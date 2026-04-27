@@ -215,6 +215,12 @@ fun TrexTextField(
     hint: String? = null,
     leadingIcon: ImageVector? = null,
     focusRequester: FocusRequester? = null,
+    textColor: Color = Color.White,
+    containerColor: Color = Color.White.copy(alpha = 0.08f),
+    borderColor: Color = Color.White.copy(alpha = 0.12f),
+    placeholderColor: Color = Color.White.copy(alpha = 0.42f),
+    iconColor: Color = Color.White.copy(alpha = 0.5f),
+    hintColor: Color = Color.White.copy(alpha = 0.62f),
 ) {
     Column(modifier = modifier) {
         BasicTextField(
@@ -224,7 +230,7 @@ fun TrexTextField(
             keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
             visualTransformation = if (password) PasswordVisualTransformation() else VisualTransformation.None,
             textStyle = TextStyle(
-                color = Color.White,
+                color = textColor,
                 fontSize = 14.sp,
                 lineHeight = 20.sp,
             ),
@@ -235,10 +241,10 @@ fun TrexTextField(
                         .fillMaxWidth()
                         .height(52.dp)
                         .clip(RoundedCornerShape(18.dp))
-                        .background(Color.White.copy(alpha = 0.08f))
+                        .background(containerColor)
                         .border(
                             width = 1.dp,
-                            color = Color.White.copy(alpha = 0.12f),
+                            color = borderColor,
                             shape = RoundedCornerShape(18.dp),
                         )
                         .padding(horizontal = 16.dp),
@@ -248,7 +254,7 @@ fun TrexTextField(
                         Icon(
                             leadingIcon,
                             contentDescription = null,
-                            tint = Color.White.copy(alpha = 0.5f),
+                            tint = iconColor,
                             modifier = Modifier.size(17.dp),
                         )
                         Spacer(Modifier.width(8.dp))
@@ -262,7 +268,7 @@ fun TrexTextField(
                         if (value.isBlank()) {
                             Text(
                                 text = placeholder,
-                                color = Color.White.copy(alpha = 0.42f),
+                                color = placeholderColor,
                                 fontSize = 14.sp,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
@@ -279,7 +285,7 @@ fun TrexTextField(
         if (hint != null) {
             Text(
                 text = hint,
-                color = Color.White.copy(alpha = 0.62f),
+                color = hintColor,
                 fontSize = 11.sp,
                 lineHeight = 15.sp,
                 modifier = Modifier.padding(top = 5.dp, start = 2.dp),

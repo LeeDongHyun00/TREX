@@ -12,6 +12,7 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -64,14 +65,38 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.delay
+
+private val loginAnimationFrames = intArrayOf(
+    R.drawable.login_animation_frame_01,
+    R.drawable.login_animation_frame_02,
+    R.drawable.login_animation_frame_03,
+    R.drawable.login_animation_frame_04,
+    R.drawable.login_animation_frame_05,
+    R.drawable.login_animation_frame_06,
+    R.drawable.login_animation_frame_07,
+    R.drawable.login_animation_frame_08,
+    R.drawable.login_animation_frame_09,
+    R.drawable.login_animation_frame_10,
+    R.drawable.login_animation_frame_11,
+    R.drawable.login_animation_frame_12,
+    R.drawable.login_animation_frame_13,
+    R.drawable.login_animation_frame_14,
+    R.drawable.login_animation_frame_15,
+    R.drawable.login_animation_frame_16,
+)
 
 @Composable
 fun LoginScreen(onLogin: () -> Unit) {
@@ -94,6 +119,29 @@ fun LoginScreen(onLogin: () -> Unit) {
 }
 
 @Composable
+private fun LoginFrameAnimation(modifier: Modifier = Modifier) {
+    var frameIndex by remember { mutableIntStateOf(0) }
+
+    LaunchedEffect(Unit) {
+        for (nextFrame in 1 until loginAnimationFrames.size) {
+            delay(95)
+            frameIndex = nextFrame
+        }
+    }
+
+    Image(
+        painter = painterResource(id = loginAnimationFrames[frameIndex]),
+        contentDescription = null,
+        contentScale = ContentScale.Crop,
+        modifier = modifier.graphicsLayer {
+            scaleX = 1.8f
+            scaleY = 1.8f
+            transformOrigin = TransformOrigin(0.5f, 0f)
+        },
+    )
+}
+
+@Composable
 private fun LoginView(
     onLogin: () -> Unit,
     goSignup: () -> Unit,
@@ -112,7 +160,7 @@ private fun LoginView(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(horizontal = 28.dp)
-                .padding(top = 118.dp, bottom = 28.dp),
+                .padding(top = 30.dp, bottom = 60.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
@@ -129,7 +177,14 @@ private fun LoginView(
                 modifier = Modifier.padding(top = 6.dp),
             )
 
-            Spacer(Modifier.height(28.dp))
+            LoginFrameAnimation(
+                modifier = Modifier
+                    .padding(top = 48.dp)
+                    .fillMaxWidth()
+                    .height(430.dp),
+            )
+
+            Spacer(Modifier.weight(1f))
             TrexTextField(
                 value = id,
                 onValueChange = { id = it },
@@ -149,6 +204,14 @@ private fun LoginView(
                 text = "로그인",
                 onClick = onLogin,
                 modifier = Modifier.fillMaxWidth(),
+            )
+            Spacer(Modifier.height(10.dp))
+            TrexButton(
+                text = "카카오톡으로 로그인",
+                onClick = onLogin,
+                modifier = Modifier.fillMaxWidth(),
+                container = Color(0xFFFEE500),
+                contentColor = Color(0xFF191919),
             )
 
             Row(

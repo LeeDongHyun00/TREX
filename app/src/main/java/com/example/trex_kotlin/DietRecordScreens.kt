@@ -4,7 +4,6 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -16,9 +15,11 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -37,6 +38,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
@@ -71,22 +75,35 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.zIndex
 import java.util.Calendar
+import kotlin.math.PI
+import kotlin.math.atan2
+import kotlin.math.cos
 import kotlin.math.roundToInt
+import kotlin.math.sin
 import kotlinx.coroutines.delay
 
 private enum class DietRecordStep {
@@ -207,11 +224,7 @@ fun DietRecordRoute(
                     recentFoods = recentFoods,
                     onCamera = { moveTo(DietRecordStep.Camera) },
                     onGallery = { startAnalyzing(photoCount = 3) },
-                    onRecent = { food ->
-                        foods = listOf(food.toRecognized(nextFoodId, 100))
-                        nextFoodId += 1
-                        moveTo(DietRecordStep.Result)
-                    },
+                    onRecent = { moveTo(DietRecordStep.Manual) },
                     onManual = { moveTo(DietRecordStep.Manual) },
                     onClose = onClose,
                 )
@@ -257,10 +270,11 @@ fun DietRecordRoute(
 
                 DietRecordStep.Manual -> DietManualInputScreen(
                     hasResult = foods.isNotEmpty(),
-                    onAdd = { newFood ->
-                        foods = foods + newFood.copy(id = nextFoodId)
-                        nextFoodId += 1
-                        moveTo(DietRecordStep.Result, forward = false)
+                    selectedMeal = selectedMeal,
+                    onRecord = { manualFoods ->
+                        val resultFoods = foods.map { FoodEntry(it.name, it.nutrition) }
+                        val addedFoods = manualFoods.map { FoodEntry(it.name, it.nutrition) }
+                        onRecord(selectedMeal, resultFoods + addedFoods)
                     },
                     onCancel = {
                         if (foods.isEmpty()) {
@@ -634,9 +648,11 @@ private fun DietResultScreen(
 @Composable
 private fun DietManualInputScreen(
     hasResult: Boolean,
-    onAdd: (RecognizedFood) -> Unit,
+    selectedMeal: String,
+    onRecord: (List<RecognizedFood>) -> Unit,
     onCancel: () -> Unit,
 ) {
+    var stagedFoods by remember { mutableStateOf<List<RecognizedFood>>(emptyList()) }
     var query by remember { mutableStateOf("") }
     var selectedName by remember { mutableStateOf<String?>(null) }
     var grams by remember { mutableIntStateOf(100) }
@@ -651,7 +667,46 @@ private fun DietManualInputScreen(
     }
     val selectedNutrition = selectedName?.let { foodDatabase[it] }
     val scaledNutrition = selectedNutrition?.scaledBy(grams)
-    val canAdd = scaledNutrition != null || (manualExpanded && manualName.isNotBlank() && manualKcal.isNotBlank())
+    val draftFood = remember(selectedName, scaledNutrition, manualExpanded, manualName, manualKcal, manualCarb, manualProtein, manualFat, grams) {
+        when {
+            scaledNutrition != null && selectedName != null -> RecognizedFood(
+                id = 0,
+                name = selectedName.orEmpty(),
+                grams = grams,
+                nutrition = scaledNutrition,
+            )
+            manualExpanded && manualName.isNotBlank() && manualKcal.isNotBlank() -> RecognizedFood(
+                id = 0,
+                name = manualName.trim(),
+                grams = grams,
+                nutrition = Nutrition(
+                    kcal = manualKcal.toIntOrNull() ?: 0,
+                    carb = manualCarb.toDoubleOrNull() ?: 0.0,
+                    protein = manualProtein.toDoubleOrNull() ?: 0.0,
+                    fat = manualFat.toDoubleOrNull() ?: 0.0,
+                ),
+            )
+            else -> null
+        }
+    }
+    val canStage = draftFood != null
+    val canRecord = stagedFoods.isNotEmpty() || draftFood != null
+
+    fun resetDraft() {
+        query = ""
+        selectedName = null
+        grams = 100
+        manualName = ""
+        manualKcal = ""
+        manualCarb = ""
+        manualProtein = ""
+        manualFat = ""
+    }
+
+    fun allManualFoods(): List<RecognizedFood> =
+        stagedFoods + listOfNotNull(draftFood).mapIndexed { index, food ->
+            food.copy(id = stagedFoods.size + index + 1)
+        }
 
     Box(
         modifier = Modifier
@@ -666,6 +721,32 @@ private fun DietManualInputScreen(
             item {
                 SectionLabel(if (hasResult) "음식 추가" else "수동 입력", color = TrexLime)
                 ScreenTitle("음식명을 검색해 주세요")
+            }
+            item {
+                MealSelector(selectedMeal = selectedMeal, onMealChange = {}, enabled = false)
+            }
+            if (stagedFoods.isNotEmpty()) {
+                item {
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(18.dp),
+                        color = Color.White,
+                    ) {
+                        Column(Modifier.padding(13.dp)) {
+                            Text("추가한 음식 ${stagedFoods.size}개", color = TrexGreenDeep, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                            stagedFoods.forEach { food ->
+                                Text(
+                                    text = "${food.name} · ${food.nutrition.kcal} kcal · 탄수 ${food.nutrition.carb.toInt()}g · 단백질 ${food.nutrition.protein.toInt()}g · 지방 ${food.nutrition.fat.toInt()}g",
+                                    color = TrexDark.copy(alpha = 0.68f),
+                                    fontSize = 11.sp,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.padding(top = 6.dp),
+                                )
+                            }
+                        }
+                    }
+                }
             }
             item {
                 TrexTextField(
@@ -747,27 +828,31 @@ private fun DietManualInputScreen(
                     }
                 }
             }
+            item {
+                TrexButton(
+                    text = "다른 음식 추가",
+                    onClick = {
+                        draftFood?.let { food ->
+                            stagedFoods = stagedFoods + food.copy(id = stagedFoods.size + 1)
+                            resetDraft()
+                        }
+                    },
+                    enabled = canStage,
+                    icon = Icons.Rounded.Add,
+                    modifier = Modifier.fillMaxWidth(),
+                    container = Color.White.copy(alpha = 0.1f),
+                    contentColor = Color.White,
+                    height = 46.dp,
+                )
+            }
         }
 
         DietFixedActions(
-            confirmText = "추가",
-            confirmIcon = Icons.Rounded.Add,
-            confirmEnabled = canAdd,
+            confirmText = "식단 기록하기",
+            confirmIcon = Icons.Rounded.Check,
+            confirmEnabled = canRecord,
             onConfirm = {
-                val nutrition = scaledNutrition ?: Nutrition(
-                    kcal = manualKcal.toIntOrNull() ?: 0,
-                    carb = manualCarb.toDoubleOrNull() ?: 0.0,
-                    protein = manualProtein.toDoubleOrNull() ?: 0.0,
-                    fat = manualFat.toDoubleOrNull() ?: 0.0,
-                )
-                onAdd(
-                    RecognizedFood(
-                        id = 0,
-                        name = selectedName ?: manualName.trim(),
-                        grams = grams,
-                        nutrition = nutrition,
-                    ),
-                )
+                onRecord(allManualFoods())
             },
             onCancel = onCancel,
             modifier = Modifier.align(Alignment.BottomCenter),
@@ -796,7 +881,10 @@ fun DietMainSummaryScreen(
     var manualGoalMode by remember { mutableStateOf(false) }
     var draftGoal by remember(targetGoal) { mutableStateOf(targetGoal) }
     var goalFeedback by remember { mutableStateOf<String?>(null) }
-    val calorieProgress = (total.kcal / targetGoal.kcal.coerceAtLeast(1).toFloat()).coerceIn(0f, 1f)
+    val focusManager = LocalFocusManager.current
+    val editingTargets = goalEditorExpanded && manualGoalMode
+    val visibleGoal = if (editingTargets) draftGoal.normalizedGoal() else targetGoal
+    val calorieProgress = (total.kcal / visibleGoal.kcal.coerceAtLeast(1).toFloat()).coerceIn(0f, 1f)
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -820,7 +908,6 @@ fun DietMainSummaryScreen(
                     modifier = Modifier.weight(1f),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    SectionLabel("오늘의 식단", color = TrexLime)
                     ScreenTitle(if (dateOffset == 0) "오늘" else "${-dateOffset}일 전")
                 }
                 Surface(
@@ -840,40 +927,56 @@ fun DietMainSummaryScreen(
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(26.dp),
-                color = TrexDarkAlt.copy(alpha = 0.92f),
-                border = dimBorder(),
+                color = Color.White,
+                contentColor = TrexDark,
             ) {
                 Column(
                     modifier = Modifier
                         .animateContentSize()
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = { focusManager.clearFocus() },
+                        )
                         .padding(18.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    CalorieGauge(progress = calorieProgress, value = total.kcal, target = targetGoal.kcal)
+                    CalorieGauge(
+                        progress = calorieProgress,
+                        value = total.kcal,
+                        target = visibleGoal.kcal,
+                        editable = editingTargets,
+                        onTargetChange = {
+                            draftGoal = draftGoal.copy(kcal = it.roundToInt()).normalizedGoal()
+                        },
+                    )
                     TrexButton(
-                        text = "영양 목표 수정하기",
+                        text = if (goalEditorExpanded) "취소" else "영양 목표 수정하기",
                         onClick = {
                             goalEditorExpanded = !goalEditorExpanded
                             if (goalEditorExpanded) {
                                 draftGoal = targetGoal
                                 goalFeedback = null
+                            } else {
+                                manualGoalMode = false
+                                draftGoal = targetGoal
+                                goalFeedback = null
+                                focusManager.clearFocus()
                             }
                         },
                         icon = if (goalEditorExpanded) Icons.Rounded.Close else Icons.Rounded.Edit,
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(top = 14.dp),
-                        container = if (goalEditorExpanded) Color.White.copy(alpha = 0.12f) else TrexLime,
-                        contentColor = if (goalEditorExpanded) Color.White else TrexDark,
+                        container = if (goalEditorExpanded) TrexError.copy(alpha = 0.2f) else TrexLime,
+                        contentColor = if (goalEditorExpanded) Color(0xFFFFB0B0) else TrexDark,
                         height = 46.dp,
                     )
                     NutritionGoalEditor(
                         expanded = goalEditorExpanded,
                         manualMode = manualGoalMode,
-                        total = total,
                         currentGoal = targetGoal,
                         recommendedGoal = recommendedGoal,
-                        draftGoal = draftGoal,
                         feedback = goalFeedback,
                         onAutoGoal = {
                             draftGoal = recommendedGoal
@@ -886,9 +989,6 @@ fun DietMainSummaryScreen(
                             manualGoalMode = true
                             goalFeedback = null
                         },
-                        onDraftGoalChange = {
-                            draftGoal = it.normalizedGoal()
-                        },
                         onApplyManual = {
                             val normalized = draftGoal.normalizedGoal()
                             draftGoal = normalized
@@ -896,11 +996,45 @@ fun DietMainSummaryScreen(
                             manualGoalMode = false
                             goalEditorExpanded = false
                             goalFeedback = null
+                            focusManager.clearFocus()
                         },
                     )
-                    MacroTargetBar("탄수화물", total.carb.toFloat(), targetGoal.carb.toFloat(), TrexLime)
-                    MacroTargetBar("단백질", total.protein.toFloat(), targetGoal.protein.toFloat(), TrexGreenSoft)
-                    MacroTargetBar("지방", total.fat.toFloat(), targetGoal.fat.toFloat(), TrexWarning)
+                    MacroTargetBar(
+                        label = "탄수화물",
+                        value = total.carb.toFloat(),
+                        target = visibleGoal.carb.toFloat(),
+                        color = TrexLime,
+                        editable = editingTargets,
+                        minTarget = 60f,
+                        maxTarget = 480f,
+                        onTargetChange = {
+                            draftGoal = draftGoal.copy(carb = it.toDouble()).normalizedGoal()
+                        },
+                    )
+                    MacroTargetBar(
+                        label = "단백질",
+                        value = total.protein.toFloat(),
+                        target = visibleGoal.protein.toFloat(),
+                        color = TrexGreenSoft,
+                        editable = editingTargets,
+                        minTarget = 40f,
+                        maxTarget = 240f,
+                        onTargetChange = {
+                            draftGoal = draftGoal.copy(protein = it.toDouble()).normalizedGoal()
+                        },
+                    )
+                    MacroTargetBar(
+                        label = "지방",
+                        value = total.fat.toFloat(),
+                        target = visibleGoal.fat.toFloat(),
+                        color = TrexWarning,
+                        editable = editingTargets,
+                        minTarget = 20f,
+                        maxTarget = 160f,
+                        onTargetChange = {
+                            draftGoal = draftGoal.copy(fat = it.toDouble()).normalizedGoal()
+                        },
+                    )
                 }
             }
         }
@@ -910,7 +1044,6 @@ fun DietMainSummaryScreen(
                 meta = meta,
                 foods = foods,
                 total = nutrition,
-                onAdd = onOpenRecord,
                 onOpen = { onOpenMeal(meta.id, foods.isEmpty()) },
             )
         }
@@ -958,12 +1091,17 @@ fun DietUndoToast(
 }
 
 @Composable
-private fun MealSelector(selectedMeal: String, onMealChange: (String) -> Unit) {
+private fun MealSelector(
+    selectedMeal: String,
+    onMealChange: (String) -> Unit,
+    enabled: Boolean = true,
+) {
     Row(horizontalArrangement = Arrangement.spacedBy(7.dp), modifier = Modifier.fillMaxWidth()) {
         mealMetas.forEach { meta ->
             val active = selectedMeal == meta.id
             Surface(
-                onClick = { onMealChange(meta.id) },
+                onClick = { if (enabled) onMealChange(meta.id) },
+                enabled = enabled,
                 modifier = Modifier.weight(1f).height(42.dp),
                 shape = RoundedCornerShape(14.dp),
                 color = if (active) TrexLime else Color.White.copy(alpha = 0.07f),
@@ -992,10 +1130,13 @@ private fun NutritionSummaryCard(total: Nutrition, targetGoal: Int) {
                 Pill("하루 목표의 ${(pct * 100).toInt()}%", background = TrexDark, color = TrexLime)
             }
             Text("${total.kcal} kcal", fontSize = 28.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 4.dp))
-            Row(modifier = Modifier.padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                MacroMini("탄수", "${total.carb.toInt()}g", Modifier.weight(1f))
-                MacroMini("단백질", "${total.protein.toInt()}g", Modifier.weight(1f))
-                MacroMini("지방", "${total.fat.toInt()}g", Modifier.weight(1f))
+            Column(
+                modifier = Modifier.padding(top = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                NutritionSummaryLine("탄수화물", "${total.carb.toInt()}g")
+                NutritionSummaryLine("단백질", "${total.protein.toInt()}g")
+                NutritionSummaryLine("지방", "${total.fat.toInt()}g")
             }
         }
     }
@@ -1039,6 +1180,7 @@ private fun RecognizedFoodCard(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
+                    .zIndex(0f)
                     .clip(RoundedCornerShape(20.dp))
                     .background(TrexError.copy(alpha = 0.22f))
                     .padding(end = 18.dp),
@@ -1049,30 +1191,49 @@ private fun RecognizedFoodCard(
         },
     ) {
         Surface(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .zIndex(1f),
             shape = RoundedCornerShape(20.dp),
-            color = Color.White.copy(alpha = 0.06f),
-            border = dimBorder(),
+            color = Color.White,
+            contentColor = TrexDark,
         ) {
             Column(Modifier.padding(14.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text(food.name, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                        Text(food.name, color = TrexDark, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                         Text(
                             "${food.grams}g · ${food.nutrition.kcal} kcal · 탄수 ${food.nutrition.carb.toInt()}g · 단백질 ${food.nutrition.protein.toInt()}g · 지방 ${food.nutrition.fat.toInt()}g",
-                            color = Color.White.copy(alpha = 0.58f),
+                            color = TrexDark.copy(alpha = 0.58f),
                             fontSize = 11.sp,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.padding(top = 3.dp),
                         )
                     }
-                    IconCircleButton(Icons.Rounded.Edit, onClick = onEdit, size = 34.dp, background = Color.White.copy(alpha = 0.09f), contentDescription = "수정")
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        IconCircleButton(
+                            Icons.Rounded.Delete,
+                            onClick = onDelete,
+                            size = 34.dp,
+                            background = TrexError.copy(alpha = 0.18f),
+                            contentColor = Color(0xFFFF8A8A),
+                            contentDescription = "제거",
+                        )
+                        IconCircleButton(
+                            Icons.Rounded.Edit,
+                            onClick = onEdit,
+                            size = 34.dp,
+                            background = TrexDark.copy(alpha = 0.08f),
+                            contentColor = TrexDark.copy(alpha = 0.76f),
+                            contentDescription = "수정",
+                        )
+                    }
                 }
 
                 AnimatedVisibility(visible = editing, enter = fadeIn(), exit = fadeOut()) {
                     Column(Modifier.padding(top = 12.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
-                        TrexTextField(name, { name = it }, "음식명", leadingIcon = Icons.Rounded.Search)
+                        LightTrexTextField(name, { name = it }, "음식명", leadingIcon = Icons.Rounded.Search)
                         matches.forEach { match ->
                             Surface(
                                 onClick = {
@@ -1084,20 +1245,20 @@ private fun RecognizedFoodCard(
                                     fat = scaled.fat.toInt().toString()
                                 },
                                 shape = RoundedCornerShape(12.dp),
-                                color = Color.White.copy(alpha = 0.08f),
+                                color = TrexDark.copy(alpha = 0.06f),
                                 modifier = Modifier.fillMaxWidth(),
                             ) {
-                                Text("$match · ${foodDatabase.getValue(match).kcal} kcal", color = Color.White.copy(alpha = 0.78f), fontSize = 12.sp, modifier = Modifier.padding(10.dp))
+                                Text("$match · ${foodDatabase.getValue(match).kcal} kcal", color = TrexDark.copy(alpha = 0.78f), fontSize = 12.sp, modifier = Modifier.padding(10.dp))
                             }
                         }
-                        TrexTextField(grams, { grams = it.digitsOnly().take(4) }, "중량(g)", keyboardType = KeyboardType.Number)
+                        LightTrexTextField(grams, { grams = it.digitsOnly().take(4) }, "중량(g)", keyboardType = KeyboardType.Number)
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            TrexTextField(kcal, { kcal = it.digitsOnly() }, "kcal", keyboardType = KeyboardType.Number, modifier = Modifier.weight(1f))
-                            TrexTextField(carb, { carb = it.decimalOnly() }, "탄수", keyboardType = KeyboardType.Decimal, modifier = Modifier.weight(1f))
+                            LightTrexTextField(kcal, { kcal = it.digitsOnly() }, "kcal", keyboardType = KeyboardType.Number, modifier = Modifier.weight(1f))
+                            LightTrexTextField(carb, { carb = it.decimalOnly() }, "탄수", keyboardType = KeyboardType.Decimal, modifier = Modifier.weight(1f))
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            TrexTextField(protein, { protein = it.decimalOnly() }, "단백질", keyboardType = KeyboardType.Decimal, modifier = Modifier.weight(1f))
-                            TrexTextField(fat, { fat = it.decimalOnly() }, "지방", keyboardType = KeyboardType.Decimal, modifier = Modifier.weight(1f))
+                            LightTrexTextField(protein, { protein = it.decimalOnly() }, "단백질", keyboardType = KeyboardType.Decimal, modifier = Modifier.weight(1f))
+                            LightTrexTextField(fat, { fat = it.decimalOnly() }, "지방", keyboardType = KeyboardType.Decimal, modifier = Modifier.weight(1f))
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             TrexButton(
@@ -1124,8 +1285,8 @@ private fun RecognizedFoodCard(
                                 onClick = onCancelEdit,
                                 modifier = Modifier.weight(1f),
                                 height = 44.dp,
-                                container = Color.White.copy(alpha = 0.1f),
-                                contentColor = Color.White,
+                                container = TrexDark.copy(alpha = 0.08f),
+                                contentColor = TrexDark,
                             )
                         }
                     }
@@ -1133,6 +1294,31 @@ private fun RecognizedFoodCard(
             }
         }
     }
+}
+
+@Composable
+private fun LightTrexTextField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    placeholder: String,
+    modifier: Modifier = Modifier,
+    keyboardType: KeyboardType = KeyboardType.Text,
+    leadingIcon: ImageVector? = null,
+) {
+    TrexTextField(
+        value = value,
+        onValueChange = onValueChange,
+        placeholder = placeholder,
+        modifier = modifier,
+        keyboardType = keyboardType,
+        leadingIcon = leadingIcon,
+        textColor = TrexDark,
+        containerColor = TrexDark.copy(alpha = 0.06f),
+        borderColor = TrexDark.copy(alpha = 0.1f),
+        placeholderColor = TrexDark.copy(alpha = 0.42f),
+        iconColor = TrexDark.copy(alpha = 0.5f),
+        hintColor = TrexDark.copy(alpha = 0.62f),
+    )
 }
 
 @Composable
@@ -1349,14 +1535,11 @@ private fun FoodPlateArt(modifier: Modifier = Modifier) {
 private fun NutritionGoalEditor(
     expanded: Boolean,
     manualMode: Boolean,
-    total: Nutrition,
     currentGoal: Nutrition,
     recommendedGoal: Nutrition,
-    draftGoal: Nutrition,
     feedback: String?,
     onAutoGoal: () -> Unit,
     onManualMode: () -> Unit,
-    onDraftGoalChange: (Nutrition) -> Unit,
     onApplyManual: () -> Unit,
 ) {
     AnimatedVisibility(
@@ -1382,21 +1565,21 @@ private fun NutritionGoalEditor(
                     text = "수동 입력",
                     onClick = onManualMode,
                     modifier = Modifier.weight(1f),
-                    container = if (manualMode) TrexLime else Color.White.copy(alpha = 0.1f),
-                    contentColor = if (manualMode) TrexDark else Color.White,
+                    container = if (manualMode) TrexLime else TrexBackground,
+                    contentColor = TrexDark,
                     height = 46.dp,
                 )
             }
 
             Text(
                 text = "현재 목표 ${currentGoal.kcal} kcal · 탄수 ${currentGoal.carb.toInt()}g · 단백질 ${currentGoal.protein.toInt()}g · 지방 ${currentGoal.fat.toInt()}g",
-                color = Color.White.copy(alpha = 0.64f),
+                color = TrexDark.copy(alpha = 0.66f),
                 fontSize = 11.sp,
                 lineHeight = 16.sp,
             )
             Text(
                 text = "자동 추천 ${recommendedGoal.kcal} kcal · 탄수 ${recommendedGoal.carb.toInt()}g · 단백질 ${recommendedGoal.protein.toInt()}g · 지방 ${recommendedGoal.fat.toInt()}g",
-                color = Color.White.copy(alpha = 0.48f),
+                color = TrexDark.copy(alpha = 0.46f),
                 fontSize = 11.sp,
                 lineHeight = 16.sp,
             )
@@ -1404,7 +1587,7 @@ private fun NutritionGoalEditor(
                 Pill(
                     text = feedback,
                     background = TrexLime.copy(alpha = 0.16f),
-                    color = TrexLime,
+                    color = TrexGreenDeep,
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
@@ -1414,164 +1597,15 @@ private fun NutritionGoalEditor(
                 enter = fadeIn(),
                 exit = fadeOut(),
             ) {
-                ManualNutritionGoalEditor(
-                    total = total,
-                    draftGoal = draftGoal,
-                    onDraftGoalChange = onDraftGoalChange,
-                    onApplyManual = onApplyManual,
+                TrexButton(
+                    text = "완료하기",
+                    onClick = onApplyManual,
+                    icon = Icons.Rounded.Check,
+                    modifier = Modifier.fillMaxWidth(),
+                    height = 48.dp,
                 )
             }
         }
-    }
-}
-
-@Composable
-private fun ManualNutritionGoalEditor(
-    total: Nutrition,
-    draftGoal: Nutrition,
-    onDraftGoalChange: (Nutrition) -> Unit,
-    onApplyManual: () -> Unit,
-) {
-    val introProgress = remember { Animatable(0f) }
-    var slidersReady by remember { mutableStateOf(false) }
-
-    LaunchedEffect(Unit) {
-        slidersReady = false
-        introProgress.snapTo(0f)
-        introProgress.animateTo(1f, animationSpec = tween(durationMillis = 720))
-        slidersReady = true
-    }
-
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
-    ) {
-        GoalSlider(
-            label = "칼로리",
-            currentValue = total.kcal.toFloat(),
-            targetValue = draftGoal.kcal.toFloat(),
-            minValue = 1000f,
-            maxValue = 3600f,
-            unit = "kcal",
-            color = TrexLime,
-            enabled = slidersReady,
-            introProgress = if (slidersReady) null else introProgress.value,
-            wholeNumber = true,
-            onTargetValueChange = { onDraftGoalChange(draftGoal.copy(kcal = it.roundToInt())) },
-        )
-        GoalSlider(
-            label = "탄수화물",
-            currentValue = total.carb.toFloat(),
-            targetValue = draftGoal.carb.toFloat(),
-            minValue = 60f,
-            maxValue = 480f,
-            unit = "g",
-            color = TrexLime,
-            enabled = slidersReady,
-            introProgress = if (slidersReady) null else introProgress.value,
-            onTargetValueChange = { onDraftGoalChange(draftGoal.copy(carb = it.toDouble())) },
-        )
-        GoalSlider(
-            label = "단백질",
-            currentValue = total.protein.toFloat(),
-            targetValue = draftGoal.protein.toFloat(),
-            minValue = 40f,
-            maxValue = 240f,
-            unit = "g",
-            color = TrexGreenSoft,
-            enabled = slidersReady,
-            introProgress = if (slidersReady) null else introProgress.value,
-            onTargetValueChange = { onDraftGoalChange(draftGoal.copy(protein = it.toDouble())) },
-        )
-        GoalSlider(
-            label = "지방",
-            currentValue = total.fat.toFloat(),
-            targetValue = draftGoal.fat.toFloat(),
-            minValue = 20f,
-            maxValue = 160f,
-            unit = "g",
-            color = TrexWarning,
-            enabled = slidersReady,
-            introProgress = if (slidersReady) null else introProgress.value,
-            onTargetValueChange = { onDraftGoalChange(draftGoal.copy(fat = it.toDouble())) },
-        )
-        TrexButton(
-            text = "완료하기",
-            onClick = onApplyManual,
-            enabled = slidersReady,
-            icon = Icons.Rounded.Check,
-            modifier = Modifier.fillMaxWidth(),
-            height = 48.dp,
-        )
-    }
-}
-
-@Composable
-private fun GoalSlider(
-    label: String,
-    currentValue: Float,
-    targetValue: Float,
-    minValue: Float,
-    maxValue: Float,
-    unit: String,
-    color: Color,
-    enabled: Boolean,
-    introProgress: Float?,
-    wholeNumber: Boolean = false,
-    onTargetValueChange: (Float) -> Unit,
-) {
-    val safeTarget = targetValue.coerceIn(minValue, maxValue)
-    val statusProgress = introProgress ?: (currentValue / safeTarget.coerceAtLeast(1f)).coerceIn(0f, 1f)
-    val animatedProgress by animateFloatAsState(
-        targetValue = statusProgress,
-        animationSpec = tween(durationMillis = if (introProgress == null) 180 else 720),
-        label = "$label-goal-progress",
-    )
-
-    Column(Modifier.fillMaxWidth()) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text(label, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                Text(
-                    text = "현재 ${formatGoalValue(currentValue, wholeNumber)}$unit / 목표 ${formatGoalValue(safeTarget, wholeNumber)}$unit",
-                    color = Color.White.copy(alpha = 0.58f),
-                    fontSize = 11.sp,
-                )
-            }
-            GoalValueInput(
-                value = safeTarget,
-                unit = unit,
-                minValue = minValue,
-                maxValue = maxValue,
-                wholeNumber = wholeNumber,
-                onValueChange = onTargetValueChange,
-            )
-        }
-
-        LinearProgressIndicator(
-            progress = { animatedProgress },
-            modifier = Modifier
-                .padding(top = 9.dp)
-                .fillMaxWidth()
-                .height(8.dp)
-                .clip(RoundedCornerShape(999.dp)),
-            color = color,
-            trackColor = Color.White.copy(alpha = 0.12f),
-        )
-        Slider(
-            value = safeTarget,
-            onValueChange = { onTargetValueChange(it.coerceIn(minValue, maxValue)) },
-            enabled = enabled,
-            valueRange = minValue..maxValue,
-            colors = SliderDefaults.colors(
-                thumbColor = color,
-                activeTrackColor = color,
-                inactiveTrackColor = Color.White.copy(alpha = 0.14f),
-                disabledThumbColor = color.copy(alpha = 0.7f),
-                disabledActiveTrackColor = color.copy(alpha = 0.7f),
-                disabledInactiveTrackColor = Color.White.copy(alpha = 0.12f),
-            ),
-        )
     }
 }
 
@@ -1582,10 +1616,14 @@ private fun GoalValueInput(
     minValue: Float,
     maxValue: Float,
     wholeNumber: Boolean,
+    modifier: Modifier = Modifier,
     onValueChange: (Float) -> Unit,
 ) {
     var editing by remember { mutableStateOf(false) }
     var text by remember { mutableStateOf(formatGoalValue(value, wholeNumber)) }
+    var wasFocused by remember { mutableStateOf(false) }
+    val focusRequester = remember { FocusRequester() }
+    val focusManager = LocalFocusManager.current
 
     LaunchedEffect(value, editing) {
         if (!editing) {
@@ -1593,28 +1631,71 @@ private fun GoalValueInput(
         }
     }
 
+    fun commitEdit() {
+        text.toFloatOrNull()?.let { onValueChange(it.coerceIn(minValue, maxValue)) }
+        editing = false
+        wasFocused = false
+        focusManager.clearFocus(force = true)
+    }
+
     if (editing) {
-        Box(Modifier.width(112.dp)) {
-            TrexTextField(
-                value = text,
-                onValueChange = { raw ->
-                    val clean = if (wholeNumber) raw.digitsOnly() else raw.decimalOnly()
-                    text = clean
-                    clean.toFloatOrNull()?.let { onValueChange(it.coerceIn(minValue, maxValue)) }
-                },
-                placeholder = unit,
-                keyboardType = if (wholeNumber) KeyboardType.Number else KeyboardType.Decimal,
-            )
+        LaunchedEffect(Unit) {
+            focusRequester.requestFocus()
         }
+        BasicTextField(
+            value = text,
+            onValueChange = { raw ->
+                val clean = if (wholeNumber) raw.digitsOnly() else raw.decimalOnly()
+                text = clean
+                clean.toFloatOrNull()?.let { onValueChange(it.coerceIn(minValue, maxValue)) }
+            },
+            singleLine = true,
+            textStyle = TextStyle(
+                color = TrexDark,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.SemiBold,
+                textAlign = TextAlign.Center,
+            ),
+            keyboardOptions = KeyboardOptions(
+                keyboardType = if (wholeNumber) KeyboardType.Number else KeyboardType.Decimal,
+                imeAction = ImeAction.Done,
+            ),
+            keyboardActions = KeyboardActions(onDone = { commitEdit() }),
+            cursorBrush = SolidColor(TrexLime),
+            modifier = modifier
+                .width(102.dp)
+                .height(36.dp)
+                .clip(RoundedCornerShape(14.dp))
+                .background(TrexBackground)
+                .border(1.dp, TrexGreen.copy(alpha = 0.7f), RoundedCornerShape(14.dp))
+                .focusRequester(focusRequester)
+                .onFocusChanged { state ->
+                    if (state.isFocused) {
+                        wasFocused = true
+                    } else if (wasFocused && editing) {
+                        commitEdit()
+                    }
+                }
+                .padding(horizontal = 10.dp),
+            decorationBox = { innerTextField ->
+                Box(contentAlignment = Alignment.Center) {
+                    if (text.isBlank()) {
+                        Text(unit, color = TrexDark.copy(alpha = 0.42f), fontSize = 12.sp)
+                    }
+                    innerTextField()
+                }
+            },
+        )
     } else {
         Surface(
             onClick = {
                 text = formatGoalValue(value, wholeNumber)
                 editing = true
             },
+            modifier = modifier,
             shape = RoundedCornerShape(14.dp),
-            color = Color.White.copy(alpha = 0.1f),
-            contentColor = Color.White,
+            color = TrexBackground,
+            contentColor = TrexDark,
         ) {
             Text(
                 text = "${formatGoalValue(value, wholeNumber)}$unit",
@@ -1627,34 +1708,142 @@ private fun GoalValueInput(
 }
 
 @Composable
-private fun CalorieGauge(progress: Float, value: Int, target: Int) {
-    Box(modifier = Modifier.size(172.dp), contentAlignment = Alignment.Center) {
+private fun CalorieGauge(
+    progress: Float,
+    value: Int,
+    target: Int,
+    editable: Boolean = false,
+    onTargetChange: (Float) -> Unit = {},
+) {
+    fun progressFromPosition(position: Offset, center: Offset): Float {
+        val angle = atan2(position.y - center.y, position.x - center.x)
+        val normalized = ((angle + (PI / 2.0)) / (PI * 2.0)).toFloat()
+        return if (normalized < 0f) normalized + 1f else normalized
+    }
+
+    fun targetFromProgress(nextProgress: Float): Float {
+        val clampedProgress = nextProgress.coerceIn(0.05f, 1f)
+        return if (value > 0) {
+            value / clampedProgress
+        } else {
+            1000f + clampedProgress * (3600f - 1000f)
+        }.coerceIn(1000f, 3600f)
+    }
+
+    val gaugeModifier = Modifier
+        .size(172.dp)
+        .then(
+            if (editable) {
+                Modifier.pointerInput(value) {
+                    fun update(position: Offset) {
+                        val center = Offset(size.width / 2f, size.height / 2f)
+                        onTargetChange(targetFromProgress(progressFromPosition(position, center)))
+                    }
+                    detectDragGestures(
+                        onDragStart = { update(it) },
+                        onDrag = { change, _ -> update(change.position) },
+                    )
+                }
+            } else {
+                Modifier
+            },
+        )
+
+    Box(modifier = gaugeModifier, contentAlignment = Alignment.Center) {
         Canvas(Modifier.fillMaxSize()) {
             val stroke = Stroke(width = 10.dp.toPx(), cap = StrokeCap.Round)
-            drawCircle(Color.White.copy(alpha = 0.16f), radius = size.minDimension / 2f - stroke.width, style = stroke)
+            val radius = size.minDimension / 2f - stroke.width
+            val center = Offset(size.width / 2f, size.height / 2f)
+            drawCircle(TrexDark.copy(alpha = 0.14f), radius = radius, style = stroke)
             drawArc(TrexLime, startAngle = -90f, sweepAngle = progress * 360f, useCenter = false, style = stroke)
+            if (editable) {
+                val handleAngle = ((progress.coerceIn(0f, 1f) * 360f) - 90f) * (PI.toFloat() / 180f)
+                val handleCenter = Offset(
+                    x = center.x + cos(handleAngle) * radius,
+                    y = center.y + sin(handleAngle) * radius,
+                )
+                drawCircle(TrexDark, radius = 8.dp.toPx(), center = handleCenter)
+                drawCircle(TrexLime, radius = 5.dp.toPx(), center = handleCenter)
+            }
         }
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(value.toString(), color = Color.White, fontSize = 32.sp, fontWeight = FontWeight.SemiBold)
-            Text("/ $target kcal", color = Color.White.copy(alpha = 0.62f), fontSize = 12.sp)
+            Text(value.toString(), color = TrexDark, fontSize = 32.sp, fontWeight = FontWeight.SemiBold)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("/ ", color = TrexDark.copy(alpha = 0.62f), fontSize = 12.sp)
+                if (editable) {
+                    GoalValueInput(
+                        value = target.toFloat(),
+                        unit = "kcal",
+                        minValue = 1000f,
+                        maxValue = 3600f,
+                        wholeNumber = true,
+                        onValueChange = onTargetChange,
+                    )
+                } else {
+                    Text("$target kcal", color = TrexDark.copy(alpha = 0.62f), fontSize = 12.sp)
+                }
+            }
         }
     }
 }
 
 @Composable
-private fun MacroTargetBar(label: String, value: Float, target: Float, color: Color) {
-    val progress = (value / target).coerceIn(0f, 1f)
+private fun MacroTargetBar(
+    label: String,
+    value: Float,
+    target: Float,
+    color: Color,
+    editable: Boolean = false,
+    minTarget: Float = 1f,
+    maxTarget: Float = 300f,
+    onTargetChange: (Float) -> Unit = {},
+) {
+    val focusManager = LocalFocusManager.current
+    val safeTarget = target.coerceIn(minTarget, maxTarget).coerceAtLeast(1f)
+    val progress = (value / safeTarget).coerceIn(0f, 1f)
     Column(Modifier.fillMaxWidth().padding(top = 12.dp)) {
-        Row {
-            Text(label, color = Color.White, fontSize = 12.sp, modifier = Modifier.weight(1f))
-            Text("${value.toInt()} / ${target.toInt()}g", color = Color.White.copy(alpha = 0.58f), fontSize = 11.sp)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(label, color = TrexDark, fontSize = 12.sp, modifier = Modifier.weight(1f))
+            Text("${value.toInt()} / ", color = TrexDark.copy(alpha = 0.58f), fontSize = 11.sp)
+            if (editable) {
+                GoalValueInput(
+                    value = safeTarget,
+                    unit = "g",
+                    minValue = minTarget,
+                    maxValue = maxTarget,
+                    wholeNumber = true,
+                    onValueChange = onTargetChange,
+                )
+            } else {
+                Text("${safeTarget.toInt()}g", color = TrexDark.copy(alpha = 0.58f), fontSize = 11.sp)
+            }
         }
-        LinearProgressIndicator(
-            progress = { progress },
-            modifier = Modifier.padding(top = 6.dp).fillMaxWidth().height(7.dp).clip(RoundedCornerShape(999.dp)),
-            color = color,
-            trackColor = Color.White.copy(alpha = 0.1f),
-        )
+        if (editable) {
+            Slider(
+                value = safeTarget,
+                onValueChange = {
+                    focusManager.clearFocus()
+                    onTargetChange(it)
+                },
+                valueRange = minTarget..maxTarget,
+                colors = SliderDefaults.colors(
+                    thumbColor = color,
+                    activeTrackColor = color,
+                    inactiveTrackColor = TrexDark.copy(alpha = 0.14f),
+                ),
+                modifier = Modifier
+                    .padding(top = 2.dp)
+                    .fillMaxWidth()
+                    .height(30.dp),
+            )
+        } else {
+            LinearProgressIndicator(
+                progress = { progress },
+                modifier = Modifier.padding(top = 6.dp).fillMaxWidth().height(7.dp).clip(RoundedCornerShape(999.dp)),
+                color = color,
+                trackColor = TrexDark.copy(alpha = 0.1f),
+            )
+        }
     }
 }
 
@@ -1663,45 +1852,35 @@ private fun DietMealSection(
     meta: MealMeta,
     foods: List<FoodEntry>,
     total: Nutrition,
-    onAdd: () -> Unit,
     onOpen: () -> Unit,
 ) {
     Surface(
+        onClick = onOpen,
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(22.dp),
-        color = Color.White.copy(alpha = 0.05f),
-        border = dimBorder(),
+        color = Color.White,
+        contentColor = TrexDark,
     ) {
         Column(Modifier.padding(15.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(meta.label, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-                Text("${total.kcal} kcal", color = TrexLime, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                Text(meta.label, color = TrexDark, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                Text("${total.kcal} kcal", color = TrexGreenDeep, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
             }
             if (foods.isEmpty()) {
-                TrexButton(
-                    text = "기록 추가하기",
-                    onClick = onAdd,
-                    icon = Icons.Rounded.Add,
-                    modifier = Modifier.padding(top = 12.dp).fillMaxWidth(),
-                    container = Color.White.copy(alpha = 0.08f),
-                    contentColor = Color.White,
-                    height = 46.dp,
+                Text(
+                    text = "터치해서 식단을 기록해 주세요",
+                    color = TrexDark.copy(alpha = 0.54f),
+                    fontSize = 12.sp,
+                    modifier = Modifier.padding(top = 12.dp),
                 )
             } else {
-                Column(Modifier.padding(top = 10.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
-                    foods.forEach { food ->
-                        Surface(
-                            onClick = onOpen,
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(15.dp),
-                            color = Color.White.copy(alpha = 0.06f),
-                        ) {
-                            Row(Modifier.padding(11.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Text(food.name, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-                                Text("${food.nutrition.kcal} kcal", color = Color.White.copy(alpha = 0.54f), fontSize = 11.sp)
-                            }
-                        }
-                    }
+                Column(
+                    modifier = Modifier.padding(top = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    MacroLine("탄수화물", "${total.carb.toInt()}g")
+                    MacroLine("단백질", "${total.protein.toInt()}g")
+                    MacroLine("지방", "${total.fat.toInt()}g")
                 }
             }
         }
@@ -1714,8 +1893,8 @@ private fun WaterTracker(cups: Int, onAdd: () -> Unit) {
         onClick = onAdd,
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(22.dp),
-        color = Color.White.copy(alpha = 0.06f),
-        border = dimBorder(),
+        color = Color.White,
+        contentColor = TrexDark,
     ) {
         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(
@@ -1725,11 +1904,57 @@ private fun WaterTracker(cups: Int, onAdd: () -> Unit) {
                 Text("컵", color = Color(0xFF9ED5FF), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
             }
             Column(Modifier.padding(start = 12.dp).weight(1f)) {
-                Text("물 섭취량", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-                Text("컵 아이콘을 터치하면 1잔씩 추가돼요", color = Color.White.copy(alpha = 0.54f), fontSize = 11.sp)
+                Text("물 섭취량", color = TrexDark, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                Text("컵 아이콘을 터치하면 1잔씩 추가돼요", color = TrexDark.copy(alpha = 0.54f), fontSize = 11.sp)
             }
-            Text("${cups}잔", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+            Text("${cups}잔", color = TrexDark, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
         }
+    }
+}
+
+@Composable
+private fun NutritionSummaryLine(label: String, value: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = label,
+            color = TrexDark.copy(alpha = 0.68f),
+            fontSize = 12.sp,
+            modifier = Modifier.weight(1f),
+        )
+        Text(
+            text = value,
+            color = TrexDark,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.SemiBold,
+        )
+    }
+}
+
+@Composable
+private fun MacroLine(label: String, value: String, modifier: Modifier = Modifier) {
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Text(
+            text = label,
+            color = TrexDark.copy(alpha = 0.62f),
+            fontSize = 11.sp,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Text(
+            text = value,
+            color = TrexDark,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 
@@ -1798,4 +2023,3 @@ private fun formatGoalValue(value: Float, wholeNumber: Boolean): String =
 private fun String.digitsOnly(): String = filter(Char::isDigit)
 
 private fun String.decimalOnly(): String = filter { it.isDigit() || it == '.' }
-

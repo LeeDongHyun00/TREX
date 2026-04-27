@@ -1,5 +1,6 @@
 # Android / Gradle
 .gradle/
+.kotlin/
 **/build/
 build/
 captures/
@@ -7,9 +8,20 @@ captures/
 .cxx/
 local.properties
 *.iml
+*.apk
+*.aab
+*.ap_
 
 # Android Studio / IntelliJ
 .idea/
+
+# Signing / secrets
+*.jks
+*.keystore
+*.p12
+*.pem
+*.env
+*.env.*
 
 # React / Vite prototype
 node_modules/

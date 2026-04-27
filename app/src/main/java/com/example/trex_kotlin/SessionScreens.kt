@@ -794,10 +794,6 @@ private fun PostureActiveScaffold(
                     target = spec.targetReps,
                     modifier = Modifier.weight(1f),
                 )
-                StatusCapsule(
-                    icon = Icons.Rounded.PhotoCamera,
-                    text = "MediaPipe Pose",
-                )
             }
 
             Spacer(Modifier.weight(1f))
@@ -1827,7 +1823,8 @@ private fun Workout.exerciseSpec(): ExerciseSpec {
 
 private fun Workout.loadLabel(): String = when (category) {
     "하체", "상체" -> "체중"
-    "코어" -> "매트"
+    "코어", "복근" -> "매트"
+    "유산소" -> "심박"
     "회복" -> "가동범위"
     else -> "자율"
 }
