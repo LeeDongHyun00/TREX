@@ -1,6 +1,7 @@
 package com.example.trex_kotlin
 
 import androidx.compose.runtime.Immutable
+import java.util.Calendar
 
 enum class TrexTab(val label: String) {
     Home("홈"),
@@ -22,6 +23,11 @@ enum class FoodStage {
     Result,
 }
 
+enum class WorkoutNavigationTab(val label: String) {
+    Schedule("운동 스케쥴"),
+    History("운동 기록"),
+}
+
 @Immutable
 data class Workout(
     val id: String,
@@ -37,6 +43,29 @@ data class Workout(
 data class WorkoutAlt(
     val name: String,
     val reps: String,
+)
+
+@Immutable
+data class PostureCorrection(
+    val focus: String,
+)
+
+@Immutable
+data class WorkoutHistoryItem(
+    val workoutName: String,
+    val reps: String,
+    val durationMinutes: Int,
+    val calories: Int,
+    val postureCorrection: PostureCorrection? = null,
+)
+
+@Immutable
+data class WorkoutHistoryDay(
+    val dayLabel: String,
+    val dateLabel: String,
+    val items: List<WorkoutHistoryItem>,
+    val averageMinutes: Int,
+    val averageCalories: Int,
 )
 
 @Immutable
@@ -168,3 +197,145 @@ fun Nutrition.plus(other: Nutrition): Nutrition = Nutrition(
 
 fun Iterable<FoodEntry>.totalNutrition(): Nutrition =
     fold(Nutrition(0, 0.0, 0.0, 0.0)) { acc, entry -> acc.plus(entry.nutrition) }
+
+fun seedWorkoutHistory(plan: List<Workout> = todayPlan): List<WorkoutHistoryDay> {
+    val postureHints = listOf(
+        "무릎이 안쪽으로 모이는 자세",
+        "상체가 앞으로 무너지는 자세",
+        "골반이 한쪽으로 기우는 자세",
+        "어깨가 올라가는 자세",
+    )
+    val calendar = Calendar.getInstance()
+
+    return (0..6).map { index ->
+        val dayCalendar = calendar.clone() as Calendar
+        dayCalendar.add(Calendar.DAY_OF_MONTH, index - 6)
+        val selected = plan.rotate(index).take(2 + index % 3)
+        val items = selected.mapIndexed { itemIndex, workout ->
+            val duration = workout.durationMinutes()
+            val hasCorrection = workout.posture && (index + itemIndex) % 2 == 0
+            WorkoutHistoryItem(
+                workoutName = workout.name,
+                reps = workout.reps,
+                durationMinutes = duration,
+                calories = workout.estimatedCalories(),
+                postureCorrection = if (hasCorrection) {
+                    PostureCorrection(postureHints[(index + itemIndex) % postureHints.size])
+                } else {
+                    null
+                },
+            )
+        }
+
+        WorkoutHistoryDay(
+            dayLabel = dayCalendar.koreanDayOfWeek(),
+            dateLabel = "${dayCalendar.get(Calendar.MONTH) + 1}/${dayCalendar.get(Calendar.DAY_OF_MONTH)}",
+            items = items,
+            averageMinutes = (items.sumOf { it.durationMinutes } - 4 - index % 2).coerceAtLeast(8),
+            averageCalories = (items.sumOf { it.calories } - 28 - index * 2).coerceAtLeast(80),
+        )
+    }
+}
+
+fun createWorkoutHistoryDay(plan: List<Workout>, elapsedSeconds: Int): WorkoutHistoryDay {
+    val calendar = Calendar.getInstance()
+    val items = plan.mapIndexed { index, workout ->
+        val duration = workout.durationMinutes()
+        WorkoutHistoryItem(
+            workoutName = workout.name,
+            reps = workout.reps,
+            durationMinutes = duration,
+            calories = workout.estimatedCalories(),
+            postureCorrection = if (workout.posture && index == plan.indexOfFirst { it.posture }) {
+                PostureCorrection(defaultPostureFocus(workout.category))
+            } else {
+                null
+            },
+        )
+    }
+    val totalMinutes = (elapsedSeconds / 60).takeIf { it > 0 } ?: items.sumOf { it.durationMinutes }
+    val totalCalories = items.sumOf { it.calories }
+
+    return WorkoutHistoryDay(
+        dayLabel = calendar.koreanDayOfWeek(),
+        dateLabel = "${calendar.get(Calendar.MONTH) + 1}/${calendar.get(Calendar.DAY_OF_MONTH)}",
+        items = items,
+        averageMinutes = (totalMinutes - 5).coerceAtLeast(8),
+        averageCalories = (totalCalories - 35).coerceAtLeast(80),
+    )
+}
+
+fun List<WorkoutHistoryDay>.replaceTodayWith(record: WorkoutHistoryDay): List<WorkoutHistoryDay> {
+    val existingIndex = indexOfLast { it.dateLabel == record.dateLabel }
+    val updated = if (existingIndex >= 0) {
+        toMutableList().also { it[existingIndex] = record }
+    } else {
+        this + record
+    }
+    return updated.takeLast(7)
+}
+
+fun WorkoutHistoryDay.totalMinutes(): Int =
+    items.sumOf { it.durationMinutes }
+
+fun WorkoutHistoryDay.totalCalories(): Int =
+    items.sumOf { it.calories }
+
+fun WorkoutHistoryDay.summaryText(): String {
+    val corrected = items.firstOrNull { it.postureCorrection != null }
+    if (corrected != null) {
+        return "${corrected.workoutName}에서 ${corrected.postureCorrection?.focus.orEmpty()}가 부족했어요."
+    }
+
+    val minuteDiff = totalMinutes() - averageMinutes
+    val calorieDiff = totalCalories() - averageCalories
+    val minuteText = if (minuteDiff >= 0) {
+        "평소보다 ${minuteDiff}분 더 운동하고"
+    } else {
+        "평소보다 ${-minuteDiff}분 적게 운동하고"
+    }
+    val calorieText = if (calorieDiff >= 0) {
+        "${calorieDiff}kcal 더 소모했어요."
+    } else {
+        "${-calorieDiff}kcal 덜 소모했어요."
+    }
+    return "$minuteText $calorieText"
+}
+
+private fun List<Workout>.rotate(offset: Int): List<Workout> {
+    if (isEmpty()) return emptyList()
+    val start = offset % size
+    return drop(start) + take(start)
+}
+
+private fun Workout.durationMinutes(): Int =
+    Regex("\\d+").find(duration)?.value?.toIntOrNull()?.coerceAtLeast(1) ?: 6
+
+private fun Workout.estimatedCalories(): Int {
+    val multiplier = when (category) {
+        "유산소" -> 8
+        "하체" -> 7
+        "상체" -> 6
+        "코어", "복근" -> 5
+        else -> 4
+    }
+    return (durationMinutes() * multiplier).coerceAtLeast(24)
+}
+
+private fun defaultPostureFocus(category: String): String = when (category) {
+    "하체" -> "무릎 정렬과 골반 중심"
+    "상체" -> "어깨 긴장과 팔꿈치 각도"
+    "코어", "복근" -> "허리 중립과 복부 긴장"
+    "유산소" -> "착지 균형과 상체 흔들림"
+    else -> "동작 마지막 구간의 안정성"
+}
+
+private fun Calendar.koreanDayOfWeek(): String = when (get(Calendar.DAY_OF_WEEK)) {
+    Calendar.MONDAY -> "월"
+    Calendar.TUESDAY -> "화"
+    Calendar.WEDNESDAY -> "수"
+    Calendar.THURSDAY -> "목"
+    Calendar.FRIDAY -> "금"
+    Calendar.SATURDAY -> "토"
+    else -> "일"
+}

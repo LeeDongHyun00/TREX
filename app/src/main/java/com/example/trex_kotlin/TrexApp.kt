@@ -78,6 +78,7 @@ fun TrexApp() {
     var sessionIndex by rememberSaveable { mutableIntStateOf(-1) }
     var sessionDone by rememberSaveable { mutableStateOf(false) }
     var workoutPlan by remember { mutableStateOf(todayPlan) }
+    var workoutHistory by remember { mutableStateOf(seedWorkoutHistory(workoutPlan)) }
     var sessionElapsedSeconds by rememberSaveable { mutableIntStateOf(0) }
     var sessionPaused by rememberSaveable { mutableStateOf(false) }
     var sessionNotice by rememberSaveable { mutableStateOf<String?>(null) }
@@ -98,6 +99,9 @@ fun TrexApp() {
         if (sessionIndex < 0) return
         sessionNotice = null
         if (sessionIndex + 1 >= workoutPlan.size) {
+            workoutHistory = workoutHistory.replaceTodayWith(
+                createWorkoutHistoryDay(workoutPlan, sessionElapsedSeconds),
+            )
             sessionIndex = -1
             sessionDone = true
             sessionPaused = false
@@ -187,6 +191,7 @@ fun TrexApp() {
                 else -> MainTabs(
                     selectedTab = selectedTab,
                     workoutPlan = workoutPlan,
+                    workoutHistory = workoutHistory,
                     onWorkoutPlanChange = { workoutPlan = it },
                     onTabSelected = { selectedTab = it },
                     onStartWorkout = ::startSession,
@@ -208,11 +213,13 @@ private data class AppRoute(
 private fun MainTabs(
     selectedTab: TrexTab,
     workoutPlan: List<Workout>,
+    workoutHistory: List<WorkoutHistoryDay>,
     onWorkoutPlanChange: (List<Workout>) -> Unit,
     onTabSelected: (TrexTab) -> Unit,
     onStartWorkout: () -> Unit,
 ) {
     var tabOverlayVisible by rememberSaveable { mutableStateOf(false) }
+    var workoutNavigation by rememberSaveable { mutableStateOf(WorkoutNavigationTab.Schedule) }
     var dietRecordRequestToken by rememberSaveable { mutableIntStateOf(0) }
     var dietRecordLaunchAction by rememberSaveable { mutableStateOf(DietRecordLaunchAction.Camera) }
     var dietRecentFoodNames by remember { mutableStateOf<List<String>>(emptyList()) }
@@ -236,11 +243,14 @@ private fun MainTabs(
         Crossfade(targetState = selectedTab, label = "tab-content") { tab ->
             when (tab) {
                 TrexTab.Home -> HomeScreen()
-                TrexTab.Workout -> WorkoutListScreen(
-                    plan = workoutPlan,
-                    onPlanChange = onWorkoutPlanChange,
-                    onSheetVisibleChange = { tabOverlayVisible = it },
-                )
+                TrexTab.Workout -> when (workoutNavigation) {
+                    WorkoutNavigationTab.Schedule -> WorkoutListScreen(
+                        plan = workoutPlan,
+                        onPlanChange = onWorkoutPlanChange,
+                        onSheetVisibleChange = { tabOverlayVisible = it },
+                    )
+                    WorkoutNavigationTab.History -> WorkoutHistoryScreen(records = workoutHistory)
+                }
                 TrexTab.Diet -> DietScreen(
                     recordRequestToken = dietRecordRequestToken,
                     recordLaunchAction = dietRecordLaunchAction,
@@ -253,8 +263,10 @@ private fun MainTabs(
 
         BottomNav(
             selectedTab = selectedTab,
+            workoutNavigation = workoutNavigation,
             dietRecentFoodNames = dietRecentFoodNames,
             onTabSelected = onTabSelected,
+            onWorkoutNavigationSelected = { workoutNavigation = it },
             onStartWorkout = onStartWorkout,
             onStartDietRecord = { action ->
                 dietRecordLaunchAction = action
@@ -274,8 +286,10 @@ private fun MainTabs(
 @Composable
 private fun BottomNav(
     selectedTab: TrexTab,
+    workoutNavigation: WorkoutNavigationTab,
     dietRecentFoodNames: List<String>,
     onTabSelected: (TrexTab) -> Unit,
+    onWorkoutNavigationSelected: (WorkoutNavigationTab) -> Unit,
     onStartWorkout: () -> Unit,
     onStartDietRecord: (DietRecordLaunchAction) -> Unit,
     modifier: Modifier = Modifier,
@@ -283,6 +297,7 @@ private fun BottomNav(
     var expanded by rememberSaveable { mutableStateOf(false) }
     var photoActionsOpen by rememberSaveable { mutableStateOf(false) }
     val actionTab = selectedTab == TrexTab.Workout || selectedTab == TrexTab.Diet
+    val workoutMenuVisible = selectedTab == TrexTab.Workout && expanded && !photoActionsOpen
 
     LaunchedEffect(selectedTab) {
         expanded = false
@@ -294,7 +309,11 @@ private fun BottomNav(
     }
 
     val navHeight by animateDpAsState(
-        targetValue = if (photoActionsOpen) 232.dp else 68.dp,
+        targetValue = when {
+            photoActionsOpen -> 232.dp
+            workoutMenuVisible -> 126.dp
+            else -> 68.dp
+        },
         animationSpec = spring(
             dampingRatio = Spring.DampingRatioNoBouncy,
             stiffness = Spring.StiffnessMediumLow,
@@ -302,7 +321,7 @@ private fun BottomNav(
         label = "nav-height",
     )
     val navCorner by animateDpAsState(
-        targetValue = if (photoActionsOpen) 28.dp else 999.dp,
+        targetValue = if (photoActionsOpen || workoutMenuVisible) 28.dp else 999.dp,
         animationSpec = spring(
             dampingRatio = Spring.DampingRatioNoBouncy,
             stiffness = Spring.StiffnessMediumLow,
@@ -343,6 +362,7 @@ private fun BottomNav(
             val highlightY by animateDpAsState(
                 targetValue = when {
                     photoActionsOpen -> 8.dp
+                    workoutMenuVisible -> 72.dp
                     expanded -> 12.dp
                     else -> 8.dp
                 },
@@ -377,39 +397,61 @@ private fun BottomNav(
                 animationSpec = tween(durationMillis = 160, delayMillis = if (expanded) 90 else 0),
                 label = "nav-action-alpha",
             )
-            val tabItemsAlpha by animateFloatAsState(
-                targetValue = if (photoActionsOpen) 0f else 1f,
-                animationSpec = tween(durationMillis = 120),
-                label = "nav-tab-items-alpha",
-            )
             val photoBottomAlpha by animateFloatAsState(
                 targetValue = if (photoActionsOpen) 1f else 0f,
                 animationSpec = tween(durationMillis = 170, delayMillis = if (photoActionsOpen) 120 else 0),
                 label = "photo-bottom-alpha",
             )
 
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(68.dp)
-                    .alpha(tabItemsAlpha),
-                verticalAlignment = Alignment.CenterVertically,
+            AnimatedVisibility(
+                visible = workoutMenuVisible,
+                enter = fadeIn(tween(150)),
+                exit = fadeOut(tween(90)),
             ) {
-                tabs.forEach { tab ->
-                    val selected = selectedTab == tab
-                    Surface(
-                        onClick = {
-                            if (!expanded) {
-                                onTabSelected(tab)
-                            }
-                        },
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxSize(),
-                        color = Color.Transparent,
-                        contentColor = if (selected) TrexLime else Color.White.copy(alpha = 0.62f),
-                    ) {
-                        NavItem(tab = tab, selected = selected, hidden = expanded)
+                Row(
+                    modifier = Modifier
+                        .offset(x = 8.dp, y = 10.dp)
+                        .fillMaxWidth()
+                        .padding(end = 16.dp)
+                        .height(44.dp)
+                        .alpha(actionContentAlpha),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    WorkoutNavButton(
+                        text = WorkoutNavigationTab.Schedule.label,
+                        selected = workoutNavigation == WorkoutNavigationTab.Schedule,
+                        onClick = { onWorkoutNavigationSelected(WorkoutNavigationTab.Schedule) },
+                        modifier = Modifier.weight(1f),
+                    )
+                    WorkoutNavButton(
+                        text = WorkoutNavigationTab.History.label,
+                        selected = workoutNavigation == WorkoutNavigationTab.History,
+                        onClick = { onWorkoutNavigationSelected(WorkoutNavigationTab.History) },
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+            }
+
+            if (!expanded && !photoActionsOpen) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(68.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    tabs.forEach { tab ->
+                        val selected = selectedTab == tab
+                        Surface(
+                            onClick = { onTabSelected(tab) },
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxSize(),
+                            color = Color.Transparent,
+                            contentColor = if (selected) TrexLime else Color.White.copy(alpha = 0.62f),
+                        ) {
+                            NavItem(tab = tab, selected = selected, hidden = false)
+                        }
                     }
                 }
             }
@@ -553,8 +595,11 @@ private fun BottomNav(
             AnimatedVisibility(
                 visible = expanded && !photoActionsOpen,
                 modifier = Modifier
-                    .align(Alignment.CenterEnd)
-                    .padding(end = 6.dp),
+                    .align(if (workoutMenuVisible) Alignment.BottomEnd else Alignment.CenterEnd)
+                    .padding(
+                        end = 6.dp,
+                        bottom = if (workoutMenuVisible) 10.dp else 0.dp,
+                    ),
                 enter = fadeIn(tween(120)) + scaleIn(
                     animationSpec = spring(
                         dampingRatio = Spring.DampingRatioMediumBouncy,
@@ -622,6 +667,33 @@ private fun NavItem(tab: TrexTab, selected: Boolean, hidden: Boolean) {
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
+    }
+}
+
+@Composable
+private fun WorkoutNavButton(
+    text: String,
+    selected: Boolean,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
+    Surface(
+        onClick = onClick,
+        modifier = modifier.height(44.dp),
+        shape = RoundedCornerShape(18.dp),
+        color = if (selected) TrexLime else Color.White.copy(alpha = 0.1f),
+        contentColor = if (selected) TrexDark else Color.White,
+        border = if (selected) null else dimBorder(0.14f),
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Text(
+                text = text,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
     }
 }
 

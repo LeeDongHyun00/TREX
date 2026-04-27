@@ -139,23 +139,30 @@ fun DietRecordRoute(
 ) {
     val initialFoods = remember(launchAction, recentFoods) {
         if (launchAction == DietRecordLaunchAction.Recent) {
-            recentFoods.firstOrNull()?.let { listOf(it.toRecognized(1, 100)) }.orEmpty()
+            recentFoods.mapIndexed { index, food -> food.toRecognized(index + 1, 100) }
         } else {
             emptyList()
         }
+    }
+    val initialManualFoods = remember(launchAction, initialFoods) {
+        if (launchAction == DietRecordLaunchAction.Recent) initialFoods else emptyList()
     }
     val initialStep = remember(launchAction, initialFoods) {
         when (launchAction) {
             DietRecordLaunchAction.Camera -> DietRecordStep.Camera
             DietRecordLaunchAction.Gallery -> DietRecordStep.Analyzing
-            DietRecordLaunchAction.Recent -> if (initialFoods.isEmpty()) DietRecordStep.Manual else DietRecordStep.Result
+            DietRecordLaunchAction.Recent -> DietRecordStep.Manual
             DietRecordLaunchAction.Manual -> DietRecordStep.Manual
         }
     }
     var step by remember { mutableStateOf(initialStep) }
     var previousStep by remember { mutableStateOf(initialStep) }
     var selectedMeal by remember { mutableStateOf(recommendedMealId()) }
-    var foods by remember { mutableStateOf(initialFoods) }
+    var foods by remember {
+        mutableStateOf(
+            if (launchAction == DietRecordLaunchAction.Recent) emptyList() else initialFoods,
+        )
+    }
     var nextFoodId by remember { mutableIntStateOf(if (initialFoods.isEmpty()) 1 else initialFoods.size + 1) }
     var selectedPhotoCount by remember { mutableIntStateOf(if (launchAction == DietRecordLaunchAction.Gallery) 3 else 1) }
     var analysisShouldFail by remember { mutableStateOf(false) }
@@ -271,6 +278,8 @@ fun DietRecordRoute(
                 DietRecordStep.Manual -> DietManualInputScreen(
                     hasResult = foods.isNotEmpty(),
                     selectedMeal = selectedMeal,
+                    initialFoods = initialManualFoods,
+                    onMealChange = { selectedMeal = it },
                     onRecord = { manualFoods ->
                         val resultFoods = foods.map { FoodEntry(it.name, it.nutrition) }
                         val addedFoods = manualFoods.map { FoodEntry(it.name, it.nutrition) }
@@ -649,10 +658,12 @@ private fun DietResultScreen(
 private fun DietManualInputScreen(
     hasResult: Boolean,
     selectedMeal: String,
+    initialFoods: List<RecognizedFood> = emptyList(),
+    onMealChange: (String) -> Unit,
     onRecord: (List<RecognizedFood>) -> Unit,
     onCancel: () -> Unit,
 ) {
-    var stagedFoods by remember { mutableStateOf<List<RecognizedFood>>(emptyList()) }
+    var stagedFoods by remember(initialFoods) { mutableStateOf(initialFoods) }
     var query by remember { mutableStateOf("") }
     var selectedName by remember { mutableStateOf<String?>(null) }
     var grams by remember { mutableIntStateOf(100) }
@@ -723,7 +734,7 @@ private fun DietManualInputScreen(
                 ScreenTitle("음식명을 검색해 주세요")
             }
             item {
-                MealSelector(selectedMeal = selectedMeal, onMealChange = {}, enabled = false)
+                MealSelector(selectedMeal = selectedMeal, onMealChange = onMealChange)
             }
             if (stagedFoods.isNotEmpty()) {
                 item {

@@ -12,8 +12,10 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -22,15 +24,19 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Help
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
@@ -75,11 +81,15 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import java.util.Calendar
 import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
@@ -259,6 +269,9 @@ fun WorkoutListScreen(
     var editTarget by remember { mutableStateOf<Workout?>(null) }
     var replaceTarget by remember { mutableStateOf<Workout?>(null) }
     var addingWorkout by remember { mutableStateOf(false) }
+    var draggingWorkoutId by remember { mutableStateOf<String?>(null) }
+    var dragOffsetY by remember { mutableStateOf(0f) }
+    val reorderDistancePx = with(LocalDensity.current) { 92.dp.toPx() }
     val heavyRain = true
 
     LaunchedEffect(editTarget != null, replaceTarget != null, addingWorkout) {
@@ -274,12 +287,32 @@ fun WorkoutListScreen(
         })
     }
 
+    fun clearDrag() {
+        draggingWorkoutId = null
+        dragOffsetY = 0f
+    }
+
+    fun finishDrag() {
+        val draggedId = draggingWorkoutId ?: return
+        val fromIndex = plan.indexOfFirst { it.id == draggedId }
+        if (fromIndex == -1) {
+            clearDrag()
+            return
+        }
+        val steps = (dragOffsetY / reorderDistancePx).roundToInt()
+        val toIndex = (fromIndex + steps).coerceIn(plan.indices)
+        if (toIndex != fromIndex) {
+            onPlanChange(plan.moved(fromIndex, toIndex))
+        }
+        clearDrag()
+    }
+
     Box(Modifier.fillMaxSize()) {
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .background(TrexDark),
-            contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 42.dp, bottom = 112.dp),
+            contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 42.dp, bottom = 174.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             item {
@@ -324,12 +357,37 @@ fun WorkoutListScreen(
             }
 
             items(plan, key = { it.id }) { workout ->
+                val isDragging = draggingWorkoutId == workout.id
                 WorkoutRow(
                     workout = workout,
                     index = plan.indexOf(workout) + 1,
+                    dragging = isDragging,
                     onEdit = { editTarget = workout },
                     onReplace = { replaceTarget = workout },
                     onPostureToggle = { togglePosture(workout.id) },
+                    modifier = Modifier
+                        .zIndex(if (isDragging) 1f else 0f)
+                        .offset {
+                            IntOffset(
+                                x = 0,
+                                y = if (isDragging) dragOffsetY.roundToInt() else 0,
+                            )
+                        }
+                        .pointerInput(workout.id, plan) {
+                            detectDragGesturesAfterLongPress(
+                                onDragStart = {
+                                    draggingWorkoutId = workout.id
+                                    dragOffsetY = 0f
+                                },
+                                onDrag = { _, dragAmount ->
+                                    if (draggingWorkoutId == workout.id) {
+                                        dragOffsetY += dragAmount.y
+                                    }
+                                },
+                                onDragEnd = { finishDrag() },
+                                onDragCancel = { clearDrag() },
+                            )
+                        },
                 )
             }
         }
@@ -382,6 +440,102 @@ fun WorkoutListScreen(
 }
 
 @Composable
+fun WorkoutHistoryScreen(
+    records: List<WorkoutHistoryDay>,
+) {
+    val weeklyMinutes = records.sumOf { it.totalMinutes() }
+    val weeklyCalories = records.sumOf { it.totalCalories() }
+    val completedDays = records.count { it.items.isNotEmpty() }
+    val orderedRecords = records.asReversed()
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(TrexDark)
+            .padding(top = 42.dp, bottom = 150.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        Column(Modifier.padding(horizontal = 20.dp)) {
+            SectionLabel("최근 7일", color = TrexLime)
+            ScreenTitle("운동 기록")
+        }
+
+        Column(
+            modifier = Modifier.padding(horizontal = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                StatCard(
+                    label = "운동한 날",
+                    value = completedDays.toString(),
+                    suffix = "일",
+                    modifier = Modifier.weight(1f),
+                    icon = Icons.Rounded.Check,
+                )
+                StatCard(
+                    label = "총 소모 칼로리",
+                    value = weeklyCalories.toString(),
+                    suffix = "kcal",
+                    modifier = Modifier.weight(1f),
+                    icon = Icons.Rounded.LocalFireDepartment,
+                    dark = true,
+                )
+            }
+
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp),
+                color = TrexLime,
+                contentColor = TrexDark,
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    IconBubble(icon = Icons.Rounded.FitnessCenter, active = true)
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(start = 12.dp),
+                    ) {
+                        Text("이번 주 누적 칼로리", color = TrexDark.copy(alpha = 0.68f), fontSize = 11.sp)
+                        Text(
+                            text = "${weeklyCalories}kcal 소모 · ${weeklyMinutes}분 운동",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
+            }
+        }
+
+        BoxWithConstraints(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
+        ) {
+            val cardWidth = maxWidth - 64.dp
+            LazyRow(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(horizontal = 20.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                items(orderedRecords, key = { "${it.dateLabel}-${it.dayLabel}" }) { record ->
+                    WorkoutHistoryDayCard(
+                        record = record,
+                        modifier = Modifier
+                            .width(cardWidth)
+                            .fillMaxHeight(),
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
 fun DietScreen(
     recordRequestToken: Int = 0,
     recordLaunchAction: DietRecordLaunchAction = DietRecordLaunchAction.Camera,
@@ -410,14 +564,9 @@ fun DietScreen(
         }
     }
     val total = remember(meals) { meals.flatMap { it.second }.totalNutrition() }
-    val recentFoods = remember(foodsByDate) {
-        foodsByDate
-            .filterKeys { it in DietDateMinOffset..DietDateMaxOffset }
-            .values
-            .flatMap { it.values.flatten() }
-            .asReversed()
-            .distinctBy { it.name }
-            .take(3)
+    val recentMealId = remember { currentMealId() }
+    val recentFoods = remember(foodsByDate, recentMealId) {
+        foodsByDate.recentFoodsForMeal(recentMealId)
     }
 
     LaunchedEffect(recordRequestToken) {
@@ -559,6 +708,15 @@ private const val DietDateMaxOffset = 0
 private fun emptyDietSlots(): Map<String, List<FoodEntry>> =
     mealMetas.associate { it.id to emptyList() }
 
+private fun Map<Int, Map<String, List<FoodEntry>>>.recentFoodsForMeal(mealId: String): List<FoodEntry> =
+    entries
+        .filter { it.key in DietDateMinOffset..DietDateMaxOffset }
+        .sortedByDescending { it.key }
+        .firstNotNullOfOrNull { (_, slots) ->
+            slots[mealId]?.takeIf { it.isNotEmpty() }
+        }
+        .orEmpty()
+
 private fun Map<Int, Map<String, List<FoodEntry>>>.filterDietHistory(): Map<Int, Map<String, List<FoodEntry>>> =
     filterKeys { it in DietDateMinOffset..DietDateMaxOffset }
 
@@ -687,6 +845,134 @@ fun ProfileScreen() {
 }
 
 @Composable
+private fun WorkoutHistoryDayCard(
+    record: WorkoutHistoryDay,
+    modifier: Modifier = Modifier,
+) {
+    val hasPostureCorrection = record.items.any { it.postureCorrection != null }
+
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(22.dp),
+        color = Color.White,
+        contentColor = TrexDark,
+    ) {
+        Column(
+            Modifier
+                .padding(16.dp)
+                .verticalScroll(rememberScrollState()),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        text = "${record.dateLabel} (${record.dayLabel})",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Text(
+                        text = "${record.totalMinutes()}분 · ${record.totalCalories()}kcal",
+                        color = TrexTextSecondary,
+                        fontSize = 11.sp,
+                        modifier = Modifier.padding(top = 2.dp),
+                    )
+                }
+            }
+
+            Column(
+                modifier = Modifier.padding(top = 13.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                record.items.forEach { item ->
+                    WorkoutHistoryItemRow(item = item)
+                }
+            }
+
+            Surface(
+                modifier = Modifier
+                    .padding(top = 14.dp)
+                    .fillMaxWidth(),
+                shape = RoundedCornerShape(18.dp),
+                color = if (hasPostureCorrection) TrexLime.copy(alpha = 0.72f) else TrexBackground,
+                contentColor = TrexDark,
+            ) {
+                Row(
+                    modifier = Modifier.padding(13.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        imageVector = if (hasPostureCorrection) Icons.Rounded.Visibility else Icons.Rounded.LocalFireDepartment,
+                        contentDescription = null,
+                        tint = TrexDark,
+                        modifier = Modifier.size(17.dp),
+                    )
+                    Text(
+                        text = record.summaryText(),
+                        color = TrexDark,
+                        fontSize = 12.sp,
+                        lineHeight = 17.sp,
+                        modifier = Modifier.padding(start = 9.dp),
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun WorkoutHistoryItemRow(item: WorkoutHistoryItem) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        color = TrexBackground,
+        contentColor = TrexDark,
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 11.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(34.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(if (item.postureCorrection != null) TrexLime else Color.White),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = if (item.postureCorrection != null) Icons.Rounded.Visibility else Icons.Rounded.FitnessCenter,
+                    contentDescription = null,
+                    tint = TrexGreenDeep,
+                    modifier = Modifier.size(15.dp),
+                )
+            }
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(start = 11.dp),
+            ) {
+                Text(
+                    text = item.workoutName,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text = item.reps,
+                    color = TrexTextSecondary,
+                    fontSize = 11.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            Column(horizontalAlignment = Alignment.End) {
+                Text("${item.durationMinutes}분", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                Text("${item.calories}kcal", color = TrexTextSecondary, fontSize = 10.sp)
+            }
+        }
+    }
+}
+
+@Composable
 private fun TodayWorkoutRow(workout: Workout, done: Boolean, time: String) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -729,15 +1015,19 @@ private fun TodayWorkoutRow(workout: Workout, done: Boolean, time: String) {
 private fun WorkoutRow(
     workout: Workout,
     index: Int,
+    modifier: Modifier = Modifier,
+    dragging: Boolean = false,
     onEdit: () -> Unit,
     onReplace: () -> Unit,
     onPostureToggle: () -> Unit,
 ) {
     Surface(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
-        color = Color.White,
+        color = if (dragging) Color(0xFFF8FFE4) else Color.White,
         contentColor = TrexDark,
+        border = if (dragging) BorderStroke(2.dp, TrexLime) else null,
+        shadowElevation = if (dragging) 10.dp else 0.dp,
     ) {
         Row(
             modifier = Modifier.padding(13.dp),
@@ -1145,6 +1435,13 @@ private fun WorkoutTemplate.toWorkout(): Workout =
         posture = posture,
         category = category,
     )
+
+private fun <T> List<T>.moved(fromIndex: Int, toIndex: Int): List<T> {
+    if (fromIndex == toIndex || fromIndex !in indices || toIndex !in indices) return this
+    return toMutableList().apply {
+        add(toIndex, removeAt(fromIndex))
+    }
+}
 
 private fun workoutCatalog(): List<WorkoutCategoryOption> = listOf(
     WorkoutCategoryOption(
@@ -1837,6 +2134,16 @@ private fun currentMeal(): MealTime {
         hour < 14 -> MealTime("점심 식사", "12:00 ~ 14:00", Icons.Rounded.Restaurant)
         hour < 18 -> MealTime("오후 간식", "15:00 ~ 17:00", Icons.Rounded.Restaurant)
         else -> MealTime("저녁 식사", "18:00 ~ 20:00", Icons.Rounded.Restaurant)
+    }
+}
+
+private fun currentMealId(): String {
+    val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
+    return when {
+        hour < 10 -> "breakfast"
+        hour < 14 -> "lunch"
+        hour < 18 -> "snack"
+        else -> "dinner"
     }
 }
 
