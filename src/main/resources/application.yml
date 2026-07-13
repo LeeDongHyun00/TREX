@@ -1,0 +1,22 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:trex_db;MODE=PostgreSQL # 메모리에 trex_db라는 임시 DB 생성 (PostgreSQL 호환 모드)
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: create # 서버가 켤 때마다 기존 테이블을 지우고 Entity를 바탕으로 새로 생성
+    properties:
+      hibernate:
+        format_sql: true
+    show-sql: true
+
+  h2:
+    console:
+      enabled: true # 웹 브라우저에서 눈으로 DB 테이블을 확인할 수 있게 해줌
+
+jwt:
+  secret: your-256-bit-secret-key-for-trex-application-minimum-32-bytes
+  expiration_time: 86400000
