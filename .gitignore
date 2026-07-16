@@ -35,3 +35,6 @@ out/
 
 ### VS Code ###
 .vscode/
+
+### 로컬 설정 (시크릿 포함 가능) — application-example.yml 템플릿만 커밋 ###
+src/main/resources/application.yml

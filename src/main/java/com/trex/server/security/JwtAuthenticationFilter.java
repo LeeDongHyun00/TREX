@@ -33,12 +33,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     ) throws ServletException, IOException {
 
         String token = resolveToken(request);
+        String loginId = (token == null) ? null : tokenProvider.getLoginIdIfValid(token);
 
-        if (token != null
-                && tokenProvider.validate(token)
+        if (loginId != null
                 && SecurityContextHolder.getContext().getAuthentication() == null) {
 
-            String loginId = tokenProvider.getLoginId(token);
             var authentication = new UsernamePasswordAuthenticationToken(loginId, null, List.of());
             authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
             SecurityContextHolder.getContext().setAuthentication(authentication);

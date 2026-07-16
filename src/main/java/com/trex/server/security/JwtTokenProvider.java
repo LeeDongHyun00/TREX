@@ -42,21 +42,20 @@ public class JwtTokenProvider {
                 .compact();
     }
 
-    public String getLoginId(String token) {
-        return parseClaims(token).getSubject();
-    }
-
     public long getExpirationMillis() {
         return expirationMillis;
     }
 
-    public boolean validate(String token) {
+    /**
+     * 토큰이 유효하면 loginId(subject)를, 서명 불일치·만료·형식 오류면 null을 반환한다.
+     * 검증과 subject 추출을 한 번의 파싱으로 처리한다.
+     */
+    public String getLoginIdIfValid(String token) {
         try {
-            parseClaims(token);
-            return true;
+            return parseClaims(token).getSubject();
         } catch (JwtException | IllegalArgumentException e) {
             log.debug("유효하지 않은 JWT: {}", e.getMessage());
-            return false;
+            return null;
         }
     }
 
