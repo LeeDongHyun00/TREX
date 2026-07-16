@@ -22,6 +22,8 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-security'
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
 	implementation 'org.springframework.boot:spring-boot-starter-webmvc'
+	// JPA AttributeConverter에서 JSON 직렬화(Jackson 3)를 컴파일 타임에 쓰기 위해 명시
+	implementation 'org.springframework.boot:spring-boot-starter-jackson'
 	compileOnly 'org.projectlombok:lombok'
 	runtimeOnly 'com.h2database:h2'
 	// PostgreSQL 완성 되면 주석 해제 후 추가하기
