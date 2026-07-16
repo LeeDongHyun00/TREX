@@ -4,7 +4,8 @@
 
 spring:
   datasource:
-    url: jdbc:h2:mem:trex_db;MODE=PostgreSQL # 메모리에 trex_db라는 임시 DB 생성 (PostgreSQL 호환 모드)
+    # DB_CLOSE_DELAY=-1: 모든 커넥션이 닫혀도(유휴 커넥션 교체 등) 인메모리 DB가 소멸하지 않게 유지
+    url: jdbc:h2:mem:trex_db;MODE=PostgreSQL;DB_CLOSE_DELAY=-1 # 메모리에 trex_db라는 임시 DB 생성 (PostgreSQL 호환 모드)
     username: sa
     password:
     driver-class-name: org.h2.Driver
