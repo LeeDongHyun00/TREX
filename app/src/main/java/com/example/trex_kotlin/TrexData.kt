@@ -1,6 +1,8 @@
 package com.example.trex_kotlin
 
 import androidx.compose.runtime.Immutable
+import com.example.trex_kotlin.catalog.AiHubExercise
+import com.example.trex_kotlin.pose.PoseEvaluatorFactory
 import java.util.Calendar
 
 enum class TrexTab(val label: String) {
@@ -30,20 +32,37 @@ enum class WorkoutNavigationTab(val label: String) {
 
 @Immutable
 data class Workout(
-    val id: String,
-    val name: String,
+    val exercise: AiHubExercise,
     val reps: String,
     val duration: String,
     val posture: Boolean,
-    val category: String,
+    val instanceId: String = exercise.id,
     val alt: WorkoutAlt? = null,
-)
+) {
+    init {
+        require(!posture || PoseEvaluatorFactory.supports(exercise)) {
+            "Posture evaluation is not supported for ${exercise.displayName}"
+        }
+    }
+
+    val name: String get() = exercise.displayName
+    val category: String get() = exercise.typeInfoType
+    val id: String get() = instanceId
+}
 
 @Immutable
 data class WorkoutAlt(
-    val name: String,
+    val exercise: AiHubExercise,
     val reps: String,
-)
+) {
+    val name: String get() = exercise.displayName
+}
+
+internal fun Workout.canUsePostureSession(): Boolean =
+    posture && PoseEvaluatorFactory.supports(exercise)
+
+internal fun Workout.withPostureCorrection(enabled: Boolean): Workout =
+    copy(posture = enabled && PoseEvaluatorFactory.supports(exercise))
 
 @Immutable
 data class PostureCorrection(
@@ -52,12 +71,14 @@ data class PostureCorrection(
 
 @Immutable
 data class WorkoutHistoryItem(
-    val workoutName: String,
+    val exercise: AiHubExercise,
     val reps: String,
     val durationMinutes: Int,
     val calories: Int,
     val postureCorrection: PostureCorrection? = null,
-)
+) {
+    val workoutName: String get() = exercise.displayName
+}
 
 @Immutable
 data class WorkoutHistoryDay(
@@ -97,54 +118,44 @@ data class GoalItem(
 
 val todayPlan = listOf(
     Workout(
-        id = "squat",
-        name = "기본 스쿼트",
+        exercise = AiHubExercise.BARBELL_SQUAT,
         reps = "12회 x 3세트",
         duration = "8분",
-        posture = true,
-        category = "하체",
-        alt = WorkoutAlt("의자 스쿼트", "10회 x 3세트"),
+        posture = false,
+        alt = WorkoutAlt(AiHubExercise.GOOD_MORNING, "10회 x 3세트"),
     ),
     Workout(
-        id = "plank",
-        name = "플랭크",
+        exercise = AiHubExercise.PLANK,
         reps = "60초 x 3세트",
         duration = "5분",
         posture = false,
-        category = "코어",
-        alt = WorkoutAlt("데드버그", "12회 x 3세트"),
+        alt = WorkoutAlt(AiHubExercise.BICYCLE_CRUNCH, "12회 x 3세트"),
     ),
     Workout(
-        id = "lunge",
-        name = "런지",
+        exercise = AiHubExercise.STEP_FORWARD_DYNAMIC_LUNGE,
         reps = "10회 x 3세트",
         duration = "10분",
-        posture = true,
-        category = "하체",
-        alt = WorkoutAlt("제자리 스텝업", "12회 x 3세트"),
+        posture = false,
+        alt = WorkoutAlt(AiHubExercise.STEP_BACKWARD_DYNAMIC_LUNGE, "10회 x 3세트"),
     ),
     Workout(
-        id = "pushup",
-        name = "푸쉬업 입문",
+        exercise = AiHubExercise.PUSH_UP,
         reps = "8회 x 3세트",
         duration = "6분",
         posture = false,
-        category = "상체",
-        alt = WorkoutAlt("벽 푸쉬업", "12회 x 3세트"),
+        alt = WorkoutAlt(AiHubExercise.KNEE_PUSH_UP, "12회 x 3세트"),
     ),
     Workout(
-        id = "stretch",
-        name = "마무리 스트레칭",
-        reps = "전신 6분",
+        exercise = AiHubExercise.STANDING_SIDE_CRUNCH,
+        reps = "12회 x 3세트",
         duration = "6분",
         posture = false,
-        category = "회복",
-        alt = WorkoutAlt("폼롤러 마무리", "전신 5분"),
+        alt = WorkoutAlt(AiHubExercise.STANDING_KNEE_UP, "12회 x 3세트"),
     ),
 )
 
 val onboardingGoals = listOf(
-    GoalItem("lower", "건강한 하체 만들어룡!", "스쿼트 · 런지 중심"),
+    GoalItem("lower", "건강한 하체 만들어룡!", "바벨 스쿼트 · 스텝 포워드 다이나믹 런지"),
     GoalItem("diet", "다이어트를 목표로 해룡!", "유산소 + 식단 관리"),
     GoalItem("simple", "간단하게 운동만 하고 싶어룡!", "하루 10분 루틴"),
     GoalItem("core", "탄탄한 코어 잡고싶어룡!", "플랭크 · 복근 루틴"),
@@ -215,7 +226,7 @@ fun seedWorkoutHistory(plan: List<Workout> = todayPlan): List<WorkoutHistoryDay>
             val duration = workout.durationMinutes()
             val hasCorrection = workout.posture && (index + itemIndex) % 2 == 0
             WorkoutHistoryItem(
-                workoutName = workout.name,
+                exercise = workout.exercise,
                 reps = workout.reps,
                 durationMinutes = duration,
                 calories = workout.estimatedCalories(),
@@ -242,12 +253,12 @@ fun createWorkoutHistoryDay(plan: List<Workout>, elapsedSeconds: Int): WorkoutHi
     val items = plan.mapIndexed { index, workout ->
         val duration = workout.durationMinutes()
         WorkoutHistoryItem(
-            workoutName = workout.name,
+            exercise = workout.exercise,
             reps = workout.reps,
             durationMinutes = duration,
             calories = workout.estimatedCalories(),
             postureCorrection = if (workout.posture && index == plan.indexOfFirst { it.posture }) {
-                PostureCorrection(defaultPostureFocus(workout.category))
+                PostureCorrection(defaultPostureFocus(workout.exercise))
             } else {
                 null
             },
@@ -311,23 +322,21 @@ private fun List<Workout>.rotate(offset: Int): List<Workout> {
 private fun Workout.durationMinutes(): Int =
     Regex("\\d+").find(duration)?.value?.toIntOrNull()?.coerceAtLeast(1) ?: 6
 
-private fun Workout.estimatedCalories(): Int {
-    val multiplier = when (category) {
-        "유산소" -> 8
-        "하체" -> 7
-        "상체" -> 6
-        "코어", "복근" -> 5
-        else -> 4
+internal fun Workout.estimatedCalories(): Int {
+    val multiplier = when (exercise.typeInfoType) {
+        "바벨/덤벨" -> 8
+        "기구" -> 7
+        "맨몸 운동" -> 6
+        else -> error("Unknown AI Hub type_info.type: ${exercise.typeInfoType}")
     }
     return (durationMinutes() * multiplier).coerceAtLeast(24)
 }
 
-private fun defaultPostureFocus(category: String): String = when (category) {
-    "하체" -> "무릎 정렬과 골반 중심"
-    "상체" -> "어깨 긴장과 팔꿈치 각도"
-    "코어", "복근" -> "허리 중립과 복부 긴장"
-    "유산소" -> "착지 균형과 상체 흔들림"
-    else -> "동작 마지막 구간의 안정성"
+internal fun defaultPostureFocus(exercise: AiHubExercise): String = when (exercise.typeInfoType) {
+    "바벨/덤벨" -> "척추 중립과 중량 궤적"
+    "기구" -> "기구 축과 관절 정렬"
+    "맨몸 운동" -> "전신 관절 정렬과 몸통 안정"
+    else -> error("Unknown AI Hub type_info.type: ${exercise.typeInfoType}")
 }
 
 private fun Calendar.koreanDayOfWeek(): String = when (get(Calendar.DAY_OF_WEEK)) {

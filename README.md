@@ -50,8 +50,13 @@ macOS/Linux 기준:
 - `app/src/main/java/com/example/trex_kotlin/`: Android Compose 앱 코드
 - `app/src/main/res/`: Android 리소스
 - `app/src/main/res/drawable-nodpi/`: 로그인 애니메이션 프레임 이미지 등 원본 크기 리소스
+- `app/src/main/java/com/example/trex_kotlin/camera/`: CameraX + MediaPipe 온디바이스 자세 추정
+- `app/src/main/java/com/example/trex_kotlin/pose/`: 운동별 관절 필터·반복 상태 머신·자세 판정
 - `assets/`: 디자인/원본 이미지 자료
 - `trex_design_react/`: React 기반 디자인 프로토타입
+- `docs/pose-correction-system.md`: 실시간 자세 교정의 기기 구현·검증 설계
+- `docs/pose-data-audit.md`: `data/` 전수 구조·무결성·라벨 품질 감사 결과
+- `docs/aihub-exercise-catalog.md`: 실제 2D JSON 기반 운동 manifest·생성·앱 연결 규칙
 
 ## Git에 포함하지 않는 파일
 
@@ -62,6 +67,7 @@ macOS/Linux 기준:
 - `.idea/`
 - APK/AAB 산출물
 - 키스토어와 `.env` 파일
+- 로컬 학습 데이터인 `data/` (앱과 Git에 포함하지 않음)
 
 ## 참고
 

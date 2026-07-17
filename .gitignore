@@ -30,6 +30,11 @@ dist/
 trex_design_react/node_modules/
 trex_design_react/dist/
 
+# Local pose training/validation corpus (large, never packaged with the app)
+/data/
+__pycache__/
+*.py[cod]
+
 # Logs
 *.log
 npm-debug.log*

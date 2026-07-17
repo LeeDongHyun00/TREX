@@ -90,15 +90,15 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
+import com.example.trex_kotlin.catalog.AiHubExercise
+import com.example.trex_kotlin.pose.PoseEvaluatorFactory
 import java.util.Calendar
 import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
 
 @Composable
 fun HomeScreen() {
-    val homeWorkouts = todayPlan.take(4).mapIndexed { index, workout ->
-        workout.copy(posture = index == 0 || index == 3)
-    }
+    val homeWorkouts = todayPlan.take(4)
     val doneCount = homeWorkouts.count { it.posture }
     val days = listOf("월", "화", "수", "목", "금", "토", "일")
     val dates = listOf(20, 21, 22, 23, 24, 25, 26)
@@ -283,7 +283,11 @@ fun WorkoutListScreen(
 
     fun togglePosture(id: String) {
         onPlanChange(plan.map { workout ->
-            if (workout.id == id) workout.copy(posture = !workout.posture) else workout
+            if (workout.id == id) {
+                workout.withPostureCorrection(!workout.posture)
+            } else {
+                workout
+            }
         })
     }
 
@@ -395,11 +399,10 @@ fun WorkoutListScreen(
         editTarget?.let { workout ->
             WorkoutPlanEditSheet(
                 workout = workout,
-                modeAdd = false,
-                onSave = { name, count, sets ->
+                onSave = { count, sets ->
                     onPlanChange(plan.map {
                         if (it.id == workout.id) {
-                            it.copy(name = name, reps = formatWorkoutReps(count, sets))
+                            it.copy(reps = formatWorkoutReps(count, sets))
                         } else {
                             it
                         }
@@ -415,7 +418,12 @@ fun WorkoutListScreen(
                 onApply = { alt ->
                     onPlanChange(plan.map {
                         if (it.id == workout.id) {
-                            it.copy(name = alt.name, reps = alt.reps)
+                            it.copy(
+                                exercise = alt.exercise,
+                                reps = alt.reps,
+                                posture = false,
+                                alt = null,
+                            )
                         } else {
                             it
                         }
@@ -1021,6 +1029,7 @@ private fun WorkoutRow(
     onReplace: () -> Unit,
     onPostureToggle: () -> Unit,
 ) {
+    val postureSupported = PoseEvaluatorFactory.supports(workout.exercise)
     Surface(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
@@ -1046,16 +1055,16 @@ private fun WorkoutRow(
                 }
                 Text(workout.name, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 9.dp))
                 Text("${workout.reps} · ${workout.duration}", color = TrexTextSecondary, fontSize = 11.sp, modifier = Modifier.padding(top = 2.dp))
+                PostureCorrectionCheck(
+                    checked = workout.posture,
+                    enabled = postureSupported,
+                    onClick = onPostureToggle,
+                    modifier = Modifier.padding(top = 9.dp),
+                )
             }
             Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
                 SmallSquareButton(icon = Icons.Rounded.Edit, onClick = onEdit, contentDescription = "수정")
                 SmallSquareButton(icon = Icons.Rounded.Refresh, onClick = onReplace, contentDescription = "교체")
-                SmallSquareButton(
-                    icon = Icons.Rounded.Visibility,
-                    onClick = onPostureToggle,
-                    active = workout.posture,
-                    contentDescription = "자세 교정",
-                )
             }
         }
     }
@@ -1069,12 +1078,13 @@ private data class WorkoutCategoryOption(
 )
 
 private data class WorkoutTemplate(
-    val name: String,
+    val exercise: AiHubExercise,
     val reps: String,
     val duration: String,
-    val category: String,
-    val posture: Boolean,
-)
+) {
+    val name: String get() = exercise.displayName
+    val category: String get() = exercise.typeInfoType
+}
 
 @Composable
 private fun WorkoutCatalogSheet(
@@ -1237,20 +1247,16 @@ private data class WorkoutRepsDraft(
 
 @Composable
 private fun WorkoutPlanEditSheet(
-    workout: Workout?,
-    modeAdd: Boolean,
-    onSave: (name: String, count: Int, sets: Int) -> Unit,
+    workout: Workout,
+    onSave: (count: Int, sets: Int) -> Unit,
     onClose: () -> Unit,
 ) {
-    val initialDraft = remember(workout?.id, modeAdd) { workout?.repsDraft() ?: WorkoutRepsDraft(count = 12, sets = 3) }
-    var name by remember(workout?.id, modeAdd) { mutableStateOf(workout?.name.orEmpty()) }
-    var countInput by remember(workout?.id, modeAdd) { mutableStateOf(initialDraft.count.toString()) }
-    var setsInput by remember(workout?.id, modeAdd) { mutableStateOf(initialDraft.sets.toString()) }
-    val cleanName = name.trim()
+    val initialDraft = remember(workout.id) { workout.repsDraft() }
+    var countInput by remember(workout.id) { mutableStateOf(initialDraft.count.toString()) }
+    var setsInput by remember(workout.id) { mutableStateOf(initialDraft.sets.toString()) }
     val count = countInput.toIntOrNull()
     val sets = setsInput.toIntOrNull()
-    val canSave = cleanName.isNotEmpty() &&
-        count != null &&
+    val canSave = count != null &&
         count in 1..999 &&
         sets != null &&
         sets in 1..99
@@ -1273,31 +1279,17 @@ private fun WorkoutPlanEditSheet(
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    SectionLabel(if (modeAdd) "운동 추가" else "운동 수정", color = TrexLime)
-                    ScreenTitle(if (modeAdd) "새 운동 만들기" else workout?.name.orEmpty())
+                    SectionLabel("운동 수정", color = TrexLime)
+                    ScreenTitle(workout.name)
                 }
                 CloseButton(onClick = onClose)
             }
             Text(
-                text = if (modeAdd) {
-                    "운동명과 목표 횟수, 세트 수를 입력해주세요."
-                } else {
-                    "${workout?.category.orEmpty()} · 현재 ${workout?.reps.orEmpty()}"
-                },
+                text = "${workout.category} · 현재 ${workout.reps}",
                 color = Color.White.copy(alpha = 0.58f),
                 fontSize = 12.sp,
                 modifier = Modifier.padding(top = 10.dp),
             )
-
-            if (modeAdd) {
-                TrexTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    placeholder = "운동 이름",
-                    leadingIcon = Icons.Rounded.FitnessCenter,
-                    modifier = Modifier.padding(top = 16.dp),
-                )
-            }
 
             Row(
                 modifier = Modifier.padding(top = 16.dp),
@@ -1335,16 +1327,16 @@ private fun WorkoutPlanEditSheet(
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 TrexButton(
-                    text = if (modeAdd) "운동 추가" else "수정 완료",
+                    text = "수정 완료",
                     onClick = {
                         val savedCount = countInput.toIntOrNull()?.coerceIn(1, 999) ?: return@TrexButton
                         val savedSets = setsInput.toIntOrNull()?.coerceIn(1, 99) ?: return@TrexButton
-                        onSave(cleanName, savedCount, savedSets)
+                        onSave(savedCount, savedSets)
                         onClose()
                     },
                     enabled = canSave,
                     modifier = Modifier.weight(1f),
-                    icon = if (modeAdd) Icons.Rounded.Add else Icons.Rounded.Check,
+                    icon = Icons.Rounded.Check,
                 )
                 IconCircleButton(
                     icon = Icons.Rounded.Close,
@@ -1428,12 +1420,11 @@ private fun estimateWorkoutDuration(sets: Int): String =
 
 private fun WorkoutTemplate.toWorkout(): Workout =
     Workout(
-        id = "custom-${System.currentTimeMillis()}-${name.hashCode()}",
-        name = name,
+        exercise = exercise,
         reps = reps,
         duration = duration,
-        posture = posture,
-        category = category,
+        posture = false,
+        instanceId = "${exercise.id}:${System.currentTimeMillis()}",
     )
 
 private fun <T> List<T>.moved(fromIndex: Int, toIndex: Int): List<T> {
@@ -1443,52 +1434,32 @@ private fun <T> List<T>.moved(fromIndex: Int, toIndex: Int): List<T> {
     }
 }
 
-private fun workoutCatalog(): List<WorkoutCategoryOption> = listOf(
-    WorkoutCategoryOption(
-        label = "상체",
-        description = "팔 · 가슴 · 등",
-        icon = Icons.Rounded.FitnessCenter,
-        workouts = listOf(
-            WorkoutTemplate("니 푸쉬업", "10회 x 3세트", "7분", "상체", posture = true),
-            WorkoutTemplate("벽 푸쉬업", "12회 x 3세트", "6분", "상체", posture = false),
-            WorkoutTemplate("밴드 로우", "12회 x 3세트", "8분", "상체", posture = false),
-            WorkoutTemplate("숄더 탭", "16회 x 3세트", "7분", "상체", posture = true),
-        ),
-    ),
-    WorkoutCategoryOption(
-        label = "복근",
-        description = "코어 안정화",
-        icon = Icons.Rounded.Person,
-        workouts = listOf(
-            WorkoutTemplate("플랭크", "45초 x 3세트", "6분", "복근", posture = false),
-            WorkoutTemplate("데드버그", "12회 x 3세트", "7분", "복근", posture = true),
-            WorkoutTemplate("크런치", "15회 x 3세트", "6분", "복근", posture = false),
-            WorkoutTemplate("버드독", "10회 x 3세트", "7분", "복근", posture = true),
-        ),
-    ),
-    WorkoutCategoryOption(
-        label = "하체",
-        description = "스쿼트 · 런지",
-        icon = Icons.Rounded.AccessTime,
-        workouts = listOf(
-            WorkoutTemplate("기본 스쿼트", "12회 x 3세트", "8분", "하체", posture = true),
-            WorkoutTemplate("런지", "10회 x 3세트", "10분", "하체", posture = true),
-            WorkoutTemplate("글루트 브릿지", "12회 x 3세트", "7분", "하체", posture = false),
-            WorkoutTemplate("카프 레이즈", "15회 x 3세트", "6분", "하체", posture = false),
-        ),
-    ),
-    WorkoutCategoryOption(
-        label = "유산소",
-        description = "심박수 올리기",
-        icon = Icons.Rounded.LocalFireDepartment,
-        workouts = listOf(
-            WorkoutTemplate("제자리 걷기", "60초 x 4세트", "8분", "유산소", posture = false),
-            WorkoutTemplate("마운틴 클라이머", "20회 x 3세트", "8분", "유산소", posture = true),
-            WorkoutTemplate("점핑잭", "30회 x 3세트", "7분", "유산소", posture = false),
-            WorkoutTemplate("스텝업", "12회 x 3세트", "9분", "유산소", posture = true),
-        ),
-    ),
-)
+private fun workoutCatalog(): List<WorkoutCategoryOption> {
+    val categoryOrder = AiHubExercise.entries.map(AiHubExercise::typeInfoType).distinct()
+    val exercisesByCategory = AiHubExercise.entries.groupBy(AiHubExercise::typeInfoType)
+    return categoryOrder.mapNotNull { category ->
+        val exercises = exercisesByCategory[category].orEmpty()
+        if (exercises.isEmpty()) return@mapNotNull null
+        WorkoutCategoryOption(
+            label = category,
+            description = "AI Hub ${exercises.size}개 운동",
+            icon = when (category) {
+                "기구" -> Icons.Rounded.AccessTime
+                "바벨/덤벨" -> Icons.Rounded.FitnessCenter
+                else -> Icons.Rounded.Person
+            },
+            workouts = exercises
+                .sortedBy(AiHubExercise::displayName)
+                .map { exercise ->
+                    WorkoutTemplate(
+                        exercise = exercise,
+                        reps = if (exercise == AiHubExercise.PLANK) "45초 x 3세트" else "12회 x 3세트",
+                        duration = "8분",
+                    )
+                },
+        )
+    }
+}
 
 @Composable
 private fun MealCard(
@@ -2085,6 +2056,68 @@ private fun SmallSquareButton(
     ) {
         Box(contentAlignment = Alignment.Center) {
             Icon(icon, contentDescription = contentDescription, modifier = Modifier.size(15.dp))
+        }
+    }
+}
+
+@Composable
+private fun PostureCorrectionCheck(
+    checked: Boolean,
+    enabled: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val containerColor = when {
+        !enabled -> TrexBackground.copy(alpha = 0.55f)
+        checked -> TrexLime.copy(alpha = 0.45f)
+        else -> TrexBackground
+    }
+    val foregroundColor = if (enabled) TrexDark else TrexTextSecondary
+
+    Surface(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = modifier,
+        shape = RoundedCornerShape(10.dp),
+        color = containerColor,
+        contentColor = foregroundColor,
+        border = BorderStroke(
+            width = 1.dp,
+            color = if (checked && enabled) TrexGreenDeep else TrexTextSecondary.copy(alpha = 0.25f),
+        ),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 9.dp, vertical = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(7.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(17.dp)
+                    .clip(RoundedCornerShape(5.dp))
+                    .background(if (checked && enabled) TrexGreenDeep else Color.Transparent)
+                    .border(
+                        width = 1.dp,
+                        color = if (enabled) TrexGreenDeep else TrexTextSecondary.copy(alpha = 0.45f),
+                        shape = RoundedCornerShape(5.dp),
+                    ),
+                contentAlignment = Alignment.Center,
+            ) {
+                if (checked && enabled) {
+                    Icon(
+                        imageVector = Icons.Rounded.Check,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(12.dp),
+                    )
+                }
+            }
+            Text(
+                text = if (enabled) "자세 교정 사용" else "자세 교정 미지원",
+                color = foregroundColor,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.SemiBold,
+            )
         }
     }
 }

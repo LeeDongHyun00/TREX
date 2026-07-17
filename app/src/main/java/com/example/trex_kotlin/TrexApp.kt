@@ -120,7 +120,7 @@ fun TrexApp() {
 
     fun fallbackToTimerSession(id: String) {
         workoutPlan = workoutPlan.map { workout ->
-            if (workout.id == id) workout.copy(posture = false) else workout
+            if (workout.id == id) workout.withPostureCorrection(false) else workout
         }
         sessionNotice = "카메라 권한이 거부되어 자세 교정 OFF 모드로 전환했어요."
     }
@@ -160,7 +160,7 @@ fun TrexApp() {
                 route.sessionIndex >= 0 -> {
                     val workout = workoutPlan[route.sessionIndex]
                     val nextWorkout = workoutPlan.getOrNull(route.sessionIndex + 1)
-                    if (workout.posture) {
+                    if (workout.canUsePostureSession()) {
                         PostureSessionScreen(
                             workout = workout,
                             index = route.sessionIndex,

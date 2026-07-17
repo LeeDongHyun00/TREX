@@ -7,6 +7,7 @@ import android.content.ContextWrapper
 import android.content.pm.PackageManager
 import android.media.AudioManager
 import android.media.ToneGenerator
+import android.os.SystemClock
 import android.speech.tts.TextToSpeech
 import android.view.WindowManager
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -63,6 +64,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -91,6 +93,17 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.example.trex_kotlin.camera.PoseCameraError
+import com.example.trex_kotlin.camera.PoseCameraPreview
+import com.example.trex_kotlin.camera.PoseCameraStatus
+import com.example.trex_kotlin.pose.Evaluation
+import com.example.trex_kotlin.pose.PoseEvaluatorFactory
+import com.example.trex_kotlin.pose.PoseFeedback
+import com.example.trex_kotlin.pose.PoseFeedbackCode
+import com.example.trex_kotlin.pose.PoseFeedbackDebouncer
+import com.example.trex_kotlin.pose.PoseFrame
+import com.example.trex_kotlin.pose.PoseJoint
+import com.example.trex_kotlin.pose.PoseTrackingState
 import java.util.Locale
 import kotlinx.coroutines.delay
 
@@ -128,7 +141,9 @@ private data class WorkoutFeedback(
     val speak: (String) -> Unit,
 )
 
-private val poseJointIndexes = (0..12).toSet()
+private const val CAMERA_READY_FRAME_COUNT = 8
+private const val POSE_FRAME_STALE_AFTER_MS = 1_200L
+private const val POSE_FRAME_FRESHNESS_POLL_MS = 250L
 
 @Composable
 fun TimerSessionScreen(
@@ -315,6 +330,21 @@ fun PostureSessionScreen(
     onNext: () -> Unit,
     onExit: () -> Unit,
 ) {
+    if (!workout.canUsePostureSession()) {
+        TimerSessionScreen(
+            workout = workout.withPostureCorrection(false),
+            index = index,
+            total = total,
+            nextWorkout = nextWorkout,
+            elapsedSeconds = elapsedSeconds,
+            notice = "이 운동은 검증된 실시간 자세 평가를 지원하지 않아 타이머 모드로 실행해요.",
+            onPausedChange = onPausedChange,
+            onNext = onNext,
+            onExit = onExit,
+        )
+        return
+    }
+
     KeepScreenOn()
 
     val context = LocalContext.current
@@ -361,20 +391,38 @@ fun PostureSessionScreen(
     val feedback = rememberWorkoutFeedback(muted = muted)
     var phase by remember(workout.id) { mutableStateOf(PosturePhase.CameraCheck) }
     var currentSet by remember(workout.id) { mutableIntStateOf(1) }
-    var currentRep by remember(workout.id, currentSet) { mutableIntStateOf(0) }
+    val poseEvaluator = remember(workout.id, currentSet) {
+        PoseEvaluatorFactory.create(workout.exercise)
+    }
+    val poseFeedbackDebouncer = remember(workout.id, currentSet) { PoseFeedbackDebouncer() }
+    var poseFrame by remember(workout.id, currentSet) { mutableStateOf<PoseFrame?>(null) }
+    var poseEvaluation by remember(workout.id, currentSet) { mutableStateOf<Evaluation?>(null) }
+    var cameraStatus by remember(workout.id) { mutableStateOf(PoseCameraStatus.Initializing) }
+    var cameraError by remember(workout.id) { mutableStateOf<PoseCameraError?>(null) }
+    var lastPoseFrameRealtimeMs by remember(workout.id, currentSet) { mutableLongStateOf(0L) }
+    var poseStreamFresh by remember(workout.id, currentSet) { mutableStateOf(false) }
+    var stableTrackingFrames by remember(workout.id, currentSet) { mutableIntStateOf(0) }
     var countdown by remember(workout.id, currentSet) { mutableIntStateOf(3) }
     var stabilizeSeconds by remember(workout.id, currentSet) { mutableIntStateOf(3) }
     var scanStep by remember(workout.id) { mutableIntStateOf(0) }
     var restSeconds by remember(workout.id) { mutableIntStateOf(spec.restSeconds) }
     var paused by remember(workout.id) { mutableStateOf(false) }
-    var trackingLost by remember(workout.id, currentSet) { mutableStateOf(false) }
-    var trackingLossShown by remember(workout.id, currentSet) { mutableStateOf(false) }
-    var postureScore by remember(workout.id, currentSet) { mutableIntStateOf(94) }
     var setScores by remember(workout.id) { mutableStateOf<List<Int>>(emptyList()) }
     var onboardingVisible by remember(workout.id) { mutableStateOf(true) }
-    val blocked = paused || lifecyclePaused || trackingLost
-    val blockedState = rememberUpdatedState(blocked)
-    val pauseState = rememberUpdatedState(paused || lifecyclePaused)
+    var lastAnnouncedRep by remember(workout.id, currentSet) { mutableIntStateOf(0) }
+    val currentRep = poseEvaluation?.repCount ?: 0
+    val postureScore = poseEvaluation?.score
+    val trackingRequired = phase != PosturePhase.Rest && phase != PosturePhase.SetComplete
+    val trackingLost = trackingRequired && (
+        cameraStatus != PoseCameraStatus.Ready ||
+            !poseStreamFresh ||
+            poseEvaluation?.trackingState != PoseTrackingState.TRACKING
+        )
+    val primaryPoseFeedback = poseEvaluation?.feedback
+        ?.filterNot { it.code == PoseFeedbackCode.REP_COMPLETE }
+        ?.maxByOrNull { it.severity.ordinal }
+    val blocked = paused || lifecyclePaused || trackingLost || onboardingVisible
+    val pauseState = rememberUpdatedState(blocked)
 
     LaunchedEffect(blocked) {
         onPausedChange(blocked)
@@ -383,13 +431,39 @@ fun PostureSessionScreen(
         onDispose { onPausedChange(false) }
     }
 
+    LaunchedEffect(cameraStatus, phase, workout.id, currentSet) {
+        if (cameraStatus != PoseCameraStatus.Ready || !trackingRequired) {
+            poseStreamFresh = false
+            return@LaunchedEffect
+        }
+        while (true) {
+            poseStreamFresh = lastPoseFrameRealtimeMs > 0L &&
+                SystemClock.elapsedRealtime() - lastPoseFrameRealtimeMs <= POSE_FRAME_STALE_AFTER_MS
+            delay(POSE_FRAME_FRESHNESS_POLL_MS)
+        }
+    }
+
+    LaunchedEffect(paused, lifecyclePaused, workout.id, currentSet) {
+        if (paused || lifecyclePaused) {
+            poseEvaluator?.interrupt()
+            poseFeedbackDebouncer.reset()
+            stableTrackingFrames = 0
+        }
+    }
+
     LaunchedEffect(phase, currentSet, workout.id) {
         if (phase == PosturePhase.CameraCheck) {
             feedback.speak("전신이 화면 안에 들어오도록 서 주세요")
             scanStep = 0
-            delay(700)
-            scanStep = 1
-            delay(700)
+        }
+    }
+
+    LaunchedEffect(phase, stableTrackingFrames, onboardingVisible, workout.id) {
+        if (
+            phase == PosturePhase.CameraCheck &&
+            !onboardingVisible &&
+            stableTrackingFrames >= CAMERA_READY_FRAME_COUNT
+        ) {
             scanStep = 2
             phase = PosturePhase.Stabilizing
         }
@@ -419,29 +493,20 @@ fun PostureSessionScreen(
 
     LaunchedEffect(phase, currentSet, workout.id) {
         if (phase == PosturePhase.Active) {
+            poseEvaluator?.reset()
+            poseFeedbackDebouncer.reset()
+            poseEvaluation = null
+            lastAnnouncedRep = 0
             feedback.speak("${workout.name} ${currentSet}세트를 시작합니다")
-            while (currentRep < spec.targetReps && phase == PosturePhase.Active) {
-                if (!trackingLossShown && currentRep >= (spec.targetReps / 2).coerceAtLeast(1)) {
-                    trackingLost = true
-                    feedback.speak("관절이 화면 밖으로 벗어났어요. 한 걸음 뒤로 이동해 주세요")
-                    delay(1600)
-                    trackingLost = false
-                    trackingLossShown = true
-                }
+        }
+    }
 
-                waitOneSecond { blockedState.value }
-                if (phase != PosturePhase.Active) return@LaunchedEffect
-
-                currentRep += 1
-                postureScore = (96 - (currentRep % 5) * 2 - if (trackingLossShown) 2 else 0).coerceIn(0, 100)
-                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                if (currentRep % 4 == 0) {
-                    feedback.speak(postureWarning(currentRep))
-                }
-            }
-
-            if (phase == PosturePhase.Active) {
-                setScores = setScores + postureScore
+    LaunchedEffect(currentRep, phase, currentSet) {
+        if (phase == PosturePhase.Active && currentRep > lastAnnouncedRep) {
+            lastAnnouncedRep = currentRep
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            if (currentRep >= spec.targetReps) {
+                setScores = setScores + (postureScore ?: poseEvaluation?.lastRepScore ?: 0)
                 feedback.speak("${currentSet}세트 완료")
                 phase = PosturePhase.SetComplete
             }
@@ -462,8 +527,6 @@ fun PostureSessionScreen(
                 onNext()
             } else {
                 currentSet += 1
-                currentRep = 0
-                postureScore = 94
                 scanStep = 2
                 countdown = 3
                 phase = PosturePhase.Countdown
@@ -480,58 +543,106 @@ fun PostureSessionScreen(
         }
     }
 
+    fun consumePoseFrame(frame: PoseFrame) {
+        poseFrame = frame
+        cameraError = null
+        lastPoseFrameRealtimeMs = SystemClock.elapsedRealtime()
+        poseStreamFresh = true
+        if (paused || lifecyclePaused || phase == PosturePhase.Rest || phase == PosturePhase.SetComplete) {
+            return
+        }
+
+        val nextEvaluation = poseEvaluator?.accept(frame) ?: return
+        poseEvaluation = nextEvaluation
+        if (phase == PosturePhase.Active) {
+            val voiceCandidate = nextEvaluation.feedback
+                .filterNot { it.code == PoseFeedbackCode.REP_COMPLETE }
+                .maxByOrNull { it.severity.ordinal }
+            poseFeedbackDebouncer.update(voiceCandidate, frame.timestampMs)?.let { cue ->
+                feedback.speak(cue.message)
+            }
+        } else {
+            // 준비 화면에서는 품질 게이트만 사용하고 운동 단계/반복 수는 누적하지 않는다.
+            poseEvaluator.reset()
+            poseFeedbackDebouncer.reset()
+        }
+        if (nextEvaluation.trackingState == PoseTrackingState.TRACKING) {
+            stableTrackingFrames = (stableTrackingFrames + 1).coerceAtMost(CAMERA_READY_FRAME_COUNT)
+            scanStep = when {
+                stableTrackingFrames >= CAMERA_READY_FRAME_COUNT -> 2
+                stableTrackingFrames >= CAMERA_READY_FRAME_COUNT / 2 -> 1
+                else -> 0
+            }
+        } else {
+            stableTrackingFrames = 0
+            if (phase == PosturePhase.CameraCheck) scanStep = 0
+        }
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black),
     ) {
-        Crossfade(targetState = phase, label = "posture-session-phase") { visiblePhase ->
-            when (visiblePhase) {
-                PosturePhase.Rest -> RestScreen(
-                    workout = workout,
-                    nextWorkout = nextWorkout,
-                    currentSet = currentSet,
-                    totalSets = spec.totalSets,
-                    restSeconds = restSeconds,
-                    restTotal = spec.restSeconds,
-                    elapsedSeconds = elapsedSeconds,
-                    muted = muted,
-                    paused = paused || lifecyclePaused,
-                    onToggleMute = { muted = !muted },
-                    onTogglePause = { paused = !paused },
-                    onSkip = onNext,
-                )
+        when (phase) {
+            PosturePhase.Rest -> RestScreen(
+                workout = workout,
+                nextWorkout = nextWorkout,
+                currentSet = currentSet,
+                totalSets = spec.totalSets,
+                restSeconds = restSeconds,
+                restTotal = spec.restSeconds,
+                elapsedSeconds = elapsedSeconds,
+                muted = muted,
+                paused = paused || lifecyclePaused,
+                onToggleMute = { muted = !muted },
+                onTogglePause = { paused = !paused },
+                onSkip = onNext,
+            )
 
-                else -> PostureActiveScaffold(
-                    workout = workout,
-                    spec = spec,
-                    index = index,
-                    total = total,
-                    currentSet = currentSet,
-                    currentRep = currentRep,
-                    countdown = countdown,
-                    stabilizeSeconds = stabilizeSeconds,
-                    scanStep = scanStep,
-                    phase = visiblePhase,
-                    trackingLost = trackingLost,
-                    postureScore = postureScore,
-                    setScores = setScores,
-                    elapsedSeconds = elapsedSeconds,
-                    muted = muted,
-                    paused = paused || lifecyclePaused,
-                    onToggleMute = { muted = !muted },
-                    onTogglePause = { paused = !paused },
-                    onSkip = onNext,
-                    onExit = onExit,
-                )
-            }
+            else -> PostureActiveScaffold(
+                workout = workout,
+                spec = spec,
+                index = index,
+                total = total,
+                currentSet = currentSet,
+                currentRep = currentRep,
+                countdown = countdown,
+                stabilizeSeconds = stabilizeSeconds,
+                scanStep = scanStep,
+                phase = phase,
+                trackingLost = trackingLost,
+                postureScore = postureScore,
+                setScores = setScores,
+                elapsedSeconds = elapsedSeconds,
+                muted = muted,
+                paused = paused || lifecyclePaused,
+                poseFrame = poseFrame,
+                poseFeedback = primaryPoseFeedback,
+                cameraStatus = cameraStatus,
+                cameraError = cameraError,
+                onPoseFrame = ::consumePoseFrame,
+                onCameraError = { cameraError = it },
+                onCameraStatusChanged = { status ->
+                    cameraStatus = status
+                    if (status == PoseCameraStatus.Ready) cameraError = null
+                    if (status == PoseCameraStatus.Stopped) {
+                        poseFrame = null
+                        poseStreamFresh = false
+                    }
+                },
+                onToggleMute = { muted = !muted },
+                onTogglePause = { paused = !paused },
+                onSkip = onNext,
+                onExit = onExit,
+            )
         }
 
         if (phase == PosturePhase.SetComplete) {
             PostureSetCompleteDialog(
                 set = currentSet,
                 totalSets = spec.totalSets,
-                score = postureScore,
+                score = postureScore ?: setScores.lastOrNull() ?: 0,
                 nextWorkout = nextWorkout,
                 isLastSet = currentSet >= spec.totalSets,
                 onContinue = ::beginRestAfterSet,
@@ -719,28 +830,31 @@ private fun PostureActiveScaffold(
     scanStep: Int,
     phase: PosturePhase,
     trackingLost: Boolean,
-    postureScore: Int,
+    postureScore: Int?,
     setScores: List<Int>,
     elapsedSeconds: Int,
     muted: Boolean,
     paused: Boolean,
+    poseFrame: PoseFrame?,
+    poseFeedback: PoseFeedback?,
+    cameraStatus: PoseCameraStatus,
+    cameraError: PoseCameraError?,
+    onPoseFrame: (PoseFrame) -> Unit,
+    onCameraError: (PoseCameraError) -> Unit,
+    onCameraStatusChanged: (PoseCameraStatus) -> Unit,
     onToggleMute: () -> Unit,
     onTogglePause: () -> Unit,
     onSkip: () -> Unit,
     onExit: () -> Unit,
 ) {
-    val detectedJoints = when {
-        phase == PosturePhase.CameraCheck && scanStep == 0 -> setOf(0, 1, 2, 5, 6)
-        phase == PosturePhase.CameraCheck && scanStep == 1 -> poseJointIndexes - setOf(11, 12)
-        trackingLost -> poseJointIndexes - setOf(10, 11, 12)
-        else -> poseJointIndexes
-    }
     val headline = when {
+        cameraError != null -> cameraError.userMessage()
+        cameraStatus == PoseCameraStatus.Initializing -> "자세 인식 모델을 준비하고 있어요"
         trackingLost -> "관절이 화면 밖으로 벗어났어요"
         phase == PosturePhase.CameraCheck -> "주요 관절 감지 중"
         phase == PosturePhase.Stabilizing -> "준비 자세 유지"
         phase == PosturePhase.Countdown -> "곧 시작합니다"
-        phase == PosturePhase.Active -> postureWarning(currentRep)
+        phase == PosturePhase.Active -> poseFeedback?.message ?: "좋아요. 동작을 이어가세요"
         else -> "세트 완료"
     }
 
@@ -750,6 +864,13 @@ private fun PostureActiveScaffold(
             .background(Color.Black),
     ) {
         CameraFeedBackground()
+        PoseCameraPreview(
+            modifier = Modifier.fillMaxSize(),
+            active = phase != PosturePhase.SetComplete,
+            onPoseFrame = onPoseFrame,
+            onError = onCameraError,
+            onStatusChanged = onCameraStatusChanged,
+        )
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -757,12 +878,9 @@ private fun PostureActiveScaffold(
         )
 
         PoseSkeletonOverlay(
-            detectedJoints = detectedJoints,
-            modifier = Modifier
-                .align(Alignment.Center)
-                .fillMaxWidth()
-                .height(520.dp)
-                .alpha(0.82f),
+            frame = poseFrame,
+            trackingLost = trackingLost,
+            modifier = Modifier.fillMaxSize().alpha(0.88f),
         )
 
         Column(
@@ -1348,7 +1466,7 @@ private fun NoticePill(text: String) {
 @Composable
 private fun GlassPostureCard(
     headline: String,
-    score: Int,
+    score: Int?,
     setScores: List<Int>,
     trackingLost: Boolean,
     modifier: Modifier = Modifier,
@@ -1402,11 +1520,11 @@ private fun GlassPostureCard(
 
 @Composable
 private fun CircularScoreGauge(
-    score: Int,
+    score: Int?,
     size: Int,
 ) {
     val progress by animateFloatAsState(
-        targetValue = (score / 100f).coerceIn(0f, 1f),
+        targetValue = ((score ?: 0) / 100f).coerceIn(0f, 1f),
         label = "score-gauge",
     )
     Box(modifier = Modifier.size(size.dp), contentAlignment = Alignment.Center) {
@@ -1418,7 +1536,11 @@ private fun CircularScoreGauge(
                 style = stroke,
             )
             drawArc(
-                color = if (score >= 85) TrexLime else TrexWarning,
+                color = when {
+                    score == null -> Color.White.copy(alpha = 0.22f)
+                    score >= 85 -> TrexLime
+                    else -> TrexWarning
+                },
                 startAngle = -90f,
                 sweepAngle = progress * 360f,
                 useCenter = false,
@@ -1426,8 +1548,8 @@ private fun CircularScoreGauge(
             )
         }
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(score.toString(), color = Color.White, fontSize = (size * 0.24f).sp, fontWeight = FontWeight.SemiBold)
-            Text("%", color = Color.White.copy(alpha = 0.58f), fontSize = (size * 0.12f).sp)
+            Text(score?.toString() ?: "--", color = Color.White, fontSize = (size * 0.24f).sp, fontWeight = FontWeight.SemiBold)
+            Text(if (score == null) "대기" else "%", color = Color.White.copy(alpha = 0.58f), fontSize = (size * 0.12f).sp)
         }
     }
 }
@@ -1586,61 +1708,85 @@ private fun CameraFeedBackground() {
 
 @Composable
 private fun PoseSkeletonOverlay(
-    detectedJoints: Set<Int>,
+    frame: PoseFrame?,
+    trackingLost: Boolean,
     modifier: Modifier = Modifier,
 ) {
     Canvas(modifier = modifier) {
-        val points = listOf(
-            Offset(size.width * 0.50f, size.height * 0.16f),
-            Offset(size.width * 0.39f, size.height * 0.28f),
-            Offset(size.width * 0.61f, size.height * 0.28f),
-            Offset(size.width * 0.31f, size.height * 0.43f),
-            Offset(size.width * 0.69f, size.height * 0.43f),
-            Offset(size.width * 0.27f, size.height * 0.58f),
-            Offset(size.width * 0.73f, size.height * 0.58f),
-            Offset(size.width * 0.43f, size.height * 0.52f),
-            Offset(size.width * 0.57f, size.height * 0.52f),
-            Offset(size.width * 0.39f, size.height * 0.72f),
-            Offset(size.width * 0.61f, size.height * 0.72f),
-            Offset(size.width * 0.34f, size.height * 0.90f),
-            Offset(size.width * 0.66f, size.height * 0.90f),
-        )
+        val currentFrame = frame ?: return@Canvas
+        val sourceAspect = currentFrame.imageAspectRatio.toFloat()
+            .takeIf { it.isFinite() && it > 0f }
+            ?: 1f
+        val targetAspect = size.width / size.height
+        val drawnWidth: Float
+        val drawnHeight: Float
+        val offsetX: Float
+        val offsetY: Float
+        if (sourceAspect > targetAspect) {
+            drawnWidth = size.width
+            drawnHeight = size.width / sourceAspect
+            offsetX = 0f
+            offsetY = (size.height - drawnHeight) / 2f
+        } else {
+            drawnHeight = size.height
+            drawnWidth = size.height * sourceAspect
+            offsetX = (size.width - drawnWidth) / 2f
+            offsetY = 0f
+        }
+
+        fun screenPoint(joint: PoseJoint): Offset? {
+            val landmark = currentFrame.landmarks[joint] ?: return null
+            if (landmark.confidence < 0.5) return null
+            val normalizedX = if (currentFrame.isMirrored) 1.0 - landmark.x else landmark.x
+            if (normalizedX !in -0.15..1.15 || landmark.y !in -0.15..1.15) return null
+            return Offset(
+                x = offsetX + normalizedX.toFloat() * drawnWidth,
+                y = offsetY + landmark.y.toFloat() * drawnHeight,
+            )
+        }
+
         val links = listOf(
-            0 to 1,
-            0 to 2,
-            1 to 2,
-            1 to 3,
-            3 to 5,
-            2 to 4,
-            4 to 6,
-            1 to 7,
-            2 to 8,
-            7 to 8,
-            7 to 9,
-            9 to 11,
-            8 to 10,
-            10 to 12,
+            PoseJoint.LEFT_EAR to PoseJoint.LEFT_SHOULDER,
+            PoseJoint.RIGHT_EAR to PoseJoint.RIGHT_SHOULDER,
+            PoseJoint.LEFT_SHOULDER to PoseJoint.RIGHT_SHOULDER,
+            PoseJoint.LEFT_SHOULDER to PoseJoint.LEFT_ELBOW,
+            PoseJoint.LEFT_ELBOW to PoseJoint.LEFT_WRIST,
+            PoseJoint.RIGHT_SHOULDER to PoseJoint.RIGHT_ELBOW,
+            PoseJoint.RIGHT_ELBOW to PoseJoint.RIGHT_WRIST,
+            PoseJoint.LEFT_SHOULDER to PoseJoint.LEFT_HIP,
+            PoseJoint.RIGHT_SHOULDER to PoseJoint.RIGHT_HIP,
+            PoseJoint.LEFT_HIP to PoseJoint.RIGHT_HIP,
+            PoseJoint.LEFT_HIP to PoseJoint.LEFT_KNEE,
+            PoseJoint.LEFT_KNEE to PoseJoint.LEFT_ANKLE,
+            PoseJoint.RIGHT_HIP to PoseJoint.RIGHT_KNEE,
+            PoseJoint.RIGHT_KNEE to PoseJoint.RIGHT_ANKLE,
+            PoseJoint.LEFT_ANKLE to PoseJoint.LEFT_HEEL,
+            PoseJoint.LEFT_HEEL to PoseJoint.LEFT_FOOT_INDEX,
+            PoseJoint.RIGHT_ANKLE to PoseJoint.RIGHT_HEEL,
+            PoseJoint.RIGHT_HEEL to PoseJoint.RIGHT_FOOT_INDEX,
         )
-        links.forEach { (startIndex, endIndex) ->
-            val detected = detectedJoints.contains(startIndex) && detectedJoints.contains(endIndex)
+        val skeletonColor = if (trackingLost) TrexError else TrexLime
+        links.forEach { (startJoint, endJoint) ->
+            val start = screenPoint(startJoint) ?: return@forEach
+            val end = screenPoint(endJoint) ?: return@forEach
             drawLine(
-                color = if (detected) TrexLime.copy(alpha = 0.72f) else TrexError.copy(alpha = 0.78f),
-                start = points[startIndex],
-                end = points[endIndex],
-                strokeWidth = 7.dp.toPx(),
+                color = skeletonColor.copy(alpha = 0.78f),
+                start = start,
+                end = end,
+                strokeWidth = 5.dp.toPx(),
                 cap = StrokeCap.Round,
             )
         }
-        points.forEachIndexed { index, point ->
-            val detected = detectedJoints.contains(index)
+        PoseJoint.entries.forEach { joint ->
+            val point = screenPoint(joint) ?: return@forEach
             drawCircle(
                 color = Color.Black.copy(alpha = 0.36f),
-                radius = 12.dp.toPx(),
+                radius = 7.dp.toPx(),
                 center = point,
             )
             drawCircle(
-                color = if (detected) TrexLime else TrexError,
-                radius = 8.dp.toPx(),
+                color = skeletonColor,
+                radius = 4.dp.toPx(),
                 center = point,
             )
         }
@@ -1821,18 +1967,20 @@ private fun Workout.exerciseSpec(): ExerciseSpec {
     )
 }
 
-private fun Workout.loadLabel(): String = when (category) {
-    "하체", "상체" -> "체중"
-    "코어", "복근" -> "매트"
-    "유산소" -> "심박"
-    "회복" -> "가동범위"
-    else -> "자율"
+private fun Workout.loadLabel(): String = when (exercise.typeInfoType) {
+    "맨몸 운동" -> "체중"
+    "바벨/덤벨" -> "중량"
+    "기구" -> "기구"
+    else -> error("Unknown AI Hub type_info.type: ${exercise.typeInfoType}")
 }
 
-private fun postureWarning(rep: Int): String = when (rep % 3) {
-    0 -> "무릎이 안쪽으로 모이지 않게 벌려주세요"
-    1 -> "허리를 곧게 세우고 시선은 정면을 봐주세요"
-    else -> "양쪽 어깨 높이를 맞춰주세요"
+private fun PoseCameraError.userMessage(): String = when (this) {
+    PoseCameraError.CameraPermissionMissing -> "카메라 권한을 확인해 주세요"
+    PoseCameraError.FrontCameraUnavailable -> "전면 카메라를 사용할 수 없어요"
+    is PoseCameraError.MissingModelAsset -> "자세 인식 모델을 불러올 수 없어요"
+    is PoseCameraError.CameraInitializationFailed -> "카메라를 시작하지 못했어요"
+    is PoseCameraError.LandmarkerInitializationFailed -> "자세 인식 엔진을 시작하지 못했어요"
+    is PoseCameraError.FrameAnalysisFailed -> "카메라 프레임을 분석하지 못했어요"
 }
 
 private fun String.numericText(): String = filter(Char::isDigit)

@@ -59,6 +59,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.trex_kotlin.catalog.AiHubExercise
 import kotlinx.coroutines.delay
 
 @Composable
@@ -68,18 +69,19 @@ fun AltSuggestSheet(
     onClose: () -> Unit,
 ) {
     var selectedAlt by remember(workout.id) { mutableStateOf<WorkoutAlt?>(null) }
-    val fallbacks = mapOf(
-        "하체" to listOf(WorkoutAlt("글루트 브릿지", "12회 x 3세트"), WorkoutAlt("카프 레이즈", "15회 x 3세트")),
-        "코어" to listOf(WorkoutAlt("버드독", "10회 x 3세트"), WorkoutAlt("사이드 플랭크", "30초 x 3세트")),
-        "복근" to listOf(WorkoutAlt("데드버그", "12회 x 3세트"), WorkoutAlt("사이드 플랭크", "30초 x 3세트")),
-        "상체" to listOf(WorkoutAlt("니 푸쉬업", "10회 x 3세트"), WorkoutAlt("밴드 로우", "12회 x 3세트")),
-        "유산소" to listOf(WorkoutAlt("제자리 걷기", "60초 x 4세트"), WorkoutAlt("스텝업", "12회 x 3세트")),
-        "회복" to listOf(WorkoutAlt("캣카우 스트레칭", "전신 5분"), WorkoutAlt("차일드 포즈", "전신 4분")),
-    )
     val alts = buildList {
-        workout.alt?.let(::add)
-        addAll(fallbacks[workout.category].orEmpty())
-    }
+        workout.alt
+            ?.takeIf { it.exercise != workout.exercise }
+            ?.let(::add)
+        addAll(
+            AiHubExercise.entries
+                .asSequence()
+                .filter { it.typeInfoType == workout.exercise.typeInfoType && it != workout.exercise }
+                .map { WorkoutAlt(it, "12회 x 3세트") }
+                .take(2)
+                .toList(),
+        )
+    }.distinctBy(WorkoutAlt::exercise)
 
     SheetSurface {
         Column(
