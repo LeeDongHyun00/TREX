@@ -5,7 +5,6 @@ import com.trex.server.dto.ProfileResponse;
 import com.trex.server.entity.User;
 import com.trex.server.entity.UserProfile;
 import com.trex.server.exception.DuplicateResourceException;
-import com.trex.server.exception.InvalidCredentialsException;
 import com.trex.server.exception.ResourceNotFoundException;
 import com.trex.server.repository.UserProfileRepository;
 import com.trex.server.repository.UserRepository;
@@ -26,7 +25,7 @@ public class ProfileService {
 
     @Transactional
     public ProfileResponse create(String loginId, ProfileRequest request) {
-        User user = findUser(loginId);
+        User user = userRepository.getByLoginIdOrThrow(loginId);
         if (profileRepository.existsByUserId(user.getId())) {
             throw new DuplicateResourceException("이미 등록된 프로필이 있습니다");
         }
@@ -47,14 +46,9 @@ public class ProfileService {
     }
 
     public ProfileResponse getMine(String loginId) {
-        User user = findUser(loginId);
+        User user = userRepository.getByLoginIdOrThrow(loginId);
         UserProfile profile = profileRepository.findByUserId(user.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("등록된 프로필이 없습니다"));
         return ProfileResponse.from(profile);
-    }
-
-    private User findUser(String loginId) {
-        return userRepository.findByLoginId(loginId)
-                .orElseThrow(() -> new InvalidCredentialsException("존재하지 않는 사용자입니다"));
     }
 }

@@ -5,7 +5,6 @@ import com.trex.server.dto.ExerciseLogResponse;
 import com.trex.server.entity.ExerciseLog;
 import com.trex.server.entity.ExerciseRoutine;
 import com.trex.server.entity.User;
-import com.trex.server.exception.InvalidCredentialsException;
 import com.trex.server.repository.ExerciseLogRepository;
 import com.trex.server.repository.UserRepository;
 import org.springframework.stereotype.Service;
@@ -27,7 +26,7 @@ public class ExerciseLogService {
 
     @Transactional
     public ExerciseLogResponse create(String loginId, ExerciseLogRequest request) {
-        User user = findUser(loginId);
+        User user = userRepository.getByLoginIdOrThrow(loginId);
 
         ExerciseLog log = ExerciseLog.builder()
                 .user(user)
@@ -50,14 +49,9 @@ public class ExerciseLogService {
     }
 
     public List<ExerciseLogResponse> getMine(String loginId) {
-        User user = findUser(loginId);
+        User user = userRepository.getByLoginIdOrThrow(loginId);
         return exerciseLogRepository.findByUserIdOrderByLogDateDescIdDesc(user.getId()).stream()
                 .map(ExerciseLogResponse::from)
                 .toList();
-    }
-
-    private User findUser(String loginId) {
-        return userRepository.findByLoginId(loginId)
-                .orElseThrow(() -> new InvalidCredentialsException("존재하지 않는 사용자입니다"));
     }
 }

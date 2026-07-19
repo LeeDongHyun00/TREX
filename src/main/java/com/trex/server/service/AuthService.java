@@ -63,9 +63,7 @@ public class AuthService {
     }
 
     public UserResponse getByLoginId(String loginId) {
-        User user = userRepository.findByLoginId(loginId)
-                .orElseThrow(() -> new InvalidCredentialsException("존재하지 않는 사용자입니다"));
-        return UserResponse.from(user);
+        return UserResponse.from(userRepository.getByLoginIdOrThrow(loginId));
     }
 
     private TokenResponse issueToken(User user) {

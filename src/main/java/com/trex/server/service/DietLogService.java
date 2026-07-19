@@ -7,7 +7,6 @@ import com.trex.server.entity.FoodItem;
 import com.trex.server.entity.Meal;
 import com.trex.server.entity.User;
 import com.trex.server.exception.DuplicateResourceException;
-import com.trex.server.exception.InvalidCredentialsException;
 import com.trex.server.repository.DietLogRepository;
 import com.trex.server.repository.UserRepository;
 import org.springframework.stereotype.Service;
@@ -29,7 +28,7 @@ public class DietLogService {
 
     @Transactional
     public DietLogResponse create(String loginId, DietLogRequest request) {
-        User user = findUser(loginId);
+        User user = userRepository.getByLoginIdOrThrow(loginId);
         if (dietLogRepository.existsByUserIdAndLogDate(user.getId(), request.logDate())) {
             throw new DuplicateResourceException("해당 날짜의 식단 기록이 이미 있습니다");
         }
@@ -65,14 +64,9 @@ public class DietLogService {
     }
 
     public List<DietLogResponse> getMine(String loginId) {
-        User user = findUser(loginId);
+        User user = userRepository.getByLoginIdOrThrow(loginId);
         return dietLogRepository.findByUserIdOrderByLogDateDesc(user.getId()).stream()
                 .map(DietLogResponse::from)
                 .toList();
-    }
-
-    private User findUser(String loginId) {
-        return userRepository.findByLoginId(loginId)
-                .orElseThrow(() -> new InvalidCredentialsException("존재하지 않는 사용자입니다"));
     }
 }

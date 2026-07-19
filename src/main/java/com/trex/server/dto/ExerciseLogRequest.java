@@ -27,7 +27,9 @@ public record ExerciseLogRequest(
         Boolean isPostureChecked,
 
         // 앱 setScores(List<Int>) 매핑 필드. 자세 확인을 안 한 세션이면 빈 배열.
+        // 최대 개수는 DB 컬럼 set_scores_json varchar(500) 한도 안에 들어오는 값으로 제한한다.
         @NotNull(message = "세트 점수 목록은 필수입니다")
+        @Size(max = 100, message = "세트 점수는 최대 100개까지 기록할 수 있습니다")
         List<@NotNull(message = "세트 점수 값이 비어 있습니다")
              @Min(value = 0, message = "세트 점수는 0~100이어야 합니다")
              @Max(value = 100, message = "세트 점수는 0~100이어야 합니다") Integer> setScoresJson,
