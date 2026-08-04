@@ -1,0 +1,28 @@
+# application.yml 템플릿.
+# 이 파일을 application.yml 로 복사한 뒤 각 환경에 맞게 값을 채운다.
+# 실제 application.yml 은 .gitignore 처리되어 커밋되지 않는다 (시크릿 포함 가능).
+
+spring:
+  datasource:
+    # DB_CLOSE_DELAY=-1: 모든 커넥션이 닫혀도(유휴 커넥션 교체 등) 인메모리 DB가 소멸하지 않게 유지
+    url: jdbc:h2:mem:trex_db;MODE=PostgreSQL;DB_CLOSE_DELAY=-1 # 메모리에 trex_db라는 임시 DB 생성 (PostgreSQL 호환 모드)
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: create # 서버가 켤 때마다 기존 테이블을 지우고 Entity를 바탕으로 새로 생성
+    properties:
+      hibernate:
+        format_sql: true
+    show-sql: true
+
+  h2:
+    console:
+      enabled: true # 웹 브라우저에서 눈으로 DB 테이블을 확인할 수 있게 해줌
+
+jwt:
+  # 운영 환경에서는 반드시 JWT_SECRET 환경변수로 주입한다. HS256 기준 최소 32바이트 이상.
+  secret: ${JWT_SECRET:CHANGE_ME_local_dev_secret_at_least_32_bytes_long}
+  expiration_time: 86400000
