@@ -1,4 +1,11 @@
-# TREX Kotlin
+# TREX
+
+T-REX(Trusted Real-time Exercise eXpert)는 온디바이스 AI 기반 운동 자세 교정 + 식단 기록 Android 앱입니다. 이 저장소는 클라이언트(Android)와 서버(Spring Boot)를 함께 담은 모노레포입니다.
+
+- `app/`, `assets/`, `trex_design_react/` 등 루트: Android Kotlin/Jetpack Compose 클라이언트
+- [`server/`](./server): Spring Boot 백엔드 (인증, 세션, 기록 동기화, 날씨 연동 — AI 추론은 전부 클라이언트에서 온디바이스로 수행)
+
+## TREX 앱 (Kotlin)
 
 TREX는 Android Kotlin과 Jetpack Compose로 만든 운동/식단 관리 앱입니다. 운동 루틴, 자세 교정 모드, 식단 기록, 로그인/온보딩 화면을 포함합니다.
 
