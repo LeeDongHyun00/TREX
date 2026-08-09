@@ -48,12 +48,18 @@ class PoseObservationContractTest {
             contract(runtimeDomainId = "mediapipe-full.world.side-view.v2"),
             contract(modelArtifactId = "mediapipe.pose-landmarker.full.v2"),
             contract(modelArtifactSha256 = SHA_B),
+            contract(inferenceOptionsContractId = "mediapipe.video-options.v2"),
+            contract(inferenceOptionsArtifactSha256 = SHA_A),
             contract(preprocessingContractId = "camerax.viewport-rotation-no-mirror.v2"),
             contract(preprocessingArtifactSha256 = SHA_C),
             contract(landmarkSchemaId = "mediapipe.pose-33.v2"),
             contract(landmarkSchemaArtifactSha256 = SHA_D),
             contract(supportedCoordinateSpaces = setOf(PoseCoordinateSpace.WORLD)),
-            contract(phaseViewContractId = "front-view.body-yaw-window.v1"),
+            contract(
+                phaseViewContractId = "front-view.body-yaw-window.v1",
+                allowedViewContractIds = setOf("front-view.body-yaw-window.v1"),
+            ),
+            contract(allowedViewContractIds = setOf(SIDE_VIEW, "front-view.body-yaw-window.v1")),
             contract(personLockArtifactId = "primary-person.temporal-lock.v2"),
             contract(personLockArtifactSha256 = SHA_C),
             contract(viewQualifierArtifactId = "body-yaw.qualifier.v2"),
@@ -79,6 +85,9 @@ class PoseObservationContractTest {
         assertThrows(IllegalArgumentException::class.java) {
             contract(viewQualifierArtifactSha256 = SHA_A.uppercase())
         }
+        assertThrows(IllegalArgumentException::class.java) {
+            contract(allowedViewContractIds = setOf("front-view.body-yaw-window.v1"))
+        }
     }
 
     @Test
@@ -87,7 +96,7 @@ class PoseObservationContractTest {
         val firstSource = PoseObservationSource(artifact)
         val secondSource = PoseObservationSource(artifact)
         val firstPersonEpoch = firstSource.newPersonTrackEpoch()
-        val sideView = firstSource.qualifyView(SIDE_VIEW)
+        val sideView = firstSource.qualifyView(SIDE_VIEW, firstPersonEpoch, 10L)
         val observation = firstSource.attest(
             frame = frame(timestampMs = 10L),
             personTrackEpoch = firstPersonEpoch,
@@ -101,6 +110,13 @@ class PoseObservationContractTest {
         assertTrue(observation.personTrackEpoch === firstPersonEpoch)
         assertTrue(observation.isViewQualified(SIDE_VIEW))
         assertFalse(observation.isViewQualified("front-view.body-yaw-window.v1"))
+        assertThrows(IllegalArgumentException::class.java) {
+            firstSource.qualifyView(
+                "front-view.body-yaw-window.v1",
+                firstPersonEpoch,
+                10L,
+            )
+        }
 
         assertThrows(IllegalArgumentException::class.java) {
             firstSource.attest(
@@ -113,7 +129,36 @@ class PoseObservationContractTest {
             firstSource.attest(
                 frame = frame(timestampMs = 20L),
                 personTrackEpoch = firstPersonEpoch,
-                viewQualifications = listOf(secondSource.qualifyView(SIDE_VIEW)),
+                viewQualifications = listOf(
+                    secondSource.qualifyView(
+                        SIDE_VIEW,
+                        secondSource.newPersonTrackEpoch(),
+                        20L,
+                    ),
+                ),
+            )
+        }
+    }
+
+    @Test
+    fun viewQualificationCannotReplayAcrossTimestampOrPersonEpoch() {
+        val source = PoseObservationSource(contract())
+        val firstEpoch = source.newPersonTrackEpoch()
+        val secondEpoch = source.newPersonTrackEpoch()
+        val viewAtTen = source.qualifyView(SIDE_VIEW, firstEpoch, 10L)
+
+        assertThrows(IllegalArgumentException::class.java) {
+            source.attest(
+                frame = frame(11L),
+                personTrackEpoch = firstEpoch,
+                viewQualifications = listOf(viewAtTen),
+            )
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            source.attest(
+                frame = frame(10L),
+                personTrackEpoch = secondEpoch,
+                viewQualifications = listOf(viewAtTen),
             )
         }
     }
@@ -124,18 +169,19 @@ class PoseObservationContractTest {
         val mutableWorld = linkedMapOf(
             PoseJoint.LEFT_HIP to PoseLandmark(0.0, 0.0, 0.0),
         )
-        val sideView = source.qualifyView(SIDE_VIEW)
+        val personEpoch = source.newPersonTrackEpoch()
+        val sideView = source.qualifyView(SIDE_VIEW, personEpoch, 42L)
         val mutableViews = mutableListOf(sideView)
         val rawFrame = frame(timestampMs = 42L).copy(worldLandmarks = mutableWorld)
         val observation = source.attest(
             frame = rawFrame,
-            personTrackEpoch = null,
+            personTrackEpoch = personEpoch,
             viewQualifications = mutableViews,
         )
         mutableWorld.clear()
         mutableViews.clear()
 
-        assertFalse(observation.hasPrimaryPersonLock)
+        assertTrue(observation.hasPrimaryPersonLock)
         assertTrue(PoseJoint.LEFT_HIP in observation.frame.worldLandmarks)
         assertTrue(observation.isViewQualified(SIDE_VIEW))
         assertThrows(UnsupportedOperationException::class.java) {
@@ -156,6 +202,8 @@ class PoseObservationContractTest {
         runtimeDomainId: String = "mediapipe-full.world.side-view.v1",
         modelArtifactId: String = "mediapipe.pose-landmarker.full.v1",
         modelArtifactSha256: String = SHA_A,
+        inferenceOptionsContractId: String = "mediapipe.video-options.v1",
+        inferenceOptionsArtifactSha256: String = SHA_D,
         preprocessingContractId: String = "camerax.viewport-rotation-no-mirror.v1",
         preprocessingArtifactSha256: String = SHA_B,
         landmarkSchemaId: String = "mediapipe.pose-33.v1",
@@ -165,6 +213,7 @@ class PoseObservationContractTest {
             PoseCoordinateSpace.WORLD,
         ),
         phaseViewContractId: String = SIDE_VIEW,
+        allowedViewContractIds: Set<String> = setOf(SIDE_VIEW),
         personLockArtifactId: String = "primary-person.temporal-lock.v1",
         personLockArtifactSha256: String = SHA_B,
         viewQualifierArtifactId: String = "body-yaw.qualifier.v1",
@@ -173,12 +222,15 @@ class PoseObservationContractTest {
         runtimeDomainId = runtimeDomainId,
         modelArtifactId = modelArtifactId,
         modelArtifactSha256 = modelArtifactSha256,
+        inferenceOptionsContractId = inferenceOptionsContractId,
+        inferenceOptionsArtifactSha256 = inferenceOptionsArtifactSha256,
         preprocessingContractId = preprocessingContractId,
         preprocessingArtifactSha256 = preprocessingArtifactSha256,
         landmarkSchemaId = landmarkSchemaId,
         landmarkSchemaArtifactSha256 = landmarkSchemaArtifactSha256,
         supportedCoordinateSpaces = supportedCoordinateSpaces,
         phaseViewContractId = phaseViewContractId,
+        allowedViewContractIds = allowedViewContractIds,
         personLockArtifactId = personLockArtifactId,
         personLockArtifactSha256 = personLockArtifactSha256,
         viewQualifierArtifactId = viewQualifierArtifactId,

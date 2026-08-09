@@ -4,6 +4,7 @@ import com.example.trex_kotlin.pose.PoseCoordinateSpace
 import com.example.trex_kotlin.pose.PoseFrame
 import com.example.trex_kotlin.pose.contract.canonicalFieldsSha256
 import java.util.Collections
+import java.util.concurrent.atomic.AtomicBoolean
 
 private val OBSERVATION_IDENTIFIER = Regex("^[a-z0-9][a-z0-9._:/-]*$")
 private val OBSERVATION_SHA256 = Regex("^[0-9a-f]{64}$")
@@ -20,12 +21,15 @@ class PoseObservationContract(
     val runtimeDomainId: String,
     val modelArtifactId: String,
     val modelArtifactSha256: String,
+    val inferenceOptionsContractId: String,
+    val inferenceOptionsArtifactSha256: String,
     val preprocessingContractId: String,
     val preprocessingArtifactSha256: String,
     val landmarkSchemaId: String,
     val landmarkSchemaArtifactSha256: String,
     supportedCoordinateSpaces: Set<PoseCoordinateSpace>,
     val phaseViewContractId: String,
+    allowedViewContractIds: Set<String>,
     val personLockArtifactId: String,
     val personLockArtifactSha256: String,
     val viewQualifierArtifactId: String,
@@ -35,11 +39,15 @@ class PoseObservationContract(
         Collections.unmodifiableSet(
             LinkedHashSet(supportedCoordinateSpaces.sortedBy(PoseCoordinateSpace::name)),
         )
+    val allowedViewContractIds: Set<String> =
+        Collections.unmodifiableSet(LinkedHashSet(allowedViewContractIds.sorted()))
 
     init {
         validateIdentifier("runtimeDomainId", runtimeDomainId)
         validateIdentifier("modelArtifactId", modelArtifactId)
         validateSha256("modelArtifactSha256", modelArtifactSha256)
+        validateIdentifier("inferenceOptionsContractId", inferenceOptionsContractId)
+        validateSha256("inferenceOptionsArtifactSha256", inferenceOptionsArtifactSha256)
         validateIdentifier("preprocessingContractId", preprocessingContractId)
         validateSha256("preprocessingArtifactSha256", preprocessingArtifactSha256)
         validateIdentifier("landmarkSchemaId", landmarkSchemaId)
@@ -48,6 +56,15 @@ class PoseObservationContract(
             "supportedCoordinateSpaces must not be empty"
         }
         validateIdentifier("phaseViewContractId", phaseViewContractId)
+        require(this.allowedViewContractIds.isNotEmpty()) {
+            "allowedViewContractIds must not be empty"
+        }
+        this.allowedViewContractIds.forEach { viewContractId ->
+            validateIdentifier("allowedViewContractId", viewContractId)
+        }
+        require(phaseViewContractId in this.allowedViewContractIds) {
+            "phaseViewContractId must be present in allowedViewContractIds"
+        }
         validateIdentifier("personLockArtifactId", personLockArtifactId)
         validateSha256("personLockArtifactSha256", personLockArtifactSha256)
         validateIdentifier("viewQualifierArtifactId", viewQualifierArtifactId)
@@ -56,10 +73,12 @@ class PoseObservationContract(
 
     val artifactSha256: String = canonicalFieldsSha256(
         buildList {
-            add("poseObservationContractSchemaVersion" to "1")
+            add("poseObservationContractSchemaVersion" to "2")
             add("runtimeDomainId" to runtimeDomainId)
             add("modelArtifactId" to modelArtifactId)
             add("modelArtifactSha256" to modelArtifactSha256)
+            add("inferenceOptionsContractId" to inferenceOptionsContractId)
+            add("inferenceOptionsArtifactSha256" to inferenceOptionsArtifactSha256)
             add("preprocessingContractId" to preprocessingContractId)
             add("preprocessingArtifactSha256" to preprocessingArtifactSha256)
             add("landmarkSchemaId" to landmarkSchemaId)
@@ -70,6 +89,11 @@ class PoseObservationContract(
                 add("supportedCoordinateSpace[$index]" to coordinateSpace.name)
             }
             add("phaseViewContractId" to phaseViewContractId)
+            val viewContractIds = this@PoseObservationContract.allowedViewContractIds
+            add("allowedViewContractIdCount" to viewContractIds.size.toString())
+            viewContractIds.forEachIndexed { index, viewContractId ->
+                add("allowedViewContractId[$index]" to viewContractId)
+            }
             add("personLockArtifactId" to personLockArtifactId)
             add("personLockArtifactSha256" to personLockArtifactSha256)
             add("viewQualifierArtifactId" to viewQualifierArtifactId)
@@ -87,13 +111,32 @@ class PoseObservationContract(
  */
 class PoseObservationSource internal constructor(
     val contract: PoseObservationContract,
-) {
-    internal fun newPersonTrackEpoch(): PosePersonTrackEpoch = PosePersonTrackEpoch(this)
+) : AutoCloseable {
+    private val closed = AtomicBoolean(false)
 
-    internal fun qualifyView(viewContractId: String): PoseViewQualification {
+    internal fun newPersonTrackEpoch(): PosePersonTrackEpoch {
+        requireOpen()
+        return PosePersonTrackEpoch(this)
+    }
+
+    internal fun qualifyView(
+        viewContractId: String,
+        personTrackEpoch: PosePersonTrackEpoch,
+        frameTimestampMs: Long,
+    ): PoseViewQualification {
+        requireOpen()
         validateIdentifier("viewContractId", viewContractId)
+        require(viewContractId in contract.allowedViewContractIds) {
+            "View contract is not allowed by this observation source"
+        }
+        require(personTrackEpoch.source === this) {
+            "A view qualification must use this source's person-track epoch"
+        }
+        require(frameTimestampMs >= 0L) { "frameTimestampMs must be non-negative" }
         return PoseViewQualification(
             source = this,
+            personTrackEpoch = personTrackEpoch,
+            frameTimestampMs = frameTimestampMs,
             viewContractId = viewContractId,
         )
     }
@@ -103,12 +146,26 @@ class PoseObservationSource internal constructor(
         frame: PoseFrame,
         personTrackEpoch: PosePersonTrackEpoch?,
         viewQualifications: Collection<PoseViewQualification>,
-    ): AttestedPoseObservation = AttestedPoseObservation(
-        source = this,
-        frame = frame,
-        personTrackEpoch = personTrackEpoch,
-        viewQualifications = viewQualifications,
-    )
+    ): AttestedPoseObservation {
+        requireOpen()
+        return AttestedPoseObservation(
+            source = this,
+            frame = frame,
+            personTrackEpoch = personTrackEpoch,
+            viewQualifications = viewQualifications,
+        )
+    }
+
+    override fun close() {
+        closed.set(true)
+    }
+
+    internal val isOpen: Boolean
+        get() = !closed.get()
+
+    private fun requireOpen() {
+        check(!closed.get()) { "Pose observation source is closed" }
+    }
 }
 
 /** Session-local, non-persistent identity continuity token minted only by its observer source. */
@@ -119,9 +176,13 @@ class PosePersonTrackEpoch internal constructor(
 /** One view decision minted by the source's contract-pinned qualifier. */
 class PoseViewQualification internal constructor(
     internal val source: PoseObservationSource,
+    internal val personTrackEpoch: PosePersonTrackEpoch,
+    internal val frameTimestampMs: Long,
     val viewContractId: String,
 ) {
     init {
+        require(personTrackEpoch.source === source)
+        require(frameTimestampMs >= 0L)
         validateIdentifier("viewContractId", viewContractId)
     }
 }
@@ -151,6 +212,14 @@ class AttestedPoseObservation internal constructor(
         }
         require(viewQualificationSnapshot.all { qualification -> qualification.source === source }) {
             "Every view qualification must be minted by the observation source"
+        }
+        require(
+            viewQualificationSnapshot.all { qualification ->
+                qualification.personTrackEpoch === personTrackEpoch &&
+                    qualification.frameTimestampMs == this.frame.timestampMs
+            },
+        ) {
+            "Every view qualification must match the observation person epoch and timestamp"
         }
         val duplicateViewIds = viewQualificationSnapshot
             .groupingBy(PoseViewQualification::viewContractId)

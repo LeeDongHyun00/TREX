@@ -187,12 +187,14 @@ class PoseExerciseEvaluationSessionTest {
         val fixture = fixture()
         val session = fixture.session()
         val foreignSource = PoseObservationSource(fixture.spec.observationContract)
+        val foreignEpoch = foreignSource.newPersonTrackEpoch()
+        val foreignFrame = frame(0L, 170.0, 90.0)
         val foreignObservation = foreignSource.attest(
-            frame = frame(0L, 170.0, 90.0),
-            personTrackEpoch = foreignSource.newPersonTrackEpoch(),
+            frame = foreignFrame,
+            personTrackEpoch = foreignEpoch,
             viewQualifications = listOf(
-                foreignSource.qualifyView(PHASE_VIEW_CONTRACT),
-                foreignSource.qualifyView(VIEW_CONTRACT),
+                foreignSource.qualifyView(PHASE_VIEW_CONTRACT, foreignEpoch, foreignFrame.timestampMs),
+                foreignSource.qualifyView(VIEW_CONTRACT, foreignEpoch, foreignFrame.timestampMs),
             ),
         )
 
@@ -391,8 +393,6 @@ class PoseExerciseEvaluationSessionTest {
             spec = spec,
             source = observationSource,
             personTrackEpoch = observationSource.newPersonTrackEpoch(),
-            phaseViewQualification = observationSource.qualifyView(PHASE_VIEW_CONTRACT),
-            criterionViewQualification = observationSource.qualifyView(VIEW_CONTRACT),
             calibrations = bundles.associate { it.criterion.criterionId to it.calibration },
         )
     }
@@ -463,12 +463,15 @@ class PoseExerciseEvaluationSessionTest {
         runtimeDomainId = RUNTIME_DOMAIN,
         modelArtifactId = "mediapipe.pose-landmarker.full.v1",
         modelArtifactSha256 = SHA_A,
+        inferenceOptionsContractId = "mediapipe.video-options.v1",
+        inferenceOptionsArtifactSha256 = SHA_A,
         preprocessingContractId = "camerax.viewport-rotation-no-mirror.v1",
         preprocessingArtifactSha256 = SHA_B,
         landmarkSchemaId = "mediapipe.pose-33.v1",
         landmarkSchemaArtifactSha256 = SHA_C,
         supportedCoordinateSpaces = setOf(PoseCoordinateSpace.WORLD),
         phaseViewContractId = PHASE_VIEW_CONTRACT,
+        allowedViewContractIds = setOf(PHASE_VIEW_CONTRACT, VIEW_CONTRACT),
         personLockArtifactId = "primary-person.temporal-lock.v1",
         personLockArtifactSha256 = SHA_B,
         viewQualifierArtifactId = "body-yaw.qualifier.v1",
@@ -520,8 +523,6 @@ class PoseExerciseEvaluationSessionTest {
         val spec: PoseExerciseSpec,
         val source: PoseObservationSource,
         val personTrackEpoch: PosePersonTrackEpoch,
-        val phaseViewQualification: PoseViewQualification,
-        val criterionViewQualification: PoseViewQualification,
         val calibrations: Map<String, CriterionAggregateCalibration>,
     ) {
         fun session() = PoseExerciseEvaluationSession(
@@ -539,8 +540,12 @@ class PoseExerciseEvaluationSessionTest {
             frame = frame,
             personTrackEpoch = personTrackEpoch,
             viewQualifications = buildList {
-                if (phaseViewQualified) add(phaseViewQualification)
-                if (criterionViewQualified) add(criterionViewQualification)
+                if (personTrackEpoch != null && phaseViewQualified) {
+                    add(source.qualifyView(PHASE_VIEW_CONTRACT, personTrackEpoch, frame.timestampMs))
+                }
+                if (personTrackEpoch != null && criterionViewQualified) {
+                    add(source.qualifyView(VIEW_CONTRACT, personTrackEpoch, frame.timestampMs))
+                }
             },
         )
     }

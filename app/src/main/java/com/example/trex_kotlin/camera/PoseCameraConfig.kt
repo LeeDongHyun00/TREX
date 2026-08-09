@@ -7,7 +7,7 @@ data class PoseCameraConfig(
     val minPoseDetectionConfidence: Float = 0.5f,
     val minPosePresenceConfidence: Float = 0.5f,
     val minTrackingConfidence: Float = 0.5f,
-    val numberOfPoses: Int = 1,
+    val numberOfPoses: Int = 2,
 ) {
     init {
         require(modelAssetName.isNotBlank()) { "modelAssetName must not be blank." }
@@ -20,13 +20,14 @@ data class PoseCameraConfig(
         require(minTrackingConfidence in 0f..1f) {
             "minTrackingConfidence must be between 0 and 1."
         }
-        require(numberOfPoses == 1) {
-            "This camera pipeline emits one PoseFrame and therefore supports exactly one pose."
+        require(numberOfPoses in 2..MAX_POSE_CANDIDATES) {
+            "The attested camera pipeline requires 2..$MAX_POSE_CANDIDATES pose candidates."
         }
     }
 
     companion object {
         const val DEFAULT_POSE_MODEL_ASSET = "pose_landmarker_full.task"
+        const val MAX_POSE_CANDIDATES = 4
     }
 }
 
@@ -34,6 +35,7 @@ data class PoseCameraConfig(
 enum class PoseCameraDelegate {
     Cpu,
     Gpu,
+    /** Falls back only when GPU task creation fails. Inference failure stops this source. */
     GpuWithCpuFallback,
 }
 
@@ -55,6 +57,10 @@ sealed interface PoseCameraError {
 
     data class LandmarkerInitializationFailed(
         val cause: Throwable,
+    ) : PoseCameraError
+
+    data class ObserverArtifactVerificationFailed(
+        val failure: PoseObserverArtifactFailure,
     ) : PoseCameraError
 
     data class FrameAnalysisFailed(

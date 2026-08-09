@@ -517,7 +517,7 @@ private fun PostureActiveScaffold(
     poseFeedback: PoseFeedback?,
     cameraStatus: PoseCameraStatus,
     cameraError: PoseCameraError?,
-    onPoseFrame: (PoseFrame) -> Unit,
+    onDisplayFrame: (PoseFrame) -> Unit,
     onCameraError: (PoseCameraError) -> Unit,
     onCameraStatusChanged: (PoseCameraStatus) -> Unit,
     onToggleMute: () -> Unit,
@@ -545,7 +545,8 @@ private fun PostureActiveScaffold(
         PoseCameraPreview(
             modifier = Modifier.fillMaxSize(),
             active = phase != PosturePhase.SetComplete,
-            onPoseFrame = onPoseFrame,
+            // Display landmarks are overlay-only. Evaluation must consume the attested observation.
+            onPoseObservation = { update -> update.displayFrame?.let(onDisplayFrame) },
             onError = onCameraError,
             onStatusChanged = onCameraStatusChanged,
         )
@@ -1662,6 +1663,8 @@ private fun PoseCameraError.userMessage(): String = when (this) {
     is PoseCameraError.MissingModelAsset -> "자세 인식 모델을 불러올 수 없어요"
     is PoseCameraError.CameraInitializationFailed -> "카메라를 시작하지 못했어요"
     is PoseCameraError.LandmarkerInitializationFailed -> "자세 인식 엔진을 시작하지 못했어요"
+    is PoseCameraError.ObserverArtifactVerificationFailed ->
+        "검증된 자세 인식 구성을 불러오지 못했어요"
     is PoseCameraError.FrameAnalysisFailed -> "카메라 프레임을 분석하지 못했어요"
 }
 

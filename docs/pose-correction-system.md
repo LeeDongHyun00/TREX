@@ -104,6 +104,10 @@ flowchart LR
 
 - CameraX 분석은 640×480, `STRATEGY_KEEP_ONLY_LATEST`, 단일 분석 스레드를 사용한다. Preview와 Analysis를 같은 ViewPort로 묶고 `ImageProxy.cropRect`를 모델 입력에도 적용한다. 처리한 `ImageProxy`는 성공·실패와 관계없이 닫는다.
 - MediaPipe Full 모델은 앱 내부에서만 실행하며 원본 프레임, Bitmap, 관절 시퀀스를 파일이나 네트워크에 저장하지 않는다.
+- observer factory는 asset을 한 번 읽으면서 정확한 길이와 SHA-256을 검증하고, 검증한 동일 direct buffer를 MediaPipe에 전달한다. running mode, 실제 CPU/GPU delegate, 요청 delegate 정책, 후보 수와 confidence 옵션, CameraX 전처리 및 33-landmark mapping은 서로 분리된 content SHA로 observation contract에 고정한다.
+- MediaPipe의 normalized/world 후보는 같은 result index로 묶고 모든 후보를 보존한다. 정확히 33개가 아니거나 non-finite인 후보는 usable pose에서 제외하지만 raw 후보 수에는 남기며, visibility/presence 누락은 `1.0`이 아니라 `0.0`으로 처리한다. capture timestamp가 중복·역행하거나 SDK 결과 timestamp와 다르면 observer를 진행하지 않는다.
+- 현재 primary-person 정책은 정확히 한 개의 raw·usable 후보가 1초 동안 연속 관측될 때만 opaque epoch를 발급한다. 두 번째 사람, schema-invalid 후보, 추적 공백, 큰 위치·체형 불연속은 epoch와 view evidence를 즉시 폐기한다. 이는 생체 신원 확인이 아니라 pose 궤적 연속성 가설이며, 거울·TV·같은 위치의 유사 체형 교체를 증명하지 못한다.
+- view qualification은 전신 crop·confidence와 body axis를 별도로 검사하고 source·person epoch·frame timestamp에 묶인 token만 발급한다. shoulder/hip axis만으로 front와 rear를 구분할 수 없으므로 현재 긍정적인 방향 token은 dwell을 통과한 lateral view뿐이며, 정면 축은 진단값만 남기고 criterion 권한으로 쓰지 않는다.
 - 모델의 해부학적 좌·우는 유지한다. 전면 카메라 미러링은 화면 오버레이에만 적용한다.
 - 카메라 계층은 SDK 타입을 공통 `PoseFrame`으로 변환한다. 판정기는 MediaPipe나 CameraX 타입을 참조하지 않는 순수 Kotlin 코드다.
 - 내부 회귀용 임시 evaluator도 `PoseEvaluatorConfig.coordinateSpace`에 고정된 한 좌표계만 사용한다. 선택한 domain의 관절이 없으면 다른 domain으로 fallback하지 않고 추적 실패로 처리하지만, 기본 world 정책은 Gold 보정 전 legacy 설정이므로 제품 availability나 사용자 판정 권한을 갖지 않는다.
@@ -135,7 +139,7 @@ flowchart LR
 - `PoseObservationContract`은 model bytes, preprocessing, landmark schema, 좌표 domain, phase view, person-lock와 view-qualifier artifact를 내용 해시로 고정한다. raw `PoseFrame`이나 호출자가 만든 capability set은 cue 증거가 아니며, 같은 observer source가 발급한 opaque person epoch와 프레임별 view qualification이 붙은 observation만 세션이 받는다.
 - `PoseExerciseEvaluationSession`은 서명된 최대 phase 시간과 별도의 2,048-frame hard cap 안에서 ring을 소유하고 dwell 확인으로 늦게 확정된 경계를 `[start,end)` 구간으로 재분배한다. 사람 lock 상실·epoch 변경은 confidence grace 없이 즉시 reset하고, view가 맞지 않는 phase 관측은 unusable로 처리한다. 중복 timestamp·buffer overflow·reset·불완전 cycle은 판정에서 폐기하며, 모든 cue criterion의 정확한 aggregate calibration이 있을 때만 완전한 cycle graph를 합성한다.
 
-내부 스쿼트·런지 회귀 evaluator의 네 개 큰 관절각과 stance ratio도 새 공통 feature primitive로 계산해 수학 경로를 비교할 수 있다. 그러나 제품 factory는 제거했고 `PostureCorrectionRuntimeFacade`의 app-bundled allowlist는 정책 SHA에 묶인 0-entry 상태다. 이 empty artifact hash는 drift 탐지용이지 서명이 아니다. 현재 signed spec/session과 observation source는 module-internal scaffold이며, 실제 candidate observer factory와 detached signature·pinned public-key release loader가 구현되기 전에는 non-empty allowlist를 허용하지 않는다.
+내부 스쿼트·런지 회귀 evaluator의 네 개 큰 관절각과 stance ratio도 새 공통 feature primitive로 계산해 수학 경로를 비교할 수 있다. 그러나 제품 factory는 제거했고 `PostureCorrectionRuntimeFacade`의 app-bundled allowlist는 정책 SHA에 묶인 0-entry 상태다. 이 empty artifact hash는 drift 탐지용이지 서명이 아니다. 검증된 candidate observer·person lock·제한된 lateral qualifier의 순수 코어는 구현했지만 현재 제품 화면의 판정 session에 연결하지 않았고, 좌표 궤적은 물리적 신원을 증명하지 않는다. observer issuer의 별도 모듈 격리, 실제 기기 identity/view challenge, MediaPipe↔Gold 보정, detached signature와 pinned public-key release loader가 모두 완료되기 전에는 non-empty allowlist를 허용하지 않는다.
 
 ## 프레임 처리 알고리즘
 

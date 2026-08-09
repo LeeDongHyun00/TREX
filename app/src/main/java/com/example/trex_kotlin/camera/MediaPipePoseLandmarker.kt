@@ -13,7 +13,8 @@ import com.google.mediapipe.tasks.core.Delegate
 import com.google.mediapipe.tasks.vision.core.RunningMode
 import com.google.mediapipe.tasks.vision.poselandmarker.PoseLandmarker
 import com.google.mediapipe.tasks.vision.poselandmarker.PoseLandmarkerResult
-import java.io.FileNotFoundException
+import java.nio.ByteBuffer
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
@@ -22,9 +23,10 @@ import java.util.concurrent.atomic.AtomicBoolean
  */
 internal class MediaPipePoseLandmarker(
     context: Context,
-    private val config: PoseCameraConfig,
+    private val verifiedProfile: VerifiedMediaPipePoseObserverProfile,
     private val onResult: (
         result: PoseLandmarkerResult,
+        captureTimestampMs: Long,
         inputWidth: Int,
         inputHeight: Int,
         rotationDegrees: Int,
@@ -34,23 +36,24 @@ internal class MediaPipePoseLandmarker(
     private val onError: (PoseCameraError) -> Unit,
 ) : AutoCloseable {
     private val applicationContext = context.applicationContext
+    private val config = verifiedProfile.config
     private val closed = AtomicBoolean(false)
     private var landmarker: PoseLandmarker? = null
-    private var lastTimestampMs = Long.MIN_VALUE
+    private val timestampGate = CameraCaptureTimestampGate()
 
-    fun initialize(): Boolean {
-        if (closed.get()) return false
-        if (!modelAssetExists(config.modelAssetName)) {
-            onError(PoseCameraError.MissingModelAsset(config.modelAssetName))
-            return false
-        }
-
+    /** Creates the MediaPipe task and its source-bound observer as one analysis-thread operation. */
+    fun initialize(): MediaPipePoseObserver? {
+        if (closed.get()) return null
+        var initialized: InitializedLandmarker? = null
         return try {
-            landmarker = createLandmarkerWithConfiguredDelegate()
-            true
-        } catch (error: Throwable) {
-            onError(PoseCameraError.LandmarkerInitializationFailed(error))
-            false
+            initialized = createLandmarkerWithConfiguredDelegate()
+            val observer = verifiedProfile.createObserver(initialized.resolvedDelegate)
+            landmarker = initialized.landmarker
+            observer
+        } catch (error: Exception) {
+            initializationFailed(initialized, error)
+        } catch (error: LinkageError) {
+            initializationFailed(initialized, error)
         }
     }
 
@@ -61,42 +64,55 @@ internal class MediaPipePoseLandmarker(
             return
         }
 
-        val rotationDegrees = imageProxy.imageInfo.rotationDegrees
-        val cropRect = Rect(imageProxy.cropRect)
-        var orientedBitmap: Bitmap? = null
-
-        val sourceBitmap = try {
-            imageProxy.toRgbaBitmap()
-        } catch (error: Throwable) {
+        val cameraFrame = try {
+            val captureTimestampMs = timestampGate.accept(imageProxy.imageInfo.timestamp)
+                ?: return
+            val cropRect = Rect(imageProxy.cropRect)
+            val rotationDegrees = imageProxy.imageInfo.rotationDegrees
+            require(rotationDegrees in setOf(0, 90, 180, 270)) {
+                "CameraX rotation must be 0, 90, 180, or 270 degrees"
+            }
+            PreparedCameraFrame(
+                sourceBitmap = imageProxy.toRgbaBitmap(),
+                cropRect = cropRect,
+                rotationDegrees = rotationDegrees,
+                captureTimestampMs = captureTimestampMs,
+            )
+        } catch (error: Exception) {
             onError(PoseCameraError.FrameAnalysisFailed(error))
             return
         } finally {
-            // The RGBA pixels have been copied, so the CameraX frame is no longer retained.
+            // Every ImageProxy access and copy is inside this boundary.
             imageProxy.close()
         }
+        val sourceBitmap = cameraFrame.sourceBitmap
+        var orientedBitmap: Bitmap? = null
 
         try {
             val transform = Matrix().apply {
-                postRotate(rotationDegrees.toFloat())
+                postRotate(cameraFrame.rotationDegrees.toFloat())
             }
             orientedBitmap = Bitmap.createBitmap(
                 sourceBitmap,
-                cropRect.left,
-                cropRect.top,
-                cropRect.width(),
-                cropRect.height(),
+                cameraFrame.cropRect.left,
+                cameraFrame.cropRect.top,
+                cameraFrame.cropRect.width(),
+                cameraFrame.cropRect.height(),
                 transform,
                 true,
             )
             if (orientedBitmap !== sourceBitmap) sourceBitmap.recycle()
 
-            val timestampMs = nextTimestampMs()
             val startedAtMs = SystemClock.uptimeMillis()
             BitmapImageBuilder(orientedBitmap).build().use { image ->
-                val result = detector.detectForVideo(image, timestampMs)
+                val result = detector.detectForVideo(image, cameraFrame.captureTimestampMs)
+                check(result.timestampMs() == cameraFrame.captureTimestampMs) {
+                    "MediaPipe returned a different timestamp than the capture frame"
+                }
                 if (!closed.get()) {
                     onResult(
                         result,
+                        cameraFrame.captureTimestampMs,
                         image.width,
                         image.height,
                         0,
@@ -105,7 +121,9 @@ internal class MediaPipePoseLandmarker(
                     )
                 }
             }
-        } catch (error: Throwable) {
+        } catch (error: Exception) {
+            if (!closed.get()) onError(PoseCameraError.FrameAnalysisFailed(error))
+        } catch (error: LinkageError) {
             if (!closed.get()) onError(PoseCameraError.FrameAnalysisFailed(error))
         } finally {
             orientedBitmap?.let { if (!it.isRecycled) it.recycle() }
@@ -119,19 +137,22 @@ internal class MediaPipePoseLandmarker(
         landmarker = null
     }
 
-    private fun createLandmarkerWithConfiguredDelegate(): PoseLandmarker {
+    private fun createLandmarkerWithConfiguredDelegate(): InitializedLandmarker {
         val delegates = when (config.delegate) {
-            PoseCameraDelegate.Cpu -> listOf(Delegate.CPU)
-            PoseCameraDelegate.Gpu -> listOf(Delegate.GPU)
-            PoseCameraDelegate.GpuWithCpuFallback -> listOf(Delegate.GPU, Delegate.CPU)
+            PoseCameraDelegate.Cpu -> listOf(Delegate.CPU to ResolvedPoseDelegate.CPU)
+            PoseCameraDelegate.Gpu -> listOf(Delegate.GPU to ResolvedPoseDelegate.GPU)
+            PoseCameraDelegate.GpuWithCpuFallback -> listOf(
+                Delegate.GPU to ResolvedPoseDelegate.GPU,
+                Delegate.CPU to ResolvedPoseDelegate.CPU,
+            )
         }
         var firstFailure: Throwable? = null
         var lastFailure: Throwable? = null
-        for (delegate in delegates) {
+        for ((delegate, resolvedDelegate) in delegates) {
             try {
                 val baseOptions = BaseOptions.builder()
                     .setDelegate(delegate)
-                    .setModelAssetPath(config.modelAssetName)
+                    .setModelAssetBuffer(verifiedProfile.modelBufferForBackend())
                     .build()
                 val options = PoseLandmarker.PoseLandmarkerOptions.builder()
                     .setBaseOptions(baseOptions)
@@ -141,8 +162,11 @@ internal class MediaPipePoseLandmarker(
                     .setMinPosePresenceConfidence(config.minPosePresenceConfidence)
                     .setMinTrackingConfidence(config.minTrackingConfidence)
                     .build()
-                return PoseLandmarker.createFromOptions(applicationContext, options)
-            } catch (error: Throwable) {
+                return InitializedLandmarker(
+                    landmarker = PoseLandmarker.createFromOptions(applicationContext, options),
+                    resolvedDelegate = resolvedDelegate,
+                )
+            } catch (error: Exception) {
                 if (firstFailure == null) firstFailure = error
                 lastFailure = error
             }
@@ -152,33 +176,108 @@ internal class MediaPipePoseLandmarker(
         throw failure
     }
 
-    private fun nextTimestampMs(): Long {
-        val now = SystemClock.uptimeMillis()
-        val next = if (now > lastTimestampMs) now else lastTimestampMs + 1L
-        lastTimestampMs = next
-        return next
-    }
-
-    private fun modelAssetExists(assetName: String): Boolean = try {
-        applicationContext.assets.open(assetName).use { }
-        true
-    } catch (_: FileNotFoundException) {
-        false
-    } catch (_: Exception) {
-        false
-    }
-
     private fun ImageProxy.toRgbaBitmap(): Bitmap {
         check(planes.isNotEmpty()) { "CameraX returned an RGBA frame without a pixel plane." }
+        val plane = planes[0]
+        check(plane.pixelStride == RGBA_BYTES_PER_PIXEL) {
+            "CameraX RGBA frames must use a four-byte pixel stride"
+        }
         val bitmap = createBitmap(width, height, Bitmap.Config.ARGB_8888)
         return try {
-            val pixelBuffer = planes[0].buffer
-            pixelBuffer.rewind()
-            bitmap.copyPixelsFromBuffer(pixelBuffer)
+            val compactPixels = copyVisibleRgbaRows(
+                sourceBuffer = plane.buffer,
+                width = width,
+                height = height,
+                rowStride = plane.rowStride,
+                pixelStride = plane.pixelStride,
+            )
+            bitmap.copyPixelsFromBuffer(ByteBuffer.wrap(compactPixels))
             bitmap
-        } catch (error: Throwable) {
+        } catch (error: Exception) {
             bitmap.recycle()
             throw error
         }
     }
+
+    private data class InitializedLandmarker(
+        val landmarker: PoseLandmarker,
+        val resolvedDelegate: ResolvedPoseDelegate,
+    )
+
+    private data class PreparedCameraFrame(
+        val sourceBitmap: Bitmap,
+        val cropRect: Rect,
+        val rotationDegrees: Int,
+        val captureTimestampMs: Long,
+    )
+
+    private fun initializationFailed(
+        initialized: InitializedLandmarker?,
+        error: Throwable,
+    ): MediaPipePoseObserver? {
+        try {
+            initialized?.landmarker?.close()
+        } catch (closeError: Exception) {
+            error.addSuppressed(closeError)
+        }
+        onError(PoseCameraError.LandmarkerInitializationFailed(error))
+        return null
+    }
+
 }
+
+internal class CameraCaptureTimestampGate {
+    private var lastCaptureTimestampNs = Long.MIN_VALUE
+    private var lastMediaPipeTimestampMs = Long.MIN_VALUE
+
+    /**
+     * Returns a strictly increasing MediaPipe timestamp or `null` when distinct sensor times
+     * collapse into the same millisecond. Sensor duplicates and regressions are fatal because they
+     * may indicate a rebound camera session and must not reuse the current person epoch.
+     */
+    fun accept(captureTimestampNs: Long): Long? {
+        require(captureTimestampNs >= 0L) { "Camera capture timestamp must be non-negative" }
+        require(
+            lastCaptureTimestampNs == Long.MIN_VALUE ||
+                captureTimestampNs > lastCaptureTimestampNs,
+        ) { "Camera capture timestamps must be strictly increasing" }
+        lastCaptureTimestampNs = captureTimestampNs
+
+        val mediaPipeTimestampMs = TimeUnit.NANOSECONDS.toMillis(captureTimestampNs)
+        if (mediaPipeTimestampMs <= lastMediaPipeTimestampMs) return null
+        lastMediaPipeTimestampMs = mediaPipeTimestampMs
+        return mediaPipeTimestampMs
+    }
+}
+
+internal fun copyVisibleRgbaRows(
+    sourceBuffer: ByteBuffer,
+    width: Int,
+    height: Int,
+    rowStride: Int,
+    pixelStride: Int,
+): ByteArray {
+    require(width > 0 && height > 0) { "RGBA dimensions must be positive" }
+    require(pixelStride == RGBA_BYTES_PER_PIXEL) {
+        "CameraX RGBA frames must use a four-byte pixel stride"
+    }
+    val visibleRowBytes = Math.multiplyExact(width, RGBA_BYTES_PER_PIXEL)
+    require(rowStride >= visibleRowBytes) {
+        "CameraX RGBA row stride is shorter than the visible image width"
+    }
+    val compactPixels = ByteArray(Math.multiplyExact(visibleRowBytes, height))
+    val source = sourceBuffer.duplicate()
+    val sourceStart = source.position()
+    for (row in 0 until height) {
+        val sourceOffset = Math.addExact(sourceStart, Math.multiplyExact(row, rowStride))
+        val sourceEnd = Math.addExact(sourceOffset, visibleRowBytes)
+        require(sourceOffset >= sourceStart && sourceEnd <= source.limit()) {
+            "CameraX RGBA plane does not contain every visible row"
+        }
+        source.position(sourceOffset)
+        source.get(compactPixels, row * visibleRowBytes, visibleRowBytes)
+    }
+    return compactPixels
+}
+
+private const val RGBA_BYTES_PER_PIXEL = 4

@@ -1039,7 +1039,9 @@ offline replay
 
 네 번째 slice는 `PostureCorrectionRuntimeFacade`를 운동 목록·사용자 선택·세션 진입의 유일한 product availability 경계로 연결했다. 41개 운동의 catalog/review/release count를 한곳에서 계산하며, policy SHA에 묶인 app-bundled allowlist는 `NO_RELEASE_KEY_CONFIGURED`, 0-entry로 고정했다. 따라서 현재 모든 토글은 비활성이고 타이머 세션으로 fail closed한다. 과거 수동 스쿼트·런지 factory를 제거해 구현 클래스의 존재가 사용자 cue·점수 권한이 되는 우회를 닫았고, 빈 feedback을 PASS 문구로 바꾸거나 null 점수를 0점으로 저장하거나 workout preference만으로 오류 기록을 합성하지 않는다. empty allowlist hash는 repository drift pin일 뿐 issuer signature가 아니다.
 
-아직 실제 candidate observer가 loaded model/config bytes를 검증해 `PoseObservationSource`를 만드는 factory, 운영 person-lock/view-qualifier 구현, detached signature와 pinned release public key loader, 실제 MediaPipe↔Gold calibration artifact가 없으므로 어떤 운동도 사용자 판정을 승인하지 않는다. 현재 signed spec/attestation source/session은 module-internal self-consistency scaffold이며 authenticity 보장이 아니다. Kotlin 단위 테스트는 feature·phase·criterion·identity 계약과 회귀 안전성의 증거이며 M2 또는 서비스 출시 완료 증거가 아니다.
+다섯 번째 slice는 bundled MediaPipe model의 정확한 길이·SHA-256을 검증한 동일 direct buffer로 task를 만들고, 실제 CPU/GPU delegate와 inference/preprocessing/landmark-schema contract를 분리해 고정하는 observer factory를 추가했다. 모든 normalized/world pose를 같은 index로 짝지으며 schema-invalid 후보도 raw 다중인물 sentinel에서 숨기지 않는다. 정확히 한 명의 usable candidate가 1초 동안 연속 관측돼야 새 person epoch를 만들고, 두 번째 후보·공백·불연속은 즉시 폐기한다. 전신 crop과 view는 별도 dwell을 거쳐 source·epoch·timestamp에 결속되며, front/rear를 구별할 수 없는 body-axis 관측은 front criterion token을 발급하지 않는다.
+
+이 구현은 여전히 SHADOW observer 기반시설이다. 좌표 연속성은 생체 신원이 아니어서 거울·TV·같은 위치의 유사 체형 교체를 막는 물리기기 challenge가 필요하고, view 임계값도 Gold 승인 전이다. issuer가 같은 Gradle module의 `internal` 경계에 있으며 동적 crop·rotation·camera-session provenance, detached signature와 pinned release public key loader, 실제 MediaPipe↔Gold calibration artifact도 아직 없다. 따라서 어떤 운동도 사용자 판정을 승인하지 않으며 0-entry release allowlist를 유지한다. Kotlin 단위 테스트는 계산 계약과 fail-closed 회귀의 증거일 뿐 M2 또는 서비스 출시 완료 증거가 아니다.
 
 ### 17.1 출시 critical path
 
@@ -1116,7 +1118,7 @@ M0–M1이 끝나기 전에 임계값을 Kotlin 상수로 굳히지 않는다. M
 3. `062`, `101`, `109`를 포함한 conflict type의 blind 전문가 Gold가 없다.
 4. 실제 가정·스마트폰·다양한 사용자의 scripted/natural-use external test와 human-factors 결과가 없다.
 5. 운동별 camera-view/criterion observability matrix, measurement construct, 방향별 cue의 승인값이 없다.
-6. 현재 앱의 observer는 단일 pose `firstOrNull()`이라 candidate-level primary-person lock과 배경인·화면 속 사람 방어가 없다.
+6. candidate-level observer는 구현됐지만 좌표 연속성만 사용하므로 거울·TV·같은 위치의 유사 체형 교체를 물리적 신원으로 구분하지 못하고, replay·실기기 wrong-person CI와 명시적 acquisition UX가 없다.
 7. world Z를 criterion별 기준장비 검증 없이 우선하고 비대칭 오차 interval·domain backoff가 없다.
 8. 실제 기기 sustained P99·heap slope·thermal fail-closed benchmark가 없다.
 9. privacy data-flow/retention/license review, 집계 telemetry, signed 운동별 kill switch와 전파 rehearsal이 없다.
