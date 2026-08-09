@@ -5,6 +5,8 @@ import com.example.trex_kotlin.pose.PoseJoint
 import com.example.trex_kotlin.pose.PoseLandmark
 import com.example.trex_kotlin.pose.contract.canonicalFieldsSha256
 import com.example.trex_kotlin.pose.runtime.AttestedPoseObservation
+import com.example.trex_kotlin.pose.runtime.PoseCameraGeometryEpoch
+import com.example.trex_kotlin.pose.runtime.PoseCameraGeometryContext
 import com.example.trex_kotlin.pose.runtime.PoseObservationSource
 import com.example.trex_kotlin.pose.runtime.PosePersonTrackEpoch
 import com.example.trex_kotlin.pose.runtime.PoseViewQualification
@@ -43,6 +45,7 @@ enum class PoseObserverUnknownReason {
     PERSON_AMBIGUOUS,
     PERSON_LOCK_ACQUIRING,
     PERSON_TRACK_DISCONTINUITY,
+    CAMERA_GEOMETRY_DISCONTINUITY,
     REQUIRED_LANDMARK_MISSING,
     REQUIRED_LANDMARK_LOW_CONFIDENCE,
     BODY_OUT_OF_FRAME,
@@ -74,30 +77,25 @@ internal data class PoseCandidateBatch(
     val timestampMs: Long,
     val candidates: List<PoseFrame>,
     val rawCandidateCount: Int = candidates.size,
-    val imageWidth: Int,
-    val imageHeight: Int,
-    val rotationDegrees: Int,
-    val isMirrored: Boolean,
+    val geometryContext: PoseCameraGeometryContext,
 ) {
     init {
         require(timestampMs >= 0L)
         require(rawCandidateCount >= candidates.size)
-        require(imageWidth > 0 && imageHeight > 0)
-        require(rotationDegrees in setOf(0, 90, 180, 270))
         require(candidates.all { it.timestampMs == timestampMs })
-        require(candidates.all { it.imageWidth == imageWidth && it.imageHeight == imageHeight })
-        require(candidates.all { it.rotationDegrees == rotationDegrees })
-        require(candidates.all { it.isMirrored == isMirrored })
+        require(candidates.all(geometryContext::matchesOutputFrame)) {
+            "Every candidate frame must match the batch camera geometry context"
+        }
     }
 
     fun emptyFrame(): PoseFrame = PoseFrame(
         timestampMs = timestampMs,
         landmarks = emptyMap(),
         worldLandmarks = emptyMap(),
-        imageWidth = imageWidth,
-        imageHeight = imageHeight,
-        rotationDegrees = rotationDegrees,
-        isMirrored = isMirrored,
+        imageWidth = geometryContext.outputImageWidth,
+        imageHeight = geometryContext.outputImageHeight,
+        rotationDegrees = geometryContext.outputRotationDegrees,
+        isMirrored = geometryContext.displayMirrored,
     )
 
     val rejectedCandidateCount: Int
@@ -211,6 +209,7 @@ internal class MediaPipePoseObserver(
     private var lockedDescriptor: CandidateDescriptor? = null
     private var lockedSceneDescriptors: List<CandidateDescriptor> = emptyList()
     private var personTrackEpoch: PosePersonTrackEpoch? = null
+    private var cameraGeometryEpoch: PoseCameraGeometryEpoch? = null
     private var pendingViewIds: Set<String> = emptySet()
     private var pendingViewStartedAtMs: Long? = null
     private var stableViewIds: Set<String> = emptySet()
@@ -239,11 +238,23 @@ internal class MediaPipePoseObserver(
 
     fun accept(batch: PoseCandidateBatch): PoseObserverUpdate {
         check(!closed) { "Pose observer is closed" }
+        require(
+            batch.geometryContext.preprocessingArtifactSha256 ==
+                observationSource.contract.preprocessingArtifactSha256,
+        ) { "Batch camera geometry does not match the observation preprocessing contract" }
         val previousTimestamp = lastTimestampMs
         require(previousTimestamp == null || batch.timestampMs > previousTimestamp) {
             "Observer timestamps must be strictly increasing"
         }
         lastTimestampMs = batch.timestampMs
+
+        val previousGeometryEpoch = cameraGeometryEpoch
+        val geometryDiscontinuity = previousGeometryEpoch != null &&
+            previousGeometryEpoch.contextArtifactSha256 != batch.geometryContext.artifactSha256
+        if (previousGeometryEpoch == null || geometryDiscontinuity) {
+            if (geometryDiscontinuity) clearLock()
+            cameraGeometryEpoch = observationSource.newCameraGeometryEpoch(batch.geometryContext)
+        }
 
         val described = batch.candidates.mapNotNull { frame ->
             CandidateDescriptor.from(frame, personLockConfig)?.let { descriptor ->
@@ -252,6 +263,31 @@ internal class MediaPipePoseObserver(
         }
         val invalidCandidateCount = batch.rejectedCandidateCount +
             (batch.candidates.size - described.size)
+
+        if (geometryDiscontinuity) {
+            val candidate = if (batch.rawCandidateCount <= 1) {
+                beginOrContinueAcquisition(batch.timestampMs, described)
+            } else {
+                pendingAcquisition = null
+                null
+            }
+            return update(
+                batch = batch,
+                selected = candidate,
+                status = PoseObserverTrackingStatus.TRACK_DISCONTINUITY,
+                reasons = buildSet {
+                    add(PoseObserverUnknownReason.CAMERA_GEOMETRY_DISCONTINUITY)
+                    if (batch.rawCandidateCount > 1) {
+                        add(PoseObserverUnknownReason.PERSON_AMBIGUOUS)
+                    } else if (batch.rawCandidateCount == 0) {
+                        add(PoseObserverUnknownReason.PERSON_NOT_FOUND)
+                    }
+                    if (invalidCandidateCount > 0) {
+                        add(PoseObserverUnknownReason.REQUIRED_LANDMARK_LOW_CONFIDENCE)
+                    }
+                },
+            )
+        }
 
         if (batch.rawCandidateCount > 1) {
             clearLock()
@@ -578,6 +614,9 @@ internal class MediaPipePoseObserver(
                 frame = frame,
                 personTrackEpoch = epoch,
                 viewQualifications = qualifications,
+                cameraGeometryEpoch = checkNotNull(cameraGeometryEpoch) {
+                    "A camera geometry epoch must exist before an observer update is attested"
+                },
             ),
             displayFrame = selectedFrame,
             trackingStatus = status,
@@ -637,6 +676,7 @@ internal class MediaPipePoseObserver(
         if (closed) return
         closed = true
         clearLock()
+        cameraGeometryEpoch = null
         observationSource.close()
     }
 

@@ -27,6 +27,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.example.trex_kotlin.pose.PoseFrame
 import com.example.trex_kotlin.pose.PoseJoint
 import com.example.trex_kotlin.pose.PoseLandmark
+import com.example.trex_kotlin.pose.runtime.PoseCameraGeometryContext
 import com.google.mediapipe.tasks.components.containers.Landmark
 import com.google.mediapipe.tasks.components.containers.NormalizedLandmark
 import com.google.mediapipe.tasks.vision.poselandmarker.PoseLandmarkerResult
@@ -101,27 +102,68 @@ fun PoseCameraPreview(
         val observerRef = AtomicReference<MediaPipePoseObserver?>(null)
         val latestDeliveryRef = AtomicReference<PendingPoseObservationDelivery?>(null)
         val observationDispatchScheduled = AtomicBoolean(false)
+        val terminalCleanup = PoseCameraTerminalCleanup()
 
-        fun stopPoseRuntime() {
-            latestDeliveryRef.set(null)
-            val observer = observerRef.getAndSet(null)
-            val landmarker = landmarkerRef.getAndSet(null)
-            if (observer == null && landmarker == null) return
-            try {
-                analysisExecutor.execute {
-                    observer?.close()
-                    landmarker?.close()
-                }
-            } catch (_: RejectedExecutionException) {
-                observer?.close()
-                landmarker?.close()
-            }
+        val rotationListener = View.OnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
+            val targetRotation = previewView.display?.rotation ?: Surface.ROTATION_0
+            previewUseCaseRef.get()?.targetRotation = targetRotation
+            analysisUseCaseRef.get()?.targetRotation = targetRotation
         }
 
-        fun dispatchError(error: PoseCameraError) {
-            mainExecutor.execute {
-                if (!disposed.get()) onErrorState.value(error)
-            }
+        /**
+         * Claims every owned resource exactly once. CameraX teardown is posted to the main
+         * executor, while analysis-owned native resources close behind any in-flight frame before
+         * the executor shuts down. Both branches are best-effort so one throwing callback or
+         * cleanup operation cannot strand the remaining resources.
+         */
+        fun terminatePoseCamera(error: PoseCameraError? = null) {
+            terminalCleanup.terminate(
+                { disposed.set(true) },
+                { latestDeliveryRef.set(null) },
+                // Stop accepting new frames as soon as a terminal failure is observed. The main
+                // cleanup repeats this after atomically detaching the use case to cover races.
+                { analysisUseCaseRef.get()?.clearAnalyzer() },
+                {
+                    analysisExecutor.closeAfterPendingWork(
+                        landmarker = landmarkerRef.getAndSet(null),
+                        observer = observerRef.getAndSet(null),
+                    )
+                },
+                {
+                    val mainCleanup = {
+                        runPoseCameraCleanupSteps(
+                            { previewView.removeOnLayoutChangeListener(rotationListener) },
+                            {
+                                val analysisUseCase = analysisUseCaseRef.getAndSet(null)
+                                analysisUseCase?.clearAnalyzer()
+                                val previewUseCase = previewUseCaseRef.getAndSet(null)
+                                val cameraProvider = cameraProviderRef.getAndSet(null)
+                                val ownedUseCases = listOfNotNull(
+                                    previewUseCase,
+                                    analysisUseCase,
+                                ).toTypedArray()
+                                if (cameraProvider != null && ownedUseCases.isNotEmpty()) {
+                                    cameraProvider.unbind(*ownedUseCases)
+                                }
+                            },
+                            { error?.let { onErrorState.value(it) } },
+                            { onStatusChangedState.value(PoseCameraStatus.Stopped) },
+                        )
+                    }
+                    try {
+                        mainExecutor.execute(mainCleanup)
+                    } catch (_: RejectedExecutionException) {
+                        mainCleanup()
+                    }
+                },
+            )
+        }
+
+        try {
+            previewView.addOnLayoutChangeListener(rotationListener)
+        } catch (error: Exception) {
+            terminatePoseCamera(PoseCameraError.CameraInitializationFailed(error))
+            return@DisposableEffect onDispose { terminatePoseCamera() }
         }
 
         fun dispatchLatestObservation(update: PoseObserverUpdate, inferenceTimeMs: Long) {
@@ -141,212 +183,167 @@ fun PoseCameraPreview(
             }
         }
 
-        val rotationListener = View.OnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
-            val targetRotation = previewView.display?.rotation ?: Surface.ROTATION_0
-            previewUseCaseRef.get()?.targetRotation = targetRotation
-            analysisUseCaseRef.get()?.targetRotation = targetRotation
-        }
-        previewView.addOnLayoutChangeListener(rotationListener)
-
-        analysisExecutor.execute initializeLandmarker@{
+        try {
+            analysisExecutor.execute initializeLandmarker@{
             val verifiedProfile = try {
                 VerifiedMediaPipePoseObserverProfile.verify(context, config)
             } catch (_: java.io.FileNotFoundException) {
-                dispatchError(PoseCameraError.MissingModelAsset(config.modelAssetName))
-                mainExecutor.execute {
-                    if (!disposed.get()) onStatusChangedState.value(PoseCameraStatus.Stopped)
-                }
+                terminatePoseCamera(PoseCameraError.MissingModelAsset(config.modelAssetName))
                 return@initializeLandmarker
             } catch (error: PoseObserverArtifactVerificationException) {
-                dispatchError(PoseCameraError.ObserverArtifactVerificationFailed(error.failure))
-                mainExecutor.execute {
-                    if (!disposed.get()) onStatusChangedState.value(PoseCameraStatus.Stopped)
-                }
+                terminatePoseCamera(PoseCameraError.ObserverArtifactVerificationFailed(error.failure))
                 return@initializeLandmarker
             }
             val landmarker = MediaPipePoseLandmarker(
                 context = context,
                 verifiedProfile = verifiedProfile,
-                onResult = { result, captureTimestampMs, width, height, rotationDegrees,
-                    isMirrored, inferenceTimeMs ->
+                onResult = { result, captureTimestampMs, geometryContext, inferenceTimeMs ->
                     observerRef.get()?.let { observer ->
                         try {
                             val update = observer.accept(
                                 result.toCandidateBatch(
                                     captureTimestampMs = captureTimestampMs,
-                                    imageWidth = width,
-                                    imageHeight = height,
-                                    rotationDegrees = rotationDegrees,
-                                    isMirrored = isMirrored,
+                                    geometryContext = geometryContext,
                                 ),
                             )
                             dispatchLatestObservation(update, inferenceTimeMs)
                         } catch (error: Exception) {
-                            stopPoseRuntime()
-                            dispatchError(PoseCameraError.FrameAnalysisFailed(error))
-                            mainExecutor.execute {
-                                analysisUseCaseRef.get()?.clearAnalyzer()
-                                if (!disposed.get()) {
-                                    onStatusChangedState.value(PoseCameraStatus.Stopped)
-                                }
-                            }
+                            terminatePoseCamera(PoseCameraError.FrameAnalysisFailed(error))
                         }
                     }
                 },
-                onError = { error ->
-                    if (error is PoseCameraError.FrameAnalysisFailed) {
-                        stopPoseRuntime()
-                        mainExecutor.execute {
-                            analysisUseCaseRef.get()?.clearAnalyzer()
-                            if (!disposed.get()) {
-                                onStatusChangedState.value(PoseCameraStatus.Stopped)
-                            }
-                        }
-                    }
-                    dispatchError(error)
-                },
+                onError = ::terminatePoseCamera,
             )
             landmarkerRef.set(landmarker)
             if (disposed.get()) {
-                landmarkerRef.compareAndSet(landmarker, null)
-                landmarker.close()
+                if (landmarkerRef.compareAndSet(landmarker, null)) landmarker.close()
                 return@initializeLandmarker
             }
             val observer = landmarker.initialize()
             if (observer == null) {
-                landmarkerRef.compareAndSet(landmarker, null)
-                landmarker.close()
-                mainExecutor.execute {
-                    if (!disposed.get()) onStatusChangedState.value(PoseCameraStatus.Stopped)
-                }
+                // MediaPipe reports the concrete initialization error through onError. This call
+                // is the fallback for a closed landmarker and is idempotent with that callback.
+                terminatePoseCamera()
                 return@initializeLandmarker
             }
             if (disposed.get() || landmarkerRef.get() !== landmarker) {
                 observer.close()
-                landmarkerRef.compareAndSet(landmarker, null)
-                landmarker.close()
+                if (landmarkerRef.compareAndSet(landmarker, null)) landmarker.close()
                 return@initializeLandmarker
             }
             observerRef.set(observer)
             if (disposed.get()) {
-                observerRef.compareAndSet(observer, null)
-                observer.close()
-                landmarkerRef.compareAndSet(landmarker, null)
-                landmarker.close()
+                if (observerRef.compareAndSet(observer, null)) observer.close()
+                if (landmarkerRef.compareAndSet(landmarker, null)) landmarker.close()
                 return@initializeLandmarker
             }
 
-            mainExecutor.execute bindCamera@{
-                if (disposed.get()) return@bindCamera
-                try {
-                    val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
-                    cameraProviderFuture.addListener(
-                        providerReady@{
-                            if (disposed.get()) return@providerReady
-                            try {
-                                val cameraProvider = cameraProviderFuture.get()
-                                cameraProviderRef.set(cameraProvider)
-                                val cameraSelector = CameraSelector.DEFAULT_FRONT_CAMERA
-                                if (!cameraProvider.hasCamera(cameraSelector)) {
-                                    stopPoseRuntime()
-                                    dispatchError(PoseCameraError.FrontCameraUnavailable)
-                                    onStatusChangedState.value(PoseCameraStatus.Stopped)
-                                    return@providerReady
-                                }
-
-                                val targetRotation = previewView.display?.rotation ?: Surface.ROTATION_0
-                                val previewResolutionSelector = ResolutionSelector.Builder()
-                                    .setAspectRatioStrategy(
-                                        AspectRatioStrategy.RATIO_4_3_FALLBACK_AUTO_STRATEGY,
-                                    )
-                                    .build()
-                                val analysisResolutionSelector = ResolutionSelector.Builder()
-                                    .setAspectRatioStrategy(
-                                        AspectRatioStrategy.RATIO_4_3_FALLBACK_AUTO_STRATEGY,
-                                    )
-                                    .setResolutionStrategy(
-                                        ResolutionStrategy(
-                                            Size(640, 480),
-                                            ResolutionStrategy.FALLBACK_RULE_CLOSEST_HIGHER_THEN_LOWER,
-                                        ),
-                                    )
-                                    .build()
-                                val previewUseCase = Preview.Builder()
-                                    .setResolutionSelector(previewResolutionSelector)
-                                    .setTargetRotation(targetRotation)
-                                    .build()
-                                val analysisUseCase = ImageAnalysis.Builder()
-                                    .setResolutionSelector(analysisResolutionSelector)
-                                    .setTargetRotation(targetRotation)
-                                    .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-                                    .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_RGBA_8888)
-                                    .build()
-                                    .also { useCase ->
-                                        useCase.setAnalyzer(analysisExecutor) { imageProxy ->
-                                            landmarker.analyze(imageProxy, previewIsMirrored = true)
-                                        }
+            try {
+                mainExecutor.execute bindCamera@{
+                    if (disposed.get()) return@bindCamera
+                    try {
+                        val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
+                        cameraProviderFuture.addListener(
+                            providerReady@{
+                                if (disposed.get()) return@providerReady
+                                try {
+                                    val cameraProvider = cameraProviderFuture.get()
+                                    cameraProviderRef.set(cameraProvider)
+                                    val cameraSelector = CameraSelector.DEFAULT_FRONT_CAMERA
+                                    if (!cameraProvider.hasCamera(cameraSelector)) {
+                                        terminatePoseCamera(PoseCameraError.FrontCameraUnavailable)
+                                        return@providerReady
                                     }
 
-                                previewUseCaseRef.set(previewUseCase)
-                                analysisUseCaseRef.set(analysisUseCase)
-                                previewUseCase.setSurfaceProvider(previewView.surfaceProvider)
-                                val viewPort = checkNotNull(previewView.viewPort) {
-                                    "Preview and analysis require one shared CameraX ViewPort"
+                                    val targetRotation =
+                                        previewView.display?.rotation ?: Surface.ROTATION_0
+                                    val previewResolutionSelector = ResolutionSelector.Builder()
+                                        .setAspectRatioStrategy(
+                                            AspectRatioStrategy.RATIO_4_3_FALLBACK_AUTO_STRATEGY,
+                                        )
+                                        .build()
+                                    val analysisResolutionSelector = ResolutionSelector.Builder()
+                                        .setAspectRatioStrategy(
+                                            AspectRatioStrategy.RATIO_4_3_FALLBACK_AUTO_STRATEGY,
+                                        )
+                                        .setResolutionStrategy(
+                                            ResolutionStrategy(
+                                                Size(640, 480),
+                                                ResolutionStrategy
+                                                    .FALLBACK_RULE_CLOSEST_HIGHER_THEN_LOWER,
+                                            ),
+                                        )
+                                        .build()
+                                    val previewUseCase = Preview.Builder()
+                                        .setResolutionSelector(previewResolutionSelector)
+                                        .setTargetRotation(targetRotation)
+                                        .build()
+                                    val analysisUseCase = ImageAnalysis.Builder()
+                                        .setResolutionSelector(analysisResolutionSelector)
+                                        .setTargetRotation(targetRotation)
+                                        .setBackpressureStrategy(
+                                            ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST,
+                                        )
+                                        .setOutputImageFormat(
+                                            ImageAnalysis.OUTPUT_IMAGE_FORMAT_RGBA_8888,
+                                        )
+                                        .build()
+
+                                    previewUseCaseRef.set(previewUseCase)
+                                    analysisUseCaseRef.set(analysisUseCase)
+                                    if (disposed.get()) return@providerReady
+                                    analysisUseCase.setAnalyzer(analysisExecutor) { imageProxy ->
+                                        landmarker.analyze(
+                                            imageProxy,
+                                            previewIsMirrored = true,
+                                        )
+                                    }
+                                    previewUseCase.setSurfaceProvider(previewView.surfaceProvider)
+                                    val viewPort = checkNotNull(previewView.viewPort) {
+                                        "Preview and analysis require one shared CameraX ViewPort"
+                                    }
+                                    val useCaseGroup = UseCaseGroup.Builder()
+                                        .addUseCase(previewUseCase)
+                                        .addUseCase(analysisUseCase)
+                                        .setViewPort(viewPort)
+                                        .build()
+                                    cameraProvider.bindToLifecycle(
+                                        lifecycleOwner,
+                                        cameraSelector,
+                                        useCaseGroup,
+                                    )
+                                    terminalCleanup.runIfActive {
+                                        onStatusChangedState.value(PoseCameraStatus.Ready)
+                                    }
+                                } catch (error: Exception) {
+                                    terminatePoseCamera(
+                                        PoseCameraError.CameraInitializationFailed(error),
+                                    )
                                 }
-                                val useCaseGroup = UseCaseGroup.Builder()
-                                    .addUseCase(previewUseCase)
-                                    .addUseCase(analysisUseCase)
-                                    .setViewPort(viewPort)
-                                    .build()
-                                cameraProvider.bindToLifecycle(
-                                    lifecycleOwner,
-                                    cameraSelector,
-                                    useCaseGroup,
-                                )
-                                onStatusChangedState.value(PoseCameraStatus.Ready)
-                            } catch (error: Exception) {
-                                stopPoseRuntime()
-                                dispatchError(PoseCameraError.CameraInitializationFailed(error))
-                                onStatusChangedState.value(PoseCameraStatus.Stopped)
-                            }
-                        },
-                        mainExecutor,
-                    )
-                } catch (error: Exception) {
-                    stopPoseRuntime()
-                    dispatchError(PoseCameraError.CameraInitializationFailed(error))
-                    onStatusChangedState.value(PoseCameraStatus.Stopped)
+                            },
+                            mainExecutor,
+                        )
+                    } catch (error: Exception) {
+                        terminatePoseCamera(PoseCameraError.CameraInitializationFailed(error))
+                    }
                 }
+            } catch (error: Exception) {
+                terminatePoseCamera(PoseCameraError.CameraInitializationFailed(error))
             }
+            }
+        } catch (error: Exception) {
+            terminatePoseCamera(PoseCameraError.CameraInitializationFailed(error))
         }
 
         onDispose {
-            disposed.set(true)
-            previewView.removeOnLayoutChangeListener(rotationListener)
-            analysisUseCaseRef.getAndSet(null)?.clearAnalyzer()
-            val observer = observerRef.getAndSet(null)
-            latestDeliveryRef.set(null)
-            val previewUseCase = previewUseCaseRef.getAndSet(null)
-            val analysisUseCase = analysisUseCaseRef.getAndSet(null)
-            cameraProviderRef.getAndSet(null)?.let { provider ->
-                val ownedUseCases = listOfNotNull(previewUseCase, analysisUseCase).toTypedArray()
-                if (ownedUseCases.isNotEmpty()) provider.unbind(*ownedUseCases)
-            }
-            analysisExecutor.closeAfterPendingWork(
-                landmarker = landmarkerRef.getAndSet(null),
-                observer = observer,
-            )
-            onStatusChangedState.value(PoseCameraStatus.Stopped)
+            terminatePoseCamera()
         }
     }
 }
 
 private fun PoseLandmarkerResult.toCandidateBatch(
     captureTimestampMs: Long,
-    imageWidth: Int,
-    imageHeight: Int,
-    rotationDegrees: Int,
-    isMirrored: Boolean,
+    geometryContext: PoseCameraGeometryContext,
 ): PoseCandidateBatch {
     check(timestampMs() == captureTimestampMs)
     return poseCandidateBatch(
@@ -357,10 +354,7 @@ private fun PoseLandmarkerResult.toCandidateBatch(
         worldCandidates = worldLandmarks().map { candidate ->
             candidate.map(Landmark::toRawPoseLandmark)
         },
-        imageWidth = imageWidth,
-        imageHeight = imageHeight,
-        rotationDegrees = rotationDegrees,
-        isMirrored = isMirrored,
+        geometryContext = geometryContext,
     )
 }
 
@@ -376,10 +370,7 @@ internal fun poseCandidateBatch(
     captureTimestampMs: Long,
     normalizedCandidates: List<List<RawPoseLandmark>>,
     worldCandidates: List<List<RawPoseLandmark>>,
-    imageWidth: Int,
-    imageHeight: Int,
-    rotationDegrees: Int,
-    isMirrored: Boolean,
+    geometryContext: PoseCameraGeometryContext,
 ): PoseCandidateBatch {
     require(normalizedCandidates.size == worldCandidates.size) {
         "MediaPipe normalized/world candidate counts must match"
@@ -395,10 +386,10 @@ internal fun poseCandidateBatch(
                 timestampMs = captureTimestampMs,
                 landmarks = PoseJoint.entries.toLandmarkMap(normalized),
                 worldLandmarks = PoseJoint.entries.toLandmarkMap(world),
-                imageWidth = imageWidth,
-                imageHeight = imageHeight,
-                rotationDegrees = rotationDegrees,
-                isMirrored = isMirrored,
+                imageWidth = geometryContext.outputImageWidth,
+                imageHeight = geometryContext.outputImageHeight,
+                rotationDegrees = geometryContext.outputRotationDegrees,
+                isMirrored = geometryContext.displayMirrored,
             )
         } catch (_: IllegalArgumentException) {
             null
@@ -408,10 +399,7 @@ internal fun poseCandidateBatch(
         timestampMs = captureTimestampMs,
         candidates = candidates,
         rawCandidateCount = normalizedCandidates.size,
-        imageWidth = imageWidth,
-        imageHeight = imageHeight,
-        rotationDegrees = rotationDegrees,
-        isMirrored = isMirrored,
+        geometryContext = geometryContext,
     )
 }
 
@@ -454,6 +442,38 @@ private data class PendingPoseObservationDelivery(
     val inferenceTimeMs: Long,
 )
 
+/** Android-free one-shot gate used to make every terminal path share the same resilient cleanup. */
+internal class PoseCameraTerminalCleanup {
+    private val lock = Any()
+    private var terminated = false
+
+    fun terminate(vararg cleanupSteps: () -> Unit): Boolean {
+        synchronized(lock) {
+            if (terminated) return false
+            terminated = true
+        }
+        runPoseCameraCleanupSteps(*cleanupSteps)
+        return true
+    }
+
+    fun runIfActive(action: () -> Unit): Boolean = synchronized(lock) {
+        if (terminated) return false
+        action()
+        true
+    }
+}
+
+internal fun runPoseCameraCleanupSteps(vararg cleanupSteps: () -> Unit) {
+    cleanupSteps.forEach { cleanup ->
+        try {
+            cleanup()
+        } catch (_: Throwable) {
+            // Terminal cleanup is deliberately best-effort: every remaining resource and callback
+            // still gets its cleanup attempt even when one owner violates its close contract.
+        }
+    }
+}
+
 private fun ExecutorService.closeAfterPendingWork(
     landmarker: MediaPipePoseLandmarker?,
     observer: MediaPipePoseObserver?,
@@ -461,13 +481,17 @@ private fun ExecutorService.closeAfterPendingWork(
     try {
         if (landmarker != null || observer != null) {
             execute {
-                observer?.close()
-                landmarker?.close()
+                runPoseCameraCleanupSteps(
+                    { observer?.close() },
+                    { landmarker?.close() },
+                )
             }
         }
     } catch (_: RejectedExecutionException) {
-        observer?.close()
-        landmarker?.close()
+        runPoseCameraCleanupSteps(
+            { observer?.close() },
+            { landmarker?.close() },
+        )
     } finally {
         shutdown()
     }

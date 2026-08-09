@@ -17,6 +17,25 @@
 
 ## 구현된 연구 계약
 
+### CameraX-MediaPipe 기하 provenance
+
+`PoseCameraGeometryContext`는 각 프레임의 CameraX 원본 크기, 반개구간 crop rectangle,
+입력 회전, upright 출력 크기, inference pixel mirror 금지, 화면 mirror metadata와
+preprocessing artifact를 함께 고정한다. `PoseObservationSource`가 만든 geometry epoch와
+프레임 timestamp receipt가 이 context를 관측값에 결속한다. context가 바뀌면 기존 person lock과
+view qualification을 폐기하고 새 dwell을 요구한다.
+
+이 경계는 crop/rotation/mirror drift를 숨기지 않기 위한 content-addressed receipt다. 현재 같은
+앱 모듈의 Kotlin `internal` API는 적대적 호출자를 막는 서명 경계가 아니므로, positive shadow나
+사용자 release 전에 observer issuer를 별도 Gradle 모듈로 격리해야 한다. 현재 카메라 scaffold의
+연구 신호 소비자와 제품 호출자는 모두 0이다.
+
+Camera geometry provider drift pin:
+`e81a27d8cc17c8a27a5860d7a3cbff2a19d764ca2b053302c0a5c4f18e16a9c8`
+
+Verified preprocessing drift pin:
+`37e938c6627823683c6f764ec3cfda7b620aca5f6cc4439371645dfbdde0467b`
+
 ### 좌우 무릎-발 투영 offset
 
 `BarbellSquatProjectedOffsetFeature`는 정규화 영상 좌표를 종횡비 보정한 뒤, 발목을
@@ -34,7 +53,7 @@ joint confidence, 영상 크기, shoulder-axis 퇴화를 통과하지 못하면 
 `front-full-body.v1`과 `front-oblique-full-body.v1`의 명시적 subset뿐이다.
 
 Feature contract SHA-256:
-`26c7318a4c216dca8c9f26b333cb087f34896cb636c3137e0fd572d07ae57418`
+`b431e97d19b7bcf9784c90e388ee5391ed5b64b9bb797b7178870fd7a36d41ba`
 
 ### 반복 phase 연구 명세
 
@@ -53,7 +72,24 @@ completed cycle로 인정하는 반개구간 `[start, end)` 규약을 고정한�
 사용자 세션 연결이 없다.
 
 Phase research contract SHA-256:
-`10886e52f9e4ea89593f9ff6f0223cf7bae8c3cd6e667a8d1e263581aab0a935`
+`589ac54005267ff89be0ae679e8f0a2316d2640ebc4d76822b48e02b33ad27a2`
+
+### 측면 좌·우 무릎 굴곡 연구 신호
+
+`BarbellSquatLateralKneeFlexionSignalExtractor`는 source-bound person lock, 정확한
+`lateral-full-body.v1` view token과 camera-geometry receipt가 있는 프레임에서만 MediaPipe WORLD
+좌표의 `hip-knee-ankle` included angle을 계산한다. flexion은 `180 - included angle`이며 LEFT와
+RIGHT를 독립 보존한다. 두 측정이 모두 유효할 때만 bilateral even median을 만든다.
+
+joint 누락·낮은 raw confidence·퇴화 벡터·source/person/view/geometry 불일치는 측정 불가로
+남긴다. 연속 acquisition wrapper는 timestamp 역행, 명시적으로 전달된 최대 관측 gap,
+person/view/crop/image-size/rotation/mirror/preprocessing drift에서 segment를 끊는다. 최소 confidence와
+최대 gap은 contract hash에 포함된 연구 acquisition gate일 뿐 FPS, phase 또는 자세 정답 threshold가
+아니다.
+
+이 신호는 phase state, completed cycle, rep count, `PASS/FAIL/UNKNOWN`, 점수, cue, feedback을
+생성하거나 노출하지 않는다. AI Hub의 `척추의 중립`, `발과 무릎의 방향 일치`, 스쿼트 깊이 또는
+안전성의 대체 판정도 아니다. 실행 phase provider와 positive shadow authorization은 여전히 0이다.
 
 ## no-verdict shadow 코어
 
@@ -87,9 +123,9 @@ contact/support provider 전까지 카메라-only `NOT_OBSERVABLE`이다.
 
 ## 다음 승격 gate
 
-1. 실제 observer가 독점 발급하는 source/person/view/camera-geometry attestation
-2. 실행 가능한 phase provider와 strict capture timestamp·reset challenge test
-3. untouched subject x device x qualified-view MediaPipe-expert/mocap Gold
+1. observer issuer를 별도 모듈로 격리하고 실제 loaded runtime과 source/person/view/geometry를 결속
+2. untouched subject x device x qualified-view MediaPipe-expert/mocap Gold
+3. Gold에 고정된 causal phase decoder와 strict capture timestamp·reset challenge test
 4. measurement construct별 blind review, quality/OOD calibration, 최소 coverage와 오차 하한
 5. 별도 서명된 shadow authorization과 opt-in dogfood privacy gate
 6. 그 뒤에도 사용자 release는 별도 signed release allowlist와 cue-content 승인을 통과해야 함

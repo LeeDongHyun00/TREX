@@ -1,5 +1,6 @@
 package com.example.trex_kotlin.camera
 
+import com.example.trex_kotlin.pose.runtime.PoseCameraGeometryContext
 import java.io.ByteArrayInputStream
 import java.io.File
 import java.io.FileInputStream
@@ -92,6 +93,14 @@ class VerifiedMediaPipePoseObserverFactoryTest {
                 cpuContract.modelArtifactSha256,
             )
             assertEquals(
+                VerifiedMediaPipePoseObserverProfile.PREPROCESSING_CONTRACT_ID,
+                cpuContract.preprocessingContractId,
+            )
+            assertEquals(
+                VerifiedMediaPipePoseObserverProfile.PREPROCESSING_ARTIFACT_SHA256,
+                cpuContract.preprocessingArtifactSha256,
+            )
+            assertEquals(
                 setOf(
                     FULL_BODY_PHASE_VIEW_CONTRACT_ID,
                     FULL_BODY_LATERAL_VIEW_CONTRACT_ID,
@@ -103,6 +112,30 @@ class VerifiedMediaPipePoseObserverFactoryTest {
             cpu.close()
             gpu.close()
         }
+    }
+
+    @Test
+    fun preprocessingContractPinsTheExactCameraGeometryProvider() {
+        assertEquals(
+            "trex.camerax-rgba-crop-rotate-upright.v2",
+            VerifiedMediaPipePoseObserverProfile.PREPROCESSING_CONTRACT_ID,
+        )
+        assertEquals(
+            "trex.camerax-image-proxy.geometry-context-provider.v1",
+            VerifiedMediaPipePoseObserverProfile.CAMERA_GEOMETRY_PROVIDER_CONTRACT_ID,
+        )
+        assertEquals(
+            PoseCameraGeometryContext.SCHEMA_VERSION,
+            VerifiedMediaPipePoseObserverProfile.CAMERA_GEOMETRY_CONTEXT_SCHEMA_VERSION,
+        )
+        assertEquals(
+            "e81a27d8cc17c8a27a5860d7a3cbff2a19d764ca2b053302c0a5c4f18e16a9c8",
+            VerifiedMediaPipePoseObserverProfile.CAMERA_GEOMETRY_PROVIDER_ARTIFACT_SHA256,
+        )
+        assertEquals(
+            "37e938c6627823683c6f764ec3cfda7b620aca5f6cc4439371645dfbdde0467b",
+            VerifiedMediaPipePoseObserverProfile.PREPROCESSING_ARTIFACT_SHA256,
+        )
     }
 
     @Test

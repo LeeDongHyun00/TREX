@@ -4,6 +4,7 @@ import com.example.trex_kotlin.pose.PoseCoordinateSpace
 import com.example.trex_kotlin.pose.PoseFrame
 import com.example.trex_kotlin.pose.PoseJoint
 import com.example.trex_kotlin.pose.PoseLandmark
+import com.example.trex_kotlin.pose.runtime.PoseCameraGeometryContext
 import com.example.trex_kotlin.pose.runtime.PoseObservationContract
 import com.example.trex_kotlin.pose.runtime.PoseObservationSource
 import kotlin.math.cos
@@ -151,6 +152,71 @@ class AttestedPoseObserverTest {
     }
 
     @Test
+    fun cameraGeometryDriftRevokesPersonAndViewAndRequiresFreshDwells() {
+        val fixture = fixture(acquisitionDwellMs = 100L, viewDwellMs = 80L)
+        fixture.accept(0L)
+        fixture.accept(100L)
+        val firstQualified = fixture.accept(180L)
+        val firstGeometryEpoch = checkNotNull(firstQualified.observation.cameraGeometryEpoch)
+        assertTrue(firstQualified.observation.isViewQualified(FULL_BODY_PHASE_VIEW_CONTRACT_ID))
+
+        val sameGeometry = fixture.accept(200L)
+        assertSame(firstGeometryEpoch, sameGeometry.observation.cameraGeometryEpoch)
+
+        val changedGeometry = geometryContext(
+            sourceImageWidth = 800,
+            sourceImageHeight = 600,
+            cropLeft = 80,
+            cropTop = 60,
+            cropRightExclusive = 720,
+            cropBottomExclusive = 540,
+        )
+        val discontinuity = fixture.accept(220L, geometryContext = changedGeometry)
+        assertStatus(
+            discontinuity,
+            PoseObserverTrackingStatus.TRACK_DISCONTINUITY,
+            locked = false,
+        )
+        assertTrue(
+            PoseObserverUnknownReason.CAMERA_GEOMETRY_DISCONTINUITY in
+                discontinuity.unknownReasons,
+        )
+        assertFalse(
+            discontinuity.observation.isViewQualified(FULL_BODY_PHASE_VIEW_CONTRACT_ID),
+        )
+        val changedGeometryEpoch = checkNotNull(discontinuity.observation.cameraGeometryEpoch)
+        assertNotSame(firstGeometryEpoch, changedGeometryEpoch)
+        assertTrue(
+            discontinuity.observation.cameraGeometryReceipt?.contextArtifactSha256 ==
+                changedGeometry.artifactSha256,
+        )
+
+        assertStatus(
+            fixture.accept(260L, geometryContext = changedGeometry),
+            PoseObserverTrackingStatus.ACQUIRING,
+            locked = false,
+        )
+        val relocked = fixture.accept(320L, geometryContext = changedGeometry)
+        assertStatus(relocked, PoseObserverTrackingStatus.TRACKED, locked = true)
+        assertFalse(relocked.observation.isViewQualified(FULL_BODY_PHASE_VIEW_CONTRACT_ID))
+        val requalified = fixture.accept(400L, geometryContext = changedGeometry)
+        assertTrue(requalified.observation.isViewQualified(FULL_BODY_PHASE_VIEW_CONTRACT_ID))
+        assertSame(changedGeometryEpoch, requalified.observation.cameraGeometryEpoch)
+    }
+
+    @Test
+    fun preprocessingMismatchIsRejectedBeforeTimestampOrGeometryStateChanges() {
+        val fixture = fixture(acquisitionDwellMs = 100L, viewDwellMs = 50L)
+        val mismatched = geometryContext(preprocessingArtifactSha256 = SHA_B)
+
+        assertThrows(IllegalArgumentException::class.java) {
+            fixture.accept(0L, geometryContext = mismatched)
+        }
+        assertStatus(fixture.accept(0L), PoseObserverTrackingStatus.ACQUIRING, locked = false)
+        assertTrue(fixture.source.isOpen)
+    }
+
+    @Test
     fun acquisitionCandidateReplacementRestartsTheFullDwell() {
         val fixture = fixture(acquisitionDwellMs = 100L, viewDwellMs = 50L)
         assertStatus(fixture.accept(0L, centerX = 0.30), PoseObserverTrackingStatus.ACQUIRING, false)
@@ -233,6 +299,7 @@ class AttestedPoseObserverTest {
             confidence: Double = 1.0,
             cropFeet: Boolean = false,
             noseConfidence: Double? = null,
+            geometryContext: PoseCameraGeometryContext = geometryContext(),
         ): PoseObserverUpdate = observer.accept(
             batch(
                 timestampMs = timestampMs,
@@ -244,8 +311,10 @@ class AttestedPoseObserverTest {
                         confidence = confidence,
                         cropFeet = cropFeet,
                         noseConfidence = noseConfidence,
+                        geometryContext = geometryContext,
                     ),
                 ),
+                geometryContext = geometryContext,
             ),
         )
     }
@@ -283,14 +352,12 @@ class AttestedPoseObserverTest {
         timestampMs: Long,
         frames: List<PoseFrame>,
         rawCandidateCount: Int = frames.size,
+        geometryContext: PoseCameraGeometryContext = geometryContext(),
     ): PoseCandidateBatch = PoseCandidateBatch(
         timestampMs = timestampMs,
         candidates = frames,
         rawCandidateCount = rawCandidateCount,
-        imageWidth = IMAGE_WIDTH,
-        imageHeight = IMAGE_HEIGHT,
-        rotationDegrees = 0,
-        isMirrored = true,
+        geometryContext = geometryContext,
     )
 
     private fun frame(
@@ -300,6 +367,7 @@ class AttestedPoseObserverTest {
         confidence: Double = 1.0,
         cropFeet: Boolean = false,
         noseConfidence: Double? = null,
+        geometryContext: PoseCameraGeometryContext = geometryContext(),
     ): PoseFrame {
         val normalized = normalizedSkeleton(centerX, confidence, cropFeet).let { skeleton ->
             if (noseConfidence == null) {
@@ -318,12 +386,38 @@ class AttestedPoseObserverTest {
             timestampMs = timestampMs,
             landmarks = normalized,
             worldLandmarks = world,
-            imageWidth = IMAGE_WIDTH,
-            imageHeight = IMAGE_HEIGHT,
-            rotationDegrees = 0,
-            isMirrored = true,
+            imageWidth = geometryContext.outputImageWidth,
+            imageHeight = geometryContext.outputImageHeight,
+            rotationDegrees = geometryContext.outputRotationDegrees,
+            isMirrored = geometryContext.displayMirrored,
         )
     }
+
+    private fun geometryContext(
+        sourceImageWidth: Int = IMAGE_WIDTH,
+        sourceImageHeight: Int = IMAGE_HEIGHT,
+        cropLeft: Int = 0,
+        cropTop: Int = 0,
+        cropRightExclusive: Int = IMAGE_WIDTH,
+        cropBottomExclusive: Int = IMAGE_HEIGHT,
+        inputRotationDegrees: Int = 0,
+        outputImageWidth: Int = IMAGE_WIDTH,
+        outputImageHeight: Int = IMAGE_HEIGHT,
+        preprocessingArtifactSha256: String = SHA_A,
+    ): PoseCameraGeometryContext = PoseCameraGeometryContext(
+        sourceImageWidth = sourceImageWidth,
+        sourceImageHeight = sourceImageHeight,
+        cropLeft = cropLeft,
+        cropTop = cropTop,
+        cropRightExclusive = cropRightExclusive,
+        cropBottomExclusive = cropBottomExclusive,
+        inputRotationDegrees = inputRotationDegrees,
+        outputImageWidth = outputImageWidth,
+        outputImageHeight = outputImageHeight,
+        inferencePixelsMirrored = false,
+        displayMirrored = true,
+        preprocessingArtifactSha256 = preprocessingArtifactSha256,
+    )
 
     private fun normalizedSkeleton(
         centerX: Double,

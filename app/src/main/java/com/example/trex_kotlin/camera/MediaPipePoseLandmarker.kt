@@ -7,6 +7,7 @@ import android.graphics.Rect
 import android.os.SystemClock
 import androidx.camera.core.ImageProxy
 import androidx.core.graphics.createBitmap
+import com.example.trex_kotlin.pose.runtime.PoseCameraGeometryContext
 import com.google.mediapipe.framework.image.BitmapImageBuilder
 import com.google.mediapipe.tasks.core.BaseOptions
 import com.google.mediapipe.tasks.core.Delegate
@@ -27,10 +28,7 @@ internal class MediaPipePoseLandmarker(
     private val onResult: (
         result: PoseLandmarkerResult,
         captureTimestampMs: Long,
-        inputWidth: Int,
-        inputHeight: Int,
-        rotationDegrees: Int,
-        isMirrored: Boolean,
+        geometryContext: PoseCameraGeometryContext,
         inferenceTimeMs: Long,
     ) -> Unit,
     private val onError: (PoseCameraError) -> Unit,
@@ -72,11 +70,39 @@ internal class MediaPipePoseLandmarker(
             require(rotationDegrees in setOf(0, 90, 180, 270)) {
                 "CameraX rotation must be 0, 90, 180, or 270 degrees"
             }
+            val outputWidth = if (rotationDegrees == 90 || rotationDegrees == 270) {
+                cropRect.height()
+            } else {
+                cropRect.width()
+            }
+            val outputHeight = if (rotationDegrees == 90 || rotationDegrees == 270) {
+                cropRect.width()
+            } else {
+                cropRect.height()
+            }
+            // Validate every ImageProxy-derived geometry field before allocating a bitmap. If the
+            // crop or rotation contract is invalid, there must be no unreachable bitmap to recycle.
+            val geometryContext = PoseCameraGeometryContext(
+                sourceImageWidth = imageProxy.width,
+                sourceImageHeight = imageProxy.height,
+                cropLeft = cropRect.left,
+                cropTop = cropRect.top,
+                cropRightExclusive = cropRect.right,
+                cropBottomExclusive = cropRect.bottom,
+                inputRotationDegrees = rotationDegrees,
+                outputImageWidth = outputWidth,
+                outputImageHeight = outputHeight,
+                inferencePixelsMirrored = false,
+                displayMirrored = previewIsMirrored,
+                preprocessingArtifactSha256 =
+                    VerifiedMediaPipePoseObserverProfile.PREPROCESSING_ARTIFACT_SHA256,
+            )
             PreparedCameraFrame(
                 sourceBitmap = imageProxy.toRgbaBitmap(),
                 cropRect = cropRect,
                 rotationDegrees = rotationDegrees,
                 captureTimestampMs = captureTimestampMs,
+                geometryContext = geometryContext,
             )
         } catch (error: Exception) {
             onError(PoseCameraError.FrameAnalysisFailed(error))
@@ -102,6 +128,10 @@ internal class MediaPipePoseLandmarker(
                 true,
             )
             if (orientedBitmap !== sourceBitmap) sourceBitmap.recycle()
+            check(
+                orientedBitmap.width == cameraFrame.geometryContext.outputImageWidth &&
+                    orientedBitmap.height == cameraFrame.geometryContext.outputImageHeight,
+            ) { "Prepared MediaPipe bitmap dimensions do not match the camera geometry context" }
 
             val startedAtMs = SystemClock.uptimeMillis()
             BitmapImageBuilder(orientedBitmap).build().use { image ->
@@ -113,10 +143,7 @@ internal class MediaPipePoseLandmarker(
                     onResult(
                         result,
                         cameraFrame.captureTimestampMs,
-                        image.width,
-                        image.height,
-                        0,
-                        previewIsMirrored,
+                        cameraFrame.geometryContext,
                         (SystemClock.uptimeMillis() - startedAtMs).coerceAtLeast(0L),
                     )
                 }
@@ -209,6 +236,7 @@ internal class MediaPipePoseLandmarker(
         val cropRect: Rect,
         val rotationDegrees: Int,
         val captureTimestampMs: Long,
+        val geometryContext: PoseCameraGeometryContext,
     )
 
     private fun initializationFailed(

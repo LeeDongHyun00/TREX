@@ -4,6 +4,7 @@ import android.content.Context
 import com.example.trex_kotlin.pose.PoseCoordinateSpace
 import com.example.trex_kotlin.pose.PoseJoint
 import com.example.trex_kotlin.pose.contract.canonicalFieldsSha256
+import com.example.trex_kotlin.pose.runtime.PoseCameraGeometryContext
 import com.example.trex_kotlin.pose.runtime.PoseObservationContract
 import com.example.trex_kotlin.pose.runtime.PoseObservationSource
 import java.io.FileNotFoundException
@@ -101,14 +102,40 @@ internal class VerifiedMediaPipePoseObserverProfile private constructor(
         internal const val INFERENCE_OPTIONS_CONTRACT_ID =
             "trex.mediapipe-pose-landmarker.video-options.v1"
         internal const val PREPROCESSING_CONTRACT_ID =
-            "trex.camerax-rgba-crop-rotate-upright.v1"
+            "trex.camerax-rgba-crop-rotate-upright.v2"
+        internal const val CAMERA_GEOMETRY_PROVIDER_CONTRACT_ID =
+            "trex.camerax-image-proxy.geometry-context-provider.v1"
+        internal const val CAMERA_GEOMETRY_CONTEXT_SCHEMA_VERSION =
+            PoseCameraGeometryContext.SCHEMA_VERSION
         internal const val LANDMARK_SCHEMA_ID = "mediapipe.pose-landmarker.33.v1"
         internal const val PERSON_LOCK_ARTIFACT_ID = "trex.primary-person.temporal-lock.v1"
         internal const val VIEW_QUALIFIER_ARTIFACT_ID = "trex.body-view.qualifier.v1"
 
+        /**
+         * Pins the code-owned mapping from one CameraX [androidx.camera.core.ImageProxy] to the
+         * immutable geometry context carried beside MediaPipe results. This is a drift identity,
+         * not an authenticity signature.
+         */
+        internal val CAMERA_GEOMETRY_PROVIDER_ARTIFACT_SHA256: String = canonicalFieldsSha256(
+            listOf(
+                "cameraGeometryProviderSchemaVersion" to "1",
+                "providerImplementationVersion" to "1",
+                "providerContractId" to CAMERA_GEOMETRY_PROVIDER_CONTRACT_ID,
+                "geometryContextSchemaVersion" to CAMERA_GEOMETRY_CONTEXT_SCHEMA_VERSION.toString(),
+                "sourceDimensionPolicy" to "IMAGE_PROXY_WIDTH_HEIGHT_EXACT",
+                "cropBoundaryPolicy" to "ANDROID_RECT_LEFT_TOP_RIGHT_BOTTOM_EXCLUSIVE_EXACT",
+                "inputRotationPolicy" to "IMAGE_INFO_ROTATION_DEGREES_EXACT",
+                "outputDimensionPolicy" to "CROP_AXES_SWAPPED_ONLY_FOR_90_OR_270",
+                "outputRotationPolicy" to "UPRIGHT_ZERO_DEGREES",
+                "inferencePixelMirrorPolicy" to "ALWAYS_FALSE",
+                "displayMirrorPolicy" to "CALLER_PREVIEW_METADATA_EXACT",
+                "frameBindingPolicy" to "SOURCE_OWNED_GEOMETRY_EPOCH_AND_TIMESTAMP_RECEIPT",
+            ),
+        )
+
         internal val PREPROCESSING_ARTIFACT_SHA256: String = canonicalFieldsSha256(
             listOf(
-                "preprocessingSchemaVersion" to "1",
+                "preprocessingSchemaVersion" to "2",
                 "cameraXVersion" to "1.6.1",
                 "inputFormat" to "RGBA_8888",
                 "planePolicy" to "REQUIRE_PIXEL_STRIDE_4_COPY_VISIBLE_ROW_BYTES",
@@ -124,6 +151,9 @@ internal class VerifiedMediaPipePoseObserverProfile private constructor(
                 "requestedResolution" to "640x480",
                 "resolutionFallback" to "CLOSEST_HIGHER_THEN_LOWER_RECORDED_PER_FRAME",
                 "viewPortPolicy" to "REQUIRED_SHARED_PREVIEW_ANALYSIS_VIEWPORT",
+                "cameraGeometryProviderContractId" to CAMERA_GEOMETRY_PROVIDER_CONTRACT_ID,
+                "cameraGeometryProviderArtifactSha256" to
+                    CAMERA_GEOMETRY_PROVIDER_ARTIFACT_SHA256,
             ),
         )
 

@@ -4,10 +4,13 @@ import com.example.trex_kotlin.pose.PoseCoordinateSpace
 import com.example.trex_kotlin.pose.PoseFrame
 import com.example.trex_kotlin.pose.PoseJoint
 import com.example.trex_kotlin.pose.PoseLandmark
+import java.lang.reflect.Modifier
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotSame
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -198,6 +201,115 @@ class PoseObservationContractTest {
         }
     }
 
+    @Test
+    fun geometryAwareAttestationBindsSourceEpochTimestampFrameAndViewReceipt() {
+        val source = PoseObservationSource(contract())
+        val geometry = geometryContext()
+        val geometryEpoch = source.newCameraGeometryEpoch(geometry)
+        val personEpoch = source.newPersonTrackEpoch()
+        val view = source.qualifyView(SIDE_VIEW, personEpoch, 42L)
+
+        val observation = source.attest(
+            frame = geometryFrame(timestampMs = 42L),
+            personTrackEpoch = personEpoch,
+            viewQualifications = listOf(view),
+            cameraGeometryEpoch = geometryEpoch,
+        )
+        val receipt = checkNotNull(observation.cameraGeometryReceipt)
+
+        assertSame(source, receipt.source)
+        assertSame(geometryEpoch, receipt.epoch)
+        assertSame(geometryEpoch, observation.cameraGeometryEpoch)
+        assertEquals(42L, receipt.frameTimestampMs)
+        assertEquals(geometry.artifactSha256, receipt.contextArtifactSha256)
+        assertSame(view, observation.viewQualification(SIDE_VIEW))
+
+        val legacy = source.attest(
+            frame = frame(timestampMs = 43L),
+            personTrackEpoch = null,
+            viewQualifications = emptyList(),
+        )
+        assertNull(legacy.cameraGeometryReceipt)
+        assertNull(legacy.cameraGeometryEpoch)
+    }
+
+    @Test
+    fun geometryEpochRejectsForeignSourceAndPreprocessingArtifact() {
+        val firstSource = PoseObservationSource(contract())
+        val secondSource = PoseObservationSource(contract())
+        val secondEpoch = secondSource.newCameraGeometryEpoch(geometryContext())
+
+        assertThrows(IllegalArgumentException::class.java) {
+            firstSource.newCameraGeometryEpoch(
+                geometryContext(preprocessingArtifactSha256 = SHA_C),
+            )
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            firstSource.attest(
+                frame = geometryFrame(10L),
+                personTrackEpoch = null,
+                viewQualifications = emptyList(),
+                cameraGeometryEpoch = secondEpoch,
+            )
+        }
+    }
+
+    @Test
+    fun geometryReceiptRejectsOutputFrameDimensionRotationOrMirrorDrift() {
+        val source = PoseObservationSource(contract())
+        val epoch = source.newCameraGeometryEpoch(geometryContext())
+        val mismatchedFrames = listOf(
+            geometryFrame(10L, imageWidth = 999),
+            geometryFrame(10L, imageHeight = 1_599),
+            geometryFrame(10L, rotationDegrees = 90),
+            geometryFrame(10L, isMirrored = false),
+        )
+
+        mismatchedFrames.forEach { mismatchedFrame ->
+            assertThrows(IllegalArgumentException::class.java) {
+                source.attest(
+                    frame = mismatchedFrame,
+                    personTrackEpoch = null,
+                    viewQualifications = emptyList(),
+                    cameraGeometryEpoch = epoch,
+                )
+            }
+        }
+    }
+
+    @Test
+    fun geometryMintingStopsWithSourceAndRawTokenConstructorsArePrivate() {
+        assertOnlyPrivateSourceConstructors(PoseCameraGeometryEpoch::class.java)
+        assertOnlyPrivateSourceConstructors(PoseCameraGeometryReceipt::class.java)
+
+        val source = PoseObservationSource(contract())
+        val epoch = source.newCameraGeometryEpoch(geometryContext())
+        source.close()
+
+        assertThrows(IllegalStateException::class.java) {
+            source.newCameraGeometryEpoch(geometryContext())
+        }
+        assertThrows(IllegalStateException::class.java) {
+            source.attest(
+                frame = geometryFrame(10L),
+                personTrackEpoch = null,
+                viewQualifications = emptyList(),
+                cameraGeometryEpoch = epoch,
+            )
+        }
+    }
+
+    private fun assertOnlyPrivateSourceConstructors(type: Class<*>) {
+        val sourceConstructors = type.declaredConstructors.filterNot { it.isSynthetic }
+        assertTrue(sourceConstructors.isNotEmpty())
+        assertTrue(sourceConstructors.all { constructor ->
+            Modifier.isPrivate(constructor.modifiers)
+        })
+        assertTrue(type.declaredConstructors.all { constructor ->
+            Modifier.isPrivate(constructor.modifiers) || constructor.isSynthetic
+        })
+    }
+
     private fun contract(
         runtimeDomainId: String = "mediapipe-full.world.side-view.v1",
         modelArtifactId: String = "mediapipe.pose-landmarker.full.v1",
@@ -241,6 +353,36 @@ class PoseObservationContractTest {
         timestampMs = timestampMs,
         landmarks = mapOf(PoseJoint.NOSE to PoseLandmark(0.5, 0.2)),
         worldLandmarks = mapOf(PoseJoint.NOSE to PoseLandmark(0.0, 0.2, -0.1)),
+    )
+
+    private fun geometryFrame(
+        timestampMs: Long,
+        imageWidth: Int = 1_000,
+        imageHeight: Int = 1_600,
+        rotationDegrees: Int = 0,
+        isMirrored: Boolean = true,
+    ): PoseFrame = frame(timestampMs).copy(
+        imageWidth = imageWidth,
+        imageHeight = imageHeight,
+        rotationDegrees = rotationDegrees,
+        isMirrored = isMirrored,
+    )
+
+    private fun geometryContext(
+        preprocessingArtifactSha256: String = SHA_B,
+    ): PoseCameraGeometryContext = PoseCameraGeometryContext(
+        sourceImageWidth = 1_920,
+        sourceImageHeight = 1_080,
+        cropLeft = 100,
+        cropTop = 20,
+        cropRightExclusive = 1_700,
+        cropBottomExclusive = 1_020,
+        inputRotationDegrees = 90,
+        outputImageWidth = 1_000,
+        outputImageHeight = 1_600,
+        inferencePixelsMirrored = false,
+        displayMirrored = true,
+        preprocessingArtifactSha256 = preprocessingArtifactSha256,
     )
 
     private companion object {

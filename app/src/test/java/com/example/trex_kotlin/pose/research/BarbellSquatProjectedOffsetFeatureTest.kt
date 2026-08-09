@@ -357,7 +357,7 @@ class BarbellSquatProjectedOffsetFeatureTest {
         const val SHA_C = "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
         const val SHA_D = "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
         const val EXPECTED_CONTRACT_SHA256 =
-            "26c7318a4c216dca8c9f26b333cb087f34896cb636c3137e0fd572d07ae57418"
+            "b431e97d19b7bcf9784c90e388ee5391ed5b64b9bb797b7178870fd7a36d41ba"
 
         fun observationContract(modelSha: String = SHA_A): PoseObservationContract =
             PoseObservationContract(
