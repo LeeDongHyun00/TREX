@@ -2,7 +2,7 @@
 
 ## 결론
 
-이 데이터는 24관절 시퀀스 기반 운동 판정과 조건별 오류 분류의 보정 자료로 사용할 수 있다. 하지만 현재 추출본만으로 스쿼트·런지 이미지 pose estimator를 재학습하거나 검증할 수는 없다. 원천 JPG가 Day04·17에만 있고 해당 촬영일의 13개 운동에 스쿼트·런지가 없기 때문이다.
+이 데이터는 24관절 시퀀스 기반 운동 판정과 조건별 오류 분류의 보정 자료로 사용할 수 있다. 2026-08-09에 `라벨링데이터` 아래 Day05 JPG 151,755장이 추가되어 스텝 포워드·백워드 다이나믹 런지를 포함한 5개 운동은 이미지와 JSON을 연결한 MediaPipe 검증이 가능해졌다. 바벨 스쿼트 이미지는 여전히 없어 현재 추출본만으로 스쿼트 pose estimator를 검증할 수는 없다.
 
 앱에서는 검증된 범용 MediaPipe Pose Landmarker를 사용하고, 이 데이터의 정제된 관절 시퀀스로 운동별 각도·시간 임계값과 이후의 작은 temporal classifier를 보정하는 구성이 맞다.
 
@@ -10,16 +10,26 @@
 
 | 형식 | 파일 수 | 크기 |
 |---|---:|---:|
-| 전체 | 393,789 | 76,253,090,589 bytes, 약 71.016 GiB |
-| JPG | 323,868 | 약 65.61 GB |
-| JSON | 69,898 | 약 10.21 GB |
-| ZIP | 23 | 약 427 MB |
+| 전체 | 561,295 | 128,789,630,533 bytes, 약 119.945 GiB |
+| JPG | 485,102 | 117,345,368,642 bytes, 약 109.286 GiB |
+| JSON | 76,176 | 11,128,133,722 bytes, 약 10.364 GiB |
+| ZIP | 15 | 315,694,598 bytes, 약 0.294 GiB |
+| XLSX | 2 | 433,571 bytes |
 
-- Training 원천 JPG: Day04 151,099장, Day17 172,769장
-- Validation: 원천 JPG 없이 라벨 ZIP만 존재
+이 표는 [고정 snapshot manifest](pose-dataset-snapshot.json)로 재현한다. 현재 metadata-tree SHA-256은 `f665aba11f890045c9546642256cef4bcf103d9cbca96c562eb49ece3d72b62c`, portable snapshot SHA-256은 `2c4aa6b7d4e94a41d9cd1c8b85cda40a389812ba36ff506b56de79121abf366d`다. 전자는 상대경로와 파일 크기를 해시하며 파일 내용 해시라고 표현하지 않는다.
+
+```powershell
+python tools/audit_pose_dataset_snapshot.py data `
+  --source-label data `
+  --check docs/pose-dataset-snapshot.json
+```
+
+- Training 원시데이터 JPG: Day04 151,099장, Day05 9,479장, Day17 172,769장
+- Training 라벨링데이터 JPG: Day05 151,755장. 따라서 Day05 전체 JPG는 161,234장이지만, 원시데이터의 9,479장은 라벨링데이터에 같은 파일명이 모두 존재하는 중복 후보이므로 학습 표본 수에 바로 더하지 않고 content hash로 확인한다.
+- 기본 snapshot은 파일 내용을 읽지 않는다. `--references`는 모든 JSON을 파싱하므로 더 느리고 메모리를 더 사용하며, 별도 무결성 작업에서만 실행한다.
+- Validation: 추출된 2D/3D JSON 6,278개가 있으며 원천 JPG는 없다.
 - Test split: 없음
 - Training 바벨·덤벨 ZIP 15개는 이미 풀린 JSON의 보관본이므로 함께 집계하면 중복된다.
-- `furniture_01.zip`과 `furniture_01(1).zip`, 문서 ZIP의 원본과 `(1)` 복사본은 SHA-256이 같은 완전 중복이다.
 
 대용량 원천 데이터는 앱 자산과 Git에서 제외한다. 런타임에는 pose 모델과 정제된 규칙/작은 모델만 포함한다.
 
@@ -82,7 +92,7 @@ Left/Right Hip, Knee, Ankle, Foot
 Neck, Back, Waist
 ```
 
-대부분 한 sequence는 16 frame이고, 각 frame에는 5개 카메라 view가 있다. `view1..5`는 Day04·17의 모든 159,345개 참조에서 각각 `A..E` 카메라와 일치했다. 보통 원본 32장 중 홀수 frame `1, 3, ..., 31`을 참조한다.
+대부분 한 sequence는 16 frame이고, 각 frame에는 5개 카메라 view가 있다. `view1..5`는 Day04·17의 159,345개 참조와 Day05의 74,645개 참조에서 각각 `A..E` 카메라와 연결된다. 보통 원본 32장 중 홀수 frame `1, 3, ..., 31`을 참조한다.
 
 예외도 파서에서 허용해야 한다.
 
@@ -91,7 +101,7 @@ Neck, Back, Waist
 - 바벨 컬 type 409·424·432: 15 frame
 - 바벨 컬 type 410·423·431: 17 frame
 
-2D는 1920×1080 픽셀 좌표이며 x는 오른쪽, y는 아래 방향이다. Day04·17에서 좌표 이상은 `D17-6-733.json`, frame 13, view5, Left Foot `(1008, 1094)` 한 점뿐이었다.
+2D는 1920×1080 픽셀 좌표이며 x는 오른쪽, y는 아래 방향이다. Day04·17에서 좌표 이상은 `D17-6-733.json`, frame 13, view5, Left Foot `(1008, 1094)` 한 점뿐이었다. Day05의 1,791,480개 좌표는 모두 1920×1080 경계 안에 있었다.
 
 3D 좌표의 절대 원점과 단위는 제공 문서에 명시되지 않았다. pelvis 중심 이동과 신체 크기 정규화 없이 MediaPipe world 좌표나 실제 거리와 직접 비교하면 안 된다.
 
@@ -102,12 +112,13 @@ Windows에서는 JSON과 XLSX 관련 텍스트를 UTF-8로 명시해 읽어야 �
 | 촬영일 | 2D sequence | `img_key` 참조 | 실제 존재 |
 |---|---:|---:|---:|
 | Day04 | 945 | 75,600 | 100% |
+| Day05 | 945 | 74,645 | 100% |
 | Day17 | 1,049 | 83,745 | 100% |
-| 합계 | 1,994 | 159,345 | 100% |
+| 합계 | 2,939 | 233,990 | 100% |
 
-Day17의 빈 sequence 2개는 참조가 0개다. 전체 JPG 중 164,523장은 JSON에서 참조되지 않으며, 대부분 짝수 frame과 Day17의 추가 촬영분이다.
+Day05와 Day17에는 각각 빈 sequence 2개가 있으며 이들은 참조가 0개다. 전체 JPG 중 251,112장은 JSON에서 직접 참조되지 않는다. 여기에는 주로 짝수 frame·추가 촬영분과 별도 원시데이터의 Day05 중복 후보 9,479장이 포함된다. Day05 라벨링데이터 내부의 미참조 JPG는 77,110장이다. 이 이미지는 시간 연속성 검증에는 사용할 수 있지만 직접적인 관절 정답 frame으로 간주하면 안 된다.
 
-Raw view-directory 10,125개의 frame 수는 다음과 같다.
+Day04·17에서 감사한 raw view-directory 10,125개의 frame 수는 다음과 같다.
 
 | 장수 | 디렉터리 수 |
 |---:|---:|

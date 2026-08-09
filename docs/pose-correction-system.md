@@ -15,26 +15,28 @@
 
 | 항목 | 확인 결과 |
 |---|---:|
-| 전체 파일 | 393,789개 |
-| 전체 크기 | 약 71.0 GiB |
-| JPG | 323,868개, 약 65.6 GB |
-| JSON | 69,898개, 약 10.2 GB |
-| ZIP | 23개, 약 0.43 GB |
-| 원천 JPG 촬영일 | Day04 151,099장, Day17 172,769장 |
+| 전체 파일 | 561,295개 |
+| 전체 크기 | 약 119.945 GiB |
+| JPG | 485,102개, 약 109.286 GiB |
+| JSON | 76,176개, 약 10.364 GiB |
+| ZIP | 15개, 약 0.294 GiB |
+| Training JPG 촬영일(전체 scope) | Day04 151,099장, Day05 161,234장, Day17 172,769장 |
+| 실제 저장 scope | Day04·Day17은 원시데이터, Day05는 라벨링데이터 151,755장 + 원시데이터 9,479장 |
+| 원시데이터 중복 후보 | Day05 9,479장 |
 | Training 2D / 3D JSON | 34,468개 / 35,430개 |
 | 정확한 2D↔3D 쌍 | 33,349쌍 |
 | 2D only / 3D only | 1,119개 / 2,081개 |
-| Validation 라벨 | 3,139쌍, 원천 JPG 없음 |
+| Validation 라벨 | 추출 JSON 6,278개 = 3,139쌍, 원천 JPG 없음 |
 
 한 2D 라벨 시퀀스는 일반적으로 16개 시점, 시점당 5개 카메라 뷰, 뷰당 24개 관절을 가진다. 대응 3D 라벨은 시점당 24개 `(x, y, z)` 관절을 가진다. 주요 메타데이터는 운동 종류, 자세, 운동명, 조건별 O/X, 오류 설명이다.
 
 데이터 사용 전에 반드시 해결할 제약이 있다.
 
-- 라벨은 여러 촬영일에 걸쳐 있지만 추출된 원천 JPG는 Day04·Day17뿐이다. 전체 라벨을 이미지 학습 데이터로 간주하면 안 된다.
+- 라벨은 여러 촬영일에 걸쳐 있지만 JSON과 연결 가능한 JPG는 Day04·Day05·Day17뿐이다. 전체 라벨을 이미지 학습 데이터로 간주하면 안 된다.
 - 2D only는 전부 Day36, 3D only는 Day37·38에 있다. category/day/basename 기준으로 쌍을 만든 뒤 누락 파일을 제외해야 한다.
 - 맨몸 기본 스쿼트 라벨은 없고 `바벨 스쿼트`만 있다. 기존 generic squat 규칙을 단순 이름 변경으로 바벨 스쿼트 evaluator에 연결하지 않는다.
 - 조건 벡터와 오류 설명이 충돌하는 사례가 있다. 예를 들어 일부 포워드 런지는 명백한 오류 설명인데도 모든 조건이 O다. `conditions.value`만 정답으로 쓰지 말고 type code와 description을 함께 감사해야 한다.
-- 추출된 JPG와 연결되는 것은 Day04·17의 13개 운동뿐이며 스쿼트·런지는 포함되지 않는다. 스쿼트·런지 관절 시퀀스 판정 보정은 가능하지만 pose detector 자체의 이미지 fine-tuning·검증은 현 자료만으로 불가능하다.
+- 새 Day05 JPG는 5개 운동과 연결되며 스텝 포워드·백워드 다이나믹 런지의 MediaPipe 검증을 가능하게 한다. 바벨 스쿼트 이미지는 여전히 없어 스쿼트 pose detector 자체의 이미지 검증은 현 자료만으로 불가능하다.
 
 현재 운동과 직접 관련된 라벨 조건은 다음과 같다.
 
@@ -56,7 +58,7 @@
 - SHA-256: `4EAA5EB7A98365221087693FCC286334CF0858E2EB6E15B506AA4A7ECDCEC4AD`
 - SDK: `com.google.mediapipe:tasks-vision:0.10.29`
 
-Universal debug APK는 MediaPipe의 4개 ABI 네이티브 라이브러리를 모두 포함해 약 84 MB다. 배포본은 Android App Bundle의 ABI 분할을 사용해 실제 기기에는 해당 ABI만 전달해야 한다.
+당시 측정한 Universal debug APK는 MediaPipe의 4개 ABI 네이티브 라이브러리를 모두 포함해 약 84MB였다. 현재 산출물 크기로 간주하지 않고 release build에서 다시 측정한다. 배포본은 Android App Bundle의 ABI 분할을 사용해 실제 기기에는 해당 ABI만 전달해야 한다.
 
 ```mermaid
 flowchart LR
@@ -73,7 +75,21 @@ flowchart LR
 - MediaPipe Full 모델은 앱 내부에서만 실행하며 원본 프레임, Bitmap, 관절 시퀀스를 파일이나 네트워크에 저장하지 않는다.
 - 모델의 해부학적 좌·우는 유지한다. 전면 카메라 미러링은 화면 오버레이에만 적용한다.
 - 카메라 계층은 SDK 타입을 공통 `PoseFrame`으로 변환한다. 판정기는 MediaPipe나 CameraX 타입을 참조하지 않는 순수 Kotlin 코드다.
-- 추론 결과의 world 좌표가 충분하면 각도 계산에 우선 사용하고, 없으면 이미지 종횡비를 보정한 normalized 좌표를 사용한다.
+- **현재 임시 구현은** 필수 관절의 world 좌표가 충분하면 각도 계산에 우선 사용하고, 없으면 이미지 종횡비를 보정한 normalized 좌표를 사용한다. 출시 목표는 [출시 청사진](pose-correction-launch-blueprint.md)에 따라 criterion별 검증과 현재 frame 일관성 gate를 통과한 world feature만 사용하는 것이다.
+
+### 검증 판정 코어
+
+새 `PoseCriterionEngine`은 기존 운동별 임계값과 피드백 문자열에서 분리된 순수 Kotlin 도메인 코어다.
+
+- 한 프레임이 아니라 명시된 phase 시작·종료 사이의 관측 구간을 집계한다.
+- time coverage와 criterion별 품질 evidence mass를 별도 gate로 검사한다.
+- 고FPS 반복 프레임을 독립 표본으로 부풀리지 않도록 Gold residual에서 고정할 correlation horizon으로 Kish 유효 표본수를 제한한다.
+- criterion, feature contract, 단위, 집계법, 품질 정의, 모델·view domain과 모든 evidence gate가 정확히 같은 calibration artifact만 받으며 artifact 내용 SHA-256을 승인 목록에 고정한다.
+- target interval과 `PRIMARY_PERSON_LOCK` 같은 required capability도 별도 evaluator-spec SHA-256에 포함해, 승인 후 허용범위를 넓히거나 안전 capability를 제거할 수 없게 한다.
+- calibration/capability/evidence가 부족하거나 허용 경계와 오차구간이 겹치면 `UNKNOWN`이며, 정상으로 대체하지 않는다.
+- 품질이 거의 0인 한 프레임이 극값 판정을 지배하지 않도록 raw minimum/maximum 집계는 제공하지 않는다.
+
+이 코어는 아직 기존 3개 evaluator의 점수·음성 cue에 연결하지 않았다. AI Hub 이미지 replay와 전문가 Gold에서 criterion별 target/calibration contract가 생성되기 전까지 임의 임계값을 새 엔진에 넣지 않는 것이 의도된 안전 경계다.
 
 ## 프레임 처리 알고리즘
 
