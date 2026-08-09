@@ -65,6 +65,22 @@ python tools/generate_aihub_criterion_coverage.py `
 - 이 레지스트리는 **source truth inventory**일 뿐이다. feature, phase, threshold, calibration, view/capability policy 또는 cue 문구가 없으며 어떤 운동도 사용자 `PASS/FAIL`이나 교정 cue로 자동 승격하지 않는다.
 - 사람의 관측가능성 해석과 출시 정책은 source coverage SHA와 별도의 policy SHA로 고정한다. 따라서 AI Hub truth가 그대로여도 proxy 범위·필요 센서·phase·view·좌우 역할·release state가 바뀌면 독립 검토가 필요하다.
 
+### 167-binding curated criterion policy
+
+`compile_aihub_criterion_policy.py`는 source coverage의 167개 `(exercise, exact condition)` 집합과 curated policy가 정확히 일치하는지 검증한다. 현재 engineering review 결과는 `DIRECT` 80개, `PROXY_UNVALIDATED` 52개, camera pose로 식별 불가능한 `NOT_OBSERVABLE` 16개, 원문 의미·극성·기준이 모호해 전문가 adjudication 전 해석을 금지한 binding 19개다. 해석 가능한 148개도 모두 보정 artifact가 없으므로 사용자 판정 권한은 없다.
+
+```powershell
+python tools/compile_aihub_criterion_policy.py --check
+```
+
+- `docs/aihub-criterion-policy.json`은 exact source identity를 유지하면서 semantic family, 측정 construct와 claim boundary, generic phase role, side policy, candidate view, 필요한 capability, 보정 부재 사유를 binding별로 보존한다.
+- `docs/aihub-criterion-policy-approval.json`은 source coverage SHA, global policy SHA와 148개 reviewed-binding set SHA를 별도로 고정한다. compiler는 후보 pin을 stdout에 표시할 수 있지만 파일을 자동 갱신하지 않는다. 현재 pin은 서명된 독립 승인이 아니라 code review에서 동시 변경과 drift를 드러내는 장치이며 runtime 권한이 아니다.
+- 생성된 `AiHubCriterionPolicyCatalog`는 41개 운동과 167개 binding의 exact-set·내용 SHA·불변 collection을 앱 초기화 시 다시 검증한다. 공개 API는 policy 조회뿐이며 evaluator, threshold, score, cue text 또는 `CUE_ELIGIBLE` 상태가 없다.
+- repository 경로를 가리키는 evidence ref는 LF/CRLF를 정규화한 실제 문서 SHA와 일치해야 한다. source·method 문서가 달라지면 compiler는 approval draft와 Kotlin 생성을 모두 중단한다.
+- policy compiler는 자신이 소비하는 source identity·assignment projection을 엄격히 다시 검사한다. type truth row, collision, quarantine 등 source artifact 전체 하위 구조의 무결성은 선행 `generate_aihub_criterion_coverage.py --check`와 `AiHubCriterionSourceCatalog` 초기화 검증을 필수 trust boundary로 둔다.
+- 이 catalog slice의 versioned phase/view/capability/measurement ID는 engineering proposal이지 provider 구현 증명이 아니다. 후속 release compiler는 signed contract registry의 exact ID·SHA를 해석해야 하며 알려지지 않은 ID나 provider 부재는 항상 `UNKNOWN`으로 처리한다.
+- 기존 바벨 스쿼트 4조건 수동 registry는 이 전수 generated registry로 대체했다. 운동을 추가할 때 Kotlin `if`를 늘리지 않고 source coverage → curated policy → 별도 Gold/calibration/release authorization 순서로 확장한다.
+
 ## 기기 런타임 구조
 
 현재 앱은 공식 `pose_landmarker_full.task` float16 번들을 `app/src/main/assets/`에 포함한다.

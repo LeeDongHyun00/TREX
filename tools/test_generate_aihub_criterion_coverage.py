@@ -3,19 +3,34 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from generate_aihub_criterion_coverage import (
-    CoverageError,
-    atomic_write_text,
-    canonical_text_file_sha256,
-    canonical_sha256,
-    generate,
-    render_kotlin,
-    validate_output_path,
-    validate_output_paths,
-    verify_artifact_fingerprint,
-    write_or_check,
-    write_text_or_check,
-)
+if __package__:
+    from .generate_aihub_criterion_coverage import (
+        CoverageError,
+        atomic_write_text,
+        canonical_text_file_sha256,
+        canonical_sha256,
+        generate,
+        render_kotlin,
+        validate_output_path,
+        validate_output_paths,
+        verify_artifact_fingerprint,
+        write_or_check,
+        write_text_or_check,
+    )
+else:
+    from generate_aihub_criterion_coverage import (
+        CoverageError,
+        atomic_write_text,
+        canonical_text_file_sha256,
+        canonical_sha256,
+        generate,
+        render_kotlin,
+        validate_output_path,
+        validate_output_paths,
+        verify_artifact_fingerprint,
+        write_or_check,
+        write_text_or_check,
+    )
 
 
 def _type_entry(code: str, count: int, values: list[bool]) -> dict:

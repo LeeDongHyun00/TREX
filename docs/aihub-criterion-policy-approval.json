@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "artifactKind": "AIHUB_CURATED_CRITERION_POLICY_APPROVAL",
+  "authority": "REPOSITORY_PIN_NOT_RUNTIME_RELEASE",
+  "approvedSourceCoverageArtifactSha256": "9240aa2c9a429cce8f4c47314f7797bea6ebf39b276d3563f5d420a9d3a34eda",
+  "approvedPolicySha256": "9acaceec25d0f654a47c96bc7078be707366d3f3097c9db4938148fd3ffc74b9",
+  "approvedReviewedBindingSetSha256": "0b8d22f9238dccd7cf803cec31480bce69f699c28c8215d13982d9bbb446e8bf",
+  "approvedReviewedBindingCount": 148,
+  "approvalScope": "CATALOG_ONLY"
+}

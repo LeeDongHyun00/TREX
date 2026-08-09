@@ -21,12 +21,20 @@ from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any, Iterable, Mapping
 
-from generate_aihub_exercise_catalog import (
-    ENUM_NAMES,
-    CatalogError,
-    decode_tail,
-    normalize_text,
-)
+try:
+    from .generate_aihub_exercise_catalog import (
+        ENUM_NAMES,
+        CatalogError,
+        decode_tail,
+        normalize_text,
+    )
+except ImportError:  # Direct `python tools/...py` execution.
+    from generate_aihub_exercise_catalog import (
+        ENUM_NAMES,
+        CatalogError,
+        decode_tail,
+        normalize_text,
+    )
 
 
 SCHEMA_VERSION = 1

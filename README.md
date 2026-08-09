@@ -56,10 +56,12 @@ macOS/Linux 기준:
 - `app/src/main/java/com/example/trex_kotlin/pose/phase/`: 운동명과 분리된 ordered phase graph·dwell·dropout 엔진
 - `app/src/main/java/com/example/trex_kotlin/pose/criterion/`: 보정된 tri-state 판정, criterion dependency graph, 단일 cue 후보 정책
 - `app/src/main/java/com/example/trex_kotlin/pose/spec/`: AI Hub 운동별 phase·feature·criterion runtime 계약
+- `app/src/main/java/com/example/trex_kotlin/pose/policy/`: 167개 운동-condition binding의 불변·비실행형 관측성/phase/side/view/capability 정책 레지스트리
 - `app/src/main/java/com/example/trex_kotlin/pose/runtime/`: observer attestation과 backdated phase 경계를 묶는 bounded evaluation session
 - `app/src/main/java/com/example/trex_kotlin/catalog/AiHubCriterionSourceCatalog.kt`: AI Hub 41개 운동·97개 원문 조건·816개 type truth row의 생성형 source-coverage 레지스트리
 - `tools/analyze_pose_coordinate_criteria.py`: AI Hub 2D metadata와 paired 3D 좌표에서 criterion 후보 특징을 찾는 threshold-free 연구 도구
 - `tools/generate_aihub_criterion_coverage.py`: 전체 2D label metadata를 감사해 source coverage JSON과 compact Kotlin 레지스트리를 원자적으로 생성·검증하는 도구
+- `tools/compile_aihub_criterion_policy.py`: curated 167-binding policy와 비인증 repository drift pin을 검증해 catalog-only Kotlin 레지스트리를 생성하는 도구
 - `tools/barbell_squat_validation_experiment.py`: 바벨 스쿼트 proxy를 subject-held-out Training과 소비된 descriptive Validation에서 비교하는 비출시 연구 도구
 - `assets/`: 디자인/원본 이미지 자료
 - `trex_design_react/`: React 기반 디자인 프로토타입
@@ -69,6 +71,9 @@ macOS/Linux 기준:
 - `docs/pose-dataset-snapshot.json`: 현재 `data/`의 경로·크기 기반 휴대용 snapshot identity와 인벤토리
 - `docs/aihub-exercise-catalog.md`: 실제 2D JSON 기반 운동 manifest·생성·앱 연결 규칙
 - `docs/aihub-criterion-coverage.json`: exact condition·truth vector·충돌·격리 provenance를 보존한 source-only artifact
+- `docs/aihub-criterion-policy-method.md`: 41개 운동의 관측 가능성·phase·side·view·capability 분류 방법과 판정 금지 경계
+- `docs/aihub-criterion-policy.json`: 167개 binding 전수의 curated engineering policy
+- `docs/aihub-criterion-policy-approval.json`: policy/source/reviewed-set의 동시 drift를 찾는 catalog-only repository pin(서명·runtime 권한 아님)
 - `docs/barbell-squat-validation.md`: 바벨 스쿼트 4개 조건의 좌표 실험 계약·관측 한계·서비스 승격 기준
 
 ## Git에 포함하지 않는 파일
