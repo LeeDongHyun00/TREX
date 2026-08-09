@@ -75,7 +75,7 @@ flowchart LR
 - MediaPipe Full 모델은 앱 내부에서만 실행하며 원본 프레임, Bitmap, 관절 시퀀스를 파일이나 네트워크에 저장하지 않는다.
 - 모델의 해부학적 좌·우는 유지한다. 전면 카메라 미러링은 화면 오버레이에만 적용한다.
 - 카메라 계층은 SDK 타입을 공통 `PoseFrame`으로 변환한다. 판정기는 MediaPipe나 CameraX 타입을 참조하지 않는 순수 Kotlin 코드다.
-- **현재 임시 구현은** 필수 관절의 world 좌표가 충분하면 각도 계산에 우선 사용하고, 없으면 이미지 종횡비를 보정한 normalized 좌표를 사용한다. 출시 목표는 [출시 청사진](pose-correction-launch-blueprint.md)에 따라 criterion별 검증과 현재 frame 일관성 gate를 통과한 world feature만 사용하는 것이다.
+- 기존 3개 임시 evaluator도 `PoseEvaluatorConfig.coordinateSpace`에 고정된 한 좌표계만 사용한다. 선택한 domain의 관절이 없으면 다른 domain으로 fallback하지 않고 추적 실패로 처리한다. 기본 world 정책은 여전히 Gold 보정 전 legacy 설정이며, 출시 목표는 [출시 청사진](pose-correction-launch-blueprint.md)에 따라 criterion별로 승인된 domain만 사용하는 것이다.
 
 ### 검증 판정 코어
 
@@ -84,12 +84,27 @@ flowchart LR
 - 한 프레임이 아니라 명시된 phase 시작·종료 사이의 관측 구간을 집계한다.
 - time coverage와 criterion별 품질 evidence mass를 별도 gate로 검사한다.
 - 고FPS 반복 프레임을 독립 표본으로 부풀리지 않도록 Gold residual에서 고정할 correlation horizon으로 Kish 유효 표본수를 제한한다.
-- criterion, feature contract, 단위, 집계법, 품질 정의, 모델·view domain과 모든 evidence gate가 정확히 같은 calibration artifact만 받으며 artifact 내용 SHA-256을 승인 목록에 고정한다.
+- criterion, feature AST SHA, 단위, 집계법, 품질 보정 artifact SHA, 모델·view domain과 모든 evidence gate가 정확히 같은 calibration artifact만 받으며 artifact 내용을 SHA-256으로 고정한다.
 - target interval과 `PRIMARY_PERSON_LOCK` 같은 required capability도 별도 evaluator-spec SHA-256에 포함해, 승인 후 허용범위를 넓히거나 안전 capability를 제거할 수 없게 한다.
 - calibration/capability/evidence가 부족하거나 허용 경계와 오차구간이 겹치면 `UNKNOWN`이며, 정상으로 대체하지 않는다.
 - 품질이 거의 0인 한 프레임이 극값 판정을 지배하지 않도록 raw minimum/maximum 집계는 제공하지 않는다.
 
 이 코어는 아직 기존 3개 evaluator의 점수·음성 cue에 연결하지 않았다. AI Hub 이미지 replay와 전문가 Gold에서 criterion별 target/calibration contract가 생성되기 전까지 임의 임계값을 새 엔진에 넣지 않는 것이 의도된 안전 경계다.
+
+### 좌표·phase·criterion graph 런타임 뼈대
+
+두 번째 구현 slice는 운동별 거대 evaluator 밖에 다음 순수 Kotlin 경계를 추가한다.
+
+- `PoseFeatureEngine`은 `NORMALIZED_IMAGE` 또는 `WORLD`를 호출자가 반드시 지정하게 하며 누락된 domain으로 자동 fallback하지 않는다. `atan2` 기반 관절각, body-scale 거리, gravity/body-axis 방향, signed alignment, 좌우 차이와 ROM을 제공하고 누락·저신뢰·퇴화·혼합 unit/domain은 값 대신 명시적 unknown을 반환한다.
+- `PoseScalarFeatureSpec`은 위 primitive를 versioned data로 표현한다. 사람이 붙인 ID와 별도로 관절·좌표계·참조축·부호·scale·중첩 feature 전체의 canonical AST SHA-256을 계산하므로, 같은 ID를 재사용해 내용을 바꿔도 기존 calibration과 결합할 수 없다.
+- `PosePhaseEngine`은 운동명과 무관한 directed phase graph, enter/hold hysteresis, 방향, dwell, dropout grace, 최대 gap과 최대 phase 시간을 처리한다. 같은 timestamp와 dropout 시간은 phase evidence를 늘리지 않으며 허용 edge 밖의 phase skip은 거부한다. `PosePhaseDriverBinding`은 feature AST, graph, 모든 시간 정책과 phase 품질 artifact를 하나의 승인 SHA로 묶는다.
+- `PoseCriterionSampler`는 raw MediaPipe confidence를 criterion evidence에 직접 넣지 못하게 한다. feature AST·signal kind·`qualityContractId`·runtime domain을 내용 해시로 고정한 불변·비감소 step-table artifact를 반드시 거치며, 첫 보정 cell 미만의 값은 null evidence로 기권한다.
+- `PoseCriterionGraph`는 atomic `PASS/FAIL/UNKNOWN`을 보존하면서 unknown prerequisite를 `UNKNOWN_CONFOUNDED`로 전파하고, 실패한 원인의 descendant cue를 억제한 뒤 severity와 선언 순서에 따라 한 개의 방향성 cue 후보만 선택한다. shadow 결과는 보존하되 released status·dependency·suppression·cue에 영향을 주지 않으며 released subgraph가 shadow prerequisite에 의존하는 명세는 거부한다.
+- `PoseExerciseSpec`은 canonical `AiHubExercise`, 승인된 phase binding, criterion feature·view·관측가능성·runtime mode와 graph 정책 전체를 top-level SHA로 묶는다. graph 입력은 같은 ID만 확인하지 않고 evaluator/calibration/phase/window/cycle/view/domain provenance가 모두 일치하는 결과만 받는다. branch별 `NOT_APPLICABLE` 계약이 없는 현재 slice는 모든 phase를 한 번씩 방문하는 결정적 단일 cycle만 승인한다.
+- `PoseObservationContract`은 model bytes, preprocessing, landmark schema, 좌표 domain, phase view, person-lock와 view-qualifier artifact를 내용 해시로 고정한다. raw `PoseFrame`이나 호출자가 만든 capability set은 cue 증거가 아니며, 같은 observer source가 발급한 opaque person epoch와 프레임별 view qualification이 붙은 observation만 세션이 받는다.
+- `PoseExerciseEvaluationSession`은 서명된 최대 phase 시간과 별도의 2,048-frame hard cap 안에서 ring을 소유하고 dwell 확인으로 늦게 확정된 경계를 `[start,end)` 구간으로 재분배한다. 사람 lock 상실·epoch 변경은 confidence grace 없이 즉시 reset하고, view가 맞지 않는 phase 관측은 unusable로 처리한다. 중복 timestamp·buffer overflow·reset·불완전 cycle은 판정에서 폐기하며, 모든 cue criterion의 정확한 aggregate calibration이 있을 때만 완전한 cycle graph를 합성한다.
+
+기존 스쿼트·런지 evaluator의 네 개 큰 관절각과 stance ratio도 새 공통 feature primitive로 계산하도록 교체해 기존 반복 회귀 테스트와 새 엔진이 같은 수학 경로를 사용한다. 운동별 필수 guard가 퇴화하면 추적 실패로 중단하며 null을 좋은 자세 점수로 대체하지 않는다. 다만 기존 임시 점수·문구는 아직 Gold 보정된 새 `ExerciseSpec`으로 승격된 것이 아니다. 현재 signed spec/session과 observation source는 module-internal scaffold이며, 실제 candidate observer가 model/config bytes를 검증해 attestation을 발급하는 factory와 승인 SHA allowlist/서명 loader는 아직 연결하지 않았다.
 
 ## 프레임 처리 알고리즘
 
@@ -104,7 +119,7 @@ flowchart LR
 ### 3. 체형·카메라 정규화
 
 - 거리 임계값은 픽셀 대신 어깨 폭, 골반 폭, 몸통 길이의 비율로 표현한다.
-- 관절각은 `A-B-C`의 벡터 내적으로 계산하고 0~180도로 제한한다.
+- 관절각은 `A-B-C` 두 벡터에 `atan2(||a×b||, a·b)`를 적용해 0~180도로 계산한다.
 - 좌우 평균과 차이를 함께 사용한다. 평균은 운동 깊이, 차이는 비대칭을 나타낸다.
 - 단안 world 좌표의 meter 값을 절대 거리나 의료적 측정값으로 사용하지 않는다.
 
@@ -138,6 +153,18 @@ flowchart LR
 6. 1차 버전은 해석 가능한 규칙 임계값의 분포를 보정한다. 충분한 정상/오류 실영상이 확보된 뒤 작은 TCN 또는 TFLite 분류기를 규칙 엔진 뒤의 보조 신호로 비교한다.
 
 현재 자료는 원천 영상 누락과 라벨 충돌이 있어 곧바로 end-to-end 분류기를 학습하기보다 규칙 보정과 회귀 테스트에 먼저 쓰는 편이 안전하다.
+
+좌표-only 후보 탐색은 다음 도구로 재현한다.
+
+```powershell
+python tools\analyze_pose_coordinate_criteria.py `
+  "data\013.피트니스자세\1.Training\라벨링데이터" `
+  --exercise "Y - Exercise" `
+  --max-sequences 32 `
+  --output "$env:TEMP\trex-coordinate-candidates.json"
+```
+
+도구는 필터 사용 여부와 무관하게 모든 2D JSON metadata tail을 감사한 뒤 운동·condition·전역 `Z` subject metadata와 basename-paired 3D 좌표를 사용하고, pelvis 중심·몸통 길이 정규화 후 Hamming-distance-1 condition 대비를 계산한다. `--max-sequences`는 type을 먼저 균형화하고 각 type 안에서 subject/day cell을 stable-hash 순환 선택하므로 파일명의 이른 촬영분만 고르지 않는다. `062`, `101`, `109`는 기본 격리하며 frame·5개 view를 독립 표본으로 세지 않는다. 같은 condition stratum 안에 양쪽 라벨을 모두 수행한 subject가 없으면 차이는 descriptive 값으로만 보존하고 후보 방향을 만들지 않는다. 출력은 원본 덮어쓰기와 재수집을 막기 위해 labeling root 밖에 atomic write한다. 현재 snapshot dry-run은 2D metadata 34,468개를 모두 해석하고 `Y - Exercise` 32 sequence를 18 subject·8 type에서 골랐으며, 세 criterion 모두 paired-subject 대비를 확보했다. 이 출력은 후보 특징 연구용이며 threshold, calibration artifact 또는 `PASS/FAIL` 정답으로 사용할 수 없다.
 
 ## 실기기 검증 기준
 

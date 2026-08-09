@@ -104,10 +104,17 @@ class PoseVisibilityGate(
         require(minimumPresence in 0.0..1.0) { "minimumPresence must be in [0, 1]" }
     }
 
-    fun check(frame: PoseFrame, requiredJoints: Set<PoseJoint>): PoseGateResult {
+    fun check(
+        frame: PoseFrame,
+        requiredJoints: Set<PoseJoint>,
+        coordinateSpace: PoseCoordinateSpace,
+    ): PoseGateResult {
         require(requiredJoints.isNotEmpty()) { "requiredJoints cannot be empty" }
 
-        val (space, selected) = selectCoordinateSpace(frame, requiredJoints)
+        val selected = when (coordinateSpace) {
+            PoseCoordinateSpace.NORMALIZED_IMAGE -> frame.landmarks
+            PoseCoordinateSpace.WORLD -> frame.worldLandmarks
+        }
         val missing = requiredJoints.filterTo(mutableSetOf()) { it !in selected }
         val lowConfidence = requiredJoints.filterTo(mutableSetOf()) { joint ->
             val landmark = selected[joint]
@@ -121,7 +128,7 @@ class PoseVisibilityGate(
 
         return PoseGateResult(
             accepted = missing.isEmpty() && lowConfidence.isEmpty(),
-            coordinateSpace = space,
+            coordinateSpace = coordinateSpace,
             landmarks = selected,
             missingJoints = missing,
             lowConfidenceJoints = lowConfidence,
@@ -129,16 +136,4 @@ class PoseVisibilityGate(
         )
     }
 
-    private fun selectCoordinateSpace(
-        frame: PoseFrame,
-        requiredJoints: Set<PoseJoint>,
-    ): Pair<PoseCoordinateSpace, Map<PoseJoint, PoseLandmark>> {
-        val worldCount = requiredJoints.count(frame.worldLandmarks::containsKey)
-        val normalizedCount = requiredJoints.count(frame.landmarks::containsKey)
-        return if (worldCount == requiredJoints.size || worldCount > normalizedCount) {
-            PoseCoordinateSpace.WORLD to frame.worldLandmarks
-        } else {
-            PoseCoordinateSpace.NORMALIZED_IMAGE to frame.landmarks
-        }
-    }
 }

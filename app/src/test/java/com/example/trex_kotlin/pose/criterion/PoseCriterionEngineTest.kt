@@ -232,10 +232,16 @@ class PoseCriterionEngineTest {
         val baseline = calibration()
         val changedResidual = calibration(MeasurementInterval(-1.0, 1.0))
         val changedEligibility = calibration(contract = contract(maximumGapMs = 201L))
+        val changedFeatureAst = calibration(contract = contract(featureSpecSha256 = "1".repeat(64)))
+        val changedQualityCalibration = calibration(
+            contract = contract(qualityCalibrationArtifactSha256 = "b".repeat(64)),
+        )
 
         assertTrue(baseline.artifactSha256.matches(Regex("^[0-9a-f]{64}$")))
         assertNotEquals(baseline.artifactSha256, changedResidual.artifactSha256)
         assertNotEquals(baseline.artifactSha256, changedEligibility.artifactSha256)
+        assertNotEquals(baseline.artifactSha256, changedFeatureAst.artifactSha256)
+        assertNotEquals(baseline.artifactSha256, changedQualityCalibration.artifactSha256)
     }
 
     @Test
@@ -522,6 +528,8 @@ class PoseCriterionEngineTest {
 
     private fun contract(
         aggregation: CriterionAggregation = CriterionAggregation.WeightedQuantile(0.5),
+        featureSpecSha256: String = "0".repeat(64),
+        qualityCalibrationArtifactSha256: String = "a".repeat(64),
         runtimeDomainId: String = "mediapipe-full-test-domain:v1",
         validMeasurementInterval: MeasurementInterval = MeasurementInterval(-1_000.0, 1_000.0),
         minimumSampleQuality: Double = 0.1,
@@ -534,9 +542,11 @@ class PoseCriterionEngineTest {
     ) = CriterionCalibrationContract(
         criterionId = "test-criterion:v1",
         featureContractId = "test-feature:v1",
+        featureSpecSha256 = featureSpecSha256,
         measurementUnit = "degree",
         aggregation = aggregation,
         qualityContractId = "test-quality:v1",
+        qualityCalibrationArtifactSha256 = qualityCalibrationArtifactSha256,
         runtimeDomainId = runtimeDomainId,
         validMeasurementInterval = validMeasurementInterval,
         minimumSampleQuality = minimumSampleQuality,

@@ -1,14 +1,13 @@
 package com.example.trex_kotlin.pose
 
 import com.example.trex_kotlin.catalog.AiHubExercise
+import com.example.trex_kotlin.pose.feature.PoseFeatureEngine
 import kotlin.math.abs
-import kotlin.math.acos
 import kotlin.math.atan2
 import kotlin.math.hypot
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
-import kotlin.math.sqrt
 
 data class SquatThresholds(
     val readyKneeAngle: Double = 160.0,
@@ -67,6 +66,8 @@ data class PoseEvaluatorConfig(
     val trackingLossGraceMs: Long = 350L,
     val reacquisitionStableFrames: Int = 2,
     val minimumRepDurationMs: Long = 500L,
+    /** Legacy evaluator domain is explicit; it must never switch domains from landmark counts. */
+    val coordinateSpace: PoseCoordinateSpace = PoseCoordinateSpace.WORLD,
     val squat: SquatThresholds = SquatThresholds(),
     val lunge: LungeThresholds = LungeThresholds(),
 ) {
@@ -236,7 +237,7 @@ internal class SymmetricSquatMotionEvaluator(
         if (metrics.kneeAngleDifference > thresholds.maximumKneeAngleDifference) {
             add(feedback(PoseFeedbackCode.KEEP_KNEES_EVEN, "양쪽 무릎을 비슷한 속도로 움직여 주세요."))
         }
-        if ((metrics.kneeTrackingRatio ?: 1.0) < thresholds.minimumKneeTrackingRatio) {
+        if (requireNotNull(metrics.kneeTrackingRatio) < thresholds.minimumKneeTrackingRatio) {
             add(feedback(PoseFeedbackCode.KEEP_KNEES_OUT, "무릎이 안쪽으로 모이지 않게 유지해 주세요."))
         }
     }
@@ -391,7 +392,7 @@ internal class AlternatingLungeMotionEvaluator(
         if (metrics.torsoLean > thresholds.maximumTorsoLean) {
             add(feedback(PoseFeedbackCode.KEEP_CHEST_UP, "상체를 세운 채 중심을 유지해 주세요."))
         }
-        if ((metrics.stanceRatio ?: Double.POSITIVE_INFINITY) < thresholds.minimumStanceRatio) {
+        if (requireNotNull(metrics.stanceRatio) < thresholds.minimumStanceRatio) {
             add(feedback(PoseFeedbackCode.WIDEN_STANCE, "앞뒤 보폭을 조금 더 넓혀 주세요."))
         }
     }
@@ -412,6 +413,9 @@ abstract class BasePoseMotionEvaluator(
     private val visibilityGate = PoseVisibilityGate(
         minimumVisibility = config.minimumVisibility,
         minimumPresence = config.minimumPresence,
+    )
+    private val featureEngine = PoseFeatureEngine(
+        minimumConfidence = min(config.minimumVisibility, config.minimumPresence),
     )
     private val completedScores = mutableListOf<Int>()
     private val sideCounts = mutableMapOf(PoseSide.LEFT to 0, PoseSide.RIGHT to 0)
@@ -456,7 +460,11 @@ abstract class BasePoseMotionEvaluator(
                 )
             }
         }
-        val gate = visibilityGate.check(smoothedFrame, REQUIRED_JOINTS)
+        val gate = visibilityGate.check(
+            frame = smoothedFrame,
+            requiredJoints = REQUIRED_JOINTS,
+            coordinateSpace = config.coordinateSpace,
+        )
         if (!gate.accepted) {
             val trackingState = if (frame.landmarks.isEmpty() && frame.worldLandmarks.isEmpty()) {
                 PoseTrackingState.NO_POSE
@@ -475,15 +483,31 @@ abstract class BasePoseMotionEvaluator(
         }
 
         val metrics = PoseGeometry.metrics(
-            landmarks = gate.landmarks,
+            frame = smoothedFrame,
             coordinateSpace = gate.coordinateSpace,
-            imageAspectRatio = smoothedFrame.imageAspectRatio,
             minimumConfidence = gate.minimumConfidence,
+            featureEngine = featureEngine,
         ) ?: return trackingFailure(
             timestampMs = frame.timestampMs,
             trackingState = PoseTrackingState.LOW_CONFIDENCE,
             feedback = listOf(feedback(PoseFeedbackCode.MOVE_FULL_BODY_INTO_FRAME, "전신 관절을 확인할 수 없습니다.")),
         )
+        val requiredGuardKnown = when (profile) {
+            PoseMotionProfile.SYMMETRIC_SQUAT -> metrics.kneeTrackingRatio != null
+            PoseMotionProfile.ALTERNATING_LUNGE -> metrics.stanceRatio != null
+        }
+        if (!requiredGuardKnown) {
+            return trackingFailure(
+                timestampMs = frame.timestampMs,
+                trackingState = PoseTrackingState.LOW_CONFIDENCE,
+                feedback = listOf(
+                    feedback(
+                        PoseFeedbackCode.MOVE_FULL_BODY_INTO_FRAME,
+                        "자세 정렬 기준을 안정적으로 확인할 수 없습니다.",
+                    ),
+                ),
+            )
+        }
 
         val lossStartedAt = trackingLossStartedAtMs
         if (lossStartedAt != null) {
@@ -654,13 +678,17 @@ abstract class BasePoseMotionEvaluator(
 
 private object PoseGeometry {
     fun metrics(
-        landmarks: Map<PoseJoint, PoseLandmark>,
+        frame: PoseFrame,
         coordinateSpace: PoseCoordinateSpace,
-        imageAspectRatio: Double,
         minimumConfidence: Double,
+        featureEngine: PoseFeatureEngine,
     ): PoseMetrics? {
+        val landmarks = when (coordinateSpace) {
+            PoseCoordinateSpace.NORMALIZED_IMAGE -> frame.landmarks
+            PoseCoordinateSpace.WORLD -> frame.worldLandmarks
+        }
         val scaleX = if (coordinateSpace == PoseCoordinateSpace.NORMALIZED_IMAGE) {
-            imageAspectRatio
+            frame.imageAspectRatio
         } else {
             1.0
         }
@@ -679,21 +707,53 @@ private object PoseGeometry {
         val leftAnkle = point(PoseJoint.LEFT_ANKLE) ?: return null
         val rightAnkle = point(PoseJoint.RIGHT_ANKLE) ?: return null
 
-        val leftKneeAngle = angle(leftHip, leftKnee, leftAnkle) ?: return null
-        val rightKneeAngle = angle(rightHip, rightKnee, rightAnkle) ?: return null
-        val leftHipAngle = angle(leftShoulder, leftHip, leftKnee) ?: return null
-        val rightHipAngle = angle(rightShoulder, rightHip, rightKnee) ?: return null
+        val leftKneeAngle = featureEngine.angle(
+            frame,
+            PoseJoint.LEFT_HIP,
+            PoseJoint.LEFT_KNEE,
+            PoseJoint.LEFT_ANKLE,
+            coordinateSpace,
+        ).value ?: return null
+        val rightKneeAngle = featureEngine.angle(
+            frame,
+            PoseJoint.RIGHT_HIP,
+            PoseJoint.RIGHT_KNEE,
+            PoseJoint.RIGHT_ANKLE,
+            coordinateSpace,
+        ).value ?: return null
+        val leftHipAngle = featureEngine.angle(
+            frame,
+            PoseJoint.LEFT_SHOULDER,
+            PoseJoint.LEFT_HIP,
+            PoseJoint.LEFT_KNEE,
+            coordinateSpace,
+        ).value ?: return null
+        val rightHipAngle = featureEngine.angle(
+            frame,
+            PoseJoint.RIGHT_SHOULDER,
+            PoseJoint.RIGHT_HIP,
+            PoseJoint.RIGHT_KNEE,
+            coordinateSpace,
+        ).value ?: return null
         val shoulderMidpoint = midpoint(leftShoulder, rightShoulder)
         val hipMidpoint = midpoint(leftHip, rightHip)
         val torso = shoulderMidpoint - hipMidpoint
+        if (torso.lengthSquared() <= EPSILON * EPSILON) return null
         val torsoLean = Math.toDegrees(atan2(hypot(torso.x, torso.z), abs(torso.y)))
 
-        val shoulderSpan = distance(leftShoulder, rightShoulder)
-        val ankleSpan = distance(leftAnkle, rightAnkle)
         val hipHorizontalSpan = abs(leftHip.x - rightHip.x)
         val ankleHorizontalSpan = abs(leftAnkle.x - rightAnkle.x)
         val kneeHorizontalSpan = abs(leftKnee.x - rightKnee.x)
         val kneeReference = max(hipHorizontalSpan, ankleHorizontalSpan)
+            .takeIf { it > EPSILON }
+        val stanceRatio = featureEngine.normalizedDistance(
+            frame = frame,
+            first = PoseJoint.LEFT_ANKLE,
+            second = PoseJoint.RIGHT_ANKLE,
+            scaleStart = PoseJoint.LEFT_SHOULDER,
+            scaleEnd = PoseJoint.RIGHT_SHOULDER,
+            coordinateSpace = coordinateSpace,
+        ).value
 
         return PoseMetrics(
             leftKneeAngle = leftKneeAngle,
@@ -702,19 +762,10 @@ private object PoseGeometry {
             rightHipAngle = rightHipAngle,
             torsoLean = torsoLean,
             kneeAngleDifference = abs(leftKneeAngle - rightKneeAngle),
-            kneeTrackingRatio = kneeReference.takeIf { it > EPSILON }?.let { kneeHorizontalSpan / it },
-            stanceRatio = shoulderSpan.takeIf { it > EPSILON }?.let { ankleSpan / it },
+            kneeTrackingRatio = kneeReference?.let { kneeHorizontalSpan / it },
+            stanceRatio = stanceRatio,
             minimumConfidence = minimumConfidence,
         )
-    }
-
-    private fun angle(first: Point3, vertex: Point3, third: Point3): Double? {
-        val a = first - vertex
-        val b = third - vertex
-        val denominator = a.length * b.length
-        if (denominator <= EPSILON) return null
-        val cosine = ((a dot b) / denominator).coerceIn(-1.0, 1.0)
-        return Math.toDegrees(acos(cosine))
     }
 
     private fun midpoint(first: Point3, second: Point3) = Point3(
@@ -723,15 +774,13 @@ private object PoseGeometry {
         z = (first.z + second.z) / 2.0,
     )
 
-    private fun distance(first: Point3, second: Point3): Double = (first - second).length
-
     private const val EPSILON = 1e-8
 }
 
 private data class Point3(val x: Double, val y: Double, val z: Double) {
     operator fun minus(other: Point3) = Point3(x - other.x, y - other.y, z - other.z)
-    infix fun dot(other: Point3): Double = x * other.x + y * other.y + z * other.z
-    val length: Double get() = sqrt(x * x + y * y + z * z)
+
+    fun lengthSquared(): Double = x * x + y * y + z * z
 }
 
 private class ConsecutiveFrameHold(private val requiredFrames: Int) {
@@ -760,7 +809,10 @@ private data class SquatRepQuality(
         )
         maximumTorsoLean = max(maximumTorsoLean, metrics.torsoLean)
         maximumKneeDifference = max(maximumKneeDifference, metrics.kneeAngleDifference)
-        metrics.kneeTrackingRatio?.let { minimumKneeTrackingRatio = min(minimumKneeTrackingRatio, it) }
+        minimumKneeTrackingRatio = min(
+            minimumKneeTrackingRatio,
+            requireNotNull(metrics.kneeTrackingRatio),
+        )
     }
 
     fun score(thresholds: SquatThresholds): Int = weightedScore(
@@ -772,7 +824,7 @@ private data class SquatRepQuality(
             badAtOrAbove = thresholds.maximumKneeAngleDifference * 1.5,
         ) to 0.20,
         higherIsBetterScore(
-            minimumKneeTrackingRatio.takeIf(Double::isFinite) ?: 1.0,
+            minimumKneeTrackingRatio,
             goodAtOrAbove = 0.90,
             badAtOrBelow = 0.50,
         ) to 0.15,
@@ -789,7 +841,7 @@ private data class LungeRepQuality(
         minimumFrontKneeAngle = min(minimumFrontKneeAngle, metrics.kneeAngle(activeSide))
         minimumRearKneeAngle = min(minimumRearKneeAngle, metrics.kneeAngle(activeSide.opposite()))
         maximumTorsoLean = max(maximumTorsoLean, metrics.torsoLean)
-        metrics.stanceRatio?.let { minimumStanceRatio = min(minimumStanceRatio, it) }
+        minimumStanceRatio = min(minimumStanceRatio, requireNotNull(metrics.stanceRatio))
     }
 
     fun score(thresholds: LungeThresholds): Int = weightedScore(
@@ -797,7 +849,7 @@ private data class LungeRepQuality(
         lowerIsBetterScore(minimumRearKneeAngle, goodAtOrBelow = 125.0, badAtOrAbove = 160.0) to 0.25,
         lowerIsBetterScore(maximumTorsoLean, goodAtOrBelow = 12.0, badAtOrAbove = thresholds.maximumTorsoLean) to 0.25,
         higherIsBetterScore(
-            minimumStanceRatio.takeIf(Double::isFinite) ?: 1.0,
+            minimumStanceRatio,
             goodAtOrAbove = 1.0,
             badAtOrBelow = 0.55,
         ) to 0.15,

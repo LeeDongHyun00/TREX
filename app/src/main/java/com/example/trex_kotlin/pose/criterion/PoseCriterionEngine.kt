@@ -1,30 +1,11 @@
 package com.example.trex_kotlin.pose.criterion
 
-import java.nio.charset.StandardCharsets
-import java.security.MessageDigest
+import com.example.trex_kotlin.pose.contract.canonicalFieldsSha256
+import java.util.Collections
 import kotlin.math.max
 import kotlin.math.min
 
 private val SHA256_REGEX = Regex("^[0-9a-f]{64}$")
-
-private fun canonicalFieldsSha256(fields: List<Pair<String, String>>): String {
-    val canonicalPayload = buildString {
-        fields.forEach { (name, value) ->
-            val byteCount = value.toByteArray(StandardCharsets.UTF_8).size
-            append(name).append(':').append(byteCount).append(':').append(value).append('\n')
-        }
-    }
-    val digest = MessageDigest.getInstance("SHA-256")
-        .digest(canonicalPayload.toByteArray(StandardCharsets.UTF_8))
-    val hex = CharArray(digest.size * 2)
-    val alphabet = "0123456789abcdef"
-    digest.forEachIndexed { index, byte ->
-        val value = byte.toInt() and 0xff
-        hex[index * 2] = alphabet[value ushr 4]
-        hex[index * 2 + 1] = alphabet[value and 0x0f]
-    }
-    return String(hex)
-}
 
 private fun calibrationArtifactSha256(
     contract: CriterionCalibrationContract,
@@ -40,9 +21,11 @@ private fun calibrationArtifactSha256(
         "artifactSchemaVersion" to "1",
         "criterionId" to contract.criterionId,
         "featureContractId" to contract.featureContractId,
+        "featureSpecSha256" to contract.featureSpecSha256,
         "measurementUnit" to contract.measurementUnit,
         "aggregation" to aggregationIdentity,
         "qualityContractId" to contract.qualityContractId,
+        "qualityCalibrationArtifactSha256" to contract.qualityCalibrationArtifactSha256,
         "runtimeDomainId" to contract.runtimeDomainId,
         "validMeasurementLower" to java.lang.Double.toHexString(
             contract.validMeasurementInterval.lower,
@@ -149,6 +132,7 @@ enum class CriterionCapability {
     GROUND_PROXY,
     OBJECT_TRACK,
     PRIMARY_PERSON_LOCK,
+    VIEW_QUALIFIED,
     ANATOMICAL_SEGMENT_FRAME,
 }
 
@@ -177,9 +161,11 @@ sealed interface CriterionAggregation {
 data class CriterionCalibrationContract(
     val criterionId: String,
     val featureContractId: String,
+    val featureSpecSha256: String,
     val measurementUnit: String,
     val aggregation: CriterionAggregation,
     val qualityContractId: String,
+    val qualityCalibrationArtifactSha256: String,
     val runtimeDomainId: String,
     val validMeasurementInterval: MeasurementInterval,
     val minimumSampleQuality: Double,
@@ -194,8 +180,14 @@ data class CriterionCalibrationContract(
     init {
         require(criterionId.isNotBlank()) { "criterionId must not be blank" }
         require(featureContractId.isNotBlank()) { "featureContractId must not be blank" }
+        require(SHA256_REGEX.matches(featureSpecSha256)) {
+            "featureSpecSha256 must be a lowercase SHA-256 value"
+        }
         require(measurementUnit.isNotBlank()) { "measurementUnit must not be blank" }
         require(qualityContractId.isNotBlank()) { "qualityContractId must not be blank" }
+        require(SHA256_REGEX.matches(qualityCalibrationArtifactSha256)) {
+            "qualityCalibrationArtifactSha256 must be a lowercase SHA-256 value"
+        }
         require(runtimeDomainId.isNotBlank()) { "runtimeDomainId must not be blank" }
         require(minimumSampleQuality.isFinite() && minimumSampleQuality > 0.0 && minimumSampleQuality <= 1.0) {
             "minimumSampleQuality must be finite and in (0, 1]"
@@ -235,7 +227,8 @@ class PoseCriterionSpec(
     requiredCapabilities: Set<CriterionCapability>,
 ) {
     /** Copying prevents a caller from mutating a validated spec through its input set. */
-    val requiredCapabilities: Set<CriterionCapability> = requiredCapabilities.toSet()
+    val requiredCapabilities: Set<CriterionCapability> =
+        Collections.unmodifiableSet(LinkedHashSet(requiredCapabilities))
 
     val evaluatorSpecSha256: String = evaluatorSpecSha256(
         approvedCalibrationArtifactSha256 = approvedCalibrationArtifactSha256,

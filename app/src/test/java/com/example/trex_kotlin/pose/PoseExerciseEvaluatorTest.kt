@@ -213,6 +213,98 @@ class PoseExerciseEvaluatorTest {
     }
 
     @Test
+    fun evaluatorUsesItsPinnedCoordinateDomainWhenBothDomainsDisagree() {
+        val worldEvaluator = SymmetricSquatMotionEvaluator(
+            deterministicConfig.copy(coordinateSpace = PoseCoordinateSpace.WORLD),
+        )
+        val normalizedEvaluator = SymmetricSquatMotionEvaluator(
+            deterministicConfig.copy(coordinateSpace = PoseCoordinateSpace.NORMALIZED_IMAGE),
+        )
+        val angles = listOf(175.0, 175.0, 105.0, 105.0, 105.0, 105.0)
+
+        var worldResult: Evaluation? = null
+        var normalizedResult: Evaluation? = null
+        angles.forEachIndexed { index, worldAngle ->
+            val frame = poseFrame(index * 100L, worldAngle, worldAngle).copy(
+                landmarks = normalizedLandmarks(rightAnkleY = 0.95),
+                imageWidth = 1_920,
+                imageHeight = 1_080,
+            )
+            worldResult = worldEvaluator.accept(frame)
+            normalizedResult = normalizedEvaluator.accept(frame)
+        }
+
+        assertEquals(PosePhase.BOTTOM, worldResult?.phase)
+        assertEquals(PosePhase.READY, normalizedResult?.phase)
+    }
+
+    @Test
+    fun degenerateAlignmentReferenceCannotAdvanceOrScoreAsGoodForm() {
+        val evaluator = SymmetricSquatMotionEvaluator(deterministicConfig)
+        val source = poseFrame(0L, 175.0, 175.0)
+        val leftHip = source.worldLandmarks.getValue(PoseJoint.LEFT_HIP)
+        val leftAnkle = source.worldLandmarks.getValue(PoseJoint.LEFT_ANKLE)
+        val degenerate = source.copy(
+            worldLandmarks = source.worldLandmarks + mapOf(
+                PoseJoint.RIGHT_HIP to source.worldLandmarks.getValue(PoseJoint.RIGHT_HIP).copy(
+                    x = leftHip.x,
+                ),
+                PoseJoint.RIGHT_ANKLE to source.worldLandmarks
+                    .getValue(PoseJoint.RIGHT_ANKLE)
+                    .copy(x = leftAnkle.x),
+            ),
+        )
+
+        val result = evaluator.accept(degenerate)
+
+        assertEquals(PoseTrackingState.LOW_CONFIDENCE, result.trackingState)
+        assertEquals(PosePhase.SEEKING, result.phase)
+        assertEquals(0, result.repCount)
+        assertEquals(null, result.lastRepScore)
+    }
+
+    @Test
+    fun unknownSquatOnlyGuardDoesNotBlockLungeProfile() {
+        val evaluator = AlternatingLungeMotionEvaluator(deterministicConfig)
+        val source = poseFrame(0L, 175.0, 175.0, lungeStance = true)
+        val leftHip = source.worldLandmarks.getValue(PoseJoint.LEFT_HIP)
+        val leftAnkle = source.worldLandmarks.getValue(PoseJoint.LEFT_ANKLE)
+        val withoutHorizontalKneeReference = source.copy(
+            worldLandmarks = source.worldLandmarks + mapOf(
+                PoseJoint.RIGHT_HIP to source.worldLandmarks.getValue(PoseJoint.RIGHT_HIP).copy(
+                    x = leftHip.x,
+                ),
+                PoseJoint.RIGHT_ANKLE to source.worldLandmarks
+                    .getValue(PoseJoint.RIGHT_ANKLE)
+                    .copy(x = leftAnkle.x),
+            ),
+        )
+
+        val result = evaluator.accept(withoutHorizontalKneeReference)
+
+        assertEquals(PoseTrackingState.TRACKING, result.trackingState)
+        assertEquals(null, result.metrics?.kneeTrackingRatio)
+        assertTrue(requireNotNull(result.metrics?.stanceRatio) > 0.0)
+    }
+
+    @Test
+    fun unknownLungeOnlyGuardDoesNotBlockSquatProfile() {
+        val evaluator = SymmetricSquatMotionEvaluator(deterministicConfig)
+        val source = poseFrame(0L, 175.0, 175.0)
+        val leftShoulder = source.worldLandmarks.getValue(PoseJoint.LEFT_SHOULDER)
+        val withoutShoulderScale = source.copy(
+            worldLandmarks = source.worldLandmarks +
+                (PoseJoint.RIGHT_SHOULDER to leftShoulder),
+        )
+
+        val result = evaluator.accept(withoutShoulderScale)
+
+        assertEquals(PoseTrackingState.TRACKING, result.trackingState)
+        assertEquals(null, result.metrics?.stanceRatio)
+        assertTrue(requireNotNull(result.metrics?.kneeTrackingRatio) > 0.0)
+    }
+
+    @Test
     fun lungeCountsAlternatingSidesIndependently() {
         val evaluator = AlternatingLungeMotionEvaluator(deterministicConfig)
         var timestamp = 0L

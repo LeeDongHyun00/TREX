@@ -52,6 +52,12 @@ macOS/Linux 기준:
 - `app/src/main/res/drawable-nodpi/`: 로그인 애니메이션 프레임 이미지 등 원본 크기 리소스
 - `app/src/main/java/com/example/trex_kotlin/camera/`: CameraX + MediaPipe 온디바이스 자세 추정
 - `app/src/main/java/com/example/trex_kotlin/pose/`: 운동별 관절 필터·반복 상태 머신·자세 판정
+- `app/src/main/java/com/example/trex_kotlin/pose/feature/`: 좌표 domain을 명시하는 공통 기하 primitive와 data-driven feature spec
+- `app/src/main/java/com/example/trex_kotlin/pose/phase/`: 운동명과 분리된 ordered phase graph·dwell·dropout 엔진
+- `app/src/main/java/com/example/trex_kotlin/pose/criterion/`: 보정된 tri-state 판정, criterion dependency graph, 단일 cue 후보 정책
+- `app/src/main/java/com/example/trex_kotlin/pose/spec/`: AI Hub 운동별 phase·feature·criterion runtime 계약
+- `app/src/main/java/com/example/trex_kotlin/pose/runtime/`: observer attestation과 backdated phase 경계를 묶는 bounded evaluation session
+- `tools/analyze_pose_coordinate_criteria.py`: AI Hub 2D metadata와 paired 3D 좌표에서 criterion 후보 특징을 찾는 threshold-free 연구 도구
 - `assets/`: 디자인/원본 이미지 자료
 - `trex_design_react/`: React 기반 디자인 프로토타입
 - `docs/pose-correction-system.md`: 실시간 자세 교정의 기기 구현·검증 설계

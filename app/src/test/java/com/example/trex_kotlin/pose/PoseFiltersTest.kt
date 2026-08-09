@@ -25,11 +25,28 @@ class PoseFiltersTest {
         val result = gate.check(
             frame(timestampMs = 0L, x = 0.0, confidence = 0.4),
             requiredJoints = setOf(PoseJoint.LEFT_KNEE),
+            coordinateSpace = PoseCoordinateSpace.NORMALIZED_IMAGE,
         )
 
         assertFalse(result.accepted)
         assertEquals(setOf(PoseJoint.LEFT_KNEE), result.lowConfidenceJoints)
         assertTrue(result.missingJoints.isEmpty())
+    }
+
+    @Test
+    fun visibilityGateNeverFallsBackToAnotherCoordinateDomain() {
+        val gate = PoseVisibilityGate()
+        val normalizedOnly = frame(timestampMs = 0L, x = 0.4, confidence = 1.0)
+
+        val worldResult = gate.check(
+            frame = normalizedOnly,
+            requiredJoints = setOf(PoseJoint.LEFT_KNEE),
+            coordinateSpace = PoseCoordinateSpace.WORLD,
+        )
+
+        assertFalse(worldResult.accepted)
+        assertEquals(PoseCoordinateSpace.WORLD, worldResult.coordinateSpace)
+        assertEquals(setOf(PoseJoint.LEFT_KNEE), worldResult.missingJoints)
     }
 
     @Test
