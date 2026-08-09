@@ -10,7 +10,7 @@ import org.junit.Test
 class PoseCriterionEngineTest {
     private val engine = PoseCriterionEngine()
     private val capability = CriterionCapability.POSE_2D
-    private val defaultWindow = CriterionPhaseWindow(0L, 200L)
+    private val defaultWindow = CriterionPhaseWindow(0L, 201L)
 
     @Test
     fun phaseAggregateCalibrationProducesPassAndDirectionalFailures() {
@@ -30,10 +30,11 @@ class PoseCriterionEngineTest {
     @Test
     fun calibrationIsAppliedAfterTheRegisteredPhaseAggregation() {
         val calibrationError = MeasurementInterval(1.0, 3.0)
+        val criterionSpec = spec(calibrationError = calibrationError)
         val result = evaluate(
-            spec = spec(calibrationError = calibrationError),
+            spec = criterionSpec,
             samples = listOf(sample(0L, 0.0), sample(100L, 10.0), sample(200L, 20.0)),
-            calibration = calibration(calibrationError),
+            calibration = calibration(calibrationError, criterionSpec.calibrationContract),
         )
 
         assertEquals(10.0, result.aggregatedMeasurement!!, 0.0)
@@ -50,9 +51,10 @@ class PoseCriterionEngineTest {
             MeasurementInterval(-6.0, 0.0),
             MeasurementInterval(0.0, 6.0),
         ).forEach { errorInterval ->
+            val criterionSpec = spec(calibrationError = errorInterval)
             val result = evaluate(
-                spec = spec(calibrationError = errorInterval),
-                calibration = calibration(errorInterval),
+                spec = criterionSpec,
+                calibration = calibration(errorInterval, criterionSpec.calibrationContract),
             )
             assertEquals(CriterionState.UNKNOWN, result.state)
             assertEquals(CriterionUnknownReason.BOUNDARY_OVERLAP, result.unknownReason)
@@ -128,7 +130,6 @@ class PoseCriterionEngineTest {
                 sample(0L, 5.0),
                 sample(100L, 5.0),
                 CriterionEvidenceSample(200L, null, qualityWeight = 1.0),
-                CriterionEvidenceSample(300L, null, qualityWeight = 1.0),
             ),
         )
         assertEquals(1.0 / 3.0, partialObservation.timeCoverage, 1e-12)
@@ -139,11 +140,11 @@ class PoseCriterionEngineTest {
         )
 
         val lowQuality = evaluate(
-            spec = spec(minimumTimeCoverage = 1.0, minimumEvidenceMass = 0.5),
+            spec = spec(minimumTimeCoverage = 0.99, minimumEvidenceMass = 0.2),
             samples = defaultSamples(quality = 0.2),
         )
-        assertEquals(1.0, lowQuality.timeCoverage, 1e-12)
-        assertEquals(0.2, lowQuality.evidenceMass, 1e-12)
+        assertEquals(200.0 / 201.0, lowQuality.timeCoverage, 1e-12)
+        assertEquals(40.0 / 201.0, lowQuality.evidenceMass, 1e-12)
         assertEquals(
             CriterionUnknownReason.INSUFFICIENT_EVIDENCE_MASS,
             lowQuality.unknownReason,
@@ -193,7 +194,7 @@ class PoseCriterionEngineTest {
                 minimumObservableDurationMs = 1_000L,
                 correlationHorizonMs = 5_000L,
             ),
-            phaseWindow = CriterionPhaseWindow(0L, 2_900L),
+            phaseWindow = CriterionPhaseWindow(0L, 2_901L),
             samples = timestamps.map { sample(it, 5.0) },
         )
         assertTrue(repeatedStaticPose.rawEffectiveSamples > 20.0)
@@ -236,12 +237,28 @@ class PoseCriterionEngineTest {
         val changedQualityCalibration = calibration(
             contract = contract(qualityCalibrationArtifactSha256 = "b".repeat(64)),
         )
+        val changedSampling = calibration(
+            contract = contract(samplingContractSha256 = "c".repeat(64)),
+        )
 
         assertTrue(baseline.artifactSha256.matches(Regex("^[0-9a-f]{64}$")))
         assertNotEquals(baseline.artifactSha256, changedResidual.artifactSha256)
         assertNotEquals(baseline.artifactSha256, changedEligibility.artifactSha256)
         assertNotEquals(baseline.artifactSha256, changedFeatureAst.artifactSha256)
         assertNotEquals(baseline.artifactSha256, changedQualityCalibration.artifactSha256)
+        assertNotEquals(baseline.artifactSha256, changedSampling.artifactSha256)
+        assertNotEquals(
+            evaluatorSpecSha256(
+                baseline.artifactSha256,
+                MeasurementInterval(0.0, 10.0),
+                setOf(capability),
+            ),
+            evaluatorSpecSha256(
+                changedSampling.artifactSha256,
+                MeasurementInterval(0.0, 10.0),
+                setOf(capability),
+            ),
+        )
     }
 
     @Test
@@ -253,7 +270,7 @@ class PoseCriterionEngineTest {
                 minimumEvidenceMass = 0.4,
                 maximumGapMs = 150L,
             ),
-            phaseWindow = CriterionPhaseWindow(0L, 400L),
+            phaseWindow = CriterionPhaseWindow(0L, 401L),
             samples = listOf(
                 sample(0L, 5.0, 1.0),
                 sample(100L, 5.0, 1.0),
@@ -263,11 +280,11 @@ class PoseCriterionEngineTest {
             ),
         )
 
-        assertEquals(1.0, result.timeCoverage, 0.0)
-        assertEquals(0.62500000000025, result.evidenceMass, 1e-12)
+        assertEquals(400.0 / 401.0, result.timeCoverage, 1e-12)
+        assertEquals(250.00000000015 / 401.0, result.evidenceMass, 1e-12)
         assertEquals(400.0, result.observableDurationMs, 0.0)
         assertEquals(200.0, result.eligibleDurationMs, 0.0)
-        assertEquals(200L, result.maximumEvidenceGapMs)
+        assertEquals(201L, result.maximumEvidenceGapMs)
         assertEquals(CriterionUnknownReason.EXCESSIVE_GAP, result.unknownReason)
     }
 
@@ -325,7 +342,7 @@ class PoseCriterionEngineTest {
 
         assertEquals(CriterionUnknownReason.NO_EVIDENCE, empty.unknownReason)
         assertEquals(CriterionUnknownReason.NO_EVIDENCE, single.unknownReason)
-        assertEquals(200L, single.windowDurationMs)
+        assertEquals(201L, single.windowDurationMs)
         assertEquals(0.0, single.observableDurationMs, 0.0)
         assertEquals(
             CriterionUnknownReason.UNCALIBRATED_DOMAIN,
@@ -439,6 +456,15 @@ class PoseCriterionEngineTest {
         assertIllegalArgument {
             evaluate(samples = listOf(sample(0L, 5.0), sample(201L, 5.0)))
         }
+        assertIllegalArgument {
+            engine.evaluate(
+                spec = spec(minimumTimeCoverage = 0.1, minimumEvidenceMass = 0.1),
+                phaseWindow = CriterionPhaseWindow(0L, 200L),
+                samples = listOf(sample(0L, 5.0), sample(200L, 5.0)),
+                availableCapabilities = setOf(capability),
+                calibration = calibration(),
+            )
+        }
     }
 
     private fun assertResult(
@@ -446,9 +472,10 @@ class PoseCriterionEngineTest {
         state: CriterionState,
         failRegion: CriterionFailRegion?,
     ) {
+        val criterionSpec = spec(calibrationError = calibrationError)
         val result = evaluate(
-            spec = spec(calibrationError = calibrationError),
-            calibration = calibration(calibrationError),
+            spec = criterionSpec,
+            calibration = calibration(calibrationError, criterionSpec.calibrationContract),
         )
         assertEquals(state, result.state)
         assertEquals(failRegion, result.failRegion)
@@ -476,8 +503,8 @@ class PoseCriterionEngineTest {
         requiredCapabilities: Set<CriterionCapability> = setOf(capability),
         validMeasurementInterval: MeasurementInterval = MeasurementInterval(-1_000.0, 1_000.0),
         minimumSampleQuality: Double = 0.1,
-        minimumTimeCoverage: Double = 1.0,
-        minimumEvidenceMass: Double = 1.0,
+        minimumTimeCoverage: Double = 0.99,
+        minimumEvidenceMass: Double = 0.99,
         minimumObservableDurationMs: Long = 100L,
         minimumEffectiveSamples: Double = 1.0,
         maximumGapMs: Long = 200L,
@@ -529,6 +556,7 @@ class PoseCriterionEngineTest {
     private fun contract(
         aggregation: CriterionAggregation = CriterionAggregation.WeightedQuantile(0.5),
         featureSpecSha256: String = "0".repeat(64),
+        samplingContractSha256: String = ATTESTED_CRITERION_SAMPLING_CONTRACT_SHA256,
         qualityCalibrationArtifactSha256: String = "a".repeat(64),
         runtimeDomainId: String = "mediapipe-full-test-domain:v1",
         validMeasurementInterval: MeasurementInterval = MeasurementInterval(-1_000.0, 1_000.0),
@@ -543,6 +571,7 @@ class PoseCriterionEngineTest {
         criterionId = "test-criterion:v1",
         featureContractId = "test-feature:v1",
         featureSpecSha256 = featureSpecSha256,
+        samplingContractSha256 = samplingContractSha256,
         measurementUnit = "degree",
         aggregation = aggregation,
         qualityContractId = "test-quality:v1",

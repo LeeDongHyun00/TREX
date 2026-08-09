@@ -152,6 +152,7 @@ class PosePhaseDriverBindingTest {
         bottomUpper: Double = 115.0,
         graceMs: Long = 300L,
         maximumPhaseDurationMs: Long = 10_000L,
+        maximumCycleDurationMs: Long = maxOf(maximumPhaseDurationMs, 30_000L),
     ): PosePhaseEngineConfig = PosePhaseEngineConfig(
         graph = OrderedPosePhaseGraph(
             states = listOf(
@@ -184,6 +185,7 @@ class PosePhaseDriverBindingTest {
         maximumObservationGapMs = 500L,
         unusableObservationGraceMs = graceMs,
         maximumPhaseDurationMs = maximumPhaseDurationMs,
+        maximumCycleDurationMs = maximumCycleDurationMs,
     )
 
     private fun qualityCalibration(

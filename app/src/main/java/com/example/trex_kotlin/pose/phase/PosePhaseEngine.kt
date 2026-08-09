@@ -1,9 +1,12 @@
 package com.example.trex_kotlin.pose.phase
 
+import com.example.trex_kotlin.pose.contract.canonicalFieldsSha256
 import java.util.Collections
 
-/** Device-safety ceiling independent of any remotely supplied signed exercise policy. */
+/** Device-safety ceiling independent of any remotely supplied exercise policy. */
 internal const val MAXIMUM_SUPPORTED_PHASE_DURATION_MS: Long = 120_000L
+internal const val MAXIMUM_SUPPORTED_CYCLE_DURATION_MS: Long = 300_000L
+internal const val MAXIMUM_TRACKED_CYCLE_PHASE_WINDOWS: Int = 64
 
 /** Stable, model-independent identifier supplied by an offline phase specification. */
 data class PosePhaseStateId(val value: String) {
@@ -172,6 +175,8 @@ data class PosePhaseEngineConfig(
     val unusableObservationGraceMs: Long,
     /** Hard bound for one open phase window and its runtime evidence buffer. */
     val maximumPhaseDurationMs: Long,
+    /** Hard bound for one complete movement cycle, including its backdated initial window. */
+    val maximumCycleDurationMs: Long,
 ) {
     init {
         require(
@@ -192,6 +197,15 @@ data class PosePhaseEngineConfig(
         }
         require(maximumPhaseDurationMs <= MAXIMUM_SUPPORTED_PHASE_DURATION_MS) {
             "maximumPhaseDurationMs exceeds the on-device safety ceiling"
+        }
+        require(maximumCycleDurationMs >= maximumPhaseDurationMs) {
+            "maximumCycleDurationMs must cover the maximum single phase duration"
+        }
+        require(maximumCycleDurationMs <= MAXIMUM_SUPPORTED_CYCLE_DURATION_MS) {
+            "maximumCycleDurationMs exceeds the on-device safety ceiling"
+        }
+        require(graph.states.size <= MAXIMUM_TRACKED_CYCLE_PHASE_WINDOWS) {
+            "Phase graph exceeds the on-device cycle-scope window ceiling"
         }
         val excessiveDwellStates = graph.states.values.filter { state ->
             state.enterPredicate.minimumDwellMs > maximumPhaseDurationMs
@@ -253,17 +267,50 @@ data class PosePhaseWindowEnded(
     override val confirmedAtTimestampMs: Long,
 ) : PosePhaseEvent
 
-data class PosePhaseCycleCompleted(
+class PosePhaseCycleCompleted(
     val cycleStartTimestampMs: Long,
     val cycleEndTimestampMs: Long,
     val completedCycleCount: Int,
+    phaseWindows: List<PosePhaseWindow>,
     override val confirmedAtTimestampMs: Long,
-) : PosePhaseEvent
+) : PosePhaseEvent {
+    val phaseWindows: List<PosePhaseWindow> =
+        Collections.unmodifiableList(ArrayList(phaseWindows))
+    val scopeSha256: String = canonicalFieldsSha256(
+        buildList {
+            add("completedCycleScopeSchemaVersion" to "1")
+            add("cycleStartTimestampMs" to cycleStartTimestampMs.toString())
+            add("cycleEndTimestampMs" to cycleEndTimestampMs.toString())
+            add("phaseWindowCount" to this@PosePhaseCycleCompleted.phaseWindows.size.toString())
+            this@PosePhaseCycleCompleted.phaseWindows.forEachIndexed { index, window ->
+                add("phaseWindow[$index].stateId" to window.stateId.value)
+                add("phaseWindow[$index].startTimestampMs" to window.startTimestampMs.toString())
+                add("phaseWindow[$index].endTimestampMs" to window.endTimestampMs.toString())
+            }
+        },
+    )
+
+    init {
+        require(cycleStartTimestampMs >= 0L)
+        require(cycleEndTimestampMs > cycleStartTimestampMs)
+        require(completedCycleCount > 0)
+        require(this.phaseWindows.isNotEmpty())
+        require(this.phaseWindows.first().startTimestampMs == cycleStartTimestampMs)
+        require(this.phaseWindows.last().endTimestampMs == cycleEndTimestampMs)
+        require(
+            this.phaseWindows.zipWithNext().all { (left, right) ->
+                left.endTimestampMs == right.startTimestampMs
+            },
+        ) { "Completed cycle phase windows must be contiguous and ordered" }
+    }
+}
 
 enum class PosePhaseResetReason {
     MAXIMUM_OBSERVATION_GAP,
     UNUSABLE_OBSERVATION_TIMEOUT,
     PHASE_DURATION_TIMEOUT,
+    CYCLE_DURATION_TIMEOUT,
+    CYCLE_SCOPE_OVERFLOW,
     PERSON_LOCK_LOST,
     PERSON_CHANGED,
 }
@@ -304,6 +351,7 @@ class PosePhaseEngine(private val config: PosePhaseEngineConfig) {
     private var activeWindowStartTimestampMs: Long? = null
     private var entryCandidate: EntryCandidate? = null
     private var cycleStartTimestampMs: Long? = null
+    private val cyclePhaseWindows = mutableListOf<PosePhaseWindow>()
 
     var activeStateId: PosePhaseStateId? = null
         private set
@@ -354,6 +402,17 @@ class PosePhaseEngine(private val config: PosePhaseEngineConfig) {
         ) {
             resetTracking(
                 reason = PosePhaseResetReason.MAXIMUM_OBSERVATION_GAP,
+                confirmedAtTimestampMs = observation.timestampMs,
+                events = events,
+            )
+        }
+        val openCycleStart = cycleStartTimestampMs
+        if (
+            openCycleStart != null &&
+            observation.timestampMs - openCycleStart > config.maximumCycleDurationMs
+        ) {
+            resetTracking(
+                reason = PosePhaseResetReason.CYCLE_DURATION_TIMEOUT,
                 confirmedAtTimestampMs = observation.timestampMs,
                 events = events,
             )
@@ -478,6 +537,7 @@ class PosePhaseEngine(private val config: PosePhaseEngineConfig) {
         activeWindowStartTimestampMs = candidate.firstMatchTimestampMs
         entryCandidate = null
         cycleStartTimestampMs = null
+        cyclePhaseWindows.clear()
         events += PosePhaseWindowStarted(
             stateId = config.graph.initialStateId,
             startTimestampMs = candidate.firstMatchTimestampMs,
@@ -550,13 +610,28 @@ class PosePhaseEngine(private val config: PosePhaseEngineConfig) {
         val previousStateId = requireNotNull(activeStateId)
         val previousWindowStart = requireNotNull(activeWindowStartTimestampMs)
         val boundaryTimestampMs = candidate.firstMatchTimestampMs
+        val startsCycle =
+            previousStateId == config.graph.initialStateId && cycleStartTimestampMs == null
+        val trackedWindowCount = if (startsCycle) 0 else cyclePhaseWindows.size
+        if (
+            (startsCycle || cycleStartTimestampMs != null) &&
+            trackedWindowCount >= MAXIMUM_TRACKED_CYCLE_PHASE_WINDOWS
+        ) {
+            resetTracking(
+                reason = PosePhaseResetReason.CYCLE_SCOPE_OVERFLOW,
+                confirmedAtTimestampMs = confirmedAtTimestampMs,
+                events = events,
+            )
+            return
+        }
 
+        val endedWindow = PosePhaseWindow(
+            stateId = previousStateId,
+            startTimestampMs = previousWindowStart,
+            endTimestampMs = boundaryTimestampMs,
+        )
         events += PosePhaseWindowEnded(
-            window = PosePhaseWindow(
-                stateId = previousStateId,
-                startTimestampMs = previousWindowStart,
-                endTimestampMs = boundaryTimestampMs,
-            ),
+            window = endedWindow,
             confirmedAtTimestampMs = confirmedAtTimestampMs,
         )
 
@@ -569,11 +644,13 @@ class PosePhaseEngine(private val config: PosePhaseEngineConfig) {
             confirmedAtTimestampMs = confirmedAtTimestampMs,
         )
 
-        if (previousStateId == config.graph.initialStateId && cycleStartTimestampMs == null) {
+        if (startsCycle) {
             // The initial window is part of the cycle and may own setup criteria. Preserve its
             // backdated start so cycle provenance never begins after included evidence.
             cycleStartTimestampMs = previousWindowStart
+            cyclePhaseWindows.clear()
         }
+        if (cycleStartTimestampMs != null) cyclePhaseWindows += endedWindow
         if (transition.completesCycle) {
             cycleStartTimestampMs?.let { cycleStart ->
                 completedCycleCount += 1
@@ -581,10 +658,12 @@ class PosePhaseEngine(private val config: PosePhaseEngineConfig) {
                     cycleStartTimestampMs = cycleStart,
                     cycleEndTimestampMs = boundaryTimestampMs,
                     completedCycleCount = completedCycleCount,
+                    phaseWindows = cyclePhaseWindows,
                     confirmedAtTimestampMs = confirmedAtTimestampMs,
                 )
             }
             cycleStartTimestampMs = null
+            cyclePhaseWindows.clear()
         }
     }
 
@@ -620,6 +699,7 @@ class PosePhaseEngine(private val config: PosePhaseEngineConfig) {
         activeWindowStartTimestampMs = null
         entryCandidate = null
         cycleStartTimestampMs = null
+        cyclePhaseWindows.clear()
         lastUsableTimestampMs = null
         lastUsableScalar = null
         unusableSinceTimestampMs = null

@@ -2,6 +2,7 @@ package com.example.trex_kotlin.pose.criterion
 
 import com.example.trex_kotlin.pose.PoseCoordinateSpace
 import com.example.trex_kotlin.pose.PoseFrame
+import com.example.trex_kotlin.pose.contract.canonicalFieldsSha256
 import com.example.trex_kotlin.pose.contract.PoseQualityCalibrationArtifact
 import com.example.trex_kotlin.pose.contract.PoseQualitySignalKind
 import com.example.trex_kotlin.pose.feature.FeatureUnknownReason
@@ -11,7 +12,34 @@ import com.example.trex_kotlin.pose.feature.contractId
 import com.example.trex_kotlin.pose.feature.measure
 
 /**
- * Safe binding between a data-defined feature, its signed criterion specification, and the exact
+ * Runtime semantics that calibration artifacts must reproduce exactly.
+ *
+ * The hash covers the attested adapter and temporal aggregation rules; changing a boundary,
+ * duplicate, view-abstention, quality-abstention, or interpolation policy invalidates calibration.
+ */
+internal val ATTESTED_CRITERION_SAMPLING_CONTRACT_SHA256: String = canonicalFieldsSha256(
+    listOf(
+        "criterionSamplingContractSchemaVersion" to "1",
+        "windowMembership" to "HALF_OPEN_START_INCLUSIVE_END_EXCLUSIVE",
+        "timestampOrder" to "STRICT_AFTER_FIRST_DUPLICATE_RETAINED",
+        "foreignPersonOrSource" to "REJECT",
+        "unqualifiedView" to "NULL_MEASUREMENT_ZERO_WEIGHT",
+        "unknownFeature" to "NULL_MEASUREMENT_ZERO_WEIGHT",
+        "qualityAbstention" to "NULL_MEASUREMENT_ZERO_WEIGHT",
+        "observableSegment" to "BOTH_ENDPOINTS_OBSERVABLE",
+        "segmentIntegration" to "TRAPEZOIDAL_ENDPOINT_QUALITY_V1",
+        "eligibleSampleWeight" to "HALF_SEGMENT_DURATION_TIMES_ENDPOINT_QUALITY_V1",
+        "timeCoverage" to "OBSERVABLE_SEGMENT_DURATION_OVER_HALF_OPEN_WINDOW_V1",
+        "effectiveSamples" to "MIN_KISH_ESS_AND_CORRELATION_HORIZON_SUPPORT_V1",
+        "weightedMean" to "INCREMENTAL_CONVEX_FINITE_V1",
+        "weightedQuantile" to "VALUE_THEN_TIMESTAMP_LOWER_CUMULATIVE_BOUND_V1",
+        "boundaryExtrapolation" to "NONE",
+        "evidenceGap" to "ELIGIBLE_TIMESTAMPS_PLUS_WINDOW_BOUNDARIES_V1",
+    ),
+)
+
+/**
+ * Safe binding between a data-defined feature, its hash-pinned criterion specification, and the exact
  * quality calibration used to accumulate evidence.
  */
 class PoseCriterionFeatureBinding(

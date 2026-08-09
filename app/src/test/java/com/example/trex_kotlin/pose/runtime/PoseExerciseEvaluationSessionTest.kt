@@ -9,6 +9,7 @@ import com.example.trex_kotlin.pose.contract.PoseQualityCalibrationArtifact
 import com.example.trex_kotlin.pose.contract.PoseQualityCalibrationKnot
 import com.example.trex_kotlin.pose.contract.PoseQualitySignalKind
 import com.example.trex_kotlin.pose.criterion.CriterionAggregateCalibration
+import com.example.trex_kotlin.pose.criterion.ATTESTED_CRITERION_SAMPLING_CONTRACT_SHA256
 import com.example.trex_kotlin.pose.criterion.CriterionAggregation
 import com.example.trex_kotlin.pose.criterion.CriterionCalibrationContract
 import com.example.trex_kotlin.pose.criterion.CriterionCapability
@@ -36,6 +37,7 @@ import com.example.trex_kotlin.pose.phase.PosePhaseTransition
 import com.example.trex_kotlin.pose.phase.phaseDriverArtifactSha256
 import com.example.trex_kotlin.pose.spec.CriterionObservability
 import com.example.trex_kotlin.pose.spec.CriterionRuntimeMode
+import com.example.trex_kotlin.pose.spec.CriterionWindowScope
 import com.example.trex_kotlin.pose.spec.ExerciseCriterionSpec
 import com.example.trex_kotlin.pose.spec.PoseExerciseSpec
 import com.example.trex_kotlin.pose.spec.exerciseSpecSha256
@@ -183,8 +185,89 @@ class PoseExerciseEvaluationSessionTest {
     }
 
     @Test
+    fun completedCycleCriterionUsesOrderedHalfOpenScope() {
+        val fixture = fixture(includeCompletedCycleCriterion = true)
+        val session = fixture.session()
+        val evaluation = requireNotNull(
+            cycleFrames().map { frame -> fixture.attest(frame) }
+                .map(session::accept).last().cycleEvaluation,
+        )
+        val cycleResult = evaluation.criterionResults.getValue(CYCLE_CRITERION)
+
+        assertEquals(CriterionWindowScope.CompletedCycle, cycleResult.windowScope)
+        assertNull(cycleResult.phaseId)
+        assertEquals(0L, cycleResult.phaseWindow.startTimestampMs)
+        assertEquals(400L, cycleResult.phaseWindow.endTimestampMs)
+        assertEquals(4, cycleResult.totalFrameCount)
+        assertEquals(4, cycleResult.qualifiedViewFrameCount)
+        assertEquals(120.0, cycleResult.atomicResult.aggregatedMeasurement!!, 1e-9)
+        assertEquals(listOf(READY_PHASE, BOTTOM_PHASE), evaluation.phaseWindows.map { it.stateId })
+        assertEquals(64, evaluation.cycleScopeSha256.length)
+    }
+
+    @Test
+    fun transientViewLossIsNullEvidenceAndCannotBeBridged() {
+        val fixture = fixture(includeCompletedCycleCriterion = true)
+        val session = fixture.session()
+        val evaluation = requireNotNull(
+            cycleFrames().map { frame ->
+                fixture.attest(
+                    frame = frame,
+                    criterionViewQualified = frame.timestampMs != 200L,
+                )
+            }.map(session::accept).last().cycleEvaluation,
+        )
+        val cycleResult = evaluation.criterionResults.getValue(CYCLE_CRITERION)
+
+        assertEquals(4, cycleResult.totalFrameCount)
+        assertEquals(3, cycleResult.qualifiedViewFrameCount)
+        assertEquals(CriterionState.UNKNOWN, cycleResult.atomicResult.state)
+        assertEquals(
+            CriterionUnknownReason.INSUFFICIENT_TIME_COVERAGE,
+            cycleResult.atomicResult.unknownReason,
+        )
+        assertEquals(0.25, cycleResult.atomicResult.timeCoverage, 1e-9)
+        assertEquals(64, cycleResult.sampledEvidenceSha256.length)
+        assertNull(evaluation.graphEvaluation.selectedCue)
+    }
+
+    @Test
+    fun adjacentCompletedCyclesShareOnlyTheHalfOpenBoundary() {
+        val fixture = fixture(includeCompletedCycleCriterion = true)
+        val session = fixture.session()
+        val first = requireNotNull(
+            cycleFrames().map { item -> fixture.attest(item) }
+                .map(session::accept)
+                .last().cycleEvaluation,
+        )
+        val second = requireNotNull(
+            listOf(
+                frame(600L, 90.0, 150.0),
+                frame(700L, 90.0, 150.0),
+                frame(800L, 170.0, 90.0),
+                frame(900L, 170.0, 90.0),
+            ).map { item -> fixture.attest(item) }
+                .map(session::accept)
+                .last().cycleEvaluation,
+        )
+
+        assertEquals(0L, first.cycleStartTimestampMs)
+        assertEquals(400L, first.cycleEndTimestampMs)
+        assertEquals(400L, second.cycleStartTimestampMs)
+        assertEquals(800L, second.cycleEndTimestampMs)
+        assertEquals(
+            4,
+            first.criterionResults.getValue(CYCLE_CRITERION).totalFrameCount,
+        )
+        assertEquals(
+            4,
+            second.criterionResults.getValue(CYCLE_CRITERION).totalFrameCount,
+        )
+    }
+
+    @Test
     fun foreignSourceAndPersonEpochChangesCannotContaminateCycleEvidence() {
-        val fixture = fixture()
+        val fixture = fixture(includeCompletedCycleCriterion = true)
         val session = fixture.session()
         val foreignSource = PoseObservationSource(fixture.spec.observationContract)
         val foreignEpoch = foreignSource.newPersonTrackEpoch()
@@ -273,6 +356,7 @@ class PoseExerciseEvaluationSessionTest {
         val fixture = fixture(
             maximumObservationGapMs = 250L,
             maximumPhaseDurationMs = 100_000L,
+            includeCompletedCycleCriterion = true,
         )
         val session = fixture.session()
         (0L..MAX_BUFFERED_POSE_FRAMES.toLong()).forEach { timestamp ->
@@ -287,13 +371,94 @@ class PoseExerciseEvaluationSessionTest {
 
         assertEquals(1, completed.completedCycleCount)
         assertNull(completed.cycleEvaluation)
+
+        val recovered = listOf(
+            frame(2_548L, 90.0, 150.0),
+            frame(2_648L, 90.0, 150.0),
+            frame(2_748L, 170.0, 90.0),
+            frame(2_848L, 170.0, 90.0),
+        ).map { item -> fixture.attest(item) }
+            .map(session::accept)
+            .last()
+        assertNotNull(recovered.cycleEvaluation)
+    }
+
+    @Test
+    fun hardFrameCeilingDuringActiveCycleDiscardsThatCycleAndNextCycleRecovers() {
+        val fixture = fixture(
+            includeCompletedCycleCriterion = true,
+            maximumObservationGapMs = 250L,
+            maximumPhaseDurationMs = 100_000L,
+            maximumCycleDurationMs = 100_000L,
+        )
+        val session = fixture.session()
+
+        listOf(
+            frame(0L, 170.0, 90.0),
+            frame(100L, 170.0, 90.0),
+            frame(200L, 90.0, 150.0),
+            frame(300L, 90.0, 150.0),
+        ).map { item -> fixture.attest(item) }
+            .forEach(session::accept)
+
+        (301L..2_348L).forEach { timestamp ->
+            session.accept(fixture.attest(frame(timestamp, 90.0, 150.0)))
+        }
+        assertEquals(MAX_BUFFERED_POSE_FRAMES, session.bufferedFrameCount)
+
+        session.accept(fixture.attest(frame(2_448L, 170.0, 90.0)))
+        val completed = session.accept(fixture.attest(frame(2_548L, 170.0, 90.0)))
+
+        assertEquals(1, completed.completedCycleCount)
+        assertNull(completed.cycleEvaluation)
+
+        val recovered = listOf(
+            frame(2_648L, 90.0, 150.0),
+            frame(2_748L, 90.0, 150.0),
+            frame(2_848L, 170.0, 90.0),
+            frame(2_948L, 170.0, 90.0),
+        ).map { item -> fixture.attest(item) }
+            .map(session::accept)
+            .last()
+
+        assertEquals(2, recovered.completedCycleCount)
+        assertNotNull(recovered.cycleEvaluation)
+    }
+
+    @Test
+    fun cycleDurationTimeoutDiscardsFullCycleEvidenceAndNextCycleRecovers() {
+        val fixture = fixture(
+            includeCompletedCycleCriterion = true,
+            maximumObservationGapMs = 5_000L,
+            maximumPhaseDurationMs = 2_000L,
+            maximumCycleDurationMs = 2_000L,
+        )
+        val session = fixture.session()
+        cycleFrames().take(4).map { fixture.attest(it) }.forEach(session::accept)
+
+        val timedOut = session.accept(fixture.attest(frame(2_101L, 90.0, 150.0)))
+
+        assertEquals(
+            PosePhaseResetReason.CYCLE_DURATION_TIMEOUT,
+            timedOut.phaseEvents.filterIsInstance<PosePhaseTrackingReset>().single().reason,
+        )
+        assertNull(timedOut.cycleEvaluation)
+        assertEquals(0, session.pendingCriterionCount)
+
+        val recovered = cycleFrames(startTimestampMs = 2_200L)
+            .map { item -> fixture.attest(item) }
+            .map(session::accept)
+            .last()
+        assertNotNull(recovered.cycleEvaluation)
     }
 
     private fun fixture(
         includeUnvisitedSidePhase: Boolean = false,
+        includeCompletedCycleCriterion: Boolean = false,
         minimumDwellMs: Long = 100L,
         maximumObservationGapMs: Long = 250L,
         maximumPhaseDurationMs: Long = 2_000L,
+        maximumCycleDurationMs: Long = maxOf(maximumPhaseDurationMs, 10_000L),
     ): Fixture {
         val phaseFeature = PoseScalarFeatureSpec.JointAngle(
             featureContractId = "session.phase.left-knee.world.v1",
@@ -331,6 +496,7 @@ class PoseExerciseEvaluationSessionTest {
             maximumObservationGapMs = maximumObservationGapMs,
             unusableObservationGraceMs = 100L,
             maximumPhaseDurationMs = maximumPhaseDurationMs,
+            maximumCycleDurationMs = maximumCycleDurationMs,
         )
         val phaseCalibration = PoseQualityCalibrationArtifact(
             signalKind = PoseQualitySignalKind.PHASE_GATE_SIGNAL,
@@ -353,10 +519,45 @@ class PoseExerciseEvaluationSessionTest {
         val observationSource = PoseObservationSource(observationContract)
 
         val bundles = buildList {
-            add(criterion(READY_CRITERION, READY_PHASE, 85.0, 95.0, criterionFeature))
-            add(criterion(BOTTOM_CRITERION, BOTTOM_PHASE, 145.0, 155.0, criterionFeature))
+            add(
+                criterion(
+                    READY_CRITERION,
+                    CriterionWindowScope.Phase(READY_PHASE),
+                    85.0,
+                    95.0,
+                    criterionFeature,
+                ),
+            )
+            add(
+                criterion(
+                    BOTTOM_CRITERION,
+                    CriterionWindowScope.Phase(BOTTOM_PHASE),
+                    145.0,
+                    155.0,
+                    criterionFeature,
+                ),
+            )
             if (includeUnvisitedSidePhase) {
-                add(criterion(SIDE_CRITERION, SIDE_PHASE, 40.0, 60.0, criterionFeature))
+                add(
+                    criterion(
+                        SIDE_CRITERION,
+                        CriterionWindowScope.Phase(SIDE_PHASE),
+                        40.0,
+                        60.0,
+                        criterionFeature,
+                    ),
+                )
+            }
+            if (includeCompletedCycleCriterion) {
+                add(
+                    criterion(
+                        CYCLE_CRITERION,
+                        CriterionWindowScope.CompletedCycle,
+                        115.0,
+                        125.0,
+                        criterionFeature,
+                    ),
+                )
             }
         }
         val criteria = bundles.map(CriterionBundle::criterion)
@@ -399,7 +600,7 @@ class PoseExerciseEvaluationSessionTest {
 
     private fun criterion(
         id: String,
-        phaseId: PosePhaseStateId,
+        windowScope: CriterionWindowScope,
         targetLower: Double,
         targetUpper: Double,
         feature: PoseScalarFeatureSpec,
@@ -415,6 +616,7 @@ class PoseExerciseEvaluationSessionTest {
             criterionId = id,
             featureContractId = feature.featureContractId,
             featureSpecSha256 = feature.featureSpecSha256,
+            samplingContractSha256 = ATTESTED_CRITERION_SAMPLING_CONTRACT_SHA256,
             measurementUnit = "degrees",
             aggregation = CriterionAggregation.WeightedMean,
             qualityContractId = qualityCalibration.qualityContractId,
@@ -450,7 +652,7 @@ class PoseExerciseEvaluationSessionTest {
         return CriterionBundle(
             criterion = ExerciseCriterionSpec(
                 featureBinding = binding,
-                eligiblePhaseIds = setOf(phaseId),
+                windowScope = windowScope,
                 viewContractId = VIEW_CONTRACT,
                 observability = CriterionObservability.DIRECT,
                 runtimeMode = CriterionRuntimeMode.CUE_ELIGIBLE,
@@ -562,6 +764,7 @@ class PoseExerciseEvaluationSessionTest {
         const val READY_CRITERION = "ready-knee"
         const val BOTTOM_CRITERION = "bottom-knee"
         const val SIDE_CRITERION = "side-knee"
+        const val CYCLE_CRITERION = "cycle-knee"
         const val SPEC_ID = "runtime-session.forward-lunge.side.v1"
         const val PHASE_VIEW_CONTRACT = "phase-side-view.body-yaw-window.v1"
         const val VIEW_CONTRACT = "side-view.body-yaw-window.v1"

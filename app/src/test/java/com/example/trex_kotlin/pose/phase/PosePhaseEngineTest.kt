@@ -66,6 +66,15 @@ class PosePhaseEngineTest {
         assertEquals(0L, completed.cycleStartTimestampMs)
         assertEquals(800L, completed.cycleEndTimestampMs)
         assertEquals(900L, completed.confirmedAtTimestampMs)
+        assertEquals(
+            listOf(ready, descending, bottom, ascending),
+            completed.phaseWindows.map(PosePhaseWindow::stateId),
+        )
+        assertEquals(64, completed.scopeSha256.length)
+        assertThrows(UnsupportedOperationException::class.java) {
+            @Suppress("UNCHECKED_CAST")
+            (completed.phaseWindows as MutableList<PosePhaseWindow>).clear()
+        }
     }
 
     @Test
@@ -300,6 +309,81 @@ class PosePhaseEngineTest {
     }
 
     @Test
+    fun maximumCycleDurationResetsWithoutPublishingPartialCompletion() {
+        val engine = engine(
+            maxGapMs = 2_000L,
+            maximumPhaseDurationMs = 1_000L,
+            maximumCycleDurationMs = 1_000L,
+        )
+        feed(
+            engine,
+            listOf(
+                observation(0L, 175.0),
+                observation(100L, 175.0),
+                observation(200L, 145.0),
+                observation(300L, 145.0),
+            ),
+        )
+
+        val reset = engine.accept(observation(1_101L, 145.0))
+
+        assertEquals(
+            PosePhaseResetReason.CYCLE_DURATION_TIMEOUT,
+            reset.events.filterIsInstance<PosePhaseTrackingReset>().single().reason,
+        )
+        assertTrue(reset.events.none { it is PosePhaseCycleCompleted })
+        assertEquals(0, reset.completedCycleCount)
+    }
+
+    @Test
+    fun loopingGraphCannotGrowCycleScopeBeyondTheDeviceWindowCeiling() {
+        val first = PosePhaseStateId("loop-first")
+        val second = PosePhaseStateId("loop-second")
+        val graph = OrderedPosePhaseGraph(
+            states = listOf(
+                PosePhaseState(
+                    first,
+                    PosePhaseEnterPredicate(PhaseScalarInterval(0.0, 0.0)),
+                ),
+                PosePhaseState(
+                    second,
+                    PosePhaseEnterPredicate(PhaseScalarInterval(1.0, 1.0)),
+                ),
+            ),
+            initialStateId = first,
+            transitions = listOf(
+                PosePhaseTransition(first, second),
+                PosePhaseTransition(second, first),
+            ),
+        )
+        val engine = PosePhaseEngine(
+            PosePhaseEngineConfig(
+                graph = graph,
+                minimumQualitySignal = 0.5,
+                maximumObservationGapMs = 10L,
+                unusableObservationGraceMs = 0L,
+                maximumPhaseDurationMs = 1_000L,
+                maximumCycleDurationMs = 1_000L,
+            ),
+        )
+        engine.accept(observation(0L, 0.0))
+
+        var lastUpdate: PosePhaseUpdate? = null
+        (1L..MAXIMUM_TRACKED_CYCLE_PHASE_WINDOWS.toLong() + 1L).forEach { timestamp ->
+            val scalar = if (timestamp % 2L == 0L) 0.0 else 1.0
+            lastUpdate = engine.accept(observation(timestamp, scalar))
+        }
+
+        val reset = requireNotNull(lastUpdate)
+        assertEquals(
+            PosePhaseResetReason.CYCLE_SCOPE_OVERFLOW,
+            reset.events.filterIsInstance<PosePhaseTrackingReset>().single().reason,
+        )
+        assertTrue(reset.events.none { it is PosePhaseCycleCompleted })
+        assertNull(reset.activeStateId)
+    }
+
+    @Test
     fun resetDiscardsZeroDurationWindowInsteadOfPublishingIt() {
         val graph = OrderedPosePhaseGraph(
             states = listOf(
@@ -321,6 +405,7 @@ class PosePhaseEngineTest {
                 maximumObservationGapMs = 100L,
                 unusableObservationGraceMs = 50L,
                 maximumPhaseDurationMs = 1_000L,
+                maximumCycleDurationMs = 5_000L,
             ),
         )
         engine.accept(observation(0L, 0.5))
@@ -388,6 +473,7 @@ class PosePhaseEngineTest {
                 maximumObservationGapMs = 400L,
                 unusableObservationGraceMs = 250L,
                 maximumPhaseDurationMs = MAXIMUM_SUPPORTED_PHASE_DURATION_MS + 1L,
+                maximumCycleDurationMs = MAXIMUM_SUPPORTED_PHASE_DURATION_MS + 1L,
             )
         }
         assertIllegalArgument {
@@ -397,6 +483,52 @@ class PosePhaseEngineTest {
                 maximumObservationGapMs = 400L,
                 unusableObservationGraceMs = 250L,
                 maximumPhaseDurationMs = 99L,
+                maximumCycleDurationMs = 1_000L,
+            )
+        }
+        assertIllegalArgument {
+            PosePhaseEngineConfig(
+                graph = graph(),
+                minimumQualitySignal = 0.5,
+                maximumObservationGapMs = 400L,
+                unusableObservationGraceMs = 250L,
+                maximumPhaseDurationMs = 1_000L,
+                maximumCycleDurationMs = 999L,
+            )
+        }
+        assertIllegalArgument {
+            PosePhaseEngineConfig(
+                graph = graph(),
+                minimumQualitySignal = 0.5,
+                maximumObservationGapMs = 400L,
+                unusableObservationGraceMs = 250L,
+                maximumPhaseDurationMs = 1_000L,
+                maximumCycleDurationMs = MAXIMUM_SUPPORTED_CYCLE_DURATION_MS + 1L,
+            )
+        }
+        val excessiveStateIds = (0..MAXIMUM_TRACKED_CYCLE_PHASE_WINDOWS).map { index ->
+            PosePhaseStateId("phase-$index")
+        }
+        val excessiveGraph = OrderedPosePhaseGraph(
+            states = excessiveStateIds.map { id ->
+                PosePhaseState(
+                    id = id,
+                    enterPredicate = PosePhaseEnterPredicate(PhaseScalarInterval(0.0, 1.0)),
+                )
+            },
+            initialStateId = excessiveStateIds.first(),
+            transitions = excessiveStateIds.zipWithNext { from, to ->
+                PosePhaseTransition(from, to)
+            },
+        )
+        assertIllegalArgument {
+            PosePhaseEngineConfig(
+                graph = excessiveGraph,
+                minimumQualitySignal = 0.5,
+                maximumObservationGapMs = 400L,
+                unusableObservationGraceMs = 250L,
+                maximumPhaseDurationMs = 1_000L,
+                maximumCycleDurationMs = 5_000L,
             )
         }
     }
@@ -406,6 +538,7 @@ class PosePhaseEngineTest {
         maxGapMs: Long = 400L,
         graceMs: Long = 250L,
         maximumPhaseDurationMs: Long = 10_000L,
+        maximumCycleDurationMs: Long = maxOf(maximumPhaseDurationMs, 30_000L),
     ) = PosePhaseEngine(
         PosePhaseEngineConfig(
             graph = graph(directionTolerance),
@@ -413,6 +546,7 @@ class PosePhaseEngineTest {
             maximumObservationGapMs = maxGapMs,
             unusableObservationGraceMs = graceMs,
             maximumPhaseDurationMs = maximumPhaseDurationMs,
+            maximumCycleDurationMs = maximumCycleDurationMs,
         ),
     )
 

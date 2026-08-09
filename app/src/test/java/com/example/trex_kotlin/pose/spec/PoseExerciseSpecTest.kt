@@ -9,6 +9,7 @@ import com.example.trex_kotlin.pose.contract.PoseQualityCalibrationArtifact
 import com.example.trex_kotlin.pose.contract.PoseQualityCalibrationKnot
 import com.example.trex_kotlin.pose.contract.PoseQualitySignalKind
 import com.example.trex_kotlin.pose.criterion.CriterionAggregateCalibration
+import com.example.trex_kotlin.pose.criterion.ATTESTED_CRITERION_SAMPLING_CONTRACT_SHA256
 import com.example.trex_kotlin.pose.criterion.CriterionAggregation
 import com.example.trex_kotlin.pose.criterion.CriterionCalibrationContract
 import com.example.trex_kotlin.pose.criterion.CriterionCapability
@@ -33,6 +34,7 @@ import com.example.trex_kotlin.pose.phase.PosePhaseTransition
 import com.example.trex_kotlin.pose.phase.phaseDriverArtifactSha256
 import com.example.trex_kotlin.pose.runtime.PoseObservationContract
 import com.example.trex_kotlin.pose.runtime.PoseObservationSource
+import com.example.trex_kotlin.pose.runtime.AttestedPoseObservation
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertThrows
@@ -193,6 +195,26 @@ class PoseExerciseSpecTest {
                 criterionGraph(incompatibleDomain.criterionId),
             )
         }
+
+        val unsupportedView = exerciseCriterion(
+            viewContractId = "front-view.body-yaw-window.v1",
+        )
+        assertThrows(IllegalArgumentException::class.java) {
+            exerciseSpec(
+                listOf(unsupportedView),
+                criterionGraph(unsupportedView.criterionId),
+            )
+        }
+
+        val incompatibleSampling = exerciseCriterion(
+            binding = featureBinding(samplingContractSha256 = SHA_D),
+        )
+        assertThrows(IllegalArgumentException::class.java) {
+            exerciseSpec(
+                listOf(incompatibleSampling),
+                criterionGraph(incompatibleSampling.criterionId),
+            )
+        }
     }
 
     @Test
@@ -255,16 +277,15 @@ class PoseExerciseSpecTest {
         val bound = spec.evaluateCriterion(
             criterionId = criterion.criterionId,
             cycleEpoch = 7L,
-            phaseId = bottom,
+            windowScope = CriterionWindowScope.Phase(bottom),
             phaseWindow = CriterionPhaseWindow(0L, 200L),
-            frames = listOf(
+            observations = listOf(
                 angleFrame(0L),
                 angleFrame(100L),
                 straightFrame(100L),
-                angleFrame(200L),
-            ),
+                angleFrame(199L),
+            ).map(::attest),
             personTrackEpoch = personTrackEpoch,
-            viewQualified = true,
             calibration = calibration,
         )
 
@@ -282,11 +303,11 @@ class PoseExerciseSpecTest {
         val bound = spec.evaluateCriterion(
             criterionId = criterion.criterionId,
             cycleEpoch = 3L,
-            phaseId = bottom,
+            windowScope = CriterionWindowScope.Phase(bottom),
             phaseWindow = CriterionPhaseWindow(0L, 200L),
-            frames = listOf(angleFrame(0L), angleFrame(100L), angleFrame(200L)),
+            observations = listOf(angleFrame(0L), angleFrame(100L))
+                .map { frame -> attest(frame, viewQualified = false) },
             personTrackEpoch = personTrackEpoch,
-            viewQualified = false,
             calibration = calibrationFor(criterion),
         )
         val evaluation = spec.evaluateCriterionGraph(listOf(bound))
@@ -299,17 +320,79 @@ class PoseExerciseSpecTest {
     }
 
     @Test
+    fun sampledEvidenceHashCommitsMeasurementsButNotHiddenUnqualifiedCoordinates() {
+        val criterion = exerciseCriterion()
+        val spec = exerciseSpec(listOf(criterion), criterionGraph(criterion.criterionId))
+        val common = listOf(angleFrame(0L), angleFrame(100L))
+        val changed = listOf(straightFrame(0L), straightFrame(100L))
+
+        fun evaluate(frames: List<PoseFrame>, viewQualified: Boolean) = spec.evaluateCriterion(
+            criterionId = criterion.criterionId,
+            cycleEpoch = 1L,
+            windowScope = CriterionWindowScope.Phase(bottom),
+            phaseWindow = CriterionPhaseWindow(0L, 200L),
+            observations = frames.map { frame -> attest(frame, viewQualified) },
+            personTrackEpoch = personTrackEpoch,
+            calibration = calibrationFor(criterion),
+        )
+
+        assertNotEquals(
+            evaluate(common, viewQualified = true).sampledEvidenceSha256,
+            evaluate(changed, viewQualified = true).sampledEvidenceSha256,
+        )
+        assertEquals(
+            evaluate(common, viewQualified = true).sampledEvidenceSha256,
+            evaluate(
+                common + straightFrame(100L),
+                viewQualified = true,
+            ).sampledEvidenceSha256,
+        )
+        assertEquals(
+            evaluate(common, viewQualified = false).sampledEvidenceSha256,
+            evaluate(changed, viewQualified = false).sampledEvidenceSha256,
+        )
+
+        val qualityCriterion = exerciseCriterion(
+            binding = featureBinding(
+                qualityKnots = listOf(
+                    PoseQualityCalibrationKnot(0.0, 0.25),
+                    PoseQualityCalibrationKnot(1.0, 1.0),
+                ),
+            ),
+        )
+        val qualitySpec = exerciseSpec(
+            listOf(qualityCriterion),
+            criterionGraph(qualityCriterion.criterionId),
+        )
+        fun qualityEvidence(confidence: Double) = qualitySpec.evaluateCriterion(
+            criterionId = qualityCriterion.criterionId,
+            cycleEpoch = 1L,
+            windowScope = CriterionWindowScope.Phase(bottom),
+            phaseWindow = CriterionPhaseWindow(0L, 200L),
+            observations = listOf(
+                angleFrame(0L, confidence),
+                angleFrame(100L, confidence),
+            ).map(::attest),
+            personTrackEpoch = personTrackEpoch,
+            calibration = calibrationFor(qualityCriterion),
+        )
+        assertNotEquals(
+            qualityEvidence(1.0).sampledEvidenceSha256,
+            qualityEvidence(0.5).sampledEvidenceSha256,
+        )
+    }
+
+    @Test
     fun foreignEvaluatorAndIneligiblePhaseCannotReachGraphCuePolicy() {
         val criterion = exerciseCriterion()
         val spec = exerciseSpec(listOf(criterion), criterionGraph(criterion.criterionId))
         val bound = spec.evaluateCriterion(
             criterionId = criterion.criterionId,
             cycleEpoch = 1L,
-            phaseId = bottom,
+            windowScope = CriterionWindowScope.Phase(bottom),
             phaseWindow = CriterionPhaseWindow(0L, 200L),
-            frames = listOf(angleFrame(0L), angleFrame(100L), angleFrame(200L)),
+            observations = listOf(angleFrame(0L), angleFrame(100L)).map(::attest),
             personTrackEpoch = personTrackEpoch,
-            viewQualified = true,
             calibration = calibrationFor(criterion),
         )
 
@@ -323,18 +406,20 @@ class PoseExerciseSpecTest {
         val alternateBound = alternateSpec.evaluateCriterion(
             criterionId = alternateCriterion.criterionId,
             cycleEpoch = 1L,
-            phaseId = bottom,
+            windowScope = CriterionWindowScope.Phase(bottom),
             phaseWindow = CriterionPhaseWindow(0L, 200L),
-            frames = listOf(angleFrame(0L), angleFrame(100L), angleFrame(200L)),
+            observations = listOf(angleFrame(0L), angleFrame(100L)).map(::attest),
             personTrackEpoch = personTrackEpoch,
-            viewQualified = true,
             calibration = calibrationFor(alternateCriterion),
         )
         val foreignEvaluator = copyEnvelope(
             source = bound,
             atomicResult = alternateBound.atomicResult,
         )
-        val ineligiblePhase = copyEnvelope(source = bound, phaseId = ready)
+        val ineligiblePhase = copyEnvelope(
+            source = bound,
+            windowScope = CriterionWindowScope.Phase(ready),
+        )
 
         assertThrows(IllegalArgumentException::class.java) {
             spec.evaluateCriterionGraph(listOf(foreignEvaluator))
@@ -375,10 +460,11 @@ class PoseExerciseSpecTest {
         runtimeMode: CriterionRuntimeMode = CriterionRuntimeMode.CUE_ELIGIBLE,
         phaseIds: Set<PosePhaseStateId> = setOf(bottom),
         binding: PoseCriterionFeatureBinding = featureBinding(),
+        viewContractId: String = "side-view.body-yaw-window.v1",
     ): ExerciseCriterionSpec = ExerciseCriterionSpec(
         featureBinding = binding,
         eligiblePhaseIds = phaseIds,
-        viewContractId = "side-view.body-yaw-window.v1",
+        viewContractId = viewContractId,
         observability = observability,
         runtimeMode = runtimeMode,
     )
@@ -386,18 +472,22 @@ class PoseExerciseSpecTest {
     private fun featureBinding(
         target: MeasurementInterval = MeasurementInterval(80.0, 110.0),
         runtimeDomainId: String = "mediapipe-full.world.side-view.v1",
+        samplingContractSha256: String = ATTESTED_CRITERION_SAMPLING_CONTRACT_SHA256,
+        qualityKnots: List<PoseQualityCalibrationKnot> =
+            listOf(PoseQualityCalibrationKnot(0.0, 1.0)),
     ): PoseCriterionFeatureBinding {
         val qualityCalibration = PoseQualityCalibrationArtifact(
             signalKind = PoseQualitySignalKind.CRITERION_EVIDENCE_WEIGHT,
             featureSpecSha256 = feature.featureSpecSha256,
             qualityContractId = "forward-lunge.knee-quality.v1",
             runtimeDomainId = runtimeDomainId,
-            knots = listOf(PoseQualityCalibrationKnot(0.0, 1.0)),
+            knots = qualityKnots,
         )
         val contract = CriterionCalibrationContract(
             criterionId = "front-knee-flexion",
             featureContractId = feature.featureContractId,
             featureSpecSha256 = feature.featureSpecSha256,
+            samplingContractSha256 = samplingContractSha256,
             measurementUnit = "degrees",
             aggregation = CriterionAggregation.WeightedMean,
             qualityContractId = qualityCalibration.qualityContractId,
@@ -445,6 +535,7 @@ class PoseExerciseSpecTest {
             maximumObservationGapMs = 500L,
             unusableObservationGraceMs = 250L,
             maximumPhaseDurationMs = 10_000L,
+            maximumCycleDurationMs = 30_000L,
         )
         val qualityCalibration = PoseQualityCalibrationArtifact(
             signalKind = PoseQualitySignalKind.PHASE_GATE_SIGNAL,
@@ -497,13 +588,31 @@ class PoseExerciseSpecTest {
         viewQualifierArtifactSha256 = SHA_C,
     )
 
-    private fun angleFrame(timestampMs: Long): PoseFrame = PoseFrame(
+    private fun angleFrame(timestampMs: Long, confidence: Double = 1.0): PoseFrame = PoseFrame(
         timestampMs = timestampMs,
         landmarks = emptyMap(),
         worldLandmarks = mapOf(
-            PoseJoint.LEFT_HIP to PoseLandmark(0.0, 1.0, 0.0),
-            PoseJoint.LEFT_KNEE to PoseLandmark(0.0, 0.0, 0.0),
-            PoseJoint.LEFT_ANKLE to PoseLandmark(1.0, 0.0, 0.0),
+            PoseJoint.LEFT_HIP to PoseLandmark(
+                0.0,
+                1.0,
+                0.0,
+                visibility = confidence,
+                presence = confidence,
+            ),
+            PoseJoint.LEFT_KNEE to PoseLandmark(
+                0.0,
+                0.0,
+                0.0,
+                visibility = confidence,
+                presence = confidence,
+            ),
+            PoseJoint.LEFT_ANKLE to PoseLandmark(
+                1.0,
+                0.0,
+                0.0,
+                visibility = confidence,
+                presence = confidence,
+            ),
         ),
     )
 
@@ -517,19 +626,40 @@ class PoseExerciseSpecTest {
         ),
     )
 
+    private fun attest(
+        frame: PoseFrame,
+        viewQualified: Boolean = true,
+    ): AttestedPoseObservation = observationSource.attest(
+        frame = frame,
+        personTrackEpoch = personTrackEpoch,
+        viewQualifications = if (viewQualified) {
+            listOf(
+                observationSource.qualifyView(
+                    viewContractId = "side-view.body-yaw-window.v1",
+                    personTrackEpoch = personTrackEpoch,
+                    frameTimestampMs = frame.timestampMs,
+                ),
+            )
+        } else {
+            emptyList()
+        },
+    )
+
     private fun copyEnvelope(
         source: BoundPoseCriterionResult,
-        phaseId: PosePhaseStateId = source.phaseId,
+        windowScope: CriterionWindowScope = source.windowScope,
         atomicResult: com.example.trex_kotlin.pose.criterion.PoseCriterionResult =
             source.atomicResult,
     ) = BoundPoseCriterionResult(
         exerciseSpecSha256 = source.exerciseSpecSha256,
         phaseArtifactSha256 = source.phaseArtifactSha256,
         cycleEpoch = source.cycleEpoch,
-        phaseId = phaseId,
+        windowScope = windowScope,
         phaseWindow = source.phaseWindow,
         viewContractId = source.viewContractId,
-        viewQualified = source.viewQualified,
+        qualifiedViewFrameCount = source.qualifiedViewFrameCount,
+        totalFrameCount = source.totalFrameCount,
+        sampledEvidenceSha256 = source.sampledEvidenceSha256,
         featureSpecSha256 = source.featureSpecSha256,
         runtimeDomainId = source.runtimeDomainId,
         qualityCalibrationArtifactSha256 = source.qualityCalibrationArtifactSha256,

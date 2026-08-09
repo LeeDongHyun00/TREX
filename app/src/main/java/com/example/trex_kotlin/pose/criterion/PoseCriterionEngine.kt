@@ -22,6 +22,7 @@ private fun calibrationArtifactSha256(
         "criterionId" to contract.criterionId,
         "featureContractId" to contract.featureContractId,
         "featureSpecSha256" to contract.featureSpecSha256,
+        "samplingContractSha256" to contract.samplingContractSha256,
         "measurementUnit" to contract.measurementUnit,
         "aggregation" to aggregationIdentity,
         "qualityContractId" to contract.qualityContractId,
@@ -49,7 +50,7 @@ private fun calibrationArtifactSha256(
     return canonicalFieldsSha256(fields)
 }
 
-/** Canonical identity expected to be pinned by a signed evaluator manifest. */
+/** Canonical identity expected to be pinned by an independently authorized evaluator manifest. */
 internal fun evaluatorSpecSha256(
     approvedCalibrationArtifactSha256: String,
     targetInterval: MeasurementInterval,
@@ -162,6 +163,7 @@ data class CriterionCalibrationContract(
     val criterionId: String,
     val featureContractId: String,
     val featureSpecSha256: String,
+    val samplingContractSha256: String,
     val measurementUnit: String,
     val aggregation: CriterionAggregation,
     val qualityContractId: String,
@@ -182,6 +184,9 @@ data class CriterionCalibrationContract(
         require(featureContractId.isNotBlank()) { "featureContractId must not be blank" }
         require(SHA256_REGEX.matches(featureSpecSha256)) {
             "featureSpecSha256 must be a lowercase SHA-256 value"
+        }
+        require(SHA256_REGEX.matches(samplingContractSha256)) {
+            "samplingContractSha256 must be a lowercase SHA-256 value"
         }
         require(measurementUnit.isNotBlank()) { "measurementUnit must not be blank" }
         require(qualityContractId.isNotBlank()) { "qualityContractId must not be blank" }
@@ -215,9 +220,9 @@ data class CriterionCalibrationContract(
  *
  * Durations and event-order constructs are derived as temporal features before entering this
  * scalar engine. The spec has no unsafe evidence-mass default: every caller must choose a positive
- * threshold from calibration data. Both approved SHA values are supplied by a signed evaluator
- * manifest; the constructor recomputes the evaluator identity so target/capability weakening
- * cannot retain an earlier approval.
+ * threshold from calibration data. Both pinned SHA values are content-addressed dependencies of
+ * the evaluator package; the constructor recomputes the evaluator identity so target/capability
+ * weakening cannot retain an earlier package identity. This does not authenticate a signer.
  */
 class PoseCriterionSpec(
     val calibrationContract: CriterionCalibrationContract,
@@ -483,9 +488,12 @@ class PoseCriterionEngine {
         samples: List<CriterionEvidenceSample>,
     ) {
         samples.forEach { sample ->
-            require(sample.timestampMs in phaseWindow.startTimestampMs..phaseWindow.endTimestampMs) {
+            require(
+                sample.timestampMs >= phaseWindow.startTimestampMs &&
+                    sample.timestampMs < phaseWindow.endTimestampMs,
+            ) {
                 "Criterion sample ${sample.timestampMs} is outside phase window " +
-                    "${phaseWindow.startTimestampMs}..${phaseWindow.endTimestampMs}"
+                    "[${phaseWindow.startTimestampMs}, ${phaseWindow.endTimestampMs})"
             }
         }
         samples.zipWithNext().forEach { (previous, current) ->

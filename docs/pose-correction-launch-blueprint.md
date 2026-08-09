@@ -999,8 +999,9 @@ offline replay
 ### 보류 — 바벨 스쿼트
 
 - 현재 evaluator는 있으나 원본 이미지–MediaPipe 검증이 없음
+- AI Hub exact condition 4개는 manifest에 4/4 결속됐지만 척추 중립·고개 정면·발-무릎 방향의 proxy 3개와 camera로 관측 불가능한 발바닥 고정 1개가 모두 `Unavailable`이다. `MeasureOnly`·실행 가능한 runtime shadow 측정·사용자 release는 각각 0개다.
 - 고중량 운동의 잘못된 실시간 cue는 결과가 더 크므로 bodyweight 운동보다 높은 safety gate 적용
-- GA 전에 타깃 원본 영상, 전문가 Gold, camera-view contract, 필요 시 barbell object capability 확보
+- 다음 구현 gate는 실제 full-cycle phase, criterion별 view, anatomical-segment-frame·face-orientation provider와 blind 전문가 Gold·calibration이다. 발바닥 고정은 별도 contact sensor 없이는 camera 지원 범위에 넣지 않는다.
 
 ### 후기 단계 — 버피·바닥 운동·기구 운동
 
@@ -1033,13 +1034,15 @@ offline replay
 
 각 slice는 unit test만으로 완료되지 않는다. 관련 offline replay, 실제 CameraX/MediaPipe instrumented test, physical-device benchmark 또는 Gold evaluation 중 적어도 하나를 requirement-derived 증거로 가져야 한다.
 
-첫 구현 slice는 metadata-only dataset snapshot과 순수 Kotlin scalar criterion core를 만들었다. 두 번째 slice는 explicit-domain feature primitive와 canonical feature-AST SHA, ordered explicit-duration phase graph와 최대 phase 시간, 불변·비감소 quality-calibration artifact, criterion dependency/root-cause graph, shadow-safe signed `PoseExerciseSpec`, attested·bounded `PoseExerciseEvaluationSession`을 추가했다. 기존 evaluator의 관절각과 stance ratio는 공통 feature primitive로 계산하고 좌표 domain 자동 fallback과 null→정상 점수 승격을 제거했다. criterion core는 명시적 phase window, 사용 가능한 시간 coverage, 품질 evidence mass, 보정된 상관시간으로 제한한 유효 표본수, 정확히 일치하는 calibration contract·artifact content SHA·evaluator-spec SHA, `PASS/FAIL/UNKNOWN` 포함관계를 유지한다. top-level exercise SHA는 observer/phase/feature/view/release/graph 정책을 묶고 graph 진입 시 evaluator/calibration/phase/window/cycle/view/domain/person provenance를 다시 검증한다. session은 같은 source가 발급한 opaque person epoch와 frame별 view qualification만 받고, identity 변경을 즉시 reset하며 backdated phase 경계를 반개구간으로 재분배한다. signed duration과 독립된 2,048-frame hard cap을 넘긴 cycle, reset·불완전 cycle은 폐기한다. branch별 적용성 계약 전에는 모든 phase를 정확히 한 번 방문하는 결정적 cycle만 승인한다.
+첫 구현 slice는 metadata-only dataset snapshot과 순수 Kotlin scalar criterion core를 만들었다. 두 번째 slice는 explicit-domain feature primitive와 canonical feature-AST SHA, ordered explicit-duration phase graph와 최대 phase 시간, 불변·비감소 quality-calibration artifact, criterion dependency/root-cause graph, shadow-safe hash-pinned `PoseExerciseSpec`, attested·bounded `PoseExerciseEvaluationSession`을 추가했다. 기존 evaluator의 관절각과 stance ratio는 공통 feature primitive로 계산하고 좌표 domain 자동 fallback과 null→정상 점수 승격을 제거했다. criterion core는 명시적 phase window, 사용 가능한 시간 coverage, 품질 evidence mass, 보정된 상관시간으로 제한한 유효 표본수, 정확히 일치하는 calibration contract·artifact content SHA·evaluator-spec SHA, `PASS/FAIL/UNKNOWN` 포함관계를 유지한다. top-level exercise SHA는 observer/phase/feature/view/release/graph 정책을 묶고 graph 진입 시 evaluator/calibration/phase/window/cycle/view/domain/person provenance를 다시 검증한다. session은 같은 source가 발급한 opaque person epoch와 frame별 view qualification만 받고, identity 변경을 즉시 reset하며 backdated phase 경계를 반개구간으로 재분배한다. 계약된 duration과 독립된 2,048-frame hard cap을 넘긴 cycle, reset·불완전 cycle은 폐기한다. branch별 적용성 계약 전에는 모든 phase를 정확히 한 번 방문하는 결정적 cycle만 승인한다.
 
 세 번째 slice는 AI Hub 34,468개 2D metadata에서 41개 운동·97개 exact condition·167개 운동-condition binding·816개 truth row를 생성형 source registry로 고정했다. 이어 167개 binding 전부에 semantic family, 관측성, generic phase role, side policy, candidate view, 필요한 capability와 calibration 부재 사유를 부여한 catalog-only policy를 생성했다. source-ambiguous 19개는 interpretation 자체가 없고, 해석된 148개도 `NO_APPROVED_ARTIFACT`라 사용자 판정 권한이 없다. strict compiler와 repository drift pin은 누락·중복·source orphan·근거 문서 drift·생성물 변조를 거부하지만 서명된 release authorization은 아니다.
 
 네 번째 slice는 `PostureCorrectionRuntimeFacade`를 운동 목록·사용자 선택·세션 진입의 유일한 product availability 경계로 연결했다. 41개 운동의 catalog/review/release count를 한곳에서 계산하며, policy SHA에 묶인 app-bundled allowlist는 `NO_RELEASE_KEY_CONFIGURED`, 0-entry로 고정했다. 따라서 현재 모든 토글은 비활성이고 타이머 세션으로 fail closed한다. 과거 수동 스쿼트·런지 factory를 제거해 구현 클래스의 존재가 사용자 cue·점수 권한이 되는 우회를 닫았고, 빈 feedback을 PASS 문구로 바꾸거나 null 점수를 0점으로 저장하거나 workout preference만으로 오류 기록을 합성하지 않는다. empty allowlist hash는 repository drift pin일 뿐 issuer signature가 아니다.
 
 다섯 번째 slice는 bundled MediaPipe model의 정확한 길이·SHA-256을 검증한 동일 direct buffer로 task를 만들고, 실제 CPU/GPU delegate와 inference/preprocessing/landmark-schema contract를 분리해 고정하는 observer factory를 추가했다. 모든 normalized/world pose를 같은 index로 짝지으며 schema-invalid 후보도 raw 다중인물 sentinel에서 숨기지 않는다. 정확히 한 명의 usable candidate가 1초 동안 연속 관측돼야 새 person epoch를 만들고, 두 번째 후보·공백·불연속은 즉시 폐기한다. 전신 crop과 view는 별도 dwell을 거쳐 source·epoch·timestamp에 결속되며, front/rear를 구별할 수 없는 body-axis 관측은 front criterion token을 발급하지 않는다.
+
+여섯 번째 slice는 criterion scope에 `CompletedCycle`을 추가해 순서·연속성이 검증된 phase path의 정확한 `[cycleStart,cycleEnd)`만 집계한다. criterion view가 맞지 않는 프레임은 측정값 `null`·품질 가중치 `0`으로 기권하고, 유효 프레임 사이를 경계 너머로 보간하지 않아 coverage·gap 부족은 `UNKNOWN`이 된다. person lock reset·epoch 변경, phase/cycle timeout, cycle scope 또는 frame-buffer overflow, 불완전 cycle에서는 부분 결과를 내지 않고 cycle 전체를 폐기한다. 같은 slice의 바벨 스쿼트 manifest는 AI Hub exact condition 4개를 모두 고정했지만 proxy 3개와 camera 비관측 발바닥 1개가 전부 `Unavailable`이므로 `MeasureOnly`·실행 가능한 runtime shadow 측정·사용자 release는 모두 0개다. 이 manifest의 content pin은 서명이나 실행 권한이 아니다.
 
 이 구현은 여전히 SHADOW observer 기반시설이다. 좌표 연속성은 생체 신원이 아니어서 거울·TV·같은 위치의 유사 체형 교체를 막는 물리기기 challenge가 필요하고, view 임계값도 Gold 승인 전이다. issuer가 같은 Gradle module의 `internal` 경계에 있으며 동적 crop·rotation·camera-session provenance, detached signature와 pinned release public key loader, 실제 MediaPipe↔Gold calibration artifact도 아직 없다. 따라서 어떤 운동도 사용자 판정을 승인하지 않으며 0-entry release allowlist를 유지한다. Kotlin 단위 테스트는 계산 계약과 fail-closed 회귀의 증거일 뿐 M2 또는 서비스 출시 완료 증거가 아니다.
 
@@ -1124,7 +1127,7 @@ M0–M1이 끝나기 전에 임계값을 Kotlin 상수로 굳히지 않는다. M
 9. privacy data-flow/retention/license review, 집계 telemetry, signed 운동별 kill switch와 전파 rehearsal이 없다.
 10. 제품 문구·Health apps 선언·intended population과 미성년자 처리의 출시 검토가 없다.
 11. 포워드 런지조차 class-conditional coverage·unconditional recall·harmful cue CI의 GA 기준을 아직 통과하지 않았다.
-12. 바벨 스쿼트의 원본 이미지–MediaPipe·고중량 안전 검증이 없다.
+12. 바벨 스쿼트 4/4 manifest는 연구 inventory일 뿐이다. 실제 full-cycle phase·criterion별 view·anatomical-segment-frame·face-orientation provider와 blind Gold·calibration이 없고, 발바닥 고정은 contact sensor 없이 camera로 관측 불가능하며 원본 이미지–MediaPipe·고중량 안전 검증도 없다.
 
 이 blocker가 남아 있는 동안 현재 기능은 데모 또는 내부 beta이지, 자세의 정확성을 보증하는 GA 서비스가 아니다.
 

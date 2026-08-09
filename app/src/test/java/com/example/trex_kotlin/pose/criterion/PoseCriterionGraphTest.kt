@@ -445,6 +445,7 @@ class PoseCriterionGraphTest {
             criterionId = id,
             featureContractId = "graph-test-feature:v1",
             featureSpecSha256 = "0".repeat(64),
+            samplingContractSha256 = ATTESTED_CRITERION_SAMPLING_CONTRACT_SHA256,
             measurementUnit = "degree",
             aggregation = CriterionAggregation.WeightedMean,
             qualityContractId = "graph-test-quality:v1",
@@ -452,8 +453,8 @@ class PoseCriterionGraphTest {
             runtimeDomainId = "graph-test-runtime:v1",
             validMeasurementInterval = MeasurementInterval(-100.0, 100.0),
             minimumSampleQuality = 0.1,
-            minimumTimeCoverage = 1.0,
-            minimumEvidenceMass = 1.0,
+            minimumTimeCoverage = 0.99,
+            minimumEvidenceMass = 0.99,
             minimumObservableDurationMs = 100L,
             minimumEffectiveSamples = 1.0,
             maximumGapMs = 100L,
@@ -484,7 +485,7 @@ class PoseCriterionGraphTest {
         }
         return engine.evaluate(
             spec = spec,
-            phaseWindow = CriterionPhaseWindow(0L, 200L),
+            phaseWindow = CriterionPhaseWindow(0L, 201L),
             samples = listOf(
                 CriterionEvidenceSample(0L, measurement, 1.0),
                 CriterionEvidenceSample(100L, measurement, 1.0),

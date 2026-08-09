@@ -263,6 +263,7 @@ class PoseCriterionSamplerTest {
             criterionId = "left-knee-flexion",
             featureContractId = feature.featureContractId,
             featureSpecSha256 = feature.featureSpecSha256,
+            samplingContractSha256 = ATTESTED_CRITERION_SAMPLING_CONTRACT_SHA256,
             measurementUnit = "degrees",
             aggregation = CriterionAggregation.WeightedMean,
             qualityContractId = qualityCalibration.qualityContractId,

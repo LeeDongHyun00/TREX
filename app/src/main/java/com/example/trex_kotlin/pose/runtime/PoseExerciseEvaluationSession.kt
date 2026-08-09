@@ -9,15 +9,17 @@ import com.example.trex_kotlin.pose.phase.PosePhaseResetReason
 import com.example.trex_kotlin.pose.phase.PosePhaseStateId
 import com.example.trex_kotlin.pose.phase.PosePhaseTrackingReset
 import com.example.trex_kotlin.pose.phase.PosePhaseUpdate
+import com.example.trex_kotlin.pose.phase.PosePhaseWindow
 import com.example.trex_kotlin.pose.phase.PosePhaseWindowEnded
 import com.example.trex_kotlin.pose.spec.BoundPoseCriterionResult
+import com.example.trex_kotlin.pose.spec.CriterionWindowScope
 import com.example.trex_kotlin.pose.spec.CriterionRuntimeMode
 import com.example.trex_kotlin.pose.spec.ExerciseCriterionSpec
 import com.example.trex_kotlin.pose.spec.PoseExerciseSpec
 import java.util.ArrayDeque
 import java.util.Collections
 
-/** A hard memory ceiling; a signed duration cannot authorize an unbounded mobile heap. */
+/** A hard memory ceiling; a manifest duration cannot authorize an unbounded mobile heap. */
 internal const val MAX_BUFFERED_POSE_FRAMES: Int = 2_048
 
 /** A graph result whose atomic criterion envelopes all belong to one completed cycle. */
@@ -26,13 +28,17 @@ internal class PoseExerciseCycleEvaluation internal constructor(
     val cycleStartTimestampMs: Long,
     val cycleEndTimestampMs: Long,
     val completedCycleCount: Int,
+    val cycleScopeSha256: String,
     val observationContractArtifactSha256: String,
     internal val personTrackEpoch: PosePersonTrackEpoch,
+    phaseWindows: List<PosePhaseWindow>,
     criterionResults: Map<String, BoundPoseCriterionResult>,
     val graphEvaluation: PoseCriterionGraphEvaluation,
 ) {
     val criterionResults: Map<String, BoundPoseCriterionResult> =
         Collections.unmodifiableMap(LinkedHashMap(criterionResults))
+    val phaseWindows: List<PosePhaseWindow> =
+        Collections.unmodifiableList(ArrayList(phaseWindows))
 }
 
 /** Result of one distinct camera timestamp accepted by [PoseExerciseEvaluationSession]. */
@@ -48,17 +54,17 @@ internal class PoseExerciseSessionUpdate internal constructor(
 }
 
 /**
- * Stateful, bounded composition of signed phase, criterion, calibration, view, and graph policy.
+ * Stateful, bounded composition of hash-pinned phase, criterion, calibration, view, and graph policy.
  *
  * One instance belongs to one camera/person-lock lifecycle and must receive frames serially. The
- * ring is bounded by both the signed maximum phase duration and a device hard frame ceiling. A
+ * ring is bounded by both the manifest maximum phase duration and a device hard frame ceiling. A
  * transition is published only after its dwell, so ended windows are reconstructed retrospectively
  * from the ring. Window membership is half-open: `[start, end)`. Consequently the first matching
  * transition frame is retained for the new phase and cannot leak into the old phase aggregate.
  *
  * The exact observation source and aggregate calibrations are constructor-pinned. Dynamic person
  * lock and view evidence comes only from source-bound opaque tokens on each observation. Every
- * cue-eligible criterion must have its exact signed aggregate calibration before a session can
+ * cue-eligible criterion must have its exact hash-pinned aggregate calibration before a session can
  * exist; shadow criteria may deliberately remain uncalibrated and evaluate to UNKNOWN.
  */
 internal class PoseExerciseEvaluationSession(
@@ -73,15 +79,24 @@ internal class PoseExerciseEvaluationSession(
     private val initialPhaseId = exerciseSpec.phaseDriver.engineConfig.graph.initialStateId
     private val maximumPhaseDurationMs =
         exerciseSpec.phaseDriver.engineConfig.maximumPhaseDurationMs
+    private val maximumCycleDurationMs =
+        exerciseSpec.phaseDriver.engineConfig.maximumCycleDurationMs
     private val criterionIds = exerciseSpec.criteria
         .map(ExerciseCriterionSpec::criterionId)
         .toCollection(LinkedHashSet())
     private val criteriaByPhase = exerciseSpec.criteria
-        .flatMap { criterion -> criterion.eligiblePhaseIds.map { phase -> phase to criterion } }
+        .mapNotNull { criterion ->
+            (criterion.windowScope as? CriterionWindowScope.Phase)?.let { scope ->
+                scope.phaseId to criterion
+            }
+        }
         .groupBy(
             keySelector = Pair<PosePhaseStateId, ExerciseCriterionSpec>::first,
             valueTransform = Pair<PosePhaseStateId, ExerciseCriterionSpec>::second,
         )
+    private val completedCycleCriteria = exerciseSpec.criteria.filter { criterion ->
+        criterion.windowScope == CriterionWindowScope.CompletedCycle
+    }
     private val frameBuffer = ArrayDeque<AttestedPoseObservation>()
     private val pendingResults = linkedMapOf<String, BoundPoseCriterionResult>()
 
@@ -108,7 +123,7 @@ internal class PoseExerciseEvaluationSession(
             observationSource.contract.artifactSha256 ==
                 exerciseSpec.observationContract.artifactSha256,
         ) {
-            "Observation source does not match the signed exercise observation contract"
+            "Observation source does not match the hash-pinned exercise observation contract"
         }
 
         val unknownCalibrationIds = this.calibrations.keys - criterionIds
@@ -222,7 +237,9 @@ internal class PoseExerciseEvaluationSession(
         val completedEvent = phaseUpdate.events
             .filterIsInstance<PosePhaseCycleCompleted>()
             .singleOrNull()
+        completedEvent?.let(::evaluateCompletedCycle)
         val cycleEvaluation = completedEvent?.let(::completeCycle)
+        if (completedEvent != null) trimBefore(completedEvent.cycleEndTimestampMs)
         return update(frame.timestampMs, phaseUpdate, cycleEvaluation)
     }
 
@@ -263,26 +280,66 @@ internal class PoseExerciseEvaluationSession(
                 return@forEach
             }
             val personTrackEpoch = requireNotNull(activePersonTrackEpoch)
-            val viewQualified = observations.isNotEmpty() && observations.all { item ->
-                item.personTrackEpoch === personTrackEpoch &&
-                    item.isViewQualified(criterion.viewContractId)
-            }
             pendingResults[criterion.criterionId] = exerciseSpec.evaluateCriterion(
                 criterionId = criterion.criterionId,
                 cycleEpoch = requireNotNull(cycleEpoch),
-                phaseId = window.stateId,
+                windowScope = criterion.windowScope,
                 phaseWindow = CriterionPhaseWindow(
                     startTimestampMs = window.startTimestampMs,
                     endTimestampMs = window.endTimestampMs,
                 ),
-                frames = observations.map(AttestedPoseObservation::frame),
+                observations = observations,
                 personTrackEpoch = personTrackEpoch,
-                viewQualified = viewQualified,
                 calibration = calibrations[criterion.criterionId],
             )
             evaluatedCriterionWindows += 1
         }
-        trimBefore(window.endTimestampMs)
+        if (completedCycleCriteria.isEmpty()) trimBefore(window.endTimestampMs)
+    }
+
+    private fun evaluateCompletedCycle(event: PosePhaseCycleCompleted) {
+        if (completedCycleCriteria.isEmpty() || activeCycleInvalid) return
+        val cycleEpoch = activeCycleEpoch ?: run {
+            activeCycleInvalid = true
+            return
+        }
+        val cycleStartTimestampMs = activeCycleStartTimestampMs ?: run {
+            activeCycleInvalid = true
+            return
+        }
+        if (
+            event.cycleStartTimestampMs != cycleStartTimestampMs ||
+            event.cycleEndTimestampMs - cycleStartTimestampMs > maximumCycleDurationMs
+        ) {
+            activeCycleInvalid = true
+            return
+        }
+        val observations = frameBuffer.asSequence()
+            .filter { observation ->
+                observation.frame.timestampMs >= cycleStartTimestampMs &&
+                    observation.frame.timestampMs < event.cycleEndTimestampMs
+            }
+            .toList()
+        val personTrackEpoch = requireNotNull(activePersonTrackEpoch)
+        completedCycleCriteria.forEach { criterion ->
+            if (pendingResults.containsKey(criterion.criterionId)) {
+                activeCycleInvalid = true
+                return@forEach
+            }
+            pendingResults[criterion.criterionId] = exerciseSpec.evaluateCriterion(
+                criterionId = criterion.criterionId,
+                cycleEpoch = cycleEpoch,
+                windowScope = CriterionWindowScope.CompletedCycle,
+                phaseWindow = CriterionPhaseWindow(
+                    startTimestampMs = cycleStartTimestampMs,
+                    endTimestampMs = event.cycleEndTimestampMs,
+                ),
+                observations = observations,
+                personTrackEpoch = personTrackEpoch,
+                calibration = calibrations[criterion.criterionId],
+            )
+            evaluatedCriterionWindows += 1
+        }
     }
 
     private fun completeCycle(event: PosePhaseCycleCompleted): PoseExerciseCycleEvaluation? {
@@ -292,20 +349,24 @@ internal class PoseExerciseEvaluationSession(
         val complete = epoch != null &&
             cycleStartTimestampMs != null &&
             personTrackEpoch != null &&
+            event.cycleStartTimestampMs == cycleStartTimestampMs &&
             !activeCycleInvalid &&
             pendingResults.keys == criterionIds
         val result = if (complete) {
             val orderedResults = exerciseSpec.criteria.associate { criterion ->
                 criterion.criterionId to pendingResults.getValue(criterion.criterionId)
             }
+            requireCycleResultWindows(event, orderedResults)
             PoseExerciseCycleEvaluation(
                 cycleEpoch = requireNotNull(epoch),
                 cycleStartTimestampMs = requireNotNull(cycleStartTimestampMs),
                 cycleEndTimestampMs = event.cycleEndTimestampMs,
                 completedCycleCount = event.completedCycleCount,
+                cycleScopeSha256 = event.scopeSha256,
                 observationContractArtifactSha256 =
                     exerciseSpec.observationContract.artifactSha256,
                 personTrackEpoch = requireNotNull(personTrackEpoch),
+                phaseWindows = event.phaseWindows,
                 criterionResults = orderedResults,
                 graphEvaluation = exerciseSpec.evaluateCriterionGraph(orderedResults.values),
             )
@@ -316,6 +377,30 @@ internal class PoseExerciseEvaluationSession(
         return result
     }
 
+    private fun requireCycleResultWindows(
+        event: PosePhaseCycleCompleted,
+        results: Map<String, BoundPoseCriterionResult>,
+    ) {
+        exerciseSpec.criteria.forEach { criterion ->
+            val result = results.getValue(criterion.criterionId)
+            when (val scope = criterion.windowScope) {
+                is CriterionWindowScope.Phase -> {
+                    val expected = event.phaseWindows.single { window ->
+                        window.stateId == scope.phaseId
+                    }
+                    require(
+                        result.phaseWindow.startTimestampMs == expected.startTimestampMs &&
+                            result.phaseWindow.endTimestampMs == expected.endTimestampMs,
+                    ) { "Phase criterion result is outside the completed cycle path" }
+                }
+                CriterionWindowScope.CompletedCycle -> require(
+                    result.phaseWindow.startTimestampMs == event.cycleStartTimestampMs &&
+                        result.phaseWindow.endTimestampMs == event.cycleEndTimestampMs,
+                ) { "Completed-cycle criterion result has mismatched boundaries" }
+            }
+        }
+    }
+
     private fun discardActiveCycle() {
         pendingResults.clear()
         activeCycleEpoch = null
@@ -324,7 +409,7 @@ internal class PoseExerciseEvaluationSession(
     }
 
     private fun trimFrameBuffer(timestampMs: Long) {
-        val cutoff = if (timestampMs > maximumPhaseDurationMs) {
+        val cutoff = activeCycleStartTimestampMs ?: if (timestampMs > maximumPhaseDurationMs) {
             timestampMs - maximumPhaseDurationMs
         } else {
             0L

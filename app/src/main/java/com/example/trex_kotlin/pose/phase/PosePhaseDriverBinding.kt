@@ -13,11 +13,11 @@ import com.example.trex_kotlin.pose.feature.measure
 private val PHASE_SHA256 = Regex("^[0-9a-f]{64}$")
 
 /**
- * Signed composition boundary for a phase feature, phase graph, timing policy, and quality gate.
+ * Content-addressed composition boundary for a phase feature, graph, timing policy, and quality gate.
  *
- * The approved artifact hash covers every phase-decision input. As a result, changing a feature
+ * The pinned artifact hash covers every phase-decision input. As a result, changing a feature
  * joint/reference, unit/domain, threshold, direction, dwell, edge, dropout policy, or quality
- * artifact cannot silently retain an earlier approval.
+ * artifact cannot silently retain an earlier package identity. This does not authenticate a signer.
  */
 internal class PosePhaseDriverBinding(
     val featureSpec: PoseScalarFeatureSpec,
@@ -57,7 +57,7 @@ internal class PosePhaseDriverBinding(
         require(
             featureEngine.runtimeContractSha256 == SIGNED_FEATURE_RUNTIME_CONTRACT_SHA256,
         ) {
-            "Phase feature engine does not match the signed runtime contract"
+            "Phase feature engine does not match the hash-pinned runtime contract"
         }
         val feature = featureEngine.measure(frame, featureSpec)
         return observation(
@@ -91,7 +91,7 @@ internal class PosePhaseDriverBinding(
     }
 }
 
-/** Canonical artifact identity expected to be pinned by a signed exercise manifest. */
+/** Canonical artifact identity expected to be pinned by an independently authorized manifest. */
 internal fun phaseDriverArtifactSha256(
     featureSpec: PoseScalarFeatureSpec,
     engineConfig: PosePhaseEngineConfig,
@@ -99,7 +99,7 @@ internal fun phaseDriverArtifactSha256(
 ): String {
     val graph = engineConfig.graph
     val fields = mutableListOf(
-        "phaseDriverArtifactSchemaVersion" to "1",
+        "phaseDriverArtifactSchemaVersion" to "2",
         "featureContractId" to featureSpec.featureContractId,
         "featureSpecSha256" to featureSpec.featureSpecSha256,
         "featureCoordinateSpace" to featureSpec.coordinateSpace.name,
@@ -116,6 +116,7 @@ internal fun phaseDriverArtifactSha256(
         "maximumObservationGapMs" to engineConfig.maximumObservationGapMs.toString(),
         "unusableObservationGraceMs" to engineConfig.unusableObservationGraceMs.toString(),
         "maximumPhaseDurationMs" to engineConfig.maximumPhaseDurationMs.toString(),
+        "maximumCycleDurationMs" to engineConfig.maximumCycleDurationMs.toString(),
         "initialStateId" to graph.initialStateId.value,
     )
 
