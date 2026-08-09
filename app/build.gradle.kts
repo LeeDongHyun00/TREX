@@ -1,8 +1,14 @@
+import org.gradle.api.artifacts.VersionCatalogsExtension
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.compose.compiler)
 }
+
+// Resolve camera additions through Gradle's catalog API so IDE sync does not depend on
+// previously generated type-safe accessors after switching branches.
+val dependencyCatalog = extensions.getByType<VersionCatalogsExtension>().named("libs")
 
 android {
     namespace = "com.example.trex_kotlin"
@@ -48,11 +54,11 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)
-    implementation(libs.androidx.camera.core)
-    implementation(libs.androidx.camera.camera2)
-    implementation(libs.androidx.camera.lifecycle)
-    implementation(libs.androidx.camera.view)
-    implementation(libs.mediapipe.tasks.vision)
+    implementation(dependencyCatalog.findLibrary("androidx-camera-core").get())
+    implementation(dependencyCatalog.findLibrary("androidx-camera-camera2").get())
+    implementation(dependencyCatalog.findLibrary("androidx-camera-lifecycle").get())
+    implementation(dependencyCatalog.findLibrary("androidx-camera-view").get())
+    implementation(dependencyCatalog.findLibrary("mediapipe-tasks-vision").get())
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.graphics)
