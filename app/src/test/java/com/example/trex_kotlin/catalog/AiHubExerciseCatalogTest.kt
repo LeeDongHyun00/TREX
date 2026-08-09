@@ -2,9 +2,10 @@ package com.example.trex_kotlin.catalog
 
 import com.example.trex_kotlin.Workout
 import com.example.trex_kotlin.canUsePostureSession
-import com.example.trex_kotlin.defaultPostureFocus
+import com.example.trex_kotlin.createWorkoutHistoryDay
 import com.example.trex_kotlin.estimatedCalories
-import com.example.trex_kotlin.pose.PoseEvaluatorFactory
+import com.example.trex_kotlin.pose.release.PostureCorrectionLifecycle
+import com.example.trex_kotlin.pose.release.PostureCorrectionRuntimeFacade
 import com.example.trex_kotlin.seedWorkoutHistory
 import com.example.trex_kotlin.todayPlan
 import com.example.trex_kotlin.withPostureCorrection
@@ -85,60 +86,61 @@ class AiHubExerciseCatalogTest {
     }
 
     @Test
-    fun evaluationSupportIsAnExplicitCatalogSubset() {
-        val catalog = AiHubExercise.entries.toSet()
-        val expectedSupported = setOf(
-            AiHubExercise.BARBELL_SQUAT,
-            AiHubExercise.STEP_FORWARD_DYNAMIC_LUNGE,
-            AiHubExercise.STEP_BACKWARD_DYNAMIC_LUNGE,
+    fun catalogCoverageDoesNotAuthorizeAUserPostureSession() {
+        assertEquals(
+            AiHubExercise.entries.toSet(),
+            PostureCorrectionRuntimeFacade.catalogedExercises,
         )
-
-        assertTrue(PoseEvaluatorFactory.supportedExercises.all { it in catalog })
+        assertTrue(PostureCorrectionRuntimeFacade.userSelectableExercises.isEmpty())
         assertTrue(
             AiHubExercise.entries.all { exercise ->
-                PoseEvaluatorFactory.supports(exercise) ==
-                    (PoseEvaluatorFactory.create(exercise) != null)
+                val availability = PostureCorrectionRuntimeFacade.availability(exercise)
+                availability.lifecycle == PostureCorrectionLifecycle.CATALOG_ONLY &&
+                    !availability.userSelectable &&
+                    !availability.sessionOpenAllowed
             },
         )
-        assertEquals(expectedSupported, PoseEvaluatorFactory.supportedExercises)
 
-        val enabled = Workout(
-            exercise = AiHubExercise.BARBELL_SQUAT,
-            reps = "1회 x 1세트",
-            duration = "1분",
-            posture = false,
-        ).withPostureCorrection(true)
-        assertTrue(enabled.posture)
-        assertTrue(enabled.canUsePostureSession())
-
-        val unsupported = Workout(
-            exercise = AiHubExercise.PLANK,
-            reps = "1회 x 1세트",
-            duration = "1분",
-            posture = false,
-        ).withPostureCorrection(true)
-        assertFalse(unsupported.posture)
-        assertFalse(unsupported.canUsePostureSession())
-
-        assertThrows(IllegalArgumentException::class.java) {
-            Workout(
-                exercise = AiHubExercise.PLANK,
+        AiHubExercise.entries.forEach { exercise ->
+            val attemptedEnable = Workout(
+                exercise = exercise,
                 reps = "1회 x 1세트",
                 duration = "1분",
-                posture = true,
-            )
+                posture = false,
+            ).withPostureCorrection(true)
+            assertFalse(attemptedEnable.posture)
+            assertFalse(attemptedEnable.canUsePostureSession())
+
+            assertThrows(IllegalArgumentException::class.java) {
+                Workout(
+                    exercise = exercise,
+                    reps = "1회 x 1세트",
+                    duration = "1분",
+                    posture = true,
+                )
+            }
         }
     }
 
     @Test
-    fun caloriesAndPostureFocusUseAiHubTypeInfoCategories() {
+    fun workoutPreferenceAloneNeverCreatesAStoredPostureClaim() {
+        val history = createWorkoutHistoryDay(todayPlan, elapsedSeconds = 300)
+
+        assertTrue(history.items.all { it.postureCorrection == null })
+        assertTrue(seedWorkoutHistory(todayPlan).flatMap { it.items }.all {
+            it.postureCorrection == null
+        })
+    }
+
+    @Test
+    fun caloriesUseAiHubTypeInfoCategories() {
         val cases = listOf(
-            Triple(AiHubExercise.BARBELL_SQUAT, 80, "척추 중립과 중량 궤적"),
-            Triple(AiHubExercise.ROWING_MACHINE, 70, "기구 축과 관절 정렬"),
-            Triple(AiHubExercise.PLANK, 60, "전신 관절 정렬과 몸통 안정"),
+            AiHubExercise.BARBELL_SQUAT to 80,
+            AiHubExercise.ROWING_MACHINE to 70,
+            AiHubExercise.PLANK to 60,
         )
 
-        cases.forEach { (exercise, calories, focus) ->
+        cases.forEach { (exercise, calories) ->
             val workout = Workout(
                 exercise = exercise,
                 reps = "10회 x 1세트",
@@ -146,7 +148,6 @@ class AiHubExerciseCatalogTest {
                 posture = false,
             )
             assertEquals(calories, workout.estimatedCalories())
-            assertEquals(focus, defaultPostureFocus(exercise))
         }
         assertEquals(
             AiHubExercise.entries.map(AiHubExercise::typeInfoType).distinct().toSet(),

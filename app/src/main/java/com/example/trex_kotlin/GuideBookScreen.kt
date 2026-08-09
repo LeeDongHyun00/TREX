@@ -53,17 +53,17 @@ private val guidePages = listOf(
     GuidePage(
         asset = "trex_guideImage_phone1.svg",
         headline = "움직임이 잘 보이도록\n카메라를 세워두세요",
-        body = "운동 전 전신과 주요 관절이 화면 안에 들어오면 TREX가 자세 변화를 더 정확하게 읽어줘룡",
+        body = "카메라 자세 기능은 검증과 출시 승인이 끝난 운동에서만 제공하며, 운동 목록에서 상태를 먼저 알려줘룡",
     ),
     GuidePage(
         asset = "trext_guideImage_phone2.svg",
-        headline = "실시간 피드백으로\n루틴의 흐름을 유지하세요",
-        body = "동작 중 필요한 교정 신호를 바로 확인하고, 세트가 끝날 때까지 같은 리듬으로 운동해룡",
+        headline = "검증 상태에 맞춰\n안전하게 루틴을 이어가세요",
+        body = "승인된 자세 기준이 없으면 임의 점수나 교정 신호 대신 타이머 모드로 운동해룡",
     ),
     GuidePage(
         asset = "trext_guideImage_phone3.svg",
         headline = "운동이 끝나면\n기록을 한눈에 정리해요",
-        body = "완료한 운동과 개선 포인트를 깔끔하게 남겨 다음 루틴을 더 쉽게 이어가룡",
+        body = "완료한 운동 기록을 정리하고, 검증된 결과가 있을 때만 자세 개선 항목을 남겨룡",
     ),
     GuidePage(
         asset = "trext_guideImage_phone4.svg",

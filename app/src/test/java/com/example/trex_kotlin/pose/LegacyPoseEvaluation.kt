@@ -1,6 +1,8 @@
 package com.example.trex_kotlin.pose
 
-import com.example.trex_kotlin.catalog.AiHubExercise
+// Pre-release heuristic evaluators retained only as test fixtures. They are intentionally absent
+// from the application and release artifacts and cannot authorize user feedback or scoring.
+
 import com.example.trex_kotlin.pose.feature.PoseFeatureEngine
 import kotlin.math.abs
 import kotlin.math.atan2
@@ -83,7 +85,7 @@ data class PoseEvaluatorConfig(
     }
 }
 
-interface PoseMotionEvaluator {
+internal interface PoseMotionEvaluator {
     val profile: PoseMotionProfile
 
     /** 시간 순서대로 들어온 한 프레임을 반영하고 현재 판정 상태를 반환한다. */
@@ -94,24 +96,6 @@ interface PoseMotionEvaluator {
 
     /** 누적 반복 수와 필터를 포함한 세션 상태 전체를 초기화한다. */
     fun reset()
-}
-
-object PoseEvaluatorFactory {
-    /** 런타임에서 자세교정 사용을 허용할 AI Hub 운동과 evaluator를 한곳에서 관리한다. */
-    private val factories: Map<AiHubExercise, (PoseEvaluatorConfig) -> PoseMotionEvaluator> = mapOf(
-        AiHubExercise.BARBELL_SQUAT to ::SymmetricSquatMotionEvaluator,
-        AiHubExercise.STEP_FORWARD_DYNAMIC_LUNGE to ::AlternatingLungeMotionEvaluator,
-        AiHubExercise.STEP_BACKWARD_DYNAMIC_LUNGE to ::AlternatingLungeMotionEvaluator,
-    )
-
-    val supportedExercises: Set<AiHubExercise> = factories.keys
-
-    fun supports(exercise: AiHubExercise): Boolean = exercise in supportedExercises
-
-    fun create(
-        exercise: AiHubExercise,
-        config: PoseEvaluatorConfig = PoseEvaluatorConfig(),
-    ): PoseMotionEvaluator? = factories[exercise]?.invoke(config)
 }
 
 internal class SymmetricSquatMotionEvaluator(
@@ -398,7 +382,7 @@ internal class AlternatingLungeMotionEvaluator(
     }
 }
 
-abstract class BasePoseMotionEvaluator(
+internal abstract class BasePoseMotionEvaluator(
     final override val profile: PoseMotionProfile,
     protected val config: PoseEvaluatorConfig,
 ) : PoseMotionEvaluator {

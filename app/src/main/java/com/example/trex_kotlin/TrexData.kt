@@ -2,7 +2,7 @@ package com.example.trex_kotlin
 
 import androidx.compose.runtime.Immutable
 import com.example.trex_kotlin.catalog.AiHubExercise
-import com.example.trex_kotlin.pose.PoseEvaluatorFactory
+import com.example.trex_kotlin.pose.release.PostureCorrectionRuntimeFacade
 import java.util.Calendar
 
 enum class TrexTab(val label: String) {
@@ -40,8 +40,11 @@ data class Workout(
     val alt: WorkoutAlt? = null,
 ) {
     init {
-        require(!posture || PoseEvaluatorFactory.supports(exercise)) {
-            "Posture evaluation is not supported for ${exercise.displayName}"
+        require(
+            !posture ||
+                PostureCorrectionRuntimeFacade.availability(exercise).sessionOpenAllowed,
+        ) {
+            "No released posture-correction session is authorized for ${exercise.displayName}"
         }
     }
 
@@ -59,13 +62,22 @@ data class WorkoutAlt(
 }
 
 internal fun Workout.canUsePostureSession(): Boolean =
-    posture && PoseEvaluatorFactory.supports(exercise)
+    posture && PostureCorrectionRuntimeFacade.availability(exercise).sessionOpenAllowed
 
 internal fun Workout.withPostureCorrection(enabled: Boolean): Workout =
-    copy(posture = enabled && PoseEvaluatorFactory.supports(exercise))
+    copy(
+        posture = enabled &&
+            PostureCorrectionRuntimeFacade.availability(exercise).sessionOpenAllowed,
+    )
 
+/**
+ * Reserved UI shape for a future provenance-bearing released FAIL record.
+ *
+ * There is intentionally no construction path in the current bundle. A preference, missing
+ * verdict, shadow result, or arbitrary string must never become a stored posture claim.
+ */
 @Immutable
-data class PostureCorrection(
+class PostureCorrection private constructor(
     val focus: String,
 )
 
@@ -210,31 +222,20 @@ fun Iterable<FoodEntry>.totalNutrition(): Nutrition =
     fold(Nutrition(0, 0.0, 0.0, 0.0)) { acc, entry -> acc.plus(entry.nutrition) }
 
 fun seedWorkoutHistory(plan: List<Workout> = todayPlan): List<WorkoutHistoryDay> {
-    val postureHints = listOf(
-        "무릎이 안쪽으로 모이는 자세",
-        "상체가 앞으로 무너지는 자세",
-        "골반이 한쪽으로 기우는 자세",
-        "어깨가 올라가는 자세",
-    )
     val calendar = Calendar.getInstance()
 
     return (0..6).map { index ->
         val dayCalendar = calendar.clone() as Calendar
         dayCalendar.add(Calendar.DAY_OF_MONTH, index - 6)
         val selected = plan.rotate(index).take(2 + index % 3)
-        val items = selected.mapIndexed { itemIndex, workout ->
+        val items = selected.map { workout ->
             val duration = workout.durationMinutes()
-            val hasCorrection = workout.posture && (index + itemIndex) % 2 == 0
             WorkoutHistoryItem(
                 exercise = workout.exercise,
                 reps = workout.reps,
                 durationMinutes = duration,
                 calories = workout.estimatedCalories(),
-                postureCorrection = if (hasCorrection) {
-                    PostureCorrection(postureHints[(index + itemIndex) % postureHints.size])
-                } else {
-                    null
-                },
+                postureCorrection = null,
             )
         }
 
@@ -250,18 +251,17 @@ fun seedWorkoutHistory(plan: List<Workout> = todayPlan): List<WorkoutHistoryDay>
 
 fun createWorkoutHistoryDay(plan: List<Workout>, elapsedSeconds: Int): WorkoutHistoryDay {
     val calendar = Calendar.getInstance()
-    val items = plan.mapIndexed { index, workout ->
+    val items = plan.map { workout ->
         val duration = workout.durationMinutes()
         WorkoutHistoryItem(
             exercise = workout.exercise,
             reps = workout.reps,
             durationMinutes = duration,
             calories = workout.estimatedCalories(),
-            postureCorrection = if (workout.posture && index == plan.indexOfFirst { it.posture }) {
-                PostureCorrection(defaultPostureFocus(workout.exercise))
-            } else {
-                null
-            },
+            // A workout preference is not evidence of a detected form error. Criterion verdicts
+            // and their release/calibration provenance must be supplied by a released session
+            // result before a posture-correction claim can be stored.
+            postureCorrection = null,
         )
     }
     val totalMinutes = (elapsedSeconds / 60).takeIf { it > 0 } ?: items.sumOf { it.durationMinutes }
@@ -330,13 +330,6 @@ internal fun Workout.estimatedCalories(): Int {
         else -> error("Unknown AI Hub type_info.type: ${exercise.typeInfoType}")
     }
     return (durationMinutes() * multiplier).coerceAtLeast(24)
-}
-
-internal fun defaultPostureFocus(exercise: AiHubExercise): String = when (exercise.typeInfoType) {
-    "바벨/덤벨" -> "척추 중립과 중량 궤적"
-    "기구" -> "기구 축과 관절 정렬"
-    "맨몸 운동" -> "전신 관절 정렬과 몸통 안정"
-    else -> error("Unknown AI Hub type_info.type: ${exercise.typeInfoType}")
 }
 
 private fun Calendar.koreanDayOfWeek(): String = when (get(Calendar.DAY_OF_WEEK)) {

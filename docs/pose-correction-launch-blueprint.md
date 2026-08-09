@@ -1037,7 +1037,9 @@ offline replay
 
 세 번째 slice는 AI Hub 34,468개 2D metadata에서 41개 운동·97개 exact condition·167개 운동-condition binding·816개 truth row를 생성형 source registry로 고정했다. 이어 167개 binding 전부에 semantic family, 관측성, generic phase role, side policy, candidate view, 필요한 capability와 calibration 부재 사유를 부여한 catalog-only policy를 생성했다. source-ambiguous 19개는 interpretation 자체가 없고, 해석된 148개도 `NO_APPROVED_ARTIFACT`라 사용자 판정 권한이 없다. strict compiler와 repository drift pin은 누락·중복·source orphan·근거 문서 drift·생성물 변조를 거부하지만 서명된 release authorization은 아니다.
 
-아직 실제 candidate observer가 loaded model/config bytes를 검증해 `PoseObservationSource`를 만드는 factory, 운영 person-lock/view-qualifier 구현, 승인 exercise SHA의 app-bundled allowlist/서명 loader, 실제 MediaPipe↔Gold calibration artifact가 없으므로 새 graph가 기존 운동 cue를 승인하지 않는다. 현재 signed spec/attestation source/session은 module-internal self-consistency scaffold이며 authenticity 보장이 아니다. Kotlin 단위 테스트는 feature·phase·criterion·identity 계약과 회귀 안전성의 증거이며 M2 또는 서비스 출시 완료 증거가 아니다.
+네 번째 slice는 `PostureCorrectionRuntimeFacade`를 운동 목록·사용자 선택·세션 진입의 유일한 product availability 경계로 연결했다. 41개 운동의 catalog/review/release count를 한곳에서 계산하며, policy SHA에 묶인 app-bundled allowlist는 `NO_RELEASE_KEY_CONFIGURED`, 0-entry로 고정했다. 따라서 현재 모든 토글은 비활성이고 타이머 세션으로 fail closed한다. 과거 수동 스쿼트·런지 factory를 제거해 구현 클래스의 존재가 사용자 cue·점수 권한이 되는 우회를 닫았고, 빈 feedback을 PASS 문구로 바꾸거나 null 점수를 0점으로 저장하거나 workout preference만으로 오류 기록을 합성하지 않는다. empty allowlist hash는 repository drift pin일 뿐 issuer signature가 아니다.
+
+아직 실제 candidate observer가 loaded model/config bytes를 검증해 `PoseObservationSource`를 만드는 factory, 운영 person-lock/view-qualifier 구현, detached signature와 pinned release public key loader, 실제 MediaPipe↔Gold calibration artifact가 없으므로 어떤 운동도 사용자 판정을 승인하지 않는다. 현재 signed spec/attestation source/session은 module-internal self-consistency scaffold이며 authenticity 보장이 아니다. Kotlin 단위 테스트는 feature·phase·criterion·identity 계약과 회귀 안전성의 증거이며 M2 또는 서비스 출시 완료 증거가 아니다.
 
 ### 17.1 출시 critical path
 

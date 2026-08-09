@@ -2,9 +2,9 @@
 
 ## 목표와 범위
 
-이 기능의 목표는 전면 카메라에서 사용자의 전신 관절을 온디바이스로 추정하고, 운동의 진행 단계·반복 횟수·지속되는 자세 오류를 실시간으로 판정하는 것이다. 운동 목록의 체크 버튼이 켜져 있고 `PoseEvaluatorFactory`에 evaluator가 등록된 운동만 자세교정 세션으로 진입한다. 현재 초기 규칙 기반 지원 운동은 `바벨 스쿼트`, `스텝 포워드 다이나믹 런지`, `스텝 백워드 다이나믹 런지` 3개다. 체크하지 않은 운동과 미지원 운동은 타이머 세션을 사용한다.
+이 기능의 목표는 전면 카메라에서 사용자의 전신 관절을 온디바이스로 추정하고, 운동의 진행 단계·반복 횟수·지속되는 자세 오류를 실시간으로 판정하는 것이다. 제품 지원 여부는 구현 클래스의 존재가 아니라 `PostureCorrectionRuntimeFacade`가 제공하는 운동별 release availability만 사용한다. 현재 41개 운동·167개 criterion binding은 모두 `CATALOG_ONLY`이고 승인된 runtime criterion은 0개이므로, 모든 자세교정 토글은 비활성화되며 세션은 타이머 모드로 실행된다.
 
-현재 evaluator는 symmetric squat / alternating lunge 관절 규칙을 위 세 운동의 런타임 프로필로 연결한 1차 구현이다. AI Hub condition 전체를 학습·보정한 최종 정확도 모델이라는 의미는 아니며, 실기기 데이터와 라벨 충돌 정제 후 계속 교체·보정해야 한다.
+과거 symmetric squat / alternating lunge 수동 규칙은 결정적 회귀 연구를 위해 module-internal 클래스로만 남아 있다. 제품 factory와 호출 경로는 제거했으며, 이 규칙의 임의 임계값·점수·문구는 화면·음성·운동 기록의 근거가 될 수 없다. 첫 사용자 기능은 별도의 Gold 보정과 runtime release authorization을 통과한 criterion만 연결한다.
 
 이 기능은 의료 진단이나 부상 위험 판정을 대신하지 않는다. 절대 거리와 관절의 실제 3D 위치를 단정하지 않고 관절각, 신체 길이 비율, 프레임 간 변화만 사용한다.
 
@@ -94,19 +94,19 @@ python tools/compile_aihub_criterion_policy.py --check
 ```mermaid
 flowchart LR
     A["CameraX Preview + ImageAnalysis"] --> B["MediaPipe Pose Landmarker"]
-    B --> C["33관절 PoseFrame"]
-    C --> D["품질 게이트 + EMA 평활"]
-    D --> E["운동별 단계 상태 머신"]
-    E --> F["반복 수 · 점수 · 오류 피드백"]
-    C --> G["미러 처리된 관절 오버레이"]
-    F --> H["Compose 세션 UI · 음성 · 진동"]
+    B --> C["attested observer · person lock · view qualifier"]
+    C --> D["signed phase · feature · criterion session"]
+    D --> E["PASS · FAIL · UNKNOWN"]
+    E --> F["runtime release authorization"]
+    F --> G["승인된 cue만 UI · 음성"]
+    H["승인 artifact 0개인 현재"] --> I["토글 비활성 · 타이머 세션"]
 ```
 
 - CameraX 분석은 640×480, `STRATEGY_KEEP_ONLY_LATEST`, 단일 분석 스레드를 사용한다. Preview와 Analysis를 같은 ViewPort로 묶고 `ImageProxy.cropRect`를 모델 입력에도 적용한다. 처리한 `ImageProxy`는 성공·실패와 관계없이 닫는다.
 - MediaPipe Full 모델은 앱 내부에서만 실행하며 원본 프레임, Bitmap, 관절 시퀀스를 파일이나 네트워크에 저장하지 않는다.
 - 모델의 해부학적 좌·우는 유지한다. 전면 카메라 미러링은 화면 오버레이에만 적용한다.
 - 카메라 계층은 SDK 타입을 공통 `PoseFrame`으로 변환한다. 판정기는 MediaPipe나 CameraX 타입을 참조하지 않는 순수 Kotlin 코드다.
-- 기존 3개 임시 evaluator도 `PoseEvaluatorConfig.coordinateSpace`에 고정된 한 좌표계만 사용한다. 선택한 domain의 관절이 없으면 다른 domain으로 fallback하지 않고 추적 실패로 처리한다. 기본 world 정책은 여전히 Gold 보정 전 legacy 설정이며, 출시 목표는 [출시 청사진](pose-correction-launch-blueprint.md)에 따라 criterion별로 승인된 domain만 사용하는 것이다.
+- 내부 회귀용 임시 evaluator도 `PoseEvaluatorConfig.coordinateSpace`에 고정된 한 좌표계만 사용한다. 선택한 domain의 관절이 없으면 다른 domain으로 fallback하지 않고 추적 실패로 처리하지만, 기본 world 정책은 Gold 보정 전 legacy 설정이므로 제품 availability나 사용자 판정 권한을 갖지 않는다.
 
 ### 검증 판정 코어
 
@@ -120,7 +120,7 @@ flowchart LR
 - calibration/capability/evidence가 부족하거나 허용 경계와 오차구간이 겹치면 `UNKNOWN`이며, 정상으로 대체하지 않는다.
 - 품질이 거의 0인 한 프레임이 극값 판정을 지배하지 않도록 raw minimum/maximum 집계는 제공하지 않는다.
 
-이 코어는 아직 기존 3개 evaluator의 점수·음성 cue에 연결하지 않았다. AI Hub 이미지 replay와 전문가 Gold에서 criterion별 target/calibration contract가 생성되기 전까지 임의 임계값을 새 엔진에 넣지 않는 것이 의도된 안전 경계다.
+이 코어는 사용자 점수·음성 cue에 연결하지 않았다. AI Hub replay와 독립 Gold에서 criterion별 target/calibration contract가 생성되고 release authorization까지 검증되기 전에는 임의 임계값을 새 엔진에 넣지 않는 것이 의도된 안전 경계다.
 
 ### 좌표·phase·criterion graph 런타임 뼈대
 
@@ -135,7 +135,7 @@ flowchart LR
 - `PoseObservationContract`은 model bytes, preprocessing, landmark schema, 좌표 domain, phase view, person-lock와 view-qualifier artifact를 내용 해시로 고정한다. raw `PoseFrame`이나 호출자가 만든 capability set은 cue 증거가 아니며, 같은 observer source가 발급한 opaque person epoch와 프레임별 view qualification이 붙은 observation만 세션이 받는다.
 - `PoseExerciseEvaluationSession`은 서명된 최대 phase 시간과 별도의 2,048-frame hard cap 안에서 ring을 소유하고 dwell 확인으로 늦게 확정된 경계를 `[start,end)` 구간으로 재분배한다. 사람 lock 상실·epoch 변경은 confidence grace 없이 즉시 reset하고, view가 맞지 않는 phase 관측은 unusable로 처리한다. 중복 timestamp·buffer overflow·reset·불완전 cycle은 판정에서 폐기하며, 모든 cue criterion의 정확한 aggregate calibration이 있을 때만 완전한 cycle graph를 합성한다.
 
-기존 스쿼트·런지 evaluator의 네 개 큰 관절각과 stance ratio도 새 공통 feature primitive로 계산하도록 교체해 기존 반복 회귀 테스트와 새 엔진이 같은 수학 경로를 사용한다. 운동별 필수 guard가 퇴화하면 추적 실패로 중단하며 null을 좋은 자세 점수로 대체하지 않는다. 다만 기존 임시 점수·문구는 아직 Gold 보정된 새 `ExerciseSpec`으로 승격된 것이 아니다. 현재 signed spec/session과 observation source는 module-internal scaffold이며, 실제 candidate observer가 model/config bytes를 검증해 attestation을 발급하는 factory와 승인 SHA allowlist/서명 loader는 아직 연결하지 않았다.
+내부 스쿼트·런지 회귀 evaluator의 네 개 큰 관절각과 stance ratio도 새 공통 feature primitive로 계산해 수학 경로를 비교할 수 있다. 그러나 제품 factory는 제거했고 `PostureCorrectionRuntimeFacade`의 app-bundled allowlist는 정책 SHA에 묶인 0-entry 상태다. 이 empty artifact hash는 drift 탐지용이지 서명이 아니다. 현재 signed spec/session과 observation source는 module-internal scaffold이며, 실제 candidate observer factory와 detached signature·pinned public-key release loader가 구현되기 전에는 non-empty allowlist를 허용하지 않는다.
 
 ## 프레임 처리 알고리즘
 

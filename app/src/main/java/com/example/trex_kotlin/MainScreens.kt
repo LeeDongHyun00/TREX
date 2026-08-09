@@ -91,7 +91,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import com.example.trex_kotlin.catalog.AiHubExercise
-import com.example.trex_kotlin.pose.PoseEvaluatorFactory
+import com.example.trex_kotlin.pose.release.PostureCorrectionLifecycle
+import com.example.trex_kotlin.pose.release.PostureCorrectionRuntimeFacade
 import java.util.Calendar
 import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
@@ -1029,7 +1030,18 @@ private fun WorkoutRow(
     onReplace: () -> Unit,
     onPostureToggle: () -> Unit,
 ) {
-    val postureSupported = PoseEvaluatorFactory.supports(workout.exercise)
+    val postureAvailability = PostureCorrectionRuntimeFacade.availability(workout.exercise)
+    val postureSupported = postureAvailability.sessionOpenAllowed
+    val postureAvailabilityLabel = when (postureAvailability.lifecycle) {
+        PostureCorrectionLifecycle.UNSUPPORTED -> "자세 교정 미지원"
+        PostureCorrectionLifecycle.CATALOG_ONLY ->
+            "자세 기준 검증 중 · ${postureAvailability.catalogCriterionCount}개"
+        PostureCorrectionLifecycle.SHADOW -> "자세 평가 내부 검증 중"
+        PostureCorrectionLifecycle.OPT_IN_BETA ->
+            "자세 교정 베타 · ${postureAvailability.releasedCriterionCount}/${postureAvailability.catalogCriterionCount}"
+        PostureCorrectionLifecycle.GA ->
+            "자세 교정 사용 · ${postureAvailability.releasedCriterionCount}/${postureAvailability.catalogCriterionCount}"
+    }
     Surface(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
@@ -1058,6 +1070,7 @@ private fun WorkoutRow(
                 PostureCorrectionCheck(
                     checked = workout.posture,
                     enabled = postureSupported,
+                    label = postureAvailabilityLabel,
                     onClick = onPostureToggle,
                     modifier = Modifier.padding(top = 9.dp),
                 )
@@ -2064,6 +2077,7 @@ private fun SmallSquareButton(
 private fun PostureCorrectionCheck(
     checked: Boolean,
     enabled: Boolean,
+    label: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -2113,7 +2127,7 @@ private fun PostureCorrectionCheck(
                 }
             }
             Text(
-                text = if (enabled) "자세 교정 사용" else "자세 교정 미지원",
+                text = label,
                 color = foregroundColor,
                 fontSize = 11.sp,
                 fontWeight = FontWeight.SemiBold,

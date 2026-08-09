@@ -1,17 +1,12 @@
 package com.example.trex_kotlin
 
-import android.Manifest
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
-import android.content.pm.PackageManager
 import android.media.AudioManager
 import android.media.ToneGenerator
-import android.os.SystemClock
 import android.speech.tts.TextToSpeech
 import android.view.WindowManager
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
@@ -89,29 +84,19 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.example.trex_kotlin.camera.PoseCameraError
 import com.example.trex_kotlin.camera.PoseCameraPreview
 import com.example.trex_kotlin.camera.PoseCameraStatus
-import com.example.trex_kotlin.pose.Evaluation
-import com.example.trex_kotlin.pose.PoseEvaluatorFactory
 import com.example.trex_kotlin.pose.PoseFeedback
-import com.example.trex_kotlin.pose.PoseFeedbackCode
-import com.example.trex_kotlin.pose.PoseFeedbackDebouncer
 import com.example.trex_kotlin.pose.PoseFrame
 import com.example.trex_kotlin.pose.PoseJoint
-import com.example.trex_kotlin.pose.PoseTrackingState
+import com.example.trex_kotlin.pose.release.PostureCorrectionLifecycle
+import com.example.trex_kotlin.pose.release.PostureCorrectionRuntimeFacade
 import java.util.Locale
 import kotlinx.coroutines.delay
-
-private enum class CameraPermissionState {
-    Requesting,
-    Granted,
-    Denied,
-}
 
 private enum class PosturePhase {
     CameraCheck,
@@ -325,337 +310,30 @@ fun PostureSessionScreen(
     total: Int,
     nextWorkout: Workout?,
     elapsedSeconds: Int,
-    onCameraDenied: () -> Unit,
     onPausedChange: (Boolean) -> Unit = {},
     onNext: () -> Unit,
     onExit: () -> Unit,
 ) {
-    if (!workout.canUsePostureSession()) {
-        TimerSessionScreen(
-            workout = workout.withPostureCorrection(false),
-            index = index,
-            total = total,
-            nextWorkout = nextWorkout,
-            elapsedSeconds = elapsedSeconds,
-            notice = "이 운동은 검증된 실시간 자세 평가를 지원하지 않아 타이머 모드로 실행해요.",
-            onPausedChange = onPausedChange,
-            onNext = onNext,
-            onExit = onExit,
-        )
-        return
+    val availability = PostureCorrectionRuntimeFacade.availability(workout.exercise)
+    val notice = when (availability.lifecycle) {
+        PostureCorrectionLifecycle.CATALOG_ONLY ->
+            "AI Hub 자세 기준 ${availability.catalogCriterionCount}개를 검증 중이라 타이머 모드로 실행해요."
+        PostureCorrectionLifecycle.SHADOW ->
+            "자세 평가를 내부 검증 중이라 사용자 피드백 없이 타이머 모드로 실행해요."
+        else ->
+            "이 운동은 검증된 실시간 자세 평가를 지원하지 않아 타이머 모드로 실행해요."
     }
-
-    KeepScreenOn()
-
-    val context = LocalContext.current
-    val spec = remember(workout.id) { workout.exerciseSpec() }
-    val lifecyclePaused = rememberTrexLifecyclePaused()
-    val haptic = LocalHapticFeedback.current
-    var permissionState by remember(workout.id) {
-        mutableStateOf(
-            if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
-                CameraPermissionState.Granted
-            } else {
-                CameraPermissionState.Requesting
-            },
-        )
-    }
-    val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        permissionState = if (granted) CameraPermissionState.Granted else CameraPermissionState.Denied
-    }
-    var fallbackSent by remember(workout.id) { mutableStateOf(false) }
-
-    LaunchedEffect(permissionState) {
-        when (permissionState) {
-            CameraPermissionState.Requesting -> permissionLauncher.launch(Manifest.permission.CAMERA)
-            CameraPermissionState.Denied -> {
-                if (!fallbackSent) {
-                    fallbackSent = true
-                    onCameraDenied()
-                }
-            }
-
-            CameraPermissionState.Granted -> Unit
-        }
-    }
-
-    if (permissionState != CameraPermissionState.Granted) {
-        CameraPermissionWarmupScreen(
-            denied = permissionState == CameraPermissionState.Denied,
-            onExit = onExit,
-        )
-        return
-    }
-
-    var muted by remember(workout.id) { mutableStateOf(false) }
-    val feedback = rememberWorkoutFeedback(muted = muted)
-    var phase by remember(workout.id) { mutableStateOf(PosturePhase.CameraCheck) }
-    var currentSet by remember(workout.id) { mutableIntStateOf(1) }
-    val poseEvaluator = remember(workout.id, currentSet) {
-        PoseEvaluatorFactory.create(workout.exercise)
-    }
-    val poseFeedbackDebouncer = remember(workout.id, currentSet) { PoseFeedbackDebouncer() }
-    var poseFrame by remember(workout.id, currentSet) { mutableStateOf<PoseFrame?>(null) }
-    var poseEvaluation by remember(workout.id, currentSet) { mutableStateOf<Evaluation?>(null) }
-    var cameraStatus by remember(workout.id) { mutableStateOf(PoseCameraStatus.Initializing) }
-    var cameraError by remember(workout.id) { mutableStateOf<PoseCameraError?>(null) }
-    var lastPoseFrameRealtimeMs by remember(workout.id, currentSet) { mutableLongStateOf(0L) }
-    var poseStreamFresh by remember(workout.id, currentSet) { mutableStateOf(false) }
-    var stableTrackingFrames by remember(workout.id, currentSet) { mutableIntStateOf(0) }
-    var countdown by remember(workout.id, currentSet) { mutableIntStateOf(3) }
-    var stabilizeSeconds by remember(workout.id, currentSet) { mutableIntStateOf(3) }
-    var scanStep by remember(workout.id) { mutableIntStateOf(0) }
-    var restSeconds by remember(workout.id) { mutableIntStateOf(spec.restSeconds) }
-    var paused by remember(workout.id) { mutableStateOf(false) }
-    var setScores by remember(workout.id) { mutableStateOf<List<Int>>(emptyList()) }
-    var onboardingVisible by remember(workout.id) { mutableStateOf(true) }
-    var lastAnnouncedRep by remember(workout.id, currentSet) { mutableIntStateOf(0) }
-    val currentRep = poseEvaluation?.repCount ?: 0
-    val postureScore = poseEvaluation?.score
-    val trackingRequired = phase != PosturePhase.Rest && phase != PosturePhase.SetComplete
-    val trackingLost = trackingRequired && (
-        cameraStatus != PoseCameraStatus.Ready ||
-            !poseStreamFresh ||
-            poseEvaluation?.trackingState != PoseTrackingState.TRACKING
-        )
-    val primaryPoseFeedback = poseEvaluation?.feedback
-        ?.filterNot { it.code == PoseFeedbackCode.REP_COMPLETE }
-        ?.maxByOrNull { it.severity.ordinal }
-    val blocked = paused || lifecyclePaused || trackingLost || onboardingVisible
-    val pauseState = rememberUpdatedState(blocked)
-
-    LaunchedEffect(blocked) {
-        onPausedChange(blocked)
-    }
-    DisposableEffect(Unit) {
-        onDispose { onPausedChange(false) }
-    }
-
-    LaunchedEffect(cameraStatus, phase, workout.id, currentSet) {
-        if (cameraStatus != PoseCameraStatus.Ready || !trackingRequired) {
-            poseStreamFresh = false
-            return@LaunchedEffect
-        }
-        while (true) {
-            poseStreamFresh = lastPoseFrameRealtimeMs > 0L &&
-                SystemClock.elapsedRealtime() - lastPoseFrameRealtimeMs <= POSE_FRAME_STALE_AFTER_MS
-            delay(POSE_FRAME_FRESHNESS_POLL_MS)
-        }
-    }
-
-    LaunchedEffect(paused, lifecyclePaused, workout.id, currentSet) {
-        if (paused || lifecyclePaused) {
-            poseEvaluator?.interrupt()
-            poseFeedbackDebouncer.reset()
-            stableTrackingFrames = 0
-        }
-    }
-
-    LaunchedEffect(phase, currentSet, workout.id) {
-        if (phase == PosturePhase.CameraCheck) {
-            feedback.speak("전신이 화면 안에 들어오도록 서 주세요")
-            scanStep = 0
-        }
-    }
-
-    LaunchedEffect(phase, stableTrackingFrames, onboardingVisible, workout.id) {
-        if (
-            phase == PosturePhase.CameraCheck &&
-            !onboardingVisible &&
-            stableTrackingFrames >= CAMERA_READY_FRAME_COUNT
-        ) {
-            scanStep = 2
-            phase = PosturePhase.Stabilizing
-        }
-    }
-
-    LaunchedEffect(phase, currentSet, workout.id) {
-        if (phase == PosturePhase.Stabilizing) {
-            feedback.speak("준비 자세를 유지해 주세요")
-            for (value in 3 downTo 1) {
-                stabilizeSeconds = value
-                waitOneSecond { pauseState.value }
-            }
-            phase = PosturePhase.Countdown
-        }
-    }
-
-    LaunchedEffect(phase, currentSet, workout.id) {
-        if (phase == PosturePhase.Countdown) {
-            for (value in 3 downTo 1) {
-                countdown = value
-                feedback.beep()
-                waitOneSecond { pauseState.value }
-            }
-            phase = PosturePhase.Active
-        }
-    }
-
-    LaunchedEffect(phase, currentSet, workout.id) {
-        if (phase == PosturePhase.Active) {
-            poseEvaluator?.reset()
-            poseFeedbackDebouncer.reset()
-            poseEvaluation = null
-            lastAnnouncedRep = 0
-            feedback.speak("${workout.name} ${currentSet}세트를 시작합니다")
-        }
-    }
-
-    LaunchedEffect(currentRep, phase, currentSet) {
-        if (phase == PosturePhase.Active && currentRep > lastAnnouncedRep) {
-            lastAnnouncedRep = currentRep
-            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-            if (currentRep >= spec.targetReps) {
-                setScores = setScores + (postureScore ?: poseEvaluation?.lastRepScore ?: 0)
-                feedback.speak("${currentSet}세트 완료")
-                phase = PosturePhase.SetComplete
-            }
-        }
-    }
-
-    LaunchedEffect(phase, currentSet, workout.id) {
-        if (phase == PosturePhase.Rest) {
-            while (restSeconds > 0) {
-                waitOneSecond { pauseState.value }
-                restSeconds -= 1
-                if (restSeconds in 1..10) {
-                    feedback.beep()
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                }
-            }
-            if (currentSet >= spec.totalSets) {
-                onNext()
-            } else {
-                currentSet += 1
-                scanStep = 2
-                countdown = 3
-                phase = PosturePhase.Countdown
-            }
-        }
-    }
-
-    fun beginRestAfterSet() {
-        if (currentSet >= spec.totalSets && nextWorkout == null) {
-            onNext()
-        } else {
-            restSeconds = spec.restSeconds
-            phase = PosturePhase.Rest
-        }
-    }
-
-    fun consumePoseFrame(frame: PoseFrame) {
-        poseFrame = frame
-        cameraError = null
-        lastPoseFrameRealtimeMs = SystemClock.elapsedRealtime()
-        poseStreamFresh = true
-        if (paused || lifecyclePaused || phase == PosturePhase.Rest || phase == PosturePhase.SetComplete) {
-            return
-        }
-
-        val nextEvaluation = poseEvaluator?.accept(frame) ?: return
-        poseEvaluation = nextEvaluation
-        if (phase == PosturePhase.Active) {
-            val voiceCandidate = nextEvaluation.feedback
-                .filterNot { it.code == PoseFeedbackCode.REP_COMPLETE }
-                .maxByOrNull { it.severity.ordinal }
-            poseFeedbackDebouncer.update(voiceCandidate, frame.timestampMs)?.let { cue ->
-                feedback.speak(cue.message)
-            }
-        } else {
-            // 준비 화면에서는 품질 게이트만 사용하고 운동 단계/반복 수는 누적하지 않는다.
-            poseEvaluator.reset()
-            poseFeedbackDebouncer.reset()
-        }
-        if (nextEvaluation.trackingState == PoseTrackingState.TRACKING) {
-            stableTrackingFrames = (stableTrackingFrames + 1).coerceAtMost(CAMERA_READY_FRAME_COUNT)
-            scanStep = when {
-                stableTrackingFrames >= CAMERA_READY_FRAME_COUNT -> 2
-                stableTrackingFrames >= CAMERA_READY_FRAME_COUNT / 2 -> 1
-                else -> 0
-            }
-        } else {
-            stableTrackingFrames = 0
-            if (phase == PosturePhase.CameraCheck) scanStep = 0
-        }
-    }
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black),
-    ) {
-        when (phase) {
-            PosturePhase.Rest -> RestScreen(
-                workout = workout,
-                nextWorkout = nextWorkout,
-                currentSet = currentSet,
-                totalSets = spec.totalSets,
-                restSeconds = restSeconds,
-                restTotal = spec.restSeconds,
-                elapsedSeconds = elapsedSeconds,
-                muted = muted,
-                paused = paused || lifecyclePaused,
-                onToggleMute = { muted = !muted },
-                onTogglePause = { paused = !paused },
-                onSkip = onNext,
-            )
-
-            else -> PostureActiveScaffold(
-                workout = workout,
-                spec = spec,
-                index = index,
-                total = total,
-                currentSet = currentSet,
-                currentRep = currentRep,
-                countdown = countdown,
-                stabilizeSeconds = stabilizeSeconds,
-                scanStep = scanStep,
-                phase = phase,
-                trackingLost = trackingLost,
-                postureScore = postureScore,
-                setScores = setScores,
-                elapsedSeconds = elapsedSeconds,
-                muted = muted,
-                paused = paused || lifecyclePaused,
-                poseFrame = poseFrame,
-                poseFeedback = primaryPoseFeedback,
-                cameraStatus = cameraStatus,
-                cameraError = cameraError,
-                onPoseFrame = ::consumePoseFrame,
-                onCameraError = { cameraError = it },
-                onCameraStatusChanged = { status ->
-                    cameraStatus = status
-                    if (status == PoseCameraStatus.Ready) cameraError = null
-                    if (status == PoseCameraStatus.Stopped) {
-                        poseFrame = null
-                        poseStreamFresh = false
-                    }
-                },
-                onToggleMute = { muted = !muted },
-                onTogglePause = { paused = !paused },
-                onSkip = onNext,
-                onExit = onExit,
-            )
-        }
-
-        if (phase == PosturePhase.SetComplete) {
-            PostureSetCompleteDialog(
-                set = currentSet,
-                totalSets = spec.totalSets,
-                score = postureScore ?: setScores.lastOrNull() ?: 0,
-                nextWorkout = nextWorkout,
-                isLastSet = currentSet >= spec.totalSets,
-                onContinue = ::beginRestAfterSet,
-            )
-        }
-
-        if (onboardingVisible) {
-            SessionOnboardingOverlay(
-                postureMode = true,
-                onDone = { onboardingVisible = false },
-            )
-        }
-    }
+    TimerSessionScreen(
+        workout = workout.withPostureCorrection(false),
+        index = index,
+        total = total,
+        nextWorkout = nextWorkout,
+        elapsedSeconds = elapsedSeconds,
+        notice = notice,
+        onPausedChange = onPausedChange,
+        onNext = onNext,
+        onExit = onExit,
+    )
 }
 
 @Composable
@@ -685,11 +363,11 @@ fun SessionCompleteScreen(onDone: () -> Unit) {
             modifier = Modifier.padding(top = 22.dp),
         )
         ScreenTitle(
-            text = "오늘도 정확하게 끝냈어룡",
+            text = "오늘 운동을 끝냈어룡",
             color = Color.White,
         )
         Text(
-            text = "세트 기록과 자세 점수가 저장되었어요. 내일 같은 시간에 만나요.",
+            text = "오늘 완료한 운동을 기록에 반영했어요. 내일 같은 시간에 만나요.",
             color = Color.White.copy(alpha = 0.62f),
             fontSize = 12.sp,
             lineHeight = 18.sp,
@@ -854,7 +532,7 @@ private fun PostureActiveScaffold(
         phase == PosturePhase.CameraCheck -> "주요 관절 감지 중"
         phase == PosturePhase.Stabilizing -> "준비 자세 유지"
         phase == PosturePhase.Countdown -> "곧 시작합니다"
-        phase == PosturePhase.Active -> poseFeedback?.message ?: "좋아요. 동작을 이어가세요"
+        phase == PosturePhase.Active -> poseFeedback?.message ?: "동작을 확인하고 있어요."
         else -> "세트 완료"
     }
 
@@ -1121,7 +799,7 @@ private fun ActualCountDialog(
 private fun PostureSetCompleteDialog(
     set: Int,
     totalSets: Int,
-    score: Int,
+    score: Int?,
     nextWorkout: Workout?,
     isLastSet: Boolean,
     onContinue: () -> Unit,
@@ -1152,7 +830,11 @@ private fun PostureSetCompleteDialog(
                     } else if (isLastSet) {
                         "휴식 후 ${nextWorkout?.name.orEmpty()}으로 이동해요."
                     } else {
-                        "세트 점수가 기록되었어요. 휴식 후 다음 세트로 이어가요."
+                        if (score == null) {
+                            "검증된 자세 점수 없이 세트만 완료했어요. 휴식 후 이어가요."
+                        } else {
+                            "세트 점수가 기록되었어요. 휴식 후 다음 세트로 이어가요."
+                        }
                     },
                     color = Color.White.copy(alpha = 0.64f),
                     fontSize = 12.sp,

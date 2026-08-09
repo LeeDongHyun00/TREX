@@ -1,6 +1,5 @@
 package com.example.trex_kotlin.pose
 
-import com.example.trex_kotlin.catalog.AiHubExercise
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
@@ -390,26 +389,6 @@ class PoseExerciseEvaluatorTest {
         assertEquals(1, result.repCount)
         assertEquals(PosePhase.SEEKING, result.phase)
         assertNotNull(result.score)
-    }
-
-    @Test
-    fun factoryCreatesOnlyExplicitlySupportedAiHubEvaluators() {
-        assertEquals(
-            setOf(
-                AiHubExercise.BARBELL_SQUAT,
-                AiHubExercise.STEP_FORWARD_DYNAMIC_LUNGE,
-                AiHubExercise.STEP_BACKWARD_DYNAMIC_LUNGE,
-            ),
-            PoseEvaluatorFactory.supportedExercises,
-        )
-        assertTrue(PoseEvaluatorFactory.create(AiHubExercise.BARBELL_SQUAT) is SymmetricSquatMotionEvaluator)
-        assertTrue(
-            PoseEvaluatorFactory.create(AiHubExercise.STEP_FORWARD_DYNAMIC_LUNGE) is AlternatingLungeMotionEvaluator,
-        )
-        assertTrue(
-            PoseEvaluatorFactory.create(AiHubExercise.STEP_BACKWARD_DYNAMIC_LUNGE) is AlternatingLungeMotionEvaluator,
-        )
-        assertEquals(null, PoseEvaluatorFactory.create(AiHubExercise.PLANK))
     }
 
     private fun poseFrame(

@@ -118,13 +118,6 @@ fun TrexApp() {
         selectedTab = TrexTab.Home
     }
 
-    fun fallbackToTimerSession(id: String) {
-        workoutPlan = workoutPlan.map { workout ->
-            if (workout.id == id) workout.withPostureCorrection(false) else workout
-        }
-        sessionNotice = "카메라 권한이 거부되어 자세 교정 OFF 모드로 전환했어요."
-    }
-
     LaunchedEffect(sessionIndex, sessionDone) {
         while (sessionIndex >= 0 && !sessionDone) {
             delay(1000)
@@ -167,7 +160,6 @@ fun TrexApp() {
                             total = workoutPlan.size,
                             nextWorkout = nextWorkout,
                             elapsedSeconds = sessionElapsedSeconds,
-                            onCameraDenied = { fallbackToTimerSession(workout.id) },
                             onPausedChange = { sessionPaused = it },
                             onNext = ::advanceSession,
                             onExit = ::exitSession,

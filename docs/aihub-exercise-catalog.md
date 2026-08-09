@@ -63,8 +63,8 @@ generator는 2D JSON의 큰 `frames`를 로드하지 않고 파일 끝의 루트
 
 사용자 운동 카드, 오늘 계획, 대체 운동, 운동 추가 시트는 모두 `AiHubExercise`에서 이름과 ID를 얻는다. 사용자가 임의 운동명으로 catalog identity를 바꿀 수 없다.
 
-사용자 운동 목록은 각 운동마다 자세교정 사용 여부를 체크할 수 있다. 체크 값이 켜져 있고 `PoseEvaluatorFactory`에 evaluator가 등록된 경우에만 카메라 자세교정 세션으로 진입한다. 현재 등록된 초기 규칙 기반 운동은 `바벨 스쿼트`, `스텝 포워드 다이나믹 런지`, `스텝 백워드 다이나믹 런지` 3개이며, 나머지 운동의 체크 UI는 미지원 상태로 비활성화된다.
+사용자 운동 목록은 `PostureCorrectionRuntimeFacade`가 계산한 운동별 lifecycle과 `released/catalog criterion` 수만 제품 지원 근거로 사용한다. 현재 41개 운동·167개 binding은 모두 `CATALOG_ONLY`, released criterion은 0개이므로 모든 체크 UI가 “자세 기준 검증 중”으로 비활성화되고 타이머 세션으로 진입한다.
 
-이 매핑은 기존 symmetric squat / alternating lunge 관절 규칙을 실제 세션에서 사용할 수 있게 한 1차 런타임 구현이다. AI Hub 조건 전체로 정확도를 검증한 최종 모델은 아니므로, 향후 데이터 기반 evaluator가 완성되면 factory의 정확한 `AiHubExercise` 항목만 교체하거나 추가한다.
+과거 symmetric squat / alternating lunge 수동 규칙은 app main source에서 제거하고 단위 테스트 fixture로만 이동했다. 향후 데이터 기반 evaluator가 완성되어도 구현 클래스나 운동 ID만으로 활성화하지 않는다. exact binding policy, Gold calibration, observation/view/person-lock contract, exercise spec, cue content를 묶은 별도 release authorization이 검증된 항목만 facade에 추가한다.
 
 루트 `data/`는 Android source set 밖이며 `.gitignore`에서 제외된다. 앱에는 원본 JSON/JPG/3D corpus나 563KB 감사 artifact가 패키징되지 않는다.
