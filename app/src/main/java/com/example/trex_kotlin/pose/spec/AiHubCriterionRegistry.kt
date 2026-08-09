@@ -146,6 +146,7 @@ class AiHubExerciseCriterionCoverage internal constructor(
     criteria: List<AiHubCriterionDefinition>,
     typeTruthRows: List<AiHubTypeConditionTruth>,
     approvedCoverageSha256: String,
+    approvedPolicySha256: String,
 ) {
     val criteria: List<AiHubCriterionDefinition> = immutableList(criteria)
     val typeTruthRows: List<AiHubTypeConditionTruth> = immutableList(typeTruthRows)
@@ -153,6 +154,7 @@ class AiHubExerciseCriterionCoverage internal constructor(
     private val criteriaBySemanticId: Map<String, AiHubCriterionDefinition>
     private val typeTruthByCode: Map<String, AiHubTypeConditionTruth>
     val coverageSha256: String
+    val policySha256: String
 
     val semanticIds: Set<String>
         get() = criteriaBySemanticId.keys
@@ -220,6 +222,18 @@ class AiHubExerciseCriterionCoverage internal constructor(
         require(coverageSha256 == approvedCoverageSha256) {
             "AI Hub criterion truth coverage differs from the independently approved source pin"
         }
+        policySha256 = aiHubPolicySha256(
+            exercise = exercise,
+            provenance = provenance,
+            sourceCoverageSha256 = coverageSha256,
+            criteria = this.criteria,
+        )
+        require(AI_HUB_SHA256.matches(approvedPolicySha256)) {
+            "approvedPolicySha256 must be a lowercase SHA-256"
+        }
+        require(policySha256 == approvedPolicySha256) {
+            "AI Hub criterion policy differs from the independently approved policy pin"
+        }
     }
 
     fun criterion(semanticId: String): AiHubCriterionDefinition? =
@@ -243,6 +257,8 @@ object AiHubCriterionRegistry {
         "fe4e3075a00212293c9ffd3df8f007bc3666e17af2526de3a8d570d052a4e29c"
     const val BARBELL_SQUAT_APPROVED_COVERAGE_SHA256: String =
         "1f6ab0ea0981c6d1ef693ace7e72608a2e9af363b4b52f789a1749f92dae9cb5"
+    const val BARBELL_SQUAT_APPROVED_POLICY_SHA256: String =
+        "e959ea6731c59a81b06e009a044d18f95417c62d142dfef40c2f21b911f0f1c0"
 
     const val SPINE_NEUTRAL_ID: String = "aihub.condition.spine-neutral.v1"
     const val HEAD_FACING_FORWARD_ID: String = "aihub.condition.head-facing-forward.v1"
@@ -368,6 +384,7 @@ object AiHubCriterionRegistry {
             barbellSquatTypeTruth("328", "0000"),
         ),
         approvedCoverageSha256 = BARBELL_SQUAT_APPROVED_COVERAGE_SHA256,
+        approvedPolicySha256 = BARBELL_SQUAT_APPROVED_POLICY_SHA256,
     )
 
     private val coverages: List<AiHubExerciseCriterionCoverage> =
@@ -431,6 +448,64 @@ internal fun aiHubCoverageSha256(
                 null -> "?"
             }
         }
+    }
+    return canonicalFieldsSha256(fields)
+}
+
+/**
+ * Fingerprints human-reviewed interpretation and release policy independently from source truth.
+ *
+ * A stable AI Hub truth table must not authorize a changed observability claim, view, phase,
+ * capability, side, release state, or user-facing limitation. Any such change requires an
+ * independently reviewed policy pin even when [aiHubCoverageSha256] remains unchanged.
+ */
+internal fun aiHubPolicySha256(
+    exercise: AiHubExercise,
+    provenance: AiHubCriterionSourceProvenance,
+    sourceCoverageSha256: String,
+    criteria: List<AiHubCriterionDefinition>,
+): String {
+    val fields = mutableListOf(
+        "policySchemaVersion" to "1",
+        "exerciseId" to exercise.id,
+        "catalogArtifactPath" to provenance.catalogArtifactPath,
+        "catalogSha256" to provenance.catalogSha256,
+        "catalogSchemaVersion" to provenance.catalogSchemaVersion.toString(),
+        "sourceExerciseName" to provenance.sourceExerciseName,
+        "sourceTypeInfoType" to provenance.sourceTypeInfoType,
+        "sourceRecordCount" to provenance.sourceRecordCount.toString(),
+        "sourceCoverageSha256" to sourceCoverageSha256,
+        "criterionCount" to criteria.size.toString(),
+    )
+    criteria.forEachIndexed { index, criterion ->
+        val prefix = "criterion[$index]"
+        fields += "$prefix.semanticId" to criterion.semanticId
+        fields += "$prefix.sourceCondition" to criterion.sourceCondition
+        fields += "$prefix.observability" to criterion.observability.name
+        fields += "$prefix.requiredCapabilityCount" to criterion.requiredCapabilities.size.toString()
+        criterion.requiredCapabilities
+            .map(CriterionCapability::name)
+            .sorted()
+            .forEachIndexed { capabilityIndex, capability ->
+                fields += "$prefix.requiredCapability[$capabilityIndex]" to capability
+            }
+        fields += "$prefix.eligiblePhaseCount" to criterion.eligiblePhases.size.toString()
+        criterion.eligiblePhases
+            .map(AiHubCriterionPhase::name)
+            .sorted()
+            .forEachIndexed { phaseIndex, phase ->
+                fields += "$prefix.eligiblePhase[$phaseIndex]" to phase
+            }
+        fields += "$prefix.sideScope" to criterion.sideScope.name
+        fields += "$prefix.eligibleViewCount" to criterion.eligibleViews.size.toString()
+        criterion.eligibleViews
+            .map(AiHubCriterionView::name)
+            .sorted()
+            .forEachIndexed { viewIndex, view ->
+                fields += "$prefix.eligibleView[$viewIndex]" to view
+            }
+        fields += "$prefix.releaseState" to criterion.releaseState.name
+        fields += "$prefix.unsupportedReason" to criterion.unsupportedReason
     }
     return canonicalFieldsSha256(fields)
 }

@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "entries": [
+    {
+      "exerciseId": "burpee-test",
+      "typeCode": "062",
+      "state": "QUARANTINED_PENDING_BLIND_GOLD",
+      "reasonCodes": [
+        "SOURCE_DESCRIPTION_TRUTH_VECTOR_CONFLICT"
+      ],
+      "evidenceRefs": [
+        "docs/aihub-exercise-catalog.md#조건-vector-사용-경고"
+      ]
+    },
+    {
+      "exerciseId": "step-forward-dynamic-lunge",
+      "typeCode": "101",
+      "state": "QUARANTINED_PENDING_BLIND_GOLD",
+      "reasonCodes": [
+        "SOURCE_DESCRIPTION_TRUTH_VECTOR_CONFLICT"
+      ],
+      "evidenceRefs": [
+        "docs/aihub-exercise-catalog.md#조건-vector-사용-경고"
+      ]
+    },
+    {
+      "exerciseId": "step-forward-dynamic-lunge",
+      "typeCode": "109",
+      "state": "QUARANTINED_PENDING_BLIND_GOLD",
+      "reasonCodes": [
+        "SOURCE_DESCRIPTION_TRUTH_VECTOR_CONFLICT"
+      ],
+      "evidenceRefs": [
+        "docs/aihub-exercise-catalog.md#조건-vector-사용-경고"
+      ]
+    }
+  ]
+}

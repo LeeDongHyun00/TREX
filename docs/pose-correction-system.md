@@ -50,6 +50,21 @@
 
 바벨 스쿼트 16개 condition 조합은 균형적이지만, 런지는 type 수보다 고유 truth vector가 훨씬 적고 type 101·109처럼 설명과 condition vector가 충돌하는 오라벨이 확인됐다. 런지 학습 전에는 description 기반 override catalog가 필요하다.
 
+### 41개 운동 criterion source coverage
+
+`generate_aihub_criterion_coverage.py`는 Training의 authoritative 2D JSON 34,468개 metadata를 전수 감사한다. 생성 결과는 41개 운동, 816개 type, exact normalized condition 97개, 운동-condition 할당 167개를 모두 보존한다. 또한 같은 truth vector를 공유하는 15개 운동·55개 충돌 그룹·104개 excess type과, description-condition 충돌이 확인된 type `062`, `101`, `109`의 153개 record를 명시적으로 분리한다.
+
+```powershell
+python tools/generate_aihub_criterion_coverage.py `
+  "data\013.피트니스자세\1.Training\라벨링데이터" `
+  --check
+```
+
+- `docs/aihub-criterion-coverage.json`은 raw condition spelling, type별 truth vector, record count, collision/quarantine 및 metadata provenance를 보존한다. frame 좌표·이미지·3D JSON은 포함하지 않는다.
+- 생성된 `AiHubCriterionSourceCatalog`는 동일 내용을 앱이 읽을 수 있는 compact immutable Kotlin 레지스트리로 제공한다. 조건 문자열 SHA, type 순서, truth-vector 충돌 선언, 전체 개수와 catalog SHA를 초기화 시 재검증한다.
+- 이 레지스트리는 **source truth inventory**일 뿐이다. feature, phase, threshold, calibration, view/capability policy 또는 cue 문구가 없으며 어떤 운동도 사용자 `PASS/FAIL`이나 교정 cue로 자동 승격하지 않는다.
+- 사람의 관측가능성 해석과 출시 정책은 source coverage SHA와 별도의 policy SHA로 고정한다. 따라서 AI Hub truth가 그대로여도 proxy 범위·필요 센서·phase·view·좌우 역할·release state가 바뀌면 독립 검토가 필요하다.
+
 ## 기기 런타임 구조
 
 현재 앱은 공식 `pose_landmarker_full.task` float16 번들을 `app/src/main/assets/`에 포함한다.

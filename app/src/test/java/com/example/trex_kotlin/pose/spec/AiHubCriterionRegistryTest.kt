@@ -44,6 +44,14 @@ class AiHubCriterionRegistryTest {
             AiHubCriterionRegistry.BARBELL_SQUAT_APPROVED_COVERAGE_SHA256,
             coverage.coverageSha256,
         )
+        assertEquals(
+            AiHubCriterionRegistry.BARBELL_SQUAT_APPROVED_POLICY_SHA256,
+            coverage.policySha256,
+        )
+        assertEquals(
+            "e959ea6731c59a81b06e009a044d18f95417c62d142dfef40c2f21b911f0f1c0",
+            AiHubCriterionRegistry.BARBELL_SQUAT_APPROVED_POLICY_SHA256,
+        )
     }
 
     @Test
@@ -131,6 +139,55 @@ class AiHubCriterionRegistryTest {
             @Suppress("UNCHECKED_CAST")
             (truth.conditionTruthBySemanticId as MutableMap<String, Boolean>).clear()
         }
+    }
+
+    @Test
+    fun policyFingerprintChangesWithoutChangingSourceTruthCoverage() {
+        val criterion = sampleCriterion()
+        val rows = AiHubExercise.BARBELL_SQUAT.typeCodes.map { code ->
+            truth(code, mapOf(criterion.semanticId to true))
+        }
+        val provenance = provenance()
+        val sourceSha = aiHubCoverageSha256(
+            exercise = AiHubExercise.BARBELL_SQUAT,
+            provenance = provenance,
+            criteria = listOf(criterion),
+            typeTruthRows = rows,
+        )
+        val changedPolicyCriterion = AiHubCriterionDefinition(
+            semanticId = criterion.semanticId,
+            sourceCondition = criterion.sourceCondition,
+            observability = CriterionObservability.NOT_OBSERVABLE,
+            requiredCapabilities = criterion.requiredCapabilities,
+            eligiblePhases = criterion.eligiblePhases,
+            sideScope = criterion.sideScope,
+            eligibleViews = criterion.eligibleViews,
+            releaseState = criterion.releaseState,
+            unsupportedReason = "카메라 좌표로 직접 관측할 수 없는 테스트 조건",
+        )
+
+        assertEquals(
+            sourceSha,
+            aiHubCoverageSha256(
+                exercise = AiHubExercise.BARBELL_SQUAT,
+                provenance = provenance,
+                criteria = listOf(changedPolicyCriterion),
+                typeTruthRows = rows,
+            ),
+        )
+        assertTrue(
+            aiHubPolicySha256(
+                exercise = AiHubExercise.BARBELL_SQUAT,
+                provenance = provenance,
+                sourceCoverageSha256 = sourceSha,
+                criteria = listOf(criterion),
+            ) != aiHubPolicySha256(
+                exercise = AiHubExercise.BARBELL_SQUAT,
+                provenance = provenance,
+                sourceCoverageSha256 = sourceSha,
+                criteria = listOf(changedPolicyCriterion),
+            ),
+        )
     }
 
     @Test
@@ -257,6 +314,17 @@ class AiHubCriterionRegistryTest {
             provenance = provenance,
             criteria = criteria,
             typeTruthRows = rows,
+        ),
+        approvedPolicySha256 = aiHubPolicySha256(
+            exercise = AiHubExercise.BARBELL_SQUAT,
+            provenance = provenance,
+            sourceCoverageSha256 = aiHubCoverageSha256(
+                exercise = AiHubExercise.BARBELL_SQUAT,
+                provenance = provenance,
+                criteria = criteria,
+                typeTruthRows = rows,
+            ),
+            criteria = criteria,
         ),
     )
 }
