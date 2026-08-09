@@ -1,0 +1,1674 @@
+{
+  "schemaVersion": 2,
+  "artifactKind": "AIHUB_BARBELL_SQUAT_COORDINATE_VALIDATION_EXPERIMENT",
+  "decisionUse": "RESEARCH_ONLY_NOT_MEDIAPIPE_CALIBRATION_OR_USER_PASS_FAIL",
+  "serviceReleaseEligible": false,
+  "authenticity": "UNSIGNED_RESEARCH_ARTIFACT_NEVER_LOAD_IN_USER_RUNTIME",
+  "experimentFamilyId": "aihub.barbell-squat.coordinate-proxy.v1",
+  "protocolContract": {
+    "protocolId": "aihub.barbell-squat.coordinate-proxy.protocol.v3",
+    "approvedCoverageSha256": "1f6ab0ea0981c6d1ef693ace7e72608a2e9af363b4b52f789a1749f92dae9cb5",
+    "criterionContracts": {
+      "척추의 중립": {
+        "semanticId": "aihub.condition.spine-neutral.v1",
+        "targetConstructId": "proxy.gross-spine-chain-shape.v1",
+        "exactConditionObservability": "PROXY_ONLY_NOT_ANATOMICAL_SPINE_NEUTRAL",
+        "claimBoundary": "Must not claim lumbar neutrality, load safety, or diagnosis."
+      },
+      "고개 정면": {
+        "semanticId": "aihub.condition.head-facing-forward.v1",
+        "targetConstructId": "proxy.head-axis-relative-to-shoulder-axis.v1",
+        "exactConditionObservability": "PROXY_ONLY_NOT_GAZE",
+        "claimBoundary": "Must not claim eye gaze or cervical safety; line-axis geometry cannot distinguish front from a 180-degree reversed orientation and mixes yaw, roll, and pitch."
+      },
+      "발과 무릎의 방향 일치": {
+        "semanticId": "aihub.condition.knee-foot-direction-aligned.v1",
+        "targetConstructId": "proxy.knee-over-foot-body-lateral-offset.v1",
+        "exactConditionObservability": "PROXY_ONLY_NOT_FULL_3D_DIRECTION_OR_LOAD",
+        "claimBoundary": "Measures body-lateral knee/toe offset only; body yaw, landmark definition, full 3D foot heading, joint load, torque, and injury risk remain unidentified."
+      },
+      "발바닥 지면 고정": {
+        "semanticId": "aihub.condition.plantar-ground-contact-fixed.v1",
+        "targetConstructId": "proxy.camera-coordinate-foot-motion.v1",
+        "exactConditionObservability": "NOT_OBSERVABLE_FROM_POSE_COORDINATES",
+        "claimBoundary": "Only gross camera-coordinate foot motion is measured; plantar contact, pressure, and ground reaction force are not identified."
+      }
+    },
+    "candidateFeaturesByCondition": {
+      "척추의 중립": [
+        "3d.whole.spine-chain-deviation-q75-deg",
+        "3d.bottom.spine-chain-deviation-median-deg",
+        "2d.views.spine-chain-deviation-q75-median-deg"
+      ],
+      "고개 정면": [
+        "3d.whole.head-body-axis-mismatch-q75-deg",
+        "3d.bottom.head-body-axis-mismatch-median-deg",
+        "2d.views.head-body-axis-mismatch-q75-median-deg"
+      ],
+      "발과 무릎의 방향 일치": [
+        "3d.whole.worst-side-knee-over-foot-body-lateral-offset-q75-shoulder-width",
+        "3d.bottom.worst-side-knee-over-foot-body-lateral-offset-median-shoulder-width"
+      ],
+      "발바닥 지면 고정": [
+        "3d.active.worst-side-camera-coordinate-foot-step-q75-per-torso-scale",
+        "3d.active.worst-side-camera-coordinate-foot-excursion-q90-per-torso-scale",
+        "2d.active.views.worst-side-camera-coordinate-foot-step-q75-per-torso-scale-median"
+      ]
+    },
+    "activePolicy": "COMMON_FIVE_VIEW_ACTIVE_YES_MASK_AS_WINDOW_PRIOR; DO_NOT_BRIDGE_INACTIVE_GAPS",
+    "phaseProxy": {
+      "smoothing": "THREE_SAMPLE_MEDIAN_WITHIN_ACTIVE_RUN",
+      "bottomWindow": "MAX_ROM_ELIGIBLE_ACTIVE_RUN_CONTIGUOUS_NADIR_PLUS_OR_MINUS_ONE_SAMPLE",
+      "minimumKneeRomDegrees": 20.0
+    },
+    "selection": "TRAINING_GLOBAL_Z_LOSO_ONLY",
+    "validationRole": "CONSUMED_DESCRIPTIVE_DEVELOPMENT_REPLICATION",
+    "abstention": "MAX_CLASS_SUBJECT_MEDIAN_MAD_X_1_4826",
+    "independentUnit": "GLOBAL_Z_SUBJECT",
+    "internalSequenceUniqueness": "REQUIRE_UNIQUE_2D_AND_3D_RAW_CONTENT_AND_CANONICAL_COORDINATES_WITHIN_SPLIT",
+    "viewsAreNested": true,
+    "framesAreNested": true,
+    "proxyResearchSignalPolicy": {
+      "purpose": "FIXED_RESEARCH_SIGNAL_TRIAGE_NOT_A_RELEASE_OR_CALIBRATION_GATE",
+      "minimumTrainingLosoSubjectMacroBalancedAccuracy": 0.65,
+      "minimumLockedValidationSubjectMacroBalancedAccuracy": 0.65,
+      "minimumTrainingAndValidationMatchedDirectionConsistency": 0.75,
+      "minimumSubjectBootstrap95Low": 0.5,
+      "minimumMatchedDirectionWilson95Low": 0.5,
+      "minimumLockedSelectiveCoverage": 0.5,
+      "minimumSelectiveClassAndSubjectCoverage": 0.5,
+      "selectiveMetricMustCoverEverySubject": true,
+      "allTrainingLosoFoldsMustMatchSemanticDirection": true
+    }
+  },
+  "protocolArtifactSha256": "01c2cccc6e05ae45c93f2a50e5bccd4d058be162c69eebfe0507b8a9703e96b8",
+  "approvedAiHubCatalog": {
+    "relativePath": "docs/aihub-exercise-catalog.json",
+    "catalogSha256": "fe4e3075a00212293c9ffd3df8f007bc3666e17af2526de3a8d570d052a4e29c",
+    "artifactByteSha256": "d0c0e91917943e0f9698d989e083895b35e0ba0a6fcf584c6b75a69d30eccb19",
+    "barbellSquatCoverageSha256": "1f6ab0ea0981c6d1ef693ace7e72608a2e9af363b4b52f789a1749f92dae9cb5"
+  },
+  "implementationProvenance": {
+    "scriptSha256": "d5e8c380a8c67c2a42c6b136391c1fec3de9b4d13655d4a29ea8e73058087bbe",
+    "sharedParserSha256": "01a3d10e87d15a56439b609f1ee1caf086bcd82cfaaef7b26263f4cc5b45355c",
+    "pythonVersion": "3.13.12",
+    "dependencies": "PYTHON_STANDARD_LIBRARY_ONLY_PLUS_PINNED_SHARED_PARSER_SOURCE"
+  },
+  "exercise": "바벨 스쿼트",
+  "typeCodes": [
+    "313",
+    "314",
+    "315",
+    "316",
+    "317",
+    "318",
+    "319",
+    "320",
+    "321",
+    "322",
+    "323",
+    "324",
+    "325",
+    "326",
+    "327",
+    "328"
+  ],
+  "conditions": [
+    "척추의 중립",
+    "고개 정면",
+    "발과 무릎의 방향 일치",
+    "발바닥 지면 고정"
+  ],
+  "conditionTruthVectors": {
+    "313": "1111",
+    "314": "0111",
+    "315": "1011",
+    "316": "1101",
+    "317": "1110",
+    "318": "0011",
+    "319": "0101",
+    "320": "0110",
+    "321": "1001",
+    "322": "1010",
+    "323": "1100",
+    "324": "1000",
+    "325": "0100",
+    "326": "0010",
+    "327": "0001",
+    "328": "0000"
+  },
+  "splitProtocol": {
+    "independentUnit": "GLOBAL_Z_SUBJECT",
+    "trainingSelection": "GLOBAL_Z_LEAVE_ONE_SUBJECT_OUT",
+    "validationProtocol": "LOCKED_WITHIN_RUN_BUT_CONSUMED_DESCRIPTIVE_DEVELOPMENT_REPLICATION",
+    "framesIndependentN": false,
+    "viewsIndependentN": false,
+    "trainingValidationSubjectOverlap": 0,
+    "trainingValidationTwoDRawContentOverlap": 0,
+    "trainingValidationThreeDContentOverlap": 0,
+    "trainingValidationTwoDCanonicalCoordinateOverlap": 0,
+    "trainingValidationThreeDCanonicalCoordinateOverlap": 0
+  },
+  "proxyResearchSignalPolicy": {
+    "purpose": "FIXED_RESEARCH_SIGNAL_TRIAGE_NOT_A_RELEASE_OR_CALIBRATION_GATE",
+    "minimumTrainingLosoSubjectMacroBalancedAccuracy": 0.65,
+    "minimumLockedValidationSubjectMacroBalancedAccuracy": 0.65,
+    "minimumTrainingAndValidationMatchedDirectionConsistency": 0.75,
+    "minimumSubjectBootstrap95Low": 0.5,
+    "minimumMatchedDirectionWilson95Low": 0.5,
+    "minimumLockedSelectiveCoverage": 0.5,
+    "minimumSelectiveClassAndSubjectCoverage": 0.5,
+    "selectiveMetricMustCoverEverySubject": true,
+    "allTrainingLosoFoldsMustMatchSemanticDirection": true
+  },
+  "featureContract": {
+    "candidateFeaturesByCondition": {
+      "척추의 중립": [
+        "3d.whole.spine-chain-deviation-q75-deg",
+        "3d.bottom.spine-chain-deviation-median-deg",
+        "2d.views.spine-chain-deviation-q75-median-deg"
+      ],
+      "고개 정면": [
+        "3d.whole.head-body-axis-mismatch-q75-deg",
+        "3d.bottom.head-body-axis-mismatch-median-deg",
+        "2d.views.head-body-axis-mismatch-q75-median-deg"
+      ],
+      "발과 무릎의 방향 일치": [
+        "3d.whole.worst-side-knee-over-foot-body-lateral-offset-q75-shoulder-width",
+        "3d.bottom.worst-side-knee-over-foot-body-lateral-offset-median-shoulder-width"
+      ],
+      "발바닥 지면 고정": [
+        "3d.active.worst-side-camera-coordinate-foot-step-q75-per-torso-scale",
+        "3d.active.worst-side-camera-coordinate-foot-excursion-q90-per-torso-scale",
+        "2d.active.views.worst-side-camera-coordinate-foot-step-q75-per-torso-scale-median"
+      ]
+    },
+    "normalization": "PELVIS_CENTER_TORSO_SCALE_FOR_GEOMETRY",
+    "phaseProxy": "MAX_ROM_ELIGIBLE_ACTIVE_RUN_THREE_SAMPLE_MEDIAN_CONTIGUOUS_NADIR_WINDOW_MIN_ROM_20_DEG",
+    "activeSemantics": "WINDOW_PRIOR_ONLY_NOT_CORRECTNESS_OR_PHASE_GOLD; FIVE_VIEWS_MUST_AGREE",
+    "temporalUnit": "ACTIVE_RUN_CAMERA_COORDINATE_STEP_AND_EXCURSION_QUANTILES_WITHOUT_FPS_SPEED_GROUND_OR_PRESSURE_CLAIM",
+    "bilateralSafetyAggregation": "WORST_SIDE_MAX_NOT_BILATERAL_MEAN",
+    "twoDViewPolicy": "AIHUB_FIVE_VIEW_ENSEMBLE_NESTED_WITHIN_SEQUENCE_NOT_DEPLOYABLE_AS_SINGLE_PHONE_VIEW",
+    "expectedProxyErrorDirection": "TRUE_LOWER"
+  },
+  "validationConsumptionLedger": {
+    "state": "CONSUMED_DEVELOPMENT_BENCHMARK",
+    "restriction": "MUST_NOT_BE_RELABELED_AS_AN_UNTOUCHED_CONFIRMATORY_OR_RELEASE_HOLDOUT_FOR_THIS_EXPERIMENT_FAMILY",
+    "requiredNextTest": "UNTOUCHED_EXTERNAL_MEDIAPIPE_GOLD_SUBJECT_DEVICE_VIEW_HOLDOUT"
+  },
+  "inventory": {
+    "training": {
+      "split": "TRAINING",
+      "sequenceCount": 720,
+      "subjectCount": 42,
+      "dayIds": [
+        "Day03_200923_F",
+        "Day11_201008_F",
+        "Day12_201012_F",
+        "Day15_201015_F",
+        "Day25_201027_F",
+        "Day29_201031_F"
+      ],
+      "typeCounts": {
+        "313": 45,
+        "314": 45,
+        "315": 45,
+        "316": 45,
+        "317": 45,
+        "318": 45,
+        "319": 45,
+        "320": 45,
+        "321": 45,
+        "322": 45,
+        "323": 45,
+        "324": 45,
+        "325": 45,
+        "326": 45,
+        "327": 45,
+        "328": 45
+      },
+      "frameCountHistogram": {
+        "9": 1,
+        "12": 4,
+        "13": 3,
+        "15": 3,
+        "16": 705,
+        "17": 4
+      },
+      "activeFrameCountHistogram": {
+        "4": 1,
+        "5": 3,
+        "6": 12,
+        "7": 7,
+        "8": 10,
+        "9": 9,
+        "10": 19,
+        "11": 37,
+        "12": 53,
+        "13": 34,
+        "14": 27,
+        "15": 31,
+        "16": 476,
+        "17": 1
+      },
+      "metadataInventory": {
+        "twoDMetadataAudited": 34468,
+        "validMetadata": 34468,
+        "malformedMetadata": 0,
+        "selectedMetadata": 720,
+        "unpaired": 0,
+        "metadataConflict": 0,
+        "activeFramesIncluded": 10452,
+        "inactiveFramesExcluded": 1037,
+        "activeRuns": 854,
+        "nonContiguousActiveSequences": 69,
+        "invalidTwoDProxyViewFrames": 197,
+        "excludedTwoDGeometryViews": 7,
+        "phaseProxyUnknownSequences": 7
+      },
+      "coordinateFingerprintSha256": "fd355655deebf768cc570e4a77fe14af927a151e508967a67ba73a69527890f8",
+      "twoDContentSetSha256": "8e2a151d5ec193af031b1574ca1a97c1e76c0d4f4f649b95cdb2071e29bcde82",
+      "threeDContentSetSha256": "1e00ee39cf4e83de098c299a5f1bcff3482bf193ffbc49ac30fc05d4abf62b55",
+      "twoDCoordinateSetSha256": "b68f497999e45fef6aaf74672887d404c140bb597e9622017480c633ea91399d",
+      "threeDCoordinateSetSha256": "dbf2cc4766e522a192da98cdfb6a9ce3583c5e042ccb89ae905b7c2d8aeaf44c",
+      "activeContractManifestSha256": "2614942ab4278db9c22a91a9c4210404c468156fb458f430b674131057717800",
+      "internalSequenceHashUniqueness": {
+        "twoDRawContent": true,
+        "threeDRawContent": true,
+        "twoDCanonicalCoordinates": true,
+        "threeDCanonicalCoordinates": true
+      }
+    },
+    "validation": {
+      "split": "VALIDATION",
+      "sequenceCount": 112,
+      "subjectCount": 7,
+      "dayIds": [
+        "Day07_200929_F"
+      ],
+      "typeCounts": {
+        "313": 7,
+        "314": 7,
+        "315": 7,
+        "316": 7,
+        "317": 7,
+        "318": 7,
+        "319": 7,
+        "320": 7,
+        "321": 7,
+        "322": 7,
+        "323": 7,
+        "324": 7,
+        "325": 7,
+        "326": 7,
+        "327": 7,
+        "328": 7
+      },
+      "frameCountHistogram": {
+        "16": 112
+      },
+      "activeFrameCountHistogram": {
+        "9": 2,
+        "10": 3,
+        "11": 4,
+        "12": 1,
+        "13": 4,
+        "14": 4,
+        "15": 3,
+        "16": 91
+      },
+      "metadataInventory": {
+        "twoDMetadataAudited": 3139,
+        "validMetadata": 3139,
+        "malformedMetadata": 0,
+        "selectedMetadata": 112,
+        "unpaired": 0,
+        "metadataConflict": 0,
+        "activeFramesIncluded": 1713,
+        "inactiveFramesExcluded": 79,
+        "activeRuns": 115,
+        "nonContiguousActiveSequences": 3,
+        "invalidTwoDProxyViewFrames": 130,
+        "excludedTwoDGeometryViews": 7,
+        "phaseProxyUnknownSequences": 0
+      },
+      "coordinateFingerprintSha256": "aaed1229229148607a6d72aacc35037f97ddf360f4f6963a52637a6a64ef213d",
+      "twoDContentSetSha256": "fb2fe135f9ada12a7e8e8cad9cd299534583af461a2ca9a8020d51e0bf086761",
+      "threeDContentSetSha256": "ceb14903ca1334b2026ac44627cdd5b02c366efbc4074e09131e98b98eb45337",
+      "twoDCoordinateSetSha256": "b5732c991f0dead19041644ce83ed2121f88af17117cfb860e7941b9828eae68",
+      "threeDCoordinateSetSha256": "80ee7a39e399aa6c15a3fcbdca3f6a60e8ee8795f10c0af6a0372d3bc76c9223",
+      "activeContractManifestSha256": "b5fd2c0410c1f460e5cc8df7a70cbe190e0e3fa893aaf8ea3ca9d377b2e302d3",
+      "internalSequenceHashUniqueness": {
+        "twoDRawContent": true,
+        "threeDRawContent": true,
+        "twoDCanonicalCoordinates": true,
+        "threeDCanonicalCoordinates": true
+      }
+    }
+  },
+  "criteria": [
+    {
+      "condition": "척추의 중립",
+      "criterionContract": {
+        "semanticId": "aihub.condition.spine-neutral.v1",
+        "targetConstructId": "proxy.gross-spine-chain-shape.v1",
+        "exactConditionObservability": "PROXY_ONLY_NOT_ANATOMICAL_SPINE_NEUTRAL",
+        "claimBoundary": "Must not claim lumbar neutrality, load safety, or diagnosis."
+      },
+      "expectedDirection": "TRUE_LOWER_PROXY_ERROR",
+      "selectionProtocol": "PREDECLARED_FEATURES_TRAINING_GLOBAL_Z_LOSO_ONLY_VALIDATION_NOT_USED_FOR_SELECTION",
+      "candidateCount": 3,
+      "trainingCandidates": [
+        {
+          "feature": "3d.whole.spine-chain-deviation-q75-deg",
+          "expectedDirection": "TRUE_LOWER",
+          "fullTrainingFit": {
+            "trueCenter": 11.2803644999,
+            "falseCenter": 16.7333830864,
+            "threshold": 14.0068737931,
+            "abstentionHalfWidth": 5.5050037356,
+            "abstentionPolicy": "MAX_CLASS_SUBJECT_MEDIAN_MAD_X_1_4826",
+            "semanticDirectionValid": true
+          },
+          "trainingLoso": {
+            "sequenceCount": 720,
+            "subjectCount": 42,
+            "subjectMetricCount": 42,
+            "determinateCount": 720,
+            "unknownCount": 0,
+            "coverage": 1.0,
+            "trueLabelCoverage": 1.0,
+            "falseLabelCoverage": 1.0,
+            "minimumSubjectCoverage": 1.0,
+            "p10SubjectCoverage": 1.0,
+            "subjectsWithBothClassEvidence": 42,
+            "sensitivity": 0.6638888889,
+            "specificity": 0.6444444444,
+            "balancedAccuracy": 0.6541666667,
+            "subjectMacroBalancedAccuracy": 0.6458333333,
+            "subjectMedianBalancedAccuracy": 0.625,
+            "subjectMacroBalancedAccuracyBootstrap95": {
+              "low": 0.609375,
+              "high": 0.6837797619,
+              "method": "DETERMINISTIC_SUBJECT_CLUSTER_PERCENTILE_BOOTSTRAP_4096"
+            },
+            "confusion": {
+              "tp": 239,
+              "fn": 121,
+              "tn": 232,
+              "fp": 128
+            },
+            "foldCount": 42,
+            "invalidSemanticDirectionFolds": 0
+          },
+          "trainingLosoSelective": {
+            "sequenceCount": 720,
+            "subjectCount": 42,
+            "subjectMetricCount": 31,
+            "determinateCount": 273,
+            "unknownCount": 447,
+            "coverage": 0.3791666667,
+            "trueLabelCoverage": 0.35,
+            "falseLabelCoverage": 0.4083333333,
+            "minimumSubjectCoverage": 0.0,
+            "p10SubjectCoverage": 0.0625,
+            "subjectsWithBothClassEvidence": 31,
+            "sensitivity": 0.5555555556,
+            "specificity": 0.9183673469,
+            "balancedAccuracy": 0.7369614512,
+            "subjectMacroBalancedAccuracy": 0.6427419355,
+            "subjectMedianBalancedAccuracy": 0.5,
+            "subjectMacroBalancedAccuracyBootstrap95": {
+              "low": 0.5734879032,
+              "high": 0.7125336022,
+              "method": "DETERMINISTIC_SUBJECT_CLUSTER_PERCENTILE_BOOTSTRAP_4096"
+            },
+            "confusion": {
+              "tp": 70,
+              "fn": 56,
+              "tn": 135,
+              "fp": 12
+            },
+            "foldCount": 42,
+            "invalidSemanticDirectionFolds": 0
+          },
+          "trainingPairedContrast": {
+            "estimand": "MATCHED_SUBJECT_DAY_OTHER_CONDITION_CELL_NOT_SAME_REPETITION",
+            "matchedSubjectDayConditionCells": 360,
+            "matchedSubjects": 42,
+            "minimumMatchedCellsPerSubject": 8,
+            "medianTrueMinusFalse": -4.4701425375,
+            "semanticTrueLowerConsistency": 0.9523809524,
+            "semanticTrueLowerConsistencyWilson95": {
+              "low": 0.842101476,
+              "high": 0.9868424751
+            },
+            "zeroEffectSubjects": 0
+          }
+        },
+        {
+          "feature": "3d.bottom.spine-chain-deviation-median-deg",
+          "expectedDirection": "TRUE_LOWER",
+          "fullTrainingFit": {
+            "trueCenter": 8.1130848414,
+            "falseCenter": 14.8446839827,
+            "threshold": 11.4788844121,
+            "abstentionHalfWidth": 7.7028695123,
+            "abstentionPolicy": "MAX_CLASS_SUBJECT_MEDIAN_MAD_X_1_4826",
+            "semanticDirectionValid": true
+          },
+          "trainingLoso": {
+            "sequenceCount": 720,
+            "subjectCount": 42,
+            "subjectMetricCount": 42,
+            "determinateCount": 713,
+            "unknownCount": 7,
+            "coverage": 0.9902777778,
+            "trueLabelCoverage": 0.9888888889,
+            "falseLabelCoverage": 0.9916666667,
+            "minimumSubjectCoverage": 0.8125,
+            "p10SubjectCoverage": 1.0,
+            "subjectsWithBothClassEvidence": 42,
+            "sensitivity": 0.6882022472,
+            "specificity": 0.5994397759,
+            "balancedAccuracy": 0.6438210116,
+            "subjectMacroBalancedAccuracy": 0.6347789116,
+            "subjectMedianBalancedAccuracy": 0.625,
+            "subjectMacroBalancedAccuracyBootstrap95": {
+              "low": 0.5944276148,
+              "high": 0.6776812287,
+              "method": "DETERMINISTIC_SUBJECT_CLUSTER_PERCENTILE_BOOTSTRAP_4096"
+            },
+            "confusion": {
+              "tp": 245,
+              "fn": 111,
+              "tn": 214,
+              "fp": 143
+            },
+            "foldCount": 42,
+            "invalidSemanticDirectionFolds": 0
+          },
+          "trainingLosoSelective": {
+            "sequenceCount": 720,
+            "subjectCount": 42,
+            "subjectMetricCount": 27,
+            "determinateCount": 198,
+            "unknownCount": 522,
+            "coverage": 0.275,
+            "trueLabelCoverage": 0.1972222222,
+            "falseLabelCoverage": 0.3527777778,
+            "minimumSubjectCoverage": 0.0,
+            "p10SubjectCoverage": 0.06875,
+            "subjectsWithBothClassEvidence": 27,
+            "sensitivity": 0.4366197183,
+            "specificity": 0.9291338583,
+            "balancedAccuracy": 0.6828767883,
+            "subjectMacroBalancedAccuracy": 0.5817901235,
+            "subjectMedianBalancedAccuracy": 0.5,
+            "subjectMacroBalancedAccuracyBootstrap95": {
+              "low": 0.5092592593,
+              "high": 0.6512345679,
+              "method": "DETERMINISTIC_SUBJECT_CLUSTER_PERCENTILE_BOOTSTRAP_4096"
+            },
+            "confusion": {
+              "tp": 31,
+              "fn": 40,
+              "tn": 118,
+              "fp": 9
+            },
+            "foldCount": 42,
+            "invalidSemanticDirectionFolds": 0
+          },
+          "trainingPairedContrast": {
+            "estimand": "MATCHED_SUBJECT_DAY_OTHER_CONDITION_CELL_NOT_SAME_REPETITION",
+            "matchedSubjectDayConditionCells": 353,
+            "matchedSubjects": 42,
+            "minimumMatchedCellsPerSubject": 5,
+            "medianTrueMinusFalse": -4.8034806901,
+            "semanticTrueLowerConsistency": 0.9285714286,
+            "semanticTrueLowerConsistencyWilson95": {
+              "low": 0.809905732,
+              "high": 0.9754095901
+            },
+            "zeroEffectSubjects": 0
+          }
+        },
+        {
+          "feature": "2d.views.spine-chain-deviation-q75-median-deg",
+          "expectedDirection": "TRUE_LOWER",
+          "fullTrainingFit": {
+            "trueCenter": 8.2338065034,
+            "falseCenter": 13.8037398328,
+            "threshold": 11.0187731681,
+            "abstentionHalfWidth": 8.0569916118,
+            "abstentionPolicy": "MAX_CLASS_SUBJECT_MEDIAN_MAD_X_1_4826",
+            "semanticDirectionValid": true
+          },
+          "trainingLoso": {
+            "sequenceCount": 720,
+            "subjectCount": 42,
+            "subjectMetricCount": 42,
+            "determinateCount": 720,
+            "unknownCount": 0,
+            "coverage": 1.0,
+            "trueLabelCoverage": 1.0,
+            "falseLabelCoverage": 1.0,
+            "minimumSubjectCoverage": 1.0,
+            "p10SubjectCoverage": 1.0,
+            "subjectsWithBothClassEvidence": 42,
+            "sensitivity": 0.6444444444,
+            "specificity": 0.5833333333,
+            "balancedAccuracy": 0.6138888889,
+            "subjectMacroBalancedAccuracy": 0.6086309524,
+            "subjectMedianBalancedAccuracy": 0.5625,
+            "subjectMacroBalancedAccuracyBootstrap95": {
+              "low": 0.5744047619,
+              "high": 0.6452752976,
+              "method": "DETERMINISTIC_SUBJECT_CLUSTER_PERCENTILE_BOOTSTRAP_4096"
+            },
+            "confusion": {
+              "tp": 232,
+              "fn": 128,
+              "tn": 210,
+              "fp": 150
+            },
+            "foldCount": 42,
+            "invalidSemanticDirectionFolds": 0
+          },
+          "trainingLosoSelective": {
+            "sequenceCount": 720,
+            "subjectCount": 42,
+            "subjectMetricCount": 17,
+            "determinateCount": 167,
+            "unknownCount": 553,
+            "coverage": 0.2319444444,
+            "trueLabelCoverage": 0.15,
+            "falseLabelCoverage": 0.3138888889,
+            "minimumSubjectCoverage": 0.0,
+            "p10SubjectCoverage": 0.0,
+            "subjectsWithBothClassEvidence": 17,
+            "sensitivity": 0.0555555556,
+            "specificity": 1.0,
+            "balancedAccuracy": 0.5277777778,
+            "subjectMacroBalancedAccuracy": 0.5441176471,
+            "subjectMedianBalancedAccuracy": 0.5,
+            "subjectMacroBalancedAccuracyBootstrap95": {
+              "low": 0.5,
+              "high": 0.6176470588,
+              "method": "DETERMINISTIC_SUBJECT_CLUSTER_PERCENTILE_BOOTSTRAP_4096"
+            },
+            "confusion": {
+              "tp": 3,
+              "fn": 51,
+              "tn": 113,
+              "fp": 0
+            },
+            "foldCount": 42,
+            "invalidSemanticDirectionFolds": 0
+          },
+          "trainingPairedContrast": {
+            "estimand": "MATCHED_SUBJECT_DAY_OTHER_CONDITION_CELL_NOT_SAME_REPETITION",
+            "matchedSubjectDayConditionCells": 360,
+            "matchedSubjects": 42,
+            "minimumMatchedCellsPerSubject": 8,
+            "medianTrueMinusFalse": -4.4103538061,
+            "semanticTrueLowerConsistency": 0.880952381,
+            "semanticTrueLowerConsistencyWilson95": {
+              "low": 0.7499960974,
+              "high": 0.9480619667
+            },
+            "zeroEffectSubjects": 0
+          }
+        }
+      ],
+      "selectedFeature": "3d.whole.spine-chain-deviation-q75-deg",
+      "lockedValidation": {
+        "sequenceCount": 112,
+        "subjectCount": 7,
+        "subjectMetricCount": 7,
+        "determinateCount": 112,
+        "unknownCount": 0,
+        "coverage": 1.0,
+        "trueLabelCoverage": 1.0,
+        "falseLabelCoverage": 1.0,
+        "minimumSubjectCoverage": 1.0,
+        "p10SubjectCoverage": 1.0,
+        "subjectsWithBothClassEvidence": 7,
+        "sensitivity": 0.7678571429,
+        "specificity": 0.625,
+        "balancedAccuracy": 0.6964285714,
+        "subjectMacroBalancedAccuracy": 0.6964285714,
+        "subjectMedianBalancedAccuracy": 0.6875,
+        "subjectMacroBalancedAccuracyBootstrap95": {
+          "low": 0.6071428571,
+          "high": 0.7946428571,
+          "method": "DETERMINISTIC_SUBJECT_CLUSTER_PERCENTILE_BOOTSTRAP_4096"
+        },
+        "confusion": {
+          "tp": 43,
+          "fn": 13,
+          "tn": 35,
+          "fp": 21
+        }
+      },
+      "lockedValidationSelective": {
+        "sequenceCount": 112,
+        "subjectCount": 7,
+        "subjectMetricCount": 7,
+        "determinateCount": 43,
+        "unknownCount": 69,
+        "coverage": 0.3839285714,
+        "trueLabelCoverage": 0.3214285714,
+        "falseLabelCoverage": 0.4464285714,
+        "minimumSubjectCoverage": 0.25,
+        "p10SubjectCoverage": 0.2875,
+        "subjectsWithBothClassEvidence": 7,
+        "sensitivity": 0.6666666667,
+        "specificity": 0.64,
+        "balancedAccuracy": 0.6533333333,
+        "subjectMacroBalancedAccuracy": 0.6523809524,
+        "subjectMedianBalancedAccuracy": 0.6666666667,
+        "subjectMacroBalancedAccuracyBootstrap95": {
+          "low": 0.4779761905,
+          "high": 0.819047619,
+          "method": "DETERMINISTIC_SUBJECT_CLUSTER_PERCENTILE_BOOTSTRAP_4096"
+        },
+        "confusion": {
+          "tp": 12,
+          "fn": 6,
+          "tn": 16,
+          "fp": 9
+        }
+      },
+      "lockedValidationPairedContrast": {
+        "estimand": "MATCHED_SUBJECT_DAY_OTHER_CONDITION_CELL_NOT_SAME_REPETITION",
+        "matchedSubjectDayConditionCells": 56,
+        "matchedSubjects": 7,
+        "minimumMatchedCellsPerSubject": 8,
+        "medianTrueMinusFalse": -1.399936243,
+        "semanticTrueLowerConsistency": 0.7142857143,
+        "semanticTrueLowerConsistencyWilson95": {
+          "low": 0.3589344518,
+          "high": 0.917781076
+        },
+        "zeroEffectSubjects": 0
+      },
+      "validationRole": "CONSUMED_DESCRIPTIVE_DEVELOPMENT_REPLICATION_NOT_PRISTINE_CONFIRMATORY_HOLDOUT",
+      "proxyResearchState": "INSUFFICIENT_ROBUST_REPLICATION",
+      "exactConditionReleaseState": "BLOCKED_NO_MEDIAPIPE_GOLD_OR_UNTOUCHED_EXTERNAL_TEST"
+    },
+    {
+      "condition": "고개 정면",
+      "criterionContract": {
+        "semanticId": "aihub.condition.head-facing-forward.v1",
+        "targetConstructId": "proxy.head-axis-relative-to-shoulder-axis.v1",
+        "exactConditionObservability": "PROXY_ONLY_NOT_GAZE",
+        "claimBoundary": "Must not claim eye gaze or cervical safety; line-axis geometry cannot distinguish front from a 180-degree reversed orientation and mixes yaw, roll, and pitch."
+      },
+      "expectedDirection": "TRUE_LOWER_PROXY_ERROR",
+      "selectionProtocol": "PREDECLARED_FEATURES_TRAINING_GLOBAL_Z_LOSO_ONLY_VALIDATION_NOT_USED_FOR_SELECTION",
+      "candidateCount": 3,
+      "trainingCandidates": [
+        {
+          "feature": "2d.views.head-body-axis-mismatch-q75-median-deg",
+          "expectedDirection": "TRUE_LOWER",
+          "fullTrainingFit": {
+            "trueCenter": 8.195330119,
+            "falseCenter": 7.8214963062,
+            "threshold": 8.0084132126,
+            "abstentionHalfWidth": 2.8013641043,
+            "abstentionPolicy": "MAX_CLASS_SUBJECT_MEDIAN_MAD_X_1_4826",
+            "semanticDirectionValid": false
+          },
+          "trainingLoso": {
+            "sequenceCount": 720,
+            "subjectCount": 42,
+            "subjectMetricCount": 42,
+            "determinateCount": 720,
+            "unknownCount": 0,
+            "coverage": 1.0,
+            "trueLabelCoverage": 1.0,
+            "falseLabelCoverage": 1.0,
+            "minimumSubjectCoverage": 1.0,
+            "p10SubjectCoverage": 1.0,
+            "subjectsWithBothClassEvidence": 42,
+            "sensitivity": 0.5333333333,
+            "specificity": 0.4694444444,
+            "balancedAccuracy": 0.5013888889,
+            "subjectMacroBalancedAccuracy": 0.4962797619,
+            "subjectMedianBalancedAccuracy": 0.46875,
+            "subjectMacroBalancedAccuracyBootstrap95": {
+              "low": 0.4496837798,
+              "high": 0.5446428571,
+              "method": "DETERMINISTIC_SUBJECT_CLUSTER_PERCENTILE_BOOTSTRAP_4096"
+            },
+            "confusion": {
+              "tp": 192,
+              "fn": 168,
+              "tn": 169,
+              "fp": 191
+            },
+            "foldCount": 42,
+            "invalidSemanticDirectionFolds": 42
+          },
+          "trainingLosoSelective": {
+            "sequenceCount": 720,
+            "subjectCount": 42,
+            "subjectMetricCount": 38,
+            "determinateCount": 309,
+            "unknownCount": 411,
+            "coverage": 0.4291666667,
+            "trueLabelCoverage": 0.4833333333,
+            "falseLabelCoverage": 0.375,
+            "minimumSubjectCoverage": 0.0,
+            "p10SubjectCoverage": 0.25,
+            "subjectsWithBothClassEvidence": 38,
+            "sensitivity": 0.4712643678,
+            "specificity": 0.6074074074,
+            "balancedAccuracy": 0.5393358876,
+            "subjectMacroBalancedAccuracy": 0.4917397661,
+            "subjectMedianBalancedAccuracy": 0.5,
+            "subjectMacroBalancedAccuracyBootstrap95": {
+              "low": 0.4288651316,
+              "high": 0.5513614766,
+              "method": "DETERMINISTIC_SUBJECT_CLUSTER_PERCENTILE_BOOTSTRAP_4096"
+            },
+            "confusion": {
+              "tp": 82,
+              "fn": 92,
+              "tn": 82,
+              "fp": 53
+            },
+            "foldCount": 42,
+            "invalidSemanticDirectionFolds": 42
+          },
+          "trainingPairedContrast": {
+            "estimand": "MATCHED_SUBJECT_DAY_OTHER_CONDITION_CELL_NOT_SAME_REPETITION",
+            "matchedSubjectDayConditionCells": 360,
+            "matchedSubjects": 42,
+            "minimumMatchedCellsPerSubject": 8,
+            "medianTrueMinusFalse": -0.1882970183,
+            "semanticTrueLowerConsistency": 0.5,
+            "semanticTrueLowerConsistencyWilson95": {
+              "low": 0.355259896,
+              "high": 0.644740104
+            },
+            "zeroEffectSubjects": 0
+          }
+        },
+        {
+          "feature": "3d.whole.head-body-axis-mismatch-q75-deg",
+          "expectedDirection": "TRUE_LOWER",
+          "fullTrainingFit": {
+            "trueCenter": 6.9680773224,
+            "falseCenter": 5.5707645243,
+            "threshold": 6.2694209234,
+            "abstentionHalfWidth": 2.7764866891,
+            "abstentionPolicy": "MAX_CLASS_SUBJECT_MEDIAN_MAD_X_1_4826",
+            "semanticDirectionValid": false
+          },
+          "trainingLoso": {
+            "sequenceCount": 720,
+            "subjectCount": 42,
+            "subjectMetricCount": 42,
+            "determinateCount": 720,
+            "unknownCount": 0,
+            "coverage": 1.0,
+            "trueLabelCoverage": 1.0,
+            "falseLabelCoverage": 1.0,
+            "minimumSubjectCoverage": 1.0,
+            "p10SubjectCoverage": 1.0,
+            "subjectsWithBothClassEvidence": 42,
+            "sensitivity": 0.4611111111,
+            "specificity": 0.4694444444,
+            "balancedAccuracy": 0.4652777778,
+            "subjectMacroBalancedAccuracy": 0.4665178571,
+            "subjectMedianBalancedAccuracy": 0.5,
+            "subjectMacroBalancedAccuracyBootstrap95": {
+              "low": 0.4241071429,
+              "high": 0.5044642857,
+              "method": "DETERMINISTIC_SUBJECT_CLUSTER_PERCENTILE_BOOTSTRAP_4096"
+            },
+            "confusion": {
+              "tp": 166,
+              "fn": 194,
+              "tn": 169,
+              "fp": 191
+            },
+            "foldCount": 42,
+            "invalidSemanticDirectionFolds": 42
+          },
+          "trainingLosoSelective": {
+            "sequenceCount": 720,
+            "subjectCount": 42,
+            "subjectMetricCount": 33,
+            "determinateCount": 288,
+            "unknownCount": 432,
+            "coverage": 0.4,
+            "trueLabelCoverage": 0.4222222222,
+            "falseLabelCoverage": 0.3777777778,
+            "minimumSubjectCoverage": 0.0625,
+            "p10SubjectCoverage": 0.128125,
+            "subjectsWithBothClassEvidence": 33,
+            "sensitivity": 0.2894736842,
+            "specificity": 0.6470588235,
+            "balancedAccuracy": 0.4682662539,
+            "subjectMacroBalancedAccuracy": 0.5187830688,
+            "subjectMedianBalancedAccuracy": 0.5,
+            "subjectMacroBalancedAccuracyBootstrap95": {
+              "low": 0.4682178932,
+              "high": 0.5702892015,
+              "method": "DETERMINISTIC_SUBJECT_CLUSTER_PERCENTILE_BOOTSTRAP_4096"
+            },
+            "confusion": {
+              "tp": 44,
+              "fn": 108,
+              "tn": 88,
+              "fp": 48
+            },
+            "foldCount": 42,
+            "invalidSemanticDirectionFolds": 42
+          },
+          "trainingPairedContrast": {
+            "estimand": "MATCHED_SUBJECT_DAY_OTHER_CONDITION_CELL_NOT_SAME_REPETITION",
+            "matchedSubjectDayConditionCells": 360,
+            "matchedSubjects": 42,
+            "minimumMatchedCellsPerSubject": 8,
+            "medianTrueMinusFalse": 0.2625451846,
+            "semanticTrueLowerConsistency": 0.380952381,
+            "semanticTrueLowerConsistencyWilson95": {
+              "low": 0.2499972576,
+              "high": 0.5318595973
+            },
+            "zeroEffectSubjects": 0
+          }
+        },
+        {
+          "feature": "3d.bottom.head-body-axis-mismatch-median-deg",
+          "expectedDirection": "TRUE_LOWER",
+          "fullTrainingFit": {
+            "trueCenter": 4.7428951054,
+            "falseCenter": 3.6356202826,
+            "threshold": 4.189257694,
+            "abstentionHalfWidth": 1.7497730307,
+            "abstentionPolicy": "MAX_CLASS_SUBJECT_MEDIAN_MAD_X_1_4826",
+            "semanticDirectionValid": false
+          },
+          "trainingLoso": {
+            "sequenceCount": 720,
+            "subjectCount": 42,
+            "subjectMetricCount": 42,
+            "determinateCount": 713,
+            "unknownCount": 7,
+            "coverage": 0.9902777778,
+            "trueLabelCoverage": 0.9916666667,
+            "falseLabelCoverage": 0.9888888889,
+            "minimumSubjectCoverage": 0.8125,
+            "p10SubjectCoverage": 1.0,
+            "subjectsWithBothClassEvidence": 42,
+            "sensitivity": 0.4761904762,
+            "specificity": 0.4073033708,
+            "balancedAccuracy": 0.4417469235,
+            "subjectMacroBalancedAccuracy": 0.4433106576,
+            "subjectMedianBalancedAccuracy": 0.4375,
+            "subjectMacroBalancedAccuracyBootstrap95": {
+              "low": 0.4029283588,
+              "high": 0.4806857639,
+              "method": "DETERMINISTIC_SUBJECT_CLUSTER_PERCENTILE_BOOTSTRAP_4096"
+            },
+            "confusion": {
+              "tp": 170,
+              "fn": 187,
+              "tn": 145,
+              "fp": 211
+            },
+            "foldCount": 42,
+            "invalidSemanticDirectionFolds": 42
+          },
+          "trainingLosoSelective": {
+            "sequenceCount": 720,
+            "subjectCount": 42,
+            "subjectMetricCount": 40,
+            "determinateCount": 358,
+            "unknownCount": 362,
+            "coverage": 0.4972222222,
+            "trueLabelCoverage": 0.5083333333,
+            "falseLabelCoverage": 0.4861111111,
+            "minimumSubjectCoverage": 0.125,
+            "p10SubjectCoverage": 0.25625,
+            "subjectsWithBothClassEvidence": 40,
+            "sensitivity": 0.3606557377,
+            "specificity": 0.5028571429,
+            "balancedAccuracy": 0.4317564403,
+            "subjectMacroBalancedAccuracy": 0.4520982143,
+            "subjectMedianBalancedAccuracy": 0.5,
+            "subjectMacroBalancedAccuracyBootstrap95": {
+              "low": 0.3966220238,
+              "high": 0.5056808036,
+              "method": "DETERMINISTIC_SUBJECT_CLUSTER_PERCENTILE_BOOTSTRAP_4096"
+            },
+            "confusion": {
+              "tp": 66,
+              "fn": 117,
+              "tn": 88,
+              "fp": 87
+            },
+            "foldCount": 42,
+            "invalidSemanticDirectionFolds": 42
+          },
+          "trainingPairedContrast": {
+            "estimand": "MATCHED_SUBJECT_DAY_OTHER_CONDITION_CELL_NOT_SAME_REPETITION",
+            "matchedSubjectDayConditionCells": 353,
+            "matchedSubjects": 42,
+            "minimumMatchedCellsPerSubject": 5,
+            "medianTrueMinusFalse": 0.4463984244,
+            "semanticTrueLowerConsistency": 0.3571428571,
+            "semanticTrueLowerConsistencyWilson95": {
+              "low": 0.2298918832,
+              "high": 0.5083363428
+            },
+            "zeroEffectSubjects": 0
+          }
+        }
+      ],
+      "selectedFeature": "2d.views.head-body-axis-mismatch-q75-median-deg",
+      "lockedValidation": {
+        "sequenceCount": 112,
+        "subjectCount": 7,
+        "subjectMetricCount": 7,
+        "determinateCount": 112,
+        "unknownCount": 0,
+        "coverage": 1.0,
+        "trueLabelCoverage": 1.0,
+        "falseLabelCoverage": 1.0,
+        "minimumSubjectCoverage": 1.0,
+        "p10SubjectCoverage": 1.0,
+        "subjectsWithBothClassEvidence": 7,
+        "sensitivity": 0.4642857143,
+        "specificity": 0.4464285714,
+        "balancedAccuracy": 0.4553571429,
+        "subjectMacroBalancedAccuracy": 0.4553571429,
+        "subjectMedianBalancedAccuracy": 0.4375,
+        "subjectMacroBalancedAccuracyBootstrap95": {
+          "low": 0.4375,
+          "high": 0.4732142857,
+          "method": "DETERMINISTIC_SUBJECT_CLUSTER_PERCENTILE_BOOTSTRAP_4096"
+        },
+        "confusion": {
+          "tp": 26,
+          "fn": 30,
+          "tn": 25,
+          "fp": 31
+        }
+      },
+      "lockedValidationSelective": {
+        "sequenceCount": 112,
+        "subjectCount": 7,
+        "subjectMetricCount": 7,
+        "determinateCount": 41,
+        "unknownCount": 71,
+        "coverage": 0.3660714286,
+        "trueLabelCoverage": 0.4642857143,
+        "falseLabelCoverage": 0.2678571429,
+        "minimumSubjectCoverage": 0.1875,
+        "p10SubjectCoverage": 0.225,
+        "subjectsWithBothClassEvidence": 7,
+        "sensitivity": 0.3846153846,
+        "specificity": 0.6,
+        "balancedAccuracy": 0.4923076923,
+        "subjectMacroBalancedAccuracy": 0.5193877551,
+        "subjectMedianBalancedAccuracy": 0.5,
+        "subjectMacroBalancedAccuracyBootstrap95": {
+          "low": 0.3852040816,
+          "high": 0.6979591837,
+          "method": "DETERMINISTIC_SUBJECT_CLUSTER_PERCENTILE_BOOTSTRAP_4096"
+        },
+        "confusion": {
+          "tp": 10,
+          "fn": 16,
+          "tn": 9,
+          "fp": 6
+        }
+      },
+      "lockedValidationPairedContrast": {
+        "estimand": "MATCHED_SUBJECT_DAY_OTHER_CONDITION_CELL_NOT_SAME_REPETITION",
+        "matchedSubjectDayConditionCells": 56,
+        "matchedSubjects": 7,
+        "minimumMatchedCellsPerSubject": 8,
+        "medianTrueMinusFalse": -0.1414556497,
+        "semanticTrueLowerConsistency": 0.5714285714,
+        "semanticTrueLowerConsistencyWilson95": {
+          "low": 0.2504583645,
+          "high": 0.8417801447
+        },
+        "zeroEffectSubjects": 0
+      },
+      "validationRole": "CONSUMED_DESCRIPTIVE_DEVELOPMENT_REPLICATION_NOT_PRISTINE_CONFIRMATORY_HOLDOUT",
+      "proxyResearchState": "INSUFFICIENT_ROBUST_REPLICATION",
+      "exactConditionReleaseState": "BLOCKED_NO_MEDIAPIPE_GOLD_OR_UNTOUCHED_EXTERNAL_TEST"
+    },
+    {
+      "condition": "발과 무릎의 방향 일치",
+      "criterionContract": {
+        "semanticId": "aihub.condition.knee-foot-direction-aligned.v1",
+        "targetConstructId": "proxy.knee-over-foot-body-lateral-offset.v1",
+        "exactConditionObservability": "PROXY_ONLY_NOT_FULL_3D_DIRECTION_OR_LOAD",
+        "claimBoundary": "Measures body-lateral knee/toe offset only; body yaw, landmark definition, full 3D foot heading, joint load, torque, and injury risk remain unidentified."
+      },
+      "expectedDirection": "TRUE_LOWER_PROXY_ERROR",
+      "selectionProtocol": "PREDECLARED_FEATURES_TRAINING_GLOBAL_Z_LOSO_ONLY_VALIDATION_NOT_USED_FOR_SELECTION",
+      "candidateCount": 2,
+      "trainingCandidates": [
+        {
+          "feature": "3d.bottom.worst-side-knee-over-foot-body-lateral-offset-median-shoulder-width",
+          "expectedDirection": "TRUE_LOWER",
+          "fullTrainingFit": {
+            "trueCenter": 0.1228408452,
+            "falseCenter": 0.2707376507,
+            "threshold": 0.196789248,
+            "abstentionHalfWidth": 0.0569253474,
+            "abstentionPolicy": "MAX_CLASS_SUBJECT_MEDIAN_MAD_X_1_4826",
+            "semanticDirectionValid": true
+          },
+          "trainingLoso": {
+            "sequenceCount": 720,
+            "subjectCount": 42,
+            "subjectMetricCount": 42,
+            "determinateCount": 713,
+            "unknownCount": 7,
+            "coverage": 0.9902777778,
+            "trueLabelCoverage": 0.9833333333,
+            "falseLabelCoverage": 0.9972222222,
+            "minimumSubjectCoverage": 0.8125,
+            "p10SubjectCoverage": 1.0,
+            "subjectsWithBothClassEvidence": 42,
+            "sensitivity": 0.8050847458,
+            "specificity": 0.8635097493,
+            "balancedAccuracy": 0.8342972475,
+            "subjectMacroBalancedAccuracy": 0.8291170635,
+            "subjectMedianBalancedAccuracy": 0.875,
+            "subjectMacroBalancedAccuracyBootstrap95": {
+              "low": 0.7717501063,
+              "high": 0.8779496173,
+              "method": "DETERMINISTIC_SUBJECT_CLUSTER_PERCENTILE_BOOTSTRAP_4096"
+            },
+            "confusion": {
+              "tp": 285,
+              "fn": 69,
+              "tn": 310,
+              "fp": 49
+            },
+            "foldCount": 42,
+            "invalidSemanticDirectionFolds": 0
+          },
+          "trainingLosoSelective": {
+            "sequenceCount": 720,
+            "subjectCount": 42,
+            "subjectMetricCount": 41,
+            "determinateCount": 462,
+            "unknownCount": 258,
+            "coverage": 0.6416666667,
+            "trueLabelCoverage": 0.6277777778,
+            "falseLabelCoverage": 0.6555555556,
+            "minimumSubjectCoverage": 0.1875,
+            "p10SubjectCoverage": 0.375,
+            "subjectsWithBothClassEvidence": 41,
+            "sensitivity": 0.889380531,
+            "specificity": 0.9576271186,
+            "balancedAccuracy": 0.9235038248,
+            "subjectMacroBalancedAccuracy": 0.8785133566,
+            "subjectMedianBalancedAccuracy": 1.0,
+            "subjectMacroBalancedAccuracyBootstrap95": {
+              "low": 0.8073969222,
+              "high": 0.9398954704,
+              "method": "DETERMINISTIC_SUBJECT_CLUSTER_PERCENTILE_BOOTSTRAP_4096"
+            },
+            "confusion": {
+              "tp": 201,
+              "fn": 25,
+              "tn": 226,
+              "fp": 10
+            },
+            "foldCount": 42,
+            "invalidSemanticDirectionFolds": 0
+          },
+          "trainingPairedContrast": {
+            "estimand": "MATCHED_SUBJECT_DAY_OTHER_CONDITION_CELL_NOT_SAME_REPETITION",
+            "matchedSubjectDayConditionCells": 353,
+            "matchedSubjects": 42,
+            "minimumMatchedCellsPerSubject": 5,
+            "medianTrueMinusFalse": -0.1590541543,
+            "semanticTrueLowerConsistency": 0.9523809524,
+            "semanticTrueLowerConsistencyWilson95": {
+              "low": 0.842101476,
+              "high": 0.9868424751
+            },
+            "zeroEffectSubjects": 0
+          }
+        },
+        {
+          "feature": "3d.whole.worst-side-knee-over-foot-body-lateral-offset-q75-shoulder-width",
+          "expectedDirection": "TRUE_LOWER",
+          "fullTrainingFit": {
+            "trueCenter": 0.2264893846,
+            "falseCenter": 0.2832163985,
+            "threshold": 0.2548528915,
+            "abstentionHalfWidth": 0.0581169073,
+            "abstentionPolicy": "MAX_CLASS_SUBJECT_MEDIAN_MAD_X_1_4826",
+            "semanticDirectionValid": true
+          },
+          "trainingLoso": {
+            "sequenceCount": 720,
+            "subjectCount": 42,
+            "subjectMetricCount": 42,
+            "determinateCount": 720,
+            "unknownCount": 0,
+            "coverage": 1.0,
+            "trueLabelCoverage": 1.0,
+            "falseLabelCoverage": 1.0,
+            "minimumSubjectCoverage": 1.0,
+            "p10SubjectCoverage": 1.0,
+            "subjectsWithBothClassEvidence": 42,
+            "sensitivity": 0.6972222222,
+            "specificity": 0.6861111111,
+            "balancedAccuracy": 0.6916666667,
+            "subjectMacroBalancedAccuracy": 0.6882440476,
+            "subjectMedianBalancedAccuracy": 0.6875,
+            "subjectMacroBalancedAccuracyBootstrap95": {
+              "low": 0.6294642857,
+              "high": 0.7455357143,
+              "method": "DETERMINISTIC_SUBJECT_CLUSTER_PERCENTILE_BOOTSTRAP_4096"
+            },
+            "confusion": {
+              "tp": 251,
+              "fn": 109,
+              "tn": 247,
+              "fp": 113
+            },
+            "foldCount": 42,
+            "invalidSemanticDirectionFolds": 0
+          },
+          "trainingLosoSelective": {
+            "sequenceCount": 720,
+            "subjectCount": 42,
+            "subjectMetricCount": 29,
+            "determinateCount": 296,
+            "unknownCount": 424,
+            "coverage": 0.4111111111,
+            "trueLabelCoverage": 0.4527777778,
+            "falseLabelCoverage": 0.3694444444,
+            "minimumSubjectCoverage": 0.0,
+            "p10SubjectCoverage": 0.0625,
+            "subjectsWithBothClassEvidence": 29,
+            "sensitivity": 0.7484662577,
+            "specificity": 0.8872180451,
+            "balancedAccuracy": 0.8178421514,
+            "subjectMacroBalancedAccuracy": 0.7545977011,
+            "subjectMedianBalancedAccuracy": 0.7,
+            "subjectMacroBalancedAccuracyBootstrap95": {
+              "low": 0.6698275862,
+              "high": 0.834375,
+              "method": "DETERMINISTIC_SUBJECT_CLUSTER_PERCENTILE_BOOTSTRAP_4096"
+            },
+            "confusion": {
+              "tp": 122,
+              "fn": 41,
+              "tn": 118,
+              "fp": 15
+            },
+            "foldCount": 42,
+            "invalidSemanticDirectionFolds": 0
+          },
+          "trainingPairedContrast": {
+            "estimand": "MATCHED_SUBJECT_DAY_OTHER_CONDITION_CELL_NOT_SAME_REPETITION",
+            "matchedSubjectDayConditionCells": 360,
+            "matchedSubjects": 42,
+            "minimumMatchedCellsPerSubject": 8,
+            "medianTrueMinusFalse": -0.0611340691,
+            "semanticTrueLowerConsistency": 0.880952381,
+            "semanticTrueLowerConsistencyWilson95": {
+              "low": 0.7499960974,
+              "high": 0.9480619667
+            },
+            "zeroEffectSubjects": 0
+          }
+        }
+      ],
+      "selectedFeature": "3d.bottom.worst-side-knee-over-foot-body-lateral-offset-median-shoulder-width",
+      "lockedValidation": {
+        "sequenceCount": 112,
+        "subjectCount": 7,
+        "subjectMetricCount": 7,
+        "determinateCount": 112,
+        "unknownCount": 0,
+        "coverage": 1.0,
+        "trueLabelCoverage": 1.0,
+        "falseLabelCoverage": 1.0,
+        "minimumSubjectCoverage": 1.0,
+        "p10SubjectCoverage": 1.0,
+        "subjectsWithBothClassEvidence": 7,
+        "sensitivity": 0.7857142857,
+        "specificity": 0.9107142857,
+        "balancedAccuracy": 0.8482142857,
+        "subjectMacroBalancedAccuracy": 0.8482142857,
+        "subjectMedianBalancedAccuracy": 0.875,
+        "subjectMacroBalancedAccuracyBootstrap95": {
+          "low": 0.6964285714,
+          "high": 0.9553571429,
+          "method": "DETERMINISTIC_SUBJECT_CLUSTER_PERCENTILE_BOOTSTRAP_4096"
+        },
+        "confusion": {
+          "tp": 44,
+          "fn": 12,
+          "tn": 51,
+          "fp": 5
+        }
+      },
+      "lockedValidationSelective": {
+        "sequenceCount": 112,
+        "subjectCount": 7,
+        "subjectMetricCount": 7,
+        "determinateCount": 77,
+        "unknownCount": 35,
+        "coverage": 0.6875,
+        "trueLabelCoverage": 0.6428571429,
+        "falseLabelCoverage": 0.7321428571,
+        "minimumSubjectCoverage": 0.4375,
+        "p10SubjectCoverage": 0.475,
+        "subjectsWithBothClassEvidence": 7,
+        "sensitivity": 0.9166666667,
+        "specificity": 0.9756097561,
+        "balancedAccuracy": 0.9461382114,
+        "subjectMacroBalancedAccuracy": 0.9261904762,
+        "subjectMedianBalancedAccuracy": 1.0,
+        "subjectMacroBalancedAccuracyBootstrap95": {
+          "low": 0.8071428571,
+          "high": 1.0,
+          "method": "DETERMINISTIC_SUBJECT_CLUSTER_PERCENTILE_BOOTSTRAP_4096"
+        },
+        "confusion": {
+          "tp": 33,
+          "fn": 3,
+          "tn": 40,
+          "fp": 1
+        }
+      },
+      "lockedValidationPairedContrast": {
+        "estimand": "MATCHED_SUBJECT_DAY_OTHER_CONDITION_CELL_NOT_SAME_REPETITION",
+        "matchedSubjectDayConditionCells": 56,
+        "matchedSubjects": 7,
+        "minimumMatchedCellsPerSubject": 8,
+        "medianTrueMinusFalse": -0.1345907124,
+        "semanticTrueLowerConsistency": 1.0,
+        "semanticTrueLowerConsistencyWilson95": {
+          "low": 0.6456695649,
+          "high": 1.0
+        },
+        "zeroEffectSubjects": 0
+      },
+      "validationRole": "CONSUMED_DESCRIPTIVE_DEVELOPMENT_REPLICATION_NOT_PRISTINE_CONFIRMATORY_HOLDOUT",
+      "proxyResearchState": "INSUFFICIENT_ROBUST_REPLICATION",
+      "exactConditionReleaseState": "BLOCKED_NO_MEDIAPIPE_GOLD_OR_UNTOUCHED_EXTERNAL_TEST"
+    },
+    {
+      "condition": "발바닥 지면 고정",
+      "criterionContract": {
+        "semanticId": "aihub.condition.plantar-ground-contact-fixed.v1",
+        "targetConstructId": "proxy.camera-coordinate-foot-motion.v1",
+        "exactConditionObservability": "NOT_OBSERVABLE_FROM_POSE_COORDINATES",
+        "claimBoundary": "Only gross camera-coordinate foot motion is measured; plantar contact, pressure, and ground reaction force are not identified."
+      },
+      "expectedDirection": "TRUE_LOWER_PROXY_ERROR",
+      "selectionProtocol": "PREDECLARED_FEATURES_TRAINING_GLOBAL_Z_LOSO_ONLY_VALIDATION_NOT_USED_FOR_SELECTION",
+      "candidateCount": 3,
+      "trainingCandidates": [
+        {
+          "feature": "3d.active.worst-side-camera-coordinate-foot-step-q75-per-torso-scale",
+          "expectedDirection": "TRUE_LOWER",
+          "fullTrainingFit": {
+            "trueCenter": 0.0193080618,
+            "falseCenter": 0.0475116855,
+            "threshold": 0.0334098737,
+            "abstentionHalfWidth": 0.015040888,
+            "abstentionPolicy": "MAX_CLASS_SUBJECT_MEDIAN_MAD_X_1_4826",
+            "semanticDirectionValid": true
+          },
+          "trainingLoso": {
+            "sequenceCount": 720,
+            "subjectCount": 42,
+            "subjectMetricCount": 42,
+            "determinateCount": 720,
+            "unknownCount": 0,
+            "coverage": 1.0,
+            "trueLabelCoverage": 1.0,
+            "falseLabelCoverage": 1.0,
+            "minimumSubjectCoverage": 1.0,
+            "p10SubjectCoverage": 1.0,
+            "subjectsWithBothClassEvidence": 42,
+            "sensitivity": 0.7944444444,
+            "specificity": 0.7638888889,
+            "balancedAccuracy": 0.7791666667,
+            "subjectMacroBalancedAccuracy": 0.7745535714,
+            "subjectMedianBalancedAccuracy": 0.765625,
+            "subjectMacroBalancedAccuracyBootstrap95": {
+              "low": 0.7239583333,
+              "high": 0.8258928571,
+              "method": "DETERMINISTIC_SUBJECT_CLUSTER_PERCENTILE_BOOTSTRAP_4096"
+            },
+            "confusion": {
+              "tp": 286,
+              "fn": 74,
+              "tn": 275,
+              "fp": 85
+            },
+            "foldCount": 42,
+            "invalidSemanticDirectionFolds": 0
+          },
+          "trainingLosoSelective": {
+            "sequenceCount": 720,
+            "subjectCount": 42,
+            "subjectMetricCount": 34,
+            "determinateCount": 362,
+            "unknownCount": 358,
+            "coverage": 0.5027777778,
+            "trueLabelCoverage": 0.5055555556,
+            "falseLabelCoverage": 0.5,
+            "minimumSubjectCoverage": 0.0625,
+            "p10SubjectCoverage": 0.25,
+            "subjectsWithBothClassEvidence": 34,
+            "sensitivity": 0.8901098901,
+            "specificity": 0.9611111111,
+            "balancedAccuracy": 0.9256105006,
+            "subjectMacroBalancedAccuracy": 0.8107843137,
+            "subjectMedianBalancedAccuracy": 0.95,
+            "subjectMacroBalancedAccuracyBootstrap95": {
+              "low": 0.7348039216,
+              "high": 0.8848039216,
+              "method": "DETERMINISTIC_SUBJECT_CLUSTER_PERCENTILE_BOOTSTRAP_4096"
+            },
+            "confusion": {
+              "tp": 162,
+              "fn": 20,
+              "tn": 173,
+              "fp": 7
+            },
+            "foldCount": 42,
+            "invalidSemanticDirectionFolds": 0
+          },
+          "trainingPairedContrast": {
+            "estimand": "MATCHED_SUBJECT_DAY_OTHER_CONDITION_CELL_NOT_SAME_REPETITION",
+            "matchedSubjectDayConditionCells": 360,
+            "matchedSubjects": 42,
+            "minimumMatchedCellsPerSubject": 8,
+            "medianTrueMinusFalse": -0.0234999367,
+            "semanticTrueLowerConsistency": 1.0,
+            "semanticTrueLowerConsistencyWilson95": {
+              "low": 0.9162012091,
+              "high": 1.0
+            },
+            "zeroEffectSubjects": 0
+          }
+        },
+        {
+          "feature": "2d.active.views.worst-side-camera-coordinate-foot-step-q75-per-torso-scale-median",
+          "expectedDirection": "TRUE_LOWER",
+          "fullTrainingFit": {
+            "trueCenter": 0.0221116471,
+            "falseCenter": 0.0438621284,
+            "threshold": 0.0329868877,
+            "abstentionHalfWidth": 0.014414152,
+            "abstentionPolicy": "MAX_CLASS_SUBJECT_MEDIAN_MAD_X_1_4826",
+            "semanticDirectionValid": true
+          },
+          "trainingLoso": {
+            "sequenceCount": 720,
+            "subjectCount": 42,
+            "subjectMetricCount": 42,
+            "determinateCount": 720,
+            "unknownCount": 0,
+            "coverage": 1.0,
+            "trueLabelCoverage": 1.0,
+            "falseLabelCoverage": 1.0,
+            "minimumSubjectCoverage": 1.0,
+            "p10SubjectCoverage": 1.0,
+            "subjectsWithBothClassEvidence": 42,
+            "sensitivity": 0.7638888889,
+            "specificity": 0.75,
+            "balancedAccuracy": 0.7569444444,
+            "subjectMacroBalancedAccuracy": 0.7611607143,
+            "subjectMedianBalancedAccuracy": 0.75,
+            "subjectMacroBalancedAccuracyBootstrap95": {
+              "low": 0.7105654762,
+              "high": 0.808500744,
+              "method": "DETERMINISTIC_SUBJECT_CLUSTER_PERCENTILE_BOOTSTRAP_4096"
+            },
+            "confusion": {
+              "tp": 275,
+              "fn": 85,
+              "tn": 270,
+              "fp": 90
+            },
+            "foldCount": 42,
+            "invalidSemanticDirectionFolds": 0
+          },
+          "trainingLosoSelective": {
+            "sequenceCount": 720,
+            "subjectCount": 42,
+            "subjectMetricCount": 31,
+            "determinateCount": 316,
+            "unknownCount": 404,
+            "coverage": 0.4388888889,
+            "trueLabelCoverage": 0.4277777778,
+            "falseLabelCoverage": 0.45,
+            "minimumSubjectCoverage": 0.0625,
+            "p10SubjectCoverage": 0.1875,
+            "subjectsWithBothClassEvidence": 31,
+            "sensitivity": 0.8831168831,
+            "specificity": 0.9444444444,
+            "balancedAccuracy": 0.9137806638,
+            "subjectMacroBalancedAccuracy": 0.7768817204,
+            "subjectMedianBalancedAccuracy": 1.0,
+            "subjectMacroBalancedAccuracyBootstrap95": {
+              "low": 0.6935483871,
+              "high": 0.8602150538,
+              "method": "DETERMINISTIC_SUBJECT_CLUSTER_PERCENTILE_BOOTSTRAP_4096"
+            },
+            "confusion": {
+              "tp": 136,
+              "fn": 18,
+              "tn": 153,
+              "fp": 9
+            },
+            "foldCount": 42,
+            "invalidSemanticDirectionFolds": 0
+          },
+          "trainingPairedContrast": {
+            "estimand": "MATCHED_SUBJECT_DAY_OTHER_CONDITION_CELL_NOT_SAME_REPETITION",
+            "matchedSubjectDayConditionCells": 360,
+            "matchedSubjects": 42,
+            "minimumMatchedCellsPerSubject": 8,
+            "medianTrueMinusFalse": -0.0198150731,
+            "semanticTrueLowerConsistency": 1.0,
+            "semanticTrueLowerConsistencyWilson95": {
+              "low": 0.9162012091,
+              "high": 1.0
+            },
+            "zeroEffectSubjects": 0
+          }
+        },
+        {
+          "feature": "3d.active.worst-side-camera-coordinate-foot-excursion-q90-per-torso-scale",
+          "expectedDirection": "TRUE_LOWER",
+          "fullTrainingFit": {
+            "trueCenter": 0.0211123132,
+            "falseCenter": 0.0440758661,
+            "threshold": 0.0325940897,
+            "abstentionHalfWidth": 0.0197562768,
+            "abstentionPolicy": "MAX_CLASS_SUBJECT_MEDIAN_MAD_X_1_4826",
+            "semanticDirectionValid": true
+          },
+          "trainingLoso": {
+            "sequenceCount": 720,
+            "subjectCount": 42,
+            "subjectMetricCount": 42,
+            "determinateCount": 720,
+            "unknownCount": 0,
+            "coverage": 1.0,
+            "trueLabelCoverage": 1.0,
+            "falseLabelCoverage": 1.0,
+            "minimumSubjectCoverage": 1.0,
+            "p10SubjectCoverage": 1.0,
+            "subjectsWithBothClassEvidence": 42,
+            "sensitivity": 0.7416666667,
+            "specificity": 0.725,
+            "balancedAccuracy": 0.7333333333,
+            "subjectMacroBalancedAccuracy": 0.728422619,
+            "subjectMedianBalancedAccuracy": 0.703125,
+            "subjectMacroBalancedAccuracyBootstrap95": {
+              "low": 0.6830357143,
+              "high": 0.7723214286,
+              "method": "DETERMINISTIC_SUBJECT_CLUSTER_PERCENTILE_BOOTSTRAP_4096"
+            },
+            "confusion": {
+              "tp": 267,
+              "fn": 93,
+              "tn": 261,
+              "fp": 99
+            },
+            "foldCount": 42,
+            "invalidSemanticDirectionFolds": 0
+          },
+          "trainingLosoSelective": {
+            "sequenceCount": 720,
+            "subjectCount": 42,
+            "subjectMetricCount": 32,
+            "determinateCount": 280,
+            "unknownCount": 440,
+            "coverage": 0.3888888889,
+            "trueLabelCoverage": 0.3888888889,
+            "falseLabelCoverage": 0.3888888889,
+            "minimumSubjectCoverage": 0.0,
+            "p10SubjectCoverage": 0.125,
+            "subjectsWithBothClassEvidence": 32,
+            "sensitivity": 0.6571428571,
+            "specificity": 0.9785714286,
+            "balancedAccuracy": 0.8178571429,
+            "subjectMacroBalancedAccuracy": 0.7222470238,
+            "subjectMedianBalancedAccuracy": 0.775,
+            "subjectMacroBalancedAccuracyBootstrap95": {
+              "low": 0.649125744,
+              "high": 0.794577753,
+              "method": "DETERMINISTIC_SUBJECT_CLUSTER_PERCENTILE_BOOTSTRAP_4096"
+            },
+            "confusion": {
+              "tp": 92,
+              "fn": 48,
+              "tn": 137,
+              "fp": 3
+            },
+            "foldCount": 42,
+            "invalidSemanticDirectionFolds": 0
+          },
+          "trainingPairedContrast": {
+            "estimand": "MATCHED_SUBJECT_DAY_OTHER_CONDITION_CELL_NOT_SAME_REPETITION",
+            "matchedSubjectDayConditionCells": 360,
+            "matchedSubjects": 42,
+            "minimumMatchedCellsPerSubject": 8,
+            "medianTrueMinusFalse": -0.0224613685,
+            "semanticTrueLowerConsistency": 0.9761904762,
+            "semanticTrueLowerConsistencyWilson95": {
+              "low": 0.8767879843,
+              "high": 0.9957845959
+            },
+            "zeroEffectSubjects": 0
+          }
+        }
+      ],
+      "selectedFeature": "3d.active.worst-side-camera-coordinate-foot-step-q75-per-torso-scale",
+      "lockedValidation": {
+        "sequenceCount": 112,
+        "subjectCount": 7,
+        "subjectMetricCount": 7,
+        "determinateCount": 112,
+        "unknownCount": 0,
+        "coverage": 1.0,
+        "trueLabelCoverage": 1.0,
+        "falseLabelCoverage": 1.0,
+        "minimumSubjectCoverage": 1.0,
+        "p10SubjectCoverage": 1.0,
+        "subjectsWithBothClassEvidence": 7,
+        "sensitivity": 0.6964285714,
+        "specificity": 0.8928571429,
+        "balancedAccuracy": 0.7946428571,
+        "subjectMacroBalancedAccuracy": 0.7946428571,
+        "subjectMedianBalancedAccuracy": 0.8125,
+        "subjectMacroBalancedAccuracyBootstrap95": {
+          "low": 0.7321428571,
+          "high": 0.8571428571,
+          "method": "DETERMINISTIC_SUBJECT_CLUSTER_PERCENTILE_BOOTSTRAP_4096"
+        },
+        "confusion": {
+          "tp": 39,
+          "fn": 17,
+          "tn": 50,
+          "fp": 6
+        }
+      },
+      "lockedValidationSelective": {
+        "sequenceCount": 112,
+        "subjectCount": 7,
+        "subjectMetricCount": 3,
+        "determinateCount": 44,
+        "unknownCount": 68,
+        "coverage": 0.3928571429,
+        "trueLabelCoverage": 0.0892857143,
+        "falseLabelCoverage": 0.6964285714,
+        "minimumSubjectCoverage": 0.25,
+        "p10SubjectCoverage": 0.25,
+        "subjectsWithBothClassEvidence": 3,
+        "sensitivity": 0.4,
+        "specificity": 0.9743589744,
+        "balancedAccuracy": 0.6871794872,
+        "subjectMacroBalancedAccuracy": 0.6666666667,
+        "subjectMedianBalancedAccuracy": 0.5,
+        "subjectMacroBalancedAccuracyBootstrap95": {
+          "low": 0.5,
+          "high": 1.0,
+          "method": "DETERMINISTIC_SUBJECT_CLUSTER_PERCENTILE_BOOTSTRAP_4096"
+        },
+        "confusion": {
+          "tp": 2,
+          "fn": 3,
+          "tn": 38,
+          "fp": 1
+        }
+      },
+      "lockedValidationPairedContrast": {
+        "estimand": "MATCHED_SUBJECT_DAY_OTHER_CONDITION_CELL_NOT_SAME_REPETITION",
+        "matchedSubjectDayConditionCells": 56,
+        "matchedSubjects": 7,
+        "minimumMatchedCellsPerSubject": 8,
+        "medianTrueMinusFalse": -0.0267623248,
+        "semanticTrueLowerConsistency": 1.0,
+        "semanticTrueLowerConsistencyWilson95": {
+          "low": 0.6456695649,
+          "high": 1.0
+        },
+        "zeroEffectSubjects": 0
+      },
+      "validationRole": "CONSUMED_DESCRIPTIVE_DEVELOPMENT_REPLICATION_NOT_PRISTINE_CONFIRMATORY_HOLDOUT",
+      "proxyResearchState": "INSUFFICIENT_ROBUST_REPLICATION",
+      "exactConditionReleaseState": "BLOCKED_NOT_OBSERVABLE_FROM_POSE_COORDINATES"
+    }
+  ],
+  "warnings": [
+    "No AI Hub barbell-squat RGB is available for a MediaPipe domain bridge.",
+    "Official Validation was observed during development and is descriptive only.",
+    "Validation is coordinate-domain only: one day and seven subjects.",
+    "Spine, head, knee-foot, and plantar constructs are gross coordinate proxies.",
+    "Plantar pressure/contact and actual gaze are not identifiable from these coordinates.",
+    "AI Hub five-view ensemble features cannot be deployed as one phone-camera feature.",
+    "A replicated proxy signal is not a threshold artifact, calibration, cue, or GA approval."
+  ],
+  "reportFingerprintSha256": "0c3746aba72cead19d608d08b66a45779a554716d4000c9d8a78cc7817bec88e"
+}
