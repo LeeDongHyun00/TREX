@@ -120,7 +120,10 @@ object PostureCorrectionRuntimeFacade {
                 val reviewedCount = bindings.count { binding ->
                     binding.reviewState == AiHubCriterionReviewState.REVIEWED_ENGINEERING_V1
                 }
-                val releasedCount = BundledPostureReleaseAllowlist.entryCount
+                // Release counts are always resolved for the exact exercise key. A future
+                // non-empty allowlist must not accidentally advertise one authorized binding on
+                // every exercise by reusing a global entry count.
+                val releasedCount = BundledPostureReleaseAllowlist.entryCount(exercise)
                 val lifecycle = when {
                     bindings.isEmpty() -> PostureCorrectionLifecycle.UNSUPPORTED
                     releasedCount == 0 -> PostureCorrectionLifecycle.CATALOG_ONLY
@@ -187,6 +190,11 @@ private object BundledPostureReleaseAllowlist {
 
     val entryCount: Int
         get() = entries.size
+
+    fun entryCount(exercise: AiHubExercise): Int {
+        check(exercise in AiHubExercise.entries)
+        return 0
+    }
 
     val artifactSha256: String = canonicalFieldsSha256(
         listOf(
