@@ -1,12 +1,13 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "artifactKind": "AIHUB_BARBELL_SQUAT_COORDINATE_VALIDATION_EXPERIMENT",
   "decisionUse": "RESEARCH_ONLY_NOT_MEDIAPIPE_CALIBRATION_OR_USER_PASS_FAIL",
   "serviceReleaseEligible": false,
   "authenticity": "UNSIGNED_RESEARCH_ARTIFACT_NEVER_LOAD_IN_USER_RUNTIME",
   "experimentFamilyId": "aihub.barbell-squat.coordinate-proxy.v1",
   "protocolContract": {
-    "protocolId": "aihub.barbell-squat.coordinate-proxy.protocol.v3",
+    "protocolId": "aihub.barbell-squat.coordinate-proxy.protocol.v4",
+    "implementationTextHashNormalization": "UTF8_STRIP_OPTIONAL_BOM_NORMALIZE_CRLF_AND_CR_TO_LF",
     "approvedCoverageSha256": "1f6ab0ea0981c6d1ef693ace7e72608a2e9af363b4b52f789a1749f92dae9cb5",
     "criterionContracts": {
       "척추의 중립": {
@@ -81,16 +82,18 @@
       "allTrainingLosoFoldsMustMatchSemanticDirection": true
     }
   },
-  "protocolArtifactSha256": "01c2cccc6e05ae45c93f2a50e5bccd4d058be162c69eebfe0507b8a9703e96b8",
+  "protocolArtifactSha256": "0c591c8213dda06a9af63ec009afdd3ddd1a265cdb72b9e387bcdcf69acb3bbb",
   "approvedAiHubCatalog": {
     "relativePath": "docs/aihub-exercise-catalog.json",
     "catalogSha256": "fe4e3075a00212293c9ffd3df8f007bc3666e17af2526de3a8d570d052a4e29c",
-    "artifactByteSha256": "d0c0e91917943e0f9698d989e083895b35e0ba0a6fcf584c6b75a69d30eccb19",
+    "artifactCanonicalLfTextSha256": "d0c0e91917943e0f9698d989e083895b35e0ba0a6fcf584c6b75a69d30eccb19",
+    "textHashNormalization": "UTF8_STRIP_OPTIONAL_BOM_NORMALIZE_CRLF_AND_CR_TO_LF",
     "barbellSquatCoverageSha256": "1f6ab0ea0981c6d1ef693ace7e72608a2e9af363b4b52f789a1749f92dae9cb5"
   },
   "implementationProvenance": {
-    "scriptSha256": "d5e8c380a8c67c2a42c6b136391c1fec3de9b4d13655d4a29ea8e73058087bbe",
-    "sharedParserSha256": "01a3d10e87d15a56439b609f1ee1caf086bcd82cfaaef7b26263f4cc5b45355c",
+    "scriptCanonicalLfTextSha256": "ff8467a8ae942fc0c96f205cc86f01ff6a1ff88658dd002579569d660de9895d",
+    "sharedParserCanonicalLfTextSha256": "01a3d10e87d15a56439b609f1ee1caf086bcd82cfaaef7b26263f4cc5b45355c",
+    "textHashNormalization": "UTF8_STRIP_OPTIONAL_BOM_NORMALIZE_CRLF_AND_CR_TO_LF",
     "pythonVersion": "3.13.12",
     "dependencies": "PYTHON_STANDARD_LIBRARY_ONLY_PLUS_PINNED_SHARED_PARSER_SOURCE"
   },
@@ -1670,5 +1673,5 @@
     "AI Hub five-view ensemble features cannot be deployed as one phone-camera feature.",
     "A replicated proxy signal is not a threshold artifact, calibration, cue, or GA approval."
   ],
-  "reportFingerprintSha256": "0c3746aba72cead19d608d08b66a45779a554716d4000c9d8a78cc7817bec88e"
+  "reportFingerprintSha256": "8d8fdffe5477c79701a053fb4fb647c91082b882213a13cfd1efb7beb0d3ea6a"
 }

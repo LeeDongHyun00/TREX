@@ -336,7 +336,7 @@ class PosePhaseEngineTest {
     }
 
     @Test
-    fun loopingGraphCannotGrowCycleScopeBeyondTheDeviceWindowCeiling() {
+    fun loopingGraphCannotGrowEitherCycleScopePolicyBeyondTheDeviceWindowCeiling() {
         val first = PosePhaseStateId("loop-first")
         val second = PosePhaseStateId("loop-second")
         val graph = OrderedPosePhaseGraph(
@@ -356,31 +356,45 @@ class PosePhaseEngineTest {
                 PosePhaseTransition(second, first),
             ),
         )
-        val engine = PosePhaseEngine(
-            PosePhaseEngineConfig(
-                graph = graph,
-                minimumQualitySignal = 0.5,
-                maximumObservationGapMs = 10L,
-                unusableObservationGraceMs = 0L,
-                maximumPhaseDurationMs = 1_000L,
-                maximumCycleDurationMs = 1_000L,
-            ),
-        )
-        engine.accept(observation(0L, 0.0))
+        PoseCycleScopeStartPolicy.entries.forEach { scopePolicy ->
+            val engine = PosePhaseEngine(
+                PosePhaseEngineConfig(
+                    graph = graph,
+                    minimumQualitySignal = 0.5,
+                    maximumObservationGapMs = 10L,
+                    unusableObservationGraceMs = 0L,
+                    maximumPhaseDurationMs = 1_000L,
+                    maximumCycleDurationMs = 1_000L,
+                    cycleScopeStartPolicy = scopePolicy,
+                ),
+            )
+            engine.accept(observation(0L, 0.0))
 
-        var lastUpdate: PosePhaseUpdate? = null
-        (1L..MAXIMUM_TRACKED_CYCLE_PHASE_WINDOWS.toLong() + 1L).forEach { timestamp ->
-            val scalar = if (timestamp % 2L == 0L) 0.0 else 1.0
-            lastUpdate = engine.accept(observation(timestamp, scalar))
+            var overflowReset: PosePhaseUpdate? = null
+            for (
+                timestamp in
+                1L..MAXIMUM_TRACKED_CYCLE_PHASE_WINDOWS.toLong() + 2L
+            ) {
+                val scalar = if (timestamp % 2L == 0L) 0.0 else 1.0
+                val update = engine.accept(observation(timestamp, scalar))
+                if (update.events.any { event ->
+                        event is PosePhaseTrackingReset &&
+                            event.reason == PosePhaseResetReason.CYCLE_SCOPE_OVERFLOW
+                    }
+                ) {
+                    overflowReset = update
+                    break
+                }
+            }
+
+            val reset = requireNotNull(overflowReset) { "No overflow reset for $scopePolicy" }
+            assertEquals(
+                PosePhaseResetReason.CYCLE_SCOPE_OVERFLOW,
+                reset.events.filterIsInstance<PosePhaseTrackingReset>().single().reason,
+            )
+            assertTrue(reset.events.none { it is PosePhaseCycleCompleted })
+            assertNull(reset.activeStateId)
         }
-
-        val reset = requireNotNull(lastUpdate)
-        assertEquals(
-            PosePhaseResetReason.CYCLE_SCOPE_OVERFLOW,
-            reset.events.filterIsInstance<PosePhaseTrackingReset>().single().reason,
-        )
-        assertTrue(reset.events.none { it is PosePhaseCycleCompleted })
-        assertNull(reset.activeStateId)
     }
 
     @Test
@@ -533,12 +547,121 @@ class PosePhaseEngineTest {
         }
     }
 
+    @Test
+    fun firstTransitionBoundaryExcludesReadyFromCompletedCycleScope() {
+        val updates = feed(
+            engine(
+                cycleScopeStartPolicy =
+                    PoseCycleScopeStartPolicy.FIRST_TRANSITION_BOUNDARY,
+            ),
+            completeCycle(),
+        )
+
+        val completed = updates.flatMap(PosePhaseUpdate::events)
+            .filterIsInstance<PosePhaseCycleCompleted>()
+            .single()
+
+        assertEquals(200L, completed.cycleStartTimestampMs)
+        assertEquals(800L, completed.cycleEndTimestampMs)
+        assertEquals(
+            listOf(descending, bottom, ascending),
+            completed.phaseWindows.map(PosePhaseWindow::stateId),
+        )
+        assertEquals(
+            listOf(200L, 400L, 600L),
+            completed.phaseWindows.map(PosePhaseWindow::startTimestampMs),
+        )
+        assertEquals(
+            listOf(400L, 600L, 800L),
+            completed.phaseWindows.map(PosePhaseWindow::endTimestampMs),
+        )
+    }
+
+    @Test
+    fun firstTransitionBoundaryKeepsAdjacentCyclesIndependent() {
+        val engine = engine(
+            cycleScopeStartPolicy = PoseCycleScopeStartPolicy.FIRST_TRANSITION_BOUNDARY,
+        )
+        val secondCycle = listOf(
+            observation(1_000L, 150.0),
+            observation(1_100L, 145.0),
+            observation(1_200L, 105.0),
+            observation(1_300L, 104.0),
+            observation(1_400L, 130.0),
+            observation(1_500L, 140.0),
+            observation(1_600L, 170.0),
+            observation(1_700L, 172.0),
+        )
+
+        val completed = feed(engine, completeCycle() + secondCycle)
+            .flatMap(PosePhaseUpdate::events)
+            .filterIsInstance<PosePhaseCycleCompleted>()
+
+        assertEquals(2, completed.size)
+        assertEquals(listOf(200L, 1_000L), completed.map { it.cycleStartTimestampMs })
+        assertEquals(listOf(800L, 1_600L), completed.map { it.cycleEndTimestampMs })
+        assertTrue(completed.all { event ->
+            event.phaseWindows.map(PosePhaseWindow::stateId) ==
+                listOf(descending, bottom, ascending)
+        })
+    }
+
+    @Test
+    fun firstTransitionBoundaryDiscardsPartialScopeAcrossIdentityReset() {
+        val engine = engine(
+            cycleScopeStartPolicy = PoseCycleScopeStartPolicy.FIRST_TRANSITION_BOUNDARY,
+        )
+        feed(
+            engine,
+            listOf(
+                observation(0L, 175.0),
+                observation(100L, 175.0),
+                observation(200L, 150.0),
+                observation(300L, 145.0),
+            ),
+        )
+        val reset = engine.resetForIdentityDiscontinuity(
+            reason = PosePhaseResetReason.PERSON_CHANGED,
+            timestampMs = 350L,
+        )
+
+        val recovered = feed(
+            engine,
+            listOf(
+                observation(400L, 175.0),
+                observation(500L, 175.0),
+                observation(600L, 150.0),
+                observation(700L, 145.0),
+                observation(800L, 105.0),
+                observation(900L, 104.0),
+                observation(1_000L, 130.0),
+                observation(1_100L, 140.0),
+                observation(1_200L, 170.0),
+                observation(1_300L, 172.0),
+            ),
+        )
+        val completed = recovered.flatMap(PosePhaseUpdate::events)
+            .filterIsInstance<PosePhaseCycleCompleted>()
+            .single()
+
+        assertTrue(reset.events.any { it is PosePhaseTrackingReset })
+        assertTrue(reset.events.none { it is PosePhaseCycleCompleted })
+        assertEquals(600L, completed.cycleStartTimestampMs)
+        assertEquals(1_200L, completed.cycleEndTimestampMs)
+        assertEquals(
+            listOf(descending, bottom, ascending),
+            completed.phaseWindows.map(PosePhaseWindow::stateId),
+        )
+    }
+
     private fun engine(
         directionTolerance: Double = 0.0,
         maxGapMs: Long = 400L,
         graceMs: Long = 250L,
         maximumPhaseDurationMs: Long = 10_000L,
         maximumCycleDurationMs: Long = maxOf(maximumPhaseDurationMs, 30_000L),
+        cycleScopeStartPolicy: PoseCycleScopeStartPolicy =
+            PoseCycleScopeStartPolicy.INITIAL_PHASE_WINDOW_START,
     ) = PosePhaseEngine(
         PosePhaseEngineConfig(
             graph = graph(directionTolerance),
@@ -547,6 +670,7 @@ class PosePhaseEngineTest {
             unusableObservationGraceMs = graceMs,
             maximumPhaseDurationMs = maximumPhaseDurationMs,
             maximumCycleDurationMs = maximumCycleDurationMs,
+            cycleScopeStartPolicy = cycleScopeStartPolicy,
         ),
     )
 

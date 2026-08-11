@@ -68,11 +68,18 @@ completed cycle로 인정하는 반개구간 `[start, end)` 규약을 고정한�
 - person/source/view/crop/rotation/mirror/timestamp discontinuity 시 미완료 cycle 전체 폐기
 - 완료 cycle의 미래 극값·quantile을 이용한 look-ahead 정규화 금지
 
-이 파일은 `SPECIFICATION_ONLY`다. 수치 threshold, 실행 phase provider, MediaPipe-Gold 승인,
-사용자 세션 연결이 없다.
+이 파일은 `SPECIFICATION_ONLY`다. Training-only 피험자 분리 실험의 continuation gate가
+`REJECTED`였으므로 수치 threshold를 runtime parameter로 가져오지 않았고, 실행 phase provider,
+MediaPipe-Gold 승인, 사용자 세션 연결이 없다. Camera geometry receipt는 M5에서 추가됐지만 같은
+Gradle module의 수동 issuer pin이므로 독립 authenticity 또는 실행 권한은 아니다.
+이번 Training-only evidence는 AI Hub 3D lateral knee-flexion signal family만 다뤘다. 위 front
+pelvis-ankle 후보는 specification에만 남아 있으며 이번 결과로 평가·검증된 것이 아니다.
 
 Phase research contract SHA-256:
-`589ac54005267ff89be0ae679e8f0a2316d2640ebc4d76822b48e02b33ad27a2`
+`7ca4751630f7625ffb8c7858ed74f3a921aa6ce91666f9a9ed60e827a9374352`
+
+Training-only readiness SHA-256:
+`7bbb9a1a3e199c5802730a29d167987c0c6786103e98af43c7924de21c859fa4`
 
 ### 측면 좌·우 무릎 굴곡 연구 신호
 
@@ -112,10 +119,10 @@ Empty shadow authority drift pin:
 
 ## 데이터 해석 제한
 
-공식 AI Hub Validation은 기존 좌표 proxy 연구와 이번 phase 탐색에서 이미 관찰되어
-`CONSUMED_DEVELOPMENT_BENCHMARK`다. 이후 threshold 선택, 성능 주장, 승격 판단의 confirmatory
-holdout으로 다시 사용할 수 없다. AI Hub 좌표와 실제 휴대폰 MediaPipe landmark 사이의 paired
-Gold도 아직 없다.
+공식 AI Hub Validation은 기존 좌표 proxy 연구에서 이미 소비됐다. 이번 Training-only phase
+탐색에서는 Validation을 읽거나 재사용하지 않았지만, 이후 threshold 선택, 성능 주장, 승격 판단의
+confirmatory holdout으로 되돌려 사용할 수는 없다. AI Hub 좌표와 실제 휴대폰 MediaPipe landmark
+사이의 paired Gold도 아직 없다.
 
 특히 MediaPipe 33 landmark에는 AI Hub의 `Back`과 `Waist`에 해당하는 척추 chain이 없으므로
 shoulder-hip 선을 `척추 중립`으로 바꾸어 부르거나 승인하면 안 된다. 발바닥 지면 고정은 검증된

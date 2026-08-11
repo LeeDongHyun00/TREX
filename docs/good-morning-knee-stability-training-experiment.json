@@ -1,0 +1,567 @@
+{
+  "schemaVersion": 1,
+  "artifactKind": "AIHUB_GOOD_MORNING_TRAINING_ONLY_KNEE_STABILITY_SURROGATE_EXPERIMENT",
+  "decisionUse": "RESEARCH_ONLY_NO_RUNTIME_THRESHOLD_PHASE_VIEW_MEDIAPIPE_GOLD_OR_RELEASE_AUTHORITY",
+  "protocolId": "aihub.good-morning.knee-stability.ordinal-surrogate.protocol.v1",
+  "protocolSha256": "c07cce45e4eb89709bc67d667c2ccf063498256a404c92f51f4ed8e3af96e3ba",
+  "tool": {
+    "relativePath": "tools/good_morning_knee_stability_experiment.py",
+    "scriptCanonicalLfTextSha256": "2d5063a61c290402582a4be5f7873289cdb2bafa7cc48a06694d52cf5b448e26",
+    "textHashNormalization": "UTF8_CANONICAL_LF_CRLF_AND_CR_NORMALIZED_TO_LF"
+  },
+  "sharedImplementationProvenance": {
+    "coordinateParserCanonicalLfTextSha256": "01a3d10e87d15a56439b609f1ee1caf086bcd82cfaaef7b26263f4cc5b45355c",
+    "textHashNormalization": "UTF8_CANONICAL_LF_CRLF_AND_CR_NORMALIZED_TO_LF"
+  },
+  "catalogProvenance": {
+    "relativePath": "docs/aihub-criterion-coverage.json",
+    "artifactSha256": "9240aa2c9a429cce8f4c47314f7797bea6ebf39b276d3563f5d420a9d3a34eda",
+    "artifactCanonicalLfTextSha256": "7e698507c7d97fad5e2cfcbf06ccc1d66390444e9648cabb476704ccf91c7e20",
+    "conditionProjectionSha256": "f31dd8f76e04144f67ceb1caadc861e162e31e010220c812de5d79976d7850d8",
+    "exerciseProjectionSha256": "c8ba594022be8f6f270b19dbdf5abcb8acd5e76f4c7b3de7bd9555b145d14a71",
+    "textHashNormalization": "UTF8_CANONICAL_LF_CRLF_AND_CR_NORMALIZED_TO_LF"
+  },
+  "dataUse": {
+    "input": "AIHUB_OFFICIAL_TRAINING_ONLY",
+    "officialValidation": "NOT_STATTED_NOT_READ_NOT_REUSED",
+    "frameTime": "ORDINAL_ONLY_NO_FPS_OR_TIMESTAMP",
+    "cameraView": "NOT_EVALUATED",
+    "mediaPipe": "NOT_EVALUATED_NO_PIXEL_BRIDGE",
+    "phaseGold": "ABSENT",
+    "independentGold": "ABSENT"
+  },
+  "inputSnapshotThreatModel": {
+    "rootPrefixPolicy": "ABSOLUTE_ANCHOR_THROUGH_ROOT_LSTAT_NO_SYMLINK_OR_REPARSE",
+    "enumerationIdentity": [
+      "st_dev",
+      "st_ino",
+      "st_size",
+      "st_mtime_ns"
+    ],
+    "openPolicy": "O_NOFOLLOW_WHERE_PLATFORM_SUPPORTS_IT",
+    "descriptorChecks": "REGULAR_AND_EXACT_IDENTITY_BEFORE_AND_AFTER_READ",
+    "parseAndHashSource": "SAME_BOUNDED_BYTE_SNAPSHOT",
+    "externalContentRoot": null,
+    "detachedInputSignature": null,
+    "cryptographicFilesystemAuthenticity": false,
+    "residualRisk": "NO_EXTERNAL_CONTENT_ROOT_OR_SIGNATURE; A HOST OR FILESYSTEM CAPABLE OF FORGING IDENTITY/METADATA REMAINS OUTSIDE THIS LOCAL RACE DEFENSE"
+  },
+  "evaluatedScope": {
+    "exerciseId": "good-morning",
+    "sourceConditionId": "aihub-exact-sha256-621f2eb88568c0d247abce9bbdbc763e8e40ae396bd0ba254a77dcd8bbc0394d",
+    "coordinateDomain": "AIHUB_TRIANGULATED_3D_NOT_MEDIAPIPE_WORLD",
+    "sides": [
+      "LEFT",
+      "RIGHT"
+    ],
+    "ordinalFrameCount": 16,
+    "metricIds": [
+      "MEDIAN_FLEXION_DEGREES",
+      "ROBUST_P90_P10_RANGE_DEGREES",
+      "MEDIAN_ABSOLUTE_ORDINAL_DELTA_DEGREES"
+    ]
+  },
+  "trainingInventory": {
+    "split": "TRAINING",
+    "officialValidationStatCount": 0,
+    "officialValidationReadCount": 0,
+    "sequenceCount": 348,
+    "globalZSubjectCount": 41,
+    "globalZSubjectSetSha256": "341896663ff730cd69fb0d2086f6538a25b5e8d9664b352f503ad25716dbb369",
+    "typeCounts": {
+      "185": 44,
+      "186": 43,
+      "187": 42,
+      "188": 44,
+      "189": 44,
+      "190": 44,
+      "191": 44,
+      "192": 43
+    },
+    "targetCounts": {
+      "FALSE": 174,
+      "TRUE": 174
+    },
+    "dayCounts": {
+      "Day02_200922_F": 64,
+      "Day10_201007_F": 69,
+      "Day14_201014_F": 71,
+      "Day24_201026_F": 72,
+      "Day28_201030_F": 72
+    },
+    "frameCount": 16,
+    "ordinalDomain": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "unknownFeatureSequenceCountsBySide": {
+      "LEFT": 0,
+      "RIGHT": 0
+    },
+    "inputManifestSha256": "6d8b74b41f27c8d5ed54e4b1c11dfa41bb0f7d0f25b65aa907d7afa89e6868d6",
+    "absoluteOrRelativePathsPersisted": false
+  },
+  "experimentIdentitySha256": "cacec90d742b497e7f82314ba67933001d76e5bbb5b904196ba85e0313859116",
+  "experiment": {
+    "outerFoldAudit": {
+      "foldCount": 41,
+      "trainingSubjectsPerFold": 40,
+      "maximumSubjectOverlapCount": 0,
+      "foldManifestSha256": "77ee58594ee80eed787efdc5838a36ca339162b89ad1bf48f4b253a29a41427c",
+      "outerDecisionManifestSha256": "e5dfc2afd08d44a1c02c4d73c09eabfacef75ddc5c6fd01c7d75260b67a8f95c"
+    },
+    "perSide": {
+      "LEFT": {
+        "components": {
+          "FLEXION": {
+            "outerMetrics": {
+              "subjectCount": 41,
+              "sequenceCount": 348,
+              "determinateCount": 348,
+              "unknownCount": 0,
+              "predictionCoverage": 1.0,
+              "sequenceAccuracyUnknownAsMiss": 0.7126436782,
+              "subjectMacroAccuracyUnknownAsMiss": 0.7160569106,
+              "subjectMacroBalancedAccuracyUnknownAsMiss": 0.7154471545,
+              "minimumSubjectAccuracyUnknownAsMiss": 0.5,
+              "minimumSubjectCoverage": 1.0,
+              "recallByLabelUnknownAsMiss": {
+                "FALSE": 0.6954022989,
+                "TRUE": 0.7298850575
+              },
+              "selectiveAccuracy": 0.7126436782,
+              "unknownReasons": {}
+            },
+            "ruleStability": {
+              "foldCount": 41,
+              "ruleAvailableFoldCount": 41,
+              "familySelectionCounts": {
+                "MEDIAN_FLEXION_DEGREES|HIGH_IS_TRUE": 41
+              },
+              "modalRule": {
+                "metricId": "MEDIAN_FLEXION_DEGREES",
+                "direction": "HIGH_IS_TRUE"
+              },
+              "modalRuleFraction": 1.0,
+              "modalRuleThresholdDegrees": {
+                "minimum": 7.3167851147,
+                "q25": 7.3961734368,
+                "median": 7.3961734368,
+                "q75": 7.3961734368,
+                "maximum": 10.2456504098,
+                "iqr": 0.0
+              },
+              "modalRuleThresholdRelativeIqr": 0.0,
+              "uniqueConfigurationCount": 4
+            }
+          },
+          "STABILITY": {
+            "outerMetrics": {
+              "subjectCount": 41,
+              "sequenceCount": 348,
+              "determinateCount": 348,
+              "unknownCount": 0,
+              "predictionCoverage": 1.0,
+              "sequenceAccuracyUnknownAsMiss": 0.5057471264,
+              "subjectMacroAccuracyUnknownAsMiss": 0.5051684088,
+              "subjectMacroBalancedAccuracyUnknownAsMiss": 0.506097561,
+              "minimumSubjectAccuracyUnknownAsMiss": 0.125,
+              "minimumSubjectCoverage": 1.0,
+              "recallByLabelUnknownAsMiss": {
+                "FALSE": 0.1149425287,
+                "TRUE": 0.8965517241
+              },
+              "selectiveAccuracy": 0.5057471264,
+              "unknownReasons": {}
+            },
+            "ruleStability": {
+              "foldCount": 41,
+              "ruleAvailableFoldCount": 41,
+              "familySelectionCounts": {
+                "MEDIAN_ABSOLUTE_ORDINAL_DELTA_DEGREES|LOW_IS_TRUE": 41
+              },
+              "modalRule": {
+                "metricId": "MEDIAN_ABSOLUTE_ORDINAL_DELTA_DEGREES",
+                "direction": "LOW_IS_TRUE"
+              },
+              "modalRuleFraction": 1.0,
+              "modalRuleThresholdDegrees": {
+                "minimum": 50.0683105348,
+                "q25": 62.7755247524,
+                "median": 62.7755247524,
+                "q75": 62.7755247524,
+                "maximum": 64.8300205142,
+                "iqr": 0.0
+              },
+              "modalRuleThresholdRelativeIqr": 0.0,
+              "uniqueConfigurationCount": 5
+            }
+          }
+        },
+        "compoundOuterMetrics": {
+          "subjectCount": 41,
+          "sequenceCount": 348,
+          "determinateCount": 348,
+          "unknownCount": 0,
+          "predictionCoverage": 1.0,
+          "sequenceAccuracyUnknownAsMiss": 0.7183908046,
+          "subjectMacroAccuracyUnknownAsMiss": 0.7221544715,
+          "subjectMacroBalancedAccuracyUnknownAsMiss": 0.7215447154,
+          "minimumSubjectAccuracyUnknownAsMiss": 0.125,
+          "minimumSubjectCoverage": 1.0,
+          "recallByLabelUnknownAsMiss": {
+            "FALSE": 0.8103448276,
+            "TRUE": 0.6264367816
+          },
+          "selectiveAccuracy": 0.7183908046,
+          "unknownReasons": {}
+        }
+      },
+      "RIGHT": {
+        "components": {
+          "FLEXION": {
+            "outerMetrics": {
+              "subjectCount": 41,
+              "sequenceCount": 348,
+              "determinateCount": 348,
+              "unknownCount": 0,
+              "predictionCoverage": 1.0,
+              "sequenceAccuracyUnknownAsMiss": 0.7471264368,
+              "subjectMacroAccuracyUnknownAsMiss": 0.7511178862,
+              "subjectMacroBalancedAccuracyUnknownAsMiss": 0.7505081301,
+              "minimumSubjectAccuracyUnknownAsMiss": 0.5,
+              "minimumSubjectCoverage": 1.0,
+              "recallByLabelUnknownAsMiss": {
+                "FALSE": 0.7586206897,
+                "TRUE": 0.7356321839
+              },
+              "selectiveAccuracy": 0.7471264368,
+              "unknownReasons": {}
+            },
+            "ruleStability": {
+              "foldCount": 41,
+              "ruleAvailableFoldCount": 41,
+              "familySelectionCounts": {
+                "MEDIAN_FLEXION_DEGREES|HIGH_IS_TRUE": 41
+              },
+              "modalRule": {
+                "metricId": "MEDIAN_FLEXION_DEGREES",
+                "direction": "HIGH_IS_TRUE"
+              },
+              "modalRuleFraction": 1.0,
+              "modalRuleThresholdDegrees": {
+                "minimum": 8.5050893021,
+                "q25": 8.5453057855,
+                "median": 8.5453057855,
+                "q75": 8.5453057855,
+                "maximum": 9.238796013,
+                "iqr": 0.0
+              },
+              "modalRuleThresholdRelativeIqr": 0.0,
+              "uniqueConfigurationCount": 3
+            }
+          },
+          "STABILITY": {
+            "outerMetrics": {
+              "subjectCount": 41,
+              "sequenceCount": 348,
+              "determinateCount": 348,
+              "unknownCount": 0,
+              "predictionCoverage": 1.0,
+              "sequenceAccuracyUnknownAsMiss": 0.5028735632,
+              "subjectMacroAccuracyUnknownAsMiss": 0.4990708479,
+              "subjectMacroBalancedAccuracyUnknownAsMiss": 0.5,
+              "minimumSubjectAccuracyUnknownAsMiss": 0.25,
+              "minimumSubjectCoverage": 1.0,
+              "recallByLabelUnknownAsMiss": {
+                "FALSE": 0.0689655172,
+                "TRUE": 0.9367816092
+              },
+              "selectiveAccuracy": 0.5028735632,
+              "unknownReasons": {}
+            },
+            "ruleStability": {
+              "foldCount": 41,
+              "ruleAvailableFoldCount": 41,
+              "familySelectionCounts": {
+                "MEDIAN_ABSOLUTE_ORDINAL_DELTA_DEGREES|LOW_IS_TRUE": 1,
+                "ROBUST_P90_P10_RANGE_DEGREES|LOW_IS_TRUE": 40
+              },
+              "modalRule": {
+                "metricId": "ROBUST_P90_P10_RANGE_DEGREES",
+                "direction": "LOW_IS_TRUE"
+              },
+              "modalRuleFraction": 0.9756097561,
+              "modalRuleThresholdDegrees": {
+                "minimum": 171.3699615826,
+                "q25": 171.3699615826,
+                "median": 171.3699615826,
+                "q75": 171.3699615826,
+                "maximum": 174.3669616462,
+                "iqr": 0.0
+              },
+              "modalRuleThresholdRelativeIqr": 0.0,
+              "uniqueConfigurationCount": 4
+            }
+          }
+        },
+        "compoundOuterMetrics": {
+          "subjectCount": 41,
+          "sequenceCount": 348,
+          "determinateCount": 348,
+          "unknownCount": 0,
+          "predictionCoverage": 1.0,
+          "sequenceAccuracyUnknownAsMiss": 0.75,
+          "subjectMacroAccuracyUnknownAsMiss": 0.7511178862,
+          "subjectMacroBalancedAccuracyUnknownAsMiss": 0.7505081301,
+          "minimumSubjectAccuracyUnknownAsMiss": 0.25,
+          "minimumSubjectCoverage": 1.0,
+          "recallByLabelUnknownAsMiss": {
+            "FALSE": 0.8275862069,
+            "TRUE": 0.6724137931
+          },
+          "selectiveAccuracy": 0.75,
+          "unknownReasons": {}
+        }
+      }
+    },
+    "researchContinuationGate": {
+      "policy": {
+        "minimumEachSideEachComponentSubjectMacroBalancedAccuracyUnknownAsMiss": 0.85,
+        "minimumEachSideCompoundSubjectMacroBalancedAccuracyUnknownAsMiss": 0.85,
+        "minimumEachSideEachComponentMinimumSubjectAccuracyUnknownAsMiss": 0.75,
+        "minimumEachSideCompoundMinimumSubjectAccuracyUnknownAsMiss": 0.75,
+        "minimumEachSideEachComponentPredictionCoverage": 0.95,
+        "minimumEachSideCompoundPredictionCoverage": 0.95,
+        "minimumEachSideEachComponentModalRuleFraction": 0.9,
+        "maximumEachSideEachComponentModalRuleThresholdRelativeIqr": 0.05
+      },
+      "checks": [
+        {
+          "id": "LEFT_FLEXION_SUBJECT_MACRO_BALANCED_ACCURACY",
+          "observed": 0.7154471545,
+          "operator": ">=",
+          "required": 0.85,
+          "passed": false
+        },
+        {
+          "id": "LEFT_FLEXION_MINIMUM_SUBJECT_ACCURACY",
+          "observed": 0.5,
+          "operator": ">=",
+          "required": 0.75,
+          "passed": false
+        },
+        {
+          "id": "LEFT_FLEXION_PREDICTION_COVERAGE",
+          "observed": 1.0,
+          "operator": ">=",
+          "required": 0.95,
+          "passed": true
+        },
+        {
+          "id": "LEFT_FLEXION_MODAL_RULE_FRACTION",
+          "observed": 1.0,
+          "operator": ">=",
+          "required": 0.9,
+          "passed": true
+        },
+        {
+          "id": "LEFT_FLEXION_MODAL_RULE_THRESHOLD_RELATIVE_IQR",
+          "observed": 0.0,
+          "operator": "<=",
+          "required": 0.05,
+          "passed": true
+        },
+        {
+          "id": "LEFT_STABILITY_SUBJECT_MACRO_BALANCED_ACCURACY",
+          "observed": 0.506097561,
+          "operator": ">=",
+          "required": 0.85,
+          "passed": false
+        },
+        {
+          "id": "LEFT_STABILITY_MINIMUM_SUBJECT_ACCURACY",
+          "observed": 0.125,
+          "operator": ">=",
+          "required": 0.75,
+          "passed": false
+        },
+        {
+          "id": "LEFT_STABILITY_PREDICTION_COVERAGE",
+          "observed": 1.0,
+          "operator": ">=",
+          "required": 0.95,
+          "passed": true
+        },
+        {
+          "id": "LEFT_STABILITY_MODAL_RULE_FRACTION",
+          "observed": 1.0,
+          "operator": ">=",
+          "required": 0.9,
+          "passed": true
+        },
+        {
+          "id": "LEFT_STABILITY_MODAL_RULE_THRESHOLD_RELATIVE_IQR",
+          "observed": 0.0,
+          "operator": "<=",
+          "required": 0.05,
+          "passed": true
+        },
+        {
+          "id": "LEFT_COMPOUND_SUBJECT_MACRO_BALANCED_ACCURACY",
+          "observed": 0.7215447154,
+          "operator": ">=",
+          "required": 0.85,
+          "passed": false
+        },
+        {
+          "id": "LEFT_COMPOUND_MINIMUM_SUBJECT_ACCURACY",
+          "observed": 0.125,
+          "operator": ">=",
+          "required": 0.75,
+          "passed": false
+        },
+        {
+          "id": "LEFT_COMPOUND_PREDICTION_COVERAGE",
+          "observed": 1.0,
+          "operator": ">=",
+          "required": 0.95,
+          "passed": true
+        },
+        {
+          "id": "RIGHT_FLEXION_SUBJECT_MACRO_BALANCED_ACCURACY",
+          "observed": 0.7505081301,
+          "operator": ">=",
+          "required": 0.85,
+          "passed": false
+        },
+        {
+          "id": "RIGHT_FLEXION_MINIMUM_SUBJECT_ACCURACY",
+          "observed": 0.5,
+          "operator": ">=",
+          "required": 0.75,
+          "passed": false
+        },
+        {
+          "id": "RIGHT_FLEXION_PREDICTION_COVERAGE",
+          "observed": 1.0,
+          "operator": ">=",
+          "required": 0.95,
+          "passed": true
+        },
+        {
+          "id": "RIGHT_FLEXION_MODAL_RULE_FRACTION",
+          "observed": 1.0,
+          "operator": ">=",
+          "required": 0.9,
+          "passed": true
+        },
+        {
+          "id": "RIGHT_FLEXION_MODAL_RULE_THRESHOLD_RELATIVE_IQR",
+          "observed": 0.0,
+          "operator": "<=",
+          "required": 0.05,
+          "passed": true
+        },
+        {
+          "id": "RIGHT_STABILITY_SUBJECT_MACRO_BALANCED_ACCURACY",
+          "observed": 0.5,
+          "operator": ">=",
+          "required": 0.85,
+          "passed": false
+        },
+        {
+          "id": "RIGHT_STABILITY_MINIMUM_SUBJECT_ACCURACY",
+          "observed": 0.25,
+          "operator": ">=",
+          "required": 0.75,
+          "passed": false
+        },
+        {
+          "id": "RIGHT_STABILITY_PREDICTION_COVERAGE",
+          "observed": 1.0,
+          "operator": ">=",
+          "required": 0.95,
+          "passed": true
+        },
+        {
+          "id": "RIGHT_STABILITY_MODAL_RULE_FRACTION",
+          "observed": 0.9756097561,
+          "operator": ">=",
+          "required": 0.9,
+          "passed": true
+        },
+        {
+          "id": "RIGHT_STABILITY_MODAL_RULE_THRESHOLD_RELATIVE_IQR",
+          "observed": 0.0,
+          "operator": "<=",
+          "required": 0.05,
+          "passed": true
+        },
+        {
+          "id": "RIGHT_COMPOUND_SUBJECT_MACRO_BALANCED_ACCURACY",
+          "observed": 0.7505081301,
+          "operator": ">=",
+          "required": 0.85,
+          "passed": false
+        },
+        {
+          "id": "RIGHT_COMPOUND_MINIMUM_SUBJECT_ACCURACY",
+          "observed": 0.25,
+          "operator": ">=",
+          "required": 0.75,
+          "passed": false
+        },
+        {
+          "id": "RIGHT_COMPOUND_PREDICTION_COVERAGE",
+          "observed": 1.0,
+          "operator": ">=",
+          "required": 0.95,
+          "passed": true
+        }
+      ],
+      "continuationStatus": "REJECTED",
+      "runtimeThresholdStatus": "NO_RUNTIME_THRESHOLD",
+      "selectedRuntimeRule": null
+    }
+  },
+  "authority": {
+    "runtimeThresholdAuthority": 0,
+    "phaseAuthority": 0,
+    "viewAuthority": 0,
+    "mediaPipeBridgeAuthority": 0,
+    "goldAuthority": 0,
+    "releaseAuthority": 0,
+    "shadowAuthority": 0,
+    "userDecisionAuthority": 0,
+    "scoreAuthority": 0,
+    "cueAuthority": 0
+  },
+  "limitations": [
+    "The AI Hub condition is a sequence-level Training surrogate, not frame, phase, expert, motion-capture, or independent Gold.",
+    "FLEXION and STABILITY are operational feature branches fitted to the same compound sequence label; without separate component Gold, their per-component metrics do not validate either component.",
+    "The sixteen entries are sampled ordinals without reliable FPS, timestamps, dwell, velocity, or latency meaning.",
+    "Camera IDs A-E do not establish lateral or other qualified runtime views.",
+    "Good Morning pixels are absent, so no production MediaPipe observation bridge was evaluated.",
+    "AI Hub triangulated 3D axes, origin, and units are not MediaPipe WORLD provenance.",
+    "Outer-fold thresholds are diagnostic research values and are never emitted as runtime parameters.",
+    "Local descriptor identity checks are not an external content root or detached signature and do not establish hostile-filesystem authenticity.",
+    "UNKNOWN and nonfinite observations count as misses; selective metrics cannot satisfy the continuation gate.",
+    "Even a passing continuation gate could authorize only independent bridge/Gold collection, never product behavior."
+  ],
+  "reportFingerprintSha256": "e6234848482e67d2483d090cbd00a3e710f571268972d873106c2c7ad5d7cdbf"
+}

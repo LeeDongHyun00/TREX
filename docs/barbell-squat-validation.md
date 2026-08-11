@@ -97,9 +97,11 @@ body-lateral knee/toe offset만 측정한다.
 [barbell-squat-coordinate-experiment.json](barbell-squat-coordinate-experiment.json)이다.
 
 - report fingerprint:
-  `0c3746aba72cead19d608d08b66a45779a554716d4000c9d8a78cc7817bec88e`
+  `8d8fdffe5477c79701a053fb4fb647c91082b882213a13cfd1efb7beb0d3ea6a`
 - protocol artifact SHA-256:
-  `01c2cccc6e05ae45c93f2a50e5bccd4d058be162c69eebfe0507b8a9703e96b8`
+  `0c591c8213dda06a9af63ec009afdd3ddd1a265cdb72b9e387bcdcf69acb3bbb`
+- implementation 및 catalog source hash는 UTF-8 canonical-LF로 계산해 checkout 줄바꿈에
+  독립적이다.
 - Training/Validation 전수 사용: 720/112 sequence
 - bottom phase proxy `UNKNOWN`: Training 7, Validation 0 sequence
 - non-contiguous active mask: Training 69, Validation 3 sequence

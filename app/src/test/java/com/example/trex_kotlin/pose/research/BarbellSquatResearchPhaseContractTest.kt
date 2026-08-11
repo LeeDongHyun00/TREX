@@ -14,7 +14,7 @@ class BarbellSquatResearchPhaseContractTest {
 
         assertEquals(first.artifactSha256, second.artifactSha256)
         assertEquals(
-            "589ac54005267ff89be0ae679e8f0a2316d2640ebc4d76822b48e02b33ad27a2",
+            "7ca4751630f7625ffb8c7858ed74f3a921aa6ce91666f9a9ed60e827a9374352",
             first.artifactSha256,
         )
         assertTrue(first.artifactSha256.matches(Regex("^[0-9a-f]{64}$")))
@@ -139,8 +139,43 @@ class BarbellSquatResearchPhaseContractTest {
         assertEquals(BarbellSquatResearchArtifactUse.RESEARCH_CANDIDATE_ONLY, artifact.artifactUse)
         assertEquals(BarbellSquatResearchExecutionMode.SPECIFICATION_ONLY, artifact.executionMode)
         assertEquals(
-            BarbellSquatResearchValidationUse.CONSUMED_DEVELOPMENT_BENCHMARK,
+            BarbellSquatResearchValidationUse
+                .PRIOR_VALIDATION_CONSUMED_NOT_READ_OR_REUSED_IN_TRAINING_PHASE_EXPERIMENT,
             artifact.evidenceProvenance.officialValidationUse,
+        )
+        assertEquals(
+            BarbellSquatPhaseResearchReadiness.CURRENT.reportArtifactSha256,
+            artifact.evidenceProvenance.sourceReportFingerprintSha256,
+        )
+        assertEquals(
+            BarbellSquatPhaseResearchReadiness.CURRENT.protocolArtifactSha256,
+            artifact.evidenceProvenance.protocolArtifactSha256,
+        )
+        assertEquals(
+            BarbellSquatPhaseResearchReadiness.CURRENT.artifactSha256,
+            artifact.evidenceProvenance.readinessArtifactSha256,
+        )
+        assertEquals(
+            BarbellSquatResearchPhaseContract.LATERAL_CANDIDATE_ID,
+            artifact.evidenceProvenance.studiedSignalFamilyId,
+        )
+        assertNotEquals(
+            BarbellSquatResearchPhaseContract.FRONT_CANDIDATE_ID,
+            artifact.evidenceProvenance.studiedSignalFamilyId,
+        )
+        assertEquals(
+            BarbellSquatPhaseResearchReadiness.STUDIED_DECODER_FAMILY_ID,
+            artifact.evidenceProvenance.studiedDecoderFamilyId,
+        )
+        assertEquals(
+            BarbellSquatPhaseResearchStudyCoordinateDomain
+                .AIHUB_TRIANGULATED_3D_NOT_MEDIAPIPE_WORLD,
+            artifact.evidenceProvenance.studyCoordinateDomain,
+        )
+        assertEquals(
+            BarbellSquatPhaseResearchStudyViewRole
+                .LATERAL_CANDIDATE_ONLY_NOT_AI_HUB_CAMERA_VIEW_QUALIFICATION,
+            artifact.evidenceProvenance.studyViewRole,
         )
         assertEquals(
             BarbellSquatResearchPhaseSupervision.ACTIVE_MASK_WINDOW_PRIOR_ONLY_NOT_PHASE_GOLD,
@@ -153,7 +188,15 @@ class BarbellSquatResearchPhaseContractTest {
         )
         assertEquals(BarbellSquatResearchLimitation.entries.toSet(), artifact.limitations)
         assertTrue(BarbellSquatResearchLimitation.NO_PHASE_GOLD in artifact.limitations)
+        assertTrue(
+            BarbellSquatResearchLimitation.TRAINING_SURROGATE_CONTINUATION_REJECTED in
+                artifact.limitations,
+        )
         assertTrue(BarbellSquatResearchLimitation.NO_RUNTIME_PHASE_PROVIDER_BINDING in artifact.limitations)
+        assertTrue(
+            BarbellSquatResearchLimitation.NO_AUTHORIZED_RUNTIME_PHASE_CALIBRATION_ARTIFACT in
+                artifact.limitations,
+        )
         assertTrue(BarbellSquatResearchLimitation.NO_PRODUCT_RELEASE_AUTHORITY in artifact.limitations)
         assertTrue(BarbellSquatResearchLimitation.NO_USER_DECISION_AUTHORITY in artifact.limitations)
     }

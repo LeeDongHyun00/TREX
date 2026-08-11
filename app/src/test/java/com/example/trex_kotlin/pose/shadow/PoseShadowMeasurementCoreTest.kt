@@ -14,6 +14,38 @@ import org.junit.Test
 
 class PoseShadowMeasurementCoreTest {
     @Test
+    fun coupledAndIndependentSidePoliciesRemainSemanticallyDistinct() {
+        val coupled = ShadowSideRuntimePolicy(
+            kind = ShadowSidePolicyKind.BILATERAL_COUPLED,
+            sideChannels = setOf(ShadowScalarSide.BILATERAL_PAIR),
+        )
+        val independent = ShadowSideRuntimePolicy(
+            kind = ShadowSidePolicyKind.BILATERAL_INDEPENDENT,
+            sideChannels = setOf(ShadowScalarSide.LEFT, ShadowScalarSide.RIGHT),
+        )
+
+        assertEquals(setOf(ShadowScalarSide.BILATERAL_PAIR), coupled.sideChannels)
+        assertEquals(
+            setOf(ShadowScalarSide.LEFT, ShadowScalarSide.RIGHT),
+            independent.sideChannels,
+        )
+        assertNotEquals(coupled.artifactSha256, independent.artifactSha256)
+
+        assertThrows(IllegalArgumentException::class.java) {
+            ShadowSideRuntimePolicy(
+                kind = ShadowSidePolicyKind.BILATERAL_COUPLED,
+                sideChannels = setOf(ShadowScalarSide.LEFT, ShadowScalarSide.RIGHT),
+            )
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            ShadowSideRuntimePolicy(
+                kind = ShadowSidePolicyKind.BILATERAL_INDEPENDENT,
+                sideChannels = setOf(ShadowScalarSide.BILATERAL_PAIR),
+            )
+        }
+    }
+
+    @Test
     fun requestHashCommitsEveryExecutionIdentityAndRejectsLooseIdentifiers() {
         val request = request()
         val featureDrift = request(featureSpecSha256 = sha('e'))

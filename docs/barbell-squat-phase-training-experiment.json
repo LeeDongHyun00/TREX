@@ -1,0 +1,3716 @@
+{
+  "schemaVersion": 1,
+  "artifactKind": "AIHUB_BARBELL_SQUAT_TRAINING_ONLY_CAUSAL_PHASE_SURROGATE_EXPERIMENT",
+  "decisionUse": "RESEARCH_ONLY_NO_PHASE_GOLD_NO_RUNTIME_OR_RELEASE_AUTHORITY",
+  "protocolId": "aihub.barbell-squat.lateral-causal-phase-surrogate.protocol.v1",
+  "protocolSha256": "286d16329bc3d68e8d2fc48b54d0b9a229f500fed67c23c2f4de3a40b47a39ce",
+  "tool": {
+    "relativePath": "tools/barbell_squat_phase_training_experiment.py",
+    "scriptCanonicalLfTextSha256": "820055892273a8888fb15e71cce5c0e9b5169b8f40883ae0ed8e9011aa84a360",
+    "textHashNormalization": "UTF8_CANONICAL_LF_CRLF_AND_CR_NORMALIZED_TO_LF"
+  },
+  "sharedImplementationProvenance": {
+    "coordinateParserCanonicalLfTextSha256": "01a3d10e87d15a56439b609f1ee1caf086bcd82cfaaef7b26263f4cc5b45355c",
+    "validationHelperCanonicalLfTextSha256": "ff8467a8ae942fc0c96f205cc86f01ff6a1ff88658dd002579569d660de9895d",
+    "textHashNormalization": "UTF8_CANONICAL_LF_CRLF_AND_CR_NORMALIZED_TO_LF"
+  },
+  "catalogProvenance": {
+    "relativePath": "docs/aihub-exercise-catalog.json",
+    "catalogSha256": "fe4e3075a00212293c9ffd3df8f007bc3666e17af2526de3a8d570d052a4e29c",
+    "artifactCanonicalLfTextSha256": "d0c0e91917943e0f9698d989e083895b35e0ba0a6fcf584c6b75a69d30eccb19",
+    "textHashNormalization": "UTF8_CANONICAL_LF_CRLF_AND_CR_NORMALIZED_TO_LF",
+    "barbellSquatCoverageSha256": "1f6ab0ea0981c6d1ef693ace7e72608a2e9af363b4b52f789a1749f92dae9cb5"
+  },
+  "dataUse": {
+    "input": "AIHUB_OFFICIAL_TRAINING_ONLY",
+    "officialValidation": "NOT_READ_NOT_REUSED",
+    "phaseGold": "ABSENT",
+    "activeMask": "MOVEMENT_WINDOW_PRIOR_ONLY_NOT_PHASE_GOLD",
+    "absoluteOrRelativePathsPersisted": false
+  },
+  "evaluatedScope": {
+    "signalFamilyId": "trex.research-phase-signal.barbell-squat.bilateral-knee-flexion-median.v1",
+    "decoderFamilyId": "trex.research-phase-decoder.barbell-squat.absolute-knee-flexion-hysteresis.v1",
+    "coordinateDomain": "AIHUB_TRIANGULATED_3D_NOT_MEDIAPIPE_WORLD",
+    "viewRole": "LATERAL_CANDIDATE_ONLY_NOT_AI_HUB_CAMERA_VIEW_QUALIFICATION",
+    "frontCandidateEvaluated": false
+  },
+  "trainingInventory": {
+    "split": "TRAINING",
+    "officialValidationReadCount": 0,
+    "sequenceCount": 720,
+    "subjectCount": 42,
+    "typeCounts": {
+      "313": 45,
+      "314": 45,
+      "315": 45,
+      "316": 45,
+      "317": 45,
+      "318": 45,
+      "319": 45,
+      "320": 45,
+      "321": 45,
+      "322": 45,
+      "323": 45,
+      "324": 45,
+      "325": 45,
+      "326": 45,
+      "327": 45,
+      "328": 45
+    },
+    "dayIds": [
+      "Day03_200923_F",
+      "Day11_201008_F",
+      "Day12_201012_F",
+      "Day15_201015_F",
+      "Day25_201027_F",
+      "Day29_201031_F"
+    ],
+    "frameCountHistogram": {
+      "9": 1,
+      "12": 4,
+      "13": 3,
+      "15": 3,
+      "16": 705,
+      "17": 4
+    },
+    "activeFrameCountHistogram": {
+      "4": 1,
+      "5": 3,
+      "6": 12,
+      "7": 7,
+      "8": 10,
+      "9": 9,
+      "10": 19,
+      "11": 37,
+      "12": 53,
+      "13": 34,
+      "14": 27,
+      "15": 31,
+      "16": 476,
+      "17": 1
+    },
+    "activeRunCountHistogram": {
+      "1": 651,
+      "2": 26,
+      "3": 25,
+      "4": 14,
+      "5": 4
+    },
+    "metadataAudit": {
+      "twoDMetadataAudited": 34468,
+      "validMetadata": 34468,
+      "malformedMetadata": 0,
+      "selectedMetadata": 720,
+      "unpaired": 0,
+      "metadataConflict": 0
+    },
+    "phaseExtractionCounts": {
+      "activeFramesIncluded": 10452,
+      "inactiveFramesExcluded": 1037,
+      "activeRuns": 854,
+      "nonContiguousActiveSequences": 69
+    },
+    "subjectSetSha256": "7ff117e3bbfacc985e01737fc79f406dfd7f86c849fa154e24ad2f321bff379f",
+    "inputManifestSha256": "5e8a28bfd2f4c55d8d2eb9b15968a813d1ae6259ec0a1d406aa98f098e511814",
+    "internalSequenceHashUniqueness": {
+      "twoDRawContent": true,
+      "threeDRawContent": true,
+      "twoDCanonicalCoordinates": true,
+      "threeDCanonicalCoordinates": true
+    }
+  },
+  "experimentIdentitySha256": "47c5240ef6a470f30c942c373b22891fb6710966c6a25d8dcddba44c3fe0ff4d",
+  "experiment": {
+    "surrogateReference": {
+      "role": "RETROSPECTIVE_MORPHOLOGY_SURROGATE_NOT_PHASE_GOLD",
+      "eligibleSequenceCount": 159,
+      "ineligibleSequenceCount": 561,
+      "eligibleSequenceCoverage": 0.2208333333,
+      "eligibleSubjectCount": 40,
+      "ineligibleSubjectCount": 2,
+      "eligibleSubjectCoverage": 0.9523809524,
+      "ineligibleSubjectSetSha256": "ee5af5dfdae3f69d6ded47106efa4c0ad8e455ed05e536b4e937d50141708583",
+      "ineligibleReasons": {
+        "NO_CONTIGUOUS_ACTIVE_RUN_WITH_MINIMUM_FRAMES_AND_ROM": 44,
+        "SURROGATE_BOTTOM_TOUCHES_ACTIVE_RUN_BOUNDARY": 109,
+        "SURROGATE_DOES_NOT_CONTAIN_COMPLETE_FOUR_STATE_TOPOLOGY": 225,
+        "SURROGATE_MULTIPLE_SIGNIFICANT_DIRECTION_REVERSALS": 183
+      },
+      "romDegrees": {
+        "minimum": 20.2280655742,
+        "median": 70.5778126499,
+        "maximum": 123.9690018692
+      }
+    },
+    "candidateGrid": {
+      "familyId": "trex.research-phase-decoder.barbell-squat.absolute-knee-flexion-hysteresis.v1",
+      "configurationCount": 384,
+      "configurationManifestSha256": "e4b8c2fcccd88ccdd3d1c5d3b1c6e92e5c9ed39f86590990e73b8e7ec2d22259"
+    },
+    "subjectGroupedOuterEvaluation": {
+      "split": "TRAINING_GLOBAL_Z_LOSO",
+      "foldCount": 42,
+      "foldManifestSha256": "08e9d12437d1260a4f276b422a3517189f890ccb3568b388d288e061d2e02e75",
+      "folds": [
+        {
+          "heldoutSubjectSha256": "3cdc111c54d610bdafdcc699d03e5bd7be6a0d1732b248dca1cf8c33aa46d4b6",
+          "trainingSubjectCount": 39,
+          "trainingSubjectSetSha256": "ba770766cf69f6f833bbfb01c56a28f639474136fcbcca1c79e737c92ddfd4ce",
+          "subjectOverlapCount": 0,
+          "heldoutSurrogateEligible": true,
+          "selectedConfiguration": {
+            "baselineFrameCount": 2,
+            "trailingMedianWindow": 3,
+            "baselineStabilityDegrees": 12.0,
+            "readyBandDegrees": 12.0,
+            "descentEntryDegrees": 10.0,
+            "motionDegreesPerSample": 3.0,
+            "bottomMinimumDisplacementDegrees": 40.0,
+            "reversalDegreesPerSample": 3.0,
+            "configurationId": "cfg-5bd9baaa84ae8170"
+          },
+          "innerTrainingMetrics": {
+            "subjectCount": 39,
+            "sequenceCount": 155,
+            "referenceFrameCount": 2430,
+            "determinateFrameCount": 1406,
+            "abstainedFrameCount": 1024,
+            "predictionCoverage": 0.578600823,
+            "minimumSubjectCoverage": 0.0,
+            "p10SubjectCoverage": 0.16125,
+            "subjectMacroSurrogateRecall": 0.2607473559,
+            "frameSurrogateAgreementUnknownAsMiss": 0.2724279835,
+            "selectiveSurrogateAgreement": 0.4708392603,
+            "completedOrderedTopologyCoverage": 0.4451612903,
+            "coverageBySurrogatePhase": {
+              "READY": 0.5376344086,
+              "DESCENDING": 0.6855345912,
+              "BOTTOM": 0.571875,
+              "ASCENDING": 0.5725338491
+            },
+            "recallBySurrogatePhaseUnknownAsMiss": {
+              "READY": 0.2849462366,
+              "DESCENDING": 0.4381551363,
+              "BOTTOM": 0.15,
+              "ASCENDING": 0.16827853
+            },
+            "abstentionReasons": {
+              "ASCENDING_DIRECTION_CONTRADICTION": 19,
+              "BOTTOM_TO_ASCENDING_EVIDENCE_INSUFFICIENT": 56,
+              "INITIAL_BASELINE_CALIBRATION": 155,
+              "INITIAL_BASELINE_NOT_STABLE": 757,
+              "REVERSAL_BEFORE_MINIMUM_BOTTOM_DISPLACEMENT": 37
+            }
+          },
+          "outerHeldoutMetrics": {
+            "subjectCount": 1,
+            "sequenceCount": 4,
+            "referenceFrameCount": 62,
+            "determinateFrameCount": 38,
+            "abstainedFrameCount": 24,
+            "predictionCoverage": 0.6129032258,
+            "minimumSubjectCoverage": 0.6129032258,
+            "p10SubjectCoverage": 0.6129032258,
+            "subjectMacroSurrogateRecall": 0.2126811594,
+            "frameSurrogateAgreementUnknownAsMiss": 0.2258064516,
+            "selectiveSurrogateAgreement": 0.3684210526,
+            "completedOrderedTopologyCoverage": 0.25,
+            "coverageBySurrogatePhase": {
+              "READY": 0.5652173913,
+              "DESCENDING": 0.5625,
+              "BOTTOM": 0.625,
+              "ASCENDING": 0.7333333333
+            },
+            "recallBySurrogatePhaseUnknownAsMiss": {
+              "READY": 0.2173913043,
+              "DESCENDING": 0.375,
+              "BOTTOM": 0.125,
+              "ASCENDING": 0.1333333333
+            },
+            "abstentionReasons": {
+              "BOTTOM_TO_ASCENDING_EVIDENCE_INSUFFICIENT": 1,
+              "INITIAL_BASELINE_CALIBRATION": 4,
+              "INITIAL_BASELINE_NOT_STABLE": 15,
+              "REVERSAL_BEFORE_MINIMUM_BOTTOM_DISPLACEMENT": 4
+            }
+          }
+        },
+        {
+          "heldoutSubjectSha256": "639716eda41a19b0757a55fa118fe855ef84fd4e491c58d1d19f7974922fb0d5",
+          "trainingSubjectCount": 39,
+          "trainingSubjectSetSha256": "ed93cadc64522a25b7a8c041b07266708787a5dc3dc36322fe0fad34e3b7d617",
+          "subjectOverlapCount": 0,
+          "heldoutSurrogateEligible": true,
+          "selectedConfiguration": {
+            "baselineFrameCount": 2,
+            "trailingMedianWindow": 3,
+            "baselineStabilityDegrees": 12.0,
+            "readyBandDegrees": 12.0,
+            "descentEntryDegrees": 10.0,
+            "motionDegreesPerSample": 3.0,
+            "bottomMinimumDisplacementDegrees": 40.0,
+            "reversalDegreesPerSample": 3.0,
+            "configurationId": "cfg-5bd9baaa84ae8170"
+          },
+          "innerTrainingMetrics": {
+            "subjectCount": 39,
+            "sequenceCount": 157,
+            "referenceFrameCount": 2460,
+            "determinateFrameCount": 1416,
+            "abstainedFrameCount": 1044,
+            "predictionCoverage": 0.5756097561,
+            "minimumSubjectCoverage": 0.0,
+            "p10SubjectCoverage": 0.16125,
+            "subjectMacroSurrogateRecall": 0.2534556209,
+            "frameSurrogateAgreementUnknownAsMiss": 0.2678861789,
+            "selectiveSurrogateAgreement": 0.4653954802,
+            "completedOrderedTopologyCoverage": 0.4331210191,
+            "coverageBySurrogatePhase": {
+              "READY": 0.5329768271,
+              "DESCENDING": 0.6782786885,
+              "BOTTOM": 0.5696594427,
+              "ASCENDING": 0.5749525617
+            },
+            "recallBySurrogatePhaseUnknownAsMiss": {
+              "READY": 0.2789661319,
+              "DESCENDING": 0.4344262295,
+              "BOTTOM": 0.1424148607,
+              "ASCENDING": 0.1669829222
+            },
+            "abstentionReasons": {
+              "ASCENDING_DIRECTION_CONTRADICTION": 19,
+              "BOTTOM_TO_ASCENDING_EVIDENCE_INSUFFICIENT": 55,
+              "INITIAL_BASELINE_CALIBRATION": 157,
+              "INITIAL_BASELINE_NOT_STABLE": 772,
+              "REVERSAL_BEFORE_MINIMUM_BOTTOM_DISPLACEMENT": 41
+            }
+          },
+          "outerHeldoutMetrics": {
+            "subjectCount": 1,
+            "sequenceCount": 2,
+            "referenceFrameCount": 32,
+            "determinateFrameCount": 28,
+            "abstainedFrameCount": 4,
+            "predictionCoverage": 0.875,
+            "minimumSubjectCoverage": 0.875,
+            "p10SubjectCoverage": 0.875,
+            "subjectMacroSurrogateRecall": 0.4970588235,
+            "frameSurrogateAgreementUnknownAsMiss": 0.53125,
+            "selectiveSurrogateAgreement": 0.6071428571,
+            "completedOrderedTopologyCoverage": 1.0,
+            "coverageBySurrogatePhase": {
+              "READY": 0.8823529412,
+              "DESCENDING": 1.0,
+              "BOTTOM": 0.8,
+              "ASCENDING": 0.8
+            },
+            "recallBySurrogatePhaseUnknownAsMiss": {
+              "READY": 0.5882352941,
+              "DESCENDING": 0.6,
+              "BOTTOM": 0.6,
+              "ASCENDING": 0.2
+            },
+            "abstentionReasons": {
+              "BOTTOM_TO_ASCENDING_EVIDENCE_INSUFFICIENT": 2,
+              "INITIAL_BASELINE_CALIBRATION": 2
+            }
+          }
+        },
+        {
+          "heldoutSubjectSha256": "9b7357753aecd2fb3d6217c1d30952af8593b6c9e2ea7014f98850fc2d3868fd",
+          "trainingSubjectCount": 39,
+          "trainingSubjectSetSha256": "5ebe96f668c08d3c07522894f600f6e2bfce760643e06dc564f0c937257ae962",
+          "subjectOverlapCount": 0,
+          "heldoutSurrogateEligible": true,
+          "selectedConfiguration": {
+            "baselineFrameCount": 2,
+            "trailingMedianWindow": 3,
+            "baselineStabilityDegrees": 12.0,
+            "readyBandDegrees": 12.0,
+            "descentEntryDegrees": 10.0,
+            "motionDegreesPerSample": 3.0,
+            "bottomMinimumDisplacementDegrees": 40.0,
+            "reversalDegreesPerSample": 3.0,
+            "configurationId": "cfg-5bd9baaa84ae8170"
+          },
+          "innerTrainingMetrics": {
+            "subjectCount": 39,
+            "sequenceCount": 155,
+            "referenceFrameCount": 2428,
+            "determinateFrameCount": 1390,
+            "abstainedFrameCount": 1038,
+            "predictionCoverage": 0.5724876442,
+            "minimumSubjectCoverage": 0.0,
+            "p10SubjectCoverage": 0.16125,
+            "subjectMacroSurrogateRecall": 0.259447056,
+            "frameSurrogateAgreementUnknownAsMiss": 0.2718286656,
+            "selectiveSurrogateAgreement": 0.4748201439,
+            "completedOrderedTopologyCoverage": 0.4387096774,
+            "coverageBySurrogatePhase": {
+              "READY": 0.5289855072,
+              "DESCENDING": 0.6749482402,
+              "BOTTOM": 0.571875,
+              "ASCENDING": 0.5700575816
+            },
+            "recallBySurrogatePhaseUnknownAsMiss": {
+              "READY": 0.285326087,
+              "DESCENDING": 0.4306418219,
+              "BOTTOM": 0.15,
+              "ASCENDING": 0.1708253359
+            },
+            "abstentionReasons": {
+              "ASCENDING_DIRECTION_CONTRADICTION": 19,
+              "BOTTOM_TO_ASCENDING_EVIDENCE_INSUFFICIENT": 53,
+              "INITIAL_BASELINE_CALIBRATION": 155,
+              "INITIAL_BASELINE_NOT_STABLE": 772,
+              "REVERSAL_BEFORE_MINIMUM_BOTTOM_DISPLACEMENT": 39
+            }
+          },
+          "outerHeldoutMetrics": {
+            "subjectCount": 1,
+            "sequenceCount": 4,
+            "referenceFrameCount": 64,
+            "determinateFrameCount": 54,
+            "abstainedFrameCount": 10,
+            "predictionCoverage": 0.84375,
+            "minimumSubjectCoverage": 0.84375,
+            "p10SubjectCoverage": 0.84375,
+            "subjectMacroSurrogateRecall": 0.2633928571,
+            "frameSurrogateAgreementUnknownAsMiss": 0.25,
+            "selectiveSurrogateAgreement": 0.2962962963,
+            "completedOrderedTopologyCoverage": 0.5,
+            "coverageBySurrogatePhase": {
+              "READY": 0.8285714286,
+              "DESCENDING": 1.0,
+              "BOTTOM": 0.625,
+              "ASCENDING": 0.9090909091
+            },
+            "recallBySurrogatePhaseUnknownAsMiss": {
+              "READY": 0.2285714286,
+              "DESCENDING": 0.7,
+              "BOTTOM": 0.125,
+              "ASCENDING": 0.0
+            },
+            "abstentionReasons": {
+              "BOTTOM_TO_ASCENDING_EVIDENCE_INSUFFICIENT": 4,
+              "INITIAL_BASELINE_CALIBRATION": 4,
+              "REVERSAL_BEFORE_MINIMUM_BOTTOM_DISPLACEMENT": 2
+            }
+          }
+        },
+        {
+          "heldoutSubjectSha256": "489e729b556380a32cd4040849067ed59575116552d35686e32595353d946b97",
+          "trainingSubjectCount": 39,
+          "trainingSubjectSetSha256": "286f982fddc6560625b5670c5de4a0a47b866daae2b9025e97cc4ef8acf7b7e6",
+          "subjectOverlapCount": 0,
+          "heldoutSurrogateEligible": true,
+          "selectedConfiguration": {
+            "baselineFrameCount": 2,
+            "trailingMedianWindow": 3,
+            "baselineStabilityDegrees": 12.0,
+            "readyBandDegrees": 12.0,
+            "descentEntryDegrees": 10.0,
+            "motionDegreesPerSample": 3.0,
+            "bottomMinimumDisplacementDegrees": 40.0,
+            "reversalDegreesPerSample": 3.0,
+            "configurationId": "cfg-5bd9baaa84ae8170"
+          },
+          "innerTrainingMetrics": {
+            "subjectCount": 39,
+            "sequenceCount": 152,
+            "referenceFrameCount": 2380,
+            "determinateFrameCount": 1376,
+            "abstainedFrameCount": 1004,
+            "predictionCoverage": 0.5781512605,
+            "minimumSubjectCoverage": 0.0,
+            "p10SubjectCoverage": 0.16125,
+            "subjectMacroSurrogateRecall": 0.261526458,
+            "frameSurrogateAgreementUnknownAsMiss": 0.275210084,
+            "selectiveSurrogateAgreement": 0.4760174419,
+            "completedOrderedTopologyCoverage": 0.4473684211,
+            "coverageBySurrogatePhase": {
+              "READY": 0.5383912249,
+              "DESCENDING": 0.6780383795,
+              "BOTTOM": 0.5700325733,
+              "ASCENDING": 0.5764705882
+            },
+            "recallBySurrogatePhaseUnknownAsMiss": {
+              "READY": 0.2879341865,
+              "DESCENDING": 0.4349680171,
+              "BOTTOM": 0.1563517915,
+              "ASCENDING": 0.1725490196
+            },
+            "abstentionReasons": {
+              "ASCENDING_DIRECTION_CONTRADICTION": 19,
+              "BOTTOM_TO_ASCENDING_EVIDENCE_INSUFFICIENT": 56,
+              "INITIAL_BASELINE_CALIBRATION": 152,
+              "INITIAL_BASELINE_NOT_STABLE": 742,
+              "REVERSAL_BEFORE_MINIMUM_BOTTOM_DISPLACEMENT": 35
+            }
+          },
+          "outerHeldoutMetrics": {
+            "subjectCount": 1,
+            "sequenceCount": 7,
+            "referenceFrameCount": 112,
+            "determinateFrameCount": 68,
+            "abstainedFrameCount": 44,
+            "predictionCoverage": 0.6071428571,
+            "minimumSubjectCoverage": 0.6071428571,
+            "p10SubjectCoverage": 0.6071428571,
+            "subjectMacroSurrogateRecall": 0.182296176,
+            "frameSurrogateAgreementUnknownAsMiss": 0.1875,
+            "selectiveSurrogateAgreement": 0.3088235294,
+            "completedOrderedTopologyCoverage": 0.2857142857,
+            "coverageBySurrogatePhase": {
+              "READY": 0.5333333333,
+              "DESCENDING": 0.75,
+              "BOTTOM": 0.619047619,
+              "ASCENDING": 0.5909090909
+            },
+            "recallBySurrogatePhaseUnknownAsMiss": {
+              "READY": 0.1777777778,
+              "DESCENDING": 0.4583333333,
+              "BOTTOM": 0.0476190476,
+              "ASCENDING": 0.0454545455
+            },
+            "abstentionReasons": {
+              "BOTTOM_TO_ASCENDING_EVIDENCE_INSUFFICIENT": 1,
+              "INITIAL_BASELINE_CALIBRATION": 7,
+              "INITIAL_BASELINE_NOT_STABLE": 30,
+              "REVERSAL_BEFORE_MINIMUM_BOTTOM_DISPLACEMENT": 6
+            }
+          }
+        },
+        {
+          "heldoutSubjectSha256": "464525a32b33474587108793889e7a1dcff50f9e32d357373f352268e9a2b2b9",
+          "trainingSubjectCount": 39,
+          "trainingSubjectSetSha256": "4049afae0f444dc9c289c265e8bd307792466e1de06fc06bf805c7b18291f01f",
+          "subjectOverlapCount": 0,
+          "heldoutSurrogateEligible": true,
+          "selectedConfiguration": {
+            "baselineFrameCount": 2,
+            "trailingMedianWindow": 3,
+            "baselineStabilityDegrees": 12.0,
+            "readyBandDegrees": 12.0,
+            "descentEntryDegrees": 10.0,
+            "motionDegreesPerSample": 3.0,
+            "bottomMinimumDisplacementDegrees": 40.0,
+            "reversalDegreesPerSample": 3.0,
+            "configurationId": "cfg-5bd9baaa84ae8170"
+          },
+          "innerTrainingMetrics": {
+            "subjectCount": 39,
+            "sequenceCount": 153,
+            "referenceFrameCount": 2396,
+            "determinateFrameCount": 1416,
+            "abstainedFrameCount": 980,
+            "predictionCoverage": 0.590984975,
+            "minimumSubjectCoverage": 0.0,
+            "p10SubjectCoverage": 0.16125,
+            "subjectMacroSurrogateRecall": 0.2632005699,
+            "frameSurrogateAgreementUnknownAsMiss": 0.2771285476,
+            "selectiveSurrogateAgreement": 0.4689265537,
+            "completedOrderedTopologyCoverage": 0.4509803922,
+            "coverageBySurrogatePhase": {
+              "READY": 0.5510948905,
+              "DESCENDING": 0.6955602537,
+              "BOTTOM": 0.5799373041,
+              "ASCENDING": 0.5866141732
+            },
+            "recallBySurrogatePhaseUnknownAsMiss": {
+              "READY": 0.2910583942,
+              "DESCENDING": 0.44397463,
+              "BOTTOM": 0.1536050157,
+              "ASCENDING": 0.1692913386
+            },
+            "abstentionReasons": {
+              "ASCENDING_DIRECTION_CONTRADICTION": 18,
+              "BOTTOM_TO_ASCENDING_EVIDENCE_INSUFFICIENT": 57,
+              "INITIAL_BASELINE_CALIBRATION": 153,
+              "INITIAL_BASELINE_NOT_STABLE": 712,
+              "REVERSAL_BEFORE_MINIMUM_BOTTOM_DISPLACEMENT": 40
+            }
+          },
+          "outerHeldoutMetrics": {
+            "subjectCount": 1,
+            "sequenceCount": 6,
+            "referenceFrameCount": 96,
+            "determinateFrameCount": 28,
+            "abstainedFrameCount": 68,
+            "predictionCoverage": 0.2916666667,
+            "minimumSubjectCoverage": 0.2916666667,
+            "p10SubjectCoverage": 0.2916666667,
+            "subjectMacroSurrogateRecall": 0.117005814,
+            "frameSurrogateAgreementUnknownAsMiss": 0.125,
+            "selectiveSurrogateAgreement": 0.4285714286,
+            "completedOrderedTopologyCoverage": 0.1666666667,
+            "coverageBySurrogatePhase": {
+              "READY": 0.2093023256,
+              "DESCENDING": 0.35,
+              "BOTTOM": 0.3333333333,
+              "ASCENDING": 0.375
+            },
+            "recallBySurrogatePhaseUnknownAsMiss": {
+              "READY": 0.0930232558,
+              "DESCENDING": 0.25,
+              "BOTTOM": 0.0,
+              "ASCENDING": 0.125
+            },
+            "abstentionReasons": {
+              "ASCENDING_DIRECTION_CONTRADICTION": 1,
+              "INITIAL_BASELINE_CALIBRATION": 6,
+              "INITIAL_BASELINE_NOT_STABLE": 60,
+              "REVERSAL_BEFORE_MINIMUM_BOTTOM_DISPLACEMENT": 1
+            }
+          }
+        },
+        {
+          "heldoutSubjectSha256": "61bc7c870c9f6f2bcc70abc8802dad212db9f1be1a9e05594425ea0eaea83cbf",
+          "trainingSubjectCount": 39,
+          "trainingSubjectSetSha256": "e234d60e48d6c1f9ed6e9871413a20563f0ae83c52aa3a567dac04f3cd4c3ebc",
+          "subjectOverlapCount": 0,
+          "heldoutSurrogateEligible": true,
+          "selectedConfiguration": {
+            "baselineFrameCount": 2,
+            "trailingMedianWindow": 3,
+            "baselineStabilityDegrees": 12.0,
+            "readyBandDegrees": 12.0,
+            "descentEntryDegrees": 10.0,
+            "motionDegreesPerSample": 3.0,
+            "bottomMinimumDisplacementDegrees": 40.0,
+            "reversalDegreesPerSample": 3.0,
+            "configurationId": "cfg-5bd9baaa84ae8170"
+          },
+          "innerTrainingMetrics": {
+            "subjectCount": 39,
+            "sequenceCount": 153,
+            "referenceFrameCount": 2396,
+            "determinateFrameCount": 1429,
+            "abstainedFrameCount": 967,
+            "predictionCoverage": 0.5964106845,
+            "minimumSubjectCoverage": 0.0,
+            "p10SubjectCoverage": 0.2260483871,
+            "subjectMacroSurrogateRecall": 0.2645276017,
+            "frameSurrogateAgreementUnknownAsMiss": 0.2787979967,
+            "selectiveSurrogateAgreement": 0.4674597621,
+            "completedOrderedTopologyCoverage": 0.4509803922,
+            "coverageBySurrogatePhase": {
+              "READY": 0.5561694291,
+              "DESCENDING": 0.7010526316,
+              "BOTTOM": 0.5862068966,
+              "ASCENDING": 0.5910852713
+            },
+            "recallBySurrogatePhaseUnknownAsMiss": {
+              "READY": 0.2928176796,
+              "DESCENDING": 0.4463157895,
+              "BOTTOM": 0.1536050157,
+              "ASCENDING": 0.1724806202
+            },
+            "abstentionReasons": {
+              "ASCENDING_DIRECTION_CONTRADICTION": 19,
+              "BOTTOM_TO_ASCENDING_EVIDENCE_INSUFFICIENT": 57,
+              "INITIAL_BASELINE_CALIBRATION": 153,
+              "INITIAL_BASELINE_NOT_STABLE": 697,
+              "REVERSAL_BEFORE_MINIMUM_BOTTOM_DISPLACEMENT": 41
+            }
+          },
+          "outerHeldoutMetrics": {
+            "subjectCount": 1,
+            "sequenceCount": 6,
+            "referenceFrameCount": 96,
+            "determinateFrameCount": 15,
+            "abstainedFrameCount": 81,
+            "predictionCoverage": 0.15625,
+            "minimumSubjectCoverage": 0.15625,
+            "p10SubjectCoverage": 0.15625,
+            "subjectMacroSurrogateRecall": 0.0652515723,
+            "frameSurrogateAgreementUnknownAsMiss": 0.0833333333,
+            "selectiveSurrogateAgreement": 0.5333333333,
+            "completedOrderedTopologyCoverage": 0.1666666667,
+            "coverageBySurrogatePhase": {
+              "READY": 0.1698113208,
+              "DESCENDING": 0.1666666667,
+              "BOTTOM": 0.1111111111,
+              "ASCENDING": 0.125
+            },
+            "recallBySurrogatePhaseUnknownAsMiss": {
+              "READY": 0.0943396226,
+              "DESCENDING": 0.1666666667,
+              "BOTTOM": 0.0,
+              "ASCENDING": 0.0
+            },
+            "abstentionReasons": {
+              "INITIAL_BASELINE_CALIBRATION": 6,
+              "INITIAL_BASELINE_NOT_STABLE": 75
+            }
+          }
+        },
+        {
+          "heldoutSubjectSha256": "76b18641c043af4aed39b898ca3b280c10ef49cf86646db66bc060dc8124b18d",
+          "trainingSubjectCount": 39,
+          "trainingSubjectSetSha256": "030b2d0657900c9d714d1e9b8b30dfc19f88aeea874efe7817963a5f82ba0384",
+          "subjectOverlapCount": 0,
+          "heldoutSurrogateEligible": true,
+          "selectedConfiguration": {
+            "baselineFrameCount": 2,
+            "trailingMedianWindow": 3,
+            "baselineStabilityDegrees": 12.0,
+            "readyBandDegrees": 12.0,
+            "descentEntryDegrees": 10.0,
+            "motionDegreesPerSample": 3.0,
+            "bottomMinimumDisplacementDegrees": 40.0,
+            "reversalDegreesPerSample": 3.0,
+            "configurationId": "cfg-5bd9baaa84ae8170"
+          },
+          "innerTrainingMetrics": {
+            "subjectCount": 39,
+            "sequenceCount": 154,
+            "referenceFrameCount": 2412,
+            "determinateFrameCount": 1386,
+            "abstainedFrameCount": 1026,
+            "predictionCoverage": 0.5746268657,
+            "minimumSubjectCoverage": 0.0,
+            "p10SubjectCoverage": 0.16125,
+            "subjectMacroSurrogateRecall": 0.2598976249,
+            "frameSurrogateAgreementUnknownAsMiss": 0.2699004975,
+            "selectiveSurrogateAgreement": 0.4696969697,
+            "completedOrderedTopologyCoverage": 0.4415584416,
+            "coverageBySurrogatePhase": {
+              "READY": 0.5311355311,
+              "DESCENDING": 0.6764091858,
+              "BOTTOM": 0.5696594427,
+              "ASCENDING": 0.5752895753
+            },
+            "recallBySurrogatePhaseUnknownAsMiss": {
+              "READY": 0.2811355311,
+              "DESCENDING": 0.4321503132,
+              "BOTTOM": 0.1517027864,
+              "ASCENDING": 0.1698841699
+            },
+            "abstentionReasons": {
+              "ASCENDING_DIRECTION_CONTRADICTION": 19,
+              "BOTTOM_TO_ASCENDING_EVIDENCE_INSUFFICIENT": 55,
+              "INITIAL_BASELINE_CALIBRATION": 154,
+              "INITIAL_BASELINE_NOT_STABLE": 757,
+              "REVERSAL_BEFORE_MINIMUM_BOTTOM_DISPLACEMENT": 41
+            }
+          },
+          "outerHeldoutMetrics": {
+            "subjectCount": 1,
+            "sequenceCount": 5,
+            "referenceFrameCount": 80,
+            "determinateFrameCount": 58,
+            "abstainedFrameCount": 22,
+            "predictionCoverage": 0.725,
+            "minimumSubjectCoverage": 0.725,
+            "p10SubjectCoverage": 0.725,
+            "subjectMacroSurrogateRecall": 0.2458206687,
+            "frameSurrogateAgreementUnknownAsMiss": 0.3125,
+            "selectiveSurrogateAgreement": 0.4310344828,
+            "completedOrderedTopologyCoverage": 0.4,
+            "coverageBySurrogatePhase": {
+              "READY": 0.7021276596,
+              "DESCENDING": 0.8571428571,
+              "BOTTOM": 0.8,
+              "ASCENDING": 0.6428571429
+            },
+            "recallBySurrogatePhaseUnknownAsMiss": {
+              "READY": 0.3404255319,
+              "DESCENDING": 0.5714285714,
+              "BOTTOM": 0.0,
+              "ASCENDING": 0.0714285714
+            },
+            "abstentionReasons": {
+              "BOTTOM_TO_ASCENDING_EVIDENCE_INSUFFICIENT": 2,
+              "INITIAL_BASELINE_CALIBRATION": 5,
+              "INITIAL_BASELINE_NOT_STABLE": 15
+            }
+          }
+        },
+        {
+          "heldoutSubjectSha256": "db33d933724124588a77a0b8571dbe396c926ea5aa7b77c31755dd772b644c72",
+          "trainingSubjectCount": 39,
+          "trainingSubjectSetSha256": "3ea4f7b5dd317317bbb7e3e192d53e557d1ce52cbd9548ad0d51ca6fef350e87",
+          "subjectOverlapCount": 0,
+          "heldoutSurrogateEligible": true,
+          "selectedConfiguration": {
+            "baselineFrameCount": 2,
+            "trailingMedianWindow": 3,
+            "baselineStabilityDegrees": 12.0,
+            "readyBandDegrees": 12.0,
+            "descentEntryDegrees": 10.0,
+            "motionDegreesPerSample": 3.0,
+            "bottomMinimumDisplacementDegrees": 40.0,
+            "reversalDegreesPerSample": 3.0,
+            "configurationId": "cfg-5bd9baaa84ae8170"
+          },
+          "innerTrainingMetrics": {
+            "subjectCount": 39,
+            "sequenceCount": 154,
+            "referenceFrameCount": 2412,
+            "determinateFrameCount": 1399,
+            "abstainedFrameCount": 1013,
+            "predictionCoverage": 0.5800165837,
+            "minimumSubjectCoverage": 0.0,
+            "p10SubjectCoverage": 0.16125,
+            "subjectMacroSurrogateRecall": 0.2614543688,
+            "frameSurrogateAgreementUnknownAsMiss": 0.2694859038,
+            "selectiveSurrogateAgreement": 0.464617584,
+            "completedOrderedTopologyCoverage": 0.4350649351,
+            "coverageBySurrogatePhase": {
+              "READY": 0.5360730594,
+              "DESCENDING": 0.6919831224,
+              "BOTTOM": 0.572755418,
+              "ASCENDING": 0.575
+            },
+            "recallBySurrogatePhaseUnknownAsMiss": {
+              "READY": 0.2757990868,
+              "DESCENDING": 0.4430379747,
+              "BOTTOM": 0.1517027864,
+              "ASCENDING": 0.1711538462
+            },
+            "abstentionReasons": {
+              "ASCENDING_DIRECTION_CONTRADICTION": 19,
+              "BOTTOM_TO_ASCENDING_EVIDENCE_INSUFFICIENT": 57,
+              "INITIAL_BASELINE_CALIBRATION": 154,
+              "INITIAL_BASELINE_NOT_STABLE": 742,
+              "REVERSAL_BEFORE_MINIMUM_BOTTOM_DISPLACEMENT": 41
+            }
+          },
+          "outerHeldoutMetrics": {
+            "subjectCount": 1,
+            "sequenceCount": 5,
+            "referenceFrameCount": 80,
+            "determinateFrameCount": 45,
+            "abstainedFrameCount": 35,
+            "predictionCoverage": 0.5625,
+            "minimumSubjectCoverage": 0.5625,
+            "p10SubjectCoverage": 0.5625,
+            "subjectMacroSurrogateRecall": 0.1851076555,
+            "frameSurrogateAgreementUnknownAsMiss": 0.325,
+            "selectiveSurrogateAgreement": 0.5777777778,
+            "completedOrderedTopologyCoverage": 0.6,
+            "coverageBySurrogatePhase": {
+              "READY": 0.5909090909,
+              "DESCENDING": 0.4210526316,
+              "BOTTOM": 0.6,
+              "ASCENDING": 0.6666666667
+            },
+            "recallBySurrogatePhaseUnknownAsMiss": {
+              "READY": 0.4772727273,
+              "DESCENDING": 0.2631578947,
+              "BOTTOM": 0.0,
+              "ASCENDING": 0.0
+            },
+            "abstentionReasons": {
+              "INITIAL_BASELINE_CALIBRATION": 5,
+              "INITIAL_BASELINE_NOT_STABLE": 30
+            }
+          }
+        },
+        {
+          "heldoutSubjectSha256": "930c3545bf009c5c0078e93240036242291f795b4c38d18df93c0fb1356ad470",
+          "trainingSubjectCount": 39,
+          "trainingSubjectSetSha256": "6662872497599e8d5c902b2542508b9f0ad389b80055db0b51827f43b3f7feb0",
+          "subjectOverlapCount": 0,
+          "heldoutSurrogateEligible": true,
+          "selectedConfiguration": {
+            "baselineFrameCount": 2,
+            "trailingMedianWindow": 3,
+            "baselineStabilityDegrees": 12.0,
+            "readyBandDegrees": 12.0,
+            "descentEntryDegrees": 10.0,
+            "motionDegreesPerSample": 3.0,
+            "bottomMinimumDisplacementDegrees": 40.0,
+            "reversalDegreesPerSample": 3.0,
+            "configurationId": "cfg-5bd9baaa84ae8170"
+          },
+          "innerTrainingMetrics": {
+            "subjectCount": 39,
+            "sequenceCount": 158,
+            "referenceFrameCount": 2476,
+            "determinateFrameCount": 1431,
+            "abstainedFrameCount": 1045,
+            "predictionCoverage": 0.5779483037,
+            "minimumSubjectCoverage": 0.0,
+            "p10SubjectCoverage": 0.16125,
+            "subjectMacroSurrogateRecall": 0.2475041378,
+            "frameSurrogateAgreementUnknownAsMiss": 0.2685783522,
+            "selectiveSurrogateAgreement": 0.464709993,
+            "completedOrderedTopologyCoverage": 0.4367088608,
+            "coverageBySurrogatePhase": {
+              "READY": 0.5358090186,
+              "DESCENDING": 0.6795918367,
+              "BOTTOM": 0.5718654434,
+              "ASCENDING": 0.5776515152
+            },
+            "recallBySurrogatePhaseUnknownAsMiss": {
+              "READY": 0.2802829355,
+              "DESCENDING": 0.4346938776,
+              "BOTTOM": 0.1467889908,
+              "ASCENDING": 0.1647727273
+            },
+            "abstentionReasons": {
+              "ASCENDING_DIRECTION_CONTRADICTION": 18,
+              "BOTTOM_TO_ASCENDING_EVIDENCE_INSUFFICIENT": 56,
+              "INITIAL_BASELINE_CALIBRATION": 158,
+              "INITIAL_BASELINE_NOT_STABLE": 772,
+              "REVERSAL_BEFORE_MINIMUM_BOTTOM_DISPLACEMENT": 41
+            }
+          },
+          "outerHeldoutMetrics": {
+            "subjectCount": 1,
+            "sequenceCount": 1,
+            "referenceFrameCount": 16,
+            "determinateFrameCount": 13,
+            "abstainedFrameCount": 3,
+            "predictionCoverage": 0.8125,
+            "minimumSubjectCoverage": 0.8125,
+            "p10SubjectCoverage": 0.8125,
+            "subjectMacroSurrogateRecall": 0.7291666667,
+            "frameSurrogateAgreementUnknownAsMiss": 0.6875,
+            "selectiveSurrogateAgreement": 0.8461538462,
+            "completedOrderedTopologyCoverage": 1.0,
+            "coverageBySurrogatePhase": {
+              "READY": 0.875,
+              "DESCENDING": 1.0,
+              "BOTTOM": 1.0,
+              "ASCENDING": 0.5
+            },
+            "recallBySurrogatePhaseUnknownAsMiss": {
+              "READY": 0.75,
+              "DESCENDING": 0.6666666667,
+              "BOTTOM": 1.0,
+              "ASCENDING": 0.5
+            },
+            "abstentionReasons": {
+              "ASCENDING_DIRECTION_CONTRADICTION": 1,
+              "BOTTOM_TO_ASCENDING_EVIDENCE_INSUFFICIENT": 1,
+              "INITIAL_BASELINE_CALIBRATION": 1
+            }
+          }
+        },
+        {
+          "heldoutSubjectSha256": "1d1d961155d35c27c17740913ebb226a5cca6d997292ef13c1601359b03641ae",
+          "trainingSubjectCount": 39,
+          "trainingSubjectSetSha256": "d279d5a8c5c19f911c8b74c894480bcbe4db93d652509e232cff3ff7d15ef7c2",
+          "subjectOverlapCount": 0,
+          "heldoutSurrogateEligible": true,
+          "selectedConfiguration": {
+            "baselineFrameCount": 2,
+            "trailingMedianWindow": 3,
+            "baselineStabilityDegrees": 12.0,
+            "readyBandDegrees": 12.0,
+            "descentEntryDegrees": 10.0,
+            "motionDegreesPerSample": 3.0,
+            "bottomMinimumDisplacementDegrees": 40.0,
+            "reversalDegreesPerSample": 3.0,
+            "configurationId": "cfg-5bd9baaa84ae8170"
+          },
+          "innerTrainingMetrics": {
+            "subjectCount": 39,
+            "sequenceCount": 157,
+            "referenceFrameCount": 2460,
+            "determinateFrameCount": 1416,
+            "abstainedFrameCount": 1044,
+            "predictionCoverage": 0.5756097561,
+            "minimumSubjectCoverage": 0.0,
+            "p10SubjectCoverage": 0.16125,
+            "subjectMacroSurrogateRecall": 0.2571729412,
+            "frameSurrogateAgreementUnknownAsMiss": 0.268699187,
+            "selectiveSurrogateAgreement": 0.4668079096,
+            "completedOrderedTopologyCoverage": 0.4394904459,
+            "coverageBySurrogatePhase": {
+              "READY": 0.5346975089,
+              "DESCENDING": 0.6762886598,
+              "BOTTOM": 0.5692307692,
+              "ASCENDING": 0.5741444867
+            },
+            "recallBySurrogatePhaseUnknownAsMiss": {
+              "READY": 0.2802491103,
+              "DESCENDING": 0.4288659794,
+              "BOTTOM": 0.1507692308,
+              "ASCENDING": 0.1692015209
+            },
+            "abstentionReasons": {
+              "ASCENDING_DIRECTION_CONTRADICTION": 19,
+              "BOTTOM_TO_ASCENDING_EVIDENCE_INSUFFICIENT": 56,
+              "INITIAL_BASELINE_CALIBRATION": 157,
+              "INITIAL_BASELINE_NOT_STABLE": 772,
+              "REVERSAL_BEFORE_MINIMUM_BOTTOM_DISPLACEMENT": 40
+            }
+          },
+          "outerHeldoutMetrics": {
+            "subjectCount": 1,
+            "sequenceCount": 2,
+            "referenceFrameCount": 32,
+            "determinateFrameCount": 28,
+            "abstainedFrameCount": 4,
+            "predictionCoverage": 0.875,
+            "minimumSubjectCoverage": 0.875,
+            "p10SubjectCoverage": 0.875,
+            "subjectMacroSurrogateRecall": 0.3520833333,
+            "frameSurrogateAgreementUnknownAsMiss": 0.46875,
+            "selectiveSurrogateAgreement": 0.5357142857,
+            "completedOrderedTopologyCoverage": 0.5,
+            "coverageBySurrogatePhase": {
+              "READY": 0.8,
+              "DESCENDING": 1.0,
+              "BOTTOM": 1.0,
+              "ASCENDING": 0.8333333333
+            },
+            "recallBySurrogatePhaseUnknownAsMiss": {
+              "READY": 0.5333333333,
+              "DESCENDING": 0.875,
+              "BOTTOM": 0.0,
+              "ASCENDING": 0.0
+            },
+            "abstentionReasons": {
+              "BOTTOM_TO_ASCENDING_EVIDENCE_INSUFFICIENT": 1,
+              "INITIAL_BASELINE_CALIBRATION": 2,
+              "REVERSAL_BEFORE_MINIMUM_BOTTOM_DISPLACEMENT": 1
+            }
+          }
+        },
+        {
+          "heldoutSubjectSha256": "6540c7d99108065ded70b56db300a4b06cf98e548c5a822f4e84cfa19ad7e0db",
+          "trainingSubjectCount": 39,
+          "trainingSubjectSetSha256": "f1eb04d21c1ad93aae95c2ab088d722e9dc5f968a8be9044b3a55cf3a55b602b",
+          "subjectOverlapCount": 0,
+          "heldoutSurrogateEligible": true,
+          "selectedConfiguration": {
+            "baselineFrameCount": 2,
+            "trailingMedianWindow": 3,
+            "baselineStabilityDegrees": 12.0,
+            "readyBandDegrees": 12.0,
+            "descentEntryDegrees": 10.0,
+            "motionDegreesPerSample": 3.0,
+            "bottomMinimumDisplacementDegrees": 40.0,
+            "reversalDegreesPerSample": 3.0,
+            "configurationId": "cfg-5bd9baaa84ae8170"
+          },
+          "innerTrainingMetrics": {
+            "subjectCount": 39,
+            "sequenceCount": 158,
+            "referenceFrameCount": 2476,
+            "determinateFrameCount": 1430,
+            "abstainedFrameCount": 1046,
+            "predictionCoverage": 0.5775444265,
+            "minimumSubjectCoverage": 0.0,
+            "p10SubjectCoverage": 0.16125,
+            "subjectMacroSurrogateRecall": 0.2504955908,
+            "frameSurrogateAgreementUnknownAsMiss": 0.2689822294,
+            "selectiveSurrogateAgreement": 0.4657342657,
+            "completedOrderedTopologyCoverage": 0.4430379747,
+            "coverageBySurrogatePhase": {
+              "READY": 0.537037037,
+              "DESCENDING": 0.6782786885,
+              "BOTTOM": 0.5736196319,
+              "ASCENDING": 0.5738636364
+            },
+            "recallBySurrogatePhaseUnknownAsMiss": {
+              "READY": 0.2839506173,
+              "DESCENDING": 0.4303278689,
+              "BOTTOM": 0.1472392638,
+              "ASCENDING": 0.1628787879
+            },
+            "abstentionReasons": {
+              "ASCENDING_DIRECTION_CONTRADICTION": 19,
+              "BOTTOM_TO_ASCENDING_EVIDENCE_INSUFFICIENT": 56,
+              "INITIAL_BASELINE_CALIBRATION": 158,
+              "INITIAL_BASELINE_NOT_STABLE": 772,
+              "REVERSAL_BEFORE_MINIMUM_BOTTOM_DISPLACEMENT": 41
+            }
+          },
+          "outerHeldoutMetrics": {
+            "subjectCount": 1,
+            "sequenceCount": 1,
+            "referenceFrameCount": 16,
+            "determinateFrameCount": 14,
+            "abstainedFrameCount": 2,
+            "predictionCoverage": 0.875,
+            "minimumSubjectCoverage": 0.875,
+            "p10SubjectCoverage": 0.875,
+            "subjectMacroSurrogateRecall": 0.6125,
+            "frameSurrogateAgreementUnknownAsMiss": 0.625,
+            "selectiveSurrogateAgreement": 0.7142857143,
+            "completedOrderedTopologyCoverage": 0.0,
+            "coverageBySurrogatePhase": {
+              "READY": 0.8,
+              "DESCENDING": 1.0,
+              "BOTTOM": 0.5,
+              "ASCENDING": 1.0
+            },
+            "recallBySurrogatePhaseUnknownAsMiss": {
+              "READY": 0.2,
+              "DESCENDING": 1.0,
+              "BOTTOM": 0.5,
+              "ASCENDING": 0.75
+            },
+            "abstentionReasons": {
+              "BOTTOM_TO_ASCENDING_EVIDENCE_INSUFFICIENT": 1,
+              "INITIAL_BASELINE_CALIBRATION": 1
+            }
+          }
+        },
+        {
+          "heldoutSubjectSha256": "78a6a878fb7fd178c4f09accffefc8898baeff1b03cac66e48d69fdbddd47aec",
+          "trainingSubjectCount": 39,
+          "trainingSubjectSetSha256": "9d1a8667fbcfd2c70ed7e7ef78d11c5b631cdfaf0e26d6ed2a2f27a5017aba23",
+          "subjectOverlapCount": 0,
+          "heldoutSurrogateEligible": true,
+          "selectedConfiguration": {
+            "baselineFrameCount": 2,
+            "trailingMedianWindow": 3,
+            "baselineStabilityDegrees": 12.0,
+            "readyBandDegrees": 12.0,
+            "descentEntryDegrees": 10.0,
+            "motionDegreesPerSample": 3.0,
+            "bottomMinimumDisplacementDegrees": 40.0,
+            "reversalDegreesPerSample": 3.0,
+            "configurationId": "cfg-5bd9baaa84ae8170"
+          },
+          "innerTrainingMetrics": {
+            "subjectCount": 39,
+            "sequenceCount": 154,
+            "referenceFrameCount": 2412,
+            "determinateFrameCount": 1372,
+            "abstainedFrameCount": 1040,
+            "predictionCoverage": 0.5688225539,
+            "minimumSubjectCoverage": 0.0,
+            "p10SubjectCoverage": 0.16125,
+            "subjectMacroSurrogateRecall": 0.2550892814,
+            "frameSurrogateAgreementUnknownAsMiss": 0.2649253731,
+            "selectiveSurrogateAgreement": 0.4657434402,
+            "completedOrderedTopologyCoverage": 0.4220779221,
+            "coverageBySurrogatePhase": {
+              "READY": 0.5285067873,
+              "DESCENDING": 0.6673728814,
+              "BOTTOM": 0.5615141956,
+              "ASCENDING": 0.5694980695
+            },
+            "recallBySurrogatePhaseUnknownAsMiss": {
+              "READY": 0.2787330317,
+              "DESCENDING": 0.4237288136,
+              "BOTTOM": 0.141955836,
+              "ASCENDING": 0.166023166
+            },
+            "abstentionReasons": {
+              "ASCENDING_DIRECTION_CONTRADICTION": 18,
+              "BOTTOM_TO_ASCENDING_EVIDENCE_INSUFFICIENT": 55,
+              "INITIAL_BASELINE_CALIBRATION": 154,
+              "INITIAL_BASELINE_NOT_STABLE": 772,
+              "REVERSAL_BEFORE_MINIMUM_BOTTOM_DISPLACEMENT": 41
+            }
+          },
+          "outerHeldoutMetrics": {
+            "subjectCount": 1,
+            "sequenceCount": 5,
+            "referenceFrameCount": 80,
+            "determinateFrameCount": 72,
+            "abstainedFrameCount": 8,
+            "predictionCoverage": 0.9,
+            "minimumSubjectCoverage": 0.9,
+            "p10SubjectCoverage": 0.9,
+            "subjectMacroSurrogateRecall": 0.4333460657,
+            "frameSurrogateAgreementUnknownAsMiss": 0.4625,
+            "selectiveSurrogateAgreement": 0.5138888889,
+            "completedOrderedTopologyCoverage": 1.0,
+            "coverageBySurrogatePhase": {
+              "READY": 0.8529411765,
+              "DESCENDING": 1.0,
+              "BOTTOM": 0.9090909091,
+              "ASCENDING": 0.8571428571
+            },
+            "recallBySurrogatePhaseUnknownAsMiss": {
+              "READY": 0.4411764706,
+              "DESCENDING": 0.7142857143,
+              "BOTTOM": 0.3636363636,
+              "ASCENDING": 0.2142857143
+            },
+            "abstentionReasons": {
+              "ASCENDING_DIRECTION_CONTRADICTION": 1,
+              "BOTTOM_TO_ASCENDING_EVIDENCE_INSUFFICIENT": 2,
+              "INITIAL_BASELINE_CALIBRATION": 5
+            }
+          }
+        },
+        {
+          "heldoutSubjectSha256": "f26a52e6971ff50062fd4264cfa6985b0e782c15fe1acca955ccbd0e91ed4522",
+          "trainingSubjectCount": 39,
+          "trainingSubjectSetSha256": "83962ee94640b77dfab1d1597371b33957c142e6b82f4a31c1fc892de622e7ed",
+          "subjectOverlapCount": 0,
+          "heldoutSurrogateEligible": true,
+          "selectedConfiguration": {
+            "baselineFrameCount": 2,
+            "trailingMedianWindow": 3,
+            "baselineStabilityDegrees": 12.0,
+            "readyBandDegrees": 12.0,
+            "descentEntryDegrees": 10.0,
+            "motionDegreesPerSample": 3.0,
+            "bottomMinimumDisplacementDegrees": 40.0,
+            "reversalDegreesPerSample": 3.0,
+            "configurationId": "cfg-5bd9baaa84ae8170"
+          },
+          "innerTrainingMetrics": {
+            "subjectCount": 39,
+            "sequenceCount": 154,
+            "referenceFrameCount": 2412,
+            "determinateFrameCount": 1389,
+            "abstainedFrameCount": 1023,
+            "predictionCoverage": 0.5758706468,
+            "minimumSubjectCoverage": 0.0,
+            "p10SubjectCoverage": 0.16125,
+            "subjectMacroSurrogateRecall": 0.2540992773,
+            "frameSurrogateAgreementUnknownAsMiss": 0.263681592,
+            "selectiveSurrogateAgreement": 0.4578833693,
+            "completedOrderedTopologyCoverage": 0.4285714286,
+            "coverageBySurrogatePhase": {
+              "READY": 0.5337591241,
+              "DESCENDING": 0.6757322176,
+              "BOTTOM": 0.5696594427,
+              "ASCENDING": 0.5766990291
+            },
+            "recallBySurrogatePhaseUnknownAsMiss": {
+              "READY": 0.2737226277,
+              "DESCENDING": 0.4309623431,
+              "BOTTOM": 0.1455108359,
+              "ASCENDING": 0.1611650485
+            },
+            "abstentionReasons": {
+              "ASCENDING_DIRECTION_CONTRADICTION": 17,
+              "BOTTOM_TO_ASCENDING_EVIDENCE_INSUFFICIENT": 54,
+              "INITIAL_BASELINE_CALIBRATION": 154,
+              "INITIAL_BASELINE_NOT_STABLE": 757,
+              "REVERSAL_BEFORE_MINIMUM_BOTTOM_DISPLACEMENT": 41
+            }
+          },
+          "outerHeldoutMetrics": {
+            "subjectCount": 1,
+            "sequenceCount": 5,
+            "referenceFrameCount": 80,
+            "determinateFrameCount": 55,
+            "abstainedFrameCount": 25,
+            "predictionCoverage": 0.6875,
+            "minimumSubjectCoverage": 0.6875,
+            "p10SubjectCoverage": 0.6875,
+            "subjectMacroSurrogateRecall": 0.4719562244,
+            "frameSurrogateAgreementUnknownAsMiss": 0.5,
+            "selectiveSurrogateAgreement": 0.7272727273,
+            "completedOrderedTopologyCoverage": 0.8,
+            "coverageBySurrogatePhase": {
+              "READY": 0.6511627907,
+              "DESCENDING": 0.8666666667,
+              "BOTTOM": 0.8,
+              "ASCENDING": 0.5882352941
+            },
+            "recallBySurrogatePhaseUnknownAsMiss": {
+              "READY": 0.5348837209,
+              "DESCENDING": 0.6,
+              "BOTTOM": 0.4,
+              "ASCENDING": 0.3529411765
+            },
+            "abstentionReasons": {
+              "ASCENDING_DIRECTION_CONTRADICTION": 2,
+              "BOTTOM_TO_ASCENDING_EVIDENCE_INSUFFICIENT": 3,
+              "INITIAL_BASELINE_CALIBRATION": 5,
+              "INITIAL_BASELINE_NOT_STABLE": 15
+            }
+          }
+        },
+        {
+          "heldoutSubjectSha256": "6f6929a13e02d3e84ed602182c8bc8ce1d8fc3a037bdb0120c331cddd533a514",
+          "trainingSubjectCount": 39,
+          "trainingSubjectSetSha256": "f1eca2839fd012c859fe625af061a233f0eede63e44dd4bf64970eee21bf463a",
+          "subjectOverlapCount": 0,
+          "heldoutSurrogateEligible": true,
+          "selectedConfiguration": {
+            "baselineFrameCount": 2,
+            "trailingMedianWindow": 3,
+            "baselineStabilityDegrees": 12.0,
+            "readyBandDegrees": 12.0,
+            "descentEntryDegrees": 10.0,
+            "motionDegreesPerSample": 3.0,
+            "bottomMinimumDisplacementDegrees": 40.0,
+            "reversalDegreesPerSample": 3.0,
+            "configurationId": "cfg-5bd9baaa84ae8170"
+          },
+          "innerTrainingMetrics": {
+            "subjectCount": 39,
+            "sequenceCount": 157,
+            "referenceFrameCount": 2464,
+            "determinateFrameCount": 1433,
+            "abstainedFrameCount": 1031,
+            "predictionCoverage": 0.5815746753,
+            "minimumSubjectCoverage": 0.0,
+            "p10SubjectCoverage": 0.16125,
+            "subjectMacroSurrogateRecall": 0.2615867432,
+            "frameSurrogateAgreementUnknownAsMiss": 0.2723214286,
+            "selectiveSurrogateAgreement": 0.4682484299,
+            "completedOrderedTopologyCoverage": 0.4458598726,
+            "coverageBySurrogatePhase": {
+              "READY": 0.5390763766,
+              "DESCENDING": 0.6837782341,
+              "BOTTOM": 0.5736196319,
+              "ASCENDING": 0.5828571429
+            },
+            "recallBySurrogatePhaseUnknownAsMiss": {
+              "READY": 0.2859680284,
+              "DESCENDING": 0.4353182752,
+              "BOTTOM": 0.1503067485,
+              "ASCENDING": 0.1676190476
+            },
+            "abstentionReasons": {
+              "ASCENDING_DIRECTION_CONTRADICTION": 19,
+              "BOTTOM_TO_ASCENDING_EVIDENCE_INSUFFICIENT": 57,
+              "INITIAL_BASELINE_CALIBRATION": 157,
+              "INITIAL_BASELINE_NOT_STABLE": 757,
+              "REVERSAL_BEFORE_MINIMUM_BOTTOM_DISPLACEMENT": 41
+            }
+          },
+          "outerHeldoutMetrics": {
+            "subjectCount": 1,
+            "sequenceCount": 2,
+            "referenceFrameCount": 28,
+            "determinateFrameCount": 11,
+            "abstainedFrameCount": 17,
+            "predictionCoverage": 0.3928571429,
+            "minimumSubjectCoverage": 0.3928571429,
+            "p10SubjectCoverage": 0.3928571429,
+            "subjectMacroSurrogateRecall": 0.1799450549,
+            "frameSurrogateAgreementUnknownAsMiss": 0.1785714286,
+            "selectiveSurrogateAgreement": 0.4545454545,
+            "completedOrderedTopologyCoverage": 0.0,
+            "coverageBySurrogatePhase": {
+              "READY": 0.4615384615,
+              "DESCENDING": 0.5,
+              "BOTTOM": 0.5,
+              "ASCENDING": 0.1428571429
+            },
+            "recallBySurrogatePhaseUnknownAsMiss": {
+              "READY": 0.0769230769,
+              "DESCENDING": 0.5,
+              "BOTTOM": 0.0,
+              "ASCENDING": 0.1428571429
+            },
+            "abstentionReasons": {
+              "INITIAL_BASELINE_CALIBRATION": 2,
+              "INITIAL_BASELINE_NOT_STABLE": 15
+            }
+          }
+        },
+        {
+          "heldoutSubjectSha256": "4c075768087bbe0520dabc0c448db54e215ec8d300c6d73bb3d4402aabc56dc6",
+          "trainingSubjectCount": 39,
+          "trainingSubjectSetSha256": "35c78408f370aa4eb97a344f848efa4937c7064928dda047f6caf7fa8974038c",
+          "subjectOverlapCount": 0,
+          "heldoutSurrogateEligible": true,
+          "selectedConfiguration": {
+            "baselineFrameCount": 2,
+            "trailingMedianWindow": 3,
+            "baselineStabilityDegrees": 12.0,
+            "readyBandDegrees": 12.0,
+            "descentEntryDegrees": 10.0,
+            "motionDegreesPerSample": 3.0,
+            "bottomMinimumDisplacementDegrees": 40.0,
+            "reversalDegreesPerSample": 3.0,
+            "configurationId": "cfg-5bd9baaa84ae8170"
+          },
+          "innerTrainingMetrics": {
+            "subjectCount": 39,
+            "sequenceCount": 156,
+            "referenceFrameCount": 2447,
+            "determinateFrameCount": 1420,
+            "abstainedFrameCount": 1027,
+            "predictionCoverage": 0.5803024111,
+            "minimumSubjectCoverage": 0.0,
+            "p10SubjectCoverage": 0.16125,
+            "subjectMacroSurrogateRecall": 0.2624683402,
+            "frameSurrogateAgreementUnknownAsMiss": 0.2733959951,
+            "selectiveSurrogateAgreement": 0.4711267606,
+            "completedOrderedTopologyCoverage": 0.4423076923,
+            "coverageBySurrogatePhase": {
+              "READY": 0.5388046387,
+              "DESCENDING": 0.683127572,
+              "BOTTOM": 0.5768025078,
+              "ASCENDING": 0.575815739
+            },
+            "recallBySurrogatePhaseUnknownAsMiss": {
+              "READY": 0.2854594112,
+              "DESCENDING": 0.4403292181,
+              "BOTTOM": 0.1536050157,
+              "ASCENDING": 0.1650671785
+            },
+            "abstentionReasons": {
+              "ASCENDING_DIRECTION_CONTRADICTION": 17,
+              "BOTTOM_TO_ASCENDING_EVIDENCE_INSUFFICIENT": 56,
+              "INITIAL_BASELINE_CALIBRATION": 156,
+              "INITIAL_BASELINE_NOT_STABLE": 757,
+              "REVERSAL_BEFORE_MINIMUM_BOTTOM_DISPLACEMENT": 41
+            }
+          },
+          "outerHeldoutMetrics": {
+            "subjectCount": 1,
+            "sequenceCount": 3,
+            "referenceFrameCount": 45,
+            "determinateFrameCount": 24,
+            "abstainedFrameCount": 21,
+            "predictionCoverage": 0.5333333333,
+            "minimumSubjectCoverage": 0.5333333333,
+            "p10SubjectCoverage": 0.5333333333,
+            "subjectMacroSurrogateRecall": 0.1455627706,
+            "frameSurrogateAgreementUnknownAsMiss": 0.1555555556,
+            "selectiveSurrogateAgreement": 0.2916666667,
+            "completedOrderedTopologyCoverage": 0.3333333333,
+            "coverageBySurrogatePhase": {
+              "READY": 0.5,
+              "DESCENDING": 0.5714285714,
+              "BOTTOM": 0.4444444444,
+              "ASCENDING": 0.6363636364
+            },
+            "recallBySurrogatePhaseUnknownAsMiss": {
+              "READY": 0.1666666667,
+              "DESCENDING": 0.1428571429,
+              "BOTTOM": 0.0,
+              "ASCENDING": 0.2727272727
+            },
+            "abstentionReasons": {
+              "ASCENDING_DIRECTION_CONTRADICTION": 2,
+              "BOTTOM_TO_ASCENDING_EVIDENCE_INSUFFICIENT": 1,
+              "INITIAL_BASELINE_CALIBRATION": 3,
+              "INITIAL_BASELINE_NOT_STABLE": 15
+            }
+          }
+        },
+        {
+          "heldoutSubjectSha256": "45154e2c7c7971b03afd180576afa40f35b113e5dbeb9923af8b02235d01d72a",
+          "trainingSubjectCount": 39,
+          "trainingSubjectSetSha256": "8ab51092e5e2c8c7d353df1afa0a4d597525695a566c6b00e5b481afa28b3798",
+          "subjectOverlapCount": 0,
+          "heldoutSurrogateEligible": true,
+          "selectedConfiguration": {
+            "baselineFrameCount": 2,
+            "trailingMedianWindow": 3,
+            "baselineStabilityDegrees": 12.0,
+            "readyBandDegrees": 12.0,
+            "descentEntryDegrees": 10.0,
+            "motionDegreesPerSample": 3.0,
+            "bottomMinimumDisplacementDegrees": 40.0,
+            "reversalDegreesPerSample": 3.0,
+            "configurationId": "cfg-5bd9baaa84ae8170"
+          },
+          "innerTrainingMetrics": {
+            "subjectCount": 39,
+            "sequenceCount": 153,
+            "referenceFrameCount": 2405,
+            "determinateFrameCount": 1391,
+            "abstainedFrameCount": 1014,
+            "predictionCoverage": 0.5783783784,
+            "minimumSubjectCoverage": 0.0,
+            "p10SubjectCoverage": 0.16125,
+            "subjectMacroSurrogateRecall": 0.259806436,
+            "frameSurrogateAgreementUnknownAsMiss": 0.2723492723,
+            "selectiveSurrogateAgreement": 0.4708842559,
+            "completedOrderedTopologyCoverage": 0.4379084967,
+            "coverageBySurrogatePhase": {
+              "READY": 0.5411020777,
+              "DESCENDING": 0.6770833333,
+              "BOTTOM": 0.5672131148,
+              "ASCENDING": 0.5730994152
+            },
+            "recallBySurrogatePhaseUnknownAsMiss": {
+              "READY": 0.2818428184,
+              "DESCENDING": 0.4354166667,
+              "BOTTOM": 0.1540983607,
+              "ASCENDING": 0.1695906433
+            },
+            "abstentionReasons": {
+              "ASCENDING_DIRECTION_CONTRADICTION": 19,
+              "BOTTOM_TO_ASCENDING_EVIDENCE_INSUFFICIENT": 57,
+              "INITIAL_BASELINE_CALIBRATION": 153,
+              "INITIAL_BASELINE_NOT_STABLE": 746,
+              "REVERSAL_BEFORE_MINIMUM_BOTTOM_DISPLACEMENT": 39
+            }
+          },
+          "outerHeldoutMetrics": {
+            "subjectCount": 1,
+            "sequenceCount": 6,
+            "referenceFrameCount": 87,
+            "determinateFrameCount": 53,
+            "abstainedFrameCount": 34,
+            "predictionCoverage": 0.6091954023,
+            "minimumSubjectCoverage": 0.6091954023,
+            "p10SubjectCoverage": 0.6091954023,
+            "subjectMacroSurrogateRecall": 0.2493770353,
+            "frameSurrogateAgreementUnknownAsMiss": 0.2413793103,
+            "selectiveSurrogateAgreement": 0.3962264151,
+            "completedOrderedTopologyCoverage": 0.5,
+            "coverageBySurrogatePhase": {
+              "READY": 0.4375,
+              "DESCENDING": 0.8461538462,
+              "BOTTOM": 0.652173913,
+              "ASCENDING": 0.6842105263
+            },
+            "recallBySurrogatePhaseUnknownAsMiss": {
+              "READY": 0.34375,
+              "DESCENDING": 0.4615384615,
+              "BOTTOM": 0.0869565217,
+              "ASCENDING": 0.1052631579
+            },
+            "abstentionReasons": {
+              "INITIAL_BASELINE_CALIBRATION": 6,
+              "INITIAL_BASELINE_NOT_STABLE": 26,
+              "REVERSAL_BEFORE_MINIMUM_BOTTOM_DISPLACEMENT": 2
+            }
+          }
+        },
+        {
+          "heldoutSubjectSha256": "83aade1cce968269c035cef95390130732842ccc9f03f85f34f9aace8f1fc3f1",
+          "trainingSubjectCount": 39,
+          "trainingSubjectSetSha256": "408d3cd239fc111d55220880a46dc185afdd86732e5afa809f5668aae3a1e981",
+          "subjectOverlapCount": 0,
+          "heldoutSurrogateEligible": true,
+          "selectedConfiguration": {
+            "baselineFrameCount": 2,
+            "trailingMedianWindow": 3,
+            "baselineStabilityDegrees": 12.0,
+            "readyBandDegrees": 12.0,
+            "descentEntryDegrees": 10.0,
+            "motionDegreesPerSample": 3.0,
+            "bottomMinimumDisplacementDegrees": 40.0,
+            "reversalDegreesPerSample": 3.0,
+            "configurationId": "cfg-5bd9baaa84ae8170"
+          },
+          "innerTrainingMetrics": {
+            "subjectCount": 39,
+            "sequenceCount": 156,
+            "referenceFrameCount": 2452,
+            "determinateFrameCount": 1420,
+            "abstainedFrameCount": 1032,
+            "predictionCoverage": 0.5791190865,
+            "minimumSubjectCoverage": 0.0,
+            "p10SubjectCoverage": 0.16125,
+            "subjectMacroSurrogateRecall": 0.2587631779,
+            "frameSurrogateAgreementUnknownAsMiss": 0.2712071778,
+            "selectiveSurrogateAgreement": 0.4683098592,
+            "completedOrderedTopologyCoverage": 0.4423076923,
+            "coverageBySurrogatePhase": {
+              "READY": 0.5373001776,
+              "DESCENDING": 0.6819126819,
+              "BOTTOM": 0.5776397516,
+              "ASCENDING": 0.5755258126
+            },
+            "recallBySurrogatePhaseUnknownAsMiss": {
+              "READY": 0.2859680284,
+              "DESCENDING": 0.4365904366,
+              "BOTTOM": 0.1459627329,
+              "ASCENDING": 0.1644359465
+            },
+            "abstentionReasons": {
+              "ASCENDING_DIRECTION_CONTRADICTION": 19,
+              "BOTTOM_TO_ASCENDING_EVIDENCE_INSUFFICIENT": 55,
+              "INITIAL_BASELINE_CALIBRATION": 156,
+              "INITIAL_BASELINE_NOT_STABLE": 761,
+              "REVERSAL_BEFORE_MINIMUM_BOTTOM_DISPLACEMENT": 41
+            }
+          },
+          "outerHeldoutMetrics": {
+            "subjectCount": 1,
+            "sequenceCount": 3,
+            "referenceFrameCount": 40,
+            "determinateFrameCount": 24,
+            "abstainedFrameCount": 16,
+            "predictionCoverage": 0.6,
+            "minimumSubjectCoverage": 0.6,
+            "p10SubjectCoverage": 0.6,
+            "subjectMacroSurrogateRecall": 0.2900641026,
+            "frameSurrogateAgreementUnknownAsMiss": 0.275,
+            "selectiveSurrogateAgreement": 0.4583333333,
+            "completedOrderedTopologyCoverage": 0.3333333333,
+            "coverageBySurrogatePhase": {
+              "READY": 0.6153846154,
+              "DESCENDING": 0.6666666667,
+              "BOTTOM": 0.3333333333,
+              "ASCENDING": 0.6666666667
+            },
+            "recallBySurrogatePhaseUnknownAsMiss": {
+              "READY": 0.0769230769,
+              "DESCENDING": 0.4166666667,
+              "BOTTOM": 0.3333333333,
+              "ASCENDING": 0.3333333333
+            },
+            "abstentionReasons": {
+              "BOTTOM_TO_ASCENDING_EVIDENCE_INSUFFICIENT": 2,
+              "INITIAL_BASELINE_CALIBRATION": 3,
+              "INITIAL_BASELINE_NOT_STABLE": 11
+            }
+          }
+        },
+        {
+          "heldoutSubjectSha256": "de03105be2c40beba27239b9c9402c96642d806bded463fcb56a67c6b898d5b3",
+          "trainingSubjectCount": 39,
+          "trainingSubjectSetSha256": "c1319c659180a58597185c628503e530318e71848cbaf63d0ca95a9042735dc7",
+          "subjectOverlapCount": 0,
+          "heldoutSurrogateEligible": true,
+          "selectedConfiguration": {
+            "baselineFrameCount": 2,
+            "trailingMedianWindow": 3,
+            "baselineStabilityDegrees": 12.0,
+            "readyBandDegrees": 12.0,
+            "descentEntryDegrees": 10.0,
+            "motionDegreesPerSample": 3.0,
+            "bottomMinimumDisplacementDegrees": 40.0,
+            "reversalDegreesPerSample": 3.0,
+            "configurationId": "cfg-5bd9baaa84ae8170"
+          },
+          "innerTrainingMetrics": {
+            "subjectCount": 39,
+            "sequenceCount": 157,
+            "referenceFrameCount": 2460,
+            "determinateFrameCount": 1444,
+            "abstainedFrameCount": 1016,
+            "predictionCoverage": 0.5869918699,
+            "minimumSubjectCoverage": 0.0,
+            "p10SubjectCoverage": 0.2260483871,
+            "subjectMacroSurrogateRecall": 0.266200719,
+            "frameSurrogateAgreementUnknownAsMiss": 0.274796748,
+            "selectiveSurrogateAgreement": 0.4681440443,
+            "completedOrderedTopologyCoverage": 0.4458598726,
+            "coverageBySurrogatePhase": {
+              "READY": 0.5453736655,
+              "DESCENDING": 0.6857142857,
+              "BOTTOM": 0.5802469136,
+              "ASCENDING": 0.5881226054
+            },
+            "recallBySurrogatePhaseUnknownAsMiss": {
+              "READY": 0.287366548,
+              "DESCENDING": 0.4387755102,
+              "BOTTOM": 0.1512345679,
+              "ASCENDING": 0.1704980843
+            },
+            "abstentionReasons": {
+              "ASCENDING_DIRECTION_CONTRADICTION": 19,
+              "BOTTOM_TO_ASCENDING_EVIDENCE_INSUFFICIENT": 57,
+              "INITIAL_BASELINE_CALIBRATION": 157,
+              "INITIAL_BASELINE_NOT_STABLE": 742,
+              "REVERSAL_BEFORE_MINIMUM_BOTTOM_DISPLACEMENT": 41
+            }
+          },
+          "outerHeldoutMetrics": {
+            "subjectCount": 1,
+            "sequenceCount": 2,
+            "referenceFrameCount": 32,
+            "determinateFrameCount": 0,
+            "abstainedFrameCount": 32,
+            "predictionCoverage": 0.0,
+            "minimumSubjectCoverage": 0.0,
+            "p10SubjectCoverage": 0.0,
+            "subjectMacroSurrogateRecall": 0.0,
+            "frameSurrogateAgreementUnknownAsMiss": 0.0,
+            "selectiveSurrogateAgreement": null,
+            "completedOrderedTopologyCoverage": 0.0,
+            "coverageBySurrogatePhase": {
+              "READY": 0.0,
+              "DESCENDING": 0.0,
+              "BOTTOM": 0.0,
+              "ASCENDING": 0.0
+            },
+            "recallBySurrogatePhaseUnknownAsMiss": {
+              "READY": 0.0,
+              "DESCENDING": 0.0,
+              "BOTTOM": 0.0,
+              "ASCENDING": 0.0
+            },
+            "abstentionReasons": {
+              "INITIAL_BASELINE_CALIBRATION": 2,
+              "INITIAL_BASELINE_NOT_STABLE": 30
+            }
+          }
+        },
+        {
+          "heldoutSubjectSha256": "f74dbf33be0db1a30b9478bebd39418f7cf1c9f70ee860ef049bd41ca84f3d03",
+          "trainingSubjectCount": 39,
+          "trainingSubjectSetSha256": "95d39646adda6ce2052339cfdb81f1f6db48770999833412996af73c5bf1e1f5",
+          "subjectOverlapCount": 0,
+          "heldoutSurrogateEligible": true,
+          "selectedConfiguration": {
+            "baselineFrameCount": 2,
+            "trailingMedianWindow": 3,
+            "baselineStabilityDegrees": 12.0,
+            "readyBandDegrees": 12.0,
+            "descentEntryDegrees": 10.0,
+            "motionDegreesPerSample": 3.0,
+            "bottomMinimumDisplacementDegrees": 40.0,
+            "reversalDegreesPerSample": 3.0,
+            "configurationId": "cfg-5bd9baaa84ae8170"
+          },
+          "innerTrainingMetrics": {
+            "subjectCount": 39,
+            "sequenceCount": 155,
+            "referenceFrameCount": 2440,
+            "determinateFrameCount": 1423,
+            "abstainedFrameCount": 1017,
+            "predictionCoverage": 0.5831967213,
+            "minimumSubjectCoverage": 0.0,
+            "p10SubjectCoverage": 0.16125,
+            "subjectMacroSurrogateRecall": 0.2641226688,
+            "frameSurrogateAgreementUnknownAsMiss": 0.2758196721,
+            "selectiveSurrogateAgreement": 0.4729444835,
+            "completedOrderedTopologyCoverage": 0.4516129032,
+            "coverageBySurrogatePhase": {
+              "READY": 0.5408805031,
+              "DESCENDING": 0.683127572,
+              "BOTTOM": 0.582278481,
+              "ASCENDING": 0.580952381
+            },
+            "recallBySurrogatePhaseUnknownAsMiss": {
+              "READY": 0.2893081761,
+              "DESCENDING": 0.4382716049,
+              "BOTTOM": 0.1550632911,
+              "ASCENDING": 0.1695238095
+            },
+            "abstentionReasons": {
+              "ASCENDING_DIRECTION_CONTRADICTION": 19,
+              "BOTTOM_TO_ASCENDING_EVIDENCE_INSUFFICIENT": 55,
+              "INITIAL_BASELINE_CALIBRATION": 155,
+              "INITIAL_BASELINE_NOT_STABLE": 748,
+              "REVERSAL_BEFORE_MINIMUM_BOTTOM_DISPLACEMENT": 40
+            }
+          },
+          "outerHeldoutMetrics": {
+            "subjectCount": 1,
+            "sequenceCount": 4,
+            "referenceFrameCount": 52,
+            "determinateFrameCount": 21,
+            "abstainedFrameCount": 31,
+            "predictionCoverage": 0.4038461538,
+            "minimumSubjectCoverage": 0.4038461538,
+            "p10SubjectCoverage": 0.4038461538,
+            "subjectMacroSurrogateRecall": 0.081043956,
+            "frameSurrogateAgreementUnknownAsMiss": 0.0576923077,
+            "selectiveSurrogateAgreement": 0.1428571429,
+            "completedOrderedTopologyCoverage": 0.0,
+            "coverageBySurrogatePhase": {
+              "READY": 0.4230769231,
+              "DESCENDING": 0.5714285714,
+              "BOTTOM": 0.3333333333,
+              "ASCENDING": 0.2857142857
+            },
+            "recallBySurrogatePhaseUnknownAsMiss": {
+              "READY": 0.0384615385,
+              "DESCENDING": 0.2857142857,
+              "BOTTOM": 0.0,
+              "ASCENDING": 0.0
+            },
+            "abstentionReasons": {
+              "BOTTOM_TO_ASCENDING_EVIDENCE_INSUFFICIENT": 2,
+              "INITIAL_BASELINE_CALIBRATION": 4,
+              "INITIAL_BASELINE_NOT_STABLE": 24,
+              "REVERSAL_BEFORE_MINIMUM_BOTTOM_DISPLACEMENT": 1
+            }
+          }
+        },
+        {
+          "heldoutSubjectSha256": "b25f328817df6ffc518ccb34847341be8b9a24feaf0591e61ad5df9da4b50e7e",
+          "trainingSubjectCount": 39,
+          "trainingSubjectSetSha256": "0f5ad7c19cbf0779cc0c2333cb44b806040a4996932b0caf5105d71c887bd533",
+          "subjectOverlapCount": 0,
+          "heldoutSurrogateEligible": true,
+          "selectedConfiguration": {
+            "baselineFrameCount": 2,
+            "trailingMedianWindow": 3,
+            "baselineStabilityDegrees": 12.0,
+            "readyBandDegrees": 12.0,
+            "descentEntryDegrees": 10.0,
+            "motionDegreesPerSample": 3.0,
+            "bottomMinimumDisplacementDegrees": 40.0,
+            "reversalDegreesPerSample": 3.0,
+            "configurationId": "cfg-5bd9baaa84ae8170"
+          },
+          "innerTrainingMetrics": {
+            "subjectCount": 39,
+            "sequenceCount": 157,
+            "referenceFrameCount": 2460,
+            "determinateFrameCount": 1430,
+            "abstainedFrameCount": 1030,
+            "predictionCoverage": 0.581300813,
+            "minimumSubjectCoverage": 0.0,
+            "p10SubjectCoverage": 0.16125,
+            "subjectMacroSurrogateRecall": 0.2633008411,
+            "frameSurrogateAgreementUnknownAsMiss": 0.2723577236,
+            "selectiveSurrogateAgreement": 0.4685314685,
+            "completedOrderedTopologyCoverage": 0.4394904459,
+            "coverageBySurrogatePhase": {
+              "READY": 0.5404444444,
+              "DESCENDING": 0.6822810591,
+              "BOTTOM": 0.5740740741,
+              "ASCENDING": 0.5788461538
+            },
+            "recallBySurrogatePhaseUnknownAsMiss": {
+              "READY": 0.2835555556,
+              "DESCENDING": 0.4378818737,
+              "BOTTOM": 0.1512345679,
+              "ASCENDING": 0.1673076923
+            },
+            "abstentionReasons": {
+              "ASCENDING_DIRECTION_CONTRADICTION": 18,
+              "BOTTOM_TO_ASCENDING_EVIDENCE_INSUFFICIENT": 57,
+              "INITIAL_BASELINE_CALIBRATION": 157,
+              "INITIAL_BASELINE_NOT_STABLE": 757,
+              "REVERSAL_BEFORE_MINIMUM_BOTTOM_DISPLACEMENT": 41
+            }
+          },
+          "outerHeldoutMetrics": {
+            "subjectCount": 1,
+            "sequenceCount": 2,
+            "referenceFrameCount": 32,
+            "determinateFrameCount": 14,
+            "abstainedFrameCount": 18,
+            "predictionCoverage": 0.4375,
+            "minimumSubjectCoverage": 0.4375,
+            "p10SubjectCoverage": 0.4375,
+            "subjectMacroSurrogateRecall": 0.1130952381,
+            "frameSurrogateAgreementUnknownAsMiss": 0.1875,
+            "selectiveSurrogateAgreement": 0.4285714286,
+            "completedOrderedTopologyCoverage": 0.5,
+            "coverageBySurrogatePhase": {
+              "READY": 0.3571428571,
+              "DESCENDING": 0.5,
+              "BOTTOM": 0.5,
+              "ASCENDING": 0.5
+            },
+            "recallBySurrogatePhaseUnknownAsMiss": {
+              "READY": 0.2857142857,
+              "DESCENDING": 0.0,
+              "BOTTOM": 0.0,
+              "ASCENDING": 0.1666666667
+            },
+            "abstentionReasons": {
+              "ASCENDING_DIRECTION_CONTRADICTION": 1,
+              "INITIAL_BASELINE_CALIBRATION": 2,
+              "INITIAL_BASELINE_NOT_STABLE": 15
+            }
+          }
+        },
+        {
+          "heldoutSubjectSha256": "bb44283ebb783ea63fedf57d088b2e8d7ba2c95af32444482356fbb58bd52aaa",
+          "trainingSubjectCount": 39,
+          "trainingSubjectSetSha256": "8afce1b6f4ffd842cb54189d71185ea6ad1665cae085e9128f33165abb508b65",
+          "subjectOverlapCount": 0,
+          "heldoutSurrogateEligible": true,
+          "selectedConfiguration": {
+            "baselineFrameCount": 2,
+            "trailingMedianWindow": 3,
+            "baselineStabilityDegrees": 12.0,
+            "readyBandDegrees": 12.0,
+            "descentEntryDegrees": 10.0,
+            "motionDegreesPerSample": 3.0,
+            "bottomMinimumDisplacementDegrees": 40.0,
+            "reversalDegreesPerSample": 3.0,
+            "configurationId": "cfg-5bd9baaa84ae8170"
+          },
+          "innerTrainingMetrics": {
+            "subjectCount": 39,
+            "sequenceCount": 158,
+            "referenceFrameCount": 2477,
+            "determinateFrameCount": 1432,
+            "abstainedFrameCount": 1045,
+            "predictionCoverage": 0.578118692,
+            "minimumSubjectCoverage": 0.0,
+            "p10SubjectCoverage": 0.16125,
+            "subjectMacroSurrogateRecall": 0.2547156762,
+            "frameSurrogateAgreementUnknownAsMiss": 0.2708922083,
+            "selectiveSurrogateAgreement": 0.468575419,
+            "completedOrderedTopologyCoverage": 0.4430379747,
+            "coverageBySurrogatePhase": {
+              "READY": 0.5358090186,
+              "DESCENDING": 0.6802443992,
+              "BOTTOM": 0.5736196319,
+              "ASCENDING": 0.5765595463
+            },
+            "recallBySurrogatePhaseUnknownAsMiss": {
+              "READY": 0.2847038019,
+              "DESCENDING": 0.4358452138,
+              "BOTTOM": 0.1472392638,
+              "ASCENDING": 0.1644612476
+            },
+            "abstentionReasons": {
+              "ASCENDING_DIRECTION_CONTRADICTION": 18,
+              "BOTTOM_TO_ASCENDING_EVIDENCE_INSUFFICIENT": 56,
+              "INITIAL_BASELINE_CALIBRATION": 158,
+              "INITIAL_BASELINE_NOT_STABLE": 772,
+              "REVERSAL_BEFORE_MINIMUM_BOTTOM_DISPLACEMENT": 41
+            }
+          },
+          "outerHeldoutMetrics": {
+            "subjectCount": 1,
+            "sequenceCount": 1,
+            "referenceFrameCount": 15,
+            "determinateFrameCount": 12,
+            "abstainedFrameCount": 3,
+            "predictionCoverage": 0.8,
+            "minimumSubjectCoverage": 0.8,
+            "p10SubjectCoverage": 0.8,
+            "subjectMacroSurrogateRecall": 0.4479166667,
+            "frameSurrogateAgreementUnknownAsMiss": 0.3333333333,
+            "selectiveSurrogateAgreement": 0.4166666667,
+            "completedOrderedTopologyCoverage": 0.0,
+            "coverageBySurrogatePhase": {
+              "READY": 0.875,
+              "DESCENDING": 1.0,
+              "BOTTOM": 0.5,
+              "ASCENDING": 0.6666666667
+            },
+            "recallBySurrogatePhaseUnknownAsMiss": {
+              "READY": 0.125,
+              "DESCENDING": 0.5,
+              "BOTTOM": 0.5,
+              "ASCENDING": 0.6666666667
+            },
+            "abstentionReasons": {
+              "ASCENDING_DIRECTION_CONTRADICTION": 1,
+              "BOTTOM_TO_ASCENDING_EVIDENCE_INSUFFICIENT": 1,
+              "INITIAL_BASELINE_CALIBRATION": 1
+            }
+          }
+        },
+        {
+          "heldoutSubjectSha256": "f63e2f39810e709e0d8cc43687f3646e29a2dba7d341b8e58062be2ff255b98c",
+          "trainingSubjectCount": 39,
+          "trainingSubjectSetSha256": "4a0c56752be74ea962773d540ad0eb311655245ae462fd68a7a9edf2f4bfab66",
+          "subjectOverlapCount": 0,
+          "heldoutSurrogateEligible": true,
+          "selectedConfiguration": {
+            "baselineFrameCount": 2,
+            "trailingMedianWindow": 3,
+            "baselineStabilityDegrees": 12.0,
+            "readyBandDegrees": 12.0,
+            "descentEntryDegrees": 10.0,
+            "motionDegreesPerSample": 3.0,
+            "bottomMinimumDisplacementDegrees": 40.0,
+            "reversalDegreesPerSample": 3.0,
+            "configurationId": "cfg-5bd9baaa84ae8170"
+          },
+          "innerTrainingMetrics": {
+            "subjectCount": 39,
+            "sequenceCount": 154,
+            "referenceFrameCount": 2412,
+            "determinateFrameCount": 1431,
+            "abstainedFrameCount": 981,
+            "predictionCoverage": 0.5932835821,
+            "minimumSubjectCoverage": 0.0,
+            "p10SubjectCoverage": 0.2247983871,
+            "subjectMacroSurrogateRecall": 0.2651885732,
+            "frameSurrogateAgreementUnknownAsMiss": 0.2790215589,
+            "selectiveSurrogateAgreement": 0.4703004892,
+            "completedOrderedTopologyCoverage": 0.4545454545,
+            "coverageBySurrogatePhase": {
+              "READY": 0.5527272727,
+              "DESCENDING": 0.7004219409,
+              "BOTTOM": 0.5849056604,
+              "ASCENDING": 0.5865384615
+            },
+            "recallBySurrogatePhaseUnknownAsMiss": {
+              "READY": 0.2936363636,
+              "DESCENDING": 0.447257384,
+              "BOTTOM": 0.1540880503,
+              "ASCENDING": 0.1711538462
+            },
+            "abstentionReasons": {
+              "ASCENDING_DIRECTION_CONTRADICTION": 19,
+              "BOTTOM_TO_ASCENDING_EVIDENCE_INSUFFICIENT": 56,
+              "INITIAL_BASELINE_CALIBRATION": 154,
+              "INITIAL_BASELINE_NOT_STABLE": 712,
+              "REVERSAL_BEFORE_MINIMUM_BOTTOM_DISPLACEMENT": 40
+            }
+          },
+          "outerHeldoutMetrics": {
+            "subjectCount": 1,
+            "sequenceCount": 5,
+            "referenceFrameCount": 80,
+            "determinateFrameCount": 13,
+            "abstainedFrameCount": 67,
+            "predictionCoverage": 0.1625,
+            "minimumSubjectCoverage": 0.1625,
+            "p10SubjectCoverage": 0.1625,
+            "subjectMacroSurrogateRecall": 0.0394736842,
+            "frameSurrogateAgreementUnknownAsMiss": 0.0375,
+            "selectiveSurrogateAgreement": 0.2307692308,
+            "completedOrderedTopologyCoverage": 0.0,
+            "coverageBySurrogatePhase": {
+              "READY": 0.1282051282,
+              "DESCENDING": 0.2105263158,
+              "BOTTOM": 0.2,
+              "ASCENDING": 0.1666666667
+            },
+            "recallBySurrogatePhaseUnknownAsMiss": {
+              "READY": 0.0,
+              "DESCENDING": 0.1578947368,
+              "BOTTOM": 0.0,
+              "ASCENDING": 0.0
+            },
+            "abstentionReasons": {
+              "BOTTOM_TO_ASCENDING_EVIDENCE_INSUFFICIENT": 1,
+              "INITIAL_BASELINE_CALIBRATION": 5,
+              "INITIAL_BASELINE_NOT_STABLE": 60,
+              "REVERSAL_BEFORE_MINIMUM_BOTTOM_DISPLACEMENT": 1
+            }
+          }
+        },
+        {
+          "heldoutSubjectSha256": "871cabf76e104afe3cdce9981917b11d1e4e1ad724807a42220c9e09fdd8229e",
+          "trainingSubjectCount": 39,
+          "trainingSubjectSetSha256": "a9941b5d2417ba41b071f4da1b47d57a2f5551ad7b760e1137ed37d802064880",
+          "subjectOverlapCount": 0,
+          "heldoutSurrogateEligible": true,
+          "selectedConfiguration": {
+            "baselineFrameCount": 2,
+            "trailingMedianWindow": 3,
+            "baselineStabilityDegrees": 12.0,
+            "readyBandDegrees": 12.0,
+            "descentEntryDegrees": 10.0,
+            "motionDegreesPerSample": 3.0,
+            "bottomMinimumDisplacementDegrees": 40.0,
+            "reversalDegreesPerSample": 3.0,
+            "configurationId": "cfg-5bd9baaa84ae8170"
+          },
+          "innerTrainingMetrics": {
+            "subjectCount": 39,
+            "sequenceCount": 156,
+            "referenceFrameCount": 2444,
+            "determinateFrameCount": 1405,
+            "abstainedFrameCount": 1039,
+            "predictionCoverage": 0.5748772504,
+            "minimumSubjectCoverage": 0.0,
+            "p10SubjectCoverage": 0.16125,
+            "subjectMacroSurrogateRecall": 0.2566832688,
+            "frameSurrogateAgreementUnknownAsMiss": 0.267594108,
+            "selectiveSurrogateAgreement": 0.465480427,
+            "completedOrderedTopologyCoverage": 0.4423076923,
+            "coverageBySurrogatePhase": {
+              "READY": 0.535173642,
+              "DESCENDING": 0.6736842105,
+              "BOTTOM": 0.5665634675,
+              "ASCENDING": 0.5755258126
+            },
+            "recallBySurrogatePhaseUnknownAsMiss": {
+              "READY": 0.2796081923,
+              "DESCENDING": 0.4294736842,
+              "BOTTOM": 0.1486068111,
+              "ASCENDING": 0.1682600382
+            },
+            "abstentionReasons": {
+              "ASCENDING_DIRECTION_CONTRADICTION": 19,
+              "BOTTOM_TO_ASCENDING_EVIDENCE_INSUFFICIENT": 56,
+              "INITIAL_BASELINE_CALIBRATION": 156,
+              "INITIAL_BASELINE_NOT_STABLE": 772,
+              "REVERSAL_BEFORE_MINIMUM_BOTTOM_DISPLACEMENT": 36
+            }
+          },
+          "outerHeldoutMetrics": {
+            "subjectCount": 1,
+            "sequenceCount": 3,
+            "referenceFrameCount": 48,
+            "determinateFrameCount": 39,
+            "abstainedFrameCount": 9,
+            "predictionCoverage": 0.8125,
+            "minimumSubjectCoverage": 0.8125,
+            "p10SubjectCoverage": 0.8125,
+            "subjectMacroSurrogateRecall": 0.3711805556,
+            "frameSurrogateAgreementUnknownAsMiss": 0.4583333333,
+            "selectiveSurrogateAgreement": 0.5641025641,
+            "completedOrderedTopologyCoverage": 0.3333333333,
+            "coverageBySurrogatePhase": {
+              "READY": 0.75,
+              "DESCENDING": 0.8888888889,
+              "BOTTOM": 1.0,
+              "ASCENDING": 0.6666666667
+            },
+            "recallBySurrogatePhaseUnknownAsMiss": {
+              "READY": 0.5625,
+              "DESCENDING": 0.6111111111,
+              "BOTTOM": 0.2,
+              "ASCENDING": 0.1111111111
+            },
+            "abstentionReasons": {
+              "BOTTOM_TO_ASCENDING_EVIDENCE_INSUFFICIENT": 1,
+              "INITIAL_BASELINE_CALIBRATION": 3,
+              "REVERSAL_BEFORE_MINIMUM_BOTTOM_DISPLACEMENT": 5
+            }
+          }
+        },
+        {
+          "heldoutSubjectSha256": "44d1ff4e955fbf89e8423f1d7345595fba76bee297c082dc7dcc2a53396c6e49",
+          "trainingSubjectCount": 39,
+          "trainingSubjectSetSha256": "457031c3ae246f746c0179363768c2a203a12052f343a26a8c300f0bd7196b4c",
+          "subjectOverlapCount": 0,
+          "heldoutSurrogateEligible": true,
+          "selectedConfiguration": {
+            "baselineFrameCount": 2,
+            "trailingMedianWindow": 3,
+            "baselineStabilityDegrees": 12.0,
+            "readyBandDegrees": 12.0,
+            "descentEntryDegrees": 10.0,
+            "motionDegreesPerSample": 3.0,
+            "bottomMinimumDisplacementDegrees": 40.0,
+            "reversalDegreesPerSample": 3.0,
+            "configurationId": "cfg-5bd9baaa84ae8170"
+          },
+          "innerTrainingMetrics": {
+            "subjectCount": 39,
+            "sequenceCount": 157,
+            "referenceFrameCount": 2464,
+            "determinateFrameCount": 1444,
+            "abstainedFrameCount": 1020,
+            "predictionCoverage": 0.586038961,
+            "minimumSubjectCoverage": 0.0,
+            "p10SubjectCoverage": 0.2260483871,
+            "subjectMacroSurrogateRecall": 0.266200719,
+            "frameSurrogateAgreementUnknownAsMiss": 0.2743506494,
+            "selectiveSurrogateAgreement": 0.4681440443,
+            "completedOrderedTopologyCoverage": 0.4458598726,
+            "coverageBySurrogatePhase": {
+              "READY": 0.5453736655,
+              "DESCENDING": 0.6885245902,
+              "BOTTOM": 0.5766871166,
+              "ASCENDING": 0.5836501901
+            },
+            "recallBySurrogatePhaseUnknownAsMiss": {
+              "READY": 0.287366548,
+              "DESCENDING": 0.4405737705,
+              "BOTTOM": 0.1503067485,
+              "ASCENDING": 0.1692015209
+            },
+            "abstentionReasons": {
+              "ASCENDING_DIRECTION_CONTRADICTION": 19,
+              "BOTTOM_TO_ASCENDING_EVIDENCE_INSUFFICIENT": 57,
+              "INITIAL_BASELINE_CALIBRATION": 157,
+              "INITIAL_BASELINE_NOT_STABLE": 746,
+              "REVERSAL_BEFORE_MINIMUM_BOTTOM_DISPLACEMENT": 41
+            }
+          },
+          "outerHeldoutMetrics": {
+            "subjectCount": 1,
+            "sequenceCount": 2,
+            "referenceFrameCount": 28,
+            "determinateFrameCount": 0,
+            "abstainedFrameCount": 28,
+            "predictionCoverage": 0.0,
+            "minimumSubjectCoverage": 0.0,
+            "p10SubjectCoverage": 0.0,
+            "subjectMacroSurrogateRecall": 0.0,
+            "frameSurrogateAgreementUnknownAsMiss": 0.0,
+            "selectiveSurrogateAgreement": null,
+            "completedOrderedTopologyCoverage": 0.0,
+            "coverageBySurrogatePhase": {
+              "READY": 0.0,
+              "DESCENDING": 0.0,
+              "BOTTOM": 0.0,
+              "ASCENDING": 0.0
+            },
+            "recallBySurrogatePhaseUnknownAsMiss": {
+              "READY": 0.0,
+              "DESCENDING": 0.0,
+              "BOTTOM": 0.0,
+              "ASCENDING": 0.0
+            },
+            "abstentionReasons": {
+              "INITIAL_BASELINE_CALIBRATION": 2,
+              "INITIAL_BASELINE_NOT_STABLE": 26
+            }
+          }
+        },
+        {
+          "heldoutSubjectSha256": "f66cc1b1dea3d7be44032c32abcb1d98b77e50e3737efa6efaf9e5043244f084",
+          "trainingSubjectCount": 39,
+          "trainingSubjectSetSha256": "db5444328f90441d05e3d37821afd9e871491b42f48d2b7a7274f701a14b7cc9",
+          "subjectOverlapCount": 0,
+          "heldoutSurrogateEligible": true,
+          "selectedConfiguration": {
+            "baselineFrameCount": 2,
+            "trailingMedianWindow": 3,
+            "baselineStabilityDegrees": 12.0,
+            "readyBandDegrees": 12.0,
+            "descentEntryDegrees": 10.0,
+            "motionDegreesPerSample": 3.0,
+            "bottomMinimumDisplacementDegrees": 40.0,
+            "reversalDegreesPerSample": 3.0,
+            "configurationId": "cfg-5bd9baaa84ae8170"
+          },
+          "innerTrainingMetrics": {
+            "subjectCount": 39,
+            "sequenceCount": 155,
+            "referenceFrameCount": 2430,
+            "determinateFrameCount": 1429,
+            "abstainedFrameCount": 1001,
+            "predictionCoverage": 0.5880658436,
+            "minimumSubjectCoverage": 0.0,
+            "p10SubjectCoverage": 0.16125,
+            "subjectMacroSurrogateRecall": 0.266200719,
+            "frameSurrogateAgreementUnknownAsMiss": 0.2781893004,
+            "selectiveSurrogateAgreement": 0.4730580826,
+            "completedOrderedTopologyCoverage": 0.4451612903,
+            "coverageBySurrogatePhase": {
+              "READY": 0.5461883408,
+              "DESCENDING": 0.6850715746,
+              "BOTTOM": 0.5867507886,
+              "ASCENDING": 0.5874263261
+            },
+            "recallBySurrogatePhaseUnknownAsMiss": {
+              "READY": 0.2896860987,
+              "DESCENDING": 0.4396728016,
+              "BOTTOM": 0.1545741325,
+              "ASCENDING": 0.1748526523
+            },
+            "abstentionReasons": {
+              "ASCENDING_DIRECTION_CONTRADICTION": 19,
+              "BOTTOM_TO_ASCENDING_EVIDENCE_INSUFFICIENT": 57,
+              "INITIAL_BASELINE_CALIBRATION": 155,
+              "INITIAL_BASELINE_NOT_STABLE": 729,
+              "REVERSAL_BEFORE_MINIMUM_BOTTOM_DISPLACEMENT": 41
+            }
+          },
+          "outerHeldoutMetrics": {
+            "subjectCount": 1,
+            "sequenceCount": 4,
+            "referenceFrameCount": 62,
+            "determinateFrameCount": 15,
+            "abstainedFrameCount": 47,
+            "predictionCoverage": 0.2419354839,
+            "minimumSubjectCoverage": 0.2419354839,
+            "p10SubjectCoverage": 0.2419354839,
+            "subjectMacroSurrogateRecall": 0.0,
+            "frameSurrogateAgreementUnknownAsMiss": 0.0,
+            "selectiveSurrogateAgreement": 0.0,
+            "completedOrderedTopologyCoverage": 0.25,
+            "coverageBySurrogatePhase": {
+              "READY": 0.1666666667,
+              "DESCENDING": 0.25,
+              "BOTTOM": 0.1818181818,
+              "ASCENDING": 0.347826087
+            },
+            "recallBySurrogatePhaseUnknownAsMiss": {
+              "READY": 0.0,
+              "DESCENDING": 0.0,
+              "BOTTOM": 0.0,
+              "ASCENDING": 0.0
+            },
+            "abstentionReasons": {
+              "INITIAL_BASELINE_CALIBRATION": 4,
+              "INITIAL_BASELINE_NOT_STABLE": 43
+            }
+          }
+        },
+        {
+          "heldoutSubjectSha256": "6a1bc3f0ae8ab5c93af17c035c150b29f8ef1df1d5d36d728180d790e897639f",
+          "trainingSubjectCount": 39,
+          "trainingSubjectSetSha256": "a5bfe0f05eb19ce14fc5227600f9c42450fd36d09e36759a21b04f89d01039ee",
+          "subjectOverlapCount": 0,
+          "heldoutSurrogateEligible": true,
+          "selectedConfiguration": {
+            "baselineFrameCount": 2,
+            "trailingMedianWindow": 3,
+            "baselineStabilityDegrees": 12.0,
+            "readyBandDegrees": 12.0,
+            "descentEntryDegrees": 10.0,
+            "motionDegreesPerSample": 3.0,
+            "bottomMinimumDisplacementDegrees": 40.0,
+            "reversalDegreesPerSample": 3.0,
+            "configurationId": "cfg-5bd9baaa84ae8170"
+          },
+          "innerTrainingMetrics": {
+            "subjectCount": 39,
+            "sequenceCount": 158,
+            "referenceFrameCount": 2476,
+            "determinateFrameCount": 1444,
+            "abstainedFrameCount": 1032,
+            "predictionCoverage": 0.5831987076,
+            "minimumSubjectCoverage": 0.0,
+            "p10SubjectCoverage": 0.2260483871,
+            "subjectMacroSurrogateRecall": 0.266200719,
+            "frameSurrogateAgreementUnknownAsMiss": 0.2730210016,
+            "selectiveSurrogateAgreement": 0.4681440443,
+            "completedOrderedTopologyCoverage": 0.4430379747,
+            "coverageBySurrogatePhase": {
+              "READY": 0.5410414828,
+              "DESCENDING": 0.6857142857,
+              "BOTTOM": 0.5766871166,
+              "ASCENDING": 0.5825426945
+            },
+            "recallBySurrogatePhaseUnknownAsMiss": {
+              "READY": 0.2850838482,
+              "DESCENDING": 0.4387755102,
+              "BOTTOM": 0.1503067485,
+              "ASCENDING": 0.1688804554
+            },
+            "abstentionReasons": {
+              "ASCENDING_DIRECTION_CONTRADICTION": 19,
+              "BOTTOM_TO_ASCENDING_EVIDENCE_INSUFFICIENT": 57,
+              "INITIAL_BASELINE_CALIBRATION": 158,
+              "INITIAL_BASELINE_NOT_STABLE": 757,
+              "REVERSAL_BEFORE_MINIMUM_BOTTOM_DISPLACEMENT": 41
+            }
+          },
+          "outerHeldoutMetrics": {
+            "subjectCount": 1,
+            "sequenceCount": 1,
+            "referenceFrameCount": 16,
+            "determinateFrameCount": 0,
+            "abstainedFrameCount": 16,
+            "predictionCoverage": 0.0,
+            "minimumSubjectCoverage": 0.0,
+            "p10SubjectCoverage": 0.0,
+            "subjectMacroSurrogateRecall": 0.0,
+            "frameSurrogateAgreementUnknownAsMiss": 0.0,
+            "selectiveSurrogateAgreement": null,
+            "completedOrderedTopologyCoverage": 0.0,
+            "coverageBySurrogatePhase": {
+              "READY": 0.0,
+              "DESCENDING": 0.0,
+              "BOTTOM": 0.0,
+              "ASCENDING": 0.0
+            },
+            "recallBySurrogatePhaseUnknownAsMiss": {
+              "READY": 0.0,
+              "DESCENDING": 0.0,
+              "BOTTOM": 0.0,
+              "ASCENDING": 0.0
+            },
+            "abstentionReasons": {
+              "INITIAL_BASELINE_CALIBRATION": 1,
+              "INITIAL_BASELINE_NOT_STABLE": 15
+            }
+          }
+        },
+        {
+          "heldoutSubjectSha256": "5cf7cd4a217823a08cc6c8b1386598d14a74616de083fcdbb4e4f74452800bb7",
+          "trainingSubjectCount": 39,
+          "trainingSubjectSetSha256": "690c97c2e2e98582710d4d55b35890e2b13a3988dc4f03935823093674ebe501",
+          "subjectOverlapCount": 0,
+          "heldoutSurrogateEligible": true,
+          "selectedConfiguration": {
+            "baselineFrameCount": 2,
+            "trailingMedianWindow": 3,
+            "baselineStabilityDegrees": 12.0,
+            "readyBandDegrees": 12.0,
+            "descentEntryDegrees": 10.0,
+            "motionDegreesPerSample": 3.0,
+            "bottomMinimumDisplacementDegrees": 40.0,
+            "reversalDegreesPerSample": 3.0,
+            "configurationId": "cfg-5bd9baaa84ae8170"
+          },
+          "innerTrainingMetrics": {
+            "subjectCount": 39,
+            "sequenceCount": 155,
+            "referenceFrameCount": 2428,
+            "determinateFrameCount": 1390,
+            "abstainedFrameCount": 1038,
+            "predictionCoverage": 0.5724876442,
+            "minimumSubjectCoverage": 0.0,
+            "p10SubjectCoverage": 0.16125,
+            "subjectMacroSurrogateRecall": 0.2553717215,
+            "frameSurrogateAgreementUnknownAsMiss": 0.268121911,
+            "selectiveSurrogateAgreement": 0.4683453237,
+            "completedOrderedTopologyCoverage": 0.4322580645,
+            "coverageBySurrogatePhase": {
+              "READY": 0.5297297297,
+              "DESCENDING": 0.6743215031,
+              "BOTTOM": 0.571875,
+              "ASCENDING": 0.570327553
+            },
+            "recallBySurrogatePhaseUnknownAsMiss": {
+              "READY": 0.2837837838,
+              "DESCENDING": 0.4342379958,
+              "BOTTOM": 0.14375,
+              "ASCENDING": 0.1579961464
+            },
+            "abstentionReasons": {
+              "ASCENDING_DIRECTION_CONTRADICTION": 18,
+              "BOTTOM_TO_ASCENDING_EVIDENCE_INSUFFICIENT": 52,
+              "INITIAL_BASELINE_CALIBRATION": 155,
+              "INITIAL_BASELINE_NOT_STABLE": 772,
+              "REVERSAL_BEFORE_MINIMUM_BOTTOM_DISPLACEMENT": 41
+            }
+          },
+          "outerHeldoutMetrics": {
+            "subjectCount": 1,
+            "sequenceCount": 4,
+            "referenceFrameCount": 64,
+            "determinateFrameCount": 54,
+            "abstainedFrameCount": 10,
+            "predictionCoverage": 0.84375,
+            "minimumSubjectCoverage": 0.84375,
+            "p10SubjectCoverage": 0.84375,
+            "subjectMacroSurrogateRecall": 0.4223309019,
+            "frameSurrogateAgreementUnknownAsMiss": 0.390625,
+            "selectiveSurrogateAgreement": 0.462962963,
+            "completedOrderedTopologyCoverage": 0.75,
+            "coverageBySurrogatePhase": {
+              "READY": 0.8620689655,
+              "DESCENDING": 0.9285714286,
+              "BOTTOM": 0.625,
+              "ASCENDING": 0.8461538462
+            },
+            "recallBySurrogatePhaseUnknownAsMiss": {
+              "READY": 0.275862069,
+              "DESCENDING": 0.5,
+              "BOTTOM": 0.375,
+              "ASCENDING": 0.5384615385
+            },
+            "abstentionReasons": {
+              "ASCENDING_DIRECTION_CONTRADICTION": 1,
+              "BOTTOM_TO_ASCENDING_EVIDENCE_INSUFFICIENT": 5,
+              "INITIAL_BASELINE_CALIBRATION": 4
+            }
+          }
+        },
+        {
+          "heldoutSubjectSha256": "49f880deed1479f7f9220c4ebbfa51b53b117394a09882d35668ae05ba25ffa7",
+          "trainingSubjectCount": 39,
+          "trainingSubjectSetSha256": "3d22cb3fd4769ca85b0dda0e3733751d0d808249ba0dfccaa55eb682df798925",
+          "subjectOverlapCount": 0,
+          "heldoutSurrogateEligible": true,
+          "selectedConfiguration": {
+            "baselineFrameCount": 2,
+            "trailingMedianWindow": 3,
+            "baselineStabilityDegrees": 12.0,
+            "readyBandDegrees": 12.0,
+            "descentEntryDegrees": 10.0,
+            "motionDegreesPerSample": 3.0,
+            "bottomMinimumDisplacementDegrees": 40.0,
+            "reversalDegreesPerSample": 3.0,
+            "configurationId": "cfg-5bd9baaa84ae8170"
+          },
+          "innerTrainingMetrics": {
+            "subjectCount": 39,
+            "sequenceCount": 152,
+            "referenceFrameCount": 2385,
+            "determinateFrameCount": 1367,
+            "abstainedFrameCount": 1018,
+            "predictionCoverage": 0.5731656184,
+            "minimumSubjectCoverage": 0.0,
+            "p10SubjectCoverage": 0.16125,
+            "subjectMacroSurrogateRecall": 0.2520037277,
+            "frameSurrogateAgreementUnknownAsMiss": 0.2595387841,
+            "selectiveSurrogateAgreement": 0.4528163862,
+            "completedOrderedTopologyCoverage": 0.4276315789,
+            "coverageBySurrogatePhase": {
+              "READY": 0.528872594,
+              "DESCENDING": 0.678111588,
+              "BOTTOM": 0.5660377358,
+              "ASCENDING": 0.5764705882
+            },
+            "recallBySurrogatePhaseUnknownAsMiss": {
+              "READY": 0.2722273144,
+              "DESCENDING": 0.4313304721,
+              "BOTTOM": 0.1320754717,
+              "ASCENDING": 0.1549019608
+            },
+            "abstentionReasons": {
+              "ASCENDING_DIRECTION_CONTRADICTION": 16,
+              "BOTTOM_TO_ASCENDING_EVIDENCE_INSUFFICIENT": 51,
+              "INITIAL_BASELINE_CALIBRATION": 152,
+              "INITIAL_BASELINE_NOT_STABLE": 758,
+              "REVERSAL_BEFORE_MINIMUM_BOTTOM_DISPLACEMENT": 41
+            }
+          },
+          "outerHeldoutMetrics": {
+            "subjectCount": 1,
+            "sequenceCount": 7,
+            "referenceFrameCount": 107,
+            "determinateFrameCount": 77,
+            "abstainedFrameCount": 30,
+            "predictionCoverage": 0.7196261682,
+            "minimumSubjectCoverage": 0.7196261682,
+            "p10SubjectCoverage": 0.7196261682,
+            "subjectMacroSurrogateRecall": 0.5536826599,
+            "frameSurrogateAgreementUnknownAsMiss": 0.5327102804,
+            "selectiveSurrogateAgreement": 0.7402597403,
+            "completedOrderedTopologyCoverage": 0.7142857143,
+            "coverageBySurrogatePhase": {
+              "READY": 0.75,
+              "DESCENDING": 0.7407407407,
+              "BOTTOM": 0.8,
+              "ASCENDING": 0.5909090909
+            },
+            "recallBySurrogatePhaseUnknownAsMiss": {
+              "READY": 0.5416666667,
+              "DESCENDING": 0.5185185185,
+              "BOTTOM": 0.7,
+              "ASCENDING": 0.4545454545
+            },
+            "abstentionReasons": {
+              "ASCENDING_DIRECTION_CONTRADICTION": 3,
+              "BOTTOM_TO_ASCENDING_EVIDENCE_INSUFFICIENT": 6,
+              "INITIAL_BASELINE_CALIBRATION": 7,
+              "INITIAL_BASELINE_NOT_STABLE": 14
+            }
+          }
+        },
+        {
+          "heldoutSubjectSha256": "0252c5f53bbb691e30f632d8f83c6201835ead374095291c385eb69cbf3cf86f",
+          "trainingSubjectCount": 39,
+          "trainingSubjectSetSha256": "7d679aedaf6e2352bb2cc64cd0469ef16678f7dfdae30f9e65716f9dbd1aca86",
+          "subjectOverlapCount": 0,
+          "heldoutSurrogateEligible": true,
+          "selectedConfiguration": {
+            "baselineFrameCount": 2,
+            "trailingMedianWindow": 3,
+            "baselineStabilityDegrees": 12.0,
+            "readyBandDegrees": 12.0,
+            "descentEntryDegrees": 10.0,
+            "motionDegreesPerSample": 3.0,
+            "bottomMinimumDisplacementDegrees": 40.0,
+            "reversalDegreesPerSample": 3.0,
+            "configurationId": "cfg-5bd9baaa84ae8170"
+          },
+          "innerTrainingMetrics": {
+            "subjectCount": 39,
+            "sequenceCount": 151,
+            "referenceFrameCount": 2364,
+            "determinateFrameCount": 1377,
+            "abstainedFrameCount": 987,
+            "predictionCoverage": 0.5824873096,
+            "minimumSubjectCoverage": 0.0,
+            "p10SubjectCoverage": 0.16125,
+            "subjectMacroSurrogateRecall": 0.2615758993,
+            "frameSurrogateAgreementUnknownAsMiss": 0.277072758,
+            "selectiveSurrogateAgreement": 0.4756717502,
+            "completedOrderedTopologyCoverage": 0.4437086093,
+            "coverageBySurrogatePhase": {
+              "READY": 0.5445362718,
+              "DESCENDING": 0.6836518047,
+              "BOTTOM": 0.5635179153,
+              "ASCENDING": 0.5814889336
+            },
+            "recallBySurrogatePhaseUnknownAsMiss": {
+              "READY": 0.2892561983,
+              "DESCENDING": 0.4373673036,
+              "BOTTOM": 0.1530944625,
+              "ASCENDING": 0.1750503018
+            },
+            "abstentionReasons": {
+              "ASCENDING_DIRECTION_CONTRADICTION": 19,
+              "BOTTOM_TO_ASCENDING_EVIDENCE_INSUFFICIENT": 57,
+              "INITIAL_BASELINE_CALIBRATION": 151,
+              "INITIAL_BASELINE_NOT_STABLE": 727,
+              "REVERSAL_BEFORE_MINIMUM_BOTTOM_DISPLACEMENT": 33
+            }
+          },
+          "outerHeldoutMetrics": {
+            "subjectCount": 1,
+            "sequenceCount": 8,
+            "referenceFrameCount": 128,
+            "determinateFrameCount": 67,
+            "abstainedFrameCount": 61,
+            "predictionCoverage": 0.5234375,
+            "minimumSubjectCoverage": 0.5234375,
+            "p10SubjectCoverage": 0.5234375,
+            "subjectMacroSurrogateRecall": 0.1803679654,
+            "frameSurrogateAgreementUnknownAsMiss": 0.1640625,
+            "selectiveSurrogateAgreement": 0.3134328358,
+            "completedOrderedTopologyCoverage": 0.375,
+            "coverageBySurrogatePhase": {
+              "READY": 0.4,
+              "DESCENDING": 0.6363636364,
+              "BOTTOM": 0.7142857143,
+              "ASCENDING": 0.5142857143
+            },
+            "recallBySurrogatePhaseUnknownAsMiss": {
+              "READY": 0.16,
+              "DESCENDING": 0.4090909091,
+              "BOTTOM": 0.0952380952,
+              "ASCENDING": 0.0571428571
+            },
+            "abstentionReasons": {
+              "INITIAL_BASELINE_CALIBRATION": 8,
+              "INITIAL_BASELINE_NOT_STABLE": 45,
+              "REVERSAL_BEFORE_MINIMUM_BOTTOM_DISPLACEMENT": 8
+            }
+          }
+        },
+        {
+          "heldoutSubjectSha256": "313ae5e11f76c22fa17e6dcdbbbdf90b9da33c82475ec48504e1f12b3001a4b3",
+          "trainingSubjectCount": 39,
+          "trainingSubjectSetSha256": "bd72c005862d7cde80aa19a64af5861937d301972e353e9f5478a6c507106468",
+          "subjectOverlapCount": 0,
+          "heldoutSurrogateEligible": true,
+          "selectedConfiguration": {
+            "baselineFrameCount": 2,
+            "trailingMedianWindow": 3,
+            "baselineStabilityDegrees": 12.0,
+            "readyBandDegrees": 12.0,
+            "descentEntryDegrees": 10.0,
+            "motionDegreesPerSample": 3.0,
+            "bottomMinimumDisplacementDegrees": 40.0,
+            "reversalDegreesPerSample": 3.0,
+            "configurationId": "cfg-5bd9baaa84ae8170"
+          },
+          "innerTrainingMetrics": {
+            "subjectCount": 39,
+            "sequenceCount": 157,
+            "referenceFrameCount": 2460,
+            "determinateFrameCount": 1429,
+            "abstainedFrameCount": 1031,
+            "predictionCoverage": 0.5808943089,
+            "minimumSubjectCoverage": 0.0,
+            "p10SubjectCoverage": 0.16125,
+            "subjectMacroSurrogateRecall": 0.261265839,
+            "frameSurrogateAgreementUnknownAsMiss": 0.2723577236,
+            "selectiveSurrogateAgreement": 0.4688593422,
+            "completedOrderedTopologyCoverage": 0.4394904459,
+            "coverageBySurrogatePhase": {
+              "READY": 0.5395555556,
+              "DESCENDING": 0.6816326531,
+              "BOTTOM": 0.5807453416,
+              "ASCENDING": 0.5755258126
+            },
+            "recallBySurrogatePhaseUnknownAsMiss": {
+              "READY": 0.2844444444,
+              "DESCENDING": 0.4367346939,
+              "BOTTOM": 0.152173913,
+              "ASCENDING": 0.1663479924
+            },
+            "abstentionReasons": {
+              "ASCENDING_DIRECTION_CONTRADICTION": 19,
+              "BOTTOM_TO_ASCENDING_EVIDENCE_INSUFFICIENT": 57,
+              "INITIAL_BASELINE_CALIBRATION": 157,
+              "INITIAL_BASELINE_NOT_STABLE": 757,
+              "REVERSAL_BEFORE_MINIMUM_BOTTOM_DISPLACEMENT": 41
+            }
+          },
+          "outerHeldoutMetrics": {
+            "subjectCount": 1,
+            "sequenceCount": 2,
+            "referenceFrameCount": 32,
+            "determinateFrameCount": 15,
+            "abstainedFrameCount": 17,
+            "predictionCoverage": 0.46875,
+            "minimumSubjectCoverage": 0.46875,
+            "p10SubjectCoverage": 0.46875,
+            "subjectMacroSurrogateRecall": 0.1924603175,
+            "frameSurrogateAgreementUnknownAsMiss": 0.1875,
+            "selectiveSurrogateAgreement": 0.4,
+            "completedOrderedTopologyCoverage": 0.5,
+            "coverageBySurrogatePhase": {
+              "READY": 0.4285714286,
+              "DESCENDING": 0.6666666667,
+              "BOTTOM": 0.1666666667,
+              "ASCENDING": 0.6666666667
+            },
+            "recallBySurrogatePhaseUnknownAsMiss": {
+              "READY": 0.2142857143,
+              "DESCENDING": 0.3333333333,
+              "BOTTOM": 0.0,
+              "ASCENDING": 0.2222222222
+            },
+            "abstentionReasons": {
+              "INITIAL_BASELINE_CALIBRATION": 2,
+              "INITIAL_BASELINE_NOT_STABLE": 15
+            }
+          }
+        },
+        {
+          "heldoutSubjectSha256": "054bd7e12804b9bfec4919633000d56d8d7dd70fe2d928d3642a965a6bbedc2b",
+          "trainingSubjectCount": 39,
+          "trainingSubjectSetSha256": "6ca42751eb99c9bfbadf826ce7bf739fb882fbef2ff402a0bf0a70f97591be22",
+          "subjectOverlapCount": 0,
+          "heldoutSurrogateEligible": true,
+          "selectedConfiguration": {
+            "baselineFrameCount": 2,
+            "trailingMedianWindow": 3,
+            "baselineStabilityDegrees": 12.0,
+            "readyBandDegrees": 12.0,
+            "descentEntryDegrees": 10.0,
+            "motionDegreesPerSample": 3.0,
+            "bottomMinimumDisplacementDegrees": 40.0,
+            "reversalDegreesPerSample": 3.0,
+            "configurationId": "cfg-5bd9baaa84ae8170"
+          },
+          "innerTrainingMetrics": {
+            "subjectCount": 39,
+            "sequenceCount": 156,
+            "referenceFrameCount": 2444,
+            "determinateFrameCount": 1401,
+            "abstainedFrameCount": 1043,
+            "predictionCoverage": 0.5732405892,
+            "minimumSubjectCoverage": 0.0,
+            "p10SubjectCoverage": 0.16125,
+            "subjectMacroSurrogateRecall": 0.2577071292,
+            "frameSurrogateAgreementUnknownAsMiss": 0.2704582651,
+            "selectiveSurrogateAgreement": 0.471805853,
+            "completedOrderedTopologyCoverage": 0.4358974359,
+            "coverageBySurrogatePhase": {
+              "READY": 0.5344057194,
+              "DESCENDING": 0.6762886598,
+              "BOTTOM": 0.5597484277,
+              "ASCENDING": 0.5689655172
+            },
+            "recallBySurrogatePhaseUnknownAsMiss": {
+              "READY": 0.2832886506,
+              "DESCENDING": 0.4329896907,
+              "BOTTOM": 0.1477987421,
+              "ASCENDING": 0.1666666667
+            },
+            "abstentionReasons": {
+              "ASCENDING_DIRECTION_CONTRADICTION": 19,
+              "BOTTOM_TO_ASCENDING_EVIDENCE_INSUFFICIENT": 57,
+              "INITIAL_BASELINE_CALIBRATION": 156,
+              "INITIAL_BASELINE_NOT_STABLE": 772,
+              "REVERSAL_BEFORE_MINIMUM_BOTTOM_DISPLACEMENT": 39
+            }
+          },
+          "outerHeldoutMetrics": {
+            "subjectCount": 1,
+            "sequenceCount": 3,
+            "referenceFrameCount": 48,
+            "determinateFrameCount": 43,
+            "abstainedFrameCount": 5,
+            "predictionCoverage": 0.8958333333,
+            "minimumSubjectCoverage": 0.8958333333,
+            "p10SubjectCoverage": 0.8958333333,
+            "subjectMacroSurrogateRecall": 0.33125,
+            "frameSurrogateAgreementUnknownAsMiss": 0.3125,
+            "selectiveSurrogateAgreement": 0.3488372093,
+            "completedOrderedTopologyCoverage": 0.6666666667,
+            "coverageBySurrogatePhase": {
+              "READY": 0.75,
+              "DESCENDING": 1.0,
+              "BOTTOM": 1.0,
+              "ASCENDING": 1.0
+            },
+            "recallBySurrogatePhaseUnknownAsMiss": {
+              "READY": 0.3,
+              "DESCENDING": 0.625,
+              "BOTTOM": 0.2,
+              "ASCENDING": 0.2
+            },
+            "abstentionReasons": {
+              "INITIAL_BASELINE_CALIBRATION": 3,
+              "REVERSAL_BEFORE_MINIMUM_BOTTOM_DISPLACEMENT": 2
+            }
+          }
+        },
+        {
+          "heldoutSubjectSha256": "eafc4c82beec8386a6afb2c5b3a350dad7ca33756a0507c4cbdfcf08a57bd249",
+          "trainingSubjectCount": 39,
+          "trainingSubjectSetSha256": "66f3fd2f3a75f59ab0b1da1da0ccecd55f904a6130d05ebf04e329372a929360",
+          "subjectOverlapCount": 0,
+          "heldoutSurrogateEligible": true,
+          "selectedConfiguration": {
+            "baselineFrameCount": 2,
+            "trailingMedianWindow": 3,
+            "baselineStabilityDegrees": 12.0,
+            "readyBandDegrees": 12.0,
+            "descentEntryDegrees": 10.0,
+            "motionDegreesPerSample": 3.0,
+            "bottomMinimumDisplacementDegrees": 40.0,
+            "reversalDegreesPerSample": 3.0,
+            "configurationId": "cfg-5bd9baaa84ae8170"
+          },
+          "innerTrainingMetrics": {
+            "subjectCount": 39,
+            "sequenceCount": 154,
+            "referenceFrameCount": 2414,
+            "determinateFrameCount": 1388,
+            "abstainedFrameCount": 1026,
+            "predictionCoverage": 0.5749792875,
+            "minimumSubjectCoverage": 0.0,
+            "p10SubjectCoverage": 0.16125,
+            "subjectMacroSurrogateRecall": 0.2570807082,
+            "frameSurrogateAgreementUnknownAsMiss": 0.2676056338,
+            "selectiveSurrogateAgreement": 0.4654178674,
+            "completedOrderedTopologyCoverage": 0.4350649351,
+            "coverageBySurrogatePhase": {
+              "READY": 0.536036036,
+              "DESCENDING": 0.6737288136,
+              "BOTTOM": 0.5641025641,
+              "ASCENDING": 0.575
+            },
+            "recallBySurrogatePhaseUnknownAsMiss": {
+              "READY": 0.2801801802,
+              "DESCENDING": 0.4300847458,
+              "BOTTOM": 0.1474358974,
+              "ASCENDING": 0.1653846154
+            },
+            "abstentionReasons": {
+              "ASCENDING_DIRECTION_CONTRADICTION": 19,
+              "BOTTOM_TO_ASCENDING_EVIDENCE_INSUFFICIENT": 56,
+              "INITIAL_BASELINE_CALIBRATION": 154,
+              "INITIAL_BASELINE_NOT_STABLE": 759,
+              "REVERSAL_BEFORE_MINIMUM_BOTTOM_DISPLACEMENT": 38
+            }
+          },
+          "outerHeldoutMetrics": {
+            "subjectCount": 1,
+            "sequenceCount": 5,
+            "referenceFrameCount": 78,
+            "determinateFrameCount": 56,
+            "abstainedFrameCount": 22,
+            "predictionCoverage": 0.7179487179,
+            "minimumSubjectCoverage": 0.7179487179,
+            "p10SubjectCoverage": 0.7179487179,
+            "subjectMacroSurrogateRecall": 0.3556804187,
+            "frameSurrogateAgreementUnknownAsMiss": 0.3846153846,
+            "selectiveSurrogateAgreement": 0.5357142857,
+            "completedOrderedTopologyCoverage": 0.6,
+            "coverageBySurrogatePhase": {
+              "READY": 0.6206896552,
+              "DESCENDING": 0.8571428571,
+              "BOTTOM": 0.75,
+              "ASCENDING": 0.6666666667
+            },
+            "recallBySurrogatePhaseUnknownAsMiss": {
+              "READY": 0.4137931034,
+              "DESCENDING": 0.5714285714,
+              "BOTTOM": 0.1875,
+              "ASCENDING": 0.25
+            },
+            "abstentionReasons": {
+              "BOTTOM_TO_ASCENDING_EVIDENCE_INSUFFICIENT": 1,
+              "INITIAL_BASELINE_CALIBRATION": 5,
+              "INITIAL_BASELINE_NOT_STABLE": 13,
+              "REVERSAL_BEFORE_MINIMUM_BOTTOM_DISPLACEMENT": 3
+            }
+          }
+        },
+        {
+          "heldoutSubjectSha256": "15abc668eb8fea14419e8dd68fea41de9b8e68ec785df372da2b35003bae9308",
+          "trainingSubjectCount": 39,
+          "trainingSubjectSetSha256": "8f85e65abeccea75f01566fe0554e23e96a08b67cc7be834780dff288101ca9e",
+          "subjectOverlapCount": 0,
+          "heldoutSurrogateEligible": true,
+          "selectedConfiguration": {
+            "baselineFrameCount": 2,
+            "trailingMedianWindow": 3,
+            "baselineStabilityDegrees": 12.0,
+            "readyBandDegrees": 12.0,
+            "descentEntryDegrees": 10.0,
+            "motionDegreesPerSample": 3.0,
+            "bottomMinimumDisplacementDegrees": 40.0,
+            "reversalDegreesPerSample": 3.0,
+            "configurationId": "cfg-5bd9baaa84ae8170"
+          },
+          "innerTrainingMetrics": {
+            "subjectCount": 39,
+            "sequenceCount": 158,
+            "referenceFrameCount": 2476,
+            "determinateFrameCount": 1431,
+            "abstainedFrameCount": 1045,
+            "predictionCoverage": 0.5779483037,
+            "minimumSubjectCoverage": 0.0,
+            "p10SubjectCoverage": 0.16125,
+            "subjectMacroSurrogateRecall": 0.2516708044,
+            "frameSurrogateAgreementUnknownAsMiss": 0.2693861066,
+            "selectiveSurrogateAgreement": 0.4661076171,
+            "completedOrderedTopologyCoverage": 0.4367088608,
+            "coverageBySurrogatePhase": {
+              "READY": 0.5374449339,
+              "DESCENDING": 0.6789366053,
+              "BOTTOM": 0.572755418,
+              "ASCENDING": 0.5746691871
+            },
+            "recallBySurrogatePhaseUnknownAsMiss": {
+              "READY": 0.2828193833,
+              "DESCENDING": 0.4355828221,
+              "BOTTOM": 0.1424148607,
+              "ASCENDING": 0.1644612476
+            },
+            "abstentionReasons": {
+              "ASCENDING_DIRECTION_CONTRADICTION": 19,
+              "BOTTOM_TO_ASCENDING_EVIDENCE_INSUFFICIENT": 55,
+              "INITIAL_BASELINE_CALIBRATION": 158,
+              "INITIAL_BASELINE_NOT_STABLE": 772,
+              "REVERSAL_BEFORE_MINIMUM_BOTTOM_DISPLACEMENT": 41
+            }
+          },
+          "outerHeldoutMetrics": {
+            "subjectCount": 1,
+            "sequenceCount": 1,
+            "referenceFrameCount": 16,
+            "determinateFrameCount": 13,
+            "abstainedFrameCount": 3,
+            "predictionCoverage": 0.8125,
+            "minimumSubjectCoverage": 0.8125,
+            "p10SubjectCoverage": 0.8125,
+            "subjectMacroSurrogateRecall": 0.5666666667,
+            "frameSurrogateAgreementUnknownAsMiss": 0.5625,
+            "selectiveSurrogateAgreement": 0.6923076923,
+            "completedOrderedTopologyCoverage": 1.0,
+            "coverageBySurrogatePhase": {
+              "READY": 0.75,
+              "DESCENDING": 1.0,
+              "BOTTOM": 0.6,
+              "ASCENDING": 1.0
+            },
+            "recallBySurrogatePhaseUnknownAsMiss": {
+              "READY": 0.5,
+              "DESCENDING": 0.5,
+              "BOTTOM": 0.6,
+              "ASCENDING": 0.6666666667
+            },
+            "abstentionReasons": {
+              "BOTTOM_TO_ASCENDING_EVIDENCE_INSUFFICIENT": 2,
+              "INITIAL_BASELINE_CALIBRATION": 1
+            }
+          }
+        },
+        {
+          "heldoutSubjectSha256": "a1240098eadc2862ee221090a161af067af8ac452e8dd226a38bc0d8b1bfb407",
+          "trainingSubjectCount": 39,
+          "trainingSubjectSetSha256": "17c52345d254730299cb210b34c0f852753135b16ed455d5297e2ef17efc058f",
+          "subjectOverlapCount": 0,
+          "heldoutSurrogateEligible": true,
+          "selectedConfiguration": {
+            "baselineFrameCount": 2,
+            "trailingMedianWindow": 3,
+            "baselineStabilityDegrees": 12.0,
+            "readyBandDegrees": 12.0,
+            "descentEntryDegrees": 10.0,
+            "motionDegreesPerSample": 3.0,
+            "bottomMinimumDisplacementDegrees": 40.0,
+            "reversalDegreesPerSample": 3.0,
+            "configurationId": "cfg-5bd9baaa84ae8170"
+          },
+          "innerTrainingMetrics": {
+            "subjectCount": 39,
+            "sequenceCount": 150,
+            "referenceFrameCount": 2348,
+            "determinateFrameCount": 1359,
+            "abstainedFrameCount": 989,
+            "predictionCoverage": 0.57879046,
+            "minimumSubjectCoverage": 0.0,
+            "p10SubjectCoverage": 0.16125,
+            "subjectMacroSurrogateRecall": 0.2597438151,
+            "frameSurrogateAgreementUnknownAsMiss": 0.269165247,
+            "selectiveSurrogateAgreement": 0.4650478293,
+            "completedOrderedTopologyCoverage": 0.44,
+            "coverageBySurrogatePhase": {
+              "READY": 0.5365168539,
+              "DESCENDING": 0.686825054,
+              "BOTTOM": 0.5741324921,
+              "ASCENDING": 0.572
+            },
+            "recallBySurrogatePhaseUnknownAsMiss": {
+              "READY": 0.2808988764,
+              "DESCENDING": 0.4362850972,
+              "BOTTOM": 0.1545741325,
+              "ASCENDING": 0.162
+            },
+            "abstentionReasons": {
+              "ASCENDING_DIRECTION_CONTRADICTION": 17,
+              "BOTTOM_TO_ASCENDING_EVIDENCE_INSUFFICIENT": 54,
+              "INITIAL_BASELINE_CALIBRATION": 150,
+              "INITIAL_BASELINE_NOT_STABLE": 727,
+              "REVERSAL_BEFORE_MINIMUM_BOTTOM_DISPLACEMENT": 41
+            }
+          },
+          "outerHeldoutMetrics": {
+            "subjectCount": 1,
+            "sequenceCount": 9,
+            "referenceFrameCount": 144,
+            "determinateFrameCount": 85,
+            "abstainedFrameCount": 59,
+            "predictionCoverage": 0.5902777778,
+            "minimumSubjectCoverage": 0.5902777778,
+            "p10SubjectCoverage": 0.5902777778,
+            "subjectMacroSurrogateRecall": 0.2518192488,
+            "frameSurrogateAgreementUnknownAsMiss": 0.3055555556,
+            "selectiveSurrogateAgreement": 0.5176470588,
+            "completedOrderedTopologyCoverage": 0.4444444444,
+            "coverageBySurrogatePhase": {
+              "READY": 0.5633802817,
+              "DESCENDING": 0.6,
+              "BOTTOM": 0.5454545455,
+              "ASCENDING": 0.65625
+            },
+            "recallBySurrogatePhaseUnknownAsMiss": {
+              "READY": 0.323943662,
+              "DESCENDING": 0.4333333333,
+              "BOTTOM": 0.0,
+              "ASCENDING": 0.25
+            },
+            "abstentionReasons": {
+              "ASCENDING_DIRECTION_CONTRADICTION": 2,
+              "BOTTOM_TO_ASCENDING_EVIDENCE_INSUFFICIENT": 3,
+              "INITIAL_BASELINE_CALIBRATION": 9,
+              "INITIAL_BASELINE_NOT_STABLE": 45
+            }
+          }
+        },
+        {
+          "heldoutSubjectSha256": "e438d51a2c3d129810171032ef21cbbe5c7493ab70bce38a898bf6dbb015450b",
+          "trainingSubjectCount": 39,
+          "trainingSubjectSetSha256": "7220733a25696c38b930372182c8d497d3941c3a4f73abffef302be116d4431f",
+          "subjectOverlapCount": 0,
+          "heldoutSurrogateEligible": true,
+          "selectedConfiguration": {
+            "baselineFrameCount": 2,
+            "trailingMedianWindow": 3,
+            "baselineStabilityDegrees": 12.0,
+            "readyBandDegrees": 12.0,
+            "descentEntryDegrees": 10.0,
+            "motionDegreesPerSample": 3.0,
+            "bottomMinimumDisplacementDegrees": 40.0,
+            "reversalDegreesPerSample": 3.0,
+            "configurationId": "cfg-5bd9baaa84ae8170"
+          },
+          "innerTrainingMetrics": {
+            "subjectCount": 39,
+            "sequenceCount": 155,
+            "referenceFrameCount": 2428,
+            "determinateFrameCount": 1404,
+            "abstainedFrameCount": 1024,
+            "predictionCoverage": 0.5782537068,
+            "minimumSubjectCoverage": 0.0,
+            "p10SubjectCoverage": 0.16125,
+            "subjectMacroSurrogateRecall": 0.262391726,
+            "frameSurrogateAgreementUnknownAsMiss": 0.2742998353,
+            "selectiveSurrogateAgreement": 0.4743589744,
+            "completedOrderedTopologyCoverage": 0.4516129032,
+            "coverageBySurrogatePhase": {
+              "READY": 0.5370866845,
+              "DESCENDING": 0.6798336798,
+              "BOTTOM": 0.5768025078,
+              "ASCENDING": 0.5736738703
+            },
+            "recallBySurrogatePhaseUnknownAsMiss": {
+              "READY": 0.2886505809,
+              "DESCENDING": 0.4386694387,
+              "BOTTOM": 0.1536050157,
+              "ASCENDING": 0.163064833
+            },
+            "abstentionReasons": {
+              "ASCENDING_DIRECTION_CONTRADICTION": 17,
+              "BOTTOM_TO_ASCENDING_EVIDENCE_INSUFFICIENT": 54,
+              "INITIAL_BASELINE_CALIBRATION": 155,
+              "INITIAL_BASELINE_NOT_STABLE": 757,
+              "REVERSAL_BEFORE_MINIMUM_BOTTOM_DISPLACEMENT": 41
+            }
+          },
+          "outerHeldoutMetrics": {
+            "subjectCount": 1,
+            "sequenceCount": 4,
+            "referenceFrameCount": 64,
+            "determinateFrameCount": 40,
+            "abstainedFrameCount": 24,
+            "predictionCoverage": 0.625,
+            "minimumSubjectCoverage": 0.625,
+            "p10SubjectCoverage": 0.625,
+            "subjectMacroSurrogateRecall": 0.1485507246,
+            "frameSurrogateAgreementUnknownAsMiss": 0.15625,
+            "selectiveSurrogateAgreement": 0.25,
+            "completedOrderedTopologyCoverage": 0.0,
+            "coverageBySurrogatePhase": {
+              "READY": 0.6,
+              "DESCENDING": 0.75,
+              "BOTTOM": 0.4444444444,
+              "ASCENDING": 0.652173913
+            },
+            "recallBySurrogatePhaseUnknownAsMiss": {
+              "READY": 0.0,
+              "DESCENDING": 0.3333333333,
+              "BOTTOM": 0.0,
+              "ASCENDING": 0.2608695652
+            },
+            "abstentionReasons": {
+              "ASCENDING_DIRECTION_CONTRADICTION": 2,
+              "BOTTOM_TO_ASCENDING_EVIDENCE_INSUFFICIENT": 3,
+              "INITIAL_BASELINE_CALIBRATION": 4,
+              "INITIAL_BASELINE_NOT_STABLE": 15
+            }
+          }
+        },
+        {
+          "heldoutSubjectSha256": "da04c4373e8925523ed0bcb4feff451f02ac1ed9d3a77ae96ce54bbffa04cf43",
+          "trainingSubjectCount": 40,
+          "trainingSubjectSetSha256": "4e7ee33fe0724e7ce4ba29274a8d42643c8ae5b6d6f241e96edd261018a9c967",
+          "subjectOverlapCount": 0,
+          "heldoutSurrogateEligible": false,
+          "selectedConfiguration": {
+            "baselineFrameCount": 2,
+            "trailingMedianWindow": 3,
+            "baselineStabilityDegrees": 12.0,
+            "readyBandDegrees": 12.0,
+            "descentEntryDegrees": 10.0,
+            "motionDegreesPerSample": 3.0,
+            "bottomMinimumDisplacementDegrees": 40.0,
+            "reversalDegreesPerSample": 3.0,
+            "configurationId": "cfg-5bd9baaa84ae8170"
+          },
+          "innerTrainingMetrics": {
+            "subjectCount": 40,
+            "sequenceCount": 159,
+            "referenceFrameCount": 2492,
+            "determinateFrameCount": 1444,
+            "abstainedFrameCount": 1048,
+            "predictionCoverage": 0.5794542536,
+            "minimumSubjectCoverage": 0.0,
+            "p10SubjectCoverage": 0.161875,
+            "subjectMacroSurrogateRecall": 0.259545701,
+            "frameSurrogateAgreementUnknownAsMiss": 0.2712680578,
+            "selectiveSurrogateAgreement": 0.4681440443,
+            "completedOrderedTopologyCoverage": 0.4402515723,
+            "coverageBySurrogatePhase": {
+              "READY": 0.538191396,
+              "DESCENDING": 0.6815415822,
+              "BOTTOM": 0.5731707317,
+              "ASCENDING": 0.5770676692
+            },
+            "recallBySurrogatePhaseUnknownAsMiss": {
+              "READY": 0.2835820896,
+              "DESCENDING": 0.4361054767,
+              "BOTTOM": 0.1493902439,
+              "ASCENDING": 0.1672932331
+            },
+            "abstentionReasons": {
+              "ASCENDING_DIRECTION_CONTRADICTION": 19,
+              "BOTTOM_TO_ASCENDING_EVIDENCE_INSUFFICIENT": 57,
+              "INITIAL_BASELINE_CALIBRATION": 159,
+              "INITIAL_BASELINE_NOT_STABLE": 772,
+              "REVERSAL_BEFORE_MINIMUM_BOTTOM_DISPLACEMENT": 41
+            }
+          },
+          "outerHeldoutMetrics": null
+        },
+        {
+          "heldoutSubjectSha256": "bae83116b0f180cc7324d691c8feda0a3d0752d8819943842690dc51268511db",
+          "trainingSubjectCount": 39,
+          "trainingSubjectSetSha256": "67023dc0037c0c1ed638ef1f146caf049774bd3cb3c3492ea24a9711313d2a42",
+          "subjectOverlapCount": 0,
+          "heldoutSurrogateEligible": true,
+          "selectedConfiguration": {
+            "baselineFrameCount": 2,
+            "trailingMedianWindow": 3,
+            "baselineStabilityDegrees": 12.0,
+            "readyBandDegrees": 12.0,
+            "descentEntryDegrees": 10.0,
+            "motionDegreesPerSample": 3.0,
+            "bottomMinimumDisplacementDegrees": 40.0,
+            "reversalDegreesPerSample": 3.0,
+            "configurationId": "cfg-5bd9baaa84ae8170"
+          },
+          "innerTrainingMetrics": {
+            "subjectCount": 39,
+            "sequenceCount": 157,
+            "referenceFrameCount": 2460,
+            "determinateFrameCount": 1432,
+            "abstainedFrameCount": 1028,
+            "predictionCoverage": 0.5821138211,
+            "minimumSubjectCoverage": 0.0,
+            "p10SubjectCoverage": 0.16125,
+            "subjectMacroSurrogateRecall": 0.2645981549,
+            "frameSurrogateAgreementUnknownAsMiss": 0.2731707317,
+            "selectiveSurrogateAgreement": 0.469273743,
+            "completedOrderedTopologyCoverage": 0.4458598726,
+            "coverageBySurrogatePhase": {
+              "READY": 0.5422974176,
+              "DESCENDING": 0.6864754098,
+              "BOTTOM": 0.572755418,
+              "ASCENDING": 0.5760456274
+            },
+            "recallBySurrogatePhaseUnknownAsMiss": {
+              "READY": 0.2840605521,
+              "DESCENDING": 0.4405737705,
+              "BOTTOM": 0.1517027864,
+              "ASCENDING": 0.1692015209
+            },
+            "abstentionReasons": {
+              "ASCENDING_DIRECTION_CONTRADICTION": 19,
+              "BOTTOM_TO_ASCENDING_EVIDENCE_INSUFFICIENT": 57,
+              "INITIAL_BASELINE_CALIBRATION": 157,
+              "INITIAL_BASELINE_NOT_STABLE": 757,
+              "REVERSAL_BEFORE_MINIMUM_BOTTOM_DISPLACEMENT": 38
+            }
+          },
+          "outerHeldoutMetrics": {
+            "subjectCount": 1,
+            "sequenceCount": 2,
+            "referenceFrameCount": 32,
+            "determinateFrameCount": 12,
+            "abstainedFrameCount": 20,
+            "predictionCoverage": 0.375,
+            "minimumSubjectCoverage": 0.375,
+            "p10SubjectCoverage": 0.375,
+            "subjectMacroSurrogateRecall": 0.0625,
+            "frameSurrogateAgreementUnknownAsMiss": 0.125,
+            "selectiveSurrogateAgreement": 0.3333333333,
+            "completedOrderedTopologyCoverage": 0.0,
+            "coverageBySurrogatePhase": {
+              "READY": 0.25,
+              "DESCENDING": 0.2,
+              "BOTTOM": 0.6,
+              "ASCENDING": 0.6666666667
+            },
+            "recallBySurrogatePhaseUnknownAsMiss": {
+              "READY": 0.25,
+              "DESCENDING": 0.0,
+              "BOTTOM": 0.0,
+              "ASCENDING": 0.0
+            },
+            "abstentionReasons": {
+              "INITIAL_BASELINE_CALIBRATION": 2,
+              "INITIAL_BASELINE_NOT_STABLE": 15,
+              "REVERSAL_BEFORE_MINIMUM_BOTTOM_DISPLACEMENT": 3
+            }
+          }
+        },
+        {
+          "heldoutSubjectSha256": "a8e3d690ce1a58ac950a19ec8164e373aa43dc70d6e314e7fba1fad07e094ac3",
+          "trainingSubjectCount": 39,
+          "trainingSubjectSetSha256": "c31defbf5d28b40d4ba36c20b9b580e2e7b1f243d8283e2af2f71eb307eac456",
+          "subjectOverlapCount": 0,
+          "heldoutSurrogateEligible": true,
+          "selectedConfiguration": {
+            "baselineFrameCount": 2,
+            "trailingMedianWindow": 3,
+            "baselineStabilityDegrees": 12.0,
+            "readyBandDegrees": 12.0,
+            "descentEntryDegrees": 10.0,
+            "motionDegreesPerSample": 3.0,
+            "bottomMinimumDisplacementDegrees": 40.0,
+            "reversalDegreesPerSample": 3.0,
+            "configurationId": "cfg-5bd9baaa84ae8170"
+          },
+          "innerTrainingMetrics": {
+            "subjectCount": 39,
+            "sequenceCount": 158,
+            "referenceFrameCount": 2476,
+            "determinateFrameCount": 1432,
+            "abstainedFrameCount": 1044,
+            "predictionCoverage": 0.5783521809,
+            "minimumSubjectCoverage": 0.0,
+            "p10SubjectCoverage": 0.16125,
+            "subjectMacroSurrogateRecall": 0.261214964,
+            "frameSurrogateAgreementUnknownAsMiss": 0.27180937,
+            "selectiveSurrogateAgreement": 0.469972067,
+            "completedOrderedTopologyCoverage": 0.4430379747,
+            "coverageBySurrogatePhase": {
+              "READY": 0.5362831858,
+              "DESCENDING": 0.6795918367,
+              "BOTTOM": 0.5749235474,
+              "ASCENDING": 0.5765595463
+            },
+            "recallBySurrogatePhaseUnknownAsMiss": {
+              "READY": 0.2849557522,
+              "DESCENDING": 0.4346938776,
+              "BOTTOM": 0.1498470948,
+              "ASCENDING": 0.168241966
+            },
+            "abstentionReasons": {
+              "ASCENDING_DIRECTION_CONTRADICTION": 18,
+              "BOTTOM_TO_ASCENDING_EVIDENCE_INSUFFICIENT": 56,
+              "INITIAL_BASELINE_CALIBRATION": 158,
+              "INITIAL_BASELINE_NOT_STABLE": 772,
+              "REVERSAL_BEFORE_MINIMUM_BOTTOM_DISPLACEMENT": 40
+            }
+          },
+          "outerHeldoutMetrics": {
+            "subjectCount": 1,
+            "sequenceCount": 1,
+            "referenceFrameCount": 16,
+            "determinateFrameCount": 12,
+            "abstainedFrameCount": 4,
+            "predictionCoverage": 0.75,
+            "minimumSubjectCoverage": 0.75,
+            "p10SubjectCoverage": 0.75,
+            "subjectMacroSurrogateRecall": 0.1944444444,
+            "frameSurrogateAgreementUnknownAsMiss": 0.1875,
+            "selectiveSurrogateAgreement": 0.25,
+            "completedOrderedTopologyCoverage": 0.0,
+            "coverageBySurrogatePhase": {
+              "READY": 0.7777777778,
+              "DESCENDING": 1.0,
+              "BOTTOM": 0.0,
+              "ASCENDING": 0.6666666667
+            },
+            "recallBySurrogatePhaseUnknownAsMiss": {
+              "READY": 0.1111111111,
+              "DESCENDING": 0.6666666667,
+              "BOTTOM": 0.0,
+              "ASCENDING": 0.0
+            },
+            "abstentionReasons": {
+              "ASCENDING_DIRECTION_CONTRADICTION": 1,
+              "BOTTOM_TO_ASCENDING_EVIDENCE_INSUFFICIENT": 1,
+              "INITIAL_BASELINE_CALIBRATION": 1,
+              "REVERSAL_BEFORE_MINIMUM_BOTTOM_DISPLACEMENT": 1
+            }
+          }
+        },
+        {
+          "heldoutSubjectSha256": "ababdafe556b0d22b6213a8297faeddc5fd4f48ab152f88e55d25cd72f6f4d0c",
+          "trainingSubjectCount": 39,
+          "trainingSubjectSetSha256": "5f41ca4e05aa455457f3ad8ef4d6e3e30793c532f39bf9ff500fa17568a36592",
+          "subjectOverlapCount": 0,
+          "heldoutSurrogateEligible": true,
+          "selectedConfiguration": {
+            "baselineFrameCount": 2,
+            "trailingMedianWindow": 3,
+            "baselineStabilityDegrees": 12.0,
+            "readyBandDegrees": 12.0,
+            "descentEntryDegrees": 10.0,
+            "motionDegreesPerSample": 3.0,
+            "bottomMinimumDisplacementDegrees": 40.0,
+            "reversalDegreesPerSample": 3.0,
+            "configurationId": "cfg-5bd9baaa84ae8170"
+          },
+          "innerTrainingMetrics": {
+            "subjectCount": 39,
+            "sequenceCount": 153,
+            "referenceFrameCount": 2396,
+            "determinateFrameCount": 1415,
+            "abstainedFrameCount": 981,
+            "predictionCoverage": 0.5905676127,
+            "minimumSubjectCoverage": 0.0,
+            "p10SubjectCoverage": 0.16125,
+            "subjectMacroSurrogateRecall": 0.2625518556,
+            "frameSurrogateAgreementUnknownAsMiss": 0.2750417362,
+            "selectiveSurrogateAgreement": 0.4657243816,
+            "completedOrderedTopologyCoverage": 0.4444444444,
+            "coverageBySurrogatePhase": {
+              "READY": 0.5487132353,
+              "DESCENDING": 0.6924686192,
+              "BOTTOM": 0.5859872611,
+              "ASCENDING": 0.5872093023
+            },
+            "recallBySurrogatePhaseUnknownAsMiss": {
+              "READY": 0.2858455882,
+              "DESCENDING": 0.4435146444,
+              "BOTTOM": 0.152866242,
+              "ASCENDING": 0.1705426357
+            },
+            "abstentionReasons": {
+              "ASCENDING_DIRECTION_CONTRADICTION": 19,
+              "BOTTOM_TO_ASCENDING_EVIDENCE_INSUFFICIENT": 56,
+              "INITIAL_BASELINE_CALIBRATION": 153,
+              "INITIAL_BASELINE_NOT_STABLE": 712,
+              "REVERSAL_BEFORE_MINIMUM_BOTTOM_DISPLACEMENT": 41
+            }
+          },
+          "outerHeldoutMetrics": {
+            "subjectCount": 1,
+            "sequenceCount": 6,
+            "referenceFrameCount": 96,
+            "determinateFrameCount": 29,
+            "abstainedFrameCount": 67,
+            "predictionCoverage": 0.3020833333,
+            "minimumSubjectCoverage": 0.3020833333,
+            "p10SubjectCoverage": 0.3020833333,
+            "subjectMacroSurrogateRecall": 0.1423056723,
+            "frameSurrogateAgreementUnknownAsMiss": 0.1770833333,
+            "selectiveSurrogateAgreement": 0.5862068966,
+            "completedOrderedTopologyCoverage": 0.3333333333,
+            "coverageBySurrogatePhase": {
+              "READY": 0.3137254902,
+              "DESCENDING": 0.3333333333,
+              "BOTTOM": 0.2857142857,
+              "ASCENDING": 0.25
+            },
+            "recallBySurrogatePhaseUnknownAsMiss": {
+              "READY": 0.2352941176,
+              "DESCENDING": 0.2,
+              "BOTTOM": 0.0714285714,
+              "ASCENDING": 0.0625
+            },
+            "abstentionReasons": {
+              "BOTTOM_TO_ASCENDING_EVIDENCE_INSUFFICIENT": 1,
+              "INITIAL_BASELINE_CALIBRATION": 6,
+              "INITIAL_BASELINE_NOT_STABLE": 60
+            }
+          }
+        },
+        {
+          "heldoutSubjectSha256": "927013d8d3d05f375ec00650ea31fbe031e9d1bc7a33c0b0cbba2bd8e6cbe801",
+          "trainingSubjectCount": 40,
+          "trainingSubjectSetSha256": "4e7ee33fe0724e7ce4ba29274a8d42643c8ae5b6d6f241e96edd261018a9c967",
+          "subjectOverlapCount": 0,
+          "heldoutSurrogateEligible": false,
+          "selectedConfiguration": {
+            "baselineFrameCount": 2,
+            "trailingMedianWindow": 3,
+            "baselineStabilityDegrees": 12.0,
+            "readyBandDegrees": 12.0,
+            "descentEntryDegrees": 10.0,
+            "motionDegreesPerSample": 3.0,
+            "bottomMinimumDisplacementDegrees": 40.0,
+            "reversalDegreesPerSample": 3.0,
+            "configurationId": "cfg-5bd9baaa84ae8170"
+          },
+          "innerTrainingMetrics": {
+            "subjectCount": 40,
+            "sequenceCount": 159,
+            "referenceFrameCount": 2492,
+            "determinateFrameCount": 1444,
+            "abstainedFrameCount": 1048,
+            "predictionCoverage": 0.5794542536,
+            "minimumSubjectCoverage": 0.0,
+            "p10SubjectCoverage": 0.161875,
+            "subjectMacroSurrogateRecall": 0.259545701,
+            "frameSurrogateAgreementUnknownAsMiss": 0.2712680578,
+            "selectiveSurrogateAgreement": 0.4681440443,
+            "completedOrderedTopologyCoverage": 0.4402515723,
+            "coverageBySurrogatePhase": {
+              "READY": 0.538191396,
+              "DESCENDING": 0.6815415822,
+              "BOTTOM": 0.5731707317,
+              "ASCENDING": 0.5770676692
+            },
+            "recallBySurrogatePhaseUnknownAsMiss": {
+              "READY": 0.2835820896,
+              "DESCENDING": 0.4361054767,
+              "BOTTOM": 0.1493902439,
+              "ASCENDING": 0.1672932331
+            },
+            "abstentionReasons": {
+              "ASCENDING_DIRECTION_CONTRADICTION": 19,
+              "BOTTOM_TO_ASCENDING_EVIDENCE_INSUFFICIENT": 57,
+              "INITIAL_BASELINE_CALIBRATION": 159,
+              "INITIAL_BASELINE_NOT_STABLE": 772,
+              "REVERSAL_BEFORE_MINIMUM_BOTTOM_DISPLACEMENT": 41
+            }
+          },
+          "outerHeldoutMetrics": null
+        },
+        {
+          "heldoutSubjectSha256": "606c4e0d04025295a823000ccb22b7c07d4435cfa503b4f9f9c57e4df2a8089a",
+          "trainingSubjectCount": 39,
+          "trainingSubjectSetSha256": "b127237dbbeb33190fe85a2d4795083128df77187b037d88608e16f964011da4",
+          "subjectOverlapCount": 0,
+          "heldoutSurrogateEligible": true,
+          "selectedConfiguration": {
+            "baselineFrameCount": 2,
+            "trailingMedianWindow": 3,
+            "baselineStabilityDegrees": 12.0,
+            "readyBandDegrees": 12.0,
+            "descentEntryDegrees": 10.0,
+            "motionDegreesPerSample": 3.0,
+            "bottomMinimumDisplacementDegrees": 40.0,
+            "reversalDegreesPerSample": 3.0,
+            "configurationId": "cfg-5bd9baaa84ae8170"
+          },
+          "innerTrainingMetrics": {
+            "subjectCount": 39,
+            "sequenceCount": 149,
+            "referenceFrameCount": 2332,
+            "determinateFrameCount": 1303,
+            "abstainedFrameCount": 1029,
+            "predictionCoverage": 0.5587478559,
+            "minimumSubjectCoverage": 0.0,
+            "p10SubjectCoverage": 0.16125,
+            "subjectMacroSurrogateRecall": 0.2546465443,
+            "frameSurrogateAgreementUnknownAsMiss": 0.2590051458,
+            "selectiveSurrogateAgreement": 0.4635456639,
+            "completedOrderedTopologyCoverage": 0.4093959732,
+            "coverageBySurrogatePhase": {
+              "READY": 0.5159774436,
+              "DESCENDING": 0.6600877193,
+              "BOTTOM": 0.5619047619,
+              "ASCENDING": 0.555331992
+            },
+            "recallBySurrogatePhaseUnknownAsMiss": {
+              "READY": 0.2687969925,
+              "DESCENDING": 0.4298245614,
+              "BOTTOM": 0.1333333333,
+              "ASCENDING": 0.1609657948
+            },
+            "abstentionReasons": {
+              "ASCENDING_DIRECTION_CONTRADICTION": 18,
+              "BOTTOM_TO_ASCENDING_EVIDENCE_INSUFFICIENT": 50,
+              "INITIAL_BASELINE_CALIBRATION": 149,
+              "INITIAL_BASELINE_NOT_STABLE": 772,
+              "REVERSAL_BEFORE_MINIMUM_BOTTOM_DISPLACEMENT": 40
+            }
+          },
+          "outerHeldoutMetrics": {
+            "subjectCount": 1,
+            "sequenceCount": 10,
+            "referenceFrameCount": 160,
+            "determinateFrameCount": 141,
+            "abstainedFrameCount": 19,
+            "predictionCoverage": 0.88125,
+            "minimumSubjectCoverage": 0.88125,
+            "p10SubjectCoverage": 0.88125,
+            "subjectMacroSurrogateRecall": 0.4506128106,
+            "frameSurrogateAgreementUnknownAsMiss": 0.45,
+            "selectiveSurrogateAgreement": 0.5106382979,
+            "completedOrderedTopologyCoverage": 0.9,
+            "coverageBySurrogatePhase": {
+              "READY": 0.8533333333,
+              "DESCENDING": 0.9459459459,
+              "BOTTOM": 0.8461538462,
+              "ASCENDING": 0.8857142857
+            },
+            "recallBySurrogatePhaseUnknownAsMiss": {
+              "READY": 0.4933333333,
+              "DESCENDING": 0.5135135135,
+              "BOTTOM": 0.5384615385,
+              "ASCENDING": 0.2571428571
+            },
+            "abstentionReasons": {
+              "ASCENDING_DIRECTION_CONTRADICTION": 1,
+              "BOTTOM_TO_ASCENDING_EVIDENCE_INSUFFICIENT": 7,
+              "INITIAL_BASELINE_CALIBRATION": 10,
+              "REVERSAL_BEFORE_MINIMUM_BOTTOM_DISPLACEMENT": 1
+            }
+          }
+        },
+        {
+          "heldoutSubjectSha256": "1d3dec4d24543e06ad6615f3b48371e9d71826e002b2e47d2ac01e7986a1013c",
+          "trainingSubjectCount": 39,
+          "trainingSubjectSetSha256": "659237f9546f4c99d42fb9ac93e7b3dc5b193bd979762baefbc7910b8dc31cb0",
+          "subjectOverlapCount": 0,
+          "heldoutSurrogateEligible": true,
+          "selectedConfiguration": {
+            "baselineFrameCount": 2,
+            "trailingMedianWindow": 3,
+            "baselineStabilityDegrees": 12.0,
+            "readyBandDegrees": 12.0,
+            "descentEntryDegrees": 10.0,
+            "motionDegreesPerSample": 3.0,
+            "bottomMinimumDisplacementDegrees": 40.0,
+            "reversalDegreesPerSample": 3.0,
+            "configurationId": "cfg-5bd9baaa84ae8170"
+          },
+          "innerTrainingMetrics": {
+            "subjectCount": 39,
+            "sequenceCount": 153,
+            "referenceFrameCount": 2396,
+            "determinateFrameCount": 1386,
+            "abstainedFrameCount": 1010,
+            "predictionCoverage": 0.5784641068,
+            "minimumSubjectCoverage": 0.0,
+            "p10SubjectCoverage": 0.16125,
+            "subjectMacroSurrogateRecall": 0.2599486644,
+            "frameSurrogateAgreementUnknownAsMiss": 0.2704507513,
+            "selectiveSurrogateAgreement": 0.4675324675,
+            "completedOrderedTopologyCoverage": 0.431372549,
+            "coverageBySurrogatePhase": {
+              "READY": 0.5381784729,
+              "DESCENDING": 0.6791666667,
+              "BOTTOM": 0.5654952077,
+              "ASCENDING": 0.5775193798
+            },
+            "recallBySurrogatePhaseUnknownAsMiss": {
+              "READY": 0.27874885,
+              "DESCENDING": 0.4354166667,
+              "BOTTOM": 0.1533546326,
+              "ASCENDING": 0.1705426357
+            },
+            "abstentionReasons": {
+              "ASCENDING_DIRECTION_CONTRADICTION": 19,
+              "BOTTOM_TO_ASCENDING_EVIDENCE_INSUFFICIENT": 55,
+              "INITIAL_BASELINE_CALIBRATION": 153,
+              "INITIAL_BASELINE_NOT_STABLE": 742,
+              "REVERSAL_BEFORE_MINIMUM_BOTTOM_DISPLACEMENT": 41
+            }
+          },
+          "outerHeldoutMetrics": {
+            "subjectCount": 1,
+            "sequenceCount": 6,
+            "referenceFrameCount": 96,
+            "determinateFrameCount": 58,
+            "abstainedFrameCount": 38,
+            "predictionCoverage": 0.6041666667,
+            "minimumSubjectCoverage": 0.6041666667,
+            "p10SubjectCoverage": 0.6041666667,
+            "subjectMacroSurrogateRecall": 0.2438301282,
+            "frameSurrogateAgreementUnknownAsMiss": 0.2916666667,
+            "selectiveSurrogateAgreement": 0.4827586207,
+            "completedOrderedTopologyCoverage": 0.6666666667,
+            "coverageBySurrogatePhase": {
+              "READY": 0.5384615385,
+              "DESCENDING": 0.7692307692,
+              "BOTTOM": 0.7333333333,
+              "ASCENDING": 0.5625
+            },
+            "recallBySurrogatePhaseUnknownAsMiss": {
+              "READY": 0.3846153846,
+              "DESCENDING": 0.4615384615,
+              "BOTTOM": 0.0666666667,
+              "ASCENDING": 0.0625
+            },
+            "abstentionReasons": {
+              "BOTTOM_TO_ASCENDING_EVIDENCE_INSUFFICIENT": 2,
+              "INITIAL_BASELINE_CALIBRATION": 6,
+              "INITIAL_BASELINE_NOT_STABLE": 30
+            }
+          }
+        }
+      ],
+      "outerMetrics": {
+        "subjectCount": 40,
+        "sequenceCount": 159,
+        "referenceFrameCount": 2492,
+        "determinateFrameCount": 1444,
+        "abstainedFrameCount": 1048,
+        "predictionCoverage": 0.5794542536,
+        "minimumSubjectCoverage": 0.0,
+        "p10SubjectCoverage": 0.161875,
+        "subjectMacroSurrogateRecall": 0.259545701,
+        "frameSurrogateAgreementUnknownAsMiss": 0.2712680578,
+        "selectiveSurrogateAgreement": 0.4681440443,
+        "completedOrderedTopologyCoverage": 0.4402515723,
+        "coverageBySurrogatePhase": {
+          "READY": 0.538191396,
+          "DESCENDING": 0.6815415822,
+          "BOTTOM": 0.5731707317,
+          "ASCENDING": 0.5770676692
+        },
+        "recallBySurrogatePhaseUnknownAsMiss": {
+          "READY": 0.2835820896,
+          "DESCENDING": 0.4361054767,
+          "BOTTOM": 0.1493902439,
+          "ASCENDING": 0.1672932331
+        },
+        "abstentionReasons": {
+          "ASCENDING_DIRECTION_CONTRADICTION": 19,
+          "BOTTOM_TO_ASCENDING_EVIDENCE_INSUFFICIENT": 57,
+          "INITIAL_BASELINE_CALIBRATION": 159,
+          "INITIAL_BASELINE_NOT_STABLE": 772,
+          "REVERSAL_BEFORE_MINIMUM_BOTTOM_DISPLACEMENT": 41
+        }
+      }
+    },
+    "causalPrefixAudit": {
+      "definition": "DECODE_EVERY_PREFIX_EQUALS_FULL_RUN_OUTPUT_PREFIX",
+      "prefixCount": 2492,
+      "matchingPrefixCount": 2492,
+      "invarianceRate": 1.0,
+      "decisionManifestSha256": "f0ce2e608726d2fced9173fec287d6dc318ff0b577b367ccf2a4b72277163858"
+    },
+    "thresholdStabilityAcrossOuterFolds": {
+      "foldCount": 42,
+      "uniqueConfigurationCount": 1,
+      "modalConfigurationId": "cfg-5bd9baaa84ae8170",
+      "modalConfigurationFraction": 1.0,
+      "configurationSelectionCounts": {
+        "cfg-5bd9baaa84ae8170": 42
+      },
+      "maximumNormalizedParameterIqr": 0.0,
+      "parameters": {
+        "baselineFrameCount": {
+          "minimum": 2.0,
+          "q25": 2.0,
+          "median": 2.0,
+          "q75": 2.0,
+          "maximum": 2.0,
+          "normalizedIqrWithinPredeclaredGrid": 0.0
+        },
+        "trailingMedianWindow": {
+          "minimum": 3.0,
+          "q25": 3.0,
+          "median": 3.0,
+          "q75": 3.0,
+          "maximum": 3.0,
+          "normalizedIqrWithinPredeclaredGrid": 0.0
+        },
+        "baselineStabilityDegrees": {
+          "minimum": 12.0,
+          "q25": 12.0,
+          "median": 12.0,
+          "q75": 12.0,
+          "maximum": 12.0,
+          "normalizedIqrWithinPredeclaredGrid": 0.0
+        },
+        "readyBandDegrees": {
+          "minimum": 12.0,
+          "q25": 12.0,
+          "median": 12.0,
+          "q75": 12.0,
+          "maximum": 12.0,
+          "normalizedIqrWithinPredeclaredGrid": 0.0
+        },
+        "descentEntryDegrees": {
+          "minimum": 10.0,
+          "q25": 10.0,
+          "median": 10.0,
+          "q75": 10.0,
+          "maximum": 10.0,
+          "normalizedIqrWithinPredeclaredGrid": 0.0
+        },
+        "motionDegreesPerSample": {
+          "minimum": 3.0,
+          "q25": 3.0,
+          "median": 3.0,
+          "q75": 3.0,
+          "maximum": 3.0,
+          "normalizedIqrWithinPredeclaredGrid": 0.0
+        },
+        "bottomMinimumDisplacementDegrees": {
+          "minimum": 40.0,
+          "q25": 40.0,
+          "median": 40.0,
+          "q75": 40.0,
+          "maximum": 40.0,
+          "normalizedIqrWithinPredeclaredGrid": 0.0
+        },
+        "reversalDegreesPerSample": {
+          "minimum": 3.0,
+          "q25": 3.0,
+          "median": 3.0,
+          "q75": 3.0,
+          "maximum": 3.0,
+          "normalizedIqrWithinPredeclaredGrid": 0.0
+        }
+      }
+    },
+    "researchContinuationGate": {
+      "policy": {
+        "minimumSurrogateEligibleSequenceCoverage": 0.7,
+        "minimumSurrogateEligibleSubjectCoverage": 1.0,
+        "minimumOuterSubjectMacroSurrogateRecall": 0.7,
+        "minimumOuterPredictionCoverage": 0.6,
+        "minimumOuterSubjectCoverage": 0.4,
+        "minimumOuterPerSurrogatePhaseCoverage": 0.4,
+        "minimumOuterCompletedTopologyCoverage": 0.5,
+        "minimumModalConfigurationFraction": 0.25,
+        "maximumNormalizedParameterIqr": 0.5,
+        "requiredCausalPrefixInvariance": 1.0
+      },
+      "checks": {
+        "completeFixedTrainingFactorial": true,
+        "minimumSurrogateEligibleSequenceCoverage": false,
+        "minimumSurrogateEligibleSubjectCoverage": false,
+        "minimumOuterSubjectMacroSurrogateRecall": false,
+        "minimumOuterPredictionCoverage": false,
+        "minimumOuterSubjectCoverage": false,
+        "minimumOuterPerSurrogatePhaseCoverage": true,
+        "minimumOuterCompletedTopologyCoverage": false,
+        "minimumModalConfigurationFraction": true,
+        "maximumNormalizedParameterIqr": true,
+        "causalPrefixInvariance": true
+      },
+      "allChecksPass": false,
+      "surrogateGateStatus": "FAIL",
+      "continuationStatus": "REJECTED",
+      "runtimeDecoderParameterStatus": "NO_RUNTIME_DECODER_PARAMETERS",
+      "diagnosticThresholdRole": "RESEARCH_CANDIDATE_DIAGNOSTICS_ONLY_NOT_RUNTIME_PARAMETERS",
+      "disposition": "RETAIN_RESEARCH_SPECIFICATION_ONLY",
+      "releaseAuthority": 0,
+      "shadowAuthority": 0,
+      "runtimeProviderAuthority": 0
+    }
+  },
+  "authority": {
+    "releaseAuthority": 0,
+    "shadowAuthority": 0,
+    "runtimeProviderAuthority": 0,
+    "userPassFailUnknownAuthority": 0,
+    "scoreAuthority": 0,
+    "cueAuthority": 0,
+    "repCountAuthority": 0
+  },
+  "limitations": [
+    "No expert, motion-capture, or manually annotated phase Gold exists.",
+    "The retrospective morphology surrogate is derived from the same knee signal and is circular evidence, not accuracy evidence.",
+    "AI Hub active is only a sampled movement-window prior and has no phase boundary semantics.",
+    "AI Hub frame order has no reliable FPS or inter-frame timing ground truth.",
+    "AI Hub triangulated 3D is not paired MediaPipe WORLD output from the production camera pipeline.",
+    "The offline dominant-active-run selection uses future context and is not a runtime segmentation algorithm.",
+    "Official Validation was not read or reused; it remains consumed by earlier development.",
+    "Passing the research-continuation gate only prioritizes independent phase-Gold collection."
+  ],
+  "reportFingerprintSha256": "6f9c2e5215339e4248055a6a001fa947a75c1781c4119beed74c22d5ca65263f"
+}

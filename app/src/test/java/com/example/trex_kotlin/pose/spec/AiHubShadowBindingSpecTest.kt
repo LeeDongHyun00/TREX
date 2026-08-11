@@ -3,6 +3,7 @@ package com.example.trex_kotlin.pose.spec
 import com.example.trex_kotlin.catalog.AiHubExercise
 import com.example.trex_kotlin.pose.phase.PosePhaseStateId
 import com.example.trex_kotlin.pose.policy.AiHubCriterionPolicyCatalog
+import com.example.trex_kotlin.pose.policy.AiHubCriterionSidePolicyKind
 import java.lang.reflect.Modifier
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame
@@ -11,6 +12,44 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class AiHubShadowBindingSpecTest {
+    @Test
+    fun staticSidePoliciesPreserveCoupledAndIndependentSemantics() {
+        assertEquals(
+            setOf(ShadowMeasurementSideChannel.MIDLINE),
+            expectedShadowSideChannelsForPolicy(AiHubCriterionSidePolicyKind.MIDLINE),
+        )
+        assertEquals(
+            setOf(ShadowMeasurementSideChannel.GLOBAL),
+            expectedShadowSideChannelsForPolicy(AiHubCriterionSidePolicyKind.GLOBAL_BODY),
+        )
+        assertEquals(
+            setOf(ShadowMeasurementSideChannel.BILATERAL_PAIR),
+            expectedShadowSideChannelsForPolicy(
+                AiHubCriterionSidePolicyKind.BILATERAL_COUPLED,
+            ),
+        )
+        assertEquals(
+            setOf(ShadowMeasurementSideChannel.LEFT, ShadowMeasurementSideChannel.RIGHT),
+            expectedShadowSideChannelsForPolicy(
+                AiHubCriterionSidePolicyKind.BILATERAL_INDEPENDENT,
+            ),
+        )
+
+        val resolverRequired = setOf(
+            AiHubCriterionSidePolicyKind.ACTIVE_LIMB,
+            AiHubCriterionSidePolicyKind.LEAD_LIMB,
+            AiHubCriterionSidePolicyKind.TRAIL_LIMB,
+            AiHubCriterionSidePolicyKind.ALTERNATING_PAIR,
+            AiHubCriterionSidePolicyKind.CONTRALATERAL_PAIR,
+            AiHubCriterionSidePolicyKind.NOT_APPLICABLE,
+        )
+        resolverRequired.forEach { kind ->
+            assertThrows(IllegalArgumentException::class.java) {
+                expectedShadowSideChannelsForPolicy(kind)
+            }
+        }
+    }
+
     @Test
     fun exactCatalogLookupRequiresTheCompleteFiveTuple() {
         val provenance = spineProvenance()

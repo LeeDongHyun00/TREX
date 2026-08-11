@@ -1,0 +1,401 @@
+{
+  "artifactKind": "TREX_POSE_EXERCISE_GOLD_PLANNING_DECLARATION",
+  "artifactSha256": "bdfcfaaf118cdaff24095abb00944bba384718130f40ee2dfe9243e71dc41281",
+  "authority": {
+    "calibrationAuthority": 0,
+    "cueAuthority": 0,
+    "phaseDecoderAuthority": 0,
+    "releaseAuthority": 0,
+    "repCountAuthority": 0,
+    "runtimeProviderAuthority": 0,
+    "scoreAuthority": 0,
+    "shadowAuthority": 0,
+    "userPassFailUnknownAuthority": 0
+  },
+  "blockers": [
+    "NO_ACTUAL_GOLD_EVIDENCE",
+    "NO_APPROVED_CALIBRATION_ARTIFACTS",
+    "NO_APPROVED_PHASE_GRAPH",
+    "NO_ATTESTED_RUNTIME_PROVIDER",
+    "NO_RUNTIME_RELEASE_AUTHORIZATION"
+  ],
+  "capabilityRequirements": {
+    "requiredCapabilityIds": [
+      "trex.capability.anatomical-segment-frame.v1",
+      "trex.capability.face-orientation.v1",
+      "trex.capability.hand-detail-track.v1",
+      "trex.capability.pose-2d.v1",
+      "trex.capability.pose-world-relative.v1",
+      "trex.capability.primary-person-lock.v1",
+      "trex.capability.reliable-depth.v1",
+      "trex.capability.temporal-pose.v1",
+      "trex.capability.view-qualified.v1"
+    ]
+  },
+  "criterionPlans": [
+    {
+      "bindingKey": {
+        "bindingId": "aihub-binding-sha256-21cef85efd45979581cd78ebc4d50aea9e3f52c22cf986f55e517b74bc8d965e",
+        "bindingPolicySha256": "4a86c7d2597ab9f782fe8566d3e891ab8ccda57990e0d3b88895343467623334",
+        "exerciseId": "standing-side-crunch",
+        "policyRegistrySha256": "4cda3be23fe34f9b1f0db1a23e301542c4fecda911a402156877cb4263cc04fc",
+        "sourceConditionId": "aihub-exact-sha256-254f9aa3700cf656f4dc7957ec96b9cce44b21b32fa8e827b6bb8fe28584cba4"
+      },
+      "calibrationProvenance": {
+        "artifactSha256": null,
+        "evidenceRefs": [
+          "docs/aihub-criterion-policy-method.md@sha256:f62487b91c7d9eeef27c776a4512200929ca5c9245fb2ac5c6a6bb02f1abe0f3"
+        ],
+        "runtimeDomainId": null,
+        "state": "NO_APPROVED_ARTIFACT"
+      },
+      "calibrationState": "NO_APPROVED_ARTIFACT",
+      "claimBoundary": "Measures only attested hand-segment landmark geometry for hand-posterior-head-position; it does not infer joint load, grip force, or technique safety.",
+      "decisionEvidenceRefs": [
+        "docs/aihub-criterion-coverage.json@sha256:7e698507c7d97fad5e2cfcbf06ccc1d66390444e9648cabb476704ccf91c7e20",
+        "docs/aihub-criterion-policy-method.md@sha256:f62487b91c7d9eeef27c776a4512200929ca5c9245fb2ac5c6a6bb02f1abe0f3"
+      ],
+      "measurementConstructId": "trex.measurement.hand-posterior-head-position.v1",
+      "observability": "DIRECT",
+      "phaseApplicability": {
+        "phaseRoleIds": [
+          "trex.phase-role.full-cycle.v1"
+        ],
+        "state": "BOUND"
+      },
+      "reasonCodes": [],
+      "releaseState": "CATALOG_ONLY",
+      "requiredCapabilityIds": [
+        "trex.capability.hand-detail-track.v1",
+        "trex.capability.pose-2d.v1",
+        "trex.capability.pose-world-relative.v1",
+        "trex.capability.primary-person-lock.v1",
+        "trex.capability.reliable-depth.v1",
+        "trex.capability.temporal-pose.v1",
+        "trex.capability.view-qualified.v1"
+      ],
+      "reviewEvidenceRefs": [
+        "docs/aihub-criterion-coverage.json@sha256:7e698507c7d97fad5e2cfcbf06ccc1d66390444e9648cabb476704ccf91c7e20",
+        "docs/aihub-criterion-policy-method.md@sha256:f62487b91c7d9eeef27c776a4512200929ca5c9245fb2ac5c6a6bb02f1abe0f3"
+      ],
+      "reviewState": "REVIEWED_ENGINEERING_V1",
+      "semanticFamilyId": "trex.semantic-family.wrist-hand.v1",
+      "semanticId": "aihub.condition.exact.254f9aa3700cf656f4dc7957ec96b9cce44b21b32fa8e827b6bb8fe28584cba4.v1",
+      "sidePolicy": {
+        "kind": "BILATERAL_COUPLED",
+        "roleResolverContractId": null
+      },
+      "unsupportedReasonCodes": [
+        "NO_APPROVED_CALIBRATION_ARTIFACT",
+        "NO_RUNTIME_RELEASE_AUTHORIZATION",
+        "REQUIRES_ATTESTED_HAND_DETAIL_TRACK",
+        "REQUIRES_ATTESTED_RELIABLE_DEPTH"
+      ],
+      "viewApplicability": {
+        "state": "QUALIFIED_VIEW_REQUIRED",
+        "viewContractIds": [
+          "trex.view.front-full-body.v1"
+        ]
+      }
+    },
+    {
+      "bindingKey": {
+        "bindingId": "aihub-binding-sha256-06a1d7cb740c07550713536d8239c6e20524f89fa888452cbff40572f56acea5",
+        "bindingPolicySha256": "4d1774e71ad2ffb2ef2e36981d5d720d27b5c48ca32e8097c5bb9f840bc52228",
+        "exerciseId": "standing-side-crunch",
+        "policyRegistrySha256": "4cda3be23fe34f9b1f0db1a23e301542c4fecda911a402156877cb4263cc04fc",
+        "sourceConditionId": "aihub-exact-sha256-6a879c85bade13509383fa19b50e1e80dcc2b6aa9b29d9c38ce7e92d7ef1aa65"
+      },
+      "calibrationProvenance": {
+        "artifactSha256": null,
+        "evidenceRefs": [
+          "docs/aihub-criterion-policy-method.md@sha256:f62487b91c7d9eeef27c776a4512200929ca5c9245fb2ac5c6a6bb02f1abe0f3"
+        ],
+        "runtimeDomainId": null,
+        "state": "NO_APPROVED_ARTIFACT"
+      },
+      "calibrationState": "NO_APPROVED_ARTIFACT",
+      "claimBoundary": "Sparse pose landmarks are only an unvalidated proxy for axial-trunk-neutrality-proxy; this policy does not claim the named anatomical construct or authorize a verdict.",
+      "decisionEvidenceRefs": [
+        "docs/aihub-criterion-coverage.json@sha256:7e698507c7d97fad5e2cfcbf06ccc1d66390444e9648cabb476704ccf91c7e20",
+        "docs/aihub-criterion-policy-method.md@sha256:f62487b91c7d9eeef27c776a4512200929ca5c9245fb2ac5c6a6bb02f1abe0f3"
+      ],
+      "measurementConstructId": "trex.measurement.axial-trunk-neutrality-proxy.v1",
+      "observability": "PROXY_UNVALIDATED",
+      "phaseApplicability": {
+        "phaseRoleIds": [
+          "trex.phase-role.full-cycle.v1"
+        ],
+        "state": "BOUND"
+      },
+      "reasonCodes": [],
+      "releaseState": "CATALOG_ONLY",
+      "requiredCapabilityIds": [
+        "trex.capability.anatomical-segment-frame.v1",
+        "trex.capability.pose-2d.v1",
+        "trex.capability.pose-world-relative.v1",
+        "trex.capability.primary-person-lock.v1",
+        "trex.capability.temporal-pose.v1",
+        "trex.capability.view-qualified.v1"
+      ],
+      "reviewEvidenceRefs": [
+        "docs/aihub-criterion-coverage.json@sha256:7e698507c7d97fad5e2cfcbf06ccc1d66390444e9648cabb476704ccf91c7e20",
+        "docs/aihub-criterion-policy-method.md@sha256:f62487b91c7d9eeef27c776a4512200929ca5c9245fb2ac5c6a6bb02f1abe0f3"
+      ],
+      "reviewState": "REVIEWED_ENGINEERING_V1",
+      "semanticFamilyId": "trex.semantic-family.axial-spine-trunk.v1",
+      "semanticId": "aihub.condition.exact.6a879c85bade13509383fa19b50e1e80dcc2b6aa9b29d9c38ce7e92d7ef1aa65.v1",
+      "sidePolicy": {
+        "kind": "MIDLINE",
+        "roleResolverContractId": null
+      },
+      "unsupportedReasonCodes": [
+        "NO_APPROVED_CALIBRATION_ARTIFACT",
+        "NO_RUNTIME_RELEASE_AUTHORIZATION",
+        "PROXY_REQUIRES_BLIND_GOLD_VALIDATION"
+      ],
+      "viewApplicability": {
+        "state": "QUALIFIED_VIEW_REQUIRED",
+        "viewContractIds": [
+          "trex.view.front-oblique-full-body.v1",
+          "trex.view.lateral-full-body.v1"
+        ]
+      }
+    },
+    {
+      "bindingKey": {
+        "bindingId": "aihub-binding-sha256-2802dc8e0435ac552657d7fbb87182526319593a1e51bb09570fbf68cf7e4262",
+        "bindingPolicySha256": "3c2be046c288b0c945aba25eaaa9cff123e569b26db44e81639e5509a089f791",
+        "exerciseId": "standing-side-crunch",
+        "policyRegistrySha256": "4cda3be23fe34f9b1f0db1a23e301542c4fecda911a402156877cb4263cc04fc",
+        "sourceConditionId": "aihub-exact-sha256-a5bcea85576e27a2458b0c442e697ef427cda8024dcf0241577cc6a0fa6551a8"
+      },
+      "calibrationProvenance": {
+        "artifactSha256": null,
+        "evidenceRefs": [
+          "docs/aihub-criterion-policy-method.md@sha256:f62487b91c7d9eeef27c776a4512200929ca5c9245fb2ac5c6a6bb02f1abe0f3"
+        ],
+        "runtimeDomainId": null,
+        "state": "NO_APPROVED_ARTIFACT"
+      },
+      "calibrationState": "NO_APPROVED_ARTIFACT",
+      "claimBoundary": "Measures only qualified-view landmark geometry and temporal relations for contralateral-knee-elbow-distance; it does not infer joint load, tissue state, or technique safety.",
+      "decisionEvidenceRefs": [
+        "docs/aihub-criterion-coverage.json@sha256:7e698507c7d97fad5e2cfcbf06ccc1d66390444e9648cabb476704ccf91c7e20",
+        "docs/aihub-criterion-policy-method.md@sha256:f62487b91c7d9eeef27c776a4512200929ca5c9245fb2ac5c6a6bb02f1abe0f3"
+      ],
+      "measurementConstructId": "trex.measurement.contralateral-knee-elbow-distance.v1",
+      "observability": "DIRECT",
+      "phaseApplicability": {
+        "phaseRoleIds": [
+          "trex.phase-role.contracted-endpoint.v1"
+        ],
+        "state": "BOUND"
+      },
+      "reasonCodes": [],
+      "releaseState": "CATALOG_ONLY",
+      "requiredCapabilityIds": [
+        "trex.capability.pose-2d.v1",
+        "trex.capability.pose-world-relative.v1",
+        "trex.capability.primary-person-lock.v1",
+        "trex.capability.temporal-pose.v1",
+        "trex.capability.view-qualified.v1"
+      ],
+      "reviewEvidenceRefs": [
+        "docs/aihub-criterion-coverage.json@sha256:7e698507c7d97fad5e2cfcbf06ccc1d66390444e9648cabb476704ccf91c7e20",
+        "docs/aihub-criterion-policy-method.md@sha256:f62487b91c7d9eeef27c776a4512200929ca5c9245fb2ac5c6a6bb02f1abe0f3"
+      ],
+      "reviewState": "REVIEWED_ENGINEERING_V1",
+      "semanticFamilyId": "trex.semantic-family.range-distance-position.v1",
+      "semanticId": "aihub.condition.exact.a5bcea85576e27a2458b0c442e697ef427cda8024dcf0241577cc6a0fa6551a8.v1",
+      "sidePolicy": {
+        "kind": "CONTRALATERAL_PAIR",
+        "roleResolverContractId": "trex.role-resolver.standing-side-crunch.contralateral-pair.v1"
+      },
+      "unsupportedReasonCodes": [
+        "NO_APPROVED_CALIBRATION_ARTIFACT",
+        "NO_RUNTIME_RELEASE_AUTHORIZATION"
+      ],
+      "viewApplicability": {
+        "state": "QUALIFIED_VIEW_REQUIRED",
+        "viewContractIds": [
+          "trex.view.front-full-body.v1"
+        ]
+      }
+    },
+    {
+      "bindingKey": {
+        "bindingId": "aihub-binding-sha256-9fd0c32112b49b03ad2f9342b49757ed9d79d106df3240be382f77c420740b9e",
+        "bindingPolicySha256": "bc6dbeccea96b07c9c411dbdf5f9f6aaea00441489395c365afd871bf4f7a25d",
+        "exerciseId": "standing-side-crunch",
+        "policyRegistrySha256": "4cda3be23fe34f9b1f0db1a23e301542c4fecda911a402156877cb4263cc04fc",
+        "sourceConditionId": "aihub-exact-sha256-e714239b71fe3873296ac006a5a78165488a6a9f6d0a6cd249ac3f4aa987c335"
+      },
+      "calibrationProvenance": {
+        "artifactSha256": null,
+        "evidenceRefs": [
+          "docs/aihub-criterion-policy-method.md@sha256:f62487b91c7d9eeef27c776a4512200929ca5c9245fb2ac5c6a6bb02f1abe0f3"
+        ],
+        "runtimeDomainId": null,
+        "state": "NO_APPROVED_ARTIFACT"
+      },
+      "calibrationState": "NO_APPROVED_ARTIFACT",
+      "claimBoundary": "Measures only qualified-view landmark geometry and temporal relations for active-knee-lateral-torso-position; it does not infer joint load, tissue state, or technique safety.",
+      "decisionEvidenceRefs": [
+        "docs/aihub-criterion-coverage.json@sha256:7e698507c7d97fad5e2cfcbf06ccc1d66390444e9648cabb476704ccf91c7e20",
+        "docs/aihub-criterion-policy-method.md@sha256:f62487b91c7d9eeef27c776a4512200929ca5c9245fb2ac5c6a6bb02f1abe0f3"
+      ],
+      "measurementConstructId": "trex.measurement.active-knee-lateral-torso-position.v1",
+      "observability": "DIRECT",
+      "phaseApplicability": {
+        "phaseRoleIds": [
+          "trex.phase-role.contracted-endpoint.v1"
+        ],
+        "state": "BOUND"
+      },
+      "reasonCodes": [],
+      "releaseState": "CATALOG_ONLY",
+      "requiredCapabilityIds": [
+        "trex.capability.pose-2d.v1",
+        "trex.capability.pose-world-relative.v1",
+        "trex.capability.primary-person-lock.v1",
+        "trex.capability.temporal-pose.v1",
+        "trex.capability.view-qualified.v1"
+      ],
+      "reviewEvidenceRefs": [
+        "docs/aihub-criterion-coverage.json@sha256:7e698507c7d97fad5e2cfcbf06ccc1d66390444e9648cabb476704ccf91c7e20",
+        "docs/aihub-criterion-policy-method.md@sha256:f62487b91c7d9eeef27c776a4512200929ca5c9245fb2ac5c6a6bb02f1abe0f3"
+      ],
+      "reviewState": "REVIEWED_ENGINEERING_V1",
+      "semanticFamilyId": "trex.semantic-family.range-distance-position.v1",
+      "semanticId": "aihub.condition.exact.e714239b71fe3873296ac006a5a78165488a6a9f6d0a6cd249ac3f4aa987c335.v1",
+      "sidePolicy": {
+        "kind": "ACTIVE_LIMB",
+        "roleResolverContractId": "trex.role-resolver.standing-side-crunch.active-limb.v1"
+      },
+      "unsupportedReasonCodes": [
+        "NO_APPROVED_CALIBRATION_ARTIFACT",
+        "NO_RUNTIME_RELEASE_AUTHORIZATION"
+      ],
+      "viewApplicability": {
+        "state": "QUALIFIED_VIEW_REQUIRED",
+        "viewContractIds": [
+          "trex.view.front-full-body.v1"
+        ]
+      }
+    },
+    {
+      "bindingKey": {
+        "bindingId": "aihub-binding-sha256-413dc5fd8190712d3f71328c9c20d0d867cb1cf288b65ea68bc72bed9455ee37",
+        "bindingPolicySha256": "908ca02e46f589c9f986b2fc98a1d1420965f7be7af70d5c86f6ccd36af072f6",
+        "exerciseId": "standing-side-crunch",
+        "policyRegistrySha256": "4cda3be23fe34f9b1f0db1a23e301542c4fecda911a402156877cb4263cc04fc",
+        "sourceConditionId": "aihub-exact-sha256-ff3f2de848e3c5a1adb8c400fa612d5821081426db1e30a0fb5e68d22f6b9c61"
+      },
+      "calibrationProvenance": {
+        "artifactSha256": null,
+        "evidenceRefs": [
+          "docs/aihub-criterion-policy-method.md@sha256:f62487b91c7d9eeef27c776a4512200929ca5c9245fb2ac5c6a6bb02f1abe0f3"
+        ],
+        "runtimeDomainId": null,
+        "state": "NO_APPROVED_ARTIFACT"
+      },
+      "calibrationState": "NO_APPROVED_ARTIFACT",
+      "claimBoundary": "Sparse pose landmarks are only an unvalidated proxy for forward-face-orientation-maintenance; this policy does not claim the named anatomical construct or authorize a verdict.",
+      "decisionEvidenceRefs": [
+        "docs/aihub-criterion-coverage.json@sha256:7e698507c7d97fad5e2cfcbf06ccc1d66390444e9648cabb476704ccf91c7e20",
+        "docs/aihub-criterion-policy-method.md@sha256:f62487b91c7d9eeef27c776a4512200929ca5c9245fb2ac5c6a6bb02f1abe0f3"
+      ],
+      "measurementConstructId": "trex.measurement.forward-face-orientation-maintenance.v1",
+      "observability": "PROXY_UNVALIDATED",
+      "phaseApplicability": {
+        "phaseRoleIds": [
+          "trex.phase-role.full-cycle.v1"
+        ],
+        "state": "BOUND"
+      },
+      "reasonCodes": [],
+      "releaseState": "CATALOG_ONLY",
+      "requiredCapabilityIds": [
+        "trex.capability.face-orientation.v1",
+        "trex.capability.pose-2d.v1",
+        "trex.capability.pose-world-relative.v1",
+        "trex.capability.primary-person-lock.v1",
+        "trex.capability.temporal-pose.v1",
+        "trex.capability.view-qualified.v1"
+      ],
+      "reviewEvidenceRefs": [
+        "docs/aihub-criterion-coverage.json@sha256:7e698507c7d97fad5e2cfcbf06ccc1d66390444e9648cabb476704ccf91c7e20",
+        "docs/aihub-criterion-policy-method.md@sha256:f62487b91c7d9eeef27c776a4512200929ca5c9245fb2ac5c6a6bb02f1abe0f3"
+      ],
+      "reviewState": "REVIEWED_ENGINEERING_V1",
+      "semanticFamilyId": "trex.semantic-family.head-gaze-cervical.v1",
+      "semanticId": "aihub.condition.exact.ff3f2de848e3c5a1adb8c400fa612d5821081426db1e30a0fb5e68d22f6b9c61.v1",
+      "sidePolicy": {
+        "kind": "MIDLINE",
+        "roleResolverContractId": null
+      },
+      "unsupportedReasonCodes": [
+        "NO_APPROVED_CALIBRATION_ARTIFACT",
+        "NO_RUNTIME_RELEASE_AUTHORIZATION",
+        "PROXY_REQUIRES_BLIND_GOLD_VALIDATION"
+      ],
+      "viewApplicability": {
+        "state": "QUALIFIED_VIEW_REQUIRED",
+        "viewContractIds": [
+          "trex.view.front-full-body.v1"
+        ]
+      }
+    }
+  ],
+  "currentActualEvidenceCounts": {
+    "adjudicatedCriterionDecisionCount": 0,
+    "adjudicatedPhaseCycleCount": 0,
+    "adjudicatedViewDecisionCount": 0,
+    "captureGroupCount": 0,
+    "participantCount": 0,
+    "realRestrictedBundleCount": 0,
+    "reviewerCount": 0
+  },
+  "decisionUse": "POLICY_PROJECTION_ONLY_NOT_GOLD_CALIBRATION_PHASE_TOPOLOGY_RUNTIME_OR_RELEASE_AUTHORITY",
+  "exerciseId": "standing-side-crunch",
+  "phaseRequirements": {
+    "requiredPolicyPhaseRoleIds": [
+      "trex.phase-role.contracted-endpoint.v1",
+      "trex.phase-role.full-cycle.v1"
+    ],
+    "topologyState": "NOT_DEFINED_NO_APPROVED_PHASE_GRAPH"
+  },
+  "policyProvenance": {
+    "approvalArtifactSha256": "24e9a71428c4b7e4483124e96b44c3d6f2b236e48488c4a1c71ec0b4e103f4a0",
+    "approvedPolicySha256": "9acaceec25d0f654a47c96bc7078be707366d3f3097c9db4938148fd3ffc74b9",
+    "policyRegistrySha256": "4cda3be23fe34f9b1f0db1a23e301542c4fecda911a402156877cb4263cc04fc",
+    "sourceCatalogSha256": "fe4e3075a00212293c9ffd3df8f007bc3666e17af2526de3a8d570d052a4e29c",
+    "sourceCoverageArtifactSha256": "9240aa2c9a429cce8f4c47314f7797bea6ebf39b276d3563f5d420a9d3a34eda",
+    "sourceMetadataSetSha256": "518513cf2c627b4cff0b4a458b4048aa4a2eb38dfe5211fea06eb8b5c68f6ed8"
+  },
+  "readiness": "NOT_READY",
+  "schemaVersion": 1,
+  "sideRequirements": {
+    "roleResolverContractIds": [
+      "trex.role-resolver.standing-side-crunch.active-limb.v1",
+      "trex.role-resolver.standing-side-crunch.contralateral-pair.v1"
+    ],
+    "sidePolicyKinds": [
+      "ACTIVE_LIMB",
+      "BILATERAL_COUPLED",
+      "CONTRALATERAL_PAIR",
+      "MIDLINE"
+    ]
+  },
+  "viewRequirements": {
+    "viewApplicabilityStates": [
+      "QUALIFIED_VIEW_REQUIRED"
+    ],
+    "viewContractIds": [
+      "trex.view.front-full-body.v1",
+      "trex.view.front-oblique-full-body.v1",
+      "trex.view.lateral-full-body.v1"
+    ]
+  }
+}

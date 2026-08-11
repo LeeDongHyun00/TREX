@@ -1,0 +1,103 @@
+{
+  "actualAggregateCounts": {
+    "adjudicatedCriterionDecisionCount": 0,
+    "adjudicatedPhaseCycleCount": 0,
+    "adjudicatedViewDecisionCount": 0,
+    "calibrationArtifactCount": 0,
+    "captureGroupCount": 0,
+    "deviceTierCount": 0,
+    "eligibleGoldCycleCount": 0,
+    "externalTestCaptureGroupCount": 0,
+    "lockedInternalTestCaptureGroupCount": 0,
+    "participantCount": 0,
+    "realRestrictedBundleCount": 0,
+    "reviewerCount": 0,
+    "runtimePhaseProviderCount": 0,
+    "syntheticConformanceBundleCount": 0
+  },
+  "approvalTrustState": {
+    "detachedSignatureVerification": "NOT_IMPLEMENTED_IN_V1",
+    "minimumProtocolVersionForPositiveRealIntake": 2,
+    "pinnedTrustRegistry": "NOT_DEFINED_IN_V1",
+    "sha256Slots": "SCHEMA_PLACEHOLDERS_ONLY",
+    "v1VerifiedReadyOrRealIntakeTransitionAllowed": false
+  },
+  "artifactKind": "TREX_BARBELL_SQUAT_GOLD_READINESS",
+  "artifactSha256": "e97a31d292fc1b7408f951f36b6bbfab13b472fa9eabbd3a5a44f6856d6fc43b",
+  "authority": {
+    "calibrationAuthority": 0,
+    "cueAuthority": 0,
+    "phaseDecoderAuthority": 0,
+    "releaseAuthority": 0,
+    "repCountAuthority": 0,
+    "runtimeProviderAuthority": 0,
+    "scoreAuthority": 0,
+    "shadowAuthority": 0,
+    "userPassFailUnknownAuthority": 0
+  },
+  "blockers": [
+    "DATA_RIGHTS_UNVERIFIED",
+    "DETACHED_APPROVAL_SIGNATURE_VERIFICATION_NOT_IMPLEMENTED_IN_V1",
+    "M6_TRAINING_SURROGATE_CONTINUATION_REJECTED",
+    "NO_APPROVED_ANNOTATION_RUBRIC",
+    "NO_APPROVED_ANNOTATION_TOOL",
+    "NO_APPROVED_CAPTURE_PROTOCOL",
+    "NO_APPROVED_COHORT_POWER_PLAN",
+    "NO_APPROVED_CRITERION_QUALITY_OR_RESIDUAL_CALIBRATION",
+    "NO_APPROVED_PARTICIPANT_CONSENT_RETENTION_OR_BACKUP_CONTRACT",
+    "NO_APPROVED_PHASE_QUALITY_OR_BOUNDARY_CALIBRATION",
+    "NO_APPROVED_REFERENCE_CLOCK_ALIGNMENT_CONTRACT",
+    "NO_APPROVED_REVIEWER_ROSTER_ROOT",
+    "NO_AUTHORIZED_PHASE_VIEW_OR_CAPABILITY_PROVIDER",
+    "NO_REAL_CAPTURE_GROUPS_OR_PARTICIPANTS",
+    "NO_REAL_RESTRICTED_GOLD_BUNDLE",
+    "NO_SPLIT_SEAL",
+    "NO_SUBJECT_BY_DEVICE_BY_QUALIFIED_VIEW_COHORT",
+    "NO_SYNCHRONIZED_PRODUCTION_MEDIAPIPE_TO_REFERENCE_EVIDENCE",
+    "NO_THREE_REVIEWER_BLINDED_PHASE_VIEW_OR_CRITERION_GOLD",
+    "OFFICIAL_VALIDATION_ALREADY_CONSUMED_AND_EXCLUDED",
+    "PINNED_APPROVAL_TRUST_REGISTRY_NOT_DEFINED_IN_V1",
+    "PLANTAR_CONTACT_NOT_OBSERVABLE_WITHOUT_ATTESTED_CONTACT_SENSOR",
+    "REAL_RESTRICTED_GOLD_INTAKE_FORBIDDEN_IN_V1",
+    "VERIFIED_READY_TRANSITION_FORBIDDEN_IN_V1"
+  ],
+  "canonicalization": {
+    "artifactHashAlgorithm": "SHA-256",
+    "artifactHashInput": "RFC8259_JSON_WITH_TOP_LEVEL_ARTIFACT_SHA256_REMOVED",
+    "artifactHashSerialization": "UTF8_SORTED_KEYS_COMPACT_NO_TRAILING_NEWLINE",
+    "fileSerialization": "UTF8_PRETTY_2_SPACES_LF_FINAL_NEWLINE",
+    "nonFiniteNumbersAllowed": false,
+    "unicodeNormalization": "NFC"
+  },
+  "compilerImplementation": {
+    "canonicalTextSha256": "08bfbee809163afc97894bbae10b47c5a28765bd41d3e346859f34927655e519",
+    "contractId": "trex.pose-gold-workflow-compiler.v1",
+    "normalization": "UTF8_CRLF_LF_CR_TO_LF",
+    "relativePath": "tools/pose_gold_workflow.py"
+  },
+  "compilerScope": "BARBELL_SQUAT_VERTICAL_SLICE_ONLY",
+  "decisionUse": "AGGREGATE_READINESS_RECEIPT_ONLY_NOT_REAL_GOLD_CALIBRATION_RUNTIME_OR_RELEASE_AUTHORITY",
+  "evidenceState": {
+    "criterionGold": "ABSENT",
+    "phaseGold": "ABSENT",
+    "productionMediaPipeReferencePairing": "ABSENT",
+    "realRestrictedBundle": "ABSENT",
+    "rights": "UNVERIFIED",
+    "studyPlan": "DEFINED_NOT_EXECUTED",
+    "viewGold": "ABSENT"
+  },
+  "exerciseId": "barbell-squat",
+  "m6ResearchProvenance": {
+    "phaseResearchContractArtifactSha256": "7ca4751630f7625ffb8c7858ed74f3a921aa6ce91666f9a9ed60e827a9374352",
+    "phaseResearchReadinessArtifactSha256": "7bbb9a1a3e199c5802730a29d167987c0c6786103e98af43c7924de21c859fa4",
+    "phaseTrainingReportFingerprintSha256": "6f9c2e5215339e4248055a6a001fa947a75c1781c4119beed74c22d5ca65263f",
+    "researchContinuation": "REJECTED_NO_RUNTIME_DECODER_PARAMETERS",
+    "researchUse": "TRAINING_SURROGATE_ONLY_NOT_PHASE_GOLD"
+  },
+  "protocolArtifactSha256": "dec8870a206fdeac132face2ca926e44ee87113b8cf6aa434241d69ae94552cb",
+  "readiness": "NOT_READY",
+  "readinessId": "trex.gold-readiness.barbell-squat.v1",
+  "rightsManifestArtifactSha256": "bfe2a80776fb65da20724d475bda61cf2adf6692587fe4f67f22c238a3a1b4df",
+  "schemaVersion": 1,
+  "studyPlanArtifactSha256": "a8299498fb045f870cff5a5151659767a6c96c1fc7521e606c1c09475a2ab172"
+}

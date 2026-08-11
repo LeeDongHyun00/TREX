@@ -158,6 +158,7 @@ internal class ShadowCapabilityProviderArtifacts(
 internal enum class ShadowScalarSide {
     MIDLINE,
     GLOBAL,
+    BILATERAL_PAIR,
     LEFT,
     RIGHT,
 }
@@ -184,7 +185,7 @@ internal class ShadowSideRuntimePolicy(
 
     val artifactSha256: String = canonicalFieldsSha256(
         buildList {
-            add("shadowSideRuntimePolicySchemaVersion" to "1")
+            add("shadowSideRuntimePolicySchemaVersion" to "2")
             add("kind" to kind.name)
             add("roleResolverContractId" to roleResolverContractId.orEmpty())
             add("roleResolverArtifactSha256" to roleResolverArtifactSha256.orEmpty())
@@ -888,7 +889,7 @@ private fun aggregateProvenanceSha256(
 private fun expectedSides(kind: ShadowSidePolicyKind): Set<ShadowScalarSide> = when (kind) {
     ShadowSidePolicyKind.MIDLINE -> setOf(ShadowScalarSide.MIDLINE)
     ShadowSidePolicyKind.GLOBAL_BODY -> setOf(ShadowScalarSide.GLOBAL)
-    ShadowSidePolicyKind.BILATERAL_COUPLED,
+    ShadowSidePolicyKind.BILATERAL_COUPLED -> setOf(ShadowScalarSide.BILATERAL_PAIR)
     ShadowSidePolicyKind.BILATERAL_INDEPENDENT,
     ShadowSidePolicyKind.ACTIVE_LIMB,
     ShadowSidePolicyKind.LEAD_LIMB,

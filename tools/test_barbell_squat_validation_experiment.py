@@ -14,9 +14,9 @@ if __package__:
         SCHEMA_VERSION,
         SquatExperimentError,
         _contiguous_bottom_indices,
+        _canonical_lf_text_sha256,
         _expected_condition_tuple,
         _frame_proxy_features,
-        _file_sha256,
         _two_d_coordinate_payload,
         _verified_catalog_provenance,
         _validate_internal_sequence_uniqueness,
@@ -42,9 +42,9 @@ else:
         SCHEMA_VERSION,
         SquatExperimentError,
         _contiguous_bottom_indices,
+        _canonical_lf_text_sha256,
         _expected_condition_tuple,
         _frame_proxy_features,
-        _file_sha256,
         _two_d_coordinate_payload,
         _verified_catalog_provenance,
         _validate_internal_sequence_uniqueness,
@@ -429,8 +429,12 @@ class BarbellSquatValidationExperimentTest(unittest.TestCase):
             report["protocolArtifactSha256"],
         )
         self.assertEqual(
-            _file_sha256(tool_path),
-            report["implementationProvenance"]["scriptSha256"],
+            _canonical_lf_text_sha256(tool_path),
+            report["implementationProvenance"]["scriptCanonicalLfTextSha256"],
+        )
+        self.assertEqual(
+            PROTOCOL_CONTRACT["implementationTextHashNormalization"],
+            report["implementationProvenance"]["textHashNormalization"],
         )
 
         ledger_path = report_path.with_name("barbell-squat-holdout-ledger.json")
@@ -447,6 +451,20 @@ class BarbellSquatValidationExperimentTest(unittest.TestCase):
             validation["activeContractManifestSha256"],
             ledger["activeContractManifestSha256"],
         )
+
+    def test_repository_text_hash_is_portable_across_line_endings(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            paths = []
+            for index, newline in enumerate(("\n", "\r\n", "\r")):
+                path = root / f"source-{index}.txt"
+                path.write_bytes(f"alpha{newline}beta{newline}".encode("utf-8"))
+                paths.append(path)
+
+            self.assertEqual(
+                1,
+                len({_canonical_lf_text_sha256(path) for path in paths}),
+            )
 
 
 if __name__ == "__main__":

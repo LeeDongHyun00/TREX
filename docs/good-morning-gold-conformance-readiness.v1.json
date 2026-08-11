@@ -1,0 +1,86 @@
+{
+  "artifactKind": "TREX_GOOD_MORNING_GOLD_SYNTHETIC_CONFORMANCE_READINESS",
+  "artifactSha256": "a7748186c79b17105456c7756dc679ad27ba469224e406ee4c1b3f82d99c7071",
+  "authority": {
+    "calibrationAuthority": 0,
+    "cueAuthority": 0,
+    "phaseDecoderAuthority": 0,
+    "releaseAuthority": 0,
+    "repCountAuthority": 0,
+    "runtimeProviderAuthority": 0,
+    "scoreAuthority": 0,
+    "shadowAuthority": 0,
+    "userPassFailUnknownAuthority": 0
+  },
+  "compilerImplementation": {
+    "canonicalLfSha256": "7780f255c898f6c94660dc553be8597d0f8c053d8fc76c9f8fce99235de55469",
+    "relativePath": "tools/good_morning_gold_conformance.py"
+  },
+  "contractBoundary": {
+    "absoluteTimestampOutputIncluded": false,
+    "datasetPathInputIncluded": false,
+    "participantRecordOutputIncluded": false,
+    "phaseDecoderIncluded": false,
+    "rawFrameOrLandmarkOutputIncluded": false,
+    "realEvidenceInputIncluded": false,
+    "restrictedBundleParserIncluded": false,
+    "runtimeProviderIncluded": false,
+    "runtimeThresholdIncluded": false,
+    "shadowOrReleaseTransitionIncluded": false,
+    "verdictScoreCueIncluded": false
+  },
+  "decisionUse": "SYNTHETIC_SCHEMA_CONFORMANCE_ONLY_NO_REAL_INPUT_OR_GOLD_AUTHORITY",
+  "inputProvenance": {
+    "bindingKey": {
+      "bindingId": "aihub-binding-sha256-f900f3dc681053ed9b705e020bac0ed27336aa5776885406a3c07a6db67d453d",
+      "bindingPolicySha256": "05125e36ac4ebc448120f9d3cc29cbc8837585cde36bc600231a4f30935080e0",
+      "exerciseId": "good-morning",
+      "policyRegistrySha256": "4cda3be23fe34f9b1f0db1a23e301542c4fecda911a402156877cb4263cc04fc",
+      "sourceConditionId": "aihub-exact-sha256-621f2eb88568c0d247abce9bbdbc763e8e40ae396bd0ba254a77dcd8bbc0394d"
+    },
+    "decisionContractArtifactSha256": "1ce7d1d52dedf46723fd5b088433460f2b92523501398b6976b10b9595bb653d",
+    "policyRegistrySha256": "4cda3be23fe34f9b1f0db1a23e301542c4fecda911a402156877cb4263cc04fc",
+    "protocolDraftCanonicalLfSha256": "09172105e8e6ebd78772a149c090f0143eadeb7dcaeae7f347b01eba2dd8afa2",
+    "protocolDraftRelativePath": "docs/good-morning-production-gold-protocol.md"
+  },
+  "readiness": {
+    "actualEvidenceCounts": {
+      "calibrationArtifactCount": 0,
+      "realAdjudicatedComponentUnitCount": 0,
+      "realCaptureCount": 0,
+      "realCycleCount": 0,
+      "realParticipantCount": 0,
+      "realReviewCount": 0,
+      "shadowAuthorizationCount": 0
+    },
+    "blockers": [
+      "NO_APPROVED_COMPONENT_RUBRIC",
+      "NO_APPROVED_PHASE_SCOPE",
+      "NO_APPROVED_RIGHTS_OR_CONSENT",
+      "NO_BLINDED_EXPERT_ADJUDICATION",
+      "NO_CALIBRATION_ARTIFACT",
+      "NO_MOCAP_REFERENCE_EVIDENCE",
+      "NO_REAL_PARTICIPANT_CAPTURE",
+      "NO_RELEASE_AUTHORIZATION",
+      "NO_SHADOW_AUTHORIZATION",
+      "NO_TRUSTED_CLOCK_ARTIFACT"
+    ],
+    "state": "NOT_READY"
+  },
+  "schemaVersion": 1,
+  "syntheticConformance": {
+    "allSyntheticComponentStates": "UNKNOWN_GOLD",
+    "clockShapeValidated": true,
+    "componentExactSetValidated": true,
+    "evidenceClass": "COMPILER_OWNED_SYNTHETIC_CONFORMANCE",
+    "fixtureCount": 1,
+    "fixtureId": "trex.synthetic.good-morning.gold-conformance.v1",
+    "participantSplitShapeValidated": true,
+    "phaseShapeValidated": true,
+    "reviewShapeValidated": true,
+    "syntheticComponentUnitShapeCount": 4,
+    "syntheticCycleShapeCount": 1,
+    "syntheticParticipantTokenCount": 4,
+    "syntheticReviewerTokenCount": 3
+  }
+}

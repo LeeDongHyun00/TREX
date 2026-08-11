@@ -1,0 +1,134 @@
+{
+  "approvalEvidenceSlots": {
+    "accessAuditApprovalArtifactSha256": null,
+    "aiHubCommercialUseApprovalArtifactSha256": null,
+    "aiHubDerivedDistributionApprovalArtifactSha256": null,
+    "backupDeletionPolicyApprovalArtifactSha256": null,
+    "participantConsentTemplateApprovalArtifactSha256": null,
+    "privacyNoticeApprovalArtifactSha256": null,
+    "retentionPolicyApprovalArtifactSha256": null,
+    "withdrawalDeletionPolicyApprovalArtifactSha256": null
+  },
+  "approvalTrustContract": {
+    "detachedSignatureVerificationState": "NOT_IMPLEMENTED_IN_V1",
+    "detachedSignaturesRequiredForPositiveApproval": true,
+    "minimumProtocolVersionForPositiveRealIntake": 2,
+    "pinnedTrustRegistryRequired": true,
+    "pinnedTrustRegistryState": "NOT_DEFINED_IN_V1",
+    "sha256SlotsAreSchemaPlaceholdersOnly": true,
+    "verifiedReadyTransitionAllowedInManifestV1": false
+  },
+  "approvedServiceLevels": {
+    "backupDeletionMaximumDays": null,
+    "primaryRetentionMaximumDays": null,
+    "withdrawalDeletionMaximumDays": null
+  },
+  "artifactKind": "TREX_POSE_DATA_RIGHTS_MANIFEST",
+  "artifactSha256": "bfe2a80776fb65da20724d475bda61cf2adf6692587fe4f67f22c238a3a1b4df",
+  "authority": {
+    "calibrationAuthority": 0,
+    "cueAuthority": 0,
+    "phaseDecoderAuthority": 0,
+    "releaseAuthority": 0,
+    "repCountAuthority": 0,
+    "runtimeProviderAuthority": 0,
+    "scoreAuthority": 0,
+    "shadowAuthority": 0,
+    "userPassFailUnknownAuthority": 0
+  },
+  "blockers": [
+    "AIHUB_COMMERCIAL_USE_RIGHTS_NOT_VERIFIED",
+    "AIHUB_DERIVED_ARTIFACT_DISTRIBUTION_RIGHTS_NOT_VERIFIED",
+    "BACKUP_RETENTION_AND_DELETION_NOT_APPROVED",
+    "DETACHED_APPROVAL_SIGNATURE_VERIFICATION_NOT_IMPLEMENTED_IN_V1",
+    "PARTICIPANT_CONSENT_FORM_NOT_APPROVED",
+    "PARTICIPANT_WITHDRAWAL_AND_DELETION_SLA_NOT_APPROVED",
+    "PINNED_APPROVAL_TRUST_REGISTRY_NOT_DEFINED_IN_V1",
+    "RAW_MEDIA_AND_DERIVED_POSE_RETENTION_SCHEDULE_NOT_APPROVED",
+    "REAL_RESTRICTED_GOLD_INTAKE_FORBIDDEN_IN_V1",
+    "RESTRICTED_STORAGE_ACCESS_AND_AUDIT_NOT_VERIFIED",
+    "VERIFIED_READY_TRANSITION_FORBIDDEN_IN_V1"
+  ],
+  "canonicalization": {
+    "artifactHashAlgorithm": "SHA-256",
+    "artifactHashInput": "RFC8259_JSON_WITH_TOP_LEVEL_ARTIFACT_SHA256_REMOVED",
+    "artifactHashSerialization": "UTF8_SORTED_KEYS_COMPACT_NO_TRAILING_NEWLINE",
+    "fileSerialization": "UTF8_PRETTY_2_SPACES_LF_FINAL_NEWLINE",
+    "nonFiniteNumbersAllowed": false,
+    "unicodeNormalization": "NFC"
+  },
+  "dataClasses": [
+    {
+      "classId": "AIHUB_SOURCE_DATA",
+      "licenseState": "UNVERIFIED",
+      "realDataUseReady": false
+    },
+    {
+      "classId": "TREX_RAW_CAMERA_OR_REFERENCE_MEDIA",
+      "consentState": "UNVERIFIED",
+      "realDataUseReady": false
+    },
+    {
+      "classId": "TREX_DERIVED_POSE_OR_MOCAP_TRAJECTORY",
+      "consentState": "UNVERIFIED",
+      "realDataUseReady": false
+    },
+    {
+      "classId": "TREX_EXPERT_REVIEW_AND_ADJUDICATION",
+      "consentAndConfidentialityState": "UNVERIFIED",
+      "realDataUseReady": false
+    }
+  ],
+  "decisionUse": "RIGHTS_AND_PRIVACY_SCHEMA_PLACEHOLDERS_ONLY_V1_CANNOT_AUTHORIZE_REAL_DATA_USE_OR_RUNTIME",
+  "gitPolicy": {
+    "aggregateReadinessReceiptAllowed": true,
+    "consentOrReviewerRecordAllowed": false,
+    "leafContentHashAllowed": false,
+    "participantOrCapturePseudonymAllowed": false,
+    "rawMediaAllowed": false,
+    "rawPoseLandmarkOrTrajectoryAllowed": false,
+    "timestampedCaptureMetadataAllowed": false
+  },
+  "manifestId": "trex.pose-data-rights-manifest.v1",
+  "permittedCurrentOperations": [
+    "PUBLIC_SCHEMA_REVIEW",
+    "SYNTHETIC_CONFORMANCE_FIXTURE_VALIDATION"
+  ],
+  "prohibitedUntilVerifiedReady": [
+    "REAL_PARTICIPANT_COLLECTION",
+    "REAL_RESTRICTED_BUNDLE_INTAKE",
+    "MODEL_OR_THRESHOLD_FITTING",
+    "CALIBRATION_OR_LOCKED_TEST_EVALUATION",
+    "SHADOW_OR_USER_RUNTIME_USE",
+    "RAW_MEDIA_OR_POSE_GIT_PERSISTENCE",
+    "ANDROID_ASSET_DATABASE_CACHE_OR_LOG_PERSISTENCE"
+  ],
+  "readiness": "NOT_READY",
+  "retentionAndBackupContract": {
+    "approvedBackupDeletionSlaPresent": false,
+    "approvedPrimaryRetentionSchedulePresent": false,
+    "approvedWithdrawalDeletionSlaPresent": false,
+    "collectionMayStart": false,
+    "legalHoldProcedureVerified": false
+  },
+  "schemaVersion": 1,
+  "status": "UNVERIFIED",
+  "storageContract": {
+    "androidPersistenceAllowed": false,
+    "offlineRestrictedWorkspaceRequired": true,
+    "publicRepositoryMayContainRawOrDerivedParticipantData": false,
+    "restrictedAccessAuditVerified": false
+  },
+  "verifiedReadyRequirements": {
+    "allApprovalEvidenceSlotsMustBeNonNullSha256": true,
+    "allBlockersMustBeResolved": true,
+    "allServiceLevelsMustBePositiveIntegers": true,
+    "detachedSignaturesRequired": true,
+    "externalTrustVerificationState": "NOT_IMPLEMENTED_IN_V1",
+    "individualConsentOrReviewerIdentifiersRemainOutsidePublicManifest": true,
+    "minimumProtocolVersionForVerifiedReady": 2,
+    "pinnedTrustRegistryRequired": true,
+    "sha256PresenceAloneMayAuthorizeTransition": false,
+    "verifiedReadyTransitionAllowedInManifestV1": false
+  }
+}

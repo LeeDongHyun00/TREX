@@ -1,2 +1,46 @@
 # Byte-exact generated-policy freshness checks require one portable checkout representation.
 /app/src/main/java/com/example/trex_kotlin/pose/policy/AiHubCriterionPolicyCatalog.kt text eol=lf
+
+# Gold intake artifacts and their byte-exact conformance tooling are portable across checkouts.
+/docs/pose-gold-protocol.v1.json text eol=lf
+/docs/pose-data-rights-manifest.v1.json text eol=lf
+/docs/barbell-squat-gold-study-plan.v1.json text eol=lf
+/docs/barbell-squat-gold-readiness.v1.json text eol=lf
+/docs/pose-gold-evidence-intake.md text eol=lf
+/tools/pose_gold_workflow.py text eol=lf
+/tools/test_pose_gold_workflow.py text eol=lf
+
+# Exercise-planning registry inputs use canonical text hashes across checkouts.
+/docs/pose-exercise-planning-registry.v1.json text eol=lf
+/docs/standing-side-crunch-gold-planning-declaration.v1.json text eol=lf
+/docs/pose-exercise-planning.md text eol=lf
+/docs/pose-exercise-planning-matrix.v1.json text eol=lf
+/tools/compile_pose_exercise_planning_matrix.py text eol=lf
+/tools/test_compile_pose_exercise_planning_matrix.py text eol=lf
+
+# Catalog-scale Gold decision contracts use one canonical checkout representation.
+/docs/pose-gold-decision-contract.v2.json text eol=lf
+/docs/pose-gold-decision-contract.md text eol=lf
+/tools/compile_pose_gold_decision_contract.py text eol=lf
+/tools/test_compile_pose_gold_decision_contract.py text eol=lf
+
+# Catalog-wide Gold annotation contracts use canonical byte-exact artifacts.
+/docs/pose-gold-annotation-contract.v2.json text eol=lf
+/docs/pose-gold-annotation-contract.md text eol=lf
+/tools/compile_pose_gold_annotation_contract.py text eol=lf
+/tools/test_compile_pose_gold_annotation_contract.py text eol=lf
+
+# Missing trusted phase-scope and resolver requirements are byte-exact inventory artifacts.
+/docs/pose-gold-scope-resolver-requirements.v1.json text eol=lf
+/docs/pose-gold-scope-resolver-requirements.md text eol=lf
+/tools/compile_pose_gold_scope_resolver_requirements.py text eol=lf
+/tools/test_compile_pose_gold_scope_resolver_requirements.py text eol=lf
+
+# Good Morning research artifacts use one portable checkout representation.
+/docs/good-morning-knee-stability-training-experiment.json text eol=lf
+/docs/good-morning-gold-conformance-readiness.v1.json text eol=lf
+/docs/good-morning-production-gold-protocol.md text eol=lf
+/tools/good_morning_gold_conformance.py text eol=lf
+/tools/good_morning_knee_stability_experiment.py text eol=lf
+/tools/test_good_morning_gold_conformance.py text eol=lf
+/tools/test_good_morning_knee_stability_experiment.py text eol=lf

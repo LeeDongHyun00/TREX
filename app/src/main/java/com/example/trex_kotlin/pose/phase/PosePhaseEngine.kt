@@ -44,6 +44,18 @@ enum class PhaseScalarDirection {
 }
 
 /**
+ * Selects the half-open start boundary of a completed cycle.
+ *
+ * [INITIAL_PHASE_WINDOW_START] preserves the original setup-inclusive behavior. A decoder whose
+ * calibrated contract defines a repetition as motion after setup may instead select
+ * [FIRST_TRANSITION_BOUNDARY], which excludes the initial phase window from the completed scope.
+ */
+enum class PoseCycleScopeStartPolicy {
+    INITIAL_PHASE_WINDOW_START,
+    FIRST_TRANSITION_BOUNDARY,
+}
+
+/**
  * Evidence contract for entering one phase.
  *
  * [enterInterval] is deliberately narrower than [holdInterval]. Once entry evidence starts,
@@ -175,8 +187,11 @@ data class PosePhaseEngineConfig(
     val unusableObservationGraceMs: Long,
     /** Hard bound for one open phase window and its runtime evidence buffer. */
     val maximumPhaseDurationMs: Long,
-    /** Hard bound for one complete movement cycle, including its backdated initial window. */
+    /** Hard bound for one complete movement cycle under [cycleScopeStartPolicy]. */
     val maximumCycleDurationMs: Long,
+    /** Exact policy for the first timestamp and first window retained in a completed cycle. */
+    val cycleScopeStartPolicy: PoseCycleScopeStartPolicy =
+        PoseCycleScopeStartPolicy.INITIAL_PHASE_WINDOW_START,
 ) {
     init {
         require(
@@ -645,12 +660,21 @@ class PosePhaseEngine(private val config: PosePhaseEngineConfig) {
         )
 
         if (startsCycle) {
-            // The initial window is part of the cycle and may own setup criteria. Preserve its
-            // backdated start so cycle provenance never begins after included evidence.
-            cycleStartTimestampMs = previousWindowStart
+            cycleStartTimestampMs = when (config.cycleScopeStartPolicy) {
+                PoseCycleScopeStartPolicy.INITIAL_PHASE_WINDOW_START -> {
+                    // The initial window may own setup criteria. Preserve its backdated start so
+                    // cycle provenance never begins after included evidence.
+                    previousWindowStart
+                }
+                PoseCycleScopeStartPolicy.FIRST_TRANSITION_BOUNDARY -> boundaryTimestampMs
+            }
             cyclePhaseWindows.clear()
         }
-        if (cycleStartTimestampMs != null) cyclePhaseWindows += endedWindow
+        val includesEndedWindow = !startsCycle ||
+            config.cycleScopeStartPolicy == PoseCycleScopeStartPolicy.INITIAL_PHASE_WINDOW_START
+        if (cycleStartTimestampMs != null && includesEndedWindow) {
+            cyclePhaseWindows += endedWindow
+        }
         if (transition.completesCycle) {
             cycleStartTimestampMs?.let { cycleStart ->
                 completedCycleCount += 1

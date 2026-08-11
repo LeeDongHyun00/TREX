@@ -1,0 +1,47 @@
+{
+  "artifactKind": "TREX_POSE_EXERCISE_PLANNING_REGISTRY",
+  "artifactSha256": "ff6fc6c01331ad395a38591f5f07c25527b1d42d336d4136e09c9551d1f42798",
+  "authority": {
+    "calibrationAuthority": 0,
+    "cueAuthority": 0,
+    "phaseDecoderAuthority": 0,
+    "releaseAuthority": 0,
+    "repCountAuthority": 0,
+    "runtimeProviderAuthority": 0,
+    "scoreAuthority": 0,
+    "shadowAuthority": 0,
+    "userPassFailUnknownAuthority": 0
+  },
+  "catalogScope": {
+    "bindingCount": 167,
+    "exactConditionCount": 97,
+    "exerciseCount": 41,
+    "releaseEligibleBindingCount": 0,
+    "reviewedBindingCount": 148
+  },
+  "policyProvenance": {
+    "approvalArtifactSha256": "24e9a71428c4b7e4483124e96b44c3d6f2b236e48488c4a1c71ec0b4e103f4a0",
+    "approvedPolicySha256": "9acaceec25d0f654a47c96bc7078be707366d3f3097c9db4938148fd3ffc74b9",
+    "policyRegistrySha256": "4cda3be23fe34f9b1f0db1a23e301542c4fecda911a402156877cb4263cc04fc",
+    "sourceCatalogSha256": "fe4e3075a00212293c9ffd3df8f007bc3666e17af2526de3a8d570d052a4e29c",
+    "sourceCoverageArtifactSha256": "9240aa2c9a429cce8f4c47314f7797bea6ebf39b276d3563f5d420a9d3a34eda",
+    "sourceMetadataSetSha256": "518513cf2c627b4cff0b4a458b4048aa4a2eb38dfe5211fea06eb8b5c68f6ed8"
+  },
+  "registeredPlans": [
+    {
+      "artifactKind": "TREX_BARBELL_SQUAT_GOLD_STUDY_PLAN",
+      "artifactPath": "docs/barbell-squat-gold-study-plan.v1.json",
+      "artifactSha256": "a8299498fb045f870cff5a5151659767a6c96c1fc7521e606c1c09475a2ab172",
+      "exerciseId": "barbell-squat",
+      "planState": "PREREGISTERED_GOLD_STUDY_PLAN_NOT_READY"
+    },
+    {
+      "artifactKind": "TREX_POSE_EXERCISE_GOLD_PLANNING_DECLARATION",
+      "artifactPath": "docs/standing-side-crunch-gold-planning-declaration.v1.json",
+      "artifactSha256": "bdfcfaaf118cdaff24095abb00944bba384718130f40ee2dfe9243e71dc41281",
+      "exerciseId": "standing-side-crunch",
+      "planState": "POLICY_PROJECTION_ONLY_NO_APPROVED_TOPOLOGY"
+    }
+  ],
+  "schemaVersion": 1
+}

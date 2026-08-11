@@ -92,7 +92,7 @@ internal enum class BarbellSquatResearchDiscardCause {
 }
 
 internal enum class BarbellSquatResearchValidationUse {
-    CONSUMED_DEVELOPMENT_BENCHMARK,
+    PRIOR_VALIDATION_CONSUMED_NOT_READ_OR_REUSED_IN_TRAINING_PHASE_EXPERIMENT,
 }
 
 internal enum class BarbellSquatResearchPhaseSupervision {
@@ -110,9 +110,11 @@ internal enum class BarbellSquatResearchLimitation {
     NO_PHASE_GOLD,
     NO_RELIABLE_FRAME_RATE_OR_FRAME_INTERVAL_GROUND_TRUTH,
     NO_MEDIAPIPE_GOLD_DOMAIN_BRIDGE,
+    TRAINING_SURROGATE_CONTINUATION_REJECTED,
     NO_RUNTIME_DECODER_PARAMETERS,
     NO_RUNTIME_PHASE_PROVIDER_BINDING,
-    NO_ATTESTED_CROP_RECT_CONTINUITY_FIELD,
+    NO_AUTHORIZED_RUNTIME_PHASE_CALIBRATION_ARTIFACT,
+    NO_SEPARATELY_AUTHENTICATED_CAMERA_GEOMETRY_ISSUER,
     NO_INDEPENDENT_PHASE_APPROVAL,
     NO_PRODUCT_RELEASE_AUTHORITY,
     NO_USER_DECISION_AUTHORITY,
@@ -168,13 +170,18 @@ internal data class BarbellSquatResearchEvidenceProvenance(
     val sourceArtifactPath: String,
     val sourceReportFingerprintSha256: String,
     val protocolArtifactSha256: String,
+    val readinessArtifactSha256: String,
+    val studiedSignalFamilyId: String,
+    val studiedDecoderFamilyId: String,
+    val studyCoordinateDomain: BarbellSquatPhaseResearchStudyCoordinateDomain,
+    val studyViewRole: BarbellSquatPhaseResearchStudyViewRole,
     val officialValidationUse: BarbellSquatResearchValidationUse,
     val phaseSupervision: BarbellSquatResearchPhaseSupervision,
     val frameTimeEvidence: BarbellSquatResearchFrameTimeEvidence,
 ) {
     init {
-        require(sourceArtifactPath == "docs/barbell-squat-coordinate-experiment.json") {
-            "Research provenance must name the reviewed coordinate experiment"
+        require(sourceArtifactPath == "docs/barbell-squat-phase-training-experiment.json") {
+            "Research provenance must name the reviewed Training-only phase experiment"
         }
         require(RESEARCH_SHA256.matches(sourceReportFingerprintSha256)) {
             "sourceReportFingerprintSha256 must be a lowercase SHA-256"
@@ -182,6 +189,11 @@ internal data class BarbellSquatResearchEvidenceProvenance(
         require(RESEARCH_SHA256.matches(protocolArtifactSha256)) {
             "protocolArtifactSha256 must be a lowercase SHA-256"
         }
+        require(RESEARCH_SHA256.matches(readinessArtifactSha256)) {
+            "readinessArtifactSha256 must be a lowercase SHA-256"
+        }
+        validateResearchId("studiedSignalFamilyId", studiedSignalFamilyId)
+        validateResearchId("studiedDecoderFamilyId", studiedDecoderFamilyId)
     }
 }
 
@@ -233,7 +245,7 @@ internal class BarbellSquatResearchPhaseContract internal constructor(
 
     val artifactSha256: String = canonicalFieldsSha256(
         buildList {
-            add("barbellSquatResearchPhaseContractSchemaVersion" to "1")
+            add("barbellSquatResearchPhaseContractSchemaVersion" to "2")
             add("contractId" to contractId)
             add("artifactUse" to artifactUse.name)
             add("executionMode" to executionMode.name)
@@ -269,6 +281,11 @@ internal class BarbellSquatResearchPhaseContract internal constructor(
                     evidenceProvenance.sourceReportFingerprintSha256,
             )
             add("evidence.protocolArtifactSha256" to evidenceProvenance.protocolArtifactSha256)
+            add("evidence.readinessArtifactSha256" to evidenceProvenance.readinessArtifactSha256)
+            add("evidence.studiedSignalFamilyId" to evidenceProvenance.studiedSignalFamilyId)
+            add("evidence.studiedDecoderFamilyId" to evidenceProvenance.studiedDecoderFamilyId)
+            add("evidence.studyCoordinateDomain" to evidenceProvenance.studyCoordinateDomain.name)
+            add("evidence.studyViewRole" to evidenceProvenance.studyViewRole.name)
             add("evidence.officialValidationUse" to evidenceProvenance.officialValidationUse.name)
             add("evidence.phaseSupervision" to evidenceProvenance.phaseSupervision.name)
             add("evidence.frameTimeEvidence" to evidenceProvenance.frameTimeEvidence.name)
@@ -312,9 +329,27 @@ internal class BarbellSquatResearchPhaseContract internal constructor(
         require(this.prohibitedTemporalOperations == REQUIRED_PROHIBITED_TEMPORAL_OPERATIONS)
         require(this.resetCauses == REQUIRED_RESET_CAUSES)
         require(this.discardCauses == REQUIRED_DISCARD_CAUSES)
+        require(evidenceProvenance.studiedSignalFamilyId == LATERAL_CANDIDATE_ID) {
+            "The Training-only phase experiment evaluated only the lateral signal family"
+        }
+        require(
+            evidenceProvenance.studiedDecoderFamilyId ==
+                BarbellSquatPhaseResearchReadiness.STUDIED_DECODER_FAMILY_ID,
+        )
+        require(
+            evidenceProvenance.studyCoordinateDomain ==
+                BarbellSquatPhaseResearchStudyCoordinateDomain
+                    .AIHUB_TRIANGULATED_3D_NOT_MEDIAPIPE_WORLD,
+        )
+        require(
+            evidenceProvenance.studyViewRole ==
+                BarbellSquatPhaseResearchStudyViewRole
+                    .LATERAL_CANDIDATE_ONLY_NOT_AI_HUB_CAMERA_VIEW_QUALIFICATION,
+        )
         require(
             evidenceProvenance.officialValidationUse ==
-                BarbellSquatResearchValidationUse.CONSUMED_DEVELOPMENT_BENCHMARK,
+                BarbellSquatResearchValidationUse
+                    .PRIOR_VALIDATION_CONSUMED_NOT_READ_OR_REUSED_IN_TRAINING_PHASE_EXPERIMENT,
         )
         require(
             evidenceProvenance.phaseSupervision ==
@@ -367,7 +402,7 @@ internal class BarbellSquatResearchPhaseContract internal constructor(
         private val REQUIRED_LIMITATIONS = BarbellSquatResearchLimitation.entries.toSet()
 
         private const val REPOSITORY_DRIFT_PIN_SHA256 =
-            "589ac54005267ff89be0ae679e8f0a2316d2640ebc4d76822b48e02b33ad27a2"
+            "7ca4751630f7625ffb8c7858ed74f3a921aa6ce91666f9a9ed60e827a9374352"
 
         val CURRENT: BarbellSquatResearchPhaseContract = createCurrent().also { artifact ->
             check(artifact.artifactSha256 == REPOSITORY_DRIFT_PIN_SHA256) {
@@ -379,7 +414,7 @@ internal class BarbellSquatResearchPhaseContract internal constructor(
         internal fun createCurrent(
             evidenceProvenance: BarbellSquatResearchEvidenceProvenance = currentEvidence(),
         ): BarbellSquatResearchPhaseContract = BarbellSquatResearchPhaseContract(
-            contractId = "trex.research-phase-contract.barbell-squat.v1",
+            contractId = "trex.research-phase-contract.barbell-squat.v2",
             artifactUse = BarbellSquatResearchArtifactUse.RESEARCH_CANDIDATE_ONLY,
             executionMode = BarbellSquatResearchExecutionMode.SPECIFICATION_ONLY,
             cyclePath = REQUIRED_CYCLE_PATH,
@@ -433,13 +468,24 @@ internal class BarbellSquatResearchPhaseContract internal constructor(
         )
 
         private fun currentEvidence() = BarbellSquatResearchEvidenceProvenance(
-            sourceArtifactPath = "docs/barbell-squat-coordinate-experiment.json",
+            sourceArtifactPath = "docs/barbell-squat-phase-training-experiment.json",
             sourceReportFingerprintSha256 =
-                "0c3746aba72cead19d608d08b66a45779a554716d4000c9d8a78cc7817bec88e",
+                BarbellSquatPhaseResearchReadiness.CURRENT.reportArtifactSha256,
             protocolArtifactSha256 =
-                "01c2cccc6e05ae45c93f2a50e5bccd4d058be162c69eebfe0507b8a9703e96b8",
+                BarbellSquatPhaseResearchReadiness.CURRENT.protocolArtifactSha256,
+            readinessArtifactSha256 =
+                BarbellSquatPhaseResearchReadiness.CURRENT.artifactSha256,
+            studiedSignalFamilyId =
+                BarbellSquatPhaseResearchReadiness.CURRENT.studiedSignalFamilyId,
+            studiedDecoderFamilyId =
+                BarbellSquatPhaseResearchReadiness.CURRENT.studiedDecoderFamilyId,
+            studyCoordinateDomain =
+                BarbellSquatPhaseResearchReadiness.CURRENT.studyCoordinateDomain,
+            studyViewRole =
+                BarbellSquatPhaseResearchReadiness.CURRENT.studyViewRole,
             officialValidationUse =
-                BarbellSquatResearchValidationUse.CONSUMED_DEVELOPMENT_BENCHMARK,
+                BarbellSquatResearchValidationUse
+                    .PRIOR_VALIDATION_CONSUMED_NOT_READ_OR_REUSED_IN_TRAINING_PHASE_EXPERIMENT,
             phaseSupervision =
                 BarbellSquatResearchPhaseSupervision.ACTIVE_MASK_WINDOW_PRIOR_ONLY_NOT_PHASE_GOLD,
             frameTimeEvidence =

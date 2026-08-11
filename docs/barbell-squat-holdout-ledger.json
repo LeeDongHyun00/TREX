@@ -13,7 +13,7 @@
   "twoDCoordinateSetSha256": "b5732c991f0dead19041644ce83ed2121f88af17117cfb860e7941b9828eae68",
   "threeDCoordinateSetSha256": "80ee7a39e399aa6c15a3fcbdca3f6a60e8ee8795f10c0af6a0372d3bc76c9223",
   "activeContractManifestSha256": "b5fd2c0410c1f460e5cc8df7a70cbe190e0e3fa893aaf8ea3ca9d377b2e302d3",
-  "protocolArtifactSha256": "01c2cccc6e05ae45c93f2a50e5bccd4d058be162c69eebfe0507b8a9703e96b8",
-  "reportFingerprintSha256": "0c3746aba72cead19d608d08b66a45779a554716d4000c9d8a78cc7817bec88e",
+  "protocolArtifactSha256": "0c591c8213dda06a9af63ec009afdd3ddd1a265cdb72b9e387bcdcf69acb3bbb",
+  "reportFingerprintSha256": "8d8fdffe5477c79701a053fb4fb647c91082b882213a13cfd1efb7beb0d3ea6a",
   "requiredNextTest": "Untouched external MediaPipe-Gold holdout grouped by subject, device, and qualified view"
 }

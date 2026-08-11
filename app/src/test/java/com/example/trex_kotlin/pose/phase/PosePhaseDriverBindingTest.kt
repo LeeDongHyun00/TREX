@@ -86,6 +86,16 @@ class PosePhaseDriverBindingTest {
         assertFalse(
             baseline == phaseDriverArtifactSha256(
                 feature,
+                config(
+                    cycleScopeStartPolicy =
+                        PoseCycleScopeStartPolicy.FIRST_TRANSITION_BOUNDARY,
+                ),
+                baseCalibration,
+            ),
+        )
+        assertFalse(
+            baseline == phaseDriverArtifactSha256(
+                feature,
                 baseConfig,
                 qualityCalibration(
                     feature,
@@ -153,6 +163,8 @@ class PosePhaseDriverBindingTest {
         graceMs: Long = 300L,
         maximumPhaseDurationMs: Long = 10_000L,
         maximumCycleDurationMs: Long = maxOf(maximumPhaseDurationMs, 30_000L),
+        cycleScopeStartPolicy: PoseCycleScopeStartPolicy =
+            PoseCycleScopeStartPolicy.INITIAL_PHASE_WINDOW_START,
     ): PosePhaseEngineConfig = PosePhaseEngineConfig(
         graph = OrderedPosePhaseGraph(
             states = listOf(
@@ -186,6 +198,7 @@ class PosePhaseDriverBindingTest {
         unusableObservationGraceMs = graceMs,
         maximumPhaseDurationMs = maximumPhaseDurationMs,
         maximumCycleDurationMs = maximumCycleDurationMs,
+        cycleScopeStartPolicy = cycleScopeStartPolicy,
     )
 
     private fun qualityCalibration(

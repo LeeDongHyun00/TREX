@@ -154,6 +154,7 @@ internal class AiHubShadowBindingProvenance private constructor(
 internal enum class ShadowMeasurementSideChannel {
     MIDLINE,
     GLOBAL,
+    BILATERAL_PAIR,
     LEFT,
     RIGHT,
 }
@@ -235,7 +236,10 @@ internal sealed interface AiHubShadowBindingPlan {
             require(viewContractId in provenance.viewContractIds) {
                 "Measurement view is absent from the exact source policy"
             }
-            require(this.sideChannels == expectedSideChannels(provenance.sidePolicyKind)) {
+            require(
+                this.sideChannels ==
+                    expectedShadowSideChannelsForPolicy(provenance.sidePolicyKind),
+            ) {
                 "Measurement side channels do not implement the exact source side policy"
             }
             require(
@@ -487,14 +491,22 @@ private fun CriterionWindowScope.shadowArtifactSha256(): String = canonicalField
     },
 )
 
-private fun expectedSideChannels(
+/**
+ * Lossless mapping for side policies whose channel identity does not need a role resolver.
+ *
+ * A coupled pair remains one channel. Treating it as independent LEFT/RIGHT evidence would
+ * change the policy meaning. Role-relative policies remain unavailable until a separately
+ * attested resolver defines their runtime member assignment.
+ */
+internal fun expectedShadowSideChannelsForPolicy(
     sidePolicyKind: AiHubCriterionSidePolicyKind,
 ): Set<ShadowMeasurementSideChannel> = when (sidePolicyKind) {
     AiHubCriterionSidePolicyKind.MIDLINE -> setOf(ShadowMeasurementSideChannel.MIDLINE)
     AiHubCriterionSidePolicyKind.GLOBAL_BODY -> setOf(ShadowMeasurementSideChannel.GLOBAL)
-    AiHubCriterionSidePolicyKind.BILATERAL_COUPLED,
-    AiHubCriterionSidePolicyKind.BILATERAL_INDEPENDENT,
-    -> setOf(ShadowMeasurementSideChannel.LEFT, ShadowMeasurementSideChannel.RIGHT)
+    AiHubCriterionSidePolicyKind.BILATERAL_COUPLED ->
+        setOf(ShadowMeasurementSideChannel.BILATERAL_PAIR)
+    AiHubCriterionSidePolicyKind.BILATERAL_INDEPENDENT ->
+        setOf(ShadowMeasurementSideChannel.LEFT, ShadowMeasurementSideChannel.RIGHT)
     AiHubCriterionSidePolicyKind.ACTIVE_LIMB,
     AiHubCriterionSidePolicyKind.LEAD_LIMB,
     AiHubCriterionSidePolicyKind.TRAIL_LIMB,

@@ -1,0 +1,1487 @@
+{
+  "artifactKind": "TREX_POSE_GOLD_SCOPE_RESOLVER_REQUIREMENTS",
+  "artifactSha256": "5700926bb5aa13e38aa118599d4353691f202090792432a7a539473ad1e0074a",
+  "authority": {
+    "calibrationAuthority": 0,
+    "cueAuthority": 0,
+    "phaseDecoderAuthority": 0,
+    "releaseAuthority": 0,
+    "repCountAuthority": 0,
+    "runtimeProviderAuthority": 0,
+    "scoreAuthority": 0,
+    "shadowAuthority": 0,
+    "userPassFailUnknownAuthority": 0
+  },
+  "catalogScope": {
+    "annotationDecisionTemplateCount": 203,
+    "approvedPhaseScopeRequirementCount": 0,
+    "approvedSideResolverRequirementCount": 0,
+    "bindingCount": 167,
+    "determinateEligibleTemplateCount": 0,
+    "exactConditionCount": 97,
+    "exerciseCount": 41,
+    "phaseScopeRequirementCount": 78,
+    "releaseEligibleBindingCount": 0,
+    "reviewedBindingCount": 148,
+    "roleRelativeAnnotationDecisionTemplateCount": 18,
+    "sideResolverRequirementCount": 13,
+    "unresolvedBindingCount": 19
+  },
+  "compilerImplementation": {
+    "canonicalTextSha256": "0353ae47bf34cc594ff70be8d7c176fde61e43aa752927c31a9470f882149554",
+    "normalization": "UTF8_NFC_LF",
+    "relativePath": "tools/compile_pose_gold_scope_resolver_requirements.py"
+  },
+  "compilerImplementationUse": "IMPLEMENTATION_DRIFT_DETECTION_ONLY_NOT_APPROVAL_SIGNATURE_OR_AUTHORITY",
+  "contractBoundary": {
+    "anatomicalAssignmentIncluded": false,
+    "approverIdentityModelIncluded": false,
+    "candidateArtifactParsingIncluded": false,
+    "cueInterfaceIncluded": false,
+    "detachedSignatureVerificationIncluded": false,
+    "evaluatorIncluded": false,
+    "phaseTopologyIncluded": false,
+    "positiveApprovalTransitionIncluded": false,
+    "realEvidenceIntakeIncluded": false,
+    "releaseTransitionIncluded": false,
+    "reviewOrAdjudicationRecordModelIncluded": false,
+    "runtimeProviderIncluded": false,
+    "syntheticFixtureParserIncluded": false,
+    "timestampValueModelIncluded": false,
+    "trustRegistryIncluded": false
+  },
+  "decisionUse": "PENDING_TRUSTED_ARTIFACT_REQUIREMENTS_ONLY_NOT_APPROVAL_TOPOLOGY_EVIDENCE_RUNTIME_CUE_OR_RELEASE_AUTHORITY",
+  "inputProvenance": {
+    "annotationContractArtifactSha256": "5d52c5408187a24e50c0017fb086675aadef8be757aa1091e6abac8ed64a57b7",
+    "annotationContractCompilerCanonicalTextSha256": "22e11e5f4af5812a352eaace61a496a83ee0da4bb9d0dce79e66440ad7b05d76",
+    "annotationContractInputProvenance": {
+      "decisionContractArtifactSha256": "1ce7d1d52dedf46723fd5b088433460f2b92523501398b6976b10b9595bb653d",
+      "decisionContractCompilerCanonicalTextSha256": "08a15f5dac50252b5cbbfb358dfb8de548eab879727071fd9fca0f5a640cb132",
+      "decisionContractInputProvenance": {
+        "approvalArtifactSha256": "24e9a71428c4b7e4483124e96b44c3d6f2b236e48488c4a1c71ec0b4e103f4a0",
+        "approvedPolicySha256": "9acaceec25d0f654a47c96bc7078be707366d3f3097c9db4938148fd3ffc74b9",
+        "planningMatrixArtifactSha256": "feeffe74a4bb22e939f8138a6f69da6021a2777bdecea6cebe3787971fe4fd75",
+        "planningRegistryArtifactSha256": "ff6fc6c01331ad395a38591f5f07c25527b1d42d336d4136e09c9551d1f42798",
+        "policyRegistrySha256": "4cda3be23fe34f9b1f0db1a23e301542c4fecda911a402156877cb4263cc04fc",
+        "sourceCatalogSha256": "fe4e3075a00212293c9ffd3df8f007bc3666e17af2526de3a8d570d052a4e29c",
+        "sourceCoverageArtifactSha256": "9240aa2c9a429cce8f4c47314f7797bea6ebf39b276d3563f5d420a9d3a34eda",
+        "sourceMetadataSetSha256": "518513cf2c627b4cff0b4a458b4048aa4a2eb38dfe5211fea06eb8b5c68f6ed8"
+      }
+    }
+  },
+  "phaseScopeRequirements": [
+    {
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 2,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-d3986f219332e42641f0d5083be1be6b5c1856a9b8c798d95a0df113995ff5b5",
+        "trex.annotation-template-sha256-e6fd0b619fa83a2294dd5855bd3373bc6aaefff4dd05cdf0e88241263c7589ed"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "barbell-curl",
+      "phaseRoleId": "trex.phase-role.contracted-endpoint.v1",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 5,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-0dfbb1025f9e74532540174adb9eb059260248d7aaf72baffb3ab5991dcc60ae",
+        "trex.annotation-template-sha256-8b06a6ebf8bb859d3b2d886f84f3e5026b9d18a202b20483325bf44800248777",
+        "trex.annotation-template-sha256-aee39f185f5b3ab2a23c543dc4b680f2147808f897ff9dd2416561641f9c3f1a",
+        "trex.annotation-template-sha256-b1b19303f8a972238984cc03000d7444a91bcfe172502fc29b81feac1fdf83e3",
+        "trex.annotation-template-sha256-b2daffeaf95ce34a8ff0d6ca728c0d7010b0ada7a51d2480e65e07354bc30b30"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "barbell-curl",
+      "phaseRoleId": "trex.phase-role.full-cycle.v1",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 2,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-778cf06e7c7642ad4945a2e35f7171f53cd75b0235bb18e3d0bf6bffe4d1fe8c",
+        "trex.annotation-template-sha256-f121e8ce2c78b38ffd329e247f7f3f97905ae07dcc72dc0a84de33f15e81f565"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "barbell-curl",
+      "phaseRoleId": "trex.phase-role.lengthened-endpoint.v1",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 1,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-1f2f3d84c5aaec998f98e3679aed2ff50df1e2350e367c4c6d0d0d06cca45ad6"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "barbell-deadlift",
+      "phaseRoleId": "trex.phase-role.compound-transition.v1",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 6,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-5ef5afbaa1d9a7f6fb6f1a91b6e101ac0ed371e7b09a1617674edbb3699d8ca5",
+        "trex.annotation-template-sha256-679424d2163f76348b369f6202613eb7fcd4523ef7e1b0595ebd3c8e7393e21e",
+        "trex.annotation-template-sha256-75d90caa211fec3d5edd69142c7e2cb9bcde56fe7c75dd0b91f8c61d999186a9",
+        "trex.annotation-template-sha256-bcfdac0d255b05278e55c27e0aa5b5884d7c0143ed997ca135829e7cc6e8b442",
+        "trex.annotation-template-sha256-d369311a73fc4e4ad2dea43ab95ee850f17336bb35d4b3187a755f3925cec2ed",
+        "trex.annotation-template-sha256-dba1b73265125b609c10150888cc2d993e3d1de75dd58aa6750ddddb80baca18"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "barbell-deadlift",
+      "phaseRoleId": "trex.phase-role.full-cycle.v1",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 3,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-53f400ec21194227a834760a6388b0c345d35e4d8b6337669708df9b634c9bcb",
+        "trex.annotation-template-sha256-6c3bab77384be7ceae82215d2b71e37714077acb84ba3a7785921602da5a7ae2",
+        "trex.annotation-template-sha256-a94d5cfbf0d2be0663168a9341db6ebe1c2d54ad576a2fdb66e79a5b6157d150"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "barbell-lunge",
+      "phaseRoleId": "trex.phase-role.full-cycle.v1",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 1,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-01446d725bb95a3ffcba0991f167d372071f6cbc1277d326eb92d47e09e4fbb9"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "barbell-lunge",
+      "phaseRoleId": "trex.phase-role.lengthened-endpoint.v1",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 7,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-1cbec6c1c06a666f566f6186dbb921efc7c9d497b42fcd23ee68f982b1558925",
+        "trex.annotation-template-sha256-1fa275ca9a902beadf56c13f20826520ecf3c10dee14eb6f166577f55bcc15f4",
+        "trex.annotation-template-sha256-2e9b031a7131473f69f32cb6ed9883231a1ea91c324d10d2ede835bdc8c24307",
+        "trex.annotation-template-sha256-36d9d955214ddf82d51b2e7afc545eb1337b3fd6dfe83dacb163ed77754532f2",
+        "trex.annotation-template-sha256-602867205b7ee07f36a528225b4455489c8cd54482812d240f3cac1e9e12420c",
+        "trex.annotation-template-sha256-c2fd60ad71484f37ff117c8b165175e49f495b7a467c67f998669660ad391754",
+        "trex.annotation-template-sha256-de93c3adfda247e143be9f47cbff98ab73a7ec4640a2f3ad1de9a204248bde98"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "barbell-row",
+      "phaseRoleId": "trex.phase-role.full-cycle.v1",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 6,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-685de4840d0e716d9226675f5d7f0bf28c3019cfd6eab3fa90ddf8afd392dd08",
+        "trex.annotation-template-sha256-7c055f9dd28cfa291a7fad0f94f4bc0b92c1a5471c35ea038b15d47568beb828",
+        "trex.annotation-template-sha256-a87c5f2f2a7661049e6353a0048e136b5f46f4738c06eee6c6131e2f88f2104d",
+        "trex.annotation-template-sha256-aa2efc3efbaba4339f5d858f370bffc16646ddaed5728c24992a19432bc46316",
+        "trex.annotation-template-sha256-b84d53c5d64ea639ef2b6aab4a1defaf74abc12a4eaa2813a5942216dd63ca78",
+        "trex.annotation-template-sha256-e8df1ff157210be195b2c8fba50fbdbea5769e33b4806cace60ea9378446cd1d"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "barbell-squat",
+      "phaseRoleId": "trex.phase-role.full-cycle.v1",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 4,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-0e72876f7f9cfb21b1c7ddd249afad999d92c3d2e0467d40f9b5c1249b71ab3a",
+        "trex.annotation-template-sha256-462a9cdc8da74e34034cc6f75bfe9b8ae7d598cf940c24450409502ffa2d26f5",
+        "trex.annotation-template-sha256-5ac1cca06ed2b34d9872ac36d83403149132699d2cef74c85915760809381d78",
+        "trex.annotation-template-sha256-ccf9673c4e7c69f621173fc6ae7f3e6bd8abafb288726c7091fb2e7e1c7460f7"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "barbell-stiff-deadlift",
+      "phaseRoleId": "trex.phase-role.full-cycle.v1",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 2,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-17d5b82a29133c1b899b67e454b564cc4d8a560ba2cada4068a013d96853e22c",
+        "trex.annotation-template-sha256-bc515be27f105dd85822e6bb1323ff3baa41b648760a016da1be9daa3b7c4b5e"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "bicycle-crunch",
+      "phaseRoleId": "trex.phase-role.contracted-endpoint.v1",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 1,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-8f81bcacebac4af350126edbc4785894c5a31fa358c0597c8c06b5f2bbca8168"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "bicycle-crunch",
+      "phaseRoleId": "trex.phase-role.full-cycle.v1",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 1,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-0e96120e9f105050eae50fe128b7105c58e8a902ed633c31fefd4aae5609371d"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "burpee-test",
+      "phaseRoleId": "trex.phase-role.full-cycle.v1",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 3,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-18a08072aca40c42cf1e7d47b8c282cc56e266adf8499b7194adb945a312cb43",
+        "trex.annotation-template-sha256-3853229cbe187e4713c8a74c4b81a4457eacc29b1afbeeea4c414f2f5088af1e",
+        "trex.annotation-template-sha256-f69d629e07b7e703c56a4f9dddc884e195e01f0c23f9017b5055d4aa6aa3c139"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "burpee-test",
+      "phaseRoleId": "trex.phase-role.lengthened-endpoint.v1",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 1,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-2a2517a7fe413d564e21c1c831c0c189686cd1badc17db396184a4677fab31ac"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "burpee-test",
+      "phaseRoleId": "trex.phase-role.static-hold.v1",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 1,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-61ae8fcfe796b35b1a17dbf210306cbe7cc669623b69ce47885ea4f47dc2154c"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "cable-crunch",
+      "phaseRoleId": "trex.phase-role.contracted-endpoint.v1",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 4,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-474fc2814db8c127c3b76fdf1441bc01ada9b83d1aa57790629eb488f91d0b77",
+        "trex.annotation-template-sha256-5ef3976dd4a9ee300fb3ccd14ffe0740aa93d3fcc149e137803e81825c408d39",
+        "trex.annotation-template-sha256-8bc105bde3065bf6fa90df757897640ef2063a05516173c2b6ee02153617ed3f",
+        "trex.annotation-template-sha256-9d61090e364bb0db177fab5991bb9173bf441d048d0a754048903e5943d04e50"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "cable-crunch",
+      "phaseRoleId": "trex.phase-role.full-cycle.v1",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 5,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-5e4dd2ffbe1fe8b4eff57f60a7f4cf1446919d5b992eb91cb11bf56fd8290905",
+        "trex.annotation-template-sha256-72e28fdd42e5ce19710b0b76f6b621a874f7227221c2e0f1c3361bf2f76b174e",
+        "trex.annotation-template-sha256-a8557e7b92b891b1a5ce0f324c5da057ba749306dc7d357aec90a5d3decd74fe",
+        "trex.annotation-template-sha256-bc8ee92d5195136ae71ddf10ebd2aec04fff63e0e39bdc18c1e57ff841ad5ab1",
+        "trex.annotation-template-sha256-e546ebc1aa0a0ac03a54f4c289f44b29b832ffa38cff090fb9ef322b373a94e2"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "cable-push-down",
+      "phaseRoleId": "trex.phase-role.full-cycle.v1",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 2,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-297d5417c26ce3a74cf0362231f2de083c6d82ef544872d49d5f4455b1a92234",
+        "trex.annotation-template-sha256-2f2c3f801b5c258aabdb7472abc1a8a4ad13b36215b21a80ccce0caee6aa3544"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "cable-push-down",
+      "phaseRoleId": "trex.phase-role.lengthened-endpoint.v1",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 2,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-20e2e590b8c8b4f2aa41ce06a43cdd48fb207d3d057a2864a640a340d0d37d01",
+        "trex.annotation-template-sha256-a71d7788bd562995df985e822b382fec41d4845b1a1bb5cb910839baf7a2a693"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "cross-lunge",
+      "phaseRoleId": "trex.phase-role.full-cycle.v1",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 1,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-863318efd9bfe2d67c6f09ca8644c328ee3f1afb3229ee09f4aa11ac4b0e72e5"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "crunch",
+      "phaseRoleId": "trex.phase-role.contracted-endpoint.v1",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 2,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-2af77f765ef55d3e9835a8d44b47bc76544f7be308edc9fe37b3869f880c3e71",
+        "trex.annotation-template-sha256-a5d8a30034cf4c1aa1637fd08987e3c652a1e241b67fbcb311f226aa6d087adc"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "crunch",
+      "phaseRoleId": "trex.phase-role.full-cycle.v1",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 1,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-a95e92378d40c976442b9383022eeecdb2c66ae05542b48d0b82ee2cada8f78d"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "crunch",
+      "phaseRoleId": "trex.phase-role.lengthened-endpoint.v1",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 1,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-52a1db4eb2b106a005c990d9e7fabc450b3ce0f067cc932eb1c58d3132897934"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "dips",
+      "phaseRoleId": "trex.phase-role.contracted-endpoint.v1",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 1,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-bbe168c328ec2af5b7c52c6307ffea28992126f7e454363eff401ab4c6da3b6d"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "dips",
+      "phaseRoleId": "trex.phase-role.full-cycle.v1",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 2,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-1c6e06e6123b7ffca4fd4dc6464e869f0774ac8c8e261255998cb242b66ca17a",
+        "trex.annotation-template-sha256-7dd92bfa0ee19ddd257c2b56a17ceae08b27a99a4f80b6e6ae6251dd13ea1791"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "dips",
+      "phaseRoleId": "trex.phase-role.lengthened-endpoint.v1",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 8,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-0a873de269f7be4928e18f29bd4da6c930c78ced5886f0244f5688a22cb0f025",
+        "trex.annotation-template-sha256-2736887cd54a0c1f371a816b1bd54cf681b90ff789c150915a8c3df82d153b9d",
+        "trex.annotation-template-sha256-4bd556fad8e2b061c4b19aa26280444e5f96b86c76758d65e9e59876e2d3cba7",
+        "trex.annotation-template-sha256-52323c10cfe77a3963c1966ba24155a922e20355f7a05e82fbd957e8476b1af6",
+        "trex.annotation-template-sha256-b85c26e2def47bab84f88b24596598306e51b0c072245a7938d2dd10d3d9dacc",
+        "trex.annotation-template-sha256-c4cd2d33f8247318287b7fe1a3e5fe5bfd233fe267e75a0c5fca49309d0b5b15",
+        "trex.annotation-template-sha256-d0c4cdcd7ad5dcfc822b8e3050c1c3d252ed7f37f3c7b2ae2dcf46ef02d61585",
+        "trex.annotation-template-sha256-ec2e721a30701115e29eeab0c467ba6415b453c2f1e82b1b5798779e27d29bf4"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "dumbbell-bent-over-row",
+      "phaseRoleId": "trex.phase-role.full-cycle.v1",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 3,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-5cdfac9fcbc4158f7c66ca8a2b99495ce6b4bf876aa438059de47a7132b0dc7f",
+        "trex.annotation-template-sha256-bc362e3b57d232372ed6ce516a24786275edfb164d8927d9ee6ddaa7ab16dcaf",
+        "trex.annotation-template-sha256-f8c31c23949bdadfd109319792a6399d6ecf2f19542037cee7090ecf9199739f"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "dumbbell-chest-fly",
+      "phaseRoleId": "trex.phase-role.full-cycle.v1",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 2,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-42c3d4a18a5d23386fe2652dbc378d31e2ba77b3281ff73f7d4f1c686251cab8",
+        "trex.annotation-template-sha256-f280c48ae67234d0efcfec06f205a275f7d942a78c469b28714e2da593a009b1"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "dumbbell-chest-fly",
+      "phaseRoleId": "trex.phase-role.lengthened-endpoint.v1",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 2,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-42bde2d7de678f4477e7139956b82e454fc304f087c7da6797c22f9614f7c830",
+        "trex.annotation-template-sha256-9005e13f6af543e0b5b918e16dbd36a7f66f29cd2a6ff108ef72dece2568d197"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "dumbbell-curl",
+      "phaseRoleId": "trex.phase-role.contracted-endpoint.v1",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 5,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-02d591749f1fb01b8e82767691b040c38e4a4acdc37e008435f34be7bd11e57e",
+        "trex.annotation-template-sha256-80e93acfbef955cb886c8e47daaabf0951c785df4ed84a6abcb5eb19f7c4463d",
+        "trex.annotation-template-sha256-9229693d22c0edce815363479d98ded6dc13d0829c672ac7cbf13a9d3e31b5cd",
+        "trex.annotation-template-sha256-a58aac2f0b884adb6e53395de3dd386c1e8836da528463455e7a842e89ac5306",
+        "trex.annotation-template-sha256-b7906bc2c8e49f9298e7b092bf3a0c5a68970e25f8c0cc3c3fb83d0902a6d1e9"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "dumbbell-curl",
+      "phaseRoleId": "trex.phase-role.full-cycle.v1",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 2,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-011450e3bc7ac35186f161e7237a2bf86927495c58a5e5c25ce8731767c9f797",
+        "trex.annotation-template-sha256-19deb5fa7993c5db835265be34eb36c7192ec35d8e824b16d75b7bee31bb628f"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "dumbbell-curl",
+      "phaseRoleId": "trex.phase-role.lengthened-endpoint.v1",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 2,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-c75a3d3dd496db2b9ec20fbff3e1e36f70400c8a4e7aa72b3a0175b1292f6f4e",
+        "trex.annotation-template-sha256-d6bdb959b25e74e752755c8280961645751d9f8e528aeb619813926f33637361"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "dumbbell-incline-chest-fly",
+      "phaseRoleId": "trex.phase-role.contracted-endpoint.v1",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 3,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-22f17848fe73da9afc2c95241cd60d464f4df1bb6b1a8dcd8c2eebbd10f58e82",
+        "trex.annotation-template-sha256-6b2a64626f632dc2f59edb02c59d33a98ac58aef35583f293ee1e2c3f9b1a9d0",
+        "trex.annotation-template-sha256-7fddcb8029ce5a29bbd81e9e541f839602f55ae5de6ada1555a2e2a8bd078457"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "dumbbell-incline-chest-fly",
+      "phaseRoleId": "trex.phase-role.full-cycle.v1",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 1,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-f1a71fe69cf250170641fc231ad4dec1c2bf732e2321bb087f8714088ac681f6"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "dumbbell-pullover",
+      "phaseRoleId": "trex.phase-role.contracted-endpoint.v1",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 5,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-0d38a7aeedf62333039909f54499933ddbea9e51bb58eaec8a01df5373837519",
+        "trex.annotation-template-sha256-2538314b61548a375cdb9ed8f718f6d9356676e27e1f758a33dd0e388dc1fa22",
+        "trex.annotation-template-sha256-56ff5fb882919d7f04153f6ca5347147f8413bf1d642fc05834bb04227fc68da",
+        "trex.annotation-template-sha256-7298165fb60ca9c1ca406faa7c7d3671fb76ef05787f410ea78b0d1fdeb81ac5",
+        "trex.annotation-template-sha256-f97eb9ce3548f56e6110f813b15acfd0665b1ad841b47bce3998de82dd0f8325"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "dumbbell-pullover",
+      "phaseRoleId": "trex.phase-role.full-cycle.v1",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 5,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-031b6e54486708a436641db0d3ede2f3ee8e4cd2e17a5f166d0e046db34f33c7",
+        "trex.annotation-template-sha256-41bcf52bf50c3e500f9a36776fe55740c1b2feba1688a5edc105bb05ba7a95c9",
+        "trex.annotation-template-sha256-44afffe203397315252605338d5b1a6a148b209899b6d799c7669c2032f52a56",
+        "trex.annotation-template-sha256-567a168327a17dc743569324fe4a8fc2ba2699381d436ee6a74e1914867397b2",
+        "trex.annotation-template-sha256-f5151e310742d9795ad83d1ee042145c9e5a43971c256e420dba25cde63f9f1e"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "face-pull",
+      "phaseRoleId": "trex.phase-role.contracted-endpoint.v1",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 3,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-1412578e6a779d3796fbe4210508e92edf5144ef06b3eff1acb383e92c42ac68",
+        "trex.annotation-template-sha256-22b50d07d039a3fbe9b7fd7389f7da7ca45722dd022345cf983f31c79aee8ec1",
+        "trex.annotation-template-sha256-513b08b4027a8b9605312f4c8c236df652500285b2fc1bdbc88cd85f565c819f"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "front-raise",
+      "phaseRoleId": "trex.phase-role.full-cycle.v1",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 3,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-2a111b0510ad28993dfc8d5eba81a07c8595eb7387ee87bbd671cffb60be36e4",
+        "trex.annotation-template-sha256-514afc3300caba14fc227fe6eab777e1b8e219e57c67926efbc8742a5281139a",
+        "trex.annotation-template-sha256-a6fc0f37110241e2ede63e5495f2fdb5005399e04be366eed430e7a92052d187"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "good-morning",
+      "phaseRoleId": "trex.phase-role.full-cycle.v1",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 1,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-304d88841de06ddc77aba0d65c7e815ff63a40730af49ff59c115ded58fba809"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "hanging-leg-raise",
+      "phaseRoleId": "trex.phase-role.full-cycle.v1",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 1,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-1b688d9078990086629bb87e1214600d097d93f6e987bc4088f6be59f6ffbb92"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "hanging-leg-raise",
+      "phaseRoleId": "trex.phase-role.lengthened-endpoint.v1",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 1,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-74592f916566645ffcf39efa7f8004c64c34efea67a6d8985f4e4f9fa171fcd8"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "hip-thrust",
+      "phaseRoleId": "trex.phase-role.contracted-endpoint.v1",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 1,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-f842da415153b298575aaf6b16783135f94d179653a179e121ae4ceefb04c798"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "hip-thrust",
+      "phaseRoleId": "trex.phase-role.full-cycle.v1",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 1,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-6b5ddf9c87b49aa5bf2b8412f28f2cf7dbe9bd3c3c915ce166c36656dd1cdff7"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "hip-thrust",
+      "phaseRoleId": "trex.phase-role.lengthened-endpoint.v1",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 2,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-54df304d4fe311de04dd7d2d47876393f5948fa689cf5033742308d83cf9d25a",
+        "trex.annotation-template-sha256-e0af861f7d30f539329ed62095fd2ed5522bf67719462c304a7c0290343b5cd5"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "knee-push-up",
+      "phaseRoleId": "trex.phase-role.full-cycle.v1",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 3,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-43d254b1b954aa8cb0765be7553cf029004994a898b6ad90655feb6560154507",
+        "trex.annotation-template-sha256-abb0625042aba48388b52bf8ebc602c450f8f3dd9417dbca9df20ad176b88044",
+        "trex.annotation-template-sha256-ca445fc8736536ffc31d2d7bd42b1733836cbd60725ccdaee45fd7ab68c187a1"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "knee-push-up",
+      "phaseRoleId": "trex.phase-role.lengthened-endpoint.v1",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 1,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-e197b336b9f8d3afd34da3a22278f958e715300187522f9dce8be77e5dbc5e87"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "lat-pulldown",
+      "phaseRoleId": "trex.phase-role.contracted-endpoint.v1",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 2,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-9fa3c8c5d05fa73fade5d13922906b642d5e50b8cbf7084fd31a0b3df6b0f152",
+        "trex.annotation-template-sha256-a5212f1aa977a9e23902fd983a80f2dad3d35d69c770b21d8f3847f7929d6c39"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "lat-pulldown",
+      "phaseRoleId": "trex.phase-role.full-cycle.v1",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 2,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-4517966943313b9efd54a60dbbb78dbf21cc1863fef79e1fbaa7981351b7d40b",
+        "trex.annotation-template-sha256-f2598af1bd228d065714a30d7f3ba2d7b953c05a23e0d290c389d953f72df643"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "lat-pulldown",
+      "phaseRoleId": "trex.phase-role.lengthened-endpoint.v1",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 3,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-b9d66068c6bc23668f4b1adbdd1115d02b158be961222bf4c5407191ead19ab2",
+        "trex.annotation-template-sha256-d2bd4bae16f86eca01f063dbfe5956c5720fd3f2b3cb0e48ef5fc355d86ac828",
+        "trex.annotation-template-sha256-d7283fe42f9439268c838daf47fed3cd38b98d3c04f44f78b974bbdfa0cc46ca"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "lying-leg-raise",
+      "phaseRoleId": "trex.phase-role.full-cycle.v1",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 1,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-e5102c8813619bc637ef2d998155b16608b9dccf5c9ae18a5a5805e633108f1e"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "lying-leg-raise",
+      "phaseRoleId": "trex.phase-role.lengthened-endpoint.v1",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 6,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-01c1bf457e5e4630207542707897c79a222a864454bf72d2b55dd5f845c3042a",
+        "trex.annotation-template-sha256-2adcbd6de5e40d2bdc0c89efcfbae8bf66aacbd2a5e7f79e227faa32cdcc6d4a",
+        "trex.annotation-template-sha256-664bf2d69e282654ca1e1b62add3de2a9127b789e7217f351f535e68d0eb1f14",
+        "trex.annotation-template-sha256-923e513e2c6421340fc6749d29af2b26ecb6d311c606cea67c8501700624fc55",
+        "trex.annotation-template-sha256-e562beb373959ccaf56c72d8f3fdb2798460494425a64cd19d0bd42c7b3c3203",
+        "trex.annotation-template-sha256-eb1fdb93e7536c23a3eaffd54d37eb3ffcf8a866118dc6df97f48a9c5e646c8d"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "lying-triceps-extension",
+      "phaseRoleId": "trex.phase-role.full-cycle.v1",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 2,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-629f2cdb529dbe267b7f54646d20b62076a3a83fa4bb0dd18d1e691d1fa4e436",
+        "trex.annotation-template-sha256-bd97647df69937cb0a4632d756363ed278327007eb1105a91b8dafefbbb78c3d"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "lying-triceps-extension",
+      "phaseRoleId": "trex.phase-role.lengthened-endpoint.v1",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 6,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-318750fe216e6352ccbd2a7656c45e803cd659a48ccdfa7e5052804bc07fc2b9",
+        "trex.annotation-template-sha256-3fa63847780a83a0727d593397351abe104f8c15ebd6c24f905b436e831671cd",
+        "trex.annotation-template-sha256-69544ea3afd9512ae27365dd8b165af5bbaac82a5fa4efcdf8c1b4099cc6ef79",
+        "trex.annotation-template-sha256-abccac1926fd1beda1a823e3df8b90e35e86b8d2323b852d3d438f41bccff1bd",
+        "trex.annotation-template-sha256-e1e1da33e474bc21b92e7f64d3b039d4e455cc6671fd3c3da26678e93358a64f",
+        "trex.annotation-template-sha256-e26f5481511cd02394acc883d12a1bb7bc9150248fc3ff9b00fe24b6dbbf0a9b"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "overhead-press",
+      "phaseRoleId": "trex.phase-role.full-cycle.v1",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 3,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-861deb4d6605fed7667b1fe2726592bc1af8d1afe6db6bc8fe3b556cee84293d",
+        "trex.annotation-template-sha256-ab841dc2800d8defa2620708abe1d280b239b3e812d56444e7a5c98a71381643",
+        "trex.annotation-template-sha256-d99f42c850933a92dc407d4fd14aec8a2d96738580f65cb83f6c6a294fe452f2"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "plank",
+      "phaseRoleId": "trex.phase-role.static-hold.v1",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 1,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-96ceb3cdf86365bafaec200cf26aab5aab75609c7459958bebbafbe8ebebfd8f"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "pull-up",
+      "phaseRoleId": "trex.phase-role.contracted-endpoint.v1",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 2,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-7e3502371d530b84fc636a759ad6b9160d83e10551439b3dbea8d358292d21c9",
+        "trex.annotation-template-sha256-8cf23be906b04150e00e329a683df5f7f830d51c9a45a345f9f5a93bf9428bd2"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "pull-up",
+      "phaseRoleId": "trex.phase-role.full-cycle.v1",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 2,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-5203e93b7462cfd382ea9313b77029ec110d0759932ba8ba55ecc15bde660406",
+        "trex.annotation-template-sha256-9adb01f65b9724d147f08dace1db3e8e3356177c6f7659dc3b6442c8a1bedf92"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "pull-up",
+      "phaseRoleId": "trex.phase-role.lengthened-endpoint.v1",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 2,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-b5b49346497ba383692ba1490d62142570ed85191ff7db857865f8f6efbcea80",
+        "trex.annotation-template-sha256-c51ee23497669468c5a8eec001924a2ff31f52df9f650773d076af96af3db6b0"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "push-up",
+      "phaseRoleId": "trex.phase-role.full-cycle.v1",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 3,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-43f7468e8b183727d86c5be7e077bd91a0d1ce4be6e65690357b86d5f59e17c1",
+        "trex.annotation-template-sha256-7962512656b6f0bc14201f14e6fe3eac0f8d2755b6f1df7e256526ef715648af",
+        "trex.annotation-template-sha256-a6ae303a0fe9b4ee9b9063be86e000679a3107ad7b3f092f694a1885e60dc9c0"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "push-up",
+      "phaseRoleId": "trex.phase-role.lengthened-endpoint.v1",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 2,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-ca32f955f784d98d355020847a390ca2151c4054f50adb3b8952775e435e5541",
+        "trex.annotation-template-sha256-f8bb87da06d3cf6ce8a62e77e2c4a8ea3dbd9b9af0326b79380cb321ea50bfab"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "rowing-machine",
+      "phaseRoleId": "trex.phase-role.compound-transition.v1",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 4,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-0aaf282f5cd3d32e9551e4a8fd548bea8e455c93f0f2e5c6e94191e23de23a02",
+        "trex.annotation-template-sha256-39bef7ae0b6399130376d706547cda0bca06cf2c76bd9013256cbbee3f719a11",
+        "trex.annotation-template-sha256-3a507b2fa300ccd5226ba0658071c4159a04507d3a7a1dbeb2c6a3e52e29f7b7",
+        "trex.annotation-template-sha256-e667cb56f176e5671f1a2a212ecc2743ee7d7359bf623ddef07a4b1001916838"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "rowing-machine",
+      "phaseRoleId": "trex.phase-role.full-cycle.v1",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 1,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-6f4ec83c40cbf38f96348a198b63f6caed847f179258180403e18e13c6558894"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "scissor-cross",
+      "phaseRoleId": "trex.phase-role.contracted-endpoint.v1",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 2,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-99f224d420a8a245dd4ef72038b09f520cc9de261ba4eda113aebed6cdddd6ad",
+        "trex.annotation-template-sha256-a4cee1ebeedbf9249b4e8156c240316e3ac6f50e3729fa374d129f854b6f191d"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "scissor-cross",
+      "phaseRoleId": "trex.phase-role.full-cycle.v1",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 9,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-1d76ed8d15e8bd235b5501397859aced8ac0e3722150b9225ac8fbee9c9cb3ce",
+        "trex.annotation-template-sha256-261da88ac950f0ad1b9e33b6baf10f991a5118be74d461b5763941b3f812915f",
+        "trex.annotation-template-sha256-2d588cc7651f14b9567a368f1cb75471e03ab9ace8b9ff6a94cd09261b7f5462",
+        "trex.annotation-template-sha256-2e1bc6c6ea6d0f4d1f703103b97e3519faee8aaaace2a653a491819de545f7e7",
+        "trex.annotation-template-sha256-4b1af94ff79330edeaac493f975bcf1d9b4b8c603077bf6d45a7119b4da5ba98",
+        "trex.annotation-template-sha256-4cb528ec48f81b2d0246449a02aa1614e148e8ee73ebe4feb1b00a1e944cffad",
+        "trex.annotation-template-sha256-606904d8f29fb94a73f7df33806155fdbca7b09ace5004f40887b76cf70ac25c",
+        "trex.annotation-template-sha256-834f2ed3b4204e0f6635cc4c5eb43337c2d461d76e3d8c3d9e1b2cdf5e700e97",
+        "trex.annotation-template-sha256-f3b79edfac1321a3ab6b9fbf79c527877ff45a9058169b4417a6d284c59ba68b"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "side-lateral-raise",
+      "phaseRoleId": "trex.phase-role.full-cycle.v1",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 3,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-5e058c3afcf6389f91c4fdf1bac1b0a3b66f67ccefeb1a37c4f3c5ce31982537",
+        "trex.annotation-template-sha256-7ad602ee3e365456f443f5f8bdc11c664574ab2147fa7bdb6e9562f58a63eaf3",
+        "trex.annotation-template-sha256-81a9bcb7f49bdf4cbbacc2f331c2e7cf1ec65b52375f28cdddd09b75417242e3"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "side-lunge",
+      "phaseRoleId": "trex.phase-role.full-cycle.v1",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 2,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-922347e96fe45056cdf2ca88322d31aaca6c70eb864ad1bc7314c8ac45fe6872",
+        "trex.annotation-template-sha256-f845e1da3a5c4870cb47fe0ad9444cb547db92e300c9510b904f1bf9566cc943"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "standing-knee-up",
+      "phaseRoleId": "trex.phase-role.full-cycle.v1",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 1,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-463d7e3ea3cfdfc898c3cb2e4cd84891473ce739663d1e99d1fdbe90ca49f3ec"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "standing-knee-up",
+      "phaseRoleId": "trex.phase-role.lengthened-endpoint.v1",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 2,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-71f3353af31a6b526a6ed3ed3e2fae1bc5c17f44703bd5010410de15954cc324",
+        "trex.annotation-template-sha256-77a27dbc34024ae34794a4f9ef4514f3e1c0267766bb515c39696a634defa623"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "standing-side-crunch",
+      "phaseRoleId": "trex.phase-role.contracted-endpoint.v1",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 3,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-9e5f48889be3c53c6b6484502bf36d3acad184378c65d557c426e18d5ef2aa42",
+        "trex.annotation-template-sha256-d738297ce48267b0f8d83d1bd93be83cd79f318d1549884be267eba8dc843671",
+        "trex.annotation-template-sha256-f1270a7f83a3cca600ec223402e629d72a7af5b3d2790360a471e1df0f8efe34"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "standing-side-crunch",
+      "phaseRoleId": "trex.phase-role.full-cycle.v1",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 3,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-8c29df635f3199374bd61a1a15e99b3f418e7b3d25e0be38914ae9e6ba329533",
+        "trex.annotation-template-sha256-d3484f35b1fa1ab9f04890dab52f99c575ba0a53ea75269ec06885c916c86009",
+        "trex.annotation-template-sha256-fe0793fbad3cd27d2b7b0928aa2e5b6ed3d8e30e235593a3eea73b836ac58974"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "step-backward-dynamic-lunge",
+      "phaseRoleId": "trex.phase-role.full-cycle.v1",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 1,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-dd0aa5af14f325af2fc3108633cdeb2a5433a4ad56e7de981a7dd9987f0eaf14"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "step-backward-dynamic-lunge",
+      "phaseRoleId": "trex.phase-role.lengthened-endpoint.v1",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 3,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-208da798f56da5337e31b267d0ea95da174da46637a754a4cab5764d1e8fce6f",
+        "trex.annotation-template-sha256-4a31b03ffb2085fb944d1aadd2130254de393ae3a8edd2b97571e86017d0ccd7",
+        "trex.annotation-template-sha256-9e68342255f835f82e64713d951e10c224c4418b7851d0514706113aeb1fda39"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "step-forward-dynamic-lunge",
+      "phaseRoleId": "trex.phase-role.full-cycle.v1",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 1,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-fa8aeab4c334db5465b3f0cb47278a05cfb787b9e0bec873b08e7dae36c97a36"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "step-forward-dynamic-lunge",
+      "phaseRoleId": "trex.phase-role.lengthened-endpoint.v1",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 2,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-19cba3d900c3abe90898e0c68ce3af4d63f012f0518c50e5a82acc1a7c82312f",
+        "trex.annotation-template-sha256-3944315ef8eefe900b3ec8887315837e9c325cdfe0038c22b85e0c1f3dc8fb29"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "upright-row",
+      "phaseRoleId": "trex.phase-role.concentric.v1",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 3,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-132fbc93d00e2610932646e15182f13f18c130c45386f2ede4f5ecee6667c7e7",
+        "trex.annotation-template-sha256-21928c9bd7f5acbff6c950dfcaf82f07d981c708c7d12492495a53c42418fbe1",
+        "trex.annotation-template-sha256-ab2511a061b5c687c622ff743bda74f908d9510a335c546e0b57db64d52886f9"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "upright-row",
+      "phaseRoleId": "trex.phase-role.full-cycle.v1",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 3,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-08bffa1c4eba711d665dfe1d21a61e6ded383059e1095c1c431ffd449aa0a2b5",
+        "trex.annotation-template-sha256-c01c41987a9b420f79aba16b2859cbd4bce161498c82405e6196f3da65bda26a",
+        "trex.annotation-template-sha256-f6555033b12cb546d816c44e695053bf5e6a03d2a0d445b632122f12c5fa0900"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "y-exercise",
+      "phaseRoleId": "trex.phase-role.contracted-endpoint.v1",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 1,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-157fb18ddfdd45b96886e5016c39db2c48cadcb8bfe8dbffb31868003010f654"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "y-exercise",
+      "phaseRoleId": "trex.phase-role.full-cycle.v1",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "trustRegistryArtifactSha256": null
+    }
+  ],
+  "requirementCoverage": {
+    "annotationDecisionTemplateCount": 203,
+    "orphanRequirementCount": 0,
+    "phaseCoveredTemplateCount": 203,
+    "phaseUncoveredTemplateCount": 0,
+    "resolverCoveredTemplateCount": 18,
+    "resolverUncoveredTemplateCount": 0,
+    "roleRelativeAnnotationDecisionTemplateCount": 18,
+    "unresolvedBindingCount": 19,
+    "unresolvedBindingGeneratedRequirementCount": 0
+  },
+  "requirementStateContract": {
+    "currentPermittedRequirementStates": [
+      "PENDING_TRUSTED_ARTIFACT"
+    ],
+    "phaseCandidateFieldsRequiredNull": [
+      "approverId",
+      "candidateArtifactSha256",
+      "detachedSignatureEnvelope",
+      "trustRegistryArtifactSha256"
+    ],
+    "positiveApprovalStates": [],
+    "repositoryHashIsApproval": false,
+    "resolverCandidateFieldsRequiredNull": [
+      "anatomicalAssignment",
+      "approverId",
+      "candidateArtifactSha256",
+      "detachedSignatureEnvelope",
+      "trustRegistryArtifactSha256"
+    ],
+    "selfIssuedApprovalAllowed": false
+  },
+  "schemaVersion": 1,
+  "sideResolverRequirements": [
+    {
+      "anatomicalAssignment": null,
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 2,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-6c3bab77384be7ceae82215d2b71e37714077acb84ba3a7785921602da5a7ae2",
+        "trex.annotation-template-sha256-a94d5cfbf0d2be0663168a9341db6ebe1c2d54ad576a2fdb66e79a5b6157d150"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "barbell-lunge",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "roleResolverContractId": "trex.role-resolver.barbell-lunge.lead-limb.v1",
+      "sidePolicyKind": "LEAD_LIMB",
+      "symbolicSlots": [
+        "LEAD_LIMB"
+      ],
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "anatomicalAssignment": null,
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 1,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-01446d725bb95a3ffcba0991f167d372071f6cbc1277d326eb92d47e09e4fbb9"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "barbell-lunge",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "roleResolverContractId": "trex.role-resolver.barbell-lunge.trail-limb.v1",
+      "sidePolicyKind": "TRAIL_LIMB",
+      "symbolicSlots": [
+        "TRAIL_LIMB"
+      ],
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "anatomicalAssignment": null,
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 1,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-bc515be27f105dd85822e6bb1323ff3baa41b648760a016da1be9daa3b7c4b5e"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "bicycle-crunch",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "roleResolverContractId": "trex.role-resolver.bicycle-crunch.active-limb.v1",
+      "sidePolicyKind": "ACTIVE_LIMB",
+      "symbolicSlots": [
+        "ACTIVE_LIMB"
+      ],
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "anatomicalAssignment": null,
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 2,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-20e2e590b8c8b4f2aa41ce06a43cdd48fb207d3d057a2864a640a340d0d37d01",
+        "trex.annotation-template-sha256-a71d7788bd562995df985e822b382fec41d4845b1a1bb5cb910839baf7a2a693"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "cross-lunge",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "roleResolverContractId": "trex.role-resolver.cross-lunge.lead-limb.v1",
+      "sidePolicyKind": "LEAD_LIMB",
+      "symbolicSlots": [
+        "LEAD_LIMB"
+      ],
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "anatomicalAssignment": null,
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 1,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-6f4ec83c40cbf38f96348a198b63f6caed847f179258180403e18e13c6558894"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "scissor-cross",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "roleResolverContractId": "trex.role-resolver.scissor-cross.alternating-pair.v1",
+      "sidePolicyKind": "ALTERNATING_PAIR",
+      "symbolicSlots": [
+        "ALTERNATING_PAIR"
+      ],
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "anatomicalAssignment": null,
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 2,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-5e058c3afcf6389f91c4fdf1bac1b0a3b66f67ccefeb1a37c4f3c5ce31982537",
+        "trex.annotation-template-sha256-81a9bcb7f49bdf4cbbacc2f331c2e7cf1ec65b52375f28cdddd09b75417242e3"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "side-lunge",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "roleResolverContractId": "trex.role-resolver.side-lunge.lead-limb.v1",
+      "sidePolicyKind": "LEAD_LIMB",
+      "symbolicSlots": [
+        "LEAD_LIMB"
+      ],
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "anatomicalAssignment": null,
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 1,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-463d7e3ea3cfdfc898c3cb2e4cd84891473ce739663d1e99d1fdbe90ca49f3ec"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "standing-knee-up",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "roleResolverContractId": "trex.role-resolver.standing-knee-up.active-limb.v1",
+      "sidePolicyKind": "ACTIVE_LIMB",
+      "symbolicSlots": [
+        "ACTIVE_LIMB"
+      ],
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "anatomicalAssignment": null,
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 1,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-71f3353af31a6b526a6ed3ed3e2fae1bc5c17f44703bd5010410de15954cc324"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "standing-side-crunch",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "roleResolverContractId": "trex.role-resolver.standing-side-crunch.active-limb.v1",
+      "sidePolicyKind": "ACTIVE_LIMB",
+      "symbolicSlots": [
+        "ACTIVE_LIMB"
+      ],
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "anatomicalAssignment": null,
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 1,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-77a27dbc34024ae34794a4f9ef4514f3e1c0267766bb515c39696a634defa623"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "standing-side-crunch",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "roleResolverContractId": "trex.role-resolver.standing-side-crunch.contralateral-pair.v1",
+      "sidePolicyKind": "CONTRALATERAL_PAIR",
+      "symbolicSlots": [
+        "CONTRALATERAL_PAIR"
+      ],
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "anatomicalAssignment": null,
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 2,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-8c29df635f3199374bd61a1a15e99b3f418e7b3d25e0be38914ae9e6ba329533",
+        "trex.annotation-template-sha256-d3484f35b1fa1ab9f04890dab52f99c575ba0a53ea75269ec06885c916c86009"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "step-backward-dynamic-lunge",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "roleResolverContractId": "trex.role-resolver.step-backward-dynamic-lunge.lead-limb.v1",
+      "sidePolicyKind": "LEAD_LIMB",
+      "symbolicSlots": [
+        "LEAD_LIMB"
+      ],
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "anatomicalAssignment": null,
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 1,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-dd0aa5af14f325af2fc3108633cdeb2a5433a4ad56e7de981a7dd9987f0eaf14"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "step-backward-dynamic-lunge",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "roleResolverContractId": "trex.role-resolver.step-backward-dynamic-lunge.trail-limb.v1",
+      "sidePolicyKind": "TRAIL_LIMB",
+      "symbolicSlots": [
+        "TRAIL_LIMB"
+      ],
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "anatomicalAssignment": null,
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 2,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-208da798f56da5337e31b267d0ea95da174da46637a754a4cab5764d1e8fce6f",
+        "trex.annotation-template-sha256-9e68342255f835f82e64713d951e10c224c4418b7851d0514706113aeb1fda39"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "step-forward-dynamic-lunge",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "roleResolverContractId": "trex.role-resolver.step-forward-dynamic-lunge.lead-limb.v1",
+      "sidePolicyKind": "LEAD_LIMB",
+      "symbolicSlots": [
+        "LEAD_LIMB"
+      ],
+      "trustRegistryArtifactSha256": null
+    },
+    {
+      "anatomicalAssignment": null,
+      "approverId": null,
+      "candidateArtifactSha256": null,
+      "coveredTemplateCount": 1,
+      "coveredTemplateIds": [
+        "trex.annotation-template-sha256-fa8aeab4c334db5465b3f0cb47278a05cfb787b9e0bec873b08e7dae36c97a36"
+      ],
+      "detachedSignatureEnvelope": null,
+      "exerciseId": "step-forward-dynamic-lunge",
+      "requirementState": "PENDING_TRUSTED_ARTIFACT",
+      "roleResolverContractId": "trex.role-resolver.step-forward-dynamic-lunge.trail-limb.v1",
+      "sidePolicyKind": "TRAIL_LIMB",
+      "symbolicSlots": [
+        "TRAIL_LIMB"
+      ],
+      "trustRegistryArtifactSha256": null
+    }
+  ]
+}

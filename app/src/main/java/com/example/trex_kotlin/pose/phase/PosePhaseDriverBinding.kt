@@ -99,7 +99,7 @@ internal fun phaseDriverArtifactSha256(
 ): String {
     val graph = engineConfig.graph
     val fields = mutableListOf(
-        "phaseDriverArtifactSchemaVersion" to "2",
+        "phaseDriverArtifactSchemaVersion" to "3",
         "featureContractId" to featureSpec.featureContractId,
         "featureSpecSha256" to featureSpec.featureSpecSha256,
         "featureCoordinateSpace" to featureSpec.coordinateSpace.name,
@@ -117,6 +117,7 @@ internal fun phaseDriverArtifactSha256(
         "unusableObservationGraceMs" to engineConfig.unusableObservationGraceMs.toString(),
         "maximumPhaseDurationMs" to engineConfig.maximumPhaseDurationMs.toString(),
         "maximumCycleDurationMs" to engineConfig.maximumCycleDurationMs.toString(),
+        "cycleScopeStartPolicy" to engineConfig.cycleScopeStartPolicy.name,
         "initialStateId" to graph.initialStateId.value,
     )
 

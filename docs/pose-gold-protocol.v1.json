@@ -1,0 +1,196 @@
+{
+  "artifactKind": "TREX_POSE_GOLD_PROTOCOL",
+  "artifactSha256": "dec8870a206fdeac132face2ca926e44ee87113b8cf6aa434241d69ae94552cb",
+  "authority": {
+    "calibrationAuthority": 0,
+    "cueAuthority": 0,
+    "phaseDecoderAuthority": 0,
+    "releaseAuthority": 0,
+    "repCountAuthority": 0,
+    "runtimeProviderAuthority": 0,
+    "scoreAuthority": 0,
+    "shadowAuthority": 0,
+    "userPassFailUnknownAuthority": 0
+  },
+  "canonicalization": {
+    "artifactHashAlgorithm": "SHA-256",
+    "artifactHashInput": "RFC8259_JSON_WITH_TOP_LEVEL_ARTIFACT_SHA256_REMOVED",
+    "artifactHashSerialization": "UTF8_SORTED_KEYS_COMPACT_NO_TRAILING_NEWLINE",
+    "fileSerialization": "UTF8_PRETTY_2_SPACES_LF_FINAL_NEWLINE",
+    "nonFiniteNumbersAllowed": false,
+    "unicodeNormalization": "NFC"
+  },
+  "criterionGoldContract": {
+    "adjudicatedStates": [
+      "CONDITION_SATISFIED",
+      "CONDITION_VIOLATED",
+      "UNKNOWN_GOLD",
+      "NOT_OBSERVABLE"
+    ],
+    "blindToAiHubTruthVector": true,
+    "blindToCandidateFeatureAndThreshold": true,
+    "exactBindingKeyFields": [
+      "exerciseId",
+      "sourceConditionId",
+      "bindingId",
+      "bindingPolicySha256",
+      "policyRegistrySha256"
+    ],
+    "measurementConstructAndClaimBoundaryRequired": true,
+    "missingRequiredCapabilityState": "UNKNOWN_GOLD_OR_NOT_OBSERVABLE_AS_PREDECLARED_BY_STUDY_PLAN",
+    "phaseAndViewApplicabilityRequired": true,
+    "proxyAndNamedAnatomicalConstructMustRemainDistinct": true,
+    "sideRoleRequired": true
+  },
+  "decisionUse": "STRICT_EVIDENCE_INTAKE_CONTRACT_ONLY_NOT_CALIBRATION_RUNTIME_OR_RELEASE_AUTHORITY",
+  "geometryContract": {
+    "captureGeometryFieldsRequired": [
+      "sourceImageSize",
+      "cropRectangleHalfOpen",
+      "inputRotationDegrees",
+      "uprightOutputImageSize",
+      "inferencePixelsMirrored",
+      "displayMirrored"
+    ],
+    "geometryChangeStartsNewCaptureGroup": true,
+    "geometryContextArtifactSha256Required": true,
+    "preprocessingArtifactSha256Required": true,
+    "productionCameraPipelineRequiredForRealEvidence": true
+  },
+  "phaseGoldContract": {
+    "activeMaskMayBeUsedAsPhaseGold": false,
+    "boundaryUncertaintyMustBePreserved": true,
+    "cycleIntervalConvention": "START_INCLUSIVE_END_EXCLUSIVE",
+    "cycleScopeStartPolicy": "FIRST_TRANSITION_BOUNDARY",
+    "futureDerivedSurrogateMayBeUsedAsGold": false,
+    "invalidOrIncompleteCycleState": "UNKNOWN_GOLD",
+    "phaseIntervalsMustBeMonotonicNonOverlappingAndContiguous": true,
+    "studyPlanMustDeclareExactOrderedTopology": true,
+    "timestampGapDisposition": "INVALIDATE_CYCLE_AS_UNKNOWN_GOLD_NO_INTERPOLATION",
+    "timestampGapMustNotBeInterpolatedAcross": true
+  },
+  "privacyContract": {
+    "androidAppPersistenceAllowed": false,
+    "publicReceiptAllowedContent": "AGGREGATE_COUNTS_ROOT_ARTIFACT_IDENTITIES_AND_READINESS_ONLY",
+    "publicReceiptForbiddenFields": [
+      "ABSOLUTE_PATH",
+      "CAPTURE_OR_PARTICIPANT_PSEUDONYM",
+      "LEAF_CONTENT_HASH",
+      "FRAME_OR_CAPTURE_TIMESTAMP",
+      "LANDMARK_OR_TRAJECTORY_VALUE",
+      "RAW_MEDIA_REFERENCE",
+      "REVIEWER_OR_CONSENT_IDENTIFIER"
+    ],
+    "rawMediaOrPoseGitPersistenceAllowed": false,
+    "realEvidenceProcessingMode": "OFFLINE_RESTRICTED_WORKSPACE_ONLY",
+    "restrictedBundleMayBePackagedInAndroidAssets": false
+  },
+  "protocolId": "trex.pose-gold-protocol.v1",
+  "referenceEvidenceContract": {
+    "allowedReferenceModalityIds": [
+      "BLINDED_EXPERT_MEDIA_REVIEW",
+      "SYNCHRONIZED_ATTESTED_CONTACT_OR_FORCE_SENSOR",
+      "SYNCHRONIZED_ATTESTED_EMG_SENSOR",
+      "SYNCHRONIZED_CALIBRATED_MULTI_VIEW",
+      "SYNCHRONIZED_MOTION_CAPTURE"
+    ],
+    "clockAlignmentArtifactRequiredForPairedTimeSeries": true,
+    "referenceModalityMustBePredeclaredByStudyPlan": true,
+    "runtimeCandidateDerivedReferenceAllowed": false
+  },
+  "restrictedBundleContract": {
+    "bundleManifestMustDeclareEvidenceClass": true,
+    "evidenceClassValues": [
+      "REAL_RESTRICTED_GOLD",
+      "SYNTHETIC_CONFORMANCE"
+    ],
+    "fileCount": 6,
+    "files": [
+      "bundle-manifest.json",
+      "capture-groups.jsonl",
+      "observations.jsonl",
+      "blind-reviews.jsonl",
+      "adjudications.jsonl",
+      "split-manifest.json"
+    ],
+    "regularSourceRelativeFilesOnly": true,
+    "symlinksAndReparsePointsAllowed": false,
+    "undeclaredFilesAllowed": false
+  },
+  "reviewContract": {
+    "adjudicationMayInferMissingReview": false,
+    "disagreementResolution": "PRESERVE_UNKNOWN_GOLD_UNLESS_ALL_REQUIRED_REVIEWS_COMPLETE_AND_ADJUDICATION_RECORDED",
+    "minimumAgreementStatistic": "KRIPPENDORFF_ALPHA_GE_0_80_OR_UNKNOWN_GOLD",
+    "reviewerIdentityMayAppearInPublicReceipt": false,
+    "reviewersBlindToOtherReviewsUntilSubmission": true,
+    "reviewersBlindToRuntimeOutputThresholdAndSplit": true,
+    "reviewersPerAdjudicableUnit": 3
+  },
+  "rightsContract": {
+    "approvalTrustContract": {
+      "detachedSignaturesRequiredForPositiveApproval": true,
+      "minimumProtocolVersionForPositiveRealIntake": 2,
+      "pinnedTrustRegistryRequired": true,
+      "sha256PresenceAloneMayConferApproval": false,
+      "trustVerificationState": "NOT_IMPLEMENTED_IN_V1"
+    },
+    "realEvidenceIntakeAllowedInProtocolV1": false,
+    "realEvidenceIntakeRequiredRightsReadiness": "VERIFIED_READY",
+    "rightsManifestArtifactKind": "TREX_POSE_DATA_RIGHTS_MANIFEST",
+    "syntheticConformanceAllowedWhileRightsUnverified": true,
+    "syntheticEvidenceMaySatisfyRealGoldReadiness": false,
+    "verifiedReadyTransitionAllowedInProtocolV1": false
+  },
+  "runtimeContract": {
+    "deviceProfileAndTierRequired": true,
+    "landmarkSchemaArtifactSha256Required": true,
+    "modelArtifactSha256Required": true,
+    "observationContractArtifactSha256Required": true,
+    "personLockArtifactSha256Required": true,
+    "runtimeDomainIdRequired": true,
+    "strictCaptureTimestampsRequired": true,
+    "viewQualifierArtifactSha256Required": true
+  },
+  "schemaVersion": 1,
+  "splitContract": {
+    "assignmentUnit": "PARTICIPANT_ACROSS_ALL_CAPTURE_GROUPS",
+    "captureGroupComponents": [
+      "participant",
+      "session",
+      "exercise",
+      "device",
+      "cameraGeometryEpoch"
+    ],
+    "contentDuplicateAcrossSplitsAllowed": false,
+    "lockedTestAllowedStateAtIntake": "UNCONSUMED",
+    "lockedTestMaySelectFeatureThresholdBinOrBackoff": false,
+    "participantSessionOrCaptureGroupOverlapAllowed": false,
+    "requiredSplits": [
+      "DEVELOPMENT",
+      "CALIBRATION",
+      "LOCKED_INTERNAL_TEST",
+      "EXTERNAL_TEST"
+    ],
+    "splitAssignmentMustPrecedeOutcomeReview": true
+  },
+  "supportedCatalogScope": {
+    "catalogContext": {
+      "exerciseCount": 41,
+      "policyBindingCount": 167,
+      "sourceExactConditionCount": 97
+    },
+    "compilerScope": "BARBELL_SQUAT_VERTICAL_SLICE_ONLY",
+    "executableExerciseIds": [
+      "barbell-squat"
+    ],
+    "schemaConceptsReusableAcrossCatalog": true,
+    "schemaReuseRequiresVersionedExercisePlanCompiler": true,
+    "studyPlanSelectsExactBindings": true
+  },
+  "viewGoldContract": {
+    "authoritativeCaptureSetupOrIndependentImageReviewRequired": true,
+    "frontRearMayBeInferredFromPoseBodyAxisAlone": false,
+    "missingOrConflictingViewEvidenceState": "UNKNOWN_GOLD",
+    "viewDecisionMustBindCaptureGeometryEpoch": true
+  }
+}

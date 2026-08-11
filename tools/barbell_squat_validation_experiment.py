@@ -52,11 +52,12 @@ else:
     )
 
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 ARTIFACT_KIND = "AIHUB_BARBELL_SQUAT_COORDINATE_VALIDATION_EXPERIMENT"
 DECISION_USE = "RESEARCH_ONLY_NOT_MEDIAPIPE_CALIBRATION_OR_USER_PASS_FAIL"
 EXPERIMENT_FAMILY_ID = "aihub.barbell-squat.coordinate-proxy.v1"
-PROTOCOL_ID = "aihub.barbell-squat.coordinate-proxy.protocol.v3"
+PROTOCOL_ID = "aihub.barbell-squat.coordinate-proxy.protocol.v4"
+TEXT_HASH_NORMALIZATION = "UTF8_STRIP_OPTIONAL_BOM_NORMALIZE_CRLF_AND_CR_TO_LF"
 APPROVED_CATALOG_SHA256 = (
     "fe4e3075a00212293c9ffd3df8f007bc3666e17af2526de3a8d570d052a4e29c"
 )
@@ -209,6 +210,7 @@ PROXY_RESEARCH_SIGNAL_POLICY: Mapping[str, Any] = {
 
 PROTOCOL_CONTRACT: Mapping[str, Any] = {
     "protocolId": PROTOCOL_ID,
+    "implementationTextHashNormalization": TEXT_HASH_NORMALIZATION,
     "approvedCoverageSha256": APPROVED_COVERAGE_SHA256,
     "criterionContracts": CRITERION_CONTRACTS,
     "candidateFeaturesByCondition": CANDIDATE_FEATURES,
@@ -733,6 +735,17 @@ def _file_sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def _canonical_lf_text_sha256(path: Path) -> str:
+    """Hash repository text independently of checkout newline conventions."""
+
+    try:
+        text = path.read_text(encoding="utf-8-sig")
+    except (OSError, UnicodeError) as error:
+        raise SquatExperimentError(f"Cannot hash UTF-8 repository text: {path}") from error
+    normalized = text.replace("\r\n", "\n").replace("\r", "\n")
+    return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
+
+
 def _canonical_fields_sha256(fields: Sequence[tuple[str, str]]) -> str:
     payload = "".join(
         f"{name}:{len(value.encode('utf-8'))}:{value}\n" for name, value in fields
@@ -908,7 +921,8 @@ def _verified_catalog_provenance() -> dict[str, Any]:
     return {
         "relativePath": "docs/aihub-exercise-catalog.json",
         "catalogSha256": APPROVED_CATALOG_SHA256,
-        "artifactByteSha256": _file_sha256(catalog_path),
+        "artifactCanonicalLfTextSha256": _canonical_lf_text_sha256(catalog_path),
+        "textHashNormalization": TEXT_HASH_NORMALIZATION,
         "barbellSquatCoverageSha256": coverage_sha256,
     }
 
@@ -1594,10 +1608,12 @@ def run_experiment(training_root: Path, validation_root: Path) -> dict[str, Any]
         "protocolArtifactSha256": _canonical_sha256(PROTOCOL_CONTRACT),
         "approvedAiHubCatalog": catalog_provenance,
         "implementationProvenance": {
-            "scriptSha256": _file_sha256(Path(__file__).resolve()),
-            "sharedParserSha256": _file_sha256(
+            "scriptCanonicalLfTextSha256":
+                _canonical_lf_text_sha256(Path(__file__).resolve()),
+            "sharedParserCanonicalLfTextSha256": _canonical_lf_text_sha256(
                 Path(__file__).resolve().with_name("analyze_pose_coordinate_criteria.py")
             ),
+            "textHashNormalization": TEXT_HASH_NORMALIZATION,
             "pythonVersion": sys.version.split()[0],
             "dependencies": "PYTHON_STANDARD_LIBRARY_ONLY_PLUS_PINNED_SHARED_PARSER_SOURCE",
         },
