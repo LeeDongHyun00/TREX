@@ -1,0 +1,174 @@
+{
+  "artifactKind": "TREX_MEDIAPIPE_AIHUB_BRIDGE_ERROR_CARD",
+  "artifactVersion": 1,
+  "detectionOutcomes": {
+    "ambiguous_multi_person": 19,
+    "chain_below_confidence": 4,
+    "no_pose": 5,
+    "single_pose": 4562
+  },
+  "jointMappingConvention": {
+    "directMedianNormalisedError": 0.019,
+    "mirroredMedianNormalisedError": 0.1502,
+    "selected": "DIRECT",
+    "unmappableAiHubJoints": [
+      "Neck",
+      "Back",
+      "Waist",
+      "Left Palm",
+      "Right Palm"
+    ]
+  },
+  "jointPositionError": {
+    "perJoint": {
+      "Left Ankle": {
+        "median": 0.0157,
+        "n": 4562,
+        "p95": 0.0577
+      },
+      "Left Ear": {
+        "median": 0.0312,
+        "n": 4562,
+        "p95": 0.0705
+      },
+      "Left Elbow": {
+        "median": 0.0173,
+        "n": 4562,
+        "p95": 0.056
+      },
+      "Left Eye": {
+        "median": 0.0232,
+        "n": 4562,
+        "p95": 0.0576
+      },
+      "Left Hip": {
+        "median": 0.033,
+        "n": 4562,
+        "p95": 0.0858
+      },
+      "Left Knee": {
+        "median": 0.0181,
+        "n": 4562,
+        "p95": 0.1122
+      },
+      "Left Shoulder": {
+        "median": 0.0148,
+        "n": 4562,
+        "p95": 0.0431
+      },
+      "Left Wrist": {
+        "median": 0.0225,
+        "n": 4562,
+        "p95": 0.0699
+      },
+      "Nose": {
+        "median": 0.0208,
+        "n": 4562,
+        "p95": 0.0549
+      },
+      "Right Ankle": {
+        "median": 0.0134,
+        "n": 4562,
+        "p95": 0.0422
+      },
+      "Right Ear": {
+        "median": 0.0135,
+        "n": 4562,
+        "p95": 0.0467
+      },
+      "Right Elbow": {
+        "median": 0.0172,
+        "n": 4562,
+        "p95": 0.0503
+      },
+      "Right Eye": {
+        "median": 0.0166,
+        "n": 4562,
+        "p95": 0.0407
+      },
+      "Right Hip": {
+        "median": 0.026,
+        "n": 4562,
+        "p95": 0.0769
+      },
+      "Right Knee": {
+        "median": 0.0163,
+        "n": 4562,
+        "p95": 0.0835
+      },
+      "Right Shoulder": {
+        "median": 0.0186,
+        "n": 4562,
+        "p95": 0.0409
+      },
+      "Right Wrist": {
+        "median": 0.0203,
+        "n": 4562,
+        "p95": 0.0691
+      }
+    },
+    "unit": "FRACTION_OF_SHOULDER_TO_ANKLE_HEIGHT"
+  },
+  "kneeAngleError": {
+    "definition": "MEDIAPIPE_WORLD_MINUS_AIHUB_3D_LABEL_PER_FRAME",
+    "meanSignedBias": 14.51,
+    "medianAbsolute": 13.4,
+    "medianSignedBias": 13.21,
+    "n": 4558,
+    "p95Absolute": 40.84,
+    "unit": "DEGREES"
+  },
+  "limitations": [
+    "Studio capture: single lighting condition, standard clothing, uncluttered floor.",
+    "Eight subjects. Any per-joint tail beyond that population is unmeasured here.",
+    "Clip-level condition labels, so transfer accuracy is clip quality, not per-rep truth.",
+    "IMAGE mode; the shipped runtime uses VIDEO mode, whose tracking may differ.",
+    "Passing transfer authorises a heuristic-beta constant only, never a release verdict."
+  ],
+  "model": {
+    "assetPath": "app/src/main/assets/pose_landmarker_full.task",
+    "matchesAppPin": true,
+    "numPoses": 2,
+    "runningMode": "IMAGE",
+    "sha256": "4eaa5eb7a98365221087693fcc286334cf0858e2eb6e15b506aa4a7ecdcec4ad"
+  },
+  "rightsAuthorization": {
+    "manifestId": "trex.aihub-research-use-rights.v1",
+    "permittedOperation": "MEDIAPIPE_TO_AIHUB_BRIDGE_ERROR_MEASUREMENT"
+  },
+  "thresholdTransfer": [
+    {
+      "aihubFittedThresholdDegrees": 92,
+      "aihubThresholdAppliedToMediapipeAccuracy": 0.5357,
+      "clipCount": 56,
+      "clipLevelAngleBiasDegrees": 18.3,
+      "conditionTrueCount": 35,
+      "exercise": "스텝 백워드 다이나믹 런지",
+      "mediapipeNativeAccuracy": 0.9821,
+      "mediapipeNativeLosoAccuracy": 0.9643,
+      "mediapipeNativeLosoThresholdMaxDegrees": 123,
+      "mediapipeNativeLosoThresholdMinDegrees": 118,
+      "mediapipeNativeThresholdDegrees": 123,
+      "subjectCount": 7
+    },
+    {
+      "aihubFittedThresholdDegrees": 111,
+      "aihubThresholdAppliedToMediapipeAccuracy": 0.8017,
+      "clipCount": 232,
+      "clipLevelAngleBiasDegrees": 16.61,
+      "conditionTrueCount": 179,
+      "exercise": "스텝 포워드 다이나믹 런지",
+      "mediapipeNativeAccuracy": 0.9526,
+      "mediapipeNativeLosoAccuracy": 0.9353,
+      "mediapipeNativeLosoThresholdMaxDegrees": 133,
+      "mediapipeNativeLosoThresholdMinDegrees": 129,
+      "mediapipeNativeThresholdDegrees": 129,
+      "subjectCount": 8
+    }
+  ],
+  "view": {
+    "cameraView": "A",
+    "labelView": "view1",
+    "orientation": "LATERAL"
+  }
+}
