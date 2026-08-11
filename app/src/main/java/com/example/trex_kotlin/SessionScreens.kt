@@ -1371,7 +1371,7 @@ private fun OnboardingRow(
 }
 
 @Composable
-private fun CameraFeedBackground() {
+internal fun CameraFeedBackground() {
     Canvas(Modifier.fillMaxSize()) {
         drawRect(
             brush = Brush.verticalGradient(
@@ -1390,7 +1390,7 @@ private fun CameraFeedBackground() {
 }
 
 @Composable
-private fun PoseSkeletonOverlay(
+internal fun PoseSkeletonOverlay(
     frame: PoseFrame?,
     trackingLost: Boolean,
     modifier: Modifier = Modifier,
@@ -1534,7 +1534,7 @@ private fun WorkoutIllustration(
 }
 
 @Composable
-private fun KeepScreenOn(enabled: Boolean = true) {
+internal fun KeepScreenOn(enabled: Boolean = true) {
     val context = LocalContext.current
     DisposableEffect(enabled, context) {
         val window = context.findActivity()?.window
@@ -1621,7 +1621,7 @@ private suspend fun waitOneSecond(paused: () -> Boolean) {
     }
 }
 
-private fun Context.findActivity(): Activity? {
+internal fun Context.findActivity(): Activity? {
     var current = this
     while (current is ContextWrapper) {
         if (current is Activity) return current
@@ -1657,7 +1657,7 @@ private fun Workout.loadLabel(): String = when (exercise.typeInfoType) {
     else -> error("Unknown AI Hub type_info.type: ${exercise.typeInfoType}")
 }
 
-private fun PoseCameraError.userMessage(): String = when (this) {
+internal fun PoseCameraError.userMessage(): String = when (this) {
     PoseCameraError.CameraPermissionMissing -> "카메라 권한을 확인해 주세요"
     PoseCameraError.FrontCameraUnavailable -> "전면 카메라를 사용할 수 없어요"
     is PoseCameraError.MissingModelAsset -> "자세 인식 모델을 불러올 수 없어요"

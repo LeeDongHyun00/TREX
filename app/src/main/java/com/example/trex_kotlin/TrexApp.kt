@@ -82,6 +82,7 @@ fun TrexApp() {
     var sessionElapsedSeconds by rememberSaveable { mutableIntStateOf(0) }
     var sessionPaused by rememberSaveable { mutableStateOf(false) }
     var sessionNotice by rememberSaveable { mutableStateOf<String?>(null) }
+    var placementCoachOpen by rememberSaveable { mutableStateOf(false) }
     val appPaused = rememberTrexLifecyclePaused()
     val appPausedState = rememberUpdatedState(appPaused)
     val sessionPausedState = rememberUpdatedState(sessionPaused)
@@ -135,6 +136,7 @@ fun TrexApp() {
                 onboarded = onboarded,
                 sessionIndex = sessionIndex,
                 sessionDone = sessionDone,
+                placementCoachOpen = placementCoachOpen,
             ),
             transitionSpec = { fadeIn() togetherWith fadeOut() },
             label = "trex-route",
@@ -180,6 +182,11 @@ fun TrexApp() {
                     }
                 }
 
+                // A running session always outranks the coach, which is a display-only utility.
+                route.placementCoachOpen -> PlacementCoachScreen(
+                    onExit = { placementCoachOpen = false },
+                )
+
                 else -> MainTabs(
                     selectedTab = selectedTab,
                     workoutPlan = workoutPlan,
@@ -187,6 +194,7 @@ fun TrexApp() {
                     onWorkoutPlanChange = { workoutPlan = it },
                     onTabSelected = { selectedTab = it },
                     onStartWorkout = ::startSession,
+                    onOpenPlacementCoach = { placementCoachOpen = true },
                 )
             }
         }
@@ -199,6 +207,7 @@ private data class AppRoute(
     val onboarded: Boolean,
     val sessionIndex: Int,
     val sessionDone: Boolean,
+    val placementCoachOpen: Boolean,
 )
 
 @Composable
@@ -209,6 +218,7 @@ private fun MainTabs(
     onWorkoutPlanChange: (List<Workout>) -> Unit,
     onTabSelected: (TrexTab) -> Unit,
     onStartWorkout: () -> Unit,
+    onOpenPlacementCoach: () -> Unit,
 ) {
     var tabOverlayVisible by rememberSaveable { mutableStateOf(false) }
     var workoutNavigation by rememberSaveable { mutableStateOf(WorkoutNavigationTab.Schedule) }
@@ -240,6 +250,7 @@ private fun MainTabs(
                         plan = workoutPlan,
                         onPlanChange = onWorkoutPlanChange,
                         onSheetVisibleChange = { tabOverlayVisible = it },
+                        onOpenPlacementCoach = onOpenPlacementCoach,
                     )
                     WorkoutNavigationTab.History -> WorkoutHistoryScreen(records = workoutHistory)
                 }

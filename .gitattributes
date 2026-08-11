@@ -36,6 +36,9 @@
 /tools/compile_pose_gold_scope_resolver_requirements.py text eol=lf
 /tools/test_compile_pose_gold_scope_resolver_requirements.py text eol=lf
 
+# The non-verdict display policy is hash-pinned by a unit test.
+/docs/pose-nonverdict-display-policy.v1.md text eol=lf
+
 # Good Morning research artifacts use one portable checkout representation.
 /docs/good-morning-knee-stability-training-experiment.json text eol=lf
 /docs/good-morning-gold-conformance-readiness.v1.json text eol=lf

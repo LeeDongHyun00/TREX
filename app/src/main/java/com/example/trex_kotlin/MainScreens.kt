@@ -266,6 +266,7 @@ fun WorkoutListScreen(
     plan: List<Workout>,
     onPlanChange: (List<Workout>) -> Unit,
     onSheetVisibleChange: (Boolean) -> Unit = {},
+    onOpenPlacementCoach: () -> Unit = {},
 ) {
     var editTarget by remember { mutableStateOf<Workout?>(null) }
     var replaceTarget by remember { mutableStateOf<Workout?>(null) }
@@ -322,6 +323,10 @@ fun WorkoutListScreen(
         ) {
             item {
                 ScreenTitle("총 ${plan.size}개 · 약 35분")
+            }
+
+            item {
+                PlacementCoachEntryRow(onClick = onOpenPlacementCoach)
             }
 
             item {
@@ -1016,6 +1021,51 @@ private fun TodayWorkoutRow(workout: Workout, done: Boolean, time: String) {
                 }
                 Text(workout.duration, color = TrexTextSecondary, fontSize = 10.sp)
             }
+        }
+    }
+}
+
+/**
+ * Entry point for the display-only placement coach.
+ *
+ * It sits above the list rather than inside a workout row on purpose. The coach checks camera
+ * framing, which is the same for every exercise, so attaching it to one row would suggest that row
+ * had gained posture correction. The rows are also drag-reorderable, and a tap target inside one
+ * competes with that gesture.
+ */
+@Composable
+private fun PlacementCoachEntryRow(onClick: () -> Unit) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        color = Color.White.copy(alpha = 0.05f),
+        contentColor = Color.White,
+        border = dimBorder(),
+        onClick = onClick,
+    ) {
+        Row(
+            modifier = Modifier.padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            IconBubble(icon = Icons.Rounded.Visibility, active = false)
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(start = 12.dp),
+            ) {
+                Text("카메라 배치 확인", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                Text(
+                    "자세를 평가하지 않고 촬영 위치만 안내해요",
+                    color = Color.White.copy(alpha = 0.6f),
+                    fontSize = 11.sp,
+                    modifier = Modifier.padding(top = 2.dp),
+                )
+            }
+            Icon(
+                imageVector = Icons.AutoMirrored.Rounded.KeyboardArrowRight,
+                contentDescription = null,
+                tint = Color.White.copy(alpha = 0.6f),
+            )
         }
     }
 }
