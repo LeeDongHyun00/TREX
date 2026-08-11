@@ -1,0 +1,93 @@
+{
+  "artifactKind": "TREX_HEURISTIC_FORM_CHECK_THRESHOLD_FIT",
+  "artifactVersion": 1,
+  "exercises": [
+    {
+      "clipCount": 56,
+      "conditionEvaluated": "앞다리 무릎 각도 90도",
+      "conditionFalseCount": 21,
+      "conditionTrueCount": 35,
+      "exercise": "스텝 백워드 다이나믹 런지",
+      "sources": {
+        "lateral2d": {
+          "losoAccuracy": 0.9107,
+          "losoHeldOutClips": 56,
+          "losoThresholdMaxDegrees": 100,
+          "losoThresholdMedianDegrees": 100,
+          "losoThresholdMinDegrees": 96,
+          "pooledAccuracy": 0.9286,
+          "pooledThresholdDegrees": 100,
+          "sensitivity": 0.8857,
+          "specificity": 1.0
+        },
+        "world3d": {
+          "losoAccuracy": 0.8393,
+          "losoHeldOutClips": 56,
+          "losoThresholdMaxDegrees": 105,
+          "losoThresholdMedianDegrees": 92,
+          "losoThresholdMinDegrees": 91,
+          "pooledAccuracy": 0.9107,
+          "pooledThresholdDegrees": 92,
+          "sensitivity": 0.8857,
+          "specificity": 0.9524
+        }
+      },
+      "subjectCount": 7,
+      "usable": true
+    },
+    {
+      "clipCount": 232,
+      "conditionEvaluated": "앞다리 무릎 각도 90도",
+      "conditionFalseCount": 53,
+      "conditionTrueCount": 179,
+      "exercise": "스텝 포워드 다이나믹 런지",
+      "sources": {
+        "lateral2d": {
+          "losoAccuracy": 0.9353,
+          "losoHeldOutClips": 232,
+          "losoThresholdMaxDegrees": 120,
+          "losoThresholdMedianDegrees": 118,
+          "losoThresholdMinDegrees": 118,
+          "pooledAccuracy": 0.9483,
+          "pooledThresholdDegrees": 118,
+          "sensitivity": 0.9497,
+          "specificity": 0.9434
+        },
+        "world3d": {
+          "losoAccuracy": 0.9612,
+          "losoHeldOutClips": 232,
+          "losoThresholdMaxDegrees": 111,
+          "losoThresholdMedianDegrees": 111,
+          "losoThresholdMinDegrees": 111,
+          "pooledAccuracy": 0.9612,
+          "pooledThresholdDegrees": 111,
+          "sensitivity": 0.9721,
+          "specificity": 0.9245
+        }
+      },
+      "subjectCount": 8,
+      "usable": true
+    }
+  ],
+  "limitations": [
+    "Angles come from AI Hub labels, not MediaPipe; the bridge error is unquantified.",
+    "Sparse keyframes with no timestamps: no rep-duration or phase constant can be fitted.",
+    "Clip-level condition labels, so a threshold predicts clip quality, not per-rep truth.",
+    "Barbell squat has no Day05 imagery and cannot be fitted from this source at all.",
+    "Fitted values are heuristic-beta candidates and confer no release authority."
+  ],
+  "method": {
+    "excludedTypeCodes": [
+      "062",
+      "101",
+      "109"
+    ],
+    "generalisation": "LEAVE_ONE_SUBJECT_OUT",
+    "limbSelection": "MINIMUM_OVER_BOTH_LEGS_NO_ROLE_RESOLVER",
+    "statistic": "MINIMUM_KNEE_INCLUDED_ANGLE_OVER_LABELLED_FRAMES"
+  },
+  "rightsAuthorization": {
+    "manifestId": "trex.aihub-research-use-rights.v1",
+    "permittedOperation": "AIHUB_LABEL_THRESHOLD_FITTING_FOR_HEURISTIC_BETA"
+  }
+}

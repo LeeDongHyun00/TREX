@@ -1,0 +1,115 @@
+{
+  "artifactKind": "TREX_AIHUB_RESEARCH_USE_RIGHTS_MANIFEST",
+  "artifactSha256": "ee0fa735e8187cd1c6f5c1e78954219bba1ae97543d8c96949ae04fd9d0385a7",
+  "attestation": {
+    "attestationMode": "SINGLE_PARTY_UNSIGNED",
+    "attestedBy": "REPOSITORY_OWNER",
+    "basis": "OWNER_ACCEPTED_AIHUB_SITE_USE_AGREEMENT",
+    "detachedSignaturePresent": false,
+    "externalCoSignerPresent": false,
+    "limitation": "Owner attestation of an accepted site agreement. Not a signed licence opinion, not external legal review, and not the protocol v2 trust root.",
+    "pinnedTrustRegistryPresent": false,
+    "termsEvidenceDocumentSha256": null
+  },
+  "authority": {
+    "calibrationAuthority": 0,
+    "cueAuthority": 0,
+    "phaseDecoderAuthority": 0,
+    "releaseAuthority": 0,
+    "repCountAuthority": 0,
+    "runtimeProviderAuthority": 0,
+    "scoreAuthority": 0,
+    "shadowAuthority": 0,
+    "userPassFailUnknownAuthority": 0
+  },
+  "canonicalization": {
+    "artifactHashAlgorithm": "SHA-256",
+    "artifactHashInput": "RFC8259_JSON_WITH_TOP_LEVEL_ARTIFACT_SHA256_REMOVED",
+    "artifactHashSerialization": "UTF8_SORTED_KEYS_COMPACT_NO_TRAILING_NEWLINE",
+    "fileSerialization": "UTF8_PRETTY_2_SPACES_LF_FINAL_NEWLINE",
+    "nonFiniteNumbersAllowed": false,
+    "unicodeNormalization": "NFC"
+  },
+  "decisionUse": "AUTHORIZES_NON_COMMERCIAL_EDUCATIONAL_ANALYSIS_OF_AIHUB_013_LABELS_ONLY_GRANTS_NO_RELEASE_RUNTIME_CUE_OR_SCORE_AUTHORITY",
+  "gitPolicy": {
+    "aggregateStatisticalSummaryAllowed": true,
+    "fittedThresholdConstantAllowed": true,
+    "rawMediaAllowed": false,
+    "rawPoseLandmarkOrTrajectoryAllowed": false,
+    "subjectIdentifierAllowed": false
+  },
+  "goldCollectionManifestRelation": {
+    "goldManifestId": "trex.pose-data-rights-manifest.v1",
+    "goldManifestRemainsNotReady": true,
+    "goldManifestSha256": "bfe2a80776fb65da20724d475bda61cf2adf6692587fe4f67f22c238a3a1b4df",
+    "relationship": "DISJOINT_SCOPE_NEITHER_SUPERSEDES_NOR_TRANSITIONS",
+    "thisManifestMayAuthorizeParticipantCollection": false
+  },
+  "issuedDate": "2026-08-12",
+  "manifestId": "trex.aihub-research-use-rights.v1",
+  "openBlockers": [
+    {
+      "blocker": "AIHUB_TERMS_EVIDENCE_DOCUMENT_NOT_ARCHIVED",
+      "blocks": "Any later claim that the licence scope was independently reviewable",
+      "resolution": "Archive the accepted AI Hub use-agreement text and record its SHA-256 in attestation.termsEvidenceDocumentSha256"
+    },
+    {
+      "blocker": "PUBLIC_APP_DISTRIBUTION_RIGHTS_NOT_REVIEWED",
+      "blocks": "Shipping AI Hub-derived thresholds in a publicly distributed build",
+      "resolution": "Confirm derived-artifact distribution terms before any public release; the capstone scope assumes non-public builds"
+    },
+    {
+      "blocker": "DETACHED_SIGNATURE_TRUST_ROOT_NOT_IMPLEMENTED",
+      "blocks": "Release-chain authorization (protocol v2), not research analysis",
+      "resolution": "Implement the protocol v2 verifier and pinned trust registry"
+    },
+    {
+      "blocker": "MEDIAPIPE_TO_AIHUB_BRIDGE_ERROR_NOT_QUANTIFIED",
+      "blocks": "Treating an AI Hub-fitted threshold as valid for MediaPipe world landmarks",
+      "resolution": "Run the bridge measurement permitted above and publish the per-joint error data card before adopting fitted constants"
+    }
+  ],
+  "permittedOperations": [
+    "AIHUB_LABEL_STATISTICAL_ANALYSIS",
+    "AIHUB_LABEL_THRESHOLD_FITTING_FOR_HEURISTIC_BETA",
+    "LEAVE_ONE_SUBJECT_OUT_CROSS_VALIDATION",
+    "MEDIAPIPE_TO_AIHUB_BRIDGE_ERROR_MEASUREMENT",
+    "AGGREGATE_ONLY_RESULT_REPORTING",
+    "PUBLIC_SCHEMA_REVIEW",
+    "SYNTHETIC_CONFORMANCE_FIXTURE_VALIDATION"
+  ],
+  "prohibitedOperations": [
+    "COMMERCIAL_USE",
+    "RAW_MEDIA_OR_POSE_GIT_PERSISTENCE",
+    "ANDROID_ASSET_DATABASE_CACHE_OR_LOG_PERSISTENCE",
+    "REAL_PARTICIPANT_COLLECTION",
+    "RELEASE_CRITERION_AUTHORIZATION",
+    "SHADOW_OR_USER_RUNTIME_USE_OF_AIHUB_DERIVED_VERDICTS",
+    "REDISTRIBUTION_OF_RAW_OR_DERIVED_RAW_DATA",
+    "PUBLIC_APP_DISTRIBUTION_OF_AIHUB_DERIVED_THRESHOLDS"
+  ],
+  "readiness": "READY_FOR_DECLARED_SCOPE_ONLY",
+  "schemaVersion": 1,
+  "scope": {
+    "commercialUseAuthorized": false,
+    "dataClassInScope": "AIHUB_SOURCE_DATA",
+    "datasetId": "AIHUB_013_FITNESS_POSE_IMAGE",
+    "derivedThresholdPublicAppDistributionAuthorized": false,
+    "redistributionOfRawOrDerivedRawAuthorized": false,
+    "subjectExercises": [
+      "STEP_FORWARD_DYNAMIC_LUNGE",
+      "STEP_BACKWARD_DYNAMIC_LUNGE",
+      "STANDING_KNEE_UP",
+      "STANDING_SIDE_CRUNCH",
+      "BURPEE_TEST"
+    ],
+    "useClass": "NON_COMMERCIAL_EDUCATIONAL_CAPSTONE"
+  },
+  "status": "VERIFIED_FOR_DECLARED_SCOPE",
+  "storageContract": {
+    "androidPersistenceAllowed": false,
+    "offlineRestrictedWorkspaceRequired": true,
+    "publicRepositoryMayContainRawOrDerivedParticipantData": false,
+    "rawDatasetRemainsOutsideGitAndApk": true
+  }
+}
