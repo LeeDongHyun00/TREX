@@ -3,6 +3,7 @@ package com.example.trex_kotlin.pose.formcheck
 import com.example.trex_kotlin.catalog.AiHubExercise
 import com.example.trex_kotlin.pose.PoseFrame
 import java.util.Collections
+import kotlin.math.abs
 import kotlin.math.roundToInt
 
 /**
@@ -22,7 +23,7 @@ internal object HeuristicFormCheckDeclaration {
     const val TRACK_ID: String = "trex.heuristic-form-check.beta.v1"
 
     const val POLICY_DOCUMENT_SHA256: String =
-        "88af0a1834f4322078e2b0f61ff45782742382a7abc2d40d5e679048b6de18ab"
+        "5b9e7c2d5e5334986ce6522cb85839e29067ffcefc40bbbe738a9cc2f33db64f"
 
     const val POLICY_DOCUMENT_PATH: String = "docs/pose-heuristic-form-check.v1.md"
 
@@ -500,6 +501,17 @@ internal class HeuristicFormCheckSession(
     private var activeSide: FormCheckBodySide? = null
     private var sideViewPreferred: Boolean = false
 
+    /**
+     * Detector-space extremes of this set's opening repetitions, used as the set's own baseline.
+     *
+     * Comparing a repetition with the user's earlier ones rather than with a population constant
+     * is the one comparison this track can make honestly: the thresholds are uncalibrated, but a
+     * self-comparison inside one set shares a camera, a body and a systematic bias, so the bias
+     * cancels. Only the random part does not, which is why [BASELINE_NOTICEABLE_DEGREES] is well
+     * clear of a difference the measurement could invent.
+     */
+    private val baselineSamples = ArrayList<Double>(BASELINE_REPETITIONS)
+
     /** "무릎이", "엉덩이가", "팔꿈치가" — the observation names whichever joint it measured. */
     private val vertexSubject: String = spec.driver.vertex.label.let { label ->
         label + FormCheckStartAnnouncer.subjectParticle(label)
@@ -532,7 +544,12 @@ internal class HeuristicFormCheckSession(
             is RepCycleEvent.Completed -> {
                 repCount += 1
                 val extreme = spec.fromDetector(event.minimumAngleDegrees)
-                headline = "$vertexSubject ${extreme.roundToInt()}도까지 ${spec.direction.reachedVerb}"
+                val observed =
+                    "$vertexSubject ${extreme.roundToInt()}도까지 ${spec.direction.reachedVerb}"
+                headline = baselineNote(event.minimumAngleDegrees)
+                    ?.let { note -> "$observed · $note" }
+                    ?: observed
+                recordBaseline(event.minimumAngleDegrees)
                 // Null for sealed exercises: the observation stands without urging more range.
                 suggestion = if (
                     event.minimumAngleDegrees <= spec.toDetector(spec.reachedAngleDegrees)
@@ -598,4 +615,46 @@ internal class HeuristicFormCheckSession(
     /** Snapshot before any observation has arrived. */
     fun initialSnapshot(): FormCheckUiState =
         snapshot(FormCheckStartState.WAITING_FOR_CAMERA, spec.requiredJoints)
+
+    /** Keeps only the set's opening repetitions; later ones are compared, never averaged in. */
+    private fun recordBaseline(detectorExtreme: Double) {
+        if (baselineSamples.size < BASELINE_REPETITIONS) baselineSamples.add(detectorExtreme)
+    }
+
+    /**
+     * How this repetition sat against the set's opening ones, or null when there is no baseline
+     * yet or the difference is inside what the measurement could have invented.
+     */
+    private fun baselineNote(detectorExtreme: Double): String? {
+        if (baselineSamples.size < BASELINE_REPETITIONS) return null
+        val baseline = baselineSamples.sorted().let { sorted ->
+            if (sorted.size % 2 == 1) {
+                sorted[sorted.size / 2]
+            } else {
+                (sorted[sorted.size / 2 - 1] + sorted[sorted.size / 2]) / 2.0
+            }
+        }
+        // Detector space: a larger value is always less work than the baseline.
+        val shortfall = detectorExtreme - baseline
+        if (abs(shortfall) < BASELINE_NOTICEABLE_DEGREES) return null
+        val magnitude = abs(shortfall).roundToInt()
+        val phrase = if (shortfall > 0) {
+            spec.direction.belowBaselinePhrase
+        } else {
+            spec.direction.beyondBaselinePhrase
+        }
+        return "오늘 첫 반복보다 ${magnitude}도 $phrase"
+    }
+
+    private companion object {
+        /** The opening repetitions that define the set's own baseline. */
+        const val BASELINE_REPETITIONS = 2
+
+        /**
+         * Below this the difference is not reported. A same-set self-comparison cancels the
+         * systematic straightening the bridge card measured, but its random part is unmeasured,
+         * so the floor sits clear of the median absolute error rather than at a flattering value.
+         */
+        const val BASELINE_NOTICEABLE_DEGREES = 15.0
+    }
 }

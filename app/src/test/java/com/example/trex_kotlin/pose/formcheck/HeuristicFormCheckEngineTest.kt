@@ -215,6 +215,101 @@ class HeuristicFormCheckEngineTest {
         }
     }
 
+    // ---- personal baseline ----
+
+    @Test
+    fun theFirstRepetitionsCarryNoBaselineComparison() {
+        val session = HeuristicFormCheckSession(FormCheckExercise.PUSH_UP)
+        var state = session.initialSnapshot()
+        var t = 0L
+
+        repeat(2) {
+            for (angle in listOf(175.0, 175.0, 120.0, 120.0, 120.0, 120.0, 175.0, 175.0)) {
+                state = session.accept(t, true, true, elbowFrame(angle, t))
+                t += 200L
+            }
+        }
+
+        assertEquals(2, state.repCount)
+        assertFalse(
+            "The opening repetitions define the baseline, so they cannot compare with it",
+            state.headline!!.contains("오늘 첫 반복"),
+        )
+    }
+
+    @Test
+    fun aLaterRepetitionThatFallsWellShortIsComparedWithTheSetsOpening() {
+        val session = HeuristicFormCheckSession(FormCheckExercise.PUSH_UP)
+        var state = session.initialSnapshot()
+        var t = 0L
+
+        repeat(2) {
+            for (angle in listOf(175.0, 175.0, 100.0, 100.0, 100.0, 100.0, 175.0, 175.0)) {
+                state = session.accept(t, true, true, elbowFrame(angle, t))
+                t += 200L
+            }
+        }
+        // Third rep bottoms out 30 degrees shallower than the baseline of 100.
+        for (angle in listOf(175.0, 175.0, 130.0, 130.0, 130.0, 130.0, 175.0, 175.0)) {
+            state = session.accept(t, true, true, elbowFrame(angle, t))
+            t += 200L
+        }
+
+        assertEquals(3, state.repCount)
+        assertTrue(
+            "Expected a self-comparison, got ${state.headline}",
+            state.headline!!.contains("오늘 첫 반복보다 30도 얕아요"),
+        )
+    }
+
+    @Test
+    fun aDifferenceInsideTheMeasurementsOwnNoiseStaysSilent() {
+        val session = HeuristicFormCheckSession(FormCheckExercise.PUSH_UP)
+        var state = session.initialSnapshot()
+        var t = 0L
+
+        repeat(2) {
+            for (angle in listOf(175.0, 175.0, 100.0, 100.0, 100.0, 100.0, 175.0, 175.0)) {
+                state = session.accept(t, true, true, elbowFrame(angle, t))
+                t += 200L
+            }
+        }
+        // Ten degrees is inside the bridge card's median absolute error; saying it would be
+        // reporting the measurement's own noise as the user's change.
+        for (angle in listOf(175.0, 175.0, 110.0, 110.0, 110.0, 110.0, 175.0, 175.0)) {
+            state = session.accept(t, true, true, elbowFrame(angle, t))
+            t += 200L
+        }
+
+        assertEquals(3, state.repCount)
+        assertFalse(state.headline!!.contains("오늘 첫 반복"))
+    }
+
+    @Test
+    fun anExtensionExerciseComparesInItsOwnDirection() {
+        val session = HeuristicFormCheckSession(FormCheckExercise.CABLE_PUSH_DOWN)
+        var state = session.initialSnapshot()
+        var t = 0L
+
+        repeat(2) {
+            for (angle in listOf(90.0, 90.0, 170.0, 170.0, 170.0, 170.0, 90.0, 90.0)) {
+                state = session.accept(t, true, true, elbowFrame(angle, t))
+                t += 200L
+            }
+        }
+        // Reaches only 150: twenty degrees less extension than the set opened with.
+        for (angle in listOf(90.0, 90.0, 150.0, 150.0, 150.0, 150.0, 90.0, 90.0)) {
+            state = session.accept(t, true, true, elbowFrame(angle, t))
+            t += 200L
+        }
+
+        assertEquals(3, state.repCount)
+        assertTrue(
+            "Expected an extension-shaped comparison, got ${state.headline}",
+            state.headline!!.contains("오늘 첫 반복보다 20도 덜 펴졌어요"),
+        )
+    }
+
     // ---- rep cycle detector ----
 
     @Test
@@ -754,6 +849,14 @@ class HeuristicFormCheckEngineTest {
     }
 
     private fun point(x: Double, y: Double, z: Double) = PoseLandmark(x, y, z, 1.0, 1.0)
+
+    /** An elbow-chain frame with the leg chains held straight. */
+    private fun elbowFrame(angleDegrees: Double, timestampMs: Long): PoseFrame = frameWithChains(
+        kneeAngleDegrees = 175.0,
+        hipAngleDegrees = 175.0,
+        elbowAngleDegrees = angleDegrees,
+        timestampMs = timestampMs,
+    )
 
     /** A frame that puts [angleDegrees] on [spec]'s own driver chain and rests the other two. */
     private fun frameForDriver(
