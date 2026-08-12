@@ -1,0 +1,1075 @@
+{
+  "artifactKind": "TREX_AIHUB_MEASUREMENT_VIEW_SELECTION",
+  "artifactVersion": 1,
+  "limitations": [
+    "View choice is per capture day; it is not a fixed property of the dataset.",
+    "A low projection error bounds what a lateral phone camera could see, not what MediaPipe will actually estimate from it."
+  ],
+  "method": {
+    "chains": {
+      "ELBOW": [
+        "Shoulder",
+        "Elbow",
+        "Wrist"
+      ],
+      "HIP": [
+        "Shoulder",
+        "Hip",
+        "Knee"
+      ],
+      "KNEE": [
+        "Hip",
+        "Knee",
+        "Ankle"
+      ],
+      "SHOULDER": [
+        "Elbow",
+        "Shoulder",
+        "Hip"
+      ],
+      "TRUNK": [
+        "Shoulder",
+        "Hip",
+        "Ankle"
+      ]
+    },
+    "criterion": "MEDIAN_ABS_DIFFERENCE_2D_PROJECTED_ANGLE_VS_3D_RECONSTRUCTION",
+    "usableMedianErrorDegrees": 12.0
+  },
+  "rightsAuthorization": {
+    "manifestId": "trex.aihub-research-use-rights.v1",
+    "permittedOperation": "AIHUB_LABEL_STATISTICAL_ANALYSIS"
+  },
+  "selections": [
+    {
+      "bestViewIndex": 5,
+      "bestViewLetter": "E",
+      "captureDay": "Day02_200922_F",
+      "chain": "KNEE",
+      "exercise": "굿모닝",
+      "frames": 2048,
+      "medianErrorDegrees": 2.19,
+      "perViewMedianErrorDegrees": {
+        "A": 2.6,
+        "B": 4.61,
+        "C": 5.81,
+        "D": 4.5,
+        "E": 2.19
+      },
+      "usable": true
+    },
+    {
+      "bestViewIndex": 1,
+      "bestViewLetter": "A",
+      "captureDay": "Day10_201007_F",
+      "chain": "KNEE",
+      "exercise": "굿모닝",
+      "frames": 2208,
+      "medianErrorDegrees": 2.21,
+      "perViewMedianErrorDegrees": {
+        "A": 2.21,
+        "B": 2.72,
+        "C": 2.55,
+        "D": 2.28,
+        "E": 2.22
+      },
+      "usable": true
+    },
+    {
+      "bestViewIndex": 1,
+      "bestViewLetter": "A",
+      "captureDay": "Day14_201014_F",
+      "chain": "KNEE",
+      "exercise": "굿모닝",
+      "frames": 2272,
+      "medianErrorDegrees": 2.04,
+      "perViewMedianErrorDegrees": {
+        "A": 2.04,
+        "B": 3.53,
+        "C": 3.91,
+        "D": 3.07,
+        "E": 2.12
+      },
+      "usable": true
+    },
+    {
+      "bestViewIndex": 5,
+      "bestViewLetter": "E",
+      "captureDay": "Day24_201026_F",
+      "chain": "KNEE",
+      "exercise": "굿모닝",
+      "frames": 2304,
+      "medianErrorDegrees": 2.49,
+      "perViewMedianErrorDegrees": {
+        "A": 2.51,
+        "B": 4.08,
+        "C": 4.75,
+        "D": 3.99,
+        "E": 2.49
+      },
+      "usable": true
+    },
+    {
+      "bestViewIndex": 5,
+      "bestViewLetter": "E",
+      "captureDay": "Day28_201030_F",
+      "chain": "KNEE",
+      "exercise": "굿모닝",
+      "frames": 2304,
+      "medianErrorDegrees": 122.77,
+      "perViewMedianErrorDegrees": {
+        "A": 123.34,
+        "B": 124.81,
+        "C": 128.17,
+        "D": 124.19,
+        "E": 122.77
+      },
+      "usable": false
+    },
+    {
+      "bestViewIndex": 3,
+      "bestViewLetter": "C",
+      "captureDay": "Day04_200924_F",
+      "chain": "SHOULDER",
+      "exercise": "덤벨 컬",
+      "frames": 8192,
+      "medianErrorDegrees": 2.2,
+      "perViewMedianErrorDegrees": {
+        "A": 7.47,
+        "B": 7.47,
+        "C": 2.2,
+        "D": 7.49,
+        "E": 7.31
+      },
+      "usable": true
+    },
+    {
+      "bestViewIndex": 3,
+      "bestViewLetter": "C",
+      "captureDay": "Day08_201005_F",
+      "chain": "SHOULDER",
+      "exercise": "덤벨 컬",
+      "frames": 8160,
+      "medianErrorDegrees": 3.05,
+      "perViewMedianErrorDegrees": {
+        "A": 5.99,
+        "B": 4.36,
+        "C": 3.05,
+        "D": 4.65,
+        "E": 6.17
+      },
+      "usable": true
+    },
+    {
+      "bestViewIndex": 3,
+      "bestViewLetter": "C",
+      "captureDay": "Day12_201012_F",
+      "chain": "SHOULDER",
+      "exercise": "덤벨 컬",
+      "frames": 9216,
+      "medianErrorDegrees": 3.22,
+      "perViewMedianErrorDegrees": {
+        "A": 6.4,
+        "B": 6.41,
+        "C": 3.22,
+        "D": 6.67,
+        "E": 5.78
+      },
+      "usable": true
+    },
+    {
+      "bestViewIndex": 3,
+      "bestViewLetter": "C",
+      "captureDay": "Day16_201016_F",
+      "chain": "SHOULDER",
+      "exercise": "덤벨 컬",
+      "frames": 2048,
+      "medianErrorDegrees": 3.84,
+      "perViewMedianErrorDegrees": {
+        "A": 7.0,
+        "B": 4.22,
+        "C": 3.84,
+        "D": 4.24,
+        "E": 6.82
+      },
+      "usable": true
+    },
+    {
+      "bestViewIndex": 3,
+      "bestViewLetter": "C",
+      "captureDay": "Day26_201028_F",
+      "chain": "SHOULDER",
+      "exercise": "덤벨 컬",
+      "frames": 9216,
+      "medianErrorDegrees": 5.25,
+      "perViewMedianErrorDegrees": {
+        "A": 6.43,
+        "B": 6.16,
+        "C": 5.25,
+        "D": 6.49,
+        "E": 6.4
+      },
+      "usable": true
+    },
+    {
+      "bestViewIndex": 3,
+      "bestViewLetter": "C",
+      "captureDay": "Day30_201102_F",
+      "chain": "SHOULDER",
+      "exercise": "덤벨 컬",
+      "frames": 9216,
+      "medianErrorDegrees": 2.58,
+      "perViewMedianErrorDegrees": {
+        "A": 6.17,
+        "B": 5.1,
+        "C": 2.58,
+        "D": 7.26,
+        "E": 5.44
+      },
+      "usable": true
+    },
+    {
+      "bestViewIndex": 1,
+      "bestViewLetter": "A",
+      "captureDay": "Day17_201017_F",
+      "chain": "ELBOW",
+      "exercise": "딥스",
+      "frames": 4416,
+      "medianErrorDegrees": 9.86,
+      "perViewMedianErrorDegrees": {
+        "A": 9.86,
+        "B": 10.54,
+        "C": 14.54,
+        "D": 12.32,
+        "E": 9.96
+      },
+      "usable": true
+    },
+    {
+      "bestViewIndex": 1,
+      "bestViewLetter": "A",
+      "captureDay": "Day20_201021_F",
+      "chain": "ELBOW",
+      "exercise": "딥스",
+      "frames": 4544,
+      "medianErrorDegrees": 8.69,
+      "perViewMedianErrorDegrees": {
+        "A": 8.69,
+        "B": 9.86,
+        "C": 14.76,
+        "D": 11.61,
+        "E": 9.31
+      },
+      "usable": true
+    },
+    {
+      "bestViewIndex": 2,
+      "bestViewLetter": "B",
+      "captureDay": "Day21_201022_F",
+      "chain": "ELBOW",
+      "exercise": "딥스",
+      "frames": 4544,
+      "medianErrorDegrees": 9.65,
+      "perViewMedianErrorDegrees": {
+        "A": 9.85,
+        "B": 9.65,
+        "C": 13.03,
+        "D": 11.35,
+        "E": 9.83
+      },
+      "usable": true
+    },
+    {
+      "bestViewIndex": 2,
+      "bestViewLetter": "B",
+      "captureDay": "Day22_201023_F",
+      "chain": "ELBOW",
+      "exercise": "딥스",
+      "frames": 4608,
+      "medianErrorDegrees": 9.8,
+      "perViewMedianErrorDegrees": {
+        "A": 10.14,
+        "B": 9.8,
+        "C": 14.17,
+        "D": 11.51,
+        "E": 9.91
+      },
+      "usable": true
+    },
+    {
+      "bestViewIndex": 3,
+      "bestViewLetter": "C",
+      "captureDay": "Day17_201017_F",
+      "chain": "SHOULDER",
+      "exercise": "랫풀 다운",
+      "frames": 4346,
+      "medianErrorDegrees": 7.23,
+      "perViewMedianErrorDegrees": {
+        "A": 10.74,
+        "B": 8.97,
+        "C": 7.23,
+        "D": 8.15,
+        "E": 9.6
+      },
+      "usable": true
+    },
+    {
+      "bestViewIndex": 3,
+      "bestViewLetter": "C",
+      "captureDay": "Day20_201021_F",
+      "chain": "SHOULDER",
+      "exercise": "랫풀 다운",
+      "frames": 4512,
+      "medianErrorDegrees": 6.33,
+      "perViewMedianErrorDegrees": {
+        "A": 9.96,
+        "B": 6.93,
+        "C": 6.33,
+        "D": 7.58,
+        "E": 7.42
+      },
+      "usable": true
+    },
+    {
+      "bestViewIndex": 4,
+      "bestViewLetter": "D",
+      "captureDay": "Day21_201022_F",
+      "chain": "SHOULDER",
+      "exercise": "랫풀 다운",
+      "frames": 4608,
+      "medianErrorDegrees": 8.31,
+      "perViewMedianErrorDegrees": {
+        "A": 9.58,
+        "B": 8.79,
+        "C": 9.18,
+        "D": 8.31,
+        "E": 9.79
+      },
+      "usable": true
+    },
+    {
+      "bestViewIndex": 4,
+      "bestViewLetter": "D",
+      "captureDay": "Day22_201023_F",
+      "chain": "SHOULDER",
+      "exercise": "랫풀 다운",
+      "frames": 4608,
+      "medianErrorDegrees": 6.74,
+      "perViewMedianErrorDegrees": {
+        "A": 9.4,
+        "B": 7.84,
+        "C": 7.2,
+        "D": 6.74,
+        "E": 8.68
+      },
+      "usable": true
+    },
+    {
+      "bestViewIndex": 3,
+      "bestViewLetter": "C",
+      "captureDay": "Day04_200924_F",
+      "chain": "SHOULDER",
+      "exercise": "바벨 컬",
+      "frames": 8128,
+      "medianErrorDegrees": 1.88,
+      "perViewMedianErrorDegrees": {
+        "A": 7.72,
+        "B": 6.3,
+        "C": 1.88,
+        "D": 6.78,
+        "E": 7.29
+      },
+      "usable": true
+    },
+    {
+      "bestViewIndex": 3,
+      "bestViewLetter": "C",
+      "captureDay": "Day08_201005_F",
+      "chain": "SHOULDER",
+      "exercise": "바벨 컬",
+      "frames": 8192,
+      "medianErrorDegrees": 2.65,
+      "perViewMedianErrorDegrees": {
+        "A": 6.17,
+        "B": 3.67,
+        "C": 2.65,
+        "D": 4.38,
+        "E": 6.31
+      },
+      "usable": true
+    },
+    {
+      "bestViewIndex": 3,
+      "bestViewLetter": "C",
+      "captureDay": "Day12_201012_F",
+      "chain": "SHOULDER",
+      "exercise": "바벨 컬",
+      "frames": 9184,
+      "medianErrorDegrees": 3.3,
+      "perViewMedianErrorDegrees": {
+        "A": 6.76,
+        "B": 6.15,
+        "C": 3.3,
+        "D": 6.06,
+        "E": 6.25
+      },
+      "usable": true
+    },
+    {
+      "bestViewIndex": 3,
+      "bestViewLetter": "C",
+      "captureDay": "Day16_201016_F",
+      "chain": "SHOULDER",
+      "exercise": "바벨 컬",
+      "frames": 2048,
+      "medianErrorDegrees": 2.88,
+      "perViewMedianErrorDegrees": {
+        "A": 6.84,
+        "B": 4.14,
+        "C": 2.88,
+        "D": 4.3,
+        "E": 7.45
+      },
+      "usable": true
+    },
+    {
+      "bestViewIndex": 1,
+      "bestViewLetter": "A",
+      "captureDay": "Day26_201028_F",
+      "chain": "SHOULDER",
+      "exercise": "바벨 컬",
+      "frames": 9216,
+      "medianErrorDegrees": 5.57,
+      "perViewMedianErrorDegrees": {
+        "A": 5.57,
+        "B": 5.95,
+        "C": 5.85,
+        "D": 6.22,
+        "E": 6.17
+      },
+      "usable": true
+    },
+    {
+      "bestViewIndex": 3,
+      "bestViewLetter": "C",
+      "captureDay": "Day30_201102_F",
+      "chain": "SHOULDER",
+      "exercise": "바벨 컬",
+      "frames": 9216,
+      "medianErrorDegrees": 2.84,
+      "perViewMedianErrorDegrees": {
+        "A": 6.73,
+        "B": 4.45,
+        "C": 2.84,
+        "D": 6.48,
+        "E": 5.96
+      },
+      "usable": true
+    },
+    {
+      "bestViewIndex": 5,
+      "bestViewLetter": "E",
+      "captureDay": "Day01_200921_F",
+      "chain": "HIP",
+      "exercise": "스탠딩 니업",
+      "frames": 4048,
+      "medianErrorDegrees": 4.76,
+      "perViewMedianErrorDegrees": {
+        "A": 5.08,
+        "B": 7.49,
+        "C": 9.59,
+        "D": 7.71,
+        "E": 4.76
+      },
+      "usable": true
+    },
+    {
+      "bestViewIndex": 1,
+      "bestViewLetter": "A",
+      "captureDay": "Day04_200924_F",
+      "chain": "HIP",
+      "exercise": "스탠딩 니업",
+      "frames": 2048,
+      "medianErrorDegrees": 5.13,
+      "perViewMedianErrorDegrees": {
+        "A": 5.13,
+        "B": 6.2,
+        "C": 6.22,
+        "D": 6.25,
+        "E": 5.18
+      },
+      "usable": true
+    },
+    {
+      "bestViewIndex": 1,
+      "bestViewLetter": "A",
+      "captureDay": "Day05_200925_F",
+      "chain": "HIP",
+      "exercise": "스탠딩 니업",
+      "frames": 4025,
+      "medianErrorDegrees": 3.73,
+      "perViewMedianErrorDegrees": {
+        "A": 3.73,
+        "B": 4.85,
+        "C": 5.93,
+        "D": 4.82,
+        "E": 4.53
+      },
+      "usable": true
+    },
+    {
+      "bestViewIndex": 1,
+      "bestViewLetter": "A",
+      "captureDay": "Day08_201005_F",
+      "chain": "HIP",
+      "exercise": "스탠딩 니업",
+      "frames": 2048,
+      "medianErrorDegrees": 4.02,
+      "perViewMedianErrorDegrees": {
+        "A": 4.02,
+        "B": 6.27,
+        "C": 4.3,
+        "D": 4.65,
+        "E": 4.12
+      },
+      "usable": true
+    },
+    {
+      "bestViewIndex": 5,
+      "bestViewLetter": "E",
+      "captureDay": "Day09_201006_F",
+      "chain": "HIP",
+      "exercise": "스탠딩 니업",
+      "frames": 4576,
+      "medianErrorDegrees": 4.43,
+      "perViewMedianErrorDegrees": {
+        "A": 4.78,
+        "B": 6.5,
+        "C": 5.15,
+        "D": 5.21,
+        "E": 4.43
+      },
+      "usable": true
+    },
+    {
+      "bestViewIndex": 5,
+      "bestViewLetter": "E",
+      "captureDay": "Day12_201012_F",
+      "chain": "HIP",
+      "exercise": "스탠딩 니업",
+      "frames": 2304,
+      "medianErrorDegrees": 5.35,
+      "perViewMedianErrorDegrees": {
+        "A": 5.91,
+        "B": 8.28,
+        "C": 6.52,
+        "D": 6.64,
+        "E": 5.35
+      },
+      "usable": true
+    },
+    {
+      "bestViewIndex": 3,
+      "bestViewLetter": "C",
+      "captureDay": "Day13_201013_F",
+      "chain": "HIP",
+      "exercise": "스탠딩 니업",
+      "frames": 4100,
+      "medianErrorDegrees": 4.34,
+      "perViewMedianErrorDegrees": {
+        "A": 4.7,
+        "B": 6.35,
+        "C": 4.34,
+        "D": 5.69,
+        "E": 4.4
+      },
+      "usable": true
+    },
+    {
+      "bestViewIndex": 3,
+      "bestViewLetter": "C",
+      "captureDay": "Day16_201016_F",
+      "chain": "HIP",
+      "exercise": "스탠딩 니업",
+      "frames": 512,
+      "medianErrorDegrees": 3.39,
+      "perViewMedianErrorDegrees": {
+        "A": 4.08,
+        "B": 5.53,
+        "C": 3.39,
+        "D": 4.92,
+        "E": 3.95
+      },
+      "usable": true
+    },
+    {
+      "bestViewIndex": 3,
+      "bestViewLetter": "C",
+      "captureDay": "Day23_201024_F",
+      "chain": "HIP",
+      "exercise": "스탠딩 니업",
+      "frames": 4608,
+      "medianErrorDegrees": 4.34,
+      "perViewMedianErrorDegrees": {
+        "A": 4.5,
+        "B": 7.02,
+        "C": 4.34,
+        "D": 6.84,
+        "E": 4.49
+      },
+      "usable": true
+    },
+    {
+      "bestViewIndex": 5,
+      "bestViewLetter": "E",
+      "captureDay": "Day26_201028_F",
+      "chain": "HIP",
+      "exercise": "스탠딩 니업",
+      "frames": 2303,
+      "medianErrorDegrees": 5.16,
+      "perViewMedianErrorDegrees": {
+        "A": 5.34,
+        "B": 9.44,
+        "C": 12.77,
+        "D": 9.75,
+        "E": 5.16
+      },
+      "usable": true
+    },
+    {
+      "bestViewIndex": 1,
+      "bestViewLetter": "A",
+      "captureDay": "Day27_201029_F",
+      "chain": "HIP",
+      "exercise": "스탠딩 니업",
+      "frames": 4607,
+      "medianErrorDegrees": 3.99,
+      "perViewMedianErrorDegrees": {
+        "A": 3.99,
+        "B": 6.77,
+        "C": 4.42,
+        "D": 6.22,
+        "E": 4.09
+      },
+      "usable": true
+    },
+    {
+      "bestViewIndex": 4,
+      "bestViewLetter": "D",
+      "captureDay": "Day30_201102_F",
+      "chain": "HIP",
+      "exercise": "스탠딩 니업",
+      "frames": 2208,
+      "medianErrorDegrees": 5.6,
+      "perViewMedianErrorDegrees": {
+        "A": 5.83,
+        "B": 6.14,
+        "C": 6.45,
+        "D": 5.6,
+        "E": 5.86
+      },
+      "usable": true
+    },
+    {
+      "bestViewIndex": 1,
+      "bestViewLetter": "A",
+      "captureDay": "Day01_200921_F",
+      "chain": "KNEE",
+      "exercise": "스텝 백워드 다이나믹 런지",
+      "frames": 2034,
+      "medianErrorDegrees": 3.8,
+      "perViewMedianErrorDegrees": {
+        "A": 3.8,
+        "B": 9.04,
+        "C": 20.83,
+        "D": 8.57,
+        "E": 3.96
+      },
+      "usable": true
+    },
+    {
+      "bestViewIndex": 5,
+      "bestViewLetter": "E",
+      "captureDay": "Day02_200922_F",
+      "chain": "KNEE",
+      "exercise": "스텝 백워드 다이나믹 런지",
+      "frames": 6136,
+      "medianErrorDegrees": 2.94,
+      "perViewMedianErrorDegrees": {
+        "A": 3.79,
+        "B": 7.87,
+        "C": 19.7,
+        "D": 7.87,
+        "E": 2.94
+      },
+      "usable": true
+    },
+    {
+      "bestViewIndex": 1,
+      "bestViewLetter": "A",
+      "captureDay": "Day05_200925_F",
+      "chain": "KNEE",
+      "exercise": "스텝 백워드 다이나믹 런지",
+      "frames": 1786,
+      "medianErrorDegrees": 3.66,
+      "perViewMedianErrorDegrees": {
+        "A": 3.66,
+        "B": 5.42,
+        "C": 15.47,
+        "D": 5.12,
+        "E": 3.7
+      },
+      "usable": true
+    },
+    {
+      "bestViewIndex": 1,
+      "bestViewLetter": "A",
+      "captureDay": "Day09_201006_F",
+      "chain": "KNEE",
+      "exercise": "스텝 백워드 다이나믹 런지",
+      "frames": 2296,
+      "medianErrorDegrees": 2.69,
+      "perViewMedianErrorDegrees": {
+        "A": 2.69,
+        "B": 3.95,
+        "C": 8.77,
+        "D": 3.29,
+        "E": 2.74
+      },
+      "usable": true
+    },
+    {
+      "bestViewIndex": 1,
+      "bestViewLetter": "A",
+      "captureDay": "Day10_201007_F",
+      "chain": "KNEE",
+      "exercise": "스텝 백워드 다이나믹 런지",
+      "frames": 6911,
+      "medianErrorDegrees": 2.95,
+      "perViewMedianErrorDegrees": {
+        "A": 2.95,
+        "B": 4.8,
+        "C": 9.17,
+        "D": 3.52,
+        "E": 2.98
+      },
+      "usable": true
+    },
+    {
+      "bestViewIndex": 1,
+      "bestViewLetter": "A",
+      "captureDay": "Day13_201013_F",
+      "chain": "KNEE",
+      "exercise": "스텝 백워드 다이나믹 런지",
+      "frames": 2048,
+      "medianErrorDegrees": 2.79,
+      "perViewMedianErrorDegrees": {
+        "A": 2.79,
+        "B": 5.52,
+        "C": 10.34,
+        "D": 4.35,
+        "E": 2.85
+      },
+      "usable": true
+    },
+    {
+      "bestViewIndex": 1,
+      "bestViewLetter": "A",
+      "captureDay": "Day14_201014_F",
+      "chain": "KNEE",
+      "exercise": "스텝 백워드 다이나믹 런지",
+      "frames": 6914,
+      "medianErrorDegrees": 3.1,
+      "perViewMedianErrorDegrees": {
+        "A": 3.1,
+        "B": 6.28,
+        "C": 11.98,
+        "D": 4.86,
+        "E": 3.25
+      },
+      "usable": true
+    },
+    {
+      "bestViewIndex": 1,
+      "bestViewLetter": "A",
+      "captureDay": "Day23_201024_F",
+      "chain": "KNEE",
+      "exercise": "스텝 백워드 다이나믹 런지",
+      "frames": 2304,
+      "medianErrorDegrees": 3.98,
+      "perViewMedianErrorDegrees": {
+        "A": 3.98,
+        "B": 5.87,
+        "C": 10.74,
+        "D": 6.69,
+        "E": 4.0
+      },
+      "usable": true
+    },
+    {
+      "bestViewIndex": 1,
+      "bestViewLetter": "A",
+      "captureDay": "Day24_201026_F",
+      "chain": "KNEE",
+      "exercise": "스텝 백워드 다이나믹 런지",
+      "frames": 6879,
+      "medianErrorDegrees": 4.17,
+      "perViewMedianErrorDegrees": {
+        "A": 4.17,
+        "B": 7.91,
+        "C": 16.27,
+        "D": 8.28,
+        "E": 4.69
+      },
+      "usable": true
+    },
+    {
+      "bestViewIndex": 1,
+      "bestViewLetter": "A",
+      "captureDay": "Day27_201029_F",
+      "chain": "KNEE",
+      "exercise": "스텝 백워드 다이나믹 런지",
+      "frames": 2304,
+      "medianErrorDegrees": 3.35,
+      "perViewMedianErrorDegrees": {
+        "A": 3.35,
+        "B": 5.11,
+        "C": 10.85,
+        "D": 5.92,
+        "E": 3.85
+      },
+      "usable": true
+    },
+    {
+      "bestViewIndex": 4,
+      "bestViewLetter": "D",
+      "captureDay": "Day28_201030_F",
+      "chain": "KNEE",
+      "exercise": "스텝 백워드 다이나믹 런지",
+      "frames": 6912,
+      "medianErrorDegrees": 94.47,
+      "perViewMedianErrorDegrees": {
+        "A": 96.74,
+        "B": 96.92,
+        "C": 107.71,
+        "D": 94.47,
+        "E": 95.62
+      },
+      "usable": false
+    },
+    {
+      "bestViewIndex": 1,
+      "bestViewLetter": "A",
+      "captureDay": "Day01_200921_F",
+      "chain": "KNEE",
+      "exercise": "스텝 포워드 다이나믹 런지",
+      "frames": 7834,
+      "medianErrorDegrees": 3.29,
+      "perViewMedianErrorDegrees": {
+        "A": 3.29,
+        "B": 8.45,
+        "C": 20.94,
+        "D": 8.19,
+        "E": 3.31
+      },
+      "usable": true
+    },
+    {
+      "bestViewIndex": 5,
+      "bestViewLetter": "E",
+      "captureDay": "Day05_200925_F",
+      "chain": "KNEE",
+      "exercise": "스텝 포워드 다이나믹 런지",
+      "frames": 7896,
+      "medianErrorDegrees": 3.76,
+      "perViewMedianErrorDegrees": {
+        "A": 3.83,
+        "B": 6.19,
+        "C": 16.99,
+        "D": 5.83,
+        "E": 3.76
+      },
+      "usable": true
+    },
+    {
+      "bestViewIndex": 1,
+      "bestViewLetter": "A",
+      "captureDay": "Day09_201006_F",
+      "chain": "KNEE",
+      "exercise": "스텝 포워드 다이나믹 런지",
+      "frames": 9216,
+      "medianErrorDegrees": 2.91,
+      "perViewMedianErrorDegrees": {
+        "A": 2.91,
+        "B": 6.94,
+        "C": 13.69,
+        "D": 5.53,
+        "E": 3.01
+      },
+      "usable": true
+    },
+    {
+      "bestViewIndex": 5,
+      "bestViewLetter": "E",
+      "captureDay": "Day13_201013_F",
+      "chain": "KNEE",
+      "exercise": "스텝 포워드 다이나믹 런지",
+      "frames": 8191,
+      "medianErrorDegrees": 3.0,
+      "perViewMedianErrorDegrees": {
+        "A": 3.04,
+        "B": 6.62,
+        "C": 12.46,
+        "D": 5.66,
+        "E": 3.0
+      },
+      "usable": true
+    },
+    {
+      "bestViewIndex": 1,
+      "bestViewLetter": "A",
+      "captureDay": "Day23_201024_F",
+      "chain": "KNEE",
+      "exercise": "스텝 포워드 다이나믹 런지",
+      "frames": 9216,
+      "medianErrorDegrees": 3.9,
+      "perViewMedianErrorDegrees": {
+        "A": 3.9,
+        "B": 7.25,
+        "C": 13.27,
+        "D": 7.49,
+        "E": 4.55
+      },
+      "usable": true
+    },
+    {
+      "bestViewIndex": 1,
+      "bestViewLetter": "A",
+      "captureDay": "Day27_201029_F",
+      "chain": "KNEE",
+      "exercise": "스텝 포워드 다이나믹 런지",
+      "frames": 9216,
+      "medianErrorDegrees": 3.56,
+      "perViewMedianErrorDegrees": {
+        "A": 3.56,
+        "B": 7.41,
+        "C": 14.02,
+        "D": 8.0,
+        "E": 4.21
+      },
+      "usable": true
+    }
+  ],
+  "summaryByExercise": {
+    "굿모닝": {
+      "chain": "KNEE",
+      "days": 5,
+      "usableDays": 4,
+      "viewsByDay": {
+        "Day02_200922_F": "E",
+        "Day10_201007_F": "A",
+        "Day14_201014_F": "A",
+        "Day24_201026_F": "E",
+        "Day28_201030_F": "E"
+      }
+    },
+    "덤벨 컬": {
+      "chain": "SHOULDER",
+      "days": 6,
+      "usableDays": 6,
+      "viewsByDay": {
+        "Day04_200924_F": "C",
+        "Day08_201005_F": "C",
+        "Day12_201012_F": "C",
+        "Day16_201016_F": "C",
+        "Day26_201028_F": "C",
+        "Day30_201102_F": "C"
+      }
+    },
+    "딥스": {
+      "chain": "ELBOW",
+      "days": 4,
+      "usableDays": 4,
+      "viewsByDay": {
+        "Day17_201017_F": "A",
+        "Day20_201021_F": "A",
+        "Day21_201022_F": "B",
+        "Day22_201023_F": "B"
+      }
+    },
+    "랫풀 다운": {
+      "chain": "SHOULDER",
+      "days": 4,
+      "usableDays": 4,
+      "viewsByDay": {
+        "Day17_201017_F": "C",
+        "Day20_201021_F": "C",
+        "Day21_201022_F": "D",
+        "Day22_201023_F": "D"
+      }
+    },
+    "바벨 컬": {
+      "chain": "SHOULDER",
+      "days": 6,
+      "usableDays": 6,
+      "viewsByDay": {
+        "Day04_200924_F": "C",
+        "Day08_201005_F": "C",
+        "Day12_201012_F": "C",
+        "Day16_201016_F": "C",
+        "Day26_201028_F": "A",
+        "Day30_201102_F": "C"
+      }
+    },
+    "스탠딩 니업": {
+      "chain": "HIP",
+      "days": 12,
+      "usableDays": 12,
+      "viewsByDay": {
+        "Day01_200921_F": "E",
+        "Day04_200924_F": "A",
+        "Day05_200925_F": "A",
+        "Day08_201005_F": "A",
+        "Day09_201006_F": "E",
+        "Day12_201012_F": "E",
+        "Day13_201013_F": "C",
+        "Day16_201016_F": "C",
+        "Day23_201024_F": "C",
+        "Day26_201028_F": "E",
+        "Day27_201029_F": "A",
+        "Day30_201102_F": "D"
+      }
+    },
+    "스텝 백워드 다이나믹 런지": {
+      "chain": "KNEE",
+      "days": 11,
+      "usableDays": 10,
+      "viewsByDay": {
+        "Day01_200921_F": "A",
+        "Day02_200922_F": "E",
+        "Day05_200925_F": "A",
+        "Day09_201006_F": "A",
+        "Day10_201007_F": "A",
+        "Day13_201013_F": "A",
+        "Day14_201014_F": "A",
+        "Day23_201024_F": "A",
+        "Day24_201026_F": "A",
+        "Day27_201029_F": "A",
+        "Day28_201030_F": "D"
+      }
+    },
+    "스텝 포워드 다이나믹 런지": {
+      "chain": "KNEE",
+      "days": 6,
+      "usableDays": 6,
+      "viewsByDay": {
+        "Day01_200921_F": "A",
+        "Day05_200925_F": "E",
+        "Day09_201006_F": "A",
+        "Day13_201013_F": "E",
+        "Day23_201024_F": "A",
+        "Day27_201029_F": "A"
+      }
+    }
+  }
+}

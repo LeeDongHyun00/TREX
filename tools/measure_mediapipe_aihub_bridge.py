@@ -57,9 +57,83 @@ MIN_TRACKING_CONFIDENCE = 0.5
 MINIMUM_CHAIN_CONFIDENCE = 0.55
 
 CONTAMINATED_TYPE_CODES = frozenset({"062", "101", "109"})
-DEPTH_CONDITION_SUBSTRING = "앞다리"
 SUBJECT_PATTERN = re.compile(r"-(Z\d+)_")
 THRESHOLD_SEARCH_RANGE = range(40, 181)
+
+# Which MediaPipe landmarks each driver chain hinges on, mirroring FormCheckDriver.
+CHAINS: dict[str, dict[str, tuple[int, int, int]]] = {
+    "KNEE": {"Left": (23, 25, 27), "Right": (24, 26, 28)},
+    "HIP": {"Left": (11, 23, 25), "Right": (12, 24, 26)},
+    "ELBOW": {"Left": (11, 13, 15), "Right": (12, 14, 16)},
+    "SHOULDER": {"Left": (13, 11, 23), "Right": (14, 12, 24)},
+    "TRUNK": {"Left": (11, 23, 27), "Right": (12, 24, 28)},
+}
+
+# The same chains named in AI Hub label vocabulary.
+LABEL_CHAINS: dict[str, dict[str, tuple[str, str, str]]] = {
+    "KNEE": {
+        "Left": ("Left Hip", "Left Knee", "Left Ankle"),
+        "Right": ("Right Hip", "Right Knee", "Right Ankle"),
+    },
+    "HIP": {
+        "Left": ("Left Shoulder", "Left Hip", "Left Knee"),
+        "Right": ("Right Shoulder", "Right Hip", "Right Knee"),
+    },
+    "ELBOW": {
+        "Left": ("Left Shoulder", "Left Elbow", "Left Wrist"),
+        "Right": ("Right Shoulder", "Right Elbow", "Right Wrist"),
+    },
+    "SHOULDER": {
+        "Left": ("Left Elbow", "Left Shoulder", "Left Hip"),
+        "Right": ("Right Elbow", "Right Shoulder", "Right Hip"),
+    },
+    "TRUNK": {
+        "Left": ("Left Shoulder", "Left Hip", "Left Ankle"),
+        "Right": ("Right Shoulder", "Right Hip", "Right Ankle"),
+    },
+}
+
+# Exercise -> the condition whose truth the driver angle is asked to predict, plus the chain and
+# working direction the runtime uses for it.
+#
+# Only exercises whose dataset carries a condition *about that joint's angle* appear here. A
+# condition like "척추의 중립" or "손목의 중립" describes something the driver angle does not
+# measure, so fitting a threshold against it would be fitting noise -- the burpee's elbow-90
+# condition already demonstrated what that looks like.
+#
+# Deliberately absent, having been checked against the catalog and found to carry no
+# range-of-motion condition at all: 바벨 스쿼트 (spine, gaze, foot-knee alignment, foot planting),
+# 굿모닝, 바벨 컬, 덤벨 컬 (elbow *position*, wrist and spine neutrality, no shrug), 랫풀 다운,
+# 케이블 푸시 다운, 오버 헤드 프레스 (forearm vertical, scapula fixed, no knee bounce). For those
+# exercises this dataset cannot calibrate a depth or extension threshold no matter how many
+# images exist, because the label never says how far the joint travelled.
+# (condition, chain, direction, extreme), mirroring docs/aihub-angle-separability.v1.json.
+#
+# The extreme is which end of the clip's angle range summarises it, and it is NOT implied by the
+# direction. Both curls need the clip's *maximum* shoulder angle even though their condition holds
+# *below* a threshold: "elbow stays put" fails when the shoulder ever swings up, so the evidence is
+# the worst moment, not the deepest one. Deriving the extreme from the direction measured the
+# minimum instead -- an angle that sits near zero for every curl -- and scored exactly chance.
+EXERCISE_PROFILES: dict[str, tuple[str, str, str, str]] = {
+    "스텝 포워드 다이나믹 런지": ("앞다리 무릎 각도 90도", "KNEE", "FLEXION", "min"),
+    "스텝 백워드 다이나믹 런지": ("앞다리 무릎 각도 90도", "KNEE", "FLEXION", "min"),
+    "스탠딩 니업": ("무릎 충분히 올라오고", "HIP", "FLEXION", "min"),
+    "랫풀 다운": ("수축 시 몸통-팔꿈치 사이 모아줌", "SHOULDER", "FLEXION", "min"),
+    "굿모닝": ("무릎 구부린채 고정", "KNEE", "FLEXION", "min"),
+    "딥스": ("이완 시 팔꿈치 각도 90도", "ELBOW", "FLEXION", "min"),
+    "바벨 컬": ("팔꿈치 위치 고정", "SHOULDER", "FLEXION", "max"),
+    "덤벨 컬": ("팔꿈치 위치 고정", "SHOULDER", "FLEXION", "max"),
+}
+
+# The 2D<->3D correspondence on this capture day is broken: every view disagrees with the
+# reconstruction by ~100 degrees where the same exercise sits at 2-4 degrees elsewhere. Found by
+# the view-selection sweep and quarantined here alongside the three contaminated type codes.
+QUARANTINED_CAPTURE_DAYS = frozenset({"Day28_201030_F"})
+
+
+def _to_detector(angle: float, direction: str) -> float:
+    """Mirrors an angle so smaller always means more work, as the runtime does."""
+    return angle if direction == "FLEXION" else 180.0 - angle
 
 # AI Hub joint name -> MediaPipe BlazePose landmark index. Only anatomically unambiguous pairs
 # are listed: Neck, Back, Waist, Left/Right Palm have no MediaPipe counterpart, which is the
@@ -92,7 +166,6 @@ for _name, _index in JOINT_MAP.items():
     else:
         MIRRORED_JOINT_MAP[_name] = _index
 
-KNEE_CHAIN = {"Left": (23, 25, 27), "Right": (24, 26, 28)}
 
 
 def _included_angle(a: Any, b: Any, c: Any) -> float | None:
@@ -107,13 +180,18 @@ def _included_angle(a: Any, b: Any, c: Any) -> float | None:
     return math.degrees(math.acos(max(-1.0, min(1.0, cosine))))
 
 
-def _label_angle(points: dict[str, Any], axes: tuple[str, ...]) -> float | None:
+def _label_angle(
+    points: dict[str, Any],
+    axes: tuple[str, ...],
+    chain: str,
+    extreme: str,
+) -> float | None:
     angles = []
-    for side in ("Left", "Right"):
+    for side, joints in LABEL_CHAINS[chain].items():
         try:
-            p = points[f"{side} Hip"]
-            q = points[f"{side} Knee"]
-            r = points[f"{side} Ankle"]
+            p = points[joints[0]]
+            q = points[joints[1]]
+            r = points[joints[2]]
         except KeyError:
             continue
         u = [p[k] - q[k] for k in axes]
@@ -124,21 +202,26 @@ def _label_angle(points: dict[str, Any], axes: tuple[str, ...]) -> float | None:
             continue
         cosine = sum(a * b for a, b in zip(u, v)) / (nu * nv)
         angles.append(math.degrees(math.acos(max(-1.0, min(1.0, cosine)))))
-    return min(angles) if angles else None
+    if not angles:
+        return None
+    # The side that carries the evidence is the one at the summarising extreme.
+    return min(angles) if extreme == "min" else max(angles)
 
 
-def _mediapipe_knee_angle(world: list[Any]) -> float | None:
-    """Deepest credible knee bend, replicating the runtime's own chain-confidence gate."""
+def _mediapipe_angle(world: list[Any], chain: str, extreme: str) -> float | None:
+    """Working extreme of the driver chain, replicating the runtime's confidence gate."""
     angles = []
-    for hip_i, knee_i, ankle_i in KNEE_CHAIN.values():
-        chain = [world[hip_i], world[knee_i], world[ankle_i]]
-        confidence = min(min(lm.visibility, lm.presence) for lm in chain)
+    for first_i, vertex_i, second_i in CHAINS[chain].values():
+        points = [world[first_i], world[vertex_i], world[second_i]]
+        confidence = min(min(lm.visibility, lm.presence) for lm in points)
         if confidence < MINIMUM_CHAIN_CONFIDENCE:
             continue
-        angle = _included_angle(*chain)
+        angle = _included_angle(*points)
         if angle is not None:
             angles.append(angle)
-    return min(angles) if angles else None
+    if not angles:
+        return None
+    return min(angles) if extreme == "min" else max(angles)
 
 
 def _fit_threshold(rows: list[tuple[float, bool]]) -> int | None:
@@ -180,7 +263,13 @@ def _verify_model(model_path: Path) -> str:
     return digest
 
 
-def run(label_root: Path, model_path: Path, limit: int | None) -> dict[str, Any]:
+def run(
+    label_root: Path,
+    model_path: Path,
+    limit: int | None,
+    image_root: Path | None = None,
+    view_artifact: Path | None = None,
+) -> dict[str, Any]:
     import cv2
     import numpy
     import mediapipe as mp
@@ -188,6 +277,15 @@ def run(label_root: Path, model_path: Path, limit: int | None) -> dict[str, Any]
     from mediapipe.tasks.python import vision
 
     model_sha = _verify_model(model_path)
+
+    view_selection: dict[tuple[str, str], str] = {}
+    if view_artifact is not None and view_artifact.is_file():
+        selection = json.loads(view_artifact.read_text(encoding="utf-8"))
+        for row in selection.get("selections", []):
+            if row.get("usable"):
+                view_selection[(row["exercise"], row["captureDay"])] = (
+                    f"view{row['bestViewIndex']}"
+                )
 
     landmarker = vision.PoseLandmarker.create_from_options(
         vision.PoseLandmarkerOptions(
@@ -201,16 +299,21 @@ def run(label_root: Path, model_path: Path, limit: int | None) -> dict[str, Any]
         )
     )
 
-    # img_key is dataset-relative and already carries the capture-day directory name, so it
-    # resolves against the label root's parent rather than the label root itself.
-    dataset_root = label_root.parent
+    # img_key is dataset-relative and already carries the capture-day directory name. It
+    # normally resolves against the label root's parent, but raw imagery unpacked from the
+    # distribution archives lives elsewhere, so an explicit root overrides that.
+    dataset_root = image_root if image_root is not None else label_root.parent
     outcomes: Counter[str] = Counter()
     joint_errors: dict[str, list[float]] = defaultdict(list)
     joint_errors_mirrored: dict[str, list[float]] = defaultdict(list)
     angle_pairs: list[tuple[float, float]] = []
     clip_rows: dict[str, list[dict[str, Any]]] = defaultdict(list)
 
-    label_paths = [p for p in sorted(label_root.glob("D05-*.json")) if not p.name.endswith("-3d.json")]
+    # Any capture-day directory beneath the root, so one run can span every day an exercise
+    # was filmed rather than a single hard-coded one.
+    label_paths = [
+        p for p in sorted(label_root.rglob("D*.json")) if not p.name.endswith("-3d.json")
+    ]
     processed_clips = 0
 
     for label_path in label_paths:
@@ -225,7 +328,12 @@ def run(label_root: Path, model_path: Path, limit: int | None) -> dict[str, Any]
             unicodedata.normalize("NFC", e["condition"]).strip(): e["value"]
             for e in type_info.get("conditions", [])
         }
-        depth_keys = [k for k in conditions if DEPTH_CONDITION_SUBSTRING in k]
+        exercise = unicodedata.normalize("NFC", type_info["exercise"]).strip()
+        profile = EXERCISE_PROFILES.get(exercise)
+        if profile is None:
+            continue
+        condition_name, chain, direction, extreme = profile
+        depth_keys = [k for k in conditions if condition_name in k]
         if len(depth_keys) != 1:
             continue
         spatial_path = label_path.with_name(label_path.stem + "-3d.json")
@@ -235,15 +343,25 @@ def run(label_root: Path, model_path: Path, limit: int | None) -> dict[str, Any]
         if len(spatial_frames) != len(frames):
             continue
 
-        exercise = unicodedata.normalize("NFC", type_info["exercise"]).strip()
-        subject_match = SUBJECT_PATTERN.search(frames[0]["view1"]["img_key"])
+        capture_day = frames[0]["view1"]["img_key"].split("/")[0]
+        if capture_day in QUARANTINED_CAPTURE_DAYS:
+            outcomes["quarantined_capture_day"] += 1
+            continue
+        # Camera assignment is a property of the capture day, not of the dataset, so the view to
+        # measure from is looked up rather than assumed. Assuming view A produced a near-chance
+        # result once already.
+        view_key = view_selection.get((exercise, capture_day))
+        if view_key is None:
+            outcomes["no_view_selection"] += 1
+            continue
+        subject_match = SUBJECT_PATTERN.search(frames[0][view_key]["img_key"])
         subject = subject_match.group(1) if subject_match else "UNKNOWN"
 
         clip_mp_angles: list[float] = []
         clip_label_angles: list[float] = []
 
         for frame, spatial_frame in zip(frames, spatial_frames):
-            view = frame["view1"]
+            view = frame[view_key]
             image_path = dataset_root / view["img_key"]
             if not image_path.exists():
                 outcomes["missing_image"] += 1
@@ -297,8 +415,8 @@ def run(label_root: Path, model_path: Path, limit: int | None) -> dict[str, Any]
                         dy = predicted.y * height - point["y"]
                         sink[name].append(math.hypot(dx, dy) / body_scale)
 
-            mp_angle = _mediapipe_knee_angle(world_landmarks)
-            label_angle = _label_angle(spatial_frame["pts"], ("x", "y", "z"))
+            mp_angle = _mediapipe_angle(world_landmarks, chain, extreme)
+            label_angle = _label_angle(spatial_frame["pts"], ("x", "y", "z"), chain, extreme)
             if mp_angle is None:
                 outcomes["chain_below_confidence"] += 1
                 continue
@@ -313,8 +431,15 @@ def run(label_root: Path, model_path: Path, limit: int | None) -> dict[str, Any]
                 {
                     "subject": subject,
                     "label": bool(conditions[depth_keys[0]]),
-                    "mediapipeMinAngle": min(clip_mp_angles),
-                    "aihubMinAngle": min(clip_label_angles),
+                    "mediapipeMinAngle": (
+                        min(clip_mp_angles) if extreme == "min" else max(clip_mp_angles)
+                    ),
+                    "aihubMinAngle": (
+                        min(clip_label_angles) if extreme == "min" else max(clip_label_angles)
+                    ),
+                    "direction": direction,
+                    "extreme": extreme,
+                    "chain": chain,
                     "observedFrames": len(clip_mp_angles),
                 }
             )
@@ -338,8 +463,16 @@ def run(label_root: Path, model_path: Path, limit: int | None) -> dict[str, Any]
     exercises: list[dict[str, Any]] = []
     for exercise in sorted(clip_rows):
         rows = clip_rows[exercise]
-        aihub_rows = [(r["aihubMinAngle"], r["label"]) for r in rows]
-        mp_rows = [(r["mediapipeMinAngle"], r["label"]) for r in rows]
+        direction = rows[0]["direction"]
+
+        # Fitting happens in the detector's space, where a smaller number always means more work,
+        # so one "angle <= threshold predicts true" rule serves both directions. Thresholds are
+        # reported back as real joint angles.
+        def mirrored(key: str) -> list[tuple[float, bool]]:
+            return [(_to_detector(r[key], direction), r["label"]) for r in rows]
+
+        aihub_rows = mirrored("aihubMinAngle")
+        mp_rows = mirrored("mediapipeMinAngle")
         positives = sum(1 for r in rows if r["label"])
         if positives in (0, len(rows)):
             continue
@@ -350,12 +483,20 @@ def run(label_root: Path, model_path: Path, limit: int | None) -> dict[str, Any]
         folds: list[int] = []
         correct = held = 0
         for subject in subjects:
-            train = [(r["mediapipeMinAngle"], r["label"]) for r in rows if r["subject"] != subject]
-            test = [(r["mediapipeMinAngle"], r["label"]) for r in rows if r["subject"] == subject]
+            train = [
+                (_to_detector(r["mediapipeMinAngle"], direction), r["label"])
+                for r in rows
+                if r["subject"] != subject
+            ]
+            test = [
+                (_to_detector(r["mediapipeMinAngle"], direction), r["label"])
+                for r in rows
+                if r["subject"] == subject
+            ]
             fitted = _fit_threshold(train)
             if fitted is None or not test:
                 continue
-            folds.append(fitted)
+            folds.append(int(_to_detector(float(fitted), direction)))
             correct += sum(1 for a, label in test if (a <= fitted) == label)
             held += len(test)
 
@@ -365,19 +506,30 @@ def run(label_root: Path, model_path: Path, limit: int | None) -> dict[str, Any]
                 "clipCount": len(rows),
                 "conditionTrueCount": positives,
                 "subjectCount": len(subjects),
-                "aihubFittedThresholdDegrees": aihub_threshold,
+                "direction": direction,
+                "chain": rows[0]["chain"],
+                "aihubFittedThresholdDegrees": (
+                    int(_to_detector(float(aihub_threshold), direction))
+                    if aihub_threshold is not None
+                    else None
+                ),
                 "aihubThresholdAppliedToMediapipeAccuracy": (
                     round(_accuracy(mp_rows, aihub_threshold), 4)
                     if aihub_threshold is not None
                     else None
                 ),
-                "mediapipeNativeThresholdDegrees": mp_threshold,
+                "mediapipeNativeThresholdDegrees": (
+                    int(_to_detector(float(mp_threshold), direction))
+                    if mp_threshold is not None
+                    else None
+                ),
                 "mediapipeNativeAccuracy": (
                     round(_accuracy(mp_rows, mp_threshold), 4) if mp_threshold is not None else None
                 ),
                 "mediapipeNativeLosoAccuracy": round(correct / held, 4) if held else None,
                 "mediapipeNativeLosoThresholdMinDegrees": min(folds) if folds else None,
                 "mediapipeNativeLosoThresholdMaxDegrees": max(folds) if folds else None,
+                "clipCountBySubject": len(subjects),
                 "clipLevelAngleBiasDegrees": round(
                     statistics.median(
                         [r["mediapipeMinAngle"] - r["aihubMinAngle"] for r in rows]
@@ -401,7 +553,10 @@ def run(label_root: Path, model_path: Path, limit: int | None) -> dict[str, Any]
             "runningMode": "IMAGE",
             "numPoses": NUM_POSES,
         },
-        "view": {"cameraView": "A", "labelView": "view1", "orientation": "LATERAL"},
+        "view": {
+            "selection": "PER_EXERCISE_AND_CAPTURE_DAY",
+            "artifact": "docs/aihub-measurement-view.v1.json",
+        },
         "jointMappingConvention": {
             "selected": convention,
             "directMedianNormalisedError": round(direct_median, 4),
@@ -448,13 +603,25 @@ def main() -> int:
     parser.add_argument("--model", type=Path, default=DEFAULT_MODEL)
     parser.add_argument("--out", type=Path, default=DEFAULT_ARTIFACT)
     parser.add_argument("--limit", type=int, default=None, help="max clips (pilot runs)")
+    parser.add_argument(
+        "--images",
+        type=Path,
+        default=None,
+        help="root the label img_key paths resolve against (defaults to the label root parent)",
+    )
+    parser.add_argument(
+        "--views",
+        type=Path,
+        default=REPO_ROOT / "docs" / "aihub-measurement-view.v1.json",
+        help="measurement-view selection artifact; clips without a usable view are skipped",
+    )
     args = parser.parse_args()
 
     if not args.label_root.is_dir():
         print(f"not a directory: {args.label_root}", file=sys.stderr)
         return 1
 
-    artifact = run(args.label_root, args.model, args.limit)
+    artifact = run(args.label_root, args.model, args.limit, args.images, args.views)
     rendered = json.dumps(artifact, sort_keys=True, indent=2, ensure_ascii=False) + "\n"
     args.out.write_text(rendered, encoding="utf-8")
 
