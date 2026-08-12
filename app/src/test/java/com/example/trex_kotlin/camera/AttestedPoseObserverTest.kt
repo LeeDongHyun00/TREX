@@ -60,6 +60,96 @@ class AttestedPoseObserverTest {
     }
 
     @Test
+    fun distantSceneryDoesNotDissolveTheLock() {
+        // A bystander crossing the far side of a gym used to end the set. Person-lock v3 excludes
+        // a candidate whose landmark envelope is well under the subject's before judging
+        // multiplicity, so the subject keeps the same epoch throughout.
+        val fixture = fixture(acquisitionDwellMs = 100L, viewDwellMs = 50L)
+        fixture.accept(0L)
+        val locked = fixture.accept(100L)
+        val epoch = locked.observation.personTrackEpoch
+
+        val withScenery = fixture.observer.accept(
+            batch(
+                timestampMs = 120L,
+                frames = listOf(frame(120L), frame(120L, centerX = 0.85, scale = 0.35)),
+            ),
+        )
+
+        assertStatus(withScenery, PoseObserverTrackingStatus.TRACKED, locked = true)
+        assertSame(epoch, withScenery.observation.personTrackEpoch)
+    }
+
+    @Test
+    fun aComparablySizedBystanderStillAbstains() {
+        // The attribution rule is unchanged: two people who could each be the subject means the
+        // measurement cannot be attributed, so the lock still drops.
+        val fixture = fixture(acquisitionDwellMs = 100L, viewDwellMs = 50L)
+        fixture.accept(0L)
+        fixture.accept(100L)
+
+        val update = fixture.observer.accept(
+            batch(
+                timestampMs = 120L,
+                frames = listOf(frame(120L), frame(120L, centerX = 0.80, scale = 0.80)),
+            ),
+        )
+
+        assertStatus(update, PoseObserverTrackingStatus.AMBIGUOUS, locked = false)
+        assertTrue(PoseObserverUnknownReason.PERSON_AMBIGUOUS in update.unknownReasons)
+    }
+
+    @Test
+    fun sceneryThatWalksCloserBecomesAmbiguousAtTheCeiling() {
+        val fixture = fixture(acquisitionDwellMs = 100L, viewDwellMs = 50L)
+        fixture.accept(0L)
+        fixture.accept(100L)
+
+        val far = fixture.observer.accept(
+            batch(
+                timestampMs = 120L,
+                frames = listOf(frame(120L), frame(120L, centerX = 0.85, scale = 0.40)),
+            ),
+        )
+        assertStatus(far, PoseObserverTrackingStatus.TRACKED, locked = true)
+
+        val near = fixture.observer.accept(
+            batch(
+                timestampMs = 140L,
+                frames = listOf(frame(140L), frame(140L, centerX = 0.80, scale = 0.70)),
+            ),
+        )
+        assertStatus(near, PoseObserverTrackingStatus.AMBIGUOUS, locked = false)
+    }
+
+    @Test
+    fun acquisitionStartsBesideSceneryButNotBesideASecondSubject() {
+        val withScenery = fixture(acquisitionDwellMs = 100L, viewDwellMs = 50L)
+        assertStatus(
+            withScenery.observer.accept(
+                batch(
+                    timestampMs = 0L,
+                    frames = listOf(frame(0L), frame(0L, centerX = 0.88, scale = 0.30)),
+                ),
+            ),
+            PoseObserverTrackingStatus.ACQUIRING,
+            locked = false,
+        )
+
+        val withPeer = fixture(acquisitionDwellMs = 100L, viewDwellMs = 50L)
+        assertStatus(
+            withPeer.observer.accept(
+                batch(
+                    timestampMs = 0L,
+                    frames = listOf(frame(0L), frame(0L, centerX = 0.80, scale = 0.90)),
+                ),
+            ),
+            PoseObserverTrackingStatus.AMBIGUOUS,
+            locked = false,
+        )
+    }
+
+    @Test
     fun rejectedSchemaCandidateStillCountsAsMultiPersonSentinel() {
         val fixture = fixture(acquisitionDwellMs = 100L, viewDwellMs = 50L)
         fixture.accept(0L)
@@ -367,9 +457,10 @@ class AttestedPoseObserverTest {
         confidence: Double = 1.0,
         cropFeet: Boolean = false,
         noseConfidence: Double? = null,
+        scale: Double = 1.0,
         geometryContext: PoseCameraGeometryContext = geometryContext(),
     ): PoseFrame {
-        val normalized = normalizedSkeleton(centerX, confidence, cropFeet).let { skeleton ->
+        val normalized = normalizedSkeleton(centerX, confidence, cropFeet, scale).let { skeleton ->
             if (noseConfidence == null) {
                 skeleton
             } else {
@@ -419,10 +510,16 @@ class AttestedPoseObserverTest {
         preprocessingArtifactSha256 = preprocessingArtifactSha256,
     )
 
+    /**
+     * @param scale shrinks the whole skeleton about its own centre, standing in for a person
+     *   farther from the camera. The landmark envelope scales linearly, so [scale] is exactly the
+     *   ratio the background gate compares against its ceiling.
+     */
     private fun normalizedSkeleton(
         centerX: Double,
         confidence: Double,
         cropFeet: Boolean,
+        scale: Double = 1.0,
     ): Map<PoseJoint, PoseLandmark> {
         val points = mutableMapOf<PoseJoint, Pair<Double, Double>>()
         fun bilateral(left: PoseJoint, right: PoseJoint, halfWidth: Double, y: Double) {
@@ -446,7 +543,13 @@ class AttestedPoseObserverTest {
         )
         return PoseJoint.entries.associateWith { joint ->
             val (x, y) = points[joint] ?: (centerX to 0.20)
-            PoseLandmark(x, y, 0.0, confidence, confidence)
+            PoseLandmark(
+                centerX + (x - centerX) * scale,
+                0.5 + (y - 0.5) * scale,
+                0.0,
+                confidence,
+                confidence,
+            )
         }
     }
 

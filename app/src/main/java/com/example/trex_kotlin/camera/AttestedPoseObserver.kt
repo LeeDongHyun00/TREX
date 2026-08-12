@@ -13,9 +13,11 @@ import com.example.trex_kotlin.pose.runtime.PoseViewQualification
 import java.util.Collections
 import kotlin.math.abs
 import kotlin.math.atan2
+import kotlin.math.exp
 import kotlin.math.hypot
 import kotlin.math.ln
 import kotlin.math.max
+import kotlin.math.min
 import kotlin.math.sqrt
 
 internal const val FULL_BODY_PHASE_VIEW_CONTRACT_ID = "trex.view.full-body-any.v1"
@@ -104,9 +106,9 @@ internal data class PoseCandidateBatch(
 
 internal data class PosePersonLockConfig(
     val minimumAnchorConfidence: Double = 0.55,
-    val minimumAnchorCount: Int = 6,
-    val minimumSharedAnchorCount: Int = 4,
-    val minimumBodyRatioCount: Int = 6,
+    val minimumAnchorCount: Int = 4,
+    val minimumSharedAnchorCount: Int = 3,
+    val minimumBodyRatioCount: Int = 4,
     val acquisitionDwellMs: Long = 1_000L,
     val maximumFrameGapMs: Long = 250L,
     val maximumCenterDistanceBodyScales: Double = 0.85,
@@ -114,11 +116,22 @@ internal data class PosePersonLockConfig(
     val maximumMeanAnchorDistanceBodyScales: Double = 0.80,
     val maximumMeanBodyRatioLogDelta: Double = 0.20,
     val minimumAssociationCostMargin: Double = 0.18,
+    /**
+     * A candidate whose landmark envelope is smaller than this fraction of the largest
+     * candidate's is scenery rather than a second subject, and is excluded before ambiguity is
+     * judged. Apparent size falls with distance, so 0.55 means "at least about 1.8 times farther
+     * away than the nearest person" — a gym bystander walking past at a comparable distance
+     * still reads as ambiguous and still stops evaluation.
+     */
+    val backgroundEnvelopeRatioCeiling: Double = 0.55,
 ) {
     init {
         require(minimumAnchorConfidence in 0.0..1.0)
+        require(backgroundEnvelopeRatioCeiling in 0.0..<1.0) {
+            "The background ratio must be a strict fraction of the largest candidate"
+        }
         require(minimumAnchorCount in 4..TRACKING_ANCHORS.size)
-        require(minimumSharedAnchorCount in 4..minimumAnchorCount)
+        require(minimumSharedAnchorCount in 3..minimumAnchorCount)
         require(minimumBodyRatioCount in 4..BODY_SEGMENTS.size + 2)
         require(acquisitionDwellMs > 0L)
         require(maximumFrameGapMs > 0L)
@@ -131,9 +144,16 @@ internal data class PosePersonLockConfig(
 
     val artifactSha256: String = canonicalFieldsSha256(
         listOf(
-            "personLockSchemaVersion" to "1",
-            "implementationContractId" to "trex.primary-person-lock.algorithm.v1",
-            "candidateMultiplicityPolicy" to "EXACTLY_ONE_RAW_AND_VALID_CANDIDATE",
+            "personLockSchemaVersion" to "3",
+            "implementationContractId" to "trex.primary-person-lock.algorithm.v3",
+            // v3: distant scenery no longer counts toward multiplicity, but two candidates of
+            // comparable apparent size still abstain — the attribution rule is unchanged.
+            "candidateMultiplicityPolicy" to "EXACTLY_ONE_FOREGROUND_AND_VALID_CANDIDATE",
+            "backgroundCandidatePolicy" to "LANDMARK_ENVELOPE_RATIO_EXCLUSION",
+            "backgroundEnvelopeRatioCeiling" to backgroundEnvelopeRatioCeiling.toString(),
+            // A self-occluded far side must not dissolve the descriptor: shoulder and hip
+            // references use the best available side of each bilateral pair.
+            "occlusionPolicy" to "BILATERAL_PAIR_BEST_SIDE_REFERENCE",
             "minimumAnchorConfidence" to minimumAnchorConfidence.toString(),
             "minimumAnchorCount" to minimumAnchorCount.toString(),
             "minimumSharedAnchorCount" to minimumSharedAnchorCount.toString(),
@@ -157,7 +177,13 @@ internal data class PoseViewQualifierConfig(
     val maximumBodyHeight: Double = 0.99,
     val maximumFrontYawDegrees: Double = 30.0,
     val minimumSagittalYawDegrees: Double = 60.0,
+    /** Once lateral, the view stays lateral until the smoothed yaw falls below this. */
+    val lateralExitYawDegrees: Double = 45.0,
     val maximumBilateralYawDisagreementDegrees: Double = 15.0,
+    /** World-side confidence floor for a single axis-yaw sample; below it the axis abstains. */
+    val minimumAxisSideConfidence: Double = 0.35,
+    /** Time constant of the exponential yaw smoother that keeps boundary noise out of tokens. */
+    val yawSmoothingTimeConstantMs: Long = 150L,
     val qualificationDwellMs: Long = 300L,
 ) {
     init {
@@ -165,24 +191,36 @@ internal data class PoseViewQualifierConfig(
         require(frameMargin in 0.0..<0.5)
         require(minimumBodyHeight in 0.0..1.0)
         require(maximumBodyHeight in minimumBodyHeight..1.0)
-        require(maximumFrontYawDegrees in 0.0..<minimumSagittalYawDegrees)
+        require(maximumFrontYawDegrees in 0.0..<lateralExitYawDegrees)
+        require(lateralExitYawDegrees <= minimumSagittalYawDegrees)
         require(minimumSagittalYawDegrees <= 90.0)
         require(maximumBilateralYawDisagreementDegrees in 0.0..90.0)
+        // Strictly positive: a zero floor would let two zero-weight axes divide 0/0 into a NaN
+        // yaw that poisons the smoother until the next reset.
+        require(minimumAxisSideConfidence > 0.0)
+        require(minimumAxisSideConfidence <= minimumLandmarkConfidence)
+        require(yawSmoothingTimeConstantMs > 0L)
         require(qualificationDwellMs > 0L)
     }
 
     val artifactSha256: String = canonicalFieldsSha256(
         listOf(
-            "viewQualifierSchemaVersion" to "1",
-            "implementationContractId" to "trex.body-view-qualifier.algorithm.v1",
+            "viewQualifierSchemaVersion" to "2",
+            "implementationContractId" to "trex.body-view-qualifier.algorithm.v2",
+            // A self-occluded far side must not revoke the whole placement: the nose plus the
+            // best side of every bilateral pair carries the visibility gates.
+            "occlusionPolicy" to "NOSE_REQUIRED_BILATERAL_PAIR_BEST_SIDE",
             "minimumLandmarkConfidence" to minimumLandmarkConfidence.toString(),
             "frameMargin" to frameMargin.toString(),
             "minimumBodyHeight" to minimumBodyHeight.toString(),
             "maximumBodyHeight" to maximumBodyHeight.toString(),
             "maximumFrontYawDegrees" to maximumFrontYawDegrees.toString(),
             "minimumSagittalYawDegrees" to minimumSagittalYawDegrees.toString(),
+            "lateralExitYawDegrees" to lateralExitYawDegrees.toString(),
             "maximumBilateralYawDisagreementDegrees" to
                 maximumBilateralYawDisagreementDegrees.toString(),
+            "minimumAxisSideConfidence" to minimumAxisSideConfidence.toString(),
+            "yawSmoothingTimeConstantMs" to yawSmoothingTimeConstantMs.toString(),
             "qualificationDwellMs" to qualificationDwellMs.toString(),
             "fullBodyPhaseViewContractId" to FULL_BODY_PHASE_VIEW_CONTRACT_ID,
             "lateralViewContractId" to FULL_BODY_LATERAL_VIEW_CONTRACT_ID,
@@ -256,16 +294,21 @@ internal class MediaPipePoseObserver(
             cameraGeometryEpoch = observationSource.newCameraGeometryEpoch(batch.geometryContext)
         }
 
-        val described = batch.candidates.mapNotNull { frame ->
+        // Scenery is separated before multiplicity is judged, so a bystander crossing the far
+        // side of a gym no longer dissolves the lock. Candidates the mapper rejected outright
+        // carry no geometry, so they cannot be shown to be scenery and keep counting.
+        val foreground = foregroundCandidates(batch.candidates)
+        val effectiveCandidateCount = batch.rejectedCandidateCount + foreground.size
+        val described = foreground.mapNotNull { frame ->
             CandidateDescriptor.from(frame, personLockConfig)?.let { descriptor ->
                 DescribedCandidate(frame, descriptor)
             }
         }
         val invalidCandidateCount = batch.rejectedCandidateCount +
-            (batch.candidates.size - described.size)
+            (foreground.size - described.size)
 
         if (geometryDiscontinuity) {
-            val candidate = if (batch.rawCandidateCount <= 1) {
+            val candidate = if (effectiveCandidateCount <= 1) {
                 beginOrContinueAcquisition(batch.timestampMs, described)
             } else {
                 pendingAcquisition = null
@@ -277,9 +320,9 @@ internal class MediaPipePoseObserver(
                 status = PoseObserverTrackingStatus.TRACK_DISCONTINUITY,
                 reasons = buildSet {
                     add(PoseObserverUnknownReason.CAMERA_GEOMETRY_DISCONTINUITY)
-                    if (batch.rawCandidateCount > 1) {
+                    if (effectiveCandidateCount > 1) {
                         add(PoseObserverUnknownReason.PERSON_AMBIGUOUS)
-                    } else if (batch.rawCandidateCount == 0) {
+                    } else if (effectiveCandidateCount == 0) {
                         add(PoseObserverUnknownReason.PERSON_NOT_FOUND)
                     }
                     if (invalidCandidateCount > 0) {
@@ -289,7 +332,7 @@ internal class MediaPipePoseObserver(
             )
         }
 
-        if (batch.rawCandidateCount > 1) {
+        if (effectiveCandidateCount > 1) {
             clearLock()
             return update(
                 batch = batch,
@@ -385,13 +428,13 @@ internal class MediaPipePoseObserver(
                 update(
                     batch = batch,
                     selected = null,
-                    status = if (batch.rawCandidateCount == 0) {
+                    status = if (effectiveCandidateCount == 0) {
                         PoseObserverTrackingStatus.PERSON_NOT_FOUND
                     } else {
                         PoseObserverTrackingStatus.INSUFFICIENT_LANDMARKS
                     },
                     reasons = setOf(
-                        if (batch.rawCandidateCount == 0) {
+                        if (effectiveCandidateCount == 0) {
                             PoseObserverUnknownReason.PERSON_NOT_FOUND
                         } else {
                             PoseObserverUnknownReason.REQUIRED_LANDMARK_LOW_CONFIDENCE
@@ -535,6 +578,43 @@ internal class MediaPipePoseObserver(
         scene.filterNot { it === primary }.forEach { add(it.descriptor) }
     }
 
+    /**
+     * Keeps the candidates that could plausibly be the subject and drops plain scenery.
+     *
+     * The size proxy is the diagonal of the landmark envelope rather than a torso length or a
+     * bounding-box height: it is defined for every candidate regardless of per-landmark
+     * confidence, and it does not collapse when the subject is horizontal, so a plank next to a
+     * standing bystander cannot be mistaken for the smaller party.
+     *
+     * The largest candidate always survives, so a non-empty batch never becomes empty here.
+     */
+    private fun foregroundCandidates(candidates: List<PoseFrame>): List<PoseFrame> {
+        if (candidates.size <= 1) return candidates
+        val envelopes = candidates.map(::landmarkEnvelopeDiagonal)
+        val largest = envelopes.max()
+        if (largest <= GEOMETRY_EPSILON) return candidates
+        val floor = largest * personLockConfig.backgroundEnvelopeRatioCeiling
+        return candidates.filterIndexed { index, _ -> envelopes[index] >= floor }
+    }
+
+    private fun landmarkEnvelopeDiagonal(frame: PoseFrame): Double {
+        val landmarks = frame.landmarks.values
+        if (landmarks.size < 2) return 0.0
+        val aspect = frame.imageAspectRatio
+        var minX = Double.MAX_VALUE
+        var maxX = -Double.MAX_VALUE
+        var minY = Double.MAX_VALUE
+        var maxY = -Double.MAX_VALUE
+        for (landmark in landmarks) {
+            val x = landmark.x * aspect
+            if (x < minX) minX = x
+            if (x > maxX) maxX = x
+            if (landmark.y < minY) minY = landmark.y
+            if (landmark.y > maxY) maxY = landmark.y
+        }
+        return hypot(maxX - minX, maxY - minY)
+    }
+
     private fun selectAcquisitionCandidate(
         candidates: List<DescribedCandidate>,
     ): AcquisitionSelection {
@@ -640,6 +720,10 @@ internal class MediaPipePoseObserver(
         personTrackEpoch = null
         pendingAcquisition = null
         clearViewState()
+        // Yaw smoothing and the lateral latch are continuity state for one observed person, so
+        // they end exactly where the lock ends — and nowhere else. A one-frame visibility blip
+        // that abstains from tokens must not erase the hysteresis it exists to provide.
+        viewQualifier.reset()
     }
 
     private fun stabilizedViewIds(
@@ -702,38 +786,68 @@ internal class MediaPipePoseObserver(
 private class PoseViewQualifier(
     private val config: PoseViewQualifierConfig,
 ) {
+    // Smoothing and the lateral latch are continuity state for one observed person. The observer
+    // calls reset() whenever the person lock or camera geometry breaks.
+    private var smoothedYawDegrees: Double? = null
+    private var smoothedYawTimestampMs: Long? = null
+    private var lateralLatched = false
+
+    fun reset() {
+        smoothedYawDegrees = null
+        smoothedYawTimestampMs = null
+        lateralLatched = false
+    }
+
     fun qualify(frame: PoseFrame): PoseViewDecision {
         val normalized = frame.landmarks
-        val missing = FULL_BODY_JOINTS.filterNot(normalized::containsKey)
-        if (missing.isNotEmpty()) {
+        val nose = normalized[PoseJoint.NOSE]
+        val pairSides = BILATERAL_VIEW_PAIRS.map { (leftJoint, rightJoint) ->
+            listOfNotNull(normalized[leftJoint], normalized[rightJoint])
+        }
+        // Gate failures below are per-frame abstentions, not identity breaks: they keep the
+        // smoothing and latch state, which the observer resets only when the person lock ends.
+        if (nose == null || pairSides.any(List<PoseLandmark>::isEmpty)) {
             return PoseViewDecision.unknown(PoseObserverUnknownReason.REQUIRED_LANDMARK_MISSING)
         }
-        val lowConfidence = FULL_BODY_JOINTS.any { joint ->
-            normalized.getValue(joint).confidence < config.minimumLandmarkConfidence
-        }
+        // Occlusion-tolerant visibility gate: a true side pose self-occludes its far half, so the
+        // nose plus the best side of every bilateral pair carries the requirement instead of all
+        // thirteen joints individually.
+        val lowConfidence = nose.confidence < config.minimumLandmarkConfidence ||
+            pairSides.any { sides ->
+                sides.maxOf(PoseLandmark::confidence) < config.minimumLandmarkConfidence
+            }
         if (lowConfidence) {
             return PoseViewDecision.unknown(
                 PoseObserverUnknownReason.REQUIRED_LANDMARK_LOW_CONFIDENCE,
             )
         }
-        val outside = FULL_BODY_JOINTS.any { joint ->
-            val point = normalized.getValue(joint)
+        // A low-confidence far-side coordinate is a guess; only credible joints are held to the
+        // framing and height gates.
+        val credible = buildList {
+            add(nose)
+            pairSides.forEach { sides ->
+                sides.forEach { landmark ->
+                    if (landmark.confidence >= config.minimumLandmarkConfidence) add(landmark)
+                }
+            }
+        }
+        val outside = credible.any { point ->
             point.x !in config.frameMargin..(1.0 - config.frameMargin) ||
                 point.y !in config.frameMargin..(1.0 - config.frameMargin)
         }
         if (outside) {
             return PoseViewDecision.unknown(PoseObserverUnknownReason.BODY_OUT_OF_FRAME)
         }
-        val upperY = listOf(PoseJoint.LEFT_SHOULDER, PoseJoint.RIGHT_SHOULDER)
-            .minOf { normalized.getValue(it).y }
-        val lowerY = listOf(
+        val upperY = credibleYs(normalized, PoseJoint.LEFT_SHOULDER, PoseJoint.RIGHT_SHOULDER).min()
+        val lowerY = credibleYs(
+            normalized,
             PoseJoint.LEFT_ANKLE,
             PoseJoint.RIGHT_ANKLE,
             PoseJoint.LEFT_HEEL,
             PoseJoint.RIGHT_HEEL,
             PoseJoint.LEFT_FOOT_INDEX,
             PoseJoint.RIGHT_FOOT_INDEX,
-        ).maxOf { normalized.getValue(it).y }
+        ).max()
         val bodyHeight = lowerY - upperY
         if (bodyHeight < config.minimumBodyHeight) {
             return PoseViewDecision.unknown(PoseObserverUnknownReason.BODY_TOO_SMALL)
@@ -743,68 +857,121 @@ private class PoseViewQualifier(
         }
 
         val ids = linkedSetOf(FULL_BODY_PHASE_VIEW_CONTRACT_ID)
-        val shoulderYaw = bilateralAxisYaw(
+        val shoulderAxis = bilateralAxisYaw(
             frame,
             PoseJoint.LEFT_SHOULDER,
             PoseJoint.RIGHT_SHOULDER,
         )
-        val hipYaw = bilateralAxisYaw(frame, PoseJoint.LEFT_HIP, PoseJoint.RIGHT_HIP)
-        if (shoulderYaw == null || hipYaw == null) {
-            return PoseViewDecision(
+        val hipAxis = bilateralAxisYaw(frame, PoseJoint.LEFT_HIP, PoseJoint.RIGHT_HIP)
+        val measuredYaw = when {
+            shoulderAxis != null && hipAxis != null -> {
+                // The disagreement veto only applies when both axes are strongly observed; a
+                // weakly observed axis abstains from the veto but still contributes its weight.
+                val bothStrong = shoulderAxis.weight >= config.minimumLandmarkConfidence &&
+                    hipAxis.weight >= config.minimumLandmarkConfidence
+                if (
+                    bothStrong &&
+                    abs(shoulderAxis.yawDegrees - hipAxis.yawDegrees) >
+                    config.maximumBilateralYawDisagreementDegrees
+                ) {
+                    return PoseViewDecision(
+                        view = PoseObserverView.UNKNOWN,
+                        qualifiedContractIds = ids,
+                        reasons = setOf(PoseObserverUnknownReason.VIEW_AMBIGUOUS),
+                    )
+                }
+                (shoulderAxis.yawDegrees * shoulderAxis.weight + hipAxis.yawDegrees * hipAxis.weight) /
+                    (shoulderAxis.weight + hipAxis.weight)
+            }
+
+            shoulderAxis != null -> shoulderAxis.yawDegrees
+            hipAxis != null -> hipAxis.yawDegrees
+            else -> return PoseViewDecision(
                 view = PoseObserverView.UNKNOWN,
                 qualifiedContractIds = ids,
                 reasons = setOf(PoseObserverUnknownReason.WORLD_LANDMARKS_UNAVAILABLE),
             )
         }
-        if (abs(shoulderYaw - hipYaw) > config.maximumBilateralYawDisagreementDegrees) {
-            return PoseViewDecision(
-                view = PoseObserverView.UNKNOWN,
-                qualifiedContractIds = ids,
-                reasons = setOf(PoseObserverUnknownReason.VIEW_AMBIGUOUS),
-            )
-        }
-        val yaw = (shoulderYaw + hipYaw) / 2.0
+        val yaw = smoothYaw(frame.timestampMs, measuredYaw)
         return when {
-            yaw <= config.maximumFrontYawDegrees -> PoseViewDecision(
-                // A shoulder/hip axis cannot distinguish front from rear. It is intentionally
-                // diagnostic-only until a separately pinned face-orientation provider exists.
-                view = PoseObserverView.FRONTAL_AXIS,
-                qualifiedContractIds = ids,
-                reasons = setOf(PoseObserverUnknownReason.FRONT_REAR_UNRESOLVED),
-            )
+            yaw <= config.maximumFrontYawDegrees -> {
+                lateralLatched = false
+                PoseViewDecision(
+                    // A shoulder/hip axis cannot distinguish front from rear. It is intentionally
+                    // diagnostic-only until a separately pinned face-orientation provider exists.
+                    view = PoseObserverView.FRONTAL_AXIS,
+                    qualifiedContractIds = ids,
+                    reasons = setOf(PoseObserverUnknownReason.FRONT_REAR_UNRESOLVED),
+                )
+            }
 
-            yaw >= config.minimumSagittalYawDegrees -> PoseViewDecision(
-                view = PoseObserverView.LATERAL,
-                qualifiedContractIds = ids + FULL_BODY_LATERAL_VIEW_CONTRACT_ID,
-                reasons = emptySet(),
-            )
+            yaw >= config.minimumSagittalYawDegrees ||
+                (lateralLatched && yaw >= config.lateralExitYawDegrees) -> {
+                // Enter at the sagittal threshold, stay until the exit threshold: without this
+                // hysteresis a person at the boundary flaps the token set every few frames and
+                // the identity-based dwell can never finish.
+                lateralLatched = true
+                PoseViewDecision(
+                    view = PoseObserverView.LATERAL,
+                    qualifiedContractIds = ids + FULL_BODY_LATERAL_VIEW_CONTRACT_ID,
+                    reasons = emptySet(),
+                )
+            }
 
-            else -> PoseViewDecision(
-                view = PoseObserverView.OBLIQUE,
-                qualifiedContractIds = ids,
-                reasons = setOf(PoseObserverUnknownReason.VIEW_AMBIGUOUS),
-            )
+            else -> {
+                lateralLatched = false
+                PoseViewDecision(
+                    view = PoseObserverView.OBLIQUE,
+                    qualifiedContractIds = ids,
+                    reasons = setOf(PoseObserverUnknownReason.VIEW_AMBIGUOUS),
+                )
+            }
         }
+    }
+
+    private fun smoothYaw(timestampMs: Long, sampleDegrees: Double): Double {
+        val previous = smoothedYawDegrees
+        val previousTs = smoothedYawTimestampMs
+        val next = if (previous == null || previousTs == null || timestampMs <= previousTs) {
+            sampleDegrees
+        } else {
+            val dtMs = (timestampMs - previousTs).toDouble()
+            val alpha = 1.0 - exp(-dtMs / config.yawSmoothingTimeConstantMs.toDouble())
+            previous + alpha * (sampleDegrees - previous)
+        }
+        smoothedYawDegrees = next
+        smoothedYawTimestampMs = timestampMs
+        return next
+    }
+
+    private fun credibleYs(
+        normalized: Map<PoseJoint, PoseLandmark>,
+        vararg joints: PoseJoint,
+    ): List<Double> = joints.mapNotNull { joint ->
+        normalized[joint]
+            ?.takeIf { it.confidence >= config.minimumLandmarkConfidence }
+            ?.y
     }
 
     private fun bilateralAxisYaw(
         frame: PoseFrame,
         leftJoint: PoseJoint,
         rightJoint: PoseJoint,
-    ): Double? {
+    ): AxisYaw? {
         val left = frame.worldLandmarks[leftJoint] ?: return null
         val right = frame.worldLandmarks[rightJoint] ?: return null
-        if (
-            left.confidence < config.minimumLandmarkConfidence ||
-            right.confidence < config.minimumLandmarkConfidence
-        ) {
-            return null
-        }
+        val weight = min(left.confidence, right.confidence)
+        if (weight < config.minimumAxisSideConfidence) return null
         val dx = right.x - left.x
         val dz = right.z - left.z
         if (hypot(dx, dz) <= GEOMETRY_EPSILON) return null
-        return Math.toDegrees(atan2(abs(dz), abs(dx)))
+        return AxisYaw(
+            yawDegrees = Math.toDegrees(atan2(abs(dz), abs(dx))),
+            weight = weight,
+        )
     }
+
+    private data class AxisYaw(val yawDegrees: Double, val weight: Double)
 }
 
 private data class PoseViewDecision(
@@ -843,15 +1010,18 @@ private data class CandidateDescriptor(
                 joint to Point2(landmark.x * aspect, landmark.y)
             }.toMap(LinkedHashMap())
             if (anchors.size < config.minimumAnchorCount) return null
-            val leftShoulder = anchors[PoseJoint.LEFT_SHOULDER] ?: return null
-            val rightShoulder = anchors[PoseJoint.RIGHT_SHOULDER] ?: return null
-            val leftHip = anchors[PoseJoint.LEFT_HIP] ?: return null
-            val rightHip = anchors[PoseJoint.RIGHT_HIP] ?: return null
-            val shoulderMid = leftShoulder.midpoint(rightShoulder)
-            val hipMid = leftHip.midpoint(rightHip)
-            val bodyScale = shoulderMid.distanceTo(hipMid)
+            // A sideways pose self-occludes its far half, so the torso references use the best
+            // available side of each pair rather than demanding all four shoulder/hip anchors.
+            val shoulderRef = bestPairPoint(
+                anchors,
+                PoseJoint.LEFT_SHOULDER,
+                PoseJoint.RIGHT_SHOULDER,
+            ) ?: return null
+            val hipRef = bestPairPoint(anchors, PoseJoint.LEFT_HIP, PoseJoint.RIGHT_HIP)
+                ?: return null
+            val bodyScale = shoulderRef.distanceTo(hipRef)
             if (bodyScale <= GEOMETRY_EPSILON) return null
-            val center = shoulderMid.midpoint(hipMid)
+            val center = shoulderRef.midpoint(hipRef)
             val bodyRatios = bodyRatios(frame, config.minimumAnchorConfidence)
             if (bodyRatios.size < config.minimumBodyRatioCount) return null
             return CandidateDescriptor(
@@ -862,6 +1032,21 @@ private data class CandidateDescriptor(
             )
         }
 
+        private fun bestPairPoint(
+            anchors: Map<PoseJoint, Point2>,
+            leftJoint: PoseJoint,
+            rightJoint: PoseJoint,
+        ): Point2? {
+            val left = anchors[leftJoint]
+            val right = anchors[rightJoint]
+            return when {
+                left != null && right != null -> left.midpoint(right)
+                left != null -> left
+                right != null -> right
+                else -> null
+            }
+        }
+
         private fun bodyRatios(
             frame: PoseFrame,
             minimumConfidence: Double,
@@ -870,17 +1055,35 @@ private data class CandidateDescriptor(
                 ?.takeIf { it.confidence >= minimumConfidence }
                 ?.let { Point3(it.x, it.y, it.z) }
 
-            val leftShoulder = point(PoseJoint.LEFT_SHOULDER) ?: return emptyMap()
-            val rightShoulder = point(PoseJoint.RIGHT_SHOULDER) ?: return emptyMap()
-            val leftHip = point(PoseJoint.LEFT_HIP) ?: return emptyMap()
-            val rightHip = point(PoseJoint.RIGHT_HIP) ?: return emptyMap()
-            val torsoLength = leftShoulder.midpoint(rightShoulder)
-                .distanceTo(leftHip.midpoint(rightHip))
+            fun pairPoint(leftJoint: PoseJoint, rightJoint: PoseJoint): Point3? {
+                val left = point(leftJoint)
+                val right = point(rightJoint)
+                return when {
+                    left != null && right != null -> left.midpoint(right)
+                    left != null -> left
+                    right != null -> right
+                    else -> null
+                }
+            }
+
+            val leftShoulder = point(PoseJoint.LEFT_SHOULDER)
+            val rightShoulder = point(PoseJoint.RIGHT_SHOULDER)
+            val leftHip = point(PoseJoint.LEFT_HIP)
+            val rightHip = point(PoseJoint.RIGHT_HIP)
+            val shoulderRef = pairPoint(PoseJoint.LEFT_SHOULDER, PoseJoint.RIGHT_SHOULDER)
+                ?: return emptyMap()
+            val hipRef = pairPoint(PoseJoint.LEFT_HIP, PoseJoint.RIGHT_HIP) ?: return emptyMap()
+            val torsoLength = shoulderRef.distanceTo(hipRef)
             if (torsoLength <= GEOMETRY_EPSILON) return emptyMap()
 
             return buildMap {
-                put("shoulder-width", leftShoulder.distanceTo(rightShoulder) / torsoLength)
-                put("hip-width", leftHip.distanceTo(rightHip) / torsoLength)
+                // Width ratios need both sides; a self-occluded side simply abstains.
+                if (leftShoulder != null && rightShoulder != null) {
+                    put("shoulder-width", leftShoulder.distanceTo(rightShoulder) / torsoLength)
+                }
+                if (leftHip != null && rightHip != null) {
+                    put("hip-width", leftHip.distanceTo(rightHip) / torsoLength)
+                }
                 BODY_SEGMENTS.forEach { segment ->
                     val from = point(segment.from)
                     val to = point(segment.to)
@@ -938,20 +1141,14 @@ private val TRACKING_ANCHORS = listOf(
     PoseJoint.RIGHT_ANKLE,
 )
 
-private val FULL_BODY_JOINTS = setOf(
-    PoseJoint.NOSE,
-    PoseJoint.LEFT_SHOULDER,
-    PoseJoint.RIGHT_SHOULDER,
-    PoseJoint.LEFT_HIP,
-    PoseJoint.RIGHT_HIP,
-    PoseJoint.LEFT_KNEE,
-    PoseJoint.RIGHT_KNEE,
-    PoseJoint.LEFT_ANKLE,
-    PoseJoint.RIGHT_ANKLE,
-    PoseJoint.LEFT_HEEL,
-    PoseJoint.RIGHT_HEEL,
-    PoseJoint.LEFT_FOOT_INDEX,
-    PoseJoint.RIGHT_FOOT_INDEX,
+/** Left/right pairs whose best side carries the full-body visibility gates. */
+private val BILATERAL_VIEW_PAIRS = listOf(
+    PoseJoint.LEFT_SHOULDER to PoseJoint.RIGHT_SHOULDER,
+    PoseJoint.LEFT_HIP to PoseJoint.RIGHT_HIP,
+    PoseJoint.LEFT_KNEE to PoseJoint.RIGHT_KNEE,
+    PoseJoint.LEFT_ANKLE to PoseJoint.RIGHT_ANKLE,
+    PoseJoint.LEFT_HEEL to PoseJoint.RIGHT_HEEL,
+    PoseJoint.LEFT_FOOT_INDEX to PoseJoint.RIGHT_FOOT_INDEX,
 )
 
 private const val GEOMETRY_EPSILON = 1e-6

@@ -14,7 +14,9 @@
 | AI Hub 연구 권리 범위 인가 (비상업 교육) | `docs/pose-data-rights-manifest.aihub-research.v1.json` + 생성기 | `86eace3` |
 | Day05 라벨 기반 런지 깊이 임계값 적합 | `docs/heuristic-form-check-threshold-fit.v1.json` + `tools/fit_heuristic_form_check_thresholds.py` | `86eace3` |
 | MediaPipe↔AI Hub 브리지 오차 카드 (측면·무릎 체인) | `docs/mediapipe-aihub-bridge.v1.json` + `tools/measure_mediapipe_aihub_bridge.py` | `1ef1879` |
-| M0: 적합 임계값 코드 반영 + 스쿼트 고하중 규칙 | 정책 v1.1 + `FormCheckExercise` 개정 | 이 커밋 |
+| M0: 적합 임계값 코드 반영 + 스쿼트 고하중 규칙 | 정책 v1.1 + `FormCheckExercise` 개정 | `6af09f5` |
+| **M1: 개발용 캡처 + JVM 리플레이 하니스** | 정책 v1.2 §5-5 + `devcapture`(debug/release twin) + `LandmarkReplay` | `fa10752` |
+| **M2: person-lock v3 배경 후보 게이트** | `backgroundEnvelopeRatioCeiling` + 전경 분리 | 아래 커밋 |
 
 핵심 수치 (재유도 불필요): MediaPipe world 무릎각은 AI Hub 3D 라벨보다 중앙값 **+13.2° 곧게** 읽힘(P95 |오차| 40.8°). 라벨 적합값(111°/92°)은 이전 불가(80.2%/53.6%로 붕괴), MediaPipe-native 적합값은 포워드 129°(LOSO 93.5%)·백워드 123°(LOSO 96.4%). 임계값을 새로 만들 때는 **항상 앱이 계산하는 좌표계(MediaPipe world)에서 적합**한다.
 
@@ -44,7 +46,13 @@
 - 배선: `SessionFormCheckLayer`의 `onPoseObservation` 콜백에서 debug 빌드일 때만 recorder로 분기 — 단 formcheck 소스가 recorder를 import하면 안 되므로, **호스트(Session 레이어) 쪽에서 옵셔널 콜백 주입** 형태로 설계한다. 예: `SessionFormCheckLayer(onDebugFrame: ((PoseObserverUpdate) -> Unit)? = null)`. release에서는 null.
 - 리플레이: 신규 테스트 유틸 `app/src/test/.../formcheck/LandmarkReplay.kt` — JSONL을 읽어 `HeuristicFormCheckSession.accept(...)`에 순서대로 주입, 최종 `repCount`/`uncountedAttemptCount` 기대값과 비교. fixture는 `app/src/test/resources/formcheck/` 아래 저장(개인 데이터이므로 **본인 촬영분만**, 파일에 신원 정보 없음 — 권리 manifest gitPolicy 준수: 랜드마크 궤적의 git 반입은 AI Hub 클래스에만 금지되어 있고 본인 데이터는 소유자 판단. 주석으로 출처 명시).
 
-**수용 기준**: 본인 촬영 1세션(스쿼트 10회)이 JSONL로 기록되고, JVM 리플레이 테스트가 기록 당시 화면과 동일한 카운트를 재현. release variant 컴파일에 recorder 클래스 부재.
+**수용 기준**: 본인 촬영 1세션(스쿼트 10회)이 기록되고, JVM 리플레이 테스트가 기록 당시 화면과 동일한 카운트를 재현. release variant 컴파일에 recorder 클래스 부재.
+
+**구현 결과 (`fa10752`) — 계획 대비 편차 2건**:
+- 형식은 JSONL이 아니라 **탭 구분 텍스트**(`TREXCAP1` 헤더 + `F` 행). 저장소에 JSON 의존성이 없어 파서를 손으로 써야 하는데, 구분자 파서가 명백히 옳은 반면 손으로 쓴 JSON 파서는 정확성 위험이 실재한다. 관절은 sparse로 기록해 누락 관절이 좌표로 날조되지 않는다.
+- 배선은 옵셔널 콜백 주입이 아니라 **variant twin**(`src/debug` 실제 구현 / `src/release` no-op). 콜백 방식은 main에서 non-null을 넘길 주체가 없어 도달 불가능한 코드가 된다. twin은 소스셋이 병합이 아니라 대체라는 성질로 출시 빌드의 링크 자체를 막고, 거버넌스 테스트가 release twin 소스에 저장 경로가 없음을 확인한다.
+- 정책 §5-5 신설(v1.2): debug 전용·기본 꺼짐·world landmark만·전송 경로 없음을 계약으로 명시. `DevPoseCapture.ENABLED`가 false로 커밋되어 debug APK 설치만으로는 아무것도 기록되지 않는다.
+- 실제 촬영 fixture는 `src/test/resources/formcheck/`에 넣으면 코드 변경 없이 로드되며, 없으면 해당 테스트는 no-op이라 신체 데이터 커밋을 강제하지 않는다.
 
 ## 2. M2 — 다중 인물 강건화: person-lock 배경 후보 게이트 (v3)
 
@@ -60,6 +68,13 @@
 **테스트**: 신규 `BackgroundCandidateGateTest` — (a) primary + 55% 미만 신장 후보 → lock 유지·카운트 진행, (b) 유사 신장 2인 → AMBIGUOUS 유지, (c) 배경 후보가 성장해 55%를 넘는 프레임 → 그 프레임부터 AMBIGUOUS, (d) lock 미보유 상태에서 배경 포함 2인 → dwell 시작은 foreground 1일 때만. 기존 `AttestedPoseObserverTest`의 AMBIGUOUS 케이스는 유사 신장으로 재구성해 의미 유지.
 
 **수용 기준**: 전 테스트 녹색 + M1 리플레이에 "제3자 통과" 세그먼트를 넣은 fixture에서 세션 생존.
+
+**구현 결과 — 계획 대비 편차 2건**:
+- 파라미터는 `backgroundEnvelopeRatioCeiling = 0.55` **하나뿐**이며 가장자리 밴드는 넣지 않았다. 밴드를 OR로 더하면 배경 분류가 더 **관대**해지는데, 이는 위험한 방향이다(프레임 가장자리에 선 동일 크기의 사람은 진짜 모호성이므로 기권이 맞다). 크기비 단독이 보수적이고 충분하다.
+- 크기 척도는 "신장비"가 아니라 **랜드마크 envelope의 대각선**이다. 신장(높이)만 쓰면 플랭크처럼 누운 피험자가 서 있는 행인보다 작게 읽혀 피험자가 배경으로 분류되는 최악의 오분류가 가능하다. 대각선은 자세 방향에 불변이고 관절 confidence와 무관하게 항상 정의된다.
+- 가장 큰 후보는 정의상 항상 전경으로 남으므로(비율 1.0), 비어 있지 않은 batch가 전경 0개가 되는 경우는 없다.
+- mapper가 거부한 후보(geometry 없음)는 배경임을 증명할 수 없으므로 계속 모호성에 계수된다 — 기존 `rejectedSchemaCandidateStillCountsAsMultiPersonSentinel` 불변.
+- 계약 해시: `personLockSchemaVersion` 3, `implementationContractId` v3, `candidateMultiplicityPolicy`를 `EXACTLY_ONE_FOREGROUND_AND_VALID_CANDIDATE`로 갱신. 연구 모듈의 파생 해시 핀은 자체 test double을 쓰므로 연쇄 갱신이 발생하지 않았다(전 테스트 녹색으로 확인).
 
 ## 3. M3 — 신호 확장(S2 엉덩이각·S3 팔꿈치각)과 운동 웨이브
 
