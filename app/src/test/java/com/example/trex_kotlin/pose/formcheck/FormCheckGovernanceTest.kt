@@ -73,7 +73,61 @@ class FormCheckGovernanceTest {
             FormCheckThresholdProvenance.MEDIAPIPE_NATIVE_DAY05_FIT_V1,
             FormCheckExercise.STEP_BACKWARD_DYNAMIC_LUNGE.provenance,
         )
-        assertEquals(3, FormCheckExercise.entries.size)
+
+        // Wave 1, all uncalibrated per §4.3.
+        assertEquals(134.0, FormCheckExercise.BARBELL_LUNGE.repDepthDegrees, 0.0)
+        assertEquals(129.0, FormCheckExercise.BARBELL_LUNGE.reachedDepthDegrees, 0.0)
+        assertEquals(135.0, FormCheckExercise.STANDING_KNEE_UP.repDepthDegrees, 0.0)
+        assertEquals(125.0, FormCheckExercise.STANDING_KNEE_UP.reachedDepthDegrees, 0.0)
+        assertEquals(135.0, FormCheckExercise.GOOD_MORNING.repDepthDegrees, 0.0)
+        assertEquals(128.0, FormCheckExercise.GOOD_MORNING.reachedDepthDegrees, 0.0)
+        assertEquals(135.0, FormCheckExercise.PUSH_UP.repDepthDegrees, 0.0)
+        assertEquals(125.0, FormCheckExercise.PUSH_UP.reachedDepthDegrees, 0.0)
+        assertEquals(7, FormCheckExercise.entries.size)
+    }
+
+    @Test
+    fun everyDriverMatchesThePolicyTablesChain() {
+        assertEquals(FormCheckDriver.KNEE, FormCheckExercise.BARBELL_SQUAT.driver)
+        assertEquals(FormCheckDriver.KNEE, FormCheckExercise.STEP_FORWARD_DYNAMIC_LUNGE.driver)
+        assertEquals(FormCheckDriver.KNEE, FormCheckExercise.STEP_BACKWARD_DYNAMIC_LUNGE.driver)
+        assertEquals(FormCheckDriver.KNEE, FormCheckExercise.BARBELL_LUNGE.driver)
+        assertEquals(FormCheckDriver.HIP, FormCheckExercise.STANDING_KNEE_UP.driver)
+        assertEquals(FormCheckDriver.HIP, FormCheckExercise.GOOD_MORNING.driver)
+        assertEquals(FormCheckDriver.ELBOW, FormCheckExercise.PUSH_UP.driver)
+
+        // §3: an exercise waits for its own chain and nothing else.
+        assertEquals(
+            setOf(
+                FormCheckJointGroup.HIP,
+                FormCheckJointGroup.KNEE,
+                FormCheckJointGroup.ANKLE,
+            ),
+            FormCheckExercise.BARBELL_SQUAT.requiredJoints,
+        )
+        assertEquals(
+            setOf(
+                FormCheckJointGroup.SHOULDER,
+                FormCheckJointGroup.ELBOW,
+                FormCheckJointGroup.WRIST,
+            ),
+            FormCheckExercise.PUSH_UP.requiredJoints,
+        )
+    }
+
+    @Test
+    fun onlyUncalibratedExercisesMayBeLoadBearing() {
+        // A calibrated exercise carries hints; a load-bearing one must not. The two sets are
+        // therefore disjoint, and a future calibration of a loaded lift has to revisit §4.2
+        // deliberately rather than silently gaining depth urging.
+        for (spec in FormCheckExercise.entries) {
+            if (spec.provenance != FormCheckThresholdProvenance.HEURISTIC_DEFAULT) {
+                assertFalse(
+                    "${spec.name} is calibrated, so §4.2's load-bearing seal needs re-deciding",
+                    spec.loadBearing,
+                )
+            }
+        }
     }
 
     @Test

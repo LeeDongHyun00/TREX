@@ -22,7 +22,7 @@ internal object HeuristicFormCheckDeclaration {
     const val TRACK_ID: String = "trex.heuristic-form-check.beta.v1"
 
     const val POLICY_DOCUMENT_SHA256: String =
-        "a29c8e65a344df3a2d87e1241ae2f8067380c030a43a1261de2dc46444ab1264"
+        "5c25f89c1e8e95f99399fae066ffe199dcc9a042faf0e055549531d14deaee52"
 
     const val POLICY_DOCUMENT_PATH: String = "docs/pose-heuristic-form-check.v1.md"
 
@@ -53,16 +53,6 @@ internal object HeuristicFormCheckDeclaration {
     }
 }
 
-/**
- * The knee included angle needs exactly this chain on one side. Declared at file scope because
- * enum entry initialisers run before the companion object exists.
- */
-private val LEG_CHAIN: Set<FormCheckJointGroup> = setOf(
-    FormCheckJointGroup.HIP,
-    FormCheckJointGroup.KNEE,
-    FormCheckJointGroup.ANKLE,
-)
-
 /** Where a threshold constant came from; mirrored in the policy document's §4 table. */
 internal enum class FormCheckThresholdProvenance {
     /** Literature-informed default that has never met calibration data. */
@@ -84,6 +74,8 @@ internal enum class FormCheckThresholdProvenance {
  */
 internal enum class FormCheckExercise(
     val exercise: AiHubExercise,
+    /** Which three-joint chain this exercise reads. Determines its required joints. */
+    val driver: FormCheckDriver,
     val repDepthDegrees: Double,
     val reachedDepthDegrees: Double,
     val provenance: FormCheckThresholdProvenance,
@@ -102,11 +94,10 @@ internal enum class FormCheckExercise(
     val shallowHint: String?,
     /** Suggestion after a counted rep whose lowest point stayed above the reached line. */
     val deeperHint: String?,
-    /** The only joints this exercise needs before it can start. */
-    val requiredJoints: Set<FormCheckJointGroup>,
 ) {
     BARBELL_SQUAT(
         exercise = AiHubExercise.BARBELL_SQUAT,
+        driver = FormCheckDriver.KNEE,
         repDepthDegrees = 110.0,
         reachedDepthDegrees = 105.0,
         provenance = FormCheckThresholdProvenance.HEURISTIC_DEFAULT,
@@ -114,10 +105,10 @@ internal enum class FormCheckExercise(
         setupHint = "옆모습이 보이게 서 주세요",
         shallowHint = null,
         deeperHint = null,
-        requiredJoints = LEG_CHAIN,
     ),
     STEP_FORWARD_DYNAMIC_LUNGE(
         exercise = AiHubExercise.STEP_FORWARD_DYNAMIC_LUNGE,
+        driver = FormCheckDriver.KNEE,
         repDepthDegrees = 134.0,
         reachedDepthDegrees = 129.0,
         provenance = FormCheckThresholdProvenance.MEDIAPIPE_NATIVE_DAY05_FIT_V1,
@@ -125,10 +116,10 @@ internal enum class FormCheckExercise(
         setupHint = "카메라 쪽 다리가 앞으로 오게 서 주세요",
         shallowHint = "카메라 쪽 다리가 앞인지 확인하고 조금 더 굽혀볼까요",
         deeperHint = "다음엔 조금 더 앉아볼까요",
-        requiredJoints = LEG_CHAIN,
     ),
     STEP_BACKWARD_DYNAMIC_LUNGE(
         exercise = AiHubExercise.STEP_BACKWARD_DYNAMIC_LUNGE,
+        driver = FormCheckDriver.KNEE,
         repDepthDegrees = 130.0,
         reachedDepthDegrees = 123.0,
         provenance = FormCheckThresholdProvenance.MEDIAPIPE_NATIVE_DAY05_FIT_V1,
@@ -136,9 +127,59 @@ internal enum class FormCheckExercise(
         setupHint = "카메라 쪽 다리가 앞으로 오게 서 주세요",
         shallowHint = "카메라 쪽 다리가 앞인지 확인하고 조금 더 굽혀볼까요",
         deeperHint = "다음엔 조금 더 앉아볼까요",
-        requiredJoints = LEG_CHAIN,
+    ),
+
+    // Wave 1. Uncalibrated: the constants borrow the dynamic-lunge fit's shape as the only
+    // available prior for MediaPipe's straightening bias, which is why none of them claims
+    // provenance beyond HEURISTIC_DEFAULT.
+    BARBELL_LUNGE(
+        exercise = AiHubExercise.BARBELL_LUNGE,
+        driver = FormCheckDriver.KNEE,
+        repDepthDegrees = 134.0,
+        reachedDepthDegrees = 129.0,
+        provenance = FormCheckThresholdProvenance.HEURISTIC_DEFAULT,
+        loadBearing = true,
+        setupHint = "카메라 쪽 다리가 앞으로 오게 서 주세요",
+        shallowHint = null,
+        deeperHint = null,
+    ),
+    STANDING_KNEE_UP(
+        exercise = AiHubExercise.STANDING_KNEE_UP,
+        driver = FormCheckDriver.HIP,
+        repDepthDegrees = 135.0,
+        reachedDepthDegrees = 125.0,
+        provenance = FormCheckThresholdProvenance.HEURISTIC_DEFAULT,
+        loadBearing = false,
+        setupHint = "옆모습이 보이게 서 주세요",
+        shallowHint = "다음엔 무릎을 조금 더 올려볼까요",
+        deeperHint = "다음엔 무릎을 조금 더 올려볼까요",
+    ),
+    GOOD_MORNING(
+        exercise = AiHubExercise.GOOD_MORNING,
+        driver = FormCheckDriver.HIP,
+        repDepthDegrees = 135.0,
+        reachedDepthDegrees = 128.0,
+        provenance = FormCheckThresholdProvenance.HEURISTIC_DEFAULT,
+        loadBearing = true,
+        setupHint = "옆모습이 보이게 서 주세요",
+        shallowHint = null,
+        deeperHint = null,
+    ),
+    PUSH_UP(
+        exercise = AiHubExercise.PUSH_UP,
+        driver = FormCheckDriver.ELBOW,
+        repDepthDegrees = 135.0,
+        reachedDepthDegrees = 125.0,
+        provenance = FormCheckThresholdProvenance.HEURISTIC_DEFAULT,
+        loadBearing = false,
+        setupHint = "옆모습이 보이게 엎드려 주세요",
+        shallowHint = "다음엔 조금 더 내려가 볼까요",
+        deeperHint = "다음엔 조금 더 내려가 볼까요",
     ),
     ;
+
+    /** The only joints this exercise needs before it can start. */
+    val requiredJoints: Set<FormCheckJointGroup> get() = driver.requiredJoints
 
     init {
         require(reachedDepthDegrees <= repDepthDegrees) {
@@ -248,6 +289,11 @@ internal class HeuristicFormCheckSession(
     private var activeSide: FormCheckBodySide? = null
     private var sideViewPreferred: Boolean = false
 
+    /** "무릎이", "엉덩이가", "팔꿈치가" — the observation names whichever joint it measured. */
+    private val vertexSubject: String = spec.driver.vertex.label.let { label ->
+        label + FormCheckStartAnnouncer.subjectParticle(label)
+    }
+
     fun accept(
         timestampMs: Long,
         hasPrimaryPersonLock: Boolean,
@@ -270,11 +316,11 @@ internal class HeuristicFormCheckSession(
             return snapshot(FormCheckStartState.WAITING_FOR_JOINTS, spec.requiredJoints)
         }
 
-        when (val event = detector.accept(timestampMs, sample.kneeIncludedAngleDegrees)) {
+        when (val event = detector.accept(timestampMs, sample.includedAngleDegrees)) {
             is RepCycleEvent.Completed -> {
                 repCount += 1
                 val minimum = event.minimumAngleDegrees.roundToInt()
-                headline = "무릎이 ${minimum}도까지 굽혀졌어요"
+                headline = "$vertexSubject ${minimum}도까지 굽혀졌어요"
                 // Null for load-bearing exercises: the observation stands without urging depth.
                 suggestion = if (event.minimumAngleDegrees <= spec.reachedDepthDegrees) {
                     null
@@ -285,7 +331,7 @@ internal class HeuristicFormCheckSession(
 
             is RepCycleEvent.ShallowAttempt -> {
                 uncountedAttemptCount += 1
-                headline = "무릎 굽힘이 얕아 횟수로 세지 않았어요"
+                headline = "${spec.driver.vertex.label} 굽힘이 얕아 횟수로 세지 않았어요"
                 suggestion = spec.shallowHint
             }
 
@@ -307,13 +353,13 @@ internal class HeuristicFormCheckSession(
      * counted as two. The active side is kept while its chain stays credible; switching sides
      * discards the excursion in flight, consistent with the abstention policy.
      */
-    private fun selectSample(frame: PoseFrame): FormCheckKneeSample? {
+    private fun selectSample(frame: PoseFrame): FormCheckAngleSample? {
         val held = activeSide
         if (held != null) {
-            val current = FormCheckGeometry.sideSample(frame, held)
+            val current = FormCheckGeometry.sideSample(frame, held, spec.driver)
             if (current != null) return current
         }
-        val fresh = FormCheckGeometry.kneeSample(frame) ?: return null
+        val fresh = FormCheckGeometry.sample(frame, spec.driver) ?: return null
         if (held != null && fresh.side != held) {
             detector.invalidate()
         }

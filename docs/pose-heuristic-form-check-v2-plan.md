@@ -16,7 +16,8 @@
 | MediaPipe↔AI Hub 브리지 오차 카드 (측면·무릎 체인) | `docs/mediapipe-aihub-bridge.v1.json` + `tools/measure_mediapipe_aihub_bridge.py` | `1ef1879` |
 | M0: 적합 임계값 코드 반영 + 스쿼트 고하중 규칙 | 정책 v1.1 + `FormCheckExercise` 개정 | `6af09f5` |
 | **M1: 개발용 캡처 + JVM 리플레이 하니스** | 정책 v1.2 §5-5 + `devcapture`(debug/release twin) + `LandmarkReplay` | `fa10752` |
-| **M2: person-lock v3 배경 후보 게이트** | `backgroundEnvelopeRatioCeiling` + 전경 분리 | 아래 커밋 |
+| **M2: person-lock v3 배경 후보 게이트** | `backgroundEnvelopeRatioCeiling` + 전경 분리 | `f49d68f` |
+| **M3-a: driver 일반화 + 웨이브 1** | 정책 v1.3 §4.3 + `FormCheckDriver`(무릎/엉덩이/팔꿈치) + 신규 4종 | 아래 커밋 |
 
 핵심 수치 (재유도 불필요): MediaPipe world 무릎각은 AI Hub 3D 라벨보다 중앙값 **+13.2° 곧게** 읽힘(P95 |오차| 40.8°). 라벨 적합값(111°/92°)은 이전 불가(80.2%/53.6%로 붕괴), MediaPipe-native 적합값은 포워드 129°(LOSO 93.5%)·백워드 123°(LOSO 96.4%). 임계값을 새로 만들 때는 **항상 앱이 계산하는 좌표계(MediaPipe world)에서 적합**한다.
 
@@ -88,6 +89,13 @@
 **임계값 규율**: 신규 운동은 전부 `HEURISTIC_DEFAULT`로 시작하고 §4 표에 행 추가(= 문서 개정 + SHA 재핀 + 거버넌스 미러 갱신, §0.3). AI Hub 좌표 라벨이 있는 운동(스탠딩 니업 등 Day05/Day17 계열)은 `tools/fit_heuristic_form_check_thresholds.py`의 조건 키워드(`DEPTH_CONDITION_SUBSTRING`)를 운동별 조건명으로 일반화해 적합을 시도하되, **이미지가 있는 운동만 브리지 카드 검증 후 반영**(이미지 없는 운동은 +13° 편차 보정 근거가 없으므로 라벨 적합값 직행 금지 — 백워드 런지에서 92→123°로 31° 이동한 전례).
 
 **주의**: 운동 시작 게이트 문구(`missingJoints`)와 `FormCheckStartAnnouncer`는 이미 그룹 label 기반이라 자동 확장된다. `Workout.supportsFormCheck`(TrexData.kt)는 `FormCheckExercise.supports`를 그대로 쓰므로 enum 추가만으로 토글이 열린다 — 웨이브별로 나눠 커밋.
+
+**구현 결과 (M3-a) — 계획 대비 편차와 남은 일**:
+- `invert` 플래그는 **구현하지 않았다**. `180 - angle` 단독 반전은 성립하지 않는다: 힙쓰러스트를 반전하면 각도 범위가 [90,175]→[90,5]로 옮겨가 상단 임계 150°에 영원히 도달하지 못해 무장 자체가 안 된다. 휴식 자세가 굽힘인 운동(힙쓰러스트·오버 헤드 프레스·케이블 푸시 다운)은 **반전 + 운동별 top/attempt 임계값**이 함께 필요하며, 이는 `RepCycleDetector` 생성자가 이미 받는 파라미터를 스펙으로 끌어올리는 별도 작업이다. 검출기 KDoc에 이 전제를 명문화했다.
+- 따라서 웨이브 1은 **휴식 자세가 신전인 운동 4종**만 넣었다: 바벨 런지(무릎), 스탠딩 니업(엉덩이), 굿모닝(엉덩이), 푸시업(팔꿈치). 팔꿈치 driver를 푸시업 하나로 먼저 실증해 일반화가 다리 밖에서도 성립함을 확인했다.
+- 남은 웨이브 2(니푸쉬업·딥스·바벨 컬·덤벨 컬·랫풀 다운)는 **동일 신전-휴식 계열이라 enum 행 추가만으로 열린다**. 오버 헤드 프레스·케이블 푸시 다운은 위 반전 작업 이후.
+- 임계값은 전부 `HEURISTIC_DEFAULT`이며 근거 한계를 정책 §4.3에 명시했다: 브리지 실측은 무릎 체인에서만 얻었으므로 **편차의 방향만 빌렸고 크기는 이전하지 않았다**. 스탠딩 니업은 Day05에 좌표 라벨이 있어 다음 보정 대상이다.
+- 거버넌스 추가: 보정된 운동과 `loadBearing`은 서로소여야 한다는 테스트를 넣어, 하중 운동이 나중에 보정되면 §4.2의 봉인을 의도적으로 다시 결정하게 강제했다.
 
 ## 4. M4 — 개인 기준선 상대 관찰
 

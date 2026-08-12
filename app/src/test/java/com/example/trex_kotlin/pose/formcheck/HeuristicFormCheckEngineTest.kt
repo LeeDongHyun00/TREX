@@ -48,11 +48,11 @@ class HeuristicFormCheckEngineTest {
             leftConfidence = 0.9,
             rightConfidence = 0.6,
         )
-        val sample = FormCheckGeometry.kneeSample(frame)
+        val sample = FormCheckGeometry.sample(frame, FormCheckDriver.KNEE)
 
         assertNotNull(sample)
         assertEquals(FormCheckBodySide.LEFT, sample!!.side)
-        assertEquals(90.0, sample.kneeIncludedAngleDegrees, 1.0)
+        assertEquals(90.0, sample.includedAngleDegrees, 1.0)
     }
 
     @Test
@@ -64,7 +64,83 @@ class HeuristicFormCheckEngineTest {
             leftConfidence = 0.3,
             rightConfidence = 0.4,
         )
-        assertNull(FormCheckGeometry.kneeSample(frame))
+        assertNull(FormCheckGeometry.sample(frame, FormCheckDriver.KNEE))
+    }
+
+    @Test
+    fun eachDriverReadsItsOwnChainOnTheSameFrame() {
+        // One geometry engine, three exercises: the driver is what selects the joints, so a hip
+        // hinge and a push-up need no bespoke measurement code.
+        val frame = frameWithChains(
+            kneeAngleDegrees = 95.0,
+            hipAngleDegrees = 120.0,
+            elbowAngleDegrees = 60.0,
+        )
+
+        assertEquals(
+            95.0,
+            FormCheckGeometry.sample(frame, FormCheckDriver.KNEE)!!.includedAngleDegrees,
+            1.0,
+        )
+        assertEquals(
+            120.0,
+            FormCheckGeometry.sample(frame, FormCheckDriver.HIP)!!.includedAngleDegrees,
+            1.0,
+        )
+        assertEquals(
+            60.0,
+            FormCheckGeometry.sample(frame, FormCheckDriver.ELBOW)!!.includedAngleDegrees,
+            1.0,
+        )
+    }
+
+    @Test
+    fun anExerciseOnlyWaitsForItsOwnChain() {
+        // A push-up never needed an ankle, so a cropped foot must not stall it.
+        val frame = frameWithChains(
+            kneeAngleDegrees = 170.0,
+            hipAngleDegrees = 170.0,
+            elbowAngleDegrees = 100.0,
+            dropped = setOf(FormCheckJointGroup.ANKLE),
+        )
+
+        val pushUp = FormCheckGeometry.readiness(
+            frame,
+            FormCheckExercise.PUSH_UP.requiredJoints,
+        )
+        val squat = FormCheckGeometry.readiness(
+            frame,
+            FormCheckExercise.BARBELL_SQUAT.requiredJoints,
+        )
+
+        assertTrue(pushUp.ready)
+        assertFalse(squat.ready)
+        assertEquals(setOf(FormCheckJointGroup.ANKLE), squat.missingGroups)
+    }
+
+    @Test
+    fun theObservationNamesTheJointItActuallyMeasured() {
+        val session = HeuristicFormCheckSession(FormCheckExercise.PUSH_UP)
+        var state = session.initialSnapshot()
+
+        var t = 0L
+        for (angle in listOf(175.0, 175.0, 120.0, 120.0, 120.0, 120.0, 175.0, 175.0)) {
+            state = session.accept(
+                t,
+                true,
+                true,
+                frameWithChains(
+                    kneeAngleDegrees = 175.0,
+                    hipAngleDegrees = 175.0,
+                    elbowAngleDegrees = angle,
+                    timestampMs = t,
+                ),
+            )
+            t += 200L
+        }
+
+        assertEquals(1, state.repCount)
+        assertTrue("Expected an elbow observation, got ${state.headline}", state.headline!!.startsWith("팔꿈치가"))
     }
 
     // ---- rep cycle detector ----
@@ -569,6 +645,68 @@ class HeuristicFormCheckEngineTest {
     }
 
     private fun point(x: Double, y: Double, z: Double) = PoseLandmark(x, y, z, 1.0, 1.0)
+
+    /**
+     * A frame carrying all three driver chains at once, each hinged to its requested angle.
+     *
+     * Joints are placed so every triple reads independently: the knee sits at the origin with the
+     * hip above it, the shoulder swings about the hip, and the wrist swings about the elbow.
+     */
+    private fun frameWithChains(
+        kneeAngleDegrees: Double,
+        hipAngleDegrees: Double,
+        elbowAngleDegrees: Double,
+        timestampMs: Long = 0L,
+        confidence: Double = 1.0,
+        dropped: Set<FormCheckJointGroup> = emptySet(),
+    ): PoseFrame {
+        val knee = Math.toRadians(kneeAngleDegrees)
+        val hip = Math.toRadians(hipAngleDegrees)
+        val elbow = Math.toRadians(elbowAngleDegrees)
+
+        fun side(offsetX: Double): Map<FormCheckJointGroup, Triple<Double, Double, Double>> {
+            val kneeAt = Triple(offsetX, 0.0, 0.0)
+            val hipAt = Triple(offsetX, 0.4, 0.0)
+            val ankleAt = Triple(offsetX + 0.4 * sin(knee), 0.4 * cos(knee), 0.0)
+            val shoulderAt = Triple(
+                hipAt.first + 0.5 * sin(hip),
+                hipAt.second - 0.5 * cos(hip),
+                0.0,
+            )
+            val elbowAt = Triple(shoulderAt.first + 0.3, shoulderAt.second, 0.0)
+            val wristAt = Triple(
+                elbowAt.first - 0.3 * cos(elbow),
+                elbowAt.second + 0.3 * sin(elbow),
+                0.0,
+            )
+            return mapOf(
+                FormCheckJointGroup.KNEE to kneeAt,
+                FormCheckJointGroup.HIP to hipAt,
+                FormCheckJointGroup.ANKLE to ankleAt,
+                FormCheckJointGroup.SHOULDER to shoulderAt,
+                FormCheckJointGroup.ELBOW to elbowAt,
+                FormCheckJointGroup.WRIST to wristAt,
+            )
+        }
+
+        val world = buildMap {
+            for ((bodySide, offsetX) in listOf(
+                FormCheckBodySide.LEFT to -0.1,
+                FormCheckBodySide.RIGHT to 0.1,
+            )) {
+                for ((group, position) in side(offsetX)) {
+                    if (group in dropped) continue
+                    val (x, y, z) = position
+                    put(group.joint(bodySide), PoseLandmark(x, y, z, confidence, confidence))
+                }
+            }
+        }
+        return PoseFrame(
+            timestampMs = timestampMs,
+            landmarks = emptyMap(),
+            worldLandmarks = world,
+        )
+    }
 
     private fun frameWithKneeAngles(
         timestampMs: Long,
