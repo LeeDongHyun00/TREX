@@ -147,9 +147,11 @@ internal data class PosePersonLockConfig(
             "personLockSchemaVersion" to "3",
             "implementationContractId" to "trex.primary-person-lock.algorithm.v3",
             // v3: distant scenery no longer counts toward multiplicity, but two candidates of
-            // comparable apparent size still abstain — the attribution rule is unchanged.
+            // comparable apparent size still abstain — the attribution rule is unchanged. The
+            // ratio is judged against the locked subject when one exists, so a candidate larger
+            // than the subject can never demote the subject to scenery.
             "candidateMultiplicityPolicy" to "EXACTLY_ONE_FOREGROUND_AND_VALID_CANDIDATE",
-            "backgroundCandidatePolicy" to "LANDMARK_ENVELOPE_RATIO_EXCLUSION",
+            "backgroundCandidatePolicy" to "ENVELOPE_RATIO_VS_LOCKED_PRIMARY_ELSE_LARGEST",
             "backgroundEnvelopeRatioCeiling" to backgroundEnvelopeRatioCeiling.toString(),
             // A self-occluded far side must not dissolve the descriptor: shoulder and hip
             // references use the best available side of each bilateral pair.
@@ -581,20 +583,52 @@ internal class MediaPipePoseObserver(
     /**
      * Keeps the candidates that could plausibly be the subject and drops plain scenery.
      *
+     * The size reference is the locked subject whenever one is present. Scenery means "much
+     * smaller than the person being measured", so a candidate *larger* than the subject is never
+     * background: someone walking between the camera and a subject filming from a few metres
+     * away looms larger than the subject, and under a largest-candidate reference the subject
+     * themselves would fall below the ratio, be dropped as scenery, and hand the lock to the
+     * passer-by. Only without a usable lock does the largest candidate serve as the reference.
+     *
      * The size proxy is the diagonal of the landmark envelope rather than a torso length or a
      * bounding-box height: it is defined for every candidate regardless of per-landmark
      * confidence, and it does not collapse when the subject is horizontal, so a plank next to a
      * standing bystander cannot be mistaken for the smaller party.
      *
-     * The largest candidate always survives, so a non-empty batch never becomes empty here.
+     * The reference candidate always survives its own floor, so a non-empty batch never becomes
+     * empty here.
      */
     private fun foregroundCandidates(candidates: List<PoseFrame>): List<PoseFrame> {
         if (candidates.size <= 1) return candidates
         val envelopes = candidates.map(::landmarkEnvelopeDiagonal)
-        val largest = envelopes.max()
-        if (largest <= GEOMETRY_EPSILON) return candidates
-        val floor = largest * personLockConfig.backgroundEnvelopeRatioCeiling
+        val reference = lockedReferenceEnvelope(candidates, envelopes) ?: envelopes.max()
+        if (reference <= GEOMETRY_EPSILON) return candidates
+        val floor = reference * personLockConfig.backgroundEnvelopeRatioCeiling
         return candidates.filterIndexed { index, _ -> envelopes[index] >= floor }
+    }
+
+    /**
+     * Envelope of the candidate the locked primary associates to, or null when no lock exists or
+     * no candidate credibly continues it — in which case the caller falls back to the largest
+     * candidate, which is also what re-acquisition would consider.
+     */
+    private fun lockedReferenceEnvelope(
+        candidates: List<PoseFrame>,
+        envelopes: List<Double>,
+    ): Double? {
+        val locked = lockedDescriptor ?: return null
+        var bestEnvelope: Double? = null
+        var bestCost = Double.POSITIVE_INFINITY
+        for (index in candidates.indices) {
+            val descriptor = CandidateDescriptor.from(candidates[index], personLockConfig)
+                ?: continue
+            val cost = associationCost(locked, descriptor)
+            if (cost < bestCost) {
+                bestCost = cost
+                bestEnvelope = envelopes[index]
+            }
+        }
+        return if (bestCost.isFinite()) bestEnvelope else null
     }
 
     private fun landmarkEnvelopeDiagonal(frame: PoseFrame): Double {

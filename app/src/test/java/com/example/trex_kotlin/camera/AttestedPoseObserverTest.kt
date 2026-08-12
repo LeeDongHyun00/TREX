@@ -81,6 +81,56 @@ class AttestedPoseObserverTest {
     }
 
     @Test
+    fun aLargerIntruderNeverStealsTheLockFromASmallerSubject() {
+        // The subject films from a few metres away and reads small; someone walking between the
+        // camera and the subject looms larger. Scenery must be judged relative to the locked
+        // subject, because under a largest-candidate reference the subject themselves falls
+        // below the ratio, gets dropped as scenery, and the lock migrates to the passer-by —
+        // whose walking legs would then be measured as the user's repetitions.
+        val fixture = fixture(acquisitionDwellMs = 100L, viewDwellMs = 50L)
+        fixture.observer.accept(batch(0L, listOf(frame(0L, scale = 0.45))))
+        val locked = fixture.observer.accept(batch(100L, listOf(frame(100L, scale = 0.45))))
+        assertStatus(locked, PoseObserverTrackingStatus.TRACKED, locked = true)
+
+        val update = fixture.observer.accept(
+            batch(
+                timestampMs = 120L,
+                frames = listOf(
+                    frame(120L, scale = 0.45),
+                    frame(120L, centerX = 0.80, scale = 1.0),
+                ),
+            ),
+        )
+
+        assertStatus(update, PoseObserverTrackingStatus.AMBIGUOUS, locked = false)
+        assertTrue(PoseObserverUnknownReason.PERSON_AMBIGUOUS in update.unknownReasons)
+    }
+
+    @Test
+    fun aSmallerSubjectKeepsItsLockPastDistantScenery() {
+        // The lock-relative reference must not cost the small subject their own scenery gate:
+        // someone even farther away is still dropped and the epoch survives.
+        val fixture = fixture(acquisitionDwellMs = 100L, viewDwellMs = 50L)
+        fixture.observer.accept(batch(0L, listOf(frame(0L, scale = 0.45))))
+        val locked = fixture.observer.accept(batch(100L, listOf(frame(100L, scale = 0.45))))
+        assertStatus(locked, PoseObserverTrackingStatus.TRACKED, locked = true)
+        val epoch = locked.observation.personTrackEpoch
+
+        val update = fixture.observer.accept(
+            batch(
+                timestampMs = 120L,
+                frames = listOf(
+                    frame(120L, scale = 0.45),
+                    frame(120L, centerX = 0.88, scale = 0.18),
+                ),
+            ),
+        )
+
+        assertStatus(update, PoseObserverTrackingStatus.TRACKED, locked = true)
+        assertSame(epoch, update.observation.personTrackEpoch)
+    }
+
+    @Test
     fun aComparablySizedBystanderStillAbstains() {
         // The attribution rule is unchanged: two people who could each be the subject means the
         // measurement cannot be attributed, so the lock still drops.

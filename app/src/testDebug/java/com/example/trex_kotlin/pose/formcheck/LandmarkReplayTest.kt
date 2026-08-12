@@ -102,8 +102,26 @@ class LandmarkReplayTest {
     }
 
     @Test
+    fun theCommittedSyntheticFixtureReplaysToExactlyOneRep() {
+        // A synthetic capture is committed so the file-loading path runs on every build instead
+        // of only when a developer has dropped a personal recording in. Synthetic conformance
+        // fixtures are the one fixture class the rights manifest allows into git; what this
+        // cannot stand in for is real-device fidelity, which stays a data-track item.
+        val capture = LandmarkReplay.load("synthetic-squat.trexcap")
+        assertNotNull("The committed synthetic fixture must exist", capture)
+
+        val result = LandmarkReplay.replay(FormCheckExercise.BARBELL_SQUAT, capture!!)
+
+        assertEquals("BARBELL_SQUAT", result.exerciseId)
+        assertEquals(9, result.frameCount)
+        assertEquals(1, result.finalState.repCount)
+        assertEquals(0, result.finalState.uncountedAttemptCount)
+        assertNull("100 degrees passes the squat's reached line", result.finalState.suggestion)
+    }
+
+    @Test
     fun aRecordedCaptureFixtureReplaysWhenPresent() {
-        // Real recordings are dropped into src/test/resources/formcheck by a developer; the
+        // Real recordings are dropped into src/testDebug/resources/formcheck by a developer; the
         // harness must load them without a code change. Absent one, this test is a no-op rather
         // than a failure, so the repository does not require committing body data.
         val capture = LandmarkReplay.load("step-forward-lunge-sample.trexcap") ?: return

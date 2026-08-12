@@ -29,11 +29,11 @@ internal object LandmarkReplay {
     fun exerciseOf(capture: String): String? =
         capture.lineSequence().firstOrNull()?.let(PoseCaptureCodec::exerciseOf)
 
-    /** Loads a capture from `src/test/resources/formcheck/<name>`, or null when absent. */
+    /** Loads a capture from `src/testDebug/resources/formcheck/<name>`, or null when absent. */
     fun load(name: String): String? {
         val candidates = listOf(
-            File("src/test/resources/formcheck/$name"),
-            File("app/src/test/resources/formcheck/$name"),
+            File("src/testDebug/resources/formcheck/$name"),
+            File("app/src/testDebug/resources/formcheck/$name"),
         )
         return candidates.firstOrNull(File::isFile)?.readText()
     }

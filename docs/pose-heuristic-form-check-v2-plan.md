@@ -58,7 +58,8 @@
 - 형식은 JSONL이 아니라 **탭 구분 텍스트**(`TREXCAP1` 헤더 + `F` 행). 저장소에 JSON 의존성이 없어 파서를 손으로 써야 하는데, 구분자 파서가 명백히 옳은 반면 손으로 쓴 JSON 파서는 정확성 위험이 실재한다. 관절은 sparse로 기록해 누락 관절이 좌표로 날조되지 않는다.
 - 배선은 옵셔널 콜백 주입이 아니라 **variant twin**(`src/debug` 실제 구현 / `src/release` no-op). 콜백 방식은 main에서 non-null을 넘길 주체가 없어 도달 불가능한 코드가 된다. twin은 소스셋이 병합이 아니라 대체라는 성질로 출시 빌드의 링크 자체를 막고, 거버넌스 테스트가 release twin 소스에 저장 경로가 없음을 확인한다.
 - 정책 §5-5 신설(v1.2): debug 전용·기본 꺼짐·world landmark만·전송 경로 없음을 계약으로 명시. `DevPoseCapture.ENABLED`가 false로 커밋되어 debug APK 설치만으로는 아무것도 기록되지 않는다.
-- 실제 촬영 fixture는 `src/test/resources/formcheck/`에 넣으면 코드 변경 없이 로드되며, 없으면 해당 테스트는 no-op이라 신체 데이터 커밋을 강제하지 않는다.
+- 실제 촬영 fixture는 `src/testDebug/resources/formcheck/`에 넣으면 코드 변경 없이 로드되며, 없으면 해당 테스트는 no-op이라 신체 데이터 커밋을 강제하지 않는다.
+- **합성 fixture 상시 검증**: `synthetic-squat.trexcap`(합성 좌표, 권리 manifest가 git 반입을 허용하는 유일한 fixture 클래스)을 커밋해 파일 로드→파싱→리플레이 전 경로가 매 빌드 정확한 카운트(1회)로 검증된다. 이것이 대체하지 못하는 것은 실기기 충실도뿐이며, 그것만 데이터 트랙에 남는다.
 
 ## 2. M2 — 다중 인물 강건화: person-lock 배경 후보 게이트 (v3)
 
@@ -81,6 +82,7 @@
 - 가장 큰 후보는 정의상 항상 전경으로 남으므로(비율 1.0), 비어 있지 않은 batch가 전경 0개가 되는 경우는 없다.
 - mapper가 거부한 후보(geometry 없음)는 배경임을 증명할 수 없으므로 계속 모호성에 계수된다 — 기존 `rejectedSchemaCandidateStillCountsAsMultiPersonSentinel` 불변.
 - 계약 해시: `personLockSchemaVersion` 3, `implementationContractId` v3, `candidateMultiplicityPolicy`를 `EXACTLY_ONE_FOREGROUND_AND_VALID_CANDIDATE`로 갱신. 연구 모듈의 파생 해시 핀은 자체 test double을 쓰므로 연쇄 갱신이 발생하지 않았다(전 테스트 녹색으로 확인).
+- **사후 결함 수정 (합성 검증으로 발견)**: 초기 구현은 배경 기준을 "가장 큰 후보"로 잡았는데, 피험자가 멀리 서서 작게 잡히고 행인이 카메라 가까이 지나가면 **피험자 자신이 배경으로 분류되어 lock이 행인에게 넘어가는** 경로가 있었다(실패 테스트로 재현 후 수정). 기준을 **잠긴 피험자에게 연관되는 후보의 envelope**로 바꿨다(`ENVELOPE_RATIO_VS_LOCKED_PRIMARY_ELSE_LARGEST`): 피험자보다 큰 후보는 정의상 배경이 될 수 없어 AMBIGUOUS로 기권하고(v2 안전성 복원), 피험자보다 충분히 작은 후보만 배경이다. lock이 없거나 연관 불가면 종전대로 최대 후보 기준. 잔여 미검증: 실기기에서의 envelope 분포(데이터 트랙).
 
 ## 3. M3 — 신호 확장(S2 엉덩이각·S3 팔꿈치각)과 운동 웨이브
 
