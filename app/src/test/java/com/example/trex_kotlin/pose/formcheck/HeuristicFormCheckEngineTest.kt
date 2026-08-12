@@ -143,6 +143,78 @@ class HeuristicFormCheckEngineTest {
         assertTrue("Expected an elbow observation, got ${state.headline}", state.headline!!.startsWith("팔꿈치가"))
     }
 
+    @Test
+    fun anExtensionExerciseCountsWhenTheJointStraightens() {
+        // A hip thrust rests flexed and works upward. Feeding the raw angle to a detector that
+        // only understands "falls to work" would never arm; the session mirrors it instead.
+        val session = HeuristicFormCheckSession(FormCheckExercise.HIP_THRUST)
+        var state = session.initialSnapshot()
+
+        var t = 0L
+        for (angle in listOf(100.0, 100.0, 135.0, 165.0, 165.0, 165.0, 120.0, 100.0, 100.0)) {
+            state = session.accept(
+                t,
+                true,
+                true,
+                frameWithChains(
+                    kneeAngleDegrees = 90.0,
+                    hipAngleDegrees = angle,
+                    elbowAngleDegrees = 170.0,
+                    timestampMs = t,
+                ),
+            )
+            t += 200L
+        }
+
+        assertEquals(1, state.repCount)
+        assertTrue("Expected an extension observation, got ${state.headline}", state.headline!!.contains("펴졌어요"))
+        assertNull("165 degrees passed the 160 reached line", state.suggestion)
+    }
+
+    @Test
+    fun anExtensionExerciseThatStopsShortReportsShortfallNotShallowness() {
+        val session = HeuristicFormCheckSession(FormCheckExercise.CABLE_PUSH_DOWN)
+        var state = session.initialSnapshot()
+
+        // Turns back at 135: past the 120 attempt line but short of the 150 rep line.
+        var t = 0L
+        for (angle in listOf(95.0, 95.0, 130.0, 135.0, 135.0, 110.0, 95.0, 95.0)) {
+            state = session.accept(
+                t,
+                true,
+                true,
+                frameWithChains(
+                    kneeAngleDegrees = 170.0,
+                    hipAngleDegrees = 170.0,
+                    elbowAngleDegrees = angle,
+                    timestampMs = t,
+                ),
+            )
+            t += 200L
+        }
+
+        assertEquals(0, state.repCount)
+        assertEquals(1, state.uncountedAttemptCount)
+        assertTrue("Expected a shortfall phrase, got ${state.headline}", state.headline!!.contains("폄이 부족해"))
+        assertEquals(FormCheckExercise.CABLE_PUSH_DOWN.attemptHint, state.suggestion)
+    }
+
+    @Test
+    fun mirroringRoundTripsForBothDirections() {
+        for (spec in FormCheckExercise.entries) {
+            for (angle in listOf(0.0, 37.5, 90.0, 142.0, 180.0)) {
+                assertEquals(angle, spec.fromDetector(spec.toDetector(angle)), 1e-9)
+            }
+            // The detector's own invariant, expressed in its space.
+            assertTrue(
+                "${spec.name} thresholds must order correctly once mirrored",
+                spec.toDetector(spec.repAngleDegrees) < spec.toDetector(spec.attemptAngleDegrees) &&
+                    spec.toDetector(spec.attemptAngleDegrees) <
+                    spec.toDetector(spec.restAngleDegrees),
+            )
+        }
+    }
+
     // ---- rep cycle detector ----
 
     @Test
@@ -351,7 +423,7 @@ class HeuristicFormCheckEngineTest {
 
         assertEquals(0, state.repCount)
         assertEquals(1, state.uncountedAttemptCount)
-        assertEquals(FormCheckExercise.STEP_FORWARD_DYNAMIC_LUNGE.shallowHint, state.suggestion)
+        assertEquals(FormCheckExercise.STEP_FORWARD_DYNAMIC_LUNGE.attemptHint, state.suggestion)
     }
 
     @Test
@@ -367,7 +439,7 @@ class HeuristicFormCheckEngineTest {
         }
 
         assertEquals(1, state.repCount)
-        assertEquals(FormCheckExercise.STEP_FORWARD_DYNAMIC_LUNGE.deeperHint, state.suggestion)
+        assertEquals(FormCheckExercise.STEP_FORWARD_DYNAMIC_LUNGE.rangeHint, state.suggestion)
         assertNotNull(state.suggestion)
     }
 
@@ -594,14 +666,51 @@ class HeuristicFormCheckEngineTest {
 
     @Test
     fun everySupportedExerciseHasCoherentThresholds() {
+        // Ordering is only meaningful in the detector's space, where a smaller number always
+        // means more work; in raw angles an extension exercise reads the other way round.
         for (spec in FormCheckExercise.entries) {
-            assertTrue(spec.reachedDepthDegrees <= spec.repDepthDegrees)
             assertTrue(
-                "Rep threshold must sit below the shallow-attempt boundary",
-                spec.repDepthDegrees < RepCycleDetector.DEFAULT_ATTEMPT_ENTER_DEGREES,
+                "${spec.name}: the reached line must be at least as far as the rep line",
+                spec.toDetector(spec.reachedAngleDegrees) <= spec.toDetector(spec.repAngleDegrees),
+            )
+            assertTrue(
+                "${spec.name}: the rep line must sit past the attempt boundary",
+                spec.toDetector(spec.repAngleDegrees) < spec.toDetector(spec.attemptAngleDegrees),
+            )
+            assertTrue(
+                "${spec.name}: the attempt boundary must sit past the resting angle",
+                spec.toDetector(spec.attemptAngleDegrees) < spec.toDetector(spec.restAngleDegrees),
             )
             assertTrue(spec.setupHint.isNotBlank())
             assertTrue(FormCheckExercise.supports(spec.exercise))
+        }
+    }
+
+    @Test
+    fun everySupportedExerciseCountsARepetitionFromItsOwnThresholds() {
+        // A table row is only useful if a movement described by that row actually counts. Driving
+        // each exercise through rest -> its rep line -> rest catches an entry whose thresholds
+        // cannot be satisfied by any real excursion.
+        for (spec in FormCheckExercise.entries) {
+            val session = HeuristicFormCheckSession(spec)
+            var state = session.initialSnapshot()
+            // Both ends clear their thresholds rather than sitting on them. Resting exactly on
+            // the line never completes, because the smoothed angle only approaches it
+            // asymptotically; working exactly on it is decided by the last bit of the angle the
+            // fixture reconstructs. Real movements clear both, so the fixture does too.
+            val work = spec.fromDetector(
+                (spec.toDetector(spec.reachedAngleDegrees) - 3.0).coerceAtLeast(0.0),
+            )
+            val rest = spec.fromDetector(
+                (spec.toDetector(spec.restAngleDegrees) + 25.0).coerceAtMost(180.0),
+            )
+            var t = 0L
+            for (angle in listOf(rest, rest, work, work, work, work, rest, rest)) {
+                state = session.accept(t, true, true, frameForDriver(spec, angle, t))
+                t += 200L
+            }
+            assertEquals("${spec.name} must count one repetition", 1, state.repCount)
+            assertNull("${spec.name} reached its line, so it needs no hint", state.suggestion)
         }
     }
 
@@ -645,6 +754,18 @@ class HeuristicFormCheckEngineTest {
     }
 
     private fun point(x: Double, y: Double, z: Double) = PoseLandmark(x, y, z, 1.0, 1.0)
+
+    /** A frame that puts [angleDegrees] on [spec]'s own driver chain and rests the other two. */
+    private fun frameForDriver(
+        spec: FormCheckExercise,
+        angleDegrees: Double,
+        timestampMs: Long,
+    ): PoseFrame = frameWithChains(
+        kneeAngleDegrees = if (spec.driver == FormCheckDriver.KNEE) angleDegrees else 175.0,
+        hipAngleDegrees = if (spec.driver == FormCheckDriver.HIP) angleDegrees else 175.0,
+        elbowAngleDegrees = if (spec.driver == FormCheckDriver.ELBOW) angleDegrees else 175.0,
+        timestampMs = timestampMs,
+    )
 
     /**
      * A frame carrying all three driver chains at once, each hinged to its requested angle.

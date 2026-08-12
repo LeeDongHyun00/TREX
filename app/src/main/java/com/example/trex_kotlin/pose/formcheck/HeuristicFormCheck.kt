@@ -11,18 +11,18 @@ import kotlin.math.roundToInt
  * Its contract is `docs/pose-heuristic-form-check.v1.md`, pinned by [POLICY_DOCUMENT_SHA256].
  * The track computes rotation-invariant joint geometry, reports observations in observational
  * language, abstains loudly, and touches nothing in the posture-correction release chain: no
- * facade, no criterion, no stored record. The lunge thresholds are MediaPipe-native fits from
- * the Day05 bridge measurement (research scope, clip-level); the barbell squat stays an
- * uncalibrated heuristic default and, being load-bearing, never urges more depth. None of this
- * amounts to release-chain calibration, which is why every surface carries the beta disclosure
- * and [claims] still withholds `calibrated`.
+ * facade, no criterion, no stored record. The two dynamic lunges carry MediaPipe-native fits from
+ * the Day05 bridge measurement (research scope, clip-level); every other exercise is an
+ * uncalibrated heuristic default, and those whose overshoot has a real consequence are sealed
+ * against urging more range. None of this amounts to release-chain calibration, which is why
+ * every surface carries the beta disclosure and [claims] still withholds `calibrated`.
  */
 internal object HeuristicFormCheckDeclaration {
 
     const val TRACK_ID: String = "trex.heuristic-form-check.beta.v1"
 
     const val POLICY_DOCUMENT_SHA256: String =
-        "5c25f89c1e8e95f99399fae066ffe199dcc9a042faf0e055549531d14deaee52"
+        "88af0a1834f4322078e2b0f61ff45782742382a7abc2d40d5e679048b6de18ab"
 
     const val POLICY_DOCUMENT_PATH: String = "docs/pose-heuristic-form-check.v1.md"
 
@@ -53,6 +53,37 @@ internal object HeuristicFormCheckDeclaration {
     }
 }
 
+/**
+ * Which way the measured angle travels as the movement does its work.
+ *
+ * A squat, a push-up and a curl all flex: the angle falls. A hip thrust, an overhead press and a
+ * triceps push-down extend: the angle rises, and their resting position is the flexed one. The
+ * repetition detector only understands "falls to work", so extension exercises are mirrored into
+ * its space; every threshold in the policy table stays written as a real joint angle.
+ */
+internal enum class FormCheckWorkingDirection(
+    /** Verb for a completed repetition's extreme. */
+    val reachedVerb: String,
+    /** Noun phrase for an excursion that never reached the rep line. */
+    val shortfallPhrase: String,
+    /** How a repetition compares with the set's own opening reps, short of and beyond it. */
+    val belowBaselinePhrase: String,
+    val beyondBaselinePhrase: String,
+) {
+    FLEXION(
+        reachedVerb = "굽혀졌어요",
+        shortfallPhrase = "굽힘이 얕아",
+        belowBaselinePhrase = "얕아요",
+        beyondBaselinePhrase = "깊어요",
+    ),
+    EXTENSION(
+        reachedVerb = "펴졌어요",
+        shortfallPhrase = "폄이 부족해",
+        belowBaselinePhrase = "덜 펴졌어요",
+        beyondBaselinePhrase = "더 펴졌어요",
+    ),
+}
+
 /** Where a threshold constant came from; mirrored in the policy document's §4 table. */
 internal enum class FormCheckThresholdProvenance {
     /** Literature-informed default that has never met calibration data. */
@@ -67,66 +98,88 @@ internal enum class FormCheckThresholdProvenance {
 }
 
 /**
- * Per-exercise thresholds, mirrored from the policy document's §4 table. 180 degrees is a
- * straight leg; depth gates compare the repetition's lowest raw angle. The label-space fits do
- * not transfer to MediaPipe (the bridge card measures +13 degrees of systematic straightening),
- * so calibrated entries carry the MediaPipe-native value, not the AI Hub one.
+ * Per-exercise thresholds, mirrored from the policy document's §4 table.
+ *
+ * Every angle here is a real joint angle: 180 degrees is a straight chain. Flexion exercises work
+ * downward from [restAngleDegrees] and extension exercises work upward from it; the session
+ * mirrors the extension ones into the detector's space rather than letting the table misstate
+ * which angle a user's hip actually reaches.
+ *
+ * The label-space fits do not transfer to MediaPipe (the bridge card measures +13 degrees of
+ * systematic straightening), so calibrated entries carry the MediaPipe-native value.
  */
 internal enum class FormCheckExercise(
     val exercise: AiHubExercise,
     /** Which three-joint chain this exercise reads. Determines its required joints. */
     val driver: FormCheckDriver,
-    val repDepthDegrees: Double,
-    val reachedDepthDegrees: Double,
+    val direction: FormCheckWorkingDirection,
+    /** The resting angle a repetition must return to before another can be armed. */
+    val restAngleDegrees: Double,
+    /** Passing this arms an excursion; turning back before the rep line reports an attempt. */
+    val attemptAngleDegrees: Double,
+    /** The extreme a repetition has to reach to be counted. */
+    val repAngleDegrees: Double,
+    /** The extreme beyond which the range needs no suggestion. */
+    val reachedAngleDegrees: Double,
     val provenance: FormCheckThresholdProvenance,
     /**
-     * A load-bearing exercise never urges more depth: an uncalibrated deeper-suggestion under
-     * external load is this track's heaviest possible output, so the init contract forbids the
-     * hints outright (policy §4.2).
+     * A sealed exercise never urges more range. An uncalibrated range-increase suggestion is this
+     * track's heaviest possible output wherever overshooting has a real consequence — an external
+     * load on the spine, or a joint already at end range — so the init contract forbids the hints
+     * outright rather than trusting each entry to omit them (policy §4.2).
      */
-    val loadBearing: Boolean,
+    val rangeUrgingSealed: Boolean,
     val setupHint: String,
     /**
-     * Shown after a shallow attempt, or null to report the observation alone. For the lunges a
-     * straight near-side reading genuinely can mean the camera-side leg is the rear one, so
-     * their hint addresses the setup before the depth.
+     * Shown after an uncounted attempt, or null to report the observation alone. For the lunges a
+     * straight near-side reading genuinely can mean the camera-side leg is the rear one, so their
+     * hint addresses the setup before the range.
      */
-    val shallowHint: String?,
-    /** Suggestion after a counted rep whose lowest point stayed above the reached line. */
-    val deeperHint: String?,
+    val attemptHint: String?,
+    /** Suggestion after a counted rep whose extreme stopped short of [reachedAngleDegrees]. */
+    val rangeHint: String?,
 ) {
     BARBELL_SQUAT(
         exercise = AiHubExercise.BARBELL_SQUAT,
         driver = FormCheckDriver.KNEE,
-        repDepthDegrees = 110.0,
-        reachedDepthDegrees = 105.0,
+        direction = FormCheckWorkingDirection.FLEXION,
+        restAngleDegrees = 150.0,
+        attemptAngleDegrees = 140.0,
+        repAngleDegrees = 110.0,
+        reachedAngleDegrees = 105.0,
         provenance = FormCheckThresholdProvenance.HEURISTIC_DEFAULT,
-        loadBearing = true,
+        rangeUrgingSealed = true,
         setupHint = "옆모습이 보이게 서 주세요",
-        shallowHint = null,
-        deeperHint = null,
+        attemptHint = null,
+        rangeHint = null,
     ),
     STEP_FORWARD_DYNAMIC_LUNGE(
         exercise = AiHubExercise.STEP_FORWARD_DYNAMIC_LUNGE,
         driver = FormCheckDriver.KNEE,
-        repDepthDegrees = 134.0,
-        reachedDepthDegrees = 129.0,
+        direction = FormCheckWorkingDirection.FLEXION,
+        restAngleDegrees = 150.0,
+        attemptAngleDegrees = 140.0,
+        repAngleDegrees = 134.0,
+        reachedAngleDegrees = 129.0,
         provenance = FormCheckThresholdProvenance.MEDIAPIPE_NATIVE_DAY05_FIT_V1,
-        loadBearing = false,
+        rangeUrgingSealed = false,
         setupHint = "카메라 쪽 다리가 앞으로 오게 서 주세요",
-        shallowHint = "카메라 쪽 다리가 앞인지 확인하고 조금 더 굽혀볼까요",
-        deeperHint = "다음엔 조금 더 앉아볼까요",
+        attemptHint = "카메라 쪽 다리가 앞인지 확인하고 조금 더 굽혀볼까요",
+        rangeHint = "다음엔 조금 더 앉아볼까요",
     ),
     STEP_BACKWARD_DYNAMIC_LUNGE(
         exercise = AiHubExercise.STEP_BACKWARD_DYNAMIC_LUNGE,
         driver = FormCheckDriver.KNEE,
-        repDepthDegrees = 130.0,
-        reachedDepthDegrees = 123.0,
+        direction = FormCheckWorkingDirection.FLEXION,
+        restAngleDegrees = 150.0,
+        attemptAngleDegrees = 140.0,
+        repAngleDegrees = 130.0,
+        reachedAngleDegrees = 123.0,
         provenance = FormCheckThresholdProvenance.MEDIAPIPE_NATIVE_DAY05_FIT_V1,
-        loadBearing = false,
+        rangeUrgingSealed = false,
         setupHint = "카메라 쪽 다리가 앞으로 오게 서 주세요",
-        shallowHint = "카메라 쪽 다리가 앞인지 확인하고 조금 더 굽혀볼까요",
-        deeperHint = "다음엔 조금 더 앉아볼까요",
+        attemptHint = "카메라 쪽 다리가 앞인지 확인하고 조금 더 굽혀볼까요",
+        rangeHint = "다음엔 조금 더 앉아볼까요",
     ),
 
     // Wave 1. Uncalibrated: the constants borrow the dynamic-lunge fit's shape as the only
@@ -135,61 +188,215 @@ internal enum class FormCheckExercise(
     BARBELL_LUNGE(
         exercise = AiHubExercise.BARBELL_LUNGE,
         driver = FormCheckDriver.KNEE,
-        repDepthDegrees = 134.0,
-        reachedDepthDegrees = 129.0,
+        direction = FormCheckWorkingDirection.FLEXION,
+        restAngleDegrees = 150.0,
+        attemptAngleDegrees = 140.0,
+        repAngleDegrees = 134.0,
+        reachedAngleDegrees = 129.0,
         provenance = FormCheckThresholdProvenance.HEURISTIC_DEFAULT,
-        loadBearing = true,
+        rangeUrgingSealed = true,
         setupHint = "카메라 쪽 다리가 앞으로 오게 서 주세요",
-        shallowHint = null,
-        deeperHint = null,
+        attemptHint = null,
+        rangeHint = null,
     ),
     STANDING_KNEE_UP(
         exercise = AiHubExercise.STANDING_KNEE_UP,
         driver = FormCheckDriver.HIP,
-        repDepthDegrees = 135.0,
-        reachedDepthDegrees = 125.0,
+        direction = FormCheckWorkingDirection.FLEXION,
+        restAngleDegrees = 150.0,
+        attemptAngleDegrees = 140.0,
+        repAngleDegrees = 135.0,
+        reachedAngleDegrees = 125.0,
         provenance = FormCheckThresholdProvenance.HEURISTIC_DEFAULT,
-        loadBearing = false,
+        rangeUrgingSealed = false,
         setupHint = "옆모습이 보이게 서 주세요",
-        shallowHint = "다음엔 무릎을 조금 더 올려볼까요",
-        deeperHint = "다음엔 무릎을 조금 더 올려볼까요",
+        attemptHint = "다음엔 무릎을 조금 더 올려볼까요",
+        rangeHint = "다음엔 무릎을 조금 더 올려볼까요",
     ),
     GOOD_MORNING(
         exercise = AiHubExercise.GOOD_MORNING,
         driver = FormCheckDriver.HIP,
-        repDepthDegrees = 135.0,
-        reachedDepthDegrees = 128.0,
+        direction = FormCheckWorkingDirection.FLEXION,
+        restAngleDegrees = 150.0,
+        attemptAngleDegrees = 140.0,
+        repAngleDegrees = 135.0,
+        reachedAngleDegrees = 128.0,
         provenance = FormCheckThresholdProvenance.HEURISTIC_DEFAULT,
-        loadBearing = true,
+        rangeUrgingSealed = true,
         setupHint = "옆모습이 보이게 서 주세요",
-        shallowHint = null,
-        deeperHint = null,
+        attemptHint = null,
+        rangeHint = null,
     ),
     PUSH_UP(
         exercise = AiHubExercise.PUSH_UP,
         driver = FormCheckDriver.ELBOW,
-        repDepthDegrees = 135.0,
-        reachedDepthDegrees = 125.0,
+        direction = FormCheckWorkingDirection.FLEXION,
+        restAngleDegrees = 150.0,
+        attemptAngleDegrees = 140.0,
+        repAngleDegrees = 135.0,
+        reachedAngleDegrees = 125.0,
         provenance = FormCheckThresholdProvenance.HEURISTIC_DEFAULT,
-        loadBearing = false,
+        rangeUrgingSealed = false,
         setupHint = "옆모습이 보이게 엎드려 주세요",
-        shallowHint = "다음엔 조금 더 내려가 볼까요",
-        deeperHint = "다음엔 조금 더 내려가 볼까요",
+        attemptHint = "다음엔 조금 더 내려가 볼까요",
+        rangeHint = "다음엔 조금 더 내려가 볼까요",
+    ),
+
+    // Wave 2, flexion. Same elbow chain as the push-up, so these are threshold rows rather than
+    // new machinery. Dips is sealed despite being bodyweight: the shoulder is at end range at
+    // the bottom, which is the other half of §4.2's criterion.
+    KNEE_PUSH_UP(
+        exercise = AiHubExercise.KNEE_PUSH_UP,
+        driver = FormCheckDriver.ELBOW,
+        direction = FormCheckWorkingDirection.FLEXION,
+        restAngleDegrees = 150.0,
+        attemptAngleDegrees = 140.0,
+        repAngleDegrees = 135.0,
+        reachedAngleDegrees = 125.0,
+        provenance = FormCheckThresholdProvenance.HEURISTIC_DEFAULT,
+        rangeUrgingSealed = false,
+        setupHint = "옆모습이 보이게 엎드려 주세요",
+        attemptHint = "다음엔 조금 더 내려가 볼까요",
+        rangeHint = "다음엔 조금 더 내려가 볼까요",
+    ),
+    DIPS(
+        exercise = AiHubExercise.DIPS,
+        driver = FormCheckDriver.ELBOW,
+        direction = FormCheckWorkingDirection.FLEXION,
+        restAngleDegrees = 150.0,
+        attemptAngleDegrees = 140.0,
+        repAngleDegrees = 135.0,
+        reachedAngleDegrees = 125.0,
+        provenance = FormCheckThresholdProvenance.HEURISTIC_DEFAULT,
+        rangeUrgingSealed = true,
+        setupHint = "옆모습이 보이게 자세를 잡아 주세요",
+        attemptHint = null,
+        rangeHint = null,
+    ),
+    BARBELL_CURL(
+        exercise = AiHubExercise.BARBELL_CURL,
+        driver = FormCheckDriver.ELBOW,
+        direction = FormCheckWorkingDirection.FLEXION,
+        restAngleDegrees = 150.0,
+        attemptAngleDegrees = 140.0,
+        repAngleDegrees = 120.0,
+        reachedAngleDegrees = 100.0,
+        provenance = FormCheckThresholdProvenance.HEURISTIC_DEFAULT,
+        rangeUrgingSealed = false,
+        setupHint = "옆모습이 보이게 서 주세요",
+        attemptHint = "다음엔 조금 더 감아올려 볼까요",
+        rangeHint = "다음엔 조금 더 감아올려 볼까요",
+    ),
+    DUMBBELL_CURL(
+        exercise = AiHubExercise.DUMBBELL_CURL,
+        driver = FormCheckDriver.ELBOW,
+        direction = FormCheckWorkingDirection.FLEXION,
+        restAngleDegrees = 150.0,
+        attemptAngleDegrees = 140.0,
+        repAngleDegrees = 120.0,
+        reachedAngleDegrees = 100.0,
+        provenance = FormCheckThresholdProvenance.HEURISTIC_DEFAULT,
+        rangeUrgingSealed = false,
+        setupHint = "옆모습이 보이게 서 주세요",
+        attemptHint = "다음엔 조금 더 감아올려 볼까요",
+        rangeHint = "다음엔 조금 더 감아올려 볼까요",
+    ),
+    LAT_PULLDOWN(
+        exercise = AiHubExercise.LAT_PULLDOWN,
+        driver = FormCheckDriver.ELBOW,
+        direction = FormCheckWorkingDirection.FLEXION,
+        restAngleDegrees = 150.0,
+        attemptAngleDegrees = 140.0,
+        repAngleDegrees = 130.0,
+        reachedAngleDegrees = 115.0,
+        provenance = FormCheckThresholdProvenance.HEURISTIC_DEFAULT,
+        rangeUrgingSealed = false,
+        setupHint = "옆모습이 보이게 앉아 주세요",
+        attemptHint = "다음엔 조금 더 당겨볼까요",
+        rangeHint = "다음엔 조금 더 당겨볼까요",
+    ),
+
+    // Wave 2, extension. Their rest position is the flexed one, so every threshold reads the
+    // other way round and the session mirrors them before the detector sees them.
+    HIP_THRUST(
+        exercise = AiHubExercise.HIP_THRUST,
+        driver = FormCheckDriver.HIP,
+        direction = FormCheckWorkingDirection.EXTENSION,
+        restAngleDegrees = 110.0,
+        attemptAngleDegrees = 130.0,
+        repAngleDegrees = 145.0,
+        reachedAngleDegrees = 160.0,
+        provenance = FormCheckThresholdProvenance.HEURISTIC_DEFAULT,
+        rangeUrgingSealed = true,
+        setupHint = "옆모습이 보이게 자세를 잡아 주세요",
+        attemptHint = null,
+        rangeHint = null,
+    ),
+    OVERHEAD_PRESS(
+        exercise = AiHubExercise.OVERHEAD_PRESS,
+        driver = FormCheckDriver.ELBOW,
+        direction = FormCheckWorkingDirection.EXTENSION,
+        restAngleDegrees = 100.0,
+        attemptAngleDegrees = 120.0,
+        repAngleDegrees = 150.0,
+        reachedAngleDegrees = 165.0,
+        provenance = FormCheckThresholdProvenance.HEURISTIC_DEFAULT,
+        rangeUrgingSealed = true,
+        setupHint = "옆모습이 보이게 서 주세요",
+        attemptHint = null,
+        rangeHint = null,
+    ),
+    CABLE_PUSH_DOWN(
+        exercise = AiHubExercise.CABLE_PUSH_DOWN,
+        driver = FormCheckDriver.ELBOW,
+        direction = FormCheckWorkingDirection.EXTENSION,
+        restAngleDegrees = 100.0,
+        attemptAngleDegrees = 120.0,
+        repAngleDegrees = 150.0,
+        reachedAngleDegrees = 165.0,
+        provenance = FormCheckThresholdProvenance.HEURISTIC_DEFAULT,
+        rangeUrgingSealed = false,
+        setupHint = "옆모습이 보이게 서 주세요",
+        attemptHint = "다음엔 팔을 조금 더 펴볼까요",
+        rangeHint = "다음엔 팔을 조금 더 펴볼까요",
     ),
     ;
 
     /** The only joints this exercise needs before it can start. */
     val requiredJoints: Set<FormCheckJointGroup> get() = driver.requiredJoints
 
+    /**
+     * Mirrors an angle into the detector's space, where a smaller number always means more work.
+     * Flexion passes through; extension reflects about a straight chain.
+     */
+    fun toDetector(angleDegrees: Double): Double = when (direction) {
+        FormCheckWorkingDirection.FLEXION -> angleDegrees
+        FormCheckWorkingDirection.EXTENSION -> 180.0 - angleDegrees
+    }
+
+    /** Converts a detector-space value back to the joint angle a user could be told. */
+    fun fromDetector(value: Double): Double = toDetector(value)
+
     init {
-        require(reachedDepthDegrees <= repDepthDegrees) {
-            "Reached-depth must be at least as deep as the rep threshold"
+        for (angle in listOf(
+            restAngleDegrees,
+            attemptAngleDegrees,
+            repAngleDegrees,
+            reachedAngleDegrees,
+        )) {
+            require(angle in 0.0..180.0) { "Every threshold must be a real joint angle" }
         }
-        require(repDepthDegrees < RepCycleDetector.DEFAULT_ATTEMPT_ENTER_DEGREES) {
-            "The rep threshold must stay below the shallow-attempt boundary"
+        require(toDetector(repAngleDegrees) < toDetector(attemptAngleDegrees)) {
+            "The rep threshold must sit past the attempt boundary in the working direction"
         }
-        require(!loadBearing || (shallowHint == null && deeperHint == null)) {
-            "A load-bearing exercise must not carry depth-increase suggestions"
+        require(toDetector(attemptAngleDegrees) < toDetector(restAngleDegrees)) {
+            "The attempt boundary must sit past the resting angle in the working direction"
+        }
+        require(toDetector(reachedAngleDegrees) <= toDetector(repAngleDegrees)) {
+            "The reached line must be at least as far as the rep threshold"
+        }
+        require(!rangeUrgingSealed || (attemptHint == null && rangeHint == null)) {
+            "A sealed exercise must not carry range-increase suggestions"
         }
         require(requiredJoints.isNotEmpty()) { "An exercise must declare its required joints" }
     }
@@ -281,7 +488,11 @@ internal class FormCheckUiState internal constructor(
 internal class HeuristicFormCheckSession(
     private val spec: FormCheckExercise,
 ) {
-    private val detector = RepCycleDetector(bottomEnterDegrees = spec.repDepthDegrees)
+    private val detector = RepCycleDetector(
+        bottomEnterDegrees = spec.toDetector(spec.repAngleDegrees),
+        attemptEnterDegrees = spec.toDetector(spec.attemptAngleDegrees),
+        topEnterDegrees = spec.toDetector(spec.restAngleDegrees),
+    )
     private var repCount = 0
     private var uncountedAttemptCount = 0
     private var headline: String? = null
@@ -316,23 +527,27 @@ internal class HeuristicFormCheckSession(
             return snapshot(FormCheckStartState.WAITING_FOR_JOINTS, spec.requiredJoints)
         }
 
-        when (val event = detector.accept(timestampMs, sample.includedAngleDegrees)) {
+        val detectorValue = spec.toDetector(sample.includedAngleDegrees)
+        when (val event = detector.accept(timestampMs, detectorValue)) {
             is RepCycleEvent.Completed -> {
                 repCount += 1
-                val minimum = event.minimumAngleDegrees.roundToInt()
-                headline = "$vertexSubject ${minimum}도까지 굽혀졌어요"
-                // Null for load-bearing exercises: the observation stands without urging depth.
-                suggestion = if (event.minimumAngleDegrees <= spec.reachedDepthDegrees) {
+                val extreme = spec.fromDetector(event.minimumAngleDegrees)
+                headline = "$vertexSubject ${extreme.roundToInt()}도까지 ${spec.direction.reachedVerb}"
+                // Null for sealed exercises: the observation stands without urging more range.
+                suggestion = if (
+                    event.minimumAngleDegrees <= spec.toDetector(spec.reachedAngleDegrees)
+                ) {
                     null
                 } else {
-                    spec.deeperHint
+                    spec.rangeHint
                 }
             }
 
             is RepCycleEvent.ShallowAttempt -> {
                 uncountedAttemptCount += 1
-                headline = "${spec.driver.vertex.label} 굽힘이 얕아 횟수로 세지 않았어요"
-                suggestion = spec.shallowHint
+                headline = "${spec.driver.vertex.label} ${spec.direction.shortfallPhrase} " +
+                    "횟수로 세지 않았어요"
+                suggestion = spec.attemptHint
             }
 
             is RepCycleEvent.TooFastAttempt -> {

@@ -55,35 +55,83 @@ class FormCheckGovernanceTest {
 
     @Test
     fun thresholdsMirrorThePolicyDocumentTable() {
-        assertEquals(110.0, FormCheckExercise.BARBELL_SQUAT.repDepthDegrees, 0.0)
-        assertEquals(105.0, FormCheckExercise.BARBELL_SQUAT.reachedDepthDegrees, 0.0)
+        assertEquals(110.0, FormCheckExercise.BARBELL_SQUAT.repAngleDegrees, 0.0)
+        assertEquals(105.0, FormCheckExercise.BARBELL_SQUAT.reachedAngleDegrees, 0.0)
         assertEquals(
             FormCheckThresholdProvenance.HEURISTIC_DEFAULT,
             FormCheckExercise.BARBELL_SQUAT.provenance,
         )
-        assertEquals(134.0, FormCheckExercise.STEP_FORWARD_DYNAMIC_LUNGE.repDepthDegrees, 0.0)
-        assertEquals(129.0, FormCheckExercise.STEP_FORWARD_DYNAMIC_LUNGE.reachedDepthDegrees, 0.0)
+        assertEquals(134.0, FormCheckExercise.STEP_FORWARD_DYNAMIC_LUNGE.repAngleDegrees, 0.0)
+        assertEquals(129.0, FormCheckExercise.STEP_FORWARD_DYNAMIC_LUNGE.reachedAngleDegrees, 0.0)
         assertEquals(
             FormCheckThresholdProvenance.MEDIAPIPE_NATIVE_DAY05_FIT_V1,
             FormCheckExercise.STEP_FORWARD_DYNAMIC_LUNGE.provenance,
         )
-        assertEquals(130.0, FormCheckExercise.STEP_BACKWARD_DYNAMIC_LUNGE.repDepthDegrees, 0.0)
-        assertEquals(123.0, FormCheckExercise.STEP_BACKWARD_DYNAMIC_LUNGE.reachedDepthDegrees, 0.0)
+        assertEquals(130.0, FormCheckExercise.STEP_BACKWARD_DYNAMIC_LUNGE.repAngleDegrees, 0.0)
+        assertEquals(123.0, FormCheckExercise.STEP_BACKWARD_DYNAMIC_LUNGE.reachedAngleDegrees, 0.0)
         assertEquals(
             FormCheckThresholdProvenance.MEDIAPIPE_NATIVE_DAY05_FIT_V1,
             FormCheckExercise.STEP_BACKWARD_DYNAMIC_LUNGE.provenance,
         )
 
-        // Wave 1, all uncalibrated per §4.3.
-        assertEquals(134.0, FormCheckExercise.BARBELL_LUNGE.repDepthDegrees, 0.0)
-        assertEquals(129.0, FormCheckExercise.BARBELL_LUNGE.reachedDepthDegrees, 0.0)
-        assertEquals(135.0, FormCheckExercise.STANDING_KNEE_UP.repDepthDegrees, 0.0)
-        assertEquals(125.0, FormCheckExercise.STANDING_KNEE_UP.reachedDepthDegrees, 0.0)
-        assertEquals(135.0, FormCheckExercise.GOOD_MORNING.repDepthDegrees, 0.0)
-        assertEquals(128.0, FormCheckExercise.GOOD_MORNING.reachedDepthDegrees, 0.0)
-        assertEquals(135.0, FormCheckExercise.PUSH_UP.repDepthDegrees, 0.0)
-        assertEquals(125.0, FormCheckExercise.PUSH_UP.reachedDepthDegrees, 0.0)
-        assertEquals(7, FormCheckExercise.entries.size)
+        // Waves 1 and 2, all uncalibrated per §4.3.
+        val expected = mapOf(
+            FormCheckExercise.BARBELL_LUNGE to (134.0 to 129.0),
+            FormCheckExercise.STANDING_KNEE_UP to (135.0 to 125.0),
+            FormCheckExercise.GOOD_MORNING to (135.0 to 128.0),
+            FormCheckExercise.PUSH_UP to (135.0 to 125.0),
+            FormCheckExercise.KNEE_PUSH_UP to (135.0 to 125.0),
+            FormCheckExercise.DIPS to (135.0 to 125.0),
+            FormCheckExercise.BARBELL_CURL to (120.0 to 100.0),
+            FormCheckExercise.DUMBBELL_CURL to (120.0 to 100.0),
+            FormCheckExercise.LAT_PULLDOWN to (130.0 to 115.0),
+            FormCheckExercise.HIP_THRUST to (145.0 to 160.0),
+            FormCheckExercise.OVERHEAD_PRESS to (150.0 to 165.0),
+            FormCheckExercise.CABLE_PUSH_DOWN to (150.0 to 165.0),
+        )
+        for ((spec, thresholds) in expected) {
+            val (rep, reached) = thresholds
+            assertEquals(spec.name, rep, spec.repAngleDegrees, 0.0)
+            assertEquals(spec.name, reached, spec.reachedAngleDegrees, 0.0)
+            assertEquals(
+                "${spec.name} must not claim calibration it never had",
+                FormCheckThresholdProvenance.HEURISTIC_DEFAULT,
+                spec.provenance,
+            )
+        }
+        assertEquals(15, FormCheckExercise.entries.size)
+    }
+
+    @Test
+    fun extensionExercisesDeclareTheirThresholdsTheOtherWayRound() {
+        // §4: the table states real joint angles, so an extension exercise's rep line is a larger
+        // number than its rest. Mirroring happens in the session, not in the table.
+        val extension = FormCheckExercise.entries
+            .filter { it.direction == FormCheckWorkingDirection.EXTENSION }
+        assertEquals(
+            setOf(
+                FormCheckExercise.HIP_THRUST,
+                FormCheckExercise.OVERHEAD_PRESS,
+                FormCheckExercise.CABLE_PUSH_DOWN,
+            ),
+            extension.toSet(),
+        )
+        for (spec in extension) {
+            assertTrue(
+                "${spec.name} works upward from rest",
+                spec.repAngleDegrees > spec.restAngleDegrees,
+            )
+            assertTrue(
+                "${spec.name} reaches further than it counts",
+                spec.reachedAngleDegrees > spec.repAngleDegrees,
+            )
+        }
+        for (spec in FormCheckExercise.entries - extension.toSet()) {
+            assertTrue(
+                "${spec.name} works downward from rest",
+                spec.repAngleDegrees < spec.restAngleDegrees,
+            )
+        }
     }
 
     @Test
@@ -116,30 +164,40 @@ class FormCheckGovernanceTest {
     }
 
     @Test
-    fun onlyUncalibratedExercisesMayBeLoadBearing() {
-        // A calibrated exercise carries hints; a load-bearing one must not. The two sets are
-        // therefore disjoint, and a future calibration of a loaded lift has to revisit §4.2
-        // deliberately rather than silently gaining depth urging.
+    fun onlyUncalibratedExercisesMayBeSealed() {
+        // A calibrated exercise carries hints; a sealed one must not. The two sets are therefore
+        // disjoint, and a future calibration of a loaded lift has to revisit §4.2 deliberately
+        // rather than silently gaining range urging.
         for (spec in FormCheckExercise.entries) {
             if (spec.provenance != FormCheckThresholdProvenance.HEURISTIC_DEFAULT) {
                 assertFalse(
-                    "${spec.name} is calibrated, so §4.2's load-bearing seal needs re-deciding",
-                    spec.loadBearing,
+                    "${spec.name} is calibrated, so §4.2's seal needs re-deciding",
+                    spec.rangeUrgingSealed,
                 )
             }
         }
     }
 
     @Test
-    fun loadBearingExercisesNeverUrgeMoreDepth() {
-        // Policy §4.2: an uncalibrated deeper-suggestion under external load is the heaviest
-        // output this track could produce, so load-bearing exercises must not carry the hints.
-        assertTrue(FormCheckExercise.BARBELL_SQUAT.loadBearing)
-        for (spec in FormCheckExercise.entries) {
-            if (spec.loadBearing) {
-                assertNull("${spec.name} must not carry a shallow hint", spec.shallowHint)
-                assertNull("${spec.name} must not carry a deeper hint", spec.deeperHint)
-            }
+    fun sealedExercisesNeverUrgeMoreRange() {
+        // Policy §4.2: an uncalibrated range-increase suggestion is the heaviest output this
+        // track could produce wherever overshooting has a real consequence — an external load on
+        // the spine, or a joint already at end range.
+        val sealed = FormCheckExercise.entries.filter { it.rangeUrgingSealed }.toSet()
+        assertEquals(
+            setOf(
+                FormCheckExercise.BARBELL_SQUAT,
+                FormCheckExercise.BARBELL_LUNGE,
+                FormCheckExercise.GOOD_MORNING,
+                FormCheckExercise.DIPS,
+                FormCheckExercise.HIP_THRUST,
+                FormCheckExercise.OVERHEAD_PRESS,
+            ),
+            sealed,
+        )
+        for (spec in sealed) {
+            assertNull("${spec.name} must not carry an attempt hint", spec.attemptHint)
+            assertNull("${spec.name} must not carry a range hint", spec.rangeHint)
         }
     }
 
