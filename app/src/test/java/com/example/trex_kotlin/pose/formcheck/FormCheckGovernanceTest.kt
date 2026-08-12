@@ -226,6 +226,36 @@ class FormCheckGovernanceTest {
     }
 
     @Test
+    fun aiHubDerivedThresholdsCarryTheirAttribution() {
+        // Policy §4.5: the dataset's usage policy permits distributing what was learned from it
+        // but requires saying so. Attribution follows provenance rather than being app-wide,
+        // because most exercises carry no AI Hub-derived constant and a blanket credit would
+        // claim a provenance they do not have.
+        assertTrue(
+            "The attribution must name the dataset",
+            HeuristicFormCheckDeclaration.DATA_ATTRIBUTION.contains("AI Hub"),
+        )
+        assertFalse(
+            "An uncalibrated default owes no attribution",
+            FormCheckThresholdProvenance.HEURISTIC_DEFAULT.requiresDataAttribution,
+        )
+        for (provenance in FormCheckThresholdProvenance.entries) {
+            if (provenance == FormCheckThresholdProvenance.HEURISTIC_DEFAULT) continue
+            assertTrue(
+                "$provenance was fitted on AI Hub data and must be attributed",
+                provenance.requiresDataAttribution,
+            )
+        }
+        // The surface that renders it must actually consult the flag.
+        val layer = mainSources().resolve("com/example/trex_kotlin/SessionFormCheckLayer.kt")
+        val text = layer.readText()
+        assertTrue(
+            "SessionFormCheckLayer must gate the attribution on provenance",
+            text.contains("requiresDataAttribution") && text.contains("DATA_ATTRIBUTION"),
+        )
+    }
+
+    @Test
     fun onlyUncalibratedExercisesMayBeSealed() {
         // A calibrated exercise carries hints; a sealed one must not. The two sets are therefore
         // disjoint, and a future calibration of a loaded lift has to revisit §4.2 deliberately

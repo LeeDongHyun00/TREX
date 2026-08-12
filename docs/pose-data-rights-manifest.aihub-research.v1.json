@@ -1,6 +1,6 @@
 {
   "artifactKind": "TREX_AIHUB_RESEARCH_USE_RIGHTS_MANIFEST",
-  "artifactSha256": "ee0fa735e8187cd1c6f5c1e78954219bba1ae97543d8c96949ae04fd9d0385a7",
+  "artifactSha256": "160cea88b5f702059ca7bb75b4ff1ffde6dd374a52236cb2e7e958aa72795230",
   "attestation": {
     "attestationMode": "SINGLE_PARTY_UNSIGNED",
     "attestedBy": "REPOSITORY_OWNER",
@@ -47,6 +47,18 @@
   },
   "issuedDate": "2026-08-12",
   "manifestId": "trex.aihub-research-use-rights.v1",
+  "obligations": [
+    {
+      "because": "The usage policy requires stating that AI Hub data was used.",
+      "implementation": "docs/pose-heuristic-form-check.v1.md section 4.5; the session surface shows the attribution wherever an exercise carries an AI Hub-derived threshold, enforced by FormCheckGovernanceTest.",
+      "obligation": "ATTRIBUTE_AIHUB_DATA_IN_USER_FACING_SURFACE"
+    },
+    {
+      "because": "Providing, transferring, leasing or selling the data is forbidden.",
+      "implementation": "storageContract.rawDatasetRemainsOutsideGitAndApk",
+      "obligation": "KEEP_RAW_DATASET_OUT_OF_ANY_DISTRIBUTION"
+    }
+  ],
   "openBlockers": [
     {
       "blocker": "AIHUB_TERMS_EVIDENCE_DOCUMENT_NOT_ARCHIVED",
@@ -54,9 +66,9 @@
       "resolution": "Archive the accepted AI Hub use-agreement text and record its SHA-256 in attestation.termsEvidenceDocumentSha256"
     },
     {
-      "blocker": "PUBLIC_APP_DISTRIBUTION_RIGHTS_NOT_REVIEWED",
-      "blocks": "Shipping AI Hub-derived thresholds in a publicly distributed build",
-      "resolution": "Confirm derived-artifact distribution terms before any public release; the capstone scope assumes non-public builds"
+      "blocker": "PUBLIC_APP_DISTRIBUTION_RIGHTS_ATTRIBUTION_CONDITIONAL",
+      "blocks": "Nothing that is currently done. Shipping a derived threshold publicly is permitted by the published policy's models-and-services clause provided the attribution obligation is met, but the clause does not name derived constants explicitly.",
+      "resolution": "Keep the attribution surface in place; obtain the operator's written confirmation that a fitted constant counts as a learned output before any commercial distribution"
     },
     {
       "blocker": "DETACHED_SIGNATURE_TRUST_ROOT_NOT_IMPLEMENTED",
@@ -86,22 +98,52 @@
     "RELEASE_CRITERION_AUTHORIZATION",
     "SHADOW_OR_USER_RUNTIME_USE_OF_AIHUB_DERIVED_VERDICTS",
     "REDISTRIBUTION_OF_RAW_OR_DERIVED_RAW_DATA",
-    "PUBLIC_APP_DISTRIBUTION_OF_AIHUB_DERIVED_THRESHOLDS"
+    "UNATTRIBUTED_DISTRIBUTION_OF_AIHUB_DERIVED_THRESHOLDS"
   ],
+  "publishedUsagePolicy": {
+    "attributionOfAiHubDataUse": "REQUIRED",
+    "consultedDate": "2026-08-12",
+    "datasetCommercialSale": "REQUIRES_SEPARATE_CONSULTATION",
+    "datasetItselfProvidedTransferredLeasedOrSold": "FORBIDDEN_WITHOUT_APPROVAL",
+    "modelsAndServicesTrainedFromData": "FREELY_DISTRIBUTABLE_AND_USABLE",
+    "ownerReading": "A fitted threshold constant is an output learned from the data rather than the data itself, so distributing it inside an application falls under the permitted 'models and services' clause, subject to the attribution obligation. The clause does not name derived constants explicitly, which is why the corresponding blocker is downgraded rather than removed.",
+    "researchAndDevelopmentUse": "PERMITTED_FOR_PROFIT_AND_NON_PROFIT",
+    "rightsHolder": "IMPLEMENTING_AND_PARTICIPATING_ORGANISATIONS_AND_NIA",
+    "source": "https://www.aihub.or.kr/intrcn/guid/usagepolicy.do"
+  },
   "readiness": "READY_FOR_DECLARED_SCOPE_ONLY",
+  "revisions": [
+    {
+      "change": "Recorded the published usage policy, downgraded the derived-distribution blocker from unreviewed to attribution-conditional, added the attribution obligation, and widened the surveyed exercise scope.",
+      "date": "2026-08-12"
+    }
+  ],
   "schemaVersion": 1,
   "scope": {
     "commercialUseAuthorized": false,
+    "commercialUsePermittedByPolicy": true,
+    "commercialUseScopeNote": "The published policy permits for-profit research and development and does not restrict commercial use of models trained from the data. This project keeps its declared scope non-commercial anyway; widening it needs an owner decision, not further research.",
     "dataClassInScope": "AIHUB_SOURCE_DATA",
     "datasetId": "AIHUB_013_FITNESS_POSE_IMAGE",
-    "derivedThresholdPublicAppDistributionAuthorized": false,
+    "derivedThresholdDistributionCondition": "ATTRIBUTION_REQUIRED",
+    "derivedThresholdPublicAppDistributionAuthorized": true,
     "redistributionOfRawOrDerivedRawAuthorized": false,
     "subjectExercises": [
       "STEP_FORWARD_DYNAMIC_LUNGE",
       "STEP_BACKWARD_DYNAMIC_LUNGE",
+      "BARBELL_LUNGE",
       "STANDING_KNEE_UP",
       "STANDING_SIDE_CRUNCH",
-      "BURPEE_TEST"
+      "BURPEE_TEST",
+      "LAT_PULLDOWN",
+      "DIPS",
+      "GOOD_MORNING",
+      "BARBELL_CURL",
+      "DUMBBELL_CURL",
+      "PUSH_UP",
+      "KNEE_PUSH_UP",
+      "PLANK",
+      "HIP_THRUST"
     ],
     "useClass": "NON_COMMERCIAL_EDUCATIONAL_CAPSTONE"
   },

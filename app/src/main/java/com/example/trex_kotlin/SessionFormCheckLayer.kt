@@ -342,6 +342,17 @@ private fun FormCheckChip(
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(top = 2.dp),
             )
+            // Only where the threshold actually came from that dataset; crediting it on an
+            // uncalibrated exercise would claim a provenance the constant does not have.
+            if (spec.provenance.requiresDataAttribution) {
+                Text(
+                    text = HeuristicFormCheckDeclaration.DATA_ATTRIBUTION,
+                    color = Color.White.copy(alpha = 0.5f),
+                    fontSize = 9.sp,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(top = 1.dp),
+                )
+            }
         }
     }
 }

@@ -68,14 +68,32 @@ def build_manifest() -> dict[str, Any]:
             "dataClassInScope": "AIHUB_SOURCE_DATA",
             "useClass": "NON_COMMERCIAL_EDUCATIONAL_CAPSTONE",
             "commercialUseAuthorized": False,
-            "derivedThresholdPublicAppDistributionAuthorized": False,
+            "commercialUsePermittedByPolicy": True,
+            "commercialUseScopeNote": (
+                "The published policy permits for-profit research and development and does not "
+                "restrict commercial use of models trained from the data. This project keeps its "
+                "declared scope non-commercial anyway; widening it needs an owner decision, not "
+                "further research."
+            ),
+            "derivedThresholdPublicAppDistributionAuthorized": True,
+            "derivedThresholdDistributionCondition": "ATTRIBUTION_REQUIRED",
             "redistributionOfRawOrDerivedRawAuthorized": False,
             "subjectExercises": [
                 "STEP_FORWARD_DYNAMIC_LUNGE",
                 "STEP_BACKWARD_DYNAMIC_LUNGE",
+                "BARBELL_LUNGE",
                 "STANDING_KNEE_UP",
                 "STANDING_SIDE_CRUNCH",
                 "BURPEE_TEST",
+                "LAT_PULLDOWN",
+                "DIPS",
+                "GOOD_MORNING",
+                "BARBELL_CURL",
+                "DUMBBELL_CURL",
+                "PUSH_UP",
+                "KNEE_PUSH_UP",
+                "PLANK",
+                "HIP_THRUST",
             ],
         },
         # Single-party, unsigned. Recorded honestly so no downstream reader mistakes this for the
@@ -93,6 +111,54 @@ def build_manifest() -> dict[str, Any]:
                 "not external legal review, and not the protocol v2 trust root."
             ),
         },
+        # Clauses read from the operator's published usage policy. Recorded because the earlier
+        # revision treated derived-artifact distribution as an open question, and the policy
+        # answers it directly. Paraphrased in English with the source named; this is a reading of
+        # a public policy page, not a licence opinion obtained from the operator.
+        "publishedUsagePolicy": {
+            "source": "https://www.aihub.or.kr/intrcn/guid/usagepolicy.do",
+            "consultedDate": "2026-08-12",
+            "rightsHolder": "IMPLEMENTING_AND_PARTICIPATING_ORGANISATIONS_AND_NIA",
+            "researchAndDevelopmentUse": "PERMITTED_FOR_PROFIT_AND_NON_PROFIT",
+            "modelsAndServicesTrainedFromData": "FREELY_DISTRIBUTABLE_AND_USABLE",
+            "datasetItselfProvidedTransferredLeasedOrSold": "FORBIDDEN_WITHOUT_APPROVAL",
+            "datasetCommercialSale": "REQUIRES_SEPARATE_CONSULTATION",
+            "attributionOfAiHubDataUse": "REQUIRED",
+            "ownerReading": (
+                "A fitted threshold constant is an output learned from the data rather than the "
+                "data itself, so distributing it inside an application falls under the permitted "
+                "'models and services' clause, subject to the attribution obligation. The clause "
+                "does not name derived constants explicitly, which is why the corresponding "
+                "blocker is downgraded rather than removed."
+            ),
+        },
+        # Obligations this project takes on as a condition of the permissions above.
+        "obligations": [
+            {
+                "obligation": "ATTRIBUTE_AIHUB_DATA_IN_USER_FACING_SURFACE",
+                "because": "The usage policy requires stating that AI Hub data was used.",
+                "implementation": (
+                    "docs/pose-heuristic-form-check.v1.md section 4.5; the session surface shows "
+                    "the attribution wherever an exercise carries an AI Hub-derived threshold, "
+                    "enforced by FormCheckGovernanceTest."
+                ),
+            },
+            {
+                "obligation": "KEEP_RAW_DATASET_OUT_OF_ANY_DISTRIBUTION",
+                "because": "Providing, transferring, leasing or selling the data is forbidden.",
+                "implementation": "storageContract.rawDatasetRemainsOutsideGitAndApk",
+            },
+        ],
+        "revisions": [
+            {
+                "date": "2026-08-12",
+                "change": (
+                    "Recorded the published usage policy, downgraded the derived-distribution "
+                    "blocker from unreviewed to attribution-conditional, added the attribution "
+                    "obligation, and widened the surveyed exercise scope."
+                ),
+            }
+        ],
         # Unchanged from the fail-closed baseline. Research authorization is not release authority.
         "authority": {
             "calibrationAuthority": 0,
@@ -122,7 +188,7 @@ def build_manifest() -> dict[str, Any]:
             "RELEASE_CRITERION_AUTHORIZATION",
             "SHADOW_OR_USER_RUNTIME_USE_OF_AIHUB_DERIVED_VERDICTS",
             "REDISTRIBUTION_OF_RAW_OR_DERIVED_RAW_DATA",
-            "PUBLIC_APP_DISTRIBUTION_OF_AIHUB_DERIVED_THRESHOLDS",
+            "UNATTRIBUTED_DISTRIBUTION_OF_AIHUB_DERIVED_THRESHOLDS",
         ],
         "storageContract": {
             "androidPersistenceAllowed": False,
@@ -149,11 +215,17 @@ def build_manifest() -> dict[str, Any]:
                 ),
             },
             {
-                "blocker": "PUBLIC_APP_DISTRIBUTION_RIGHTS_NOT_REVIEWED",
-                "blocks": "Shipping AI Hub-derived thresholds in a publicly distributed build",
+                "blocker": "PUBLIC_APP_DISTRIBUTION_RIGHTS_ATTRIBUTION_CONDITIONAL",
+                "blocks": (
+                    "Nothing that is currently done. Shipping a derived threshold publicly is "
+                    "permitted by the published policy's models-and-services clause provided the "
+                    "attribution obligation is met, but the clause does not name derived "
+                    "constants explicitly."
+                ),
                 "resolution": (
-                    "Confirm derived-artifact distribution terms before any public release; the "
-                    "capstone scope assumes non-public builds"
+                    "Keep the attribution surface in place; obtain the operator's written "
+                    "confirmation that a fitted constant counts as a learned output before any "
+                    "commercial distribution"
                 ),
             },
             {

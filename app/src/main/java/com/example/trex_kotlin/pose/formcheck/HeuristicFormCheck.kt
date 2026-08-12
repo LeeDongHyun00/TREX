@@ -23,12 +23,22 @@ internal object HeuristicFormCheckDeclaration {
     const val TRACK_ID: String = "trex.heuristic-form-check.beta.v1"
 
     const val POLICY_DOCUMENT_SHA256: String =
-        "8095f19e28e60f090fc297a295605db3e02bbe70a2460ffcaed64f72a655c079"
+        "7905e8db877e518c7138d61af64278814422fd480e3d76fbd55f8566371b52ca"
 
     const val POLICY_DOCUMENT_PATH: String = "docs/pose-heuristic-form-check.v1.md"
 
     /** Always-on beta disclosure. The user cannot dismiss it. */
     const val BETA_DISCLOSURE: String = "휴리스틱 참고용이에요 · 정식 검증 전"
+
+    /**
+     * Shown wherever an exercise's threshold was fitted on AI Hub data.
+     *
+     * The dataset's published usage policy permits distributing what is learned from it but
+     * requires stating that the data was used, so this is an obligation rather than a courtesy.
+     * It appears per exercise rather than app-wide because most exercises carry no AI Hub-derived
+     * constant, and a blanket credit would claim a provenance they do not have.
+     */
+    const val DATA_ATTRIBUTION: String = "임계값 근거: AI Hub 피트니스 자세 이미지"
 
     // User-facing strings for the workout list live here rather than in the screen file so the
     // language seal scans every word this track ever shows.
@@ -105,6 +115,14 @@ internal enum class FormCheckThresholdProvenance {
      * domain: a beta constant, never release calibration.
      */
     MEDIAPIPE_NATIVE_DAY05_FIT_V1,
+    ;
+
+    /**
+     * Whether this constant was learned from AI Hub data, and therefore carries the dataset's
+     * attribution obligation onto whatever surface shows it.
+     */
+    val requiresDataAttribution: Boolean
+        get() = this != HEURISTIC_DEFAULT
 }
 
 /**
