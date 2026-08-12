@@ -88,6 +88,7 @@ class FormCheckGovernanceTest {
             FormCheckExercise.HIP_THRUST to (145.0 to 160.0),
             FormCheckExercise.OVERHEAD_PRESS to (150.0 to 165.0),
             FormCheckExercise.CABLE_PUSH_DOWN to (150.0 to 165.0),
+            FormCheckExercise.PLANK to (160.0 to 160.0),
         )
         for ((spec, thresholds) in expected) {
             val (rep, reached) = thresholds
@@ -99,14 +100,33 @@ class FormCheckGovernanceTest {
                 spec.provenance,
             )
         }
-        assertEquals(15, FormCheckExercise.entries.size)
+        assertEquals(16, FormCheckExercise.entries.size)
+    }
+
+    @Test
+    fun theHoldCadenceIsDeclaredOnlyWhereThePolicyTableSaysSo() {
+        // §4.35: a hold has no excursion, so it can carry no range suggestion and its band reads
+        // enter-then-release rather than rest-then-extreme.
+        val holds = FormCheckExercise.entries.filter { it.cadence == FormCheckCadence.HOLD }
+        assertEquals(listOf(FormCheckExercise.PLANK), holds)
+        for (spec in holds) {
+            assertNull(spec.attemptHint)
+            assertNull(spec.rangeHint)
+            assertTrue(
+                "${spec.name} must enter its hold past the release line",
+                spec.toDetector(spec.repAngleDegrees) < spec.toDetector(spec.restAngleDegrees),
+            )
+        }
     }
 
     @Test
     fun extensionExercisesDeclareTheirThresholdsTheOtherWayRound() {
         // §4: the table states real joint angles, so an extension exercise's rep line is a larger
-        // number than its rest. Mirroring happens in the session, not in the table.
-        val extension = FormCheckExercise.entries
+        // number than its rest. Mirroring happens in the session, not in the table. Holds are
+        // excluded: their two angles are a band, not an excursion, and §4.35 covers them.
+        val repetitions = FormCheckExercise.entries
+            .filter { it.cadence == FormCheckCadence.REPETITION }
+        val extension = repetitions
             .filter { it.direction == FormCheckWorkingDirection.EXTENSION }
         assertEquals(
             setOf(
@@ -126,7 +146,7 @@ class FormCheckGovernanceTest {
                 spec.reachedAngleDegrees > spec.repAngleDegrees,
             )
         }
-        for (spec in FormCheckExercise.entries - extension.toSet()) {
+        for (spec in repetitions - extension.toSet()) {
             assertTrue(
                 "${spec.name} works downward from rest",
                 spec.repAngleDegrees < spec.restAngleDegrees,

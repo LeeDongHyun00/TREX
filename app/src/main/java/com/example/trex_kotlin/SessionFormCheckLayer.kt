@@ -46,6 +46,7 @@ import com.example.trex_kotlin.camera.PoseCameraStatus
 import com.example.trex_kotlin.catalog.AiHubExercise
 import com.example.trex_kotlin.devcapture.DevPoseCapture
 import com.example.trex_kotlin.pose.PoseFrame
+import com.example.trex_kotlin.pose.formcheck.FormCheckCadence
 import com.example.trex_kotlin.pose.formcheck.FormCheckExercise
 import com.example.trex_kotlin.pose.formcheck.FormCheckStartAnnouncer
 import com.example.trex_kotlin.pose.formcheck.FormCheckStartState
@@ -277,15 +278,22 @@ private fun FormCheckChip(
                 )
             } else {
                 Row(verticalAlignment = Alignment.CenterVertically) {
+                    // An isometric exercise has no repetitions to show, so it counts the seconds
+                    // it is holding right now instead.
+                    val holding = spec.cadence == FormCheckCadence.HOLD
                     Text(
-                        text = "${formState.repCount}",
+                        text = if (holding) {
+                            "${formState.holdSeconds}"
+                        } else {
+                            "${formState.repCount}"
+                        },
                         color = TrexLime,
                         fontSize = 24.sp,
                         fontWeight = FontWeight.Bold,
                     )
                     Spacer(Modifier.width(6.dp))
                     Text(
-                        text = "회 감지",
+                        text = if (holding) "초 유지" else "회 감지",
                         color = Color.White.copy(alpha = 0.85f),
                         fontSize = 12.sp,
                     )

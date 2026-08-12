@@ -23,7 +23,7 @@ internal object HeuristicFormCheckDeclaration {
     const val TRACK_ID: String = "trex.heuristic-form-check.beta.v1"
 
     const val POLICY_DOCUMENT_SHA256: String =
-        "5b9e7c2d5e5334986ce6522cb85839e29067ffcefc40bbbe738a9cc2f33db64f"
+        "dbbc99df1b80b81a4f4dc3b8697f2f58e626e55811b93b2e9410d9eec2fac238"
 
     const val POLICY_DOCUMENT_PATH: String = "docs/pose-heuristic-form-check.v1.md"
 
@@ -85,6 +85,15 @@ internal enum class FormCheckWorkingDirection(
     ),
 }
 
+/** Whether the exercise repeats a movement or holds a position. */
+internal enum class FormCheckCadence {
+    /** Counted in repetitions: an excursion away from rest and back. */
+    REPETITION,
+
+    /** Counted in seconds: a position entered and maintained, like a plank. */
+    HOLD,
+}
+
 /** Where a threshold constant came from; mirrored in the policy document's §4 table. */
 internal enum class FormCheckThresholdProvenance {
     /** Literature-informed default that has never met calibration data. */
@@ -114,11 +123,18 @@ internal enum class FormCheckExercise(
     /** Which three-joint chain this exercise reads. Determines its required joints. */
     val driver: FormCheckDriver,
     val direction: FormCheckWorkingDirection,
-    /** The resting angle a repetition must return to before another can be armed. */
+    val cadence: FormCheckCadence,
+    /**
+     * For a repetition, the resting angle it must return to before another can be armed. For a
+     * hold, the angle at which the held position counts as lost.
+     */
     val restAngleDegrees: Double,
     /** Passing this arms an excursion; turning back before the rep line reports an attempt. */
     val attemptAngleDegrees: Double,
-    /** The extreme a repetition has to reach to be counted. */
+    /**
+     * For a repetition, the extreme it has to reach to be counted. For a hold, the angle that
+     * enters the held position.
+     */
     val repAngleDegrees: Double,
     /** The extreme beyond which the range needs no suggestion. */
     val reachedAngleDegrees: Double,
@@ -144,6 +160,7 @@ internal enum class FormCheckExercise(
         exercise = AiHubExercise.BARBELL_SQUAT,
         driver = FormCheckDriver.KNEE,
         direction = FormCheckWorkingDirection.FLEXION,
+        cadence = FormCheckCadence.REPETITION,
         restAngleDegrees = 150.0,
         attemptAngleDegrees = 140.0,
         repAngleDegrees = 110.0,
@@ -158,6 +175,7 @@ internal enum class FormCheckExercise(
         exercise = AiHubExercise.STEP_FORWARD_DYNAMIC_LUNGE,
         driver = FormCheckDriver.KNEE,
         direction = FormCheckWorkingDirection.FLEXION,
+        cadence = FormCheckCadence.REPETITION,
         restAngleDegrees = 150.0,
         attemptAngleDegrees = 140.0,
         repAngleDegrees = 134.0,
@@ -172,6 +190,7 @@ internal enum class FormCheckExercise(
         exercise = AiHubExercise.STEP_BACKWARD_DYNAMIC_LUNGE,
         driver = FormCheckDriver.KNEE,
         direction = FormCheckWorkingDirection.FLEXION,
+        cadence = FormCheckCadence.REPETITION,
         restAngleDegrees = 150.0,
         attemptAngleDegrees = 140.0,
         repAngleDegrees = 130.0,
@@ -190,6 +209,7 @@ internal enum class FormCheckExercise(
         exercise = AiHubExercise.BARBELL_LUNGE,
         driver = FormCheckDriver.KNEE,
         direction = FormCheckWorkingDirection.FLEXION,
+        cadence = FormCheckCadence.REPETITION,
         restAngleDegrees = 150.0,
         attemptAngleDegrees = 140.0,
         repAngleDegrees = 134.0,
@@ -204,6 +224,7 @@ internal enum class FormCheckExercise(
         exercise = AiHubExercise.STANDING_KNEE_UP,
         driver = FormCheckDriver.HIP,
         direction = FormCheckWorkingDirection.FLEXION,
+        cadence = FormCheckCadence.REPETITION,
         restAngleDegrees = 150.0,
         attemptAngleDegrees = 140.0,
         repAngleDegrees = 135.0,
@@ -218,6 +239,7 @@ internal enum class FormCheckExercise(
         exercise = AiHubExercise.GOOD_MORNING,
         driver = FormCheckDriver.HIP,
         direction = FormCheckWorkingDirection.FLEXION,
+        cadence = FormCheckCadence.REPETITION,
         restAngleDegrees = 150.0,
         attemptAngleDegrees = 140.0,
         repAngleDegrees = 135.0,
@@ -232,6 +254,7 @@ internal enum class FormCheckExercise(
         exercise = AiHubExercise.PUSH_UP,
         driver = FormCheckDriver.ELBOW,
         direction = FormCheckWorkingDirection.FLEXION,
+        cadence = FormCheckCadence.REPETITION,
         restAngleDegrees = 150.0,
         attemptAngleDegrees = 140.0,
         repAngleDegrees = 135.0,
@@ -250,6 +273,7 @@ internal enum class FormCheckExercise(
         exercise = AiHubExercise.KNEE_PUSH_UP,
         driver = FormCheckDriver.ELBOW,
         direction = FormCheckWorkingDirection.FLEXION,
+        cadence = FormCheckCadence.REPETITION,
         restAngleDegrees = 150.0,
         attemptAngleDegrees = 140.0,
         repAngleDegrees = 135.0,
@@ -264,6 +288,7 @@ internal enum class FormCheckExercise(
         exercise = AiHubExercise.DIPS,
         driver = FormCheckDriver.ELBOW,
         direction = FormCheckWorkingDirection.FLEXION,
+        cadence = FormCheckCadence.REPETITION,
         restAngleDegrees = 150.0,
         attemptAngleDegrees = 140.0,
         repAngleDegrees = 135.0,
@@ -278,6 +303,7 @@ internal enum class FormCheckExercise(
         exercise = AiHubExercise.BARBELL_CURL,
         driver = FormCheckDriver.ELBOW,
         direction = FormCheckWorkingDirection.FLEXION,
+        cadence = FormCheckCadence.REPETITION,
         restAngleDegrees = 150.0,
         attemptAngleDegrees = 140.0,
         repAngleDegrees = 120.0,
@@ -292,6 +318,7 @@ internal enum class FormCheckExercise(
         exercise = AiHubExercise.DUMBBELL_CURL,
         driver = FormCheckDriver.ELBOW,
         direction = FormCheckWorkingDirection.FLEXION,
+        cadence = FormCheckCadence.REPETITION,
         restAngleDegrees = 150.0,
         attemptAngleDegrees = 140.0,
         repAngleDegrees = 120.0,
@@ -306,6 +333,7 @@ internal enum class FormCheckExercise(
         exercise = AiHubExercise.LAT_PULLDOWN,
         driver = FormCheckDriver.ELBOW,
         direction = FormCheckWorkingDirection.FLEXION,
+        cadence = FormCheckCadence.REPETITION,
         restAngleDegrees = 150.0,
         attemptAngleDegrees = 140.0,
         repAngleDegrees = 130.0,
@@ -323,6 +351,7 @@ internal enum class FormCheckExercise(
         exercise = AiHubExercise.HIP_THRUST,
         driver = FormCheckDriver.HIP,
         direction = FormCheckWorkingDirection.EXTENSION,
+        cadence = FormCheckCadence.REPETITION,
         restAngleDegrees = 110.0,
         attemptAngleDegrees = 130.0,
         repAngleDegrees = 145.0,
@@ -337,6 +366,7 @@ internal enum class FormCheckExercise(
         exercise = AiHubExercise.OVERHEAD_PRESS,
         driver = FormCheckDriver.ELBOW,
         direction = FormCheckWorkingDirection.EXTENSION,
+        cadence = FormCheckCadence.REPETITION,
         restAngleDegrees = 100.0,
         attemptAngleDegrees = 120.0,
         repAngleDegrees = 150.0,
@@ -351,6 +381,7 @@ internal enum class FormCheckExercise(
         exercise = AiHubExercise.CABLE_PUSH_DOWN,
         driver = FormCheckDriver.ELBOW,
         direction = FormCheckWorkingDirection.EXTENSION,
+        cadence = FormCheckCadence.REPETITION,
         restAngleDegrees = 100.0,
         attemptAngleDegrees = 120.0,
         repAngleDegrees = 150.0,
@@ -360,6 +391,24 @@ internal enum class FormCheckExercise(
         setupHint = "옆모습이 보이게 서 주세요",
         attemptHint = "다음엔 팔을 조금 더 펴볼까요",
         rangeHint = "다음엔 팔을 조금 더 펴볼까요",
+    ),
+
+    // Isometric. The thresholds read as a band rather than an excursion: the hold begins once
+    // the body straightens past the rep angle and ends once it sags back past the rest angle.
+    PLANK(
+        exercise = AiHubExercise.PLANK,
+        driver = FormCheckDriver.HIP,
+        direction = FormCheckWorkingDirection.EXTENSION,
+        cadence = FormCheckCadence.HOLD,
+        restAngleDegrees = 145.0,
+        attemptAngleDegrees = 152.0,
+        repAngleDegrees = 160.0,
+        reachedAngleDegrees = 160.0,
+        provenance = FormCheckThresholdProvenance.HEURISTIC_DEFAULT,
+        rangeUrgingSealed = false,
+        setupHint = "옆모습이 보이게 엎드려 주세요",
+        attemptHint = null,
+        rangeHint = null,
     ),
     ;
 
@@ -399,6 +448,11 @@ internal enum class FormCheckExercise(
         require(!rangeUrgingSealed || (attemptHint == null && rangeHint == null)) {
             "A sealed exercise must not carry range-increase suggestions"
         }
+        // A hold has no excursion to fall short of, so an attempt or range hint would describe
+        // something the isometric path never reports.
+        require(cadence != FormCheckCadence.HOLD || (attemptHint == null && rangeHint == null)) {
+            "A hold must not carry repetition suggestions"
+        }
         require(requiredJoints.isNotEmpty()) { "An exercise must declare its required joints" }
     }
 
@@ -435,6 +489,10 @@ internal class FormCheckUiState internal constructor(
     val sideViewPreferred: Boolean,
     val headline: String?,
     val suggestion: String?,
+    /** Seconds of the hold currently in progress; zero for repetition exercises. */
+    val holdSeconds: Int = 0,
+    /** The longest hold observed in this set, whether or not one is in progress. */
+    val longestHoldSeconds: Int = 0,
 ) {
     val missingJoints: Set<FormCheckJointGroup> =
         Collections.unmodifiableSet(LinkedHashSet(missingJoints.sortedBy { it.ordinal }))
@@ -445,6 +503,10 @@ internal class FormCheckUiState internal constructor(
     init {
         require(repCount >= 0)
         require(uncountedAttemptCount >= 0)
+        require(holdSeconds >= 0)
+        require(longestHoldSeconds >= holdSeconds) {
+            "The longest hold cannot be shorter than the one in progress"
+        }
         require(startState != FormCheckStartState.STARTED || this.missingJoints.isEmpty()) {
             "A started exercise cannot still be missing joints"
         }
@@ -459,7 +521,9 @@ internal class FormCheckUiState internal constructor(
             missingJoints == other.missingJoints &&
             sideViewPreferred == other.sideViewPreferred &&
             headline == other.headline &&
-            suggestion == other.suggestion
+            suggestion == other.suggestion &&
+            holdSeconds == other.holdSeconds &&
+            longestHoldSeconds == other.longestHoldSeconds
     }
 
     override fun hashCode(): Int {
@@ -470,6 +534,8 @@ internal class FormCheckUiState internal constructor(
         result = 31 * result + sideViewPreferred.hashCode()
         result = 31 * result + (headline?.hashCode() ?: 0)
         result = 31 * result + (suggestion?.hashCode() ?: 0)
+        result = 31 * result + holdSeconds
+        result = 31 * result + longestHoldSeconds
         return result
     }
 }
@@ -489,11 +555,24 @@ internal class FormCheckUiState internal constructor(
 internal class HeuristicFormCheckSession(
     private val spec: FormCheckExercise,
 ) {
-    private val detector = RepCycleDetector(
-        bottomEnterDegrees = spec.toDetector(spec.repAngleDegrees),
-        attemptEnterDegrees = spec.toDetector(spec.attemptAngleDegrees),
-        topEnterDegrees = spec.toDetector(spec.restAngleDegrees),
-    )
+    private val detector = if (spec.cadence == FormCheckCadence.REPETITION) {
+        RepCycleDetector(
+            bottomEnterDegrees = spec.toDetector(spec.repAngleDegrees),
+            attemptEnterDegrees = spec.toDetector(spec.attemptAngleDegrees),
+            topEnterDegrees = spec.toDetector(spec.restAngleDegrees),
+        )
+    } else {
+        null
+    }
+
+    private val holdDetector = if (spec.cadence == FormCheckCadence.HOLD) {
+        HoldDetector(
+            enterDegrees = spec.toDetector(spec.repAngleDegrees),
+            exitDegrees = spec.toDetector(spec.restAngleDegrees),
+        )
+    } else {
+        null
+    }
     private var repCount = 0
     private var uncountedAttemptCount = 0
     private var headline: String? = null
@@ -525,22 +604,48 @@ internal class HeuristicFormCheckSession(
     ): FormCheckUiState {
         sideViewPreferred = !lateralViewQualified
         if (!hasPrimaryPersonLock) {
-            detector.invalidate()
+            invalidateDetectors()
             return snapshot(FormCheckStartState.WAITING_FOR_PERSON, spec.requiredJoints)
         }
         val readiness = FormCheckGeometry.readiness(frame, spec.requiredJoints)
         if (!readiness.ready) {
-            detector.invalidate()
+            invalidateDetectors()
             return snapshot(FormCheckStartState.WAITING_FOR_JOINTS, readiness.missingGroups)
         }
         val sample = selectSample(frame)
         if (sample == null) {
-            detector.invalidate()
+            invalidateDetectors()
             return snapshot(FormCheckStartState.WAITING_FOR_JOINTS, spec.requiredJoints)
         }
 
         val detectorValue = spec.toDetector(sample.includedAngleDegrees)
-        when (val event = detector.accept(timestampMs, detectorValue)) {
+        holdDetector?.let { hold ->
+            when (val event = hold.accept(timestampMs, detectorValue)) {
+                HoldEvent.Entered -> {
+                    headline = "자세를 잡았어요"
+                    suggestion = null
+                }
+
+                is HoldEvent.Holding -> {
+                    headline = "${(event.heldMs / 1_000L)}초째 유지하고 있어요"
+                    suggestion = null
+                }
+
+                is HoldEvent.Released -> {
+                    headline = if (event.countedAsHold) {
+                        "${(event.heldMs / 1_000L)}초 유지했어요"
+                    } else {
+                        "자세가 잠깐 풀렸어요"
+                    }
+                    suggestion = null
+                }
+
+                HoldEvent.None -> Unit
+            }
+            return snapshot(FormCheckStartState.STARTED, emptySet())
+        }
+
+        when (val event = requireNotNull(detector).accept(timestampMs, detectorValue)) {
             is RepCycleEvent.Completed -> {
                 repCount += 1
                 val extreme = spec.fromDetector(event.minimumAngleDegrees)
@@ -593,7 +698,7 @@ internal class HeuristicFormCheckSession(
         }
         val fresh = FormCheckGeometry.sample(frame, spec.driver) ?: return null
         if (held != null && fresh.side != held) {
-            detector.invalidate()
+            invalidateDetectors()
         }
         activeSide = fresh.side
         return fresh
@@ -610,11 +715,19 @@ internal class HeuristicFormCheckSession(
         sideViewPreferred = sideViewPreferred,
         headline = headline,
         suggestion = suggestion,
+        holdSeconds = ((holdDetector?.heldMs ?: 0L) / 1_000L).toInt(),
+        longestHoldSeconds = ((holdDetector?.longestHeldMs ?: 0L) / 1_000L).toInt(),
     )
 
     /** Snapshot before any observation has arrived. */
     fun initialSnapshot(): FormCheckUiState =
         snapshot(FormCheckStartState.WAITING_FOR_CAMERA, spec.requiredJoints)
+
+    /** Whichever detector this cadence uses; abstention is identical for both. */
+    private fun invalidateDetectors() {
+        detector?.invalidate()
+        holdDetector?.invalidate()
+    }
 
     /** Keeps only the set's opening repetitions; later ones are compared, never averaged in. */
     private fun recordBaseline(detectorExtreme: Double) {

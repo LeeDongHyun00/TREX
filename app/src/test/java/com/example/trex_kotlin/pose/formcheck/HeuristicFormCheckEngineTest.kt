@@ -215,6 +215,85 @@ class HeuristicFormCheckEngineTest {
         }
     }
 
+    // ---- hold cadence ----
+
+    @Test
+    fun aHoldAccumulatesSecondsWhileThePositionIsMaintained() {
+        val session = HeuristicFormCheckSession(FormCheckExercise.PLANK)
+        var state = session.initialSnapshot()
+
+        var t = 0L
+        // Straightens past 160 and stays there for five seconds of samples.
+        repeat(26) {
+            state = session.accept(t, true, true, hipFrame(170.0, t))
+            t += 200L
+        }
+
+        assertTrue("Expected accumulated seconds, got ${state.holdSeconds}", state.holdSeconds >= 4)
+        assertTrue(state.headline!!.contains("유지하고 있어요"))
+        assertEquals("A hold counts no repetitions", 0, state.repCount)
+    }
+
+    @Test
+    fun losingTheHoldReportsWhatItAmountedTo() {
+        val session = HeuristicFormCheckSession(FormCheckExercise.PLANK)
+        var state = session.initialSnapshot()
+
+        var t = 0L
+        repeat(26) {
+            state = session.accept(t, true, true, hipFrame(170.0, t))
+            t += 200L
+        }
+        // The hips sag well past the release line.
+        repeat(6) {
+            state = session.accept(t, true, true, hipFrame(120.0, t))
+            t += 200L
+        }
+
+        assertTrue("Expected a completed-hold report, got ${state.headline}", state.headline!!.contains("초 유지했어요"))
+        assertEquals(0, state.holdSeconds)
+        assertTrue(state.longestHoldSeconds >= 4)
+    }
+
+    @Test
+    fun aHoldBrokenByLostObservationIsDiscardedNotBanked() {
+        val session = HeuristicFormCheckSession(FormCheckExercise.PLANK)
+        var state = session.initialSnapshot()
+
+        var t = 0L
+        repeat(16) {
+            state = session.accept(t, true, true, hipFrame(170.0, t))
+            t += 200L
+        }
+        val before = state.holdSeconds
+        assertTrue(before > 0)
+
+        // The lock drops: unobserved time is not time the user held anything.
+        state = session.accept(t, false, true, hipFrame(170.0, t))
+        t += 200L
+
+        assertEquals(0, state.holdSeconds)
+        assertFalse(state.started)
+    }
+
+    @Test
+    fun aBriefTouchOfThePositionIsNotReportedAsAHold() {
+        val session = HeuristicFormCheckSession(FormCheckExercise.PLANK)
+        var state = session.initialSnapshot()
+
+        var t = 0L
+        repeat(4) {
+            state = session.accept(t, true, true, hipFrame(170.0, t))
+            t += 200L
+        }
+        repeat(6) {
+            state = session.accept(t, true, true, hipFrame(120.0, t))
+            t += 200L
+        }
+
+        assertTrue("Expected a break report, got ${state.headline}", state.headline!!.contains("잠깐 풀렸어요"))
+    }
+
     // ---- personal baseline ----
 
     @Test
@@ -787,6 +866,7 @@ class HeuristicFormCheckEngineTest {
         // each exercise through rest -> its rep line -> rest catches an entry whose thresholds
         // cannot be satisfied by any real excursion.
         for (spec in FormCheckExercise.entries) {
+            if (spec.cadence == FormCheckCadence.HOLD) continue
             val session = HeuristicFormCheckSession(spec)
             var state = session.initialSnapshot()
             // Both ends clear their thresholds rather than sitting on them. Resting exactly on
@@ -849,6 +929,14 @@ class HeuristicFormCheckEngineTest {
     }
 
     private fun point(x: Double, y: Double, z: Double) = PoseLandmark(x, y, z, 1.0, 1.0)
+
+    /** A hip-chain frame with the other chains held straight. */
+    private fun hipFrame(angleDegrees: Double, timestampMs: Long): PoseFrame = frameWithChains(
+        kneeAngleDegrees = 175.0,
+        hipAngleDegrees = angleDegrees,
+        elbowAngleDegrees = 175.0,
+        timestampMs = timestampMs,
+    )
 
     /** An elbow-chain frame with the leg chains held straight. */
     private fun elbowFrame(angleDegrees: Double, timestampMs: Long): PoseFrame = frameWithChains(

@@ -17,7 +17,12 @@
 | M0: 적합 임계값 코드 반영 + 스쿼트 고하중 규칙 | 정책 v1.1 + `FormCheckExercise` 개정 | `6af09f5` |
 | **M1: 개발용 캡처 + JVM 리플레이 하니스** | 정책 v1.2 §5-5 + `devcapture`(debug/release twin) + `LandmarkReplay` | `fa10752` |
 | **M2: person-lock v3 배경 후보 게이트** | `backgroundEnvelopeRatioCeiling` + 전경 분리 | `f49d68f` |
-| **M3-a: driver 일반화 + 웨이브 1** | 정책 v1.3 §4.3 + `FormCheckDriver`(무릎/엉덩이/팔꿈치) + 신규 4종 | 아래 커밋 |
+| **M3-a: driver 일반화 + 웨이브 1** | 정책 v1.3 §4.3 + `FormCheckDriver`(무릎/엉덩이/팔꿈치) + 신규 4종 | `64c1aef` |
+| **M3-b/c: 작업 방향 모델 + 웨이브 2** | 정책 v1.4 + `FormCheckWorkingDirection` + 신규 8종 (지원 15종) | `4cb84a1` |
+| **M4: 세트 내 개인 기준선** | 정책 v1.5 §4.4 + 15° 하한 자기 비교 | `954f72f` |
+| **M5-a: 홀드 cadence + 플랭크** | 정책 v1.6 §4.35 + `HoldDetector` (지원 16종) | 아래 커밋 |
+
+**M5-b(중력 attestation)는 의도적으로 착수하지 않았다.** 중력 벡터가 열어주는 신호는 "중력 대비 절대 몸통 기울기"인데, 현재 지원 16종 중 그것을 필요로 하는 운동이 없다 — 굿모닝의 상체 숙임은 이미 회전 불변인 엉덩이 내각으로 읽고 있다. 센서를 attested observation 계약에 끼워 넣는 일은 `PoseObserverUpdate`와 계약 해시 연쇄를 건드리는데, 그 대가로 얻는 사용자 가치가 현재 0이다. 착수 조건은 **중력 없이는 읽을 수 없는 운동이 스펙에 들어올 때**다(예: 벤트오버 로우의 상체 각도, 사이드 레터럴 레이즈의 팔 높이).
 
 핵심 수치 (재유도 불필요): MediaPipe world 무릎각은 AI Hub 3D 라벨보다 중앙값 **+13.2° 곧게** 읽힘(P95 |오차| 40.8°). 라벨 적합값(111°/92°)은 이전 불가(80.2%/53.6%로 붕괴), MediaPipe-native 적합값은 포워드 129°(LOSO 93.5%)·백워드 123°(LOSO 96.4%). 임계값을 새로 만들 때는 **항상 앱이 계산하는 좌표계(MediaPipe world)에서 적합**한다.
 
