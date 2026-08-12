@@ -59,7 +59,9 @@ internal class FormCheckStartAnnouncer(
 
             FormCheckStartState.STARTED ->
                 if (state.sideViewPreferred) {
-                    "자세 체크를 시작할게요. 옆모습으로 서면 무릎이 더 잘 보여요"
+                    // Names the joint this exercise actually measures: telling a push-up about a
+                    // knee would describe something the track never looked at.
+                    "자세 체크를 시작할게요. 옆모습으로 서면 ${sideViewSubject(spec)} 더 잘 보여요"
                 } else {
                     "자세 체크를 시작할게요"
                 }
@@ -67,6 +69,10 @@ internal class FormCheckStartAnnouncer(
 
     companion object {
         const val DEFAULT_REPEAT_INTERVAL_MS: Long = 8_000L
+
+        /** "무릎이", "팔꿈치가", "엉덩이가" — the joint the side view would read more directly. */
+        internal fun sideViewSubject(spec: FormCheckExercise): String =
+            spec.driver.vertex.label.let { label -> label + subjectParticle(label) }
 
         /** Korean subject particle: 이 after a final consonant, 가 otherwise. */
         internal fun subjectParticle(word: String): String {

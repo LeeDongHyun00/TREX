@@ -252,7 +252,27 @@ class HeuristicFormCheckEngineTest {
 
         assertTrue("Expected a completed-hold report, got ${state.headline}", state.headline!!.contains("초 유지했어요"))
         assertEquals(0, state.holdSeconds)
-        assertTrue(state.longestHoldSeconds >= 4)
+    }
+
+    @Test
+    fun aDiscardedHoldIsNeverBankedAsABest() {
+        // The detector reports a stretch only when it ends, so a stretch that abstention throws
+        // away leaves nothing behind for a later summary to pick up.
+        val detector = HoldDetector(enterDegrees = 20.0, exitDegrees = 35.0)
+        var t = 0L
+        repeat(30) {
+            detector.accept(t, 10.0)
+            t += 200L
+        }
+        assertTrue("The hold was running", detector.heldMs > 3_000L)
+
+        detector.invalidate()
+
+        assertEquals(0L, detector.heldMs)
+        assertFalse(detector.holding)
+        // Re-entering starts from zero rather than resuming the discarded stretch.
+        detector.accept(t, 10.0)
+        assertEquals(0L, detector.heldMs)
     }
 
     @Test
@@ -828,6 +848,24 @@ class HeuristicFormCheckEngineTest {
 
         val lateral = announcer.onState(20_000L, spec, startedState(sideViewPreferred = false))
         assertEquals("자세 체크를 시작할게요", lateral)
+    }
+
+    @Test
+    fun theSideViewSuggestionNamesTheJointTheExerciseMeasures() {
+        // Telling a push-up about a knee would describe a joint the track never looked at.
+        assertEquals("무릎이", FormCheckStartAnnouncer.sideViewSubject(FormCheckExercise.BARBELL_SQUAT))
+        assertEquals("팔꿈치가", FormCheckStartAnnouncer.sideViewSubject(FormCheckExercise.PUSH_UP))
+        assertEquals("엉덩이가", FormCheckStartAnnouncer.sideViewSubject(FormCheckExercise.GOOD_MORNING))
+
+        val announcer = FormCheckStartAnnouncer()
+        val spoken = announcer.onState(
+            0L,
+            FormCheckExercise.PUSH_UP,
+            startedState(sideViewPreferred = true),
+        )
+        assertNotNull(spoken)
+        assertTrue("Expected the elbow named, got $spoken", spoken!!.contains("팔꿈치가"))
+        assertFalse(spoken.contains("무릎"))
     }
 
     @Test

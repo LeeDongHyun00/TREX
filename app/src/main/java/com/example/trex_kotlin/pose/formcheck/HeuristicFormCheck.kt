@@ -23,7 +23,7 @@ internal object HeuristicFormCheckDeclaration {
     const val TRACK_ID: String = "trex.heuristic-form-check.beta.v1"
 
     const val POLICY_DOCUMENT_SHA256: String =
-        "dbbc99df1b80b81a4f4dc3b8697f2f58e626e55811b93b2e9410d9eec2fac238"
+        "8095f19e28e60f090fc297a295605db3e02bbe70a2460ffcaed64f72a655c079"
 
     const val POLICY_DOCUMENT_PATH: String = "docs/pose-heuristic-form-check.v1.md"
 
@@ -485,14 +485,15 @@ internal class FormCheckUiState internal constructor(
     val uncountedAttemptCount: Int,
     val startState: FormCheckStartState,
     missingJoints: Set<FormCheckJointGroup>,
-    /** The side view reads the knee bend more directly; anything else still starts. */
+    /**
+     * The side view reads this exercise's own driver joint most directly; anything else still
+     * starts, with the view offered as a quality note rather than a gate.
+     */
     val sideViewPreferred: Boolean,
     val headline: String?,
     val suggestion: String?,
     /** Seconds of the hold currently in progress; zero for repetition exercises. */
     val holdSeconds: Int = 0,
-    /** The longest hold observed in this set, whether or not one is in progress. */
-    val longestHoldSeconds: Int = 0,
 ) {
     val missingJoints: Set<FormCheckJointGroup> =
         Collections.unmodifiableSet(LinkedHashSet(missingJoints.sortedBy { it.ordinal }))
@@ -504,9 +505,6 @@ internal class FormCheckUiState internal constructor(
         require(repCount >= 0)
         require(uncountedAttemptCount >= 0)
         require(holdSeconds >= 0)
-        require(longestHoldSeconds >= holdSeconds) {
-            "The longest hold cannot be shorter than the one in progress"
-        }
         require(startState != FormCheckStartState.STARTED || this.missingJoints.isEmpty()) {
             "A started exercise cannot still be missing joints"
         }
@@ -522,8 +520,7 @@ internal class FormCheckUiState internal constructor(
             sideViewPreferred == other.sideViewPreferred &&
             headline == other.headline &&
             suggestion == other.suggestion &&
-            holdSeconds == other.holdSeconds &&
-            longestHoldSeconds == other.longestHoldSeconds
+            holdSeconds == other.holdSeconds
     }
 
     override fun hashCode(): Int {
@@ -535,7 +532,6 @@ internal class FormCheckUiState internal constructor(
         result = 31 * result + (headline?.hashCode() ?: 0)
         result = 31 * result + (suggestion?.hashCode() ?: 0)
         result = 31 * result + holdSeconds
-        result = 31 * result + longestHoldSeconds
         return result
     }
 }
@@ -716,7 +712,6 @@ internal class HeuristicFormCheckSession(
         headline = headline,
         suggestion = suggestion,
         holdSeconds = ((holdDetector?.heldMs ?: 0L) / 1_000L).toInt(),
-        longestHoldSeconds = ((holdDetector?.longestHeldMs ?: 0L) / 1_000L).toInt(),
     )
 
     /** Snapshot before any observation has arrived. */

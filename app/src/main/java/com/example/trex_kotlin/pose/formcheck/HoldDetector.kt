@@ -31,6 +31,11 @@ internal sealed interface HoldEvent {
  * Like [RepCycleDetector] it knows nothing about exercises, locks or views: the session
  * invalidates it whenever observation quality lapses, and an invalidated stretch is discarded
  * without an event. Time that was not observed is not time the user held anything.
+ *
+ * A stretch is therefore only ever reported once, by the [HoldEvent.Released] that ends it. The
+ * detector deliberately keeps no running best: a "longest hold" accumulated while holding would
+ * bank a stretch that abstention later discards, which is the opposite of what the policy
+ * promises. A set summary, if one is ever wanted, has to be built from released events.
  */
 internal class HoldDetector(
     private val enterDegrees: Double,
@@ -57,10 +62,6 @@ internal class HoldDetector(
     var heldMs: Long = 0L
         private set
 
-    /** The longest completed stretch this detector has seen since the last [invalidate]. */
-    var longestHeldMs: Long = 0L
-        private set
-
     val holding: Boolean get() = holdStartMs != null
 
     fun accept(timestampMs: Long, angleDegrees: Double): HoldEvent {
@@ -83,14 +84,12 @@ internal class HoldDetector(
 
         if (smoothed < exitDegrees) {
             heldMs = timestampMs - startMs
-            longestHeldMs = maxOf(longestHeldMs, heldMs)
             return HoldEvent.Holding(heldMs)
         }
 
         val total = timestampMs - startMs
         holdStartMs = null
         heldMs = 0L
-        longestHeldMs = maxOf(longestHeldMs, total)
         return HoldEvent.Released(heldMs = total, countedAsHold = total >= minimumHoldMs)
     }
 

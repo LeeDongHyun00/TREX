@@ -116,7 +116,49 @@ class FormCheckGovernanceTest {
                 "${spec.name} must enter its hold past the release line",
                 spec.toDetector(spec.repAngleDegrees) < spec.toDetector(spec.restAngleDegrees),
             )
+            // Unused by the hold path, but it still has to sit inside the band so a meaningless
+            // number cannot be parked there.
+            assertTrue(
+                "${spec.name}'s unused attempt angle must stay inside its band",
+                spec.toDetector(spec.attemptAngleDegrees) >
+                    spec.toDetector(spec.repAngleDegrees) &&
+                    spec.toDetector(spec.attemptAngleDegrees) <
+                    spec.toDetector(spec.restAngleDegrees),
+            )
         }
+        assertEquals(160.0, FormCheckExercise.PLANK.repAngleDegrees, 0.0)
+        assertEquals(145.0, FormCheckExercise.PLANK.restAngleDegrees, 0.0)
+        assertEquals(152.0, FormCheckExercise.PLANK.attemptAngleDegrees, 0.0)
+        assertEquals(FormCheckDriver.HIP, FormCheckExercise.PLANK.driver)
+    }
+
+    @Test
+    fun everyExercisePinsItsRestAndAttemptColumnsToo() {
+        // §4: the rep and reached columns were mirrored, but rest and attempt decide whether a
+        // repetition ever arms, so they are just as much part of the table.
+        val bands = mapOf(
+            FormCheckExercise.HIP_THRUST to (110.0 to 130.0),
+            FormCheckExercise.OVERHEAD_PRESS to (100.0 to 120.0),
+            FormCheckExercise.CABLE_PUSH_DOWN to (100.0 to 120.0),
+        )
+        for (spec in FormCheckExercise.entries) {
+            if (spec.cadence == FormCheckCadence.HOLD) continue
+            val (rest, attempt) = bands[spec] ?: (150.0 to 140.0)
+            assertEquals("${spec.name} rest", rest, spec.restAngleDegrees, 0.0)
+            assertEquals("${spec.name} attempt", attempt, spec.attemptAngleDegrees, 0.0)
+        }
+    }
+
+    @Test
+    fun everyWaveTwoExerciseReadsTheChainThePolicyTableNames() {
+        assertEquals(FormCheckDriver.ELBOW, FormCheckExercise.KNEE_PUSH_UP.driver)
+        assertEquals(FormCheckDriver.ELBOW, FormCheckExercise.DIPS.driver)
+        assertEquals(FormCheckDriver.ELBOW, FormCheckExercise.BARBELL_CURL.driver)
+        assertEquals(FormCheckDriver.ELBOW, FormCheckExercise.DUMBBELL_CURL.driver)
+        assertEquals(FormCheckDriver.ELBOW, FormCheckExercise.LAT_PULLDOWN.driver)
+        assertEquals(FormCheckDriver.ELBOW, FormCheckExercise.OVERHEAD_PRESS.driver)
+        assertEquals(FormCheckDriver.ELBOW, FormCheckExercise.CABLE_PUSH_DOWN.driver)
+        assertEquals(FormCheckDriver.HIP, FormCheckExercise.HIP_THRUST.driver)
     }
 
     @Test

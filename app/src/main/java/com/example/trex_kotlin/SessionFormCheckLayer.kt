@@ -317,7 +317,8 @@ private fun FormCheckChip(
                 }
                 if (formState.sideViewPreferred) {
                     Text(
-                        text = "옆모습으로 서면 무릎이 더 잘 보여요",
+                        text = "옆모습으로 서면 " +
+                            "${FormCheckStartAnnouncer.sideViewSubject(spec)} 더 잘 보여요",
                         color = Color.White.copy(alpha = 0.6f),
                         fontSize = 10.sp,
                         modifier = Modifier.padding(top = 2.dp),
