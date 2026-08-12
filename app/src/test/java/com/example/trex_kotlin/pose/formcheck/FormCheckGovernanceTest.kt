@@ -1,5 +1,6 @@
 package com.example.trex_kotlin.pose.formcheck
 
+import com.example.trex_kotlin.devcapture.DevPoseCapture
 import com.example.trex_kotlin.pose.release.PostureCorrectionRuntimeFacade
 import com.example.trex_kotlin.todayPlan
 import com.example.trex_kotlin.withFormCheck
@@ -174,6 +175,37 @@ class FormCheckGovernanceTest {
             assertNull(item.postureCorrection)
         }
     }
+
+    @Test
+    fun theReleaseVariantHasNoPoseStoragePathAtAll() {
+        // Policy §5-5. Variant source sets replace rather than merge, so the shipped build links
+        // this twin instead of the recorder; the promise is only as good as the twin staying inert.
+        val stub = variantSources("release")
+            .resolve("com/example/trex_kotlin/devcapture/DevPoseCapture.kt")
+        assertTrue("Release DevPoseCapture twin is missing", stub.isFile)
+
+        val text = stub.readText()
+        val forbidden = listOf(
+            "java.io", "java.nio", "Executors", "bufferedWriter", "getExternalFilesDir",
+            "openFileOutput", "FileOutputStream", "filesDir", "mkdirs",
+        )
+        for (symbol in forbidden) {
+            assertFalse("Release DevPoseCapture references $symbol", text.contains(symbol))
+        }
+    }
+
+    @Test
+    fun theDebugRecorderStaysOffUntilADeveloperOptsIn() {
+        // Policy §5-5: installing a debug build must not begin recording body coordinates.
+        assertFalse(DevPoseCapture.ENABLED)
+        assertFalse(DevPoseCapture.isEnabled)
+    }
+
+    private fun variantSources(variant: String): File =
+        listOf("src/$variant/java", "app/src/$variant/java")
+            .map(::File)
+            .firstOrNull(File::isDirectory)
+            ?: error("$variant sources not found from ${File("").absolutePath}")
 
     private fun trackFiles(): List<File> {
         val sources = mainSources()
