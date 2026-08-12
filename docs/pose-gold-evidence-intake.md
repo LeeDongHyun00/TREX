@@ -138,6 +138,16 @@ python -m unittest -v tools.test_pose_gold_workflow
 v1에는 성공해야 하는 real intake CLI 예시가 없다. `REAL_RESTRICTED_GOLD` 입력은 반드시
 fail-closed해야 한다.
 
+## 권리 manifest 해시 핀 제거 (2026-08-12, 소유자 결정)
+
+`_validate_rights`가 rights manifest의 SHA-256을 `APPROVED_RIGHTS_V1_SHA256`과 대조해 불일치 시 실패시키던 검사를 제거했다. 이에 따라 `barbell-squat-gold-readiness.v1.json`을 재생성했으며, **바뀐 필드는 `compilerImplementation.canonicalTextSha256`과 `artifactSha256` 두 개뿐**이다(영수증의 입력 데이터는 전부 동일). 컴파일러가 자기 소스 해시를 영수증에 박기 때문에 발생한 변경이다.
+
+**잃은 것**: v1 manifest가 사실상 불변이던 성질. 이제 manifest 파일을 편집해 `readiness`를 VERIFIED_READY로 바꿔도 **신원 대조만으로는** 막히지 않는다.
+
+**남아 있는 것**: 같은 함수의 구조 검사는 그대로다. VERIFIED_READY를 주장하려면 여전히 approval evidence slot 8개가 모두 non-null SHA여야 하고, service level이 양의 정수여야 하며, retention safeguard 전부가 true, 접근 감사가 verified, 전 data class가 ready여야 한다. 참가자를 한 명도 촬영하지 않은 현재 상태에서 이 조건들을 만족시키려면 존재하지 않는 증빙 해시를 지어내야 하므로, **부당한 전환을 막는 실질적 장치는 유지된다.** 제거된 것은 그 앞단의 신원 확인이다.
+
+**대안 경로 기록**: AI Hub 연구 목적으로 권한이 필요했던 건은 이 핀을 우회하지 않고 [별도 범위의 연구 manifest](pose-data-rights-manifest.aihub-research.v1.json)를 신설해 해결했다. v1은 참가자 수집(Gold) 트랙을 관장하고 그 트랙은 여전히 NOT_READY다. 두 manifest는 `DISJOINT_SCOPE_NEITHER_SUPERSEDES_NOR_TRANSITIONS` 관계다.
+
 ## 두 번째 운동 전 gate
 
 두 번째 운동을 추가하기 전에 versioned exercise-plan/compiler가 운동별 ordered topology,

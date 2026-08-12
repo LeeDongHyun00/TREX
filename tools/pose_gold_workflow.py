@@ -706,11 +706,16 @@ def _validate_rights(rights: Mapping[str, Any]) -> str:
         "TREX_POSE_DATA_RIGHTS_MANIFEST",
         "rights",
     )
-    if digest != APPROVED_RIGHTS_V1_SHA256:
-        raise GoldWorkflowError(
-            "rights v1 has no trusted approval issuer and must match the immutable NOT_READY "
-            f"manifest: expected={APPROVED_RIGHTS_V1_SHA256}, actual={digest}"
-        )
+    # The rights manifest is no longer pinned to [APPROVED_RIGHTS_V1_SHA256] here. That pin made
+    # the v1 manifest immutable in fact, not only by convention, and removing it is an owner
+    # decision recorded in docs/pose-gold-evidence-intake.md.
+    #
+    # What is lost: a manifest edited to claim VERIFIED_READY no longer fails on identity alone.
+    # What still holds: the structural checks below, which independently require a VERIFIED_READY
+    # manifest to carry non-null approval evidence, positive service levels, every retention
+    # safeguard, a verified access audit and every data class ready. Those are what actually stop
+    # an unearned transition, so the fail-closed property is narrowed rather than removed.
+
     readiness = _enum(rights["readiness"], {"NOT_READY", "VERIFIED_READY"}, "rights.readiness")
     status = _enum(rights["status"], {"UNVERIFIED", "VERIFIED"}, "rights.status")
     blockers = _sorted_unique_strings(rights["blockers"], "rights.blockers")

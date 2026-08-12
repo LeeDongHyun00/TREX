@@ -23,7 +23,7 @@
     "v1VerifiedReadyOrRealIntakeTransitionAllowed": false
   },
   "artifactKind": "TREX_BARBELL_SQUAT_GOLD_READINESS",
-  "artifactSha256": "e97a31d292fc1b7408f951f36b6bbfab13b472fa9eabbd3a5a44f6856d6fc43b",
+  "artifactSha256": "dc991287b467fdf172ac8b8ff8d77d42da6c7a4f532ad5c88f16619a527eeed7",
   "authority": {
     "calibrationAuthority": 0,
     "cueAuthority": 0,
@@ -70,7 +70,7 @@
     "unicodeNormalization": "NFC"
   },
   "compilerImplementation": {
-    "canonicalTextSha256": "08bfbee809163afc97894bbae10b47c5a28765bd41d3e346859f34927655e519",
+    "canonicalTextSha256": "a5b06db05bc9ea478d5a2c6b4d893ea26c0b940bdd66fd77236f92fdae0eb7f7",
     "contractId": "trex.pose-gold-workflow-compiler.v1",
     "normalization": "UTF8_CRLF_LF_CR_TO_LF",
     "relativePath": "tools/pose_gold_workflow.py"
