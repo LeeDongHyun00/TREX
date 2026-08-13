@@ -928,6 +928,179 @@ class HeuristicFormCheckEngineTest {
         }
     }
 
+    // ---- the guard chain ----
+
+    @Test
+    fun guardReportsTheJointThatMovedDuringACountedRepetition() {
+        // A curl counted on the elbow whose shoulder swung to 70 degrees mid-repetition: the
+        // count stands, and the completed observation names the swing with its measured angle.
+        val spec = FormCheckExercise.BARBELL_CURL
+        val session = HeuristicFormCheckSession(spec)
+        var state = session.initialSnapshot()
+        var t = 0L
+        for ((elbow, shoulder) in listOf(
+            175.0 to 30.0, 175.0 to 30.0,
+            95.0 to 30.0, 95.0 to 70.0, 95.0 to 30.0,
+            175.0 to 30.0, 175.0 to 30.0,
+        )) {
+            state = session.accept(t, true, true, curlFrame(elbow, shoulder, t))
+            t += 200L
+        }
+
+        assertEquals(1, state.repCount)
+        val headline = requireNotNull(state.headline)
+        assertTrue(headline, headline.contains("어깨가 70도까지 벌어졌어요"))
+        assertNull("A guard observes; it never suggests", state.suggestion)
+    }
+
+    @Test
+    fun guardStaysSilentWhenTheJointStaysPut() {
+        val spec = FormCheckExercise.BARBELL_CURL
+        val session = HeuristicFormCheckSession(spec)
+        var state = session.initialSnapshot()
+        var t = 0L
+        for (elbow in listOf(175.0, 175.0, 95.0, 95.0, 95.0, 175.0, 175.0)) {
+            state = session.accept(t, true, true, curlFrame(elbow, shoulder = 30.0, t = t))
+            t += 200L
+        }
+
+        assertEquals(1, state.repCount)
+        val headline = requireNotNull(state.headline)
+        assertFalse("A held joint is not an observation", headline.contains("벌어졌"))
+    }
+
+    @Test
+    fun movementBetweenRepetitionsNeverReachesTheGuard() {
+        // A stretch or a head-scratch at rest swings the shoulder far past the limit, but the
+        // excursion has not armed, so the next counted repetition must not report it.
+        val spec = FormCheckExercise.BARBELL_CURL
+        val session = HeuristicFormCheckSession(spec)
+        var state = session.initialSnapshot()
+        var t = 0L
+        for ((elbow, shoulder) in listOf(
+            175.0 to 30.0, 175.0 to 160.0, 175.0 to 30.0,
+            95.0 to 30.0, 95.0 to 30.0, 95.0 to 30.0,
+            175.0 to 30.0, 175.0 to 30.0,
+        )) {
+            state = session.accept(t, true, true, curlFrame(elbow, shoulder, t))
+            t += 200L
+        }
+
+        assertEquals(1, state.repCount)
+        val headline = requireNotNull(state.headline)
+        assertFalse(
+            "Rest-window movement leaked into the repetition's guard",
+            headline.contains("벌어졌"),
+        )
+    }
+
+    @Test
+    fun guardAbstainsWhenItsOwnJointsAreHidden() {
+        // The guard chain needs the hip; the elbow driver does not. Hiding the hip silences the
+        // guard and nothing else — an unobserved joint is not evidence in either direction.
+        val spec = FormCheckExercise.BARBELL_CURL
+        val session = HeuristicFormCheckSession(spec)
+        var state = session.initialSnapshot()
+        var t = 0L
+        for (elbow in listOf(175.0, 175.0, 95.0, 95.0, 95.0, 175.0, 175.0)) {
+            state = session.accept(
+                t,
+                true,
+                true,
+                frameWithChains(
+                    kneeAngleDegrees = 175.0,
+                    hipAngleDegrees = 175.0,
+                    elbowAngleDegrees = elbow,
+                    timestampMs = t,
+                    dropped = setOf(FormCheckJointGroup.HIP),
+                ),
+            )
+            t += 200L
+        }
+
+        assertEquals("The count never depended on the guard", 1, state.repCount)
+        val headline = requireNotNull(state.headline)
+        assertFalse(headline.contains("벌어졌"))
+    }
+
+    @Test
+    fun aMinGuardReportsAnArmThatNeverFolded() {
+        // The side crunch's guard reads the other way: hands behind the head keep the elbow at or
+        // under 94 degrees at some point in every repetition, so an elbow that never came down to
+        // it is the observation.
+        val spec = FormCheckExercise.STANDING_SIDE_CRUNCH
+        val session = HeuristicFormCheckSession(spec)
+        var state = session.initialSnapshot()
+        var t = 0L
+        for (hip in listOf(175.0, 175.0, 120.0, 120.0, 120.0, 175.0, 175.0)) {
+            state = session.accept(
+                t,
+                true,
+                true,
+                frameWithChains(
+                    kneeAngleDegrees = 175.0,
+                    hipAngleDegrees = hip,
+                    elbowAngleDegrees = 150.0,
+                    timestampMs = t,
+                ),
+            )
+            t += 200L
+        }
+
+        assertEquals(1, state.repCount)
+        val headline = requireNotNull(state.headline)
+        assertTrue(headline, headline.contains("팔꿈치가 150도까지만 굽혀졌어요"))
+    }
+
+    @Test
+    fun aMinGuardStaysSilentWhenTheArmStayedFolded() {
+        val spec = FormCheckExercise.STANDING_SIDE_CRUNCH
+        val session = HeuristicFormCheckSession(spec)
+        var state = session.initialSnapshot()
+        var t = 0L
+        for (hip in listOf(175.0, 175.0, 120.0, 120.0, 120.0, 175.0, 175.0)) {
+            state = session.accept(
+                t,
+                true,
+                true,
+                frameWithChains(
+                    kneeAngleDegrees = 175.0,
+                    hipAngleDegrees = hip,
+                    elbowAngleDegrees = 70.0,
+                    timestampMs = t,
+                ),
+            )
+            t += 200L
+        }
+
+        assertEquals(1, state.repCount)
+        val headline = requireNotNull(state.headline)
+        assertFalse(headline.contains("팔꿈치가"))
+    }
+
+    @Test
+    fun theCountAnnouncerSpeaksEachCountOnceAndConsumesWhilePaused() {
+        val announcer = FormCheckCountAnnouncer()
+
+        assertNull("Zero is the absence of a count", announcer.onCount(0))
+        assertEquals("1회", announcer.onCount(1))
+        assertNull("The same count is never repeated", announcer.onCount(1))
+        assertEquals("2회", announcer.onCount(2))
+        assertNull("A paused count is consumed, not deferred", announcer.onCount(3, muted = true))
+        assertNull("…so resuming does not announce it late", announcer.onCount(3))
+        assertEquals("4회", announcer.onCount(4))
+        assertNull("A fresh set resets the baseline silently", announcer.onCount(0))
+        assertEquals("1회", announcer.onCount(1))
+    }
+
+    private fun curlFrame(elbow: Double, shoulder: Double, t: Long) = frameWithChains(
+        kneeAngleDegrees = 175.0,
+        hipAngleDegrees = 175.0,
+        elbowAngleDegrees = elbow,
+        shoulderAngleDegrees = shoulder,
+        timestampMs = t,
+    )
+
     // ---- fixtures ----
 
     /** Top hold, descent to ~100 degrees, return to top; 200ms cadence beats the EMA. */

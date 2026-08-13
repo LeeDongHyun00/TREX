@@ -47,6 +47,7 @@ import com.example.trex_kotlin.catalog.AiHubExercise
 import com.example.trex_kotlin.devcapture.DevPoseCapture
 import com.example.trex_kotlin.pose.PoseFrame
 import com.example.trex_kotlin.pose.formcheck.FormCheckCadence
+import com.example.trex_kotlin.pose.formcheck.FormCheckCountAnnouncer
 import com.example.trex_kotlin.pose.formcheck.FormCheckExercise
 import com.example.trex_kotlin.pose.formcheck.FormCheckStartAnnouncer
 import com.example.trex_kotlin.pose.formcheck.FormCheckStartState
@@ -123,6 +124,7 @@ private fun FormCheckContent(
     val session = remember(spec, attemptResetKey) { HeuristicFormCheckSession(spec) }
     var formState by remember(spec, attemptResetKey) { mutableStateOf(session.initialSnapshot()) }
     val announcer = remember(spec, attemptResetKey) { FormCheckStartAnnouncer() }
+    val countAnnouncer = remember(spec, attemptResetKey) { FormCheckCountAnnouncer() }
     val announce = rememberUpdatedState(onAnnounce)
 
     // Developer capture. Inert in every shipped build: the release variant links a no-op twin,
@@ -163,6 +165,14 @@ private fun FormCheckContent(
             spec = spec,
             state = formState,
         )?.let { phrase -> announce.value(phrase) }
+    }
+
+    // Nobody mid-squat is reading the screen: each counted repetition is spoken once through the
+    // same host-owned voice path. A count reached while paused is consumed silently rather than
+    // announced late, and the counter itself never speaks — the host does (§3.2).
+    LaunchedEffect(formState.repCount, paused) {
+        countAnnouncer.onCount(formState.repCount, muted = paused)
+            ?.let { phrase -> announce.value(phrase) }
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -342,9 +352,10 @@ private fun FormCheckChip(
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(top = 2.dp),
             )
-            // Only where the threshold actually came from that dataset; crediting it on an
-            // uncalibrated exercise would claim a provenance the constant does not have.
-            if (spec.provenance.requiresDataAttribution) {
+            // Only where a constant actually came from that dataset; crediting an uncalibrated
+            // exercise would claim a provenance it does not have. The guard counts — a fitted
+            // guard on an otherwise-default exercise still owes the credit.
+            if (spec.requiresDataAttribution) {
                 Text(
                     text = HeuristicFormCheckDeclaration.DATA_ATTRIBUTION,
                     color = Color.White.copy(alpha = 0.5f),

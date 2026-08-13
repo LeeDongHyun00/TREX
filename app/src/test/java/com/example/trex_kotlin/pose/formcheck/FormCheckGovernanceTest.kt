@@ -55,11 +55,18 @@ class FormCheckGovernanceTest {
 
     @Test
     fun thresholdsMirrorThePolicyDocumentTable() {
+        // Literature-standard entries: the number cites a published standard (parallel squat at
+        // ~90 degrees plus the measured bridge bias; the plank's straight-line protocol). Better
+        // than a bare default, still not a fit, and owing no dataset attribution.
         assertEquals(110.0, FormCheckExercise.BARBELL_SQUAT.repAngleDegrees, 0.0)
         assertEquals(105.0, FormCheckExercise.BARBELL_SQUAT.reachedAngleDegrees, 0.0)
         assertEquals(
-            FormCheckThresholdProvenance.HEURISTIC_DEFAULT,
+            FormCheckThresholdProvenance.LITERATURE_STANDARD,
             FormCheckExercise.BARBELL_SQUAT.provenance,
+        )
+        assertEquals(
+            FormCheckThresholdProvenance.LITERATURE_STANDARD,
+            FormCheckExercise.PLANK.provenance,
         )
         // The three exercises whose thresholds were measured through the app's own model, from the
         // camera view the selection artifact picks per capture day, and cleared a leave-one-subject
@@ -101,7 +108,7 @@ class FormCheckGovernanceTest {
         assertEquals(134.0, FormCheckExercise.STEP_FORWARD_DYNAMIC_LUNGE.repAngleDegrees, 0.0)
         assertEquals(130.0, FormCheckExercise.STEP_BACKWARD_DYNAMIC_LUNGE.repAngleDegrees, 0.0)
 
-        // Waves 1 and 2, all uncalibrated per §4.3.
+        // Waves 1 and 2 plus the stability wave's rep drivers, all uncalibrated per §4.3.
         val expected = mapOf(
             FormCheckExercise.BARBELL_LUNGE to (134.0 to 129.0),
             FormCheckExercise.GOOD_MORNING to (135.0 to 128.0),
@@ -109,10 +116,11 @@ class FormCheckGovernanceTest {
             FormCheckExercise.KNEE_PUSH_UP to (135.0 to 125.0),
             FormCheckExercise.BARBELL_CURL to (120.0 to 100.0),
             FormCheckExercise.DUMBBELL_CURL to (120.0 to 100.0),
+            FormCheckExercise.ROWING_MACHINE to (110.0 to 100.0),
+            FormCheckExercise.STANDING_SIDE_CRUNCH to (135.0 to 125.0),
             FormCheckExercise.HIP_THRUST to (145.0 to 160.0),
             FormCheckExercise.OVERHEAD_PRESS to (150.0 to 165.0),
             FormCheckExercise.CABLE_PUSH_DOWN to (150.0 to 165.0),
-            FormCheckExercise.PLANK to (160.0 to 160.0),
         )
         for ((spec, thresholds) in expected) {
             val (rep, reached) = thresholds
@@ -124,7 +132,83 @@ class FormCheckGovernanceTest {
                 spec.provenance,
             )
         }
-        assertEquals(16, FormCheckExercise.entries.size)
+        assertEquals(160.0, FormCheckExercise.PLANK.repAngleDegrees, 0.0)
+        assertEquals(18, FormCheckExercise.entries.size)
+    }
+
+    @Test
+    fun guardsMirrorThePolicyDocumentTable() {
+        // §4.6: a guard watches the joint that must stay put while the driver counts. The limit,
+        // the chain, the window extreme and the provenance are all part of the published table.
+        data class Expected(
+            val driver: FormCheckDriver,
+            val extreme: FormCheckGuardExtreme,
+            val limit: Double,
+            val provenance: FormCheckThresholdProvenance,
+        )
+
+        val expected = mapOf(
+            FormCheckExercise.BARBELL_CURL to Expected(
+                FormCheckDriver.SHOULDER,
+                FormCheckGuardExtreme.MAX,
+                52.0,
+                FormCheckThresholdProvenance.MEDIAPIPE_NATIVE_FIT_V2,
+            ),
+            // The dumbbell twin's own measurement is under the gate, so it borrows the barbell
+            // limit and must not claim a fit for it.
+            FormCheckExercise.DUMBBELL_CURL to Expected(
+                FormCheckDriver.SHOULDER,
+                FormCheckGuardExtreme.MAX,
+                52.0,
+                FormCheckThresholdProvenance.HEURISTIC_DEFAULT,
+            ),
+            FormCheckExercise.ROWING_MACHINE to Expected(
+                FormCheckDriver.TRUNK,
+                FormCheckGuardExtreme.MAX,
+                132.0,
+                FormCheckThresholdProvenance.MEDIAPIPE_NATIVE_FIT_V2,
+            ),
+            FormCheckExercise.STANDING_SIDE_CRUNCH to Expected(
+                FormCheckDriver.ELBOW,
+                FormCheckGuardExtreme.MIN,
+                94.0,
+                FormCheckThresholdProvenance.MEDIAPIPE_NATIVE_FIT_V2,
+            ),
+        )
+
+        for (spec in FormCheckExercise.entries) {
+            val want = expected[spec]
+            val guard = spec.guard
+            if (want == null) {
+                assertEquals("${spec.name} must not quietly grow a guard", null, guard)
+                continue
+            }
+            assertEquals("${spec.name} guard chain", want.driver, guard?.driver)
+            assertEquals("${spec.name} guard extreme", want.extreme, guard?.extreme)
+            assertEquals("${spec.name} guard limit", want.limit, guard?.limitDegrees)
+            assertEquals("${spec.name} guard provenance", want.provenance, guard?.provenance)
+        }
+    }
+
+    @Test
+    fun guardsObserveAndNeverUrge() {
+        // A guard reports what happened; "keep it still" phrased as advice is a corrective cue,
+        // which belongs to the sealed release chain. The suggestion-shaped ending is the tell.
+        for (spec in FormCheckExercise.entries) {
+            val guard = spec.guard ?: continue
+            assertTrue(
+                "${spec.name}'s guard must state the measured angle",
+                guard.crossedObservation.contains("%d"),
+            )
+            assertFalse(
+                "${spec.name}'s guard must not phrase a suggestion",
+                guard.crossedObservation.contains("볼까요"),
+            )
+            assertFalse(
+                "${spec.name}'s guard must not phrase an instruction",
+                guard.crossedObservation.contains("주세요"),
+            )
+        }
     }
 
     @Test
@@ -183,6 +267,9 @@ class FormCheckGovernanceTest {
         // closes toward the ribs, which the elbow angle scores at chance and the shoulder chain at
         // 0.879 balanced on 3D ground truth.
         assertEquals(FormCheckDriver.SHOULDER, FormCheckExercise.LAT_PULLDOWN.driver)
+        // The stability wave counts with an ordinary chain; the fitted constant is the guard's.
+        assertEquals(FormCheckDriver.KNEE, FormCheckExercise.ROWING_MACHINE.driver)
+        assertEquals(FormCheckDriver.HIP, FormCheckExercise.STANDING_SIDE_CRUNCH.driver)
         assertEquals(FormCheckDriver.ELBOW, FormCheckExercise.OVERHEAD_PRESS.driver)
         assertEquals(FormCheckDriver.ELBOW, FormCheckExercise.CABLE_PUSH_DOWN.driver)
         assertEquals(FormCheckDriver.HIP, FormCheckExercise.HIP_THRUST.driver)
@@ -266,13 +353,24 @@ class FormCheckGovernanceTest {
             "An uncalibrated default owes no attribution",
             FormCheckThresholdProvenance.HEURISTIC_DEFAULT.requiresDataAttribution,
         )
-        for (provenance in FormCheckThresholdProvenance.entries) {
-            if (provenance == FormCheckThresholdProvenance.HEURISTIC_DEFAULT) continue
-            assertTrue(
-                "$provenance was fitted on AI Hub data and must be attributed",
-                provenance.requiresDataAttribution,
-            )
-        }
+        assertFalse(
+            "A literature standard cites a publication, not the dataset",
+            FormCheckThresholdProvenance.LITERATURE_STANDARD.requiresDataAttribution,
+        )
+        assertTrue(
+            "The MediaPipe-native fit was learned from AI Hub data and must be attributed",
+            FormCheckThresholdProvenance.MEDIAPIPE_NATIVE_FIT_V2.requiresDataAttribution,
+        )
+
+        // The exercise-level flag folds the guard in: a fitted guard on an otherwise-default
+        // exercise still owes the credit, and a default guard confers none.
+        assertTrue(FormCheckExercise.BARBELL_CURL.requiresDataAttribution)
+        assertTrue(FormCheckExercise.ROWING_MACHINE.requiresDataAttribution)
+        assertTrue(FormCheckExercise.STANDING_SIDE_CRUNCH.requiresDataAttribution)
+        assertFalse(FormCheckExercise.DUMBBELL_CURL.requiresDataAttribution)
+        assertFalse(FormCheckExercise.BARBELL_SQUAT.requiresDataAttribution)
+        assertFalse(FormCheckExercise.PLANK.requiresDataAttribution)
+
         // The surface that renders it must actually consult the flag.
         val layer = mainSources().resolve("com/example/trex_kotlin/SessionFormCheckLayer.kt")
         val text = layer.readText()
@@ -326,13 +424,14 @@ class FormCheckGovernanceTest {
         //
         // What must still hold is the part that protects the user: a sealed exercise carries no
         // suggestion, whatever its evidence. That is asserted in sealedExercisesNeverUrgeMoreRange.
-        val sealedAndCalibrated = FormCheckExercise.entries.filter {
-            it.rangeUrgingSealed && it.provenance != FormCheckThresholdProvenance.HEURISTIC_DEFAULT
+        val sealedAndFitted = FormCheckExercise.entries.filter {
+            it.rangeUrgingSealed &&
+                it.provenance == FormCheckThresholdProvenance.MEDIAPIPE_NATIVE_FIT_V2
         }
         assertEquals(
-            "Only dips is deliberately both calibrated and sealed; anything else is a slip",
+            "Only dips is deliberately both fitted and sealed; anything else is a slip",
             listOf(FormCheckExercise.DIPS),
-            sealedAndCalibrated,
+            sealedAndFitted,
         )
     }
 

@@ -80,6 +80,14 @@ internal class RepCycleDetector(
     val smoothedAngleDegrees: Double?
         get() = smoothedDegrees
 
+    /**
+     * Whether an armed excursion is in flight right now. The guard observation accumulates only
+     * inside this window, so a stretch or a head-scratch between repetitions cannot be reported
+     * as movement during one.
+     */
+    val inExcursion: Boolean
+        get() = excursionStartMs != null
+
     fun accept(timestampMs: Long, angleDegrees: Double): RepCycleEvent {
         val previousTs = smoothedTimestampMs
         if (previousTs != null && timestampMs <= previousTs) {

@@ -70,6 +70,9 @@ internal class FormCheckStartAnnouncer(
     companion object {
         const val DEFAULT_REPEAT_INTERVAL_MS: Long = 8_000L
 
+        /** Spoken once per counted repetition: "1회", "2회", … */
+        internal fun countPhrase(repCount: Int): String = "${repCount}회"
+
         /** "무릎이", "팔꿈치가", "엉덩이가" — the joint the side view would read more directly. */
         internal fun sideViewSubject(spec: FormCheckExercise): String =
             spec.driver.vertex.label.let { label -> label + subjectParticle(label) }
@@ -85,5 +88,27 @@ internal class FormCheckStartAnnouncer(
         private const val HANGUL_FIRST = '가'
         private const val HANGUL_LAST = '힣'
         private const val HANGUL_FINAL_COUNT = 28
+    }
+}
+
+/**
+ * Decides when the running repetition count is spoken.
+ *
+ * A count is announced exactly once, when it first appears. The dedup key is the count itself
+ * rather than a clock, because each phrase is distinct and a repetition can legitimately follow
+ * the previous one inside any fixed interval. While muted or paused a new count is consumed
+ * silently — announcing it later would attribute the number to the wrong moment.
+ */
+internal class FormCheckCountAnnouncer {
+    private var lastAnnounced = 0
+
+    fun onCount(repCount: Int, muted: Boolean = false): String? {
+        if (repCount <= lastAnnounced) {
+            // The host resets the session per set; a smaller count is a fresh set, not a repeat.
+            if (repCount < lastAnnounced) lastAnnounced = repCount
+            return null
+        }
+        lastAnnounced = repCount
+        return if (muted) null else FormCheckStartAnnouncer.countPhrase(repCount)
     }
 }

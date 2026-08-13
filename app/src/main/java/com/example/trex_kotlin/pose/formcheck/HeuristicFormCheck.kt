@@ -12,10 +12,11 @@ import kotlin.math.roundToInt
  * Its contract is `docs/pose-heuristic-form-check.v1.md`, pinned by [POLICY_DOCUMENT_SHA256].
  * The track computes rotation-invariant joint geometry, reports observations in observational
  * language, abstains loudly, and touches nothing in the posture-correction release chain: no
- * facade, no criterion, no stored record. Three exercises -- the standing knee-up, the lat
- * pull-down and dips -- carry MediaPipe-native fits that cleared a leave-one-global-subject-out
- * balanced accuracy of 0.75 through the app's own model (research scope, clip-level); every other
- * exercise is an uncalibrated heuristic default, and those whose overshoot has a real consequence
+ * facade, no criterion, no stored record. Constants carry their provenance individually: six were
+ * measured through the app's own model and cleared a leave-one-global-subject-out balanced
+ * accuracy of 0.75 (three depth thresholds -- standing knee-up, lat pull-down, dips -- and three
+ * guard limits -- barbell curl, rowing machine, standing side crunch); two cite published
+ * standards; the rest are uncalibrated defaults. Exercises whose overshoot has a real consequence
  * are sealed against urging more range whether or not they are calibrated. None of this amounts to
  * release-chain calibration, which is why every surface carries the beta disclosure and [claims]
  * still withholds `calibrated`.
@@ -25,7 +26,7 @@ internal object HeuristicFormCheckDeclaration {
     const val TRACK_ID: String = "trex.heuristic-form-check.beta.v1"
 
     const val POLICY_DOCUMENT_SHA256: String =
-        "61564c1124ad786ff53f860ec427a1e56b0938709f58121e1078c6fbd9770803"
+        "37b8526a7fa9592fdbcc1cd5a60157be098f8ae560aaa30d73d2c6bdeecf3659"
 
     const val POLICY_DOCUMENT_PATH: String = "docs/pose-heuristic-form-check.v1.md"
 
@@ -138,8 +139,16 @@ internal enum class FormCheckCadence {
 
 /** Where a threshold constant came from; mirrored in the policy document's §4 table. */
 internal enum class FormCheckThresholdProvenance {
-    /** Literature-informed default that has never met calibration data. */
+    /** Default that has never met calibration data and cites no external standard. */
     HEURISTIC_DEFAULT,
+
+    /**
+     * Taken from a published exercise standard, with the bridge card's measured MediaPipe bias
+     * applied where the standard is stated in true joint angles. Better-founded than a bare
+     * default — the number has a citation — but it has never been fitted against labelled data,
+     * so it confers no calibration claim and owes no dataset attribution.
+     */
+    LITERATURE_STANDARD,
 
     /**
      * Fitted on MediaPipe output over AI Hub label frames under the research-use rights manifest
@@ -157,10 +166,70 @@ internal enum class FormCheckThresholdProvenance {
 
     /**
      * Whether this constant was learned from AI Hub data, and therefore carries the dataset's
-     * attribution obligation onto whatever surface shows it.
+     * attribution obligation onto whatever surface shows it. A literature standard cites a
+     * publication, not the dataset, so it owes nothing here.
      */
     val requiresDataAttribution: Boolean
-        get() = this != HEURISTIC_DEFAULT
+        get() = this == MEDIAPIPE_NATIVE_FIT_V2
+}
+
+/**
+ * A joint this exercise must keep still while the driver chain does the counting.
+ *
+ * The driver answers "how far did the working joint travel"; the guard answers the other question
+ * users mean by form — "did the joint that was supposed to stay put actually stay put". A curl's
+ * fault is the upper arm swinging, which the elbow angle barely sees; a rowing stroke's fault is
+ * the torso whipping back, which the knee never sees. The dataset separates these conditions on
+ * exactly these second chains, at accuracies as good as the depth checks.
+ *
+ * A guard only ever *observes*. Crossing the limit appends an observation to the completed
+ * repetition's headline; it never produces a suggestion, because "keep it still" phrased as
+ * advice is a corrective cue, and cues belong to the sealed release chain. It is also not a
+ * start requirement: an invisible guard joint silences the guard, never the exercise.
+ */
+internal class FormCheckGuard(
+    /** The chain being watched — a different one from the exercise's driver. */
+    val driver: FormCheckDriver,
+    /** Which end of the excursion window summarises the guard chain. */
+    val extreme: FormCheckGuardExtreme,
+    /**
+     * A real joint angle on a flexion-read chain. The window statistic staying at or under this
+     * limit is what the calibration found on clips where the condition held; a statistic beyond
+     * it is the observation worth reporting.
+     */
+    val limitDegrees: Double,
+    /** Guards carry their own provenance: a fitted guard on an unfitted exercise is common. */
+    val provenance: FormCheckThresholdProvenance,
+    /**
+     * The observation for a crossed limit, with `%d` for the measured statistic. Named after the
+     * anatomy, like every observation: "어깨가 61도까지 벌어졌어요", never a verdict.
+     */
+    val crossedObservation: String,
+) {
+    init {
+        require(limitDegrees in 0.0..180.0) { "A guard limit must be a real joint angle" }
+        require(crossedObservation.contains("%d")) {
+            "The crossed observation must state the measured angle"
+        }
+    }
+
+    /**
+     * Whether the excursion's guard statistic is the observation worth reporting.
+     *
+     * One rule serves both extremes because both fits read "statistic ≤ limit means the condition
+     * held": a MAX guard crosses when the joint swung past the limit, a MIN guard crosses when
+     * the joint never came down to it.
+     */
+    fun crossed(statisticDegrees: Double): Boolean = statisticDegrees > limitDegrees
+}
+
+/** Which end of the excursion window a guard reads. */
+internal enum class FormCheckGuardExtreme {
+    /** The lowest angle seen — for a position that must be reached and kept, like folded arms. */
+    MIN,
+
+    /** The highest angle seen — for a joint that must not swing away, like a curl's upper arm. */
+    MAX,
 }
 
 /**
@@ -185,6 +254,8 @@ internal enum class FormCheckExercise(
      * anatomically wrong. Null takes [FormCheckWorkingDirection.defaultVocabulary].
      */
     private val vocabularyOverride: FormCheckVocabulary? = null,
+    /** The joint this exercise watches for staying put, or null when only depth is read. */
+    val guard: FormCheckGuard? = null,
     val cadence: FormCheckCadence,
     /**
      * For a repetition, the resting angle it must return to before another can be armed. For a
@@ -226,8 +297,12 @@ internal enum class FormCheckExercise(
         restAngleDegrees = 150.0,
         attemptAngleDegrees = 140.0,
         repAngleDegrees = 110.0,
+        // The biomechanics literature places a parallel squat at roughly 90 degrees of knee
+        // included angle (IJSPT squat review); adding the bridge card's measured MediaPipe
+        // straightening bias lands at ~103-105. This value targets the parallel squat, cited, not
+        // fitted — the dataset carries no depth condition for this exercise at all.
         reachedAngleDegrees = 105.0,
-        provenance = FormCheckThresholdProvenance.HEURISTIC_DEFAULT,
+        provenance = FormCheckThresholdProvenance.LITERATURE_STANDARD,
         rangeUrgingSealed = true,
         setupHint = "옆모습이 보이게 서 주세요",
         attemptHint = null,
@@ -396,6 +471,17 @@ internal enum class FormCheckExercise(
         repAngleDegrees = 120.0,
         reachedAngleDegrees = 100.0,
         provenance = FormCheckThresholdProvenance.HEURISTIC_DEFAULT,
+        // The dataset's condition for this exercise is not curl depth but "the elbow stays put",
+        // and it separates on the shoulder chain the elbow angle barely moves: measured 52
+        // degrees, LOSO balanced 0.784 over 18 participants and 574 clips. The window maximum is
+        // the evidence — a single swing is the fault, not the average.
+        guard = FormCheckGuard(
+            driver = FormCheckDriver.SHOULDER,
+            extreme = FormCheckGuardExtreme.MAX,
+            limitDegrees = 52.0,
+            provenance = FormCheckThresholdProvenance.MEDIAPIPE_NATIVE_FIT_V2,
+            crossedObservation = "어깨가 %d도까지 벌어졌어요",
+        ),
         rangeUrgingSealed = false,
         setupHint = "옆모습이 보이게 서 주세요",
         attemptHint = "다음엔 조금 더 감아올려 볼까요",
@@ -411,6 +497,17 @@ internal enum class FormCheckExercise(
         repAngleDegrees = 120.0,
         reachedAngleDegrees = 100.0,
         provenance = FormCheckThresholdProvenance.HEURISTIC_DEFAULT,
+        // Same movement, weaker evidence: its own measurement reaches 0.739 balanced, under the
+        // 0.75 gate, so this guard borrows the barbell twin's limit and must say so — an
+        // uncalibrated prior, not a fit. Its clip-level bias also hints at label damage on the
+        // dumbbell capture days, which a wider archive could later resolve.
+        guard = FormCheckGuard(
+            driver = FormCheckDriver.SHOULDER,
+            extreme = FormCheckGuardExtreme.MAX,
+            limitDegrees = 52.0,
+            provenance = FormCheckThresholdProvenance.HEURISTIC_DEFAULT,
+            crossedObservation = "어깨가 %d도까지 벌어졌어요",
+        ),
         rangeUrgingSealed = false,
         setupHint = "옆모습이 보이게 서 주세요",
         attemptHint = "다음엔 조금 더 감아올려 볼까요",
@@ -440,6 +537,62 @@ internal enum class FormCheckExercise(
         setupHint = "옆모습이 보이게 앉아 주세요",
         attemptHint = "다음엔 조금 더 당겨볼까요",
         rangeHint = "다음엔 조금 더 당겨볼까요",
+    ),
+
+    // The stability wave. These two exist because their dataset condition is a guarded joint,
+    // not a depth, and the guard fit cleared the gate; their rep-counting thresholds are ordinary
+    // uncalibrated defaults, which is what the provenance split on each entry records.
+    ROWING_MACHINE(
+        exercise = AiHubExercise.ROWING_MACHINE,
+        driver = FormCheckDriver.KNEE,
+        direction = FormCheckWorkingDirection.FLEXION,
+        cadence = FormCheckCadence.REPETITION,
+        restAngleDegrees = 150.0,
+        attemptAngleDegrees = 140.0,
+        repAngleDegrees = 110.0,
+        reachedAngleDegrees = 100.0,
+        provenance = FormCheckThresholdProvenance.HEURISTIC_DEFAULT,
+        // "No excessive lean-back" separates on the torso line at 132 degrees, LOSO balanced
+        // 0.800 over 32 participants and 1,136 clips. The trunk chain reads lean, not spine
+        // curvature — a rounded back and a straight hinge look identical to it — so the
+        // observation speaks of the torso's angle and nothing else.
+        guard = FormCheckGuard(
+            driver = FormCheckDriver.TRUNK,
+            extreme = FormCheckGuardExtreme.MAX,
+            limitDegrees = 132.0,
+            provenance = FormCheckThresholdProvenance.MEDIAPIPE_NATIVE_FIT_V2,
+            crossedObservation = "상체가 %d도까지 젖혀졌어요",
+        ),
+        rangeUrgingSealed = false,
+        setupHint = "옆모습이 보이게 앉아 주세요",
+        attemptHint = "다음엔 무릎을 조금 더 굽혀볼까요",
+        rangeHint = "다음엔 무릎을 조금 더 굽혀볼까요",
+    ),
+    STANDING_SIDE_CRUNCH(
+        exercise = AiHubExercise.STANDING_SIDE_CRUNCH,
+        driver = FormCheckDriver.HIP,
+        direction = FormCheckWorkingDirection.FLEXION,
+        cadence = FormCheckCadence.REPETITION,
+        restAngleDegrees = 150.0,
+        attemptAngleDegrees = 140.0,
+        repAngleDegrees = 135.0,
+        reachedAngleDegrees = 125.0,
+        provenance = FormCheckThresholdProvenance.HEURISTIC_DEFAULT,
+        // "Hands stay behind the head" is a MIN guard: folded arms keep the elbow at or under 94
+        // degrees at some point in every repetition, and an elbow that never came down to it is
+        // an arm that never folded. Measured LOSO balanced 0.856 over 47 participants and 1,574
+        // clips — the closest any constant in this table sits to its label ceiling.
+        guard = FormCheckGuard(
+            driver = FormCheckDriver.ELBOW,
+            extreme = FormCheckGuardExtreme.MIN,
+            limitDegrees = 94.0,
+            provenance = FormCheckThresholdProvenance.MEDIAPIPE_NATIVE_FIT_V2,
+            crossedObservation = "팔꿈치가 %d도까지만 굽혀졌어요",
+        ),
+        rangeUrgingSealed = false,
+        setupHint = "옆모습이 보이게 서 주세요",
+        attemptHint = "다음엔 무릎을 조금 더 올려볼까요",
+        rangeHint = "다음엔 무릎을 조금 더 올려볼까요",
     ),
 
     // Wave 2, extension. Their rest position is the flexed one, so every threshold reads the
@@ -499,9 +652,12 @@ internal enum class FormCheckExercise(
         cadence = FormCheckCadence.HOLD,
         restAngleDegrees = 145.0,
         attemptAngleDegrees = 152.0,
+        // The standard test protocol defines a plank as a straight head-to-heel line, ended when
+        // the hips sag: 160 degrees of hip angle is that line with a sag tolerance, cited from
+        // the protocol rather than fitted — the isometric hold has no clip statistic to fit.
         repAngleDegrees = 160.0,
         reachedAngleDegrees = 160.0,
-        provenance = FormCheckThresholdProvenance.HEURISTIC_DEFAULT,
+        provenance = FormCheckThresholdProvenance.LITERATURE_STANDARD,
         rangeUrgingSealed = false,
         setupHint = "옆모습이 보이게 엎드려 주세요",
         attemptHint = null,
@@ -509,11 +665,23 @@ internal enum class FormCheckExercise(
     ),
     ;
 
-    /** The only joints this exercise needs before it can start. */
+    /**
+     * The only joints this exercise needs before it can start — the driver's, never the guard's.
+     * A hidden guard joint silences the guard observation; making it a start gate would keep the
+     * whole exercise from counting because of a joint the count does not read.
+     */
     val requiredJoints: Set<FormCheckJointGroup> get() = driver.requiredJoints
 
     /** The words used to describe what the measured joint did. */
     val vocabulary: FormCheckVocabulary get() = vocabularyOverride ?: direction.defaultVocabulary
+
+    /**
+     * Whether any constant this exercise shows was learned from AI Hub data. The guard counts:
+     * a fitted guard on an otherwise-default exercise still owes the dataset its credit.
+     */
+    val requiresDataAttribution: Boolean
+        get() = provenance.requiresDataAttribution ||
+            guard?.provenance?.requiresDataAttribution == true
 
     /**
      * Mirrors an angle into the detector's space, where a smaller number always means more work.
@@ -552,6 +720,13 @@ internal enum class FormCheckExercise(
         // something the isometric path never reports.
         require(cadence != FormCheckCadence.HOLD || (attemptHint == null && rangeHint == null)) {
             "A hold must not carry repetition suggestions"
+        }
+        // A guard's window is the repetition excursion; a hold has no such window.
+        require(guard == null || cadence == FormCheckCadence.REPETITION) {
+            "A guard needs a repetition excursion to watch"
+        }
+        require(guard == null || guard.driver !== driver) {
+            "A guard must watch a different chain from the driver"
         }
         require(requiredJoints.isNotEmpty()) { "An exercise must declare its required joints" }
     }
@@ -677,6 +852,13 @@ internal class HeuristicFormCheckSession(
     private var sideViewPreferred: Boolean = false
 
     /**
+     * The guard chain's extreme over the excursion in flight, or null when nothing credible has
+     * been seen inside the window. Null at completion is abstention: a guard that was never
+     * observed reports nothing, in both directions.
+     */
+    private var guardWindowDegrees: Double? = null
+
+    /**
      * Detector-space extremes of this set's opening repetitions, used as the set's own baseline.
      *
      * Comparing a repetition with the user's earlier ones rather than with a population constant
@@ -741,15 +923,25 @@ internal class HeuristicFormCheckSession(
             return snapshot(FormCheckStartState.STARTED, emptySet())
         }
 
-        when (val event = requireNotNull(detector).accept(timestampMs, detectorValue)) {
+        val repDetector = requireNotNull(detector)
+        val event = repDetector.accept(timestampMs, detectorValue)
+        // The guard watches the same excursion the count comes from — accumulation runs only
+        // while one is armed, so a stretch between repetitions is never reported as movement
+        // during one. The completing frame sits at the top and is deliberately outside.
+        if (spec.guard != null && repDetector.inExcursion) {
+            accumulateGuard(frame, spec.guard)
+        }
+        when (event) {
             is RepCycleEvent.Completed -> {
                 repCount += 1
                 val extreme = spec.fromDetector(event.minimumAngleDegrees)
                 val observed =
                     "$vertexSubject ${extreme.roundToInt()}도까지 ${spec.vocabulary.reachedVerb}"
-                headline = baselineNote(event.minimumAngleDegrees)
-                    ?.let { note -> "$observed · $note" }
-                    ?: observed
+                headline = listOfNotNull(
+                    observed,
+                    baselineNote(event.minimumAngleDegrees),
+                    takeGuardObservation(),
+                ).joinToString(" · ")
                 recordBaseline(event.minimumAngleDegrees)
                 // Null for sealed exercises: the observation stands without urging more range.
                 suggestion = if (
@@ -766,15 +958,21 @@ internal class HeuristicFormCheckSession(
                 headline = "${spec.driver.vertex.label} ${spec.vocabulary.shortfallPhrase} " +
                     "횟수로 세지 않았어요"
                 suggestion = spec.attemptHint
+                guardWindowDegrees = null
             }
 
             is RepCycleEvent.TooFastAttempt -> {
                 uncountedAttemptCount += 1
                 headline = "동작이 빨라 횟수로 세지 않았어요"
                 suggestion = "조금 더 천천히 움직여볼까요"
+                guardWindowDegrees = null
             }
 
-            RepCycleEvent.None -> Unit
+            RepCycleEvent.None -> {
+                // A max-duration abort ends the window without an event; whatever the guard saw
+                // belongs to a movement that was never counted.
+                if (!repDetector.inExcursion) guardWindowDegrees = null
+            }
         }
         return snapshot(FormCheckStartState.STARTED, emptySet())
     }
@@ -822,6 +1020,36 @@ internal class HeuristicFormCheckSession(
     private fun invalidateDetectors() {
         detector?.invalidate()
         holdDetector?.invalidate()
+        guardWindowDegrees = null
+    }
+
+    /**
+     * Feeds one frame's guard reading into the excursion window, on the driver's own side.
+     *
+     * The guard reads the side the count is attributed to — mixing a left shoulder into a right
+     * arm's repetition would splice two people's worth of anatomy into one sentence. If that
+     * side's guard chain is not credible this frame, the frame contributes nothing; if no frame
+     * contributes by the end, the guard abstains entirely.
+     */
+    private fun accumulateGuard(frame: PoseFrame, guard: FormCheckGuard) {
+        val side = activeSide ?: return
+        val sample = FormCheckGeometry.sideSample(frame, side, guard.driver) ?: return
+        val angle = sample.includedAngleDegrees
+        val current = guardWindowDegrees
+        guardWindowDegrees = when {
+            current == null -> angle
+            guard.extreme == FormCheckGuardExtreme.MAX -> maxOf(current, angle)
+            else -> minOf(current, angle)
+        }
+    }
+
+    /** The completed excursion's guard observation, or null; always resets the window. */
+    private fun takeGuardObservation(): String? {
+        val guard = spec.guard ?: return null
+        val statistic = guardWindowDegrees
+        guardWindowDegrees = null
+        if (statistic == null || !guard.crossed(statistic)) return null
+        return guard.crossedObservation.format(statistic.roundToInt())
     }
 
     /** Keeps only the set's opening repetitions; later ones are compared, never averaged in. */

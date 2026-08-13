@@ -113,6 +113,21 @@ internal class FormCheckDriver(
             first = FormCheckJointGroup.ELBOW,
             second = FormCheckJointGroup.HIP,
         )
+
+        /**
+         * shoulder-hip-ankle. The torso line against the legs — lean, not hinge depth.
+         *
+         * Coarser than the hip chain because the ankle is far from the action, which is exactly
+         * why it reads whole-torso lean-back on a rowing stroke: the dataset's "no excessive
+         * lean-back" condition separates on this chain at 0.800 balanced through the app's own
+         * model. It cannot see spine curvature — a rounded back and a straight hinge look the
+         * same — so it guards lean, never posture.
+         */
+        val TRUNK = FormCheckDriver(
+            vertex = FormCheckJointGroup.HIP,
+            first = FormCheckJointGroup.SHOULDER,
+            second = FormCheckJointGroup.ANKLE,
+        )
     }
 }
 
