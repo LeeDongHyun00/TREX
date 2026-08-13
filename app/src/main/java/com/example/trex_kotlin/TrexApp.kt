@@ -47,6 +47,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -55,6 +56,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -67,18 +69,62 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
+import com.example.trex_kotlin.store.TrexSnapshot
+import com.example.trex_kotlin.store.rememberTrexStore
+import com.example.trex_kotlin.store.toPersistedHistory
+import com.example.trex_kotlin.store.toPersistedPlan
+import com.example.trex_kotlin.store.toWorkoutHistory
+import com.example.trex_kotlin.store.toWorkoutPlan
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.withContext
+
+/**
+ * How long an edit rests before it reaches the disk. Long enough that a drag-reorder or a held
+ * stepper writes once rather than once per frame, short enough that an ordinary tap is durable
+ * before the user can reach the system back gesture.
+ *
+ * Nothing rides on the exact value for correctness: disposal, backgrounding and session completion
+ * each flush unconditionally, so the only way to lose an edit inside this window is a kill that
+ * runs no lifecycle callback at all.
+ */
+private const val PERSIST_DEBOUNCE_MILLIS = 250L
 
 @Composable
 fun TrexApp() {
+    val store = rememberTrexStore()
+    // One synchronous, sub-kilobyte read on the first composition, deliberately. The three gate
+    // flags below decide which screen renders at all, so loading them asynchronously would show
+    // the guide or login screen for a frame and then jump. Re-runs on a fresh composition, which
+    // is what serves rotation: every mutation is written through, so the reload is current.
+    val restored = remember(store) { store.load() }
+
     var selectedTab by rememberSaveable { mutableStateOf(TrexTab.Home) }
-    var guideDone by rememberSaveable { mutableStateOf(false) }
-    var loggedIn by rememberSaveable { mutableStateOf(false) }
-    var onboarded by rememberSaveable { mutableStateOf(false) }
+    var guideDone by rememberSaveable { mutableStateOf(restored?.guideDone == true) }
+    var loggedIn by rememberSaveable { mutableStateOf(restored?.loggedIn == true) }
+    var onboarding by remember { mutableStateOf(restored?.onboarding) }
+    // Derived rather than stored beside its payload. The flag and the answers are set by the same
+    // callback and can never legitimately disagree, but two separate sources could: a saveable
+    // flag restores from the instance-state bundle while the answers restore from disk, so a
+    // bundle could assert "onboarded" over answers that were never written. The next snapshot
+    // would then cement `onboarded = true, onboarding = null` — and because the screen never shows
+    // again, the body metrics could never be collected a second time. One source of truth removes
+    // the whole class of failure instead of reconciling it.
+    val onboarded = onboarding != null
     var sessionIndex by rememberSaveable { mutableIntStateOf(-1) }
     var sessionDone by rememberSaveable { mutableStateOf(false) }
-    var workoutPlan by remember { mutableStateOf(todayPlan) }
-    var workoutHistory by remember { mutableStateOf(seedWorkoutHistory(workoutPlan)) }
+    var workoutPlan by remember {
+        mutableStateOf(restored?.plan?.toWorkoutPlan()?.takeIf { it.isNotEmpty() } ?: todayPlan)
+    }
+    // Starts empty rather than seeded. `seedWorkoutHistory` fabricates a week by rotating today's
+    // plan over past dates; once history is durable, the first finished session would write that
+    // fiction to disk as the user's own record. An empty history screen is the honest first launch.
+    var workoutHistory by remember {
+        mutableStateOf(restored?.history?.toWorkoutHistory() ?: emptyList())
+    }
     var sessionElapsedSeconds by rememberSaveable { mutableIntStateOf(0) }
     var sessionPaused by rememberSaveable { mutableStateOf(false) }
     var sessionNotice by rememberSaveable { mutableStateOf<String?>(null) }
@@ -119,6 +165,50 @@ fun TrexApp() {
         selectedTab = TrexTab.Home
     }
 
+    fun currentSnapshot(): TrexSnapshot = TrexSnapshot(
+        guideDone = guideDone,
+        loggedIn = loggedIn,
+        // Written from the derived value, so the file can never carry the inconsistent pair.
+        onboarded = onboarded,
+        onboarding = onboarding,
+        plan = workoutPlan.toPersistedPlan(),
+        history = workoutHistory.toPersistedHistory(),
+    )
+
+    // Every ordinary edit is caught here rather than at each call site: `snapshotFlow` records the
+    // state reads made inside `currentSnapshot()`, so the five plan-edit paths in the workout list
+    // and the history write in `advanceSession` are all covered without being touched. The debounce
+    // stops a drag-reorder from writing once per frame; the flow conflates identical snapshots, so
+    // a recomposition that changes nothing persists nothing.
+    LaunchedEffect(store) {
+        snapshotFlow { currentSnapshot() }
+            .drop(1)
+            .collectLatest { snapshot ->
+                delay(PERSIST_DEBOUNCE_MILLIS)
+                withContext(Dispatchers.IO) { store.save(snapshot) }
+            }
+    }
+
+    // The flush that actually has to hold, and the reason it is synchronous rather than a
+    // coroutine. A configuration change runs pause, stop and destroy inside a single main-thread
+    // message: no frame is drawn between them, so a lifecycle observer's state write never causes
+    // a recomposition and any coroutine launched from one never gets to start. `NonCancellable`
+    // does not help — it protects a block that has already begun, and this one never would. An
+    // `onDispose` body is the last code guaranteed to run, so the write happens there, on the main
+    // thread. The payload is a few hundred bytes and the matching load is synchronous too.
+    DisposableEffect(store) {
+        onDispose { store.save(currentSnapshot()) }
+    }
+
+    // Backgrounding without disposal — home button, screen off — never reaches `onDispose`, and it
+    // is the likeliest moment for the process to be killed. This is the coroutine case where the
+    // frame does run, so NonCancellable is meaningful here.
+    LaunchedEffect(sessionDone, appPaused) {
+        if (sessionDone || appPaused) {
+            withContext(NonCancellable + Dispatchers.IO) { store.save(currentSnapshot()) }
+        }
+    }
+
     LaunchedEffect(sessionIndex, sessionDone) {
         while (sessionIndex >= 0 && !sessionDone) {
             delay(1000)
@@ -144,7 +234,7 @@ fun TrexApp() {
             when {
                 !route.guideDone -> GuideBookScreen(onLogin = { guideDone = true })
                 !route.loggedIn -> LoginScreen(onLogin = { loggedIn = true })
-                !route.onboarded -> OnboardingScreen(onDone = { onboarded = true })
+                !route.onboarded -> OnboardingScreen(onDone = { answers -> onboarding = answers })
                 route.sessionDone -> SessionCompleteScreen(
                     onDone = {
                         sessionDone = false
@@ -153,9 +243,16 @@ fun TrexApp() {
                 )
 
                 route.sessionIndex >= 0 -> {
-                    val workout = workoutPlan[route.sessionIndex]
+                    // The session cursor is saveable while the plan is restored from disk, so a
+                    // cursor recovered from an instance-state bundle can outlive the plan it
+                    // indexed — a shorter restored plan would make the raw subscript that used to
+                    // be here throw on the launch path. Falling out of the session is the only
+                    // sane recovery.
+                    val workout = workoutPlan.getOrNull(route.sessionIndex)
                     val nextWorkout = workoutPlan.getOrNull(route.sessionIndex + 1)
-                    if (workout.canUsePostureSession()) {
+                    if (workout == null) {
+                        LaunchedEffect(Unit) { exitSession() }
+                    } else if (workout.canUsePostureSession()) {
                         PostureSessionScreen(
                             workout = workout,
                             index = route.sessionIndex,

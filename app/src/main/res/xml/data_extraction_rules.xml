@@ -5,15 +5,23 @@
 -->
 <data-extraction-rules>
     <cloud-backup>
-        <!-- TODO: Use <include> and <exclude> to control what is backed up.
-        <include .../>
-        <exclude .../>
+        <!--
+           The local store holds what onboarding collected: goal, schedule, and body metrics
+           (gender, height, weight, age), plus the workout log. Copying that to a cloud account
+           would send off the device the one thing this app never sends anywhere.
+
+           The whole directory, not the file: a save writes through a sibling .tmp holding an
+           identical copy, and a path entry matches by exact name, so naming only the file would
+           leave a crash-orphaned temp copy backed up.
         -->
+        <exclude
+            domain="file"
+            path="trex" />
     </cloud-backup>
     <!--
-    <device-transfer>
-        <include .../>
-        <exclude .../>
-    </device-transfer>
+       Device-to-device transfer is deliberately left unrestricted: it moves data straight to the
+       user's replacement phone without a server in the middle, so a phone upgrade keeps the log
+       rather than silently starting over. The asymmetry with cloud-backup above is the point.
     -->
+    <device-transfer />
 </data-extraction-rules>

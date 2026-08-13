@@ -7,7 +7,16 @@
 -->
 <full-backup-content>
     <!--
-   <include domain="sharedpref" path="."/>
-   <exclude domain="sharedpref" path="device.xml"/>
--->
+       The local store holds what onboarding collected: goal, schedule, and body metrics
+       (gender, height, weight, age), plus the workout log. This app keeps everything on the
+       device, so letting auto-backup copy that to a cloud account would quietly break the one
+       promise it makes. Excluded here for pre-31 devices and in data_extraction_rules.xml for 31+.
+
+       The whole directory, not the file: a save writes through a sibling .tmp holding an identical
+       copy, and a path entry matches by exact name, so naming only the file would leave a
+       crash-orphaned temp copy backed up.
+    -->
+    <exclude
+        domain="file"
+        path="trex" />
 </full-backup-content>

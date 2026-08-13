@@ -77,6 +77,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.trex_kotlin.store.OnboardingAnswers
 import kotlinx.coroutines.delay
 
 private val loginAnimationFrames = intArrayOf(
@@ -2055,7 +2056,7 @@ private fun selectedDaysText(dayMask: Int, days: List<String>): String =
     days.filterIndexed { index, _ -> dayMask and (1 shl index) != 0 }.joinToString(" · ")
 
 @Composable
-fun OnboardingScreen(onDone: () -> Unit) {
+internal fun OnboardingScreen(onDone: (OnboardingAnswers) -> Unit) {
     val context = LocalContext.current
     var step by rememberSaveable { mutableIntStateOf(0) }
     var selectedGoal by rememberSaveable { mutableStateOf<String?>(null) }
@@ -2083,6 +2084,25 @@ fun OnboardingScreen(onDone: () -> Unit) {
         else -> bodyCanProceed
     }
 
+    /**
+     * Everything this flow asked for, handed to the caller instead of discarded.
+     *
+     * The two nullable selections are unwrapped rather than propagated: reaching either exit path
+     * means `canNext` already passed steps 0 and 2, so a null here would be a bug in the step
+     * machine, and carrying the nullability outward would only spread it.
+     */
+    fun collectedAnswers(): OnboardingAnswers = OnboardingAnswers(
+        goalId = selectedGoal.orEmpty(),
+        dayMask = dayMask,
+        placeId = selectedPlace.orEmpty(),
+        bodyweightOnly = bodyweightOnly,
+        equipmentMask = equipmentMask,
+        gender = selectedGender,
+        height = heightInput,
+        weight = weightInput,
+        age = ageInput,
+    )
+
     fun goBack() {
         if (step == 3 && bodyInputStep > 0) {
             bodyInputStep -= 1
@@ -2098,7 +2118,7 @@ fun OnboardingScreen(onDone: () -> Unit) {
         }
         when (bodyInputStep) {
             0, 1, 2 -> bodyInputStep += 1
-            else -> onDone()
+            else -> onDone(collectedAnswers())
         }
     }
 
@@ -2209,7 +2229,7 @@ fun OnboardingScreen(onDone: () -> Unit) {
                     },
                     onAverageAge = {
                         ageInput = "30"
-                        onDone()
+                        onDone(collectedAnswers())
                     },
                 )
             }
