@@ -26,7 +26,7 @@ internal object HeuristicFormCheckDeclaration {
     const val TRACK_ID: String = "trex.heuristic-form-check.beta.v1"
 
     const val POLICY_DOCUMENT_SHA256: String =
-        "37b8526a7fa9592fdbcc1cd5a60157be098f8ae560aaa30d73d2c6bdeecf3659"
+        "058d7a85c1e810e142250cd0156be58205fa825b244277a84f797ac89a6cac85"
 
     const val POLICY_DOCUMENT_PATH: String = "docs/pose-heuristic-form-check.v1.md"
 
@@ -48,6 +48,53 @@ internal object HeuristicFormCheckDeclaration {
     const val TOGGLE_LABEL: String = "자세 체크 베타 · 관찰 안내"
     const val ROW_CAPTION: String = "자세 체크는 휴리스틱 베타 · 정식 판정 준비 중"
     const val PILL_LABEL: String = "자세 체크 베타"
+
+    /**
+     * What the track says while it is not counting.
+     *
+     * Split from the opening guidance because the two mean different things to somebody already
+     * in position: "…이 화면에 보이게 서 주세요" asks for a setup they have completed, whereas what
+     * actually happened is that the camera lost the joint and the count stopped. Naming that is
+     * how policy §3.1's abstention becomes something the user can see rather than a silence they
+     * read as a crash.
+     */
+    const val PAUSED_PERSON: String = "지금은 화면에서 사람을 놓쳐서 세지 않고 있어요"
+    const val PAUSED_JOINT_PREFIX: String = "지금은 "
+    const val PAUSED_JOINT_SUFFIX: String = " 잘 안 보여서 세지 않고 있어요"
+    const val PAUSED_RESUME: String = "다시 보이면 이어서 셀게요"
+
+    /**
+     * The one-time framing shown before the first set of a form-check session.
+     *
+     * Says what the surface is before it says anything about a body, so the drawing on screen is
+     * read as an instrument rather than as an opinion.
+     */
+    const val INTRO_TITLE: String = "카메라가 관절 각도를 재서 보여드려요"
+    const val INTRO_MEASURES_PREFIX: String = "이 운동은 "
+    const val INTRO_MEASURES_SUFFIX: String = " 각도를 봐요"
+    const val INTRO_SILENCE: String = "그 관절이 안 보이면 세지 않고, 그렇다고 알려드려요"
+    const val INTRO_NOT_A_VERDICT: String = "잰 값을 그대로 보여줄 뿐 판단은 하지 않아요"
+    const val INTRO_DISMISS: String = "알겠어요"
+
+    /** The rest-period review. Read standing still, at arm's length — the one legible moment. */
+    const val SUMMARY_TITLE: String = "이번 세트에서 카메라가 본 것"
+    const val SUMMARY_EMPTY: String = "이번 세트에서는 관찰된 움직임이 없어요"
+    const val SUMMARY_COUNT_SUFFIX: String = "회 세었어요"
+    const val SUMMARY_HOLD_SUFFIX: String = "초까지 유지했어요"
+
+    /**
+     * Where the exercise's angle constants came from, in a sentence rather than a badge.
+     *
+     * Policy §4 requires the provenance of each constant to reach the screen, and §4.5 keeps it
+     * per exercise. Stated plainly here, including the uncalibrated case: a mark that only ever
+     * appears when the evidence is good reads as advertising.
+     */
+    const val PROVENANCE_FITTED: String = "이 각도 기준은 AI Hub 자세 이미지로 맞춘 값이에요"
+    const val PROVENANCE_LITERATURE: String = "이 각도 기준은 공개된 운동 표준을 인용한 값이에요"
+    const val PROVENANCE_DEFAULT: String = "이 각도 기준은 아직 맞춰보지 않은 기본값이에요"
+
+    /** Non-text descriptions for a screen reader, which the drawing alone cannot carry. */
+    const val OVERLAY_DESCRIPTION: String = "카메라가 지금 재고 있는 관절"
 
     /** Every claim this track could conceivably make, all withheld. */
     val claims: Map<String, Boolean> = Collections.unmodifiableMap(
@@ -171,6 +218,14 @@ internal enum class FormCheckThresholdProvenance {
      */
     val requiresDataAttribution: Boolean
         get() = this == MEDIAPIPE_NATIVE_FIT_V2
+
+    /** The same distinction stated to the user, rather than encoded in a badge they must decode. */
+    val note: String
+        get() = when (this) {
+            HEURISTIC_DEFAULT -> HeuristicFormCheckDeclaration.PROVENANCE_DEFAULT
+            LITERATURE_STANDARD -> HeuristicFormCheckDeclaration.PROVENANCE_LITERATURE
+            MEDIAPIPE_NATIVE_FIT_V2 -> HeuristicFormCheckDeclaration.PROVENANCE_FITTED
+        }
 }
 
 /**
@@ -759,6 +814,17 @@ internal class FormCheckUiState internal constructor(
     /** Excursions reported but not counted, whatever the truthful reason (depth or speed). */
     val uncountedAttemptCount: Int,
     val startState: FormCheckStartState,
+    /**
+     * Whether this set ever reached [FormCheckStartState.STARTED].
+     *
+     * Falling back to a waiting state after that is not a setup problem but an abstention, and
+     * the two need different words: "서 주세요" tells someone who is already in position to do
+     * something they have already done, while what actually happened is that the track stopped
+     * counting. Sticky for the life of the set.
+     */
+    val hasEverStarted: Boolean,
+    /** This set's completed excursions, oldest first. Memory only, discarded with the set. */
+    repMarks: List<FormCheckRepMark>,
     missingJoints: Set<FormCheckJointGroup>,
     /**
      * The side view reads this exercise's own driver joint most directly; anything else still
@@ -773,8 +839,17 @@ internal class FormCheckUiState internal constructor(
     val missingJoints: Set<FormCheckJointGroup> =
         Collections.unmodifiableSet(LinkedHashSet(missingJoints.sortedBy { it.ordinal }))
 
+    val repMarks: List<FormCheckRepMark> = Collections.unmodifiableList(ArrayList(repMarks))
+
     val started: Boolean
         get() = startState == FormCheckStartState.STARTED
+
+    /**
+     * The track was counting and is not counting now. Distinguished from the opening states so
+     * the surface can say the observation paused instead of repeating setup instructions.
+     */
+    val observationPaused: Boolean
+        get() = hasEverStarted && startState != FormCheckStartState.STARTED
 
     init {
         require(repCount >= 0)
@@ -782,6 +857,9 @@ internal class FormCheckUiState internal constructor(
         require(holdSeconds >= 0)
         require(startState != FormCheckStartState.STARTED || this.missingJoints.isEmpty()) {
             "A started exercise cannot still be missing joints"
+        }
+        require(startState != FormCheckStartState.STARTED || hasEverStarted) {
+            "A started exercise has started"
         }
     }
 
@@ -791,6 +869,11 @@ internal class FormCheckUiState internal constructor(
         return repCount == other.repCount &&
             uncountedAttemptCount == other.uncountedAttemptCount &&
             startState == other.startState &&
+            hasEverStarted == other.hasEverStarted &&
+            // Size rather than contents: marks are immutable and only ever appended, so the size
+            // moves whenever the list does. Leaving it out would let the surface's `!=` guard
+            // swallow a new repetition's mark.
+            repMarks.size == other.repMarks.size &&
             missingJoints == other.missingJoints &&
             sideViewPreferred == other.sideViewPreferred &&
             headline == other.headline &&
@@ -802,6 +885,8 @@ internal class FormCheckUiState internal constructor(
         var result = repCount
         result = 31 * result + uncountedAttemptCount
         result = 31 * result + startState.hashCode()
+        result = 31 * result + hasEverStarted.hashCode()
+        result = 31 * result + repMarks.size
         result = 31 * result + missingJoints.hashCode()
         result = 31 * result + sideViewPreferred.hashCode()
         result = 31 * result + (headline?.hashCode() ?: 0)
@@ -850,6 +935,21 @@ internal class HeuristicFormCheckSession(
     private var suggestion: String? = null
     private var activeSide: FormCheckBodySide? = null
     private var sideViewPreferred: Boolean = false
+    private var hasEverStarted: Boolean = false
+    private var longestHoldMs: Long = 0L
+    private var lastAcceptedTimestampMs: Long? = null
+    private val repMarks = ArrayList<FormCheckRepMark>(MARK_CAPACITY)
+
+    /**
+     * What the surface may draw on the body this frame, or null while the track abstains.
+     *
+     * Deliberately not part of [FormCheckUiState]: it moves every frame, and the surface compares
+     * snapshots before re-rendering. Null is load-bearing — every return path that stops
+     * evaluating clears it, which is how policy §3.1 ("판정 불가를 다른 값으로 위장하지 않는다")
+     * becomes a property of this class rather than a rule the drawing code has to remember.
+     */
+    var liveReading: FormCheckLiveReading? = null
+        private set
 
     /**
      * The guard chain's extreme over the excursion in flight, or null when nothing credible has
@@ -881,6 +981,17 @@ internal class HeuristicFormCheckSession(
         frame: PoseFrame,
     ): FormCheckUiState {
         sideViewPreferred = !lateralViewQualified
+        // Policy §3.1 lists a backwards timestamp among the abstentions, and each detector already
+        // discards its own excursion on one. Enforcing it here as well is what makes that clause
+        // true of the whole session: the detectors' internal invalidation cannot clear a live
+        // reading the session publishes afterwards, so without this the surface would keep drawing
+        // an angle from a frame the engine had just refused.
+        val previous = lastAcceptedTimestampMs
+        if (previous != null && timestampMs <= previous) {
+            invalidateDetectors()
+            return snapshot(FormCheckStartState.WAITING_FOR_JOINTS, spec.requiredJoints)
+        }
+        lastAcceptedTimestampMs = timestampMs
         if (!hasPrimaryPersonLock) {
             invalidateDetectors()
             return snapshot(FormCheckStartState.WAITING_FOR_PERSON, spec.requiredJoints)
@@ -895,6 +1006,7 @@ internal class HeuristicFormCheckSession(
             invalidateDetectors()
             return snapshot(FormCheckStartState.WAITING_FOR_JOINTS, spec.requiredJoints)
         }
+        hasEverStarted = true
 
         val detectorValue = spec.toDetector(sample.includedAngleDegrees)
         holdDetector?.let { hold ->
@@ -911,6 +1023,9 @@ internal class HeuristicFormCheckSession(
 
                 is HoldEvent.Released -> {
                     headline = if (event.countedAsHold) {
+                        // Banked only on release, never while holding: a stretch abstention would
+                        // later discard must not already be in the set's summary.
+                        longestHoldMs = maxOf(longestHoldMs, event.heldMs)
                         "${(event.heldMs / 1_000L)}초 유지했어요"
                     } else {
                         "자세가 잠깐 풀렸어요"
@@ -920,6 +1035,15 @@ internal class HeuristicFormCheckSession(
 
                 HoldEvent.None -> Unit
             }
+            // A hold has no excursion, so its reading carries none: the surface draws the angle
+            // the body is holding and nothing about a movement that is not happening.
+            liveReading = FormCheckLiveReading(
+                angleDegrees = sample.includedAngleDegrees,
+                chainConfidence = sample.chainConfidence,
+                side = sample.side,
+                inExcursion = hold.holding,
+                excursionExtremeDegrees = null,
+            )
             return snapshot(FormCheckStartState.STARTED, emptySet())
         }
 
@@ -937,12 +1061,22 @@ internal class HeuristicFormCheckSession(
                 val extreme = spec.fromDetector(event.minimumAngleDegrees)
                 val observed =
                     "$vertexSubject ${extreme.roundToInt()}도까지 ${spec.vocabulary.reachedVerb}"
+                // Both read the baseline before this repetition joins it, so the comparison is
+                // against the set's opening repetitions rather than against itself.
+                val relation = baselineRelation(event.minimumAngleDegrees)
+                val guardCrossing = takeGuardCrossing()
                 headline = listOfNotNull(
                     observed,
                     baselineNote(event.minimumAngleDegrees),
-                    takeGuardObservation(),
+                    guardCrossing?.let { spec.guard?.crossedObservation?.format(it) },
                 ).joinToString(" · ")
                 recordBaseline(event.minimumAngleDegrees)
+                appendMark(
+                    kind = FormCheckRepEventKind.COUNTED,
+                    extremeDegrees = extreme,
+                    baselineRelation = relation,
+                    guardDegrees = guardCrossing,
+                )
                 // Null for sealed exercises: the observation stands without urging more range.
                 suggestion = if (
                     event.minimumAngleDegrees <= spec.toDetector(spec.reachedAngleDegrees)
@@ -959,6 +1093,12 @@ internal class HeuristicFormCheckSession(
                     "횟수로 세지 않았어요"
                 suggestion = spec.attemptHint
                 guardWindowDegrees = null
+                appendMark(
+                    kind = FormCheckRepEventKind.SHALLOW,
+                    extremeDegrees = spec.fromDetector(event.minimumAngleDegrees),
+                    baselineRelation = FormCheckBaselineRelation.SAME,
+                    guardDegrees = null,
+                )
             }
 
             is RepCycleEvent.TooFastAttempt -> {
@@ -966,6 +1106,12 @@ internal class HeuristicFormCheckSession(
                 headline = "동작이 빨라 횟수로 세지 않았어요"
                 suggestion = "조금 더 천천히 움직여볼까요"
                 guardWindowDegrees = null
+                appendMark(
+                    kind = FormCheckRepEventKind.TOO_FAST,
+                    extremeDegrees = spec.fromDetector(event.minimumAngleDegrees),
+                    baselineRelation = FormCheckBaselineRelation.SAME,
+                    guardDegrees = null,
+                )
             }
 
             RepCycleEvent.None -> {
@@ -974,6 +1120,13 @@ internal class HeuristicFormCheckSession(
                 if (!repDetector.inExcursion) guardWindowDegrees = null
             }
         }
+        liveReading = FormCheckLiveReading(
+            angleDegrees = sample.includedAngleDegrees,
+            chainConfidence = sample.chainConfidence,
+            side = sample.side,
+            inExcursion = repDetector.inExcursion,
+            excursionExtremeDegrees = repDetector.excursionExtremeDegrees?.let(spec::fromDetector),
+        )
         return snapshot(FormCheckStartState.STARTED, emptySet())
     }
 
@@ -1005,6 +1158,8 @@ internal class HeuristicFormCheckSession(
         repCount = repCount,
         uncountedAttemptCount = uncountedAttemptCount,
         startState = startState,
+        hasEverStarted = hasEverStarted,
+        repMarks = repMarks,
         missingJoints = if (startState == FormCheckStartState.STARTED) emptySet() else missingJoints,
         sideViewPreferred = sideViewPreferred,
         headline = headline,
@@ -1016,11 +1171,60 @@ internal class HeuristicFormCheckSession(
     fun initialSnapshot(): FormCheckUiState =
         snapshot(FormCheckStartState.WAITING_FOR_CAMERA, spec.requiredJoints)
 
-    /** Whichever detector this cadence uses; abstention is identical for both. */
+    /**
+     * What this set amounted to, for the rest period to show.
+     *
+     * Built from what was already reported: the marks and the last headline, never from a
+     * repetition or a hold still in flight. Nothing here is stored — the host keeps the instance
+     * for as long as the set lasts and drops it with the set.
+     */
+    fun summary(): FormCheckSetSummary = FormCheckSetSummary(
+        measuredJointLabel = spec.driver.vertex.label,
+        cadence = spec.cadence,
+        repCount = repCount,
+        holdSeconds = (longestHoldMs / 1_000L).toInt(),
+        marks = repMarks,
+        lastObservation = headline,
+        provenanceNote = spec.provenance.note,
+        requiresDataAttribution = spec.requiresDataAttribution,
+    )
+
+    /**
+     * Whichever detector this cadence uses; abstention is identical for both.
+     *
+     * Clearing [liveReading] here is the single choke point that keeps an unobserved joint from
+     * leaving its last angle drawn on the body. Every path in [accept] that gives up on a frame
+     * comes through here.
+     */
     private fun invalidateDetectors() {
         detector?.invalidate()
         holdDetector?.invalidate()
         guardWindowDegrees = null
+        liveReading = null
+    }
+
+    /**
+     * Records one completed excursion. Only the three reported events reach this: an excursion
+     * discarded by abstention or by the duration ceiling emits nothing, so nothing is banked for
+     * a movement the track did not observe to the end.
+     */
+    private fun appendMark(
+        kind: FormCheckRepEventKind,
+        extremeDegrees: Double,
+        baselineRelation: FormCheckBaselineRelation,
+        guardDegrees: Int?,
+    ) {
+        val observation = headline ?: return
+        if (repMarks.size >= MARK_CAPACITY) repMarks.removeAt(0)
+        repMarks.add(
+            FormCheckRepMark(
+                kind = kind,
+                extremeDegrees = extremeDegrees.roundToInt().coerceIn(0, 180),
+                baselineRelation = baselineRelation,
+                guardDegrees = guardDegrees,
+                observation = observation,
+            ),
+        )
     }
 
     /**
@@ -1043,13 +1247,21 @@ internal class HeuristicFormCheckSession(
         }
     }
 
-    /** The completed excursion's guard observation, or null; always resets the window. */
-    private fun takeGuardObservation(): String? {
+    /**
+     * The completed excursion's guard reading in whole degrees when it crossed the limit, or null;
+     * always resets the window.
+     *
+     * The number rather than the sentence, because the surface needs both: the sentence goes into
+     * the observation text and the number lets the drawing show which joint the reading belongs
+     * to. A null is abstention in both directions — a guard that was never observed says nothing,
+     * and one that stayed inside its limit is not news.
+     */
+    private fun takeGuardCrossing(): Int? {
         val guard = spec.guard ?: return null
         val statistic = guardWindowDegrees
         guardWindowDegrees = null
         if (statistic == null || !guard.crossed(statistic)) return null
-        return guard.crossedObservation.format(statistic.roundToInt())
+        return statistic.roundToInt().coerceIn(0, 180)
     }
 
     /** Keeps only the set's opening repetitions; later ones are compared, never averaged in. */
@@ -1058,10 +1270,14 @@ internal class HeuristicFormCheckSession(
     }
 
     /**
-     * How this repetition sat against the set's opening ones, or null when there is no baseline
-     * yet or the difference is inside what the measurement could have invented.
+     * How far this repetition sat from the set's opening ones, in detector space, or null when
+     * there is no baseline yet or the difference is inside what the measurement could have
+     * invented. A larger value is always less work.
+     *
+     * The single place the fifteen-degree floor is applied. The sentence and the mark both read
+     * it, so a surface cannot draw a difference the wording refuses to speak.
      */
-    private fun baselineNote(detectorExtreme: Double): String? {
+    private fun baselineShortfall(detectorExtreme: Double): Double? {
         if (baselineSamples.size < BASELINE_REPETITIONS) return null
         val baseline = baselineSamples.sorted().let { sorted ->
             if (sorted.size % 2 == 1) {
@@ -1070,9 +1286,27 @@ internal class HeuristicFormCheckSession(
                 (sorted[sorted.size / 2 - 1] + sorted[sorted.size / 2]) / 2.0
             }
         }
-        // Detector space: a larger value is always less work than the baseline.
         val shortfall = detectorExtreme - baseline
-        if (abs(shortfall) < BASELINE_NOTICEABLE_DEGREES) return null
+        return shortfall.takeIf { abs(it) >= BASELINE_NOTICEABLE_DEGREES }
+    }
+
+    /** The same comparison as [baselineNote], quantised for a surface that draws it. */
+    private fun baselineRelation(detectorExtreme: Double): FormCheckBaselineRelation {
+        val shortfall = baselineShortfall(detectorExtreme)
+            ?: return FormCheckBaselineRelation.SAME
+        return if (shortfall > 0) {
+            FormCheckBaselineRelation.BELOW
+        } else {
+            FormCheckBaselineRelation.BEYOND
+        }
+    }
+
+    /**
+     * How this repetition sat against the set's opening ones, or null when there is no baseline
+     * yet or the difference is inside what the measurement could have invented.
+     */
+    private fun baselineNote(detectorExtreme: Double): String? {
+        val shortfall = baselineShortfall(detectorExtreme) ?: return null
         val magnitude = abs(shortfall).roundToInt()
         val phrase = if (shortfall > 0) {
             spec.vocabulary.belowBaselinePhrase
@@ -1085,6 +1319,12 @@ internal class HeuristicFormCheckSession(
     private companion object {
         /** The opening repetitions that define the set's own baseline. */
         const val BASELINE_REPETITIONS = 2
+
+        /**
+         * How many marks a set keeps. Bounded so a long set cannot grow memory without limit;
+         * the oldest go first, which is the end the surface stops showing anyway.
+         */
+        const val MARK_CAPACITY = 20
 
         /**
          * Below this the difference is not reported. A same-set self-comparison cancels the

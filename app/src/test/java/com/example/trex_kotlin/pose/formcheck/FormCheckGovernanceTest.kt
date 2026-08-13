@@ -459,6 +459,85 @@ class FormCheckGovernanceTest {
     }
 
     @Test
+    fun theSurfaceNeverDrawsAThresholdTarget() {
+        // Six exercises may never be urged toward more range (§4.2), and a target drawn only on
+        // the other twelve would make the seal visible as a missing feature. So no surface draws
+        // one at all: no reach tick, no ideal band, no notch, for any exercise. The only way such
+        // a mark could get built is by reading a threshold in the drawing code, so the threshold
+        // names are what this test forbids. It converts a rule about wording into a rule about
+        // rendering, which is the level §4.2 actually operates at.
+        val layer = mainSources().resolve("com/example/trex_kotlin/SessionFormCheckLayer.kt")
+        val text = layer.readText()
+        for (threshold in listOf(
+            "reachedAngleDegrees",
+            "repAngleDegrees",
+            "attemptAngleDegrees",
+            "restAngleDegrees",
+            "limitDegrees",
+        )) {
+            assertFalse(
+                "SessionFormCheckLayer must not render the $threshold line as a target",
+                text.contains(threshold),
+            )
+        }
+    }
+
+    @Test
+    fun theSurfaceNeverPaintsAnErrorColour() {
+        // Abstention is a statement about what the camera could observe, not a fault, and an
+        // alarm colour on a live picture of somebody's body is read as a verdict about the body.
+        // Colour on this surface encodes tense only: being measured, seen but not measured, or
+        // absent. Every state it shows is also carried by a shape or a sentence, so nothing here
+        // depends on colour alone.
+        val layer = mainSources().resolve("com/example/trex_kotlin/SessionFormCheckLayer.kt")
+        val text = layer.readText()
+        for (alarm in listOf("TrexError", "TrexWarning")) {
+            assertFalse("SessionFormCheckLayer must not paint $alarm", text.contains(alarm))
+        }
+    }
+
+    @Test
+    fun theSurfaceClearsItsLiveMirrorWhereverItClearsTheFrame() {
+        // The layer mirrors the engine's live reading into its own state so the Canvas can read it
+        // without recomposing text at frame rate. That mirror is a second copy of a value whose
+        // nullability is the abstention contract, and a camera that stops delivering frames never
+        // pushes a null through the callback — so the layer has to clear it on the same paths it
+        // clears the frame, or the last angle stays drawn on a body that has left.
+        val layer = mainSources().resolve("com/example/trex_kotlin/SessionFormCheckLayer.kt")
+        val text = layer.readText()
+        assertTrue(
+            "The layer must mirror the engine's abstention rather than its own guess",
+            text.contains("liveState.value = session.liveReading"),
+        )
+        val cleared = Regex("""frameState\.value = null\s*\n\s*liveState\.value = null""")
+        assertTrue(
+            "liveState must be cleared beside frameState",
+            cleared.containsMatchIn(text),
+        )
+        assertTrue(
+            "A paused camera stops delivering frames, so the mirror must be cleared explicitly",
+            text.contains("if (paused) liveState.value = null"),
+        )
+    }
+
+    @Test
+    fun everySurfaceThatShowsANumberAlsoShowsTheDisclosure() {
+        // The live slab is no longer the only place this track puts a count in front of somebody:
+        // the rest period shows the set's review. Both owe the same disclosure, so the count is
+        // checked wherever it is rendered rather than only where it was first written.
+        val layer = mainSources().resolve("com/example/trex_kotlin/SessionFormCheckLayer.kt")
+        val text = layer.readText()
+        for (surface in listOf("FormCheckCountSlab", "FormCheckSetSummaryCard", "FormCheckIntroCard")) {
+            val body = text.substringAfter("fun $surface", "").substringBefore("\n}\n")
+            assertTrue("$surface is missing", body.isNotEmpty())
+            assertTrue(
+                "$surface must carry the beta disclosure",
+                body.contains("BETA_DISCLOSURE"),
+            )
+        }
+    }
+
+    @Test
     fun formCheckSourcesNeverTouchTheReleaseChain() {
         val forbidden = listOf(
             "PostureCorrectionRuntimeFacade",

@@ -93,6 +93,7 @@ import com.example.trex_kotlin.camera.PoseCameraStatus
 import com.example.trex_kotlin.pose.PoseFeedback
 import com.example.trex_kotlin.pose.PoseFrame
 import com.example.trex_kotlin.pose.PoseJoint
+import com.example.trex_kotlin.pose.formcheck.FormCheckSetSummary
 import com.example.trex_kotlin.pose.release.PostureCorrectionLifecycle
 import com.example.trex_kotlin.pose.release.PostureCorrectionRuntimeFacade
 import java.util.Locale
@@ -159,6 +160,14 @@ fun TimerSessionScreen(
     var actualRecords by remember(workout.id) { mutableStateOf<List<Int>>(emptyList()) }
     var onboardingVisible by remember(workout.id) { mutableStateOf(true) }
     var noticeVisible by remember(notice) { mutableStateOf(notice != null) }
+    // Shown once per workout, before the first set: the camera surface is otherwise entirely
+    // non-verbal and nothing on it explains itself.
+    var formCheckIntroVisible by remember(workout.id) { mutableStateOf(workout.formCheck) }
+    // The set's observations, held only for as long as the set lasts. Keyed on the set number so
+    // a new set drops the previous one; nothing here reaches the workout record.
+    var formCheckSummary by remember(workout.id, currentSet) {
+        mutableStateOf<FormCheckSetSummary?>(null)
+    }
     val blocked = paused || lifecyclePaused
     val blockedState = rememberUpdatedState(blocked)
 
@@ -240,9 +249,13 @@ fun TimerSessionScreen(
         if (workout.formCheck) {
             SessionFormCheckLayer(
                 exercise = workout.exercise,
-                paused = blocked || phase == TimerPhase.Rest,
+                // Observation stops the moment the user declares the set over, so the walk back
+                // to the phone cannot be counted as part of it.
+                paused = blocked || phase == TimerPhase.Rest ||
+                    phase == TimerPhase.ActualInput || formCheckIntroVisible,
                 attemptResetKey = currentSet,
                 onAnnounce = { phrase -> feedback.speak(phrase) },
+                onSetObserved = { summary -> formCheckSummary = summary },
                 modifier = Modifier.fillMaxSize(),
             )
         } else if (workout.cameraGuide) {
@@ -264,6 +277,9 @@ fun TimerSessionScreen(
                     elapsedSeconds = elapsedSeconds,
                     muted = muted,
                     paused = blocked,
+                    // Standing still and close to the phone is the only moment the set's
+                    // observations are legible, so this is where the sentences live.
+                    formCheckSummary = formCheckSummary,
                     onToggleMute = { muted = !muted },
                     onTogglePause = { paused = !paused },
                     onSkip = onNext,
@@ -320,6 +336,21 @@ fun TimerSessionScreen(
                 postureMode = false,
                 onDone = { onboardingVisible = false },
             )
+        }
+
+        if (!onboardingVisible && formCheckIntroVisible) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.72f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                FormCheckIntroCard(
+                    exercise = workout.exercise,
+                    onDismiss = { formCheckIntroVisible = false },
+                    modifier = Modifier.padding(horizontal = 24.dp),
+                )
+            }
         }
     }
 }
@@ -663,6 +694,7 @@ private fun RestScreen(
     elapsedSeconds: Int,
     muted: Boolean,
     paused: Boolean,
+    formCheckSummary: FormCheckSetSummary? = null,
     onToggleMute: () -> Unit,
     onTogglePause: () -> Unit,
     onSkip: () -> Unit,
@@ -749,6 +781,15 @@ private fun RestScreen(
             }
 
             Spacer(Modifier.weight(1f))
+
+            formCheckSummary?.let { summary ->
+                FormCheckSetSummaryCard(
+                    summary = summary,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 12.dp),
+                )
+            }
 
             WorkoutPreviewCard(
                 title = if (movingToNextWorkout) "다음 운동" else "다음 세트",

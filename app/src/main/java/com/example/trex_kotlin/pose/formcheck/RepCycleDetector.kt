@@ -88,6 +88,14 @@ internal class RepCycleDetector(
     val inExcursion: Boolean
         get() = excursionStartMs != null
 
+    /**
+     * How far the excursion in flight has travelled so far, in the detector's space, or null when
+     * nothing is armed. Raw rather than smoothed for the same reason the completed event reports a
+     * raw minimum: the EMA lags the descent and would understate how far the movement has gone.
+     */
+    val excursionExtremeDegrees: Double?
+        get() = excursionMinRawDegrees.takeIf { inExcursion && it != Double.MAX_VALUE }
+
     fun accept(timestampMs: Long, angleDegrees: Double): RepCycleEvent {
         val previousTs = smoothedTimestampMs
         if (previousTs != null && timestampMs <= previousTs) {

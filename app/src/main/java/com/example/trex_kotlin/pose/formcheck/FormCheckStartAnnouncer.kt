@@ -73,6 +73,29 @@ internal class FormCheckStartAnnouncer(
         /** Spoken once per counted repetition: "1회", "2회", … */
         internal fun countPhrase(repCount: Int): String = "${repCount}회"
 
+        /**
+         * The count with the set's own comparison attached, when there is one worth speaking.
+         *
+         * A user standing side-on to a phone on the floor cannot read the screen, so speech is
+         * the only channel that reaches them mid-set — and the comparison against their own
+         * opening repetitions is the one thing this track can say that is both actionable and
+         * free of any norm. [FormCheckBaselineRelation.SAME] covers "no baseline yet" as well as
+         * "inside the fifteen-degree floor", and both are silences the wording already owes: the
+         * count goes out alone rather than claiming a similarity nobody measured.
+         */
+        internal fun countPhrase(
+            repCount: Int,
+            relation: FormCheckBaselineRelation,
+            vocabulary: FormCheckVocabulary,
+        ): String {
+            val clause = when (relation) {
+                FormCheckBaselineRelation.SAME -> return countPhrase(repCount)
+                FormCheckBaselineRelation.BELOW -> vocabulary.belowBaselinePhrase
+                FormCheckBaselineRelation.BEYOND -> vocabulary.beyondBaselinePhrase
+            }
+            return "${countPhrase(repCount)} · 첫 반복보다 $clause"
+        }
+
         /** "무릎이", "팔꿈치가", "엉덩이가" — the joint the side view would read more directly. */
         internal fun sideViewSubject(spec: FormCheckExercise): String =
             spec.driver.vertex.label.let { label -> label + subjectParticle(label) }
@@ -102,13 +125,59 @@ internal class FormCheckStartAnnouncer(
 internal class FormCheckCountAnnouncer {
     private var lastAnnounced = 0
 
-    fun onCount(repCount: Int, muted: Boolean = false): String? {
+    fun onCount(repCount: Int, muted: Boolean = false): String? =
+        onCount(repCount, FormCheckBaselineRelation.SAME, null, muted)
+
+    /**
+     * The count, with the set's own comparison when the latest repetition earned one.
+     *
+     * [vocabulary] is null for a caller that has no comparison to make, which keeps the bare
+     * count path identical to what it was.
+     */
+    fun onCount(
+        repCount: Int,
+        relation: FormCheckBaselineRelation,
+        vocabulary: FormCheckVocabulary?,
+        muted: Boolean,
+    ): String? {
         if (repCount <= lastAnnounced) {
             // The host resets the session per set; a smaller count is a fresh set, not a repeat.
             if (repCount < lastAnnounced) lastAnnounced = repCount
             return null
         }
         lastAnnounced = repCount
-        return if (muted) null else FormCheckStartAnnouncer.countPhrase(repCount)
+        if (muted) return null
+        return if (vocabulary == null) {
+            FormCheckStartAnnouncer.countPhrase(repCount)
+        } else {
+            FormCheckStartAnnouncer.countPhrase(repCount, relation, vocabulary)
+        }
+    }
+}
+
+/**
+ * Speaks why an excursion was not counted — once per set, on the first one.
+ *
+ * Silence is not a usable signal here: the phone may be muted, the room is loud, and an
+ * uncounted repetition then feels identical to a crash. Saying it once tells a beginner what
+ * happened; saying it every time turns an observation into nagging, which is how a track that
+ * makes no judgement starts to feel like one. The wording is the headline the engine already
+ * built, so nothing new is put in anyone's mouth.
+ */
+internal class FormCheckUncountedAnnouncer {
+    private var lastSeen = 0
+    private var spoken = false
+
+    fun onUncounted(uncountedCount: Int, phrase: String?, muted: Boolean = false): String? {
+        if (uncountedCount < lastSeen) {
+            // A fresh set: the host rebuilds the session, so the once-per-set budget resets too.
+            lastSeen = uncountedCount
+            spoken = false
+        }
+        if (uncountedCount <= lastSeen) return null
+        lastSeen = uncountedCount
+        if (spoken || muted || phrase.isNullOrBlank()) return null
+        spoken = true
+        return phrase
     }
 }

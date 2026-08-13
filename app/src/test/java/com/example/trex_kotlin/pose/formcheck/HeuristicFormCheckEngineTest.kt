@@ -1101,7 +1101,229 @@ class HeuristicFormCheckEngineTest {
         timestampMs = t,
     )
 
+    // ---- what the surface is allowed to draw ----
+
+    @Test
+    fun abstentionClearsTheLiveReadingOnEveryPath() {
+        // Policy §3.1. The surface draws the live reading on the body, so a value that survived an
+        // abstention would leave an angle glowing on a joint the camera can no longer see — the
+        // "판정 불가를 다른 값으로 위장" the clause forbids. Every giving-up path is checked, because
+        // one that forgets is invisible until somebody walks out of frame mid-set.
+        val lostLock = HeuristicFormCheckSession(FormCheckExercise.BARBELL_SQUAT)
+        lostLock.accept(0L, true, true, frameForDriver(FormCheckExercise.BARBELL_SQUAT, 170.0, 0L))
+        assertNotNull(lostLock.liveReading)
+        lostLock.accept(200L, false, true, frameForDriver(FormCheckExercise.BARBELL_SQUAT, 170.0, 200L))
+        assertNull("Losing the person lock must clear the reading", lostLock.liveReading)
+
+        val lostJoint = HeuristicFormCheckSession(FormCheckExercise.BARBELL_SQUAT)
+        lostJoint.accept(0L, true, true, frameForDriver(FormCheckExercise.BARBELL_SQUAT, 170.0, 0L))
+        assertNotNull(lostJoint.liveReading)
+        lostJoint.accept(200L, true, true, frameWithMissingGroups(setOf(FormCheckJointGroup.ANKLE)))
+        assertNull("A missing required joint must clear the reading", lostJoint.liveReading)
+
+        val belowConfidence = HeuristicFormCheckSession(FormCheckExercise.BARBELL_SQUAT)
+        belowConfidence.accept(0L, true, true, frameForDriver(FormCheckExercise.BARBELL_SQUAT, 170.0, 0L))
+        assertNotNull(belowConfidence.liveReading)
+        belowConfidence.accept(
+            200L,
+            true,
+            true,
+            frameWithChains(
+                kneeAngleDegrees = 170.0,
+                hipAngleDegrees = 175.0,
+                elbowAngleDegrees = 175.0,
+                timestampMs = 200L,
+                confidence = 0.54,
+            ),
+        )
+        assertNull("A chain under the confidence floor must clear the reading", belowConfidence.liveReading)
+
+        val reversed = HeuristicFormCheckSession(FormCheckExercise.BARBELL_SQUAT)
+        reversed.accept(400L, true, true, frameForDriver(FormCheckExercise.BARBELL_SQUAT, 170.0, 400L))
+        assertNotNull(reversed.liveReading)
+        reversed.accept(200L, true, true, frameForDriver(FormCheckExercise.BARBELL_SQUAT, 170.0, 200L))
+        assertNull("A backwards timestamp must clear the reading", reversed.liveReading)
+    }
+
+    @Test
+    fun repMarksQuantiseToThePolicyFloor() {
+        // Policy §4.4 silences a self-comparison under fifteen degrees because the random part of
+        // the measurement error was never measured. The mark carries the same gate as the
+        // sentence, so a surface cannot draw a difference the wording refuses to speak.
+        // The curl counts anything at or under 120 degrees, so all three comparisons below stay
+        // inside the counted band and the only thing under test is the floor itself.
+        val spec = FormCheckExercise.BARBELL_CURL
+        val inside = markRelations(spec, listOf(90.0, 90.0, 104.0))
+        assertEquals(
+            "A fourteen-degree difference is inside what the measurement could have invented",
+            FormCheckBaselineRelation.SAME,
+            inside.last(),
+        )
+
+        val outside = markRelations(spec, listOf(90.0, 90.0, 107.0))
+        assertEquals(
+            "A seventeen-degree shortfall is the set's own comparison and may be reported",
+            FormCheckBaselineRelation.BELOW,
+            outside.last(),
+        )
+
+        val deeper = markRelations(spec, listOf(90.0, 90.0, 74.0))
+        assertEquals(FormCheckBaselineRelation.BEYOND, deeper.last())
+
+        // The opening repetitions have nothing to compare against and must not pretend otherwise.
+        assertTrue(inside.take(2).all { it == FormCheckBaselineRelation.SAME })
+    }
+
+    @Test
+    fun noMarkIsBankedForAnExcursionAbstentionDiscarded() {
+        // The same discipline the hold detector documents: time that was not observed is not time
+        // the user held anything, and a repetition that was not observed to its end is not one.
+        val spec = FormCheckExercise.PUSH_UP
+        val session = HeuristicFormCheckSession(spec)
+        var state = session.initialSnapshot()
+        for ((t, angle) in listOf(0L to 175.0, 200L to 175.0, 400L to 100.0, 600L to 100.0)) {
+            state = session.accept(t, true, true, elbowFrame(angle, t))
+        }
+        assertTrue("The excursion is in flight", state.repMarks.isEmpty())
+
+        // The person is lost at the bottom and comes back standing.
+        state = session.accept(800L, false, true, elbowFrame(100.0, 800L))
+        for ((t, angle) in listOf(1_000L to 175.0, 1_200L to 175.0, 1_400L to 175.0)) {
+            state = session.accept(t, true, true, elbowFrame(angle, t))
+        }
+
+        assertEquals("A discarded excursion leaves no mark", 0, state.repMarks.size)
+        assertEquals(0, state.repCount)
+        assertEquals(0, state.uncountedAttemptCount)
+    }
+
+    @Test
+    fun anUncountedExcursionIsMarkedWithItsTruthfulReason() {
+        val spec = FormCheckExercise.PUSH_UP
+        val session = HeuristicFormCheckSession(spec)
+        var state = session.initialSnapshot()
+        // Deep enough to arm, never deep enough to count.
+        for ((t, angle) in listOf(
+            0L to 175.0,
+            200L to 175.0,
+            400L to 138.0,
+            600L to 138.0,
+            800L to 175.0,
+            1_000L to 175.0,
+        )) {
+            state = session.accept(t, true, true, elbowFrame(angle, t))
+        }
+
+        assertEquals(1, state.repMarks.size)
+        val mark = state.repMarks.single()
+        assertEquals(FormCheckRepEventKind.SHALLOW, mark.kind)
+        // An uncounted excursion never joined the repetitions the baseline is made of.
+        assertEquals(FormCheckBaselineRelation.SAME, mark.baselineRelation)
+        assertEquals(
+            "The mark carries the same observation the surface would have shown",
+            state.headline,
+            mark.observation,
+        )
+    }
+
+    @Test
+    fun theSetSummaryReportsOnlyWhatWasObserved() {
+        val spec = FormCheckExercise.PUSH_UP
+        val session = HeuristicFormCheckSession(spec)
+        assertFalse(
+            "An untouched set has nothing to review",
+            session.summary().hasObservations,
+        )
+
+        var state = session.initialSnapshot()
+        // Three frames at the bottom, so the excursion outlasts the 500ms floor that separates a
+        // repetition from a movement too fast to be one.
+        for ((t, angle) in listOf(
+            0L to 175.0,
+            200L to 175.0,
+            400L to 100.0,
+            600L to 100.0,
+            800L to 100.0,
+            1_000L to 175.0,
+            1_200L to 175.0,
+        )) {
+            state = session.accept(t, true, true, elbowFrame(angle, t))
+        }
+
+        val summary = session.summary()
+        assertTrue(summary.hasObservations)
+        assertEquals(1, summary.repCount)
+        assertEquals(0, summary.uncountedCount)
+        assertEquals(state.repMarks.size, summary.marks.size)
+        assertEquals(spec.driver.vertex.label, summary.measuredJointLabel)
+        assertEquals(spec.provenance.note, summary.provenanceNote)
+        assertEquals(spec.requiresDataAttribution, summary.requiresDataAttribution)
+    }
+
+    @Test
+    fun theSpokenCountCarriesTheSetsOwnComparisonAndNothingElse() {
+        // Speech is the only channel that reaches somebody standing side-on to the phone, so the
+        // count carries the comparison §4.4 already permits. SAME covers both "no baseline yet"
+        // and "inside the floor", and both are silences the wording owes.
+        val vocabulary = FormCheckExercise.PUSH_UP.vocabulary
+        assertEquals(
+            "3회",
+            FormCheckStartAnnouncer.countPhrase(3, FormCheckBaselineRelation.SAME, vocabulary),
+        )
+        assertEquals(
+            "3회 · 첫 반복보다 얕아요",
+            FormCheckStartAnnouncer.countPhrase(3, FormCheckBaselineRelation.BELOW, vocabulary),
+        )
+        assertEquals(
+            "3회 · 첫 반복보다 깊어요",
+            FormCheckStartAnnouncer.countPhrase(3, FormCheckBaselineRelation.BEYOND, vocabulary),
+        )
+        // A shoulder chain is drawn in, never bent: the spoken clause follows anatomy for the
+        // same reason the written one does.
+        assertEquals(
+            "2회 · 첫 반복보다 덜 모아졌어요",
+            FormCheckStartAnnouncer.countPhrase(
+                2,
+                FormCheckBaselineRelation.BELOW,
+                FormCheckExercise.LAT_PULLDOWN.vocabulary,
+            ),
+        )
+    }
+
+    @Test
+    fun theUncountedReasonIsSpokenOncePerSet() {
+        val announcer = FormCheckUncountedAnnouncer()
+        assertNull("Nothing to say before anything happens", announcer.onUncounted(0, null))
+        assertEquals("이유", announcer.onUncounted(1, "이유"))
+        assertNull("Saying it every time would be nagging", announcer.onUncounted(2, "다른 이유"))
+        assertNull(announcer.onUncounted(3, "또 다른 이유"))
+    }
+
     // ---- fixtures ----
+
+    /** The baseline relation of each mark a run of completed repetitions produced. */
+    private fun markRelations(
+        spec: FormCheckExercise,
+        extremes: List<Double>,
+    ): List<FormCheckBaselineRelation> {
+        val session = HeuristicFormCheckSession(spec)
+        var state = session.initialSnapshot()
+        var t = 0L
+        fun step(angle: Double) {
+            state = session.accept(t, true, true, frameForDriver(spec, angle, t))
+            t += 200L
+        }
+        step(175.0)
+        step(175.0)
+        for (extreme in extremes) {
+            step(extreme)
+            step(extreme)
+            step(extreme)
+            step(175.0)
+            step(175.0)
+        }
+        return state.repMarks.map { it.baselineRelation }
+    }
 
     /** Top hold, descent to ~100 degrees, return to top; 200ms cadence beats the EMA. */
     private fun rampSequence(): List<Pair<Long, Double>> {
@@ -1113,6 +1335,8 @@ class HeuristicFormCheckEngineTest {
         repCount = 0,
         uncountedAttemptCount = 0,
         startState = FormCheckStartState.WAITING_FOR_JOINTS,
+        hasEverStarted = false,
+        repMarks = emptyList(),
         missingJoints = missing,
         sideViewPreferred = false,
         headline = null,
@@ -1123,6 +1347,8 @@ class HeuristicFormCheckEngineTest {
         repCount = 0,
         uncountedAttemptCount = 0,
         startState = FormCheckStartState.STARTED,
+        hasEverStarted = true,
+        repMarks = emptyList(),
         missingJoints = emptySet(),
         sideViewPreferred = sideViewPreferred,
         headline = null,
