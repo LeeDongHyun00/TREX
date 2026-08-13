@@ -98,6 +98,21 @@ internal class FormCheckDriver(
             first = FormCheckJointGroup.SHOULDER,
             second = FormCheckJointGroup.WRIST,
         )
+
+        /**
+         * elbow-shoulder-hip. How far the upper arm sits from the torso.
+         *
+         * This chain answers a question the elbow chain cannot: whether the arm stayed against the
+         * body. A curl's fault is the elbow drifting forward, which barely moves the elbow angle
+         * but swings this one; a pull-down's work is the upper arm closing toward the ribs, which
+         * the elbow angle also misses. The dataset's own conditions for those exercises separate
+         * on this chain and score at chance on the elbow.
+         */
+        val SHOULDER = FormCheckDriver(
+            vertex = FormCheckJointGroup.SHOULDER,
+            first = FormCheckJointGroup.ELBOW,
+            second = FormCheckJointGroup.HIP,
+        )
     }
 }
 

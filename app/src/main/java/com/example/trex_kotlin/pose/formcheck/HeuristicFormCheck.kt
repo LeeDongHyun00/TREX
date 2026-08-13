@@ -12,18 +12,20 @@ import kotlin.math.roundToInt
  * Its contract is `docs/pose-heuristic-form-check.v1.md`, pinned by [POLICY_DOCUMENT_SHA256].
  * The track computes rotation-invariant joint geometry, reports observations in observational
  * language, abstains loudly, and touches nothing in the posture-correction release chain: no
- * facade, no criterion, no stored record. The two dynamic lunges carry MediaPipe-native fits from
- * the Day05 bridge measurement (research scope, clip-level); every other exercise is an
- * uncalibrated heuristic default, and those whose overshoot has a real consequence are sealed
- * against urging more range. None of this amounts to release-chain calibration, which is why
- * every surface carries the beta disclosure and [claims] still withholds `calibrated`.
+ * facade, no criterion, no stored record. Three exercises -- the forward dynamic lunge, the
+ * standing knee-up and the lat pull-down -- carry MediaPipe-native fits that cleared a
+ * leave-one-subject-out balanced accuracy of 0.75 through the app's own model (research scope,
+ * clip-level); every other exercise is an uncalibrated heuristic default, and those whose
+ * overshoot has a real consequence are sealed against urging more range. None of this amounts to
+ * release-chain calibration, which is why every surface carries the beta disclosure and [claims]
+ * still withholds `calibrated`.
  */
 internal object HeuristicFormCheckDeclaration {
 
     const val TRACK_ID: String = "trex.heuristic-form-check.beta.v1"
 
     const val POLICY_DOCUMENT_SHA256: String =
-        "7905e8db877e518c7138d61af64278814422fd480e3d76fbd55f8566371b52ca"
+        "da8c7a16130d0f28f704a14474ae94eb82c8d2b733965ba53a2b7c64a4a324e8"
 
     const val POLICY_DOCUMENT_PATH: String = "docs/pose-heuristic-form-check.v1.md"
 
@@ -65,14 +67,17 @@ internal object HeuristicFormCheckDeclaration {
 }
 
 /**
- * Which way the measured angle travels as the movement does its work.
+ * What the user is told the measured joint did.
  *
- * A squat, a push-up and a curl all flex: the angle falls. A hip thrust, an overhead press and a
- * triceps push-down extend: the angle rises, and their resting position is the flexed one. The
- * repetition detector only understands "falls to work", so extension exercises are mirrored into
- * its space; every threshold in the policy table stays written as a real joint angle.
+ * Split from [FormCheckWorkingDirection] because the two answer different questions. The direction
+ * is a fact about the detector -- which way the number travels as the movement works -- while this
+ * is a fact about anatomy. They coincide for a knee and an elbow and come apart at the shoulder: a
+ * lat pull-down closes the elbow-shoulder-hip angle, so the detector reads flexion, but the arm is
+ * being *drawn in to the body*, and Korean "어깨가 굽혀졌어요" reads as rounded shoulders -- a posture
+ * judgement this track is not entitled to make. Binding the verb to the direction produced exactly
+ * that sentence.
  */
-internal enum class FormCheckWorkingDirection(
+internal enum class FormCheckVocabulary(
     /** Verb for a completed repetition's extreme. */
     val reachedVerb: String,
     /** Noun phrase for an excursion that never reached the rep line. */
@@ -81,18 +86,45 @@ internal enum class FormCheckWorkingDirection(
     val belowBaselinePhrase: String,
     val beyondBaselinePhrase: String,
 ) {
-    FLEXION(
+    /** A joint closing: knees, elbows, hips. */
+    BENDING(
         reachedVerb = "굽혀졌어요",
         shortfallPhrase = "굽힘이 얕아",
         belowBaselinePhrase = "얕아요",
         beyondBaselinePhrase = "깊어요",
     ),
-    EXTENSION(
+
+    /** A joint opening. */
+    STRAIGHTENING(
         reachedVerb = "펴졌어요",
         shortfallPhrase = "폄이 부족해",
         belowBaselinePhrase = "덜 펴졌어요",
         beyondBaselinePhrase = "더 펴졌어요",
     ),
+
+    /** A limb drawn in toward the torso: the shoulder chain closing on a pull. */
+    DRAWING_IN(
+        reachedVerb = "모아졌어요",
+        shortfallPhrase = "모아짐이 얕아",
+        belowBaselinePhrase = "덜 모아졌어요",
+        beyondBaselinePhrase = "더 모아졌어요",
+    ),
+}
+
+/**
+ * Which way the measured angle travels as the movement does its work.
+ *
+ * A squat, a push-up and a curl all flex: the angle falls. A hip thrust, an overhead press and a
+ * triceps push-down extend: the angle rises, and their resting position is the flexed one. The
+ * repetition detector only understands "falls to work", so extension exercises are mirrored into
+ * its space; every threshold in the policy table stays written as a real joint angle.
+ */
+internal enum class FormCheckWorkingDirection(
+    /** The words that fit this direction unless the exercise names others. */
+    val defaultVocabulary: FormCheckVocabulary,
+) {
+    FLEXION(FormCheckVocabulary.BENDING),
+    EXTENSION(FormCheckVocabulary.STRAIGHTENING),
 }
 
 /** Whether the exercise repeats a movement or holds a position. */
@@ -110,11 +142,17 @@ internal enum class FormCheckThresholdProvenance {
     HEURISTIC_DEFAULT,
 
     /**
-     * Fitted on MediaPipe output over AI Hub Day05 lateral label frames under the research-use
-     * rights manifest (`docs/mediapipe-aihub-bridge.v1.json`). Clip-level, IMAGE-mode, studio
+     * Fitted on MediaPipe output over AI Hub label frames under the research-use rights manifest
+     * (`docs/mediapipe-aihub-bridge.v1.json`, artifact version 2). Clip-level, IMAGE-mode, studio
      * domain: a beta constant, never release calibration.
+     *
+     * Supersedes the v1 fit, which assumed camera view A was the lateral one, reported raw
+     * accuracy, and drew on a single capture day. Every constant carrying this provenance was
+     * measured from the view that `docs/aihub-measurement-view.v1.json` selects for its exercise
+     * and capture day, and cleared a leave-one-subject-out **balanced** accuracy of 0.75 -- the
+     * same gate the separability survey uses, so a degenerate always-true classifier cannot pass.
      */
-    MEDIAPIPE_NATIVE_DAY05_FIT_V1,
+    MEDIAPIPE_NATIVE_FIT_V2,
     ;
 
     /**
@@ -133,14 +171,20 @@ internal enum class FormCheckThresholdProvenance {
  * mirrors the extension ones into the detector's space rather than letting the table misstate
  * which angle a user's hip actually reaches.
  *
- * The label-space fits do not transfer to MediaPipe (the bridge card measures +13 degrees of
- * systematic straightening), so calibrated entries carry the MediaPipe-native value.
+ * The label-space fits do not transfer to MediaPipe -- the bridge card measures a median absolute
+ * error of 11.2 degrees between the two, and applying a label-fitted threshold directly costs most
+ * of the separation it had -- so calibrated entries carry the MediaPipe-native value.
  */
 internal enum class FormCheckExercise(
     val exercise: AiHubExercise,
     /** Which three-joint chain this exercise reads. Determines its required joints. */
     val driver: FormCheckDriver,
     val direction: FormCheckWorkingDirection,
+    /**
+     * How this exercise's movement is described, when the direction's default words would be
+     * anatomically wrong. Null takes [FormCheckWorkingDirection.defaultVocabulary].
+     */
+    private val vocabularyOverride: FormCheckVocabulary? = null,
     val cadence: FormCheckCadence,
     /**
      * For a repetition, the resting angle it must return to before another can be armed. For a
@@ -197,8 +241,12 @@ internal enum class FormCheckExercise(
         restAngleDegrees = 150.0,
         attemptAngleDegrees = 140.0,
         repAngleDegrees = 134.0,
-        reachedAngleDegrees = 129.0,
-        provenance = FormCheckThresholdProvenance.MEDIAPIPE_NATIVE_DAY05_FIT_V1,
+        // Measured 116 degrees, LOSO balanced 0.927 over 8 subjects and 232 clips, clip-level
+        // bias 2.9 degrees. The previous 129 was fitted through camera view A on the assumption
+        // that it was the lateral one; it is a raised oblique of the studio, and the constant had
+        // absorbed that view's error rather than MediaPipe's.
+        reachedAngleDegrees = 116.0,
+        provenance = FormCheckThresholdProvenance.MEDIAPIPE_NATIVE_FIT_V2,
         rangeUrgingSealed = false,
         setupHint = "카메라 쪽 다리가 앞으로 오게 서 주세요",
         attemptHint = "카메라 쪽 다리가 앞인지 확인하고 조금 더 굽혀볼까요",
@@ -212,8 +260,14 @@ internal enum class FormCheckExercise(
         restAngleDegrees = 150.0,
         attemptAngleDegrees = 140.0,
         repAngleDegrees = 130.0,
-        reachedAngleDegrees = 123.0,
-        provenance = FormCheckThresholdProvenance.MEDIAPIPE_NATIVE_DAY05_FIT_V1,
+        // Uncalibrated, and now says so. The retired 123 came from the same discredited view-A run
+        // as the forward lunge's 129, but unlike that one it cannot be refitted: on 3D ground truth
+        // across 94 subjects this exercise's best chain separates its depth condition at 0.736
+        // balanced, under the 0.75 gate, so no measurement view was ever selected for it and
+        // MediaPipe can only do worse than labels that already fail. The forward lunge's measured
+        // 116 is borrowed as the nearest defensible prior for the same movement pattern.
+        reachedAngleDegrees = 116.0,
+        provenance = FormCheckThresholdProvenance.HEURISTIC_DEFAULT,
         rangeUrgingSealed = false,
         setupHint = "카메라 쪽 다리가 앞으로 오게 서 주세요",
         attemptHint = "카메라 쪽 다리가 앞인지 확인하고 조금 더 굽혀볼까요",
@@ -246,8 +300,11 @@ internal enum class FormCheckExercise(
         restAngleDegrees = 150.0,
         attemptAngleDegrees = 140.0,
         repAngleDegrees = 135.0,
-        reachedAngleDegrees = 125.0,
-        provenance = FormCheckThresholdProvenance.HEURISTIC_DEFAULT,
+        // Measured 103 degrees, LOSO balanced 0.789 over 16 subjects and 192 clips. The clip-level
+        // bias of 1.0 degree is the smallest in the whole bridge card: the hip is a torso joint,
+        // and those survive a phone camera far better than the limbs do.
+        reachedAngleDegrees = 103.0,
+        provenance = FormCheckThresholdProvenance.MEDIAPIPE_NATIVE_FIT_V2,
         rangeUrgingSealed = false,
         setupHint = "옆모습이 보이게 서 주세요",
         attemptHint = "다음엔 무릎을 조금 더 올려볼까요",
@@ -349,14 +406,22 @@ internal enum class FormCheckExercise(
     ),
     LAT_PULLDOWN(
         exercise = AiHubExercise.LAT_PULLDOWN,
-        driver = FormCheckDriver.ELBOW,
+        // Reads the shoulder, not the elbow. The dataset's condition for this exercise is how far
+        // the upper arm closes toward the ribs, which the elbow angle barely sees: on 3D ground
+        // truth the elbow chain scores at chance and the shoulder chain at 0.879 balanced.
+        driver = FormCheckDriver.SHOULDER,
         direction = FormCheckWorkingDirection.FLEXION,
+        // The detector reads flexion, but the arm is being drawn in to the body. Left to the
+        // direction's default this sentence became "어깨가 67도까지 굽혀졌어요", which in Korean
+        // describes rounded shoulders -- a posture judgement, from a track that makes none.
+        vocabularyOverride = FormCheckVocabulary.DRAWING_IN,
         cadence = FormCheckCadence.REPETITION,
         restAngleDegrees = 150.0,
         attemptAngleDegrees = 140.0,
         repAngleDegrees = 130.0,
-        reachedAngleDegrees = 115.0,
-        provenance = FormCheckThresholdProvenance.HEURISTIC_DEFAULT,
+        // Measured 67 degrees, LOSO balanced 0.831 over 9 subjects and 136 clips.
+        reachedAngleDegrees = 67.0,
+        provenance = FormCheckThresholdProvenance.MEDIAPIPE_NATIVE_FIT_V2,
         rangeUrgingSealed = false,
         setupHint = "옆모습이 보이게 앉아 주세요",
         attemptHint = "다음엔 조금 더 당겨볼까요",
@@ -432,6 +497,9 @@ internal enum class FormCheckExercise(
 
     /** The only joints this exercise needs before it can start. */
     val requiredJoints: Set<FormCheckJointGroup> get() = driver.requiredJoints
+
+    /** The words used to describe what the measured joint did. */
+    val vocabulary: FormCheckVocabulary get() = vocabularyOverride ?: direction.defaultVocabulary
 
     /**
      * Mirrors an angle into the detector's space, where a smaller number always means more work.
@@ -664,7 +732,7 @@ internal class HeuristicFormCheckSession(
                 repCount += 1
                 val extreme = spec.fromDetector(event.minimumAngleDegrees)
                 val observed =
-                    "$vertexSubject ${extreme.roundToInt()}도까지 ${spec.direction.reachedVerb}"
+                    "$vertexSubject ${extreme.roundToInt()}도까지 ${spec.vocabulary.reachedVerb}"
                 headline = baselineNote(event.minimumAngleDegrees)
                     ?.let { note -> "$observed · $note" }
                     ?: observed
@@ -681,7 +749,7 @@ internal class HeuristicFormCheckSession(
 
             is RepCycleEvent.ShallowAttempt -> {
                 uncountedAttemptCount += 1
-                headline = "${spec.driver.vertex.label} ${spec.direction.shortfallPhrase} " +
+                headline = "${spec.driver.vertex.label} ${spec.vocabulary.shortfallPhrase} " +
                     "횟수로 세지 않았어요"
                 suggestion = spec.attemptHint
             }
@@ -765,9 +833,9 @@ internal class HeuristicFormCheckSession(
         if (abs(shortfall) < BASELINE_NOTICEABLE_DEGREES) return null
         val magnitude = abs(shortfall).roundToInt()
         val phrase = if (shortfall > 0) {
-            spec.direction.belowBaselinePhrase
+            spec.vocabulary.belowBaselinePhrase
         } else {
-            spec.direction.beyondBaselinePhrase
+            spec.vocabulary.beyondBaselinePhrase
         }
         return "오늘 첫 반복보다 ${magnitude}도 $phrase"
     }

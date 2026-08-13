@@ -38,7 +38,7 @@ import sys
 import unicodedata
 from collections import Counter, defaultdict
 from pathlib import Path
-from typing import Any
+from typing import Any, NamedTuple
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_MODEL = REPO_ROOT / "app" / "src" / "main" / "assets" / "pose_landmarker_full.task"
@@ -103,28 +103,60 @@ LABEL_CHAINS: dict[str, dict[str, tuple[str, str, str]]] = {
 # measure, so fitting a threshold against it would be fitting noise -- the burpee's elbow-90
 # condition already demonstrated what that looks like.
 #
-# Deliberately absent, having been checked against the catalog and found to carry no
-# range-of-motion condition at all: 바벨 스쿼트 (spine, gaze, foot-knee alignment, foot planting),
-# 굿모닝, 바벨 컬, 덤벨 컬 (elbow *position*, wrist and spine neutrality, no shrug), 랫풀 다운,
-# 케이블 푸시 다운, 오버 헤드 프레스 (forearm vertical, scapula fixed, no knee bounce). For those
-# exercises this dataset cannot calibrate a depth or extension threshold no matter how many
-# images exist, because the label never says how far the joint travelled.
-# (condition, chain, direction, extreme), mirroring docs/aihub-angle-separability.v1.json.
+# Deliberately absent, having been checked against the catalog and found to carry no condition any
+# chain can predict: 바벨 스쿼트 (spine, gaze, foot-knee alignment, foot planting), 케이블 푸시 다운
+# and 오버 헤드 프레스 (forearm vertical, scapula fixed, no knee bounce). For those exercises this
+# dataset cannot calibrate a threshold no matter how many images exist, because the label never
+# says how far any joint travelled. 푸시업 and 니 푸쉬업 are absent for a different reason: they
+# carry an elbow-90 condition, but adherence to it is so weak that the 3D ground truth itself
+# separates it at chance.
+#
+# 스텝 백워드 다이나믹 런지 was removed rather than left here. Its strongest combination on 3D truth
+# -- the same KNEE/min driver its forward twin uses -- reaches only 0.736 balanced over 94 subjects,
+# below the survey's 0.75 SEPARABLE gate. Gate 2 therefore never selected a measurement view for
+# it, so every clip would be skipped, and MediaPipe can only degrade what the labels already fail
+# to separate. Its shipped 123 degrees has no evidence behind it and must be retired, not refitted.
+#
+# The chain that predicts a condition is often not the chain that moves. A curl's "elbow stays put"
+# fails when the *shoulder* swings, so the SHOULDER chain carries evidence the ELBOW chain cannot.
+# The separability survey chose these pairings; this table mirrors them.
 #
 # The extreme is which end of the clip's angle range summarises it, and it is NOT implied by the
 # direction. Both curls need the clip's *maximum* shoulder angle even though their condition holds
-# *below* a threshold: "elbow stays put" fails when the shoulder ever swings up, so the evidence is
-# the worst moment, not the deepest one. Deriving the extreme from the direction measured the
-# minimum instead -- an angle that sits near zero for every curl -- and scored exactly chance.
-EXERCISE_PROFILES: dict[str, tuple[str, str, str, str]] = {
-    "스텝 포워드 다이나믹 런지": ("앞다리 무릎 각도 90도", "KNEE", "FLEXION", "min"),
-    "스텝 백워드 다이나믹 런지": ("앞다리 무릎 각도 90도", "KNEE", "FLEXION", "min"),
-    "스탠딩 니업": ("무릎 충분히 올라오고", "HIP", "FLEXION", "min"),
-    "랫풀 다운": ("수축 시 몸통-팔꿈치 사이 모아줌", "SHOULDER", "FLEXION", "min"),
-    "굿모닝": ("무릎 구부린채 고정", "KNEE", "FLEXION", "min"),
-    "딥스": ("이완 시 팔꿈치 각도 90도", "ELBOW", "FLEXION", "min"),
-    "바벨 컬": ("팔꿈치 위치 고정", "SHOULDER", "FLEXION", "max"),
-    "덤벨 컬": ("팔꿈치 위치 고정", "SHOULDER", "FLEXION", "max"),
+# *below* a threshold: the evidence is the worst moment, not the deepest one. Deriving the extreme
+# from the direction measured the minimum instead -- an angle near zero for every curl -- and
+# scored exactly chance.
+
+
+class ExerciseProfile(NamedTuple):
+    """What a clip of this exercise is asked to predict, and what a threshold on it would mean."""
+
+    condition: str
+    chain: str
+    direction: str
+    extreme: str
+    # RANGE: the joint must travel past the threshold; falling short is insufficient depth, and a
+    #   "go a little further" suggestion is the honest reading.
+    # STABILITY: the joint must stay on the near side of the threshold; crossing it is a fault, and
+    #   the same suggestion would be exactly backwards. The app must not phrase these alike, which
+    #   is why the kind travels with the number instead of being inferred from it later.
+    kind: str
+
+
+EXERCISE_PROFILES: dict[str, ExerciseProfile] = {
+    # -- Range of motion: the joint must travel far enough. -------------------------------------
+    "스텝 포워드 다이나믹 런지": ExerciseProfile("앞다리 무릎 각도 90도", "KNEE", "FLEXION", "min", "RANGE"),
+    "스탠딩 니업": ExerciseProfile("무릎 충분히 올라오고", "HIP", "FLEXION", "min", "RANGE"),
+    "딥스": ExerciseProfile("이완 시 팔꿈치 각도 90도", "ELBOW", "FLEXION", "min", "RANGE"),
+    "크로스 런지": ExerciseProfile("앞다리 무릎 각도 90도", "KNEE", "FLEXION", "min", "RANGE"),
+    "랫풀 다운": ExerciseProfile("수축 시 몸통-팔꿈치 사이 모아줌", "SHOULDER", "FLEXION", "min", "RANGE"),
+    "풀업": ExerciseProfile("수축 시 몸통-팔꿈치 사이 모아줌", "SHOULDER", "FLEXION", "min", "RANGE"),
+    # -- Stability: the joint must stay put. ----------------------------------------------------
+    "굿모닝": ExerciseProfile("무릎 구부린채 고정", "KNEE", "FLEXION", "min", "STABILITY"),
+    "바벨 컬": ExerciseProfile("팔꿈치 위치 고정", "SHOULDER", "FLEXION", "max", "STABILITY"),
+    "덤벨 컬": ExerciseProfile("팔꿈치 위치 고정", "SHOULDER", "FLEXION", "max", "STABILITY"),
+    "로잉머신": ExerciseProfile("상체 과도한 젖힘 없음", "TRUNK", "FLEXION", "max", "STABILITY"),
+    "스탠딩 사이드 크런치": ExerciseProfile("양 손이 머리 뒤에 위치", "ELBOW", "FLEXION", "min", "STABILITY"),
 }
 
 # The 2D<->3D correspondence on this capture day is broken: every view disagrees with the
@@ -298,8 +330,9 @@ def run(
     label_root: Path,
     model_path: Path,
     limit: int | None,
-    image_root: Path | None = None,
+    image_roots: list[Path] | None = None,
     view_artifact: Path | None = None,
+    only: set[str] | None = None,
 ) -> dict[str, Any]:
     import cv2
     import numpy
@@ -330,10 +363,18 @@ def run(
         )
     )
 
-    # img_key is dataset-relative and already carries the capture-day directory name. It
-    # normally resolves against the label root's parent, but raw imagery unpacked from the
-    # distribution archives lives elsewhere, so an explicit root overrides that.
-    dataset_root = image_root if image_root is not None else label_root.parent
+    # img_key is dataset-relative and already carries the capture-day directory name. It normally
+    # resolves against the label root's parent, but the distribution splits imagery across places:
+    # most days unpack into a raw-data tree, while Day05 ships its frames beside the labels. Roots
+    # are therefore tried in order rather than assumed to be one directory.
+    dataset_roots = list(image_roots) if image_roots else [label_root.parent]
+
+    def resolve_image(img_key: str) -> Path | None:
+        for root in dataset_roots:
+            candidate = root / img_key
+            if candidate.exists():
+                return candidate
+        return None
     outcomes: Counter[str] = Counter()
     joint_errors: dict[str, list[float]] = defaultdict(list)
     joint_errors_mirrored: dict[str, list[float]] = defaultdict(list)
@@ -363,7 +404,9 @@ def run(
         profile = EXERCISE_PROFILES.get(exercise)
         if profile is None:
             continue
-        condition_name, chain, direction, extreme = profile
+        if only is not None and exercise not in only:
+            continue
+        condition_name, chain, direction, extreme, _kind = profile
         depth_keys = [k for k in conditions if condition_name in k]
         if len(depth_keys) != 1:
             continue
@@ -393,8 +436,8 @@ def run(
 
         for frame, spatial_frame in zip(frames, spatial_frames):
             view = frame[view_key]
-            image_path = dataset_root / view["img_key"]
-            if not image_path.exists():
+            image_path = resolve_image(view["img_key"])
+            if image_path is None:
                 outcomes["missing_image"] += 1
                 continue
             # cv2.imread cannot open the dataset's non-ASCII Windows paths; decode from bytes.
@@ -456,6 +499,16 @@ def run(
             angle_pairs.append((mp_angle, label_angle))
             clip_mp_angles.append(mp_angle)
             clip_label_angles.append(label_angle)
+
+        # Progress on stderr: this run reads tens of thousands of images and a silent half hour is
+        # indistinguishable from a hang.
+        if processed_clips % 50 == 0:
+            done = sum(outcomes[k] for k in ("single_pose", "no_pose", "ambiguous_multi_person"))
+            print(
+                f"  clips={processed_clips} frames={done} outcomes={dict(outcomes)}",
+                file=sys.stderr,
+                flush=True,
+            )
 
         if clip_mp_angles and clip_label_angles:
             clip_rows[exercise].append(
@@ -545,6 +598,12 @@ def run(
         exercises.append(
             {
                 "exercise": exercise,
+                "condition": EXERCISE_PROFILES[exercise].condition,
+                # RANGE or STABILITY. A threshold means opposite things across these two, so the
+                # kind travels with the number: RANGE short of it is insufficient depth, STABILITY
+                # beyond it is a joint that failed to stay put. Reading a STABILITY limit as a
+                # depth line would make the app urge more of exactly the wrong movement.
+                "conditionKind": EXERCISE_PROFILES[exercise].kind,
                 "clipCount": len(rows),
                 "conditionTrueCount": positives,
                 "subjectCount": len(subjects),
@@ -593,7 +652,13 @@ def run(
 
     return {
         "artifactKind": "TREX_MEDIAPIPE_AIHUB_BRIDGE_ERROR_CARD",
-        "artifactVersion": 1,
+        "artifactVersion": 2,
+        "supersedes": (
+            "v1 assumed camera view A was lateral, reported raw accuracy only, and covered one "
+            "capture day. This version selects the view per exercise and capture day from "
+            "docs/aihub-measurement-view.v1.json, reports balanced accuracy as the verdict metric, "
+            "and records whether each condition is a range-of-motion or a stability limit."
+        ),
         "rightsAuthorization": {
             "manifestId": "trex.aihub-research-use-rights.v1",
             "permittedOperation": "MEDIAPIPE_TO_AIHUB_BRIDGE_ERROR_MEASUREMENT",
@@ -659,8 +724,19 @@ def main() -> int:
     parser.add_argument(
         "--images",
         type=Path,
+        action="append",
         default=None,
-        help="root the label img_key paths resolve against (defaults to the label root parent)",
+        help=(
+            "root the label img_key paths resolve against; repeatable and tried in order, because "
+            "the distribution splits imagery between the raw-data tree and the label directories "
+            "(defaults to the label root parent)"
+        ),
+    )
+    parser.add_argument(
+        "--only",
+        action="append",
+        default=None,
+        help="restrict the run to these exercise names; repeatable",
     )
     parser.add_argument(
         "--views",
@@ -674,7 +750,18 @@ def main() -> int:
         print(f"not a directory: {args.label_root}", file=sys.stderr)
         return 1
 
-    artifact = run(args.label_root, args.model, args.limit, args.images, args.views)
+    only = (
+        {unicodedata.normalize("NFC", name).strip() for name in args.only}
+        if args.only
+        else None
+    )
+    if only:
+        unknown = only - set(EXERCISE_PROFILES)
+        if unknown:
+            print(f"no profile for: {sorted(unknown)}", file=sys.stderr)
+            return 1
+
+    artifact = run(args.label_root, args.model, args.limit, args.images, args.views, only)
     rendered = json.dumps(artifact, sort_keys=True, indent=2, ensure_ascii=False) + "\n"
     args.out.write_text(rendered, encoding="utf-8")
 

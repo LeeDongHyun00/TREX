@@ -61,30 +61,45 @@ class FormCheckGovernanceTest {
             FormCheckThresholdProvenance.HEURISTIC_DEFAULT,
             FormCheckExercise.BARBELL_SQUAT.provenance,
         )
-        assertEquals(134.0, FormCheckExercise.STEP_FORWARD_DYNAMIC_LUNGE.repAngleDegrees, 0.0)
-        assertEquals(129.0, FormCheckExercise.STEP_FORWARD_DYNAMIC_LUNGE.reachedAngleDegrees, 0.0)
-        assertEquals(
-            FormCheckThresholdProvenance.MEDIAPIPE_NATIVE_DAY05_FIT_V1,
-            FormCheckExercise.STEP_FORWARD_DYNAMIC_LUNGE.provenance,
+        // The three exercises whose thresholds were measured through the app's own model, from the
+        // camera view the selection artifact picks per capture day, and cleared a leave-one-subject
+        // -out balanced accuracy of 0.75.
+        val calibrated = mapOf(
+            FormCheckExercise.STEP_FORWARD_DYNAMIC_LUNGE to (134.0 to 116.0),
+            FormCheckExercise.STANDING_KNEE_UP to (135.0 to 103.0),
+            FormCheckExercise.LAT_PULLDOWN to (130.0 to 67.0),
         )
+        for ((spec, thresholds) in calibrated) {
+            val (rep, reached) = thresholds
+            assertEquals(spec.name, rep, spec.repAngleDegrees, 0.0)
+            assertEquals(spec.name, reached, spec.reachedAngleDegrees, 0.0)
+            assertEquals(
+                spec.name,
+                FormCheckThresholdProvenance.MEDIAPIPE_NATIVE_FIT_V2,
+                spec.provenance,
+            )
+        }
+
+        // The backward lunge's fit was retired rather than corrected. Its depth condition does not
+        // separate on 3D ground truth (0.736 balanced, under the 0.75 gate), so no measurement view
+        // exists for it and no MediaPipe fit is possible; it borrows the forward lunge's measured
+        // value as an uncalibrated prior and must not claim provenance for it.
         assertEquals(130.0, FormCheckExercise.STEP_BACKWARD_DYNAMIC_LUNGE.repAngleDegrees, 0.0)
-        assertEquals(123.0, FormCheckExercise.STEP_BACKWARD_DYNAMIC_LUNGE.reachedAngleDegrees, 0.0)
+        assertEquals(116.0, FormCheckExercise.STEP_BACKWARD_DYNAMIC_LUNGE.reachedAngleDegrees, 0.0)
         assertEquals(
-            FormCheckThresholdProvenance.MEDIAPIPE_NATIVE_DAY05_FIT_V1,
+            FormCheckThresholdProvenance.HEURISTIC_DEFAULT,
             FormCheckExercise.STEP_BACKWARD_DYNAMIC_LUNGE.provenance,
         )
 
         // Waves 1 and 2, all uncalibrated per §4.3.
         val expected = mapOf(
             FormCheckExercise.BARBELL_LUNGE to (134.0 to 129.0),
-            FormCheckExercise.STANDING_KNEE_UP to (135.0 to 125.0),
             FormCheckExercise.GOOD_MORNING to (135.0 to 128.0),
             FormCheckExercise.PUSH_UP to (135.0 to 125.0),
             FormCheckExercise.KNEE_PUSH_UP to (135.0 to 125.0),
             FormCheckExercise.DIPS to (135.0 to 125.0),
             FormCheckExercise.BARBELL_CURL to (120.0 to 100.0),
             FormCheckExercise.DUMBBELL_CURL to (120.0 to 100.0),
-            FormCheckExercise.LAT_PULLDOWN to (130.0 to 115.0),
             FormCheckExercise.HIP_THRUST to (145.0 to 160.0),
             FormCheckExercise.OVERHEAD_PRESS to (150.0 to 165.0),
             FormCheckExercise.CABLE_PUSH_DOWN to (150.0 to 165.0),
@@ -155,7 +170,10 @@ class FormCheckGovernanceTest {
         assertEquals(FormCheckDriver.ELBOW, FormCheckExercise.DIPS.driver)
         assertEquals(FormCheckDriver.ELBOW, FormCheckExercise.BARBELL_CURL.driver)
         assertEquals(FormCheckDriver.ELBOW, FormCheckExercise.DUMBBELL_CURL.driver)
-        assertEquals(FormCheckDriver.ELBOW, FormCheckExercise.LAT_PULLDOWN.driver)
+        // Not the elbow. The condition this exercise is measured against is how far the upper arm
+        // closes toward the ribs, which the elbow angle scores at chance and the shoulder chain at
+        // 0.879 balanced on 3D ground truth.
+        assertEquals(FormCheckDriver.SHOULDER, FormCheckExercise.LAT_PULLDOWN.driver)
         assertEquals(FormCheckDriver.ELBOW, FormCheckExercise.OVERHEAD_PRESS.driver)
         assertEquals(FormCheckDriver.ELBOW, FormCheckExercise.CABLE_PUSH_DOWN.driver)
         assertEquals(FormCheckDriver.HIP, FormCheckExercise.HIP_THRUST.driver)
@@ -253,6 +271,40 @@ class FormCheckGovernanceTest {
             "SessionFormCheckLayer must gate the attribution on provenance",
             text.contains("requiresDataAttribution") && text.contains("DATA_ATTRIBUTION"),
         )
+    }
+
+    @Test
+    fun theShoulderChainIsNeverDescribedAsBending() {
+        // §4.1: the detector direction and the word shown to the user are different facts. A lat
+        // pull-down closes the elbow-shoulder-hip angle, so the direction is flexion, but rendering
+        // that as "어깨가 67도까지 굽혀졌어요" describes rounded shoulders — a posture judgement this
+        // track does not make. Every shoulder-chain exercise must therefore name its own words.
+        for (spec in FormCheckExercise.entries) {
+            if (spec.driver != FormCheckDriver.SHOULDER) continue
+            assertEquals(
+                "${spec.name} reads the shoulder and must not call it bending",
+                FormCheckVocabulary.DRAWING_IN,
+                spec.vocabulary,
+            )
+        }
+
+        // And the sentence itself, built the way the engine builds it.
+        val pulldown = FormCheckExercise.LAT_PULLDOWN
+        val observation = "${pulldown.driver.vertex.label} 67도까지 ${pulldown.vocabulary.reachedVerb}"
+        assertEquals("어깨 67도까지 모아졌어요", observation)
+        assertFalse(observation.contains("굽혀"))
+    }
+
+    @Test
+    fun everyExerciseKeepsTheWordsThatMatchItsAnatomy() {
+        // The override exists for the shoulder; nothing else may quietly acquire one.
+        for (spec in FormCheckExercise.entries) {
+            val expected = when (spec.driver) {
+                FormCheckDriver.SHOULDER -> FormCheckVocabulary.DRAWING_IN
+                else -> spec.direction.defaultVocabulary
+            }
+            assertEquals(spec.name, expected, spec.vocabulary)
+        }
     }
 
     @Test

@@ -4,6 +4,7 @@ import com.example.trex_kotlin.pose.PoseFrame
 import com.example.trex_kotlin.pose.PoseJoint
 import com.example.trex_kotlin.pose.PoseLandmark
 import kotlin.math.cos
+import kotlin.math.hypot
 import kotlin.math.sin
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -993,6 +994,7 @@ class HeuristicFormCheckEngineTest {
         kneeAngleDegrees = if (spec.driver == FormCheckDriver.KNEE) angleDegrees else 175.0,
         hipAngleDegrees = if (spec.driver == FormCheckDriver.HIP) angleDegrees else 175.0,
         elbowAngleDegrees = if (spec.driver == FormCheckDriver.ELBOW) angleDegrees else 175.0,
+        shoulderAngleDegrees = if (spec.driver == FormCheckDriver.SHOULDER) angleDegrees else null,
         timestampMs = timestampMs,
     )
 
@@ -1006,6 +1008,7 @@ class HeuristicFormCheckEngineTest {
         kneeAngleDegrees: Double,
         hipAngleDegrees: Double,
         elbowAngleDegrees: Double,
+        shoulderAngleDegrees: Double? = null,
         timestampMs: Long = 0L,
         confidence: Double = 1.0,
         dropped: Set<FormCheckJointGroup> = emptySet(),
@@ -1013,6 +1016,10 @@ class HeuristicFormCheckEngineTest {
         val knee = Math.toRadians(kneeAngleDegrees)
         val hip = Math.toRadians(hipAngleDegrees)
         val elbow = Math.toRadians(elbowAngleDegrees)
+
+        /** Rotates a 2D vector, so a joint can be placed at a requested included angle. */
+        fun rotate(x: Double, y: Double, radians: Double): Pair<Double, Double> =
+            (x * cos(radians) - y * sin(radians)) to (x * sin(radians) + y * cos(radians))
 
         fun side(offsetX: Double): Map<FormCheckJointGroup, Triple<Double, Double, Double>> {
             val kneeAt = Triple(offsetX, 0.0, 0.0)
@@ -1023,12 +1030,30 @@ class HeuristicFormCheckEngineTest {
                 hipAt.second - 0.5 * cos(hip),
                 0.0,
             )
-            val elbowAt = Triple(shoulderAt.first + 0.3, shoulderAt.second, 0.0)
-            val wristAt = Triple(
-                elbowAt.first - 0.3 * cos(elbow),
-                elbowAt.second + 0.3 * sin(elbow),
-                0.0,
-            )
+            // The upper arm swings about the shoulder, measured off the shoulder-to-hip direction,
+            // so the elbow-shoulder-hip angle is whatever the caller asked for. Left null it keeps
+            // the original fixed placement, which the knee, hip and elbow cases were written
+            // against and which must not move under them.
+            val elbowAt = if (shoulderAngleDegrees == null) {
+                Triple(shoulderAt.first + 0.3, shoulderAt.second, 0.0)
+            } else {
+                val toHipX = hipAt.first - shoulderAt.first
+                val toHipY = hipAt.second - shoulderAt.second
+                val length = hypot(toHipX, toHipY)
+                val (dx, dy) = rotate(
+                    toHipX / length,
+                    toHipY / length,
+                    Math.toRadians(shoulderAngleDegrees),
+                )
+                Triple(shoulderAt.first + 0.3 * dx, shoulderAt.second + 0.3 * dy, 0.0)
+            }
+            // The forearm swings about the elbow, measured off the elbow-to-shoulder direction, so
+            // the elbow angle stays independent of wherever the upper arm was just placed.
+            val toShoulderX = shoulderAt.first - elbowAt.first
+            val toShoulderY = shoulderAt.second - elbowAt.second
+            val forearm = hypot(toShoulderX, toShoulderY)
+            val (wx, wy) = rotate(toShoulderX / forearm, toShoulderY / forearm, elbow)
+            val wristAt = Triple(elbowAt.first + 0.3 * wx, elbowAt.second + 0.3 * wy, 0.0)
             return mapOf(
                 FormCheckJointGroup.KNEE to kneeAt,
                 FormCheckJointGroup.HIP to hipAt,
