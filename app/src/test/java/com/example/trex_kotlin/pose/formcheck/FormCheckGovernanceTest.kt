@@ -65,9 +65,9 @@ class FormCheckGovernanceTest {
         // camera view the selection artifact picks per capture day, and cleared a leave-one-subject
         // -out balanced accuracy of 0.75.
         val calibrated = mapOf(
-            FormCheckExercise.STEP_FORWARD_DYNAMIC_LUNGE to (134.0 to 116.0),
-            FormCheckExercise.STANDING_KNEE_UP to (135.0 to 103.0),
+            FormCheckExercise.STANDING_KNEE_UP to (135.0 to 105.0),
             FormCheckExercise.LAT_PULLDOWN to (130.0 to 67.0),
+            FormCheckExercise.DIPS to (135.0 to 106.0),
         )
         for ((spec, thresholds) in calibrated) {
             val (rep, reached) = thresholds
@@ -80,16 +80,26 @@ class FormCheckGovernanceTest {
             )
         }
 
-        // The backward lunge's fit was retired rather than corrected. Its depth condition does not
-        // separate on 3D ground truth (0.736 balanced, under the 0.75 gate), so no measurement view
-        // exists for it and no MediaPipe fit is possible; it borrows the forward lunge's measured
-        // value as an uncalibrated prior and must not claim provenance for it.
-        assertEquals(130.0, FormCheckExercise.STEP_BACKWARD_DYNAMIC_LUNGE.repAngleDegrees, 0.0)
-        assertEquals(116.0, FormCheckExercise.STEP_BACKWARD_DYNAMIC_LUNGE.reachedAngleDegrees, 0.0)
-        assertEquals(
-            FormCheckThresholdProvenance.HEURISTIC_DEFAULT,
-            FormCheckExercise.STEP_BACKWARD_DYNAMIC_LUNGE.provenance,
+        // All three lunges share one uncalibrated value. The forward lunge briefly held a measured
+        // 116 from a single capture day; across six days and 48 participants it falls to 0.746,
+        // under the gate, so the fit was withdrawn rather than kept because it had once looked
+        // good. The backward lunge can never be fitted at all — its condition separates at 0.736
+        // on perfect 3D data, so no measurement view was ever selected for it.
+        val lunges = listOf(
+            FormCheckExercise.STEP_FORWARD_DYNAMIC_LUNGE,
+            FormCheckExercise.STEP_BACKWARD_DYNAMIC_LUNGE,
+            FormCheckExercise.BARBELL_LUNGE,
         )
+        for (lunge in lunges) {
+            assertEquals(lunge.name, 129.0, lunge.reachedAngleDegrees, 0.0)
+            assertEquals(
+                "${lunge.name} must not claim a fit that did not survive its population",
+                FormCheckThresholdProvenance.HEURISTIC_DEFAULT,
+                lunge.provenance,
+            )
+        }
+        assertEquals(134.0, FormCheckExercise.STEP_FORWARD_DYNAMIC_LUNGE.repAngleDegrees, 0.0)
+        assertEquals(130.0, FormCheckExercise.STEP_BACKWARD_DYNAMIC_LUNGE.repAngleDegrees, 0.0)
 
         // Waves 1 and 2, all uncalibrated per §4.3.
         val expected = mapOf(
@@ -97,7 +107,6 @@ class FormCheckGovernanceTest {
             FormCheckExercise.GOOD_MORNING to (135.0 to 128.0),
             FormCheckExercise.PUSH_UP to (135.0 to 125.0),
             FormCheckExercise.KNEE_PUSH_UP to (135.0 to 125.0),
-            FormCheckExercise.DIPS to (135.0 to 125.0),
             FormCheckExercise.BARBELL_CURL to (120.0 to 100.0),
             FormCheckExercise.DUMBBELL_CURL to (120.0 to 100.0),
             FormCheckExercise.HIP_THRUST to (145.0 to 160.0),
@@ -308,18 +317,23 @@ class FormCheckGovernanceTest {
     }
 
     @Test
-    fun onlyUncalibratedExercisesMayBeSealed() {
-        // A calibrated exercise carries hints; a sealed one must not. The two sets are therefore
-        // disjoint, and a future calibration of a loaded lift has to revisit §4.2 deliberately
-        // rather than silently gaining range urging.
-        for (spec in FormCheckExercise.entries) {
-            if (spec.provenance != FormCheckThresholdProvenance.HEURISTIC_DEFAULT) {
-                assertFalse(
-                    "${spec.name} is calibrated, so §4.2's seal needs re-deciding",
-                    spec.rangeUrgingSealed,
-                )
-            }
+    fun sealingAnswersConsequenceNotEvidence() {
+        // This rule used to read "only uncalibrated exercises may be sealed", on the assumption
+        // that calibrating something was the same as clearing it to urge more range. Dips broke
+        // that: it now carries a measured threshold and is still sealed, because at the bottom of a
+        // dip the shoulder is at end range and a better threshold does not change that. §4.2 was
+        // revised to say the seal is about the consequence of overshoot.
+        //
+        // What must still hold is the part that protects the user: a sealed exercise carries no
+        // suggestion, whatever its evidence. That is asserted in sealedExercisesNeverUrgeMoreRange.
+        val sealedAndCalibrated = FormCheckExercise.entries.filter {
+            it.rangeUrgingSealed && it.provenance != FormCheckThresholdProvenance.HEURISTIC_DEFAULT
         }
+        assertEquals(
+            "Only dips is deliberately both calibrated and sealed; anything else is a slip",
+            listOf(FormCheckExercise.DIPS),
+            sealedAndCalibrated,
+        )
     }
 
     @Test

@@ -1,132 +1,27 @@
 {
   "artifactKind": "TREX_MEDIAPIPE_AIHUB_BRIDGE_ERROR_CARD",
-  "artifactVersion": 2,
+  "artifactVersion": 3,
   "detectionOutcomes": {
-    "ambiguous_multi_person": 2158,
-    "chain_below_confidence": 616,
-    "missing_image": 138706,
-    "no_pose": 297,
+    "ambiguous_multi_person": 4343,
+    "chain_below_confidence": 4822,
+    "missing_archive": 31040,
+    "missing_image": 733,
+    "no_pose": 1493,
+    "no_view_selection_for_this_chain": 574,
     "quarantined_capture_day": 144,
-    "single_pose": 27627
+    "single_pose": 117173
   },
-  "jointMappingConvention": {
-    "directMedianNormalisedError": 0.0206,
-    "mirroredMedianNormalisedError": 0.1674,
-    "selected": "DIRECT",
-    "unmappableAiHubJoints": [
-      "Neck",
-      "Back",
-      "Waist",
-      "Left Palm",
-      "Right Palm"
-    ]
-  },
-  "jointPositionError": {
-    "perJoint": {
-      "Left Ankle": {
-        "median": 0.0171,
-        "n": 27627,
-        "p95": 0.4771
-      },
-      "Left Ear": {
-        "median": 0.0276,
-        "n": 27627,
-        "p95": 0.6228
-      },
-      "Left Elbow": {
-        "median": 0.0175,
-        "n": 27627,
-        "p95": 0.5483
-      },
-      "Left Eye": {
-        "median": 0.0199,
-        "n": 27627,
-        "p95": 0.5883
-      },
-      "Left Hip": {
-        "median": 0.0279,
-        "n": 27627,
-        "p95": 0.2334
-      },
-      "Left Knee": {
-        "median": 0.0185,
-        "n": 27627,
-        "p95": 0.3502
-      },
-      "Left Shoulder": {
-        "median": 0.0183,
-        "n": 27627,
-        "p95": 0.5179
-      },
-      "Left Wrist": {
-        "median": 0.0203,
-        "n": 27627,
-        "p95": 0.6039
-      },
-      "Nose": {
-        "median": 0.0202,
-        "n": 27627,
-        "p95": 0.5676
-      },
-      "Right Ankle": {
-        "median": 0.0162,
-        "n": 27627,
-        "p95": 0.4659
-      },
-      "Right Ear": {
-        "median": 0.031,
-        "n": 27627,
-        "p95": 0.6277
-      },
-      "Right Elbow": {
-        "median": 0.0175,
-        "n": 27627,
-        "p95": 0.4955
-      },
-      "Right Eye": {
-        "median": 0.0195,
-        "n": 27627,
-        "p95": 0.5966
-      },
-      "Right Hip": {
-        "median": 0.0296,
-        "n": 27627,
-        "p95": 0.1899
-      },
-      "Right Knee": {
-        "median": 0.0178,
-        "n": 27627,
-        "p95": 0.3304
-      },
-      "Right Shoulder": {
-        "median": 0.0162,
-        "n": 27627,
-        "p95": 0.545
-      },
-      "Right Wrist": {
-        "median": 0.0218,
-        "n": 27627,
-        "p95": 0.5442
-      }
-    },
-    "unit": "FRACTION_OF_SHOULDER_TO_ANKLE_HEIGHT"
-  },
-  "kneeAngleError": {
-    "definition": "MEDIAPIPE_WORLD_MINUS_AIHUB_3D_LABEL_PER_FRAME",
-    "meanSignedBias": 10.58,
-    "medianAbsolute": 11.18,
-    "medianSignedBias": 3.76,
-    "n": 27011,
-    "p95Absolute": 74.36,
-    "unit": "DEGREES"
+  "generalisation": {
+    "note": "The fold unit is the dataset-wide participant code, not the participant within a capture day. A person filmed on several days is one fold, so a held-out person contributes nothing to the threshold being tested against them.",
+    "scheme": "LEAVE_ONE_GLOBAL_Z_SUBJECT_OUT"
   },
   "limitations": [
     "Studio capture: single lighting condition, standard clothing, uncluttered floor.",
-    "Eight subjects. Any per-joint tail beyond that population is unmeasured here.",
     "Clip-level condition labels, so transfer accuracy is clip quality, not per-rep truth.",
     "IMAGE mode; the shipped runtime uses VIDEO mode, whose tracking may differ.",
     "Passing transfer authorises a heuristic-beta constant only, never a release verdict.",
-    "Verdicts use balanced accuracy; raw accuracy is reported only to expose imbalance."
+    "Verdicts use balanced accuracy; raw accuracy is not reported because it rewards predicting the majority class.",
+    "A subject is one participant folder within one capture day, so the same person filmed on two days counts twice and leave-one-subject-out is optimistic to that extent."
   ],
   "model": {
     "assetPath": "app/src/main/assets/pose_landmarker_full.task",
@@ -139,263 +34,324 @@
     "manifestId": "trex.aihub-research-use-rights.v1",
     "permittedOperation": "MEDIAPIPE_TO_AIHUB_BRIDGE_ERROR_MEASUREMENT"
   },
-  "supersedes": "v1 assumed camera view A was lateral, reported raw accuracy only, and covered one capture day. This version selects the view per exercise and capture day from docs/aihub-measurement-view.v1.json, reports balanced accuracy as the verdict metric, and records whether each condition is a range-of-motion or a stability limit.",
+  "source": {
+    "archiveRoot": "T:\\trex_allData\\013.피트니스자세\\1.Training\\원시데이터",
+    "note": "One archive holds one capture day; only the selected view's frames are read.",
+    "readInPlaceFromArchives": true
+  },
+  "supersedes": "v2 measured only the three capture days that were unpacked on disk. This version reads the distribution archives in place, so every capture day with a usable measurement view contributes, and leave-one-subject-out folds span capture days rather than a single shoot.",
   "thresholdTransfer": [
     {
-      "aihubFittedThresholdDegrees": 40,
-      "aihubThresholdAppliedToMediapipeAccuracy": 0.5898,
-      "chain": "SHOULDER",
-      "clipCount": 256,
-      "clipCountBySubject": 8,
-      "clipLevelAngleBiasDegrees": 96.68,
-      "condition": "팔꿈치 위치 고정",
+      "captureDays": [
+        "Day02_200922_F",
+        "Day10_201007_F",
+        "Day14_201014_F",
+        "Day24_201026_F"
+      ],
+      "chain": "KNEE",
+      "clipCount": 276,
+      "clipLevelAngleBiasDegrees": -13.26,
+      "condition": "무릎 구부린채 고정",
       "conditionKind": "STABILITY",
-      "conditionTrueCount": 128,
+      "conditionTrueCount": 138,
       "direction": "FLEXION",
-      "exercise": "덤벨 컬",
+      "exercise": "굿모닝",
+      "extreme": "min",
       "losoConfusion": {
-        "fn": 84,
-        "fp": 7,
-        "tn": 121,
-        "tp": 44
+        "fn": 34,
+        "fp": 55,
+        "tn": 83,
+        "tp": 104
       },
       "majorityBaseline": 0.5,
-      "mediapipeNativeAccuracy": 0.6445,
-      "mediapipeNativeBalancedAccuracy": 0.6445,
-      "mediapipeNativeLosoBalancedAccuracy": 0.6445,
-      "mediapipeNativeLosoRawAccuracy": 0.6445,
-      "mediapipeNativeLosoThresholdMaxDegrees": 47,
-      "mediapipeNativeLosoThresholdMinDegrees": 47,
-      "mediapipeNativeThresholdDegrees": 47,
-      "subjectCount": 8
+      "mediapipeNativeBalancedAccuracy": 0.7101,
+      "mediapipeNativeLosoBalancedAccuracy": 0.6775,
+      "mediapipeNativeLosoThresholdMaxDegrees": 144,
+      "mediapipeNativeLosoThresholdMinDegrees": 136,
+      "mediapipeNativeThresholdDegrees": 139,
+      "subjectCount": 33
     },
     {
-      "aihubFittedThresholdDegrees": 88,
-      "aihubThresholdAppliedToMediapipeAccuracy": 0.5507,
+      "captureDays": [
+        "Day04_200924_F",
+        "Day08_201005_F",
+        "Day16_201016_F"
+      ],
+      "chain": "SHOULDER",
+      "clipCount": 575,
+      "clipLevelAngleBiasDegrees": 21.38,
+      "condition": "팔꿈치 위치 고정",
+      "conditionKind": "STABILITY",
+      "conditionTrueCount": 287,
+      "direction": "FLEXION",
+      "exercise": "덤벨 컬",
+      "extreme": "max",
+      "losoConfusion": {
+        "fn": 112,
+        "fp": 38,
+        "tn": 250,
+        "tp": 175
+      },
+      "majorityBaseline": 0.5009,
+      "mediapipeNativeBalancedAccuracy": 0.7389,
+      "mediapipeNativeLosoBalancedAccuracy": 0.7389,
+      "mediapipeNativeLosoThresholdMaxDegrees": 50,
+      "mediapipeNativeLosoThresholdMinDegrees": 50,
+      "mediapipeNativeThresholdDegrees": 50,
+      "subjectCount": 18
+    },
+    {
+      "captureDays": [
+        "Day17_201017_F",
+        "Day20_201021_F",
+        "Day21_201022_F",
+        "Day22_201023_F"
+      ],
       "chain": "ELBOW",
-      "clipCount": 138,
-      "clipCountBySubject": 9,
-      "clipLevelAngleBiasDegrees": 17.76,
+      "clipCount": 566,
+      "clipLevelAngleBiasDegrees": 14.85,
       "condition": "이완 시 팔꿈치 각도 90도",
       "conditionKind": "RANGE",
-      "conditionTrueCount": 70,
+      "conditionTrueCount": 284,
       "direction": "FLEXION",
       "exercise": "딥스",
+      "extreme": "min",
       "losoConfusion": {
-        "fn": 23,
-        "fp": 14,
-        "tn": 54,
-        "tp": 47
+        "fn": 58,
+        "fp": 77,
+        "tn": 205,
+        "tp": 226
       },
-      "majorityBaseline": 0.5072,
-      "mediapipeNativeAccuracy": 0.7826,
-      "mediapipeNativeBalancedAccuracy": 0.7838,
-      "mediapipeNativeLosoBalancedAccuracy": 0.7328,
-      "mediapipeNativeLosoRawAccuracy": 0.7319,
-      "mediapipeNativeLosoThresholdMaxDegrees": 108,
-      "mediapipeNativeLosoThresholdMinDegrees": 103,
-      "mediapipeNativeThresholdDegrees": 104,
-      "subjectCount": 9
+      "majorityBaseline": 0.5018,
+      "mediapipeNativeBalancedAccuracy": 0.7614,
+      "mediapipeNativeLosoBalancedAccuracy": 0.7614,
+      "mediapipeNativeLosoThresholdMaxDegrees": 106,
+      "mediapipeNativeLosoThresholdMinDegrees": 106,
+      "mediapipeNativeThresholdDegrees": 106,
+      "subjectCount": 32
     },
     {
-      "aihubFittedThresholdDegrees": 56,
-      "aihubThresholdAppliedToMediapipeAccuracy": 0.7941,
+      "captureDays": [
+        "Day17_201017_F",
+        "Day20_201021_F",
+        "Day21_201022_F",
+        "Day22_201023_F"
+      ],
       "chain": "SHOULDER",
-      "clipCount": 136,
-      "clipCountBySubject": 9,
+      "clipCount": 565,
       "clipLevelAngleBiasDegrees": 10.9,
       "condition": "수축 시 몸통-팔꿈치 사이 모아줌",
       "conditionKind": "RANGE",
-      "conditionTrueCount": 68,
+      "conditionTrueCount": 283,
       "direction": "FLEXION",
       "exercise": "랫풀 다운",
+      "extreme": "min",
       "losoConfusion": {
-        "fn": 9,
-        "fp": 14,
-        "tn": 54,
-        "tp": 59
+        "fn": 27,
+        "fp": 55,
+        "tn": 227,
+        "tp": 256
       },
-      "majorityBaseline": 0.5,
-      "mediapipeNativeAccuracy": 0.875,
-      "mediapipeNativeBalancedAccuracy": 0.875,
-      "mediapipeNativeLosoBalancedAccuracy": 0.8309,
-      "mediapipeNativeLosoRawAccuracy": 0.8309,
+      "majorityBaseline": 0.5009,
+      "mediapipeNativeBalancedAccuracy": 0.8548,
+      "mediapipeNativeLosoBalancedAccuracy": 0.8548,
       "mediapipeNativeLosoThresholdMaxDegrees": 67,
-      "mediapipeNativeLosoThresholdMinDegrees": 62,
+      "mediapipeNativeLosoThresholdMinDegrees": 67,
       "mediapipeNativeThresholdDegrees": 67,
-      "subjectCount": 9
+      "subjectCount": 32
     },
     {
-      "aihubFittedThresholdDegrees": 142,
-      "aihubThresholdAppliedToMediapipeAccuracy": 0.735,
+      "captureDays": [
+        "Day17_201017_F",
+        "Day20_201021_F",
+        "Day21_201022_F",
+        "Day22_201023_F"
+      ],
       "chain": "TRUNK",
-      "clipCount": 283,
-      "clipCountBySubject": 9,
-      "clipLevelAngleBiasDegrees": -14.34,
+      "clipCount": 1136,
+      "clipLevelAngleBiasDegrees": -11.44,
       "condition": "상체 과도한 젖힘 없음",
       "conditionKind": "STABILITY",
-      "conditionTrueCount": 140,
+      "conditionTrueCount": 569,
       "direction": "FLEXION",
       "exercise": "로잉머신",
+      "extreme": "max",
       "losoConfusion": {
-        "fn": 15,
-        "fp": 20,
-        "tn": 123,
-        "tp": 125
+        "fn": 121,
+        "fp": 106,
+        "tn": 461,
+        "tp": 448
       },
-      "majorityBaseline": 0.5053,
-      "mediapipeNativeAccuracy": 0.8869,
-      "mediapipeNativeBalancedAccuracy": 0.8872,
-      "mediapipeNativeLosoBalancedAccuracy": 0.8765,
-      "mediapipeNativeLosoRawAccuracy": 0.8763,
-      "mediapipeNativeLosoThresholdMaxDegrees": 129,
-      "mediapipeNativeLosoThresholdMinDegrees": 126,
-      "mediapipeNativeThresholdDegrees": 129,
-      "subjectCount": 9
+      "majorityBaseline": 0.5009,
+      "mediapipeNativeBalancedAccuracy": 0.8073,
+      "mediapipeNativeLosoBalancedAccuracy": 0.8002,
+      "mediapipeNativeLosoThresholdMaxDegrees": 133,
+      "mediapipeNativeLosoThresholdMinDegrees": 132,
+      "mediapipeNativeThresholdDegrees": 132,
+      "subjectCount": 32
     },
     {
-      "aihubFittedThresholdDegrees": 40,
-      "aihubThresholdAppliedToMediapipeAccuracy": 0.6339,
+      "captureDays": [
+        "Day04_200924_F",
+        "Day08_201005_F",
+        "Day16_201016_F"
+      ],
       "chain": "SHOULDER",
-      "clipCount": 254,
-      "clipCountBySubject": 8,
-      "clipLevelAngleBiasDegrees": 19.2,
+      "clipCount": 574,
+      "clipLevelAngleBiasDegrees": 19.6,
       "condition": "팔꿈치 위치 고정",
       "conditionKind": "STABILITY",
-      "conditionTrueCount": 127,
+      "conditionTrueCount": 287,
       "direction": "FLEXION",
       "exercise": "바벨 컬",
+      "extreme": "max",
       "losoConfusion": {
-        "fn": 54,
-        "fp": 18,
-        "tn": 109,
-        "tp": 73
+        "fn": 92,
+        "fp": 32,
+        "tn": 255,
+        "tp": 195
       },
       "majorityBaseline": 0.5,
-      "mediapipeNativeAccuracy": 0.7402,
-      "mediapipeNativeBalancedAccuracy": 0.7402,
-      "mediapipeNativeLosoBalancedAccuracy": 0.7165,
-      "mediapipeNativeLosoRawAccuracy": 0.7165,
+      "mediapipeNativeBalancedAccuracy": 0.784,
+      "mediapipeNativeLosoBalancedAccuracy": 0.784,
       "mediapipeNativeLosoThresholdMaxDegrees": 52,
-      "mediapipeNativeLosoThresholdMinDegrees": 48,
+      "mediapipeNativeLosoThresholdMinDegrees": 52,
       "mediapipeNativeThresholdDegrees": 52,
-      "subjectCount": 8
+      "subjectCount": 18
     },
     {
-      "aihubFittedThresholdDegrees": 98,
-      "aihubThresholdAppliedToMediapipeAccuracy": 0.8021,
+      "captureDays": [
+        "Day01_200921_F",
+        "Day04_200924_F",
+        "Day05_200925_F",
+        "Day08_201005_F",
+        "Day09_201006_F",
+        "Day13_201013_F",
+        "Day16_201016_F",
+        "Day23_201024_F",
+        "Day27_201029_F"
+      ],
       "chain": "HIP",
-      "clipCount": 192,
-      "clipCountBySubject": 16,
-      "clipLevelAngleBiasDegrees": 0.98,
+      "clipCount": 942,
+      "clipLevelAngleBiasDegrees": 1.02,
       "condition": "무릎 충분히 올라오고",
       "conditionKind": "RANGE",
-      "conditionTrueCount": 136,
+      "conditionTrueCount": 657,
       "direction": "FLEXION",
       "exercise": "스탠딩 니업",
+      "extreme": "min",
       "losoConfusion": {
-        "fn": 21,
-        "fp": 15,
-        "tn": 41,
-        "tp": 115
+        "fn": 89,
+        "fp": 68,
+        "tn": 217,
+        "tp": 568
       },
-      "majorityBaseline": 0.7083,
-      "mediapipeNativeAccuracy": 0.8333,
-      "mediapipeNativeBalancedAccuracy": 0.8246,
-      "mediapipeNativeLosoBalancedAccuracy": 0.7889,
-      "mediapipeNativeLosoRawAccuracy": 0.8125,
-      "mediapipeNativeLosoThresholdMaxDegrees": 107,
-      "mediapipeNativeLosoThresholdMinDegrees": 103,
-      "mediapipeNativeThresholdDegrees": 103,
-      "subjectCount": 16
+      "majorityBaseline": 0.6975,
+      "mediapipeNativeBalancedAccuracy": 0.8395,
+      "mediapipeNativeLosoBalancedAccuracy": 0.813,
+      "mediapipeNativeLosoThresholdMaxDegrees": 112,
+      "mediapipeNativeLosoThresholdMinDegrees": 105,
+      "mediapipeNativeThresholdDegrees": 105,
+      "subjectCount": 48
     },
     {
-      "aihubFittedThresholdDegrees": 59,
-      "aihubThresholdAppliedToMediapipeAccuracy": 0.5961,
+      "captureDays": [
+        "Day01_200921_F",
+        "Day05_200925_F",
+        "Day09_201006_F",
+        "Day13_201013_F",
+        "Day23_201024_F",
+        "Day27_201029_F"
+      ],
       "chain": "ELBOW",
-      "clipCount": 255,
-      "clipCountBySubject": 8,
-      "clipLevelAngleBiasDegrees": 18.7,
+      "clipCount": 1574,
+      "clipLevelAngleBiasDegrees": 21.81,
       "condition": "양 손이 머리 뒤에 위치",
       "conditionKind": "STABILITY",
-      "conditionTrueCount": 143,
+      "conditionTrueCount": 880,
       "direction": "FLEXION",
       "exercise": "스탠딩 사이드 크런치",
+      "extreme": "min",
       "losoConfusion": {
-        "fn": 5,
-        "fp": 14,
-        "tn": 98,
-        "tp": 138
+        "fn": 61,
+        "fp": 152,
+        "tn": 542,
+        "tp": 819
       },
-      "majorityBaseline": 0.5608,
-      "mediapipeNativeAccuracy": 0.9294,
-      "mediapipeNativeBalancedAccuracy": 0.9235,
-      "mediapipeNativeLosoBalancedAccuracy": 0.92,
-      "mediapipeNativeLosoRawAccuracy": 0.9255,
-      "mediapipeNativeLosoThresholdMaxDegrees": 95,
+      "majorityBaseline": 0.5591,
+      "mediapipeNativeBalancedAccuracy": 0.8645,
+      "mediapipeNativeLosoBalancedAccuracy": 0.8558,
+      "mediapipeNativeLosoThresholdMaxDegrees": 99,
       "mediapipeNativeLosoThresholdMinDegrees": 94,
-      "mediapipeNativeThresholdDegrees": 95,
-      "subjectCount": 8
+      "mediapipeNativeThresholdDegrees": 94,
+      "subjectCount": 47
     },
     {
-      "aihubFittedThresholdDegrees": 111,
-      "aihubThresholdAppliedToMediapipeAccuracy": 0.9052,
+      "captureDays": [
+        "Day01_200921_F",
+        "Day05_200925_F",
+        "Day09_201006_F",
+        "Day13_201013_F",
+        "Day23_201024_F",
+        "Day27_201029_F"
+      ],
       "chain": "KNEE",
-      "clipCount": 232,
-      "clipCountBySubject": 8,
-      "clipLevelAngleBiasDegrees": 2.94,
+      "clipCount": 1513,
+      "clipLevelAngleBiasDegrees": 14.42,
       "condition": "앞다리 무릎 각도 90도",
       "conditionKind": "RANGE",
-      "conditionTrueCount": 179,
+      "conditionTrueCount": 1160,
       "direction": "FLEXION",
       "exercise": "스텝 포워드 다이나믹 런지",
+      "extreme": "min",
       "losoConfusion": {
-        "fn": 16,
-        "fp": 3,
-        "tn": 50,
-        "tp": 163
+        "fn": 63,
+        "fp": 160,
+        "tn": 193,
+        "tp": 1097
       },
-      "majorityBaseline": 0.7716,
-      "mediapipeNativeAccuracy": 0.931,
-      "mediapipeNativeBalancedAccuracy": 0.9287,
-      "mediapipeNativeLosoBalancedAccuracy": 0.927,
-      "mediapipeNativeLosoRawAccuracy": 0.9181,
-      "mediapipeNativeLosoThresholdMaxDegrees": 116,
-      "mediapipeNativeLosoThresholdMinDegrees": 113,
-      "mediapipeNativeThresholdDegrees": 116,
-      "subjectCount": 8
+      "majorityBaseline": 0.7667,
+      "mediapipeNativeBalancedAccuracy": 0.7462,
+      "mediapipeNativeLosoBalancedAccuracy": 0.7462,
+      "mediapipeNativeLosoThresholdMaxDegrees": 136,
+      "mediapipeNativeLosoThresholdMinDegrees": 136,
+      "mediapipeNativeThresholdDegrees": 136,
+      "subjectCount": 48
     },
     {
-      "aihubFittedThresholdDegrees": 70,
-      "aihubThresholdAppliedToMediapipeAccuracy": 0.5874,
-      "chain": "SHOULDER",
-      "clipCount": 143,
-      "clipCountBySubject": 9,
-      "clipLevelAngleBiasDegrees": 9.99,
-      "condition": "수축 시 몸통-팔꿈치 사이 모아줌",
+      "captureDays": [
+        "Day02_200922_F",
+        "Day10_201007_F",
+        "Day14_201014_F",
+        "Day24_201026_F"
+      ],
+      "chain": "KNEE",
+      "clipCount": 277,
+      "clipLevelAngleBiasDegrees": 7.67,
+      "condition": "앞다리 무릎 각도 90도",
       "conditionKind": "RANGE",
-      "conditionTrueCount": 72,
+      "conditionTrueCount": 173,
       "direction": "FLEXION",
-      "exercise": "풀업",
+      "exercise": "크로스 런지",
+      "extreme": "min",
       "losoConfusion": {
-        "fn": 3,
-        "fp": 36,
-        "tn": 35,
-        "tp": 69
+        "fn": 22,
+        "fp": 20,
+        "tn": 84,
+        "tp": 151
       },
-      "majorityBaseline": 0.5035,
-      "mediapipeNativeAccuracy": 0.7273,
-      "mediapipeNativeBalancedAccuracy": 0.7256,
-      "mediapipeNativeLosoBalancedAccuracy": 0.7256,
-      "mediapipeNativeLosoRawAccuracy": 0.7273,
-      "mediapipeNativeLosoThresholdMaxDegrees": 88,
-      "mediapipeNativeLosoThresholdMinDegrees": 88,
-      "mediapipeNativeThresholdDegrees": 88,
-      "subjectCount": 9
+      "majorityBaseline": 0.6245,
+      "mediapipeNativeBalancedAccuracy": 0.8518,
+      "mediapipeNativeLosoBalancedAccuracy": 0.8403,
+      "mediapipeNativeLosoThresholdMaxDegrees": 118,
+      "mediapipeNativeLosoThresholdMinDegrees": 116,
+      "mediapipeNativeThresholdDegrees": 118,
+      "subjectCount": 33
     }
   ],
   "view": {
     "artifact": "docs/aihub-measurement-view.v1.json",
-    "selection": "PER_EXERCISE_AND_CAPTURE_DAY"
+    "note": "A view is chosen by minimising the error of one specific clip statistic, so a selection made for another chain is not reused; such clips are skipped.",
+    "selection": "PER_EXERCISE_CAPTURE_DAY_CHAIN_AND_EXTREME"
   }
 }

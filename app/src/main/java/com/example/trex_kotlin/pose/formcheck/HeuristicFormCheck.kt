@@ -12,11 +12,11 @@ import kotlin.math.roundToInt
  * Its contract is `docs/pose-heuristic-form-check.v1.md`, pinned by [POLICY_DOCUMENT_SHA256].
  * The track computes rotation-invariant joint geometry, reports observations in observational
  * language, abstains loudly, and touches nothing in the posture-correction release chain: no
- * facade, no criterion, no stored record. Three exercises -- the forward dynamic lunge, the
- * standing knee-up and the lat pull-down -- carry MediaPipe-native fits that cleared a
- * leave-one-subject-out balanced accuracy of 0.75 through the app's own model (research scope,
- * clip-level); every other exercise is an uncalibrated heuristic default, and those whose
- * overshoot has a real consequence are sealed against urging more range. None of this amounts to
+ * facade, no criterion, no stored record. Three exercises -- the standing knee-up, the lat
+ * pull-down and dips -- carry MediaPipe-native fits that cleared a leave-one-global-subject-out
+ * balanced accuracy of 0.75 through the app's own model (research scope, clip-level); every other
+ * exercise is an uncalibrated heuristic default, and those whose overshoot has a real consequence
+ * are sealed against urging more range whether or not they are calibrated. None of this amounts to
  * release-chain calibration, which is why every surface carries the beta disclosure and [claims]
  * still withholds `calibrated`.
  */
@@ -25,7 +25,7 @@ internal object HeuristicFormCheckDeclaration {
     const val TRACK_ID: String = "trex.heuristic-form-check.beta.v1"
 
     const val POLICY_DOCUMENT_SHA256: String =
-        "da8c7a16130d0f28f704a14474ae94eb82c8d2b733965ba53a2b7c64a4a324e8"
+        "61564c1124ad786ff53f860ec427a1e56b0938709f58121e1078c6fbd9770803"
 
     const val POLICY_DOCUMENT_PATH: String = "docs/pose-heuristic-form-check.v1.md"
 
@@ -241,12 +241,15 @@ internal enum class FormCheckExercise(
         restAngleDegrees = 150.0,
         attemptAngleDegrees = 140.0,
         repAngleDegrees = 134.0,
-        // Measured 116 degrees, LOSO balanced 0.927 over 8 subjects and 232 clips, clip-level
-        // bias 2.9 degrees. The previous 129 was fitted through camera view A on the assumption
-        // that it was the lateral one; it is a raised oblique of the studio, and the constant had
-        // absorbed that view's error rather than MediaPipe's.
-        reachedAngleDegrees = 116.0,
-        provenance = FormCheckThresholdProvenance.MEDIAPIPE_NATIVE_FIT_V2,
+        // Uncalibrated, after a fit was tried and withdrawn. Measured on one capture day this
+        // exercise looked like the best-calibrated in the app -- 116 degrees at 0.927 balanced over
+        // 8 subjects. Re-measured across six capture days and 48 participants it falls to 136
+        // degrees at 0.746, under the 0.75 gate, and the 3D ground truth itself only reaches 0.778.
+        // The 0.927 was a property of those eight people, not of the exercise; that MediaPipe
+        // appeared to beat the label ceiling was the clue. Back to the uncalibrated value the other
+        // two lunges use, since the movement pattern is the same and nothing better is earned.
+        reachedAngleDegrees = 129.0,
+        provenance = FormCheckThresholdProvenance.HEURISTIC_DEFAULT,
         rangeUrgingSealed = false,
         setupHint = "카메라 쪽 다리가 앞으로 오게 서 주세요",
         attemptHint = "카메라 쪽 다리가 앞인지 확인하고 조금 더 굽혀볼까요",
@@ -260,13 +263,12 @@ internal enum class FormCheckExercise(
         restAngleDegrees = 150.0,
         attemptAngleDegrees = 140.0,
         repAngleDegrees = 130.0,
-        // Uncalibrated, and now says so. The retired 123 came from the same discredited view-A run
-        // as the forward lunge's 129, but unlike that one it cannot be refitted: on 3D ground truth
-        // across 94 subjects this exercise's best chain separates its depth condition at 0.736
-        // balanced, under the 0.75 gate, so no measurement view was ever selected for it and
-        // MediaPipe can only do worse than labels that already fail. The forward lunge's measured
-        // 116 is borrowed as the nearest defensible prior for the same movement pattern.
-        reachedAngleDegrees = 116.0,
+        // Uncalibrated, and never refittable: on 3D ground truth across 94 subjects this exercise's
+        // best chain separates its depth condition at 0.736 balanced, under the 0.75 gate, so no
+        // measurement view was ever selected for it and MediaPipe can only do worse than labels
+        // that already fail. Shares the lunge family's uncalibrated value; the forward lunge's
+        // one-day 116 that this briefly borrowed did not survive a wider population either.
+        reachedAngleDegrees = 129.0,
         provenance = FormCheckThresholdProvenance.HEURISTIC_DEFAULT,
         rangeUrgingSealed = false,
         setupHint = "카메라 쪽 다리가 앞으로 오게 서 주세요",
@@ -300,10 +302,11 @@ internal enum class FormCheckExercise(
         restAngleDegrees = 150.0,
         attemptAngleDegrees = 140.0,
         repAngleDegrees = 135.0,
-        // Measured 103 degrees, LOSO balanced 0.789 over 16 subjects and 192 clips. The clip-level
-        // bias of 1.0 degree is the smallest in the whole bridge card: the hip is a torso joint,
-        // and those survive a phone camera far better than the limbs do.
-        reachedAngleDegrees = 103.0,
+        // Measured 105 degrees, LOSO balanced 0.813 over 48 participants, 942 clips and nine
+        // capture days -- the widest evidence any constant in this table has. The clip-level bias
+        // of 1.0 degree is the smallest in the whole bridge card: the hip is a torso joint, and
+        // those survive a phone camera far better than the limbs do.
+        reachedAngleDegrees = 105.0,
         provenance = FormCheckThresholdProvenance.MEDIAPIPE_NATIVE_FIT_V2,
         rangeUrgingSealed = false,
         setupHint = "옆모습이 보이게 서 주세요",
@@ -367,8 +370,17 @@ internal enum class FormCheckExercise(
         restAngleDegrees = 150.0,
         attemptAngleDegrees = 140.0,
         repAngleDegrees = 135.0,
-        reachedAngleDegrees = 125.0,
-        provenance = FormCheckThresholdProvenance.HEURISTIC_DEFAULT,
+        // Measured 106 degrees, LOSO balanced 0.761 over 32 participants, 566 clips and four
+        // capture days.
+        reachedAngleDegrees = 106.0,
+        provenance = FormCheckThresholdProvenance.MEDIAPIPE_NATIVE_FIT_V2,
+        // Calibrated AND sealed, which nothing else in this table is. Knowing where the line sits
+        // does not make it safe to push somebody toward it: at the bottom of a dip the shoulder is
+        // at end range, and that is an anatomical fact a better threshold does not change. The
+        // calibration improves what this exercise *observes* -- the angle it names is now a
+        // measured one -- and the seal keeps it from suggesting more of a movement whose overshoot
+        // has a real consequence. Policy §4.2 was revised to say the seal answers a question about
+        // consequence, not about evidence.
         rangeUrgingSealed = true,
         setupHint = "옆모습이 보이게 자세를 잡아 주세요",
         attemptHint = null,
@@ -419,7 +431,9 @@ internal enum class FormCheckExercise(
         restAngleDegrees = 150.0,
         attemptAngleDegrees = 140.0,
         repAngleDegrees = 130.0,
-        // Measured 67 degrees, LOSO balanced 0.831 over 9 subjects and 136 clips.
+        // Measured 67 degrees, LOSO balanced 0.855 over 32 participants, 565 clips and four capture
+        // days. Widening the population left the threshold unmoved and raised the accuracy, which
+        // is what a constant that describes the exercise rather than the sample looks like.
         reachedAngleDegrees = 67.0,
         provenance = FormCheckThresholdProvenance.MEDIAPIPE_NATIVE_FIT_V2,
         rangeUrgingSealed = false,
