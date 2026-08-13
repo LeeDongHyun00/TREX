@@ -63,6 +63,9 @@ class PlacementCoachGovernanceTest {
             "pose.shadow",
             "pose.criterion",
             "pose.readiness",
+            // Policy B10: a display-only surface must never speak or beep on its own.
+            "TextToSpeech",
+            "ToneGenerator",
         )
 
         for (file in trackFiles(sources)) {
@@ -139,6 +142,7 @@ class PlacementCoachGovernanceTest {
         val screens = listOf(
             "com/example/trex_kotlin/PlacementCoachScreen.kt",
             "com/example/trex_kotlin/CameraPermissionState.kt",
+            "com/example/trex_kotlin/SessionCameraGuideLayer.kt",
         ).map { path ->
             sources.resolve(path).also { assertTrue("$path is missing", it.isFile) }
         }

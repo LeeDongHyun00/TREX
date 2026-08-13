@@ -2,6 +2,7 @@ package com.example.trex_kotlin
 
 import androidx.compose.runtime.Immutable
 import com.example.trex_kotlin.catalog.AiHubExercise
+import com.example.trex_kotlin.pose.formcheck.FormCheckExercise
 import com.example.trex_kotlin.pose.release.PostureCorrectionRuntimeFacade
 import java.util.Calendar
 
@@ -36,6 +37,18 @@ data class Workout(
     val reps: String,
     val duration: String,
     val posture: Boolean,
+    /**
+     * Show the camera with skeleton and framing guidance during this workout's timer session.
+     * Display-only: it never produces a verdict, score or cue, so it needs no facade release.
+     */
+    val cameraGuide: Boolean = false,
+    /**
+     * Heuristic form check (beta) during this workout's timer session: rep counting and
+     * observational depth feedback from joint geometry. Governed by
+     * `docs/pose-heuristic-form-check.v1.md`; it is uncalibrated, stores nothing, and stays
+     * outside the posture-correction release chain.
+     */
+    val formCheck: Boolean = false,
     val instanceId: String = exercise.id,
     val alt: WorkoutAlt? = null,
 ) {
@@ -69,6 +82,27 @@ internal fun Workout.withPostureCorrection(enabled: Boolean): Workout =
         posture = enabled &&
             PostureCorrectionRuntimeFacade.availability(exercise).sessionOpenAllowed,
     )
+
+/**
+ * Deliberately ungated: the camera guide only shows what the camera sees and how to frame it.
+ * Posture verdicts stay behind [withPostureCorrection] and the facade release chain.
+ *
+ * The two camera modes are mutually exclusive — only one camera layer ever runs, so a toggle
+ * that stayed visually on while silently superseded would misstate what the session will do.
+ */
+internal fun Workout.withCameraGuide(enabled: Boolean): Workout =
+    copy(cameraGuide = enabled, formCheck = if (enabled) false else formCheck)
+
+internal fun Workout.supportsFormCheck(): Boolean = FormCheckExercise.supports(exercise)
+
+/**
+ * The heuristic beta toggle. Gated only by exercise support — it grants no posture authority
+ * and released verdicts stay behind the facade chain regardless of this flag.
+ */
+internal fun Workout.withFormCheck(enabled: Boolean): Workout {
+    val on = enabled && FormCheckExercise.supports(exercise)
+    return copy(formCheck = on, cameraGuide = if (on) false else cameraGuide)
+}
 
 /**
  * Reserved UI shape for a future provenance-bearing released FAIL record.

@@ -187,7 +187,7 @@ internal object PlacementCoachDisplayPolicy {
 
     /** SHA-256 of the LF-normalised policy document that governs this track. */
     const val POLICY_DOCUMENT_SHA256: String =
-        "0afdaa25feb035425a1ad079bee46f975408fd1ec9091341c2665aa576078cdd"
+        "d69ea762522af72fa6c4573676a7f277cf9e4a9f5a3d9cbb62788a3af5d9e1ea"
 
     const val POLICY_DOCUMENT_PATH: String = "docs/pose-nonverdict-display-policy.v1.md"
 

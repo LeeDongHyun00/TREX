@@ -35,6 +35,7 @@ import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -83,6 +84,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
@@ -91,6 +93,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import com.example.trex_kotlin.catalog.AiHubExercise
+import com.example.trex_kotlin.pose.formcheck.HeuristicFormCheckDeclaration
 import com.example.trex_kotlin.pose.release.PostureCorrectionLifecycle
 import com.example.trex_kotlin.pose.release.PostureCorrectionRuntimeFacade
 import java.util.Calendar
@@ -283,10 +286,20 @@ fun WorkoutListScreen(
         onDispose { onSheetVisibleChange(false) }
     }
 
-    fun togglePosture(id: String) {
+    fun toggleCameraGuide(id: String) {
         onPlanChange(plan.map { workout ->
             if (workout.id == id) {
-                workout.withPostureCorrection(!workout.posture)
+                workout.withCameraGuide(!workout.cameraGuide)
+            } else {
+                workout
+            }
+        })
+    }
+
+    fun toggleFormCheck(id: String) {
+        onPlanChange(plan.map { workout ->
+            if (workout.id == id) {
+                workout.withFormCheck(!workout.formCheck)
             } else {
                 workout
             }
@@ -374,7 +387,8 @@ fun WorkoutListScreen(
                     dragging = isDragging,
                     onEdit = { editTarget = workout },
                     onReplace = { replaceTarget = workout },
-                    onPostureToggle = { togglePosture(workout.id) },
+                    onCameraGuideToggle = { toggleCameraGuide(workout.id) },
+                    onFormCheckToggle = { toggleFormCheck(workout.id) },
                     modifier = Modifier
                         .zIndex(if (isDragging) 1f else 0f)
                         .offset {
@@ -1078,10 +1092,10 @@ private fun WorkoutRow(
     dragging: Boolean = false,
     onEdit: () -> Unit,
     onReplace: () -> Unit,
-    onPostureToggle: () -> Unit,
+    onCameraGuideToggle: () -> Unit,
+    onFormCheckToggle: () -> Unit,
 ) {
     val postureAvailability = PostureCorrectionRuntimeFacade.availability(workout.exercise)
-    val postureSupported = postureAvailability.sessionOpenAllowed
     val postureAvailabilityLabel = when (postureAvailability.lifecycle) {
         PostureCorrectionLifecycle.UNSUPPORTED -> "자세 교정 미지원"
         PostureCorrectionLifecycle.CATALOG_ONLY ->
@@ -1111,18 +1125,39 @@ private fun WorkoutRow(
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     Pill(index.toString().padStart(2, '0'), background = TrexDark, color = TrexLime)
                     Pill(workout.category, background = TrexBackground, color = TrexGreenDeep)
-                    if (workout.posture) {
-                        Pill("자세교정", background = TrexLime, color = TrexDark, icon = Icons.Rounded.Visibility)
+                    if (workout.formCheck) {
+                        Pill(HeuristicFormCheckDeclaration.PILL_LABEL, background = TrexLime, color = TrexDark, icon = Icons.Rounded.Visibility)
+                    } else if (workout.cameraGuide) {
+                        Pill("카메라 가이드", background = TrexLime, color = TrexDark, icon = Icons.Rounded.Visibility)
                     }
                 }
                 Text(workout.name, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 9.dp))
                 Text("${workout.reps} · ${workout.duration}", color = TrexTextSecondary, fontSize = 11.sp, modifier = Modifier.padding(top = 2.dp))
+                if (workout.supportsFormCheck()) {
+                    PostureCorrectionCheck(
+                        checked = workout.formCheck,
+                        enabled = true,
+                        label = HeuristicFormCheckDeclaration.TOGGLE_LABEL,
+                        onClick = onFormCheckToggle,
+                        modifier = Modifier.padding(top = 9.dp),
+                    )
+                }
                 PostureCorrectionCheck(
-                    checked = workout.posture,
-                    enabled = postureSupported,
-                    label = postureAvailabilityLabel,
-                    onClick = onPostureToggle,
-                    modifier = Modifier.padding(top = 9.dp),
+                    checked = workout.cameraGuide,
+                    enabled = true,
+                    label = "카메라 가이드 · 배치 안내만",
+                    onClick = onCameraGuideToggle,
+                    modifier = Modifier.padding(top = if (workout.supportsFormCheck()) 6.dp else 9.dp),
+                )
+                Text(
+                    text = if (workout.supportsFormCheck()) {
+                        HeuristicFormCheckDeclaration.ROW_CAPTION
+                    } else {
+                        "자세 판정 미제공 · $postureAvailabilityLabel"
+                    },
+                    color = TrexTextSecondary,
+                    fontSize = 10.sp,
+                    modifier = Modifier.padding(top = 5.dp),
                 )
             }
             Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
@@ -2139,9 +2174,14 @@ private fun PostureCorrectionCheck(
     val foregroundColor = if (enabled) TrexDark else TrexTextSecondary
 
     Surface(
-        onClick = onClick,
-        enabled = enabled,
-        modifier = modifier,
+        // Toggleable semantics so a screen reader announces the on/off state in place instead of
+        // reading this as a plain button whose state lives in colour alone.
+        modifier = modifier.toggleable(
+            value = checked,
+            enabled = enabled,
+            role = Role.Checkbox,
+            onValueChange = { onClick() },
+        ),
         shape = RoundedCornerShape(10.dp),
         color = containerColor,
         contentColor = foregroundColor,

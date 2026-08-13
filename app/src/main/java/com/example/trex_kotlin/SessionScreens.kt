@@ -231,6 +231,27 @@ fun TimerSessionScreen(
             .fillMaxSize()
             .background(TrexDark),
     ) {
+        // Hoisted above the Crossfade on purpose: phase transitions compose old and new
+        // subtrees at once, and two live PoseCameraPreview instances would race to bind the
+        // one front camera. One long-lived layer also keeps the permission answer and the
+        // person lock across Countdown/Active/ActualInput; it only rests during Rest, whose
+        // screen covers this backdrop anyway. At most one camera layer ever exists: the form
+        // check supersedes the plain guide.
+        if (workout.formCheck) {
+            SessionFormCheckLayer(
+                exercise = workout.exercise,
+                paused = blocked || phase == TimerPhase.Rest,
+                attemptResetKey = currentSet,
+                onAnnounce = { phrase -> feedback.speak(phrase) },
+                modifier = Modifier.fillMaxSize(),
+            )
+        } else if (workout.cameraGuide) {
+            SessionCameraGuideLayer(
+                paused = blocked || phase == TimerPhase.Rest,
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
+
         Crossfade(targetState = phase, label = "timer-session-phase") { visiblePhase ->
             when (visiblePhase) {
                 TimerPhase.Rest -> RestScreen(
@@ -406,15 +427,27 @@ private fun TimerActiveScaffold(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Brush.verticalGradient(listOf(Color(0xFF0D1117), TrexDark))),
+            .then(
+                // With a camera layer on, the backdrop is the hoisted layer behind this
+                // scaffold; an opaque gradient here would hide it.
+                if (workout.cameraGuide || workout.formCheck) {
+                    Modifier
+                } else {
+                    Modifier.background(
+                        Brush.verticalGradient(listOf(Color(0xFF0D1117), TrexDark)),
+                    )
+                },
+            ),
     ) {
-        WorkoutIllustration(
-            modifier = Modifier
-                .align(Alignment.Center)
-                .fillMaxWidth()
-                .height(390.dp),
-            active = phase == TimerPhase.Active && !paused,
-        )
+        if (!workout.cameraGuide && !workout.formCheck) {
+            WorkoutIllustration(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .fillMaxWidth()
+                    .height(390.dp),
+                active = phase == TimerPhase.Active && !paused,
+            )
+        }
 
         Column(
             modifier = Modifier

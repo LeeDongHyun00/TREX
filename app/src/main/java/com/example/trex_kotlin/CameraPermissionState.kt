@@ -34,6 +34,15 @@ internal class CameraPermissionController(
 )
 
 /**
+ * The automatic prompt fires at most once per process. Composables hosting the controller can be
+ * disposed and recreated (phase changes, screen re-entry), and a declined dialog must not chase
+ * the user across every remount; explicit request buttons are unaffected.
+ */
+private object CameraPermissionAutoRequest {
+    var consumed: Boolean = false
+}
+
+/**
  * Asks for the camera once, then keeps the answer current.
  *
  * The app had no runtime permission flow before this screen, so the behaviour is defined here:
@@ -61,7 +70,8 @@ internal fun rememberCameraPermissionController(): CameraPermissionController {
     }
 
     LaunchedEffect(Unit) {
-        if (!granted && !requested) {
+        if (!granted && !requested && !CameraPermissionAutoRequest.consumed) {
+            CameraPermissionAutoRequest.consumed = true
             requested = true
             launcher.launch(Manifest.permission.CAMERA)
         }
@@ -81,7 +91,9 @@ internal fun rememberCameraPermissionController(): CameraPermissionController {
     val state = when {
         granted -> CameraPermissionUiState.GRANTED
         permanentlyDenied -> CameraPermissionUiState.PERMANENTLY_DENIED
-        requested -> CameraPermissionUiState.DENIED
+        // A prompt earlier in this process counts: a freshly remounted surface must show the
+        // declined state, not pretend the question was never asked.
+        requested || CameraPermissionAutoRequest.consumed -> CameraPermissionUiState.DENIED
         else -> CameraPermissionUiState.UNKNOWN
     }
 

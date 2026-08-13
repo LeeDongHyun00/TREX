@@ -239,7 +239,7 @@ Exit criteria:
 3. 소표본 파일럿(≥12명 LOSO)으로 사용자 노출 기능 beta 승격
 4. frame-level 상관 관측에 독립성 가정 신뢰구간(Wilson 등) 적용
 5. 봉인 holdout에 복수 가설 무통제 동시 검정, gate 사후 완화, 동일 데이터 재평가
-6. 오차 데이터 카드 없는 측정값(ROM 등) 사용자 노출
+6. 오차 데이터 카드 없는 측정값(ROM 등) 사용자 노출 — *예외: 휴리스틱 자세 체크 베타 트랙은 소유자 결정으로 [별도 계약](pose-heuristic-form-check.v1.md) §1.1의 보상 통제 하에 각도 관찰·반복 카운트를 노출한다*
 7. 파사드 밖 우회 화면으로 표시 기능 신설(경계 이중화)
 8. "zero-authority 연구" 라벨로 rights manifest 금지 작업 우회
 9. 세션/audit floor 충족을 participant-level CI 충족으로 혼동

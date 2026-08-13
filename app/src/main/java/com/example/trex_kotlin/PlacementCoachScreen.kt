@@ -151,7 +151,12 @@ private fun PlacementCoachCameraStage(onExit: () -> Unit) {
             }
         },
         onError = { error -> cameraError = error },
-        onStatusChanged = { status -> cameraStatus = status },
+        onStatusChanged = { status ->
+            cameraStatus = status
+            if (status == PoseCameraStatus.Ready) {
+                cameraError = null
+            }
+        },
     )
 
     Box(
