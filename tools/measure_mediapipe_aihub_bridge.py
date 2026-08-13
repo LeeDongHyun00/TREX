@@ -58,7 +58,9 @@ MINIMUM_CHAIN_CONFIDENCE = 0.55
 
 CONTAMINATED_TYPE_CODES = frozenset({"062", "101", "109"})
 SUBJECT_PATTERN = re.compile(r"-(Z\d+)_")
-THRESHOLD_SEARCH_RANGE = range(40, 181)
+# 180 is excluded deliberately: at a straight chain every clip is predicted true, which is the
+# degenerate always-true classifier that raw accuracy rewards on an imbalanced condition.
+THRESHOLD_SEARCH_RANGE = range(40, 180)
 
 # Which MediaPipe landmarks each driver chain hinges on, mirroring FormCheckDriver.
 CHAINS: dict[str, dict[str, tuple[int, int, int]]] = {
@@ -241,6 +243,35 @@ def _fit_threshold(rows: list[tuple[float, bool]]) -> int | None:
 
 def _accuracy(rows: list[tuple[float, bool]], threshold: float) -> float:
     return sum(1 for a, label in rows if (a <= threshold) == label) / len(rows)
+
+
+def _confusion(rows: list[tuple[float, bool]], threshold: float) -> tuple[int, int, int, int]:
+    tp = fn = tn = fp = 0
+    for value, label in rows:
+        predicted = value <= threshold
+        if label and predicted:
+            tp += 1
+        elif label:
+            fn += 1
+        elif predicted:
+            fp += 1
+        else:
+            tn += 1
+    return tp, fn, tn, fp
+
+
+def _balanced_accuracy(rows: list[tuple[float, bool]], threshold: float) -> float | None:
+    """Mean of sensitivity and specificity.
+
+    The verdict metric, matching the separability survey. Plain accuracy rewards predicting the
+    majority class, and standing knee-up is 71% positive, so a raw figure there is compatible with
+    balanced accuracies on both sides of the survey's own 0.75 gate. Comparing a raw bridge number
+    against a balanced survey number -- as an earlier report did -- is comparing different units.
+    """
+    tp, fn, tn, fp = _confusion(rows, threshold)
+    if (tp + fn) == 0 or (tn + fp) == 0:
+        return None
+    return (tp / (tp + fn) + tn / (tn + fp)) / 2.0
 
 
 def _percentile(values: list[float], fraction: float) -> float:
@@ -482,6 +513,7 @@ def run(
         subjects = sorted({r["subject"] for r in rows})
         folds: list[int] = []
         correct = held = 0
+        tp = fn = tn = fp = 0
         for subject in subjects:
             train = [
                 (_to_detector(r["mediapipeMinAngle"], direction), r["label"])
@@ -499,6 +531,16 @@ def run(
             folds.append(int(_to_detector(float(fitted), direction)))
             correct += sum(1 for a, label in test if (a <= fitted) == label)
             held += len(test)
+            f_tp, f_fn, f_tn, f_fp = _confusion(test, fitted)
+            tp += f_tp
+            fn += f_fn
+            tn += f_tn
+            fp += f_fp
+        loso_balanced = (
+            (tp / (tp + fn) + tn / (tn + fp)) / 2.0
+            if (tp + fn) and (tn + fp)
+            else None
+        )
 
         exercises.append(
             {
@@ -526,7 +568,17 @@ def run(
                 "mediapipeNativeAccuracy": (
                     round(_accuracy(mp_rows, mp_threshold), 4) if mp_threshold is not None else None
                 ),
-                "mediapipeNativeLosoAccuracy": round(correct / held, 4) if held else None,
+                "mediapipeNativeLosoBalancedAccuracy": (
+                    round(loso_balanced, 4) if loso_balanced is not None else None
+                ),
+                "mediapipeNativeLosoRawAccuracy": round(correct / held, 4) if held else None,
+                "majorityBaseline": round(max(positives, len(rows) - positives) / len(rows), 4),
+                "losoConfusion": {"tp": tp, "fn": fn, "tn": tn, "fp": fp},
+                "mediapipeNativeBalancedAccuracy": (
+                    round(_balanced_accuracy(mp_rows, mp_threshold) or float("nan"), 4)
+                    if mp_threshold is not None
+                    else None
+                ),
                 "mediapipeNativeLosoThresholdMinDegrees": min(folds) if folds else None,
                 "mediapipeNativeLosoThresholdMaxDegrees": max(folds) if folds else None,
                 "clipCountBySubject": len(subjects),
@@ -593,6 +645,7 @@ def run(
             "Clip-level condition labels, so transfer accuracy is clip quality, not per-rep truth.",
             "IMAGE mode; the shipped runtime uses VIDEO mode, whose tracking may differ.",
             "Passing transfer authorises a heuristic-beta constant only, never a release verdict.",
+            "Verdicts use balanced accuracy; raw accuracy is reported only to expose imbalance.",
         ],
     }
 
@@ -641,8 +694,10 @@ def main() -> int:
         )
         print(
             f"   MediaPipe-native {entry['mediapipeNativeThresholdDegrees']}deg"
-            f" -> acc={entry['mediapipeNativeAccuracy']}"
-            f" LOSO={entry['mediapipeNativeLosoAccuracy']}"
+            f" -> bal={entry['mediapipeNativeBalancedAccuracy']}"
+            f" LOSO_bal={entry['mediapipeNativeLosoBalancedAccuracy']}"
+            f" (raw {entry['mediapipeNativeLosoRawAccuracy']},"
+            f" base {entry['majorityBaseline']})"
             f" (folds {entry['mediapipeNativeLosoThresholdMinDegrees']}-"
             f"{entry['mediapipeNativeLosoThresholdMaxDegrees']}deg)"
         )
