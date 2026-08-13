@@ -106,6 +106,10 @@ git add tools/pose_gold_workflow.py docs/barbell-squat-gold-readiness.v1.json do
 git commit -m "Retire the rights-manifest hash pin, recording what it protected"
 ```
 
-## 9. 관련 문서
+## 9. 이 문서가 다루지 않는 것
+
+임계값 보정만 다룬다. **서비스 도달에 필요한 나머지 전부**(영속화·음성 카운트·실기기 검증·가짜 화면 정리·release 정비·문헌 표준 provenance·경쟁 위치)는 [서비스 인수인계](pose-service-readiness-handoff.md)에 있다. 그쪽 §7의 결론은 **보정 잔여 작업보다 실기기 검증이 우선**이라는 것이다.
+
+## 10. 관련 문서
 
 [휴리스틱 정책](pose-heuristic-form-check.v1.md) · [v2 구현 계획](pose-heuristic-form-check-v2-plan.md) · [연구 권리 manifest](pose-data-rights-manifest.aihub-research.v1.json) · [데이터 감사](pose-data-audit.md) · [분리 가능성 조사](aihub-angle-separability.v1.json) · [측정 뷰 선택](aihub-measurement-view.v1.json)
