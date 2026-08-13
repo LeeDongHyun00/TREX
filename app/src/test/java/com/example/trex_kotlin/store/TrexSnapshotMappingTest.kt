@@ -206,6 +206,7 @@ class TrexSnapshotMappingTest {
 
         val restored = listOf(day).toPersistedHistory().toWorkoutHistory().single()
 
+        assertEquals(day.epochDay, restored.epochDay)
         assertEquals(day.dayLabel, restored.dayLabel)
         assertEquals(day.dateLabel, restored.dateLabel)
         assertEquals(day.averageMinutes, restored.averageMinutes)
@@ -222,8 +223,7 @@ class TrexSnapshotMappingTest {
     @Test
     fun noRestoredHistoryItemCarriesAPostureClaim() {
         val day = WorkoutHistoryDay(
-            dayLabel = "수",
-            dateLabel = "8/13",
+            epochDay = 20_678L,
             items = listOf(WorkoutHistoryItem(AiHubExercise.PLANK, "60초", 5, 30)),
             averageMinutes = 5,
             averageCalories = 30,

@@ -87,6 +87,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -96,6 +97,7 @@ import com.example.trex_kotlin.catalog.AiHubExercise
 import com.example.trex_kotlin.pose.formcheck.HeuristicFormCheckDeclaration
 import com.example.trex_kotlin.pose.release.PostureCorrectionLifecycle
 import com.example.trex_kotlin.pose.release.PostureCorrectionRuntimeFacade
+import com.example.trex_kotlin.store.OnboardingAnswers
 import java.util.Calendar
 import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
@@ -475,6 +477,15 @@ fun WorkoutHistoryScreen(
     val weeklyCalories = records.sumOf { it.totalCalories() }
     val completedDays = records.count { it.items.isNotEmpty() }
     val orderedRecords = records.asReversed()
+    // The list holds the last seven *recorded* days. Those are the last seven calendar days only
+    // while the user has been training; after a break they can be months old, and history now
+    // survives restarts, so the "이번 주" framing has to be earned rather than assumed.
+    //
+    // Deliberately not remembered. The answer depends on today's date as much as on the records,
+    // and the date is not observable state — a cached value would survive midnight and re-assert
+    // exactly the framing this exists to prevent. Re-reading costs one clock call and a scan of at
+    // most seven items.
+    val thisWeek = records.coverOnlyTheLastWeek(todayEpochDay())
 
     Column(
         modifier = Modifier
@@ -484,8 +495,13 @@ fun WorkoutHistoryScreen(
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         Column(Modifier.padding(horizontal = 20.dp)) {
-            SectionLabel("최근 7일", color = TrexLime)
+            SectionLabel(if (thisWeek) "최근 7일" else "최근 기록", color = TrexLime)
             ScreenTitle("운동 기록")
+        }
+
+        if (records.isEmpty()) {
+            WorkoutHistoryEmptyState(Modifier.weight(1f))
+            return@Column
         }
 
         Column(
@@ -526,7 +542,11 @@ fun WorkoutHistoryScreen(
                             .weight(1f)
                             .padding(start = 12.dp),
                     ) {
-                        Text("이번 주 누적 칼로리", color = TrexDark.copy(alpha = 0.68f), fontSize = 11.sp)
+                        Text(
+                            text = if (thisWeek) "이번 주 누적 칼로리" else "최근 기록 누적 칼로리",
+                            color = TrexDark.copy(alpha = 0.68f),
+                            fontSize = 11.sp,
+                        )
                         Text(
                             text = "${weeklyCalories}kcal 소모 · ${weeklyMinutes}분 운동",
                             fontSize = 15.sp,
@@ -550,7 +570,9 @@ fun WorkoutHistoryScreen(
                 contentPadding = PaddingValues(horizontal = 20.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                items(orderedRecords, key = { "${it.dateLabel}-${it.dayLabel}" }) { record ->
+                // Keyed on the epoch day: the rendered date repeats every year, and two records a
+                // year apart would collide here now that history is durable.
+                items(orderedRecords, key = { it.epochDay }) { record ->
                     WorkoutHistoryDayCard(
                         record = record,
                         modifier = Modifier
@@ -563,10 +585,57 @@ fun WorkoutHistoryScreen(
     }
 }
 
+/**
+ * Shown before the first workout is finished.
+ *
+ * The screen used to be unreachable in this state because history was seeded with a fabricated
+ * week. With the seed gone, the alternative to this is the summary card rendered in the app's
+ * celebratory accent reading "0kcal 소모 · 0분 운동" over a blank strip, which reads as a bad result
+ * rather than as no result yet.
+ */
 @Composable
-fun DietScreen(
+private fun WorkoutHistoryEmptyState(modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterVertically),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(58.dp)
+                .clip(CircleShape)
+                .background(Color.White.copy(alpha = 0.06f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.FitnessCenter,
+                contentDescription = null,
+                tint = TrexLime.copy(alpha = 0.7f),
+                modifier = Modifier.size(26.dp),
+            )
+        }
+        Text(
+            text = "아직 기록이 없어요",
+            color = Color.White,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.SemiBold,
+        )
+        Text(
+            text = "운동을 끝까지 마치면 여기에 하루씩 쌓여요",
+            color = Color.White.copy(alpha = 0.55f),
+            fontSize = 13.sp,
+            textAlign = TextAlign.Center,
+        )
+    }
+}
+
+@Composable
+internal fun DietScreen(
     recordRequestToken: Int = 0,
     recordLaunchAction: DietRecordLaunchAction = DietRecordLaunchAction.Camera,
+    onboarding: OnboardingAnswers? = null,
     onSheetVisibleChange: (Boolean) -> Unit = {},
     onRecentFoodsChange: (List<String>) -> Unit = {},
 ) {
@@ -579,7 +648,19 @@ fun DietScreen(
     var toastVisible by remember { mutableStateOf(false) }
     var pendingUndo by remember { mutableStateOf<Pair<String, List<FoodEntry>>?>(null) }
     var handledRecordRequestToken by remember { mutableIntStateOf(recordRequestToken) }
-    val recommendedTargetGoal = remember { recommendedNutritionGoal(heightCm = 170, weightKg = 65, activityFactor = 1.35) }
+    // Onboarding asks for height, weight and age and this is the screen that needs them. Until the
+    // answers were persisted they were dropped at `onDone()`, so every user's goal was computed
+    // from the same invented 170cm / 65kg body. A missing or unparseable answer still falls back
+    // to that, because a nutrition goal has to render.
+    val recommendedTargetGoal = remember(onboarding) {
+        val body = onboarding.nutritionBody()
+        recommendedNutritionGoal(
+            heightCm = body.heightCm,
+            weightKg = body.weightKg,
+            age = body.age,
+            activityFactor = 1.35,
+        )
+    }
     var targetGoal by remember { mutableStateOf(recommendedTargetGoal) }
     val foodsBySlot = foodsByDate[dateOffset] ?: emptyDietSlots()
     val canEditSelectedDate = dateOffset in DietDateMinOffset..DietDateMaxOffset
@@ -2283,6 +2364,46 @@ private fun currentMealId(): String {
         else -> "dinner"
     }
 }
+
+/**
+ * The body used when onboarding was skipped, or answered with something a goal cannot be computed
+ * from.
+ *
+ * These were inline literals on the diet screen, which made them look like a considered default
+ * rather than a placeholder standing in for data the app already had.
+ */
+private const val DefaultBodyHeightCm = 170
+private const val DefaultBodyWeightKg = 65
+private const val DefaultBodyAge = 30
+
+/**
+ * Ranges a nutrition goal can be computed from at all.
+ *
+ * Onboarding's field only restricts the character set — six characters of digits and one dot — so
+ * `0`, `9999` and `1` all reach here, and the step gate accepts any non-blank answer. The
+ * Mifflin-St Jeor term `10*kg + 6.25*cm - 5*age + 5` is unbounded in both directions, so an
+ * unfiltered answer turns into a starvation target or a negative one, rendered on a progress gauge
+ * as if it were advice. Out-of-range answers fall back to the placeholder body rather than being
+ * clamped: a clamped 9999cm would silently become a goal for a body the user never described.
+ */
+private val PlausibleBodyHeightCm = 90..250
+private val PlausibleBodyWeightKg = 25..300
+private val PlausibleBodyAge = 10..120
+
+/** The body a nutrition goal is computed from, with every implausible answer replaced. */
+internal data class NutritionBody(
+    val heightCm: Int,
+    val weightKg: Int,
+    val age: Int,
+)
+
+internal fun OnboardingAnswers?.nutritionBody(): NutritionBody = NutritionBody(
+    heightCm = this?.height?.toDoubleOrNull()?.roundToInt()
+        ?.takeIf { it in PlausibleBodyHeightCm } ?: DefaultBodyHeightCm,
+    weightKg = this?.weight?.toDoubleOrNull()?.roundToInt()
+        ?.takeIf { it in PlausibleBodyWeightKg } ?: DefaultBodyWeightKg,
+    age = this?.age?.toIntOrNull()?.takeIf { it in PlausibleBodyAge } ?: DefaultBodyAge,
+)
 
 private fun recommendedCalorieGoal(
     heightCm: Int,

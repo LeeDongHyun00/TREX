@@ -45,7 +45,7 @@ class FileTrexStoreTest {
             PersistedWorkout("id", "PLANK", "60초 x 3세트", "5분", PersistedCameraMode.Guide, null, null),
         ),
         history = listOf(
-            PersistedHistoryDay("수", "8/13", 5, 30, listOf(PersistedHistoryItem("PLANK", "60초", 5, 30))),
+            PersistedHistoryDay(20_678L, 5, 30, listOf(PersistedHistoryItem("PLANK", "60초", 5, 30))),
         ),
     )
 

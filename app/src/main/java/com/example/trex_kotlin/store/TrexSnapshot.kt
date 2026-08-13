@@ -20,7 +20,7 @@ package com.example.trex_kotlin.store
  * change deliberately leaves untouched. The repetition strings below are the *planned* ones the
  * user typed into the plan ("12회 x 3세트"), not anything a detector produced.
  */
-internal const val TREX_SNAPSHOT_SCHEMA_VERSION = 1
+internal const val TREX_SNAPSHOT_SCHEMA_VERSION = 2
 
 /** Which camera layer a planned workout opens with, if any. At most one, by construction. */
 internal enum class PersistedCameraMode {
@@ -60,14 +60,15 @@ internal data class PersistedHistoryItem(
 )
 
 /**
- * One day of history.
+ * One day of history, keyed by its epoch day.
  *
- * The labels are stored rather than recomputed because they are what the day *was* called when it
- * was recorded. Recomputing them from a clock at load time would silently relabel old records.
+ * Schema 1 stored the rendered labels (`수`, `8/13`) instead. That lost the year, so a record could
+ * not be aged, ordered across a year boundary, or told apart from the same calendar date twelve
+ * months earlier. Storing the day itself and deriving the labels removes all three, and lets a
+ * screen say whether what it is showing is really "this week".
  */
 internal data class PersistedHistoryDay(
-    val dayLabel: String,
-    val dateLabel: String,
+    val epochDay: Long,
     val averageMinutes: Int,
     val averageCalories: Int,
     val items: List<PersistedHistoryItem>,

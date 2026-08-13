@@ -69,6 +69,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
+import com.example.trex_kotlin.store.OnboardingAnswers
 import com.example.trex_kotlin.store.TrexSnapshot
 import com.example.trex_kotlin.store.rememberTrexStore
 import com.example.trex_kotlin.store.toPersistedHistory
@@ -288,6 +289,7 @@ fun TrexApp() {
                     selectedTab = selectedTab,
                     workoutPlan = workoutPlan,
                     workoutHistory = workoutHistory,
+                    onboarding = onboarding,
                     onWorkoutPlanChange = { workoutPlan = it },
                     onTabSelected = { selectedTab = it },
                     onStartWorkout = ::startSession,
@@ -312,6 +314,7 @@ private fun MainTabs(
     selectedTab: TrexTab,
     workoutPlan: List<Workout>,
     workoutHistory: List<WorkoutHistoryDay>,
+    onboarding: OnboardingAnswers?,
     onWorkoutPlanChange: (List<Workout>) -> Unit,
     onTabSelected: (TrexTab) -> Unit,
     onStartWorkout: () -> Unit,
@@ -354,6 +357,7 @@ private fun MainTabs(
                 TrexTab.Diet -> DietScreen(
                     recordRequestToken = dietRecordRequestToken,
                     recordLaunchAction = dietRecordLaunchAction,
+                    onboarding = onboarding,
                     onSheetVisibleChange = { tabOverlayVisible = it },
                     onRecentFoodsChange = { dietRecentFoodNames = it },
                 )

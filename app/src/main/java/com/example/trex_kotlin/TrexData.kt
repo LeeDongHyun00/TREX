@@ -4,7 +4,8 @@ import androidx.compose.runtime.Immutable
 import com.example.trex_kotlin.catalog.AiHubExercise
 import com.example.trex_kotlin.pose.formcheck.FormCheckExercise
 import com.example.trex_kotlin.pose.release.PostureCorrectionRuntimeFacade
-import java.util.Calendar
+import java.time.DayOfWeek
+import java.time.LocalDate
 
 enum class TrexTab(val label: String) {
     Home("홈"),
@@ -126,14 +127,54 @@ data class WorkoutHistoryItem(
     val workoutName: String get() = exercise.displayName
 }
 
+/**
+ * One day of workout history, identified by its date rather than by how that date reads.
+ *
+ * The labels are derived, not stored. They used to be the only date a record carried, which made
+ * `8/13` the de facto key — and `8/13` repeats every year. Two records a year apart compared equal
+ * when replacing a day, and collided as list keys. An epoch day is unique, orders correctly, and
+ * lets a screen ask how old a record actually is.
+ */
 @Immutable
 data class WorkoutHistoryDay(
-    val dayLabel: String,
-    val dateLabel: String,
+    val epochDay: Long,
     val items: List<WorkoutHistoryItem>,
     val averageMinutes: Int,
     val averageCalories: Int,
-)
+) {
+    val dayLabel: String get() = koreanDayLabel(epochDay)
+    val dateLabel: String get() = monthDayLabel(epochDay)
+}
+
+/** How many days of history are kept. Older records fall off the end. */
+const val WorkoutHistoryRetentionDays: Int = 7
+
+fun todayEpochDay(): Long = LocalDate.now().toEpochDay()
+
+fun koreanDayLabel(epochDay: Long): String = when (LocalDate.ofEpochDay(epochDay).dayOfWeek) {
+    DayOfWeek.MONDAY -> "월"
+    DayOfWeek.TUESDAY -> "화"
+    DayOfWeek.WEDNESDAY -> "수"
+    DayOfWeek.THURSDAY -> "목"
+    DayOfWeek.FRIDAY -> "금"
+    DayOfWeek.SATURDAY -> "토"
+    DayOfWeek.SUNDAY -> "일"
+}
+
+fun monthDayLabel(epochDay: Long): String = with(LocalDate.ofEpochDay(epochDay)) {
+    "$monthValue/$dayOfMonth"
+}
+
+/**
+ * Whether every record on hand falls inside the last seven calendar days.
+ *
+ * The history screen calls itself "최근 7일" and totals itself as "이번 주". That was true while the
+ * list was regenerated from a clock on every launch; now that it survives restarts it holds the
+ * last seven *recorded* days, which after a break can be months old. A caller that asks this can
+ * say which of the two it is showing instead of asserting the wrong one.
+ */
+fun List<WorkoutHistoryDay>.coverOnlyTheLastWeek(todayEpochDay: Long): Boolean =
+    isNotEmpty() && all { todayEpochDay - it.epochDay in 0 until WorkoutHistoryRetentionDays }
 
 @Immutable
 data class Nutrition(
@@ -255,12 +296,18 @@ fun Nutrition.plus(other: Nutrition): Nutrition = Nutrition(
 fun Iterable<FoodEntry>.totalNutrition(): Nutrition =
     fold(Nutrition(0, 0.0, 0.0, 0.0)) { acc, entry -> acc.plus(entry.nutrition) }
 
-fun seedWorkoutHistory(plan: List<Workout> = todayPlan): List<WorkoutHistoryDay> {
-    val calendar = Calendar.getInstance()
-
+/**
+ * A fabricated week, for tests and previews only.
+ *
+ * It invents history by rotating a plan over past dates. Nothing under `src/main` may call it —
+ * once history is durable, a production caller would write this fiction to disk as the user's own
+ * record on their first finished session. `TrexPersistenceGovernanceTest` enforces that.
+ */
+fun seedWorkoutHistory(
+    plan: List<Workout> = todayPlan,
+    todayEpochDay: Long = todayEpochDay(),
+): List<WorkoutHistoryDay> {
     return (0..6).map { index ->
-        val dayCalendar = calendar.clone() as Calendar
-        dayCalendar.add(Calendar.DAY_OF_MONTH, index - 6)
         val selected = plan.rotate(index).take(2 + index % 3)
         val items = selected.map { workout ->
             val duration = workout.durationMinutes()
@@ -274,8 +321,7 @@ fun seedWorkoutHistory(plan: List<Workout> = todayPlan): List<WorkoutHistoryDay>
         }
 
         WorkoutHistoryDay(
-            dayLabel = dayCalendar.koreanDayOfWeek(),
-            dateLabel = "${dayCalendar.get(Calendar.MONTH) + 1}/${dayCalendar.get(Calendar.DAY_OF_MONTH)}",
+            epochDay = todayEpochDay - (6 - index),
             items = items,
             averageMinutes = (items.sumOf { it.durationMinutes } - 4 - index % 2).coerceAtLeast(8),
             averageCalories = (items.sumOf { it.calories } - 28 - index * 2).coerceAtLeast(80),
@@ -283,8 +329,11 @@ fun seedWorkoutHistory(plan: List<Workout> = todayPlan): List<WorkoutHistoryDay>
     }
 }
 
-fun createWorkoutHistoryDay(plan: List<Workout>, elapsedSeconds: Int): WorkoutHistoryDay {
-    val calendar = Calendar.getInstance()
+fun createWorkoutHistoryDay(
+    plan: List<Workout>,
+    elapsedSeconds: Int,
+    epochDay: Long = todayEpochDay(),
+): WorkoutHistoryDay {
     val items = plan.map { workout ->
         val duration = workout.durationMinutes()
         WorkoutHistoryItem(
@@ -302,22 +351,32 @@ fun createWorkoutHistoryDay(plan: List<Workout>, elapsedSeconds: Int): WorkoutHi
     val totalCalories = items.sumOf { it.calories }
 
     return WorkoutHistoryDay(
-        dayLabel = calendar.koreanDayOfWeek(),
-        dateLabel = "${calendar.get(Calendar.MONTH) + 1}/${calendar.get(Calendar.DAY_OF_MONTH)}",
+        epochDay = epochDay,
         items = items,
         averageMinutes = (totalMinutes - 5).coerceAtLeast(8),
         averageCalories = (totalCalories - 35).coerceAtLeast(80),
     )
 }
 
+/**
+ * Replaces the record for the same day, or adds a new one, keeping the list chronological and
+ * bounded.
+ *
+ * Matching is on the epoch day. It used to be on the `M/d` label, which repeats every year: a user
+ * returning after twelve months would have had their old record silently overwritten instead of a
+ * new one recorded.
+ *
+ * [record] is retained unconditionally and the *older* entries compete for the remaining slots.
+ * Sorting the whole list and truncating would be simpler and would lose the workout the user just
+ * finished whenever its date sorts below every retained one — which a device that boots with a
+ * reset clock produces. Dropping a record already on disk is recoverable; dropping the one being
+ * written means the session vanished with nothing to show for it.
+ */
 fun List<WorkoutHistoryDay>.replaceTodayWith(record: WorkoutHistoryDay): List<WorkoutHistoryDay> {
-    val existingIndex = indexOfLast { it.dateLabel == record.dateLabel }
-    val updated = if (existingIndex >= 0) {
-        toMutableList().also { it[existingIndex] = record }
-    } else {
-        this + record
-    }
-    return updated.takeLast(7)
+    val others = filterNot { it.epochDay == record.epochDay }
+        .sortedBy { it.epochDay }
+        .takeLast(WorkoutHistoryRetentionDays - 1)
+    return (others + record).sortedBy { it.epochDay }
 }
 
 fun WorkoutHistoryDay.totalMinutes(): Int =
@@ -364,14 +423,4 @@ internal fun Workout.estimatedCalories(): Int {
         else -> error("Unknown AI Hub type_info.type: ${exercise.typeInfoType}")
     }
     return (durationMinutes() * multiplier).coerceAtLeast(24)
-}
-
-private fun Calendar.koreanDayOfWeek(): String = when (get(Calendar.DAY_OF_WEEK)) {
-    Calendar.MONDAY -> "월"
-    Calendar.TUESDAY -> "화"
-    Calendar.WEDNESDAY -> "수"
-    Calendar.THURSDAY -> "목"
-    Calendar.FRIDAY -> "금"
-    Calendar.SATURDAY -> "토"
-    else -> "일"
 }

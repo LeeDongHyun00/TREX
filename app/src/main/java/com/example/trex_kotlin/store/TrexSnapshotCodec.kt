@@ -10,11 +10,11 @@ package com.example.trex_kotlin.store
  * all. The format below is the whole cost of avoiding that.
  *
  * ```
- * trex-store<TAB>1
+ * trex-store<TAB>2
  * flags<TAB>true<TAB>true<TAB>true
  * onboarding<TAB>lower<TAB>42<TAB>gym<TAB>false<TAB>7<TAB>male<TAB>178<TAB>72<TAB>29
  * plan<TAB>BARBELL_SQUAT<TAB>BARBELL_SQUAT<TAB>12회 x 3세트<TAB>8분<TAB>none<TAB>GOOD_MORNING<TAB>10회 x 3세트
- * day<TAB>수<TAB>8/13<TAB>18<TAB>140
+ * day<TAB>20678<TAB>18<TAB>140
  * item<TAB>BARBELL_SQUAT<TAB>12회 x 3세트<TAB>8<TAB>64
  * ```
  *
@@ -90,8 +90,7 @@ internal object TrexSnapshotCodec {
         for (day in snapshot.history) {
             appendRow(
                 DAY,
-                escape(day.dayLabel),
-                escape(day.dateLabel),
+                day.epochDay.toString(),
                 day.averageMinutes.toString(),
                 day.averageCalories.toString(),
             )
@@ -178,13 +177,12 @@ internal object TrexSnapshotCodec {
                 }
 
                 DAY -> {
-                    require(fields.size == 5)
+                    require(fields.size == 4)
                     closeDay()
                     currentDay = PersistedHistoryDay(
-                        dayLabel = required(fields[1]),
-                        dateLabel = required(fields[2]),
-                        averageMinutes = parseInt(fields[3]),
-                        averageCalories = parseInt(fields[4]),
+                        epochDay = parseLong(fields[1]),
+                        averageMinutes = parseInt(fields[2]),
+                        averageCalories = parseInt(fields[3]),
                         items = emptyList(),
                     )
                 }
@@ -244,6 +242,9 @@ internal object TrexSnapshotCodec {
 
     private fun parseInt(token: String): Int =
         token.toIntOrNull() ?: throw IllegalArgumentException("not an integer")
+
+    private fun parseLong(token: String): Long =
+        token.toLongOrNull() ?: throw IllegalArgumentException("not a long")
 
     private fun required(token: String): String =
         unescape(token) ?: throw IllegalArgumentException("required field was absent")

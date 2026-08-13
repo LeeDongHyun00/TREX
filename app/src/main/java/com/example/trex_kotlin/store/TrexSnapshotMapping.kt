@@ -68,8 +68,7 @@ internal fun List<PersistedWorkout>.toWorkoutPlan(): List<Workout> = mapNotNull 
 
 internal fun List<WorkoutHistoryDay>.toPersistedHistory(): List<PersistedHistoryDay> = map { day ->
     PersistedHistoryDay(
-        dayLabel = day.dayLabel,
-        dateLabel = day.dateLabel,
+        epochDay = day.epochDay,
         averageMinutes = day.averageMinutes,
         averageCalories = day.averageCalories,
         items = day.items.map { item ->
@@ -85,8 +84,7 @@ internal fun List<WorkoutHistoryDay>.toPersistedHistory(): List<PersistedHistory
 
 internal fun List<PersistedHistoryDay>.toWorkoutHistory(): List<WorkoutHistoryDay> = map { day ->
     WorkoutHistoryDay(
-        dayLabel = day.dayLabel,
-        dateLabel = day.dateLabel,
+        epochDay = day.epochDay,
         averageMinutes = day.averageMinutes,
         averageCalories = day.averageCalories,
         items = day.items.mapNotNull { item ->

@@ -50,8 +50,7 @@ class TrexSnapshotCodecTest {
         ),
         history = listOf(
             PersistedHistoryDay(
-                dayLabel = "화",
-                dateLabel = "8/12",
+                epochDay = 20_677L,
                 averageMinutes = 14,
                 averageCalories = 96,
                 items = listOf(
@@ -60,8 +59,7 @@ class TrexSnapshotCodecTest {
                 ),
             ),
             PersistedHistoryDay(
-                dayLabel = "수",
-                dateLabel = "8/13",
+                epochDay = 20_678L,
                 averageMinutes = 18,
                 averageCalories = 140,
                 items = listOf(PersistedHistoryItem("PUSH_UP", "8회 x 3세트", 6, 36)),
@@ -87,8 +85,8 @@ class TrexSnapshotCodecTest {
     fun aDayWithNoItemsIsNotConfusedWithTheDayAfterIt() {
         val snapshot = TrexSnapshot(
             history = listOf(
-                PersistedHistoryDay("화", "8/12", 0, 0, emptyList()),
-                PersistedHistoryDay("수", "8/13", 18, 140, listOf(
+                PersistedHistoryDay(20_677L, 0, 0, emptyList()),
+                PersistedHistoryDay(20_678L, 18, 140, listOf(
                     PersistedHistoryItem("PUSH_UP", "8회", 6, 36),
                 )),
             ),
@@ -179,7 +177,9 @@ class TrexSnapshotCodecTest {
             header + "flags\tyes\ttrue\ttrue\n" to "flags row with a non-boolean",
             header + "plan\tid\tPLANK\tr\td\tsideways\t\\-\t\\-\n" to "unknown camera mode",
             header + "plan\tid\tPLANK\tr\td\tnone\t\\-\n" to "plan row missing a field",
-            header + "day\t수\t8/13\tx\t140\n" to "non-numeric average",
+            header + "day\t20678\tx\t140\n" to "non-numeric average",
+            header + "day\tnotaday\t18\t140\n" to "non-numeric epoch day",
+            header + "day\t20678\t18\n" to "day row missing a field",
             header + "item\tPLANK\tr\t5\t30\n" to "item with no day above it",
             header + "plan\tid\tPLANK\tr\\\td\tnone\t\\-\t\\-\n" to "dangling escape",
             header + "plan\tid\tPLANK\tr\\qd\td\tnone\t\\-\t\\-\n" to "unknown escape",
