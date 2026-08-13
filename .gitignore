@@ -35,6 +35,14 @@ trex_design_react/dist/
 __pycache__/
 *.py[cod]
 
+# Python venv for the measurement tools. MediaPipe needs 3.12 while the system runs 3.13, so
+# tools/measure_*.py are run from here:
+#   py -V:3.12 -m venv .venv312
+#   .venv312/Scripts/python -m pip install mediapipe opencv-python-headless
+.venv312/
+.venv/
+venv/
+
 # Logs
 *.log
 npm-debug.log*
