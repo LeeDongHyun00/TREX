@@ -293,13 +293,14 @@ def archive_for_day(archives: list[Path], day: str, cache: dict[str, str]) -> Pa
 
 def run(
     label_root: Path,
-    archive_root: Path,
+    archive_roots: list[Path],
     model_path: Path,
     view_artifact: Path,
     workers: int,
     only: set[str] | None,
     extra_image_roots: list[Path],
     clips_out: Path | None = None,
+    frames_out: Path | None = None,
 ) -> dict[str, Any]:
     model_sha = _verify_model(model_path)
     plan = build_plan(label_root, view_artifact, only)
@@ -350,7 +351,12 @@ def run(
                 measured[clip_id].append((img_key, angle))
             block = False
 
-    archives = sorted(archive_root.glob("*.tar")) if archive_root.is_dir() else []
+    # The distribution spans drives: the first twelve barbell archives live beside the labels and
+    # the rest arrived on an external volume. One capture day still lives in exactly one archive,
+    # so pooling the roots changes where a day is found, never which day it is.
+    archives = sorted(
+        archive for root in archive_roots if root.is_dir() for archive in root.glob("*.tar")
+    )
     day_cache: dict[str, str] = {}
 
     for day in sorted(frames_by_day):
@@ -421,6 +427,7 @@ def run(
 
     # ---- fit ----------------------------------------------------------------------------------
     rows_by_exercise: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    frame_rows: list[dict[str, Any]] = []
     for clip_id, survivors in measured.items():
         if not survivors:
             continue
@@ -430,6 +437,25 @@ def run(
         paired_labels = [
             clip["labelByKey"][key] for key, _ in survivors if key in clip["labelByKey"]
         ]
+        if frames_out is not None:
+            # The per-frame pairs the clip statistic is distilled from. The clip extreme answers
+            # the threshold question; these answer the error question — what one frame of this
+            # chain misreads by — which no artifact has ever published for a chain other than the
+            # knee, though several policy bounds now lean on exactly that number.
+            for key, mediapipe_angle in survivors:
+                label_angle = clip["labelByKey"].get(key)
+                if label_angle is None:
+                    continue
+                frame_rows.append(
+                    {
+                        "exercise": clip["exercise"],
+                        "chain": clip["chain"],
+                        "day": clip["day"],
+                        "subject": clip["subject"],
+                        "mediapipe": round(mediapipe_angle, 2),
+                        "aihub": round(label_angle, 2),
+                    }
+                )
         clip["aihubExtremeOverMeasuredFrames"] = (
             (min(paired_labels) if extreme == "min" else max(paired_labels))
             if paired_labels
@@ -464,6 +490,22 @@ def run(
             encoding="utf-8",
         )
         print(f"wrote per-clip rows to {clips_out}", file=sys.stderr, flush=True)
+
+    if frames_out is not None:
+        frames_out.write_text(
+            json.dumps(
+                {
+                    "note": (
+                        "Per-frame (MediaPipe, AI Hub 3D label) angle pairs from the same pass, "
+                        "so a per-chain per-frame error card needs no second pass."
+                    ),
+                    "rows": frame_rows,
+                },
+                ensure_ascii=False,
+            ),
+            encoding="utf-8",
+        )
+        print(f"wrote {len(frame_rows)} per-frame pairs to {frames_out}", file=sys.stderr, flush=True)
 
     exercises: list[dict[str, Any]] = []
     for exercise in sorted(rows_by_exercise):
@@ -572,7 +614,7 @@ def run(
         },
         "source": {
             "readInPlaceFromArchives": True,
-            "archiveRoot": str(archive_root),
+            "archiveRoots": [str(root) for root in archive_roots],
             "note": "One archive holds one capture day; only the selected view's frames are read.",
         },
         "detectionOutcomes": dict(sorted(outcomes.items())),
@@ -593,7 +635,13 @@ def run(
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("label_root", type=Path)
-    parser.add_argument("--archives", type=Path, required=True)
+    parser.add_argument(
+        "--archives",
+        type=Path,
+        action="append",
+        required=True,
+        help="a directory of day tars; repeatable, because the distribution spans drives",
+    )
     parser.add_argument("--model", type=Path, default=DEFAULT_MODEL)
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--workers", type=int, default=8)
@@ -607,6 +655,15 @@ def main() -> int:
         ),
     )
     parser.add_argument("--only", action="append", default=None)
+    parser.add_argument(
+        "--frames-out",
+        type=Path,
+        default=None,
+        help=(
+            "write the per-frame (MediaPipe, label) angle pairs here, so a per-chain per-frame "
+            "error card can be computed without another pass over the archives"
+        ),
+    )
     parser.add_argument(
         "--images",
         type=Path,
@@ -638,6 +695,7 @@ def main() -> int:
         only,
         list(args.images or []),
         args.clips_out,
+        args.frames_out,
     )
     args.out.write_text(
         json.dumps(artifact, sort_keys=True, indent=2, ensure_ascii=False) + "\n",

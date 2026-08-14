@@ -146,6 +146,11 @@ class ExerciseProfile(NamedTuple):
 EXERCISE_PROFILES: dict[str, ExerciseProfile] = {
     # -- Range of motion: the joint must travel far enough. -------------------------------------
     "스텝 포워드 다이나믹 런지": ExerciseProfile("앞다리 무릎 각도 90도", "KNEE", "FLEXION", "min", "RANGE"),
+    # The static split stance reads its depth on the HIP, not the knee: the separability survey
+    # scores this condition 0.771 on shoulder-hip-knee and near chance on hip-knee-ankle, the
+    # reverse of the stepping lunges. The profile follows the measurement, as the lat pulldown's
+    # shoulder driver did.
+    "바벨 런지": ExerciseProfile("앞다리 무릎 각도 90도", "HIP", "FLEXION", "min", "RANGE"),
     "스탠딩 니업": ExerciseProfile("무릎 충분히 올라오고", "HIP", "FLEXION", "min", "RANGE"),
     "딥스": ExerciseProfile("이완 시 팔꿈치 각도 90도", "ELBOW", "FLEXION", "min", "RANGE"),
     "크로스 런지": ExerciseProfile("앞다리 무릎 각도 90도", "KNEE", "FLEXION", "min", "RANGE"),
