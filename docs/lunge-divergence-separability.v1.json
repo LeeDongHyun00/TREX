@@ -1,0 +1,1591 @@
+{
+  "ankleSeparationInLegLengths": {
+    "바벨 런지": {
+      "count": 1438,
+      "max": 2.3968924987656397,
+      "median": 1.2492833492772089,
+      "min": 0.4805703640514565,
+      "p10": 0.9013197849905266,
+      "p5": 0.8242854628663061,
+      "p90": 1.5436812394543598,
+      "p95": 1.6340288192950096
+    },
+    "바벨 스쿼트": {
+      "count": 720,
+      "max": 1.8064379163729245,
+      "median": 0.8129502249066322,
+      "min": 0.3962794428701958,
+      "p10": 0.6178536541445805,
+      "p5": 0.5816068394761695,
+      "p90": 1.182271591644287,
+      "p95": 1.3195391230182107
+    },
+    "스텝 백워드 다이나믹 런지": {
+      "count": 1455,
+      "max": 330345.5834070481,
+      "median": 1.2981035287042053,
+      "min": 0.6185238038554436,
+      "p10": 0.9675199712102212,
+      "p5": 0.868537246758854,
+      "p90": 12.510782971865094,
+      "p95": 124.72429160085258
+    },
+    "스텝 포워드 다이나믹 런지": {
+      "count": 1615,
+      "max": 2.136803409306824,
+      "median": 1.2726941974357462,
+      "min": 0.5495598431615482,
+      "p10": 0.9456266249363076,
+      "p5": 0.8362814838467035,
+      "p90": 1.51437437287991,
+      "p95": 1.6134047123184665
+    }
+  },
+  "artifactKind": "LUNGE_DIVERGENCE_SEPARABILITY",
+  "authority": "CATALOG_AND_LABEL_ANALYSIS_ONLY_NOT_RUNTIME_RELEASE",
+  "chains": {
+    "HIP": {
+      "bestBoundAtOnePercentFalseRejection": {
+        "boundDegrees": 12.0,
+        "impostorCaughtRate": 0.7416666666666667,
+        "lungeFalseRejectionRate": 0.009760425909494233
+      },
+      "impostor": {
+        "count": 720,
+        "max": 71.34394775364485,
+        "median": 7.049076555241896,
+        "min": 1.9823421602254143,
+        "p10": 4.032588645703441,
+        "p5": 3.330219676869177,
+        "p90": 19.97065747742431,
+        "p95": 24.014534203350934
+      },
+      "lunge": {
+        "count": 4508,
+        "max": 179.83767694274485,
+        "median": 44.62568116851189,
+        "min": 6.058915930960609,
+        "p10": 20.54808630635074,
+        "p5": 16.8724004123942,
+        "p90": 79.21914600761093,
+        "p95": 104.35949790335293
+      },
+      "shallowLunge": {
+        "count": 2205,
+        "max": 179.83767694274485,
+        "median": 33.89902692052817,
+        "min": 6.266433410814415,
+        "p10": 18.02067466084128,
+        "p5": 15.498834223224833,
+        "p90": 66.18628810955985,
+        "p95": 99.58714737905329
+      },
+      "sweep": [
+        {
+          "boundDegrees": 2.0,
+          "impostorCaughtRate": 0.001388888888888889,
+          "lungeFalseRejectionRate": 0.0
+        },
+        {
+          "boundDegrees": 3.0,
+          "impostorCaughtRate": 0.02361111111111111,
+          "lungeFalseRejectionRate": 0.0
+        },
+        {
+          "boundDegrees": 4.0,
+          "impostorCaughtRate": 0.09722222222222222,
+          "lungeFalseRejectionRate": 0.0
+        },
+        {
+          "boundDegrees": 5.0,
+          "impostorCaughtRate": 0.23055555555555557,
+          "lungeFalseRejectionRate": 0.0
+        },
+        {
+          "boundDegrees": 6.0,
+          "impostorCaughtRate": 0.36944444444444446,
+          "lungeFalseRejectionRate": 0.0
+        },
+        {
+          "boundDegrees": 7.0,
+          "impostorCaughtRate": 0.4930555555555556,
+          "lungeFalseRejectionRate": 0.00044365572315882877
+        },
+        {
+          "boundDegrees": 8.0,
+          "impostorCaughtRate": 0.5708333333333333,
+          "lungeFalseRejectionRate": 0.0015527950310559005
+        },
+        {
+          "boundDegrees": 9.0,
+          "impostorCaughtRate": 0.6263888888888889,
+          "lungeFalseRejectionRate": 0.001996450754214729
+        },
+        {
+          "boundDegrees": 10.0,
+          "impostorCaughtRate": 0.6763888888888889,
+          "lungeFalseRejectionRate": 0.003105590062111801
+        },
+        {
+          "boundDegrees": 11.0,
+          "impostorCaughtRate": 0.7125,
+          "lungeFalseRejectionRate": 0.005545696539485359
+        },
+        {
+          "boundDegrees": 12.0,
+          "impostorCaughtRate": 0.7416666666666667,
+          "lungeFalseRejectionRate": 0.009760425909494233
+        },
+        {
+          "boundDegrees": 13.0,
+          "impostorCaughtRate": 0.7722222222222223,
+          "lungeFalseRejectionRate": 0.014418811002661935
+        },
+        {
+          "boundDegrees": 14.0,
+          "impostorCaughtRate": 0.7847222222222222,
+          "lungeFalseRejectionRate": 0.021073646850044366
+        },
+        {
+          "boundDegrees": 15.0,
+          "impostorCaughtRate": 0.8097222222222222,
+          "lungeFalseRejectionRate": 0.027284826974267967
+        },
+        {
+          "boundDegrees": 16.0,
+          "impostorCaughtRate": 0.8263888888888888,
+          "lungeFalseRejectionRate": 0.03571428571428571
+        },
+        {
+          "boundDegrees": 17.0,
+          "impostorCaughtRate": 0.8569444444444444,
+          "lungeFalseRejectionRate": 0.05124223602484472
+        },
+        {
+          "boundDegrees": 18.0,
+          "impostorCaughtRate": 0.8680555555555556,
+          "lungeFalseRejectionRate": 0.06299911268855368
+        },
+        {
+          "boundDegrees": 19.0,
+          "impostorCaughtRate": 0.8847222222222222,
+          "lungeFalseRejectionRate": 0.07897071872227152
+        },
+        {
+          "boundDegrees": 20.0,
+          "impostorCaughtRate": 0.9013888888888889,
+          "lungeFalseRejectionRate": 0.0911712511091393
+        },
+        {
+          "boundDegrees": 21.0,
+          "impostorCaughtRate": 0.9069444444444444,
+          "lungeFalseRejectionRate": 0.10825199645075421
+        },
+        {
+          "boundDegrees": 22.0,
+          "impostorCaughtRate": 0.925,
+          "lungeFalseRejectionRate": 0.12555456965394854
+        },
+        {
+          "boundDegrees": 23.0,
+          "impostorCaughtRate": 0.9388888888888889,
+          "lungeFalseRejectionRate": 0.13975155279503104
+        },
+        {
+          "boundDegrees": 24.0,
+          "impostorCaughtRate": 0.9486111111111111,
+          "lungeFalseRejectionRate": 0.15505767524401065
+        },
+        {
+          "boundDegrees": 25.0,
+          "impostorCaughtRate": 0.9583333333333334,
+          "lungeFalseRejectionRate": 0.17236024844720496
+        },
+        {
+          "boundDegrees": 26.0,
+          "impostorCaughtRate": 0.9625,
+          "lungeFalseRejectionRate": 0.19099378881987578
+        },
+        {
+          "boundDegrees": 27.0,
+          "impostorCaughtRate": 0.9680555555555556,
+          "lungeFalseRejectionRate": 0.20740905057675244
+        },
+        {
+          "boundDegrees": 28.0,
+          "impostorCaughtRate": 0.9722222222222222,
+          "lungeFalseRejectionRate": 0.22937000887311446
+        },
+        {
+          "boundDegrees": 29.0,
+          "impostorCaughtRate": 0.9736111111111111,
+          "lungeFalseRejectionRate": 0.24445430346051464
+        },
+        {
+          "boundDegrees": 30.0,
+          "impostorCaughtRate": 0.9763888888888889,
+          "lungeFalseRejectionRate": 0.25998225377107365
+        },
+        {
+          "boundDegrees": 31.0,
+          "impostorCaughtRate": 0.9791666666666666,
+          "lungeFalseRejectionRate": 0.2803904170363798
+        },
+        {
+          "boundDegrees": 32.0,
+          "impostorCaughtRate": 0.9819444444444444,
+          "lungeFalseRejectionRate": 0.2948092280390417
+        },
+        {
+          "boundDegrees": 33.0,
+          "impostorCaughtRate": 0.9819444444444444,
+          "lungeFalseRejectionRate": 0.3163265306122449
+        },
+        {
+          "boundDegrees": 34.0,
+          "impostorCaughtRate": 0.9833333333333333,
+          "lungeFalseRejectionRate": 0.33229813664596275
+        },
+        {
+          "boundDegrees": 35.0,
+          "impostorCaughtRate": 0.9833333333333333,
+          "lungeFalseRejectionRate": 0.3533717834960071
+        },
+        {
+          "boundDegrees": 36.0,
+          "impostorCaughtRate": 0.9833333333333333,
+          "lungeFalseRejectionRate": 0.3684560780834073
+        },
+        {
+          "boundDegrees": 37.0,
+          "impostorCaughtRate": 0.9847222222222223,
+          "lungeFalseRejectionRate": 0.38620230700976044
+        },
+        {
+          "boundDegrees": 38.0,
+          "impostorCaughtRate": 0.9847222222222223,
+          "lungeFalseRejectionRate": 0.39906832298136646
+        },
+        {
+          "boundDegrees": 39.0,
+          "impostorCaughtRate": 0.9875,
+          "lungeFalseRejectionRate": 0.4150399290150843
+        },
+        {
+          "boundDegrees": 40.0,
+          "impostorCaughtRate": 0.9888888888888889,
+          "lungeFalseRejectionRate": 0.4303460514640639
+        },
+        {
+          "boundDegrees": 41.0,
+          "impostorCaughtRate": 0.9902777777777778,
+          "lungeFalseRejectionRate": 0.4454303460514641
+        },
+        {
+          "boundDegrees": 42.0,
+          "impostorCaughtRate": 0.9916666666666667,
+          "lungeFalseRejectionRate": 0.4645075421472937
+        },
+        {
+          "boundDegrees": 43.0,
+          "impostorCaughtRate": 0.9916666666666667,
+          "lungeFalseRejectionRate": 0.48025732031943213
+        },
+        {
+          "boundDegrees": 44.0,
+          "impostorCaughtRate": 0.9930555555555556,
+          "lungeFalseRejectionRate": 0.49290150842945873
+        },
+        {
+          "boundDegrees": 45.0,
+          "impostorCaughtRate": 0.9944444444444445,
+          "lungeFalseRejectionRate": 0.5088731144631766
+        },
+        {
+          "boundDegrees": 46.0,
+          "impostorCaughtRate": 0.9944444444444445,
+          "lungeFalseRejectionRate": 0.5206299911268856
+        },
+        {
+          "boundDegrees": 47.0,
+          "impostorCaughtRate": 0.9944444444444445,
+          "lungeFalseRejectionRate": 0.5361579414374446
+        },
+        {
+          "boundDegrees": 48.0,
+          "impostorCaughtRate": 0.9944444444444445,
+          "lungeFalseRejectionRate": 0.5525732031943212
+        },
+        {
+          "boundDegrees": 49.0,
+          "impostorCaughtRate": 0.9944444444444445,
+          "lungeFalseRejectionRate": 0.5729813664596274
+        },
+        {
+          "boundDegrees": 50.0,
+          "impostorCaughtRate": 0.9944444444444445,
+          "lungeFalseRejectionRate": 0.5876220053238687
+        },
+        {
+          "boundDegrees": 51.0,
+          "impostorCaughtRate": 0.9944444444444445,
+          "lungeFalseRejectionRate": 0.6024844720496895
+        },
+        {
+          "boundDegrees": 52.0,
+          "impostorCaughtRate": 0.9944444444444445,
+          "lungeFalseRejectionRate": 0.6193433895297249
+        },
+        {
+          "boundDegrees": 53.0,
+          "impostorCaughtRate": 0.9944444444444445,
+          "lungeFalseRejectionRate": 0.6319875776397516
+        },
+        {
+          "boundDegrees": 54.0,
+          "impostorCaughtRate": 0.9944444444444445,
+          "lungeFalseRejectionRate": 0.6486246672582077
+        },
+        {
+          "boundDegrees": 55.0,
+          "impostorCaughtRate": 0.9958333333333333,
+          "lungeFalseRejectionRate": 0.6603815439219166
+        },
+        {
+          "boundDegrees": 56.0,
+          "impostorCaughtRate": 0.9958333333333333,
+          "lungeFalseRejectionRate": 0.6748003549245786
+        },
+        {
+          "boundDegrees": 57.0,
+          "impostorCaughtRate": 0.9972222222222222,
+          "lungeFalseRejectionRate": 0.6858917480035492
+        },
+        {
+          "boundDegrees": 58.0,
+          "impostorCaughtRate": 0.9972222222222222,
+          "lungeFalseRejectionRate": 0.6983141082519965
+        },
+        {
+          "boundDegrees": 59.0,
+          "impostorCaughtRate": 0.9972222222222222,
+          "lungeFalseRejectionRate": 0.708740017746229
+        },
+        {
+          "boundDegrees": 60.0,
+          "impostorCaughtRate": 0.9972222222222222,
+          "lungeFalseRejectionRate": 0.7216060337178349
+        }
+      ]
+    },
+    "HIP_DROP_ONE": {
+      "bestBoundAtOnePercentFalseRejection": {
+        "boundDegrees": 9.0,
+        "impostorCaughtRate": 0.7833333333333333,
+        "lungeFalseRejectionRate": 0.007763975155279503
+      },
+      "impostor": {
+        "count": 720,
+        "max": 61.55972957518193,
+        "median": 5.410456249552752,
+        "min": 1.7748047421415265,
+        "p10": 3.176848901696758,
+        "p5": 2.7994897454819068,
+        "p90": 15.051546774286237,
+        "p95": 20.435148143641555
+      },
+      "lunge": {
+        "count": 4508,
+        "max": 178.08445220891983,
+        "median": 38.02200547723556,
+        "min": 4.661114236624655,
+        "p10": 16.836252574061632,
+        "p5": 13.820590752932247,
+        "p90": 72.74767822905609,
+        "p95": 93.30023232040216
+      },
+      "shallowLunge": {
+        "count": 2205,
+        "max": 177.8648555077413,
+        "median": 28.606217576113465,
+        "min": 4.661114236624655,
+        "p10": 14.707451852571467,
+        "p5": 12.394042036847054,
+        "p90": 59.06663681221306,
+        "p95": 90.58162570776595
+      },
+      "sweep": [
+        {
+          "boundDegrees": 2.0,
+          "impostorCaughtRate": 0.005555555555555556,
+          "lungeFalseRejectionRate": 0.0
+        },
+        {
+          "boundDegrees": 3.0,
+          "impostorCaughtRate": 0.07222222222222222,
+          "lungeFalseRejectionRate": 0.0
+        },
+        {
+          "boundDegrees": 4.0,
+          "impostorCaughtRate": 0.24861111111111112,
+          "lungeFalseRejectionRate": 0.0
+        },
+        {
+          "boundDegrees": 5.0,
+          "impostorCaughtRate": 0.425,
+          "lungeFalseRejectionRate": 0.00022182786157941438
+        },
+        {
+          "boundDegrees": 6.0,
+          "impostorCaughtRate": 0.5763888888888888,
+          "lungeFalseRejectionRate": 0.001774622892635315
+        },
+        {
+          "boundDegrees": 7.0,
+          "impostorCaughtRate": 0.6916666666666667,
+          "lungeFalseRejectionRate": 0.0037710736468500442
+        },
+        {
+          "boundDegrees": 8.0,
+          "impostorCaughtRate": 0.7388888888888889,
+          "lungeFalseRejectionRate": 0.005989352262644188
+        },
+        {
+          "boundDegrees": 9.0,
+          "impostorCaughtRate": 0.7833333333333333,
+          "lungeFalseRejectionRate": 0.007763975155279503
+        },
+        {
+          "boundDegrees": 10.0,
+          "impostorCaughtRate": 0.8194444444444444,
+          "lungeFalseRejectionRate": 0.012200532386867791
+        },
+        {
+          "boundDegrees": 11.0,
+          "impostorCaughtRate": 0.8375,
+          "lungeFalseRejectionRate": 0.01818988464951198
+        },
+        {
+          "boundDegrees": 12.0,
+          "impostorCaughtRate": 0.8527777777777777,
+          "lungeFalseRejectionRate": 0.027950310559006212
+        },
+        {
+          "boundDegrees": 13.0,
+          "impostorCaughtRate": 0.8680555555555556,
+          "lungeFalseRejectionRate": 0.03970718722271517
+        },
+        {
+          "boundDegrees": 14.0,
+          "impostorCaughtRate": 0.8791666666666667,
+          "lungeFalseRejectionRate": 0.05323868677905945
+        },
+        {
+          "boundDegrees": 15.0,
+          "impostorCaughtRate": 0.8986111111111111,
+          "lungeFalseRejectionRate": 0.06810115350488022
+        },
+        {
+          "boundDegrees": 16.0,
+          "impostorCaughtRate": 0.9069444444444444,
+          "lungeFalseRejectionRate": 0.08695652173913043
+        },
+        {
+          "boundDegrees": 17.0,
+          "impostorCaughtRate": 0.9277777777777778,
+          "lungeFalseRejectionRate": 0.10270629991126885
+        },
+        {
+          "boundDegrees": 18.0,
+          "impostorCaughtRate": 0.9319444444444445,
+          "lungeFalseRejectionRate": 0.12111801242236025
+        },
+        {
+          "boundDegrees": 19.0,
+          "impostorCaughtRate": 0.9416666666666667,
+          "lungeFalseRejectionRate": 0.1401952085181899
+        },
+        {
+          "boundDegrees": 20.0,
+          "impostorCaughtRate": 0.9472222222222222,
+          "lungeFalseRejectionRate": 0.15771960958296363
+        },
+        {
+          "boundDegrees": 21.0,
+          "impostorCaughtRate": 0.9541666666666667,
+          "lungeFalseRejectionRate": 0.1772404614019521
+        },
+        {
+          "boundDegrees": 22.0,
+          "impostorCaughtRate": 0.9666666666666667,
+          "lungeFalseRejectionRate": 0.19498669032830523
+        },
+        {
+          "boundDegrees": 23.0,
+          "impostorCaughtRate": 0.9708333333333333,
+          "lungeFalseRejectionRate": 0.2160603371783496
+        },
+        {
+          "boundDegrees": 24.0,
+          "impostorCaughtRate": 0.9763888888888889,
+          "lungeFalseRejectionRate": 0.2393522626441881
+        },
+        {
+          "boundDegrees": 25.0,
+          "impostorCaughtRate": 0.9791666666666666,
+          "lungeFalseRejectionRate": 0.25754214729370006
+        },
+        {
+          "boundDegrees": 26.0,
+          "impostorCaughtRate": 0.9805555555555555,
+          "lungeFalseRejectionRate": 0.2795031055900621
+        },
+        {
+          "boundDegrees": 27.0,
+          "impostorCaughtRate": 0.9819444444444444,
+          "lungeFalseRejectionRate": 0.3003549245785271
+        },
+        {
+          "boundDegrees": 28.0,
+          "impostorCaughtRate": 0.9847222222222223,
+          "lungeFalseRejectionRate": 0.321206743566992
+        },
+        {
+          "boundDegrees": 29.0,
+          "impostorCaughtRate": 0.9875,
+          "lungeFalseRejectionRate": 0.3427240461401952
+        },
+        {
+          "boundDegrees": 30.0,
+          "impostorCaughtRate": 0.9875,
+          "lungeFalseRejectionRate": 0.364019520851819
+        },
+        {
+          "boundDegrees": 31.0,
+          "impostorCaughtRate": 0.9875,
+          "lungeFalseRejectionRate": 0.3842058562555457
+        },
+        {
+          "boundDegrees": 32.0,
+          "impostorCaughtRate": 0.9875,
+          "lungeFalseRejectionRate": 0.4023957409050577
+        },
+        {
+          "boundDegrees": 33.0,
+          "impostorCaughtRate": 0.9875,
+          "lungeFalseRejectionRate": 0.42213842058562556
+        },
+        {
+          "boundDegrees": 34.0,
+          "impostorCaughtRate": 0.9888888888888889,
+          "lungeFalseRejectionRate": 0.4367790594498669
+        },
+        {
+          "boundDegrees": 35.0,
+          "impostorCaughtRate": 0.9888888888888889,
+          "lungeFalseRejectionRate": 0.4527506654835847
+        },
+        {
+          "boundDegrees": 36.0,
+          "impostorCaughtRate": 0.9888888888888889,
+          "lungeFalseRejectionRate": 0.46872227151730256
+        },
+        {
+          "boundDegrees": 37.0,
+          "impostorCaughtRate": 0.9902777777777778,
+          "lungeFalseRejectionRate": 0.48047914818101156
+        },
+        {
+          "boundDegrees": 38.0,
+          "impostorCaughtRate": 0.9902777777777778,
+          "lungeFalseRejectionRate": 0.49955634427684115
+        },
+        {
+          "boundDegrees": 39.0,
+          "impostorCaughtRate": 0.9902777777777778,
+          "lungeFalseRejectionRate": 0.5177462289263531
+        },
+        {
+          "boundDegrees": 40.0,
+          "impostorCaughtRate": 0.9916666666666667,
+          "lungeFalseRejectionRate": 0.5328305235137534
+        },
+        {
+          "boundDegrees": 41.0,
+          "impostorCaughtRate": 0.9944444444444445,
+          "lungeFalseRejectionRate": 0.5496894409937888
+        },
+        {
+          "boundDegrees": 42.0,
+          "impostorCaughtRate": 0.9944444444444445,
+          "lungeFalseRejectionRate": 0.5643300798580302
+        },
+        {
+          "boundDegrees": 43.0,
+          "impostorCaughtRate": 0.9944444444444445,
+          "lungeFalseRejectionRate": 0.5796362023070097
+        },
+        {
+          "boundDegrees": 44.0,
+          "impostorCaughtRate": 0.9958333333333333,
+          "lungeFalseRejectionRate": 0.5953859804791481
+        },
+        {
+          "boundDegrees": 45.0,
+          "impostorCaughtRate": 0.9958333333333333,
+          "lungeFalseRejectionRate": 0.6118012422360248
+        },
+        {
+          "boundDegrees": 46.0,
+          "impostorCaughtRate": 0.9958333333333333,
+          "lungeFalseRejectionRate": 0.6275510204081632
+        },
+        {
+          "boundDegrees": 47.0,
+          "impostorCaughtRate": 0.9958333333333333,
+          "lungeFalseRejectionRate": 0.6419698314108252
+        },
+        {
+          "boundDegrees": 48.0,
+          "impostorCaughtRate": 0.9958333333333333,
+          "lungeFalseRejectionRate": 0.6583850931677019
+        },
+        {
+          "boundDegrees": 49.0,
+          "impostorCaughtRate": 0.9958333333333333,
+          "lungeFalseRejectionRate": 0.6743566992014197
+        },
+        {
+          "boundDegrees": 50.0,
+          "impostorCaughtRate": 0.9958333333333333,
+          "lungeFalseRejectionRate": 0.6883318544809228
+        },
+        {
+          "boundDegrees": 51.0,
+          "impostorCaughtRate": 0.9958333333333333,
+          "lungeFalseRejectionRate": 0.6996450754214729
+        },
+        {
+          "boundDegrees": 52.0,
+          "impostorCaughtRate": 0.9958333333333333,
+          "lungeFalseRejectionRate": 0.7131765749778172
+        },
+        {
+          "boundDegrees": 53.0,
+          "impostorCaughtRate": 0.9958333333333333,
+          "lungeFalseRejectionRate": 0.726929902395741
+        },
+        {
+          "boundDegrees": 54.0,
+          "impostorCaughtRate": 0.9972222222222222,
+          "lungeFalseRejectionRate": 0.7397959183673469
+        },
+        {
+          "boundDegrees": 55.0,
+          "impostorCaughtRate": 0.9986111111111111,
+          "lungeFalseRejectionRate": 0.7513309671694764
+        },
+        {
+          "boundDegrees": 56.0,
+          "impostorCaughtRate": 0.9986111111111111,
+          "lungeFalseRejectionRate": 0.7608695652173914
+        },
+        {
+          "boundDegrees": 57.0,
+          "impostorCaughtRate": 0.9986111111111111,
+          "lungeFalseRejectionRate": 0.7726264418811003
+        },
+        {
+          "boundDegrees": 58.0,
+          "impostorCaughtRate": 0.9986111111111111,
+          "lungeFalseRejectionRate": 0.782608695652174
+        },
+        {
+          "boundDegrees": 59.0,
+          "impostorCaughtRate": 0.9986111111111111,
+          "lungeFalseRejectionRate": 0.7925909494232476
+        },
+        {
+          "boundDegrees": 60.0,
+          "impostorCaughtRate": 0.9986111111111111,
+          "lungeFalseRejectionRate": 0.8032386867790594
+        }
+      ]
+    },
+    "KNEE": {
+      "bestBoundAtOnePercentFalseRejection": {
+        "boundDegrees": 16.0,
+        "impostorCaughtRate": 0.8666666666666667,
+        "lungeFalseRejectionRate": 0.00865128660159716
+      },
+      "impostor": {
+        "count": 720,
+        "max": 75.57347136897862,
+        "median": 6.056170329246619,
+        "min": 1.2162928886421867,
+        "p10": 3.4830604017331552,
+        "p5": 3.0856870718832,
+        "p90": 19.25109212374977,
+        "p95": 26.926045084607836
+      },
+      "lunge": {
+        "count": 4508,
+        "max": 179.537253839962,
+        "median": 43.96396120956456,
+        "min": 3.8885707952210566,
+        "p10": 27.933498512804903,
+        "p5": 24.02142457578597,
+        "p90": 70.70544502026168,
+        "p95": 88.22535313731429
+      },
+      "shallowLunge": {
+        "count": 2205,
+        "max": 179.27656143049867,
+        "median": 53.873031666059575,
+        "min": 3.8885707952210566,
+        "p10": 34.63987253005547,
+        "p5": 28.8994094345488,
+        "p90": 75.45286265853666,
+        "p95": 92.31351230932226
+      },
+      "sweep": [
+        {
+          "boundDegrees": 2.0,
+          "impostorCaughtRate": 0.006944444444444444,
+          "lungeFalseRejectionRate": 0.0
+        },
+        {
+          "boundDegrees": 3.0,
+          "impostorCaughtRate": 0.04027777777777778,
+          "lungeFalseRejectionRate": 0.0
+        },
+        {
+          "boundDegrees": 4.0,
+          "impostorCaughtRate": 0.16805555555555557,
+          "lungeFalseRejectionRate": 0.00022182786157941438
+        },
+        {
+          "boundDegrees": 5.0,
+          "impostorCaughtRate": 0.3472222222222222,
+          "lungeFalseRejectionRate": 0.00022182786157941438
+        },
+        {
+          "boundDegrees": 6.0,
+          "impostorCaughtRate": 0.4986111111111111,
+          "lungeFalseRejectionRate": 0.00022182786157941438
+        },
+        {
+          "boundDegrees": 7.0,
+          "impostorCaughtRate": 0.6027777777777777,
+          "lungeFalseRejectionRate": 0.00044365572315882877
+        },
+        {
+          "boundDegrees": 8.0,
+          "impostorCaughtRate": 0.6722222222222223,
+          "lungeFalseRejectionRate": 0.0006654835847382431
+        },
+        {
+          "boundDegrees": 9.0,
+          "impostorCaughtRate": 0.7180555555555556,
+          "lungeFalseRejectionRate": 0.0008873114463176575
+        },
+        {
+          "boundDegrees": 10.0,
+          "impostorCaughtRate": 0.7361111111111112,
+          "lungeFalseRejectionRate": 0.0008873114463176575
+        },
+        {
+          "boundDegrees": 11.0,
+          "impostorCaughtRate": 0.7680555555555556,
+          "lungeFalseRejectionRate": 0.001774622892635315
+        },
+        {
+          "boundDegrees": 12.0,
+          "impostorCaughtRate": 0.7875,
+          "lungeFalseRejectionRate": 0.002883762200532387
+        },
+        {
+          "boundDegrees": 13.0,
+          "impostorCaughtRate": 0.8097222222222222,
+          "lungeFalseRejectionRate": 0.003992901508429458
+        },
+        {
+          "boundDegrees": 14.0,
+          "impostorCaughtRate": 0.8263888888888888,
+          "lungeFalseRejectionRate": 0.005989352262644188
+        },
+        {
+          "boundDegrees": 15.0,
+          "impostorCaughtRate": 0.8458333333333333,
+          "lungeFalseRejectionRate": 0.006876663708961846
+        },
+        {
+          "boundDegrees": 16.0,
+          "impostorCaughtRate": 0.8666666666666667,
+          "lungeFalseRejectionRate": 0.00865128660159716
+        },
+        {
+          "boundDegrees": 17.0,
+          "impostorCaughtRate": 0.8791666666666667,
+          "lungeFalseRejectionRate": 0.011756876663708962
+        },
+        {
+          "boundDegrees": 18.0,
+          "impostorCaughtRate": 0.8888888888888888,
+          "lungeFalseRejectionRate": 0.013753327417923691
+        },
+        {
+          "boundDegrees": 19.0,
+          "impostorCaughtRate": 0.8958333333333334,
+          "lungeFalseRejectionRate": 0.017968056787932566
+        },
+        {
+          "boundDegrees": 20.0,
+          "impostorCaughtRate": 0.9055555555555556,
+          "lungeFalseRejectionRate": 0.022182786157941437
+        },
+        {
+          "boundDegrees": 21.0,
+          "impostorCaughtRate": 0.9125,
+          "lungeFalseRejectionRate": 0.027506654835847383
+        },
+        {
+          "boundDegrees": 22.0,
+          "impostorCaughtRate": 0.9166666666666666,
+          "lungeFalseRejectionRate": 0.033939662821650396
+        },
+        {
+          "boundDegrees": 23.0,
+          "impostorCaughtRate": 0.9236111111111112,
+          "lungeFalseRejectionRate": 0.042369121561668145
+        },
+        {
+          "boundDegrees": 24.0,
+          "impostorCaughtRate": 0.9263888888888889,
+          "lungeFalseRejectionRate": 0.049689440993788817
+        },
+        {
+          "boundDegrees": 25.0,
+          "impostorCaughtRate": 0.9388888888888889,
+          "lungeFalseRejectionRate": 0.06100266193433895
+        },
+        {
+          "boundDegrees": 26.0,
+          "impostorCaughtRate": 0.9472222222222222,
+          "lungeFalseRejectionRate": 0.07165039929015084
+        },
+        {
+          "boundDegrees": 27.0,
+          "impostorCaughtRate": 0.95,
+          "lungeFalseRejectionRate": 0.08562555456965394
+        },
+        {
+          "boundDegrees": 28.0,
+          "impostorCaughtRate": 0.9527777777777777,
+          "lungeFalseRejectionRate": 0.10159716060337179
+        },
+        {
+          "boundDegrees": 29.0,
+          "impostorCaughtRate": 0.9555555555555556,
+          "lungeFalseRejectionRate": 0.11934338952972494
+        },
+        {
+          "boundDegrees": 30.0,
+          "impostorCaughtRate": 0.9611111111111111,
+          "lungeFalseRejectionRate": 0.14130434782608695
+        },
+        {
+          "boundDegrees": 31.0,
+          "impostorCaughtRate": 0.9666666666666667,
+          "lungeFalseRejectionRate": 0.16370896184560782
+        },
+        {
+          "boundDegrees": 32.0,
+          "impostorCaughtRate": 0.9694444444444444,
+          "lungeFalseRejectionRate": 0.1867790594498669
+        },
+        {
+          "boundDegrees": 33.0,
+          "impostorCaughtRate": 0.9708333333333333,
+          "lungeFalseRejectionRate": 0.21694764862466726
+        },
+        {
+          "boundDegrees": 34.0,
+          "impostorCaughtRate": 0.975,
+          "lungeFalseRejectionRate": 0.24157054125998226
+        },
+        {
+          "boundDegrees": 35.0,
+          "impostorCaughtRate": 0.9763888888888889,
+          "lungeFalseRejectionRate": 0.2653061224489796
+        },
+        {
+          "boundDegrees": 36.0,
+          "impostorCaughtRate": 0.9805555555555555,
+          "lungeFalseRejectionRate": 0.29281277728482696
+        },
+        {
+          "boundDegrees": 37.0,
+          "impostorCaughtRate": 0.9833333333333333,
+          "lungeFalseRejectionRate": 0.3203194321206744
+        },
+        {
+          "boundDegrees": 38.0,
+          "impostorCaughtRate": 0.9847222222222223,
+          "lungeFalseRejectionRate": 0.3500443655723159
+        },
+        {
+          "boundDegrees": 39.0,
+          "impostorCaughtRate": 0.9847222222222223,
+          "lungeFalseRejectionRate": 0.37843833185448095
+        },
+        {
+          "boundDegrees": 40.0,
+          "impostorCaughtRate": 0.9847222222222223,
+          "lungeFalseRejectionRate": 0.4017302573203194
+        },
+        {
+          "boundDegrees": 41.0,
+          "impostorCaughtRate": 0.9847222222222223,
+          "lungeFalseRejectionRate": 0.4245785270629991
+        },
+        {
+          "boundDegrees": 42.0,
+          "impostorCaughtRate": 0.9847222222222223,
+          "lungeFalseRejectionRate": 0.4531943212067436
+        },
+        {
+          "boundDegrees": 43.0,
+          "impostorCaughtRate": 0.9847222222222223,
+          "lungeFalseRejectionRate": 0.475377107364685
+        },
+        {
+          "boundDegrees": 44.0,
+          "impostorCaughtRate": 0.9847222222222223,
+          "lungeFalseRejectionRate": 0.5006654835847383
+        },
+        {
+          "boundDegrees": 45.0,
+          "impostorCaughtRate": 0.9847222222222223,
+          "lungeFalseRejectionRate": 0.5266193433895298
+        },
+        {
+          "boundDegrees": 46.0,
+          "impostorCaughtRate": 0.9847222222222223,
+          "lungeFalseRejectionRate": 0.5534605146406388
+        },
+        {
+          "boundDegrees": 47.0,
+          "impostorCaughtRate": 0.9847222222222223,
+          "lungeFalseRejectionRate": 0.576530612244898
+        },
+        {
+          "boundDegrees": 48.0,
+          "impostorCaughtRate": 0.9847222222222223,
+          "lungeFalseRejectionRate": 0.59849157054126
+        },
+        {
+          "boundDegrees": 49.0,
+          "impostorCaughtRate": 0.9861111111111112,
+          "lungeFalseRejectionRate": 0.6180124223602484
+        },
+        {
+          "boundDegrees": 50.0,
+          "impostorCaughtRate": 0.9861111111111112,
+          "lungeFalseRejectionRate": 0.6339840283939663
+        },
+        {
+          "boundDegrees": 51.0,
+          "impostorCaughtRate": 0.9861111111111112,
+          "lungeFalseRejectionRate": 0.6519520851818988
+        },
+        {
+          "boundDegrees": 52.0,
+          "impostorCaughtRate": 0.9888888888888889,
+          "lungeFalseRejectionRate": 0.6690328305235137
+        },
+        {
+          "boundDegrees": 53.0,
+          "impostorCaughtRate": 0.9888888888888889,
+          "lungeFalseRejectionRate": 0.6863354037267081
+        },
+        {
+          "boundDegrees": 54.0,
+          "impostorCaughtRate": 0.9888888888888889,
+          "lungeFalseRejectionRate": 0.706078083407276
+        },
+        {
+          "boundDegrees": 55.0,
+          "impostorCaughtRate": 0.9888888888888889,
+          "lungeFalseRejectionRate": 0.7229370008873115
+        },
+        {
+          "boundDegrees": 56.0,
+          "impostorCaughtRate": 0.9888888888888889,
+          "lungeFalseRejectionRate": 0.7364685004436557
+        },
+        {
+          "boundDegrees": 57.0,
+          "impostorCaughtRate": 0.9888888888888889,
+          "lungeFalseRejectionRate": 0.7508873114463177
+        },
+        {
+          "boundDegrees": 58.0,
+          "impostorCaughtRate": 0.9888888888888889,
+          "lungeFalseRejectionRate": 0.7650842945874001
+        },
+        {
+          "boundDegrees": 59.0,
+          "impostorCaughtRate": 0.9888888888888889,
+          "lungeFalseRejectionRate": 0.7792812777284827
+        },
+        {
+          "boundDegrees": 60.0,
+          "impostorCaughtRate": 0.9888888888888889,
+          "lungeFalseRejectionRate": 0.7919254658385093
+        }
+      ]
+    },
+    "KNEE_DROP_ONE": {
+      "bestBoundAtOnePercentFalseRejection": {
+        "boundDegrees": 12.0,
+        "impostorCaughtRate": 0.8930555555555556,
+        "lungeFalseRejectionRate": 0.00909494232475599
+      },
+      "impostor": {
+        "count": 720,
+        "max": 70.32799818133915,
+        "median": 4.587938948695367,
+        "min": 1.0834219563910636,
+        "p10": 2.789596576099541,
+        "p5": 2.350279837904381,
+        "p90": 12.265282140476216,
+        "p95": 18.70981145541562
+      },
+      "lunge": {
+        "count": 4508,
+        "max": 177.18270684267196,
+        "median": 36.88869374002957,
+        "min": 3.5182893318402364,
+        "p10": 21.832494165515214,
+        "p5": 18.77985533955355,
+        "p90": 64.41132451717567,
+        "p95": 82.01913590026466
+      },
+      "shallowLunge": {
+        "count": 2205,
+        "max": 177.18270684267196,
+        "median": 47.78512342204216,
+        "min": 3.5182893318402364,
+        "p10": 27.618188384493067,
+        "p5": 21.54594127175656,
+        "p90": 69.85061397144818,
+        "p95": 84.44958423142313
+      },
+      "sweep": [
+        {
+          "boundDegrees": 2.0,
+          "impostorCaughtRate": 0.02361111111111111,
+          "lungeFalseRejectionRate": 0.0
+        },
+        {
+          "boundDegrees": 3.0,
+          "impostorCaughtRate": 0.15138888888888888,
+          "lungeFalseRejectionRate": 0.0
+        },
+        {
+          "boundDegrees": 4.0,
+          "impostorCaughtRate": 0.38333333333333336,
+          "lungeFalseRejectionRate": 0.00044365572315882877
+        },
+        {
+          "boundDegrees": 5.0,
+          "impostorCaughtRate": 0.5777777777777777,
+          "lungeFalseRejectionRate": 0.00044365572315882877
+        },
+        {
+          "boundDegrees": 6.0,
+          "impostorCaughtRate": 0.7236111111111111,
+          "lungeFalseRejectionRate": 0.0006654835847382431
+        },
+        {
+          "boundDegrees": 7.0,
+          "impostorCaughtRate": 0.7875,
+          "lungeFalseRejectionRate": 0.0015527950310559005
+        },
+        {
+          "boundDegrees": 8.0,
+          "impostorCaughtRate": 0.825,
+          "lungeFalseRejectionRate": 0.0022182786157941437
+        },
+        {
+          "boundDegrees": 9.0,
+          "impostorCaughtRate": 0.8527777777777777,
+          "lungeFalseRejectionRate": 0.003105590062111801
+        },
+        {
+          "boundDegrees": 10.0,
+          "impostorCaughtRate": 0.8722222222222222,
+          "lungeFalseRejectionRate": 0.0048802129547471165
+        },
+        {
+          "boundDegrees": 11.0,
+          "impostorCaughtRate": 0.8805555555555555,
+          "lungeFalseRejectionRate": 0.006433007985803017
+        },
+        {
+          "boundDegrees": 12.0,
+          "impostorCaughtRate": 0.8930555555555556,
+          "lungeFalseRejectionRate": 0.00909494232475599
+        },
+        {
+          "boundDegrees": 13.0,
+          "impostorCaughtRate": 0.9083333333333333,
+          "lungeFalseRejectionRate": 0.013531499556344277
+        },
+        {
+          "boundDegrees": 14.0,
+          "impostorCaughtRate": 0.925,
+          "lungeFalseRejectionRate": 0.017080745341614908
+        },
+        {
+          "boundDegrees": 15.0,
+          "impostorCaughtRate": 0.9347222222222222,
+          "lungeFalseRejectionRate": 0.02040816326530612
+        },
+        {
+          "boundDegrees": 16.0,
+          "impostorCaughtRate": 0.9402777777777778,
+          "lungeFalseRejectionRate": 0.027950310559006212
+        },
+        {
+          "boundDegrees": 17.0,
+          "impostorCaughtRate": 0.9416666666666667,
+          "lungeFalseRejectionRate": 0.03460514640638864
+        },
+        {
+          "boundDegrees": 18.0,
+          "impostorCaughtRate": 0.9486111111111111,
+          "lungeFalseRejectionRate": 0.04259094942324756
+        },
+        {
+          "boundDegrees": 19.0,
+          "impostorCaughtRate": 0.95,
+          "lungeFalseRejectionRate": 0.053904170363797695
+        },
+        {
+          "boundDegrees": 20.0,
+          "impostorCaughtRate": 0.9583333333333334,
+          "lungeFalseRejectionRate": 0.06810115350488022
+        },
+        {
+          "boundDegrees": 21.0,
+          "impostorCaughtRate": 0.9611111111111111,
+          "lungeFalseRejectionRate": 0.08562555456965394
+        },
+        {
+          "boundDegrees": 22.0,
+          "impostorCaughtRate": 0.9680555555555556,
+          "lungeFalseRejectionRate": 0.10270629991126885
+        },
+        {
+          "boundDegrees": 23.0,
+          "impostorCaughtRate": 0.9708333333333333,
+          "lungeFalseRejectionRate": 0.12111801242236025
+        },
+        {
+          "boundDegrees": 24.0,
+          "impostorCaughtRate": 0.9722222222222222,
+          "lungeFalseRejectionRate": 0.14241348713398402
+        },
+        {
+          "boundDegrees": 25.0,
+          "impostorCaughtRate": 0.9777777777777777,
+          "lungeFalseRejectionRate": 0.1665927240461402
+        },
+        {
+          "boundDegrees": 26.0,
+          "impostorCaughtRate": 0.9791666666666666,
+          "lungeFalseRejectionRate": 0.1898846495119787
+        },
+        {
+          "boundDegrees": 27.0,
+          "impostorCaughtRate": 0.9819444444444444,
+          "lungeFalseRejectionRate": 0.21850044365572316
+        },
+        {
+          "boundDegrees": 28.0,
+          "impostorCaughtRate": 0.9819444444444444,
+          "lungeFalseRejectionRate": 0.2451197870452529
+        },
+        {
+          "boundDegrees": 29.0,
+          "impostorCaughtRate": 0.9819444444444444,
+          "lungeFalseRejectionRate": 0.2755102040816326
+        },
+        {
+          "boundDegrees": 30.0,
+          "impostorCaughtRate": 0.9833333333333333,
+          "lungeFalseRejectionRate": 0.30434782608695654
+        },
+        {
+          "boundDegrees": 31.0,
+          "impostorCaughtRate": 0.9875,
+          "lungeFalseRejectionRate": 0.3349600709849157
+        },
+        {
+          "boundDegrees": 32.0,
+          "impostorCaughtRate": 0.9875,
+          "lungeFalseRejectionRate": 0.3624667258207631
+        },
+        {
+          "boundDegrees": 33.0,
+          "impostorCaughtRate": 0.9875,
+          "lungeFalseRejectionRate": 0.3908606921029281
+        },
+        {
+          "boundDegrees": 34.0,
+          "impostorCaughtRate": 0.9875,
+          "lungeFalseRejectionRate": 0.42036379769299026
+        },
+        {
+          "boundDegrees": 35.0,
+          "impostorCaughtRate": 0.9888888888888889,
+          "lungeFalseRejectionRate": 0.45119787045252885
+        },
+        {
+          "boundDegrees": 36.0,
+          "impostorCaughtRate": 0.9902777777777778,
+          "lungeFalseRejectionRate": 0.48025732031943213
+        },
+        {
+          "boundDegrees": 37.0,
+          "impostorCaughtRate": 0.9902777777777778,
+          "lungeFalseRejectionRate": 0.5046583850931677
+        },
+        {
+          "boundDegrees": 38.0,
+          "impostorCaughtRate": 0.9902777777777778,
+          "lungeFalseRejectionRate": 0.5279503105590062
+        },
+        {
+          "boundDegrees": 39.0,
+          "impostorCaughtRate": 0.9902777777777778,
+          "lungeFalseRejectionRate": 0.5503549245785271
+        },
+        {
+          "boundDegrees": 40.0,
+          "impostorCaughtRate": 0.9902777777777778,
+          "lungeFalseRejectionRate": 0.5694321206743567
+        },
+        {
+          "boundDegrees": 41.0,
+          "impostorCaughtRate": 0.9902777777777778,
+          "lungeFalseRejectionRate": 0.5922803904170364
+        },
+        {
+          "boundDegrees": 42.0,
+          "impostorCaughtRate": 0.9902777777777778,
+          "lungeFalseRejectionRate": 0.6120230700976043
+        },
+        {
+          "boundDegrees": 43.0,
+          "impostorCaughtRate": 0.9902777777777778,
+          "lungeFalseRejectionRate": 0.6315439219165927
+        },
+        {
+          "boundDegrees": 44.0,
+          "impostorCaughtRate": 0.9902777777777778,
+          "lungeFalseRejectionRate": 0.6475155279503105
+        },
+        {
+          "boundDegrees": 45.0,
+          "impostorCaughtRate": 0.9902777777777778,
+          "lungeFalseRejectionRate": 0.6674800354924578
+        },
+        {
+          "boundDegrees": 46.0,
+          "impostorCaughtRate": 0.9902777777777778,
+          "lungeFalseRejectionRate": 0.6847826086956522
+        },
+        {
+          "boundDegrees": 47.0,
+          "impostorCaughtRate": 0.9916666666666667,
+          "lungeFalseRejectionRate": 0.7000887311446318
+        },
+        {
+          "boundDegrees": 48.0,
+          "impostorCaughtRate": 0.9930555555555556,
+          "lungeFalseRejectionRate": 0.7145075421472937
+        },
+        {
+          "boundDegrees": 49.0,
+          "impostorCaughtRate": 0.9930555555555556,
+          "lungeFalseRejectionRate": 0.728039041703638
+        },
+        {
+          "boundDegrees": 50.0,
+          "impostorCaughtRate": 0.9930555555555556,
+          "lungeFalseRejectionRate": 0.7422360248447205
+        },
+        {
+          "boundDegrees": 51.0,
+          "impostorCaughtRate": 0.9930555555555556,
+          "lungeFalseRejectionRate": 0.7557675244010648
+        },
+        {
+          "boundDegrees": 52.0,
+          "impostorCaughtRate": 0.9930555555555556,
+          "lungeFalseRejectionRate": 0.7741792369121562
+        },
+        {
+          "boundDegrees": 53.0,
+          "impostorCaughtRate": 0.9930555555555556,
+          "lungeFalseRejectionRate": 0.7910381543921916
+        },
+        {
+          "boundDegrees": 54.0,
+          "impostorCaughtRate": 0.9944444444444445,
+          "lungeFalseRejectionRate": 0.8034605146406388
+        },
+        {
+          "boundDegrees": 55.0,
+          "impostorCaughtRate": 0.9944444444444445,
+          "lungeFalseRejectionRate": 0.8149955634427685
+        },
+        {
+          "boundDegrees": 56.0,
+          "impostorCaughtRate": 0.9944444444444445,
+          "lungeFalseRejectionRate": 0.827639751552795
+        },
+        {
+          "boundDegrees": 57.0,
+          "impostorCaughtRate": 0.9958333333333333,
+          "lungeFalseRejectionRate": 0.8382874889086069
+        },
+        {
+          "boundDegrees": 58.0,
+          "impostorCaughtRate": 0.9972222222222222,
+          "lungeFalseRejectionRate": 0.8473824312333629
+        },
+        {
+          "boundDegrees": 59.0,
+          "impostorCaughtRate": 0.9972222222222222,
+          "lungeFalseRejectionRate": 0.857586512866016
+        },
+        {
+          "boundDegrees": 60.0,
+          "impostorCaughtRate": 0.9972222222222222,
+          "lungeFalseRejectionRate": 0.8691215616681455
+        }
+      ]
+    }
+  },
+  "clipCounts": {
+    "바벨 런지": {
+      "clips": 1438,
+      "shallow": 720,
+      "subjects": 42
+    },
+    "바벨 스쿼트": {
+      "clips": 720,
+      "shallow": 0,
+      "subjects": 42
+    },
+    "스텝 백워드 다이나믹 런지": {
+      "clips": 1455,
+      "shallow": 727,
+      "subjects": 56
+    },
+    "스텝 포워드 다이나믹 런지": {
+      "clips": 1615,
+      "shallow": 758,
+      "subjects": 48
+    }
+  },
+  "generalisationUnit": "LEAVE_ONE_GLOBAL_Z_SUBJECT_OUT",
+  "limitations": [
+    "3D label coordinates, not MediaPipe output: this is a ceiling, not a prediction.",
+    "Clip-level statistics over sixteen sparse keyframes with no timestamps, so the window maximum is taken over the whole clip rather than over one repetition.",
+    "The ankle separation is a proxy for far-leg occlusion, not a measurement of it; actual visibility depends on the camera axis, which the labels do not record.",
+    "No per-frame measurement error is applied. A divergence is a difference of two independently estimated angles and inherits both, one of them from the occluded side, so the real separation is narrower than every figure here."
+  ],
+  "question": "Whether a cross-side divergence clause separates the three lunges from a barbell squat on 3D ground truth, which is a ceiling for what the app's monocular estimate could achieve.",
+  "schemaVersion": 1,
+  "subjectCount": 63,
+  "underMeasurementError": {
+    "HIP": {
+      "optimistic_3deg": {
+        "bestBoundAtOnePercentFalseRejection": {
+          "boundDegrees": 12.0,
+          "impostorCaughtRate": 0.6813888888888889,
+          "lungeFalseRejectionRate": 0.006610470275066549
+        },
+        "combinedSigmaDegrees": 3.0,
+        "impostor": {
+          "count": 3600,
+          "max": 75.51174037292553,
+          "median": 9.761147253254663,
+          "min": 3.398256047965768,
+          "p10": 6.4886059735438195,
+          "p5": 5.906313970863475,
+          "p90": 21.667737725315245,
+          "p95": 25.759097793210874
+        },
+        "lunge": {
+          "count": 22540,
+          "max": 185.7940260205032,
+          "median": 45.10741425465184,
+          "min": 6.696543645416658,
+          "p10": 21.314856827533777,
+          "p5": 17.758396558283202,
+          "p90": 80.13572053317588,
+          "p95": 104.55531185179142
+        }
+      },
+      "perfect": {
+        "bestBoundAtOnePercentFalseRejection": {
+          "boundDegrees": 12.0,
+          "impostorCaughtRate": 0.7416666666666667,
+          "lungeFalseRejectionRate": 0.009760425909494233
+        },
+        "combinedSigmaDegrees": 0.0,
+        "impostor": {
+          "count": 3600,
+          "max": 71.34394775364485,
+          "median": 7.049076555241896,
+          "min": 1.9823421602254143,
+          "p10": 4.032588645703441,
+          "p5": 3.330219676869177,
+          "p90": 19.97065747742431,
+          "p95": 24.014534203350934
+        },
+        "lunge": {
+          "count": 22540,
+          "max": 179.83767694274485,
+          "median": 44.62568116851189,
+          "min": 6.058915930960609,
+          "p10": 20.54808630635074,
+          "p5": 16.8724004123942,
+          "p90": 79.21914600761093,
+          "p95": 104.35949790335293
+        }
+      },
+      "walking_gait": {
+        "bestBoundAtOnePercentFalseRejection": {
+          "boundDegrees": 16.0,
+          "impostorCaughtRate": 0.28583333333333333,
+          "lungeFalseRejectionRate": 0.00709849157054126
+        },
+        "combinedSigmaDegrees": 8.0,
+        "impostor": {
+          "count": 3600,
+          "max": 82.45806140506,
+          "median": 18.447928937941658,
+          "min": 7.6801440239857275,
+          "p10": 13.270318714642258,
+          "p5": 12.183685978541524,
+          "p90": 27.795894690521948,
+          "p95": 31.828506282532132
+        },
+        "lunge": {
+          "count": 22540,
+          "max": 197.5796222513241,
+          "median": 48.08786992925947,
+          "min": 9.728668712560236,
+          "p10": 25.383079625975732,
+          "p5": 21.780191560829877,
+          "p90": 83.89856925715814,
+          "p95": 108.00586893116733
+        }
+      }
+    },
+    "KNEE": {
+      "optimistic_3deg": {
+        "bestBoundAtOnePercentFalseRejection": {
+          "boundDegrees": 16.0,
+          "impostorCaughtRate": 0.8436111111111111,
+          "lungeFalseRejectionRate": 0.0080301685891748
+        },
+        "combinedSigmaDegrees": 3.0,
+        "impostor": {
+          "count": 3600,
+          "max": 76.30626164453918,
+          "median": 8.835311239422898,
+          "min": 3.2819708399671903,
+          "p10": 5.957220128620355,
+          "p5": 5.411698618803304,
+          "p90": 20.180481947527056,
+          "p95": 28.184815929106673
+        },
+        "lunge": {
+          "count": 22540,
+          "max": 186.571078858854,
+          "median": 44.46077540908357,
+          "min": 4.942662946722395,
+          "p10": 28.30603859812103,
+          "p5": 24.414273903079167,
+          "p90": 71.38299343924677,
+          "p95": 90.16231797782757
+        }
+      },
+      "perfect": {
+        "bestBoundAtOnePercentFalseRejection": {
+          "boundDegrees": 16.0,
+          "impostorCaughtRate": 0.8666666666666667,
+          "lungeFalseRejectionRate": 0.00865128660159716
+        },
+        "combinedSigmaDegrees": 0.0,
+        "impostor": {
+          "count": 3600,
+          "max": 75.57347136897862,
+          "median": 6.056170329246619,
+          "min": 1.2162928886421867,
+          "p10": 3.4830604017331552,
+          "p5": 3.0856870718832,
+          "p90": 19.25109212374977,
+          "p95": 26.926045084607836
+        },
+        "lunge": {
+          "count": 22540,
+          "max": 179.537253839962,
+          "median": 43.96396120956456,
+          "min": 3.8885707952210566,
+          "p10": 27.933498512804903,
+          "p5": 24.02142457578597,
+          "p90": 70.70544502026168,
+          "p95": 88.22535313731429
+        }
+      },
+      "walking_gait": {
+        "bestBoundAtOnePercentFalseRejection": {
+          "boundDegrees": 19.0,
+          "impostorCaughtRate": 0.5944444444444444,
+          "lungeFalseRejectionRate": 0.007586512866015972
+        },
+        "combinedSigmaDegrees": 8.0,
+        "impostor": {
+          "count": 3600,
+          "max": 83.7851458997688,
+          "median": 17.891090461784973,
+          "min": 6.719129896148142,
+          "p10": 12.910099752767128,
+          "p5": 11.647987066170677,
+          "p90": 27.008382276181678,
+          "p95": 32.98423005227667
+        },
+        "lunge": {
+          "count": 22540,
+          "max": 200.36925715169377,
+          "median": 47.81073739125988,
+          "min": 11.505758029349554,
+          "p10": 30.508121084819038,
+          "p5": 26.630088537617386,
+          "p90": 75.7895335185372,
+          "p95": 95.60309022001128
+        }
+      }
+    }
+  },
+  "windowStatistic": "MAXIMUM_OVER_CLIP_FRAMES"
+}
