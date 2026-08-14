@@ -143,6 +143,9 @@ class FormCheckGovernanceTest {
             FormCheckExercise.LYING_TRICEPS_EXTENSION to (150.0 to 165.0),
             FormCheckExercise.FRONT_RAISE to (70.0 to 85.0),
             FormCheckExercise.DUMBBELL_PULLOVER to (150.0 to 165.0),
+            // Wave 4, the coronal-plane pair the frontal placement unlocked.
+            FormCheckExercise.SIDE_LUNGE to (130.0 to 120.0),
+            FormCheckExercise.SIDE_LATERAL_RAISE to (70.0 to 85.0),
         )
         for ((spec, thresholds) in expected) {
             val (rep, reached) = thresholds
@@ -155,7 +158,7 @@ class FormCheckGovernanceTest {
             )
         }
         assertEquals(160.0, FormCheckExercise.PLANK.repAngleDegrees, 0.0)
-        assertEquals(31, FormCheckExercise.entries.size)
+        assertEquals(33, FormCheckExercise.entries.size)
     }
 
     @Test
@@ -424,6 +427,53 @@ class FormCheckGovernanceTest {
     }
 
     @Test
+    fun onlyCoronalPlaneMovementsAskForTheFrontalPlacement() {
+        // §3: the preferred view follows the plane the movement works in. Everything sagittal
+        // reads best from the side; a movement that travels sideways would put its whole
+        // excursion along the camera's depth axis there, which is what kept these two refused
+        // until a frontal placement existed to ask for.
+        val frontal = FormCheckExercise.entries
+            .filter { it.view == FormCheckView.FRONTAL }
+            .toSet()
+        assertEquals(
+            setOf(FormCheckExercise.SIDE_LUNGE, FormCheckExercise.SIDE_LATERAL_RAISE),
+            frontal,
+        )
+        for (spec in FormCheckExercise.entries) {
+            // A hint may address something other than placement — the lunges ask which leg is in
+            // front, because a straight near-side reading genuinely can mean the camera-side leg
+            // is the rear one. What it may never do is name the placement the guidance is not
+            // aiming at, which would put the screen and the voice in contradiction.
+            val contradiction = when (spec.view) {
+                FormCheckView.LATERAL -> "정면"
+                FormCheckView.FRONTAL -> "옆모습"
+            }
+            assertFalse(
+                "${spec.name} asks for ${spec.view} but its hint says '$contradiction'",
+                spec.setupHint.contains(contradiction),
+            )
+        }
+    }
+
+    @Test
+    fun theFrontalTokenNeverClaimsToKnowWhichWayThePersonFaces() {
+        // A shoulder and hip axis cannot tell a chest from a back. The token is named for the
+        // axis and the wording that reaches the user follows: it asks somebody to face the
+        // camera, and never reports back that it checked they did.
+        assertTrue(
+            "The frontal placement must be named for the axis, not a facing direction",
+            FormCheckView.FRONTAL.contractId.contains("frontal-axis"),
+        )
+        assertFalse(FormCheckView.FRONTAL.contractId.contains("facing"))
+        for (view in FormCheckView.entries) {
+            assertFalse(
+                "${view.name}'s phrases must not claim a verified facing direction",
+                view.setupPhrase.contains("앞을 향") || view.noteSubject.contains("앞을 향"),
+            )
+        }
+    }
+
+    @Test
     fun definitionGatesObserveAndNeverUrge() {
         // A failed gate states what a joint did and that the excursion was not counted. "Keep
         // it still" or "bend more" phrased at a body part is a corrective cue, and cues belong
@@ -511,6 +561,7 @@ class FormCheckGovernanceTest {
             FormCheckExercise.LYING_TRICEPS_EXTENSION to (100.0 to 120.0),
             FormCheckExercise.FRONT_RAISE to (20.0 to 40.0),
             FormCheckExercise.DUMBBELL_PULLOVER to (90.0 to 110.0),
+            FormCheckExercise.SIDE_LATERAL_RAISE to (20.0 to 40.0),
         )
         for (spec in FormCheckExercise.entries) {
             if (spec.cadence == FormCheckCadence.HOLD) continue
@@ -555,6 +606,7 @@ class FormCheckGovernanceTest {
                 FormCheckExercise.LYING_TRICEPS_EXTENSION,
                 FormCheckExercise.FRONT_RAISE,
                 FormCheckExercise.DUMBBELL_PULLOVER,
+                FormCheckExercise.SIDE_LATERAL_RAISE,
             ),
             extension.toSet(),
         )
@@ -735,6 +787,7 @@ class FormCheckGovernanceTest {
                 FormCheckExercise.BARBELL_STIFF_DEADLIFT,
                 FormCheckExercise.UPRIGHT_ROW,
                 FormCheckExercise.DUMBBELL_PULLOVER,
+                FormCheckExercise.SIDE_LATERAL_RAISE,
             ),
             sealed,
         )

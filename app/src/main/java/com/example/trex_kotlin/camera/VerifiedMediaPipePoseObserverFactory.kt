@@ -81,6 +81,7 @@ internal class VerifiedMediaPipePoseObserverProfile private constructor(
             allowedViewContractIds = setOf(
                 FULL_BODY_PHASE_VIEW_CONTRACT_ID,
                 FULL_BODY_LATERAL_VIEW_CONTRACT_ID,
+                FRONTAL_AXIS_VIEW_CONTRACT_ID,
             ),
             personLockArtifactId = PERSON_LOCK_ARTIFACT_ID,
             personLockArtifactSha256 = personLockConfig.artifactSha256,

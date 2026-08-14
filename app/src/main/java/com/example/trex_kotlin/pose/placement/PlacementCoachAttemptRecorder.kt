@@ -98,6 +98,10 @@ internal class PlacementCoachAttemptRecorder(
                     if (fullBodyReachedAfterMs == null) fullBodyReachedAfterMs = elapsedMs
                 PlacementCoachGoal.LATERAL ->
                     if (lateralReachedAfterMs == null) lateralReachedAfterMs = elapsedMs
+                // The two orientation goals are alternatives, never a sequence: an exercise asks
+                // for one placement, so they share the slot that records how long it took.
+                PlacementCoachGoal.FRONTAL ->
+                    if (lateralReachedAfterMs == null) lateralReachedAfterMs = elapsedMs
             }
         }
 

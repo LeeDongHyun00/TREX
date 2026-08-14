@@ -1,5 +1,6 @@
 package com.example.trex_kotlin.pose.placement
 
+import com.example.trex_kotlin.camera.FRONTAL_AXIS_VIEW_CONTRACT_ID
 import com.example.trex_kotlin.camera.FULL_BODY_LATERAL_VIEW_CONTRACT_ID
 import com.example.trex_kotlin.camera.FULL_BODY_PHASE_VIEW_CONTRACT_ID
 import com.example.trex_kotlin.camera.PoseObserverUpdate
@@ -18,5 +19,6 @@ internal fun PoseObserverUpdate.toPlacementObservedSignal(): PlacementObservedSi
         hasPrimaryPersonLock = observation.hasPrimaryPersonLock,
         fullBodyViewQualified = observation.isViewQualified(FULL_BODY_PHASE_VIEW_CONTRACT_ID),
         lateralViewQualified = observation.isViewQualified(FULL_BODY_LATERAL_VIEW_CONTRACT_ID),
+        frontalViewQualified = observation.isViewQualified(FRONTAL_AXIS_VIEW_CONTRACT_ID),
         candidateCount = candidateCount,
     )

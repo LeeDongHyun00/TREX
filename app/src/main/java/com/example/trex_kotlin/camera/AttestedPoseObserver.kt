@@ -23,6 +23,19 @@ import kotlin.math.sqrt
 internal const val FULL_BODY_PHASE_VIEW_CONTRACT_ID = "trex.view.full-body-any.v1"
 internal const val FULL_BODY_LATERAL_VIEW_CONTRACT_ID = "trex.view.lateral-full-body.v1"
 
+/**
+ * The body's bilateral axis faces the camera, front or back.
+ *
+ * Named for the axis rather than for the front on purpose: a shoulder and hip axis cannot tell a
+ * chest from a back, and this token does not claim it can — [PoseObserverUnknownReason
+ * .FRONT_REAR_UNRESOLVED] still travels with it. What the token does assert is the thing a
+ * coronal-plane movement needs: the camera is looking across the plane the movement happens in
+ * rather than down it. Every quantity this project measures from it is a rotation-invariant
+ * included angle, which reads the same whichever way the person is turned, so the unresolved half
+ * is unresolved and harmless rather than unresolved and load-bearing.
+ */
+internal const val FRONTAL_AXIS_VIEW_CONTRACT_ID = "trex.view.frontal-axis-full-body.v1"
+
 /** Temporal state of the selected pose candidate. It is not a correctness verdict. */
 enum class PoseObserverTrackingStatus {
     PERSON_NOT_FOUND,
@@ -181,6 +194,14 @@ internal data class PoseViewQualifierConfig(
     val minimumSagittalYawDegrees: Double = 60.0,
     /** Once lateral, the view stays lateral until the smoothed yaw falls below this. */
     val lateralExitYawDegrees: Double = 45.0,
+    /**
+     * Once frontal, the view stays frontal until the smoothed yaw rises above this.
+     *
+     * The mirror of [lateralExitYawDegrees] and it exists for the same reason: without
+     * hysteresis a person standing near the boundary flaps the token set every few frames, and
+     * an identity-based dwell can never finish while the set keeps changing.
+     */
+    val frontalExitYawDegrees: Double = 40.0,
     val maximumBilateralYawDisagreementDegrees: Double = 15.0,
     /** World-side confidence floor for a single axis-yaw sample; below it the axis abstains. */
     val minimumAxisSideConfidence: Double = 0.35,
@@ -195,6 +216,9 @@ internal data class PoseViewQualifierConfig(
         require(maximumBodyHeight in minimumBodyHeight..1.0)
         require(maximumFrontYawDegrees in 0.0..<lateralExitYawDegrees)
         require(lateralExitYawDegrees <= minimumSagittalYawDegrees)
+        // The frontal latch may reach past the entry threshold but never as far as the lateral
+        // one, or a single yaw could satisfy both latches and mint two contradictory tokens.
+        require(frontalExitYawDegrees in maximumFrontYawDegrees..<lateralExitYawDegrees)
         require(minimumSagittalYawDegrees <= 90.0)
         require(maximumBilateralYawDisagreementDegrees in 0.0..90.0)
         // Strictly positive: a zero floor would let two zero-weight axes divide 0/0 into a NaN
@@ -207,8 +231,8 @@ internal data class PoseViewQualifierConfig(
 
     val artifactSha256: String = canonicalFieldsSha256(
         listOf(
-            "viewQualifierSchemaVersion" to "2",
-            "implementationContractId" to "trex.body-view-qualifier.algorithm.v2",
+            "viewQualifierSchemaVersion" to "3",
+            "implementationContractId" to "trex.body-view-qualifier.algorithm.v3",
             // A self-occluded far side must not revoke the whole placement: the nose plus the
             // best side of every bilateral pair carries the visibility gates.
             "occlusionPolicy" to "NOSE_REQUIRED_BILATERAL_PAIR_BEST_SIDE",
@@ -219,6 +243,7 @@ internal data class PoseViewQualifierConfig(
             "maximumFrontYawDegrees" to maximumFrontYawDegrees.toString(),
             "minimumSagittalYawDegrees" to minimumSagittalYawDegrees.toString(),
             "lateralExitYawDegrees" to lateralExitYawDegrees.toString(),
+            "frontalExitYawDegrees" to frontalExitYawDegrees.toString(),
             "maximumBilateralYawDisagreementDegrees" to
                 maximumBilateralYawDisagreementDegrees.toString(),
             "minimumAxisSideConfidence" to minimumAxisSideConfidence.toString(),
@@ -226,6 +251,7 @@ internal data class PoseViewQualifierConfig(
             "qualificationDwellMs" to qualificationDwellMs.toString(),
             "fullBodyPhaseViewContractId" to FULL_BODY_PHASE_VIEW_CONTRACT_ID,
             "lateralViewContractId" to FULL_BODY_LATERAL_VIEW_CONTRACT_ID,
+            "frontalAxisViewContractId" to FRONTAL_AXIS_VIEW_CONTRACT_ID,
         ),
     )
 }
@@ -272,6 +298,7 @@ internal class MediaPipePoseObserver(
             observationSource.contract.allowedViewContractIds == setOf(
                 FULL_BODY_PHASE_VIEW_CONTRACT_ID,
                 FULL_BODY_LATERAL_VIEW_CONTRACT_ID,
+                FRONTAL_AXIS_VIEW_CONTRACT_ID,
             ),
         ) { "Observation source view allowlist does not match the qualifier implementation" }
     }
@@ -825,11 +852,13 @@ private class PoseViewQualifier(
     private var smoothedYawDegrees: Double? = null
     private var smoothedYawTimestampMs: Long? = null
     private var lateralLatched = false
+    private var frontalLatched = false
 
     fun reset() {
         smoothedYawDegrees = null
         smoothedYawTimestampMs = null
         lateralLatched = false
+        frontalLatched = false
     }
 
     fun qualify(frame: PoseFrame): PoseViewDecision {
@@ -928,13 +957,20 @@ private class PoseViewQualifier(
         }
         val yaw = smoothYaw(frame.timestampMs, measuredYaw)
         return when {
-            yaw <= config.maximumFrontYawDegrees -> {
+            yaw <= config.maximumFrontYawDegrees ||
+                (frontalLatched && yaw <= config.frontalExitYawDegrees) -> {
+                // Enter at the front threshold, stay until the exit threshold, exactly as the
+                // lateral branch does and for the same reason.
+                frontalLatched = true
                 lateralLatched = false
                 PoseViewDecision(
-                    // A shoulder/hip axis cannot distinguish front from rear. It is intentionally
-                    // diagnostic-only until a separately pinned face-orientation provider exists.
                     view = PoseObserverView.FRONTAL_AXIS,
-                    qualifiedContractIds = ids,
+                    // The token says the bilateral axis faces the camera; it does not say which
+                    // way. A shoulder/hip axis cannot distinguish a chest from a back, so the
+                    // unresolved reason travels with the token rather than being cleared by it.
+                    // Nothing downstream needs the distinction: every measurement taken through
+                    // this view is a rotation-invariant included angle.
+                    qualifiedContractIds = ids + FRONTAL_AXIS_VIEW_CONTRACT_ID,
                     reasons = setOf(PoseObserverUnknownReason.FRONT_REAR_UNRESOLVED),
                 )
             }
@@ -945,6 +981,7 @@ private class PoseViewQualifier(
                 // hysteresis a person at the boundary flaps the token set every few frames and
                 // the identity-based dwell can never finish.
                 lateralLatched = true
+                frontalLatched = false
                 PoseViewDecision(
                     view = PoseObserverView.LATERAL,
                     qualifiedContractIds = ids + FULL_BODY_LATERAL_VIEW_CONTRACT_ID,
@@ -954,6 +991,7 @@ private class PoseViewQualifier(
 
             else -> {
                 lateralLatched = false
+                frontalLatched = false
                 PoseViewDecision(
                     view = PoseObserverView.OBLIQUE,
                     qualifiedContractIds = ids,

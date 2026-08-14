@@ -50,7 +50,7 @@ internal object LandmarkReplay {
             state = session.accept(
                 timestampMs = frame.timestampMs,
                 hasPrimaryPersonLock = frame.hasPrimaryPersonLock,
-                lateralViewQualified = frame.lateralViewQualified,
+                preferredViewQualified = frame.lateralViewQualified,
                 frame = frame.toPoseFrame(),
             )
         }

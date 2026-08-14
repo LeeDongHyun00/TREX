@@ -119,6 +119,7 @@ class PlacementCoachGuidanceStabilizerTest {
             hasPrimaryPersonLock = true,
             fullBodyViewQualified = true,
             lateralViewQualified = false,
+            frontalViewQualified = false,
             candidateCount = 1,
         ),
     )
@@ -132,6 +133,7 @@ class PlacementCoachGuidanceStabilizerTest {
             hasPrimaryPersonLock = true,
             fullBodyViewQualified = true,
             lateralViewQualified = false,
+            frontalViewQualified = false,
             candidateCount = 1,
         ),
     )
@@ -145,6 +147,7 @@ class PlacementCoachGuidanceStabilizerTest {
             hasPrimaryPersonLock = false,
             fullBodyViewQualified = false,
             lateralViewQualified = false,
+            frontalViewQualified = false,
             candidateCount = 1,
         ),
     )

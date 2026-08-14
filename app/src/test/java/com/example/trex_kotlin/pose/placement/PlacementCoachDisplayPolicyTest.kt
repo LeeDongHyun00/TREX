@@ -83,6 +83,7 @@ class PlacementCoachDisplayPolicyTest {
                 hasPrimaryPersonLock = true,
                 fullBodyViewQualified = false,
                 lateralViewQualified = false,
+            frontalViewQualified = false,
                 candidateCount = 1,
             ),
         )
@@ -97,6 +98,7 @@ class PlacementCoachDisplayPolicyTest {
                 hasPrimaryPersonLock = false,
                 fullBodyViewQualified = true,
                 lateralViewQualified = true,
+            frontalViewQualified = false,
                 candidateCount = 1,
             ),
         )
@@ -111,6 +113,7 @@ class PlacementCoachDisplayPolicyTest {
                 hasPrimaryPersonLock = true,
                 fullBodyViewQualified = true,
                 lateralViewQualified = true,
+            frontalViewQualified = false,
                 candidateCount = 1,
             ),
         )
@@ -225,7 +228,7 @@ class PlacementCoachDisplayPolicyTest {
     @Test
     fun vocabularyIsPinned() {
         assertEquals(
-            listOf("FULL_BODY", "LATERAL"),
+            listOf("FULL_BODY", "LATERAL", "FRONTAL"),
             PlacementCoachGoal.entries.map { it.name },
         )
         assertEquals(
@@ -304,6 +307,7 @@ class PlacementCoachDisplayPolicyTest {
                 hasPrimaryPersonLock = true,
                 fullBodyViewQualified = true,
                 lateralViewQualified = false,
+            frontalViewQualified = false,
                 candidateCount = -1,
             )
         }
@@ -319,6 +323,7 @@ class PlacementCoachDisplayPolicyTest {
         hasPrimaryPersonLock = true,
         fullBodyViewQualified = true,
         lateralViewQualified = lateral,
+            frontalViewQualified = false,
         candidateCount = candidateCount,
     )
 
@@ -332,6 +337,7 @@ class PlacementCoachDisplayPolicyTest {
                 hasPrimaryPersonLock = false,
                 fullBodyViewQualified = false,
                 lateralViewQualified = false,
+            frontalViewQualified = false,
                 candidateCount = 1,
             ),
         )
@@ -346,6 +352,7 @@ class PlacementCoachDisplayPolicyTest {
                 hasPrimaryPersonLock = false,
                 fullBodyViewQualified = false,
                 lateralViewQualified = false,
+            frontalViewQualified = false,
                 candidateCount = 1,
             ),
         )

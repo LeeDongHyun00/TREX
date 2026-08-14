@@ -548,7 +548,7 @@ class HeuristicFormCheckEngineTest {
             state = session.accept(
                 timestampMs = timestamp,
                 hasPrimaryPersonLock = true,
-                lateralViewQualified = true,
+                preferredViewQualified = true,
                 frame = frameWithKneeAngles(timestamp, angle, angle, 1.0, 1.0),
             )
         }
@@ -783,12 +783,12 @@ class HeuristicFormCheckEngineTest {
         val state = session.accept(
             timestampMs = 0L,
             hasPrimaryPersonLock = true,
-            lateralViewQualified = false,
+            preferredViewQualified = false,
             frame = frameWithKneeAngles(0L, 170.0, 170.0, 1.0, 1.0),
         )
 
         assertTrue("Required joints are visible, so the exercise must start", state.started)
-        assertTrue("A non-lateral view is a quality note, not a blocker", state.sideViewPreferred)
+        assertTrue("A non-lateral view is a quality note, not a blocker", state.preferredViewSuggested)
     }
 
     @Test
@@ -798,7 +798,7 @@ class HeuristicFormCheckEngineTest {
         val state = session.accept(
             timestampMs = 0L,
             hasPrimaryPersonLock = true,
-            lateralViewQualified = true,
+            preferredViewQualified = true,
             frame = frameWithMissingGroups(setOf(FormCheckJointGroup.ANKLE)),
         )
 
@@ -814,7 +814,7 @@ class HeuristicFormCheckEngineTest {
         val state = session.accept(
             timestampMs = 0L,
             hasPrimaryPersonLock = false,
-            lateralViewQualified = true,
+            preferredViewQualified = true,
             frame = frameWithKneeAngles(0L, 170.0, 170.0, 1.0, 1.0),
         )
 
@@ -859,14 +859,14 @@ class HeuristicFormCheckEngineTest {
         val announcer = immediateAnnouncer()
         val spec = FormCheckExercise.BARBELL_SQUAT
 
-        val started = announcer.onState(0L, spec, startedState(sideViewPreferred = true))
+        val started = announcer.onState(0L, spec, startedState(preferredViewSuggested = true))
         assertNotNull(started)
         assertTrue(started!!.contains("시작"))
         assertTrue(started.contains("옆모습"))
 
         // The start is announced once per set; a fresh set gets a fresh announcer.
         val lateral = immediateAnnouncer()
-            .onState(0L, spec, startedState(sideViewPreferred = false))
+            .onState(0L, spec, startedState(preferredViewSuggested = false))
         assertEquals("자세 체크를 시작할게요", lateral)
     }
 
@@ -883,7 +883,7 @@ class HeuristicFormCheckEngineTest {
         )
         val spec = FormCheckExercise.BARBELL_SQUAT
         val lost = pausedWaiting(setOf(FormCheckJointGroup.ANKLE))
-        val running = startedState(sideViewPreferred = false)
+        val running = startedState(preferredViewSuggested = false)
 
         assertNotNull("The first start is the exception and speaks at once",
             announcer.onState(0L, spec, running))
@@ -905,7 +905,7 @@ class HeuristicFormCheckEngineTest {
             minimumGapMs = 2_500L,
         )
         val spec = FormCheckExercise.BARBELL_SQUAT
-        val running = startedState(sideViewPreferred = false)
+        val running = startedState(preferredViewSuggested = false)
         val lostPerson = FormCheckUiState(
             repCount = 0,
             uncountedAttemptCount = 0,
@@ -913,7 +913,7 @@ class HeuristicFormCheckEngineTest {
             hasEverStarted = true,
             repMarks = emptyList(),
             missingJoints = setOf(FormCheckJointGroup.HIP, FormCheckJointGroup.KNEE, FormCheckJointGroup.ANKLE),
-            sideViewPreferred = false,
+            preferredViewSuggested = false,
             headline = null,
             suggestion = null,
         )
@@ -955,15 +955,15 @@ class HeuristicFormCheckEngineTest {
     @Test
     fun theSideViewSuggestionNamesTheJointTheExerciseMeasures() {
         // Telling a push-up about a knee would describe a joint the track never looked at.
-        assertEquals("무릎이", FormCheckStartAnnouncer.sideViewSubject(FormCheckExercise.BARBELL_SQUAT))
-        assertEquals("팔꿈치가", FormCheckStartAnnouncer.sideViewSubject(FormCheckExercise.PUSH_UP))
-        assertEquals("엉덩이가", FormCheckStartAnnouncer.sideViewSubject(FormCheckExercise.GOOD_MORNING))
+        assertEquals("무릎이", FormCheckStartAnnouncer.viewNoteSubject(FormCheckExercise.BARBELL_SQUAT))
+        assertEquals("팔꿈치가", FormCheckStartAnnouncer.viewNoteSubject(FormCheckExercise.PUSH_UP))
+        assertEquals("엉덩이가", FormCheckStartAnnouncer.viewNoteSubject(FormCheckExercise.GOOD_MORNING))
 
         val announcer = FormCheckStartAnnouncer()
         val spoken = announcer.onState(
             0L,
             FormCheckExercise.PUSH_UP,
-            startedState(sideViewPreferred = true),
+            startedState(preferredViewSuggested = true),
         )
         assertNotNull(spoken)
         assertTrue("Expected the elbow named, got $spoken", spoken!!.contains("팔꿈치가"))
@@ -1793,6 +1793,7 @@ class HeuristicFormCheckEngineTest {
                 FormCheckExercise.LYING_LEG_RAISE,
                 FormCheckExercise.LYING_TRICEPS_EXTENSION,
                 FormCheckExercise.DUMBBELL_PULLOVER,
+                FormCheckExercise.SIDE_LATERAL_RAISE,
             ),
             bilateral,
         )
@@ -1807,6 +1808,9 @@ class HeuristicFormCheckEngineTest {
         assertFalse(FormCheckExercise.DUMBBELL_BENT_OVER_ROW.bilateralDriver)
         assertFalse(FormCheckExercise.STANDING_KNEE_UP.bilateralDriver)
         assertFalse(FormCheckExercise.PLANK.bilateralDriver)
+        // A side lunge bends one leg while the other stays straight — the asymmetry is the
+        // exercise, exactly as it is for the knee-up.
+        assertFalse(FormCheckExercise.SIDE_LUNGE.bilateralDriver)
     }
 
     @Test
@@ -1935,7 +1939,7 @@ class HeuristicFormCheckEngineTest {
         hasEverStarted = false,
         repMarks = emptyList(),
         missingJoints = missing,
-        sideViewPreferred = false,
+        preferredViewSuggested = false,
         headline = null,
         suggestion = null,
     )
@@ -1948,19 +1952,19 @@ class HeuristicFormCheckEngineTest {
         hasEverStarted = true,
         repMarks = emptyList(),
         missingJoints = missing,
-        sideViewPreferred = false,
+        preferredViewSuggested = false,
         headline = null,
         suggestion = null,
     )
 
-    private fun startedState(sideViewPreferred: Boolean) = FormCheckUiState(
+    private fun startedState(preferredViewSuggested: Boolean) = FormCheckUiState(
         repCount = 0,
         uncountedAttemptCount = 0,
         startState = FormCheckStartState.STARTED,
         hasEverStarted = true,
         repMarks = emptyList(),
         missingJoints = emptySet(),
-        sideViewPreferred = sideViewPreferred,
+        preferredViewSuggested = preferredViewSuggested,
         headline = null,
         suggestion = null,
     )

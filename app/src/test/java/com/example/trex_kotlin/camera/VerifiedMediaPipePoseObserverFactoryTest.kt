@@ -104,10 +104,24 @@ class VerifiedMediaPipePoseObserverFactoryTest {
                 setOf(
                     FULL_BODY_PHASE_VIEW_CONTRACT_ID,
                     FULL_BODY_LATERAL_VIEW_CONTRACT_ID,
+                    FRONTAL_AXIS_VIEW_CONTRACT_ID,
                 ),
                 cpuContract.allowedViewContractIds,
             )
-            assertFalse(cpuContract.allowedViewContractIds.any { "front" in it || "rear" in it })
+            // No token may claim to have resolved a chest from a back, because a shoulder and hip
+            // axis cannot. The frontal token is named for the axis for exactly that reason and
+            // carries FRONT_REAR_UNRESOLVED alongside it; what is forbidden is a token that
+            // asserts a facing direction, which is what these words would name.
+            assertFalse(
+                "No view token may claim a resolved facing direction",
+                cpuContract.allowedViewContractIds.any {
+                    "front-facing" in it || "rear" in it || "facing" in it
+                },
+            )
+            assertTrue(
+                "The frontal token must name the axis, not a direction",
+                FRONTAL_AXIS_VIEW_CONTRACT_ID.contains("frontal-axis"),
+            )
         } finally {
             cpu.close()
             gpu.close()

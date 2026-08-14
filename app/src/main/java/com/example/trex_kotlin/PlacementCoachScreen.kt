@@ -216,6 +216,7 @@ private fun PlacementCoachTopBar(goal: PlacementCoachGoal, onExit: () -> Unit) {
                 text = when (goal) {
                     PlacementCoachGoal.FULL_BODY -> "1단계 · 전신이 화면에 들어오기"
                     PlacementCoachGoal.LATERAL -> "2단계 · 옆모습으로 서기"
+                    PlacementCoachGoal.FRONTAL -> "2단계 · 정면으로 서기"
                 },
                 color = TrexLime,
                 fontSize = 12.sp,

@@ -70,6 +70,7 @@ import com.example.trex_kotlin.pose.formcheck.FormCheckStartAnnouncer
 import com.example.trex_kotlin.pose.formcheck.FormCheckStartState
 import com.example.trex_kotlin.pose.formcheck.FormCheckUiState
 import com.example.trex_kotlin.pose.formcheck.FormCheckUncountedAnnouncer
+import com.example.trex_kotlin.pose.formcheck.FormCheckView
 import com.example.trex_kotlin.pose.formcheck.HeuristicFormCheckDeclaration
 import com.example.trex_kotlin.pose.formcheck.HeuristicFormCheckSession
 import com.example.trex_kotlin.pose.placement.PlacementCameraState
@@ -153,10 +154,16 @@ private fun FormCheckContent(
     onAnnounce: (String) -> Unit,
     onSetObserved: (FormCheckSetSummary) -> Unit,
 ) {
+    // The placement the guidance aims at follows the exercise, so a coronal-plane movement is
+    // never told to turn sideways — the one placement it cannot be read from.
+    val placementGoal = when (spec.view) {
+        FormCheckView.LATERAL -> PlacementCoachGoal.LATERAL
+        FormCheckView.FRONTAL -> PlacementCoachGoal.FRONTAL
+    }
     var cameraStatus by remember { mutableStateOf(PoseCameraStatus.Initializing) }
     var cameraError by remember { mutableStateOf<PoseCameraError?>(null) }
     var placementDisplay by remember {
-        mutableStateOf(PlacementCoachDisplayPolicy.initial(PlacementCoachGoal.LATERAL))
+        mutableStateOf(PlacementCoachDisplayPolicy.initial(placementGoal))
     }
     val frameState = remember { mutableStateOf<PoseFrame?>(null) }
     // The live angle moves every camera frame. Kept in its own state and read only inside the
@@ -191,7 +198,7 @@ private fun FormCheckContent(
     LaunchedEffect(cameraState) {
         if (cameraState != PlacementCameraState.RUNNING) {
             placementDisplay = PlacementCoachDisplayPolicy.resolve(
-                goal = PlacementCoachGoal.LATERAL,
+                goal = placementGoal,
                 cameraState = cameraState,
                 observed = null,
             )
@@ -236,7 +243,7 @@ private fun FormCheckContent(
     // polled again once the window could have elapsed. A state change cancels and restarts the
     // effect, which is the debounce working — a flapping person lock restarts the wait forever
     // and is never spoken.
-    LaunchedEffect(formState.startState, formState.missingJoints, formState.sideViewPreferred, paused) {
+    LaunchedEffect(formState.startState, formState.missingJoints, formState.preferredViewSuggested, paused) {
         if (paused) return@LaunchedEffect
         while (true) {
             val now = SystemClock.elapsedRealtime()
@@ -293,7 +300,7 @@ private fun FormCheckContent(
             onPoseObservation = { update ->
                 frameState.value = update.displayFrame
                 val resolved = PlacementCoachDisplayPolicy.resolve(
-                    goal = PlacementCoachGoal.LATERAL,
+                    goal = placementGoal,
                     cameraState = liveCameraState.value,
                     observed = update.toPlacementObservedSignal(),
                 )
@@ -303,6 +310,10 @@ private fun FormCheckContent(
                 }
                 // Evaluation consumes the attested observation, never the display frame.
                 val observed = update.observation
+                // The exercise's own placement, not always the lateral one: a coronal-plane
+                // movement seen from the side travels along the camera's depth axis, which is
+                // where a monocular estimate is weakest.
+                val preferredQualified = observed.isViewQualified(spec.view.contractId)
                 val lateralQualified = observed.isViewQualified(FULL_BODY_LATERAL_VIEW_CONTRACT_ID)
                 DevPoseCapture.record(
                     timestampMs = observed.frame.timestampMs,
@@ -313,7 +324,7 @@ private fun FormCheckContent(
                 val nextForm = session.accept(
                     timestampMs = observed.frame.timestampMs,
                     hasPrimaryPersonLock = observed.hasPrimaryPersonLock,
-                    lateralViewQualified = lateralQualified,
+                    preferredViewQualified = preferredQualified,
                     frame = observed.frame,
                 )
                 // Mirrors the engine's own field, including its nulls: the engine clears it on
@@ -645,10 +656,10 @@ private fun FormCheckCountSlab(
                     modifier = Modifier.padding(top = 2.dp),
                 )
             }
-            if (formState.sideViewPreferred) {
+            if (formState.preferredViewSuggested) {
                 Text(
-                    text = "옆모습으로 서면 " +
-                        "${FormCheckStartAnnouncer.sideViewSubject(spec)} 더 잘 보여요",
+                    text = "${spec.view.noteSubject} " +
+                        "${FormCheckStartAnnouncer.viewNoteSubject(spec)} 더 잘 보여요",
                     color = Color.White.copy(alpha = 0.68f),
                     fontSize = 14.sp,
                     modifier = Modifier.padding(top = 4.dp),

@@ -465,6 +465,7 @@ class AttestedPoseObserverTest {
         allowedViews: Set<String> = setOf(
             FULL_BODY_PHASE_VIEW_CONTRACT_ID,
             FULL_BODY_LATERAL_VIEW_CONTRACT_ID,
+            FRONTAL_AXIS_VIEW_CONTRACT_ID,
         ),
     ): PoseObservationContract = PoseObservationContract(
         runtimeDomainId = "trex.test-observer.cpu.v1",

@@ -1,5 +1,6 @@
 package com.example.trex_kotlin.pose.placement
 
+import com.example.trex_kotlin.camera.FRONTAL_AXIS_VIEW_CONTRACT_ID
 import com.example.trex_kotlin.camera.FULL_BODY_LATERAL_VIEW_CONTRACT_ID
 import com.example.trex_kotlin.camera.FULL_BODY_PHASE_VIEW_CONTRACT_ID
 import com.example.trex_kotlin.camera.MediaPipePoseObserver
@@ -229,6 +230,7 @@ class PlacementCoachObserverAdapterTest {
             allowedViewContractIds = setOf(
                 FULL_BODY_PHASE_VIEW_CONTRACT_ID,
                 FULL_BODY_LATERAL_VIEW_CONTRACT_ID,
+                FRONTAL_AXIS_VIEW_CONTRACT_ID,
             ),
             personLockArtifactId = "trex.primary-person.temporal-lock.v1",
             personLockArtifactSha256 = personLockSha,

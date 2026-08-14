@@ -7,12 +7,23 @@ import java.util.Collections
 /**
  * Placement target the coach is currently guiding toward.
  *
- * The two goals mirror the only affirmative view tokens the observer ever mints. Stage one is
- * about framing, stage two is about body orientation.
+ * The goals mirror the affirmative view tokens the observer mints. Stage one is about framing;
+ * the two orientation goals are stage two, and they are alternatives rather than a sequence — an
+ * exercise asks for one placement, and the coach guides toward that one only.
  */
 internal enum class PlacementCoachGoal {
     FULL_BODY,
     LATERAL,
+
+    /**
+     * The body's bilateral axis faces the camera, front or back.
+     *
+     * The observer cannot tell a chest from a back — its token says so, and the guidance below
+     * says so too by asking the user to face the camera without ever claiming to have checked
+     * that they did. Everything read through this placement is a rotation-invariant included
+     * angle, so the half that stays unresolved is not a half anything depends on.
+     */
+    FRONTAL,
 }
 
 /** Camera lifecycle as the coach sees it. It says nothing about the person in frame. */
@@ -95,12 +106,20 @@ internal enum class PlacementCoachGuidance(
         headline = "카메라가 옆모습을 보도록 서 주세요",
         detail = "몸을 한쪽으로 돌려 주세요",
     ),
+    TURN_TO_FACE(
+        headline = "카메라가 정면을 보도록 서 주세요",
+        detail = "어깨가 카메라와 나란해지게 돌려 주세요",
+    ),
     FULL_BODY_REACHED(
         headline = "카메라가 전신을 안정적으로 보고 있어요",
         detail = "이어서 옆모습 배치를 확인해 볼까요",
     ),
     LATERAL_REACHED(
         headline = "카메라가 옆모습을 안정적으로 보고 있어요",
+        detail = "배치 확인이 끝났어요",
+    ),
+    FRONTAL_REACHED(
+        headline = "카메라가 정면을 안정적으로 보고 있어요",
         detail = "배치 확인이 끝났어요",
     ),
 }
@@ -119,6 +138,7 @@ internal class PlacementObservedSignal(
     val hasPrimaryPersonLock: Boolean,
     val fullBodyViewQualified: Boolean,
     val lateralViewQualified: Boolean,
+    val frontalViewQualified: Boolean,
     val candidateCount: Int,
 ) {
     val unknownReasons: Set<PoseObserverUnknownReason> =
@@ -187,7 +207,7 @@ internal object PlacementCoachDisplayPolicy {
 
     /** SHA-256 of the LF-normalised policy document that governs this track. */
     const val POLICY_DOCUMENT_SHA256: String =
-        "d69ea762522af72fa6c4573676a7f277cf9e4a9f5a3d9cbb62788a3af5d9e1ea"
+        "e70a80600fa474c4e4e85c34c52c8494c8c613328b2c821d814c3a27e4c09e88"
 
     const val POLICY_DOCUMENT_PATH: String = "docs/pose-nonverdict-display-policy.v1.md"
 
@@ -280,7 +300,11 @@ internal object PlacementCoachDisplayPolicy {
         val framed = observed.trackingStatus == PoseObserverTrackingStatus.TRACKED &&
             observed.hasPrimaryPersonLock &&
             observed.fullBodyViewQualified
-        val reached = framed && (goal == PlacementCoachGoal.FULL_BODY || observed.lateralViewQualified)
+        val reached = framed && when (goal) {
+            PlacementCoachGoal.FULL_BODY -> true
+            PlacementCoachGoal.LATERAL -> observed.lateralViewQualified
+            PlacementCoachGoal.FRONTAL -> observed.frontalViewQualified
+        }
 
         if (reached) {
             return PlacementCoachDisplay(
@@ -289,6 +313,7 @@ internal object PlacementCoachDisplayPolicy {
                 guidance = when (goal) {
                     PlacementCoachGoal.FULL_BODY -> PlacementCoachGuidance.FULL_BODY_REACHED
                     PlacementCoachGoal.LATERAL -> PlacementCoachGuidance.LATERAL_REACHED
+                    PlacementCoachGoal.FRONTAL -> PlacementCoachGuidance.FRONTAL_REACHED
                 },
                 skeletonVisible = skeletonVisible,
                 suppressedReasons = observed.unknownReasons,
@@ -298,8 +323,15 @@ internal object PlacementCoachDisplayPolicy {
         // Framing is already settled and only the orientation is missing. The reasons that remain
         // here are suppressed ones, so the priority scan below would fall through to a generic
         // "hold still" that gives the user nothing to act on.
-        if (framed && goal == PlacementCoachGoal.LATERAL) {
-            return display(goal, PlacementCoachStage.ADJUSTING, PlacementCoachGuidance.TURN_SIDEWAYS, skeletonVisible)
+        if (framed) {
+            val turn = when (goal) {
+                PlacementCoachGoal.LATERAL -> PlacementCoachGuidance.TURN_SIDEWAYS
+                PlacementCoachGoal.FRONTAL -> PlacementCoachGuidance.TURN_TO_FACE
+                PlacementCoachGoal.FULL_BODY -> null
+            }
+            if (turn != null) {
+                return display(goal, PlacementCoachStage.ADJUSTING, turn, skeletonVisible)
+            }
         }
 
         val leading = DISPLAY_PRIORITY.firstOrNull { it in observed.unknownReasons }

@@ -1,5 +1,7 @@
 package com.example.trex_kotlin.pose.formcheck
 
+import com.example.trex_kotlin.camera.FRONTAL_AXIS_VIEW_CONTRACT_ID
+import com.example.trex_kotlin.camera.FULL_BODY_LATERAL_VIEW_CONTRACT_ID
 import com.example.trex_kotlin.catalog.AiHubExercise
 import com.example.trex_kotlin.pose.PoseFrame
 import java.util.Collections
@@ -26,7 +28,7 @@ internal object HeuristicFormCheckDeclaration {
     const val TRACK_ID: String = "trex.heuristic-form-check.beta.v1"
 
     const val POLICY_DOCUMENT_SHA256: String =
-        "56ef48d89bc487d3222619d140b613573ecd4902fda289845e375b7292658c41"
+        "7ebb6631db2cd2f21a271da1e1ca76bc33ab7bd07956f57bd07756b0bd5cd80e"
 
     const val POLICY_DOCUMENT_PATH: String = "docs/pose-heuristic-form-check.v1.md"
 
@@ -191,6 +193,39 @@ internal enum class FormCheckWorkingDirection(
 ) {
     FLEXION(FormCheckVocabulary.BENDING),
     EXTENSION(FormCheckVocabulary.STRAIGHTENING),
+}
+
+/**
+ * Which way the camera reads this exercise's movement most directly.
+ *
+ * Not a start gate — §3 keeps that to the driver chain's own joints, and it stays that way. This
+ * decides which placement the track suggests and, for an exercise whose movement happens in the
+ * coronal plane, it is the difference between a measurement and a foreshortened guess: a side
+ * lunge seen from the side travels almost entirely along the camera's depth axis, where a
+ * monocular estimate is at its weakest.
+ *
+ * The frontal token deliberately does not resolve front from rear, and nothing here needs it to.
+ * Every quantity this track measures is a rotation-invariant included angle, so a person facing
+ * away reads identically to one facing the camera.
+ */
+internal enum class FormCheckView(
+    /** The observer token that qualifies this placement. */
+    val contractId: String,
+    /** How the placement is described to somebody standing in front of the camera. */
+    val setupPhrase: String,
+    /** Named in the spoken and written note when the placement would read the joint better. */
+    val noteSubject: String,
+) {
+    LATERAL(
+        contractId = FULL_BODY_LATERAL_VIEW_CONTRACT_ID,
+        setupPhrase = "옆모습이 보이게",
+        noteSubject = "옆모습으로 서면",
+    ),
+    FRONTAL(
+        contractId = FRONTAL_AXIS_VIEW_CONTRACT_ID,
+        setupPhrase = "정면이 보이게",
+        noteSubject = "정면으로 서면",
+    ),
 }
 
 /** Whether the exercise repeats a movement or holds a position. */
@@ -438,6 +473,13 @@ internal enum class FormCheckExercise(
      * needs an orientation reference this track does not assume.
      */
     val definition: List<FormCheckDefinitionGate> = emptyList(),
+    /**
+     * Which placement reads this movement most directly. Lateral for everything whose work
+     * happens in the sagittal plane, which is most of the catalogue; frontal for the movements
+     * that travel sideways, where a side view would put the whole excursion along the camera's
+     * depth axis.
+     */
+    val view: FormCheckView = FormCheckView.LATERAL,
     val cadence: FormCheckCadence,
     /**
      * For a repetition, the resting angle it must return to before another can be armed. For a
@@ -1249,6 +1291,55 @@ internal enum class FormCheckExercise(
         rangeHint = null,
     ),
 
+    // Wave 4: the coronal-plane movements. The survey refused these while the track could only
+    // ask for a side view, where their entire excursion lies along the camera's depth axis. With
+    // a frontal placement to ask for, the same chains read them head on (§4.3b).
+    SIDE_LUNGE(
+        exercise = AiHubExercise.SIDE_LUNGE,
+        driver = FormCheckDriver.KNEE,
+        direction = FormCheckWorkingDirection.FLEXION,
+        // Deliberately not bilateral: a side lunge is one leg bending while the other stays
+        // straight — that asymmetry is the exercise, exactly as it is for the knee-up.
+        // The straight trailing leg is what a definition gate would read, and it is the same
+        // opposite-side clause the knee-up uses; it is left out until the frontal placement has
+        // been seen on a real device, because an untested gate that discards real repetitions
+        // is worse than one that does not exist.
+        view = FormCheckView.FRONTAL,
+        cadence = FormCheckCadence.REPETITION,
+        restAngleDegrees = 150.0,
+        attemptAngleDegrees = 140.0,
+        repAngleDegrees = 130.0,
+        reachedAngleDegrees = 120.0,
+        provenance = FormCheckThresholdProvenance.HEURISTIC_DEFAULT,
+        rangeUrgingSealed = false,
+        setupHint = "정면이 보이게 서 주세요",
+        attemptHint = "다음엔 조금 더 앉아볼까요",
+        rangeHint = "다음엔 조금 더 앉아볼까요",
+    ),
+    SIDE_LATERAL_RAISE(
+        exercise = AiHubExercise.SIDE_LATERAL_RAISE,
+        driver = FormCheckDriver.SHOULDER,
+        direction = FormCheckWorkingDirection.EXTENSION,
+        // The arm travels away from the torso, so it opens rather than straightens — the same
+        // anatomy the front raise and the pullover use.
+        vocabularyOverride = FormCheckVocabulary.OPENING,
+        bilateralDriver = true,
+        view = FormCheckView.FRONTAL,
+        cadence = FormCheckCadence.REPETITION,
+        restAngleDegrees = 20.0,
+        attemptAngleDegrees = 40.0,
+        repAngleDegrees = 70.0,
+        reachedAngleDegrees = 85.0,
+        provenance = FormCheckThresholdProvenance.HEURISTIC_DEFAULT,
+        // Sealed on the end-range arm of §4.2: past shoulder height this movement carries the
+        // joint into the position it is most often overdone at, and more range is the one thing
+        // this track must not suggest here.
+        rangeUrgingSealed = true,
+        setupHint = "정면이 보이게 서 주세요",
+        attemptHint = null,
+        rangeHint = null,
+    ),
+
     // Isometric. The thresholds read as a band rather than an excursion: the hold begins once
     // the body straightens past the rep angle and ends once it sags back past the rest angle.
     PLANK(
@@ -1399,10 +1490,11 @@ internal class FormCheckUiState internal constructor(
     repMarks: List<FormCheckRepMark>,
     missingJoints: Set<FormCheckJointGroup>,
     /**
-     * The side view reads this exercise's own driver joint most directly; anything else still
-     * starts, with the view offered as a quality note rather than a gate.
+     * The exercise's own preferred placement is not currently qualified. Anything else still
+     * starts — §3 keeps the start gate to the driver's joints — with the placement offered as a
+     * quality note rather than a gate.
      */
-    val sideViewPreferred: Boolean,
+    val preferredViewSuggested: Boolean,
     val headline: String?,
     val suggestion: String?,
     /** Seconds of the hold currently in progress; zero for repetition exercises. */
@@ -1447,7 +1539,7 @@ internal class FormCheckUiState internal constructor(
             // swallow a new repetition's mark.
             repMarks.size == other.repMarks.size &&
             missingJoints == other.missingJoints &&
-            sideViewPreferred == other.sideViewPreferred &&
+            preferredViewSuggested == other.preferredViewSuggested &&
             headline == other.headline &&
             suggestion == other.suggestion &&
             holdSeconds == other.holdSeconds
@@ -1460,7 +1552,7 @@ internal class FormCheckUiState internal constructor(
         result = 31 * result + hasEverStarted.hashCode()
         result = 31 * result + repMarks.size
         result = 31 * result + missingJoints.hashCode()
-        result = 31 * result + sideViewPreferred.hashCode()
+        result = 31 * result + preferredViewSuggested.hashCode()
         result = 31 * result + (headline?.hashCode() ?: 0)
         result = 31 * result + (suggestion?.hashCode() ?: 0)
         result = 31 * result + holdSeconds
@@ -1506,7 +1598,7 @@ internal class HeuristicFormCheckSession(
     private var headline: String? = null
     private var suggestion: String? = null
     private var activeSide: FormCheckBodySide? = null
-    private var sideViewPreferred: Boolean = false
+    private var preferredViewSuggested: Boolean = false
     private var hasEverStarted: Boolean = false
     private var longestHoldMs: Long = 0L
     private var lastAcceptedTimestampMs: Long? = null
@@ -1582,10 +1674,10 @@ internal class HeuristicFormCheckSession(
     fun accept(
         timestampMs: Long,
         hasPrimaryPersonLock: Boolean,
-        lateralViewQualified: Boolean,
+        preferredViewQualified: Boolean,
         frame: PoseFrame,
     ): FormCheckUiState {
-        sideViewPreferred = !lateralViewQualified
+        preferredViewSuggested = !preferredViewQualified
         // Policy §3.1 lists a backwards timestamp among the abstentions, and each detector already
         // discards its own excursion on one. Enforcing it here as well is what makes that clause
         // true of the whole session: the detectors' internal invalidation cannot clear a live
@@ -1816,7 +1908,7 @@ internal class HeuristicFormCheckSession(
         hasEverStarted = hasEverStarted,
         repMarks = repMarks,
         missingJoints = if (startState == FormCheckStartState.STARTED) emptySet() else missingJoints,
-        sideViewPreferred = sideViewPreferred,
+        preferredViewSuggested = preferredViewSuggested,
         headline = headline,
         suggestion = suggestion,
         holdSeconds = ((holdDetector?.heldMs ?: 0L) / 1_000L).toInt(),

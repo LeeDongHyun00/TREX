@@ -219,6 +219,7 @@ class PlacementCoachAttemptRecorderTest {
         hasPrimaryPersonLock = true,
         fullBodyViewQualified = true,
         lateralViewQualified = lateral,
+            frontalViewQualified = false,
         candidateCount = 1,
     )
 
@@ -231,6 +232,7 @@ class PlacementCoachAttemptRecorderTest {
             hasPrimaryPersonLock = false,
             fullBodyViewQualified = false,
             lateralViewQualified = false,
+            frontalViewQualified = false,
             candidateCount = 1,
         ),
     )
