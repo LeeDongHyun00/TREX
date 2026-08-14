@@ -578,12 +578,13 @@ def run(
 
     return {
         "artifactKind": "TREX_MEDIAPIPE_AIHUB_BRIDGE_ERROR_CARD",
-        "artifactVersion": 3,
+        "artifactVersion": 4,
         "supersedes": (
-            "v2 measured only the three capture days that were unpacked on disk. This version "
-            "reads the distribution archives in place, so every capture day with a usable "
-            "measurement view contributes, and leave-one-subject-out folds span capture days "
-            "rather than a single shoot."
+            "v3 read the archives in place but could only reach the roots on one drive, which "
+            "silently halved the curls' capture days and hid the barbell lunge entirely. This "
+            "version pools archive roots across drives, adds the barbell lunge profile, and "
+            "keeps the per-frame pairs the fit distils, so the per-chain error card comes from "
+            "the same pass."
         ),
         "rightsAuthorization": {
             "manifestId": "trex.aihub-research-use-rights.v1",

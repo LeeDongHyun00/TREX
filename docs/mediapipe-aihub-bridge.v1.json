@@ -1,15 +1,14 @@
 {
   "artifactKind": "TREX_MEDIAPIPE_AIHUB_BRIDGE_ERROR_CARD",
-  "artifactVersion": 3,
+  "artifactVersion": 4,
   "detectionOutcomes": {
-    "ambiguous_multi_person": 4343,
-    "chain_below_confidence": 4822,
-    "missing_archive": 31040,
-    "missing_image": 733,
-    "no_pose": 1493,
+    "ambiguous_multi_person": 5362,
+    "chain_below_confidence": 4921,
+    "missing_image": 1229,
+    "no_pose": 1767,
     "no_view_selection_for_this_chain": 574,
     "quarantined_capture_day": 144,
-    "single_pose": 117173
+    "single_pose": 169310
   },
   "generalisation": {
     "note": "The fold unit is the dataset-wide participant code, not the participant within a capture day. A person filmed on several days is one fold, so a held-out person contributes nothing to the threshold being tested against them.",
@@ -35,11 +34,14 @@
     "permittedOperation": "MEDIAPIPE_TO_AIHUB_BRIDGE_ERROR_MEASUREMENT"
   },
   "source": {
-    "archiveRoot": "T:\\trex_allData\\013.피트니스자세\\1.Training\\원시데이터",
+    "archiveRoots": [
+      "data\\013.피트니스자세\\1.Training\\원시데이터",
+      "T:\\trex_allData\\013.피트니스자세\\1.Training\\원시데이터"
+    ],
     "note": "One archive holds one capture day; only the selected view's frames are read.",
     "readInPlaceFromArchives": true
   },
-  "supersedes": "v2 measured only the three capture days that were unpacked on disk. This version reads the distribution archives in place, so every capture day with a usable measurement view contributes, and leave-one-subject-out folds span capture days rather than a single shoot.",
+  "supersedes": "v3 read the archives in place but could only reach the roots on one drive, which silently halved the curls' capture days and hid the barbell lunge entirely. This version pools archive roots across drives, adds the barbell lunge profile, and keeps the per-frame pairs the fit distils, so the per-chain error card comes from the same pass.",
   "thresholdTransfer": [
     {
       "captureDays": [
@@ -75,30 +77,33 @@
       "captureDays": [
         "Day04_200924_F",
         "Day08_201005_F",
-        "Day16_201016_F"
+        "Day12_201012_F",
+        "Day16_201016_F",
+        "Day26_201028_F",
+        "Day30_201102_F"
       ],
       "chain": "SHOULDER",
-      "clipCount": 575,
-      "clipLevelAngleBiasDegrees": 21.38,
+      "clipCount": 1439,
+      "clipLevelAngleBiasDegrees": 14.72,
       "condition": "팔꿈치 위치 고정",
       "conditionKind": "STABILITY",
-      "conditionTrueCount": 287,
+      "conditionTrueCount": 719,
       "direction": "FLEXION",
       "exercise": "덤벨 컬",
       "extreme": "max",
       "losoConfusion": {
-        "fn": 112,
-        "fp": 38,
-        "tn": 250,
-        "tp": 175
+        "fn": 225,
+        "fp": 131,
+        "tn": 589,
+        "tp": 494
       },
-      "majorityBaseline": 0.5009,
-      "mediapipeNativeBalancedAccuracy": 0.7389,
-      "mediapipeNativeLosoBalancedAccuracy": 0.7389,
-      "mediapipeNativeLosoThresholdMaxDegrees": 50,
-      "mediapipeNativeLosoThresholdMinDegrees": 50,
-      "mediapipeNativeThresholdDegrees": 50,
-      "subjectCount": 18
+      "majorityBaseline": 0.5003,
+      "mediapipeNativeBalancedAccuracy": 0.7526,
+      "mediapipeNativeLosoBalancedAccuracy": 0.7526,
+      "mediapipeNativeLosoThresholdMaxDegrees": 51,
+      "mediapipeNativeLosoThresholdMinDegrees": 51,
+      "mediapipeNativeThresholdDegrees": 51,
+      "subjectCount": 44
     },
     {
       "captureDays": [
@@ -192,32 +197,66 @@
     },
     {
       "captureDays": [
+        "Day03_200923_F",
+        "Day11_201008_F",
+        "Day15_201015_F",
+        "Day25_201027_F",
+        "Day29_201031_F"
+      ],
+      "chain": "HIP",
+      "clipCount": 1407,
+      "clipLevelAngleBiasDegrees": 0.61,
+      "condition": "앞다리 무릎 각도 90도",
+      "conditionKind": "RANGE",
+      "conditionTrueCount": 1055,
+      "direction": "FLEXION",
+      "exercise": "바벨 런지",
+      "extreme": "min",
+      "losoConfusion": {
+        "fn": 93,
+        "fp": 163,
+        "tn": 189,
+        "tp": 962
+      },
+      "majorityBaseline": 0.7498,
+      "mediapipeNativeBalancedAccuracy": 0.7343,
+      "mediapipeNativeLosoBalancedAccuracy": 0.7244,
+      "mediapipeNativeLosoThresholdMaxDegrees": 130,
+      "mediapipeNativeLosoThresholdMinDegrees": 127,
+      "mediapipeNativeThresholdDegrees": 129,
+      "subjectCount": 42
+    },
+    {
+      "captureDays": [
         "Day04_200924_F",
         "Day08_201005_F",
-        "Day16_201016_F"
+        "Day12_201012_F",
+        "Day16_201016_F",
+        "Day26_201028_F",
+        "Day30_201102_F"
       ],
       "chain": "SHOULDER",
-      "clipCount": 574,
-      "clipLevelAngleBiasDegrees": 19.6,
+      "clipCount": 1437,
+      "clipLevelAngleBiasDegrees": 15.35,
       "condition": "팔꿈치 위치 고정",
       "conditionKind": "STABILITY",
-      "conditionTrueCount": 287,
+      "conditionTrueCount": 718,
       "direction": "FLEXION",
       "exercise": "바벨 컬",
       "extreme": "max",
       "losoConfusion": {
-        "fn": 92,
-        "fp": 32,
-        "tn": 255,
-        "tp": 195
+        "fn": 209,
+        "fp": 109,
+        "tn": 610,
+        "tp": 509
       },
-      "majorityBaseline": 0.5,
-      "mediapipeNativeBalancedAccuracy": 0.784,
-      "mediapipeNativeLosoBalancedAccuracy": 0.784,
+      "majorityBaseline": 0.5003,
+      "mediapipeNativeBalancedAccuracy": 0.7884,
+      "mediapipeNativeLosoBalancedAccuracy": 0.7787,
       "mediapipeNativeLosoThresholdMaxDegrees": 52,
-      "mediapipeNativeLosoThresholdMinDegrees": 52,
+      "mediapipeNativeLosoThresholdMinDegrees": 51,
       "mediapipeNativeThresholdDegrees": 52,
-      "subjectCount": 18
+      "subjectCount": 44
     },
     {
       "captureDays": [
@@ -226,33 +265,36 @@
         "Day05_200925_F",
         "Day08_201005_F",
         "Day09_201006_F",
+        "Day12_201012_F",
         "Day13_201013_F",
         "Day16_201016_F",
         "Day23_201024_F",
-        "Day27_201029_F"
+        "Day26_201028_F",
+        "Day27_201029_F",
+        "Day30_201102_F"
       ],
       "chain": "HIP",
-      "clipCount": 942,
-      "clipLevelAngleBiasDegrees": 1.02,
+      "clipCount": 1155,
+      "clipLevelAngleBiasDegrees": 1.66,
       "condition": "무릎 충분히 올라오고",
       "conditionKind": "RANGE",
-      "conditionTrueCount": 657,
+      "conditionTrueCount": 816,
       "direction": "FLEXION",
       "exercise": "스탠딩 니업",
       "extreme": "min",
       "losoConfusion": {
-        "fn": 89,
-        "fp": 68,
-        "tn": 217,
-        "tp": 568
+        "fn": 71,
+        "fp": 106,
+        "tn": 233,
+        "tp": 745
       },
-      "majorityBaseline": 0.6975,
-      "mediapipeNativeBalancedAccuracy": 0.8395,
-      "mediapipeNativeLosoBalancedAccuracy": 0.813,
-      "mediapipeNativeLosoThresholdMaxDegrees": 112,
-      "mediapipeNativeLosoThresholdMinDegrees": 105,
-      "mediapipeNativeThresholdDegrees": 105,
-      "subjectCount": 48
+      "majorityBaseline": 0.7065,
+      "mediapipeNativeBalancedAccuracy": 0.8002,
+      "mediapipeNativeLosoBalancedAccuracy": 0.8002,
+      "mediapipeNativeLosoThresholdMaxDegrees": 115,
+      "mediapipeNativeLosoThresholdMinDegrees": 115,
+      "mediapipeNativeThresholdDegrees": 115,
+      "subjectCount": 55
     },
     {
       "captureDays": [

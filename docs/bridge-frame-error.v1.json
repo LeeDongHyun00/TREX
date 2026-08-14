@@ -1,0 +1,385 @@
+{
+  "artifactKind": "BRIDGE_PER_FRAME_ERROR_CARD",
+  "authority": "CATALOG_AND_LABEL_ANALYSIS_ONLY_NOT_RUNTIME_RELEASE",
+  "limitations": [
+    "IMAGE-mode inference over studio captures; the runtime is VIDEO mode in the wild.",
+    "Frames come only from the capture days and selected views of the exercises the emitting run measured, so a chain's card reflects those exercises' poses, not the chain in general.",
+    "The 3D reconstruction is itself a label, not truth; where it fails, its failure is counted here as MediaPipe's."
+  ],
+  "perChain": {
+    "ELBOW": {
+      "absoluteError": {
+        "median": 19.19,
+        "p90": 50.94,
+        "p95": 58.42
+      },
+      "captureDays": [
+        "Day01_200921_F",
+        "Day05_200925_F",
+        "Day09_201006_F",
+        "Day13_201013_F",
+        "Day17_201017_F",
+        "Day20_201021_F",
+        "Day21_201022_F",
+        "Day22_201023_F",
+        "Day23_201024_F",
+        "Day27_201029_F"
+      ],
+      "frames": 31074,
+      "signedBias": {
+        "median": 3.86,
+        "p5": -24.83,
+        "p95": 58.4
+      },
+      "subjects": 64
+    },
+    "HIP": {
+      "absoluteError": {
+        "median": 8.27,
+        "p90": 23.26,
+        "p95": 39.71
+      },
+      "captureDays": [
+        "Day01_200921_F",
+        "Day03_200923_F",
+        "Day04_200924_F",
+        "Day05_200925_F",
+        "Day08_201005_F",
+        "Day09_201006_F",
+        "Day11_201008_F",
+        "Day12_201012_F",
+        "Day13_201013_F",
+        "Day15_201015_F",
+        "Day16_201016_F",
+        "Day23_201024_F",
+        "Day25_201027_F",
+        "Day26_201028_F",
+        "Day27_201029_F",
+        "Day29_201031_F",
+        "Day30_201102_F"
+      ],
+      "frames": 40077,
+      "signedBias": {
+        "median": -2.61,
+        "p5": -15.41,
+        "p95": 36.72
+      },
+      "subjects": 63
+    },
+    "KNEE": {
+      "absoluteError": {
+        "median": 9.93,
+        "p90": 28.92,
+        "p95": 35.82
+      },
+      "captureDays": [
+        "Day01_200921_F",
+        "Day02_200922_F",
+        "Day05_200925_F",
+        "Day09_201006_F",
+        "Day10_201007_F",
+        "Day13_201013_F",
+        "Day14_201014_F",
+        "Day23_201024_F",
+        "Day24_201026_F",
+        "Day27_201029_F"
+      ],
+      "frames": 32418,
+      "signedBias": {
+        "median": 5.23,
+        "p5": -14.06,
+        "p95": 34.93
+      },
+      "subjects": 54
+    },
+    "SHOULDER": {
+      "absoluteError": {
+        "median": 7.65,
+        "p90": 20.52,
+        "p95": 26.89
+      },
+      "captureDays": [
+        "Day04_200924_F",
+        "Day08_201005_F",
+        "Day12_201012_F",
+        "Day16_201016_F",
+        "Day17_201017_F",
+        "Day20_201021_F",
+        "Day21_201022_F",
+        "Day22_201023_F",
+        "Day26_201028_F",
+        "Day30_201102_F"
+      ],
+      "frames": 52308,
+      "signedBias": {
+        "median": 6.94,
+        "p5": -5.44,
+        "p95": 26.32
+      },
+      "subjects": 59
+    },
+    "TRUNK": {
+      "absoluteError": {
+        "median": 9.26,
+        "p90": 25.74,
+        "p95": 34.18
+      },
+      "captureDays": [
+        "Day17_201017_F",
+        "Day20_201021_F",
+        "Day21_201022_F",
+        "Day22_201023_F"
+      ],
+      "frames": 13433,
+      "signedBias": {
+        "median": -7.1,
+        "p5": -32.87,
+        "p95": 11.1
+      },
+      "subjects": 32
+    }
+  },
+  "perExercise": {
+    "굿모닝": {
+      "absoluteError": {
+        "median": 8.57,
+        "p90": 22.04,
+        "p95": 30.28
+      },
+      "captureDays": [
+        "Day02_200922_F",
+        "Day10_201007_F",
+        "Day14_201014_F",
+        "Day24_201026_F"
+      ],
+      "frames": 4109,
+      "signedBias": {
+        "median": -7.63,
+        "p5": -30.15,
+        "p95": 9.15
+      },
+      "subjects": 33
+    },
+    "덤벨 컬": {
+      "absoluteError": {
+        "median": 7.07,
+        "p90": 20.54,
+        "p95": 30.3
+      },
+      "captureDays": [
+        "Day04_200924_F",
+        "Day08_201005_F",
+        "Day12_201012_F",
+        "Day16_201016_F",
+        "Day26_201028_F",
+        "Day30_201102_F"
+      ],
+      "frames": 21571,
+      "signedBias": {
+        "median": 6.12,
+        "p5": -6.07,
+        "p95": 30.21
+      },
+      "subjects": 44
+    },
+    "딥스": {
+      "absoluteError": {
+        "median": 13.27,
+        "p90": 27.02,
+        "p95": 30.71
+      },
+      "captureDays": [
+        "Day17_201017_F",
+        "Day20_201021_F",
+        "Day21_201022_F",
+        "Day22_201023_F"
+      ],
+      "frames": 8840,
+      "signedBias": {
+        "median": -5.25,
+        "p5": -28.07,
+        "p95": 24.56
+      },
+      "subjects": 32
+    },
+    "랫풀 다운": {
+      "absoluteError": {
+        "median": 10.0,
+        "p90": 23.76,
+        "p95": 29.25
+      },
+      "captureDays": [
+        "Day17_201017_F",
+        "Day20_201021_F",
+        "Day21_201022_F",
+        "Day22_201023_F"
+      ],
+      "frames": 8229,
+      "signedBias": {
+        "median": 9.38,
+        "p5": -5.45,
+        "p95": 27.07
+      },
+      "subjects": 32
+    },
+    "로잉머신": {
+      "absoluteError": {
+        "median": 9.26,
+        "p90": 25.74,
+        "p95": 34.18
+      },
+      "captureDays": [
+        "Day17_201017_F",
+        "Day20_201021_F",
+        "Day21_201022_F",
+        "Day22_201023_F"
+      ],
+      "frames": 13433,
+      "signedBias": {
+        "median": -7.1,
+        "p5": -32.87,
+        "p95": 11.1
+      },
+      "subjects": 32
+    },
+    "바벨 런지": {
+      "absoluteError": {
+        "median": 8.48,
+        "p90": 21.43,
+        "p95": 29.54
+      },
+      "captureDays": [
+        "Day03_200923_F",
+        "Day11_201008_F",
+        "Day15_201015_F",
+        "Day25_201027_F",
+        "Day29_201031_F"
+      ],
+      "frames": 22035,
+      "signedBias": {
+        "median": -1.64,
+        "p5": -16.05,
+        "p95": 28.35
+      },
+      "subjects": 42
+    },
+    "바벨 컬": {
+      "absoluteError": {
+        "median": 7.39,
+        "p90": 18.89,
+        "p95": 24.16
+      },
+      "captureDays": [
+        "Day04_200924_F",
+        "Day08_201005_F",
+        "Day12_201012_F",
+        "Day16_201016_F",
+        "Day26_201028_F",
+        "Day30_201102_F"
+      ],
+      "frames": 22508,
+      "signedBias": {
+        "median": 6.83,
+        "p5": -4.74,
+        "p95": 24.0
+      },
+      "subjects": 44
+    },
+    "스탠딩 니업": {
+      "absoluteError": {
+        "median": 8.04,
+        "p90": 28.83,
+        "p95": 55.5
+      },
+      "captureDays": [
+        "Day01_200921_F",
+        "Day04_200924_F",
+        "Day05_200925_F",
+        "Day08_201005_F",
+        "Day09_201006_F",
+        "Day12_201012_F",
+        "Day13_201013_F",
+        "Day16_201016_F",
+        "Day23_201024_F",
+        "Day26_201028_F",
+        "Day27_201029_F",
+        "Day30_201102_F"
+      ],
+      "frames": 18042,
+      "signedBias": {
+        "median": -3.53,
+        "p5": -14.65,
+        "p95": 52.01
+      },
+      "subjects": 55
+    },
+    "스탠딩 사이드 크런치": {
+      "absoluteError": {
+        "median": 24.21,
+        "p90": 54.62,
+        "p95": 61.64
+      },
+      "captureDays": [
+        "Day01_200921_F",
+        "Day05_200925_F",
+        "Day09_201006_F",
+        "Day13_201013_F",
+        "Day23_201024_F",
+        "Day27_201029_F"
+      ],
+      "frames": 22234,
+      "signedBias": {
+        "median": 17.65,
+        "p5": -23.11,
+        "p95": 61.63
+      },
+      "subjects": 47
+    },
+    "스텝 포워드 다이나믹 런지": {
+      "absoluteError": {
+        "median": 10.39,
+        "p90": 30.05,
+        "p95": 36.62
+      },
+      "captureDays": [
+        "Day01_200921_F",
+        "Day05_200925_F",
+        "Day09_201006_F",
+        "Day13_201013_F",
+        "Day23_201024_F",
+        "Day27_201029_F"
+      ],
+      "frames": 24064,
+      "signedBias": {
+        "median": 8.49,
+        "p5": -10.26,
+        "p95": 36.58
+      },
+      "subjects": 48
+    },
+    "크로스 런지": {
+      "absoluteError": {
+        "median": 9.36,
+        "p90": 27.32,
+        "p95": 34.26
+      },
+      "captureDays": [
+        "Day02_200922_F",
+        "Day10_201007_F",
+        "Day14_201014_F",
+        "Day24_201026_F"
+      ],
+      "frames": 4245,
+      "signedBias": {
+        "median": 2.6,
+        "p5": -16.67,
+        "p95": 33.19
+      },
+      "subjects": 33
+    }
+  },
+  "question": "What a single frame of a chain's MediaPipe reading misses the 3D label by — the quantity per-frame noise arguments in the policy have so far had to borrow from the knee chain or from walking-gait literature.",
+  "schemaVersion": 1,
+  "signedConvention": "MEDIAPIPE_MINUS_AIHUB_3D_LABEL",
+  "source": "bridge-frames.full-sweep.v1.json"
+}

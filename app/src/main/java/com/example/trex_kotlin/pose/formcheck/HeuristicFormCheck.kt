@@ -12,11 +12,11 @@ import kotlin.math.roundToInt
  * Its contract is `docs/pose-heuristic-form-check.v1.md`, pinned by [POLICY_DOCUMENT_SHA256].
  * The track computes rotation-invariant joint geometry, reports observations in observational
  * language, abstains loudly, and touches nothing in the posture-correction release chain: no
- * facade, no criterion, no stored record. Constants carry their provenance individually: six were
- * measured through the app's own model and cleared a leave-one-global-subject-out balanced
- * accuracy of 0.75 (three depth thresholds -- standing knee-up, lat pull-down, dips -- and three
- * guard limits -- barbell curl, rowing machine, standing side crunch); two cite published
- * standards; the rest are uncalibrated defaults. Exercises whose overshoot has a real consequence
+ * facade, no criterion, no stored record. Constants carry their provenance individually: seven
+ * were measured through the app's own model and cleared a leave-one-global-subject-out balanced
+ * accuracy of 0.75 (three depth thresholds -- standing knee-up, lat pull-down, dips -- and four
+ * guard limits -- barbell curl, dumbbell curl, rowing machine, standing side crunch); two cite
+ * published standards; the rest are uncalibrated defaults. Exercises whose overshoot has a real consequence
  * are sealed against urging more range whether or not they are calibrated. None of this amounts to
  * release-chain calibration, which is why every surface carries the beta disclosure and [claims]
  * still withholds `calibrated`.
@@ -26,7 +26,7 @@ internal object HeuristicFormCheckDeclaration {
     const val TRACK_ID: String = "trex.heuristic-form-check.beta.v1"
 
     const val POLICY_DOCUMENT_SHA256: String =
-        "7a5a026ab5ea646c2804cc7da50b5baca26bc1eca0d191289e6656827b013e3a"
+        "fe57c882daf2e47b3a96208d93827d3d38e11019d71060754ca1c36308ab70ca"
 
     const val POLICY_DOCUMENT_PATH: String = "docs/pose-heuristic-form-check.v1.md"
 
@@ -582,11 +582,14 @@ internal enum class FormCheckExercise(
         restAngleDegrees = 150.0,
         attemptAngleDegrees = 140.0,
         repAngleDegrees = 135.0,
-        // Measured 105 degrees, LOSO balanced 0.813 over 48 participants, 942 clips and nine
-        // capture days -- the widest evidence any constant in this table has. The clip-level bias
-        // of 1.0 degree is the smallest in the whole bridge card: the hip is a torso joint, and
-        // those survive a phone camera far better than the limbs do.
-        reachedAngleDegrees = 105.0,
+        // Measured 115 degrees, LOSO balanced 0.800 over 55 participants, 1,155 clips and twelve
+        // capture days, with every fold agreeing on 115 -- the widest evidence any constant in
+        // this table has. The nine-day fit said 105; three more capture days moved it ten degrees
+        // and the repo's own rule decides which to keep: a narrow sample's number is a property
+        // of the sample. The clip-level bias of 1.7 degrees stays among the smallest in the
+        // bridge card: the hip is a torso joint, and those survive a phone camera far better
+        // than the limbs do.
+        reachedAngleDegrees = 115.0,
         provenance = FormCheckThresholdProvenance.MEDIAPIPE_NATIVE_FIT_V2,
         rangeUrgingSealed = false,
         setupHint = "옆모습이 보이게 서 주세요",
@@ -713,8 +716,10 @@ internal enum class FormCheckExercise(
         provenance = FormCheckThresholdProvenance.HEURISTIC_DEFAULT,
         // The dataset's condition for this exercise is not curl depth but "the elbow stays put",
         // and it separates on the shoulder chain the elbow angle barely moves: measured 52
-        // degrees, LOSO balanced 0.784 over 18 participants and 574 clips. The window maximum is
-        // the evidence — a single swing is the fault, not the average.
+        // degrees, LOSO balanced 0.779 over 44 participants, 1,437 clips and six capture days.
+        // Widening from three days and 18 participants left the limit exactly where it was —
+        // the same behaviour the lat pulldown showed. The window maximum is the evidence — a
+        // single swing is the fault, not the average.
         //
         // The guard and the definition gate above read the same chain and the same extreme, and
         // they say different kinds of thing: the guard describes a swing that happened inside a
@@ -758,15 +763,17 @@ internal enum class FormCheckExercise(
         repAngleDegrees = 120.0,
         reachedAngleDegrees = 100.0,
         provenance = FormCheckThresholdProvenance.HEURISTIC_DEFAULT,
-        // Same movement, weaker evidence: its own measurement reaches 0.739 balanced, under the
-        // 0.75 gate, so this guard borrows the barbell twin's limit and must say so — an
-        // uncalibrated prior, not a fit. Its clip-level bias also hints at label damage on the
-        // dumbbell capture days, which a wider archive could later resolve.
+        // Measured on its own evidence at last: 51 degrees, LOSO balanced 0.753 over 44
+        // participants, 1,439 clips and six capture days, every fold agreeing on 51. The
+        // three-day measurement had fallen under the gate at 0.739 and this guard borrowed the
+        // barbell twin's 52 as an uncalibrated prior; the wider archive resolved it, one degree
+        // away from the borrowed value — which is what a constant that describes the movement
+        // rather than the sample looks like.
         guard = FormCheckGuard(
             driver = FormCheckDriver.SHOULDER,
             extreme = FormCheckGuardExtreme.MAX,
-            limitDegrees = 52.0,
-            provenance = FormCheckThresholdProvenance.HEURISTIC_DEFAULT,
+            limitDegrees = 51.0,
+            provenance = FormCheckThresholdProvenance.MEDIAPIPE_NATIVE_FIT_V2,
             crossedObservation = "어깨가 %d도까지 벌어졌어요",
         ),
         rangeUrgingSealed = false,
@@ -1842,8 +1849,9 @@ internal class HeuristicFormCheckSession(
          * How many frames a STAY clause must be outside its bound before the excursion is
          * discarded. One frame is noise, and a STAY clause read from a raw extreme can only be
          * pushed the wrong way by noise — the direction that throws away a real repetition. The
-         * per-frame error of these chains has never been measured, which is the reason this
-         * exists rather than a reason to skip it.
+         * per-frame error is now measured (`docs/bridge-frame-error.v1.json`): median absolute
+         * error runs 7.7–19.2 degrees per chain with p95 tails up to 58, which is why a single
+         * frame is never treated as evidence.
          */
         const val DEFINITION_MINIMUM_VIOLATING_FRAMES = 3
 

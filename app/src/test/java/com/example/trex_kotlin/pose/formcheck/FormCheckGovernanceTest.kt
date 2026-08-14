@@ -72,7 +72,10 @@ class FormCheckGovernanceTest {
         // camera view the selection artifact picks per capture day, and cleared a leave-one-subject
         // -out balanced accuracy of 0.75.
         val calibrated = mapOf(
-            FormCheckExercise.STANDING_KNEE_UP to (135.0 to 105.0),
+            // 115 from the twelve-day fit (LOSO 0.800, 55 subjects, every fold at 115). The
+            // nine-day fit said 105; the wider population wins, by the same rule that withdrew
+            // the forward lunge's one-day number.
+            FormCheckExercise.STANDING_KNEE_UP to (135.0 to 115.0),
             FormCheckExercise.LAT_PULLDOWN to (130.0 to 67.0),
             FormCheckExercise.DIPS to (135.0 to 106.0),
         )
@@ -154,13 +157,14 @@ class FormCheckGovernanceTest {
                 52.0,
                 FormCheckThresholdProvenance.MEDIAPIPE_NATIVE_FIT_V2,
             ),
-            // The dumbbell twin's own measurement is under the gate, so it borrows the barbell
-            // limit and must not claim a fit for it.
+            // Fitted on its own evidence since the archive widened to six capture days: 51
+            // degrees at LOSO 0.753 over 44 participants, one degree from the barbell value it
+            // used to borrow.
             FormCheckExercise.DUMBBELL_CURL to Expected(
                 FormCheckDriver.SHOULDER,
                 FormCheckGuardExtreme.MAX,
-                52.0,
-                FormCheckThresholdProvenance.HEURISTIC_DEFAULT,
+                51.0,
+                FormCheckThresholdProvenance.MEDIAPIPE_NATIVE_FIT_V2,
             ),
             FormCheckExercise.ROWING_MACHINE to Expected(
                 FormCheckDriver.TRUNK,
@@ -590,11 +594,12 @@ class FormCheckGovernanceTest {
         )
 
         // The exercise-level flag folds the guard in: a fitted guard on an otherwise-default
-        // exercise still owes the credit, and a default guard confers none.
+        // exercise still owes the credit, and a default guard confers none. The dumbbell curl
+        // joined the fitted set when its guard cleared the gate on its own six-day evidence.
         assertTrue(FormCheckExercise.BARBELL_CURL.requiresDataAttribution)
+        assertTrue(FormCheckExercise.DUMBBELL_CURL.requiresDataAttribution)
         assertTrue(FormCheckExercise.ROWING_MACHINE.requiresDataAttribution)
         assertTrue(FormCheckExercise.STANDING_SIDE_CRUNCH.requiresDataAttribution)
-        assertFalse(FormCheckExercise.DUMBBELL_CURL.requiresDataAttribution)
         assertFalse(FormCheckExercise.BARBELL_SQUAT.requiresDataAttribution)
         assertFalse(FormCheckExercise.PLANK.requiresDataAttribution)
 
