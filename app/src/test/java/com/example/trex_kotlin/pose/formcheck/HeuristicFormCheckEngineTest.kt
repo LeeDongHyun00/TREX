@@ -3,6 +3,7 @@ package com.example.trex_kotlin.pose.formcheck
 import com.example.trex_kotlin.pose.PoseFrame
 import com.example.trex_kotlin.pose.PoseJoint
 import com.example.trex_kotlin.pose.PoseLandmark
+import com.example.trex_kotlin.pose.runtime.PoseGravityReading
 import kotlin.math.cos
 import kotlin.math.hypot
 import kotlin.math.sin
@@ -1745,6 +1746,116 @@ class HeuristicFormCheckEngineTest {
         assertEquals(FormCheckRepEventKind.INCOMPLETE, held.repMarks.single().kind)
     }
 
+    // ---- posture: which way the body is pointing ----
+
+    /** A gravity reading pointing down the image, as an upright phone produces. */
+    private fun downwardGravity(t: Long) =
+        PoseGravityReading.of(x = 0.0, y = 9.8, outOfPlane = 0.0, timestampMs = t)!!
+
+    /**
+     * Runs a push-up-shaped elbow excursion with the torso posed at [torsoDegrees] away from
+     * gravity, so the only thing under test is which way the body points.
+     */
+    private fun pushUpExcursion(
+        torsoDegrees: Double,
+        gravityAt: (Long) -> PoseGravityReading?,
+    ): FormCheckUiState {
+        val session = HeuristicFormCheckSession(FormCheckExercise.PUSH_UP)
+        var state = session.initialSnapshot()
+        val elbows = listOf(175.0, 175.0, 130.0, 110.0, 110.0, 110.0, 130.0, 175.0, 175.0, 175.0)
+        val radians = Math.toRadians(torsoDegrees)
+        for ((index, elbow) in elbows.withIndex()) {
+            val t = index * 200L
+            // The torso is placed at the requested angle from the image-down direction, which is
+            // where the gravity fixture points.
+            state = session.accept(
+                t,
+                true,
+                true,
+                frameWithTorsoDirection(
+                    elbowAngleDegrees = elbow,
+                    torsoX = sin(radians),
+                    torsoY = cos(radians),
+                    timestampMs = t,
+                ),
+                gravity = gravityAt(t),
+            )
+        }
+        return state
+    }
+
+    @Test
+    fun aStandingArmMovementIsNotAPushUp() {
+        // Every included angle a push-up makes lies inside a standing curl's range, so the only
+        // thing that separates them is which way the body points. A torso along gravity is
+        // somebody standing up, whatever their elbow did.
+        val standing = pushUpExcursion(torsoDegrees = 5.0, gravityAt = ::downwardGravity)
+
+        assertEquals(0, standing.repCount)
+        assertEquals(1, standing.uncountedAttemptCount)
+        assertEquals(FormCheckRepEventKind.INCOMPLETE, standing.repMarks.single().kind)
+        assertTrue(
+            "Expected the posture observation, got ${standing.headline}",
+            standing.headline!!.contains("몸통이 중력 기준"),
+        )
+        assertNull("A posture shortfall urges nothing", standing.suggestion)
+    }
+
+    @Test
+    fun aFaceDownPressCounts() {
+        val prone = pushUpExcursion(torsoDegrees = 85.0, gravityAt = ::downwardGravity)
+
+        assertEquals(1, prone.repCount)
+        assertEquals(0, prone.uncountedAttemptCount)
+        assertEquals(FormCheckRepEventKind.COUNTED, prone.repMarks.single().kind)
+    }
+
+    @Test
+    fun thePostureClauseAbstainsWithoutAUsableGravityReading() {
+        // A device with no sensor, and a reading too stale to describe the frame, are different
+        // facts with the same correct output: say nothing and count on the joints alone.
+        val noSensor = pushUpExcursion(torsoDegrees = 5.0, gravityAt = { null })
+        assertEquals("An unmeasured direction is not evidence", 1, noSensor.repCount)
+        assertEquals(0, noSensor.uncountedAttemptCount)
+
+        val stale = pushUpExcursion(
+            torsoDegrees = 5.0,
+            gravityAt = { PoseGravityReading.of(0.0, 9.8, 0.0, timestampMs = 0L) },
+        )
+        assertEquals("A stale reading is not evidence either", 1, stale.repCount)
+    }
+
+    @Test
+    fun aCameraAimedAlongGravityYieldsNoReadingAtAll() {
+        // Pointing a phone at the floor puts almost nothing of gravity in its own image plane,
+        // and the direction that survives is noise. The reading refuses to be built.
+        assertNull(PoseGravityReading.of(x = 0.1, y = 0.1, outOfPlane = 9.8, timestampMs = 100L))
+        assertNotNull(PoseGravityReading.of(x = 0.0, y = 9.8, outOfPlane = 0.0, timestampMs = 100L))
+
+        val reading = PoseGravityReading.of(x = 0.0, y = 9.8, outOfPlane = 0.0, timestampMs = 100L)!!
+        assertEquals(1.0, reading.directionY, 1e-9)
+        assertEquals(0.0, reading.directionX, 1e-9)
+        assertTrue(reading.isFreshAt(200L))
+        assertFalse(reading.isFreshAt(5_000L))
+    }
+
+    @Test
+    fun onlyThePushUpsDependOnWhichWayTheBodyPoints() {
+        // Dips was grouped with them as a gravity case and it is not one: measured on the 3D
+        // labels its torso sits 19 degrees from vertical against a curl's 5, inside the same
+        // range rather than outside it. Nothing was gained by giving it a posture clause, so it
+        // does not have one.
+        val withPosture = FormCheckExercise.entries.filter { it.posture != null }.toSet()
+        assertEquals(
+            setOf(FormCheckExercise.PUSH_UP, FormCheckExercise.KNEE_PUSH_UP),
+            withPosture,
+        )
+        assertNull(FormCheckExercise.DIPS.posture)
+        for (spec in withPosture) {
+            assertEquals(60.0, spec.posture!!.minimumTorsoGravityAngleDegrees, 0.0)
+        }
+    }
+
     @Test
     fun definitionGatesAbstainWhenTheirChainIsUnobserved() {
         // A squat measured through frames that carry no shoulders cannot see the hip chain, so
@@ -1981,6 +2092,58 @@ class HeuristicFormCheckEngineTest {
     }
 
     private fun point(x: Double, y: Double, z: Double) = PoseLandmark(x, y, z, 1.0, 1.0)
+
+    /**
+     * A frame whose torso points in a requested image-plane direction, with the elbow chain at a
+     * requested angle. Everything is built around the hip so the torso direction is exact.
+     */
+    private fun frameWithTorsoDirection(
+        elbowAngleDegrees: Double,
+        torsoX: Double,
+        torsoY: Double,
+        timestampMs: Long,
+    ): PoseFrame {
+        val elbow = Math.toRadians(elbowAngleDegrees)
+        fun rot(x: Double, y: Double, r: Double) =
+            (x * cos(r) - y * sin(r)) to (x * sin(r) + y * cos(r))
+
+        val world = buildMap {
+            for ((side, offsetX) in listOf(
+                FormCheckBodySide.LEFT to -0.1,
+                FormCheckBodySide.RIGHT to 0.1,
+            )) {
+                // Hip at the origin; the shoulder sits one torso length back along the requested
+                // direction, so hip - shoulder points exactly the way the test asked for.
+                val hip = Triple(offsetX, 0.0, 0.0)
+                val shoulder = Triple(offsetX - 0.5 * torsoX, -0.5 * torsoY, 0.0)
+                val elbowAt = Triple(shoulder.first + 0.3, shoulder.second, 0.0)
+                val toShoulderX = shoulder.first - elbowAt.first
+                val toShoulderY = shoulder.second - elbowAt.second
+                val length = hypot(toShoulderX, toShoulderY)
+                val (wx, wy) = rot(toShoulderX / length, toShoulderY / length, elbow)
+                val knee = Triple(offsetX + 0.4 * torsoX, 0.4 * torsoY, 0.0)
+                val ankle = Triple(offsetX + 0.8 * torsoX, 0.8 * torsoY, 0.0)
+                for ((group, point) in listOf(
+                    FormCheckJointGroup.HIP to hip,
+                    FormCheckJointGroup.SHOULDER to shoulder,
+                    FormCheckJointGroup.ELBOW to elbowAt,
+                    FormCheckJointGroup.WRIST to Triple(
+                        elbowAt.first + 0.3 * wx,
+                        elbowAt.second + 0.3 * wy,
+                        0.0,
+                    ),
+                    FormCheckJointGroup.KNEE to knee,
+                    FormCheckJointGroup.ANKLE to ankle,
+                )) {
+                    put(
+                        group.joint(side),
+                        PoseLandmark(point.first, point.second, point.third, 1.0, 1.0),
+                    )
+                }
+            }
+        }
+        return PoseFrame(timestampMs = timestampMs, landmarks = emptyMap(), worldLandmarks = world)
+    }
 
     /** A hip-chain frame with the other chains held straight. */
     private fun hipFrame(angleDegrees: Double, timestampMs: Long): PoseFrame = frameWithChains(

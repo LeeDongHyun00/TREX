@@ -53,6 +53,7 @@ import com.example.trex_kotlin.camera.FULL_BODY_LATERAL_VIEW_CONTRACT_ID
 import com.example.trex_kotlin.camera.PoseCameraError
 import com.example.trex_kotlin.camera.PoseCameraPreview
 import com.example.trex_kotlin.camera.PoseCameraStatus
+import com.example.trex_kotlin.camera.rememberDeviceGravity
 import com.example.trex_kotlin.catalog.AiHubExercise
 import com.example.trex_kotlin.devcapture.DevPoseCapture
 import com.example.trex_kotlin.pose.PoseFrame
@@ -160,6 +161,9 @@ private fun FormCheckContent(
         FormCheckView.LATERAL -> PlacementCoachGoal.LATERAL
         FormCheckView.FRONTAL -> PlacementCoachGoal.FRONTAL
     }
+    // Sampled only for the exercises whose identity depends on which way the body points; every
+    // other exercise never reads it and a device without the sensor simply never registers.
+    val gravity = rememberDeviceGravity(active = spec.posture != null && !paused)
     var cameraStatus by remember { mutableStateOf(PoseCameraStatus.Initializing) }
     var cameraError by remember { mutableStateOf<PoseCameraError?>(null) }
     var placementDisplay by remember {
@@ -326,6 +330,7 @@ private fun FormCheckContent(
                     hasPrimaryPersonLock = observed.hasPrimaryPersonLock,
                     preferredViewQualified = preferredQualified,
                     frame = observed.frame,
+                    gravity = gravity.value,
                 )
                 // Mirrors the engine's own field, including its nulls: the engine clears it on
                 // every path that stops evaluating, so the drawing inherits abstention for free.

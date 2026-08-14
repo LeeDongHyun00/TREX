@@ -4,6 +4,7 @@ import com.example.trex_kotlin.camera.FRONTAL_AXIS_VIEW_CONTRACT_ID
 import com.example.trex_kotlin.camera.FULL_BODY_LATERAL_VIEW_CONTRACT_ID
 import com.example.trex_kotlin.catalog.AiHubExercise
 import com.example.trex_kotlin.pose.PoseFrame
+import com.example.trex_kotlin.pose.runtime.PoseGravityReading
 import java.util.Collections
 import kotlin.math.abs
 import kotlin.math.roundToInt
@@ -28,7 +29,7 @@ internal object HeuristicFormCheckDeclaration {
     const val TRACK_ID: String = "trex.heuristic-form-check.beta.v1"
 
     const val POLICY_DOCUMENT_SHA256: String =
-        "7ebb6631db2cd2f21a271da1e1ca76bc33ab7bd07956f57bd07756b0bd5cd80e"
+        "59685fb9d30380aa7ae88c83b31657eacd3e33f82c7a5432fd6794d53a263fa5"
 
     const val POLICY_DOCUMENT_PATH: String = "docs/pose-heuristic-form-check.v1.md"
 
@@ -226,6 +227,46 @@ internal enum class FormCheckView(
         setupPhrase = "정면이 보이게",
         noteSubject = "정면으로 서면",
     ),
+}
+
+/**
+ * How the torso must be oriented against gravity for an excursion to be this exercise's.
+ *
+ * The one clause in this track that is not rotation invariant, and the only kind that could ever
+ * separate a press performed face-down from the same arm movement performed standing. Every
+ * included angle in a push-up lies inside the range a standing curl produces — the survey
+ * measured the containment and refused both push-ups on it — and no threshold on a contained
+ * distribution exists at any margin. What separates them is not a joint at all: it is which way
+ * the body is pointing.
+ *
+ * Measured on the dataset's own 3D labels over 6,530 clips, the torso's angle away from vertical
+ * is 80 degrees median for a push-up and 76 for a knee push-up, against 5 for a dumbbell curl,
+ * 10 for a squat and 24 for a push-down. The bound sits in the gap and well clear of both tails.
+ *
+ * Evaluated like a definition gate and under the same discipline: over the excursion window,
+ * needing a minimum of observed frames, needing a sustained breach rather than one, and silent
+ * whenever the device gives no usable gravity — a phone with no sensor, a stale reading, or one
+ * aimed so nearly along gravity that its own image plane holds no direction.
+ */
+internal class FormCheckPostureRequirement(
+    /**
+     * How far from gravity the torso must lie, in degrees. Zero is a torso pointing straight
+     * down the gravity vector — somebody standing — and ninety is one across it, prone or supine.
+     */
+    val minimumTorsoGravityAngleDegrees: Double,
+    /** The observation for a torso that stayed upright, with `%d` for the measured angle. */
+    val shortfallObservation: String,
+) {
+    init {
+        require(minimumTorsoGravityAngleDegrees in 0.0..180.0) {
+            "A posture bound must be a real angle"
+        }
+        require(shortfallObservation.contains("%d")) {
+            "The shortfall observation must state the measured angle"
+        }
+    }
+
+    fun satisfied(angleDegrees: Double): Boolean = angleDegrees >= minimumTorsoGravityAngleDegrees
 }
 
 /** Whether the exercise repeats a movement or holds a position. */
@@ -474,6 +515,11 @@ internal enum class FormCheckExercise(
      */
     val definition: List<FormCheckDefinitionGate> = emptyList(),
     /**
+     * Which way the body must be pointing, when the movement's identity depends on it and no
+     * joint angle can say (§4.3c). Null for everything an included angle already separates.
+     */
+    val posture: FormCheckPostureRequirement? = null,
+    /**
      * Which placement reads this movement most directly. Lateral for everything whose work
      * happens in the sagittal plane, which is most of the catalogue; frontal for the movements
      * that travel sideways, where a side view would put the whole excursion along the camera's
@@ -688,6 +734,15 @@ internal enum class FormCheckExercise(
         driver = FormCheckDriver.ELBOW,
         direction = FormCheckWorkingDirection.FLEXION,
         bilateralDriver = true,
+        // A push-up is a press performed face-down, and that is the whole of what separates it
+        // from a standing curl: every included angle it makes lies inside the curl's range. The
+        // labels put its torso 80 degrees off vertical against the curl's 5, so the bound sits
+        // far below the push-up's own fifth percentile of 68 and far above the highest impostor
+        // tail, the push-down's 49.
+        posture = FormCheckPostureRequirement(
+            minimumTorsoGravityAngleDegrees = 60.0,
+            shortfallObservation = "몸통이 중력 기준 %d도로 서 있어서 횟수로 세지 않았어요",
+        ),
         cadence = FormCheckCadence.REPETITION,
         restAngleDegrees = 150.0,
         attemptAngleDegrees = 140.0,
@@ -708,6 +763,13 @@ internal enum class FormCheckExercise(
         driver = FormCheckDriver.ELBOW,
         direction = FormCheckWorkingDirection.FLEXION,
         bilateralDriver = true,
+        // The same clause and the same bound: knees down changes the trunk incline a little —
+        // 76 degrees median against the full push-up's 80 — and leaves the separation from every
+        // standing movement untouched.
+        posture = FormCheckPostureRequirement(
+            minimumTorsoGravityAngleDegrees = 60.0,
+            shortfallObservation = "몸통이 중력 기준 %d도로 서 있어서 횟수로 세지 않았어요",
+        ),
         cadence = FormCheckCadence.REPETITION,
         restAngleDegrees = 150.0,
         attemptAngleDegrees = 140.0,
@@ -1652,6 +1714,17 @@ internal class HeuristicFormCheckSession(
     private val gateViolatingFrames = IntArray(spec.definition.size)
 
     /**
+     * The posture window: how many frames of the excursion the torso's orientation could be
+     * measured at all, how many of those were upright, and the most upright reading seen.
+     *
+     * Observed counts frames where a gravity reading and a torso segment were both available, so
+     * a device with no sensor contributes nothing and the clause abstains rather than guessing.
+     */
+    private var postureObservedFrames = 0
+    private var postureViolatingFrames = 0
+    private var postureMostUprightDegrees = Double.MAX_VALUE
+
+    /**
      * Detector-space extremes of this set's opening repetitions, used as the set's own baseline.
      *
      * Comparing a repetition with the user's earlier ones rather than with a population constant
@@ -1676,6 +1749,12 @@ internal class HeuristicFormCheckSession(
         hasPrimaryPersonLock: Boolean,
         preferredViewQualified: Boolean,
         frame: PoseFrame,
+        /**
+         * Which way is down, when the device could say. Null on a device without the sensor, or
+         * one aimed too nearly along gravity for its own image plane to hold a direction — both
+         * of which silence any clause that depends on it rather than letting it guess.
+         */
+        gravity: PoseGravityReading? = null,
     ): FormCheckUiState {
         preferredViewSuggested = !preferredViewQualified
         // Policy §3.1 lists a backwards timestamp among the abstentions, and each detector already
@@ -1755,6 +1834,7 @@ internal class HeuristicFormCheckSession(
                 accumulateBilateral(frame, measuredDegrees = sample.includedAngleDegrees)
             }
             if (spec.definition.isNotEmpty()) accumulateDefinition(frame)
+            if (spec.posture != null) accumulatePosture(frame, gravity)
         }
         when (event) {
             is RepCycleEvent.Completed -> {
@@ -1764,6 +1844,10 @@ internal class HeuristicFormCheckSession(
                 // incoherence than one clause of the definition falling short.
                 val incoherent = takeBilateralIncoherence()
                 val shortfall = takeDefinitionShortfall()
+                // Consumed unconditionally like the others so its window never leaks into the
+                // next excursion; reported last because a body pointing the wrong way is a
+                // narrower statement than two sides disagreeing or a joint not doing its part.
+                val uprightDegrees = takePostureShortfall()
                 if (incoherent) {
                     // The measured side did everything a repetition does; the other side,
                     // watched frame for frame, did not move with it. On a two-sided exercise
@@ -1776,6 +1860,21 @@ internal class HeuristicFormCheckSession(
                     guardWindowDegrees = null
                     appendMark(
                         kind = FormCheckRepEventKind.ASYMMETRIC,
+                        extremeDegrees = extreme,
+                        baselineRelation = FormCheckBaselineRelation.SAME,
+                        guardDegrees = null,
+                    )
+                } else if (shortfall == null && uprightDegrees != null) {
+                    // The driver finished its arc and the companion joints played their parts,
+                    // but the body was upright throughout — so whatever this was, it was not the
+                    // face-down press being counted.
+                    uncountedAttemptCount += 1
+                    headline = requireNotNull(spec.posture)
+                        .shortfallObservation.format(uprightDegrees)
+                    suggestion = null
+                    guardWindowDegrees = null
+                    appendMark(
+                        kind = FormCheckRepEventKind.INCOMPLETE,
                         extremeDegrees = extreme,
                         baselineRelation = FormCheckBaselineRelation.SAME,
                         guardDegrees = null,
@@ -1834,6 +1933,7 @@ internal class HeuristicFormCheckSession(
                 guardWindowDegrees = null
                 resetBilateralWindow()
                 resetDefinitionWindows()
+                resetPostureWindow()
                 appendMark(
                     kind = FormCheckRepEventKind.SHALLOW,
                     extremeDegrees = spec.fromDetector(event.minimumAngleDegrees),
@@ -1849,6 +1949,7 @@ internal class HeuristicFormCheckSession(
                 guardWindowDegrees = null
                 resetBilateralWindow()
                 resetDefinitionWindows()
+                resetPostureWindow()
                 appendMark(
                     kind = FormCheckRepEventKind.TOO_FAST,
                     extremeDegrees = spec.fromDetector(event.minimumAngleDegrees),
@@ -1864,6 +1965,7 @@ internal class HeuristicFormCheckSession(
                     guardWindowDegrees = null
                     resetBilateralWindow()
                     resetDefinitionWindows()
+                    resetPostureWindow()
                 }
             }
         }
@@ -1949,6 +2051,7 @@ internal class HeuristicFormCheckSession(
         guardWindowDegrees = null
         resetBilateralWindow()
         resetDefinitionWindows()
+        resetPostureWindow()
         liveReading = null
     }
 
@@ -2027,6 +2130,68 @@ internal class HeuristicFormCheckSession(
         gateWindowMinimum.fill(Double.MAX_VALUE)
         gateWindowMaximum.fill(-Double.MAX_VALUE)
         gateViolatingFrames.fill(0)
+    }
+
+    /**
+     * Kept separate from the gate windows on purpose. `takeDefinitionShortfall` clears those as
+     * its last act, and the posture window is read after it — folding the two together zeroed
+     * the posture evidence before anything could consume it.
+     */
+    private fun resetPostureWindow() {
+        postureObservedFrames = 0
+        postureViolatingFrames = 0
+        postureMostUprightDegrees = Double.MAX_VALUE
+    }
+
+    /**
+     * Feeds one frame's torso orientation into the posture window.
+     *
+     * Both operands are projected onto the image plane, because that is the only plane the
+     * gravity reading claims anything in. A torso pointing almost straight at or away from the
+     * camera projects to nearly nothing, and contributes nothing rather than a wild angle.
+     */
+    private fun accumulatePosture(frame: PoseFrame, gravity: PoseGravityReading?) {
+        val requirement = spec.posture ?: return
+        val reading = gravity ?: return
+        if (!reading.isFreshAt(frame.timestampMs)) return
+        val side = activeSide ?: return
+        val shoulder = frame.worldLandmarks[FormCheckJointGroup.SHOULDER.joint(side)] ?: return
+        val hip = frame.worldLandmarks[FormCheckJointGroup.HIP.joint(side)] ?: return
+        if (
+            shoulder.confidence < FormCheckGeometry.MINIMUM_CHAIN_CONFIDENCE ||
+            hip.confidence < FormCheckGeometry.MINIMUM_CHAIN_CONFIDENCE
+        ) {
+            return
+        }
+        val torsoX = hip.x - shoulder.x
+        val torsoY = hip.y - shoulder.y
+        val torsoLength = kotlin.math.hypot(torsoX, torsoY)
+        if (torsoLength < TORSO_PROJECTION_FLOOR) return
+
+        val cosine = ((torsoX * reading.directionX + torsoY * reading.directionY) / torsoLength)
+            .coerceIn(-1.0, 1.0)
+        val angle = Math.toDegrees(kotlin.math.acos(cosine))
+        postureObservedFrames += 1
+        postureMostUprightDegrees = minOf(postureMostUprightDegrees, angle)
+        if (!requirement.satisfied(angle)) postureViolatingFrames += 1
+    }
+
+    /**
+     * The completed excursion's posture shortfall in whole degrees, or null; always resets the
+     * window. Null covers both "the body was pointing the right way" and "gravity was never
+     * usable", which are different facts with the same correct output: say nothing.
+     */
+    private fun takePostureShortfall(): Int? {
+        val requirement = spec.posture
+        val observed = postureObservedFrames
+        val violating = postureViolatingFrames
+        val mostUpright = postureMostUprightDegrees
+        resetPostureWindow()
+        if (requirement == null) return null
+        if (observed < DEFINITION_MINIMUM_OBSERVED_FRAMES) return null
+        if (violating < DEFINITION_MINIMUM_VIOLATING_FRAMES) return null
+        if (mostUpright == Double.MAX_VALUE) return null
+        return mostUpright.roundToInt().coerceIn(0, 180)
     }
 
     /**
@@ -2194,6 +2359,13 @@ internal class HeuristicFormCheckSession(
 
         /** A definition gate abstains below this many observed frames, for the same reason. */
         const val DEFINITION_MINIMUM_OBSERVED_FRAMES = 5
+
+        /**
+         * A torso whose image projection is shorter than this contributes no posture reading.
+         * Someone pointing almost straight at or away from the camera projects a torso to nearly
+         * a point, and the angle of a point is noise. Metres, in MediaPipe world units.
+         */
+        const val TORSO_PROJECTION_FLOOR = 0.05
 
         /**
          * How many frames a STAY clause must be outside its bound before the excursion is
