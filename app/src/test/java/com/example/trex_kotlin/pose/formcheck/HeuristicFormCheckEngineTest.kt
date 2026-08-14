@@ -813,9 +813,16 @@ class HeuristicFormCheckEngineTest {
 
     // ---- voice ----
 
+    /** Timing knobs zeroed: these tests are about the wording, and the timing has its own. */
+    private fun immediateAnnouncer(repeatIntervalMs: Long = 8_000L) = FormCheckStartAnnouncer(
+        repeatIntervalMs = repeatIntervalMs,
+        stabilityMs = 0L,
+        minimumGapMs = 0L,
+    )
+
     @Test
     fun theAnnouncerNamesTheMissingJointsWithTheRightParticle() {
-        val announcer = FormCheckStartAnnouncer()
+        val announcer = immediateAnnouncer()
         val spec = FormCheckExercise.BARBELL_SQUAT
 
         val ankle = announcer.onState(0L, spec, waiting(setOf(FormCheckJointGroup.ANKLE)))
@@ -827,7 +834,7 @@ class HeuristicFormCheckEngineTest {
 
     @Test
     fun theAnnouncerStaysQuietUntilTheSituationChanges() {
-        val announcer = FormCheckStartAnnouncer(repeatIntervalMs = 8_000L)
+        val announcer = immediateAnnouncer(repeatIntervalMs = 8_000L)
         val spec = FormCheckExercise.BARBELL_SQUAT
         val missing = waiting(setOf(FormCheckJointGroup.ANKLE))
 
@@ -839,7 +846,7 @@ class HeuristicFormCheckEngineTest {
 
     @Test
     fun theAnnouncerSaysTheExerciseStartedAndSuggestsTheSideView() {
-        val announcer = FormCheckStartAnnouncer()
+        val announcer = immediateAnnouncer()
         val spec = FormCheckExercise.BARBELL_SQUAT
 
         val started = announcer.onState(0L, spec, startedState(sideViewPreferred = true))
@@ -847,8 +854,92 @@ class HeuristicFormCheckEngineTest {
         assertTrue(started!!.contains("시작"))
         assertTrue(started.contains("옆모습"))
 
-        val lateral = announcer.onState(20_000L, spec, startedState(sideViewPreferred = false))
+        // The start is announced once per set; a fresh set gets a fresh announcer.
+        val lateral = immediateAnnouncer()
+            .onState(0L, spec, startedState(sideViewPreferred = false))
         assertEquals("자세 체크를 시작할게요", lateral)
+    }
+
+    @Test
+    fun aFlappingSituationIsNeverSpoken() {
+        // The real-device failure this exists for: a lateral stance makes the person lock flap
+        // about once a second, and deduplicating only against the immediately-previous phrase
+        // let every flip through — the guidance became a metronome. A situation must now hold
+        // for the stability window before it is spoken at all, so alternation is pure silence.
+        val announcer = FormCheckStartAnnouncer(
+            repeatIntervalMs = 8_000L,
+            stabilityMs = 1_200L,
+            minimumGapMs = 2_500L,
+        )
+        val spec = FormCheckExercise.BARBELL_SQUAT
+        val lost = pausedWaiting(setOf(FormCheckJointGroup.ANKLE))
+        val running = startedState(sideViewPreferred = false)
+
+        assertNotNull("The first start is the exception and speaks at once",
+            announcer.onState(0L, spec, running))
+
+        var t = 1_000L
+        repeat(10) {
+            assertNull("A flap must not be spoken", announcer.onState(t, spec, lost))
+            t += 600L
+            assertNull("Nor its return", announcer.onState(t, spec, running))
+            t += 600L
+        }
+    }
+
+    @Test
+    fun aPersistentPauseIsSpokenOnceAndItsResumeOnce() {
+        val announcer = FormCheckStartAnnouncer(
+            repeatIntervalMs = 8_000L,
+            stabilityMs = 1_200L,
+            minimumGapMs = 2_500L,
+        )
+        val spec = FormCheckExercise.BARBELL_SQUAT
+        val running = startedState(sideViewPreferred = false)
+        val lostPerson = FormCheckUiState(
+            repCount = 0,
+            uncountedAttemptCount = 0,
+            startState = FormCheckStartState.WAITING_FOR_PERSON,
+            hasEverStarted = true,
+            repMarks = emptyList(),
+            missingJoints = setOf(FormCheckJointGroup.HIP, FormCheckJointGroup.KNEE, FormCheckJointGroup.ANKLE),
+            sideViewPreferred = false,
+            headline = null,
+            suggestion = null,
+        )
+
+        assertNotNull(announcer.onState(0L, spec, running))
+        // The pause holds long enough to be real; the wording is the pause, not setup guidance.
+        assertNull(announcer.onState(3_000L, spec, lostPerson))
+        val paused = announcer.onState(4_400L, spec, lostPerson)
+        assertEquals(HeuristicFormCheckDeclaration.PAUSED_PERSON, paused)
+
+        // The resume is worth a word only because the pause got one.
+        assertNull(announcer.onState(7_000L, spec, running))
+        val resumed = announcer.onState(8_300L, spec, running)
+        assertEquals(HeuristicFormCheckDeclaration.RESUMED, resumed)
+
+        // A silent blip earns a silent resume.
+        assertNull(announcer.onState(9_000L, spec, lostPerson))
+        assertNull(announcer.onState(9_300L, spec, running))
+        assertNull(announcer.onState(11_000L, spec, running))
+    }
+
+    @Test
+    fun theRetryDelayLetsAPendingSituationBecomeSpeakable() {
+        val announcer = FormCheckStartAnnouncer(
+            repeatIntervalMs = 8_000L,
+            stabilityMs = 1_200L,
+            minimumGapMs = 2_500L,
+        )
+        val spec = FormCheckExercise.BARBELL_SQUAT
+        val missing = waiting(setOf(FormCheckJointGroup.ANKLE))
+
+        assertNull("Not yet stable", announcer.onState(0L, spec, missing))
+        val delay = announcer.retryDelayMs(0L)
+        assertNotNull("Something is pending, so a retry is scheduled", delay)
+        assertEquals(1_200L, delay)
+        assertNotNull("After the wait the same call speaks", announcer.onState(1_200L, spec, missing))
     }
 
     @Test
@@ -1227,6 +1318,133 @@ class HeuristicFormCheckEngineTest {
     }
 
     @Test
+    fun aOneSidedExcursionOnABilateralExerciseIsNotCounted() {
+        // The real-device failure this exists for: standing still and raising one knee bends
+        // that knee through exactly the arc a squat does, and the single-side model counted it.
+        // The still leg, concurrently observed, is what tells the two movements apart.
+        val session = HeuristicFormCheckSession(FormCheckExercise.BARBELL_SQUAT)
+        var state = session.initialSnapshot()
+        fun frame(t: Long, left: Double, right: Double) =
+            session.accept(t, true, true, frameWithKneeAngles(t, left, right, 1.0, 0.9))
+                .also { state = it }
+
+        frame(0L, 175.0, 175.0)
+        frame(200L, 175.0, 175.0)
+        // The measured (left) knee dives; the right knee stands at 175 throughout.
+        for ((index, angle) in listOf(120.0, 100.0, 100.0, 100.0, 100.0, 120.0).withIndex()) {
+            frame(400L + index * 200L, angle, 175.0)
+        }
+        frame(1_800L, 175.0, 175.0)
+        frame(2_000L, 175.0, 175.0)
+
+        assertEquals("A one-sided excursion is not a squat", 0, state.repCount)
+        assertEquals(1, state.uncountedAttemptCount)
+        val mark = state.repMarks.single()
+        assertEquals(FormCheckRepEventKind.ASYMMETRIC, mark.kind)
+        assertEquals("양쪽 무릎이 서로 다르게 움직여서 횟수로 세지 않았어요", state.headline)
+        assertEquals(state.headline, mark.observation)
+        assertNull("An asymmetric discard urges nothing", state.suggestion)
+    }
+
+    @Test
+    fun aBilateralRepetitionWithBothKneesTravellingCounts() {
+        val session = HeuristicFormCheckSession(FormCheckExercise.BARBELL_SQUAT)
+        var state = session.initialSnapshot()
+        fun frame(t: Long, both: Double) =
+            session.accept(t, true, true, frameWithKneeAngles(t, both, both, 1.0, 0.9))
+                .also { state = it }
+
+        frame(0L, 175.0)
+        frame(200L, 175.0)
+        for ((index, angle) in listOf(120.0, 100.0, 100.0, 100.0, 100.0, 120.0).withIndex()) {
+            frame(400L + index * 200L, angle)
+        }
+        frame(1_800L, 175.0)
+        frame(2_000L, 175.0)
+
+        assertEquals("Both knees travelled together: an ordinary squat", 1, state.repCount)
+        assertEquals(0, state.uncountedAttemptCount)
+        assertEquals(FormCheckRepEventKind.COUNTED, state.repMarks.single().kind)
+    }
+
+    @Test
+    fun theCoherenceCheckAbstainsWhenTheOppositeSideIsUnobserved() {
+        // The recommended stance is lateral, where the far side is occluded. The documented
+        // single-side limitation stands there: no concurrent observation, no check, the count
+        // proceeds on the side the camera can see.
+        val session = HeuristicFormCheckSession(FormCheckExercise.BARBELL_SQUAT)
+        var state = session.initialSnapshot()
+        fun frame(t: Long, left: Double) =
+            session.accept(t, true, true, frameWithKneeAngles(t, left, 175.0, 1.0, 0.2))
+                .also { state = it }
+
+        frame(0L, 175.0)
+        frame(200L, 175.0)
+        for ((index, angle) in listOf(120.0, 100.0, 100.0, 100.0, 100.0, 120.0).withIndex()) {
+            frame(400L + index * 200L, angle)
+        }
+        frame(1_800L, 175.0)
+        frame(2_000L, 175.0)
+
+        assertEquals("An invisible far side is not evidence against the repetition", 1, state.repCount)
+        assertEquals(0, state.uncountedAttemptCount)
+    }
+
+    @Test
+    fun aUnilateralExerciseNeverRunsTheCoherenceCheck() {
+        // A standing knee-up is one-sided by definition: the other leg standing still is the
+        // exercise being done correctly, not a discrepancy.
+        val spec = FormCheckExercise.STANDING_KNEE_UP
+        assertFalse(spec.bilateralDriver)
+
+        val session = HeuristicFormCheckSession(spec)
+        var state = session.initialSnapshot()
+        // Left hip flexes to 100 while the right hip stays straight — a knee raise.
+        fun frame(t: Long, hip: Double): FormCheckUiState {
+            state = session.accept(t, true, true, hipFrame(hip, t))
+            return state
+        }
+
+        frame(0L, 175.0)
+        frame(200L, 175.0)
+        for ((index, angle) in listOf(120.0, 100.0, 100.0, 100.0, 120.0).withIndex()) {
+            frame(400L + index * 200L, angle)
+        }
+        frame(1_600L, 175.0)
+        frame(1_800L, 175.0)
+
+        assertEquals(1, state.repCount)
+    }
+
+    @Test
+    fun theBilateralFlagNamesExactlyTheTwoSidedExercises() {
+        val bilateral = FormCheckExercise.entries.filter { it.bilateralDriver }.toSet()
+        assertEquals(
+            setOf(
+                FormCheckExercise.BARBELL_SQUAT,
+                FormCheckExercise.GOOD_MORNING,
+                FormCheckExercise.PUSH_UP,
+                FormCheckExercise.KNEE_PUSH_UP,
+                FormCheckExercise.DIPS,
+                FormCheckExercise.BARBELL_CURL,
+                FormCheckExercise.LAT_PULLDOWN,
+                FormCheckExercise.ROWING_MACHINE,
+                FormCheckExercise.HIP_THRUST,
+                FormCheckExercise.OVERHEAD_PRESS,
+                FormCheckExercise.CABLE_PUSH_DOWN,
+            ),
+            bilateral,
+        )
+        // The exclusions are decisions, not omissions: the lunges stride, the dumbbell curl may
+        // alternate, the knee-up and side crunch are one-sided by design, the plank has no
+        // excursion to compare over.
+        assertFalse(FormCheckExercise.STEP_FORWARD_DYNAMIC_LUNGE.bilateralDriver)
+        assertFalse(FormCheckExercise.DUMBBELL_CURL.bilateralDriver)
+        assertFalse(FormCheckExercise.STANDING_KNEE_UP.bilateralDriver)
+        assertFalse(FormCheckExercise.PLANK.bilateralDriver)
+    }
+
+    @Test
     fun theSetSummaryReportsOnlyWhatWasObserved() {
         val spec = FormCheckExercise.PUSH_UP
         val session = HeuristicFormCheckSession(spec)
@@ -1336,6 +1554,19 @@ class HeuristicFormCheckEngineTest {
         uncountedAttemptCount = 0,
         startState = FormCheckStartState.WAITING_FOR_JOINTS,
         hasEverStarted = false,
+        repMarks = emptyList(),
+        missingJoints = missing,
+        sideViewPreferred = false,
+        headline = null,
+        suggestion = null,
+    )
+
+    /** The same waiting state after the exercise had already started: an abstention, not setup. */
+    private fun pausedWaiting(missing: Set<FormCheckJointGroup>) = FormCheckUiState(
+        repCount = 0,
+        uncountedAttemptCount = 0,
+        startState = FormCheckStartState.WAITING_FOR_JOINTS,
+        hasEverStarted = true,
         repMarks = emptyList(),
         missingJoints = missing,
         sideViewPreferred = false,

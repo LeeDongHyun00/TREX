@@ -26,7 +26,7 @@ internal object HeuristicFormCheckDeclaration {
     const val TRACK_ID: String = "trex.heuristic-form-check.beta.v1"
 
     const val POLICY_DOCUMENT_SHA256: String =
-        "058d7a85c1e810e142250cd0156be58205fa825b244277a84f797ac89a6cac85"
+        "8ccf1108eb567147135067aa037aca65aec2af77d456e744b719f48a69181d93"
 
     const val POLICY_DOCUMENT_PATH: String = "docs/pose-heuristic-form-check.v1.md"
 
@@ -62,6 +62,9 @@ internal object HeuristicFormCheckDeclaration {
     const val PAUSED_JOINT_PREFIX: String = "지금은 "
     const val PAUSED_JOINT_SUFFIX: String = " 잘 안 보여서 세지 않고 있어요"
     const val PAUSED_RESUME: String = "다시 보이면 이어서 셀게요"
+
+    /** Spoken when observation resumes after a pause long enough to have been announced. */
+    const val RESUMED: String = "다시 보여서 이어서 셀게요"
 
     /**
      * The one-time framing shown before the first set of a form-check session.
@@ -311,6 +314,19 @@ internal enum class FormCheckExercise(
     private val vocabularyOverride: FormCheckVocabulary? = null,
     /** The joint this exercise watches for staying put, or null when only depth is read. */
     val guard: FormCheckGuard? = null,
+    /**
+     * Whether this movement is mechanically two-sided — a bar in both hands, both feet pressing
+     * together — so that its repetition is *defined* over both sides even though only one chain
+     * is measured (§4.8).
+     *
+     * When true and the opposite side's chain happens to be concurrently observable, an excursion
+     * whose two sides persistently disagree is reported rather than counted: a standing knee
+     * raise bends one knee through exactly the arc a squat does, and the still leg is the only
+     * thing that distinguishes them. False for movements that are one-sided by design (knee-up,
+     * side crunch), for the lunges (a stride's two knees genuinely travel differently), and for
+     * the dumbbell curl (alternating arms is a legitimate way to do it).
+     */
+    val bilateralDriver: Boolean = false,
     val cadence: FormCheckCadence,
     /**
      * For a repetition, the resting angle it must return to before another can be armed. For a
@@ -348,6 +364,7 @@ internal enum class FormCheckExercise(
         exercise = AiHubExercise.BARBELL_SQUAT,
         driver = FormCheckDriver.KNEE,
         direction = FormCheckWorkingDirection.FLEXION,
+        bilateralDriver = true,
         cadence = FormCheckCadence.REPETITION,
         restAngleDegrees = 150.0,
         attemptAngleDegrees = 140.0,
@@ -447,6 +464,7 @@ internal enum class FormCheckExercise(
         exercise = AiHubExercise.GOOD_MORNING,
         driver = FormCheckDriver.HIP,
         direction = FormCheckWorkingDirection.FLEXION,
+        bilateralDriver = true,
         cadence = FormCheckCadence.REPETITION,
         restAngleDegrees = 150.0,
         attemptAngleDegrees = 140.0,
@@ -462,6 +480,7 @@ internal enum class FormCheckExercise(
         exercise = AiHubExercise.PUSH_UP,
         driver = FormCheckDriver.ELBOW,
         direction = FormCheckWorkingDirection.FLEXION,
+        bilateralDriver = true,
         cadence = FormCheckCadence.REPETITION,
         restAngleDegrees = 150.0,
         attemptAngleDegrees = 140.0,
@@ -481,6 +500,7 @@ internal enum class FormCheckExercise(
         exercise = AiHubExercise.KNEE_PUSH_UP,
         driver = FormCheckDriver.ELBOW,
         direction = FormCheckWorkingDirection.FLEXION,
+        bilateralDriver = true,
         cadence = FormCheckCadence.REPETITION,
         restAngleDegrees = 150.0,
         attemptAngleDegrees = 140.0,
@@ -496,6 +516,7 @@ internal enum class FormCheckExercise(
         exercise = AiHubExercise.DIPS,
         driver = FormCheckDriver.ELBOW,
         direction = FormCheckWorkingDirection.FLEXION,
+        bilateralDriver = true,
         cadence = FormCheckCadence.REPETITION,
         restAngleDegrees = 150.0,
         attemptAngleDegrees = 140.0,
@@ -520,6 +541,7 @@ internal enum class FormCheckExercise(
         exercise = AiHubExercise.BARBELL_CURL,
         driver = FormCheckDriver.ELBOW,
         direction = FormCheckWorkingDirection.FLEXION,
+        bilateralDriver = true,
         cadence = FormCheckCadence.REPETITION,
         restAngleDegrees = 150.0,
         attemptAngleDegrees = 140.0,
@@ -579,6 +601,7 @@ internal enum class FormCheckExercise(
         // direction's default this sentence became "어깨가 67도까지 굽혀졌어요", which in Korean
         // describes rounded shoulders -- a posture judgement, from a track that makes none.
         vocabularyOverride = FormCheckVocabulary.DRAWING_IN,
+        bilateralDriver = true,
         cadence = FormCheckCadence.REPETITION,
         restAngleDegrees = 150.0,
         attemptAngleDegrees = 140.0,
@@ -601,6 +624,7 @@ internal enum class FormCheckExercise(
         exercise = AiHubExercise.ROWING_MACHINE,
         driver = FormCheckDriver.KNEE,
         direction = FormCheckWorkingDirection.FLEXION,
+        bilateralDriver = true,
         cadence = FormCheckCadence.REPETITION,
         restAngleDegrees = 150.0,
         attemptAngleDegrees = 140.0,
@@ -656,6 +680,7 @@ internal enum class FormCheckExercise(
         exercise = AiHubExercise.HIP_THRUST,
         driver = FormCheckDriver.HIP,
         direction = FormCheckWorkingDirection.EXTENSION,
+        bilateralDriver = true,
         cadence = FormCheckCadence.REPETITION,
         restAngleDegrees = 110.0,
         attemptAngleDegrees = 130.0,
@@ -671,6 +696,7 @@ internal enum class FormCheckExercise(
         exercise = AiHubExercise.OVERHEAD_PRESS,
         driver = FormCheckDriver.ELBOW,
         direction = FormCheckWorkingDirection.EXTENSION,
+        bilateralDriver = true,
         cadence = FormCheckCadence.REPETITION,
         restAngleDegrees = 100.0,
         attemptAngleDegrees = 120.0,
@@ -686,6 +712,7 @@ internal enum class FormCheckExercise(
         exercise = AiHubExercise.CABLE_PUSH_DOWN,
         driver = FormCheckDriver.ELBOW,
         direction = FormCheckWorkingDirection.EXTENSION,
+        bilateralDriver = true,
         cadence = FormCheckCadence.REPETITION,
         restAngleDegrees = 100.0,
         attemptAngleDegrees = 120.0,
@@ -779,6 +806,12 @@ internal enum class FormCheckExercise(
         // A guard's window is the repetition excursion; a hold has no such window.
         require(guard == null || cadence == FormCheckCadence.REPETITION) {
             "A guard needs a repetition excursion to watch"
+        }
+        // The coherence check reads the excursion window too. A hold's two sides matter just as
+        // much, but the hold path has no window to compare over, so declaring the flag there
+        // would promise a check that never runs.
+        require(!bilateralDriver || cadence == FormCheckCadence.REPETITION) {
+            "Bilateral coherence needs a repetition excursion to compare over"
         }
         require(guard == null || guard.driver !== driver) {
             "A guard must watch a different chain from the driver"
@@ -959,6 +992,20 @@ internal class HeuristicFormCheckSession(
     private var guardWindowDegrees: Double? = null
 
     /**
+     * The coherence window for a bilateral exercise: of the frames inside the excursion where the
+     * opposite side's chain was credibly observed *in the same frame*, how many, and in how many
+     * the two sides disagreed by more than [BILATERAL_DIVERGENCE_DEGREES].
+     *
+     * Concurrent, per-frame comparison on purpose. Comparing window extremes would misfire when
+     * the far side is only visible near the top — its minimum would read straight and a real
+     * squat would be discarded. Two sides seen in the same frame either agree or they do not,
+     * however little of the excursion the far side was visible for; and the majority rule keeps
+     * a few noisy far-side frames from outvoting an excursion that was coherent throughout.
+     */
+    private var bilateralConcurrentFrames = 0
+    private var bilateralDivergentFrames = 0
+
+    /**
      * Detector-space extremes of this set's opening repetitions, used as the set's own baseline.
      *
      * Comparing a repetition with the user's earlier ones rather than with a population constant
@@ -973,6 +1020,10 @@ internal class HeuristicFormCheckSession(
     private val vertexSubject: String = spec.driver.vertex.label.let { label ->
         label + FormCheckStartAnnouncer.subjectParticle(label)
     }
+
+    /** "양쪽 무릎이 서로 다르게 움직여서 횟수로 세지 않았어요" — the truthful uncounted reason. */
+    private val asymmetricObservation: String =
+        "양쪽 $vertexSubject 서로 다르게 움직여서 횟수로 세지 않았어요"
 
     fun accept(
         timestampMs: Long,
@@ -1052,38 +1103,59 @@ internal class HeuristicFormCheckSession(
         // The guard watches the same excursion the count comes from — accumulation runs only
         // while one is armed, so a stretch between repetitions is never reported as movement
         // during one. The completing frame sits at the top and is deliberately outside.
-        if (spec.guard != null && repDetector.inExcursion) {
-            accumulateGuard(frame, spec.guard)
+        if (repDetector.inExcursion) {
+            if (spec.guard != null) accumulateGuard(frame, spec.guard)
+            if (spec.bilateralDriver) {
+                accumulateBilateral(frame, measuredDegrees = sample.includedAngleDegrees)
+            }
         }
         when (event) {
             is RepCycleEvent.Completed -> {
-                repCount += 1
                 val extreme = spec.fromDetector(event.minimumAngleDegrees)
-                val observed =
-                    "$vertexSubject ${extreme.roundToInt()}도까지 ${spec.vocabulary.reachedVerb}"
-                // Both read the baseline before this repetition joins it, so the comparison is
-                // against the set's opening repetitions rather than against itself.
-                val relation = baselineRelation(event.minimumAngleDegrees)
-                val guardCrossing = takeGuardCrossing()
-                headline = listOfNotNull(
-                    observed,
-                    baselineNote(event.minimumAngleDegrees),
-                    guardCrossing?.let { spec.guard?.crossedObservation?.format(it) },
-                ).joinToString(" · ")
-                recordBaseline(event.minimumAngleDegrees)
-                appendMark(
-                    kind = FormCheckRepEventKind.COUNTED,
-                    extremeDegrees = extreme,
-                    baselineRelation = relation,
-                    guardDegrees = guardCrossing,
-                )
-                // Null for sealed exercises: the observation stands without urging more range.
-                suggestion = if (
-                    event.minimumAngleDegrees <= spec.toDetector(spec.reachedAngleDegrees)
-                ) {
-                    null
+                if (takeBilateralIncoherence()) {
+                    // The measured side did everything a repetition does; the other side,
+                    // watched frame for frame, did not move with it. On a two-sided exercise
+                    // that is not the movement being counted, and saying which is the truthful
+                    // reason — "얕아" would be false and silence would be indistinguishable
+                    // from a missed detection.
+                    uncountedAttemptCount += 1
+                    headline = asymmetricObservation
+                    suggestion = null
+                    guardWindowDegrees = null
+                    appendMark(
+                        kind = FormCheckRepEventKind.ASYMMETRIC,
+                        extremeDegrees = extreme,
+                        baselineRelation = FormCheckBaselineRelation.SAME,
+                        guardDegrees = null,
+                    )
                 } else {
-                    spec.rangeHint
+                    repCount += 1
+                    val observed =
+                        "$vertexSubject ${extreme.roundToInt()}도까지 ${spec.vocabulary.reachedVerb}"
+                    // Both read the baseline before this repetition joins it, so the comparison
+                    // is against the set's opening repetitions rather than against itself.
+                    val relation = baselineRelation(event.minimumAngleDegrees)
+                    val guardCrossing = takeGuardCrossing()
+                    headline = listOfNotNull(
+                        observed,
+                        baselineNote(event.minimumAngleDegrees),
+                        guardCrossing?.let { spec.guard?.crossedObservation?.format(it) },
+                    ).joinToString(" · ")
+                    recordBaseline(event.minimumAngleDegrees)
+                    appendMark(
+                        kind = FormCheckRepEventKind.COUNTED,
+                        extremeDegrees = extreme,
+                        baselineRelation = relation,
+                        guardDegrees = guardCrossing,
+                    )
+                    // Null for sealed exercises: the observation stands without urging more range.
+                    suggestion = if (
+                        event.minimumAngleDegrees <= spec.toDetector(spec.reachedAngleDegrees)
+                    ) {
+                        null
+                    } else {
+                        spec.rangeHint
+                    }
                 }
             }
 
@@ -1093,6 +1165,7 @@ internal class HeuristicFormCheckSession(
                     "횟수로 세지 않았어요"
                 suggestion = spec.attemptHint
                 guardWindowDegrees = null
+                resetBilateralWindow()
                 appendMark(
                     kind = FormCheckRepEventKind.SHALLOW,
                     extremeDegrees = spec.fromDetector(event.minimumAngleDegrees),
@@ -1106,6 +1179,7 @@ internal class HeuristicFormCheckSession(
                 headline = "동작이 빨라 횟수로 세지 않았어요"
                 suggestion = "조금 더 천천히 움직여볼까요"
                 guardWindowDegrees = null
+                resetBilateralWindow()
                 appendMark(
                     kind = FormCheckRepEventKind.TOO_FAST,
                     extremeDegrees = spec.fromDetector(event.minimumAngleDegrees),
@@ -1115,9 +1189,12 @@ internal class HeuristicFormCheckSession(
             }
 
             RepCycleEvent.None -> {
-                // A max-duration abort ends the window without an event; whatever the guard saw
-                // belongs to a movement that was never counted.
-                if (!repDetector.inExcursion) guardWindowDegrees = null
+                // A max-duration abort ends the window without an event; whatever the guard and
+                // the coherence window saw belongs to a movement that was never counted.
+                if (!repDetector.inExcursion) {
+                    guardWindowDegrees = null
+                    resetBilateralWindow()
+                }
             }
         }
         liveReading = FormCheckLiveReading(
@@ -1200,7 +1277,54 @@ internal class HeuristicFormCheckSession(
         detector?.invalidate()
         holdDetector?.invalidate()
         guardWindowDegrees = null
+        resetBilateralWindow()
         liveReading = null
+    }
+
+    /**
+     * Feeds one frame's opposite-side reading into the coherence window.
+     *
+     * The comparison is between raw included angles of the same chain on the two sides, in the
+     * same frame. An extension exercise mirrors both sides identically, so the difference is the
+     * same in either space and no mirroring is needed here. A frame where the opposite chain is
+     * not credible contributes nothing — an unobserved side is not evidence of anything, in
+     * either direction.
+     */
+    private fun accumulateBilateral(frame: PoseFrame, measuredDegrees: Double) {
+        val side = activeSide ?: return
+        val opposite = when (side) {
+            FormCheckBodySide.LEFT -> FormCheckBodySide.RIGHT
+            FormCheckBodySide.RIGHT -> FormCheckBodySide.LEFT
+        }
+        val sample = FormCheckGeometry.sideSample(frame, opposite, spec.driver) ?: return
+        bilateralConcurrentFrames += 1
+        if (abs(sample.includedAngleDegrees - measuredDegrees) > BILATERAL_DIVERGENCE_DEGREES) {
+            bilateralDivergentFrames += 1
+        }
+    }
+
+    /**
+     * Whether the completed excursion's two sides persistently disagreed; always resets the
+     * window.
+     *
+     * Requires enough concurrent frames to mean anything and a divergent majority among them.
+     * The majority is what separates a one-sided movement — divergent for essentially the whole
+     * excursion — from a real repetition whose far side threw a handful of noisy frames; the
+     * generous threshold covers what the far side of a monocular estimate can misread by while
+     * still sitting far under the near-90° gap a raised knee opens against a standing leg.
+     */
+    private fun takeBilateralIncoherence(): Boolean {
+        val concurrent = bilateralConcurrentFrames
+        val divergent = bilateralDivergentFrames
+        resetBilateralWindow()
+        if (!spec.bilateralDriver) return false
+        if (concurrent < BILATERAL_MINIMUM_CONCURRENT_FRAMES) return false
+        return divergent * 2 >= concurrent
+    }
+
+    private fun resetBilateralWindow() {
+        bilateralConcurrentFrames = 0
+        bilateralDivergentFrames = 0
     }
 
     /**
@@ -1325,6 +1449,22 @@ internal class HeuristicFormCheckSession(
          * the oldest go first, which is the end the surface stops showing anyway.
          */
         const val MARK_CAPACITY = 20
+
+        /**
+         * Above this a frame's two sides count as disagreeing. Generous by design: it has to sit
+         * above any asymmetry a coherent repetition shows plus what the far side of a monocular
+         * estimate can misread by, and well under the near-90° gap a raised knee opens against a
+         * standing leg. Only a *majority* of divergent frames discards, so this line does not
+         * need to be sharp.
+         */
+        const val BILATERAL_DIVERGENCE_DEGREES = 45.0
+
+        /**
+         * Fewer concurrent observations than this and the coherence check abstains entirely —
+         * the documented single-side limitation stands wherever the far side is out of view,
+         * which in the recommended lateral stance is most of the time.
+         */
+        const val BILATERAL_MINIMUM_CONCURRENT_FRAMES = 5
 
         /**
          * Below this the difference is not reported. A same-set self-comparison cancels the

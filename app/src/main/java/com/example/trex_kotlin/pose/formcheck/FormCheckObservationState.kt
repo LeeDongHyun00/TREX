@@ -42,6 +42,14 @@ internal enum class FormCheckRepEventKind {
 
     /** Reached the rep line but returned faster than a repetition can be. */
     TOO_FAST,
+
+    /**
+     * The measured side completed a full excursion while the opposite side, concurrently
+     * observed, visibly did not travel with it. On a two-sided exercise that is not a
+     * repetition — a knee raised in front of a squat counter bends one knee exactly like a
+     * squat does, and only the still leg gives it away.
+     */
+    ASYMMETRIC,
 }
 
 /**

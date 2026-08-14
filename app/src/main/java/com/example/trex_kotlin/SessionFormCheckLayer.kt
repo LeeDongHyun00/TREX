@@ -210,15 +210,43 @@ private fun FormCheckContent(
         if (paused) liveState.value = null
     }
 
+    // The band waits out one flap before it appears. A marginal person lock in a lateral stance
+    // can drop and return inside a second; strobing "사람을 놓쳐서…" at that rhythm reads as the
+    // app panicking. Counting still abstains from the first lost frame — this debounce delays
+    // only the wording, and a camera fault skips it entirely. Cancellation does the timing: a
+    // state change restarts the effect, so the delay only ever completes for a stable situation.
+    var statusBandVisible by remember(spec, attemptResetKey) { mutableStateOf(false) }
+    LaunchedEffect(formState.started, cameraError != null) {
+        if (cameraError != null) {
+            statusBandVisible = true
+            return@LaunchedEffect
+        }
+        if (formState.started) {
+            statusBandVisible = false
+            return@LaunchedEffect
+        }
+        delay(STATUS_BAND_STABILITY_MS)
+        statusBandVisible = true
+    }
+
     // Speaking is driven off the state rather than the frame callback so a muted or repeated
-    // situation stays silent, and so the announcer never runs on the analysis thread.
+    // situation stays silent, and so the announcer never runs on the analysis thread. The loop
+    // exists because a situation becomes speakable by *persisting*, not only by changing: the
+    // announcer refuses anything that has not held for its stability window, and asks to be
+    // polled again once the window could have elapsed. A state change cancels and restarts the
+    // effect, which is the debounce working — a flapping person lock restarts the wait forever
+    // and is never spoken.
     LaunchedEffect(formState.startState, formState.missingJoints, formState.sideViewPreferred, paused) {
         if (paused) return@LaunchedEffect
-        announcer.onState(
-            timestampMs = SystemClock.elapsedRealtime(),
-            spec = spec,
-            state = formState,
-        )?.let { phrase -> announce.value(phrase) }
+        while (true) {
+            val now = SystemClock.elapsedRealtime()
+            val phrase = announcer.onState(timestampMs = now, spec = spec, state = formState)
+            if (phrase != null) {
+                announce.value(phrase)
+            }
+            val retry = announcer.retryDelayMs(SystemClock.elapsedRealtime()) ?: return@LaunchedEffect
+            delay(retry)
+        }
     }
 
     // Nobody mid-squat is reading the screen, and somebody standing side-on to it cannot even
@@ -329,6 +357,7 @@ private fun FormCheckContent(
             spec = spec,
             formState = formState,
             cameraError = cameraError,
+            visible = statusBandVisible,
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .padding(top = 132.dp, start = 20.dp, end = 20.dp),
@@ -491,11 +520,12 @@ private fun FormCheckStatusBand(
     spec: FormCheckExercise,
     formState: FormCheckUiState,
     cameraError: PoseCameraError?,
+    visible: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val headline = cameraError?.userMessage() ?: statusHeadline(spec, formState)
     AnimatedVisibility(
-        visible = headline != null,
+        visible = visible && headline != null,
         enter = fadeIn(tween(150)),
         exit = fadeOut(tween(120)),
         modifier = modifier,
@@ -871,3 +901,6 @@ private fun FormCheckNote(text: String) {
 
 /** How many of a set's observations the rest card lists. The tail is the part still felt. */
 private const val SUMMARY_MARK_LIMIT = 6
+
+/** How long a waiting situation must hold before the status band names it. */
+private const val STATUS_BAND_STABILITY_MS = 650L

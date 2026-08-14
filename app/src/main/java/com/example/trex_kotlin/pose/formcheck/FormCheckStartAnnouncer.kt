@@ -7,22 +7,49 @@ package com.example.trex_kotlin.pose.formcheck
  * to stay quiet. The host session owns the actual speech, which keeps audio out of this track
  * and lets the user's mute switch work unchanged.
  *
- * Repetition is suppressed — the same phrase is not repeated inside [repeatIntervalMs], and a
- * phrase only interrupts silence when the situation actually changed.
+ * Three suppressions, learned in that order on a real phone:
+ *
+ * 1. The same phrase is not repeated inside [repeatIntervalMs].
+ * 2. A situation must persist for [stabilityMs] before it is spoken at all. The first cut
+ *    deduplicated only against the immediately-previous phrase, and a lateral stance made the
+ *    person lock flap once a second — every flip produced a "different" phrase, so the throttle
+ *    never engaged and the guidance became a metronome. A flapping observation is measurement
+ *    noise, not a situation, and noise is not announced.
+ * 3. No two utterances land inside [minimumGapMs], whatever their wording. Even genuinely
+ *    changing situations must not machine-gun the voice channel.
+ *
+ * The first transition into a started exercise is exempt from 2 and 3: it happens once, and it
+ * is the confirmation the user is waiting for.
+ *
+ * Because a pending situation becomes speakable by time passing rather than by changing, the
+ * caller polls: [onState] on every state change, and again after [retryDelayMs] when it returned
+ * silence with something still pending.
  */
 internal class FormCheckStartAnnouncer(
     private val repeatIntervalMs: Long = DEFAULT_REPEAT_INTERVAL_MS,
+    private val stabilityMs: Long = DEFAULT_STABILITY_MS,
+    private val minimumGapMs: Long = DEFAULT_MINIMUM_GAP_MS,
 ) {
     init {
         require(repeatIntervalMs > 0L) { "Repeat interval must be positive" }
+        require(stabilityMs >= 0L) { "Stability must not be negative" }
+        require(minimumGapMs >= 0L) { "The utterance gap must not be negative" }
     }
 
     private var lastPhrase: String? = null
     private var lastSpokenAtMs: Long = Long.MIN_VALUE
+    private var pendingPhrase: String? = null
+    private var pendingSinceMs: Long = 0L
+    private var announcedFirstStart = false
+    private var pauseAnnounced = false
 
     fun reset() {
         lastPhrase = null
         lastSpokenAtMs = Long.MIN_VALUE
+        pendingPhrase = null
+        pendingSinceMs = 0L
+        announcedFirstStart = false
+        pauseAnnounced = false
     }
 
     fun onState(
@@ -30,14 +57,51 @@ internal class FormCheckStartAnnouncer(
         spec: FormCheckExercise,
         state: FormCheckUiState,
     ): String? {
-        val phrase = phraseFor(spec, state) ?: return null
-        val repeated = phrase == lastPhrase
-        if (repeated && timestampMs - lastSpokenAtMs < repeatIntervalMs) {
+        val phrase = phraseFor(spec, state)
+        if (phrase == null) {
+            pendingPhrase = null
+            return null
+        }
+        if (phrase != pendingPhrase) {
+            pendingPhrase = phrase
+            pendingSinceMs = timestampMs
+        }
+        val firstStart = state.startState == FormCheckStartState.STARTED && !announcedFirstStart
+        if (!firstStart) {
+            if (timestampMs - pendingSinceMs < stabilityMs) return null
+            if (lastSpokenAtMs != Long.MIN_VALUE && timestampMs - lastSpokenAtMs < minimumGapMs) {
+                return null
+            }
+        }
+        if (phrase == lastPhrase && timestampMs - lastSpokenAtMs < repeatIntervalMs) {
             return null
         }
         lastPhrase = phrase
         lastSpokenAtMs = timestampMs
+        if (state.startState == FormCheckStartState.STARTED) {
+            announcedFirstStart = true
+            pauseAnnounced = false
+        } else if (state.hasEverStarted) {
+            pauseAnnounced = true
+        }
         return phrase
+    }
+
+    /**
+     * How long until the pending situation could become speakable by time alone, or null when
+     * nothing is pending. The caller re-polls [onState] after this delay; a state change in the
+     * meantime simply restarts the wait, which is the debounce doing its job.
+     */
+    fun retryDelayMs(timestampMs: Long): Long? {
+        val phrase = pendingPhrase ?: return null
+        var wait = stabilityMs - (timestampMs - pendingSinceMs)
+        if (lastSpokenAtMs != Long.MIN_VALUE) {
+            wait = maxOf(wait, minimumGapMs - (timestampMs - lastSpokenAtMs))
+            if (phrase == lastPhrase) {
+                wait = maxOf(wait, repeatIntervalMs - (timestampMs - lastSpokenAtMs))
+            }
+        }
+        return maxOf(wait, MINIMUM_RETRY_MS)
     }
 
     private fun phraseFor(spec: FormCheckExercise, state: FormCheckUiState): String? =
@@ -45,30 +109,60 @@ internal class FormCheckStartAnnouncer(
             FormCheckStartState.WAITING_FOR_CAMERA -> null
 
             FormCheckStartState.WAITING_FOR_PERSON ->
-                "화면에 한 사람만 보이게 서 주세요"
+                if (state.hasEverStarted) {
+                    // Somebody who was being counted has not walked out to set up again: telling
+                    // them to stand somewhere repeats an instruction they have already followed.
+                    // What happened is that the track stopped counting, so that is what is said.
+                    HeuristicFormCheckDeclaration.PAUSED_PERSON
+                } else {
+                    "화면에 한 사람만 보이게 서 주세요"
+                }
 
             FormCheckStartState.WAITING_FOR_JOINTS -> {
                 val missing = state.missingJoints
-                if (missing.isEmpty()) {
-                    "${spec.setupHint.removeSuffix(".")}"
-                } else {
-                    val names = missing.joinToString(", ") { it.label }
-                    "${names}${subjectParticle(names)} 화면에 보이게 서 주세요"
+                val names = missing.joinToString(", ") { it.label }
+                when {
+                    missing.isEmpty() -> spec.setupHint.removeSuffix(".")
+                    state.hasEverStarted ->
+                        HeuristicFormCheckDeclaration.PAUSED_JOINT_PREFIX + names +
+                            subjectParticle(names) +
+                            HeuristicFormCheckDeclaration.PAUSED_JOINT_SUFFIX
+                    else -> "${names}${subjectParticle(names)} 화면에 보이게 서 주세요"
                 }
             }
 
-            FormCheckStartState.STARTED ->
-                if (state.sideViewPreferred) {
-                    // Names the joint this exercise actually measures: telling a push-up about a
-                    // knee would describe something the track never looked at.
-                    "자세 체크를 시작할게요. 옆모습으로 서면 ${sideViewSubject(spec)} 더 잘 보여요"
-                } else {
-                    "자세 체크를 시작할게요"
-                }
+            FormCheckStartState.STARTED -> when {
+                !announcedFirstStart ->
+                    if (state.sideViewPreferred) {
+                        // Names the joint this exercise actually measures: telling a push-up
+                        // about a knee would describe something the track never looked at.
+                        "자세 체크를 시작할게요. 옆모습으로 서면 ${sideViewSubject(spec)} 더 잘 보여요"
+                    } else {
+                        "자세 체크를 시작할게요"
+                    }
+
+                // Only a pause the user actually heard about earns a resume announcement; a blip
+                // too short to be spoken resumes as silently as it paused.
+                pauseAnnounced -> HeuristicFormCheckDeclaration.RESUMED
+
+                else -> null
+            }
         }
 
     companion object {
         const val DEFAULT_REPEAT_INTERVAL_MS: Long = 8_000L
+
+        /**
+         * How long a situation must hold before it is announced. Longer than any one flap of a
+         * marginal person lock, shorter than the moment a user starts wondering what is wrong.
+         */
+        const val DEFAULT_STABILITY_MS: Long = 1_200L
+
+        /** The floor between any two utterances, whatever they say. */
+        const val DEFAULT_MINIMUM_GAP_MS: Long = 2_500L
+
+        /** The caller's re-poll is clamped so arithmetic near zero cannot spin it. */
+        const val MINIMUM_RETRY_MS: Long = 50L
 
         /** Spoken once per counted repetition: "1회", "2회", … */
         internal fun countPhrase(repCount: Int): String = "${repCount}회"
