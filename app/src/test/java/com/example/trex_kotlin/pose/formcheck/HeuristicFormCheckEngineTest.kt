@@ -391,15 +391,25 @@ class HeuristicFormCheckEngineTest {
         var state = session.initialSnapshot()
         var t = 0L
 
+        // Upper arms pinned: this exercise's definition gate reads the shoulder chain, and the
+        // fixture's incidental shoulder placement would fail it.
+        fun pushDownFrame(angle: Double, timestamp: Long) = frameWithChains(
+            kneeAngleDegrees = 175.0,
+            hipAngleDegrees = 175.0,
+            elbowAngleDegrees = angle,
+            shoulderAngleDegrees = 25.0,
+            timestampMs = timestamp,
+        )
+
         repeat(2) {
             for (angle in listOf(90.0, 90.0, 170.0, 170.0, 170.0, 170.0, 90.0, 90.0)) {
-                state = session.accept(t, true, true, elbowFrame(angle, t))
+                state = session.accept(t, true, true, pushDownFrame(angle, t))
                 t += 200L
             }
         }
         // Reaches only 150: twenty degrees less extension than the set opened with.
         for (angle in listOf(90.0, 90.0, 150.0, 150.0, 150.0, 150.0, 90.0, 90.0)) {
-            state = session.accept(t, true, true, elbowFrame(angle, t))
+            state = session.accept(t, true, true, pushDownFrame(angle, t))
             t += 200L
         }
 
@@ -1393,27 +1403,277 @@ class HeuristicFormCheckEngineTest {
     @Test
     fun aUnilateralExerciseNeverRunsTheCoherenceCheck() {
         // A standing knee-up is one-sided by definition: the other leg standing still is the
-        // exercise being done correctly, not a discrepancy.
+        // exercise being done correctly, not a discrepancy — and the definition gates agree,
+        // because the raised knee folds and the standing hip stands.
         val spec = FormCheckExercise.STANDING_KNEE_UP
         assertFalse(spec.bilateralDriver)
 
         val session = HeuristicFormCheckSession(spec)
         var state = session.initialSnapshot()
-        // Left hip flexes to 100 while the right hip stays straight — a knee raise.
-        fun frame(t: Long, hip: Double): FormCheckUiState {
-            state = session.accept(t, true, true, hipFrame(hip, t))
+        // The left leg raises — hip folds, shin hangs — while the right leg stands straight.
+        fun frame(t: Long, hip: Double, knee: Double): FormCheckUiState {
+            state = session.accept(
+                t,
+                true,
+                true,
+                frameWithChains(
+                    kneeAngleDegrees = knee,
+                    hipAngleDegrees = hip,
+                    elbowAngleDegrees = 175.0,
+                    timestampMs = t,
+                    oppositeKneeAngleDegrees = 175.0,
+                    oppositeHipAngleDegrees = 175.0,
+                ),
+            )
             return state
         }
 
-        frame(0L, 175.0)
-        frame(200L, 175.0)
-        for ((index, angle) in listOf(120.0, 100.0, 100.0, 100.0, 120.0).withIndex()) {
-            frame(400L + index * 200L, angle)
+        frame(0L, 175.0, 175.0)
+        frame(200L, 175.0, 175.0)
+        for ((index, angle) in listOf(120.0, 100.0, 100.0, 100.0, 100.0, 120.0).withIndex()) {
+            frame(400L + index * 200L, angle, angle)
         }
-        frame(1_600L, 175.0)
-        frame(1_800L, 175.0)
+        frame(1_800L, 175.0, 175.0)
+        frame(2_000L, 175.0, 175.0)
 
         assertEquals(1, state.repCount)
+        assertEquals(0, state.uncountedAttemptCount)
+    }
+
+    // ---- definition gates: the movement, not just the driver arc ----
+
+    /** Runs one excursion of [spec] through frames built per step, returning the final state. */
+    private fun runExcursion(
+        spec: FormCheckExercise,
+        restAngle: Double,
+        workAngles: List<Double>,
+        frame: (t: Long, driverAngle: Double) -> PoseFrame,
+    ): FormCheckUiState {
+        val session = HeuristicFormCheckSession(spec)
+        var state = session.initialSnapshot()
+        var t = 0L
+        fun step(angle: Double) {
+            state = session.accept(t, true, true, frame(t, angle))
+            t += 200L
+        }
+        step(restAngle)
+        step(restAngle)
+        for (angle in workAngles) step(angle)
+        step(restAngle)
+        step(restAngle)
+        step(restAngle)
+        return state
+    }
+
+    @Test
+    fun aKneeOnlyDipIsNotASquat() {
+        // Bouncing on the ankles bends the knees through a squat's whole arc while the hips
+        // stay near straight. The definition says a squat sits back, so the excursion is
+        // reported with the joint that fell short rather than counted.
+        val depths = listOf(120.0, 100.0, 100.0, 100.0, 100.0, 120.0)
+        val bounce = runExcursion(FormCheckExercise.BARBELL_SQUAT, 175.0, depths) { t, knee ->
+            frameWithChains(
+                kneeAngleDegrees = knee,
+                hipAngleDegrees = 170.0,
+                elbowAngleDegrees = 175.0,
+                timestampMs = t,
+            )
+        }
+        assertEquals(0, bounce.repCount)
+        assertEquals(1, bounce.uncountedAttemptCount)
+        assertEquals(FormCheckRepEventKind.INCOMPLETE, bounce.repMarks.single().kind)
+        assertEquals("엉덩이가 170도까지만 굽혀져서 횟수로 세지 않았어요", bounce.headline)
+        assertNull("A definition shortfall urges nothing", bounce.suggestion)
+
+        // The same knee arc with the hips travelling is simply a squat.
+        val squat = runExcursion(FormCheckExercise.BARBELL_SQUAT, 175.0, depths) { t, knee ->
+            frameWithChains(
+                kneeAngleDegrees = knee,
+                hipAngleDegrees = knee,
+                elbowAngleDegrees = 175.0,
+                timestampMs = t,
+            )
+        }
+        assertEquals(1, squat.repCount)
+        assertEquals(0, squat.uncountedAttemptCount)
+    }
+
+    @Test
+    fun aForwardBowIsNotAKneeUp() {
+        // A bow flexes the hip driver exactly like a raise, but the knees stay straight — the
+        // dataset's own condition for this exercise is that the knee comes up.
+        val arc = listOf(120.0, 100.0, 100.0, 100.0, 100.0, 120.0)
+        val bow = runExcursion(FormCheckExercise.STANDING_KNEE_UP, 175.0, arc) { t, hip ->
+            frameWithChains(
+                kneeAngleDegrees = 175.0,
+                hipAngleDegrees = hip,
+                elbowAngleDegrees = 175.0,
+                timestampMs = t,
+            )
+        }
+        assertEquals(0, bow.repCount)
+        assertEquals(1, bow.uncountedAttemptCount)
+        assertEquals("무릎이 175도까지만 굽혀져서 횟수로 세지 않았어요", bow.headline)
+    }
+
+    @Test
+    fun aSquatPatternIsNotAKneeUp() {
+        // Knees and hips folding on both sides is a squat; the knee-up's standing leg is part
+        // of its definition, so the opposite hip folding along is the truthful reason.
+        val arc = listOf(120.0, 100.0, 100.0, 100.0, 100.0, 120.0)
+        val squat = runExcursion(FormCheckExercise.STANDING_KNEE_UP, 175.0, arc) { t, hip ->
+            frameWithChains(
+                kneeAngleDegrees = hip,
+                hipAngleDegrees = hip,
+                elbowAngleDegrees = 175.0,
+                timestampMs = t,
+            )
+        }
+        assertEquals(0, squat.repCount)
+        assertEquals(1, squat.uncountedAttemptCount)
+        assertEquals(FormCheckRepEventKind.INCOMPLETE, squat.repMarks.single().kind)
+        assertEquals("반대쪽 엉덩이가 100도까지 함께 굽혀져서 횟수로 세지 않았어요", squat.headline)
+    }
+
+    @Test
+    fun aSquatPatternIsNotAGoodMorning() {
+        // The hinge's dataset condition is "무릎 구부린채 고정": knees folding through the arc
+        // make the movement a squat, however correct the hip hinge looked.
+        val arc = listOf(120.0, 100.0, 100.0, 100.0, 100.0, 120.0)
+        val squat = runExcursion(FormCheckExercise.GOOD_MORNING, 175.0, arc) { t, hip ->
+            frameWithChains(
+                kneeAngleDegrees = 100.0,
+                hipAngleDegrees = hip,
+                elbowAngleDegrees = 175.0,
+                timestampMs = t,
+            )
+        }
+        assertEquals(0, squat.repCount)
+        assertEquals("무릎이 100도까지 굽혀져서 횟수로 세지 않았어요", squat.headline)
+
+        // Soft knees are the exercise: the same hinge on near-straight legs counts.
+        val hinge = runExcursion(FormCheckExercise.GOOD_MORNING, 175.0, arc) { t, hip ->
+            hipFrame(hip, t)
+        }
+        assertEquals(1, hinge.repCount)
+    }
+
+    @Test
+    fun sittingUpFromAChairIsNotAHipThrust() {
+        // Standing up extends the hips through the thrust's whole arc — with the knees
+        // straightening under it, which the planted-feet bridge never does.
+        val arc = listOf(130.0, 150.0, 165.0, 165.0, 165.0, 150.0)
+        var kneeByStep = listOf(100.0, 120.0, 150.0, 170.0, 170.0, 150.0).iterator()
+        val standUp = runExcursion(FormCheckExercise.HIP_THRUST, 100.0, arc) { t, hip ->
+            frameWithChains(
+                kneeAngleDegrees = if (kneeByStep.hasNext()) kneeByStep.next() else 100.0,
+                hipAngleDegrees = hip,
+                elbowAngleDegrees = 170.0,
+                timestampMs = t,
+            )
+        }
+        assertEquals(0, standUp.repCount)
+        assertEquals(1, standUp.uncountedAttemptCount)
+        assertEquals("무릎이 170도까지 펴져서 횟수로 세지 않았어요", standUp.headline)
+    }
+
+    @Test
+    fun anArmSwingIsNotALatPulldown() {
+        // The shoulder chain closes identically whether the bar was pulled or the straight arm
+        // swung down; the elbows bending are what make it a pull.
+        val arc = listOf(120.0, 60.0, 60.0, 60.0, 60.0, 120.0)
+        val swing = runExcursion(FormCheckExercise.LAT_PULLDOWN, 155.0, arc) { t, shoulder ->
+            frameWithChains(
+                kneeAngleDegrees = 175.0,
+                hipAngleDegrees = 175.0,
+                elbowAngleDegrees = 170.0,
+                shoulderAngleDegrees = shoulder,
+                timestampMs = t,
+            )
+        }
+        assertEquals(0, swing.repCount)
+        assertEquals("팔꿈치가 170도까지만 굽혀져서 횟수로 세지 않았어요", swing.headline)
+
+        val pull = runExcursion(FormCheckExercise.LAT_PULLDOWN, 155.0, arc) { t, shoulder ->
+            frameWithChains(
+                kneeAngleDegrees = 175.0,
+                hipAngleDegrees = 175.0,
+                elbowAngleDegrees = 80.0,
+                shoulderAngleDegrees = shoulder,
+                timestampMs = t,
+            )
+        }
+        assertEquals(1, pull.repCount)
+    }
+
+    @Test
+    fun aWaistPressIsNotAnOverheadPress() {
+        // A press finishes overhead. The same elbow extension with the upper arm hanging at
+        // the waist is a push-down's motion wearing this exercise's counter. Rest is fed past
+        // the exercise's own rest line so the smoothed return actually crosses it.
+        val arc = listOf(120.0, 150.0, 165.0, 165.0, 165.0, 165.0, 150.0)
+        val waist = runExcursion(FormCheckExercise.OVERHEAD_PRESS, 90.0, arc) { t, elbow ->
+            frameWithChains(
+                kneeAngleDegrees = 175.0,
+                hipAngleDegrees = 175.0,
+                elbowAngleDegrees = elbow,
+                shoulderAngleDegrees = 25.0,
+                timestampMs = t,
+            )
+        }
+        assertEquals(0, waist.repCount)
+        assertEquals("어깨가 25도까지만 벌어져서 횟수로 세지 않았어요", waist.headline)
+
+        val press = runExcursion(FormCheckExercise.OVERHEAD_PRESS, 90.0, arc) { t, elbow ->
+            frameWithChains(
+                kneeAngleDegrees = 175.0,
+                hipAngleDegrees = 175.0,
+                elbowAngleDegrees = elbow,
+                shoulderAngleDegrees = 160.0,
+                timestampMs = t,
+            )
+        }
+        assertEquals(1, press.repCount)
+    }
+
+    @Test
+    fun anOverheadSwingIsNotAPushDown() {
+        // The dataset's condition for this exercise is "팔꿈치 위치 고정": the upper arms stay
+        // pinned. Opened wide, the same elbow extension has become a press.
+        val arc = listOf(120.0, 150.0, 165.0, 165.0, 165.0, 165.0, 150.0)
+        val overhead = runExcursion(FormCheckExercise.CABLE_PUSH_DOWN, 90.0, arc) { t, elbow ->
+            frameWithChains(
+                kneeAngleDegrees = 175.0,
+                hipAngleDegrees = 175.0,
+                elbowAngleDegrees = elbow,
+                shoulderAngleDegrees = 160.0,
+                timestampMs = t,
+            )
+        }
+        assertEquals(0, overhead.repCount)
+        assertEquals("어깨가 160도까지 벌어져서 횟수로 세지 않았어요", overhead.headline)
+    }
+
+    @Test
+    fun definitionGatesAbstainWhenTheirChainIsUnobserved() {
+        // A squat measured through frames that carry no shoulders cannot see the hip chain, so
+        // the hip clause abstains and the count proceeds — the same discipline as everything
+        // else here: an unobserved joint is not evidence in either direction.
+        val session = HeuristicFormCheckSession(FormCheckExercise.BARBELL_SQUAT)
+        var state = session.initialSnapshot()
+        var t = 0L
+        fun step(both: Double) {
+            state = session.accept(t, true, true, frameWithKneeAngles(t, both, both, 1.0, 0.9))
+            t += 200L
+        }
+        step(175.0)
+        step(175.0)
+        for (angle in listOf(120.0, 100.0, 100.0, 100.0, 100.0, 120.0)) step(angle)
+        step(175.0)
+        step(175.0)
+
+        assertEquals("An invisible companion chain is not a failed one", 1, state.repCount)
+        assertEquals(0, state.uncountedAttemptCount)
     }
 
     @Test
@@ -1509,12 +1769,26 @@ class HeuristicFormCheckEngineTest {
     }
 
     @Test
-    fun theUncountedReasonIsSpokenOncePerSet() {
+    fun eachDistinctUncountedReasonIsSpokenOncePerSet() {
         val announcer = FormCheckUncountedAnnouncer()
+        val shallow = "무릎 굽힘이 얕아 횟수로 세지 않았어요"
+
         assertNull("Nothing to say before anything happens", announcer.onUncounted(0, null))
-        assertEquals("이유", announcer.onUncounted(1, "이유"))
-        assertNull("Saying it every time would be nagging", announcer.onUncounted(2, "다른 이유"))
-        assertNull(announcer.onUncounted(3, "또 다른 이유"))
+        assertNotNull("The first reason speaks", announcer.onUncounted(1, shallow))
+        assertNull("The same reason again stays silent", announcer.onUncounted(2, shallow))
+        assertNotNull(
+            "A genuinely different reason gets its own sentence",
+            announcer.onUncounted(3, "엉덩이가 158도까지만 굽혀져서 횟수로 세지 않았어요"),
+        )
+        assertNull(
+            "The same situation measured a few degrees apart is one reason, not two",
+            announcer.onUncounted(4, "엉덩이가 162도까지만 굽혀져서 횟수로 세지 않았어요"),
+        )
+        assertNotNull(announcer.onUncounted(5, "동작이 빨라 횟수로 세지 않았어요"))
+        assertNull(
+            "Three distinct reasons is where the voice channel stops lecturing",
+            announcer.onUncounted(6, "양쪽 무릎이 서로 다르게 움직여서 횟수로 세지 않았어요"),
+        )
     }
 
     // ---- fixtures ----
@@ -1642,16 +1916,24 @@ class HeuristicFormCheckEngineTest {
         timestampMs: Long = 0L,
         confidence: Double = 1.0,
         dropped: Set<FormCheckJointGroup> = emptySet(),
+        // The RIGHT side's leg, when it must differ from the measured LEFT — a standing leg
+        // under a knee raise, a still knee beside a travelling one. Null mirrors the left.
+        oppositeKneeAngleDegrees: Double? = null,
+        oppositeHipAngleDegrees: Double? = null,
     ): PoseFrame {
-        val knee = Math.toRadians(kneeAngleDegrees)
-        val hip = Math.toRadians(hipAngleDegrees)
         val elbow = Math.toRadians(elbowAngleDegrees)
 
         /** Rotates a 2D vector, so a joint can be placed at a requested included angle. */
         fun rotate(x: Double, y: Double, radians: Double): Pair<Double, Double> =
             (x * cos(radians) - y * sin(radians)) to (x * sin(radians) + y * cos(radians))
 
-        fun side(offsetX: Double): Map<FormCheckJointGroup, Triple<Double, Double, Double>> {
+        fun side(
+            offsetX: Double,
+            kneeDegrees: Double,
+            hipDegrees: Double,
+        ): Map<FormCheckJointGroup, Triple<Double, Double, Double>> {
+            val knee = Math.toRadians(kneeDegrees)
+            val hip = Math.toRadians(hipDegrees)
             val kneeAt = Triple(offsetX, 0.0, 0.0)
             val hipAt = Triple(offsetX, 0.4, 0.0)
             val ankleAt = Triple(offsetX + 0.4 * sin(knee), 0.4 * cos(knee), 0.0)
@@ -1699,7 +1981,17 @@ class HeuristicFormCheckEngineTest {
                 FormCheckBodySide.LEFT to -0.1,
                 FormCheckBodySide.RIGHT to 0.1,
             )) {
-                for ((group, position) in side(offsetX)) {
+                val kneeDegrees = if (bodySide == FormCheckBodySide.RIGHT) {
+                    oppositeKneeAngleDegrees ?: kneeAngleDegrees
+                } else {
+                    kneeAngleDegrees
+                }
+                val hipDegrees = if (bodySide == FormCheckBodySide.RIGHT) {
+                    oppositeHipAngleDegrees ?: hipAngleDegrees
+                } else {
+                    hipAngleDegrees
+                }
+                for ((group, position) in side(offsetX, kneeDegrees, hipDegrees)) {
                     if (group in dropped) continue
                     val (x, y, z) = position
                     put(group.joint(bodySide), PoseLandmark(x, y, z, confidence, confidence))

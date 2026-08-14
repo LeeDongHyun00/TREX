@@ -6,7 +6,16 @@ import com.example.trex_kotlin.pose.PoseLandmark
 import kotlin.math.acos
 import kotlin.math.sqrt
 
-internal enum class FormCheckBodySide { LEFT, RIGHT }
+internal enum class FormCheckBodySide {
+    LEFT,
+    RIGHT,
+    ;
+
+    fun opposite(): FormCheckBodySide = when (this) {
+        LEFT -> RIGHT
+        RIGHT -> LEFT
+    }
+}
 
 /**
  * A bilateral joint group an exercise needs to observe. Named so guidance can say exactly what

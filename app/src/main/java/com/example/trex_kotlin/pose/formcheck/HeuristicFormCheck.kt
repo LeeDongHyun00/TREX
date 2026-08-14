@@ -26,7 +26,7 @@ internal object HeuristicFormCheckDeclaration {
     const val TRACK_ID: String = "trex.heuristic-form-check.beta.v1"
 
     const val POLICY_DOCUMENT_SHA256: String =
-        "8ccf1108eb567147135067aa037aca65aec2af77d456e744b719f48a69181d93"
+        "50c5c8238bbfb8e14985ddb088ed83d896811283de88000cbfbbd1d0aa3aeb14"
 
     const val POLICY_DOCUMENT_PATH: String = "docs/pose-heuristic-form-check.v1.md"
 
@@ -290,6 +290,75 @@ internal enum class FormCheckGuardExtreme {
     MAX,
 }
 
+/** Whose side of the body a definition gate reads, relative to the measured side. */
+internal enum class FormCheckGateSide {
+    /** The same side the count is attributed to. */
+    DRIVER,
+
+    /**
+     * The other side — for a movement that is one-sided *because* the other side stands still.
+     * A knee raise is a knee raise only while the standing leg stands; if both hips fold, the
+     * movement is a bow or a squat wearing a knee-up's counter.
+     */
+    OPPOSITE,
+}
+
+/** Which end of the excursion window a definition gate evaluates. */
+internal enum class FormCheckGateStatistic { WINDOW_MINIMUM, WINDOW_MAXIMUM }
+
+/** Which way the gate's bound cuts. */
+internal enum class FormCheckGateComparator { AT_MOST, AT_LEAST }
+
+/**
+ * One clause of an exercise's movement definition: a joint that must do — or refrain from —
+ * something during the excursion for the driver's arc to count as this exercise's repetition.
+ *
+ * This is the second half of the lesson the one-knee squat taught. The bilateral rule (§4.8)
+ * says the two sides must agree; a definition gate says the *rest of the body* must play its
+ * part: a squat's hips travel with its knees, a good morning's knees hold still, a pull-down's
+ * elbows bend, a push-down's upper arms stay pinned. The driver angle alone distinguishes none
+ * of these from their impostors, because included angles are all the engine can see and many
+ * movements share one.
+ *
+ * A gate is part of the *definition of a repetition*, the same status as the rep threshold —
+ * not a form-quality judgement, which stays the sealed release chain's business, and not a
+ * guard, which observes without gating. A failed gate reports the truthful reason the excursion
+ * was not counted, with the measured angle, and never urges: naming what the joint did is an
+ * observation; telling somebody to fix it would be a corrective cue.
+ *
+ * Gates abstain like everything else here: a chain that was not credibly observed through the
+ * window says nothing in either direction, so in the recommended lateral stance an OPPOSITE
+ * gate is usually silent and the documented single-side limitation stands.
+ */
+internal class FormCheckDefinitionGate(
+    /** The chain being required — for DRIVER-side gates, a different one from the driver's. */
+    val chain: FormCheckDriver,
+    val side: FormCheckGateSide = FormCheckGateSide.DRIVER,
+    val statistic: FormCheckGateStatistic,
+    val comparator: FormCheckGateComparator,
+    /** A real joint angle; the window statistic is compared against it. */
+    val boundDegrees: Double,
+    /** Every gate bound is an uncalibrated default today; candidates for the fit pipeline. */
+    val provenance: FormCheckThresholdProvenance,
+    /**
+     * The observation for a failed gate, with `%d` for the window statistic. States what the
+     * joint did and that the excursion was not counted — never an instruction.
+     */
+    val shortfallObservation: String,
+) {
+    init {
+        require(boundDegrees in 0.0..180.0) { "A gate bound must be a real joint angle" }
+        require(shortfallObservation.contains("%d")) {
+            "The shortfall observation must state the measured angle"
+        }
+    }
+
+    fun satisfied(statisticDegrees: Double): Boolean = when (comparator) {
+        FormCheckGateComparator.AT_MOST -> statisticDegrees <= boundDegrees
+        FormCheckGateComparator.AT_LEAST -> statisticDegrees >= boundDegrees
+    }
+}
+
 /**
  * Per-exercise thresholds, mirrored from the policy document's §4 table.
  *
@@ -327,6 +396,14 @@ internal enum class FormCheckExercise(
      * the dumbbell curl (alternating arms is a legitimate way to do it).
      */
     val bilateralDriver: Boolean = false,
+    /**
+     * The movement's definition beyond the driver arc: joints that must come along, hold still,
+     * or stay put for an excursion to be this exercise's repetition (§4.9). Evaluated in
+     * declaration order; the first unmet clause is the one reported. Empty where the driver arc
+     * plus the bilateral rule already are the definition, or where the honest discriminator
+     * needs an orientation reference this track does not assume.
+     */
+    val definition: List<FormCheckDefinitionGate> = emptyList(),
     val cadence: FormCheckCadence,
     /**
      * For a repetition, the resting angle it must return to before another can be armed. For a
@@ -365,6 +442,19 @@ internal enum class FormCheckExercise(
         driver = FormCheckDriver.KNEE,
         direction = FormCheckWorkingDirection.FLEXION,
         bilateralDriver = true,
+        // A squat sits back: the hips travel with the knees (the biomechanics literature puts
+        // parallel-squat hip flexion far past this line). A knee-only dip — bouncing on the
+        // ankles with the torso upright — leaves the hip chain near straight and is not a squat.
+        definition = listOf(
+            FormCheckDefinitionGate(
+                chain = FormCheckDriver.HIP,
+                statistic = FormCheckGateStatistic.WINDOW_MINIMUM,
+                comparator = FormCheckGateComparator.AT_MOST,
+                boundDegrees = 140.0,
+                provenance = FormCheckThresholdProvenance.HEURISTIC_DEFAULT,
+                shortfallObservation = "엉덩이가 %d도까지만 굽혀져서 횟수로 세지 않았어요",
+            ),
+        ),
         cadence = FormCheckCadence.REPETITION,
         restAngleDegrees = 150.0,
         attemptAngleDegrees = 140.0,
@@ -445,6 +535,30 @@ internal enum class FormCheckExercise(
         exercise = AiHubExercise.STANDING_KNEE_UP,
         driver = FormCheckDriver.HIP,
         direction = FormCheckWorkingDirection.FLEXION,
+        // The dataset's own condition is "무릎 충분히 올라오고": a raise hangs the shin, so the
+        // raised knee closes roughly as far as the hip does, while a forward bow — which flexes
+        // the hip driver identically — keeps the knees straight. And a knee raise is one-sided
+        // *because* the standing leg stands: both hips folding together is a bow or a squat
+        // wearing this exercise's counter.
+        definition = listOf(
+            FormCheckDefinitionGate(
+                chain = FormCheckDriver.KNEE,
+                statistic = FormCheckGateStatistic.WINDOW_MINIMUM,
+                comparator = FormCheckGateComparator.AT_MOST,
+                boundDegrees = 150.0,
+                provenance = FormCheckThresholdProvenance.HEURISTIC_DEFAULT,
+                shortfallObservation = "무릎이 %d도까지만 굽혀져서 횟수로 세지 않았어요",
+            ),
+            FormCheckDefinitionGate(
+                chain = FormCheckDriver.HIP,
+                side = FormCheckGateSide.OPPOSITE,
+                statistic = FormCheckGateStatistic.WINDOW_MINIMUM,
+                comparator = FormCheckGateComparator.AT_LEAST,
+                boundDegrees = 140.0,
+                provenance = FormCheckThresholdProvenance.HEURISTIC_DEFAULT,
+                shortfallObservation = "반대쪽 엉덩이가 %d도까지 함께 굽혀져서 횟수로 세지 않았어요",
+            ),
+        ),
         cadence = FormCheckCadence.REPETITION,
         restAngleDegrees = 150.0,
         attemptAngleDegrees = 140.0,
@@ -465,6 +579,20 @@ internal enum class FormCheckExercise(
         driver = FormCheckDriver.HIP,
         direction = FormCheckWorkingDirection.FLEXION,
         bilateralDriver = true,
+        // The dataset's own condition is "무릎 구부린채 고정": a good morning is a hinge on soft
+        // knees. A squat flexes the same hip driver through the same arc — the knees folding
+        // with it are what make it a squat instead, so knees that dip past soft are the
+        // truthful reason the excursion is not a good morning.
+        definition = listOf(
+            FormCheckDefinitionGate(
+                chain = FormCheckDriver.KNEE,
+                statistic = FormCheckGateStatistic.WINDOW_MINIMUM,
+                comparator = FormCheckGateComparator.AT_LEAST,
+                boundDegrees = 135.0,
+                provenance = FormCheckThresholdProvenance.HEURISTIC_DEFAULT,
+                shortfallObservation = "무릎이 %d도까지 굽혀져서 횟수로 세지 않았어요",
+            ),
+        ),
         cadence = FormCheckCadence.REPETITION,
         restAngleDegrees = 150.0,
         attemptAngleDegrees = 140.0,
@@ -602,6 +730,18 @@ internal enum class FormCheckExercise(
         // describes rounded shoulders -- a posture judgement, from a track that makes none.
         vocabularyOverride = FormCheckVocabulary.DRAWING_IN,
         bilateralDriver = true,
+        // A pull-down pulls: the elbows bend as the bar comes toward the chest. A straight-arm
+        // swing closes the same shoulder angle without ever being a pull on this machine.
+        definition = listOf(
+            FormCheckDefinitionGate(
+                chain = FormCheckDriver.ELBOW,
+                statistic = FormCheckGateStatistic.WINDOW_MINIMUM,
+                comparator = FormCheckGateComparator.AT_MOST,
+                boundDegrees = 130.0,
+                provenance = FormCheckThresholdProvenance.HEURISTIC_DEFAULT,
+                shortfallObservation = "팔꿈치가 %d도까지만 굽혀져서 횟수로 세지 않았어요",
+            ),
+        ),
         cadence = FormCheckCadence.REPETITION,
         restAngleDegrees = 150.0,
         attemptAngleDegrees = 140.0,
@@ -651,6 +791,29 @@ internal enum class FormCheckExercise(
         exercise = AiHubExercise.STANDING_SIDE_CRUNCH,
         driver = FormCheckDriver.HIP,
         direction = FormCheckWorkingDirection.FLEXION,
+        // The dataset asks "무릎이 몸통 측면에서 올라오는지": the crunch raises a knee toward the
+        // elbow, so the same two clauses as the knee-up apply — the raised knee closes, and the
+        // standing leg stands. What this chain cannot see, the lateral flexion itself, stays
+        // unclaimed (§6).
+        definition = listOf(
+            FormCheckDefinitionGate(
+                chain = FormCheckDriver.KNEE,
+                statistic = FormCheckGateStatistic.WINDOW_MINIMUM,
+                comparator = FormCheckGateComparator.AT_MOST,
+                boundDegrees = 150.0,
+                provenance = FormCheckThresholdProvenance.HEURISTIC_DEFAULT,
+                shortfallObservation = "무릎이 %d도까지만 굽혀져서 횟수로 세지 않았어요",
+            ),
+            FormCheckDefinitionGate(
+                chain = FormCheckDriver.HIP,
+                side = FormCheckGateSide.OPPOSITE,
+                statistic = FormCheckGateStatistic.WINDOW_MINIMUM,
+                comparator = FormCheckGateComparator.AT_LEAST,
+                boundDegrees = 140.0,
+                provenance = FormCheckThresholdProvenance.HEURISTIC_DEFAULT,
+                shortfallObservation = "반대쪽 엉덩이가 %d도까지 함께 굽혀져서 횟수로 세지 않았어요",
+            ),
+        ),
         cadence = FormCheckCadence.REPETITION,
         restAngleDegrees = 150.0,
         attemptAngleDegrees = 140.0,
@@ -681,6 +844,20 @@ internal enum class FormCheckExercise(
         driver = FormCheckDriver.HIP,
         direction = FormCheckWorkingDirection.EXTENSION,
         bilateralDriver = true,
+        // The bridge the dataset describes ("수축시 무릎부터 어깨까지 일자") is built on planted
+        // feet: the knees stay bent near ninety through the whole repetition. Standing up from a
+        // chair extends the same hip driver through the same arc — the knees straightening with
+        // it are what make it standing up.
+        definition = listOf(
+            FormCheckDefinitionGate(
+                chain = FormCheckDriver.KNEE,
+                statistic = FormCheckGateStatistic.WINDOW_MAXIMUM,
+                comparator = FormCheckGateComparator.AT_MOST,
+                boundDegrees = 140.0,
+                provenance = FormCheckThresholdProvenance.HEURISTIC_DEFAULT,
+                shortfallObservation = "무릎이 %d도까지 펴져서 횟수로 세지 않았어요",
+            ),
+        ),
         cadence = FormCheckCadence.REPETITION,
         restAngleDegrees = 110.0,
         attemptAngleDegrees = 130.0,
@@ -697,6 +874,19 @@ internal enum class FormCheckExercise(
         driver = FormCheckDriver.ELBOW,
         direction = FormCheckWorkingDirection.EXTENSION,
         bilateralDriver = true,
+        // A press finishes overhead: at lockout the upper arm has opened all the way away from
+        // the torso. The same elbow extension performed at the waist — a push-down's motion, a
+        // punch — never opens the shoulder, and is not a press however straight the arm gets.
+        definition = listOf(
+            FormCheckDefinitionGate(
+                chain = FormCheckDriver.SHOULDER,
+                statistic = FormCheckGateStatistic.WINDOW_MAXIMUM,
+                comparator = FormCheckGateComparator.AT_LEAST,
+                boundDegrees = 140.0,
+                provenance = FormCheckThresholdProvenance.HEURISTIC_DEFAULT,
+                shortfallObservation = "어깨가 %d도까지만 벌어져서 횟수로 세지 않았어요",
+            ),
+        ),
         cadence = FormCheckCadence.REPETITION,
         restAngleDegrees = 100.0,
         attemptAngleDegrees = 120.0,
@@ -713,6 +903,19 @@ internal enum class FormCheckExercise(
         driver = FormCheckDriver.ELBOW,
         direction = FormCheckWorkingDirection.EXTENSION,
         bilateralDriver = true,
+        // The dataset's own condition is "팔꿈치 위치 고정": a push-down keeps the upper arms
+        // pinned to the ribs while the forearms travel. If the shoulder opens wide the movement
+        // has become a press or a swing — the mirror image of the overhead press's clause.
+        definition = listOf(
+            FormCheckDefinitionGate(
+                chain = FormCheckDriver.SHOULDER,
+                statistic = FormCheckGateStatistic.WINDOW_MAXIMUM,
+                comparator = FormCheckGateComparator.AT_MOST,
+                boundDegrees = 70.0,
+                provenance = FormCheckThresholdProvenance.HEURISTIC_DEFAULT,
+                shortfallObservation = "어깨가 %d도까지 벌어져서 횟수로 세지 않았어요",
+            ),
+        ),
         cadence = FormCheckCadence.REPETITION,
         restAngleDegrees = 100.0,
         attemptAngleDegrees = 120.0,
@@ -812,6 +1015,16 @@ internal enum class FormCheckExercise(
         // would promise a check that never runs.
         require(!bilateralDriver || cadence == FormCheckCadence.REPETITION) {
             "Bilateral coherence needs a repetition excursion to compare over"
+        }
+        require(definition.isEmpty() || cadence == FormCheckCadence.REPETITION) {
+            "A definition gate needs a repetition excursion to evaluate over"
+        }
+        for (gate in definition) {
+            // A driver-side gate on the driver's own chain would restate the rep thresholds; an
+            // opposite-side gate on the driver chain is the standing-leg clause and is fine.
+            require(gate.side == FormCheckGateSide.OPPOSITE || gate.chain !== driver) {
+                "A definition gate must watch a companion chain, not the driver's own"
+            }
         }
         require(guard == null || guard.driver !== driver) {
             "A guard must watch a different chain from the driver"
@@ -1006,6 +1219,15 @@ internal class HeuristicFormCheckSession(
     private var bilateralDivergentFrames = 0
 
     /**
+     * Per-gate windows over the excursion in flight: how many frames the gate's chain was
+     * credibly observed, and the raw extremes it reached. Raw angles, no smoothing — a gate
+     * asks where the joint actually was, and the windows reset with the excursion.
+     */
+    private val gateObservedFrames = IntArray(spec.definition.size)
+    private val gateWindowMinimum = DoubleArray(spec.definition.size) { Double.MAX_VALUE }
+    private val gateWindowMaximum = DoubleArray(spec.definition.size) { -Double.MAX_VALUE }
+
+    /**
      * Detector-space extremes of this set's opening repetitions, used as the set's own baseline.
      *
      * Comparing a repetition with the user's earlier ones rather than with a population constant
@@ -1108,11 +1330,17 @@ internal class HeuristicFormCheckSession(
             if (spec.bilateralDriver) {
                 accumulateBilateral(frame, measuredDegrees = sample.includedAngleDegrees)
             }
+            if (spec.definition.isNotEmpty()) accumulateDefinition(frame)
         }
         when (event) {
             is RepCycleEvent.Completed -> {
                 val extreme = spec.fromDetector(event.minimumAngleDegrees)
-                if (takeBilateralIncoherence()) {
+                // Both consumed unconditionally so their windows never leak into the next
+                // excursion; evaluated coarsest first — two sides disagreeing is a grosser
+                // incoherence than one clause of the definition falling short.
+                val incoherent = takeBilateralIncoherence()
+                val shortfall = takeDefinitionShortfall()
+                if (incoherent) {
                     // The measured side did everything a repetition does; the other side,
                     // watched frame for frame, did not move with it. On a two-sided exercise
                     // that is not the movement being counted, and saying which is the truthful
@@ -1124,6 +1352,21 @@ internal class HeuristicFormCheckSession(
                     guardWindowDegrees = null
                     appendMark(
                         kind = FormCheckRepEventKind.ASYMMETRIC,
+                        extremeDegrees = extreme,
+                        baselineRelation = FormCheckBaselineRelation.SAME,
+                        guardDegrees = null,
+                    )
+                } else if (shortfall != null) {
+                    // The driver finished its arc but a joint the movement's definition names
+                    // did not do its part. Reporting which joint, and how far it got, is what
+                    // the user asked "왜 안 셌지" actually means.
+                    val (gate, statistic) = shortfall
+                    uncountedAttemptCount += 1
+                    headline = gate.shortfallObservation.format(statistic)
+                    suggestion = null
+                    guardWindowDegrees = null
+                    appendMark(
+                        kind = FormCheckRepEventKind.INCOMPLETE,
                         extremeDegrees = extreme,
                         baselineRelation = FormCheckBaselineRelation.SAME,
                         guardDegrees = null,
@@ -1166,6 +1409,7 @@ internal class HeuristicFormCheckSession(
                 suggestion = spec.attemptHint
                 guardWindowDegrees = null
                 resetBilateralWindow()
+                resetDefinitionWindows()
                 appendMark(
                     kind = FormCheckRepEventKind.SHALLOW,
                     extremeDegrees = spec.fromDetector(event.minimumAngleDegrees),
@@ -1180,6 +1424,7 @@ internal class HeuristicFormCheckSession(
                 suggestion = "조금 더 천천히 움직여볼까요"
                 guardWindowDegrees = null
                 resetBilateralWindow()
+                resetDefinitionWindows()
                 appendMark(
                     kind = FormCheckRepEventKind.TOO_FAST,
                     extremeDegrees = spec.fromDetector(event.minimumAngleDegrees),
@@ -1194,6 +1439,7 @@ internal class HeuristicFormCheckSession(
                 if (!repDetector.inExcursion) {
                     guardWindowDegrees = null
                     resetBilateralWindow()
+                    resetDefinitionWindows()
                 }
             }
         }
@@ -1278,6 +1524,7 @@ internal class HeuristicFormCheckSession(
         holdDetector?.invalidate()
         guardWindowDegrees = null
         resetBilateralWindow()
+        resetDefinitionWindows()
         liveReading = null
     }
 
@@ -1292,15 +1539,61 @@ internal class HeuristicFormCheckSession(
      */
     private fun accumulateBilateral(frame: PoseFrame, measuredDegrees: Double) {
         val side = activeSide ?: return
-        val opposite = when (side) {
-            FormCheckBodySide.LEFT -> FormCheckBodySide.RIGHT
-            FormCheckBodySide.RIGHT -> FormCheckBodySide.LEFT
-        }
-        val sample = FormCheckGeometry.sideSample(frame, opposite, spec.driver) ?: return
+        val sample = FormCheckGeometry.sideSample(frame, side.opposite(), spec.driver) ?: return
         bilateralConcurrentFrames += 1
         if (abs(sample.includedAngleDegrees - measuredDegrees) > BILATERAL_DIVERGENCE_DEGREES) {
             bilateralDivergentFrames += 1
         }
+    }
+
+    /**
+     * Feeds one frame into every definition gate's window. A gate whose chain is not credible
+     * this frame simply gets nothing — an unobserved joint is not evidence, in either direction.
+     */
+    private fun accumulateDefinition(frame: PoseFrame) {
+        val measuredSide = activeSide ?: return
+        for ((index, gate) in spec.definition.withIndex()) {
+            val side = when (gate.side) {
+                FormCheckGateSide.DRIVER -> measuredSide
+                FormCheckGateSide.OPPOSITE -> measuredSide.opposite()
+            }
+            val sample = FormCheckGeometry.sideSample(frame, side, gate.chain) ?: continue
+            gateObservedFrames[index] += 1
+            gateWindowMinimum[index] = minOf(gateWindowMinimum[index], sample.includedAngleDegrees)
+            gateWindowMaximum[index] = maxOf(gateWindowMaximum[index], sample.includedAngleDegrees)
+        }
+    }
+
+    /**
+     * The first definition clause the completed excursion did not satisfy, with its measured
+     * window statistic in whole degrees, or null when the definition held; always resets the
+     * windows.
+     *
+     * A gate observed for fewer than [DEFINITION_MINIMUM_OBSERVED_FRAMES] abstains rather than
+     * votes — in the recommended lateral stance an opposite-side clause is usually invisible,
+     * and the documented single-side limitation stands there.
+     */
+    private fun takeDefinitionShortfall(): Pair<FormCheckDefinitionGate, Int>? {
+        var shortfall: Pair<FormCheckDefinitionGate, Int>? = null
+        for ((index, gate) in spec.definition.withIndex()) {
+            if (gateObservedFrames[index] < DEFINITION_MINIMUM_OBSERVED_FRAMES) continue
+            val statistic = when (gate.statistic) {
+                FormCheckGateStatistic.WINDOW_MINIMUM -> gateWindowMinimum[index]
+                FormCheckGateStatistic.WINDOW_MAXIMUM -> gateWindowMaximum[index]
+            }
+            if (!gate.satisfied(statistic)) {
+                shortfall = gate to statistic.roundToInt().coerceIn(0, 180)
+                break
+            }
+        }
+        resetDefinitionWindows()
+        return shortfall
+    }
+
+    private fun resetDefinitionWindows() {
+        gateObservedFrames.fill(0)
+        gateWindowMinimum.fill(Double.MAX_VALUE)
+        gateWindowMaximum.fill(-Double.MAX_VALUE)
     }
 
     /**
@@ -1465,6 +1758,9 @@ internal class HeuristicFormCheckSession(
          * which in the recommended lateral stance is most of the time.
          */
         const val BILATERAL_MINIMUM_CONCURRENT_FRAMES = 5
+
+        /** A definition gate abstains below this many observed frames, for the same reason. */
+        const val DEFINITION_MINIMUM_OBSERVED_FRAMES = 5
 
         /**
          * Below this the difference is not reported. A same-set self-comparison cancels the

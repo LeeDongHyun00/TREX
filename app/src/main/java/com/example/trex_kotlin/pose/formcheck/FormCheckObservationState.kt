@@ -50,6 +50,15 @@ internal enum class FormCheckRepEventKind {
      * squat does, and only the still leg gives it away.
      */
     ASYMMETRIC,
+
+    /**
+     * The driver completed its arc but a joint the movement's definition names did not do its
+     * part — the hips never came along on a squat, the knees bent through a good morning, the
+     * elbows never bent on a pull-down. The excursion is reported with the joint that fell
+     * short rather than counted, because the driver angle alone does not make a movement this
+     * exercise.
+     */
+    INCOMPLETE,
 }
 
 /**

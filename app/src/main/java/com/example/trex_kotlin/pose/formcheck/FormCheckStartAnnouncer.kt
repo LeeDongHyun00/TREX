@@ -250,28 +250,39 @@ internal class FormCheckCountAnnouncer {
 }
 
 /**
- * Speaks why an excursion was not counted — once per set, on the first one.
+ * Speaks why an excursion was not counted — once per *distinct reason* per set.
  *
  * Silence is not a usable signal here: the phone may be muted, the room is loud, and an
- * uncounted repetition then feels identical to a crash. Saying it once tells a beginner what
- * happened; saying it every time turns an observation into nagging, which is how a track that
- * makes no judgement starts to feel like one. The wording is the headline the engine already
- * built, so nothing new is put in anyone's mouth.
+ * uncounted repetition then feels identical to a crash. Saying each reason once tells a beginner
+ * what happened — and with the definition gates there are genuinely different reasons in one
+ * set, each worth its one sentence. Repeating a reason turns an observation into nagging, which
+ * is how a track that makes no judgement starts to feel like one.
+ *
+ * Two reasons are the same when they differ only in the measured number: "무릎이 158도까지만…"
+ * and "무릎이 162도까지만…" are one situation, not two. The wording is the headline the engine
+ * already built, so nothing new is put in anyone's mouth.
  */
 internal class FormCheckUncountedAnnouncer {
     private var lastSeen = 0
-    private var spoken = false
+    private val spokenReasons = LinkedHashSet<String>()
 
     fun onUncounted(uncountedCount: Int, phrase: String?, muted: Boolean = false): String? {
         if (uncountedCount < lastSeen) {
-            // A fresh set: the host rebuilds the session, so the once-per-set budget resets too.
+            // A fresh set: the host rebuilds the session, so the per-set budget resets too.
             lastSeen = uncountedCount
-            spoken = false
+            spokenReasons.clear()
         }
         if (uncountedCount <= lastSeen) return null
         lastSeen = uncountedCount
-        if (spoken || muted || phrase.isNullOrBlank()) return null
-        spoken = true
+        if (muted || phrase.isNullOrBlank()) return null
+        val reason = phrase.filterNot(Char::isDigit)
+        if (reason in spokenReasons || spokenReasons.size >= MAX_DISTINCT_REASONS) return null
+        spokenReasons.add(reason)
         return phrase
+    }
+
+    private companion object {
+        /** However varied the set, the voice channel is not a lecture. */
+        const val MAX_DISTINCT_REASONS = 3
     }
 }

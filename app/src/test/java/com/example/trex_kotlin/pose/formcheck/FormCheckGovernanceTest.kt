@@ -191,6 +191,159 @@ class FormCheckGovernanceTest {
     }
 
     @Test
+    fun definitionGatesMirrorThePolicyDocumentTable() {
+        // §4.9: a definition gate is part of what makes an excursion this exercise's repetition.
+        // The roster is contract — exercises must not quietly grow or lose clauses.
+        data class Gate(
+            val chain: FormCheckDriver,
+            val side: FormCheckGateSide,
+            val statistic: FormCheckGateStatistic,
+            val comparator: FormCheckGateComparator,
+            val bound: Double,
+        )
+
+        fun gates(spec: FormCheckExercise): List<Gate> = spec.definition.map {
+            Gate(it.chain, it.side, it.statistic, it.comparator, it.boundDegrees)
+        }
+
+        val expected = mapOf(
+            FormCheckExercise.BARBELL_SQUAT to listOf(
+                Gate(
+                    FormCheckDriver.HIP,
+                    FormCheckGateSide.DRIVER,
+                    FormCheckGateStatistic.WINDOW_MINIMUM,
+                    FormCheckGateComparator.AT_MOST,
+                    140.0,
+                ),
+            ),
+            FormCheckExercise.STANDING_KNEE_UP to listOf(
+                Gate(
+                    FormCheckDriver.KNEE,
+                    FormCheckGateSide.DRIVER,
+                    FormCheckGateStatistic.WINDOW_MINIMUM,
+                    FormCheckGateComparator.AT_MOST,
+                    150.0,
+                ),
+                Gate(
+                    FormCheckDriver.HIP,
+                    FormCheckGateSide.OPPOSITE,
+                    FormCheckGateStatistic.WINDOW_MINIMUM,
+                    FormCheckGateComparator.AT_LEAST,
+                    140.0,
+                ),
+            ),
+            FormCheckExercise.STANDING_SIDE_CRUNCH to listOf(
+                Gate(
+                    FormCheckDriver.KNEE,
+                    FormCheckGateSide.DRIVER,
+                    FormCheckGateStatistic.WINDOW_MINIMUM,
+                    FormCheckGateComparator.AT_MOST,
+                    150.0,
+                ),
+                Gate(
+                    FormCheckDriver.HIP,
+                    FormCheckGateSide.OPPOSITE,
+                    FormCheckGateStatistic.WINDOW_MINIMUM,
+                    FormCheckGateComparator.AT_LEAST,
+                    140.0,
+                ),
+            ),
+            FormCheckExercise.GOOD_MORNING to listOf(
+                Gate(
+                    FormCheckDriver.KNEE,
+                    FormCheckGateSide.DRIVER,
+                    FormCheckGateStatistic.WINDOW_MINIMUM,
+                    FormCheckGateComparator.AT_LEAST,
+                    135.0,
+                ),
+            ),
+            FormCheckExercise.LAT_PULLDOWN to listOf(
+                Gate(
+                    FormCheckDriver.ELBOW,
+                    FormCheckGateSide.DRIVER,
+                    FormCheckGateStatistic.WINDOW_MINIMUM,
+                    FormCheckGateComparator.AT_MOST,
+                    130.0,
+                ),
+            ),
+            FormCheckExercise.HIP_THRUST to listOf(
+                Gate(
+                    FormCheckDriver.KNEE,
+                    FormCheckGateSide.DRIVER,
+                    FormCheckGateStatistic.WINDOW_MAXIMUM,
+                    FormCheckGateComparator.AT_MOST,
+                    140.0,
+                ),
+            ),
+            FormCheckExercise.OVERHEAD_PRESS to listOf(
+                Gate(
+                    FormCheckDriver.SHOULDER,
+                    FormCheckGateSide.DRIVER,
+                    FormCheckGateStatistic.WINDOW_MAXIMUM,
+                    FormCheckGateComparator.AT_LEAST,
+                    140.0,
+                ),
+            ),
+            FormCheckExercise.CABLE_PUSH_DOWN to listOf(
+                Gate(
+                    FormCheckDriver.SHOULDER,
+                    FormCheckGateSide.DRIVER,
+                    FormCheckGateStatistic.WINDOW_MAXIMUM,
+                    FormCheckGateComparator.AT_MOST,
+                    70.0,
+                ),
+            ),
+        )
+
+        for (spec in FormCheckExercise.entries) {
+            assertEquals(
+                "${spec.name} must carry exactly the definition the policy table names",
+                expected[spec] ?: emptyList<Gate>(),
+                gates(spec),
+            )
+        }
+
+        // Every gate bound is an uncalibrated default: none was fitted, so none may claim a
+        // provenance that would put the dataset credit on it.
+        for (spec in FormCheckExercise.entries) {
+            for (gate in spec.definition) {
+                assertEquals(
+                    "${spec.name}'s gate bounds are defaults until the fit pipeline measures them",
+                    FormCheckThresholdProvenance.HEURISTIC_DEFAULT,
+                    gate.provenance,
+                )
+            }
+        }
+    }
+
+    @Test
+    fun definitionGatesObserveAndNeverUrge() {
+        // A failed gate states what a joint did and that the excursion was not counted. "Keep
+        // it still" or "bend more" phrased at a body part is a corrective cue, and cues belong
+        // to the sealed release chain — the same rule the guard lives under.
+        for (spec in FormCheckExercise.entries) {
+            for (gate in spec.definition) {
+                assertTrue(
+                    "${spec.name}'s gate must state the measured angle",
+                    gate.shortfallObservation.contains("%d"),
+                )
+                assertTrue(
+                    "${spec.name}'s gate must state the excursion was not counted",
+                    gate.shortfallObservation.endsWith("횟수로 세지 않았어요"),
+                )
+                assertFalse(
+                    "${spec.name}'s gate must not phrase a suggestion",
+                    gate.shortfallObservation.contains("볼까요"),
+                )
+                assertFalse(
+                    "${spec.name}'s gate must not phrase an instruction",
+                    gate.shortfallObservation.contains("주세요"),
+                )
+            }
+        }
+    }
+
+    @Test
     fun guardsObserveAndNeverUrge() {
         // A guard reports what happened; "keep it still" phrased as advice is a corrective cue,
         // which belongs to the sealed release chain. The suggestion-shaped ending is the tell.
