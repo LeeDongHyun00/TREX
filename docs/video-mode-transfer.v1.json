@@ -1,0 +1,253 @@
+{
+  "artifactKind": "TREX_VIDEO_MODE_TRANSFER",
+  "artifactVersion": 1,
+  "detectionOutcomes": {
+    "ambiguous_multi_person": 3051,
+    "chain_below_confidence": 5424,
+    "no_pose": 1871,
+    "single_pose": 152303
+  },
+  "limitations": [
+    "Studio capture: single lighting, standard clothing, uncluttered background. This measures the inference mode, not the environment.",
+    "The frame interval is assumed rather than recorded, and VIDEO-mode smoothing depends on it.",
+    "Says nothing about frame rate, thermal behaviour, or the per-frame copy path on a real device."
+  ],
+  "method": {
+    "assumedFrameIntervalMs": 33,
+    "framesPerClip": "all frames in capture order; statistic taken over the labelled subset",
+    "generalisation": "LEAVE_ONE_GLOBAL_Z_SUBJECT_OUT",
+    "landmarkerLifetime": "one per clip, so no tracker state crosses a clip boundary",
+    "runningMode": "VIDEO"
+  },
+  "model": {
+    "artifactSha256": "4eaa5eb7a98365221087693fcc286334cf0858e2eb6e15b506aa4a7ecdcec4ad"
+  },
+  "question": "Whether constants fitted in MediaPipe IMAGE mode still separate their condition when the same footage is played through VIDEO mode, which is what the app runs.",
+  "rightsAuthorization": {
+    "manifestId": "trex.aihub-research-use-rights.v1",
+    "permittedOperation": "MEDIAPIPE_TO_AIHUB_BRIDGE_ERROR_MEASUREMENT"
+  },
+  "transfer": [
+    {
+      "captureDays": [
+        "Day04_200924_F",
+        "Day08_201005_F",
+        "Day12_201012_F",
+        "Day16_201016_F",
+        "Day26_201028_F",
+        "Day30_201102_F"
+      ],
+      "chain": "SHOULDER",
+      "clearsGateInVideoMode": false,
+      "clipCount": 1434,
+      "conditionKind": "STABILITY",
+      "exercise": "덤벨 컬",
+      "extreme": "max",
+      "imageModeLosoBalancedAccuracy": 0.7526,
+      "losoShift": -0.0342,
+      "losoThresholdMaxDegrees": 52,
+      "losoThresholdMinDegrees": 51,
+      "shippedThresholdDegrees": 51,
+      "subjectCount": 44,
+      "thresholdShiftDegrees": 1,
+      "videoModeLosoBalancedAccuracy": 0.7184,
+      "videoModeThresholdDegrees": 52
+    },
+    {
+      "captureDays": [
+        "Day17_201017_F",
+        "Day20_201021_F",
+        "Day21_201022_F",
+        "Day22_201023_F"
+      ],
+      "chain": "ELBOW",
+      "clearsGateInVideoMode": true,
+      "clipCount": 566,
+      "conditionKind": "RANGE",
+      "exercise": "딥스",
+      "extreme": "min",
+      "imageModeLosoBalancedAccuracy": 0.7614,
+      "losoShift": 0.0071,
+      "losoThresholdMaxDegrees": 106,
+      "losoThresholdMinDegrees": 106,
+      "shippedThresholdDegrees": 106,
+      "subjectCount": 32,
+      "thresholdShiftDegrees": 0,
+      "videoModeLosoBalancedAccuracy": 0.7685,
+      "videoModeThresholdDegrees": 106
+    },
+    {
+      "captureDays": [
+        "Day39_201112_F",
+        "Day40_201113_F",
+        "Day41_201114_F",
+        "Day42_201116_F"
+      ],
+      "chain": "SHOULDER",
+      "clearsGateInVideoMode": true,
+      "clipCount": 2022,
+      "conditionKind": "STABILITY",
+      "exercise": "라잉 트라이셉스 익스텐션",
+      "extreme": "max",
+      "imageModeLosoBalancedAccuracy": 0.8202,
+      "losoShift": -0.0054,
+      "losoThresholdMaxDegrees": 127,
+      "losoThresholdMinDegrees": 124,
+      "shippedThresholdDegrees": 127,
+      "subjectCount": 63,
+      "thresholdShiftDegrees": 0,
+      "videoModeLosoBalancedAccuracy": 0.8148,
+      "videoModeThresholdDegrees": 127
+    },
+    {
+      "captureDays": [
+        "Day17_201017_F",
+        "Day20_201021_F",
+        "Day21_201022_F",
+        "Day22_201023_F"
+      ],
+      "chain": "SHOULDER",
+      "clearsGateInVideoMode": true,
+      "clipCount": 565,
+      "conditionKind": "RANGE",
+      "exercise": "랫풀 다운",
+      "extreme": "min",
+      "imageModeLosoBalancedAccuracy": 0.8548,
+      "losoShift": 0.0071,
+      "losoThresholdMaxDegrees": 67,
+      "losoThresholdMinDegrees": 67,
+      "shippedThresholdDegrees": 67,
+      "subjectCount": 32,
+      "thresholdShiftDegrees": 0,
+      "videoModeLosoBalancedAccuracy": 0.8619,
+      "videoModeThresholdDegrees": 67
+    },
+    {
+      "captureDays": [
+        "Day17_201017_F",
+        "Day20_201021_F",
+        "Day21_201022_F",
+        "Day22_201023_F"
+      ],
+      "chain": "TRUNK",
+      "clearsGateInVideoMode": true,
+      "clipCount": 1136,
+      "conditionKind": "STABILITY",
+      "exercise": "로잉머신",
+      "extreme": "max",
+      "imageModeLosoBalancedAccuracy": 0.8002,
+      "losoShift": 0.0062,
+      "losoThresholdMaxDegrees": 133,
+      "losoThresholdMinDegrees": 132,
+      "shippedThresholdDegrees": 132,
+      "subjectCount": 32,
+      "thresholdShiftDegrees": 0,
+      "videoModeLosoBalancedAccuracy": 0.8064,
+      "videoModeThresholdDegrees": 132
+    },
+    {
+      "captureDays": [
+        "Day04_200924_F",
+        "Day08_201005_F",
+        "Day12_201012_F",
+        "Day16_201016_F",
+        "Day26_201028_F",
+        "Day30_201102_F"
+      ],
+      "chain": "SHOULDER",
+      "clearsGateInVideoMode": true,
+      "clipCount": 1436,
+      "conditionKind": "STABILITY",
+      "exercise": "바벨 컬",
+      "extreme": "max",
+      "imageModeLosoBalancedAccuracy": 0.7787,
+      "losoShift": -0.0148,
+      "losoThresholdMaxDegrees": 52,
+      "losoThresholdMinDegrees": 51,
+      "shippedThresholdDegrees": 52,
+      "subjectCount": 44,
+      "thresholdShiftDegrees": 0,
+      "videoModeLosoBalancedAccuracy": 0.7639,
+      "videoModeThresholdDegrees": 52
+    },
+    {
+      "captureDays": [
+        "Day01_200921_F",
+        "Day04_200924_F",
+        "Day05_200925_F",
+        "Day08_201005_F",
+        "Day09_201006_F",
+        "Day12_201012_F",
+        "Day13_201013_F",
+        "Day16_201016_F",
+        "Day23_201024_F",
+        "Day26_201028_F",
+        "Day27_201029_F",
+        "Day30_201102_F"
+      ],
+      "chain": "HIP",
+      "clearsGateInVideoMode": true,
+      "clipCount": 1155,
+      "conditionKind": "RANGE",
+      "exercise": "스탠딩 니업",
+      "extreme": "min",
+      "imageModeLosoBalancedAccuracy": 0.8002,
+      "losoShift": -0.0096,
+      "losoThresholdMaxDegrees": 115,
+      "losoThresholdMinDegrees": 115,
+      "shippedThresholdDegrees": 115,
+      "subjectCount": 55,
+      "thresholdShiftDegrees": 0,
+      "videoModeLosoBalancedAccuracy": 0.7906,
+      "videoModeThresholdDegrees": 115
+    },
+    {
+      "captureDays": [
+        "Day01_200921_F",
+        "Day05_200925_F",
+        "Day09_201006_F",
+        "Day13_201013_F",
+        "Day23_201024_F",
+        "Day27_201029_F"
+      ],
+      "chain": "ELBOW",
+      "clearsGateInVideoMode": true,
+      "clipCount": 1574,
+      "conditionKind": "STABILITY",
+      "exercise": "스탠딩 사이드 크런치",
+      "extreme": "min",
+      "imageModeLosoBalancedAccuracy": 0.8558,
+      "losoShift": 0.0048,
+      "losoThresholdMaxDegrees": 99,
+      "losoThresholdMinDegrees": 94,
+      "shippedThresholdDegrees": 94,
+      "subjectCount": 47,
+      "thresholdShiftDegrees": 0,
+      "videoModeLosoBalancedAccuracy": 0.8606,
+      "videoModeThresholdDegrees": 94
+    },
+    {
+      "captureDays": [
+        "Day02_200922_F",
+        "Day10_201007_F",
+        "Day14_201014_F",
+        "Day24_201026_F"
+      ],
+      "chain": "KNEE",
+      "clearsGateInVideoMode": true,
+      "clipCount": 277,
+      "conditionKind": "RANGE",
+      "exercise": "크로스 런지",
+      "extreme": "min",
+      "imageModeLosoBalancedAccuracy": 0.8403,
+      "losoShift": -0.0289,
+      "losoThresholdMaxDegrees": 118,
+      "losoThresholdMinDegrees": 113,
+      "shippedThresholdDegrees": 118,
+      "subjectCount": 33,
+      "thresholdShiftDegrees": 0,
+      "videoModeLosoBalancedAccuracy": 0.8114,
+      "videoModeThresholdDegrees": 118
+    }
+  ]
+}

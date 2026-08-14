@@ -53,3 +53,10 @@ pnpm-debug.log*
 # OS
 .DS_Store
 Thumbs.db
+
+# Measurement intermediates. The per-frame sweep is a 22MB byproduct of
+# measure_bridge_from_archives.py --frames-out; the cards summarised from it
+# (bridge-frame-error.v1.json and friends) are what the policy cites, and both
+# are reproducible from the archives. Committing the dump would put a large
+# unreferenced file where a `git add docs/` would sweep it up.
+docs/bridge-frames.*.json

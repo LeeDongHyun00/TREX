@@ -179,14 +179,15 @@ class FormCheckGovernanceTest {
                 52.0,
                 FormCheckThresholdProvenance.MEDIAPIPE_NATIVE_FIT_V2,
             ),
-            // Fitted on its own evidence since the archive widened to six capture days: 51
-            // degrees at LOSO 0.753 over 44 participants, one degree from the barbell value it
-            // used to borrow.
+            // Back to the borrowed barbell limit. Its own fit reached 0.753 in IMAGE mode and
+            // fell to 0.718 when the same footage was replayed through VIDEO mode, which is the
+            // mode the app runs — so the calibration claim was withdrawn rather than kept
+            // because it had once looked good.
             FormCheckExercise.DUMBBELL_CURL to Expected(
                 FormCheckDriver.SHOULDER,
                 FormCheckGuardExtreme.MAX,
-                51.0,
-                FormCheckThresholdProvenance.MEDIAPIPE_NATIVE_FIT_V2,
+                52.0,
+                FormCheckThresholdProvenance.HEURISTIC_DEFAULT,
             ),
             FormCheckExercise.ROWING_MACHINE to Expected(
                 FormCheckDriver.TRUNK,
@@ -682,9 +683,10 @@ class FormCheckGovernanceTest {
 
         // The exercise-level flag folds the guard in: a fitted guard on an otherwise-default
         // exercise still owes the credit, and a default guard confers none. The dumbbell curl
-        // joined the fitted set when its guard cleared the gate on its own six-day evidence.
+        // owes none again: its guard borrows the barbell limit after its own fit failed to
+        // survive VIDEO mode, and a borrowed prior is not a thing learned from the dataset.
         assertTrue(FormCheckExercise.BARBELL_CURL.requiresDataAttribution)
-        assertTrue(FormCheckExercise.DUMBBELL_CURL.requiresDataAttribution)
+        assertFalse(FormCheckExercise.DUMBBELL_CURL.requiresDataAttribution)
         assertTrue(FormCheckExercise.ROWING_MACHINE.requiresDataAttribution)
         assertTrue(FormCheckExercise.STANDING_SIDE_CRUNCH.requiresDataAttribution)
         assertFalse(FormCheckExercise.BARBELL_SQUAT.requiresDataAttribution)

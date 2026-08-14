@@ -15,11 +15,12 @@ import kotlin.math.roundToInt
  * Its contract is `docs/pose-heuristic-form-check.v1.md`, pinned by [POLICY_DOCUMENT_SHA256].
  * The track computes rotation-invariant joint geometry, reports observations in observational
  * language, abstains loudly, and touches nothing in the posture-correction release chain: no
- * facade, no criterion, no stored record. Constants carry their provenance individually: nine
+ * facade, no criterion, no stored record. Constants carry their provenance individually: eight
  * were measured through the app's own model and cleared a leave-one-global-subject-out balanced
- * accuracy of 0.75 (four depth thresholds -- standing knee-up, lat pull-down, dips, cross lunge
- * -- and five guard limits -- barbell curl, dumbbell curl, rowing machine, standing side crunch,
- * lying triceps extension); two cite published standards; the rest are uncalibrated defaults. Exercises whose overshoot has a real consequence
+ * accuracy of 0.75 in both inference modes (four depth thresholds -- standing knee-up, lat
+ * pull-down, dips, cross lunge -- and four guard limits -- barbell curl, rowing machine,
+ * standing side crunch, lying triceps extension); two cite published standards; the rest are
+ * uncalibrated defaults. Exercises whose overshoot has a real consequence
  * are sealed against urging more range whether or not they are calibrated. None of this amounts to
  * release-chain calibration, which is why every surface carries the beta disclosure and [claims]
  * still withholds `calibrated`.
@@ -29,7 +30,7 @@ internal object HeuristicFormCheckDeclaration {
     const val TRACK_ID: String = "trex.heuristic-form-check.beta.v1"
 
     const val POLICY_DOCUMENT_SHA256: String =
-        "59685fb9d30380aa7ae88c83b31657eacd3e33f82c7a5432fd6794d53a263fa5"
+        "fbd83ad5060fb3d7a2fcf7ed2f6b061807ef06800276b1c5919590c46d9468ce"
 
     const val POLICY_DOCUMENT_PATH: String = "docs/pose-heuristic-form-check.v1.md"
 
@@ -882,17 +883,18 @@ internal enum class FormCheckExercise(
         repAngleDegrees = 120.0,
         reachedAngleDegrees = 100.0,
         provenance = FormCheckThresholdProvenance.HEURISTIC_DEFAULT,
-        // Measured on its own evidence at last: 51 degrees, LOSO balanced 0.753 over 44
-        // participants, 1,439 clips and six capture days, every fold agreeing on 51. The
-        // three-day measurement had fallen under the gate at 0.739 and this guard borrowed the
-        // barbell twin's 52 as an uncalibrated prior; the wider archive resolved it, one degree
-        // away from the borrowed value — which is what a constant that describes the movement
-        // rather than the sample looks like.
+        // Borrows the barbell twin's limit, and has now failed to earn its own twice. The
+        // three-day measurement missed the gate at 0.739; the six-day one appeared to clear it
+        // at 0.753 and briefly carried a fit here; replaying the same footage through VIDEO
+        // mode — the mode this app actually runs — drops it to 0.718. Eight other constants
+        // survived that replay without moving a degree, so the mode is not the problem: this
+        // exercise's condition is simply the weakest of them, and 0.753 was the gate being
+        // grazed rather than cleared. The claim is withdrawn and the borrowed prior returns.
         guard = FormCheckGuard(
             driver = FormCheckDriver.SHOULDER,
             extreme = FormCheckGuardExtreme.MAX,
-            limitDegrees = 51.0,
-            provenance = FormCheckThresholdProvenance.MEDIAPIPE_NATIVE_FIT_V2,
+            limitDegrees = 52.0,
+            provenance = FormCheckThresholdProvenance.HEURISTIC_DEFAULT,
             crossedObservation = "어깨가 %d도까지 벌어졌어요",
         ),
         rangeUrgingSealed = false,
