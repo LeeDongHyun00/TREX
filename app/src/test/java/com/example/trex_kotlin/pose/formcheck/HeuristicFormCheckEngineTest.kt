@@ -1655,6 +1655,97 @@ class HeuristicFormCheckEngineTest {
     }
 
     @Test
+    fun anOverheadPressIsNotACurl() {
+        // Both bend the elbow through the curl's arc. What separates them is where the upper arm
+        // goes: a press puts it in line with the torso, which no curl variant does.
+        val arc = listOf(130.0, 110.0, 95.0, 95.0, 95.0, 110.0)
+        val press = runExcursion(FormCheckExercise.BARBELL_CURL, 175.0, arc) { t, elbow ->
+            frameWithChains(
+                kneeAngleDegrees = 175.0,
+                hipAngleDegrees = 175.0,
+                elbowAngleDegrees = elbow,
+                shoulderAngleDegrees = 165.0,
+                timestampMs = t,
+            )
+        }
+        assertEquals(0, press.repCount)
+        assertEquals(1, press.uncountedAttemptCount)
+        assertEquals(FormCheckRepEventKind.INCOMPLETE, press.repMarks.single().kind)
+        assertEquals(
+            "어깨가 165도까지 벌어져 위팔이 몸통과 거의 일직선이 되어서 횟수로 세지 않았어요",
+            press.headline,
+        )
+    }
+
+    @Test
+    fun aSwingingCurlStillCountsAndIsObservedRatherThanDiscarded() {
+        // The guard and the gate read the same joint and the same extreme, so this is the case
+        // that proves they are different kinds of statement. A shoulder swinging to 100 is far
+        // past the guard's 52 and nowhere near the gate's 140: the repetition counts, and the
+        // swing is reported as an observation attached to it.
+        val arc = listOf(130.0, 110.0, 95.0, 95.0, 95.0, 110.0)
+        val swung = runExcursion(FormCheckExercise.BARBELL_CURL, 175.0, arc) { t, elbow ->
+            frameWithChains(
+                kneeAngleDegrees = 175.0,
+                hipAngleDegrees = 175.0,
+                elbowAngleDegrees = elbow,
+                shoulderAngleDegrees = 100.0,
+                timestampMs = t,
+            )
+        }
+        assertEquals(1, swung.repCount)
+        assertEquals(0, swung.uncountedAttemptCount)
+        assertEquals(FormCheckRepEventKind.COUNTED, swung.repMarks.single().kind)
+        assertTrue(
+            "Expected the guard's observation alongside the reach, got ${swung.headline}",
+            swung.headline!!.contains("어깨가 100도까지 벌어졌어요"),
+        )
+    }
+
+    @Test
+    fun aSingleBlownFrameDoesNotDiscardARepetition() {
+        // A STAY clause reads a raw extreme, so noise can only push it the wrong way — the
+        // direction that throws away a repetition that really happened. One frame is noise; the
+        // clause asks for a position the movement held.
+        // Paired elbow/shoulder frames, so each shoulder reading lands on a known point of the
+        // excursion rather than on whichever frame an iterator happens to reach.
+        fun run(shoulders: List<Double>): FormCheckUiState {
+            val elbows = listOf(175.0, 175.0, 130.0, 110.0, 95.0, 95.0, 95.0, 110.0, 175.0, 175.0, 175.0)
+            check(elbows.size == shoulders.size)
+            val session = HeuristicFormCheckSession(FormCheckExercise.BARBELL_CURL)
+            var state = session.initialSnapshot()
+            for (i in elbows.indices) {
+                state = session.accept(
+                    i * 200L,
+                    true,
+                    true,
+                    frameWithChains(
+                        kneeAngleDegrees = 175.0,
+                        hipAngleDegrees = 175.0,
+                        elbowAngleDegrees = elbows[i],
+                        shoulderAngleDegrees = shoulders[i],
+                        timestampMs = i * 200L,
+                    ),
+                )
+            }
+            return state
+        }
+
+        // The excursion arms on the third frame, where the elbow first passes the attempt line.
+        val strict = listOf(30.0, 30.0, 30.0, 30.0, 30.0, 30.0, 30.0, 30.0, 30.0, 30.0, 30.0)
+        val oneSpike = listOf(30.0, 30.0, 30.0, 175.0, 30.0, 30.0, 30.0, 30.0, 30.0, 30.0, 30.0)
+        val sustained = listOf(30.0, 30.0, 175.0, 175.0, 175.0, 30.0, 30.0, 30.0, 30.0, 30.0, 30.0)
+
+        assertEquals("A strict curl counts", 1, run(strict).repCount)
+        assertEquals("One misread frame must not discard the repetition", 1, run(oneSpike).repCount)
+
+        val held = run(sustained)
+        assertEquals("A position the movement held is reported", 0, held.repCount)
+        assertEquals(1, held.uncountedAttemptCount)
+        assertEquals(FormCheckRepEventKind.INCOMPLETE, held.repMarks.single().kind)
+    }
+
+    @Test
     fun definitionGatesAbstainWhenTheirChainIsUnobserved() {
         // A squat measured through frames that carry no shoulders cannot see the hip chain, so
         // the hip clause abstains and the count proceeds — the same discipline as everything

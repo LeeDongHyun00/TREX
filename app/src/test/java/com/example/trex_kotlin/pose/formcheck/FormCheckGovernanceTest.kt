@@ -257,6 +257,27 @@ class FormCheckGovernanceTest {
                     135.0,
                 ),
             ),
+            // Both curls carry the same clause, and must: gating one twin and not the other
+            // would give a user two behaviours for one movement. It is the same line the
+            // overhead press requires from the other side, so no excursion satisfies both.
+            FormCheckExercise.BARBELL_CURL to listOf(
+                Gate(
+                    FormCheckDriver.SHOULDER,
+                    FormCheckGateSide.DRIVER,
+                    FormCheckGateStatistic.WINDOW_MAXIMUM,
+                    FormCheckGateComparator.AT_MOST,
+                    140.0,
+                ),
+            ),
+            FormCheckExercise.DUMBBELL_CURL to listOf(
+                Gate(
+                    FormCheckDriver.SHOULDER,
+                    FormCheckGateSide.DRIVER,
+                    FormCheckGateStatistic.WINDOW_MAXIMUM,
+                    FormCheckGateComparator.AT_MOST,
+                    140.0,
+                ),
+            ),
             FormCheckExercise.LAT_PULLDOWN to listOf(
                 Gate(
                     FormCheckDriver.ELBOW,
@@ -314,6 +335,59 @@ class FormCheckGovernanceTest {
                 )
             }
         }
+    }
+
+    @Test
+    fun aGateSharingAJointWithAGuardStaysOutsideTheExercisesOwnPopulation() {
+        // §4.9 rule 7. The curls are the first exercises where a guard and a gate read the same
+        // chain and the same extreme, and the two say different kinds of thing: the guard
+        // describes a swing inside a counted repetition, the gate says the arc was not this
+        // exercise. That is only safe while the gate bound lies outside the movement's own
+        // population — otherwise a user reads them as two rungs of one severity scale, and the
+        // guard retroactively becomes the quality grade §4.6 forbids it from being.
+        for (spec in FormCheckExercise.entries) {
+            val guard = spec.guard ?: continue
+            for (gate in spec.definition) {
+                if (gate.chain !== guard.driver) continue
+                val sameExtreme = when (guard.extreme) {
+                    FormCheckGuardExtreme.MAX ->
+                        gate.statistic == FormCheckGateStatistic.WINDOW_MAXIMUM
+                    FormCheckGuardExtreme.MIN ->
+                        gate.statistic == FormCheckGateStatistic.WINDOW_MINIMUM
+                }
+                if (!sameExtreme) continue
+                assertTrue(
+                    "${spec.name}'s gate at ${gate.boundDegrees} sits too close to its guard at " +
+                        "${guard.limitDegrees} to read as a different kind of statement",
+                    gate.boundDegrees - guard.limitDegrees >= 60.0,
+                )
+            }
+        }
+    }
+
+    @Test
+    fun stayClausesRequireASustainedReadingAndReachClausesDoNot() {
+        // §4.9 rule 6. Noise acts on the two shapes in opposite directions: it can only make a
+        // REACH clause easier to satisfy, but a single blown frame is enough to make a STAY
+        // clause discard a repetition that really happened. The shape classification is what
+        // routes them, so it is pinned rather than left to be re-derived at each call site.
+        val stay = FormCheckExercise.entries
+            .flatMap { spec -> spec.definition.map { spec to it } }
+            .filter { (_, gate) -> gate.requiresSustainedReading }
+            .map { (spec, gate) -> "${spec.name}:${gate.chain.vertex.name}" }
+            .toSet()
+        assertEquals(
+            setOf(
+                "STANDING_KNEE_UP:HIP",
+                "STANDING_SIDE_CRUNCH:HIP",
+                "GOOD_MORNING:KNEE",
+                "BARBELL_CURL:SHOULDER",
+                "DUMBBELL_CURL:SHOULDER",
+                "HIP_THRUST:KNEE",
+                "CABLE_PUSH_DOWN:SHOULDER",
+            ),
+            stay,
+        )
     }
 
     @Test

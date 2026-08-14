@@ -26,7 +26,7 @@ internal object HeuristicFormCheckDeclaration {
     const val TRACK_ID: String = "trex.heuristic-form-check.beta.v1"
 
     const val POLICY_DOCUMENT_SHA256: String =
-        "50c5c8238bbfb8e14985ddb088ed83d896811283de88000cbfbbd1d0aa3aeb14"
+        "eb1418b8791eeb37aab900bf2d726d5df39c4219cbbfe4aee9b1c9c78a04d49d"
 
     const val POLICY_DOCUMENT_PATH: String = "docs/pose-heuristic-form-check.v1.md"
 
@@ -357,6 +357,25 @@ internal class FormCheckDefinitionGate(
         FormCheckGateComparator.AT_MOST -> statisticDegrees <= boundDegrees
         FormCheckGateComparator.AT_LEAST -> statisticDegrees >= boundDegrees
     }
+
+    /**
+     * Whether this clause asks a joint to STAY somewhere rather than to REACH something.
+     *
+     * The distinction decides how noise is allowed to act on it. A REACH clause reads the extreme
+     * the window travelled to, and a spurious frame can only make it easier to satisfy — the
+     * failure mode is a movement counted that should not have been, which is the direction this
+     * track already lives with. A STAY clause is the opposite: one blown frame is enough to make
+     * the extreme cross the line and discard a repetition that really happened, which is the more
+     * expensive mistake. So STAY clauses require a sustained reading rather than an extreme
+     * (§4.9 rule 6).
+     */
+    val requiresSustainedReading: Boolean
+        get() = when (statistic) {
+            FormCheckGateStatistic.WINDOW_MINIMUM ->
+                comparator == FormCheckGateComparator.AT_LEAST
+            FormCheckGateStatistic.WINDOW_MAXIMUM ->
+                comparator == FormCheckGateComparator.AT_MOST
+        }
 }
 
 /**
@@ -670,6 +689,22 @@ internal enum class FormCheckExercise(
         driver = FormCheckDriver.ELBOW,
         direction = FormCheckWorkingDirection.FLEXION,
         bilateralDriver = true,
+        // A curl keeps the upper arm alongside the ribs. At 180 the upper arm is in line with
+        // the torso, so this clause says the arm never came within forty degrees of that — which
+        // no curl does, in any variant, in either direction (an included angle is unsigned, so
+        // an arm raised high and one carried far behind read the same). It is the same line the
+        // overhead press requires from the other side, so no excursion can be both.
+        definition = listOf(
+            FormCheckDefinitionGate(
+                chain = FormCheckDriver.SHOULDER,
+                statistic = FormCheckGateStatistic.WINDOW_MAXIMUM,
+                comparator = FormCheckGateComparator.AT_MOST,
+                boundDegrees = 140.0,
+                provenance = FormCheckThresholdProvenance.HEURISTIC_DEFAULT,
+                shortfallObservation =
+                    "어깨가 %d도까지 벌어져 위팔이 몸통과 거의 일직선이 되어서 횟수로 세지 않았어요",
+            ),
+        ),
         cadence = FormCheckCadence.REPETITION,
         restAngleDegrees = 150.0,
         attemptAngleDegrees = 140.0,
@@ -680,6 +715,12 @@ internal enum class FormCheckExercise(
         // and it separates on the shoulder chain the elbow angle barely moves: measured 52
         // degrees, LOSO balanced 0.784 over 18 participants and 574 clips. The window maximum is
         // the evidence — a single swing is the fault, not the average.
+        //
+        // The guard and the definition gate above read the same chain and the same extreme, and
+        // they say different kinds of thing: the guard describes a swing that happened inside a
+        // counted repetition, the gate says the arc was not a curl at all. That is safe here only
+        // because 140 sits outside every curl population, so the two can never be read as two
+        // rungs of one scale (§4.9 rule 7).
         guard = FormCheckGuard(
             driver = FormCheckDriver.SHOULDER,
             extreme = FormCheckGuardExtreme.MAX,
@@ -696,6 +737,21 @@ internal enum class FormCheckExercise(
         exercise = AiHubExercise.DUMBBELL_CURL,
         driver = FormCheckDriver.ELBOW,
         direction = FormCheckWorkingDirection.FLEXION,
+        // The same clause as the barbell twin, and it has to be: gating one and not the other
+        // would give a user two different behaviours for one movement. The bound sits far enough
+        // outside every curl variant that it does not lean on this exercise's weaker fit, and
+        // this twin is the more exposed of the two because it carries no bilateral rule.
+        definition = listOf(
+            FormCheckDefinitionGate(
+                chain = FormCheckDriver.SHOULDER,
+                statistic = FormCheckGateStatistic.WINDOW_MAXIMUM,
+                comparator = FormCheckGateComparator.AT_MOST,
+                boundDegrees = 140.0,
+                provenance = FormCheckThresholdProvenance.HEURISTIC_DEFAULT,
+                shortfallObservation =
+                    "어깨가 %d도까지 벌어져 위팔이 몸통과 거의 일직선이 되어서 횟수로 세지 않았어요",
+            ),
+        ),
         cadence = FormCheckCadence.REPETITION,
         restAngleDegrees = 150.0,
         attemptAngleDegrees = 140.0,
@@ -966,7 +1022,12 @@ internal enum class FormCheckExercise(
      */
     val requiresDataAttribution: Boolean
         get() = provenance.requiresDataAttribution ||
-            guard?.provenance?.requiresDataAttribution == true
+            guard?.provenance?.requiresDataAttribution == true ||
+            // A no-op today — every gate bound is an uncalibrated default. It is here because
+            // §4.9 rule 4 names gate bounds as the next thing the fit pipeline will measure, and
+            // without this line the first fitted bound would reach a user with no credit shown
+            // and no test failing: the §4.5 obligation missed silently rather than loudly.
+            definition.any { it.provenance.requiresDataAttribution }
 
     /**
      * Mirrors an angle into the detector's space, where a smaller number always means more work.
@@ -1226,6 +1287,12 @@ internal class HeuristicFormCheckSession(
     private val gateObservedFrames = IntArray(spec.definition.size)
     private val gateWindowMinimum = DoubleArray(spec.definition.size) { Double.MAX_VALUE }
     private val gateWindowMaximum = DoubleArray(spec.definition.size) { -Double.MAX_VALUE }
+
+    /**
+     * How many frames of the excursion each STAY clause was actually outside its bound. A single
+     * misread frame is noise; a position the movement held is the thing worth reporting.
+     */
+    private val gateViolatingFrames = IntArray(spec.definition.size)
 
     /**
      * Detector-space extremes of this set's opening repetitions, used as the set's own baseline.
@@ -1561,6 +1628,9 @@ internal class HeuristicFormCheckSession(
             gateObservedFrames[index] += 1
             gateWindowMinimum[index] = minOf(gateWindowMinimum[index], sample.includedAngleDegrees)
             gateWindowMaximum[index] = maxOf(gateWindowMaximum[index], sample.includedAngleDegrees)
+            if (!gate.satisfied(sample.includedAngleDegrees)) {
+                gateViolatingFrames[index] += 1
+            }
         }
     }
 
@@ -1581,7 +1651,12 @@ internal class HeuristicFormCheckSession(
                 FormCheckGateStatistic.WINDOW_MINIMUM -> gateWindowMinimum[index]
                 FormCheckGateStatistic.WINDOW_MAXIMUM -> gateWindowMaximum[index]
             }
-            if (!gate.satisfied(statistic)) {
+            val failed = if (gate.requiresSustainedReading) {
+                gateViolatingFrames[index] >= DEFINITION_MINIMUM_VIOLATING_FRAMES
+            } else {
+                !gate.satisfied(statistic)
+            }
+            if (failed) {
                 shortfall = gate to statistic.roundToInt().coerceIn(0, 180)
                 break
             }
@@ -1594,6 +1669,7 @@ internal class HeuristicFormCheckSession(
         gateObservedFrames.fill(0)
         gateWindowMinimum.fill(Double.MAX_VALUE)
         gateWindowMaximum.fill(-Double.MAX_VALUE)
+        gateViolatingFrames.fill(0)
     }
 
     /**
@@ -1761,6 +1837,15 @@ internal class HeuristicFormCheckSession(
 
         /** A definition gate abstains below this many observed frames, for the same reason. */
         const val DEFINITION_MINIMUM_OBSERVED_FRAMES = 5
+
+        /**
+         * How many frames a STAY clause must be outside its bound before the excursion is
+         * discarded. One frame is noise, and a STAY clause read from a raw extreme can only be
+         * pushed the wrong way by noise — the direction that throws away a real repetition. The
+         * per-frame error of these chains has never been measured, which is the reason this
+         * exists rather than a reason to skip it.
+         */
+        const val DEFINITION_MINIMUM_VIOLATING_FRAMES = 3
 
         /**
          * Below this the difference is not reported. A same-set self-comparison cancels the
