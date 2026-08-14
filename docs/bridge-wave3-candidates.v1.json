@@ -1,0 +1,141 @@
+{
+  "artifactKind": "TREX_MEDIAPIPE_AIHUB_BRIDGE_ERROR_CARD",
+  "artifactVersion": 4,
+  "detectionOutcomes": {
+    "ambiguous_multi_person": 426,
+    "chain_below_confidence": 196,
+    "missing_image": 512,
+    "no_pose": 539,
+    "single_pose": 61732
+  },
+  "generalisation": {
+    "note": "The fold unit is the dataset-wide participant code, not the participant within a capture day. A person filmed on several days is one fold, so a held-out person contributes nothing to the threshold being tested against them.",
+    "scheme": "LEAVE_ONE_GLOBAL_Z_SUBJECT_OUT"
+  },
+  "limitations": [
+    "Studio capture: single lighting condition, standard clothing, uncluttered floor.",
+    "Clip-level condition labels, so transfer accuracy is clip quality, not per-rep truth.",
+    "IMAGE mode; the shipped runtime uses VIDEO mode, whose tracking may differ.",
+    "Passing transfer authorises a heuristic-beta constant only, never a release verdict.",
+    "Verdicts use balanced accuracy; raw accuracy is not reported because it rewards predicting the majority class.",
+    "A subject is one participant folder within one capture day, so the same person filmed on two days counts twice and leave-one-subject-out is optimistic to that extent."
+  ],
+  "model": {
+    "assetPath": "app/src/main/assets/pose_landmarker_full.task",
+    "matchesAppPin": true,
+    "numPoses": 2,
+    "runningMode": "IMAGE",
+    "sha256": "4eaa5eb7a98365221087693fcc286334cf0858e2eb6e15b506aa4a7ecdcec4ad"
+  },
+  "rightsAuthorization": {
+    "manifestId": "trex.aihub-research-use-rights.v1",
+    "permittedOperation": "MEDIAPIPE_TO_AIHUB_BRIDGE_ERROR_MEASUREMENT"
+  },
+  "source": {
+    "archiveRoots": [
+      "data\\013.피트니스자세\\1.Training\\원시데이터",
+      "T:\\trex_allData\\013.피트니스자세\\1.Training\\원시데이터"
+    ],
+    "note": "One archive holds one capture day; only the selected view's frames are read.",
+    "readInPlaceFromArchives": true
+  },
+  "supersedes": "v3 read the archives in place but could only reach the roots on one drive, which silently halved the curls' capture days and hid the barbell lunge entirely. This version pools archive roots across drives, adds the barbell lunge profile, and keeps the per-frame pairs the fit distils, so the per-chain error card comes from the same pass.",
+  "thresholdTransfer": [
+    {
+      "captureDays": [
+        "Day39_201112_F",
+        "Day40_201113_F",
+        "Day41_201114_F",
+        "Day42_201116_F"
+      ],
+      "chain": "SHOULDER",
+      "clipCount": 2022,
+      "clipLevelAngleBiasDegrees": 7.27,
+      "condition": "팔꿈치 위치 고정",
+      "conditionKind": "STABILITY",
+      "conditionTrueCount": 1020,
+      "direction": "FLEXION",
+      "exercise": "라잉 트라이셉스 익스텐션",
+      "extreme": "max",
+      "losoConfusion": {
+        "fn": 213,
+        "fp": 151,
+        "tn": 851,
+        "tp": 807
+      },
+      "majorityBaseline": 0.5045,
+      "mediapipeNativeBalancedAccuracy": 0.8202,
+      "mediapipeNativeLosoBalancedAccuracy": 0.8202,
+      "mediapipeNativeLosoThresholdMaxDegrees": 127,
+      "mediapipeNativeLosoThresholdMinDegrees": 127,
+      "mediapipeNativeThresholdDegrees": 127,
+      "subjectCount": 63
+    },
+    {
+      "captureDays": [
+        "Day03_200923_F",
+        "Day11_201008_F",
+        "Day15_201015_F",
+        "Day25_201027_F",
+        "Day29_201031_F"
+      ],
+      "chain": "SHOULDER",
+      "clipCount": 1338,
+      "clipLevelAngleBiasDegrees": 7.62,
+      "condition": "바벨 궤적과 몸 밀착",
+      "conditionKind": "STABILITY",
+      "conditionTrueCount": 669,
+      "direction": "FLEXION",
+      "exercise": "바벨 데드리프트",
+      "extreme": "max",
+      "losoConfusion": {
+        "fn": 217,
+        "fp": 263,
+        "tn": 406,
+        "tp": 452
+      },
+      "majorityBaseline": 0.5,
+      "mediapipeNativeBalancedAccuracy": 0.6442,
+      "mediapipeNativeLosoBalancedAccuracy": 0.6413,
+      "mediapipeNativeLosoThresholdMaxDegrees": 84,
+      "mediapipeNativeLosoThresholdMinDegrees": 83,
+      "mediapipeNativeThresholdDegrees": 83,
+      "subjectCount": 40
+    },
+    {
+      "captureDays": [
+        "Day17_201017_F",
+        "Day20_201021_F",
+        "Day21_201022_F",
+        "Day22_201023_F"
+      ],
+      "chain": "ELBOW",
+      "clipCount": 574,
+      "clipLevelAngleBiasDegrees": 24.78,
+      "condition": "수축 시 몸통-팔꿈치 사이 모아줌",
+      "conditionKind": "RANGE",
+      "conditionTrueCount": 288,
+      "direction": "FLEXION",
+      "exercise": "풀업",
+      "extreme": "min",
+      "losoConfusion": {
+        "fn": 84,
+        "fp": 103,
+        "tn": 183,
+        "tp": 204
+      },
+      "majorityBaseline": 0.5017,
+      "mediapipeNativeBalancedAccuracy": 0.7261,
+      "mediapipeNativeLosoBalancedAccuracy": 0.6741,
+      "mediapipeNativeLosoThresholdMaxDegrees": 101,
+      "mediapipeNativeLosoThresholdMinDegrees": 91,
+      "mediapipeNativeThresholdDegrees": 101,
+      "subjectCount": 32
+    }
+  ],
+  "view": {
+    "artifact": "docs/aihub-measurement-view.v1.json",
+    "note": "A view is chosen by minimising the error of one specific clip statistic, so a selection made for another chain is not reused; such clips are skipped.",
+    "selection": "PER_EXERCISE_CAPTURE_DAY_CHAIN_AND_EXTREME"
+  }
+}

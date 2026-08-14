@@ -12,11 +12,11 @@ import kotlin.math.roundToInt
  * Its contract is `docs/pose-heuristic-form-check.v1.md`, pinned by [POLICY_DOCUMENT_SHA256].
  * The track computes rotation-invariant joint geometry, reports observations in observational
  * language, abstains loudly, and touches nothing in the posture-correction release chain: no
- * facade, no criterion, no stored record. Constants carry their provenance individually: seven
+ * facade, no criterion, no stored record. Constants carry their provenance individually: nine
  * were measured through the app's own model and cleared a leave-one-global-subject-out balanced
- * accuracy of 0.75 (three depth thresholds -- standing knee-up, lat pull-down, dips -- and four
- * guard limits -- barbell curl, dumbbell curl, rowing machine, standing side crunch); two cite
- * published standards; the rest are uncalibrated defaults. Exercises whose overshoot has a real consequence
+ * accuracy of 0.75 (four depth thresholds -- standing knee-up, lat pull-down, dips, cross lunge
+ * -- and five guard limits -- barbell curl, dumbbell curl, rowing machine, standing side crunch,
+ * lying triceps extension); two cite published standards; the rest are uncalibrated defaults. Exercises whose overshoot has a real consequence
  * are sealed against urging more range whether or not they are calibrated. None of this amounts to
  * release-chain calibration, which is why every surface carries the beta disclosure and [claims]
  * still withholds `calibrated`.
@@ -26,7 +26,7 @@ internal object HeuristicFormCheckDeclaration {
     const val TRACK_ID: String = "trex.heuristic-form-check.beta.v1"
 
     const val POLICY_DOCUMENT_SHA256: String =
-        "fe57c882daf2e47b3a96208d93827d3d38e11019d71060754ca1c36308ab70ca"
+        "56ef48d89bc487d3222619d140b613573ecd4902fda289845e375b7292658c41"
 
     const val POLICY_DOCUMENT_PATH: String = "docs/pose-heuristic-form-check.v1.md"
 
@@ -159,6 +159,21 @@ internal enum class FormCheckVocabulary(
         shortfallPhrase = "모아짐이 얕아",
         belowBaselinePhrase = "덜 모아졌어요",
         beyondBaselinePhrase = "더 모아졌어요",
+    ),
+
+    /**
+     * A limb carried away from the torso: the shoulder chain opening on a raise or a pullover.
+     *
+     * The mirror of [DRAWING_IN], and needed for the same reason it was: the extension default
+     * would render "어깨가 88도까지 펴졌어요", which describes a joint straightening rather than
+     * an arm rising away from the body. The guard vocabulary already speaks of 벌어짐 for this
+     * axis, so the driver uses the same anatomy.
+     */
+    OPENING(
+        reachedVerb = "벌어졌어요",
+        shortfallPhrase = "벌어짐이 부족해",
+        belowBaselinePhrase = "덜 벌어졌어요",
+        beyondBaselinePhrase = "더 벌어졌어요",
     ),
 }
 
@@ -989,6 +1004,249 @@ internal enum class FormCheckExercise(
         setupHint = "옆모습이 보이게 서 주세요",
         attemptHint = "다음엔 팔을 조금 더 펴볼까요",
         rangeHint = "다음엔 팔을 조금 더 펴볼까요",
+    ),
+
+    // Wave 3: the catalogue exercises whose movement the engine's chains can honestly read,
+    // added after a full survey of the remaining 23 ruled on every one (§4.3). Constants are
+    // uncalibrated defaults unless stated; the ten exercises the survey refused are refused in
+    // the policy, each for its own reason, not silently absent.
+    CROSS_LUNGE(
+        exercise = AiHubExercise.CROSS_LUNGE,
+        driver = FormCheckDriver.KNEE,
+        direction = FormCheckWorkingDirection.FLEXION,
+        cadence = FormCheckCadence.REPETITION,
+        restAngleDegrees = 150.0,
+        attemptAngleDegrees = 140.0,
+        repAngleDegrees = 130.0,
+        // Measured 118 degrees, LOSO balanced 0.840 over 33 participants, 277 clips and four
+        // capture days — fitted in the full-archive sweep and waiting for this entry to exist.
+        // Like the other lunges the engine cannot tell the crossing leg from the standing one,
+        // so the same setup hint carries the same assumption.
+        reachedAngleDegrees = 118.0,
+        provenance = FormCheckThresholdProvenance.MEDIAPIPE_NATIVE_FIT_V2,
+        rangeUrgingSealed = false,
+        setupHint = "카메라 쪽 다리가 앞으로 오게 서 주세요",
+        attemptHint = "카메라 쪽 다리가 앞인지 확인하고 조금 더 굽혀볼까요",
+        rangeHint = "다음엔 조금 더 앉아볼까요",
+    ),
+    PULL_UP(
+        exercise = AiHubExercise.PULL_UP,
+        driver = FormCheckDriver.ELBOW,
+        direction = FormCheckWorkingDirection.FLEXION,
+        bilateralDriver = true,
+        cadence = FormCheckCadence.REPETITION,
+        restAngleDegrees = 150.0,
+        attemptAngleDegrees = 140.0,
+        repAngleDegrees = 120.0,
+        reachedAngleDegrees = 100.0,
+        provenance = FormCheckThresholdProvenance.HEURISTIC_DEFAULT,
+        rangeUrgingSealed = false,
+        setupHint = "옆모습이 보이게 매달려 주세요",
+        attemptHint = "다음엔 조금 더 당겨볼까요",
+        rangeHint = "다음엔 조금 더 당겨볼까요",
+    ),
+    FACE_PULL(
+        exercise = AiHubExercise.FACE_PULL,
+        driver = FormCheckDriver.ELBOW,
+        direction = FormCheckWorkingDirection.FLEXION,
+        bilateralDriver = true,
+        cadence = FormCheckCadence.REPETITION,
+        restAngleDegrees = 150.0,
+        attemptAngleDegrees = 140.0,
+        repAngleDegrees = 120.0,
+        reachedAngleDegrees = 95.0,
+        provenance = FormCheckThresholdProvenance.HEURISTIC_DEFAULT,
+        rangeUrgingSealed = false,
+        setupHint = "옆모습이 보이게 서 주세요",
+        attemptHint = "다음엔 조금 더 당겨볼까요",
+        rangeHint = "다음엔 조금 더 당겨볼까요",
+    ),
+    UPRIGHT_ROW(
+        exercise = AiHubExercise.UPRIGHT_ROW,
+        driver = FormCheckDriver.ELBOW,
+        direction = FormCheckWorkingDirection.FLEXION,
+        bilateralDriver = true,
+        cadence = FormCheckCadence.REPETITION,
+        restAngleDegrees = 150.0,
+        attemptAngleDegrees = 140.0,
+        repAngleDegrees = 120.0,
+        reachedAngleDegrees = 100.0,
+        provenance = FormCheckThresholdProvenance.HEURISTIC_DEFAULT,
+        // Sealed on the end-range arm of §4.2: the top of an upright row carries the shoulder
+        // toward the position this movement is famous for overdoing, and a higher pull is the
+        // one thing this track must never suggest here.
+        rangeUrgingSealed = true,
+        setupHint = "옆모습이 보이게 서 주세요",
+        attemptHint = null,
+        rangeHint = null,
+    ),
+    BARBELL_ROW(
+        exercise = AiHubExercise.BARBELL_ROW,
+        driver = FormCheckDriver.ELBOW,
+        direction = FormCheckWorkingDirection.FLEXION,
+        bilateralDriver = true,
+        cadence = FormCheckCadence.REPETITION,
+        restAngleDegrees = 150.0,
+        attemptAngleDegrees = 140.0,
+        repAngleDegrees = 120.0,
+        reachedAngleDegrees = 100.0,
+        provenance = FormCheckThresholdProvenance.HEURISTIC_DEFAULT,
+        // A loaded hinge held through every repetition: external load on the spine, §4.2's
+        // first criterion.
+        rangeUrgingSealed = true,
+        setupHint = "옆모습이 보이게 서 주세요",
+        attemptHint = null,
+        rangeHint = null,
+    ),
+    DUMBBELL_BENT_OVER_ROW(
+        exercise = AiHubExercise.DUMBBELL_BENT_OVER_ROW,
+        driver = FormCheckDriver.ELBOW,
+        direction = FormCheckWorkingDirection.FLEXION,
+        // Deliberately not bilateral: the one-arm row, braced on a bench, is the standard way
+        // to perform this exercise, and its free arm never moves.
+        cadence = FormCheckCadence.REPETITION,
+        restAngleDegrees = 150.0,
+        attemptAngleDegrees = 140.0,
+        repAngleDegrees = 120.0,
+        reachedAngleDegrees = 100.0,
+        provenance = FormCheckThresholdProvenance.HEURISTIC_DEFAULT,
+        rangeUrgingSealed = true,
+        setupHint = "옆모습이 보이게 서 주세요",
+        attemptHint = null,
+        rangeHint = null,
+    ),
+    BARBELL_DEADLIFT(
+        exercise = AiHubExercise.BARBELL_DEADLIFT,
+        driver = FormCheckDriver.HIP,
+        direction = FormCheckWorkingDirection.FLEXION,
+        bilateralDriver = true,
+        cadence = FormCheckCadence.REPETITION,
+        restAngleDegrees = 150.0,
+        attemptAngleDegrees = 140.0,
+        repAngleDegrees = 125.0,
+        reachedAngleDegrees = 105.0,
+        provenance = FormCheckThresholdProvenance.HEURISTIC_DEFAULT,
+        // The heaviest spinal load in the catalogue. Note the detector's arming rule means a
+        // set started from the floor does not count its first pull — the top has to be seen
+        // before an excursion can arm, and honesty about that beats a guessed repetition.
+        rangeUrgingSealed = true,
+        setupHint = "옆모습이 보이게 서 주세요",
+        attemptHint = null,
+        rangeHint = null,
+    ),
+    BARBELL_STIFF_DEADLIFT(
+        exercise = AiHubExercise.BARBELL_STIFF_DEADLIFT,
+        driver = FormCheckDriver.HIP,
+        direction = FormCheckWorkingDirection.FLEXION,
+        bilateralDriver = true,
+        cadence = FormCheckCadence.REPETITION,
+        restAngleDegrees = 150.0,
+        attemptAngleDegrees = 140.0,
+        repAngleDegrees = 130.0,
+        reachedAngleDegrees = 115.0,
+        provenance = FormCheckThresholdProvenance.HEURISTIC_DEFAULT,
+        rangeUrgingSealed = true,
+        setupHint = "옆모습이 보이게 서 주세요",
+        attemptHint = null,
+        rangeHint = null,
+    ),
+    HANGING_LEG_RAISE(
+        exercise = AiHubExercise.HANGING_LEG_RAISE,
+        driver = FormCheckDriver.HIP,
+        direction = FormCheckWorkingDirection.FLEXION,
+        bilateralDriver = true,
+        cadence = FormCheckCadence.REPETITION,
+        restAngleDegrees = 150.0,
+        attemptAngleDegrees = 140.0,
+        repAngleDegrees = 130.0,
+        reachedAngleDegrees = 110.0,
+        provenance = FormCheckThresholdProvenance.HEURISTIC_DEFAULT,
+        rangeUrgingSealed = false,
+        setupHint = "옆모습이 보이게 매달려 주세요",
+        attemptHint = "다음엔 다리를 조금 더 올려볼까요",
+        rangeHint = "다음엔 다리를 조금 더 올려볼까요",
+    ),
+    LYING_LEG_RAISE(
+        exercise = AiHubExercise.LYING_LEG_RAISE,
+        driver = FormCheckDriver.HIP,
+        direction = FormCheckWorkingDirection.FLEXION,
+        bilateralDriver = true,
+        cadence = FormCheckCadence.REPETITION,
+        restAngleDegrees = 150.0,
+        attemptAngleDegrees = 140.0,
+        repAngleDegrees = 130.0,
+        reachedAngleDegrees = 110.0,
+        provenance = FormCheckThresholdProvenance.HEURISTIC_DEFAULT,
+        rangeUrgingSealed = false,
+        setupHint = "옆모습이 보이게 누워 주세요",
+        attemptHint = "다음엔 다리를 조금 더 올려볼까요",
+        rangeHint = "다음엔 다리를 조금 더 올려볼까요",
+    ),
+    LYING_TRICEPS_EXTENSION(
+        exercise = AiHubExercise.LYING_TRICEPS_EXTENSION,
+        driver = FormCheckDriver.ELBOW,
+        direction = FormCheckWorkingDirection.EXTENSION,
+        bilateralDriver = true,
+        cadence = FormCheckCadence.REPETITION,
+        restAngleDegrees = 100.0,
+        attemptAngleDegrees = 120.0,
+        repAngleDegrees = 150.0,
+        reachedAngleDegrees = 165.0,
+        provenance = FormCheckThresholdProvenance.HEURISTIC_DEFAULT,
+        // The dataset's condition is "팔꿈치 위치 고정": the upper arm stays vertical over the
+        // face while the forearm travels. It separates on the shoulder chain at 127 degrees,
+        // LOSO balanced 0.820 over 63 participants and 2,022 clips — the widest guard sample in
+        // this table, with every fold agreeing.
+        guard = FormCheckGuard(
+            driver = FormCheckDriver.SHOULDER,
+            extreme = FormCheckGuardExtreme.MAX,
+            limitDegrees = 127.0,
+            provenance = FormCheckThresholdProvenance.MEDIAPIPE_NATIVE_FIT_V2,
+            crossedObservation = "어깨가 %d도까지 벌어졌어요",
+        ),
+        rangeUrgingSealed = false,
+        setupHint = "옆모습이 보이게 누워 주세요",
+        attemptHint = "다음엔 팔을 조금 더 펴볼까요",
+        rangeHint = "다음엔 팔을 조금 더 펴볼까요",
+    ),
+    FRONT_RAISE(
+        exercise = AiHubExercise.FRONT_RAISE,
+        driver = FormCheckDriver.SHOULDER,
+        direction = FormCheckWorkingDirection.EXTENSION,
+        // The arm rises away from the torso in the sagittal plane — the side view reads it as
+        // directly as it reads a knee. Its frontal-plane sibling, the side lateral raise, is
+        // refused for exactly the view reason this one escapes (§4.3).
+        vocabularyOverride = FormCheckVocabulary.OPENING,
+        // Not bilateral: alternating front raises are a legitimate way to perform it.
+        cadence = FormCheckCadence.REPETITION,
+        restAngleDegrees = 20.0,
+        attemptAngleDegrees = 40.0,
+        repAngleDegrees = 70.0,
+        reachedAngleDegrees = 85.0,
+        provenance = FormCheckThresholdProvenance.HEURISTIC_DEFAULT,
+        rangeUrgingSealed = false,
+        setupHint = "옆모습이 보이게 서 주세요",
+        attemptHint = "다음엔 팔을 조금 더 올려볼까요",
+        rangeHint = "다음엔 팔을 조금 더 올려볼까요",
+    ),
+    DUMBBELL_PULLOVER(
+        exercise = AiHubExercise.DUMBBELL_PULLOVER,
+        driver = FormCheckDriver.SHOULDER,
+        direction = FormCheckWorkingDirection.EXTENSION,
+        vocabularyOverride = FormCheckVocabulary.OPENING,
+        bilateralDriver = true,
+        cadence = FormCheckCadence.REPETITION,
+        restAngleDegrees = 90.0,
+        attemptAngleDegrees = 110.0,
+        repAngleDegrees = 150.0,
+        reachedAngleDegrees = 165.0,
+        provenance = FormCheckThresholdProvenance.HEURISTIC_DEFAULT,
+        // Sealed for the dips reason: the bottom of a pullover holds a loaded shoulder at its
+        // overhead end range, and that is an anatomical fact no threshold changes.
+        rangeUrgingSealed = true,
+        setupHint = "옆모습이 보이게 누워 주세요",
+        attemptHint = null,
+        rangeHint = null,
     ),
 
     // Isometric. The thresholds read as a band rather than an excursion: the hold begins once

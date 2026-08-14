@@ -155,9 +155,15 @@ EXERCISE_PROFILES: dict[str, ExerciseProfile] = {
     "딥스": ExerciseProfile("이완 시 팔꿈치 각도 90도", "ELBOW", "FLEXION", "min", "RANGE"),
     "크로스 런지": ExerciseProfile("앞다리 무릎 각도 90도", "KNEE", "FLEXION", "min", "RANGE"),
     "랫풀 다운": ExerciseProfile("수축 시 몸통-팔꿈치 사이 모아줌", "SHOULDER", "FLEXION", "min", "RANGE"),
-    "풀업": ExerciseProfile("수축 시 몸통-팔꿈치 사이 모아줌", "SHOULDER", "FLEXION", "min", "RANGE"),
+    # The pull-up's condition separates a hair better on the elbow (0.7785 vs 0.7749) and, more
+    # decisively, the view-selection sweep only ever chose views for its ELBOW chain — the
+    # SHOULDER profile it used to share with the lat pulldown made every one of its clips skip
+    # with no_view_selection_for_this_chain.
+    "풀업": ExerciseProfile("수축 시 몸통-팔꿈치 사이 모아줌", "ELBOW", "FLEXION", "min", "RANGE"),
     # -- Stability: the joint must stay put. ----------------------------------------------------
     "굿모닝": ExerciseProfile("무릎 구부린채 고정", "KNEE", "FLEXION", "min", "STABILITY"),
+    "라잉 트라이셉스 익스텐션": ExerciseProfile("팔꿈치 위치 고정", "SHOULDER", "FLEXION", "max", "STABILITY"),
+    "바벨 데드리프트": ExerciseProfile("바벨 궤적과 몸 밀착", "SHOULDER", "FLEXION", "max", "STABILITY"),
     "바벨 컬": ExerciseProfile("팔꿈치 위치 고정", "SHOULDER", "FLEXION", "max", "STABILITY"),
     "덤벨 컬": ExerciseProfile("팔꿈치 위치 고정", "SHOULDER", "FLEXION", "max", "STABILITY"),
     "로잉머신": ExerciseProfile("상체 과도한 젖힘 없음", "TRUNK", "FLEXION", "max", "STABILITY"),

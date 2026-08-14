@@ -1783,14 +1783,28 @@ class HeuristicFormCheckEngineTest {
                 FormCheckExercise.HIP_THRUST,
                 FormCheckExercise.OVERHEAD_PRESS,
                 FormCheckExercise.CABLE_PUSH_DOWN,
+                FormCheckExercise.PULL_UP,
+                FormCheckExercise.FACE_PULL,
+                FormCheckExercise.UPRIGHT_ROW,
+                FormCheckExercise.BARBELL_ROW,
+                FormCheckExercise.BARBELL_DEADLIFT,
+                FormCheckExercise.BARBELL_STIFF_DEADLIFT,
+                FormCheckExercise.HANGING_LEG_RAISE,
+                FormCheckExercise.LYING_LEG_RAISE,
+                FormCheckExercise.LYING_TRICEPS_EXTENSION,
+                FormCheckExercise.DUMBBELL_PULLOVER,
             ),
             bilateral,
         )
-        // The exclusions are decisions, not omissions: the lunges stride, the dumbbell curl may
-        // alternate, the knee-up and side crunch are one-sided by design, the plank has no
-        // excursion to compare over.
+        // The exclusions are decisions, not omissions: the lunges stride, the dumbbell curl and
+        // the front raise may alternate, the one-arm bench row is the standard way to perform
+        // it, the knee-up and side crunch are one-sided by design, the plank has no excursion
+        // to compare over.
         assertFalse(FormCheckExercise.STEP_FORWARD_DYNAMIC_LUNGE.bilateralDriver)
+        assertFalse(FormCheckExercise.CROSS_LUNGE.bilateralDriver)
         assertFalse(FormCheckExercise.DUMBBELL_CURL.bilateralDriver)
+        assertFalse(FormCheckExercise.FRONT_RAISE.bilateralDriver)
+        assertFalse(FormCheckExercise.DUMBBELL_BENT_OVER_ROW.bilateralDriver)
         assertFalse(FormCheckExercise.STANDING_KNEE_UP.bilateralDriver)
         assertFalse(FormCheckExercise.PLANK.bilateralDriver)
     }

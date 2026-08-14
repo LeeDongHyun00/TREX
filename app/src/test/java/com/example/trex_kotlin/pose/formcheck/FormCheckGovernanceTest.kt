@@ -78,6 +78,10 @@ class FormCheckGovernanceTest {
             FormCheckExercise.STANDING_KNEE_UP to (135.0 to 115.0),
             FormCheckExercise.LAT_PULLDOWN to (130.0 to 67.0),
             FormCheckExercise.DIPS to (135.0 to 106.0),
+            // The one lunge whose depth condition survives MediaPipe: 118 at LOSO 0.840 over 33
+            // participants. The pull-up was measured in the same run and failed (0.674 against a
+            // 0.778 label ceiling), which is why it is absent here and stays a default.
+            FormCheckExercise.CROSS_LUNGE to (130.0 to 118.0),
         )
         for ((spec, thresholds) in calibrated) {
             val (rep, reached) = thresholds
@@ -124,6 +128,21 @@ class FormCheckGovernanceTest {
             FormCheckExercise.HIP_THRUST to (145.0 to 160.0),
             FormCheckExercise.OVERHEAD_PRESS to (150.0 to 165.0),
             FormCheckExercise.CABLE_PUSH_DOWN to (150.0 to 165.0),
+            // Wave 3, all uncalibrated per §4.3. The pull-up and the deadlift guard were
+            // measured and failed their gates, which the policy records; nothing here may
+            // quietly claim otherwise.
+            FormCheckExercise.PULL_UP to (120.0 to 100.0),
+            FormCheckExercise.FACE_PULL to (120.0 to 95.0),
+            FormCheckExercise.UPRIGHT_ROW to (120.0 to 100.0),
+            FormCheckExercise.BARBELL_ROW to (120.0 to 100.0),
+            FormCheckExercise.DUMBBELL_BENT_OVER_ROW to (120.0 to 100.0),
+            FormCheckExercise.BARBELL_DEADLIFT to (125.0 to 105.0),
+            FormCheckExercise.BARBELL_STIFF_DEADLIFT to (130.0 to 115.0),
+            FormCheckExercise.HANGING_LEG_RAISE to (130.0 to 110.0),
+            FormCheckExercise.LYING_LEG_RAISE to (130.0 to 110.0),
+            FormCheckExercise.LYING_TRICEPS_EXTENSION to (150.0 to 165.0),
+            FormCheckExercise.FRONT_RAISE to (70.0 to 85.0),
+            FormCheckExercise.DUMBBELL_PULLOVER to (150.0 to 165.0),
         )
         for ((spec, thresholds) in expected) {
             val (rep, reached) = thresholds
@@ -136,7 +155,7 @@ class FormCheckGovernanceTest {
             )
         }
         assertEquals(160.0, FormCheckExercise.PLANK.repAngleDegrees, 0.0)
-        assertEquals(18, FormCheckExercise.entries.size)
+        assertEquals(31, FormCheckExercise.entries.size)
     }
 
     @Test
@@ -176,6 +195,16 @@ class FormCheckGovernanceTest {
                 FormCheckDriver.ELBOW,
                 FormCheckGuardExtreme.MIN,
                 94.0,
+                FormCheckThresholdProvenance.MEDIAPIPE_NATIVE_FIT_V2,
+            ),
+            // The upper arm stays vertical over the face while the forearm travels: 127 at LOSO
+            // 0.820 over 63 participants — the widest guard sample in the table. The barbell
+            // deadlift's bar-path condition was measured in the same run and failed at 0.641,
+            // which is why the deadlift carries no guard.
+            FormCheckExercise.LYING_TRICEPS_EXTENSION to Expected(
+                FormCheckDriver.SHOULDER,
+                FormCheckGuardExtreme.MAX,
+                127.0,
                 FormCheckThresholdProvenance.MEDIAPIPE_NATIVE_FIT_V2,
             ),
         )
@@ -479,6 +508,9 @@ class FormCheckGovernanceTest {
             FormCheckExercise.HIP_THRUST to (110.0 to 130.0),
             FormCheckExercise.OVERHEAD_PRESS to (100.0 to 120.0),
             FormCheckExercise.CABLE_PUSH_DOWN to (100.0 to 120.0),
+            FormCheckExercise.LYING_TRICEPS_EXTENSION to (100.0 to 120.0),
+            FormCheckExercise.FRONT_RAISE to (20.0 to 40.0),
+            FormCheckExercise.DUMBBELL_PULLOVER to (90.0 to 110.0),
         )
         for (spec in FormCheckExercise.entries) {
             if (spec.cadence == FormCheckCadence.HOLD) continue
@@ -520,6 +552,9 @@ class FormCheckGovernanceTest {
                 FormCheckExercise.HIP_THRUST,
                 FormCheckExercise.OVERHEAD_PRESS,
                 FormCheckExercise.CABLE_PUSH_DOWN,
+                FormCheckExercise.LYING_TRICEPS_EXTENSION,
+                FormCheckExercise.FRONT_RAISE,
+                FormCheckExercise.DUMBBELL_PULLOVER,
             ),
             extension.toSet(),
         )
@@ -617,12 +652,17 @@ class FormCheckGovernanceTest {
         // §4.1: the detector direction and the word shown to the user are different facts. A lat
         // pull-down closes the elbow-shoulder-hip angle, so the direction is flexion, but rendering
         // that as "어깨가 67도까지 굽혀졌어요" describes rounded shoulders — a posture judgement this
-        // track does not make. Every shoulder-chain exercise must therefore name its own words.
+        // track does not make. Every shoulder-chain exercise must therefore name its own words:
+        // drawn in when the arm closes on the torso, opened when it rises away.
         for (spec in FormCheckExercise.entries) {
             if (spec.driver != FormCheckDriver.SHOULDER) continue
+            val expected = when (spec.direction) {
+                FormCheckWorkingDirection.FLEXION -> FormCheckVocabulary.DRAWING_IN
+                FormCheckWorkingDirection.EXTENSION -> FormCheckVocabulary.OPENING
+            }
             assertEquals(
                 "${spec.name} reads the shoulder and must not call it bending",
-                FormCheckVocabulary.DRAWING_IN,
+                expected,
                 spec.vocabulary,
             )
         }
@@ -636,10 +676,14 @@ class FormCheckGovernanceTest {
 
     @Test
     fun everyExerciseKeepsTheWordsThatMatchItsAnatomy() {
-        // The override exists for the shoulder; nothing else may quietly acquire one.
+        // The overrides exist for the shoulder; nothing else may quietly acquire one.
         for (spec in FormCheckExercise.entries) {
-            val expected = when (spec.driver) {
-                FormCheckDriver.SHOULDER -> FormCheckVocabulary.DRAWING_IN
+            val expected = when {
+                spec.driver == FormCheckDriver.SHOULDER &&
+                    spec.direction == FormCheckWorkingDirection.FLEXION ->
+                    FormCheckVocabulary.DRAWING_IN
+                spec.driver == FormCheckDriver.SHOULDER ->
+                    FormCheckVocabulary.OPENING
                 else -> spec.direction.defaultVocabulary
             }
             assertEquals(spec.name, expected, spec.vocabulary)
@@ -681,6 +725,16 @@ class FormCheckGovernanceTest {
                 FormCheckExercise.DIPS,
                 FormCheckExercise.HIP_THRUST,
                 FormCheckExercise.OVERHEAD_PRESS,
+                // Wave 3's loaded hinges and end-range positions: the rows and deadlifts hold an
+                // external load on a hinged spine, the upright row's top carries the shoulder
+                // toward its famous overuse position, and a pullover's bottom is a loaded
+                // overhead end range — the dips criterion again.
+                FormCheckExercise.BARBELL_ROW,
+                FormCheckExercise.DUMBBELL_BENT_OVER_ROW,
+                FormCheckExercise.BARBELL_DEADLIFT,
+                FormCheckExercise.BARBELL_STIFF_DEADLIFT,
+                FormCheckExercise.UPRIGHT_ROW,
+                FormCheckExercise.DUMBBELL_PULLOVER,
             ),
             sealed,
         )
