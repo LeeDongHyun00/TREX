@@ -69,14 +69,26 @@ class SidesStreamContractTest(unittest.TestCase):
         # And the per-side dict rides along in the same message.
         self.assertIn("outbox.put((clip_id, img_key, outcome, angle, sides))", source)
 
-    def test_the_sides_rows_carry_full_identity(self):
+    def test_the_sides_rows_carry_full_identity_and_the_runtime_confidence(self):
         import inspect
 
         import measure_bridge_from_archives as tool
 
         source = inspect.getsource(tool.run)
-        for field in ('"clip": clip_id', '"key": key', '"side": side'):
+        for field in ('"clip": clip_id', '"key": key', '"side": side', '"confidence": round(mp_confidence, 4)'):
             self.assertIn(field, source, f"the sides stream must carry {field}")
+
+    def test_the_confidence_is_the_runtimes_own_definition(self):
+        # FormCheckGeometry: landmark.confidence = min(visibility, presence); chain confidence
+        # = minOf over the three joints; the side with the higher value wins. The worker must
+        # compute the identical quantity or the error card reproduces a different selector.
+        import inspect
+
+        import measure_bridge_from_archives as tool
+
+        source = inspect.getsource(tool._worker)
+        self.assertIn("confidence = min(min(lm.visibility, lm.presence) for lm in points)", source)
+        self.assertIn("sides[side] = (angle, confidence)", source)
 
 
 if __name__ == "__main__":

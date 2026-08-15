@@ -8,7 +8,7 @@ from summarize_extreme_error import (
 import summarize_extreme_error as extreme
 
 
-def _rows(clip, side, extreme, pairs, exercise="랫풀 다운", chain="SHOULDER"):
+def _rows(clip, side, extreme, pairs, exercise="랫풀 다운", chain="SHOULDER", confidences=None):
     return [
         {
             "clip": clip,
@@ -21,6 +21,7 @@ def _rows(clip, side, extreme, pairs, exercise="랫풀 다운", chain="SHOULDER"
             "subject": "Z1",
             "mediapipe": mp,
             "aihub": gt,
+            **({"confidence": confidences[i]} if confidences is not None else {}),
         }
         for i, (mp, gt) in enumerate(pairs)
     ]
@@ -53,6 +54,56 @@ class OverstatementTest(unittest.TestCase):
     def test_a_side_below_the_paired_floor_abstains(self):
         rows = _rows("c4", "Left", "min", [(90, 80)] * (MINIMUM_PAIRED_FRAMES - 1))
         self.assertEqual({}, dict(excursion_overstatements(rows)))
+
+
+class RuntimeExactSelectorTest(unittest.TestCase):
+    """The floors are quantiles under the runtime's own side choice, reproduced verbatim."""
+
+    def test_the_first_jointly_credible_frame_decides_and_left_wins_ties(self):
+        from summarize_extreme_error import selector_views
+
+        n = MINIMUM_PAIRED_FRAMES
+        # Left is deeper (would win runtimeLike) but Right is more confident on frame 0, so the
+        # runtime locks Right — and holds it even though Left overtakes on later frames.
+        left = _rows("c1", "Left", "min", [(60, 80)] * n, confidences=[0.60] + [0.99] * (n - 1))
+        right = _rows("c1", "Right", "min", [(90, 80)] * n, confidences=[0.70] + [0.56] * (n - 1))
+        views = selector_views(left + right)
+        self.assertEqual("Right", views["runtimeExact"]["SHOULDER"][0]["side"])
+        self.assertEqual("Left", views["runtimeLike"]["SHOULDER"][0]["side"])
+        # Mean confidence would pick Left (0.91 vs 0.59): the two confidence rules can differ,
+        # which is why both are reported.
+        self.assertEqual("Left", views["runtimeByMeanConfidence"]["SHOULDER"][0]["side"])
+
+        tie_l = _rows("c2", "Left", "min", [(90, 80)] * n, confidences=[0.8] * n)
+        tie_r = _rows("c2", "Right", "min", [(60, 80)] * n, confidences=[0.8] * n)
+        views = selector_views(tie_l + tie_r)
+        self.assertEqual("Left", views["runtimeExact"]["SHOULDER"][0]["side"])
+
+    def test_the_lock_is_decided_in_capture_order_not_emission_order(self):
+        # The bridge tool's workers finish out of order, so rows arrive shuffled. The runtime
+        # locks on the FIRST captured joint frame; the selector must sort by key to find it.
+        import random
+
+        from summarize_extreme_error import selector_views
+
+        n = MINIMUM_PAIRED_FRAMES
+        left = _rows("c5", "Left", "min", [(60, 80)] * n, confidences=[0.60] + [0.99] * (n - 1))
+        right = _rows("c5", "Right", "min", [(90, 80)] * n, confidences=[0.70] + [0.56] * (n - 1))
+        rows = left + right
+        for seed in range(5):
+            random.Random(seed).shuffle(rows)
+            views = selector_views(rows)
+            self.assertEqual("Right", views["runtimeExact"]["SHOULDER"][0]["side"], f"seed {seed}")
+
+    def test_rows_without_the_field_leave_the_confidence_views_empty(self):
+        from summarize_extreme_error import selector_views
+
+        n = MINIMUM_PAIRED_FRAMES
+        left = _rows("c3", "Left", "min", [(60, 80)] * n)
+        right = _rows("c3", "Right", "min", [(90, 80)] * n)
+        views = selector_views(left + right)
+        self.assertEqual([], views["runtimeExact"]["SHOULDER"])
+        self.assertEqual(1, len(views["runtimeLike"]["SHOULDER"]))
 
 
 class SummaryTest(unittest.TestCase):

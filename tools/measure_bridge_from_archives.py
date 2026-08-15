@@ -118,28 +118,35 @@ def _worker(
         )
     )
 
-    def chain_sides(world: list[Any], chain: str) -> dict[str, float]:
-        """Each credible side's included angle, keyed by side name.
+    def chain_sides(world: list[Any], chain: str) -> dict[str, tuple[float, float]]:
+        """Each credible side's (included angle, chain confidence), keyed by side name.
 
         Kept per side rather than reduced here: the collapsed extreme answers the threshold
         question the same as before, but a same-side pairing against the label needs to know
         WHICH side each reading came from — collapsing Left and Right with a min inside the
         worker bakes one min-over-two of noise into every "per-frame" figure downstream.
+
+        The confidence is the runtime's own definition — the minimum over the chain's three
+        landmarks of min(visibility, presence) — because the runtime chooses its side by exactly
+        this number (FormCheckGeometry.sample: the higher chain confidence wins). Carrying it
+        lets the error card reproduce that choice instead of approximating it by depth.
         """
-        sides: dict[str, float] = {}
+        sides: dict[str, tuple[float, float]] = {}
         for side, (first_i, vertex_i, second_i) in CHAINS[chain].items():
             points = [world[first_i], world[vertex_i], world[second_i]]
-            if min(min(lm.visibility, lm.presence) for lm in points) < MINIMUM_CHAIN_CONFIDENCE:
+            confidence = min(min(lm.visibility, lm.presence) for lm in points)
+            if confidence < MINIMUM_CHAIN_CONFIDENCE:
                 continue
             angle = _included_angle(*points)
             if angle is not None:
-                sides[side] = angle
+                sides[side] = (angle, confidence)
         return sides
 
-    def chain_extreme(sides: dict[str, float], extreme: str) -> float | None:
+    def chain_extreme(sides: dict[str, tuple[float, float]], extreme: str) -> float | None:
         if not sides:
             return None
-        return min(sides.values()) if extreme == "min" else max(sides.values())
+        angles = [angle for angle, _ in sides.values()]
+        return min(angles) if extreme == "min" else max(angles)
 
     while True:
         item = inbox.get()
@@ -148,7 +155,7 @@ def _worker(
         clip_id, img_key, payload = item
         outcome = "single_pose"
         angle = None
-        sides: dict[str, float] = {}
+        sides: dict[str, tuple[float, float]] = {}
         try:
             image = cv2.imdecode(numpy.frombuffer(payload, dtype=numpy.uint8), cv2.IMREAD_COLOR)
             if image is None:
@@ -346,7 +353,7 @@ def run(
 
     outcomes: Counter[str] = Counter(plan["skipped"])
     measured: dict[str, list[tuple[str, float]]] = defaultdict(list)
-    measured_sides: dict[str, list[tuple[str, dict[str, float]]]] = defaultdict(list)
+    measured_sides: dict[str, list[tuple[str, dict[str, tuple[float, float]]]]] = defaultdict(list)
     submitted = 0
     collected = 0
     started = time.time()
@@ -463,7 +470,7 @@ def run(
                 label_sides = label_sides_by_key.get(key)
                 if not label_sides:
                     continue
-                for side, mp_angle in mp_sides.items():
+                for side, (mp_angle, mp_confidence) in mp_sides.items():
                     label_angle = label_sides.get(side)
                     if label_angle is None:
                         continue
@@ -479,6 +486,8 @@ def run(
                             "subject": clip["subject"],
                             "mediapipe": round(mp_angle, 2),
                             "aihub": round(label_angle, 2),
+                            # The runtime's side selector reads exactly this number.
+                            "confidence": round(mp_confidence, 4),
                         }
                     )
         paired_labels = [
@@ -544,8 +553,10 @@ def run(
                 {
                     "note": (
                         "Per-(clip, frame, side) same-side (MediaPipe, AI Hub 3D label) angle "
-                        "pairs. Unlike the per-frame rows, nothing here is collapsed across "
-                        "sides, so paired excursion extremes can be reconstructed exactly."
+                        "pairs, each with the side's chain confidence as the runtime defines it. "
+                        "Unlike the per-frame rows, nothing here is collapsed across sides, so "
+                        "paired excursion extremes — and the runtime's own side choice — can be "
+                        "reconstructed exactly."
                     ),
                     "rows": side_rows,
                 },

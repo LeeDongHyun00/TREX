@@ -407,7 +407,7 @@
     "풀업"
   ],
   "schemaVersion": 1,
-  "selectorNote": "perChain/perExercise above count every (clip, side) once. The floors in policy §4.10 are upper quantiles under selectors.runtimeLike — the side whose MediaPipe extreme is deepest, paired with its own label — which is the closest analogue to the runtime's confidence-first side choice. perSideEqual weights the far side equally and describes a selector the app does not run.",
+  "selectorNote": "perChain/perExercise above count every (clip, side) once. The floors in policy §4.10 are upper quantiles under selectors.runtimeExact — the side the runtime locks onto, chosen by chain confidence on the first frame both sides are credible and held thereafter, verbatim FormCheckGeometry.sample + selectSample. runtimeLike is the depth-based stand-in used before the confidence field existed and is kept for comparison; perSideEqual weights the far side equally and describes a selector the app does not run.",
   "selectors": {
     "perSideEqual": {
       "perChain": {
@@ -795,6 +795,788 @@
           "p75": 36.08,
           "p90": 43.85,
           "p95": 48.04,
+          "p99": 59.53,
+          "subjects": 32
+        }
+      }
+    },
+    "runtimeByMeanConfidence": {
+      "perChain": {
+        "ELBOW": {
+          "captureDays": [
+            "Day17_201017_F",
+            "Day20_201021_F",
+            "Day21_201022_F",
+            "Day22_201023_F"
+          ],
+          "clips": 1138,
+          "exceedance": {
+            "P(S>=10)": 0.7961,
+            "P(S>=15)": 0.6467,
+            "P(S>=20)": 0.4965,
+            "P(S>=25)": 0.3445,
+            "P(S>=30)": 0.2267,
+            "P(S>=35)": 0.1371,
+            "P(S>=40)": 0.0773
+          },
+          "excursions": 1138,
+          "exercises": [
+            "딥스",
+            "풀업"
+          ],
+          "extremes": [
+            "min"
+          ],
+          "median": 19.8,
+          "p50": 19.76,
+          "p75": 28.94,
+          "p90": 38.37,
+          "p95": 43.67,
+          "p99": 52.96,
+          "subjects": 32
+        },
+        "HIP": {
+          "captureDays": [
+            "Day01_200921_F",
+            "Day03_200923_F",
+            "Day04_200924_F",
+            "Day05_200925_F",
+            "Day08_201005_F",
+            "Day09_201006_F",
+            "Day11_201008_F",
+            "Day12_201012_F",
+            "Day13_201013_F",
+            "Day15_201015_F",
+            "Day16_201016_F",
+            "Day23_201024_F",
+            "Day25_201027_F",
+            "Day26_201028_F",
+            "Day27_201029_F",
+            "Day29_201031_F",
+            "Day30_201102_F"
+          ],
+          "clips": 2526,
+          "exceedance": {
+            "P(S>=10)": 0.1979,
+            "P(S>=15)": 0.1164,
+            "P(S>=20)": 0.0681,
+            "P(S>=25)": 0.0412,
+            "P(S>=30)": 0.0245,
+            "P(S>=35)": 0.0135,
+            "P(S>=40)": 0.0075
+          },
+          "excursions": 2526,
+          "exercises": [
+            "바벨 런지",
+            "스탠딩 니업"
+          ],
+          "extremes": [
+            "min"
+          ],
+          "median": -0.34,
+          "p50": -0.34,
+          "p75": 7.6,
+          "p90": 16.49,
+          "p95": 22.98,
+          "p99": 37.3,
+          "subjects": 63
+        },
+        "KNEE": {
+          "captureDays": [
+            "Day01_200921_F",
+            "Day02_200922_F",
+            "Day05_200925_F",
+            "Day09_201006_F",
+            "Day10_201007_F",
+            "Day13_201013_F",
+            "Day14_201014_F",
+            "Day23_201024_F",
+            "Day24_201026_F",
+            "Day27_201029_F"
+          ],
+          "clips": 1783,
+          "exceedance": {
+            "P(S>=10)": 0.5042,
+            "P(S>=15)": 0.3702,
+            "P(S>=20)": 0.2479,
+            "P(S>=25)": 0.1486,
+            "P(S>=30)": 0.074,
+            "P(S>=35)": 0.0387,
+            "P(S>=40)": 0.0213
+          },
+          "excursions": 1783,
+          "exercises": [
+            "스텝 포워드 다이나믹 런지",
+            "크로스 런지"
+          ],
+          "extremes": [
+            "min"
+          ],
+          "median": 10.21,
+          "p50": 10.21,
+          "p75": 19.87,
+          "p90": 27.93,
+          "p95": 32.63,
+          "p99": 44.57,
+          "subjects": 54
+        },
+        "SHOULDER": {
+          "captureDays": [
+            "Day17_201017_F",
+            "Day20_201021_F",
+            "Day21_201022_F",
+            "Day22_201023_F"
+          ],
+          "clips": 549,
+          "exceedance": {
+            "P(S>=10)": 0.4699,
+            "P(S>=15)": 0.2641,
+            "P(S>=20)": 0.1403,
+            "P(S>=25)": 0.0783,
+            "P(S>=30)": 0.0455,
+            "P(S>=35)": 0.0219,
+            "P(S>=40)": 0.0091
+          },
+          "excursions": 549,
+          "exercises": [
+            "랫풀 다운"
+          ],
+          "extremes": [
+            "min"
+          ],
+          "median": 9.25,
+          "p50": 9.25,
+          "p75": 15.3,
+          "p90": 22.3,
+          "p95": 29.29,
+          "p99": 39.32,
+          "subjects": 32
+        }
+      },
+      "perExercise": {
+        "딥스": {
+          "captureDays": [
+            "Day17_201017_F",
+            "Day20_201021_F",
+            "Day21_201022_F",
+            "Day22_201023_F"
+          ],
+          "clips": 565,
+          "exceedance": {
+            "P(S>=10)": 0.692,
+            "P(S>=15)": 0.4991,
+            "P(S>=20)": 0.3168,
+            "P(S>=25)": 0.1681,
+            "P(S>=30)": 0.0761,
+            "P(S>=35)": 0.0301,
+            "P(S>=40)": 0.0142
+          },
+          "excursions": 565,
+          "exercises": [
+            "딥스"
+          ],
+          "extremes": [
+            "min"
+          ],
+          "median": 14.96,
+          "p50": 14.96,
+          "p75": 22.16,
+          "p90": 28.4,
+          "p95": 32.39,
+          "p99": 45.5,
+          "subjects": 32
+        },
+        "랫풀 다운": {
+          "captureDays": [
+            "Day17_201017_F",
+            "Day20_201021_F",
+            "Day21_201022_F",
+            "Day22_201023_F"
+          ],
+          "clips": 549,
+          "exceedance": {
+            "P(S>=10)": 0.4699,
+            "P(S>=15)": 0.2641,
+            "P(S>=20)": 0.1403,
+            "P(S>=25)": 0.0783,
+            "P(S>=30)": 0.0455,
+            "P(S>=35)": 0.0219,
+            "P(S>=40)": 0.0091
+          },
+          "excursions": 549,
+          "exercises": [
+            "랫풀 다운"
+          ],
+          "extremes": [
+            "min"
+          ],
+          "median": 9.25,
+          "p50": 9.25,
+          "p75": 15.3,
+          "p90": 22.3,
+          "p95": 29.29,
+          "p99": 39.32,
+          "subjects": 32
+        },
+        "바벨 런지": {
+          "captureDays": [
+            "Day03_200923_F",
+            "Day11_201008_F",
+            "Day15_201015_F",
+            "Day25_201027_F",
+            "Day29_201031_F"
+          ],
+          "clips": 1406,
+          "exceedance": {
+            "P(S>=10)": 0.2269,
+            "P(S>=15)": 0.1394,
+            "P(S>=20)": 0.0789,
+            "P(S>=25)": 0.0484,
+            "P(S>=30)": 0.0306,
+            "P(S>=35)": 0.0164,
+            "P(S>=40)": 0.0085
+          },
+          "excursions": 1406,
+          "exercises": [
+            "바벨 런지"
+          ],
+          "extremes": [
+            "min"
+          ],
+          "median": 0.44,
+          "p50": 0.44,
+          "p75": 9.03,
+          "p90": 18.24,
+          "p95": 24.24,
+          "p99": 37.47,
+          "subjects": 42
+        },
+        "스탠딩 니업": {
+          "captureDays": [
+            "Day01_200921_F",
+            "Day04_200924_F",
+            "Day05_200925_F",
+            "Day08_201005_F",
+            "Day09_201006_F",
+            "Day12_201012_F",
+            "Day13_201013_F",
+            "Day16_201016_F",
+            "Day23_201024_F",
+            "Day26_201028_F",
+            "Day27_201029_F",
+            "Day30_201102_F"
+          ],
+          "clips": 1120,
+          "exceedance": {
+            "P(S>=10)": 0.1616,
+            "P(S>=15)": 0.0875,
+            "P(S>=20)": 0.0545,
+            "P(S>=25)": 0.0321,
+            "P(S>=30)": 0.017,
+            "P(S>=35)": 0.0098,
+            "P(S>=40)": 0.0063
+          },
+          "excursions": 1120,
+          "exercises": [
+            "스탠딩 니업"
+          ],
+          "extremes": [
+            "min"
+          ],
+          "median": -1.12,
+          "p50": -1.13,
+          "p75": 6.25,
+          "p90": 13.72,
+          "p95": 20.57,
+          "p99": 33.66,
+          "subjects": 55
+        },
+        "스텝 포워드 다이나믹 런지": {
+          "captureDays": [
+            "Day01_200921_F",
+            "Day05_200925_F",
+            "Day09_201006_F",
+            "Day13_201013_F",
+            "Day23_201024_F",
+            "Day27_201029_F"
+          ],
+          "clips": 1513,
+          "exceedance": {
+            "P(S>=10)": 0.5307,
+            "P(S>=15)": 0.3966,
+            "P(S>=20)": 0.2677,
+            "P(S>=25)": 0.1639,
+            "P(S>=30)": 0.0826,
+            "P(S>=35)": 0.0423,
+            "P(S>=40)": 0.0225
+          },
+          "excursions": 1513,
+          "exercises": [
+            "스텝 포워드 다이나믹 런지"
+          ],
+          "extremes": [
+            "min"
+          ],
+          "median": 11.16,
+          "p50": 11.16,
+          "p75": 20.56,
+          "p90": 28.54,
+          "p95": 33.63,
+          "p99": 44.57,
+          "subjects": 48
+        },
+        "크로스 런지": {
+          "captureDays": [
+            "Day02_200922_F",
+            "Day10_201007_F",
+            "Day14_201014_F",
+            "Day24_201026_F"
+          ],
+          "clips": 270,
+          "exceedance": {
+            "P(S>=10)": 0.3556,
+            "P(S>=15)": 0.2222,
+            "P(S>=20)": 0.137,
+            "P(S>=25)": 0.063,
+            "P(S>=30)": 0.0259,
+            "P(S>=35)": 0.0185,
+            "P(S>=40)": 0.0148
+          },
+          "excursions": 270,
+          "exercises": [
+            "크로스 런지"
+          ],
+          "extremes": [
+            "min"
+          ],
+          "median": 4.19,
+          "p50": 4.04,
+          "p75": 13.95,
+          "p90": 22.59,
+          "p95": 25.64,
+          "p99": 41.95,
+          "subjects": 33
+        },
+        "풀업": {
+          "captureDays": [
+            "Day17_201017_F",
+            "Day20_201021_F",
+            "Day21_201022_F",
+            "Day22_201023_F"
+          ],
+          "clips": 573,
+          "exceedance": {
+            "P(S>=10)": 0.8988,
+            "P(S>=15)": 0.7923,
+            "P(S>=20)": 0.6736,
+            "P(S>=25)": 0.5183,
+            "P(S>=30)": 0.3752,
+            "P(S>=35)": 0.2426,
+            "P(S>=40)": 0.1396
+          },
+          "excursions": 573,
+          "exercises": [
+            "풀업"
+          ],
+          "extremes": [
+            "min"
+          ],
+          "median": 25.8,
+          "p50": 25.8,
+          "p75": 34.81,
+          "p90": 43.02,
+          "p95": 46.88,
+          "p99": 57.75,
+          "subjects": 32
+        }
+      }
+    },
+    "runtimeExact": {
+      "perChain": {
+        "ELBOW": {
+          "captureDays": [
+            "Day17_201017_F",
+            "Day20_201021_F",
+            "Day21_201022_F",
+            "Day22_201023_F"
+          ],
+          "clips": 1138,
+          "exceedance": {
+            "P(S>=10)": 0.8111,
+            "P(S>=15)": 0.6775,
+            "P(S>=20)": 0.5475,
+            "P(S>=25)": 0.4095,
+            "P(S>=30)": 0.2873,
+            "P(S>=35)": 0.1889,
+            "P(S>=40)": 0.1186
+          },
+          "excursions": 1138,
+          "exercises": [
+            "딥스",
+            "풀업"
+          ],
+          "extremes": [
+            "min"
+          ],
+          "median": 21.64,
+          "p50": 21.64,
+          "p75": 31.9,
+          "p90": 42.12,
+          "p95": 48.24,
+          "p99": 61.86,
+          "subjects": 32
+        },
+        "HIP": {
+          "captureDays": [
+            "Day01_200921_F",
+            "Day03_200923_F",
+            "Day04_200924_F",
+            "Day05_200925_F",
+            "Day08_201005_F",
+            "Day09_201006_F",
+            "Day11_201008_F",
+            "Day12_201012_F",
+            "Day13_201013_F",
+            "Day15_201015_F",
+            "Day16_201016_F",
+            "Day23_201024_F",
+            "Day25_201027_F",
+            "Day26_201028_F",
+            "Day27_201029_F",
+            "Day29_201031_F",
+            "Day30_201102_F"
+          ],
+          "clips": 2526,
+          "exceedance": {
+            "P(S>=10)": 0.2015,
+            "P(S>=15)": 0.1211,
+            "P(S>=20)": 0.0732,
+            "P(S>=25)": 0.0447,
+            "P(S>=30)": 0.0269,
+            "P(S>=35)": 0.015,
+            "P(S>=40)": 0.0083
+          },
+          "excursions": 2526,
+          "exercises": [
+            "바벨 런지",
+            "스탠딩 니업"
+          ],
+          "extremes": [
+            "min"
+          ],
+          "median": -0.24,
+          "p50": -0.26,
+          "p75": 7.67,
+          "p90": 16.79,
+          "p95": 23.94,
+          "p99": 37.96,
+          "subjects": 63
+        },
+        "KNEE": {
+          "captureDays": [
+            "Day01_200921_F",
+            "Day02_200922_F",
+            "Day05_200925_F",
+            "Day09_201006_F",
+            "Day10_201007_F",
+            "Day13_201013_F",
+            "Day14_201014_F",
+            "Day23_201024_F",
+            "Day24_201026_F",
+            "Day27_201029_F"
+          ],
+          "clips": 1783,
+          "exceedance": {
+            "P(S>=10)": 0.5036,
+            "P(S>=15)": 0.3707,
+            "P(S>=20)": 0.2473,
+            "P(S>=25)": 0.1486,
+            "P(S>=30)": 0.0757,
+            "P(S>=35)": 0.0393,
+            "P(S>=40)": 0.0213
+          },
+          "excursions": 1783,
+          "exercises": [
+            "스텝 포워드 다이나믹 런지",
+            "크로스 런지"
+          ],
+          "extremes": [
+            "min"
+          ],
+          "median": 10.19,
+          "p50": 10.19,
+          "p75": 19.84,
+          "p90": 27.99,
+          "p95": 32.64,
+          "p99": 44.57,
+          "subjects": 54
+        },
+        "SHOULDER": {
+          "captureDays": [
+            "Day17_201017_F",
+            "Day20_201021_F",
+            "Day21_201022_F",
+            "Day22_201023_F"
+          ],
+          "clips": 549,
+          "exceedance": {
+            "P(S>=10)": 0.5118,
+            "P(S>=15)": 0.3133,
+            "P(S>=20)": 0.1384,
+            "P(S>=25)": 0.0765,
+            "P(S>=30)": 0.0383,
+            "P(S>=35)": 0.0182,
+            "P(S>=40)": 0.0073
+          },
+          "excursions": 549,
+          "exercises": [
+            "랫풀 다운"
+          ],
+          "extremes": [
+            "min"
+          ],
+          "median": 10.13,
+          "p50": 10.13,
+          "p75": 16.36,
+          "p90": 22.29,
+          "p95": 28.0,
+          "p99": 38.65,
+          "subjects": 32
+        }
+      },
+      "perExercise": {
+        "딥스": {
+          "captureDays": [
+            "Day17_201017_F",
+            "Day20_201021_F",
+            "Day21_201022_F",
+            "Day22_201023_F"
+          ],
+          "clips": 565,
+          "exceedance": {
+            "P(S>=10)": 0.7221,
+            "P(S>=15)": 0.5487,
+            "P(S>=20)": 0.3841,
+            "P(S>=25)": 0.2425,
+            "P(S>=30)": 0.1363,
+            "P(S>=35)": 0.0956,
+            "P(S>=40)": 0.0708
+          },
+          "excursions": 565,
+          "exercises": [
+            "딥스"
+          ],
+          "extremes": [
+            "min"
+          ],
+          "median": 16.79,
+          "p50": 16.79,
+          "p75": 24.68,
+          "p90": 33.82,
+          "p95": 47.0,
+          "p99": 63.45,
+          "subjects": 32
+        },
+        "랫풀 다운": {
+          "captureDays": [
+            "Day17_201017_F",
+            "Day20_201021_F",
+            "Day21_201022_F",
+            "Day22_201023_F"
+          ],
+          "clips": 549,
+          "exceedance": {
+            "P(S>=10)": 0.5118,
+            "P(S>=15)": 0.3133,
+            "P(S>=20)": 0.1384,
+            "P(S>=25)": 0.0765,
+            "P(S>=30)": 0.0383,
+            "P(S>=35)": 0.0182,
+            "P(S>=40)": 0.0073
+          },
+          "excursions": 549,
+          "exercises": [
+            "랫풀 다운"
+          ],
+          "extremes": [
+            "min"
+          ],
+          "median": 10.13,
+          "p50": 10.13,
+          "p75": 16.36,
+          "p90": 22.29,
+          "p95": 28.0,
+          "p99": 38.65,
+          "subjects": 32
+        },
+        "바벨 런지": {
+          "captureDays": [
+            "Day03_200923_F",
+            "Day11_201008_F",
+            "Day15_201015_F",
+            "Day25_201027_F",
+            "Day29_201031_F"
+          ],
+          "clips": 1406,
+          "exceedance": {
+            "P(S>=10)": 0.234,
+            "P(S>=15)": 0.1472,
+            "P(S>=20)": 0.0875,
+            "P(S>=25)": 0.0548,
+            "P(S>=30)": 0.0356,
+            "P(S>=35)": 0.0199,
+            "P(S>=40)": 0.0107
+          },
+          "excursions": 1406,
+          "exercises": [
+            "바벨 런지"
+          ],
+          "extremes": [
+            "min"
+          ],
+          "median": 0.72,
+          "p50": 0.71,
+          "p75": 9.38,
+          "p90": 18.77,
+          "p95": 26.73,
+          "p99": 40.55,
+          "subjects": 42
+        },
+        "스탠딩 니업": {
+          "captureDays": [
+            "Day01_200921_F",
+            "Day04_200924_F",
+            "Day05_200925_F",
+            "Day08_201005_F",
+            "Day09_201006_F",
+            "Day12_201012_F",
+            "Day13_201013_F",
+            "Day16_201016_F",
+            "Day23_201024_F",
+            "Day26_201028_F",
+            "Day27_201029_F",
+            "Day30_201102_F"
+          ],
+          "clips": 1120,
+          "exceedance": {
+            "P(S>=10)": 0.1607,
+            "P(S>=15)": 0.0884,
+            "P(S>=20)": 0.0554,
+            "P(S>=25)": 0.0321,
+            "P(S>=30)": 0.0161,
+            "P(S>=35)": 0.0089,
+            "P(S>=40)": 0.0054
+          },
+          "excursions": 1120,
+          "exercises": [
+            "스탠딩 니업"
+          ],
+          "extremes": [
+            "min"
+          ],
+          "median": -1.14,
+          "p50": -1.14,
+          "p75": 6.19,
+          "p90": 13.78,
+          "p95": 20.74,
+          "p99": 32.26,
+          "subjects": 55
+        },
+        "스텝 포워드 다이나믹 런지": {
+          "captureDays": [
+            "Day01_200921_F",
+            "Day05_200925_F",
+            "Day09_201006_F",
+            "Day13_201013_F",
+            "Day23_201024_F",
+            "Day27_201029_F"
+          ],
+          "clips": 1513,
+          "exceedance": {
+            "P(S>=10)": 0.5314,
+            "P(S>=15)": 0.3979,
+            "P(S>=20)": 0.267,
+            "P(S>=25)": 0.1646,
+            "P(S>=30)": 0.0846,
+            "P(S>=35)": 0.043,
+            "P(S>=40)": 0.0225
+          },
+          "excursions": 1513,
+          "exercises": [
+            "스텝 포워드 다이나믹 런지"
+          ],
+          "extremes": [
+            "min"
+          ],
+          "median": 11.16,
+          "p50": 11.16,
+          "p75": 20.54,
+          "p90": 28.62,
+          "p95": 33.64,
+          "p99": 44.57,
+          "subjects": 48
+        },
+        "크로스 런지": {
+          "captureDays": [
+            "Day02_200922_F",
+            "Day10_201007_F",
+            "Day14_201014_F",
+            "Day24_201026_F"
+          ],
+          "clips": 270,
+          "exceedance": {
+            "P(S>=10)": 0.3481,
+            "P(S>=15)": 0.2185,
+            "P(S>=20)": 0.137,
+            "P(S>=25)": 0.0593,
+            "P(S>=30)": 0.0259,
+            "P(S>=35)": 0.0185,
+            "P(S>=40)": 0.0148
+          },
+          "excursions": 270,
+          "exercises": [
+            "크로스 런지"
+          ],
+          "extremes": [
+            "min"
+          ],
+          "median": 3.58,
+          "p50": 3.52,
+          "p75": 13.72,
+          "p90": 22.57,
+          "p95": 25.64,
+          "p99": 41.95,
+          "subjects": 33
+        },
+        "풀업": {
+          "captureDays": [
+            "Day17_201017_F",
+            "Day20_201021_F",
+            "Day21_201022_F",
+            "Day22_201023_F"
+          ],
+          "clips": 573,
+          "exceedance": {
+            "P(S>=10)": 0.8988,
+            "P(S>=15)": 0.8045,
+            "P(S>=20)": 0.7086,
+            "P(S>=25)": 0.5742,
+            "P(S>=30)": 0.4363,
+            "P(S>=35)": 0.281,
+            "P(S>=40)": 0.1658
+          },
+          "excursions": 573,
+          "exercises": [
+            "풀업"
+          ],
+          "extremes": [
+            "min"
+          ],
+          "median": 27.45,
+          "p50": 27.45,
+          "p75": 36.62,
+          "p90": 44.48,
+          "p95": 48.64,
           "p99": 59.53,
           "subjects": 32
         }
@@ -1584,6 +2366,6 @@
     }
   },
   "signedConvention": "S = min(MediaPipe) − min(label) for a min chain, max(label) − max(MediaPipe) for a max chain; positive means the reported extreme sits short of the truth",
-  "source": "sides.json",
+  "source": "bridge-sides.full-sweep.v1.json",
   "unit": "one record per (clip, side) with at least MINIMUM_PAIRED_FRAMES same-side pairs"
 }

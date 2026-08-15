@@ -81,18 +81,22 @@ internal class FormCheckDriver(
      * Measured, not chosen: the paired quantity is `S`, the degrees by which a reported extreme
      * overstates a shortfall (`min(MediaPipe) − min(label)` over exactly the same frames of the
      * same side), and a claimed gap of N is entirely manufactured with probability `P(S ≥ N)`.
-     * Each floor is an upper quantile of that distribution under the RUNTIME-LIKE selector — per
-     * clip, the side MediaPipe read deepest, paired with that side's own label — which is the
-     * closest analogue to this engine's confidence-first, side-sticky choice. The selector has to
-     * be named because the far side of a lateral capture reads systematically worse on every
+     * Each floor is an upper quantile of that distribution under THIS ENGINE'S OWN side
+     * selector, reproduced verbatim from the sides stream's per-side chain confidence: on the
+     * first frame both sides are credible, the higher chain confidence wins (Left on a tie) and
+     * is held — [FormCheckGeometry.sample] plus the session's side-stickiness. The selector has
+     * to be named because the far side of a lateral capture reads systematically worse on every
      * chain (p90 10-13 degrees higher), so an "extreme error" that weights both sides equally
-     * describes a selector this engine does not run and would put every floor 10-13 degrees too
-     * low. The per-frame error card cannot answer any of this: the error at the bottom of an
-     * excursion is phase-dependent and one-signed — the deepest frame is the most self-occluded
-     * one and it fails toward under-flexion — so the extreme's bias runs 3-6x the per-frame
-     * median. At a single 15-degree floor roughly half of all knee and elbow statements would be
-     * measurement alone, which is why this is a per-chain map. Source:
-     * docs/bridge-extreme-error.v1.json, 365,354 same-side pairs, policy §4.10.
+     * describes a selector this engine does not run. And it has to be the confidence rule, not
+     * a depth-based stand-in: the two pick different sides on 14-48% of clips depending on the
+     * chain, and when they differ the confidence-picked side reads 3-10 degrees worse at the
+     * median — which is what moved the elbow floor from 35 to 45. Every floor sits where
+     * P(S >= floor) is 7-8% under the exact selector, so the four are on one footing. The
+     * per-frame error card cannot answer any of this: the error at the bottom of an excursion is
+     * phase-dependent and one-signed — the deepest frame is the most self-occluded one and it
+     * fails toward under-flexion — so the extreme's bias runs 3-6x the per-frame median. Source:
+     * docs/bridge-extreme-error.v1.json (selectors.runtimeExact), 365,354 same-side pairs with
+     * confidence, policy §4.10.
      */
     val referenceNoticeableDegrees: Double? = null,
 ) {
@@ -117,8 +121,9 @@ internal class FormCheckDriver(
             vertex = FormCheckJointGroup.KNEE,
             first = FormCheckJointGroup.HIP,
             second = FormCheckJointGroup.ANKLE,
-            // Runtime-like p90 +27.2 over 1,783 clips, 54 subjects, two exercises (step forward
-            // lunge, cross lunge); P(S >= 30) = 6.1%. Both-sides-equal p90 is +39.2.
+            // Exact-selector p90 +28.0 over 1,783 clips, 54 subjects, two exercises (step
+            // forward lunge, cross lunge); P(S >= 30) = 7.6%. Confidence and depth agree on the
+            // side 86% of the time here, the highest of the four chains.
             referenceNoticeableDegrees = 30.0,
         )
 
@@ -127,9 +132,10 @@ internal class FormCheckDriver(
             vertex = FormCheckJointGroup.HIP,
             first = FormCheckJointGroup.SHOULDER,
             second = FormCheckJointGroup.KNEE,
-            // Runtime-like p90 +12.7 over 2,526 clips, 63 subjects, two exercises (barbell
-            // lunge, standing knee-up); P(S >= 20) = 4.2%. The best-behaved chain, and the
-            // widest margin under its floor.
+            // Exact-selector p90 +16.8 over 2,526 clips, 63 subjects, two exercises (barbell
+            // lunge, standing knee-up); P(S >= 20) = 7.3%. The depth stand-in read 12.7 — the
+            // confidence rule picks the other side on 24% of clips and it costs 9.7 degrees at
+            // the median when it does.
             referenceNoticeableDegrees = 20.0,
         )
 
@@ -138,10 +144,15 @@ internal class FormCheckDriver(
             vertex = FormCheckJointGroup.ELBOW,
             first = FormCheckJointGroup.SHOULDER,
             second = FormCheckJointGroup.WRIST,
-            // Runtime-like p90 +33.5 over 1,138 clips, 32 subjects, two exercises (dips 27.7,
-            // pull-up 38.0); P(S >= 35) = 8.1%. The thinnest margin of the four — this line is
-            // the first to re-measure if an elbow exercise ever qualifies for the distance.
-            referenceNoticeableDegrees = 35.0,
+            // Exact-selector p90 +42.1 over 1,138 clips, 32 subjects, two exercises (dips
+            // 33.8, pull-up 44.5); P(S >= 45) = 7.4%. Was 35 on the depth-based stand-in
+            // (p90 33.5) — under the confidence rule the two selectors disagree on 37% of
+            // elbow clips and the confidence-picked side reads 10.3 degrees worse at the median
+            // when they do, which is exactly the margin the old floor did not have. At 35 the
+            // exact P(S >= floor) was 18.9%, more than double the other chains'. No elbow
+            // exercise's counted band reaches 45 (dips 29, pull-up 20), so none may state a
+            // distance — measured now, not assumed.
+            referenceNoticeableDegrees = 45.0,
         )
 
         /**
@@ -157,12 +168,13 @@ internal class FormCheckDriver(
             vertex = FormCheckJointGroup.SHOULDER,
             first = FormCheckJointGroup.ELBOW,
             second = FormCheckJointGroup.HIP,
-            // Runtime-like p90 +21.1 over 549 clips of ONE exercise (lat pull-down), 32
-            // subjects; P(S >= 25) = 6.0%. The one chain whose floor is not a transfer where it
+            // Exact-selector p90 +22.3 over 549 clips of ONE exercise (lat pull-down), 32
+            // subjects; P(S >= 25) = 7.7%. The one chain whose floor is not a transfer where it
             // is used: the lat pull-down is both the only exercise this floor was measured on
-            // and the only exercise that reports a distance — and the one chain where the
-            // three selectors nearly agree (21.1 / 22.8 / 25.6), because its two sides read
-            // almost alike.
+            // and the only exercise that reports a distance. Confidence and depth pick different
+            // sides on 48% of its clips — the highest disagreement — yet it costs only 2.6
+            // degrees at the median, because this chain's two sides read almost alike; that is
+            // why every selector lands within 4 degrees here (21.1 / 22.3 / 22.8 / 25.6).
             referenceNoticeableDegrees = 25.0,
         )
 

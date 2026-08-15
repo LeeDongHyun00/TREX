@@ -528,7 +528,9 @@ class FormCheckGovernanceTest {
         // cannot state a distance at all.
         assertEquals(30.0, FormCheckDriver.KNEE.referenceNoticeableDegrees)
         assertEquals(20.0, FormCheckDriver.HIP.referenceNoticeableDegrees)
-        assertEquals(35.0, FormCheckDriver.ELBOW.referenceNoticeableDegrees)
+        // 45, from 35: the exact confidence-first selector disagrees with the depth stand-in on
+        // 37% of elbow clips and reads ten degrees worse when it does (v2.14).
+        assertEquals(45.0, FormCheckDriver.ELBOW.referenceNoticeableDegrees)
         assertEquals(25.0, FormCheckDriver.SHOULDER.referenceNoticeableDegrees)
         assertNull(FormCheckDriver.TRUNK.referenceNoticeableDegrees)
 

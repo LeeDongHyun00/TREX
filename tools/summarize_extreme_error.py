@@ -40,20 +40,24 @@ the lateral capture the far side reads systematically worse on every chain (its 
 which side is being reported, and this tool reports S under three selectors:
 
   * ``perSideEqual``     every (clip, side) counted once — what a two-sided error card would say
+  * ``runtimeExact``     per clip, the side the runtime would lock onto: on the first paired
+                         frame where both sides are credible, the higher chain confidence wins
+                         (Left on a tie), and that side is held for the clip — verbatim
+                         FormCheckGeometry.sample plus HeuristicFormCheckSession.selectSample.
+                         Needs the ``confidence`` field the sides stream carries.
+  * ``runtimeByMeanConfidence``  per clip, the side with the higher MEAN chain confidence over
+                         its paired frames — what side-stickiness converges to, kept beside the
+                         exact rule because a clip's first frame is an arbitrary instant.
   * ``runtimeLike``      per clip, the side whose MediaPipe extreme is deepest, paired with THAT
-                         side's own label — the closest analogue to the runtime, which picks the
-                         better-observed side and sticks to it for the excursion
+                         side's own label — the depth-based analogue used before the confidence
+                         field existed; kept so the two can be compared.
   * ``worstSide``        per clip, the larger S of the two — the far side, mostly
 
-The runtime-like selector is what policy §4.10's floors are an upper quantile of, and under it
-the collapsed pairing the previous measurement used turns out to have been an honest proxy: the
-two agree to within a degree on every chain, because in a lateral view "deepest MediaPipe side"
-and "deepest label side" are almost always the same near side. The per-side-equal figures are
-5-13 degrees worse at p90 and describe a selector the app does not run.
-
-What runtime-like still does not reproduce: the runtime picks by chain CONFIDENCE, this tool
-picks by depth. The two coincide when the near side is both better seen and reads deeper, which
-is the lateral norm; a per-side confidence field in the sides stream would close it exactly.
+Policy §4.10's floors are upper quantiles under the runtime's own selector, ``runtimeExact``.
+The per-side-equal figures weight the far side equally and describe a selector the app does not
+run; the depth-based ``runtimeLike`` was the stand-in before confidence was carried, and the
+artifact keeps it so the gap between "picked by depth" and "picked by confidence" is a number
+rather than an assumption.
 
 What it cannot answer
 ---------------------
@@ -111,6 +115,8 @@ def selector_views(rows: Sequence[dict]) -> Dict[str, Dict[str, List[dict]]]:
 
     views: Dict[str, Dict[str, List[dict]]] = {
         "perSideEqual": defaultdict(list),
+        "runtimeExact": defaultdict(list),
+        "runtimeByMeanConfidence": defaultdict(list),
         "runtimeLike": defaultdict(list),
         "worstSide": defaultdict(list),
     }
@@ -159,7 +165,49 @@ def selector_views(rows: Sequence[dict]) -> Dict[str, Dict[str, List[dict]]]:
             {**base, "side": worst, "pairedFrames": len(usable[worst]),
              "overstatementDegrees": round(per_side[worst], 2)}
         )
+        # The two confidence selectors need the field; rows from an older run lack it and the
+        # views simply stay empty, which the artifact then reports as such.
+        if all("confidence" in f for fr in usable.values() for f in fr):
+            locked = runtime_locked_side(usable)
+            if locked is not None:
+                views["runtimeExact"][chain].append(
+                    {**base, "side": locked, "pairedFrames": len(usable[locked]),
+                     "overstatementDegrees": round(per_side[locked], 2)}
+                )
+            by_mean = max(
+                usable,
+                key=lambda s: (
+                    sum(f["confidence"] for f in usable[s]) / len(usable[s]),
+                    s == "Left",
+                ),
+            )
+            views["runtimeByMeanConfidence"][chain].append(
+                {**base, "side": by_mean, "pairedFrames": len(usable[by_mean]),
+                 "overstatementDegrees": round(per_side[by_mean], 2)}
+            )
     return views
+
+
+def runtime_locked_side(usable: Dict[str, List[dict]]) -> Optional[str]:
+    """The side FormCheckGeometry.sample would pick on the first frame both sides are credible.
+
+    HeuristicFormCheckSession.selectSample then holds that side while it stays credible, so the
+    first joint frame decides the clip. Frames are put in capture order by their image key — the
+    key ends in a zero-padded frame index, and emission order is NOT capture order, because the
+    bridge tool's workers drain a queue in whatever order they finish. Left wins a tie, as
+    `left.chainConfidence >= right.chainConfidence` does in the runtime.
+    """
+    if "Left" not in usable or "Right" not in usable:
+        return next(iter(usable))
+    right_by_key = {f["key"]: f for f in usable["Right"]}
+    for left in sorted(usable["Left"], key=lambda f: f["key"]):
+        right = right_by_key.get(left["key"])
+        if right is None:
+            continue
+        return "Left" if left["confidence"] >= right["confidence"] else "Right"
+    # No frame where both sides were credible: the runtime would have locked whichever
+    # appeared first, which the clip cannot say. Abstain.
+    return None
 
 
 def excursion_overstatements(rows: Sequence[dict]) -> Dict[str, List[dict]]:
@@ -285,10 +333,12 @@ def main() -> int:
         },
         "selectorNote": (
             "perChain/perExercise above count every (clip, side) once. The floors in policy "
-            "§4.10 are upper quantiles under selectors.runtimeLike — the side whose MediaPipe "
-            "extreme is deepest, paired with its own label — which is the closest analogue to "
-            "the runtime's confidence-first side choice. perSideEqual weights the far side "
-            "equally and describes a selector the app does not run."
+            "§4.10 are upper quantiles under selectors.runtimeExact — the side the runtime locks "
+            "onto, chosen by chain confidence on the first frame both sides are credible and "
+            "held thereafter, verbatim FormCheckGeometry.sample + selectSample. runtimeLike is "
+            "the depth-based stand-in used before the confidence field existed and is kept for "
+            "comparison; perSideEqual weights the far side equally and describes a selector the "
+            "app does not run."
         ),
         "limitations": [
             "A clip holds ~16 labelled frames against a 40-60 frame runtime window; the transfer "
