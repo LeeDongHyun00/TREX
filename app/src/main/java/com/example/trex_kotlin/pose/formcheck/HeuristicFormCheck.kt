@@ -30,7 +30,7 @@ internal object HeuristicFormCheckDeclaration {
     const val TRACK_ID: String = "trex.heuristic-form-check.beta.v1"
 
     const val POLICY_DOCUMENT_SHA256: String =
-        "fbd83ad5060fb3d7a2fcf7ed2f6b061807ef06800276b1c5919590c46d9468ce"
+        "c9ba951f4e7aa55ac21d1aa2a13b190c2766843796d42f3705591f026f02e715"
 
     const val POLICY_DOCUMENT_PATH: String = "docs/pose-heuristic-form-check.v1.md"
 
@@ -102,6 +102,14 @@ internal object HeuristicFormCheckDeclaration {
 
     /** Non-text descriptions for a screen reader, which the drawing alone cannot carry. */
     const val OVERLAY_DESCRIPTION: String = "카메라가 지금 재고 있는 관절"
+
+    /**
+     * Shown while an exercise whose identity depends on orientation (§4.3c) is running on a
+     * device whose gravity cannot be read. The clause fails open by design — an unmeasured
+     * direction is evidence of nothing — but silence about the silence would let a push-up or a
+     * plank be counted by joints alone with the user believing orientation was checked.
+     */
+    const val ORIENTATION_SILENT_DISCLOSURE: String = "기기 방향을 읽을 수 없어 몸 방향은 확인하지 않아요"
 
     /** Every claim this track could conceivably make, all withheld. */
     val claims: Map<String, Boolean> = Collections.unmodifiableMap(
@@ -395,6 +403,19 @@ internal enum class FormCheckGateSide {
     OPPOSITE,
 }
 
+/**
+ * The definition-evidence floors, shared by the clause contract and the session that enforces it.
+ *
+ * A definition gate abstains below [DEFINITION_MINIMUM_OBSERVED_FRAMES] observed frames — an
+ * unobserved joint is evidence in neither direction. A STAY clause needs
+ * [DEFINITION_MINIMUM_VIOLATING_FRAMES] violating frames before it discards an excursion, and a
+ * REACH clause may demand up to the observation floor in satisfying frames; one frame is noise
+ * in both directions. The per-frame error is measured (`docs/bridge-frame-error.v1.json`):
+ * median absolute error runs 7.7–19.2 degrees per chain with p95 tails up to 58.
+ */
+internal const val DEFINITION_MINIMUM_OBSERVED_FRAMES = 5
+internal const val DEFINITION_MINIMUM_VIOLATING_FRAMES = 3
+
 /** Which end of the excursion window a definition gate evaluates. */
 internal enum class FormCheckGateStatistic { WINDOW_MINIMUM, WINDOW_MAXIMUM }
 
@@ -430,6 +451,18 @@ internal class FormCheckDefinitionGate(
     val comparator: FormCheckGateComparator,
     /** A real joint angle; the window statistic is compared against it. */
     val boundDegrees: Double,
+    /**
+     * How many frames of the excursion a REACH clause must find at or inside its bound before it
+     * is satisfied — the mirror, from the other side, of the STAY rule's
+     * [HeuristicFormCheckSession.DEFINITION_MINIMUM_VIOLATING_FRAMES]. A REACH clause read from a
+     * raw window extreme is satisfied by a single frame, and the bridge sweep measured how often
+     * a single frame lies: a hip whose true angle sits at 140–150 degrees reads at or under 140
+     * on 27.7% of frames. One frame is not evidence that the joint went somewhere. One keeps the
+     * historical single-frame reading; only clauses whose leak has been measured raise it. The
+     * session evaluates the k-th best reading, so the reported shortfall angle is a position the
+     * joint actually held rather than its noisiest instant.
+     */
+    val minimumSatisfyingFrames: Int = 1,
     /** Every gate bound is an uncalibrated default today; candidates for the fit pipeline. */
     val provenance: FormCheckThresholdProvenance,
     /**
@@ -442,6 +475,12 @@ internal class FormCheckDefinitionGate(
         require(boundDegrees in 0.0..180.0) { "A gate bound must be a real joint angle" }
         require(shortfallObservation.contains("%d")) {
             "The shortfall observation must state the measured angle"
+        }
+        require(minimumSatisfyingFrames in 1..DEFINITION_MINIMUM_OBSERVED_FRAMES) {
+            "A REACH clause cannot demand more frames than the observation floor guarantees"
+        }
+        require(minimumSatisfyingFrames == 1 || !requiresSustainedReading) {
+            "A STAY clause counts violating frames, not satisfying ones"
         }
     }
 
@@ -565,15 +604,24 @@ internal enum class FormCheckExercise(
         driver = FormCheckDriver.KNEE,
         direction = FormCheckWorkingDirection.FLEXION,
         bilateralDriver = true,
-        // A squat sits back: the hips travel with the knees (the biomechanics literature puts
-        // parallel-squat hip flexion far past this line). A knee-only dip — bouncing on the
-        // ankles with the torso upright — leaves the hip chain near straight and is not a squat.
+        // A squat sits back: the hips travel with the knees. The first version of this clause
+        // said an upright knee bend "leaves the hip chain near straight" — measured, that premise
+        // is false. Balance alone forces the hip of a planted-foot, upright-torso knee bend down
+        // to 135–141 degrees by the time the knees reach the rep line (planar linkage over
+        // Winter's segment ratios, reproduced independently to 0.1 degree), so the old 140 bound
+        // admitted the impostor on true geometry. 130 sits between that balance floor (135.2 at
+        // the edge of falling backwards) and the p99 of 4,226 real squat repetitions
+        // reconstructed from the 3D labels (124.9), costing 0.59% of real repetitions. And one
+        // frame is no longer enough to satisfy it: the bridge sweep measured a true 140–150
+        // degree hip reading at or under 140 on 27.7% of frames, so this clause demands the
+        // third-best reading — the single-frame leak, not the bound, was the dominant escape.
         definition = listOf(
             FormCheckDefinitionGate(
                 chain = FormCheckDriver.HIP,
                 statistic = FormCheckGateStatistic.WINDOW_MINIMUM,
                 comparator = FormCheckGateComparator.AT_MOST,
-                boundDegrees = 140.0,
+                boundDegrees = 130.0,
+                minimumSatisfyingFrames = 3,
                 provenance = FormCheckThresholdProvenance.HEURISTIC_DEFAULT,
                 shortfallObservation = "엉덩이가 %d도까지만 굽혀져서 횟수로 세지 않았어요",
             ),
@@ -1140,6 +1188,24 @@ internal enum class FormCheckExercise(
         driver = FormCheckDriver.ELBOW,
         direction = FormCheckWorkingDirection.FLEXION,
         bilateralDriver = true,
+        // A hanging body stays straight. Measured over 2,033 repetition-shaped excursions from
+        // 475 clips and 32 subjects (gate-bound-quantiles v1): the hip window minimum's p1 is
+        // 139.3, so a bound at 125 sits 14.3 degrees outside the population and costs 0.70% of
+        // excursions — a body that folds past it mid-pull (a seated row, a squatting arm pull,
+        // a knee-tucked kip) is doing something this counter does not count. The overhead-hang
+        // moment itself lives at rest, outside the excursion window, which is why the clause
+        // reads the hip and not the shoulder: the shoulder's in-window maximum was measured and
+        // its p1 (57.0) leaves no bound both meaningful and affordable.
+        definition = listOf(
+            FormCheckDefinitionGate(
+                chain = FormCheckDriver.HIP,
+                statistic = FormCheckGateStatistic.WINDOW_MINIMUM,
+                comparator = FormCheckGateComparator.AT_LEAST,
+                boundDegrees = 125.0,
+                provenance = FormCheckThresholdProvenance.HEURISTIC_DEFAULT,
+                shortfallObservation = "엉덩이가 %d도까지 굽혀져서 횟수로 세지 않았어요",
+            ),
+        ),
         cadence = FormCheckCadence.REPETITION,
         restAngleDegrees = 150.0,
         attemptAngleDegrees = 140.0,
@@ -1156,6 +1222,20 @@ internal enum class FormCheckExercise(
         driver = FormCheckDriver.ELBOW,
         direction = FormCheckWorkingDirection.FLEXION,
         bilateralDriver = true,
+        // A face pull is done standing at a cable, torso carried; an elbow arc performed while
+        // bowing or crouching is not one. Measured over 1,197 excursions from 254 clips and 32
+        // subjects: the hip window minimum's p1 is 116.6, so 105 sits 11.6 degrees outside the
+        // population and cost exactly zero measured excursions.
+        definition = listOf(
+            FormCheckDefinitionGate(
+                chain = FormCheckDriver.HIP,
+                statistic = FormCheckGateStatistic.WINDOW_MINIMUM,
+                comparator = FormCheckGateComparator.AT_LEAST,
+                boundDegrees = 105.0,
+                provenance = FormCheckThresholdProvenance.HEURISTIC_DEFAULT,
+                shortfallObservation = "엉덩이가 %d도까지 굽혀져서 횟수로 세지 않았어요",
+            ),
+        ),
         cadence = FormCheckCadence.REPETITION,
         restAngleDegrees = 150.0,
         attemptAngleDegrees = 140.0,
@@ -1208,6 +1288,23 @@ internal enum class FormCheckExercise(
         exercise = AiHubExercise.DUMBBELL_BENT_OVER_ROW,
         driver = FormCheckDriver.ELBOW,
         direction = FormCheckWorkingDirection.FLEXION,
+        // A row keeps the upper arm rowing, not swinging: the same 140-degree line the curls
+        // hold and the overhead press requires from the other side. Measured over 7,565
+        // excursions from 1,411 clips and 42 subjects: the shoulder window maximum's p99 is
+        // 121.2, so 140 sits 18.8 degrees outside the population and costs 0.11% of excursions.
+        // The barbell twin measurably cannot carry this clause — 13.2% of its excursions swing
+        // past 140 — so the two rows genuinely differ and only this one is gated.
+        definition = listOf(
+            FormCheckDefinitionGate(
+                chain = FormCheckDriver.SHOULDER,
+                statistic = FormCheckGateStatistic.WINDOW_MAXIMUM,
+                comparator = FormCheckGateComparator.AT_MOST,
+                boundDegrees = 140.0,
+                provenance = FormCheckThresholdProvenance.HEURISTIC_DEFAULT,
+                shortfallObservation =
+                    "어깨가 %d도까지 벌어져 위팔이 몸통과 거의 일직선이 되어서 횟수로 세지 않았어요",
+            ),
+        ),
         // Deliberately not bilateral: the one-arm row, braced on a bench, is the standard way
         // to perform this exercise, and its free arm never moves.
         cadence = FormCheckCadence.REPETITION,
@@ -1277,6 +1374,17 @@ internal enum class FormCheckExercise(
         driver = FormCheckDriver.HIP,
         direction = FormCheckWorkingDirection.FLEXION,
         bilateralDriver = true,
+        // Sitting down flexes both hips through this exercise's whole arc, so lying is part of
+        // the movement's identity — and no included angle says "lying": the knee-straight gate
+        // anatomy suggests was measured and refused (the population's median knee window
+        // minimum is 58.4 degrees — real lying raises here bend the knees). Orientation is the
+        // honest clause, on the same terms as the push-ups: supine puts the torso across
+        // gravity, sitting puts it along, and a device that cannot read gravity leaves the
+        // clause silent (§4.3c).
+        posture = FormCheckPostureRequirement(
+            minimumTorsoGravityAngleDegrees = 60.0,
+            shortfallObservation = "몸통이 중력 기준 %d도로 서 있어서 횟수로 세지 않았어요",
+        ),
         cadence = FormCheckCadence.REPETITION,
         restAngleDegrees = 150.0,
         attemptAngleDegrees = 140.0,
@@ -1410,6 +1518,17 @@ internal enum class FormCheckExercise(
         exercise = AiHubExercise.PLANK,
         driver = FormCheckDriver.HIP,
         direction = FormCheckWorkingDirection.EXTENSION,
+        // A standing body and a plank share a straight hip, so the driver angle alone would let
+        // the hold accrue on somebody standing still — the same identity failure the squat's
+        // hip clause exists for, with no joint able to answer it. Orientation is the answer:
+        // the v2.9 measurement put a prone torso 76–80 degrees from gravity and the standing
+        // family at 24 or less, and 60 splits that with a 16-degree margin each way — the same
+        // bound and provenance as the push-ups, which share the position. On a device where
+        // gravity cannot be read the clause is silent and the driver counts alone (§4.3c).
+        posture = FormCheckPostureRequirement(
+            minimumTorsoGravityAngleDegrees = 60.0,
+            shortfallObservation = "몸통이 중력 기준 %d도로 서 있어서 유지 시간을 세지 않았어요",
+        ),
         cadence = FormCheckCadence.HOLD,
         restAngleDegrees = 145.0,
         attemptAngleDegrees = 152.0,
@@ -1710,6 +1829,24 @@ internal class HeuristicFormCheckSession(
     private val gateWindowMaximum = DoubleArray(spec.definition.size) { -Double.MAX_VALUE }
 
     /**
+     * The k best readings of each REACH clause's window, best first, where k is the clause's
+     * [FormCheckDefinitionGate.minimumSatisfyingFrames]. Element k−1 is the statistic the clause
+     * is judged on: the angle the joint held for k frames, not the single frame it grazed. With
+     * k = 1 the sole element is the raw extreme and the behaviour is the historical one.
+     * [DEFINITION_MINIMUM_OBSERVED_FRAMES] ≥ k is a class invariant, so a gate that votes at all
+     * always has a full buffer.
+     */
+    private val gateReachBest = Array(spec.definition.size) { index ->
+        val gate = spec.definition[index]
+        DoubleArray(gate.minimumSatisfyingFrames) {
+            when (gate.statistic) {
+                FormCheckGateStatistic.WINDOW_MINIMUM -> Double.MAX_VALUE
+                FormCheckGateStatistic.WINDOW_MAXIMUM -> -Double.MAX_VALUE
+            }
+        }
+    }
+
+    /**
      * How many frames of the excursion each STAY clause was actually outside its bound. A single
      * misread frame is noise; a position the movement held is the thing worth reporting.
      */
@@ -1725,6 +1862,14 @@ internal class HeuristicFormCheckSession(
     private var postureObservedFrames = 0
     private var postureViolatingFrames = 0
     private var postureMostUprightDegrees = Double.MAX_VALUE
+
+    /**
+     * The hold cadence's posture streak: how many consecutive frames the torso has measurably
+     * pointed the way the held position is not, and the most upright angle of the streak. A
+     * frame where orientation cannot be measured resets both — abstention, not evidence.
+     */
+    private var holdUprightStreak = 0
+    private var holdUprightDegrees = Double.MAX_VALUE
 
     /**
      * Detector-space extremes of this set's opening repetitions, used as the set's own baseline.
@@ -1788,7 +1933,52 @@ internal class HeuristicFormCheckSession(
 
         val detectorValue = spec.toDetector(sample.includedAngleDegrees)
         holdDetector?.let { hold ->
-            when (val event = hold.accept(timestampMs, detectorValue)) {
+            // The hold-cadence posture clause (§4.3c): a plank's driver angle cannot tell a prone
+            // body from a standing one — both keep a straight hip — so orientation is part of the
+            // held position's identity. The two directions get the asymmetric treatment the
+            // REACH/STAY distinction prescribes. Entry is vetoed on any frame measurably upright:
+            // a wrongly vetoed entry heals on the next frame, so single-frame evidence is enough.
+            // A hold in flight ends only on a sustained upright reading, because one blown frame
+            // ending a real hold is the expensive direction; and it ends as a *release* — the
+            // stretch until the body turned upright genuinely happened and is counted by the
+            // normal rule. A frame where orientation cannot be measured resets the streak: an
+            // unobserved torso is evidence in neither direction, so on a device without the
+            // sensor this clause is silent and the driver angle counts alone.
+            val posture = spec.posture
+            val wasHolding = hold.holding
+            var uprightThisFrame: Double? = null
+            if (posture != null) {
+                val angle = torsoGravityAngleDegrees(frame, gravity)
+                if (angle != null && !posture.satisfied(angle)) {
+                    uprightThisFrame = angle
+                    holdUprightStreak += 1
+                    holdUprightDegrees = minOf(holdUprightDegrees, angle)
+                } else {
+                    holdUprightStreak = 0
+                    holdUprightDegrees = Double.MAX_VALUE
+                }
+            }
+            if (hold.holding && holdUprightStreak >= DEFINITION_MINIMUM_VIOLATING_FRAMES) {
+                when (val ended = hold.release(timestampMs)) {
+                    is HoldEvent.Released -> {
+                        headline = if (ended.countedAsHold) {
+                            longestHoldMs = maxOf(longestHoldMs, ended.heldMs)
+                            "${(ended.heldMs / 1_000L)}초 유지했어요"
+                        } else {
+                            "자세가 잠깐 풀렸어요"
+                        }
+                        suggestion = null
+                    }
+
+                    else -> Unit
+                }
+            }
+            val event = hold.accept(
+                timestampMs,
+                detectorValue,
+                allowEntry = uprightThisFrame == null,
+            )
+            when (event) {
                 HoldEvent.Entered -> {
                     headline = "자세를 잡았어요"
                     suggestion = null
@@ -1812,6 +2002,21 @@ internal class HeuristicFormCheckSession(
                 }
 
                 HoldEvent.None -> Unit
+            }
+            // Said once per upright stretch, at the moment the reading becomes sustained — the
+            // truthful reason no hold is accruing, in the same vocabulary as every shortfall.
+            // Not on the frame that just released a real hold: the counted seconds are the
+            // announcement there, and the veto line takes over only if the user stays upright.
+            if (
+                posture != null &&
+                !wasHolding &&
+                !hold.holding &&
+                holdUprightStreak == DEFINITION_MINIMUM_VIOLATING_FRAMES &&
+                holdUprightDegrees != Double.MAX_VALUE
+            ) {
+                headline = posture.shortfallObservation
+                    .format(holdUprightDegrees.roundToInt().coerceIn(0, 180))
+                suggestion = null
             }
             // A hold has no excursion, so its reading carries none: the surface draws the angle
             // the body is holding and nothing about a movement that is not happening.
@@ -2090,10 +2295,34 @@ internal class HeuristicFormCheckSession(
             gateObservedFrames[index] += 1
             gateWindowMinimum[index] = minOf(gateWindowMinimum[index], sample.includedAngleDegrees)
             gateWindowMaximum[index] = maxOf(gateWindowMaximum[index], sample.includedAngleDegrees)
+            offerReachReading(gateReachBest[index], gate.statistic, sample.includedAngleDegrees)
             if (!gate.satisfied(sample.includedAngleDegrees)) {
                 gateViolatingFrames[index] += 1
             }
         }
+    }
+
+    /**
+     * Inserts one reading into a best-first buffer of the k best seen this window: ascending for
+     * a WINDOW_MINIMUM clause, descending for a WINDOW_MAXIMUM one. k is at most
+     * [DEFINITION_MINIMUM_OBSERVED_FRAMES], so the shift is a handful of doubles.
+     */
+    private fun offerReachReading(
+        best: DoubleArray,
+        statistic: FormCheckGateStatistic,
+        angleDegrees: Double,
+    ) {
+        val better: (Double, Double) -> Boolean = when (statistic) {
+            FormCheckGateStatistic.WINDOW_MINIMUM -> { a, b -> a < b }
+            FormCheckGateStatistic.WINDOW_MAXIMUM -> { a, b -> a > b }
+        }
+        if (!better(angleDegrees, best[best.size - 1])) return
+        var position = best.size - 1
+        while (position > 0 && better(angleDegrees, best[position - 1])) {
+            best[position] = best[position - 1]
+            position -= 1
+        }
+        best[position] = angleDegrees
     }
 
     /**
@@ -2109,9 +2338,17 @@ internal class HeuristicFormCheckSession(
         var shortfall: Pair<FormCheckDefinitionGate, Int>? = null
         for ((index, gate) in spec.definition.withIndex()) {
             if (gateObservedFrames[index] < DEFINITION_MINIMUM_OBSERVED_FRAMES) continue
-            val statistic = when (gate.statistic) {
-                FormCheckGateStatistic.WINDOW_MINIMUM -> gateWindowMinimum[index]
-                FormCheckGateStatistic.WINDOW_MAXIMUM -> gateWindowMaximum[index]
+            val statistic = if (gate.requiresSustainedReading) {
+                // A STAY clause is judged on sustained violations and reports the raw extreme.
+                when (gate.statistic) {
+                    FormCheckGateStatistic.WINDOW_MINIMUM -> gateWindowMinimum[index]
+                    FormCheckGateStatistic.WINDOW_MAXIMUM -> gateWindowMaximum[index]
+                }
+            } else {
+                // A REACH clause is judged on — and reports — the k-th best reading, so the
+                // decision and the printed angle are the same quantity and the shortfall
+                // sentence stays literally true (§4.9 rule 6).
+                gateReachBest[index][gate.minimumSatisfyingFrames - 1]
             }
             val failed = if (gate.requiresSustainedReading) {
                 gateViolatingFrames[index] >= DEFINITION_MINIMUM_VIOLATING_FRAMES
@@ -2132,6 +2369,14 @@ internal class HeuristicFormCheckSession(
         gateWindowMinimum.fill(Double.MAX_VALUE)
         gateWindowMaximum.fill(-Double.MAX_VALUE)
         gateViolatingFrames.fill(0)
+        for ((index, gate) in spec.definition.withIndex()) {
+            gateReachBest[index].fill(
+                when (gate.statistic) {
+                    FormCheckGateStatistic.WINDOW_MINIMUM -> Double.MAX_VALUE
+                    FormCheckGateStatistic.WINDOW_MAXIMUM -> -Double.MAX_VALUE
+                },
+            )
+        }
     }
 
     /**
@@ -2143,6 +2388,8 @@ internal class HeuristicFormCheckSession(
         postureObservedFrames = 0
         postureViolatingFrames = 0
         postureMostUprightDegrees = Double.MAX_VALUE
+        holdUprightStreak = 0
+        holdUprightDegrees = Double.MAX_VALUE
     }
 
     /**
@@ -2154,28 +2401,40 @@ internal class HeuristicFormCheckSession(
      */
     private fun accumulatePosture(frame: PoseFrame, gravity: PoseGravityReading?) {
         val requirement = spec.posture ?: return
-        val reading = gravity ?: return
-        if (!reading.isFreshAt(frame.timestampMs)) return
-        val side = activeSide ?: return
-        val shoulder = frame.worldLandmarks[FormCheckJointGroup.SHOULDER.joint(side)] ?: return
-        val hip = frame.worldLandmarks[FormCheckJointGroup.HIP.joint(side)] ?: return
+        val angle = torsoGravityAngleDegrees(frame, gravity) ?: return
+        postureObservedFrames += 1
+        postureMostUprightDegrees = minOf(postureMostUprightDegrees, angle)
+        if (!requirement.satisfied(angle)) postureViolatingFrames += 1
+    }
+
+    /**
+     * The angle between the torso and gravity in the image plane this frame, or null when it
+     * cannot be measured — no reading, a stale one, an unobserved torso, or one projecting to
+     * nearly a point. Null is abstention, never a value.
+     */
+    private fun torsoGravityAngleDegrees(
+        frame: PoseFrame,
+        gravity: PoseGravityReading?,
+    ): Double? {
+        val reading = gravity ?: return null
+        if (!reading.isFreshAt(frame.timestampMs)) return null
+        val side = activeSide ?: return null
+        val shoulder = frame.worldLandmarks[FormCheckJointGroup.SHOULDER.joint(side)] ?: return null
+        val hip = frame.worldLandmarks[FormCheckJointGroup.HIP.joint(side)] ?: return null
         if (
             shoulder.confidence < FormCheckGeometry.MINIMUM_CHAIN_CONFIDENCE ||
             hip.confidence < FormCheckGeometry.MINIMUM_CHAIN_CONFIDENCE
         ) {
-            return
+            return null
         }
         val torsoX = hip.x - shoulder.x
         val torsoY = hip.y - shoulder.y
         val torsoLength = kotlin.math.hypot(torsoX, torsoY)
-        if (torsoLength < TORSO_PROJECTION_FLOOR) return
+        if (torsoLength < TORSO_PROJECTION_FLOOR) return null
 
         val cosine = ((torsoX * reading.directionX + torsoY * reading.directionY) / torsoLength)
             .coerceIn(-1.0, 1.0)
-        val angle = Math.toDegrees(kotlin.math.acos(cosine))
-        postureObservedFrames += 1
-        postureMostUprightDegrees = minOf(postureMostUprightDegrees, angle)
-        if (!requirement.satisfied(angle)) postureViolatingFrames += 1
+        return Math.toDegrees(kotlin.math.acos(cosine))
     }
 
     /**
@@ -2359,25 +2618,12 @@ internal class HeuristicFormCheckSession(
          */
         const val BILATERAL_MINIMUM_CONCURRENT_FRAMES = 5
 
-        /** A definition gate abstains below this many observed frames, for the same reason. */
-        const val DEFINITION_MINIMUM_OBSERVED_FRAMES = 5
-
         /**
          * A torso whose image projection is shorter than this contributes no posture reading.
          * Someone pointing almost straight at or away from the camera projects a torso to nearly
          * a point, and the angle of a point is noise. Metres, in MediaPipe world units.
          */
         const val TORSO_PROJECTION_FLOOR = 0.05
-
-        /**
-         * How many frames a STAY clause must be outside its bound before the excursion is
-         * discarded. One frame is noise, and a STAY clause read from a raw extreme can only be
-         * pushed the wrong way by noise — the direction that throws away a real repetition. The
-         * per-frame error is now measured (`docs/bridge-frame-error.v1.json`): median absolute
-         * error runs 7.7–19.2 degrees per chain with p95 tails up to 58, which is why a single
-         * frame is never treated as evidence.
-         */
-        const val DEFINITION_MINIMUM_VIOLATING_FRAMES = 3
 
         /**
          * Below this the difference is not reported. A same-set self-comparison cancels the

@@ -1,0 +1,4777 @@
+{
+  "artifactKind": "TREX_GATE_BOUND_QUANTILES",
+  "artifactVersion": 1,
+  "limitations": [
+    "Sparse keyframes: an excursion holds a handful of frames where the runtime holds ~60, so the runtime's k-satisfying-frames rule is not simulated; window extremes are the k=1 reading, which ground truth makes equivalent.",
+    "The impostor the user performs is in no dataset; only the legitimate side of each bound is measured, plus the squat replayed through the deadlifts' driver.",
+    "Ground-truth angles: MediaPipe-native error is measured elsewhere (docs/bridge-frame-error.v1.json) and is not folded in here."
+  ],
+  "measurements": [
+    {
+      "driver": "KNEE",
+      "exercise": "바벨 스쿼트",
+      "legitimate": {
+        "chains": {
+          "HIP": {
+            "clauseSweep": [
+              {
+                "boundDegrees": 40.0,
+                "reachAtLeastOnMaximum": 0.0013,
+                "reachAtMostOnMinimum": 0.978,
+                "stayAtLeastOnMinimum": 0.022,
+                "stayAtMostOnMaximum": 0.9987
+              },
+              {
+                "boundDegrees": 45.0,
+                "reachAtLeastOnMaximum": 0.0013,
+                "reachAtMostOnMinimum": 0.9597,
+                "stayAtLeastOnMinimum": 0.0403,
+                "stayAtMostOnMaximum": 0.9987
+              },
+              {
+                "boundDegrees": 50.0,
+                "reachAtLeastOnMaximum": 0.0017,
+                "reachAtMostOnMinimum": 0.9334,
+                "stayAtLeastOnMinimum": 0.0666,
+                "stayAtMostOnMaximum": 0.9983
+              },
+              {
+                "boundDegrees": 55.0,
+                "reachAtLeastOnMaximum": 0.0017,
+                "reachAtMostOnMinimum": 0.8907,
+                "stayAtLeastOnMinimum": 0.1093,
+                "stayAtMostOnMaximum": 0.9983
+              },
+              {
+                "boundDegrees": 60.0,
+                "reachAtLeastOnMaximum": 0.0037,
+                "reachAtMostOnMinimum": 0.8377,
+                "stayAtLeastOnMinimum": 0.1623,
+                "stayAtMostOnMaximum": 0.9963
+              },
+              {
+                "boundDegrees": 65.0,
+                "reachAtLeastOnMaximum": 0.008,
+                "reachAtMostOnMinimum": 0.7701,
+                "stayAtLeastOnMinimum": 0.2299,
+                "stayAtMostOnMaximum": 0.992
+              },
+              {
+                "boundDegrees": 70.0,
+                "reachAtLeastOnMaximum": 0.0157,
+                "reachAtMostOnMinimum": 0.6924,
+                "stayAtLeastOnMinimum": 0.3076,
+                "stayAtMostOnMaximum": 0.9843
+              },
+              {
+                "boundDegrees": 75.0,
+                "reachAtLeastOnMaximum": 0.0217,
+                "reachAtMostOnMinimum": 0.6145,
+                "stayAtLeastOnMinimum": 0.3855,
+                "stayAtMostOnMaximum": 0.9783
+              },
+              {
+                "boundDegrees": 80.0,
+                "reachAtLeastOnMaximum": 0.033,
+                "reachAtMostOnMinimum": 0.5265,
+                "stayAtLeastOnMinimum": 0.4735,
+                "stayAtMostOnMaximum": 0.967
+              },
+              {
+                "boundDegrees": 85.0,
+                "reachAtLeastOnMaximum": 0.0503,
+                "reachAtMostOnMinimum": 0.4489,
+                "stayAtLeastOnMinimum": 0.5511,
+                "stayAtMostOnMaximum": 0.9497
+              },
+              {
+                "boundDegrees": 90.0,
+                "reachAtLeastOnMaximum": 0.0773,
+                "reachAtMostOnMinimum": 0.3585,
+                "stayAtLeastOnMinimum": 0.6415,
+                "stayAtMostOnMaximum": 0.9227
+              },
+              {
+                "boundDegrees": 95.0,
+                "reachAtLeastOnMaximum": 0.1093,
+                "reachAtMostOnMinimum": 0.2822,
+                "stayAtLeastOnMinimum": 0.7178,
+                "stayAtMostOnMaximum": 0.8907
+              },
+              {
+                "boundDegrees": 100.0,
+                "reachAtLeastOnMaximum": 0.1569,
+                "reachAtMostOnMinimum": 0.2163,
+                "stayAtLeastOnMinimum": 0.7837,
+                "stayAtMostOnMaximum": 0.8431
+              },
+              {
+                "boundDegrees": 105.0,
+                "reachAtLeastOnMaximum": 0.2136,
+                "reachAtMostOnMinimum": 0.1463,
+                "stayAtLeastOnMinimum": 0.8537,
+                "stayAtMostOnMaximum": 0.7864
+              },
+              {
+                "boundDegrees": 110.0,
+                "reachAtLeastOnMaximum": 0.2792,
+                "reachAtMostOnMinimum": 0.0963,
+                "stayAtLeastOnMinimum": 0.9037,
+                "stayAtMostOnMaximum": 0.7208
+              },
+              {
+                "boundDegrees": 115.0,
+                "reachAtLeastOnMaximum": 0.3549,
+                "reachAtMostOnMinimum": 0.05,
+                "stayAtLeastOnMinimum": 0.95,
+                "stayAtMostOnMaximum": 0.6451
+              },
+              {
+                "boundDegrees": 120.0,
+                "reachAtLeastOnMaximum": 0.4359,
+                "reachAtMostOnMinimum": 0.025,
+                "stayAtLeastOnMinimum": 0.975,
+                "stayAtMostOnMaximum": 0.5641
+              },
+              {
+                "boundDegrees": 125.0,
+                "reachAtLeastOnMaximum": 0.5335,
+                "reachAtMostOnMinimum": 0.0147,
+                "stayAtLeastOnMinimum": 0.9853,
+                "stayAtMostOnMaximum": 0.4665
+              },
+              {
+                "boundDegrees": 130.0,
+                "reachAtLeastOnMaximum": 0.6245,
+                "reachAtMostOnMinimum": 0.009,
+                "stayAtLeastOnMinimum": 0.991,
+                "stayAtMostOnMaximum": 0.3755
+              },
+              {
+                "boundDegrees": 135.0,
+                "reachAtLeastOnMaximum": 0.7181,
+                "reachAtMostOnMinimum": 0.0067,
+                "stayAtLeastOnMinimum": 0.9933,
+                "stayAtMostOnMaximum": 0.2819
+              },
+              {
+                "boundDegrees": 140.0,
+                "reachAtLeastOnMaximum": 0.8001,
+                "reachAtMostOnMinimum": 0.0043,
+                "stayAtLeastOnMinimum": 0.9957,
+                "stayAtMostOnMaximum": 0.1999
+              },
+              {
+                "boundDegrees": 145.0,
+                "reachAtLeastOnMaximum": 0.888,
+                "reachAtMostOnMinimum": 0.003,
+                "stayAtLeastOnMinimum": 0.997,
+                "stayAtMostOnMaximum": 0.112
+              },
+              {
+                "boundDegrees": 150.0,
+                "reachAtLeastOnMaximum": 0.9533,
+                "reachAtMostOnMinimum": 0.0023,
+                "stayAtLeastOnMinimum": 0.9977,
+                "stayAtMostOnMaximum": 0.0467
+              },
+              {
+                "boundDegrees": 155.0,
+                "reachAtLeastOnMaximum": 0.9827,
+                "reachAtMostOnMinimum": 0.002,
+                "stayAtLeastOnMinimum": 0.998,
+                "stayAtMostOnMaximum": 0.0173
+              },
+              {
+                "boundDegrees": 160.0,
+                "reachAtLeastOnMaximum": 0.9943,
+                "reachAtMostOnMinimum": 0.001,
+                "stayAtLeastOnMinimum": 0.999,
+                "stayAtMostOnMaximum": 0.0057
+              },
+              {
+                "boundDegrees": 165.0,
+                "reachAtLeastOnMaximum": 0.9973,
+                "reachAtMostOnMinimum": 0.0003,
+                "stayAtLeastOnMinimum": 0.9997,
+                "stayAtMostOnMaximum": 0.0027
+              },
+              {
+                "boundDegrees": 170.0,
+                "reachAtLeastOnMaximum": 0.9987,
+                "reachAtMostOnMinimum": 0.0,
+                "stayAtLeastOnMinimum": 1.0,
+                "stayAtMostOnMaximum": 0.0013
+              },
+              {
+                "boundDegrees": 175.0,
+                "reachAtLeastOnMaximum": 0.9997,
+                "reachAtMostOnMinimum": 0.0,
+                "stayAtLeastOnMinimum": 1.0,
+                "stayAtMostOnMaximum": 0.0003
+              },
+              {
+                "boundDegrees": 180.0,
+                "reachAtLeastOnMaximum": 1.0,
+                "reachAtMostOnMinimum": 0.0,
+                "stayAtLeastOnMinimum": 1.0,
+                "stayAtMostOnMaximum": 0.0
+              }
+            ],
+            "windowMaximum": {
+              "count": 3001,
+              "maximum": 175.5,
+              "minimum": 26.1,
+              "p0.5": 61.4,
+              "p1": 67.1,
+              "p10": 93.8,
+              "p2.5": 77.2,
+              "p25": 107.6,
+              "p5": 84.9,
+              "p50": 123.2,
+              "p75": 136.6,
+              "p90": 145.7,
+              "p95": 149.7,
+              "p97.5": 153.3,
+              "p99": 157.1,
+              "p99.5": 161.0
+            },
+            "windowMinimum": {
+              "count": 3001,
+              "maximum": 166.7,
+              "minimum": 25.6,
+              "p0.5": 31.9,
+              "p1": 35.5,
+              "p10": 54.1,
+              "p2.5": 41.3,
+              "p25": 66.2,
+              "p5": 47.1,
+              "p50": 81.5,
+              "p75": 97.4,
+              "p90": 109.4,
+              "p95": 115.0,
+              "p97.5": 119.7,
+              "p99": 128.7,
+              "p99.5": 139.3
+            }
+          }
+        },
+        "clipsContributing": 706,
+        "excursions": 4404,
+        "subjects": 42
+      },
+      "repDegrees": 110.0
+    },
+    {
+      "driver": "ELBOW",
+      "exercise": "풀업",
+      "legitimate": {
+        "chains": {
+          "HIP": {
+            "clauseSweep": [
+              {
+                "boundDegrees": 40.0,
+                "reachAtLeastOnMaximum": 0.0,
+                "reachAtMostOnMinimum": 1.0,
+                "stayAtLeastOnMinimum": 0.0,
+                "stayAtMostOnMaximum": 1.0
+              },
+              {
+                "boundDegrees": 45.0,
+                "reachAtLeastOnMaximum": 0.0,
+                "reachAtMostOnMinimum": 0.999,
+                "stayAtLeastOnMinimum": 0.001,
+                "stayAtMostOnMaximum": 1.0
+              },
+              {
+                "boundDegrees": 50.0,
+                "reachAtLeastOnMaximum": 0.0,
+                "reachAtMostOnMinimum": 0.998,
+                "stayAtLeastOnMinimum": 0.002,
+                "stayAtMostOnMaximum": 1.0
+              },
+              {
+                "boundDegrees": 55.0,
+                "reachAtLeastOnMaximum": 0.0,
+                "reachAtMostOnMinimum": 0.997,
+                "stayAtLeastOnMinimum": 0.003,
+                "stayAtMostOnMaximum": 1.0
+              },
+              {
+                "boundDegrees": 60.0,
+                "reachAtLeastOnMaximum": 0.0,
+                "reachAtMostOnMinimum": 0.997,
+                "stayAtLeastOnMinimum": 0.003,
+                "stayAtMostOnMaximum": 1.0
+              },
+              {
+                "boundDegrees": 65.0,
+                "reachAtLeastOnMaximum": 0.0,
+                "reachAtMostOnMinimum": 0.997,
+                "stayAtLeastOnMinimum": 0.003,
+                "stayAtMostOnMaximum": 1.0
+              },
+              {
+                "boundDegrees": 70.0,
+                "reachAtLeastOnMaximum": 0.0,
+                "reachAtMostOnMinimum": 0.996,
+                "stayAtLeastOnMinimum": 0.004,
+                "stayAtMostOnMaximum": 1.0
+              },
+              {
+                "boundDegrees": 75.0,
+                "reachAtLeastOnMaximum": 0.0,
+                "reachAtMostOnMinimum": 0.995,
+                "stayAtLeastOnMinimum": 0.005,
+                "stayAtMostOnMaximum": 1.0
+              },
+              {
+                "boundDegrees": 80.0,
+                "reachAtLeastOnMaximum": 0.0,
+                "reachAtMostOnMinimum": 0.995,
+                "stayAtLeastOnMinimum": 0.005,
+                "stayAtMostOnMaximum": 1.0
+              },
+              {
+                "boundDegrees": 85.0,
+                "reachAtLeastOnMaximum": 0.0,
+                "reachAtMostOnMinimum": 0.994,
+                "stayAtLeastOnMinimum": 0.006,
+                "stayAtMostOnMaximum": 1.0
+              },
+              {
+                "boundDegrees": 90.0,
+                "reachAtLeastOnMaximum": 0.0,
+                "reachAtMostOnMinimum": 0.994,
+                "stayAtLeastOnMinimum": 0.006,
+                "stayAtMostOnMaximum": 1.0
+              },
+              {
+                "boundDegrees": 95.0,
+                "reachAtLeastOnMaximum": 0.0,
+                "reachAtMostOnMinimum": 0.994,
+                "stayAtLeastOnMinimum": 0.006,
+                "stayAtMostOnMaximum": 1.0
+              },
+              {
+                "boundDegrees": 100.0,
+                "reachAtLeastOnMaximum": 0.0,
+                "reachAtMostOnMinimum": 0.993,
+                "stayAtLeastOnMinimum": 0.007,
+                "stayAtMostOnMaximum": 1.0
+              },
+              {
+                "boundDegrees": 105.0,
+                "reachAtLeastOnMaximum": 0.0,
+                "reachAtMostOnMinimum": 0.993,
+                "stayAtLeastOnMinimum": 0.007,
+                "stayAtMostOnMaximum": 1.0
+              },
+              {
+                "boundDegrees": 110.0,
+                "reachAtLeastOnMaximum": 0.0,
+                "reachAtMostOnMinimum": 0.993,
+                "stayAtLeastOnMinimum": 0.007,
+                "stayAtMostOnMaximum": 1.0
+              },
+              {
+                "boundDegrees": 115.0,
+                "reachAtLeastOnMaximum": 0.0,
+                "reachAtMostOnMinimum": 0.993,
+                "stayAtLeastOnMinimum": 0.007,
+                "stayAtMostOnMaximum": 1.0
+              },
+              {
+                "boundDegrees": 120.0,
+                "reachAtLeastOnMaximum": 0.0,
+                "reachAtMostOnMinimum": 0.993,
+                "stayAtLeastOnMinimum": 0.007,
+                "stayAtMostOnMaximum": 1.0
+              },
+              {
+                "boundDegrees": 125.0,
+                "reachAtLeastOnMaximum": 0.0,
+                "reachAtMostOnMinimum": 0.993,
+                "stayAtLeastOnMinimum": 0.007,
+                "stayAtMostOnMaximum": 1.0
+              },
+              {
+                "boundDegrees": 130.0,
+                "reachAtLeastOnMaximum": 0.0,
+                "reachAtMostOnMinimum": 0.992,
+                "stayAtLeastOnMinimum": 0.008,
+                "stayAtMostOnMaximum": 1.0
+              },
+              {
+                "boundDegrees": 135.0,
+                "reachAtLeastOnMaximum": 0.0,
+                "reachAtMostOnMinimum": 0.991,
+                "stayAtLeastOnMinimum": 0.009,
+                "stayAtMostOnMaximum": 1.0
+              },
+              {
+                "boundDegrees": 140.0,
+                "reachAtLeastOnMaximum": 0.0,
+                "reachAtMostOnMinimum": 0.9899,
+                "stayAtLeastOnMinimum": 0.0101,
+                "stayAtMostOnMaximum": 1.0
+              },
+              {
+                "boundDegrees": 145.0,
+                "reachAtLeastOnMaximum": 0.0,
+                "reachAtMostOnMinimum": 0.9879,
+                "stayAtLeastOnMinimum": 0.0121,
+                "stayAtMostOnMaximum": 1.0
+              },
+              {
+                "boundDegrees": 150.0,
+                "reachAtLeastOnMaximum": 0.0,
+                "reachAtMostOnMinimum": 0.9749,
+                "stayAtLeastOnMinimum": 0.0251,
+                "stayAtMostOnMaximum": 1.0
+              },
+              {
+                "boundDegrees": 155.0,
+                "reachAtLeastOnMaximum": 0.001,
+                "reachAtMostOnMinimum": 0.9397,
+                "stayAtLeastOnMinimum": 0.0603,
+                "stayAtMostOnMaximum": 0.999
+              },
+              {
+                "boundDegrees": 160.0,
+                "reachAtLeastOnMaximum": 0.004,
+                "reachAtMostOnMinimum": 0.8683,
+                "stayAtLeastOnMinimum": 0.1317,
+                "stayAtMostOnMaximum": 0.996
+              },
+              {
+                "boundDegrees": 165.0,
+                "reachAtLeastOnMaximum": 0.0513,
+                "reachAtMostOnMinimum": 0.6432,
+                "stayAtLeastOnMinimum": 0.3568,
+                "stayAtMostOnMaximum": 0.9487
+              },
+              {
+                "boundDegrees": 170.0,
+                "reachAtLeastOnMaximum": 0.1769,
+                "reachAtMostOnMinimum": 0.3307,
+                "stayAtLeastOnMinimum": 0.6693,
+                "stayAtMostOnMaximum": 0.8231
+              },
+              {
+                "boundDegrees": 175.0,
+                "reachAtLeastOnMaximum": 0.5427,
+                "reachAtMostOnMinimum": 0.0623,
+                "stayAtLeastOnMinimum": 0.9377,
+                "stayAtMostOnMaximum": 0.4573
+              },
+              {
+                "boundDegrees": 180.0,
+                "reachAtLeastOnMaximum": 1.0,
+                "reachAtMostOnMinimum": 0.0,
+                "stayAtLeastOnMinimum": 1.0,
+                "stayAtMostOnMaximum": 0.0
+              }
+            ],
+            "windowMaximum": {
+              "count": 995,
+              "maximum": 179.9,
+              "minimum": 151.4,
+              "p0.5": 160.2,
+              "p1": 162.1,
+              "p10": 167.9,
+              "p2.5": 163.1,
+              "p25": 171.5,
+              "p5": 164.9,
+              "p50": 174.7,
+              "p75": 177.1,
+              "p90": 178.4,
+              "p95": 179.0,
+              "p97.5": 179.3,
+              "p99": 179.6,
+              "p99.5": 179.7
+            },
+            "windowMinimum": {
+              "count": 995,
+              "maximum": 179.1,
+              "minimum": 40.9,
+              "p0.5": 74.4,
+              "p1": 139.3,
+              "p10": 158.9,
+              "p2.5": 149.9,
+              "p25": 163.2,
+              "p5": 154.4,
+              "p50": 167.3,
+              "p75": 171.2,
+              "p90": 174.0,
+              "p95": 175.3,
+              "p97.5": 176.5,
+              "p99": 177.9,
+              "p99.5": 178.7
+            }
+          },
+          "SHOULDER": {
+            "clauseSweep": [
+              {
+                "boundDegrees": 40.0,
+                "reachAtLeastOnMaximum": 0.003,
+                "reachAtMostOnMinimum": 0.9367,
+                "stayAtLeastOnMinimum": 0.0633,
+                "stayAtMostOnMaximum": 0.997
+              },
+              {
+                "boundDegrees": 45.0,
+                "reachAtLeastOnMaximum": 0.004,
+                "reachAtMostOnMinimum": 0.9035,
+                "stayAtLeastOnMinimum": 0.0965,
+                "stayAtMostOnMaximum": 0.996
+              },
+              {
+                "boundDegrees": 50.0,
+                "reachAtLeastOnMaximum": 0.007,
+                "reachAtMostOnMinimum": 0.8462,
+                "stayAtLeastOnMinimum": 0.1538,
+                "stayAtMostOnMaximum": 0.993
+              },
+              {
+                "boundDegrees": 55.0,
+                "reachAtLeastOnMaximum": 0.008,
+                "reachAtMostOnMinimum": 0.7668,
+                "stayAtLeastOnMinimum": 0.2332,
+                "stayAtMostOnMaximum": 0.992
+              },
+              {
+                "boundDegrees": 60.0,
+                "reachAtLeastOnMaximum": 0.0141,
+                "reachAtMostOnMinimum": 0.7055,
+                "stayAtLeastOnMinimum": 0.2945,
+                "stayAtMostOnMaximum": 0.9859
+              },
+              {
+                "boundDegrees": 65.0,
+                "reachAtLeastOnMaximum": 0.0191,
+                "reachAtMostOnMinimum": 0.6412,
+                "stayAtLeastOnMinimum": 0.3588,
+                "stayAtMostOnMaximum": 0.9809
+              },
+              {
+                "boundDegrees": 70.0,
+                "reachAtLeastOnMaximum": 0.0221,
+                "reachAtMostOnMinimum": 0.6,
+                "stayAtLeastOnMinimum": 0.4,
+                "stayAtMostOnMaximum": 0.9779
+              },
+              {
+                "boundDegrees": 75.0,
+                "reachAtLeastOnMaximum": 0.0271,
+                "reachAtMostOnMinimum": 0.5447,
+                "stayAtLeastOnMinimum": 0.4553,
+                "stayAtMostOnMaximum": 0.9729
+              },
+              {
+                "boundDegrees": 80.0,
+                "reachAtLeastOnMaximum": 0.0342,
+                "reachAtMostOnMinimum": 0.4905,
+                "stayAtLeastOnMinimum": 0.5095,
+                "stayAtMostOnMaximum": 0.9658
+              },
+              {
+                "boundDegrees": 85.0,
+                "reachAtLeastOnMaximum": 0.0402,
+                "reachAtMostOnMinimum": 0.4342,
+                "stayAtLeastOnMinimum": 0.5658,
+                "stayAtMostOnMaximum": 0.9598
+              },
+              {
+                "boundDegrees": 90.0,
+                "reachAtLeastOnMaximum": 0.0482,
+                "reachAtMostOnMinimum": 0.3759,
+                "stayAtLeastOnMinimum": 0.6241,
+                "stayAtMostOnMaximum": 0.9518
+              },
+              {
+                "boundDegrees": 95.0,
+                "reachAtLeastOnMaximum": 0.0593,
+                "reachAtMostOnMinimum": 0.3196,
+                "stayAtLeastOnMinimum": 0.6804,
+                "stayAtMostOnMaximum": 0.9407
+              },
+              {
+                "boundDegrees": 100.0,
+                "reachAtLeastOnMaximum": 0.0744,
+                "reachAtMostOnMinimum": 0.2503,
+                "stayAtLeastOnMinimum": 0.7497,
+                "stayAtMostOnMaximum": 0.9256
+              },
+              {
+                "boundDegrees": 105.0,
+                "reachAtLeastOnMaximum": 0.1035,
+                "reachAtMostOnMinimum": 0.1698,
+                "stayAtLeastOnMinimum": 0.8302,
+                "stayAtMostOnMaximum": 0.8965
+              },
+              {
+                "boundDegrees": 110.0,
+                "reachAtLeastOnMaximum": 0.1307,
+                "reachAtMostOnMinimum": 0.1095,
+                "stayAtLeastOnMinimum": 0.8905,
+                "stayAtMostOnMaximum": 0.8693
+              },
+              {
+                "boundDegrees": 115.0,
+                "reachAtLeastOnMaximum": 0.1598,
+                "reachAtMostOnMinimum": 0.0462,
+                "stayAtLeastOnMinimum": 0.9538,
+                "stayAtMostOnMaximum": 0.8402
+              },
+              {
+                "boundDegrees": 120.0,
+                "reachAtLeastOnMaximum": 0.198,
+                "reachAtMostOnMinimum": 0.0211,
+                "stayAtLeastOnMinimum": 0.9789,
+                "stayAtMostOnMaximum": 0.802
+              },
+              {
+                "boundDegrees": 125.0,
+                "reachAtLeastOnMaximum": 0.2523,
+                "reachAtMostOnMinimum": 0.008,
+                "stayAtLeastOnMinimum": 0.992,
+                "stayAtMostOnMaximum": 0.7477
+              },
+              {
+                "boundDegrees": 130.0,
+                "reachAtLeastOnMaximum": 0.3608,
+                "reachAtMostOnMinimum": 0.001,
+                "stayAtLeastOnMinimum": 0.999,
+                "stayAtMostOnMaximum": 0.6392
+              },
+              {
+                "boundDegrees": 135.0,
+                "reachAtLeastOnMaximum": 0.5136,
+                "reachAtMostOnMinimum": 0.0,
+                "stayAtLeastOnMinimum": 1.0,
+                "stayAtMostOnMaximum": 0.4864
+              },
+              {
+                "boundDegrees": 140.0,
+                "reachAtLeastOnMaximum": 0.7035,
+                "reachAtMostOnMinimum": 0.0,
+                "stayAtLeastOnMinimum": 1.0,
+                "stayAtMostOnMaximum": 0.2965
+              },
+              {
+                "boundDegrees": 145.0,
+                "reachAtLeastOnMaximum": 0.8734,
+                "reachAtMostOnMinimum": 0.0,
+                "stayAtLeastOnMinimum": 1.0,
+                "stayAtMostOnMaximum": 0.1266
+              },
+              {
+                "boundDegrees": 150.0,
+                "reachAtLeastOnMaximum": 0.9608,
+                "reachAtMostOnMinimum": 0.0,
+                "stayAtLeastOnMinimum": 1.0,
+                "stayAtMostOnMaximum": 0.0392
+              },
+              {
+                "boundDegrees": 155.0,
+                "reachAtLeastOnMaximum": 0.997,
+                "reachAtMostOnMinimum": 0.0,
+                "stayAtLeastOnMinimum": 1.0,
+                "stayAtMostOnMaximum": 0.003
+              },
+              {
+                "boundDegrees": 160.0,
+                "reachAtLeastOnMaximum": 0.999,
+                "reachAtMostOnMinimum": 0.0,
+                "stayAtLeastOnMinimum": 1.0,
+                "stayAtMostOnMaximum": 0.001
+              },
+              {
+                "boundDegrees": 165.0,
+                "reachAtLeastOnMaximum": 1.0,
+                "reachAtMostOnMinimum": 0.0,
+                "stayAtLeastOnMinimum": 1.0,
+                "stayAtMostOnMaximum": 0.0
+              },
+              {
+                "boundDegrees": 170.0,
+                "reachAtLeastOnMaximum": 1.0,
+                "reachAtMostOnMinimum": 0.0,
+                "stayAtLeastOnMinimum": 1.0,
+                "stayAtMostOnMaximum": 0.0
+              },
+              {
+                "boundDegrees": 175.0,
+                "reachAtLeastOnMaximum": 1.0,
+                "reachAtMostOnMinimum": 0.0,
+                "stayAtLeastOnMinimum": 1.0,
+                "stayAtMostOnMaximum": 0.0
+              },
+              {
+                "boundDegrees": 180.0,
+                "reachAtLeastOnMaximum": 1.0,
+                "reachAtMostOnMinimum": 0.0,
+                "stayAtLeastOnMinimum": 1.0,
+                "stayAtMostOnMaximum": 0.0
+              }
+            ],
+            "windowMaximum": {
+              "count": 995,
+              "maximum": 163.5,
+              "minimum": 30.0,
+              "p0.5": 47.1,
+              "p1": 57.0,
+              "p10": 104.6,
+              "p2.5": 70.7,
+              "p25": 124.9,
+              "p5": 91.6,
+              "p50": 134.6,
+              "p75": 141.2,
+              "p90": 146.3,
+              "p95": 149.0,
+              "p97.5": 150.9,
+              "p99": 152.4,
+              "p99.5": 153.9
+            },
+            "windowMinimum": {
+              "count": 995,
+              "maximum": 131.9,
+              "minimum": 5.7,
+              "p0.5": 19.1,
+              "p1": 23.5,
+              "p10": 45.2,
+              "p2.5": 33.8,
+              "p25": 56.5,
+              "p5": 38.1,
+              "p50": 79.2,
+              "p75": 100.0,
+              "p90": 110.7,
+              "p95": 114.6,
+              "p97.5": 118.7,
+              "p99": 123.8,
+              "p99.5": 127.5
+            }
+          }
+        },
+        "clipsContributing": 475,
+        "excursions": 2033,
+        "subjects": 32
+      },
+      "repDegrees": 120.0
+    },
+    {
+      "driver": "ELBOW",
+      "exercise": "페이스 풀",
+      "legitimate": {
+        "chains": {
+          "HIP": {
+            "clauseSweep": [
+              {
+                "boundDegrees": 40.0,
+                "reachAtLeastOnMaximum": 0.0,
+                "reachAtMostOnMinimum": 1.0,
+                "stayAtLeastOnMinimum": 0.0,
+                "stayAtMostOnMaximum": 1.0
+              },
+              {
+                "boundDegrees": 45.0,
+                "reachAtLeastOnMaximum": 0.0,
+                "reachAtMostOnMinimum": 1.0,
+                "stayAtLeastOnMinimum": 0.0,
+                "stayAtMostOnMaximum": 1.0
+              },
+              {
+                "boundDegrees": 50.0,
+                "reachAtLeastOnMaximum": 0.0,
+                "reachAtMostOnMinimum": 1.0,
+                "stayAtLeastOnMinimum": 0.0,
+                "stayAtMostOnMaximum": 1.0
+              },
+              {
+                "boundDegrees": 55.0,
+                "reachAtLeastOnMaximum": 0.0,
+                "reachAtMostOnMinimum": 1.0,
+                "stayAtLeastOnMinimum": 0.0,
+                "stayAtMostOnMaximum": 1.0
+              },
+              {
+                "boundDegrees": 60.0,
+                "reachAtLeastOnMaximum": 0.0,
+                "reachAtMostOnMinimum": 1.0,
+                "stayAtLeastOnMinimum": 0.0,
+                "stayAtMostOnMaximum": 1.0
+              },
+              {
+                "boundDegrees": 65.0,
+                "reachAtLeastOnMaximum": 0.0,
+                "reachAtMostOnMinimum": 1.0,
+                "stayAtLeastOnMinimum": 0.0,
+                "stayAtMostOnMaximum": 1.0
+              },
+              {
+                "boundDegrees": 70.0,
+                "reachAtLeastOnMaximum": 0.0,
+                "reachAtMostOnMinimum": 1.0,
+                "stayAtLeastOnMinimum": 0.0,
+                "stayAtMostOnMaximum": 1.0
+              },
+              {
+                "boundDegrees": 75.0,
+                "reachAtLeastOnMaximum": 0.0,
+                "reachAtMostOnMinimum": 1.0,
+                "stayAtLeastOnMinimum": 0.0,
+                "stayAtMostOnMaximum": 1.0
+              },
+              {
+                "boundDegrees": 80.0,
+                "reachAtLeastOnMaximum": 0.0,
+                "reachAtMostOnMinimum": 1.0,
+                "stayAtLeastOnMinimum": 0.0,
+                "stayAtMostOnMaximum": 1.0
+              },
+              {
+                "boundDegrees": 85.0,
+                "reachAtLeastOnMaximum": 0.0,
+                "reachAtMostOnMinimum": 1.0,
+                "stayAtLeastOnMinimum": 0.0,
+                "stayAtMostOnMaximum": 1.0
+              },
+              {
+                "boundDegrees": 90.0,
+                "reachAtLeastOnMaximum": 0.0,
+                "reachAtMostOnMinimum": 1.0,
+                "stayAtLeastOnMinimum": 0.0,
+                "stayAtMostOnMaximum": 1.0
+              },
+              {
+                "boundDegrees": 95.0,
+                "reachAtLeastOnMaximum": 0.0,
+                "reachAtMostOnMinimum": 1.0,
+                "stayAtLeastOnMinimum": 0.0,
+                "stayAtMostOnMaximum": 1.0
+              },
+              {
+                "boundDegrees": 100.0,
+                "reachAtLeastOnMaximum": 0.0,
+                "reachAtMostOnMinimum": 1.0,
+                "stayAtLeastOnMinimum": 0.0,
+                "stayAtMostOnMaximum": 1.0
+              },
+              {
+                "boundDegrees": 105.0,
+                "reachAtLeastOnMaximum": 0.0,
+                "reachAtMostOnMinimum": 1.0,
+                "stayAtLeastOnMinimum": 0.0,
+                "stayAtMostOnMaximum": 1.0
+              },
+              {
+                "boundDegrees": 110.0,
+                "reachAtLeastOnMaximum": 0.0,
+                "reachAtMostOnMinimum": 0.9963,
+                "stayAtLeastOnMinimum": 0.0037,
+                "stayAtMostOnMaximum": 1.0
+              },
+              {
+                "boundDegrees": 115.0,
+                "reachAtLeastOnMaximum": 0.0012,
+                "reachAtMostOnMinimum": 0.9926,
+                "stayAtLeastOnMinimum": 0.0074,
+                "stayAtMostOnMaximum": 0.9988
+              },
+              {
+                "boundDegrees": 120.0,
+                "reachAtLeastOnMaximum": 0.0087,
+                "reachAtMostOnMinimum": 0.9814,
+                "stayAtLeastOnMinimum": 0.0186,
+                "stayAtMostOnMaximum": 0.9913
+              },
+              {
+                "boundDegrees": 125.0,
+                "reachAtLeastOnMaximum": 0.021,
+                "reachAtMostOnMinimum": 0.9678,
+                "stayAtLeastOnMinimum": 0.0322,
+                "stayAtMostOnMaximum": 0.979
+              },
+              {
+                "boundDegrees": 130.0,
+                "reachAtLeastOnMaximum": 0.0322,
+                "reachAtMostOnMinimum": 0.9381,
+                "stayAtLeastOnMinimum": 0.0619,
+                "stayAtMostOnMaximum": 0.9678
+              },
+              {
+                "boundDegrees": 135.0,
+                "reachAtLeastOnMaximum": 0.0681,
+                "reachAtMostOnMinimum": 0.875,
+                "stayAtLeastOnMinimum": 0.125,
+                "stayAtMostOnMaximum": 0.9319
+              },
+              {
+                "boundDegrees": 140.0,
+                "reachAtLeastOnMaximum": 0.1324,
+                "reachAtMostOnMinimum": 0.797,
+                "stayAtLeastOnMinimum": 0.203,
+                "stayAtMostOnMaximum": 0.8676
+              },
+              {
+                "boundDegrees": 145.0,
+                "reachAtLeastOnMaximum": 0.2327,
+                "reachAtMostOnMinimum": 0.6535,
+                "stayAtLeastOnMinimum": 0.3465,
+                "stayAtMostOnMaximum": 0.7673
+              },
+              {
+                "boundDegrees": 150.0,
+                "reachAtLeastOnMaximum": 0.3478,
+                "reachAtMostOnMinimum": 0.5606,
+                "stayAtLeastOnMinimum": 0.4394,
+                "stayAtMostOnMaximum": 0.6522
+              },
+              {
+                "boundDegrees": 155.0,
+                "reachAtLeastOnMaximum": 0.4295,
+                "reachAtMostOnMinimum": 0.5111,
+                "stayAtLeastOnMinimum": 0.4889,
+                "stayAtMostOnMaximum": 0.5705
+              },
+              {
+                "boundDegrees": 160.0,
+                "reachAtLeastOnMaximum": 0.4851,
+                "reachAtMostOnMinimum": 0.4134,
+                "stayAtLeastOnMinimum": 0.5866,
+                "stayAtMostOnMaximum": 0.5149
+              },
+              {
+                "boundDegrees": 165.0,
+                "reachAtLeastOnMaximum": 0.599,
+                "reachAtMostOnMinimum": 0.2215,
+                "stayAtLeastOnMinimum": 0.7785,
+                "stayAtMostOnMaximum": 0.401
+              },
+              {
+                "boundDegrees": 170.0,
+                "reachAtLeastOnMaximum": 0.8032,
+                "reachAtMostOnMinimum": 0.0644,
+                "stayAtLeastOnMinimum": 0.9356,
+                "stayAtMostOnMaximum": 0.1968
+              },
+              {
+                "boundDegrees": 175.0,
+                "reachAtLeastOnMaximum": 0.9431,
+                "reachAtMostOnMinimum": 0.0,
+                "stayAtLeastOnMinimum": 1.0,
+                "stayAtMostOnMaximum": 0.0569
+              },
+              {
+                "boundDegrees": 180.0,
+                "reachAtLeastOnMaximum": 1.0,
+                "reachAtMostOnMinimum": 0.0,
+                "stayAtLeastOnMinimum": 1.0,
+                "stayAtMostOnMaximum": 0.0
+              }
+            ],
+            "windowMaximum": {
+              "count": 808,
+              "maximum": 179.8,
+              "minimum": 114.8,
+              "p0.5": 118.7,
+              "p1": 120.5,
+              "p10": 137.4,
+              "p2.5": 127.1,
+              "p25": 145.7,
+              "p5": 133.2,
+              "p50": 160.6,
+              "p75": 168.7,
+              "p90": 173.5,
+              "p95": 175.4,
+              "p97.5": 177.1,
+              "p99": 177.7,
+              "p99.5": 178.7
+            },
+            "windowMinimum": {
+              "count": 808,
+              "maximum": 174.7,
+              "minimum": 107.2,
+              "p0.5": 111.1,
+              "p1": 116.6,
+              "p10": 133.4,
+              "p2.5": 121.8,
+              "p25": 141.5,
+              "p5": 128.7,
+              "p50": 155.8,
+              "p75": 164.3,
+              "p90": 168.2,
+              "p95": 170.4,
+              "p97.5": 172.2,
+              "p99": 173.5,
+              "p99.5": 173.8
+            }
+          },
+          "SHOULDER": {
+            "clauseSweep": [
+              {
+                "boundDegrees": 40.0,
+                "reachAtLeastOnMaximum": 0.021,
+                "reachAtMostOnMinimum": 0.7191,
+                "stayAtLeastOnMinimum": 0.2809,
+                "stayAtMostOnMaximum": 0.979
+              },
+              {
+                "boundDegrees": 45.0,
+                "reachAtLeastOnMaximum": 0.0285,
+                "reachAtMostOnMinimum": 0.6708,
+                "stayAtLeastOnMinimum": 0.3292,
+                "stayAtMostOnMaximum": 0.9715
+              },
+              {
+                "boundDegrees": 50.0,
+                "reachAtLeastOnMaximum": 0.0359,
+                "reachAtMostOnMinimum": 0.6374,
+                "stayAtLeastOnMinimum": 0.3626,
+                "stayAtMostOnMaximum": 0.9641
+              },
+              {
+                "boundDegrees": 55.0,
+                "reachAtLeastOnMaximum": 0.0408,
+                "reachAtMostOnMinimum": 0.6101,
+                "stayAtLeastOnMinimum": 0.3899,
+                "stayAtMostOnMaximum": 0.9592
+              },
+              {
+                "boundDegrees": 60.0,
+                "reachAtLeastOnMaximum": 0.0483,
+                "reachAtMostOnMinimum": 0.6002,
+                "stayAtLeastOnMinimum": 0.3998,
+                "stayAtMostOnMaximum": 0.9517
+              },
+              {
+                "boundDegrees": 65.0,
+                "reachAtLeastOnMaximum": 0.0557,
+                "reachAtMostOnMinimum": 0.5804,
+                "stayAtLeastOnMinimum": 0.4196,
+                "stayAtMostOnMaximum": 0.9443
+              },
+              {
+                "boundDegrees": 70.0,
+                "reachAtLeastOnMaximum": 0.0681,
+                "reachAtMostOnMinimum": 0.5569,
+                "stayAtLeastOnMinimum": 0.4431,
+                "stayAtMostOnMaximum": 0.9319
+              },
+              {
+                "boundDegrees": 75.0,
+                "reachAtLeastOnMaximum": 0.0891,
+                "reachAtMostOnMinimum": 0.5396,
+                "stayAtLeastOnMinimum": 0.4604,
+                "stayAtMostOnMaximum": 0.9109
+              },
+              {
+                "boundDegrees": 80.0,
+                "reachAtLeastOnMaximum": 0.1027,
+                "reachAtMostOnMinimum": 0.5136,
+                "stayAtLeastOnMinimum": 0.4864,
+                "stayAtMostOnMaximum": 0.8973
+              },
+              {
+                "boundDegrees": 85.0,
+                "reachAtLeastOnMaximum": 0.1312,
+                "reachAtMostOnMinimum": 0.4926,
+                "stayAtLeastOnMinimum": 0.5074,
+                "stayAtMostOnMaximum": 0.8688
+              },
+              {
+                "boundDegrees": 90.0,
+                "reachAtLeastOnMaximum": 0.1696,
+                "reachAtMostOnMinimum": 0.4666,
+                "stayAtLeastOnMinimum": 0.5334,
+                "stayAtMostOnMaximum": 0.8304
+              },
+              {
+                "boundDegrees": 95.0,
+                "reachAtLeastOnMaximum": 0.2265,
+                "reachAtMostOnMinimum": 0.448,
+                "stayAtLeastOnMinimum": 0.552,
+                "stayAtMostOnMaximum": 0.7735
+              },
+              {
+                "boundDegrees": 100.0,
+                "reachAtLeastOnMaximum": 0.2847,
+                "reachAtMostOnMinimum": 0.4134,
+                "stayAtLeastOnMinimum": 0.5866,
+                "stayAtMostOnMaximum": 0.7153
+              },
+              {
+                "boundDegrees": 105.0,
+                "reachAtLeastOnMaximum": 0.349,
+                "reachAtMostOnMinimum": 0.3663,
+                "stayAtLeastOnMinimum": 0.6337,
+                "stayAtMostOnMaximum": 0.651
+              },
+              {
+                "boundDegrees": 110.0,
+                "reachAtLeastOnMaximum": 0.4183,
+                "reachAtMostOnMinimum": 0.3156,
+                "stayAtLeastOnMinimum": 0.6844,
+                "stayAtMostOnMaximum": 0.5817
+              },
+              {
+                "boundDegrees": 115.0,
+                "reachAtLeastOnMaximum": 0.4963,
+                "reachAtMostOnMinimum": 0.2649,
+                "stayAtLeastOnMinimum": 0.7351,
+                "stayAtMostOnMaximum": 0.5037
+              },
+              {
+                "boundDegrees": 120.0,
+                "reachAtLeastOnMaximum": 0.5693,
+                "reachAtMostOnMinimum": 0.1955,
+                "stayAtLeastOnMinimum": 0.8045,
+                "stayAtMostOnMaximum": 0.4307
+              },
+              {
+                "boundDegrees": 125.0,
+                "reachAtLeastOnMaximum": 0.6498,
+                "reachAtMostOnMinimum": 0.1287,
+                "stayAtLeastOnMinimum": 0.8713,
+                "stayAtMostOnMaximum": 0.3502
+              },
+              {
+                "boundDegrees": 130.0,
+                "reachAtLeastOnMaximum": 0.7413,
+                "reachAtMostOnMinimum": 0.0644,
+                "stayAtLeastOnMinimum": 0.9356,
+                "stayAtMostOnMaximum": 0.2587
+              },
+              {
+                "boundDegrees": 135.0,
+                "reachAtLeastOnMaximum": 0.8329,
+                "reachAtMostOnMinimum": 0.0322,
+                "stayAtLeastOnMinimum": 0.9678,
+                "stayAtMostOnMaximum": 0.1671
+              },
+              {
+                "boundDegrees": 140.0,
+                "reachAtLeastOnMaximum": 0.901,
+                "reachAtMostOnMinimum": 0.0087,
+                "stayAtLeastOnMinimum": 0.9913,
+                "stayAtMostOnMaximum": 0.099
+              },
+              {
+                "boundDegrees": 145.0,
+                "reachAtLeastOnMaximum": 0.9567,
+                "reachAtMostOnMinimum": 0.0025,
+                "stayAtLeastOnMinimum": 0.9975,
+                "stayAtMostOnMaximum": 0.0433
+              },
+              {
+                "boundDegrees": 150.0,
+                "reachAtLeastOnMaximum": 0.9851,
+                "reachAtMostOnMinimum": 0.0,
+                "stayAtLeastOnMinimum": 1.0,
+                "stayAtMostOnMaximum": 0.0149
+              },
+              {
+                "boundDegrees": 155.0,
+                "reachAtLeastOnMaximum": 0.9963,
+                "reachAtMostOnMinimum": 0.0,
+                "stayAtLeastOnMinimum": 1.0,
+                "stayAtMostOnMaximum": 0.0037
+              },
+              {
+                "boundDegrees": 160.0,
+                "reachAtLeastOnMaximum": 0.9963,
+                "reachAtMostOnMinimum": 0.0,
+                "stayAtLeastOnMinimum": 1.0,
+                "stayAtMostOnMaximum": 0.0037
+              },
+              {
+                "boundDegrees": 165.0,
+                "reachAtLeastOnMaximum": 0.9988,
+                "reachAtMostOnMinimum": 0.0,
+                "stayAtLeastOnMinimum": 1.0,
+                "stayAtMostOnMaximum": 0.0012
+              },
+              {
+                "boundDegrees": 170.0,
+                "reachAtLeastOnMaximum": 0.9988,
+                "reachAtMostOnMinimum": 0.0,
+                "stayAtLeastOnMinimum": 1.0,
+                "stayAtMostOnMaximum": 0.0012
+              },
+              {
+                "boundDegrees": 175.0,
+                "reachAtLeastOnMaximum": 0.9988,
+                "reachAtMostOnMinimum": 0.0,
+                "stayAtLeastOnMinimum": 1.0,
+                "stayAtMostOnMaximum": 0.0012
+              },
+              {
+                "boundDegrees": 180.0,
+                "reachAtLeastOnMaximum": 1.0,
+                "reachAtMostOnMinimum": 0.0,
+                "stayAtLeastOnMinimum": 1.0,
+                "stayAtMostOnMaximum": 0.0
+              }
+            ],
+            "windowMaximum": {
+              "count": 808,
+              "maximum": 178.2,
+              "minimum": 23.6,
+              "p0.5": 33.8,
+              "p1": 36.8,
+              "p10": 76.8,
+              "p2.5": 43.3,
+              "p25": 97.1,
+              "p5": 60.1,
+              "p50": 115.2,
+              "p75": 130.4,
+              "p90": 139.9,
+              "p95": 144.0,
+              "p97.5": 146.9,
+              "p99": 151.5,
+              "p99.5": 153.6
+            },
+            "windowMinimum": {
+              "count": 808,
+              "maximum": 145.6,
+              "minimum": 5.5,
+              "p0.5": 12.1,
+              "p1": 14.6,
+              "p10": 27.2,
+              "p2.5": 19.0,
+              "p25": 36.9,
+              "p5": 22.3,
+              "p50": 83.0,
+              "p75": 116.5,
+              "p90": 126.4,
+              "p95": 132.2,
+              "p97.5": 136.1,
+              "p99": 139.6,
+              "p99.5": 141.1
+            }
+          }
+        },
+        "clipsContributing": 254,
+        "excursions": 1197,
+        "subjects": 32
+      },
+      "repDegrees": 120.0
+    },
+    {
+      "driver": "ELBOW",
+      "exercise": "업라이트로우",
+      "legitimate": {
+        "chains": {
+          "HIP": {
+            "clauseSweep": [
+              {
+                "boundDegrees": 40.0,
+                "reachAtLeastOnMaximum": 0.014,
+                "reachAtMostOnMinimum": 0.8615,
+                "stayAtLeastOnMinimum": 0.1385,
+                "stayAtMostOnMaximum": 0.986
+              },
+              {
+                "boundDegrees": 45.0,
+                "reachAtLeastOnMaximum": 0.0167,
+                "reachAtMostOnMinimum": 0.8602,
+                "stayAtLeastOnMinimum": 0.1398,
+                "stayAtMostOnMaximum": 0.9833
+              },
+              {
+                "boundDegrees": 50.0,
+                "reachAtLeastOnMaximum": 0.0167,
+                "reachAtMostOnMinimum": 0.8575,
+                "stayAtLeastOnMinimum": 0.1425,
+                "stayAtMostOnMaximum": 0.9833
+              },
+              {
+                "boundDegrees": 55.0,
+                "reachAtLeastOnMaximum": 0.0174,
+                "reachAtMostOnMinimum": 0.8555,
+                "stayAtLeastOnMinimum": 0.1445,
+                "stayAtMostOnMaximum": 0.9826
+              },
+              {
+                "boundDegrees": 60.0,
+                "reachAtLeastOnMaximum": 0.0181,
+                "reachAtMostOnMinimum": 0.8555,
+                "stayAtLeastOnMinimum": 0.1445,
+                "stayAtMostOnMaximum": 0.9819
+              },
+              {
+                "boundDegrees": 65.0,
+                "reachAtLeastOnMaximum": 0.0187,
+                "reachAtMostOnMinimum": 0.8542,
+                "stayAtLeastOnMinimum": 0.1458,
+                "stayAtMostOnMaximum": 0.9813
+              },
+              {
+                "boundDegrees": 70.0,
+                "reachAtLeastOnMaximum": 0.0207,
+                "reachAtMostOnMinimum": 0.8542,
+                "stayAtLeastOnMinimum": 0.1458,
+                "stayAtMostOnMaximum": 0.9793
+              },
+              {
+                "boundDegrees": 75.0,
+                "reachAtLeastOnMaximum": 0.0221,
+                "reachAtMostOnMinimum": 0.8528,
+                "stayAtLeastOnMinimum": 0.1472,
+                "stayAtMostOnMaximum": 0.9779
+              },
+              {
+                "boundDegrees": 80.0,
+                "reachAtLeastOnMaximum": 0.0281,
+                "reachAtMostOnMinimum": 0.8508,
+                "stayAtLeastOnMinimum": 0.1492,
+                "stayAtMostOnMaximum": 0.9719
+              },
+              {
+                "boundDegrees": 85.0,
+                "reachAtLeastOnMaximum": 0.0328,
+                "reachAtMostOnMinimum": 0.8508,
+                "stayAtLeastOnMinimum": 0.1492,
+                "stayAtMostOnMaximum": 0.9672
+              },
+              {
+                "boundDegrees": 90.0,
+                "reachAtLeastOnMaximum": 0.0355,
+                "reachAtMostOnMinimum": 0.8495,
+                "stayAtLeastOnMinimum": 0.1505,
+                "stayAtMostOnMaximum": 0.9645
+              },
+              {
+                "boundDegrees": 95.0,
+                "reachAtLeastOnMaximum": 0.0375,
+                "reachAtMostOnMinimum": 0.8482,
+                "stayAtLeastOnMinimum": 0.1518,
+                "stayAtMostOnMaximum": 0.9625
+              },
+              {
+                "boundDegrees": 100.0,
+                "reachAtLeastOnMaximum": 0.0408,
+                "reachAtMostOnMinimum": 0.8482,
+                "stayAtLeastOnMinimum": 0.1518,
+                "stayAtMostOnMaximum": 0.9592
+              },
+              {
+                "boundDegrees": 105.0,
+                "reachAtLeastOnMaximum": 0.0462,
+                "reachAtMostOnMinimum": 0.8468,
+                "stayAtLeastOnMinimum": 0.1532,
+                "stayAtMostOnMaximum": 0.9538
+              },
+              {
+                "boundDegrees": 110.0,
+                "reachAtLeastOnMaximum": 0.0475,
+                "reachAtMostOnMinimum": 0.8462,
+                "stayAtLeastOnMinimum": 0.1538,
+                "stayAtMostOnMaximum": 0.9525
+              },
+              {
+                "boundDegrees": 115.0,
+                "reachAtLeastOnMaximum": 0.0495,
+                "reachAtMostOnMinimum": 0.8462,
+                "stayAtLeastOnMinimum": 0.1538,
+                "stayAtMostOnMaximum": 0.9505
+              },
+              {
+                "boundDegrees": 120.0,
+                "reachAtLeastOnMaximum": 0.0528,
+                "reachAtMostOnMinimum": 0.8462,
+                "stayAtLeastOnMinimum": 0.1538,
+                "stayAtMostOnMaximum": 0.9472
+              },
+              {
+                "boundDegrees": 125.0,
+                "reachAtLeastOnMaximum": 0.0555,
+                "reachAtMostOnMinimum": 0.8455,
+                "stayAtLeastOnMinimum": 0.1545,
+                "stayAtMostOnMaximum": 0.9445
+              },
+              {
+                "boundDegrees": 130.0,
+                "reachAtLeastOnMaximum": 0.0575,
+                "reachAtMostOnMinimum": 0.8455,
+                "stayAtLeastOnMinimum": 0.1545,
+                "stayAtMostOnMaximum": 0.9425
+              },
+              {
+                "boundDegrees": 135.0,
+                "reachAtLeastOnMaximum": 0.0602,
+                "reachAtMostOnMinimum": 0.8448,
+                "stayAtLeastOnMinimum": 0.1552,
+                "stayAtMostOnMaximum": 0.9398
+              },
+              {
+                "boundDegrees": 140.0,
+                "reachAtLeastOnMaximum": 0.0622,
+                "reachAtMostOnMinimum": 0.8448,
+                "stayAtLeastOnMinimum": 0.1552,
+                "stayAtMostOnMaximum": 0.9378
+              },
+              {
+                "boundDegrees": 145.0,
+                "reachAtLeastOnMaximum": 0.0656,
+                "reachAtMostOnMinimum": 0.8415,
+                "stayAtLeastOnMinimum": 0.1585,
+                "stayAtMostOnMaximum": 0.9344
+              },
+              {
+                "boundDegrees": 150.0,
+                "reachAtLeastOnMaximum": 0.0689,
+                "reachAtMostOnMinimum": 0.8375,
+                "stayAtLeastOnMinimum": 0.1625,
+                "stayAtMostOnMaximum": 0.9311
+              },
+              {
+                "boundDegrees": 155.0,
+                "reachAtLeastOnMaximum": 0.0749,
+                "reachAtMostOnMinimum": 0.8234,
+                "stayAtLeastOnMinimum": 0.1766,
+                "stayAtMostOnMaximum": 0.9251
+              },
+              {
+                "boundDegrees": 160.0,
+                "reachAtLeastOnMaximum": 0.0916,
+                "reachAtMostOnMinimum": 0.7926,
+                "stayAtLeastOnMinimum": 0.2074,
+                "stayAtMostOnMaximum": 0.9084
+              },
+              {
+                "boundDegrees": 165.0,
+                "reachAtLeastOnMaximum": 0.1405,
+                "reachAtMostOnMinimum": 0.6943,
+                "stayAtLeastOnMinimum": 0.3057,
+                "stayAtMostOnMaximum": 0.8595
+              },
+              {
+                "boundDegrees": 170.0,
+                "reachAtLeastOnMaximum": 0.3692,
+                "reachAtMostOnMinimum": 0.3652,
+                "stayAtLeastOnMinimum": 0.6348,
+                "stayAtMostOnMaximum": 0.6308
+              },
+              {
+                "boundDegrees": 175.0,
+                "reachAtLeastOnMaximum": 0.8341,
+                "reachAtMostOnMinimum": 0.0214,
+                "stayAtLeastOnMinimum": 0.9786,
+                "stayAtMostOnMaximum": 0.1659
+              },
+              {
+                "boundDegrees": 180.0,
+                "reachAtLeastOnMaximum": 1.0,
+                "reachAtMostOnMinimum": 0.0,
+                "stayAtLeastOnMinimum": 1.0,
+                "stayAtMostOnMaximum": 0.0
+              }
+            ],
+            "windowMaximum": {
+              "count": 1495,
+              "maximum": 179.8,
+              "minimum": 0.3,
+              "p0.5": 5.3,
+              "p1": 16.8,
+              "p10": 161.4,
+              "p2.5": 78.4,
+              "p25": 168.3,
+              "p5": 115.3,
+              "p50": 171.4,
+              "p75": 174.0,
+              "p90": 176.2,
+              "p95": 177.8,
+              "p97.5": 178.8,
+              "p99": 179.4,
+              "p99.5": 179.6
+            },
+            "windowMinimum": {
+              "count": 1495,
+              "maximum": 178.5,
+              "minimum": 0.0,
+              "p0.5": 0.0,
+              "p1": 0.0,
+              "p10": 3.0,
+              "p2.5": 0.0,
+              "p25": 163.1,
+              "p5": 0.2,
+              "p50": 168.5,
+              "p75": 171.0,
+              "p90": 172.8,
+              "p95": 173.8,
+              "p97.5": 174.8,
+              "p99": 175.9,
+              "p99.5": 176.9
+            }
+          },
+          "SHOULDER": {
+            "clauseSweep": [
+              {
+                "boundDegrees": 40.0,
+                "reachAtLeastOnMaximum": 0.0522,
+                "reachAtMostOnMinimum": 0.4749,
+                "stayAtLeastOnMinimum": 0.5251,
+                "stayAtMostOnMaximum": 0.9478
+              },
+              {
+                "boundDegrees": 45.0,
+                "reachAtLeastOnMaximum": 0.0722,
+                "reachAtMostOnMinimum": 0.3933,
+                "stayAtLeastOnMinimum": 0.6067,
+                "stayAtMostOnMaximum": 0.9278
+              },
+              {
+                "boundDegrees": 50.0,
+                "reachAtLeastOnMaximum": 0.093,
+                "reachAtMostOnMinimum": 0.3217,
+                "stayAtLeastOnMinimum": 0.6783,
+                "stayAtMostOnMaximum": 0.907
+              },
+              {
+                "boundDegrees": 55.0,
+                "reachAtLeastOnMaximum": 0.113,
+                "reachAtMostOnMinimum": 0.2528,
+                "stayAtLeastOnMinimum": 0.7472,
+                "stayAtMostOnMaximum": 0.887
+              },
+              {
+                "boundDegrees": 60.0,
+                "reachAtLeastOnMaximum": 0.1445,
+                "reachAtMostOnMinimum": 0.2074,
+                "stayAtLeastOnMinimum": 0.7926,
+                "stayAtMostOnMaximum": 0.8555
+              },
+              {
+                "boundDegrees": 65.0,
+                "reachAtLeastOnMaximum": 0.1746,
+                "reachAtMostOnMinimum": 0.1679,
+                "stayAtLeastOnMinimum": 0.8321,
+                "stayAtMostOnMaximum": 0.8254
+              },
+              {
+                "boundDegrees": 70.0,
+                "reachAtLeastOnMaximum": 0.2127,
+                "reachAtMostOnMinimum": 0.1358,
+                "stayAtLeastOnMinimum": 0.8642,
+                "stayAtMostOnMaximum": 0.7873
+              },
+              {
+                "boundDegrees": 75.0,
+                "reachAtLeastOnMaximum": 0.2502,
+                "reachAtMostOnMinimum": 0.1077,
+                "stayAtLeastOnMinimum": 0.8923,
+                "stayAtMostOnMaximum": 0.7498
+              },
+              {
+                "boundDegrees": 80.0,
+                "reachAtLeastOnMaximum": 0.3017,
+                "reachAtMostOnMinimum": 0.0856,
+                "stayAtLeastOnMinimum": 0.9144,
+                "stayAtMostOnMaximum": 0.6983
+              },
+              {
+                "boundDegrees": 85.0,
+                "reachAtLeastOnMaximum": 0.3532,
+                "reachAtMostOnMinimum": 0.0609,
+                "stayAtLeastOnMinimum": 0.9391,
+                "stayAtMostOnMaximum": 0.6468
+              },
+              {
+                "boundDegrees": 90.0,
+                "reachAtLeastOnMaximum": 0.4194,
+                "reachAtMostOnMinimum": 0.0375,
+                "stayAtLeastOnMinimum": 0.9625,
+                "stayAtMostOnMaximum": 0.5806
+              },
+              {
+                "boundDegrees": 95.0,
+                "reachAtLeastOnMaximum": 0.4916,
+                "reachAtMostOnMinimum": 0.0234,
+                "stayAtLeastOnMinimum": 0.9766,
+                "stayAtMostOnMaximum": 0.5084
+              },
+              {
+                "boundDegrees": 100.0,
+                "reachAtLeastOnMaximum": 0.5739,
+                "reachAtMostOnMinimum": 0.012,
+                "stayAtLeastOnMinimum": 0.988,
+                "stayAtMostOnMaximum": 0.4261
+              },
+              {
+                "boundDegrees": 105.0,
+                "reachAtLeastOnMaximum": 0.6435,
+                "reachAtMostOnMinimum": 0.0047,
+                "stayAtLeastOnMinimum": 0.9953,
+                "stayAtMostOnMaximum": 0.3565
+              },
+              {
+                "boundDegrees": 110.0,
+                "reachAtLeastOnMaximum": 0.7144,
+                "reachAtMostOnMinimum": 0.0033,
+                "stayAtLeastOnMinimum": 0.9967,
+                "stayAtMostOnMaximum": 0.2856
+              },
+              {
+                "boundDegrees": 115.0,
+                "reachAtLeastOnMaximum": 0.7839,
+                "reachAtMostOnMinimum": 0.002,
+                "stayAtLeastOnMinimum": 0.998,
+                "stayAtMostOnMaximum": 0.2161
+              },
+              {
+                "boundDegrees": 120.0,
+                "reachAtLeastOnMaximum": 0.8388,
+                "reachAtMostOnMinimum": 0.002,
+                "stayAtLeastOnMinimum": 0.998,
+                "stayAtMostOnMaximum": 0.1612
+              },
+              {
+                "boundDegrees": 125.0,
+                "reachAtLeastOnMaximum": 0.8763,
+                "reachAtMostOnMinimum": 0.002,
+                "stayAtLeastOnMinimum": 0.998,
+                "stayAtMostOnMaximum": 0.1237
+              },
+              {
+                "boundDegrees": 130.0,
+                "reachAtLeastOnMaximum": 0.9057,
+                "reachAtMostOnMinimum": 0.0013,
+                "stayAtLeastOnMinimum": 0.9987,
+                "stayAtMostOnMaximum": 0.0943
+              },
+              {
+                "boundDegrees": 135.0,
+                "reachAtLeastOnMaximum": 0.9117,
+                "reachAtMostOnMinimum": 0.0013,
+                "stayAtLeastOnMinimum": 0.9987,
+                "stayAtMostOnMaximum": 0.0883
+              },
+              {
+                "boundDegrees": 140.0,
+                "reachAtLeastOnMaximum": 0.9151,
+                "reachAtMostOnMinimum": 0.0013,
+                "stayAtLeastOnMinimum": 0.9987,
+                "stayAtMostOnMaximum": 0.0849
+              },
+              {
+                "boundDegrees": 145.0,
+                "reachAtLeastOnMaximum": 0.9204,
+                "reachAtMostOnMinimum": 0.0013,
+                "stayAtLeastOnMinimum": 0.9987,
+                "stayAtMostOnMaximum": 0.0796
+              },
+              {
+                "boundDegrees": 150.0,
+                "reachAtLeastOnMaximum": 0.9251,
+                "reachAtMostOnMinimum": 0.0013,
+                "stayAtLeastOnMinimum": 0.9987,
+                "stayAtMostOnMaximum": 0.0749
+              },
+              {
+                "boundDegrees": 155.0,
+                "reachAtLeastOnMaximum": 0.9271,
+                "reachAtMostOnMinimum": 0.0013,
+                "stayAtLeastOnMinimum": 0.9987,
+                "stayAtMostOnMaximum": 0.0729
+              },
+              {
+                "boundDegrees": 160.0,
+                "reachAtLeastOnMaximum": 0.9338,
+                "reachAtMostOnMinimum": 0.0013,
+                "stayAtLeastOnMinimum": 0.9987,
+                "stayAtMostOnMaximum": 0.0662
+              },
+              {
+                "boundDegrees": 165.0,
+                "reachAtLeastOnMaximum": 0.9398,
+                "reachAtMostOnMinimum": 0.0007,
+                "stayAtLeastOnMinimum": 0.9993,
+                "stayAtMostOnMaximum": 0.0602
+              },
+              {
+                "boundDegrees": 170.0,
+                "reachAtLeastOnMaximum": 0.9452,
+                "reachAtMostOnMinimum": 0.0007,
+                "stayAtLeastOnMinimum": 0.9993,
+                "stayAtMostOnMaximum": 0.0548
+              },
+              {
+                "boundDegrees": 175.0,
+                "reachAtLeastOnMaximum": 0.9532,
+                "reachAtMostOnMinimum": 0.0007,
+                "stayAtLeastOnMinimum": 0.9993,
+                "stayAtMostOnMaximum": 0.0468
+              },
+              {
+                "boundDegrees": 180.0,
+                "reachAtLeastOnMaximum": 1.0,
+                "reachAtMostOnMinimum": 0.0,
+                "stayAtLeastOnMinimum": 1.0,
+                "stayAtMostOnMaximum": 0.0
+              }
+            ],
+            "windowMaximum": {
+              "count": 1495,
+              "maximum": 180.0,
+              "minimum": 0.0,
+              "p0.5": 1.6,
+              "p1": 8.8,
+              "p10": 52.1,
+              "p2.5": 31.3,
+              "p25": 75.0,
+              "p5": 38.8,
+              "p50": 95.4,
+              "p75": 112.8,
+              "p90": 128.6,
+              "p95": 173.7,
+              "p97.5": 178.4,
+              "p99": 179.3,
+              "p99.5": 179.6
+            },
+            "windowMinimum": {
+              "count": 1495,
+              "maximum": 177.4,
+              "minimum": 0.0,
+              "p0.5": 0.0,
+              "p1": 0.0,
+              "p10": 1.2,
+              "p2.5": 0.0,
+              "p25": 26.8,
+              "p5": 0.1,
+              "p50": 39.0,
+              "p75": 55.2,
+              "p90": 76.5,
+              "p95": 87.3,
+              "p97.5": 93.8,
+              "p99": 100.6,
+              "p99.5": 103.2
+            }
+          }
+        },
+        "clipsContributing": 347,
+        "excursions": 1885,
+        "subjects": 41
+      },
+      "repDegrees": 120.0
+    },
+    {
+      "driver": "ELBOW",
+      "exercise": "바벨 로우",
+      "legitimate": {
+        "chains": {
+          "HIP": {
+            "clauseSweep": [
+              {
+                "boundDegrees": 40.0,
+                "reachAtLeastOnMaximum": 0.0349,
+                "reachAtMostOnMinimum": 0.7901,
+                "stayAtLeastOnMinimum": 0.2099,
+                "stayAtMostOnMaximum": 0.9651
+              },
+              {
+                "boundDegrees": 45.0,
+                "reachAtLeastOnMaximum": 0.0363,
+                "reachAtMostOnMinimum": 0.7856,
+                "stayAtLeastOnMinimum": 0.2144,
+                "stayAtMostOnMaximum": 0.9637
+              },
+              {
+                "boundDegrees": 50.0,
+                "reachAtLeastOnMaximum": 0.0383,
+                "reachAtMostOnMinimum": 0.7783,
+                "stayAtLeastOnMinimum": 0.2217,
+                "stayAtMostOnMaximum": 0.9617
+              },
+              {
+                "boundDegrees": 55.0,
+                "reachAtLeastOnMaximum": 0.0408,
+                "reachAtMostOnMinimum": 0.7676,
+                "stayAtLeastOnMinimum": 0.2324,
+                "stayAtMostOnMaximum": 0.9592
+              },
+              {
+                "boundDegrees": 60.0,
+                "reachAtLeastOnMaximum": 0.0445,
+                "reachAtMostOnMinimum": 0.751,
+                "stayAtLeastOnMinimum": 0.249,
+                "stayAtMostOnMaximum": 0.9555
+              },
+              {
+                "boundDegrees": 65.0,
+                "reachAtLeastOnMaximum": 0.0495,
+                "reachAtMostOnMinimum": 0.729,
+                "stayAtLeastOnMinimum": 0.271,
+                "stayAtMostOnMaximum": 0.9505
+              },
+              {
+                "boundDegrees": 70.0,
+                "reachAtLeastOnMaximum": 0.0563,
+                "reachAtMostOnMinimum": 0.7017,
+                "stayAtLeastOnMinimum": 0.2983,
+                "stayAtMostOnMaximum": 0.9437
+              },
+              {
+                "boundDegrees": 75.0,
+                "reachAtLeastOnMaximum": 0.0639,
+                "reachAtMostOnMinimum": 0.6674,
+                "stayAtLeastOnMinimum": 0.3326,
+                "stayAtMostOnMaximum": 0.9361
+              },
+              {
+                "boundDegrees": 80.0,
+                "reachAtLeastOnMaximum": 0.0763,
+                "reachAtMostOnMinimum": 0.6224,
+                "stayAtLeastOnMinimum": 0.3776,
+                "stayAtMostOnMaximum": 0.9237
+              },
+              {
+                "boundDegrees": 85.0,
+                "reachAtLeastOnMaximum": 0.0931,
+                "reachAtMostOnMinimum": 0.565,
+                "stayAtLeastOnMinimum": 0.435,
+                "stayAtMostOnMaximum": 0.9069
+              },
+              {
+                "boundDegrees": 90.0,
+                "reachAtLeastOnMaximum": 0.1103,
+                "reachAtMostOnMinimum": 0.4932,
+                "stayAtLeastOnMinimum": 0.5068,
+                "stayAtMostOnMaximum": 0.8897
+              },
+              {
+                "boundDegrees": 95.0,
+                "reachAtLeastOnMaximum": 0.1401,
+                "reachAtMostOnMinimum": 0.417,
+                "stayAtLeastOnMinimum": 0.583,
+                "stayAtMostOnMaximum": 0.8599
+              },
+              {
+                "boundDegrees": 100.0,
+                "reachAtLeastOnMaximum": 0.1851,
+                "reachAtMostOnMinimum": 0.3348,
+                "stayAtLeastOnMinimum": 0.6652,
+                "stayAtMostOnMaximum": 0.8149
+              },
+              {
+                "boundDegrees": 105.0,
+                "reachAtLeastOnMaximum": 0.2316,
+                "reachAtMostOnMinimum": 0.2631,
+                "stayAtLeastOnMinimum": 0.7369,
+                "stayAtMostOnMaximum": 0.7684
+              },
+              {
+                "boundDegrees": 110.0,
+                "reachAtLeastOnMaximum": 0.2817,
+                "reachAtMostOnMinimum": 0.2023,
+                "stayAtLeastOnMinimum": 0.7977,
+                "stayAtMostOnMaximum": 0.7183
+              },
+              {
+                "boundDegrees": 115.0,
+                "reachAtLeastOnMaximum": 0.3301,
+                "reachAtMostOnMinimum": 0.1508,
+                "stayAtLeastOnMinimum": 0.8492,
+                "stayAtMostOnMaximum": 0.6699
+              },
+              {
+                "boundDegrees": 120.0,
+                "reachAtLeastOnMaximum": 0.3782,
+                "reachAtMostOnMinimum": 0.1145,
+                "stayAtLeastOnMinimum": 0.8855,
+                "stayAtMostOnMaximum": 0.6218
+              },
+              {
+                "boundDegrees": 125.0,
+                "reachAtLeastOnMaximum": 0.4212,
+                "reachAtMostOnMinimum": 0.0853,
+                "stayAtLeastOnMinimum": 0.9147,
+                "stayAtMostOnMaximum": 0.5788
+              },
+              {
+                "boundDegrees": 130.0,
+                "reachAtLeastOnMaximum": 0.4682,
+                "reachAtMostOnMinimum": 0.0667,
+                "stayAtLeastOnMinimum": 0.9333,
+                "stayAtMostOnMaximum": 0.5318
+              },
+              {
+                "boundDegrees": 135.0,
+                "reachAtLeastOnMaximum": 0.5144,
+                "reachAtMostOnMinimum": 0.049,
+                "stayAtLeastOnMinimum": 0.951,
+                "stayAtMostOnMaximum": 0.4856
+              },
+              {
+                "boundDegrees": 140.0,
+                "reachAtLeastOnMaximum": 0.5653,
+                "reachAtMostOnMinimum": 0.036,
+                "stayAtLeastOnMinimum": 0.964,
+                "stayAtMostOnMaximum": 0.4347
+              },
+              {
+                "boundDegrees": 145.0,
+                "reachAtLeastOnMaximum": 0.623,
+                "reachAtMostOnMinimum": 0.027,
+                "stayAtLeastOnMinimum": 0.973,
+                "stayAtMostOnMaximum": 0.377
+              },
+              {
+                "boundDegrees": 150.0,
+                "reachAtLeastOnMaximum": 0.6733,
+                "reachAtMostOnMinimum": 0.02,
+                "stayAtLeastOnMinimum": 0.98,
+                "stayAtMostOnMaximum": 0.3267
+              },
+              {
+                "boundDegrees": 155.0,
+                "reachAtLeastOnMaximum": 0.7195,
+                "reachAtMostOnMinimum": 0.0144,
+                "stayAtLeastOnMinimum": 0.9856,
+                "stayAtMostOnMaximum": 0.2805
+              },
+              {
+                "boundDegrees": 160.0,
+                "reachAtLeastOnMaximum": 0.7617,
+                "reachAtMostOnMinimum": 0.0104,
+                "stayAtLeastOnMinimum": 0.9896,
+                "stayAtMostOnMaximum": 0.2383
+              },
+              {
+                "boundDegrees": 165.0,
+                "reachAtLeastOnMaximum": 0.8022,
+                "reachAtMostOnMinimum": 0.0068,
+                "stayAtLeastOnMinimum": 0.9932,
+                "stayAtMostOnMaximum": 0.1978
+              },
+              {
+                "boundDegrees": 170.0,
+                "reachAtLeastOnMaximum": 0.8627,
+                "reachAtMostOnMinimum": 0.0025,
+                "stayAtLeastOnMinimum": 0.9975,
+                "stayAtMostOnMaximum": 0.1373
+              },
+              {
+                "boundDegrees": 175.0,
+                "reachAtLeastOnMaximum": 0.9313,
+                "reachAtMostOnMinimum": 0.0006,
+                "stayAtLeastOnMinimum": 0.9994,
+                "stayAtMostOnMaximum": 0.0687
+              },
+              {
+                "boundDegrees": 180.0,
+                "reachAtLeastOnMaximum": 1.0,
+                "reachAtMostOnMinimum": 0.0,
+                "stayAtLeastOnMinimum": 1.0,
+                "stayAtMostOnMaximum": 0.0
+              }
+            ],
+            "windowMaximum": {
+              "count": 3554,
+              "maximum": 179.9,
+              "minimum": 0.2,
+              "p0.5": 2.0,
+              "p1": 6.0,
+              "p10": 87.2,
+              "p2.5": 22.6,
+              "p25": 106.8,
+              "p5": 65.5,
+              "p50": 133.6,
+              "p75": 158.6,
+              "p90": 172.5,
+              "p95": 177.0,
+              "p97.5": 178.3,
+              "p99": 179.2,
+              "p99.5": 179.5
+            },
+            "windowMinimum": {
+              "count": 3554,
+              "maximum": 179.0,
+              "minimum": 0.0,
+              "p0.5": 0.0,
+              "p1": 0.0,
+              "p10": 0.3,
+              "p2.5": 0.0,
+              "p25": 60.5,
+              "p5": 0.0,
+              "p50": 89.5,
+              "p75": 105.9,
+              "p90": 122.1,
+              "p95": 134.7,
+              "p97.5": 146.5,
+              "p99": 160.9,
+              "p99.5": 167.2
+            }
+          },
+          "SHOULDER": {
+            "clauseSweep": [
+              {
+                "boundDegrees": 40.0,
+                "reachAtLeastOnMaximum": 0.1376,
+                "reachAtMostOnMinimum": 0.4021,
+                "stayAtLeastOnMinimum": 0.5979,
+                "stayAtMostOnMaximum": 0.8624
+              },
+              {
+                "boundDegrees": 45.0,
+                "reachAtLeastOnMaximum": 0.2344,
+                "reachAtMostOnMinimum": 0.3129,
+                "stayAtLeastOnMinimum": 0.6871,
+                "stayAtMostOnMaximum": 0.7656
+              },
+              {
+                "boundDegrees": 50.0,
+                "reachAtLeastOnMaximum": 0.3301,
+                "reachAtMostOnMinimum": 0.2521,
+                "stayAtLeastOnMinimum": 0.7479,
+                "stayAtMostOnMaximum": 0.6699
+              },
+              {
+                "boundDegrees": 55.0,
+                "reachAtLeastOnMaximum": 0.4083,
+                "reachAtMostOnMinimum": 0.2046,
+                "stayAtLeastOnMinimum": 0.7954,
+                "stayAtMostOnMaximum": 0.5917
+              },
+              {
+                "boundDegrees": 60.0,
+                "reachAtLeastOnMaximum": 0.4651,
+                "reachAtMostOnMinimum": 0.168,
+                "stayAtLeastOnMinimum": 0.832,
+                "stayAtMostOnMaximum": 0.5349
+              },
+              {
+                "boundDegrees": 65.0,
+                "reachAtLeastOnMaximum": 0.5146,
+                "reachAtMostOnMinimum": 0.1348,
+                "stayAtLeastOnMinimum": 0.8652,
+                "stayAtMostOnMaximum": 0.4854
+              },
+              {
+                "boundDegrees": 70.0,
+                "reachAtLeastOnMaximum": 0.5582,
+                "reachAtMostOnMinimum": 0.1064,
+                "stayAtLeastOnMinimum": 0.8936,
+                "stayAtMostOnMaximum": 0.4418
+              },
+              {
+                "boundDegrees": 75.0,
+                "reachAtLeastOnMaximum": 0.5982,
+                "reachAtMostOnMinimum": 0.0827,
+                "stayAtLeastOnMinimum": 0.9173,
+                "stayAtMostOnMaximum": 0.4018
+              },
+              {
+                "boundDegrees": 80.0,
+                "reachAtLeastOnMaximum": 0.6367,
+                "reachAtMostOnMinimum": 0.056,
+                "stayAtLeastOnMinimum": 0.944,
+                "stayAtMostOnMaximum": 0.3633
+              },
+              {
+                "boundDegrees": 85.0,
+                "reachAtLeastOnMaximum": 0.675,
+                "reachAtMostOnMinimum": 0.038,
+                "stayAtLeastOnMinimum": 0.962,
+                "stayAtMostOnMaximum": 0.325
+              },
+              {
+                "boundDegrees": 90.0,
+                "reachAtLeastOnMaximum": 0.7136,
+                "reachAtMostOnMinimum": 0.0217,
+                "stayAtLeastOnMinimum": 0.9783,
+                "stayAtMostOnMaximum": 0.2864
+              },
+              {
+                "boundDegrees": 95.0,
+                "reachAtLeastOnMaximum": 0.7473,
+                "reachAtMostOnMinimum": 0.0158,
+                "stayAtLeastOnMinimum": 0.9842,
+                "stayAtMostOnMaximum": 0.2527
+              },
+              {
+                "boundDegrees": 100.0,
+                "reachAtLeastOnMaximum": 0.7783,
+                "reachAtMostOnMinimum": 0.0107,
+                "stayAtLeastOnMinimum": 0.9893,
+                "stayAtMostOnMaximum": 0.2217
+              },
+              {
+                "boundDegrees": 105.0,
+                "reachAtLeastOnMaximum": 0.8075,
+                "reachAtMostOnMinimum": 0.0082,
+                "stayAtLeastOnMinimum": 0.9918,
+                "stayAtMostOnMaximum": 0.1925
+              },
+              {
+                "boundDegrees": 110.0,
+                "reachAtLeastOnMaximum": 0.8227,
+                "reachAtMostOnMinimum": 0.0076,
+                "stayAtLeastOnMinimum": 0.9924,
+                "stayAtMostOnMaximum": 0.1773
+              },
+              {
+                "boundDegrees": 115.0,
+                "reachAtLeastOnMaximum": 0.8348,
+                "reachAtMostOnMinimum": 0.0073,
+                "stayAtLeastOnMinimum": 0.9927,
+                "stayAtMostOnMaximum": 0.1652
+              },
+              {
+                "boundDegrees": 120.0,
+                "reachAtLeastOnMaximum": 0.8433,
+                "reachAtMostOnMinimum": 0.0059,
+                "stayAtLeastOnMinimum": 0.9941,
+                "stayAtMostOnMaximum": 0.1567
+              },
+              {
+                "boundDegrees": 125.0,
+                "reachAtLeastOnMaximum": 0.8495,
+                "reachAtMostOnMinimum": 0.0059,
+                "stayAtLeastOnMinimum": 0.9941,
+                "stayAtMostOnMaximum": 0.1505
+              },
+              {
+                "boundDegrees": 130.0,
+                "reachAtLeastOnMaximum": 0.8582,
+                "reachAtMostOnMinimum": 0.0045,
+                "stayAtLeastOnMinimum": 0.9955,
+                "stayAtMostOnMaximum": 0.1418
+              },
+              {
+                "boundDegrees": 135.0,
+                "reachAtLeastOnMaximum": 0.8633,
+                "reachAtMostOnMinimum": 0.0039,
+                "stayAtLeastOnMinimum": 0.9961,
+                "stayAtMostOnMaximum": 0.1367
+              },
+              {
+                "boundDegrees": 140.0,
+                "reachAtLeastOnMaximum": 0.868,
+                "reachAtMostOnMinimum": 0.0031,
+                "stayAtLeastOnMinimum": 0.9969,
+                "stayAtMostOnMaximum": 0.132
+              },
+              {
+                "boundDegrees": 145.0,
+                "reachAtLeastOnMaximum": 0.8723,
+                "reachAtMostOnMinimum": 0.0031,
+                "stayAtLeastOnMinimum": 0.9969,
+                "stayAtMostOnMaximum": 0.1277
+              },
+              {
+                "boundDegrees": 150.0,
+                "reachAtLeastOnMaximum": 0.8765,
+                "reachAtMostOnMinimum": 0.0023,
+                "stayAtLeastOnMinimum": 0.9977,
+                "stayAtMostOnMaximum": 0.1235
+              },
+              {
+                "boundDegrees": 155.0,
+                "reachAtLeastOnMaximum": 0.8827,
+                "reachAtMostOnMinimum": 0.002,
+                "stayAtLeastOnMinimum": 0.998,
+                "stayAtMostOnMaximum": 0.1173
+              },
+              {
+                "boundDegrees": 160.0,
+                "reachAtLeastOnMaximum": 0.8894,
+                "reachAtMostOnMinimum": 0.0017,
+                "stayAtLeastOnMinimum": 0.9983,
+                "stayAtMostOnMaximum": 0.1106
+              },
+              {
+                "boundDegrees": 165.0,
+                "reachAtLeastOnMaximum": 0.897,
+                "reachAtMostOnMinimum": 0.0014,
+                "stayAtLeastOnMinimum": 0.9986,
+                "stayAtMostOnMaximum": 0.103
+              },
+              {
+                "boundDegrees": 170.0,
+                "reachAtLeastOnMaximum": 0.9102,
+                "reachAtMostOnMinimum": 0.0014,
+                "stayAtLeastOnMinimum": 0.9986,
+                "stayAtMostOnMaximum": 0.0898
+              },
+              {
+                "boundDegrees": 175.0,
+                "reachAtLeastOnMaximum": 0.9322,
+                "reachAtMostOnMinimum": 0.0008,
+                "stayAtLeastOnMinimum": 0.9992,
+                "stayAtMostOnMaximum": 0.0678
+              },
+              {
+                "boundDegrees": 180.0,
+                "reachAtLeastOnMaximum": 1.0,
+                "reachAtMostOnMinimum": 0.0,
+                "stayAtLeastOnMinimum": 1.0,
+                "stayAtMostOnMaximum": 0.0
+              }
+            ],
+            "windowMaximum": {
+              "count": 3554,
+              "maximum": 179.9,
+              "minimum": 0.1,
+              "p0.5": 1.9,
+              "p1": 5.6,
+              "p10": 37.6,
+              "p2.5": 26.0,
+              "p25": 46.0,
+              "p5": 33.0,
+              "p50": 63.0,
+              "p75": 95.3,
+              "p90": 165.9,
+              "p95": 177.1,
+              "p97.5": 178.7,
+              "p99": 179.4,
+              "p99.5": 179.6
+            },
+            "windowMinimum": {
+              "count": 3554,
+              "maximum": 178.6,
+              "minimum": 0.0,
+              "p0.5": 0.0,
+              "p1": 0.0,
+              "p10": 0.5,
+              "p2.5": 0.0,
+              "p25": 24.7,
+              "p5": 0.0,
+              "p50": 35.8,
+              "p75": 50.2,
+              "p90": 71.6,
+              "p95": 81.3,
+              "p97.5": 88.7,
+              "p99": 100.5,
+              "p99.5": 129.3
+            }
+          }
+        },
+        "clipsContributing": 1360,
+        "excursions": 7319,
+        "subjects": 48
+      },
+      "repDegrees": 120.0
+    },
+    {
+      "driver": "ELBOW",
+      "exercise": "덤벨 벤트오버 로우",
+      "legitimate": {
+        "chains": {
+          "HIP": {
+            "clauseSweep": [
+              {
+                "boundDegrees": 40.0,
+                "reachAtLeastOnMaximum": 0.0,
+                "reachAtMostOnMinimum": 0.9961,
+                "stayAtLeastOnMinimum": 0.0039,
+                "stayAtMostOnMaximum": 1.0
+              },
+              {
+                "boundDegrees": 45.0,
+                "reachAtLeastOnMaximum": 0.0,
+                "reachAtMostOnMinimum": 0.9944,
+                "stayAtLeastOnMinimum": 0.0056,
+                "stayAtMostOnMaximum": 1.0
+              },
+              {
+                "boundDegrees": 50.0,
+                "reachAtLeastOnMaximum": 0.0,
+                "reachAtMostOnMinimum": 0.9893,
+                "stayAtLeastOnMinimum": 0.0107,
+                "stayAtMostOnMaximum": 1.0
+              },
+              {
+                "boundDegrees": 55.0,
+                "reachAtLeastOnMaximum": 0.0,
+                "reachAtMostOnMinimum": 0.9775,
+                "stayAtLeastOnMinimum": 0.0225,
+                "stayAtMostOnMaximum": 1.0
+              },
+              {
+                "boundDegrees": 60.0,
+                "reachAtLeastOnMaximum": 0.0003,
+                "reachAtMostOnMinimum": 0.9607,
+                "stayAtLeastOnMinimum": 0.0393,
+                "stayAtMostOnMaximum": 0.9997
+              },
+              {
+                "boundDegrees": 65.0,
+                "reachAtLeastOnMaximum": 0.0022,
+                "reachAtMostOnMinimum": 0.9368,
+                "stayAtLeastOnMinimum": 0.0632,
+                "stayAtMostOnMaximum": 0.9978
+              },
+              {
+                "boundDegrees": 70.0,
+                "reachAtLeastOnMaximum": 0.0048,
+                "reachAtMostOnMinimum": 0.9033,
+                "stayAtLeastOnMinimum": 0.0967,
+                "stayAtMostOnMaximum": 0.9952
+              },
+              {
+                "boundDegrees": 75.0,
+                "reachAtLeastOnMaximum": 0.0096,
+                "reachAtMostOnMinimum": 0.8606,
+                "stayAtLeastOnMinimum": 0.1394,
+                "stayAtMostOnMaximum": 0.9904
+              },
+              {
+                "boundDegrees": 80.0,
+                "reachAtLeastOnMaximum": 0.0166,
+                "reachAtMostOnMinimum": 0.8134,
+                "stayAtLeastOnMinimum": 0.1866,
+                "stayAtMostOnMaximum": 0.9834
+              },
+              {
+                "boundDegrees": 85.0,
+                "reachAtLeastOnMaximum": 0.0273,
+                "reachAtMostOnMinimum": 0.7412,
+                "stayAtLeastOnMinimum": 0.2588,
+                "stayAtMostOnMaximum": 0.9727
+              },
+              {
+                "boundDegrees": 90.0,
+                "reachAtLeastOnMaximum": 0.0447,
+                "reachAtMostOnMinimum": 0.6682,
+                "stayAtLeastOnMinimum": 0.3318,
+                "stayAtMostOnMaximum": 0.9553
+              },
+              {
+                "boundDegrees": 95.0,
+                "reachAtLeastOnMaximum": 0.0652,
+                "reachAtMostOnMinimum": 0.5712,
+                "stayAtLeastOnMinimum": 0.4288,
+                "stayAtMostOnMaximum": 0.9348
+              },
+              {
+                "boundDegrees": 100.0,
+                "reachAtLeastOnMaximum": 0.0978,
+                "reachAtMostOnMinimum": 0.4732,
+                "stayAtLeastOnMinimum": 0.5268,
+                "stayAtMostOnMaximum": 0.9022
+              },
+              {
+                "boundDegrees": 105.0,
+                "reachAtLeastOnMaximum": 0.1374,
+                "reachAtMostOnMinimum": 0.3757,
+                "stayAtLeastOnMinimum": 0.6243,
+                "stayAtMostOnMaximum": 0.8626
+              },
+              {
+                "boundDegrees": 110.0,
+                "reachAtLeastOnMaximum": 0.2043,
+                "reachAtMostOnMinimum": 0.2855,
+                "stayAtLeastOnMinimum": 0.7145,
+                "stayAtMostOnMaximum": 0.7957
+              },
+              {
+                "boundDegrees": 115.0,
+                "reachAtLeastOnMaximum": 0.2636,
+                "reachAtMostOnMinimum": 0.2152,
+                "stayAtLeastOnMinimum": 0.7848,
+                "stayAtMostOnMaximum": 0.7364
+              },
+              {
+                "boundDegrees": 120.0,
+                "reachAtLeastOnMaximum": 0.3366,
+                "reachAtMostOnMinimum": 0.1599,
+                "stayAtLeastOnMinimum": 0.8401,
+                "stayAtMostOnMaximum": 0.6634
+              },
+              {
+                "boundDegrees": 125.0,
+                "reachAtLeastOnMaximum": 0.392,
+                "reachAtMostOnMinimum": 0.1169,
+                "stayAtLeastOnMinimum": 0.8831,
+                "stayAtMostOnMaximum": 0.608
+              },
+              {
+                "boundDegrees": 130.0,
+                "reachAtLeastOnMaximum": 0.4653,
+                "reachAtMostOnMinimum": 0.0775,
+                "stayAtLeastOnMinimum": 0.9225,
+                "stayAtMostOnMaximum": 0.5347
+              },
+              {
+                "boundDegrees": 135.0,
+                "reachAtLeastOnMaximum": 0.528,
+                "reachAtMostOnMinimum": 0.0492,
+                "stayAtLeastOnMinimum": 0.9508,
+                "stayAtMostOnMaximum": 0.472
+              },
+              {
+                "boundDegrees": 140.0,
+                "reachAtLeastOnMaximum": 0.599,
+                "reachAtMostOnMinimum": 0.0354,
+                "stayAtLeastOnMinimum": 0.9646,
+                "stayAtMostOnMaximum": 0.401
+              },
+              {
+                "boundDegrees": 145.0,
+                "reachAtLeastOnMaximum": 0.6676,
+                "reachAtMostOnMinimum": 0.0287,
+                "stayAtLeastOnMinimum": 0.9713,
+                "stayAtMostOnMaximum": 0.3324
+              },
+              {
+                "boundDegrees": 150.0,
+                "reachAtLeastOnMaximum": 0.7221,
+                "reachAtMostOnMinimum": 0.023,
+                "stayAtLeastOnMinimum": 0.977,
+                "stayAtMostOnMaximum": 0.2779
+              },
+              {
+                "boundDegrees": 155.0,
+                "reachAtLeastOnMaximum": 0.7775,
+                "reachAtMostOnMinimum": 0.0183,
+                "stayAtLeastOnMinimum": 0.9817,
+                "stayAtMostOnMaximum": 0.2225
+              },
+              {
+                "boundDegrees": 160.0,
+                "reachAtLeastOnMaximum": 0.8269,
+                "reachAtMostOnMinimum": 0.014,
+                "stayAtLeastOnMinimum": 0.986,
+                "stayAtMostOnMaximum": 0.1731
+              },
+              {
+                "boundDegrees": 165.0,
+                "reachAtLeastOnMaximum": 0.8708,
+                "reachAtMostOnMinimum": 0.0093,
+                "stayAtLeastOnMinimum": 0.9907,
+                "stayAtMostOnMaximum": 0.1292
+              },
+              {
+                "boundDegrees": 170.0,
+                "reachAtLeastOnMaximum": 0.9298,
+                "reachAtMostOnMinimum": 0.0028,
+                "stayAtLeastOnMinimum": 0.9972,
+                "stayAtMostOnMaximum": 0.0702
+              },
+              {
+                "boundDegrees": 175.0,
+                "reachAtLeastOnMaximum": 0.9868,
+                "reachAtMostOnMinimum": 0.0006,
+                "stayAtLeastOnMinimum": 0.9994,
+                "stayAtMostOnMaximum": 0.0132
+              },
+              {
+                "boundDegrees": 180.0,
+                "reachAtLeastOnMaximum": 1.0,
+                "reachAtMostOnMinimum": 0.0,
+                "stayAtLeastOnMinimum": 1.0,
+                "stayAtMostOnMaximum": 0.0
+              }
+            ],
+            "windowMaximum": {
+              "count": 3559,
+              "maximum": 179.2,
+              "minimum": 55.4,
+              "p0.5": 70.2,
+              "p1": 75.7,
+              "p10": 100.3,
+              "p2.5": 83.2,
+              "p25": 113.8,
+              "p5": 91.5,
+              "p50": 133.2,
+              "p75": 152.4,
+              "p90": 167.7,
+              "p95": 171.8,
+              "p97.5": 173.8,
+              "p99": 175.4,
+              "p99.5": 176.3
+            },
+            "windowMinimum": {
+              "count": 3559,
+              "maximum": 175.6,
+              "minimum": 26.4,
+              "p0.5": 41.8,
+              "p1": 49.4,
+              "p10": 70.5,
+              "p2.5": 55.9,
+              "p25": 84.4,
+              "p5": 62.2,
+              "p50": 98.7,
+              "p75": 112.4,
+              "p90": 126.8,
+              "p95": 135.0,
+              "p97.5": 148.3,
+              "p99": 164.1,
+              "p99.5": 168.7
+            }
+          },
+          "SHOULDER": {
+            "clauseSweep": [
+              {
+                "boundDegrees": 40.0,
+                "reachAtLeastOnMaximum": 0.1484,
+                "reachAtMostOnMinimum": 0.4248,
+                "stayAtLeastOnMinimum": 0.5752,
+                "stayAtMostOnMaximum": 0.8516
+              },
+              {
+                "boundDegrees": 45.0,
+                "reachAtLeastOnMaximum": 0.2678,
+                "reachAtMostOnMinimum": 0.3183,
+                "stayAtLeastOnMinimum": 0.6817,
+                "stayAtMostOnMaximum": 0.7322
+              },
+              {
+                "boundDegrees": 50.0,
+                "reachAtLeastOnMaximum": 0.4035,
+                "reachAtMostOnMinimum": 0.2461,
+                "stayAtLeastOnMinimum": 0.7539,
+                "stayAtMostOnMaximum": 0.5965
+              },
+              {
+                "boundDegrees": 55.0,
+                "reachAtLeastOnMaximum": 0.5145,
+                "reachAtMostOnMinimum": 0.1871,
+                "stayAtLeastOnMinimum": 0.8129,
+                "stayAtMostOnMaximum": 0.4855
+              },
+              {
+                "boundDegrees": 60.0,
+                "reachAtLeastOnMaximum": 0.6089,
+                "reachAtMostOnMinimum": 0.1436,
+                "stayAtLeastOnMinimum": 0.8564,
+                "stayAtMostOnMaximum": 0.3911
+              },
+              {
+                "boundDegrees": 65.0,
+                "reachAtLeastOnMaximum": 0.6763,
+                "reachAtMostOnMinimum": 0.1132,
+                "stayAtLeastOnMinimum": 0.8868,
+                "stayAtMostOnMaximum": 0.3237
+              },
+              {
+                "boundDegrees": 70.0,
+                "reachAtLeastOnMaximum": 0.7362,
+                "reachAtMostOnMinimum": 0.0843,
+                "stayAtLeastOnMinimum": 0.9157,
+                "stayAtMostOnMaximum": 0.2638
+              },
+              {
+                "boundDegrees": 75.0,
+                "reachAtLeastOnMaximum": 0.7907,
+                "reachAtMostOnMinimum": 0.061,
+                "stayAtLeastOnMinimum": 0.939,
+                "stayAtMostOnMaximum": 0.2093
+              },
+              {
+                "boundDegrees": 80.0,
+                "reachAtLeastOnMaximum": 0.8342,
+                "reachAtMostOnMinimum": 0.0416,
+                "stayAtLeastOnMinimum": 0.9584,
+                "stayAtMostOnMaximum": 0.1658
+              },
+              {
+                "boundDegrees": 85.0,
+                "reachAtLeastOnMaximum": 0.8708,
+                "reachAtMostOnMinimum": 0.0236,
+                "stayAtLeastOnMinimum": 0.9764,
+                "stayAtMostOnMaximum": 0.1292
+              },
+              {
+                "boundDegrees": 90.0,
+                "reachAtLeastOnMaximum": 0.9,
+                "reachAtMostOnMinimum": 0.0098,
+                "stayAtLeastOnMinimum": 0.9902,
+                "stayAtMostOnMaximum": 0.1
+              },
+              {
+                "boundDegrees": 95.0,
+                "reachAtLeastOnMaximum": 0.9295,
+                "reachAtMostOnMinimum": 0.0039,
+                "stayAtLeastOnMinimum": 0.9961,
+                "stayAtMostOnMaximum": 0.0705
+              },
+              {
+                "boundDegrees": 100.0,
+                "reachAtLeastOnMaximum": 0.9548,
+                "reachAtMostOnMinimum": 0.0014,
+                "stayAtLeastOnMinimum": 0.9986,
+                "stayAtMostOnMaximum": 0.0452
+              },
+              {
+                "boundDegrees": 105.0,
+                "reachAtLeastOnMaximum": 0.9716,
+                "reachAtMostOnMinimum": 0.0006,
+                "stayAtLeastOnMinimum": 0.9994,
+                "stayAtMostOnMaximum": 0.0284
+              },
+              {
+                "boundDegrees": 110.0,
+                "reachAtLeastOnMaximum": 0.982,
+                "reachAtMostOnMinimum": 0.0003,
+                "stayAtLeastOnMinimum": 0.9997,
+                "stayAtMostOnMaximum": 0.018
+              },
+              {
+                "boundDegrees": 115.0,
+                "reachAtLeastOnMaximum": 0.9871,
+                "reachAtMostOnMinimum": 0.0003,
+                "stayAtLeastOnMinimum": 0.9997,
+                "stayAtMostOnMaximum": 0.0129
+              },
+              {
+                "boundDegrees": 120.0,
+                "reachAtLeastOnMaximum": 0.9899,
+                "reachAtMostOnMinimum": 0.0003,
+                "stayAtLeastOnMinimum": 0.9997,
+                "stayAtMostOnMaximum": 0.0101
+              },
+              {
+                "boundDegrees": 125.0,
+                "reachAtLeastOnMaximum": 0.9941,
+                "reachAtMostOnMinimum": 0.0003,
+                "stayAtLeastOnMinimum": 0.9997,
+                "stayAtMostOnMaximum": 0.0059
+              },
+              {
+                "boundDegrees": 130.0,
+                "reachAtLeastOnMaximum": 0.9963,
+                "reachAtMostOnMinimum": 0.0003,
+                "stayAtLeastOnMinimum": 0.9997,
+                "stayAtMostOnMaximum": 0.0037
+              },
+              {
+                "boundDegrees": 135.0,
+                "reachAtLeastOnMaximum": 0.9986,
+                "reachAtMostOnMinimum": 0.0,
+                "stayAtLeastOnMinimum": 1.0,
+                "stayAtMostOnMaximum": 0.0014
+              },
+              {
+                "boundDegrees": 140.0,
+                "reachAtLeastOnMaximum": 0.9989,
+                "reachAtMostOnMinimum": 0.0,
+                "stayAtLeastOnMinimum": 1.0,
+                "stayAtMostOnMaximum": 0.0011
+              },
+              {
+                "boundDegrees": 145.0,
+                "reachAtLeastOnMaximum": 0.9989,
+                "reachAtMostOnMinimum": 0.0,
+                "stayAtLeastOnMinimum": 1.0,
+                "stayAtMostOnMaximum": 0.0011
+              },
+              {
+                "boundDegrees": 150.0,
+                "reachAtLeastOnMaximum": 0.9992,
+                "reachAtMostOnMinimum": 0.0,
+                "stayAtLeastOnMinimum": 1.0,
+                "stayAtMostOnMaximum": 0.0008
+              },
+              {
+                "boundDegrees": 155.0,
+                "reachAtLeastOnMaximum": 0.9994,
+                "reachAtMostOnMinimum": 0.0,
+                "stayAtLeastOnMinimum": 1.0,
+                "stayAtMostOnMaximum": 0.0006
+              },
+              {
+                "boundDegrees": 160.0,
+                "reachAtLeastOnMaximum": 0.9994,
+                "reachAtMostOnMinimum": 0.0,
+                "stayAtLeastOnMinimum": 1.0,
+                "stayAtMostOnMaximum": 0.0006
+              },
+              {
+                "boundDegrees": 165.0,
+                "reachAtLeastOnMaximum": 1.0,
+                "reachAtMostOnMinimum": 0.0,
+                "stayAtLeastOnMinimum": 1.0,
+                "stayAtMostOnMaximum": 0.0
+              },
+              {
+                "boundDegrees": 170.0,
+                "reachAtLeastOnMaximum": 1.0,
+                "reachAtMostOnMinimum": 0.0,
+                "stayAtLeastOnMinimum": 1.0,
+                "stayAtMostOnMaximum": 0.0
+              },
+              {
+                "boundDegrees": 175.0,
+                "reachAtLeastOnMaximum": 1.0,
+                "reachAtMostOnMinimum": 0.0,
+                "stayAtLeastOnMinimum": 1.0,
+                "stayAtMostOnMaximum": 0.0
+              },
+              {
+                "boundDegrees": 180.0,
+                "reachAtLeastOnMaximum": 1.0,
+                "reachAtMostOnMinimum": 0.0,
+                "stayAtLeastOnMinimum": 1.0,
+                "stayAtMostOnMaximum": 0.0
+              }
+            ],
+            "windowMaximum": {
+              "count": 3559,
+              "maximum": 161.9,
+              "minimum": 19.2,
+              "p0.5": 24.4,
+              "p1": 27.4,
+              "p10": 37.3,
+              "p2.5": 30.7,
+              "p25": 44.3,
+              "p5": 33.4,
+              "p50": 54.5,
+              "p75": 71.0,
+              "p90": 90.0,
+              "p95": 98.9,
+              "p97.5": 107.0,
+              "p99": 121.2,
+              "p99.5": 126.0
+            },
+            "windowMinimum": {
+              "count": 3559,
+              "maximum": 132.6,
+              "minimum": 5.0,
+              "p0.5": 15.4,
+              "p1": 16.7,
+              "p10": 24.4,
+              "p2.5": 19.6,
+              "p25": 29.7,
+              "p5": 21.6,
+              "p50": 37.6,
+              "p75": 49.7,
+              "p90": 67.1,
+              "p95": 77.7,
+              "p97.5": 84.7,
+              "p99": 89.9,
+              "p99.5": 94.0
+            }
+          }
+        },
+        "clipsContributing": 1411,
+        "excursions": 7565,
+        "subjects": 42
+      },
+      "repDegrees": 120.0
+    },
+    {
+      "driver": "HIP",
+      "exercise": "행잉 레그 레이즈",
+      "legitimate": {
+        "chains": {
+          "KNEE": {
+            "clauseSweep": [
+              {
+                "boundDegrees": 40.0,
+                "reachAtLeastOnMaximum": 0.0,
+                "reachAtMostOnMinimum": 1.0,
+                "stayAtLeastOnMinimum": 0.0,
+                "stayAtMostOnMaximum": 1.0
+              },
+              {
+                "boundDegrees": 45.0,
+                "reachAtLeastOnMaximum": 0.0,
+                "reachAtMostOnMinimum": 0.9932,
+                "stayAtLeastOnMinimum": 0.0068,
+                "stayAtMostOnMaximum": 1.0
+              },
+              {
+                "boundDegrees": 50.0,
+                "reachAtLeastOnMaximum": 0.0,
+                "reachAtMostOnMinimum": 0.9887,
+                "stayAtLeastOnMinimum": 0.0113,
+                "stayAtMostOnMaximum": 1.0
+              },
+              {
+                "boundDegrees": 55.0,
+                "reachAtLeastOnMaximum": 0.0,
+                "reachAtMostOnMinimum": 0.9797,
+                "stayAtLeastOnMinimum": 0.0203,
+                "stayAtMostOnMaximum": 1.0
+              },
+              {
+                "boundDegrees": 60.0,
+                "reachAtLeastOnMaximum": 0.0045,
+                "reachAtMostOnMinimum": 0.9571,
+                "stayAtLeastOnMinimum": 0.0429,
+                "stayAtMostOnMaximum": 0.9955
+              },
+              {
+                "boundDegrees": 65.0,
+                "reachAtLeastOnMaximum": 0.0045,
+                "reachAtMostOnMinimum": 0.9345,
+                "stayAtLeastOnMinimum": 0.0655,
+                "stayAtMostOnMaximum": 0.9955
+              },
+              {
+                "boundDegrees": 70.0,
+                "reachAtLeastOnMaximum": 0.0045,
+                "reachAtMostOnMinimum": 0.9029,
+                "stayAtLeastOnMinimum": 0.0971,
+                "stayAtMostOnMaximum": 0.9955
+              },
+              {
+                "boundDegrees": 75.0,
+                "reachAtLeastOnMaximum": 0.0045,
+                "reachAtMostOnMinimum": 0.8533,
+                "stayAtLeastOnMinimum": 0.1467,
+                "stayAtMostOnMaximum": 0.9955
+              },
+              {
+                "boundDegrees": 80.0,
+                "reachAtLeastOnMaximum": 0.0045,
+                "reachAtMostOnMinimum": 0.8397,
+                "stayAtLeastOnMinimum": 0.1603,
+                "stayAtMostOnMaximum": 0.9955
+              },
+              {
+                "boundDegrees": 85.0,
+                "reachAtLeastOnMaximum": 0.0068,
+                "reachAtMostOnMinimum": 0.8149,
+                "stayAtLeastOnMinimum": 0.1851,
+                "stayAtMostOnMaximum": 0.9932
+              },
+              {
+                "boundDegrees": 90.0,
+                "reachAtLeastOnMaximum": 0.0113,
+                "reachAtMostOnMinimum": 0.7788,
+                "stayAtLeastOnMinimum": 0.2212,
+                "stayAtMostOnMaximum": 0.9887
+              },
+              {
+                "boundDegrees": 95.0,
+                "reachAtLeastOnMaximum": 0.0203,
+                "reachAtMostOnMinimum": 0.7449,
+                "stayAtLeastOnMinimum": 0.2551,
+                "stayAtMostOnMaximum": 0.9797
+              },
+              {
+                "boundDegrees": 100.0,
+                "reachAtLeastOnMaximum": 0.0316,
+                "reachAtMostOnMinimum": 0.7201,
+                "stayAtLeastOnMinimum": 0.2799,
+                "stayAtMostOnMaximum": 0.9684
+              },
+              {
+                "boundDegrees": 105.0,
+                "reachAtLeastOnMaximum": 0.0542,
+                "reachAtMostOnMinimum": 0.6885,
+                "stayAtLeastOnMinimum": 0.3115,
+                "stayAtMostOnMaximum": 0.9458
+              },
+              {
+                "boundDegrees": 110.0,
+                "reachAtLeastOnMaximum": 0.0722,
+                "reachAtMostOnMinimum": 0.6433,
+                "stayAtLeastOnMinimum": 0.3567,
+                "stayAtMostOnMaximum": 0.9278
+              },
+              {
+                "boundDegrees": 115.0,
+                "reachAtLeastOnMaximum": 0.088,
+                "reachAtMostOnMinimum": 0.5937,
+                "stayAtLeastOnMinimum": 0.4063,
+                "stayAtMostOnMaximum": 0.912
+              },
+              {
+                "boundDegrees": 120.0,
+                "reachAtLeastOnMaximum": 0.1016,
+                "reachAtMostOnMinimum": 0.5395,
+                "stayAtLeastOnMinimum": 0.4605,
+                "stayAtMostOnMaximum": 0.8984
+              },
+              {
+                "boundDegrees": 125.0,
+                "reachAtLeastOnMaximum": 0.1174,
+                "reachAtMostOnMinimum": 0.5079,
+                "stayAtLeastOnMinimum": 0.4921,
+                "stayAtMostOnMaximum": 0.8826
+              },
+              {
+                "boundDegrees": 130.0,
+                "reachAtLeastOnMaximum": 0.1445,
+                "reachAtMostOnMinimum": 0.4537,
+                "stayAtLeastOnMinimum": 0.5463,
+                "stayAtMostOnMaximum": 0.8555
+              },
+              {
+                "boundDegrees": 135.0,
+                "reachAtLeastOnMaximum": 0.1716,
+                "reachAtMostOnMinimum": 0.3837,
+                "stayAtLeastOnMinimum": 0.6163,
+                "stayAtMostOnMaximum": 0.8284
+              },
+              {
+                "boundDegrees": 140.0,
+                "reachAtLeastOnMaximum": 0.2054,
+                "reachAtMostOnMinimum": 0.3386,
+                "stayAtLeastOnMinimum": 0.6614,
+                "stayAtMostOnMaximum": 0.7946
+              },
+              {
+                "boundDegrees": 145.0,
+                "reachAtLeastOnMaximum": 0.2777,
+                "reachAtMostOnMinimum": 0.246,
+                "stayAtLeastOnMinimum": 0.754,
+                "stayAtMostOnMaximum": 0.7223
+              },
+              {
+                "boundDegrees": 150.0,
+                "reachAtLeastOnMaximum": 0.3521,
+                "reachAtMostOnMinimum": 0.1964,
+                "stayAtLeastOnMinimum": 0.8036,
+                "stayAtMostOnMaximum": 0.6479
+              },
+              {
+                "boundDegrees": 155.0,
+                "reachAtLeastOnMaximum": 0.456,
+                "reachAtMostOnMinimum": 0.1558,
+                "stayAtLeastOnMinimum": 0.8442,
+                "stayAtMostOnMaximum": 0.544
+              },
+              {
+                "boundDegrees": 160.0,
+                "reachAtLeastOnMaximum": 0.5937,
+                "reachAtMostOnMinimum": 0.1106,
+                "stayAtLeastOnMinimum": 0.8894,
+                "stayAtMostOnMaximum": 0.4063
+              },
+              {
+                "boundDegrees": 165.0,
+                "reachAtLeastOnMaximum": 0.7201,
+                "reachAtMostOnMinimum": 0.0609,
+                "stayAtLeastOnMinimum": 0.9391,
+                "stayAtMostOnMaximum": 0.2799
+              },
+              {
+                "boundDegrees": 170.0,
+                "reachAtLeastOnMaximum": 0.8284,
+                "reachAtMostOnMinimum": 0.0339,
+                "stayAtLeastOnMinimum": 0.9661,
+                "stayAtMostOnMaximum": 0.1716
+              },
+              {
+                "boundDegrees": 175.0,
+                "reachAtLeastOnMaximum": 0.9233,
+                "reachAtMostOnMinimum": 0.0045,
+                "stayAtLeastOnMinimum": 0.9955,
+                "stayAtMostOnMaximum": 0.0767
+              },
+              {
+                "boundDegrees": 180.0,
+                "reachAtLeastOnMaximum": 1.0,
+                "reachAtMostOnMinimum": 0.0,
+                "stayAtLeastOnMinimum": 1.0,
+                "stayAtMostOnMaximum": 0.0
+              }
+            ],
+            "windowMaximum": {
+              "count": 443,
+              "maximum": 179.0,
+              "minimum": 57.1,
+              "p0.5": 84.9,
+              "p1": 88.3,
+              "p10": 119.3,
+              "p2.5": 98.6,
+              "p25": 143.7,
+              "p5": 103.9,
+              "p50": 156.8,
+              "p75": 166.5,
+              "p90": 173.1,
+              "p95": 176.3,
+              "p97.5": 177.7,
+              "p99": 178.6,
+              "p99.5": 178.9
+            },
+            "windowMinimum": {
+              "count": 443,
+              "maximum": 177.7,
+              "minimum": 41.8,
+              "p0.5": 45.0,
+              "p1": 49.0,
+              "p10": 70.7,
+              "p2.5": 55.9,
+              "p25": 92.9,
+              "p5": 61.9,
+              "p50": 125.6,
+              "p75": 144.9,
+              "p90": 161.3,
+              "p95": 166.6,
+              "p97.5": 171.8,
+              "p99": 174.2,
+              "p99.5": 174.3
+            }
+          },
+          "SHOULDER": {
+            "clauseSweep": [
+              {
+                "boundDegrees": 40.0,
+                "reachAtLeastOnMaximum": 0.0203,
+                "reachAtMostOnMinimum": 0.9458,
+                "stayAtLeastOnMinimum": 0.0542,
+                "stayAtMostOnMaximum": 0.9797
+              },
+              {
+                "boundDegrees": 45.0,
+                "reachAtLeastOnMaximum": 0.0203,
+                "reachAtMostOnMinimum": 0.9413,
+                "stayAtLeastOnMinimum": 0.0587,
+                "stayAtMostOnMaximum": 0.9797
+              },
+              {
+                "boundDegrees": 50.0,
+                "reachAtLeastOnMaximum": 0.0248,
+                "reachAtMostOnMinimum": 0.9368,
+                "stayAtLeastOnMinimum": 0.0632,
+                "stayAtMostOnMaximum": 0.9752
+              },
+              {
+                "boundDegrees": 55.0,
+                "reachAtLeastOnMaximum": 0.0339,
+                "reachAtMostOnMinimum": 0.93,
+                "stayAtLeastOnMinimum": 0.07,
+                "stayAtMostOnMaximum": 0.9661
+              },
+              {
+                "boundDegrees": 60.0,
+                "reachAtLeastOnMaximum": 0.0406,
+                "reachAtMostOnMinimum": 0.9255,
+                "stayAtLeastOnMinimum": 0.0745,
+                "stayAtMostOnMaximum": 0.9594
+              },
+              {
+                "boundDegrees": 65.0,
+                "reachAtLeastOnMaximum": 0.0451,
+                "reachAtMostOnMinimum": 0.9255,
+                "stayAtLeastOnMinimum": 0.0745,
+                "stayAtMostOnMaximum": 0.9549
+              },
+              {
+                "boundDegrees": 70.0,
+                "reachAtLeastOnMaximum": 0.0451,
+                "reachAtMostOnMinimum": 0.9255,
+                "stayAtLeastOnMinimum": 0.0745,
+                "stayAtMostOnMaximum": 0.9549
+              },
+              {
+                "boundDegrees": 75.0,
+                "reachAtLeastOnMaximum": 0.0497,
+                "reachAtMostOnMinimum": 0.9255,
+                "stayAtLeastOnMinimum": 0.0745,
+                "stayAtMostOnMaximum": 0.9503
+              },
+              {
+                "boundDegrees": 80.0,
+                "reachAtLeastOnMaximum": 0.0519,
+                "reachAtMostOnMinimum": 0.9255,
+                "stayAtLeastOnMinimum": 0.0745,
+                "stayAtMostOnMaximum": 0.9481
+              },
+              {
+                "boundDegrees": 85.0,
+                "reachAtLeastOnMaximum": 0.0542,
+                "reachAtMostOnMinimum": 0.9255,
+                "stayAtLeastOnMinimum": 0.0745,
+                "stayAtMostOnMaximum": 0.9458
+              },
+              {
+                "boundDegrees": 90.0,
+                "reachAtLeastOnMaximum": 0.0542,
+                "reachAtMostOnMinimum": 0.921,
+                "stayAtLeastOnMinimum": 0.079,
+                "stayAtMostOnMaximum": 0.9458
+              },
+              {
+                "boundDegrees": 95.0,
+                "reachAtLeastOnMaximum": 0.0542,
+                "reachAtMostOnMinimum": 0.921,
+                "stayAtLeastOnMinimum": 0.079,
+                "stayAtMostOnMaximum": 0.9458
+              },
+              {
+                "boundDegrees": 100.0,
+                "reachAtLeastOnMaximum": 0.0542,
+                "reachAtMostOnMinimum": 0.921,
+                "stayAtLeastOnMinimum": 0.079,
+                "stayAtMostOnMaximum": 0.9458
+              },
+              {
+                "boundDegrees": 105.0,
+                "reachAtLeastOnMaximum": 0.0564,
+                "reachAtMostOnMinimum": 0.921,
+                "stayAtLeastOnMinimum": 0.079,
+                "stayAtMostOnMaximum": 0.9436
+              },
+              {
+                "boundDegrees": 110.0,
+                "reachAtLeastOnMaximum": 0.0564,
+                "reachAtMostOnMinimum": 0.921,
+                "stayAtLeastOnMinimum": 0.079,
+                "stayAtMostOnMaximum": 0.9436
+              },
+              {
+                "boundDegrees": 115.0,
+                "reachAtLeastOnMaximum": 0.0564,
+                "reachAtMostOnMinimum": 0.912,
+                "stayAtLeastOnMinimum": 0.088,
+                "stayAtMostOnMaximum": 0.9436
+              },
+              {
+                "boundDegrees": 120.0,
+                "reachAtLeastOnMaximum": 0.0564,
+                "reachAtMostOnMinimum": 0.912,
+                "stayAtLeastOnMinimum": 0.088,
+                "stayAtMostOnMaximum": 0.9436
+              },
+              {
+                "boundDegrees": 125.0,
+                "reachAtLeastOnMaximum": 0.0609,
+                "reachAtMostOnMinimum": 0.9074,
+                "stayAtLeastOnMinimum": 0.0926,
+                "stayAtMostOnMaximum": 0.9391
+              },
+              {
+                "boundDegrees": 130.0,
+                "reachAtLeastOnMaximum": 0.0609,
+                "reachAtMostOnMinimum": 0.8962,
+                "stayAtLeastOnMinimum": 0.1038,
+                "stayAtMostOnMaximum": 0.9391
+              },
+              {
+                "boundDegrees": 135.0,
+                "reachAtLeastOnMaximum": 0.0609,
+                "reachAtMostOnMinimum": 0.8871,
+                "stayAtLeastOnMinimum": 0.1129,
+                "stayAtMostOnMaximum": 0.9391
+              },
+              {
+                "boundDegrees": 140.0,
+                "reachAtLeastOnMaximum": 0.0655,
+                "reachAtMostOnMinimum": 0.833,
+                "stayAtLeastOnMinimum": 0.167,
+                "stayAtMostOnMaximum": 0.9345
+              },
+              {
+                "boundDegrees": 145.0,
+                "reachAtLeastOnMaximum": 0.0655,
+                "reachAtMostOnMinimum": 0.781,
+                "stayAtLeastOnMinimum": 0.219,
+                "stayAtMostOnMaximum": 0.9345
+              },
+              {
+                "boundDegrees": 150.0,
+                "reachAtLeastOnMaximum": 0.0835,
+                "reachAtMostOnMinimum": 0.6614,
+                "stayAtLeastOnMinimum": 0.3386,
+                "stayAtMostOnMaximum": 0.9165
+              },
+              {
+                "boundDegrees": 155.0,
+                "reachAtLeastOnMaximum": 0.1309,
+                "reachAtMostOnMinimum": 0.4876,
+                "stayAtLeastOnMinimum": 0.5124,
+                "stayAtMostOnMaximum": 0.8691
+              },
+              {
+                "boundDegrees": 160.0,
+                "reachAtLeastOnMaximum": 0.298,
+                "reachAtMostOnMinimum": 0.2957,
+                "stayAtLeastOnMinimum": 0.7043,
+                "stayAtMostOnMaximum": 0.702
+              },
+              {
+                "boundDegrees": 165.0,
+                "reachAtLeastOnMaximum": 0.5508,
+                "reachAtMostOnMinimum": 0.1106,
+                "stayAtLeastOnMinimum": 0.8894,
+                "stayAtMostOnMaximum": 0.4492
+              },
+              {
+                "boundDegrees": 170.0,
+                "reachAtLeastOnMaximum": 0.763,
+                "reachAtMostOnMinimum": 0.0203,
+                "stayAtLeastOnMinimum": 0.9797,
+                "stayAtMostOnMaximum": 0.237
+              },
+              {
+                "boundDegrees": 175.0,
+                "reachAtLeastOnMaximum": 0.9345,
+                "reachAtMostOnMinimum": 0.0,
+                "stayAtLeastOnMinimum": 1.0,
+                "stayAtMostOnMaximum": 0.0655
+              },
+              {
+                "boundDegrees": 180.0,
+                "reachAtLeastOnMaximum": 1.0,
+                "reachAtMostOnMinimum": 0.0,
+                "stayAtLeastOnMinimum": 1.0,
+                "stayAtMostOnMaximum": 0.0
+              }
+            ],
+            "windowMaximum": {
+              "count": 443,
+              "maximum": 179.1,
+              "minimum": 21.0,
+              "p0.5": 25.9,
+              "p1": 29.6,
+              "p10": 152.8,
+              "p2.5": 50.1,
+              "p25": 158.9,
+              "p5": 79.7,
+              "p50": 163.4,
+              "p75": 169.7,
+              "p90": 174.0,
+              "p95": 175.3,
+              "p97.5": 176.9,
+              "p99": 178.2,
+              "p99.5": 178.9
+            },
+            "windowMinimum": {
+              "count": 443,
+              "maximum": 172.9,
+              "minimum": 12.8,
+              "p0.5": 21.2,
+              "p1": 22.5,
+              "p10": 129.2,
+              "p2.5": 27.9,
+              "p25": 146.4,
+              "p5": 38.3,
+              "p50": 154.7,
+              "p75": 161.3,
+              "p90": 165.4,
+              "p95": 168.0,
+              "p97.5": 169.3,
+              "p99": 171.9,
+              "p99.5": 172.7
+            }
+          }
+        },
+        "clipsContributing": 272,
+        "excursions": 1432,
+        "subjects": 32
+      },
+      "repDegrees": 130.0
+    },
+    {
+      "driver": "HIP",
+      "exercise": "라잉 레그 레이즈",
+      "legitimate": {
+        "chains": {
+          "KNEE": {
+            "clauseSweep": [
+              {
+                "boundDegrees": 40.0,
+                "reachAtLeastOnMaximum": 0.0632,
+                "reachAtMostOnMinimum": 0.5949,
+                "stayAtLeastOnMinimum": 0.4051,
+                "stayAtMostOnMaximum": 0.9368
+              },
+              {
+                "boundDegrees": 45.0,
+                "reachAtLeastOnMaximum": 0.0718,
+                "reachAtMostOnMinimum": 0.5658,
+                "stayAtLeastOnMinimum": 0.4342,
+                "stayAtMostOnMaximum": 0.9282
+              },
+              {
+                "boundDegrees": 50.0,
+                "reachAtLeastOnMaximum": 0.0872,
+                "reachAtMostOnMinimum": 0.5504,
+                "stayAtLeastOnMinimum": 0.4496,
+                "stayAtMostOnMaximum": 0.9128
+              },
+              {
+                "boundDegrees": 55.0,
+                "reachAtLeastOnMaximum": 0.0889,
+                "reachAtMostOnMinimum": 0.5265,
+                "stayAtLeastOnMinimum": 0.4735,
+                "stayAtMostOnMaximum": 0.9111
+              },
+              {
+                "boundDegrees": 60.0,
+                "reachAtLeastOnMaximum": 0.0974,
+                "reachAtMostOnMinimum": 0.4838,
+                "stayAtLeastOnMinimum": 0.5162,
+                "stayAtMostOnMaximum": 0.9026
+              },
+              {
+                "boundDegrees": 65.0,
+                "reachAtLeastOnMaximum": 0.0991,
+                "reachAtMostOnMinimum": 0.4547,
+                "stayAtLeastOnMinimum": 0.5453,
+                "stayAtMostOnMaximum": 0.9009
+              },
+              {
+                "boundDegrees": 70.0,
+                "reachAtLeastOnMaximum": 0.1111,
+                "reachAtMostOnMinimum": 0.4359,
+                "stayAtLeastOnMinimum": 0.5641,
+                "stayAtMostOnMaximum": 0.8889
+              },
+              {
+                "boundDegrees": 75.0,
+                "reachAtLeastOnMaximum": 0.1214,
+                "reachAtMostOnMinimum": 0.4154,
+                "stayAtLeastOnMinimum": 0.5846,
+                "stayAtMostOnMaximum": 0.8786
+              },
+              {
+                "boundDegrees": 80.0,
+                "reachAtLeastOnMaximum": 0.1436,
+                "reachAtMostOnMinimum": 0.3863,
+                "stayAtLeastOnMinimum": 0.6137,
+                "stayAtMostOnMaximum": 0.8564
+              },
+              {
+                "boundDegrees": 85.0,
+                "reachAtLeastOnMaximum": 0.1829,
+                "reachAtMostOnMinimum": 0.3607,
+                "stayAtLeastOnMinimum": 0.6393,
+                "stayAtMostOnMaximum": 0.8171
+              },
+              {
+                "boundDegrees": 90.0,
+                "reachAtLeastOnMaximum": 0.2205,
+                "reachAtMostOnMinimum": 0.3299,
+                "stayAtLeastOnMinimum": 0.6701,
+                "stayAtMostOnMaximum": 0.7795
+              },
+              {
+                "boundDegrees": 95.0,
+                "reachAtLeastOnMaximum": 0.2769,
+                "reachAtMostOnMinimum": 0.3111,
+                "stayAtLeastOnMinimum": 0.6889,
+                "stayAtMostOnMaximum": 0.7231
+              },
+              {
+                "boundDegrees": 100.0,
+                "reachAtLeastOnMaximum": 0.3128,
+                "reachAtMostOnMinimum": 0.2838,
+                "stayAtLeastOnMinimum": 0.7162,
+                "stayAtMostOnMaximum": 0.6872
+              },
+              {
+                "boundDegrees": 105.0,
+                "reachAtLeastOnMaximum": 0.347,
+                "reachAtMostOnMinimum": 0.2615,
+                "stayAtLeastOnMinimum": 0.7385,
+                "stayAtMostOnMaximum": 0.653
+              },
+              {
+                "boundDegrees": 110.0,
+                "reachAtLeastOnMaximum": 0.3778,
+                "reachAtMostOnMinimum": 0.2462,
+                "stayAtLeastOnMinimum": 0.7538,
+                "stayAtMostOnMaximum": 0.6222
+              },
+              {
+                "boundDegrees": 115.0,
+                "reachAtLeastOnMaximum": 0.4188,
+                "reachAtMostOnMinimum": 0.2291,
+                "stayAtLeastOnMinimum": 0.7709,
+                "stayAtMostOnMaximum": 0.5812
+              },
+              {
+                "boundDegrees": 120.0,
+                "reachAtLeastOnMaximum": 0.4547,
+                "reachAtMostOnMinimum": 0.2222,
+                "stayAtLeastOnMinimum": 0.7778,
+                "stayAtMostOnMaximum": 0.5453
+              },
+              {
+                "boundDegrees": 125.0,
+                "reachAtLeastOnMaximum": 0.4991,
+                "reachAtMostOnMinimum": 0.2034,
+                "stayAtLeastOnMinimum": 0.7966,
+                "stayAtMostOnMaximum": 0.5009
+              },
+              {
+                "boundDegrees": 130.0,
+                "reachAtLeastOnMaximum": 0.5402,
+                "reachAtMostOnMinimum": 0.188,
+                "stayAtLeastOnMinimum": 0.812,
+                "stayAtMostOnMaximum": 0.4598
+              },
+              {
+                "boundDegrees": 135.0,
+                "reachAtLeastOnMaximum": 0.5915,
+                "reachAtMostOnMinimum": 0.1641,
+                "stayAtLeastOnMinimum": 0.8359,
+                "stayAtMostOnMaximum": 0.4085
+              },
+              {
+                "boundDegrees": 140.0,
+                "reachAtLeastOnMaximum": 0.6496,
+                "reachAtMostOnMinimum": 0.1385,
+                "stayAtLeastOnMinimum": 0.8615,
+                "stayAtMostOnMaximum": 0.3504
+              },
+              {
+                "boundDegrees": 145.0,
+                "reachAtLeastOnMaximum": 0.6855,
+                "reachAtMostOnMinimum": 0.1128,
+                "stayAtLeastOnMinimum": 0.8872,
+                "stayAtMostOnMaximum": 0.3145
+              },
+              {
+                "boundDegrees": 150.0,
+                "reachAtLeastOnMaximum": 0.7145,
+                "reachAtMostOnMinimum": 0.094,
+                "stayAtLeastOnMinimum": 0.906,
+                "stayAtMostOnMaximum": 0.2855
+              },
+              {
+                "boundDegrees": 155.0,
+                "reachAtLeastOnMaximum": 0.7795,
+                "reachAtMostOnMinimum": 0.0701,
+                "stayAtLeastOnMinimum": 0.9299,
+                "stayAtMostOnMaximum": 0.2205
+              },
+              {
+                "boundDegrees": 160.0,
+                "reachAtLeastOnMaximum": 0.8479,
+                "reachAtMostOnMinimum": 0.0462,
+                "stayAtLeastOnMinimum": 0.9538,
+                "stayAtMostOnMaximum": 0.1521
+              },
+              {
+                "boundDegrees": 165.0,
+                "reachAtLeastOnMaximum": 0.8855,
+                "reachAtMostOnMinimum": 0.0188,
+                "stayAtLeastOnMinimum": 0.9812,
+                "stayAtMostOnMaximum": 0.1145
+              },
+              {
+                "boundDegrees": 170.0,
+                "reachAtLeastOnMaximum": 0.9436,
+                "reachAtMostOnMinimum": 0.0068,
+                "stayAtLeastOnMinimum": 0.9932,
+                "stayAtMostOnMaximum": 0.0564
+              },
+              {
+                "boundDegrees": 175.0,
+                "reachAtLeastOnMaximum": 0.988,
+                "reachAtMostOnMinimum": 0.0017,
+                "stayAtLeastOnMinimum": 0.9983,
+                "stayAtMostOnMaximum": 0.012
+              },
+              {
+                "boundDegrees": 180.0,
+                "reachAtLeastOnMaximum": 1.0,
+                "reachAtMostOnMinimum": 0.0,
+                "stayAtLeastOnMinimum": 1.0,
+                "stayAtMostOnMaximum": 0.0
+              }
+            ],
+            "windowMaximum": {
+              "count": 585,
+              "maximum": 178.8,
+              "minimum": 7.3,
+              "p0.5": 13.7,
+              "p1": 17.2,
+              "p10": 65.1,
+              "p2.5": 22.8,
+              "p25": 92.8,
+              "p5": 35.8,
+              "p50": 125.3,
+              "p75": 152.9,
+              "p90": 166.7,
+              "p95": 170.5,
+              "p97.5": 172.9,
+              "p99": 175.8,
+              "p99.5": 177.0
+            },
+            "windowMinimum": {
+              "count": 585,
+              "maximum": 175.4,
+              "minimum": 0.2,
+              "p0.5": 1.8,
+              "p1": 2.4,
+              "p10": 11.2,
+              "p2.5": 5.4,
+              "p25": 21.0,
+              "p5": 8.1,
+              "p50": 58.4,
+              "p75": 108.8,
+              "p90": 148.0,
+              "p95": 159.0,
+              "p97.5": 164.4,
+              "p99": 169.1,
+              "p99.5": 171.9
+            }
+          },
+          "SHOULDER": {
+            "clauseSweep": [
+              {
+                "boundDegrees": 40.0,
+                "reachAtLeastOnMaximum": 0.4496,
+                "reachAtMostOnMinimum": 0.1333,
+                "stayAtLeastOnMinimum": 0.8667,
+                "stayAtMostOnMaximum": 0.5504
+              },
+              {
+                "boundDegrees": 45.0,
+                "reachAtLeastOnMaximum": 0.5316,
+                "reachAtMostOnMinimum": 0.1026,
+                "stayAtLeastOnMinimum": 0.8974,
+                "stayAtMostOnMaximum": 0.4684
+              },
+              {
+                "boundDegrees": 50.0,
+                "reachAtLeastOnMaximum": 0.6256,
+                "reachAtMostOnMinimum": 0.0769,
+                "stayAtLeastOnMinimum": 0.9231,
+                "stayAtMostOnMaximum": 0.3744
+              },
+              {
+                "boundDegrees": 55.0,
+                "reachAtLeastOnMaximum": 0.706,
+                "reachAtMostOnMinimum": 0.0581,
+                "stayAtLeastOnMinimum": 0.9419,
+                "stayAtMostOnMaximum": 0.294
+              },
+              {
+                "boundDegrees": 60.0,
+                "reachAtLeastOnMaximum": 0.7675,
+                "reachAtMostOnMinimum": 0.0496,
+                "stayAtLeastOnMinimum": 0.9504,
+                "stayAtMostOnMaximum": 0.2325
+              },
+              {
+                "boundDegrees": 65.0,
+                "reachAtLeastOnMaximum": 0.8308,
+                "reachAtMostOnMinimum": 0.0393,
+                "stayAtLeastOnMinimum": 0.9607,
+                "stayAtMostOnMaximum": 0.1692
+              },
+              {
+                "boundDegrees": 70.0,
+                "reachAtLeastOnMaximum": 0.8957,
+                "reachAtMostOnMinimum": 0.0239,
+                "stayAtLeastOnMinimum": 0.9761,
+                "stayAtMostOnMaximum": 0.1043
+              },
+              {
+                "boundDegrees": 75.0,
+                "reachAtLeastOnMaximum": 0.9453,
+                "reachAtMostOnMinimum": 0.0068,
+                "stayAtLeastOnMinimum": 0.9932,
+                "stayAtMostOnMaximum": 0.0547
+              },
+              {
+                "boundDegrees": 80.0,
+                "reachAtLeastOnMaximum": 0.9675,
+                "reachAtMostOnMinimum": 0.0,
+                "stayAtLeastOnMinimum": 1.0,
+                "stayAtMostOnMaximum": 0.0325
+              },
+              {
+                "boundDegrees": 85.0,
+                "reachAtLeastOnMaximum": 0.9761,
+                "reachAtMostOnMinimum": 0.0,
+                "stayAtLeastOnMinimum": 1.0,
+                "stayAtMostOnMaximum": 0.0239
+              },
+              {
+                "boundDegrees": 90.0,
+                "reachAtLeastOnMaximum": 0.9812,
+                "reachAtMostOnMinimum": 0.0,
+                "stayAtLeastOnMinimum": 1.0,
+                "stayAtMostOnMaximum": 0.0188
+              },
+              {
+                "boundDegrees": 95.0,
+                "reachAtLeastOnMaximum": 0.9863,
+                "reachAtMostOnMinimum": 0.0,
+                "stayAtLeastOnMinimum": 1.0,
+                "stayAtMostOnMaximum": 0.0137
+              },
+              {
+                "boundDegrees": 100.0,
+                "reachAtLeastOnMaximum": 0.9863,
+                "reachAtMostOnMinimum": 0.0,
+                "stayAtLeastOnMinimum": 1.0,
+                "stayAtMostOnMaximum": 0.0137
+              },
+              {
+                "boundDegrees": 105.0,
+                "reachAtLeastOnMaximum": 0.9915,
+                "reachAtMostOnMinimum": 0.0,
+                "stayAtLeastOnMinimum": 1.0,
+                "stayAtMostOnMaximum": 0.0085
+              },
+              {
+                "boundDegrees": 110.0,
+                "reachAtLeastOnMaximum": 0.9932,
+                "reachAtMostOnMinimum": 0.0,
+                "stayAtLeastOnMinimum": 1.0,
+                "stayAtMostOnMaximum": 0.0068
+              },
+              {
+                "boundDegrees": 115.0,
+                "reachAtLeastOnMaximum": 0.9932,
+                "reachAtMostOnMinimum": 0.0,
+                "stayAtLeastOnMinimum": 1.0,
+                "stayAtMostOnMaximum": 0.0068
+              },
+              {
+                "boundDegrees": 120.0,
+                "reachAtLeastOnMaximum": 0.9932,
+                "reachAtMostOnMinimum": 0.0,
+                "stayAtLeastOnMinimum": 1.0,
+                "stayAtMostOnMaximum": 0.0068
+              },
+              {
+                "boundDegrees": 125.0,
+                "reachAtLeastOnMaximum": 0.9949,
+                "reachAtMostOnMinimum": 0.0,
+                "stayAtLeastOnMinimum": 1.0,
+                "stayAtMostOnMaximum": 0.0051
+              },
+              {
+                "boundDegrees": 130.0,
+                "reachAtLeastOnMaximum": 0.9966,
+                "reachAtMostOnMinimum": 0.0,
+                "stayAtLeastOnMinimum": 1.0,
+                "stayAtMostOnMaximum": 0.0034
+              },
+              {
+                "boundDegrees": 135.0,
+                "reachAtLeastOnMaximum": 0.9983,
+                "reachAtMostOnMinimum": 0.0,
+                "stayAtLeastOnMinimum": 1.0,
+                "stayAtMostOnMaximum": 0.0017
+              },
+              {
+                "boundDegrees": 140.0,
+                "reachAtLeastOnMaximum": 0.9983,
+                "reachAtMostOnMinimum": 0.0,
+                "stayAtLeastOnMinimum": 1.0,
+                "stayAtMostOnMaximum": 0.0017
+              },
+              {
+                "boundDegrees": 145.0,
+                "reachAtLeastOnMaximum": 1.0,
+                "reachAtMostOnMinimum": 0.0,
+                "stayAtLeastOnMinimum": 1.0,
+                "stayAtMostOnMaximum": 0.0
+              },
+              {
+                "boundDegrees": 150.0,
+                "reachAtLeastOnMaximum": 1.0,
+                "reachAtMostOnMinimum": 0.0,
+                "stayAtLeastOnMinimum": 1.0,
+                "stayAtMostOnMaximum": 0.0
+              },
+              {
+                "boundDegrees": 155.0,
+                "reachAtLeastOnMaximum": 1.0,
+                "reachAtMostOnMinimum": 0.0,
+                "stayAtLeastOnMinimum": 1.0,
+                "stayAtMostOnMaximum": 0.0
+              },
+              {
+                "boundDegrees": 160.0,
+                "reachAtLeastOnMaximum": 1.0,
+                "reachAtMostOnMinimum": 0.0,
+                "stayAtLeastOnMinimum": 1.0,
+                "stayAtMostOnMaximum": 0.0
+              },
+              {
+                "boundDegrees": 165.0,
+                "reachAtLeastOnMaximum": 1.0,
+                "reachAtMostOnMinimum": 0.0,
+                "stayAtLeastOnMinimum": 1.0,
+                "stayAtMostOnMaximum": 0.0
+              },
+              {
+                "boundDegrees": 170.0,
+                "reachAtLeastOnMaximum": 1.0,
+                "reachAtMostOnMinimum": 0.0,
+                "stayAtLeastOnMinimum": 1.0,
+                "stayAtMostOnMaximum": 0.0
+              },
+              {
+                "boundDegrees": 175.0,
+                "reachAtLeastOnMaximum": 1.0,
+                "reachAtMostOnMinimum": 0.0,
+                "stayAtLeastOnMinimum": 1.0,
+                "stayAtMostOnMaximum": 0.0
+              },
+              {
+                "boundDegrees": 180.0,
+                "reachAtLeastOnMaximum": 1.0,
+                "reachAtMostOnMinimum": 0.0,
+                "stayAtLeastOnMinimum": 1.0,
+                "stayAtMostOnMaximum": 0.0
+              }
+            ],
+            "windowMaximum": {
+              "count": 585,
+              "maximum": 141.2,
+              "minimum": 10.0,
+              "p0.5": 12.1,
+              "p1": 13.4,
+              "p10": 22.6,
+              "p2.5": 16.2,
+              "p25": 29.5,
+              "p5": 18.3,
+              "p50": 43.4,
+              "p75": 58.8,
+              "p90": 70.5,
+              "p95": 75.6,
+              "p97.5": 84.4,
+              "p99": 102.5,
+              "p99.5": 125.6
+            },
+            "windowMinimum": {
+              "count": 585,
+              "maximum": 78.0,
+              "minimum": 1.0,
+              "p0.5": 1.9,
+              "p1": 2.5,
+              "p10": 8.9,
+              "p2.5": 4.4,
+              "p25": 14.8,
+              "p5": 6.5,
+              "p50": 22.3,
+              "p75": 30.9,
+              "p90": 45.1,
+              "p95": 58.4,
+              "p97.5": 69.7,
+              "p99": 74.4,
+              "p99.5": 76.9
+            }
+          }
+        },
+        "clipsContributing": 253,
+        "excursions": 1202,
+        "subjects": 19
+      },
+      "repDegrees": 130.0
+    },
+    {
+      "driver": "HIP",
+      "exercise": "바벨 데드리프트",
+      "impostorReplays": {
+        "바벨 스쿼트": {
+          "chains": {
+            "KNEE": {
+              "clauseSweep": [
+                {
+                  "boundDegrees": 40.0,
+                  "reachAtLeastOnMaximum": 0.0003,
+                  "reachAtMostOnMinimum": 0.9748,
+                  "stayAtLeastOnMinimum": 0.0252,
+                  "stayAtMostOnMaximum": 0.9997
+                },
+                {
+                  "boundDegrees": 45.0,
+                  "reachAtLeastOnMaximum": 0.0006,
+                  "reachAtMostOnMinimum": 0.953,
+                  "stayAtLeastOnMinimum": 0.047,
+                  "stayAtMostOnMaximum": 0.9994
+                },
+                {
+                  "boundDegrees": 50.0,
+                  "reachAtLeastOnMaximum": 0.0013,
+                  "reachAtMostOnMinimum": 0.9363,
+                  "stayAtLeastOnMinimum": 0.0637,
+                  "stayAtMostOnMaximum": 0.9987
+                },
+                {
+                  "boundDegrees": 55.0,
+                  "reachAtLeastOnMaximum": 0.0022,
+                  "reachAtMostOnMinimum": 0.9117,
+                  "stayAtLeastOnMinimum": 0.0883,
+                  "stayAtMostOnMaximum": 0.9978
+                },
+                {
+                  "boundDegrees": 60.0,
+                  "reachAtLeastOnMaximum": 0.0038,
+                  "reachAtMostOnMinimum": 0.8729,
+                  "stayAtLeastOnMinimum": 0.1271,
+                  "stayAtMostOnMaximum": 0.9962
+                },
+                {
+                  "boundDegrees": 65.0,
+                  "reachAtLeastOnMaximum": 0.0066,
+                  "reachAtMostOnMinimum": 0.8132,
+                  "stayAtLeastOnMinimum": 0.1868,
+                  "stayAtMostOnMaximum": 0.9934
+                },
+                {
+                  "boundDegrees": 70.0,
+                  "reachAtLeastOnMaximum": 0.0136,
+                  "reachAtMostOnMinimum": 0.7413,
+                  "stayAtLeastOnMinimum": 0.2587,
+                  "stayAtMostOnMaximum": 0.9864
+                },
+                {
+                  "boundDegrees": 75.0,
+                  "reachAtLeastOnMaximum": 0.0164,
+                  "reachAtMostOnMinimum": 0.6618,
+                  "stayAtLeastOnMinimum": 0.3382,
+                  "stayAtMostOnMaximum": 0.9836
+                },
+                {
+                  "boundDegrees": 80.0,
+                  "reachAtLeastOnMaximum": 0.0218,
+                  "reachAtMostOnMinimum": 0.5685,
+                  "stayAtLeastOnMinimum": 0.4315,
+                  "stayAtMostOnMaximum": 0.9782
+                },
+                {
+                  "boundDegrees": 85.0,
+                  "reachAtLeastOnMaximum": 0.0379,
+                  "reachAtMostOnMinimum": 0.4763,
+                  "stayAtLeastOnMinimum": 0.5237,
+                  "stayAtMostOnMaximum": 0.9621
+                },
+                {
+                  "boundDegrees": 90.0,
+                  "reachAtLeastOnMaximum": 0.0621,
+                  "reachAtMostOnMinimum": 0.3798,
+                  "stayAtLeastOnMinimum": 0.6202,
+                  "stayAtMostOnMaximum": 0.9379
+                },
+                {
+                  "boundDegrees": 95.0,
+                  "reachAtLeastOnMaximum": 0.0959,
+                  "reachAtMostOnMinimum": 0.2849,
+                  "stayAtLeastOnMinimum": 0.7151,
+                  "stayAtMostOnMaximum": 0.9041
+                },
+                {
+                  "boundDegrees": 100.0,
+                  "reachAtLeastOnMaximum": 0.136,
+                  "reachAtMostOnMinimum": 0.2057,
+                  "stayAtLeastOnMinimum": 0.7943,
+                  "stayAtMostOnMaximum": 0.864
+                },
+                {
+                  "boundDegrees": 105.0,
+                  "reachAtLeastOnMaximum": 0.1934,
+                  "reachAtMostOnMinimum": 0.1442,
+                  "stayAtLeastOnMinimum": 0.8558,
+                  "stayAtMostOnMaximum": 0.8066
+                },
+                {
+                  "boundDegrees": 110.0,
+                  "reachAtLeastOnMaximum": 0.2599,
+                  "reachAtMostOnMinimum": 0.0931,
+                  "stayAtLeastOnMinimum": 0.9069,
+                  "stayAtMostOnMaximum": 0.7401
+                },
+                {
+                  "boundDegrees": 115.0,
+                  "reachAtLeastOnMaximum": 0.341,
+                  "reachAtMostOnMinimum": 0.0514,
+                  "stayAtLeastOnMinimum": 0.9486,
+                  "stayAtMostOnMaximum": 0.659
+                },
+                {
+                  "boundDegrees": 120.0,
+                  "reachAtLeastOnMaximum": 0.4347,
+                  "reachAtMostOnMinimum": 0.0252,
+                  "stayAtLeastOnMinimum": 0.9748,
+                  "stayAtMostOnMaximum": 0.5653
+                },
+                {
+                  "boundDegrees": 125.0,
+                  "reachAtLeastOnMaximum": 0.5161,
+                  "reachAtMostOnMinimum": 0.0123,
+                  "stayAtLeastOnMinimum": 0.9877,
+                  "stayAtMostOnMaximum": 0.4839
+                },
+                {
+                  "boundDegrees": 130.0,
+                  "reachAtLeastOnMaximum": 0.6091,
+                  "reachAtMostOnMinimum": 0.0025,
+                  "stayAtLeastOnMinimum": 0.9975,
+                  "stayAtMostOnMaximum": 0.3909
+                },
+                {
+                  "boundDegrees": 135.0,
+                  "reachAtLeastOnMaximum": 0.6959,
+                  "reachAtMostOnMinimum": 0.0009,
+                  "stayAtLeastOnMinimum": 0.9991,
+                  "stayAtMostOnMaximum": 0.3041
+                },
+                {
+                  "boundDegrees": 140.0,
+                  "reachAtLeastOnMaximum": 0.7804,
+                  "reachAtMostOnMinimum": 0.0009,
+                  "stayAtLeastOnMinimum": 0.9991,
+                  "stayAtMostOnMaximum": 0.2196
+                },
+                {
+                  "boundDegrees": 145.0,
+                  "reachAtLeastOnMaximum": 0.8587,
+                  "reachAtMostOnMinimum": 0.0003,
+                  "stayAtLeastOnMinimum": 0.9997,
+                  "stayAtMostOnMaximum": 0.1413
+                },
+                {
+                  "boundDegrees": 150.0,
+                  "reachAtLeastOnMaximum": 0.9139,
+                  "reachAtMostOnMinimum": 0.0,
+                  "stayAtLeastOnMinimum": 1.0,
+                  "stayAtMostOnMaximum": 0.0861
+                },
+                {
+                  "boundDegrees": 155.0,
+                  "reachAtLeastOnMaximum": 0.9492,
+                  "reachAtMostOnMinimum": 0.0,
+                  "stayAtLeastOnMinimum": 1.0,
+                  "stayAtMostOnMaximum": 0.0508
+                },
+                {
+                  "boundDegrees": 160.0,
+                  "reachAtLeastOnMaximum": 0.9738,
+                  "reachAtMostOnMinimum": 0.0,
+                  "stayAtLeastOnMinimum": 1.0,
+                  "stayAtMostOnMaximum": 0.0262
+                },
+                {
+                  "boundDegrees": 165.0,
+                  "reachAtLeastOnMaximum": 0.9839,
+                  "reachAtMostOnMinimum": 0.0,
+                  "stayAtLeastOnMinimum": 1.0,
+                  "stayAtMostOnMaximum": 0.0161
+                },
+                {
+                  "boundDegrees": 170.0,
+                  "reachAtLeastOnMaximum": 0.9921,
+                  "reachAtMostOnMinimum": 0.0,
+                  "stayAtLeastOnMinimum": 1.0,
+                  "stayAtMostOnMaximum": 0.0079
+                },
+                {
+                  "boundDegrees": 175.0,
+                  "reachAtLeastOnMaximum": 0.9978,
+                  "reachAtMostOnMinimum": 0.0,
+                  "stayAtLeastOnMinimum": 1.0,
+                  "stayAtMostOnMaximum": 0.0022
+                },
+                {
+                  "boundDegrees": 180.0,
+                  "reachAtLeastOnMaximum": 1.0,
+                  "reachAtMostOnMinimum": 0.0,
+                  "stayAtLeastOnMinimum": 1.0,
+                  "stayAtMostOnMaximum": 0.0
+                }
+              ],
+              "windowMaximum": {
+                "count": 3170,
+                "maximum": 176.9,
+                "minimum": 39.2,
+                "p0.5": 62.2,
+                "p1": 67.8,
+                "p10": 95.7,
+                "p2.5": 81.7,
+                "p25": 109.3,
+                "p5": 87.4,
+                "p50": 124.0,
+                "p75": 138.3,
+                "p90": 148.6,
+                "p95": 155.1,
+                "p97.5": 160.3,
+                "p99": 167.6,
+                "p99.5": 172.0
+              },
+              "windowMinimum": {
+                "count": 3170,
+                "maximum": 147.3,
+                "minimum": 24.5,
+                "p0.5": 33.7,
+                "p1": 36.1,
+                "p10": 57.0,
+                "p2.5": 39.9,
+                "p25": 69.4,
+                "p5": 45.7,
+                "p50": 83.8,
+                "p75": 97.3,
+                "p90": 109.0,
+                "p95": 115.3,
+                "p97.5": 120.0,
+                "p99": 125.9,
+                "p99.5": 128.0
+              }
+            }
+          },
+          "clipsContributing": 714,
+          "excursions": 4650,
+          "subjects": 42
+        }
+      },
+      "legitimate": {
+        "chains": {
+          "KNEE": {
+            "clauseSweep": [
+              {
+                "boundDegrees": 40.0,
+                "reachAtLeastOnMaximum": 0.0,
+                "reachAtMostOnMinimum": 0.9999,
+                "stayAtLeastOnMinimum": 0.0001,
+                "stayAtMostOnMaximum": 1.0
+              },
+              {
+                "boundDegrees": 45.0,
+                "reachAtLeastOnMaximum": 0.0,
+                "reachAtMostOnMinimum": 0.9996,
+                "stayAtLeastOnMinimum": 0.0004,
+                "stayAtMostOnMaximum": 1.0
+              },
+              {
+                "boundDegrees": 50.0,
+                "reachAtLeastOnMaximum": 0.0,
+                "reachAtMostOnMinimum": 0.9986,
+                "stayAtLeastOnMinimum": 0.0014,
+                "stayAtMostOnMaximum": 1.0
+              },
+              {
+                "boundDegrees": 55.0,
+                "reachAtLeastOnMaximum": 0.0,
+                "reachAtMostOnMinimum": 0.9953,
+                "stayAtLeastOnMinimum": 0.0047,
+                "stayAtMostOnMaximum": 1.0
+              },
+              {
+                "boundDegrees": 60.0,
+                "reachAtLeastOnMaximum": 0.0,
+                "reachAtMostOnMinimum": 0.9923,
+                "stayAtLeastOnMinimum": 0.0077,
+                "stayAtMostOnMaximum": 1.0
+              },
+              {
+                "boundDegrees": 65.0,
+                "reachAtLeastOnMaximum": 0.0,
+                "reachAtMostOnMinimum": 0.99,
+                "stayAtLeastOnMinimum": 0.01,
+                "stayAtMostOnMaximum": 1.0
+              },
+              {
+                "boundDegrees": 70.0,
+                "reachAtLeastOnMaximum": 0.0,
+                "reachAtMostOnMinimum": 0.984,
+                "stayAtLeastOnMinimum": 0.016,
+                "stayAtMostOnMaximum": 1.0
+              },
+              {
+                "boundDegrees": 75.0,
+                "reachAtLeastOnMaximum": 0.0,
+                "reachAtMostOnMinimum": 0.9738,
+                "stayAtLeastOnMinimum": 0.0262,
+                "stayAtMostOnMaximum": 1.0
+              },
+              {
+                "boundDegrees": 80.0,
+                "reachAtLeastOnMaximum": 0.0001,
+                "reachAtMostOnMinimum": 0.9574,
+                "stayAtLeastOnMinimum": 0.0426,
+                "stayAtMostOnMaximum": 0.9999
+              },
+              {
+                "boundDegrees": 85.0,
+                "reachAtLeastOnMaximum": 0.0004,
+                "reachAtMostOnMinimum": 0.9375,
+                "stayAtLeastOnMinimum": 0.0625,
+                "stayAtMostOnMaximum": 0.9996
+              },
+              {
+                "boundDegrees": 90.0,
+                "reachAtLeastOnMaximum": 0.0005,
+                "reachAtMostOnMinimum": 0.9099,
+                "stayAtLeastOnMinimum": 0.0901,
+                "stayAtMostOnMaximum": 0.9995
+              },
+              {
+                "boundDegrees": 95.0,
+                "reachAtLeastOnMaximum": 0.0012,
+                "reachAtMostOnMinimum": 0.8704,
+                "stayAtLeastOnMinimum": 0.1296,
+                "stayAtMostOnMaximum": 0.9988
+              },
+              {
+                "boundDegrees": 100.0,
+                "reachAtLeastOnMaximum": 0.0034,
+                "reachAtMostOnMinimum": 0.8191,
+                "stayAtLeastOnMinimum": 0.1809,
+                "stayAtMostOnMaximum": 0.9966
+              },
+              {
+                "boundDegrees": 105.0,
+                "reachAtLeastOnMaximum": 0.0079,
+                "reachAtMostOnMinimum": 0.7624,
+                "stayAtLeastOnMinimum": 0.2376,
+                "stayAtMostOnMaximum": 0.9921
+              },
+              {
+                "boundDegrees": 110.0,
+                "reachAtLeastOnMaximum": 0.0142,
+                "reachAtMostOnMinimum": 0.698,
+                "stayAtLeastOnMinimum": 0.302,
+                "stayAtMostOnMaximum": 0.9858
+              },
+              {
+                "boundDegrees": 115.0,
+                "reachAtLeastOnMaximum": 0.0249,
+                "reachAtMostOnMinimum": 0.6288,
+                "stayAtLeastOnMinimum": 0.3712,
+                "stayAtMostOnMaximum": 0.9751
+              },
+              {
+                "boundDegrees": 120.0,
+                "reachAtLeastOnMaximum": 0.0445,
+                "reachAtMostOnMinimum": 0.5423,
+                "stayAtLeastOnMinimum": 0.4577,
+                "stayAtMostOnMaximum": 0.9555
+              },
+              {
+                "boundDegrees": 125.0,
+                "reachAtLeastOnMaximum": 0.0703,
+                "reachAtMostOnMinimum": 0.4511,
+                "stayAtLeastOnMinimum": 0.5489,
+                "stayAtMostOnMaximum": 0.9297
+              },
+              {
+                "boundDegrees": 130.0,
+                "reachAtLeastOnMaximum": 0.1132,
+                "reachAtMostOnMinimum": 0.3504,
+                "stayAtLeastOnMinimum": 0.6496,
+                "stayAtMostOnMaximum": 0.8868
+              },
+              {
+                "boundDegrees": 135.0,
+                "reachAtLeastOnMaximum": 0.1641,
+                "reachAtMostOnMinimum": 0.2535,
+                "stayAtLeastOnMinimum": 0.7465,
+                "stayAtMostOnMaximum": 0.8359
+              },
+              {
+                "boundDegrees": 140.0,
+                "reachAtLeastOnMaximum": 0.2322,
+                "reachAtMostOnMinimum": 0.1736,
+                "stayAtLeastOnMinimum": 0.8264,
+                "stayAtMostOnMaximum": 0.7678
+              },
+              {
+                "boundDegrees": 145.0,
+                "reachAtLeastOnMaximum": 0.3176,
+                "reachAtMostOnMinimum": 0.1045,
+                "stayAtLeastOnMinimum": 0.8955,
+                "stayAtMostOnMaximum": 0.6824
+              },
+              {
+                "boundDegrees": 150.0,
+                "reachAtLeastOnMaximum": 0.4185,
+                "reachAtMostOnMinimum": 0.0548,
+                "stayAtLeastOnMinimum": 0.9452,
+                "stayAtMostOnMaximum": 0.5815
+              },
+              {
+                "boundDegrees": 155.0,
+                "reachAtLeastOnMaximum": 0.5263,
+                "reachAtMostOnMinimum": 0.0252,
+                "stayAtLeastOnMinimum": 0.9748,
+                "stayAtMostOnMaximum": 0.4737
+              },
+              {
+                "boundDegrees": 160.0,
+                "reachAtLeastOnMaximum": 0.6384,
+                "reachAtMostOnMinimum": 0.0083,
+                "stayAtLeastOnMinimum": 0.9917,
+                "stayAtMostOnMaximum": 0.3616
+              },
+              {
+                "boundDegrees": 165.0,
+                "reachAtLeastOnMaximum": 0.7464,
+                "reachAtMostOnMinimum": 0.0015,
+                "stayAtLeastOnMinimum": 0.9985,
+                "stayAtMostOnMaximum": 0.2536
+              },
+              {
+                "boundDegrees": 170.0,
+                "reachAtLeastOnMaximum": 0.8325,
+                "reachAtMostOnMinimum": 0.0004,
+                "stayAtLeastOnMinimum": 0.9996,
+                "stayAtMostOnMaximum": 0.1675
+              },
+              {
+                "boundDegrees": 175.0,
+                "reachAtLeastOnMaximum": 0.9161,
+                "reachAtMostOnMinimum": 0.0001,
+                "stayAtLeastOnMinimum": 0.9999,
+                "stayAtMostOnMaximum": 0.0839
+              },
+              {
+                "boundDegrees": 180.0,
+                "reachAtLeastOnMaximum": 1.0,
+                "reachAtMostOnMinimum": 0.0,
+                "stayAtLeastOnMinimum": 1.0,
+                "stayAtMostOnMaximum": 0.0
+              }
+            ],
+            "windowMaximum": {
+              "count": 7378,
+              "maximum": 179.9,
+              "minimum": 78.3,
+              "p0.5": 102.7,
+              "p1": 106.6,
+              "p10": 128.7,
+              "p2.5": 115.0,
+              "p25": 141.1,
+              "p5": 121.2,
+              "p50": 153.9,
+              "p75": 165.3,
+              "p90": 174.3,
+              "p95": 176.4,
+              "p97.5": 177.6,
+              "p99": 178.5,
+              "p99.5": 178.9
+            },
+            "windowMinimum": {
+              "count": 7378,
+              "maximum": 176.5,
+              "minimum": 39.2,
+              "p0.5": 55.5,
+              "p1": 64.5,
+              "p10": 91.5,
+              "p2.5": 74.5,
+              "p25": 105.9,
+              "p5": 82.1,
+              "p50": 122.4,
+              "p75": 135.2,
+              "p90": 145.3,
+              "p95": 150.6,
+              "p97.5": 155.1,
+              "p99": 159.5,
+              "p99.5": 161.5
+            }
+          }
+        },
+        "clipsContributing": 1368,
+        "excursions": 9038,
+        "subjects": 40
+      },
+      "repDegrees": 125.0
+    },
+    {
+      "driver": "HIP",
+      "exercise": "바벨 스티프 데드리프트",
+      "impostorReplays": {
+        "바벨 스쿼트": {
+          "chains": {
+            "KNEE": {
+              "clauseSweep": [
+                {
+                  "boundDegrees": 40.0,
+                  "reachAtLeastOnMaximum": 0.0003,
+                  "reachAtMostOnMinimum": 0.9752,
+                  "stayAtLeastOnMinimum": 0.0248,
+                  "stayAtMostOnMaximum": 0.9997
+                },
+                {
+                  "boundDegrees": 45.0,
+                  "reachAtLeastOnMaximum": 0.0006,
+                  "reachAtMostOnMinimum": 0.9538,
+                  "stayAtLeastOnMinimum": 0.0462,
+                  "stayAtMostOnMaximum": 0.9994
+                },
+                {
+                  "boundDegrees": 50.0,
+                  "reachAtLeastOnMaximum": 0.0012,
+                  "reachAtMostOnMinimum": 0.9374,
+                  "stayAtLeastOnMinimum": 0.0626,
+                  "stayAtMostOnMaximum": 0.9988
+                },
+                {
+                  "boundDegrees": 55.0,
+                  "reachAtLeastOnMaximum": 0.0022,
+                  "reachAtMostOnMinimum": 0.9132,
+                  "stayAtLeastOnMinimum": 0.0868,
+                  "stayAtMostOnMaximum": 0.9978
+                },
+                {
+                  "boundDegrees": 60.0,
+                  "reachAtLeastOnMaximum": 0.0037,
+                  "reachAtMostOnMinimum": 0.8751,
+                  "stayAtLeastOnMinimum": 0.1249,
+                  "stayAtMostOnMaximum": 0.9963
+                },
+                {
+                  "boundDegrees": 65.0,
+                  "reachAtLeastOnMaximum": 0.0065,
+                  "reachAtMostOnMinimum": 0.8165,
+                  "stayAtLeastOnMinimum": 0.1835,
+                  "stayAtMostOnMaximum": 0.9935
+                },
+                {
+                  "boundDegrees": 70.0,
+                  "reachAtLeastOnMaximum": 0.0133,
+                  "reachAtMostOnMinimum": 0.7459,
+                  "stayAtLeastOnMinimum": 0.2541,
+                  "stayAtMostOnMaximum": 0.9867
+                },
+                {
+                  "boundDegrees": 75.0,
+                  "reachAtLeastOnMaximum": 0.0161,
+                  "reachAtMostOnMinimum": 0.6678,
+                  "stayAtLeastOnMinimum": 0.3322,
+                  "stayAtMostOnMaximum": 0.9839
+                },
+                {
+                  "boundDegrees": 80.0,
+                  "reachAtLeastOnMaximum": 0.0214,
+                  "reachAtMostOnMinimum": 0.5761,
+                  "stayAtLeastOnMinimum": 0.4239,
+                  "stayAtMostOnMaximum": 0.9786
+                },
+                {
+                  "boundDegrees": 85.0,
+                  "reachAtLeastOnMaximum": 0.0372,
+                  "reachAtMostOnMinimum": 0.4856,
+                  "stayAtLeastOnMinimum": 0.5144,
+                  "stayAtMostOnMaximum": 0.9628
+                },
+                {
+                  "boundDegrees": 90.0,
+                  "reachAtLeastOnMaximum": 0.061,
+                  "reachAtMostOnMinimum": 0.3898,
+                  "stayAtLeastOnMinimum": 0.6102,
+                  "stayAtMostOnMaximum": 0.939
+                },
+                {
+                  "boundDegrees": 95.0,
+                  "reachAtLeastOnMaximum": 0.0942,
+                  "reachAtMostOnMinimum": 0.2966,
+                  "stayAtLeastOnMinimum": 0.7034,
+                  "stayAtMostOnMaximum": 0.9058
+                },
+                {
+                  "boundDegrees": 100.0,
+                  "reachAtLeastOnMaximum": 0.1336,
+                  "reachAtMostOnMinimum": 0.2178,
+                  "stayAtLeastOnMinimum": 0.7822,
+                  "stayAtMostOnMaximum": 0.8664
+                },
+                {
+                  "boundDegrees": 105.0,
+                  "reachAtLeastOnMaximum": 0.19,
+                  "reachAtMostOnMinimum": 0.1571,
+                  "stayAtLeastOnMinimum": 0.8429,
+                  "stayAtMostOnMaximum": 0.81
+                },
+                {
+                  "boundDegrees": 110.0,
+                  "reachAtLeastOnMaximum": 0.2557,
+                  "reachAtMostOnMinimum": 0.1041,
+                  "stayAtLeastOnMinimum": 0.8959,
+                  "stayAtMostOnMaximum": 0.7443
+                },
+                {
+                  "boundDegrees": 115.0,
+                  "reachAtLeastOnMaximum": 0.3372,
+                  "reachAtMostOnMinimum": 0.0595,
+                  "stayAtLeastOnMinimum": 0.9405,
+                  "stayAtMostOnMaximum": 0.6628
+                },
+                {
+                  "boundDegrees": 120.0,
+                  "reachAtLeastOnMaximum": 0.4304,
+                  "reachAtMostOnMinimum": 0.0304,
+                  "stayAtLeastOnMinimum": 0.9696,
+                  "stayAtMostOnMaximum": 0.5696
+                },
+                {
+                  "boundDegrees": 125.0,
+                  "reachAtLeastOnMaximum": 0.5132,
+                  "reachAtMostOnMinimum": 0.0158,
+                  "stayAtLeastOnMinimum": 0.9842,
+                  "stayAtMostOnMaximum": 0.4868
+                },
+                {
+                  "boundDegrees": 130.0,
+                  "reachAtLeastOnMaximum": 0.6064,
+                  "reachAtMostOnMinimum": 0.0037,
+                  "stayAtLeastOnMinimum": 0.9963,
+                  "stayAtMostOnMaximum": 0.3936
+                },
+                {
+                  "boundDegrees": 135.0,
+                  "reachAtLeastOnMaximum": 0.6941,
+                  "reachAtMostOnMinimum": 0.0012,
+                  "stayAtLeastOnMinimum": 0.9988,
+                  "stayAtMostOnMaximum": 0.3059
+                },
+                {
+                  "boundDegrees": 140.0,
+                  "reachAtLeastOnMaximum": 0.7791,
+                  "reachAtMostOnMinimum": 0.0012,
+                  "stayAtLeastOnMinimum": 0.9988,
+                  "stayAtMostOnMaximum": 0.2209
+                },
+                {
+                  "boundDegrees": 145.0,
+                  "reachAtLeastOnMaximum": 0.8596,
+                  "reachAtMostOnMinimum": 0.0006,
+                  "stayAtLeastOnMinimum": 0.9994,
+                  "stayAtMostOnMaximum": 0.1404
+                },
+                {
+                  "boundDegrees": 150.0,
+                  "reachAtLeastOnMaximum": 0.9142,
+                  "reachAtMostOnMinimum": 0.0003,
+                  "stayAtLeastOnMinimum": 0.9997,
+                  "stayAtMostOnMaximum": 0.0858
+                },
+                {
+                  "boundDegrees": 155.0,
+                  "reachAtLeastOnMaximum": 0.9492,
+                  "reachAtMostOnMinimum": 0.0003,
+                  "stayAtLeastOnMinimum": 0.9997,
+                  "stayAtMostOnMaximum": 0.0508
+                },
+                {
+                  "boundDegrees": 160.0,
+                  "reachAtLeastOnMaximum": 0.974,
+                  "reachAtMostOnMinimum": 0.0,
+                  "stayAtLeastOnMinimum": 1.0,
+                  "stayAtMostOnMaximum": 0.026
+                },
+                {
+                  "boundDegrees": 165.0,
+                  "reachAtLeastOnMaximum": 0.9842,
+                  "reachAtMostOnMinimum": 0.0,
+                  "stayAtLeastOnMinimum": 1.0,
+                  "stayAtMostOnMaximum": 0.0158
+                },
+                {
+                  "boundDegrees": 170.0,
+                  "reachAtLeastOnMaximum": 0.9923,
+                  "reachAtMostOnMinimum": 0.0,
+                  "stayAtLeastOnMinimum": 1.0,
+                  "stayAtMostOnMaximum": 0.0077
+                },
+                {
+                  "boundDegrees": 175.0,
+                  "reachAtLeastOnMaximum": 0.9978,
+                  "reachAtMostOnMinimum": 0.0,
+                  "stayAtLeastOnMinimum": 1.0,
+                  "stayAtMostOnMaximum": 0.0022
+                },
+                {
+                  "boundDegrees": 180.0,
+                  "reachAtLeastOnMaximum": 1.0,
+                  "reachAtMostOnMinimum": 0.0,
+                  "stayAtLeastOnMinimum": 1.0,
+                  "stayAtMostOnMaximum": 0.0
+                }
+              ],
+              "windowMaximum": {
+                "count": 3227,
+                "maximum": 176.9,
+                "minimum": 39.2,
+                "p0.5": 62.4,
+                "p1": 68.3,
+                "p10": 95.8,
+                "p2.5": 81.9,
+                "p25": 109.6,
+                "p5": 87.6,
+                "p50": 124.3,
+                "p75": 138.4,
+                "p90": 148.5,
+                "p95": 155.1,
+                "p97.5": 160.3,
+                "p99": 167.6,
+                "p99.5": 171.9
+              },
+              "windowMinimum": {
+                "count": 3227,
+                "maximum": 157.3,
+                "minimum": 24.5,
+                "p0.5": 33.9,
+                "p1": 36.1,
+                "p10": 57.3,
+                "p2.5": 40.0,
+                "p25": 69.8,
+                "p5": 46.2,
+                "p50": 84.2,
+                "p75": 98.0,
+                "p90": 110.5,
+                "p95": 116.5,
+                "p97.5": 121.0,
+                "p99": 126.6,
+                "p99.5": 129.4
+              }
+            }
+          },
+          "clipsContributing": 715,
+          "excursions": 4730,
+          "subjects": 42
+        }
+      },
+      "legitimate": {
+        "chains": {
+          "KNEE": {
+            "clauseSweep": [
+              {
+                "boundDegrees": 40.0,
+                "reachAtLeastOnMaximum": 0.0114,
+                "reachAtMostOnMinimum": 0.8749,
+                "stayAtLeastOnMinimum": 0.1251,
+                "stayAtMostOnMaximum": 0.9886
+              },
+              {
+                "boundDegrees": 45.0,
+                "reachAtLeastOnMaximum": 0.0121,
+                "reachAtMostOnMinimum": 0.8737,
+                "stayAtLeastOnMinimum": 0.1263,
+                "stayAtMostOnMaximum": 0.9879
+              },
+              {
+                "boundDegrees": 50.0,
+                "reachAtLeastOnMaximum": 0.0121,
+                "reachAtMostOnMinimum": 0.873,
+                "stayAtLeastOnMinimum": 0.127,
+                "stayAtMostOnMaximum": 0.9879
+              },
+              {
+                "boundDegrees": 55.0,
+                "reachAtLeastOnMaximum": 0.0127,
+                "reachAtMostOnMinimum": 0.8724,
+                "stayAtLeastOnMinimum": 0.1276,
+                "stayAtMostOnMaximum": 0.9873
+              },
+              {
+                "boundDegrees": 60.0,
+                "reachAtLeastOnMaximum": 0.014,
+                "reachAtMostOnMinimum": 0.8686,
+                "stayAtLeastOnMinimum": 0.1314,
+                "stayAtMostOnMaximum": 0.986
+              },
+              {
+                "boundDegrees": 65.0,
+                "reachAtLeastOnMaximum": 0.0152,
+                "reachAtMostOnMinimum": 0.8679,
+                "stayAtLeastOnMinimum": 0.1321,
+                "stayAtMostOnMaximum": 0.9848
+              },
+              {
+                "boundDegrees": 70.0,
+                "reachAtLeastOnMaximum": 0.0165,
+                "reachAtMostOnMinimum": 0.866,
+                "stayAtLeastOnMinimum": 0.134,
+                "stayAtMostOnMaximum": 0.9835
+              },
+              {
+                "boundDegrees": 75.0,
+                "reachAtLeastOnMaximum": 0.0178,
+                "reachAtMostOnMinimum": 0.866,
+                "stayAtLeastOnMinimum": 0.134,
+                "stayAtMostOnMaximum": 0.9822
+              },
+              {
+                "boundDegrees": 80.0,
+                "reachAtLeastOnMaximum": 0.0229,
+                "reachAtMostOnMinimum": 0.8635,
+                "stayAtLeastOnMinimum": 0.1365,
+                "stayAtMostOnMaximum": 0.9771
+              },
+              {
+                "boundDegrees": 85.0,
+                "reachAtLeastOnMaximum": 0.0229,
+                "reachAtMostOnMinimum": 0.8622,
+                "stayAtLeastOnMinimum": 0.1378,
+                "stayAtMostOnMaximum": 0.9771
+              },
+              {
+                "boundDegrees": 90.0,
+                "reachAtLeastOnMaximum": 0.0248,
+                "reachAtMostOnMinimum": 0.8622,
+                "stayAtLeastOnMinimum": 0.1378,
+                "stayAtMostOnMaximum": 0.9752
+              },
+              {
+                "boundDegrees": 95.0,
+                "reachAtLeastOnMaximum": 0.0254,
+                "reachAtMostOnMinimum": 0.8622,
+                "stayAtLeastOnMinimum": 0.1378,
+                "stayAtMostOnMaximum": 0.9746
+              },
+              {
+                "boundDegrees": 100.0,
+                "reachAtLeastOnMaximum": 0.0267,
+                "reachAtMostOnMinimum": 0.8616,
+                "stayAtLeastOnMinimum": 0.1384,
+                "stayAtMostOnMaximum": 0.9733
+              },
+              {
+                "boundDegrees": 105.0,
+                "reachAtLeastOnMaximum": 0.0279,
+                "reachAtMostOnMinimum": 0.861,
+                "stayAtLeastOnMinimum": 0.139,
+                "stayAtMostOnMaximum": 0.9721
+              },
+              {
+                "boundDegrees": 110.0,
+                "reachAtLeastOnMaximum": 0.0317,
+                "reachAtMostOnMinimum": 0.8571,
+                "stayAtLeastOnMinimum": 0.1429,
+                "stayAtMostOnMaximum": 0.9683
+              },
+              {
+                "boundDegrees": 115.0,
+                "reachAtLeastOnMaximum": 0.0356,
+                "reachAtMostOnMinimum": 0.8559,
+                "stayAtLeastOnMinimum": 0.1441,
+                "stayAtMostOnMaximum": 0.9644
+              },
+              {
+                "boundDegrees": 120.0,
+                "reachAtLeastOnMaximum": 0.0356,
+                "reachAtMostOnMinimum": 0.8533,
+                "stayAtLeastOnMinimum": 0.1467,
+                "stayAtMostOnMaximum": 0.9644
+              },
+              {
+                "boundDegrees": 125.0,
+                "reachAtLeastOnMaximum": 0.0381,
+                "reachAtMostOnMinimum": 0.8444,
+                "stayAtLeastOnMinimum": 0.1556,
+                "stayAtMostOnMaximum": 0.9619
+              },
+              {
+                "boundDegrees": 130.0,
+                "reachAtLeastOnMaximum": 0.0394,
+                "reachAtMostOnMinimum": 0.8254,
+                "stayAtLeastOnMinimum": 0.1746,
+                "stayAtMostOnMaximum": 0.9606
+              },
+              {
+                "boundDegrees": 135.0,
+                "reachAtLeastOnMaximum": 0.0432,
+                "reachAtMostOnMinimum": 0.7905,
+                "stayAtLeastOnMinimum": 0.2095,
+                "stayAtMostOnMaximum": 0.9568
+              },
+              {
+                "boundDegrees": 140.0,
+                "reachAtLeastOnMaximum": 0.0451,
+                "reachAtMostOnMinimum": 0.7473,
+                "stayAtLeastOnMinimum": 0.2527,
+                "stayAtMostOnMaximum": 0.9549
+              },
+              {
+                "boundDegrees": 145.0,
+                "reachAtLeastOnMaximum": 0.0584,
+                "reachAtMostOnMinimum": 0.6692,
+                "stayAtLeastOnMinimum": 0.3308,
+                "stayAtMostOnMaximum": 0.9416
+              },
+              {
+                "boundDegrees": 150.0,
+                "reachAtLeastOnMaximum": 0.0959,
+                "reachAtMostOnMinimum": 0.5124,
+                "stayAtLeastOnMinimum": 0.4876,
+                "stayAtMostOnMaximum": 0.9041
+              },
+              {
+                "boundDegrees": 155.0,
+                "reachAtLeastOnMaximum": 0.1981,
+                "reachAtMostOnMinimum": 0.3321,
+                "stayAtLeastOnMinimum": 0.6679,
+                "stayAtMostOnMaximum": 0.8019
+              },
+              {
+                "boundDegrees": 160.0,
+                "reachAtLeastOnMaximum": 0.386,
+                "reachAtMostOnMinimum": 0.1898,
+                "stayAtLeastOnMinimum": 0.8102,
+                "stayAtMostOnMaximum": 0.614
+              },
+              {
+                "boundDegrees": 165.0,
+                "reachAtLeastOnMaximum": 0.581,
+                "reachAtMostOnMinimum": 0.0921,
+                "stayAtLeastOnMinimum": 0.9079,
+                "stayAtMostOnMaximum": 0.419
+              },
+              {
+                "boundDegrees": 170.0,
+                "reachAtLeastOnMaximum": 0.7867,
+                "reachAtMostOnMinimum": 0.0451,
+                "stayAtLeastOnMinimum": 0.9549,
+                "stayAtMostOnMaximum": 0.2133
+              },
+              {
+                "boundDegrees": 175.0,
+                "reachAtLeastOnMaximum": 0.9016,
+                "reachAtMostOnMinimum": 0.0114,
+                "stayAtLeastOnMinimum": 0.9886,
+                "stayAtMostOnMaximum": 0.0984
+              },
+              {
+                "boundDegrees": 180.0,
+                "reachAtLeastOnMaximum": 1.0,
+                "reachAtMostOnMinimum": 0.0,
+                "stayAtLeastOnMinimum": 1.0,
+                "stayAtMostOnMaximum": 0.0
+              }
+            ],
+            "windowMaximum": {
+              "count": 1575,
+              "maximum": 180.0,
+              "minimum": 0.1,
+              "p0.5": 8.1,
+              "p1": 24.0,
+              "p10": 150.3,
+              "p2.5": 94.2,
+              "p25": 156.5,
+              "p5": 143.2,
+              "p50": 162.9,
+              "p75": 169.1,
+              "p90": 174.8,
+              "p95": 177.2,
+              "p97.5": 178.3,
+              "p99": 179.2,
+              "p99.5": 179.4
+            },
+            "windowMinimum": {
+              "count": 1575,
+              "maximum": 177.3,
+              "minimum": 0.0,
+              "p0.5": 0.0,
+              "p1": 0.0,
+              "p10": 5.5,
+              "p2.5": 0.0,
+              "p25": 139.9,
+              "p5": 0.3,
+              "p50": 150.4,
+              "p75": 157.6,
+              "p90": 164.4,
+              "p95": 169.6,
+              "p97.5": 172.8,
+              "p99": 175.4,
+              "p99.5": 176.0
+            }
+          }
+        },
+        "clipsContributing": 339,
+        "excursions": 2190,
+        "subjects": 40
+      },
+      "repDegrees": 130.0
+    }
+  ],
+  "method": {
+    "coordinates": "AI Hub 3D ground-truth labels; no MediaPipe transfer is claimed",
+    "excursionMachine": "armed at 140.0, completed at 150.0, counted when the driver minimum reached the exercise's rep line; armed-at-clip-end discarded",
+    "minimumCompanionFrames": 2,
+    "unit": "per-excursion companion-chain window extreme, one side at a time"
+  },
+  "question": "Where does each definition-gated companion chain travel during the exercise's own repetition-shaped excursions, so a gate bound can sit outside that distribution with a stated margin (§4.9 rule 7)?",
+  "rightsAuthorization": {
+    "manifest": "docs/pose-data-rights-manifest.aihub-research.v1.json",
+    "operation": "AIHUB_LABEL_STATISTICAL_ANALYSIS"
+  }
+}

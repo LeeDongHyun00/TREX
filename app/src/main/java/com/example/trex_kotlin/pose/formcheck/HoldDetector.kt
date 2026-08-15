@@ -64,7 +64,17 @@ internal class HoldDetector(
 
     val holding: Boolean get() = holdStartMs != null
 
-    fun accept(timestampMs: Long, angleDegrees: Double): HoldEvent {
+    fun accept(
+        timestampMs: Long,
+        angleDegrees: Double,
+        /**
+         * Whether a hold may begin on this frame. The angle alone cannot always say a position is
+         * the held one — a standing body and a plank share a straight hip — so the session may
+         * veto entry on a frame where a clause it owns says the position is something else. The
+         * smoothing history still advances; only the transition into a hold is withheld.
+         */
+        allowEntry: Boolean = true,
+    ): HoldEvent {
         val previousTs = smoothedTimestampMs
         if (previousTs != null && timestampMs <= previousTs) {
             invalidate()
@@ -74,7 +84,7 @@ internal class HoldDetector(
 
         val startMs = holdStartMs
         if (startMs == null) {
-            if (smoothed <= enterDegrees) {
+            if (smoothed <= enterDegrees && allowEntry) {
                 holdStartMs = timestampMs
                 heldMs = 0L
                 return HoldEvent.Entered
@@ -88,6 +98,23 @@ internal class HoldDetector(
         }
 
         val total = timestampMs - startMs
+        holdStartMs = null
+        heldMs = 0L
+        return HoldEvent.Released(heldMs = total, countedAsHold = total >= minimumHoldMs)
+    }
+
+    /**
+     * Ends the stretch in flight as a normal release, from outside the angle band.
+     *
+     * For when the position stopped being the held one for a reason the driver angle cannot see
+     * — a plank whose body stood up keeps a straight hip, so the band alone would let the hold
+     * accrue forever. The stretch up to this moment genuinely happened and is counted by the
+     * same rule as a band exit; contrast [invalidate], which is for stretches that were never
+     * credibly observed at all.
+     */
+    fun release(timestampMs: Long): HoldEvent {
+        val startMs = holdStartMs ?: return HoldEvent.None
+        val total = (timestampMs - startMs).coerceAtLeast(0L)
         holdStartMs = null
         heldMs = 0L
         return HoldEvent.Released(heldMs = total, countedAsHold = total >= minimumHoldMs)

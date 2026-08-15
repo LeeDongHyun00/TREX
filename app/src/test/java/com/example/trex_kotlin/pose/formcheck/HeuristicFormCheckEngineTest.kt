@@ -1500,6 +1500,57 @@ class HeuristicFormCheckEngineTest {
     }
 
     @Test
+    fun oneGrazingFrameDoesNotSatisfyTheSquatsHipClause() {
+        // The bridge sweep measured a true 140-150 degree hip reading at or under 140 on 27.7%
+        // of frames, so a single frame at the extreme is not evidence the hip went there. The
+        // squat's clause demands three satisfying frames and is judged on the third-best
+        // reading — which is also the number it reports, so the sentence stays literally true.
+        val knees = listOf(120.0, 100.0, 100.0, 100.0, 100.0, 120.0)
+        fun run(hips: List<Double>): FormCheckUiState {
+            val session = HeuristicFormCheckSession(FormCheckExercise.BARBELL_SQUAT)
+            var state = session.initialSnapshot()
+            var t = 0L
+            var work = 0
+            fun step(knee: Double, hip: Double) {
+                state = session.accept(
+                    t,
+                    true,
+                    true,
+                    frameWithChains(
+                        kneeAngleDegrees = knee,
+                        hipAngleDegrees = hip,
+                        elbowAngleDegrees = 175.0,
+                        timestampMs = t,
+                    ),
+                )
+                t += 200L
+            }
+            step(175.0, 170.0)
+            step(175.0, 170.0)
+            for (knee in knees) {
+                step(knee, hips[work])
+                work += 1
+            }
+            step(175.0, 170.0)
+            step(175.0, 170.0)
+            step(175.0, 170.0)
+            return state
+        }
+
+        // Two frames graze the bound; the third-best reading is 170 and the excursion is
+        // reported with that sustained angle, not with the instant it grazed.
+        val grazed = run(listOf(170.0, 120.0, 120.0, 170.0, 170.0, 170.0))
+        assertEquals(0, grazed.repCount)
+        assertEquals(1, grazed.uncountedAttemptCount)
+        assertEquals("엉덩이가 170도까지만 굽혀져서 횟수로 세지 않았어요", grazed.headline)
+
+        // Three frames at the same depth are a position the hip actually held.
+        val held = run(listOf(170.0, 120.0, 120.0, 120.0, 170.0, 170.0))
+        assertEquals(1, held.repCount)
+        assertEquals(0, held.uncountedAttemptCount)
+    }
+
+    @Test
     fun aForwardBowIsNotAKneeUp() {
         // A bow flexes the hip driver exactly like a raise, but the knees stay straight — the
         // dataset's own condition for this exercise is that the knee comes up.
@@ -1534,6 +1585,37 @@ class HeuristicFormCheckEngineTest {
         assertEquals(1, squat.uncountedAttemptCount)
         assertEquals(FormCheckRepEventKind.INCOMPLETE, squat.repMarks.single().kind)
         assertEquals("반대쪽 엉덩이가 100도까지 함께 굽혀져서 횟수로 세지 않았어요", squat.headline)
+    }
+
+    @Test
+    fun aFoldedBodyPullIsNotAPullUp() {
+        // The elbow arc of a pull-up performed while the body folds — a seated row, a squatting
+        // cable pull — flexes the hip past the measured floor of every hanging excursion. The
+        // hip names the truthful reason, sustained for three frames per the STAY rule.
+        val arc = listOf(135.0, 110.0, 105.0, 105.0, 110.0, 135.0)
+        val folded = runExcursion(FormCheckExercise.PULL_UP, 175.0, arc) { t, elbow ->
+            frameWithChains(
+                kneeAngleDegrees = 170.0,
+                hipAngleDegrees = 100.0,
+                elbowAngleDegrees = elbow,
+                timestampMs = t,
+            )
+        }
+        assertEquals(0, folded.repCount)
+        assertEquals(1, folded.uncountedAttemptCount)
+        assertEquals("엉덩이가 100도까지 굽혀져서 횟수로 세지 않았어요", folded.headline)
+
+        // The same arc with the body hanging straight is simply a pull-up.
+        val hanging = runExcursion(FormCheckExercise.PULL_UP, 175.0, arc) { t, elbow ->
+            frameWithChains(
+                kneeAngleDegrees = 170.0,
+                hipAngleDegrees = 172.0,
+                elbowAngleDegrees = elbow,
+                timestampMs = t,
+            )
+        }
+        assertEquals(1, hanging.repCount)
+        assertEquals(0, hanging.uncountedAttemptCount)
     }
 
     @Test
@@ -1839,15 +1921,108 @@ class HeuristicFormCheckEngineTest {
         assertFalse(reading.isFreshAt(5_000L))
     }
 
+    /**
+     * Runs the plank with a straight body posed at [torsoDegrees] from gravity. The straight
+     * hip is the same in every case; which way the body points is the only variable.
+     */
+    private fun plankRun(
+        torsoDegrees: Double,
+        gravityAt: (Long) -> PoseGravityReading?,
+        frames: Int = 30,
+        torsoDegreesAt: ((Int) -> Double)? = null,
+    ): FormCheckUiState {
+        val session = HeuristicFormCheckSession(FormCheckExercise.PLANK)
+        var state = session.initialSnapshot()
+        for (index in 0 until frames) {
+            val t = index * 200L
+            val radians = Math.toRadians(torsoDegreesAt?.invoke(index) ?: torsoDegrees)
+            state = session.accept(
+                t,
+                true,
+                true,
+                frameWithTorsoDirection(
+                    elbowAngleDegrees = 90.0,
+                    torsoX = sin(radians),
+                    torsoY = cos(radians),
+                    timestampMs = t,
+                ),
+                gravity = gravityAt(t),
+            )
+        }
+        return state
+    }
+
     @Test
-    fun onlyThePushUpsDependOnWhichWayTheBodyPoints() {
+    fun aStandingBodyIsNotAPlank() {
+        // A standing body keeps the exact straight hip a plank does, so before v2.11 the hold
+        // accrued on somebody standing still — the driver angle alone cannot tell the two
+        // apart. Orientation is part of the held position's identity: along gravity, no hold
+        // begins, and the truthful reason is reported once the reading is sustained.
+        val standing = plankRun(torsoDegrees = 5.0, gravityAt = ::downwardGravity)
+
+        assertEquals(0, standing.holdSeconds)
+        assertTrue(
+            "Expected the posture observation, got ${standing.headline}",
+            standing.headline!!.contains("몸통이 중력 기준") &&
+                standing.headline!!.contains("유지 시간을 세지 않았어요"),
+        )
+        assertNull("A hold posture veto urges nothing", standing.suggestion)
+    }
+
+    @Test
+    fun aProneBodyHoldsAPlank() {
+        val prone = plankRun(torsoDegrees = 85.0, gravityAt = ::downwardGravity)
+        assertTrue("Expected an accruing hold, got ${prone.holdSeconds}s", prone.holdSeconds >= 4)
+    }
+
+    @Test
+    fun thePlankPostureClauseAbstainsWithoutAUsableGravityReading() {
+        // No sensor means no orientation evidence, and the driver counts alone — the same
+        // fail-open the push-ups document. The cost is stated in §4.3c, not hidden here.
+        val noSensor = plankRun(torsoDegrees = 5.0, gravityAt = { null })
+        assertTrue(
+            "An unmeasured direction is not evidence: ${noSensor.holdSeconds}s",
+            noSensor.holdSeconds >= 4,
+        )
+    }
+
+    @Test
+    fun standingUpEndsThePlankAndCountsTheHeldStretch() {
+        // The stretch until the body turned upright genuinely happened. Ending it as a normal
+        // release — counted seconds, not a discard — is what keeps the summary honest.
+        val state = plankRun(
+            torsoDegrees = 85.0,
+            gravityAt = ::downwardGravity,
+            frames = 35,
+            torsoDegreesAt = { index -> if (index < 25) 85.0 else 5.0 },
+        )
+
+        assertEquals("The hold must stop accruing once the body stands", 0, state.holdSeconds)
+        assertTrue(
+            "Expected the counted stretch, got ${state.headline}",
+            state.headline!!.contains("유지했어요"),
+        )
+    }
+
+    @Test
+    fun onlyTheProneThreeDependOnWhichWayTheBodyPoints() {
         // Dips was grouped with them as a gravity case and it is not one: measured on the 3D
         // labels its torso sits 19 degrees from vertical against a curl's 5, inside the same
         // range rather than outside it. Nothing was gained by giving it a posture clause, so it
-        // does not have one.
+        // does not have one. The plank joined in v2.11 for the identity reason the squat's hip
+        // clause exists: a standing body keeps the same straight hip a plank does, so without
+        // orientation the hold would accrue on somebody standing still.
         val withPosture = FormCheckExercise.entries.filter { it.posture != null }.toSet()
         assertEquals(
-            setOf(FormCheckExercise.PUSH_UP, FormCheckExercise.KNEE_PUSH_UP),
+            setOf(
+                FormCheckExercise.PUSH_UP,
+                FormCheckExercise.KNEE_PUSH_UP,
+                FormCheckExercise.PLANK,
+                // v2.11: sitting down flexes both hips through this exercise's whole arc, and
+                // the knee gate anatomy suggested was measured and refused — the population
+                // bends its knees. Lying is orientation, and only gravity can say it.
+                FormCheckExercise.LYING_LEG_RAISE,
+            ),
             withPosture,
         )
         assertNull(FormCheckExercise.DIPS.posture)

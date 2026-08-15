@@ -237,20 +237,29 @@ class FormCheckGovernanceTest {
             val statistic: FormCheckGateStatistic,
             val comparator: FormCheckGateComparator,
             val bound: Double,
+            // §4.9 rule 6, REACH side: how many satisfying frames the clause demands. Contract,
+            // not an implementation detail — raising it changes what counts as a repetition.
+            val minimumSatisfyingFrames: Int = 1,
         )
 
         fun gates(spec: FormCheckExercise): List<Gate> = spec.definition.map {
-            Gate(it.chain, it.side, it.statistic, it.comparator, it.boundDegrees)
+            Gate(it.chain, it.side, it.statistic, it.comparator, it.boundDegrees, it.minimumSatisfyingFrames)
         }
 
         val expected = mapOf(
+            // 130 with three satisfying frames (v2.11). The old 140 was measured to admit an
+            // upright-torso knee bend on true geometry — balance forces its hip to 135-141 at
+            // the rep line — and the single-frame REACH reading leaked 27.7% per frame against
+            // a true 140-150 hip. 130 sits above the p99 of 4,226 real repetitions (124.9) and
+            // below the impostor's balance floor (135.2).
             FormCheckExercise.BARBELL_SQUAT to listOf(
                 Gate(
                     FormCheckDriver.HIP,
                     FormCheckGateSide.DRIVER,
                     FormCheckGateStatistic.WINDOW_MINIMUM,
                     FormCheckGateComparator.AT_MOST,
-                    140.0,
+                    130.0,
+                    minimumSatisfyingFrames = 3,
                 ),
             ),
             FormCheckExercise.STANDING_KNEE_UP to listOf(
@@ -351,6 +360,38 @@ class FormCheckGovernanceTest {
                     70.0,
                 ),
             ),
+            // The v2.11 wave, every bound placed from the quantile artifact
+            // (docs/gate-bound-quantiles.v1.json) with its margin and cost recorded there. The
+            // measured refusals — barbell row 13.2% at any usable bound, upright row, hanging
+            // leg raise, both deadlifts — are as much a part of that measurement as these are,
+            // and none of those exercises may quietly gain a clause without new evidence.
+            FormCheckExercise.PULL_UP to listOf(
+                Gate(
+                    FormCheckDriver.HIP,
+                    FormCheckGateSide.DRIVER,
+                    FormCheckGateStatistic.WINDOW_MINIMUM,
+                    FormCheckGateComparator.AT_LEAST,
+                    125.0,
+                ),
+            ),
+            FormCheckExercise.FACE_PULL to listOf(
+                Gate(
+                    FormCheckDriver.HIP,
+                    FormCheckGateSide.DRIVER,
+                    FormCheckGateStatistic.WINDOW_MINIMUM,
+                    FormCheckGateComparator.AT_LEAST,
+                    105.0,
+                ),
+            ),
+            FormCheckExercise.DUMBBELL_BENT_OVER_ROW to listOf(
+                Gate(
+                    FormCheckDriver.SHOULDER,
+                    FormCheckGateSide.DRIVER,
+                    FormCheckGateStatistic.WINDOW_MAXIMUM,
+                    FormCheckGateComparator.AT_MOST,
+                    140.0,
+                ),
+            ),
         )
 
         for (spec in FormCheckExercise.entries) {
@@ -422,6 +463,12 @@ class FormCheckGovernanceTest {
                 "DUMBBELL_CURL:SHOULDER",
                 "HIP_THRUST:KNEE",
                 "CABLE_PUSH_DOWN:SHOULDER",
+                // The v2.11 wave: every one a "keep the body carried" clause, so every one a
+                // STAY shape — hanging bodies stay straight, a face pull's torso stays up, a
+                // row's upper arm stays rowing.
+                "PULL_UP:HIP",
+                "FACE_PULL:HIP",
+                "DUMBBELL_BENT_OVER_ROW:SHOULDER",
             ),
             stay,
         )

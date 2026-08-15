@@ -381,6 +381,10 @@ private fun FormCheckContent(
         FormCheckCountSlab(
             spec = spec,
             formState = formState,
+            // The posture clause fails open by §4.3c design; this is the open failing said out
+            // loud. Null covers no sensor and a phone aimed along gravity alike — both leave
+            // orientation unread while the joints keep counting.
+            orientationUnread = spec.posture != null && gravity.value == null,
             modifier = Modifier
                 .align(Alignment.BottomStart)
                 .padding(start = 20.dp, end = 20.dp, bottom = 116.dp)
@@ -599,6 +603,7 @@ private fun FormCheckStatusBand(
 private fun FormCheckCountSlab(
     spec: FormCheckExercise,
     formState: FormCheckUiState,
+    orientationUnread: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     val holding = spec.cadence == FormCheckCadence.HOLD
@@ -665,6 +670,17 @@ private fun FormCheckCountSlab(
                 Text(
                     text = "${spec.view.noteSubject} " +
                         "${FormCheckStartAnnouncer.viewNoteSubject(spec)} 더 잘 보여요",
+                    color = Color.White.copy(alpha = 0.68f),
+                    fontSize = 14.sp,
+                    modifier = Modifier.padding(top = 4.dp),
+                )
+            }
+            // Shown only while an orientation-dependent exercise runs blind to gravity: the
+            // clause is silent by design, and silence about the silence would let the count be
+            // read as orientation-checked (§4.3c).
+            if (orientationUnread) {
+                Text(
+                    text = HeuristicFormCheckDeclaration.ORIENTATION_SILENT_DISCLOSURE,
                     color = Color.White.copy(alpha = 0.68f),
                     fontSize = 14.sp,
                     modifier = Modifier.padding(top = 4.dp),
