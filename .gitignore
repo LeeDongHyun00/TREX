@@ -60,3 +60,6 @@ Thumbs.db
 # are reproducible from the archives. Committing the dump would put a large
 # unreferenced file where a `git add docs/` would sweep it up.
 docs/bridge-frames.*.json
+# The same-side per-(clip, frame, side) stream: 111MB, reproducible, summarised into
+# bridge-extreme-error.v1.json which is what the policy cites.
+docs/bridge-sides.*.json

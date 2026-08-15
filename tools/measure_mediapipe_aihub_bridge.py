@@ -253,6 +253,37 @@ def _label_angle(
     return min(angles) if extreme == "min" else max(angles)
 
 
+def _label_sides(
+    points: dict[str, Any],
+    axes: tuple[str, ...],
+    chain: str,
+) -> dict[str, float]:
+    """Each side's label angle for the chain, keyed by side — the per-side twin of _label_angle.
+
+    Kept unreduced so a MediaPipe reading can be paired with the label of the SAME side. The
+    reduced form is right for the threshold question and wrong for the error question: pairing a
+    min-over-two MediaPipe reading with a min-over-two label reading compares two different
+    sides whenever their noise ranks them differently, and reports that as estimator error.
+    """
+    sides: dict[str, float] = {}
+    for side, joints in LABEL_CHAINS[chain].items():
+        try:
+            p = points[joints[0]]
+            q = points[joints[1]]
+            r = points[joints[2]]
+        except KeyError:
+            continue
+        u = [p[k] - q[k] for k in axes]
+        v = [r[k] - q[k] for k in axes]
+        nu = math.sqrt(sum(t * t for t in u))
+        nv = math.sqrt(sum(t * t for t in v))
+        if nu < 1e-9 or nv < 1e-9:
+            continue
+        cosine = sum(a * b for a, b in zip(u, v)) / (nu * nv)
+        sides[side] = math.degrees(math.acos(max(-1.0, min(1.0, cosine))))
+    return sides
+
+
 def _mediapipe_angle(world: list[Any], chain: str, extreme: str) -> float | None:
     """Working extreme of the driver chain, replicating the runtime's confidence gate."""
     angles = []

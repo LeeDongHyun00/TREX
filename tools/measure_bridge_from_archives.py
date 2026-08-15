@@ -58,6 +58,7 @@ from measure_mediapipe_aihub_bridge import (  # noqa: E402
     _fit_threshold,
     _included_angle,
     _label_angle,
+    _label_sides,
     _to_detector,
 )
 
@@ -117,18 +118,28 @@ def _worker(
         )
     )
 
-    def chain_extreme(world: list[Any], chain: str, extreme: str) -> float | None:
-        angles = []
-        for first_i, vertex_i, second_i in CHAINS[chain].values():
+    def chain_sides(world: list[Any], chain: str) -> dict[str, float]:
+        """Each credible side's included angle, keyed by side name.
+
+        Kept per side rather than reduced here: the collapsed extreme answers the threshold
+        question the same as before, but a same-side pairing against the label needs to know
+        WHICH side each reading came from — collapsing Left and Right with a min inside the
+        worker bakes one min-over-two of noise into every "per-frame" figure downstream.
+        """
+        sides: dict[str, float] = {}
+        for side, (first_i, vertex_i, second_i) in CHAINS[chain].items():
             points = [world[first_i], world[vertex_i], world[second_i]]
             if min(min(lm.visibility, lm.presence) for lm in points) < MINIMUM_CHAIN_CONFIDENCE:
                 continue
             angle = _included_angle(*points)
             if angle is not None:
-                angles.append(angle)
-        if not angles:
+                sides[side] = angle
+        return sides
+
+    def chain_extreme(sides: dict[str, float], extreme: str) -> float | None:
+        if not sides:
             return None
-        return min(angles) if extreme == "min" else max(angles)
+        return min(sides.values()) if extreme == "min" else max(sides.values())
 
     while True:
         item = inbox.get()
@@ -137,6 +148,7 @@ def _worker(
         clip_id, img_key, payload = item
         outcome = "single_pose"
         angle = None
+        sides: dict[str, float] = {}
         try:
             image = cv2.imdecode(numpy.frombuffer(payload, dtype=numpy.uint8), cv2.IMREAD_COLOR)
             if image is None:
@@ -154,16 +166,13 @@ def _worker(
                     # evidence about anybody.
                     outcome = "ambiguous_multi_person"
                 else:
-                    angle = chain_extreme(
-                        result.pose_world_landmarks[0],
-                        chain_by_key[clip_id],
-                        extreme_by_key[clip_id],
-                    )
+                    sides = chain_sides(result.pose_world_landmarks[0], chain_by_key[clip_id])
+                    angle = chain_extreme(sides, extreme_by_key[clip_id])
                     if angle is None:
                         outcome = "chain_below_confidence"
         except Exception:  # a single bad frame must not end the run
             outcome = "unreadable_image"
-        outbox.put((clip_id, img_key, outcome, angle))
+        outbox.put((clip_id, img_key, outcome, angle, sides))
 
     landmarker.close()
     outbox.put(POISON)
@@ -240,12 +249,16 @@ def build_plan(label_root: Path, view_artifact: Path, only: set[str] | None) -> 
         # error. Frames drop out hardest at maximum flexion, which is exactly where the extreme is.
         view_key = f"view{view_index}"
         label_by_key: dict[str, float] = {}
+        label_sides_by_key: dict[str, dict[str, float]] = {}
         for frame, spatial_frame in zip(frames, spatial_frames):
             value = _label_angle(
                 spatial_frame["pts"], ("x", "y", "z"), profile.chain, profile.extreme
             )
             if value is not None:
                 label_by_key[frame[view_key]["img_key"]] = value
+            sides = _label_sides(spatial_frame["pts"], ("x", "y", "z"), profile.chain)
+            if sides:
+                label_sides_by_key[frame[view_key]["img_key"]] = sides
         first_key = frames[0][view_key]["img_key"]
         match = SUBJECT_PATTERN.search(first_key)
         clip_id = str(path.relative_to(label_root)).replace("\\", "/")
@@ -258,6 +271,7 @@ def build_plan(label_root: Path, view_artifact: Path, only: set[str] | None) -> 
             "extreme": profile.extreme,
             "direction": profile.direction,
             "labelByKey": label_by_key,
+            "labelSidesByKey": label_sides_by_key,
             "expectedFrames": 0,
         }
         for frame in frames:
@@ -301,6 +315,7 @@ def run(
     extra_image_roots: list[Path],
     clips_out: Path | None = None,
     frames_out: Path | None = None,
+    sides_out: Path | None = None,
 ) -> dict[str, Any]:
     model_sha = _verify_model(model_path)
     plan = build_plan(label_root, view_artifact, only)
@@ -331,6 +346,7 @@ def run(
 
     outcomes: Counter[str] = Counter(plan["skipped"])
     measured: dict[str, list[tuple[str, float]]] = defaultdict(list)
+    measured_sides: dict[str, list[tuple[str, dict[str, float]]]] = defaultdict(list)
     submitted = 0
     collected = 0
     started = time.time()
@@ -344,11 +360,12 @@ def run(
                 return
             if item is POISON:
                 continue
-            clip_id, img_key, outcome, angle = item
+            clip_id, img_key, outcome, angle, sides = item
             outcomes[outcome] += 1
             collected += 1
             if angle is not None:
                 measured[clip_id].append((img_key, angle))
+                measured_sides[clip_id].append((img_key, sides))
             block = False
 
     # The distribution spans drives: the first twelve barbell archives live beside the labels and
@@ -428,12 +445,42 @@ def run(
     # ---- fit ----------------------------------------------------------------------------------
     rows_by_exercise: dict[str, list[dict[str, Any]]] = defaultdict(list)
     frame_rows: list[dict[str, Any]] = []
+    side_rows: list[dict[str, Any]] = []
     for clip_id, survivors in measured.items():
         if not survivors:
             continue
         clip = clips[clip_id]
         extreme = clip["extreme"]
         angles = [a for _, a in survivors]
+        if sides_out is not None:
+            # Same-side pairs with full identity. The per-frame rows above collapse Left and
+            # Right on both sides with a min/max, so a "per-frame" error there already carries one
+            # extreme-of-two of noise and cannot be regrouped into excursions. These rows keep the
+            # clip, the frame key and the side, so a paired excursion extreme can be reconstructed
+            # exactly — the measurement §4.10's floors were bootstrapped toward, taken directly.
+            label_sides_by_key = clip["labelSidesByKey"]
+            for key, mp_sides in measured_sides[clip_id]:
+                label_sides = label_sides_by_key.get(key)
+                if not label_sides:
+                    continue
+                for side, mp_angle in mp_sides.items():
+                    label_angle = label_sides.get(side)
+                    if label_angle is None:
+                        continue
+                    side_rows.append(
+                        {
+                            "clip": clip_id,
+                            "key": key,
+                            "side": side,
+                            "exercise": clip["exercise"],
+                            "chain": clip["chain"],
+                            "extreme": extreme,
+                            "day": clip["day"],
+                            "subject": clip["subject"],
+                            "mediapipe": round(mp_angle, 2),
+                            "aihub": round(label_angle, 2),
+                        }
+                    )
         paired_labels = [
             clip["labelByKey"][key] for key, _ in survivors if key in clip["labelByKey"]
         ]
@@ -490,6 +537,23 @@ def run(
             encoding="utf-8",
         )
         print(f"wrote per-clip rows to {clips_out}", file=sys.stderr, flush=True)
+
+    if sides_out is not None:
+        sides_out.write_text(
+            json.dumps(
+                {
+                    "note": (
+                        "Per-(clip, frame, side) same-side (MediaPipe, AI Hub 3D label) angle "
+                        "pairs. Unlike the per-frame rows, nothing here is collapsed across "
+                        "sides, so paired excursion extremes can be reconstructed exactly."
+                    ),
+                    "rows": side_rows,
+                },
+                ensure_ascii=False,
+            ),
+            encoding="utf-8",
+        )
+        print(f"wrote {len(side_rows)} same-side pairs to {sides_out}", file=sys.stderr, flush=True)
 
     if frames_out is not None:
         frames_out.write_text(
@@ -666,6 +730,15 @@ def main() -> int:
         ),
     )
     parser.add_argument(
+        "--sides-out",
+        type=Path,
+        default=None,
+        help=(
+            "write per-(clip, frame, side) same-side angle pairs here, so a paired excursion "
+            "extreme error can be measured directly rather than bootstrapped"
+        ),
+    )
+    parser.add_argument(
         "--images",
         type=Path,
         action="append",
@@ -697,6 +770,7 @@ def main() -> int:
         list(args.images or []),
         args.clips_out,
         args.frames_out,
+        args.sides_out,
     )
     args.out.write_text(
         json.dumps(artifact, sort_keys=True, indent=2, ensure_ascii=False) + "\n",

@@ -30,7 +30,7 @@ internal object HeuristicFormCheckDeclaration {
     const val TRACK_ID: String = "trex.heuristic-form-check.beta.v1"
 
     const val POLICY_DOCUMENT_SHA256: String =
-        "e1edb3c559a8fd856132c59f27f09050dbc4de10639b22a90ae35f79ed6acff7"
+        "9112870d129e991f343ced4d33795a94c73b365ba4c9c7b4d131b8772ff28cf1"
 
     const val POLICY_DOCUMENT_PATH: String = "docs/pose-heuristic-form-check.v1.md"
 

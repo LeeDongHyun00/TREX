@@ -79,13 +79,20 @@ internal class FormCheckDriver(
      * range-of-motion clip of this chain was ever measured, which forbids the comparison outright.
      *
      * Measured, not chosen: the paired quantity is `S`, the degrees by which a reported extreme
-     * overstates a shortfall (`min(MediaPipe) − min(label)` over exactly the same frames), and a
-     * claimed gap of N is entirely manufactured with probability `P(S ≥ N)`. Each floor is an
-     * upper quantile of that distribution. The per-frame error card cannot answer this: the error
-     * at the bottom of an excursion is phase-dependent and one-signed — the deepest frame is the
-     * most self-occluded one and it fails toward under-flexion — so the extreme's bias runs 3-6x
-     * the per-frame median. At a single 15-degree floor roughly half of all knee and elbow
-     * statements would be measurement alone, which is why this is a per-chain map.
+     * overstates a shortfall (`min(MediaPipe) − min(label)` over exactly the same frames of the
+     * same side), and a claimed gap of N is entirely manufactured with probability `P(S ≥ N)`.
+     * Each floor is an upper quantile of that distribution under the RUNTIME-LIKE selector — per
+     * clip, the side MediaPipe read deepest, paired with that side's own label — which is the
+     * closest analogue to this engine's confidence-first, side-sticky choice. The selector has to
+     * be named because the far side of a lateral capture reads systematically worse on every
+     * chain (p90 10-13 degrees higher), so an "extreme error" that weights both sides equally
+     * describes a selector this engine does not run and would put every floor 10-13 degrees too
+     * low. The per-frame error card cannot answer any of this: the error at the bottom of an
+     * excursion is phase-dependent and one-signed — the deepest frame is the most self-occluded
+     * one and it fails toward under-flexion — so the extreme's bias runs 3-6x the per-frame
+     * median. At a single 15-degree floor roughly half of all knee and elbow statements would be
+     * measurement alone, which is why this is a per-chain map. Source:
+     * docs/bridge-extreme-error.v1.json, 365,354 same-side pairs, policy §4.10.
      */
     val referenceNoticeableDegrees: Double? = null,
 ) {
@@ -110,8 +117,8 @@ internal class FormCheckDriver(
             vertex = FormCheckJointGroup.KNEE,
             first = FormCheckJointGroup.HIP,
             second = FormCheckJointGroup.ANKLE,
-            // p90 of S over 1,790 clips, 54 subjects, 10 capture days, two exercises (step
-            // forward lunge, cross lunge). Median S is +13.32 and P(S >= 15) is 46%.
+            // Runtime-like p90 +27.2 over 1,783 clips, 54 subjects, two exercises (step forward
+            // lunge, cross lunge); P(S >= 30) = 6.1%. Both-sides-equal p90 is +39.2.
             referenceNoticeableDegrees = 30.0,
         )
 
@@ -120,8 +127,9 @@ internal class FormCheckDriver(
             vertex = FormCheckJointGroup.HIP,
             first = FormCheckJointGroup.SHOULDER,
             second = FormCheckJointGroup.KNEE,
-            // p90 of S over 2,562 clips, 63 subjects, 17 capture days, two exercises (barbell
-            // lunge, standing knee-up). The best-behaved chain here: median S is +1.18.
+            // Runtime-like p90 +12.7 over 2,526 clips, 63 subjects, two exercises (barbell
+            // lunge, standing knee-up); P(S >= 20) = 4.2%. The best-behaved chain, and the
+            // widest margin under its floor.
             referenceNoticeableDegrees = 20.0,
         )
 
@@ -130,10 +138,9 @@ internal class FormCheckDriver(
             vertex = FormCheckJointGroup.ELBOW,
             first = FormCheckJointGroup.SHOULDER,
             second = FormCheckJointGroup.WRIST,
-            // p90 of S is +29.01, over 566 clips of ONE exercise (dips) on 4 capture days —
-            // the narrowest evidence base of the four, so the floor carries margin above the
-            // measurement rather than sitting on it. The worst chain in the repository: median
-            // S is +14.83 and P(S >= 15) is 49%.
+            // Runtime-like p90 +33.5 over 1,138 clips, 32 subjects, two exercises (dips 27.7,
+            // pull-up 38.0); P(S >= 35) = 8.1%. The thinnest margin of the four — this line is
+            // the first to re-measure if an elbow exercise ever qualifies for the distance.
             referenceNoticeableDegrees = 35.0,
         )
 
@@ -150,10 +157,12 @@ internal class FormCheckDriver(
             vertex = FormCheckJointGroup.SHOULDER,
             first = FormCheckJointGroup.ELBOW,
             second = FormCheckJointGroup.HIP,
-            // p90 of S is +21.81, over 565 clips of ONE exercise (lat pull-down) on 4 capture
-            // days, with margin added for the same reason as the elbow. The one chain whose
-            // floor is not a transfer where it is used: the lat pull-down is both the only
-            // exercise this floor was measured on and the only exercise that reports a gap.
+            // Runtime-like p90 +21.1 over 549 clips of ONE exercise (lat pull-down), 32
+            // subjects; P(S >= 25) = 6.0%. The one chain whose floor is not a transfer where it
+            // is used: the lat pull-down is both the only exercise this floor was measured on
+            // and the only exercise that reports a distance — and the one chain where the
+            // three selectors nearly agree (21.1 / 22.8 / 25.6), because its two sides read
+            // almost alike.
             referenceNoticeableDegrees = 25.0,
         )
 
