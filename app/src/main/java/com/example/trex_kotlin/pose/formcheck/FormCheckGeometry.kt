@@ -73,10 +73,28 @@ internal class FormCheckDriver(
     val vertex: FormCheckJointGroup,
     val first: FormCheckJointGroup,
     val second: FormCheckJointGroup,
+    /**
+     * Below how many degrees a distance between this chain's excursion extreme and a fixed
+     * external line is inside what the measurement could have invented — null where no
+     * range-of-motion clip of this chain was ever measured, which forbids the comparison outright.
+     *
+     * Measured, not chosen: the paired quantity is `S`, the degrees by which a reported extreme
+     * overstates a shortfall (`min(MediaPipe) − min(label)` over exactly the same frames), and a
+     * claimed gap of N is entirely manufactured with probability `P(S ≥ N)`. Each floor is an
+     * upper quantile of that distribution. The per-frame error card cannot answer this: the error
+     * at the bottom of an excursion is phase-dependent and one-signed — the deepest frame is the
+     * most self-occluded one and it fails toward under-flexion — so the extreme's bias runs 3-6x
+     * the per-frame median. At a single 15-degree floor roughly half of all knee and elbow
+     * statements would be measurement alone, which is why this is a per-chain map.
+     */
+    val referenceNoticeableDegrees: Double? = null,
 ) {
     init {
         require(vertex != first && vertex != second && first != second) {
             "A driver chain needs three distinct joint groups"
+        }
+        require(referenceNoticeableDegrees == null || referenceNoticeableDegrees > 0.0) {
+            "A noticeable-difference floor must be a real number of degrees"
         }
     }
 
@@ -92,6 +110,9 @@ internal class FormCheckDriver(
             vertex = FormCheckJointGroup.KNEE,
             first = FormCheckJointGroup.HIP,
             second = FormCheckJointGroup.ANKLE,
+            // p90 of S over 1,790 clips, 54 subjects, 10 capture days, two exercises (step
+            // forward lunge, cross lunge). Median S is +13.32 and P(S >= 15) is 46%.
+            referenceNoticeableDegrees = 30.0,
         )
 
         /** shoulder-hip-knee. Hip hinges and knee raises. */
@@ -99,6 +120,9 @@ internal class FormCheckDriver(
             vertex = FormCheckJointGroup.HIP,
             first = FormCheckJointGroup.SHOULDER,
             second = FormCheckJointGroup.KNEE,
+            // p90 of S over 2,562 clips, 63 subjects, 17 capture days, two exercises (barbell
+            // lunge, standing knee-up). The best-behaved chain here: median S is +1.18.
+            referenceNoticeableDegrees = 20.0,
         )
 
         /** shoulder-elbow-wrist. Pressing and pulling. */
@@ -106,6 +130,11 @@ internal class FormCheckDriver(
             vertex = FormCheckJointGroup.ELBOW,
             first = FormCheckJointGroup.SHOULDER,
             second = FormCheckJointGroup.WRIST,
+            // p90 of S is +29.01, over 566 clips of ONE exercise (dips) on 4 capture days —
+            // the narrowest evidence base of the four, so the floor carries margin above the
+            // measurement rather than sitting on it. The worst chain in the repository: median
+            // S is +14.83 and P(S >= 15) is 49%.
+            referenceNoticeableDegrees = 35.0,
         )
 
         /**
@@ -121,6 +150,11 @@ internal class FormCheckDriver(
             vertex = FormCheckJointGroup.SHOULDER,
             first = FormCheckJointGroup.ELBOW,
             second = FormCheckJointGroup.HIP,
+            // p90 of S is +21.81, over 565 clips of ONE exercise (lat pull-down) on 4 capture
+            // days, with margin added for the same reason as the elbow. The one chain whose
+            // floor is not a transfer where it is used: the lat pull-down is both the only
+            // exercise this floor was measured on and the only exercise that reports a gap.
+            referenceNoticeableDegrees = 25.0,
         )
 
         /**

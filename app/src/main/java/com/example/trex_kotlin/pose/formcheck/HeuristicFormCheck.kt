@@ -30,7 +30,7 @@ internal object HeuristicFormCheckDeclaration {
     const val TRACK_ID: String = "trex.heuristic-form-check.beta.v1"
 
     const val POLICY_DOCUMENT_SHA256: String =
-        "c9ba951f4e7aa55ac21d1aa2a13b190c2766843796d42f3705591f026f02e715"
+        "e1edb3c559a8fd856132c59f27f09050dbc4de10639b22a90ae35f79ed6acff7"
 
     const val POLICY_DOCUMENT_PATH: String = "docs/pose-heuristic-form-check.v1.md"
 
@@ -111,6 +111,29 @@ internal object HeuristicFormCheckDeclaration {
      */
     const val ORIENTATION_SILENT_DISCLOSURE: String = "기기 방향을 읽을 수 없어 몸 방향은 확인하지 않아요"
 
+    /**
+     * The reference-distance lines (§4.10) — how far the set's hardest repetition landed from the
+     * exercise's own reached line, said once per set in the rest summary and nowhere else.
+     *
+     * The distinction that governs every string here: a number whose referent lies *behind* the
+     * user is an observation, and one whose referent lies *ahead* is an urging whatever verb
+     * wraps it. That is why a sealed exercise gets [REFERENCE_SEALED] instead — naming a fixed
+     * external line would make it a referent-ahead for every following repetition — and why none
+     * of these reach the live surface or the speech channel.
+     */
+    const val REFERENCE_PREFIX: String = "이 운동이 보는 기준 각도는 "
+    const val REFERENCE_SUFFIX: String = "도예요"
+    const val REFERENCE_NOT_A_GRADE: String =
+        "기준 각도는 이 앱이 어디까지 재는지 정한 선이에요 · 등급을 매기는 선이 아니에요"
+    const val REFERENCE_GAP_PREFIX: String = "이번 세트에서 가장 "
+    const val REFERENCE_GAP_SUFFIX: String = " 반복은 기준 각도와 %d도 차이였어요"
+    const val REFERENCE_GAP_BELOW_FLOOR: String =
+        "이번 세트의 기준 각도 차이는 이 카메라가 말할 수 있는 크기보다 작았어요"
+    const val REFERENCE_SEALED: String =
+        "이 운동에서는 기준 각도와의 차이를 말하지 않아요 · 이 세트의 첫 반복과만 견줘요"
+    const val SELF_REFERENCE_NOTE: String =
+        "이 세트의 첫 두 반복과 견줘서 차이가 크면 몇 도인지 알려드려요"
+
     /** Every claim this track could conceivably make, all withheld. */
     val claims: Map<String, Boolean> = Collections.unmodifiableMap(
         linkedMapOf(
@@ -148,6 +171,8 @@ internal enum class FormCheckVocabulary(
     /** How a repetition compares with the set's own opening reps, short of and beyond it. */
     val belowBaselinePhrase: String,
     val beyondBaselinePhrase: String,
+    /** Names the set's hardest-working repetition — "이번 세트에서 가장 깊었던 반복". */
+    val setExtremePhrase: String,
 ) {
     /** A joint closing: knees, elbows, hips. */
     BENDING(
@@ -155,6 +180,7 @@ internal enum class FormCheckVocabulary(
         shortfallPhrase = "굽힘이 얕아",
         belowBaselinePhrase = "얕아요",
         beyondBaselinePhrase = "깊어요",
+        setExtremePhrase = "깊었던",
     ),
 
     /** A joint opening. */
@@ -163,6 +189,7 @@ internal enum class FormCheckVocabulary(
         shortfallPhrase = "폄이 부족해",
         belowBaselinePhrase = "덜 펴졌어요",
         beyondBaselinePhrase = "더 펴졌어요",
+        setExtremePhrase = "많이 편",
     ),
 
     /** A limb drawn in toward the torso: the shoulder chain closing on a pull. */
@@ -171,6 +198,7 @@ internal enum class FormCheckVocabulary(
         shortfallPhrase = "모아짐이 얕아",
         belowBaselinePhrase = "덜 모아졌어요",
         beyondBaselinePhrase = "더 모아졌어요",
+        setExtremePhrase = "많이 모은",
     ),
 
     /**
@@ -186,6 +214,7 @@ internal enum class FormCheckVocabulary(
         shortfallPhrase = "벌어짐이 부족해",
         belowBaselinePhrase = "덜 벌어졌어요",
         beyondBaselinePhrase = "더 벌어졌어요",
+        setExtremePhrase = "많이 벌린",
     ),
 }
 
@@ -1556,6 +1585,44 @@ internal enum class FormCheckExercise(
     val vocabulary: FormCheckVocabulary get() = vocabularyOverride ?: direction.defaultVocabulary
 
     /**
+     * Whether this exercise may state how far a repetition landed from its own reached line
+     * (§4.10). Four conditions, and each one disqualifies most of the catalogue:
+     *
+     * A hold has no excursion to compare. A range-sealed exercise may not name a line ahead of
+     * the user at all — that is §4.2's whole subject, and the seal answers consequence rather
+     * than evidence, so a better-evidenced constant does not unseal it. A threshold that was
+     * never fitted cannot fund a digit: telling somebody they are twenty degrees off an invented
+     * number is worse than the vague hint they get today. And the *counted band* — the distance
+     * between the rep line and the reached line — bounds the largest gap a counted repetition
+     * can possibly show, so an exercise whose band sits under its own chain's measurement floor
+     * would either say nothing forever or say noise; §4.1 designed that band narrow on purpose,
+     * and for 29 of 33 exercises it is narrower than the measurement.
+     *
+     * Exactly one exercise satisfies all four today, and the roster is pinned by test.
+     */
+    val referenceIsQuantifiable: Boolean
+        get() {
+            val floor = driver.referenceNoticeableDegrees ?: return false
+            return cadence == FormCheckCadence.REPETITION &&
+                !rangeUrgingSealed &&
+                provenance == FormCheckThresholdProvenance.MEDIAPIPE_NATIVE_FIT_V2 &&
+                toDetector(repAngleDegrees) - toDetector(reachedAngleDegrees) > floor
+        }
+
+    /**
+     * The reached line stated plainly, or null where this exercise may not state one. A gap is
+     * meaningless without its reference, so the two ship together or not at all.
+     */
+    val referenceNote: String?
+        get() = if (!referenceIsQuantifiable) {
+            null
+        } else {
+            HeuristicFormCheckDeclaration.REFERENCE_PREFIX +
+                driver.vertex.label + " " + reachedAngleDegrees.roundToInt() +
+                HeuristicFormCheckDeclaration.REFERENCE_SUFFIX
+        }
+
+    /**
      * Whether any constant this exercise shows was learned from AI Hub data. The guard counts:
      * a fitted guard on an otherwise-default exercise still owes the dataset its credit.
      */
@@ -1600,6 +1667,14 @@ internal enum class FormCheckExercise(
         }
         require(!rangeUrgingSealed || (attemptHint == null && rangeHint == null)) {
             "A sealed exercise must not carry range-increase suggestions"
+        }
+        // §4.2 at the type level, and the reason it belongs here rather than in a test: a
+        // distance to a fixed line is a target tick rendered in Korean, and quantifying the
+        // remaining distance is strictly stronger urging than drawing the tick would be. The
+        // computed property already excludes sealed exercises; this makes the exclusion a
+        // property of the type, so a later edit to that property cannot quietly unseal one.
+        require(!referenceIsQuantifiable || !rangeUrgingSealed) {
+            "A sealed exercise must not state a distance to its reached line"
         }
         // A hold has no excursion to fall short of, so an attempt or range hint would describe
         // something the isometric path never reports.
@@ -1882,6 +1957,15 @@ internal class HeuristicFormCheckSession(
      */
     private val baselineSamples = ArrayList<Double>(BASELINE_REPETITIONS)
 
+    /**
+     * The hardest-working extreme among this set's COUNTED repetitions, in detector space, or
+     * null before one is counted. The set — not the repetition — is the unit the reference
+     * distance is reported over: §4.1 records that the fitted constants separate *clip* quality
+     * rather than per-repetition truth, and a per-repetition line would emit one independently
+     * fallible statement per repetition, whose union across a set is a near-certain false one.
+     */
+    private var bestCountedDetectorExtreme: Double? = null
+
     /** "무릎이", "엉덩이가", "팔꿈치가" — the observation names whichever joint it measured. */
     private val vertexSubject: String = spec.driver.vertex.label.let { label ->
         label + FormCheckStartAnnouncer.subjectParticle(label)
@@ -2103,6 +2187,10 @@ internal class HeuristicFormCheckSession(
                     )
                 } else {
                     repCount += 1
+                    bestCountedDetectorExtreme = minOf(
+                        bestCountedDetectorExtreme ?: Double.MAX_VALUE,
+                        event.minimumAngleDegrees,
+                    )
                     val observed =
                         "$vertexSubject ${extreme.roundToInt()}도까지 ${spec.vocabulary.reachedVerb}"
                     // Both read the baseline before this repetition joins it, so the comparison
@@ -2243,7 +2331,35 @@ internal class HeuristicFormCheckSession(
         lastObservation = headline,
         provenanceNote = spec.provenance.note,
         requiresDataAttribution = spec.requiresDataAttribution,
+        referenceLine = if (spec.rangeUrgingSealed) {
+            HeuristicFormCheckDeclaration.REFERENCE_SEALED
+        } else {
+            spec.referenceNote
+        },
+        referenceGapLine = referenceGapLine(),
     )
+
+    /**
+     * How far this set's hardest counted repetition landed from the exercise's reached line, or
+     * null where there is nothing honest to say (§4.10).
+     *
+     * Three outcomes, and the middle one matters most: at or past the line there is nothing to
+     * report; inside the chain's measurement floor the difference is named as unsayable rather
+     * than printed, because a number the camera could have invented is worse than no number; and
+     * only beyond the floor does a digit appear. Computed in detector space, where a smaller
+     * value always means more work, so flexion and extension need no case split.
+     */
+    private fun referenceGapLine(): String? {
+        if (!spec.referenceIsQuantifiable) return null
+        val floor = spec.driver.referenceNoticeableDegrees ?: return null
+        val best = bestCountedDetectorExtreme ?: return null
+        val gap = best - spec.toDetector(spec.reachedAngleDegrees)
+        if (gap <= 0.0) return null
+        if (gap < floor) return HeuristicFormCheckDeclaration.REFERENCE_GAP_BELOW_FLOOR
+        return HeuristicFormCheckDeclaration.REFERENCE_GAP_PREFIX +
+            spec.vocabulary.setExtremePhrase +
+            HeuristicFormCheckDeclaration.REFERENCE_GAP_SUFFIX.format(gap.roundToInt())
+    }
 
     /**
      * Whichever detector this cadence uses; abstention is identical for both.

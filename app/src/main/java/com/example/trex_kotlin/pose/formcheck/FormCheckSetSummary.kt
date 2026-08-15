@@ -31,6 +31,15 @@ internal class FormCheckSetSummary(
     /** Where this exercise's angle constants came from, stated plainly. */
     val provenanceNote: String,
     val requiresDataAttribution: Boolean,
+    /**
+     * The exercise's reached line named plainly, or the sentence saying this exercise does not
+     * name one, or null where neither applies. Prebuilt here rather than in the surface: the
+     * governance test forbids the Compose layer from naming `reachedAngleDegrees` at all, so a
+     * threshold reaches the screen only as a finished sentence the engine wrote (§4.10).
+     */
+    val referenceLine: String? = null,
+    /** How far the set's hardest counted repetition landed from that line, when it is sayable. */
+    val referenceGapLine: String? = null,
 ) {
     val marks: List<FormCheckRepMark> = Collections.unmodifiableList(ArrayList(marks))
 

@@ -475,6 +475,79 @@ class FormCheckGovernanceTest {
     }
 
     @Test
+    fun exactlyOneExerciseMayStateADistanceToItsReachedLine() {
+        // §4.10. The roster is one exercise, and every other candidate is excluded by a
+        // measurement rather than by preference — which is the point of pinning it here.
+        val quantifiable = FormCheckExercise.entries
+            .filter { it.referenceIsQuantifiable }
+            .toSet()
+        assertEquals(setOf(FormCheckExercise.LAT_PULLDOWN), quantifiable)
+
+        // The three near misses, each for its own recorded reason. Standing knee-up's counted
+        // band exactly equals its chain floor and the rule demands strictly greater; dips fails
+        // the elbow floor and is sealed besides; the cross lunge's band is well under the knee
+        // floor. If any of these ever flips, it must be because a fit or a floor moved.
+        for (spec in listOf(
+            FormCheckExercise.STANDING_KNEE_UP,
+            FormCheckExercise.DIPS,
+            FormCheckExercise.CROSS_LUNGE,
+        )) {
+            assertFalse(spec.name, spec.referenceIsQuantifiable)
+        }
+
+        // A gap is meaningless without its reference, so the two ship together or not at all.
+        for (spec in FormCheckExercise.entries) {
+            assertEquals(
+                "${spec.name} must name its reference exactly when it may state a distance",
+                spec.referenceIsQuantifiable,
+                spec.referenceNote != null,
+            )
+        }
+    }
+
+    @Test
+    fun noSealedExerciseStatesADistanceToAFixedLine() {
+        // §4.2 read as consequence rather than evidence: quantifying the remaining distance to a
+        // line is stronger urging than drawing a target tick, which §4.7 R1 already bans
+        // everywhere. Dips is the standing precedent — a fitted threshold did not unseal it.
+        for (spec in FormCheckExercise.entries) {
+            if (!spec.rangeUrgingSealed) continue
+            assertFalse(
+                "${spec.name} is sealed and must not quantify a distance",
+                spec.referenceIsQuantifiable,
+            )
+            assertNull(spec.name, spec.referenceNote)
+        }
+    }
+
+    @Test
+    fun everyReferenceFloorIsAMeasuredChainProperty() {
+        // The floors are per chain because the chains measurably differ: the same claimed gap is
+        // a 15% statement on the hip and a 49% statement on the elbow. TRUNK carries none —
+        // no range-of-motion clip of that chain was ever measured, and a chain with no floor
+        // cannot state a distance at all.
+        assertEquals(30.0, FormCheckDriver.KNEE.referenceNoticeableDegrees)
+        assertEquals(20.0, FormCheckDriver.HIP.referenceNoticeableDegrees)
+        assertEquals(35.0, FormCheckDriver.ELBOW.referenceNoticeableDegrees)
+        assertEquals(25.0, FormCheckDriver.SHOULDER.referenceNoticeableDegrees)
+        assertNull(FormCheckDriver.TRUNK.referenceNoticeableDegrees)
+
+        // Every floor sits above the self-comparison floor, and must: a same-set difference
+        // cancels the systematic bias while a distance to an external constant does not.
+        for (driver in listOf(
+            FormCheckDriver.KNEE,
+            FormCheckDriver.HIP,
+            FormCheckDriver.ELBOW,
+            FormCheckDriver.SHOULDER,
+        )) {
+            assertTrue(
+                "A distance to a fixed line needs more evidence than a self-comparison",
+                driver.referenceNoticeableDegrees!! >= 20.0,
+            )
+        }
+    }
+
+    @Test
     fun onlyCoronalPlaneMovementsAskForTheFrontalPlacement() {
         // §3: the preferred view follows the plane the movement works in. Everything sagittal
         // reads best from the side; a movement that travels sideways would put its whole

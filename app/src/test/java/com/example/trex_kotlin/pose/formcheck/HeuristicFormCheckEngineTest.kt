@@ -1588,6 +1588,89 @@ class HeuristicFormCheckEngineTest {
     }
 
     @Test
+    fun theSetsReferenceDistanceIsSaidOnlyWhenTheCameraCouldHaveSeenIt() {
+        // The lat pull-down is the one exercise that may state a distance: its counted band is
+        // 63 degrees against a shoulder floor of 25, and the floor was measured on this very
+        // exercise's clips. Three outcomes, and the middle one is the reason the feature is
+        // trustworthy — a difference the measurement could have invented is named as unsayable
+        // rather than printed as a digit.
+        fun setSummaryFor(shoulderExtreme: Double): FormCheckSetSummary {
+            val session = HeuristicFormCheckSession(FormCheckExercise.LAT_PULLDOWN)
+            var t = 0L
+            fun step(shoulder: Double) {
+                session.accept(
+                    t,
+                    true,
+                    true,
+                    frameWithChains(
+                        kneeAngleDegrees = 175.0,
+                        hipAngleDegrees = 175.0,
+                        elbowAngleDegrees = 100.0,
+                        shoulderAngleDegrees = shoulder,
+                        timestampMs = t,
+                    ),
+                )
+                t += 200L
+            }
+            step(170.0)
+            step(170.0)
+            for (angle in listOf(125.0, shoulderExtreme, shoulderExtreme, shoulderExtreme, 125.0)) {
+                step(angle)
+            }
+            step(170.0)
+            step(170.0)
+            step(170.0)
+            return session.summary()
+        }
+
+        // The line is 67 and a smaller angle is more work, so a shortfall means stopping
+        // ABOVE it. 94 is 27 degrees short — past the shoulder chain's 25-degree floor.
+        val wide = setSummaryFor(94.0)
+        assertEquals(1, wide.repCount)
+        assertEquals(
+            "이번 세트에서 가장 많이 모은 반복은 기준 각도와 27도 차이였어요",
+            wide.referenceGapLine,
+        )
+
+        // 74 is 7 degrees short: inside what the extreme could have invented, so the difference
+        // is named as unsayable rather than printed.
+        val narrow = setSummaryFor(74.0)
+        assertEquals(1, narrow.repCount)
+        assertEquals(
+            HeuristicFormCheckDeclaration.REFERENCE_GAP_BELOW_FLOOR,
+            narrow.referenceGapLine,
+        )
+
+        // 40 is past the line entirely: nothing to report, and the silence is the message.
+        val reached = setSummaryFor(40.0)
+        assertEquals(1, reached.repCount)
+        assertNull("Past the line there is nothing to report", reached.referenceGapLine)
+
+        // The reference itself accompanies the distance, always.
+        assertEquals("이 운동이 보는 기준 각도는 어깨 67도예요", wide.referenceLine)
+    }
+
+    @Test
+    fun aSealedExerciseSaysThatItDoesNotStateADistance() {
+        // Silence about the silence is what turns a deliberate absence into a suspected bug, so
+        // the sealed exercises name the decision instead of leaving a blank (§4.10).
+        val session = HeuristicFormCheckSession(FormCheckExercise.BARBELL_SQUAT)
+        val summary = session.summary()
+        assertEquals(HeuristicFormCheckDeclaration.REFERENCE_SEALED, summary.referenceLine)
+        assertNull(summary.referenceGapLine)
+    }
+
+    @Test
+    fun anUncalibratedExerciseStatesNoReferenceAtAll() {
+        // Telling somebody they are twenty degrees off an invented number is worse than the
+        // vague hint they get today, so an unfitted threshold names no line and no distance.
+        val session = HeuristicFormCheckSession(FormCheckExercise.FACE_PULL)
+        val summary = session.summary()
+        assertNull(summary.referenceLine)
+        assertNull(summary.referenceGapLine)
+    }
+
+    @Test
     fun aFoldedBodyPullIsNotAPullUp() {
         // The elbow arc of a pull-up performed while the body folds — a seated row, a squatting
         // cable pull — flexes the hip past the measured floor of every hanging excursion. The

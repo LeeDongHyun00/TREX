@@ -784,11 +784,34 @@ internal fun FormCheckSetSummaryCard(
                     }
                 }
             }
+            // The reference, the distance to it, and where the reference came from, rendered as
+            // one block: a gap is meaningless without its line, and a line is misleading without
+            // its warrant. All three are finished sentences the engine wrote (§4.10).
+            summary.referenceLine?.let { line ->
+                Text(
+                    text = line,
+                    color = Color.White.copy(alpha = 0.72f),
+                    fontSize = 13.sp,
+                    lineHeight = 18.sp,
+                    modifier = Modifier.padding(top = 10.dp),
+                )
+            }
+            summary.referenceGapLine?.let { gap ->
+                Text(
+                    text = gap,
+                    color = Color.White.copy(alpha = 0.88f),
+                    fontSize = 14.sp,
+                    lineHeight = 19.sp,
+                    modifier = Modifier.padding(top = 4.dp),
+                )
+            }
             Text(
                 text = summary.provenanceNote,
                 color = Color.White.copy(alpha = 0.6f),
                 fontSize = 12.sp,
-                modifier = Modifier.padding(top = 10.dp),
+                modifier = Modifier.padding(
+                    top = if (summary.referenceLine == null) 10.dp else 6.dp,
+                ),
             )
             Text(
                 text = HeuristicFormCheckDeclaration.BETA_DISCLOSURE,
@@ -857,6 +880,32 @@ internal fun FormCheckIntroCard(
                 lineHeight = 21.sp,
                 modifier = Modifier.padding(top = 6.dp),
             )
+            // Every exercise says it compares against this set's own opening repetitions; only
+            // an exercise that may state a fixed line names one, and it says in the same breath
+            // what that line is not.
+            Text(
+                text = HeuristicFormCheckDeclaration.SELF_REFERENCE_NOTE,
+                color = Color.White.copy(alpha = 0.8f),
+                fontSize = 15.sp,
+                lineHeight = 21.sp,
+                modifier = Modifier.padding(top = 6.dp),
+            )
+            spec.referenceNote?.let { note ->
+                Text(
+                    text = note,
+                    color = Color.White.copy(alpha = 0.8f),
+                    fontSize = 15.sp,
+                    lineHeight = 21.sp,
+                    modifier = Modifier.padding(top = 6.dp),
+                )
+                Text(
+                    text = HeuristicFormCheckDeclaration.REFERENCE_NOT_A_GRADE,
+                    color = Color.White.copy(alpha = 0.62f),
+                    fontSize = 13.sp,
+                    lineHeight = 18.sp,
+                    modifier = Modifier.padding(top = 4.dp),
+                )
+            }
             Text(
                 text = HeuristicFormCheckDeclaration.BETA_DISCLOSURE,
                 color = Color.White.copy(alpha = 0.58f),
