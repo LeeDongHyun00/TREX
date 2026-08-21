@@ -40,3 +40,9 @@ pnpm-debug.log*
 # OS
 .DS_Store
 Thumbs.db
+
+# Research outputs (AIHub parsed tables, experiment results)
+research/aihub_fitness/outputs*/
+research/aihub_fitness/models/
+__pycache__/
+*.pyc
