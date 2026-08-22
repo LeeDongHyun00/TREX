@@ -18,6 +18,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -153,12 +154,15 @@ private fun LoginView(
     var id by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
 
-    Box(
+    BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
             .background(TrexDark)
             .imePadding(),
     ) {
+        // 세로가 짧은 기기(예: 1080×2280, ~690dp 가용)에서는 430dp 애니메이션 때문에 아래 버튼들이 화면 밖으로 밀려
+        // 카카오/실험실 버튼이 보이지 않았다. 텍스트·입력창·버튼 3개·링크·여백 합계(≈540dp)를 뺀 만큼만 애니메이션에 준다.
+        val animationHeight = (maxHeight - 540.dp).coerceIn(160.dp, 430.dp)
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -184,7 +188,7 @@ private fun LoginView(
                 modifier = Modifier
                     .padding(top = 48.dp)
                     .fillMaxWidth()
-                    .height(430.dp),
+                    .height(animationHeight),
             )
 
             Spacer(Modifier.weight(1f))

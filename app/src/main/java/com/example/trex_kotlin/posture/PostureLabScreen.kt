@@ -54,6 +54,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -126,25 +127,36 @@ fun PostureLabScreen(onClose: () -> Unit) {
     val aggregator = remember { FeatureAggregator() }
     val phaseRef = remember { arrayOf(LabPhase.IDLE) }
     phaseRef[0] = phase
-    val lastSampleAt = remember { longArrayOf(0L) }
 
-    val analyzer = remember {
-        try {
-            PostureAnalyzer(context)
-        } catch (t: Throwable) {
-            analyzerError = "모델 로드 실패: ${t.message}"
-            null
-        }
-    }
+    // ---- 엔진 선택 (발열 대응): 모델 full/lite, GPU 우선/CPU. 바꾸면 랜드마커를 새로 만든다.
+    var poseModel by rememberSaveable { mutableStateOf(PoseModel.FULL) }
+    var preferGpu by rememberSaveable { mutableStateOf(true) }
+    val analyzer = remember(poseModel, preferGpu) { PostureAnalyzer(context, poseModel, preferGpu) }
+    DisposableEffect(analyzer) { onDispose { analyzer.close() } }
+    var stats by remember { mutableStateOf<AnalyzerStats?>(null) }
     val executor = remember { Executors.newSingleThreadExecutor() }
+
+    // ---- 추론 스케줄러: 단계별 간격 × 열 상태 배수. 쉬지 않는 추론이 발열의 1차 원인이었다.
+    val policy = remember { InferencePolicy(sampleIntervalMs = SAMPLE_INTERVAL_MS) }
+    val lastInferAt = remember { longArrayOf(0L) }
+    val thermal = remember { ThermalMonitor(context) }
+    var thermalStatus by remember { mutableIntStateOf(InferencePolicy.THERMAL_NONE) }
+    val thermalRef = remember { intArrayOf(InferencePolicy.THERMAL_NONE) }
+    // 듀티(추론에 쓴 시간 비율) 측정용: [busyNanos, windowStartNanos]
+    val dutyAcc = remember { longArrayOf(0L, 0L) }
+    var dutyPct by remember { mutableIntStateOf(0) }
 
     // IMU 중력축으로 up 을 잡는다 (폰이 기울어도 높이/수직 피처가 유지됨)
     val gravity = remember { GravityTracker(context) }
     DisposableEffect(Unit) {
         gravity.start()
+        thermal.start(ContextCompat.getMainExecutor(context)) { s ->
+            thermalStatus = s
+            thermalRef[0] = s
+        }
         onDispose {
             gravity.stop()
-            analyzer?.close()
+            thermal.stop()
             executor.shutdown()
         }
     }
@@ -161,38 +173,57 @@ fun PostureLabScreen(onClose: () -> Unit) {
     }
 
     LaunchedEffect(granted, useFrontCamera, analyzer) {
-        if (!granted || analyzer == null) return@LaunchedEffect
+        if (!granted) return@LaunchedEffect
         val provider = context.awaitCameraProvider()
         provider.unbindAll()
-        // 프리뷰와 분석의 종횡비를 4:3 으로 맞춰야 골격 오버레이가 화면과 정렬된다
-        val aspect43 = ResolutionSelector.Builder()
+        // 프리뷰와 분석의 종횡비를 4:3 으로 맞춰야 골격 오버레이가 화면과 정렬된다.
+        // 프리뷰는 1280×960 까지만 (화면 폭 1080 에 충분) — 더 큰 스트림은 GPU/메모리 대역폭만 쓴다.
+        val previewSelector = ResolutionSelector.Builder()
             .setAspectRatioStrategy(AspectRatioStrategy.RATIO_4_3_FALLBACK_AUTO_STRATEGY)
+            .setResolutionStrategy(
+                ResolutionStrategy(Size(1280, 960), ResolutionStrategy.FALLBACK_RULE_CLOSEST_LOWER_THEN_HIGHER),
+            )
             .build()
+        // 분석 스트림은 640×480 (센서 방향 표기). 모델 입력은 256px 라 그 이상은 변환·회전 비용만 늘린다.
         val analysisSelector = ResolutionSelector.Builder()
             .setAspectRatioStrategy(AspectRatioStrategy.RATIO_4_3_FALLBACK_AUTO_STRATEGY)
             .setResolutionStrategy(
-                ResolutionStrategy(Size(480, 640), ResolutionStrategy.FALLBACK_RULE_CLOSEST_HIGHER_THEN_LOWER),
+                ResolutionStrategy(Size(640, 480), ResolutionStrategy.FALLBACK_RULE_CLOSEST_HIGHER_THEN_LOWER),
             )
             .build()
         val preview = Preview.Builder()
-            .setResolutionSelector(aspect43)
+            .setResolutionSelector(previewSelector)
             .build()
             .also { it.surfaceProvider = previewView.surfaceProvider }
+        // 출력 포맷은 기본 YUV: RGBA 로 받으면 CameraX 가 '전달되는 모든 프레임'(30fps)을 CPU 변환한다.
+        // 우리는 스케줄러가 고른 프레임만 변환한다.
         val analysis = ImageAnalysis.Builder()
             .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-            .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_RGBA_8888)
             .setResolutionSelector(analysisSelector)
             .build()
         analysis.setAnalyzer(executor) { image ->
+            val now = System.currentTimeMillis()
+            val ph = when (phaseRef[0]) {
+                LabPhase.IDLE -> InferencePhase.IDLE
+                LabPhase.RECORDING -> InferencePhase.RECORDING
+                LabPhase.RESULT -> InferencePhase.RESULT
+            }
+            // 스케줄러: 간격이 안 됐으면 프레임을 즉시 반환 (변환·추론 비용 0)
+            if (!policy.shouldInfer(now, lastInferAt[0], ph, thermalRef[0])) {
+                image.close()
+                return@setAnalyzer
+            }
+            lastInferAt[0] = now
+            val t0 = System.nanoTime()
             try {
-                val now = System.currentTimeMillis()
                 val up = gravity.gravityDevice
                     ?.let { gravityUpInWorld(it, displayRotation, frontRef[0]) }
                     ?: SCREEN_UP
                 val s = analyzer.analyze(image, now, up)
                 sample = s
-                if (phaseRef[0] == LabPhase.RECORDING && s.detected && now - lastSampleAt[0] >= SAMPLE_INTERVAL_MS) {
-                    lastSampleAt[0] = now
+                stats = analyzer.stats()
+                // RECORDING 에서는 추론 1회 = 샘플 1개 (간격이 곧 샘플 간격)
+                if (phaseRef[0] == LabPhase.RECORDING && s.detected) {
                     aggregator.add(s.features)
                     sampledFrames = aggregator.frameCount
                 }
@@ -200,6 +231,16 @@ fun PostureLabScreen(onClose: () -> Unit) {
                 analyzerError = t.message
             } finally {
                 image.close()
+                // 듀티 = 2초 창에서 추론(변환+모델+피처)에 쓴 시간 비율
+                val t1 = System.nanoTime()
+                if (dutyAcc[1] == 0L) dutyAcc[1] = t0
+                dutyAcc[0] += (t1 - t0)
+                val window = t1 - dutyAcc[1]
+                if (window >= 2_000_000_000L) {
+                    dutyPct = (100L * dutyAcc[0] / window).toInt().coerceIn(0, 100)
+                    dutyAcc[0] = 0L
+                    dutyAcc[1] = t1
+                }
             }
         }
         val selector = if (useFrontCamera) CameraSelector.DEFAULT_FRONT_CAMERA else CameraSelector.DEFAULT_BACK_CAMERA
@@ -332,6 +373,48 @@ fun PostureLabScreen(onClose: () -> Unit) {
                         .padding(horizontal = 6.dp, vertical = 2.dp),
                 )
             }
+            // ---- 엔진 상태 + 발열 대응 토글 (모델 full/lite, GPU 우선/CPU)
+            val st = stats
+            val intervalNow = policy.intervalMs(
+                when (phase) { LabPhase.IDLE -> InferencePhase.IDLE; LabPhase.RECORDING -> InferencePhase.RECORDING; LabPhase.RESULT -> InferencePhase.RESULT },
+                thermalStatus,
+            )
+            val thermalMul = policy.thermalMultiplier(thermalStatus)
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
+                Text(
+                    text = buildString {
+                        append("엔진 ")
+                        append(st?.let { "${it.model}·${it.delegate}" } ?: "${poseModel.label}·대기")
+                        append(" · 간격 ${intervalNow}ms")
+                        st?.takeIf { it.inferCount > 0 }?.let { append(" · 추론 ${"%.0f".format(it.emaInferMs)}ms") }
+                        append(" · 듀티 $dutyPct%")
+                        append(" · 열 ${InferencePolicy.thermalLabel(thermalStatus)}")
+                        if (thermalMul > 1f) append("(×${"%.1f".format(thermalMul)} 감속)")
+                    },
+                    color = if (thermalStatus >= InferencePolicy.THERMAL_MODERATE) TrexWarning else Color.White.copy(alpha = 0.55f),
+                    fontSize = 10.sp,
+                    modifier = Modifier.weight(1f),
+                )
+                Text(
+                    text = poseModel.label,
+                    color = TrexLime,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier
+                        .clickable { poseModel = if (poseModel == PoseModel.FULL) PoseModel.LITE else PoseModel.FULL }
+                        .padding(horizontal = 6.dp, vertical = 2.dp),
+                )
+                Text(
+                    text = if (preferGpu) "GPU" else "CPU",
+                    color = TrexLime,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier
+                        .clickable { preferGpu = !preferGpu }
+                        .padding(horizontal = 6.dp, vertical = 2.dp),
+                )
+            }
+            st?.error?.let { Text(it, color = TrexError, fontSize = 10.sp) }
             Text(
                 text = "정면~전방 45°에서 촬영 · 전신이 프레임에 들어오게" +
                     if (sample.upFromGravity) " · 높이 축은 IMU 중력축 사용" else " · 중력센서 없음: 폰을 세로로 세워 거치",
@@ -350,7 +433,7 @@ fun PostureLabScreen(onClose: () -> Unit) {
                             aggregator.reset()
                             sampledFrames = 0
                             results = emptyList()
-                            lastSampleAt[0] = 0L
+                            lastInferAt[0] = 0L   // 세트 시작 즉시 첫 샘플
                             phase = LabPhase.RECORDING
                         },
                         modifier = Modifier.weight(1f),
