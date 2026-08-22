@@ -23,7 +23,6 @@ data class Vec3(val x: Float, val y: Float, val z: Float) {
     infix fun cross(o: Vec3) = Vec3(y * o.z - z * o.y, z * o.x - x * o.z, x * o.y - y * o.x)
     val norm: Float get() = sqrt(this dot this)
     fun unit(): Vec3? = norm.let { if (it < 1e-6f) null else this * (1f / it) }
-    fun horiz() = Vec3(x, 0f, z)
 }
 
 private const val RAD = 180.0 / Math.PI
@@ -93,10 +92,23 @@ object Joints {
     )
 }
 
-/** 한 프레임의 24관절(월드 cm, y 위 +). 값이 null 이면 그 관절은 신뢰도 미달. */
-class PoseFrame(val joints: Map<String, Vec3?>) {
+/**
+ * 한 프레임의 24관절(월드 cm). 값이 null 이면 그 관절은 신뢰도 미달.
+ *
+ * @param up 중력 반대 방향(단위벡터, world 좌표계). IMU 를 못 쓰면 화면 세로축 [SCREEN_UP].
+ *   모든 "높이" 피처는 이 축으로의 투영으로 계산되므로, 폰이 기울어도 값이 보존된다.
+ */
+class PoseFrame(val joints: Map<String, Vec3?>, up: Vec3 = Vec3(0f, 1f, 0f)) {
 
     private fun g(name: String): Vec3? = joints[name]
+
+    private val up: Vec3 = up.unit() ?: Vec3(0f, 1f, 0f)
+
+    /** 중력축 높이 (스칼라). 점이면 원점 기준 높이, 방향 벡터면 up 성분. */
+    private fun h(p: Vec3): Float = p dot this.up
+
+    /** up 성분을 제거한 수평 성분. */
+    private fun flat(v: Vec3): Vec3 = v - this.up * (v dot this.up)
 
     val lHip = g(Joints.L_HIP)
     val rHip = g(Joints.R_HIP)
@@ -108,8 +120,7 @@ class PoseFrame(val joints: Map<String, Vec3?>) {
     /** Neck 은 MediaPipe 에 없어 어깨 중점으로 대체 (spec §3). */
     val neck: Vec3? = shMid
 
-    private val up = Vec3(0f, 1f, 0f)
-    private val xb: Vec3? = if (lHip != null && rHip != null) (lHip - rHip).horiz().unit() else null
+    private val xb: Vec3? = if (lHip != null && rHip != null) flat(lHip - rHip).unit() else null
     private val zb: Vec3? = xb?.let { (it cross up).unit() }
 
     val valid: Boolean get() = hipMid != null && xb != null && zb != null
@@ -161,7 +172,7 @@ class PoseFrame(val joints: Map<String, Vec3?>) {
         val a = g(Joints.L_EAR); val b = g(Joints.R_EAR)
         if (a != null && b != null) mid(a, b) else a ?: b
     }
-    private val bodyH: Float? = if (neck != null && ankleMid != null) (neck.y - ankleMid.y).takeIf { abs(it) >= 30f } else null
+    private val bodyH: Float? = if (neck != null && ankleMid != null) h(neck - ankleMid).takeIf { abs(it) >= 30f } else null
 
     /**
      * 이 프레임의 모든 피처. 계산 불가한 항목은 맵에서 빠진다.
@@ -235,7 +246,7 @@ class PoseFrame(val joints: Map<String, Vec3?>) {
             zb?.let { put("face_vs_forward", angleVec(face, it)) }
         }
         if (earMid != null && shMid != null && torsoLen != null) {
-            put("ear_shoulder_gap", (earMid.y - shMid.y) / torsoLen)
+            put("ear_shoulder_gap", h(earMid - shMid) / torsoLen)
         }
 
         // ---- 무릎 / 발
@@ -246,13 +257,13 @@ class PoseFrame(val joints: Map<String, Vec3?>) {
             val foot = if (side == 'L') lFt else rFt
             val sign = if (side == 'L') 1f else -1f
             if (knee != null && ankle != null && foot != null) {
-                val shinH = (knee - ankle).horiz()
-                val footH = (foot - ankle).horiz()
+                val shinH = flat(knee - ankle)
+                val footH = flat(foot - ankle)
                 if (shinH.norm > 8f) put("kneefoot_$side", angleVec(shinH, footH))
-                put("foot_pitch_$side", (foot - ankle).unit()?.let { (asin(it.y.coerceIn(-1f, 1f)) * RAD).toFloat() })
+                put("foot_pitch_$side", (foot - ankle).unit()?.let { (asin(h(it).coerceIn(-1f, 1f)) * RAD).toFloat() })
             }
-            if (ankle != null) put("ankle_y_$side", ankle.y)
-            if (foot != null) put("foot_y_$side", foot.y)
+            if (ankle != null) put("ankle_y_$side", h(ankle))
+            if (foot != null) put("foot_y_$side", h(foot))
             if (hip != null && knee != null && ankle != null) {
                 val hb = body(hip); val kb = body(knee); val ab = body(ankle)
                 if (hb != null && kb != null && ab != null) {
@@ -267,7 +278,7 @@ class PoseFrame(val joints: Map<String, Vec3?>) {
                     if (shin >= 1e-3f) put("knee_fwd_$side", (kb.z - ab.z) / shin)
                     hipW?.let { put("knee_lat_$side", sign * (kb.x - hb.x) / it) }
                 }
-                legLen?.let { ll -> hipMid?.let { put("knee_h_$side", (knee.y - it.y) / ll) } }
+                legLen?.let { ll -> hipMid?.let { put("knee_h_$side", h(knee - it) / ll) } }
             }
         }
         val koL = f["knee_out_L"]; val koR = f["knee_out_R"]
@@ -285,8 +296,8 @@ class PoseFrame(val joints: Map<String, Vec3?>) {
         if (fyL != null && fyR != null) put("foot_y_mean", (fyL + fyR) / 2f)
         if (lKn != null && rKn != null && hipW != null) put("knee_gap", (lKn - rKn).norm / hipW)
         if (hipMid != null && ankleMid != null && legLen != null) {
-            put("hip_height_rel", (hipMid.y - ankleMid.y) / legLen)
-            if (kneeMid != null) put("hip_below_knee", (hipMid.y - kneeMid.y) / legLen)
+            put("hip_height_rel", h(hipMid - ankleMid) / legLen)
+            if (kneeMid != null) put("hip_below_knee", h(hipMid - kneeMid) / legLen)
         }
         if (lAn != null && rAn != null && hipW != null) put("stance_w", (lAn - rAn).norm / hipW)
 
@@ -299,12 +310,12 @@ class PoseFrame(val joints: Map<String, Vec3?>) {
             ankleMid?.let { am -> body(am)?.let { put("palm_fwd_ankle", (pb.z - it.z) / torsoLen) } }
         }
         if (pb != null && shW != null) put("palm_lat", pb.x / shW)
-        if (palmMid != null && ankleMid != null && bodyH != null) put("palm_h_rel", (palmMid.y - ankleMid.y) / bodyH)
-        if (palmMid != null && shMid != null && torsoLen != null) put("palm_h_sh", (palmMid.y - shMid.y) / torsoLen)
+        if (palmMid != null && ankleMid != null && bodyH != null) put("palm_h_rel", h(palmMid - ankleMid) / bodyH)
+        if (palmMid != null && shMid != null && torsoLen != null) put("palm_h_sh", h(palmMid - shMid) / torsoLen)
         if (palmMid != null && earMid != null && torsoLen != null) put("palm_head_dist", (palmMid - earMid).norm / torsoLen)
         if (lPa != null && rPa != null) {
             shW?.let { put("grip_w", (lPa - rPa).norm / it) }
-            torsoLen?.let { put("hand_h_asym", (lPa.y - rPa.y) / it) }
+            torsoLen?.let { put("hand_h_asym", h(lPa - rPa) / it) }
         }
         for (side in listOf('L', 'R')) {
             val sh = if (side == 'L') lSh else rSh
@@ -316,13 +327,13 @@ class PoseFrame(val joints: Map<String, Vec3?>) {
             if (sh != null && el != null && hip != null) {
                 perpFromLine(el, hip, sh)?.let { (perp, len) -> put("elbow_torso_$side", perp.norm / len) }
             }
-            if (sh != null && el != null && torsoLen != null) put("elbow_h_$side", (el.y - sh.y) / torsoLen)
-            if (el != null && wr != null && torsoLen != null) put("elbow_wrist_h_$side", (el.y - wr.y) / torsoLen)
-            if (sh != null && hipMid != null && torsoLen != null) put("shoulder_h_$side", (sh.y - hipMid.y) / torsoLen)
+            if (sh != null && el != null && torsoLen != null) put("elbow_h_$side", h(el - sh) / torsoLen)
+            if (el != null && wr != null && torsoLen != null) put("elbow_wrist_h_$side", h(el - wr) / torsoLen)
+            if (sh != null && hipMid != null && torsoLen != null) put("shoulder_h_$side", h(sh - hipMid) / torsoLen)
         }
         val fvL = f["forearm_vert_L"]; val fvR = f["forearm_vert_R"]
         if (fvL != null && fvR != null) put("forearm_vert_mean", (fvL + fvR) / 2f)
-        if (lSh != null && rSh != null && shW != null) put("shoulder_asym", (lSh.y - rSh.y) / shW)
+        if (lSh != null && rSh != null && shW != null) put("shoulder_asym", h(lSh - rSh) / shW)
 
         // ---- 무릎-팔꿈치
         if (torsoLen != null) {

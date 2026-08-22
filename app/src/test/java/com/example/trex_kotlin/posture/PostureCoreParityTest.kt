@@ -94,6 +94,90 @@ class PostureCoreParityTest {
         assertEquals("불일치 ${mismatches.size}건:\n" + mismatches.take(20).joinToString("\n"), 0, mismatches.size)
     }
 
+    /** 로드리게스 회전. */
+    private fun rotate(v: Vec3, axis: Vec3, angleRad: Float): Vec3 {
+        val k = axis.unit()!!
+        val c = kotlin.math.cos(angleRad)
+        val s = kotlin.math.sin(angleRad)
+        return v * c + (k cross v) * s + k * ((k dot v) * (1f - c))
+    }
+
+    /**
+     * 중력축 일반화 검증: 장면(관절)과 up 을 같은 회전으로 돌리면 모든 피처가 불변이어야 한다.
+     * 폰이 기울어도(롤·피치) IMU up 을 쓰면 값이 보존된다는 뜻이다.
+     */
+    @Test
+    fun featuresAreInvariantWhenSceneAndUpRotateTogether() {
+        val cases = loadCases()
+        val rotations = listOf(
+            Triple(Vec3(0f, 0f, 1f), 30f, "롤 30°"),      // 카메라 축 회전 = 폰 롤
+            Triple(Vec3(1f, 0f, 0f), 20f, "피치 20°"),    // 폰을 뒤로 기울임
+            Triple(Vec3(0.3f, 0.2f, 1f), 47f, "복합 47°"),
+        )
+        var compared = 0
+        val mismatches = ArrayList<String>()
+        for (case in cases.take(15)) {
+            val base = PoseFrame(case.joints).features()
+            for ((axis, deg, label) in rotations) {
+                val rad = (deg * Math.PI / 180.0).toFloat()
+                val rotatedJoints = case.joints.mapValues { (_, v) -> v?.let { rotate(it, axis, rad) } }
+                val rotatedUp = rotate(Vec3(0f, 1f, 0f), axis, rad)
+                val rotated = PoseFrame(rotatedJoints, rotatedUp).features()
+                for ((feature, expected) in base) {
+                    val actual = rotated[feature]
+                    if (actual == null) {
+                        mismatches += "${case.name} [$label] $feature: 회전 후 누락"
+                        continue
+                    }
+                    compared++
+                    // 회전 누적 부동소수 오차를 감안해 파리티보다 약간 넉넉하게
+                    val tol = maxOf(0.15f, abs(expected) * 3e-3f)
+                    if (abs(actual - expected) > tol) {
+                        mismatches += "${case.name} [$label] $feature: base=$expected rotated=$actual (tol=$tol)"
+                    }
+                }
+            }
+        }
+        assertTrue("비교된 피처가 충분해야 한다 (실제 $compared)", compared > 3000)
+        assertEquals("회전 불변성 위반 ${mismatches.size}건:\n" + mismatches.take(15).joinToString("\n"), 0, mismatches.size)
+    }
+
+    /** IMU 중력 → world up 변환 (PostureOrientation). */
+    @Test
+    fun gravityMapsToWorldUp() {
+        fun assertVec(msg: String, expected: Vec3, actual: Vec3?) {
+            assertTrue("$msg: null", actual != null)
+            assertEquals("$msg x", expected.x, actual!!.x, 1e-4f)
+            assertEquals("$msg y", expected.y, actual.y, 1e-4f)
+            assertEquals("$msg z", expected.z, actual.z, 1e-4f)
+        }
+        val rot0 = android.view.Surface.ROTATION_0
+        // 폰을 세로로 세움: 중력은 기기 아래(-y) → up 은 화면 위 = world (0,1,0) (기존 가정과 동일)
+        assertVec("세로 거치/후면", Vec3(0f, 1f, 0f), gravityUpInWorld(Vec3(0f, -9.81f, 0f), rot0, false))
+        assertVec("세로 거치/전면", Vec3(0f, 1f, 0f), gravityUpInWorld(Vec3(0f, -9.81f, 0f), rot0, true))
+        // 폰을 반시계로 90° 눕힘: 중력이 기기 -x → 이미지 상의 up 은 오른쪽
+        assertVec("롤 90°/후면", Vec3(1f, 0f, 0f), gravityUpInWorld(Vec3(-9.81f, 0f, 0f), rot0, false))
+        // 전면 카메라는 이미지 좌우가 뒤집히므로 x 부호 반전
+        assertVec("롤 90°/전면", Vec3(-1f, 0f, 0f), gravityUpInWorld(Vec3(-9.81f, 0f, 0f), rot0, true))
+        // 폰을 바닥에 눕혀 후면 카메라가 아래를 봄: 중력이 기기 -z → up 은 카메라 쪽(+Z_w)
+        assertVec("평평히 눕힘/후면", Vec3(0f, 0f, 1f), gravityUpInWorld(Vec3(0f, 0f, -9.81f), rot0, false))
+        assertVec("평평히 눕힘/전면", Vec3(0f, 0f, -1f), gravityUpInWorld(Vec3(0f, 0f, -9.81f), rot0, true))
+        // 디스플레이가 90° 회전된 상태에서 세로로 세우면 디스플레이 기준 up 은 좌측
+        assertVec(
+            "디스플레이 90°",
+            Vec3(-1f, 0f, 0f),
+            gravityUpInWorld(Vec3(0f, -9.81f, 0f), android.view.Surface.ROTATION_90, false),
+        )
+        assertEquals("영벡터는 null", null, gravityUpInWorld(Vec3(0f, 0f, 0f), rot0, false))
+    }
+
+    @Test
+    fun tiltDegreesReflectsDeviationFromScreenUp() {
+        assertEquals(0f, tiltFromScreenUpDegrees(Vec3(0f, 1f, 0f)), 1e-3f)
+        assertEquals(90f, tiltFromScreenUpDegrees(Vec3(1f, 0f, 0f)), 1e-3f)
+        assertEquals(45f, tiltFromScreenUpDegrees(Vec3(0f, 1f, 1f)), 1e-3f)
+    }
+
     @Test
     fun aggregatorStatsAreCorrect() {
         val agg = FeatureAggregator()

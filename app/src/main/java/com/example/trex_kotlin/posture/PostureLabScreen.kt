@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
 import android.util.Size
+import android.view.WindowManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.CameraSelector
@@ -136,12 +137,24 @@ fun PostureLabScreen(onClose: () -> Unit) {
         }
     }
     val executor = remember { Executors.newSingleThreadExecutor() }
+
+    // IMU 중력축으로 up 을 잡는다 (폰이 기울어도 높이/수직 피처가 유지됨)
+    val gravity = remember { GravityTracker(context) }
     DisposableEffect(Unit) {
+        gravity.start()
         onDispose {
+            gravity.stop()
             analyzer?.close()
             executor.shutdown()
         }
     }
+    val displayRotation = remember(context) {
+        @Suppress("DEPRECATION")
+        (context.getSystemService(Context.WINDOW_SERVICE) as WindowManager).defaultDisplay.rotation
+    }
+    // 분석 스레드에서 매 프레임 읽으므로 상태가 아닌 참조로 전달
+    val frontRef = remember { booleanArrayOf(false) }
+    frontRef[0] = useFrontCamera
 
     val previewView = remember {
         PreviewView(context).apply { scaleType = PreviewView.ScaleType.FILL_CENTER }
@@ -173,7 +186,10 @@ fun PostureLabScreen(onClose: () -> Unit) {
         analysis.setAnalyzer(executor) { image ->
             try {
                 val now = System.currentTimeMillis()
-                val s = analyzer.analyze(image, now)
+                val up = gravity.gravityDevice
+                    ?.let { gravityUpInWorld(it, displayRotation, frontRef[0]) }
+                    ?: SCREEN_UP
+                val s = analyzer.analyze(image, now, up)
                 sample = s
                 if (phaseRef[0] == LabPhase.RECORDING && s.detected && now - lastSampleAt[0] >= SAMPLE_INTERVAL_MS) {
                     lastSampleAt[0] = now
@@ -262,6 +278,13 @@ fun PostureLabScreen(onClose: () -> Unit) {
                         append("  가시 ${sample.visibleJointCount}/33")
                         append("  ${sample.inferMs}ms")
                         if (sample.imageWidth > 0) append("  ${sample.imageWidth}×${sample.imageHeight}")
+                        append(
+                            if (sample.upFromGravity) {
+                                "  중력축 기울기 ${"%.0f".format(tiltFromScreenUpDegrees(sample.up))}°"
+                            } else {
+                                "  중력센서 X(화면축 가정)"
+                            },
+                        )
                     },
                     color = if (sample.detected) TrexLime else TrexError,
                     fontSize = 10.sp,
@@ -310,7 +333,8 @@ fun PostureLabScreen(onClose: () -> Unit) {
                 )
             }
             Text(
-                text = "폰을 세로로 세워 거치 · 정면~전방 45°에서 촬영 · 전신이 프레임에 들어오게",
+                text = "정면~전방 45°에서 촬영 · 전신이 프레임에 들어오게" +
+                    if (sample.upFromGravity) " · 높이 축은 IMU 중력축 사용" else " · 중력센서 없음: 폰을 세로로 세워 거치",
                 color = Color.White.copy(alpha = 0.4f),
                 fontSize = 10.sp,
                 modifier = Modifier.padding(top = 4.dp),

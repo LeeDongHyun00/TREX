@@ -52,11 +52,25 @@ MediaPipe 의 Left/Right 는 사람 기준(해부학적)이며 AIHub 와 동일 
 
 ## 4. 신체좌표계 (매 프레임)
 ```
-x_b = unit( (LHip − RHip) with y := 0 )        // 사람의 왼쪽 +
-y_b = (0, 1, 0)                                 // 중력 반대 (폰이 수평이라는 가정; 필요시 IMU 중력축으로 대체)
+y_b = up                                        // 중력 반대 방향 (IMU, 아래 참조)
+x_b = unit( flat(LHip − RHip) ),  flat(v) = v − y_b·(v·y_b)   // 사람의 왼쪽 +
 z_b = unit( x_b × y_b )                          // 전방 +
 body(P) = ( (P−HipMid)·x_b , (P−HipMid)·y_b , (P−HipMid)·z_b )
+height(P) = P·y_b                                // 모든 "높이" 피처는 화면 세로축이 아니라 이 값
 ```
+
+**up 은 IMU 중력축에서 구한다** (`PostureOrientation.kt`). 화면 세로축을 중력으로 가정하면 폰이 기울거나 회전할 때
+모든 높이·수직 피처가 틀어지므로, `TYPE_GRAVITY`(없으면 가속도계 저역통과) 벡터를 world 좌표계로 옮겨 `up = −g` 로 쓴다.
+
+| 프레임 | 정의 |
+|---|---|
+| 센서(디바이스 자연좌표) | x 오른쪽, y 기기 상단, z 화면 바깥 |
+| 디스플레이 | 회전별 (right, up) 을 디바이스 좌표로 표현 — `displayAxes(rotation)` |
+| 이미지 | up = 디스플레이 up, right = viewDir × up → 후면은 디스플레이 right, **전면은 그 반대** |
+| world | X = 이미지 right, Y = 이미지 up, Z = 카메라 쪽(후면 +z_dev, 전면 −z_dev) |
+
+`gravityUpInWorld(g, displayRotation, isFront)` = `−normalize( (g·imageRight, g·displayUp, g·towardCamera) )`.
+센서를 못 쓰면 `SCREEN_UP=(0,1,0)` 로 폴백하고 UI 에 그 사실을 표시한다.
 정규화 분모(실패 프레임 방지): `torso_len=|Neck−HipMid| (<20cm → NaN)`, `leg_len=mean(|LHip−LAnkle|,|RHip−RAnkle|) (<40cm → NaN)`, `sh_w=|LSh−RSh| (<15cm → NaN)`, `hip_w=|LHip−RHip| (<8cm → NaN)`, `body_h=Neck.y−AnkleMid.y (|·|<30cm → NaN)`.
 
 ## 5. 피처 (프레임 단위)
@@ -202,22 +216,27 @@ fun evaluate(rule: Rule, aggs: Map<String, Agg>, minFrames: Int = 8): Verdict {
 구현 위치: `app/src/main/java/com/example/trex_kotlin/posture/`
 | 파일 | 역할 |
 |---|---|
-| `PostureCore.kt` | Vec3/기하, 24관절 매핑 상수, `PoseFrame.features()` (§3~§5), `FeatureAggregator` (§6) |
+| `PostureCore.kt` | Vec3/기하, 24관절 매핑 상수, `PoseFrame(joints, up).features()` (§3~§5), `FeatureAggregator` (§6) |
+| `PostureOrientation.kt` | `GravityTracker`(TYPE_GRAVITY 구독), `gravityUpInWorld()` — IMU 중력축 → world up (§4) |
 | `PostureRules.kt` | `rules_mp_v0.json` 로더, `PostureRule.isViolated`, `PostureRuleSet.evaluate` (§7) |
 | `PostureAnalyzer.kt` | MediaPipe Pose Landmarker(VIDEO) 래퍼, ImageProxy→회전보정→월드 피처, 오버레이용 연결선 |
 | `PostureLabScreen.kt` | 실험 화면(카메라+골격 오버레이+종목 선택+세트 기록+판정 리포트) |
 에셋: `app/src/main/assets/posture/pose_landmarker_full.task`, `rules_mp_v0.json` (`noCompress += "task"`).
 진입: 로그인 화면의 **"자세 교정 실험실 (개발용)"** 버튼 → `TrexApp` 의 `postureLab` 라우트.
 
-**파리티 검증**: `app/src/test/java/.../PostureCoreParityTest.kt` 가 연구 코드(features.py)로 계산한 40프레임 ×129피처를
-같은 입력에서 Kotlin 결과와 비교한다(각도 0.05° / 상대 1e-3 허용). 픽스처 생성: `export_port_fixture.py`.
+**검증 테스트**: `app/src/test/java/.../PostureCoreParityTest.kt` (6개)
+1. **파리티** — 연구 코드(features.py)로 계산한 40프레임 × 129피처를 같은 입력에서 Kotlin 결과와 비교(각도 0.05° / 상대 1e-3). 픽스처: `export_port_fixture.py`
+2. **회전 불변성** — 장면(관절)과 up 을 같은 회전(롤 30° / 피치 20° / 복합 47°)으로 돌리면 모든 피처가 불변. IMU up 일반화가 옳다는 근거
+3. **중력 매핑** — `gravityUpInWorld` 의 세로 거치 / 롤 90° / 평평히 눕힘 / 전면·후면 / 디스플레이 회전 케이스
+4. 기울기 각도, 5. 집계 통계, 6. 규칙 위반 방향
 ```bash
-./gradlew :app:testDebugUnitTest --tests "com.example.trex_kotlin.posture.PostureCoreParityTest"
+./gradlew :app:testDebugUnitTest --tests "com.example.trex_kotlin.posture.*"
 ```
 
 **실기기 확인**(Galaxy, 전면 카메라): 검출 O, 가시 22/33, 추론 147~245 ms/프레임(720×960), 골격 오버레이 정렬,
 규칙 로드/실시간 값/세트 기록(18프레임)/판정 리포트 정상. 추론이 150 ms 대이므로 실시간 프레임 판정은 무리이고
 §6 의 2~4 fps 샘플링 + 세트 종료 후 리포트 구조가 적절하다.
 
-**남은 한계**: `y_b`를 화면 세로축으로 가정하므로 폰이 기울면 축이 틀어진다(IMU 중력축 사용은 v1).
-임계값은 여전히 AIHub 스튜디오 분포 기준 — §9 재보정 전에는 위반/정상 판정을 신뢰하지 말 것.
+**남은 한계**: 임계값은 여전히 AIHub 스튜디오 분포 기준 — §9 재보정 전에는 위반/정상 판정을 신뢰하지 말 것.
+또한 AIHub GT 3D 자체가 리그(스튜디오) 기준이라 up 이 곧 화면 세로축이었으므로, IMU up 은 **앱 쪽 정확도만 개선**한다.
+재보정 데이터를 모을 때는 폰 기울기(`tiltFromScreenUpDegrees`)도 함께 기록해 두면 축 보정 효과를 사후 검증할 수 있다.

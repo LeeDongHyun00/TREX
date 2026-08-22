@@ -29,9 +29,13 @@ class PoseSample(
     val inferMs: Long,
     val imageWidth: Int,
     val imageHeight: Int,
+    /** 이 프레임 계산에 쓴 up 벡터 (IMU 중력축 또는 화면 세로축 폴백). */
+    val up: Vec3 = SCREEN_UP,
+    /** up 이 IMU 에서 온 것인지 (false = 화면 세로축 가정). */
+    val upFromGravity: Boolean = false,
 ) {
     companion object {
-        fun empty(inferMs: Long = 0L, w: Int = 0, h: Int = 0) = PoseSample(
+        fun empty(inferMs: Long = 0L, w: Int = 0, h: Int = 0, up: Vec3 = SCREEN_UP, fromGravity: Boolean = false) = PoseSample(
             detected = false,
             normalizedXy = FloatArray(MP_LANDMARK_COUNT * 2),
             visibility = FloatArray(MP_LANDMARK_COUNT),
@@ -40,6 +44,8 @@ class PoseSample(
             inferMs = inferMs,
             imageWidth = w,
             imageHeight = h,
+            up = up,
+            upFromGravity = fromGravity,
         )
     }
 }
@@ -61,12 +67,16 @@ class PostureAnalyzer(context: Context, modelAsset: String = "posture/pose_landm
 
     private var lastTimestampMs = 0L
 
-    /** ImageProxy 를 소비하지 않는다 — 호출 측에서 close() 할 것. */
-    fun analyze(image: ImageProxy, timestampMs: Long): PoseSample {
+    /**
+     * ImageProxy 를 소비하지 않는다 — 호출 측에서 close() 할 것.
+     * @param up 중력 반대 방향(world 좌표계 단위벡터). IMU 를 못 쓰면 [SCREEN_UP].
+     */
+    fun analyze(image: ImageProxy, timestampMs: Long, up: Vec3 = SCREEN_UP): PoseSample {
+        val fromGravity = up !== SCREEN_UP
         val bitmap = try {
             image.toBitmap()
         } catch (t: Throwable) {
-            return PoseSample.empty()
+            return PoseSample.empty(up = up, fromGravity = fromGravity)
         }
         val rotation = image.imageInfo.rotationDegrees
         val upright = if (rotation == 0) bitmap else {
@@ -89,7 +99,7 @@ class PostureAnalyzer(context: Context, modelAsset: String = "posture/pose_landm
         val landmarks = result?.landmarks()?.firstOrNull()
         val world = result?.worldLandmarks()?.firstOrNull()
         if (landmarks == null || world == null || landmarks.size < MP_LANDMARK_COUNT) {
-            return PoseSample.empty(inferMs, w, h)
+            return PoseSample.empty(inferMs, w, h, up, fromGravity)
         }
 
         val xy = FloatArray(MP_LANDMARK_COUNT * 2)
@@ -118,7 +128,7 @@ class PostureAnalyzer(context: Context, modelAsset: String = "posture/pose_landm
             val b = pts.getOrNull(pair.second)
             joints[name] = if (a != null && b != null) mid(a, b) else a ?: b
         }
-        val frame = PoseFrame(joints)
+        val frame = PoseFrame(joints, up)
         val features = frame.features()
         val visibleCount = vis.count { it >= MIN_VISIBILITY }
         return PoseSample(
@@ -130,6 +140,8 @@ class PostureAnalyzer(context: Context, modelAsset: String = "posture/pose_landm
             inferMs = inferMs,
             imageWidth = w,
             imageHeight = h,
+            up = up,
+            upFromGravity = fromGravity,
         )
     }
 
