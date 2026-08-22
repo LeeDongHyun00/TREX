@@ -197,3 +197,27 @@ fun evaluate(rule: Rule, aggs: Map<String, Agg>, minFrames: Int = 8): Verdict {
 ## 12. 파일
 - `rules/rules_mp_v0.json` (앱이 읽을 정본), `rules/rules_mp_v0.md` (사람용 표, 피처 공식 표 포함), `export_rules_mp.py` (재생성)
 - 실험 코드/요약: `experiment_a.py`, `experiment_a_refit.py`, `outputs/experiment_a_summary.md`, `outputs/expA_refit_summary.md`
+
+## 13. 앱 구현 현황 (2026-08-22)
+구현 위치: `app/src/main/java/com/example/trex_kotlin/posture/`
+| 파일 | 역할 |
+|---|---|
+| `PostureCore.kt` | Vec3/기하, 24관절 매핑 상수, `PoseFrame.features()` (§3~§5), `FeatureAggregator` (§6) |
+| `PostureRules.kt` | `rules_mp_v0.json` 로더, `PostureRule.isViolated`, `PostureRuleSet.evaluate` (§7) |
+| `PostureAnalyzer.kt` | MediaPipe Pose Landmarker(VIDEO) 래퍼, ImageProxy→회전보정→월드 피처, 오버레이용 연결선 |
+| `PostureLabScreen.kt` | 실험 화면(카메라+골격 오버레이+종목 선택+세트 기록+판정 리포트) |
+에셋: `app/src/main/assets/posture/pose_landmarker_full.task`, `rules_mp_v0.json` (`noCompress += "task"`).
+진입: 로그인 화면의 **"자세 교정 실험실 (개발용)"** 버튼 → `TrexApp` 의 `postureLab` 라우트.
+
+**파리티 검증**: `app/src/test/java/.../PostureCoreParityTest.kt` 가 연구 코드(features.py)로 계산한 40프레임 ×129피처를
+같은 입력에서 Kotlin 결과와 비교한다(각도 0.05° / 상대 1e-3 허용). 픽스처 생성: `export_port_fixture.py`.
+```bash
+./gradlew :app:testDebugUnitTest --tests "com.example.trex_kotlin.posture.PostureCoreParityTest"
+```
+
+**실기기 확인**(Galaxy, 전면 카메라): 검출 O, 가시 22/33, 추론 147~245 ms/프레임(720×960), 골격 오버레이 정렬,
+규칙 로드/실시간 값/세트 기록(18프레임)/판정 리포트 정상. 추론이 150 ms 대이므로 실시간 프레임 판정은 무리이고
+§6 의 2~4 fps 샘플링 + 세트 종료 후 리포트 구조가 적절하다.
+
+**남은 한계**: `y_b`를 화면 세로축으로 가정하므로 폰이 기울면 축이 틀어진다(IMU 중력축 사용은 v1).
+임계값은 여전히 AIHub 스튜디오 분포 기준 — §9 재보정 전에는 위반/정상 판정을 신뢰하지 말 것.

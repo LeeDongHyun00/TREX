@@ -46,3 +46,6 @@ research/aihub_fitness/outputs*/
 research/aihub_fitness/models/
 __pycache__/
 *.pyc
+
+# 파리티 픽스처는 테스트가 쓰는 .txt 만 추적 (.json 은 동일 내용의 참고본)
+app/src/test/resources/posture_port_fixture.json

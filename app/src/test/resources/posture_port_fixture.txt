@@ -1,0 +1,6025 @@
+# posture core parity fixture — 자동 생성, 수정 금지
+# CASE <clip> <view> <frame> / J <joint> x y z / F <feature> value / END
+CASE D26-4-424 B 0
+J Nose 6.56059 69.25542 18.12325
+J LEye 4.56663 73.00671 16.6476
+J REye 2.79912 72.25124 18.67832
+J LEar 0.22288 70.89306 6.55323
+J REar -7.77041 67.95342 16.42049
+J LShoulder 9.98343 51.97202 -2.48283
+J RShoulder -15.9898 49.15549 16.74042
+J LElbow 12.19901 28.89708 -7.20342
+J RElbow -17.99281 24.84009 16.06856
+J LWrist 17.60285 10.63944 4.16951
+J RWrist -13.79856 2.90424 21.19258
+J LHip 9.42372 0.494 -5.84313
+J RHip -9.45057 -0.43516 5.661
+J LKnee 8.29071 -38.98816 -16.18713
+J RKnee -9.07263 -39.01899 -4.26882
+J LAnkle 9.2339 -70.02347 -32.32372
+J RAnkle -12.379 -72.45274 -22.28926
+J Neck -3.00318 50.56375 7.1288
+J LPalm 18.23665 2.71364 8.45916
+J RPalm -11.50246 -5.47866 25.05811
+J LFoot 19.54978 -78.69847 -25.70452
+J RFoot -10.84334 -83.84319 -12.20339
+F knee_L 166.83223
+F knee_R 165.06674
+F hip_L 169.01312
+F hip_R 172.96733
+F elbow_L 136.34081
+F elbow_R 158.83769
+F shoulder_L 9.85127
+F shoulder_R 16.3007
+F ankle_L 109.12447
+F ankle_R 109.4369
+F wrist_L 169.34734
+F wrist_R 168.15533
+F knee_mean 165.94949
+F hip_mean 170.99023
+F elbow_mean 147.58925
+F knee_minside 165.06674
+F knee_maxside 166.83223
+F elbow_minside 136.34081
+F elbow_maxside 158.83769
+F torso_incl 8.79035
+F torso_pitch 5.21117
+F torso_roll -7.11804
+F head_pitch -0.78283
+F head_yaw 25.92984
+F face_vs_torso 89.22128
+F face_vs_forward 25.94084
+F kneefoot_L 60.65882
+F foot_pitch_L -35.28956
+F ankle_y_L -70.02347
+F foot_y_L -78.69847
+F knee_out_L -0.04261
+F knee_fwd_L 0.37974
+F kneefoot_R 1.73968
+F foot_pitch_R -48.15008
+F ankle_y_R -72.45274
+F foot_y_R -83.84319
+F knee_out_R 0.01246
+F knee_fwd_R 0.44875
+F kneefoot_mean 31.19925
+F knee_out_mean -0.01508
+F ankle_y_mean -71.2381
+F foot_y_mean -81.27083
+F palm_fwd_hip 0.31578
+F palm_fwd_knee 0.48889
+F palm_fwd_ankle 0.78611
+F palm_lat -0.18137
+F palm_h_rel 0.57352
+F palm_dist_body 0.33608
+F forearm_vert_L 145.40773
+F upperarm_vert_L 167.26572
+F elbow_torso_L 0.07845
+F forearm_vert_R 163.20262
+F upperarm_vert_R 175.03421
+F elbow_torso_R 0.13371
+F forearm_vert_mean 154.30518
+F shoulder_h_L 1.01579
+F shoulder_h_R 0.96071
+F shoulder_asym 0.08683
+F knee_asym 1.76549
+F hip_asym -3.95421
+F elbow_asym -22.49689
+F hand_h_asym 0.16021
+F stance_w 1.08266
+F grip_w 1.07996
+F neck_over_ankle 0.37553
+F hip_height_rel 0.93384
+F hip_below_knee 0.51146
+F sh_over_hip_fwd 0.09013
+F palm_head_dist 1.39552
+F palm_h_sh -1.01587
+F ear_shoulder_gap 0.36882
+F knee_gap 0.95194
+F knee_elbow_dist 1.32219
+F knee_h_L -0.51126
+F knee_lat_L 0.19961
+F elbow_h_L -0.45126
+F elbow_wrist_h_L 0.35705
+F knee_h_R -0.51167
+F knee_lat_R -0.24819
+F elbow_h_R -0.47551
+F elbow_wrist_h_R 0.42898
+F ankle_mean 109.28069
+F ankle_minside 109.12447
+F ankle_maxside 109.4369
+F ankle_y_minside -72.45274
+F ankle_y_maxside -70.02347
+F elbow_h_mean -0.46338
+F elbow_h_minside -0.47551
+F elbow_h_maxside -0.45126
+F elbow_torso_mean 0.10608
+F elbow_torso_minside 0.07845
+F elbow_torso_maxside 0.13371
+F elbow_wrist_h_mean 0.39301
+F elbow_wrist_h_minside 0.35705
+F elbow_wrist_h_maxside 0.42898
+F foot_pitch_mean -41.71982
+F foot_pitch_minside -48.15008
+F foot_pitch_maxside -35.28956
+F foot_y_minside -83.84319
+F foot_y_maxside -78.69847
+F forearm_vert_minside 145.40773
+F forearm_vert_maxside 163.20262
+F hip_minside 169.01312
+F hip_maxside 172.96733
+F knee_fwd_mean 0.41424
+F knee_fwd_minside 0.37974
+F knee_fwd_maxside 0.44875
+F knee_h_mean -0.51146
+F knee_h_minside -0.51167
+F knee_h_maxside -0.51126
+F knee_lat_mean -0.02429
+F knee_lat_minside -0.24819
+F knee_lat_maxside 0.19961
+F knee_out_minside -0.04261
+F knee_out_maxside 0.01246
+F kneefoot_minside 1.73968
+F kneefoot_maxside 60.65882
+F shoulder_mean 13.07599
+F shoulder_minside 9.85127
+F shoulder_maxside 16.3007
+F shoulder_h_mean 0.98825
+F shoulder_h_minside 0.96071
+F shoulder_h_maxside 1.01579
+F upperarm_vert_mean 171.14996
+F upperarm_vert_minside 167.26572
+F upperarm_vert_maxside 175.03421
+F wrist_mean 168.75134
+F wrist_minside 168.15533
+F wrist_maxside 169.34734
+END
+CASE D11-3-293 E 0
+J Nose -33.41059 37.42201 -20.278
+J LEye -36.73147 38.89832 -17.73532
+J REye -35.07809 40.04581 -19.75906
+J LEar -35.47152 42.24208 -8.36707
+J REar -29.61574 46.60688 -17.0502
+J LShoulder -30.8651 36.35025 2.45983
+J RShoulder -11.77032 41.18909 -19.37208
+J LElbow -32.35292 13.59443 10.63039
+J RElbow -2.96525 19.12805 -22.57144
+J LWrist -32.65443 -13.20864 8.13128
+J RWrist -2.8055 -3.59533 -26.25476
+J LHip -5.39709 -0.92882 6.80207
+J RHip 5.349 0.96906 -6.97179
+J LKnee -14.77026 -41.37029 3.01868
+J RKnee 2.5447 -37.22495 -16.30187
+J LAnkle -8.70755 -78.71397 3.32184
+J RAnkle 3.37698 -74.42632 -19.30468
+J Neck -21.31771 38.76967 -8.45613
+J LPalm -33.32961 -21.52387 8.80635
+J RPalm -0.98982 -8.9001 -28.44588
+J LFoot -23.60386 -81.93707 7.86884
+J RFoot -11.48285 -78.78517 -19.52581
+F knee_L 157.04744
+F knee_R 169.43446
+F hip_L 131.48608
+F hip_R 140.0246
+F elbow_L 154.77687
+F elbow_R 158.8235
+F shoulder_L 39.65468
+F shoulder_R 23.54396
+F ankle_L 92.99387
+F ankle_R 105.08305
+F wrist_L 169.27632
+F wrist_R 158.46185
+F knee_mean 163.24095
+F hip_mean 135.75534
+F elbow_mean 156.80019
+F knee_minside 157.04744
+F knee_maxside 169.43446
+F elbow_minside 154.77687
+F elbow_maxside 158.8235
+F torso_incl 30.56018
+F torso_pitch 29.51628
+F torso_roll 9.51946
+F head_pitch -42.58601
+F head_yaw -45.50541
+F face_vs_torso 114.01532
+F face_vs_forward 58.93544
+F foot_pitch_L -11.69188
+F ankle_y_L -78.71397
+F foot_y_L -81.93707
+F knee_out_L 0.04043
+F knee_fwd_L 0.13127
+F foot_pitch_R -16.34636
+F ankle_y_R -74.42632
+F foot_y_R -78.78517
+F knee_out_R 0.01727
+F knee_fwd_R -0.0319
+F knee_out_mean 0.02885
+F ankle_y_mean -76.57014
+F foot_y_mean -80.36111
+F palm_fwd_hip 0.4333
+F palm_fwd_knee 0.23699
+F palm_fwd_ankle 0.27894
+F palm_lat 0.09744
+F palm_h_rel 0.53198
+F palm_dist_body 0.43795
+F forearm_vert_L 174.63477
+F upperarm_vert_L 159.95004
+F elbow_torso_L 0.34083
+F forearm_vert_R 170.78429
+F upperarm_vert_R 156.9913
+F elbow_torso_R 0.21071
+F forearm_vert_mean 172.70953
+F shoulder_h_L 0.80733
+F shoulder_h_R 0.91486
+F shoulder_asym -0.16456
+F knee_asym -12.38702
+F hip_asym -8.53851
+F elbow_asym -4.04663
+F hand_h_asym -0.28053
+F stance_w 1.47998
+F grip_w 1.73171
+F neck_over_ankle 0.19425
+F hip_height_rel 0.99238
+F hip_below_knee 0.50944
+F sh_over_hip_fwd 0.48751
+F palm_head_dist 1.37013
+F palm_h_sh -1.19958
+F ear_shoulder_gap 0.12566
+F knee_gap 1.49511
+F knee_elbow_dist 1.26594
+F knee_h_L -0.5363
+F knee_lat_L 0.15835
+F elbow_h_L -0.50568
+F elbow_wrist_h_L 0.59562
+F knee_h_R -0.48259
+F knee_lat_R 0.32045
+F elbow_h_R -0.49024
+F elbow_wrist_h_R 0.50496
+F ankle_mean 99.03846
+F ankle_minside 92.99387
+F ankle_maxside 105.08305
+F ankle_y_minside -78.71397
+F ankle_y_maxside -74.42632
+F elbow_h_mean -0.49796
+F elbow_h_minside -0.50568
+F elbow_h_maxside -0.49024
+F elbow_torso_mean 0.27577
+F elbow_torso_minside 0.21071
+F elbow_torso_maxside 0.34083
+F elbow_wrist_h_mean 0.55029
+F elbow_wrist_h_minside 0.50496
+F elbow_wrist_h_maxside 0.59562
+F foot_pitch_mean -14.01912
+F foot_pitch_minside -16.34636
+F foot_pitch_maxside -11.69188
+F foot_y_minside -81.93707
+F foot_y_maxside -78.78517
+F forearm_vert_minside 170.78429
+F forearm_vert_maxside 174.63477
+F hip_minside 131.48608
+F hip_maxside 140.0246
+F knee_fwd_mean 0.04969
+F knee_fwd_minside -0.0319
+F knee_fwd_maxside 0.13127
+F knee_h_mean -0.50944
+F knee_h_minside -0.5363
+F knee_h_maxside -0.48259
+F knee_lat_mean 0.2394
+F knee_lat_minside 0.15835
+F knee_lat_maxside 0.32045
+F knee_out_minside 0.01727
+F knee_out_maxside 0.04043
+F shoulder_mean 31.59932
+F shoulder_minside 23.54396
+F shoulder_maxside 39.65468
+F shoulder_h_mean 0.8611
+F shoulder_h_minside 0.80733
+F shoulder_h_maxside 0.91486
+F upperarm_vert_mean 158.47067
+F upperarm_vert_minside 156.9913
+F upperarm_vert_maxside 159.95004
+F wrist_mean 163.86908
+F wrist_minside 158.46185
+F wrist_maxside 169.27632
+END
+CASE D30-1-038 B 0
+J Nose 20.52376 58.63639 32.08422
+J LEye 19.62789 63.284 29.87264
+J REye 16.88806 62.62178 31.60589
+J LEar 18.17142 63.37258 17.4598
+J REar 5.93379 60.97804 25.18285
+J LShoulder 24.66462 45.13182 7.34693
+J RShoulder -7.13859 45.48296 18.96222
+J LElbow 21.78596 26.28153 1.5536
+J RElbow -27.9954 29.78844 15.12175
+J LWrist 17.01055 8.91408 13.44466
+J RWrist -20.63583 8.87078 18.03852
+J LHip 10.33736 -1.06961 -4.81447
+J RHip -10.35736 1.13753 4.66303
+J LKnee 6.23163 -42.26787 -3.74374
+J RKnee -6.33861 -39.31913 3.91134
+J LAnkle 7.49068 -78.78784 -12.66993
+J RAnkle -3.08879 -77.07124 -4.81859
+J Neck 8.76301 45.30739 13.15458
+J LPalm 13.92005 2.57328 17.77328
+J RPalm -15.6558 1.49068 19.7966
+J LFoot 19.06169 -86.60477 -2.49906
+J RFoot 0.50429 -86.43711 8.22542
+F knee_L 162.99884
+F knee_R 168.06183
+F hip_L 160.66533
+F hip_R 160.65118
+F elbow_L 129.26517
+F elbow_R 106.09565
+F shoulder_L 8.69249
+F shoulder_R 48.40478
+F ankle_L 108.78478
+F ankle_R 113.13378
+F wrist_L 170.85561
+F wrist_R 165.10873
+F knee_mean 165.53033
+F hip_mean 160.65826
+F elbow_mean 117.6804
+F knee_minside 162.99884
+F knee_maxside 168.06183
+F elbow_minside 106.09565
+F elbow_maxside 129.26517
+F torso_incl 19.32275
+F torso_pitch 19.10501
+F torso_roll 3.11968
+F head_pitch -14.4871
+F head_yaw 13.59902
+F face_vs_torso 85.22516
+F face_vs_forward 19.76959
+F kneefoot_L 56.71334
+F foot_pitch_L -26.9035
+F ankle_y_L -78.78784
+F foot_y_L -86.60477
+F knee_out_L -0.05809
+F knee_fwd_L 0.20181
+F kneefoot_R 35.81902
+F foot_pitch_R -34.69249
+F ankle_y_R -77.07124
+F foot_y_R -86.43711
+F knee_out_R 0.01888
+F knee_fwd_R 0.16932
+F kneefoot_mean 46.26618
+F knee_out_mean -0.0196
+F ankle_y_mean -77.92953
+F foot_y_mean -86.52094
+F palm_fwd_hip 0.34998
+F palm_fwd_knee 0.34734
+F palm_fwd_ankle 0.49507
+F palm_lat -0.25497
+F palm_h_rel 0.64884
+F palm_dist_body 0.39353
+F forearm_vert_L 143.57921
+F upperarm_vert_L 161.05861
+F elbow_torso_L 0.06039
+F forearm_vert_R 159.27036
+F upperarm_vert_R 126.5032
+F elbow_torso_R 0.42246
+F forearm_vert_mean 151.42477
+F shoulder_h_L 0.94001
+F shoulder_h_R 0.94733
+F shoulder_asym -0.01037
+F knee_asym -5.06299
+F hip_asym 0.01414
+F elbow_asym 23.16952
+F hand_h_asym 0.02257
+F stance_w 0.58097
+F grip_w 0.87611
+F neck_over_ankle 0.28792
+F hip_height_rel 0.99138
+F hip_below_knee 0.51916
+F sh_over_hip_fwd 0.32687
+F palm_head_dist 1.28331
+F palm_h_sh -0.90202
+F ear_shoulder_gap 0.35159
+F knee_gap 0.65637
+F knee_elbow_dist 1.46931
+F knee_h_L -0.53791
+F knee_lat_L -0.18273
+F elbow_h_L -0.39291
+F elbow_wrist_h_L 0.362
+F knee_h_R -0.50041
+F knee_lat_R -0.17346
+F elbow_h_R -0.32713
+F elbow_wrist_h_R 0.436
+F ankle_mean 110.95928
+F ankle_minside 108.78478
+F ankle_maxside 113.13378
+F ankle_y_minside -78.78784
+F ankle_y_maxside -77.07124
+F elbow_h_mean -0.36002
+F elbow_h_minside -0.39291
+F elbow_h_maxside -0.32713
+F elbow_torso_mean 0.24142
+F elbow_torso_minside 0.06039
+F elbow_torso_maxside 0.42246
+F elbow_wrist_h_mean 0.399
+F elbow_wrist_h_minside 0.362
+F elbow_wrist_h_maxside 0.436
+F foot_pitch_mean -30.79799
+F foot_pitch_minside -34.69249
+F foot_pitch_maxside -26.9035
+F foot_y_minside -86.60477
+F foot_y_maxside -86.43711
+F forearm_vert_minside 143.57921
+F forearm_vert_maxside 159.27036
+F hip_minside 160.65118
+F hip_maxside 160.66533
+F knee_fwd_mean 0.18557
+F knee_fwd_minside 0.16932
+F knee_fwd_maxside 0.20181
+F knee_h_mean -0.51916
+F knee_h_minside -0.53791
+F knee_h_maxside -0.50041
+F knee_lat_mean -0.1781
+F knee_lat_minside -0.18273
+F knee_lat_maxside -0.17346
+F knee_out_minside -0.05809
+F knee_out_maxside 0.01888
+F kneefoot_minside 35.81902
+F kneefoot_maxside 56.71334
+F shoulder_mean 28.54863
+F shoulder_minside 8.69249
+F shoulder_maxside 48.40478
+F shoulder_h_mean 0.94367
+F shoulder_h_minside 0.94001
+F shoulder_h_maxside 0.94733
+F upperarm_vert_mean 143.7809
+F upperarm_vert_minside 126.5032
+F upperarm_vert_maxside 161.05861
+F wrist_mean 167.98218
+F wrist_minside 165.10873
+F wrist_maxside 170.85561
+END
+CASE D02-6-216 C 0
+J Nose -2.73841 -30.20038 50.22697
+J LEye 0.28301 -28.88714 52.51318
+J REye -3.70181 -27.80414 52.78323
+J LEar 8.93695 -23.02335 48.86386
+J REar -7.1314 -20.43042 50.99459
+J LShoulder 16.96366 -18.52652 31.67253
+J RShoulder -20.34712 -15.27215 39.26399
+J LElbow 25.36882 -42.22635 29.73137
+J RElbow -30.57536 -37.63455 29.96145
+J LWrist 20.9803 -65.52087 41.64929
+J RWrist -28.53507 -58.92083 39.79342
+J LHip 11.07875 -1.01888 -2.78985
+J RHip -11.01473 0.88938 2.63517
+J LKnee 17.10378 -32.2883 -11.63974
+J RKnee -21.27683 -39.60279 -3.18997
+J LAnkle 3.27441 -49.85695 -41.42907
+J RAnkle -14.99807 -50.21093 -40.14448
+J Neck -1.69173 -16.89933 35.46826
+J LPalm 20.26721 -67.82397 48.10226
+J RPalm -28.74774 -61.73834 47.45242
+J LFoot 4.87265 -61.86072 -42.47973
+J RFoot -16.91841 -61.20277 -43.9846
+F knee_L 126.35027
+F knee_R 110.68528
+F hip_L 77.58103
+F hip_R 71.96416
+F elbow_L 137.33585
+F elbow_R 125.99628
+F shoulder_L 113.771
+F shoulder_R 96.16783
+F ankle_L 119.08585
+F ankle_R 122.41937
+F wrist_L 137.0079
+F wrist_R 134.57242
+F knee_mean 118.51778
+F hip_mean 74.7726
+F elbow_mean 131.66606
+F knee_minside 110.68528
+F knee_maxside 126.35027
+F elbow_minside 125.99628
+F elbow_maxside 137.33585
+F torso_incl 115.31645
+F torso_pitch 116.26868
+F torso_roll -148.91219
+F head_pitch -66.67677
+F head_yaw -99.12112
+F face_vs_torso 63.95436
+F face_vs_forward 93.59834
+F kneefoot_L 98.41782
+F foot_pitch_L -80.94667
+F ankle_y_L -49.85695
+F foot_y_L -61.86072
+F knee_out_L 0.11018
+F knee_fwd_L 0.86525
+F kneefoot_R 143.78882
+F foot_pitch_R -68.66394
+F ankle_y_R -50.21093
+F foot_y_R -61.20277
+F knee_out_R 0.20364
+F knee_fwd_R 0.88281
+F kneefoot_mean 121.10332
+F knee_out_mean 0.15691
+F ankle_y_mean -50.03394
+F foot_y_mean -61.53175
+F palm_fwd_hip 1.15462
+F palm_fwd_knee 1.34845
+F palm_fwd_ankle 2.19455
+F palm_lat -0.4072
+F palm_h_rel -0.44507
+F palm_dist_body 1.2204
+F forearm_vert_L 151.40065
+F upperarm_vert_L 159.99919
+F elbow_torso_L 0.59032
+F forearm_vert_R 154.74522
+F upperarm_vert_R 148.27303
+F elbow_torso_R 0.63585
+F forearm_vert_mean 153.07294
+F shoulder_h_L -0.46895
+F shoulder_h_R -0.38629
+F shoulder_asym -0.08516
+F knee_asym 15.66499
+F hip_asym 5.61687
+F elbow_asym 11.33956
+F hand_h_asym -0.15458
+F stance_w 0.80251
+F grip_w 1.2926
+F neck_over_ankle 1.15885
+F hip_height_rel 0.77158
+F hip_below_knee 0.55404
+F sh_over_hip_fwd 0.86641
+F palm_head_dist 1.10276
+F palm_h_sh -1.21625
+F ear_shoulder_gap -0.12263
+F knee_gap 1.75099
+F knee_elbow_dist 0.87601
+F knee_h_L -0.49757
+F knee_lat_L 0.34874
+F elbow_h_L -0.602
+F elbow_wrist_h_L 0.59171
+F knee_h_R -0.61051
+F knee_lat_R 0.37569
+F elbow_h_R -0.56803
+F elbow_wrist_h_R 0.5407
+F ankle_mean 120.75261
+F ankle_minside 119.08585
+F ankle_maxside 122.41937
+F ankle_y_minside -50.21093
+F ankle_y_maxside -49.85695
+F elbow_h_mean -0.58502
+F elbow_h_minside -0.602
+F elbow_h_maxside -0.56803
+F elbow_torso_mean 0.61308
+F elbow_torso_minside 0.59032
+F elbow_torso_maxside 0.63585
+F elbow_wrist_h_mean 0.5662
+F elbow_wrist_h_minside 0.5407
+F elbow_wrist_h_maxside 0.59171
+F foot_pitch_mean -74.80531
+F foot_pitch_minside -80.94667
+F foot_pitch_maxside -68.66394
+F foot_y_minside -61.86072
+F foot_y_maxside -61.20277
+F forearm_vert_minside 151.40065
+F forearm_vert_maxside 154.74522
+F hip_minside 71.96416
+F hip_maxside 77.58103
+F knee_fwd_mean 0.87403
+F knee_fwd_minside 0.86525
+F knee_fwd_maxside 0.88281
+F knee_h_mean -0.55404
+F knee_h_minside -0.61051
+F knee_h_maxside -0.49757
+F knee_lat_mean 0.36222
+F knee_lat_minside 0.34874
+F knee_lat_maxside 0.37569
+F knee_out_minside 0.11018
+F knee_out_maxside 0.20364
+F kneefoot_minside 98.41782
+F kneefoot_maxside 143.78882
+F shoulder_mean 104.96942
+F shoulder_minside 96.16783
+F shoulder_maxside 113.771
+F shoulder_h_mean -0.42762
+F shoulder_h_minside -0.46895
+F shoulder_h_maxside -0.38629
+F upperarm_vert_mean 154.13611
+F upperarm_vert_minside 148.27303
+F upperarm_vert_maxside 159.99919
+F wrist_mean 135.79016
+F wrist_minside 134.57242
+F wrist_maxside 137.0079
+END
+CASE D33-5-551 A 0
+J Nose 54.60172 -5.26423 35.54181
+J LEye 57.62192 -7.66758 37.41127
+J REye 58.40142 -6.73398 34.84284
+J LEar 53.74836 -17.7434 38.2627
+J REar 58.58027 -12.89246 26.58533
+J LShoulder 32.3149 -21.39359 37.33905
+J RShoulder 47.59707 -10.0981 13.61588
+J LElbow 6.88982 -12.46817 32.67723
+J RElbow 24.23961 -2.98251 2.51448
+J LWrist 5.19017 6.122 19.75169
+J RWrist 11.47818 10.77248 -1.45386
+J LHip -5.59388 -5.18078 7.73025
+J RHip 5.67119 5.16408 -7.81825
+J LKnee -29.77202 31.37193 11.94155
+J RKnee -10.68889 43.80695 -21.06424
+J LAnkle -39.79505 -7.33199 -9.34113
+J RAnkle -5.30957 16.839 -43.73738
+J Neck 39.95598 -15.74584 25.47747
+J LPalm 4.45121 11.45536 20.46393
+J RPalm 7.09686 13.27 -2.03835
+J LFoot -56.34796 -14.54621 -23.38753
+J RFoot -14.39037 16.10738 -60.29183
+F knee_L 50.73748
+F knee_R 58.05623
+F hip_L 128.2798
+F hip_R 135.72658
+F elbow_L 115.71294
+F elbow_R 148.79997
+F shoulder_L 26.09966
+F shoulder_R 3.02485
+F ankle_L 135.89935
+F ankle_R 120.93709
+F wrist_L 137.69083
+F wrist_R 161.96956
+F knee_mean 54.39686
+F hip_mean 132.00319
+F elbow_mean 132.25645
+F knee_minside 50.73748
+F knee_maxside 58.05623
+F elbow_minside 115.71294
+F elbow_maxside 148.79997
+F torso_incl 108.37463
+F torso_pitch -108.40362
+F torso_roll -170.07895
+F head_pitch 70.86919
+F head_yaw 99.30428
+F face_vs_torso 105.3938
+F face_vs_forward 93.03728
+F kneefoot_L 155.53513
+F foot_pitch_L -18.38205
+F ankle_y_L -7.33199
+F foot_y_L -14.54621
+F knee_out_L 3.22977
+F knee_fwd_L -0.4549
+F kneefoot_R 137.90646
+F foot_pitch_R -2.21901
+F ankle_y_R 16.839
+F foot_y_R 16.10738
+F knee_out_R -1.87691
+F knee_fwd_R -0.25101
+F kneefoot_mean 146.72079
+F knee_out_mean 0.67643
+F ankle_y_mean 4.75351
+F foot_y_mean 0.78058
+F palm_fwd_hip -0.20182
+F palm_fwd_knee -0.58368
+F palm_fwd_ankle -0.87963
+F palm_lat 0.13591
+F palm_dist_body 0.21812
+F forearm_vert_L 35.04099
+F upperarm_vert_L 70.95063
+F elbow_torso_L 0.23701
+F forearm_vert_R 44.17441
+F upperarm_vert_R 74.61611
+F elbow_torso_R 0.02859
+F forearm_vert_mean 39.6077
+F shoulder_h_L -0.42836
+F shoulder_h_R -0.2021
+F shoulder_asym -0.37161
+F knee_asym -7.31874
+F hip_asym -7.44678
+F elbow_asym -33.08703
+F hand_h_asym -0.03635
+F stance_w 2.49311
+F grip_w 0.74779
+F sh_over_hip_fwd -0.94741
+F palm_head_dist 1.24191
+F palm_h_sh 0.56303
+F ear_shoulder_gap 0.00857
+F knee_gap 1.83871
+F knee_elbow_dist 1.21775
+F knee_lat_L 0.80678
+F elbow_h_L 0.17878
+F elbow_wrist_h_L -0.37237
+F knee_lat_R 0.05172
+F elbow_h_R 0.14253
+F elbow_wrist_h_R -0.27552
+F ankle_mean 128.41821
+F ankle_minside 120.93709
+F ankle_maxside 135.89935
+F ankle_y_minside -7.33199
+F ankle_y_maxside 16.839
+F elbow_h_mean 0.16065
+F elbow_h_minside 0.14253
+F elbow_h_maxside 0.17878
+F elbow_torso_mean 0.1328
+F elbow_torso_minside 0.02859
+F elbow_torso_maxside 0.23701
+F elbow_wrist_h_mean -0.32394
+F elbow_wrist_h_minside -0.37237
+F elbow_wrist_h_maxside -0.27552
+F foot_pitch_mean -10.30053
+F foot_pitch_minside -18.38205
+F foot_pitch_maxside -2.21901
+F foot_y_minside -14.54621
+F foot_y_maxside 16.10738
+F forearm_vert_minside 35.04099
+F forearm_vert_maxside 44.17441
+F hip_minside 128.2798
+F hip_maxside 135.72658
+F knee_fwd_mean -0.35295
+F knee_fwd_minside -0.4549
+F knee_fwd_maxside -0.25101
+F knee_lat_mean 0.42925
+F knee_lat_minside 0.05172
+F knee_lat_maxside 0.80678
+F knee_out_minside -1.87691
+F knee_out_maxside 3.22977
+F kneefoot_minside 137.90646
+F kneefoot_maxside 155.53513
+F shoulder_mean 14.56226
+F shoulder_minside 3.02485
+F shoulder_maxside 26.09966
+F shoulder_h_mean -0.31523
+F shoulder_h_minside -0.42836
+F shoulder_h_maxside -0.2021
+F upperarm_vert_mean 72.78337
+F upperarm_vert_minside 70.95063
+F upperarm_vert_maxside 74.61611
+F wrist_mean 149.8302
+F wrist_minside 137.69083
+F wrist_maxside 161.96956
+END
+CASE D12-1-417 D 0
+J Nose -1.66329 64.01981 23.11794
+J LEye -0.31141 67.66454 22.6671
+J REye -2.8724 67.63671 21.18417
+J LEar 8.08372 65.69472 16.7573
+J REar -3.51877 66.60158 10.44506
+J LShoulder 13.54902 46.73664 18.6149
+J RShoulder -6.52192 49.59144 -2.29581
+J LElbow 9.31291 20.84104 23.40668
+J RElbow -13.71628 22.93086 -8.16607
+J LWrist 1.84501 1.81859 32.24558
+J RWrist -25.95629 2.12342 0.39791
+J LHip 8.39765 -0.65125 6.5816
+J RHip -8.36453 0.70901 -6.74774
+J LKnee 6.06968 -41.13231 6.10829
+J RKnee -7.18585 -38.01371 -8.71408
+J LAnkle 12.09054 -75.66241 -2.02216
+J RAnkle 1.10902 -76.02995 -18.03345
+J Neck 3.51355 48.16404 8.15955
+J LPalm -1.69511 -5.57745 36.78278
+J RPalm -28.6409 -5.58057 2.59119
+J LFoot 7.21929 -86.23801 9.58862
+J RFoot -10.08894 -85.06321 -10.00991
+F knee_L 161.99695
+F knee_R 165.14713
+F hip_L 166.1967
+F hip_R 175.48177
+F elbow_L 162.55536
+F elbow_R 145.02322
+F shoulder_L 24.70736
+F shoulder_R 14.48463
+F ankle_L 114.08457
+F ankle_R 105.46471
+F wrist_L 173.30545
+F wrist_R 168.36055
+F knee_mean 163.57204
+F hip_mean 170.83923
+F elbow_mean 153.78929
+F knee_minside 161.99695
+F knee_maxside 165.14713
+F elbow_minside 145.02322
+F elbow_maxside 162.55536
+F torso_incl 10.53732
+F torso_pitch 5.07518
+F torso_roll 9.28247
+F head_pitch -11.67241
+F head_yaw 15.97235
+F face_vs_torso 94.20901
+F face_vs_forward 19.69273
+F kneefoot_L 13.76091
+F foot_pitch_L -40.02752
+F ankle_y_L -75.66241
+F foot_y_L -86.23801
+F knee_out_L -0.01041
+F knee_fwd_L 0.28101
+F kneefoot_R 12.70646
+F foot_pitch_R -33.25427
+F ankle_y_R -76.02995
+F foot_y_R -85.06321
+F knee_out_R 0.00638
+F knee_fwd_R 0.31134
+F kneefoot_mean 13.23368
+F knee_out_mean -0.00201
+F ankle_y_mean -75.84618
+F foot_y_mean -85.65061
+F palm_fwd_hip 0.50908
+F palm_fwd_knee 0.52127
+F palm_fwd_ankle 0.75174
+F palm_lat 0.01442
+F palm_h_rel 0.56662
+F palm_dist_body 0.50915
+F forearm_vert_L 148.68793
+F upperarm_vert_L 166.12657
+F elbow_torso_L 0.22678
+F forearm_vert_R 144.32384
+F upperarm_vert_R 160.79768
+F elbow_torso_R 0.14376
+F forearm_vert_mean 146.50589
+F shoulder_h_L 0.95398
+F shoulder_h_R 1.01229
+F shoulder_asym -0.09802
+F knee_asym -3.15018
+F hip_asym -9.28506
+F elbow_asym 17.53214
+F hand_h_asym 6e-05
+F stance_w 0.90492
+F grip_w 1.49472
+F neck_over_ankle 0.21018
+F hip_height_rel 0.9871
+F hip_below_knee 0.5152
+F sh_over_hip_fwd 0.08731
+F palm_head_dist 1.51284
+F palm_h_sh -1.09767
+F ear_shoulder_gap 0.36732
+F knee_gap 0.93797
+F knee_elbow_dist 1.25194
+F knee_h_L -0.53549
+F knee_lat_L -0.09864
+F elbow_h_L -0.5289
+F elbow_wrist_h_L 0.38852
+F knee_h_R -0.49491
+F knee_lat_R 0.01404
+F elbow_h_R -0.54453
+F elbow_wrist_h_R 0.42498
+F ankle_mean 109.77464
+F ankle_minside 105.46471
+F ankle_maxside 114.08457
+F ankle_y_minside -76.02995
+F ankle_y_maxside -75.66241
+F elbow_h_mean -0.53672
+F elbow_h_minside -0.54453
+F elbow_h_maxside -0.5289
+F elbow_torso_mean 0.18527
+F elbow_torso_minside 0.14376
+F elbow_torso_maxside 0.22678
+F elbow_wrist_h_mean 0.40675
+F elbow_wrist_h_minside 0.38852
+F elbow_wrist_h_maxside 0.42498
+F foot_pitch_mean -36.64089
+F foot_pitch_minside -40.02752
+F foot_pitch_maxside -33.25427
+F foot_y_minside -86.23801
+F foot_y_maxside -85.06321
+F forearm_vert_minside 144.32384
+F forearm_vert_maxside 148.68793
+F hip_minside 166.1967
+F hip_maxside 175.48177
+F knee_fwd_mean 0.29617
+F knee_fwd_minside 0.28101
+F knee_fwd_maxside 0.31134
+F knee_h_mean -0.5152
+F knee_h_minside -0.53549
+F knee_h_maxside -0.49491
+F knee_lat_mean -0.0423
+F knee_lat_minside -0.09864
+F knee_lat_maxside 0.01404
+F knee_out_minside -0.01041
+F knee_out_maxside 0.00638
+F kneefoot_minside 12.70646
+F kneefoot_maxside 13.76091
+F shoulder_mean 19.596
+F shoulder_minside 14.48463
+F shoulder_maxside 24.70736
+F shoulder_h_mean 0.98314
+F shoulder_h_minside 0.95398
+F shoulder_h_maxside 1.01229
+F upperarm_vert_mean 163.46213
+F upperarm_vert_minside 160.79768
+F upperarm_vert_maxside 166.12657
+F wrist_mean 170.83301
+F wrist_minside 168.36055
+F wrist_maxside 173.30545
+END
+CASE D10-7-175 D 0
+J Nose -2.84032 68.98964 16.09547
+J LEye -0.53809 72.36687 16.69998
+J REye -2.50573 72.63953 14.60651
+J LEar 9.04796 68.5536 13.54596
+J REar -0.29838 70.71698 4.67272
+J LShoulder 16.97223 47.9076 14.17272
+J RShoulder -4.94197 51.02826 -7.31798
+J LElbow 15.76439 22.62663 14.85669
+J RElbow -5.51862 26.40936 -3.99977
+J LWrist -4.93859 24.74736 14.60235
+J RWrist -13.67336 23.98739 16.10426
+J LHip 8.96007 -0.27531 6.24202
+J RHip -8.96923 0.34361 -6.3353
+J LKnee 8.88166 -41.34902 1.40912
+J RKnee -4.39616 -40.27679 -11.81409
+J LAnkle 17.29757 -76.1892 -8.86626
+J RAnkle 2.84098 -76.64658 -23.05803
+J Neck 6.01513 49.46793 3.42737
+J LPalm -12.44695 25.64865 16.74578
+J RPalm -15.47203 22.66326 19.8569
+J LFoot 11.53017 -85.03666 2.78806
+J RFoot -8.03709 -85.24586 -14.3525
+F knee_L 163.69382
+F knee_R 169.63193
+F hip_L 170.42406
+F hip_R 165.99846
+F elbow_L 86.86899
+F elbow_R 103.97955
+F shoulder_L 12.67414
+F shoulder_R 7.30073
+F ankle_L 103.80745
+F ankle_R 102.39133
+F wrist_L 163.44588
+F wrist_R 168.20464
+F knee_mean 166.66287
+F hip_mean 168.21126
+F elbow_mean 95.42427
+F knee_minside 163.69382
+F knee_maxside 169.63193
+F elbow_minside 86.86899
+F elbow_maxside 103.97955
+F torso_incl 8.00315
+F torso_pitch -0.71045
+F torso_roll 7.97235
+F head_pitch -3.67834
+F head_yaw -10.87423
+F face_vs_torso 95.83556
+F face_vs_forward 11.4724
+F kneefoot_L 12.9892
+F foot_pitch_L -34.23139
+F ankle_y_L -76.1892
+F foot_y_L -85.03666
+F knee_out_L -0.02361
+F knee_fwd_L 0.35523
+F kneefoot_R 18.56304
+F foot_pitch_R -31.68306
+F ankle_y_R -76.64658
+F foot_y_R -85.24586
+F knee_out_R -0.00707
+F knee_fwd_R 0.3448
+F kneefoot_mean 15.77612
+F knee_out_mean -0.01534
+F ankle_y_mean -76.41789
+F foot_y_mean -85.14127
+F palm_fwd_hip 0.46143
+F palm_fwd_knee 0.57184
+F palm_fwd_ankle 0.83833
+F palm_lat -0.02876
+F palm_h_rel 0.79893
+F palm_dist_body 0.46178
+F forearm_vert_L 84.15169
+F upperarm_vert_L 176.85732
+F elbow_torso_L 0.11226
+F forearm_vert_R 96.36996
+F upperarm_vert_R 172.21013
+F elbow_torso_R 0.06209
+F forearm_vert_mean 90.26083
+F shoulder_h_L 0.959
+F shoulder_h_R 1.02152
+F shoulder_asym -0.10115
+F knee_asym -5.93811
+F hip_asym 4.4256
+F elbow_asym -17.11056
+F hand_h_asym 0.0598
+F stance_w 0.92487
+F grip_w 0.17073
+F neck_over_ankle 0.23111
+F hip_height_rel 0.97072
+F hip_below_knee 0.51864
+F sh_over_hip_fwd -0.01228
+F palm_head_dist 0.9994
+F palm_h_sh -0.50705
+F ear_shoulder_gap 0.40399
+F knee_gap 0.85669
+F knee_elbow_dist 1.31681
+F knee_h_L -0.52545
+F knee_lat_L -0.12961
+F elbow_h_L -0.50643
+F elbow_wrist_h_L -0.04248
+F knee_h_R -0.51183
+F knee_lat_R -0.02727
+F elbow_h_R -0.49317
+F elbow_wrist_h_R 0.04852
+F ankle_mean 103.09939
+F ankle_minside 102.39133
+F ankle_maxside 103.80745
+F ankle_y_minside -76.64658
+F ankle_y_maxside -76.1892
+F elbow_h_mean -0.4998
+F elbow_h_minside -0.50643
+F elbow_h_maxside -0.49317
+F elbow_torso_mean 0.08718
+F elbow_torso_minside 0.06209
+F elbow_torso_maxside 0.11226
+F elbow_wrist_h_mean 0.00302
+F elbow_wrist_h_minside -0.04248
+F elbow_wrist_h_maxside 0.04852
+F foot_pitch_mean -32.95722
+F foot_pitch_minside -34.23139
+F foot_pitch_maxside -31.68306
+F foot_y_minside -85.24586
+F foot_y_maxside -85.03666
+F forearm_vert_minside 84.15169
+F forearm_vert_maxside 96.36996
+F hip_minside 165.99846
+F hip_maxside 170.42406
+F knee_fwd_mean 0.35002
+F knee_fwd_minside 0.3448
+F knee_fwd_maxside 0.35523
+F knee_h_mean -0.51864
+F knee_h_minside -0.52545
+F knee_h_maxside -0.51183
+F knee_lat_mean -0.07844
+F knee_lat_minside -0.12961
+F knee_lat_maxside -0.02727
+F knee_out_minside -0.02361
+F knee_out_maxside -0.00707
+F kneefoot_minside 12.9892
+F kneefoot_maxside 18.56304
+F shoulder_mean 9.98744
+F shoulder_minside 7.30073
+F shoulder_maxside 12.67414
+F shoulder_h_mean 0.99026
+F shoulder_h_minside 0.959
+F shoulder_h_maxside 1.02152
+F upperarm_vert_mean 174.53372
+F upperarm_vert_minside 172.21013
+F upperarm_vert_maxside 176.85732
+F wrist_mean 165.82526
+F wrist_minside 163.44588
+F wrist_maxside 168.20464
+END
+CASE D08-7-363 E 0
+J Nose -8.60938 71.29185 -3.96089
+J LEye -8.74467 73.49449 -0.74891
+J REye -6.57582 73.77287 -3.10619
+J LEar -6.30213 66.99419 7.91369
+J REar 2.0595 68.48194 -1.53403
+J LShoulder -12.2065 50.48364 14.65721
+J RShoulder 12.38651 54.74667 -7.31846
+J LElbow -32.38663 53.68497 13.84145
+J RElbow 9.17701 58.5072 -28.49435
+J LWrist -38.92474 73.7875 2.75615
+J RWrist 3.92485 78.07798 -47.06059
+J LHip -6.67863 -0.71237 7.04827
+J RHip 6.66881 0.79266 -7.18439
+J LKnee -12.17421 -41.0253 -2.07022
+J RKnee 5.41135 -36.70746 -20.82476
+J LAnkle -4.52682 -74.73812 1.24617
+J RAnkle 9.60972 -73.41198 -22.13671
+J Neck 0.09 52.61516 3.66938
+J LPalm -39.0885 77.10699 2.74847
+J RPalm 4.8354 81.6337 -50.78993
+J LFoot -9.98161 -83.24382 0.97795
+J RFoot 4.21736 -81.90521 -23.80446
+F knee_L 152.70761
+F knee_R 160.24911
+F hip_L 165.67523
+F hip_R 159.47791
+F elbow_L 114.87816
+F elbow_R 144.01985
+F shoulder_L 104.65205
+F shoulder_R 99.1386
+F ankle_L 134.06763
+F ankle_R 140.59586
+F wrist_L 148.84135
+F wrist_R 158.76817
+F knee_mean 156.47836
+F hip_mean 162.57657
+F elbow_mean 129.44901
+F knee_minside 152.70761
+F knee_maxside 160.24911
+F elbow_minside 114.87816
+F elbow_maxside 144.01985
+F torso_incl 4.06751
+F torso_pitch -2.85926
+F torso_roll 2.89775
+F head_pitch 20.20661
+F head_yaw -4.61988
+F face_vs_torso 72.89529
+F face_vs_forward 20.70647
+F kneefoot_L 20.6296
+F foot_pitch_L -57.2961
+F ankle_y_L -74.73812
+F foot_y_L -83.24382
+F knee_out_L 0.00289
+F knee_fwd_L 0.22595
+F foot_pitch_R -56.39306
+F ankle_y_R -73.41198
+F foot_y_R -81.90521
+F knee_out_R 0.03381
+F knee_fwd_R 0.05856
+F kneefoot_mean 20.6296
+F knee_out_mean 0.01835
+F ankle_y_mean -74.07505
+F foot_y_mean -82.57452
+F palm_fwd_hip 0.54781
+F palm_fwd_knee 0.3534
+F palm_fwd_ankle 0.44837
+F palm_lat -0.17319
+F palm_h_rel 1.21119
+F palm_dist_body 0.55861
+F forearm_vert_L 32.62761
+F upperarm_vert_L 80.99307
+F elbow_torso_L 0.38007
+F forearm_vert_R 44.59318
+F upperarm_vert_R 80.04151
+F elbow_torso_R 0.3957
+F forearm_vert_mean 38.6104
+F shoulder_h_L 0.95704
+F shoulder_h_R 1.03792
+F shoulder_asym -0.12819
+F knee_asym -7.5415
+F hip_asym 6.19733
+F elbow_asym -29.14169
+F hand_h_asym -0.08588
+F stance_w 1.39786
+F grip_w 2.08684
+F neck_over_ankle -0.10487
+F hip_height_rel 0.98796
+F hip_below_knee 0.51863
+F sh_over_hip_fwd -0.04982
+F palm_head_dist 0.6295
+F palm_h_sh 0.50761
+F ear_shoulder_gap 0.28692
+F knee_gap 1.33212
+F knee_elbow_dist 1.81372
+F knee_h_L -0.5474
+F knee_lat_L -0.14778
+F elbow_h_L 0.06074
+F elbow_wrist_h_L -0.3814
+F knee_h_R -0.48985
+F knee_lat_R 0.46446
+F elbow_h_R 0.07135
+F elbow_wrist_h_R -0.37131
+F ankle_mean 137.33174
+F ankle_minside 134.06763
+F ankle_maxside 140.59586
+F ankle_y_minside -74.73812
+F ankle_y_maxside -73.41198
+F elbow_h_mean 0.06604
+F elbow_h_minside 0.06074
+F elbow_h_maxside 0.07135
+F elbow_torso_mean 0.38789
+F elbow_torso_minside 0.38007
+F elbow_torso_maxside 0.3957
+F elbow_wrist_h_mean -0.37635
+F elbow_wrist_h_minside -0.3814
+F elbow_wrist_h_maxside -0.37131
+F foot_pitch_mean -56.84458
+F foot_pitch_minside -57.2961
+F foot_pitch_maxside -56.39306
+F foot_y_minside -83.24382
+F foot_y_maxside -81.90521
+F forearm_vert_minside 32.62761
+F forearm_vert_maxside 44.59318
+F hip_minside 159.47791
+F hip_maxside 165.67523
+F knee_fwd_mean 0.14226
+F knee_fwd_minside 0.05856
+F knee_fwd_maxside 0.22595
+F knee_h_mean -0.51863
+F knee_h_minside -0.5474
+F knee_h_maxside -0.48985
+F knee_lat_mean 0.15834
+F knee_lat_minside -0.14778
+F knee_lat_maxside 0.46446
+F knee_out_minside 0.00289
+F knee_out_maxside 0.03381
+F kneefoot_minside 20.6296
+F kneefoot_maxside 20.6296
+F shoulder_mean 101.89532
+F shoulder_minside 99.1386
+F shoulder_maxside 104.65205
+F shoulder_h_mean 0.99748
+F shoulder_h_minside 0.95704
+F shoulder_h_maxside 1.03792
+F upperarm_vert_mean 80.51729
+F upperarm_vert_minside 80.04151
+F upperarm_vert_maxside 80.99307
+F wrist_mean 153.80476
+F wrist_minside 148.84135
+F wrist_maxside 158.76817
+END
+CASE D08-2-451 E 0
+J Nose -20.78461 58.05886 -15.75031
+J LEye -23.25668 60.30692 -11.97433
+J REye -20.80683 61.38713 -14.17803
+J LEar -20.00261 58.59084 -0.32826
+J REar -11.07586 63.58876 -9.38132
+J LShoulder -17.62904 44.18262 10.41974
+J RShoulder 6.08731 49.51738 -11.80524
+J LElbow -19.53898 18.15358 14.25463
+J RElbow 11.92344 24.82335 -19.32288
+J LWrist -27.0405 -3.29408 2.59046
+J RWrist 0.32904 9.09852 -30.89113
+J LHip -6.04928 -1.23385 5.42715
+J RHip 6.04418 1.32348 -5.58322
+J LKnee -11.16973 -39.87885 -0.34137
+J RKnee 7.70011 -38.85218 -13.12504
+J LAnkle -7.88628 -77.15538 -3.83152
+J RAnkle 7.77528 -76.44003 -16.95694
+J Neck -5.77086 46.85 -0.69275
+J LPalm -30.23338 -11.03256 2.18751
+J RPalm -1.44718 4.81307 -33.35783
+J LFoot -15.2762 -81.27859 -2.01291
+J RFoot 0.54217 -80.24019 -16.72712
+F knee_L 167.13449
+F knee_R 174.70879
+F hip_L 158.20114
+F hip_R 161.86095
+F elbow_L 141.57938
+F elbow_R 132.71494
+F shoulder_L 23.42665
+F shoulder_R 27.27078
+F ankle_L 112.23309
+F ankle_R 117.25206
+F wrist_L 155.39749
+F wrist_R 167.61597
+F knee_mean 170.92163
+F hip_mean 160.03104
+F elbow_mean 137.14716
+F knee_minside 167.13449
+F knee_maxside 174.70879
+F elbow_minside 132.71494
+F elbow_maxside 141.57938
+F torso_incl 7.06514
+F torso_pitch 5.29502
+F torso_roll 4.70415
+F head_pitch -14.07122
+F head_yaw -16.60865
+F face_vs_torso 100.27829
+F face_vs_forward 21.63901
+F foot_pitch_L -28.44824
+F ankle_y_L -77.15538
+F foot_y_L -81.27859
+F knee_out_L 0.03116
+F knee_fwd_L -0.00985
+F foot_pitch_R -27.70481
+F ankle_y_R -76.44003
+F foot_y_R -80.24019
+F knee_out_R 0.02143
+F knee_fwd_R -0.07365
+F knee_out_mean 0.0263
+F ankle_y_mean -76.79771
+F foot_y_mean -80.75939
+F palm_fwd_hip 0.4692
+F palm_fwd_knee 0.34013
+F palm_fwd_ankle 0.3067
+F palm_lat 0.0386
+F palm_h_rel 0.59595
+F palm_dist_body 0.46997
+F forearm_vert_L 147.11311
+F upperarm_vert_L 170.65335
+F elbow_torso_L 0.22251
+F forearm_vert_R 133.83354
+F upperarm_vert_R 158.92326
+F elbow_torso_R 0.24954
+F forearm_vert_mean 140.47333
+F shoulder_h_L 0.93585
+F shoulder_h_R 1.04896
+F shoulder_asym -0.16197
+F knee_asym -7.5743
+F hip_asym -3.65981
+F elbow_asym 8.86444
+F hand_h_asym -0.33597
+F stance_w 1.23519
+F grip_w 1.46965
+F neck_over_ankle -0.04288
+F hip_height_rel 0.99077
+F hip_below_knee 0.50814
+F sh_over_hip_fwd 0.09198
+F palm_head_dist 1.38012
+F palm_h_sh -1.05929
+F ear_shoulder_gap 0.30193
+F knee_gap 1.37828
+F knee_elbow_dist 1.28113
+F knee_h_L -0.51476
+F knee_lat_L -0.00587
+F elbow_h_L -0.55189
+F elbow_wrist_h_L 0.45475
+F knee_h_R -0.50152
+F knee_lat_R 0.38069
+F elbow_h_R -0.52359
+F elbow_wrist_h_R 0.33341
+F ankle_mean 114.74257
+F ankle_minside 112.23309
+F ankle_maxside 117.25206
+F ankle_y_minside -77.15538
+F ankle_y_maxside -76.44003
+F elbow_h_mean -0.53774
+F elbow_h_minside -0.55189
+F elbow_h_maxside -0.52359
+F elbow_torso_mean 0.23602
+F elbow_torso_minside 0.22251
+F elbow_torso_maxside 0.24954
+F elbow_wrist_h_mean 0.39408
+F elbow_wrist_h_minside 0.33341
+F elbow_wrist_h_maxside 0.45475
+F foot_pitch_mean -28.07652
+F foot_pitch_minside -28.44824
+F foot_pitch_maxside -27.70481
+F foot_y_minside -81.27859
+F foot_y_maxside -80.24019
+F forearm_vert_minside 133.83354
+F forearm_vert_maxside 147.11311
+F hip_minside 158.20114
+F hip_maxside 161.86095
+F knee_fwd_mean -0.04175
+F knee_fwd_minside -0.07365
+F knee_fwd_maxside -0.00985
+F knee_h_mean -0.50814
+F knee_h_minside -0.51476
+F knee_h_maxside -0.50152
+F knee_lat_mean 0.18741
+F knee_lat_minside -0.00587
+F knee_lat_maxside 0.38069
+F knee_out_minside 0.02143
+F knee_out_maxside 0.03116
+F shoulder_mean 25.34872
+F shoulder_minside 23.42665
+F shoulder_maxside 27.27078
+F shoulder_h_mean 0.99241
+F shoulder_h_minside 0.93585
+F shoulder_h_maxside 1.04896
+F upperarm_vert_mean 164.7883
+F upperarm_vert_minside 158.92326
+F upperarm_vert_maxside 170.65335
+F wrist_mean 161.50673
+F wrist_minside 155.39749
+F wrist_maxside 167.61597
+END
+CASE D21-4-754 D 0
+J Nose 16.74269 63.70771 -10.89216
+J LEye 13.42072 67.8022 -9.45929
+J REye 15.5735 66.75637 -7.06743
+J LEar 1.57497 67.15209 -6.9242
+J REar 10.34186 62.47826 4.9715
+J LShoulder -4.97609 53.49327 -13.27164
+J RShoulder 13.47319 48.87901 13.30622
+J LElbow 11.87829 66.96391 -27.59842
+J RElbow 34.03609 54.82793 12.36966
+J LWrist 30.30473 84.2153 -33.23346
+J RWrist 46.62886 70.8253 3.06789
+J LHip -5.23849 -0.12758 -9.18722
+J RHip 5.21082 0.12522 9.04981
+J LKnee -5.83053 -40.55106 -20.59813
+J RKnee 23.80479 -33.70018 2.33673
+J LAnkle -4.53142 -73.92309 -29.19819
+J RAnkle 35.79041 -71.3164 -1.04339
+J Neck 4.24855 51.18614 0.01729
+J LPalm 32.51273 87.42705 -33.47922
+J RPalm 48.24137 74.31687 4.07295
+J LFoot 4.17689 -78.67437 -30.01747
+J RFoot 47.16647 -74.38947 2.67502
+F knee_L 176.75633
+F knee_R 167.90248
+F hip_L 159.87457
+F hip_R 141.60788
+F elbow_L 158.60617
+F elbow_R 139.15747
+F shoulder_L 124.31848
+F shoulder_R 115.38787
+F ankle_L 121.02274
+F ankle_R 119.26885
+F wrist_L 164.81996
+F wrist_R 138.66914
+F knee_mean 172.32941
+F hip_mean 150.74123
+F elbow_mean 148.88182
+F knee_minside 167.90248
+F knee_maxside 176.75633
+F elbow_minside 139.15747
+F elbow_maxside 158.60617
+F torso_incl 4.76103
+F torso_pitch 4.08488
+F torso_roll -2.45393
+F head_pitch -4.32303
+F head_yaw 12.78607
+F face_vs_torso 90.87878
+F face_vs_forward 13.48557
+F kneefoot_L 103.96457
+F foot_pitch_L -28.51098
+F ankle_y_L -73.92309
+F foot_y_L -78.67437
+F knee_out_L 0.01147
+F knee_fwd_L -0.15666
+F kneefoot_R 146.15015
+F foot_pitch_R -14.40056
+F ankle_y_R -71.3164
+F foot_y_R -74.38947
+F knee_out_R 0.00469
+F knee_fwd_R -0.30486
+F kneefoot_mean 125.05736
+F knee_out_mean 0.00808
+F ankle_y_mean -72.61974
+F foot_y_mean -76.53192
+F palm_fwd_hip 0.82394
+F palm_fwd_knee 0.58418
+F palm_fwd_ankle 0.414
+F palm_lat -0.22589
+F palm_h_rel 1.23978
+F palm_dist_body 0.83638
+F forearm_vert_L 48.16189
+F upperarm_vert_L 58.66024
+F elbow_torso_L 0.39777
+F forearm_vert_R 44.38153
+F upperarm_vert_R 73.88052
+F elbow_torso_R 0.39002
+F forearm_vert_mean 46.27171
+F shoulder_h_L 1.04147
+F shoulder_h_R 0.95163
+F shoulder_asym 0.14119
+F knee_asym 8.85385
+F hip_asym 18.26669
+F elbow_asym 19.4487
+F hand_h_asym 0.25524
+F stance_w 2.3429
+F grip_w 1.30877
+F neck_over_ankle -0.22478
+F hip_height_rel 0.93806
+F hip_below_knee 0.47956
+F sh_over_hip_fwd 0.07117
+F palm_head_dist 0.78623
+F palm_h_sh 0.57794
+F ear_shoulder_gap 0.26534
+F knee_gap 1.8123
+F knee_elbow_dist 1.74596
+F knee_h_L -0.52381
+F knee_lat_L 0.48502
+F elbow_h_L 0.26226
+F elbow_wrist_h_L -0.33586
+F knee_h_R -0.43531
+F knee_lat_R 0.16267
+F elbow_h_R 0.11582
+F elbow_wrist_h_R -0.31145
+F ankle_mean 120.1458
+F ankle_minside 119.26885
+F ankle_maxside 121.02274
+F ankle_y_minside -73.92309
+F ankle_y_maxside -71.3164
+F elbow_h_mean 0.18904
+F elbow_h_minside 0.11582
+F elbow_h_maxside 0.26226
+F elbow_torso_mean 0.39389
+F elbow_torso_minside 0.39002
+F elbow_torso_maxside 0.39777
+F elbow_wrist_h_mean -0.32365
+F elbow_wrist_h_minside -0.33586
+F elbow_wrist_h_maxside -0.31145
+F foot_pitch_mean -21.45577
+F foot_pitch_minside -28.51098
+F foot_pitch_maxside -14.40056
+F foot_y_minside -78.67437
+F foot_y_maxside -74.38947
+F forearm_vert_minside 44.38153
+F forearm_vert_maxside 48.16189
+F hip_minside 141.60788
+F hip_maxside 159.87457
+F knee_fwd_mean -0.23076
+F knee_fwd_minside -0.30486
+F knee_fwd_maxside -0.15666
+F knee_h_mean -0.47956
+F knee_h_minside -0.52381
+F knee_h_maxside -0.43531
+F knee_lat_mean 0.32384
+F knee_lat_minside 0.16267
+F knee_lat_maxside 0.48502
+F knee_out_minside 0.00469
+F knee_out_maxside 0.01147
+F kneefoot_minside 103.96457
+F kneefoot_maxside 146.15015
+F shoulder_mean 119.85318
+F shoulder_minside 115.38787
+F shoulder_maxside 124.31848
+F shoulder_h_mean 0.99655
+F shoulder_h_minside 0.95163
+F shoulder_h_maxside 1.04147
+F upperarm_vert_mean 66.27038
+F upperarm_vert_minside 58.66024
+F upperarm_vert_maxside 73.88052
+F wrist_mean 151.74455
+F wrist_minside 138.66914
+F wrist_maxside 164.81996
+END
+CASE D04-3-401 E 0
+J Nose 14.97687 60.84206 -18.15257
+J LEye 12.51783 64.29208 -17.22962
+J REye 15.14006 63.77526 -14.90367
+J LEar 2.47331 63.92319 -13.53405
+J REar 13.23098 62.03377 -2.56181
+J LShoulder -9.86198 47.38518 -14.21712
+J RShoulder 14.53291 46.20163 10.12188
+J LElbow -14.66827 23.99955 -17.30692
+J RElbow 17.91216 17.24584 10.48321
+J LWrist -4.86311 8.43279 -23.47095
+J RWrist 25.34114 -4.60177 -0.15781
+J LHip -5.70641 -0.20196 -8.41394
+J RHip 5.70992 0.2579 8.22526
+J LKnee -7.63071 -41.99094 -10.61297
+J RKnee 7.82604 -40.52174 1.11089
+J LAnkle -1.93496 -78.22801 -12.76716
+J RAnkle 9.55929 -77.68276 -0.95101
+J Neck 2.33546 46.7934 -2.04762
+J LPalm -2.43926 2.70831 -24.73246
+J RPalm 27.97147 -11.26577 -2.32724
+J LFoot 7.0001 -82.38641 -11.30267
+J RFoot 17.38961 -83.08977 1.40035
+F knee_L 168.44341
+F knee_R 173.28267
+F hip_L 167.48283
+F hip_R 164.30617
+F elbow_L 135.99329
+F elbow_R 151.95648
+F shoulder_L 21.88125
+F shoulder_R 17.78373
+F ankle_L 122.81849
+F ankle_R 125.03436
+F wrist_L 168.61771
+F wrist_R 171.68193
+F knee_mean 170.86304
+F hip_mean 165.8945
+F elbow_mean 143.97488
+F knee_minside 168.44341
+F knee_maxside 173.28267
+F elbow_minside 135.99329
+F elbow_maxside 151.95648
+F torso_incl 3.72336
+F torso_pitch 3.70635
+F torso_roll 0.3557
+F head_pitch -9.80363
+F head_yaw 20.35813
+F face_vs_torso 96.20406
+F face_vs_forward 22.50506
+F foot_pitch_L -24.66812
+F ankle_y_L -78.22801
+F foot_y_L -82.38641
+F knee_out_L 0.02713
+F knee_fwd_L -0.16098
+F foot_pitch_R -33.47853
+F ankle_y_R -77.68276
+F foot_y_R -83.08977
+F knee_out_R -0.02354
+F knee_fwd_R -0.06967
+F knee_out_mean 0.00179
+F ankle_y_mean -77.95538
+F foot_y_mean -82.73809
+F palm_fwd_hip 0.38678
+F palm_fwd_knee 0.32888
+F palm_fwd_ankle 0.23807
+F palm_lat 0.11187
+F palm_h_rel 0.5906
+F palm_dist_body 0.39544
+F forearm_vert_L 143.3506
+F upperarm_vert_L 166.26996
+F elbow_torso_L 0.18645
+F forearm_vert_R 149.28923
+F upperarm_vert_R 173.30586
+F elbow_torso_R 0.19018
+F forearm_vert_mean 146.31992
+F shoulder_h_L 1.01052
+F shoulder_h_R 0.98526
+F shoulder_asym 0.03433
+F knee_asym -4.83926
+F hip_asym 3.17667
+F elbow_asym -15.9632
+F hand_h_asym 0.29818
+F stance_w 0.81714
+F grip_w 1.16806
+F neck_over_ankle -0.05025
+F hip_height_rel 0.99461
+F hip_below_knee 0.52655
+F sh_over_hip_fwd 0.06464
+F palm_head_dist 1.44372
+F palm_h_sh -1.08979
+F ear_shoulder_gap 0.34536
+F knee_gap 0.96389
+F knee_elbow_dist 1.26718
+F knee_h_L -0.53592
+F knee_lat_L 0.14377
+F elbow_h_L -0.49901
+F elbow_wrist_h_L 0.33217
+F knee_h_R -0.51718
+F knee_lat_R -0.23133
+F elbow_h_R -0.61786
+F elbow_wrist_h_R 0.46619
+F ankle_mean 123.92642
+F ankle_minside 122.81849
+F ankle_maxside 125.03436
+F ankle_y_minside -78.22801
+F ankle_y_maxside -77.68276
+F elbow_h_mean -0.55844
+F elbow_h_minside -0.61786
+F elbow_h_maxside -0.49901
+F elbow_torso_mean 0.18831
+F elbow_torso_minside 0.18645
+F elbow_torso_maxside 0.19018
+F elbow_wrist_h_mean 0.39918
+F elbow_wrist_h_minside 0.33217
+F elbow_wrist_h_maxside 0.46619
+F foot_pitch_mean -29.07332
+F foot_pitch_minside -33.47853
+F foot_pitch_maxside -24.66812
+F foot_y_minside -83.08977
+F foot_y_maxside -82.38641
+F forearm_vert_minside 143.3506
+F forearm_vert_maxside 149.28923
+F hip_minside 164.30617
+F hip_maxside 167.48283
+F knee_fwd_mean -0.11533
+F knee_fwd_minside -0.16098
+F knee_fwd_maxside -0.06967
+F knee_h_mean -0.52655
+F knee_h_minside -0.53592
+F knee_h_maxside -0.51718
+F knee_lat_mean -0.04378
+F knee_lat_minside -0.23133
+F knee_lat_maxside 0.14377
+F knee_out_minside -0.02354
+F knee_out_maxside 0.02713
+F shoulder_mean 19.83249
+F shoulder_minside 17.78373
+F shoulder_maxside 21.88125
+F shoulder_h_mean 0.99789
+F shoulder_h_minside 0.98526
+F shoulder_h_maxside 1.01052
+F upperarm_vert_mean 169.7879
+F upperarm_vert_minside 166.26996
+F upperarm_vert_maxside 173.30586
+F wrist_mean 170.14981
+F wrist_minside 168.61771
+F wrist_maxside 171.68193
+END
+CASE D11-7-242 E 0
+J Nose -42.50296 18.8523 -44.81647
+J LEye -45.15139 20.46856 -43.38163
+J REye -43.28888 21.58996 -44.89054
+J LEar -42.88221 22.46668 -35.28325
+J REar -36.17197 26.58953 -42.34806
+J LShoulder -43.05891 13.68972 -21.62995
+J RShoulder -20.99658 18.41125 -42.86225
+J LElbow -44.34007 -10.34425 -15.3202
+J RElbow -15.68349 -6.20789 -43.1326
+J LWrist -45.60488 -33.54472 -15.83499
+J RWrist -16.8096 -26.60933 -39.71725
+J LHip -7.39191 -0.13502 8.16883
+J RHip 7.31988 0.15953 -8.36833
+J LKnee -30.43406 -29.56352 -0.31455
+J RKnee -4.57428 -28.44834 -15.63489
+J LAnkle -31.91604 -59.36273 -9.12589
+J RAnkle -5.87497 -59.01119 -17.81887
+J Neck -32.02774 16.05049 -32.2461
+J LPalm -46.48712 -39.84834 -15.25616
+J RPalm -16.21251 -29.05232 -41.49832
+J LFoot -41.20618 -67.63725 -10.52526
+J RFoot -13.21935 -66.13255 -20.04027
+F knee_L 145.77251
+F knee_R 158.12462
+F hip_L 68.94088
+F hip_R 87.56048
+F elbow_L 164.04041
+F elbow_R 161.68854
+F shoulder_L 66.83588
+F shoulder_R 60.90852
+F ankle_L 134.43526
+F ankle_R 136.28564
+F wrist_L 171.92293
+F wrist_R 132.44547
+F knee_mean 151.94856
+F hip_mean 78.25068
+F elbow_mean 162.86447
+F knee_minside 145.77251
+F knee_maxside 158.12462
+F elbow_minside 161.68854
+F elbow_maxside 164.04041
+F torso_incl 70.52466
+F torso_pitch 70.49137
+F torso_roll -9.743
+F head_pitch -40.2768
+F head_yaw -21.96581
+F face_vs_torso 62.18402
+F face_vs_forward 44.96432
+F kneefoot_L 108.11327
+F foot_pitch_L -41.37172
+F ankle_y_L -59.36273
+F foot_y_L -67.63725
+F knee_out_L 0.10992
+F knee_fwd_L -0.22385
+F foot_pitch_R -42.86465
+F ankle_y_R -59.01119
+F foot_y_R -66.13255
+F knee_out_R -0.02689
+F knee_fwd_R -0.07902
+F kneefoot_mean 108.11327
+F knee_out_mean 0.04151
+F ankle_y_mean -59.18696
+F foot_y_mean -66.8849
+F palm_fwd_hip 0.87706
+F palm_fwd_knee 0.49695
+F palm_fwd_ankle 0.39937
+F palm_lat -0.01013
+F palm_h_rel 0.32878
+F palm_dist_body 0.87708
+F forearm_vert_L 176.63156
+F upperarm_vert_L 165.00305
+F elbow_torso_L 0.47176
+F forearm_vert_R 170.00304
+F upperarm_vert_R 167.8064
+F elbow_torso_R 0.45649
+F forearm_vert_mean 173.31729
+F shoulder_h_L 0.28433
+F shoulder_h_R 0.38248
+F shoulder_asym -0.1524
+F knee_asym -12.35211
+F hip_asym -18.6196
+F elbow_asym 2.35187
+F hand_h_asym -0.22443
+F stance_w 1.24033
+F grip_w 1.33932
+F neck_over_ankle 0.34895
+F hip_height_rel 0.92678
+F hip_below_knee 0.45429
+F sh_over_hip_fwd 0.94105
+F palm_head_dist 1.25664
+F palm_h_sh -1.04981
+F ear_shoulder_gap 0.17623
+F knee_gap 1.35878
+F knee_elbow_dist 0.58352
+F knee_h_L -0.46302
+F knee_lat_L 0.40555
+F elbow_h_L -0.49962
+F elbow_wrist_h_L 0.48229
+F knee_h_R -0.44556
+F knee_lat_R -0.11188
+F elbow_h_R -0.51178
+F elbow_wrist_h_R 0.4241
+F ankle_mean 135.36044
+F ankle_minside 134.43526
+F ankle_maxside 136.28564
+F ankle_y_minside -59.36273
+F ankle_y_maxside -59.01119
+F elbow_h_mean -0.5057
+F elbow_h_minside -0.51178
+F elbow_h_maxside -0.49962
+F elbow_torso_mean 0.46412
+F elbow_torso_minside 0.45649
+F elbow_torso_maxside 0.47176
+F elbow_wrist_h_mean 0.4532
+F elbow_wrist_h_minside 0.4241
+F elbow_wrist_h_maxside 0.48229
+F foot_pitch_mean -42.11819
+F foot_pitch_minside -42.86465
+F foot_pitch_maxside -41.37172
+F foot_y_minside -67.63725
+F foot_y_maxside -66.13255
+F forearm_vert_minside 170.00304
+F forearm_vert_maxside 176.63156
+F hip_minside 68.94088
+F hip_maxside 87.56048
+F knee_fwd_mean -0.15143
+F knee_fwd_minside -0.22385
+F knee_fwd_maxside -0.07902
+F knee_h_mean -0.45429
+F knee_h_minside -0.46302
+F knee_h_maxside -0.44556
+F knee_lat_mean 0.14683
+F knee_lat_minside -0.11188
+F knee_lat_maxside 0.40555
+F knee_out_minside -0.02689
+F knee_out_maxside 0.10992
+F kneefoot_minside 108.11327
+F kneefoot_maxside 108.11327
+F shoulder_mean 63.8722
+F shoulder_minside 60.90852
+F shoulder_maxside 66.83588
+F shoulder_h_mean 0.3334
+F shoulder_h_minside 0.28433
+F shoulder_h_maxside 0.38248
+F upperarm_vert_mean 166.40472
+F upperarm_vert_minside 165.00305
+F upperarm_vert_maxside 167.8064
+F wrist_mean 152.1842
+F wrist_minside 132.44547
+F wrist_maxside 171.92293
+END
+CASE D21-9-760 D 0
+J Nose 10.76088 66.74541 -11.30148
+J LEye 7.71438 70.24806 -9.54031
+J REye 10.00592 69.55351 -7.50269
+J LEar -2.84045 68.23796 -5.84214
+J REar 6.53343 65.09501 4.50074
+J LShoulder -8.85613 53.11187 -10.82159
+J RShoulder 10.2708 49.38102 13.16336
+J LElbow 6.87363 58.478 -25.1361
+J RElbow 28.64274 48.46335 6.36033
+J LWrist 29.07682 73.90725 -35.28062
+J RWrist 32.96352 63.10653 -11.61885
+J LHip -5.57826 0.17714 -8.23626
+J RHip 5.55358 -0.13722 8.06919
+J LKnee -9.71153 -40.90218 -15.13053
+J RKnee 14.63307 -36.71924 1.06722
+J LAnkle -8.98579 -72.18102 -21.01791
+J RAnkle 15.90961 -73.3013 -4.13257
+J Neck 0.70734 51.24644 1.17089
+J LPalm 34.24398 75.28608 -36.14916
+J RPalm 33.66914 65.31717 -12.79197
+J LFoot -1.62031 -77.69057 -22.0927
+J RFoot 24.08846 -77.38533 -2.28692
+F knee_L 172.93571
+F knee_R 167.96849
+F hip_L 164.63017
+F hip_R 160.26241
+F elbow_L 155.68842
+F elbow_R 114.01361
+F shoulder_L 103.37895
+F shoulder_R 90.3837
+F ankle_L 128.61708
+F ankle_R 115.83216
+F wrist_L 157.7494
+F wrist_R 157.13455
+F knee_mean 170.4521
+F hip_mean 162.44629
+F elbow_mean 134.85101
+F knee_minside 167.96849
+F knee_maxside 172.93571
+F elbow_minside 114.01361
+F elbow_maxside 155.68842
+F torso_incl 1.61701
+F torso_pitch -0.1263
+F torso_roll -1.61218
+F head_pitch 0.32595
+F head_yaw 15.69702
+F face_vs_torso 90.23183
+F face_vs_forward 15.70032
+F foot_pitch_L -36.50823
+F ankle_y_L -72.18102
+F foot_y_L -77.69057
+F knee_out_L 0.01279
+F knee_fwd_L -0.1231
+F foot_pitch_R -25.97035
+F ankle_y_R -73.3013
+F foot_y_R -77.38533
+F knee_out_R 0.01944
+F knee_fwd_R -0.10781
+F knee_out_mean 0.01611
+F ankle_y_mean -72.74117
+F foot_y_mean -77.53795
+F palm_fwd_hip 0.81575
+F palm_fwd_knee 0.69945
+F palm_fwd_ankle 0.62232
+F palm_lat 0.03197
+F palm_h_rel 1.15369
+F palm_dist_body 0.81598
+F forearm_vert_L 57.70451
+F upperarm_vert_L 75.83929
+F elbow_torso_L 0.40188
+F forearm_vert_R 51.62413
+F upperarm_vert_R 92.68184
+F elbow_torso_R 0.39222
+F forearm_vert_mean 54.66432
+F shoulder_h_L 1.036
+F shoulder_h_R 0.9632
+F shoulder_asym 0.12073
+F knee_asym 4.96722
+F hip_asym 4.36777
+F elbow_asym 41.6748
+F hand_h_asym 0.19453
+F stance_w 1.52452
+F grip_w 0.82198
+F neck_over_ankle -0.13507
+F hip_height_rel 0.98027
+F hip_below_knee 0.52314
+F sh_over_hip_fwd -0.0022
+F palm_head_dist 0.78314
+F palm_h_sh 0.37183
+F ear_shoulder_gap 0.3009
+F knee_gap 1.49596
+F knee_elbow_dist 1.68769
+F knee_h_L -0.55132
+F knee_lat_L 0.40639
+F elbow_h_L 0.10471
+F elbow_wrist_h_L -0.30108
+F knee_h_R -0.49497
+F knee_lat_R -0.0336
+F elbow_h_R -0.01791
+F elbow_wrist_h_R -0.28574
+F ankle_mean 122.22462
+F ankle_minside 115.83216
+F ankle_maxside 128.61708
+F ankle_y_minside -73.3013
+F ankle_y_maxside -72.18102
+F elbow_h_mean 0.0434
+F elbow_h_minside -0.01791
+F elbow_h_maxside 0.10471
+F elbow_torso_mean 0.39705
+F elbow_torso_minside 0.39222
+F elbow_torso_maxside 0.40188
+F elbow_wrist_h_mean -0.29341
+F elbow_wrist_h_minside -0.30108
+F elbow_wrist_h_maxside -0.28574
+F foot_pitch_mean -31.23929
+F foot_pitch_minside -36.50823
+F foot_pitch_maxside -25.97035
+F foot_y_minside -77.69057
+F foot_y_maxside -77.38533
+F forearm_vert_minside 51.62413
+F forearm_vert_maxside 57.70451
+F hip_minside 160.26241
+F hip_maxside 164.63017
+F knee_fwd_mean -0.11546
+F knee_fwd_minside -0.1231
+F knee_fwd_maxside -0.10781
+F knee_h_mean -0.52314
+F knee_h_minside -0.55132
+F knee_h_maxside -0.49497
+F knee_lat_mean 0.18639
+F knee_lat_minside -0.0336
+F knee_lat_maxside 0.40639
+F knee_out_minside 0.01279
+F knee_out_maxside 0.01944
+F shoulder_mean 96.88132
+F shoulder_minside 90.3837
+F shoulder_maxside 103.37895
+F shoulder_h_mean 0.9996
+F shoulder_h_minside 0.9632
+F shoulder_h_maxside 1.036
+F upperarm_vert_mean 84.26057
+F upperarm_vert_minside 75.83929
+F upperarm_vert_maxside 92.68184
+F wrist_mean 157.44199
+F wrist_minside 157.13455
+F wrist_maxside 157.7494
+END
+CASE D26-8-039 B 0
+J Nose 23.02084 58.34471 29.06536
+J LEye 22.60743 62.68949 26.81805
+J REye 19.97739 62.45114 28.68901
+J LEar 20.53605 62.63273 14.01894
+J REar 8.72174 62.00487 22.77924
+J LShoulder 25.13794 45.03133 2.80789
+J RShoulder -5.59662 47.68073 17.9172
+J LElbow 24.74026 27.62697 -5.57424
+J RElbow -27.37842 33.17037 14.21409
+J LWrist 20.4954 15.12596 4.99952
+J RWrist -18.68442 13.86335 17.38839
+J LHip 10.32255 -0.93744 -5.89355
+J RHip -10.33936 1.01042 5.74493
+J LKnee 8.37971 -40.70129 -13.27153
+J RKnee -6.81323 -37.01341 6.83039
+J LAnkle 15.15508 -74.48382 -26.02804
+J RAnkle -7.09879 -73.34662 -2.49079
+J Neck 9.77066 46.35603 10.36254
+J LPalm 17.62614 10.86208 9.31739
+J RPalm -12.9741 7.4264 19.3774
+J LFoot 27.32166 -82.40115 -17.79773
+J RFoot -2.2688 -84.11709 10.29734
+F knee_L 163.22144
+F knee_R 163.0016
+F hip_L 165.17754
+F hip_R 160.44412
+F elbow_L 113.55961
+F elbow_R 98.0266
+F shoulder_L 22.04527
+F shoulder_R 49.87526
+F ankle_L 113.54514
+F ankle_R 114.50304
+F wrist_L 168.20029
+F wrist_R 162.39583
+F knee_mean 163.11151
+F hip_mean 162.81082
+F elbow_mean 105.79311
+F knee_minside 163.0016
+F knee_maxside 163.22144
+F elbow_minside 98.0266
+F elbow_maxside 113.55961
+F torso_incl 17.15946
+F torso_pitch 16.69579
+F torso_roll 4.1959
+F head_pitch -16.32106
+F head_yaw 8.80301
+F face_vs_torso 89.22192
+F face_vs_forward 18.48673
+F kneefoot_L 83.89699
+F foot_pitch_L -28.32472
+F ankle_y_L -74.48382
+F foot_y_L -82.40115
+F knee_out_L -0.07448
+F knee_fwd_L 0.21201
+F kneefoot_R 18.9365
+F foot_pitch_R -38.23453
+F ankle_y_R -73.34662
+F foot_y_R -84.11709
+F knee_out_R 0.01297
+F knee_fwd_R 0.22024
+F kneefoot_mean 51.41674
+F knee_out_mean -0.03076
+F ankle_y_mean -73.91522
+F foot_y_mean -83.25912
+F palm_fwd_hip 0.28283
+F palm_fwd_knee 0.33137
+F palm_fwd_ankle 0.49692
+F palm_lat -0.14684
+F palm_h_rel 0.6906
+F palm_dist_body 0.30137
+F forearm_vert_L 137.65251
+F upperarm_vert_L 154.25885
+F elbow_torso_L 0.14778
+F forearm_vert_R 154.38792
+F upperarm_vert_R 123.29473
+F elbow_torso_R 0.41705
+F forearm_vert_mean 146.02022
+F shoulder_h_L 0.92816
+F shoulder_h_R 0.98281
+F shoulder_asym -0.07713
+F knee_asym 0.21983
+F hip_asym 4.73341
+F elbow_asym 15.53301
+F hand_h_asym 0.07087
+F stance_w 1.36218
+F grip_w 0.94306
+F neck_over_ankle 0.32086
+F hip_height_rel 0.97763
+F hip_below_knee 0.51417
+F sh_over_hip_fwd 0.28658
+F palm_head_dist 1.12897
+F palm_h_sh -0.76761
+F ear_shoulder_gap 0.32928
+F knee_gap 1.07026
+F knee_elbow_dist 1.458
+F knee_h_L -0.53855
+F knee_lat_L 0.08104
+F elbow_h_L -0.35902
+F elbow_wrist_h_L 0.25787
+F knee_h_R -0.48979
+F knee_lat_R -0.10673
+F elbow_h_R -0.29932
+F elbow_wrist_h_R 0.39827
+F ankle_mean 114.02409
+F ankle_minside 113.54514
+F ankle_maxside 114.50304
+F ankle_y_minside -74.48382
+F ankle_y_maxside -73.34662
+F elbow_h_mean -0.32917
+F elbow_h_minside -0.35902
+F elbow_h_maxside -0.29932
+F elbow_torso_mean 0.28241
+F elbow_torso_minside 0.14778
+F elbow_torso_maxside 0.41705
+F elbow_wrist_h_mean 0.32807
+F elbow_wrist_h_minside 0.25787
+F elbow_wrist_h_maxside 0.39827
+F foot_pitch_mean -33.27962
+F foot_pitch_minside -38.23453
+F foot_pitch_maxside -28.32472
+F foot_y_minside -84.11709
+F foot_y_maxside -82.40115
+F forearm_vert_minside 137.65251
+F forearm_vert_maxside 154.38792
+F hip_minside 160.44412
+F hip_maxside 165.17754
+F knee_fwd_mean 0.21613
+F knee_fwd_minside 0.21201
+F knee_fwd_maxside 0.22024
+F knee_h_mean -0.51417
+F knee_h_minside -0.53855
+F knee_h_maxside -0.48979
+F knee_lat_mean -0.01285
+F knee_lat_minside -0.10673
+F knee_lat_maxside 0.08104
+F knee_out_minside -0.07448
+F knee_out_maxside 0.01297
+F kneefoot_minside 18.9365
+F kneefoot_maxside 83.89699
+F shoulder_mean 35.96027
+F shoulder_minside 22.04527
+F shoulder_maxside 49.87526
+F shoulder_h_mean 0.95549
+F shoulder_h_minside 0.92816
+F shoulder_h_maxside 0.98281
+F upperarm_vert_mean 138.77679
+F upperarm_vert_minside 123.29473
+F upperarm_vert_maxside 154.25885
+F wrist_mean 165.29807
+F wrist_minside 162.39583
+F wrist_maxside 168.20029
+END
+CASE D20-7-710 C 0
+J Nose -0.23018 66.32806 25.87726
+J LEye 0.07475 70.04033 24.17559
+J REye -2.96686 69.58002 24.14955
+J LEar 5.09623 67.90279 14.3043
+J REar -8.97914 66.45795 14.47141
+J LShoulder 16.32488 48.31533 8.42416
+J RShoulder -17.81009 46.76538 9.12971
+J LElbow 20.60956 26.40485 3.63409
+J RElbow -25.43461 24.70362 2.27275
+J LWrist 26.22306 7.07421 11.6174
+J RWrist -32.24462 6.14243 7.64882
+J LHip 11.97926 -0.1671 -0.90144
+J RHip -11.96964 0.20498 0.75043
+J LKnee 7.64791 -39.15751 -3.24422
+J RKnee -9.79191 -36.80999 -5.41928
+J LAnkle 8.8856 -62.51508 -37.98545
+J RAnkle -9.59381 -61.18266 -36.19746
+J Neck -0.74261 47.54035 8.77693
+J LPalm 26.4963 -0.54506 15.50669
+J RPalm -33.43262 -0.24742 10.31554
+J LFoot 12.15214 -76.15939 -32.64229
+J RFoot -8.19834 -74.3338 -29.99784
+F knee_L 126.83431
+F knee_R 137.7561
+F hip_L 172.47479
+F hip_R 176.2113
+F elbow_L 145.88359
+F elbow_R 148.39943
+F shoulder_L 15.91081
+F shoulder_R 26.24462
+F ankle_L 102.59559
+F ankle_R 103.10225
+F wrist_L 166.0453
+F wrist_R 168.4631
+F knee_mean 132.29521
+F hip_mean 174.34305
+F elbow_mean 147.14151
+F knee_minside 126.83431
+F knee_maxside 137.7561
+F elbow_minside 145.88359
+F elbow_maxside 148.39943
+F torso_incl 10.58898
+F torso_pitch 10.46788
+F torso_roll -1.63301
+F head_pitch -4.19643
+F head_yaw 4.52584
+F face_vs_torso 83.89066
+F face_vs_forward 6.16898
+F kneefoot_L 33.47986
+F foot_pitch_L -65.34551
+F ankle_y_L -62.51508
+F foot_y_L -76.15939
+F knee_out_L -0.05269
+F knee_fwd_L 0.82551
+F kneefoot_R 13.054
+F foot_pitch_R -64.2098
+F ankle_y_R -61.18266
+F foot_y_R -74.3338
+F knee_out_R 0.00509
+F knee_fwd_R 0.78175
+F kneefoot_mean 23.26693
+F knee_out_mean -0.0238
+F ankle_y_mean -61.84887
+F foot_y_mean -75.2466
+F palm_fwd_hip 0.26305
+F palm_fwd_knee 0.35241
+F palm_fwd_ankle 1.02741
+F palm_lat -0.12752
+F palm_h_rel 0.56178
+F palm_dist_body 0.27807
+F forearm_vert_L 153.21246
+F upperarm_vert_L 163.65259
+F elbow_torso_L 0.1263
+F forearm_vert_R 154.94655
+F upperarm_vert_R 155.07095
+F elbow_torso_R 0.22569
+F forearm_vert_mean 154.0795
+F shoulder_h_L 0.999
+F shoulder_h_R 0.96694
+F shoulder_asym 0.04535
+F knee_asym -10.92179
+F hip_asym -3.73651
+F elbow_asym -2.51584
+F hand_h_asym -0.00616
+F stance_w 0.77528
+F grip_w 1.76005
+F neck_over_ankle 0.63387
+F hip_height_rel 0.8575
+F hip_below_knee 0.52673
+F sh_over_hip_fwd 0.18161
+F palm_head_dist 1.3985
+F palm_h_sh -0.99156
+F ear_shoulder_gap 0.40625
+F knee_gap 0.73853
+F knee_elbow_dist 1.3225
+F knee_h_L -0.543
+F knee_lat_L -0.17327
+F elbow_h_L -0.45321
+F elbow_wrist_h_L 0.39985
+F knee_h_R -0.51046
+F knee_lat_R -0.10817
+F elbow_h_R -0.45634
+F elbow_wrist_h_R 0.38393
+F ankle_mean 102.84892
+F ankle_minside 102.59559
+F ankle_maxside 103.10225
+F ankle_y_minside -62.51508
+F ankle_y_maxside -61.18266
+F elbow_h_mean -0.45478
+F elbow_h_minside -0.45634
+F elbow_h_maxside -0.45321
+F elbow_torso_mean 0.17599
+F elbow_torso_minside 0.1263
+F elbow_torso_maxside 0.22569
+F elbow_wrist_h_mean 0.39189
+F elbow_wrist_h_minside 0.38393
+F elbow_wrist_h_maxside 0.39985
+F foot_pitch_mean -64.77766
+F foot_pitch_minside -65.34551
+F foot_pitch_maxside -64.2098
+F foot_y_minside -76.15939
+F foot_y_maxside -74.3338
+F forearm_vert_minside 153.21246
+F forearm_vert_maxside 154.94655
+F hip_minside 172.47479
+F hip_maxside 176.2113
+F knee_fwd_mean 0.80363
+F knee_fwd_minside 0.78175
+F knee_fwd_maxside 0.82551
+F knee_h_mean -0.52673
+F knee_h_minside -0.543
+F knee_h_maxside -0.51046
+F knee_lat_mean -0.14072
+F knee_lat_minside -0.17327
+F knee_lat_maxside -0.10817
+F knee_out_minside -0.05269
+F knee_out_maxside 0.00509
+F kneefoot_minside 13.054
+F kneefoot_maxside 33.47986
+F shoulder_mean 21.07772
+F shoulder_minside 15.91081
+F shoulder_maxside 26.24462
+F shoulder_h_mean 0.98297
+F shoulder_h_minside 0.96694
+F shoulder_h_maxside 0.999
+F upperarm_vert_mean 159.36177
+F upperarm_vert_minside 155.07095
+F upperarm_vert_maxside 163.65259
+F wrist_mean 167.25421
+F wrist_minside 166.0453
+F wrist_maxside 168.4631
+END
+CASE D22-4-722 C 0
+J Nose -0.92675 65.16523 26.39174
+J LEye -0.53788 68.70412 24.00924
+J REye -3.72421 68.295 24.29051
+J LEar 4.01235 66.14615 12.70893
+J REar -10.59989 64.46416 14.64848
+J LShoulder 13.14592 53.19667 8.48231
+J RShoulder -15.57838 52.41576 14.0482
+J LElbow 23.8454 75.09791 11.49786
+J RElbow -27.43332 70.73871 23.91724
+J LWrist 29.89709 96.50784 18.14392
+J RWrist -27.05555 93.26295 32.59502
+J LHip 10.38782 -0.16061 -1.17632
+J RHip -10.41074 0.21628 1.06031
+J LKnee 7.31112 -39.74179 -2.87476
+J RKnee -7.14025 -37.22978 -1.01383
+J LAnkle 7.62872 -72.84583 -16.48847
+J RAnkle -4.7424 -70.76933 -14.69859
+J Neck -1.21623 52.80621 11.26526
+J LPalm 29.6244 100.11757 21.15784
+J RPalm -25.74245 98.47263 34.87091
+J LFoot 10.06468 -82.52368 -6.2124
+J RFoot -5.17582 -81.97373 -4.65352
+F knee_L 159.51392
+F knee_R 160.99284
+F hip_L 172.06425
+F hip_R 169.23161
+F elbow_L 166.13658
+F elbow_R 148.66507
+F shoulder_L 156.96857
+F shoulder_R 152.29277
+F ankle_L 110.70108
+F ankle_R 115.73311
+F wrist_L 151.00093
+F wrist_R 167.63451
+F knee_mean 160.25339
+F hip_mean 170.64793
+F elbow_mean 157.40082
+F knee_minside 159.51392
+F knee_maxside 160.99284
+F elbow_minside 148.66507
+F elbow_maxside 166.13658
+F torso_incl 12.17519
+F torso_pitch 11.90768
+F torso_roll -2.6129
+F head_pitch -0.61997
+F head_yaw 4.40919
+F face_vs_torso 78.95956
+F face_vs_forward 4.4525
+F kneefoot_L 14.67235
+F foot_pitch_L -42.50182
+F ankle_y_L -72.84583
+F foot_y_L -82.52368
+F knee_out_L -0.03061
+F knee_fwd_L 0.37719
+F kneefoot_R 7.46784
+F foot_pitch_R -48.09634
+F ankle_y_R -70.76933
+F foot_y_R -81.97373
+F knee_out_R 0.00532
+F knee_fwd_R 0.36773
+F kneefoot_mean 11.07009
+F knee_out_mean -0.01264
+F ankle_y_mean -71.80759
+F foot_y_mean -82.2487
+F palm_fwd_hip 0.52081
+F palm_fwd_knee 0.55536
+F palm_fwd_ankle 0.80402
+F palm_lat -0.03623
+F palm_h_rel 1.37306
+F palm_dist_body 0.52118
+F forearm_vert_L 22.77404
+F upperarm_vert_L 26.91078
+F elbow_torso_L 0.17698
+F forearm_vert_R 21.08806
+F upperarm_vert_R 40.09243
+F elbow_torso_R 0.20608
+F forearm_vert_mean 21.93105
+F shoulder_h_L 0.98474
+F shoulder_h_R 0.97028
+F shoulder_asym 0.02668
+F knee_asym -1.47893
+F hip_asym 2.83264
+F elbow_asym 17.47151
+F hand_h_asym 0.03047
+F stance_w 0.60565
+F grip_w 1.94962
+F neck_over_ankle 0.35881
+F hip_height_rel 0.97559
+F hip_below_knee 0.52305
+F sh_over_hip_fwd 0.20613
+F palm_head_dist 0.69007
+F palm_h_sh 0.86102
+F ear_shoulder_gap 0.23149
+F knee_gap 0.70671
+F knee_elbow_dist 2.08643
+F knee_h_L -0.54011
+F knee_lat_L -0.13753
+F elbow_h_L 0.40563
+F elbow_wrist_h_L -0.39653
+F knee_h_R -0.50599
+F knee_lat_R -0.16602
+F elbow_h_R 0.33936
+F elbow_wrist_h_R -0.41717
+F ankle_mean 113.21709
+F ankle_minside 110.70108
+F ankle_maxside 115.73311
+F ankle_y_minside -72.84583
+F ankle_y_maxside -70.76933
+F elbow_h_mean 0.3725
+F elbow_h_minside 0.33936
+F elbow_h_maxside 0.40563
+F elbow_torso_mean 0.19153
+F elbow_torso_minside 0.17698
+F elbow_torso_maxside 0.20608
+F elbow_wrist_h_mean -0.40685
+F elbow_wrist_h_minside -0.41717
+F elbow_wrist_h_maxside -0.39653
+F foot_pitch_mean -45.29908
+F foot_pitch_minside -48.09634
+F foot_pitch_maxside -42.50182
+F foot_y_minside -82.52368
+F foot_y_maxside -81.97373
+F forearm_vert_minside 21.08806
+F forearm_vert_maxside 22.77404
+F hip_minside 169.23161
+F hip_maxside 172.06425
+F knee_fwd_mean 0.37246
+F knee_fwd_minside 0.36773
+F knee_fwd_maxside 0.37719
+F knee_h_mean -0.52305
+F knee_h_minside -0.54011
+F knee_h_maxside -0.50599
+F knee_lat_mean -0.15178
+F knee_lat_minside -0.16602
+F knee_lat_maxside -0.13753
+F knee_out_minside -0.03061
+F knee_out_maxside 0.00532
+F kneefoot_minside 7.46784
+F kneefoot_maxside 14.67235
+F shoulder_mean 154.63068
+F shoulder_minside 152.29277
+F shoulder_maxside 156.96857
+F shoulder_h_mean 0.97751
+F shoulder_h_minside 0.97028
+F shoulder_h_maxside 0.98474
+F upperarm_vert_mean 33.50161
+F upperarm_vert_minside 26.91078
+F upperarm_vert_maxside 40.09243
+F wrist_mean 159.31772
+F wrist_minside 151.00093
+F wrist_maxside 167.63451
+END
+CASE D34-1-560 E 0
+J Nose 55.2615 -26.87272 -23.44658
+J LEye 58.78245 -24.00089 -25.06215
+J REye 58.42704 -24.19511 -21.61012
+J LEar 57.40812 -12.68622 -31.76653
+J REar 55.81596 -13.18432 -15.31172
+J LShoulder 37.49324 -8.15722 -36.78253
+J RShoulder 43.05716 -12.59249 -3.26453
+J LElbow 24.81594 -21.80233 -37.5001
+J RElbow 27.53896 -23.42429 13.06581
+J LWrist 23.52927 -41.69806 -33.73866
+J RWrist 24.97476 -40.85369 24.29482
+J LHip -3.13174 2.76561 -10.40386
+J RHip 3.14982 -2.74758 10.30186
+J LKnee -36.25571 -12.00654 -12.72501
+J RKnee -27.342 -29.31665 10.70796
+J LAnkle -64.28842 -37.90671 -9.13634
+J RAnkle -59.24343 -43.89281 14.51319
+J Neck 40.2752 -10.37485 -20.02353
+J LPalm 26.27864 -43.30727 -34.70461
+J RPalm 27.44477 -43.19055 24.06508
+J LFoot -60.35273 -52.52991 -4.26504
+J RFoot -58.98117 -54.85648 20.79737
+F knee_L 159.25137
+F knee_R 162.59357
+F hip_L 128.48808
+F hip_R 123.28554
+F elbow_L 138.92693
+F elbow_R 142.08022
+F shoulder_L 67.97723
+F shoulder_R 47.26745
+F ankle_L 117.95803
+F ankle_R 113.15625
+F wrist_L 111.58383
+F wrist_R 116.54343
+F knee_mean 160.92247
+F hip_mean 125.88681
+F elbow_mean 140.50357
+F knee_minside 159.25137
+F knee_maxside 162.59357
+F elbow_minside 138.92693
+F elbow_maxside 142.08022
+F torso_incl 103.0084
+F torso_pitch 103.18322
+F torso_roll 144.44133
+F head_pitch -84.45239
+F head_yaw 167.04369
+F face_vs_torso 82.12606
+F face_vs_forward 95.40594
+F kneefoot_L 58.35921
+F foot_pitch_L -66.81651
+F ankle_y_L -37.90671
+F foot_y_L -52.52991
+F knee_out_L 0.07936
+F knee_fwd_L 0.72695
+F kneefoot_R 94.41239
+F foot_pitch_R -60.15792
+F ankle_y_R -43.89281
+F foot_y_R -54.85648
+F knee_out_R 0.00843
+F knee_fwd_R 0.89662
+F kneefoot_mean 76.3858
+F knee_out_mean 0.04389
+F ankle_y_mean -40.89976
+F foot_y_mean -53.6932
+F palm_fwd_hip 0.59018
+F palm_fwd_knee 1.24397
+F palm_fwd_ankle 1.88886
+F palm_lat -0.08036
+F palm_h_rel -0.07696
+F palm_dist_body 0.59319
+F forearm_vert_L 168.70041
+F upperarm_vert_L 137.05998
+F elbow_torso_L 0.34799
+F forearm_vert_R 146.54164
+F upperarm_vert_R 115.67931
+F elbow_torso_R 0.42418
+F forearm_vert_mean 157.62103
+F shoulder_h_L -0.17702
+F shoulder_h_R -0.27317
+F shoulder_asym 0.12944
+F knee_asym -3.34219
+F hip_asym 5.20255
+F elbow_asym -3.15329
+F hand_h_asym -0.00253
+F stance_w 1.11566
+F grip_w 1.7155
+F neck_over_ankle 1.40566
+F hip_height_rel 0.55165
+F hip_below_knee 0.27874
+F sh_over_hip_fwd 0.96096
+F palm_head_dist 1.00184
+F palm_h_sh -0.71262
+F ear_shoulder_gap -0.0555
+F knee_gap 1.36443
+F knee_elbow_dist 1.1976
+F knee_h_L -0.16203
+F knee_lat_L 0.53013
+F elbow_h_L -0.29579
+F elbow_wrist_h_L 0.43129
+F knee_h_R -0.39545
+F knee_lat_R -0.37903
+F elbow_h_R -0.2348
+F elbow_wrist_h_R 0.37782
+F ankle_mean 115.55714
+F ankle_minside 113.15625
+F ankle_maxside 117.95803
+F ankle_y_minside -43.89281
+F ankle_y_maxside -37.90671
+F elbow_h_mean -0.2653
+F elbow_h_minside -0.29579
+F elbow_h_maxside -0.2348
+F elbow_torso_mean 0.38609
+F elbow_torso_minside 0.34799
+F elbow_torso_maxside 0.42418
+F elbow_wrist_h_mean 0.40455
+F elbow_wrist_h_minside 0.37782
+F elbow_wrist_h_maxside 0.43129
+F foot_pitch_mean -63.48722
+F foot_pitch_minside -66.81651
+F foot_pitch_maxside -60.15792
+F foot_y_minside -54.85648
+F foot_y_maxside -52.52991
+F forearm_vert_minside 146.54164
+F forearm_vert_maxside 168.70041
+F hip_minside 123.28554
+F hip_maxside 128.48808
+F knee_fwd_mean 0.81178
+F knee_fwd_minside 0.72695
+F knee_fwd_maxside 0.89662
+F knee_h_mean -0.27874
+F knee_h_minside -0.39545
+F knee_h_maxside -0.16203
+F knee_lat_mean 0.07555
+F knee_lat_minside -0.37903
+F knee_lat_maxside 0.53013
+F knee_out_minside 0.00843
+F knee_out_maxside 0.07936
+F kneefoot_minside 58.35921
+F kneefoot_maxside 94.41239
+F shoulder_mean 57.62234
+F shoulder_minside 47.26745
+F shoulder_maxside 67.97723
+F shoulder_h_mean -0.22509
+F shoulder_h_minside -0.27317
+F shoulder_h_maxside -0.17702
+F upperarm_vert_mean 126.36964
+F upperarm_vert_minside 115.67931
+F upperarm_vert_maxside 137.05998
+F wrist_mean 114.06363
+F wrist_minside 111.58383
+F wrist_maxside 116.54343
+END
+CASE D14-4-192 B 0
+J Nose 11.4266 65.90805 11.69029
+J LEye 9.99835 69.83251 10.75634
+J REye 8.37088 69.11615 12.52852
+J LEar 6.40295 69.43461 2.09691
+J REar -1.72271 66.21514 10.97861
+J LShoulder 11.416 53.47693 -4.96636
+J RShoulder -8.26407 54.47345 10.56431
+J LElbow 16.80819 75.33235 -14.79312
+J RElbow -12.42809 74.02784 3.96851
+J LWrist 6.83893 87.50209 -28.05975
+J RWrist -8.58644 79.37005 -19.5564
+J LHip 8.14499 -0.68782 -7.02607
+J RHip -8.19279 0.72793 6.92437
+J LKnee 6.17492 -39.60341 -13.8574
+J RKnee -7.49604 -38.36306 1.9696
+J LAnkle 7.81043 -73.63549 -21.68976
+J RAnkle -12.10362 -72.74445 -5.18102
+J Neck 1.57597 53.97519 2.79897
+J LPalm 0.92468 83.79912 -28.45415
+J RPalm -6.84552 74.38445 -21.71035
+J LFoot 19.97186 -83.77537 -15.96299
+J RFoot -5.32209 -85.58949 3.7204
+F knee_L 173.7019
+F knee_R 170.38652
+F hip_L 172.21007
+F hip_R 176.52222
+F elbow_L 132.66945
+F elbow_R 118.27742
+F shoulder_L 152.32442
+F shoulder_R 154.93083
+F ankle_L 122.94363
+F ankle_R 125.07547
+F wrist_L 97.64297
+F wrist_R 102.7409
+F knee_mean 172.04422
+F hip_mean 174.36615
+F elbow_mean 125.47343
+F knee_minside 170.38652
+F knee_maxside 173.7019
+F elbow_minside 118.27742
+F elbow_maxside 132.66945
+F torso_incl 3.46634
+F torso_pitch 3.40064
+F torso_roll -0.6731
+F head_pitch -10.39829
+F head_yaw 19.95119
+F face_vs_torso 97.42668
+F face_vs_forward 22.39998
+F kneefoot_L 76.57912
+F foot_pitch_L -37.02813
+F ankle_y_L -73.63549
+F foot_y_L -83.77537
+F knee_out_L -0.02696
+F knee_fwd_L 0.14
+F kneefoot_R 4.5058
+F foot_pitch_R -48.93821
+F ankle_y_R -72.74445
+F foot_y_R -85.58949
+F knee_out_R -0.01539
+F knee_fwd_R 0.23801
+F kneefoot_mean 40.54247
+F knee_out_mean -0.02117
+F ankle_y_mean -73.18997
+F foot_y_mean -84.68243
+F palm_fwd_hip -0.38744
+F palm_fwd_knee -0.29688
+F palm_fwd_ankle -0.17364
+F palm_lat 0.55884
+F palm_h_rel 1.19751
+F palm_dist_body 0.46626
+F forearm_vert_L 53.74577
+F upperarm_vert_L 27.15187
+F elbow_torso_L 0.21009
+F forearm_vert_R 77.36768
+F upperarm_vert_R 21.74704
+F elbow_torso_R 0.16559
+F forearm_vert_mean 65.55672
+F shoulder_h_L 0.98895
+F shoulder_h_R 1.00739
+F shoulder_asym -0.03972
+F knee_asym 3.31538
+F hip_asym -4.31215
+F elbow_asym 14.39203
+F hand_h_asym 0.17417
+F stance_w 1.20216
+F grip_w 0.55584
+F neck_over_ankle 0.1982
+F hip_height_rel 0.98286
+F hip_below_knee 0.52363
+F sh_over_hip_fwd 0.05931
+F palm_head_dist 0.62869
+F palm_h_sh 0.46466
+F ear_shoulder_gap 0.25622
+F knee_gap 0.97309
+F knee_elbow_dist 2.08156
+F knee_h_L -0.53195
+F knee_lat_L 0.13645
+F elbow_h_L 0.40433
+F elbow_wrist_h_L -0.22514
+F knee_h_R -0.5153
+F knee_lat_R -0.17405
+F elbow_h_R 0.36176
+F elbow_wrist_h_R -0.09883
+F ankle_mean 124.00955
+F ankle_minside 122.94363
+F ankle_maxside 125.07547
+F ankle_y_minside -73.63549
+F ankle_y_maxside -72.74445
+F elbow_h_mean 0.38304
+F elbow_h_minside 0.36176
+F elbow_h_maxside 0.40433
+F elbow_torso_mean 0.18784
+F elbow_torso_minside 0.16559
+F elbow_torso_maxside 0.21009
+F elbow_wrist_h_mean -0.16199
+F elbow_wrist_h_minside -0.22514
+F elbow_wrist_h_maxside -0.09883
+F foot_pitch_mean -42.98317
+F foot_pitch_minside -48.93821
+F foot_pitch_maxside -37.02813
+F foot_y_minside -85.58949
+F foot_y_maxside -83.77537
+F forearm_vert_minside 53.74577
+F forearm_vert_maxside 77.36768
+F hip_minside 172.21007
+F hip_maxside 176.52222
+F knee_fwd_mean 0.189
+F knee_fwd_minside 0.14
+F knee_fwd_maxside 0.23801
+F knee_h_mean -0.52363
+F knee_h_minside -0.53195
+F knee_h_maxside -0.5153
+F knee_lat_mean -0.0188
+F knee_lat_minside -0.17405
+F knee_lat_maxside 0.13645
+F knee_out_minside -0.02696
+F knee_out_maxside -0.01539
+F kneefoot_minside 4.5058
+F kneefoot_maxside 76.57912
+F shoulder_mean 153.62762
+F shoulder_minside 152.32442
+F shoulder_maxside 154.93083
+F shoulder_h_mean 0.99817
+F shoulder_h_minside 0.98895
+F shoulder_h_maxside 1.00739
+F upperarm_vert_mean 24.44946
+F upperarm_vert_minside 21.74704
+F upperarm_vert_maxside 27.15187
+F wrist_mean 100.19194
+F wrist_minside 97.64297
+F wrist_maxside 102.7409
+END
+CASE D10-4-205 C 0
+J Nose 4.71402 66.37476 23.70661
+J LEye 6.21309 69.95244 21.82918
+J REye 2.95947 70.15522 21.8157
+J LEar 11.50591 67.50456 11.11551
+J REar -3.23204 68.84616 11.44917
+J LShoulder 19.83624 47.65762 5.56597
+J RShoulder -14.78223 51.45704 4.84876
+J LElbow 27.99965 27.46435 6.47484
+J RElbow -27.48802 31.03041 4.50067
+J LWrist 23.84888 9.95897 22.64871
+J RWrist -25.24779 12.85814 19.5526
+J LHip 11.52817 -0.74986 -0.12163
+J RHip -11.5378 0.80723 0.02894
+J LKnee 10.36408 -41.7064 -0.67847
+J RKnee -9.51345 -39.29428 -2.04699
+J LAnkle 13.44368 -75.7146 -17.38191
+J RAnkle -7.61734 -74.53481 -17.44025
+J Neck 2.52701 49.55733 5.20737
+J LPalm 19.6494 3.67811 28.14259
+J RPalm -22.56575 6.35859 24.12524
+J LFoot 17.85627 -87.29169 -6.27572
+J RFoot -10.82122 -84.81972 -6.03054
+F knee_L 153.87744
+F knee_R 159.39317
+F hip_L 170.02977
+F hip_R 177.41644
+F elbow_L 129.33788
+F elbow_R 126.28783
+F shoulder_L 32.94703
+F shoulder_R 35.77964
+F ankle_L 110.52775
+F ankle_R 107.40676
+F wrist_L 163.10074
+F wrist_R 166.06238
+F knee_mean 156.63531
+F hip_mean 173.72311
+F elbow_mean 127.81285
+F knee_minside 153.87744
+F knee_maxside 159.39317
+F elbow_minside 126.28783
+F elbow_maxside 129.33788
+F torso_incl 6.7156
+F torso_pitch 6.07374
+F torso_roll 2.88668
+F head_pitch -8.2375
+F head_yaw 2.28534
+F face_vs_torso 92.0525
+F face_vs_forward 8.54654
+F kneefoot_L 32.11465
+F foot_pitch_L -44.09032
+F ankle_y_L -75.7146
+F foot_y_L -87.29169
+F knee_out_L -0.02948
+F knee_fwd_L 0.43887
+F kneefoot_R 8.6627
+F foot_pitch_R -40.95311
+F ankle_y_R -74.53481
+F foot_y_R -84.81972
+F knee_out_R 0.00141
+F knee_fwd_R 0.39947
+F kneefoot_mean 20.38868
+F knee_out_mean -0.01403
+F ankle_y_mean -75.1247
+F foot_y_mean -86.0557
+F palm_fwd_hip 0.52476
+F palm_fwd_knee 0.5511
+F palm_fwd_ankle 0.87257
+F palm_lat -0.04663
+F palm_h_rel 0.64278
+F palm_dist_body 0.52577
+F forearm_vert_L 136.35223
+F upperarm_vert_L 157.8654
+F elbow_torso_L 0.23979
+F forearm_vert_R 140.05669
+F upperarm_vert_R 148.10788
+F elbow_torso_R 0.27591
+F forearm_vert_mean 138.20447
+F shoulder_h_L 0.95505
+F shoulder_h_R 1.03123
+F shoulder_asym -0.10907
+F knee_asym -5.51573
+F hip_asym -7.38667
+F elbow_asym 3.05005
+F hand_h_asym -0.05375
+F stance_w 0.91242
+F grip_w 1.21981
+F neck_over_ankle 0.29297
+F hip_height_rel 0.97355
+F hip_below_knee 0.52502
+F sh_over_hip_fwd 0.10568
+F palm_head_dist 1.30578
+F palm_h_sh -0.89309
+F ear_shoulder_gap 0.37333
+F knee_gap 0.86812
+F knee_elbow_dist 1.43854
+F knee_h_L -0.54064
+F knee_lat_L -0.05019
+F elbow_h_L -0.40491
+F elbow_wrist_h_L 0.35101
+F knee_h_R -0.5094
+F knee_lat_R -0.08815
+F elbow_h_R -0.40959
+F elbow_wrist_h_R 0.36439
+F ankle_mean 108.96725
+F ankle_minside 107.40676
+F ankle_maxside 110.52775
+F ankle_y_minside -75.7146
+F ankle_y_maxside -74.53481
+F elbow_h_mean -0.40725
+F elbow_h_minside -0.40959
+F elbow_h_maxside -0.40491
+F elbow_torso_mean 0.25785
+F elbow_torso_minside 0.23979
+F elbow_torso_maxside 0.27591
+F elbow_wrist_h_mean 0.3577
+F elbow_wrist_h_minside 0.35101
+F elbow_wrist_h_maxside 0.36439
+F foot_pitch_mean -42.52172
+F foot_pitch_minside -44.09032
+F foot_pitch_maxside -40.95311
+F foot_y_minside -87.29169
+F foot_y_maxside -84.81972
+F forearm_vert_minside 136.35223
+F forearm_vert_maxside 140.05669
+F hip_minside 170.02977
+F hip_maxside 177.41644
+F knee_fwd_mean 0.41917
+F knee_fwd_minside 0.39947
+F knee_fwd_maxside 0.43887
+F knee_h_mean -0.52502
+F knee_h_minside -0.54064
+F knee_h_maxside -0.5094
+F knee_lat_mean -0.06917
+F knee_lat_minside -0.08815
+F knee_lat_maxside -0.05019
+F knee_out_minside -0.02948
+F knee_out_maxside 0.00141
+F kneefoot_minside 8.6627
+F kneefoot_maxside 32.11465
+F shoulder_mean 34.36333
+F shoulder_minside 32.94703
+F shoulder_maxside 35.77964
+F shoulder_h_mean 0.99314
+F shoulder_h_minside 0.95505
+F shoulder_h_maxside 1.03123
+F upperarm_vert_mean 152.98663
+F upperarm_vert_minside 148.10788
+F upperarm_vert_maxside 157.8654
+F wrist_mean 164.58156
+F wrist_minside 163.10074
+F wrist_maxside 166.06238
+END
+CASE D39-9-647 B 0
+J Nose -42.87346 40.09055 31.2981
+J LEye -47.5584 38.8012 31.14576
+J REye -46.31446 38.24891 34.19873
+J LEar -50.81624 29.33966 24.13163
+J REar -45.9185 26.62912 38.74692
+J LShoulder -46.13426 25.06994 14.19486
+J RShoulder -30.86905 19.92854 41.53277
+J LElbow -45.10957 46.06752 9.49678
+J RElbow -23.03269 41.68249 47.92991
+J LWrist -44.32715 67.88618 18.78634
+J RWrist -28.66074 62.3223 50.42112
+J LHip -3.62259 2.88739 -10.43946
+J RHip 3.54291 -2.91951 10.30017
+J LKnee 17.53072 -0.75065 -35.14288
+J RKnee 29.63803 -7.06306 -6.33199
+J LAnkle 25.43198 -18.58042 -58.70863
+J RAnkle 26.57293 -35.98763 -28.28105
+J Neck -38.50165 22.49924 27.86381
+J LPalm -45.94131 72.10521 23.75859
+J RPalm -32.7473 66.61073 55.52592
+J LFoot 32.6856 -17.44654 -62.62223
+J RFoot 30.72198 -41.02382 -29.14421
+F knee_L 144.42133
+F knee_R 110.85045
+F hip_L 154.21355
+F hip_R 159.27112
+F elbow_L 144.34607
+F elbow_R 144.53136
+F shoulder_L 105.30308
+F shoulder_R 110.11065
+F ankle_L 120.54176
+F ankle_R 129.29608
+F wrist_L 149.24846
+F wrist_R 137.52748
+F knee_mean 127.63589
+F hip_mean 156.74234
+F elbow_mean 144.43872
+F knee_minside 110.85045
+F knee_maxside 144.42133
+F elbow_minside 144.34607
+F elbow_maxside 144.53136
+F torso_incl 64.65514
+F torso_pitch -63.6594
+F torso_roll -31.58265
+F head_pitch 65.58382
+F head_yaw -17.58796
+F face_vs_torso 85.2979
+F face_vs_forward 66.79398
+F kneefoot_L 136.88408
+F foot_pitch_L 7.83321
+F ankle_y_L -18.58042
+F foot_y_L -17.44654
+F knee_out_L 0.17113
+F knee_fwd_L -0.49573
+F kneefoot_R 93.80228
+F foot_pitch_R -49.91984
+F ankle_y_R -35.98763
+F foot_y_R -41.02382
+F knee_out_R -0.06402
+F knee_fwd_R -0.1172
+F kneefoot_mean 115.34318
+F knee_out_mean 0.05355
+F ankle_y_mean -27.28403
+F foot_y_mean -29.23518
+F palm_fwd_hip -0.95285
+F palm_fwd_knee -1.50569
+F palm_fwd_ankle -1.69044
+F palm_lat -0.77842
+F palm_h_rel 1.94125
+F palm_dist_body 1.06228
+F forearm_vert_L 23.13555
+F upperarm_vert_L 12.89855
+F elbow_torso_L 0.38542
+F forearm_vert_R 16.60452
+F upperarm_vert_R 24.93914
+F elbow_torso_R 0.43503
+F forearm_vert_mean 19.87003
+F shoulder_h_L 0.47694
+F shoulder_h_R 0.37919
+F shoulder_asym 0.16203
+F knee_asym 33.57088
+F hip_asym -5.05757
+F elbow_asym -0.18529
+F hand_h_asym 0.10446
+F stance_w 1.54523
+F grip_w 1.09782
+F neck_over_ankle -1.45195
+F hip_height_rel 0.46982
+F hip_below_knee 0.06704
+F sh_over_hip_fwd -0.86458
+F palm_head_dist 0.82006
+F palm_h_sh 0.89089
+F ear_shoulder_gap 0.10428
+F knee_gap 1.40465
+F knee_elbow_dist 1.71054
+F knee_h_L -0.01266
+F knee_lat_L 0.72435
+F elbow_h_L 0.39921
+F elbow_wrist_h_L -0.41482
+F knee_h_R -0.12142
+F knee_lat_R -0.31716
+F elbow_h_R 0.41359
+F elbow_wrist_h_R -0.39241
+F ankle_mean 124.91891
+F ankle_minside 120.54176
+F ankle_maxside 129.29608
+F ankle_y_minside -35.98763
+F ankle_y_maxside -18.58042
+F elbow_h_mean 0.4064
+F elbow_h_minside 0.39921
+F elbow_h_maxside 0.41359
+F elbow_torso_mean 0.41023
+F elbow_torso_minside 0.38542
+F elbow_torso_maxside 0.43503
+F elbow_wrist_h_mean -0.40361
+F elbow_wrist_h_minside -0.41482
+F elbow_wrist_h_maxside -0.39241
+F foot_pitch_mean -21.04331
+F foot_pitch_minside -49.91984
+F foot_pitch_maxside 7.83321
+F foot_y_minside -41.02382
+F foot_y_maxside -17.44654
+F forearm_vert_minside 16.60452
+F forearm_vert_maxside 23.13555
+F hip_minside 154.21355
+F hip_maxside 159.27112
+F knee_fwd_mean -0.30646
+F knee_fwd_minside -0.49573
+F knee_fwd_maxside -0.1172
+F knee_h_mean -0.06704
+F knee_h_minside -0.12142
+F knee_h_maxside -0.01266
+F knee_lat_mean 0.2036
+F knee_lat_minside -0.31716
+F knee_lat_maxside 0.72435
+F knee_out_minside -0.06402
+F knee_out_maxside 0.17113
+F kneefoot_minside 93.80228
+F kneefoot_maxside 136.88408
+F shoulder_mean 107.70686
+F shoulder_minside 105.30308
+F shoulder_maxside 110.11065
+F shoulder_h_mean 0.42807
+F shoulder_h_minside 0.37919
+F shoulder_h_maxside 0.47694
+F upperarm_vert_mean 18.91885
+F upperarm_vert_minside 12.89855
+F upperarm_vert_maxside 24.93914
+F wrist_mean 143.38797
+F wrist_minside 137.52748
+F wrist_maxside 149.24846
+END
+CASE D39-2-641 D 0
+J Nose -47.84168 41.9999 12.06322
+J LEye -51.4178 43.41966 9.84341
+J REye -52.31845 41.27175 11.80959
+J LEar -51.91902 40.10426 -1.8701
+J REar -56.26182 30.72997 8.0242
+J LShoulder -34.17603 35.72244 -13.66335
+J RShoulder -45.06137 23.0327 19.6822
+J LElbow -25.52133 49.65686 -16.27826
+J RElbow -36.56399 41.05122 34.21342
+J LWrist -18.47205 74.79112 -9.84444
+J RWrist -28.37194 66.47788 34.80078
+J LHip 5.5293 5.72388 -8.74645
+J RHip -5.6006 -5.75089 8.59132
+J LKnee 41.92569 -7.62342 1.36155
+J RKnee 26.13042 -19.92972 18.15442
+J LAnkle 51.72848 -40.61878 -10.35025
+J RAnkle 24.0611 -49.53665 2.74443
+J Neck -39.6187 29.37757 3.00943
+J LPalm -18.08794 80.16936 -8.26695
+J RPalm -26.20032 71.62404 36.33976
+J LFoot 63.04683 -50.66307 -6.518
+J RFoot 32.50661 -61.16587 4.98775
+F knee_L 117.7756
+F knee_R 99.87645
+F hip_L 161.08817
+F hip_R 149.41026
+F elbow_L 152.03049
+F elbow_R 144.48466
+F shoulder_L 96.02828
+F shoulder_R 106.19624
+F ankle_L 134.45341
+F ankle_R 126.92723
+F wrist_L 168.55132
+F wrist_R 165.0126
+F knee_mean 108.82602
+F hip_mean 155.24921
+F elbow_mean 148.25757
+F knee_minside 99.87645
+F knee_maxside 117.7756
+F elbow_minside 144.48466
+F elbow_maxside 152.03049
+F torso_incl 53.4886
+F torso_pitch -47.11265
+F torso_roll -39.21212
+F head_pitch 31.02395
+F head_yaw -22.48807
+F face_vs_torso 92.37346
+F face_vs_forward 37.64702
+F kneefoot_L 111.22389
+F foot_pitch_L -40.04906
+F ankle_y_L -40.61878
+F foot_y_L -50.66307
+F knee_out_L 0.05468
+F knee_fwd_L -0.05287
+F kneefoot_R 67.47628
+F foot_pitch_R -53.07826
+F ankle_y_R -49.53665
+F foot_y_R -61.16587
+F knee_out_R -0.04345
+F knee_fwd_R 0.30101
+F kneefoot_mean 89.35008
+F knee_out_mean 0.00561
+F ankle_y_mean -45.07771
+F foot_y_mean -55.91447
+F palm_fwd_hip -0.22228
+F palm_fwd_knee -0.91014
+F palm_fwd_ankle -0.82771
+F palm_lat -0.63859
+F palm_h_rel 1.62479
+F palm_dist_body 0.53098
+F forearm_vert_L 20.79264
+F upperarm_vert_L 32.97683
+F elbow_torso_L 0.33033
+F forearm_vert_R 17.90099
+F upperarm_vert_R 43.05237
+F elbow_torso_R 0.47277
+F forearm_vert_mean 19.34681
+F shoulder_h_L 0.72343
+F shoulder_h_R 0.46654
+F shoulder_asym 0.34019
+F knee_asym 17.89915
+F hip_asym 11.6779
+F elbow_asym 7.54582
+F hand_h_asym 0.17299
+F stance_w 1.35194
+F grip_w 1.23684
+F neck_over_ankle -1.03736
+F hip_height_rel 0.75952
+F hip_below_knee 0.23196
+F sh_over_hip_fwd -0.64056
+F palm_head_dist 1.06722
+F palm_h_sh 0.94172
+F ear_shoulder_gap 0.12226
+F knee_gap 1.10815
+F knee_elbow_dist 1.80011
+F knee_h_L -0.12826
+F knee_lat_L 0.47305
+F elbow_h_L 0.28208
+F elbow_wrist_h_L -0.50881
+F knee_h_R -0.33567
+F knee_lat_R -0.38562
+F elbow_h_R 0.36476
+F elbow_wrist_h_R -0.51473
+F ankle_mean 130.69032
+F ankle_minside 126.92723
+F ankle_maxside 134.45341
+F ankle_y_minside -49.53665
+F ankle_y_maxside -40.61878
+F elbow_h_mean 0.32342
+F elbow_h_minside 0.28208
+F elbow_h_maxside 0.36476
+F elbow_torso_mean 0.40155
+F elbow_torso_minside 0.33033
+F elbow_torso_maxside 0.47277
+F elbow_wrist_h_mean -0.51177
+F elbow_wrist_h_minside -0.51473
+F elbow_wrist_h_maxside -0.50881
+F foot_pitch_mean -46.56366
+F foot_pitch_minside -53.07826
+F foot_pitch_maxside -40.04906
+F foot_y_minside -61.16587
+F foot_y_maxside -50.66307
+F forearm_vert_minside 17.90099
+F forearm_vert_maxside 20.79264
+F hip_minside 149.41026
+F hip_maxside 161.08817
+F knee_fwd_mean 0.12407
+F knee_fwd_minside -0.05287
+F knee_fwd_maxside 0.30101
+F knee_h_mean -0.23196
+F knee_h_minside -0.33567
+F knee_h_maxside -0.12826
+F knee_lat_mean 0.04371
+F knee_lat_minside -0.38562
+F knee_lat_maxside 0.47305
+F knee_out_minside -0.04345
+F knee_out_maxside 0.05468
+F kneefoot_minside 67.47628
+F kneefoot_maxside 111.22389
+F shoulder_mean 101.11226
+F shoulder_minside 96.02828
+F shoulder_maxside 106.19624
+F shoulder_h_mean 0.59498
+F shoulder_h_minside 0.46654
+F shoulder_h_maxside 0.72343
+F upperarm_vert_mean 38.0146
+F upperarm_vert_minside 32.97683
+F upperarm_vert_maxside 43.05237
+F wrist_mean 166.78195
+F wrist_minside 165.0126
+F wrist_maxside 168.55132
+END
+CASE D04-4-407 A 0
+J Nose 12.26135 61.38391 -13.97243
+J LEye 9.56159 64.63486 -13.79171
+J REye 11.79846 64.56696 -10.93039
+J LEar -1.25699 63.78368 -12.11108
+J REar 7.90097 63.89959 1.29814
+J LShoulder -11.08701 44.88266 -13.7763
+J RShoulder 8.78826 49.27911 14.41295
+J LElbow -15.99806 19.58854 -11.82744
+J RElbow 11.12496 22.21819 16.99233
+J LWrist -6.40343 0.14586 -10.95593
+J RWrist 14.88572 -0.51007 8.45939
+J LHip -4.2948 -1.25132 -9.90675
+J RHip 4.28202 1.30444 9.72926
+J LKnee -6.45596 -41.20819 -13.21176
+J RKnee 8.51173 -38.81575 4.00335
+J LAnkle -2.94165 -77.9602 -16.16916
+J RAnkle 8.89302 -76.55023 2.7873
+J Neck -1.14938 47.08088 0.31833
+J LPalm -3.49738 -7.13838 -11.25958
+J RPalm 16.72413 -7.82853 7.83061
+J LFoot 7.48992 -81.96911 -13.36057
+J RFoot 17.18627 -80.93959 8.24635
+F knee_L 171.46892
+F knee_R 171.743
+F hip_L 165.13789
+F hip_R 168.41849
+F elbow_L 142.75824
+F elbow_R 153.88042
+F shoulder_L 19.30639
+F shoulder_R 15.04239
+F ankle_L 114.30905
+F ankle_R 113.305
+F wrist_L 173.612
+F wrist_R 163.77972
+F knee_mean 171.60596
+F hip_mean 166.7782
+F elbow_mean 148.31934
+F knee_minside 171.46892
+F knee_maxside 171.743
+F elbow_minside 142.75824
+F elbow_maxside 153.88042
+F torso_incl 1.47711
+F torso_pitch -1.47348
+F torso_roll 0.10285
+F head_pitch -11.22771
+F head_yaw 20.18277
+F face_vs_torso 102.57457
+F face_vs_forward 22.98118
+F foot_pitch_L -20.35942
+F ankle_y_L -77.9602
+F foot_y_L -81.96911
+F knee_out_L 0.01541
+F knee_fwd_L -0.11891
+F foot_pitch_R -23.84963
+F ankle_y_R -76.55023
+F foot_y_R -80.93959
+F knee_out_R -0.01567
+F knee_fwd_R -0.02215
+F knee_out_mean -0.00013
+F ankle_y_mean -77.25522
+F foot_y_mean -81.45435
+F palm_fwd_hip 0.1427
+F palm_fwd_knee 0.08417
+F palm_fwd_ankle 0.0285
+F palm_lat -0.03336
+F palm_h_rel 0.56115
+F palm_dist_body 0.14482
+F forearm_vert_L 153.6409
+F upperarm_vert_L 168.20132
+F elbow_torso_L 0.18258
+F forearm_vert_R 157.69269
+F upperarm_vert_R 172.6712
+F elbow_torso_R 0.14626
+F forearm_vert_mean 155.66679
+F shoulder_h_L 0.95297
+F shoulder_h_R 1.04637
+F shoulder_asym -0.12644
+F knee_asym -0.27408
+F hip_asym -3.28059
+F elbow_asym -11.12218
+F hand_h_asym 0.01466
+F stance_w 1.03765
+F grip_w 0.80004
+F neck_over_ankle -0.08483
+F hip_height_rel 0.99542
+F hip_below_knee 0.51571
+F sh_over_hip_fwd -0.02571
+F palm_head_dist 1.51894
+F palm_h_sh -1.15922
+F ear_shoulder_gap 0.35608
+F knee_gap 1.06293
+F knee_elbow_dist 1.30777
+F knee_h_L -0.53112
+F knee_lat_L 0.18044
+F elbow_h_L -0.53737
+F elbow_wrist_h_L 0.41306
+F knee_h_R -0.5003
+F knee_lat_R -0.1647
+F elbow_h_R -0.57491
+F elbow_wrist_h_R 0.48286
+F ankle_mean 113.80702
+F ankle_minside 113.305
+F ankle_maxside 114.30905
+F ankle_y_minside -77.9602
+F ankle_y_maxside -76.55023
+F elbow_h_mean -0.55614
+F elbow_h_minside -0.57491
+F elbow_h_maxside -0.53737
+F elbow_torso_mean 0.16442
+F elbow_torso_minside 0.14626
+F elbow_torso_maxside 0.18258
+F elbow_wrist_h_mean 0.44796
+F elbow_wrist_h_minside 0.41306
+F elbow_wrist_h_maxside 0.48286
+F foot_pitch_mean -22.10453
+F foot_pitch_minside -23.84963
+F foot_pitch_maxside -20.35942
+F foot_y_minside -81.96911
+F foot_y_maxside -80.93959
+F forearm_vert_minside 153.6409
+F forearm_vert_maxside 157.69269
+F hip_minside 165.13789
+F hip_maxside 168.41849
+F knee_fwd_mean -0.07053
+F knee_fwd_minside -0.11891
+F knee_fwd_maxside -0.02215
+F knee_h_mean -0.51571
+F knee_h_minside -0.53112
+F knee_h_maxside -0.5003
+F knee_lat_mean 0.00787
+F knee_lat_minside -0.1647
+F knee_lat_maxside 0.18044
+F knee_out_minside -0.01567
+F knee_out_maxside 0.01541
+F shoulder_mean 17.17439
+F shoulder_minside 15.04239
+F shoulder_maxside 19.30639
+F shoulder_h_mean 0.99967
+F shoulder_h_minside 0.95297
+F shoulder_h_maxside 1.04637
+F upperarm_vert_mean 170.43626
+F upperarm_vert_minside 168.20132
+F upperarm_vert_maxside 172.6712
+F wrist_mean 168.69586
+F wrist_minside 163.77972
+F wrist_maxside 173.612
+END
+CASE D24-8-174 E 0
+J Nose -11.65007 62.38106 -21.27212
+J LEye -15.04383 64.79713 -18.14181
+J REye -12.24659 65.41586 -19.05743
+J LEar -16.38931 61.15085 -9.58716
+J REar -4.36256 64.46077 -13.14352
+J LShoulder -16.57405 46.98766 1.22134
+J RShoulder 13.16554 49.8121 -8.5628
+J LElbow -25.67286 27.12059 4.51157
+J RElbow 26.08521 29.79971 -2.96113
+J LWrist -15.69941 15.12225 -2.29951
+J RWrist 17.57137 12.21143 -2.88393
+J LHip -7.44277 -0.81523 5.64424
+J RHip 7.4245 0.87967 -5.84253
+J LKnee -11.578 -40.65062 4.32665
+J RKnee 11.01262 -41.76811 -7.31419
+J LAnkle 0.01958 -76.32423 5.81226
+J RAnkle 13.43189 -77.20447 -5.15018
+J Neck -1.70426 48.39988 -3.67073
+J LPalm -12.53926 11.85909 -3.29823
+J RPalm 14.66279 8.2041 -4.30352
+J LFoot -4.33879 -85.96959 4.47058
+J RFoot 7.84912 -85.41591 -5.0335
+F knee_L 155.71182
+F knee_R 174.46982
+F hip_L 161.84099
+F hip_R 167.4111
+F elbow_L 109.44157
+F elbow_R 120.46282
+F shoulder_L 35.31396
+F shoulder_R 40.34059
+F ankle_L 136.71121
+F ankle_R 141.80972
+F wrist_L 168.07968
+F wrist_R 160.93634
+F knee_mean 165.09082
+F hip_mean 164.62604
+F elbow_mean 114.95219
+F knee_minside 155.71182
+F knee_maxside 174.46982
+F elbow_minside 109.44157
+F elbow_maxside 120.46282
+F torso_incl 4.67282
+F torso_pitch 4.56599
+F torso_roll -0.99763
+F head_pitch -2.43501
+F head_yaw -30.36171
+F face_vs_torso 87.99213
+F face_vs_forward 30.4499
+F kneefoot_L 9.81083
+F foot_pitch_L -64.69579
+F ankle_y_L -76.32423
+F foot_y_L -85.96959
+F knee_out_L 0.07285
+F knee_fwd_L 0.22019
+F foot_pitch_R -55.78329
+F ankle_y_R -77.20447
+F foot_y_R -85.41591
+F knee_out_R 0.01754
+F knee_fwd_R 0.08969
+F kneefoot_mean 9.81083
+F knee_out_mean 0.0452
+F ankle_y_mean -76.76435
+F foot_y_mean -85.69275
+F palm_fwd_hip 0.04687
+F palm_fwd_knee 0.02068
+F palm_fwd_ankle 0.13873
+F palm_lat -0.09896
+F palm_h_rel 0.69346
+F palm_dist_body 0.07941
+F forearm_vert_L 134.81215
+F upperarm_vert_L 154.03352
+F elbow_torso_L 0.2614
+F forearm_vert_R 154.16914
+F upperarm_vert_R 144.86774
+F elbow_torso_R 0.32102
+F forearm_vert_mean 144.49065
+F shoulder_h_L 0.96758
+F shoulder_h_R 1.02578
+F shoulder_asym -0.08985
+F knee_asym -18.758
+F hip_asym -5.57011
+F elbow_asym -11.02125
+F hand_h_asym 0.07532
+F stance_w 0.91946
+F grip_w 0.87371
+F neck_over_ankle 0.10793
+F hip_height_rel 0.9961
+F hip_below_knee 0.53493
+F sh_over_hip_fwd 0.0796
+F palm_head_dist 1.12359
+F palm_h_sh -0.79063
+F ear_shoulder_gap 0.29685
+F knee_gap 1.34849
+F knee_elbow_dist 1.4264
+F knee_h_L -0.52768
+F knee_lat_L 0.13076
+F elbow_h_L -0.40939
+F elbow_wrist_h_L 0.24724
+F knee_h_R -0.54217
+F knee_lat_R 0.19821
+F elbow_h_R -0.41238
+F elbow_wrist_h_R 0.36243
+F ankle_mean 139.26047
+F ankle_minside 136.71121
+F ankle_maxside 141.80972
+F ankle_y_minside -77.20447
+F ankle_y_maxside -76.32423
+F elbow_h_mean -0.41088
+F elbow_h_minside -0.41238
+F elbow_h_maxside -0.40939
+F elbow_torso_mean 0.29121
+F elbow_torso_minside 0.2614
+F elbow_torso_maxside 0.32102
+F elbow_wrist_h_mean 0.30483
+F elbow_wrist_h_minside 0.24724
+F elbow_wrist_h_maxside 0.36243
+F foot_pitch_mean -60.23954
+F foot_pitch_minside -64.69579
+F foot_pitch_maxside -55.78329
+F foot_y_minside -85.96959
+F foot_y_maxside -85.41591
+F forearm_vert_minside 134.81215
+F forearm_vert_maxside 154.16914
+F hip_minside 161.84099
+F hip_maxside 167.4111
+F knee_fwd_mean 0.15494
+F knee_fwd_minside 0.08969
+F knee_fwd_maxside 0.22019
+F knee_h_mean -0.53493
+F knee_h_minside -0.54217
+F knee_h_maxside -0.52768
+F knee_lat_mean 0.16449
+F knee_lat_minside 0.13076
+F knee_lat_maxside 0.19821
+F knee_out_minside 0.01754
+F knee_out_maxside 0.07285
+F kneefoot_minside 9.81083
+F kneefoot_maxside 9.81083
+F shoulder_mean 37.82727
+F shoulder_minside 35.31396
+F shoulder_maxside 40.34059
+F shoulder_h_mean 0.99668
+F shoulder_h_minside 0.96758
+F shoulder_h_maxside 1.02578
+F upperarm_vert_mean 149.45062
+F upperarm_vert_minside 144.86774
+F upperarm_vert_maxside 154.03352
+F wrist_mean 164.50801
+F wrist_minside 160.93634
+F wrist_maxside 168.07968
+END
+CASE D22-7-805 C 0
+J Nose -40.30479 39.36027 -2.78773
+J LEye -40.70529 42.86557 -0.34592
+J REye -40.66467 43.34859 -3.34772
+J LEar -30.7267 44.72779 4.75406
+J REar -32.00972 47.35479 -8.1459
+J LShoulder -26.41734 34.17907 12.09603
+J RShoulder -23.06071 34.39628 -19.16327
+J LElbow -49.35373 20.97665 17.21802
+J RElbow -45.69275 22.28024 -24.23359
+J LWrist -70.03273 14.8069 10.46847
+J RWrist -65.08664 15.63673 -19.13949
+J LHip -0.91528 -0.0238 10.34343
+J RHip 0.85243 0.0366 -10.47576
+J LKnee -36.1315 7.85021 8.5068
+J RKnee -32.37757 14.23887 -20.76887
+J LAnkle -51.09011 -19.91719 -2.70896
+J RAnkle -44.30303 -15.60792 -33.06699
+J Neck -24.73903 34.28767 -3.53362
+J LPalm -72.67349 14.53526 11.86494
+J RPalm -67.9579 17.32961 -19.45949
+J LFoot -63.66938 -19.20128 -0.02566
+J RFoot -55.62254 -17.02058 -33.55878
+F knee_L 105.771
+F knee_R 94.38986
+F hip_L 41.01239
+F hip_R 31.34336
+F elbow_L 148.77284
+F elbow_R 153.24965
+F shoulder_L 97.10378
+F shoulder_R 98.68579
+F ankle_L 108.69096
+F ankle_R 117.79077
+F wrist_L 133.70131
+F wrist_R 127.24425
+F knee_mean 100.08043
+F hip_mean 36.17787
+F elbow_mean 151.01125
+F knee_minside 94.38986
+F knee_maxside 105.771
+F elbow_minside 148.77284
+F elbow_maxside 153.24965
+F torso_incl 36.04692
+F torso_pitch 36.00609
+F torso_roll -2.27966
+F head_pitch -36.57859
+F head_yaw -2.11231
+F face_vs_torso 90.53598
+F face_vs_forward 36.63102
+F kneefoot_L 131.09659
+F foot_pitch_L 3.18579
+F ankle_y_L -19.91719
+F foot_y_L -19.20128
+F knee_out_L -0.04175
+F knee_fwd_L -0.4736
+F kneefoot_R 136.60635
+F foot_pitch_R -7.107
+F ankle_y_R -15.60792
+F foot_y_R -17.02058
+F knee_out_R 0.46182
+F knee_fwd_R -0.37553
+F kneefoot_mean 133.85147
+F knee_out_mean 0.21004
+F ankle_y_mean -17.76256
+F foot_y_mean -18.11093
+F palm_fwd_hip 1.65918
+F palm_fwd_knee 0.84281
+F palm_fwd_ankle 0.50345
+F palm_lat 0.07088
+F palm_h_rel 0.64736
+F palm_dist_body 1.66001
+F forearm_vert_L 105.83504
+F upperarm_vert_L 119.3261
+F elbow_torso_L 0.62644
+F forearm_vert_R 108.33095
+F upperarm_vert_R 117.58256
+F elbow_torso_R 0.60502
+F forearm_vert_mean 107.08299
+F shoulder_h_L 0.80597
+F shoulder_h_R 0.8111
+F shoulder_asym -0.00691
+F knee_asym 11.38114
+F hip_asym 9.66903
+F elbow_asym -4.47681
+F hand_h_asym -0.06591
+F stance_w 1.50303
+F grip_w 1.01147
+F neck_over_ankle -0.4445
+F hip_height_rel 0.32787
+F hip_below_knee -0.20367
+F sh_over_hip_fwd 0.58757
+F palm_head_dist 1.16213
+F palm_h_sh -0.43291
+F ear_shoulder_gap 0.27721
+F knee_gap 1.44532
+F knee_elbow_dist 0.37586
+F knee_h_L 0.14473
+F knee_lat_L 0.05501
+F elbow_h_L -0.31138
+F elbow_wrist_h_L 0.14552
+F knee_h_R 0.26262
+F knee_lat_R 0.35631
+F elbow_h_R -0.28576
+F elbow_wrist_h_R 0.15669
+F ankle_mean 113.24086
+F ankle_minside 108.69096
+F ankle_maxside 117.79077
+F ankle_y_minside -19.91719
+F ankle_y_maxside -15.60792
+F elbow_h_mean -0.29857
+F elbow_h_minside -0.31138
+F elbow_h_maxside -0.28576
+F elbow_torso_mean 0.61573
+F elbow_torso_minside 0.60502
+F elbow_torso_maxside 0.62644
+F elbow_wrist_h_mean 0.1511
+F elbow_wrist_h_minside 0.14552
+F elbow_wrist_h_maxside 0.15669
+F foot_pitch_mean -1.96061
+F foot_pitch_minside -7.107
+F foot_pitch_maxside 3.18579
+F foot_y_minside -19.20128
+F foot_y_maxside -17.02058
+F forearm_vert_minside 105.83504
+F forearm_vert_maxside 108.33095
+F hip_minside 31.34336
+F hip_maxside 41.01239
+F knee_fwd_mean -0.42456
+F knee_fwd_minside -0.4736
+F knee_fwd_maxside -0.37553
+F knee_h_mean 0.20367
+F knee_h_minside 0.14473
+F knee_h_maxside 0.26262
+F knee_lat_mean 0.20566
+F knee_lat_minside 0.05501
+F knee_lat_maxside 0.35631
+F knee_out_minside -0.04175
+F knee_out_maxside 0.46182
+F kneefoot_minside 131.09659
+F kneefoot_maxside 136.60635
+F shoulder_mean 97.89478
+F shoulder_minside 97.10378
+F shoulder_maxside 98.68579
+F shoulder_h_mean 0.80854
+F shoulder_h_minside 0.80597
+F shoulder_h_maxside 0.8111
+F upperarm_vert_mean 118.45433
+F upperarm_vert_minside 117.58256
+F upperarm_vert_maxside 119.3261
+F wrist_mean 130.47278
+F wrist_minside 127.24425
+F wrist_maxside 133.70131
+END
+CASE D01-8-112 E 0
+J Nose -13.62611 68.50711 5.51026
+J LEye -12.08916 71.56124 7.66255
+J REye -11.97525 71.91508 4.2406
+J LEar -1.71793 67.72694 12.38867
+J REar -2.48855 70.11121 -2.18703
+J LShoulder 3.45902 49.80417 20.96634
+J RShoulder 3.2803 52.31534 -13.39982
+J LElbow 6.99461 29.15464 24.31355
+J RElbow 7.28247 29.6102 -18.86734
+J LWrist -0.63492 13.5675 17.6918
+J RWrist -2.91187 13.49617 -14.64994
+J LHip 1.39329 -0.09802 9.7808
+J RHip -1.36394 0.17734 -9.9507
+J LKnee -0.22752 -40.75293 2.3182
+J RKnee 3.59091 -39.59481 -17.13099
+J LAnkle 9.70707 -77.83031 -2.05781
+J RAnkle 13.21987 -75.4341 -24.82935
+J Neck 3.36966 51.05975 3.78326
+J LPalm -3.81543 7.82494 19.87045
+J RPalm -5.3696 8.26922 -13.88436
+J LFoot -1.67548 -82.72066 7.47601
+J RFoot 1.87027 -82.38732 -19.93446
+F knee_L 162.47279
+F knee_R 172.05237
+F hip_L 177.76813
+F hip_R 161.52327
+F elbow_L 133.7944
+F elbow_R 130.74409
+F shoulder_L 24.80156
+F shoulder_R 22.73965
+F ankle_L 92.51676
+F ankle_R 100.96451
+F wrist_L 140.65204
+F wrist_R 171.42282
+F knee_mean 167.26257
+F hip_mean 169.64569
+F elbow_mean 132.26926
+F knee_minside 162.47279
+F knee_maxside 172.05237
+F elbow_minside 130.74409
+F elbow_maxside 133.7944
+F torso_incl 5.73108
+F torso_pitch -3.12712
+F torso_roll 4.81228
+F head_pitch -2.04627
+F head_yaw -5.9198
+F face_vs_torso 95.63538
+F face_vs_forward 6.26225
+F kneefoot_L 16.17632
+F foot_pitch_L -18.2301
+F ankle_y_L -77.83031
+F foot_y_L -82.72066
+F knee_out_L -0.02637
+F knee_fwd_L 0.27035
+F kneefoot_R 15.31265
+F foot_pitch_R -29.36002
+F ankle_y_R -75.4341
+F foot_y_R -82.38732
+F knee_out_R -0.00336
+F knee_fwd_R 0.27973
+F kneefoot_mean 15.74448
+F knee_out_mean -0.01487
+F ankle_y_mean -76.6322
+F foot_y_mean -82.55399
+F palm_fwd_hip 0.09729
+F palm_fwd_knee 0.14925
+F palm_fwd_ankle 0.35447
+F palm_lat 0.06996
+F palm_h_rel 0.66315
+F palm_dist_body 0.10806
+F forearm_vert_L 147.0519
+F upperarm_vert_L 166.73326
+F elbow_torso_L 0.17388
+F forearm_vert_R 145.60298
+F upperarm_vert_R 163.38359
+F elbow_torso_R 0.1746
+F forearm_vert_mean 146.32744
+F shoulder_h_L 0.97051
+F shoulder_h_R 1.01949
+F shoulder_asym -0.07288
+F knee_asym -9.57957
+F hip_asym 16.24486
+F elbow_asym 3.05031
+F hand_h_asym -0.00866
+F stance_w 1.16261
+F grip_w 0.98071
+F neck_over_ankle 0.13207
+F hip_height_rel 0.97363
+F hip_below_knee 0.51066
+F sh_over_hip_fwd -0.05436
+F palm_head_dist 1.18884
+F palm_h_sh -0.83884
+F ear_shoulder_gap 0.3483
+F knee_gap 0.99644
+F knee_elbow_dist 1.35199
+F knee_h_L -0.51801
+F knee_lat_L -0.38219
+F elbow_h_L -0.40271
+F elbow_wrist_h_L 0.30398
+F knee_h_R -0.50331
+F knee_lat_R 0.32248
+F elbow_h_R -0.4428
+F elbow_wrist_h_R 0.31426
+F ankle_mean 96.74063
+F ankle_minside 92.51676
+F ankle_maxside 100.96451
+F ankle_y_minside -77.83031
+F ankle_y_maxside -75.4341
+F elbow_h_mean -0.42275
+F elbow_h_minside -0.4428
+F elbow_h_maxside -0.40271
+F elbow_torso_mean 0.17424
+F elbow_torso_minside 0.17388
+F elbow_torso_maxside 0.1746
+F elbow_wrist_h_mean 0.30912
+F elbow_wrist_h_minside 0.30398
+F elbow_wrist_h_maxside 0.31426
+F foot_pitch_mean -23.79506
+F foot_pitch_minside -29.36002
+F foot_pitch_maxside -18.2301
+F foot_y_minside -82.72066
+F foot_y_maxside -82.38732
+F forearm_vert_minside 145.60298
+F forearm_vert_maxside 147.0519
+F hip_minside 161.52327
+F hip_maxside 177.76813
+F knee_fwd_mean 0.27504
+F knee_fwd_minside 0.27035
+F knee_fwd_maxside 0.27973
+F knee_h_mean -0.51066
+F knee_h_minside -0.51801
+F knee_h_maxside -0.50331
+F knee_lat_mean -0.02985
+F knee_lat_minside -0.38219
+F knee_lat_maxside 0.32248
+F knee_out_minside -0.02637
+F knee_out_maxside -0.00336
+F kneefoot_minside 15.31265
+F kneefoot_maxside 16.17632
+F shoulder_mean 23.77061
+F shoulder_minside 22.73965
+F shoulder_maxside 24.80156
+F shoulder_h_mean 0.995
+F shoulder_h_minside 0.97051
+F shoulder_h_maxside 1.01949
+F upperarm_vert_mean 165.05843
+F upperarm_vert_minside 163.38359
+F upperarm_vert_maxside 166.73326
+F wrist_mean 156.03743
+F wrist_minside 140.65204
+F wrist_maxside 171.42282
+END
+CASE D14-1-134 B 0
+J Nose 4.35007 68.68413 18.20604
+J LEye 3.34185 72.61954 16.16977
+J REye 0.94233 71.88858 17.41259
+J LEar 2.88385 70.43209 5.84078
+J REar -8.04547 67.52175 11.84758
+J LShoulder 13.50648 50.08998 -2.5979
+J RShoulder -16.94559 48.90821 9.5639
+J LElbow 21.99868 30.97519 -8.73047
+J RElbow -30.49893 29.02344 7.51844
+J LWrist 18.50645 14.48258 1.92694
+J RWrist -18.3511 11.5891 14.5604
+J LHip 9.73003 -0.42298 -4.46404
+J RHip -9.76503 0.47412 4.32533
+J LKnee 3.26346 -41.60614 -6.29962
+J RKnee -8.65772 -39.15046 1.96012
+J LAnkle 2.30156 -76.77625 -16.75482
+J RAnkle -5.4782 -75.61101 -9.63087
+J Neck -1.71955 49.49909 3.483
+J LPalm 14.39585 9.08839 6.6425
+J RPalm -12.68582 5.82293 17.99142
+J LFoot 11.11231 -84.84671 -6.8326
+J RFoot -2.06764 -84.83735 2.42098
+F knee_L 164.2151
+F knee_R 165.45805
+F hip_L 175.33749
+F hip_R 172.67908
+F elbow_L 120.43862
+F elbow_R 108.06275
+F shoulder_L 31.21251
+F shoulder_R 42.5236
+F ankle_L 107.52197
+F ankle_R 110.33589
+F wrist_L 158.77988
+F wrist_R 169.86172
+F knee_mean 164.83658
+F hip_mean 174.00829
+F elbow_mean 114.25069
+F knee_minside 164.2151
+F knee_maxside 165.45805
+F elbow_minside 108.06275
+F elbow_maxside 120.43862
+F torso_incl 4.55221
+F torso_pitch 2.93772
+F torso_roll -3.48358
+F head_pitch -1.4399
+F head_yaw 12.24541
+F face_vs_torso 89.30897
+F face_vs_forward 12.3285
+F kneefoot_L 36.34796
+F foot_pitch_L -31.30782
+F ankle_y_L -76.77625
+F foot_y_L -84.84671
+F knee_out_L -0.05422
+F knee_fwd_L 0.27045
+F kneefoot_R 31.14045
+F foot_pitch_R -36.37633
+F ankle_y_R -75.61101
+F foot_y_R -84.83735
+F knee_out_R 0.03925
+F knee_fwd_R 0.2412
+F kneefoot_mean 33.74421
+F knee_out_mean -0.00749
+F ankle_y_mean -76.19363
+F foot_y_mean -84.84203
+F palm_fwd_hip 0.23474
+F palm_fwd_knee 0.29552
+F palm_fwd_ankle 0.48881
+F palm_lat -0.13091
+F palm_h_rel 0.66551
+F palm_dist_body 0.25019
+F forearm_vert_L 145.78426
+F upperarm_vert_L 151.27701
+F elbow_torso_L 0.22284
+F forearm_vert_R 141.15259
+F upperarm_vert_R 145.42099
+F elbow_torso_R 0.33149
+F forearm_vert_mean 143.46841
+F shoulder_h_L 1.00875
+F shoulder_h_R 0.98494
+F shoulder_asym 0.03602
+F knee_asym -1.24295
+F hip_asym 2.65842
+F elbow_asym 12.37587
+F hand_h_asym 0.0658
+F stance_w 0.49584
+F grip_w 0.90041
+F neck_over_ankle 0.19525
+F hip_height_rel 0.98243
+F hip_below_knee 0.52078
+F sh_over_hip_fwd 0.05116
+F palm_head_dist 1.2435
+F palm_h_sh -0.84714
+F ear_shoulder_gap 0.39246
+F knee_gap 0.68724
+F knee_elbow_dist 1.44676
+F knee_h_L -0.53661
+F knee_lat_L -0.24018
+F elbow_h_L -0.38515
+F elbow_wrist_h_L 0.33231
+F knee_h_R -0.50496
+F knee_lat_R -0.09258
+F elbow_h_R -0.40066
+F elbow_wrist_h_R 0.35129
+F ankle_mean 108.92893
+F ankle_minside 107.52197
+F ankle_maxside 110.33589
+F ankle_y_minside -76.77625
+F ankle_y_maxside -75.61101
+F elbow_h_mean -0.3929
+F elbow_h_minside -0.40066
+F elbow_h_maxside -0.38515
+F elbow_torso_mean 0.27717
+F elbow_torso_minside 0.22284
+F elbow_torso_maxside 0.33149
+F elbow_wrist_h_mean 0.3418
+F elbow_wrist_h_minside 0.33231
+F elbow_wrist_h_maxside 0.35129
+F foot_pitch_mean -33.84207
+F foot_pitch_minside -36.37633
+F foot_pitch_maxside -31.30782
+F foot_y_minside -84.84671
+F foot_y_maxside -84.83735
+F forearm_vert_minside 141.15259
+F forearm_vert_maxside 145.78426
+F hip_minside 172.67908
+F hip_maxside 175.33749
+F knee_fwd_mean 0.25583
+F knee_fwd_minside 0.2412
+F knee_fwd_maxside 0.27045
+F knee_h_mean -0.52078
+F knee_h_minside -0.53661
+F knee_h_maxside -0.50496
+F knee_lat_mean -0.16638
+F knee_lat_minside -0.24018
+F knee_lat_maxside -0.09258
+F knee_out_minside -0.05422
+F knee_out_maxside 0.03925
+F kneefoot_minside 31.14045
+F kneefoot_maxside 36.34796
+F shoulder_mean 36.86806
+F shoulder_minside 31.21251
+F shoulder_maxside 42.5236
+F shoulder_h_mean 0.99685
+F shoulder_h_minside 0.98494
+F shoulder_h_maxside 1.00875
+F upperarm_vert_mean 148.349
+F upperarm_vert_minside 145.42099
+F upperarm_vert_maxside 151.27701
+F wrist_mean 164.3208
+F wrist_minside 158.77988
+F wrist_maxside 169.86172
+END
+CASE D21-8-720 E 0
+J Nose 0.56227 67.45889 -8.50317
+J LEye -1.27236 70.20619 -6.83402
+J REye 0.87806 69.92778 -6.51237
+J LEar -6.17949 65.66247 -1.43376
+J REar 2.82404 64.89513 0.41106
+J LShoulder -7.84274 53.24141 0.35285
+J RShoulder 5.45838 54.43115 4.02907
+J LElbow -17.58418 73.16656 -1.17637
+J RElbow 4.95366 71.90804 4.95852
+J LWrist -20.28646 93.85204 4.22032
+J RWrist 3.73246 92.33247 1.87561
+J LHip -0.22487 -0.5658 -2.06675
+J RHip 0.16233 0.59854 1.905
+J LKnee 0.83721 -38.58455 -1.5201
+J RKnee 1.89006 -38.11735 2.88637
+J LAnkle 13.38015 -65.20587 -5.75306
+J RAnkle 3.66674 -68.56704 -1.24504
+J Neck -1.19218 53.83628 2.19096
+J LPalm -21.44701 96.91446 6.01907
+J RPalm 4.4445 95.66725 2.73561
+J LFoot 19.05201 -70.30585 0.20778
+J RFoot 5.30851 -75.51251 4.66002
+F knee_L 154.78227
+F knee_R 170.80234
+F hip_L 172.71574
+F hip_R 171.02946
+F elbow_L 153.90959
+F elbow_R 168.25563
+F shoulder_L 160.87874
+F shoulder_R 172.69165
+F ankle_L 129.14177
+F ankle_R 131.79134
+F wrist_L 161.14326
+F wrist_R 152.57599
+F knee_mean 162.7923
+F hip_mean 171.8726
+F elbow_mean 161.08261
+F knee_minside 154.78227
+F knee_maxside 170.80234
+F elbow_minside 153.90959
+F elbow_maxside 168.25563
+F torso_incl 2.71404
+F torso_pitch -1.46441
+F torso_roll -2.28602
+F head_pitch 14.71725
+F head_yaw 68.77444
+F face_vs_torso 77.94373
+F face_vs_forward 69.50276
+F kneefoot_L 114.92858
+F foot_pitch_L -31.79169
+F ankle_y_L -65.20587
+F foot_y_L -70.30585
+F knee_out_L -0.03066
+F knee_fwd_L -0.4337
+F foot_pitch_R -48.57316
+F ankle_y_R -68.56704
+F foot_y_R -75.51251
+F knee_out_R 0.03908
+F knee_fwd_R -0.07047
+F kneefoot_mean 114.92858
+F knee_out_mean 0.00421
+F ankle_y_mean -66.88646
+F foot_y_mean -72.90918
+F palm_fwd_hip -0.16449
+F palm_fwd_knee -0.18888
+F palm_fwd_ankle -0.32867
+F palm_h_rel 1.35167
+F palm_dist_body 0.17765
+F forearm_vert_L 16.26578
+F upperarm_vert_L 26.33029
+F elbow_torso_L 0.13387
+F forearm_vert_R 9.22164
+F upperarm_vert_R 3.46311
+F elbow_torso_R 0.04114
+F forearm_vert_mean 12.74371
+F shoulder_h_L 0.98784
+F shoulder_h_R 1.00992
+F knee_asym -16.02007
+F hip_asym 1.68628
+F elbow_asym -14.34604
+F hand_h_asym 0.02315
+F neck_over_ankle -0.15089
+F hip_height_rel 0.98761
+F hip_below_knee 0.56637
+F sh_over_hip_fwd -0.02554
+F palm_head_dist 0.59628
+F palm_h_sh 0.78794
+F ear_shoulder_gap 0.21237
+F knee_elbow_dist 2.04319
+F knee_h_L -0.56982
+F elbow_h_L 0.3698
+F elbow_wrist_h_L -0.38392
+F knee_h_R -0.56292
+F elbow_h_R 0.32436
+F elbow_wrist_h_R -0.37907
+F ankle_mean 130.46655
+F ankle_minside 129.14177
+F ankle_maxside 131.79134
+F ankle_y_minside -68.56704
+F ankle_y_maxside -65.20587
+F elbow_h_mean 0.34708
+F elbow_h_minside 0.32436
+F elbow_h_maxside 0.3698
+F elbow_torso_mean 0.08751
+F elbow_torso_minside 0.04114
+F elbow_torso_maxside 0.13387
+F elbow_wrist_h_mean -0.38149
+F elbow_wrist_h_minside -0.38392
+F elbow_wrist_h_maxside -0.37907
+F foot_pitch_mean -40.18243
+F foot_pitch_minside -48.57316
+F foot_pitch_maxside -31.79169
+F foot_y_minside -75.51251
+F foot_y_maxside -70.30585
+F forearm_vert_minside 9.22164
+F forearm_vert_maxside 16.26578
+F hip_minside 171.02946
+F hip_maxside 172.71574
+F knee_fwd_mean -0.25209
+F knee_fwd_minside -0.4337
+F knee_fwd_maxside -0.07047
+F knee_h_mean -0.56637
+F knee_h_minside -0.56982
+F knee_h_maxside -0.56292
+F knee_out_minside -0.03066
+F knee_out_maxside 0.03908
+F kneefoot_minside 114.92858
+F kneefoot_maxside 114.92858
+F shoulder_mean 166.78519
+F shoulder_minside 160.87874
+F shoulder_maxside 172.69165
+F shoulder_h_mean 0.99888
+F shoulder_h_minside 0.98784
+F shoulder_h_maxside 1.00992
+F upperarm_vert_mean 14.8967
+F upperarm_vert_minside 3.46311
+F upperarm_vert_maxside 26.33029
+F wrist_mean 156.85962
+F wrist_minside 152.57599
+F wrist_maxside 161.14326
+END
+CASE D16-4-440 C 0
+J Nose 1.10496 56.5479 37.47266
+J LEye 2.01029 60.84076 36.67887
+J REye -1.33203 60.48219 36.85823
+J LEar 6.81153 62.79559 25.34985
+J REar -8.52926 62.06207 26.61336
+J LShoulder 16.73431 48.12198 14.58983
+J RShoulder -17.07336 46.99307 17.09173
+J LElbow 18.06493 23.14487 9.94831
+J RElbow -19.14819 20.76748 11.37759
+J LWrist 24.09591 0.74847 19.20717
+J RWrist -24.54163 -2.39578 19.63299
+J LHip 11.79402 -0.10898 -0.68361
+J RHip -11.82436 0.17669 0.55159
+J LKnee 12.73099 -41.93954 -0.22974
+J RKnee -11.35598 -39.18328 -1.19829
+J LAnkle 16.95722 -74.68027 -16.73102
+J RAnkle -9.74098 -72.8479 -16.83119
+J Neck -0.16952 47.55753 15.84078
+J LPalm 25.55357 -7.99555 23.35495
+J RPalm -25.2738 -10.5072 23.78267
+J LFoot 22.69606 -85.80254 -5.46515
+J RFoot -13.32907 -83.75262 -5.03706
+F knee_L 152.19742
+F knee_R 157.57318
+F hip_L 160.57855
+F hip_R 162.29408
+F elbow_L 145.63693
+F elbow_R 147.48325
+F shoulder_L 11.09251
+F shoulder_R 12.66925
+F ankle_L 109.01651
+F ankle_R 106.81903
+F wrist_L 173.8815
+F wrist_R 169.27254
+F knee_mean 154.8853
+F hip_mean 161.43631
+F elbow_mean 146.56009
+F knee_minside 152.19742
+F knee_maxside 157.57318
+F elbow_minside 145.63693
+F elbow_maxside 147.48325
+F torso_incl 18.50687
+F torso_pitch 18.47378
+F torso_roll -1.18725
+F head_pitch -26.76953
+F head_yaw 6.70445
+F face_vs_torso 98.5248
+F face_vs_forward 27.53606
+F kneefoot_L 41.35985
+F foot_pitch_L -41.33788
+F ankle_y_L -74.68027
+F foot_y_L -85.80254
+F knee_out_L -0.03205
+F knee_fwd_L 0.44052
+F kneefoot_R 11.023
+F foot_pitch_R -41.49466
+F ankle_y_R -72.8479
+F foot_y_R -83.75262
+F knee_out_R 0.014
+F knee_fwd_R 0.41793
+F kneefoot_mean 26.19142
+F knee_out_mean -0.00902
+F ankle_y_mean -73.76408
+F foot_y_mean -84.77757
+F palm_fwd_hip 0.47113
+F palm_fwd_knee 0.48331
+F palm_fwd_ankle 0.80043
+F palm_lat -0.03183
+F palm_h_rel 0.53175
+F palm_dist_body 0.47162
+F forearm_vert_L 153.73935
+F upperarm_vert_L 169.05878
+F elbow_torso_L 0.09629
+F forearm_vert_R 156.93953
+F upperarm_vert_R 166.94914
+F elbow_torso_R 0.11826
+F forearm_vert_mean 155.33945
+F shoulder_h_L 0.95955
+F shoulder_h_R 0.93702
+F shoulder_asym 0.03328
+F knee_asym -5.37576
+F hip_asym -1.71553
+F elbow_asym -1.84631
+F hand_h_asym 0.05012
+F stance_w 1.13144
+F grip_w 1.50038
+F neck_over_ankle 0.42733
+F hip_height_rel 0.97393
+F hip_below_knee 0.53575
+F sh_over_hip_fwd 0.31681
+F palm_head_dist 1.43125
+F palm_h_sh -1.13356
+F ear_shoulder_gap 0.29674
+F knee_gap 1.02584
+F knee_elbow_dist 1.23214
+F knee_h_L -0.55393
+F knee_lat_L 0.03856
+F elbow_h_L -0.49839
+F elbow_wrist_h_L 0.4469
+F knee_h_R -0.51756
+F knee_lat_R -0.02364
+F elbow_h_R -0.5233
+F elbow_wrist_h_R 0.4622
+F ankle_mean 107.91777
+F ankle_minside 106.81903
+F ankle_maxside 109.01651
+F ankle_y_minside -74.68027
+F ankle_y_maxside -72.8479
+F elbow_h_mean -0.51085
+F elbow_h_minside -0.5233
+F elbow_h_maxside -0.49839
+F elbow_torso_mean 0.10727
+F elbow_torso_minside 0.09629
+F elbow_torso_maxside 0.11826
+F elbow_wrist_h_mean 0.45455
+F elbow_wrist_h_minside 0.4469
+F elbow_wrist_h_maxside 0.4622
+F foot_pitch_mean -41.41627
+F foot_pitch_minside -41.49466
+F foot_pitch_maxside -41.33788
+F foot_y_minside -85.80254
+F foot_y_maxside -83.75262
+F forearm_vert_minside 153.73935
+F forearm_vert_maxside 156.93953
+F hip_minside 160.57855
+F hip_maxside 162.29408
+F knee_fwd_mean 0.42922
+F knee_fwd_minside 0.41793
+F knee_fwd_maxside 0.44052
+F knee_h_mean -0.53575
+F knee_h_minside -0.55393
+F knee_h_maxside -0.51756
+F knee_lat_mean 0.00746
+F knee_lat_minside -0.02364
+F knee_lat_maxside 0.03856
+F knee_out_minside -0.03205
+F knee_out_maxside 0.014
+F kneefoot_minside 11.023
+F kneefoot_maxside 41.35985
+F shoulder_mean 11.88088
+F shoulder_minside 11.09251
+F shoulder_maxside 12.66925
+F shoulder_h_mean 0.94829
+F shoulder_h_minside 0.93702
+F shoulder_h_maxside 0.95955
+F upperarm_vert_mean 168.00397
+F upperarm_vert_minside 166.94914
+F upperarm_vert_maxside 169.05878
+F wrist_mean 171.57703
+F wrist_minside 169.27254
+F wrist_maxside 173.8815
+END
+CASE D14-6-188 D 0
+J Nose -7.22527 68.45483 13.737
+J LEye -4.96506 71.81972 13.80059
+J REye -7.26171 71.96918 11.88334
+J LEar 5.17666 69.52669 9.88016
+J REar -5.76277 70.60702 1.69926
+J LShoulder 16.63204 54.61539 8.66671
+J RShoulder -9.55328 55.38686 -5.62291
+J LElbow 20.95877 72.48223 4.15968
+J RElbow -17.36514 66.24824 -20.48517
+J LWrist 12.74578 87.28672 -19.08466
+J RWrist -12.45582 80.04806 -32.27157
+J LHip 9.67456 -0.86546 4.81757
+J RHip -9.74815 0.90538 -4.88772
+J LKnee 10.44823 -41.10005 3.66266
+J RKnee -4.41898 -38.72463 -10.10774
+J LAnkle 17.66127 -75.72544 -2.15912
+J RAnkle 2.28798 -75.31814 -17.27438
+J Neck 3.53938 55.00113 1.5219
+J LPalm 9.1938 84.29491 -20.5601
+J RPalm -8.34007 79.06065 -32.7035
+J LFoot 13.60997 -87.29271 7.04276
+J RFoot -8.08031 -87.28118 -10.28644
+F knee_L 166.88974
+F knee_R 175.61134
+F hip_L 171.44757
+F hip_R 168.64491
+F elbow_L 127.81825
+F elbow_R 139.69513
+F shoulder_L 161.16071
+F shoulder_R 123.4856
+F ankle_L 125.33532
+F ankle_R 119.03
+F wrist_L 97.86541
+F wrist_R 98.38969
+F knee_mean 171.25055
+F hip_mean 170.04623
+F elbow_mean 133.75668
+F knee_minside 166.88974
+F knee_maxside 175.61134
+F elbow_minside 127.81825
+F elbow_maxside 139.69513
+F torso_incl 4.05782
+F torso_pitch -0.2144
+F torso_roll 4.05218
+F head_pitch -8.69087
+F head_yaw -14.54663
+F face_vs_torso 99.89487
+F face_vs_forward 16.89682
+F kneefoot_L 27.32991
+F foot_pitch_L -49.0029
+F ankle_y_L -75.72544
+F foot_y_L -87.29271
+F knee_out_L -0.02629
+F knee_fwd_L 0.23524
+F kneefoot_R 12.91885
+F foot_pitch_R -43.73501
+F ankle_y_R -75.31814
+F foot_y_R -87.28118
+F knee_out_R 0.00365
+F knee_fwd_R 0.24834
+F kneefoot_mean 20.12438
+F knee_out_mean -0.01132
+F ankle_y_mean -75.52179
+F foot_y_mean -87.28694
+F palm_fwd_hip -0.4354
+F palm_fwd_knee -0.35893
+F palm_fwd_ankle -0.19709
+F palm_lat -0.3845
+F palm_h_rel 1.20438
+F palm_dist_body 0.4826
+F forearm_vert_L 59.0142
+F upperarm_vert_L 19.2738
+F elbow_torso_L 0.10905
+F forearm_vert_R 42.77581
+F upperarm_vert_R 57.10171
+F elbow_torso_R 0.30609
+F forearm_vert_mean 50.895
+F shoulder_h_L 0.99049
+F shoulder_h_R 1.00449
+F shoulder_asym -0.02585
+F knee_asym -8.7216
+F hip_asym 2.80266
+F elbow_asym -11.87688
+F hand_h_asym 0.09496
+F stance_w 0.98984
+F grip_w 0.73595
+F neck_over_ankle 0.16818
+F hip_height_rel 0.98257
+F hip_below_knee 0.5194
+F sh_over_hip_fwd -0.00373
+F palm_head_dist 0.62492
+F palm_h_sh 0.48398
+F ear_shoulder_gap 0.27333
+F knee_gap 0.9366
+F knee_elbow_dist 1.92811
+F knee_h_L -0.53485
+F knee_lat_L 0.00807
+F elbow_h_L 0.32415
+F elbow_wrist_h_L -0.26859
+F knee_h_R -0.50395
+F knee_lat_R -0.11172
+F elbow_h_R 0.19705
+F elbow_wrist_h_R -0.25036
+F ankle_mean 122.18266
+F ankle_minside 119.03
+F ankle_maxside 125.33532
+F ankle_y_minside -75.72544
+F ankle_y_maxside -75.31814
+F elbow_h_mean 0.2606
+F elbow_h_minside 0.19705
+F elbow_h_maxside 0.32415
+F elbow_torso_mean 0.20757
+F elbow_torso_minside 0.10905
+F elbow_torso_maxside 0.30609
+F elbow_wrist_h_mean -0.25948
+F elbow_wrist_h_minside -0.26859
+F elbow_wrist_h_maxside -0.25036
+F foot_pitch_mean -46.36896
+F foot_pitch_minside -49.0029
+F foot_pitch_maxside -43.73501
+F foot_y_minside -87.29271
+F foot_y_maxside -87.28118
+F forearm_vert_minside 42.77581
+F forearm_vert_maxside 59.0142
+F hip_minside 168.64491
+F hip_maxside 171.44757
+F knee_fwd_mean 0.24179
+F knee_fwd_minside 0.23524
+F knee_fwd_maxside 0.24834
+F knee_h_mean -0.5194
+F knee_h_minside -0.53485
+F knee_h_maxside -0.50395
+F knee_lat_mean -0.05183
+F knee_lat_minside -0.11172
+F knee_lat_maxside 0.00807
+F knee_out_minside -0.02629
+F knee_out_maxside 0.00365
+F kneefoot_minside 12.91885
+F kneefoot_maxside 27.32991
+F shoulder_mean 142.32315
+F shoulder_minside 123.4856
+F shoulder_maxside 161.16071
+F shoulder_h_mean 0.99749
+F shoulder_h_minside 0.99049
+F shoulder_h_maxside 1.00449
+F upperarm_vert_mean 38.18776
+F upperarm_vert_minside 19.2738
+F upperarm_vert_maxside 57.10171
+F wrist_mean 98.12755
+F wrist_minside 97.86541
+F wrist_maxside 98.38969
+END
+CASE D40-12-650 B 0
+J Nose -62.89286 8.17934 29.33883
+J LEye -65.84161 4.77958 28.15211
+J REye -64.5807 3.81489 30.9378
+J LEar -62.88451 -1.72622 18.09842
+J REar -57.89968 -5.93417 31.60311
+J LShoulder -53.14503 2.57975 5.80225
+J RShoulder -40.58832 -1.46416 35.83448
+J LElbow -56.94017 21.33251 -1.62687
+J RElbow -38.49038 18.95808 41.1517
+J LWrist -62.06041 41.34872 3.15308
+J RWrist -47.49191 38.62725 42.57379
+J LHip -3.85408 1.66234 -10.76201
+J RHip 3.79351 -1.71162 10.60912
+J LKnee 16.64362 -1.96768 -36.8931
+J RKnee 33.80396 -0.13045 7.47862
+J LAnkle 22.15608 -26.64394 -56.51679
+J RAnkle 43.11948 -33.83152 -0.21455
+J Neck -46.86668 0.55779 20.81837
+J LPalm -63.7342 44.6739 6.13078
+J RPalm -51.57679 42.76649 45.79034
+J LFoot 27.08792 -27.61182 -60.26228
+J RFoot 49.99967 -41.12615 1.99502
+F knee_L 131.98972
+F knee_R 103.38216
+F hip_L 146.358
+F hip_R 156.12648
+F elbow_L 145.63399
+F elbow_R 148.11731
+F shoulder_L 94.36335
+F shoulder_R 92.439
+F ankle_L 128.38475
+F ankle_R 142.83153
+F wrist_L 152.12245
+F wrist_R 148.4425
+F knee_mean 117.68594
+F hip_mean 151.24225
+F elbow_mean 146.87564
+F knee_minside 103.38216
+F knee_maxside 131.98972
+F elbow_minside 145.63399
+F elbow_maxside 148.11731
+F torso_incl 89.34934
+F torso_pitch -89.34746
+F torso_roll -81.49073
+F head_pitch 66.83846
+F head_yaw -138.8163
+F face_vs_torso 71.01973
+F face_vs_forward 107.21854
+F kneefoot_L 142.90535
+F foot_pitch_L -8.88289
+F ankle_y_L -26.64394
+F foot_y_L -27.61182
+F knee_out_L 0.2225
+F knee_fwd_L -0.36874
+F kneefoot_R 122.64413
+F foot_pitch_R -45.26965
+F ankle_y_R -33.83152
+F foot_y_R -41.12615
+F knee_out_R 0.14089
+F knee_fwd_R -0.31739
+F kneefoot_mean 132.77473
+F knee_out_mean 0.18169
+F ankle_y_mean -30.23773
+F foot_y_mean -34.36899
+F palm_fwd_hip -1.22888
+F palm_fwd_knee -1.78859
+F palm_fwd_ankle -2.01442
+F palm_lat -0.15546
+F palm_h_rel 2.40158
+F palm_dist_body 1.2329
+F forearm_vert_L 19.28736
+F upperarm_vert_L 23.98238
+F elbow_torso_L 0.3935
+F forearm_vert_R 24.85933
+F upperarm_vert_R 15.63678
+F elbow_torso_R 0.41504
+F forearm_vert_mean 22.07335
+F shoulder_h_L 0.05078
+F shoulder_h_R -0.02807
+F shoulder_asym 0.12328
+F knee_asym 28.60755
+F hip_asym -9.76848
+F elbow_asym -2.48332
+F hand_h_asym 0.03719
+F stance_w 2.63673
+F grip_w 1.26593
+F neck_over_ankle -1.63735
+F hip_height_rel 0.54108
+F hip_below_knee 0.01835
+F sh_over_hip_fwd -0.99705
+F palm_head_dist 0.92889
+F palm_h_sh 0.84155
+F ear_shoulder_gap -0.08555
+F knee_gap 2.07472
+F knee_elbow_dist 1.59886
+F knee_h_L -0.0348
+F knee_lat_L 0.77119
+F elbow_h_L 0.36563
+F elbow_wrist_h_L -0.39026
+F knee_h_R -0.00189
+F knee_lat_R 0.31218
+F elbow_h_R 0.39818
+F elbow_wrist_h_R -0.3835
+F ankle_mean 135.60814
+F ankle_minside 128.38475
+F ankle_maxside 142.83153
+F ankle_y_minside -33.83152
+F ankle_y_maxside -26.64394
+F elbow_h_mean 0.3819
+F elbow_h_minside 0.36563
+F elbow_h_maxside 0.39818
+F elbow_torso_mean 0.40427
+F elbow_torso_minside 0.3935
+F elbow_torso_maxside 0.41504
+F elbow_wrist_h_mean -0.38688
+F elbow_wrist_h_minside -0.39026
+F elbow_wrist_h_maxside -0.3835
+F foot_pitch_mean -27.07627
+F foot_pitch_minside -45.26965
+F foot_pitch_maxside -8.88289
+F foot_y_minside -41.12615
+F foot_y_maxside -27.61182
+F forearm_vert_minside 19.28736
+F forearm_vert_maxside 24.85933
+F hip_minside 146.358
+F hip_maxside 156.12648
+F knee_fwd_mean -0.34306
+F knee_fwd_minside -0.36874
+F knee_fwd_maxside -0.31739
+F knee_h_mean -0.01835
+F knee_h_minside -0.0348
+F knee_h_maxside -0.00189
+F knee_lat_mean 0.54169
+F knee_lat_minside 0.31218
+F knee_lat_maxside 0.77119
+F knee_out_minside 0.14089
+F knee_out_maxside 0.2225
+F kneefoot_minside 122.64413
+F kneefoot_maxside 142.90535
+F shoulder_mean 93.40117
+F shoulder_minside 92.439
+F shoulder_maxside 94.36335
+F shoulder_h_mean 0.01136
+F shoulder_h_minside -0.02807
+F shoulder_h_maxside 0.05078
+F upperarm_vert_mean 19.80958
+F upperarm_vert_minside 15.63678
+F upperarm_vert_maxside 23.98238
+F wrist_mean 150.28247
+F wrist_minside 148.4425
+F wrist_maxside 152.12245
+END
+CASE D36-6-494 C 0
+J Nose -67.31562 12.0003 9.67912
+J LEye -71.06565 9.07663 9.17176
+J REye -70.00714 8.47906 12.289
+J LEar -69.23159 -0.6459 1.33726
+J REar -65.54951 -2.7048 16.47338
+J LShoulder -53.39001 2.14709 -8.34115
+J RShoulder -53.62422 -7.53618 18.39814
+J LElbow -74.37237 0.83629 -29.07114
+J RElbow -73.84961 -11.80138 20.09993
+J LWrist -80.76066 -5.57396 -46.52149
+J RWrist -75.0881 -5.66063 -0.7044
+J LHip 0.35729 4.88466 -10.55037
+J RHip -0.40049 -4.93901 10.40803
+J LKnee 26.73879 28.83859 -10.82728
+J RKnee 22.97651 22.27266 9.83151
+J LAnkle 37.44346 -1.52724 -20.25238
+J RAnkle 37.64658 -3.65728 -4.26819
+J Neck -53.50711 -2.69455 5.0285
+J LPalm -76.84484 -8.82096 -49.65968
+J RPalm -69.33727 -2.42078 -3.25759
+J LFoot 51.81176 -9.25593 -22.41534
+J RFoot 54.2981 -10.63582 -8.85441
+F knee_L 68.28281
+F knee_R 72.5549
+F hip_L 140.64474
+F hip_R 133.04121
+F elbow_L 150.31032
+F elbow_R 85.34798
+F shoulder_L 133.04802
+F shoulder_R 170.17453
+F ankle_L 137.778
+F ankle_R 142.9295
+F wrist_L 115.48866
+F wrist_R 115.37268
+F knee_mean 70.41885
+F hip_mean 136.84299
+F elbow_mean 117.82915
+F knee_minside 68.28281
+F knee_maxside 72.5549
+F elbow_minside 85.34798
+F elbow_maxside 150.31032
+F torso_incl 92.84215
+F torso_pitch -92.86675
+F torso_roll -110.78094
+F head_pitch 86.74639
+F head_yaw -82.3985
+F face_vs_torso 92.84235
+F face_vs_forward 89.56982
+F kneefoot_L 147.19801
+F foot_pitch_L -28.00875
+F ankle_y_L -1.52724
+F foot_y_L -9.25593
+F knee_out_L 1.09239
+F knee_fwd_L -0.30872
+F kneefoot_R 151.53455
+F foot_pitch_R -22.00106
+F ankle_y_R -3.65728
+F foot_y_R -10.63582
+F knee_out_R 8.31245
+F knee_fwd_R -0.42934
+F kneefoot_mean 149.36627
+F knee_out_mean 4.70242
+F ankle_y_mean -2.59226
+F foot_y_mean -9.94587
+F palm_fwd_hip -1.37515
+F palm_fwd_knee -1.83705
+F palm_fwd_ankle -2.06485
+F palm_lat 0.8344
+F palm_dist_body 1.44417
+F forearm_vert_L 109.03204
+F upperarm_vert_L 92.54459
+F elbow_torso_L 0.40058
+F forearm_vert_R 73.58263
+F upperarm_vert_R 101.8675
+F elbow_torso_R 0.06568
+F forearm_vert_mean 91.30733
+F shoulder_h_L 0.04042
+F shoulder_h_R -0.13959
+F shoulder_asym 0.34049
+F knee_asym -4.27209
+F hip_asym 7.60353
+F elbow_asym 64.96234
+F hand_h_asym -0.11898
+F stance_w 0.69635
+F grip_w 1.66807
+F sh_over_hip_fwd -0.99019
+F palm_head_dist 0.66991
+F palm_h_sh -0.0544
+F ear_shoulder_gap 0.01895
+F knee_gap 0.95001
+F knee_elbow_dist 1.91766
+F knee_lat_L 0.05311
+F elbow_h_L -0.02437
+F elbow_wrist_h_L 0.11916
+F knee_lat_R -0.06135
+F elbow_h_R -0.07929
+F elbow_wrist_h_R -0.11415
+F ankle_mean 140.35376
+F ankle_minside 137.778
+F ankle_maxside 142.9295
+F ankle_y_minside -3.65728
+F ankle_y_maxside -1.52724
+F elbow_h_mean -0.05183
+F elbow_h_minside -0.07929
+F elbow_h_maxside -0.02437
+F elbow_torso_mean 0.23313
+F elbow_torso_minside 0.06568
+F elbow_torso_maxside 0.40058
+F elbow_wrist_h_mean 0.0025
+F elbow_wrist_h_minside -0.11415
+F elbow_wrist_h_maxside 0.11916
+F foot_pitch_mean -25.00491
+F foot_pitch_minside -28.00875
+F foot_pitch_maxside -22.00106
+F foot_y_minside -10.63582
+F foot_y_maxside -9.25593
+F forearm_vert_minside 73.58263
+F forearm_vert_maxside 109.03204
+F hip_minside 133.04121
+F hip_maxside 140.64474
+F knee_fwd_mean -0.36903
+F knee_fwd_minside -0.42934
+F knee_fwd_maxside -0.30872
+F knee_lat_mean -0.00412
+F knee_lat_minside -0.06135
+F knee_lat_maxside 0.05311
+F knee_out_minside 1.09239
+F knee_out_maxside 8.31245
+F kneefoot_minside 147.19801
+F kneefoot_maxside 151.53455
+F shoulder_mean 151.61127
+F shoulder_minside 133.04802
+F shoulder_maxside 170.17453
+F shoulder_h_mean -0.04958
+F shoulder_h_minside -0.13959
+F shoulder_h_maxside 0.04042
+F upperarm_vert_mean 97.20604
+F upperarm_vert_minside 92.54459
+F upperarm_vert_maxside 101.8675
+F wrist_mean 115.43066
+F wrist_minside 115.37268
+F wrist_maxside 115.48866
+END
+CASE D22-6-739 C 1
+J Nose -4.45296 -13.04695 29.51118
+J LEye -5.24713 -13.32649 28.98205
+J REye -4.16007 -13.54448 30.16286
+J LEar -4.79203 -10.09303 22.46236
+J REar 0.89753 -12.03223 26.99516
+J LShoulder -8.1628 -5.17444 9.59939
+J RShoulder 7.22394 -16.55665 16.98614
+J LElbow -18.37617 2.29497 0.57844
+J RElbow 13.95542 -31.57882 11.96469
+J LWrist -16.30297 -2.62493 -11.27069
+J RWrist 22.5705 -49.84038 9.74334
+J LHip -2.91604 3.18186 -1.21706
+J RHip 3.01192 -3.28881 1.06732
+J LKnee 11.52963 -15.87625 9.93621
+J RKnee -2.10078 -17.8211 2.83174
+J LAnkle 11.49525 -51.11986 5.43534
+J RAnkle 10.25022 -38.75882 -0.47309
+J Neck -0.46943 -10.86555 13.29277
+J LPalm -16.74695 -1.7099 -13.76494
+J RPalm 23.5064 -53.1282 10.69644
+J LFoot 12.47951 -63.23803 9.31913
+J RFoot 14.17283 -52.31321 0.45903
+F knee_L 131.47974
+F knee_R 128.209
+F hip_L 58.10869
+F hip_R 52.55524
+F elbow_L 104.03185
+F elbow_R 169.25816
+F shoulder_L 62.11592
+F shoulder_R 113.94848
+F ankle_L 154.57935
+F ankle_R 161.58734
+F wrist_L 133.57848
+F wrist_R 156.25529
+F knee_mean 129.84436
+F hip_mean 55.33197
+F elbow_mean 136.645
+F knee_minside 128.209
+F knee_maxside 131.47974
+F elbow_minside 104.03185
+F elbow_maxside 169.25816
+F torso_incl 128.94582
+F torso_pitch -130.49945
+F torso_roll -158.20239
+F head_pitch -20.17985
+F head_yaw 173.42258
+F face_vs_torso 28.8268
+F face_vs_forward 158.81784
+F foot_pitch_L -71.70484
+F ankle_y_L -51.11986
+F foot_y_L -63.23803
+F knee_out_L -0.21089
+F knee_fwd_L -0.11786
+F kneefoot_R 151.65282
+F foot_pitch_R -73.43454
+F ankle_y_R -38.75882
+F foot_y_R -52.31321
+F knee_out_R -0.18426
+F knee_fwd_R -0.30673
+F kneefoot_mean 151.65282
+F knee_out_mean -0.19758
+F ankle_y_mean -44.93934
+F foot_y_mean -57.77562
+F palm_lat -0.12596
+F palm_h_rel 0.51419
+F forearm_vert_L 112.24448
+F upperarm_vert_L 61.27108
+F elbow_torso_L 0.93817
+F forearm_vert_R 154.0251
+F upperarm_vert_R 150.7928
+F elbow_torso_R 0.74379
+F forearm_vert_mean 133.1348
+F shoulder_asym 0.55482
+F knee_asym 3.27074
+F hip_asym 5.55345
+F elbow_asym -65.22631
+F stance_w 1.51709
+F grip_w 3.39905
+F neck_over_ankle -0.3053
+F hip_height_rel 0.96729
+F hip_below_knee 0.36194
+F knee_gap 1.70857
+F knee_h_L -0.34098
+F knee_lat_L -1.92876
+F knee_h_R -0.38289
+F knee_lat_R -0.45614
+F ankle_mean 158.08334
+F ankle_minside 154.57935
+F ankle_maxside 161.58734
+F ankle_y_minside -51.11986
+F ankle_y_maxside -38.75882
+F elbow_torso_mean 0.84098
+F elbow_torso_minside 0.74379
+F elbow_torso_maxside 0.93817
+F foot_pitch_mean -72.56969
+F foot_pitch_minside -73.43454
+F foot_pitch_maxside -71.70484
+F foot_y_minside -63.23803
+F foot_y_maxside -52.31321
+F forearm_vert_minside 112.24448
+F forearm_vert_maxside 154.0251
+F hip_minside 52.55524
+F hip_maxside 58.10869
+F knee_fwd_mean -0.21229
+F knee_fwd_minside -0.30673
+F knee_fwd_maxside -0.11786
+F knee_h_mean -0.36194
+F knee_h_minside -0.38289
+F knee_h_maxside -0.34098
+F knee_lat_mean -1.19245
+F knee_lat_minside -1.92876
+F knee_lat_maxside -0.45614
+F knee_out_minside -0.21089
+F knee_out_maxside -0.18426
+F kneefoot_minside 151.65282
+F kneefoot_maxside 151.65282
+F shoulder_mean 88.0322
+F shoulder_minside 62.11592
+F shoulder_maxside 113.94848
+F upperarm_vert_mean 106.03194
+F upperarm_vert_minside 61.27108
+F upperarm_vert_maxside 150.7928
+F wrist_mean 144.91689
+F wrist_minside 133.57848
+F wrist_maxside 156.25529
+END
+CASE D41-6-664 D 0
+J Nose -61.55839 17.15619 -15.53022
+J LEye -65.19994 15.00255 -16.0365
+J REye -64.69404 14.37649 -13.93441
+J LEar -63.97197 7.24946 -20.81053
+J REar -61.9449 4.07292 -9.5514
+J LShoulder -46.51448 7.81046 -28.08385
+J RShoulder -51.89511 2.63627 -6.99834
+J LElbow -49.87688 11.69952 -46.50893
+J RElbow -73.05459 7.10603 -14.92222
+J LWrist -59.3439 10.50973 -61.56521
+J RWrist -86.48181 2.48609 -42.54784
+J LHip 4.73766 5.02551 -6.90724
+J RHip -4.75301 -5.07713 6.81751
+J LKnee 39.1887 -4.7804 -2.82861
+J RKnee 16.1112 -17.98173 15.60989
+J LAnkle 50.80515 -34.85226 -3.29537
+J RAnkle 18.61314 -53.55007 24.1314
+J Neck -49.2048 5.22337 -17.5411
+J LPalm -60.22048 8.20938 -64.35783
+J RPalm -84.52258 0.80074 -47.61008
+J LFoot 61.25357 -42.19317 -2.04916
+J RFoot 25.84959 -65.59073 27.12837
+F knee_L 126.61087
+F knee_R 127.84225
+F hip_L 159.86455
+F hip_R 158.3632
+F elbow_L 153.30095
+F elbow_R 132.3954
+F shoulder_L 122.67049
+F shoulder_R 175.28793
+F ankle_L 145.65767
+F ankle_R 153.65793
+F wrist_L 143.12405
+F wrist_R 133.41083
+F knee_mean 127.22656
+F hip_mean 159.11388
+F elbow_mean 142.84818
+F knee_minside 126.61087
+F knee_maxside 127.84225
+F elbow_minside 132.3954
+F elbow_maxside 153.30095
+F torso_incl 84.25941
+F torso_pitch -84.05592
+F torso_roll -68.88181
+F head_pitch 82.84516
+F head_yaw 48.67124
+F face_vs_torso 90.22881
+F face_vs_forward 85.28204
+F kneefoot_L 170.89735
+F foot_pitch_L -34.90121
+F ankle_y_L -34.85226
+F foot_y_L -42.19317
+F knee_out_L 0.17248
+F knee_fwd_L -0.28811
+F kneefoot_R 128.85924
+F foot_pitch_R -56.95582
+F ankle_y_R -53.55007
+F foot_y_R -65.59073
+F knee_out_R -0.08647
+F knee_fwd_R -0.18834
+F kneefoot_mean 149.8783
+F knee_out_mean 0.043
+F ankle_y_mean -44.20116
+F foot_y_mean -53.89195
+F palm_fwd_hip -1.74042
+F palm_fwd_knee -2.24365
+F palm_fwd_ankle -2.39794
+F palm_lat 0.21693
+F palm_h_rel 0.98547
+F palm_dist_body 1.74288
+F forearm_vert_L 93.82724
+F upperarm_vert_L 78.26951
+F elbow_torso_L 0.29001
+F forearm_vert_R 98.55367
+F upperarm_vert_R 78.80994
+F elbow_torso_R 0.03805
+F forearm_vert_mean 96.19045
+F shoulder_h_L 0.14932
+F shoulder_h_R 0.05073
+F shoulder_asym 0.23132
+F knee_asym -1.23138
+F hip_asym 1.50134
+F elbow_asym 20.90555
+F hand_h_asym 0.14117
+F stance_w 2.3705
+F grip_w 1.36042
+F neck_over_ankle -1.44468
+F hip_height_rel 0.75151
+F hip_below_knee 0.19317
+F sh_over_hip_fwd -0.96069
+F palm_head_dist 0.79824
+F palm_h_sh -0.01369
+F ear_shoulder_gap 0.00834
+F knee_gap 1.65866
+F knee_elbow_dist 1.85847
+F knee_h_L -0.08088
+F knee_lat_L 0.83253
+F elbow_h_L 0.07411
+F elbow_wrist_h_L 0.02267
+F knee_h_R -0.30547
+F knee_lat_R -0.23761
+F elbow_h_R 0.08517
+F elbow_wrist_h_R 0.08803
+F ankle_mean 149.65781
+F ankle_minside 145.65767
+F ankle_maxside 153.65793
+F ankle_y_minside -53.55007
+F ankle_y_maxside -34.85226
+F elbow_h_mean 0.07964
+F elbow_h_minside 0.07411
+F elbow_h_maxside 0.08517
+F elbow_torso_mean 0.16403
+F elbow_torso_minside 0.03805
+F elbow_torso_maxside 0.29001
+F elbow_wrist_h_mean 0.05535
+F elbow_wrist_h_minside 0.02267
+F elbow_wrist_h_maxside 0.08803
+F foot_pitch_mean -45.92852
+F foot_pitch_minside -56.95582
+F foot_pitch_maxside -34.90121
+F foot_y_minside -65.59073
+F foot_y_maxside -42.19317
+F forearm_vert_minside 93.82724
+F forearm_vert_maxside 98.55367
+F hip_minside 158.3632
+F hip_maxside 159.86455
+F knee_fwd_mean -0.23823
+F knee_fwd_minside -0.28811
+F knee_fwd_maxside -0.18834
+F knee_h_mean -0.19317
+F knee_h_minside -0.30547
+F knee_h_maxside -0.08088
+F knee_lat_mean 0.29746
+F knee_lat_minside -0.23761
+F knee_lat_maxside 0.83253
+F knee_out_minside -0.08647
+F knee_out_maxside 0.17248
+F kneefoot_minside 128.85924
+F kneefoot_maxside 170.89735
+F shoulder_mean 148.97922
+F shoulder_minside 122.67049
+F shoulder_maxside 175.28793
+F shoulder_h_mean 0.10002
+F shoulder_h_minside 0.05073
+F shoulder_h_maxside 0.14932
+F upperarm_vert_mean 78.53973
+F upperarm_vert_minside 78.26951
+F upperarm_vert_maxside 78.80994
+F wrist_mean 138.26744
+F wrist_minside 133.41083
+F wrist_maxside 143.12405
+END
+CASE D17-6-790 C 0
+J Nose -43.12006 37.06141 2.5603
+J LEye -43.93334 40.85685 4.75746
+J REye -43.87915 40.81296 1.88714
+J LEar -34.10035 43.5944 8.51261
+J REar -35.11897 44.18788 -3.5744
+J LShoulder -27.79786 32.8339 15.62002
+J RShoulder -24.36795 32.87585 -15.61785
+J LElbow -49.82136 20.13052 22.82197
+J RElbow -47.7279 21.007 -19.28919
+J LWrist -68.42599 11.7297 19.40642
+J RWrist -67.18823 11.69123 -12.57273
+J LHip -0.8252 0.19978 10.33525
+J RHip 0.76449 -0.16008 -10.46879
+J LKnee -33.89565 14.93341 11.78977
+J RKnee -31.40894 17.4833 -24.8778
+J LAnkle -39.52521 -16.1415 3.86892
+J RAnkle -36.41199 -15.87545 -37.36689
+J Neck -26.0829 32.85487 0.00108
+J LPalm -70.84805 11.77973 21.21749
+J RPalm -69.9613 13.27895 -12.39313
+J LFoot -53.31918 -16.16105 5.87609
+J RFoot -48.56622 -19.54387 -40.25766
+F knee_L 76.11028
+F knee_R 79.94204
+F hip_L 26.7498
+F hip_R 27.26773
+F elbow_L 154.06927
+F elbow_R 154.69684
+F shoulder_L 101.12422
+F shoulder_R 101.14427
+F ankle_L 97.898
+F ankle_R 117.91802
+F wrist_L 127.89937
+F wrist_R 123.94259
+F knee_mean 78.02616
+F hip_mean 27.00876
+F elbow_mean 154.38306
+F knee_minside 76.11028
+F knee_maxside 79.94204
+F elbow_minside 154.06927
+F elbow_maxside 154.69684
+F torso_incl 38.4299
+F torso_pitch 38.34308
+F torso_roll 3.57708
+F head_pitch -38.74604
+F head_yaw 4.98356
+F face_vs_torso 90.31704
+F face_vs_forward 39.01517
+F kneefoot_L 117.12342
+F foot_pitch_L -0.08036
+F ankle_y_L -16.1415
+F foot_y_L -16.16105
+F knee_out_L 0.01918
+F knee_fwd_L -0.19094
+F kneefoot_R 125.20941
+F foot_pitch_R -16.36391
+F ankle_y_R -15.87545
+F foot_y_R -19.54387
+F knee_out_R 0.8009
+F knee_fwd_R -0.16514
+F kneefoot_mean 121.16641
+F knee_out_mean 0.41004
+F ankle_y_mean -16.00848
+F foot_y_mean -17.85246
+F palm_fwd_hip 1.66595
+F palm_fwd_knee 0.87815
+F palm_fwd_ankle 0.73314
+F palm_lat 0.31273
+F palm_h_rel 0.58403
+F palm_dist_body 1.68237
+F forearm_vert_L 113.94707
+F upperarm_vert_L 118.73335
+F elbow_torso_L 0.6077
+F forearm_vert_R 114.34734
+F upperarm_vert_R 116.65316
+F elbow_torso_R 0.62063
+F forearm_vert_mean 114.1472
+F shoulder_h_L 0.78287
+F shoulder_h_R 0.78387
+F shoulder_asym -0.00133
+F knee_asym -3.83176
+F hip_asym -0.51793
+F elbow_asym -0.62756
+F hand_h_asym -0.03577
+F stance_w 1.98172
+F grip_w 1.07096
+F neck_over_ankle -0.28849
+F hip_height_rel 0.35224
+F hip_below_knee -0.35576
+F sh_over_hip_fwd 0.61962
+F palm_head_dist 1.13634
+F palm_h_sh -0.48492
+F ear_shoulder_gap 0.2633
+F knee_gap 1.76541
+F knee_elbow_dist 0.42003
+F knee_h_L 0.32775
+F knee_lat_L 0.19024
+F elbow_h_L -0.30307
+F elbow_wrist_h_L 0.20042
+F knee_h_R 0.38378
+F knee_lat_R 0.57101
+F elbow_h_R -0.28316
+F elbow_wrist_h_R 0.22225
+F ankle_mean 107.90801
+F ankle_minside 97.898
+F ankle_maxside 117.91802
+F ankle_y_minside -16.1415
+F ankle_y_maxside -15.87545
+F elbow_h_mean -0.29312
+F elbow_h_minside -0.30307
+F elbow_h_maxside -0.28316
+F elbow_torso_mean 0.61416
+F elbow_torso_minside 0.6077
+F elbow_torso_maxside 0.62063
+F elbow_wrist_h_mean 0.21134
+F elbow_wrist_h_minside 0.20042
+F elbow_wrist_h_maxside 0.22225
+F foot_pitch_mean -8.22214
+F foot_pitch_minside -16.36391
+F foot_pitch_maxside -0.08036
+F foot_y_minside -19.54387
+F foot_y_maxside -16.16105
+F forearm_vert_minside 113.94707
+F forearm_vert_maxside 114.34734
+F hip_minside 26.7498
+F hip_maxside 27.26773
+F knee_fwd_mean -0.17804
+F knee_fwd_minside -0.19094
+F knee_fwd_maxside -0.16514
+F knee_h_mean 0.35576
+F knee_h_minside 0.32775
+F knee_h_maxside 0.38378
+F knee_lat_mean 0.38063
+F knee_lat_minside 0.19024
+F knee_lat_maxside 0.57101
+F knee_out_minside 0.01918
+F knee_out_maxside 0.8009
+F kneefoot_minside 117.12342
+F kneefoot_maxside 125.20941
+F shoulder_mean 101.13425
+F shoulder_minside 101.12422
+F shoulder_maxside 101.14427
+F shoulder_h_mean 0.78337
+F shoulder_h_minside 0.78287
+F shoulder_h_maxside 0.78387
+F upperarm_vert_mean 117.69325
+F upperarm_vert_minside 116.65316
+F upperarm_vert_maxside 118.73335
+F wrist_mean 125.92097
+F wrist_minside 123.94259
+F wrist_maxside 127.89937
+END
+CASE D35-4-600 C 0
+J Nose -61.47864 14.61311 8.20524
+J LEye -63.82846 17.24807 10.51516
+J REye -63.84642 17.52086 7.28442
+J LEar -57.41549 25.16969 15.68089
+J REar -58.80359 25.80574 1.44533
+J LShoulder -40.22366 21.04352 22.11336
+J RShoulder -44.46977 22.42529 -9.85007
+J LElbow -37.57576 -5.65159 27.30992
+J RElbow -42.10898 0.58049 -17.8366
+J LWrist -45.26153 -25.24071 27.44614
+J RWrist -47.65847 -21.21593 -12.86568
+J LHip 0.76757 0.52787 9.26653
+J RHip -0.85399 -0.50234 -9.39771
+J LKnee 30.47004 -24.1248 10.2504
+J RKnee 35.05775 -13.82377 -13.9685
+J LAnkle 64.6824 -12.75229 2.4576
+J RAnkle 71.3775 -14.91062 -18.35506
+J Neck -42.34671 21.73441 6.13165
+J LPalm -50.7165 -26.59349 30.2138
+J RPalm -52.7211 -23.09017 -11.60417
+J LFoot 76.95162 -15.59177 5.00577
+J RFoot 80.48233 -21.82907 -13.85593
+F knee_L 120.74751
+F knee_R 161.49554
+F hip_L 158.53494
+F hip_R 169.61096
+F elbow_L 151.07805
+F elbow_R 141.82455
+F shoulder_L 63.05425
+F shoulder_R 58.60052
+F ankle_L 140.86472
+F ankle_R 135.08015
+F wrist_L 121.45982
+F wrist_R 126.08724
+F knee_mean 141.12152
+F hip_mean 164.07295
+F elbow_mean 146.45129
+F knee_minside 120.74751
+F knee_maxside 161.49554
+F elbow_minside 141.82455
+F elbow_maxside 151.07805
+F torso_incl 63.0672
+F torso_pitch 63.02716
+F torso_roll 6.59777
+F head_pitch -72.69527
+F head_yaw -11.0288
+F face_vs_torso 100.11243
+F face_vs_forward 73.02466
+F kneefoot_L 155.43539
+F foot_pitch_L -12.76736
+F ankle_y_L -12.75229
+F foot_y_L -15.59177
+F knee_out_L 0.08949
+F knee_fwd_L 0.94233
+F kneefoot_R 146.81717
+F foot_pitch_R -34.26395
+F ankle_y_R -14.91062
+F foot_y_R -21.82907
+F knee_out_R -0.01381
+F knee_fwd_R 0.999
+F kneefoot_mean 151.12628
+F knee_out_mean 0.03784
+F ankle_y_mean -13.83145
+F foot_y_mean -18.71042
+F palm_fwd_hip 1.09042
+F palm_fwd_knee 1.77519
+F palm_fwd_ankle 2.5188
+F palm_lat 0.15066
+F palm_h_rel -0.30958
+F palm_dist_body 1.09512
+F forearm_vert_L 158.57443
+F upperarm_vert_L 167.67581
+F elbow_torso_L 0.51168
+F forearm_vert_R 161.12891
+F upperarm_vert_R 159.13104
+F elbow_torso_R 0.40495
+F forearm_vert_mean 159.85167
+F shoulder_h_L 0.43854
+F shoulder_h_R 0.46735
+F shoulder_asym -0.04281
+F knee_asym -40.74804
+F hip_asym -11.07602
+F elbow_asym 9.25349
+F hand_h_asym -0.07305
+F stance_w 1.17089
+F grip_w 1.30175
+F neck_over_ankle 1.59022
+F hip_height_rel 0.19801
+F hip_below_knee 0.27157
+F sh_over_hip_fwd 0.89
+F palm_head_dist 1.05802
+F palm_h_sh -0.97122
+F ear_shoulder_gap 0.07826
+F knee_gap 1.42385
+F knee_elbow_dist 1.51269
+F knee_h_L -0.34524
+F knee_lat_L 0.18926
+F elbow_h_L -0.55665
+F elbow_wrist_h_L 0.40848
+F knee_h_R -0.1979
+F knee_lat_R 0.07703
+F elbow_h_R -0.45551
+F elbow_wrist_h_R 0.4545
+F ankle_mean 137.97244
+F ankle_minside 135.08015
+F ankle_maxside 140.86472
+F ankle_y_minside -14.91062
+F ankle_y_maxside -12.75229
+F elbow_h_mean -0.50608
+F elbow_h_minside -0.55665
+F elbow_h_maxside -0.45551
+F elbow_torso_mean 0.45832
+F elbow_torso_minside 0.40495
+F elbow_torso_maxside 0.51168
+F elbow_wrist_h_mean 0.43149
+F elbow_wrist_h_minside 0.40848
+F elbow_wrist_h_maxside 0.4545
+F foot_pitch_mean -23.51566
+F foot_pitch_minside -34.26395
+F foot_pitch_maxside -12.76736
+F foot_y_minside -21.82907
+F foot_y_maxside -15.59177
+F forearm_vert_minside 158.57443
+F forearm_vert_maxside 161.12891
+F hip_minside 158.53494
+F hip_maxside 169.61096
+F knee_fwd_mean 0.97066
+F knee_fwd_minside 0.94233
+F knee_fwd_maxside 0.999
+F knee_h_mean -0.27157
+F knee_h_minside -0.34524
+F knee_h_maxside -0.1979
+F knee_lat_mean 0.13315
+F knee_lat_minside 0.07703
+F knee_lat_maxside 0.18926
+F knee_out_minside -0.01381
+F knee_out_maxside 0.08949
+F kneefoot_minside 146.81717
+F kneefoot_maxside 155.43539
+F shoulder_mean 60.82738
+F shoulder_minside 58.60052
+F shoulder_maxside 63.05425
+F shoulder_h_mean 0.45295
+F shoulder_h_minside 0.43854
+F shoulder_h_maxside 0.46735
+F upperarm_vert_mean 163.40343
+F upperarm_vert_minside 159.13104
+F upperarm_vert_maxside 167.67581
+F wrist_mean 123.77353
+F wrist_minside 121.45982
+F wrist_maxside 126.08724
+END
+CASE D34-2-501 C 0
+J Nose -65.27984 12.37638 9.04813
+J LEye -69.08254 9.87207 8.56813
+J REye -68.10796 9.126 11.61705
+J LEar -68.17924 0.47289 0.4176
+J REar -64.71018 -2.30762 15.2541
+J LShoulder -54.0167 3.1258 -9.6765
+J RShoulder -53.49864 -8.11413 17.67723
+J LElbow -67.54023 2.94503 -27.59537
+J RElbow -69.88551 -13.7078 21.36475
+J LWrist -73.60975 -2.36459 -38.85646
+J RWrist -73.57706 -12.66942 3.77475
+J LHip 0.25151 4.89835 -9.78105
+J RHip -0.29885 -4.93544 9.63929
+J LKnee 21.84731 27.35927 -12.30111
+J RKnee 18.75188 20.63094 7.67041
+J LAnkle 34.06324 -0.28586 -18.31585
+J RAnkle 35.82371 -4.33625 -2.411
+J Neck -53.75768 -2.49417 4.00037
+J LPalm -71.4446 -4.59262 -41.29066
+J RPalm -69.72577 -10.80758 1.72906
+J LFoot 48.72074 -7.49153 -18.94132
+J RFoot 51.75451 -11.84899 -5.77969
+F knee_L 69.20794
+F knee_R 73.26591
+F hip_L 135.56734
+F hip_R 130.16905
+F elbow_L 156.34677
+F elbow_R 88.16985
+F shoulder_L 126.92627
+F shoulder_R 164.43835
+F ankle_L 139.32651
+F ankle_R 149.67575
+F wrist_L 118.51879
+F wrist_R 106.11858
+F knee_mean 71.23692
+F hip_mean 132.86819
+F elbow_mean 122.25832
+F knee_minside 69.20794
+F knee_maxside 73.26591
+F elbow_minside 88.16985
+F elbow_maxside 156.34677
+F torso_incl 92.63033
+F torso_pitch -92.64458
+F torso_roll -113.88013
+F head_pitch 82.79217
+F head_yaw -44.51894
+F face_vs_torso 97.19778
+F face_vs_forward 84.86736
+F kneefoot_L 156.22928
+F foot_pitch_L -26.15823
+F ankle_y_L -0.28586
+F foot_y_L -7.49153
+F knee_out_L 1.25493
+F knee_fwd_L -0.39072
+F kneefoot_R 161.37668
+F foot_pitch_R -24.76782
+F ankle_y_R -4.33625
+F foot_y_R -11.84899
+F knee_out_R 14.57604
+F knee_fwd_R -0.5263
+F kneefoot_mean 158.80298
+F knee_out_mean 7.91549
+F ankle_y_mean -2.31106
+F foot_y_mean -9.67026
+F palm_fwd_hip -1.31786
+F palm_fwd_knee -1.69327
+F palm_fwd_ankle -1.96039
+F palm_lat 0.59853
+F palm_dist_body 1.3581
+F forearm_vert_L 112.54105
+F upperarm_vert_L 90.46136
+F elbow_torso_L 0.33053
+F forearm_vert_R 86.69348
+F upperarm_vert_R 108.41892
+F elbow_torso_R 0.08812
+F forearm_vert_mean 99.61726
+F shoulder_h_L 0.05829
+F shoulder_h_R -0.15007
+F shoulder_asym 0.38002
+F knee_asym -4.05797
+F hip_asym 5.39828
+F elbow_asym 68.17692
+F hand_h_asym 0.11521
+F stance_w 0.75805
+F grip_w 1.47072
+F sh_over_hip_fwd -0.99355
+F palm_head_dist 0.53271
+F palm_h_sh -0.0965
+F ear_shoulder_gap 0.02923
+F knee_gap 0.97821
+F knee_elbow_dist 1.74095
+F knee_lat_L 0.14378
+F elbow_h_L -0.00335
+F elbow_wrist_h_L 0.09843
+F knee_lat_R -0.11517
+F elbow_h_R -0.10369
+F elbow_wrist_h_R -0.01925
+F ankle_mean 144.50113
+F ankle_minside 139.32651
+F ankle_maxside 149.67575
+F ankle_y_minside -4.33625
+F ankle_y_maxside -0.28586
+F elbow_h_mean -0.05352
+F elbow_h_minside -0.10369
+F elbow_h_maxside -0.00335
+F elbow_torso_mean 0.20932
+F elbow_torso_minside 0.08812
+F elbow_torso_maxside 0.33053
+F elbow_wrist_h_mean 0.03959
+F elbow_wrist_h_minside -0.01925
+F elbow_wrist_h_maxside 0.09843
+F foot_pitch_mean -25.46302
+F foot_pitch_minside -26.15823
+F foot_pitch_maxside -24.76782
+F foot_y_minside -11.84899
+F foot_y_maxside -7.49153
+F forearm_vert_minside 86.69348
+F forearm_vert_maxside 112.54105
+F hip_minside 130.16905
+F hip_maxside 135.56734
+F knee_fwd_mean -0.45851
+F knee_fwd_minside -0.5263
+F knee_fwd_maxside -0.39072
+F knee_lat_mean 0.01431
+F knee_lat_minside -0.11517
+F knee_lat_maxside 0.14378
+F knee_out_minside 1.25493
+F knee_out_maxside 14.57604
+F kneefoot_minside 156.22928
+F kneefoot_maxside 161.37668
+F shoulder_mean 145.68231
+F shoulder_minside 126.92627
+F shoulder_maxside 164.43835
+F shoulder_h_mean -0.04589
+F shoulder_h_minside -0.15007
+F shoulder_h_maxside 0.05829
+F upperarm_vert_mean 99.44014
+F upperarm_vert_minside 90.46136
+F upperarm_vert_maxside 108.41892
+F wrist_mean 112.31869
+F wrist_minside 106.11858
+F wrist_maxside 118.51879
+END
+CASE D27-1-044 D 0
+J Nose -2.36409 60.40515 24.40005
+J LEye -1.47616 64.31799 23.44885
+J REye -4.48428 64.03986 22.85811
+J LEar 5.41646 63.87417 14.22072
+J REar -8.29862 63.21539 11.68027
+J LShoulder 16.03674 47.30154 7.59948
+J RShoulder -14.34153 48.32088 1.37718
+J LElbow 27.03112 26.99474 7.95335
+J RElbow -26.07237 27.69365 -2.09717
+J LWrist 14.08183 16.03335 17.9743
+J RWrist -17.63548 14.64437 8.5078
+J LHip 10.36752 -0.45209 2.66175
+J RHip -10.40391 0.51711 -2.78619
+J LKnee 5.97493 -43.14127 3.47173
+J RKnee -8.45585 -40.47784 -5.02934
+J LAnkle 10.72559 -78.46956 -5.77656
+J RAnkle -2.97725 -78.28233 -14.08698
+J Neck 0.84761 47.81121 4.48833
+J LPalm 7.68234 12.80815 21.68676
+J RPalm -12.26755 10.621 11.39918
+J LFoot 10.85913 -89.20518 6.00808
+J RFoot -10.55498 -87.9407 -4.31339
+F knee_L 159.41782
+F knee_R 168.42073
+F hip_L 172.99889
+F hip_R 177.2999
+F elbow_L 100.60741
+F elbow_R 107.19123
+F shoulder_L 35.78765
+F shoulder_R 34.25915
+F ankle_L 117.48131
+F ankle_R 112.43388
+F wrist_L 167.77745
+F wrist_R 159.17918
+F knee_mean 163.91928
+F hip_mean 175.14938
+F elbow_mean 103.89932
+F knee_minside 159.41782
+F knee_maxside 168.42073
+F elbow_minside 100.60741
+F elbow_maxside 107.19123
+F torso_incl 5.53757
+F torso_pitch 5.00229
+F torso_roll 2.38734
+F head_pitch -15.28715
+F head_yaw 10.08754
+F face_vs_torso 99.94347
+F face_vs_forward 18.24896
+F kneefoot_L 27.83789
+F foot_pitch_L -42.3312
+F ankle_y_L -78.46956
+F foot_y_L -89.20518
+F knee_out_L -0.03901
+F knee_fwd_L 0.27564
+F kneefoot_R 6.61936
+F foot_pitch_R -37.98889
+F ankle_y_R -78.28233
+F foot_y_R -87.9407
+F knee_out_R 0.01164
+F knee_fwd_R 0.25857
+F kneefoot_mean 17.22862
+F knee_out_mean -0.01369
+F ankle_y_mean -78.37595
+F foot_y_mean -88.57294
+F palm_fwd_hip 0.34662
+F palm_fwd_knee 0.3546
+F palm_fwd_ankle 0.56607
+F palm_lat 0.06487
+F palm_h_rel 0.71394
+F palm_dist_body 0.34915
+F forearm_vert_L 123.80009
+F upperarm_vert_L 151.55585
+F elbow_torso_L 0.27937
+F forearm_vert_R 133.91814
+F upperarm_vert_R 149.32674
+F elbow_torso_R 0.28041
+F forearm_vert_mean 128.85912
+F shoulder_h_L 0.98472
+F shoulder_h_R 1.00595
+F shoulder_asym -0.03285
+F knee_asym -9.00291
+F hip_asym -4.30101
+F elbow_asym -6.58382
+F hand_h_asym 0.04556
+F stance_w 0.74559
+F grip_w 0.7269
+F neck_over_ankle 0.18578
+F hip_height_rel 0.98985
+F hip_below_knee 0.52823
+F sh_over_hip_fwd 0.08712
+F palm_head_dist 1.08247
+F palm_h_sh -0.75197
+F ear_shoulder_gap 0.32776
+F knee_gap 0.78895
+F knee_elbow_dist 1.46808
+F knee_h_L -0.54504
+F knee_lat_L -0.1881
+F elbow_h_L -0.42303
+F elbow_wrist_h_L 0.22835
+F knee_h_R -0.51141
+F knee_lat_R -0.06119
+F elbow_h_R -0.42971
+F elbow_wrist_h_R 0.27184
+F ankle_mean 114.9576
+F ankle_minside 112.43388
+F ankle_maxside 117.48131
+F ankle_y_minside -78.46956
+F ankle_y_maxside -78.28233
+F elbow_h_mean -0.42637
+F elbow_h_minside -0.42971
+F elbow_h_maxside -0.42303
+F elbow_torso_mean 0.27989
+F elbow_torso_minside 0.27937
+F elbow_torso_maxside 0.28041
+F elbow_wrist_h_mean 0.2501
+F elbow_wrist_h_minside 0.22835
+F elbow_wrist_h_maxside 0.27184
+F foot_pitch_mean -40.16004
+F foot_pitch_minside -42.3312
+F foot_pitch_maxside -37.98889
+F foot_y_minside -89.20518
+F foot_y_maxside -87.9407
+F forearm_vert_minside 123.80009
+F forearm_vert_maxside 133.91814
+F hip_minside 172.99889
+F hip_maxside 177.2999
+F knee_fwd_mean 0.26711
+F knee_fwd_minside 0.25857
+F knee_fwd_maxside 0.27564
+F knee_h_mean -0.52823
+F knee_h_minside -0.54504
+F knee_h_maxside -0.51141
+F knee_lat_mean -0.12464
+F knee_lat_minside -0.1881
+F knee_lat_maxside -0.06119
+F knee_out_minside -0.03901
+F knee_out_maxside 0.01164
+F kneefoot_minside 6.61936
+F kneefoot_maxside 27.83789
+F shoulder_mean 35.0234
+F shoulder_minside 34.25915
+F shoulder_maxside 35.78765
+F shoulder_h_mean 0.99533
+F shoulder_h_minside 0.98472
+F shoulder_h_maxside 1.00595
+F upperarm_vert_mean 150.44128
+F upperarm_vert_minside 149.32674
+F upperarm_vert_maxside 151.55585
+F wrist_mean 163.47832
+F wrist_minside 159.17918
+F wrist_maxside 167.77745
+END
+CASE D12-1-383 D 0
+J Nose -1.37782 65.86577 19.23482
+J LEye -0.00149 69.35872 18.43085
+J REye -2.73055 69.27317 17.14736
+J LEar 8.06368 66.77825 11.78027
+J REar -4.18902 67.38758 6.39954
+J LShoulder 14.7709 46.73532 13.10273
+J RShoulder -8.10135 49.81179 -4.79824
+J LElbow 14.94155 20.55395 15.97408
+J RElbow -12.54867 22.23102 -9.69047
+J LWrist 10.57512 -0.80102 24.16967
+J RWrist -17.45646 -0.40348 -0.0112
+J LHip 8.72234 -0.50714 5.85209
+J RHip -8.70907 0.55843 -5.99864
+J LKnee 6.90332 -40.95936 4.81894
+J RKnee -2.59484 -39.98752 -8.70906
+J LAnkle 12.57656 -76.40736 -3.78326
+J RAnkle 5.44886 -77.85243 -17.36459
+J Neck 3.33477 48.27355 4.15224
+J LPalm 7.60312 -8.46398 28.68121
+J RPalm -17.74314 -8.64007 2.57109
+J LFoot 8.02235 -86.67225 8.08102
+J RFoot -4.49667 -86.3916 -8.1624
+F knee_L 163.33765
+F knee_R 170.5527
+F hip_L 171.40657
+F hip_R 170.42574
+F elbow_L 161.5708
+F elbow_R 147.24741
+F shoulder_L 16.76021
+F shoulder_R 11.979
+F ankle_L 113.03523
+F ankle_R 104.93112
+F wrist_L 168.03989
+F wrist_R 169.02931
+F knee_mean 166.94518
+F hip_mean 170.91615
+F elbow_mean 154.4091
+F knee_minside 163.33765
+F knee_maxside 170.5527
+F elbow_minside 147.24741
+F elbow_maxside 161.5708
+F torso_incl 6.36119
+F torso_pitch 1.92696
+F torso_roll 6.06688
+F head_pitch -6.50599
+F head_yaw 16.11346
+F face_vs_torso 92.95575
+F face_vs_forward 17.34498
+F kneefoot_L 12.40553
+F foot_pitch_L -38.92879
+F ankle_y_L -76.40736
+F foot_y_L -86.67225
+F knee_out_L -0.01171
+F knee_fwd_L 0.27911
+F kneefoot_R 4.32142
+F foot_pitch_R -32.21961
+F ankle_y_R -77.85243
+F foot_y_R -86.3916
+F knee_out_R -0.00972
+F knee_fwd_R 0.29447
+F kneefoot_mean 8.36347
+F knee_out_mean -0.01071
+F ankle_y_mean -77.1299
+F foot_y_mean -86.53192
+F palm_fwd_hip 0.32623
+F palm_fwd_knee 0.38299
+F palm_fwd_ankle 0.60941
+F palm_lat 0.15847
+F palm_h_rel 0.54686
+F palm_dist_body 0.33987
+F forearm_vert_L 156.4982
+F upperarm_vert_L 173.73032
+F elbow_torso_L 0.15765
+F forearm_vert_R 154.384
+F upperarm_vert_R 166.51967
+F elbow_torso_R 0.11947
+F forearm_vert_mean 155.4411
+F shoulder_h_L 0.96216
+F shoulder_h_R 1.02553
+F shoulder_asym -0.10533
+F knee_asym -7.21506
+F hip_asym 0.98083
+F elbow_asym 14.32339
+F hand_h_asym 0.00363
+F stance_w 0.72996
+F grip_w 1.24592
+F neck_over_ankle 0.19569
+F hip_height_rel 0.9823
+F hip_below_knee 0.51561
+F sh_over_hip_fwd 0.03344
+F palm_head_dist 1.57043
+F palm_h_sh -1.17053
+F ear_shoulder_gap 0.38745
+F knee_gap 0.78454
+F knee_elbow_dist 1.29807
+F knee_h_L -0.5218
+F knee_lat_L -0.0988
+F elbow_h_L -0.5393
+F elbow_wrist_h_L 0.43988
+F knee_h_R -0.50942
+F knee_lat_R -0.16738
+F elbow_h_R -0.56813
+F elbow_wrist_h_R 0.46624
+F ankle_mean 108.98318
+F ankle_minside 104.93112
+F ankle_maxside 113.03523
+F ankle_y_minside -77.85243
+F ankle_y_maxside -76.40736
+F elbow_h_mean -0.55371
+F elbow_h_minside -0.56813
+F elbow_h_maxside -0.5393
+F elbow_torso_mean 0.13856
+F elbow_torso_minside 0.11947
+F elbow_torso_maxside 0.15765
+F elbow_wrist_h_mean 0.45306
+F elbow_wrist_h_minside 0.43988
+F elbow_wrist_h_maxside 0.46624
+F foot_pitch_mean -35.5742
+F foot_pitch_minside -38.92879
+F foot_pitch_maxside -32.21961
+F foot_y_minside -86.67225
+F foot_y_maxside -86.3916
+F forearm_vert_minside 154.384
+F forearm_vert_maxside 156.4982
+F hip_minside 170.42574
+F hip_maxside 171.40657
+F knee_fwd_mean 0.28679
+F knee_fwd_minside 0.27911
+F knee_fwd_maxside 0.29447
+F knee_h_mean -0.51561
+F knee_h_minside -0.5218
+F knee_h_maxside -0.50942
+F knee_lat_mean -0.13309
+F knee_lat_minside -0.16738
+F knee_lat_maxside -0.0988
+F knee_out_minside -0.01171
+F knee_out_maxside -0.00972
+F kneefoot_minside 4.32142
+F kneefoot_maxside 12.40553
+F shoulder_mean 14.3696
+F shoulder_minside 11.979
+F shoulder_maxside 16.76021
+F shoulder_h_mean 0.99384
+F shoulder_h_minside 0.96216
+F shoulder_h_maxside 1.02553
+F upperarm_vert_mean 170.125
+F upperarm_vert_minside 166.51967
+F upperarm_vert_maxside 173.73032
+F wrist_mean 168.53461
+F wrist_minside 168.03989
+F wrist_maxside 169.02931
+END
+CASE D39-12-680 C 0
+J Nose -66.66152 13.68785 1.5961
+J LEye -69.74426 11.05608 0.57126
+J REye -69.22085 10.78245 3.86412
+J LEar -67.95889 1.98688 -6.98644
+J REar -66.04421 0.62207 8.96628
+J LShoulder -53.56233 3.78088 -15.87002
+J RShoulder -52.39902 0.50549 17.63172
+J LElbow -54.87751 21.02086 -22.54097
+J RElbow -53.65946 18.8667 25.17038
+J LWrist -57.64654 43.36314 -16.63656
+J RWrist -55.04139 41.24878 22.10663
+J LHip -0.28238 2.51956 -11.07871
+J RHip 0.25912 -2.597 10.91678
+J LKnee 36.16962 -9.39151 -12.44993
+J RKnee 36.74852 -4.33966 18.10958
+J LAnkle 36.25853 -36.94258 -21.21587
+J RAnkle 34.37873 -39.73635 10.23149
+J Neck -52.98067 2.14318 0.88085
+J LPalm -57.35611 47.99203 -14.25633
+J RPalm -53.91954 46.44443 23.36045
+J LFoot 43.50862 -45.33076 -18.69885
+J RFoot 40.46815 -51.23122 12.96669
+F knee_L 108.03176
+F knee_R 86.54865
+F hip_L 161.79964
+F hip_R 161.59557
+F elbow_L 144.10825
+F elbow_R 149.94318
+F shoulder_L 97.17043
+F shoulder_R 99.46754
+F ankle_L 129.63533
+F ankle_R 140.15871
+F wrist_L 164.06339
+F wrist_R 153.79189
+F knee_mean 97.29021
+F hip_mean 161.6976
+F elbow_mean 147.02571
+F knee_minside 86.54865
+F knee_maxside 108.03176
+F elbow_minside 144.10825
+F elbow_maxside 149.94318
+F torso_incl 87.64159
+F torso_pitch -87.64154
+F torso_roll 8.91072
+F head_pitch 86.78755
+F head_yaw -62.12
+F face_vs_torso 89.16436
+F face_vs_forward 88.49841
+F kneefoot_L 71.43559
+F foot_pitch_L -47.54377
+F ankle_y_L -36.94258
+F foot_y_L -45.33076
+F knee_out_L -0.04228
+F knee_fwd_L -0.01054
+F kneefoot_R 49.06999
+F foot_pitch_R -59.85465
+F ankle_y_R -39.73635
+F foot_y_R -51.23122
+F knee_out_R 0.16023
+F knee_fwd_R 0.05986
+F kneefoot_mean 60.25279
+F knee_out_mean 0.05898
+F ankle_y_mean -38.33947
+F foot_y_mean -48.28099
+F palm_fwd_hip -1.05093
+F palm_fwd_knee -1.73721
+F palm_fwd_ankle -1.71957
+F palm_lat -0.09687
+F palm_h_rel 2.11344
+F palm_dist_body 1.05273
+F forearm_vert_L 16.27195
+F upperarm_vert_L 21.52401
+F elbow_torso_L 0.34363
+F forearm_vert_R 8.53999
+F upperarm_vert_R 22.6007
+F elbow_torso_R 0.36893
+F forearm_vert_mean 12.40597
+F shoulder_h_L 0.07204
+F shoulder_h_R 0.01026
+F shoulder_asym 0.09725
+F knee_asym 21.48311
+F hip_asym 0.20407
+F elbow_asym -5.83493
+F hand_h_asym 0.02919
+F stance_w 1.4001
+F grip_w 1.12243
+F neck_over_ankle -1.6817
+F hip_height_rel 0.72838
+F hip_below_knee 0.12983
+F sh_over_hip_fwd -0.99913
+F palm_head_dist 0.89458
+F palm_h_sh 0.85011
+F ear_shoulder_gap -0.01582
+F knee_gap 1.37143
+F knee_elbow_dist 1.76539
+F knee_h_L -0.17787
+F knee_lat_L 0.02097
+F elbow_h_L 0.32514
+F elbow_wrist_h_L -0.42137
+F knee_h_R -0.08179
+F knee_lat_R 0.35808
+F elbow_h_R 0.34629
+F elbow_wrist_h_R -0.42212
+F ankle_mean 134.89702
+F ankle_minside 129.63533
+F ankle_maxside 140.15871
+F ankle_y_minside -39.73635
+F ankle_y_maxside -36.94258
+F elbow_h_mean 0.33572
+F elbow_h_minside 0.32514
+F elbow_h_maxside 0.34629
+F elbow_torso_mean 0.35628
+F elbow_torso_minside 0.34363
+F elbow_torso_maxside 0.36893
+F elbow_wrist_h_mean -0.42175
+F elbow_wrist_h_minside -0.42212
+F elbow_wrist_h_maxside -0.42137
+F foot_pitch_mean -53.69921
+F foot_pitch_minside -59.85465
+F foot_pitch_maxside -47.54377
+F foot_y_minside -51.23122
+F foot_y_maxside -45.33076
+F forearm_vert_minside 8.53999
+F forearm_vert_maxside 16.27195
+F hip_minside 161.59557
+F hip_maxside 161.79964
+F knee_fwd_mean 0.02466
+F knee_fwd_minside -0.01054
+F knee_fwd_maxside 0.05986
+F knee_h_mean -0.12983
+F knee_h_minside -0.17787
+F knee_h_maxside -0.08179
+F knee_lat_mean 0.18952
+F knee_lat_minside 0.02097
+F knee_lat_maxside 0.35808
+F knee_out_minside -0.04228
+F knee_out_maxside 0.16023
+F kneefoot_minside 49.06999
+F kneefoot_maxside 71.43559
+F shoulder_mean 98.31898
+F shoulder_minside 97.17043
+F shoulder_maxside 99.46754
+F shoulder_h_mean 0.04115
+F shoulder_h_minside 0.01026
+F shoulder_h_maxside 0.07204
+F upperarm_vert_mean 22.06236
+F upperarm_vert_minside 21.52401
+F upperarm_vert_maxside 22.6007
+F wrist_mean 158.92764
+F wrist_minside 153.79189
+F wrist_maxside 164.06339
+END
+CASE D17-7-767 B 0
+J Nose -18.79357 63.23426 -11.12821
+J LEye -20.39561 65.39056 -7.87287
+J REye -18.34188 66.25943 -9.90236
+J LEar -17.67232 61.21772 1.57386
+J REar -10.13095 65.25023 -6.48987
+J LShoulder -18.55877 46.80219 8.72623
+J RShoulder 3.89756 53.15522 -11.58562
+J LElbow -38.71302 44.77774 0.19773
+J RElbow -6.39658 50.75088 -29.96939
+J LWrist -46.85329 66.84813 -19.28445
+J RWrist -21.00201 67.27134 -44.52854
+J LHip -5.62336 -1.37479 6.3162
+J RHip 5.59792 1.44725 -6.46883
+J LKnee -7.9994 -41.76518 5.85817
+J RKnee 9.10172 -37.92184 -8.82399
+J LAnkle -5.81501 -77.617 6.49838
+J RAnkle 12.55605 -77.56972 -8.60858
+J Neck -7.3306 49.97871 -1.4297
+J LPalm -47.41647 70.54727 -19.91209
+J RPalm -22.12719 71.40735 -47.14119
+J LFoot -12.50062 -84.72009 6.3299
+J RFoot 6.45752 -82.2774 -7.8544
+F knee_L 172.94653
+F knee_R 176.27826
+F hip_L 161.49181
+F hip_R 170.39351
+F elbow_L 115.17302
+F elbow_R 132.46014
+F shoulder_L 97.46582
+F shoulder_R 89.33716
+F ankle_L 133.20679
+F ankle_R 122.54707
+F wrist_L 148.16673
+F wrist_R 157.78967
+F knee_mean 174.6124
+F hip_mean 165.94266
+F elbow_mean 123.81658
+F knee_minside 172.94653
+F knee_maxside 176.27826
+F elbow_minside 115.17302
+F elbow_maxside 132.46014
+F torso_incl 8.47535
+F torso_pitch 7.29426
+F torso_roll 4.36259
+F head_pitch 0.00167
+F head_yaw -19.29421
+F face_vs_torso 84.57232
+F face_vs_forward 19.29421
+F foot_pitch_L -46.72512
+F ankle_y_L -77.617
+F foot_y_L -84.72009
+F knee_out_L 0.01421
+F knee_fwd_L 0.05746
+F foot_pitch_R -37.45573
+F ankle_y_R -77.56972
+F foot_y_R -82.2774
+F knee_out_R 0.01252
+F knee_fwd_R 0.0688
+F knee_out_mean 0.01336
+F ankle_y_mean -77.59336
+F foot_y_mean -83.49875
+F palm_fwd_hip 0.95436
+F palm_fwd_knee 0.94438
+F palm_fwd_ankle 0.99193
+F palm_lat -0.07148
+F palm_h_rel 1.1646
+F palm_dist_body 0.95537
+F forearm_vert_L 43.73188
+F upperarm_vert_L 95.28519
+F elbow_torso_L 0.43634
+F forearm_vert_R 51.30216
+F upperarm_vert_R 96.51007
+F elbow_torso_R 0.40788
+F forearm_vert_mean 47.51702
+F shoulder_h_L 0.92617
+F shoulder_h_R 1.05199
+F shoulder_asym -0.20534
+F knee_asym -3.33173
+F hip_asym -8.9017
+F elbow_asym -17.28712
+F hand_h_asym -0.01703
+F stance_w 1.37935
+F grip_w 1.20144
+F neck_over_ankle 0.10656
+F hip_height_rel 0.99785
+F hip_below_knee 0.51261
+F sh_over_hip_fwd 0.1266
+F palm_head_dist 0.75693
+F palm_h_sh 0.41586
+F ear_shoulder_gap 0.26251
+F knee_gap 1.32598
+F knee_elbow_dist 1.82211
+F knee_h_L -0.53731
+F knee_lat_L 0.07093
+F elbow_h_L -0.04009
+F elbow_wrist_h_L -0.43709
+F knee_h_R -0.48791
+F knee_lat_R 0.23669
+F elbow_h_R -0.04762
+F elbow_wrist_h_R -0.32718
+F ankle_mean 127.87693
+F ankle_minside 122.54707
+F ankle_maxside 133.20679
+F ankle_y_minside -77.617
+F ankle_y_maxside -77.56972
+F elbow_h_mean -0.04385
+F elbow_h_minside -0.04762
+F elbow_h_maxside -0.04009
+F elbow_torso_mean 0.42211
+F elbow_torso_minside 0.40788
+F elbow_torso_maxside 0.43634
+F elbow_wrist_h_mean -0.38213
+F elbow_wrist_h_minside -0.43709
+F elbow_wrist_h_maxside -0.32718
+F foot_pitch_mean -42.09042
+F foot_pitch_minside -46.72512
+F foot_pitch_maxside -37.45573
+F foot_y_minside -84.72009
+F foot_y_maxside -82.2774
+F forearm_vert_minside 43.73188
+F forearm_vert_maxside 51.30216
+F hip_minside 161.49181
+F hip_maxside 170.39351
+F knee_fwd_mean 0.06313
+F knee_fwd_minside 0.05746
+F knee_fwd_maxside 0.0688
+F knee_h_mean -0.51261
+F knee_h_minside -0.53731
+F knee_h_maxside -0.48791
+F knee_lat_mean 0.15381
+F knee_lat_minside 0.07093
+F knee_lat_maxside 0.23669
+F knee_out_minside 0.01252
+F knee_out_maxside 0.01421
+F shoulder_mean 93.40149
+F shoulder_minside 89.33716
+F shoulder_maxside 97.46582
+F shoulder_h_mean 0.98908
+F shoulder_h_minside 0.92617
+F shoulder_h_maxside 1.05199
+F upperarm_vert_mean 95.89763
+F upperarm_vert_minside 95.28519
+F upperarm_vert_maxside 96.51007
+F wrist_mean 152.97821
+F wrist_minside 148.16673
+F wrist_maxside 157.78967
+END

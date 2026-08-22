@@ -36,6 +36,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.rounded.AccountCircle
+import androidx.compose.material.icons.rounded.CenterFocusStrong
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Email
 import androidx.compose.material.icons.rounded.FitnessCenter
@@ -99,7 +100,7 @@ private val loginAnimationFrames = intArrayOf(
 )
 
 @Composable
-fun LoginScreen(onLogin: () -> Unit) {
+fun LoginScreen(onLogin: () -> Unit, onOpenPostureLab: () -> Unit = {}) {
     var mode by rememberSaveable { mutableStateOf(LoginMode.Login) }
 
     when (mode) {
@@ -107,6 +108,7 @@ fun LoginScreen(onLogin: () -> Unit) {
             onLogin = onLogin,
             goSignup = { mode = LoginMode.Signup },
             goFind = { mode = LoginMode.Find },
+            onOpenPostureLab = onOpenPostureLab,
         )
 
         LoginMode.Signup -> SignupView(
@@ -146,6 +148,7 @@ private fun LoginView(
     onLogin: () -> Unit,
     goSignup: () -> Unit,
     goFind: () -> Unit,
+    onOpenPostureLab: () -> Unit = {},
 ) {
     var id by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
@@ -212,6 +215,16 @@ private fun LoginView(
                 modifier = Modifier.fillMaxWidth(),
                 container = Color(0xFFFEE500),
                 contentColor = Color(0xFF191919),
+            )
+            Spacer(Modifier.height(10.dp))
+            // 개발용: 로그인 없이 자세 교정(MediaPipe + rules_mp_v0) 실험 화면으로 진입
+            TrexButton(
+                text = "자세 교정 실험실 (개발용)",
+                onClick = onOpenPostureLab,
+                modifier = Modifier.fillMaxWidth(),
+                icon = Icons.Rounded.CenterFocusStrong,
+                container = Color.White.copy(alpha = 0.10f),
+                contentColor = TrexLime,
             )
 
             Row(

@@ -67,6 +67,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
+import com.example.trex_kotlin.posture.PostureLabScreen
 import kotlinx.coroutines.delay
 
 @Composable
@@ -75,6 +76,7 @@ fun TrexApp() {
     var guideDone by rememberSaveable { mutableStateOf(false) }
     var loggedIn by rememberSaveable { mutableStateOf(false) }
     var onboarded by rememberSaveable { mutableStateOf(false) }
+    var postureLab by rememberSaveable { mutableStateOf(false) }
     var sessionIndex by rememberSaveable { mutableIntStateOf(-1) }
     var sessionDone by rememberSaveable { mutableStateOf(false) }
     var workoutPlan by remember { mutableStateOf(todayPlan) }
@@ -142,13 +144,18 @@ fun TrexApp() {
                 onboarded = onboarded,
                 sessionIndex = sessionIndex,
                 sessionDone = sessionDone,
+                postureLab = postureLab,
             ),
             transitionSpec = { fadeIn() togetherWith fadeOut() },
             label = "trex-route",
         ) { route ->
             when {
+                route.postureLab -> PostureLabScreen(onClose = { postureLab = false })
                 !route.guideDone -> GuideBookScreen(onLogin = { guideDone = true })
-                !route.loggedIn -> LoginScreen(onLogin = { loggedIn = true })
+                !route.loggedIn -> LoginScreen(
+                    onLogin = { loggedIn = true },
+                    onOpenPostureLab = { postureLab = true },
+                )
                 !route.onboarded -> OnboardingScreen(onDone = { onboarded = true })
                 route.sessionDone -> SessionCompleteScreen(
                     onDone = {
@@ -207,6 +214,7 @@ private data class AppRoute(
     val onboarded: Boolean,
     val sessionIndex: Int,
     val sessionDone: Boolean,
+    val postureLab: Boolean = false,
 )
 
 @Composable
