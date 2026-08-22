@@ -48,6 +48,20 @@ def main():
     feat_cols = [c for c in fm.columns if c not in ("clip_id", "view_letter")]
     # MediaPipe 에서 계산 불가한 피처는 제거 (spine_*, neck_angle, shoulder_neck_gap, shoulder_fwd)
     feat_cols = [c for c in feat_cols if c.startswith("ts_") or mediapipe_computable(c.rsplit("__", 1)[0])]
+    # --mirror-safe: 카메라를 사용자의 좌/우 어느 쪽에 두어도 같은 값이 나오는 피처만
+    #   (*_L/*_R 한쪽 지정 제외, 반대칭 피처는 std/range 만) → 출력 파일명에 _mirror 접미
+    mirror = "--mirror-safe" in sys.argv
+    if mirror:
+        from export_rules_mp import mirror_safe as _ms
+        def _ok(c: str) -> bool:
+            if c.startswith("ts_"):
+                return True
+            b, s = c.rsplit("__", 1)
+            return _ms(b, s)[0]
+        feat_cols = [c for c in feat_cols if _ok(c)]
+        print(f"[mirror-safe] 허용 피처 {len(feat_cols)}개", flush=True)
+    out_csv = OUT / ("expA_refit_mirror.csv" if mirror else "expA_refit.csv")
+    out_md = OUT / ("expA_refit_mirror_summary.md" if mirror else "expA_refit_summary.md")
     views = {v: g.set_index("clip_id")[feat_cols] for v, g in fm.groupby("view_letter")}
     views["FUSED"] = fm.groupby("clip_id")[feat_cols].mean()
     # 통제군: 같은 표본(샘플 클립) + 같은 MP-가능 화이트리스트 + GT 3D 피처 → 표본 크기 효과와 랜드마크 노이즈 효과 분리
@@ -101,11 +115,11 @@ def main():
                                      mp_threshold=r["threshold"], mp_sign=r["sign"], gt_wl_auc=gt_wl, gt_mp_auc=gt_mp))
         print(f"[{ex_name}] done", flush=True)
     res = pd.DataFrame(rows)
-    res.to_csv(OUT / "expA_refit.csv", index=False, encoding="utf-8-sig")
-    write_summary(res, rules_gt)
+    res.to_csv(out_csv, index=False, encoding="utf-8-sig")
+    write_summary(res, rules_gt, out_md)
 
 
-def write_summary(res: pd.DataFrame, rules_gt: pd.DataFrame):
+def write_summary(res: pd.DataFrame, rules_gt: pd.DataFrame, out_md: Path = OUT / "expA_refit_summary.md"):
     all_base = res[(res.subtype == "") & (res.qc_flag != "3D불량") & res.mp_refit_auc.notna()]
     ctrl = all_base[all_base.view == "GT_SUBSET"].set_index(["exercise", "condition"])["mp_refit_auc"].rename("gt_sub_auc")
     base = all_base[all_base.view != "GT_SUBSET"].merge(ctrl.reset_index(), on=["exercise", "condition"], how="left")
@@ -151,7 +165,7 @@ def write_summary(res: pd.DataFrame, rules_gt: pd.DataFrame):
     L += ["## 5. GT 최적 피처(기본명)별: 통제군 → MP 재적합 중앙값 (n≥2)\n", "| GT 피처 | n | GT 통제군 | MP 재적합 | Δ |", "|---|---|---|---|---|"]
     for r in fam.itertuples():
         L.append(f"| {r.gt_base} | {r.n} | {r.gt_sub:.3f} | {r.mp:.3f} | {r.d:+.3f} |")
-    (OUT / "expA_refit_summary.md").write_text("\n".join(L), encoding="utf-8")
+    out_md.write_text("\n".join(L), encoding="utf-8")
     print("\n".join(L[:20]))
 
 

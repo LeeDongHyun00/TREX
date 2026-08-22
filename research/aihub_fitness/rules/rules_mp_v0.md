@@ -1,62 +1,65 @@
-# rules_mp_v0 — MediaPipe 포팅용 규칙 (2026-08-22)
+# rules_mp_v0.1 — MediaPipe 포팅용 규칙 (2026-08-22)
 
 - 출처: AIHub 013 피트니스자세 (41종목, 수행자 113명) × MediaPipe pose_landmarker_full — 실험 A-2 (MP 피처 재적합, 수행자 GroupKFold, 종목당 ≤60클립)
-- 등급: ship 57 / beta 13 / exclude 71 (미러 불변 규칙: ship 38, beta 10)
+- 등급: ship 59 / beta 12 / exclude 70 (미러 불변 규칙: ship 53, beta 11)
+- mp_v0.1: 미러 불변(좌/우 카메라 위치 무관) 재적합 결과를 우선 채택, 비제약 규칙은 alt_rule 로 보존. 미러 안전 규칙이 정본이 된 건수 16
 - 규칙 해석: `violation_if` 가 참이면 해당 조건 위반. 임계값은 MediaPipe full 모델·AIHub 스튜디오 분포 기준 — **자체 촬영 데이터로 재보정 필수**
 
-## SHIP (57)
+## SHIP (59)
 
 | 종목 | 조건 | 하위유형 | 규칙(위반 if) | 뷰 | AUC | 균형정확도 | n | GT 통제군 | 주의/사유 |
 |---|---|---|---|---|---|---|---|---|---|
 | 굿모닝 | 척추의 중립 | all | `shoulder_asym__std > 0.05201` | C | 0.983 | 0.927 | 60 | 0.955 |  |
 | 굿모닝 | 척추의 중립 | lateral | `shoulder_asym__std > 0.05201` | C | 0.983 | 0.927 | 60 | 0.955 |  |
 | 굿모닝 | 무릎 구부린채 고정 |  | `knee_minside__mean > 160` | D | 0.926 | 0.821 | 60 | 0.954 |  |
+| 덤벨 인클라인 체스트 플라이 | 팔꿈치 살짝 구부린채 고정 |  | `elbow_mean__mean > 136.5` | D | 0.889 | 0.731 | 60 | 0.899 |  |
 | 덤벨 인클라인 체스트 플라이 | 수축 시 덤벨 어깨높이 |  | `palm_head_dist__min > 0.4966` | D | 0.882 | 0.741 | 60 | 0.758 |  |
 | 덤벨 체스트 플라이 | 이완 시 덤벨 가슴높이 |  | `palm_head_dist__mean > 1.021` | B | 0.915 | 0.700 | 60 | 0.933 |  |
 | 덤벨 체스트 플라이 | 팔꿈치 살짝 구부린채 고정 |  | `elbow_minside__max > 154.5` | D | 0.853 | 0.783 | 60 | 0.889 |  |
-| 덤벨 컬 | 척추의 중립 | all | `shoulder_h_L__mean < 0.985` | B | 0.983 | 0.882 | 60 | 0.831 | 어깨 높이(으쓱) 미세 변화는 MP 노이즈에 묻힘; 한쪽(L/R) 지정 피처 — 카메라가 반대편이면 먼 쪽 관절이 되어 정밀도 변동. mean/minside/maxside 변형으로 대체 권장 |
-| 덤벨 컬 | 척추의 중립 | flexion | `shoulder_h_L__mean < 0.985` | B | 0.983 | 0.882 | 60 | 0.831 | 어깨 높이(으쓱) 미세 변화는 MP 노이즈에 묻힘; 한쪽(L/R) 지정 피처 — 카메라가 반대편이면 먼 쪽 관절이 되어 정밀도 변동. mean/minside/maxside 변형으로 대체 권장 |
+| 덤벨 컬 | 척추의 중립 | all | `head_pitch__mean < -19.92` | D | 0.955 | 0.721 | 60 | 0.831 |  |
+| 덤벨 컬 | 척추의 중립 | flexion | `head_pitch__mean < -19.92` | D | 0.955 | 0.721 | 60 | 0.831 |  |
 | 덤벨 컬 | 팔꿈치 위치 고정 |  | `elbow_torso_R__mean > 0.1933` | D | 0.892 | 0.811 | 60 | 0.816 | 한쪽(L/R) 지정 피처 — 카메라가 반대편이면 먼 쪽 관절이 되어 정밀도 변동. mean/minside/maxside 변형으로 대체 권장 |
 | 딥스 | 상체 살짝 숙임 유지 |  | `torso_incl__mean < 20.77` | C | 0.983 | 0.834 | 60 | 0.904 |  |
 | 딥스 | 수축 시 고개 안 젖힘 |  | `face_vs_torso__mean < 94.91` | B | 0.901 | 0.775 | 60 | 0.873 |  |
 | 딥스 | 이완 시 팔꿈치 각도 90도 |  | `shoulder_R__max < 50.93` | B | 0.861 | 0.799 | 60 | 0.893 | 한쪽(L/R) 지정 피처 — 카메라가 반대편이면 먼 쪽 관절이 되어 정밀도 변동. mean/minside/maxside 변형으로 대체 권장 |
 | 라잉 트라이셉스 익스텐션 | 척추의 중립 | all | `face_vs_forward__min < 70.37` | C | 0.976 | 0.892 | 60 | 0.928 |  |
-| 라잉 트라이셉스 익스텐션 | 팔꿈치 위치 고정 |  | `shoulder_R__max > 113.7` | B | 0.964 | 0.862 | 60 | 0.923 | 한쪽(L/R) 지정 피처 — 카메라가 반대편이면 먼 쪽 관절이 되어 정밀도 변동. mean/minside/maxside 변형으로 대체 권장 |
+| 라잉 트라이셉스 익스텐션 | 팔꿈치 위치 고정 |  | `elbow_minside__min > 83.51` | C | 0.909 | 0.823 | 60 | 0.923 |  |
 | 랫풀 다운 | 수축 시 적당한 상체 젖힘 |  | `torso_incl__mean > 8.973` | D | 0.976 | 0.932 | 60 | 0.940 |  |
 | 랫풀 다운 | 수축 시 몸통-팔꿈치 사이 모아줌 |  | `elbow_mean__std < 21.47` | B | 0.961 | 0.876 | 60 | 0.889 |  |
 | 로잉머신 | 상체 과도한 젖힘 없음 |  | `torso_pitch__min < -35.07` | C | 0.938 | 0.784 | 60 | 0.861 |  |
 | 바벨 데드리프트 | 바벨 궤적과 몸 밀착 |  | `palm_lat__min < -0.1033` | D | 0.965 | 0.954 | 60 | 0.944 | 반대칭 피처의 mean/min/max — 카메라 좌/우에 따라 부호 반전. std/range 변형 또는 절댓값 처리 필요 |
 | 바벨 데드리프트 | 발과 무릎의 방향 일치 |  | `knee_out_mean__min < -0.02981` | C | 0.909 | 0.786 | 60 | 0.941 | valgus 는 정면(C) 뷰에서만 신뢰 (전방 사선에서 r≈0.5) |
 | 바벨 런지 | 척추의 중립 | lateral | `shoulder_asym__range > 0.4313` | D | 0.973 | 0.927 | 43 | 1.000 |  |
-| 바벨 스쿼트 | 발과 무릎의 방향 일치 |  | `knee_out_R__mean < 0.03259` | C | 0.993 | 0.909 | 56 | 0.966 | valgus 는 정면(C) 뷰에서만 신뢰 (전방 사선에서 r≈0.5); 한쪽(L/R) 지정 피처 — 카메라가 반대편이면 먼 쪽 관절이 되어 정밀도 변동. mean/minside/maxside 변형으로 대체 권장 |
+| 바벨 런지 | 뒤다리 무릎 각도 90도 |  | `hip_below_knee__min < 0.3804` | D | 0.886 | 0.718 | 59 | 0.947 |  |
 | 바벨 스쿼트 | 고개 정면 |  | `face_vs_torso__min < 77.49` | B | 0.958 | 0.845 | 57 | 0.967 |  |
-| 바벨 스쿼트 | 척추의 중립 | all | `shoulder_h_R__min < 0.8419` | B | 0.938 | 0.832 | 57 | 0.936 | 어깨 높이(으쓱) 미세 변화는 MP 노이즈에 묻힘; 한쪽(L/R) 지정 피처 — 카메라가 반대편이면 먼 쪽 관절이 되어 정밀도 변동. mean/minside/maxside 변형으로 대체 권장 |
-| 바벨 스쿼트 | 척추의 중립 | flexion | `shoulder_h_R__min < 0.8419` | B | 0.938 | 0.832 | 57 | 0.936 | 어깨 높이(으쓱) 미세 변화는 MP 노이즈에 묻힘; 한쪽(L/R) 지정 피처 — 카메라가 반대편이면 먼 쪽 관절이 되어 정밀도 변동. mean/minside/maxside 변형으로 대체 권장 |
+| 바벨 스쿼트 | 척추의 중립 | all | `torso_incl__range > 30.85` | B | 0.931 | 0.851 | 57 | 0.936 |  |
+| 바벨 스쿼트 | 척추의 중립 | flexion | `torso_incl__range > 30.85` | B | 0.931 | 0.851 | 57 | 0.936 |  |
 | 바벨 스쿼트 | 발바닥 지면 고정 |  | `foot_pitch_R__min < -53.37` | C | 0.922 | 0.834 | 56 | 0.879 | 발 피치(뒤꿈치 들림) 깊이 의존 — MP heel(29/30) 활용 권장; 한쪽(L/R) 지정 피처 — 카메라가 반대편이면 먼 쪽 관절이 되어 정밀도 변동. mean/minside/maxside 변형으로 대체 권장 |
+| 바벨 스쿼트 | 발과 무릎의 방향 일치 |  | `knee_out_mean__mean < 0.02388` | C | 0.902 | 0.868 | 56 | 0.966 | valgus 는 정면(C) 뷰에서만 신뢰 (전방 사선에서 r≈0.5) |
 | 바벨 스티프 데드리프트 | 척추의 중립 | lateral | `shoulder_asym__std > 0.04286` | C | 0.983 | 0.831 | 41 | 1.000 |  |
-| 바벨 스티프 데드리프트 | 바벨 궤적과 몸 밀착 |  | `palm_lat__mean < 0.01853` | D | 0.933 | 0.788 | 60 | 0.938 | 반대칭 피처의 mean/min/max — 카메라 좌/우에 따라 부호 반전. std/range 변형 또는 절댓값 처리 필요 |
+| 바벨 스티프 데드리프트 | 바벨 궤적과 몸 밀착 |  | `palm_fwd_hip__max > 1.033` | B | 0.906 | 0.808 | 60 | 0.938 |  |
 | 바벨 컬 | 팔꿈치 위치 고정 |  | `shoulder_R__mean > 24.84` | D | 0.956 | 0.796 | 60 | 0.886 | 한쪽(L/R) 지정 피처 — 카메라가 반대편이면 먼 쪽 관절이 되어 정밀도 변동. mean/minside/maxside 변형으로 대체 권장 |
 | 바벨 컬 | 척추의 중립 | all | `sh_over_hip_fwd__mean > 0.0758` | B | 0.944 | 0.894 | 60 | 0.914 |  |
 | 바벨 컬 | 척추의 중립 | flexion | `sh_over_hip_fwd__mean > 0.0758` | B | 0.944 | 0.894 | 60 | 0.914 |  |
 | 사이드 런지 | 앞다리 무릎 각도 90도 |  | `hip_asym__std < 16.88` | B | 0.877 | 0.779 | 58 | 0.865 |  |
 | 사이드 레터럴 레이즈 | 무릎 반동 없음 |  | `knee_mean__std > 4.799` | D | 0.911 | 0.846 | 60 | 0.894 |  |
-| 사이드 레터럴 레이즈 | 상관과 전완의 각도 고정 |  | `forearm_vert_R__min < 71.78` | D | 0.907 | 0.843 | 60 | 0.862 | 한쪽(L/R) 지정 피처 — 카메라가 반대편이면 먼 쪽 관절이 되어 정밀도 변동. mean/minside/maxside 변형으로 대체 권장 |
+| 사이드 레터럴 레이즈 | 상관과 전완의 각도 고정 |  | `forearm_vert_mean__min < 76` | D | 0.869 | 0.829 | 60 | 0.862 | 후방 뷰(A)에서 더 좋음 (AUC 0.93) — 촬영 가이드와 상충 |
 | 스탠딩 니업 | 무릎 충분히 올라오고 |  | `knee_minside__range < 87.4` | C | 0.971 | 0.872 | 58 | 0.916 |  |
 | 스탠딩 니업 | 척추 중립 | all | `sh_over_hip_fwd__mean > 0.1708` | D | 0.944 | 0.887 | 58 | 0.899 |  |
 | 스탠딩 니업 | 척추 중립 | forward_lean | `sh_over_hip_fwd__mean > 0.1708` | D | 0.944 | 0.887 | 58 | 0.899 |  |
 | 스탠딩 사이드 크런치 | 양 손이 머리 뒤에 위치 |  | `palm_head_dist__min > 0.3998` | D | 0.989 | 0.897 | 57 | 0.920 |  |
+| 스탠딩 사이드 크런치 | 무릎이 몸통 측면에서 올라오는지 여부 |  | `knee_out_mean__mean < 0.02086` | C | 0.939 | 0.847 | 57 | 0.903 | valgus 는 정면(C) 뷰에서만 신뢰 (전방 사선에서 r≈0.5) |
 | 스탠딩 사이드 크런치 | 척추의 중립 | all | `shoulder_h_R__mean < 0.9845` | D | 0.933 | 0.886 | 57 | 0.932 | 어깨 높이(으쓱) 미세 변화는 MP 노이즈에 묻힘; 한쪽(L/R) 지정 피처 — 카메라가 반대편이면 먼 쪽 관절이 되어 정밀도 변동. mean/minside/maxside 변형으로 대체 권장 |
-| 스탠딩 사이드 크런치 | 무릎이 몸통 측면에서 올라오는지 여부 |  | `knee_lat_L__max < 0.3748` | C | 0.921 | 0.877 | 57 | 0.903 | 한쪽(L/R) 지정 피처 — 카메라가 반대편이면 먼 쪽 관절이 되어 정밀도 변동. mean/minside/maxside 변형으로 대체 권장 |
 | 스탠딩 사이드 크런치 | 시선 정면 유지 |  | `head_pitch__mean > -7.138` | C | 0.901 | 0.726 | 57 | 0.776 |  |
-| 스텝 백워드 다이나믹 런지 | 앞다리 무릎 각도 90도 |  | `knee_R__std < 13.2` | C | 1.000 | 0.982 | 60 | 0.955 | 한쪽(L/R) 지정 피처 — 카메라가 반대편이면 먼 쪽 관절이 되어 정밀도 변동. mean/minside/maxside 변형으로 대체 권장 |
-| 스텝 백워드 다이나믹 런지 | 뒤다리 무릎 각도 90도 |  | `knee_h_R__min > -0.6652` | C | 0.860 | 0.732 | 60 | 0.825 | 한쪽(L/R) 지정 피처 — 카메라가 반대편이면 먼 쪽 관절이 되어 정밀도 변동. mean/minside/maxside 변형으로 대체 권장; 후방 뷰(A)에서 더 좋음 (AUC 0.92) — 촬영 가이드와 상충 |
+| 스텝 백워드 다이나믹 런지 | 앞다리 무릎 각도 90도 |  | `knee_maxside__mean > 160.6` | B | 0.971 | 0.914 | 60 | 0.955 |  |
+| 스텝 백워드 다이나믹 런지 | 뒤다리 무릎 각도 90도 |  | `knee_minside__range < 73.55` | B | 0.851 | 0.768 | 60 | 0.825 | 후방 뷰(A)에서 더 좋음 (AUC 0.92) — 촬영 가이드와 상충 |
 | 스텝 포워드 다이나믹 런지 | 척추의 중립 | lateral | `shoulder_asym__std > 0.1021` | B | 0.967 | 0.813 | 39 | 0.973 | 표본 적음 (n=39, AUC 표준오차 ≈ ±0.06) |
 | 스텝 포워드 다이나믹 런지 | 상체의 과조한 숙임/젖힘 여부 |  | `torso_pitch__min < -3.972` | D | 0.880 | 0.725 | 60 | 0.852 |  |
 | 업라이트로우 | 팔꿈치가 손목 리드 |  | `hand_h_asym__std > 0.06212` | B | 0.916 | 0.857 | 60 | 0.955 |  |
 | 오버 헤드 프레스 | 무릎 반동 없음 |  | `knee_maxside__std > 4.314` | D | 0.943 | 0.876 | 60 | 0.983 |  |
 | 오버 헤드 프레스 | 전완 지면과 수직 |  | `grip_w__mean < 1.416` | B | 0.929 | 0.856 | 60 | 0.954 |  |
-| 오버 헤드 프레스 | 척추의 중립 | all | `shoulder_h_L__mean < 0.9973` | B | 0.881 | 0.762 | 60 | 0.822 | 어깨 높이(으쓱) 미세 변화는 MP 노이즈에 묻힘; 한쪽(L/R) 지정 피처 — 카메라가 반대편이면 먼 쪽 관절이 되어 정밀도 변동. mean/minside/maxside 변형으로 대체 권장 |
-| 오버 헤드 프레스 | 척추의 중립 | flexion | `shoulder_h_L__mean < 0.9973` | B | 0.881 | 0.762 | 60 | 0.822 | 어깨 높이(으쓱) 미세 변화는 MP 노이즈에 묻힘; 한쪽(L/R) 지정 피처 — 카메라가 반대편이면 먼 쪽 관절이 되어 정밀도 변동. mean/minside/maxside 변형으로 대체 권장 |
+| 오버 헤드 프레스 | 척추의 중립 | all | `head_pitch__mean < -9.958` | B | 0.875 | 0.719 | 60 | 0.822 |  |
+| 오버 헤드 프레스 | 척추의 중립 | flexion | `head_pitch__mean < -9.958` | B | 0.875 | 0.719 | 60 | 0.822 |  |
 | 케이블 푸시 다운 | 상체 과도한 숙임 없음 |  | `torso_incl__mean > 9.435` | C | 0.955 | 0.852 | 60 | 0.904 |  |
 | 크로스 런지 | 앞다리 무릎 각도 90도 |  | `knee_maxside__std < 13.02` | D | 0.966 | 0.836 | 60 | 0.981 |  |
 | 크로스 런지 | 상체 정면 균형잡기 |  | `head_pitch__max > -2.915` | C | 0.908 | 0.814 | 60 | 0.884 |  |
@@ -66,13 +69,11 @@
 | 행잉 레그 레이즈 | 어깨와 귀 사이 적당한 거리 유지 |  | `grip_w__mean < 1.217` | C | 0.960 | 0.841 | 60 | 0.936 |  |
 | 행잉 레그 레이즈 | 두 다리 사이 모아줌 유지 |  | `stance_w__min < 0.3637` | C | 0.946 | 0.851 | 60 | 0.882 |  |
 
-## BETA (13)
+## BETA (12)
 
 | 종목 | 조건 | 하위유형 | 규칙(위반 if) | 뷰 | AUC | 균형정확도 | n | GT 통제군 | 주의/사유 |
 |---|---|---|---|---|---|---|---|---|---|
-| 덤벨 인클라인 체스트 플라이 | 팔꿈치 살짝 구부린채 고정 |  | `elbow_R__mean > 139.3` | D | 0.850 | 0.663 | 60 | 0.899 | 한쪽(L/R) 지정 피처 — 카메라가 반대편이면 먼 쪽 관절이 되어 정밀도 변동. mean/minside/maxside 변형으로 대체 권장 |
 | 라잉 트라이셉스 익스텐션 | 척추의 중립 | lumbar_swing | `torso_incl__min < 73.4` | D | 0.784 | 0.667 | 60 | 0.914 |  |
-| 바벨 런지 | 뒤다리 무릎 각도 90도 |  | `knee_h_R__min > -0.5867` | B | 0.813 | 0.806 | 59 | 0.947 | 한쪽(L/R) 지정 피처 — 카메라가 반대편이면 먼 쪽 관절이 되어 정밀도 변동. mean/minside/maxside 변형으로 대체 권장; 후방 뷰(E)에서 더 좋음 (AUC 0.91) — 촬영 가이드와 상충 |
 | 바벨 로우 | 바벨 궤적과 몸 밀착 |  | `palm_lat__mean < -0.06753` | D | 0.785 | 0.731 | 60 | 0.885 | 반대칭 피처의 mean/min/max — 카메라 좌/우에 따라 부호 반전. std/range 변형 또는 절댓값 처리 필요 |
 | 바벨 로우 | 무릎 반동 없음 |  | `knee_asym__std < 5.924` | C | 0.769 | 0.700 | 60 | 0.872 |  |
 | 사이드 런지 | 척추의 중립 | all | `face_vs_forward__mean > 19.14` | B | 0.781 | 0.709 | 58 | 0.945 |  |
@@ -80,11 +81,12 @@
 | 스탠딩 사이드 크런치 | 수축시 무릎과 팔꿈치가 충분히 가까움 |  | `knee_elbow_dist__min > 0.9681` | C | 0.773 | 0.764 | 57 | 0.797 |  |
 | 스탠딩 사이드 크런치 | 척추의 중립 | forward_lean | `torso_incl__mean > 9.949` | D | 0.767 | 0.697 | 56 | 0.975 | 후방 뷰(A)에서 더 좋음 (AUC 0.94) — 촬영 가이드와 상충 |
 | 스텝 백워드 다이나믹 런지 | 상체의 과조한 숙임/젖힘 여부 |  | `torso_pitch__min < -2.755` | D | 0.809 | 0.764 | 60 | 0.917 | 후방 뷰(A)에서 더 좋음 (AUC 0.88) — 촬영 가이드와 상충 |
+| 스텝 포워드 다이나믹 런지 | 척추의 중립 | all | `shoulder_asym__std > 0.06543` | B | 0.764 | 0.706 | 60 | 0.761 |  |
 | 페이스 풀 | 상완의 외회전 |  | `grip_w__mean < 1.313` | D | 0.830 | 0.845 | 60 | 0.871 |  |
 | 풀업 | 수축 시 몸통-팔꿈치 사이 모아줌 |  | `elbow_minside__std < 20.5` | B | 0.843 | 0.720 | 60 | 0.859 |  |
 | 프런트 레이즈 | 손목 어깨 또는 턱선까지 올리기 |  | `palm_h_rel__mean < 0.7044` | B | 0.827 | 0.813 | 60 | 0.805 |  |
 
-## EXCLUDE (71)
+## EXCLUDE (70)
 
 | 종목 | 조건 | 하위유형 | 규칙(위반 if) | 뷰 | AUC | 균형정확도 | n | GT 통제군 | 주의/사유 |
 |---|---|---|---|---|---|---|---|---|---|
@@ -143,7 +145,6 @@
 | 스텝 백워드 다이나믹 런지 | 척추의 중립 | all | `shoulder_h_L__max > 1.017` | D | 0.722 | 0.647 | 60 | 0.662 | GT 3D 로도 관측 불가 (통제군 AUC 0.66) |
 | 스텝 백워드 다이나믹 런지 | 척추의 중립 | cervical | `face_vs_forward__std > 5.087` | C | 0.685 | 0.674 | 47 | 0.882 | 경추(시선) 편차는 MP 로 약함 |
 | 스텝 포워드 다이나믹 런지 | 뒤다리 무릎 각도 90도 |  | `knee_lat_L__max > 0.3446` | D | 0.784 | 0.772 | 60 | 0.634 | GT 3D 로도 관측 불가 (통제군 AUC 0.63) |
-| 스텝 포워드 다이나믹 런지 | 척추의 중립 | all | `shoulder_h_L__max > 1.032` | C | 0.715 | 0.627 | 60 | 0.761 | MediaPipe 전이 실패 (전방뷰 최적 AUC 0.72, GT 통제군 0.76) |
 | 스텝 포워드 다이나믹 런지 | 척추의 중립 | cervical | `head_pitch__max > -1.548` | C | 0.710 | 0.757 | 38 | 0.698 | 경추(시선) 편차는 MP 로 약함 |
 | 업라이트로우 | 견갑골 하강 유지 |  | `ear_shoulder_gap__mean < 0.3383` | D | 0.645 | 0.663 | 60 | 0.790 | MediaPipe 전이 실패 (전방뷰 최적 AUC 0.64, GT 통제군 0.79) |
 | 오버 헤드 프레스 | 견갑대 고정 |  | `ear_shoulder_gap__min < 0.2111` | B | 0.609 | 0.643 | 60 | 0.712 | GT 3D 로도 관측 불가 (통제군 AUC 0.71) |
@@ -164,28 +165,28 @@
 
 | 패밀리 | 사용 변형 | 설명 | 계산식 | MP 랜드마크 |
 |---|---|---|---|---|
-| elbow | elbow_R, elbow_mean, elbow_minside | 팔꿈치각 | ∠(Shoulder, Elbow, Wrist); _mean/_minside/_maxside/_asym 동일 규칙 | [11, 12, 13, 14, 15, 16] |
+| elbow | elbow_mean, elbow_minside | 팔꿈치각 | ∠(Shoulder, Elbow, Wrist); _mean/_minside/_maxside/_asym 동일 규칙 | [11, 12, 13, 14, 15, 16] |
 | elbow_torso | elbow_torso_R | 팔꿈치-몸통 거리 | point-line distance(Elbow, Hip→Shoulder)/|Sh−Hip| — elbow_torso_L/R | [11, 12, 13, 14, 23, 24] |
 | face_vs_forward | face_vs_forward | 시선-전방각 | angle(Nose−EarMid, z_b); 0 = 정면 | [0, 7, 8, 23, 24] |
 | face_vs_torso | face_vs_torso | 시선-몸통각 | angle(Nose−EarMid, Neck−HipMid); 직립+정면 ≈ 90 | [0, 7, 8, 11, 12, 23, 24] |
 | foot_pitch | foot_pitch_R | 발 피치 | asin(unit(Foot−Ankle).y) deg; Foot=foot_index(31/32). 앱에선 heel(29/30) 높이 변화가 더 직접적 | [27, 28, 31, 32] |
-| forearm_vert | forearm_vert_R | 전완 수직각 | angle(Wrist−Elbow, UP); 0=전완이 위로 수직 | [13, 14, 15, 16] |
+| forearm_vert | forearm_vert_mean | 전완 수직각 | angle(Wrist−Elbow, UP); 0=전완이 위로 수직 | [13, 14, 15, 16] |
 | grip_w | grip_w | 그립 폭 | |LPalm−RPalm| / |LSh−RSh|; Palm=(pinky+index)/2 | [11, 12, 17, 18, 19, 20] |
 | hand_h_asym | hand_h_asym | 좌우 손 높이차 | (LPalm.y − RPalm.y)/torso_len | [11, 12, 17, 18, 19, 20, 23, 24] |
 | head_pitch | head_pitch | 머리 피치 | face=Nose−EarMid; atan2(face·UP, |수평성분|) deg; + = 위를 봄 | [0, 7, 8, 23, 24] |
 | hip | hip_asym | 고관절각 | ∠(Shoulder, Hip, Knee); _asym=L−R | [11, 12, 23, 24, 25, 26] |
-| knee | knee_R, knee_asym, knee_maxside, knee_mean, knee_minside | 무릎각 | ∠(Hip, Knee, Ankle); _mean=(L+R)/2, _minside=min(L,R), _maxside=max(L,R), _asym=L−R | [23, 24, 25, 26, 27, 28] |
+| hip_below_knee | hip_below_knee | 골반-무릎 높이차 | (HipMid.y − KneeMid.y)/leg_len | [23, 24, 25, 26, 27, 28] |
+| knee | knee_asym, knee_maxside, knee_mean, knee_minside | 무릎각 | ∠(Hip, Knee, Ankle); _mean=(L+R)/2, _minside=min(L,R), _maxside=max(L,R), _asym=L−R | [23, 24, 25, 26, 27, 28] |
 | knee_elbow_dist | knee_elbow_dist | 무릎-팔꿈치 거리 | min(|LKnee−LElbow|, |RKnee−RElbow|)/torso_len | [11, 12, 13, 14, 23, 24, 25, 26] |
-| knee_h | knee_h_R | 무릎 높이 | (Knee.y − HipMid.y)/leg_len — knee_h_L/R | [23, 24, 25, 26, 27, 28] |
-| knee_lat | knee_lat_L | 무릎 측방 위치 | sign·(x_b(Knee) − x_b(Hip))/|LHip−RHip|; + 바깥 | [23, 24, 25, 26] |
-| knee_out | knee_out_R, knee_out_mean | 무릎 외측 오프셋(valgus−) | body frame 에서 무릎 x_b 와 Hip→Ankle 직선 위 같은 높이의 x_b 차 / |Hip−Ankle|; L:+외측, R:부호반전; _mean=(L+R)/2. 음수=무릎 모임 | [23, 24, 25, 26, 27, 28] |
+| knee_out | knee_out_mean | 무릎 외측 오프셋(valgus−) | body frame 에서 무릎 x_b 와 Hip→Ankle 직선 위 같은 높이의 x_b 차 / |Hip−Ankle|; L:+외측, R:부호반전; _mean=(L+R)/2. 음수=무릎 모임 | [23, 24, 25, 26, 27, 28] |
+| palm_fwd_hip | palm_fwd_hip | 손 전방 거리(골반 기준) | z_b(PalmMid)/torso_len | [11, 12, 17, 18, 19, 20, 23, 24] |
 | palm_h_rel | palm_h_rel | 손 높이(키 정규화) | (PalmMid.y − AnkleMid.y)/(Neck.y − AnkleMid.y) | [11, 12, 17, 18, 19, 20, 27, 28] |
 | palm_head_dist | palm_head_dist | 손-머리 거리 | |PalmMid − EarMid| / torso_len | [7, 8, 11, 12, 17, 18, 19, 20, 23, 24] |
 | palm_lat | palm_lat | 손 측방 위치 | x_b(PalmMid) / |LSh−RSh| | [11, 12, 17, 18, 19, 20, 23, 24] |
 | sh_over_hip_fwd | sh_over_hip_fwd | 어깨-골반 전후 오프셋 | z_b(Neck)/torso_len | [11, 12, 23, 24] |
 | shoulder | shoulder_R | 팔 거상각 | ∠(Elbow, Shoulder, Hip) — shoulder_L/R | [11, 12, 13, 14, 23, 24] |
 | shoulder_asym | shoulder_asym | 어깨 높이 비대칭 | (LSh.y − RSh.y) / |LSh−RSh| | [11, 12] |
-| shoulder_h | shoulder_h_L, shoulder_h_R | 어깨 높이 | (Sh.y − HipMid.y)/torso_len — shoulder_h_L/R | [11, 12, 23, 24] |
+| shoulder_h | shoulder_h_R | 어깨 높이 | (Sh.y − HipMid.y)/torso_len — shoulder_h_L/R | [11, 12, 23, 24] |
 | stance_w | stance_w | 스탠스 폭 | |LAnkle−RAnkle| / |LHip−RHip| | [23, 24, 27, 28] |
 | torso_incl | torso_incl | 몸통 기울기 | angle(Neck−HipMid, UP); Neck=ShMid | [11, 12, 23, 24] |
 | torso_pitch | torso_pitch | 몸통 피치(부호) | atan2(z_b(Neck), y_b(Neck)) in deg; + = 앞으로 숙임 | [11, 12, 23, 24] |

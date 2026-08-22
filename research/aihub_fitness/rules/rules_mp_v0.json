@@ -1,5 +1,6 @@
 {
- "version": "mp_v0",
+ "version": "mp_v0.1",
+ "revision_note": "mp_v0.1: 미러 불변(좌/우 카메라 위치 무관) 재적합 결과를 우선 채택, 비제약 규칙은 alt_rule 로 보존. 미러 안전 규칙이 정본이 된 건수 16",
  "generated": "2026-08-22",
  "source": "AIHub 013 피트니스자세 (41종목, 수행자 113명) × MediaPipe pose_landmarker_full — 실험 A-2 (MP 피처 재적합, 수행자 GroupKFold, 종목당 ≤60클립)",
  "coordinate_convention": {
@@ -15,13 +16,13 @@
   "exclude": "AUC < 0.75 또는 GT 통제군 < 0.75 또는 cervical/unspecified/3D불량"
  },
  "counts": {
-  "ship": 57,
-  "beta": 13,
-  "exclude": 71
+  "ship": 59,
+  "beta": 12,
+  "exclude": 70
  },
  "mirror_safe_counts": {
-  "ship": 38,
-  "beta": 10
+  "ship": 53,
+  "beta": 11
  },
  "rules": [
   {
@@ -47,6 +48,7 @@
    "view_best_any": "C",
    "cv_auc_best_any": 0.9833,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.9546,
    "gt_auc_full": 0.9874,
    "cautions": []
@@ -74,6 +76,7 @@
    "view_best_any": "C",
    "cv_auc_best_any": 0.9833,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.9546,
    "gt_auc_full": 0.9874,
    "cautions": []
@@ -101,8 +104,45 @@
    "view_best_any": "D",
    "cv_auc_best_any": 0.9257,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.9543,
    "gt_auc_full": 0.9662,
+   "cautions": []
+  },
+  {
+   "id": "덤벨 인클라인 체스트 플라이|팔꿈치 살짝 구부린채 고정",
+   "exercise": "덤벨 인클라인 체스트 플라이",
+   "condition": "팔꿈치 살짝 구부린채 고정",
+   "subtype": null,
+   "status": "ship",
+   "reason": null,
+   "feature": "elbow_mean__mean",
+   "base_feature": "elbow_mean",
+   "stat": "mean",
+   "family": "elbow",
+   "op": ">",
+   "threshold": 136.50354,
+   "violation_if": "elbow_mean__mean > 136.5",
+   "view_best_front": "D",
+   "view_best_front_desc": "전방사선R(-40°)",
+   "cv_auc": 0.8892,
+   "cv_balacc": 0.731,
+   "n": 60,
+   "n_performers": 38,
+   "view_best_any": "E",
+   "cv_auc_best_any": 0.8743,
+   "mirror_safe": true,
+   "alt_rule": {
+    "kind": "unconstrained",
+    "feature": "elbow_R__mean",
+    "op": ">",
+    "threshold": 139.26149,
+    "cv_auc": 0.8498,
+    "view": "D",
+    "mirror_safe": false
+   },
+   "gt_auc_control": 0.8992,
+   "gt_auc_full": 0.9008,
    "cautions": []
   },
   {
@@ -128,6 +168,7 @@
    "view_best_any": "D",
    "cv_auc_best_any": 0.8821,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.7578,
    "gt_auc_full": 0.8205,
    "cautions": []
@@ -155,6 +196,7 @@
    "view_best_any": "E",
    "cv_auc_best_any": 0.9236,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.9333,
    "gt_auc_full": 0.9037,
    "cautions": []
@@ -182,6 +224,7 @@
    "view_best_any": "D",
    "cv_auc_best_any": 0.853,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.8889,
    "gt_auc_full": 0.8655,
    "cautions": []
@@ -193,28 +236,34 @@
    "subtype": "all",
    "status": "ship",
    "reason": null,
-   "feature": "shoulder_h_L__mean",
-   "base_feature": "shoulder_h_L",
+   "feature": "head_pitch__mean",
+   "base_feature": "head_pitch",
    "stat": "mean",
-   "family": "shoulder_h",
+   "family": "head_pitch",
    "op": "<",
-   "threshold": 0.985012,
-   "violation_if": "shoulder_h_L__mean < 0.985",
-   "view_best_front": "B",
-   "view_best_front_desc": "전방사선L(+40°)",
-   "cv_auc": 0.9829,
-   "cv_balacc": 0.8822,
+   "threshold": -19.920662,
+   "violation_if": "head_pitch__mean < -19.92",
+   "view_best_front": "D",
+   "view_best_front_desc": "전방사선R(-40°)",
+   "cv_auc": 0.9552,
+   "cv_balacc": 0.7211,
    "n": 60,
    "n_performers": 32,
    "view_best_any": "B",
    "cv_auc_best_any": 0.9829,
-   "mirror_safe": false,
+   "mirror_safe": true,
+   "alt_rule": {
+    "kind": "unconstrained",
+    "feature": "shoulder_h_L__mean",
+    "op": "<",
+    "threshold": 0.985012,
+    "cv_auc": 0.9829,
+    "view": "B",
+    "mirror_safe": false
+   },
    "gt_auc_control": 0.8311,
    "gt_auc_full": 0.828,
-   "cautions": [
-    "어깨 높이(으쓱) 미세 변화는 MP 노이즈에 묻힘",
-    "한쪽(L/R) 지정 피처 — 카메라가 반대편이면 먼 쪽 관절이 되어 정밀도 변동. mean/minside/maxside 변형으로 대체 권장"
-   ]
+   "cautions": []
   },
   {
    "id": "덤벨 컬|척추의 중립[flexion]",
@@ -223,28 +272,34 @@
    "subtype": "flexion",
    "status": "ship",
    "reason": null,
-   "feature": "shoulder_h_L__mean",
-   "base_feature": "shoulder_h_L",
+   "feature": "head_pitch__mean",
+   "base_feature": "head_pitch",
    "stat": "mean",
-   "family": "shoulder_h",
+   "family": "head_pitch",
    "op": "<",
-   "threshold": 0.985012,
-   "violation_if": "shoulder_h_L__mean < 0.985",
-   "view_best_front": "B",
-   "view_best_front_desc": "전방사선L(+40°)",
-   "cv_auc": 0.9829,
-   "cv_balacc": 0.8822,
+   "threshold": -19.920662,
+   "violation_if": "head_pitch__mean < -19.92",
+   "view_best_front": "D",
+   "view_best_front_desc": "전방사선R(-40°)",
+   "cv_auc": 0.9552,
+   "cv_balacc": 0.7211,
    "n": 60,
    "n_performers": 32,
    "view_best_any": "B",
    "cv_auc_best_any": 0.9829,
-   "mirror_safe": false,
+   "mirror_safe": true,
+   "alt_rule": {
+    "kind": "unconstrained",
+    "feature": "shoulder_h_L__mean",
+    "op": "<",
+    "threshold": 0.985012,
+    "cv_auc": 0.9829,
+    "view": "B",
+    "mirror_safe": false
+   },
    "gt_auc_control": 0.8311,
    "gt_auc_full": 0.828,
-   "cautions": [
-    "어깨 높이(으쓱) 미세 변화는 MP 노이즈에 묻힘",
-    "한쪽(L/R) 지정 피처 — 카메라가 반대편이면 먼 쪽 관절이 되어 정밀도 변동. mean/minside/maxside 변형으로 대체 권장"
-   ]
+   "cautions": []
   },
   {
    "id": "덤벨 컬|팔꿈치 위치 고정",
@@ -269,6 +324,15 @@
    "view_best_any": "E",
    "cv_auc_best_any": 0.9014,
    "mirror_safe": false,
+   "alt_rule": {
+    "kind": "mirror_safe",
+    "feature": "elbow_maxside__min",
+    "op": ">",
+    "threshold": 91.210014,
+    "cv_auc": 0.8119,
+    "view": "B",
+    "mirror_safe": true
+   },
    "gt_auc_control": 0.8156,
    "gt_auc_full": 0.913,
    "cautions": [
@@ -298,6 +362,7 @@
    "view_best_any": "C",
    "cv_auc_best_any": 0.9832,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.9038,
    "gt_auc_full": 0.8536,
    "cautions": []
@@ -325,6 +390,7 @@
    "view_best_any": "B",
    "cv_auc_best_any": 0.9011,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.8731,
    "gt_auc_full": 0.8261,
    "cautions": []
@@ -352,6 +418,15 @@
    "view_best_any": "B",
    "cv_auc_best_any": 0.8608,
    "mirror_safe": false,
+   "alt_rule": {
+    "kind": "mirror_safe",
+    "feature": "elbow_minside__min",
+    "op": ">",
+    "threshold": 104.226875,
+    "cv_auc": 0.812,
+    "view": "B",
+    "mirror_safe": true
+   },
    "gt_auc_control": 0.8932,
    "gt_auc_full": 0.9377,
    "cautions": [
@@ -381,6 +456,7 @@
    "view_best_any": "C",
    "cv_auc_best_any": 0.9757,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.9285,
    "gt_auc_full": 0.9575,
    "cautions": []
@@ -392,27 +468,34 @@
    "subtype": null,
    "status": "ship",
    "reason": null,
-   "feature": "shoulder_R__max",
-   "base_feature": "shoulder_R",
-   "stat": "max",
-   "family": "shoulder",
+   "feature": "elbow_minside__min",
+   "base_feature": "elbow_minside",
+   "stat": "min",
+   "family": "elbow",
    "op": ">",
-   "threshold": 113.691093,
-   "violation_if": "shoulder_R__max > 113.7",
-   "view_best_front": "B",
-   "view_best_front_desc": "전방사선L(+40°)",
-   "cv_auc": 0.9643,
-   "cv_balacc": 0.8617,
+   "threshold": 83.514374,
+   "violation_if": "elbow_minside__min > 83.51",
+   "view_best_front": "C",
+   "view_best_front_desc": "정면",
+   "cv_auc": 0.9094,
+   "cv_balacc": 0.8232,
    "n": 60,
    "n_performers": 44,
    "view_best_any": "B",
    "cv_auc_best_any": 0.9643,
-   "mirror_safe": false,
+   "mirror_safe": true,
+   "alt_rule": {
+    "kind": "unconstrained",
+    "feature": "shoulder_R__max",
+    "op": ">",
+    "threshold": 113.691093,
+    "cv_auc": 0.9643,
+    "view": "B",
+    "mirror_safe": false
+   },
    "gt_auc_control": 0.9231,
    "gt_auc_full": 0.8675,
-   "cautions": [
-    "한쪽(L/R) 지정 피처 — 카메라가 반대편이면 먼 쪽 관절이 되어 정밀도 변동. mean/minside/maxside 변형으로 대체 권장"
-   ]
+   "cautions": []
   },
   {
    "id": "랫풀 다운|수축 시 적당한 상체 젖힘",
@@ -437,6 +520,7 @@
    "view_best_any": "D",
    "cv_auc_best_any": 0.9761,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.9398,
    "gt_auc_full": 0.9622,
    "cautions": []
@@ -464,6 +548,7 @@
    "view_best_any": "B",
    "cv_auc_best_any": 0.9606,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.8887,
    "gt_auc_full": 0.8677,
    "cautions": []
@@ -491,6 +576,7 @@
    "view_best_any": "C",
    "cv_auc_best_any": 0.9378,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.8614,
    "gt_auc_full": 0.8594,
    "cautions": []
@@ -518,6 +604,15 @@
    "view_best_any": "D",
    "cv_auc_best_any": 0.9651,
    "mirror_safe": false,
+   "alt_rule": {
+    "kind": "mirror_safe",
+    "feature": "palm_lat__range",
+    "op": ">",
+    "threshold": 0.391916,
+    "cv_auc": 0.8227,
+    "view": "D",
+    "mirror_safe": true
+   },
    "gt_auc_control": 0.9444,
    "gt_auc_full": 0.9476,
    "cautions": [
@@ -547,6 +642,7 @@
    "view_best_any": "C",
    "cv_auc_best_any": 0.9088,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.9407,
    "gt_auc_full": 0.9504,
    "cautions": [
@@ -576,39 +672,46 @@
    "view_best_any": "D",
    "cv_auc_best_any": 0.9733,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 1.0,
    "gt_auc_full": 0.978,
    "cautions": []
   },
   {
-   "id": "바벨 스쿼트|발과 무릎의 방향 일치",
-   "exercise": "바벨 스쿼트",
-   "condition": "발과 무릎의 방향 일치",
+   "id": "바벨 런지|뒤다리 무릎 각도 90도",
+   "exercise": "바벨 런지",
+   "condition": "뒤다리 무릎 각도 90도",
    "subtype": null,
    "status": "ship",
    "reason": null,
-   "feature": "knee_out_R__mean",
-   "base_feature": "knee_out_R",
-   "stat": "mean",
-   "family": "knee_out",
+   "feature": "hip_below_knee__min",
+   "base_feature": "hip_below_knee",
+   "stat": "min",
+   "family": "hip_below_knee",
    "op": "<",
-   "threshold": 0.032593,
-   "violation_if": "knee_out_R__mean < 0.03259",
-   "view_best_front": "C",
-   "view_best_front_desc": "정면",
-   "cv_auc": 0.9933,
-   "cv_balacc": 0.9092,
-   "n": 56,
-   "n_performers": 30,
-   "view_best_any": "C",
-   "cv_auc_best_any": 0.9933,
-   "mirror_safe": false,
-   "gt_auc_control": 0.9662,
-   "gt_auc_full": 0.9708,
-   "cautions": [
-    "valgus 는 정면(C) 뷰에서만 신뢰 (전방 사선에서 r≈0.5)",
-    "한쪽(L/R) 지정 피처 — 카메라가 반대편이면 먼 쪽 관절이 되어 정밀도 변동. mean/minside/maxside 변형으로 대체 권장"
-   ]
+   "threshold": 0.380446,
+   "violation_if": "hip_below_knee__min < 0.3804",
+   "view_best_front": "D",
+   "view_best_front_desc": "전방사선R(-40°)",
+   "cv_auc": 0.8863,
+   "cv_balacc": 0.718,
+   "n": 59,
+   "n_performers": 33,
+   "view_best_any": "E",
+   "cv_auc_best_any": 0.906,
+   "mirror_safe": true,
+   "alt_rule": {
+    "kind": "unconstrained",
+    "feature": "knee_h_R__min",
+    "op": ">",
+    "threshold": -0.586738,
+    "cv_auc": 0.8133,
+    "view": "B",
+    "mirror_safe": false
+   },
+   "gt_auc_control": 0.9468,
+   "gt_auc_full": 0.8726,
+   "cautions": []
   },
   {
    "id": "바벨 스쿼트|고개 정면",
@@ -633,6 +736,7 @@
    "view_best_any": "B",
    "cv_auc_best_any": 0.9576,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.9666,
    "gt_auc_full": 0.9399,
    "cautions": []
@@ -644,28 +748,34 @@
    "subtype": "all",
    "status": "ship",
    "reason": null,
-   "feature": "shoulder_h_R__min",
-   "base_feature": "shoulder_h_R",
-   "stat": "min",
-   "family": "shoulder_h",
-   "op": "<",
-   "threshold": 0.841886,
-   "violation_if": "shoulder_h_R__min < 0.8419",
+   "feature": "torso_incl__range",
+   "base_feature": "torso_incl",
+   "stat": "range",
+   "family": "torso_incl",
+   "op": ">",
+   "threshold": 30.848427,
+   "violation_if": "torso_incl__range > 30.85",
    "view_best_front": "B",
    "view_best_front_desc": "전방사선L(+40°)",
-   "cv_auc": 0.9381,
-   "cv_balacc": 0.8323,
+   "cv_auc": 0.931,
+   "cv_balacc": 0.8506,
    "n": 57,
    "n_performers": 31,
    "view_best_any": "B",
    "cv_auc_best_any": 0.9381,
-   "mirror_safe": false,
+   "mirror_safe": true,
+   "alt_rule": {
+    "kind": "unconstrained",
+    "feature": "shoulder_h_R__min",
+    "op": "<",
+    "threshold": 0.841886,
+    "cv_auc": 0.9381,
+    "view": "B",
+    "mirror_safe": false
+   },
    "gt_auc_control": 0.9357,
    "gt_auc_full": 0.8954,
-   "cautions": [
-    "어깨 높이(으쓱) 미세 변화는 MP 노이즈에 묻힘",
-    "한쪽(L/R) 지정 피처 — 카메라가 반대편이면 먼 쪽 관절이 되어 정밀도 변동. mean/minside/maxside 변형으로 대체 권장"
-   ]
+   "cautions": []
   },
   {
    "id": "바벨 스쿼트|척추의 중립[flexion]",
@@ -674,28 +784,34 @@
    "subtype": "flexion",
    "status": "ship",
    "reason": null,
-   "feature": "shoulder_h_R__min",
-   "base_feature": "shoulder_h_R",
-   "stat": "min",
-   "family": "shoulder_h",
-   "op": "<",
-   "threshold": 0.841886,
-   "violation_if": "shoulder_h_R__min < 0.8419",
+   "feature": "torso_incl__range",
+   "base_feature": "torso_incl",
+   "stat": "range",
+   "family": "torso_incl",
+   "op": ">",
+   "threshold": 30.848427,
+   "violation_if": "torso_incl__range > 30.85",
    "view_best_front": "B",
    "view_best_front_desc": "전방사선L(+40°)",
-   "cv_auc": 0.9381,
-   "cv_balacc": 0.8323,
+   "cv_auc": 0.931,
+   "cv_balacc": 0.8506,
    "n": 57,
    "n_performers": 31,
    "view_best_any": "B",
    "cv_auc_best_any": 0.9381,
-   "mirror_safe": false,
+   "mirror_safe": true,
+   "alt_rule": {
+    "kind": "unconstrained",
+    "feature": "shoulder_h_R__min",
+    "op": "<",
+    "threshold": 0.841886,
+    "cv_auc": 0.9381,
+    "view": "B",
+    "mirror_safe": false
+   },
    "gt_auc_control": 0.9357,
    "gt_auc_full": 0.8954,
-   "cautions": [
-    "어깨 높이(으쓱) 미세 변화는 MP 노이즈에 묻힘",
-    "한쪽(L/R) 지정 피처 — 카메라가 반대편이면 먼 쪽 관절이 되어 정밀도 변동. mean/minside/maxside 변형으로 대체 권장"
-   ]
+   "cautions": []
   },
   {
    "id": "바벨 스쿼트|발바닥 지면 고정",
@@ -720,11 +836,58 @@
    "view_best_any": "C",
    "cv_auc_best_any": 0.9216,
    "mirror_safe": false,
+   "alt_rule": {
+    "kind": "mirror_safe",
+    "feature": "stance_w__mean",
+    "op": "<",
+    "threshold": 1.700174,
+    "cv_auc": 0.6974,
+    "view": "D",
+    "mirror_safe": true
+   },
    "gt_auc_control": 0.8786,
    "gt_auc_full": 0.9302,
    "cautions": [
     "발 피치(뒤꿈치 들림) 깊이 의존 — MP heel(29/30) 활용 권장",
     "한쪽(L/R) 지정 피처 — 카메라가 반대편이면 먼 쪽 관절이 되어 정밀도 변동. mean/minside/maxside 변형으로 대체 권장"
+   ]
+  },
+  {
+   "id": "바벨 스쿼트|발과 무릎의 방향 일치",
+   "exercise": "바벨 스쿼트",
+   "condition": "발과 무릎의 방향 일치",
+   "subtype": null,
+   "status": "ship",
+   "reason": null,
+   "feature": "knee_out_mean__mean",
+   "base_feature": "knee_out_mean",
+   "stat": "mean",
+   "family": "knee_out",
+   "op": "<",
+   "threshold": 0.02388,
+   "violation_if": "knee_out_mean__mean < 0.02388",
+   "view_best_front": "C",
+   "view_best_front_desc": "정면",
+   "cv_auc": 0.9024,
+   "cv_balacc": 0.8681,
+   "n": 56,
+   "n_performers": 30,
+   "view_best_any": "C",
+   "cv_auc_best_any": 0.9933,
+   "mirror_safe": true,
+   "alt_rule": {
+    "kind": "unconstrained",
+    "feature": "knee_out_R__mean",
+    "op": "<",
+    "threshold": 0.032593,
+    "cv_auc": 0.9933,
+    "view": "C",
+    "mirror_safe": false
+   },
+   "gt_auc_control": 0.9662,
+   "gt_auc_full": 0.9708,
+   "cautions": [
+    "valgus 는 정면(C) 뷰에서만 신뢰 (전방 사선에서 r≈0.5)"
    ]
   },
   {
@@ -750,6 +913,7 @@
    "view_best_any": "C",
    "cv_auc_best_any": 0.9833,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 1.0,
    "gt_auc_full": 0.9813,
    "cautions": []
@@ -761,27 +925,34 @@
    "subtype": null,
    "status": "ship",
    "reason": null,
-   "feature": "palm_lat__mean",
-   "base_feature": "palm_lat",
-   "stat": "mean",
-   "family": "palm_lat",
-   "op": "<",
-   "threshold": 0.018532,
-   "violation_if": "palm_lat__mean < 0.01853",
-   "view_best_front": "D",
-   "view_best_front_desc": "전방사선R(-40°)",
-   "cv_auc": 0.9328,
-   "cv_balacc": 0.7884,
+   "feature": "palm_fwd_hip__max",
+   "base_feature": "palm_fwd_hip",
+   "stat": "max",
+   "family": "palm_fwd_hip",
+   "op": ">",
+   "threshold": 1.032541,
+   "violation_if": "palm_fwd_hip__max > 1.033",
+   "view_best_front": "B",
+   "view_best_front_desc": "전방사선L(+40°)",
+   "cv_auc": 0.9058,
+   "cv_balacc": 0.8078,
    "n": 60,
    "n_performers": 29,
    "view_best_any": "D",
    "cv_auc_best_any": 0.9328,
-   "mirror_safe": false,
+   "mirror_safe": true,
+   "alt_rule": {
+    "kind": "unconstrained",
+    "feature": "palm_lat__mean",
+    "op": "<",
+    "threshold": 0.018532,
+    "cv_auc": 0.9328,
+    "view": "D",
+    "mirror_safe": false
+   },
    "gt_auc_control": 0.9382,
    "gt_auc_full": 0.9697,
-   "cautions": [
-    "반대칭 피처의 mean/min/max — 카메라 좌/우에 따라 부호 반전. std/range 변형 또는 절댓값 처리 필요"
-   ]
+   "cautions": []
   },
   {
    "id": "바벨 컬|팔꿈치 위치 고정",
@@ -806,6 +977,15 @@
    "view_best_any": "D",
    "cv_auc_best_any": 0.9557,
    "mirror_safe": false,
+   "alt_rule": {
+    "kind": "mirror_safe",
+    "feature": "elbow_asym__range",
+    "op": ">",
+    "threshold": 13.248184,
+    "cv_auc": 0.6737,
+    "view": "C",
+    "mirror_safe": true
+   },
    "gt_auc_control": 0.8865,
    "gt_auc_full": 0.9072,
    "cautions": [
@@ -835,6 +1015,7 @@
    "view_best_any": "B",
    "cv_auc_best_any": 0.9437,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.9138,
    "gt_auc_full": 0.8302,
    "cautions": []
@@ -862,6 +1043,7 @@
    "view_best_any": "B",
    "cv_auc_best_any": 0.9437,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.9138,
    "gt_auc_full": 0.8302,
    "cautions": []
@@ -889,6 +1071,7 @@
    "view_best_any": "B",
    "cv_auc_best_any": 0.8767,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.865,
    "gt_auc_full": 0.7995,
    "cautions": []
@@ -916,6 +1099,7 @@
    "view_best_any": "D",
    "cv_auc_best_any": 0.911,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.8937,
    "gt_auc_full": 0.9529,
    "cautions": []
@@ -927,26 +1111,35 @@
    "subtype": null,
    "status": "ship",
    "reason": null,
-   "feature": "forearm_vert_R__min",
-   "base_feature": "forearm_vert_R",
+   "feature": "forearm_vert_mean__min",
+   "base_feature": "forearm_vert_mean",
    "stat": "min",
    "family": "forearm_vert",
    "op": "<",
-   "threshold": 71.779259,
-   "violation_if": "forearm_vert_R__min < 71.78",
+   "threshold": 75.997665,
+   "violation_if": "forearm_vert_mean__min < 76",
    "view_best_front": "D",
    "view_best_front_desc": "전방사선R(-40°)",
-   "cv_auc": 0.9066,
-   "cv_balacc": 0.8433,
+   "cv_auc": 0.8688,
+   "cv_balacc": 0.829,
    "n": 60,
    "n_performers": 34,
    "view_best_any": "A",
    "cv_auc_best_any": 0.9267,
-   "mirror_safe": false,
+   "mirror_safe": true,
+   "alt_rule": {
+    "kind": "unconstrained",
+    "feature": "forearm_vert_R__min",
+    "op": "<",
+    "threshold": 71.779259,
+    "cv_auc": 0.9066,
+    "view": "D",
+    "mirror_safe": false
+   },
    "gt_auc_control": 0.8623,
    "gt_auc_full": 0.893,
    "cautions": [
-    "한쪽(L/R) 지정 피처 — 카메라가 반대편이면 먼 쪽 관절이 되어 정밀도 변동. mean/minside/maxside 변형으로 대체 권장"
+    "후방 뷰(A)에서 더 좋음 (AUC 0.93) — 촬영 가이드와 상충"
    ]
   },
   {
@@ -972,6 +1165,7 @@
    "view_best_any": "C",
    "cv_auc_best_any": 0.9709,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.916,
    "gt_auc_full": 0.9366,
    "cautions": []
@@ -999,6 +1193,7 @@
    "view_best_any": "E",
    "cv_auc_best_any": 0.9826,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.8986,
    "gt_auc_full": 0.9596,
    "cautions": []
@@ -1026,6 +1221,7 @@
    "view_best_any": "E",
    "cv_auc_best_any": 0.9826,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.8986,
    "gt_auc_full": 0.9596,
    "cautions": []
@@ -1053,9 +1249,48 @@
    "view_best_any": "D",
    "cv_auc_best_any": 0.9889,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.92,
    "gt_auc_full": 0.9395,
    "cautions": []
+  },
+  {
+   "id": "스탠딩 사이드 크런치|무릎이 몸통 측면에서 올라오는지 여부",
+   "exercise": "스탠딩 사이드 크런치",
+   "condition": "무릎이 몸통 측면에서 올라오는지 여부",
+   "subtype": null,
+   "status": "ship",
+   "reason": null,
+   "feature": "knee_out_mean__mean",
+   "base_feature": "knee_out_mean",
+   "stat": "mean",
+   "family": "knee_out",
+   "op": "<",
+   "threshold": 0.020856,
+   "violation_if": "knee_out_mean__mean < 0.02086",
+   "view_best_front": "C",
+   "view_best_front_desc": "정면",
+   "cv_auc": 0.939,
+   "cv_balacc": 0.8469,
+   "n": 57,
+   "n_performers": 35,
+   "view_best_any": "C",
+   "cv_auc_best_any": 0.921,
+   "mirror_safe": true,
+   "alt_rule": {
+    "kind": "unconstrained",
+    "feature": "knee_lat_L__max",
+    "op": "<",
+    "threshold": 0.374758,
+    "cv_auc": 0.921,
+    "view": "C",
+    "mirror_safe": false
+   },
+   "gt_auc_control": 0.9029,
+   "gt_auc_full": 0.947,
+   "cautions": [
+    "valgus 는 정면(C) 뷰에서만 신뢰 (전방 사선에서 r≈0.5)"
+   ]
   },
   {
    "id": "스탠딩 사이드 크런치|척추의 중립[all]",
@@ -1080,39 +1315,19 @@
    "view_best_any": "D",
    "cv_auc_best_any": 0.9333,
    "mirror_safe": false,
+   "alt_rule": {
+    "kind": "mirror_safe",
+    "feature": "head_pitch__min",
+    "op": "<",
+    "threshold": -32.725368,
+    "cv_auc": 0.7948,
+    "view": "D",
+    "mirror_safe": true
+   },
    "gt_auc_control": 0.9322,
    "gt_auc_full": 0.9076,
    "cautions": [
     "어깨 높이(으쓱) 미세 변화는 MP 노이즈에 묻힘",
-    "한쪽(L/R) 지정 피처 — 카메라가 반대편이면 먼 쪽 관절이 되어 정밀도 변동. mean/minside/maxside 변형으로 대체 권장"
-   ]
-  },
-  {
-   "id": "스탠딩 사이드 크런치|무릎이 몸통 측면에서 올라오는지 여부",
-   "exercise": "스탠딩 사이드 크런치",
-   "condition": "무릎이 몸통 측면에서 올라오는지 여부",
-   "subtype": null,
-   "status": "ship",
-   "reason": null,
-   "feature": "knee_lat_L__max",
-   "base_feature": "knee_lat_L",
-   "stat": "max",
-   "family": "knee_lat",
-   "op": "<",
-   "threshold": 0.374758,
-   "violation_if": "knee_lat_L__max < 0.3748",
-   "view_best_front": "C",
-   "view_best_front_desc": "정면",
-   "cv_auc": 0.921,
-   "cv_balacc": 0.877,
-   "n": 57,
-   "n_performers": 35,
-   "view_best_any": "C",
-   "cv_auc_best_any": 0.921,
-   "mirror_safe": false,
-   "gt_auc_control": 0.9029,
-   "gt_auc_full": 0.947,
-   "cautions": [
     "한쪽(L/R) 지정 피처 — 카메라가 반대편이면 먼 쪽 관절이 되어 정밀도 변동. mean/minside/maxside 변형으로 대체 권장"
    ]
   },
@@ -1139,6 +1354,7 @@
    "view_best_any": "C",
    "cv_auc_best_any": 0.9014,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.7763,
    "gt_auc_full": 0.8761,
    "cautions": []
@@ -1150,27 +1366,34 @@
    "subtype": null,
    "status": "ship",
    "reason": null,
-   "feature": "knee_R__std",
-   "base_feature": "knee_R",
-   "stat": "std",
+   "feature": "knee_maxside__mean",
+   "base_feature": "knee_maxside",
+   "stat": "mean",
    "family": "knee",
-   "op": "<",
-   "threshold": 13.201259,
-   "violation_if": "knee_R__std < 13.2",
-   "view_best_front": "C",
-   "view_best_front_desc": "정면",
-   "cv_auc": 1.0,
-   "cv_balacc": 0.9821,
+   "op": ">",
+   "threshold": 160.625061,
+   "violation_if": "knee_maxside__mean > 160.6",
+   "view_best_front": "B",
+   "view_best_front_desc": "전방사선L(+40°)",
+   "cv_auc": 0.9714,
+   "cv_balacc": 0.9143,
    "n": 60,
    "n_performers": 35,
    "view_best_any": "C",
    "cv_auc_best_any": 1.0,
-   "mirror_safe": false,
+   "mirror_safe": true,
+   "alt_rule": {
+    "kind": "unconstrained",
+    "feature": "knee_R__std",
+    "op": "<",
+    "threshold": 13.201259,
+    "cv_auc": 1.0,
+    "view": "C",
+    "mirror_safe": false
+   },
    "gt_auc_control": 0.9551,
    "gt_auc_full": 0.955,
-   "cautions": [
-    "한쪽(L/R) 지정 피처 — 카메라가 반대편이면 먼 쪽 관절이 되어 정밀도 변동. mean/minside/maxside 변형으로 대체 권장"
-   ]
+   "cautions": []
   },
   {
    "id": "스텝 백워드 다이나믹 런지|뒤다리 무릎 각도 90도",
@@ -1179,26 +1402,34 @@
    "subtype": null,
    "status": "ship",
    "reason": null,
-   "feature": "knee_h_R__min",
-   "base_feature": "knee_h_R",
-   "stat": "min",
-   "family": "knee_h",
-   "op": ">",
-   "threshold": -0.665188,
-   "violation_if": "knee_h_R__min > -0.6652",
-   "view_best_front": "C",
-   "view_best_front_desc": "정면",
-   "cv_auc": 0.8602,
-   "cv_balacc": 0.7324,
+   "feature": "knee_minside__range",
+   "base_feature": "knee_minside",
+   "stat": "range",
+   "family": "knee",
+   "op": "<",
+   "threshold": 73.545715,
+   "violation_if": "knee_minside__range < 73.55",
+   "view_best_front": "B",
+   "view_best_front_desc": "전방사선L(+40°)",
+   "cv_auc": 0.8506,
+   "cv_balacc": 0.7678,
    "n": 60,
    "n_performers": 35,
    "view_best_any": "A",
    "cv_auc_best_any": 0.9181,
-   "mirror_safe": false,
+   "mirror_safe": true,
+   "alt_rule": {
+    "kind": "unconstrained",
+    "feature": "knee_h_R__min",
+    "op": ">",
+    "threshold": -0.665188,
+    "cv_auc": 0.8602,
+    "view": "C",
+    "mirror_safe": false
+   },
    "gt_auc_control": 0.8248,
    "gt_auc_full": 0.8808,
    "cautions": [
-    "한쪽(L/R) 지정 피처 — 카메라가 반대편이면 먼 쪽 관절이 되어 정밀도 변동. mean/minside/maxside 변형으로 대체 권장",
     "후방 뷰(A)에서 더 좋음 (AUC 0.92) — 촬영 가이드와 상충"
    ]
   },
@@ -1225,6 +1456,7 @@
    "view_best_any": "B",
    "cv_auc_best_any": 0.9667,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.9733,
    "gt_auc_full": 0.988,
    "cautions": [
@@ -1254,6 +1486,7 @@
    "view_best_any": "D",
    "cv_auc_best_any": 0.8796,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.8521,
    "gt_auc_full": 0.8042,
    "cautions": []
@@ -1281,6 +1514,7 @@
    "view_best_any": "B",
    "cv_auc_best_any": 0.9157,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.9551,
    "gt_auc_full": 0.9513,
    "cautions": []
@@ -1308,6 +1542,7 @@
    "view_best_any": "D",
    "cv_auc_best_any": 0.9432,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.9833,
    "gt_auc_full": 0.9774,
    "cautions": []
@@ -1335,6 +1570,7 @@
    "view_best_any": "B",
    "cv_auc_best_any": 0.9292,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.9542,
    "gt_auc_full": 0.8215,
    "cautions": []
@@ -1346,28 +1582,34 @@
    "subtype": "all",
    "status": "ship",
    "reason": null,
-   "feature": "shoulder_h_L__mean",
-   "base_feature": "shoulder_h_L",
+   "feature": "head_pitch__mean",
+   "base_feature": "head_pitch",
    "stat": "mean",
-   "family": "shoulder_h",
+   "family": "head_pitch",
    "op": "<",
-   "threshold": 0.997253,
-   "violation_if": "shoulder_h_L__mean < 0.9973",
+   "threshold": -9.95801,
+   "violation_if": "head_pitch__mean < -9.958",
    "view_best_front": "B",
    "view_best_front_desc": "전방사선L(+40°)",
-   "cv_auc": 0.8814,
-   "cv_balacc": 0.7623,
+   "cv_auc": 0.8751,
+   "cv_balacc": 0.7191,
    "n": 60,
    "n_performers": 29,
    "view_best_any": "B",
    "cv_auc_best_any": 0.8814,
-   "mirror_safe": false,
+   "mirror_safe": true,
+   "alt_rule": {
+    "kind": "unconstrained",
+    "feature": "shoulder_h_L__mean",
+    "op": "<",
+    "threshold": 0.997253,
+    "cv_auc": 0.8814,
+    "view": "B",
+    "mirror_safe": false
+   },
    "gt_auc_control": 0.8222,
    "gt_auc_full": 0.8349,
-   "cautions": [
-    "어깨 높이(으쓱) 미세 변화는 MP 노이즈에 묻힘",
-    "한쪽(L/R) 지정 피처 — 카메라가 반대편이면 먼 쪽 관절이 되어 정밀도 변동. mean/minside/maxside 변형으로 대체 권장"
-   ]
+   "cautions": []
   },
   {
    "id": "오버 헤드 프레스|척추의 중립[flexion]",
@@ -1376,28 +1618,34 @@
    "subtype": "flexion",
    "status": "ship",
    "reason": null,
-   "feature": "shoulder_h_L__mean",
-   "base_feature": "shoulder_h_L",
+   "feature": "head_pitch__mean",
+   "base_feature": "head_pitch",
    "stat": "mean",
-   "family": "shoulder_h",
+   "family": "head_pitch",
    "op": "<",
-   "threshold": 0.997253,
-   "violation_if": "shoulder_h_L__mean < 0.9973",
+   "threshold": -9.95801,
+   "violation_if": "head_pitch__mean < -9.958",
    "view_best_front": "B",
    "view_best_front_desc": "전방사선L(+40°)",
-   "cv_auc": 0.8814,
-   "cv_balacc": 0.7623,
+   "cv_auc": 0.8751,
+   "cv_balacc": 0.7191,
    "n": 60,
    "n_performers": 29,
    "view_best_any": "B",
    "cv_auc_best_any": 0.8814,
-   "mirror_safe": false,
+   "mirror_safe": true,
+   "alt_rule": {
+    "kind": "unconstrained",
+    "feature": "shoulder_h_L__mean",
+    "op": "<",
+    "threshold": 0.997253,
+    "cv_auc": 0.8814,
+    "view": "B",
+    "mirror_safe": false
+   },
    "gt_auc_control": 0.8222,
    "gt_auc_full": 0.8349,
-   "cautions": [
-    "어깨 높이(으쓱) 미세 변화는 MP 노이즈에 묻힘",
-    "한쪽(L/R) 지정 피처 — 카메라가 반대편이면 먼 쪽 관절이 되어 정밀도 변동. mean/minside/maxside 변형으로 대체 권장"
-   ]
+   "cautions": []
   },
   {
    "id": "케이블 푸시 다운|상체 과도한 숙임 없음",
@@ -1422,6 +1670,7 @@
    "view_best_any": "C",
    "cv_auc_best_any": 0.9552,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.9038,
    "gt_auc_full": 0.9055,
    "cautions": []
@@ -1449,6 +1698,7 @@
    "view_best_any": "D",
    "cv_auc_best_any": 0.9658,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.9812,
    "gt_auc_full": 0.979,
    "cautions": []
@@ -1476,6 +1726,7 @@
    "view_best_any": "C",
    "cv_auc_best_any": 0.9083,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.8845,
    "gt_auc_full": 0.9001,
    "cautions": []
@@ -1503,6 +1754,7 @@
    "view_best_any": "D",
    "cv_auc_best_any": 0.9829,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.9714,
    "gt_auc_full": 0.982,
    "cautions": []
@@ -1530,6 +1782,7 @@
    "view_best_any": "B",
    "cv_auc_best_any": 0.975,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.9709,
    "gt_auc_full": 0.9875,
    "cautions": []
@@ -1557,6 +1810,7 @@
    "view_best_any": "A",
    "cv_auc_best_any": 1.0,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 1.0,
    "gt_auc_full": 0.9667,
    "cautions": [
@@ -1586,6 +1840,7 @@
    "view_best_any": "C",
    "cv_auc_best_any": 0.9598,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.9361,
    "gt_auc_full": 0.9521,
    "cautions": []
@@ -1613,38 +1868,10 @@
    "view_best_any": "C",
    "cv_auc_best_any": 0.9459,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.882,
    "gt_auc_full": 0.8899,
    "cautions": []
-  },
-  {
-   "id": "덤벨 인클라인 체스트 플라이|팔꿈치 살짝 구부린채 고정",
-   "exercise": "덤벨 인클라인 체스트 플라이",
-   "condition": "팔꿈치 살짝 구부린채 고정",
-   "subtype": null,
-   "status": "beta",
-   "reason": null,
-   "feature": "elbow_R__mean",
-   "base_feature": "elbow_R",
-   "stat": "mean",
-   "family": "elbow",
-   "op": ">",
-   "threshold": 139.26149,
-   "violation_if": "elbow_R__mean > 139.3",
-   "view_best_front": "D",
-   "view_best_front_desc": "전방사선R(-40°)",
-   "cv_auc": 0.8498,
-   "cv_balacc": 0.663,
-   "n": 60,
-   "n_performers": 38,
-   "view_best_any": "E",
-   "cv_auc_best_any": 0.8743,
-   "mirror_safe": false,
-   "gt_auc_control": 0.8992,
-   "gt_auc_full": 0.9008,
-   "cautions": [
-    "한쪽(L/R) 지정 피처 — 카메라가 반대편이면 먼 쪽 관절이 되어 정밀도 변동. mean/minside/maxside 변형으로 대체 권장"
-   ]
   },
   {
    "id": "라잉 트라이셉스 익스텐션|척추의 중립[lumbar_swing]",
@@ -1669,39 +1896,10 @@
    "view_best_any": "E",
    "cv_auc_best_any": 0.8007,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.9139,
    "gt_auc_full": 0.9266,
    "cautions": []
-  },
-  {
-   "id": "바벨 런지|뒤다리 무릎 각도 90도",
-   "exercise": "바벨 런지",
-   "condition": "뒤다리 무릎 각도 90도",
-   "subtype": null,
-   "status": "beta",
-   "reason": null,
-   "feature": "knee_h_R__min",
-   "base_feature": "knee_h_R",
-   "stat": "min",
-   "family": "knee_h",
-   "op": ">",
-   "threshold": -0.586738,
-   "violation_if": "knee_h_R__min > -0.5867",
-   "view_best_front": "B",
-   "view_best_front_desc": "전방사선L(+40°)",
-   "cv_auc": 0.8133,
-   "cv_balacc": 0.8056,
-   "n": 59,
-   "n_performers": 33,
-   "view_best_any": "E",
-   "cv_auc_best_any": 0.906,
-   "mirror_safe": false,
-   "gt_auc_control": 0.9468,
-   "gt_auc_full": 0.8726,
-   "cautions": [
-    "한쪽(L/R) 지정 피처 — 카메라가 반대편이면 먼 쪽 관절이 되어 정밀도 변동. mean/minside/maxside 변형으로 대체 권장",
-    "후방 뷰(E)에서 더 좋음 (AUC 0.91) — 촬영 가이드와 상충"
-   ]
   },
   {
    "id": "바벨 로우|바벨 궤적과 몸 밀착",
@@ -1726,6 +1924,15 @@
    "view_best_any": "A",
    "cv_auc_best_any": 0.8062,
    "mirror_safe": false,
+   "alt_rule": {
+    "kind": "mirror_safe",
+    "feature": "palm_fwd_hip__mean",
+    "op": ">",
+    "threshold": 0.721333,
+    "cv_auc": 0.7425,
+    "view": "B",
+    "mirror_safe": true
+   },
    "gt_auc_control": 0.8855,
    "gt_auc_full": 0.879,
    "cautions": [
@@ -1755,6 +1962,7 @@
    "view_best_any": "C",
    "cv_auc_best_any": 0.7693,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.8723,
    "gt_auc_full": 0.8781,
    "cautions": []
@@ -1782,6 +1990,7 @@
    "view_best_any": "B",
    "cv_auc_best_any": 0.7809,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.9446,
    "gt_auc_full": 0.8772,
    "cautions": []
@@ -1809,6 +2018,7 @@
    "view_best_any": "B",
    "cv_auc_best_any": 0.8343,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.8629,
    "gt_auc_full": 0.8454,
    "cautions": []
@@ -1836,6 +2046,7 @@
    "view_best_any": "C",
    "cv_auc_best_any": 0.7733,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.7973,
    "gt_auc_full": 0.8678,
    "cautions": []
@@ -1863,6 +2074,7 @@
    "view_best_any": "A",
    "cv_auc_best_any": 0.9409,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.9745,
    "gt_auc_full": 0.9506,
    "cautions": [
@@ -1892,11 +2104,48 @@
    "view_best_any": "A",
    "cv_auc_best_any": 0.8806,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.9171,
    "gt_auc_full": 0.9144,
    "cautions": [
     "후방 뷰(A)에서 더 좋음 (AUC 0.88) — 촬영 가이드와 상충"
    ]
+  },
+  {
+   "id": "스텝 포워드 다이나믹 런지|척추의 중립[all]",
+   "exercise": "스텝 포워드 다이나믹 런지",
+   "condition": "척추의 중립",
+   "subtype": "all",
+   "status": "beta",
+   "reason": null,
+   "feature": "shoulder_asym__std",
+   "base_feature": "shoulder_asym",
+   "stat": "std",
+   "family": "shoulder_asym",
+   "op": ">",
+   "threshold": 0.065435,
+   "violation_if": "shoulder_asym__std > 0.06543",
+   "view_best_front": "B",
+   "view_best_front_desc": "전방사선L(+40°)",
+   "cv_auc": 0.7643,
+   "cv_balacc": 0.7056,
+   "n": 60,
+   "n_performers": 34,
+   "view_best_any": "C",
+   "cv_auc_best_any": 0.7153,
+   "mirror_safe": true,
+   "alt_rule": {
+    "kind": "unconstrained",
+    "feature": "shoulder_h_L__max",
+    "op": ">",
+    "threshold": 1.031709,
+    "cv_auc": 0.7153,
+    "view": "C",
+    "mirror_safe": false
+   },
+   "gt_auc_control": 0.7612,
+   "gt_auc_full": 0.8098,
+   "cautions": []
   },
   {
    "id": "페이스 풀|상완의 외회전",
@@ -1921,6 +2170,7 @@
    "view_best_any": "D",
    "cv_auc_best_any": 0.8297,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.8713,
    "gt_auc_full": 0.8775,
    "cautions": []
@@ -1948,6 +2198,7 @@
    "view_best_any": "B",
    "cv_auc_best_any": 0.8433,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.8588,
    "gt_auc_full": 0.8788,
    "cautions": []
@@ -1975,6 +2226,7 @@
    "view_best_any": "A",
    "cv_auc_best_any": 0.8281,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.8052,
    "gt_auc_full": 0.8922,
    "cautions": []
@@ -2002,6 +2254,7 @@
    "view_best_any": "D",
    "cv_auc_best_any": 0.8581,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.749,
    "gt_auc_full": 0.8749,
    "cautions": []
@@ -2029,6 +2282,7 @@
    "view_best_any": "B",
    "cv_auc_best_any": 0.817,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.741,
    "gt_auc_full": 0.6696,
    "cautions": []
@@ -2056,6 +2310,15 @@
    "view_best_any": "D",
    "cv_auc_best_any": 0.7498,
    "mirror_safe": false,
+   "alt_rule": {
+    "kind": "mirror_safe",
+    "feature": "palm_fwd_hip__min",
+    "op": "<",
+    "threshold": 0.217713,
+    "cv_auc": 0.5802,
+    "view": "D",
+    "mirror_safe": true
+   },
    "gt_auc_control": 0.787,
    "gt_auc_full": 0.8736,
    "cautions": [
@@ -2085,6 +2348,15 @@
    "view_best_any": "D",
    "cv_auc_best_any": 0.7421,
    "mirror_safe": false,
+   "alt_rule": {
+    "kind": "mirror_safe",
+    "feature": "knee_maxside__std",
+    "op": ">",
+    "threshold": 9.295281,
+    "cv_auc": 0.7389,
+    "view": "B",
+    "mirror_safe": true
+   },
    "gt_auc_control": 0.8684,
    "gt_auc_full": 0.8591,
    "cautions": [
@@ -2114,6 +2386,15 @@
    "view_best_any": "B",
    "cv_auc_best_any": 0.7239,
    "mirror_safe": false,
+   "alt_rule": {
+    "kind": "mirror_safe",
+    "feature": "face_vs_forward__range",
+    "op": ">",
+    "threshold": 36.581219,
+    "cv_auc": 0.6483,
+    "view": "D",
+    "mirror_safe": true
+   },
    "gt_auc_control": 0.7569,
    "gt_auc_full": 0.7293,
    "cautions": [
@@ -2143,6 +2424,15 @@
    "view_best_any": "B",
    "cv_auc_best_any": 0.7086,
    "mirror_safe": false,
+   "alt_rule": {
+    "kind": "mirror_safe",
+    "feature": "palm_dist_body__max",
+    "op": ">",
+    "threshold": 1.053816,
+    "cv_auc": 0.7243,
+    "view": "D",
+    "mirror_safe": true
+   },
    "gt_auc_control": 0.8324,
    "gt_auc_full": 0.8605,
    "cautions": [
@@ -2172,6 +2462,7 @@
    "view_best_any": "A",
    "cv_auc_best_any": 0.6736,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.7569,
    "gt_auc_full": 0.7293,
    "cautions": []
@@ -2199,6 +2490,7 @@
    "view_best_any": "E",
    "cv_auc_best_any": 0.6348,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.6605,
    "gt_auc_full": 0.7079,
    "cautions": []
@@ -2226,6 +2518,7 @@
    "view_best_any": "D",
    "cv_auc_best_any": 0.7187,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.4269,
    "gt_auc_full": 0.5455,
    "cautions": []
@@ -2253,6 +2546,7 @@
    "view_best_any": "B",
    "cv_auc_best_any": 0.7306,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.8773,
    "gt_auc_full": 0.8996,
    "cautions": []
@@ -2280,6 +2574,7 @@
    "view_best_any": "B",
    "cv_auc_best_any": 0.6581,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.7402,
    "gt_auc_full": 0.793,
    "cautions": []
@@ -2307,6 +2602,15 @@
    "view_best_any": "E",
    "cv_auc_best_any": 0.6078,
    "mirror_safe": false,
+   "alt_rule": {
+    "kind": "mirror_safe",
+    "feature": "knee_minside__range",
+    "op": ">",
+    "threshold": 9.844223,
+    "cv_auc": 0.5677,
+    "view": "C",
+    "mirror_safe": true
+   },
    "gt_auc_control": 0.7261,
    "gt_auc_full": 0.6556,
    "cautions": [
@@ -2336,6 +2640,7 @@
    "view_best_any": "C",
    "cv_auc_best_any": 0.8202,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.7457,
    "gt_auc_full": 0.9288,
    "cautions": []
@@ -2363,6 +2668,7 @@
    "view_best_any": "D",
    "cv_auc_best_any": 0.7342,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.5878,
    "gt_auc_full": 0.8164,
    "cautions": []
@@ -2390,6 +2696,15 @@
    "view_best_any": "D",
    "cv_auc_best_any": 0.7326,
    "mirror_safe": false,
+   "alt_rule": {
+    "kind": "mirror_safe",
+    "feature": "elbow_asym__range",
+    "op": ">",
+    "threshold": 33.438332,
+    "cv_auc": 0.6875,
+    "view": "B",
+    "mirror_safe": true
+   },
    "gt_auc_control": 0.5507,
    "gt_auc_full": 0.6938,
    "cautions": [
@@ -2419,6 +2734,7 @@
    "view_best_any": "E",
    "cv_auc_best_any": 0.7037,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.905,
    "gt_auc_full": 0.7697,
    "cautions": []
@@ -2446,6 +2762,7 @@
    "view_best_any": "C",
    "cv_auc_best_any": 0.8629,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.5886,
    "gt_auc_full": 0.6462,
    "cautions": []
@@ -2473,6 +2790,7 @@
    "view_best_any": "B",
    "cv_auc_best_any": 0.7334,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.6317,
    "gt_auc_full": 0.7311,
    "cautions": []
@@ -2500,6 +2818,15 @@
    "view_best_any": "C",
    "cv_auc_best_any": 0.6339,
    "mirror_safe": false,
+   "alt_rule": {
+    "kind": "mirror_safe",
+    "feature": "knee_maxside__std",
+    "op": ">",
+    "threshold": 4.746128,
+    "cv_auc": 0.6095,
+    "view": "D",
+    "mirror_safe": true
+   },
    "gt_auc_control": 0.5346,
    "gt_auc_full": 0.5511,
    "cautions": [
@@ -2529,6 +2856,15 @@
    "view_best_any": "A",
    "cv_auc_best_any": 0.7151,
    "mirror_safe": false,
+   "alt_rule": {
+    "kind": "mirror_safe",
+    "feature": "grip_w__min",
+    "op": "<",
+    "threshold": 0.651843,
+    "cv_auc": 0.6098,
+    "view": "D",
+    "mirror_safe": true
+   },
    "gt_auc_control": 0.777,
    "gt_auc_full": 0.8526,
    "cautions": [
@@ -2559,6 +2895,7 @@
    "view_best_any": "D",
    "cv_auc_best_any": 0.7962,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.5897,
    "gt_auc_full": 0.6504,
    "cautions": []
@@ -2586,6 +2923,7 @@
    "view_best_any": "B",
    "cv_auc_best_any": 0.625,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.8607,
    "gt_auc_full": 0.8659,
    "cautions": []
@@ -2613,6 +2951,7 @@
    "view_best_any": "D",
    "cv_auc_best_any": 0.8181,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.5573,
    "gt_auc_full": 0.8199,
    "cautions": []
@@ -2640,6 +2979,7 @@
    "view_best_any": "B",
    "cv_auc_best_any": 0.6712,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.4055,
    "gt_auc_full": 0.5297,
    "cautions": []
@@ -2667,6 +3007,15 @@
    "view_best_any": "E",
    "cv_auc_best_any": 0.7819,
    "mirror_safe": false,
+   "alt_rule": {
+    "kind": "mirror_safe",
+    "feature": "knee_elbow_dist__mean",
+    "op": ">",
+    "threshold": 0.583871,
+    "cv_auc": 0.6076,
+    "view": "D",
+    "mirror_safe": true
+   },
    "gt_auc_control": 0.5896,
    "gt_auc_full": 0.6934,
    "cautions": [
@@ -2696,6 +3045,15 @@
    "view_best_any": "A",
    "cv_auc_best_any": 0.7351,
    "mirror_safe": false,
+   "alt_rule": {
+    "kind": "mirror_safe",
+    "feature": "palm_h_rel__mean",
+    "op": ">",
+    "threshold": 0.742601,
+    "cv_auc": 0.6591,
+    "view": "D",
+    "mirror_safe": true
+   },
    "gt_auc_control": 0.7264,
    "gt_auc_full": 0.7078,
    "cautions": [
@@ -2725,6 +3083,7 @@
    "view_best_any": "B",
    "cv_auc_best_any": 0.7632,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.5893,
    "gt_auc_full": 0.7641,
    "cautions": []
@@ -2752,6 +3111,7 @@
    "view_best_any": "A",
    "cv_auc_best_any": 0.7191,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.5893,
    "gt_auc_full": 0.7641,
    "cautions": []
@@ -2779,6 +3139,15 @@
    "view_best_any": "A",
    "cv_auc_best_any": 0.5997,
    "mirror_safe": false,
+   "alt_rule": {
+    "kind": "mirror_safe",
+    "feature": "stance_w__std",
+    "op": ">",
+    "threshold": 0.27496,
+    "cv_auc": 0.4437,
+    "view": "D",
+    "mirror_safe": true
+   },
    "gt_auc_control": 0.9568,
    "gt_auc_full": 0.9173,
    "cautions": [
@@ -2809,6 +3178,7 @@
    "view_best_any": "A",
    "cv_auc_best_any": 0.6703,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.8426,
    "gt_auc_full": 0.8805,
    "cautions": []
@@ -2836,6 +3206,7 @@
    "view_best_any": "C",
    "cv_auc_best_any": 0.8467,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.73,
    "gt_auc_full": 0.7649,
    "cautions": []
@@ -2863,6 +3234,7 @@
    "view_best_any": "B",
    "cv_auc_best_any": 0.8325,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.6875,
    "gt_auc_full": 0.8508,
    "cautions": []
@@ -2890,6 +3262,7 @@
    "view_best_any": "C",
    "cv_auc_best_any": 0.7196,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.77,
    "gt_auc_full": 0.8844,
    "cautions": []
@@ -2917,6 +3290,7 @@
    "view_best_any": "D",
    "cv_auc_best_any": 0.7278,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.3713,
    "gt_auc_full": 0.6669,
    "cautions": []
@@ -2944,6 +3318,7 @@
    "view_best_any": "D",
    "cv_auc_best_any": 0.7278,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.3861,
    "gt_auc_full": 0.6669,
    "cautions": []
@@ -2971,6 +3346,7 @@
    "view_best_any": "E",
    "cv_auc_best_any": 0.7093,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.5664,
    "gt_auc_full": 0.6491,
    "cautions": []
@@ -2998,6 +3374,7 @@
    "view_best_any": "C",
    "cv_auc_best_any": 0.571,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.7844,
    "gt_auc_full": 0.8118,
    "cautions": []
@@ -3025,6 +3402,15 @@
    "view_best_any": "E",
    "cv_auc_best_any": 0.6727,
    "mirror_safe": false,
+   "alt_rule": {
+    "kind": "mirror_safe",
+    "feature": "knee_mean__mean",
+    "op": ">",
+    "threshold": 154.678406,
+    "cv_auc": 0.6048,
+    "view": "D",
+    "mirror_safe": true
+   },
    "gt_auc_control": 0.4718,
    "gt_auc_full": 0.6414,
    "cautions": [
@@ -3054,6 +3440,7 @@
    "view_best_any": "E",
    "cv_auc_best_any": 0.677,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.762,
    "gt_auc_full": 0.864,
    "cautions": []
@@ -3081,6 +3468,15 @@
    "view_best_any": "E",
    "cv_auc_best_any": 0.6595,
    "mirror_safe": false,
+   "alt_rule": {
+    "kind": "mirror_safe",
+    "feature": "elbow_mean__mean",
+    "op": ">",
+    "threshold": 127.518295,
+    "cv_auc": 0.6237,
+    "view": "B",
+    "mirror_safe": true
+   },
    "gt_auc_control": 0.4968,
    "gt_auc_full": 0.7057,
    "cautions": [
@@ -3110,6 +3506,7 @@
    "view_best_any": "C",
    "cv_auc_best_any": 0.569,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.6982,
    "gt_auc_full": 0.7595,
    "cautions": []
@@ -3137,6 +3534,7 @@
    "view_best_any": "E",
    "cv_auc_best_any": 0.5699,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.7679,
    "gt_auc_full": 0.8615,
    "cautions": []
@@ -3164,6 +3562,15 @@
    "view_best_any": "B",
    "cv_auc_best_any": 0.7228,
    "mirror_safe": false,
+   "alt_rule": {
+    "kind": "mirror_safe",
+    "feature": "elbow_minside__std",
+    "op": "<",
+    "threshold": 15.97477,
+    "cv_auc": 0.6019,
+    "view": "B",
+    "mirror_safe": true
+   },
    "gt_auc_control": 0.7443,
    "gt_auc_full": 0.6807,
    "cautions": [
@@ -3193,6 +3600,7 @@
    "view_best_any": "B",
    "cv_auc_best_any": 0.6359,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.4859,
    "gt_auc_full": 0.6884,
    "cautions": []
@@ -3220,6 +3628,7 @@
    "view_best_any": "E",
    "cv_auc_best_any": 0.6865,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.6945,
    "gt_auc_full": 0.6884,
    "cautions": []
@@ -3247,6 +3656,7 @@
    "view_best_any": "B",
    "cv_auc_best_any": 0.5937,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.3541,
    "gt_auc_full": 0.5079,
    "cautions": []
@@ -3274,6 +3684,7 @@
    "view_best_any": "A",
    "cv_auc_best_any": 0.88,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.8925,
    "gt_auc_full": 0.9398,
    "cautions": []
@@ -3301,6 +3712,7 @@
    "view_best_any": "A",
    "cv_auc_best_any": 0.7453,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.7487,
    "gt_auc_full": 0.7148,
    "cautions": []
@@ -3328,6 +3740,7 @@
    "view_best_any": "E",
    "cv_auc_best_any": 0.8678,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.8957,
    "gt_auc_full": 0.8517,
    "cautions": []
@@ -3355,6 +3768,7 @@
    "view_best_any": "C",
    "cv_auc_best_any": 0.6364,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.4809,
    "gt_auc_full": 0.7338,
    "cautions": []
@@ -3382,6 +3796,7 @@
    "view_best_any": "A",
    "cv_auc_best_any": 0.8274,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.8556,
    "gt_auc_full": 0.845,
    "cautions": []
@@ -3409,6 +3824,15 @@
    "view_best_any": "B",
    "cv_auc_best_any": 0.7349,
    "mirror_safe": false,
+   "alt_rule": {
+    "kind": "mirror_safe",
+    "feature": "ear_shoulder_gap__std",
+    "op": "<",
+    "threshold": 0.035764,
+    "cv_auc": 0.6979,
+    "view": "C",
+    "mirror_safe": true
+   },
    "gt_auc_control": 0.7077,
    "gt_auc_full": 0.7001,
    "cautions": [
@@ -3439,6 +3863,15 @@
    "view_best_any": "E",
    "cv_auc_best_any": 0.7502,
    "mirror_safe": false,
+   "alt_rule": {
+    "kind": "mirror_safe",
+    "feature": "torso_roll__range",
+    "op": ">",
+    "threshold": 17.672691,
+    "cv_auc": 0.7057,
+    "view": "D",
+    "mirror_safe": true
+   },
    "gt_auc_control": 0.6618,
    "gt_auc_full": 0.8101,
    "cautions": [
@@ -3469,6 +3902,7 @@
    "view_best_any": "E",
    "cv_auc_best_any": 0.7164,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.8823,
    "gt_auc_full": 0.9322,
    "cautions": []
@@ -3496,39 +3930,18 @@
    "view_best_any": "D",
    "cv_auc_best_any": 0.7837,
    "mirror_safe": false,
+   "alt_rule": {
+    "kind": "mirror_safe",
+    "feature": "hip_mean__min",
+    "op": ">",
+    "threshold": 138.191833,
+    "cv_auc": 0.6166,
+    "view": "C",
+    "mirror_safe": true
+   },
    "gt_auc_control": 0.6343,
    "gt_auc_full": 0.8646,
    "cautions": [
-    "한쪽(L/R) 지정 피처 — 카메라가 반대편이면 먼 쪽 관절이 되어 정밀도 변동. mean/minside/maxside 변형으로 대체 권장"
-   ]
-  },
-  {
-   "id": "스텝 포워드 다이나믹 런지|척추의 중립[all]",
-   "exercise": "스텝 포워드 다이나믹 런지",
-   "condition": "척추의 중립",
-   "subtype": "all",
-   "status": "exclude",
-   "reason": "MediaPipe 전이 실패 (전방뷰 최적 AUC 0.72, GT 통제군 0.76)",
-   "feature": "shoulder_h_L__max",
-   "base_feature": "shoulder_h_L",
-   "stat": "max",
-   "family": "shoulder_h",
-   "op": ">",
-   "threshold": 1.031709,
-   "violation_if": "shoulder_h_L__max > 1.032",
-   "view_best_front": "C",
-   "view_best_front_desc": "정면",
-   "cv_auc": 0.7153,
-   "cv_balacc": 0.6268,
-   "n": 60,
-   "n_performers": 34,
-   "view_best_any": "C",
-   "cv_auc_best_any": 0.7153,
-   "mirror_safe": false,
-   "gt_auc_control": 0.7612,
-   "gt_auc_full": 0.8098,
-   "cautions": [
-    "어깨 높이(으쓱) 미세 변화는 MP 노이즈에 묻힘",
     "한쪽(L/R) 지정 피처 — 카메라가 반대편이면 먼 쪽 관절이 되어 정밀도 변동. mean/minside/maxside 변형으로 대체 권장"
    ]
   },
@@ -3555,6 +3968,7 @@
    "view_best_any": "C",
    "cv_auc_best_any": 0.71,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.6983,
    "gt_auc_full": 0.8142,
    "cautions": [
@@ -3584,6 +3998,7 @@
    "view_best_any": "E",
    "cv_auc_best_any": 0.6962,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.7899,
    "gt_auc_full": 0.8206,
    "cautions": []
@@ -3611,6 +4026,7 @@
    "view_best_any": "A",
    "cv_auc_best_any": 0.6601,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.712,
    "gt_auc_full": 0.7449,
    "cautions": []
@@ -3638,6 +4054,7 @@
    "view_best_any": "D",
    "cv_auc_best_any": 0.6774,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.7742,
    "gt_auc_full": 0.7299,
    "cautions": []
@@ -3665,6 +4082,15 @@
    "view_best_any": "C",
    "cv_auc_best_any": 0.6631,
    "mirror_safe": false,
+   "alt_rule": {
+    "kind": "mirror_safe",
+    "feature": "palm_h_sh__std",
+    "op": ">",
+    "threshold": 0.334002,
+    "cv_auc": 0.6783,
+    "view": "B",
+    "mirror_safe": true
+   },
    "gt_auc_control": 0.913,
    "gt_auc_full": 0.8607,
    "cautions": [
@@ -3694,6 +4120,15 @@
    "view_best_any": "D",
    "cv_auc_best_any": 0.5925,
    "mirror_safe": false,
+   "alt_rule": {
+    "kind": "mirror_safe",
+    "feature": "torso_incl__min",
+    "op": "<",
+    "threshold": 8.475352,
+    "cv_auc": 0.5904,
+    "view": "B",
+    "mirror_safe": true
+   },
    "gt_auc_control": 0.4904,
    "gt_auc_full": 0.6118,
    "cautions": [
@@ -3723,6 +4158,15 @@
    "view_best_any": "A",
    "cv_auc_best_any": 0.7702,
    "mirror_safe": false,
+   "alt_rule": {
+    "kind": "mirror_safe",
+    "feature": "knee_asym__std",
+    "op": ">",
+    "threshold": 2.681372,
+    "cv_auc": 0.7077,
+    "view": "C",
+    "mirror_safe": true
+   },
    "gt_auc_control": 0.6462,
    "gt_auc_full": 0.5766,
    "cautions": [
@@ -3752,6 +4196,7 @@
    "view_best_any": "A",
    "cv_auc_best_any": 0.5946,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.7985,
    "gt_auc_full": 0.8402,
    "cautions": []
@@ -3779,6 +4224,7 @@
    "view_best_any": "A",
    "cv_auc_best_any": 0.6677,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.4841,
    "gt_auc_full": 0.7504,
    "cautions": []
@@ -3806,6 +4252,15 @@
    "view_best_any": "E",
    "cv_auc_best_any": 0.7155,
    "mirror_safe": false,
+   "alt_rule": {
+    "kind": "mirror_safe",
+    "feature": "kneefoot_mean__mean",
+    "op": ">",
+    "threshold": 29.411293,
+    "cv_auc": 0.6602,
+    "view": "C",
+    "mirror_safe": true
+   },
    "gt_auc_control": 0.4554,
    "gt_auc_full": 0.6826,
    "cautions": [
@@ -3836,6 +4291,7 @@
    "view_best_any": "C",
    "cv_auc_best_any": 0.7279,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.777,
    "gt_auc_full": 0.8281,
    "cautions": []
@@ -3863,6 +4319,7 @@
    "view_best_any": "D",
    "cv_auc_best_any": 0.6898,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.593,
    "gt_auc_full": 0.6234,
    "cautions": []
@@ -3890,6 +4347,7 @@
    "view_best_any": "E",
    "cv_auc_best_any": 0.721,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.9642,
    "gt_auc_full": 0.8881,
    "cautions": []
@@ -3917,6 +4375,7 @@
    "view_best_any": "B",
    "cv_auc_best_any": 0.6329,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.715,
    "gt_auc_full": 0.7552,
    "cautions": []
@@ -3944,6 +4403,7 @@
    "view_best_any": "D",
    "cv_auc_best_any": 0.5886,
    "mirror_safe": true,
+   "alt_rule": null,
    "gt_auc_control": 0.7129,
    "gt_auc_full": 0.6154,
    "cautions": []
@@ -3953,7 +4413,6 @@
   {
    "family": "elbow",
    "bases": [
-    "elbow_R",
     "elbow_mean",
     "elbow_minside"
    ],
@@ -4033,7 +4492,7 @@
   {
    "family": "forearm_vert",
    "bases": [
-    "forearm_vert_R"
+    "forearm_vert_mean"
    ],
    "description": "전완 수직각",
    "formula": "angle(Wrist−Elbow, UP); 0=전완이 위로 수직",
@@ -4110,9 +4569,24 @@
    ]
   },
   {
+   "family": "hip_below_knee",
+   "bases": [
+    "hip_below_knee"
+   ],
+   "description": "골반-무릎 높이차",
+   "formula": "(HipMid.y − KneeMid.y)/leg_len",
+   "mp_landmarks": [
+    23,
+    24,
+    25,
+    26,
+    27,
+    28
+   ]
+  },
+  {
    "family": "knee",
    "bases": [
-    "knee_R",
     "knee_asym",
     "knee_maxside",
     "knee_mean",
@@ -4148,39 +4622,8 @@
    ]
   },
   {
-   "family": "knee_h",
-   "bases": [
-    "knee_h_R"
-   ],
-   "description": "무릎 높이",
-   "formula": "(Knee.y − HipMid.y)/leg_len — knee_h_L/R",
-   "mp_landmarks": [
-    23,
-    24,
-    25,
-    26,
-    27,
-    28
-   ]
-  },
-  {
-   "family": "knee_lat",
-   "bases": [
-    "knee_lat_L"
-   ],
-   "description": "무릎 측방 위치",
-   "formula": "sign·(x_b(Knee) − x_b(Hip))/|LHip−RHip|; + 바깥",
-   "mp_landmarks": [
-    23,
-    24,
-    25,
-    26
-   ]
-  },
-  {
    "family": "knee_out",
    "bases": [
-    "knee_out_R",
     "knee_out_mean"
    ],
    "description": "무릎 외측 오프셋(valgus−)",
@@ -4192,6 +4635,24 @@
     26,
     27,
     28
+   ]
+  },
+  {
+   "family": "palm_fwd_hip",
+   "bases": [
+    "palm_fwd_hip"
+   ],
+   "description": "손 전방 거리(골반 기준)",
+   "formula": "z_b(PalmMid)/torso_len",
+   "mp_landmarks": [
+    11,
+    12,
+    17,
+    18,
+    19,
+    20,
+    23,
+    24
    ]
   },
   {
@@ -4295,7 +4756,6 @@
   {
    "family": "shoulder_h",
    "bases": [
-    "shoulder_h_L",
     "shoulder_h_R"
    ],
    "description": "어깨 높이",

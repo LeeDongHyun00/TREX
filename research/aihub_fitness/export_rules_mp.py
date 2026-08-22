@@ -138,15 +138,46 @@ def main():
 
     single = r[r.view.isin(list("ABCDE")) & r.mp_refit_auc.notna()].copy()
     ctrl = r[r.view == "GT_SUBSET"].set_index(["exercise", "condition", "subtype"])["mp_refit_auc"]
+    # 미러 불변 화이트리스트로 재적합한 결과 (experiment_a_refit.py --mirror-safe). 있으면 미러 안전 규칙을 우선 채택.
+    mirror_path = OUT / "expA_refit_mirror.csv"
+    rm = None
+    if mirror_path.exists():
+        rm = pd.read_csv(mirror_path)
+        rm["subtype"] = rm["subtype"].fillna("")
+        rm = rm[rm.view.isin(FRONT_VIEWS) & rm.mp_refit_auc.notna()].copy()
     keys = single[["exercise", "condition", "subtype"]].drop_duplicates()
     rules, rows_md = [], []
+    n_mirror_primary = 0
     for k in keys.itertuples(index=False):
         g = single[(single.exercise == k.exercise) & (single.condition == k.condition) & (single.subtype == k.subtype)]
         gf = g[g.view.isin(FRONT_VIEWS)]
         if gf.empty:
             continue
-        bf = gf.sort_values("mp_refit_auc", ascending=False).iloc[0]
-        ba = g.sort_values("mp_refit_auc", ascending=False).iloc[0]
+        bu = gf.sort_values("mp_refit_auc", ascending=False).iloc[0]      # 비제약 전방뷰 최적
+        ba = g.sort_values("mp_refit_auc", ascending=False).iloc[0]       # 전체 뷰 최적 (참고)
+        bm = None
+        if rm is not None:
+            gm = rm[(rm.exercise == k.exercise) & (rm.condition == k.condition) & (rm.subtype == k.subtype)]
+            if not gm.empty:
+                bm = gm.sort_values("mp_refit_auc", ascending=False).iloc[0]
+        # 채택 정책: 비제약 최적이 이미 미러 안전이면 그대로. 아니면 미러 안전 대안이 ship 수준(≥0.85)이거나
+        # 비제약 대비 −0.03 이내(단 ≥0.75)면 미러 안전 규칙을 정본으로, 비제약은 alt 로 보존.
+        u_stat = bu.mp_feature.rsplit("__", 1)[1] if "__" in bu.mp_feature else None
+        u_safe = mirror_safe(base_of(bu.mp_feature), u_stat)[0]
+        alt = None
+        if u_safe or bm is None:
+            bf = bu
+        else:
+            m_auc, u_auc = float(bm.mp_refit_auc), float(bu.mp_refit_auc)
+            if m_auc >= 0.85 or (m_auc >= 0.75 and m_auc >= u_auc - 0.03):
+                bf = bm
+                alt = dict(kind="unconstrained", feature=bu.mp_feature, op=("<" if int(bu.mp_sign) > 0 else ">"),
+                           threshold=round(float(bu.mp_threshold), 6), cv_auc=round(u_auc, 4), view=bu.view, mirror_safe=False)
+                n_mirror_primary += 1
+            else:
+                bf = bu
+                alt = dict(kind="mirror_safe", feature=bm.mp_feature, op=("<" if int(bm.mp_sign) > 0 else ">"),
+                           threshold=round(float(bm.mp_threshold), 6), cv_auc=round(m_auc, 4), view=bm.view, mirror_safe=True)
         gt_sub = float(ctrl.get((k.exercise, k.condition, k.subtype), np.nan))
         gt_row = gt_idx.loc[(k.exercise, k.condition, k.subtype)] if (k.exercise, k.condition, k.subtype) in gt_idx.index else None
         if gt_row is not None and isinstance(gt_row, pd.DataFrame):
@@ -189,6 +220,7 @@ def main():
             n=int(bf.n), n_performers=int(bf.n_performers),
             view_best_any=ba.view, cv_auc_best_any=round(float(ba.mp_refit_auc), 4),
             mirror_safe=ms,
+            alt_rule=alt,
             gt_auc_control=(None if np.isnan(gt_sub) else round(gt_sub, 4)), gt_auc_full=(None if np.isnan(gt_full) else round(gt_full, 4)),
             cautions=cautions,
         ))
@@ -207,7 +239,9 @@ def main():
                                   description=(d[0] if d else ""), formula=(d[1] if d else "(문서 없음)"), mp_landmarks=(d[2] if d else [])))
 
     doc = dict(
-        version="mp_v0",
+        version=("mp_v0.1" if rm is not None else "mp_v0"),
+        revision_note=("mp_v0.1: 미러 불변(좌/우 카메라 위치 무관) 재적합 결과를 우선 채택, 비제약 규칙은 alt_rule 로 보존. "
+                       f"미러 안전 규칙이 정본이 된 건수 {n_mirror_primary}" if rm is not None else None),
         generated=str(date.today()),
         source="AIHub 013 피트니스자세 (41종목, 수행자 113명) × MediaPipe pose_landmarker_full — 실험 A-2 (MP 피처 재적합, 수행자 GroupKFold, 종목당 ≤60클립)",
         coordinate_convention=dict(
@@ -226,8 +260,9 @@ def main():
     (RULES_DIR / "rules_mp_v0.json").write_text(json.dumps(doc, ensure_ascii=False, indent=1), encoding="utf-8")
 
     # ---- MD
-    L = [f"# rules_mp_v0 — MediaPipe 포팅용 규칙 ({doc['generated']})\n",
+    L = [f"# rules_{doc['version']} — MediaPipe 포팅용 규칙 ({doc['generated']})\n",
          f"- 출처: {doc['source']}", f"- 등급: ship {doc['counts']['ship']} / beta {doc['counts']['beta']} / exclude {doc['counts']['exclude']} (미러 불변 규칙: ship {doc['mirror_safe_counts']['ship']}, beta {doc['mirror_safe_counts']['beta']})",
+         *( [f"- {doc['revision_note']}"] if doc.get("revision_note") else [] ),
          "- 규칙 해석: `violation_if` 가 참이면 해당 조건 위반. 임계값은 MediaPipe full 모델·AIHub 스튜디오 분포 기준 — **자체 촬영 데이터로 재보정 필수**\n"]
     for status in ("ship", "beta", "exclude"):
         L += [f"## {status.upper()} ({doc['counts'][status]})\n", "| 종목 | 조건 | 하위유형 | 규칙(위반 if) | 뷰 | AUC | 균형정확도 | n | GT 통제군 | 주의/사유 |", "|---|---|---|---|---|---|---|---|---|---|"]

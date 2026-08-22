@@ -92,14 +92,25 @@ python experiment_a_refit.py        # MediaPipe 피처 위에서 규칙 재적�
 - 디스크: 원시 이미지를 디스크에 쓰지 않음. tar당 인덱스 parquet(수 MB) + 결과 parquet(수 MB)만 생성
 - tar 1개 = 촬영일 1개 (`outputs/mp/tar_days.json`). Day37/38 은 2D 라벨 없음 → 미사용. Day28 은 3D 전량 불량(리그 캘리브레이션 실패일) → QC 에서 제외됨
 
-## 앱 포팅용 규칙 확정 (rules_mp_v0)
+## 앱 포팅용 규칙 확정 (rules_mp_v0 → v0.1)
 ```bash
-python export_rules_mp.py   # expA_refit.csv → rules/rules_mp_v0.json, rules/rules_mp_v0.md
+python experiment_a_refit.py --mirror-safe   # 미러 불변 화이트리스트 재적합 → expA_refit_mirror.csv
+python export_rules_mp.py                    # expA_refit(+_mirror).csv → rules/rules_mp_v0.json (version mp_v0.1), rules_mp_v0.md
+cp rules/rules_mp_v0.json ../../app/src/main/assets/posture/rules_mp_v0.json
 ```
 - 전방 반구(B/C/D) 최적 단일 뷰의 MediaPipe 재적합 규칙. 등급 ship(AUC≥0.85) / beta / exclude(사유 기록)
-- 포팅 명세: [KOTLIN_PORTING_SPEC.md](KOTLIN_PORTING_SPEC.md) — 좌표 변환·관절 매핑·신체좌표계·피처 공식·집계 창·규칙 평가·촬영 가이드·재보정 절차·Kotlin 스케치
+- v0.1: 미러 불변(좌/우 카메라 위치 무관) 규칙 우선 채택, 교체된 비제약 규칙은 `alt_rule` 보존 — ship 59 / beta 12 / exclude 70, 미러 불변 ship 53
+- 포팅 명세: [KOTLIN_PORTING_SPEC.md](KOTLIN_PORTING_SPEC.md) — 좌표 변환·관절 매핑·신체좌표계·피처 공식·집계 창·규칙 평가·촬영 가이드·재보정 절차·앱 구현 현황·재보정 툴체인
+
+## 재보정 툴체인 (명세 §14)
+```bash
+python demo_setlogs_from_aihub.py            # (검증용) AIHub MP 결과 → 앱 세트 로그 스키마 + labels.csv
+python calibrate_from_logs.py --logs <posture_logs|*.jsonl> --labels labels.csv --rules rules/rules_mp_v0.json --out outputs/calib --suggest
+```
+- 앱 쪽 작성기: `app/src/main/java/com/example/trex_kotlin/posture/PostureSetLog.kt` (+ `PostureSetLogTest`)
+- 로그 + 코치 라벨 → 피처·방향 고정, 임계값 Youden 재적합(수행자 GroupKFold) → `rules_calibrated.json` + 리포트
 
 ## 다음 단계 (예정)
-- 자체 촬영 셋으로 임계값 재보정 (명세 §9) → ship 규칙 앱 통합
+- 랩 화면에 세트 로그 저장 토글 연결(명세 §14-1, 3줄) → 자체 촬영·코치 라벨 → `calibrate_from_logs.py` → 규칙 JSON 갱신
 - v1: 2-피처 규칙(AND/OR), 개인 기준선 오프셋
 - 실험 C(뷰 전이)는 실험 A 의 뷰별 분석으로 대체됨
