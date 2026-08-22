@@ -110,7 +110,13 @@ python calibrate_from_logs.py --logs <posture_logs|*.jsonl> --labels labels.csv 
 - 앱 쪽 작성기: `app/src/main/java/com/example/trex_kotlin/posture/PostureSetLog.kt` (+ `PostureSetLogTest`)
 - 로그 + 코치 라벨 → 피처·방향 고정, 임계값 Youden 재적합(수행자 GroupKFold) → `rules_calibrated.json` + 리포트
 
+## 룰엔진 v1 탐색 (명세 §15)
+```bash
+python rule_engine_v1.py     # (A) 2-피처 규칙(깊이-2 트리) vs 단일, (B) 개인 기준선 오프셋 → rule_engine_v1_summary.md
+```
+결과: (A) 2-피처는 단일보다 나쁨(Δ −0.020) → 채택 안 함. (B) 개인 기준선은 level 피처(mean/min/max)에서만 개선 → 규칙 JSON `personal_baseline.eligible` 주석으로 반영.
+
 ## 다음 단계 (예정)
-- 랩 화면에 세트 로그 저장 토글 연결(명세 §14-1, 3줄) → 자체 촬영·코치 라벨 → `calibrate_from_logs.py` → 규칙 JSON 갱신
-- v1: 2-피처 규칙(AND/OR), 개인 기준선 오프셋
+- 랩 화면 "로그 저장 ON"으로 자체 촬영 → 내보내기 → 코치 라벨 `labels.csv` → `calibrate_from_logs.py` → 규칙 JSON 갱신·에셋 반영
+- 앱: 기준선 세트(정상 자세) UI + `personal_baseline.eligible` 규칙의 사용자 기준선 보정 (§15)
 - 실험 C(뷰 전이)는 실험 A 의 뷰별 분석으로 대체됨

@@ -145,6 +145,13 @@ def main():
         rm = pd.read_csv(mirror_path)
         rm["subtype"] = rm["subtype"].fillna("")
         rm = rm[rm.view.isin(FRONT_VIEWS) & rm.mp_refit_auc.notna()].copy()
+    # 룰엔진 v1 탐색 결과(개인 기준선 오프셋 효과, GT 3D) — 조건 단위 주석. level 통계(mean/min/max)에만 의미 있음.
+    v1_path = OUT / "rule_engine_v1.csv"
+    v1 = None
+    if v1_path.exists():
+        v1 = pd.read_csv(v1_path)
+        v1["subtype"] = v1["subtype"].fillna("")
+        v1 = v1.set_index(["exercise", "condition", "subtype"])
     keys = single[["exercise", "condition", "subtype"]].drop_duplicates()
     rules, rows_md = [], []
     n_mirror_primary = 0
@@ -211,6 +218,16 @@ def main():
         if status != "exclude" and ba.view not in FRONT_VIEWS and float(ba.mp_refit_auc) - auc > 0.05:
             cautions.append(f"후방 뷰({ba.view})에서 더 좋음 (AUC {float(ba.mp_refit_auc):.2f}) — 촬영 가이드와 상충")
         op = "<" if int(bf.mp_sign) > 0 else ">"
+        pb = None
+        if v1 is not None and (k.exercise, k.condition, k.subtype) in v1.index:
+            vr = v1.loc[(k.exercise, k.condition, k.subtype)]
+            if isinstance(vr, pd.DataFrame):
+                vr = vr.iloc[0]
+            if np.isfinite(vr.get("bl_adj_auc", np.nan)):
+                gain = float(vr["bl_adj_auc"] - vr["bl_raw_auc"])
+                pb = dict(gt_raw_auc=round(float(vr["bl_raw_auc"]), 4), gt_adjusted_auc=round(float(vr["bl_adj_auc"]), 4), gain=round(gain, 4),
+                          eligible=bool(gain >= 0.02 and stat in ("mean", "min", "max")),
+                          note="수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지")
         rid = f"{k.exercise}|{k.condition}" + (f"[{k.subtype}]" if k.subtype else "")
         rules.append(dict(
             id=rid, exercise=k.exercise, condition=k.condition, subtype=k.subtype or None, status=status, reason=reason or None,
@@ -221,6 +238,7 @@ def main():
             view_best_any=ba.view, cv_auc_best_any=round(float(ba.mp_refit_auc), 4),
             mirror_safe=ms,
             alt_rule=alt,
+            personal_baseline=pb,
             gt_auc_control=(None if np.isnan(gt_sub) else round(gt_sub, 4)), gt_auc_full=(None if np.isnan(gt_full) else round(gt_full, 4)),
             cautions=cautions,
         ))

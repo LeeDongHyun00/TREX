@@ -124,6 +124,15 @@ fun PostureLabScreen(onClose: () -> Unit) {
     var results by remember { mutableStateOf<List<RuleResult>>(emptyList()) }
     var analyzerError by remember { mutableStateOf<String?>(null) }
 
+    // ---- 세트 로그(재보정 데이터, spec §14): 기록 구간의 프레임 샘플을 모아 세트 종료 시 JSONL 로 남긴다.
+    //      recordedSamples 는 분석 스레드에서 추가되므로 synchronized 로 접근한다.
+    var saveLogs by rememberSaveable { mutableStateOf(true) }
+    val recordedSamples = remember { ArrayList<PoseSample>() }
+    val recordedTimesMs = remember { ArrayList<Long>() }
+    val logStore = remember { SetLogStore(context) }
+    var savedSets by remember { mutableIntStateOf(0) }
+    var lastSavedNote by remember { mutableStateOf<String?>(null) }
+
     val aggregator = remember { FeatureAggregator() }
     val phaseRef = remember { arrayOf(LabPhase.IDLE) }
     phaseRef[0] = phase
@@ -150,6 +159,7 @@ fun PostureLabScreen(onClose: () -> Unit) {
     val gravity = remember { GravityTracker(context) }
     DisposableEffect(Unit) {
         gravity.start()
+        executor.execute { savedSets = logStore.totalSets() }   // 파일 IO 는 분석 스레드에서
         thermal.start(ContextCompat.getMainExecutor(context)) { s ->
             thermalStatus = s
             thermalRef[0] = s
@@ -226,6 +236,10 @@ fun PostureLabScreen(onClose: () -> Unit) {
                 if (phaseRef[0] == LabPhase.RECORDING && s.detected) {
                     aggregator.add(s.features)
                     sampledFrames = aggregator.frameCount
+                    synchronized(recordedSamples) {
+                        recordedSamples.add(s)
+                        recordedTimesMs.add(now)
+                    }
                 }
             } catch (t: Throwable) {
                 analyzerError = t.message
@@ -353,6 +367,7 @@ fun PostureLabScreen(onClose: () -> Unit) {
                     aggregator.reset()
                     sampledFrames = 0
                     results = emptyList()
+                    synchronized(recordedSamples) { recordedSamples.clear(); recordedTimesMs.clear() }
                 },
             )
             Spacer(Modifier.height(8.dp))
@@ -433,6 +448,8 @@ fun PostureLabScreen(onClose: () -> Unit) {
                             aggregator.reset()
                             sampledFrames = 0
                             results = emptyList()
+                            lastSavedNote = null
+                            synchronized(recordedSamples) { recordedSamples.clear(); recordedTimesMs.clear() }
                             lastInferAt[0] = 0L   // 세트 시작 즉시 첫 샘플
                             phase = LabPhase.RECORDING
                         },
@@ -444,8 +461,35 @@ fun PostureLabScreen(onClose: () -> Unit) {
                         text = "세트 종료 ($sampledFrames 프레임)",
                         icon = Icons.Rounded.Stop,
                         onClick = {
-                            results = ruleSet?.evaluate(exercise, aggregator, includeBeta, MIN_FRAMES_FOR_VERDICT).orEmpty()
+                            val evaluated = ruleSet?.evaluate(exercise, aggregator, includeBeta, MIN_FRAMES_FOR_VERDICT).orEmpty()
+                            results = evaluated
                             phase = LabPhase.RESULT
+                            // 세트 로그 저장 (spec §14-1): 프레임 샘플 원본 + 판정 → JSONL. 파일 IO 는 분석 스레드에서.
+                            if (saveLogs) {
+                                val samples = synchronized(recordedSamples) { ArrayList(recordedSamples) }
+                                val times = synchronized(recordedSamples) { ArrayList(recordedTimesMs) }
+                                val t0 = times.firstOrNull() ?: 0L
+                                val log = SetLog.build(
+                                    exercise = exercise,
+                                    samples = samples,
+                                    results = evaluated,
+                                    rulesVersion = ruleSet?.version ?: "",
+                                    model = poseModel.label,
+                                    delegate = stats?.delegate ?: "-",
+                                    frontCamera = useFrontCamera,
+                                    sampleIntervalMs = SAMPLE_INTERVAL_MS,
+                                    sampleTimesMs = times.map { it - t0 },
+                                )
+                                executor.execute {
+                                    try {
+                                        logStore.append(log)
+                                        savedSets = logStore.totalSets()
+                                        lastSavedNote = "세트 로그 저장됨 · ${samples.size}프레임 · 누적 ${savedSets}세트"
+                                    } catch (t: Throwable) {
+                                        lastSavedNote = "세트 로그 저장 실패: ${t.message}"
+                                    }
+                                }
+                            }
                         },
                         modifier = Modifier.weight(1f),
                         container = TrexError,
@@ -459,12 +503,58 @@ fun PostureLabScreen(onClose: () -> Unit) {
                             aggregator.reset()
                             sampledFrames = 0
                             results = emptyList()
+                            synchronized(recordedSamples) { recordedSamples.clear(); recordedTimesMs.clear() }
                             phase = LabPhase.IDLE
                         },
                         modifier = Modifier.weight(1f),
                     )
                 }
             }
+            // ---- 세트 로그(재보정 데이터) 컨트롤: 저장 토글 · 누적 건수 · 내보내기(공유) · 지우기
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
+                Text(
+                    text = if (saveLogs) "로그 저장 ON" else "로그 저장 OFF",
+                    color = if (saveLogs) TrexLime else Color.White.copy(alpha = 0.5f),
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier
+                        .clickable { saveLogs = !saveLogs }
+                        .padding(horizontal = 6.dp, vertical = 2.dp),
+                )
+                Text(
+                    text = "누적 ${savedSets}세트",
+                    color = Color.White.copy(alpha = 0.55f),
+                    fontSize = 10.sp,
+                    modifier = Modifier.weight(1f),
+                )
+                Text(
+                    text = "내보내기",
+                    color = if (savedSets > 0) TrexLime else Color.White.copy(alpha = 0.3f),
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier
+                        .clickable(enabled = savedSets > 0) {
+                            if (!SetLogExport.share(context, logStore)) lastSavedNote = "내보낼 로그가 없습니다"
+                        }
+                        .padding(horizontal = 6.dp, vertical = 2.dp),
+                )
+                Text(
+                    text = "지우기",
+                    color = if (savedSets > 0) TrexWarning else Color.White.copy(alpha = 0.3f),
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier
+                        .clickable(enabled = savedSets > 0) {
+                            executor.execute {
+                                logStore.clear()
+                                savedSets = logStore.totalSets()
+                                lastSavedNote = "세트 로그를 지웠습니다"
+                            }
+                        }
+                        .padding(horizontal = 6.dp, vertical = 2.dp),
+                )
+            }
+            lastSavedNote?.let { Text(it, color = Color.White.copy(alpha = 0.55f), fontSize = 10.sp) }
             Spacer(Modifier.height(10.dp))
 
             val message = analyzerError ?: loadError

@@ -225,13 +225,10 @@ fun evaluate(rule: Rule, aggs: Map<String, Agg>, minFrames: Int = 8): Verdict {
   → 기록 구간의 **프레임 피처 원본**(집계 전) + 가시성 33개 + 추론 ms + 규칙 판정을 담는다. 집계 창 정의를 나중에 바꿔도 재계산 가능.
 - `SetLogStore(context).append(log)` → `<externalFilesDir>/posture_logs/sets-yyyyMMdd.jsonl` (권한 불필요, `adb pull`/공유로 회수). `totalSets()/clear()`.
 - org.json 을 쓰지 않는 직접 직렬화(NaN/Inf → null, 로케일 무관 숫자, 문자열 이스케이프). 테스트: `PostureSetLogTest` 3개.
-- **랩 화면 연결(3줄, 미적용 — 랩 화면은 수정하지 않았음)**: RESULT 로 넘어가며 `results` 를 만든 직후
-  ```kotlin
-  val log = SetLog.build(exercise, recordedSamples, results, ruleSet.version, poseModel.label, stats?.delegate ?: "-",
-                         useFrontCamera, policy.sampleIntervalMs, subjectId = null)
-  SetLogStore(context).append(log)   // IO 스레드 권장
-  ```
-  + 설정 토글("세트 로그 저장")과 저장 건수/지우기 표시. `subject_id` 는 재보정 시 GroupKFold 그룹이므로 같은 사람이면 같은 값을 넣을 것.
+- **랩 화면 연결(적용됨, `PostureLabScreen.kt` 추가형 편집)**: RECORDING 중 검출 프레임을 `recordedSamples/recordedTimesMs` 에 모으고(분석 스레드, synchronized),
+  "세트 종료" 시 `SetLog.build(...)` → `SetLogStore.append` 를 분석 스레드(`executor`)에서 수행. 컨트롤 행: **로그 저장 ON/OFF**(기본 ON, rememberSaveable) · 누적 N세트 · **내보내기**(공유 시트) · **지우기**.
+  내보내기는 `PostureSetLogExport.share()` — `FileProvider`(`${applicationId}.fileprovider`, `res/xml/file_paths.xml`) 로 `posture_logs/*.jsonl` 을 ACTION_SEND(_MULTIPLE) 로 전달 → 드라이브/메신저/PC 로 바로 회수.
+  `subject_id` 는 아직 UI 가 없어 null — 재보정 시 `labels.csv` 의 `subject_id` 컬럼으로 보완(같은 사람이면 같은 값). 기록 시각은 실제 추론 시각(`t_ms`, 열 감속 반영)으로 남는다.
 
 ### 14-2. 연구: `calibrate_from_logs.py`
 ```bash
@@ -241,6 +238,14 @@ python calibrate_from_logs.py --logs <posture_logs 폴더 또는 *.jsonl> --labe
 - 규칙마다: 앱과 동일한 집계(mean/min/max/std/range, NaN 무시) → 세트 ≥30·클래스당 ≥8 이면 **피처·방향 고정, Youden J 임계값만 재적합**. 수행자 ≥2 이면 GroupKFold, 아니면 StratifiedKFold(+경고). CV AUC < 0.70 → `feature_weak`, `--suggest` 시 같은 패밀리 화이트리스트 안 대안 피처 제안. 임계값 이동이 표본 표준편차 1배 초과면 `threshold_shift` 경고.
 - 출력: `rules_calibrated.json`(version `+calib-YYYYMMDD`, 규칙별 `calibration{n_sets,n_pos,n_neg,n_subjects,method,cv_auc,cv_balacc,warnings,suggested_feature}`), `calibration_report.md/.csv`. 데이터 부족 규칙은 이전 임계값 유지 + 표시.
 - **검증(데모)**: `demo_setlogs_from_aihub.py` 가 실험 A 의 MediaPipe 결과(정면 뷰 C, 4종목 × 60클립, 수행자 59명)를 같은 스키마의 로그+라벨로 변환 → 툴 실행 시 236세트 / 14규칙 재보정, 강한 규칙은 임계값이 기존과 근접(예: 스쿼트 valgus 동일, 고개 정면 77.5→76.7), 약한 규칙은 경고+대안 제안 — 파이프라인 엔드투엔드 동작 확인.
+
+## 15. 룰엔진 v1 탐색 결과 (`rule_engine_v1.py`, GT 3D · MP 가능·미러 불변 화이트리스트 · 수행자 GroupKFold)
+| 가설 | 결과 | 결정 |
+|---|---|---|
+| (A) 2-피처 규칙(깊이-2 트리, 폴드별 상위 6피처 쌍 탐색)이 단일 규칙보다 낫다 | 단일 0.860 → 2-피처 0.842 (Δ 중앙값 −0.020; 개선 ≥+0.03 3개 / 악화 24개). GBM 우세 조건(단일<0.80, GBM≥0.90, n=7)에서도 Δ −0.007 | **채택 안 함.** GBM 의 우위는 2-피처 상호작용이 아니라 다수 피처 조합에서 나옴. 단일 규칙 유지 |
+| (B) 개인 기준선 오프셋(수행자 '정상' 앞 3세트 중앙값을 뺀 값) | 전체 Δ 중앙값 +0.001(115조건). 그러나 **level 피처**(ear_shoulder_gap +0.044, neck_over_ankle +0.029, head_pitch +0.028, palm_h_rel +0.026, sh_over_hip_fwd +0.021, torso_incl +0.015)는 개선, **변동성 피처**(knee std/range 등)는 악화(−0.03~−0.06) | **조건부 채택.** `personal_baseline.eligible=true`(gain ≥ 0.02 이고 stat ∈ mean/min/max) 규칙에만 사용자 기준선 보정 적용, std/range 는 보정 금지. JSON 에 주석으로 포함(`personal_baseline{gt_raw_auc, gt_adjusted_auc, gain, eligible}`) |
+
+앱 반영(다음 단계): 첫 세트를 "기준선 세트(정상 자세)"로 표시하면 eligible 규칙의 값에서 사용자 기준선(해당 피처의 세트 통계 중앙값)을 빼고 임계값과 비교 — 임계값도 기준선-상대 스케일로 재보정해야 하므로 §9 재보정과 함께 진행.
 
 ## 12. 파일
 - `rules/rules_mp_v0.json` (앱이 읽을 정본), `rules/rules_mp_v0.md` (사람용 표, 피처 공식 표 포함), `export_rules_mp.py` (재생성)

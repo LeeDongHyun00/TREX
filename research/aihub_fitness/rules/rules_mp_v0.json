@@ -49,6 +49,13 @@
    "cv_auc_best_any": 0.9833,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.983,
+    "gt_adjusted_auc": 0.9821,
+    "gain": -0.0009,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.9546,
    "gt_auc_full": 0.9874,
    "cautions": []
@@ -77,6 +84,13 @@
    "cv_auc_best_any": 0.9833,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.983,
+    "gt_adjusted_auc": 0.9821,
+    "gain": -0.0009,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.9546,
    "gt_auc_full": 0.9874,
    "cautions": []
@@ -105,6 +119,13 @@
    "cv_auc_best_any": 0.9257,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.969,
+    "gt_adjusted_auc": 0.9425,
+    "gain": -0.0265,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.9543,
    "gt_auc_full": 0.9662,
    "cautions": []
@@ -141,6 +162,13 @@
     "view": "D",
     "mirror_safe": false
    },
+   "personal_baseline": {
+    "gt_raw_auc": 0.8899,
+    "gt_adjusted_auc": 0.9552,
+    "gain": 0.0653,
+    "eligible": true,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.8992,
    "gt_auc_full": 0.9008,
    "cautions": []
@@ -169,6 +197,13 @@
    "cv_auc_best_any": 0.8821,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.8157,
+    "gt_adjusted_auc": 0.9376,
+    "gain": 0.1219,
+    "eligible": true,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.7578,
    "gt_auc_full": 0.8205,
    "cautions": []
@@ -197,6 +232,13 @@
    "cv_auc_best_any": 0.9236,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.8819,
+    "gt_adjusted_auc": 0.8859,
+    "gain": 0.004,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.9333,
    "gt_auc_full": 0.9037,
    "cautions": []
@@ -225,6 +267,13 @@
    "cv_auc_best_any": 0.853,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.8726,
+    "gt_adjusted_auc": 0.8608,
+    "gain": -0.0118,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.8889,
    "gt_auc_full": 0.8655,
    "cautions": []
@@ -260,6 +309,13 @@
     "cv_auc": 0.9829,
     "view": "B",
     "mirror_safe": false
+   },
+   "personal_baseline": {
+    "gt_raw_auc": 0.8272,
+    "gt_adjusted_auc": 0.8899,
+    "gain": 0.0627,
+    "eligible": true,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
    },
    "gt_auc_control": 0.8311,
    "gt_auc_full": 0.828,
@@ -297,6 +353,13 @@
     "view": "B",
     "mirror_safe": false
    },
+   "personal_baseline": {
+    "gt_raw_auc": 0.8272,
+    "gt_adjusted_auc": 0.8899,
+    "gain": 0.0627,
+    "eligible": true,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.8311,
    "gt_auc_full": 0.828,
    "cautions": []
@@ -333,6 +396,13 @@
     "view": "B",
     "mirror_safe": true
    },
+   "personal_baseline": {
+    "gt_raw_auc": 0.9121,
+    "gt_adjusted_auc": 0.9125,
+    "gain": 0.0004,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.8156,
    "gt_auc_full": 0.913,
    "cautions": [
@@ -363,6 +433,13 @@
    "cv_auc_best_any": 0.9832,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.8591,
+    "gt_adjusted_auc": 0.89,
+    "gain": 0.0309,
+    "eligible": true,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.9038,
    "gt_auc_full": 0.8536,
    "cautions": []
@@ -391,6 +468,13 @@
    "cv_auc_best_any": 0.9011,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.8097,
+    "gt_adjusted_auc": 0.78,
+    "gain": -0.0297,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.8731,
    "gt_auc_full": 0.8261,
    "cautions": []
@@ -427,6 +511,13 @@
     "view": "B",
     "mirror_safe": true
    },
+   "personal_baseline": {
+    "gt_raw_auc": 0.9375,
+    "gt_adjusted_auc": 0.9174,
+    "gain": -0.0202,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.8932,
    "gt_auc_full": 0.9377,
    "cautions": [
@@ -457,6 +548,13 @@
    "cv_auc_best_any": 0.9757,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.9546,
+    "gt_adjusted_auc": 0.9403,
+    "gain": -0.0143,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.9285,
    "gt_auc_full": 0.9575,
    "cautions": []
@@ -493,6 +591,13 @@
     "view": "B",
     "mirror_safe": false
    },
+   "personal_baseline": {
+    "gt_raw_auc": 0.8745,
+    "gt_adjusted_auc": 0.8799,
+    "gain": 0.0054,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.9231,
    "gt_auc_full": 0.8675,
    "cautions": []
@@ -521,6 +626,13 @@
    "cv_auc_best_any": 0.9761,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.9622,
+    "gt_adjusted_auc": 0.9778,
+    "gain": 0.0156,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.9398,
    "gt_auc_full": 0.9622,
    "cautions": []
@@ -549,6 +661,13 @@
    "cv_auc_best_any": 0.9606,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.8832,
+    "gt_adjusted_auc": 0.8798,
+    "gain": -0.0033,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.8887,
    "gt_auc_full": 0.8677,
    "cautions": []
@@ -577,6 +696,13 @@
    "cv_auc_best_any": 0.9378,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.8578,
+    "gt_adjusted_auc": 0.8579,
+    "gain": 0.0001,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.8614,
    "gt_auc_full": 0.8594,
    "cautions": []
@@ -613,6 +739,13 @@
     "view": "D",
     "mirror_safe": true
    },
+   "personal_baseline": {
+    "gt_raw_auc": 0.9405,
+    "gt_adjusted_auc": 0.9494,
+    "gain": 0.0089,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.9444,
    "gt_auc_full": 0.9476,
    "cautions": [
@@ -643,6 +776,13 @@
    "cv_auc_best_any": 0.9088,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.9382,
+    "gt_adjusted_auc": 0.9354,
+    "gain": -0.0029,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.9407,
    "gt_auc_full": 0.9504,
    "cautions": [
@@ -673,6 +813,13 @@
    "cv_auc_best_any": 0.9733,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.9771,
+    "gt_adjusted_auc": 0.9728,
+    "gain": -0.0044,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 1.0,
    "gt_auc_full": 0.978,
    "cautions": []
@@ -709,6 +856,13 @@
     "view": "B",
     "mirror_safe": false
    },
+   "personal_baseline": {
+    "gt_raw_auc": 0.8725,
+    "gt_adjusted_auc": 0.855,
+    "gain": -0.0175,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.9468,
    "gt_auc_full": 0.8726,
    "cautions": []
@@ -737,6 +891,13 @@
    "cv_auc_best_any": 0.9576,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.9447,
+    "gt_adjusted_auc": 0.9164,
+    "gain": -0.0283,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.9666,
    "gt_auc_full": 0.9399,
    "cautions": []
@@ -772,6 +933,13 @@
     "cv_auc": 0.9381,
     "view": "B",
     "mirror_safe": false
+   },
+   "personal_baseline": {
+    "gt_raw_auc": 0.878,
+    "gt_adjusted_auc": 0.8795,
+    "gain": 0.0015,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
    },
    "gt_auc_control": 0.9357,
    "gt_auc_full": 0.8954,
@@ -809,6 +977,13 @@
     "view": "B",
     "mirror_safe": false
    },
+   "personal_baseline": {
+    "gt_raw_auc": 0.878,
+    "gt_adjusted_auc": 0.8795,
+    "gain": 0.0015,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.9357,
    "gt_auc_full": 0.8954,
    "cautions": []
@@ -844,6 +1019,13 @@
     "cv_auc": 0.6974,
     "view": "D",
     "mirror_safe": true
+   },
+   "personal_baseline": {
+    "gt_raw_auc": 0.9484,
+    "gt_adjusted_auc": 0.9519,
+    "gain": 0.0035,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
    },
    "gt_auc_control": 0.8786,
    "gt_auc_full": 0.9302,
@@ -884,6 +1066,13 @@
     "view": "C",
     "mirror_safe": false
    },
+   "personal_baseline": {
+    "gt_raw_auc": 0.9701,
+    "gt_adjusted_auc": 0.9526,
+    "gain": -0.0174,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.9662,
    "gt_auc_full": 0.9708,
    "cautions": [
@@ -914,6 +1103,7 @@
    "cv_auc_best_any": 0.9833,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": null,
    "gt_auc_control": 1.0,
    "gt_auc_full": 0.9813,
    "cautions": []
@@ -949,6 +1139,13 @@
     "cv_auc": 0.9328,
     "view": "D",
     "mirror_safe": false
+   },
+   "personal_baseline": {
+    "gt_raw_auc": 0.9644,
+    "gt_adjusted_auc": 0.9723,
+    "gain": 0.0079,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
    },
    "gt_auc_control": 0.9382,
    "gt_auc_full": 0.9697,
@@ -986,6 +1183,13 @@
     "view": "C",
     "mirror_safe": true
    },
+   "personal_baseline": {
+    "gt_raw_auc": 0.9119,
+    "gt_adjusted_auc": 0.9089,
+    "gain": -0.0029,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.8865,
    "gt_auc_full": 0.9072,
    "cautions": [
@@ -1016,6 +1220,13 @@
    "cv_auc_best_any": 0.9437,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.8338,
+    "gt_adjusted_auc": 0.8888,
+    "gain": 0.055,
+    "eligible": true,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.9138,
    "gt_auc_full": 0.8302,
    "cautions": []
@@ -1044,6 +1255,13 @@
    "cv_auc_best_any": 0.9437,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.8338,
+    "gt_adjusted_auc": 0.8888,
+    "gain": 0.055,
+    "eligible": true,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.9138,
    "gt_auc_full": 0.8302,
    "cautions": []
@@ -1072,6 +1290,13 @@
    "cv_auc_best_any": 0.8767,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.7953,
+    "gt_adjusted_auc": 0.802,
+    "gain": 0.0068,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.865,
    "gt_auc_full": 0.7995,
    "cautions": []
@@ -1100,6 +1325,13 @@
    "cv_auc_best_any": 0.911,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.9432,
+    "gt_adjusted_auc": 0.9484,
+    "gain": 0.0052,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.8937,
    "gt_auc_full": 0.9529,
    "cautions": []
@@ -1136,6 +1368,13 @@
     "view": "D",
     "mirror_safe": false
    },
+   "personal_baseline": {
+    "gt_raw_auc": 0.8883,
+    "gt_adjusted_auc": 0.8996,
+    "gain": 0.0113,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.8623,
    "gt_auc_full": 0.893,
    "cautions": [
@@ -1166,6 +1405,13 @@
    "cv_auc_best_any": 0.9709,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.9269,
+    "gt_adjusted_auc": 0.914,
+    "gain": -0.0129,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.916,
    "gt_auc_full": 0.9366,
    "cautions": []
@@ -1194,6 +1440,13 @@
    "cv_auc_best_any": 0.9826,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.9578,
+    "gt_adjusted_auc": 0.9599,
+    "gain": 0.0021,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.8986,
    "gt_auc_full": 0.9596,
    "cautions": []
@@ -1222,6 +1475,13 @@
    "cv_auc_best_any": 0.9826,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.9578,
+    "gt_adjusted_auc": 0.9599,
+    "gain": 0.0021,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.8986,
    "gt_auc_full": 0.9596,
    "cautions": []
@@ -1250,6 +1510,13 @@
    "cv_auc_best_any": 0.9889,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.9394,
+    "gt_adjusted_auc": 0.938,
+    "gain": -0.0014,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.92,
    "gt_auc_full": 0.9395,
    "cautions": []
@@ -1285,6 +1552,13 @@
     "cv_auc": 0.921,
     "view": "C",
     "mirror_safe": false
+   },
+   "personal_baseline": {
+    "gt_raw_auc": 0.9591,
+    "gt_adjusted_auc": 0.9455,
+    "gain": -0.0136,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
    },
    "gt_auc_control": 0.9029,
    "gt_auc_full": 0.947,
@@ -1324,6 +1598,13 @@
     "view": "D",
     "mirror_safe": true
    },
+   "personal_baseline": {
+    "gt_raw_auc": 0.913,
+    "gt_adjusted_auc": 0.912,
+    "gain": -0.001,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.9322,
    "gt_auc_full": 0.9076,
    "cautions": [
@@ -1355,6 +1636,13 @@
    "cv_auc_best_any": 0.9014,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.8727,
+    "gt_adjusted_auc": 0.8807,
+    "gain": 0.008,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.7763,
    "gt_auc_full": 0.8761,
    "cautions": []
@@ -1390,6 +1678,13 @@
     "cv_auc": 1.0,
     "view": "C",
     "mirror_safe": false
+   },
+   "personal_baseline": {
+    "gt_raw_auc": 0.9592,
+    "gt_adjusted_auc": 0.9296,
+    "gain": -0.0296,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
    },
    "gt_auc_control": 0.9551,
    "gt_auc_full": 0.955,
@@ -1427,6 +1722,13 @@
     "view": "C",
     "mirror_safe": false
    },
+   "personal_baseline": {
+    "gt_raw_auc": 0.9229,
+    "gt_adjusted_auc": 0.8634,
+    "gain": -0.0594,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.8248,
    "gt_auc_full": 0.8808,
    "cautions": [
@@ -1457,6 +1759,13 @@
    "cv_auc_best_any": 0.9667,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.9843,
+    "gt_adjusted_auc": 0.9841,
+    "gain": -0.0002,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.9733,
    "gt_auc_full": 0.988,
    "cautions": [
@@ -1487,6 +1796,13 @@
    "cv_auc_best_any": 0.8796,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.7949,
+    "gt_adjusted_auc": 0.8075,
+    "gain": 0.0126,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.8521,
    "gt_auc_full": 0.8042,
    "cautions": []
@@ -1515,6 +1831,13 @@
    "cv_auc_best_any": 0.9157,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.8984,
+    "gt_adjusted_auc": 0.9049,
+    "gain": 0.0065,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.9551,
    "gt_auc_full": 0.9513,
    "cautions": []
@@ -1543,6 +1866,13 @@
    "cv_auc_best_any": 0.9432,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.9707,
+    "gt_adjusted_auc": 0.9743,
+    "gain": 0.0035,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.9833,
    "gt_auc_full": 0.9774,
    "cautions": []
@@ -1571,6 +1901,13 @@
    "cv_auc_best_any": 0.9292,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.8498,
+    "gt_adjusted_auc": 0.8706,
+    "gain": 0.0209,
+    "eligible": true,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.9542,
    "gt_auc_full": 0.8215,
    "cautions": []
@@ -1606,6 +1943,13 @@
     "cv_auc": 0.8814,
     "view": "B",
     "mirror_safe": false
+   },
+   "personal_baseline": {
+    "gt_raw_auc": 0.8124,
+    "gt_adjusted_auc": 0.8537,
+    "gain": 0.0413,
+    "eligible": true,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
    },
    "gt_auc_control": 0.8222,
    "gt_auc_full": 0.8349,
@@ -1643,6 +1987,13 @@
     "view": "B",
     "mirror_safe": false
    },
+   "personal_baseline": {
+    "gt_raw_auc": 0.8124,
+    "gt_adjusted_auc": 0.8537,
+    "gain": 0.0413,
+    "eligible": true,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.8222,
    "gt_auc_full": 0.8349,
    "cautions": []
@@ -1671,6 +2022,13 @@
    "cv_auc_best_any": 0.9552,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.9,
+    "gt_adjusted_auc": 0.9336,
+    "gain": 0.0336,
+    "eligible": true,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.9038,
    "gt_auc_full": 0.9055,
    "cautions": []
@@ -1699,6 +2057,13 @@
    "cv_auc_best_any": 0.9658,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.9757,
+    "gt_adjusted_auc": 0.9609,
+    "gain": -0.0148,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.9812,
    "gt_auc_full": 0.979,
    "cautions": []
@@ -1727,6 +2092,7 @@
    "cv_auc_best_any": 0.9083,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": null,
    "gt_auc_control": 0.8845,
    "gt_auc_full": 0.9001,
    "cautions": []
@@ -1755,6 +2121,13 @@
    "cv_auc_best_any": 0.9829,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.947,
+    "gt_adjusted_auc": 0.9726,
+    "gain": 0.0257,
+    "eligible": true,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.9714,
    "gt_auc_full": 0.982,
    "cautions": []
@@ -1783,6 +2156,13 @@
    "cv_auc_best_any": 0.975,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.9791,
+    "gt_adjusted_auc": 0.9922,
+    "gain": 0.013,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.9709,
    "gt_auc_full": 0.9875,
    "cautions": []
@@ -1811,6 +2191,13 @@
    "cv_auc_best_any": 1.0,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.9896,
+    "gt_adjusted_auc": 0.9809,
+    "gain": -0.0087,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 1.0,
    "gt_auc_full": 0.9667,
    "cautions": [
@@ -1841,6 +2228,13 @@
    "cv_auc_best_any": 0.9598,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.9421,
+    "gt_adjusted_auc": 0.9608,
+    "gain": 0.0188,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.9361,
    "gt_auc_full": 0.9521,
    "cautions": []
@@ -1869,6 +2263,13 @@
    "cv_auc_best_any": 0.9459,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.8793,
+    "gt_adjusted_auc": 0.8679,
+    "gain": -0.0114,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.882,
    "gt_auc_full": 0.8899,
    "cautions": []
@@ -1897,6 +2298,13 @@
    "cv_auc_best_any": 0.8007,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.9261,
+    "gt_adjusted_auc": 0.9146,
+    "gain": -0.0115,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.9139,
    "gt_auc_full": 0.9266,
    "cautions": []
@@ -1933,6 +2341,13 @@
     "view": "B",
     "mirror_safe": true
    },
+   "personal_baseline": {
+    "gt_raw_auc": 0.8759,
+    "gt_adjusted_auc": 0.889,
+    "gain": 0.013,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.8855,
    "gt_auc_full": 0.879,
    "cautions": [
@@ -1963,6 +2378,13 @@
    "cv_auc_best_any": 0.7693,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.8653,
+    "gt_adjusted_auc": 0.8385,
+    "gain": -0.0268,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.8723,
    "gt_auc_full": 0.8781,
    "cautions": []
@@ -1991,6 +2413,13 @@
    "cv_auc_best_any": 0.7809,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.8583,
+    "gt_adjusted_auc": 0.8518,
+    "gain": -0.0065,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.9446,
    "gt_auc_full": 0.8772,
    "cautions": []
@@ -2019,6 +2448,13 @@
    "cv_auc_best_any": 0.8343,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.8315,
+    "gt_adjusted_auc": 0.8441,
+    "gain": 0.0127,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.8629,
    "gt_auc_full": 0.8454,
    "cautions": []
@@ -2047,6 +2483,13 @@
    "cv_auc_best_any": 0.7733,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.8668,
+    "gt_adjusted_auc": 0.8555,
+    "gain": -0.0112,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.7973,
    "gt_auc_full": 0.8678,
    "cautions": []
@@ -2075,6 +2518,13 @@
    "cv_auc_best_any": 0.9409,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.9569,
+    "gt_adjusted_auc": 0.9564,
+    "gain": -0.0006,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.9745,
    "gt_auc_full": 0.9506,
    "cautions": [
@@ -2105,6 +2555,13 @@
    "cv_auc_best_any": 0.8806,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.9227,
+    "gt_adjusted_auc": 0.9264,
+    "gain": 0.0037,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.9171,
    "gt_auc_full": 0.9144,
    "cautions": [
@@ -2143,6 +2600,13 @@
     "view": "C",
     "mirror_safe": false
    },
+   "personal_baseline": {
+    "gt_raw_auc": 0.7958,
+    "gt_adjusted_auc": 0.7939,
+    "gain": -0.0019,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.7612,
    "gt_auc_full": 0.8098,
    "cautions": []
@@ -2171,6 +2635,13 @@
    "cv_auc_best_any": 0.8297,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.8778,
+    "gt_adjusted_auc": 0.8769,
+    "gain": -0.0009,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.8713,
    "gt_auc_full": 0.8775,
    "cautions": []
@@ -2199,6 +2670,13 @@
    "cv_auc_best_any": 0.8433,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.857,
+    "gt_adjusted_auc": 0.8714,
+    "gain": 0.0143,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.8588,
    "gt_auc_full": 0.8788,
    "cautions": []
@@ -2227,6 +2705,13 @@
    "cv_auc_best_any": 0.8281,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.9066,
+    "gt_adjusted_auc": 0.9079,
+    "gain": 0.0013,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.8052,
    "gt_auc_full": 0.8922,
    "cautions": []
@@ -2255,6 +2740,13 @@
    "cv_auc_best_any": 0.8581,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.818,
+    "gt_adjusted_auc": 0.8458,
+    "gain": 0.0278,
+    "eligible": true,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.749,
    "gt_auc_full": 0.8749,
    "cautions": []
@@ -2283,6 +2775,13 @@
    "cv_auc_best_any": 0.817,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.6625,
+    "gt_adjusted_auc": 0.6836,
+    "gain": 0.0211,
+    "eligible": true,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.741,
    "gt_auc_full": 0.6696,
    "cautions": []
@@ -2318,6 +2817,13 @@
     "cv_auc": 0.5802,
     "view": "D",
     "mirror_safe": true
+   },
+   "personal_baseline": {
+    "gt_raw_auc": 0.884,
+    "gt_adjusted_auc": 0.8815,
+    "gain": -0.0025,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
    },
    "gt_auc_control": 0.787,
    "gt_auc_full": 0.8736,
@@ -2357,6 +2863,13 @@
     "view": "B",
     "mirror_safe": true
    },
+   "personal_baseline": {
+    "gt_raw_auc": 0.8615,
+    "gt_adjusted_auc": 0.8457,
+    "gain": -0.0158,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.8684,
    "gt_auc_full": 0.8591,
    "cautions": [
@@ -2394,6 +2907,13 @@
     "cv_auc": 0.6483,
     "view": "D",
     "mirror_safe": true
+   },
+   "personal_baseline": {
+    "gt_raw_auc": 0.7109,
+    "gt_adjusted_auc": 0.786,
+    "gain": 0.0751,
+    "eligible": true,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
    },
    "gt_auc_control": 0.7569,
    "gt_auc_full": 0.7293,
@@ -2433,6 +2953,13 @@
     "view": "D",
     "mirror_safe": true
    },
+   "personal_baseline": {
+    "gt_raw_auc": 0.8689,
+    "gt_adjusted_auc": 0.8875,
+    "gain": 0.0186,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.8324,
    "gt_auc_full": 0.8605,
    "cautions": [
@@ -2463,6 +2990,13 @@
    "cv_auc_best_any": 0.6736,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.7109,
+    "gt_adjusted_auc": 0.786,
+    "gain": 0.0751,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.7569,
    "gt_auc_full": 0.7293,
    "cautions": []
@@ -2491,6 +3025,13 @@
    "cv_auc_best_any": 0.6348,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.6059,
+    "gt_adjusted_auc": 0.6198,
+    "gain": 0.014,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.6605,
    "gt_auc_full": 0.7079,
    "cautions": []
@@ -2519,6 +3060,13 @@
    "cv_auc_best_any": 0.7187,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.5283,
+    "gt_adjusted_auc": 0.5723,
+    "gain": 0.044,
+    "eligible": true,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.4269,
    "gt_auc_full": 0.5455,
    "cautions": []
@@ -2547,6 +3095,13 @@
    "cv_auc_best_any": 0.7306,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.8903,
+    "gt_adjusted_auc": 0.8938,
+    "gain": 0.0036,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.8773,
    "gt_auc_full": 0.8996,
    "cautions": []
@@ -2575,6 +3130,13 @@
    "cv_auc_best_any": 0.6581,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.8281,
+    "gt_adjusted_auc": 0.8276,
+    "gain": -0.0004,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.7402,
    "gt_auc_full": 0.793,
    "cautions": []
@@ -2611,6 +3173,13 @@
     "view": "C",
     "mirror_safe": true
    },
+   "personal_baseline": {
+    "gt_raw_auc": 0.639,
+    "gt_adjusted_auc": 0.6445,
+    "gain": 0.0054,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.7261,
    "gt_auc_full": 0.6556,
    "cautions": [
@@ -2641,6 +3210,13 @@
    "cv_auc_best_any": 0.8202,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.9292,
+    "gt_adjusted_auc": 0.9213,
+    "gain": -0.0079,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.7457,
    "gt_auc_full": 0.9288,
    "cautions": []
@@ -2669,6 +3245,13 @@
    "cv_auc_best_any": 0.7342,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.8014,
+    "gt_adjusted_auc": 0.7761,
+    "gain": -0.0253,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.5878,
    "gt_auc_full": 0.8164,
    "cautions": []
@@ -2705,6 +3288,13 @@
     "view": "B",
     "mirror_safe": true
    },
+   "personal_baseline": {
+    "gt_raw_auc": 0.684,
+    "gt_adjusted_auc": 0.6874,
+    "gain": 0.0034,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.5507,
    "gt_auc_full": 0.6938,
    "cautions": [
@@ -2735,6 +3325,13 @@
    "cv_auc_best_any": 0.7037,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.7497,
+    "gt_adjusted_auc": 0.7204,
+    "gain": -0.0293,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.905,
    "gt_auc_full": 0.7697,
    "cautions": []
@@ -2763,6 +3360,13 @@
    "cv_auc_best_any": 0.8629,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.7203,
+    "gt_adjusted_auc": 0.7142,
+    "gain": -0.006,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.5886,
    "gt_auc_full": 0.6462,
    "cautions": []
@@ -2791,6 +3395,13 @@
    "cv_auc_best_any": 0.7334,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.7115,
+    "gt_adjusted_auc": 0.6982,
+    "gain": -0.0134,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.6317,
    "gt_auc_full": 0.7311,
    "cautions": []
@@ -2826,6 +3437,13 @@
     "cv_auc": 0.6095,
     "view": "D",
     "mirror_safe": true
+   },
+   "personal_baseline": {
+    "gt_raw_auc": 0.5574,
+    "gt_adjusted_auc": 0.553,
+    "gain": -0.0044,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
    },
    "gt_auc_control": 0.5346,
    "gt_auc_full": 0.5511,
@@ -2865,6 +3483,13 @@
     "view": "D",
     "mirror_safe": true
    },
+   "personal_baseline": {
+    "gt_raw_auc": 0.8486,
+    "gt_adjusted_auc": 0.8279,
+    "gain": -0.0207,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.777,
    "gt_auc_full": 0.8526,
    "cautions": [
@@ -2896,6 +3521,13 @@
    "cv_auc_best_any": 0.7962,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.6035,
+    "gt_adjusted_auc": 0.6165,
+    "gain": 0.013,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.5897,
    "gt_auc_full": 0.6504,
    "cautions": []
@@ -2924,6 +3556,13 @@
    "cv_auc_best_any": 0.625,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.8942,
+    "gt_adjusted_auc": 0.883,
+    "gain": -0.0112,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.8607,
    "gt_auc_full": 0.8659,
    "cautions": []
@@ -2952,6 +3591,13 @@
    "cv_auc_best_any": 0.8181,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.7992,
+    "gt_adjusted_auc": 0.7999,
+    "gain": 0.0007,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.5573,
    "gt_auc_full": 0.8199,
    "cautions": []
@@ -2980,6 +3626,13 @@
    "cv_auc_best_any": 0.6712,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.5677,
+    "gt_adjusted_auc": 0.567,
+    "gain": -0.0007,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.4055,
    "gt_auc_full": 0.5297,
    "cautions": []
@@ -3015,6 +3668,13 @@
     "cv_auc": 0.6076,
     "view": "D",
     "mirror_safe": true
+   },
+   "personal_baseline": {
+    "gt_raw_auc": 0.6582,
+    "gt_adjusted_auc": 0.6388,
+    "gain": -0.0195,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
    },
    "gt_auc_control": 0.5896,
    "gt_auc_full": 0.6934,
@@ -3054,6 +3714,13 @@
     "view": "D",
     "mirror_safe": true
    },
+   "personal_baseline": {
+    "gt_raw_auc": 0.7173,
+    "gt_adjusted_auc": 0.7473,
+    "gain": 0.0301,
+    "eligible": true,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.7264,
    "gt_auc_full": 0.7078,
    "cautions": [
@@ -3084,6 +3751,13 @@
    "cv_auc_best_any": 0.7632,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.7806,
+    "gt_adjusted_auc": 0.8115,
+    "gain": 0.031,
+    "eligible": true,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.5893,
    "gt_auc_full": 0.7641,
    "cautions": []
@@ -3112,6 +3786,13 @@
    "cv_auc_best_any": 0.7191,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.7806,
+    "gt_adjusted_auc": 0.8115,
+    "gain": 0.031,
+    "eligible": true,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.5893,
    "gt_auc_full": 0.7641,
    "cautions": []
@@ -3148,6 +3829,13 @@
     "view": "D",
     "mirror_safe": true
    },
+   "personal_baseline": {
+    "gt_raw_auc": 0.9148,
+    "gt_adjusted_auc": 0.9247,
+    "gain": 0.0098,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.9568,
    "gt_auc_full": 0.9173,
    "cautions": [
@@ -3179,6 +3867,13 @@
    "cv_auc_best_any": 0.6703,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.8666,
+    "gt_adjusted_auc": 0.851,
+    "gain": -0.0156,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.8426,
    "gt_auc_full": 0.8805,
    "cautions": []
@@ -3207,6 +3902,13 @@
    "cv_auc_best_any": 0.8467,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.7662,
+    "gt_adjusted_auc": 0.7584,
+    "gain": -0.0078,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.73,
    "gt_auc_full": 0.7649,
    "cautions": []
@@ -3235,6 +3937,13 @@
    "cv_auc_best_any": 0.8325,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.8334,
+    "gt_adjusted_auc": 0.8295,
+    "gain": -0.0039,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.6875,
    "gt_auc_full": 0.8508,
    "cautions": []
@@ -3263,6 +3972,13 @@
    "cv_auc_best_any": 0.7196,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.8261,
+    "gt_adjusted_auc": 0.8828,
+    "gain": 0.0567,
+    "eligible": true,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.77,
    "gt_auc_full": 0.8844,
    "cautions": []
@@ -3291,6 +4007,13 @@
    "cv_auc_best_any": 0.7278,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.681,
+    "gt_adjusted_auc": 0.7692,
+    "gain": 0.0882,
+    "eligible": true,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.3713,
    "gt_auc_full": 0.6669,
    "cautions": []
@@ -3319,6 +4042,13 @@
    "cv_auc_best_any": 0.7278,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.681,
+    "gt_adjusted_auc": 0.7692,
+    "gain": 0.0882,
+    "eligible": true,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.3861,
    "gt_auc_full": 0.6669,
    "cautions": []
@@ -3347,6 +4077,13 @@
    "cv_auc_best_any": 0.7093,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.6263,
+    "gt_adjusted_auc": 0.626,
+    "gain": -0.0002,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.5664,
    "gt_auc_full": 0.6491,
    "cautions": []
@@ -3375,6 +4112,13 @@
    "cv_auc_best_any": 0.571,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.8075,
+    "gt_adjusted_auc": 0.8169,
+    "gain": 0.0094,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.7844,
    "gt_auc_full": 0.8118,
    "cautions": []
@@ -3411,6 +4155,13 @@
     "view": "D",
     "mirror_safe": true
    },
+   "personal_baseline": {
+    "gt_raw_auc": 0.5797,
+    "gt_adjusted_auc": 0.5753,
+    "gain": -0.0044,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.4718,
    "gt_auc_full": 0.6414,
    "cautions": [
@@ -3441,6 +4192,7 @@
    "cv_auc_best_any": 0.677,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": null,
    "gt_auc_control": 0.762,
    "gt_auc_full": 0.864,
    "cautions": []
@@ -3477,6 +4229,13 @@
     "view": "B",
     "mirror_safe": true
    },
+   "personal_baseline": {
+    "gt_raw_auc": 0.68,
+    "gt_adjusted_auc": 0.6886,
+    "gain": 0.0085,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.4968,
    "gt_auc_full": 0.7057,
    "cautions": [
@@ -3507,6 +4266,13 @@
    "cv_auc_best_any": 0.569,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.7791,
+    "gt_adjusted_auc": 0.7767,
+    "gain": -0.0025,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.6982,
    "gt_auc_full": 0.7595,
    "cautions": []
@@ -3535,6 +4301,13 @@
    "cv_auc_best_any": 0.5699,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.8685,
+    "gt_adjusted_auc": 0.868,
+    "gain": -0.0006,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.7679,
    "gt_auc_full": 0.8615,
    "cautions": []
@@ -3571,6 +4344,13 @@
     "view": "B",
     "mirror_safe": true
    },
+   "personal_baseline": {
+    "gt_raw_auc": 0.696,
+    "gt_adjusted_auc": 0.6881,
+    "gain": -0.0079,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.7443,
    "gt_auc_full": 0.6807,
    "cautions": [
@@ -3601,6 +4381,13 @@
    "cv_auc_best_any": 0.6359,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.6611,
+    "gt_adjusted_auc": 0.6921,
+    "gain": 0.0309,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.4859,
    "gt_auc_full": 0.6884,
    "cautions": []
@@ -3629,6 +4416,13 @@
    "cv_auc_best_any": 0.6865,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.6664,
+    "gt_adjusted_auc": 0.6707,
+    "gain": 0.0043,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.6945,
    "gt_auc_full": 0.6884,
    "cautions": []
@@ -3657,6 +4451,13 @@
    "cv_auc_best_any": 0.5937,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.5324,
+    "gt_adjusted_auc": 0.5363,
+    "gain": 0.004,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.3541,
    "gt_auc_full": 0.5079,
    "cautions": []
@@ -3685,6 +4486,13 @@
    "cv_auc_best_any": 0.88,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.9305,
+    "gt_adjusted_auc": 0.9165,
+    "gain": -0.0141,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.8925,
    "gt_auc_full": 0.9398,
    "cautions": []
@@ -3713,6 +4521,13 @@
    "cv_auc_best_any": 0.7453,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.6977,
+    "gt_adjusted_auc": 0.6772,
+    "gain": -0.0206,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.7487,
    "gt_auc_full": 0.7148,
    "cautions": []
@@ -3741,6 +4556,13 @@
    "cv_auc_best_any": 0.8678,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.7779,
+    "gt_adjusted_auc": 0.7878,
+    "gain": 0.0099,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.8957,
    "gt_auc_full": 0.8517,
    "cautions": []
@@ -3769,6 +4591,13 @@
    "cv_auc_best_any": 0.6364,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.7403,
+    "gt_adjusted_auc": 0.7211,
+    "gain": -0.0192,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.4809,
    "gt_auc_full": 0.7338,
    "cautions": []
@@ -3797,6 +4626,13 @@
    "cv_auc_best_any": 0.8274,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.8371,
+    "gt_adjusted_auc": 0.842,
+    "gain": 0.0049,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.8556,
    "gt_auc_full": 0.845,
    "cautions": []
@@ -3832,6 +4668,13 @@
     "cv_auc": 0.6979,
     "view": "C",
     "mirror_safe": true
+   },
+   "personal_baseline": {
+    "gt_raw_auc": 0.6701,
+    "gt_adjusted_auc": 0.666,
+    "gain": -0.0041,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
    },
    "gt_auc_control": 0.7077,
    "gt_auc_full": 0.7001,
@@ -3872,6 +4715,13 @@
     "view": "D",
     "mirror_safe": true
    },
+   "personal_baseline": {
+    "gt_raw_auc": 0.7948,
+    "gt_adjusted_auc": 0.7845,
+    "gain": -0.0103,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.6618,
    "gt_auc_full": 0.8101,
    "cautions": [
@@ -3903,6 +4753,13 @@
    "cv_auc_best_any": 0.7164,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.9245,
+    "gt_adjusted_auc": 0.9138,
+    "gain": -0.0107,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.8823,
    "gt_auc_full": 0.9322,
    "cautions": []
@@ -3939,6 +4796,13 @@
     "view": "C",
     "mirror_safe": true
    },
+   "personal_baseline": {
+    "gt_raw_auc": 0.866,
+    "gt_adjusted_auc": 0.8419,
+    "gain": -0.0241,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.6343,
    "gt_auc_full": 0.8646,
    "cautions": [
@@ -3969,6 +4833,13 @@
    "cv_auc_best_any": 0.71,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.7782,
+    "gt_adjusted_auc": 0.7734,
+    "gain": -0.0048,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.6983,
    "gt_auc_full": 0.8142,
    "cautions": [
@@ -3999,6 +4870,13 @@
    "cv_auc_best_any": 0.6962,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.8138,
+    "gt_adjusted_auc": 0.8923,
+    "gain": 0.0785,
+    "eligible": true,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.7899,
    "gt_auc_full": 0.8206,
    "cautions": []
@@ -4027,6 +4905,13 @@
    "cv_auc_best_any": 0.6601,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.7286,
+    "gt_adjusted_auc": 0.7375,
+    "gain": 0.0089,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.712,
    "gt_auc_full": 0.7449,
    "cautions": []
@@ -4055,6 +4940,13 @@
    "cv_auc_best_any": 0.6774,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.5596,
+    "gt_adjusted_auc": 0.5967,
+    "gain": 0.0371,
+    "eligible": true,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.7742,
    "gt_auc_full": 0.7299,
    "cautions": []
@@ -4090,6 +4982,13 @@
     "cv_auc": 0.6783,
     "view": "B",
     "mirror_safe": true
+   },
+   "personal_baseline": {
+    "gt_raw_auc": 0.8573,
+    "gt_adjusted_auc": 0.8474,
+    "gain": -0.0099,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
    },
    "gt_auc_control": 0.913,
    "gt_auc_full": 0.8607,
@@ -4129,6 +5028,13 @@
     "view": "B",
     "mirror_safe": true
    },
+   "personal_baseline": {
+    "gt_raw_auc": 0.5417,
+    "gt_adjusted_auc": 0.5643,
+    "gain": 0.0226,
+    "eligible": true,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.4904,
    "gt_auc_full": 0.6118,
    "cautions": [
@@ -4167,6 +5073,13 @@
     "view": "C",
     "mirror_safe": true
    },
+   "personal_baseline": {
+    "gt_raw_auc": 0.5629,
+    "gt_adjusted_auc": 0.5622,
+    "gain": -0.0007,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.6462,
    "gt_auc_full": 0.5766,
    "cautions": [
@@ -4197,6 +5110,13 @@
    "cv_auc_best_any": 0.5946,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.8444,
+    "gt_adjusted_auc": 0.8233,
+    "gain": -0.0211,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.7985,
    "gt_auc_full": 0.8402,
    "cautions": []
@@ -4225,6 +5145,13 @@
    "cv_auc_best_any": 0.6677,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.7232,
+    "gt_adjusted_auc": 0.7796,
+    "gain": 0.0564,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.4841,
    "gt_auc_full": 0.7504,
    "cautions": []
@@ -4261,6 +5188,13 @@
     "view": "C",
     "mirror_safe": true
    },
+   "personal_baseline": {
+    "gt_raw_auc": 0.7761,
+    "gt_adjusted_auc": 0.8075,
+    "gain": 0.0313,
+    "eligible": true,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.4554,
    "gt_auc_full": 0.6826,
    "cautions": [
@@ -4292,6 +5226,13 @@
    "cv_auc_best_any": 0.7279,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.7669,
+    "gt_adjusted_auc": 0.781,
+    "gain": 0.0141,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.777,
    "gt_auc_full": 0.8281,
    "cautions": []
@@ -4320,6 +5261,13 @@
    "cv_auc_best_any": 0.6898,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.6303,
+    "gt_adjusted_auc": 0.6224,
+    "gain": -0.0079,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.593,
    "gt_auc_full": 0.6234,
    "cautions": []
@@ -4348,6 +5296,13 @@
    "cv_auc_best_any": 0.721,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.8714,
+    "gt_adjusted_auc": 0.8735,
+    "gain": 0.0021,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.9642,
    "gt_auc_full": 0.8881,
    "cautions": []
@@ -4376,6 +5331,13 @@
    "cv_auc_best_any": 0.6329,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.7624,
+    "gt_adjusted_auc": 0.7839,
+    "gain": 0.0215,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.715,
    "gt_auc_full": 0.7552,
    "cautions": []
@@ -4404,6 +5366,13 @@
    "cv_auc_best_any": 0.5886,
    "mirror_safe": true,
    "alt_rule": null,
+   "personal_baseline": {
+    "gt_raw_auc": 0.6821,
+    "gt_adjusted_auc": 0.6605,
+    "gain": -0.0216,
+    "eligible": false,
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+   },
    "gt_auc_control": 0.7129,
    "gt_auc_full": 0.6154,
    "cautions": []
