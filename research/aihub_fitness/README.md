@@ -123,6 +123,13 @@ python personalization_experiments.py [--summary-only]   # 오라클 상한 / �
 결과: 개인별 임계값 재적합(A)은 정직한 이득 0(+0.002) → 기본 경로 제외; ICC 0.66 으로 개인차는 실재하나 level 피처에 국한 → 기준선 정규화(B) 로 흡수;
 체형 조건화는 R² 0.08 로 기각; 기준선 오염은 1개까지 강건, 5세트 중앙값 권장.
 
+## 촬영 프로토콜 (명세 §17)
+```bash
+python calibration_protocol.py    # 표본 크기 곡선·기준선 k 곡선 → outputs/CALIBRATION_PROTOCOL.md
+```
+결론: 재보정은 **종목당 30세트(최소 12) × 여러 사람(3~6명+)**, 세트마다 조건별 정상/위반 무작위 절반 배정.
+개인 기준선은 **eligible 6종목만, 정자세 3세트**.
+
 ## 다음 단계 (예정)
 - 랩 화면 "로그 저장 ON"으로 자체 촬영(여러 사용자) → 내보내기 → 코치 라벨 `labels.csv` → `calibrate_from_logs.py` → 규칙 JSON 갱신·에셋 반영
 - 앱: 기준선 세트(정상 자세 5세트 중앙값) UI + `personal_baseline.eligible` 규칙의 사용자 기준선 보정 (§15·§16)
