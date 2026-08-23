@@ -340,6 +340,20 @@ python calibrate_from_logs.py --logs <posture_logs 폴더 또는 *.jsonl> --labe
 
 **문헌 근거**: 재활 평가 골격 정규화(흉-골반 뼈 단위길이 스케일·흉부 원점·회전 정렬; [rotation-invariant rehab assessment](https://www.researchgate.net/publication/371312818_A_Skeleton-based_Rehabilitation_Exercise_Assessment_System_with_Rotation_Invariance), [2D gait skeleton normalization](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC9185346/)), [bone-length adjustment for 3D pose](https://arxiv.org/html/2410.20731v2), [skeleton-aware motion retargeting](https://link.springer.com/chapter/10.1007/978-3-031-92387-6_21), 보행 분석의 무차원 정규화([Hof 1996](https://www.semanticscholar.org/paper/Scaling-gait-data-to-body-size-Hof/356c4891c81e3633d22181d01c5eba7a29e14f19), [비교 연구](https://www.sciencedirect.com/science/article/abs/pii/S0167945709000165)). 체형이 스쿼트 운동학에 미치는 영향([FTR–무릎·발목 굴곡](https://www.sciencedirect.com/science/article/pii/S1728869X21000332), [요추골반 굴곡과 체형](https://ijspt.scholasticahq.com/article/122637-are-anthropometric-measures-range-of-motion-or-movement-control-tests-associated-with-lumbopelvic-flexion-during-barbell-back-squats)) — 대퇴가 길면 상체 숙임 *또는* 무릎 전방 이동으로 보상하므로 "긴 대퇴 = 나쁜 자세" 단순화는 틀림 → 체형보존 규칙은 **개인 전략 차이를 오류로 찍지 않는 것**이 핵심.
 
+## 21. '올바르지 않은 자세' 의 정의 요건 (`definition_quality.py`, [DEFINITION_QUALITY.md](DEFINITION_QUALITY.md))
+새 종목을 추가하거나 기존 조건을 고칠 때의 기준. 이론이 아니라 이 프로젝트에서 깨진 지점에서 역산했다.
+
+| 요건 | 실측 근거 |
+|---|---|
+| **1. 한 조건 = 한 메커니즘** | 다중 방향이 섞인 조건 6개에서 하위유형 분리 이득 중앙값 **+0.132**(런지 0.765→0.978). 더 중요한 건 **방향별 검출률**: 통합 규칙은 다수 방향 90~98% 를 잡지만 **소수 방향(n<50)은 검출률 중앙값 8%**(스티프 데드 신전 **3%**, 굴곡 12%). AUC 0.86 이 "가장 흔한 방향만 잡는 상태"를 가린다 |
+| **2. 관측 가능** | GT 3D 로도 AUC<0.75 인 조건 **26/62** — 정의가 관절 좌표에 없는 것(긴장·템포·숄더패킹)을 가리킨 경우. 각도 / 정규화 거리 / 시계열 통계로 표현되지 않으면 스코프 아웃 |
+| **3. 라벨명 = 실제 편차** | 행잉레그 '어깨-귀 거리'=좁은 그립, OHP '전완 수직'=팔꿈치 내밀기, 페이스풀 '외회전'=팔꿈치 모으기. 규칙은 라벨명이 아니라 연기된 편차를 학습하므로 **피드백 문구는 후자 기준** |
+| **4. 방향 특정** | 양방향 오류를 무부호 절대값으로 재면 한 방향만 잡힌다. **AUC 로는 검증 불가**(AIHub 가 한 방향만 연기해 오히려 AUC 가 높다) — 체형 초과분에서만 흔적: `torso_incl` +0.046 vs `torso_pitch` −0.009 |
+
+**새 종목 정의 절차**: ① 실패 모드를 메커니즘 단위로 나열(상위어 금지) → ② 기하량으로 표현 가능한지 확인 → ③ 양방향이면 두 조건으로 분리하거나 부호 있는 피처 → ④ 통계 선택(자세=mean/min/max, 반동=std/range) → ⑤ **위반 재현 방법까지 문서화** → ⑥ 조건별 무작위 절반 배정 30세트 × 3~6명(§17) → ⑦ **검증 3종: 인구 AUC + 방향별 검출률 + 체형 분위 이식**. ⑦에서 AUC 만 보면 요건 1·4 실패를 놓친다.
+
+**남은 한계**: '올바름' 은 코치 합의물(inter-rater 미측정) · 연기 오류 ≠ 자연 오류 · 부하 불가시 · 이진 판정에 심각도 없음.
+
 ## 12. 파일
 - `rules/rules_mp_v0.json` (앱이 읽을 정본), `rules/rules_mp_v0.md` (사람용 표, 피처 공식 표 포함), `export_rules_mp.py` (재생성)
 - 실험 코드/요약: `experiment_a.py`, `experiment_a_refit.py`, `outputs/experiment_a_summary.md`, `outputs/expA_refit_summary.md`
