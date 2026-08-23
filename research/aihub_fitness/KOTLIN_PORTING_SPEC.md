@@ -354,6 +354,18 @@ python calibrate_from_logs.py --logs <posture_logs 폴더 또는 *.jsonl> --labe
 
 **남은 한계**: '올바름' 은 코치 합의물(inter-rater 미측정) · 연기 오류 ≠ 자연 오류 · 부하 불가시 · 이진 판정에 심각도 없음.
 
+## 22. 실시간 음성 코칭 — "어디가, 처음부터인지 점점인지" (`PostureCoach.kt`, [ERROR_ONSET.md](ERROR_ONSET.md))
+| 구성 | 내용 |
+|---|---|
+| **원리** | 세트 **초반 창**(첫 8프레임)과 **최근 창**(마지막 8프레임)을 같은 규칙으로 따로 평가 → 둘 다 위반 = **HABIT**(처음부터), 초반 정상→최근 위반 = **DRIFT**(점점 흐트러짐), 위반→정상 = **RECOVERED**(교정됨). 근거: 8프레임 창 GroupKFold AUC **0.912 ≈ 전체 16프레임 0.903**(첫 5프레임 0.889) — 슬라이딩 창 판정이 성립. 300ms 샘플링이면 8프레임 ≈ 2.4초 ≈ 1렙 |
+| `LiveCoach` | `onFrame(features)`(분석 스레드) → `evaluate(nowMs)`: 최근/초반 창을 `PostureRuleSet.evaluate(..., baseline)` 로 평가(개인 기준선 적용), 규칙별 `OnsetState`(early/recent verdict·값·kind). **발화 억제**: persistence(연속 2회 위반) · 규칙 쿨다운 12s · 전역 간격 4s · 한 번에 1문장(가장 오래 지속된 위반, 동률이면 AUC 높은 규칙). `summarize()`: 세트 종료 후 전반/후반 창 기준 규칙별 onset |
+| `CoachCues` | 조건명(+척추 하위유형) → 한국어 문구 {bodyPart, habit, drift, recovered}. **라벨명이 아니라 연기된 편차 기준**(요건 3): 예 OHP '전완 지면과 수직' → "팔꿈치가 앞으로 벌어져 있어요", 행잉레그 '어깨-귀 거리' → 어깨 올라감. 43개 활성 조건 커버, 미등록은 조건명 폴백 |
+| `SpeechCoach` | Android `TextToSpeech`(ko-KR, 비동기 초기화, 속도 1.05, QUEUE_FLUSH 로 최신 안내 우선). 한국어 음성 없으면 `ready=false` → 화면 배너만 |
+| 랩 화면 | 세트 시작 시 `LiveCoach` 생성(종목·규칙·기준선 고정) → 기록 중 프레임마다 `onFrame`+`evaluate` → 배너(처음부터/점점/교정됨 색 구분 + 문구 + 현재 창 카운트) + 음성. "음성 코칭 ON/OFF" 토글. 세트 종료 시 `summarize()` → 리포트에 **"세트 내 변화(전반→후반)"** 블록: 규칙별 처음부터/점점/교정됨 + 값 변화 |
+| 테스트 | `PostureCoachTest` 5개: HABIT(persistence·쿨다운), DRIFT(초반 정상→최근 위반, 요약 일치), RECOVERED(1회), 후보 선택·전역 간격, 문구 카탈로그 커버리지·하위유형·폴백 |
+
+한계(정직하게): **임계값은 습관형(AIHub)으로 보정된 값**이라 DRIFT 도 같은 임계값을 쓴다 — 피로형 전용 임계값은 실측 로그 후. 순간 붕괴(삐끗)는 2~4fps 샘플링에서 놓칠 수 있어 이번 범위에서 제외. "왜 틀렸는가"(피로 vs 습관)는 좌표만으로는 추정이며, 세트 번호·렙 수·부하 같은 맥락과 합쳐야 신뢰도가 오른다. 음성 안내는 오탐이 나면 사용자를 잘못 교정시키므로 §9 재보정 전까지는 랩(개발용)에서만.
+
 ## 12. 파일
 - `rules/rules_mp_v0.json` (앱이 읽을 정본), `rules/rules_mp_v0.md` (사람용 표, 피처 공식 표 포함), `export_rules_mp.py` (재생성)
 - 실험 코드/요약: `experiment_a.py`, `experiment_a_refit.py`, `outputs/experiment_a_summary.md`, `outputs/expA_refit_summary.md`

@@ -135,6 +135,15 @@ fun PostureLabScreen(onClose: () -> Unit) {
     // 개인 기준선 저장소 (BaselineGuideScreen 이 기록, 여기서는 읽기만)
     val baselineStore = remember { BaselineStore(context) }
 
+    // ---- 실시간 코칭 (PostureCoach): 초반 창 vs 최근 창 → '처음부터' / '점점 흐트러짐' 을 음성으로. 분석 스레드에서 갱신.
+    var voiceCoach by rememberSaveable { mutableStateOf(true) }
+    val speech = remember { SpeechCoach(context) }
+    DisposableEffect(speech) { onDispose { speech.shutdown() } }
+    val coachRef = remember { arrayOfNulls<LiveCoach>(1) }
+    var coachBanner by remember { mutableStateOf<CoachEvent?>(null) }
+    var coachStates by remember { mutableStateOf<List<OnsetState>>(emptyList()) }
+    var onsetSummary by remember { mutableStateOf<List<OnsetState>>(emptyList()) }
+
     val aggregator = remember { FeatureAggregator() }
     val phaseRef = remember { arrayOf(LabPhase.IDLE) }
     phaseRef[0] = phase
@@ -241,6 +250,16 @@ fun PostureLabScreen(onClose: () -> Unit) {
                     synchronized(recordedSamples) {
                         recordedSamples.add(s)
                         recordedTimesMs.add(now)
+                    }
+                    // 실시간 코칭: 프레임 누적 → 최근 창 평가 → 말할 이벤트가 있으면 배너 + 음성
+                    coachRef[0]?.let { coach ->
+                        coach.onFrame(s.features)
+                        val ev = coach.evaluate(now)
+                        coachStates = coach.lastStates
+                        if (ev != null) {
+                            coachBanner = ev
+                            if (voiceCoach) speech.speak(ev.message)
+                        }
                     }
                 }
             } catch (t: Throwable) {
@@ -454,6 +473,13 @@ fun PostureLabScreen(onClose: () -> Unit) {
                             results = emptyList()
                             lastSavedNote = null
                             synchronized(recordedSamples) { recordedSamples.clear(); recordedTimesMs.clear() }
+                            // 실시간 코치 준비 (이 세트의 종목·규칙·기준선로 고정)
+                            coachBanner = null
+                            coachStates = emptyList()
+                            onsetSummary = emptyList()
+                            coachRef[0] = ruleSet?.let {
+                                LiveCoach(it, exercise, includeBeta, baselineStore.load().valuesFor(exercise), minFrames = MIN_FRAMES_FOR_VERDICT)
+                            }
                             lastInferAt[0] = 0L   // 세트 시작 즉시 첫 샘플
                             phase = LabPhase.RECORDING
                         },
@@ -469,6 +495,10 @@ fun PostureLabScreen(onClose: () -> Unit) {
                             val baselineValues = baselineStore.load().valuesFor(exercise)
                             val evaluated = ruleSet?.evaluate(exercise, aggregator, includeBeta, MIN_FRAMES_FOR_VERDICT, baselineValues).orEmpty()
                             results = evaluated
+                            // 세트 요약: 규칙별로 '처음부터 / 점점 흐트러짐 / 교정됨' (전반 창 vs 후반 창)
+                            onsetSummary = coachRef[0]?.summarize().orEmpty()
+                            coachRef[0] = null
+                            speech.stop()
                             phase = LabPhase.RESULT
                             // 세트 로그 저장 (spec §14-1): 프레임 샘플 원본 + 판정 → JSONL. 파일 IO 는 분석 스레드에서.
                             if (saveLogs) {
@@ -516,8 +546,57 @@ fun PostureLabScreen(onClose: () -> Unit) {
                     )
                 }
             }
-            // ---- 세트 로그(재보정 데이터) 컨트롤: 저장 토글 · 누적 건수 · 내보내기(공유) · 지우기
+            // ---- 실시간 코칭 배너 (기록 중): 어디가 / 처음부터인지 점점인지
+            if (phase == LabPhase.RECORDING) {
+                val ev = coachBanner
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = when (ev?.kind) {
+                        OnsetKind.HABIT -> TrexError.copy(alpha = 0.25f)
+                        OnsetKind.DRIFT -> TrexWarning.copy(alpha = 0.25f)
+                        OnsetKind.RECOVERED -> TrexLime.copy(alpha = 0.2f)
+                        null -> Color.White.copy(alpha = 0.06f)
+                    },
+                    modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
+                ) {
+                    Column(Modifier.padding(horizontal = 10.dp, vertical = 6.dp)) {
+                        Text(
+                            text = ev?.let {
+                                (when (it.kind) { OnsetKind.HABIT -> "처음부터 · "; OnsetKind.DRIFT -> "점점 흐트러짐 · "; OnsetKind.RECOVERED -> "교정됨 · " }) + it.rule.condition
+                            } ?: "코칭 대기 — 초반 ${MIN_FRAMES_FOR_VERDICT}프레임 후 판정 시작",
+                            color = Color.White,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                        Text(
+                            text = ev?.message ?: (if (!speech.ready) (speech.lastError ?: "음성 준비 중…") else if (voiceCoach) "음성 안내 ON" else "음성 안내 OFF (화면만)"),
+                            color = Color.White.copy(alpha = 0.8f),
+                            fontSize = 11.sp,
+                            lineHeight = 15.sp,
+                        )
+                        val habitN = coachStates.count { it.kind == OnsetKind.HABIT }
+                        val driftN = coachStates.count { it.kind == OnsetKind.DRIFT }
+                        if (coachStates.isNotEmpty()) {
+                            Text(
+                                text = "현재 창: 처음부터 $habitN · 흐트러짐 $driftN · 정상 ${coachStates.count { it.kind == null && it.recent == Verdict.OK }}",
+                                color = Color.White.copy(alpha = 0.5f),
+                                fontSize = 9.sp,
+                            )
+                        }
+                    }
+                }
+            }
+            // ---- 세트 로그(재보정 데이터) 컨트롤: 저장 토글 · 누적 건수 · 내보내기(공유) · 지우기 · 음성 코칭
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
+                Text(
+                    text = if (voiceCoach) "음성 코칭 ON" else "음성 코칭 OFF",
+                    color = if (voiceCoach) TrexLime else Color.White.copy(alpha = 0.5f),
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier
+                        .clickable { voiceCoach = !voiceCoach; speech.muted = !voiceCoach; if (!voiceCoach) speech.stop() }
+                        .padding(horizontal = 6.dp, vertical = 2.dp),
+                )
                 Text(
                     text = if (saveLogs) "로그 저장 ON" else "로그 저장 OFF",
                     color = if (saveLogs) TrexLime else Color.White.copy(alpha = 0.5f),
@@ -585,6 +664,24 @@ fun PostureLabScreen(onClose: () -> Unit) {
                             fontWeight = FontWeight.SemiBold,
                         )
                         Spacer(Modifier.height(8.dp))
+                        // 세트 내 변화: 전반 창 vs 후반 창 — 처음부터 / 점점 흐트러짐 / 교정됨
+                        val changed = onsetSummary.filter { it.kind != null }
+                        if (changed.isNotEmpty()) {
+                            Text("세트 내 변화 (전반 → 후반)", color = Color.White.copy(alpha = 0.7f), fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                            changed.forEach { st ->
+                                Text(
+                                    text = "• ${st.label} — ${st.rule.condition}" +
+                                        (st.earlyValue?.let { e -> st.recentValue?.let { r -> "  (${PostureRule.fmt(e)} → ${PostureRule.fmt(r)})" } } ?: ""),
+                                    color = when (st.kind) {
+                                        OnsetKind.HABIT -> TrexError
+                                        OnsetKind.DRIFT -> TrexWarning
+                                        else -> TrexLime
+                                    },
+                                    fontSize = 10.sp,
+                                )
+                            }
+                            Spacer(Modifier.height(6.dp))
+                        }
                         results.forEach { RuleResultRow(it) }
                     }
 
