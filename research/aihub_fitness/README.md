@@ -116,7 +116,14 @@ python rule_engine_v1.py     # (A) 2-피처 규칙(깊이-2 트리) vs 단일, (
 ```
 결과: (A) 2-피처는 단일보다 나쁨(Δ −0.020) → 채택 안 함. (B) 개인 기준선은 level 피처(mean/min/max)에서만 개선 → 규칙 JSON `personal_baseline.eligible` 주석으로 반영.
 
+## 개인화 실험 4종 (명세 §16)
+```bash
+python personalization_experiments.py [--summary-only]   # 오라클 상한 / 임계값 분산 분해 / 체형 조건화 / 기준선 오염 → personalization_summary.md
+```
+결과: 개인별 임계값 재적합(A)은 정직한 이득 0(+0.002) → 기본 경로 제외; ICC 0.66 으로 개인차는 실재하나 level 피처에 국한 → 기준선 정규화(B) 로 흡수;
+체형 조건화는 R² 0.08 로 기각; 기준선 오염은 1개까지 강건, 5세트 중앙값 권장.
+
 ## 다음 단계 (예정)
-- 랩 화면 "로그 저장 ON"으로 자체 촬영 → 내보내기 → 코치 라벨 `labels.csv` → `calibrate_from_logs.py` → 규칙 JSON 갱신·에셋 반영
-- 앱: 기준선 세트(정상 자세) UI + `personal_baseline.eligible` 규칙의 사용자 기준선 보정 (§15)
+- 랩 화면 "로그 저장 ON"으로 자체 촬영(여러 사용자) → 내보내기 → 코치 라벨 `labels.csv` → `calibrate_from_logs.py` → 규칙 JSON 갱신·에셋 반영
+- 앱: 기준선 세트(정상 자세 5세트 중앙값) UI + `personal_baseline.eligible` 규칙의 사용자 기준선 보정 (§15·§16)
 - 실험 C(뷰 전이)는 실험 A 의 뷰별 분석으로 대체됨
