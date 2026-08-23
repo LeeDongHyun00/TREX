@@ -292,6 +292,17 @@ python calibrate_from_logs.py --logs <posture_logs 폴더 또는 *.jsonl> --labe
 검증: `PostureBaselineTest`(수집 중앙값·희소 피처 제외, 집계기→세트값, 저장소 왕복, 기준선 적용 평가 4케이스) 포함 posture 유닛 테스트 통과.
 한계: `threshold_rel` 은 GT 3D 기준 — MP 스케일 차이는 앱 세트 로그(note=baseline)와 §9 재보정으로 맞출 것. `subject_id` 입력 UI 는 아직 없음.
 
+## 19. 개인화 이득의 출처와 앱 격차 (`personalization_gap.py`)
+§18 에서 넣은 기준선 기능이 실제로 얼마나 들을지 — AIHub 에서 잰 이득이 어디서 온 것인지 분해했다. 결론: **세 계층에서 격차가 생기고, 그중 둘은 앱에서 이득을 깎는 방향**이다.
+
+| 계층 | 측정 | 앱에서의 함의 |
+|---|---|---|
+| **① 세션(같은 사람, 다른 날)** | 분산 분해: person 45%(eligible 73%), day 13%(근거 ≥10명 규칙 7개). **세션 전이 실험**: same-day 기준선 이득 **+0.009** → **cross-day 이득 −0.009**(6규칙, 수행자 중앙값 29명). 같은 사람의 day A↔B 기준선 차이 절대 중앙값 2.6(각도 기준), SD 5.2 | 앱은 **항상 cross-day**(기준선 찍은 날 ≠ 사용하는 날) → AIHub 이득의 상당분이 세션 효과일 수 있음. 다만 eligible 종목엔 multi-day 수행자가 0~2명이라 **직접 확인 불가**(하루에 몰아 촬영) |
+| **② 측정(GT 3D → MediaPipe)** | eligible 피처의 MP 세트 단위 MAE / \|threshold_rel\| 중앙값 **1.12**(GT 기준선 잡음비 0.30). 최악은 덤벨 인클라인 `elbow_mean__mean` 3.62 | `threshold_rel` 은 GT 에서 적합 — bias 는 기준선을 빼며 상쇄되지만 **잡음이 판정 경계와 맞먹는다**. MP 스케일 재보정 전에는 이득을 기대하지 말 것 |
+| **③ 모집단·프로토콜** | 연기된 오류(무·경부하), 체형 범위 좁음(대퇴/경골 0.91~1.07), 5뷰 고정 리그·통제 조명·타이트 복장, 16프레임 성긴 샘플링, 피트니스 모델 인구 | 앱은 실중량·자연 오류·단일 뷰·조밀 샘플링·일반 인구. §16 의 "체형 조건화 기각"도 이 좁은 범위 때문일 수 있음 |
+
+**앱 반영**: 기준선 기능은 유지하되 (a) `RuleResult.rawValue/baselineApplied` 로 **절대·상대 판정을 모두 로그에 남겨** 실사용 데이터로 A/B 판정, (b) 기준선 세트는 `note=baseline` 이라 이후 세트와 날짜가 다르므로 **그 자체가 cross-day 실험**이 된다, (c) `threshold_rel` 을 MP 스케일로 재보정(§9 에 baseline-relative 모드 추가), (d) 세션 이동량을 고려해 기준선 **유효기간/재촬영 유도** 검토.
+
 ## 12. 파일
 - `rules/rules_mp_v0.json` (앱이 읽을 정본), `rules/rules_mp_v0.md` (사람용 표, 피처 공식 표 포함), `export_rules_mp.py` (재생성)
 - 실험 코드/요약: `experiment_a.py`, `experiment_a_refit.py`, `outputs/experiment_a_summary.md`, `outputs/expA_refit_summary.md`
