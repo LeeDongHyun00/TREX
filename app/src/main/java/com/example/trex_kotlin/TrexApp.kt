@@ -67,6 +67,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
+import com.example.trex_kotlin.posture.BaselineGuideScreen
 import com.example.trex_kotlin.posture.PostureLabScreen
 import kotlinx.coroutines.delay
 
@@ -77,6 +78,7 @@ fun TrexApp() {
     var loggedIn by rememberSaveable { mutableStateOf(false) }
     var onboarded by rememberSaveable { mutableStateOf(false) }
     var postureLab by rememberSaveable { mutableStateOf(false) }
+    var baselineGuide by rememberSaveable { mutableStateOf(false) }
     var sessionIndex by rememberSaveable { mutableIntStateOf(-1) }
     var sessionDone by rememberSaveable { mutableStateOf(false) }
     var workoutPlan by remember { mutableStateOf(todayPlan) }
@@ -145,16 +147,19 @@ fun TrexApp() {
                 sessionIndex = sessionIndex,
                 sessionDone = sessionDone,
                 postureLab = postureLab,
+                baselineGuide = baselineGuide,
             ),
             transitionSpec = { fadeIn() togetherWith fadeOut() },
             label = "trex-route",
         ) { route ->
             when {
+                route.baselineGuide -> BaselineGuideScreen(onClose = { baselineGuide = false })
                 route.postureLab -> PostureLabScreen(onClose = { postureLab = false })
                 !route.guideDone -> GuideBookScreen(onLogin = { guideDone = true })
                 !route.loggedIn -> LoginScreen(
                     onLogin = { loggedIn = true },
                     onOpenPostureLab = { postureLab = true },
+                    onOpenBaselineGuide = { baselineGuide = true },
                 )
                 !route.onboarded -> OnboardingScreen(onDone = { onboarded = true })
                 route.sessionDone -> SessionCompleteScreen(
@@ -215,6 +220,7 @@ private data class AppRoute(
     val sessionIndex: Int,
     val sessionDone: Boolean,
     val postureLab: Boolean = false,
+    val baselineGuide: Boolean = false,
 )
 
 @Composable

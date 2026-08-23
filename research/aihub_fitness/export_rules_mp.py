@@ -152,6 +152,9 @@ def main():
         v1 = pd.read_csv(v1_path)
         v1["subtype"] = v1["subtype"].fillna("")
         v1 = v1.set_index(["exercise", "condition", "subtype"])
+    # 기준선-상대 임계값 (baseline_thresholds.py) — eligible 규칙의 (value − 사용자 기준선) 에 적용할 임계값
+    bt_path = OUT / "baseline_thresholds.csv"
+    bt = pd.read_csv(bt_path).set_index(["exercise", "condition", "feature"]) if bt_path.exists() else None
     keys = single[["exercise", "condition", "subtype"]].drop_duplicates()
     rules, rows_md = [], []
     n_mirror_primary = 0
@@ -228,6 +231,13 @@ def main():
                 pb = dict(gt_raw_auc=round(float(vr["bl_raw_auc"]), 4), gt_adjusted_auc=round(float(vr["bl_adj_auc"]), 4), gain=round(gain, 4),
                           eligible=bool(gain >= 0.02 and stat in ("mean", "min", "max")),
                           note="수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지")
+                if pb["eligible"] and bt is not None and (k.exercise, k.condition, bf.mp_feature) in bt.index:
+                    br = bt.loc[(k.exercise, k.condition, bf.mp_feature)]
+                    if isinstance(br, pd.DataFrame):
+                        br = br.iloc[0]
+                    pb.update(threshold_rel=round(float(br["threshold_rel"]), 6), k=int(br["k"]),
+                              auc_rel_cv=round(float(br["auc_rel_cv"]), 4), acc_rel_cv=round(float(br["acc_rel_cv"]), 4),
+                              rel_note="(value − 기준선) 에 같은 op 로 적용. GT 3D 기준 — 앱 로그로 재보정 권장")
         rid = f"{k.exercise}|{k.condition}" + (f"[{k.subtype}]" if k.subtype else "")
         rules.append(dict(
             id=rid, exercise=k.exercise, condition=k.condition, subtype=k.subtype or None, status=status, reason=reason or None,

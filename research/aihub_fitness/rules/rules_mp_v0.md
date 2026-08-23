@@ -1,4 +1,4 @@
-# rules_mp_v0.1 — MediaPipe 포팅용 규칙 (2026-08-22)
+# rules_mp_v0.1 — MediaPipe 포팅용 규칙 (2026-08-23)
 
 - 출처: AIHub 013 피트니스자세 (41종목, 수행자 113명) × MediaPipe pose_landmarker_full — 실험 A-2 (MP 피처 재적합, 수행자 GroupKFold, 종목당 ≤60클립)
 - 등급: ship 59 / beta 12 / exclude 70 (미러 불변 규칙: ship 53, beta 11)

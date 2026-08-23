@@ -132,6 +132,8 @@ fun PostureLabScreen(onClose: () -> Unit) {
     val logStore = remember { SetLogStore(context) }
     var savedSets by remember { mutableIntStateOf(0) }
     var lastSavedNote by remember { mutableStateOf<String?>(null) }
+    // 개인 기준선 저장소 (BaselineGuideScreen 이 기록, 여기서는 읽기만)
+    val baselineStore = remember { BaselineStore(context) }
 
     val aggregator = remember { FeatureAggregator() }
     val phaseRef = remember { arrayOf(LabPhase.IDLE) }
@@ -463,7 +465,9 @@ fun PostureLabScreen(onClose: () -> Unit) {
                         text = "세트 종료 ($sampledFrames 프레임)",
                         icon = Icons.Rounded.Stop,
                         onClick = {
-                            val evaluated = ruleSet?.evaluate(exercise, aggregator, includeBeta, MIN_FRAMES_FOR_VERDICT).orEmpty()
+                            // 개인 기준선(BaselineGuideScreen 에서 설정)이 있으면 eligible 규칙은 (값 − 기준선) 으로 판정
+                            val baselineValues = baselineStore.load().valuesFor(exercise)
+                            val evaluated = ruleSet?.evaluate(exercise, aggregator, includeBeta, MIN_FRAMES_FOR_VERDICT, baselineValues).orEmpty()
                             results = evaluated
                             phase = LabPhase.RESULT
                             // 세트 로그 저장 (spec §14-1): 프레임 샘플 원본 + 판정 → JSONL. 파일 IO 는 분석 스레드에서.

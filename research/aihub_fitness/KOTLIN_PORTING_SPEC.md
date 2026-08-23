@@ -278,6 +278,20 @@ python calibrate_from_logs.py --logs <posture_logs 폴더 또는 *.jsonl> --labe
 - **인원 > 세트**: 개인 임계값의 정직한 이득이 +0.002(§16)이므로 같은 총량이면 **1명 × 90세트보다 6명 × 15세트**.
 - 전체 표·라벨 CSV 작성법: `outputs/CALIBRATION_PROTOCOL.md` (자동 생성).
 
+## 18. 기준선 설정 UI (앱 구현) — 운동 목록 + 세트 가이드
+§15~§17 의 결론을 앱에 넣은 것. 진입: 로그인 화면 "자세 기준선 설정 (정자세 3세트)" → `TrexApp` 의 `baselineGuide` 라우트 → `BaselineGuideScreen`.
+
+| 파일 | 역할 |
+|---|---|
+| `posture/PostureBaseline.kt` | `ExerciseBaseline`(종목 → feature → 중앙값, 세트값, k, 생성시각) · `BaselineProfile` · `BaselineCollector`(세트별 집계값 수집 → 중앙값) · `BaselineStore`(`filesDir/posture_baseline.tsv`, org.json 비의존) |
+| `posture/PostureRules.kt` | `PostureRule.baselineEligible / baselineThresholdRel / baselineK / baselineGain`(JSON `personal_baseline` 파싱), `supportsBaseline`, `isViolatedRelative`, `PostureRuleSet.baselineExercises / baselineRulesFor / baselineFeaturesFor / baselineSetsFor`, **`evaluate(..., baseline)`** — 기준선이 있고 규칙이 supportsBaseline 이면 (값 − 기준선) 을 `threshold_rel` 과 비교, `RuleResult.baselineApplied/rawValue` |
+| `posture/BaselineGuideScreen.kt` | ① **목록**: `baselineExercises`(JSON 기준 7종목)만 — 종목별 기준선 규칙·권장 뷰·설정 여부(세트 수·날짜·값)·초기화. ② **가이드/촬영**: 진행 칩(세트 1/2/3), 안내(정자세 3~4렙·권장 뷰·전신·세로 거치), 카메라+골격 오버레이, 세트 시작/종료 → 세트 값 확인(REVIEW: 프레임 부족·값 계산 불가·인구 기준 위반 경고는 **안내만, 강제 거부 없음** §16) → 저장/다시 → k세트 완료 시 중앙값 기준선 표시 → 기준선 저장. 세트 로그도 `note=baseline i/k` 로 남김(재보정용) |
+| `PostureLabScreen.kt` | 세트 종료 시 `BaselineStore.load().valuesFor(exercise)` 를 `evaluate` 에 전달 (추가형 2줄) |
+| 규칙 JSON | `personal_baseline.threshold_rel`(`baseline_thresholds.py`, GT 3D 에서 수행자별 정상 앞 3클립 기준선으로 Youden 적합; eligible 12규칙, AUC 0.82~0.99), `k=3` |
+
+검증: `PostureBaselineTest`(수집 중앙값·희소 피처 제외, 집계기→세트값, 저장소 왕복, 기준선 적용 평가 4케이스) 포함 posture 유닛 테스트 통과.
+한계: `threshold_rel` 은 GT 3D 기준 — MP 스케일 차이는 앱 세트 로그(note=baseline)와 §9 재보정으로 맞출 것. `subject_id` 입력 UI 는 아직 없음.
+
 ## 12. 파일
 - `rules/rules_mp_v0.json` (앱이 읽을 정본), `rules/rules_mp_v0.md` (사람용 표, 피처 공식 표 포함), `export_rules_mp.py` (재생성)
 - 실험 코드/요약: `experiment_a.py`, `experiment_a_refit.py`, `outputs/experiment_a_summary.md`, `outputs/expA_refit_summary.md`

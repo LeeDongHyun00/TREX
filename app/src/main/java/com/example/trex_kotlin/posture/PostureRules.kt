@@ -42,10 +42,27 @@ data class PostureRule(
     val sampleN: Int,
     val mirrorSafe: Boolean,
     val cautions: List<String>,
+    /** 개인 기준선(정자세 k세트 중앙값) 보정이 검증된 규칙인지 (spec §15/§16, rules JSON personal_baseline.eligible). */
+    val baselineEligible: Boolean = false,
+    /** 기준선을 뺀 값(value − baseline)에 적용할 임계값 (같은 op). null 이면 기준선 보정 불가. */
+    val baselineThresholdRel: Float? = null,
+    /** 기준선에 필요한 정자세 세트 수. */
+    val baselineK: Int = 3,
+    /** 연구(GT)에서 측정된 기준선 보정 이득(AUC Δ). */
+    val baselineGain: Float? = null,
 ) {
     val violationText: String get() = "$feature $op ${fmt(threshold)}"
 
+    /** 기준선 보정 판정이 가능한 규칙 (eligible + 상대 임계값 보유). */
+    val supportsBaseline: Boolean get() = baselineEligible && baselineThresholdRel != null
+
     fun isViolated(value: Float): Boolean = if (op == "<") value < threshold else value > threshold
+
+    /** 기준선을 뺀 값으로 판정. 상대 임계값이 없으면 절대 임계값으로 폴백. */
+    fun isViolatedRelative(adjusted: Float): Boolean {
+        val t = baselineThresholdRel ?: return isViolated(adjusted)
+        return if (op == "<") adjusted < t else adjusted > t
+    }
 
     companion object {
         fun fmt(v: Float): String = when {
@@ -59,8 +76,13 @@ data class PostureRule(
 data class RuleResult(
     val rule: PostureRule,
     val verdict: Verdict,
+    /** 판정에 쓴 값 — 기준선이 적용됐으면 (원값 − 기준선). */
     val value: Float?,
     val sampleCount: Int,
+    /** 개인 기준선을 빼고 상대 임계값으로 판정했는지. */
+    val baselineApplied: Boolean = false,
+    /** 기준선 적용 전 원값 (baselineApplied 가 false 면 value 와 같다). */
+    val rawValue: Float? = value,
 )
 
 class PostureRuleSet(
@@ -87,21 +109,46 @@ class PostureRuleSet(
             }
             .sortedWith(compareBy({ it.status }, { -it.cvAuc }))
 
-    /** 집계 결과에 규칙을 적용. minFrames 미만이면 유보. */
+    /** 개인 기준선이 검증된(eligible + 상대 임계값) 활성 규칙이 있는 종목 — 기준선 설정 UI 대상. */
+    val baselineExercises: List<String> = rules
+        .filter { it.status != RuleStatus.EXCLUDE && it.supportsBaseline }
+        .map { it.exercise }
+        .distinct()
+        .sorted()
+
+    /** 종목의 기준선 대상 규칙 (활성 + supportsBaseline). 같은 피처를 쓰는 하위유형 중복은 피처 기준으로 합친다. */
+    fun baselineRulesFor(exercise: String): List<PostureRule> =
+        rulesFor(exercise, includeBeta = true).filter { it.supportsBaseline }.distinctBy { it.feature }
+
+    /** 종목의 기준선에 필요한 feature(base__stat) 목록. */
+    fun baselineFeaturesFor(exercise: String): List<String> = baselineRulesFor(exercise).map { it.feature }
+
+    /** 종목의 기준선 세트 수 (규칙들의 k 최댓값, 기본 3). */
+    fun baselineSetsFor(exercise: String): Int = baselineRulesFor(exercise).maxOfOrNull { it.baselineK } ?: BaselineCollector.DEFAULT_SETS
+
+    /**
+     * 집계 결과에 규칙을 적용. minFrames 미만이면 유보.
+     * @param baseline 사용자 기준선 (feature → 값). 주어지고 규칙이 supportsBaseline 이면 (값 − 기준선) 을 상대 임계값과 비교한다.
+     */
     fun evaluate(
         exercise: String,
         agg: FeatureAggregator,
         includeBeta: Boolean = true,
         minFrames: Int = 8,
+        baseline: Map<String, Float>? = null,
     ): List<RuleResult> = rulesFor(exercise, includeBeta).map { rule ->
         val n = agg.count(rule.baseFeature)
-        val value = if (n >= minFrames) agg.stat(rule.baseFeature, rule.stat) else null
+        val raw = if (n >= minFrames) agg.stat(rule.baseFeature, rule.stat) else null
+        val b = baseline?.get(rule.feature)
+        val useBaseline = raw != null && b != null && rule.supportsBaseline
+        val value = if (useBaseline) raw!! - b!! else raw
         val verdict = when {
             value == null -> Verdict.ABSTAIN
+            useBaseline -> if (rule.isViolatedRelative(value)) Verdict.VIOLATION else Verdict.OK
             rule.isViolated(value) -> Verdict.VIOLATION
             else -> Verdict.OK
         }
-        RuleResult(rule, verdict, value, n)
+        RuleResult(rule, verdict, value, n, baselineApplied = useBaseline, rawValue = raw)
     }
 
     companion object {
@@ -118,6 +165,7 @@ class PostureRuleSet(
                 val cautions = buildList {
                     if (cautionsArr != null) for (j in 0 until cautionsArr.length()) add(cautionsArr.getString(j))
                 }
+                val pb = o.optJSONObject("personal_baseline")
                 out += PostureRule(
                     id = o.getString("id"),
                     exercise = o.getString("exercise"),
@@ -138,6 +186,10 @@ class PostureRuleSet(
                     sampleN = o.optInt("n", 0),
                     mirrorSafe = o.optBoolean("mirror_safe", true),
                     cautions = cautions,
+                    baselineEligible = pb?.optBoolean("eligible", false) ?: false,
+                    baselineThresholdRel = pb?.let { if (it.has("threshold_rel") && !it.isNull("threshold_rel")) it.getDouble("threshold_rel").toFloat() else null },
+                    baselineK = pb?.optInt("k", BaselineCollector.DEFAULT_SETS) ?: BaselineCollector.DEFAULT_SETS,
+                    baselineGain = pb?.let { if (it.has("gain") && !it.isNull("gain")) it.getDouble("gain").toFloat() else null },
                 )
             }
             return PostureRuleSet(

@@ -130,7 +130,13 @@ python calibration_protocol.py    # 표본 크기 곡선·기준선 k 곡선 →
 결론: 재보정은 **종목당 30세트(최소 12) × 여러 사람(3~6명+)**, 세트마다 조건별 정상/위반 무작위 절반 배정.
 개인 기준선은 **eligible 6종목만, 정자세 3세트**.
 
+## 기준선-상대 임계값 + 앱 기준선 UI (명세 §18)
+```bash
+python baseline_thresholds.py   # eligible 규칙의 (value − 기준선) 임계값 → outputs/baseline_thresholds.csv → export 시 personal_baseline.threshold_rel
+```
+앱: 로그인 화면 "자세 기준선 설정" → 종목 목록(7종목) → 정자세 3세트 가이드/촬영 → 중앙값 기준선 저장(`filesDir/posture_baseline.tsv`) → 랩 판정에서 eligible 규칙은 (값 − 기준선) 으로 판정.
+
 ## 다음 단계 (예정)
 - 랩 화면 "로그 저장 ON"으로 자체 촬영(여러 사용자) → 내보내기 → 코치 라벨 `labels.csv` → `calibrate_from_logs.py` → 규칙 JSON 갱신·에셋 반영
-- 앱: 기준선 세트(정상 자세 5세트 중앙값) UI + `personal_baseline.eligible` 규칙의 사용자 기준선 보정 (§15·§16)
+- 기준선 세트 로그(note=baseline)로 `threshold_rel` 재보정(MP 스케일), subject_id 입력 UI
 - 실험 C(뷰 전이)는 실험 A 의 뷰별 분석으로 대체됨

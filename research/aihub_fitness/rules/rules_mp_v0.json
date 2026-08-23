@@ -1,7 +1,7 @@
 {
  "version": "mp_v0.1",
  "revision_note": "mp_v0.1: 미러 불변(좌/우 카메라 위치 무관) 재적합 결과를 우선 채택, 비제약 규칙은 alt_rule 로 보존. 미러 안전 규칙이 정본이 된 건수 16",
- "generated": "2026-08-22",
+ "generated": "2026-08-23",
  "source": "AIHub 013 피트니스자세 (41종목, 수행자 113명) × MediaPipe pose_landmarker_full — 실험 A-2 (MP 피처 재적합, 수행자 GroupKFold, 종목당 ≤60클립)",
  "coordinate_convention": {
   "world": "MediaPipe worldLandmarks (m, 골반 중점 원점, y 아래+) → ×100 cm, y·z 부호 반전 → y 위+",
@@ -167,7 +167,12 @@
     "gt_adjusted_auc": 0.9552,
     "gain": 0.0653,
     "eligible": true,
-    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지",
+    "threshold_rel": 4.563156,
+    "k": 3,
+    "auc_rel_cv": 0.9469,
+    "acc_rel_cv": 0.8619,
+    "rel_note": "(value − 기준선) 에 같은 op 로 적용. GT 3D 기준 — 앱 로그로 재보정 권장"
    },
    "gt_auc_control": 0.8992,
    "gt_auc_full": 0.9008,
@@ -202,7 +207,12 @@
     "gt_adjusted_auc": 0.9376,
     "gain": 0.1219,
     "eligible": true,
-    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지",
+    "threshold_rel": 0.088631,
+    "k": 3,
+    "auc_rel_cv": 0.8157,
+    "acc_rel_cv": 0.7354,
+    "rel_note": "(value − 기준선) 에 같은 op 로 적용. GT 3D 기준 — 앱 로그로 재보정 권장"
    },
    "gt_auc_control": 0.7578,
    "gt_auc_full": 0.8205,
@@ -315,7 +325,12 @@
     "gt_adjusted_auc": 0.8899,
     "gain": 0.0627,
     "eligible": true,
-    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지",
+    "threshold_rel": -5.151995,
+    "k": 3,
+    "auc_rel_cv": 0.8847,
+    "acc_rel_cv": 0.7885,
+    "rel_note": "(value − 기준선) 에 같은 op 로 적용. GT 3D 기준 — 앱 로그로 재보정 권장"
    },
    "gt_auc_control": 0.8311,
    "gt_auc_full": 0.828,
@@ -358,7 +373,12 @@
     "gt_adjusted_auc": 0.8899,
     "gain": 0.0627,
     "eligible": true,
-    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지",
+    "threshold_rel": -5.151995,
+    "k": 3,
+    "auc_rel_cv": 0.8847,
+    "acc_rel_cv": 0.7885,
+    "rel_note": "(value − 기준선) 에 같은 op 로 적용. GT 3D 기준 — 앱 로그로 재보정 권장"
    },
    "gt_auc_control": 0.8311,
    "gt_auc_full": 0.828,
@@ -438,7 +458,12 @@
     "gt_adjusted_auc": 0.89,
     "gain": 0.0309,
     "eligible": true,
-    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지",
+    "threshold_rel": -6.619118,
+    "k": 3,
+    "auc_rel_cv": 0.89,
+    "acc_rel_cv": 0.8067,
+    "rel_note": "(value − 기준선) 에 같은 op 로 적용. GT 3D 기준 — 앱 로그로 재보정 권장"
    },
    "gt_auc_control": 0.9038,
    "gt_auc_full": 0.8536,
@@ -1225,7 +1250,12 @@
     "gt_adjusted_auc": 0.8888,
     "gain": 0.055,
     "eligible": true,
-    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지",
+    "threshold_rel": 0.05718,
+    "k": 3,
+    "auc_rel_cv": 0.8494,
+    "acc_rel_cv": 0.8123,
+    "rel_note": "(value − 기준선) 에 같은 op 로 적용. GT 3D 기준 — 앱 로그로 재보정 권장"
    },
    "gt_auc_control": 0.9138,
    "gt_auc_full": 0.8302,
@@ -1260,7 +1290,12 @@
     "gt_adjusted_auc": 0.8888,
     "gain": 0.055,
     "eligible": true,
-    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지",
+    "threshold_rel": 0.05718,
+    "k": 3,
+    "auc_rel_cv": 0.8494,
+    "acc_rel_cv": 0.8123,
+    "rel_note": "(value − 기준선) 에 같은 op 로 적용. GT 3D 기준 — 앱 로그로 재보정 권장"
    },
    "gt_auc_control": 0.9138,
    "gt_auc_full": 0.8302,
@@ -1906,7 +1941,12 @@
     "gt_adjusted_auc": 0.8706,
     "gain": 0.0209,
     "eligible": true,
-    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지",
+    "threshold_rel": -0.195596,
+    "k": 3,
+    "auc_rel_cv": 0.8706,
+    "acc_rel_cv": 0.7886,
+    "rel_note": "(value − 기준선) 에 같은 op 로 적용. GT 3D 기준 — 앱 로그로 재보정 권장"
    },
    "gt_auc_control": 0.9542,
    "gt_auc_full": 0.8215,
@@ -1949,7 +1989,12 @@
     "gt_adjusted_auc": 0.8537,
     "gain": 0.0413,
     "eligible": true,
-    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지",
+    "threshold_rel": -5.497057,
+    "k": 3,
+    "auc_rel_cv": 0.8537,
+    "acc_rel_cv": 0.7904,
+    "rel_note": "(value − 기준선) 에 같은 op 로 적용. GT 3D 기준 — 앱 로그로 재보정 권장"
    },
    "gt_auc_control": 0.8222,
    "gt_auc_full": 0.8349,
@@ -1992,7 +2037,12 @@
     "gt_adjusted_auc": 0.8537,
     "gain": 0.0413,
     "eligible": true,
-    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지",
+    "threshold_rel": -5.497057,
+    "k": 3,
+    "auc_rel_cv": 0.8537,
+    "acc_rel_cv": 0.7904,
+    "rel_note": "(value − 기준선) 에 같은 op 로 적용. GT 3D 기준 — 앱 로그로 재보정 권장"
    },
    "gt_auc_control": 0.8222,
    "gt_auc_full": 0.8349,
@@ -2027,7 +2077,12 @@
     "gt_adjusted_auc": 0.9336,
     "gain": 0.0336,
     "eligible": true,
-    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지",
+    "threshold_rel": 9.554235,
+    "k": 3,
+    "auc_rel_cv": 0.9326,
+    "acc_rel_cv": 0.84,
+    "rel_note": "(value − 기준선) 에 같은 op 로 적용. GT 3D 기준 — 앱 로그로 재보정 권장"
    },
    "gt_auc_control": 0.9038,
    "gt_auc_full": 0.9055,
@@ -2126,7 +2181,12 @@
     "gt_adjusted_auc": 0.9726,
     "gain": 0.0257,
     "eligible": true,
-    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지"
+    "note": "수행자별 '정상' 앞 3세트 중앙값을 뺀 값으로 판정했을 때의 GT AUC 변화. level 통계(mean/min/max)에만 적용 권장, std/range 는 보정 금지",
+    "threshold_rel": -0.060023,
+    "k": 3,
+    "auc_rel_cv": 0.9901,
+    "acc_rel_cv": 0.9237,
+    "rel_note": "(value − 기준선) 에 같은 op 로 적용. GT 3D 기준 — 앱 로그로 재보정 권장"
    },
    "gt_auc_control": 0.9714,
    "gt_auc_full": 0.982,

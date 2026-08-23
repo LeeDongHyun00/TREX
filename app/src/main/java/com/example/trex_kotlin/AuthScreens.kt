@@ -101,7 +101,7 @@ private val loginAnimationFrames = intArrayOf(
 )
 
 @Composable
-fun LoginScreen(onLogin: () -> Unit, onOpenPostureLab: () -> Unit = {}) {
+fun LoginScreen(onLogin: () -> Unit, onOpenPostureLab: () -> Unit = {}, onOpenBaselineGuide: () -> Unit = {}) {
     var mode by rememberSaveable { mutableStateOf(LoginMode.Login) }
 
     when (mode) {
@@ -110,6 +110,7 @@ fun LoginScreen(onLogin: () -> Unit, onOpenPostureLab: () -> Unit = {}) {
             goSignup = { mode = LoginMode.Signup },
             goFind = { mode = LoginMode.Find },
             onOpenPostureLab = onOpenPostureLab,
+            onOpenBaselineGuide = onOpenBaselineGuide,
         )
 
         LoginMode.Signup -> SignupView(
@@ -150,6 +151,7 @@ private fun LoginView(
     goSignup: () -> Unit,
     goFind: () -> Unit,
     onOpenPostureLab: () -> Unit = {},
+    onOpenBaselineGuide: () -> Unit = {},
 ) {
     var id by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
@@ -161,8 +163,8 @@ private fun LoginView(
             .imePadding(),
     ) {
         // 세로가 짧은 기기(예: 1080×2280, ~690dp 가용)에서는 430dp 애니메이션 때문에 아래 버튼들이 화면 밖으로 밀려
-        // 카카오/실험실 버튼이 보이지 않았다. 텍스트·입력창·버튼 3개·링크·여백 합계(≈540dp)를 뺀 만큼만 애니메이션에 준다.
-        val animationHeight = (maxHeight - 540.dp).coerceIn(160.dp, 430.dp)
+        // 카카오/실험실 버튼이 보이지 않았다. 텍스트·입력창·버튼 4개·링크·여백 합계(≈602dp)를 뺀 만큼만 애니메이션에 준다.
+        val animationHeight = (maxHeight - 602.dp).coerceIn(140.dp, 430.dp)
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -227,6 +229,16 @@ private fun LoginView(
                 onClick = onOpenPostureLab,
                 modifier = Modifier.fillMaxWidth(),
                 icon = Icons.Rounded.CenterFocusStrong,
+                container = Color.White.copy(alpha = 0.10f),
+                contentColor = TrexLime,
+            )
+            Spacer(Modifier.height(10.dp))
+            // 개인화: 기준선 대상 6종목을 정자세 3세트씩 찍어 '내 기준'을 만드는 안내 화면 (spec §15~§17)
+            TrexButton(
+                text = "자세 기준선 설정 (정자세 3세트)",
+                onClick = onOpenBaselineGuide,
+                modifier = Modifier.fillMaxWidth(),
+                icon = Icons.Rounded.Check,
                 container = Color.White.copy(alpha = 0.10f),
                 contentColor = TrexLime,
             )
