@@ -324,6 +324,22 @@ python calibrate_from_logs.py --logs <posture_logs 폴더 또는 *.jsonl> --labe
 
 한계: AIHub 체형 범위가 좁다(대퇴/경골 0.91~1.07, 키 프록시 108~141cm). 더 넓은 인구에서는 체형 효과가 커질 수 있다.
 
+## 21. 체형보존 알고리즘 — 정준 골격 리타게팅 (`canonical_retarget.py`)
+**알고리즘**: 각 프레임 골격을 관절 **방향(단위벡터)** 과 **뼈 길이**로 분해 → 뼈 길이만 인구 중앙값(정준 체형)으로 바꿔 forward kinematics 로 재조립(루트=골반 중점, 머리는 강체로 단일 배율). 각도 피처는 정의상 불변(무릎각 최대 변화 0.02°), 위치·거리 피처는 "표준 체형 위에서의 자세"가 된다 — 기존 정규화(몸통 길이·어깨폭 나눗셈)가 못 지우는 **체절 간 비율 차이**(팔/몸통 등)까지 제거.
+
+| 결과 (활성 규칙 62개, 값 바뀐 26개) | 원본 | 정준 | Δ |
+|---|---|---|---|
+| 수행자 홀드아웃 AUC 중앙값 | 0.868 | 0.867 | +0.002 |
+| 체형 4분위 이식 초과분 | +0.006 | +0.006 | +0.002 |
+| 체형 회귀 R² | 0.07 | 0.07 | 0 |
+
+- 팔 길이에 의존하던 규칙은 고쳐진다: 행잉 레그 레이즈 `grip_w` 초과분 +0.062→**+0.001**, 페이스 풀 `grip_w` +0.089→+0.039, `stance_w` AUC 0.890→0.951, `palm_head_dist` 0.783→0.803.
+- **전체 이득은 0** — 피처가 이미 각도·비율이라 남은 체형 효과가 거의 없었기 때문(§20). §20 의 '체형 의존' 규칙 중 `torso_incl`/`face_vs_forward` 는 각도라 리타게팅과 무관 → 그 의존은 체형이 아니라 **키와 상관된 수행 습관**이다.
+- 구현 교훈: 머리(코·귀·눈)를 개별 뼈로 리타게팅하면 얼굴 방향이 왜곡돼 `head_pitch` 규칙이 −0.05 → **강체 처리 필수**.
+- 앱 적용: MediaPipe world landmark 에 같은 리타게팅 가능(트리·정준 길이 JSON화). 단 AIHub 범위(대퇴/경골 0.91~1.07)에선 이득이 없으므로 **넓은 체형 인구 데이터가 생겼을 때** 켤 옵션으로 보관.
+
+**문헌 근거**: 재활 평가 골격 정규화(흉-골반 뼈 단위길이 스케일·흉부 원점·회전 정렬; [rotation-invariant rehab assessment](https://www.researchgate.net/publication/371312818_A_Skeleton-based_Rehabilitation_Exercise_Assessment_System_with_Rotation_Invariance), [2D gait skeleton normalization](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC9185346/)), [bone-length adjustment for 3D pose](https://arxiv.org/html/2410.20731v2), [skeleton-aware motion retargeting](https://link.springer.com/chapter/10.1007/978-3-031-92387-6_21), 보행 분석의 무차원 정규화([Hof 1996](https://www.semanticscholar.org/paper/Scaling-gait-data-to-body-size-Hof/356c4891c81e3633d22181d01c5eba7a29e14f19), [비교 연구](https://www.sciencedirect.com/science/article/abs/pii/S0167945709000165)). 체형이 스쿼트 운동학에 미치는 영향([FTR–무릎·발목 굴곡](https://www.sciencedirect.com/science/article/pii/S1728869X21000332), [요추골반 굴곡과 체형](https://ijspt.scholasticahq.com/article/122637-are-anthropometric-measures-range-of-motion-or-movement-control-tests-associated-with-lumbopelvic-flexion-during-barbell-back-squats)) — 대퇴가 길면 상체 숙임 *또는* 무릎 전방 이동으로 보상하므로 "긴 대퇴 = 나쁜 자세" 단순화는 틀림 → 체형보존 규칙은 **개인 전략 차이를 오류로 찍지 않는 것**이 핵심.
+
 ## 12. 파일
 - `rules/rules_mp_v0.json` (앱이 읽을 정본), `rules/rules_mp_v0.md` (사람용 표, 피처 공식 표 포함), `export_rules_mp.py` (재생성)
 - 실험 코드/요약: `experiment_a.py`, `experiment_a_refit.py`, `outputs/experiment_a_summary.md`, `outputs/expA_refit_summary.md`
