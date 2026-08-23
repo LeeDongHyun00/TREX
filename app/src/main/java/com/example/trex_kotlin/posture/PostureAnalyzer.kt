@@ -47,6 +47,10 @@ class PoseSample(
     val up: Vec3 = SCREEN_UP,
     /** up 이 IMU 에서 온 것인지 (false = 화면 세로축 가정). */
     val upFromGravity: Boolean = false,
+    /** 관절 배치 자가검증(checkUpSanity)으로 up 을 뒤집어 보정했는지. */
+    val upFlipped: Boolean = false,
+    /** 자가검증으로 up 방향을 확인할 수 있었는지 (false = 누운 자세/관절 부족 등으로 미검증). */
+    val upVerified: Boolean = false,
 ) {
     companion object {
         fun empty(inferMs: Long = 0L, w: Int = 0, h: Int = 0, up: Vec3 = SCREEN_UP, fromGravity: Boolean = false) = PoseSample(
@@ -94,6 +98,10 @@ class PostureAnalyzer(
     @Volatile private var inferCount = 0L
     @Volatile private var emaMs = 0f
     @Volatile private var lastMs = 0L
+    @Volatile private var flippedCount = 0L
+
+    /** up 자가검증으로 보정한 프레임 수 (진단용). */
+    val upFlippedCount: Long get() = flippedCount
 
     val isReady: Boolean get() = landmarker != null
 
@@ -193,7 +201,16 @@ class PostureAnalyzer(
             val b = pts.getOrNull(pair.second)
             joints[name] = if (a != null && b != null) mid(a, b) else a ?: b
         }
-        val frame = PoseFrame(joints, up)
+        // up 자가검증: IMU 부호/회전 매핑이 틀려 up 이 뒤집혔으면(골반이 발목 아래로 계산됨) −up 으로 보정 (spec §4)
+        val sanity = checkUpSanity(joints, up)
+        val upUsed = if (sanity.flipped) (up * -1f).unit() ?: up else up
+        if (sanity.flipped) {
+            flippedCount += 1
+            if (flippedCount == 1L || flippedCount % 50L == 0L) {
+                Log.w(TAG, "up 반전 감지·보정 (#$flippedCount): hip-ankle=${sanity.hipAboveAnkleCm} ear-shoulder=${sanity.earAboveShoulderCm}")
+            }
+        }
+        val frame = PoseFrame(joints, upUsed)
         val features = frame.features()
         val visibleCount = vis.count { it >= MIN_VISIBILITY }
         return PoseSample(
@@ -205,8 +222,10 @@ class PostureAnalyzer(
             inferMs = inferMs,
             imageWidth = w,
             imageHeight = h,
-            up = up,
+            up = upUsed,
             upFromGravity = fromGravity,
+            upFlipped = sanity.flipped,
+            upVerified = sanity.verified,
         )
     }
 

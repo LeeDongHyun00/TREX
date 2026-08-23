@@ -58,6 +58,9 @@ data class SetLog(
     val frames: List<SetLogFrame>,
     val results: List<SetLogResult>,
     val note: String? = null,
+    /** up 자가검증으로 뒤집어 보정한 프레임 수 / 방향을 검증한 프레임 수 (진단용, 스키마 호환 추가 필드). */
+    val upFlippedFrames: Int = 0,
+    val upVerifiedFrames: Int = 0,
 ) {
     companion object {
         const val SCHEMA = "trex.posture.setlog/1"
@@ -116,6 +119,8 @@ data class SetLog(
                 frames = frames,
                 results = results.map { SetLogResult(it.rule.id, it.verdict.name, it.value, it.sampleCount) },
                 note = note,
+                upFlippedFrames = samples.count { it.upFlipped },
+                upVerifiedFrames = samples.count { it.upVerified },
             )
         }
     }
@@ -139,6 +144,8 @@ object SetLogJson {
         sb.append("\"up_from_gravity\":").append(log.upFromGravity).append(',')
         sb.append("\"tilt_deg\":").append(num(log.tiltDeg)).append(',')
         sb.append("\"sample_interval_ms\":").append(log.sampleIntervalMs).append(',')
+        sb.append("\"up_flipped_frames\":").append(log.upFlippedFrames).append(',')
+        sb.append("\"up_verified_frames\":").append(log.upVerifiedFrames).append(',')
         field(sb, "note", log.note)
         sb.append("\"frames\":[")
         log.frames.forEachIndexed { i, f ->

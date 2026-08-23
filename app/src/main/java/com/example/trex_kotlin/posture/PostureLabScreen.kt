@@ -340,6 +340,8 @@ fun PostureLabScreen(onClose: () -> Unit) {
                                 "  중력센서 X(화면축 가정)"
                             },
                         )
+                        if (sample.upFlipped) append("  ⚠ up반전 자동보정")
+                        else if (sample.detected && !sample.upVerified) append("  (up 미검증)")
                     },
                     color = if (sample.detected) TrexLime else TrexError,
                     fontSize = 10.sp,

@@ -14,6 +14,13 @@ import android.view.Surface
  * 폰이 기울거나(피치) 회전하면(롤) 화면 세로축과 중력축이 어긋나 모든 높이·수직 피처가 틀어지므로,
  * TYPE_GRAVITY 센서로 얻은 중력 벡터를 MediaPipe world 좌표계로 옮겨 up = -중력 으로 쓴다.
  *
+ * ## 센서 부호 규약 (버그 이력)
+ * Android 의 TYPE_ACCELEROMETER / TYPE_GRAVITY 는 정지 상태에서 **반작용 벡터**를 보고한다 — 기기를 화면 위로 평평히 놓으면
+ * z = +9.81 (지면 반대 방향). 즉 센서 값은 "아래"가 아니라 "위"를 가리킨다. 초기 구현은 이를 아래 방향으로 가정해
+ * up 이 180° 뒤집혔고(세운 폰에서 tilt 175°, 실기기 로그로 확인), 높이·수직 피처 전부의 부호가 반전됐다.
+ * [sensorGravityToDown] 으로 부호를 뒤집어 "아래 방향" 중력 벡터로 만든 뒤 사용한다.
+ * 추가 안전장치로 PostureCore.checkUpSanity 가 관절 배치(귀>어깨, 골반>발목)로 up 방향을 검증한다.
+ *
  * ## 좌표계 유도
  * - 센서(디바이스 자연좌표): x 오른쪽, y 위(기기 상단), z 화면 바깥
  * - 분석 이미지: CameraX 가 targetRotation(기본=디스플레이 회전)에 맞춰 회전시킨 뒤 우리가 다시 회전 보정하므로
@@ -33,6 +40,12 @@ internal fun displayAxes(displayRotation: Int): Pair<Vec3, Vec3> = when (display
 
 /** 화면 세로축을 중력으로 가정할 때의 up (센서를 못 쓸 때의 폴백). */
 val SCREEN_UP: Vec3 = Vec3(0f, 1f, 0f)
+
+/**
+ * Android 센서 값(TYPE_GRAVITY / 정지 상태 가속도계; 지면 **반대** 방향, 평평히 놓으면 (0,0,+9.81))을
+ * "아래 방향" 중력 벡터로 변환한다. [gravityUpInWorld] 는 아래 방향 벡터를 받는다.
+ */
+fun sensorGravityToDown(sensorValues: Vec3): Vec3 = sensorValues * -1f
 
 /**
  * 디바이스 자연좌표의 중력 벡터를 world 좌표계의 up(= -중력, 단위벡터)으로 변환.
@@ -81,7 +94,8 @@ class GravityTracker(context: Context) : SensorEventListener {
     }
 
     override fun onSensorChanged(event: SensorEvent) {
-        val v = Vec3(event.values[0], event.values[1], event.values[2])
+        // 센서는 반작용(위) 방향을 보고하므로 아래 방향으로 뒤집는다 (파일 상단 '센서 부호 규약' 참고)
+        val v = sensorGravityToDown(Vec3(event.values[0], event.values[1], event.values[2]))
         gravityDevice = if (usingAccelFallback) {
             // 가속도계 폴백: 저역통과로 중력 성분만 남긴다
             val prev = gravityDevice

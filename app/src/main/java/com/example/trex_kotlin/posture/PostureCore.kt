@@ -372,6 +372,53 @@ class PoseFrame(val joints: Map<String, Vec3?>, up: Vec3 = Vec3(0f, 1f, 0f)) {
 }
 
 /**
+ * up 방향 자가검증 결과.
+ * - [flipped] = 관절 배치가 "골반이 발목 아래 / 귀가 어깨 아래" 면 up 이 뒤집힌 것으로 보고 −up 을 쓴다.
+ * - [verified] = 서 있는 자세라 방향을 확인할 수 있었는지(누운 자세·관절 부족이면 false, 보정도 하지 않음).
+ */
+data class UpSanity(
+    val verified: Boolean,
+    val flipped: Boolean,
+    /** (HipMid − AnkleMid)·up, cm. 서 있으면 +60~+100. */
+    val hipAboveAnkleCm: Float?,
+    /** (EarMid − ShMid)·up, cm. 서 있으면 +10~+25. */
+    val earAboveShoulderCm: Float?,
+) {
+    companion object {
+        val UNVERIFIED = UpSanity(verified = false, flipped = false, hipAboveAnkleCm = null, earAboveShoulderCm = null)
+    }
+}
+
+private const val UP_SANITY_HIP_ANKLE_CM = 30f
+private const val UP_SANITY_EAR_SHOULDER_CM = 6f
+
+/**
+ * 관절 배치로 up 벡터 방향을 검증한다 (IMU 부호·회전 매핑 오류의 안전장치).
+ * 골반-발목 높이차가 −30cm 미만이면(또는 다리가 안 보일 때 귀-어깨가 −6cm 미만) 뒤집힘으로 판정.
+ * 누운 자세처럼 높이차가 작으면 판정 불가(verified=false) — 이때는 보정하지 않는다.
+ */
+fun checkUpSanity(joints: Map<String, Vec3?>, up: Vec3): UpSanity {
+    val u = up.unit() ?: return UpSanity.UNVERIFIED
+    fun m(a: String, b: String): Vec3? {
+        val p = joints[a]; val q = joints[b]
+        return if (p != null && q != null) mid(p, q) else p ?: q
+    }
+    val hipMid = m(Joints.L_HIP, Joints.R_HIP)
+    val ankleMid = m(Joints.L_ANKLE, Joints.R_ANKLE)
+    val earMid = m(Joints.L_EAR, Joints.R_EAR)
+    val shMid = m(Joints.L_SHOULDER, Joints.R_SHOULDER)
+    val hipAnkle = if (hipMid != null && ankleMid != null) (hipMid - ankleMid) dot u else null
+    val earSh = if (earMid != null && shMid != null) (earMid - shMid) dot u else null
+    return when {
+        hipAnkle != null && hipAnkle < -UP_SANITY_HIP_ANKLE_CM -> UpSanity(true, true, hipAnkle, earSh)
+        hipAnkle != null && hipAnkle > UP_SANITY_HIP_ANKLE_CM -> UpSanity(true, false, hipAnkle, earSh)
+        hipAnkle == null && earSh != null && earSh < -UP_SANITY_EAR_SHOULDER_CM -> UpSanity(true, true, null, earSh)
+        hipAnkle == null && earSh != null && earSh > UP_SANITY_EAR_SHOULDER_CM -> UpSanity(true, false, null, earSh)
+        else -> UpSanity(false, false, hipAnkle, earSh)
+    }
+}
+
+/**
  * 세트 창 집계 (spec §6). 프레임 피처를 모아 mean/min/max/std/range 를 낸다.
  * 샘플링 간격은 호출 측에서 2~4 fps 로 맞춘다 — 임계값의 전제.
  */

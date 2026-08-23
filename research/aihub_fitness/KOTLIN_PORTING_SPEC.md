@@ -78,8 +78,14 @@ height(P) = P·y_b                                // 모든 "높이" 피처는 �
 | 이미지 | up = 디스플레이 up, right = viewDir × up → 후면은 디스플레이 right, **전면은 그 반대** |
 | world | X = 이미지 right, Y = 이미지 up, Z = 카메라 쪽(후면 +z_dev, 전면 −z_dev) |
 
-`gravityUpInWorld(g, displayRotation, isFront)` = `−normalize( (g·imageRight, g·displayUp, g·towardCamera) )`.
+`gravityUpInWorld(g, displayRotation, isFront)` = `−normalize( (g·imageRight, g·displayUp, g·towardCamera) )`, **g 는 아래 방향 중력**.
 센서를 못 쓰면 `SCREEN_UP=(0,1,0)` 로 폴백하고 UI 에 그 사실을 표시한다.
+
+**센서 부호 규약(버그 이력, 2026-08-23 실기기 로그로 발견)**: Android `TYPE_GRAVITY`/`TYPE_ACCELEROMETER` 는 정지 시 **반작용(위) 벡터**를 보고한다 —
+기기를 화면 위로 평평히 놓으면 z=+9.81. 초기 구현은 이를 아래 방향으로 가정해 up 이 180° 뒤집혔다(세운 폰에서 tilt 175°, 70° 젖힌 폰에서 106~111°;
+높이·수직 피처 전부 부호 반전 — 예: 귀-어깨 간격 −0.34 vs AIHub +0.36). 수정: `sensorGravityToDown()` 으로 센서 값을 뒤집어 아래 방향으로 만든 뒤 사용.
+**자가검증 안전장치** `checkUpSanity(joints, up)`: 서 있는 자세에서 (HipMid−AnkleMid)·up < −30cm(다리 미검출 시 (EarMid−ShMid)·up < −6cm)이면 뒤집힘으로 보고 −up 으로 보정(`PoseSample.upFlipped`),
+높이차가 작아 판단 불가(누운 자세 등)면 `upVerified=false` 로만 표시하고 보정하지 않는다. 세트 로그에 `up_flipped_frames / up_verified_frames` 기록.
 정규화 분모(실패 프레임 방지): `torso_len=|Neck−HipMid| (<20cm → NaN)`, `leg_len=mean(|LHip−LAnkle|,|RHip−RAnkle|) (<40cm → NaN)`, `sh_w=|LSh−RSh| (<15cm → NaN)`, `hip_w=|LHip−RHip| (<8cm → NaN)`, `body_h=Neck.y−AnkleMid.y (|·|<30cm → NaN)`.
 
 ## 5. 피처 (프레임 단위)
