@@ -196,7 +196,7 @@ def main():
         rows.append(dict(rule_id=r["id"], exercise=r["exercise"], condition=r["condition"], subtype=r.get("subtype") or "",
                          feature=r["feature"], primary_op=r["op"], primary_threshold=r["threshold"],
                          guard_op=guard_op, guard_threshold=round(float(guard_thr), 6), n_norm=len(v),
-                         method=f"MP({view}) 정상 med±{K_MAD}·MAD", opposite_desc=hit[2], evidence=hit[3],
+                         method=f"MP({view}) 정상 med±{K_GUARD}·MAD", opposite_desc=hit[2], evidence=hit[3],
                          validated=bool("검증" in hit[3] and "미검증" not in hit[3])))
     gdf = pd.DataFrame(rows)
     gdf.to_csv(OUT / "opposite_guards.csv", index=False, encoding="utf-8-sig")
@@ -205,7 +205,7 @@ def main():
     for r in gdf.itertuples():
         L.append(f"| {r.rule_id} | `{r.feature}` | {r.primary_op} {r.primary_threshold:.3g} | **{r.guard_op} {r.guard_threshold:.3g}** | {r.n_norm} | {r.opposite_desc} | {'O' if r.validated else '미검증(정상분포 기반)'} |")
     L += ["", f"- 가드 {len(gdf)}개 생성. FPR 은 C 검증에서 med±2.5·MAD 기준 측정値 참조 — 가드는 보수적 경계이며, 스쿼트 '무릎 바깥' 처럼 라벨이 없는 방향은 `validated=false` 로 표시(오탐률만 통제, 검출률은 미보증).",
-          "- lateral(좌/우 기울기) 규칙은 std/range 라 이미 양방향을 잡는다 — 가드 불필요, 대신 **방향 명명**(shoulder_asym 평균 부호 → 왼쪽/오른쪽)을 코칭 문구에 사용."]
+          "- lateral(좌/우 기울기) 규칙은 std/range 라 이미 양방향을 잡는다 — 가드 불필요. **방향 명명**(shoulder_asym 평균 부호 → 왼쪽/오른쪽)은 B 의 판별 정확도가 71~76% 에 그쳐 음성으로 단정하기 위험하므로 **미채택**(코칭 문구는 '옆으로'). head_yaw 90% 는 향후 명명 후보."]
     (OUT / "BIDIRECTIONAL.md").write_text("\n".join(L), encoding="utf-8")
     print("\n".join(L))
 

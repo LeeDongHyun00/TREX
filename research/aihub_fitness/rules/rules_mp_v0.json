@@ -507,7 +507,7 @@
     "op": ">",
     "threshold": 127.899483,
     "desc": "고개 과도 숙임",
-    "method": "MP(B) 정상 med±2.5·MAD",
+    "method": "MP(B) 정상 med±3.0·MAD",
     "n_norm": 32,
     "validated": false
    }
@@ -825,7 +825,7 @@
     "op": ">",
     "threshold": -0.003913,
     "desc": "무릎/발이 과도하게 바깥",
-    "method": "MP(C) 정상 med±2.5·MAD",
+    "method": "MP(C) 정상 med±3.0·MAD",
     "n_norm": 32,
     "validated": true
    }
@@ -946,7 +946,7 @@
     "op": ">",
     "threshold": 111.862783,
     "desc": "반대 방향 고개(들림/숙임)",
-    "method": "MP(B) 정상 med±2.5·MAD",
+    "method": "MP(B) 정상 med±3.0·MAD",
     "n_norm": 24,
     "validated": true
    }
@@ -1131,7 +1131,7 @@
     "op": ">",
     "threshold": 0.23358,
     "desc": "무릎/발이 과도하게 바깥",
-    "method": "MP(C) 정상 med±2.5·MAD",
+    "method": "MP(C) 정상 med±3.0·MAD",
     "n_norm": 27,
     "validated": true
    }
@@ -1717,7 +1717,7 @@
     "op": "<",
     "threshold": -42.474806,
     "desc": "반대 방향 고개(들림/숙임)",
-    "method": "MP(C) 정상 med±2.5·MAD",
+    "method": "MP(C) 정상 med±3.0·MAD",
     "n_norm": 26,
     "validated": true
    }
@@ -1885,7 +1885,7 @@
     "op": ">",
     "threshold": 9.311985,
     "desc": "과도한 앞 숙임",
-    "method": "MP(D) 정상 med±2.5·MAD",
+    "method": "MP(D) 정상 med±3.0·MAD",
     "n_norm": 37,
     "validated": false
    }
@@ -2679,7 +2679,7 @@
     "op": ">",
     "threshold": 11.196192,
     "desc": "과도한 앞 숙임",
-    "method": "MP(D) 정상 med±2.5·MAD",
+    "method": "MP(D) 정상 med±3.0·MAD",
     "n_norm": 40,
     "validated": false
    }
