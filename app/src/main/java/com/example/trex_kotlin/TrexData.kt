@@ -46,6 +46,8 @@ data class Workout(
     val posture: Boolean,
     val category: String,
     val alt: WorkoutAlt? = null,
+    /** 오늘 세션에서 완료했는지 (리디자인: 홈/운동 탭 진행률과 카드 번호 칩 상태). */
+    val done: Boolean = false,
 )
 
 @Immutable
@@ -66,6 +68,8 @@ data class WorkoutHistoryItem(
     val durationMinutes: Int,
     val calories: Int,
     val postureCorrection: PostureCorrection? = null,
+    /** 자세 정확도(%) — 자세 엔진이 산출. 없으면 null 로 두고 UI 에서 숨긴다. */
+    val accuracy: Int? = null,
 )
 
 @Immutable
@@ -91,6 +95,8 @@ data class Nutrition(
 data class FoodEntry(
     val name: String,
     val nutrition: Nutrition,
+    /** 수량 — 리디자인의 직접 기록 시트 스테퍼. 합산 시 곱해진다. */
+    val qty: Int = 1,
 )
 
 @Immutable
@@ -210,7 +216,14 @@ fun Nutrition.plus(other: Nutrition): Nutrition = Nutrition(
 )
 
 fun Iterable<FoodEntry>.totalNutrition(): Nutrition =
-    fold(Nutrition(0, 0.0, 0.0, 0.0)) { acc, entry -> acc.plus(entry.nutrition) }
+    fold(Nutrition(0, 0.0, 0.0, 0.0)) { acc, entry ->
+        Nutrition(
+            kcal = acc.kcal + entry.nutrition.kcal * entry.qty,
+            carb = acc.carb + entry.nutrition.carb * entry.qty,
+            protein = acc.protein + entry.nutrition.protein * entry.qty,
+            fat = acc.fat + entry.nutrition.fat * entry.qty,
+        )
+    }
 
 /** 첫 실행 데모용 시드 기록 (백엔드 연동 전). 저장소가 비어 있을 때만 쓰인다. */
 fun seedWorkoutHistory(plan: List<Workout> = todayPlan): List<WorkoutHistoryDay> {
@@ -240,6 +253,7 @@ fun seedWorkoutHistory(plan: List<Workout> = todayPlan): List<WorkoutHistoryDay>
                 } else {
                     null
                 },
+                accuracy = 86 + (index * 3 + itemIndex * 2) % 10,
             )
         }
 

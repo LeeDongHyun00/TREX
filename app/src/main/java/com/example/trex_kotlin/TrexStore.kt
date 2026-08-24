@@ -31,6 +31,15 @@ class TrexStore(context: Context) {
         get() = prefs.getBoolean(KEY_ONBOARDED, false)
         set(value) = prefs.edit().putBoolean(KEY_ONBOARDED, value).apply()
 
+    var themeMode: ThemeMode
+        get() = runCatching { ThemeMode.valueOf(prefs.getString(KEY_THEME, null) ?: "System") }.getOrDefault(ThemeMode.System)
+        set(value) = prefs.edit().putString(KEY_THEME, value.name).apply()
+
+    /** 계획의 done 플래그가 어느 날짜 기준인지 — 날짜가 바뀌면 리셋한다. */
+    var planDoneEpochDay: Long
+        get() = prefs.getLong(KEY_PLAN_DONE_DAY, -1L)
+        set(value) = prefs.edit().putLong(KEY_PLAN_DONE_DAY, value).apply()
+
     // ---- 사용자 프로필
 
     fun loadProfile(): UserProfile? = prefs.getString(KEY_PROFILE, null)?.let { raw ->
@@ -83,6 +92,7 @@ class TrexStore(context: Context) {
                     alt = o.optJSONObject("alt")?.let { a ->
                         WorkoutAlt(a.getString("name"), a.getString("reps"))
                     },
+                    done = o.optBoolean("done", false),
                 )
             }
         }.getOrNull()
@@ -98,6 +108,7 @@ class TrexStore(context: Context) {
                 .put("duration", w.duration)
                 .put("posture", w.posture)
                 .put("category", w.category)
+                .put("done", w.done)
             w.alt?.let { o.put("alt", JSONObject().put("name", it.name).put("reps", it.reps)) }
             arr.put(o)
         }
@@ -127,6 +138,7 @@ class TrexStore(context: Context) {
                             calories = it.getInt("calories"),
                             postureCorrection = it.optString("postureFocus").takeIf { f -> f.isNotEmpty() }
                                 ?.let(::PostureCorrection),
+                            accuracy = it.optInt("accuracy", -1).takeIf { a -> a >= 0 },
                         )
                     },
                 )
@@ -145,7 +157,8 @@ class TrexStore(context: Context) {
                         .put("reps", item.reps)
                         .put("durationMinutes", item.durationMinutes)
                         .put("calories", item.calories)
-                        .put("postureFocus", item.postureCorrection?.focus ?: ""),
+                        .put("postureFocus", item.postureCorrection?.focus ?: "")
+                        .put("accuracy", item.accuracy ?: -1),
                 )
             }
             arr.put(
@@ -186,6 +199,7 @@ class TrexStore(context: Context) {
                                                 protein = f.getDouble("protein"),
                                                 fat = f.getDouble("fat"),
                                             ),
+                                            qty = f.optInt("qty", 1),
                                         )
                                     },
                                 )
@@ -210,7 +224,8 @@ class TrexStore(context: Context) {
                             .put("kcal", food.nutrition.kcal)
                             .put("carb", food.nutrition.carb)
                             .put("protein", food.nutrition.protein)
-                            .put("fat", food.nutrition.fat),
+                            .put("fat", food.nutrition.fat)
+                            .put("qty", food.qty),
                     )
                 }
                 slotsObj.put(slotId, arr)
@@ -263,6 +278,8 @@ class TrexStore(context: Context) {
     }
 
     private companion object {
+        const val KEY_THEME = "theme_mode"
+        const val KEY_PLAN_DONE_DAY = "plan_done_day"
         const val KEY_GUIDE_DONE = "guide_done"
         const val KEY_LOGGED_IN = "logged_in"
         const val KEY_ONBOARDED = "onboarded"

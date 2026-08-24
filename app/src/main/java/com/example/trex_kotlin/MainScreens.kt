@@ -1,168 +1,599 @@
 package com.example.trex_kotlin
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Help
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.rounded.Logout
-import androidx.compose.material.icons.rounded.AccessTime
 import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.Cloud
 import androidx.compose.material.icons.rounded.BakeryDining
+import androidx.compose.material.icons.rounded.BarChart
+import androidx.compose.material.icons.rounded.Bolt
+import androidx.compose.material.icons.rounded.Brightness4
+import androidx.compose.material.icons.rounded.Cloud
+import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.Description
 import androidx.compose.material.icons.rounded.DinnerDining
 import androidx.compose.material.icons.rounded.Edit
-import androidx.compose.material.icons.rounded.FitnessCenter
 import androidx.compose.material.icons.rounded.FreeBreakfast
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.Language
+import androidx.compose.material.icons.rounded.LightMode
 import androidx.compose.material.icons.rounded.LocalFireDepartment
 import androidx.compose.material.icons.rounded.LunchDining
+import androidx.compose.material.icons.rounded.ManageAccounts
 import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.Person
-import androidx.compose.material.icons.rounded.Remove
+import androidx.compose.material.icons.rounded.PhotoCamera
+import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Restaurant
 import androidx.compose.material.icons.rounded.Security
+import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.zIndex
 import java.time.LocalDate
 import java.time.format.TextStyle
 import java.util.Locale
-import kotlin.math.roundToInt
-import kotlinx.coroutines.delay
+
+/** 종목 카테고리별 코칭 팁 (운동 카드 펼침 영역). */
+val categoryTips = mapOf(
+    "하체" to "무릎이 발끝을 넘지 않게, 뒤꿈치로 바닥을 눌러주세룡",
+    "코어" to "허리를 편 상태로 배에 힘을 유지해주세룡",
+    "복근" to "허리를 편 상태로 배에 힘을 유지해주세룡",
+    "상체" to "어깨를 내리고 팔꿈치는 몸통 쪽으로 붙여주세룡",
+    "회복" to "호흡을 길게 내쉬면서 천천히 늘려주세룡",
+    "유산소" to "리듬을 일정하게, 착지는 부드럽게 해주세룡",
+)
+
+private val tabContentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 50.dp, bottom = 110.dp)
+
+// ============================================================= HOME
 
 @Composable
-fun HomeScreen(app: AppViewModel) {
+fun HomeScreen(
+    app: AppViewModel,
+    onGoWorkout: () -> Unit,
+    onGoDiet: () -> Unit,
+) {
+    val c = Trex.c
     val today = LocalDate.now()
     val plan = app.workoutPlan
-    val todayRecord = app.todayRecord
-    val doneNames = todayRecord?.items?.map { it.workoutName }?.toSet().orEmpty()
-    val doneCount = plan.count { it.name in doneNames }
-    val weekDays = (6 downTo 0).map { back -> today.minusDays(back.toLong()) }
+    val doneCount = plan.count { it.done }
+    val weekDays = (6 downTo 0).map { today.minusDays(it.toLong()) }
     val activeDays = app.workoutHistory.filter { it.items.isNotEmpty() }.map { it.epochDay }.toSet()
-    val attendedCount = weekDays.count { it.toEpochDay() in activeDays }
     val meal = currentMealInfo()
-    val mealLogged = app.dietFor(0)[meal.id].orEmpty().isNotEmpty()
+    val todayFoods = app.dietFor(0)
+    val mealLogged = todayFoods[meal.id].orEmpty().isNotEmpty()
+    val total = todayFoods.values.flatten().totalNutrition()
+    val goal = app.targetGoal
+    val kcalPct = if (goal.kcal > 0) (total.kcal * 100 / goal.kcal) else 0
+    val burnedToday = app.todayRecord?.totalCalories() ?: 0
+    val weekKcal = weekDays.map { d -> app.workoutHistory.firstOrNull { it.epochDay == d.toEpochDay() }?.totalCalories() ?: 0 }
+    val maxKcal = (weekKcal.maxOrNull() ?: 0).coerceAtLeast(1)
+    val streak = app.attendanceStreak()
 
     LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(TrexDark),
-        contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 42.dp, bottom = 112.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
+        modifier = Modifier.fillMaxSize().background(c.bg),
+        contentPadding = tabContentPadding,
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {
-            ScreenTitle("${today.year}년 ${today.monthValue}월 ${today.dayOfMonth}일", color = Color.White)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        text = "${today.monthValue}월 ${today.dayOfMonth}일 ${today.dayOfWeek.getDisplayName(TextStyle.FULL, Locale.KOREAN)}",
+                        color = c.text3, fontSize = 11.5.sp,
+                    )
+                    Text("안녕하세룡!", color = c.text, fontSize = 21.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 4.dp))
+                }
+                RoundIcon(Icons.Rounded.Notifications, onClick = {}, size = 40.dp, contentDescription = "알림")
+            }
+        }
+
+        item {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                weekDays.forEach { date ->
+                    val attended = date.toEpochDay() in activeDays
+                    val isToday = date == today
+                    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                        Text(date.dayOfWeek.getDisplayName(TextStyle.NARROW, Locale.KOREAN), color = c.text3, fontSize = 10.sp)
+                        Box(
+                            modifier = Modifier
+                                .size(34.dp)
+                                .clip(CircleShape)
+                                .background(if (attended) c.primary else if (isToday) c.surface else Color.Transparent)
+                                .border(1.dp, if (attended) c.primary else if (isToday) c.primarySoftLine else c.line, CircleShape),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(
+                                date.dayOfMonth.toString(),
+                                color = if (attended) Color.White else if (isToday) c.text else c.text3,
+                                fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold,
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // 오늘 섭취 — 칼로리 링 + 탄단지 (리디자인의 홈 메인 카드)
+        item {
+            DCard(radius = 28.dp) {
+                Column(Modifier.padding(20.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Kicker("오늘 섭취")
+                        Spacer(Modifier.weight(1f))
+                        WashPill("$kcalPct%")
+                    }
+                    Row(Modifier.padding(top = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+                        RingGauge(progress = if (goal.kcal > 0) total.kcal / goal.kcal.toFloat() else 0f, size = 104.dp, stroke = 9.dp) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text("${total.kcal}", color = c.text, fontSize = 25.sp, fontWeight = FontWeight.SemiBold, lineHeight = 26.sp)
+                                Text("/ ${goal.kcal} kcal", color = c.text3, fontSize = 10.sp)
+                            }
+                        }
+                        Spacer(Modifier.width(18.dp))
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            MacroBar("탄수", total.carb.toInt(), goal.carb.toInt(), c.primary)
+                            MacroBar("단백질", total.protein.toInt(), goal.protein.toInt(), c.lime)
+                            MacroBar("지방", total.fat.toInt(), goal.fat.toInt(), c.warn)
+                        }
+                    }
+                }
+            }
+        }
+
+        // 두 액션 카드 — 운동하기 / 식사 기록
+        item {
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Surface(
+                    onClick = onGoWorkout,
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(24.dp),
+                    color = c.primary,
+                    contentColor = Color.White,
+                    shadowElevation = 6.dp,
+                ) {
+                    Column(Modifier.padding(18.dp)) {
+                        Box(
+                            Modifier.size(40.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.2f)),
+                            contentAlignment = Alignment.Center,
+                        ) { Icon(Icons.Rounded.PlayArrow, contentDescription = null, modifier = Modifier.size(18.dp)) }
+                        Spacer(Modifier.height(26.dp))
+                        Text("운동하기", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                        Text(
+                            text = if (doneCount == 0) "${plan.size}개 · 약 ${plan.sumOf { it.durationMinutes() }}분" else "$doneCount/${plan.size} 완료",
+                            fontSize = 11.sp, color = Color.White.copy(alpha = 0.85f), modifier = Modifier.padding(top = 3.dp),
+                        )
+                    }
+                }
+                Surface(
+                    onClick = onGoDiet,
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(24.dp),
+                    color = c.surface,
+                    contentColor = c.text,
+                    border = BorderStroke(1.dp, c.line),
+                    shadowElevation = 2.dp,
+                ) {
+                    Column(Modifier.padding(18.dp)) {
+                        Box(
+                            Modifier.size(40.dp).clip(CircleShape).background(c.primaryWash),
+                            contentAlignment = Alignment.Center,
+                        ) { Icon(mealIcon(meal.id), contentDescription = null, tint = c.primaryText, modifier = Modifier.size(18.dp)) }
+                        Spacer(Modifier.height(26.dp))
+                        val mealShort = mealMetas.firstOrNull { it.id == meal.id }?.label ?: meal.label
+                        Text(if (mealLogged) "$mealShort 수정" else "$mealShort 기록", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                        Text(meal.timeHint, fontSize = 11.sp, color = c.text3, modifier = Modifier.padding(top = 3.dp))
+                    }
+                }
+            }
+        }
+
+        // 통계 — 오늘 소모 / 연속 출석
+        item {
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                DCard(modifier = Modifier.weight(1f), radius = 22.dp) {
+                    Column(Modifier.padding(16.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("오늘 소모", color = c.text3, fontSize = 11.sp, modifier = Modifier.weight(1f))
+                            Icon(Icons.Rounded.LocalFireDepartment, contentDescription = null, tint = c.warn, modifier = Modifier.size(15.dp))
+                        }
+                        Row(Modifier.padding(top = 10.dp), verticalAlignment = Alignment.Bottom) {
+                            Text("$burnedToday", color = c.text, fontSize = 26.sp, fontWeight = FontWeight.SemiBold, lineHeight = 26.sp)
+                            Text(" kcal", color = c.text3, fontSize = 11.sp, modifier = Modifier.padding(bottom = 3.dp))
+                        }
+                        Row(
+                            Modifier.padding(top = 12.dp).height(26.dp),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalAlignment = Alignment.Bottom,
+                        ) {
+                            weekKcal.forEachIndexed { i, v ->
+                                Box(
+                                    Modifier
+                                        .weight(1f)
+                                        .height((26 * (v / maxKcal.toFloat())).coerceAtLeast(3f).dp)
+                                        .clip(RoundedCornerShape(3.dp))
+                                        .background(if (i == weekKcal.lastIndex) c.primary else c.track),
+                                )
+                            }
+                        }
+                    }
+                }
+                DCard(modifier = Modifier.weight(1f), radius = 22.dp) {
+                    Column(Modifier.padding(16.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("연속 출석", color = c.text3, fontSize = 11.sp, modifier = Modifier.weight(1f))
+                            Icon(Icons.Rounded.Bolt, contentDescription = null, tint = c.primaryText, modifier = Modifier.size(15.dp))
+                        }
+                        Row(Modifier.padding(top = 10.dp), verticalAlignment = Alignment.Bottom) {
+                            Text("$streak", color = c.text, fontSize = 26.sp, fontWeight = FontWeight.SemiBold, lineHeight = 26.sp)
+                            Text(" 일", color = c.text3, fontSize = 11.sp, modifier = Modifier.padding(bottom = 3.dp))
+                        }
+                        Row(
+                            Modifier.padding(top = 12.dp).height(26.dp),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            repeat(7) { i ->
+                                Box(
+                                    Modifier
+                                        .weight(1f)
+                                        .height(8.dp)
+                                        .clip(RoundedCornerShape(999.dp))
+                                        .background(if (i < streak.coerceAtMost(7)) c.primary else c.track),
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ============================================================= WORKOUT TAB
+
+@Composable
+fun WorkoutTabScreen(
+    app: AppViewModel,
+    onOpenAlt: (Workout) -> Unit,
+    onOpenSets: (Workout) -> Unit,
+    onAddWorkout: () -> Unit,
+) {
+    val c = Trex.c
+    val plan = app.workoutPlan
+    val doneCount = plan.count { it.done }
+    var openWorkout by remember { mutableStateOf(plan.firstOrNull { !it.done }?.id) }
+
+    LazyColumn(
+        modifier = Modifier.fillMaxSize().background(c.bg),
+        contentPadding = tabContentPadding,
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        item {
+            Row(verticalAlignment = Alignment.Top) {
+                Column(Modifier.weight(1f)) {
+                    Kicker("오늘의 운동")
+                    TitleBig(
+                        if (plan.isNotEmpty() && doneCount >= plan.size) "오늘 루틴 완료"
+                        else "${plan.size}개 루틴, 약 ${plan.sumOf { it.durationMinutes() }}분",
+                    )
+                    Text("${doneCount}개 완료 · 남은 ${plan.size - doneCount}개", color = c.text2, fontSize = 12.sp, modifier = Modifier.padding(top = 5.dp))
+                }
+                RoundIcon(Icons.Rounded.Add, onClick = onAddWorkout, size = 40.dp, contentDescription = "운동 추가")
+            }
+            Spacer(Modifier.height(14.dp))
+            TrackBar(progress = if (plan.isEmpty()) 0f else doneCount / plan.size.toFloat())
+        }
+
+        item {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(c.warnWash)
+                    .border(1.dp, c.warnLine, RoundedCornerShape(20.dp))
+                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    Modifier.size(34.dp).clip(RoundedCornerShape(12.dp)).background(c.warn),
+                    contentAlignment = Alignment.Center,
+                ) { Icon(Icons.Rounded.Cloud, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp)) }
+                Text(
+                    "강수 6.4 mm/h · 오늘은 실내 루틴을 추천해룡",
+                    color = c.text2, fontSize = 12.sp, lineHeight = 17.sp,
+                    modifier = Modifier.padding(start = 11.dp).weight(1f),
+                )
+            }
+        }
+
+        items(count = plan.size, key = { plan[it].id }) { i ->
+            val w = plan[i]
+            WorkoutExpandCard(
+                workout = w,
+                index = i,
+                open = openWorkout == w.id,
+                onToggleOpen = { openWorkout = if (openWorkout == w.id) null else w.id },
+                onOpenAlt = { onOpenAlt(w) },
+                onOpenSets = { onOpenSets(w) },
+                onTogglePosture = { app.togglePosture(w.id) },
+            )
+        }
+    }
+}
+
+@Composable
+private fun WorkoutExpandCard(
+    workout: Workout,
+    index: Int,
+    open: Boolean,
+    onToggleOpen: () -> Unit,
+    onOpenAlt: () -> Unit,
+    onOpenSets: () -> Unit,
+    onTogglePosture: () -> Unit,
+) {
+    val c = Trex.c
+    val chevron by animateFloatAsState(if (open) 180f else 0f, tween(300), label = "chev")
+    Surface(
+        modifier = Modifier.fillMaxWidth().animateContentSize(tween(320)),
+        shape = RoundedCornerShape(24.dp),
+        color = c.surface,
+        contentColor = c.text,
+        border = BorderStroke(1.dp, if (open) c.primarySoftLine else c.line),
+        shadowElevation = 2.dp,
+    ) {
+        Column {
+            Surface(onClick = onToggleOpen, color = Color.Transparent, contentColor = c.text) {
+                Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 15.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        Modifier
+                            .size(38.dp)
+                            .clip(RoundedCornerShape(13.dp))
+                            .background(if (workout.done) c.primary else if (open) c.primaryWash else c.surface2),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            (index + 1).toString().padStart(2, '0'),
+                            color = if (workout.done) Color.White else if (open) c.primaryText else c.text3,
+                            fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
+                        )
+                    }
+                    Column(Modifier.weight(1f).padding(start = 12.dp)) {
+                        Text(workout.name, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                        Row(Modifier.padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text("${workout.reps} · ${workout.duration}", color = c.text3, fontSize = 11.5.sp)
+                            if (workout.posture) {
+                                Row(
+                                    Modifier.clip(RoundedCornerShape(999.dp)).background(c.primaryWash).padding(horizontal = 7.dp, vertical = 2.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Icon(Icons.Rounded.Visibility, contentDescription = null, tint = c.primaryText, modifier = Modifier.size(9.dp))
+                                    Text("자세교정", color = c.primaryText, fontSize = 9.5.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 3.dp))
+                                }
+                            }
+                        }
+                    }
+                    Icon(
+                        Icons.Rounded.KeyboardArrowDown, contentDescription = null, tint = c.text3,
+                        modifier = Modifier.size(17.dp).rotate(chevron),
+                    )
+                }
+            }
+            if (open) {
+                Column(Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            workout.category,
+                            color = c.text2, fontSize = 11.sp, fontWeight = FontWeight.Medium,
+                            modifier = Modifier.clip(RoundedCornerShape(999.dp)).background(c.surface2).padding(horizontal = 10.dp, vertical = 5.dp),
+                        )
+                        Text(
+                            categoryTips[workout.category].orEmpty(),
+                            color = c.text3, fontSize = 11.5.sp, lineHeight = 16.sp,
+                            modifier = Modifier.padding(start = 8.dp).weight(1f),
+                        )
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                        GhostButton("대체 운동", onClick = onOpenAlt, icon = Icons.Rounded.Refresh, modifier = Modifier.weight(1f), height = 44.dp)
+                        GhostButton("세트 수정", onClick = onOpenSets, icon = Icons.Rounded.Edit, modifier = Modifier.weight(1f), height = 44.dp)
+                    }
+                    // 자세 교정 사용 스위치
+                    Surface(
+                        onClick = onTogglePosture,
+                        shape = RoundedCornerShape(15.dp),
+                        color = if (workout.posture) c.primaryWash else c.surface2,
+                        contentColor = if (workout.posture) c.primaryText else c.text2,
+                        border = BorderStroke(1.dp, if (workout.posture) c.primarySoftLine else c.line),
+                    ) {
+                        Row(Modifier.fillMaxWidth().height(46.dp).padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Rounded.Visibility, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Text("자세 교정 사용", fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 10.dp).weight(1f))
+                            Box(
+                                Modifier
+                                    .width(38.dp).height(22.dp)
+                                    .clip(RoundedCornerShape(999.dp))
+                                    .background(if (workout.posture) c.primary else c.track)
+                                    .padding(2.dp),
+                                contentAlignment = if (workout.posture) Alignment.CenterEnd else Alignment.CenterStart,
+                            ) {
+                                Box(Modifier.size(18.dp).clip(CircleShape).background(Color.White))
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ============================================================= DIET TAB
+
+@Composable
+fun DietTabScreen(
+    app: AppViewModel,
+    onOpenGoals: () -> Unit,
+    onOpenPhoto: () -> Unit,
+    onOpenManual: (String) -> Unit,
+) {
+    val c = Trex.c
+    val foods = app.dietFor(0)
+    val total = foods.values.flatten().totalNutrition()
+    val goal = app.targetGoal
+    val kcalPct = if (goal.kcal > 0) total.kcal * 100 / goal.kcal else 0
+    val remain = goal.kcal - total.kcal
+
+    LazyColumn(
+        modifier = Modifier.fillMaxSize().background(c.bg),
+        contentPadding = tabContentPadding,
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        item {
+            Kicker("오늘의 식단")
+            TitleBig("바로 보고, 바로 채우고", size = 21)
+        }
+
+        item {
+            DCard(radius = 28.dp) {
+                Column {
+                    Column(Modifier.padding(20.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            RingGauge(progress = if (goal.kcal > 0) total.kcal / goal.kcal.toFloat() else 0f, size = 118.dp, stroke = 11.dp) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text("${total.kcal}", color = c.text, fontSize = 28.sp, fontWeight = FontWeight.SemiBold, lineHeight = 28.sp)
+                                    Text("/ ${goal.kcal} kcal", color = c.text3, fontSize = 10.sp, modifier = Modifier.padding(top = 4.dp))
+                                    Box(Modifier.padding(top = 6.dp)) { WashPill("$kcalPct%") }
+                                }
+                            }
+                            Spacer(Modifier.width(20.dp))
+                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(13.dp)) {
+                                MacroBar("탄수", total.carb.toInt(), goal.carb.toInt(), c.primary, barHeight = 7.dp)
+                                MacroBar("단백질", total.protein.toInt(), goal.protein.toInt(), c.lime, barHeight = 7.dp)
+                                MacroBar("지방", total.fat.toInt(), goal.fat.toInt(), c.warn, barHeight = 7.dp)
+                            }
+                        }
+                        Text(
+                            text = if (remain > 0) "$remain kcal 더 먹을 수 있어룡" else "오늘 목표를 채웠어룡",
+                            color = c.text3, fontSize = 11.5.sp, modifier = Modifier.padding(top = 16.dp),
+                        )
+                    }
+                    Surface(onClick = onOpenGoals, color = c.surface2, contentColor = c.text) {
+                        Row(
+                            Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Box(
+                                Modifier.size(30.dp).clip(RoundedCornerShape(10.dp)).background(c.surface).border(1.dp, c.line, RoundedCornerShape(10.dp)),
+                                contentAlignment = Alignment.Center,
+                            ) { Icon(Icons.Rounded.Tune, contentDescription = null, tint = c.primaryText, modifier = Modifier.size(14.dp)) }
+                            Text("영양 목표 수정", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 11.dp).weight(1f))
+                            Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, contentDescription = null, tint = c.text3, modifier = Modifier.size(16.dp))
+                        }
+                    }
+                }
+            }
         }
 
         item {
             Surface(
+                onClick = onOpenPhoto,
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(24.dp),
-                color = TrexLime,
-                contentColor = TrexDark,
+                shape = RoundedCornerShape(20.dp),
+                color = c.surface,
+                contentColor = c.text,
+                border = BorderStroke(1.dp, c.line),
             ) {
-                Column(Modifier.padding(16.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = "이번 주 출석",
-                            color = TrexDark.copy(alpha = 0.7f),
-                            fontSize = 12.sp,
-                            modifier = Modifier.weight(1f),
-                        )
-                        Pill("$attendedCount/7일", background = TrexDark, color = TrexLime)
+                Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        Modifier.size(40.dp).clip(RoundedCornerShape(14.dp)).background(c.primary),
+                        contentAlignment = Alignment.Center,
+                    ) { Icon(Icons.Rounded.PhotoCamera, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp)) }
+                    Column(Modifier.padding(start = 12.dp).weight(1f)) {
+                        Text("사진으로 식단 기록", fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold)
+                        Text("찍으면 음식·영양정보를 자동으로 채워줘룡", color = c.text3, fontSize = 11.sp, modifier = Modifier.padding(top = 2.dp))
                     }
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 14.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                    ) {
-                        weekDays.forEach { date ->
-                            val attended = date.toEpochDay() in activeDays
-                            val isToday = date == today
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, contentDescription = null, tint = c.text3, modifier = Modifier.size(17.dp))
+                }
+            }
+        }
+
+        items(count = mealMetas.size, key = { mealMetas[it].id }) { i ->
+            val meta = mealMetas[i]
+            val list = foods[meta.id].orEmpty()
+            val empty = list.isEmpty()
+            DCard(radius = 20.dp) {
+                Column(Modifier.padding(15.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            Modifier.size(40.dp).clip(CircleShape).background(if (empty) c.surface2 else c.primaryWash),
+                            contentAlignment = Alignment.Center,
+                        ) { Icon(mealIcon(meta.id), contentDescription = null, tint = if (empty) c.text3 else c.primaryText, modifier = Modifier.size(18.dp)) }
+                        Column(Modifier.padding(start = 12.dp).weight(1f)) {
+                            Text(meta.label, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                            Text(
+                                if (empty) "기록 전" else "${list.totalNutrition().kcal} kcal · ${list.sumOf { it.qty }}개",
+                                color = c.text3, fontSize = 11.5.sp, modifier = Modifier.padding(top = 2.dp),
+                            )
+                        }
+                        Surface(
+                            onClick = { onOpenManual(meta.id) },
+                            modifier = Modifier.size(34.dp),
+                            shape = CircleShape,
+                            color = if (empty) c.primary else c.surface2,
+                            contentColor = if (empty) Color.White else c.primaryText,
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(if (empty) Icons.Rounded.Add else Icons.Rounded.Edit, contentDescription = "기록", modifier = Modifier.size(15.dp))
+                            }
+                        }
+                    }
+                    if (!empty) {
+                        Row(Modifier.padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                            list.take(4).forEach {
                                 Text(
-                                    text = date.dayOfWeek.getDisplayName(TextStyle.NARROW, Locale.KOREAN),
-                                    color = TrexDark.copy(alpha = 0.58f),
-                                    fontSize = 10.sp,
+                                    if (it.qty > 1) "${it.name} ×${it.qty}" else it.name,
+                                    color = c.text2, fontSize = 11.sp, fontWeight = FontWeight.Medium,
+                                    modifier = Modifier.clip(RoundedCornerShape(999.dp)).background(c.surface2).padding(horizontal = 10.dp, vertical = 5.dp),
                                 )
-                                Box(
-                                    modifier = Modifier
-                                        .padding(top = 6.dp)
-                                        .size(34.dp)
-                                        .clip(CircleShape)
-                                        .background(
-                                            when {
-                                                attended -> TrexDark
-                                                isToday -> Color.White
-                                                else -> TrexDark.copy(alpha = 0.1f)
-                                            },
-                                        ),
-                                    contentAlignment = Alignment.Center,
-                                ) {
-                                    Text(
-                                        text = date.dayOfMonth.toString(),
-                                        color = if (attended) TrexLime else TrexDark.copy(alpha = 0.78f),
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.SemiBold,
-                                    )
-                                }
                             }
                         }
                     }
@@ -171,607 +602,158 @@ fun HomeScreen(app: AppViewModel) {
         }
 
         item {
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(24.dp),
-                color = Color.White,
-                contentColor = TrexDark,
-            ) {
-                Column(Modifier.padding(16.dp)) {
-                    SectionLabel("오늘 운동 리스트", color = TrexTextSecondary)
-                    Row(
-                        modifier = Modifier.padding(top = 2.dp),
-                        verticalAlignment = Alignment.Bottom,
-                    ) {
-                        Text(doneCount.toString(), fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
-                        Text(" / ${plan.size} 완료", color = TrexTextSecondary, fontSize = 14.sp)
-                    }
-                    TrackProgress(
-                        progress = if (plan.isEmpty()) 0f else doneCount / plan.size.toFloat(),
-                        modifier = Modifier.padding(top = 13.dp),
-                        track = TrexBackground,
-                        fill = TrexGreen,
-                    )
-                    Column(
-                        modifier = Modifier.padding(top = 14.dp),
-                        verticalArrangement = Arrangement.spacedBy(9.dp),
-                    ) {
-                        plan.take(4).forEach { workout ->
-                            TodayWorkoutRow(
-                                workout = workout,
-                                done = workout.name in doneNames,
-                            )
-                        }
-                        if (plan.size > 4) {
-                            Text(
-                                text = "외 ${plan.size - 4}개 — 운동 탭에서 전체 보기",
-                                color = TrexTextSecondary,
-                                fontSize = 11.sp,
-                            )
-                        }
-                    }
-                }
-            }
-        }
-
-        item {
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(20.dp),
-                color = TrexLime,
-                contentColor = TrexDark,
-            ) {
+            Column {
+                Kicker("추천 식단")
                 Row(
-                    modifier = Modifier.padding(16.dp),
+                    Modifier
+                        .padding(top = 10.dp)
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(c.primaryWash)
+                        .border(1.dp, c.primarySoftLine, RoundedCornerShape(20.dp))
+                        .padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    IconBubble(icon = mealIcon(meal.id), active = true)
-                    Column(
-                        modifier = Modifier
-                            .weight(1f)
-                            .padding(start = 12.dp),
-                    ) {
-                        Text(meal.timeHint, color = TrexDark.copy(alpha = 0.68f), fontSize = 11.sp)
-                        Text(
-                            text = if (mealLogged) "${meal.label} 기록 완료!" else "${meal.label} 시간이에요",
-                            color = TrexDark,
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
+                    Box(
+                        Modifier.size(44.dp).clip(RoundedCornerShape(14.dp)).background(c.primary),
+                        contentAlignment = Alignment.Center,
+                    ) { Icon(Icons.Rounded.Restaurant, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp)) }
+                    Column(Modifier.padding(start = 12.dp).weight(1f)) {
+                        Text("초보자용 · 약 520 kcal", color = c.text3, fontSize = 11.sp)
+                        Text("고단백 저녁 한끼", color = c.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 2.dp))
+                        Text("연어 스테이크 · 퀴노아 · 브로콜리", color = c.text2, fontSize = 11.sp, modifier = Modifier.padding(top = 2.dp))
                     }
-                }
-            }
-        }
-
-        item {
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                StatCard(
-                    label = "오늘 소모",
-                    value = (todayRecord?.totalCalories() ?: 0).toString(),
-                    suffix = "kcal",
-                    icon = Icons.Rounded.LocalFireDepartment,
-                    modifier = Modifier.weight(1f),
-                )
-                StatCard(
-                    label = "연속 출석",
-                    value = app.attendanceStreak().toString(),
-                    suffix = "일",
-                    modifier = Modifier.weight(1f),
-                    dark = true,
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun WorkoutListScreen(
-    plan: List<Workout>,
-    onPlanChange: (List<Workout>) -> Unit,
-    onSheetVisibleChange: (Boolean) -> Unit = {},
-) {
-    var editTarget by remember { mutableStateOf<Workout?>(null) }
-    var replaceTarget by remember { mutableStateOf<Workout?>(null) }
-    var addingWorkout by remember { mutableStateOf(false) }
-    var draggingWorkoutId by remember { mutableStateOf<String?>(null) }
-    var dragOffsetY by remember { mutableStateOf(0f) }
-    val reorderDistancePx = with(LocalDensity.current) { 92.dp.toPx() }
-    val heavyRain = true
-
-    LaunchedEffect(editTarget != null, replaceTarget != null, addingWorkout) {
-        onSheetVisibleChange(editTarget != null || replaceTarget != null || addingWorkout)
-    }
-    DisposableEffect(Unit) {
-        onDispose { onSheetVisibleChange(false) }
-    }
-
-    fun togglePosture(id: String) {
-        onPlanChange(plan.map { workout ->
-            if (workout.id == id) workout.copy(posture = !workout.posture) else workout
-        })
-    }
-
-    fun clearDrag() {
-        draggingWorkoutId = null
-        dragOffsetY = 0f
-    }
-
-    fun finishDrag() {
-        val draggedId = draggingWorkoutId ?: return
-        val fromIndex = plan.indexOfFirst { it.id == draggedId }
-        if (fromIndex == -1) {
-            clearDrag()
-            return
-        }
-        val steps = (dragOffsetY / reorderDistancePx).roundToInt()
-        val toIndex = (fromIndex + steps).coerceIn(plan.indices)
-        if (toIndex != fromIndex) {
-            onPlanChange(plan.moved(fromIndex, toIndex))
-        }
-        clearDrag()
-    }
-
-    Box(Modifier.fillMaxSize()) {
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(TrexDark),
-            contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 42.dp, bottom = 174.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
-        ) {
-            item {
-                ScreenTitle("총 ${plan.size}개 · 약 ${plan.sumOf { it.durationMinutes() }}분")
-            }
-
-            item {
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(20.dp),
-                    color = if (heavyRain) TrexLime else Color.White.copy(alpha = 0.05f),
-                    contentColor = if (heavyRain) TrexDark else Color.White,
-                    border = if (heavyRain) null else dimBorder(),
-                ) {
-                    Row(
-                        modifier = Modifier.padding(14.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        IconBubble(icon = Icons.Rounded.Cloud, active = heavyRain)
-                        Column(
-                            modifier = Modifier
-                                .weight(1f)
-                                .padding(start = 12.dp),
-                        ) {
-                            Text("현재 예상 강수량", fontSize = 11.sp, color = if (heavyRain) TrexDark.copy(alpha = 0.68f) else Color.White.copy(alpha = 0.68f))
-                            Text("6.4 mm/h", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-                        }
-                        Pill("실내 권장", background = TrexDark, color = TrexLime)
-                    }
-                }
-            }
-
-            item {
-                TrexButton(
-                    text = "운동 추가",
-                    onClick = { addingWorkout = true },
-                    modifier = Modifier.fillMaxWidth(),
-                    icon = Icons.Rounded.Add,
-                    container = TrexLime,
-                    contentColor = TrexDark,
-                )
-            }
-
-            items(plan, key = { it.id }) { workout ->
-                val isDragging = draggingWorkoutId == workout.id
-                WorkoutRow(
-                    workout = workout,
-                    index = plan.indexOf(workout) + 1,
-                    dragging = isDragging,
-                    onEdit = { editTarget = workout },
-                    onReplace = { replaceTarget = workout },
-                    onPostureToggle = { togglePosture(workout.id) },
-                    modifier = Modifier
-                        .zIndex(if (isDragging) 1f else 0f)
-                        .offset {
-                            IntOffset(
-                                x = 0,
-                                y = if (isDragging) dragOffsetY.roundToInt() else 0,
-                            )
-                        }
-                        .pointerInput(workout.id, plan) {
-                            detectDragGesturesAfterLongPress(
-                                onDragStart = {
-                                    draggingWorkoutId = workout.id
-                                    dragOffsetY = 0f
-                                },
-                                onDrag = { _, dragAmount ->
-                                    if (draggingWorkoutId == workout.id) {
-                                        dragOffsetY += dragAmount.y
-                                    }
-                                },
-                                onDragEnd = { finishDrag() },
-                                onDragCancel = { clearDrag() },
-                            )
-                        },
-                )
-            }
-        }
-
-        editTarget?.let { workout ->
-            WorkoutPlanEditSheet(
-                workout = workout,
-                modeAdd = false,
-                onSave = { name, count, sets ->
-                    onPlanChange(plan.map {
-                        if (it.id == workout.id) {
-                            it.copy(name = name, reps = formatReps(count, sets))
-                        } else {
-                            it
-                        }
-                    })
-                },
-                onClose = { editTarget = null },
-            )
-        }
-
-        replaceTarget?.let { workout ->
-            AltSuggestSheet(
-                workout = workout,
-                onApply = { alt ->
-                    onPlanChange(plan.map {
-                        if (it.id == workout.id) {
-                            it.copy(name = alt.name, reps = alt.reps)
-                        } else {
-                            it
-                        }
-                    })
-                },
-                onClose = { replaceTarget = null },
-            )
-        }
-
-        if (addingWorkout) {
-            WorkoutCatalogSheet(
-                onAdd = { template ->
-                    onPlanChange(
-                        plan + template.toWorkout(),
-                    )
-                    addingWorkout = false
-                },
-                onClose = { addingWorkout = false },
-            )
-        }
-    }
-}
-
-@Composable
-fun WorkoutHistoryScreen(
-    records: List<WorkoutHistoryDay>,
-) {
-    val weeklyMinutes = records.sumOf { it.totalMinutes() }
-    val weeklyCalories = records.sumOf { it.totalCalories() }
-    val completedDays = records.count { it.items.isNotEmpty() }
-    val orderedRecords = records.asReversed()
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(TrexDark)
-            .padding(top = 42.dp, bottom = 150.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
-    ) {
-        Column(Modifier.padding(horizontal = 20.dp)) {
-            SectionLabel("최근 7일", color = TrexLime)
-            ScreenTitle("운동 기록")
-        }
-
-        Column(
-            modifier = Modifier.padding(horizontal = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                StatCard(
-                    label = "운동한 날",
-                    value = completedDays.toString(),
-                    suffix = "일",
-                    modifier = Modifier.weight(1f),
-                    icon = Icons.Rounded.Check,
-                )
-                StatCard(
-                    label = "총 소모 칼로리",
-                    value = weeklyCalories.toString(),
-                    suffix = "kcal",
-                    modifier = Modifier.weight(1f),
-                    icon = Icons.Rounded.LocalFireDepartment,
-                    dark = true,
-                )
-            }
-
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(20.dp),
-                color = TrexLime,
-                contentColor = TrexDark,
-            ) {
-                Row(
-                    modifier = Modifier.padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    IconBubble(icon = Icons.Rounded.FitnessCenter, active = true)
-                    Column(
-                        modifier = Modifier
-                            .weight(1f)
-                            .padding(start = 12.dp),
-                    ) {
-                        Text("이번 주 누적 칼로리", color = TrexDark.copy(alpha = 0.68f), fontSize = 11.sp)
-                        Text(
-                            text = "${weeklyCalories}kcal 소모 · ${weeklyMinutes}분 운동",
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    }
-                }
-            }
-        }
-
-        BoxWithConstraints(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f),
-        ) {
-            val cardWidth = maxWidth - 64.dp
-            LazyRow(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(horizontal = 20.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                items(orderedRecords, key = { "${it.dateLabel}-${it.dayLabel}" }) { record ->
-                    WorkoutHistoryDayCard(
-                        record = record,
-                        modifier = Modifier
-                            .width(cardWidth)
-                            .fillMaxHeight(),
-                    )
                 }
             }
         }
     }
 }
 
+// ============================================================= PROFILE TAB
+
 @Composable
-fun DietScreen(
+fun ProfileTabScreen(
     app: AppViewModel,
-    recordRequestToken: Int = 0,
-    recordLaunchAction: DietRecordLaunchAction = DietRecordLaunchAction.Camera,
-    onSheetVisibleChange: (Boolean) -> Unit = {},
-) {
-    var editing by remember { mutableStateOf<Pair<String, Boolean>?>(null) }
-    var recordVisible by remember { mutableStateOf(false) }
-    var activeRecordLaunchAction by remember { mutableStateOf(recordLaunchAction) }
-    var dateOffset by rememberSaveable { mutableIntStateOf(0) }
-    var toastVisible by remember { mutableStateOf(false) }
-    /** 방금 기록한 (슬롯, 추가 개수) — 실행 취소용. */
-    var pendingUndo by remember { mutableStateOf<Pair<String, Int>?>(null) }
-    var handledRecordRequestToken by rememberSaveable { mutableIntStateOf(recordRequestToken) }
-    val foodsBySlot = app.dietFor(dateOffset)
-    val canEditSelectedDate = dateOffset in AppViewModel.DIET_MIN_OFFSET..AppViewModel.DIET_MAX_OFFSET
-    val meals = remember(foodsBySlot) {
-        mealMetas.map { meta ->
-            val foods = foodsBySlot[meta.id].orEmpty()
-            Triple(meta, foods, foods.totalNutrition())
-        }
-    }
-    val total = remember(meals) { meals.flatMap { it.second }.totalNutrition() }
-    val recentFoods = remember(app.dietByDay) { app.recentFoodsForCurrentMeal() }
-
-    LaunchedEffect(recordRequestToken) {
-        if (recordRequestToken > 0 && recordRequestToken != handledRecordRequestToken) {
-            handledRecordRequestToken = recordRequestToken
-            if (canEditSelectedDate) {
-                activeRecordLaunchAction = recordLaunchAction
-                recordVisible = true
-            }
-        }
-    }
-
-    LaunchedEffect(recordVisible, editing != null) {
-        onSheetVisibleChange(recordVisible || editing != null)
-    }
-    DisposableEffect(Unit) {
-        onDispose { onSheetVisibleChange(false) }
-    }
-
-    LaunchedEffect(toastVisible, pendingUndo) {
-        if (toastVisible) {
-            delay(3000)
-            toastVisible = false
-            pendingUndo = null
-        }
-    }
-
-    Box(Modifier.fillMaxSize()) {
-        DietMainSummaryScreen(
-            meals = meals,
-            total = total,
-            targetGoal = app.targetGoal,
-            recommendedGoal = app.recommendedGoal,
-            dateOffset = dateOffset,
-            waterCups = app.waterFor(dateOffset),
-            canGoPreviousDate = dateOffset > AppViewModel.DIET_MIN_OFFSET,
-            canGoNextDate = dateOffset < AppViewModel.DIET_MAX_OFFSET,
-            canEditSelectedDate = canEditSelectedDate,
-            onDateOffset = { dateOffset = it.coerceIn(AppViewModel.DIET_MIN_OFFSET, AppViewModel.DIET_MAX_OFFSET) },
-            onOpenRecord = {
-                if (canEditSelectedDate) {
-                    activeRecordLaunchAction = DietRecordLaunchAction.Manual
-                    recordVisible = true
-                }
-            },
-            onOpenMeal = { slot, addMode ->
-                if (canEditSelectedDate) {
-                    editing = slot to addMode
-                }
-            },
-            onTargetGoalChange = { app.setTargetGoal(it) },
-            onWater = {
-                if (canEditSelectedDate) {
-                    app.addWater(dateOffset)
-                }
-            },
-        )
-
-        if (recordVisible) {
-            DietRecordRoute(
-                targetGoal = app.targetGoal.kcal,
-                recentFoods = recentFoods,
-                launchAction = activeRecordLaunchAction,
-                onRecord = { slot, foods ->
-                    app.appendFoods(dateOffset, slot, foods)
-                    pendingUndo = slot to foods.size
-                    toastVisible = true
-                    recordVisible = false
-                },
-                onClose = { recordVisible = false },
-            )
-        }
-
-        editing?.let { (slot, addMode) ->
-            ManualFoodLogSheet(
-                modeAdd = addMode,
-                initialSlot = slot,
-                initialFoods = foodsBySlot[slot].orEmpty(),
-                onSave = { saveSlot, foods ->
-                    app.replaceSlot(dateOffset, saveSlot, foods)
-                    editing = null
-                },
-                onDelete = {
-                    app.clearSlot(dateOffset, slot)
-                    editing = null
-                },
-                onClose = { editing = null },
-            )
-        }
-
-        AnimatedVisibility(
-            visible = toastVisible,
-            enter = fadeIn(),
-            exit = fadeOut(),
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = 88.dp),
-        ) {
-            DietUndoToast(
-                onUndo = {
-                    pendingUndo?.let { (slot, count) ->
-                        app.undoAppend(dateOffset, slot, count)
-                    }
-                    pendingUndo = null
-                    toastVisible = false
-                },
-            )
-        }
-    }
-}
-
-@Composable
-fun ProfileScreen(
-    profile: UserProfile,
+    onOpenRecord: () -> Unit,
     onLogout: () -> Unit,
 ) {
-    val groups = listOf(
+    val c = Trex.c
+    val profile = app.profile
+    val settingGroups = listOf(
         listOf(
-            ProfileRowData("프로필 편집", Icons.Rounded.Person),
-            ProfileRowData("계정 관리", Icons.Rounded.Person, "이메일 · 비밀번호 · 연결된 계정"),
+            Triple(Icons.Rounded.Person, "프로필 편집", "이름 · 사진 · 목표"),
+            Triple(Icons.Rounded.ManageAccounts, "계정 관리", "이메일 · 비밀번호 · 연결된 계정"),
         ),
         listOf(
-            ProfileRowData("알림", Icons.Rounded.Notifications, "운동 · 식단 리마인더"),
-            ProfileRowData("언어", Icons.Rounded.Language, "한국어"),
-            ProfileRowData("개인정보 보호", Icons.Rounded.Security),
+            Triple(Icons.Rounded.Notifications, "알림", "운동 · 식단 리마인더"),
+            Triple(Icons.Rounded.Language, "언어", "한국어"),
+            Triple(Icons.Rounded.Security, "개인정보 보호", "카메라 · 기록 데이터"),
         ),
         listOf(
-            ProfileRowData("도움말", Icons.AutoMirrored.Rounded.Help),
-            ProfileRowData("약관 및 정책", Icons.Rounded.Description),
+            Triple(Icons.AutoMirrored.Rounded.Help, "도움말", "자세 인식이 안 될 때"),
+            Triple(Icons.Rounded.Description, "약관 및 정책", "서비스 이용약관"),
         ),
     )
 
     LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(TrexDark),
-        contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 42.dp, bottom = 112.dp),
-        verticalArrangement = Arrangement.spacedBy(18.dp),
+        modifier = Modifier.fillMaxSize().background(c.bg),
+        contentPadding = tabContentPadding,
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {
-            SectionLabel("내 정보")
-            ScreenTitle("설정")
+            Kicker("내 정보")
+            TitleBig("설정", size = 21)
         }
 
         item {
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(20.dp),
-                color = Color.White.copy(alpha = 0.06f),
-                border = dimBorder(),
-            ) {
-                Row(
-                    modifier = Modifier.padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
+            DCard(radius = 22.dp) {
+                Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                     Box(
-                        modifier = Modifier
-                            .size(58.dp)
-                            .clip(CircleShape)
-                            .background(TrexLime),
+                        Modifier.size(52.dp).clip(CircleShape).background(c.primary),
                         contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(Icons.Rounded.Person, contentDescription = null, tint = TrexDark, modifier = Modifier.size(30.dp))
-                    }
-                    Column(
-                        modifier = Modifier
-                            .weight(1f)
-                            .padding(start = 14.dp),
-                    ) {
-                        Text("사용자", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                    ) { Icon(Icons.Rounded.Person, contentDescription = null, tint = Color.White, modifier = Modifier.size(24.dp)) }
+                    Column(Modifier.padding(start = 13.dp).weight(1f)) {
+                        Text("사용자", fontSize = 15.5.sp, fontWeight = FontWeight.SemiBold)
                         Text(
-                            text = "${profileGoalLabel(profile.goal)} · ${profile.heightCm.toInt()}cm · ${profile.weightKg.toInt()}kg · ${profile.age}세",
-                            color = Color.White.copy(alpha = 0.5f),
-                            fontSize = 11.sp,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
+                            "${profile.heightCm.toInt()}cm · ${profile.weightKg.toInt()}kg · ${profile.age}세",
+                            color = c.text3, fontSize = 11.5.sp, modifier = Modifier.padding(top = 2.dp),
                         )
+                        Box(Modifier.padding(top = 7.dp)) { WashPill("${profileGoalLabel(profile.goal)} 루틴 진행중") }
                     }
-                    IconCircleButton(
-                        icon = Icons.AutoMirrored.Rounded.KeyboardArrowRight,
-                        onClick = {},
-                        size = 34.dp,
-                        background = Color.White.copy(alpha = 0.1f),
-                        contentColor = Color.White.copy(alpha = 0.62f),
-                        contentDescription = "프로필",
+                    Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, contentDescription = null, tint = c.text3, modifier = Modifier.size(17.dp))
+                }
+            }
+        }
+
+        // 화면 모드
+        item {
+            DCard(radius = 20.dp) {
+                Column(Modifier.padding(16.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        SettingIcon(
+                            when (app.themeMode) {
+                                ThemeMode.Dark -> Icons.Rounded.DarkMode
+                                ThemeMode.Light -> Icons.Rounded.LightMode
+                                ThemeMode.System -> Icons.Rounded.Brightness4
+                            },
+                        )
+                        Column(Modifier.padding(start = 12.dp).weight(1f)) {
+                            Text("화면 모드", fontSize = 13.5.sp, fontWeight = FontWeight.Medium)
+                            Text(
+                                when (app.themeMode) {
+                                    ThemeMode.System -> "시스템 설정에 맞춰룡"
+                                    ThemeMode.Dark -> "항상 다크로 보여룡"
+                                    ThemeMode.Light -> "항상 라이트로 보여룡"
+                                },
+                                color = c.text3, fontSize = 11.sp, modifier = Modifier.padding(top = 2.dp),
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(13.dp))
+                    SegmentedTabs(
+                        options = listOf("라이트", "다크", "시스템"),
+                        selected = when (app.themeMode) {
+                            ThemeMode.Light -> 0
+                            ThemeMode.Dark -> 1
+                            ThemeMode.System -> 2
+                        },
+                        onSelect = { app.setTheme(listOf(ThemeMode.Light, ThemeMode.Dark, ThemeMode.System)[it]) },
+                        height = 38.dp,
+                        filled = true,
                     )
                 }
             }
         }
 
-        items(groups) { rows ->
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(18.dp),
-                color = Color.White.copy(alpha = 0.04f),
-                border = dimBorder(),
-            ) {
+        item {
+            DCard(radius = 20.dp) {
+                Surface(onClick = onOpenRecord, color = Color.Transparent, contentColor = c.text) {
+                    Row(Modifier.fillMaxWidth().padding(15.dp), verticalAlignment = Alignment.CenterVertically) {
+                        SettingIcon(Icons.Rounded.BarChart)
+                        Column(Modifier.padding(start = 12.dp).weight(1f)) {
+                            Text("운동 기록", fontSize = 13.5.sp, fontWeight = FontWeight.Medium)
+                            Text("일주일 기록과 정확도 보기", color = c.text3, fontSize = 11.sp, modifier = Modifier.padding(top = 2.dp))
+                        }
+                        Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, contentDescription = null, tint = c.text3, modifier = Modifier.size(15.dp))
+                    }
+                }
+            }
+        }
+
+        items(count = settingGroups.size) { gi ->
+            DCard(radius = 20.dp) {
                 Column {
-                    rows.forEachIndexed { index, row ->
-                        ProfileRow(row)
-                        if (index != rows.lastIndex) {
-                            Spacer(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(1.dp)
-                                    .background(Color.White.copy(alpha = 0.06f)),
-                            )
+                    settingGroups[gi].forEachIndexed { ri, (icon, label, sub) ->
+                        if (ri > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(c.line))
+                        Surface(onClick = {}, color = Color.Transparent, contentColor = c.text) {
+                            Row(Modifier.fillMaxWidth().padding(horizontal = 15.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+                                SettingIcon(icon)
+                                Column(Modifier.padding(start = 12.dp).weight(1f)) {
+                                    Text(label, fontSize = 13.5.sp, fontWeight = FontWeight.Medium)
+                                    Text(sub, color = c.text3, fontSize = 11.sp, modifier = Modifier.padding(top = 2.dp))
+                                }
+                                Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, contentDescription = null, tint = c.text3, modifier = Modifier.size(15.dp))
+                            }
                         }
                     }
                 }
@@ -779,796 +761,73 @@ fun ProfileScreen(
         }
 
         item {
-            Surface(
-                onClick = onLogout,
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(18.dp),
-                color = TrexError.copy(alpha = 0.12f),
-                border = BorderStroke(1.dp, TrexError.copy(alpha = 0.3f)),
-                contentColor = Color(0xFFFF8585),
-            ) {
-                Row(
-                    modifier = Modifier.padding(vertical = 14.dp),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically,
+            Column {
+                Surface(
+                    onClick = onLogout,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(18.dp),
+                    color = c.errWash,
+                    contentColor = c.err,
+                    border = BorderStroke(1.dp, c.errLine),
                 ) {
-                    Icon(Icons.AutoMirrored.Rounded.Logout, contentDescription = null, modifier = Modifier.size(17.dp))
-                    Text("로그아웃", fontSize = 14.sp, modifier = Modifier.padding(start = 7.dp))
+                    Row(
+                        Modifier.padding(15.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(Icons.AutoMirrored.Rounded.Logout, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Text("로그아웃", fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 8.dp))
+                    }
                 }
-            }
-            Text(
-                text = "TREX v1.0.0",
-                color = Color.White.copy(alpha = 0.3f),
-                fontSize = 11.sp,
-                modifier = Modifier
-                    .padding(top = 12.dp)
-                    .fillMaxWidth(),
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-            )
-        }
-    }
-}
-
-@Composable
-private fun WorkoutHistoryDayCard(
-    record: WorkoutHistoryDay,
-    modifier: Modifier = Modifier,
-) {
-    val hasPostureCorrection = record.items.any { it.postureCorrection != null }
-
-    Surface(
-        modifier = modifier,
-        shape = RoundedCornerShape(22.dp),
-        color = Color.White,
-        contentColor = TrexDark,
-    ) {
-        Column(
-            Modifier
-                .padding(16.dp)
-                .verticalScroll(rememberScrollState()),
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text(
-                        text = "${record.dateLabel} (${record.dayLabel})",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                    Text(
-                        text = "${record.totalMinutes()}분 · ${record.totalCalories()}kcal",
-                        color = TrexTextSecondary,
-                        fontSize = 11.sp,
-                        modifier = Modifier.padding(top = 2.dp),
-                    )
-                }
-            }
-
-            Column(
-                modifier = Modifier.padding(top = 13.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                record.items.forEach { item ->
-                    WorkoutHistoryItemRow(item = item)
-                }
-            }
-
-            Surface(
-                modifier = Modifier
-                    .padding(top = 14.dp)
-                    .fillMaxWidth(),
-                shape = RoundedCornerShape(18.dp),
-                color = if (hasPostureCorrection) TrexLime.copy(alpha = 0.72f) else TrexBackground,
-                contentColor = TrexDark,
-            ) {
-                Row(
-                    modifier = Modifier.padding(13.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Icon(
-                        imageVector = if (hasPostureCorrection) Icons.Rounded.Visibility else Icons.Rounded.LocalFireDepartment,
-                        contentDescription = null,
-                        tint = TrexDark,
-                        modifier = Modifier.size(17.dp),
-                    )
-                    Text(
-                        text = record.summaryText(),
-                        color = TrexDark,
-                        fontSize = 12.sp,
-                        lineHeight = 17.sp,
-                        modifier = Modifier.padding(start = 9.dp),
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun WorkoutHistoryItemRow(item: WorkoutHistoryItem) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        color = TrexBackground,
-        contentColor = TrexDark,
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 11.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(34.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(if (item.postureCorrection != null) TrexLime else Color.White),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = if (item.postureCorrection != null) Icons.Rounded.Visibility else Icons.Rounded.FitnessCenter,
-                    contentDescription = null,
-                    tint = TrexGreenDeep,
-                    modifier = Modifier.size(15.dp),
-                )
-            }
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(start = 11.dp),
-            ) {
                 Text(
-                    text = item.workoutName,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
+                    "TREX v1.0.0",
+                    color = c.text3, fontSize = 11.sp, fontWeight = FontWeight.Medium,
+                    modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                 )
-                Text(
-                    text = item.reps,
-                    color = TrexTextSecondary,
-                    fontSize = 11.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-            Column(horizontalAlignment = Alignment.End) {
-                Text("${item.durationMinutes}분", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                Text("${item.calories}kcal", color = TrexTextSecondary, fontSize = 10.sp)
             }
         }
     }
 }
 
-@Composable
-private fun TodayWorkoutRow(workout: Workout, done: Boolean) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
-        color = TrexBackground,
-        contentColor = TrexDark,
-    ) {
-        Row(
-            modifier = Modifier.padding(11.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            IconBubble(icon = if (done) Icons.Rounded.Check else Icons.Rounded.FitnessCenter, active = done)
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(start = 11.dp),
-            ) {
-                Text(
-                    text = workout.name,
-                    fontSize = 13.sp,
-                    color = if (done) TrexTextSecondary else TrexDark,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Text(workout.reps, color = TrexTextSecondary, fontSize = 11.sp)
-            }
-            Column(horizontalAlignment = Alignment.End) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Rounded.AccessTime, contentDescription = null, tint = TrexDark, modifier = Modifier.size(12.dp))
-                    Text(workout.duration, color = TrexDark, fontSize = 12.sp, modifier = Modifier.padding(start = 3.dp))
-                }
-                Text(if (done) "완료" else workout.category, color = TrexTextSecondary, fontSize = 10.sp)
-            }
-        }
-    }
-}
+// ============================================================= 공용 조각
 
+/** 기본 서피스 카드. */
 @Composable
-private fun WorkoutRow(
-    workout: Workout,
-    index: Int,
-    modifier: Modifier = Modifier,
-    dragging: Boolean = false,
-    onEdit: () -> Unit,
-    onReplace: () -> Unit,
-    onPostureToggle: () -> Unit,
-) {
+fun DCard(modifier: Modifier = Modifier, radius: androidx.compose.ui.unit.Dp = 24.dp, content: @Composable () -> Unit) {
+    val c = Trex.c
     Surface(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        color = if (dragging) Color(0xFFF8FFE4) else Color.White,
-        contentColor = TrexDark,
-        border = if (dragging) BorderStroke(2.dp, TrexLime) else null,
-        shadowElevation = if (dragging) 10.dp else 0.dp,
-    ) {
-        Row(
-            modifier = Modifier.padding(13.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.Center,
-            ) {
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Pill(index.toString().padStart(2, '0'), background = TrexDark, color = TrexLime)
-                    Pill(workout.category, background = TrexBackground, color = TrexGreenDeep)
-                    if (workout.posture) {
-                        Pill("자세교정", background = TrexLime, color = TrexDark, icon = Icons.Rounded.Visibility)
-                    }
-                }
-                Text(workout.name, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 9.dp))
-                Text("${workout.reps} · ${workout.duration}", color = TrexTextSecondary, fontSize = 11.sp, modifier = Modifier.padding(top = 2.dp))
-            }
-            Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
-                SmallSquareButton(icon = Icons.Rounded.Edit, onClick = onEdit, contentDescription = "수정")
-                SmallSquareButton(icon = Icons.Rounded.Refresh, onClick = onReplace, contentDescription = "교체")
-                SmallSquareButton(
-                    icon = Icons.Rounded.Visibility,
-                    onClick = onPostureToggle,
-                    active = workout.posture,
-                    contentDescription = "자세 교정",
-                )
-            }
-        }
-    }
+        shape = RoundedCornerShape(radius),
+        color = c.surface,
+        contentColor = c.text,
+        border = BorderStroke(1.dp, c.line),
+        shadowElevation = 2.dp,
+    ) { content() }
 }
 
-private data class WorkoutCategoryOption(
-    val label: String,
-    val description: String,
-    val icon: ImageVector,
-    val workouts: List<WorkoutTemplate>,
-)
-
-private data class WorkoutTemplate(
-    val name: String,
-    val reps: String,
-    val duration: String,
-    val category: String,
-    val posture: Boolean,
-)
-
+/** primaryWash 톤 알약 라벨. */
 @Composable
-private fun WorkoutCatalogSheet(
-    onAdd: (WorkoutTemplate) -> Unit,
-    onClose: () -> Unit,
-) {
-    val categories = remember { workoutCatalog() }
-    var selectedCategory by remember { mutableStateOf<WorkoutCategoryOption?>(null) }
-
-    SheetSurface {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .fillMaxHeight(0.88f)
-                .padding(20.dp),
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    SectionLabel("운동 추가", color = TrexLime)
-                    ScreenTitle("카테고리에서 선택")
-                }
-                CloseButton(onClick = onClose)
-            }
-            Text(
-                text = "카테고리를 먼저 고르면 추가 가능한 운동을 보여드려요.",
-                color = Color.White.copy(alpha = 0.58f),
-                fontSize = 12.sp,
-                modifier = Modifier.padding(top = 10.dp),
-            )
-
-            Column(
-                modifier = Modifier.padding(top = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                categories.chunked(2).forEach { row ->
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                        row.forEach { category ->
-                            WorkoutCategoryCard(
-                                category = category,
-                                selected = selectedCategory?.label == category.label,
-                                onClick = { selectedCategory = category },
-                                modifier = Modifier.weight(1f),
-                            )
-                        }
-                        if (row.size == 1) Spacer(Modifier.weight(1f))
-                    }
-                }
-            }
-
-            Text(
-                text = selectedCategory?.let { "${it.label} 운동" } ?: "카테고리를 선택해주세요",
-                color = Color.White,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.padding(top = 18.dp),
-            )
-
-            LazyColumn(
-                modifier = Modifier
-                    .padding(top = 10.dp)
-                    .weight(1f),
-                verticalArrangement = Arrangement.spacedBy(9.dp),
-            ) {
-                val templates = selectedCategory?.workouts.orEmpty()
-                items(templates, key = { it.name }) { template ->
-                    WorkoutTemplateCard(
-                        template = template,
-                        onClick = { onAdd(template) },
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun WorkoutCategoryCard(
-    category: WorkoutCategoryOption,
-    selected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Surface(
-        onClick = onClick,
-        modifier = modifier.height(76.dp),
-        shape = RoundedCornerShape(18.dp),
-        color = if (selected) TrexLime else Color.White.copy(alpha = 0.08f),
-        contentColor = if (selected) TrexDark else Color.White,
-        border = if (selected) null else dimBorder(0.12f),
-    ) {
-        Row(
-            modifier = Modifier.padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(38.dp)
-                    .clip(RoundedCornerShape(13.dp))
-                    .background(if (selected) TrexDark else TrexLime.copy(alpha = 0.18f)),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(category.icon, contentDescription = null, tint = if (selected) TrexLime else TrexLime, modifier = Modifier.size(17.dp))
-            }
-            Column(Modifier.padding(start = 10.dp)) {
-                Text(category.label, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(
-                    category.description,
-                    color = if (selected) TrexDark.copy(alpha = 0.66f) else Color.White.copy(alpha = 0.48f),
-                    fontSize = 10.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun WorkoutTemplateCard(
-    template: WorkoutTemplate,
-    onClick: () -> Unit,
-) {
-    Surface(
-        onClick = onClick,
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
-        color = Color.White,
-        contentColor = TrexDark,
-    ) {
-        Row(
-            modifier = Modifier.padding(13.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(44.dp)
-                    .clip(RoundedCornerShape(15.dp))
-                    .background(TrexBackground),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(Icons.Rounded.FitnessCenter, contentDescription = null, tint = TrexGreenDeep, modifier = Modifier.size(18.dp))
-            }
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(start = 12.dp),
-            ) {
-                Text(template.name, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text("${template.reps} · ${template.duration}", color = TrexTextSecondary, fontSize = 11.sp, modifier = Modifier.padding(top = 2.dp))
-            }
-            Pill("추가", background = TrexLime, color = TrexDark, icon = Icons.Rounded.Add)
-        }
-    }
-}
-
-@Composable
-private fun WorkoutPlanEditSheet(
-    workout: Workout?,
-    modeAdd: Boolean,
-    onSave: (name: String, count: Int, sets: Int) -> Unit,
-    onClose: () -> Unit,
-) {
-    val initialDraft = remember(workout?.id, modeAdd) { workout?.repsSpec() ?: RepsSpec(count = 12, sets = 3, targetLabel = "12회") }
-    var name by remember(workout?.id, modeAdd) { mutableStateOf(workout?.name.orEmpty()) }
-    var countInput by remember(workout?.id, modeAdd) { mutableStateOf(initialDraft.count.toString()) }
-    var setsInput by remember(workout?.id, modeAdd) { mutableStateOf(initialDraft.sets.toString()) }
-    val cleanName = name.trim()
-    val count = countInput.toIntOrNull()
-    val sets = setsInput.toIntOrNull()
-    val canSave = cleanName.isNotEmpty() &&
-        count != null &&
-        count in 1..999 &&
-        sets != null &&
-        sets in 1..99
-
-    fun updateCount(delta: Int) {
-        val current = countInput.toIntOrNull() ?: initialDraft.count
-        countInput = (current + delta).coerceIn(1, 999).toString()
-    }
-
-    fun updateSets(delta: Int) {
-        val current = setsInput.toIntOrNull() ?: initialDraft.sets
-        setsInput = (current + delta).coerceIn(1, 99).toString()
-    }
-
-    SheetSurface {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(20.dp),
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    SectionLabel(if (modeAdd) "운동 추가" else "운동 수정", color = TrexLime)
-                    ScreenTitle(if (modeAdd) "새 운동 만들기" else workout?.name.orEmpty())
-                }
-                CloseButton(onClick = onClose)
-            }
-            Text(
-                text = if (modeAdd) {
-                    "운동명과 목표 횟수, 세트 수를 입력해주세요."
-                } else {
-                    "${workout?.category.orEmpty()} · 현재 ${workout?.reps.orEmpty()}"
-                },
-                color = Color.White.copy(alpha = 0.58f),
-                fontSize = 12.sp,
-                modifier = Modifier.padding(top = 10.dp),
-            )
-
-            if (modeAdd) {
-                TrexTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    placeholder = "운동 이름",
-                    leadingIcon = Icons.Rounded.FitnessCenter,
-                    modifier = Modifier.padding(top = 16.dp),
-                )
-            }
-
-            Row(
-                modifier = Modifier.padding(top = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                WorkoutCounterField(
-                    label = "횟수",
-                    value = countInput,
-                    onValueChange = { countInput = it.digitsOnly().take(3) },
-                    onMinus = { updateCount(-1) },
-                    onPlus = { updateCount(1) },
-                    modifier = Modifier.weight(1f),
-                )
-                WorkoutCounterField(
-                    label = "세트",
-                    value = setsInput,
-                    onValueChange = { setsInput = it.digitsOnly().take(2) },
-                    onMinus = { updateSets(-1) },
-                    onPlus = { updateSets(1) },
-                    modifier = Modifier.weight(1f),
-                )
-            }
-
-            Text(
-                text = "저장 후 ${formatReps(count ?: initialDraft.count, sets ?: initialDraft.sets)}로 표시됩니다.",
-                color = Color.White.copy(alpha = 0.48f),
-                fontSize = 11.sp,
-                modifier = Modifier.padding(top = 12.dp),
-            )
-
-            Row(
-                modifier = Modifier
-                    .padding(top = 18.dp)
-                    .fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                TrexButton(
-                    text = if (modeAdd) "운동 추가" else "수정 완료",
-                    onClick = {
-                        val savedCount = countInput.toIntOrNull()?.coerceIn(1, 999) ?: return@TrexButton
-                        val savedSets = setsInput.toIntOrNull()?.coerceIn(1, 99) ?: return@TrexButton
-                        onSave(cleanName, savedCount, savedSets)
-                        onClose()
-                    },
-                    enabled = canSave,
-                    modifier = Modifier.weight(1f),
-                    icon = if (modeAdd) Icons.Rounded.Add else Icons.Rounded.Check,
-                )
-                IconCircleButton(
-                    icon = Icons.Rounded.Close,
-                    onClick = onClose,
-                    size = 52.dp,
-                    background = TrexError.copy(alpha = 0.12f),
-                    contentColor = Color(0xFFFF8A8A),
-                    contentDescription = "닫기",
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun WorkoutCounterField(
-    label: String,
-    value: String,
-    onValueChange: (String) -> Unit,
-    onMinus: () -> Unit,
-    onPlus: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Column(modifier = modifier) {
-        Text(label, color = Color.White.copy(alpha = 0.72f), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-        Row(
-            modifier = Modifier.padding(top = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            CounterIconButton(icon = Icons.Rounded.Remove, onClick = onMinus, contentDescription = "$label 줄이기")
-            TrexTextField(
-                value = value,
-                onValueChange = onValueChange,
-                placeholder = "0",
-                keyboardType = KeyboardType.Number,
-                modifier = Modifier.weight(1f),
-                textColor = Color.White,
-            )
-            CounterIconButton(icon = Icons.Rounded.Add, onClick = onPlus, contentDescription = "$label 늘리기")
-        }
-    }
-}
-
-@Composable
-private fun CounterIconButton(
-    icon: ImageVector,
-    onClick: () -> Unit,
-    contentDescription: String,
-) {
-    Surface(
-        onClick = onClick,
-        modifier = Modifier.size(40.dp),
-        shape = RoundedCornerShape(14.dp),
-        color = Color.White.copy(alpha = 0.08f),
-        contentColor = Color.White,
-        border = dimBorder(0.12f),
-    ) {
-        Box(contentAlignment = Alignment.Center) {
-            Icon(icon, contentDescription = contentDescription, modifier = Modifier.size(17.dp))
-        }
-    }
-}
-
-private fun WorkoutTemplate.toWorkout(): Workout =
-    Workout(
-        id = "custom-${System.currentTimeMillis()}-${name.hashCode()}",
-        name = name,
-        reps = reps,
-        duration = duration,
-        posture = posture,
-        category = category,
+fun WashPill(text: String) {
+    val c = Trex.c
+    Text(
+        text,
+        color = c.primaryText, fontSize = 10.5.sp, fontWeight = FontWeight.SemiBold,
+        maxLines = 1, overflow = TextOverflow.Ellipsis,
+        modifier = Modifier.clip(RoundedCornerShape(999.dp)).background(c.primaryWash).padding(horizontal = 9.dp, vertical = 4.dp),
     )
-
-private fun <T> List<T>.moved(fromIndex: Int, toIndex: Int): List<T> {
-    if (fromIndex == toIndex || fromIndex !in indices || toIndex !in indices) return this
-    return toMutableList().apply {
-        add(toIndex, removeAt(fromIndex))
-    }
-}
-
-private fun workoutCatalog(): List<WorkoutCategoryOption> = listOf(
-    WorkoutCategoryOption(
-        label = "상체",
-        description = "팔 · 가슴 · 등",
-        icon = Icons.Rounded.FitnessCenter,
-        workouts = listOf(
-            WorkoutTemplate("니 푸쉬업", "10회 x 3세트", "7분", "상체", posture = true),
-            WorkoutTemplate("벽 푸쉬업", "12회 x 3세트", "6분", "상체", posture = false),
-            WorkoutTemplate("밴드 로우", "12회 x 3세트", "8분", "상체", posture = false),
-            WorkoutTemplate("숄더 탭", "16회 x 3세트", "7분", "상체", posture = true),
-        ),
-    ),
-    WorkoutCategoryOption(
-        label = "복근",
-        description = "코어 안정화",
-        icon = Icons.Rounded.Person,
-        workouts = listOf(
-            WorkoutTemplate("플랭크", "45초 x 3세트", "6분", "복근", posture = false),
-            WorkoutTemplate("데드버그", "12회 x 3세트", "7분", "복근", posture = true),
-            WorkoutTemplate("크런치", "15회 x 3세트", "6분", "복근", posture = false),
-            WorkoutTemplate("버드독", "10회 x 3세트", "7분", "복근", posture = true),
-        ),
-    ),
-    WorkoutCategoryOption(
-        label = "하체",
-        description = "스쿼트 · 런지",
-        icon = Icons.Rounded.AccessTime,
-        workouts = listOf(
-            WorkoutTemplate("기본 스쿼트", "12회 x 3세트", "8분", "하체", posture = true),
-            WorkoutTemplate("런지", "10회 x 3세트", "10분", "하체", posture = true),
-            WorkoutTemplate("글루트 브릿지", "12회 x 3세트", "7분", "하체", posture = false),
-            WorkoutTemplate("카프 레이즈", "15회 x 3세트", "6분", "하체", posture = false),
-        ),
-    ),
-    WorkoutCategoryOption(
-        label = "유산소",
-        description = "심박수 올리기",
-        icon = Icons.Rounded.LocalFireDepartment,
-        workouts = listOf(
-            WorkoutTemplate("제자리 걷기", "60초 x 4세트", "8분", "유산소", posture = false),
-            WorkoutTemplate("마운틴 클라이머", "20회 x 3세트", "8분", "유산소", posture = true),
-            WorkoutTemplate("점핑잭", "30회 x 3세트", "7분", "유산소", posture = false),
-            WorkoutTemplate("스텝업", "12회 x 3세트", "9분", "유산소", posture = true),
-        ),
-    ),
-)
-
-@Composable
-private fun ProfileRow(row: ProfileRowData) {
-    Surface(
-        onClick = {},
-        color = Color.Transparent,
-        contentColor = Color.White,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 15.dp, vertical = 13.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(34.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(Color.White.copy(alpha = 0.1f)),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(row.icon, contentDescription = null, tint = TrexLime, modifier = Modifier.size(16.dp))
-            }
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(start = 12.dp),
-            ) {
-                Text(row.label, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                if (row.sub != null) {
-                    Text(row.sub, color = Color.White.copy(alpha = 0.45f), fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                }
-            }
-            Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, contentDescription = null, tint = Color.White.copy(alpha = 0.3f), modifier = Modifier.size(18.dp))
-        }
-    }
 }
 
 @Composable
-private fun StatCard(
-    label: String,
-    value: String,
-    suffix: String,
-    modifier: Modifier = Modifier,
-    icon: ImageVector? = null,
-    dark: Boolean = false,
-) {
-    Surface(
-        modifier = modifier.height(112.dp),
-        shape = RoundedCornerShape(20.dp),
-        color = if (dark) Color.White.copy(alpha = 0.05f) else Color.White,
-        contentColor = if (dark) Color.White else TrexDark,
-        border = if (dark) dimBorder() else null,
-    ) {
-        Column(Modifier.padding(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(label, color = if (dark) Color.White.copy(alpha = 0.6f) else TrexTextSecondary, fontSize = 11.sp, modifier = Modifier.weight(1f))
-                if (icon != null) {
-                    Icon(icon, contentDescription = null, tint = TrexWarning, modifier = Modifier.size(17.dp))
-                }
-            }
-            Row(
-                modifier = Modifier.padding(top = 15.dp),
-                verticalAlignment = Alignment.Bottom,
-            ) {
-                Text(value, fontSize = 26.sp, fontWeight = FontWeight.SemiBold)
-                Text(suffix, color = if (dark) Color.White.copy(alpha = 0.6f) else TrexTextSecondary, fontSize = 11.sp, modifier = Modifier.padding(start = 4.dp, bottom = 4.dp))
-            }
-        }
-    }
-}
-
-@Composable
-private fun IconBubble(icon: ImageVector, active: Boolean) {
+private fun SettingIcon(icon: ImageVector) {
+    val c = Trex.c
     Box(
-        modifier = Modifier
-            .size(40.dp)
-            .clip(RoundedCornerShape(14.dp))
-            .background(if (active) TrexDark else Color.White.copy(alpha = 0.12f)),
+        Modifier.size(32.dp).clip(RoundedCornerShape(11.dp)).background(c.surface2),
         contentAlignment = Alignment.Center,
-    ) {
-        Icon(icon, contentDescription = null, tint = if (active) TrexLime else TrexGreenDeep, modifier = Modifier.size(18.dp))
-    }
+    ) { Icon(icon, contentDescription = null, tint = c.primaryText, modifier = Modifier.size(15.dp)) }
 }
 
-@Composable
-private fun SmallSquareButton(
-    icon: ImageVector,
-    onClick: () -> Unit,
-    active: Boolean = false,
-    contentDescription: String,
-) {
-    Surface(
-        onClick = onClick,
-        modifier = Modifier.size(34.dp),
-        shape = RoundedCornerShape(12.dp),
-        color = if (active) TrexLime else TrexBackground,
-        contentColor = if (active) TrexDark else TrexGreenDeep,
-    ) {
-        Box(contentAlignment = Alignment.Center) {
-            Icon(icon, contentDescription = contentDescription, modifier = Modifier.size(15.dp))
-        }
-    }
-}
-
-@Composable
-private fun TrackProgress(
-    progress: Float,
-    modifier: Modifier = Modifier,
-    track: Color,
-    fill: Color,
-) {
-    LinearProgressIndicator(
-        progress = { progress },
-        modifier = modifier
-            .fillMaxWidth()
-            .height(7.dp)
-            .clip(RoundedCornerShape(999.dp)),
-        color = fill,
-        trackColor = track,
-    )
-}
-
-private data class ProfileRowData(
-    val label: String,
-    val icon: ImageVector,
-    val sub: String? = null,
-)
-
-private fun profileGoalLabel(goal: String): String = when (goal) {
-    "muscle" -> "근육 증가"
-    "diet" -> "다이어트"
-    "stamina" -> "체력 향상"
-    "maintain" -> "유지"
-    else -> "일반 루틴"
-}
-
-private fun mealIcon(mealId: String): ImageVector = when (mealId) {
+fun mealIcon(mealId: String): ImageVector = when (mealId) {
     "breakfast" -> Icons.Rounded.FreeBreakfast
     "lunch" -> Icons.Rounded.LunchDining
     "snack" -> Icons.Rounded.BakeryDining
@@ -1576,3 +835,10 @@ private fun mealIcon(mealId: String): ImageVector = when (mealId) {
     else -> Icons.Rounded.Restaurant
 }
 
+fun profileGoalLabel(goal: String): String = when (goal) {
+    "muscle" -> "근육 증가"
+    "diet" -> "다이어트"
+    "stamina" -> "체력 향상"
+    "maintain" -> "유지"
+    else -> "일반"
+}

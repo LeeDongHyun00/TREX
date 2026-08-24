@@ -48,6 +48,16 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         store.loggedIn = false
     }
 
+    // ---- 화면 모드 (라이트/다크/시스템)
+
+    var themeMode by mutableStateOf(store.themeMode)
+        private set
+
+    fun setTheme(mode: ThemeMode) {
+        themeMode = mode
+        store.themeMode = mode
+    }
+
     // ---- 사용자 프로필 → 권장 영양 목표
 
     var profile by mutableStateOf(store.loadProfile() ?: UserProfile())
@@ -79,9 +89,27 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     var workoutHistory by mutableStateOf(store.loadHistory() ?: seedWorkoutHistory(todayPlan))
         private set
 
+    init {
+        // 어제 완료한 계획은 오늘 다시 처음부터 — done 플래그는 하루 단위다
+        val today = LocalDate.now().toEpochDay()
+        if (store.planDoneEpochDay != today && workoutPlan.any { it.done }) {
+            workoutPlan = workoutPlan.map { it.copy(done = false) }
+            store.savePlan(workoutPlan)
+        }
+        store.planDoneEpochDay = today
+    }
+
     fun updatePlan(plan: List<Workout>) {
         workoutPlan = plan
         store.savePlan(plan)
+    }
+
+    fun markWorkoutDone(id: String) {
+        updatePlan(workoutPlan.map { if (it.id == id) it.copy(done = true) else it })
+    }
+
+    fun togglePosture(id: String) {
+        updatePlan(workoutPlan.map { if (it.id == id) it.copy(posture = !it.posture) else it })
     }
 
     fun recordCompletedSession(elapsedSeconds: Int) {
@@ -130,10 +158,30 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         store.saveWater(waterByDay)
     }
 
-    /** 슬롯에 음식 추가 (사진/수동 기록 플로우의 결과). */
+    /** 슬롯에 음식 추가 (사진/수동 기록 플로우의 결과). 같은 이름은 수량을 올린다. */
     fun appendFoods(offset: Int, slot: String, foods: List<FoodEntry>) {
         mutateSlots(offset) { slots ->
-            slots + (slot to slots[slot].orEmpty() + foods)
+            var list = slots[slot].orEmpty()
+            foods.forEach { food ->
+                val at = list.indexOfFirst { it.name == food.name }
+                list = if (at == -1) {
+                    list + food
+                } else {
+                    list.toMutableList().also { it[at] = it[at].copy(qty = it[at].qty + food.qty) }
+                }
+            }
+            slots + (slot to list)
+        }
+    }
+
+    /** 슬롯 내 음식 수량 증감 — 0이 되면 제거 (직접 기록 시트 스테퍼). */
+    fun changeFoodQty(offset: Int, slot: String, index: Int, delta: Int) {
+        mutateSlots(offset) { slots ->
+            val list = slots[slot].orEmpty().toMutableList()
+            val cur = list.getOrNull(index) ?: return@mutateSlots slots
+            val q = cur.qty + delta
+            if (q <= 0) list.removeAt(index) else list[index] = cur.copy(qty = q)
+            slots + (slot to list)
         }
     }
 
