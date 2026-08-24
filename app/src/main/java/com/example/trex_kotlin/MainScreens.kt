@@ -166,8 +166,13 @@ fun HomeScreen(
                     Row(Modifier.padding(top = 14.dp), verticalAlignment = Alignment.CenterVertically) {
                         RingGauge(progress = if (goal.kcal > 0) total.kcal / goal.kcal.toFloat() else 0f, size = 104.dp, stroke = 9.dp) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text("${total.kcal}", color = c.text, fontSize = 25.sp, fontWeight = FontWeight.SemiBold, lineHeight = 26.sp)
-                                Text("/ ${goal.kcal} kcal", color = c.text3, fontSize = 10.sp)
+                                Text(
+                                    "${total.kcal}",
+                                    color = c.text,
+                                    fontSize = if (total.kcal >= 10_000) 19.sp else 25.sp,
+                                    fontWeight = FontWeight.SemiBold, lineHeight = 26.sp, maxLines = 1,
+                                )
+                                Text("/ ${goal.kcal}", color = c.text3, fontSize = 10.sp, maxLines = 1)
                             }
                         }
                         Spacer(Modifier.width(18.dp))
@@ -325,25 +330,23 @@ fun WorkoutTabScreen(
             TrackBar(progress = if (plan.isEmpty()) 0f else doneCount / plan.size.toFloat())
         }
 
+        // 날씨 카드 — 중립 서피스 + 소프트 아이콘 버블 + 실내 추천 칩 (경고 워시 대신 차분한 톤)
         item {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(c.warnWash)
-                    .border(1.dp, c.warnLine, RoundedCornerShape(20.dp))
-                    .padding(horizontal = 14.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Box(
-                    Modifier.size(34.dp).clip(RoundedCornerShape(12.dp)).background(c.warn),
-                    contentAlignment = Alignment.Center,
-                ) { Icon(Icons.Rounded.Cloud, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp)) }
-                Text(
-                    "강수 6.4 mm/h · 오늘은 실내 루틴을 추천해룡",
-                    color = c.text2, fontSize = 12.sp, lineHeight = 17.sp,
-                    modifier = Modifier.padding(start = 11.dp).weight(1f),
-                )
+            DCard(radius = 22.dp) {
+                Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        Modifier.size(42.dp).clip(RoundedCornerShape(15.dp)).background(c.surface2),
+                        contentAlignment = Alignment.Center,
+                    ) { Icon(Icons.Rounded.Cloud, contentDescription = null, tint = c.text2, modifier = Modifier.size(19.dp)) }
+                    Column(Modifier.padding(start = 12.dp).weight(1f)) {
+                        Row(verticalAlignment = Alignment.Bottom) {
+                            Text("비 예보", fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold)
+                            Text("6.4 mm/h", color = c.text3, fontSize = 11.5.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(start = 6.dp, bottom = 1.dp))
+                        }
+                        Text("오늘은 실내 루틴이 좋아룡", color = c.text3, fontSize = 11.sp, modifier = Modifier.padding(top = 2.dp))
+                    }
+                    WashPill("실내 추천")
+                }
             }
         }
 
@@ -402,7 +405,7 @@ private fun WorkoutExpandCard(
                         Text(workout.name, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                         Row(Modifier.padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             Text("${workout.reps} · ${workout.duration}", color = c.text3, fontSize = 11.5.sp)
-                            if (workout.posture) {
+                            if (workout.posture && workout.postureSupported()) {
                                 Row(
                                     Modifier.clip(RoundedCornerShape(999.dp)).background(c.primaryWash).padding(horizontal = 7.dp, vertical = 2.dp),
                                     verticalAlignment = Alignment.CenterVertically,
@@ -437,27 +440,53 @@ private fun WorkoutExpandCard(
                         GhostButton("대체 운동", onClick = onOpenAlt, icon = Icons.Rounded.Refresh, modifier = Modifier.weight(1f), height = 44.dp)
                         GhostButton("세트 수정", onClick = onOpenSets, icon = Icons.Rounded.Edit, modifier = Modifier.weight(1f), height = 44.dp)
                     }
-                    // 자세 교정 사용 스위치
-                    Surface(
-                        onClick = onTogglePosture,
-                        shape = RoundedCornerShape(15.dp),
-                        color = if (workout.posture) c.primaryWash else c.surface2,
-                        contentColor = if (workout.posture) c.primaryText else c.text2,
-                        border = BorderStroke(1.dp, if (workout.posture) c.primarySoftLine else c.line),
-                    ) {
-                        Row(Modifier.fillMaxWidth().height(46.dp).padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Rounded.Visibility, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Text("자세 교정 사용", fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 10.dp).weight(1f))
-                            Box(
-                                Modifier
-                                    .width(38.dp).height(22.dp)
-                                    .clip(RoundedCornerShape(999.dp))
-                                    .background(if (workout.posture) c.primary else c.track)
-                                    .padding(2.dp),
-                                contentAlignment = if (workout.posture) Alignment.CenterEnd else Alignment.CenterStart,
-                            ) {
-                                Box(Modifier.size(18.dp).clip(CircleShape).background(Color.White))
+                    // 자세 교정 스위치 — 규칙 엔진 지원 종목에만. 미지원이면 안내만.
+                    if (workout.postureSupported()) {
+                        val on = workout.posture
+                        Surface(
+                            onClick = onTogglePosture,
+                            shape = RoundedCornerShape(15.dp),
+                            color = if (on) c.primaryWash else c.surface2,
+                            contentColor = if (on) c.primaryText else c.text2,
+                            border = BorderStroke(1.dp, if (on) c.primarySoftLine else c.line),
+                        ) {
+                            Row(Modifier.fillMaxWidth().height(46.dp).padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Rounded.Visibility, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Column(Modifier.padding(start = 10.dp).weight(1f)) {
+                                    Text("자세 교정 사용", fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold)
+                                    Text(
+                                        if (on) "카메라로 실시간 자세 평가를 해줘룡" else "켜면 카메라로 자세를 평가해룡",
+                                        fontSize = 10.sp, color = if (on) c.primaryText.copy(alpha = 0.8f) else c.text3,
+                                    )
+                                }
+                                Box(
+                                    Modifier
+                                        .width(38.dp).height(22.dp)
+                                        .clip(RoundedCornerShape(999.dp))
+                                        .background(if (on) c.primary else c.track)
+                                        .padding(2.dp),
+                                    contentAlignment = if (on) Alignment.CenterEnd else Alignment.CenterStart,
+                                ) {
+                                    Box(Modifier.size(18.dp).clip(CircleShape).background(Color.White))
+                                }
                             }
+                        }
+                    } else {
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(15.dp))
+                                .background(c.surface2)
+                                .border(1.dp, c.line, RoundedCornerShape(15.dp))
+                                .padding(horizontal = 14.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(Icons.Rounded.Visibility, contentDescription = null, tint = c.text3, modifier = Modifier.size(15.dp))
+                            Text(
+                                "이 운동의 자세 평가는 준비 중이에룡",
+                                color = c.text3, fontSize = 11.5.sp,
+                                modifier = Modifier.padding(start = 10.dp),
+                            )
                         }
                     }
                 }
@@ -496,12 +525,24 @@ fun DietTabScreen(
             DCard(radius = 28.dp) {
                 Column {
                     Column(Modifier.padding(20.dp)) {
+                        // 헤더에 % 를 빼고 링 안에는 수치만 — 텍스트가 링 밖으로 넘치지 않게
                         Row(verticalAlignment = Alignment.CenterVertically) {
+                            Kicker("오늘 섭취")
+                            Spacer(Modifier.weight(1f))
+                            WashPill("목표 ${goal.kcal} kcal · $kcalPct%")
+                        }
+                        Row(Modifier.padding(top = 14.dp), verticalAlignment = Alignment.CenterVertically) {
                             RingGauge(progress = if (goal.kcal > 0) total.kcal / goal.kcal.toFloat() else 0f, size = 118.dp, stroke = 11.dp) {
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Text("${total.kcal}", color = c.text, fontSize = 28.sp, fontWeight = FontWeight.SemiBold, lineHeight = 28.sp)
-                                    Text("/ ${goal.kcal} kcal", color = c.text3, fontSize = 10.sp, modifier = Modifier.padding(top = 4.dp))
-                                    Box(Modifier.padding(top = 6.dp)) { WashPill("$kcalPct%") }
+                                    Text(
+                                        "${total.kcal}",
+                                        color = c.text,
+                                        fontSize = if (total.kcal >= 10_000) 21.sp else 27.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        lineHeight = 28.sp,
+                                        maxLines = 1,
+                                    )
+                                    Text("kcal", color = c.text3, fontSize = 10.sp, modifier = Modifier.padding(top = 2.dp))
                                 }
                             }
                             Spacer(Modifier.width(20.dp))

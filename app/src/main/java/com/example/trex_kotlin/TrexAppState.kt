@@ -109,7 +109,12 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun togglePosture(id: String) {
-        updatePlan(workoutPlan.map { if (it.id == id) it.copy(posture = !it.posture) else it })
+        updatePlan(
+            workoutPlan.map {
+                // 규칙 엔진이 지원하는 종목만 자세 교정을 켤 수 있다 (postureExerciseMap)
+                if (it.id == id && it.postureSupported()) it.copy(posture = !it.posture) else it
+            },
+        )
     }
 
     fun recordCompletedSession(elapsedSeconds: Int) {

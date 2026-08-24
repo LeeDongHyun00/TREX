@@ -171,7 +171,7 @@ fun TrexApp(app: AppViewModel = viewModel()) {
             !app.onboarded -> RootRoute.Onboarding
             sessionDone -> RootRoute.Complete
             sessionIndex >= 0 && sessionWorkout != null ->
-                if (sessionWorkout.posture) RootRoute.PostureSession else RootRoute.TimerSession
+                if (sessionWorkout.posture && sessionWorkout.postureSupported()) RootRoute.PostureSession else RootRoute.TimerSession
             subScreen == "record" -> RootRoute.Record
             else -> RootRoute.Main
         }
@@ -218,7 +218,7 @@ fun TrexApp(app: AppViewModel = viewModel()) {
                     )
 
                     RootRoute.PostureSession -> sessionWorkout?.let { w ->
-                        PostureSessionScreen(
+                        PostureLiveSessionScreen(
                             workout = w,
                             index = sessionIndex,
                             total = plan.size,

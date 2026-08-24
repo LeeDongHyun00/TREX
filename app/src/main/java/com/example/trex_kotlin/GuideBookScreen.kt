@@ -53,7 +53,8 @@ private data class GuidePage(
     val headline: String,
     val body: String,
     val slot: String,
-    val icon: ImageVector,
+    /** assets/guid_img 의 공룡 일러스트 SVG. */
+    val asset: String,
 )
 
 private val guidePages = listOf(
@@ -61,25 +62,25 @@ private val guidePages = listOf(
         headline = "움직임이 잘 보이도록\n카메라를 세워두세요",
         body = "전신과 주요 관절이 화면 안에 들어오면 TREX가 자세 변화를 더 정확하게 읽어줘룡",
         slot = "camera setup",
-        icon = Icons.Rounded.PhotoCamera,
+        asset = "trex_guideImage_phone1.svg",
     ),
     GuidePage(
         headline = "실시간 피드백으로\n루틴의 흐름을 유지하세요",
         body = "동작 중 필요한 교정 신호를 바로 확인하고, 세트가 끝날 때까지 같은 리듬으로 운동해룡",
         slot = "live feedback",
-        icon = Icons.Rounded.Visibility,
+        asset = "trext_guideImage_phone2.svg",
     ),
     GuidePage(
         headline = "운동이 끝나면\n기록을 한눈에 정리해요",
         body = "완료한 운동과 개선 포인트를 하루 단위로 남겨 다음 루틴을 더 쉽게 이어가룡",
         slot = "weekly record",
-        icon = Icons.Rounded.BarChart,
+        asset = "trext_guideImage_phone3.svg",
     ),
     GuidePage(
         headline = "사진 한 장으로\n식단 기록을 시작하세요",
         body = "식사 사진을 고르면 음식을 분석하고 탄단지까지 정리해줘룡",
         slot = "photo diet log",
-        icon = Icons.Rounded.Restaurant,
+        asset = "trext_guideImage_phone4.svg",
     ),
 )
 
@@ -144,26 +145,20 @@ fun GuideBookScreen(onDone: () -> Unit) {
                             }
                         },
                         label = "guide-card",
+                        modifier = Modifier.fillMaxSize(),
                     ) { p ->
                         val g = guidePages[p]
-                        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(18.dp)) {
-                            Surface(
-                                modifier = Modifier.size(86.dp),
-                                shape = RoundedCornerShape(30.dp),
-                                color = c.surface,
-                                border = BorderStroke(1.dp, c.line),
-                                shadowElevation = 2.dp,
-                            ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Icon(g.icon, contentDescription = null, tint = c.primaryText, modifier = Modifier.size(36.dp))
-                                }
-                            }
+                        Box(Modifier.fillMaxSize()) {
+                            // 공룡 일러스트 (원본 가이드 SVG)
+                            GuideSvgImage(assetName = g.asset, modifier = Modifier.fillMaxSize().padding(12.dp))
                             Text(
                                 g.slot,
                                 color = c.text3, fontSize = 11.sp, fontWeight = FontWeight.Medium, letterSpacing = 0.5.sp,
                                 modifier = Modifier
+                                    .align(Alignment.BottomCenter)
+                                    .padding(bottom = 14.dp)
                                     .clip(RoundedCornerShape(999.dp))
-                                    .background(c.surface)
+                                    .background(c.surface.copy(alpha = 0.92f))
                                     .padding(horizontal = 12.dp, vertical = 6.dp),
                             )
                         }
@@ -204,4 +199,42 @@ fun GuideBookScreen(onDone: () -> Unit) {
             )
         }
     }
+}
+
+/** assets/guid_img 의 공룡 SVG 를 WebView 로 렌더 (복잡한 SVG 라 VectorDrawable 변환 불가). */
+@android.annotation.SuppressLint("SetJavaScriptEnabled")
+@Composable
+private fun GuideSvgImage(assetName: String, modifier: Modifier = Modifier) {
+    androidx.compose.ui.viewinterop.AndroidView(
+        modifier = modifier,
+        factory = { context ->
+            android.webkit.WebView(context).apply {
+                layoutParams = android.view.ViewGroup.LayoutParams(
+                    android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+                    android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+                )
+                setBackgroundColor(android.graphics.Color.TRANSPARENT)
+                isVerticalScrollBarEnabled = false
+                isHorizontalScrollBarEnabled = false
+                isFocusable = false
+                isClickable = false
+                settings.javaScriptEnabled = false
+                settings.loadWithOverviewMode = true
+                settings.useWideViewPort = true
+            }
+        },
+        update = { webView ->
+            val html = """
+                <!doctype html>
+                <html><head><meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <style>
+                  html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:transparent}
+                  body{display:flex;align-items:center;justify-content:center}
+                  img{width:100%;height:100%;object-fit:contain;display:block}
+                </style></head>
+                <body><img src="$assetName"></body></html>
+            """.trimIndent()
+            webView.loadDataWithBaseURL("file:///android_asset/guid_img/", html, "text/html", "UTF-8", null)
+        },
+    )
 }
