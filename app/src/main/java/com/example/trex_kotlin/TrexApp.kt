@@ -68,11 +68,17 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.trex_kotlin.posture.BaselineGuideScreen
+import com.example.trex_kotlin.posture.PostureLabScreen
 import kotlinx.coroutines.delay
 
 @Composable
 fun TrexApp(app: AppViewModel = viewModel()) {
     var selectedTab by rememberSaveable { mutableStateOf(TrexTab.Home) }
+    // 진행 플래그(guideDone/loggedIn/onboarded)는 AppViewModel 이 소유·영속화한다.
+    // 아래 둘은 개발용 진입점이라 세션 한정 UI 상태로 남긴다.
+    var postureLab by rememberSaveable { mutableStateOf(false) }
+    var baselineGuide by rememberSaveable { mutableStateOf(false) }
     var sessionIndex by rememberSaveable { mutableIntStateOf(-1) }
     var sessionDone by rememberSaveable { mutableStateOf(false) }
     val workoutPlan = app.workoutPlan
@@ -139,13 +145,21 @@ fun TrexApp(app: AppViewModel = viewModel()) {
                 onboarded = app.onboarded,
                 sessionIndex = sessionIndex.coerceAtMost(workoutPlan.lastIndex),
                 sessionDone = sessionDone,
+                postureLab = postureLab,
+                baselineGuide = baselineGuide,
             ),
             transitionSpec = { fadeIn() togetherWith fadeOut() },
             label = "trex-route",
         ) { route ->
             when {
+                route.baselineGuide -> BaselineGuideScreen(onClose = { baselineGuide = false })
+                route.postureLab -> PostureLabScreen(onClose = { postureLab = false })
                 !route.guideDone -> GuideBookScreen(onLogin = { app.completeGuide() })
-                !route.loggedIn -> LoginScreen(onLogin = { app.completeLogin() })
+                !route.loggedIn -> LoginScreen(
+                    onLogin = { app.completeLogin() },
+                    onOpenPostureLab = { postureLab = true },
+                    onOpenBaselineGuide = { baselineGuide = true },
+                )
                 !route.onboarded -> OnboardingScreen(onDone = { profile -> app.completeOnboarding(profile) })
                 route.sessionDone -> SessionCompleteScreen(
                     onDone = {
@@ -202,6 +216,8 @@ private data class AppRoute(
     val onboarded: Boolean,
     val sessionIndex: Int,
     val sessionDone: Boolean,
+    val postureLab: Boolean = false,
+    val baselineGuide: Boolean = false,
 )
 
 @Composable

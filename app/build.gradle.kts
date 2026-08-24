@@ -36,6 +36,10 @@ android {
     buildFeatures {
         compose = true
     }
+    androidResources {
+        // MediaPipe 모델(.task)은 압축되면 AssetFileDescriptor 로 열 수 없다
+        noCompress += "task"
+    }
 }
 
 kotlin {
@@ -55,6 +59,11 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.material.icons.extended)
+    implementation(libs.androidx.camera.core)
+    implementation(libs.androidx.camera.camera2)
+    implementation(libs.androidx.camera.lifecycle)
+    implementation(libs.androidx.camera.view)
+    implementation(libs.mediapipe.tasks.vision)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

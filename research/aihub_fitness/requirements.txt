@@ -1,0 +1,7 @@
+numpy>=2.0
+pandas>=2.2
+pyarrow>=16
+scikit-learn>=1.5
+scipy>=1.13
+joblib>=1.4
+threadpoolctl>=3.5

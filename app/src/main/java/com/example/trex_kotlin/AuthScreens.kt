@@ -18,6 +18,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -36,6 +37,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.rounded.AccountCircle
+import androidx.compose.material.icons.rounded.CenterFocusStrong
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Email
 import androidx.compose.material.icons.rounded.FitnessCenter
@@ -97,7 +99,7 @@ private val loginAnimationFrames = intArrayOf(
 )
 
 @Composable
-fun LoginScreen(onLogin: () -> Unit) {
+fun LoginScreen(onLogin: () -> Unit, onOpenPostureLab: () -> Unit = {}, onOpenBaselineGuide: () -> Unit = {}) {
     var mode by rememberSaveable { mutableStateOf(LoginMode.Login) }
 
     when (mode) {
@@ -105,6 +107,8 @@ fun LoginScreen(onLogin: () -> Unit) {
             onLogin = onLogin,
             goSignup = { mode = LoginMode.Signup },
             goFind = { mode = LoginMode.Find },
+            onOpenPostureLab = onOpenPostureLab,
+            onOpenBaselineGuide = onOpenBaselineGuide,
         )
 
         LoginMode.Signup -> SignupView(
@@ -144,16 +148,21 @@ private fun LoginView(
     onLogin: () -> Unit,
     goSignup: () -> Unit,
     goFind: () -> Unit,
+    onOpenPostureLab: () -> Unit = {},
+    onOpenBaselineGuide: () -> Unit = {},
 ) {
     var id by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
 
-    Box(
+    BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
             .background(TrexDark)
             .imePadding(),
     ) {
+        // 세로가 짧은 기기(예: 1080×2280, ~690dp 가용)에서는 430dp 애니메이션 때문에 아래 버튼들이 화면 밖으로 밀려
+        // 카카오/실험실 버튼이 보이지 않았다. 텍스트·입력창·버튼 4개·링크·여백 합계(≈602dp)를 뺀 만큼만 애니메이션에 준다.
+        val animationHeight = (maxHeight - 602.dp).coerceIn(140.dp, 430.dp)
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -179,7 +188,7 @@ private fun LoginView(
                 modifier = Modifier
                     .padding(top = 48.dp)
                     .fillMaxWidth()
-                    .height(430.dp),
+                    .height(animationHeight),
             )
 
             Spacer(Modifier.weight(1f))
@@ -210,6 +219,26 @@ private fun LoginView(
                 modifier = Modifier.fillMaxWidth(),
                 container = Color(0xFFFEE500),
                 contentColor = Color(0xFF191919),
+            )
+            Spacer(Modifier.height(10.dp))
+            // 개발용: 로그인 없이 자세 교정(MediaPipe + rules_mp_v0) 실험 화면으로 진입
+            TrexButton(
+                text = "자세 교정 실험실 (개발용)",
+                onClick = onOpenPostureLab,
+                modifier = Modifier.fillMaxWidth(),
+                icon = Icons.Rounded.CenterFocusStrong,
+                container = Color.White.copy(alpha = 0.10f),
+                contentColor = TrexLime,
+            )
+            Spacer(Modifier.height(10.dp))
+            // 개인화: 기준선 대상 6종목을 정자세 3세트씩 찍어 '내 기준'을 만드는 안내 화면 (spec §15~§17)
+            TrexButton(
+                text = "자세 기준선 설정 (정자세 3세트)",
+                onClick = onOpenBaselineGuide,
+                modifier = Modifier.fillMaxWidth(),
+                icon = Icons.Rounded.Check,
+                container = Color.White.copy(alpha = 0.10f),
+                contentColor = TrexLime,
             )
 
             Row(
