@@ -40,7 +40,9 @@ DOF_RULES: list[tuple[str, str, str]] = [
 
 # 랜드마크가 아예 없어 원리적으로 불가능한 것 (MediaPipe 33점 기준)
 STRUCTURAL_GAPS = [
-    ("척추 곡률(요추/흉추)", "목·어깨·골반만 있고 척추 중간 지점이 없음 → 굽음 정도를 직접 못 잼", "AIHub GT 는 Back/Waist 가 있어 부분 가능했으나 MediaPipe 에는 없음"),
+    ("척추 곡률을 **각도로 직접** 재는 것", "MediaPipe 33점에 척추 중간 지점이 없음(목·어깨·골반뿐) → 굽음 정도 자체를 못 잼",
+     "AIHub GT 의 Back/Waist 기반 `spine_*` 피처를 쓴 규칙 6개는 **전부 exclude**(GT AUC 0.546~0.730). "
+     "반면 프록시(어깨 비대칭·고개·몸통 기울기)로 판정한 척추 조건 11개는 ship — **조건 판정은 되지만 곡률 측정은 안 된다**"),
     ("견갑골 움직임", "어깨 랜드마크는 관절 중심 근사 — 견갑의 전인/후인/거상/하강이 좌표를 거의 안 바꿈", "'견갑대 고정' GT 0.75 / '숄더패킹' 0.62~0.71 로 최저권"),
     ("골반 전·후방 경사", "좌우 골반점만 있어 골반이 앞뒤로 기울어도 두 점은 그대로", "요추 굴곡 판정이 막히는 주된 이유"),
     ("사지 축회전", "팔·다리가 제 축으로 돌아도 끝점(팔꿈치·손목·무릎) 위치가 거의 안 변함", "'상완의 외회전' 은 실제로 '팔꿈치 모으기'(외전) 로 연기돼 그 프록시로만 잡힘"),
@@ -65,12 +67,24 @@ def main():
     ref = pd.read_csv(OUT / "expA_refit.csv")
     ref["subtype"] = ref["subtype"].fillna("")
     doc = json.load(open(HERE / "rules" / "rules_mp_v0.json", encoding="utf-8"))
-    status = {(r["exercise"], r["condition"]): r["status"] for r in doc["rules"] if not r.get("subtype")}
+    # 조건 단위 status: 하위유형 중 하나라도 ship 이면 ship (그 조건을 판정해 출시했는가)
+    rank = {"ship": 0, "beta": 1, "exclude": 2}
+    status: dict[tuple[str, str], str] = {}
+    for r in doc["rules"]:
+        k = (r["exercise"], r["condition"])
+        if k not in status or rank[r["status"]] < rank[status[k]]:
+            status[k] = r["status"]
 
-    base = rv[(rv.subtype == "") & (rv.qc_flag != "3D불량") & rv.wl_auc.notna()].copy()
+    # 주의: '척추의 중립' 같은 다중 메커니즘 조건은 rules_v0 에서 항상 subtype('all'/'flexion'/...)을 갖는다.
+    # subtype=="" 만 쓰면 척추 조건 45행이 통째로 빠지므로, (종목,조건)별 **최고 성능 행**을 대표로 쓴다
+    # ("이 조건을 판정할 수 있는가"가 질문이므로 하위유형 분리 후 최고가 맞는 대표값).
+    base = (rv[(rv.qc_flag != "3D불량") & rv.wl_auc.notna()]
+            .sort_values("wl_auc", ascending=False)
+            .drop_duplicates(["exercise", "base_condition"])
+            .copy())
     base["dof"], base["dof_desc"] = zip(*base.base_condition.map(classify))
     # MP 전이: 뷰별 최적 / 정면 / 전방사선
-    single = ref[ref.view.isin(list("ABCDE")) & (ref.subtype == "")]
+    single = ref[ref.view.isin(list("ABCDE"))]
     best = single.sort_values("mp_refit_auc", ascending=False).drop_duplicates(["exercise", "condition"])[["exercise", "condition", "mp_refit_auc", "view"]]
     front = single[single.view == "C"].groupby(["exercise", "condition"])["mp_refit_auc"].max().rename("mp_front")
     obliq = single[single.view.isin(["B", "D"])].groupby(["exercise", "condition"])["mp_refit_auc"].max().rename("mp_oblique")
@@ -92,7 +106,10 @@ def main():
     L = ["# 모든 신체 자세를 파악할 수 있는가 — 해부학적 자유도별 관측 가능성\n",
          f"- AIHub 조건 {len(base)}개(3D 양호 종목, 기본 조건)를 해부학적 자유도로 분류.",
          "- **GT** = 완벽한 3D 좌표에서의 단일 규칙 AUC(관측 가능성의 상한) · **MP** = MediaPipe 최적 뷰 재적합 AUC · **정면/사선** = 뷰별",
-         "- 답부터: **아니오. 관절이 굽고 펴지는 것과 사지가 벌어지고 모이는 것은 잘 보이지만, 축을 중심으로 도는 회전·견갑/골반·척추 곡률·긴장/부하는 원리적으로 안 보인다.**\n",
+         "- 답부터: **아니오. 관절이 굽고 펴지는 것 · 사지가 벌어지고 모이는 것 · 몸통 정렬은 잘 보이지만, "
+         "축을 중심으로 도는 회전 · 견갑/골반의 자체 움직임 · 근육 긴장/부하는 안 보인다.**",
+         "- **주의 — '척추'는 두 가지를 구분해야 한다**: *척추 중립 조건의 판정*은 프록시로 잘 되지만(ship 11/20, MP 0.938), "
+         "*척추 곡률을 각도로 측정*하는 것은 MediaPipe 로 불가능하다(`spine_*` 규칙 6개 전부 exclude). §3 참조.\n",
          "## 1. 자유도별 관측 가능성\n",
          "| 자유도 | 조건 수 | GT(상한) | MP(최적뷰) | GT→MP 손실 | ship 비율 | 판정 |",
          "|---|---|---|---|---|---|---|"]
@@ -162,9 +179,10 @@ def main():
           "| 머리·시선 | ✅ 됨 | 미세 각은 MP 에서 약해짐 |",
           "| 발 접지·뒤꿈치 들림 | △ 부분 | 깊이 의존, MP 전이 손실 큼 |",
           "| 반동·흔들림 (시계열) | ✅ 됨 | std/range 통계, 샘플링 주기에 의존 |",
+          "| **척추 중립 조건 판정** | ✅ 됨 | ship 11/20, MP 0.938 — **단 프록시로**(어깨 비대칭·고개·몸통 기울기) |",
+          "| **척추 곡률을 각도로 측정** | ❌ | MP 에 중간 랜드마크 없음. `spine_*` 규칙 6개 전부 exclude |",
           "| **사지 축회전** | ❌ | 끝점 좌표가 안 변함 |",
           "| **견갑·골반 자체 움직임** | ❌ | 관절 중심 근사라 정보 없음 |",
-          "| **척추 곡률** | ❌ (MP) | 중간 랜드마크 없음 — 동반 증상(목·머리) 프록시만 |",
           "| **근육 긴장·복압·중량** | ❌ | 좌표에 힘 정보 없음 |",
           "",
           "### 실무 함의",
