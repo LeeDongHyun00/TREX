@@ -22,6 +22,23 @@ enum class RuleStatus { SHIP, BETA, EXCLUDE;
 
 enum class Verdict { OK, VIOLATION, ABSTAIN }
 
+/** 위반 방향 — PRIMARY 는 라벨로 검증된 방향(예: 스쿼트 무릎 '안쪽'), OPPOSITE 는 반대측 가드(예: '바깥'). */
+enum class Direction { PRIMARY, OPPOSITE }
+
+/**
+ * 반대측 가드 (spec §23, BIDIRECTIONAL.md). 같은 피처의 정상 분포 반대쪽 경계(med±3·MAD, MP 스케일).
+ * validated=false 는 그 방향의 라벨이 없어 검출률이 미보증이라는 뜻 — 오탐률만 통제된 보수적 경계다.
+ */
+data class OppositeGuard(
+    val op: String,
+    val threshold: Float,
+    val desc: String,
+    val validated: Boolean,
+    val nNorm: Int,
+) {
+    fun isViolated(value: Float): Boolean = if (op == "<") value < threshold else value > threshold
+}
+
 data class PostureRule(
     val id: String,
     val exercise: String,
@@ -50,6 +67,8 @@ data class PostureRule(
     val baselineK: Int = 3,
     /** 연구(GT)에서 측정된 기준선 보정 이득(AUC Δ). */
     val baselineGain: Float? = null,
+    /** 반대 방향 가드 — 있으면 기본 방향이 정상일 때 반대측도 검사한다. */
+    val oppositeGuard: OppositeGuard? = null,
 ) {
     val violationText: String get() = "$feature $op ${fmt(threshold)}"
 
@@ -83,6 +102,8 @@ data class RuleResult(
     val baselineApplied: Boolean = false,
     /** 기준선 적용 전 원값 (baselineApplied 가 false 면 value 와 같다). */
     val rawValue: Float? = value,
+    /** 위반일 때 어느 방향인지. OPPOSITE 는 반대측 가드(원값 기준) 위반. 위반이 아니면 null. */
+    val direction: Direction? = null,
 )
 
 class PostureRuleSet(
@@ -142,13 +163,23 @@ class PostureRuleSet(
         val b = baseline?.get(rule.feature)
         val useBaseline = raw != null && b != null && rule.supportsBaseline
         val value = if (useBaseline) raw!! - b!! else raw
-        val verdict = when {
+        var verdict = when {
             value == null -> Verdict.ABSTAIN
             useBaseline -> if (rule.isViolatedRelative(value)) Verdict.VIOLATION else Verdict.OK
             rule.isViolated(value) -> Verdict.VIOLATION
             else -> Verdict.OK
         }
-        RuleResult(rule, verdict, value, n, baselineApplied = useBaseline, rawValue = raw)
+        var direction: Direction? = if (verdict == Verdict.VIOLATION) Direction.PRIMARY else null
+        // 반대측 가드: 기본 방향이 정상일 때만, 기준선 없이 **원값**으로 검사(가드는 모집단 정상 분포 경계라 개인 보정 대상이 아님)
+        if (verdict == Verdict.OK && raw != null) {
+            rule.oppositeGuard?.let { g ->
+                if (g.isViolated(raw)) {
+                    verdict = Verdict.VIOLATION
+                    direction = Direction.OPPOSITE
+                }
+            }
+        }
+        RuleResult(rule, verdict, value, n, baselineApplied = useBaseline, rawValue = raw, direction = direction)
     }
 
     companion object {
@@ -166,6 +197,15 @@ class PostureRuleSet(
                     if (cautionsArr != null) for (j in 0 until cautionsArr.length()) add(cautionsArr.getString(j))
                 }
                 val pb = o.optJSONObject("personal_baseline")
+                val og = o.optJSONObject("opposite_guard")?.let { g ->
+                    OppositeGuard(
+                        op = g.getString("op"),
+                        threshold = g.getDouble("threshold").toFloat(),
+                        desc = g.optString("desc"),
+                        validated = g.optBoolean("validated", false),
+                        nNorm = g.optInt("n_norm", 0),
+                    )
+                }
                 out += PostureRule(
                     id = o.getString("id"),
                     exercise = o.getString("exercise"),
@@ -190,6 +230,7 @@ class PostureRuleSet(
                     baselineThresholdRel = pb?.let { if (it.has("threshold_rel") && !it.isNull("threshold_rel")) it.getDouble("threshold_rel").toFloat() else null },
                     baselineK = pb?.optInt("k", BaselineCollector.DEFAULT_SETS) ?: BaselineCollector.DEFAULT_SETS,
                     baselineGain = pb?.let { if (it.has("gain") && !it.isNull("gain")) it.getDouble("gain").toFloat() else null },
+                    oppositeGuard = og,
                 )
             }
             return PostureRuleSet(

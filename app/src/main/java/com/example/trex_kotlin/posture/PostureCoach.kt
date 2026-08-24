@@ -81,7 +81,24 @@ object CoachCues {
         e("허리 휨", "허리", "처음부터 허리가 휘어 있어요. 배에 힘을 주고 허리를 곧게.", "허리가 점점 휘어요. 배에 힘을 주세요."),
     )
 
-    fun cueFor(rule: PostureRule): CoachCue {
+    /**
+     * 반대측(OPPOSITE) 문구 — opposite_guard 가 붙은 조건들 (spec §23).
+     * 기본 방향과 반대의 편차를 말한다: 무릎 '안쪽'(기본) ↔ '바깥'(반대), 고개 '숙임' ↔ '젖힘' 등.
+     */
+    private val oppositeEntries: List<Entry> = listOf(
+        e("발과 무릎의 방향|무릎.*방향", "무릎", "처음부터 무릎이 발끝보다 바깥으로 벌어져 있어요. 무릎을 발끝 방향에 맞추세요.", "무릎이 점점 바깥으로 벌어져요. 무릎을 발끝 방향에 맞추세요."),
+        e("고개 정면", "고개", "처음부터 고개가 뒤로 젖혀져 있어요. 턱을 살짝 당기고 정면을 보세요.", "고개가 점점 젖혀져요. 턱을 당기고 정면을 보세요."),
+        e("시선 정면", "시선", "처음부터 시선이 아래로 떨어져 있어요. 고개를 들어 정면을 보세요.", "시선이 점점 아래로 떨어져요. 고개를 들어 정면을 보세요."),
+        e("고개 안 젖힘", "고개", "처음부터 고개가 푹 숙여져 있어요. 시선을 자연스럽게 앞에 두세요.", "고개가 점점 숙여져요. 시선을 앞에 두세요."),
+        e("상체.*숙임/젖힘|상체 과도한 숙임", "상체", "처음부터 상체가 과하게 앞으로 숙여져 있어요. 가슴을 들고 몸통을 세우세요.", "상체가 점점 앞으로 숙여져요. 가슴을 들고 몸통을 세우세요."),
+    )
+
+    fun cueFor(rule: PostureRule, direction: Direction? = Direction.PRIMARY): CoachCue {
+        if (direction == Direction.OPPOSITE) {
+            for (en in oppositeEntries) if (en.pattern.containsMatchIn(rule.condition)) return en.cue
+            val desc = rule.oppositeGuard?.desc?.takeIf { it.isNotBlank() } ?: "반대 방향"
+            return CoachCue(rule.condition, "처음부터 반대 방향으로 벗어나 있어요 ($desc). 자세를 확인하세요.", "반대 방향으로 점점 벗어나요 ($desc). 자세를 확인하세요.")
+        }
         val st = rule.subtype
         if (rule.condition.contains("척추")) {
             spineBySubtype[st ?: "all"]?.let { return it }
@@ -99,6 +116,8 @@ data class CoachEvent(
     val atMs: Long,
     val earlyValue: Float?,
     val recentValue: Float?,
+    /** 위반 방향 (RECOVERED 이벤트는 null). */
+    val direction: Direction? = null,
 )
 
 /** 규칙 하나의 현재 상태 (UI 표시·세트 요약용). */
@@ -109,14 +128,18 @@ data class OnsetState(
     val earlyValue: Float?,
     val recentValue: Float?,
     val kind: OnsetKind?,
+    /** 최근 창 위반의 방향 (위반이 아니면 null). */
+    val direction: Direction? = null,
 ) {
     val label: String
         get() = when (kind) {
-            OnsetKind.HABIT -> "처음부터"
-            OnsetKind.DRIFT -> "점점 흐트러짐"
+            OnsetKind.HABIT -> "처음부터$dirSuffix"
+            OnsetKind.DRIFT -> "점점 흐트러짐$dirSuffix"
             OnsetKind.RECOVERED -> "교정됨"
             null -> if (recent == Verdict.ABSTAIN) "유보" else "정상"
         }
+
+    private val dirSuffix: String get() = if (direction == Direction.OPPOSITE) " (반대측)" else ""
 }
 
 class LiveCoach(
@@ -196,7 +219,7 @@ class LiveCoach(
             val er = earlyRes[rr.rule.id]
             val early = er?.verdict ?: Verdict.ABSTAIN
             val kind = classify(early, rr.verdict, rr.rule.id)
-            val st = OnsetState(rr.rule, early, rr.verdict, er?.value, rr.value, kind)
+            val st = OnsetState(rr.rule, early, rr.verdict, er?.value, rr.value, kind, direction = rr.direction)
             states += st
             if (rr.verdict == Verdict.VIOLATION) {
                 val s = (streak[rr.rule.id] ?: 0) + 1
@@ -215,7 +238,7 @@ class LiveCoach(
         // 위반 후보가 없으면 '교정됨' 한 번
         val pick = candidate ?: states.firstOrNull { it.kind == OnsetKind.RECOVERED && canSpeak(it.rule.id, nowMs, recovered = true) }
         if (pick == null) return null
-        val cue = CoachCues.cueFor(pick.rule)
+        val cue = CoachCues.cueFor(pick.rule, pick.direction ?: Direction.PRIMARY)
         val msg = when (pick.kind) {
             OnsetKind.HABIT -> cue.habit
             OnsetKind.DRIFT -> cue.drift
@@ -225,7 +248,7 @@ class LiveCoach(
         lastSpokenAt[pick.rule.id] = nowMs
         lastGlobalAt = nowMs
         spokenKind[pick.rule.id] = pick.kind
-        return CoachEvent(pick.rule, pick.kind, msg, nowMs, pick.earlyValue, pick.recentValue)
+        return CoachEvent(pick.rule, pick.kind, msg, nowMs, pick.earlyValue, pick.recentValue, direction = pick.direction)
     }
 
     private fun canSpeak(ruleId: String, nowMs: Long, recovered: Boolean = false): Boolean {
@@ -251,7 +274,7 @@ class LiveCoach(
                 lr.verdict == Verdict.OK && early == Verdict.VIOLATION -> OnsetKind.RECOVERED
                 else -> null
             }
-            OnsetState(lr.rule, early, lr.verdict, er?.value, lr.value, kind)
+            OnsetState(lr.rule, early, lr.verdict, er?.value, lr.value, kind, direction = lr.direction)
         }
     }
 }

@@ -562,7 +562,8 @@ fun PostureLabScreen(onClose: () -> Unit) {
                     Column(Modifier.padding(horizontal = 10.dp, vertical = 6.dp)) {
                         Text(
                             text = ev?.let {
-                                (when (it.kind) { OnsetKind.HABIT -> "처음부터 · "; OnsetKind.DRIFT -> "점점 흐트러짐 · "; OnsetKind.RECOVERED -> "교정됨 · " }) + it.rule.condition
+                                (when (it.kind) { OnsetKind.HABIT -> "처음부터 · "; OnsetKind.DRIFT -> "점점 흐트러짐 · "; OnsetKind.RECOVERED -> "교정됨 · " }) +
+                                    it.rule.condition + (if (it.direction == Direction.OPPOSITE) " (반대측)" else "")
                             } ?: "코칭 대기 — 초반 ${MIN_FRAMES_FOR_VERDICT}프레임 후 판정 시작",
                             color = Color.White,
                             fontSize = 11.sp,
@@ -800,7 +801,7 @@ private fun LiveRuleRow(rule: PostureRule, liveValue: Float?, aggValue: Float?, 
 private fun RuleResultRow(result: RuleResult) {
     val rule = result.rule
     val (label, color) = when (result.verdict) {
-        Verdict.VIOLATION -> "위반" to TrexError
+        Verdict.VIOLATION -> (if (result.direction == Direction.OPPOSITE) "위반(반대측)" else "위반") to TrexError
         Verdict.OK -> "정상" to TrexLime
         Verdict.ABSTAIN -> "유보" to Color.White.copy(alpha = 0.45f)
     }
@@ -823,11 +824,21 @@ private fun RuleResultRow(result: RuleResult) {
         }
         Text(
             text = "${rule.feature} = ${result.value?.let { PostureRule.fmt(it) } ?: "—"}" +
-                "  (기준 ${rule.op} ${PostureRule.fmt(rule.threshold)}, 샘플 ${result.sampleCount})",
+                "  (기준 ${rule.op} ${PostureRule.fmt(rule.threshold)}, 샘플 ${result.sampleCount})" +
+                (rule.oppositeGuard?.let { g -> " · 반대측 ${g.op} ${PostureRule.fmt(g.threshold)}" } ?: ""),
             color = Color.White.copy(alpha = 0.62f),
             fontSize = 10.sp,
             modifier = Modifier.padding(top = 3.dp),
         )
+        if (result.direction == Direction.OPPOSITE) {
+            val g = rule.oppositeGuard
+            Text(
+                text = "반대 방향 위반: ${g?.desc ?: "반대측"}" + (if (g?.validated == false) " · 정상분포 기반 경계(검출률 미보증)" else ""),
+                color = TrexWarning.copy(alpha = 0.9f),
+                fontSize = 9.sp,
+                modifier = Modifier.padding(top = 2.dp),
+            )
+        }
         Text(
             text = "권장 뷰 ${rule.view} · 연구 AUC ${"%.2f".format(rule.cvAuc)} / 균형정확도 ${"%.2f".format(rule.cvBalacc)}" +
                 if (!rule.mirrorSafe) " · 좌우 미러 주의" else "",

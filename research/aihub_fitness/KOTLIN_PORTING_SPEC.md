@@ -393,6 +393,19 @@ AIHub 조건 132개를 해부학적 자유도로 분류해, 완벽한 GT 3D 상�
 
 > **정정 이력**: 이 절의 초판은 `subtype==""` 필터로 척추 조건 45행을 통째로 누락해 "척추 곡률 ship 0/4, 원리적 관측 불가"라고 적었다. 실제로 그 4개는 주변부 조건(등 아치·허리 휨)이었고, 본 척추 조건 20개는 ship 11/20 이다. 조건 단위 대표값(하위유형 중 최고)으로 재집계해 수정했다.
 
+## 24. 양방향 검출 — 반대측 가드 (`bidirectional_analysis.py` → `add_opposite_guards.py`, [BIDIRECTIONAL.md](BIDIRECTIONAL.md))
+
+질문: "스쿼트에서 무릎이 **안쪽**뿐 아니라 **바깥**으로 벌어져도 잡을 수 있나?" — AIHub 라벨은 종목당 한 방향만 연기했으므로(스쿼트 무릎 바깥 클립 0개) 기존 규칙은 단방향이다.
+
+**근거 3종** (모두 `bidirectional_analysis.py`):
+1. **부호 분리** — 서서 하는 전 종목에서 knee_out 부호가 방향을 가른다: 발끝 안쪽 위반 −0.030 vs 바깥쪽 위반 +0.044 vs 정자세 그 사이. 좌/우(head_yaw 90%), 상/하(head_pitch·face_vs_torso 78%), 기울기(shoulder_asym 69~76%)도 중앙값 분리로 방향 판별 가능.
+2. **가드 방식 검증** — 양방향 라벨이 있는 조건(고개 좌/우/상/하, 좌우 손 높이)에서 "정상 분포 반대측 경계(med±2.5·MAD)" 가드의 수행자-홀드아웃 recall: hand_h_asym 96/93%, head_yaw 97/98% (FPR 6.5~8%), shoulder_asym 66/61%, head_pitch 38/59%. **foot_open(발끝 방향) 5/25% — 가드 불가**(정상 발각도 분산이 큼).
+3. **주입** — 검증 통과 피처를 쓰는 활성 규칙 7개에 `opposite_guard {op, threshold, desc, method, n_norm, validated}` 를 MP 스케일(규칙의 view_best_front 정상 클립)로 주입. 앱 주입은 med±**3.0**·MAD 로 검증(2.5)보다 보수화 — 음성 안내라 오탐을 눌렀다. `validated=false`(런지 상체 앞숙임, 딥스 고개 숙임)는 그 방향 라벨이 없어 **오탐률만 통제, 검출률 미보증**.
+
+**앱 동작** (`PostureRules.kt`/`PostureCoach.kt`): 기본 방향 정상 && 원값이 가드 초과 → `VIOLATION(direction=OPPOSITE)`. 가드는 모집단 경계이므로 개인 기준선 보정 없이 **원값**으로 판정. 코칭 문구는 반대측 카탈로그(무릎 "바깥으로 벌어져 있어요", 고개 "젖혀져", 시선 "아래로", 상체 "앞으로 숙여져") → 없으면 guard.desc 폴백. UI 는 "위반(반대측)" 태그.
+
+**한계**: (1) lateral(좌/우 기울기) 규칙은 std/range 라 이미 양방향 — 가드 대신 **방향 명명**이 과제인데 좌/우 판별 71~76%는 음성으로 단정하기 위험해 이번엔 미명명("옆으로"). head_yaw 90%는 명명 후보. (2) 발끝 안/바깥은 knee_out 프록시로만 커버 — 전용 foot_open 피처는 검증 실패로 보류. (3) 반대측 임계값도 AIHub 분포 기준 — §9 재보정 대상에 포함할 것.
+
 ## 12. 파일
 - `rules/rules_mp_v0.json` (앱이 읽을 정본), `rules/rules_mp_v0.md` (사람용 표, 피처 공식 표 포함), `export_rules_mp.py` (재생성)
 - 실험 코드/요약: `experiment_a.py`, `experiment_a_refit.py`, `outputs/experiment_a_summary.md`, `outputs/expA_refit_summary.md`

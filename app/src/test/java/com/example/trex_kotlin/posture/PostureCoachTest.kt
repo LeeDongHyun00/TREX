@@ -140,4 +140,77 @@ class PostureCoachTest {
         assertTrue(fb.habit.contains("알 수 없는 조건"))
         assertTrue(fb.recovered.contains("교정"))
     }
+
+    // ---- 양방향(반대측 가드) — spec §23, BIDIRECTIONAL.md
+
+    private val guardedKneeRule = kneeRule.copy(
+        oppositeGuard = OppositeGuard(op = ">", threshold = 0.20f, desc = "무릎/발이 과도하게 바깥", validated = true, nNorm = 27),
+    )
+    private val rsGuard = PostureRuleSet("t", "d", listOf(guardedKneeRule, torsoRule))
+
+    @Test
+    fun evaluateFlagsBothDirectionsOfKneeError() {
+        val agg = FeatureAggregator()
+        repeat(8) { agg.add(frame(0.30f, 0f)) }                       // 무릎 과도하게 바깥
+        val out = rsGuard.evaluate("바벨 스쿼트", agg).first { it.rule.id == guardedKneeRule.id }
+        assertEquals(Verdict.VIOLATION, out.verdict)
+        assertEquals(Direction.OPPOSITE, out.direction)
+
+        val aggIn = FeatureAggregator()
+        repeat(8) { aggIn.add(frame(-0.05f, 0f)) }                    // 무릎 안쪽 (기본 방향)
+        val inRes = rsGuard.evaluate("바벨 스쿼트", aggIn).first { it.rule.id == guardedKneeRule.id }
+        assertEquals(Verdict.VIOLATION, inRes.verdict)
+        assertEquals(Direction.PRIMARY, inRes.direction)
+
+        val aggOk = FeatureAggregator()
+        repeat(8) { aggOk.add(frame(0.05f, 0f)) }                     // 정상 (임계값 사이)
+        val okRes = rsGuard.evaluate("바벨 스쿼트", aggOk).first { it.rule.id == guardedKneeRule.id }
+        assertEquals(Verdict.OK, okRes.verdict)
+        assertNull(okRes.direction)
+    }
+
+    @Test
+    fun coachSpeaksOutwardKneeCueAndRecovers() {
+        val c = LiveCoach(rsGuard, "바벨 스쿼트", windowFrames = 8, minFrames = 8, persistence = 2, ruleCooldownMs = 0, globalGapMs = 0)
+        var t = 0L
+        repeat(9) { c.onFrame(frame(0.30f, 0f)); t += 300 }
+        c.evaluate(t)                                                  // streak 1
+        c.onFrame(frame(0.30f, 0f)); t += 300
+        val ev = c.evaluate(t)
+        assertNotNull(ev)
+        assertEquals(OnsetKind.HABIT, ev!!.kind)
+        assertEquals(Direction.OPPOSITE, ev.direction)
+        assertTrue(ev.message.contains("바깥"))
+        val st = c.lastStates.first { it.rule.id == guardedKneeRule.id }
+        assertEquals(Direction.OPPOSITE, st.direction)
+        assertTrue(st.label.contains("반대측"))
+        // 교정 → RECOVERED
+        var rec: CoachEvent? = null
+        repeat(10) {
+            c.onFrame(frame(0.05f, 0f)); t += 300
+            val e = c.evaluate(t)
+            if (e?.kind == OnsetKind.RECOVERED) rec = e
+        }
+        assertNotNull(rec)
+    }
+
+    @Test
+    fun oppositeCueCatalogAndFallback() {
+        val g = rule("x", "발과 무릎의 방향 일치", "knee_out_mean__mean", "<", 0f)
+        val cue = CoachCues.cueFor(g, Direction.OPPOSITE)
+        assertTrue(cue.habit.contains("바깥"))
+        assertTrue(cue.drift.contains("점점"))
+        // 기본 방향은 기존 문구 그대로
+        assertTrue(CoachCues.cueFor(g, Direction.PRIMARY).habit.contains("안쪽"))
+        assertTrue(CoachCues.cueFor(g).habit.contains("안쪽"))
+        // 고개/상체 반대측
+        assertTrue(CoachCues.cueFor(rule("x", "고개 정면", "face_vs_torso__min", "<", 0f), Direction.OPPOSITE).habit.contains("젖혀"))
+        assertTrue(CoachCues.cueFor(rule("x", "상체의 과조한 숙임/젖힘 여부", "torso_pitch__min", "<", 0f), Direction.OPPOSITE).habit.contains("숙여"))
+        // 카탈로그에 없는 조건은 가드 설명으로 폴백
+        val fb = rule("x", "무릎 반동 없음", "knee_mean__mean", "<", 0f)
+            .copy(oppositeGuard = OppositeGuard(">", 1f, "반대 테스트", validated = false, nNorm = 10))
+        val fbCue = CoachCues.cueFor(fb, Direction.OPPOSITE)
+        assertTrue(fbCue.habit.contains("반대 테스트"))
+        assertTrue(fbCue.habit.contains("반대 방향"))
+    }
 }

@@ -1,6 +1,6 @@
 {
  "version": "mp_v0.1",
- "revision_note": "mp_v0.1: 미러 불변(좌/우 카메라 위치 무관) 재적합 결과를 우선 채택, 비제약 규칙은 alt_rule 로 보존. 미러 안전 규칙이 정본이 된 건수 16",
+ "revision_note": "mp_v0.1: 미러 불변(좌/우 카메라 위치 무관) 재적합 결과를 우선 채택, 비제약 규칙은 alt_rule 로 보존. 미러 안전 규칙이 정본이 된 건수 16 | opposite_guard 7개 주입(양방향 검출, bidirectional_analysis.py) — 반대측은 정상 분포 밖 보수 경계, validated=false 는 검출률 미보증",
  "generated": "2026-08-23",
  "source": "AIHub 013 피트니스자세 (41종목, 수행자 113명) × MediaPipe pose_landmarker_full — 실험 A-2 (MP 피처 재적합, 수행자 GroupKFold, 종목당 ≤60클립)",
  "coordinate_convention": {
@@ -502,7 +502,15 @@
    },
    "gt_auc_control": 0.8731,
    "gt_auc_full": 0.8261,
-   "cautions": []
+   "cautions": [],
+   "opposite_guard": {
+    "op": ">",
+    "threshold": 127.899483,
+    "desc": "고개 과도 숙임",
+    "method": "MP(B) 정상 med±2.5·MAD",
+    "n_norm": 32,
+    "validated": false
+   }
   },
   {
    "id": "딥스|이완 시 팔꿈치 각도 90도",
@@ -812,7 +820,15 @@
    "gt_auc_full": 0.9504,
    "cautions": [
     "valgus 는 정면(C) 뷰에서만 신뢰 (전방 사선에서 r≈0.5)"
-   ]
+   ],
+   "opposite_guard": {
+    "op": ">",
+    "threshold": -0.003913,
+    "desc": "무릎/발이 과도하게 바깥",
+    "method": "MP(C) 정상 med±2.5·MAD",
+    "n_norm": 32,
+    "validated": true
+   }
   },
   {
    "id": "바벨 런지|척추의 중립[lateral]",
@@ -925,7 +941,15 @@
    },
    "gt_auc_control": 0.9666,
    "gt_auc_full": 0.9399,
-   "cautions": []
+   "cautions": [],
+   "opposite_guard": {
+    "op": ">",
+    "threshold": 111.862783,
+    "desc": "반대 방향 고개(들림/숙임)",
+    "method": "MP(B) 정상 med±2.5·MAD",
+    "n_norm": 24,
+    "validated": true
+   }
   },
   {
    "id": "바벨 스쿼트|척추의 중립[all]",
@@ -1102,7 +1126,15 @@
    "gt_auc_full": 0.9708,
    "cautions": [
     "valgus 는 정면(C) 뷰에서만 신뢰 (전방 사선에서 r≈0.5)"
-   ]
+   ],
+   "opposite_guard": {
+    "op": ">",
+    "threshold": 0.23358,
+    "desc": "무릎/발이 과도하게 바깥",
+    "method": "MP(C) 정상 med±2.5·MAD",
+    "n_norm": 27,
+    "validated": true
+   }
   },
   {
    "id": "바벨 스티프 데드리프트|척추의 중립[lateral]",
@@ -1680,7 +1712,15 @@
    },
    "gt_auc_control": 0.7763,
    "gt_auc_full": 0.8761,
-   "cautions": []
+   "cautions": [],
+   "opposite_guard": {
+    "op": "<",
+    "threshold": -42.474806,
+    "desc": "반대 방향 고개(들림/숙임)",
+    "method": "MP(C) 정상 med±2.5·MAD",
+    "n_norm": 26,
+    "validated": true
+   }
   },
   {
    "id": "스텝 백워드 다이나믹 런지|앞다리 무릎 각도 90도",
@@ -1840,7 +1880,15 @@
    },
    "gt_auc_control": 0.8521,
    "gt_auc_full": 0.8042,
-   "cautions": []
+   "cautions": [],
+   "opposite_guard": {
+    "op": ">",
+    "threshold": 9.311985,
+    "desc": "과도한 앞 숙임",
+    "method": "MP(D) 정상 med±2.5·MAD",
+    "n_norm": 37,
+    "validated": false
+   }
   },
   {
    "id": "업라이트로우|팔꿈치가 손목 리드",
@@ -2626,7 +2674,15 @@
    "gt_auc_full": 0.9144,
    "cautions": [
     "후방 뷰(A)에서 더 좋음 (AUC 0.88) — 촬영 가이드와 상충"
-   ]
+   ],
+   "opposite_guard": {
+    "op": ">",
+    "threshold": 11.196192,
+    "desc": "과도한 앞 숙임",
+    "method": "MP(D) 정상 med±2.5·MAD",
+    "n_norm": 40,
+    "validated": false
+   }
   },
   {
    "id": "스텝 포워드 다이나믹 런지|척추의 중립[all]",
