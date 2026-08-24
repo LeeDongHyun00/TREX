@@ -67,18 +67,15 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
+import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.delay
 
 @Composable
-fun TrexApp() {
+fun TrexApp(app: AppViewModel = viewModel()) {
     var selectedTab by rememberSaveable { mutableStateOf(TrexTab.Home) }
-    var guideDone by rememberSaveable { mutableStateOf(false) }
-    var loggedIn by rememberSaveable { mutableStateOf(false) }
-    var onboarded by rememberSaveable { mutableStateOf(false) }
     var sessionIndex by rememberSaveable { mutableIntStateOf(-1) }
     var sessionDone by rememberSaveable { mutableStateOf(false) }
-    var workoutPlan by remember { mutableStateOf(todayPlan) }
-    var workoutHistory by remember { mutableStateOf(seedWorkoutHistory(workoutPlan)) }
+    val workoutPlan = app.workoutPlan
     var sessionElapsedSeconds by rememberSaveable { mutableIntStateOf(0) }
     var sessionPaused by rememberSaveable { mutableStateOf(false) }
     var sessionNotice by rememberSaveable { mutableStateOf<String?>(null) }
@@ -99,9 +96,7 @@ fun TrexApp() {
         if (sessionIndex < 0) return
         sessionNotice = null
         if (sessionIndex + 1 >= workoutPlan.size) {
-            workoutHistory = workoutHistory.replaceTodayWith(
-                createWorkoutHistoryDay(workoutPlan, sessionElapsedSeconds),
-            )
+            app.recordCompletedSession(sessionElapsedSeconds)
             sessionIndex = -1
             sessionDone = true
             sessionPaused = false
@@ -119,9 +114,11 @@ fun TrexApp() {
     }
 
     fun fallbackToTimerSession(id: String) {
-        workoutPlan = workoutPlan.map { workout ->
-            if (workout.id == id) workout.copy(posture = false) else workout
-        }
+        app.updatePlan(
+            workoutPlan.map { workout ->
+                if (workout.id == id) workout.copy(posture = false) else workout
+            },
+        )
         sessionNotice = "카메라 권한이 거부되어 자세 교정 OFF 모드로 전환했어요."
     }
 
@@ -137,19 +134,19 @@ fun TrexApp() {
     ScreenScaffold {
         AnimatedContent(
             targetState = AppRoute(
-                loggedIn = loggedIn,
-                guideDone = guideDone,
-                onboarded = onboarded,
-                sessionIndex = sessionIndex,
+                loggedIn = app.loggedIn,
+                guideDone = app.guideDone,
+                onboarded = app.onboarded,
+                sessionIndex = sessionIndex.coerceAtMost(workoutPlan.lastIndex),
                 sessionDone = sessionDone,
             ),
             transitionSpec = { fadeIn() togetherWith fadeOut() },
             label = "trex-route",
         ) { route ->
             when {
-                !route.guideDone -> GuideBookScreen(onLogin = { guideDone = true })
-                !route.loggedIn -> LoginScreen(onLogin = { loggedIn = true })
-                !route.onboarded -> OnboardingScreen(onDone = { onboarded = true })
+                !route.guideDone -> GuideBookScreen(onLogin = { app.completeGuide() })
+                !route.loggedIn -> LoginScreen(onLogin = { app.completeLogin() })
+                !route.onboarded -> OnboardingScreen(onDone = { profile -> app.completeOnboarding(profile) })
                 route.sessionDone -> SessionCompleteScreen(
                     onDone = {
                         sessionDone = false
@@ -189,10 +186,8 @@ fun TrexApp() {
                 }
 
                 else -> MainTabs(
+                    app = app,
                     selectedTab = selectedTab,
-                    workoutPlan = workoutPlan,
-                    workoutHistory = workoutHistory,
-                    onWorkoutPlanChange = { workoutPlan = it },
                     onTabSelected = { selectedTab = it },
                     onStartWorkout = ::startSession,
                 )
@@ -211,10 +206,8 @@ private data class AppRoute(
 
 @Composable
 private fun MainTabs(
+    app: AppViewModel,
     selectedTab: TrexTab,
-    workoutPlan: List<Workout>,
-    workoutHistory: List<WorkoutHistoryDay>,
-    onWorkoutPlanChange: (List<Workout>) -> Unit,
     onTabSelected: (TrexTab) -> Unit,
     onStartWorkout: () -> Unit,
 ) {
@@ -222,7 +215,7 @@ private fun MainTabs(
     var workoutNavigation by rememberSaveable { mutableStateOf(WorkoutNavigationTab.Schedule) }
     var dietRecordRequestToken by rememberSaveable { mutableIntStateOf(0) }
     var dietRecordLaunchAction by rememberSaveable { mutableStateOf(DietRecordLaunchAction.Camera) }
-    var dietRecentFoodNames by remember { mutableStateOf<List<String>>(emptyList()) }
+    val dietRecentFoodNames = remember(app.dietByDay) { app.recentFoodsForCurrentMeal().map { it.name } }
 
     LaunchedEffect(selectedTab) {
         tabOverlayVisible = false
@@ -242,22 +235,22 @@ private fun MainTabs(
     Box(Modifier.fillMaxSize()) {
         Crossfade(targetState = selectedTab, label = "tab-content") { tab ->
             when (tab) {
-                TrexTab.Home -> HomeScreen()
+                TrexTab.Home -> HomeScreen(app = app)
                 TrexTab.Workout -> when (workoutNavigation) {
                     WorkoutNavigationTab.Schedule -> WorkoutListScreen(
-                        plan = workoutPlan,
-                        onPlanChange = onWorkoutPlanChange,
+                        plan = app.workoutPlan,
+                        onPlanChange = { app.updatePlan(it) },
                         onSheetVisibleChange = { tabOverlayVisible = it },
                     )
-                    WorkoutNavigationTab.History -> WorkoutHistoryScreen(records = workoutHistory)
+                    WorkoutNavigationTab.History -> WorkoutHistoryScreen(records = app.workoutHistory)
                 }
                 TrexTab.Diet -> DietScreen(
+                    app = app,
                     recordRequestToken = dietRecordRequestToken,
                     recordLaunchAction = dietRecordLaunchAction,
                     onSheetVisibleChange = { tabOverlayVisible = it },
-                    onRecentFoodsChange = { dietRecentFoodNames = it },
                 )
-                TrexTab.Profile -> ProfileScreen()
+                TrexTab.Profile -> ProfileScreen(profile = app.profile, onLogout = { app.logout() })
             }
         }
 

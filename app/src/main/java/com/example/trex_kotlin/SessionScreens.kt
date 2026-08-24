@@ -116,19 +116,10 @@ private enum class TimerPhase {
     Rest,
 }
 
-private data class ExerciseSpec(
-    val targetReps: Int,
-    val targetLabel: String,
-    val totalSets: Int,
-    val restSeconds: Int,
-)
-
 private data class WorkoutFeedback(
     val beep: () -> Unit,
     val speak: (String) -> Unit,
 )
-
-private val poseJointIndexes = (0..12).toSet()
 
 @Composable
 fun TimerSessionScreen(
@@ -288,7 +279,7 @@ fun TimerSessionScreen(
                 setLabel = "${currentSet}세트 완료",
                 planned = spec.targetLabel,
                 value = actualCountInput,
-                onValueChange = { actualCountInput = it.numericText().take(3) },
+                onValueChange = { actualCountInput = it.digitsOnly().take(3) },
                 onDismiss = { phase = TimerPhase.Active },
                 onConfirm = ::finishSetWithActualCount,
             )
@@ -359,6 +350,8 @@ fun PostureSessionScreen(
 
     var muted by remember(workout.id) { mutableStateOf(false) }
     val feedback = rememberWorkoutFeedback(muted = muted)
+    // 분석 엔진 — 지금은 시뮬레이션, 실제 카메라+포즈 추정 엔진이 같은 인터페이스로 교체된다 (PostureEngine.kt)
+    val engine: PostureAnalysisEngine = remember(workout.id) { SimulatedPostureAnalysisEngine(spec.targetReps) }
     var phase by remember(workout.id) { mutableStateOf(PosturePhase.CameraCheck) }
     var currentSet by remember(workout.id) { mutableIntStateOf(1) }
     var currentRep by remember(workout.id, currentSet) { mutableIntStateOf(0) }
@@ -367,14 +360,20 @@ fun PostureSessionScreen(
     var scanStep by remember(workout.id) { mutableIntStateOf(0) }
     var restSeconds by remember(workout.id) { mutableIntStateOf(spec.restSeconds) }
     var paused by remember(workout.id) { mutableStateOf(false) }
-    var trackingLost by remember(workout.id, currentSet) { mutableStateOf(false) }
-    var trackingLossShown by remember(workout.id, currentSet) { mutableStateOf(false) }
+    var activeCue by remember(workout.id, currentSet) { mutableStateOf("자세를 유지해 주세요") }
     var postureScore by remember(workout.id, currentSet) { mutableIntStateOf(94) }
     var setScores by remember(workout.id) { mutableStateOf<List<Int>>(emptyList()) }
     var onboardingVisible by remember(workout.id) { mutableStateOf(true) }
+    val trackingLost = engine.trackingLost
     val blocked = paused || lifecyclePaused || trackingLost
     val blockedState = rememberUpdatedState(blocked)
     val pauseState = rememberUpdatedState(paused || lifecyclePaused)
+
+    LaunchedEffect(trackingLost) {
+        if (trackingLost) {
+            feedback.speak("관절이 화면 밖으로 벗어났어요. 한 걸음 뒤로 이동해 주세요")
+        }
+    }
 
     LaunchedEffect(blocked) {
         onPausedChange(blocked)
@@ -419,24 +418,18 @@ fun PostureSessionScreen(
 
     LaunchedEffect(phase, currentSet, workout.id) {
         if (phase == PosturePhase.Active) {
+            engine.beginSet(currentSet)
             feedback.speak("${workout.name} ${currentSet}세트를 시작합니다")
             while (currentRep < spec.targetReps && phase == PosturePhase.Active) {
-                if (!trackingLossShown && currentRep >= (spec.targetReps / 2).coerceAtLeast(1)) {
-                    trackingLost = true
-                    feedback.speak("관절이 화면 밖으로 벗어났어요. 한 걸음 뒤로 이동해 주세요")
-                    delay(1600)
-                    trackingLost = false
-                    trackingLossShown = true
-                }
-
-                waitOneSecond { blockedState.value }
+                val analysis = engine.awaitNextRep(currentRep) { blockedState.value }
                 if (phase != PosturePhase.Active) return@LaunchedEffect
 
                 currentRep += 1
-                postureScore = (96 - (currentRep % 5) * 2 - if (trackingLossShown) 2 else 0).coerceIn(0, 100)
+                postureScore = analysis.score
                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                if (currentRep % 4 == 0) {
-                    feedback.speak(postureWarning(currentRep))
+                analysis.cue?.let { cue ->
+                    activeCue = cue
+                    feedback.speak(cue)
                 }
             }
 
@@ -514,6 +507,8 @@ fun PostureSessionScreen(
                     scanStep = scanStep,
                     phase = visiblePhase,
                     trackingLost = trackingLost,
+                    engineJoints = engine.detectedJoints,
+                    activeCue = activeCue,
                     postureScore = postureScore,
                     setScores = setScores,
                     elapsedSeconds = elapsedSeconds,
@@ -719,6 +714,8 @@ private fun PostureActiveScaffold(
     scanStep: Int,
     phase: PosturePhase,
     trackingLost: Boolean,
+    engineJoints: Set<Int>,
+    activeCue: String,
     postureScore: Int,
     setScores: List<Int>,
     elapsedSeconds: Int,
@@ -732,15 +729,14 @@ private fun PostureActiveScaffold(
     val detectedJoints = when {
         phase == PosturePhase.CameraCheck && scanStep == 0 -> setOf(0, 1, 2, 5, 6)
         phase == PosturePhase.CameraCheck && scanStep == 1 -> poseJointIndexes - setOf(11, 12)
-        trackingLost -> poseJointIndexes - setOf(10, 11, 12)
-        else -> poseJointIndexes
+        else -> engineJoints
     }
     val headline = when {
         trackingLost -> "관절이 화면 밖으로 벗어났어요"
         phase == PosturePhase.CameraCheck -> "주요 관절 감지 중"
         phase == PosturePhase.Stabilizing -> "준비 자세 유지"
         phase == PosturePhase.Countdown -> "곧 시작합니다"
-        phase == PosturePhase.Active -> postureWarning(currentRep)
+        phase == PosturePhase.Active -> activeCue
         else -> "세트 완료"
     }
 
@@ -1801,44 +1797,4 @@ private fun Context.findActivity(): Activity? {
     return null
 }
 
-private fun Workout.exerciseSpec(): ExerciseSpec {
-    val numbers = Regex("\\d+").findAll(reps).map { it.value.toInt() }.toList()
-    val totalSets = when {
-        reps.contains("세트") && numbers.size >= 2 -> numbers.last().coerceAtLeast(1)
-        else -> 1
-    }
-    val target = numbers.firstOrNull()?.coerceAtLeast(1) ?: 1
-    val targetLabel = when {
-        reps.contains("초") -> "${target}초"
-        reps.contains("분") && !reps.contains("회") -> reps
-        else -> "${target}회"
-    }
-    return ExerciseSpec(
-        targetReps = target,
-        targetLabel = targetLabel,
-        totalSets = totalSets,
-        restSeconds = 30,
-    )
-}
 
-private fun Workout.loadLabel(): String = when (category) {
-    "하체", "상체" -> "체중"
-    "코어", "복근" -> "매트"
-    "유산소" -> "심박"
-    "회복" -> "가동범위"
-    else -> "자율"
-}
-
-private fun postureWarning(rep: Int): String = when (rep % 3) {
-    0 -> "무릎이 안쪽으로 모이지 않게 벌려주세요"
-    1 -> "허리를 곧게 세우고 시선은 정면을 봐주세요"
-    else -> "양쪽 어깨 높이를 맞춰주세요"
-}
-
-private fun String.numericText(): String = filter(Char::isDigit)
-
-private fun Int.asClock(): String {
-    val minute = this / 60
-    val second = this % 60
-    return minute.toString().padStart(2, '0') + ":" + second.toString().padStart(2, '0')
-}

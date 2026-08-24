@@ -1,17 +1,10 @@
 package com.example.trex_kotlin
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -31,8 +24,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.relocation.BringIntoViewRequester
-import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -69,16 +60,15 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
@@ -90,20 +80,24 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
-import java.util.Calendar
+import java.time.LocalDate
+import java.time.format.TextStyle
+import java.util.Locale
 import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
 
 @Composable
-fun HomeScreen() {
-    val homeWorkouts = todayPlan.take(4).mapIndexed { index, workout ->
-        workout.copy(posture = index == 0 || index == 3)
-    }
-    val doneCount = homeWorkouts.count { it.posture }
-    val days = listOf("월", "화", "수", "목", "금", "토", "일")
-    val dates = listOf(20, 21, 22, 23, 24, 25, 26)
-    val completed = listOf(true, true, false, true, true, false, false)
-    val meal = currentMeal()
+fun HomeScreen(app: AppViewModel) {
+    val today = LocalDate.now()
+    val plan = app.workoutPlan
+    val todayRecord = app.todayRecord
+    val doneNames = todayRecord?.items?.map { it.workoutName }?.toSet().orEmpty()
+    val doneCount = plan.count { it.name in doneNames }
+    val weekDays = (6 downTo 0).map { back -> today.minusDays(back.toLong()) }
+    val activeDays = app.workoutHistory.filter { it.items.isNotEmpty() }.map { it.epochDay }.toSet()
+    val attendedCount = weekDays.count { it.toEpochDay() in activeDays }
+    val meal = currentMealInfo()
+    val mealLogged = app.dietFor(0)[meal.id].orEmpty().isNotEmpty()
 
     LazyColumn(
         modifier = Modifier
@@ -113,7 +107,7 @@ fun HomeScreen() {
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         item {
-            ScreenTitle("2026년 4월 XX일", color = Color.White)
+            ScreenTitle("${today.year}년 ${today.monthValue}월 ${today.dayOfMonth}일", color = Color.White)
         }
 
         item {
@@ -131,7 +125,7 @@ fun HomeScreen() {
                             fontSize = 12.sp,
                             modifier = Modifier.weight(1f),
                         )
-                        Pill("4/7일", background = TrexDark, color = TrexLime)
+                        Pill("$attendedCount/7일", background = TrexDark, color = TrexLime)
                     }
                     Row(
                         modifier = Modifier
@@ -139,9 +133,15 @@ fun HomeScreen() {
                             .padding(top = 14.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
-                        days.forEachIndexed { index, day ->
+                        weekDays.forEach { date ->
+                            val attended = date.toEpochDay() in activeDays
+                            val isToday = date == today
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text(day, color = TrexDark.copy(alpha = 0.58f), fontSize = 10.sp)
+                                Text(
+                                    text = date.dayOfWeek.getDisplayName(TextStyle.NARROW, Locale.KOREAN),
+                                    color = TrexDark.copy(alpha = 0.58f),
+                                    fontSize = 10.sp,
+                                )
                                 Box(
                                     modifier = Modifier
                                         .padding(top = 6.dp)
@@ -149,16 +149,16 @@ fun HomeScreen() {
                                         .clip(CircleShape)
                                         .background(
                                             when {
-                                                completed[index] -> TrexDark
-                                                index == 5 -> Color.White
+                                                attended -> TrexDark
+                                                isToday -> Color.White
                                                 else -> TrexDark.copy(alpha = 0.1f)
                                             },
                                         ),
                                     contentAlignment = Alignment.Center,
                                 ) {
                                     Text(
-                                        text = dates[index].toString(),
-                                        color = if (completed[index]) TrexLime else TrexDark.copy(alpha = 0.78f),
+                                        text = date.dayOfMonth.toString(),
+                                        color = if (attended) TrexLime else TrexDark.copy(alpha = 0.78f),
                                         fontSize = 12.sp,
                                         fontWeight = FontWeight.SemiBold,
                                     )
@@ -184,10 +184,10 @@ fun HomeScreen() {
                         verticalAlignment = Alignment.Bottom,
                     ) {
                         Text(doneCount.toString(), fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
-                        Text(" / ${homeWorkouts.size} 완료", color = TrexTextSecondary, fontSize = 14.sp)
+                        Text(" / ${plan.size} 완료", color = TrexTextSecondary, fontSize = 14.sp)
                     }
                     TrackProgress(
-                        progress = doneCount / homeWorkouts.size.toFloat(),
+                        progress = if (plan.isEmpty()) 0f else doneCount / plan.size.toFloat(),
                         modifier = Modifier.padding(top = 13.dp),
                         track = TrexBackground,
                         fill = TrexGreen,
@@ -196,11 +196,17 @@ fun HomeScreen() {
                         modifier = Modifier.padding(top = 14.dp),
                         verticalArrangement = Arrangement.spacedBy(9.dp),
                     ) {
-                        homeWorkouts.forEachIndexed { index, workout ->
+                        plan.take(4).forEach { workout ->
                             TodayWorkoutRow(
                                 workout = workout,
-                                done = index == 0 || index == 3,
-                                time = if (index < 2) "08:${index * 15}".padEnd(5, '0') else "19:${(index - 2) * 15}".padEnd(5, '0'),
+                                done = workout.name in doneNames,
+                            )
+                        }
+                        if (plan.size > 4) {
+                            Text(
+                                text = "외 ${plan.size - 4}개 — 운동 탭에서 전체 보기",
+                                color = TrexTextSecondary,
+                                fontSize = 11.sp,
                             )
                         }
                     }
@@ -219,7 +225,7 @@ fun HomeScreen() {
                     modifier = Modifier.padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    IconBubble(icon = meal.icon, active = true)
+                    IconBubble(icon = mealIcon(meal.id), active = true)
                     Column(
                         modifier = Modifier
                             .weight(1f)
@@ -227,7 +233,7 @@ fun HomeScreen() {
                     ) {
                         Text(meal.timeHint, color = TrexDark.copy(alpha = 0.68f), fontSize = 11.sp)
                         Text(
-                            text = "${meal.label} 시간이에요",
+                            text = if (mealLogged) "${meal.label} 기록 완료!" else "${meal.label} 시간이에요",
                             color = TrexDark,
                             fontSize = 15.sp,
                             fontWeight = FontWeight.SemiBold,
@@ -243,14 +249,14 @@ fun HomeScreen() {
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 StatCard(
                     label = "오늘 소모",
-                    value = "248",
+                    value = (todayRecord?.totalCalories() ?: 0).toString(),
                     suffix = "kcal",
                     icon = Icons.Rounded.LocalFireDepartment,
                     modifier = Modifier.weight(1f),
                 )
                 StatCard(
                     label = "연속 출석",
-                    value = "5",
+                    value = app.attendanceStreak().toString(),
                     suffix = "일",
                     modifier = Modifier.weight(1f),
                     dark = true,
@@ -316,7 +322,7 @@ fun WorkoutListScreen(
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             item {
-                ScreenTitle("총 ${plan.size}개 · 약 35분")
+                ScreenTitle("총 ${plan.size}개 · 약 ${plan.sumOf { it.durationMinutes() }}분")
             }
 
             item {
@@ -399,7 +405,7 @@ fun WorkoutListScreen(
                 onSave = { name, count, sets ->
                     onPlanChange(plan.map {
                         if (it.id == workout.id) {
-                            it.copy(name = name, reps = formatWorkoutReps(count, sets))
+                            it.copy(name = name, reps = formatReps(count, sets))
                         } else {
                             it
                         }
@@ -537,37 +543,29 @@ fun WorkoutHistoryScreen(
 
 @Composable
 fun DietScreen(
+    app: AppViewModel,
     recordRequestToken: Int = 0,
     recordLaunchAction: DietRecordLaunchAction = DietRecordLaunchAction.Camera,
     onSheetVisibleChange: (Boolean) -> Unit = {},
-    onRecentFoodsChange: (List<String>) -> Unit = {},
 ) {
-    var foodsByDate by remember { mutableStateOf(mapOf(0 to seedFoods())) }
     var editing by remember { mutableStateOf<Pair<String, Boolean>?>(null) }
     var recordVisible by remember { mutableStateOf(false) }
     var activeRecordLaunchAction by remember { mutableStateOf(recordLaunchAction) }
-    var dateOffset by remember { mutableIntStateOf(0) }
-    var waterCups by remember { mutableIntStateOf(4) }
+    var dateOffset by rememberSaveable { mutableIntStateOf(0) }
     var toastVisible by remember { mutableStateOf(false) }
-    var pendingUndo by remember { mutableStateOf<Pair<String, List<FoodEntry>>?>(null) }
-    var handledRecordRequestToken by remember { mutableIntStateOf(recordRequestToken) }
-    val recommendedTargetGoal = remember { recommendedNutritionGoal(heightCm = 170, weightKg = 65, activityFactor = 1.35) }
-    var targetGoal by remember { mutableStateOf(recommendedTargetGoal) }
-    val foodsBySlot = foodsByDate[dateOffset] ?: emptyDietSlots()
-    val canEditSelectedDate = dateOffset in DietDateMinOffset..DietDateMaxOffset
-    val meals by remember(foodsBySlot) {
-        derivedStateOf {
-            mealMetas.map { meta ->
-                val foods = foodsBySlot[meta.id].orEmpty()
-                Triple(meta, foods, foods.totalNutrition())
-            }
+    /** 방금 기록한 (슬롯, 추가 개수) — 실행 취소용. */
+    var pendingUndo by remember { mutableStateOf<Pair<String, Int>?>(null) }
+    var handledRecordRequestToken by rememberSaveable { mutableIntStateOf(recordRequestToken) }
+    val foodsBySlot = app.dietFor(dateOffset)
+    val canEditSelectedDate = dateOffset in AppViewModel.DIET_MIN_OFFSET..AppViewModel.DIET_MAX_OFFSET
+    val meals = remember(foodsBySlot) {
+        mealMetas.map { meta ->
+            val foods = foodsBySlot[meta.id].orEmpty()
+            Triple(meta, foods, foods.totalNutrition())
         }
     }
     val total = remember(meals) { meals.flatMap { it.second }.totalNutrition() }
-    val recentMealId = remember { currentMealId() }
-    val recentFoods = remember(foodsByDate, recentMealId) {
-        foodsByDate.recentFoodsForMeal(recentMealId)
-    }
+    val recentFoods = remember(app.dietByDay) { app.recentFoodsForCurrentMeal() }
 
     LaunchedEffect(recordRequestToken) {
         if (recordRequestToken > 0 && recordRequestToken != handledRecordRequestToken) {
@@ -577,10 +575,6 @@ fun DietScreen(
                 recordVisible = true
             }
         }
-    }
-
-    LaunchedEffect(recentFoods) {
-        onRecentFoodsChange(recentFoods.map { it.name })
     }
 
     LaunchedEffect(recordVisible, editing != null) {
@@ -602,14 +596,14 @@ fun DietScreen(
         DietMainSummaryScreen(
             meals = meals,
             total = total,
-            targetGoal = targetGoal,
-            recommendedGoal = recommendedTargetGoal,
+            targetGoal = app.targetGoal,
+            recommendedGoal = app.recommendedGoal,
             dateOffset = dateOffset,
-            waterCups = waterCups,
-            canGoPreviousDate = dateOffset > DietDateMinOffset,
-            canGoNextDate = dateOffset < DietDateMaxOffset,
+            waterCups = app.waterFor(dateOffset),
+            canGoPreviousDate = dateOffset > AppViewModel.DIET_MIN_OFFSET,
+            canGoNextDate = dateOffset < AppViewModel.DIET_MAX_OFFSET,
             canEditSelectedDate = canEditSelectedDate,
-            onDateOffset = { dateOffset = it.coerceIn(DietDateMinOffset, DietDateMaxOffset) },
+            onDateOffset = { dateOffset = it.coerceIn(AppViewModel.DIET_MIN_OFFSET, AppViewModel.DIET_MAX_OFFSET) },
             onOpenRecord = {
                 if (canEditSelectedDate) {
                     activeRecordLaunchAction = DietRecordLaunchAction.Manual
@@ -621,26 +615,22 @@ fun DietScreen(
                     editing = slot to addMode
                 }
             },
-            onTargetGoalChange = { targetGoal = it },
+            onTargetGoalChange = { app.setTargetGoal(it) },
             onWater = {
                 if (canEditSelectedDate) {
-                    waterCups += 1
+                    app.addWater(dateOffset)
                 }
             },
         )
 
         if (recordVisible) {
             DietRecordRoute(
-                targetGoal = targetGoal.kcal,
+                targetGoal = app.targetGoal.kcal,
                 recentFoods = recentFoods,
                 launchAction = activeRecordLaunchAction,
                 onRecord = { slot, foods ->
-                    val current = foodsByDate[dateOffset] ?: emptyDietSlots()
-                    val updated = current.toMutableMap().apply {
-                        this[slot] = this[slot].orEmpty() + foods
-                    }
-                    foodsByDate = (foodsByDate + (dateOffset to updated)).filterDietHistory()
-                    pendingUndo = slot to foods
+                    app.appendFoods(dateOffset, slot, foods)
+                    pendingUndo = slot to foods.size
                     toastVisible = true
                     recordVisible = false
                 },
@@ -654,19 +644,11 @@ fun DietScreen(
                 initialSlot = slot,
                 initialFoods = foodsBySlot[slot].orEmpty(),
                 onSave = { saveSlot, foods ->
-                    val current = foodsByDate[dateOffset] ?: emptyDietSlots()
-                    val updated = current.toMutableMap().apply {
-                        this[saveSlot] = foods
-                    }
-                    foodsByDate = (foodsByDate + (dateOffset to updated)).filterDietHistory()
+                    app.replaceSlot(dateOffset, saveSlot, foods)
                     editing = null
                 },
                 onDelete = {
-                    val current = foodsByDate[dateOffset] ?: emptyDietSlots()
-                    val updated = current.toMutableMap().apply {
-                        this[slot] = emptyList()
-                    }
-                    foodsByDate = (foodsByDate + (dateOffset to updated)).filterDietHistory()
+                    app.clearSlot(dateOffset, slot)
                     editing = null
                 },
                 onClose = { editing = null },
@@ -683,16 +665,8 @@ fun DietScreen(
         ) {
             DietUndoToast(
                 onUndo = {
-                    pendingUndo?.let { (slot, foods) ->
-                        val currentSlotFoods = foodsByDate[dateOffset] ?: emptyDietSlots()
-                        val updated = currentSlotFoods.toMutableMap().apply {
-                            val current = this[slot].orEmpty().toMutableList()
-                            repeat(foods.size) {
-                                if (current.isNotEmpty()) current.removeAt(current.lastIndex)
-                            }
-                            this[slot] = current
-                        }
-                        foodsByDate = (foodsByDate + (dateOffset to updated)).filterDietHistory()
+                    pendingUndo?.let { (slot, count) ->
+                        app.undoAppend(dateOffset, slot, count)
                     }
                     pendingUndo = null
                     toastVisible = false
@@ -702,26 +676,11 @@ fun DietScreen(
     }
 }
 
-private const val DietDateMinOffset = -7
-private const val DietDateMaxOffset = 0
-
-private fun emptyDietSlots(): Map<String, List<FoodEntry>> =
-    mealMetas.associate { it.id to emptyList() }
-
-private fun Map<Int, Map<String, List<FoodEntry>>>.recentFoodsForMeal(mealId: String): List<FoodEntry> =
-    entries
-        .filter { it.key in DietDateMinOffset..DietDateMaxOffset }
-        .sortedByDescending { it.key }
-        .firstNotNullOfOrNull { (_, slots) ->
-            slots[mealId]?.takeIf { it.isNotEmpty() }
-        }
-        .orEmpty()
-
-private fun Map<Int, Map<String, List<FoodEntry>>>.filterDietHistory(): Map<Int, Map<String, List<FoodEntry>>> =
-    filterKeys { it in DietDateMinOffset..DietDateMaxOffset }
-
 @Composable
-fun ProfileScreen() {
+fun ProfileScreen(
+    profile: UserProfile,
+    onLogout: () -> Unit,
+) {
     val groups = listOf(
         listOf(
             ProfileRowData("프로필 편집", Icons.Rounded.Person),
@@ -776,7 +735,13 @@ fun ProfileScreen() {
                             .padding(start = 14.dp),
                     ) {
                         Text("사용자", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-                        Text("user@trex.app", color = Color.White.copy(alpha = 0.5f), fontSize = 11.sp)
+                        Text(
+                            text = "${profileGoalLabel(profile.goal)} · ${profile.heightCm.toInt()}cm · ${profile.weightKg.toInt()}kg · ${profile.age}세",
+                            color = Color.White.copy(alpha = 0.5f),
+                            fontSize = 11.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
                     }
                     IconCircleButton(
                         icon = Icons.AutoMirrored.Rounded.KeyboardArrowRight,
@@ -815,7 +780,7 @@ fun ProfileScreen() {
 
         item {
             Surface(
-                onClick = {},
+                onClick = onLogout,
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(18.dp),
                 color = TrexError.copy(alpha = 0.12f),
@@ -973,7 +938,7 @@ private fun WorkoutHistoryItemRow(item: WorkoutHistoryItem) {
 }
 
 @Composable
-private fun TodayWorkoutRow(workout: Workout, done: Boolean, time: String) {
+private fun TodayWorkoutRow(workout: Workout, done: Boolean) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(18.dp),
@@ -984,7 +949,7 @@ private fun TodayWorkoutRow(workout: Workout, done: Boolean, time: String) {
             modifier = Modifier.padding(11.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            IconBubble(icon = Icons.Rounded.FitnessCenter, active = done)
+            IconBubble(icon = if (done) Icons.Rounded.Check else Icons.Rounded.FitnessCenter, active = done)
             Column(
                 modifier = Modifier
                     .weight(1f)
@@ -1003,9 +968,9 @@ private fun TodayWorkoutRow(workout: Workout, done: Boolean, time: String) {
             Column(horizontalAlignment = Alignment.End) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Rounded.AccessTime, contentDescription = null, tint = TrexDark, modifier = Modifier.size(12.dp))
-                    Text(time, color = TrexDark, fontSize = 12.sp, modifier = Modifier.padding(start = 3.dp))
+                    Text(workout.duration, color = TrexDark, fontSize = 12.sp, modifier = Modifier.padding(start = 3.dp))
                 }
-                Text(workout.duration, color = TrexTextSecondary, fontSize = 10.sp)
+                Text(if (done) "완료" else workout.category, color = TrexTextSecondary, fontSize = 10.sp)
             }
         }
     }
@@ -1230,11 +1195,6 @@ private fun WorkoutTemplateCard(
     }
 }
 
-private data class WorkoutRepsDraft(
-    val count: Int,
-    val sets: Int,
-)
-
 @Composable
 private fun WorkoutPlanEditSheet(
     workout: Workout?,
@@ -1242,7 +1202,7 @@ private fun WorkoutPlanEditSheet(
     onSave: (name: String, count: Int, sets: Int) -> Unit,
     onClose: () -> Unit,
 ) {
-    val initialDraft = remember(workout?.id, modeAdd) { workout?.repsDraft() ?: WorkoutRepsDraft(count = 12, sets = 3) }
+    val initialDraft = remember(workout?.id, modeAdd) { workout?.repsSpec() ?: RepsSpec(count = 12, sets = 3, targetLabel = "12회") }
     var name by remember(workout?.id, modeAdd) { mutableStateOf(workout?.name.orEmpty()) }
     var countInput by remember(workout?.id, modeAdd) { mutableStateOf(initialDraft.count.toString()) }
     var setsInput by remember(workout?.id, modeAdd) { mutableStateOf(initialDraft.sets.toString()) }
@@ -1306,7 +1266,7 @@ private fun WorkoutPlanEditSheet(
                 WorkoutCounterField(
                     label = "횟수",
                     value = countInput,
-                    onValueChange = { countInput = it.numericText().take(3) },
+                    onValueChange = { countInput = it.digitsOnly().take(3) },
                     onMinus = { updateCount(-1) },
                     onPlus = { updateCount(1) },
                     modifier = Modifier.weight(1f),
@@ -1314,7 +1274,7 @@ private fun WorkoutPlanEditSheet(
                 WorkoutCounterField(
                     label = "세트",
                     value = setsInput,
-                    onValueChange = { setsInput = it.numericText().take(2) },
+                    onValueChange = { setsInput = it.digitsOnly().take(2) },
                     onMinus = { updateSets(-1) },
                     onPlus = { updateSets(1) },
                     modifier = Modifier.weight(1f),
@@ -1322,7 +1282,7 @@ private fun WorkoutPlanEditSheet(
             }
 
             Text(
-                text = "저장 후 ${formatWorkoutReps(count ?: initialDraft.count, sets ?: initialDraft.sets)}로 표시됩니다.",
+                text = "저장 후 ${formatReps(count ?: initialDraft.count, sets ?: initialDraft.sets)}로 표시됩니다.",
                 color = Color.White.copy(alpha = 0.48f),
                 fontSize = 11.sp,
                 modifier = Modifier.padding(top = 12.dp),
@@ -1409,23 +1369,6 @@ private fun CounterIconButton(
     }
 }
 
-private fun Workout.repsDraft(): WorkoutRepsDraft {
-    val numbers = Regex("\\d+").findAll(reps).map { it.value.toInt() }.toList()
-    val count = numbers.firstOrNull()?.coerceAtLeast(1) ?: 12
-    val sets = if (reps.contains("세트") && numbers.size >= 2) {
-        numbers.last().coerceAtLeast(1)
-    } else {
-        1
-    }
-    return WorkoutRepsDraft(count = count, sets = sets)
-}
-
-private fun formatWorkoutReps(count: Int, sets: Int): String =
-    "${count.coerceIn(1, 999)}회 x ${sets.coerceIn(1, 99)}세트"
-
-private fun estimateWorkoutDuration(sets: Int): String =
-    "${(sets.coerceIn(1, 99) * 3).coerceIn(3, 30)}분"
-
 private fun WorkoutTemplate.toWorkout(): Workout =
     Workout(
         id = "custom-${System.currentTimeMillis()}-${name.hashCode()}",
@@ -1489,502 +1432,6 @@ private fun workoutCatalog(): List<WorkoutCategoryOption> = listOf(
         ),
     ),
 )
-
-@Composable
-private fun MealCard(
-    meta: MealMeta,
-    foods: List<FoodEntry>,
-    nutrition: Nutrition,
-    onEdit: () -> Unit,
-) {
-    val empty = foods.isEmpty()
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        color = if (empty) Color.White.copy(alpha = 0.05f) else Color.White,
-        contentColor = if (empty) Color.White else TrexDark,
-        border = if (empty) dimBorder() else null,
-    ) {
-        Column(Modifier.padding(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                IconBubble(icon = mealIcon(meta.id), active = !empty)
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(start = 12.dp),
-                ) {
-                    Text(meta.label, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-                    Text(
-                        if (empty) "기록 전" else "${nutrition.kcal} kcal",
-                        color = if (empty) Color.White.copy(alpha = 0.6f) else TrexTextSecondary,
-                        fontSize = 11.sp,
-                    )
-                }
-                IconCircleButton(
-                    icon = if (empty) Icons.Rounded.Add else Icons.Rounded.Edit,
-                    onClick = onEdit,
-                    size = 34.dp,
-                    background = if (empty) TrexLime else TrexDark,
-                    contentColor = if (empty) TrexDark else TrexLime,
-                    contentDescription = if (empty) "기록 추가" else "기록 수정",
-                )
-            }
-            if (foods.isNotEmpty()) {
-                Row(
-                    modifier = Modifier.padding(top = 12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    foods.take(3).forEach {
-                        Pill(it.name, background = TrexBackground, color = TrexGreenDeep)
-                    }
-                    if (foods.size > 3) {
-                        Pill("+${foods.size - 3}", background = TrexBackground, color = TrexGreenDeep)
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun GoalCalorieInlineCard(
-    expanded: Boolean,
-    recommendedGoal: Int,
-    manualInput: String,
-    manualMode: Boolean,
-    onToggle: () -> Unit,
-    onAutoGoal: () -> Unit,
-    onManualMode: () -> Unit,
-    onManualInput: (String) -> Unit,
-    onApplyManual: () -> Unit,
-) {
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .animateContentSize(
-                animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioNoBouncy,
-                    stiffness = Spring.StiffnessMediumLow,
-                ),
-            ),
-        shape = RoundedCornerShape(18.dp),
-        color = Color.White.copy(alpha = 0.06f),
-        border = dimBorder(),
-    ) {
-        Column(Modifier.padding(14.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                IconBubble(icon = Icons.Rounded.LocalFireDepartment, active = true)
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(start = 12.dp),
-                ) {
-                    Text("목표 칼로리 수정", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                    Text(
-                        "추천 목표 ${recommendedGoal} kcal",
-                        color = Color.White.copy(alpha = 0.64f),
-                        fontSize = 11.sp,
-                    )
-                }
-                IconCircleButton(
-                    icon = if (expanded) Icons.Rounded.Close else Icons.Rounded.Edit,
-                    onClick = onToggle,
-                    size = 36.dp,
-                    background = if (expanded) TrexError.copy(alpha = 0.14f) else TrexLime,
-                    contentColor = if (expanded) Color(0xFFFF8A8A) else TrexDark,
-                    contentDescription = if (expanded) "닫기" else "수정",
-                )
-            }
-
-            AnimatedVisibility(
-                visible = expanded,
-                enter = expandVertically(expandFrom = Alignment.Top) + fadeIn(),
-                exit = shrinkVertically(shrinkTowards = Alignment.Top) + fadeOut(),
-            ) {
-                Column(
-                    modifier = Modifier.padding(top = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    InlineStep(title = "목표 설정 방식") {
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            TrexButton(
-                                text = "체형별 자동 목표",
-                                onClick = onAutoGoal,
-                                modifier = Modifier.weight(1f),
-                                height = 46.dp,
-                            )
-                            TrexButton(
-                                text = "수동 입력",
-                                onClick = onManualMode,
-                                modifier = Modifier.weight(1f),
-                                container = if (manualMode) TrexLime else Color.White.copy(alpha = 0.1f),
-                                contentColor = if (manualMode) TrexDark else Color.White,
-                                height = 46.dp,
-                            )
-                        }
-                    }
-
-                    AnimatedVisibility(
-                        visible = manualMode,
-                        enter = expandVertically(expandFrom = Alignment.Top) + fadeIn(),
-                        exit = shrinkVertically(shrinkTowards = Alignment.Top) + fadeOut(),
-                    ) {
-                        InlineStep(title = "수동 목표 칼로리") {
-                            TrexTextField(
-                                value = manualInput,
-                                onValueChange = onManualInput,
-                                placeholder = "추천 목표 ${recommendedGoal} kcal",
-                                keyboardType = KeyboardType.Number,
-                                leadingIcon = Icons.Rounded.LocalFireDepartment,
-                            )
-                            TrexButton(
-                                text = "목표 적용",
-                                onClick = onApplyManual,
-                                enabled = manualInput.toIntOrNull()?.let { it > 0 } == true,
-                                icon = Icons.Rounded.Check,
-                                modifier = Modifier
-                                    .padding(top = 10.dp)
-                                    .fillMaxWidth(),
-                                height = 46.dp,
-                            )
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-private fun ManualFoodInlineCard(
-    expanded: Boolean,
-    selectedSlot: String?,
-    stagedFoodEntries: List<FoodEntry>,
-    draftFoodName: String,
-    manualKcal: String,
-    manualCarb: String,
-    manualProtein: String,
-    manualFat: String,
-    askingAddMoreFood: Boolean,
-    onToggle: () -> Unit,
-    onSelectSlot: (String) -> Unit,
-    onFoodNameChange: (String) -> Unit,
-    onRecordFood: () -> Unit,
-    onAddAnotherFood: () -> Unit,
-    onManualKcalChange: (String) -> Unit,
-    onManualCarbChange: (String) -> Unit,
-    onManualProteinChange: (String) -> Unit,
-    onManualFatChange: (String) -> Unit,
-    onFinish: (String, List<FoodEntry>) -> Unit,
-) {
-    val cleanFoodName = draftFoodName.trim()
-    val autoNutrition = foodDatabase[cleanFoodName]
-    val stagedTotal = stagedFoodEntries.totalNutrition()
-    val canRecordFood = selectedSlot != null && cleanFoodName.isNotEmpty()
-    val foodNameFocusRequester = remember { FocusRequester() }
-    val manualKcalFocusRequester = remember { FocusRequester() }
-    val foodStepRequester = remember { BringIntoViewRequester() }
-    val nutritionStepRequester = remember { BringIntoViewRequester() }
-    val addMoreStepRequester = remember { BringIntoViewRequester() }
-
-    LaunchedEffect(expanded, selectedSlot, askingAddMoreFood, stagedFoodEntries.size) {
-        if (expanded && selectedSlot != null && !askingAddMoreFood && draftFoodName.isBlank()) {
-            delay(220)
-            foodStepRequester.bringIntoView()
-            foodNameFocusRequester.requestFocus()
-        }
-    }
-
-    LaunchedEffect(expanded, selectedSlot, cleanFoodName, autoNutrition, askingAddMoreFood) {
-        if (expanded && selectedSlot != null && cleanFoodName.isNotEmpty() && !askingAddMoreFood) {
-            delay(if (autoNutrition == null) 650 else 220)
-            nutritionStepRequester.bringIntoView()
-            if (autoNutrition == null) {
-                manualKcalFocusRequester.requestFocus()
-            }
-        }
-    }
-
-    LaunchedEffect(expanded, askingAddMoreFood, stagedFoodEntries.size) {
-        if (expanded && askingAddMoreFood && stagedFoodEntries.isNotEmpty()) {
-            delay(220)
-            addMoreStepRequester.bringIntoView()
-        }
-    }
-
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .animateContentSize(
-                animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioNoBouncy,
-                    stiffness = Spring.StiffnessMediumLow,
-                ),
-            ),
-        shape = RoundedCornerShape(18.dp),
-        color = Color.White.copy(alpha = 0.06f),
-        border = dimBorder(),
-    ) {
-        Column(Modifier.padding(14.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                IconBubble(icon = Icons.Rounded.Edit, active = true)
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(start = 12.dp),
-                ) {
-                    Text("수동 식단 기록 추가", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                    Text(
-                        text = if (expanded) "순서대로 입력하면 다음 항목이 열려요" else "음식만 입력하면 영양정보 자동 추천",
-                        color = Color.White.copy(alpha = 0.64f),
-                        fontSize = 11.sp,
-                    )
-                }
-                IconCircleButton(
-                    icon = if (expanded) Icons.Rounded.Close else Icons.Rounded.Add,
-                    onClick = onToggle,
-                    size = 36.dp,
-                    background = if (expanded) TrexError.copy(alpha = 0.14f) else TrexLime,
-                    contentColor = if (expanded) Color(0xFFFF8A8A) else TrexDark,
-                    contentDescription = if (expanded) "닫기" else "추가",
-                )
-            }
-
-            AnimatedVisibility(
-                visible = expanded,
-                enter = expandVertically(expandFrom = Alignment.Top) + fadeIn(),
-                exit = shrinkVertically(shrinkTowards = Alignment.Top) + fadeOut(),
-            ) {
-                Column(
-                    modifier = Modifier.padding(top = 18.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp),
-                ) {
-                    InlineStep(title = "어떤 끼니인가요?") {
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            mealMetas.forEach { meta ->
-                                val active = selectedSlot == meta.id
-                                Surface(
-                                    onClick = { onSelectSlot(meta.id) },
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .height(42.dp),
-                                    shape = RoundedCornerShape(14.dp),
-                                    color = if (active) TrexLime else Color.White.copy(alpha = 0.08f),
-                                    contentColor = if (active) TrexDark else Color.White.copy(alpha = 0.82f),
-                                ) {
-                                    Row(
-                                        horizontalArrangement = Arrangement.Center,
-                                        verticalAlignment = Alignment.CenterVertically,
-                                    ) {
-                                        Icon(mealIcon(meta.id), contentDescription = null, modifier = Modifier.size(15.dp))
-                                        Spacer(Modifier.width(4.dp))
-                                        Text(meta.label, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    AnimatedVisibility(
-                        visible = selectedSlot != null && !askingAddMoreFood,
-                        enter = expandVertically(expandFrom = Alignment.Top) + fadeIn(),
-                        exit = shrinkVertically(shrinkTowards = Alignment.Top) + fadeOut(),
-                    ) {
-                        Box(Modifier.bringIntoViewRequester(foodStepRequester)) {
-                            InlineStep(title = "어떤 음식인가요?") {
-                                if (stagedFoodEntries.isNotEmpty()) {
-                                    Row(
-                                        modifier = Modifier.padding(bottom = 9.dp),
-                                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                    ) {
-                                        stagedFoodEntries.take(3).forEach {
-                                            Pill(it.name, background = TrexLime.copy(alpha = 0.16f), color = TrexLime)
-                                        }
-                                        if (stagedFoodEntries.size > 3) {
-                                            Pill("+${stagedFoodEntries.size - 3}", background = TrexLime.copy(alpha = 0.16f), color = TrexLime)
-                                        }
-                                    }
-                                }
-                                TrexTextField(
-                                    value = draftFoodName,
-                                    onValueChange = onFoodNameChange,
-                                    placeholder = "예: 닭가슴살, 바나나",
-                                    leadingIcon = Icons.Rounded.Restaurant,
-                                    focusRequester = foodNameFocusRequester,
-                                )
-                                if (autoNutrition != null) {
-                                    Text(
-                                        text = "DB에서 영양정보를 찾았어요",
-                                        color = TrexLime,
-                                        fontSize = 11.sp,
-                                        modifier = Modifier.padding(top = 7.dp),
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    AnimatedVisibility(
-                        visible = selectedSlot != null && cleanFoodName.isNotEmpty() && !askingAddMoreFood,
-                        enter = expandVertically(expandFrom = Alignment.Top) + fadeIn(),
-                        exit = shrinkVertically(shrinkTowards = Alignment.Top) + fadeOut(),
-                    ) {
-                        Box(Modifier.bringIntoViewRequester(nutritionStepRequester)) {
-                            InlineStep(title = "영양 정보를 확인해주세요") {
-                                if (autoNutrition != null) {
-                                    Surface(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        shape = RoundedCornerShape(16.dp),
-                                        color = TrexLime,
-                                        contentColor = TrexDark,
-                                    ) {
-                                        Column(Modifier.padding(13.dp)) {
-                                            Text(cleanFoodName, fontSize = 11.sp, color = TrexDark.copy(alpha = 0.7f))
-                                            Text("${autoNutrition.kcal} kcal", fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
-                                            Text(
-                                                "탄수 ${autoNutrition.carb.toInt()}g · 단백질 ${autoNutrition.protein.toInt()}g · 지방 ${autoNutrition.fat.toInt()}g",
-                                                fontSize = 11.sp,
-                                                color = TrexDark.copy(alpha = 0.7f),
-                                            )
-                                        }
-                                    }
-                                } else {
-                                    Text(
-                                        text = "정보가 없는 음식입니다 직접 영양 정보를 입력해주세요",
-                                        color = Color.White.copy(alpha = 0.62f),
-                                        fontSize = 11.sp,
-                                        modifier = Modifier.padding(bottom = 9.dp),
-                                    )
-                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        TrexTextField(
-                                            value = manualKcal,
-                                            onValueChange = onManualKcalChange,
-                                            placeholder = "칼로리",
-                                            keyboardType = KeyboardType.Number,
-                                            modifier = Modifier.weight(1f),
-                                            focusRequester = manualKcalFocusRequester,
-                                        )
-                                        TrexTextField(
-                                            value = manualCarb,
-                                            onValueChange = onManualCarbChange,
-                                            placeholder = "탄수(g)",
-                                            keyboardType = KeyboardType.Decimal,
-                                            modifier = Modifier.weight(1f),
-                                        )
-                                    }
-                                    Row(
-                                        modifier = Modifier.padding(top = 8.dp),
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                    ) {
-                                        TrexTextField(
-                                            value = manualProtein,
-                                            onValueChange = onManualProteinChange,
-                                            placeholder = "단백질(g)",
-                                            keyboardType = KeyboardType.Decimal,
-                                            modifier = Modifier.weight(1f),
-                                        )
-                                        TrexTextField(
-                                            value = manualFat,
-                                            onValueChange = onManualFatChange,
-                                            placeholder = "지방(g)",
-                                            keyboardType = KeyboardType.Decimal,
-                                            modifier = Modifier.weight(1f),
-                                        )
-                                    }
-                                }
-
-                                TrexButton(
-                                    text = "기록 추가",
-                                    onClick = onRecordFood,
-                                    enabled = canRecordFood,
-                                    icon = Icons.Rounded.Check,
-                                    modifier = Modifier
-                                        .padding(top = 10.dp)
-                                        .fillMaxWidth(),
-                                    height = 46.dp,
-                                )
-                            }
-                        }
-                    }
-
-                    AnimatedVisibility(
-                        visible = askingAddMoreFood && stagedFoodEntries.isNotEmpty(),
-                        enter = expandVertically(expandFrom = Alignment.Top) + fadeIn(),
-                        exit = shrinkVertically(shrinkTowards = Alignment.Top) + fadeOut(),
-                    ) {
-                        Box(Modifier.bringIntoViewRequester(addMoreStepRequester)) {
-                            InlineStep(title = "음식을 추가하시겠습니까?") {
-                                Surface(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    shape = RoundedCornerShape(16.dp),
-                                    color = Color.White.copy(alpha = 0.08f),
-                                    border = dimBorder(),
-                                ) {
-                                    Column(Modifier.padding(13.dp)) {
-                                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                            stagedFoodEntries.take(3).forEach {
-                                                Pill(it.name, background = TrexLime.copy(alpha = 0.16f), color = TrexLime)
-                                            }
-                                            if (stagedFoodEntries.size > 3) {
-                                                Pill("+${stagedFoodEntries.size - 3}", background = TrexLime.copy(alpha = 0.16f), color = TrexLime)
-                                            }
-                                        }
-                                        Text(
-                                            "현재 ${stagedFoodEntries.size}개 기록 대기 · ${stagedTotal.kcal} kcal",
-                                            color = Color.White.copy(alpha = 0.74f),
-                                            fontSize = 12.sp,
-                                            modifier = Modifier.padding(top = 8.dp),
-                                        )
-                                    }
-                                }
-
-                                Row(
-                                    modifier = Modifier.padding(top = 10.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                ) {
-                                    TrexButton(
-                                        text = "예",
-                                        onClick = onAddAnotherFood,
-                                        modifier = Modifier.weight(1f),
-                                        height = 46.dp,
-                                    )
-                                    TrexButton(
-                                        text = "아니오",
-                                        onClick = { selectedSlot?.let { onFinish(it, stagedFoodEntries) } },
-                                        modifier = Modifier.weight(1f),
-                                        container = Color.White.copy(alpha = 0.1f),
-                                        contentColor = Color.White,
-                                        height = 46.dp,
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun InlineStep(
-    title: String,
-    content: @Composable () -> Unit,
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(18.dp))
-            .background(Color.White.copy(alpha = 0.04f))
-            .border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(18.dp))
-            .padding(13.dp),
-    ) {
-        Text(title, color = Color.White.copy(alpha = 0.76f), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-        Spacer(Modifier.height(10.dp))
-        content()
-    }
-}
 
 @Composable
 private fun ProfileRow(row: ProfileRowData) {
@@ -2107,17 +1554,19 @@ private fun TrackProgress(
     )
 }
 
-private data class MealTime(
-    val label: String,
-    val timeHint: String,
-    val icon: ImageVector,
-)
-
 private data class ProfileRowData(
     val label: String,
     val icon: ImageVector,
     val sub: String? = null,
 )
+
+private fun profileGoalLabel(goal: String): String = when (goal) {
+    "muscle" -> "근육 증가"
+    "diet" -> "다이어트"
+    "stamina" -> "체력 향상"
+    "maintain" -> "유지"
+    else -> "일반 루틴"
+}
 
 private fun mealIcon(mealId: String): ImageVector = when (mealId) {
     "breakfast" -> Icons.Rounded.FreeBreakfast
@@ -2127,49 +1576,3 @@ private fun mealIcon(mealId: String): ImageVector = when (mealId) {
     else -> Icons.Rounded.Restaurant
 }
 
-private fun currentMeal(): MealTime {
-    val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
-    return when {
-        hour < 10 -> MealTime("아침 식사", "08:00 ~ 10:00", Icons.Rounded.Restaurant)
-        hour < 14 -> MealTime("점심 식사", "12:00 ~ 14:00", Icons.Rounded.Restaurant)
-        hour < 18 -> MealTime("오후 간식", "15:00 ~ 17:00", Icons.Rounded.Restaurant)
-        else -> MealTime("저녁 식사", "18:00 ~ 20:00", Icons.Rounded.Restaurant)
-    }
-}
-
-private fun currentMealId(): String {
-    val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
-    return when {
-        hour < 10 -> "breakfast"
-        hour < 14 -> "lunch"
-        hour < 18 -> "snack"
-        else -> "dinner"
-    }
-}
-
-private fun recommendedCalorieGoal(
-    heightCm: Int,
-    weightKg: Int,
-    age: Int = 30,
-    activityFactor: Double,
-): Int {
-    val bmr = 10 * weightKg + 6.25 * heightCm - 5 * age + 5
-    return ((bmr * activityFactor) / 10).toInt() * 10
-}
-
-private fun recommendedNutritionGoal(
-    heightCm: Int,
-    weightKg: Int,
-    age: Int = 30,
-    activityFactor: Double,
-): Nutrition {
-    val kcal = recommendedCalorieGoal(heightCm, weightKg, age, activityFactor)
-    val protein = (weightKg * 1.8).roundToInt().toDouble()
-    val fat = (kcal * 0.25 / 9.0).roundToInt().toDouble()
-    val carb = ((kcal - protein * 4 - fat * 9) / 4.0).roundToInt().coerceAtLeast(0).toDouble()
-    return Nutrition(kcal = kcal, carb = carb, protein = protein, fat = fat)
-}
-
-private fun String.numericText(): String = filter(Char::isDigit)
-
-private fun String.decimalText(): String = filter { it.isDigit() || it == '.' }

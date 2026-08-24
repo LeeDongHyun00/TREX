@@ -1,6 +1,7 @@
 package com.example.trex_kotlin
 
 import androidx.compose.runtime.Immutable
+import java.time.LocalDate
 import java.util.Calendar
 
 enum class TrexTab(val label: String) {
@@ -16,17 +17,25 @@ enum class LoginMode {
     Find,
 }
 
-enum class FoodStage {
-    Choose,
-    Capture,
-    Analyzing,
-    Result,
-}
-
 enum class WorkoutNavigationTab(val label: String) {
     Schedule("운동 스케쥴"),
     History("운동 기록"),
 }
+
+/** 온보딩에서 수집한 사용자 프로필 — 권장 영양/강도 계산의 입력. */
+@Immutable
+data class UserProfile(
+    val goal: String = "general",
+    val dayMask: Int = 0,
+    val place: String? = null,
+    val bodyweightOnly: Boolean = false,
+    val equipmentMask: Int = 0,
+    val gender: String = "none",
+    val heightCm: Double = 170.0,
+    val weightKg: Double = 65.0,
+    val age: Int = 30,
+    val activityFactor: Double = 1.35,
+)
 
 @Immutable
 data class Workout(
@@ -61,6 +70,8 @@ data class WorkoutHistoryItem(
 
 @Immutable
 data class WorkoutHistoryDay(
+    /** 그 날의 epoch day — 날짜가 바뀌어도 기록이 밀리지 않게 하는 정본 키. */
+    val epochDay: Long,
     val dayLabel: String,
     val dateLabel: String,
     val items: List<WorkoutHistoryItem>,
@@ -188,6 +199,9 @@ fun seedFoods(): Map<String, List<FoodEntry>> = mapOf(
     "dinner" to emptyList(),
 )
 
+fun emptyDietSlots(): Map<String, List<FoodEntry>> =
+    mealMetas.associate { it.id to emptyList() }
+
 fun Nutrition.plus(other: Nutrition): Nutrition = Nutrition(
     kcal = kcal + other.kcal,
     carb = carb + other.carb,
@@ -198,6 +212,7 @@ fun Nutrition.plus(other: Nutrition): Nutrition = Nutrition(
 fun Iterable<FoodEntry>.totalNutrition(): Nutrition =
     fold(Nutrition(0, 0.0, 0.0, 0.0)) { acc, entry -> acc.plus(entry.nutrition) }
 
+/** 첫 실행 데모용 시드 기록 (백엔드 연동 전). 저장소가 비어 있을 때만 쓰인다. */
 fun seedWorkoutHistory(plan: List<Workout> = todayPlan): List<WorkoutHistoryDay> {
     val postureHints = listOf(
         "무릎이 안쪽으로 모이는 자세",
@@ -206,6 +221,7 @@ fun seedWorkoutHistory(plan: List<Workout> = todayPlan): List<WorkoutHistoryDay>
         "어깨가 올라가는 자세",
     )
     val calendar = Calendar.getInstance()
+    val todayEpoch = LocalDate.now().toEpochDay()
 
     return (0..6).map { index ->
         val dayCalendar = calendar.clone() as Calendar
@@ -228,6 +244,7 @@ fun seedWorkoutHistory(plan: List<Workout> = todayPlan): List<WorkoutHistoryDay>
         }
 
         WorkoutHistoryDay(
+            epochDay = todayEpoch - (6 - index),
             dayLabel = dayCalendar.koreanDayOfWeek(),
             dateLabel = "${dayCalendar.get(Calendar.MONTH) + 1}/${dayCalendar.get(Calendar.DAY_OF_MONTH)}",
             items = items,
@@ -257,6 +274,7 @@ fun createWorkoutHistoryDay(plan: List<Workout>, elapsedSeconds: Int): WorkoutHi
     val totalCalories = items.sumOf { it.calories }
 
     return WorkoutHistoryDay(
+        epochDay = LocalDate.now().toEpochDay(),
         dayLabel = calendar.koreanDayOfWeek(),
         dateLabel = "${calendar.get(Calendar.MONTH) + 1}/${calendar.get(Calendar.DAY_OF_MONTH)}",
         items = items,
@@ -266,13 +284,13 @@ fun createWorkoutHistoryDay(plan: List<Workout>, elapsedSeconds: Int): WorkoutHi
 }
 
 fun List<WorkoutHistoryDay>.replaceTodayWith(record: WorkoutHistoryDay): List<WorkoutHistoryDay> {
-    val existingIndex = indexOfLast { it.dateLabel == record.dateLabel }
+    val existingIndex = indexOfLast { it.epochDay == record.epochDay }
     val updated = if (existingIndex >= 0) {
         toMutableList().also { it[existingIndex] = record }
     } else {
         this + record
     }
-    return updated.takeLast(7)
+    return updated.sortedBy { it.epochDay }.takeLast(7)
 }
 
 fun WorkoutHistoryDay.totalMinutes(): Int =
@@ -308,20 +326,6 @@ private fun List<Workout>.rotate(offset: Int): List<Workout> {
     return drop(start) + take(start)
 }
 
-private fun Workout.durationMinutes(): Int =
-    Regex("\\d+").find(duration)?.value?.toIntOrNull()?.coerceAtLeast(1) ?: 6
-
-private fun Workout.estimatedCalories(): Int {
-    val multiplier = when (category) {
-        "유산소" -> 8
-        "하체" -> 7
-        "상체" -> 6
-        "코어", "복근" -> 5
-        else -> 4
-    }
-    return (durationMinutes() * multiplier).coerceAtLeast(24)
-}
-
 private fun defaultPostureFocus(category: String): String = when (category) {
     "하체" -> "무릎 정렬과 골반 중심"
     "상체" -> "어깨 긴장과 팔꿈치 각도"
@@ -330,7 +334,7 @@ private fun defaultPostureFocus(category: String): String = when (category) {
     else -> "동작 마지막 구간의 안정성"
 }
 
-private fun Calendar.koreanDayOfWeek(): String = when (get(Calendar.DAY_OF_WEEK)) {
+fun Calendar.koreanDayOfWeek(): String = when (get(Calendar.DAY_OF_WEEK)) {
     Calendar.MONDAY -> "월"
     Calendar.TUESDAY -> "화"
     Calendar.WEDNESDAY -> "수"

@@ -98,7 +98,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.zIndex
-import java.util.Calendar
 import kotlin.math.PI
 import kotlin.math.atan2
 import kotlin.math.cos
@@ -157,7 +156,7 @@ fun DietRecordRoute(
     }
     var step by remember { mutableStateOf(initialStep) }
     var previousStep by remember { mutableStateOf(initialStep) }
-    var selectedMeal by remember { mutableStateOf(recommendedMealId()) }
+    var selectedMeal by remember { mutableStateOf(currentMealId()) }
     var foods by remember {
         mutableStateOf(
             if (launchAction == DietRecordLaunchAction.Recent) emptyList() else initialFoods,
@@ -1631,14 +1630,14 @@ private fun GoalValueInput(
     onValueChange: (Float) -> Unit,
 ) {
     var editing by remember { mutableStateOf(false) }
-    var text by remember { mutableStateOf(formatGoalValue(value, wholeNumber)) }
+    var text by remember { mutableStateOf(formatGoalValue(value)) }
     var wasFocused by remember { mutableStateOf(false) }
     val focusRequester = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
 
     LaunchedEffect(value, editing) {
         if (!editing) {
-            text = formatGoalValue(value, wholeNumber)
+            text = formatGoalValue(value)
         }
     }
 
@@ -1700,7 +1699,7 @@ private fun GoalValueInput(
     } else {
         Surface(
             onClick = {
-                text = formatGoalValue(value, wholeNumber)
+                text = formatGoalValue(value)
                 editing = true
             },
             modifier = modifier,
@@ -1709,7 +1708,7 @@ private fun GoalValueInput(
             contentColor = TrexDark,
         ) {
             Text(
-                text = "${formatGoalValue(value, wholeNumber)}$unit",
+                text = "${formatGoalValue(value)}$unit",
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
                 fontSize = 12.sp,
                 fontWeight = FontWeight.SemiBold,
@@ -1969,20 +1968,6 @@ private fun MacroLine(label: String, value: String, modifier: Modifier = Modifie
     }
 }
 
-@Composable
-private fun MacroMini(label: String, value: String, modifier: Modifier = Modifier) {
-    Surface(
-        modifier = modifier.height(54.dp),
-        shape = RoundedCornerShape(15.dp),
-        color = TrexDark.copy(alpha = 0.12f),
-    ) {
-        Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.Center) {
-            Text(label, color = TrexDark.copy(alpha = 0.62f), fontSize = 10.sp)
-            Text(value, color = TrexDark, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-        }
-    }
-}
-
 private fun simulatedDetectedFoods(photoCount: Int, firstId: Int): List<RecognizedFood> {
     val base = listOf(
         FoodEntry("현미밥", Nutrition(220, 46.0, 5.0, 1.7)),
@@ -2007,30 +1992,5 @@ private fun Nutrition.scaledBy(grams: Int): Nutrition {
     )
 }
 
-private fun recommendedMealId(): String {
-    val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
-    return when {
-        hour < 10 -> "breakfast"
-        hour < 14 -> "lunch"
-        hour < 18 -> "snack"
-        else -> "dinner"
-    }
-}
+private fun formatGoalValue(value: Float): String = value.roundToInt().toString()
 
-private fun Nutrition.normalizedGoal(): Nutrition = Nutrition(
-    kcal = kcal.coerceIn(800, 5000),
-    carb = carb.coerceIn(0.0, 800.0),
-    protein = protein.coerceIn(0.0, 400.0),
-    fat = fat.coerceIn(0.0, 250.0),
-)
-
-private fun formatGoalValue(value: Float, wholeNumber: Boolean): String =
-    if (wholeNumber) {
-        value.roundToInt().toString()
-    } else {
-        value.roundToInt().toString()
-    }
-
-private fun String.digitsOnly(): String = filter(Char::isDigit)
-
-private fun String.decimalOnly(): String = filter { it.isDigit() || it == '.' }
