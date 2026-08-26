@@ -427,6 +427,17 @@ AIHub 조건 132개를 해부학적 자유도로 분류해, 완벽한 GT 3D 상�
 
 **구현 시 주의**: (a) 중력축 의존 경로를 **분기**해야 한다 — `PoseFrame(joints, up)` 대신 신체 주축 기반 프레임. (b) `checkUpSanity` 는 누운 자세에서 오작동 가능(현재는 '미검증' 처리라 안전하나 명시적 분기 필요). (c) 종목별 최적 뷰가 다르다(크런치류 C, 푸시업·플랭크 E) → 촬영 가이드도 종목별. (d) **임계값은 AIHub 값을 쓰면 안 된다** — 5개 뷰 모두 서 있는 높이 카메라라 이상적이지 않다. 바닥 높이·측면으로 §17 프로토콜 재수집 필요. (e) 최적 뷰를 사후 선택한 값이라 낙관 편향이 있다.
 
+**앱 구현 (2026-08-24, `PostureFloor.kt` + `export_floor_rules.py`)**
+| 구성 | 내용 |
+|---|---|
+| `rules_floor_v0.json` | 17규칙 / 9종목, 전부 **beta**. 종목당 **단일 뷰 고정**(조건별 최적 뷰 체리픽 제거, CV AUC ≥ 0.72 채택): 푸시업 C 3규칙 · 니푸쉬업 B 3 · 시저크로스 D 3 · 레그레이즈 E 2 · 힙쓰러스트 B 2 · 크런치 C 1 · 바이시클 E 1 · 플랭크 B 1 · Y-Ex B 1. 임계값 = 전체 데이터 Youden — **미보정**(바닥 높이 카메라 아님), 세트 로그 재보정 대상 |
+| 부호 정준화 | 부호 있는 이탈의 법선을 **화면 위쪽 = 양수**로 고정(n0=(−u_y,u_x), n0_y>0 이면 반전) → 좌우 어느 방향으로 누워도 값 불변. `elbow_ang`/`elbow_width`/`shoulder_asym2d` 는 한쪽 사지 기준이라 mirror_safe=false + caution |
+| `FloorFeatureExtractor` | 2D 피처 23개(이탈 4 + 각도 6 + 정규화 거리 5 + 접지선 대비 5 + 비대칭 3), Double 연산. **스트리밍 접지선**: 골반↔발목 vs 손목↔발목 중 누적 이동량이 작은 쌍의 prefix 중앙값 — 연구 익스포터와 동일 알고리즘이라 임계값 적합·앱 계산이 같은 정의. 핵심 관절(어깨·골반·발목) 가시성 < 0.2 면 프레임 스킵(접지선도 미갱신) |
+| 랩 연결 | `rules_mp_v0 + rules_floor_v0` 병합 로드. 바닥 종목 선택 시: 분석 콜백에서 `s.features`(중력 3D) 대신 `floorExtractor.compute(normalizedXy…)` 로 교체해 집계·코치·세트 로그에 그대로 흘림(재보정 파이프라인 §9/§14 재사용). 세트 시작마다 접지선 리셋. 가이드 줄: "바닥 모드(2D) · 폰을 바닥 높이에 · <뷰 힌트> · 임계값 미보정(beta)". `checkUpSanity` 는 우회 불필요 — up 을 아예 안 쓴다(누운 자세에서 '미검증'으로 남는 게 정상) |
+| 음성 코칭 | 바닥 조건 10종 문구를 CoachCues 상단에 추가(일반 패턴보다 먼저 매칭) — 습관형/점진형 모두 |
+| 파리티 | `floor_port_fixture.txt`: AIHub 2D 3클립×16프레임의 px 좌표+기대 피처. `FloorFeaturesTest` 4개: 연구 코드 일치(공차 각도 0.02°), 좌우 반전 불변, 접지쌍 선택·위=양수 부호, 바닥 문구 커버리지 |
+
+
 ## 12. 파일
 - `rules/rules_mp_v0.json` (앱이 읽을 정본), `rules/rules_mp_v0.md` (사람용 표, 피처 공식 표 포함), `export_rules_mp.py` (재생성)
 - 실험 코드/요약: `experiment_a.py`, `experiment_a_refit.py`, `outputs/experiment_a_summary.md`, `outputs/expA_refit_summary.md`
