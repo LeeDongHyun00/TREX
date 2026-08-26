@@ -308,9 +308,11 @@ fun PostureLabScreen(onClose: () -> Unit) {
     // 바닥 종목 여부 — 분석 스레드에서 매 프레임 읽으므로 ref 로도 전달
     val isFloorExercise = exercise in floorExercises
     floorRef[0] = isFloorExercise
-    val recommendedViews = activeRules.map { it.view }.filter { it.isNotEmpty() }
-        .groupingBy { it }.eachCount().entries.sortedByDescending { it.value }
-        .joinToString(", ") { "${it.key}(${it.value})" }
+    // 뷰는 코드(A~E) 대신 사람 말로 (spec §26) — 서서/바닥에 따라 같은 코드도 뜻이 다르다
+    val recommendedViews = ViewGuide.summary(activeRules, isFloorExercise)
+    val viewPlacement = ViewGuide.dominantView(activeRules)?.let {
+        ViewGuide.placement(it, isFloorExercise, activeRules.all { r -> r.mirrorSafe })
+    }
 
     Column(
         modifier = Modifier
@@ -419,7 +421,7 @@ fun PostureLabScreen(onClose: () -> Unit) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = "규칙 ${activeRules.size}개" + (if (isFloorExercise) " · 바닥 2D" else "") +
-                        if (recommendedViews.isNotEmpty()) " · 권장 뷰 $recommendedViews" else "",
+                        if (recommendedViews.isNotEmpty()) " · 촬영 방향 $recommendedViews" else "",
                     color = Color.White.copy(alpha = 0.6f),
                     fontSize = 11.sp,
                     modifier = Modifier.weight(1f),
@@ -478,12 +480,9 @@ fun PostureLabScreen(onClose: () -> Unit) {
             st?.error?.let { Text(it, color = TrexError, fontSize = 10.sp) }
             Text(
                 text = if (isFloorExercise) {
-                    // 바닥 모드: 중력축 대신 2D 평면 피처 — 뷰 힌트는 규칙의 view_desc 에서
-                    val vd = activeRules.firstOrNull()?.viewDesc?.takeIf { it.isNotEmpty() }
-                    "바닥 모드(2D) · 폰을 바닥 높이에 두고 몸 전체가 보이게" +
-                        (vd?.let { " · $it" } ?: "") + " · 임계값 미보정(beta)"
+                    (viewPlacement ?: "폰을 바닥에 눕히듯 낮게 두고 몸 옆에서") + " · 몸 전체가 프레임에 · 임계값 미보정(beta)"
                 } else {
-                    "정면~전방 45°에서 촬영 · 전신이 프레임에 들어오게" +
+                    (viewPlacement ?: "폰을 허리 높이에 세로로 세우고, 몸을 정면에서 마주보게") + " · 전신이 프레임에" +
                         if (sample.upFromGravity) " · 높이 축은 IMU 중력축 사용" else " · 중력센서 없음: 폰을 세로로 세워 거치"
                 },
                 color = if (isFloorExercise) TrexWarning.copy(alpha = 0.8f) else Color.White.copy(alpha = 0.4f),
@@ -714,7 +713,7 @@ fun PostureLabScreen(onClose: () -> Unit) {
                             }
                             Spacer(Modifier.height(6.dp))
                         }
-                        results.forEach { RuleResultRow(it) }
+                        results.forEach { RuleResultRow(it, isFloorExercise) }
                     }
 
                     else -> {
@@ -829,7 +828,7 @@ private fun LiveRuleRow(rule: PostureRule, liveValue: Float?, aggValue: Float?, 
 }
 
 @Composable
-private fun RuleResultRow(result: RuleResult) {
+private fun RuleResultRow(result: RuleResult, floor: Boolean = false) {
     val rule = result.rule
     val (label, color) = when (result.verdict) {
         Verdict.VIOLATION -> (if (result.direction == Direction.OPPOSITE) "위반(반대측)" else "위반") to TrexError
@@ -871,7 +870,7 @@ private fun RuleResultRow(result: RuleResult) {
             )
         }
         Text(
-            text = "권장 뷰 ${rule.view} · 연구 AUC ${"%.2f".format(rule.cvAuc)} / 균형정확도 ${"%.2f".format(rule.cvBalacc)}" +
+            text = "촬영 방향 ${ViewGuide.shortName(rule.view, floor)} · 연구 AUC ${"%.2f".format(rule.cvAuc)} / 균형정확도 ${"%.2f".format(rule.cvBalacc)}" +
                 if (!rule.mirrorSafe) " · 좌우 미러 주의" else "",
             color = Color.White.copy(alpha = 0.4f),
             fontSize = 9.sp,
