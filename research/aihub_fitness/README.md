@@ -136,6 +136,14 @@ python baseline_thresholds.py   # eligible 규칙의 (value − 기준선) 임�
 ```
 앱: 로그인 화면 "자세 기준선 설정" → 종목 목록(7종목) → 정자세 3세트 가이드/촬영 → 중앙값 기준선 저장(`filesDir/posture_baseline.tsv`) → 랩 판정에서 eligible 규칙은 (값 − 기준선) 으로 판정.
 
+## 바닥 종목 2D 경로 (명세 §25)
+
+3D GT 불량(73~92%)의 원인은 종목이 아니라 **선 자세용 촬영 리그**였다. 동작 평면에 평행한 뷰의 2D 만으로
+`floor_2d_rules.py`(탐색: 35조건 중 17개 AUC ≥ 0.75) → `export_floor_rules.py`(내보내기: 종목당 단일 뷰,
+'화면 위 = 양수' 부호 정준화, 스트리밍 접지선) → `rules/rules_floor_v0.json` **17규칙/9종목, 전부 beta**.
+앱은 `PostureFloor.kt` 가 같은 정의로 2D 피처를 계산해 기존 집계·코칭·세트 로그 파이프라인에 그대로 흘린다
+(파리티: `floor_port_fixture.txt`). 임계값은 바닥 높이 카메라로 재보정 전까지 참고용.
+
 ## 다음 단계 (예정)
 - 랩 화면 "로그 저장 ON"으로 자체 촬영(여러 사용자) → 내보내기 → 코치 라벨 `labels.csv` → `calibrate_from_logs.py` → 규칙 JSON 갱신·에셋 반영
 - 기준선 세트 로그(note=baseline)로 `threshold_rel` 재보정(MP 스케일), subject_id 입력 UI

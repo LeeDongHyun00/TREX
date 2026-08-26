@@ -105,10 +105,19 @@ fun PostureLabScreen(onClose: () -> Unit) {
     LaunchedEffect(Unit) { if (!granted) permissionLauncher.launch(Manifest.permission.CAMERA) }
 
     var ruleSet by remember { mutableStateOf<PostureRuleSet?>(null) }
+    var floorExercises by remember { mutableStateOf<Set<String>>(emptySet()) }
     var loadError by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(Unit) {
         try {
-            ruleSet = PostureRuleSet.load(context)
+            val standing = PostureRuleSet.load(context)
+            // 바닥 종목 규칙(2D 평면 경로, spec §25)을 합친다 — 자산이 없으면 서서 하는 종목만
+            ruleSet = try {
+                val floor = PostureRuleSet.load(context, FLOOR_RULES_ASSET)
+                floorExercises = floor.exercises.toSet()
+                PostureRuleSet("${standing.version}+${floor.version}", standing.generated, standing.rules + floor.rules)
+            } catch (_: Throwable) {
+                standing
+            }
         } catch (t: Throwable) {
             loadError = t.message ?: t.toString()
         }
@@ -145,6 +154,9 @@ fun PostureLabScreen(onClose: () -> Unit) {
     var onsetSummary by remember { mutableStateOf<List<OnsetState>>(emptyList()) }
 
     val aggregator = remember { FeatureAggregator() }
+    // 바닥 종목용 2D 피처 추출기 — 접지선 상태를 세트 단위로 유지, 분석 스레드에서만 접근
+    val floorExtractor = remember { FloorFeatureExtractor() }
+    val floorRef = remember { booleanArrayOf(false) }
     val phaseRef = remember { arrayOf(LabPhase.IDLE) }
     phaseRef[0] = phase
 
@@ -245,15 +257,21 @@ fun PostureLabScreen(onClose: () -> Unit) {
                 stats = analyzer.stats()
                 // RECORDING 에서는 추론 1회 = 샘플 1개 (간격이 곧 샘플 간격)
                 if (phaseRef[0] == LabPhase.RECORDING && s.detected) {
-                    aggregator.add(s.features)
+                    // 바닥 종목: 중력 기반 3D 피처 대신 2D 평면 피처로 교체 (spec §25). 세트 로그에도 그대로 흘린다.
+                    val s2 = if (floorRef[0]) {
+                        s.withFeatures(floorExtractor.compute(s.normalizedXy, s.visibility, s.imageWidth, s.imageHeight))
+                    } else {
+                        s
+                    }
+                    aggregator.add(s2.features)
                     sampledFrames = aggregator.frameCount
                     synchronized(recordedSamples) {
-                        recordedSamples.add(s)
+                        recordedSamples.add(s2)
                         recordedTimesMs.add(now)
                     }
                     // 실시간 코칭: 프레임 누적 → 최근 창 평가 → 말할 이벤트가 있으면 배너 + 음성
                     coachRef[0]?.let { coach ->
-                        coach.onFrame(s.features)
+                        coach.onFrame(s2.features)
                         val ev = coach.evaluate(now)
                         coachStates = coach.lastStates
                         if (ev != null) {
@@ -287,9 +305,14 @@ fun PostureLabScreen(onClose: () -> Unit) {
     }
 
     val activeRules = ruleSet?.rulesFor(exercise, includeBeta).orEmpty()
-    val recommendedViews = activeRules.map { it.view }.filter { it.isNotEmpty() }
-        .groupingBy { it }.eachCount().entries.sortedByDescending { it.value }
-        .joinToString(", ") { "${it.key}(${it.value})" }
+    // 바닥 종목 여부 — 분석 스레드에서 매 프레임 읽으므로 ref 로도 전달
+    val isFloorExercise = exercise in floorExercises
+    floorRef[0] = isFloorExercise
+    // 뷰는 코드(A~E) 대신 사람 말로 (spec §26) — 서서/바닥에 따라 같은 코드도 뜻이 다르다
+    val recommendedViews = ViewGuide.summary(activeRules, isFloorExercise)
+    val viewPlacement = ViewGuide.dominantView(activeRules)?.let {
+        ViewGuide.placement(it, isFloorExercise, activeRules.all { r -> r.mirrorSafe })
+    }
 
     Column(
         modifier = Modifier
@@ -388,6 +411,7 @@ fun PostureLabScreen(onClose: () -> Unit) {
                     exercise = it
                     phase = LabPhase.IDLE
                     aggregator.reset()
+                    floorExtractor.reset()
                     sampledFrames = 0
                     results = emptyList()
                     synchronized(recordedSamples) { recordedSamples.clear(); recordedTimesMs.clear() }
@@ -396,7 +420,8 @@ fun PostureLabScreen(onClose: () -> Unit) {
             Spacer(Modifier.height(8.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = "규칙 ${activeRules.size}개" + if (recommendedViews.isNotEmpty()) " · 권장 뷰 $recommendedViews" else "",
+                    text = "규칙 ${activeRules.size}개" + (if (isFloorExercise) " · 바닥 2D" else "") +
+                        if (recommendedViews.isNotEmpty()) " · 촬영 방향 $recommendedViews" else "",
                     color = Color.White.copy(alpha = 0.6f),
                     fontSize = 11.sp,
                     modifier = Modifier.weight(1f),
@@ -454,9 +479,13 @@ fun PostureLabScreen(onClose: () -> Unit) {
             }
             st?.error?.let { Text(it, color = TrexError, fontSize = 10.sp) }
             Text(
-                text = "정면~전방 45°에서 촬영 · 전신이 프레임에 들어오게" +
-                    if (sample.upFromGravity) " · 높이 축은 IMU 중력축 사용" else " · 중력센서 없음: 폰을 세로로 세워 거치",
-                color = Color.White.copy(alpha = 0.4f),
+                text = if (isFloorExercise) {
+                    (viewPlacement ?: "폰을 바닥에 눕히듯 낮게 두고 몸 옆에서") + " · 몸 전체가 프레임에 · 임계값 미보정(beta)"
+                } else {
+                    (viewPlacement ?: "폰을 허리 높이에 세로로 세우고, 몸을 정면에서 마주보게") + " · 전신이 프레임에" +
+                        if (sample.upFromGravity) " · 높이 축은 IMU 중력축 사용" else " · 중력센서 없음: 폰을 세로로 세워 거치"
+                },
+                color = if (isFloorExercise) TrexWarning.copy(alpha = 0.8f) else Color.White.copy(alpha = 0.4f),
                 fontSize = 10.sp,
                 modifier = Modifier.padding(top = 4.dp),
             )
@@ -469,6 +498,7 @@ fun PostureLabScreen(onClose: () -> Unit) {
                         icon = Icons.Rounded.PlayArrow,
                         onClick = {
                             aggregator.reset()
+                            floorExtractor.reset()   // 바닥 접지선 추정도 세트 단위로 초기화
                             sampledFrames = 0
                             results = emptyList()
                             lastSavedNote = null
@@ -683,7 +713,7 @@ fun PostureLabScreen(onClose: () -> Unit) {
                             }
                             Spacer(Modifier.height(6.dp))
                         }
-                        results.forEach { RuleResultRow(it) }
+                        results.forEach { RuleResultRow(it, isFloorExercise) }
                     }
 
                     else -> {
@@ -798,7 +828,7 @@ private fun LiveRuleRow(rule: PostureRule, liveValue: Float?, aggValue: Float?, 
 }
 
 @Composable
-private fun RuleResultRow(result: RuleResult) {
+private fun RuleResultRow(result: RuleResult, floor: Boolean = false) {
     val rule = result.rule
     val (label, color) = when (result.verdict) {
         Verdict.VIOLATION -> (if (result.direction == Direction.OPPOSITE) "위반(반대측)" else "위반") to TrexError
@@ -840,7 +870,7 @@ private fun RuleResultRow(result: RuleResult) {
             )
         }
         Text(
-            text = "권장 뷰 ${rule.view} · 연구 AUC ${"%.2f".format(rule.cvAuc)} / 균형정확도 ${"%.2f".format(rule.cvBalacc)}" +
+            text = "촬영 방향 ${ViewGuide.shortName(rule.view, floor)} · 연구 AUC ${"%.2f".format(rule.cvAuc)} / 균형정확도 ${"%.2f".format(rule.cvBalacc)}" +
                 if (!rule.mirrorSafe) " · 좌우 미러 주의" else "",
             color = Color.White.copy(alpha = 0.4f),
             fontSize = 9.sp,

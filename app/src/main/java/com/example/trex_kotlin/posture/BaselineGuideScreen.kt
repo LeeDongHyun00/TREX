@@ -195,7 +195,8 @@ private fun BaselineExerciseList(
                 val rules = ruleSet.baselineRulesFor(ex)
                 val k = ruleSet.baselineSetsFor(ex)
                 val b = profile.get(ex)
-                val views = rules.map { it.view }.filter { it.isNotEmpty() }.distinct().sorted().joinToString("/")
+                // 기준선 대상은 전부 서서 하는 종목이라 floor=false (뷰 코드 → 사람 말, spec §26)
+                val views = rules.map { ViewGuide.shortName(it.view, floor = false) }.distinct().joinToString("/")
                 Surface(
                     shape = RoundedCornerShape(14.dp),
                     color = TrexDarkAlt,
@@ -218,7 +219,7 @@ private fun BaselineExerciseList(
                         Spacer(Modifier.height(4.dp))
                         Text(
                             text = "기준선 규칙 ${rules.size}개 · " + rules.joinToString(", ") { it.condition } +
-                                (if (views.isNotEmpty()) " · 권장 뷰 $views" else ""),
+                                (if (views.isNotEmpty()) " · 촬영 방향 $views" else ""),
                             color = Color.White.copy(alpha = 0.6f),
                             fontSize = 10.sp,
                             lineHeight = 14.sp,
@@ -267,7 +268,10 @@ private fun BaselineCaptureView(
     val features = remember(exercise) { ruleSet.baselineFeaturesFor(exercise) }
     val requiredSets = remember(exercise) { ruleSet.baselineSetsFor(exercise) }
     val collector = remember(exercise) { BaselineCollector(exercise, features, requiredSets) }
-    val recommendedViews = remember(exercise) { rules.map { it.view }.filter { it.isNotEmpty() }.distinct().sorted().joinToString("/") }
+    // 폰 배치 지시 (뷰 코드 대신 사람 말, spec §26) — 기준선 종목은 전부 서서 하는 종목
+    val viewPlacement = remember(exercise) {
+        ViewGuide.dominantView(rules)?.let { ViewGuide.placement(it, floor = false, mirrorSafe = rules.all { r -> r.mirrorSafe }) }
+    }
 
     var granted by remember {
         mutableStateOf(ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED)
@@ -474,7 +478,7 @@ private fun BaselineCaptureView(
             Spacer(Modifier.height(8.dp))
             Text(
                 text = "• 평소처럼 **정자세로** 3~4렙 (일부러 잘하려 하지 말 것 — 이게 '내 기준'이 됩니다)\n" +
-                    "• 폰은 " + (if (recommendedViews.isNotEmpty()) "권장 뷰 $recommendedViews" else "정면~전방 45°") + ", 허리 높이, 세로 거치 · 전신이 프레임 안에\n" +
+                    "• " + (viewPlacement ?: "폰을 허리 높이에 세로로 세우고, 몸을 정면에서 마주보게") + " · 전신이 프레임 안에\n" +
                     "• '세트 시작' → 렙 수행 → '세트 종료' → 값 확인 후 저장",
                 color = Color.White.copy(alpha = 0.7f),
                 fontSize = 10.sp,

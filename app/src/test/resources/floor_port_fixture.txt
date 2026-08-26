@@ -1,0 +1,1927 @@
+# floor_port_fixture — export_floor_rules.py 생성. px 좌표를 순서대로 먹여 프레임 피처 일치를 검증.
+CLIP 푸시업 C
+FRAME 0
+P Nose 779.0000 564.0000
+P LEar 775.0000 518.0000
+P REar 778.0000 515.0000
+P LShoulder 842.0000 523.0000
+P RShoulder 862.0000 500.0000
+P LElbow 865.0000 645.0000
+P RElbow 891.0000 615.0000
+P LWrist 848.0000 757.0000
+P RWrist 861.0000 698.0000
+P LHip 1055.0000 498.0000
+P RHip 1058.0000 492.0000
+P LKnee 1196.0000 610.0000
+P RKnee 1201.0000 603.0000
+P LAnkle 1362.0000 684.0000
+P RAnkle 1360.0000 682.0000
+F hip_dev_ankle 0.150680
+F hip_dev_knee 0.194789
+F knee_dev -0.056657
+F shoulder_dev 0.466088
+F elbow_ang 160.692843
+F knee_ang 167.070211
+F hip_ang 137.247703
+F trunk_ankle_ang 143.695692
+F head_trunk_ang 91.378094
+F shoulder_arm_ang 82.237763
+F hand_shoulder_off -1.050383
+F wrist_shoulder_d 1.052884
+F knee_shoulder_d 1.751214
+F ankle_hip_d 1.744261
+F elbow_width 0.084866
+F knee_gap2d 0.041929
+F ankle_gap2d 0.013786
+F shoulder_asym2d -0.115532
+F shoulder_ground -0.339441
+F hip_ground 0.000000
+F knee_ground -0.056657
+F ankle_ground 0.000000
+F head_ground -0.462164
+ENDFRAME
+FRAME 1
+P Nose 782.0000 567.0000
+P LEar 780.0000 522.0000
+P REar 780.0000 517.0000
+P LShoulder 850.0000 522.0000
+P RShoulder 864.0000 510.0000
+P LElbow 869.0000 649.0000
+P RElbow 889.0000 620.0000
+P LWrist 850.0000 760.0000
+P RWrist 853.0000 699.0000
+P LHip 1046.0000 521.0000
+P RHip 1076.0000 520.0000
+P LKnee 1207.0000 622.0000
+P RKnee 1089.0000 521.0000
+P LAnkle 1011.0000 658.0000
+P RAnkle 1020.0000 662.0000
+F hip_dev_ankle 0.625029
+F hip_dev_knee 0.114088
+F knee_dev -0.671466
+F shoulder_dev 0.497638
+F elbow_ang 161.778046
+F knee_ang 64.119059
+F hip_ang 150.884547
+F trunk_ankle_ang 73.199165
+F head_trunk_ang 87.385072
+F shoulder_arm_ang 78.218882
+F hand_shoulder_off -1.046654
+F wrist_shoulder_d 1.046661
+F knee_shoulder_d 1.451829
+F ankle_hip_d 0.719103
+F elbow_width 0.079832
+F knee_gap2d 0.761198
+F ankle_gap2d 0.048267
+F shoulder_asym2d -0.064518
+F shoulder_ground 0.614075
+F hip_ground 0.500477
+F knee_ground 0.309744
+F ankle_ground 0.118488
+F head_ground 0.641882
+ENDFRAME
+FRAME 2
+P Nose 747.0000 676.0000
+P LEar 742.0000 639.0000
+P REar 742.0000 638.0000
+P LShoulder 802.0000 610.0000
+P RShoulder 801.0000 606.0000
+P LElbow 874.0000 666.0000
+P RElbow 872.0000 666.0000
+P LWrist 848.0000 761.0000
+P RWrist 852.0000 705.0000
+P LHip 1026.0000 719.0000
+P RHip 934.0000 609.0000
+P LKnee 994.0000 642.0000
+P RKnee 997.0000 643.0000
+P LAnkle 997.0000 645.0000
+P RAnkle 981.0000 629.0000
+F hip_dev_ankle -0.147886
+F hip_dev_knee -0.121200
+F knee_dev -0.277778
+F shoulder_dev 0.904690
+F elbow_ang 112.568845
+F knee_ang 94.447385
+F hip_ang 108.371003
+F trunk_ankle_ang 91.016978
+F head_trunk_ang 76.289853
+F shoulder_arm_ang 21.630607
+F hand_shoulder_off -0.559928
+F wrist_shoulder_d 0.716702
+F knee_shoulder_d 1.053270
+F ankle_hip_d 0.152132
+F elbow_width 0.332945
+F knee_gap2d 0.016904
+F ankle_gap2d 0.120952
+F shoulder_asym2d -0.018585
+F shoulder_ground 0.737591
+F hip_ground 0.057090
+F knee_ground 0.134274
+F ankle_ground 0.176943
+F head_ground 0.710271
+ENDFRAME
+FRAME 3
+P Nose 731.0000 692.0000
+P LEar 726.0000 653.0000
+P REar 726.0000 652.0000
+P LShoulder 792.0000 622.0000
+P RShoulder 783.0000 610.0000
+P LElbow 869.0000 665.0000
+P RElbow 858.0000 632.0000
+P LWrist 849.0000 761.0000
+P RWrist 855.0000 705.0000
+P LHip 984.0000 630.0000
+P RHip 929.0000 609.0000
+P LKnee 987.0000 640.0000
+P RKnee 1013.0000 719.0000
+P LAnkle 1013.0000 670.0000
+P RAnkle 974.0000 679.0000
+F hip_dev_ankle 0.199866
+F hip_dev_knee 0.203051
+F knee_dev 0.039258
+F shoulder_dev 0.821227
+F elbow_ang 107.412517
+F knee_ang 16.489296
+F hip_ang 127.128541
+F trunk_ankle_ang 125.116227
+F head_trunk_ang 90.933240
+F shoulder_arm_ang 21.966652
+F hand_shoulder_off -0.684110
+F wrist_shoulder_d 0.790369
+F knee_shoulder_d 1.312055
+F ankle_hip_d 0.392148
+F elbow_width 0.365618
+F knee_gap2d 0.492016
+F ankle_gap2d 0.236783
+F shoulder_asym2d -0.066126
+F shoulder_ground 0.791745
+F hip_ground 0.377920
+F knee_ground -0.057720
+F ankle_ground -0.014709
+F head_ground 0.731976
+ENDFRAME
+FRAME 4
+P Nose 766.0000 582.0000
+P LEar 753.0000 539.0000
+P REar 754.0000 537.0000
+P LShoulder 833.0000 533.0000
+P RShoulder 846.0000 520.0000
+P LElbow 852.0000 648.0000
+P RElbow 874.0000 635.0000
+P LWrist 848.0000 757.0000
+P RWrist 855.0000 702.0000
+P LHip 1034.0000 559.0000
+P RHip 1073.0000 567.0000
+P LKnee 849.0000 646.0000
+P RKnee 1009.0000 521.0000
+P LAnkle 1015.0000 659.0000
+P RAnkle 1002.0000 645.0000
+F hip_dev_ankle 0.466890
+F hip_dev_knee 0.793237
+F knee_dev 1.021315
+F shoulder_dev 0.627555
+F elbow_ang 168.516836
+F knee_ang 50.099689
+F hip_ang 19.029612
+F trunk_ankle_ang 72.857287
+F head_trunk_ang 69.376992
+F shoulder_arm_ang 68.771470
+F hand_shoulder_off -0.912489
+F wrist_shoulder_d 0.936727
+F knee_shoulder_d 0.488781
+F ankle_hip_d 0.459392
+F elbow_width 0.050217
+F knee_gap2d 0.935276
+F ankle_gap2d 0.088005
+F shoulder_asym2d -0.072519
+F shoulder_ground 1.109424
+F hip_ground 0.410509
+F knee_ground 0.594851
+F ankle_ground 0.042606
+F head_ground 1.250931
+ENDFRAME
+FRAME 5
+P Nose 743.0000 650.0000
+P LEar 732.0000 613.0000
+P REar 733.0000 612.0000
+P LShoulder 807.0000 590.0000
+P RShoulder 797.0000 574.0000
+P LElbow 871.0000 662.0000
+P RElbow 870.0000 661.0000
+P LWrist 850.0000 761.0000
+P RWrist 854.0000 704.0000
+P LHip 1013.0000 554.0000
+P RHip 1044.0000 521.0000
+P LKnee 995.0000 642.0000
+P RKnee 996.0000 642.0000
+P LAnkle 1006.0000 653.0000
+P RAnkle 1008.0000 658.0000
+F hip_dev_ankle 0.543364
+F hip_dev_knee 0.540924
+F knee_dev 0.114502
+F shoulder_dev 0.524931
+F elbow_ang 126.390328
+F knee_ang 122.048353
+F hip_ang 61.359216
+F trunk_ankle_ang 68.558575
+F head_trunk_ang 88.576032
+F shoulder_arm_ang 60.365870
+F hand_shoulder_off -0.681523
+F wrist_shoulder_d 0.687035
+F knee_shoulder_d 0.877654
+F ankle_hip_d 0.519615
+F elbow_width 0.252428
+F knee_gap2d 0.004332
+F ankle_gap2d 0.023330
+F shoulder_asym2d -0.074084
+F shoulder_ground 0.905279
+F hip_ground 0.580409
+F knee_ground 0.112934
+F ankle_ground 0.013667
+F head_ground 0.916486
+ENDFRAME
+FRAME 6
+P Nose 736.0000 686.0000
+P LEar 726.0000 646.0000
+P REar 726.0000 645.0000
+P LShoulder 792.0000 617.0000
+P RShoulder 780.0000 604.0000
+P LElbow 867.0000 663.0000
+P RElbow 859.0000 627.0000
+P LWrist 848.0000 761.0000
+P RWrist 854.0000 703.0000
+P LHip 976.0000 627.0000
+P RHip 1035.0000 544.0000
+P LKnee 990.0000 640.0000
+P RKnee 1013.0000 720.0000
+P LAnkle 987.0000 680.0000
+P RAnkle 980.0000 679.0000
+F hip_dev_ankle 0.458859
+F hip_dev_knee 0.402624
+F knee_dev -0.182725
+F shoulder_dev 0.624149
+F elbow_ang 110.549937
+F knee_ang 90.832631
+F hip_ang 81.078513
+F trunk_ankle_ang 70.329731
+F head_trunk_ang 88.246068
+F shoulder_arm_ang 30.632574
+F hand_shoulder_off -0.579738
+F wrist_shoulder_d 0.623732
+F knee_shoulder_d 1.024945
+F ankle_hip_d 0.436993
+F elbow_width 0.344504
+F knee_gap2d 0.376792
+F ankle_gap2d 0.032007
+F shoulder_asym2d -0.061601
+F shoulder_ground 0.804013
+F hip_ground 0.398197
+F knee_ground -0.092425
+F ankle_ground -0.045642
+F head_ground 0.765787
+ENDFRAME
+FRAME 7
+P Nose 764.0000 575.0000
+P LEar 753.0000 533.0000
+P REar 755.0000 531.0000
+P LShoulder 832.0000 532.0000
+P RShoulder 844.0000 509.0000
+P LElbow 853.0000 648.0000
+P RElbow 872.0000 631.0000
+P LWrist 847.0000 759.0000
+P RWrist 857.0000 702.0000
+P LHip 1044.0000 561.0000
+P RHip 1056.0000 561.0000
+P LKnee 852.0000 645.0000
+P RKnee 1015.0000 522.0000
+P LAnkle 1008.0000 651.0000
+P RAnkle 866.0000 694.0000
+F hip_dev_ankle 0.857453
+F hip_dev_knee 0.724889
+F knee_dev 0.414553
+F shoulder_dev 0.646993
+F elbow_ang 166.644567
+F knee_ang 98.679079
+F hip_ang 21.746465
+F trunk_ankle_ang 55.432526
+F head_trunk_ang 71.312527
+F shoulder_arm_ang 67.551024
+F hand_shoulder_off -0.943516
+F wrist_shoulder_d 0.975130
+F knee_shoulder_d 0.530076
+F ankle_hip_d 0.735515
+F elbow_width 0.058488
+F knee_gap2d 0.946102
+F ankle_gap2d 0.687417
+F shoulder_asym2d -0.118786
+F shoulder_ground 1.225019
+F hip_ground 0.471734
+F knee_ground 0.632757
+F ankle_ground 0.121136
+F head_ground 1.367813
+ENDFRAME
+FRAME 8
+P Nose 778.0000 571.0000
+P LEar 770.0000 523.0000
+P REar 771.0000 523.0000
+P LShoulder 846.0000 526.0000
+P RShoulder 866.0000 503.0000
+P LElbow 859.0000 649.0000
+P RElbow 886.0000 620.0000
+P LWrist 850.0000 758.0000
+P RWrist 859.0000 699.0000
+P LHip 1048.0000 571.0000
+P RHip 1064.0000 572.0000
+P LKnee 1158.0000 722.0000
+P RKnee 1015.0000 525.0000
+P LAnkle 1158.0000 719.0000
+P RAnkle 1099.0000 679.0000
+F hip_dev_ankle 0.197306
+F hip_dev_knee 0.133231
+F knee_dev 0.005520
+F shoulder_dev 0.657236
+F elbow_ang 169.246610
+F knee_ang 178.693548
+F hip_ang 136.300815
+F trunk_ankle_ang 135.531301
+F head_trunk_ang 71.478122
+F shoulder_arm_ang 66.263372
+F hand_shoulder_off -0.991595
+F wrist_shoulder_d 1.029050
+F knee_shoulder_d 1.226044
+F ankle_hip_d 0.705273
+F elbow_width 0.046880
+F knee_gap2d 1.170538
+F ankle_gap2d 0.342757
+F shoulder_asym2d -0.140713
+F shoulder_ground 1.213918
+F hip_ground 0.467816
+F knee_ground 0.108949
+F ankle_ground -0.407262
+F head_ground 1.346873
+ENDFRAME
+FRAME 9
+P Nose 760.0000 569.0000
+P LEar 751.0000 525.0000
+P REar 754.0000 520.0000
+P LShoulder 822.0000 532.0000
+P RShoulder 839.0000 500.0000
+P LElbow 843.0000 646.0000
+P RElbow 870.0000 631.0000
+P LWrist 849.0000 758.0000
+P RWrist 862.0000 700.0000
+P LHip 1017.0000 575.0000
+P RHip 1082.0000 601.0000
+P LKnee 843.0000 644.0000
+P RKnee 1021.0000 722.0000
+P LAnkle 1001.0000 646.0000
+P RAnkle 865.0000 694.0000
+F hip_dev_ankle 0.769850
+F hip_dev_knee 0.766275
+F knee_dev -0.070580
+F shoulder_dev 0.779717
+F elbow_ang 172.629010
+F knee_ang 46.645387
+F hip_ang 57.155073
+F trunk_ankle_ang 53.339449
+F head_trunk_ang 68.400796
+F shoulder_arm_ang 59.817921
+F hand_shoulder_off -0.843861
+F wrist_shoulder_d 0.930292
+F knee_shoulder_d 0.847717
+F ankle_hip_d 0.617983
+F elbow_width 0.032198
+F knee_gap2d 0.843006
+F ankle_gap2d 0.625605
+F shoulder_asym2d -0.158143
+F shoulder_ground 1.297252
+F hip_ground 0.371550
+F knee_ground 0.089177
+F ankle_ground 0.162655
+F head_ground 1.439561
+ENDFRAME
+FRAME 10
+P Nose 755.0000 566.0000
+P LEar 750.0000 520.0000
+P REar 753.0000 519.0000
+P LShoulder 822.0000 533.0000
+P RShoulder 843.0000 500.0000
+P LElbow 848.0000 646.0000
+P RElbow 871.0000 632.0000
+P LWrist 848.0000 757.0000
+P RWrist 861.0000 700.0000
+P LHip 971.0000 583.0000
+P RHip 1085.0000 606.0000
+P LKnee 845.0000 645.0000
+P RKnee 1011.0000 483.0000
+P LAnkle 998.0000 643.0000
+P RAnkle 864.0000 694.0000
+F hip_dev_ankle 0.671610
+F hip_dev_knee 0.161495
+F knee_dev 0.695902
+F shoulder_dev 0.826705
+F elbow_ang 167.042420
+F knee_ang 71.393891
+F hip_ang 4.789156
+F trunk_ankle_ang 59.090386
+F head_trunk_ang 70.519344
+F shoulder_arm_ang 55.819415
+F hand_shoulder_off -0.896754
+F wrist_shoulder_d 1.012603
+F knee_shoulder_d 0.506736
+F ankle_hip_d 0.579631
+F elbow_width 0.056753
+F knee_gap2d 1.101967
+F ankle_gap2d 0.681173
+F shoulder_asym2d -0.187451
+F shoulder_ground 1.328371
+F hip_ground 0.366281
+F knee_ground 0.801963
+F ankle_ground 0.166833
+F head_ground 1.514897
+ENDFRAME
+FRAME 11
+P Nose 741.0000 552.0000
+P LEar 748.0000 506.0000
+P REar 748.0000 505.0000
+P LShoulder 821.0000 532.0000
+P RShoulder 843.0000 502.0000
+P LElbow 847.0000 647.0000
+P RElbow 869.0000 625.0000
+P LWrist 849.0000 759.0000
+P RWrist 862.0000 700.0000
+P LHip 948.0000 589.0000
+P RHip 960.0000 578.0000
+P LKnee 847.0000 645.0000
+P RKnee 1003.0000 645.0000
+P LAnkle 999.0000 644.0000
+P RAnkle 867.0000 694.0000
+F hip_dev_ankle 0.355127
+F hip_dev_knee 0.376763
+F knee_dev 0.153266
+F shoulder_dev 0.785417
+F elbow_ang 168.283383
+F knee_ang 136.319078
+F hip_ang 93.348031
+F trunk_ankle_ang 104.794519
+F head_trunk_ang 77.822180
+F shoulder_arm_ang 49.081268
+F hand_shoulder_off -1.261884
+F wrist_shoulder_d 1.538684
+F knee_shoulder_d 1.138695
+F ankle_hip_d 0.633632
+F elbow_width 0.051268
+F knee_gap2d 1.122731
+F ankle_gap2d 1.015873
+F shoulder_asym2d -0.270154
+F shoulder_ground 1.339272
+F hip_ground 0.618101
+F knee_ground 0.321289
+F ankle_ground 0.155047
+F head_ground 1.628146
+ENDFRAME
+FRAME 12
+P Nose 738.0000 551.0000
+P LEar 750.0000 505.0000
+P REar 750.0000 504.0000
+P LShoulder 817.0000 534.0000
+P RShoulder 839.0000 507.0000
+P LElbow 850.0000 647.0000
+P RElbow 871.0000 623.0000
+P LWrist 850.0000 760.0000
+P RWrist 862.0000 699.0000
+P LHip 944.0000 596.0000
+P RHip 945.0000 594.0000
+P LKnee 846.0000 645.0000
+P RKnee 1004.0000 643.0000
+P LAnkle 1003.0000 645.0000
+P RAnkle 869.0000 693.0000
+F hip_dev_ankle 0.274474
+F hip_dev_knee 0.290385
+F knee_dev 0.185013
+F shoulder_dev 0.858810
+F elbow_ang 163.720327
+F knee_ang 134.549969
+F hip_ang 100.897767
+F trunk_ankle_ang 116.045750
+F head_trunk_ang 79.517941
+F shoulder_arm_ang 41.555485
+F hand_shoulder_off -1.164204
+F wrist_shoulder_d 1.524884
+F knee_shoulder_d 1.135626
+F ankle_hip_d 0.538649
+F elbow_width 0.071485
+F knee_gap2d 1.142667
+F ankle_gap2d 1.029313
+F shoulder_asym2d -0.253494
+F shoulder_ground 1.341329
+F hip_ground 0.572032
+F knee_ground 0.325334
+F ankle_ground 0.142961
+F head_ground 1.649453
+ENDFRAME
+FRAME 13
+P Nose 741.0000 552.0000
+P LEar 751.0000 506.0000
+P REar 752.0000 503.0000
+P LShoulder 819.0000 534.0000
+P RShoulder 843.0000 501.0000
+P LElbow 849.0000 648.0000
+P RElbow 869.0000 622.0000
+P LWrist 849.0000 758.0000
+P RWrist 857.0000 699.0000
+P LHip 955.0000 589.0000
+P RHip 1073.0000 589.0000
+P LKnee 846.0000 645.0000
+P RKnee 1014.0000 485.0000
+P LAnkle 1001.0000 643.0000
+P RAnkle 869.0000 692.0000
+F hip_dev_ankle 0.600732
+F hip_dev_knee 0.133861
+F knee_dev 0.684498
+F shoulder_dev 0.816196
+F elbow_ang 165.256437
+F knee_ang 71.261902
+F hip_ang 5.395708
+F trunk_ankle_ang 66.159213
+F head_trunk_ang 84.621319
+F shoulder_arm_ang 55.255412
+F hand_shoulder_off -0.959554
+F wrist_shoulder_d 1.079766
+F knee_shoulder_d 0.558886
+F ankle_hip_d 0.566849
+F elbow_width 0.064610
+F knee_gap2d 1.180830
+F ankle_gap2d 0.716648
+F shoulder_asym2d -0.209680
+F shoulder_ground 1.376181
+F hip_ground 0.418627
+F knee_ground 0.803419
+F ankle_ground 0.153195
+F head_ground 1.680065
+ENDFRAME
+FRAME 14
+P Nose 744.0000 552.0000
+P LEar 749.0000 508.0000
+P REar 751.0000 506.0000
+P LShoulder 818.0000 531.0000
+P RShoulder 843.0000 502.0000
+P LElbow 850.0000 646.0000
+P RElbow 871.0000 626.0000
+P LWrist 850.0000 759.0000
+P RWrist 863.0000 699.0000
+P LHip 944.0000 590.0000
+P RHip 943.0000 590.0000
+P LKnee 847.0000 644.0000
+P RKnee 1012.0000 483.0000
+P LAnkle 1000.0000 644.0000
+P RAnkle 870.0000 693.0000
+F hip_dev_ankle 0.279073
+F hip_dev_knee -0.163655
+F knee_dev 0.212407
+F shoulder_dev 0.821923
+F elbow_ang 164.450196
+F knee_ang 24.849111
+F hip_ang 29.110736
+F trunk_ankle_ang 116.861762
+F head_trunk_ang 74.378187
+F shoulder_arm_ang 42.865677
+F hand_shoulder_off -1.216289
+F wrist_shoulder_d 1.588156
+F knee_shoulder_d 0.812979
+F ankle_hip_d 0.585745
+F elbow_width 0.068216
+F knee_gap2d 1.710184
+F ankle_gap2d 1.030617
+F shoulder_asym2d -0.286619
+F shoulder_ground 1.409234
+F hip_ground 0.615234
+F knee_ground 0.823313
+F ankle_ground 0.144970
+F head_ground 1.704538
+ENDFRAME
+FRAME 15
+P Nose 744.0000 555.0000
+P LEar 749.0000 509.0000
+P REar 752.0000 508.0000
+P LShoulder 818.0000 531.0000
+P RShoulder 841.0000 503.0000
+P LElbow 848.0000 646.0000
+P RElbow 868.0000 640.0000
+P LWrist 849.0000 759.0000
+P RWrist 862.0000 700.0000
+P LHip 949.0000 590.0000
+P RHip 1064.0000 585.0000
+P LKnee 847.0000 644.0000
+P RKnee 1012.0000 483.0000
+P LAnkle 1001.0000 644.0000
+P RAnkle 868.0000 693.0000
+F hip_dev_ankle 0.571353
+F hip_dev_knee 0.097063
+F knee_dev 0.678161
+F shoulder_dev 0.832759
+F elbow_ang 165.886155
+F knee_ang 69.962043
+F hip_ang 4.405998
+F trunk_ankle_ang 70.084104
+F head_trunk_ang 80.807626
+F shoulder_arm_ang 55.537067
+F hand_shoulder_off -0.985682
+F wrist_shoulder_d 1.123665
+F knee_shoulder_d 0.578839
+F ankle_hip_d 0.568824
+F elbow_width 0.061857
+F knee_gap2d 1.210003
+F ankle_gap2d 0.743946
+F shoulder_asym2d -0.190484
+F shoulder_ground 1.603455
+F hip_ground 0.388712
+F knee_ground 0.869910
+F ankle_ground 0.105831
+F head_ground 1.982925
+ENDFRAME
+ENDCLIP
+CLIP 힙쓰러스트 B
+FRAME 0
+P Nose 792.0000 679.0000
+P LEar 818.0000 731.0000
+P REar 794.0000 712.0000
+P LShoulder 917.0000 730.0000
+P RShoulder 1199.0000 520.0000
+P LElbow 1166.0000 638.0000
+P RElbow 1175.0000 639.0000
+P LWrist 1146.0000 722.0000
+P RWrist 1146.0000 722.0000
+P LHip 1038.0000 657.0000
+P RHip 1050.0000 657.0000
+P LKnee 1037.0000 738.0000
+P RKnee 1055.0000 609.0000
+P LAnkle 1251.0000 669.0000
+P RAnkle 1250.0000 664.0000
+F hip_dev_ankle -0.173833
+F hip_dev_knee 0.118177
+F knee_dev -0.079290
+F shoulder_dev 0.285324
+F elbow_ang 56.329344
+F knee_ang 94.950768
+F hip_ang 149.459395
+F trunk_ankle_ang 69.004648
+F head_trunk_ang 93.069078
+F shoulder_arm_ang 106.786604
+F hand_shoulder_off -3.421311
+F wrist_shoulder_d 3.749645
+F knee_shoulder_d 1.430422
+F ankle_hip_d 5.918331
+F elbow_width 0.363318
+F knee_gap2d 3.729040
+F ankle_gap2d 0.145985
+F shoulder_asym2d 0.142169
+F shoulder_ground 0.157749
+F hip_ground 0.000000
+F knee_ground -0.079290
+F ankle_ground 0.000000
+F head_ground -0.364600
+ENDFRAME
+FRAME 1
+P Nose 792.0000 677.0000
+P LEar 819.0000 732.0000
+P REar 792.0000 708.0000
+P LShoulder 917.0000 731.0000
+P RShoulder 1199.0000 520.0000
+P LElbow 1166.0000 638.0000
+P RElbow 1175.0000 640.0000
+P LWrist 1146.0000 723.0000
+P RWrist 1146.0000 723.0000
+P LHip 1036.0000 651.0000
+P RHip 1051.0000 657.0000
+P LKnee 1036.0000 738.0000
+P RKnee 1055.0000 610.0000
+P LAnkle 1249.0000 667.0000
+P RAnkle 1249.0000 663.0000
+F hip_dev_ankle -0.158151
+F hip_dev_knee 0.138330
+F knee_dev -0.096526
+F shoulder_dev 0.256873
+F elbow_ang 56.279123
+F knee_ang 93.178278
+F hip_ang 147.323692
+F trunk_ankle_ang 66.098289
+F head_trunk_ang 91.930587
+F shoulder_arm_ang 110.122941
+F hand_shoulder_off -3.835452
+F wrist_shoulder_d 4.107391
+F knee_shoulder_d 1.566302
+F ankle_hip_d 6.435784
+F elbow_width 0.367679
+F knee_gap2d 4.046792
+F ankle_gap2d 0.125092
+F shoulder_asym2d 0.118129
+F shoulder_ground 1.076736
+F hip_ground 0.924140
+F knee_ground 0.767647
+F ankle_ground 0.008608
+F head_ground 1.400306
+ENDFRAME
+FRAME 2
+P Nose 791.0000 677.0000
+P LEar 820.0000 731.0000
+P REar 791.0000 707.0000
+P LShoulder 916.0000 728.0000
+P RShoulder 1198.0000 520.0000
+P LElbow 1166.0000 639.0000
+P RElbow 1175.0000 639.0000
+P LWrist 1143.0000 720.0000
+P RWrist 1143.0000 720.0000
+P LHip 1030.0000 649.0000
+P RHip 1048.0000 655.0000
+P LKnee 1037.0000 739.0000
+P RKnee 1048.0000 608.0000
+P LAnkle 1250.0000 670.0000
+P RAnkle 1250.0000 665.0000
+F hip_dev_ankle -0.158069
+F hip_dev_knee 0.182297
+F knee_dev -0.100137
+F shoulder_dev 0.267876
+F elbow_ang 54.552342
+F knee_ang 97.589829
+F hip_ang 138.018661
+F trunk_ankle_ang 61.466159
+F head_trunk_ang 93.036433
+F shoulder_arm_ang 115.206725
+F hand_shoulder_off -3.732852
+F wrist_shoulder_d 3.872051
+F knee_shoulder_d 1.549572
+F ankle_hip_d 6.355961
+F elbow_width 0.352819
+F knee_gap2d 3.949364
+F ankle_gap2d 0.150210
+F shoulder_asym2d 0.097225
+F shoulder_ground 1.088891
+F hip_ground 0.951228
+F knee_ground 0.776343
+F ankle_ground -0.007484
+F head_ground 1.382369
+ENDFRAME
+FRAME 3
+P Nose 805.0000 678.0000
+P LEar 819.0000 737.0000
+P REar 819.0000 737.0000
+P LShoulder 914.0000 727.0000
+P RShoulder 829.0000 672.0000
+P LElbow 1029.0000 732.0000
+P RElbow 1136.0000 485.0000
+P LWrist 1137.0000 721.0000
+P RWrist 1137.0000 721.0000
+P LHip 1028.0000 567.0000
+P RHip 1052.0000 587.0000
+P LKnee 1029.0000 732.0000
+P RKnee 1222.0000 512.0000
+P LAnkle 1173.0000 640.0000
+P RAnkle 1249.0000 665.0000
+F hip_dev_ankle 0.286622
+F hip_dev_knee 0.256036
+F knee_dev -0.035481
+F shoulder_dev -1.199088
+F elbow_ang 171.694821
+F knee_ang 171.874055
+F hip_ang 116.224196
+F trunk_ankle_ang 120.160297
+F head_trunk_ang 67.444869
+F shoulder_arm_ang 12.687711
+F hand_shoulder_off -0.832897
+F wrist_shoulder_d 1.278635
+F knee_shoulder_d 1.274752
+F ankle_hip_d 0.897288
+F elbow_width 0.036270
+F knee_gap2d 1.404830
+F ankle_gap2d 0.384049
+F shoulder_asym2d -0.367534
+F shoulder_ground 1.240336
+F hip_ground 1.485763
+F knee_ground 0.814172
+F ankle_ground 0.250308
+F head_ground 1.168828
+ENDFRAME
+FRAME 4
+P Nose 805.0000 678.0000
+P LEar 818.0000 737.0000
+P REar 818.0000 735.0000
+P LShoulder 915.0000 728.0000
+P RShoulder 1221.0000 512.0000
+P LElbow 1028.0000 737.0000
+P RElbow 1137.0000 484.0000
+P LWrist 1137.0000 722.0000
+P RWrist 1137.0000 722.0000
+P LHip 1018.0000 583.0000
+P RHip 1051.0000 605.0000
+P LKnee 1028.0000 737.0000
+P RKnee 1222.0000 512.0000
+P LAnkle 1175.0000 642.0000
+P RAnkle 1250.0000 665.0000
+F hip_dev_ankle 0.119748
+F hip_dev_knee 0.407203
+F knee_dev -0.001256
+F shoulder_dev 0.060356
+F elbow_ang 167.610707
+F knee_ang 179.712002
+F hip_ang 19.191063
+F trunk_ankle_ang 19.332514
+F head_trunk_ang 69.372928
+F shoulder_arm_ang 108.952556
+F hand_shoulder_off -0.902544
+F wrist_shoulder_d 2.903997
+F knee_shoulder_d 1.348339
+F ankle_hip_d 4.425841
+F elbow_width 0.054258
+F knee_gap2d 7.005827
+F ankle_gap2d 1.849923
+F shoulder_asym2d -0.366017
+F shoulder_ground 1.041560
+F hip_ground 1.363652
+F knee_ground 0.784329
+F ankle_ground 0.227787
+F head_ground 1.176458
+ENDFRAME
+FRAME 5
+P Nose 803.0000 679.0000
+P LEar 818.0000 738.0000
+P REar 818.0000 735.0000
+P LShoulder 914.0000 730.0000
+P RShoulder 829.0000 673.0000
+P LElbow 1029.0000 738.0000
+P RElbow 1137.0000 485.0000
+P LWrist 1137.0000 722.0000
+P RWrist 1137.0000 722.0000
+P LHip 1016.0000 583.0000
+P RHip 1054.0000 591.0000
+P LKnee 1029.0000 737.0000
+P RKnee 1222.0000 512.0000
+P LAnkle 1174.0000 642.0000
+P RAnkle 1251.0000 665.0000
+F hip_dev_ankle 0.263073
+F hip_dev_knee 0.234133
+F knee_dev -0.017757
+F shoulder_dev -1.178927
+F elbow_ang 167.593649
+F knee_ang 175.927561
+F hip_ang 122.488834
+F trunk_ankle_ang 124.457866
+F head_trunk_ang 70.056360
+F shoulder_arm_ang 11.952477
+F hand_shoulder_off -0.847123
+F wrist_shoulder_d 1.334080
+F knee_shoulder_d 1.329694
+F ankle_hip_d 0.949612
+F elbow_width 0.054305
+F knee_gap2d 1.485104
+F ankle_gap2d 0.402602
+F shoulder_asym2d -0.382325
+F shoulder_ground 1.536890
+F hip_ground 1.547672
+F knee_ground 0.801602
+F ankle_ground 0.136941
+F head_ground 1.551748
+ENDFRAME
+FRAME 6
+P Nose 808.0000 677.0000
+P LEar 821.0000 735.0000
+P REar 821.0000 733.0000
+P LShoulder 916.0000 732.0000
+P RShoulder 1201.0000 522.0000
+P LElbow 1032.0000 738.0000
+P RElbow 1177.0000 640.0000
+P LWrist 1140.0000 722.0000
+P RWrist 1141.0000 722.0000
+P LHip 1007.0000 640.0000
+P RHip 1055.0000 651.0000
+P LKnee 1032.0000 738.0000
+P RKnee 1085.0000 635.0000
+P LAnkle 1252.0000 670.0000
+P RAnkle 1252.0000 666.0000
+F hip_dev_ankle -0.120318
+F hip_dev_knee 0.462185
+F knee_dev -0.171078
+F shoulder_dev 0.231442
+F elbow_ang 168.612095
+F knee_ang 118.389719
+F hip_ang 90.078787
+F trunk_ankle_ang 39.743048
+F head_trunk_ang 79.995757
+F shoulder_arm_ang 92.643234
+F hand_shoulder_off -3.759217
+F wrist_shoulder_d 3.786400
+F knee_shoulder_d 1.795217
+F ankle_hip_d 6.702417
+F elbow_width 0.049805
+F knee_gap2d 3.494973
+F ankle_gap2d 0.120687
+F shoulder_asym2d -0.011381
+F shoulder_ground 0.997354
+F hip_ground 0.968079
+F knee_ground 0.567579
+F ankle_ground -0.033053
+F head_ground 1.125705
+ENDFRAME
+FRAME 7
+P Nose 808.0000 679.0000
+P LEar 821.0000 737.0000
+P REar 821.0000 737.0000
+P LShoulder 915.0000 731.0000
+P RShoulder 1227.0000 516.0000
+P LElbow 1031.0000 737.0000
+P RElbow 1170.0000 639.0000
+P LWrist 1138.0000 722.0000
+P RWrist 1138.0000 722.0000
+P LHip 978.0000 627.0000
+P RHip 1060.0000 629.0000
+P LKnee 1031.0000 737.0000
+P RKnee 1165.0000 639.0000
+P LAnkle 1250.0000 668.0000
+P RAnkle 1252.0000 666.0000
+F hip_dev_ankle -0.089583
+F hip_dev_knee -0.710845
+F knee_dev -0.195844
+F shoulder_dev 0.235835
+F elbow_ang 169.058950
+F knee_ang 134.968266
+F hip_ang 42.162407
+F trunk_ankle_ang 14.488367
+F head_trunk_ang 73.800356
+F shoulder_arm_ang 109.631700
+F hand_shoulder_off -1.990823
+F wrist_shoulder_d 2.282374
+F knee_shoulder_d 1.339669
+F ankle_hip_d 4.507292
+F elbow_width 0.047822
+F knee_gap2d 3.180652
+F ankle_gap2d 0.054190
+F shoulder_asym2d -0.175172
+F shoulder_ground 0.959499
+F hip_ground 1.118051
+F knee_ground 0.396159
+F ankle_ground -0.014504
+F head_ground 1.060623
+ENDFRAME
+FRAME 8
+P Nose 806.0000 679.0000
+P LEar 818.0000 738.0000
+P REar 818.0000 735.0000
+P LShoulder 915.0000 732.0000
+P RShoulder 1222.0000 513.0000
+P LElbow 1032.0000 738.0000
+P RElbow 1168.0000 638.0000
+P LWrist 1138.0000 722.0000
+P RWrist 1138.0000 722.0000
+P LHip 978.0000 629.0000
+P RHip 1060.0000 626.0000
+P LKnee 1032.0000 738.0000
+P RKnee 1167.0000 640.0000
+P LAnkle 1250.0000 666.0000
+P RAnkle 1250.0000 665.0000
+F hip_dev_ankle -0.087263
+F hip_dev_knee -0.640273
+F knee_dev -0.203403
+F shoulder_dev 0.228344
+F elbow_ang 168.480705
+F knee_ang 133.746219
+F hip_ang 43.146818
+F trunk_ankle_ang 15.109504
+F head_trunk_ang 73.317713
+F shoulder_arm_ang 109.915758
+F hand_shoulder_off -2.130189
+F wrist_shoulder_d 2.439491
+F knee_shoulder_d 1.474731
+F ankle_hip_d 4.705443
+F elbow_width 0.050332
+F knee_gap2d 3.353044
+F ankle_gap2d 0.020100
+F shoulder_asym2d -0.171311
+F shoulder_ground 0.957709
+F hip_ground 1.099849
+F knee_ground 0.373104
+F ankle_ground 0.000000
+F head_ground 1.045738
+ENDFRAME
+FRAME 9
+P Nose 810.0000 675.0000
+P LEar 824.0000 735.0000
+P REar 824.0000 734.0000
+P LShoulder 916.0000 732.0000
+P RShoulder 837.0000 672.0000
+P LElbow 1031.0000 738.0000
+P RElbow 1170.0000 638.0000
+P LWrist 1142.0000 722.0000
+P RWrist 1142.0000 722.0000
+P LHip 1007.0000 633.0000
+P RHip 1052.0000 649.0000
+P LKnee 1031.0000 738.0000
+P RKnee 1085.0000 628.0000
+P LAnkle 1250.0000 669.0000
+P RAnkle 1250.0000 665.0000
+F hip_dev_ankle 0.123846
+F hip_dev_knee 0.245156
+F knee_dev -0.172833
+F shoulder_dev -1.001990
+F elbow_ang 168.811009
+F knee_ang 119.396053
+F hip_ang 102.422880
+F trunk_ankle_ang 151.538273
+F head_trunk_ang 78.775562
+F shoulder_arm_ang 18.160480
+F hand_shoulder_off -0.709749
+F wrist_shoulder_d 1.616473
+F knee_shoulder_d 1.107946
+F ankle_hip_d 1.347976
+F elbow_width 0.048968
+F knee_gap2d 0.743965
+F ankle_gap2d 0.024285
+F shoulder_asym2d -0.368228
+F shoulder_ground 1.099174
+F hip_ground 0.981508
+F knee_ground 0.575867
+F ankle_ground -0.007191
+F head_ground 1.056362
+ENDFRAME
+FRAME 10
+P Nose 807.0000 677.0000
+P LEar 820.0000 738.0000
+P REar 820.0000 738.0000
+P LShoulder 914.0000 729.0000
+P RShoulder 832.0000 676.0000
+P LElbow 1031.0000 738.0000
+P RElbow 1146.0000 485.0000
+P LWrist 1139.0000 723.0000
+P RWrist 1139.0000 723.0000
+P LHip 1000.0000 604.0000
+P RHip 1039.0000 604.0000
+P LKnee 1031.0000 738.0000
+P RKnee 1229.0000 516.0000
+P LAnkle 1175.0000 641.0000
+P RAnkle 1251.0000 664.0000
+F hip_dev_ankle 0.221550
+F hip_dev_knee 0.198661
+F knee_dev 0.022836
+F shoulder_dev -1.026827
+F elbow_ang 167.694132
+F knee_ang 174.679464
+F hip_ang 134.326956
+F trunk_ankle_ang 132.013818
+F head_trunk_ang 68.142160
+F shoulder_arm_ang 11.022050
+F hand_shoulder_off -0.937100
+F wrist_shoulder_d 1.511254
+F knee_shoulder_d 1.517325
+F ankle_hip_d 1.130008
+F elbow_width 0.053828
+F knee_gap2d 1.685047
+F ankle_gap2d 0.449793
+F shoulder_asym2d -0.392697
+F shoulder_ground 1.108311
+F hip_ground 1.279535
+F knee_ground 0.712520
+F ankle_ground 0.227773
+F head_ground 1.047331
+ENDFRAME
+FRAME 11
+P Nose 809.0000 676.0000
+P LEar 823.0000 735.0000
+P REar 823.0000 733.0000
+P LShoulder 918.0000 732.0000
+P RShoulder 836.0000 671.0000
+P LElbow 1032.0000 739.0000
+P RElbow 1166.0000 640.0000
+P LWrist 1141.0000 722.0000
+P RWrist 1143.0000 722.0000
+P LHip 1000.0000 638.0000
+P RHip 1055.0000 655.0000
+P LKnee 1033.0000 738.0000
+P RKnee 1164.0000 641.0000
+P LAnkle 1251.0000 667.0000
+P RAnkle 1251.0000 666.0000
+F hip_dev_ankle 0.108451
+F hip_dev_knee 0.210878
+F knee_dev -0.162664
+F shoulder_dev -0.938851
+F elbow_ang 167.621626
+F knee_ang 140.222795
+F hip_ang 128.724730
+F trunk_ankle_ang 154.811726
+F head_trunk_ang 80.405667
+F shoulder_arm_ang 16.980697
+F hand_shoulder_off -0.687832
+F wrist_shoulder_d 1.658762
+F knee_shoulder_d 1.384372
+F ankle_hip_d 1.400400
+F elbow_width 0.054205
+F knee_gap2d 1.017275
+F ankle_gap2d 0.006241
+F shoulder_asym2d -0.367308
+F shoulder_ground 1.110068
+F hip_ground 0.955452
+F knee_ground 0.385397
+F ankle_ground -0.007267
+F head_ground 1.073503
+ENDFRAME
+FRAME 12
+P Nose 808.0000 678.0000
+P LEar 821.0000 736.0000
+P REar 821.0000 735.0000
+P LShoulder 915.0000 729.0000
+P RShoulder 1227.0000 516.0000
+P LElbow 1031.0000 739.0000
+P RElbow 1170.0000 638.0000
+P LWrist 1138.0000 723.0000
+P RWrist 1138.0000 723.0000
+P LHip 987.0000 617.0000
+P RHip 1051.0000 624.0000
+P LKnee 1031.0000 739.0000
+P RKnee 1167.0000 640.0000
+P LAnkle 1250.0000 667.0000
+P RAnkle 1250.0000 666.0000
+F hip_dev_ankle -0.056803
+F hip_dev_knee -0.650104
+F knee_dev -0.220974
+F shoulder_dev 0.206428
+F elbow_ang 166.568311
+F knee_ang 130.561627
+F hip_ang 38.575172
+F trunk_ankle_ang 9.059628
+F head_trunk_ang 72.591281
+F shoulder_arm_ang 116.285794
+F hand_shoulder_off -1.880355
+F wrist_shoulder_d 2.321091
+F knee_shoulder_d 1.395419
+F ankle_hip_d 4.526183
+F elbow_width 0.058796
+F knee_gap2d 3.232555
+F ankle_gap2d 0.019217
+F shoulder_asym2d -0.215930
+F shoulder_ground 0.962162
+F hip_ground 1.163964
+F knee_ground 0.378378
+F ankle_ground 0.000000
+F head_ground 1.048649
+ENDFRAME
+FRAME 13
+P Nose 807.0000 678.0000
+P LEar 822.0000 735.0000
+P REar 822.0000 735.0000
+P LShoulder 919.0000 731.0000
+P RShoulder 1202.0000 522.0000
+P LElbow 1032.0000 739.0000
+P RElbow 1171.0000 639.0000
+P LWrist 1141.0000 722.0000
+P RWrist 1141.0000 724.0000
+P LHip 1003.0000 643.0000
+P RHip 1026.0000 656.0000
+P LKnee 1032.0000 739.0000
+P RKnee 1082.0000 637.0000
+P LAnkle 1252.0000 667.0000
+P RAnkle 1252.0000 665.0000
+F hip_dev_ankle -0.162728
+F hip_dev_knee 0.724338
+F knee_dev -0.148954
+F shoulder_dev 0.293887
+F elbow_ang 167.085795
+F knee_ang 131.390204
+F hip_ang 68.737927
+F trunk_ankle_ang 30.539214
+F head_trunk_ang 80.794883
+F shoulder_arm_ang 96.699824
+F hand_shoulder_off -2.378261
+F wrist_shoulder_d 2.443501
+F knee_shoulder_d 1.197745
+F ankle_hip_d 4.629098
+F elbow_width 0.056579
+F knee_gap2d 2.208764
+F ankle_gap2d 0.038888
+F shoulder_asym2d -0.060394
+F shoulder_ground 0.979292
+F hip_ground 0.981176
+F knee_ground 0.547844
+F ankle_ground -0.005499
+F head_ground 1.066709
+ENDFRAME
+FRAME 14
+P Nose 806.0000 678.0000
+P LEar 821.0000 736.0000
+P REar 821.0000 734.0000
+P LShoulder 920.0000 733.0000
+P RShoulder 1201.0000 521.0000
+P LElbow 1031.0000 739.0000
+P RElbow 1173.0000 638.0000
+P LWrist 1142.0000 723.0000
+P RWrist 1143.0000 723.0000
+P LHip 1004.0000 646.0000
+P RHip 1055.0000 662.0000
+P LKnee 1031.0000 739.0000
+P RKnee 1081.0000 638.0000
+P LAnkle 1251.0000 667.0000
+P RAnkle 1251.0000 662.0000
+F hip_dev_ankle -0.167283
+F hip_dev_knee 0.469428
+F knee_dev -0.149748
+F shoulder_dev 0.296064
+F elbow_ang 168.703588
+F knee_ang 120.511939
+F hip_ang 93.526373
+F trunk_ankle_ang 43.768835
+F head_trunk_ang 83.512952
+F shoulder_arm_ang 82.956535
+F hand_shoulder_off -3.071006
+F wrist_shoulder_d 3.071148
+F knee_shoulder_d 1.500000
+F ankle_hip_d 5.394085
+F elbow_width 0.049449
+F knee_gap2d 2.741420
+F ankle_gap2d 0.121626
+F shoulder_asym2d 0.021549
+F shoulder_ground 0.983886
+F hip_ground 0.903198
+F knee_ground 0.555343
+F ankle_ground 0.007156
+F head_ground 1.088736
+ENDFRAME
+FRAME 15
+P Nose 807.0000 678.0000
+P LEar 821.0000 735.0000
+P REar 821.0000 735.0000
+P LShoulder 919.0000 731.0000
+P RShoulder 1201.0000 522.0000
+P LElbow 1032.0000 740.0000
+P RElbow 1171.0000 637.0000
+P LWrist 1142.0000 722.0000
+P RWrist 1143.0000 722.0000
+P LHip 1005.0000 645.0000
+P RHip 1055.0000 658.0000
+P LKnee 1032.0000 738.0000
+P RKnee 1083.0000 637.0000
+P LAnkle 1253.0000 668.0000
+P RAnkle 1251.0000 663.0000
+F hip_dev_ankle -0.155530
+F hip_dev_knee 0.474210
+F knee_dev -0.153739
+F shoulder_dev 0.279551
+F elbow_ang 166.152923
+F knee_ang 120.922479
+F hip_ang 92.429764
+F trunk_ankle_ang 43.414040
+F head_trunk_ang 82.021713
+F shoulder_arm_ang 83.990994
+F hand_shoulder_off -3.231148
+F wrist_shoulder_d 3.231657
+F knee_shoulder_d 1.563361
+F ankle_hip_d 5.696130
+F elbow_width 0.060711
+F knee_gap2d 2.897370
+F ankle_gap2d 0.137900
+F shoulder_asym2d 0.016952
+F shoulder_ground 0.991784
+F hip_ground 0.922660
+F knee_ground 0.559745
+F ankle_ground -0.005642
+F head_ground 1.097093
+ENDFRAME
+ENDCLIP
+CLIP 시저크로스 D
+FRAME 0
+P Nose 658.0000 577.0000
+P LEar 615.0000 616.0000
+P REar 615.0000 617.0000
+P LShoulder 899.0000 387.0000
+P RShoulder 624.0000 666.0000
+P LElbow 907.0000 339.0000
+P RElbow 655.0000 721.0000
+P LWrist 953.0000 672.0000
+P RWrist 697.0000 775.0000
+P LHip 861.0000 695.0000
+P RHip 864.0000 693.0000
+P LKnee 845.0000 526.0000
+P RKnee 897.0000 526.0000
+P LAnkle 953.0000 673.0000
+P RAnkle 955.0000 673.0000
+F hip_dev_ankle -0.298149
+F hip_dev_knee -1.533860
+F knee_dev 1.723938
+F shoulder_dev 4.067977
+F elbow_ang 17.327280
+F knee_ang 32.346620
+F hip_ang 33.985774
+F trunk_ankle_ang 108.163351
+F head_trunk_ang 59.957699
+F shoulder_arm_ang 48.735139
+F hand_shoulder_off -0.242065
+F wrist_shoulder_d 1.058216
+F knee_shoulder_d 0.559837
+F ankle_hip_d 0.479967
+F elbow_width 0.057903
+F knee_gap2d 0.265856
+F ankle_gap2d 0.010225
+F shoulder_asym2d 1.287434
+F shoulder_ground 1.979661
+F hip_ground -0.000000
+F knee_ground 1.723938
+F ankle_ground 0.000000
+F head_ground 1.394349
+ENDFRAME
+FRAME 1
+P Nose 659.0000 577.0000
+P LEar 616.0000 616.0000
+P REar 614.0000 618.0000
+P LShoulder 950.0000 390.0000
+P RShoulder 623.0000 668.0000
+P LElbow 851.0000 258.0000
+P RElbow 655.0000 721.0000
+P LWrist 950.0000 671.0000
+P RWrist 697.0000 776.0000
+P LHip 862.0000 695.0000
+P RHip 864.0000 692.0000
+P LKnee 897.0000 514.0000
+P RKnee 895.0000 524.0000
+P LAnkle 948.0000 671.0000
+P RAnkle 950.0000 672.0000
+F hip_dev_ankle -0.338881
+F hip_dev_knee -1.553132
+F knee_dev 1.812310
+F shoulder_dev 3.573925
+F elbow_ang 23.389906
+F knee_ang 29.873274
+F hip_ang 35.649415
+F trunk_ankle_ang 100.591243
+F head_trunk_ang 59.416996
+F shoulder_arm_ang 164.639256
+F hand_shoulder_off -0.267155
+F wrist_shoulder_d 1.091336
+F knee_shoulder_d 0.606090
+F ankle_hip_d 0.489308
+F elbow_width 0.352313
+F knee_gap2d 0.056213
+F ankle_gap2d 0.012326
+F shoulder_asym2d 1.288552
+F shoulder_ground 1.950030
+F hip_ground 0.002016
+F knee_ground 1.774136
+F ankle_ground 0.014428
+F head_ground 1.455625
+ENDFRAME
+FRAME 2
+P Nose 651.0000 579.0000
+P LEar 612.0000 616.0000
+P REar 612.0000 618.0000
+P LShoulder 714.0000 625.0000
+P RShoulder 623.0000 667.0000
+P LElbow 830.0000 503.0000
+P RElbow 654.0000 724.0000
+P LWrist 948.0000 670.0000
+P RWrist 698.0000 776.0000
+P LHip 812.0000 696.0000
+P RHip 868.0000 693.0000
+P LKnee 832.0000 501.0000
+P RKnee 915.0000 542.0000
+P LAnkle 944.0000 670.0000
+P RAnkle 1007.0000 368.0000
+F hip_dev_ankle -0.332222
+F hip_dev_knee -0.544009
+F knee_dev 0.357243
+F shoulder_dev 5.187060
+F elbow_ang 78.800398
+F knee_ang 102.363239
+F hip_ang 85.168370
+F trunk_ankle_ang 111.880163
+F head_trunk_ang 63.029469
+F shoulder_arm_ang 39.644747
+F hand_shoulder_off -0.179831
+F wrist_shoulder_d 0.968571
+F knee_shoulder_d 1.345731
+F ankle_hip_d 1.244048
+F elbow_width 0.594706
+F knee_gap2d 0.519421
+F ankle_gap2d 1.730955
+F shoulder_asym2d 0.242793
+F shoulder_ground 0.920924
+F hip_ground 0.148295
+F knee_ground 1.204049
+F ankle_ground 0.951810
+F head_ground 1.261576
+ENDFRAME
+FRAME 3
+P Nose 654.0000 575.0000
+P LEar 614.0000 614.0000
+P REar 613.0000 618.0000
+P LShoulder 620.0000 663.0000
+P RShoulder 624.0000 665.0000
+P LElbow 804.0000 555.0000
+P RElbow 654.0000 722.0000
+P LWrist 948.0000 670.0000
+P RWrist 696.0000 775.0000
+P LHip 859.0000 695.0000
+P RHip 874.0000 699.0000
+P LKnee 939.0000 498.0000
+P RKnee 889.0000 408.0000
+P LAnkle 946.0000 670.0000
+P RAnkle 1055.0000 361.0000
+F hip_dev_ankle -0.295187
+F hip_dev_knee -0.471746
+F knee_dev 0.472998
+F shoulder_dev 2.928436
+F elbow_ang 110.977666
+F knee_ang 65.166367
+F hip_ang 93.329389
+F trunk_ankle_ang 118.751434
+F head_trunk_ang 63.104392
+F shoulder_arm_ang 21.091284
+F hand_shoulder_off -0.126554
+F wrist_shoulder_d 0.844612
+F knee_shoulder_d 1.460203
+F ankle_hip_d 0.914434
+F elbow_width 0.341085
+F knee_gap2d 0.417305
+F ankle_gap2d 1.328086
+F shoulder_asym2d 0.005967
+F shoulder_ground 0.937858
+F hip_ground -0.050036
+F knee_ground 0.731313
+F ankle_ground 0.184271
+F head_ground 1.154304
+ENDFRAME
+FRAME 4
+P Nose 651.0000 582.0000
+P LEar 613.0000 621.0000
+P REar 612.0000 622.0000
+P LShoulder 621.0000 667.0000
+P RShoulder 625.0000 667.0000
+P LElbow 655.0000 724.0000
+P RElbow 652.0000 723.0000
+P LWrist 950.0000 671.0000
+P RWrist 694.0000 773.0000
+P LHip 865.0000 709.0000
+P RHip 868.0000 709.0000
+P LKnee 875.0000 527.0000
+P RKnee 877.0000 529.0000
+P LAnkle 940.0000 668.0000
+P RAnkle 1100.0000 510.0000
+F hip_dev_ankle -0.217890
+F hip_dev_knee -0.533691
+F knee_dev 0.701842
+F shoulder_dev 2.342445
+F elbow_ang 110.630546
+F knee_ang 70.046425
+F hip_ang 83.218133
+F trunk_ankle_ang 132.196817
+F head_trunk_ang 64.742746
+F shoulder_arm_ang 51.852459
+F hand_shoulder_off -0.082457
+F wrist_shoulder_d 0.835550
+F knee_shoulder_d 1.168250
+F ankle_hip_d 0.788517
+F elbow_width 0.171970
+F knee_gap2d 0.011447
+F ankle_gap2d 0.910030
+F shoulder_asym2d -0.002796
+F shoulder_ground 0.857512
+F hip_ground -0.089634
+F knee_ground 0.549242
+F ankle_ground -0.144690
+F head_ground 1.060019
+ENDFRAME
+FRAME 5
+P Nose 652.0000 577.0000
+P LEar 614.0000 623.0000
+P REar 616.0000 623.0000
+P LShoulder 621.0000 667.0000
+P RShoulder 624.0000 667.0000
+P LElbow 653.0000 724.0000
+P RElbow 653.0000 724.0000
+P LWrist 953.0000 670.0000
+P RWrist 695.0000 775.0000
+P LHip 836.0000 705.0000
+P RHip 892.0000 634.0000
+P LKnee 849.0000 734.0000
+P RKnee 890.0000 641.0000
+P LAnkle 949.0000 668.0000
+P RAnkle 1089.0000 521.0000
+F hip_dev_ankle -0.113868
+F hip_dev_knee 0.070540
+F knee_dev -0.108010
+F shoulder_dev 2.925720
+F elbow_ang 109.106033
+F knee_ang 75.106172
+F hip_ang 107.583926
+F trunk_ankle_ang 153.585905
+F head_trunk_ang 61.766586
+F shoulder_arm_ang 61.256209
+F hand_shoulder_off -0.221153
+F wrist_shoulder_d 0.865393
+F knee_shoulder_d 1.026236
+F ankle_hip_d 0.712971
+F elbow_width 0.170802
+F knee_gap2d 0.420833
+F ankle_gap2d 0.840535
+F shoulder_asym2d -0.000130
+F shoulder_ground 0.800908
+F hip_ground 0.077526
+F knee_ground -0.005673
+F ankle_ground -0.101889
+F head_ground 0.986705
+ENDFRAME
+FRAME 6
+P Nose 650.0000 582.0000
+P LEar 615.0000 623.0000
+P REar 614.0000 624.0000
+P LShoulder 625.0000 667.0000
+P RShoulder 625.0000 669.0000
+P LElbow 652.0000 723.0000
+P RElbow 655.0000 723.0000
+P LWrist 952.0000 666.0000
+P RWrist 696.0000 776.0000
+P LHip 861.0000 703.0000
+P RHip 861.0000 694.0000
+P LKnee 868.0000 549.0000
+P RKnee 870.0000 546.0000
+P LAnkle 940.0000 660.0000
+P RAnkle 1149.0000 505.0000
+F hip_dev_ankle -0.179893
+F hip_dev_knee -0.484497
+F knee_dev 0.568247
+F shoulder_dev 3.433409
+F elbow_ang 104.982741
+F knee_ang 81.754165
+F hip_ang 85.668769
+F trunk_ankle_ang 140.336933
+F head_trunk_ang 66.378491
+F shoulder_arm_ang 55.243696
+F hand_shoulder_off -0.113702
+F wrist_shoulder_d 0.865417
+F knee_shoulder_d 1.143594
+F ankle_hip_d 0.912288
+F elbow_width 0.171505
+F knee_gap2d 0.015152
+F ankle_gap2d 1.093464
+F shoulder_asym2d 0.008344
+F shoulder_ground 0.735409
+F hip_ground -0.015427
+F knee_ground 0.506615
+F ankle_ground -0.096101
+F head_ground 0.924178
+ENDFRAME
+FRAME 7
+P Nose 652.0000 578.0000
+P LEar 612.0000 623.0000
+P REar 612.0000 624.0000
+P LShoulder 725.0000 626.0000
+P RShoulder 625.0000 666.0000
+P LElbow 653.0000 723.0000
+P RElbow 653.0000 725.0000
+P LWrist 954.0000 669.0000
+P RWrist 692.0000 774.0000
+P LHip 846.0000 716.0000
+P RHip 922.0000 584.0000
+P LKnee 888.0000 606.0000
+P RKnee 887.0000 623.0000
+P LAnkle 951.0000 667.0000
+P RAnkle 951.0000 667.0000
+F hip_dev_ankle 0.042876
+F hip_dev_knee -0.161078
+F knee_dev 0.510255
+F shoulder_dev 1.719356
+F elbow_ang 43.243899
+F knee_ang 56.047705
+F hip_ang 94.534247
+F trunk_ankle_ang 166.859156
+F head_trunk_ang 54.245186
+F shoulder_arm_ang 104.654738
+F hand_shoulder_off -0.347564
+F wrist_shoulder_d 0.794808
+F knee_shoulder_d 1.027668
+F ankle_hip_d 0.330672
+F elbow_width 0.466182
+F knee_gap2d 0.081465
+F ankle_gap2d 0.000000
+F shoulder_asym2d 0.130092
+F shoulder_ground 0.723066
+F hip_ground 0.090449
+F knee_ground 0.212313
+F ankle_ground -0.170886
+F head_ground 0.993062
+ENDFRAME
+FRAME 8
+P Nose 648.0000 582.0000
+P LEar 610.0000 625.0000
+P REar 610.0000 627.0000
+P LShoulder 623.0000 666.0000
+P RShoulder 623.0000 667.0000
+P LElbow 839.0000 592.0000
+P RElbow 655.0000 726.0000
+P LWrist 949.0000 666.0000
+P RWrist 695.0000 776.0000
+P LHip 875.0000 709.0000
+P RHip 874.0000 404.0000
+P LKnee 839.0000 591.0000
+P RKnee 1072.0000 535.0000
+P LAnkle 939.0000 663.0000
+P RAnkle 940.0000 660.0000
+F hip_dev_ankle 0.334914
+F hip_dev_knee 0.086954
+F knee_dev 0.530000
+F shoulder_dev 1.193861
+F elbow_ang 127.159123
+F knee_ang 85.361634
+F hip_ang 151.788620
+F trunk_ankle_ang 98.136078
+F head_trunk_ang 34.462681
+F shoulder_arm_ang 20.162148
+F hand_shoulder_off -0.472405
+F wrist_shoulder_d 0.751640
+F knee_shoulder_d 1.268603
+F ankle_hip_d 0.449870
+F elbow_width 0.226994
+F knee_gap2d 0.872976
+F ankle_gap2d 0.011520
+F shoulder_asym2d 0.003333
+F shoulder_ground 0.861246
+F hip_ground 0.472323
+F knee_ground 0.185764
+F ankle_ground -0.141510
+F head_ground 1.059031
+ENDFRAME
+FRAME 9
+P Nose 654.0000 580.0000
+P LEar 614.0000 623.0000
+P REar 614.0000 623.0000
+P LShoulder 624.0000 663.0000
+P RShoulder 624.0000 666.0000
+P LElbow 846.0000 627.0000
+P RElbow 654.0000 724.0000
+P LWrist 952.0000 668.0000
+P RWrist 693.0000 774.0000
+P LHip 876.0000 708.0000
+P RHip 895.0000 454.0000
+P LKnee 847.0000 619.0000
+P RKnee 998.0000 534.0000
+P LAnkle 942.0000 661.0000
+P RAnkle 1132.0000 423.0000
+F hip_dev_ankle 0.013212
+F hip_dev_knee 0.019750
+F knee_dev -0.031105
+F shoulder_dev 1.330116
+F elbow_ang 149.642879
+F knee_ang 170.166267
+F hip_ang 169.225460
+F trunk_ankle_ang 176.727086
+F head_trunk_ang 38.276300
+F shoulder_arm_ang 22.698252
+F hand_shoulder_off -0.416027
+F wrist_shoulder_d 0.751834
+F knee_shoulder_d 1.133670
+F ankle_hip_d 0.569890
+F elbow_width 0.120046
+F knee_gap2d 0.631239
+F ankle_gap2d 1.109400
+F shoulder_asym2d 0.010376
+F shoulder_ground 0.802125
+F hip_ground 0.342332
+F knee_ground 0.250004
+F ankle_ground 0.040995
+F head_ground 0.986341
+ENDFRAME
+FRAME 10
+P Nose 654.0000 580.0000
+P LEar 614.0000 623.0000
+P REar 613.0000 626.0000
+P LShoulder 624.0000 667.0000
+P RShoulder 625.0000 667.0000
+P LElbow 988.0000 425.0000
+P RElbow 654.0000 724.0000
+P LWrist 948.0000 668.0000
+P RWrist 694.0000 776.0000
+P LHip 876.0000 708.0000
+P RHip 854.0000 716.0000
+P LKnee 1004.0000 524.0000
+P RKnee 1012.0000 524.0000
+P LAnkle 937.0000 661.0000
+P RAnkle 1130.0000 419.0000
+F hip_dev_ankle -0.266880
+F hip_dev_knee -0.308313
+F knee_dev 0.122153
+F shoulder_dev 2.153733
+F elbow_ang 47.035065
+F knee_ang 95.151753
+F hip_ang 116.659931
+F trunk_ankle_ang 123.813000
+F head_trunk_ang 66.877710
+F shoulder_arm_ang 35.806222
+F hand_shoulder_off -0.073248
+F wrist_shoulder_d 0.833976
+F knee_shoulder_d 1.672814
+F ankle_hip_d 0.984096
+F elbow_width 0.750374
+F knee_gap2d 0.032697
+F ankle_gap2d 1.265100
+F shoulder_asym2d -0.000755
+F shoulder_ground 0.735091
+F hip_ground -0.077467
+F knee_ground 0.214248
+F ankle_ground 0.087580
+F head_ground 0.918173
+ENDFRAME
+FRAME 11
+P Nose 652.0000 581.0000
+P LEar 616.0000 623.0000
+P REar 614.0000 626.0000
+P LShoulder 627.0000 667.0000
+P RShoulder 627.0000 669.0000
+P LElbow 653.0000 725.0000
+P RElbow 653.0000 726.0000
+P LWrist 951.0000 667.0000
+P RWrist 695.0000 778.0000
+P LHip 810.0000 706.0000
+P RHip 870.0000 708.0000
+P LKnee 974.0000 538.0000
+P RKnee 972.0000 539.0000
+P LAnkle 939.0000 660.0000
+P RAnkle 1030.0000 419.0000
+F hip_dev_ankle -0.286263
+F hip_dev_knee -0.300964
+F knee_dev 0.042315
+F shoulder_dev 7.490789
+F elbow_ang 103.131709
+F knee_ang 123.314910
+F hip_ang 117.908805
+F trunk_ankle_ang 120.408054
+F head_trunk_ang 69.752656
+F shoulder_arm_ang 55.292913
+F hand_shoulder_off -0.084549
+F wrist_shoulder_d 0.939481
+F knee_shoulder_d 1.706099
+F ankle_hip_d 1.021589
+F elbow_width 0.179012
+F knee_gap2d 0.010326
+F ankle_gap2d 1.189651
+F shoulder_asym2d 0.009100
+F shoulder_ground 0.759026
+F hip_ground 0.005582
+F knee_ground 0.225297
+F ankle_ground 0.188575
+F head_ground 0.949287
+ENDFRAME
+FRAME 12
+P Nose 629.0000 600.0000
+P LEar 606.0000 650.0000
+P REar 611.0000 648.0000
+P LShoulder 619.0000 670.0000
+P RShoulder 621.0000 670.0000
+P LElbow 651.0000 725.0000
+P RElbow 651.0000 725.0000
+P LWrist 691.0000 774.0000
+P RWrist 691.0000 774.0000
+P LHip 806.0000 706.0000
+P RHip 852.0000 699.0000
+P LKnee 996.0000 734.0000
+P RKnee 940.0000 682.0000
+P LAnkle 1001.0000 777.0000
+P RAnkle 1001.0000 779.0000
+F hip_dev_ankle 0.064974
+F hip_dev_knee -0.027483
+F knee_dev 0.270616
+F shoulder_dev 0.804285
+F elbow_ang 170.965949
+F knee_ang 117.506446
+F hip_ang 173.427077
+F trunk_ankle_ang 165.139601
+F head_trunk_ang 80.935308
+F shoulder_arm_ang 51.753970
+F hand_shoulder_off -0.434280
+F wrist_shoulder_d 0.595355
+F knee_shoulder_d 1.655078
+F ankle_hip_d 0.888088
+F elbow_width 0.039500
+F knee_gap2d 0.361303
+F ankle_gap2d 0.009456
+F shoulder_asym2d -0.001467
+F shoulder_ground 0.738300
+F hip_ground 0.055728
+F knee_ground -0.340244
+F ankle_ground -0.681437
+F head_ground 0.844988
+ENDFRAME
+FRAME 13
+P Nose 625.0000 600.0000
+P LEar 606.0000 651.0000
+P REar 612.0000 646.0000
+P LShoulder 617.0000 671.0000
+P RShoulder 620.0000 669.0000
+P LElbow 650.0000 724.0000
+P RElbow 650.0000 725.0000
+P LWrist 691.0000 774.0000
+P RWrist 691.0000 774.0000
+P LHip 807.0000 708.0000
+P RHip 856.0000 695.0000
+P LKnee 860.0000 737.0000
+P RKnee 1014.0000 733.0000
+P LAnkle 1001.0000 773.0000
+P RAnkle 1001.0000 778.0000
+F hip_dev_ankle 0.066203
+F hip_dev_knee 0.036078
+F knee_dev 0.062233
+F shoulder_dev 0.794841
+F elbow_ang 172.556354
+F knee_ang 165.290353
+F hip_ang 170.795852
+F trunk_ankle_ang 164.827314
+F head_trunk_ang 85.140737
+F shoulder_arm_ang 51.560530
+F hand_shoulder_off -0.428553
+F wrist_shoulder_d 0.588790
+F knee_shoulder_d 1.509707
+F ankle_hip_d 0.858964
+F elbow_width 0.032515
+F knee_gap2d 0.715467
+F ankle_gap2d 0.023222
+F shoulder_asym2d -0.011367
+F shoulder_ground 0.739053
+F hip_ground 0.053177
+F knee_ground -0.351852
+F ankle_ground -0.671187
+F head_ground 0.842972
+ENDFRAME
+FRAME 14
+P Nose 624.0000 601.0000
+P LEar 608.0000 648.0000
+P REar 611.0000 647.0000
+P LShoulder 618.0000 670.0000
+P RShoulder 620.0000 670.0000
+P LElbow 651.0000 724.0000
+P RElbow 651.0000 726.0000
+P LWrist 692.0000 775.0000
+P RWrist 692.0000 775.0000
+P LHip 807.0000 709.0000
+P RHip 851.0000 696.0000
+P LKnee 858.0000 736.0000
+P RKnee 950.0000 686.0000
+P LAnkle 1000.0000 775.0000
+P RAnkle 1002.0000 779.0000
+F hip_dev_ankle 0.063893
+F hip_dev_knee -0.007870
+F knee_dev 0.117421
+F shoulder_dev 0.819034
+F elbow_ang 172.633014
+F knee_ang 152.234077
+F hip_ang 177.668521
+F trunk_ankle_ang 165.378067
+F head_trunk_ang 86.748010
+F shoulder_arm_ang 51.010966
+F hand_shoulder_off -0.435765
+F wrist_shoulder_d 0.601801
+F knee_shoulder_d 1.354984
+F ankle_hip_d 0.882077
+F elbow_width 0.032180
+F knee_gap2d 0.492749
+F ankle_gap2d 0.021045
+F shoulder_asym2d -0.001453
+F shoulder_ground 0.734135
+F hip_ground 0.056751
+F knee_ground -0.173677
+F ankle_ground -0.675208
+F head_ground 0.842584
+ENDFRAME
+FRAME 15
+P Nose 634.0000 597.0000
+P LEar 607.0000 649.0000
+P REar 609.0000 649.0000
+P LShoulder 619.0000 669.0000
+P RShoulder 619.0000 670.0000
+P LElbow 649.0000 725.0000
+P RElbow 649.0000 725.0000
+P LWrist 690.0000 775.0000
+P RWrist 690.0000 775.0000
+P LHip 807.0000 710.0000
+P RHip 856.0000 697.0000
+P LKnee 1004.0000 732.0000
+P RKnee 1017.0000 733.0000
+P LAnkle 1005.0000 775.0000
+P RAnkle 1005.0000 781.0000
+F hip_dev_ankle 0.061780
+F hip_dev_knee 0.000487
+F knee_dev 0.232915
+F shoulder_dev 0.795908
+F elbow_ang 168.826837
+F knee_ang 92.310174
+F hip_ang 179.887680
+F trunk_ankle_ang 165.851842
+F head_trunk_ang 77.138959
+F shoulder_arm_ang 52.516704
+F hand_shoulder_off -0.431954
+F wrist_shoulder_d 0.590913
+F knee_shoulder_d 1.842618
+F ankle_hip_d 0.877399
+F elbow_width 0.048903
+F knee_gap2d 0.060587
+F ankle_gap2d 0.027881
+F shoulder_asym2d 0.004592
+F shoulder_ground 0.701556
+F hip_ground 0.061693
+F knee_ground -0.478871
+F ankle_ground -0.665100
+F head_ground 0.816616
+ENDFRAME
+ENDCLIP
