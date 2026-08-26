@@ -1,5 +1,7 @@
 package com.example.trex_kotlin
 
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -12,6 +14,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -33,6 +36,7 @@ import androidx.compose.material.icons.rounded.PhotoCamera
 import androidx.compose.material.icons.rounded.Remove
 import androidx.compose.material.icons.rounded.RestaurantMenu
 import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.SwapHoriz
 import androidx.compose.material.icons.rounded.Timer
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
@@ -92,51 +96,176 @@ private val altFallbacks = mapOf(
     "회복" to listOf(WorkoutAlt("캣카우 스트레칭", "전신 5분"), WorkoutAlt("차일드 포즈", "전신 4분")),
 )
 
+/** 대체 운동 칩의 첫 항목 — 카테고리가 아니라 "추천 묶음"을 고르는 자리다. */
+private const val ALT_RECOMMEND_TAB = "추천"
+
 @Composable
 private fun AltSheet(app: AppViewModel, workout: Workout, onClose: () -> Unit) {
     val c = Trex.c
-    val alts = buildList {
-        workout.alt?.let(::add)
-        addAll(altFallbacks[workout.category].orEmpty())
+    val tabs = remember { listOf(ALT_RECOMMEND_TAB) + workoutCatalog.keys }
+
+    // 추천 = 이 운동에 붙어 있는 대체안 + 같은 카테고리 대안. 지금 하고 있는 운동은 뺀다.
+    val recommended = remember(workout.name, workout.category, workout.alt) {
+        buildList {
+            workout.alt?.let(::add)
+            addAll(altFallbacks[workout.category].orEmpty())
+        }.filter { it.name != workout.name }.distinctBy { it.name }
     }
+    // 추천할 게 없으면(직접 추가한 종목 등) 같은 카테고리 목록부터 보여준다
+    var tab by remember(workout.id) {
+        mutableStateOf(
+            when {
+                recommended.isNotEmpty() -> ALT_RECOMMEND_TAB
+                workout.category in workoutCatalog -> workout.category
+                else -> tabs[1]
+            },
+        )
+    }
+    val picks: List<AltPick> = remember(tab, workout.name, recommended) {
+        if (tab == ALT_RECOMMEND_TAB) {
+            recommended.mapIndexed { i, alt ->
+                val template = catalogByName[alt.name]
+                AltPick(
+                    name = alt.name,
+                    reps = alt.reps,
+                    duration = template?.duration,
+                    best = i == 0,
+                    postureReady = postureExerciseMap.containsKey(alt.name),
+                )
+            }
+        } else {
+            workoutCatalog[tab].orEmpty()
+                .filter { it.name != workout.name }
+                .map { AltPick(it.name, it.reps, it.duration, best = false, postureReady = it.posture) }
+        }
+    }
+
     SheetHost(onDismiss = onClose) {
-        Column(Modifier.padding(20.dp)) {
-            SheetTitleRow("추천 대체 운동", workout.name, onClose)
-            Text("${workout.category} · ${workout.reps} 와 비슷한 강도예룡", color = c.text2, fontSize = 12.sp, modifier = Modifier.padding(top = 10.dp))
-            Column(Modifier.padding(top = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                alts.forEachIndexed { i, alt ->
-                    Surface(
-                        onClick = {
-                            app.updatePlan(app.workoutPlan.map { if (it.id == workout.id) it.copy(name = alt.name, reps = alt.reps) else it })
+        // 탭마다 목록 길이가 달라 높이를 고정하면 "추천"에서 빈 공간이 크게 남는다 —
+        // 내용에 맞춰 늘었다 줄었다 하되 그 변화는 부드럽게 이어준다.
+        Column(
+            Modifier
+                .animateContentSize(tween(280))
+                .padding(horizontal = 20.dp)
+                .padding(top = 20.dp, bottom = 20.dp),
+        ) {
+            SheetTitleRow("운동 교체", workout.name, onClose)
+            Text(
+                "${workout.category} · ${workout.reps} 대신 할 운동을 골라봐룡",
+                color = c.text2, fontSize = 12.sp, modifier = Modifier.padding(top = 10.dp),
+            )
+            Spacer(Modifier.height(14.dp))
+            FilterChipRow(options = tabs, selected = tab, onSelect = { tab = it })
+
+            LazyColumn(
+                Modifier.padding(top = 12.dp).heightIn(max = 420.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                if (picks.isEmpty()) {
+                    item(key = "empty") {
+                        Text(
+                            "여기엔 바꿀 만한 운동이 없어룡", color = c.text3, fontSize = 12.sp,
+                            modifier = Modifier.fillMaxWidth().padding(top = 24.dp), textAlign = TextAlign.Center,
+                        )
+                    }
+                }
+                items(count = picks.size, key = { picks[it].name }) { i ->
+                    val pick = picks[i]
+                    AltPickRow(
+                        pick = pick,
+                        onPick = {
+                            app.updatePlan(
+                                app.workoutPlan.map {
+                                    if (it.id == workout.id) it.replacedWith(pick.name, pick.reps) else it
+                                },
+                            )
                             onClose()
                         },
-                        shape = RoundedCornerShape(18.dp),
-                        color = c.surface,
-                        contentColor = c.text,
-                        border = BorderStroke(1.dp, c.line),
-                    ) {
-                        Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                Modifier.size(40.dp).clip(RoundedCornerShape(14.dp)).background(if (i == 0) c.primary else c.surface2),
-                                contentAlignment = Alignment.Center,
-                            ) { Icon(Icons.Rounded.FitnessCenter, contentDescription = null, tint = if (i == 0) Color.White else c.primaryText, modifier = Modifier.size(17.dp)) }
-                            Column(Modifier.padding(start = 11.dp).weight(1f)) {
-                                Text(alt.name, fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold)
-                                Text(alt.reps, color = c.text3, fontSize = 11.sp, modifier = Modifier.padding(top = 2.dp))
-                            }
-                            if (i == 0) {
-                                Text(
-                                    "가장 추천", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.SemiBold,
-                                    modifier = Modifier.clip(RoundedCornerShape(999.dp)).background(c.primary).padding(horizontal = 9.dp, vertical = 5.dp),
-                                )
-                            }
-                        }
+                    )
+                }
+            }
+            GhostButton("그대로 유지", onClick = onClose, modifier = Modifier.padding(top = 12.dp).fillMaxWidth())
+        }
+    }
+}
+
+/** 교체 후보 한 줄에 필요한 것만 모은 표시용 모델. */
+private data class AltPick(
+    val name: String,
+    val reps: String,
+    val duration: String?,
+    val best: Boolean,
+    val postureReady: Boolean,
+)
+
+@Composable
+private fun AltPickRow(pick: AltPick, onPick: () -> Unit) {
+    val c = Trex.c
+    Surface(
+        onClick = onPick,
+        shape = RoundedCornerShape(18.dp),
+        color = c.surface,
+        contentColor = c.text,
+        border = BorderStroke(1.dp, if (pick.best) c.primarySoftLine else c.line),
+    ) {
+        Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                Modifier.size(40.dp).clip(RoundedCornerShape(14.dp)).background(if (pick.best) c.primary else c.surface2),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    Icons.Rounded.FitnessCenter, contentDescription = null,
+                    tint = if (pick.best) Color.White else c.primaryText, modifier = Modifier.size(17.dp),
+                )
+            }
+            Column(Modifier.padding(start = 11.dp).weight(1f)) {
+                Text(pick.name, fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold)
+                Row(Modifier.padding(top = 3.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        pick.reps + (pick.duration?.let { " · $it" } ?: ""),
+                        color = c.text3, fontSize = 11.sp,
+                    )
+                    if (pick.postureReady) {
+                        Text(
+                            "자세교정", color = c.primaryText, fontSize = 9.5.sp, fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier
+                                .padding(start = 6.dp)
+                                .clip(RoundedCornerShape(999.dp))
+                                .background(c.primaryWash)
+                                .padding(horizontal = 7.dp, vertical = 2.dp),
+                        )
                     }
                 }
             }
-            GhostButton("그대로 유지", onClick = onClose, modifier = Modifier.padding(top = 14.dp).fillMaxWidth())
+            if (pick.best) {
+                Text(
+                    "가장 추천", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.clip(RoundedCornerShape(999.dp)).background(c.primary).padding(horizontal = 9.dp, vertical = 5.dp),
+                )
+            } else {
+                Box(Modifier.size(28.dp).clip(CircleShape).background(c.surface2), contentAlignment = Alignment.Center) {
+                    Icon(Icons.Rounded.SwapHoriz, contentDescription = "교체", tint = c.primaryText, modifier = Modifier.size(15.dp))
+                }
+            }
         }
     }
+}
+
+/**
+ * 대체 운동으로 갈아끼우기.
+ *
+ * 이름/반복만 바꾸면 시간·카테고리·자세교정 플래그가 이전 종목 값으로 남는다.
+ * 카탈로그에 있는 종목이면 그 값까지 함께 맞추고, 자세 평가는 규칙 엔진이 지원할 때만 유지한다.
+ */
+private fun Workout.replacedWith(name: String, reps: String): Workout {
+    val template = catalogByName[name]
+    return copy(
+        name = name,
+        reps = reps,
+        duration = template?.duration ?: duration,
+        category = template?.category ?: category,
+        posture = posture && postureExerciseMap.containsKey(name),
+    )
 }
 
 // ============================================================= 세트 수정
@@ -660,56 +789,86 @@ private data class WorkoutTemplate(val name: String, val reps: String, val durat
 private val workoutCatalog = mapOf(
     "하체" to listOf(
         WorkoutTemplate("기본 스쿼트", "12회 × 3세트", "8분", "하체", true),
+        WorkoutTemplate("바벨 스쿼트", "10회 × 3세트", "10분", "하체", true),
         WorkoutTemplate("런지", "10회 × 3세트", "10분", "하체", true),
+        WorkoutTemplate("바벨 런지", "10회 × 3세트", "10분", "하체", true),
         WorkoutTemplate("사이드 런지", "10회 × 3세트", "9분", "하체", true),
         WorkoutTemplate("크로스 런지", "10회 × 3세트", "9분", "하체", true),
         WorkoutTemplate("바벨 데드리프트", "10회 × 3세트", "10분", "하체", true),
         WorkoutTemplate("굿모닝", "12회 × 3세트", "8분", "하체", true),
+        WorkoutTemplate("불가리안 스플릿 스쿼트", "10회 × 3세트", "9분", "하체", false),
         WorkoutTemplate("글루트 브릿지", "12회 × 3세트", "7분", "하체", false),
+        WorkoutTemplate("월 싯", "45초 × 3세트", "6분", "하체", false),
         WorkoutTemplate("카프 레이즈", "15회 × 3세트", "6분", "하체", false),
     ),
     "상체" to listOf(
         WorkoutTemplate("오버헤드 프레스", "10회 × 3세트", "9분", "상체", true),
+        WorkoutTemplate("랫풀 다운", "12회 × 3세트", "8분", "상체", true),
+        WorkoutTemplate("딥스", "10회 × 3세트", "8분", "상체", true),
         WorkoutTemplate("덤벨 컬", "12회 × 3세트", "7분", "상체", true),
+        WorkoutTemplate("바벨 컬", "12회 × 3세트", "7분", "상체", true),
         WorkoutTemplate("사이드 레터럴 레이즈", "12회 × 3세트", "7분", "상체", true),
         WorkoutTemplate("프런트 레이즈", "12회 × 3세트", "7분", "상체", true),
-        WorkoutTemplate("딥스", "10회 × 3세트", "8분", "상체", true),
-        WorkoutTemplate("랫풀 다운", "12회 × 3세트", "8분", "상체", true),
+        WorkoutTemplate("업라이트로우", "12회 × 3세트", "7분", "상체", true),
+        WorkoutTemplate("인클라인 푸쉬업", "12회 × 3세트", "7분", "상체", false),
         WorkoutTemplate("니 푸쉬업", "10회 × 3세트", "7분", "상체", false),
         WorkoutTemplate("벽 푸쉬업", "12회 × 3세트", "6분", "상체", false),
         WorkoutTemplate("밴드 로우", "12회 × 3세트", "8분", "상체", false),
+    ),
+    "코어" to listOf(
+        WorkoutTemplate("플랭크", "45초 × 3세트", "6분", "코어", false),
+        WorkoutTemplate("사이드 플랭크", "30초 × 3세트", "6분", "코어", false),
+        WorkoutTemplate("플랭크 숄더탭", "16회 × 3세트", "7분", "코어", false),
+        WorkoutTemplate("버드독", "10회 × 3세트", "7분", "코어", false),
+        WorkoutTemplate("데드버그", "12회 × 3세트", "7분", "코어", false),
+        WorkoutTemplate("할로우 홀드", "30초 × 3세트", "6분", "코어", false),
+        WorkoutTemplate("힙 브릿지 홀드", "40초 × 3세트", "6분", "코어", false),
     ),
     "복근" to listOf(
         WorkoutTemplate("스탠딩 사이드 크런치", "12회 × 3세트", "7분", "복근", true),
         WorkoutTemplate("스탠딩 니업", "12회 × 3세트", "7분", "복근", true),
         WorkoutTemplate("행잉 레그 레이즈", "10회 × 3세트", "8분", "복근", true),
-        WorkoutTemplate("플랭크", "45초 × 3세트", "6분", "복근", false),
         WorkoutTemplate("크런치", "15회 × 3세트", "6분", "복근", false),
-        WorkoutTemplate("데드버그", "12회 × 3세트", "7분", "복근", false),
+        WorkoutTemplate("리버스 크런치", "12회 × 3세트", "6분", "복근", false),
+        WorkoutTemplate("바이시클 크런치", "20회 × 3세트", "7분", "복근", false),
+        WorkoutTemplate("레그 레이즈", "12회 × 3세트", "7분", "복근", false),
+        WorkoutTemplate("러시안 트위스트", "20회 × 3세트", "7분", "복근", false),
     ),
     "유산소" to listOf(
         WorkoutTemplate("제자리 걷기", "60초 × 4세트", "8분", "유산소", false),
+        WorkoutTemplate("하이 니", "30초 × 4세트", "7분", "유산소", false),
         WorkoutTemplate("마운틴 클라이머", "20회 × 3세트", "8분", "유산소", false),
         WorkoutTemplate("점핑잭", "30회 × 3세트", "7분", "유산소", false),
         WorkoutTemplate("스텝업", "12회 × 3세트", "9분", "유산소", false),
+        WorkoutTemplate("스키터 점프", "20회 × 3세트", "7분", "유산소", false),
+        WorkoutTemplate("섀도 복싱", "60초 × 3세트", "8분", "유산소", false),
+        WorkoutTemplate("버피", "10회 × 3세트", "8분", "유산소", false),
+    ),
+    "회복" to listOf(
+        WorkoutTemplate("마무리 스트레칭", "전신 6분", "6분", "회복", false),
+        WorkoutTemplate("캣카우 스트레칭", "전신 5분", "5분", "회복", false),
+        WorkoutTemplate("차일드 포즈", "전신 4분", "4분", "회복", false),
+        WorkoutTemplate("폼롤러 마무리", "전신 5분", "5분", "회복", false),
+        WorkoutTemplate("햄스트링 스트레칭", "전신 5분", "5분", "회복", false),
+        WorkoutTemplate("흉추 회전 스트레칭", "전신 4분", "4분", "회복", false),
     ),
 )
+
+/** 이름으로 카탈로그를 찾는다 — 대체 운동으로 갈아끼울 때 시간/카테고리까지 함께 맞추려고 쓴다. */
+private val catalogByName: Map<String, WorkoutTemplate> =
+    workoutCatalog.values.flatten().associateBy { it.name }
 
 @Composable
 private fun AddWorkoutSheet(app: AppViewModel, onClose: () -> Unit) {
     val c = Trex.c
-    var category by remember { mutableStateOf(workoutCatalog.keys.first()) }
+    val categories = remember { workoutCatalog.keys.toList() }
+    var category by remember { mutableStateOf(categories.first()) }
     SheetHost(onDismiss = onClose) {
         Column(Modifier.fillMaxHeight(0.86f).padding(20.dp)) {
             SheetTitleRow("운동 추가", "카테고리에서 선택", onClose)
             Spacer(Modifier.height(14.dp))
-            SegmentedTabs(
-                options = workoutCatalog.keys.toList(),
-                selected = workoutCatalog.keys.indexOf(category),
-                onSelect = { category = workoutCatalog.keys.toList()[it] },
-                height = 38.dp,
-                filled = true,
-            )
+            // 카테고리가 6개라 세그먼트로는 좁다 — 대체 운동 시트와 같은 필터 칩을 쓴다
+            FilterChipRow(options = categories, selected = category, onSelect = { category = it })
             LazyColumn(
                 Modifier.padding(top = 14.dp).weight(1f),
                 verticalArrangement = Arrangement.spacedBy(8.dp),

@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -20,6 +21,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -309,6 +311,42 @@ fun SegmentedTabs(
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Text(label, fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+                }
+            }
+        }
+    }
+}
+
+/**
+ * 가로 스크롤 필터 칩 — 항목이 많아 세그먼트로 나누기 어려운 목록(운동 카테고리)용.
+ *
+ * 선택된 칩만 primary 로 채우고 나머지는 서피스 톤으로 두는 리디자인 규칙을 따른다.
+ */
+@Composable
+fun FilterChipRow(
+    options: List<String>,
+    selected: String,
+    onSelect: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    height: Dp = 34.dp,
+) {
+    val c = Trex.c
+    Row(
+        modifier = modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(7.dp),
+    ) {
+        options.forEach { option ->
+            val sel = option == selected
+            Surface(
+                onClick = { onSelect(option) },
+                shape = RoundedCornerShape(999.dp),
+                color = if (sel) c.primary else c.surface2,
+                contentColor = if (sel) Color.White else c.text2,
+                border = BorderStroke(1.dp, if (sel) Color.Transparent else c.line),
+                shadowElevation = if (sel) 3.dp else 0.dp,
+            ) {
+                Box(Modifier.height(height).padding(horizontal = 15.dp), contentAlignment = Alignment.Center) {
+                    Text(option, fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
                 }
             }
         }

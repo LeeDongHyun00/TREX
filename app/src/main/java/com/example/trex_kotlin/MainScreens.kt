@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -34,6 +35,7 @@ import androidx.compose.material.icons.rounded.Cloud
 import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.Description
 import androidx.compose.material.icons.rounded.DinnerDining
+import androidx.compose.material.icons.rounded.DragIndicator
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.FreeBreakfast
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
@@ -61,10 +63,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -309,12 +315,34 @@ fun WorkoutTabScreen(
     val doneCount = plan.count { it.done }
     var openWorkout by remember { mutableStateOf(plan.firstOrNull { !it.done }?.id) }
 
+    val listState = rememberLazyListState()
+    val haptic = LocalHapticFeedback.current
+    // 요약 / 날씨 카드 다음부터가 순서를 바꿀 수 있는 구간이다
+    val reorder = rememberReorderState(
+        listState = listState,
+        canDrag = { it - WORKOUT_LIST_HEADER_COUNT in app.workoutPlan.indices },
+        onMove = { from, to ->
+            app.updatePlan(
+                app.workoutPlan.moved(from - WORKOUT_LIST_HEADER_COUNT, to - WORKOUT_LIST_HEADER_COUNT),
+            )
+        },
+        // 드래그 중에는 펼침 상태를 건드리지 않는다 — 카드를 접으면 목록이 손가락 밑에서 밀려 엉뚱한 자리로 바뀐다
+        onFeedback = { feedback ->
+            when (feedback) {
+                ReorderFeedback.Lift -> haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                ReorderFeedback.Move -> haptic.performHapticFeedback(HapticFeedbackType.SegmentTick)
+                ReorderFeedback.Drop -> haptic.performHapticFeedback(HapticFeedbackType.GestureEnd)
+            }
+        },
+    )
+
     LazyColumn(
+        state = listState,
         modifier = Modifier.fillMaxSize().background(c.bg),
         contentPadding = tabContentPadding,
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        item {
+        item(key = "summary") {
             Row(verticalAlignment = Alignment.Top) {
                 Column(Modifier.weight(1f)) {
                     Kicker("오늘의 운동")
@@ -328,10 +356,20 @@ fun WorkoutTabScreen(
             }
             Spacer(Modifier.height(14.dp))
             TrackBar(progress = if (plan.isEmpty()) 0f else doneCount / plan.size.toFloat())
+            if (plan.size > 1) {
+                Row(Modifier.padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Rounded.DragIndicator, contentDescription = null, tint = c.text3, modifier = Modifier.size(13.dp))
+                    Text(
+                        "카드를 길게 눌러 순서를 바꿔룡",
+                        color = c.text3, fontSize = 11.sp, fontWeight = FontWeight.Medium,
+                        modifier = Modifier.padding(start = 5.dp),
+                    )
+                }
+            }
         }
 
         // 날씨 카드 — 중립 서피스 + 소프트 아이콘 버블 + 실내 추천 칩 (경고 워시 대신 차분한 톤)
-        item {
+        item(key = "weather") {
             DCard(radius = 22.dp) {
                 Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
                     Box(
@@ -352,10 +390,20 @@ fun WorkoutTabScreen(
 
         items(count = plan.size, key = { plan[it].id }) { i ->
             val w = plan[i]
+            val dragging = reorder.isDragging(w.id)
             WorkoutExpandCard(
                 workout = w,
                 index = i,
                 open = openWorkout == w.id,
+                dragging = dragging,
+                // 들고 있는 카드는 translationY 로 직접 움직이므로 자리 애니메이션을 꺼둔다
+                modifier = Modifier
+                    .animateItem(
+                        fadeInSpec = null,
+                        placementSpec = if (dragging) null else tween(260),
+                        fadeOutSpec = null,
+                    )
+                    .reorderable(reorder, w.id),
                 onToggleOpen = { openWorkout = if (openWorkout == w.id) null else w.id },
                 onOpenAlt = { onOpenAlt(w) },
                 onOpenSets = { onOpenSets(w) },
@@ -365,11 +413,16 @@ fun WorkoutTabScreen(
     }
 }
 
+/** 운동 탭 LazyColumn 에서 루틴 카드가 시작되는 인덱스 (요약 + 날씨 카드). */
+private const val WORKOUT_LIST_HEADER_COUNT = 2
+
 @Composable
 private fun WorkoutExpandCard(
     workout: Workout,
     index: Int,
     open: Boolean,
+    dragging: Boolean,
+    modifier: Modifier = Modifier,
     onToggleOpen: () -> Unit,
     onOpenAlt: () -> Unit,
     onOpenSets: () -> Unit,
@@ -377,29 +430,44 @@ private fun WorkoutExpandCard(
 ) {
     val c = Trex.c
     val chevron by animateFloatAsState(if (open) 180f else 0f, tween(300), label = "chev")
+    // 들어 올림 정도(0~1) — 살짝 커지고 그림자가 깊어지는 iOS 식 "리프트"
+    val lift by animateFloatAsState(if (dragging) 1f else 0f, tween(200), label = "lift")
     Surface(
-        modifier = Modifier.fillMaxWidth().animateContentSize(tween(320)),
+        modifier = modifier
+            .fillMaxWidth()
+            .graphicsLayer {
+                val scale = 1f + 0.028f * lift
+                scaleX = scale
+                scaleY = scale
+            }
+            .animateContentSize(tween(320)),
         shape = RoundedCornerShape(24.dp),
         color = c.surface,
         contentColor = c.text,
-        border = BorderStroke(1.dp, if (open) c.primarySoftLine else c.line),
-        shadowElevation = 2.dp,
+        border = BorderStroke(1.dp, if (open || dragging) c.primarySoftLine else c.line),
+        shadowElevation = (2 + 16 * lift).dp,
     ) {
         Column {
-            Surface(onClick = onToggleOpen, color = Color.Transparent, contentColor = c.text) {
+            // 드래그로 들려 있는 동안에는 탭으로 펼쳐지지 않게 막는다 (손을 뗄 때 오작동 방지)
+            Surface(onClick = { if (!dragging) onToggleOpen() }, color = Color.Transparent, contentColor = c.text) {
                 Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 15.dp), verticalAlignment = Alignment.CenterVertically) {
                     Box(
                         Modifier
                             .size(38.dp)
                             .clip(RoundedCornerShape(13.dp))
-                            .background(if (workout.done) c.primary else if (open) c.primaryWash else c.surface2),
+                            .background(if (workout.done || dragging) c.primary else if (open) c.primaryWash else c.surface2),
                         contentAlignment = Alignment.Center,
                     ) {
-                        Text(
-                            (index + 1).toString().padStart(2, '0'),
-                            color = if (workout.done) Color.White else if (open) c.primaryText else c.text3,
-                            fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
-                        )
+                        // 들고 있는 동안에는 순번 대신 이동 그립을 보여준다
+                        if (dragging) {
+                            Icon(Icons.Rounded.DragIndicator, contentDescription = null, tint = Color.White, modifier = Modifier.size(17.dp))
+                        } else {
+                            Text(
+                                (index + 1).toString().padStart(2, '0'),
+                                color = if (workout.done) Color.White else if (open) c.primaryText else c.text3,
+                                fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
+                            )
+                        }
                     }
                     Column(Modifier.weight(1f).padding(start = 12.dp)) {
                         Text(workout.name, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
@@ -418,7 +486,7 @@ private fun WorkoutExpandCard(
                     }
                     Icon(
                         Icons.Rounded.KeyboardArrowDown, contentDescription = null, tint = c.text3,
-                        modifier = Modifier.size(17.dp).rotate(chevron),
+                        modifier = Modifier.size(17.dp).rotate(chevron).alpha(1f - lift),
                     )
                 }
             }
