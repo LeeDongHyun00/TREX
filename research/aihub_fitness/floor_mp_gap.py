@@ -369,6 +369,25 @@ def main():
     vel["ratio"] = vel["v_mp"] / vel["v_gt"]
     vel["floor"] = vel.index.isin(FLOOR)
     fid = stat_fidelity(st_gt, st_mp, rules)
+
+    # ---- 전 (종목 × 피처__통계) 충실도 — export_floor_rules.py 의 후보 게이트 입력.
+    #      뷰 풀링(종목당 n≈100). 규칙 17개만이 아니라 후보 전부를 재서, 재적합이 '측정에서 살아남는 피처'만 고르게 한다.
+    from scipy.stats import spearmanr
+    rows_all = []
+    for ex in FLOOR:
+        views = [v for (e, v) in st_gt if e == ex and (e, v) in st_mp]
+        if not views:
+            continue
+        cols = set.intersection(*[set(st_gt[(ex, v)].columns) & set(st_mp[(ex, v)].columns) for v in views]) - {"n_frames"}
+        for col in sorted(cols):
+            pairs = pd.concat([st_gt[(ex, v)][[col]].join(st_mp[(ex, v)][[col]], how="inner", lsuffix="_g", rsuffix="_m")
+                               for v in views]).dropna()
+            if len(pairs) < 40:
+                continue
+            sp = spearmanr(pairs.iloc[:, 0], pairs.iloc[:, 1]).statistic
+            rows_all.append(dict(exercise=ex, feature=col, n=len(pairs), spearman=float(sp) if np.isfinite(sp) else np.nan))
+    pd.DataFrame(rows_all).to_csv(OUT / "floor_stat_fidelity_all.csv", index=False, encoding="utf-8-sig")
+    print(f"[fidelity-all] {len(rows_all)} (종목×피처) → floor_stat_fidelity_all.csv", flush=True)
     a_gt = rule_aucs(st_gt, rules, conds, clips, "GT_sub")
     a_mp = rule_aucs(st_mp, rules, conds, clips, "MP")
     chain = a_gt[["exercise", "condition", "feature", "auc", "view"]].rename(columns={"auc": "gt_sub", "view": "view_gt"})

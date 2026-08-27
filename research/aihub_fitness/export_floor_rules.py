@@ -34,6 +34,9 @@ warnings.filterwarnings("ignore")
 
 HERE = Path(__file__).resolve().parent
 OUT = HERE / "outputs"
+# 파서 산출물(clips/kp2d/conditions)이 이 워크트리에 없으면 구 워크트리 outputs 를 입력으로 쓴다 (floor_mp_gap.py 와 동일)
+_SRC_FALLBACK = Path(r"C:\Users\hp276\Desktop\trex\.claude\worktrees\correct-exercise-form-6ddf55\research\aihub_fitness\outputs")
+SRC = OUT if (OUT / "clips.parquet").exists() else _SRC_FALLBACK
 FLOOR = ["크런치", "푸시업", "니푸쉬업", "플랭크", "라잉 레그 레이즈", "힙쓰러스트", "시저크로스", "바이시클 크런치", "Y - Exercise"]
 # MediaPipe 33점으로 계산 가능한 관절만 (Neck/Back/Waist/Foot 제외 — Neck 은 어깨 중점으로 대체 가능하지만 여기선 불필요)
 JOINTS = ["Nose", "LEar", "REar", "LShoulder", "RShoulder", "LElbow", "RElbow", "LWrist", "RWrist",
@@ -42,6 +45,11 @@ STATS = ("mean", "min", "max", "std", "range")
 MIN_FRAMES = 8
 CV_AUC_CUT = 0.72          # 단일 뷰 고정 후 채택 컷 (탐색의 0.75 체리픽보다 완화·정직)
 MIN_PERFORMERS = 3
+# MP 측정 충실도 게이트 (v0.1, floor_mp_gap.py 실측): GT↔MP Spearman(뷰 풀링 n≈100)이 이 미만인
+# (종목, 피처__통계) 는 후보에서 제외 — 임계값을 아무리 보정해도 판정이 복원되지 않는다.
+# 0.35~0.5 는 채택하되 caution. 주의: ρ 는 20클립 표본 추정이라 CI 가 넓다(±~0.2) — 재보정 데이터로 재확인 대상.
+RHO_CUT = 0.35
+RHO_CAUTION = 0.5
 # 좌우 반전 시 다른 쪽 사지를 재거나 부호가 뒤집히는 베이스 (정준화로도 안 잡히는 것)
 NOT_MIRROR_SAFE = {"elbow_ang", "elbow_width", "shoulder_asym2d"}
 # 뷰 코드 → 실제 기하. **관측으로 확정**(view_geometry.py): 바닥에서는 C 가 측면이다
@@ -172,8 +180,8 @@ def aggregate_clip(F: dict[str, np.ndarray]) -> dict[str, float]:
 # ---------------------------------------------------------------- 데이터 → 클립 피처 테이블
 def build_features() -> pd.DataFrame:
     cols = ["clip_id", "view_letter", "frame_idx"] + [f"{j}_{a}" for j in JOINTS for a in "xy"]
-    clips = pd.read_parquet(OUT / "clips.parquet")[["clip_id", "exercise", "performer"]]
-    k2 = pd.read_parquet(OUT / "kp2d.parquet", columns=cols).merge(clips, on="clip_id")
+    clips = pd.read_parquet(SRC / "clips.parquet")[["clip_id", "exercise", "performer"]]
+    k2 = pd.read_parquet(SRC / "kp2d.parquet", columns=cols).merge(clips, on="clip_id")
     k2 = k2[k2.exercise.isin(FLOOR)].sort_values(["clip_id", "view_letter", "frame_idx"])
     rows = []
     for (cid, view), d in k2.groupby(["clip_id", "view_letter"]):
@@ -224,14 +232,26 @@ def cv_rule(X, y, g, names):
 
 def main():
     feats = build_features()
-    conds = pd.read_parquet(OUT / "conditions.parquet")
+    conds = pd.read_parquet(SRC / "conditions.parquet")
     fcols = [c for c in feats.columns if "__" in c]
-    print(f"[features] 클립×뷰 {len(feats)} · 피처 {len(fcols)}", flush=True)
 
-    # 1) 종목당 뷰 1개: 각 뷰에서 CV 를 돌려 '사용 가능 조건 수(≥컷)' 최대 뷰 선택
+    # 0) 충실도 게이트 로드 — floor_mp_gap.py 산출. 표에 없는(표본 부족) 조합도 보수적으로 제외.
+    fid_path = OUT / "floor_stat_fidelity_all.csv"
+    if not fid_path.exists():
+        sys.exit("[err] outputs/floor_stat_fidelity_all.csv 없음 — 먼저 `python floor_mp_gap.py` 실행 (v0.1 게이트 입력)")
+    fid = pd.read_csv(fid_path)
+    fid_map = {(r.exercise, r.feature): float(r.spearman) for r in fid.itertuples() if np.isfinite(r.spearman)}
+    faithful = {ex: [c for c in fcols if fid_map.get((ex, c), -1.0) >= RHO_CUT] for ex in FLOOR}
+    print(f"[features] 클립×뷰 {len(feats)} · 피처 {len(fcols)} · 충실도 게이트(ρ≥{RHO_CUT}) 통과 "
+          + ", ".join(f"{ex} {len(v)}" for ex, v in faithful.items()), flush=True)
+
+    # 1) 종목당 뷰 1개: 각 뷰에서 CV 를 돌려 '사용 가능 조건 수(≥컷)' 최대 뷰 선택 — 후보는 충실 피처만
     per = []
     for (ex, view), d in feats.groupby(["exercise", "view"]):
-        X_all = d[fcols].to_numpy(dtype=np.float64)
+        cands = faithful.get(ex, [])
+        if not cands:
+            continue
+        X_all = d[cands].to_numpy(dtype=np.float64)
         g = d.performer.to_numpy()
         for cond, cg in conds[conds.exercise == ex].groupby("condition"):
             y = cg.drop_duplicates("clip_id").set_index("clip_id")["value"].reindex(d.clip_id)
@@ -239,7 +259,7 @@ def main():
             if m.sum() < 60:
                 continue
             yviol = (~y[m].astype(bool)).to_numpy().astype(int)   # 위반=1 (value=False 가 위반)
-            r = cv_rule(X_all[m], yviol, g[m], fcols)
+            r = cv_rule(X_all[m], yviol, g[m], cands)
             if r:
                 per.append(dict(exercise=ex, view=view, condition=cond, n=int(m.sum()), **r))
     per = pd.DataFrame(per)
@@ -271,6 +291,10 @@ def main():
         op = ">" if sgn > 0 else "<"
         thr = t if sgn > 0 else -t
         base = row.feature.rsplit("__", 1)[0]
+        rho = fid_map.get((ex, row.feature))
+        cautions = (["좌우 반전(반대로 누움) 시 다른 쪽 사지를 잼"] if base in NOT_MIRROR_SAFE else [])
+        if rho is not None and rho < RHO_CAUTION:
+            cautions.append(f"MP 충실도 낮음(ρ={rho:.2f}<{RHO_CAUTION}) — 재보정 데이터로 확인 필요")
         rules.append({
             "id": f"floor|{ex}|{cond}",
             "exercise": ex, "condition": cond, "subtype": None,
@@ -280,13 +304,15 @@ def main():
             "family": "floor2d", "op": op, "threshold": round(float(thr), 6),
             "view_best_front": view, "view_best_front_desc": VIEW_DESC[view],
             "cv_auc": round(float(row.auc), 4), "cv_balacc": round(float(row.bacc), 4), "n": int(row.n),
+            "mp_fidelity": round(rho, 3) if rho is not None else None,
             "mirror_safe": base not in NOT_MIRROR_SAFE,
-            "cautions": (["좌우 반전(반대로 누움) 시 다른 쪽 사지를 잼"] if base in NOT_MIRROR_SAFE else []),
+            "cautions": cautions,
             "mode": "floor2d",
         })
 
-    doc = {"version": "floor_v0", "generated": "2026-08-24",
-           "source": "export_floor_rules.py (AIHub 2D, 종목당 단일 뷰, 스트리밍 접지선, 위쪽=양수 정준화)",
+    doc = {"version": "floor_v0.1", "generated": "2026-08-24",
+           "source": "export_floor_rules.py (AIHub 2D, 종목당 단일 뷰, 스트리밍 접지선, 위쪽=양수 정준화, "
+                     f"MP 충실도 게이트 ρ≥{RHO_CUT} — floor_mp_gap.py 실측)",
            "rules": rules}
     (HERE / "rules").mkdir(exist_ok=True)
     with open(HERE / "rules" / "rules_floor_v0.json", "w", encoding="utf-8") as f:
@@ -295,8 +321,8 @@ def main():
     # 3) Kotlin 패리티 픽스처 — 라인 텍스트 포맷(유닛 테스트의 org.json 스텁 회피, PostureCoreParityTest 와 동일 방식)
     #    CLIP <종목> <뷰> / FRAME n / P <관절> x y … / F <피처> 값 … / ENDFRAME / ENDCLIP
     cols = ["clip_id", "view_letter", "frame_idx"] + [f"{j}_{a}" for j in JOINTS for a in "xy"]
-    clips_meta = pd.read_parquet(OUT / "clips.parquet")[["clip_id", "exercise"]]
-    k2 = pd.read_parquet(OUT / "kp2d.parquet", columns=cols).merge(clips_meta, on="clip_id")
+    clips_meta = pd.read_parquet(SRC / "clips.parquet")[["clip_id", "exercise"]]
+    k2 = pd.read_parquet(SRC / "kp2d.parquet", columns=cols).merge(clips_meta, on="clip_id")
     lines = ["# floor_port_fixture — export_floor_rules.py 생성. px 좌표를 순서대로 먹여 프레임 피처 일치를 검증."]
     for ex in ["푸시업", "힙쓰러스트", "시저크로스"]:
         view = view_pick.get(ex)
@@ -321,12 +347,15 @@ def main():
 
     # 4) 리포트
     rep = pd.DataFrame(report).sort_values(["exercise", "adopted", "cv_auc"], ascending=[True, False, False])
-    L = ["# 바닥 규칙 내보내기 (rules_floor_v0)\n",
-         f"- 종목당 단일 뷰 고정, CV AUC ≥ {CV_AUC_CUT}, 수행자 ≥ {MIN_PERFORMERS} → **채택 {len(rules)}규칙 / {rep.exercise.nunique()}종목**",
+    L = ["# 바닥 규칙 내보내기 (rules_floor_v0.1 — MP 충실도 게이트)\n",
+         f"- 종목당 단일 뷰 고정, **MP 충실도 게이트 ρ≥{RHO_CUT}**(floor_mp_gap 실측, 뷰 풀링 n≈100), CV AUC ≥ {CV_AUC_CUT}, 수행자 ≥ {MIN_PERFORMERS} → **채택 {len(rules)}규칙 / {len({r['exercise'] for r in rules})}종목**",
+         "- v0 대비: 측정-사망 피처(std/min 형 팔다리 각도 등)가 후보에서 빠지고, 같은 조건이 충실한 대체 피처로 살아나면 그걸로 재적합된다",
+         f"- ρ<{RHO_CAUTION} 채택분은 caution 표기. ρ 는 20클립 표본 추정(CI ±~0.2) — 재보정 데이터로 재확인 대상",
          "- 전 규칙 status=beta: AIHub 에 바닥 높이 카메라가 없어 임계값은 미보정 — 세트 로그 재보정 전까지 참고용\n",
-         "| 종목 | 뷰 | 조건 | CV AUC | 채택 | 피처 |", "|---|---|---|---|---|---|"]
+         "| 종목 | 뷰 | 조건 | CV AUC | ρ(MP) | 채택 | 피처 |", "|---|---|---|---|---|---|---|"]
     for _, r in rep.iterrows():
-        L.append(f"| {r.exercise} | {r.view} | {r.condition} | {r.cv_auc:.3f} | {'✅' if r.adopted else '—'} | `{r.feature}` |")
+        rho = fid_map.get((r.exercise, r.feature))
+        L.append(f"| {r.exercise} | {r.view} | {r.condition} | {r.cv_auc:.3f} | {f'{rho:.2f}' if rho is not None else '—'} | {'✅' if r.adopted else '—'} | `{r.feature}` |")
     (OUT / "floor_export_report.md").write_text("\n".join(L), encoding="utf-8")
     print(f"[export] 규칙 {len(rules)}개 → rules/rules_floor_v0.json")
     for ex, v in sorted(view_pick.items()):
