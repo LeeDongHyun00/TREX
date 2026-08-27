@@ -62,6 +62,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -193,13 +194,20 @@ fun PostureLabScreen(onClose: () -> Unit) {
             executor.shutdown()
         }
     }
-    val displayRotation = remember(context) {
+    // 회전해도 Activity 가 유지되므로(AndroidManifest configChanges), configuration 변화마다 다시 읽는다.
+    // 캐시해 두면 회전 후 중력축 계산이 틀어진다.
+    val configuration = LocalConfiguration.current
+    val displayRotation = remember(configuration) {
         @Suppress("DEPRECATION")
         (context.getSystemService(Context.WINDOW_SERVICE) as WindowManager).defaultDisplay.rotation
     }
     // 분석 스레드에서 매 프레임 읽으므로 상태가 아닌 참조로 전달
     val frontRef = remember { booleanArrayOf(false) }
     frontRef[0] = useFrontCamera
+    val rotationRef = remember { intArrayOf(displayRotation) }
+    rotationRef[0] = displayRotation
+    val analysisRef = remember { arrayOfNulls<ImageAnalysis>(1) }
+    LaunchedEffect(displayRotation) { analysisRef[0]?.targetRotation = displayRotation }
 
     val previewView = remember {
         PreviewView(context).apply { scaleType = PreviewView.ScaleType.FILL_CENTER }
@@ -233,7 +241,9 @@ fun PostureLabScreen(onClose: () -> Unit) {
         val analysis = ImageAnalysis.Builder()
             .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
             .setResolutionSelector(analysisSelector)
+            .setTargetRotation(rotationRef[0])
             .build()
+        analysisRef[0] = analysis   // 회전 시 targetRotation 갱신용
         analysis.setAnalyzer(executor) { image ->
             val now = System.currentTimeMillis()
             val ph = when (phaseRef[0]) {
@@ -250,7 +260,7 @@ fun PostureLabScreen(onClose: () -> Unit) {
             val t0 = System.nanoTime()
             try {
                 val up = gravity.gravityDevice
-                    ?.let { gravityUpInWorld(it, displayRotation, frontRef[0]) }
+                    ?.let { gravityUpInWorld(it, rotationRef[0], frontRef[0]) }
                     ?: SCREEN_UP
                 val s = analyzer.analyze(image, now, up)
                 sample = s

@@ -499,6 +499,17 @@ AIHub 조건 132개를 해부학적 자유도로 분류해, 완벽한 GT 3D 상�
 
 **실측 검증** (받은 로그 5세트 재생): 프레임 보존율 **55.4% → 86.2%**(+143). 푸시업 세트1의 판정 표본 **27 → 131~142프레임**. 플랭크 세트4는 133 → 78로 줄었는데, 발목 가시성 컷을 0.2→0.35 로 올려 흐릿한 발목으로 `trunk_ankle_ang` 을 계산하던 프레임을 뺀 결과다(품질 개선, 표본은 여전히 충분). 몸이 안 잡힌 2~3초 세트는 그대로 ABSTAIN 유지.
 
+## 25c. 세션 화면 레이아웃과 회전 (실기기 피드백)
+실기기 사용에서 두 가지가 드러났다.
+
+**① 하단 UI 가 카메라를 가렸다.** 기기(411×868dp) 기준 하단 글래스 패널이 **약 270dp = 화면의 31%** 를 덮었다. 게다가 `PreviewView` 가 `FILL_CENTER` 라 4:3 영상을 9:19.5 화면에 채우느라 **좌우 약 37% 를 잘라내** 사용자가 카메라의 실제 시야보다 좁게 보고 프레이밍을 판단하고 있었다 — §25a 에서 발목이 프레임 밖으로 나간 것과 무관하지 않다.
+
+→ **카메라 영역과 조작 영역을 분리**한다. `FIT_CENTER` 로 바꿔 카메라가 보는 전체를 남는 공간에 채우고, 패널은 그 **바깥**에 둔다(세로: 아래, 가로: 우측 320dp 고정폭+스크롤). 겹침 0. 오버레이 좌표 변환도 `maxOf`→`minOf` 로 함께 바꿔야 스켈레톤이 어긋나지 않는다(같은 실수를 랩 화면에서 반복하지 말 것 — 그쪽은 아직 FILL 이라 `maxOf` 가 맞다). 패널은 타이머 32→24sp 등으로 압축했다.
+
+**② 회전하면 세트가 초기화됐다.** 매니페스트에 `configChanges` 가 없어 회전 시 Activity 가 통째로 재생성됐다. 세션 진행도(`sessionIndex`·`sessionTimeLeft`)는 `rememberSaveable` 이라 살아남지만, 세트 내부 상태 — 코치 창, **접지선 추정**, 수집 버퍼, 커버리지 — 는 전부 날아갔다.
+
+→ `android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden"`. **주의: 이걸 넣으면 회전값을 캐시한 코드가 전부 깨진다.** `remember(context)` 로 잡아둔 `displayRotation` 이 갱신되지 않아 중력축(`gravityUpInWorld`)과 이미지 정립이 틀어진다. 그래서 세 화면(`PostureLive`·`PostureLabScreen`·`BaselineGuideScreen`) 모두 `remember(configuration)` 으로 바꾸고, 분석 스레드용 `rotationRef` 와 `ImageAnalysis.targetRotation` 갱신을 함께 넣었다.
+
 ## 12. 파일
 - `rules/rules_mp_v0.json` (앱이 읽을 정본), `rules/rules_mp_v0.md` (사람용 표, 피처 공식 표 포함), `export_rules_mp.py` (재생성)
 - 실험 코드/요약: `experiment_a.py`, `experiment_a_refit.py`, `outputs/experiment_a_summary.md`, `outputs/expA_refit_summary.md`

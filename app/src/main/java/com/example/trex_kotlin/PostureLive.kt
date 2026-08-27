@@ -3,6 +3,7 @@ package com.example.trex_kotlin
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
+import android.content.res.Configuration
 import android.util.Size
 import android.view.WindowManager
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -24,11 +25,14 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -66,6 +70,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -269,10 +274,19 @@ fun PostureLiveSessionScreen(
             executor.shutdown()
         }
     }
-    val displayRotation = remember(context) {
+    // 회전해도 Activity 가 유지되므로(configChanges), 화면 회전값은 configuration 변화마다 다시 읽는다.
+    // 분석 스레드가 매 프레임 읽으므로 ref 로도 전달한다.
+    val configuration = LocalConfiguration.current
+    val displayRotation = remember(configuration) {
         @Suppress("DEPRECATION")
         (context.getSystemService(Context.WINDOW_SERVICE) as WindowManager).defaultDisplay.rotation
     }
+    val rotationRef = remember { intArrayOf(displayRotation) }
+    rotationRef[0] = displayRotation
+    // ImageAnalysis 는 바인딩 시점의 회전값을 갖고 있어, 회전 후에는 직접 갱신해야 이미지가 바로 선다.
+    val analysisRef = remember { arrayOfNulls<ImageAnalysis>(1) }
+    LaunchedEffect(displayRotation) { analysisRef[0]?.targetRotation = displayRotation }
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
     var useFrontCamera by remember { mutableStateOf(true) }
     val frontRef = remember { booleanArrayOf(true) }
@@ -368,8 +382,10 @@ fun PostureLiveSessionScreen(
         }
     }
 
+    // FIT_CENTER: 카메라가 보는 **전체**를 보여준다. FILL_CENTER 는 4:3 영상을 긴 화면에 채우느라
+    // 좌우(세로 모드) 또는 상하(가로 모드)를 잘라내, 사용자가 실제 분석 범위보다 좁게 보고 프레이밍을 그르쳤다.
     val previewView = remember {
-        PreviewView(context).apply { scaleType = PreviewView.ScaleType.FILL_CENTER }
+        PreviewView(context).apply { scaleType = PreviewView.ScaleType.FIT_CENTER }
     }
 
     LaunchedEffect(useFrontCamera) {
@@ -388,7 +404,9 @@ fun PostureLiveSessionScreen(
         val analysis = ImageAnalysis.Builder()
             .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
             .setResolutionSelector(analysisSelector)
+            .setTargetRotation(rotationRef[0])
             .build()
+        analysisRef[0] = analysis   // 회전 시 targetRotation 갱신용
         analysis.setAnalyzer(executor) { image ->
             val now = System.currentTimeMillis()
             val phase = if (pausedRef[0]) InferencePhase.IDLE else InferencePhase.RECORDING
@@ -399,7 +417,7 @@ fun PostureLiveSessionScreen(
             lastInferAt[0] = now
             try {
                 val up = gravity.gravityDevice
-                    ?.let { gravityUpInWorld(it, displayRotation, frontRef[0]) }
+                    ?.let { gravityUpInWorld(it, rotationRef[0], frontRef[0]) }
                     ?: SCREEN_UP
                 val s = analyzer.analyze(image, now, up)
                 sample = s
@@ -458,81 +476,78 @@ fun PostureLiveSessionScreen(
         runCatching { provider.bindToLifecycle(lifecycleOwner, selector, preview, analysis) }
     }
 
-    // ---- UI: 풀블리드 카메라 + 플로팅 글래스 패널 (애플 피트니스 스타일)
+    // ---- UI: 카메라 영역과 조작 영역을 **분리**한다 (spec §25c).
+    //      이전에는 풀블리드 카메라 위에 패널을 얹어 하단 31% 가 가려졌고, FILL_CENTER 라 영상의
+    //      좌우(세로 모드) 37% 가 잘려 보여 사용자가 프레이밍을 확인할 수 없었다.
+    //      이제 FIT_CENTER 로 카메라가 보는 전체를 남는 공간에 꽉 채우고, 패널은 그 바깥에 둔다.
     val glass = if (c.isDark) Color(0xE61B2115) else Color(0xF2FFFFFF)
     val onCam = Color.White
 
-    Box(Modifier.fillMaxSize().background(Color.Black)) {
-        AndroidView(factory = { previewView }, modifier = Modifier.fillMaxSize())
-        LivePoseOverlay(sample = sample, mirror = useFrontCamera, tint = c.lime, modifier = Modifier.fillMaxSize())
-
-        // 상단 스크림 + 컨트롤
-        Box(
-            Modifier
-                .fillMaxWidth()
-                .height(140.dp)
-                .background(Brush.verticalGradient(listOf(Color(0x99000000), Color.Transparent))),
-        )
-        Row(
-            Modifier
-                .statusBarsPadding()
-                .padding(horizontal = 16.dp, vertical = 10.dp)
-                .fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            GlassIcon(Icons.Rounded.Close, contentDescription = "종료", onClick = onExit)
-            Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
-                Text(
-                    "진행중 · ${index + 1}/$total",
-                    color = onCam.copy(alpha = 0.75f), fontSize = 10.5.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 0.8.sp,
-                )
-                Text(workout.name, color = onCam, fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 2.dp))
-            }
-            GlassIcon(Icons.Rounded.Cameraswitch, contentDescription = "카메라 전환", onClick = { useFrontCamera = !useFrontCamera })
-        }
-
-        // 인식 상태 칩
-        Row(
-            Modifier
-                .align(Alignment.TopEnd)
-                .statusBarsPadding()
-                .padding(top = 64.dp, end = 16.dp)
-                .clip(RoundedCornerShape(999.dp))
-                .background(Color(0x8C0C1008))
-                .padding(horizontal = 11.dp, vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            val pulse by animateFloatAsState(if (paused || !sample.detected) 0.35f else 1f, tween(500), label = "live-pulse")
-            Box(Modifier.size(6.dp).clip(CircleShape).background(c.lime.copy(alpha = pulse)))
-            Text(
-                text = when {
-                    paused -> "일시정지"
-                    !analyzer.isReady && stats?.error != null -> "엔진 오류"
-                    sample.detected -> "자세 인식 중 · ${sample.visibleJointCount}/33"
-                    everDetected -> "관절 이탈 — 프레임 안으로"
-                    else -> "전신을 화면에 맞춰주세요"
-                },
-                color = onCam, fontSize = 11.sp, fontWeight = FontWeight.Medium,
-                modifier = Modifier.padding(start = 6.dp),
+    val cameraArea: @Composable (Modifier) -> Unit = { mod ->
+        Box(mod.background(Color.Black)) {
+            AndroidView(factory = { previewView }, modifier = Modifier.fillMaxSize())
+            LivePoseOverlay(sample = sample, mirror = useFrontCamera, tint = c.lime, modifier = Modifier.fillMaxSize())
+            // 상단 스크림 + 컨트롤 (영상 위에 겹치지만 사람은 보통 화면 중앙에 잡히므로 최소 높이만)
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .height(96.dp)
+                    .background(Brush.verticalGradient(listOf(Color(0x99000000), Color.Transparent))),
             )
+            Row(
+                Modifier
+                    .statusBarsPadding()
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                    .fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                GlassIcon(Icons.Rounded.Close, contentDescription = "종료", onClick = onExit)
+                Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
+                    Text(
+                        "진행중 · ${index + 1}/$total",
+                        color = onCam.copy(alpha = 0.75f), fontSize = 10.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 0.8.sp,
+                    )
+                    Text(workout.name, color = onCam, fontSize = 17.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 1.dp))
+                }
+                GlassIcon(Icons.Rounded.Cameraswitch, contentDescription = "카메라 전환", onClick = { useFrontCamera = !useFrontCamera })
+            }
+            // 인식 상태 칩
+            Row(
+                Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(end = 12.dp, bottom = 10.dp)
+                    .clip(RoundedCornerShape(999.dp))
+                    .background(Color(0x8C0C1008))
+                    .padding(horizontal = 11.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                val pulse by animateFloatAsState(if (paused || !sample.detected) 0.35f else 1f, tween(500), label = "live-pulse")
+                Box(Modifier.size(6.dp).clip(CircleShape).background(c.lime.copy(alpha = pulse)))
+                Text(
+                    text = when {
+                        paused -> "일시정지"
+                        !analyzer.isReady && stats?.error != null -> "엔진 오류"
+                        sample.detected -> "인식 중 · ${sample.visibleJointCount}/33"
+                        everDetected -> "관절 이탈 — 프레임 안으로"
+                        else -> "전신을 화면에 맞춰주세요"
+                    },
+                    color = onCam, fontSize = 11.sp, fontWeight = FontWeight.Medium,
+                    modifier = Modifier.padding(start = 6.dp),
+                )
+            }
         }
+    }
 
-        // 하단 글래스 패널
-        Column(
-            Modifier
-                .align(Alignment.BottomCenter)
-                .padding(horizontal = 14.dp)
-                .navigationBarsPadding()
-                .padding(bottom = 14.dp),
-        ) {
+    val panel: @Composable (Modifier) -> Unit = { mod ->
+        Column(mod) {
             Surface(
-                shape = RoundedCornerShape(28.dp),
+                shape = RoundedCornerShape(24.dp),
                 color = glass,
                 contentColor = c.text,
                 border = BorderStroke(1.dp, c.line),
-                shadowElevation = 16.dp,
+                shadowElevation = 12.dp,
             ) {
-                Column(Modifier.padding(18.dp)) {
+                Column(Modifier.padding(horizontal = 16.dp, vertical = 13.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text("바로 보고, 바로 고치고", color = c.primaryText, fontSize = 10.5.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 0.8.sp)
                         Spacer(Modifier.weight(1f))
@@ -577,13 +592,14 @@ fun PostureLiveSessionScreen(
                         }
                     }
 
-                    Row(Modifier.padding(top = 14.dp), verticalAlignment = Alignment.Bottom) {
+                    // 타이머·점수·목표를 한 줄로 (이전에는 32sp 타이머가 세로 공간을 크게 먹었다)
+                    Row(Modifier.padding(top = 10.dp), verticalAlignment = Alignment.Bottom) {
                         Column(Modifier.weight(1f)) {
-                            Text("남은 시간", color = c.text3, fontSize = 10.5.sp)
-                            Text(timeLeft.asClock(), fontSize = 32.sp, fontWeight = FontWeight.SemiBold, lineHeight = 34.sp, modifier = Modifier.padding(top = 2.dp))
+                            Text("남은 시간", color = c.text3, fontSize = 9.5.sp)
+                            Text(timeLeft.asClock(), fontSize = 24.sp, fontWeight = FontWeight.SemiBold, lineHeight = 26.sp)
                         }
-                        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(end = 18.dp)) {
-                            Text("자세 점수", color = c.text3, fontSize = 10.5.sp)
+                        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(end = 14.dp)) {
+                            Text("자세 점수", color = c.text3, fontSize = 9.5.sp)
                             Text(
                                 scorePct?.let { "$it%" } ?: "—",
                                 color = when {
@@ -591,44 +607,72 @@ fun PostureLiveSessionScreen(
                                     scorePct!! >= 85 -> c.primaryText
                                     else -> c.warn
                                 },
-                                fontSize = 20.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 4.dp),
+                                fontSize = 17.sp, fontWeight = FontWeight.SemiBold, lineHeight = 20.sp,
                             )
                         }
                         Column(horizontalAlignment = Alignment.End) {
-                            Text("목표", color = c.text3, fontSize = 10.5.sp)
-                            Text(workout.reps, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 6.dp))
+                            Text("목표", color = c.text3, fontSize = 9.5.sp)
+                            Text(workout.reps, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, lineHeight = 20.sp)
                         }
                     }
-                    Box(Modifier.padding(top = 12.dp)) {
-                        TrackBar(progress = 1f - (timeLeft / totalSeconds.toFloat()), height = 6.dp)
+                    Box(Modifier.padding(top = 8.dp)) {
+                        TrackBar(progress = 1f - (timeLeft / totalSeconds.toFloat()), height = 5.dp)
                     }
 
                     Row(
-                        Modifier.padding(top = 14.dp).fillMaxWidth(),
+                        Modifier.padding(top = 10.dp).fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
+                        horizontalArrangement = Arrangement.spacedBy(14.dp, Alignment.CenterHorizontally),
                     ) {
                         RoundIcon(
                             if (muted) Icons.AutoMirrored.Rounded.VolumeOff else Icons.AutoMirrored.Rounded.VolumeUp,
                             onClick = { muted = !muted },
-                            size = 48.dp,
+                            size = 44.dp,
                             contentDescription = "음성 안내",
                         )
                         Surface(
                             onClick = onTogglePause,
-                            modifier = Modifier.size(62.dp),
+                            modifier = Modifier.size(56.dp),
                             shape = CircleShape,
                             color = c.primary,
                             contentColor = Color.White,
                             shadowElevation = 8.dp,
                         ) {
                             Box(contentAlignment = Alignment.Center) {
-                                Icon(if (paused) Icons.Rounded.PlayArrow else Icons.Rounded.Pause, contentDescription = "일시정지", modifier = Modifier.size(25.dp))
+                                Icon(if (paused) Icons.Rounded.PlayArrow else Icons.Rounded.Pause, contentDescription = "일시정지", modifier = Modifier.size(23.dp))
                             }
                         }
-                        RoundIcon(Icons.Rounded.Check, onClick = onNext, size = 48.dp, contentDescription = "완료")
+                        RoundIcon(Icons.Rounded.Check, onClick = onNext, size = 44.dp, contentDescription = "완료")
                     }
                 }
+            }
+        }
+    }
+
+    // 세로: 카메라가 남는 세로 공간을 전부 차지하고 패널은 그 아래. 가로: 카메라 좌측, 패널 우측 고정폭.
+    Box(Modifier.fillMaxSize().background(c.bg)) {
+        if (isLandscape) {
+            Row(Modifier.fillMaxSize()) {
+                cameraArea(Modifier.weight(1f).fillMaxHeight())
+                panel(
+                    Modifier
+                        .width(320.dp)
+                        .fillMaxHeight()
+                        .verticalScroll(rememberScrollState())
+                        .statusBarsPadding()
+                        .navigationBarsPadding()
+                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                )
+            }
+        } else {
+            Column(Modifier.fillMaxSize()) {
+                cameraArea(Modifier.fillMaxWidth().weight(1f))
+                panel(
+                    Modifier
+                        .fillMaxWidth()
+                        .navigationBarsPadding()
+                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                )
             }
         }
     }
@@ -659,7 +703,8 @@ private fun LivePoseOverlay(sample: PoseSample, mirror: Boolean, tint: Color, mo
         if (!sample.detected || sample.imageWidth <= 0) return@Canvas
         val imgW = sample.imageWidth.toFloat()
         val imgH = sample.imageHeight.toFloat()
-        val scale = maxOf(size.width / imgW, size.height / imgH)
+        // PreviewView 가 FIT_CENTER 이므로 여기서도 min — max(FILL)를 쓰면 스켈레톤이 어긋난다
+        val scale = minOf(size.width / imgW, size.height / imgH)
         val drawW = imgW * scale
         val drawH = imgH * scale
         val dx = (size.width - drawW) / 2f

@@ -16,9 +16,17 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.Trex_kotlin">
+        <!--
+            configChanges: 회전 시 Activity 재생성을 막는다. 자세 세션은 카메라·코치·접지선 추정이
+            모두 화면 상태에 살아 있어, 재생성되면 진행 중이던 세트가 끊기고 접지선이 리셋된다.
+            (세션 진행도는 rememberSaveable 이라 살아남지만 세트 내부 상태는 아니다.)
+            Compose 는 LocalConfiguration 으로 방향 변화를 받으므로 UI 는 정상 갱신되고,
+            카메라 회전값·중력축은 PostureLive/PostureLabScreen 에서 configuration 을 키로 다시 계산한다.
+        -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden"
             android:theme="@style/Theme.Trex_kotlin">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
