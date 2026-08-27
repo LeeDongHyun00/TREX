@@ -78,7 +78,9 @@ import com.example.trex_kotlin.posture.AnalyzerStats
 import com.example.trex_kotlin.posture.CoachEvent
 import com.example.trex_kotlin.posture.FeatureAggregator
 import com.example.trex_kotlin.posture.GravityTracker
+import com.example.trex_kotlin.posture.CoverageReport
 import com.example.trex_kotlin.posture.FLOOR_RULES_ASSET
+import com.example.trex_kotlin.posture.FloorCoverage
 import com.example.trex_kotlin.posture.FloorFeatureExtractor
 import com.example.trex_kotlin.posture.InferencePhase
 import com.example.trex_kotlin.posture.InferencePolicy
@@ -88,6 +90,7 @@ import com.example.trex_kotlin.posture.POSE_CONNECTIONS
 import com.example.trex_kotlin.posture.PoseModel
 import com.example.trex_kotlin.posture.PoseSample
 import com.example.trex_kotlin.posture.PostureAnalyzer
+import com.example.trex_kotlin.posture.PostureRule
 import com.example.trex_kotlin.posture.PostureRuleSet
 import com.example.trex_kotlin.posture.SCREEN_UP
 import com.example.trex_kotlin.posture.SetLog
@@ -151,6 +154,12 @@ private const val SESSION_SAMPLE_INTERVAL_MS = 300L
 
 /** 이 프레임 수 미만이면 판정도 로그도 남기지 않는다 (랩의 MIN_FRAMES_FOR_VERDICT 과 동일) */
 private const val MIN_FRAMES_FOR_LOG = 8
+
+/** 커버리지 경고를 띄우기까지 연속으로 막혀야 하는 프레임 수 (300ms × 3 ≈ 1초) */
+private const val COVERAGE_STREAK = 3
+
+/** 촬영 안내 음성 최소 간격 — 자세를 고치는 데 시간이 걸리므로 자주 말하지 않는다 */
+private const val COVERAGE_SPEAK_GAP_MS = 8_000L
 
 @Composable
 fun PostureLiveSessionScreen(
@@ -226,6 +235,18 @@ fun PostureLiveSessionScreen(
     val floorRef = remember { booleanArrayOf(false) }
     floorRef[0] = isFloorExercise
     val floorExtractor = remember { FloorFeatureExtractor() }
+
+    // ---- 촬영 커버리지 (spec §25b): 규칙이 요구하는 부위가 화면에 없으면 '왜'와 '어떻게'를 안내한다.
+    //      판정 자체가 불가능한 상태이므로 자세 코칭보다 우선한다.
+    val floorRules = remember(ruleSet, aihubExercise, isFloorExercise) {
+        if (isFloorExercise) ruleSet?.rulesFor(aihubExercise, includeBeta = true).orEmpty() else emptyList()
+    }
+    val floorRulesRef = remember { arrayOfNulls<List<PostureRule>>(1) }
+    floorRulesRef[0] = floorRules
+    var coverage by remember { mutableStateOf(CoverageReport.OK) }
+    // 한 프레임 튀는 것으로 문구가 깜빡이지 않도록, 연속으로 막힐 때만 표시한다
+    val coverageStreak = remember { intArrayOf(0) }
+    val lastCoverageSpeakAt = remember { longArrayOf(0L) }
     val speech = remember { SpeechCoach(context) }
     DisposableEffect(speech) { onDispose { speech.shutdown() } }
     var muted by remember { mutableStateOf(false) }
@@ -391,6 +412,17 @@ fun PostureLiveSessionScreen(
                     } else {
                         s.features
                     }
+                    // 촬영 커버리지 — 규칙이 요구하는 부위가 화면에 있는가
+                    if (floorRef[0]) {
+                        val rep = FloorCoverage.analyze(s.normalizedXy, s.visibility, floorRulesRef[0].orEmpty(), frontRef[0])
+                        if (rep.ok) {
+                            coverageStreak[0] = 0
+                            if (!coverage.ok) coverage = CoverageReport.OK
+                        } else {
+                            coverageStreak[0]++
+                            if (coverageStreak[0] >= COVERAGE_STREAK) coverage = rep
+                        }
+                    }
                     // 재보정용 원본 샘플 — 바닥 종목은 규칙이 실제로 쓴 2D 피처를 그대로 남긴다
                     aggregator.add(features)
                     synchronized(recordedSamples) {
@@ -401,7 +433,13 @@ fun PostureLiveSessionScreen(
                     coachRef[0]?.let { coach ->
                         coach.onFrame(features)
                         val ev = coach.evaluate(now)
-                        if (ev != null) {
+                        // 커버리지가 막힌 동안에는 자세 지적 대신 촬영 안내를 말한다 (판정 근거가 없으므로)
+                        if (!coverage.ok) {
+                            if (now - lastCoverageSpeakAt[0] > COVERAGE_SPEAK_GAP_MS) {
+                                lastCoverageSpeakAt[0] = now
+                                speech.speak(coverage.message + ". " + coverage.fix)
+                            }
+                        } else if (ev != null) {
                             coachBanner = ev
                             speech.speak(ev.message)
                         }
@@ -504,21 +542,39 @@ fun PostureLiveSessionScreen(
                             color = c.text3, fontSize = 9.5.sp, fontWeight = FontWeight.Medium,
                         )
                     }
+                    // 커버리지가 막히면 판정 자체가 불가능하므로 자세 코칭보다 먼저 보여준다 (spec §25b)
                     AnimatedContent(
-                        targetState = coachBanner?.message
-                            ?: when {
-                                sample.detected -> "좋아요, 자세를 유지해 주세요"
-                                isFloorExercise -> "휴대폰을 바닥 높이에, 몸 옆에서 보이게 두면 평가를 시작해룡"
-                                else -> "전신과 주요 관절이 보이면 평가를 시작해룡"
-                            },
+                        targetState = when {
+                            !coverage.ok -> coverage.message
+                            coachBanner != null -> coachBanner!!.message
+                            sample.detected -> "좋아요, 자세를 유지해 주세요"
+                            isFloorExercise -> "휴대폰을 바닥 높이에, 몸 옆에서 보이게 두면 평가를 시작해룡"
+                            else -> "전신과 주요 관절이 보이면 평가를 시작해룡"
+                        },
                         transitionSpec = { fadeIn(tween(260)) togetherWith fadeOut(tween(180)) },
                         label = "coach-cue",
                     ) { msg ->
                         Text(
                             msg,
+                            color = if (!coverage.ok) c.warn else Color.Unspecified,
                             fontSize = 14.5.sp, fontWeight = FontWeight.SemiBold, lineHeight = 20.sp,
                             modifier = Modifier.padding(top = 5.dp),
                         )
+                    }
+                    // 해결책 — 카메라를 멀리 / 옮기기 / 각도 바꾸기
+                    if (!coverage.ok) {
+                        Text(
+                            coverage.fix,
+                            color = c.text2, fontSize = 12.sp, lineHeight = 17.sp,
+                            modifier = Modifier.padding(top = 4.dp),
+                        )
+                        if (coverage.blocked.isNotEmpty()) {
+                            Text(
+                                "판정 보류: " + coverage.blocked.keys.joinToString(", "),
+                                color = c.text3, fontSize = 10.sp,
+                                modifier = Modifier.padding(top = 3.dp),
+                            )
+                        }
                     }
 
                     Row(Modifier.padding(top = 14.dp), verticalAlignment = Alignment.Bottom) {

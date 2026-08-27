@@ -188,8 +188,22 @@ class FloorFeaturesTest {
         assertFalse(noHead.containsKey("head_ground"))
         assertTrue(noHead.containsKey("elbow_ang"))
 
-        // 코어(발목) 가림 → 프레임 전체 스킵 (기존 동작 유지)
-        val visCore = visAll.copyOf().also { it[27] = 0.1f }
+        // 발목 가림 → 발목이 필요한 피처만 유보. 프레임을 통째로 버리지 않는다 (§25b).
+        // 이전 구현은 발목을 코어로 뒀다가, 발목을 쓰지도 않는 푸시업 규칙의 프레임 85%를 버렸다.
+        val visAnkle = visAll.copyOf().also { it[27] = 0.1f; it[28] = 0.1f }
+        val noAnkle = FloorFeatureExtractor().compute(xyOf(pts), visAnkle, w, h)
+        assertTrue("발목이 없다고 프레임을 버리면 안 된다", noAnkle.isNotEmpty())
+        assertFalse(noAnkle.containsKey("trunk_ankle_ang"))   // 발목 필요 → 유보
+        assertFalse(noAnkle.containsKey("hip_dev_ankle"))
+        assertFalse(noAnkle.containsKey("knee_ang"))
+        assertFalse(noAnkle.containsKey("hip_ground"))        // 접지선 기준점이 발목
+        assertTrue(noAnkle.containsKey("head_trunk_ang"))     // 발목 불필요 → 유지
+        assertTrue(noAnkle.containsKey("wrist_shoulder_d"))
+        assertTrue(noAnkle.containsKey("shoulder_dev"))
+        assertTrue(noAnkle.containsKey("hip_ang"))
+
+        // 코어(어깨·골반)는 몸통 정규화의 전제 → 이때만 프레임 전체 스킵
+        val visCore = visAll.copyOf().also { it[23] = 0.1f; it[24] = 0.1f }
         assertTrue(FloorFeatureExtractor().compute(xyOf(pts), visCore, w, h).isEmpty())
     }
 

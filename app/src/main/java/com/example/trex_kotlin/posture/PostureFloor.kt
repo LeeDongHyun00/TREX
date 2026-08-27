@@ -67,8 +67,11 @@ class FloorFeatureExtractor {
      */
     fun compute(normalizedXy: FloatArray, vis: FloatArray?, imageWidth: Int, imageHeight: Int): Map<String, Float> {
         if (normalizedXy.size < MP_LANDMARK_COUNT * 2 || imageWidth <= 0 || imageHeight <= 0) return emptyMap()
+        // 코어 = 어깨·골반뿐. 이 둘은 몸통 길이(torso) 정규화와 신체 주축에 쓰여 **모든** 피처의 전제다.
+        // 발목은 코어에서 뺐다(§25b): 실측에서 발목이 프레임 밖으로 잘려 푸시업 세트의 85% 프레임이
+        // 버려졌는데, 그 세트의 규칙 3개는 발목을 쓰지도 않았다. 발목이 필요한 피처만 아래에서 개별 유보한다.
         if (vis != null) {
-            val core = intArrayOf(M.L_SH, M.R_SH, M.L_HIP, M.R_HIP, M.L_ANK, M.R_ANK)
+            val core = intArrayOf(M.L_SH, M.R_SH, M.L_HIP, M.R_HIP)
             if (core.any { vis[it] < 0.2f }) return emptyMap()
         }
         val w = imageWidth.toDouble()
@@ -94,32 +97,35 @@ class FloorFeatureExtractor {
         val vWrist = visOk(vis, M.L_WR, M.R_WR)
         val vElbow = visOk(vis, M.L_EL, M.R_EL)
         val vArmL = visOk(vis, M.L_SH, M.L_EL, M.L_WR)
+        val vAnkle = visOk(vis, M.L_ANK, M.R_ANK)
+        // 접지선은 발목을 기준점으로 쓰므로, 발목이 안 보이면 ground 계열 전체가 유보된다
+        val vGround = vAnkle
 
         val f = HashMap<String, Float>(24)
         fun put(name: String, v: Double, ok: Boolean = true) {
             if (ok && v.isFinite()) f[name] = v.toFloat()
         }
 
-        put("hip_dev_ankle", devUp(hp, sh, an))
+        put("hip_dev_ankle", devUp(hp, sh, an), vAnkle)
         put("hip_dev_knee", devUp(hp, sh, kn), vKnee)
-        put("knee_dev", devUp(kn, hp, an), vKnee)
+        put("knee_dev", devUp(kn, hp, an), vKnee && vAnkle)
         put("shoulder_dev", devUp(sh, hp, wr), vWrist)
         val ls = pt(M.L_SH); val le = pt(M.L_EL); val lw = pt(M.L_WR)
         put("elbow_ang", ang(ls, le, lw), vArmL)
-        put("knee_ang", ang(hp, kn, an), vKnee)
+        put("knee_ang", ang(hp, kn, an), vKnee && vAnkle)
         put("hip_ang", ang(sh, hp, kn), vKnee)
-        put("trunk_ankle_ang", ang(sh, hp, an))
+        put("trunk_ankle_ang", ang(sh, hp, an), vAnkle)
         put("head_trunk_ang", ang(nose, ear, hp), vHead)
         put("shoulder_arm_ang", ang(hp, sh, el), vElbow)
         put("hand_shoulder_off", devUp(wr, sh, hp), vWrist)
         put("wrist_shoulder_d", hypot(wr[0] - sh[0], wr[1] - sh[1]) / torso, vWrist)
         put("knee_shoulder_d", hypot(kn[0] - sh[0], kn[1] - sh[1]) / torso, vKnee)
-        put("ankle_hip_d", hypot(an[0] - hp[0], an[1] - hp[1]) / torso)
+        put("ankle_hip_d", hypot(an[0] - hp[0], an[1] - hp[1]) / torso, vAnkle)
         put("elbow_width", abs(devUp(le, ls, lw)), vArmL)
         val lk = pt(M.L_KNEE); val rk = pt(M.R_KNEE)
         val la = pt(M.L_ANK); val ra = pt(M.R_ANK)
         put("knee_gap2d", hypot(lk[0] - rk[0], lk[1] - rk[1]) / torso, vKnee)
-        put("ankle_gap2d", hypot(la[0] - ra[0], la[1] - ra[1]) / torso)
+        put("ankle_gap2d", hypot(la[0] - ra[0], la[1] - ra[1]) / torso, vAnkle)
         val rs = pt(M.R_SH)
         put("shoulder_asym2d", devUp(ls, rs, hp))
 
@@ -133,11 +139,11 @@ class FloorFeatureExtractor {
         histHip.add(hp); histAnk.add(an); histWr.add(wr)
         val groundA = median2(if (moveHipAnkle <= moveWristAnkle) histHip else histWr)
         val groundB = median2(histAnk)
-        put("shoulder_ground", devUp(sh, groundA, groundB))
-        put("hip_ground", devUp(hp, groundA, groundB))
-        put("knee_ground", devUp(kn, groundA, groundB), vKnee)
-        put("ankle_ground", devUp(an, groundA, groundB))
-        put("head_ground", devUp(ear, groundA, groundB), vHead)
+        put("shoulder_ground", devUp(sh, groundA, groundB), vGround)
+        put("hip_ground", devUp(hp, groundA, groundB), vGround)
+        put("knee_ground", devUp(kn, groundA, groundB), vKnee && vGround)
+        put("ankle_ground", devUp(an, groundA, groundB), vGround)
+        put("head_ground", devUp(ear, groundA, groundB), vHead && vGround)
         return f
     }
 
