@@ -1,6 +1,7 @@
 package com.example.trex_kotlin.posture
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import kotlin.math.abs
@@ -155,7 +156,44 @@ class FloorFeaturesTest {
         assertEquals(0, ex.frameCount)
     }
 
-    // ---------- 4) 바닥 규칙 자산과 코칭 문구 ----------
+    // ---------- 4) 가림 시 피처 단위 유보 (spec §25a) ----------
+
+    @Test
+    fun occludedJointsSuspendOnlyTheirFeatures() {
+        val w = 1000
+        val h = 800
+        val pts = plankPoints(440.0)
+        // 전 관절 가시 → 모든 피처 존재
+        val visAll = FloatArray(MP_LANDMARK_COUNT) { 0.9f }
+        val full = FloorFeatureExtractor().compute(xyOf(pts), visAll, w, h)
+        assertTrue(full.containsKey("elbow_ang"))
+        assertTrue(full.containsKey("head_trunk_ang"))
+        assertTrue(full.containsKey("knee_ang"))
+
+        // 왼팔꿈치·손목 가림(몸통 아래) → 팔 피처만 빠지고 머리·무릎·코어 피처는 유지
+        val visArm = visAll.copyOf().also { it[13] = 0.1f; it[15] = 0.1f }
+        val noArm = FloorFeatureExtractor().compute(xyOf(pts), visArm, w, h)
+        assertFalse("elbow_ang 은 유보돼야 함", noArm.containsKey("elbow_ang"))
+        assertFalse(noArm.containsKey("elbow_width"))
+        assertFalse(noArm.containsKey("wrist_shoulder_d"))
+        assertTrue(noArm.containsKey("head_trunk_ang"))
+        assertTrue(noArm.containsKey("knee_ang"))
+        assertTrue(noArm.containsKey("hip_dev_ankle"))
+        assertTrue(noArm.containsKey("trunk_ankle_ang"))
+
+        // 머리 가림 → head 피처만 유보
+        val visHead = visAll.copyOf().also { it[0] = 0.1f }
+        val noHead = FloorFeatureExtractor().compute(xyOf(pts), visHead, w, h)
+        assertFalse(noHead.containsKey("head_trunk_ang"))
+        assertFalse(noHead.containsKey("head_ground"))
+        assertTrue(noHead.containsKey("elbow_ang"))
+
+        // 코어(발목) 가림 → 프레임 전체 스킵 (기존 동작 유지)
+        val visCore = visAll.copyOf().also { it[27] = 0.1f }
+        assertTrue(FloorFeatureExtractor().compute(xyOf(pts), visCore, w, h).isEmpty())
+    }
+
+    // ---------- 5) 바닥 규칙 자산과 코칭 문구 ----------
 
     @Test
     fun floorCueCatalogCoversExportedConditions() {

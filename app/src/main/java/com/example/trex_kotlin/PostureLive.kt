@@ -77,6 +77,8 @@ import com.example.trex_kotlin.posture.AnalyzerStats
 import com.example.trex_kotlin.posture.CoachEvent
 import com.example.trex_kotlin.posture.FeatureAggregator
 import com.example.trex_kotlin.posture.GravityTracker
+import com.example.trex_kotlin.posture.FLOOR_RULES_ASSET
+import com.example.trex_kotlin.posture.FloorFeatureExtractor
 import com.example.trex_kotlin.posture.InferencePhase
 import com.example.trex_kotlin.posture.InferencePolicy
 import com.example.trex_kotlin.posture.LiveCoach
@@ -125,6 +127,16 @@ val postureExerciseMap: Map<String, String> = mapOf(
     "스탠딩 사이드 크런치" to "스탠딩 사이드 크런치",
     "스탠딩 니업" to "스탠딩 니업",
     "행잉 레그 레이즈" to "행잉 레그 레이즈",
+    // 바닥 종목 (rules_floor_v0.1 — 2D 평면 경로, 전부 beta·임계값 미보정, spec §25/§25a).
+    // 바이시클 크런치는 MP 충실도 게이트 후 남은 규칙이 없어 제외.
+    "푸쉬업" to "푸시업",
+    "니 푸쉬업" to "니푸쉬업",
+    "플랭크" to "플랭크",
+    "크런치" to "크런치",
+    "레그 레이즈" to "라잉 레그 레이즈",
+    "힙 쓰러스트" to "힙쓰러스트",
+    "시저 크로스" to "시저크로스",
+    "Y 레이즈" to "Y - Exercise",
 )
 
 fun Workout.postureSupported(): Boolean = postureExerciseMap.containsKey(name)
@@ -183,11 +195,26 @@ fun PostureLiveSessionScreen(
         return
     }
 
-    // ---- 실 엔진 파이프라인
+    // ---- 실 엔진 파이프라인 (서서 하는 종목 + 바닥 종목 규칙 병합 — PostureLabScreen 과 동일 패턴)
     var ruleSet by remember { mutableStateOf<PostureRuleSet?>(null) }
+    var floorExercises by remember { mutableStateOf<Set<String>>(emptySet()) }
     LaunchedEffect(Unit) {
-        runCatching { PostureRuleSet.load(context) }.onSuccess { ruleSet = it }
+        runCatching {
+            val standing = PostureRuleSet.load(context)
+            try {
+                val floor = PostureRuleSet.load(context, FLOOR_RULES_ASSET)
+                floorExercises = floor.exercises.toSet()
+                PostureRuleSet("${standing.version}+${floor.version}", standing.generated, standing.rules + floor.rules)
+            } catch (_: Throwable) {
+                standing
+            }
+        }.onSuccess { ruleSet = it }
     }
+    // 바닥 종목은 중력/3D 피처 대신 2D 평면 피처를 쓴다 (spec §25). 분석 스레드에서 매 프레임 읽으므로 ref 로 전달.
+    val isFloorExercise = aihubExercise in floorExercises
+    val floorRef = remember { booleanArrayOf(false) }
+    floorRef[0] = isFloorExercise
+    val floorExtractor = remember { FloorFeatureExtractor() }
     val speech = remember { SpeechCoach(context) }
     DisposableEffect(speech) { onDispose { speech.shutdown() } }
     var muted by remember { mutableStateOf(false) }
@@ -230,7 +257,16 @@ fun PostureLiveSessionScreen(
     LaunchedEffect(ruleSet, workout.id) {
         val rs = ruleSet ?: return@LaunchedEffect
         coachRef[0] = LiveCoach(rs, aihubExercise)
-        if (!muted) speech.speak("${workout.name} 자세 평가를 시작합니다. 전신이 화면에 들어오게 서 주세요")
+        floorExtractor.reset()   // 접지선 추정은 세트(운동) 단위 상태
+        if (!muted) {
+            speech.speak(
+                if (aihubExercise in floorExercises) {
+                    "${workout.name} 자세 평가를 시작합니다. 휴대폰을 바닥 높이에, 몸 옆에서 보이게 두세요"
+                } else {
+                    "${workout.name} 자세 평가를 시작합니다. 전신이 화면에 들어오게 서 주세요"
+                },
+            )
+        }
     }
 
     val previewView = remember {
@@ -271,8 +307,14 @@ fun PostureLiveSessionScreen(
                 stats = analyzer.stats()
                 if (s.detected) everDetected = true
                 if (s.detected && !pausedRef[0]) {
+                    // 바닥 종목: 중력 기반 3D 피처 대신 2D 평면 피처 (가림 시 피처 단위 유보 포함)
+                    val features = if (floorRef[0]) {
+                        floorExtractor.compute(s.normalizedXy, s.visibility, s.imageWidth, s.imageHeight)
+                    } else {
+                        s.features
+                    }
                     coachRef[0]?.let { coach ->
-                        coach.onFrame(s.features)
+                        coach.onFrame(features)
                         val ev = coach.evaluate(now)
                         if (ev != null) {
                             coachBanner = ev
@@ -371,7 +413,11 @@ fun PostureLiveSessionScreen(
                     Text("바로 보고, 바로 고치고", color = c.primaryText, fontSize = 10.5.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 0.8.sp)
                     AnimatedContent(
                         targetState = coachBanner?.message
-                            ?: if (sample.detected) "좋아요, 자세를 유지해 주세요" else "전신과 주요 관절이 보이면 평가를 시작해룡",
+                            ?: when {
+                                sample.detected -> "좋아요, 자세를 유지해 주세요"
+                                isFloorExercise -> "휴대폰을 바닥 높이에, 몸 옆에서 보이게 두면 평가를 시작해룡"
+                                else -> "전신과 주요 관절이 보이면 평가를 시작해룡"
+                            },
                         transitionSpec = { fadeIn(tween(260)) togetherWith fadeOut(tween(180)) },
                         label = "coach-cue",
                     ) { msg ->

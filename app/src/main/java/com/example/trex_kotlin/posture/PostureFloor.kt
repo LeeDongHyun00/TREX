@@ -21,6 +21,17 @@ import kotlin.math.max
  */
 const val FLOOR_RULES_ASSET = "posture/rules_floor_v0.json"
 
+/**
+ * 피처별 가시성 컷 (spec §25a): 바닥 자세의 1차 실패는 몸통에 가려진 팔꿈치·손목·무릎이
+ * '검출은 되는데 좌표가 틀리는' 것이다(관절 오차 0.17~0.22, 전체 3.0×). 요구 관절의 가시성이
+ * 이 값 미만이면 그 피처만 프레임에서 유보한다 → 세트에서 측정 프레임이 부족한 규칙은 자연히
+ * ABSTAIN 이 된다. 값은 휴리스틱(MP visibility 는 보정된 확률이 아님) — 세트 로그로 조정 대상.
+ */
+private const val FEATURE_VIS_CUT = 0.35f
+
+private fun visOk(vis: FloatArray?, vararg ids: Int): Boolean =
+    vis == null || ids.all { vis[it] >= FEATURE_VIS_CUT }   // null = 연구 픽스처 경로(게이트 없음)
+
 /** MediaPipe 33점 인덱스 (바닥 피처에 쓰는 것만). */
 private object M {
     const val NOSE = 0
@@ -77,30 +88,37 @@ class FloorFeatureExtractor {
         val nose = pt(M.NOSE)
         val torso = max(hypot(sh[0] - hp[0], sh[1] - hp[1]), 1e-6)
 
+        // 가림 게이트: 코어(어깨·골반·발목)는 위에서 프레임 전체를 거르고, 그 외 관절은 피처 단위로 유보
+        val vHead = visOk(vis, M.NOSE, M.L_EAR, M.R_EAR)
+        val vKnee = visOk(vis, M.L_KNEE, M.R_KNEE)
+        val vWrist = visOk(vis, M.L_WR, M.R_WR)
+        val vElbow = visOk(vis, M.L_EL, M.R_EL)
+        val vArmL = visOk(vis, M.L_SH, M.L_EL, M.L_WR)
+
         val f = HashMap<String, Float>(24)
-        fun put(name: String, v: Double) {
-            if (v.isFinite()) f[name] = v.toFloat()
+        fun put(name: String, v: Double, ok: Boolean = true) {
+            if (ok && v.isFinite()) f[name] = v.toFloat()
         }
 
         put("hip_dev_ankle", devUp(hp, sh, an))
-        put("hip_dev_knee", devUp(hp, sh, kn))
-        put("knee_dev", devUp(kn, hp, an))
-        put("shoulder_dev", devUp(sh, hp, wr))
+        put("hip_dev_knee", devUp(hp, sh, kn), vKnee)
+        put("knee_dev", devUp(kn, hp, an), vKnee)
+        put("shoulder_dev", devUp(sh, hp, wr), vWrist)
         val ls = pt(M.L_SH); val le = pt(M.L_EL); val lw = pt(M.L_WR)
-        put("elbow_ang", ang(ls, le, lw))
-        put("knee_ang", ang(hp, kn, an))
-        put("hip_ang", ang(sh, hp, kn))
+        put("elbow_ang", ang(ls, le, lw), vArmL)
+        put("knee_ang", ang(hp, kn, an), vKnee)
+        put("hip_ang", ang(sh, hp, kn), vKnee)
         put("trunk_ankle_ang", ang(sh, hp, an))
-        put("head_trunk_ang", ang(nose, ear, hp))
-        put("shoulder_arm_ang", ang(hp, sh, el))
-        put("hand_shoulder_off", devUp(wr, sh, hp))
-        put("wrist_shoulder_d", hypot(wr[0] - sh[0], wr[1] - sh[1]) / torso)
-        put("knee_shoulder_d", hypot(kn[0] - sh[0], kn[1] - sh[1]) / torso)
+        put("head_trunk_ang", ang(nose, ear, hp), vHead)
+        put("shoulder_arm_ang", ang(hp, sh, el), vElbow)
+        put("hand_shoulder_off", devUp(wr, sh, hp), vWrist)
+        put("wrist_shoulder_d", hypot(wr[0] - sh[0], wr[1] - sh[1]) / torso, vWrist)
+        put("knee_shoulder_d", hypot(kn[0] - sh[0], kn[1] - sh[1]) / torso, vKnee)
         put("ankle_hip_d", hypot(an[0] - hp[0], an[1] - hp[1]) / torso)
-        put("elbow_width", abs(devUp(le, ls, lw)))
+        put("elbow_width", abs(devUp(le, ls, lw)), vArmL)
         val lk = pt(M.L_KNEE); val rk = pt(M.R_KNEE)
         val la = pt(M.L_ANK); val ra = pt(M.R_ANK)
-        put("knee_gap2d", hypot(lk[0] - rk[0], lk[1] - rk[1]) / torso)
+        put("knee_gap2d", hypot(lk[0] - rk[0], lk[1] - rk[1]) / torso, vKnee)
         put("ankle_gap2d", hypot(la[0] - ra[0], la[1] - ra[1]) / torso)
         val rs = pt(M.R_SH)
         put("shoulder_asym2d", devUp(ls, rs, hp))
@@ -117,9 +135,9 @@ class FloorFeatureExtractor {
         val groundB = median2(histAnk)
         put("shoulder_ground", devUp(sh, groundA, groundB))
         put("hip_ground", devUp(hp, groundA, groundB))
-        put("knee_ground", devUp(kn, groundA, groundB))
+        put("knee_ground", devUp(kn, groundA, groundB), vKnee)
         put("ankle_ground", devUp(an, groundA, groundB))
-        put("head_ground", devUp(ear, groundA, groundB))
+        put("head_ground", devUp(ear, groundA, groundB), vHead)
         return f
     }
 

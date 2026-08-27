@@ -784,7 +784,8 @@ private data class WorkoutTemplate(val name: String, val reps: String, val durat
 
 /**
  * 운동 카탈로그 — posture 플래그는 규칙 엔진이 실제로 지원하는 종목(postureExerciseMap)에만 켠다.
- * 지원 종목은 rules_mp_v0(ship/beta) 기준이다.
+ * 지원 종목은 rules_mp_v0(서서 하는 종목) + rules_floor_v0.1(바닥 종목, 전부 beta) 기준이다.
+ * 바이시클 크런치는 MP 충실도 게이트(spec §25a) 후 남은 규칙이 없어 posture=false.
  */
 private val workoutCatalog = mapOf(
     "하체" to listOf(
@@ -796,6 +797,7 @@ private val workoutCatalog = mapOf(
         WorkoutTemplate("크로스 런지", "10회 × 3세트", "9분", "하체", true),
         WorkoutTemplate("바벨 데드리프트", "10회 × 3세트", "10분", "하체", true),
         WorkoutTemplate("굿모닝", "12회 × 3세트", "8분", "하체", true),
+        WorkoutTemplate("힙 쓰러스트", "12회 × 3세트", "8분", "하체", true),
         WorkoutTemplate("불가리안 스플릿 스쿼트", "10회 × 3세트", "9분", "하체", false),
         WorkoutTemplate("글루트 브릿지", "12회 × 3세트", "7분", "하체", false),
         WorkoutTemplate("월 싯", "45초 × 3세트", "6분", "하체", false),
@@ -810,13 +812,15 @@ private val workoutCatalog = mapOf(
         WorkoutTemplate("사이드 레터럴 레이즈", "12회 × 3세트", "7분", "상체", true),
         WorkoutTemplate("프런트 레이즈", "12회 × 3세트", "7분", "상체", true),
         WorkoutTemplate("업라이트로우", "12회 × 3세트", "7분", "상체", true),
+        WorkoutTemplate("푸쉬업", "12회 × 3세트", "7분", "상체", true),
+        WorkoutTemplate("니 푸쉬업", "10회 × 3세트", "7분", "상체", true),
+        WorkoutTemplate("Y 레이즈", "12회 × 3세트", "6분", "상체", true),
         WorkoutTemplate("인클라인 푸쉬업", "12회 × 3세트", "7분", "상체", false),
-        WorkoutTemplate("니 푸쉬업", "10회 × 3세트", "7분", "상체", false),
         WorkoutTemplate("벽 푸쉬업", "12회 × 3세트", "6분", "상체", false),
         WorkoutTemplate("밴드 로우", "12회 × 3세트", "8분", "상체", false),
     ),
     "코어" to listOf(
-        WorkoutTemplate("플랭크", "45초 × 3세트", "6분", "코어", false),
+        WorkoutTemplate("플랭크", "45초 × 3세트", "6분", "코어", true),
         WorkoutTemplate("사이드 플랭크", "30초 × 3세트", "6분", "코어", false),
         WorkoutTemplate("플랭크 숄더탭", "16회 × 3세트", "7분", "코어", false),
         WorkoutTemplate("버드독", "10회 × 3세트", "7분", "코어", false),
@@ -828,10 +832,11 @@ private val workoutCatalog = mapOf(
         WorkoutTemplate("스탠딩 사이드 크런치", "12회 × 3세트", "7분", "복근", true),
         WorkoutTemplate("스탠딩 니업", "12회 × 3세트", "7분", "복근", true),
         WorkoutTemplate("행잉 레그 레이즈", "10회 × 3세트", "8분", "복근", true),
-        WorkoutTemplate("크런치", "15회 × 3세트", "6분", "복근", false),
+        WorkoutTemplate("크런치", "15회 × 3세트", "6분", "복근", true),
         WorkoutTemplate("리버스 크런치", "12회 × 3세트", "6분", "복근", false),
         WorkoutTemplate("바이시클 크런치", "20회 × 3세트", "7분", "복근", false),
-        WorkoutTemplate("레그 레이즈", "12회 × 3세트", "7분", "복근", false),
+        WorkoutTemplate("레그 레이즈", "12회 × 3세트", "7분", "복근", true),
+        WorkoutTemplate("시저 크로스", "20회 × 3세트", "7분", "복근", true),
         WorkoutTemplate("러시안 트위스트", "20회 × 3세트", "7분", "복근", false),
     ),
     "유산소" to listOf(
