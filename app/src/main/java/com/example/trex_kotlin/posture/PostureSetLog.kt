@@ -216,6 +216,24 @@ object SetLogJson {
 }
 
 /**
+ * 설치 단위 익명 수행자 ID — 재보정에서 **GroupKFold 그룹**으로 쓴다.
+ * 같은 사람의 세트가 학습/검증에 갈라져 들어가면 성능이 부풀려지므로, 사람 구분자가 반드시 필요하다.
+ * 기기·계정과 무관한 난수라 개인 식별 정보가 아니다.
+ */
+object SubjectId {
+    private const val PREFS = "trex_posture"
+    private const val KEY = "subject_id"
+
+    fun get(context: Context): String {
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        prefs.getString(KEY, null)?.let { return it }
+        val id = "s-" + UUID.randomUUID().toString().substring(0, 8)
+        prefs.edit().putString(KEY, id).apply()
+        return id
+    }
+}
+
+/**
  * 세트 로그 저장소: `<externalFilesDir>/posture_logs/sets-yyyyMMdd.jsonl` 에 한 줄씩 추가.
  * 외부 앱 전용 저장소라 권한이 필요 없고, `adb pull` 또는 공유 시트로 꺼내 재보정 도구에 넣는다.
  */

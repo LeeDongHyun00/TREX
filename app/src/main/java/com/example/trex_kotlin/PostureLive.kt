@@ -55,6 +55,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -89,10 +90,14 @@ import com.example.trex_kotlin.posture.PoseSample
 import com.example.trex_kotlin.posture.PostureAnalyzer
 import com.example.trex_kotlin.posture.PostureRuleSet
 import com.example.trex_kotlin.posture.SCREEN_UP
+import com.example.trex_kotlin.posture.SetLog
+import com.example.trex_kotlin.posture.SetLogStore
 import com.example.trex_kotlin.posture.SpeechCoach
+import com.example.trex_kotlin.posture.SubjectId
 import com.example.trex_kotlin.posture.ThermalMonitor
 import com.example.trex_kotlin.posture.Verdict
 import com.example.trex_kotlin.posture.gravityUpInWorld
+import com.example.trex_kotlin.posture.withFeatures
 import java.util.concurrent.Executors
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
@@ -140,6 +145,12 @@ val postureExerciseMap: Map<String, String> = mapOf(
 )
 
 fun Workout.postureSupported(): Boolean = postureExerciseMap.containsKey(name)
+
+/** 추론·샘플 간격 (랩과 동일 — 로그의 프레임 간격이 재보정 창 정의와 맞아야 한다) */
+private const val SESSION_SAMPLE_INTERVAL_MS = 300L
+
+/** 이 프레임 수 미만이면 판정도 로그도 남기지 않는다 (랩의 MIN_FRAMES_FOR_VERDICT 과 동일) */
+private const val MIN_FRAMES_FOR_LOG = 8
 
 @Composable
 fun PostureLiveSessionScreen(
@@ -223,7 +234,7 @@ fun PostureLiveSessionScreen(
     val analyzer = remember { PostureAnalyzer(context, PoseModel.FULL, preferGpu = true) }
     DisposableEffect(analyzer) { onDispose { analyzer.close() } }
     val executor = remember { Executors.newSingleThreadExecutor() }
-    val policy = remember { InferencePolicy(sampleIntervalMs = 300L) }
+    val policy = remember { InferencePolicy(sampleIntervalMs = SESSION_SAMPLE_INTERVAL_MS) }
     val lastInferAt = remember { longArrayOf(0L) }
     val thermal = remember { ThermalMonitor(context) }
     val thermalRef = remember { intArrayOf(InferencePolicy.THERMAL_NONE) }
@@ -254,6 +265,73 @@ fun PostureLiveSessionScreen(
     var coachBanner by remember { mutableStateOf<CoachEvent?>(null) }
     var scorePct by remember { mutableStateOf<Int?>(null) }
     val coachRef = remember { arrayOfNulls<LiveCoach>(1) }
+
+    // ---- 세트 로그 (재보정 데이터, spec §14): 실제 세션에서도 남긴다.
+    //      바닥 종목은 이 화면으로만 돌아가므로, 여기서 안 남기면 바닥 임계값 재보정 데이터가 아예 생기지 않는다.
+    val recordedSamples = remember { ArrayList<PoseSample>() }
+    val recordedTimesMs = remember { ArrayList<Long>() }
+    val aggregator = remember { FeatureAggregator() }
+    val logStore = remember { SetLogStore(context) }
+    val subjectId = remember { SubjectId.get(context) }
+    var savedSets by remember { mutableIntStateOf(0) }
+    var recordedFrames by remember { mutableIntStateOf(0) }
+    LaunchedEffect(Unit) { savedSets = runCatching { logStore.totalSets() }.getOrDefault(0) }
+
+    // 세트 경계에서 호출된다. 종목/뷰는 **세트 시작 시점 값**을 인자로 받는다 —
+    // 이 화면은 다음 운동으로 넘어가도 재생성되지 않아(AnimatedContent 의 같은 route), 지금 값을 쓰면 종목이 어긋난다.
+    val saveLogRef = remember { arrayOfNulls<(String, String, Boolean) -> Unit>(1) }
+    saveLogRef[0] = save@{ ex: String, label: String, floor: Boolean ->
+        val rs = ruleSet ?: return@save
+        val samples: List<PoseSample>
+        val times: List<Long>
+        synchronized(recordedSamples) {
+            samples = ArrayList(recordedSamples)
+            times = ArrayList(recordedTimesMs)
+            recordedSamples.clear()
+            recordedTimesMs.clear()
+        }
+        val frames = aggregator.frameCount
+        val results = if (frames >= MIN_FRAMES_FOR_LOG) {
+            runCatching { rs.evaluate(ex, aggregator, true, MIN_FRAMES_FOR_LOG, null) }.getOrDefault(emptyList())
+        } else {
+            emptyList()
+        }
+        aggregator.reset()
+        if (samples.size >= MIN_FRAMES_FOR_LOG) {
+            val t0 = times.firstOrNull() ?: 0L
+            val log = SetLog.build(
+                exercise = ex,
+                samples = samples,
+                results = results,
+                rulesVersion = rs.version,
+                model = PoseModel.FULL.label,
+                delegate = stats?.delegate ?: "-",
+                frontCamera = useFrontCamera,
+                sampleIntervalMs = SESSION_SAMPLE_INTERVAL_MS,
+                sampleTimesMs = times.map { it - t0 },
+                subjectId = subjectId,
+                note = "session:$label" + if (floor) " floor" else "",
+            )
+            // 분석 executor 는 화면 종료 시 shutdown 되므로 순서에 의존하지 않도록 별도 스레드에서 기록한다.
+            Thread {
+                runCatching {
+                    logStore.append(log)
+                    savedSets = logStore.totalSets()
+                }
+            }.start()
+        }
+    }
+    // 세트(운동) 경계: 키가 바뀌면 이전 운동의 값으로 저장된다. 화면을 떠날 때도 같은 경로로 저장.
+    DisposableEffect(workout.id) {
+        val ex = aihubExercise
+        val label = workout.name
+        val floor = isFloorExercise
+        recordedFrames = 0
+        onDispose {
+            saveLogRef[0]?.invoke(ex, label, floor)
+            recordedFrames = 0
+        }
+    }
     LaunchedEffect(ruleSet, workout.id) {
         val rs = ruleSet ?: return@LaunchedEffect
         coachRef[0] = LiveCoach(rs, aihubExercise)
@@ -312,6 +390,13 @@ fun PostureLiveSessionScreen(
                         floorExtractor.compute(s.normalizedXy, s.visibility, s.imageWidth, s.imageHeight)
                     } else {
                         s.features
+                    }
+                    // 재보정용 원본 샘플 — 바닥 종목은 규칙이 실제로 쓴 2D 피처를 그대로 남긴다
+                    aggregator.add(features)
+                    synchronized(recordedSamples) {
+                        recordedSamples.add(if (floorRef[0]) s.withFeatures(features) else s)
+                        recordedTimesMs.add(now)
+                        recordedFrames = recordedSamples.size
                     }
                     coachRef[0]?.let { coach ->
                         coach.onFrame(features)
@@ -410,7 +495,15 @@ fun PostureLiveSessionScreen(
                 shadowElevation = 16.dp,
             ) {
                 Column(Modifier.padding(18.dp)) {
-                    Text("바로 보고, 바로 고치고", color = c.primaryText, fontSize = 10.5.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 0.8.sp)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("바로 보고, 바로 고치고", color = c.primaryText, fontSize = 10.5.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 0.8.sp)
+                        Spacer(Modifier.weight(1f))
+                        // 재보정 로그 상태 — 기록 중인지, 몇 세트 쌓였는지 (spec §14)
+                        Text(
+                            "REC $recordedFrames · 누적 ${savedSets}세트",
+                            color = c.text3, fontSize = 9.5.sp, fontWeight = FontWeight.Medium,
+                        )
+                    }
                     AnimatedContent(
                         targetState = coachBanner?.message
                             ?: when {
