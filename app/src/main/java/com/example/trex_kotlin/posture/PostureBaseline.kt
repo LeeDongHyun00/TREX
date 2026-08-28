@@ -79,6 +79,19 @@ class BaselineCollector(
             return if (n % 2 == 1) s[n / 2] else (s[n / 2 - 1] + s[n / 2]) / 2f
         }
 
+        /**
+         * **측정된** 프레임 수 = 대상 피처들이 실제로 값을 낸 프레임의 최댓값.
+         *
+         * `FeatureAggregator.frameCount` 는 피처가 비어 있어도 증가하므로(관절이 안 보이면 빈 맵이 들어온다),
+         * 그 값을 사용자에게 보여주면 "120 프레임 찍었는데 값이 하나도 없음" 이 된다 — 실기기 로그에서
+         * 9세트 중 5세트가 이렇게 낭비됐다(DEVICE_SET_VARIANCE). 촬영 중에는 이 값을 보여줘야 한다.
+         */
+        fun measurableFrames(agg: FeatureAggregator, features: List<String>): Int =
+            features.maxOfOrNull { f ->
+                val i = f.lastIndexOf("__")
+                if (i <= 0) 0 else agg.count(f.substring(0, i))
+            } ?: 0
+
         /** 집계기에서 feature(base__stat) 들의 세트 통계값을 뽑는다. 프레임이 minFrames 미만이면 그 피처는 빠진다. */
         fun setValues(agg: FeatureAggregator, features: List<String>, minFrames: Int = 8): Map<String, Float> {
             val out = LinkedHashMap<String, Float>()

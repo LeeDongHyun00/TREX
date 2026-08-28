@@ -297,6 +297,8 @@ private fun BaselineCaptureView(
     var phase by remember { mutableStateOf(BaselinePhase.IDLE) }
     var sample by remember { mutableStateOf(PoseSample.empty()) }
     var sampledFrames by remember { mutableIntStateOf(0) }
+    // 실제로 피처 값이 나온 프레임 수 — 관절이 가려지면 sampledFrames 만 오르고 이 값은 그대로다
+    var measurableFrames by remember { mutableIntStateOf(0) }
     var completedSets by remember { mutableIntStateOf(0) }
     var lastSetValues by remember { mutableStateOf<Map<String, Float>>(emptyMap()) }
     var lastWarnings by remember { mutableStateOf<List<String>>(emptyList()) }
@@ -378,6 +380,8 @@ private fun BaselineCaptureView(
                     }
                     aggregator.add(s2.features)
                     sampledFrames = aggregator.frameCount
+                    // 관절이 안 보이면 피처가 빈 맵이라 frameCount 만 오른다 — 실제로 값이 나온 프레임을 따로 센다
+                    measurableFrames = BaselineCollector.measurableFrames(aggregator, features)
                     synchronized(recordedSamples) {
                         recordedSamples.add(s2)
                         recordedTimesMs.add(now)
@@ -401,6 +405,7 @@ private fun BaselineCaptureView(
         aggregator.reset()
         floorExtractor.reset()   // 바닥 접지선 추정은 세트 단위 상태
         sampledFrames = 0
+        measurableFrames = 0
         synchronized(recordedSamples) { recordedSamples.clear(); recordedTimesMs.clear() }
     }
 
@@ -530,7 +535,8 @@ private fun BaselineCaptureView(
                         enabled = granted && features.isNotEmpty(),
                     )
                     BaselinePhase.RECORDING -> TrexButton(
-                        text = "세트 종료 ($sampledFrames 프레임)",
+                        // 측정된 프레임을 보여준다 — 총 프레임만 보면 '많이 찍혔는데 값은 0' 을 알 수 없다
+                        text = "세트 종료 (측정 $measurableFrames/$sampledFrames)",
                         icon = Icons.Rounded.Stop,
                         onClick = {
                             val values = BaselineCollector.setValues(aggregator, features, BASELINE_MIN_FRAMES)
@@ -538,7 +544,10 @@ private fun BaselineCaptureView(
                             // 느슨한 가드: 절대 임계값으로 '위반'이면 정자세였는지 확인만 요청 (강제 거부 X)
                             val absolute = ruleSet.evaluate(exercise, aggregator, includeBeta = true, minFrames = BASELINE_MIN_FRAMES, baseline = null)
                             val warns = ArrayList<String>()
-                            if (sampledFrames < BASELINE_MIN_FRAMES) warns += "프레임 부족($sampledFrames) — 3~4렙을 온전히 기록해 주세요"
+                            if (measurableFrames < BASELINE_MIN_FRAMES) {
+                                warns += "측정된 프레임 부족($measurableFrames/$sampledFrames) — 관절이 가려졌습니다. " +
+                                    "전신(어깨·골반·발목)이 프레임 안에 들어오게 폰 위치를 조정하고 다시 찍어 주세요"
+                            }
                             val missing = features.filter { it !in values }
                             if (missing.isNotEmpty()) warns += "값 계산 불가: " + missing.joinToString(", ") { shortFeature(it) } + " (관절 가림/프레이밍 확인)"
                             absolute.filter { r -> r.rule.supportsBaseline && r.verdict == Verdict.VIOLATION }
