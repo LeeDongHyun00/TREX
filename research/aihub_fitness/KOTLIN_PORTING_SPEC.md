@@ -440,6 +440,8 @@ AIHub 조건 132개를 해부학적 자유도로 분류해, 완벽한 GT 3D 상�
 
 **적용 (2026-08-27)**: ①③ → `export_floor_rules.py` 에 충실도 게이트(`RHO_CUT=0.35`, `floor_stat_fidelity_all.csv` 입력)로 구현, 사후 강등이 아니라 **후보 제한 후 재적합** — 죽은 5규칙 중 2개가 충실 피처로 구제되고 3개 탈락, v0.1 = 14규칙/8종목(바이시클 크런치 0). ② → `PostureFloor.kt` 피처별 가시성 게이트(`FEATURE_VIS_CUT=0.35`, 휴리스틱): 가려진 관절의 피처만 프레임 단위 유보 → 그 규칙은 측정 프레임 부족으로 자연 ABSTAIN. 세션 연결: `PostureLive` 가 rules_mp_v0 + rules_floor_v0.1 을 병합하고 바닥 종목이면 2D 평면 피처로 분기, `postureExerciseMap` 에 바닥 8종목 추가(운동 카탈로그에 푸쉬업·힙 쓰러스트·시저 크로스·Y 레이즈 신설, 크런치·레그 레이즈·니 푸쉬업·플랭크 posture=true). 시작 안내가 바닥이면 "휴대폰을 바닥 높이, 몸 옆에" 로 분기.
 
+**정상-앵커 재배치 (v0.2, 2026-08-28, [FLOOR_ANCHOR_VALIDATION.md](FLOOR_ANCHOR_VALIDATION.md))**: 임계값이 채택 뷰 투영에 묶인 문제(플래그율 뷰 간 33%p 요동)의 배포 가능한 해법. 각 규칙에 `normal_median`(채택 뷰 정상 클립 중앙값)·`normal_fpr`(진단용)을 싣고 `personal_baseline{eligible, threshold_rel = threshold − normal_median, k:3, mode:"reanchor"}` 로 기존 기준선 배관을 재사용 — 사용자의 **실제 폰 위치**에서 찍은 정자세 k세트 중앙값으로 임계값 위치를 옮긴다(각도·높이 구분 불필요). 검증(AIHub 교차 뷰): **타인 앵커로는 손해**(k=3 Δ−0.021 — 사람 간 분산이 앵커 노이즈), **동일-수행자 앵커(앱 상황)에서는 이득**: k=3 **Δ+0.027**(34승 9패), k=5 +0.042, k=10 +0.056; 채택 뷰 무해성 k=3 −0.007(≈무해). quant(분위수) 방식은 모든 k 에서 shift 이하 → shift 채택. 앱: `BaselineGuideScreen` 이 바닥 규칙을 병합 로드하고 바닥 종목이면 `FloorFeatureExtractor` 로 수집(기준선과 세션 평가의 피처 정의 일치), 배치 안내도 floor 분기. 남는 가정: 순위 보존이 높이 변화에도 유지된다는 것 — 세트 로그로만 최종 확인 가능.
+
 **앱 구현 (2026-08-24, `PostureFloor.kt` + `export_floor_rules.py`)**
 | 구성 | 내용 |
 |---|---|

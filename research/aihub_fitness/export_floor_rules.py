@@ -295,6 +295,14 @@ def main():
         cautions = (["좌우 반전(반대로 누움) 시 다른 쪽 사지를 잼"] if base in NOT_MIRROR_SAFE else [])
         if rho is not None and rho < RHO_CAUTION:
             cautions.append(f"MP 충실도 낮음(ρ={rho:.2f}<{RHO_CAUTION}) — 재보정 데이터로 확인 필요")
+        # 정상-앵커 재배치 (v0.2, spec §25a / FLOOR_QUANTILE_TRANSFER): 임계값은 채택 뷰의 투영에 묶여
+        # 있으므로, 사용자의 실제 폰 시점에서 찍은 정자세 기준선으로 위치를 옮길 수 있게 앵커를 싣는다.
+        #   normal_median — 채택 뷰 정상 클립들의 피처 중앙값. 중앙값 이동: t_user = 사용자중앙값 + (thr − normal_median)
+        #     = 기존 personal_baseline 경로(값−기준선 vs threshold_rel)와 동일 → 앱 평가 코드 재사용.
+        #   normal_fpr — 이 임계값이 채택 뷰 정상 클립을 오탐하는 비율(분위수 방식용, 진단·대안).
+        x_norm = x[yviol == 0]
+        normal_median = float(np.median(x_norm))
+        normal_fpr = float((x_norm > thr).mean() if op == ">" else (x_norm < thr).mean())
         rules.append({
             "id": f"floor|{ex}|{cond}",
             "exercise": ex, "condition": cond, "subtype": None,
@@ -308,9 +316,17 @@ def main():
             "mirror_safe": base not in NOT_MIRROR_SAFE,
             "cautions": cautions,
             "mode": "floor2d",
+            "normal_median": round(normal_median, 6),
+            "normal_fpr": round(normal_fpr, 4),
+            "personal_baseline": {
+                "eligible": True, "k": 3, "gain": None,
+                "threshold_rel": round(float(thr) - normal_median, 6),
+                "mode": "reanchor",
+                "note": "바닥 시점 재배치 — 기준선(사용자 폰 위치의 정자세 k세트 중앙값)으로 임계값 위치를 옮긴다. 검증: FLOOR_ANCHOR_VALIDATION.md",
+            },
         })
 
-    doc = {"version": "floor_v0.1", "generated": "2026-08-24",
+    doc = {"version": "floor_v0.2", "generated": "2026-08-24",
            "source": "export_floor_rules.py (AIHub 2D, 종목당 단일 뷰, 스트리밍 접지선, 위쪽=양수 정준화, "
                      f"MP 충실도 게이트 ρ≥{RHO_CUT} — floor_mp_gap.py 실측)",
            "rules": rules}
