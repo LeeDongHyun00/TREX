@@ -99,7 +99,14 @@ fun BaselineGuideScreen(onClose: () -> Unit) {
     var loadError by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(Unit) {
         try {
-            ruleSet = PostureRuleSet.load(context)
+            // 바닥 규칙(v0.2)도 personal_baseline(재배치 앵커)을 가지므로 병합 — 바닥 종목이 기준선 대상에 포함된다
+            val standing = PostureRuleSet.load(context)
+            ruleSet = try {
+                val floor = PostureRuleSet.load(context, FLOOR_RULES_ASSET)
+                PostureRuleSet("${standing.version}+${floor.version}", standing.generated, standing.rules + floor.rules)
+            } catch (_: Throwable) {
+                standing
+            }
         } catch (t: Throwable) {
             loadError = t.message ?: t.toString()
         }
@@ -196,8 +203,9 @@ private fun BaselineExerciseList(
                 val rules = ruleSet.baselineRulesFor(ex)
                 val k = ruleSet.baselineSetsFor(ex)
                 val b = profile.get(ex)
-                // 기준선 대상은 전부 서서 하는 종목이라 floor=false (뷰 코드 → 사람 말, spec §26)
-                val views = rules.map { ViewGuide.shortName(it.view, floor = false) }.distinct().joinToString("/")
+                // 바닥 종목(family=floor2d)은 같은 뷰 코드가 다른 배치를 뜻한다 (뷰 코드 → 사람 말, spec §26)
+                val exFloor = rules.any { it.family == "floor2d" }
+                val views = rules.map { ViewGuide.shortName(it.view, floor = exFloor) }.distinct().joinToString("/")
                 Surface(
                     shape = RoundedCornerShape(14.dp),
                     color = TrexDarkAlt,
@@ -269,9 +277,14 @@ private fun BaselineCaptureView(
     val features = remember(exercise) { ruleSet.baselineFeaturesFor(exercise) }
     val requiredSets = remember(exercise) { ruleSet.baselineSetsFor(exercise) }
     val collector = remember(exercise) { BaselineCollector(exercise, features, requiredSets) }
-    // 폰 배치 지시 (뷰 코드 대신 사람 말, spec §26) — 기준선 종목은 전부 서서 하는 종목
+    // 바닥 종목이면 2D 평면 피처로 수집해야 한다 — 기준선과 세션 평가의 피처 정의가 같아야 재배치가 성립 (spec §25a)
+    val isFloor = remember(exercise) { rules.any { it.family == "floor2d" } }
+    val floorRef = remember { booleanArrayOf(false) }
+    floorRef[0] = isFloor
+    val floorExtractor = remember { FloorFeatureExtractor() }
+    // 폰 배치 지시 (뷰 코드 대신 사람 말, spec §26) — 바닥 종목은 같은 뷰 코드도 배치가 다르다
     val viewPlacement = remember(exercise) {
-        ViewGuide.dominantView(rules)?.let { ViewGuide.placement(it, floor = false, mirrorSafe = rules.all { r -> r.mirrorSafe }) }
+        ViewGuide.dominantView(rules)?.let { ViewGuide.placement(it, floor = isFloor, mirrorSafe = rules.all { r -> r.mirrorSafe }) }
     }
 
     var granted by remember {
@@ -357,10 +370,16 @@ private fun BaselineCaptureView(
                 val s = analyzer.analyze(image, now, up)
                 sample = s
                 if (phaseRef[0] == BaselinePhase.RECORDING && s.detected) {
-                    aggregator.add(s.features)
+                    // 바닥 종목: 세션 평가와 같은 2D 평면 피처로 기준선을 만든다 (가림 시 피처 단위 유보 포함)
+                    val s2 = if (floorRef[0]) {
+                        s.withFeatures(floorExtractor.compute(s.normalizedXy, s.visibility, s.imageWidth, s.imageHeight))
+                    } else {
+                        s
+                    }
+                    aggregator.add(s2.features)
                     sampledFrames = aggregator.frameCount
                     synchronized(recordedSamples) {
-                        recordedSamples.add(s)
+                        recordedSamples.add(s2)
                         recordedTimesMs.add(now)
                     }
                 }
@@ -380,6 +399,7 @@ private fun BaselineCaptureView(
 
     fun resetSet() {
         aggregator.reset()
+        floorExtractor.reset()   // 바닥 접지선 추정은 세트 단위 상태
         sampledFrames = 0
         synchronized(recordedSamples) { recordedSamples.clear(); recordedTimesMs.clear() }
     }
