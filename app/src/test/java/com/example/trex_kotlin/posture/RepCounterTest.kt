@@ -108,4 +108,39 @@ class RepCounterTest {
         // 신뢰 신호가 없는 종목은 미등록 — 오카운트보다 미표시
         assertNull(RepCounter.forExercise("스탠딩 사이드 크런치"))
     }
+@Test
+    fun romValidityJudgesShallowRepsInvalid() {
+        // 푸시업 ROM: min 방향, 임계 0.710 (AIHub 전조건 정상 렙 90% 통과 분위수)
+        val sig = RepSignals.byExercise.getValue("푸시업")
+        assertEquals("min", sig.romDirection)
+        assertEquals(0.710f, sig.romThreshold!!, 0.01f)
+        assertTrue(sig.romValidated)
+        assertTrue(sig.invalidCue.contains("가슴"))
+        // 깊은 렙(하단 0.45) = 유효, 얕은 렙(하단 0.85) = 무효
+        assertEquals(true, sig.isValidRep(0.45f, 1.4f))
+        assertEquals(false, sig.isValidRep(0.85f, 1.4f))
+        // max 방향 종목 (크런치: 상단 극값이 임계 이상이어야 유효)
+        val cr = RepSignals.byExercise.getValue("크런치")
+        assertEquals("max", cr.romDirection)
+        assertEquals(true, cr.isValidRep(0f, cr.romThreshold!! + 0.1f))
+        assertEquals(false, cr.isValidRep(0f, cr.romThreshold!! - 0.1f))
+    }
+
+    @Test
+    fun cycleExtremaAreExposedPerRep() {
+        val c = counter()
+        // 깊은 사이클 1개: 하단 0.4 → lastCycleMin 이 그 근방
+        triangle(c, cycles = 2, periodMs = 4_800L, top = 1.4f, bottom = 0.4f)
+        assertTrue(c.reps >= 1)
+        assertTrue("min=${c.lastCycleMin}", c.lastCycleMin <= 0.55f)   // 300ms 이산화로 정확한 저점(0.4)은 방출 안 됨(최저 0.525)
+        assertTrue("max=${c.lastCycleMax}", c.lastCycleMax >= 1.2f)
+    }
+
+    @Test
+    fun unvalidatedExercisesUseNeutralCue() {
+        // 방향 자동판정이 복귀 끝을 잡았을 수 있는 종목 — 방향 중립 문구만 (정직성)
+        val sig = RepSignals.byExercise.getValue("힙쓰러스트")
+        assertTrue(!sig.romValidated)
+        assertTrue(sig.invalidCue.contains("끝까지"))
+    }
 }

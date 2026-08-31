@@ -255,7 +255,9 @@ fun PostureLiveSessionScreen(
     // ---- 자동 렙 카운터 (spec §27): 종목별 렙 신호의 히스테리시스 사이클. 분석 스레드에서 갱신.
     //      등척성(플랭크)·미등록 종목은 null. 카운트는 beta — ±1 오차가 구조적이라 참고 표시.
     val repRef = remember { arrayOfNulls<RepCounter>(1) }
-    var repCount by remember { mutableIntStateOf(0) }
+    var repCount by remember { mutableIntStateOf(0) }      // 유효 렙
+    var repInvalid by remember { mutableIntStateOf(0) }    // ROM 미달 무효 렙 — 세되 무효 + 사유 발화 (심판 방식)
+    val repInvalidRef = remember { intArrayOf(0) }
     var repFast by remember { mutableStateOf(false) }
 
     // ---- 촬영 커버리지 (spec §25b): 규칙이 요구하는 부위가 화면에 없으면 '왜'와 '어떻게'를 안내한다.
@@ -368,6 +370,7 @@ fun PostureLiveSessionScreen(
                 // 프레임 t_ms 와 같은 기준(세트 시작 상대시각)으로 — 첫 로그에서 절대 epoch 로 남던 결함 수정
                 repTimesMs = rc?.repTimesMs?.map { it - t0 },
                 repSignal = rc?.signal?.feature,
+                repInvalid = if (rc != null) repInvalidRef[0] else null,
             )
             // 분석 executor 는 화면 종료 시 shutdown 되므로 순서에 의존하지 않도록 별도 스레드에서 기록한다.
             Thread {
@@ -399,6 +402,8 @@ fun PostureLiveSessionScreen(
         coachBanner = null   // 이전 종목의 배너·ⓘ 근거 주석이 새 종목에 오귀속되지 않도록
         repRef[0] = RepCounter.forExercise(aihubExercise)
         repCount = 0
+        repInvalid = 0
+        repInvalidRef[0] = 0
         repFast = false
         floorExtractor.reset()   // 접지선 추정은 세트(운동) 단위 상태
         if (!muted) {
@@ -480,10 +485,19 @@ fun PostureLiveSessionScreen(
                     }
                     repRef[0]?.let { rc ->
                         if (rc.onFrame(now, features[rc.signal.feature])) {
-                            repCount = rc.reps
+                            // ROM 유효성 (수정판): 사이클 극값이 데이터 기준 미달이면 무효 렙 —
+                            // 안 세는 게 아니라 세되 무효로 판정하고 사유를 말한다 (REP_VALIDITY.md)
+                            val valid = rc.signal.isValidRep(rc.lastCycleMin, rc.lastCycleMax) ?: true
+                            if (valid) {
+                                repCount++
+                                if (!muted) speech.speak(repCount.toString(), flush = false)   // 숫자는 큐에 추가 — 코칭 문구를 끊지 않음
+                            } else {
+                                repInvalid++
+                                repInvalidRef[0] = repInvalid
+                                if (!muted) speech.speak(rc.signal.invalidCue, flush = false)
+                            }
                             // 빠른 렙 자가진단: 주기가 1.5s 아래면 3.3fps 로는 놓칠 수 있다 (렙당 4샘플 하한 실측)
                             repFast = (rc.periodMs ?: Long.MAX_VALUE) < 1_500L
-                            if (!muted) speech.speak("${'$'}{rc.reps}", flush = false)   // 숫자는 큐에 추가 — 코칭 문구를 끊지 않음
                         }
                     }
                     coachRef[0]?.let { coach ->
@@ -660,8 +674,11 @@ fun PostureLiveSessionScreen(
                         if (repRef[0] != null) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(end = 14.dp)) {
                                 Text(if (repFast) "렙(빠름·미확정)" else "렙", color = c.text3, fontSize = 9.5.sp)
-                                Text("$repCount", color = if (repFast) c.warn else Color.Unspecified,
-                                    fontSize = 17.sp, fontWeight = FontWeight.SemiBold, lineHeight = 20.sp)
+                                Text(
+                                    repCount.toString() + if (repInvalid > 0) " · 무효 " + repInvalid else "",
+                                    color = if (repFast) c.warn else Color.Unspecified,
+                                    fontSize = 17.sp, fontWeight = FontWeight.SemiBold, lineHeight = 20.sp,
+                                )
                             }
                         }
                         Column(horizontalAlignment = Alignment.End) {

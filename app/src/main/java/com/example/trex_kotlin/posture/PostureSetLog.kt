@@ -67,10 +67,12 @@ data class SetLog(
     /** up 자가검증으로 뒤집어 보정한 프레임 수 / 방향을 검증한 프레임 수 (진단용, 스키마 호환 추가 필드). */
     val upFlippedFrames: Int = 0,
     val upVerifiedFrames: Int = 0,
-    /** 자동 렙 카운트 (spec §27, 스키마 호환 추가 필드). null = 카운터 미적용 종목. */
+    /** 자동 렙 카운트 (spec §27, 스키마 호환 추가 필드). null = 카운터 미적용 종목.
+     *  repCount = 완료 사이클 전체, repInvalid = 그중 ROM 미달 무효 렙 (유효 = count − invalid). */
     val repCount: Int? = null,
     val repTimesMs: List<Long>? = null,
     val repSignal: String? = null,
+    val repInvalid: Int? = null,
 ) {
     companion object {
         const val SCHEMA = "trex.posture.setlog/1"
@@ -105,6 +107,7 @@ data class SetLog(
             repCount: Int? = null,
             repTimesMs: List<Long>? = null,
             repSignal: String? = null,
+            repInvalid: Int? = null,
         ): SetLog {
             val frames = samples.mapIndexed { i, s ->
                 SetLogFrame(
@@ -140,6 +143,7 @@ data class SetLog(
                 repCount = repCount,
                 repTimesMs = repTimesMs,
                 repSignal = repSignal,
+                repInvalid = repInvalid,
             )
         }
     }
@@ -170,6 +174,7 @@ object SetLogJson {
         if (log.repCount != null) {
             sb.append("\"reps\":{")
             sb.append("\"count\":").append(log.repCount).append(',')
+            sb.append("\"invalid\":").append(log.repInvalid ?: 0).append(',')
             field(sb, "signal", log.repSignal)
             sb.append("\"t_ms\":[")
             log.repTimesMs.orEmpty().forEachIndexed { i, t -> if (i > 0) sb.append(','); sb.append(t) }

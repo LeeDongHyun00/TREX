@@ -27,6 +27,14 @@ class RepCounter(
         private set
     val repTimesMs = ArrayList<Long>()
 
+    /** 방금 완료된 렙의 사이클 극값 (onFrame 이 true 를 돌려준 직후 유효). ROM 유효성 판정 입력. */
+    var lastCycleMin: Float = Float.NaN
+        private set
+    var lastCycleMax: Float = Float.NaN
+        private set
+    private var curMin = Float.POSITIVE_INFINITY
+    private var curMax = Float.NEGATIVE_INFINITY
+
     /** 최근 렙 주기(ms) 지수평활 추정 — null 이면 아직 렙 2개 미만. 빠른 렙 자가진단·적응 샘플링 신호. */
     var periodMs: Long? = null
         private set
@@ -46,6 +54,10 @@ class RepCounter(
         rawCount = 0
         state = 0
         lastRepAt = Long.MIN_VALUE / 2
+        lastCycleMin = Float.NaN
+        lastCycleMax = Float.NaN
+        curMin = Float.POSITIVE_INFINITY
+        curMax = Float.NEGATIVE_INFINITY
     }
 
     private fun samplesPerRep(): Float {
@@ -62,6 +74,8 @@ class RepCounter(
         rawCount++
         // 평활: 렙당 샘플이 충분할 때만 (성긴 신호 평활 금지)
         val v = if (rawCount >= 3 && samplesPerRep() >= 8f) median3(raw3) else value
+        if (v < curMin) curMin = v
+        if (v > curMax) curMax = v
         tHist.add(tMs)
         vHist.add(v)
         while (tHist.isNotEmpty() && tMs - tHist.first() > windowMs) {
@@ -92,6 +106,10 @@ class RepCounter(
                 reps++
                 repTimesMs.add(tMs)
                 lastRepAt = tMs
+                lastCycleMin = curMin
+                lastCycleMax = curMax
+                curMin = Float.POSITIVE_INFINITY
+                curMax = Float.NEGATIVE_INFINITY
                 return true
             }
         }
@@ -128,7 +146,32 @@ data class RepSignal(
     val minAmp: Float,
     val isometric: Boolean = false,
     val validated: Boolean = false,
-)
+    /**
+     * ROM(가동범위) 유효성 — "얕으면 무효 렙" (spec §27 수정판, REP_VALIDITY.md).
+     * 임계값은 AIHub **전 조건 정상 클립**의 렙 극값 분포에서 기준 렙 90% 통과 분위수 —
+     * 문장 기준을 좌표에 직역하면 정상 스쿼트 98% 가 실격이라, 기준은 반드시 데이터에서.
+     * romDirection: "min"=사이클 하단 극값이 임계값 이하여야 유효, "max"=상단 극값이 이상.
+     * romValidated: ROM 성격의 AIHub 조건으로 판별력 검증됨(위반 클립 무효율 2.8~3.8배) —
+     * 검증 종목만 구체 사유(romCue)를 말하고, 나머지는 방향 중립 사유로.
+     */
+    val romDirection: String? = null,
+    val romThreshold: Float? = null,
+    val romValidated: Boolean = false,
+    val romCue: String? = null,
+) {
+    /** 완료된 렙의 ROM 유효성. null = ROM 기준 없음(항상 유효 취급). */
+    fun isValidRep(cycleMin: Float, cycleMax: Float): Boolean? {
+        val thr = romThreshold ?: return null
+        return when (romDirection) {
+            "min" -> cycleMin <= thr
+            "max" -> cycleMax >= thr
+            else -> null
+        }
+    }
+
+    val invalidCue: String
+        get() = romCue ?: "동작 범위가 부족했어요. 끝까지 움직여 주세요"
+}
 
 /**
  * 렙 신호 등록부 (REP_SIGNALS.md 큐레이션).
@@ -143,7 +186,61 @@ object RepSignals {
     private const val NORM = 0.25f     // 몸통 정규화 거리형
     private const val NORM_S = 0.10f   // 작은 스케일 정규화형 (이탈·높이차)
 
-    val byExercise: Map<String, RepSignal> = buildMap {
+    private data class Rom(val dir: String, val thr: Float, val validated: Boolean, val cue: String?)
+
+    /**
+     * ROM 유효성 임계값 (rep_validity_thresholds.py 산출, REP_VALIDITY.md).
+     * AIHub 전 조건 정상 클립의 렙 극값 분포에서 기준 렙 90% 통과 분위수.
+     * validated=true(5종목)는 ROM 성격의 AIHub 조건으로 판별력 검증됨 — 구체 사유 발화.
+     * 나머지는 방향 자동판정이 수축 끝 대신 복귀 끝을 잡았을 수 있어 방향 중립 사유만.
+     */
+    private val ROM: Map<String, Rom> = mapOf(
+        "푸시업" to Rom("min", 0.7101f, true, "얕았어요. 가슴을 더 내려 주세요"),
+        "니푸쉬업" to Rom("min", 0.8377f, true, "얕았어요. 가슴을 더 내려 주세요"),
+        "크런치" to Rom("max", 0.2953f, true, "덜 올라왔어요. 상체를 더 말아 올려 주세요"),
+        "라잉 레그 레이즈" to Rom("min", 119.4981f, false, null),
+        "힙쓰러스트" to Rom("min", -0.1618f, false, null),
+        "Y - Exercise" to Rom("min", 0.1275f, false, null),
+        "시저크로스" to Rom("max", 0.3932f, false, null),
+        "바이시클 크런치" to Rom("max", 0.4310f, false, null),
+        "바벨 데드리프트" to Rom("min", 102.2493f, false, null),
+        "바벨 스티프 데드리프트" to Rom("min", 100.0967f, false, null),
+        "굿모닝" to Rom("min", 109.2276f, false, null),
+        "바벨 스쿼트" to Rom("min", 97.8905f, false, null),
+        "버피 테스트" to Rom("min", 129.9882f, false, null),
+        "크로스 런지" to Rom("min", 115.6725f, false, null),
+        "바벨 런지" to Rom("min", 112.0852f, true, "무릎을 충분히 굽혀 주세요"),
+        "사이드 런지" to Rom("min", 106.0722f, false, null),
+        "스텝 포워드 다이나믹 런지" to Rom("min", -0.0076f, false, null),
+        "스텝 백워드 다이나믹 런지" to Rom("min", 141.7641f, false, null),
+        "스탠딩 니업" to Rom("min", 142.7811f, false, null),
+        "풀업" to Rom("min", 80.3965f, false, null),
+        "딥스" to Rom("min", 93.9059f, true, "얕았어요. 더 내려가 주세요"),
+        "바벨 로우" to Rom("min", 112.6863f, false, null),
+        "덤벨 벤트오버 로우" to Rom("min", 113.4363f, false, null),
+        "바벨 컬" to Rom("min", 66.4238f, false, null),
+        "덤벨 컬" to Rom("min", 81.3342f, false, null),
+        "페이스 풀" to Rom("min", 84.0116f, false, null),
+        "랫풀 다운" to Rom("max", 19.2011f, false, null),
+        "사이드 레터럴 레이즈" to Rom("min", 107.4791f, false, null),
+        "프런트 레이즈" to Rom("min", 96.5170f, false, null),
+        "업라이트로우" to Rom("min", 116.1889f, false, null),
+        "덤벨 체스트 플라이" to Rom("max", 31.6000f, false, null),
+        "덤벨 인클라인 체스트 플라이" to Rom("max", 29.0803f, false, null),
+        "오버 헤드 프레스" to Rom("min", 0.4568f, false, null),
+        "케이블 푸시 다운" to Rom("min", -0.7237f, false, null),
+        "라잉 트라이셉스 익스텐션" to Rom("min", 0.4038f, false, null),
+        "덤벨 풀 오버" to Rom("min", 0.2460f, false, null),
+        "로잉머신" to Rom("min", -0.1773f, false, null),
+        "행잉 레그 레이즈" to Rom("min", 0.1498f, false, null),
+        "케이블 크런치" to Rom("min", 1.1342f, false, null),
+    )
+
+    val byExercise: Map<String, RepSignal> = base().mapValues { (ex, sig) ->
+        ROM[ex]?.let { sig.copy(romDirection = it.dir, romThreshold = it.thr, romValidated = it.validated, romCue = it.cue) } ?: sig
+    }
+
+    private fun base(): Map<String, RepSignal> = buildMap {
         // ---- 바닥 (M0 재생 검증 — rep_replay.py SIGNALS 와 일치)
         put("푸시업", RepSignal("wrist_shoulder_d", 0.30f, validated = true))
         put("니푸쉬업", RepSignal("wrist_shoulder_d", 0.30f, validated = true))
