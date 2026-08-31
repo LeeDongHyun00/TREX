@@ -3,7 +3,7 @@
 
 렙 라벨이 없는 AIHub 에서 렙 신호를 고르는 원리: 올바른 렙 신호라면 **같은 종목의 모든 클립에서
 비슷한 횟수**가 세져야 한다(수행 프로토콜이 클립당 렙 수를 대체로 고정하므로). 그래서
-(종목 × 피처)마다 자기보정 히스테리시스 카운터를 돌리고, 클립 간 **카운트 일관성**(최빈값 ±1 비율)이
+(종목 × 피처)마다 자기보정 히스테리시스 카운터를 돌리고, 클립별 **전 피처 합의(consensus) 카운트**와의 ±1 일치율이
 가장 높은 피처를 렙 신호로 채택한다. 절대 정답 없이도 나쁜 신호(노이즈 진동·비주기 피처)는
 클립마다 제멋대로 세져 일관성에서 탈락한다.
 
@@ -31,7 +31,7 @@ DATA = Path(r"C:/Users/hp276/Desktop/trex/.claude/worktrees/correct-exercise-for
 OUT = HERE / "outputs"
 
 import floor_2d_rules as f2d
-from features import apply_qc_mask, compute_frame_features, load_kp3d
+from features import apply_qc_mask, compute_frame_features, load_kp3d, mediapipe_computable
 
 FRAME_DT = 0.6  # AIHub 프레임 간격(초) — 16프레임 ≈ 9.6s
 APP_FPS = 3.33  # 앱 샘플링 (300ms)
@@ -43,58 +43,38 @@ FLOOR_VIEW = {"푸시업": "C", "니푸쉬업": "B", "플랭크": "B", "힙쓰�
 LR_PAIRS = [("knee_L", "knee_R"), ("elbow_L", "elbow_R"), ("wrist_h_L", "wrist_h_R"), ("knee_h_L", "knee_h_R")]
 
 
-def count_reps(series: np.ndarray, min_gap: int = 1, qlo: float = 0.40, qhi: float = 0.60) -> int:
-    """자기보정 히스테리시스 카운터 (설계 §2 와 동일 원리, 프레임 단위).
+def count_reps(series: np.ndarray, frac: float = 0.15) -> int:
+    """자기보정 히스테리시스 카운터 v3 — 극값-중점 밴드.
 
-    렙 1 = 밴드 상단 위 → 하단 아래 → 다시 상단 위 (전체 사이클). NaN 프레임은 압축.
-    밴드는 클립 자신의 p30/p70 — 절대 임계값이 없어 종목·시점·체형과 무관.
+    v2(분위수 밴드 p40/p60 + 진폭 게이트)는 **비대칭 듀티 사이클에서 붕괴**했다(적대 검증):
+    컬은 0.6s 샘플링에서 대부분 프레임이 신전 근처이고 굴곡이 1프레임 딥이라, 분위수 밴드가
+    신전 쪽에 몰려 딥을 못 보고 게이트가 클립을 '무활동'으로 기각했다(육안 대조 2/10 일치).
+    v3 는 밴드를 신호의 **극값 중점**에 건다: center=(p10+p90)/2, 밴드 = center ± frac×(p90−p10).
+    렙 1 = 밴드 하단 아래 → 상단 위 복귀(전체 사이클, 히스테리시스가 최소 2샘플 간격을 구조적으로 보장).
+    캘리브레이션(육안 정답 2종): 스쿼트 6클립 오차합 2(v2: 3), 컬 최빈 4·0카운트 0%(v2: 31%가 ≤2).
+    진폭 게이트 없음 — 무신호 잡음은 클립 간 합의(consensus) 불일치로 걸러진다. 앱에서는
+    종목별 최소 진폭(물리 단위)을 별도 게이트로 둘 것(분위수식 게이트는 방향이 틀렸음이 확인됨).
     """
     v = series[np.isfinite(series)]
     if len(v) < 8:
         return -1  # 측정 불가
-    # 평활은 샘플 밀도에 적응: 렙당 ~4샘플(AIHub 0.6s)에서는 3점 중앙값이 1샘플 폭의 렙 꼭대기를
-    # 지워버린다(실측: 스쿼트 49,163,96 → 96). 짧은 시계열은 원시값 그대로, 긴 시계열(앱 0.3s,
-    # 렙당 ~17샘플)만 평활한다. 히스테리시스 밴드가 단발 잡음의 1차 방어선.
-    sm = v if len(v) <= 24 else np.array([np.median(v[max(0, i - 1):i + 2]) for i in range(len(v))])
-    # 밴드 폭도 샘플 밀도에 적응: 렙당 3~4샘플에서는 샘플된 극값이 바깥 분위수에 못 미친다 —
-    # 스쿼트 육안 정답 6클립 캘리브레이션에서 p40/p60 이 p30/p70 보다 오차합 8→3 (긴 시계열은 넓게).
+    # 평활은 샘플 밀도에 적응(성기면 원시값): 렙당 ~4샘플에서 3점 중앙값이 렙 꼭대기를 지운다
     if len(v) > 24:
-        qlo, qhi = 0.30, 0.70
-    lo, hi = np.quantile(sm, [qlo, qhi])
-    rng = sm.max() - sm.min()
-    # 진폭 게이트는 카운팅 밴드와 분리 (p30/p70 고정): 카운팅 밴드를 좁힐 때 게이트까지 좁아지면
-    # 진짜 진동을 '활동 없음'으로 기각한다 (1차 실행에서 17종목이 이렇게 죽었다)
-    g30, g70 = np.quantile(sm, [0.30, 0.70])
-    if rng <= 0 or (g70 - g30) < 0.15 * rng:
+        v = np.array([np.median(v[max(0, i - 1):i + 2]) for i in range(len(v))])
+    p10, p90 = np.quantile(v, [0.10, 0.90])
+    center, half = (p10 + p90) / 2, frac * (p90 - p10)
+    lo, hi = center - half, center + half
+    if hi <= lo:
         return 0
-    state = "high" if sm[0] >= hi else ("low" if sm[0] <= lo else "mid")
-    reps, last = 0, -10
-    for i, x in enumerate(sm):
+    state = "high" if v[0] >= hi else ("low" if v[0] <= lo else "mid")
+    reps = 0
+    for x in v:
         if state != "low" and x <= lo:
             state = "low"
         elif state == "low" and x >= hi:
-            if i - last >= min_gap:
-                reps += 1
-                last = i
+            reps += 1
             state = "high"
     return reps
-
-
-def survey_features(F: dict[str, np.ndarray], keep: np.ndarray) -> pd.DataFrame:
-    """F: {base: (N,T)} → 피처별 카운트 일관성 표. keep: 이 종목의 클립 마스크."""
-    rows = []
-    for base, arr in F.items():
-        counts = np.array([count_reps(arr[i]) for i in np.where(keep)[0]])
-        ok = counts >= 0
-        if ok.sum() < 30:
-            continue
-        c = counts[ok]
-        vals, freq = np.unique(c, return_counts=True)
-        mode = int(vals[freq.argmax()])
-        consist = float(np.isin(c, [mode - 1, mode, mode + 1]).mean())
-        rows.append(dict(feature=base, n=int(ok.sum()), mode=mode, median=float(np.median(c)),
-                         consistency=consist, zero_share=float((c == 0).mean())))
-    return pd.DataFrame(rows)
 
 
 def lr_antiphase(arrL: np.ndarray, arrR: np.ndarray, keep: np.ndarray) -> float:
@@ -141,11 +121,12 @@ def floor_series(exercise: str, view: str) -> tuple[dict[str, np.ndarray], np.nd
     F2 = f2d.frame_features(k2)
     ids = k2.clip_id.to_numpy()
     uniq, inv = np.unique(ids, return_inverse=True)
-    fidx = k2.frame_idx.to_numpy() - 1
+    fidx = k2.frame_idx.to_numpy()  # 0-기반 (검증 실측: min=0, max=20) — v1 의 −1 은 프레임 0·15 를 유실시켰다
+    m15 = fidx <= 15
     out = {}
     for base, v in F2.items():
         M = np.full((len(uniq), 16), np.nan)
-        M[inv, np.clip(fidx, 0, 15)] = v
+        M[inv[m15], fidx[m15]] = v[m15]
         out[base] = M
     return out, np.ones(len(uniq), bool)
 
@@ -178,6 +159,9 @@ def main() -> None:
         idxs = np.where(keep)[0]
         cmat = {}
         for base, a in F.items():
+            # 앱에서 계산 불가한 피처는 후보에서 제외 (검증 지적: shoulder_neck_gap 은 MP 에서 ≡0)
+            if not floor and not mediapipe_computable(base):
+                continue
             cc = np.array([count_reps(a[i]) for i in idxs])
             if (cc >= 0).sum() >= 30:
                 cmat[base] = cc
@@ -208,7 +192,7 @@ def main() -> None:
         t["exercise"] = ex
         t["consensus_median"] = float(np.median(cons[okj])) if okj.sum() else np.nan
         results.append(t)
-        # 채택: 중앙 렙수 ≥2.5(진짜 진동) 중 합의 일치율 최대
+        # 채택: 중앙 렙수 ≥2(진짜 진동) 중 합의 일치율 최대
         cand = t[(t["median"] >= 2.0) & (t["mode"] <= 8)].sort_values(["consistency", "n"], ascending=False)
         if len(cand):
             b = cand.iloc[0]
@@ -249,7 +233,7 @@ def main() -> None:
         a = F[r.best]
         idx = np.where(keep)[0]
         c1 = np.array([count_reps(a[i]) for i in idx])
-        c2 = np.array([count_reps(a[i, ::2], min_gap=1) for i in idx])
+        c2 = np.array([count_reps(a[i, ::2]) for i in idx])
         ok = (c1 > 0) & (c2 >= 0)
         if ok.sum() < 20:
             continue
@@ -299,7 +283,7 @@ def write_report(best: pd.DataFrame, stress: pd.DataFrame) -> None:
           "- 대처 4 — UX 최후선: 부스트로도 못 따라가는 초고속 반복은 '정확한 카운트를 위해 조금 천천히' 안내. "
           "폼 관점에서도 통제된 템포가 권장되므로 코칭과 정합.",
           ]
-    L += ['', '## 최종 채택 (큐레이션) — 설문 + 기기 실측 + 운동학\n', '서서 하는 32종목은 설문 승자를 그대로 쓴다(합의일치 0.77~0.95, 운동학 타당: 스쿼트→무릎각, 데드→상체숙임, 컬→팔꿈치…).', '**바닥 9종목은 AIHub 0.6s 주석으로 판별 불가** — 전 피처가 0.65~0.81 동률이고 전부 중앙 2회로 언더카운트', '(푸시업 예: knee_ground 0.731 vs wrist_shoulder_d 0.670 — 유의미한 차이가 아님). 결정적 근거는 기기 실측:', 'wrist_shoulder_d 가 3.3fps(렙당 ~17샘플)에서 정답 3~4회를 4회로 적중했다. 따라서:\n', '| 바닥 종목 | 채택 신호 | 근거 |', '|---|---|---|', '| 푸시업·니푸쉬업 | `wrist_shoulder_d` | **기기 검증**(4/4 적중) |', '| 크런치 | `head_ground` | 운동학(상체 말아올림) — M0 검증 대상 |', '| 라잉 레그 레이즈 | `hip_ang` | 운동학(다리 올림) — M0 |', '| 힙쓰러스트 | `hip_dev_ankle` | 운동학(골반 상승) — M0 |', '| Y-Exercise | `hand_shoulder_off` | 운동학(팔 올림) — M0 |', '| 시저크로스·바이시클 | `knee_gap2d` | 교대형 — M0 |', "| **플랭크** | — (**등척성 확정**) | 설문의 '2회' = 진입+이탈 아티팩트. 상태기계 SETTLING/END 가 흡수 → ACTIVE 중 카운트 0 = HoldTimer |", '', '교대형(시저크로스·바이시클·스탠딩 니업·스탠딩 사이드 크런치)의 좌우 역위상은 0.6s 에일리어싱 때문에', '이 데이터로 확인 불가(lr_corr −0.24~0.33) — 운동 정의로 분류하고 기기 3.3fps 로그로 재검한다.']
+    L += ['', '## 최종 채택 (큐레이션) — 설문 + 기기 실측 + 운동학\n', '서서 하는 32종목은 설문 승자를 그대로 쓴다(합의일치 0.77~0.95, 운동학 타당: 스쿼트→무릎각, 데드→상체숙임, 컬→팔꿈치…).', '**바닥 9종목은 AIHub 0.6s 주석으로 판별 불가** — 전 피처가 좁은 범위에 동률이고 대부분 언더카운트', '(전 피처 동률 — 유의미한 차이가 아님). 결정적 근거는 기기 실측:', 'wrist_shoulder_d 가 3.3fps(렙당 ~17샘플)에서 정답 3~4회를 4회로 적중했다. 따라서:\n', '| 바닥 종목 | 채택 신호 | 근거 |', '|---|---|---|', '| 푸시업·니푸쉬업 | `wrist_shoulder_d` | **기기 검증**(4/4 적중) |', '| 크런치 | `head_ground` | 운동학(상체 말아올림) — M0 검증 대상 |', '| 라잉 레그 레이즈 | `hip_ang` | 운동학(다리 올림) — M0 |', '| 힙쓰러스트 | `hip_dev_ankle` | 운동학(골반 상승) — M0 |', '| Y-Exercise | `hand_shoulder_off` | 운동학(팔 올림) — M0 |', '| 시저크로스·바이시클 | `knee_gap2d` | 교대형 — M0 |', "| **플랭크** | — (**등척성 확정**) | 설문의 '2회' = 진입+이탈 아티팩트. 상태기계 SETTLING/END 가 흡수 → ACTIVE 중 카운트 0 = HoldTimer |", '', '교대형(시저크로스·바이시클·스탠딩 니업·스탠딩 사이드 크런치)의 좌우 역위상은 0.6s 에일리어싱 때문에', '이 데이터로 확인 불가(lr_corr −0.24~0.33) — 운동 정의로 분류하고 기기 3.3fps 로그로 재검한다.']
     (OUT / "REP_SIGNALS.md").write_text("\n".join(L), encoding="utf-8")
     print(f"[done] 종목 {len(best)} · 동적 {len(dyn)} → {OUT / 'REP_SIGNALS.md'}")
 
