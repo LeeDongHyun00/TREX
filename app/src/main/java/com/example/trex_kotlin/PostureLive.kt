@@ -365,7 +365,8 @@ fun PostureLiveSessionScreen(
                 subjectId = subjectId,
                 note = "session:$label" + if (floor) " floor" else "",
                 repCount = rc?.reps,
-                repTimesMs = rc?.repTimesMs?.toList(),
+                // 프레임 t_ms 와 같은 기준(세트 시작 상대시각)으로 — 첫 로그에서 절대 epoch 로 남던 결함 수정
+                repTimesMs = rc?.repTimesMs?.map { it - t0 },
                 repSignal = rc?.signal?.feature,
             )
             // 분석 executor 는 화면 종료 시 shutdown 되므로 순서에 의존하지 않도록 별도 스레드에서 기록한다.
