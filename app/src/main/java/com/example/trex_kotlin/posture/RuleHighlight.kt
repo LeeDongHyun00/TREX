@@ -58,7 +58,7 @@ object RuleHighlight {
         "hip_ground" to HIPS, "hip" to HIPS,
         "stance_w" to ANKLES, "ankle_hip_d" to ANKLES + HIPS, "ankle_gap" to ANKLES,
         "ankle_ground" to ANKLES, "ankle" to ANKLES,
-        "foot_pitch" to FEET + ANKLES, "foot_y" to FEET, "foot" to FEET,
+        "heel_lift" to FEET, "foot_pitch" to FEET + ANKLES, "foot_y" to FEET, "foot" to FEET,
         "shoulder_ground" to SHOULDERS, "shoulder_dev" to SHOULDERS + HIPS + WRISTS,
         "shoulder_arm_ang" to HIPS + SHOULDERS + ELBOWS, "shoulder" to SHOULDERS,
         "hip_asym" to HIPS, "spine" to TORSO,

@@ -69,6 +69,8 @@ object Joints {
     const val R_HIP = "RHip"
     const val L_KNEE = "LKnee"
     const val R_KNEE = "RKnee"
+    const val L_HEEL = "LHeel"
+    const val R_HEEL = "RHeel"
     const val L_ANKLE = "LAnkle"
     const val R_ANKLE = "RAnkle"
     const val L_PALM = "LPalm"
@@ -82,7 +84,7 @@ object Joints {
         L_SHOULDER to 11, R_SHOULDER to 12, L_ELBOW to 13, R_ELBOW to 14,
         L_WRIST to 15, R_WRIST to 16, L_HIP to 23, R_HIP to 24,
         L_KNEE to 25, R_KNEE to 26, L_ANKLE to 27, R_ANKLE to 28,
-        L_FOOT to 31, R_FOOT to 32,
+        L_FOOT to 31, R_FOOT to 32, L_HEEL to 29, R_HEEL to 30,
     )
 
     /** 두 인덱스의 중점으로 만드는 관절. Neck = 어깨 중점(AIHub 의 목 기저보다 낮음 — spec §3 참고). */
@@ -264,6 +266,12 @@ class PoseFrame(val joints: Map<String, Vec3?>, up: Vec3 = Vec3(0f, 1f, 0f)) {
             }
             if (ankle != null) put("ankle_y_$side", h(ankle))
             if (foot != null) put("foot_y_$side", h(foot))
+            // §28b heel_lift 재료: 발 내부 기하(heel↔toe 상대 높이/발 길이) — 발목 배굴과 구조적으로 분리
+            val heel = if (side == 'L') g(Joints.L_HEEL) else g(Joints.R_HEEL)
+            if (heel != null && foot != null) {
+                val len = (heel - foot).norm
+                if (len > 3f) put("heel_lift_$side", h(heel - foot) / len)
+            }
             if (hip != null && knee != null && ankle != null) {
                 val hb = body(hip); val kb = body(knee); val ab = body(ankle)
                 if (hb != null && kb != null && ab != null) {
@@ -300,6 +308,20 @@ class PoseFrame(val joints: Map<String, Vec3?>, up: Vec3 = Vec3(0f, 1f, 0f)) {
             if (kneeMid != null) put("hip_below_knee", h(hipMid - kneeMid) / legLen)
         }
         if (lAn != null && rAn != null && hipW != null) put("stance_w", (lAn - rAn).norm / hipW)
+
+        // §28b: heel_lift = 발 내부 기하 좌우 평균 — '발바닥 지면 고정' 재설계 피처 (heel 29/30 필요)
+        run {
+            val lifts = mutableListOf<Float>()
+            for (side in listOf('L', 'R')) {
+                val heel = if (side == 'L') g(Joints.L_HEEL) else g(Joints.R_HEEL)
+                val foot = if (side == 'L') g(Joints.L_FOOT) else g(Joints.R_FOOT)
+                if (heel != null && foot != null) {
+                    val len = (heel - foot).norm
+                    if (len > 3f) lifts += h(heel - foot) / len
+                }
+            }
+            if (lifts.isNotEmpty()) put("heel_lift", lifts.average().toFloat())
+        }
 
         // ---- 손 / 팔
         val pb = palmMid?.let { body(it) }
@@ -436,6 +458,15 @@ class FeatureAggregator {
 
     fun count(base: String): Int = values[base]?.size ?: 0
 
+    private fun quantile(v: List<Float>, q: Float): Float {
+        val sorted = v.sorted()
+        val pos = q * (sorted.size - 1)
+        val i = pos.toInt()
+        if (i >= sorted.size - 1) return sorted.last()
+        val f = pos - i
+        return sorted[i] * (1 - f) + sorted[i + 1] * f
+    }
+
     fun stat(base: String, stat: String): Float? {
         val v = values[base] ?: return null
         if (v.isEmpty()) return null
@@ -448,6 +479,9 @@ class FeatureAggregator {
                 val m = v.average()
                 sqrt(v.sumOf { (it - m) * (it - m) } / v.size).toFloat()
             }
+            // §28b 원칙: 신규 규칙은 극값(min/max) 대신 꼬리-강건 분위수 — numpy 선형보간과 패리티
+            "p10" -> quantile(v, 0.10f)
+            "p90" -> quantile(v, 0.90f)
             else -> null
         }
     }
