@@ -259,17 +259,17 @@
    "condition": "팔꿈치 살짝 구부린채 고정",
    "subtype": null,
    "status": "ship",
-   "reason": null,
-   "feature": "elbow_minside__max",
+   "reason": " | §28c 강건 통계 교체",
+   "feature": "elbow_minside__mean",
    "base_feature": "elbow_minside",
-   "stat": "max",
+   "stat": "mean",
    "family": "elbow",
    "op": ">",
    "threshold": 154.484756,
    "violation_if": "elbow_minside__max > 154.5",
    "view_best_front": "D",
    "view_best_front_desc": "전방사선R(-40°)",
-   "cv_auc": 0.853,
+   "cv_auc": 0.868,
    "cv_balacc": 0.7835,
    "n": 60,
    "n_performers": 39,
@@ -286,7 +286,9 @@
    },
    "gt_auc_control": 0.8889,
    "gt_auc_full": 0.8655,
-   "cautions": []
+   "cautions": [
+    "§28c: 극값(min)→mean 교체 — 극값은 렙 극단 프레임을 뽑아 결합·잡음에 취약. GT AUC 0.868, 결합 r=+0.09"
+   ]
   },
   {
    "id": "덤벨 컬|척추의 중립[all]",
@@ -518,17 +520,17 @@
    "condition": "이완 시 팔꿈치 각도 90도",
    "subtype": null,
    "status": "ship",
-   "reason": null,
-   "feature": "shoulder_R__max",
+   "reason": " | §28c 강건 통계 교체",
+   "feature": "shoulder_R__p90",
    "base_feature": "shoulder_R",
-   "stat": "max",
+   "stat": "p90",
    "family": "shoulder",
    "op": "<",
    "threshold": 50.932575,
    "violation_if": "shoulder_R__max < 50.93",
    "view_best_front": "B",
    "view_best_front_desc": "전방사선L(+40°)",
-   "cv_auc": 0.8608,
+   "cv_auc": 0.76,
    "cv_balacc": 0.7988,
    "n": 60,
    "n_performers": 25,
@@ -554,7 +556,8 @@
    "gt_auc_control": 0.8932,
    "gt_auc_full": 0.9377,
    "cautions": [
-    "한쪽(L/R) 지정 피처 — 카메라가 반대편이면 먼 쪽 관절이 되어 정밀도 변동. mean/minside/maxside 변형으로 대체 권장"
+    "한쪽(L/R) 지정 피처 — 카메라가 반대편이면 먼 쪽 관절이 되어 정밀도 변동. mean/minside/maxside 변형으로 대체 권장",
+    "§28c: 극값(max)→p90 교체 — 극값은 렙 극단 프레임을 뽑아 결합·잡음에 취약. GT AUC 0.760, 결합 r=+0.40"
    ]
   },
   {
@@ -597,7 +600,7 @@
    "exercise": "라잉 트라이셉스 익스텐션",
    "condition": "팔꿈치 위치 고정",
    "subtype": null,
-   "status": "ship",
+   "status": "beta",
    "reason": null,
    "feature": "elbow_minside__min",
    "base_feature": "elbow_minside",
@@ -633,7 +636,9 @@
    },
    "gt_auc_control": 0.9231,
    "gt_auc_full": 0.8675,
-   "cautions": []
+   "cautions": [
+    "§28c: 주 동작과 강한 결합(정상 클립 내 r=-0.70) — 조건이 아니라 렙 위상을 따라갈 위험. 통계 교체로 해소 안 됨(조건-피처 재정의 필요). 실기기 오탐 관찰 대상"
+   ]
   },
   {
    "id": "랫풀 다운|수축 시 적당한 상체 젖힘",
@@ -746,17 +751,17 @@
    "condition": "바벨 궤적과 몸 밀착",
    "subtype": null,
    "status": "ship",
-   "reason": null,
-   "feature": "palm_lat__min",
+   "reason": " | §28c 강건 통계 교체",
+   "feature": "palm_lat__p10",
    "base_feature": "palm_lat",
-   "stat": "min",
+   "stat": "p10",
    "family": "palm_lat",
    "op": "<",
    "threshold": -0.1033,
    "violation_if": "palm_lat__min < -0.1033",
    "view_best_front": "D",
    "view_best_front_desc": "전방사선R(-40°)",
-   "cv_auc": 0.9651,
+   "cv_auc": 0.601,
    "cv_balacc": 0.9542,
    "n": 60,
    "n_performers": 30,
@@ -782,7 +787,8 @@
    "gt_auc_control": 0.9444,
    "gt_auc_full": 0.9476,
    "cautions": [
-    "반대칭 피처의 mean/min/max — 카메라 좌/우에 따라 부호 반전. std/range 변형 또는 절댓값 처리 필요"
+    "반대칭 피처의 mean/min/max — 카메라 좌/우에 따라 부호 반전. std/range 변형 또는 절댓값 처리 필요",
+    "§28c: 극값(min)→p10 교체 — 극값은 렙 극단 프레임을 뽑아 결합·잡음에 취약. GT AUC 0.601, 결합 r=-0.03"
    ]
   },
   {
@@ -791,17 +797,17 @@
    "condition": "발과 무릎의 방향 일치",
    "subtype": null,
    "status": "ship",
-   "reason": null,
-   "feature": "knee_out_mean__min",
+   "reason": " | §28c 강건 통계 교체",
+   "feature": "knee_out_mean__p10",
    "base_feature": "knee_out_mean",
-   "stat": "min",
+   "stat": "p10",
    "family": "knee_out",
    "op": "<",
    "threshold": -0.029808,
    "violation_if": "knee_out_mean__min < -0.02981",
    "view_best_front": "C",
    "view_best_front_desc": "정면",
-   "cv_auc": 0.9088,
+   "cv_auc": 0.94,
    "cv_balacc": 0.7856,
    "n": 60,
    "n_performers": 30,
@@ -819,7 +825,8 @@
    "gt_auc_control": 0.9407,
    "gt_auc_full": 0.9504,
    "cautions": [
-    "valgus 는 정면(C) 뷰에서만 신뢰 (전방 사선에서 r≈0.5)"
+    "valgus 는 정면(C) 뷰에서만 신뢰 (전방 사선에서 r≈0.5)",
+    "§28c: 극값(min)→p10 교체 — 극값은 렙 극단 프레임을 뽑아 결합·잡음에 취약. GT AUC 0.940, 결합 r=+0.00"
    ],
    "opposite_guard": {
     "op": ">",
@@ -871,17 +878,17 @@
    "condition": "뒤다리 무릎 각도 90도",
    "subtype": null,
    "status": "ship",
-   "reason": null,
-   "feature": "hip_below_knee__min",
+   "reason": " | §28c 강건 통계 교체",
+   "feature": "hip_below_knee__p10",
    "base_feature": "hip_below_knee",
-   "stat": "min",
+   "stat": "p10",
    "family": "hip_below_knee",
    "op": "<",
    "threshold": 0.380446,
    "violation_if": "hip_below_knee__min < 0.3804",
    "view_best_front": "D",
    "view_best_front_desc": "전방사선R(-40°)",
-   "cv_auc": 0.8863,
+   "cv_auc": 0.887,
    "cv_balacc": 0.718,
    "n": 59,
    "n_performers": 33,
@@ -906,7 +913,9 @@
    },
    "gt_auc_control": 0.9468,
    "gt_auc_full": 0.8726,
-   "cautions": []
+   "cautions": [
+    "§28c: 극값(min)→p10 교체 — 극값은 렙 극단 프레임을 뽑아 결합·잡음에 취약. GT AUC 0.887, 결합 r=-0.20"
+   ]
   },
   {
    "id": "바벨 스쿼트|고개 정면",
@@ -1174,17 +1183,17 @@
    "condition": "바벨 궤적과 몸 밀착",
    "subtype": null,
    "status": "ship",
-   "reason": null,
-   "feature": "palm_fwd_hip__max",
+   "reason": " | §28c 강건 통계 교체",
+   "feature": "palm_fwd_hip__p90",
    "base_feature": "palm_fwd_hip",
-   "stat": "max",
+   "stat": "p90",
    "family": "palm_fwd_hip",
    "op": ">",
    "threshold": 1.032541,
    "violation_if": "palm_fwd_hip__max > 1.033",
    "view_best_front": "B",
    "view_best_front_desc": "전방사선L(+40°)",
-   "cv_auc": 0.9058,
+   "cv_auc": 0.961,
    "cv_balacc": 0.8078,
    "n": 60,
    "n_performers": 29,
@@ -1209,7 +1218,9 @@
    },
    "gt_auc_control": 0.9382,
    "gt_auc_full": 0.9697,
-   "cautions": []
+   "cautions": [
+    "§28c: 극값(max)→p90 교체 — 극값은 렙 극단 프레임을 뽑아 결합·잡음에 취약. GT AUC 0.961, 결합 r=+0.46"
+   ]
   },
   {
    "id": "바벨 컬|팔꿈치 위치 고정",
@@ -1411,7 +1422,7 @@
    "exercise": "사이드 레터럴 레이즈",
    "condition": "상관과 전완의 각도 고정",
    "subtype": null,
-   "status": "ship",
+   "status": "beta",
    "reason": null,
    "feature": "forearm_vert_mean__min",
    "base_feature": "forearm_vert_mean",
@@ -1448,7 +1459,8 @@
    "gt_auc_control": 0.8623,
    "gt_auc_full": 0.893,
    "cautions": [
-    "후방 뷰(A)에서 더 좋음 (AUC 0.93) — 촬영 가이드와 상충"
+    "후방 뷰(A)에서 더 좋음 (AUC 0.93) — 촬영 가이드와 상충",
+    "§28c: 주 동작과 강한 결합(정상 클립 내 r=-0.96) — 조건이 아니라 렙 위상을 따라갈 위험. 통계 교체로 해소 안 됨(조건-피처 재정의 필요). 실기기 오탐 관찰 대상"
    ]
   },
   {
@@ -1562,17 +1574,17 @@
    "condition": "양 손이 머리 뒤에 위치",
    "subtype": null,
    "status": "ship",
-   "reason": null,
-   "feature": "palm_head_dist__min",
+   "reason": " | §28c 강건 통계 교체",
+   "feature": "palm_head_dist__mean",
    "base_feature": "palm_head_dist",
-   "stat": "min",
+   "stat": "mean",
    "family": "palm_head_dist",
    "op": ">",
    "threshold": 0.399757,
    "violation_if": "palm_head_dist__min > 0.3998",
    "view_best_front": "D",
    "view_best_front_desc": "전방사선R(-40°)",
-   "cv_auc": 0.9889,
+   "cv_auc": 0.944,
    "cv_balacc": 0.8968,
    "n": 57,
    "n_performers": 35,
@@ -1589,7 +1601,9 @@
    },
    "gt_auc_control": 0.92,
    "gt_auc_full": 0.9395,
-   "cautions": []
+   "cautions": [
+    "§28c: 극값(min)→mean 교체 — 극값은 렙 극단 프레임을 뽑아 결합·잡음에 취약. GT AUC 0.944, 결합 r=-0.03"
+   ]
   },
   {
    "id": "스탠딩 사이드 크런치|무릎이 몸통 측면에서 올라오는지 여부",
@@ -2144,7 +2158,7 @@
    "exercise": "크로스 런지",
    "condition": "앞다리 무릎 각도 90도",
    "subtype": null,
-   "status": "ship",
+   "status": "beta",
    "reason": null,
    "feature": "knee_maxside__std",
    "base_feature": "knee_maxside",
@@ -2172,7 +2186,9 @@
    },
    "gt_auc_control": 0.9812,
    "gt_auc_full": 0.979,
-   "cautions": []
+   "cautions": [
+    "§28c: 주 동작과 강한 결합(정상 클립 내 r=+0.89) — 조건이 아니라 렙 위상을 따라갈 위험. 통계 교체로 해소 안 됨(조건-피처 재정의 필요). 실기기 오탐 관찰 대상"
+   ]
   },
   {
    "id": "크로스 런지|상체 정면 균형잡기",
