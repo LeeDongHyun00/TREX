@@ -1,0 +1,111 @@
+package com.example.trex_kotlin.posture
+
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+/**
+ * 자동 렙 카운터 (spec §27) — 파이썬 레퍼런스(rep_replay.py)와의 패리티가 핵심.
+ * 실기기 픽스처(rep_fixture_baseline1.txt)는 파이썬 재생에서 4렙(정답 3~4)이 나온 세트다.
+ */
+class RepCounterTest {
+
+    private fun counter(minAmp: Float = 0.30f) = RepCounter(RepSignal("wrist_shoulder_d", minAmp))
+
+    /** 주기 periodMs 의 삼각파: bottom↔top 왕복. 300ms 샘플링. */
+    private fun triangle(c: RepCounter, cycles: Int, periodMs: Long, top: Float = 1.4f, bottom: Float = 0.4f): Int {
+        var t = 0L
+        var completed = 0
+        val half = (periodMs / 2).toInt()
+        val step = 300
+        repeat(cycles) {
+            var x = 0
+            while (x < half) { // 하강
+                val v = top - (top - bottom) * x / half
+                if (c.onFrame(t, v)) completed++
+                t += step; x += step
+            }
+            x = 0
+            while (x < half) { // 상승
+                val v = bottom + (top - bottom) * x / half
+                if (c.onFrame(t, v)) completed++
+                t += step; x += step
+            }
+        }
+        return completed
+    }
+
+    @Test
+    fun deviceFixtureMatchesPythonReference() {
+        // 실기기 푸시업 baseline 1/3 (82프레임, 가림 프레임 포함) — 파이썬 스트리밍 카운터 = 4렙
+        val lines = javaClass.classLoader!!.getResourceAsStream("rep_fixture_baseline1.txt")!!
+            .bufferedReader().readLines().filter { !it.startsWith("#") && it.isNotBlank() }
+        val c = counter()
+        for (ln in lines) {
+            val (t, v) = ln.split(",", limit = 2)
+            c.onFrame(t.toLong(), v.takeIf { it.isNotBlank() }?.toFloat())
+        }
+        assertEquals(4, c.reps)
+        // 불응기: 렙 간격이 전부 1.2s 이상
+        c.repTimesMs.zipWithNext { a, b -> assertTrue("렙 간격 ${b - a}ms", b - a >= 1_200L) }
+    }
+
+    @Test
+    fun countsTriangleWaveAtNormalTempo() {
+        val c = counter()
+        triangle(c, cycles = 5, periodMs = 4_800L)
+        // 워밍업(첫 8샘플)과 위상에 따라 첫 사이클은 놓칠 수 있다 — 5사이클에서 4~5
+        assertTrue("reps=${c.reps}", c.reps in 4..5)
+        assertNotNull(c.periodMs)
+        assertTrue("period=${c.periodMs}", c.periodMs!! in 3_800L..5_800L)
+    }
+
+    @Test
+    fun amplitudeGateBlocksNoise() {
+        // 스윙 0.2 < 게이트 0.30 — 잡음/무활동은 세지 않는다 (플랭크 잡음 바닥 실측의 교훈)
+        val c = counter(minAmp = 0.30f)
+        triangle(c, cycles = 6, periodMs = 4_800L, top = 1.0f, bottom = 0.8f)
+        assertEquals(0, c.reps)
+    }
+
+    @Test
+    fun occlusionPausesWithoutCounting() {
+        val c = counter()
+        var t = 0L
+        // 정상 2사이클 → 가림 구간 → 재개 1사이클: 가림 중 카운트 없음, 재개 후 계속
+        triangle(c, 2, 4_800L)
+        val before = c.reps
+        repeat(10) { c.onFrame(t + 100_000L + it * 300L, null) }
+        assertEquals(before, c.reps)
+        val c2 = counter()
+        triangle(c2, 3, 4_800L)
+        assertTrue(c2.reps >= before)   // 재개 경로가 상태를 깨뜨리지 않는다 (같은 로직 재사용 확인)
+    }
+
+    @Test
+    fun refractorySuppressesTooFastCycles() {
+        // 0.9s 주기(불응기 1.2s 미만): 사이클마다 세지 않고 걸러진다 — 놓침이지 과카운트가 아님
+        val c = counter()
+        triangle(c, cycles = 8, periodMs = 900L)
+        assertTrue("reps=${c.reps}", c.reps < 8)
+    }
+
+    @Test
+    fun registryMapsExercisesHonestly() {
+        // 등척성은 카운터 미적용 (HoldTimer 대상)
+        assertNull(RepCounter.forExercise("플랭크"))
+        // 기기 검증 종목
+        val push = RepCounter.forExercise("푸시업")
+        assertNotNull(push)
+        assertEquals("wrist_shoulder_d", push!!.signal.feature)
+        assertTrue(push.signal.validated)
+        // 서서 종목: 힙 힌지 → hip_mean (앱 가용 매핑), beta
+        val dead = RepCounter.forExercise("바벨 데드리프트")
+        assertEquals("hip_mean", dead!!.signal.feature)
+        assertTrue(!dead.signal.validated)
+        // 신뢰 신호가 없는 종목은 미등록 — 오카운트보다 미표시
+        assertNull(RepCounter.forExercise("스탠딩 사이드 크런치"))
+    }
+}

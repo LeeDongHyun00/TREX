@@ -67,6 +67,10 @@ data class SetLog(
     /** up 자가검증으로 뒤집어 보정한 프레임 수 / 방향을 검증한 프레임 수 (진단용, 스키마 호환 추가 필드). */
     val upFlippedFrames: Int = 0,
     val upVerifiedFrames: Int = 0,
+    /** 자동 렙 카운트 (spec §27, 스키마 호환 추가 필드). null = 카운터 미적용 종목. */
+    val repCount: Int? = null,
+    val repTimesMs: List<Long>? = null,
+    val repSignal: String? = null,
 ) {
     companion object {
         const val SCHEMA = "trex.posture.setlog/1"
@@ -98,6 +102,9 @@ data class SetLog(
             note: String? = null,
             includeVisibility: Boolean = true,
             now: Date = Date(),
+            repCount: Int? = null,
+            repTimesMs: List<Long>? = null,
+            repSignal: String? = null,
         ): SetLog {
             val frames = samples.mapIndexed { i, s ->
                 SetLogFrame(
@@ -130,6 +137,9 @@ data class SetLog(
                 note = note,
                 upFlippedFrames = samples.count { it.upFlipped },
                 upVerifiedFrames = samples.count { it.upVerified },
+                repCount = repCount,
+                repTimesMs = repTimesMs,
+                repSignal = repSignal,
             )
         }
     }
@@ -156,6 +166,15 @@ object SetLogJson {
         sb.append("\"up_flipped_frames\":").append(log.upFlippedFrames).append(',')
         sb.append("\"up_verified_frames\":").append(log.upVerifiedFrames).append(',')
         field(sb, "note", log.note)
+        // 자동 렙 카운트 — 카운터가 돌았던 세트만 기록 (미적용 세트와 구분: 필드 부재 = 미적용)
+        if (log.repCount != null) {
+            sb.append("\"reps\":{")
+            sb.append("\"count\":").append(log.repCount).append(',')
+            field(sb, "signal", log.repSignal)
+            sb.append("\"t_ms\":[")
+            log.repTimesMs.orEmpty().forEachIndexed { i, t -> if (i > 0) sb.append(','); sb.append(t) }
+            sb.append("]},")
+        }
         sb.append("\"frames\":[")
         log.frames.forEachIndexed { i, f ->
             if (i > 0) sb.append(',')
