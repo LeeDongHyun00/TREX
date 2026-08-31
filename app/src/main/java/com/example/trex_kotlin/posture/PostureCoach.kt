@@ -44,15 +44,15 @@ object CoachCues {
     private val entries: List<Entry> = listOf(
         // ---- 바닥 종목 (rules_floor_v0, spec §25) — 아래 일반 패턴보다 먼저 매칭돼야 하는 조건들
         e("고개 젖힘/숙임", "고개", "처음부터 고개가 몸통과 일직선이 아니에요. 고개를 척추 연장선에 두세요.", "고개가 점점 떨어지거나 젖혀져요. 고개를 척추 연장선에 두세요."),
-        e("고개 들지 않기", "고개", "처음부터 고개를 들고 있어요. 턱을 당기고 목을 편하게 두세요.", "고개가 점점 들려요. 턱을 당기세요."),
+        e("고개 들지 않기", "고개", "처음부터 고개가 흔들리고 있어요. 시선을 한 점에 고정하고 고개를 바닥에 두세요.", "고개 움직임이 점점 커져요. 시선을 고정하세요."),   // 감사 C: 판정 근거 = 흔들림(std)
         e("고개 숙임 여부", "고개", "처음부터 고개를 당겨 올리고 있어요. 머리를 바닥에 편하게 두세요.", "고개가 점점 올라와요. 머리를 바닥에 두세요."),
         e("시선 배꼽", "시선", "처음부터 시선이 배꼽을 벗어나 있어요. 턱을 당겨 배꼽을 보세요.", "시선이 점점 흐트러져요. 턱을 당겨 배꼽을 보세요."),
-        e("견갑골이 지면", "어깨", "처음부터 어깨가 충분히 올라오지 않아요. 견갑골이 바닥에서 뜨게 상체를 더 말아 올리세요.", "상체가 점점 덜 올라와요. 견갑골이 뜨도록 더 말아 올리세요."),
+        e("견갑골이 지면", "상체", "처음부터 상체가 충분히 올라오지 않아요. 머리와 어깨를 함께 말아 올리세요.", "상체가 점점 덜 올라와요. 머리·어깨를 함께 말아 올리세요."),   // 감사 A: 판정 근거 = 머리 높이(어깨 측정 불가)
         e("무릎부터 어깨까지 일자", "엉덩이", "처음부터 엉덩이가 낮아요. 엉덩이를 들어 무릎-골반-어깨를 일직선으로 만드세요.", "엉덩이가 점점 내려가요. 무릎-골반-어깨 일직선까지 올리세요."),
         e("몸통과 엉덩이의 정렬", "엉덩이", "처음부터 엉덩이가 처지거나 솟아 있어요. 어깨-골반-발목을 일직선으로 유지하세요.", "엉덩이가 점점 처지거나 솟아요. 몸을 일직선으로 되돌리세요."),
         e("허벅지와 종아리 각도", "무릎", "처음부터 무릎 각도가 흔들려요. 무릎 각도를 고정한 채 다리를 올리세요.", "무릎 각도가 점점 풀려요. 각도를 고정한 채 움직이세요."),
         e("다리와 지면 사이", "다리", "처음부터 다리 높이가 맞지 않아요. 다리를 지면에서 한 뼘 높이로 유지하세요.", "다리 높이가 점점 흐트러져요. 지면에서 한 뼘 높이를 유지하세요."),
-        e("경추 중립|후인", "목", "처음부터 목이 앞으로 빠져 있어요. 턱을 당겨 목을 중립으로 두세요.", "목이 점점 앞으로 빠져요. 턱을 당기세요."),
+        e("경추 중립|후인", "몸통", "처음부터 몸 라인이 무너져 있어요. 가슴을 살짝 들어 몸 전체를 일직선으로 유지하세요.", "몸 라인이 점점 무너져요. 가슴을 들어 일직선을 되찾으세요."),   // 감사 D: 판정 근거 = 몸통-골반 라인(목 각도 측정 불가)
         // ---- 서서 하는 종목
         e("발과 무릎의 방향|발 무릎 방향|몸통 발 무릎|몸통 앞발 앞무릎|무릎.*방향", "무릎", "처음부터 무릎이 안쪽으로 모여 있어요. 무릎을 발끝 방향으로 벌리세요.", "무릎이 점점 안쪽으로 모여요. 무릎을 발끝 방향으로 벌리세요."),
         e("발바닥 지면|뒤꿈치", "발", "처음부터 뒤꿈치가 들려 있어요. 발바닥 전체로 바닥을 누르세요.", "뒤꿈치가 점점 들려요. 발바닥 전체로 바닥을 누르세요."),
@@ -118,6 +118,36 @@ object CoachCues {
         }
         for (en in entries) if (en.pattern.containsMatchIn(rule.condition)) return en.cue
         return CoachCue(rule.condition, "처음부터 '${rule.condition}' 조건을 벗어나 있어요.", "'${rule.condition}' 조건에서 점점 벗어나고 있어요.")
+    }
+
+    /**
+     * 감사 B (FLOOR_RULE_AUDIT): 플랭크 '몸통과 엉덩이의 정렬'의 채택 피처(trunk_ankle_ang)는 꺾인 정도만
+     * 재고 방향이 없는데, 실측 위반은 엉덩이 솟음 69% / 처짐 31% 로 갈리고 처방이 정반대다(내려라/올려라).
+     * 부호 있는 hip_dev_ankle(화면 위 = 양수 = 솟음)을 최근 창에서 읽어 문구를 가른다 — 판정은 그대로,
+     * 말만 방향을 얻는다. 값이 없으면(발목 가림) null → 병합 문구 폴백.
+     */
+    fun directional(rule: PostureRule, recent: FeatureAggregator): CoachCue? {
+        if (!rule.condition.contains("몸통과 엉덩이의 정렬")) return null
+        val hipDev = recent.stat("hip_dev_ankle", "mean") ?: return null
+        return if (hipDev > 0f) {
+            CoachCue("엉덩이", "처음부터 엉덩이가 솟아 있어요. 엉덩이를 내려 어깨-골반-발목을 일직선으로 만드세요.", "엉덩이가 점점 솟아요. 엉덩이를 내려 일직선으로 되돌리세요.")
+        } else {
+            CoachCue("엉덩이", "처음부터 엉덩이가 처져 있어요. 배에 힘을 주고 엉덩이를 올려 일직선으로 만드세요.", "엉덩이가 점점 처져요. 배에 힘을 주고 엉덩이를 올리세요.")
+        }
+    }
+
+    /**
+     * 감사 A/C/D: 규칙이 조건명이 약속하는 것과 **다른 것을 잴 때**, 판정 근거를 정직하게 밝히는
+     * 한 줄 주석 (화면 표시용 — TTS 로는 읽지 않는다).
+     */
+    fun measurementNote(rule: PostureRule): String? = when {
+        rule.exercise == "크런치" && rule.condition.contains("견갑골") ->
+            "머리 높이로 근사 판정 — 목만 당겨 올리는 동작은 구분하지 못해요"
+        rule.exercise == "힙쓰러스트" && rule.condition.contains("고개") ->
+            "고개 '흔들림'으로 판정 — 계속 든 채 고정된 고개는 놓칠 수 있어요"
+        rule.condition.contains("경추 중립") ->
+            "목 각도가 아니라 몸통-골반 라인으로 근사 판정해요"
+        else -> null
     }
 }
 
@@ -222,7 +252,8 @@ class LiveCoach(
     @Synchronized
     fun evaluate(nowMs: Long): CoachEvent? {
         if (frames.size < minFrames) return null
-        val recentRes = ruleSet.evaluate(exercise, recentAggregator(), includeBeta, minFrames, baseline)
+        val recentAgg = recentAggregator()
+        val recentRes = ruleSet.evaluate(exercise, recentAgg, includeBeta, minFrames, baseline)
         val earlyRes = ruleSet.evaluate(exercise, earlyAgg, includeBeta, minFrames, baseline).associateBy { it.rule.id }
         val states = ArrayList<OnsetState>(recentRes.size)
         var candidate: OnsetState? = null
@@ -250,7 +281,9 @@ class LiveCoach(
         // 위반 후보가 없으면 '교정됨' 한 번
         val pick = candidate ?: states.firstOrNull { it.kind == OnsetKind.RECOVERED && canSpeak(it.rule.id, nowMs, recovered = true) }
         if (pick == null) return null
-        val cue = CoachCues.cueFor(pick.rule, pick.direction ?: Direction.PRIMARY)
+        val base = CoachCues.cueFor(pick.rule, pick.direction ?: Direction.PRIMARY)
+        // 방향 있는 조건(플랭크 정렬)은 최근 창의 부호로 문구를 가른다 — 교정됨 문구는 방향 불필요
+        val cue = if (pick.kind != OnsetKind.RECOVERED) CoachCues.directional(pick.rule, recentAgg) ?: base else base
         val msg = when (pick.kind) {
             OnsetKind.HABIT -> cue.habit
             OnsetKind.DRIFT -> cue.drift

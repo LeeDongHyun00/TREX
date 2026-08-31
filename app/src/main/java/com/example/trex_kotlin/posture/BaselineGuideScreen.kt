@@ -572,10 +572,13 @@ private fun BaselineCaptureView(
                             contentColor = Color.White,
                         )
                         Spacer(Modifier.width(8.dp))
+                        // 실기기 실측(DEVICE_SET_VARIANCE): 9세트 중 5세트가 관절 가림으로 측정 0 — 그런 세트가
+                        // 기준선 슬롯을 차지하면 재배치가 노이즈를 옮긴다. 값이 하나도 없으면 저장을 막는다(하드 게이트).
                         TrexButton(
-                            text = "이 세트 저장",
+                            text = if (lastSetValues.isEmpty()) "측정값 없음 — 저장 불가" else "이 세트 저장",
                             icon = Icons.Rounded.Check,
-                            onClick = {
+                            onClick = save@{
+                                if (lastSetValues.isEmpty()) return@save
                                 collector.addSet(lastSetValues)
                                 completedSets = collector.completedSets
                                 // 세트 로그(재보정용): 프레임 원본 + note=baseline

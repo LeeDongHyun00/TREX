@@ -80,6 +80,8 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.example.trex_kotlin.posture.AnalyzerStats
+import com.example.trex_kotlin.posture.BaselineStore
+import com.example.trex_kotlin.posture.CoachCues
 import com.example.trex_kotlin.posture.CoachEvent
 import com.example.trex_kotlin.posture.FeatureAggregator
 import com.example.trex_kotlin.posture.GravityTracker
@@ -241,6 +243,14 @@ fun PostureLiveSessionScreen(
     floorRef[0] = isFloorExercise
     val floorExtractor = remember { FloorFeatureExtractor() }
 
+    // ---- 개인 기준선(정상-앵커 재배치, spec §25c/§25d): BaselineGuideScreen 이 수집한 정자세 k세트 중앙값.
+    //      바닥 규칙 임계값은 AIHub 채택 뷰 투영에 묶여 있어(뷰 간 플래그율 33%p 요동) 사용자의 실제 폰
+    //      시점으로 '위치'를 옮겨야 한다. 재투영 실측: 거치가 정확하면 중립, 방위가 어긋나면 +0.11 복구(보험).
+    //      수집만 하고 세션에서 안 쓰면 죽은 기능 — 여기서 소비한다.
+    val baselineStore = remember { BaselineStore(context) }
+    val baselineRef = remember { arrayOfNulls<Map<String, Float>>(1) }
+    var baselineActive by remember { mutableStateOf(false) }
+
     // ---- 촬영 커버리지 (spec §25b): 규칙이 요구하는 부위가 화면에 없으면 '왜'와 '어떻게'를 안내한다.
     //      판정 자체가 불가능한 상태이므로 자세 코칭보다 우선한다.
     val floorRules = remember(ruleSet, aihubExercise, isFloorExercise) {
@@ -327,7 +337,7 @@ fun PostureLiveSessionScreen(
         }
         val frames = aggregator.frameCount
         val results = if (frames >= MIN_FRAMES_FOR_LOG) {
-            runCatching { rs.evaluate(ex, aggregator, true, MIN_FRAMES_FOR_LOG, null) }.getOrDefault(emptyList())
+            runCatching { rs.evaluate(ex, aggregator, true, MIN_FRAMES_FOR_LOG, baselineRef[0]) }.getOrDefault(emptyList())
         } else {
             emptyList()
         }
@@ -369,12 +379,16 @@ fun PostureLiveSessionScreen(
     }
     LaunchedEffect(ruleSet, workout.id) {
         val rs = ruleSet ?: return@LaunchedEffect
-        coachRef[0] = LiveCoach(rs, aihubExercise)
+        val baselineValues = runCatching { baselineStore.load().valuesFor(aihubExercise) }
+            .getOrNull()?.takeIf { it.isNotEmpty() }
+        baselineRef[0] = baselineValues
+        baselineActive = baselineValues != null
+        coachRef[0] = LiveCoach(rs, aihubExercise, baseline = baselineValues)
         floorExtractor.reset()   // 접지선 추정은 세트(운동) 단위 상태
         if (!muted) {
             speech.speak(
                 if (aihubExercise in floorExercises) {
-                    "${workout.name} 자세 평가를 시작합니다. 휴대폰을 바닥 높이에, 몸 옆에서 보이게 두세요"
+                    "${workout.name} 자세 평가를 시작합니다. 휴대폰을 몸 옆에 두세요. 발쪽으로 치우치지 않게요"
                 } else {
                     "${workout.name} 자세 평가를 시작합니다. 전신이 화면에 들어오게 서 주세요"
                 },
@@ -553,8 +567,8 @@ fun PostureLiveSessionScreen(
                         Spacer(Modifier.weight(1f))
                         // 재보정 로그 상태 — 기록 중인지, 몇 세트 쌓였는지 (spec §14)
                         Text(
-                            "REC $recordedFrames · 누적 ${savedSets}세트",
-                            color = c.text3, fontSize = 9.5.sp, fontWeight = FontWeight.Medium,
+                            (if (baselineActive) "기준선 ✓ · " else "") + "REC $recordedFrames · 누적 ${savedSets}세트",
+                            color = if (baselineActive) c.lime else c.text3, fontSize = 9.5.sp, fontWeight = FontWeight.Medium,
                         )
                     }
                     // 커버리지가 막히면 판정 자체가 불가능하므로 자세 코칭보다 먼저 보여준다 (spec §25b)
@@ -574,6 +588,15 @@ fun PostureLiveSessionScreen(
                             color = if (!coverage.ok) c.warn else Color.Unspecified,
                             fontSize = 14.5.sp, fontWeight = FontWeight.SemiBold, lineHeight = 20.sp,
                             modifier = Modifier.padding(top = 5.dp),
+                        )
+                    }
+                    // 판정 근거가 조건명과 다른 규칙(감사 A/C/D)은 근거를 정직하게 밝힌다
+                    val note = coachBanner?.let { CoachCues.measurementNote(it.rule) }
+                    if (coverage.ok && note != null) {
+                        Text(
+                            "ⓘ $note",
+                            color = c.text3, fontSize = 10.5.sp, lineHeight = 14.sp,
+                            modifier = Modifier.padding(top = 3.dp),
                         )
                     }
                     // 해결책 — 카메라를 멀리 / 옮기기 / 각도 바꾸기
