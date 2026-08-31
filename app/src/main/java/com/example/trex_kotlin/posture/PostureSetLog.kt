@@ -21,7 +21,8 @@ import java.util.UUID
  *  "exercise":"바벨 스쿼트","rules_version":"mp_v0","model":"full","delegate":"GPU","front_camera":true,
  *  "up_from_gravity":true,"tilt_deg":3.2,"sample_interval_ms":300,"note":null,
  *  "frames":[{"t_ms":0,"infer_ms":63,"visible":22,"vis":[...33],"features":{"knee_L":112.3,...}}, ...],
- *  "results":[{"rule_id":"바벨 스쿼트|발과 무릎의 방향 일치","verdict":"VIOLATION","value":0.004,"n":18}]}
+ *  "results":[{"rule_id":"바벨 스쿼트|발과 무릎의 방향 일치","verdict":"VIOLATION","value":0.004,"n":18,
+ *              "baseline_applied":false,"value_rel":null}]}   // value 는 항상 절대값, verdict 는 재배치 반영
  * ```
  * org.json 은 Android 유닛 테스트에서 스텁이라 직접 직렬화한다 (PostureCoreParityTest 와 같은 이유).
  */
@@ -38,8 +39,13 @@ data class SetLogFrame(
 data class SetLogResult(
     val ruleId: String,
     val verdict: String,
+    /** **항상 절대값**(기준선 차감 전). 재보정 도구가 임계값과 직접 대조하는 값이라 좌표계를 고정한다. */
     val value: Float?,
     val sampleCount: Int,
+    /** 판정에 기준선 재배치가 적용됐는가 (verdict 는 상대 판정). 스키마 호환 추가 필드. */
+    val baselineApplied: Boolean = false,
+    /** 재배치 적용 시의 상대값(value − 기준선중앙값). 미적용이면 null. */
+    val valueRel: Float? = null,
 )
 
 data class SetLog(
@@ -117,7 +123,10 @@ data class SetLog(
                 tiltDeg = tilt,
                 sampleIntervalMs = sampleIntervalMs,
                 frames = frames,
-                results = results.map { SetLogResult(it.rule.id, it.verdict.name, it.value, it.sampleCount) },
+                results = results.map {
+                    // 로그의 value 는 절대 좌표로 고정 — 재배치 세트와 비재배치 세트가 섞여도 해석이 갈리지 않는다
+                    SetLogResult(it.rule.id, it.verdict.name, it.rawValue ?: it.value, it.sampleCount, it.baselineApplied, if (it.baselineApplied) it.value else null)
+                },
                 note = note,
                 upFlippedFrames = samples.count { it.upFlipped },
                 upVerifiedFrames = samples.count { it.upVerified },
@@ -179,7 +188,9 @@ object SetLogJson {
             field(sb, "rule_id", r.ruleId)
             field(sb, "verdict", r.verdict)
             sb.append("\"value\":").append(num(r.value)).append(',')
-            sb.append("\"n\":").append(r.sampleCount)
+            sb.append("\"n\":").append(r.sampleCount).append(',')
+            sb.append("\"baseline_applied\":").append(r.baselineApplied).append(',')
+            sb.append("\"value_rel\":").append(num(r.valueRel))
             sb.append('}')
         }
         sb.append("]}")

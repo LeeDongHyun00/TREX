@@ -384,6 +384,7 @@ fun PostureLiveSessionScreen(
         baselineRef[0] = baselineValues
         baselineActive = baselineValues != null
         coachRef[0] = LiveCoach(rs, aihubExercise, baseline = baselineValues)
+        coachBanner = null   // 이전 종목의 배너·ⓘ 근거 주석이 새 종목에 오귀속되지 않도록
         floorExtractor.reset()   // 접지선 추정은 세트(운동) 단위 상태
         if (!muted) {
             speech.speak(

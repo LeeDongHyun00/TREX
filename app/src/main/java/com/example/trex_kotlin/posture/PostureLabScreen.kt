@@ -609,6 +609,9 @@ fun PostureLabScreen(onClose: () -> Unit) {
                             fontSize = 11.sp,
                             fontWeight = FontWeight.SemiBold,
                         )
+                        ev?.let { CoachCues.measurementNote(it.rule) }?.let { note ->
+                            Text("ⓘ $note", color = Color.White.copy(alpha = 0.55f), fontSize = 9.5.sp, lineHeight = 13.sp)
+                        }
                         Text(
                             text = ev?.message ?: (if (!speech.ready) (speech.lastError ?: "음성 준비 중…") else if (voiceCoach) "음성 안내 ON" else "음성 안내 OFF (화면만)"),
                             color = Color.White.copy(alpha = 0.8f),

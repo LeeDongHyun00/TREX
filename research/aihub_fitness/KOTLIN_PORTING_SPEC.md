@@ -544,9 +544,9 @@ AIHub 조건 132개를 해부학적 자유도로 분류해, 완벽한 GT 3D 상�
 1. **세션이 기준선을 소비** (`PostureLive.kt`): v0.2 재배치의 가장 큰 격차 — `BaselineGuideScreen` 이 앵커를 수집해도 세션은 `baseline=null` 로 평가해 재배치가 실전에서 죽어 있었다. 운동 시작 시 `BaselineStore` 에서 그 종목 기준선을 읽어 `LiveCoach` 와 세트 종료 `evaluate` 양쪽에 전달하고, 상태 줄에 "기준선 ✓" 표시. §25d 실측 기준 거치 오차 시 +0.11 복구가 이제 실제로 작동한다.
 2. **감사 4건(§25b FLOOR_RULE_AUDIT) 정직성 반영** (`PostureCoach.kt`): (B) 플랭크 정렬 — `CoachCues.directional()` 이 최근 창의 부호 있는 `hip_dev_ankle` 로 "엉덩이 솟음→내려라 / 처짐→올려라"를 가른다(값 없으면 병합 문구 폴백). (C) 힙쓰러스트 고개 — 판정 근거(흔들림 std)와 문구 일치: "처음부터 고개가 흔들리고 있어요". (A) 크런치 견갑골 — "견갑골이 뜨게" 약속 제거, "머리·어깨를 함께" 로. (D) Y 경추 — 몸 라인 문구로. (A/C/D) `measurementNote()` 가 판정 근거를 화면에 정직하게 공개(ⓘ, TTS 제외).
 3. **§25d 거치 가이드** (`PostureViewGuide.kt`): 바닥 배치 문구에 "발쪽으로 치우치지 않게(높이·거리는 자유)" — 엄격해야 하는 축(방위)과 관대한 축(높이·거리)을 실측대로 구분. 세션 시작 TTS 도 동일.
-4. **기준선 무측정 세트 하드 게이트** (`BaselineGuideScreen.kt`): 실기기 9세트 중 5세트가 관절 가림으로 측정 0 이었는데 저장은 가능했다 — 값이 하나도 없는 세트는 저장 버튼 자체를 차단("측정값 없음 — 저장 불가").
+4. **기준선 무측정 세트 게이트 명시화** (`BaselineGuideScreen.kt`): 저장 버튼은 도입 시점부터 `enabled = lastSetValues.isNotEmpty()` 로 이미 비활성화돼 있었다(리뷰 정정 — 초판의 "저장이 가능했다"는 과장). 이번 변경은 **왜 눌리지 않는지**를 라벨로 밝히고("측정값 없음 — 저장 불가") onClick 이중 가드를 추가한 것.
 
-검증: `FloorCoachHonestyTest` 5개(방향 분리 양/음/폴백, measurementNote 4건, 흔들림 문구) 포함 posture 유닛 테스트 74/74 통과, assembleDebug 성공.
+검증: `FloorCoachHonestyTest` 5개(방향 분리 양/음/폴백, measurementNote 4건, 흔들림 문구) 포함 posture 유닛 테스트 통과, assembleDebug 성공. 적대 리뷰(2에이전트)가 잡은 4건 반영: **세트 로그 좌표계 고정**(재배치 적용 시 로그 value 가 차감값이 되어 재보정 입력이 오염되던 것 → value 는 항상 절대값 + `baseline_applied`/`value_rel` 추가 필드), 운동 전환 시 배너·ⓘ 리셋, 랩 화면에도 ⓘ 일관 표시, TTS 표기 통일.
 
 남은 것(데이터 필요): 임계값 실측 재보정(라벨 있는 기준선·세트 로그), 크런치 견갑골 규칙의 제거 여부 판단(현재는 근거 공개로 유지), MP 충실도 ρ<0.5 4규칙 재확인.
 
