@@ -35,7 +35,7 @@ OUT = HERE / "outputs"
 
 # 종목 → (렙 신호, 최소 진폭[물리 단위], 등척성 여부). REP_SIGNALS 큐레이션과 일치.
 SIGNALS = {
-    "푸시업": ("wrist_shoulder_d", 0.30, False),     # 몸통 정규화 거리 — 실기기 렙 스윙 ~1.0
+    "푸시업": ("wrist_shoulder_d", 0.30, False),     # 물리 하한 0.10 은 main 에서 plaus 로 적용
     "니푸쉬업": ("wrist_shoulder_d", 0.30, False),
     "크런치": ("head_ground", 0.15, False),
     "라잉 레그 레이즈": ("hip_ang", 25.0, False),      # 도
@@ -48,68 +48,75 @@ SIGNALS = {
 
 
 class StreamRepCounter:
-    """프레임 단위 온라인 카운터 — Kotlin RepCounter 의 레퍼런스 구현."""
+    """v4 반전(reversal) 카운터 — Kotlin RepCounter 의 파이썬 레퍼런스 (패리티 유지 필수).
 
-    def __init__(self, min_amp: float, frac: float = 0.15, window_s: float = 20.0,
-                 refractory_s: float = 1.2, isometric: bool = False):
-        self.min_amp = min_amp
-        self.frac = frac
-        self.window_s = window_s
-        self.refractory_s = refractory_s
+    라벨 세트(깊3·얕3·깊3·얕3=12) 실측으로 v3(창 분위수 밴드)를 교체: 잡프레임의 밴드 오염과
+    깊/얕 혼합 시 상단 미복귀 결함 → 방향 반전이 최소 스윙 h 를 넘을 때 극점 확정(만보기 원리).
+    결과: 라벨 세트 9/12(유효5/무효4), baseline1 4, 플랭크 잡음 0·0·0·1. 파라미터는 전부 모집단산.
+    """
+
+    def __init__(self, min_amp: float, refractory_s: float = 1.2, isometric: bool = False,
+                 plaus: tuple[float | None, float | None] = (None, None)):
+        self.h = min_amp
+        self.refr = refractory_s
         self.isometric = isometric
-        self.raw3: deque[float] = deque(maxlen=3)          # 평활용 최근 3원시값
-        self.hist: deque[tuple[float, float]] = deque()    # (t, 평활값) — 밴드 창
-        self.state = "mid"
+        self.plo, self.phi = plaus
+        self.raw3: deque[float] = deque(maxlen=3)
+        self.dirn = 0
+        self.ext: float | None = None
+        self.ext_t = 0.0
+        self.pending_bottom: float | None = None
         self.reps = 0
         self.rep_times: list[float] = []
+        self.rep_mins: list[float] = []
         self.last_rep_t = -1e9
-        self.active_s = 0.0            # 게이트 통과(활동) 시간 — 등척성 유지시간
-        self._last_t: float | None = None
-        self.period_est: float | None = None               # 최근 렙 주기 추정 (적응 샘플링 신호)
-
-    def _samples_per_rep(self) -> float:
-        if self.period_est is None or len(self.hist) < 2:
-            return 99.0
-        dt = (self.hist[-1][0] - self.hist[0][0]) / max(len(self.hist) - 1, 1)
-        return self.period_est / max(dt, 1e-6)
+        self.period_est: float | None = None
+        self.active_s = 0.0
+        self._prev_t: float | None = None
+        self._dt: float | None = None
 
     def on_frame(self, t_s: float, value: float | None) -> bool:
-        """value=None 이면 가림(피처 유보) — 카운터 일시정지. 렙 완료 시 True."""
         if value is None or not np.isfinite(value):
             return False
+        if (self.plo is not None and value < self.plo) or (self.phi is not None and value > self.phi):
+            return False
+        if self._prev_t is not None:
+            d = t_s - self._prev_t
+            if 0 < d < 2.0:
+                self._dt = d if self._dt is None else 0.7 * self._dt + 0.3 * d
+            self.active_s += min(d, 1.0)
+        self._prev_t = t_s
         self.raw3.append(float(value))
-        # 평활: 렙당 샘플이 충분할 때만 (성긴 신호 평활 금지 — AIHub 실측)
-        v = float(np.median(self.raw3)) if len(self.raw3) == 3 and self._samples_per_rep() >= 8 else float(value)
-        self.hist.append((t_s, v))
-        while self.hist and t_s - self.hist[0][0] > self.window_s:
-            self.hist.popleft()
-        if len(self.hist) < 8:
+        v = float(np.median(self.raw3)) if len(self.raw3) == 3 and (self._dt or 9) <= 0.35 else float(value)
+        if self.ext is None:
+            self.ext, self.ext_t = v, t_s
             return False
-        vals = np.fromiter((x[1] for x in self.hist), float)
-        p10, p90 = np.quantile(vals, [0.10, 0.90])
-        if (p90 - p10) < self.min_amp:                      # 진폭 게이트 (물리 단위)
-            self.state = "mid"
-            return False
-        if self._last_t is not None:
-            self.active_s += min(t_s - self._last_t, 1.0)
-        self._last_t = t_s
-        # 밴드 폭은 0.15 고정: 넓히면 얕은 렙(실기기 깊이부족 푸시업)을 놓친다 — M0 실측으로
-        # frac 0.30 이 라벨 세트를 ✗ 로 후퇴시켰다. 잡음 억제는 밴드가 아니라 진폭 게이트의 몫.
-        center = (p10 + p90) / 2
-        half = self.frac * (p90 - p10)
-        lo, hi = center - half, center + half
-        if self.state != "low" and v <= lo:
-            self.state = "low"
-        elif self.state == "low" and v >= hi:
-            self.state = "high"
-            if t_s - self.last_rep_t >= self.refractory_s:
-                if self.last_rep_t > -1e8:
-                    p = t_s - self.last_rep_t
-                    self.period_est = p if self.period_est is None else 0.5 * self.period_est + 0.5 * p
-                self.reps += 1
-                self.rep_times.append(t_s)
-                self.last_rep_t = t_s
-                return True
+        if self.dirn <= 0:
+            if v < self.ext:
+                self.ext, self.ext_t = v, t_s
+            elif v - self.ext >= self.h:
+                self.pending_bottom = self.ext
+                self.dirn = 1
+                self.ext, self.ext_t = v, t_s
+        else:
+            if v > self.ext:
+                self.ext, self.ext_t = v, t_s
+            elif self.ext - v >= self.h:
+                fired = False
+                if self.pending_bottom is not None and t_s - self.last_rep_t >= self.refr:
+                    if self.last_rep_t > -1e8:
+                        p = t_s - self.last_rep_t
+                        self.period_est = p if self.period_est is None else 0.5 * self.period_est + 0.5 * p
+                    self.reps += 1
+                    self.rep_times.append(self.ext_t)
+                    self.rep_mins.append(self.pending_bottom)
+                    self.last_rep_t = t_s
+                    self.pending_bottom = None   # 불응기 기각 시엔 유지 (연쇄 유실 방지)
+                    fired = True
+                self.dirn = -1
+                self.ext, self.ext_t = v, t_s
+                if fired:
+                    return True
         return False
 
 
@@ -154,7 +161,8 @@ def main() -> None:
                 continue
             sig, min_amp, iso = SIGNALS[ex]
             frames = log["frames"]
-            sc = StreamRepCounter(min_amp, isometric=iso)
+            plaus = (0.10, None) if sig == "wrist_shoulder_d" else (None, None)
+            sc = StreamRepCounter(min_amp, isometric=iso, plaus=plaus)
             series = []
             for fr in frames:
                 val = (fr.get("features") or {}).get(sig)

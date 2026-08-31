@@ -12,7 +12,7 @@ import org.junit.Test
  */
 class RepCounterTest {
 
-    private fun counter(minAmp: Float = 0.30f) = RepCounter(RepSignal("wrist_shoulder_d", minAmp))
+    private fun counter(minAmp: Float = 0.30f) = RepCounter(RepSignal("wrist_shoulder_d", minAmp, plausibleMin = 0.10f))
 
     /** 주기 periodMs 의 삼각파: bottom↔top 왕복. 300ms 샘플링. */
     private fun triangle(c: RepCounter, cycles: Int, periodMs: Long, top: Float = 1.4f, bottom: Float = 0.4f): Int {
@@ -134,6 +134,45 @@ class RepCounterTest {
         assertTrue(c.reps >= 1)
         assertTrue("min=${c.lastCycleMin}", c.lastCycleMin <= 0.55f)   // 300ms 이산화로 정확한 저점(0.4)은 방출 안 됨(최저 0.525)
         assertTrue("max=${c.lastCycleMax}", c.lastCycleMax >= 1.2f)
+    }
+
+    @Test
+    fun mixedDepthSetSeparatesValidAndInvalid() {
+        // 라벨 세트 실측 시나리오: 깊(0.45)·얕(0.85) 혼합 — 반전 카운터는 둘 다 사이클로 잡고
+        // ROM(0.71)이 유효/무효를 가른다. v3 밴드는 얕은 렙을 사이클로도 못 잡았다(실측 5/12 원인).
+        val sig = RepSignals.byExercise.getValue("푸시업")
+        val c = RepCounter(sig)
+        var t = 0L
+        var valid = 0
+        var invalid = 0
+        fun rep(bottom: Float) {
+            for (v in listOf(1.4f, 1.1f, 0.95f, bottom, bottom + 0.1f, 1.1f, 1.4f, 1.4f)) {
+                if (c.onFrame(t, v)) {
+                    if (sig.isValidRep(c.lastCycleMin, c.lastCycleMax) == true) valid++ else invalid++
+                }
+                t += 300
+            }
+        }
+        repeat(3) { rep(0.45f) }   // 깊 3
+        repeat(3) { rep(0.85f) }   // 얕 3
+        repeat(3) { rep(0.45f) }   // 깊 3
+        // 마지막 상단은 다음 하락이 있어야 확정 — 마무리 하락 프레임
+        c.onFrame(t, 1.0f)
+        if (c.onFrame(t + 300, 0.95f)) { if (sig.isValidRep(c.lastCycleMin, c.lastCycleMax) == true) valid++ else invalid++ }
+        assertTrue("valid=$valid invalid=$invalid", valid in 5..6)
+        assertTrue("invalid=$invalid", invalid == 3)
+    }
+
+    @Test
+    fun plausibilityGateIgnoresWristCollapse() {
+        // 손목-붕괴 잡값(0.01)은 물리 하한(0.10) 밖 — 가림처럼 일시정지, 하단으로 오인하지 않음
+        val c = counter()
+        var t = 0L
+        for (v in listOf(1.4f, 1.0f, 0.6f, 0.01f, 0.02f, 0.6f, 1.0f, 1.4f, 1.4f, 1.4f, 1.0f, 0.9f, 0.8f)) {   // 꼬리 하락 — 3점 평활 지연 보상
+            c.onFrame(t, v); t += 300
+        }
+        assertTrue(c.reps >= 1)
+        assertTrue("cycleMin=${c.lastCycleMin} — 잡값이 하단이 되면 안 됨", c.lastCycleMin >= 0.5f)
     }
 
     @Test

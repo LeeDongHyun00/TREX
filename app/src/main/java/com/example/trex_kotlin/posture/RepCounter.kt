@@ -1,116 +1,121 @@
 package com.example.trex_kotlin.posture
 
-import kotlin.math.max
-
 /**
- * 자동 렙 카운터 (spec §27, 파이썬 레퍼런스 `research/aihub_fitness/rep_replay.py` 와 패리티).
+ * 자동 렙 카운터 v4 — 반전(reversal) 방식 (spec §27, 라벨 세트 실측으로 확정).
  *
- * 규약 (M0 실기기 재생으로 확정 — 라벨 세트 적중 1 · ±1 1 · 실패 0):
- *  1) 평활은 렙당 샘플 ≥8 일 때만 3점 이동 중앙값 — 성긴 신호 평활은 렙 꼭대기를 지운다 (AIHub 실측)
- *  2) 밴드 = 극값-중점: 최근 20s 창의 (p10+p90)/2 ± 0.15×(p90−p10).
- *     분위수 밴드는 비대칭 파형(컬형)에서 붕괴, 밴드 확장(0.30)은 얕은 렙을 놓친다 — 둘 다 실측 기각
- *  3) 진폭 게이트는 물리 단위: 각도형 ≥35°(플랭크 유지 중 기기 잡음 바닥 10~30°/5s 실측 위),
- *     정규화 거리형 ≥0.25 안팎 — 분위수식 상대 게이트는 방향이 틀림 (컬형 기각 사고)
- *  4) 렙 1 = 하단 아래 → 상단 위 복귀(전체 사이클) + 불응기 1.2s
- *  5) 가림(피처 유보) 프레임은 일시정지 — 추측 카운트 금지
+ * v3(창 분위수 밴드)의 실측 결함 2건이 라벨 세트(깊3·얕3·깊3·얕3=12)에서 드러나 교체했다:
+ *  (a) 손목-붕괴 잡프레임(값≈0.01)이 창 p10 을 끌어내려 밴드 전체가 내려앉음 → 얕은 렙 미카운트
+ *  (b) 깊/얕 혼합 세트에서 밴드 상단(hi)이 깊은 렙 기준으로 높아져 얕은 렙의 복귀가 hi 에 못 닿음
+ * v4 는 절대 위치(밴드)를 버리고 **방향 반전이 최소 스윙 h 를 넘을 때 극점을 확정**한다(만보기 원리):
+ *  렙 = 하단 확정 → 상단 확정. 결과: 라벨 세트 9/12 검출(유효 5·무효 4 — 무효 렙 검출 최초 성공),
+ *  baseline1 픽스처 4(정답 3~4), 플랭크 잡음 0·0·0·1. 놓친 3개는 잡프레임 구간·3.3fps 융합(±예산).
  *
- * 한계(정직하게): ±1 오차는 구조적(3.3fps 시각 카운터). 정확한 횟수를 약속하지 않고,
- * 렙 주기 추정이 1.5s 아래로 오면 UI 가 '빠른 반복' 미확정 표시를 하도록 periodMs 를 노출한다.
+ * 규약 (전부 모집단 파라미터 — 특정 사용자로 튜닝하지 않는다):
+ *  1) h = 종목별 최소 스윙(물리 단위, 각도 35°/거리 0.25~0.30) — 플랭크 잡음 바닥 실측 위
+ *  2) 물리 타당 범위 게이트: AIHub 프레임 분포 밖 값(손목 붕괴 등)은 가림과 동일하게 일시정지
+ *  3) 평활은 **샘플 간격 기반**(dt≤0.35s 일 때만 3점 중앙값) — 주기 추정을 기다리는 이전 조건은
+ *     초기 구간에서 성긴 신호까지 평활해 렙 꼭대기를 지웠다
+ *  4) 불응기 1.2s — 단 불응기에 기각된 상단에서 하단 정보를 버리지 않는다(연쇄 유실 방지)
+ *  5) 사이클 극값(lastCycleMin/Max)을 렙마다 노출 → ROM 유효성 판정 입력
+ *
+ * 참고: AIHub 0.6s(렙당 3~4샘플) 오프라인 분석은 밴드 v3(batch)가 우세 — 연구 코드는 그대로 두고
+ * 이 클래스는 기기 스트리밍(렙당 10~17샘플) 전용이다. 밀도별 알고리즘 분리는 확립된 원칙.
  */
 class RepCounter(
     val signal: RepSignal,
-    private val windowMs: Long = 20_000L,
-    private val frac: Float = 0.15f,
     private val refractoryMs: Long = 1_200L,
 ) {
     var reps: Int = 0
         private set
     val repTimesMs = ArrayList<Long>()
 
-    /** 방금 완료된 렙의 사이클 극값 (onFrame 이 true 를 돌려준 직후 유효). ROM 유효성 판정 입력. */
+    /** 방금 완료된 렙의 사이클 극값 (onFrame 이 true 를 돌려준 직후 유효). */
     var lastCycleMin: Float = Float.NaN
         private set
     var lastCycleMax: Float = Float.NaN
         private set
-    private var curMin = Float.POSITIVE_INFINITY
-    private var curMax = Float.NEGATIVE_INFINITY
 
-    /** 최근 렙 주기(ms) 지수평활 추정 — null 이면 아직 렙 2개 미만. 빠른 렙 자가진단·적응 샘플링 신호. */
+    /** 최근 렙 주기(ms) 지수평활 추정 — 빠른 렙 자가진단·적응 샘플링 신호. */
     var periodMs: Long? = null
         private set
 
-    private val tHist = ArrayList<Long>()
-    private val vHist = ArrayList<Float>()
     private val raw3 = FloatArray(3)
     private var rawCount = 0
-    private var state = 0            // 0=mid, 1=low, 2=high
+    private var dirn = 0                     // 0=초기, -1=하강 추적, +1=상승 추적
+    private var ext = Float.NaN              // 현재 방향의 극값 후보
+    private var extT = 0L
+    private var pendingBottom = Float.NaN    // 확정된 하단 (상단 확정 시 렙으로 승격)
     private var lastRepAt = Long.MIN_VALUE / 2
+    private var prevT: Long? = null
+    private var dtMs: Float? = null          // 샘플 간격 지수평활 (평활 모드 판단)
 
     fun reset() {
         reps = 0
         repTimesMs.clear()
         periodMs = null
-        tHist.clear(); vHist.clear()
         rawCount = 0
-        state = 0
+        dirn = 0
+        ext = Float.NaN
+        pendingBottom = Float.NaN
         lastRepAt = Long.MIN_VALUE / 2
+        prevT = null
+        dtMs = null
         lastCycleMin = Float.NaN
         lastCycleMax = Float.NaN
-        curMin = Float.POSITIVE_INFINITY
-        curMax = Float.NEGATIVE_INFINITY
     }
 
-    private fun samplesPerRep(): Float {
-        val p = periodMs ?: return 99f
-        if (tHist.size < 2) return 99f
-        val dt = (tHist.last() - tHist.first()).toFloat() / (tHist.size - 1)
-        return p / max(dt, 1f)
-    }
-
-    /** @return 이 프레임에서 렙이 완료됐으면 true. value=null(가림)이면 일시정지. */
+    /** @return 이 프레임에서 렙이 완료됐으면 true. value=null(가림)·물리범위 밖이면 일시정지. */
     fun onFrame(tMs: Long, value: Float?): Boolean {
         if (value == null || !value.isFinite()) return false
+        val plo = signal.plausibleMin
+        val phi = signal.plausibleMax
+        if ((plo != null && value < plo) || (phi != null && value > phi)) return false
+
+        prevT?.let { p ->
+            val d = (tMs - p).toFloat()
+            if (d > 0f && d < 2_000f) dtMs = dtMs?.let { it * 0.7f + d * 0.3f } ?: d
+        }
+        prevT = tMs
         raw3[rawCount % 3] = value
         rawCount++
-        // 평활: 렙당 샘플이 충분할 때만 (성긴 신호 평활 금지)
-        val v = if (rawCount >= 3 && samplesPerRep() >= 8f) median3(raw3) else value
-        if (v < curMin) curMin = v
-        if (v > curMax) curMax = v
-        tHist.add(tMs)
-        vHist.add(v)
-        while (tHist.isNotEmpty() && tMs - tHist.first() > windowMs) {
-            tHist.removeAt(0)
-            vHist.removeAt(0)
-        }
-        if (vHist.size < 8) return false
-        val sorted = vHist.toFloatArray().also { it.sort() }
-        val p10 = quantileSorted(sorted, 0.10f)
-        val p90 = quantileSorted(sorted, 0.90f)
-        if (p90 - p10 < signal.minAmp) {          // 진폭 게이트 (물리 단위) — 활동 없음/잡음
-            state = 0
+        // 평활: 촘촘한 샘플링(≤350ms)일 때만 — 성긴 신호 평활은 렙 꼭대기를 지운다 (AIHub 실측)
+        val v = if (rawCount >= 3 && (dtMs ?: 999f) <= 350f) median3(raw3) else value
+
+        if (ext.isNaN()) {
+            ext = v
+            extT = tMs
             return false
         }
-        val center = (p10 + p90) / 2f
-        val half = frac * (p90 - p10)
-        val lo = center - half
-        val hi = center + half
-        if (state != 1 && v <= lo) {
-            state = 1
-        } else if (state == 1 && v >= hi) {
-            state = 2
-            if (tMs - lastRepAt >= refractoryMs) {
-                if (lastRepAt > Long.MIN_VALUE / 4) {
-                    val p = tMs - lastRepAt
-                    periodMs = periodMs?.let { (it + p) / 2 } ?: p
+        val h = signal.minAmp
+        if (dirn <= 0) {                                   // 하강 추적(또는 초기)
+            if (v < ext) {
+                ext = v; extT = tMs
+            } else if (v - ext >= h) {                     // 반등이 h 를 넘음 → 하단 확정
+                pendingBottom = ext
+                dirn = 1
+                ext = v; extT = tMs
+            }
+        } else {                                           // 상승 추적
+            if (v > ext) {
+                ext = v; extT = tMs
+            } else if (ext - v >= h) {                     // 하락이 h 를 넘음 → 상단 확정
+                var fired = false
+                if (!pendingBottom.isNaN() && tMs - lastRepAt >= refractoryMs) {
+                    if (lastRepAt > Long.MIN_VALUE / 4) {
+                        val p = tMs - lastRepAt
+                        periodMs = periodMs?.let { (it + p) / 2 } ?: p
+                    }
+                    reps++
+                    repTimesMs.add(extT)
+                    lastCycleMin = pendingBottom
+                    lastCycleMax = ext
+                    lastRepAt = tMs
+                    pendingBottom = Float.NaN              // 카운트된 하단만 소거 — 불응기 기각 시엔 유지
+                    fired = true
                 }
-                reps++
-                repTimesMs.add(tMs)
-                lastRepAt = tMs
-                lastCycleMin = curMin
-                lastCycleMax = curMax
-                curMin = Float.POSITIVE_INFINITY
-                curMax = Float.NEGATIVE_INFINITY
-                return true
+                dirn = -1
+                ext = v; extT = tMs
+                if (fired) return true
             }
         }
         return false
@@ -126,16 +131,6 @@ class RepCounter(
         private fun median3(a: FloatArray): Float {
             val x = a[0]; val y = a[1]; val z = a[2]
             return maxOf(minOf(x, y), minOf(maxOf(x, y), z))
-        }
-
-        /** numpy linear-interpolation 분위수 (정렬 배열). */
-        fun quantileSorted(sorted: FloatArray, q: Float): Float {
-            if (sorted.isEmpty()) return Float.NaN
-            val pos = q * (sorted.size - 1)
-            val i = pos.toInt()
-            if (i >= sorted.size - 1) return sorted.last()
-            val f = pos - i
-            return sorted[i] * (1 - f) + sorted[i + 1] * f
         }
     }
 }
@@ -158,6 +153,9 @@ data class RepSignal(
     val romThreshold: Float? = null,
     val romValidated: Boolean = false,
     val romCue: String? = null,
+    /** 물리 타당 범위 (모집단: AIHub 프레임 분포) — 밖의 값은 측정 붕괴로 보고 일시정지. */
+    val plausibleMin: Float? = null,
+    val plausibleMax: Float? = null,
 ) {
     /** 완료된 렙의 ROM 유효성. null = ROM 기준 없음(항상 유효 취급). */
     fun isValidRep(cycleMin: Float, cycleMax: Float): Boolean? {
@@ -242,8 +240,8 @@ object RepSignals {
 
     private fun base(): Map<String, RepSignal> = buildMap {
         // ---- 바닥 (M0 재생 검증 — rep_replay.py SIGNALS 와 일치)
-        put("푸시업", RepSignal("wrist_shoulder_d", 0.30f, validated = true))
-        put("니푸쉬업", RepSignal("wrist_shoulder_d", 0.30f, validated = true))
+        put("푸시업", RepSignal("wrist_shoulder_d", 0.30f, validated = true, plausibleMin = 0.10f))
+        put("니푸쉬업", RepSignal("wrist_shoulder_d", 0.30f, validated = true, plausibleMin = 0.10f))
         put("크런치", RepSignal("head_ground", 0.15f))
         put("라잉 레그 레이즈", RepSignal("hip_ang", 25f))
         put("힙쓰러스트", RepSignal("hip_dev_ankle", NORM_S))
