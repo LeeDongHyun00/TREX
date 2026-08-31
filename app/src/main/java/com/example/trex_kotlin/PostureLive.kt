@@ -99,6 +99,7 @@ import com.example.trex_kotlin.posture.PoseSample
 import com.example.trex_kotlin.posture.PostureAnalyzer
 import com.example.trex_kotlin.posture.PostureRule
 import com.example.trex_kotlin.posture.RepCounter
+import com.example.trex_kotlin.posture.RuleHighlight
 import com.example.trex_kotlin.posture.PostureRuleSet
 import com.example.trex_kotlin.posture.SCREEN_UP
 import com.example.trex_kotlin.posture.SetLog
@@ -259,6 +260,8 @@ fun PostureLiveSessionScreen(
     var repInvalid by remember { mutableIntStateOf(0) }    // ROM 미달 무효 렙 — 세되 무효 + 사유 발화 (심판 방식)
     val repInvalidRef = remember { intArrayOf(0) }
     var repFast by remember { mutableStateOf(false) }
+    // 위반 부위 시각화 (수정할점 #1): 위반 중 규칙의 관절을 스켈레톤에서 붉게 강조
+    var violHighlight by remember { mutableStateOf<Set<Int>>(emptySet()) }
 
     // ---- 촬영 커버리지 (spec §25b): 규칙이 요구하는 부위가 화면에 없으면 '왜'와 '어떻게'를 안내한다.
     //      판정 자체가 불가능한 상태이므로 자세 코칭보다 우선한다.
@@ -503,6 +506,7 @@ fun PostureLiveSessionScreen(
                     coachRef[0]?.let { coach ->
                         coach.onFrame(features)
                         val ev = coach.evaluate(now)
+                        violHighlight = RuleHighlight.forViolations(coach.lastStates)
                         // 커버리지가 막힌 동안에는 자세 지적 대신 촬영 안내를 말한다 (판정 근거가 없으므로)
                         if (!coverage.ok) {
                             if (now - lastCoverageSpeakAt[0] > COVERAGE_SPEAK_GAP_MS) {
@@ -538,7 +542,7 @@ fun PostureLiveSessionScreen(
     val cameraArea: @Composable (Modifier) -> Unit = { mod ->
         Box(mod.background(Color.Black)) {
             AndroidView(factory = { previewView }, modifier = Modifier.fillMaxSize())
-            LivePoseOverlay(sample = sample, mirror = useFrontCamera, tint = c.lime, modifier = Modifier.fillMaxSize())
+            LivePoseOverlay(sample = sample, mirror = useFrontCamera, tint = c.lime, highlight = violHighlight, modifier = Modifier.fillMaxSize())
             // 상단 스크림 + 컨트롤 (영상 위에 겹치지만 사람은 보통 화면 중앙에 잡히므로 최소 높이만)
             Box(
                 Modifier
@@ -769,7 +773,7 @@ private fun GlassIcon(
 }
 
 @Composable
-private fun LivePoseOverlay(sample: PoseSample, mirror: Boolean, tint: Color, modifier: Modifier = Modifier) {
+private fun LivePoseOverlay(sample: PoseSample, mirror: Boolean, tint: Color, highlight: Set<Int> = emptySet(), modifier: Modifier = Modifier) {
     Canvas(modifier = modifier) {
         if (!sample.detected || sample.imageWidth <= 0) return@Canvas
         val imgW = sample.imageWidth.toFloat()
@@ -787,20 +791,27 @@ private fun LivePoseOverlay(sample: PoseSample, mirror: Boolean, tint: Color, mo
             return Offset(if (mirror) size.width - px else px, py)
         }
 
+        val warn = Color(0xFFFF5A5A)
         POSE_CONNECTIONS.forEach { (a, b) ->
             if (sample.visibility[a] >= 0.5f && sample.visibility[b] >= 0.5f) {
+                val hot = a in highlight && b in highlight   // 위반 부위의 연결선은 붉게 (수정할점 #1)
                 drawLine(
-                    color = tint.copy(alpha = 0.55f),
+                    color = if (hot) warn.copy(alpha = 0.9f) else tint.copy(alpha = 0.55f),
                     start = point(a),
                     end = point(b),
-                    strokeWidth = 4f,
+                    strokeWidth = if (hot) 7f else 4f,
                     cap = StrokeCap.Round,
                 )
             }
         }
         for (i in 0 until MP_LANDMARK_COUNT) {
             if (sample.visibility[i] < 0.5f) continue
-            drawCircle(color = Color.White.copy(alpha = 0.85f), radius = 4f, center = point(i))
+            val hot = i in highlight
+            drawCircle(
+                color = if (hot) warn else Color.White.copy(alpha = 0.85f),
+                radius = if (hot) 7f else 4f,
+                center = point(i),
+            )
         }
     }
 }
