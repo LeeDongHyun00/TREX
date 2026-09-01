@@ -14,6 +14,11 @@ local.properties
 
 # Android Studio / IntelliJ
 .idea/
+*.hprof
+
+# Claude Code 작업 트리·로컬 설정 (저장소 내부에 생기지만 공유 대상 아님)
+.claude/worktrees/
+.claude/settings.local.json
 
 # Signing / secrets
 *.jks
@@ -46,6 +51,20 @@ research/aihub_fitness/outputs*/
 research/aihub_fitness/models/
 __pycache__/
 *.pyc
+venv/
+.venv/
+*.egg-info/
+.ipynb_checkpoints/
+
+# 원천 데이터셋 — AIHub 원본/압축본은 로컬(T:)에만 둔다 (라이선스·용량)
+data/
+*.tar
+*.tar.gz
+*.zip
+
+# 실기기 세트 로그 (adb pull 결과) — 개인 측정치라 저장소에 올리지 않는다
+research/aihub_fitness/logs/
+*.jsonl
 
 # 파리티 픽스처는 테스트가 쓰는 .txt 만 추적 (.json 은 동일 내용의 참고본)
 app/src/test/resources/posture_port_fixture.json
