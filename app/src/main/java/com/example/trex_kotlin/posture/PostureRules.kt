@@ -63,6 +63,8 @@ data class PostureRule(
     val baselineEligible: Boolean = false,
     /** 기준선을 뺀 값(value − baseline)에 적용할 임계값 (같은 op). null 이면 기준선 보정 불가. */
     val baselineThresholdRel: Float? = null,
+    /** JSON personal_baseline.required — 기준선 없으면 판정 보류 (spec §28e). */
+    val baselineRequired: Boolean = false,
     /** 기준선에 필요한 정자세 세트 수. */
     val baselineK: Int = 3,
     /** 연구(GT)에서 측정된 기준선 보정 이득(AUC Δ). */
@@ -74,6 +76,13 @@ data class PostureRule(
 
     /** 기준선 보정 판정이 가능한 규칙 (eligible + 상대 임계값 보유). */
     val supportsBaseline: Boolean get() = baselineEligible && baselineThresholdRel != null
+
+    /**
+     * 기준선이 **필수**인 규칙 (spec §28e). 임계값이 기기 분포 한가운데에 놓여 raw 판정이
+     * 사실상 동전던지기인 경우 — 기준선 없이 판정하면 오탐이 난다(실측: 스쿼트 heel_lift
+     * 기기 p10~p90 = 0.506~0.637 인데 AIHub 임계 0.580). 기준선 없으면 ABSTAIN.
+     */
+    val requiresBaseline: Boolean get() = baselineRequired
 
     fun isViolated(value: Float): Boolean = if (op == "<") value < threshold else value > threshold
 
@@ -165,6 +174,8 @@ class PostureRuleSet(
         val value = if (useBaseline) raw!! - b!! else raw
         var verdict = when {
             value == null -> Verdict.ABSTAIN
+            // §28e: 기준선 필수 규칙은 기준선 없이 판정하지 않는다 — raw 임계가 기기 분포 중앙이라 오탐
+            rule.requiresBaseline && !useBaseline -> Verdict.ABSTAIN
             useBaseline -> if (rule.isViolatedRelative(value)) Verdict.VIOLATION else Verdict.OK
             rule.isViolated(value) -> Verdict.VIOLATION
             else -> Verdict.OK
@@ -227,6 +238,7 @@ class PostureRuleSet(
                     mirrorSafe = o.optBoolean("mirror_safe", true),
                     cautions = cautions,
                     baselineEligible = pb?.optBoolean("eligible", false) ?: false,
+                    baselineRequired = pb?.optBoolean("required", false) ?: false,
                     baselineThresholdRel = pb?.let { if (it.has("threshold_rel") && !it.isNull("threshold_rel")) it.getDouble("threshold_rel").toFloat() else null },
                     baselineK = pb?.optInt("k", BaselineCollector.DEFAULT_SETS) ?: BaselineCollector.DEFAULT_SETS,
                     baselineGain = pb?.let { if (it.has("gain") && !it.isNull("gain")) it.getDouble("gain").toFloat() else null },
