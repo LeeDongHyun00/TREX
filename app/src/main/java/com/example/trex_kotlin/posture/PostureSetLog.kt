@@ -73,6 +73,13 @@ data class SetLog(
     val repTimesMs: List<Long>? = null,
     val repSignal: String? = null,
     val repInvalid: Int? = null,
+    /** 렙별 사이클 극값·ROM 판정 (spec §29). 후반 드리프트(피로)·깊이 일관성을 오프라인에서
+     *  렙 단위로 분석할 수 있게 한다 — repTimesMs 와 같은 순서. */
+    val repMins: List<Float>? = null,
+    val repMaxs: List<Float>? = null,
+    val repValid: List<Boolean?>? = null,
+    /** 세션 모드 (spec §29): "coach"(기본) | "track". null = 모드 개념 이전 로그. */
+    val mode: String? = null,
 ) {
     companion object {
         const val SCHEMA = "trex.posture.setlog/1"
@@ -108,6 +115,8 @@ data class SetLog(
             repTimesMs: List<Long>? = null,
             repSignal: String? = null,
             repInvalid: Int? = null,
+            repRecords: List<RepRecord>? = null,
+            mode: String? = null,
         ): SetLog {
             val frames = samples.mapIndexed { i, s ->
                 SetLogFrame(
@@ -144,6 +153,10 @@ data class SetLog(
                 repTimesMs = repTimesMs,
                 repSignal = repSignal,
                 repInvalid = repInvalid,
+                repMins = repRecords?.map { it.cycleMin },
+                repMaxs = repRecords?.map { it.cycleMax },
+                repValid = repRecords?.map { it.valid },
+                mode = mode,
             )
         }
     }
@@ -170,6 +183,7 @@ object SetLogJson {
         sb.append("\"up_flipped_frames\":").append(log.upFlippedFrames).append(',')
         sb.append("\"up_verified_frames\":").append(log.upVerifiedFrames).append(',')
         field(sb, "note", log.note)
+        if (log.mode != null) field(sb, "mode", log.mode)
         // 자동 렙 카운트 — 카운터가 돌았던 세트만 기록 (미적용 세트와 구분: 필드 부재 = 미적용)
         if (log.repCount != null) {
             sb.append("\"reps\":{")
@@ -178,7 +192,24 @@ object SetLogJson {
             field(sb, "signal", log.repSignal)
             sb.append("\"t_ms\":[")
             log.repTimesMs.orEmpty().forEachIndexed { i, t -> if (i > 0) sb.append(','); sb.append(t) }
-            sb.append("]},")
+            sb.append(']')
+            // 렙별 극값·ROM 판정 (spec §29) — t_ms 와 같은 순서. 구버전 로그에는 없다.
+            log.repMins?.let { v ->
+                sb.append(",\"min\":[")
+                v.forEachIndexed { i, x -> if (i > 0) sb.append(','); sb.append(num(x)) }
+                sb.append(']')
+            }
+            log.repMaxs?.let { v ->
+                sb.append(",\"max\":[")
+                v.forEachIndexed { i, x -> if (i > 0) sb.append(','); sb.append(num(x)) }
+                sb.append(']')
+            }
+            log.repValid?.let { v ->
+                sb.append(",\"valid\":[")
+                v.forEachIndexed { i, x -> if (i > 0) sb.append(','); sb.append(x?.toString() ?: "null") }
+                sb.append(']')
+            }
+            sb.append("},")
         }
         sb.append("\"frames\":[")
         log.frames.forEachIndexed { i, f ->

@@ -182,4 +182,13 @@ class RepCounterTest {
         assertTrue(!sig.romValidated)
         assertTrue(sig.invalidCue.contains("끝까지"))
     }
+
+    @Test
+    fun medianPeriodIsRobustToOneOutlierGap() {
+        // §29 기록 모드 템포: 렙 사이에 휴식 하나가 끼어도 중앙값은 흔들리지 않는다 (EMA 는 끌려간다)
+        assertEquals(3000L, RepMetrics.medianPeriodMs(listOf(0L, 3_000L, 6_000L, 9_000L, 60_000L)))
+        assertEquals(2500L, RepMetrics.medianPeriodMs(listOf(0L, 2_000L, 5_000L)))   // 짝수 개 간격 = 가운데 평균
+        assertNull(RepMetrics.medianPeriodMs(listOf(5_000L)))
+        assertNull(RepMetrics.medianPeriodMs(emptyList()))
+    }
 }

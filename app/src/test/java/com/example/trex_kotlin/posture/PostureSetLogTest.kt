@@ -85,6 +85,35 @@ class PostureSetLogTest {
     }
 
     @Test
+    fun encodesRepRecordsAndMode() {
+        // §29: 렙별 극값·ROM 판정 배열 + 세션 모드 — 후반 드리프트(피로) 오프라인 분석의 원자재
+        val samples = List(3) { sample(true, mapOf("knee_L" to 90f)) }
+        val log = SetLog.build(
+            "푸시업", samples, emptyList(), "floor_v0", "full", "GPU", true, 300L, now = Date(0L),
+            repCount = 3, repTimesMs = listOf(1000L, 4000L, 7300L), repSignal = "wrist_shoulder_d", repInvalid = 1,
+            repRecords = listOf(
+                RepRecord(1000L, 0.45f, 1.40f, true),
+                RepRecord(4000L, 0.85f, 1.38f, false),
+                RepRecord(7300L, 0.50f, 1.41f, null),   // ROM 기준 없는 종목 = null
+            ),
+            mode = "track",
+        )
+        val json = SetLogJson.encode(log)
+        assertTrue(json.contains("\"mode\":\"track\""))
+        assertTrue(json.contains("\"count\":3"))
+        assertTrue(json.contains("\"invalid\":1"))
+        assertTrue(json.contains("\"t_ms\":[1000,4000,7300]"))
+        assertTrue(json.contains("\"min\":[0.45,0.85,0.5]"))
+        assertTrue(json.contains("\"max\":[1.4,1.38,1.41]"))
+        assertTrue(json.contains("\"valid\":[true,false,null]"))
+        // 구버전 호환: repRecords/mode 를 안 주면 필드 자체가 없다 (부재 = 미적용)
+        val old = SetLog.build("푸시업", samples, emptyList(), "floor_v0", "full", "GPU", true, 300L, now = Date(0L), repCount = 2)
+        val oj = SetLogJson.encode(old)
+        assertFalse(oj.contains("\"min\":"))
+        assertFalse(oj.contains("\"mode\":"))
+    }
+
+    @Test
     fun numberFormattingIsLocaleSafeAndCompact() {
         assertEquals("0", SetLogJson.num(0f))
         assertEquals("0", SetLogJson.num(-0.0000001f))

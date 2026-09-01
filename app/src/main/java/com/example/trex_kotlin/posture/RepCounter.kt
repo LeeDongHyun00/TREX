@@ -280,3 +280,20 @@ object RepSignals {
         // 미등록(신뢰 가능한 앱 가용 신호 없음): 스탠딩 사이드 크런치 — 오카운트보다 미표시가 정직
     }
 }
+
+/** 완료된 렙 하나의 기록 — 사이클 극값과 ROM 판정. 세트 로그에 렙별로 남겨 후반 드리프트(피로)
+ *  분석을 오프라인에서 가능하게 한다 (spec §29 — 숙련자 계기판의 원자재). */
+data class RepRecord(val tMs: Long, val cycleMin: Float, val cycleMax: Float, val valid: Boolean?)
+
+object RepMetrics {
+    /**
+     * 렙 간격 **중앙값**(ms) — 기록 모드 템포 표시용. RepCounter.periodMs(지수평활)는 이상 렙
+     * 하나(휴식 끼임 등)에 끌려가므로, 표시는 중앙값으로 강건하게. 렙 2개 미만이면 null.
+     */
+    fun medianPeriodMs(repTimesMs: List<Long>): Long? {
+        if (repTimesMs.size < 2) return null
+        val gaps = repTimesMs.zipWithNext { a, b -> b - a }.sorted()
+        val m = gaps.size
+        return if (m % 2 == 1) gaps[m / 2] else (gaps[m / 2 - 1] + gaps[m / 2]) / 2
+    }
+}

@@ -83,6 +83,7 @@ import com.example.trex_kotlin.posture.AnalyzerStats
 import com.example.trex_kotlin.posture.BaselineStore
 import com.example.trex_kotlin.posture.CoachCues
 import com.example.trex_kotlin.posture.CoachEvent
+import com.example.trex_kotlin.posture.CoachMode
 import com.example.trex_kotlin.posture.FeatureAggregator
 import com.example.trex_kotlin.posture.GravityTracker
 import com.example.trex_kotlin.posture.CoverageReport
@@ -92,13 +93,17 @@ import com.example.trex_kotlin.posture.FloorFeatureExtractor
 import com.example.trex_kotlin.posture.InferencePhase
 import com.example.trex_kotlin.posture.InferencePolicy
 import com.example.trex_kotlin.posture.LiveCoach
+import com.example.trex_kotlin.posture.ModeStore
 import com.example.trex_kotlin.posture.MP_LANDMARK_COUNT
+import com.example.trex_kotlin.posture.OnsetKind
 import com.example.trex_kotlin.posture.POSE_CONNECTIONS
 import com.example.trex_kotlin.posture.PoseModel
 import com.example.trex_kotlin.posture.PoseSample
 import com.example.trex_kotlin.posture.PostureAnalyzer
 import com.example.trex_kotlin.posture.PostureRule
 import com.example.trex_kotlin.posture.RepCounter
+import com.example.trex_kotlin.posture.RepMetrics
+import com.example.trex_kotlin.posture.RepRecord
 import com.example.trex_kotlin.posture.RuleHighlight
 import com.example.trex_kotlin.posture.PostureRuleSet
 import com.example.trex_kotlin.posture.SCREEN_UP
@@ -257,11 +262,22 @@ fun PostureLiveSessionScreen(
     //      등척성(플랭크)·미등록 종목은 null. 카운트는 beta — ±1 오차가 구조적이라 참고 표시.
     val repRef = remember { arrayOfNulls<RepCounter>(1) }
     var repCount by remember { mutableIntStateOf(0) }      // 유효 렙
-    var repInvalid by remember { mutableIntStateOf(0) }    // ROM 미달 무효 렙 — 세되 무효 + 사유 발화 (심판 방식)
+    var repInvalid by remember { mutableIntStateOf(0) }    // ROM 미달 렙 — 코치: 무효+사유 발화, 기록: 파셜 집계만 (§29)
     val repInvalidRef = remember { intArrayOf(0) }
     var repFast by remember { mutableStateOf(false) }
+    var repTempoMs by remember { mutableStateOf<Long?>(null) }   // 렙 간격 중앙값 — 기록 모드 계기판 (§29)
+    val repRecords = remember { ArrayList<RepRecord>() }         // 렙별 극값 — 세트 로그에 남김 (분석 스레드에서 추가)
     // 위반 부위 시각화 (수정할점 #1): 위반 중 규칙의 관절을 스켈레톤에서 붉게 강조
     var violHighlight by remember { mutableStateOf<Set<Int>>(emptySet()) }
+
+    // ---- 세션 모드 (spec §29): 코치(초보 기본) / 기록(숙련). 종목별 저장. 정책 레이어만 바꾼다 —
+    //      판정·임계값·로그는 두 모드에서 동일하게 계산된다 (모든 사용자 원칙).
+    val modeStore = remember { ModeStore(context) }
+    var mode by remember { mutableStateOf(CoachMode.COACH) }
+    val modeRef = remember { arrayOf(CoachMode.COACH) }
+    modeRef[0] = mode
+    // 기록 모드에서 DRIFT 를 실제로 발화한 규칙 — RECOVERED 는 말한 드리프트에 대해서만 (안 말한 위반의 "교정됐어요" 방지)
+    val trackDriftSpoken = remember { HashSet<String>() }
 
     // ---- 촬영 커버리지 (spec §25b): 규칙이 요구하는 부위가 화면에 없으면 '왜'와 '어떻게'를 안내한다.
     //      판정 자체가 불가능한 상태이므로 자세 코칭보다 우선한다.
@@ -357,6 +373,11 @@ fun PostureLiveSessionScreen(
         if (samples.size >= MIN_FRAMES_FOR_LOG) {
             val t0 = times.firstOrNull() ?: 0L
             val rc = repRef[0]
+            val reps: List<RepRecord>?
+            synchronized(repRecords) {
+                reps = if (rc != null) ArrayList(repRecords) else null
+                repRecords.clear()
+            }
             val log = SetLog.build(
                 exercise = ex,
                 samples = samples,
@@ -374,6 +395,9 @@ fun PostureLiveSessionScreen(
                 repTimesMs = rc?.repTimesMs?.map { it - t0 },
                 repSignal = rc?.signal?.feature,
                 repInvalid = if (rc != null) repInvalidRef[0] else null,
+                // 렙별 극값 t 도 세트 상대시각으로 (프레임·repTimesMs 와 같은 기준)
+                repRecords = reps?.map { it.copy(tMs = it.tMs - t0) },
+                mode = if (modeRef[0] == CoachMode.TRACK) "track" else "coach",
             )
             // 분석 executor 는 화면 종료 시 shutdown 되므로 순서에 의존하지 않도록 별도 스레드에서 기록한다.
             Thread {
@@ -408,6 +432,10 @@ fun PostureLiveSessionScreen(
         repInvalid = 0
         repInvalidRef[0] = 0
         repFast = false
+        repTempoMs = null
+        synchronized(repRecords) { repRecords.clear() }
+        mode = modeStore.get(aihubExercise)
+        trackDriftSpoken.clear()
         floorExtractor.reset()   // 접지선 추정은 세트(운동) 단위 상태
         if (!muted) {
             speech.speak(
@@ -488,10 +516,16 @@ fun PostureLiveSessionScreen(
                     }
                     repRef[0]?.let { rc ->
                         if (rc.onFrame(now, features[rc.signal.feature])) {
-                            // ROM 유효성 (수정판): 사이클 극값이 데이터 기준 미달이면 무효 렙 —
-                            // 안 세는 게 아니라 세되 무효로 판정하고 사유를 말한다 (REP_VALIDITY.md)
-                            val valid = rc.signal.isValidRep(rc.lastCycleMin, rc.lastCycleMax) ?: true
-                            if (valid) {
+                            // ROM 유효성 (수정판): 사이클 극값이 데이터 기준 미달이면 미달 렙.
+                            // 코치 모드 = 무효로 판정하고 사유를 말한다 (REP_VALIDITY.md, 심판 방식).
+                            // 기록 모드 = "파셜"로 집계만 — 숙련자의 파셜은 기법이지 잘못이 아니다 (§29).
+                            val valid = rc.signal.isValidRep(rc.lastCycleMin, rc.lastCycleMax)
+                            synchronized(repRecords) { repRecords.add(RepRecord(now, rc.lastCycleMin, rc.lastCycleMax, valid)) }
+                            if (modeRef[0] == CoachMode.TRACK) {
+                                if (valid != false) repCount++ else { repInvalid++; repInvalidRef[0] = repInvalid }
+                                // 카운트만 말한다 — 숙련자가 세는 숫자는 파셜 포함 전체
+                                if (!muted) speech.speak((repCount + repInvalid).toString(), flush = false)
+                            } else if (valid != false) {
                                 repCount++
                                 if (!muted) speech.speak(repCount.toString(), flush = false)   // 숫자는 큐에 추가 — 코칭 문구를 끊지 않음
                             } else {
@@ -499,6 +533,7 @@ fun PostureLiveSessionScreen(
                                 repInvalidRef[0] = repInvalid
                                 if (!muted) speech.speak(rc.signal.invalidCue, flush = false)
                             }
+                            repTempoMs = RepMetrics.medianPeriodMs(rc.repTimesMs)
                             // 빠른 렙 자가진단: 주기가 1.5s 아래면 3.3fps 로는 놓칠 수 있다 (렙당 4샘플 하한 실측)
                             repFast = (rc.periodMs ?: Long.MAX_VALUE) < 1_500L
                         }
@@ -506,7 +541,9 @@ fun PostureLiveSessionScreen(
                     coachRef[0]?.let { coach ->
                         coach.onFrame(features)
                         val ev = coach.evaluate(now)
-                        violHighlight = RuleHighlight.forViolations(coach.lastStates)
+                        val track = modeRef[0] == CoachMode.TRACK
+                        // 기록 모드: 위반 강조 없음 — 모집단 임계 기준 "틀림" 표시는 스타일을 오판할 수 있다 (§29)
+                        violHighlight = if (track) emptySet() else RuleHighlight.forViolations(coach.lastStates)
                         // 커버리지가 막힌 동안에는 자세 지적 대신 촬영 안내를 말한다 (판정 근거가 없으므로)
                         if (!coverage.ok) {
                             if (now - lastCoverageSpeakAt[0] > COVERAGE_SPEAK_GAP_MS) {
@@ -514,8 +551,24 @@ fun PostureLiveSessionScreen(
                                 speech.speak(coverage.message + ". " + coverage.fix)
                             }
                         } else if (ev != null) {
-                            coachBanner = ev
-                            speech.speak(ev.message)
+                            if (!track) {
+                                coachBanner = ev
+                                speech.speak(ev.message)
+                            } else when (ev.kind) {
+                                // §29: 세트 내 변화(피로 드리프트)만 알린다 — 숙련자에게도 정보
+                                OnsetKind.DRIFT -> {
+                                    coachBanner = ev
+                                    speech.speak(ev.message)
+                                    trackDriftSpoken.add(ev.rule.id)
+                                }
+                                // 말한 드리프트가 돌아왔을 때만 "교정됐어요" — 침묵한 위반의 교정 발화는 어리둥절
+                                OnsetKind.RECOVERED -> if (trackDriftSpoken.remove(ev.rule.id)) {
+                                    coachBanner = ev
+                                    speech.speak(ev.message)
+                                }
+                                // HABIT("처음부터") = 본인 스타일일 수 있음 — 판정은 로그에만, 잔소리 없음
+                                OnsetKind.HABIT -> {}
+                            }
                         }
                         val states = coach.lastStates
                         val ok = states.count { it.recent == Verdict.OK }
@@ -605,7 +658,16 @@ fun PostureLiveSessionScreen(
             ) {
                 Column(Modifier.padding(horizontal = 16.dp, vertical = 13.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("바로 보고, 바로 고치고", color = c.primaryText, fontSize = 10.5.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 0.8.sp)
+                        // 모드 전환 (spec §29): 코치 = 앱이 가르침(기본) / 기록 = 본인이 기준, 앱은 기록함(숙련)
+                        ModeSwitch(mode) { m ->
+                            mode = m
+                            modeStore.set(aihubExercise, m)
+                            if (!muted) {
+                                speech.speak(
+                                    if (m == CoachMode.TRACK) "기록 모드. 카운트와 측정만 안내해요" else "코치 모드. 자세를 안내해요",
+                                )
+                            }
+                        }
                         Spacer(Modifier.weight(1f))
                         // 재보정 로그 상태 — 기록 중인지, 몇 세트 쌓였는지 (spec §14)
                         Text(
@@ -663,23 +725,40 @@ fun PostureLiveSessionScreen(
                             Text("남은 시간", color = c.text3, fontSize = 9.5.sp)
                             Text(timeLeft.asClock(), fontSize = 24.sp, fontWeight = FontWeight.SemiBold, lineHeight = 26.sp)
                         }
-                        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(end = 14.dp)) {
-                            Text("자세 점수", color = c.text3, fontSize = 9.5.sp)
-                            Text(
-                                scorePct?.let { "$it%" } ?: "—",
-                                color = when {
-                                    scorePct == null -> c.text3
-                                    scorePct!! >= 85 -> c.primaryText
-                                    else -> c.warn
-                                },
-                                fontSize = 17.sp, fontWeight = FontWeight.SemiBold, lineHeight = 20.sp,
-                            )
+                        if (mode == CoachMode.TRACK && repRef[0] != null) {
+                            // §29 계기판: 모집단 기준 점수 대신 템포(렙 간격 중앙값) — 스타일 무관한 측정치
+                            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(end = 14.dp)) {
+                                Text("템포", color = c.text3, fontSize = 9.5.sp)
+                                Text(
+                                    repTempoMs?.let { String.format(java.util.Locale.US, "%.1f초", it / 1000f) } ?: "—",
+                                    color = if (repTempoMs == null) c.text3 else Color.Unspecified,
+                                    fontSize = 17.sp, fontWeight = FontWeight.SemiBold, lineHeight = 20.sp,
+                                )
+                            }
+                        } else {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(end = 14.dp)) {
+                                Text("자세 점수", color = c.text3, fontSize = 9.5.sp)
+                                Text(
+                                    scorePct?.let { "$it%" } ?: "—",
+                                    color = when {
+                                        scorePct == null -> c.text3
+                                        scorePct!! >= 85 -> c.primaryText
+                                        else -> c.warn
+                                    },
+                                    fontSize = 17.sp, fontWeight = FontWeight.SemiBold, lineHeight = 20.sp,
+                                )
+                            }
                         }
                         if (repRef[0] != null) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(end = 14.dp)) {
                                 Text(if (repFast) "렙(빠름·미확정)" else "렙", color = c.text3, fontSize = 9.5.sp)
                                 Text(
-                                    repCount.toString() + if (repInvalid > 0) " · 무효 " + repInvalid else "",
+                                    // 코치: 유효 수 기준 "5 · 무효 2". 기록: 전체 수 기준 "7 · 파셜 2" — 발화 숫자와 일치 (§29)
+                                    if (mode == CoachMode.TRACK) {
+                                        (repCount + repInvalid).toString() + if (repInvalid > 0) " · 파셜 " + repInvalid else ""
+                                    } else {
+                                        repCount.toString() + if (repInvalid > 0) " · 무효 " + repInvalid else ""
+                                    },
                                     color = if (repFast) c.warn else Color.Unspecified,
                                     fontSize = 17.sp, fontWeight = FontWeight.SemiBold, lineHeight = 20.sp,
                                 )
@@ -768,6 +847,31 @@ private fun GlassIcon(
     ) {
         Box(contentAlignment = Alignment.Center) {
             Icon(icon, contentDescription = contentDescription, modifier = Modifier.size(17.dp))
+        }
+    }
+}
+
+/** 코치/기록 모드 전환 (spec §29). 종목별로 저장되므로 스쿼트는 기록, 새 종목은 코치일 수 있다. */
+@Composable
+private fun ModeSwitch(mode: CoachMode, onSelect: (CoachMode) -> Unit) {
+    val c = Trex.c
+    Row(
+        Modifier.clip(RoundedCornerShape(999.dp)).background(c.surface).padding(2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        listOf(CoachMode.COACH to "코치", CoachMode.TRACK to "기록").forEach { (m, label) ->
+            val sel = m == mode
+            Surface(
+                onClick = { if (!sel) onSelect(m) },
+                shape = RoundedCornerShape(999.dp),
+                color = if (sel) c.primary else Color.Transparent,
+                contentColor = if (sel) Color.White else c.text2,
+            ) {
+                Text(
+                    label, fontSize = 10.sp, fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp),
+                )
+            }
         }
     }
 }
