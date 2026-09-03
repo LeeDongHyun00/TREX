@@ -301,6 +301,8 @@ fun PostureLiveSessionScreen(
     val detectStartRef = remember { longArrayOf(0L) }
     var anchored by remember { mutableStateOf(false) }
     val anchoredRef = remember { booleanArrayOf(false) }
+    /** 앵커가 잡힌 세트 상대시각(ms). 로그에 남겨 오프라인 재계산이 같은 창을 쓸 수 있게 한다. 0 = 아직. */
+    val anchorAtRef = remember { longArrayOf(0L) }
     // 베타(미보정) 위반 — 말하지 않고 화면에만 '참고' 로 남긴다
     var provisionalNote by remember { mutableStateOf<String?>(null) }
     val provisionalAtRef = remember { longArrayOf(0L) }
@@ -384,7 +386,9 @@ fun PostureLiveSessionScreen(
     var stats by remember { mutableStateOf<AnalyzerStats?>(null) }
     var everDetected by remember { mutableStateOf(false) }
     var coachBanner by remember { mutableStateOf<CoachEvent?>(null) }
-    var scorePct by remember { mutableStateOf<Int?>(null) }
+    // 자세 점수는 **분수**로 보여 준다 — 종목당 검증된 규칙이 2~4개뿐이라 한 건 위반이 33%p 를 깎는다.
+    // "67%" 는 성적처럼 읽히지만 실제 의미는 "3가지 중 2가지 정상" 이다.
+    var scoreOk by remember { mutableStateOf<Pair<Int, Int>?>(null) }
     val coachRef = remember { arrayOfNulls<LiveCoach>(1) }
 
     // ---- 세트 로그 (재보정 데이터, spec §14): 실제 세션에서도 남긴다.
@@ -456,6 +460,8 @@ fun PostureLiveSessionScreen(
             // 렙별 극값 t 도 세트 상대시각으로 (프레임·repTimesMs 와 같은 기준)
             repRecords = reps?.map { it.copy(tMs = it.tMs - t0) },
             mode = if (modeRef[0] == CoachMode.TRACK) "track" else "coach",
+            // 집계 창의 시작 — results 가 이 시점 이후 프레임만 본다는 사실을 로그에 남긴다
+            anchorTMs = anchorAtRef[0].takeIf { it > 0L }?.let { it - t0 },
         )
         // 분석 executor 는 화면 종료 시 shutdown 되므로 순서에 의존하지 않도록 별도 스레드에서 기록한다.
         Thread {
@@ -509,6 +515,8 @@ fun PostureLiveSessionScreen(
         detectStartRef[0] = 0L
         anchored = false
         anchoredRef[0] = false
+        anchorAtRef[0] = 0L
+        scoreOk = null
         provisionalNote = null
         provisionalAtRef[0] = 0L
         provisionalHighlight = emptySet()
@@ -608,8 +616,12 @@ fun PostureLiveSessionScreen(
                         // repTimesMs 갱신은 세트 마감의 복사와 같은 락 안에서
                         val completed = synchronized(repRecords) { rc.onFrame(now, features[rc.signal.feature]) }
                         if (completed) {
-                            // 첫 렙이 끝났다 = 여기부터가 진짜 운동 구간. 초반 창을 여기로 옮긴다 (spec §31).
-                            if (coachRef[0]?.anchor() == true) { anchored = true; anchoredRef[0] = true }
+                            // 첫 렙이 끝났다 = 여기부터가 진짜 운동 구간. 초반 창과 **세트 집계**를 여기로 옮긴다 (spec §31).
+                            if (coachRef[0]?.anchor() == true) {
+                                anchored = true; anchoredRef[0] = true; anchorAtRef[0] = now
+                                // 세트 점수·판정의 집계기도 같이 비운다 — 준비 동작이 range/min/max 통계를 통째로 뒤집는다
+                                synchronized(recordedSamples) { aggregator.reset() }
+                            }
                             // ROM 유효성 (수정판): 사이클 극값이 데이터 기준 미달이면 미달 렙.
                             // 코치 모드 = 무효로 판정하고 사유를 말한다 (REP_VALIDITY.md, 심판 방식).
                             // 기록 모드 = "파셜"로 집계만 — 숙련자의 파셜은 기법이지 잘못이 아니다 (§29).
@@ -642,7 +654,10 @@ fun PostureLiveSessionScreen(
                         if (!coach.isAnchored) {
                             if (detectStartRef[0] == 0L) detectStartRef[0] = now
                             val wait = if (repRef[0] == null) ANCHOR_FALLBACK_NO_COUNTER_MS else ANCHOR_FALLBACK_WITH_COUNTER_MS
-                            if (now - detectStartRef[0] >= wait && coach.anchor()) { anchored = true; anchoredRef[0] = true }
+                            if (now - detectStartRef[0] >= wait && coach.anchor()) {
+                                anchored = true; anchoredRef[0] = true; anchorAtRef[0] = now
+                                synchronized(recordedSamples) { aggregator.reset() }
+                            }
                         }
                         coach.onFrame(features)
                         val ev = coach.evaluate(now)
@@ -690,10 +705,11 @@ fun PostureLiveSessionScreen(
                                 OnsetKind.HABIT -> {}
                             }
                         }
-                        val states = coach.lastStates
+                        // 점수는 리포트와 같은 분모로 — 검증된(ship) 규칙만. 베타를 섞으면 화면과 리포트가 다른 숫자를 말한다.
+                        val states = coach.lastStates.filter { it.rule.status != RuleStatus.BETA }
                         val ok = states.count { it.recent == Verdict.OK }
                         val bad = states.count { it.recent == Verdict.VIOLATION }
-                        if (ok + bad > 0) scorePct = 100 * ok / (ok + bad)
+                        if (ok + bad > 0) scoreOk = ok to (ok + bad)
                     }
                 }
             } catch (_: Throwable) {
@@ -889,10 +905,10 @@ fun PostureLiveSessionScreen(
                             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(end = 14.dp)) {
                                 Text("자세 점수", color = c.text3, fontSize = 9.5.sp)
                                 Text(
-                                    scorePct?.let { "$it%" } ?: "—",
+                                    scoreOk?.let { (ok, n) -> "$ok/$n" } ?: "—",
                                     color = when {
-                                        scorePct == null -> c.text3
-                                        scorePct!! >= 85 -> c.primaryText
+                                        scoreOk == null -> c.text3
+                                        scoreOk!!.first == scoreOk!!.second -> c.primaryText
                                         else -> c.warn
                                     },
                                     fontSize = 17.sp, fontWeight = FontWeight.SemiBold, lineHeight = 20.sp,

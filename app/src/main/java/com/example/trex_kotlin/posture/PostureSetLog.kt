@@ -80,6 +80,12 @@ data class SetLog(
     val repValid: List<Boolean?>? = null,
     /** 세션 모드 (spec §29): "coach"(기본) | "track". null = 모드 개념 이전 로그. */
     val mode: String? = null,
+    /**
+     * 초반 창·세트 집계를 시작한 시각(세트 상대 ms, spec §31). null = 앵커 개념 이전 로그.
+     * `results` 는 이 시점 이후 프레임만 집계한 값이다 — 오프라인 재계산이 같은 창을 쓰려면 이 값이 필요하다.
+     * 준비 동작(폰 놓고 걸어오기·바 세팅)이 range/min/max 통계를 통째로 뒤집기 때문에 창을 자른다.
+     */
+    val anchorTMs: Long? = null,
 ) {
     companion object {
         const val SCHEMA = "trex.posture.setlog/1"
@@ -117,6 +123,7 @@ data class SetLog(
             repInvalid: Int? = null,
             repRecords: List<RepRecord>? = null,
             mode: String? = null,
+            anchorTMs: Long? = null,
         ): SetLog {
             val frames = samples.mapIndexed { i, s ->
                 SetLogFrame(
@@ -157,6 +164,7 @@ data class SetLog(
                 repMaxs = repRecords?.map { it.cycleMax },
                 repValid = repRecords?.map { it.valid },
                 mode = mode,
+                anchorTMs = anchorTMs,
             )
         }
     }
@@ -184,6 +192,7 @@ object SetLogJson {
         sb.append("\"up_verified_frames\":").append(log.upVerifiedFrames).append(',')
         field(sb, "note", log.note)
         if (log.mode != null) field(sb, "mode", log.mode)
+        if (log.anchorTMs != null) { sb.append("\"anchor_t_ms\":").append(log.anchorTMs).append(',') }
         // 자동 렙 카운트 — 카운터가 돌았던 세트만 기록 (미적용 세트와 구분: 필드 부재 = 미적용)
         if (log.repCount != null) {
             sb.append("\"reps\":{")
