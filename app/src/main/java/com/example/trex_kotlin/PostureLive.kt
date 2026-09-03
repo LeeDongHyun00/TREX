@@ -3,6 +3,8 @@ package com.example.trex_kotlin
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
+import android.media.AudioManager
+import android.media.ToneGenerator
 import android.content.res.Configuration
 import android.util.Size
 import android.view.WindowManager
@@ -82,6 +84,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.example.trex_kotlin.posture.AnalyzerStats
 import com.example.trex_kotlin.posture.BaselineStore
 import com.example.trex_kotlin.posture.CoachCues
+import com.example.trex_kotlin.posture.Direction
 import com.example.trex_kotlin.posture.CoachEvent
 import com.example.trex_kotlin.posture.CoachMode
 import com.example.trex_kotlin.posture.FeatureAggregator
@@ -105,8 +108,10 @@ import com.example.trex_kotlin.posture.RepCounter
 import com.example.trex_kotlin.posture.RepMetrics
 import com.example.trex_kotlin.posture.RepRecord
 import com.example.trex_kotlin.posture.RuleHighlight
+import com.example.trex_kotlin.posture.RuleStatus
 import com.example.trex_kotlin.posture.RuleResult
 import com.example.trex_kotlin.posture.PostureRuleSet
+import com.example.trex_kotlin.posture.PostureScope
 import com.example.trex_kotlin.posture.PostureSetReport
 import com.example.trex_kotlin.posture.SCREEN_UP
 import com.example.trex_kotlin.posture.SetLog
@@ -174,6 +179,19 @@ private const val MIN_FRAMES_FOR_LOG = 8
 /** 커버리지 경고를 띄우기까지 연속으로 막혀야 하는 프레임 수 (300ms × 3 ≈ 1초) */
 private const val COVERAGE_STREAK = 3
 
+/**
+ * 초반 창 앵커 폴백 (spec §31). 렙 카운터가 있는 종목은 **첫 렙 완료**에 앵커하지만, 그때까지 마냥 기다리면
+ * 등척성·느린 종목에서 세트 내내 판정이 없다. 렙 신호가 없는 종목(데드리프트·컬·레이즈류)은 짧게, 있는 종목은 길게.
+ */
+private const val ANCHOR_FALLBACK_NO_COUNTER_MS = 4_000L
+private const val ANCHOR_FALLBACK_WITH_COUNTER_MS = 10_000L
+
+/** '참고(베타)' 배너 갱신 최소 간격 — 말하지 않는 표시라도 매 프레임 바뀌면 읽을 수 없다 */
+private const val PROVISIONAL_NOTE_GAP_MS = 3_000L
+
+/** 세트당 무효 렙 사유 발화 상한 — 같은 문장을 렙마다 반복하면 잔소리가 되고 자세 지적을 큐 뒤로 민다 */
+private const val MAX_INVALID_CUES = 2
+
 /** 촬영 안내 음성 최소 간격 — 자세를 고치는 데 시간이 걸리므로 자주 말하지 않는다 */
 private const val COVERAGE_SPEAK_GAP_MS = 8_000L
 
@@ -192,6 +210,8 @@ fun PostureLiveSessionScreen(
     onNext: () -> Unit,
     onExit: () -> Unit,
     onSetReport: (PostureSetReport) -> Unit = {},
+    /** 카메라 없이 이 운동을 **타이머로** 이어간다 — 건너뛰기가 아니다. */
+    onFallbackToTimer: () -> Unit = {},
     /** 세션 스코프 스피커 — 이 화면보다 오래 산다. 세트 종료 요약이 다음 운동(타이머 화면)으로 넘어가며 끊기지 않게 TrexApp 이 소유한다. */
     speech: SpeechCoach,
 ) {
@@ -226,11 +246,13 @@ fun PostureLiveSessionScreen(
                 ) { Icon(Icons.Rounded.PhotoCamera, contentDescription = null, tint = c.warn, modifier = Modifier.size(34.dp)) }
                 Text("카메라 권한이 필요해룡", color = c.text, fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 20.dp))
                 Text(
-                    "자세 평가 없이 타이머로 이어가려면 계속을 눌러주세요.",
+                    "이 운동을 자세 평가 없이 타이머로 이어갈 수 있어요.",
                     color = c.text2, fontSize = 13.sp, lineHeight = 19.sp, textAlign = TextAlign.Center,
                     modifier = Modifier.padding(top = 8.dp),
                 )
-                Cta("타이머로 계속", onClick = onNext, modifier = Modifier.padding(top = 28.dp).fillMaxWidth())
+                // onNext 는 이 운동을 '완료' 처리하고 다음으로 넘긴다 — 권한을 거부했다고 운동을 건너뛰면 안 된다.
+                // 같은 운동을 타이머 화면으로 다시 열도록 호출부에 맡긴다.
+                Cta("타이머로 계속", onClick = onFallbackToTimer, modifier = Modifier.padding(top = 28.dp).fillMaxWidth())
                 GhostButton("나가기", onClick = onExit, modifier = Modifier.padding(top = 10.dp).fillMaxWidth())
             }
         }
@@ -272,6 +294,17 @@ fun PostureLiveSessionScreen(
     var repCount by remember { mutableIntStateOf(0) }      // 유효 렙
     var repInvalid by remember { mutableIntStateOf(0) }    // ROM 미달 렙 — 코치: 무효+사유 발화, 기록: 파셜 집계만 (§29)
     val repInvalidRef = remember { intArrayOf(0) }
+    // 무효 렙 사유 발화 횟수 — 세트당 상한(MAX_INVALID_CUES). 렙마다 같은 말을 반복하면 코칭이 잔소리가 되고,
+    // 정작 들어야 할 자세 지적이 큐 뒤로 밀린다.
+    val invalidCuesRef = remember { intArrayOf(0) }
+    // 앵커 폴백 기준시각 — 이 종목에서 사람이 처음 잡힌 때(0 = 아직). 종목 경계에서 리셋한다.
+    val detectStartRef = remember { longArrayOf(0L) }
+    var anchored by remember { mutableStateOf(false) }
+    val anchoredRef = remember { booleanArrayOf(false) }
+    // 베타(미보정) 위반 — 말하지 않고 화면에만 '참고' 로 남긴다
+    var provisionalNote by remember { mutableStateOf<String?>(null) }
+    val provisionalAtRef = remember { longArrayOf(0L) }
+    var provisionalHighlight by remember { mutableStateOf<Set<Int>>(emptySet()) }
     var repFast by remember { mutableStateOf(false) }
     var repTempoMs by remember { mutableStateOf<Long?>(null) }   // 렙 간격 중앙값 — 기록 모드 계기판 (§29)
     val repRecords = remember { ArrayList<RepRecord>() }         // 렙별 극값 — 세트 로그에 남김 (분석 스레드에서 추가)
@@ -292,6 +325,9 @@ fun PostureLiveSessionScreen(
     val floorRules = remember(ruleSet, aihubExercise, isFloorExercise) {
         if (isFloorExercise) ruleSet?.rulesFor(aihubExercise, includeBeta = true).orEmpty() else emptyList()
     }
+    // 이 종목에서 무엇을 보고 무엇을 못 보는가 (spec §31) — 시작 안내 둘째 문장과 카드 부제가 같은 값을 쓴다.
+    // 데드리프트처럼 '척추의 중립' 이 전부 exclude 인 종목은 허리를 말아도 리포트가 "깨끗" 이라 말한다 — 그걸 미리 밝힌다.
+    val scope = remember(ruleSet, aihubExercise) { ruleSet?.let { PostureScope.of(it, aihubExercise) } }
     val floorRulesRef = remember { arrayOfNulls<List<PostureRule>>(1) }
     floorRulesRef[0] = floorRules
     var coverage by remember { mutableStateOf(CoverageReport.OK) }
@@ -299,6 +335,9 @@ fun PostureLiveSessionScreen(
     val coverageStreak = remember { intArrayOf(0) }
     val lastCoverageSpeakAt = remember { longArrayOf(0L) }
     // 음소거는 스피커(세션 스코프)에 남아 다음 운동·완료 화면까지 이어진다
+    // TTS 를 못 쓰는 기기에서는 렙 숫자가 통째로 사라진다 — 짧은 톤으로라도 센 것을 알린다
+    val repTone = remember { runCatching { ToneGenerator(AudioManager.STREAM_MUSIC, 70) }.getOrNull() }
+    DisposableEffect(repTone) { onDispose { runCatching { repTone?.release() } } }
     var muted by remember { mutableStateOf(speech.muted) }
     LaunchedEffect(muted) { speech.muted = muted }
     // 세트 경계 발화(요약 + 다음 종목 시작 안내)가 끝날 때까지 코치·커버리지 발화는 큐에 붙인다(flush 금지) — 요약이 통째로 사라지지 않게
@@ -458,12 +497,21 @@ fun PostureLiveSessionScreen(
             .getOrNull()?.takeIf { it.isNotEmpty() }
         baselineRef[0] = baselineValues
         baselineActive = baselineValues != null
-        coachRef[0] = LiveCoach(rs, aihubExercise, baseline = baselineValues)
+        // requireAnchor: 초반 창이 준비 동작(폰 놓고 걸어오기)을 '정상 기준' 으로 삼으면 첫 코칭이 "처음부터…" 오탐이 된다.
+        // speakBeta=false: 미보정 규칙은 화면·리포트에 '참고' 로만 남기고 음성은 검증된 규칙만 낸다 (§28 오탐 3건이 전부 베타).
+        coachRef[0] = LiveCoach(rs, aihubExercise, baseline = baselineValues, requireAnchor = true, speakBeta = false)
         coachBanner = null   // 이전 종목의 배너·ⓘ 근거 주석이 새 종목에 오귀속되지 않도록
         repRef[0] = RepCounter.forExercise(aihubExercise)
         repCount = 0
         repInvalid = 0
         repInvalidRef[0] = 0
+        invalidCuesRef[0] = 0
+        detectStartRef[0] = 0L
+        anchored = false
+        anchoredRef[0] = false
+        provisionalNote = null
+        provisionalAtRef[0] = 0L
+        provisionalHighlight = emptySet()
         repFast = false
         repTempoMs = null
         synchronized(repRecords) { repRecords.clear() }
@@ -475,12 +523,15 @@ fun PostureLiveSessionScreen(
         coverageStreak[0] = 0
         if (!muted) {
             // 큐에 추가(flush=false) — ✓ 에서 말한 직전 세트의 요약 문장을 끊지 않도록. 첫 세트는 큐가 비어 있어 바로 나온다.
+            val placement = if (aihubExercise in floorExercises) {
+                "휴대폰을 몸 옆에 두세요. 발쪽으로 치우치지 않게요"
+            } else {
+                "전신이 화면에 들어오게 서 주세요"
+            }
+            // 셋째 문장: 이 종목에서 보는 것·못 보는 것. 침묵을 "완벽하다" 로 읽지 않게 미리 밝힌다 (spec §31).
+            val scopeLine = scope?.startLine
             speech.speak(
-                if (aihubExercise in floorExercises) {
-                    "${workout.name} 자세 평가를 시작합니다. 휴대폰을 몸 옆에 두세요. 발쪽으로 치우치지 않게요"
-                } else {
-                    "${workout.name} 자세 평가를 시작합니다. 전신이 화면에 들어오게 서 주세요"
-                },
+                "${workout.name} 자세 평가를 시작합니다. " + placement + (scopeLine?.let { ". " + it } ?: ""),
                 flush = false,
             )
         }
@@ -557,6 +608,8 @@ fun PostureLiveSessionScreen(
                         // repTimesMs 갱신은 세트 마감의 복사와 같은 락 안에서
                         val completed = synchronized(repRecords) { rc.onFrame(now, features[rc.signal.feature]) }
                         if (completed) {
+                            // 첫 렙이 끝났다 = 여기부터가 진짜 운동 구간. 초반 창을 여기로 옮긴다 (spec §31).
+                            if (coachRef[0]?.anchor() == true) { anchored = true; anchoredRef[0] = true }
                             // ROM 유효성 (수정판): 사이클 극값이 데이터 기준 미달이면 미달 렙.
                             // 코치 모드 = 무효로 판정하고 사유를 말한다 (REP_VALIDITY.md, 심판 방식).
                             // 기록 모드 = "파셜"로 집계만 — 숙련자의 파셜은 기법이지 잘못이 아니다 (§29).
@@ -565,14 +618,19 @@ fun PostureLiveSessionScreen(
                             if (modeRef[0] == CoachMode.TRACK) {
                                 if (valid != false) repCount++ else { repInvalid++; repInvalidRef[0] = repInvalid }
                                 // 카운트만 말한다 — 숙련자가 세는 숫자는 파셜 포함 전체
-                                if (!muted) speech.speak((repCount + repInvalid).toString(), flush = false)
+                                if (!muted) speakRep(speech, repTone, repCount + repInvalid)
                             } else if (valid != false) {
                                 repCount++
-                                if (!muted) speech.speak(repCount.toString(), flush = false)   // 숫자는 큐에 추가 — 코칭 문구를 끊지 않음
+                                if (!muted) speakRep(speech, repTone, repCount)   // 숫자는 큐에 추가 — 코칭 문구를 끊지 않음
                             } else {
                                 repInvalid++
                                 repInvalidRef[0] = repInvalid
-                                if (!muted) speech.speak(rc.signal.invalidCue, flush = false)
+                                // ROM 판별력이 검증된 종목만 사유를 말한다 — 미검증 종목의 무효 판정은 방향 중립 문구라
+                                // "끝까지 움직이세요" 가 오히려 잘못된 가동범위를 유도할 수 있다 (REP_VALIDITY.md).
+                                if (!muted && rc.signal.romValidated && invalidCuesRef[0] < MAX_INVALID_CUES) {
+                                    invalidCuesRef[0]++
+                                    speech.speak(rc.signal.invalidCue, flush = false)
+                                }
                             }
                             repTempoMs = RepMetrics.medianPeriodMs(rc.repTimesMs)
                             // 빠른 렙 자가진단: 주기가 1.5s 아래면 3.3fps 로는 놓칠 수 있다 (렙당 4샘플 하한 실측)
@@ -580,11 +638,30 @@ fun PostureLiveSessionScreen(
                         }
                     }
                     coachRef[0]?.let { coach ->
+                        // 앵커 폴백: 렙 신호가 없는 종목(등척성·컬·레이즈류)이거나 첫 렙이 너무 늦으면 시간으로 앵커한다.
+                        if (!coach.isAnchored) {
+                            if (detectStartRef[0] == 0L) detectStartRef[0] = now
+                            val wait = if (repRef[0] == null) ANCHOR_FALLBACK_NO_COUNTER_MS else ANCHOR_FALLBACK_WITH_COUNTER_MS
+                            if (now - detectStartRef[0] >= wait && coach.anchor()) { anchored = true; anchoredRef[0] = true }
+                        }
                         coach.onFrame(features)
                         val ev = coach.evaluate(now)
                         val track = modeRef[0] == CoachMode.TRACK
+                        // 강조를 두 갈래로: 검증된(ship) 위반만 붉게, 미보정(beta)은 '참고' 색 — 같은 붉은색이면
+                        // 말하지 않기로 한 규칙이 화면에서는 확신처럼 보인다.
+                        val shipStates = coach.lastStates.filter { it.rule.status != RuleStatus.BETA }
+                        val betaStates = coach.lastStates.filter { it.rule.status == RuleStatus.BETA }
                         // 기록 모드: 위반 강조 없음 — 모집단 임계 기준 "틀림" 표시는 스타일을 오판할 수 있다 (§29)
-                        violHighlight = if (track) emptySet() else RuleHighlight.forViolations(coach.lastStates)
+                        violHighlight = if (track) emptySet() else RuleHighlight.forViolations(shipStates)
+                        provisionalHighlight = if (track) emptySet() else RuleHighlight.forViolations(betaStates)
+                        // 베타 위반은 말하지 않는 대신 화면에 '참고' 로 남긴다 — 침묵이 "이상 없음" 으로 읽히면 안 된다
+                        if (!track && now - provisionalAtRef[0] > PROVISIONAL_NOTE_GAP_MS) {
+                            provisionalAtRef[0] = now
+                            provisionalNote = betaStates.firstOrNull { it.recent == Verdict.VIOLATION }?.let { st ->
+                                val cue = CoachCues.cueFor(st.rule, st.direction ?: Direction.PRIMARY)
+                                PostureSetReport.splitCue(if (st.kind == OnsetKind.DRIFT) cue.drift else cue.habit).first
+                            }
+                        }
                         // 세트 경계 발화(요약·시작 안내)가 나가는 동안은 끊지 않고 뒤에 붙인다
                         val flush = now > boundaryUntil[0]
                         // 커버리지가 막힌 동안에는 자세 지적 대신 촬영 안내를 말한다 (판정 근거가 없으므로) — 바닥 종목만의 상태
@@ -638,7 +715,11 @@ fun PostureLiveSessionScreen(
     val cameraArea: @Composable (Modifier) -> Unit = { mod ->
         Box(mod.background(Color.Black)) {
             AndroidView(factory = { previewView }, modifier = Modifier.fillMaxSize())
-            LivePoseOverlay(sample = sample, mirror = useFrontCamera, tint = c.lime, highlight = violHighlight, modifier = Modifier.fillMaxSize())
+            LivePoseOverlay(
+                sample = sample, mirror = useFrontCamera, tint = c.lime,
+                highlight = violHighlight, provisional = provisionalHighlight,
+                modifier = Modifier.fillMaxSize(),
+            )
             // 상단 스크림 + 컨트롤 (영상 위에 겹치지만 사람은 보통 화면 중앙에 잡히므로 최소 높이만)
             Box(
                 Modifier
@@ -731,6 +812,8 @@ fun PostureLiveSessionScreen(
                         targetState = when {
                             !coverage.ok -> coverage.message
                             coachBanner != null -> coachBanner!!.message
+                            // 앵커 전에는 판정이 없다 — "좋아요" 라고 하면 아직 보지도 않은 자세를 칭찬하는 셈이다
+                            sample.detected && !anchored -> "보고 있어요 — 편하게 시작하세요"
                             sample.detected -> "좋아요, 자세를 유지해 주세요"
                             isFloorExercise -> "휴대폰을 바닥 높이에, 몸 옆에서 보이게 두면 평가를 시작해룡"
                             else -> "전신과 주요 관절이 보이면 평가를 시작해룡"
@@ -751,6 +834,22 @@ fun PostureLiveSessionScreen(
                         Text(
                             "ⓘ $note",
                             color = c.text3, fontSize = 10.5.sp, lineHeight = 14.sp,
+                            modifier = Modifier.padding(top = 3.dp),
+                        )
+                    }
+                    // 말하지 않기로 한 미보정 규칙 — 화면에는 '참고' 로 남긴다 (침묵 ≠ 이상 없음)
+                    provisionalNote?.takeIf { coverage.ok && coachBanner == null }?.let { pn ->
+                        Text(
+                            "참고 · $pn — 아직 검증 중인 항목이에요",
+                            color = Color(0xFFFFC24B), fontSize = 11.5.sp, lineHeight = 16.sp,
+                            modifier = Modifier.padding(top = 3.dp),
+                        )
+                    }
+                    // 음성이 아예 안 되는 기기(한국어 TTS 미설치 등) — 침묵의 이유를 밝힌다
+                    speech.unavailableReason?.let { reason ->
+                        Text(
+                            reason,
+                            color = c.warn, fontSize = 10.5.sp, lineHeight = 14.sp,
                             modifier = Modifier.padding(top = 3.dp),
                         )
                     }
@@ -898,6 +997,15 @@ fun PostureLiveSessionScreen(
     }
 }
 
+/** 렙 카운트 알림 — 음성이 되면 숫자로, 안 되면 짧은 톤으로. 코칭 문구를 끊지 않게 큐에 붙인다. */
+private fun speakRep(speech: SpeechCoach, tone: ToneGenerator?, n: Int) {
+    if (speech.ready) {
+        speech.speak(n.toString(), flush = false)
+    } else {
+        runCatching { tone?.startTone(ToneGenerator.TONE_PROP_BEEP, 90) }
+    }
+}
+
 @Composable
 private fun GlassIcon(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
@@ -943,7 +1051,16 @@ private fun ModeSwitch(mode: CoachMode, onSelect: (CoachMode) -> Unit) {
 }
 
 @Composable
-private fun LivePoseOverlay(sample: PoseSample, mirror: Boolean, tint: Color, highlight: Set<Int> = emptySet(), modifier: Modifier = Modifier) {
+private fun LivePoseOverlay(
+    sample: PoseSample,
+    mirror: Boolean,
+    tint: Color,
+    /** 검증된(ship) 규칙 위반 — 붉게. */
+    highlight: Set<Int> = emptySet(),
+    /** 미보정(beta) 규칙 위반 — 노랗게. 말하지 않는 판정이므로 붉은색과 같은 확신을 주면 안 된다 (spec §31). */
+    provisional: Set<Int> = emptySet(),
+    modifier: Modifier = Modifier,
+) {
     Canvas(modifier = modifier) {
         if (!sample.detected || sample.imageWidth <= 0) return@Canvas
         val imgW = sample.imageWidth.toFloat()
@@ -962,14 +1079,20 @@ private fun LivePoseOverlay(sample: PoseSample, mirror: Boolean, tint: Color, hi
         }
 
         val warn = Color(0xFFFF5A5A)
+        val provisionalColor = Color(0xFFFFC24B)   // 미보정 규칙 = 호박색. 붉은색과 같은 확신을 주지 않는다
         POSE_CONNECTIONS.forEach { (a, b) ->
             if (sample.visibility[a] >= 0.5f && sample.visibility[b] >= 0.5f) {
                 val hot = a in highlight && b in highlight   // 위반 부위의 연결선은 붉게 (수정할점 #1)
+                val soft = !hot && a in provisional && b in provisional
                 drawLine(
-                    color = if (hot) warn.copy(alpha = 0.9f) else tint.copy(alpha = 0.55f),
+                    color = when {
+                        hot -> warn.copy(alpha = 0.9f)
+                        soft -> provisionalColor.copy(alpha = 0.75f)
+                        else -> tint.copy(alpha = 0.55f)
+                    },
                     start = point(a),
                     end = point(b),
-                    strokeWidth = if (hot) 7f else 4f,
+                    strokeWidth = if (hot) 7f else if (soft) 5f else 4f,
                     cap = StrokeCap.Round,
                 )
             }
@@ -977,9 +1100,14 @@ private fun LivePoseOverlay(sample: PoseSample, mirror: Boolean, tint: Color, hi
         for (i in 0 until MP_LANDMARK_COUNT) {
             if (sample.visibility[i] < 0.5f) continue
             val hot = i in highlight
+            val soft = !hot && i in provisional
             drawCircle(
-                color = if (hot) warn else Color.White.copy(alpha = 0.85f),
-                radius = if (hot) 7f else 4f,
+                color = when {
+                    hot -> warn
+                    soft -> provisionalColor
+                    else -> Color.White.copy(alpha = 0.85f)
+                },
+                radius = if (hot) 7f else if (soft) 6f else 4f,
                 center = point(i),
             )
         }

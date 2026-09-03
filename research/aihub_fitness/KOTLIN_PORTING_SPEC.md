@@ -722,6 +722,28 @@ AIHub 조건 132개를 해부학적 자유도로 분류해, 완벽한 GT 3D 상�
 - `PostureSetReportTest`(15): 랭킹 순서(전체 위반+onset → DRIFT → HABIT) · 동률 ship→베타→AUC · 베타만 위반이면 REFERENCE 이고 헤드라인 없음·점수는 ship 만(100) · 전부 ABSTAIN 이면 UNJUDGED 이고 점수 없음 · 위반 없음 CLEAN · TRACK 은 HABIT 과 kind null 위반 강등·DRIFT 유지·점수 숨김 · TRACK 렙·드리프트 없으면 "기록됨" · 베타만 판정된 세트는 betaOnly(점수 없음·"검증 중") · `splitCue` 관찰/교정 분리 · 세트 중간 위반은 "처음부터" 제거 · 반올림 · RECOVERED 만이면 RECOVERED · rule.id 조인·반대측 · FormLabel 왕복.
 - `SetLabelStoreTest`(5): CSV 헤더 1회 + 라벨당 1행(source 열) · reps null 이면 jsonl 에만 · 콤마·따옴표 CSV 인용 · 파일 없으면 count 0 · 라벨 파일이 `SetLogStore` 의 `*.jsonl` 규약(files/totalSets/clear) 밖에 있음.
 
+## 31. 코칭 신뢰성 — 앵커·베타 침묵·평가 범위·음성 채널 (`PostureScope.kt`, 2026-09-03)
+
+**동기**: 엔진은 판정을 하는데, 그 판정이 사용자에게 닿는 경로가 사용자를 잘못 이끄는 자리가 다섯 군데 있었다. 전부 "모르는 것을 아는 것처럼 말한다" 는 한 가지 병의 변형이다.
+
+| 문제 | 실제로 일어나던 일 | 조치 |
+|---|---|---|
+| **초반 창 = 준비 동작** | `LiveCoach` 의 초반 창(첫 8프레임)은 사용자가 폰을 놓고 걸어와 자세를 잡는 구간이다. 그 구간이 "정상 기준" 이 되므로 첫 코칭이 "처음부터 …" 오탐이 된다 | `LiveCoach(requireAnchor = true)` — `anchor()` 전에는 프레임을 버리고 `evaluate`/`summarize` 가 판정하지 않는다(`lastStates` 도 비어 붉은 강조가 안 뜬다). 호출부는 **첫 렙 완료**에 앵커하고, 렙 신호 없는 종목은 4초·있는 종목은 10초 시간 폴백 |
+| **베타가 ship 과 같은 확신으로 말함** | §28 실기기 오탐 3건이 **전부 베타/미보정 규칙**이었는데 라이브는 `includeBeta = true` 로 똑같이 발화·붉은 강조 | `LiveCoach(speakBeta = false)` — 베타는 **발화 후보에서만** 빠진다(판정·`lastStates`·`summarize`·리포트는 그대로). 화면은 붉은색 대신 **호박색**(`0xFFFFC24B`) 강조 + "참고 · … — 아직 검증 중인 항목이에요" 줄. 침묵을 "이상 없음" 으로 읽지 않게 하는 것이 핵심 |
+| **못 보는 것을 안 밝힘** | 바벨 데드리프트는 '척추의 중립' 규칙이 전부 `exclude` 라, 허리를 말아도 ship 2규칙(바 궤적·무릎)만 통과하면 리포트가 "이번 세트 깨끗했어요" 라고 말한다 — 거짓 안심 | `PostureScope.of(ruleSet, exercise)`: 조건을 등급별로 묶어 **부위명**으로 압축 → `watched`(ship) / `provisional`(beta) / `blind`(전부 exclude). 세트 시작 안내 셋째 문장("무릎·상체를 봐요. 등·허리는 못 봐요."), 운동 카드 부제(`cardLine`), 카드의 "무엇을 보나요?" 3줄(`introLines`) |
+| **음성이 조용히 죽음** | TTS 초기화가 비동기라 세트 시작 안내가 통째로 버려지고, 한국어 음성이 없으면 영원히 무음인데 화면은 이유를 말하지 않는다. 헬스장 음악 위로도 안 들린다 | `SpeechCoach`: 준비 전 발화 **대기 큐**(최대 3건·10초 TTL), 오디오 포커스 `TRANSIENT_MAY_DUCK`, `unavailableReason` 을 패널에 표시. 렙 숫자는 TTS 불가 시 **짧은 톤**으로 대체 |
+| **권한 거부가 운동을 삼킴** | 카메라 거부 화면의 "타이머로 계속" 이 `onNext` 를 불러 그 운동을 **완료 처리하고 건너뛰었다** | `onFallbackToTimer` — 같은 운동을 `TimerSession` 라우트로 다시 연다(`postureFallback` 세션 목록). ✕ 종료도 완료한 운동이 있으면 "여기까지 기록하고 끝내기" 를 묻는다(묻지 않고 버리지 않는다) |
+
+**부수**: 무효 렙 사유 발화는 **세트당 2회 상한** + `romValidated == false` 종목은 침묵 — 미검증 ROM 의 "끝까지 움직이세요" 는 잘못된 가동범위를 유도할 수 있다(REP_VALIDITY.md). 패널 배너는 앵커 전 "보고 있어요 — 편하게 시작하세요" 로, 판정하기 전에 칭찬("좋아요")하지 않는다.
+
+**바닥 종목 주의**: 8종목 14규칙이 **전부 beta** 라 `speakBeta = false` 에서 자세 음성이 사라진다. 그래서 `PostureScope.provisionalOnly` 종목은 시작 안내가 "검증 중이라 지적 없이 횟수와 촬영 상태만 알려드려요" 라고 **먼저 밝힌다**. 화면에는 호박색 강조·참고 줄이 남으므로 정보가 사라지는 것은 아니다.
+
+**기본값**: `requireAnchor`·`speakBeta` 는 서로 **독립**이고 기본값은 종전 동작(`false`/`true`)이다 — 랩 화면(`PostureLabScreen`)은 베타를 일부러 듣는 자리다. 실사용 경로(`PostureLive`)만 `requireAnchor = true, speakBeta = false` 로 명시한다.
+
+**테스트**: `LiveCoachAnchorTest`(7) 앵커 전 침묵·앵커 후 HABIT·재앵커 거부·`summarize` 빈 값·`reset` 후 재앵커 필요·베타 침묵/`speakBeta` 옵트인. `PostureScopeTest`(8) 등급 분류·ship+exclude 혼재 시 watched·부위 압축·`startLine`/`cardLine`/`provisionalOnly`·규칙 없는 종목. 전체 133건 통과.
+
+**한계·다음**: 규칙별 **위험 등급**(척추/무릎 vs 시선)이 없어 발화 후보 선택은 여전히 지속시간→AUC 순이다 — `risk` 필드와 트리거 큐(짧은 말 즉시 + 교정문은 렙 사이)가 다음이다. 피로 드리프트의 **세트 종료 권고**도 미구현(지금은 같은 교정을 12초마다 반복). `SpeechCoach` 의 대기 큐·오디오 포커스는 유닛 테스트 대상이 아니라 실기기 검증이 필요하다.
+
 ## 12. 파일
 - `rules/rules_mp_v0.json` (앱이 읽을 정본), `rules/rules_mp_v0.md` (사람용 표, 피처 공식 표 포함), `export_rules_mp.py` (재생성)
 - 실험 코드/요약: `experiment_a.py`, `experiment_a_refit.py`, `outputs/experiment_a_summary.md`, `outputs/expA_refit_summary.md`
@@ -737,6 +759,8 @@ AIHub 조건 132개를 해부학적 자유도로 분류해, 완벽한 GT 3D 상�
 | `PostureAnalyzer.kt` | MediaPipe Pose Landmarker(VIDEO) 래퍼, ImageProxy→회전보정→월드 피처, 오버레이용 연결선 |
 | `PostureLabScreen.kt` | 실험 화면(카메라+골격 오버레이+종목 선택+세트 기록+판정 리포트) |
 | `PostureSetReport.kt` | 세트 종료 리포트 — 집계 판정 + onset 을 규칙별 `RuleOutcome` 으로 조인, 랭킹·verdict·점수(분수)·요약/발화 문구 (§30) |
+| `PostureScope.kt` | 종목별 평가 범위 — 조건 등급(ship/beta/exclude)을 부위명으로 압축, 시작 안내·카드 부제 문구 (§31) |
+| `PostureScopeUi.kt` | 규칙셋 캐시 + `rememberPostureScope` — 운동 카드가 세션 밖에서 범위를 읽는다 (§31) |
 | `PostureSetLabel.kt` | 세트 자가 라벨 저장 — `set_labels.jsonl`(항상) + `rep_truth.csv`(횟수 있을 때, `rep_replay.py` 정답) (§30) |
 에셋: `app/src/main/assets/posture/pose_landmarker_full.task`, `rules_mp_v0.json` (`noCompress += "task"`).
 진입: 로그인 화면의 **"자세 교정 실험실 (개발용)"** 버튼 → `TrexApp` 의 `postureLab` 라우트.

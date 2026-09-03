@@ -1,7 +1,11 @@
 package com.example.trex_kotlin.posture
 
 import android.content.Context
+import android.media.AudioAttributes
+import android.media.AudioFocusRequest
+import android.media.AudioManager
 import android.speech.tts.TextToSpeech
+import android.speech.tts.UtteranceProgressListener
 import java.util.Locale
 
 /**
@@ -184,11 +188,33 @@ data class OnsetState(
     private val dirSuffix: String get() = if (direction == Direction.OPPOSITE) " (반대측)" else ""
 }
 
+/**
+ * 실시간 코칭 엔진 (문구 카탈로그는 [CoachCues]).
+ *
+ * **앵커**: 초반 창은 세트의 '정상 기준'이다 — 준비 동작이 섞이면 첫 코칭이 오탐이 된다(사용자가 폰을 놓고
+ * 걸어와 자세를 잡는 구간이 "처음부터 …" 로 둔갑한다). 그래서 호출부(PostureLive)가 첫 렙 완료 또는 시간
+ * 폴백으로 [anchor] 를 부르고, 그 전 프레임은 버린다. [requireAnchor] = true 일 때만 이 문(gate)이 걸린다 —
+ * 기본값이 false 인 이유는 기존 호출부(자세 랩 화면)와 기존 테스트가 앵커 없이 즉시 판정하기 때문이다.
+ *
+ * **베타 침묵**: 베타(미보정) 규칙은 라이브에서 말하지 않는다 — 화면·리포트에는 '참고'로 남지만 음성은
+ * 검증된(ship) 규칙만 낸다(§28 실기기 오탐 3건이 전부 베타/미보정 규칙이었다). [speakBeta] 의 기본값은
+ * [requireAnchor] 를 따라간다: 라이브 경로(앵커 사용)는 침묵, 기존 호출부는 종전대로 발화.
+ * 판정 자체는 그대로다 — [lastStates]·[summarize] 에는 베타 규칙도 전부 들어간다.
+ */
 class LiveCoach(
     private val ruleSet: PostureRuleSet,
     private val exercise: String,
     private val includeBeta: Boolean = true,
     private val baseline: Map<String, Float>? = null,
+    /** true 면 [anchor] 호출 전까지 프레임을 버리고 판정하지 않는다. */
+    private val requireAnchor: Boolean = false,
+    /**
+     * false 면 베타(미보정) 규칙은 **발화 후보에서만** 빠진다 — 판정·`lastStates`·`summarize` 는 그대로라
+     * 화면·리포트에는 '참고'로 남는다. 기본값은 종전 동작(true) — 랩 화면처럼 베타를 일부러 듣는 자리가 있다.
+     * 실사용 세션은 false 로 준다: §28 실기기 오탐 3건이 전부 베타/미보정 규칙이었다.
+     * [requireAnchor] 와는 독립이다 — 한쪽만 켜도 된다.
+     */
+    private val speakBeta: Boolean = true,
     private val windowFrames: Int = 8,
     private val minFrames: Int = 8,
     private val persistence: Int = 2,
@@ -201,12 +227,33 @@ class LiveCoach(
     private val lastSpokenAt = HashMap<String, Long>()
     private val spokenKind = HashMap<String, OnsetKind>()
     private var lastGlobalAt = 0L
+    private var anchored = !requireAnchor
 
     @Volatile
     var lastStates: List<OnsetState> = emptyList()
         private set
 
     val frameCount: Int get() = frames.size
+
+    /** 초반 창이 실제 운동 구간에 놓였는지. false 면 판정도 발화도 없다. */
+    val isAnchored: Boolean get() = anchored
+
+    /**
+     * 초반 창을 지금부터 다시 모은다 — 첫 렙이 끝난 시점(또는 시간 폴백)에 호출한다.
+     * 준비 동작 프레임을 버려야 "처음부터 …" 가 진짜 세트 초반을 가리킨다.
+     * @return 이번 호출로 앵커가 잡혔으면 true, 이미 앵커돼 있었으면 false(아무것도 하지 않는다).
+     */
+    @Synchronized
+    fun anchor(): Boolean {
+        if (anchored) return false
+        frames.clear()
+        earlyAgg.reset()
+        streak.clear()
+        lastStates = emptyList()
+        anchored = true
+        return true
+        // spokenKind/lastSpokenAt/lastGlobalAt 은 유지 — 앵커 전엔 말한 적이 없고, 억제 상태를 되돌릴 이유도 없다
+    }
 
     fun reset() {
         frames.clear()
@@ -216,11 +263,13 @@ class LiveCoach(
         spokenKind.clear()
         lastGlobalAt = 0L
         lastStates = emptyList()
+        anchored = !requireAnchor
     }
 
-    /** 검출된 프레임의 피처를 넣는다 (분석 스레드). */
+    /** 검출된 프레임의 피처를 넣는다 (분석 스레드). 앵커 전 프레임은 준비 동작이라 버린다. */
     @Synchronized
     fun onFrame(features: Map<String, Float>) {
+        if (!anchored) return
         frames += features
         if (frames.size <= windowFrames) earlyAgg.add(features)
     }
@@ -251,6 +300,7 @@ class LiveCoach(
      */
     @Synchronized
     fun evaluate(nowMs: Long): CoachEvent? {
+        if (!anchored) return null       // 준비 동작 구간 — lastStates 도 비워 둬야 화면의 붉은 강조가 안 뜬다
         if (frames.size < minFrames) return null
         val recentAgg = recentAggregator()
         val recentRes = ruleSet.evaluate(exercise, recentAgg, includeBeta, minFrames, baseline)
@@ -267,7 +317,7 @@ class LiveCoach(
             if (rr.verdict == Verdict.VIOLATION) {
                 val s = (streak[rr.rule.id] ?: 0) + 1
                 streak[rr.rule.id] = s
-                if (s >= persistence && kind != null && canSpeak(rr.rule.id, nowMs)) {
+                if (s >= persistence && kind != null && speakable(rr.rule) && canSpeak(rr.rule.id, nowMs)) {
                     if (candidate == null || s > candidateStreak || (s == candidateStreak && rr.rule.cvAuc > candidate!!.rule.cvAuc)) {
                         candidate = st
                         candidateStreak = s
@@ -279,7 +329,9 @@ class LiveCoach(
         }
         lastStates = states
         // 위반 후보가 없으면 '교정됨' 한 번
-        val pick = candidate ?: states.firstOrNull { it.kind == OnsetKind.RECOVERED && canSpeak(it.rule.id, nowMs, recovered = true) }
+        val pick = candidate ?: states.firstOrNull {
+            it.kind == OnsetKind.RECOVERED && speakable(it.rule) && canSpeak(it.rule.id, nowMs, recovered = true)
+        }
         if (pick == null) return null
         val base = CoachCues.cueFor(pick.rule, pick.direction ?: Direction.PRIMARY)
         // 방향 있는 조건(플랭크 정렬)은 최근 창의 부호로 문구를 가른다 — 교정됨 문구는 방향 불필요
@@ -296,6 +348,9 @@ class LiveCoach(
         return CoachEvent(pick.rule, pick.kind, msg, nowMs, pick.earlyValue, pick.recentValue, direction = pick.direction)
     }
 
+    /** 발화 후보 자격 — 베타는 화면·리포트엔 남기고 음성만 막는다. */
+    private fun speakable(rule: PostureRule): Boolean = speakBeta || rule.status != RuleStatus.BETA
+
     private fun canSpeak(ruleId: String, nowMs: Long, recovered: Boolean = false): Boolean {
         if (nowMs - lastGlobalAt < globalGapMs && lastGlobalAt != 0L) return false
         val last = lastSpokenAt[ruleId] ?: return true
@@ -306,6 +361,7 @@ class LiveCoach(
     /** 세트 종료 후 요약: 전반 창(첫 W) vs 후반 창(마지막 W) 으로 규칙별 onset 분류. */
     @Synchronized
     fun summarize(): List<OnsetState> {
+        if (!anchored) return emptyList()
         if (frames.size < minFrames) return emptyList()
         val earlyRes = ruleSet.evaluate(exercise, aggregatorOf(0 until windowFrames), includeBeta, minFrames, baseline).associateBy { it.rule.id }
         val lateRes = ruleSet.evaluate(exercise, aggregatorOf(maxOf(0, frames.size - windowFrames) until frames.size), includeBeta, minFrames, baseline)
@@ -324,9 +380,33 @@ class LiveCoach(
     }
 }
 
-/** Android TTS 래퍼 — 한국어 음성, 초기화 비동기. 음성이 없으면 텍스트만 표시하도록 ready=false. */
+/**
+ * Android TTS 래퍼 — 한국어 음성, 초기화 비동기.
+ *
+ * 세 가지를 함께 다룬다(§31 라이브 신뢰성):
+ *  - **준비 전 큐**: 초기화가 비동기라 세트 시작 안내가 통째로 버려졌다. ready 전 요청은 최대 [MAX_PENDING] 건
+ *    담아 두고, 초기화 직후 **[PENDING_TTL_MS] 이내 요청만** 순서대로 말한다 — 더 오래된 안내는 이미 지난 상황이라
+ *    지금 말하면 오히려 방해다.
+ *  - **오디오 포커스**: 헬스장 음악 위로 들려야 한다. 발화 동안만 DUCK 포커스를 잡고 마지막 발화가 끝나면 놓는다.
+ *  - **상태 노출**: 한국어 음성이 없으면 영원히 무음인데 화면이 이유를 말하지 못했다 → [unavailableReason].
+ */
 class SpeechCoach(context: Context) {
+
+    private data class Pending(val text: String, val atMs: Long)
+
+    private val appContext = context.applicationContext
+    private val audioManager = runCatching {
+        appContext.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
+    }.getOrNull()
+
     private var tts: TextToSpeech? = null
+
+    private val lock = Any()
+    /** ready 전 대기 큐 (오래된 것부터). */
+    private val pending = ArrayList<Pending>()
+    /** 아직 끝나지 않은 발화 id — 비면 오디오 포커스를 놓는다. */
+    private val speaking = LinkedHashSet<String>()
+    private var focusRequest: AudioFocusRequest? = null
 
     @Volatile
     var ready: Boolean = false
@@ -339,43 +419,154 @@ class SpeechCoach(context: Context) {
     var lastError: String? = null
         private set
 
+    /** 초기화 콜백이 한 번이라도 돌았는지 — "아직 준비 중" 과 "못 씀" 을 가르는 유일한 근거. */
+    @Volatile
+    private var initialized = false
+
+    @Volatile
+    private var unavailable: String? = null
+
+    /** 초기화가 끝났는데 음성을 못 쓰는 이유(한국어). 아직 초기화 중이거나 정상이면 null — 화면 배너용. */
+    val unavailableReason: String? get() = if (initialized) unavailable else null
+
+    private val progress = object : UtteranceProgressListener() {
+        override fun onStart(utteranceId: String?) {}
+        override fun onDone(utteranceId: String?) = finished(utteranceId)
+        override fun onStop(utteranceId: String?, interrupted: Boolean) = finished(utteranceId)
+        @Deprecated("API 21 이전 시그니처 — 추상 메서드라 구현은 필요하다", ReplaceWith("onError(utteranceId, errorCode)"))
+        override fun onError(utteranceId: String?) = finished(utteranceId)
+        override fun onError(utteranceId: String?, errorCode: Int) = finished(utteranceId)
+    }
+
     init {
         try {
-            tts = TextToSpeech(context.applicationContext) { status ->
+            tts = TextToSpeech(appContext) { status ->
                 if (status == TextToSpeech.SUCCESS) {
-                    val r = tts?.setLanguage(Locale.KOREAN)
-                    ready = r != TextToSpeech.LANG_MISSING_DATA && r != TextToSpeech.LANG_NOT_SUPPORTED
-                    if (!ready) lastError = "한국어 음성 데이터 없음 (기기 TTS 설정에서 한국어 설치)"
-                    tts?.setSpeechRate(1.05f)
+                    val r = runCatching { tts?.setLanguage(Locale.KOREAN) }.getOrNull()
+                    ready = r != null && r != TextToSpeech.LANG_MISSING_DATA && r != TextToSpeech.LANG_NOT_SUPPORTED
+                    if (!ready) {
+                        lastError = "한국어 음성 데이터 없음 (기기 TTS 설정에서 한국어 설치)"
+                        unavailable = "음성 안내를 쓸 수 없어요 — 기기 설정에서 한국어 음성을 설치하세요"
+                    }
+                    runCatching { tts?.setSpeechRate(1.05f) }
+                    runCatching { tts?.setOnUtteranceProgressListener(progress) }
                 } else {
                     lastError = "TTS 초기화 실패"
+                    unavailable = "음성 안내를 쓸 수 없어요 — 기기 TTS 엔진을 확인하세요"
                 }
+                initialized = true
+                flushPending()
             }
         } catch (t: Throwable) {
             lastError = "TTS 사용 불가: ${t.message}"
+            unavailable = "음성 안내를 쓸 수 없어요 — 기기 TTS 엔진을 확인하세요"
+            initialized = true
         }
     }
 
-    /** 말한다. 진행 중인 문장은 끊고 최신 안내를 우선한다(flush). */
+    /**
+     * 말한다. 진행 중인 문장은 끊고 최신 안내를 우선한다(flush).
+     * 아직 준비 전이면 큐에 담아 뒀다가 초기화 직후 말한다 — 세트 시작 안내가 통째로 사라지지 않도록.
+     */
     fun speak(text: String, flush: Boolean = true) {
-        if (!ready || muted) return
-        try {
-            tts?.speak(text, if (flush) TextToSpeech.QUEUE_FLUSH else TextToSpeech.QUEUE_ADD, null, "coach-${System.nanoTime()}")
-        } catch (_: Throwable) {
+        if (muted) return
+        if (!ready) {
+            // 초기화가 끝났는데도 못 쓰는 상태면 영원히 못 말한다 — 담아 둘 이유가 없다
+            if (initialized) return
+            synchronized(lock) {
+                if (flush) pending.clear()          // flush = "지금 이것만" 이라는 뜻
+                pending += Pending(text, System.currentTimeMillis())
+                while (pending.size > MAX_PENDING) pending.removeAt(0)
+            }
+            return
         }
+        speakNow(text, flush)
     }
 
     fun stop() {
-        try { tts?.stop() } catch (_: Throwable) {}
+        synchronized(lock) {
+            pending.clear()
+            speaking.clear()
+        }
+        runCatching { tts?.stop() }
+        abandonFocus()
     }
 
     fun shutdown() {
-        try {
-            tts?.stop()
-            tts?.shutdown()
-        } catch (_: Throwable) {
+        synchronized(lock) {
+            pending.clear()
+            speaking.clear()
         }
+        runCatching { tts?.stop() }
+        runCatching { tts?.shutdown() }
+        abandonFocus()
         tts = null
         ready = false
+    }
+
+    private fun speakNow(text: String, flush: Boolean) {
+        val id = "coach-${System.nanoTime()}"
+        synchronized(lock) {
+            if (flush) speaking.clear()             // 끊긴 발화는 onDone 이 오지 않는다
+            speaking += id
+        }
+        requestFocus()
+        val rc = runCatching {
+            tts?.speak(text, if (flush) TextToSpeech.QUEUE_FLUSH else TextToSpeech.QUEUE_ADD, null, id)
+        }.getOrNull()
+        // 발화가 시작조차 못 하면 리스너가 안 오므로 여기서 포커스를 정리한다
+        if (rc != TextToSpeech.SUCCESS) finished(id)
+    }
+
+    /** 초기화 직후 대기 큐를 흘려보낸다. 오래된 요청은 이미 지난 상황이라 버린다. */
+    private fun flushPending() {
+        val now = System.currentTimeMillis()
+        val due = synchronized(lock) {
+            val out = pending.filter { now - it.atMs <= PENDING_TTL_MS }
+            pending.clear()
+            out
+        }
+        if (!ready || muted) return
+        for (p in due) speakNow(p.text, flush = false)
+    }
+
+    private fun finished(utteranceId: String?) {
+        val id = utteranceId ?: return
+        val idle = synchronized(lock) {
+            speaking.remove(id)
+            speaking.isEmpty()
+        }
+        if (idle) abandonFocus()
+    }
+
+    /** 발화 동안만 DUCK 포커스 — 음악을 끄지 않고 낮춘다. 실패해도 발화는 그대로 진행한다. */
+    private fun requestFocus() {
+        val am = audioManager ?: return
+        val req = synchronized(lock) {
+            if (focusRequest != null) return
+            val attrs = AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_ASSISTANCE_ACCESSIBILITY)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                .build()
+            AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK)
+                .setAudioAttributes(attrs)
+                .setWillPauseWhenDucked(false)
+                .build()
+                .also { focusRequest = it }
+        }
+        runCatching { am.requestAudioFocus(req) }
+    }
+
+    private fun abandonFocus() {
+        val am = audioManager ?: return
+        val req = synchronized(lock) { focusRequest.also { focusRequest = null } } ?: return
+        runCatching { am.abandonAudioFocusRequest(req) }
+    }
+
+    companion object {
+        /** 대기 큐 최대 건수 — 밀린 안내를 몰아서 읽으면 오히려 방해다. */
+        const val MAX_PENDING = 3
+        /** 대기 요청 유효 시간(ms) — 이보다 오래된 안내는 이미 지난 상황. */
+        const val PENDING_TTL_MS = 10_000L
     }
 }

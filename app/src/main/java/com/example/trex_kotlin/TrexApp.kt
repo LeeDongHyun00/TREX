@@ -13,7 +13,9 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -42,7 +44,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -54,6 +58,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
@@ -112,6 +117,11 @@ fun TrexApp(app: AppViewModel = viewModel()) {
         var sessionTimeLeft by rememberSaveable { mutableIntStateOf(0) }
         var sessionElapsed by rememberSaveable { mutableIntStateOf(0) }
         var sessionPaused by rememberSaveable { mutableStateOf(false) }
+        // 카메라 권한을 거부한 운동 — 자세 평가 대신 **같은 운동을** 타이머로 돌린다(건너뛰지 않는다).
+        // 세션 단위 상태라 다음 세션에서는 다시 권한을 물어본다.
+        val postureFallback = remember { mutableStateListOf<String>() }
+        // ✕ 종료 확인 — 완료한 운동이 있으면 "여기까지 기록" 을 물어본다(결정 3: 묻지 않고 버리지 않는다).
+        var exitAsk by remember { mutableStateOf(false) }
         val appPaused = rememberTrexLifecyclePaused()
         val pausedState = rememberUpdatedState(sessionPaused || appPaused)
         val plan = app.workoutPlan
@@ -128,6 +138,8 @@ fun TrexApp(app: AppViewModel = viewModel()) {
             if (plan.isEmpty()) return
             // 이어하기(✕ 뒤 같은 날 재시작)면 이미 마친 운동의 리포트는 남긴다 — 최종 기록에 그 운동의 자세 칸이 비지 않게
             app.clearSessionReports(keep = plan.take(start).map { it.id })
+            postureFallback.clear()
+            exitAsk = false
             speech.stop()
             sessionIndex = start
             sessionDone = false
@@ -154,10 +166,22 @@ fun TrexApp(app: AppViewModel = viewModel()) {
 
         fun exitSession() {
             speech.stop()
+            exitAsk = false
             sessionIndex = -1
             sessionDone = false
             sessionPaused = false
             selectedTab = TrexTab.Home
+        }
+
+        /** 완료한 운동까지 오늘 기록에 남기고 나간다 — 세트 리포트도 같이 접혀 들어간다. */
+        fun exitAndRecord() {
+            app.recordCompletedSession(sessionElapsed)
+            exitSession()
+        }
+
+        // ✕ 는 바로 나가지 않는다: 완료한 운동이 있는데 묻지 않고 버리면 그날 출석·기록이 통째로 빈다.
+        fun requestExit() {
+            if (plan.any { it.done }) exitAsk = true else exitSession()
         }
 
         LaunchedEffect(sessionIndex) {
@@ -181,7 +205,11 @@ fun TrexApp(app: AppViewModel = viewModel()) {
             !app.onboarded -> RootRoute.Onboarding
             sessionDone -> RootRoute.Complete
             sessionIndex >= 0 && sessionWorkout != null ->
-                if (sessionWorkout.posture && sessionWorkout.postureSupported()) RootRoute.PostureSession else RootRoute.TimerSession
+                if (sessionWorkout.posture && sessionWorkout.postureSupported() && sessionWorkout.id !in postureFallback) {
+                    RootRoute.PostureSession
+                } else {
+                    RootRoute.TimerSession
+                }
             subScreen == "record" -> RootRoute.Record
             else -> RootRoute.Main
         }
@@ -240,8 +268,9 @@ fun TrexApp(app: AppViewModel = viewModel()) {
                             paused = sessionPaused || appPaused,
                             onTogglePause = { sessionPaused = !sessionPaused },
                             onNext = { nextSession() },
-                            onExit = { exitSession() },
+                            onExit = { requestExit() },
                             onSetReport = { app.addPostureReport(w.id, it) },
+                            onFallbackToTimer = { if (w.id !in postureFallback) postureFallback.add(w.id) },
                             speech = speech,
                         )
                     }
@@ -256,7 +285,7 @@ fun TrexApp(app: AppViewModel = viewModel()) {
                             paused = sessionPaused || appPaused,
                             onTogglePause = { sessionPaused = !sessionPaused },
                             onNext = { nextSession() },
-                            onExit = { exitSession() },
+                            onExit = { requestExit() },
                         )
                     }
 
@@ -273,6 +302,50 @@ fun TrexApp(app: AppViewModel = viewModel()) {
                         onOpenRecord = { subScreen = "record" },
                     )
                 }
+            }
+
+            if (exitAsk) {
+                SessionExitSheet(
+                    doneCount = plan.count { it.done },
+                    onRecord = { exitAndRecord() },
+                    onDiscard = { exitSession() },
+                    onCancel = { exitAsk = false },
+                )
+            }
+        }
+    }
+}
+
+/**
+ * 세션 ✕ 확인 — 완료한 운동을 오늘 기록에 남길지 묻는다.
+ * 자세 세트 로그(JSONL)는 어느 쪽이든 이미 저장돼 있고, 여기서 갈리는 건 **오늘 기록·출석**뿐이다.
+ */
+@Composable
+private fun SessionExitSheet(
+    doneCount: Int,
+    onRecord: () -> Unit,
+    onDiscard: () -> Unit,
+    onCancel: () -> Unit,
+) {
+    val c = Trex.c
+    Box(Modifier.fillMaxSize().zIndex(50f)) {
+        SheetSurface {
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .navigationBarsPadding()
+                    .padding(horizontal = 22.dp, vertical = 22.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                Text("운동을 끝낼까요?", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                Text(
+                    "완료한 ${doneCount}개 운동을 오늘 기록에 남길 수 있어요.",
+                    color = Color.White.copy(alpha = 0.72f), fontSize = 13.sp, lineHeight = 19.sp, textAlign = TextAlign.Center,
+                )
+                Cta("여기까지 기록하고 끝내기", onClick = onRecord, modifier = Modifier.padding(top = 6.dp).fillMaxWidth())
+                GhostButton("기록 없이 끝내기", onClick = onDiscard, modifier = Modifier.fillMaxWidth())
+                GhostButton("계속하기", onClick = onCancel, modifier = Modifier.fillMaxWidth())
             }
         }
     }

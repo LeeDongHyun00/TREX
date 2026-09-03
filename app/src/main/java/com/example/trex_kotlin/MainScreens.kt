@@ -6,6 +6,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -75,6 +76,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.trex_kotlin.posture.rememberPostureScope
 import java.time.LocalDate
 import java.time.format.TextStyle
 import java.util.Locale
@@ -511,6 +513,11 @@ private fun WorkoutExpandCard(
                     // 자세 교정 스위치 — 규칙 엔진 지원 종목에만. 미지원이면 안내만.
                     if (workout.postureSupported()) {
                         val on = workout.posture
+                        // 이 종목에서 무엇을 보고 무엇을 못 보는지 (spec §31) — 켜기 전에 밝힌다.
+                        // 데드리프트처럼 '척추의 중립' 이 전부 exclude 인 종목은 허리를 말아도 "깨끗" 이라 나오므로,
+                        // 범위를 모르면 침묵을 "완벽하다" 로 읽게 된다.
+                        val scope = rememberPostureScope(postureExerciseMap[workout.name])
+                        var scopeOpen by remember(workout.id) { mutableStateOf(false) }
                         Surface(
                             onClick = onTogglePosture,
                             shape = RoundedCornerShape(15.dp),
@@ -523,7 +530,9 @@ private fun WorkoutExpandCard(
                                 Column(Modifier.padding(start = 10.dp).weight(1f)) {
                                     Text("자세 교정 사용", fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold)
                                     Text(
-                                        if (on) "카메라로 실시간 자세 평가를 해줘룡" else "켜면 카메라로 자세를 평가해룡",
+                                        // 켜져 있으면 "평가 2 · 검증 중 1 · 못 봄 2" 처럼 범위를 숫자로 — 막연한 기대를 줄인다
+                                        scope?.cardLine?.takeIf { on }
+                                            ?: if (on) "카메라로 실시간 자세 평가를 해줘룡" else "켜면 카메라로 자세를 평가해룡",
                                         fontSize = 10.sp, color = if (on) c.primaryText.copy(alpha = 0.8f) else c.text3,
                                     )
                                 }
@@ -536,6 +545,28 @@ private fun WorkoutExpandCard(
                                     contentAlignment = if (on) Alignment.CenterEnd else Alignment.CenterStart,
                                 ) {
                                     Box(Modifier.size(18.dp).clip(CircleShape).background(Color.White))
+                                }
+                            }
+                        }
+                        // 무엇을 보나요 — 규칙셋에서 만든 3줄. 켜기 전에도 열 수 있다.
+                        scope?.let { sc ->
+                            Column(Modifier.padding(top = 6.dp)) {
+                                Text(
+                                    if (scopeOpen) "무엇을 보나요? ▴" else "무엇을 보나요? ▾",
+                                    color = c.text3, fontSize = 11.sp, fontWeight = FontWeight.SemiBold,
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .clickable { scopeOpen = !scopeOpen }
+                                        .padding(vertical = 3.dp, horizontal = 2.dp),
+                                )
+                                if (scopeOpen) {
+                                    sc.introLines.forEach { line ->
+                                        Text(
+                                            "· $line",
+                                            color = c.text3, fontSize = 11.sp, lineHeight = 16.sp,
+                                            modifier = Modifier.padding(top = 3.dp),
+                                        )
+                                    }
                                 }
                             }
                         }
