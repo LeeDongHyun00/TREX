@@ -652,7 +652,12 @@ fun PostureLiveSessionScreen(
                     coachRef[0]?.let { coach ->
                         // 앵커 폴백: 렙 신호가 없는 종목(등척성·컬·레이즈류)이거나 첫 렙이 너무 늦으면 시간으로 앵커한다.
                         if (!coach.isAnchored) {
-                            if (detectStartRef[0] == 0L) detectStartRef[0] = now
+                            // 기준 시점은 '검출' 이 아니라 '측정 가능' 이다 — PostureAnalyzer 는 가시 관절이 몇 개든
+                            // detected=true 를 돌려주므로(관절 11개짜리 프레임도 detected), 검출 기준으로 세면
+                            // 사람이 아직 프레임 안에 제대로 없는 동안 폴백이 다 흘러가 버린다.
+                            // 실측(§31a): 검출 기준이면 10.0s 에 앵커돼 43.8s 준비 동작이 그대로 집계에 들어갔다.
+                            if (detectStartRef[0] == 0L && features.isNotEmpty()) detectStartRef[0] = now
+                            if (detectStartRef[0] == 0L) return@let
                             val wait = if (repRef[0] == null) ANCHOR_FALLBACK_NO_COUNTER_MS else ANCHOR_FALLBACK_WITH_COUNTER_MS
                             if (now - detectStartRef[0] >= wait && coach.anchor()) {
                                 anchored = true; anchoredRef[0] = true; anchorAtRef[0] = now
