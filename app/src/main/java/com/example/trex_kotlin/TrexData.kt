@@ -1,6 +1,10 @@
 package com.example.trex_kotlin
 
 import androidx.compose.runtime.Immutable
+import com.example.trex_kotlin.posture.CoachMode
+import com.example.trex_kotlin.posture.OnsetKind
+import com.example.trex_kotlin.posture.PostureSetReport
+import com.example.trex_kotlin.posture.SetVerdict
 import java.time.LocalDate
 import java.util.Calendar
 
@@ -56,10 +60,71 @@ data class WorkoutAlt(
     val reps: String,
 )
 
+/**
+ * 기록 항목에 접혀 들어가는 세트 리포트 요약 (spec §30). [focus] 는 관찰 문장(끝 마침표 없음) —
+ * CLEAN 이면 "자세 깨끗", UNJUDGED 면 "자세 판정 없음", TRACK 이면 summaryLine. 나머지는 리포트에서 그대로 옮긴 값이고
+ * [actualReps]/[formLabel] 만 완료 화면의 자가 라벨로 나중에 채워진다. 새 필드는 전부 기본값 null 이라 구버전 저장 기록도 그대로 읽힌다.
+ */
 @Immutable
 data class PostureCorrection(
     val focus: String,
+    /** "habit"|"drift"|"recovered"|"violation"|"clean"|"reference"|"unjudged". null = 구버전·목업 기록. */
+    val kind: String? = null,
+    val bodyPart: String? = null,
+    val fix: String? = null,
+    val note: String? = null,
+    val beta: Boolean = false,
+    val setId: String? = null,
+    /** "coach"|"track" */
+    val mode: String? = null,
+    val judged: Int? = null,
+    val abstained: Int? = null,
+    val repsValid: Int? = null,
+    val repsPartial: Int? = null,
+    val tempoMs: Long? = null,
+    val actualReps: Int? = null,
+    val formLabel: String? = null,
 )
+
+/**
+ * 세트 리포트 → 기록 항목. posture 패키지는 app 에 의존할 수 없어서 확장함수는 이쪽에 둔다.
+ * kind 는 verdict 소문자를 쓰되 ISSUE 만 헤드라인의 onset 종류(habit/drift/violation)로 세분한다 — 기록 화면이 라벨 색을 고르는 키.
+ */
+fun PostureSetReport.toCorrection(): PostureCorrection {
+    // REFERENCE 는 non-beta 헤드라인이 없으므로 첫 후보(베타)를 대표로 — beta 플래그가 같이 실려 UI 가 "참고" 로 낮춘다
+    val lead = headline ?: candidates.firstOrNull()
+    val focus = when {
+        mode == CoachMode.TRACK -> summaryLine
+        verdict == SetVerdict.CLEAN -> if (betaOnly) "검증 중인 항목 기준으로는 이상 없었어요" else "자세 깨끗했어요"
+        verdict == SetVerdict.UNJUDGED -> "자세 판정 없음"
+        // "좋아요, 무릎 자세가 교정됐어요" 는 코칭 발화 문장이라 "{운동}에서 {관찰}" 틀에 안 맞는다 — 기록용 관찰문으로
+        verdict == SetVerdict.RECOVERED -> "${lead?.bodyPart ?: "자세"} 자세가 세트 후반에 교정됐어요"
+        else -> lead?.observation ?: summaryLine
+    }
+    val kind = when (verdict) {
+        SetVerdict.ISSUE -> when (headline?.kind) {
+            OnsetKind.HABIT -> "habit"
+            OnsetKind.DRIFT -> "drift"
+            else -> "violation"
+        }
+        else -> verdict.name.lowercase()
+    }
+    return PostureCorrection(
+        focus = focus,
+        kind = kind,
+        bodyPart = lead?.bodyPart,
+        fix = lead?.fix?.takeIf { it.isNotBlank() && verdict != SetVerdict.RECOVERED },   // 교정된 세트에 "다음엔 …" 은 어긋난다
+        note = lead?.note,
+        beta = lead?.beta ?: false,
+        setId = setId,
+        mode = if (mode == CoachMode.TRACK) "track" else "coach",
+        judged = judged,
+        abstained = abstained,
+        repsValid = repsValid,
+        repsPartial = repsPartial,
+        tempoMs = tempoMs,
+    )
+}
 
 @Immutable
 data class WorkoutHistoryItem(
@@ -225,14 +290,11 @@ fun Iterable<FoodEntry>.totalNutrition(): Nutrition =
         )
     }
 
-/** 첫 실행 데모용 시드 기록 (백엔드 연동 전). 저장소가 비어 있을 때만 쓰인다. */
+/**
+ * 첫 실행 데모용 시드 기록 (백엔드 연동 전). 저장소가 비어 있을 때만 쓰인다.
+ * 시드에는 자세 데이터를 넣지 않는다: 지어낸 지적은 실데이터의 신뢰를 깎는다.
+ */
 fun seedWorkoutHistory(plan: List<Workout> = todayPlan): List<WorkoutHistoryDay> {
-    val postureHints = listOf(
-        "무릎이 안쪽으로 모이는 자세",
-        "상체가 앞으로 무너지는 자세",
-        "골반이 한쪽으로 기우는 자세",
-        "어깨가 올라가는 자세",
-    )
     val calendar = Calendar.getInstance()
     val todayEpoch = LocalDate.now().toEpochDay()
 
@@ -240,20 +302,14 @@ fun seedWorkoutHistory(plan: List<Workout> = todayPlan): List<WorkoutHistoryDay>
         val dayCalendar = calendar.clone() as Calendar
         dayCalendar.add(Calendar.DAY_OF_MONTH, index - 6)
         val selected = plan.rotate(index).take(2 + index % 3)
-        val items = selected.mapIndexed { itemIndex, workout ->
-            val duration = workout.durationMinutes()
-            val hasCorrection = workout.posture && (index + itemIndex) % 2 == 0
+        val items = selected.map { workout ->
             WorkoutHistoryItem(
                 workoutName = workout.name,
                 reps = workout.reps,
-                durationMinutes = duration,
+                durationMinutes = workout.durationMinutes(),
                 calories = workout.estimatedCalories(),
-                postureCorrection = if (hasCorrection) {
-                    PostureCorrection(postureHints[(index + itemIndex) % postureHints.size])
-                } else {
-                    null
-                },
-                accuracy = 86 + (index * 3 + itemIndex * 2) % 10,
+                postureCorrection = null,
+                accuracy = null,
             )
         }
 
@@ -268,20 +324,22 @@ fun seedWorkoutHistory(plan: List<Workout> = todayPlan): List<WorkoutHistoryDay>
     }
 }
 
-fun createWorkoutHistoryDay(plan: List<Workout>, elapsedSeconds: Int): WorkoutHistoryDay {
+/** @param reports workoutId → 이번 세션의 세트 리포트. 자세를 켠 운동이라도 리포트가 없으면 항목의 자세 칸은 null 이다(판정 안 한 것을 지어내지 않는다). */
+fun createWorkoutHistoryDay(
+    plan: List<Workout>,
+    elapsedSeconds: Int,
+    reports: Map<String, PostureSetReport> = emptyMap(),
+): WorkoutHistoryDay {
     val calendar = Calendar.getInstance()
-    val items = plan.mapIndexed { index, workout ->
-        val duration = workout.durationMinutes()
+    val items = plan.map { workout ->
+        val report = reports[workout.id]
         WorkoutHistoryItem(
             workoutName = workout.name,
             reps = workout.reps,
-            durationMinutes = duration,
+            durationMinutes = workout.durationMinutes(),
             calories = workout.estimatedCalories(),
-            postureCorrection = if (workout.posture && index == plan.indexOfFirst { it.posture }) {
-                PostureCorrection(defaultPostureFocus(workout.category))
-            } else {
-                null
-            },
+            postureCorrection = report?.toCorrection(),
+            accuracy = report?.accuracy,
         )
     }
     val totalMinutes = (elapsedSeconds / 60).takeIf { it > 0 } ?: items.sumOf { it.durationMinutes }
@@ -313,10 +371,14 @@ fun WorkoutHistoryDay.totalMinutes(): Int =
 fun WorkoutHistoryDay.totalCalories(): Int =
     items.sumOf { it.calories }
 
+/** 홈 요약에 올릴 리포트 종류 — 실제 판정에서 나온 관찰 문장만. clean/unjudged/reference/recovered 와 kind 없는 구버전·목업 기록은 제외. */
+private val homeSummaryKinds = setOf("habit", "drift", "violation")
+
 fun WorkoutHistoryDay.summaryText(): String {
-    val corrected = items.firstOrNull { it.postureCorrection != null }
+    // TRACK 은 focus 가 문장이 아니라 "n렙 · 템포" 요약이고, 모집단 판정을 지적으로 보이지 않는 모드라(§29) 넘어간다
+    val corrected = items.firstOrNull { it.postureCorrection?.let { pc -> pc.mode != "track" && pc.kind in homeSummaryKinds } == true }
     if (corrected != null) {
-        return "${corrected.workoutName}에서 ${corrected.postureCorrection?.focus.orEmpty()}가 부족했어요."
+        return "${corrected.workoutName}에서 ${corrected.postureCorrection?.focus.orEmpty()}."
     }
 
     val minuteDiff = totalMinutes() - averageMinutes
@@ -338,14 +400,6 @@ private fun List<Workout>.rotate(offset: Int): List<Workout> {
     if (isEmpty()) return emptyList()
     val start = offset % size
     return drop(start) + take(start)
-}
-
-private fun defaultPostureFocus(category: String): String = when (category) {
-    "하체" -> "무릎 정렬과 골반 중심"
-    "상체" -> "어깨 긴장과 팔꿈치 각도"
-    "코어", "복근" -> "허리 중립과 복부 긴장"
-    "유산소" -> "착지 균형과 상체 흔들림"
-    else -> "동작 마지막 구간의 안정성"
 }
 
 fun Calendar.koreanDayOfWeek(): String = when (get(Calendar.DAY_OF_WEEK)) {

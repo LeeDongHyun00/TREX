@@ -9,7 +9,7 @@
     python pull_logs.py --summary-only  # 이미 받은 파일만 다시 요약
     python pull_logs.py --clear-device  # 회수 후 기기에서 삭제(중복 누적 방지)
 
-출력: outputs/logs/*.jsonl, 표준출력 요약(세트/종목/프레임/판정/측정품질)
+출력: outputs/logs/sets-*.jsonl (+ rep_truth.csv, set_labels.jsonl 자가 라벨 — spec §30), 표준출력 요약(세트/종목/프레임/판정/측정품질)
 """
 from __future__ import annotations
 
@@ -48,13 +48,19 @@ def pull(clear: bool) -> int:
     if "No such file" in listing or "Permission denied" in listing:
         raise SystemExit(f"[err] 기기에 로그 폴더가 없습니다: {REMOTE_DIR}\n"
                          "      앱에서 자세교정 세션을 8프레임 이상 진행한 뒤 다시 시도하세요.")
-    names = [n.strip() for n in listing.split() if n.strip().endswith(".jsonl")]
+    # 세트 로그만 (sets-*.jsonl). 자가 라벨(labels/set_labels.jsonl, rep_truth.csv — spec §30)은 세트 로그가 아니므로
+    # 따로 받고, --clear 에서도 지우지 않는다(정답 데이터).
+    names = [n.strip() for n in listing.split() if n.strip().startswith("sets-") and n.strip().endswith(".jsonl")]
     if not names:
-        raise SystemExit("[err] 로그 파일(.jsonl)이 없습니다 — 세션을 한 세트 이상 마쳐 주세요.")
+        raise SystemExit("[err] 로그 파일(sets-*.jsonl)이 없습니다 — 세션을 한 세트 이상 마쳐 주세요.")
     DEST.mkdir(parents=True, exist_ok=True)
     for n in names:
         adb("pull", f"{REMOTE_DIR}/{n}", str(DEST / n))
         print(f"[pull] {n}")
+    for extra in ("rep_truth.csv", "labels/set_labels.jsonl"):
+        out = adb("pull", f"{REMOTE_DIR}/{extra}", str(DEST / Path(extra).name), check=False)
+        if "error" not in out.lower() and "does not exist" not in out:
+            print(f"[pull] {extra}  (자가 라벨 — rep_replay.py 정답)")
     if clear:
         for n in names:
             adb("shell", "rm", f"{REMOTE_DIR}/{n}", check=False)
@@ -63,7 +69,7 @@ def pull(clear: bool) -> int:
 
 
 def summarize() -> None:
-    files = sorted(DEST.glob("*.jsonl"))
+    files = sorted(DEST.glob("sets-*.jsonl"))   # set_labels.jsonl 은 라벨 파일 — 세트 로그가 아니다
     if not files:
         raise SystemExit(f"[err] 받은 로그가 없습니다: {DEST}")
     logs = []

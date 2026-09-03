@@ -679,6 +679,49 @@ AIHub 조건 132개를 해부학적 자유도로 분류해, 완벽한 GT 3D 상�
 
 **미구현(다음 단계)**: 세트 후 자가 라벨("좋았음/의도적 변형/무너짐" 한 탭 — 숙련자 라벨은 최고 품질 재보정 데이터), 세트 의도 태그(파셜 블록/템포/PR), 자기 참조(폼 프로필) 판정 — 프로필의 세트 간 산포 실측이 선행 조건, 온보딩 모드 질문·행동 감지 제안.
 
+## 30. 세트/세션 자세 리포트 + 자가 라벨 (`PostureSetReport.kt`, `PostureSetLabel.kt`, 2026-09-02)
+
+**동기**: §22 의 실시간 음성은 흘러가고 세트가 끝나면 남는 것이 없었다 — 전반→후반 요약은 랩 화면(개발용)에만 있었고, 기록 화면의 정확도 %·"자세 지적" 은 `defaultPostureFocus()` 하드코딩 목업이었다. 실측 세션을 돌려도 사용자가 다시 볼 수 있는 결과가 없으니 §9 재보정에 필요한 라벨도 모이지 않는다. 리포트는 **세트 로그(§14-1)에서 파생되는 값**이고 `setId` 로 그 JSONL 을 가리킨다 — 진실은 로그 하나이며, 리포트·기록 화면·라벨은 전부 그 id 로 묶인다.
+
+**모델** (`PostureSetReport.kt`, posture 패키지 — app 패키지 의존 없음):
+| 항목 | 내용 |
+|---|---|
+| `RuleOutcome` | 규칙 하나의 세트 결과: `overall`(세트 전체 집계 `PostureRuleSet.evaluate` 판정) + `kind`(`LiveCoach.summarize()` 의 초반 8프레임 vs 후반 8프레임 onset, 없으면 null) + `direction`(반대측 가드 §24) + `observation`/`fix`(끝 마침표 없는 문장 조각) + `note`(`measurementNote`, §25e) + `beta`(`RuleStatus.BETA`) + `cvAuc`. `label` 은 `OnsetState.label` 과 같은 어휘("처음부터/점점 흐트러짐/교정됨") 에 세트 중간 위반(kind null + VIOLATION) 의 "위반" 만 추가, 유보/정상은 그대로 |
+| 랭킹 (`rank`) | 0: overall VIOLATION 이고 kind ∈ {HABIT, DRIFT}(가장 확실) → 1: DRIFT(피로형, 두 모드 모두 가치) → 2: HABIT → 3: overall VIOLATION 이지만 창에서 안 잡힘(세트 중간 위반) → 4: RECOVERED → 9: 후보 아님. 동률은 ship 우선 → cvAuc 내림차순 |
+| `PostureSetReport` | `items`(랭킹순 전체 규칙, ABSTAIN 포함) 위에 파생값: `judged`(OK+VIOLATION), `abstained`, `okCount`, `candidates`(rank<9), `demoted`, `headline`(첫 **non-beta** 후보), `highlights`(후보 3개), `verdict`, `accuracy`, `summaryLine`(기록 화면 한 줄), `voiceLine`(세트 종료 발화). 렙 카운터(§27) 적용 종목이면 `repsValid/repsPartial/tempoMs`, 미적용이면 null |
+| `verdict` 5종 | `UNJUDGED`(judged==0) / `ISSUE`(non-beta 후보 중 rank≤3) / `RECOVERED`(non-beta 후보가 전부 교정됨) / `REFERENCE`(non-beta 후보 없고 beta 후보만) / `CLEAN`(그 외) |
+| 베타 = 헤드라인 불가 | §28 실기기 오탐 3건이 **전부 베타/미보정 규칙**이었다. 베타 위반은 `highlights` 에 남기되 verdict 는 REFERENCE 로 낮추고, 발화도 "아직 검증 중인 항목이라 참고만 하세요" 로 밝힌다 |
+| 점수 | `accuracy = round(100·shipOk/shipJudged)` — 분모는 **검증된(ship) 규칙 중 판정한 수**지 전체 규칙 수가 아니다. 유보를 정상으로 세면 화면에 덜 잡힌 세트일수록 점수가 오르는 거짓 신호가 되고, 베타를 세면 "참고만 하세요" 라던 항목이 점수를 깎는 자기모순이 된다. UI 는 `shipOk/shipJudged` 분수 표기로 분모를 드러내고 베타는 "참고 n건" 으로 따로 센다. judged==0 이면 점수·"깨끗" 둘 다 금지(UNJUDGED: "화면에 충분히 잡히지 않아 판정하지 못했어요"), 베타만 판정된 세트(바닥 종목 전부)는 `betaOnly` — 점수 없이 "검증 중인 항목 기준으로는 이상 없었어요" |
+| TRACK(기록) 모드 | §29 의 연장: `accuracy` 는 **항상 null**(모집단 판정을 숙련자에게 점수로 보이지 않는다). 후보는 **세트 내 변화(DRIFT/RECOVERED)만** — HABIT 도, 창에서 안 잡힌 세트 전체 위반(kind null)도 모집단 임계 기준이라 본인 스타일일 수 있으므로 `candidates` 에서 빼 `demoted`("측정 기록" 으로 접어 표시) 로 강등. `summaryLine`/`voiceLine` 은 "N렙 · 파셜 M · 템포 x.x초 (· {부위} 점점)" — 렙·템포가 없으면 "기록됨" |
+| 문구 조립 | `CoachCues.cueFor(rule, direction)` 의 습관/드리프트/교정 문장을 `splitCue("A. B.") → ("A","B")` 로 관찰·교정으로 가르고, kind==null(세트 중간 위반) 이면 관찰 앞의 "처음부터 " 를 뗀다(초반 창이 정상이었으므로 그 말은 거짓) |
+
+**데이터 흐름**: `PostureLive` 의 세트 마감 람다(`finalizeRef`) — **✓/✕ 핸들러에서 먼저** 호출, `onDispose` 는 안전망(멱등) — → `onSetReport` → `AppViewModel.sessionPostureReports`(workoutId → report, 맵에만 둔다) → 마지막 운동의 `nextSession()` 이 `recordCompletedSession()` 으로 `createWorkoutHistoryDay(plan, elapsed, reports)` 병합 → `WorkoutHistoryItem.postureCorrection`(확장 필드: kind/bodyPart/fix/note/beta/setId/mode/judged/abstained/reps/tempo/actualReps/formLabel). 병합은 이 한 곳뿐 — 도착 즉시 오늘 기록을 채우는 "지연 도착 보정" 은 ✕ 중도 이탈 세트를 그날 앞선 세션 기록에 섞어 넣어 뺐다. 이어하기(✕ 뒤 재시작)는 이미 마친 운동의 리포트를 `clearSessionReports(keep)` 로 남긴다. 세트 마감의 규칙 평가·렙 시각 복사는 분석 스레드의 `aggregator.add`/`onFrame` 과 같은 락 안에서 — 겹치면 CME 로 결과가 비어 멀쩡한 세트가 UNJUDGED 가 됐다. §30 이전 기록(`postureKind` 없음)의 자세 칸·정확도는 전부 시드 목업이라 `loadHistory` 가 버린다.
+
+**화면 3곳**: ① 세트 종료 음성 `voiceLine` 한 줄 — 스피커(`SpeechCoach`)는 **세션 스코프**(`TrexApp` 소유): 라이브 화면이 소유하면 자세→타이머 전환마다 `shutdown()` 이 문장을 0.4초 만에 끊는다(기본 플랜은 스쿼트→플랭크, 런지→푸쉬업이라 매번). 마지막 운동도 말하고, 완료 화면의 세션 요약은 같은 큐 뒤에 붙는다(음소거도 공유). 세트 경계 9초 동안 코치·커버리지 발화는 flush 대신 큐잉, 시작 안내도 QUEUE_ADD. 바닥→서서 하는 종목 전환 시 커버리지 상태를 리셋한다(안 풀면 새 종목 내내 코칭이 막힌다). ② 완료 화면 자세 블록(운동별 verdict·헤드라인 관찰/교정·`shipOk/shipJudged` 분수·베타 "참고 n건"·ⓘ 근거·TRACK 은 렙/템포와 접힌 "측정 기록"), ③ 기록 화면은 COACH 면 관찰(`observation`)+"다음엔 {fix}" 두 줄, TRACK 만 `summaryLine` — 정확도 %는 `accuracy`(TRACK 은 null 이라 숨김), 자가 라벨은 "내 평가 · 좋았음 · 실제 n회 (앱 m)" 로 카운터 오차를 드러낸다.
+
+**자가 라벨** (`PostureSetLabel.kt`): `FormLabel { GOOD, INTENDED, BROKE }` = §29 가 미구현으로 남긴 "좋았음 / 의도적 변형 / 무너짐" 한 탭 + 실제 횟수 입력. `SetLabelStore(context)` 는 `SetLogStore` 와 같은 디렉터리(`externalFilesDir/posture_logs`) 라 adb pull 한 번에 같이 나온다:
+| 파일 | 언제 | 형식 |
+|---|---|---|
+| `labels/set_labels.jsonl` | 항상 한 줄 | `{"set_id","exercise","actual_reps"(null 가능),"reps_source"(edited/confirmed, null 가능),"form"(good/intended/broke, null 가능),"created_at"}` — 앱 쪽 진실 기록. **하위 폴더**인 이유: `SetLogStore.files()/clear()/totalSets()` 와 `pull_logs.py` 가 `*.jsonl` 로 세트 로그를 고르므로 같은 폴더면 랩 "지우기"가 라벨을 삭제하고 세트 수에 라벨 줄이 섞인다 |
+| `rep_truth.csv` | `actualReps` 있을 때만 | 헤더 `set_id,reps_min,reps_max,exercise,form,source,created_at`, reps_min=reps_max=actualReps. `rep_replay.py` 가 `set_id,reps_min,reps_max` 를 `int()` 로 읽으므로 횟수 없는 행은 넣지 않는다(파싱이 깨진다). `source`=edited(스테퍼로 고침)/confirmed("이 숫자 맞아요" 로 확인) — 확인·수정 없이 폼만 고른 저장은 렙을 정답으로 넣지 않는다(앱 카운트가 정답으로 흘러가면 재생 검증이 자기 답을 채점한다). 저장은 companion 락으로 직렬화(헤더 중복 방지). `pull_logs.py` 가 세트 로그와 함께 받는다 |
+
+이것이 **렙 카운터 v5 의 정답 데이터**가 되는 이유: [REP_REPLAY.md](REP_REPLAY.md) 의 재생 검증은 라벨 세트 **3개**(적중 2·실패 1) 로 돌아갔고 v4(§27) 확정도 라벨 12렙 한 세트였다 — 알고리즘이 아니라 정답 수가 병목이다. 완료 화면에서 매 세트 횟수를 한 번 입력하면 라벨이 세션마다 쌓이고, `set_id` 로 로그와 1:1 결합되므로 재생 스크립트 변경 없이 곧바로 정답이 늘어난다. `form` 은 §29 의 "숙련자 라벨은 최고 품질 재보정 데이터" 를 위한 것 — INTENDED 세트는 임계값 재적합(§14)에서 위반 정답으로 쓰면 안 된다는 표식이다. 직렬화는 org.json 없이 `SetLogJson.str` 패턴(유닛테스트에서 org.json 이 스텁).
+
+**결정 3건**:
+1. **시드 목업 자세 데이터 제거** — `seedWorkoutHistory()` 의 `postureCorrection`/`accuracy` 를 null 로. 지어낸 지적("코어 긴장 유지" 류)이 실데이터의 신뢰를 깎고, 정직성 원칙(판정하지 않은 것을 판정한 것처럼 말하지 않는다)에 반한다.
+2. **운동 사이 인터스티셜 없음** — 세트 종료 결과는 음성 한 줄로만, 다음 운동으로 바로 넘어간다. 세션 리듬(휴식 타이머)을 화면 하나가 끊는 것보다 완료 화면에서 한 번에 보는 편이 낫다.
+3. **세션 중도 이탈은 기록하지 않음(유지)** — 기존 정책 그대로. 리포트 맵은 남지만 기록으로 병합되지 않으며, 라벨도 받지 않는다.
+
+**한계·다음**:
+- 초반 창 8프레임에 **준비 동작(셋업)이 섞일 수 있다** — 렙 카운터가 잡은 첫 사이클에 초반 창을 앵커링하면 HABIT/DRIFT 구분이 정확해진다(예정).
+- 완료 화면 TTS 는 세션 스코프 스피커를 같이 쓰므로 음소거를 따른다(해결). 남은 것: TTS 엔진 초기화 전(첫 세트 직후) 발화는 무음으로 떨어진다(기존 동작).
+- 세션 리포트는 **운동 블록 단위**(workoutId 하나 = 리포트 하나) — 한 운동 안의 세트 분할은 없다. 세트별 리포트는 세션 화면이 세트를 구분하게 된 뒤.
+- 리포트의 판정·임계값은 여전히 모집단(AIHub) 산출이며 §9 재보정 전이다 — 그래서 점수는 분수, 베타는 참고, TRACK 은 점수 없음이다.
+
+**테스트**:
+- `PostureSetReportTest`(15): 랭킹 순서(전체 위반+onset → DRIFT → HABIT) · 동률 ship→베타→AUC · 베타만 위반이면 REFERENCE 이고 헤드라인 없음·점수는 ship 만(100) · 전부 ABSTAIN 이면 UNJUDGED 이고 점수 없음 · 위반 없음 CLEAN · TRACK 은 HABIT 과 kind null 위반 강등·DRIFT 유지·점수 숨김 · TRACK 렙·드리프트 없으면 "기록됨" · 베타만 판정된 세트는 betaOnly(점수 없음·"검증 중") · `splitCue` 관찰/교정 분리 · 세트 중간 위반은 "처음부터" 제거 · 반올림 · RECOVERED 만이면 RECOVERED · rule.id 조인·반대측 · FormLabel 왕복.
+- `SetLabelStoreTest`(5): CSV 헤더 1회 + 라벨당 1행(source 열) · reps null 이면 jsonl 에만 · 콤마·따옴표 CSV 인용 · 파일 없으면 count 0 · 라벨 파일이 `SetLogStore` 의 `*.jsonl` 규약(files/totalSets/clear) 밖에 있음.
+
 ## 12. 파일
 - `rules/rules_mp_v0.json` (앱이 읽을 정본), `rules/rules_mp_v0.md` (사람용 표, 피처 공식 표 포함), `export_rules_mp.py` (재생성)
 - 실험 코드/요약: `experiment_a.py`, `experiment_a_refit.py`, `outputs/experiment_a_summary.md`, `outputs/expA_refit_summary.md`
@@ -693,6 +736,8 @@ AIHub 조건 132개를 해부학적 자유도로 분류해, 완벽한 GT 3D 상�
 | `PostureRules.kt` | `rules_mp_v0.json` 로더, `PostureRule.isViolated`, `PostureRuleSet.evaluate` (§7) |
 | `PostureAnalyzer.kt` | MediaPipe Pose Landmarker(VIDEO) 래퍼, ImageProxy→회전보정→월드 피처, 오버레이용 연결선 |
 | `PostureLabScreen.kt` | 실험 화면(카메라+골격 오버레이+종목 선택+세트 기록+판정 리포트) |
+| `PostureSetReport.kt` | 세트 종료 리포트 — 집계 판정 + onset 을 규칙별 `RuleOutcome` 으로 조인, 랭킹·verdict·점수(분수)·요약/발화 문구 (§30) |
+| `PostureSetLabel.kt` | 세트 자가 라벨 저장 — `set_labels.jsonl`(항상) + `rep_truth.csv`(횟수 있을 때, `rep_replay.py` 정답) (§30) |
 에셋: `app/src/main/assets/posture/pose_landmarker_full.task`, `rules_mp_v0.json` (`noCompress += "task"`).
 진입: 로그인 화면의 **"자세 교정 실험실 (개발용)"** 버튼 → `TrexApp` 의 `postureLab` 라우트.
 

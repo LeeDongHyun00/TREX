@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -38,6 +39,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.trex_kotlin.posture.FormLabel
 import java.time.LocalDate
 import java.time.format.TextStyle
 import java.util.Locale
@@ -237,16 +239,36 @@ fun RecordScreen(app: AppViewModel, onBack: () -> Unit) {
                                             }
                                         }
                                         item.postureCorrection?.let { pc ->
-                                            Row(Modifier.padding(top = 10.dp)) {
+                                            val (line1, line2) = postureLines(pc)
+                                            val selfLabel = selfLabelText(pc)
+                                            val appReps = pc.repsValid?.let { it + (pc.repsPartial ?: 0) }
+                                            Row(Modifier.padding(top = 10.dp).height(IntrinsicSize.Min)) {
+                                                // 막대 색은 판정 종류로 — 정확도 문턱(92%)은 TRACK 에서 accuracy 가 null 이라 기준이 못 된다
                                                 Box(
-                                                    Modifier.width(2.dp).height(28.dp).clip(RoundedCornerShape(999.dp))
-                                                        .background(if ((item.accuracy ?: 0) >= 92) c.primary else c.primarySoftLine),
+                                                    Modifier.width(2.dp).fillMaxHeight().clip(RoundedCornerShape(999.dp))
+                                                        .background(postureBarColor(c, pc)),
                                                 )
-                                                Text(
-                                                    "${pc.focus} 부분을 다음에 신경 써보세룡",
-                                                    color = c.text2, fontSize = 11.5.sp, lineHeight = 16.sp,
-                                                    modifier = Modifier.padding(start = 8.dp).weight(1f),
-                                                )
+                                                Column(Modifier.padding(start = 8.dp).weight(1f)) {
+                                                    Text(line1, color = c.text2, fontSize = 11.5.sp, lineHeight = 16.sp)
+                                                    line2?.let { Text(it, color = c.text3, fontSize = 11.5.sp, lineHeight = 16.sp) }
+                                                    if (selfLabel != null) {
+                                                        Row(Modifier.padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                                                            Text(
+                                                                selfLabel,
+                                                                color = c.text2, fontSize = 10.sp, fontWeight = FontWeight.Medium,
+                                                                modifier = Modifier
+                                                                    .clip(RoundedCornerShape(999.dp))
+                                                                    .background(c.surface)
+                                                                    .border(1.dp, c.line, RoundedCornerShape(999.dp))
+                                                                    .padding(horizontal = 8.dp, vertical = 3.dp),
+                                                            )
+                                                            // 앱 카운트와 사용자 라벨이 다르면 그대로 드러낸다 — 카운터 오차를 숨기지 않는다
+                                                            if (pc.actualReps != null && appReps != null && appReps != pc.actualReps) {
+                                                                Text("(앱 $appReps)", color = c.text3, fontSize = 10.sp, modifier = Modifier.padding(start = 6.dp))
+                                                            }
+                                                        }
+                                                    }
+                                                }
                                             }
                                         }
                                     }
@@ -280,6 +302,40 @@ fun RecordScreen(app: AppViewModel, onBack: () -> Unit) {
             }
         }
     }
+}
+
+/**
+ * 기록 카드의 자세 문구 — (첫 줄: 관찰, 둘째 줄: 교정, 없으면 null).
+ * 판정하지 않은 것을 판정한 것처럼 말하지 않는다: UNJUDGED 는 "없음"이라고 말하고, 베타 참고는 "검증 중"임을 밝힌다.
+ */
+private fun postureLines(pc: PostureCorrection): Pair<String, String?> {
+    // TRACK 은 판정이 아니라 측정값(summaryLine)만 — 모집단 기준을 숙련자에게 지적으로 보이지 않는다(spec §29)
+    if (pc.mode == "track") return pc.focus to null
+    return when (pc.kind) {
+        "clean" -> pc.focus to null   // "자세 깨끗했어요" 또는 베타만 판정된 세트의 "검증 중인 항목 기준으로는 이상 없었어요"
+        "unjudged" -> "자세 판정 없음 — 화면에 충분히 잡히지 않았어요" to null
+        "habit", "drift", "violation", "recovered" -> pc.focus to pc.fix?.takeIf { it.isNotBlank() }?.let { "다음엔 $it" }
+        "reference" -> "참고: ${pc.focus} (검증 중인 항목)" to null
+        // kind 없는 항목은 TrexStore 가 로드 시 버린다(§30 이전 목업) — 남아 있어도 지어낸 지적 문구는 쓰지 않는다
+        else -> pc.focus to null
+    }
+}
+
+/** 왼쪽 세로 막대 — 깨끗/교정됨은 primary, 지적은 warn, 참고·유보·구 데이터는 연한 선. TRACK 은 세트 내 변화(점점/교정)만 색을 준다(§29). */
+private fun postureBarColor(c: TrexColors, pc: PostureCorrection): Color = when {
+    pc.mode == "track" -> when (pc.kind) { "drift" -> c.warn; "recovered" -> c.primary; else -> c.primarySoftLine }
+    pc.kind == "clean" || pc.kind == "recovered" -> c.primary
+    pc.kind == "habit" || pc.kind == "drift" || pc.kind == "violation" -> c.warn
+    else -> c.primarySoftLine
+}
+
+/** "내 평가 · 좋았음 · 실제 12회" — 자가 라벨이 하나도 없으면 null (칩 줄 자체를 그리지 않는다). */
+private fun selfLabelText(pc: PostureCorrection): String? {
+    val parts = buildList {
+        FormLabel.from(pc.formLabel)?.let { add(it.displayName) }
+        pc.actualReps?.let { add("실제 ${it}회") }
+    }
+    return if (parts.isEmpty()) null else (listOf("내 평가") + parts).joinToString(" · ")
 }
 
 private fun dayTitle(record: WorkoutHistoryDay): String {

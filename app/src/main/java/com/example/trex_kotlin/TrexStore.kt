@@ -131,14 +131,15 @@ class TrexStore(context: Context) {
                     averageCalories = o.getInt("averageCalories"),
                     items = List(itemsArr.length()) { j ->
                         val it = itemsArr.getJSONObject(j)
+                        // §30 이전 기록(postureKind 없음)의 자세 칸·정확도는 전부 시드 목업/하드코딩이었다 — 실데이터와 섞이지 않게 버린다
+                        val legacy = it.optString("postureKind").isEmpty()
                         WorkoutHistoryItem(
                             workoutName = it.getString("workoutName"),
                             reps = it.getString("reps"),
                             durationMinutes = it.getInt("durationMinutes"),
                             calories = it.getInt("calories"),
-                            postureCorrection = it.optString("postureFocus").takeIf { f -> f.isNotEmpty() }
-                                ?.let(::PostureCorrection),
-                            accuracy = it.optInt("accuracy", -1).takeIf { a -> a >= 0 },
+                            postureCorrection = if (legacy) null else readPostureCorrection(it),
+                            accuracy = if (legacy) null else it.optInt("accuracy", -1).takeIf { a -> a >= 0 },
                         )
                     },
                 )
@@ -157,8 +158,8 @@ class TrexStore(context: Context) {
                         .put("reps", item.reps)
                         .put("durationMinutes", item.durationMinutes)
                         .put("calories", item.calories)
-                        .put("postureFocus", item.postureCorrection?.focus ?: "")
-                        .put("accuracy", item.accuracy ?: -1),
+                        .put("accuracy", item.accuracy ?: -1)
+                        .also { o -> writePostureCorrection(o, item.postureCorrection) },
                 )
             }
             arr.put(
@@ -172,6 +173,51 @@ class TrexStore(context: Context) {
             )
         }
         prefs.edit().putString(KEY_HISTORY, arr.toString()).apply()
+    }
+
+    /**
+     * 자세 요약 필드 — "postureFocus" 가 비어 있으면 자세 칸 없음(구버전과 같은 관례).
+     * 정수 null 은 accuracy 와 같은 -1, 문자열 null 은 키 생략(optString 은 "" 로 읽힌다). JSON null 을 넣지 않는 이유:
+     * org.json 의 optString 은 JSON null 을 문자열 "null" 로 돌려준다.
+     */
+    private fun readPostureCorrection(o: JSONObject): PostureCorrection? {
+        val focus = o.optString("postureFocus").takeIf { it.isNotEmpty() } ?: return null
+        return PostureCorrection(
+            focus = focus,
+            kind = o.optString("postureKind").takeIf { it.isNotEmpty() },
+            bodyPart = o.optString("postureBodyPart").takeIf { it.isNotEmpty() },
+            fix = o.optString("postureFix").takeIf { it.isNotEmpty() },
+            note = o.optString("postureNote").takeIf { it.isNotEmpty() },
+            beta = o.optBoolean("postureBeta", false),
+            setId = o.optString("postureSetId").takeIf { it.isNotEmpty() },
+            mode = o.optString("postureMode").takeIf { it.isNotEmpty() },
+            judged = o.optInt("postureJudged", -1).takeIf { it >= 0 },
+            abstained = o.optInt("postureAbstained", -1).takeIf { it >= 0 },
+            repsValid = o.optInt("postureRepsValid", -1).takeIf { it >= 0 },
+            repsPartial = o.optInt("postureRepsPartial", -1).takeIf { it >= 0 },
+            tempoMs = o.optLong("postureTempoMs", -1L).takeIf { it >= 0L },
+            actualReps = o.optInt("postureActualReps", -1).takeIf { it >= 0 },
+            formLabel = o.optString("postureFormLabel").takeIf { it.isNotEmpty() },
+        )
+    }
+
+    private fun writePostureCorrection(o: JSONObject, pc: PostureCorrection?) {
+        o.put("postureFocus", pc?.focus ?: "")
+        if (pc == null) return
+        pc.kind?.let { o.put("postureKind", it) }
+        pc.bodyPart?.let { o.put("postureBodyPart", it) }
+        pc.fix?.let { o.put("postureFix", it) }
+        pc.note?.let { o.put("postureNote", it) }
+        o.put("postureBeta", pc.beta)
+        pc.setId?.let { o.put("postureSetId", it) }
+        pc.mode?.let { o.put("postureMode", it) }
+        o.put("postureJudged", pc.judged ?: -1)
+        o.put("postureAbstained", pc.abstained ?: -1)
+        o.put("postureRepsValid", pc.repsValid ?: -1)
+        o.put("postureRepsPartial", pc.repsPartial ?: -1)
+        o.put("postureTempoMs", pc.tempoMs ?: -1L)
+        o.put("postureActualReps", pc.actualReps ?: -1)
+        pc.formLabel?.let { o.put("postureFormLabel", it) }
     }
 
     // ---- 식단 (epochDay → 슬롯 → 음식들)

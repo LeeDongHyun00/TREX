@@ -60,6 +60,7 @@ import androidx.compose.ui.zIndex
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.trex_kotlin.posture.BaselineGuideScreen
 import com.example.trex_kotlin.posture.PostureLabScreen
+import com.example.trex_kotlin.posture.SpeechCoach
 import kotlinx.coroutines.delay
 
 /**
@@ -115,11 +116,19 @@ fun TrexApp(app: AppViewModel = viewModel()) {
         val pausedState = rememberUpdatedState(sessionPaused || appPaused)
         val plan = app.workoutPlan
 
+        // 세션 스코프 스피커 (spec §30): 라이브 화면이 소유하면 자세→타이머 전환마다 shutdown 이 세트 요약을 끊는다.
+        // 여기서 만들어 라이브 화면·완료 화면이 같은 큐를 쓰고, 세션을 나갈 때 stop 한다.
+        val speech = androidx.compose.runtime.remember { SpeechCoach(context) }
+        androidx.compose.runtime.DisposableEffect(Unit) { onDispose { speech.shutdown() } }
+
         fun sessionSeconds(w: Workout): Int = (w.durationMinutes() * 60).coerceAtLeast(30)
 
         fun startSession() {
             val start = plan.indexOfFirst { !it.done }.takeIf { it >= 0 } ?: 0
             if (plan.isEmpty()) return
+            // 이어하기(✕ 뒤 같은 날 재시작)면 이미 마친 운동의 리포트는 남긴다 — 최종 기록에 그 운동의 자세 칸이 비지 않게
+            app.clearSessionReports(keep = plan.take(start).map { it.id })
+            speech.stop()
             sessionIndex = start
             sessionDone = false
             sessionElapsed = 0
@@ -144,6 +153,7 @@ fun TrexApp(app: AppViewModel = viewModel()) {
         }
 
         fun exitSession() {
+            speech.stop()
             sessionIndex = -1
             sessionDone = false
             sessionPaused = false
@@ -214,6 +224,9 @@ fun TrexApp(app: AppViewModel = viewModel()) {
                     RootRoute.Complete -> SessionCompleteScreen(
                         plan = plan,
                         elapsedSeconds = sessionElapsed,
+                        reports = app.sessionPostureReports,
+                        onLabel = { setId, actualReps, repsSource, form -> app.labelPostureSet(setId, actualReps, repsSource, form) },
+                        speak = { speech.speak(it, flush = false) },
                         onDone = { exitSession() },
                     )
 
@@ -228,6 +241,8 @@ fun TrexApp(app: AppViewModel = viewModel()) {
                             onTogglePause = { sessionPaused = !sessionPaused },
                             onNext = { nextSession() },
                             onExit = { exitSession() },
+                            onSetReport = { app.addPostureReport(w.id, it) },
+                            speech = speech,
                         )
                     }
 

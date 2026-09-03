@@ -2,9 +2,16 @@ package com.example.trex_kotlin
 
 import android.app.Application
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.lifecycle.AndroidViewModel
+import com.example.trex_kotlin.posture.FormLabel
+import com.example.trex_kotlin.posture.PostureSetReport
+import com.example.trex_kotlin.posture.SetLabelStore
+import com.example.trex_kotlin.posture.SetLog
+import com.example.trex_kotlin.posture.SetSelfLabel
 import java.time.LocalDate
 
 /**
@@ -118,14 +125,64 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun recordCompletedSession(elapsedSeconds: Int) {
+        // 리포트 맵은 여기서 비우지 않는다 — 완료 화면이 같은 맵을 읽고, 다음 startSession 이 비운다
         workoutHistory = workoutHistory.replaceTodayWith(
-            createWorkoutHistoryDay(workoutPlan, elapsedSeconds),
+            createWorkoutHistoryDay(workoutPlan, elapsedSeconds, sessionPostureReports.toMap()),
         )
         store.saveHistory(workoutHistory)
     }
 
     val todayRecord: WorkoutHistoryDay?
         get() = workoutHistory.firstOrNull { it.epochDay == LocalDate.now().toEpochDay() }
+
+    // ---- 이번 세션의 자세 리포트 (spec §30) — workoutId → 세트 리포트
+
+    /** 라이브 코칭이 세트를 닫으며 넘긴 리포트. 세션 시작에 비우고, 세션 완료 시 기록으로 접혀 들어간다. */
+    val sessionPostureReports: SnapshotStateMap<String, PostureSetReport> = mutableStateMapOf()
+
+    /** [keep] 에 든 운동(이어하기로 이미 마친 것)의 리포트는 남기고 나머지를 비운다. */
+    fun clearSessionReports(keep: Collection<String> = emptyList()) {
+        val keepSet = keep.toSet()
+        sessionPostureReports.keys.filter { it !in keepSet }.forEach { sessionPostureReports.remove(it) }
+    }
+
+    /**
+     * 리포트는 맵에만 둔다 — 기록 병합은 recordCompletedSession 한 곳에서. ✓ 가 finalize 를 먼저 하므로 마지막 운동도
+     * 병합 전에 도착하고, ✕ 중도 이탈 리포트는 여기 남았다가 다음 세션 시작에 지워진다(결정 3: 중도 이탈은 기록하지 않는다).
+     */
+    fun addPostureReport(workoutId: String, report: PostureSetReport) {
+        sessionPostureReports[workoutId] = report
+    }
+
+    /**
+     * 완료 화면의 자가 라벨 — 기록에서 그 세트(setId) 항목의 actualReps/formLabel 을 갱신하고,
+     * 연구용 라벨 파일(labels/set_labels.jsonl / rep_truth.csv)에도 남긴다. exercise 는 리포트의 AIHub 종목명이 정본이고
+     * 리포트가 이미 비워졌으면 기록 항목의 운동 이름으로 대신한다. [repsSource] 는 "edited"|"confirmed"|null.
+     */
+    fun labelPostureSet(setId: String, actualReps: Int?, repsSource: String?, form: FormLabel?) {
+        // setId 는 전역 유일 — 자정을 넘겨 저장해도 기록이 어제 날짜에 있을 수 있으니 날짜로 거르지 않는다
+        workoutHistory = workoutHistory.map { day ->
+            day.copy(
+                items = day.items.map { item ->
+                    val pc = item.postureCorrection
+                    if (pc != null && pc.setId == setId) {
+                        item.copy(postureCorrection = pc.copy(actualReps = actualReps, formLabel = form?.key))
+                    } else {
+                        item
+                    }
+                },
+            )
+        }
+        store.saveHistory(workoutHistory)
+
+        val exercise = sessionPostureReports.values.firstOrNull { it.setId == setId }?.exercise
+            ?: workoutHistory.asSequence().flatMap { it.items.asSequence() }.firstOrNull { it.postureCorrection?.setId == setId }?.workoutName
+            ?: ""
+        val label = SetSelfLabel(setId = setId, exercise = exercise, actualReps = actualReps, repsSource = repsSource, form = form, createdAtIso = SetLog.nowIso())
+        val labelStore = SetLabelStore(getApplication<Application>())
+        // 파일 IO 는 메인 스레드 밖에서 — SetLogStore 저장과 같은 이유
+        Thread { runCatching { labelStore.append(label) } }.start()
+    }
 
     /** 오늘 포함 최근 연속 운동일. */
     fun attendanceStreak(): Int {

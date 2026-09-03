@@ -105,7 +105,9 @@ import com.example.trex_kotlin.posture.RepCounter
 import com.example.trex_kotlin.posture.RepMetrics
 import com.example.trex_kotlin.posture.RepRecord
 import com.example.trex_kotlin.posture.RuleHighlight
+import com.example.trex_kotlin.posture.RuleResult
 import com.example.trex_kotlin.posture.PostureRuleSet
+import com.example.trex_kotlin.posture.PostureSetReport
 import com.example.trex_kotlin.posture.SCREEN_UP
 import com.example.trex_kotlin.posture.SetLog
 import com.example.trex_kotlin.posture.SetLogStore
@@ -175,6 +177,9 @@ private const val COVERAGE_STREAK = 3
 /** 촬영 안내 음성 최소 간격 — 자세를 고치는 데 시간이 걸리므로 자주 말하지 않는다 */
 private const val COVERAGE_SPEAK_GAP_MS = 8_000L
 
+/** 세트 경계 발화(요약 + 다음 종목 시작 안내)를 보호하는 시간 — 그동안 코치·커버리지 발화는 flush 대신 큐에 붙는다 */
+private const val SET_BOUNDARY_SPEECH_MS = 9_000L
+
 @Composable
 fun PostureLiveSessionScreen(
     workout: Workout,
@@ -186,6 +191,9 @@ fun PostureLiveSessionScreen(
     onTogglePause: () -> Unit,
     onNext: () -> Unit,
     onExit: () -> Unit,
+    onSetReport: (PostureSetReport) -> Unit = {},
+    /** 세션 스코프 스피커 — 이 화면보다 오래 산다. 세트 종료 요약이 다음 운동(타이머 화면)으로 넘어가며 끊기지 않게 TrexApp 이 소유한다. */
+    speech: SpeechCoach,
 ) {
     val c = Trex.c
     KeepScreenOn()
@@ -290,10 +298,11 @@ fun PostureLiveSessionScreen(
     // 한 프레임 튀는 것으로 문구가 깜빡이지 않도록, 연속으로 막힐 때만 표시한다
     val coverageStreak = remember { intArrayOf(0) }
     val lastCoverageSpeakAt = remember { longArrayOf(0L) }
-    val speech = remember { SpeechCoach(context) }
-    DisposableEffect(speech) { onDispose { speech.shutdown() } }
-    var muted by remember { mutableStateOf(false) }
+    // 음소거는 스피커(세션 스코프)에 남아 다음 운동·완료 화면까지 이어진다
+    var muted by remember { mutableStateOf(speech.muted) }
     LaunchedEffect(muted) { speech.muted = muted }
+    // 세트 경계 발화(요약 + 다음 종목 시작 안내)가 끝날 때까지 코치·커버리지 발화는 큐에 붙인다(flush 금지) — 요약이 통째로 사라지지 않게
+    val boundaryUntil = remember { longArrayOf(0L) }
 
     val analyzer = remember { PostureAnalyzer(context, PoseModel.FULL, preferGpu = true) }
     DisposableEffect(analyzer) { onDispose { analyzer.close() } }
@@ -350,72 +359,96 @@ fun PostureLiveSessionScreen(
     var recordedFrames by remember { mutableIntStateOf(0) }
     LaunchedEffect(Unit) { savedSets = runCatching { logStore.totalSets() }.getOrDefault(0) }
 
-    // 세트 경계에서 호출된다. 종목/뷰는 **세트 시작 시점 값**을 인자로 받는다 —
+    // 세트 마감 — 세트 경계에서 호출된다. 종목/뷰는 **세트 시작 시점 값**을 인자로 받는다 —
     // 이 화면은 다음 운동으로 넘어가도 재생성되지 않아(AnimatedContent 의 같은 route), 지금 값을 쓰면 종목이 어긋난다.
-    val saveLogRef = remember { arrayOfNulls<(String, String, Boolean) -> Unit>(1) }
-    saveLogRef[0] = save@{ ex: String, label: String, floor: Boolean ->
-        val rs = ruleSet ?: return@save
+    // 로그(재보정 데이터, §14)와 리포트(완료 화면·세트 종료 발화·기록, §30)를 한 자리에서 만든다 —
+    // 자가 라벨이 로그를 가리켜야 하므로 리포트의 setId 는 SetLog 가 발급한 값을 그대로 쓴다.
+    // 반환: 샘플이 MIN_FRAMES_FOR_LOG 이상이면 리포트(규칙 평가가 실패해도 results 를 비워 UNJUDGED 로), 미만이면 null(로그도 없음).
+    // 멱등 — 샘플을 비우므로 같은 세트의 두 번째 호출(onDispose 안전망)은 null 이고 아무것도 남기지 않는다.
+    val finalizeRef = remember { arrayOfNulls<(String, String, Boolean) -> PostureSetReport?>(1) }
+    finalizeRef[0] = fin@{ ex: String, label: String, floor: Boolean ->
+        val rs = ruleSet ?: return@fin null
         val samples: List<PoseSample>
         val times: List<Long>
+        val results: List<RuleResult>
+        // 분석 스레드의 aggregator.add 와 같은 락 — 평가 도중 프레임이 끼어들면 CME 로 결과가 비어 멀쩡한 세트가 UNJUDGED 가 된다
         synchronized(recordedSamples) {
             samples = ArrayList(recordedSamples)
             times = ArrayList(recordedTimesMs)
             recordedSamples.clear()
             recordedTimesMs.clear()
-        }
-        val frames = aggregator.frameCount
-        val results = if (frames >= MIN_FRAMES_FOR_LOG) {
-            runCatching { rs.evaluate(ex, aggregator, true, MIN_FRAMES_FOR_LOG, baselineRef[0]) }.getOrDefault(emptyList())
-        } else {
-            emptyList()
-        }
-        aggregator.reset()
-        if (samples.size >= MIN_FRAMES_FOR_LOG) {
-            val t0 = times.firstOrNull() ?: 0L
-            val rc = repRef[0]
-            val reps: List<RepRecord>?
-            synchronized(repRecords) {
-                reps = if (rc != null) ArrayList(repRecords) else null
-                repRecords.clear()
+            val frames = aggregator.frameCount
+            results = if (frames >= MIN_FRAMES_FOR_LOG) {
+                runCatching { rs.evaluate(ex, aggregator, true, MIN_FRAMES_FOR_LOG, baselineRef[0]) }.getOrDefault(emptyList())
+            } else {
+                emptyList()
             }
-            val log = SetLog.build(
-                exercise = ex,
-                samples = samples,
-                results = results,
-                rulesVersion = rs.version,
-                model = PoseModel.FULL.label,
-                delegate = stats?.delegate ?: "-",
-                frontCamera = useFrontCamera,
-                sampleIntervalMs = SESSION_SAMPLE_INTERVAL_MS,
-                sampleTimesMs = times.map { it - t0 },
-                subjectId = subjectId,
-                note = "session:$label" + if (floor) " floor" else "",
-                repCount = rc?.reps,
-                // 프레임 t_ms 와 같은 기준(세트 시작 상대시각)으로 — 첫 로그에서 절대 epoch 로 남던 결함 수정
-                repTimesMs = rc?.repTimesMs?.map { it - t0 },
-                repSignal = rc?.signal?.feature,
-                repInvalid = if (rc != null) repInvalidRef[0] else null,
-                // 렙별 극값 t 도 세트 상대시각으로 (프레임·repTimesMs 와 같은 기준)
-                repRecords = reps?.map { it.copy(tMs = it.tMs - t0) },
-                mode = if (modeRef[0] == CoachMode.TRACK) "track" else "coach",
-            )
-            // 분석 executor 는 화면 종료 시 shutdown 되므로 순서에 의존하지 않도록 별도 스레드에서 기록한다.
-            Thread {
-                runCatching {
-                    logStore.append(log)
-                    savedSets = logStore.totalSets()
-                }
-            }.start()
+            aggregator.reset()
         }
+        if (samples.size < MIN_FRAMES_FOR_LOG) return@fin null
+        // onset(처음부터/점점/교정됨) 분류는 여기서 — coachRef 는 다음 종목의 LaunchedEffect 에서 새 코치로 바뀐다
+        val onset = runCatching { coachRef[0]?.summarize().orEmpty() }.getOrDefault(emptyList())
+        val t0 = times.firstOrNull() ?: 0L
+        val rc = repRef[0]
+        val reps: List<RepRecord>?
+        val repTimes: List<Long>?
+        synchronized(repRecords) {
+            reps = if (rc != null) ArrayList(repRecords) else null
+            repTimes = rc?.repTimesMs?.toList()   // 분석 스레드의 onFrame 과 같은 락 안에서 복사
+            repRecords.clear()
+        }
+        val log = SetLog.build(
+            exercise = ex,
+            samples = samples,
+            results = results,
+            rulesVersion = rs.version,
+            model = PoseModel.FULL.label,
+            delegate = stats?.delegate ?: "-",
+            frontCamera = useFrontCamera,
+            sampleIntervalMs = SESSION_SAMPLE_INTERVAL_MS,
+            sampleTimesMs = times.map { it - t0 },
+            subjectId = subjectId,
+            note = "session:$label" + if (floor) " floor" else "",
+            repCount = rc?.reps,
+            // 프레임 t_ms 와 같은 기준(세트 시작 상대시각)으로 — 첫 로그에서 절대 epoch 로 남던 결함 수정
+            repTimesMs = repTimes?.map { it - t0 },
+            repSignal = rc?.signal?.feature,
+            repInvalid = if (rc != null) repInvalidRef[0] else null,
+            // 렙별 극값 t 도 세트 상대시각으로 (프레임·repTimesMs 와 같은 기준)
+            repRecords = reps?.map { it.copy(tMs = it.tMs - t0) },
+            mode = if (modeRef[0] == CoachMode.TRACK) "track" else "coach",
+        )
+        // 분석 executor 는 화면 종료 시 shutdown 되므로 순서에 의존하지 않도록 별도 스레드에서 기록한다.
+        Thread {
+            runCatching {
+                logStore.append(log)
+                savedSets = logStore.totalSets()
+            }
+        }.start()
+        PostureSetReport.build(
+            setId = log.setId,
+            exercise = ex,
+            workoutName = label,
+            mode = modeRef[0],
+            frames = samples.size,
+            baselineActive = baselineRef[0] != null,
+            results = results,
+            onset = onset,
+            // 렙 카운터 미적용 종목은 null. 유효 = 전체 사이클 − ROM 미달(코치의 "무효" = 기록의 "파셜", §29)
+            repsValid = rc?.let { it.reps - repInvalidRef[0] },
+            repsPartial = rc?.let { repInvalidRef[0] },
+            tempoMs = repTimes?.let { RepMetrics.medianPeriodMs(it) },
+        )
     }
-    // 세트(운동) 경계: 키가 바뀌면 이전 운동의 값으로 저장된다. 화면을 떠날 때도 같은 경로로 저장.
+    // 세트(운동) 경계 안전망: ✓/✕ 가 이미 마감했으면 멱등으로 null. 마감 없이 화면이 사라질 때(액티비티 종료 등)만
+    // 여기서 로그·리포트가 남는다 — 발화는 없다(화면이 이미 없다).
     DisposableEffect(workout.id) {
         val ex = aihubExercise
         val label = workout.name
         val floor = isFloorExercise
         recordedFrames = 0
         onDispose {
-            saveLogRef[0]?.invoke(ex, label, floor)
+            finalizeRef[0]?.invoke(ex, label, floor)?.let(onSetReport)
             recordedFrames = 0
         }
     }
@@ -437,13 +470,18 @@ fun PostureLiveSessionScreen(
         mode = modeStore.get(aihubExercise)
         trackDriftSpoken.clear()
         floorExtractor.reset()   // 접지선 추정은 세트(운동) 단위 상태
+        // 커버리지는 바닥 종목 루프에서만 갱신되므로, 바닥→서서 하는 종목으로 넘어갈 때 여기서 안 풀면 새 종목 내내 코칭이 막힌다
+        coverage = CoverageReport.OK
+        coverageStreak[0] = 0
         if (!muted) {
+            // 큐에 추가(flush=false) — ✓ 에서 말한 직전 세트의 요약 문장을 끊지 않도록. 첫 세트는 큐가 비어 있어 바로 나온다.
             speech.speak(
                 if (aihubExercise in floorExercises) {
                     "${workout.name} 자세 평가를 시작합니다. 휴대폰을 몸 옆에 두세요. 발쪽으로 치우치지 않게요"
                 } else {
                     "${workout.name} 자세 평가를 시작합니다. 전신이 화면에 들어오게 서 주세요"
                 },
+                flush = false,
             )
         }
     }
@@ -507,15 +545,18 @@ fun PostureLiveSessionScreen(
                             if (coverageStreak[0] >= COVERAGE_STREAK) coverage = rep
                         }
                     }
-                    // 재보정용 원본 샘플 — 바닥 종목은 규칙이 실제로 쓴 2D 피처를 그대로 남긴다
-                    aggregator.add(features)
+                    // 재보정용 원본 샘플 — 바닥 종목은 규칙이 실제로 쓴 2D 피처를 그대로 남긴다.
+                    // aggregator 도 같은 락 안에서 — 세트 마감의 evaluate/reset 과 겹치면 CME 로 결과가 비어 UNJUDGED 오판정이 난다
                     synchronized(recordedSamples) {
+                        aggregator.add(features)
                         recordedSamples.add(if (floorRef[0]) s.withFeatures(features) else s)
                         recordedTimesMs.add(now)
                         recordedFrames = recordedSamples.size
                     }
                     repRef[0]?.let { rc ->
-                        if (rc.onFrame(now, features[rc.signal.feature])) {
+                        // repTimesMs 갱신은 세트 마감의 복사와 같은 락 안에서
+                        val completed = synchronized(repRecords) { rc.onFrame(now, features[rc.signal.feature]) }
+                        if (completed) {
                             // ROM 유효성 (수정판): 사이클 극값이 데이터 기준 미달이면 미달 렙.
                             // 코치 모드 = 무효로 판정하고 사유를 말한다 (REP_VALIDITY.md, 심판 방식).
                             // 기록 모드 = "파셜"로 집계만 — 숙련자의 파셜은 기법이지 잘못이 아니다 (§29).
@@ -544,27 +585,29 @@ fun PostureLiveSessionScreen(
                         val track = modeRef[0] == CoachMode.TRACK
                         // 기록 모드: 위반 강조 없음 — 모집단 임계 기준 "틀림" 표시는 스타일을 오판할 수 있다 (§29)
                         violHighlight = if (track) emptySet() else RuleHighlight.forViolations(coach.lastStates)
-                        // 커버리지가 막힌 동안에는 자세 지적 대신 촬영 안내를 말한다 (판정 근거가 없으므로)
-                        if (!coverage.ok) {
+                        // 세트 경계 발화(요약·시작 안내)가 나가는 동안은 끊지 않고 뒤에 붙인다
+                        val flush = now > boundaryUntil[0]
+                        // 커버리지가 막힌 동안에는 자세 지적 대신 촬영 안내를 말한다 (판정 근거가 없으므로) — 바닥 종목만의 상태
+                        if (floorRef[0] && !coverage.ok) {
                             if (now - lastCoverageSpeakAt[0] > COVERAGE_SPEAK_GAP_MS) {
                                 lastCoverageSpeakAt[0] = now
-                                speech.speak(coverage.message + ". " + coverage.fix)
+                                speech.speak(coverage.message + ". " + coverage.fix, flush = flush)
                             }
                         } else if (ev != null) {
                             if (!track) {
                                 coachBanner = ev
-                                speech.speak(ev.message)
+                                speech.speak(ev.message, flush = flush)
                             } else when (ev.kind) {
                                 // §29: 세트 내 변화(피로 드리프트)만 알린다 — 숙련자에게도 정보
                                 OnsetKind.DRIFT -> {
                                     coachBanner = ev
-                                    speech.speak(ev.message)
+                                    speech.speak(ev.message, flush = flush)
                                     trackDriftSpoken.add(ev.rule.id)
                                 }
                                 // 말한 드리프트가 돌아왔을 때만 "교정됐어요" — 침묵한 위반의 교정 발화는 어리둥절
                                 OnsetKind.RECOVERED -> if (trackDriftSpoken.remove(ev.rule.id)) {
                                     coachBanner = ev
-                                    speech.speak(ev.message)
+                                    speech.speak(ev.message, flush = flush)
                                 }
                                 // HABIT("처음부터") = 본인 스타일일 수 있음 — 판정은 로그에만, 잔소리 없음
                                 OnsetKind.HABIT -> {}
@@ -610,7 +653,15 @@ fun PostureLiveSessionScreen(
                     .fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                GlassIcon(Icons.Rounded.Close, contentDescription = "종료", onClick = onExit)
+                GlassIcon(
+                    Icons.Rounded.Close,
+                    contentDescription = "종료",
+                    // 종료도 세트 마감 — 로그는 지금도 남기므로 리포트도 같이 넘긴다. 발화는 없다(화면이 바로 사라진다).
+                    onClick = {
+                        finalizeRef[0]?.invoke(aihubExercise, workout.name, isFloorExercise)?.let(onSetReport)
+                        onExit()
+                    },
+                )
                 Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
                     Text(
                         "진행중 · ${index + 1}/$total",
@@ -796,7 +847,22 @@ fun PostureLiveSessionScreen(
                                 Icon(if (paused) Icons.Rounded.PlayArrow else Icons.Rounded.Pause, contentDescription = "일시정지", modifier = Modifier.size(23.dp))
                             }
                         }
-                        RoundIcon(Icons.Rounded.Check, onClick = onNext, size = 44.dp, contentDescription = "완료")
+                        RoundIcon(
+                            Icons.Rounded.Check,
+                            onClick = {
+                                val r = finalizeRef[0]?.invoke(aihubExercise, workout.name, isFloorExercise)
+                                r?.let(onSetReport)
+                                // 세트 요약 발화는 진행 중인 렙 숫자·코칭보다 우선(flush). 스피커가 세션 스코프라 다음 운동이
+                                // 타이머 화면이어도, 마지막 운동이어도 끊기지 않는다 — 완료 화면의 세션 요약은 이 뒤에 큐로 붙는다.
+                                if (r != null && !muted) {
+                                    speech.speak(r.voiceLine, flush = true)
+                                    boundaryUntil[0] = System.currentTimeMillis() + SET_BOUNDARY_SPEECH_MS
+                                }
+                                onNext()
+                            },
+                            size = 44.dp,
+                            contentDescription = "완료",
+                        )
                     }
                 }
             }
