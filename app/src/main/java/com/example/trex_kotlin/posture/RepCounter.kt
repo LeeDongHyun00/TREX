@@ -24,6 +24,7 @@ package com.example.trex_kotlin.posture
 class RepCounter(
     val signal: RepSignal,
     private val refractoryMs: Long = 1_200L,
+    private val maxGapMs: Long = Long.MAX_VALUE,
 ) {
     var reps: Int = 0
         private set
@@ -71,6 +72,10 @@ class RepCounter(
         val phi = signal.plausibleMax
         if ((plo != null && value < plo) || (phi != null && value > phi)) return false
 
+        // 바닥 경로에서는 가림·일시정지 전후를 한 반복으로 이어 세지 않는다.
+        if (prevT?.let { tMs - it > maxGapMs || tMs <= it } == true) {
+            dirn = 0; ext = Float.NaN; pendingBottom = Float.NaN; rawCount = 0; dtMs = null
+        }
         prevT?.let { p ->
             val d = (tMs - p).toFloat()
             if (d > 0f && d < 2_000f) dtMs = dtMs?.let { it * 0.7f + d * 0.3f } ?: d

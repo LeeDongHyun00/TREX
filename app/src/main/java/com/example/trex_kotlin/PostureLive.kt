@@ -1,5 +1,9 @@
 package com.example.trex_kotlin
 
+import com.example.trex_kotlin.posture.FloorTemporal
+import com.example.trex_kotlin.posture.HoldTracker
+import com.example.trex_kotlin.posture.AssessmentWindow
+
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
@@ -119,6 +123,7 @@ import com.example.trex_kotlin.posture.SetLogStore
 import com.example.trex_kotlin.posture.SpeechCoach
 import com.example.trex_kotlin.posture.SubjectId
 import com.example.trex_kotlin.posture.ThermalMonitor
+import com.example.trex_kotlin.posture.ViewEstimator
 import com.example.trex_kotlin.posture.Verdict
 import com.example.trex_kotlin.posture.gravityUpInWorld
 import com.example.trex_kotlin.posture.withFeatures
@@ -267,7 +272,7 @@ fun PostureLiveSessionScreen(
             val standing = PostureRuleSet.load(context)
             try {
                 val floor = PostureRuleSet.load(context, FLOOR_RULES_ASSET)
-                floorExercises = floor.exercises.toSet()
+                floorExercises = floor.rules.map { it.exercise }.toSet()
                 PostureRuleSet("${standing.version}+${floor.version}", standing.generated, standing.rules + floor.rules)
             } catch (_: Throwable) {
                 standing
@@ -279,6 +284,8 @@ fun PostureLiveSessionScreen(
     val floorRef = remember { booleanArrayOf(false) }
     floorRef[0] = isFloorExercise
     val floorExtractor = remember { FloorFeatureExtractor() }
+    val holdRef = remember { arrayOfNulls<HoldTracker>(1) }
+    var floorMeasurement by remember { mutableStateOf<String?>(null) }
 
     // ---- 개인 기준선(정상-앵커 재배치, spec §25c/§25d): BaselineGuideScreen 이 수집한 정자세 k세트 중앙값.
     //      바닥 규칙 임계값은 AIHub 채택 뷰 투영에 묶여 있어(뷰 간 플래그율 33%p 요동) 사용자의 실제 폰
@@ -325,7 +332,12 @@ fun PostureLiveSessionScreen(
     // ---- 촬영 커버리지 (spec §25b): 규칙이 요구하는 부위가 화면에 없으면 '왜'와 '어떻게'를 안내한다.
     //      판정 자체가 불가능한 상태이므로 자세 코칭보다 우선한다.
     val floorRules = remember(ruleSet, aihubExercise, isFloorExercise) {
-        if (isFloorExercise) ruleSet?.rulesFor(aihubExercise, includeBeta = true).orEmpty() else emptyList()
+        if (isFloorExercise) {
+            val active = ruleSet?.rulesFor(aihubExercise, includeBeta = true).orEmpty()
+            val template = ruleSet?.rules?.firstOrNull { it.exercise == aihubExercise }
+            val feature = com.example.trex_kotlin.posture.RepSignals.byExercise[aihubExercise]?.feature
+            active + listOfNotNull(if (template != null && feature != null) template.copy(baseFeature = feature, condition = "동작 측정") else null)
+        } else emptyList()
     }
     // 이 종목에서 무엇을 보고 무엇을 못 보는가 (spec §31) — 시작 안내 둘째 문장과 카드 부제가 같은 값을 쓴다.
     // 데드리프트처럼 '척추의 중립' 이 전부 exclude 인 종목은 허리를 말아도 리포트가 "깨끗" 이라 말한다 — 그걸 미리 밝힌다.
@@ -333,6 +345,8 @@ fun PostureLiveSessionScreen(
     val floorRulesRef = remember { arrayOfNulls<List<PostureRule>>(1) }
     floorRulesRef[0] = floorRules
     var coverage by remember { mutableStateOf(CoverageReport.OK) }
+    // 촬영 방향 추정 (spec §33) — 현재 집계 창 기준. 전방 반구가 아니면 규칙이 유보되므로 이유를 화면에 밝힌다
+    var viewEst by remember { mutableStateOf<ViewEstimator.Estimate?>(null) }
     // 한 프레임 튀는 것으로 문구가 깜빡이지 않도록, 연속으로 막힐 때만 표시한다
     val coverageStreak = remember { intArrayOf(0) }
     val lastCoverageSpeakAt = remember { longArrayOf(0L) }
@@ -420,12 +434,6 @@ fun PostureLiveSessionScreen(
             times = ArrayList(recordedTimesMs)
             recordedSamples.clear()
             recordedTimesMs.clear()
-            val frames = aggregator.frameCount
-            results = if (frames >= MIN_FRAMES_FOR_LOG) {
-                runCatching { rs.evaluate(ex, aggregator, true, MIN_FRAMES_FOR_LOG, baselineRef[0]) }.getOrDefault(emptyList())
-            } else {
-                emptyList()
-            }
             aggregator.reset()
         }
         if (samples.size < MIN_FRAMES_FOR_LOG) return@fin null
@@ -440,10 +448,35 @@ fun PostureLiveSessionScreen(
             repTimes = rc?.repTimesMs?.toList()   // 분석 스레드의 onFrame 과 같은 락 안에서 복사
             repRecords.clear()
         }
+        val endAt = AssessmentWindow.end(times.lastOrNull() ?: t0, repTimes.orEmpty())
+        val startAt = anchorAtRef[0].takeIf { it > 0L } ?: Long.MAX_VALUE
+        val finalAgg = FeatureAggregator()
+        samples.forEachIndexed { i, s -> if (times[i] > startAt && times[i] <= endAt) finalAgg.add(s.features) }
+        results = rs.evaluate(ex, finalAgg, true, MIN_FRAMES_FOR_LOG, baselineRef[0]).map { result ->
+            when (result.rule.kind) {
+                "hold" -> {
+                    val tracker = result.rule.holdConfig?.let { HoldTracker(it) }
+                    samples.forEachIndexed { i, s ->
+                        if (times[i] > startAt && times[i] <= endAt) tracker?.add(times[i] - t0, s.features[result.rule.baseFeature])
+                    }
+                    tracker?.snapshot()?.let { FloorTemporal.holdResult(result.rule, it) } ?: result
+                }
+                "rep" -> FloorTemporal.repResult(result.rule, reps.orEmpty().filter { it.tMs <= endAt })
+                else -> result
+            }
+        }
+        val measurementLines = results.mapNotNull { it.measurement }.toMutableList()
+        if (floor && measurementLines.isEmpty()) {
+            val observed = samples.indices.lastOrNull { times[it] > startAt && times[it] <= endAt && samples[it].features.isNotEmpty() }?.let { samples[it].features }.orEmpty()
+            if (observed.isNotEmpty()) measurementLines += "참고 · " + FloorTemporal.observation(ex, observed).ifEmpty { "검출된 동작 ${reps.orEmpty().size}회 · 자세 미확정" }
+        }
+        if (endAt < (times.lastOrNull() ?: endAt)) measurementLines += "마지막 검출 뒤 한 주기까지 평가했어요. 종료 구간은 추정값이에요"
         val log = SetLog.build(
             exercise = ex,
             samples = samples,
             results = results,
+            assessmentEndTMs = endAt - t0,
+            measurements = measurementLines,
             rulesVersion = rs.version,
             model = PoseModel.FULL.label,
             delegate = stats?.delegate ?: "-",
@@ -451,7 +484,7 @@ fun PostureLiveSessionScreen(
             sampleIntervalMs = SESSION_SAMPLE_INTERVAL_MS,
             sampleTimesMs = times.map { it - t0 },
             subjectId = subjectId,
-            note = "session:$label" + if (floor) " floor" else "",
+            note = "session:$label" + (if (floor) " floor" else "") + " assessment_end_ms=${endAt - t0} " + measurementLines.joinToString(" | "),
             repCount = rc?.reps,
             // 프레임 t_ms 와 같은 기준(세트 시작 상대시각)으로 — 첫 로그에서 절대 epoch 로 남던 결함 수정
             repTimesMs = repTimes?.map { it - t0 },
@@ -478,7 +511,8 @@ fun PostureLiveSessionScreen(
             frames = samples.size,
             baselineActive = baselineRef[0] != null,
             results = results,
-            onset = onset,
+            onset = if (endAt < (times.lastOrNull() ?: endAt)) emptyList() else onset,
+            measurements = measurementLines,
             // 렙 카운터 미적용 종목은 null. 유효 = 전체 사이클 − ROM 미달(코치의 "무효" = 기록의 "파셜", §29)
             repsValid = rc?.let { it.reps - repInvalidRef[0] },
             repsPartial = rc?.let { repInvalidRef[0] },
@@ -490,7 +524,7 @@ fun PostureLiveSessionScreen(
     DisposableEffect(workout.id) {
         val ex = aihubExercise
         val label = workout.name
-        val floor = isFloorExercise
+        val floor = aihubExercise in FloorTemporal.exercises
         recordedFrames = 0
         onDispose {
             finalizeRef[0]?.invoke(ex, label, floor)?.let(onSetReport)
@@ -507,7 +541,12 @@ fun PostureLiveSessionScreen(
         // speakBeta=false: 미보정 규칙은 화면·리포트에 '참고' 로만 남기고 음성은 검증된 규칙만 낸다 (§28 오탐 3건이 전부 베타).
         coachRef[0] = LiveCoach(rs, aihubExercise, baseline = baselineValues, requireAnchor = true, speakBeta = false)
         coachBanner = null   // 이전 종목의 배너·ⓘ 근거 주석이 새 종목에 오귀속되지 않도록
-        repRef[0] = RepCounter.forExercise(aihubExercise)
+        repRef[0] = RepCounter.forExercise(aihubExercise)?.let { counter ->
+            val config = rs.rulesFor(aihubExercise).firstOrNull { it.kind == "rep" }?.repConfig
+            if (config != null) RepCounter(counter.signal.copy(romDirection = config.direction, romThreshold = config.threshold, romValidated = false), maxGapMs = 1500L)
+            else if (isFloorExercise) RepCounter(counter.signal.copy(romThreshold = null, romDirection = null, romValidated = false), maxGapMs = 1500L)
+            else counter
+        }
         repCount = 0
         repInvalid = 0
         repInvalidRef[0] = 0
@@ -525,10 +564,13 @@ fun PostureLiveSessionScreen(
         synchronized(repRecords) { repRecords.clear() }
         mode = modeStore.get(aihubExercise)
         trackDriftSpoken.clear()
+        holdRef[0] = ruleSet?.rulesFor(aihubExercise)?.firstOrNull { it.holdConfig != null }?.holdConfig?.let { HoldTracker(it) }
+        floorMeasurement = null
         floorExtractor.reset()   // 접지선 추정은 세트(운동) 단위 상태
         // 커버리지는 바닥 종목 루프에서만 갱신되므로, 바닥→서서 하는 종목으로 넘어갈 때 여기서 안 풀면 새 종목 내내 코칭이 막힌다
         coverage = CoverageReport.OK
         coverageStreak[0] = 0
+        viewEst = null
         if (!muted) {
             // 큐에 추가(flush=false) — ✓ 에서 말한 직전 세트의 요약 문장을 끊지 않도록. 첫 세트는 큐가 비어 있어 바로 나온다.
             val placement = if (aihubExercise in floorExercises) {
@@ -586,6 +628,10 @@ fun PostureLiveSessionScreen(
                 sample = s
                 stats = analyzer.stats()
                 if (s.detected) everDetected = true
+                if (!s.detected || pausedRef[0]) {
+                    holdRef[0]?.add(now - (recordedTimesMs.firstOrNull() ?: now), null)
+                    if (floorRef[0]) floorMeasurement = "측정 일시 중지 · 몸 전체가 보이게 해주세요"
+                }
                 if (s.detected && !pausedRef[0]) {
                     // 바닥 종목: 중력 기반 3D 피처 대신 2D 평면 피처 (가림 시 피처 단위 유보 포함)
                     val features = if (floorRef[0]) {
@@ -605,12 +651,19 @@ fun PostureLiveSessionScreen(
                         }
                     }
                     // 재보정용 원본 샘플 — 바닥 종목은 규칙이 실제로 쓴 2D 피처를 그대로 남긴다.
+                    if (floorRef[0]) {
+                        if (anchoredRef[0]) holdRef[0]?.add(now - (recordedTimesMs.firstOrNull() ?: now), features["hip_dev_ankle"])
+                        floorMeasurement = holdRef[0]?.snapshot()?.text
+                            ?: FloorTemporal.observation(aihubExercise, features).ifEmpty { "동작을 측정하고 있어요" }
+                    }
                     // aggregator 도 같은 락 안에서 — 세트 마감의 evaluate/reset 과 겹치면 CME 로 결과가 비어 UNJUDGED 오판정이 난다
                     synchronized(recordedSamples) {
                         aggregator.add(features)
                         recordedSamples.add(if (floorRef[0]) s.withFeatures(features) else s)
                         recordedTimesMs.add(now)
                         recordedFrames = recordedSamples.size
+                        // 촬영 방향 (spec §33) — 서서 하는 종목만, 현재 집계 창 기준 (앵커에서 창이 비면 직전 값을 유지)
+                        if (!floorRef[0]) ViewEstimator.estimate(aggregator)?.let { viewEst = it }
                     }
                     repRef[0]?.let { rc ->
                         // repTimesMs 갱신은 세트 마감의 복사와 같은 락 안에서
@@ -627,7 +680,7 @@ fun PostureLiveSessionScreen(
                             // 기록 모드 = "파셜"로 집계만 — 숙련자의 파셜은 기법이지 잘못이 아니다 (§29).
                             val valid = rc.signal.isValidRep(rc.lastCycleMin, rc.lastCycleMax)
                             synchronized(repRecords) { repRecords.add(RepRecord(now, rc.lastCycleMin, rc.lastCycleMax, valid)) }
-                            if (modeRef[0] == CoachMode.TRACK) {
+                            if (modeRef[0] == CoachMode.TRACK || floorRef[0]) {
                                 if (valid != false) repCount++ else { repInvalid++; repInvalidRef[0] = repInvalid }
                                 // 카운트만 말한다 — 숙련자가 세는 숫자는 파셜 포함 전체
                                 if (!muted) speakRep(speech, repTone, repCount + repInvalid)
@@ -639,7 +692,7 @@ fun PostureLiveSessionScreen(
                                 repInvalidRef[0] = repInvalid
                                 // ROM 판별력이 검증된 종목만 사유를 말한다 — 미검증 종목의 무효 판정은 방향 중립 문구라
                                 // "끝까지 움직이세요" 가 오히려 잘못된 가동범위를 유도할 수 있다 (REP_VALIDITY.md).
-                                if (!muted && rc.signal.romValidated && invalidCuesRef[0] < MAX_INVALID_CUES) {
+                                if (!muted && !floorRef[0] && rc.signal.romValidated && invalidCuesRef[0] < MAX_INVALID_CUES) {
                                     invalidCuesRef[0]++
                                     speech.speak(rc.signal.invalidCue, flush = false)
                                 }
@@ -866,6 +919,21 @@ fun PostureLiveSessionScreen(
                             modifier = Modifier.padding(top = 3.dp),
                         )
                     }
+                    if (isFloorExercise) {
+                        Text(FloorTemporal.guide(aihubExercise), color = c.text3, fontSize = 11.sp, lineHeight = 15.sp)
+                        Text("참고 · " + (floorMeasurement ?: "측정 준비 중") + "\n초기 자세·투영 좌표 기준이며 올바른 자세를 보증하지 않아요",
+                            color = c.text3, fontSize = 11.5.sp, lineHeight = 16.sp,
+                            modifier = Modifier.padding(top = 3.dp))
+                    }
+                    // 촬영 방향 (spec §33) — 전방 반구(정면·앞 비스듬히)가 아니면 규칙이 유보되므로 그 사실을 밝힌다
+                    viewEst?.takeIf { coverage.ok && !isFloorExercise && it.cls != ViewEstimator.ViewClass.UNKNOWN }?.let { ve ->
+                        Text(
+                            if (ve.cls.front) "촬영 방향 · ${ve.cls.label}"
+                            else "카메라가 ${ve.cls.label}에 있어요 — 앞쪽에서 비스듬히 두어야 자세를 판정해요",
+                            color = if (ve.cls.front) c.text3 else c.warn, fontSize = 10.5.sp, lineHeight = 14.sp,
+                            modifier = Modifier.padding(top = 3.dp),
+                        )
+                    }
                     // 음성이 아예 안 되는 기기(한국어 TTS 미설치 등) — 침묵의 이유를 밝힌다
                     speech.unavailableReason?.let { reason ->
                         Text(
@@ -925,7 +993,9 @@ fun PostureLiveSessionScreen(
                                 Text(if (repFast) "렙(빠름·미확정)" else "렙", color = c.text3, fontSize = 9.5.sp)
                                 Text(
                                     // 코치: 유효 수 기준 "5 · 무효 2". 기록: 전체 수 기준 "7 · 파셜 2" — 발화 숫자와 일치 (§29)
-                                    if (mode == CoachMode.TRACK) {
+                                    if (isFloorExercise) {
+                                        "검출 ${repCount + repInvalid}" + if (repInvalid > 0) " · 참고 범위 미달 $repInvalid" else ""
+                                    } else if (mode == CoachMode.TRACK) {
                                         (repCount + repInvalid).toString() + if (repInvalid > 0) " · 파셜 " + repInvalid else ""
                                     } else {
                                         repCount.toString() + if (repInvalid > 0) " · 무효 " + repInvalid else ""

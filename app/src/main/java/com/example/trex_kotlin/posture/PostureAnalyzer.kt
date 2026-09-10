@@ -211,7 +211,8 @@ class PostureAnalyzer(
             }
         }
         val frame = PoseFrame(joints, upUsed)
-        val features = frame.features()
+        // §33: 촬영 방향 피처(view_cos/view_sin)도 같은 프레임 피처로 — 집계·로그·규칙 게이팅이 추가 배선 없이 받는다
+        val features = frame.features() + ViewEstimator.frameFeatures(joints)
         val visibleCount = vis.count { it >= MIN_VISIBILITY }
         return PoseSample(
             detected = true,

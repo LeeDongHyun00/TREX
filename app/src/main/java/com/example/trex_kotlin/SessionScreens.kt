@@ -1,5 +1,7 @@
 package com.example.trex_kotlin
 
+import com.example.trex_kotlin.posture.FloorTemporal
+
 import android.Manifest
 import android.content.pm.PackageManager
 import android.media.AudioManager
@@ -251,13 +253,14 @@ private fun sessionHeadline(reports: List<PostureSetReport>): String {
         return "${r.workoutName} ${r.callout!!.bodyPart} — 오늘 가장 신경 쓸 부위예요"   // 그대로 발화되므로 문장으로
     }
     // TRACK 의 베타 후보는 행에 보여 줄 자리가 없다(callout 은 DRIFT/RECOVERED 만) — 헤드라인으로도 올리지 않는다
-    reports.firstOrNull { it.verdict == SetVerdict.REFERENCE && it.mode == CoachMode.COACH }?.let { r ->
+    reports.firstOrNull { it.verdict == SetVerdict.REFERENCE && it.mode == CoachMode.COACH && it.candidates.isNotEmpty() && it.exercise !in FloorTemporal.exercises }?.let { r ->
         return "${r.workoutName} ${r.candidates.first().bodyPart} — 검증 중인 항목이라 참고만 하세요"
     }
     reports.firstOrNull { it.verdict == SetVerdict.RECOVERED && it.callout != null }?.let { r ->
         return "${r.workoutName} ${r.callout!!.bodyPart} — 세트 후반에 교정됐어요"
     }
     return when {
+        reports.any { it.exercise in FloorTemporal.exercises } -> "바닥 운동의 참고 측정을 기록했어요. 자세 확정 판정은 제공하지 않아요"
         reports.all { it.verdict == SetVerdict.UNJUDGED } -> "자세를 판정할 만큼 화면에 잡히지 않았어요"
         reports.all { it.mode == CoachMode.TRACK && it.verdict != SetVerdict.UNJUDGED } -> "세트 안에서 흐트러진 부위 없이 기록됐어요"
         reports.all { it.mode == CoachMode.COACH && it.verdict == SetVerdict.CLEAN } -> "오늘 자세 깨끗했어요"
@@ -364,6 +367,7 @@ private fun PostureSetRow(
         }
         if (expanded) {
             Column(Modifier.padding(start = 16.dp, end = 16.dp, bottom = 14.dp)) {
+                report.measurements.forEach { Text(it, color = c.text2, fontSize = 12.sp, modifier = Modifier.padding(bottom = 6.dp)) }
                 when (report.mode) {
                     CoachMode.COACH -> CoachSetDetail(report)
                     CoachMode.TRACK -> TrackSetDetail(report)
@@ -451,7 +455,7 @@ private fun CoachSetDetail(r: PostureSetReport) {
             },
             color = c.text3, fontSize = 11.sp,
         )
-        r.repsValid?.let { valid -> Text("렙 유효 $valid · 무효 ${r.repsPartial ?: 0}", color = c.text3, fontSize = 11.sp) }
+        r.repsValid?.let { valid -> Text(if (r.exercise in FloorTemporal.exercises) "참고 · 검출 ${valid + (r.repsPartial ?: 0)}회 · 범위 미달 ${r.repsPartial ?: 0}회" else "렙 유효 $valid · 무효 ${r.repsPartial ?: 0}", color = c.text3, fontSize = 11.sp) }
         r.highlights.filter { it.ruleId != lead?.ruleId }.forEach { OutcomeLine(it) }
         h?.note?.let { Text("ⓘ $it", color = c.text3, fontSize = 10.5.sp, lineHeight = 15.sp) }
     }

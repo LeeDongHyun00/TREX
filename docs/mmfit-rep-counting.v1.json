@@ -1,0 +1,3181 @@
+{
+  "artifactKind": "TREX_MMFIT_REP_COUNTING",
+  "artifactVersion": 1,
+  "question": "How many of the repetitions in a labelled set does the shipped detector count, and how often does it count something outside the set?",
+  "limitations": [
+    "MM-Fit labels sets, not repetitions, so this is count error and not a boundary-matched rep F1; the roadmap's SL-1 gate still needs per-repetition truth.",
+    "The camera is fixed and frontal. The engine asks for lateral placement on every mapped exercise except the lateral raise, so most rows measure a placement the app would advise against.",
+    "MM-Fit's squats and lunges are bodyweight and its presses and rows are dumbbell; several shipped specs were written for the barbell or lying variant. See fidelity.",
+    "A studio recording: one subject, clear background, consistent lighting. Says nothing about frame rate, thermal behaviour, or the phone's own capture path.",
+    "No device sensor accompanies the video, so every gravity-dependent posture clause abstains, exactly as it does on a phone without the sensor."
+  ],
+  "source": {
+    "dataset": "MM-Fit",
+    "citation": "Strömbäck, Huang and Radu, IMWUT 2020, doi:10.1145/3432701",
+    "licence": "CC BY 4.0",
+    "workouts": [
+      "w06",
+      "w14",
+      "w18",
+      "w19",
+      "w20"
+    ]
+  },
+  "model": {
+    "sha256": "4eaa5eb7a98365221087693fcc286334cf0858e2eb6e15b506aa4a7ecdcec4ad",
+    "runningMode": "VIDEO",
+    "numPoses": 2
+  },
+  "detectionOutcomes": {
+    "single_pose": 373930,
+    "no_pose": 4466,
+    "ambiguous_multi_person": 856
+  },
+  "overall": {
+    "sets": 116,
+    "labelledRepetitions": 1157,
+    "countedRepetitions": 669,
+    "meanAbsoluteError": 4.207,
+    "meanSignedError": -4.207,
+    "normalisedMeanAbsoluteError": 0.42,
+    "offByOneAccuracy": 0.405,
+    "exactMatchRate": 0.319,
+    "countPrecision": 1.0,
+    "countRecall": 0.578,
+    "countF1": 0.733
+  },
+  "byExercise": [
+    {
+      "exercise": "BARBELL_SQUAT",
+      "fidelity": "PROXY_UNLOADED",
+      "mappingNote": "MM-Fit squats are bodyweight; the shipped spec is the barbell squat, whose 110/105 degree lines are uncalibrated heuristics and whose hip definition gate at 130 was placed on loaded-squat label distributions.",
+      "sets": 15,
+      "labelledRepetitions": 150,
+      "countedRepetitions": 148,
+      "uncountedAttempts": 0,
+      "truePositives": 148,
+      "falsePositives": 0,
+      "falseNegatives": 2,
+      "meanAbsoluteError": 0.133,
+      "normalisedMeanAbsoluteError": 0.013,
+      "meanSignedError": -0.133,
+      "offByOneAccuracy": 1.0,
+      "exactMatchRate": 0.867,
+      "countPrecision": 1.0,
+      "countRecall": 0.987,
+      "countF1": 0.993
+    },
+    {
+      "exercise": "DUMBBELL_BENT_OVER_ROW",
+      "fidelity": "DIRECT",
+      "mappingNote": "MM-Fit calls these standing dumbbell rows.",
+      "sets": 15,
+      "labelledRepetitions": 150,
+      "countedRepetitions": 133,
+      "uncountedAttempts": 0,
+      "truePositives": 133,
+      "falsePositives": 0,
+      "falseNegatives": 17,
+      "meanAbsoluteError": 1.133,
+      "normalisedMeanAbsoluteError": 0.113,
+      "meanSignedError": -1.133,
+      "offByOneAccuracy": 0.667,
+      "exactMatchRate": 0.533,
+      "countPrecision": 1.0,
+      "countRecall": 0.887,
+      "countF1": 0.94
+    },
+    {
+      "exercise": "DUMBBELL_CURL",
+      "fidelity": "DIRECT",
+      "mappingNote": "MM-Fit curls are dumbbell and may alternate arms, which is why the dumbbell spec (no bilateral coherence) is the right one rather than the barbell curl.",
+      "sets": 16,
+      "labelledRepetitions": 160,
+      "countedRepetitions": 68,
+      "uncountedAttempts": 0,
+      "truePositives": 68,
+      "falsePositives": 0,
+      "falseNegatives": 92,
+      "meanAbsoluteError": 5.75,
+      "normalisedMeanAbsoluteError": 0.575,
+      "meanSignedError": -5.75,
+      "offByOneAccuracy": 0.0,
+      "exactMatchRate": 0.0,
+      "countPrecision": 1.0,
+      "countRecall": 0.425,
+      "countF1": 0.596
+    },
+    {
+      "exercise": "LYING_TRICEPS_EXTENSION",
+      "fidelity": "PROXY_POSTURE",
+      "mappingNote": "MM-Fit performs these standing or seated with a dumbbell; the shipped spec is the lying variant. Same elbow extension, different body orientation -- the weakest mapping here, and reported separately for that reason.",
+      "sets": 15,
+      "labelledRepetitions": 153,
+      "countedRepetitions": 0,
+      "uncountedAttempts": 0,
+      "truePositives": 0,
+      "falsePositives": 0,
+      "falseNegatives": 153,
+      "meanAbsoluteError": 10.2,
+      "normalisedMeanAbsoluteError": 1.0,
+      "meanSignedError": -10.2,
+      "offByOneAccuracy": 0.0,
+      "exactMatchRate": 0.0,
+      "countPrecision": 0.0,
+      "countRecall": 0.0,
+      "countF1": 0.0
+    },
+    {
+      "exercise": "OVERHEAD_PRESS",
+      "fidelity": "PROXY_IMPLEMENT",
+      "mappingNote": "Dumbbell press against a spec written for the barbell overhead press; the elbow extension arc is the same, the hand path is not.",
+      "sets": 12,
+      "labelledRepetitions": 119,
+      "countedRepetitions": 42,
+      "uncountedAttempts": 0,
+      "truePositives": 42,
+      "falsePositives": 0,
+      "falseNegatives": 77,
+      "meanAbsoluteError": 6.417,
+      "normalisedMeanAbsoluteError": 0.65,
+      "meanSignedError": -6.417,
+      "offByOneAccuracy": 0.167,
+      "exactMatchRate": 0.167,
+      "countPrecision": 1.0,
+      "countRecall": 0.353,
+      "countF1": 0.522
+    },
+    {
+      "exercise": "PUSH_UP",
+      "fidelity": "DIRECT",
+      "mappingNote": "Same movement. The gravity clause is silent here because a downloaded video carries no device sensor, so the push-up's posture requirement abstains.",
+      "sets": 15,
+      "labelledRepetitions": 147,
+      "countedRepetitions": 124,
+      "uncountedAttempts": 0,
+      "truePositives": 124,
+      "falsePositives": 0,
+      "falseNegatives": 23,
+      "meanAbsoluteError": 1.533,
+      "normalisedMeanAbsoluteError": 0.153,
+      "meanSignedError": -1.533,
+      "offByOneAccuracy": 0.667,
+      "exactMatchRate": 0.4,
+      "countPrecision": 1.0,
+      "countRecall": 0.844,
+      "countF1": 0.915
+    },
+    {
+      "exercise": "SIDE_LATERAL_RAISE",
+      "fidelity": "DIRECT",
+      "mappingNote": "One of the two shipped exercises whose preferred view is frontal, so MM-Fit's camera placement is the recommended one here rather than a penalty.",
+      "sets": 13,
+      "labelledRepetitions": 129,
+      "countedRepetitions": 41,
+      "uncountedAttempts": 0,
+      "truePositives": 41,
+      "falsePositives": 0,
+      "falseNegatives": 88,
+      "meanAbsoluteError": 6.769,
+      "normalisedMeanAbsoluteError": 0.685,
+      "meanSignedError": -6.769,
+      "offByOneAccuracy": 0.0,
+      "exactMatchRate": 0.0,
+      "countPrecision": 1.0,
+      "countRecall": 0.318,
+      "countF1": 0.482
+    },
+    {
+      "exercise": "STEP_FORWARD_DYNAMIC_LUNGE",
+      "fidelity": "PROXY_UNLOADED",
+      "mappingNote": "MM-Fit does not say which lunge direction; the engine cannot separate forward from backward either (policy rule 5c), so the forward spec stands for both.",
+      "sets": 15,
+      "labelledRepetitions": 149,
+      "countedRepetitions": 113,
+      "uncountedAttempts": 19,
+      "truePositives": 113,
+      "falsePositives": 0,
+      "falseNegatives": 36,
+      "meanAbsoluteError": 2.4,
+      "normalisedMeanAbsoluteError": 0.241,
+      "meanSignedError": -2.4,
+      "offByOneAccuracy": 0.667,
+      "exactMatchRate": 0.533,
+      "countPrecision": 1.0,
+      "countRecall": 0.758,
+      "countF1": 0.863
+    }
+  ],
+  "restFiring": [
+    {
+      "exercise": "BARBELL_SQUAT",
+      "workouts": 5,
+      "gaps": 147,
+      "restFrames": 284314,
+      "counted": 20,
+      "restMinutes": 158.0,
+      "countedPerRestMinute": 0.127
+    },
+    {
+      "exercise": "DUMBBELL_BENT_OVER_ROW",
+      "workouts": 5,
+      "gaps": 147,
+      "restFrames": 284314,
+      "counted": 177,
+      "restMinutes": 158.0,
+      "countedPerRestMinute": 1.121
+    },
+    {
+      "exercise": "DUMBBELL_CURL",
+      "workouts": 5,
+      "gaps": 147,
+      "restFrames": 284314,
+      "counted": 177,
+      "restMinutes": 158.0,
+      "countedPerRestMinute": 1.121
+    },
+    {
+      "exercise": "LYING_TRICEPS_EXTENSION",
+      "workouts": 5,
+      "gaps": 147,
+      "restFrames": 284314,
+      "counted": 48,
+      "restMinutes": 158.0,
+      "countedPerRestMinute": 0.304
+    },
+    {
+      "exercise": "OVERHEAD_PRESS",
+      "workouts": 5,
+      "gaps": 147,
+      "restFrames": 284314,
+      "counted": 0,
+      "restMinutes": 158.0,
+      "countedPerRestMinute": 0.0
+    },
+    {
+      "exercise": "PUSH_UP",
+      "workouts": 5,
+      "gaps": 147,
+      "restFrames": 284314,
+      "counted": 298,
+      "restMinutes": 158.0,
+      "countedPerRestMinute": 1.887
+    },
+    {
+      "exercise": "SIDE_LATERAL_RAISE",
+      "workouts": 5,
+      "gaps": 147,
+      "restFrames": 284314,
+      "counted": 54,
+      "restMinutes": 158.0,
+      "countedPerRestMinute": 0.342
+    },
+    {
+      "exercise": "STEP_FORWARD_DYNAMIC_LUNGE",
+      "workouts": 5,
+      "gaps": 147,
+      "restFrames": 284314,
+      "counted": 47,
+      "restMinutes": 158.0,
+      "countedPerRestMinute": 0.298
+    }
+  ],
+  "crossExerciseFiring": [
+    {
+      "performedActivity": "squats",
+      "countedAs": "STEP_FORWARD_DYNAMIC_LUNGE",
+      "sets": 15,
+      "performedRepetitions": 150,
+      "countedRepetitions": 148,
+      "activityIsMapped": true,
+      "countedPerPerformedRepetition": 0.987
+    },
+    {
+      "performedActivity": "dumbbell_shoulder_press",
+      "countedAs": "PUSH_UP",
+      "sets": 12,
+      "performedRepetitions": 119,
+      "countedRepetitions": 107,
+      "activityIsMapped": true,
+      "countedPerPerformedRepetition": 0.899
+    },
+    {
+      "performedActivity": "dumbbell_rows",
+      "countedAs": "PUSH_UP",
+      "sets": 15,
+      "performedRepetitions": 150,
+      "countedRepetitions": 133,
+      "activityIsMapped": true,
+      "countedPerPerformedRepetition": 0.887
+    },
+    {
+      "performedActivity": "dumbbell_rows",
+      "countedAs": "DUMBBELL_CURL",
+      "sets": 15,
+      "performedRepetitions": 150,
+      "countedRepetitions": 133,
+      "activityIsMapped": true,
+      "countedPerPerformedRepetition": 0.887
+    },
+    {
+      "performedActivity": "pushups",
+      "countedAs": "DUMBBELL_CURL",
+      "sets": 15,
+      "performedRepetitions": 147,
+      "countedRepetitions": 124,
+      "activityIsMapped": true,
+      "countedPerPerformedRepetition": 0.844
+    },
+    {
+      "performedActivity": "pushups",
+      "countedAs": "DUMBBELL_BENT_OVER_ROW",
+      "sets": 15,
+      "performedRepetitions": 147,
+      "countedRepetitions": 124,
+      "activityIsMapped": true,
+      "countedPerPerformedRepetition": 0.844
+    },
+    {
+      "performedActivity": "pushups",
+      "countedAs": "LYING_TRICEPS_EXTENSION",
+      "sets": 15,
+      "performedRepetitions": 147,
+      "countedRepetitions": 102,
+      "activityIsMapped": true,
+      "countedPerPerformedRepetition": 0.694
+    },
+    {
+      "performedActivity": "dumbbell_rows",
+      "countedAs": "LYING_TRICEPS_EXTENSION",
+      "sets": 15,
+      "performedRepetitions": 150,
+      "countedRepetitions": 85,
+      "activityIsMapped": true,
+      "countedPerPerformedRepetition": 0.567
+    },
+    {
+      "performedActivity": "bicep_curls",
+      "countedAs": "DUMBBELL_BENT_OVER_ROW",
+      "sets": 16,
+      "performedRepetitions": 160,
+      "countedRepetitions": 68,
+      "activityIsMapped": true,
+      "countedPerPerformedRepetition": 0.425
+    },
+    {
+      "performedActivity": "squats",
+      "countedAs": "PUSH_UP",
+      "sets": 15,
+      "performedRepetitions": 150,
+      "countedRepetitions": 62,
+      "activityIsMapped": true,
+      "countedPerPerformedRepetition": 0.413
+    },
+    {
+      "performedActivity": "lunges",
+      "countedAs": "BARBELL_SQUAT",
+      "sets": 15,
+      "performedRepetitions": 149,
+      "countedRepetitions": 57,
+      "activityIsMapped": true,
+      "countedPerPerformedRepetition": 0.383
+    },
+    {
+      "performedActivity": "squats",
+      "countedAs": "SIDE_LATERAL_RAISE",
+      "sets": 15,
+      "performedRepetitions": 150,
+      "countedRepetitions": 57,
+      "activityIsMapped": true,
+      "countedPerPerformedRepetition": 0.38
+    },
+    {
+      "performedActivity": "dumbbell_shoulder_press",
+      "countedAs": "LYING_TRICEPS_EXTENSION",
+      "sets": 12,
+      "performedRepetitions": 119,
+      "countedRepetitions": 42,
+      "activityIsMapped": true,
+      "countedPerPerformedRepetition": 0.353
+    },
+    {
+      "performedActivity": "jumping_jacks",
+      "countedAs": "SIDE_LATERAL_RAISE",
+      "sets": 12,
+      "performedRepetitions": 121,
+      "countedRepetitions": 41,
+      "activityIsMapped": false,
+      "countedPerPerformedRepetition": 0.339
+    },
+    {
+      "performedActivity": "squats",
+      "countedAs": "DUMBBELL_CURL",
+      "sets": 15,
+      "performedRepetitions": 150,
+      "countedRepetitions": 49,
+      "activityIsMapped": true,
+      "countedPerPerformedRepetition": 0.327
+    },
+    {
+      "performedActivity": "squats",
+      "countedAs": "DUMBBELL_BENT_OVER_ROW",
+      "sets": 15,
+      "performedRepetitions": 150,
+      "countedRepetitions": 49,
+      "activityIsMapped": true,
+      "countedPerPerformedRepetition": 0.327
+    },
+    {
+      "performedActivity": "bicep_curls",
+      "countedAs": "LYING_TRICEPS_EXTENSION",
+      "sets": 16,
+      "performedRepetitions": 160,
+      "countedRepetitions": 51,
+      "activityIsMapped": true,
+      "countedPerPerformedRepetition": 0.319
+    },
+    {
+      "performedActivity": "lateral_shoulder_raises",
+      "countedAs": "PUSH_UP",
+      "sets": 13,
+      "performedRepetitions": 129,
+      "countedRepetitions": 22,
+      "activityIsMapped": true,
+      "countedPerPerformedRepetition": 0.171
+    },
+    {
+      "performedActivity": "bicep_curls",
+      "countedAs": "PUSH_UP",
+      "sets": 16,
+      "performedRepetitions": 160,
+      "countedRepetitions": 17,
+      "activityIsMapped": true,
+      "countedPerPerformedRepetition": 0.106
+    },
+    {
+      "performedActivity": "dumbbell_rows",
+      "countedAs": "STEP_FORWARD_DYNAMIC_LUNGE",
+      "sets": 15,
+      "performedRepetitions": 150,
+      "countedRepetitions": 11,
+      "activityIsMapped": true,
+      "countedPerPerformedRepetition": 0.073
+    },
+    {
+      "performedActivity": "dumbbell_shoulder_press",
+      "countedAs": "DUMBBELL_CURL",
+      "sets": 12,
+      "performedRepetitions": 119,
+      "countedRepetitions": 8,
+      "activityIsMapped": true,
+      "countedPerPerformedRepetition": 0.067
+    },
+    {
+      "performedActivity": "dumbbell_shoulder_press",
+      "countedAs": "DUMBBELL_BENT_OVER_ROW",
+      "sets": 12,
+      "performedRepetitions": 119,
+      "countedRepetitions": 8,
+      "activityIsMapped": true,
+      "countedPerPerformedRepetition": 0.067
+    },
+    {
+      "performedActivity": "jumping_jacks",
+      "countedAs": "PUSH_UP",
+      "sets": 12,
+      "performedRepetitions": 121,
+      "countedRepetitions": 8,
+      "activityIsMapped": false,
+      "countedPerPerformedRepetition": 0.066
+    },
+    {
+      "performedActivity": "jumping_jacks",
+      "countedAs": "DUMBBELL_CURL",
+      "sets": 12,
+      "performedRepetitions": 121,
+      "countedRepetitions": 2,
+      "activityIsMapped": false,
+      "countedPerPerformedRepetition": 0.017
+    },
+    {
+      "performedActivity": "jumping_jacks",
+      "countedAs": "DUMBBELL_BENT_OVER_ROW",
+      "sets": 12,
+      "performedRepetitions": 121,
+      "countedRepetitions": 2,
+      "activityIsMapped": false,
+      "countedPerPerformedRepetition": 0.017
+    },
+    {
+      "performedActivity": "dumbbell_rows",
+      "countedAs": "BARBELL_SQUAT",
+      "sets": 15,
+      "performedRepetitions": 150,
+      "countedRepetitions": 2,
+      "activityIsMapped": true,
+      "countedPerPerformedRepetition": 0.013
+    },
+    {
+      "performedActivity": "bicep_curls",
+      "countedAs": "BARBELL_SQUAT",
+      "sets": 16,
+      "performedRepetitions": 160,
+      "countedRepetitions": 2,
+      "activityIsMapped": true,
+      "countedPerPerformedRepetition": 0.013
+    },
+    {
+      "performedActivity": "bicep_curls",
+      "countedAs": "STEP_FORWARD_DYNAMIC_LUNGE",
+      "sets": 16,
+      "performedRepetitions": 160,
+      "countedRepetitions": 2,
+      "activityIsMapped": true,
+      "countedPerPerformedRepetition": 0.013
+    },
+    {
+      "performedActivity": "bicep_curls",
+      "countedAs": "SIDE_LATERAL_RAISE",
+      "sets": 16,
+      "performedRepetitions": 160,
+      "countedRepetitions": 2,
+      "activityIsMapped": true,
+      "countedPerPerformedRepetition": 0.013
+    },
+    {
+      "performedActivity": "lunges",
+      "countedAs": "PUSH_UP",
+      "sets": 15,
+      "performedRepetitions": 149,
+      "countedRepetitions": 1,
+      "activityIsMapped": true,
+      "countedPerPerformedRepetition": 0.007
+    },
+    {
+      "performedActivity": "situps",
+      "countedAs": "STEP_FORWARD_DYNAMIC_LUNGE",
+      "sets": 15,
+      "performedRepetitions": 150,
+      "countedRepetitions": 1,
+      "activityIsMapped": false,
+      "countedPerPerformedRepetition": 0.007
+    },
+    {
+      "performedActivity": "situps",
+      "countedAs": "PUSH_UP",
+      "sets": 15,
+      "performedRepetitions": 150,
+      "countedRepetitions": 1,
+      "activityIsMapped": false,
+      "countedPerPerformedRepetition": 0.007
+    },
+    {
+      "performedActivity": "situps",
+      "countedAs": "DUMBBELL_CURL",
+      "sets": 15,
+      "performedRepetitions": 150,
+      "countedRepetitions": 1,
+      "activityIsMapped": false,
+      "countedPerPerformedRepetition": 0.007
+    },
+    {
+      "performedActivity": "situps",
+      "countedAs": "DUMBBELL_BENT_OVER_ROW",
+      "sets": 15,
+      "performedRepetitions": 150,
+      "countedRepetitions": 1,
+      "activityIsMapped": false,
+      "countedPerPerformedRepetition": 0.007
+    },
+    {
+      "performedActivity": "squats",
+      "countedAs": "OVERHEAD_PRESS",
+      "sets": 15,
+      "performedRepetitions": 150,
+      "countedRepetitions": 0,
+      "activityIsMapped": true,
+      "countedPerPerformedRepetition": 0.0
+    },
+    {
+      "performedActivity": "squats",
+      "countedAs": "LYING_TRICEPS_EXTENSION",
+      "sets": 15,
+      "performedRepetitions": 150,
+      "countedRepetitions": 0,
+      "activityIsMapped": true,
+      "countedPerPerformedRepetition": 0.0
+    },
+    {
+      "performedActivity": "pushups",
+      "countedAs": "BARBELL_SQUAT",
+      "sets": 15,
+      "performedRepetitions": 147,
+      "countedRepetitions": 0,
+      "activityIsMapped": true,
+      "countedPerPerformedRepetition": 0.0
+    },
+    {
+      "performedActivity": "pushups",
+      "countedAs": "STEP_FORWARD_DYNAMIC_LUNGE",
+      "sets": 15,
+      "performedRepetitions": 147,
+      "countedRepetitions": 0,
+      "activityIsMapped": true,
+      "countedPerPerformedRepetition": 0.0
+    },
+    {
+      "performedActivity": "pushups",
+      "countedAs": "OVERHEAD_PRESS",
+      "sets": 15,
+      "performedRepetitions": 147,
+      "countedRepetitions": 0,
+      "activityIsMapped": true,
+      "countedPerPerformedRepetition": 0.0
+    },
+    {
+      "performedActivity": "pushups",
+      "countedAs": "SIDE_LATERAL_RAISE",
+      "sets": 15,
+      "performedRepetitions": 147,
+      "countedRepetitions": 0,
+      "activityIsMapped": true,
+      "countedPerPerformedRepetition": 0.0
+    },
+    {
+      "performedActivity": "dumbbell_shoulder_press",
+      "countedAs": "BARBELL_SQUAT",
+      "sets": 12,
+      "performedRepetitions": 119,
+      "countedRepetitions": 0,
+      "activityIsMapped": true,
+      "countedPerPerformedRepetition": 0.0
+    },
+    {
+      "performedActivity": "dumbbell_shoulder_press",
+      "countedAs": "STEP_FORWARD_DYNAMIC_LUNGE",
+      "sets": 12,
+      "performedRepetitions": 119,
+      "countedRepetitions": 0,
+      "activityIsMapped": true,
+      "countedPerPerformedRepetition": 0.0
+    },
+    {
+      "performedActivity": "dumbbell_shoulder_press",
+      "countedAs": "SIDE_LATERAL_RAISE",
+      "sets": 12,
+      "performedRepetitions": 119,
+      "countedRepetitions": 0,
+      "activityIsMapped": true,
+      "countedPerPerformedRepetition": 0.0
+    },
+    {
+      "performedActivity": "lunges",
+      "countedAs": "DUMBBELL_CURL",
+      "sets": 15,
+      "performedRepetitions": 149,
+      "countedRepetitions": 0,
+      "activityIsMapped": true,
+      "countedPerPerformedRepetition": 0.0
+    },
+    {
+      "performedActivity": "lunges",
+      "countedAs": "OVERHEAD_PRESS",
+      "sets": 15,
+      "performedRepetitions": 149,
+      "countedRepetitions": 0,
+      "activityIsMapped": true,
+      "countedPerPerformedRepetition": 0.0
+    },
+    {
+      "performedActivity": "lunges",
+      "countedAs": "DUMBBELL_BENT_OVER_ROW",
+      "sets": 15,
+      "performedRepetitions": 149,
+      "countedRepetitions": 0,
+      "activityIsMapped": true,
+      "countedPerPerformedRepetition": 0.0
+    },
+    {
+      "performedActivity": "lunges",
+      "countedAs": "LYING_TRICEPS_EXTENSION",
+      "sets": 15,
+      "performedRepetitions": 149,
+      "countedRepetitions": 0,
+      "activityIsMapped": true,
+      "countedPerPerformedRepetition": 0.0
+    },
+    {
+      "performedActivity": "lunges",
+      "countedAs": "SIDE_LATERAL_RAISE",
+      "sets": 15,
+      "performedRepetitions": 149,
+      "countedRepetitions": 0,
+      "activityIsMapped": true,
+      "countedPerPerformedRepetition": 0.0
+    },
+    {
+      "performedActivity": "dumbbell_rows",
+      "countedAs": "OVERHEAD_PRESS",
+      "sets": 15,
+      "performedRepetitions": 150,
+      "countedRepetitions": 0,
+      "activityIsMapped": true,
+      "countedPerPerformedRepetition": 0.0
+    },
+    {
+      "performedActivity": "dumbbell_rows",
+      "countedAs": "SIDE_LATERAL_RAISE",
+      "sets": 15,
+      "performedRepetitions": 150,
+      "countedRepetitions": 0,
+      "activityIsMapped": true,
+      "countedPerPerformedRepetition": 0.0
+    },
+    {
+      "performedActivity": "situps",
+      "countedAs": "BARBELL_SQUAT",
+      "sets": 15,
+      "performedRepetitions": 150,
+      "countedRepetitions": 0,
+      "activityIsMapped": false,
+      "countedPerPerformedRepetition": 0.0
+    },
+    {
+      "performedActivity": "situps",
+      "countedAs": "OVERHEAD_PRESS",
+      "sets": 15,
+      "performedRepetitions": 150,
+      "countedRepetitions": 0,
+      "activityIsMapped": false,
+      "countedPerPerformedRepetition": 0.0
+    },
+    {
+      "performedActivity": "situps",
+      "countedAs": "LYING_TRICEPS_EXTENSION",
+      "sets": 15,
+      "performedRepetitions": 150,
+      "countedRepetitions": 0,
+      "activityIsMapped": false,
+      "countedPerPerformedRepetition": 0.0
+    },
+    {
+      "performedActivity": "situps",
+      "countedAs": "SIDE_LATERAL_RAISE",
+      "sets": 15,
+      "performedRepetitions": 150,
+      "countedRepetitions": 0,
+      "activityIsMapped": false,
+      "countedPerPerformedRepetition": 0.0
+    },
+    {
+      "performedActivity": "tricep_extensions",
+      "countedAs": "BARBELL_SQUAT",
+      "sets": 15,
+      "performedRepetitions": 153,
+      "countedRepetitions": 0,
+      "activityIsMapped": true,
+      "countedPerPerformedRepetition": 0.0
+    },
+    {
+      "performedActivity": "tricep_extensions",
+      "countedAs": "STEP_FORWARD_DYNAMIC_LUNGE",
+      "sets": 15,
+      "performedRepetitions": 153,
+      "countedRepetitions": 0,
+      "activityIsMapped": true,
+      "countedPerPerformedRepetition": 0.0
+    },
+    {
+      "performedActivity": "tricep_extensions",
+      "countedAs": "PUSH_UP",
+      "sets": 15,
+      "performedRepetitions": 153,
+      "countedRepetitions": 0,
+      "activityIsMapped": true,
+      "countedPerPerformedRepetition": 0.0
+    },
+    {
+      "performedActivity": "tricep_extensions",
+      "countedAs": "DUMBBELL_CURL",
+      "sets": 15,
+      "performedRepetitions": 153,
+      "countedRepetitions": 0,
+      "activityIsMapped": true,
+      "countedPerPerformedRepetition": 0.0
+    },
+    {
+      "performedActivity": "tricep_extensions",
+      "countedAs": "OVERHEAD_PRESS",
+      "sets": 15,
+      "performedRepetitions": 153,
+      "countedRepetitions": 0,
+      "activityIsMapped": true,
+      "countedPerPerformedRepetition": 0.0
+    },
+    {
+      "performedActivity": "tricep_extensions",
+      "countedAs": "DUMBBELL_BENT_OVER_ROW",
+      "sets": 15,
+      "performedRepetitions": 153,
+      "countedRepetitions": 0,
+      "activityIsMapped": true,
+      "countedPerPerformedRepetition": 0.0
+    },
+    {
+      "performedActivity": "tricep_extensions",
+      "countedAs": "SIDE_LATERAL_RAISE",
+      "sets": 15,
+      "performedRepetitions": 153,
+      "countedRepetitions": 0,
+      "activityIsMapped": true,
+      "countedPerPerformedRepetition": 0.0
+    },
+    {
+      "performedActivity": "bicep_curls",
+      "countedAs": "OVERHEAD_PRESS",
+      "sets": 16,
+      "performedRepetitions": 160,
+      "countedRepetitions": 0,
+      "activityIsMapped": true,
+      "countedPerPerformedRepetition": 0.0
+    },
+    {
+      "performedActivity": "lateral_shoulder_raises",
+      "countedAs": "BARBELL_SQUAT",
+      "sets": 13,
+      "performedRepetitions": 129,
+      "countedRepetitions": 0,
+      "activityIsMapped": true,
+      "countedPerPerformedRepetition": 0.0
+    },
+    {
+      "performedActivity": "lateral_shoulder_raises",
+      "countedAs": "STEP_FORWARD_DYNAMIC_LUNGE",
+      "sets": 13,
+      "performedRepetitions": 129,
+      "countedRepetitions": 0,
+      "activityIsMapped": true,
+      "countedPerPerformedRepetition": 0.0
+    },
+    {
+      "performedActivity": "lateral_shoulder_raises",
+      "countedAs": "DUMBBELL_CURL",
+      "sets": 13,
+      "performedRepetitions": 129,
+      "countedRepetitions": 0,
+      "activityIsMapped": true,
+      "countedPerPerformedRepetition": 0.0
+    },
+    {
+      "performedActivity": "lateral_shoulder_raises",
+      "countedAs": "OVERHEAD_PRESS",
+      "sets": 13,
+      "performedRepetitions": 129,
+      "countedRepetitions": 0,
+      "activityIsMapped": true,
+      "countedPerPerformedRepetition": 0.0
+    },
+    {
+      "performedActivity": "lateral_shoulder_raises",
+      "countedAs": "DUMBBELL_BENT_OVER_ROW",
+      "sets": 13,
+      "performedRepetitions": 129,
+      "countedRepetitions": 0,
+      "activityIsMapped": true,
+      "countedPerPerformedRepetition": 0.0
+    },
+    {
+      "performedActivity": "lateral_shoulder_raises",
+      "countedAs": "LYING_TRICEPS_EXTENSION",
+      "sets": 13,
+      "performedRepetitions": 129,
+      "countedRepetitions": 0,
+      "activityIsMapped": true,
+      "countedPerPerformedRepetition": 0.0
+    },
+    {
+      "performedActivity": "jumping_jacks",
+      "countedAs": "BARBELL_SQUAT",
+      "sets": 12,
+      "performedRepetitions": 121,
+      "countedRepetitions": 0,
+      "activityIsMapped": false,
+      "countedPerPerformedRepetition": 0.0
+    },
+    {
+      "performedActivity": "jumping_jacks",
+      "countedAs": "STEP_FORWARD_DYNAMIC_LUNGE",
+      "sets": 12,
+      "performedRepetitions": 121,
+      "countedRepetitions": 0,
+      "activityIsMapped": false,
+      "countedPerPerformedRepetition": 0.0
+    },
+    {
+      "performedActivity": "jumping_jacks",
+      "countedAs": "OVERHEAD_PRESS",
+      "sets": 12,
+      "performedRepetitions": 121,
+      "countedRepetitions": 0,
+      "activityIsMapped": false,
+      "countedPerPerformedRepetition": 0.0
+    },
+    {
+      "performedActivity": "jumping_jacks",
+      "countedAs": "LYING_TRICEPS_EXTENSION",
+      "sets": 12,
+      "performedRepetitions": 121,
+      "countedRepetitions": 0,
+      "activityIsMapped": false,
+      "countedPerPerformedRepetition": 0.0
+    }
+  ],
+  "sessionTotals": [
+    {
+      "exercise": "BARBELL_SQUAT",
+      "workouts": 5,
+      "sessionCounted": 240,
+      "owedBySets": 150,
+      "sessionFrames": 379252,
+      "excessOverOwned": 90,
+      "excessPerWorkout": 18.0
+    },
+    {
+      "exercise": "DUMBBELL_BENT_OVER_ROW",
+      "workouts": 5,
+      "sessionCounted": 579,
+      "owedBySets": 150,
+      "sessionFrames": 379252,
+      "excessOverOwned": 429,
+      "excessPerWorkout": 85.8
+    },
+    {
+      "exercise": "DUMBBELL_CURL",
+      "workouts": 5,
+      "sessionCounted": 579,
+      "owedBySets": 160,
+      "sessionFrames": 379252,
+      "excessOverOwned": 419,
+      "excessPerWorkout": 83.8
+    },
+    {
+      "exercise": "LYING_TRICEPS_EXTENSION",
+      "workouts": 5,
+      "sessionCounted": 333,
+      "owedBySets": 153,
+      "sessionFrames": 379252,
+      "excessOverOwned": 180,
+      "excessPerWorkout": 36.0
+    },
+    {
+      "exercise": "OVERHEAD_PRESS",
+      "workouts": 5,
+      "sessionCounted": 26,
+      "owedBySets": 119,
+      "sessionFrames": 379252,
+      "excessOverOwned": -93,
+      "excessPerWorkout": -18.6
+    },
+    {
+      "exercise": "PUSH_UP",
+      "workouts": 5,
+      "sessionCounted": 825,
+      "owedBySets": 147,
+      "sessionFrames": 379252,
+      "excessOverOwned": 678,
+      "excessPerWorkout": 135.6
+    },
+    {
+      "exercise": "SIDE_LATERAL_RAISE",
+      "workouts": 5,
+      "sessionCounted": 232,
+      "owedBySets": 129,
+      "sessionFrames": 379252,
+      "excessOverOwned": 103,
+      "excessPerWorkout": 20.6
+    },
+    {
+      "exercise": "STEP_FORWARD_DYNAMIC_LUNGE",
+      "workouts": 5,
+      "sessionCounted": 339,
+      "owedBySets": 149,
+      "sessionFrames": 379252,
+      "excessOverOwned": 190,
+      "excessPerWorkout": 38.0
+    }
+  ],
+  "sets": [
+    {
+      "workout": "w06",
+      "activity": "squats",
+      "exercise": "BARBELL_SQUAT",
+      "fidelity": "PROXY_UNLOADED",
+      "labelled": 10,
+      "counted": 10,
+      "uncounted": 0,
+      "frames": 583
+    },
+    {
+      "workout": "w06",
+      "activity": "squats",
+      "exercise": "BARBELL_SQUAT",
+      "fidelity": "PROXY_UNLOADED",
+      "labelled": 10,
+      "counted": 10,
+      "uncounted": 0,
+      "frames": 603
+    },
+    {
+      "workout": "w06",
+      "activity": "squats",
+      "exercise": "BARBELL_SQUAT",
+      "fidelity": "PROXY_UNLOADED",
+      "labelled": 10,
+      "counted": 10,
+      "uncounted": 0,
+      "frames": 622
+    },
+    {
+      "workout": "w06",
+      "activity": "pushups",
+      "exercise": "PUSH_UP",
+      "fidelity": "DIRECT",
+      "labelled": 10,
+      "counted": 5,
+      "uncounted": 0,
+      "frames": 484
+    },
+    {
+      "workout": "w06",
+      "activity": "pushups",
+      "exercise": "PUSH_UP",
+      "fidelity": "DIRECT",
+      "labelled": 10,
+      "counted": 8,
+      "uncounted": 0,
+      "frames": 575
+    },
+    {
+      "workout": "w06",
+      "activity": "pushups",
+      "exercise": "PUSH_UP",
+      "fidelity": "DIRECT",
+      "labelled": 10,
+      "counted": 10,
+      "uncounted": 0,
+      "frames": 548
+    },
+    {
+      "workout": "w06",
+      "activity": "dumbbell_shoulder_press",
+      "exercise": "OVERHEAD_PRESS",
+      "fidelity": "PROXY_IMPLEMENT",
+      "labelled": 10,
+      "counted": 0,
+      "uncounted": 0,
+      "frames": 725
+    },
+    {
+      "workout": "w06",
+      "activity": "dumbbell_shoulder_press",
+      "exercise": "OVERHEAD_PRESS",
+      "fidelity": "PROXY_IMPLEMENT",
+      "labelled": 10,
+      "counted": 1,
+      "uncounted": 0,
+      "frames": 770
+    },
+    {
+      "workout": "w06",
+      "activity": "dumbbell_shoulder_press",
+      "exercise": "OVERHEAD_PRESS",
+      "fidelity": "PROXY_IMPLEMENT",
+      "labelled": 10,
+      "counted": 0,
+      "uncounted": 0,
+      "frames": 817
+    },
+    {
+      "workout": "w06",
+      "activity": "lunges",
+      "exercise": "STEP_FORWARD_DYNAMIC_LUNGE",
+      "fidelity": "PROXY_UNLOADED",
+      "labelled": 10,
+      "counted": 10,
+      "uncounted": 0,
+      "frames": 914
+    },
+    {
+      "workout": "w06",
+      "activity": "lunges",
+      "exercise": "STEP_FORWARD_DYNAMIC_LUNGE",
+      "fidelity": "PROXY_UNLOADED",
+      "labelled": 10,
+      "counted": 8,
+      "uncounted": 0,
+      "frames": 814
+    },
+    {
+      "workout": "w06",
+      "activity": "lunges",
+      "exercise": "STEP_FORWARD_DYNAMIC_LUNGE",
+      "fidelity": "PROXY_UNLOADED",
+      "labelled": 10,
+      "counted": 10,
+      "uncounted": 0,
+      "frames": 862
+    },
+    {
+      "workout": "w06",
+      "activity": "dumbbell_rows",
+      "exercise": "DUMBBELL_BENT_OVER_ROW",
+      "fidelity": "DIRECT",
+      "labelled": 10,
+      "counted": 8,
+      "uncounted": 0,
+      "frames": 613
+    },
+    {
+      "workout": "w06",
+      "activity": "dumbbell_rows",
+      "exercise": "DUMBBELL_BENT_OVER_ROW",
+      "fidelity": "DIRECT",
+      "labelled": 10,
+      "counted": 10,
+      "uncounted": 0,
+      "frames": 553
+    },
+    {
+      "workout": "w06",
+      "activity": "dumbbell_rows",
+      "exercise": "DUMBBELL_BENT_OVER_ROW",
+      "fidelity": "DIRECT",
+      "labelled": 10,
+      "counted": 10,
+      "uncounted": 0,
+      "frames": 559
+    },
+    {
+      "workout": "w06",
+      "activity": "tricep_extensions",
+      "exercise": "LYING_TRICEPS_EXTENSION",
+      "fidelity": "PROXY_POSTURE",
+      "labelled": 10,
+      "counted": 0,
+      "uncounted": 0,
+      "frames": 605
+    },
+    {
+      "workout": "w06",
+      "activity": "tricep_extensions",
+      "exercise": "LYING_TRICEPS_EXTENSION",
+      "fidelity": "PROXY_POSTURE",
+      "labelled": 10,
+      "counted": 0,
+      "uncounted": 0,
+      "frames": 662
+    },
+    {
+      "workout": "w06",
+      "activity": "tricep_extensions",
+      "exercise": "LYING_TRICEPS_EXTENSION",
+      "fidelity": "PROXY_POSTURE",
+      "labelled": 10,
+      "counted": 0,
+      "uncounted": 0,
+      "frames": 625
+    },
+    {
+      "workout": "w06",
+      "activity": "bicep_curls",
+      "exercise": "DUMBBELL_CURL",
+      "fidelity": "DIRECT",
+      "labelled": 10,
+      "counted": 5,
+      "uncounted": 0,
+      "frames": 636
+    },
+    {
+      "workout": "w06",
+      "activity": "bicep_curls",
+      "exercise": "DUMBBELL_CURL",
+      "fidelity": "DIRECT",
+      "labelled": 10,
+      "counted": 5,
+      "uncounted": 0,
+      "frames": 605
+    },
+    {
+      "workout": "w06",
+      "activity": "bicep_curls",
+      "exercise": "DUMBBELL_CURL",
+      "fidelity": "DIRECT",
+      "labelled": 10,
+      "counted": 5,
+      "uncounted": 0,
+      "frames": 626
+    },
+    {
+      "workout": "w06",
+      "activity": "lateral_shoulder_raises",
+      "exercise": "SIDE_LATERAL_RAISE",
+      "fidelity": "DIRECT",
+      "labelled": 10,
+      "counted": 0,
+      "uncounted": 0,
+      "frames": 700
+    },
+    {
+      "workout": "w06",
+      "activity": "lateral_shoulder_raises",
+      "exercise": "SIDE_LATERAL_RAISE",
+      "fidelity": "DIRECT",
+      "labelled": 10,
+      "counted": 0,
+      "uncounted": 0,
+      "frames": 599
+    },
+    {
+      "workout": "w06",
+      "activity": "lateral_shoulder_raises",
+      "exercise": "SIDE_LATERAL_RAISE",
+      "fidelity": "DIRECT",
+      "labelled": 10,
+      "counted": 0,
+      "uncounted": 0,
+      "frames": 527
+    },
+    {
+      "workout": "w14",
+      "activity": "squats",
+      "exercise": "BARBELL_SQUAT",
+      "fidelity": "PROXY_UNLOADED",
+      "labelled": 10,
+      "counted": 10,
+      "uncounted": 0,
+      "frames": 541
+    },
+    {
+      "workout": "w14",
+      "activity": "squats",
+      "exercise": "BARBELL_SQUAT",
+      "fidelity": "PROXY_UNLOADED",
+      "labelled": 10,
+      "counted": 10,
+      "uncounted": 0,
+      "frames": 544
+    },
+    {
+      "workout": "w14",
+      "activity": "squats",
+      "exercise": "BARBELL_SQUAT",
+      "fidelity": "PROXY_UNLOADED",
+      "labelled": 10,
+      "counted": 10,
+      "uncounted": 0,
+      "frames": 538
+    },
+    {
+      "workout": "w14",
+      "activity": "pushups",
+      "exercise": "PUSH_UP",
+      "fidelity": "DIRECT",
+      "labelled": 10,
+      "counted": 10,
+      "uncounted": 0,
+      "frames": 523
+    },
+    {
+      "workout": "w14",
+      "activity": "pushups",
+      "exercise": "PUSH_UP",
+      "fidelity": "DIRECT",
+      "labelled": 10,
+      "counted": 10,
+      "uncounted": 0,
+      "frames": 456
+    },
+    {
+      "workout": "w14",
+      "activity": "pushups",
+      "exercise": "PUSH_UP",
+      "fidelity": "DIRECT",
+      "labelled": 10,
+      "counted": 10,
+      "uncounted": 0,
+      "frames": 480
+    },
+    {
+      "workout": "w14",
+      "activity": "dumbbell_shoulder_press",
+      "exercise": "OVERHEAD_PRESS",
+      "fidelity": "PROXY_IMPLEMENT",
+      "labelled": 10,
+      "counted": 7,
+      "uncounted": 0,
+      "frames": 684
+    },
+    {
+      "workout": "w14",
+      "activity": "dumbbell_shoulder_press",
+      "exercise": "OVERHEAD_PRESS",
+      "fidelity": "PROXY_IMPLEMENT",
+      "labelled": 10,
+      "counted": 10,
+      "uncounted": 0,
+      "frames": 706
+    },
+    {
+      "workout": "w14",
+      "activity": "dumbbell_shoulder_press",
+      "exercise": "OVERHEAD_PRESS",
+      "fidelity": "PROXY_IMPLEMENT",
+      "labelled": 10,
+      "counted": 10,
+      "uncounted": 0,
+      "frames": 708
+    },
+    {
+      "workout": "w14",
+      "activity": "dumbbell_rows",
+      "exercise": "DUMBBELL_BENT_OVER_ROW",
+      "fidelity": "DIRECT",
+      "labelled": 10,
+      "counted": 10,
+      "uncounted": 0,
+      "frames": 594
+    },
+    {
+      "workout": "w14",
+      "activity": "dumbbell_rows",
+      "exercise": "DUMBBELL_BENT_OVER_ROW",
+      "fidelity": "DIRECT",
+      "labelled": 10,
+      "counted": 10,
+      "uncounted": 0,
+      "frames": 576
+    },
+    {
+      "workout": "w14",
+      "activity": "dumbbell_rows",
+      "exercise": "DUMBBELL_BENT_OVER_ROW",
+      "fidelity": "DIRECT",
+      "labelled": 10,
+      "counted": 10,
+      "uncounted": 0,
+      "frames": 588
+    },
+    {
+      "workout": "w14",
+      "activity": "tricep_extensions",
+      "exercise": "LYING_TRICEPS_EXTENSION",
+      "fidelity": "PROXY_POSTURE",
+      "labelled": 10,
+      "counted": 0,
+      "uncounted": 0,
+      "frames": 672
+    },
+    {
+      "workout": "w14",
+      "activity": "tricep_extensions",
+      "exercise": "LYING_TRICEPS_EXTENSION",
+      "fidelity": "PROXY_POSTURE",
+      "labelled": 10,
+      "counted": 0,
+      "uncounted": 0,
+      "frames": 629
+    },
+    {
+      "workout": "w14",
+      "activity": "tricep_extensions",
+      "exercise": "LYING_TRICEPS_EXTENSION",
+      "fidelity": "PROXY_POSTURE",
+      "labelled": 10,
+      "counted": 0,
+      "uncounted": 0,
+      "frames": 666
+    },
+    {
+      "workout": "w14",
+      "activity": "bicep_curls",
+      "exercise": "DUMBBELL_CURL",
+      "fidelity": "DIRECT",
+      "labelled": 10,
+      "counted": 5,
+      "uncounted": 0,
+      "frames": 608
+    },
+    {
+      "workout": "w14",
+      "activity": "bicep_curls",
+      "exercise": "DUMBBELL_CURL",
+      "fidelity": "DIRECT",
+      "labelled": 10,
+      "counted": 5,
+      "uncounted": 0,
+      "frames": 618
+    },
+    {
+      "workout": "w14",
+      "activity": "bicep_curls",
+      "exercise": "DUMBBELL_CURL",
+      "fidelity": "DIRECT",
+      "labelled": 10,
+      "counted": 5,
+      "uncounted": 0,
+      "frames": 617
+    },
+    {
+      "workout": "w14",
+      "activity": "lateral_shoulder_raises",
+      "exercise": "SIDE_LATERAL_RAISE",
+      "fidelity": "DIRECT",
+      "labelled": 10,
+      "counted": 0,
+      "uncounted": 0,
+      "frames": 679
+    },
+    {
+      "workout": "w14",
+      "activity": "lateral_shoulder_raises",
+      "exercise": "SIDE_LATERAL_RAISE",
+      "fidelity": "DIRECT",
+      "labelled": 10,
+      "counted": 0,
+      "uncounted": 0,
+      "frames": 722
+    },
+    {
+      "workout": "w14",
+      "activity": "lateral_shoulder_raises",
+      "exercise": "SIDE_LATERAL_RAISE",
+      "fidelity": "DIRECT",
+      "labelled": 10,
+      "counted": 0,
+      "uncounted": 0,
+      "frames": 671
+    },
+    {
+      "workout": "w14",
+      "activity": "lunges",
+      "exercise": "STEP_FORWARD_DYNAMIC_LUNGE",
+      "fidelity": "PROXY_UNLOADED",
+      "labelled": 10,
+      "counted": 10,
+      "uncounted": 0,
+      "frames": 864
+    },
+    {
+      "workout": "w14",
+      "activity": "lunges",
+      "exercise": "STEP_FORWARD_DYNAMIC_LUNGE",
+      "fidelity": "PROXY_UNLOADED",
+      "labelled": 10,
+      "counted": 10,
+      "uncounted": 0,
+      "frames": 841
+    },
+    {
+      "workout": "w14",
+      "activity": "lunges",
+      "exercise": "STEP_FORWARD_DYNAMIC_LUNGE",
+      "fidelity": "PROXY_UNLOADED",
+      "labelled": 10,
+      "counted": 10,
+      "uncounted": 0,
+      "frames": 812
+    },
+    {
+      "workout": "w18",
+      "activity": "squats",
+      "exercise": "BARBELL_SQUAT",
+      "fidelity": "PROXY_UNLOADED",
+      "labelled": 10,
+      "counted": 10,
+      "uncounted": 0,
+      "frames": 746
+    },
+    {
+      "workout": "w18",
+      "activity": "squats",
+      "exercise": "BARBELL_SQUAT",
+      "fidelity": "PROXY_UNLOADED",
+      "labelled": 10,
+      "counted": 10,
+      "uncounted": 0,
+      "frames": 790
+    },
+    {
+      "workout": "w18",
+      "activity": "squats",
+      "exercise": "BARBELL_SQUAT",
+      "fidelity": "PROXY_UNLOADED",
+      "labelled": 10,
+      "counted": 9,
+      "uncounted": 0,
+      "frames": 774
+    },
+    {
+      "workout": "w18",
+      "activity": "pushups",
+      "exercise": "PUSH_UP",
+      "fidelity": "DIRECT",
+      "labelled": 10,
+      "counted": 10,
+      "uncounted": 0,
+      "frames": 513
+    },
+    {
+      "workout": "w18",
+      "activity": "pushups",
+      "exercise": "PUSH_UP",
+      "fidelity": "DIRECT",
+      "labelled": 10,
+      "counted": 9,
+      "uncounted": 0,
+      "frames": 561
+    },
+    {
+      "workout": "w18",
+      "activity": "pushups",
+      "exercise": "PUSH_UP",
+      "fidelity": "DIRECT",
+      "labelled": 10,
+      "counted": 9,
+      "uncounted": 0,
+      "frames": 586
+    },
+    {
+      "workout": "w18",
+      "activity": "dumbbell_shoulder_press",
+      "exercise": "OVERHEAD_PRESS",
+      "fidelity": "PROXY_IMPLEMENT",
+      "labelled": 9,
+      "counted": 0,
+      "uncounted": 0,
+      "frames": 469
+    },
+    {
+      "workout": "w18",
+      "activity": "dumbbell_shoulder_press",
+      "exercise": "OVERHEAD_PRESS",
+      "fidelity": "PROXY_IMPLEMENT",
+      "labelled": 10,
+      "counted": 0,
+      "uncounted": 0,
+      "frames": 541
+    },
+    {
+      "workout": "w18",
+      "activity": "dumbbell_shoulder_press",
+      "exercise": "OVERHEAD_PRESS",
+      "fidelity": "PROXY_IMPLEMENT",
+      "labelled": 10,
+      "counted": 0,
+      "uncounted": 0,
+      "frames": 478
+    },
+    {
+      "workout": "w18",
+      "activity": "lunges",
+      "exercise": "STEP_FORWARD_DYNAMIC_LUNGE",
+      "fidelity": "PROXY_UNLOADED",
+      "labelled": 10,
+      "counted": 0,
+      "uncounted": 0,
+      "frames": 955
+    },
+    {
+      "workout": "w18",
+      "activity": "lunges",
+      "exercise": "STEP_FORWARD_DYNAMIC_LUNGE",
+      "fidelity": "PROXY_UNLOADED",
+      "labelled": 10,
+      "counted": 0,
+      "uncounted": 0,
+      "frames": 885
+    },
+    {
+      "workout": "w18",
+      "activity": "lunges",
+      "exercise": "STEP_FORWARD_DYNAMIC_LUNGE",
+      "fidelity": "PROXY_UNLOADED",
+      "labelled": 10,
+      "counted": 0,
+      "uncounted": 0,
+      "frames": 893
+    },
+    {
+      "workout": "w18",
+      "activity": "dumbbell_rows",
+      "exercise": "DUMBBELL_BENT_OVER_ROW",
+      "fidelity": "DIRECT",
+      "labelled": 10,
+      "counted": 5,
+      "uncounted": 0,
+      "frames": 598
+    },
+    {
+      "workout": "w18",
+      "activity": "dumbbell_rows",
+      "exercise": "DUMBBELL_BENT_OVER_ROW",
+      "fidelity": "DIRECT",
+      "labelled": 10,
+      "counted": 6,
+      "uncounted": 0,
+      "frames": 627
+    },
+    {
+      "workout": "w18",
+      "activity": "dumbbell_rows",
+      "exercise": "DUMBBELL_BENT_OVER_ROW",
+      "fidelity": "DIRECT",
+      "labelled": 10,
+      "counted": 8,
+      "uncounted": 0,
+      "frames": 618
+    },
+    {
+      "workout": "w18",
+      "activity": "tricep_extensions",
+      "exercise": "LYING_TRICEPS_EXTENSION",
+      "fidelity": "PROXY_POSTURE",
+      "labelled": 10,
+      "counted": 0,
+      "uncounted": 0,
+      "frames": 613
+    },
+    {
+      "workout": "w18",
+      "activity": "tricep_extensions",
+      "exercise": "LYING_TRICEPS_EXTENSION",
+      "fidelity": "PROXY_POSTURE",
+      "labelled": 10,
+      "counted": 0,
+      "uncounted": 0,
+      "frames": 597
+    },
+    {
+      "workout": "w18",
+      "activity": "tricep_extensions",
+      "exercise": "LYING_TRICEPS_EXTENSION",
+      "fidelity": "PROXY_POSTURE",
+      "labelled": 11,
+      "counted": 0,
+      "uncounted": 0,
+      "frames": 651
+    },
+    {
+      "workout": "w18",
+      "activity": "bicep_curls",
+      "exercise": "DUMBBELL_CURL",
+      "fidelity": "DIRECT",
+      "labelled": 10,
+      "counted": 3,
+      "uncounted": 0,
+      "frames": 543
+    },
+    {
+      "workout": "w18",
+      "activity": "bicep_curls",
+      "exercise": "DUMBBELL_CURL",
+      "fidelity": "DIRECT",
+      "labelled": 10,
+      "counted": 3,
+      "uncounted": 0,
+      "frames": 607
+    },
+    {
+      "workout": "w18",
+      "activity": "bicep_curls",
+      "exercise": "DUMBBELL_CURL",
+      "fidelity": "DIRECT",
+      "labelled": 10,
+      "counted": 2,
+      "uncounted": 0,
+      "frames": 596
+    },
+    {
+      "workout": "w18",
+      "activity": "lateral_shoulder_raises",
+      "exercise": "SIDE_LATERAL_RAISE",
+      "fidelity": "DIRECT",
+      "labelled": 10,
+      "counted": 6,
+      "uncounted": 0,
+      "frames": 633
+    },
+    {
+      "workout": "w18",
+      "activity": "lateral_shoulder_raises",
+      "exercise": "SIDE_LATERAL_RAISE",
+      "fidelity": "DIRECT",
+      "labelled": 10,
+      "counted": 7,
+      "uncounted": 0,
+      "frames": 648
+    },
+    {
+      "workout": "w18",
+      "activity": "lateral_shoulder_raises",
+      "exercise": "SIDE_LATERAL_RAISE",
+      "fidelity": "DIRECT",
+      "labelled": 10,
+      "counted": 6,
+      "uncounted": 0,
+      "frames": 621
+    },
+    {
+      "workout": "w19",
+      "activity": "squats",
+      "exercise": "BARBELL_SQUAT",
+      "fidelity": "PROXY_UNLOADED",
+      "labelled": 10,
+      "counted": 10,
+      "uncounted": 0,
+      "frames": 527
+    },
+    {
+      "workout": "w19",
+      "activity": "squats",
+      "exercise": "BARBELL_SQUAT",
+      "fidelity": "PROXY_UNLOADED",
+      "labelled": 10,
+      "counted": 10,
+      "uncounted": 0,
+      "frames": 517
+    },
+    {
+      "workout": "w19",
+      "activity": "squats",
+      "exercise": "BARBELL_SQUAT",
+      "fidelity": "PROXY_UNLOADED",
+      "labelled": 10,
+      "counted": 9,
+      "uncounted": 0,
+      "frames": 505
+    },
+    {
+      "workout": "w19",
+      "activity": "pushups",
+      "exercise": "PUSH_UP",
+      "fidelity": "DIRECT",
+      "labelled": 10,
+      "counted": 8,
+      "uncounted": 0,
+      "frames": 699
+    },
+    {
+      "workout": "w19",
+      "activity": "pushups",
+      "exercise": "PUSH_UP",
+      "fidelity": "DIRECT",
+      "labelled": 10,
+      "counted": 7,
+      "uncounted": 0,
+      "frames": 916
+    },
+    {
+      "workout": "w19",
+      "activity": "pushups",
+      "exercise": "PUSH_UP",
+      "fidelity": "DIRECT",
+      "labelled": 7,
+      "counted": 7,
+      "uncounted": 0,
+      "frames": 775
+    },
+    {
+      "workout": "w19",
+      "activity": "dumbbell_shoulder_press",
+      "exercise": "OVERHEAD_PRESS",
+      "fidelity": "PROXY_IMPLEMENT",
+      "labelled": 10,
+      "counted": 6,
+      "uncounted": 0,
+      "frames": 826
+    },
+    {
+      "workout": "w19",
+      "activity": "dumbbell_shoulder_press",
+      "exercise": "OVERHEAD_PRESS",
+      "fidelity": "PROXY_IMPLEMENT",
+      "labelled": 10,
+      "counted": 4,
+      "uncounted": 0,
+      "frames": 773
+    },
+    {
+      "workout": "w19",
+      "activity": "dumbbell_shoulder_press",
+      "exercise": "OVERHEAD_PRESS",
+      "fidelity": "PROXY_IMPLEMENT",
+      "labelled": 10,
+      "counted": 4,
+      "uncounted": 0,
+      "frames": 888
+    },
+    {
+      "workout": "w19",
+      "activity": "lunges",
+      "exercise": "STEP_FORWARD_DYNAMIC_LUNGE",
+      "fidelity": "PROXY_UNLOADED",
+      "labelled": 10,
+      "counted": 10,
+      "uncounted": 8,
+      "frames": 1055
+    },
+    {
+      "workout": "w19",
+      "activity": "lunges",
+      "exercise": "STEP_FORWARD_DYNAMIC_LUNGE",
+      "fidelity": "PROXY_UNLOADED",
+      "labelled": 10,
+      "counted": 10,
+      "uncounted": 6,
+      "frames": 856
+    },
+    {
+      "workout": "w19",
+      "activity": "lunges",
+      "exercise": "STEP_FORWARD_DYNAMIC_LUNGE",
+      "fidelity": "PROXY_UNLOADED",
+      "labelled": 10,
+      "counted": 10,
+      "uncounted": 5,
+      "frames": 805
+    },
+    {
+      "workout": "w19",
+      "activity": "dumbbell_rows",
+      "exercise": "DUMBBELL_BENT_OVER_ROW",
+      "fidelity": "DIRECT",
+      "labelled": 10,
+      "counted": 10,
+      "uncounted": 0,
+      "frames": 471
+    },
+    {
+      "workout": "w19",
+      "activity": "dumbbell_rows",
+      "exercise": "DUMBBELL_BENT_OVER_ROW",
+      "fidelity": "DIRECT",
+      "labelled": 10,
+      "counted": 10,
+      "uncounted": 0,
+      "frames": 511
+    },
+    {
+      "workout": "w19",
+      "activity": "dumbbell_rows",
+      "exercise": "DUMBBELL_BENT_OVER_ROW",
+      "fidelity": "DIRECT",
+      "labelled": 10,
+      "counted": 10,
+      "uncounted": 0,
+      "frames": 482
+    },
+    {
+      "workout": "w19",
+      "activity": "tricep_extensions",
+      "exercise": "LYING_TRICEPS_EXTENSION",
+      "fidelity": "PROXY_POSTURE",
+      "labelled": 10,
+      "counted": 0,
+      "uncounted": 0,
+      "frames": 628
+    },
+    {
+      "workout": "w19",
+      "activity": "tricep_extensions",
+      "exercise": "LYING_TRICEPS_EXTENSION",
+      "fidelity": "PROXY_POSTURE",
+      "labelled": 11,
+      "counted": 0,
+      "uncounted": 0,
+      "frames": 650
+    },
+    {
+      "workout": "w19",
+      "activity": "tricep_extensions",
+      "exercise": "LYING_TRICEPS_EXTENSION",
+      "fidelity": "PROXY_POSTURE",
+      "labelled": 11,
+      "counted": 0,
+      "uncounted": 0,
+      "frames": 616
+    },
+    {
+      "workout": "w19",
+      "activity": "bicep_curls",
+      "exercise": "DUMBBELL_CURL",
+      "fidelity": "DIRECT",
+      "labelled": 10,
+      "counted": 5,
+      "uncounted": 0,
+      "frames": 710
+    },
+    {
+      "workout": "w19",
+      "activity": "bicep_curls",
+      "exercise": "DUMBBELL_CURL",
+      "fidelity": "DIRECT",
+      "labelled": 10,
+      "counted": 5,
+      "uncounted": 0,
+      "frames": 672
+    },
+    {
+      "workout": "w19",
+      "activity": "bicep_curls",
+      "exercise": "DUMBBELL_CURL",
+      "fidelity": "DIRECT",
+      "labelled": 10,
+      "counted": 4,
+      "uncounted": 0,
+      "frames": 614
+    },
+    {
+      "workout": "w19",
+      "activity": "bicep_curls",
+      "exercise": "DUMBBELL_CURL",
+      "fidelity": "DIRECT",
+      "labelled": 10,
+      "counted": 4,
+      "uncounted": 0,
+      "frames": 655
+    },
+    {
+      "workout": "w19",
+      "activity": "lateral_shoulder_raises",
+      "exercise": "SIDE_LATERAL_RAISE",
+      "fidelity": "DIRECT",
+      "labelled": 9,
+      "counted": 0,
+      "uncounted": 0,
+      "frames": 442
+    },
+    {
+      "workout": "w20",
+      "activity": "squats",
+      "exercise": "BARBELL_SQUAT",
+      "fidelity": "PROXY_UNLOADED",
+      "labelled": 10,
+      "counted": 10,
+      "uncounted": 0,
+      "frames": 829
+    },
+    {
+      "workout": "w20",
+      "activity": "squats",
+      "exercise": "BARBELL_SQUAT",
+      "fidelity": "PROXY_UNLOADED",
+      "labelled": 10,
+      "counted": 10,
+      "uncounted": 0,
+      "frames": 823
+    },
+    {
+      "workout": "w20",
+      "activity": "squats",
+      "exercise": "BARBELL_SQUAT",
+      "fidelity": "PROXY_UNLOADED",
+      "labelled": 10,
+      "counted": 10,
+      "uncounted": 0,
+      "frames": 880
+    },
+    {
+      "workout": "w20",
+      "activity": "pushups",
+      "exercise": "PUSH_UP",
+      "fidelity": "DIRECT",
+      "labelled": 10,
+      "counted": 9,
+      "uncounted": 0,
+      "frames": 559
+    },
+    {
+      "workout": "w20",
+      "activity": "pushups",
+      "exercise": "PUSH_UP",
+      "fidelity": "DIRECT",
+      "labelled": 10,
+      "counted": 9,
+      "uncounted": 0,
+      "frames": 664
+    },
+    {
+      "workout": "w20",
+      "activity": "pushups",
+      "exercise": "PUSH_UP",
+      "fidelity": "DIRECT",
+      "labelled": 10,
+      "counted": 3,
+      "uncounted": 0,
+      "frames": 759
+    },
+    {
+      "workout": "w20",
+      "activity": "lunges",
+      "exercise": "STEP_FORWARD_DYNAMIC_LUNGE",
+      "fidelity": "PROXY_UNLOADED",
+      "labelled": 10,
+      "counted": 9,
+      "uncounted": 0,
+      "frames": 1035
+    },
+    {
+      "workout": "w20",
+      "activity": "lunges",
+      "exercise": "STEP_FORWARD_DYNAMIC_LUNGE",
+      "fidelity": "PROXY_UNLOADED",
+      "labelled": 9,
+      "counted": 8,
+      "uncounted": 0,
+      "frames": 937
+    },
+    {
+      "workout": "w20",
+      "activity": "lunges",
+      "exercise": "STEP_FORWARD_DYNAMIC_LUNGE",
+      "fidelity": "PROXY_UNLOADED",
+      "labelled": 10,
+      "counted": 8,
+      "uncounted": 0,
+      "frames": 1014
+    },
+    {
+      "workout": "w20",
+      "activity": "dumbbell_rows",
+      "exercise": "DUMBBELL_BENT_OVER_ROW",
+      "fidelity": "DIRECT",
+      "labelled": 10,
+      "counted": 8,
+      "uncounted": 0,
+      "frames": 623
+    },
+    {
+      "workout": "w20",
+      "activity": "dumbbell_rows",
+      "exercise": "DUMBBELL_BENT_OVER_ROW",
+      "fidelity": "DIRECT",
+      "labelled": 10,
+      "counted": 9,
+      "uncounted": 0,
+      "frames": 732
+    },
+    {
+      "workout": "w20",
+      "activity": "dumbbell_rows",
+      "exercise": "DUMBBELL_BENT_OVER_ROW",
+      "fidelity": "DIRECT",
+      "labelled": 10,
+      "counted": 9,
+      "uncounted": 0,
+      "frames": 650
+    },
+    {
+      "workout": "w20",
+      "activity": "tricep_extensions",
+      "exercise": "LYING_TRICEPS_EXTENSION",
+      "fidelity": "PROXY_POSTURE",
+      "labelled": 10,
+      "counted": 0,
+      "uncounted": 0,
+      "frames": 767
+    },
+    {
+      "workout": "w20",
+      "activity": "tricep_extensions",
+      "exercise": "LYING_TRICEPS_EXTENSION",
+      "fidelity": "PROXY_POSTURE",
+      "labelled": 10,
+      "counted": 0,
+      "uncounted": 0,
+      "frames": 740
+    },
+    {
+      "workout": "w20",
+      "activity": "tricep_extensions",
+      "exercise": "LYING_TRICEPS_EXTENSION",
+      "fidelity": "PROXY_POSTURE",
+      "labelled": 10,
+      "counted": 0,
+      "uncounted": 0,
+      "frames": 706
+    },
+    {
+      "workout": "w20",
+      "activity": "bicep_curls",
+      "exercise": "DUMBBELL_CURL",
+      "fidelity": "DIRECT",
+      "labelled": 10,
+      "counted": 4,
+      "uncounted": 0,
+      "frames": 811
+    },
+    {
+      "workout": "w20",
+      "activity": "bicep_curls",
+      "exercise": "DUMBBELL_CURL",
+      "fidelity": "DIRECT",
+      "labelled": 10,
+      "counted": 4,
+      "uncounted": 0,
+      "frames": 819
+    },
+    {
+      "workout": "w20",
+      "activity": "bicep_curls",
+      "exercise": "DUMBBELL_CURL",
+      "fidelity": "DIRECT",
+      "labelled": 10,
+      "counted": 4,
+      "uncounted": 0,
+      "frames": 816
+    },
+    {
+      "workout": "w20",
+      "activity": "lateral_shoulder_raises",
+      "exercise": "SIDE_LATERAL_RAISE",
+      "fidelity": "DIRECT",
+      "labelled": 10,
+      "counted": 7,
+      "uncounted": 0,
+      "frames": 932
+    },
+    {
+      "workout": "w20",
+      "activity": "lateral_shoulder_raises",
+      "exercise": "SIDE_LATERAL_RAISE",
+      "fidelity": "DIRECT",
+      "labelled": 10,
+      "counted": 7,
+      "uncounted": 0,
+      "frames": 925
+    },
+    {
+      "workout": "w20",
+      "activity": "lateral_shoulder_raises",
+      "exercise": "SIDE_LATERAL_RAISE",
+      "fidelity": "DIRECT",
+      "labelled": 10,
+      "counted": 8,
+      "uncounted": 0,
+      "frames": 959
+    }
+  ],
+  "gravityCondition": "none",
+  "gravityComparison": {
+    "note": "Only exercises with a posture clause appear under 'level-camera'; for every other exercise the two conditions are the same replay.",
+    "conditions": {
+      "none": {
+        "byExercise": [
+          {
+            "exercise": "BARBELL_SQUAT",
+            "fidelity": "PROXY_UNLOADED",
+            "mappingNote": "MM-Fit squats are bodyweight; the shipped spec is the barbell squat, whose 110/105 degree lines are uncalibrated heuristics and whose hip definition gate at 130 was placed on loaded-squat label distributions.",
+            "sets": 15,
+            "labelledRepetitions": 150,
+            "countedRepetitions": 148,
+            "uncountedAttempts": 0,
+            "truePositives": 148,
+            "falsePositives": 0,
+            "falseNegatives": 2,
+            "meanAbsoluteError": 0.133,
+            "normalisedMeanAbsoluteError": 0.013,
+            "meanSignedError": -0.133,
+            "offByOneAccuracy": 1.0,
+            "exactMatchRate": 0.867,
+            "countPrecision": 1.0,
+            "countRecall": 0.987,
+            "countF1": 0.993
+          },
+          {
+            "exercise": "DUMBBELL_BENT_OVER_ROW",
+            "fidelity": "DIRECT",
+            "mappingNote": "MM-Fit calls these standing dumbbell rows.",
+            "sets": 15,
+            "labelledRepetitions": 150,
+            "countedRepetitions": 133,
+            "uncountedAttempts": 0,
+            "truePositives": 133,
+            "falsePositives": 0,
+            "falseNegatives": 17,
+            "meanAbsoluteError": 1.133,
+            "normalisedMeanAbsoluteError": 0.113,
+            "meanSignedError": -1.133,
+            "offByOneAccuracy": 0.667,
+            "exactMatchRate": 0.533,
+            "countPrecision": 1.0,
+            "countRecall": 0.887,
+            "countF1": 0.94
+          },
+          {
+            "exercise": "DUMBBELL_CURL",
+            "fidelity": "DIRECT",
+            "mappingNote": "MM-Fit curls are dumbbell and may alternate arms, which is why the dumbbell spec (no bilateral coherence) is the right one rather than the barbell curl.",
+            "sets": 16,
+            "labelledRepetitions": 160,
+            "countedRepetitions": 68,
+            "uncountedAttempts": 0,
+            "truePositives": 68,
+            "falsePositives": 0,
+            "falseNegatives": 92,
+            "meanAbsoluteError": 5.75,
+            "normalisedMeanAbsoluteError": 0.575,
+            "meanSignedError": -5.75,
+            "offByOneAccuracy": 0.0,
+            "exactMatchRate": 0.0,
+            "countPrecision": 1.0,
+            "countRecall": 0.425,
+            "countF1": 0.596
+          },
+          {
+            "exercise": "LYING_TRICEPS_EXTENSION",
+            "fidelity": "PROXY_POSTURE",
+            "mappingNote": "MM-Fit performs these standing or seated with a dumbbell; the shipped spec is the lying variant. Same elbow extension, different body orientation -- the weakest mapping here, and reported separately for that reason.",
+            "sets": 15,
+            "labelledRepetitions": 153,
+            "countedRepetitions": 0,
+            "uncountedAttempts": 0,
+            "truePositives": 0,
+            "falsePositives": 0,
+            "falseNegatives": 153,
+            "meanAbsoluteError": 10.2,
+            "normalisedMeanAbsoluteError": 1.0,
+            "meanSignedError": -10.2,
+            "offByOneAccuracy": 0.0,
+            "exactMatchRate": 0.0,
+            "countPrecision": 0.0,
+            "countRecall": 0.0,
+            "countF1": 0.0
+          },
+          {
+            "exercise": "OVERHEAD_PRESS",
+            "fidelity": "PROXY_IMPLEMENT",
+            "mappingNote": "Dumbbell press against a spec written for the barbell overhead press; the elbow extension arc is the same, the hand path is not.",
+            "sets": 12,
+            "labelledRepetitions": 119,
+            "countedRepetitions": 42,
+            "uncountedAttempts": 0,
+            "truePositives": 42,
+            "falsePositives": 0,
+            "falseNegatives": 77,
+            "meanAbsoluteError": 6.417,
+            "normalisedMeanAbsoluteError": 0.65,
+            "meanSignedError": -6.417,
+            "offByOneAccuracy": 0.167,
+            "exactMatchRate": 0.167,
+            "countPrecision": 1.0,
+            "countRecall": 0.353,
+            "countF1": 0.522
+          },
+          {
+            "exercise": "PUSH_UP",
+            "fidelity": "DIRECT",
+            "mappingNote": "Same movement. The gravity clause is silent here because a downloaded video carries no device sensor, so the push-up's posture requirement abstains.",
+            "sets": 15,
+            "labelledRepetitions": 147,
+            "countedRepetitions": 124,
+            "uncountedAttempts": 0,
+            "truePositives": 124,
+            "falsePositives": 0,
+            "falseNegatives": 23,
+            "meanAbsoluteError": 1.533,
+            "normalisedMeanAbsoluteError": 0.153,
+            "meanSignedError": -1.533,
+            "offByOneAccuracy": 0.667,
+            "exactMatchRate": 0.4,
+            "countPrecision": 1.0,
+            "countRecall": 0.844,
+            "countF1": 0.915
+          },
+          {
+            "exercise": "SIDE_LATERAL_RAISE",
+            "fidelity": "DIRECT",
+            "mappingNote": "One of the two shipped exercises whose preferred view is frontal, so MM-Fit's camera placement is the recommended one here rather than a penalty.",
+            "sets": 13,
+            "labelledRepetitions": 129,
+            "countedRepetitions": 41,
+            "uncountedAttempts": 0,
+            "truePositives": 41,
+            "falsePositives": 0,
+            "falseNegatives": 88,
+            "meanAbsoluteError": 6.769,
+            "normalisedMeanAbsoluteError": 0.685,
+            "meanSignedError": -6.769,
+            "offByOneAccuracy": 0.0,
+            "exactMatchRate": 0.0,
+            "countPrecision": 1.0,
+            "countRecall": 0.318,
+            "countF1": 0.482
+          },
+          {
+            "exercise": "STEP_FORWARD_DYNAMIC_LUNGE",
+            "fidelity": "PROXY_UNLOADED",
+            "mappingNote": "MM-Fit does not say which lunge direction; the engine cannot separate forward from backward either (policy rule 5c), so the forward spec stands for both.",
+            "sets": 15,
+            "labelledRepetitions": 149,
+            "countedRepetitions": 113,
+            "uncountedAttempts": 19,
+            "truePositives": 113,
+            "falsePositives": 0,
+            "falseNegatives": 36,
+            "meanAbsoluteError": 2.4,
+            "normalisedMeanAbsoluteError": 0.241,
+            "meanSignedError": -2.4,
+            "offByOneAccuracy": 0.667,
+            "exactMatchRate": 0.533,
+            "countPrecision": 1.0,
+            "countRecall": 0.758,
+            "countF1": 0.863
+          }
+        ],
+        "restFiring": [
+          {
+            "exercise": "BARBELL_SQUAT",
+            "workouts": 5,
+            "gaps": 147,
+            "restFrames": 284314,
+            "counted": 20,
+            "restMinutes": 158.0,
+            "countedPerRestMinute": 0.127
+          },
+          {
+            "exercise": "DUMBBELL_BENT_OVER_ROW",
+            "workouts": 5,
+            "gaps": 147,
+            "restFrames": 284314,
+            "counted": 177,
+            "restMinutes": 158.0,
+            "countedPerRestMinute": 1.121
+          },
+          {
+            "exercise": "DUMBBELL_CURL",
+            "workouts": 5,
+            "gaps": 147,
+            "restFrames": 284314,
+            "counted": 177,
+            "restMinutes": 158.0,
+            "countedPerRestMinute": 1.121
+          },
+          {
+            "exercise": "LYING_TRICEPS_EXTENSION",
+            "workouts": 5,
+            "gaps": 147,
+            "restFrames": 284314,
+            "counted": 48,
+            "restMinutes": 158.0,
+            "countedPerRestMinute": 0.304
+          },
+          {
+            "exercise": "OVERHEAD_PRESS",
+            "workouts": 5,
+            "gaps": 147,
+            "restFrames": 284314,
+            "counted": 0,
+            "restMinutes": 158.0,
+            "countedPerRestMinute": 0.0
+          },
+          {
+            "exercise": "PUSH_UP",
+            "workouts": 5,
+            "gaps": 147,
+            "restFrames": 284314,
+            "counted": 298,
+            "restMinutes": 158.0,
+            "countedPerRestMinute": 1.887
+          },
+          {
+            "exercise": "SIDE_LATERAL_RAISE",
+            "workouts": 5,
+            "gaps": 147,
+            "restFrames": 284314,
+            "counted": 54,
+            "restMinutes": 158.0,
+            "countedPerRestMinute": 0.342
+          },
+          {
+            "exercise": "STEP_FORWARD_DYNAMIC_LUNGE",
+            "workouts": 5,
+            "gaps": 147,
+            "restFrames": 284314,
+            "counted": 47,
+            "restMinutes": 158.0,
+            "countedPerRestMinute": 0.298
+          }
+        ],
+        "crossExerciseFiring": [
+          {
+            "performedActivity": "squats",
+            "countedAs": "STEP_FORWARD_DYNAMIC_LUNGE",
+            "sets": 15,
+            "performedRepetitions": 150,
+            "countedRepetitions": 148,
+            "activityIsMapped": true,
+            "countedPerPerformedRepetition": 0.987
+          },
+          {
+            "performedActivity": "dumbbell_shoulder_press",
+            "countedAs": "PUSH_UP",
+            "sets": 12,
+            "performedRepetitions": 119,
+            "countedRepetitions": 107,
+            "activityIsMapped": true,
+            "countedPerPerformedRepetition": 0.899
+          },
+          {
+            "performedActivity": "dumbbell_rows",
+            "countedAs": "PUSH_UP",
+            "sets": 15,
+            "performedRepetitions": 150,
+            "countedRepetitions": 133,
+            "activityIsMapped": true,
+            "countedPerPerformedRepetition": 0.887
+          },
+          {
+            "performedActivity": "dumbbell_rows",
+            "countedAs": "DUMBBELL_CURL",
+            "sets": 15,
+            "performedRepetitions": 150,
+            "countedRepetitions": 133,
+            "activityIsMapped": true,
+            "countedPerPerformedRepetition": 0.887
+          },
+          {
+            "performedActivity": "pushups",
+            "countedAs": "DUMBBELL_CURL",
+            "sets": 15,
+            "performedRepetitions": 147,
+            "countedRepetitions": 124,
+            "activityIsMapped": true,
+            "countedPerPerformedRepetition": 0.844
+          },
+          {
+            "performedActivity": "pushups",
+            "countedAs": "DUMBBELL_BENT_OVER_ROW",
+            "sets": 15,
+            "performedRepetitions": 147,
+            "countedRepetitions": 124,
+            "activityIsMapped": true,
+            "countedPerPerformedRepetition": 0.844
+          },
+          {
+            "performedActivity": "pushups",
+            "countedAs": "LYING_TRICEPS_EXTENSION",
+            "sets": 15,
+            "performedRepetitions": 147,
+            "countedRepetitions": 102,
+            "activityIsMapped": true,
+            "countedPerPerformedRepetition": 0.694
+          },
+          {
+            "performedActivity": "dumbbell_rows",
+            "countedAs": "LYING_TRICEPS_EXTENSION",
+            "sets": 15,
+            "performedRepetitions": 150,
+            "countedRepetitions": 85,
+            "activityIsMapped": true,
+            "countedPerPerformedRepetition": 0.567
+          },
+          {
+            "performedActivity": "bicep_curls",
+            "countedAs": "DUMBBELL_BENT_OVER_ROW",
+            "sets": 16,
+            "performedRepetitions": 160,
+            "countedRepetitions": 68,
+            "activityIsMapped": true,
+            "countedPerPerformedRepetition": 0.425
+          },
+          {
+            "performedActivity": "squats",
+            "countedAs": "PUSH_UP",
+            "sets": 15,
+            "performedRepetitions": 150,
+            "countedRepetitions": 62,
+            "activityIsMapped": true,
+            "countedPerPerformedRepetition": 0.413
+          },
+          {
+            "performedActivity": "lunges",
+            "countedAs": "BARBELL_SQUAT",
+            "sets": 15,
+            "performedRepetitions": 149,
+            "countedRepetitions": 57,
+            "activityIsMapped": true,
+            "countedPerPerformedRepetition": 0.383
+          },
+          {
+            "performedActivity": "squats",
+            "countedAs": "SIDE_LATERAL_RAISE",
+            "sets": 15,
+            "performedRepetitions": 150,
+            "countedRepetitions": 57,
+            "activityIsMapped": true,
+            "countedPerPerformedRepetition": 0.38
+          },
+          {
+            "performedActivity": "dumbbell_shoulder_press",
+            "countedAs": "LYING_TRICEPS_EXTENSION",
+            "sets": 12,
+            "performedRepetitions": 119,
+            "countedRepetitions": 42,
+            "activityIsMapped": true,
+            "countedPerPerformedRepetition": 0.353
+          },
+          {
+            "performedActivity": "jumping_jacks",
+            "countedAs": "SIDE_LATERAL_RAISE",
+            "sets": 12,
+            "performedRepetitions": 121,
+            "countedRepetitions": 41,
+            "activityIsMapped": false,
+            "countedPerPerformedRepetition": 0.339
+          },
+          {
+            "performedActivity": "squats",
+            "countedAs": "DUMBBELL_CURL",
+            "sets": 15,
+            "performedRepetitions": 150,
+            "countedRepetitions": 49,
+            "activityIsMapped": true,
+            "countedPerPerformedRepetition": 0.327
+          },
+          {
+            "performedActivity": "squats",
+            "countedAs": "DUMBBELL_BENT_OVER_ROW",
+            "sets": 15,
+            "performedRepetitions": 150,
+            "countedRepetitions": 49,
+            "activityIsMapped": true,
+            "countedPerPerformedRepetition": 0.327
+          },
+          {
+            "performedActivity": "bicep_curls",
+            "countedAs": "LYING_TRICEPS_EXTENSION",
+            "sets": 16,
+            "performedRepetitions": 160,
+            "countedRepetitions": 51,
+            "activityIsMapped": true,
+            "countedPerPerformedRepetition": 0.319
+          },
+          {
+            "performedActivity": "lateral_shoulder_raises",
+            "countedAs": "PUSH_UP",
+            "sets": 13,
+            "performedRepetitions": 129,
+            "countedRepetitions": 22,
+            "activityIsMapped": true,
+            "countedPerPerformedRepetition": 0.171
+          },
+          {
+            "performedActivity": "bicep_curls",
+            "countedAs": "PUSH_UP",
+            "sets": 16,
+            "performedRepetitions": 160,
+            "countedRepetitions": 17,
+            "activityIsMapped": true,
+            "countedPerPerformedRepetition": 0.106
+          },
+          {
+            "performedActivity": "dumbbell_rows",
+            "countedAs": "STEP_FORWARD_DYNAMIC_LUNGE",
+            "sets": 15,
+            "performedRepetitions": 150,
+            "countedRepetitions": 11,
+            "activityIsMapped": true,
+            "countedPerPerformedRepetition": 0.073
+          },
+          {
+            "performedActivity": "dumbbell_shoulder_press",
+            "countedAs": "DUMBBELL_CURL",
+            "sets": 12,
+            "performedRepetitions": 119,
+            "countedRepetitions": 8,
+            "activityIsMapped": true,
+            "countedPerPerformedRepetition": 0.067
+          },
+          {
+            "performedActivity": "dumbbell_shoulder_press",
+            "countedAs": "DUMBBELL_BENT_OVER_ROW",
+            "sets": 12,
+            "performedRepetitions": 119,
+            "countedRepetitions": 8,
+            "activityIsMapped": true,
+            "countedPerPerformedRepetition": 0.067
+          },
+          {
+            "performedActivity": "jumping_jacks",
+            "countedAs": "PUSH_UP",
+            "sets": 12,
+            "performedRepetitions": 121,
+            "countedRepetitions": 8,
+            "activityIsMapped": false,
+            "countedPerPerformedRepetition": 0.066
+          },
+          {
+            "performedActivity": "jumping_jacks",
+            "countedAs": "DUMBBELL_CURL",
+            "sets": 12,
+            "performedRepetitions": 121,
+            "countedRepetitions": 2,
+            "activityIsMapped": false,
+            "countedPerPerformedRepetition": 0.017
+          },
+          {
+            "performedActivity": "jumping_jacks",
+            "countedAs": "DUMBBELL_BENT_OVER_ROW",
+            "sets": 12,
+            "performedRepetitions": 121,
+            "countedRepetitions": 2,
+            "activityIsMapped": false,
+            "countedPerPerformedRepetition": 0.017
+          },
+          {
+            "performedActivity": "dumbbell_rows",
+            "countedAs": "BARBELL_SQUAT",
+            "sets": 15,
+            "performedRepetitions": 150,
+            "countedRepetitions": 2,
+            "activityIsMapped": true,
+            "countedPerPerformedRepetition": 0.013
+          },
+          {
+            "performedActivity": "bicep_curls",
+            "countedAs": "BARBELL_SQUAT",
+            "sets": 16,
+            "performedRepetitions": 160,
+            "countedRepetitions": 2,
+            "activityIsMapped": true,
+            "countedPerPerformedRepetition": 0.013
+          },
+          {
+            "performedActivity": "bicep_curls",
+            "countedAs": "STEP_FORWARD_DYNAMIC_LUNGE",
+            "sets": 16,
+            "performedRepetitions": 160,
+            "countedRepetitions": 2,
+            "activityIsMapped": true,
+            "countedPerPerformedRepetition": 0.013
+          },
+          {
+            "performedActivity": "bicep_curls",
+            "countedAs": "SIDE_LATERAL_RAISE",
+            "sets": 16,
+            "performedRepetitions": 160,
+            "countedRepetitions": 2,
+            "activityIsMapped": true,
+            "countedPerPerformedRepetition": 0.013
+          },
+          {
+            "performedActivity": "lunges",
+            "countedAs": "PUSH_UP",
+            "sets": 15,
+            "performedRepetitions": 149,
+            "countedRepetitions": 1,
+            "activityIsMapped": true,
+            "countedPerPerformedRepetition": 0.007
+          },
+          {
+            "performedActivity": "situps",
+            "countedAs": "STEP_FORWARD_DYNAMIC_LUNGE",
+            "sets": 15,
+            "performedRepetitions": 150,
+            "countedRepetitions": 1,
+            "activityIsMapped": false,
+            "countedPerPerformedRepetition": 0.007
+          },
+          {
+            "performedActivity": "situps",
+            "countedAs": "PUSH_UP",
+            "sets": 15,
+            "performedRepetitions": 150,
+            "countedRepetitions": 1,
+            "activityIsMapped": false,
+            "countedPerPerformedRepetition": 0.007
+          },
+          {
+            "performedActivity": "situps",
+            "countedAs": "DUMBBELL_CURL",
+            "sets": 15,
+            "performedRepetitions": 150,
+            "countedRepetitions": 1,
+            "activityIsMapped": false,
+            "countedPerPerformedRepetition": 0.007
+          },
+          {
+            "performedActivity": "situps",
+            "countedAs": "DUMBBELL_BENT_OVER_ROW",
+            "sets": 15,
+            "performedRepetitions": 150,
+            "countedRepetitions": 1,
+            "activityIsMapped": false,
+            "countedPerPerformedRepetition": 0.007
+          },
+          {
+            "performedActivity": "squats",
+            "countedAs": "OVERHEAD_PRESS",
+            "sets": 15,
+            "performedRepetitions": 150,
+            "countedRepetitions": 0,
+            "activityIsMapped": true,
+            "countedPerPerformedRepetition": 0.0
+          },
+          {
+            "performedActivity": "squats",
+            "countedAs": "LYING_TRICEPS_EXTENSION",
+            "sets": 15,
+            "performedRepetitions": 150,
+            "countedRepetitions": 0,
+            "activityIsMapped": true,
+            "countedPerPerformedRepetition": 0.0
+          },
+          {
+            "performedActivity": "pushups",
+            "countedAs": "BARBELL_SQUAT",
+            "sets": 15,
+            "performedRepetitions": 147,
+            "countedRepetitions": 0,
+            "activityIsMapped": true,
+            "countedPerPerformedRepetition": 0.0
+          },
+          {
+            "performedActivity": "pushups",
+            "countedAs": "STEP_FORWARD_DYNAMIC_LUNGE",
+            "sets": 15,
+            "performedRepetitions": 147,
+            "countedRepetitions": 0,
+            "activityIsMapped": true,
+            "countedPerPerformedRepetition": 0.0
+          },
+          {
+            "performedActivity": "pushups",
+            "countedAs": "OVERHEAD_PRESS",
+            "sets": 15,
+            "performedRepetitions": 147,
+            "countedRepetitions": 0,
+            "activityIsMapped": true,
+            "countedPerPerformedRepetition": 0.0
+          },
+          {
+            "performedActivity": "pushups",
+            "countedAs": "SIDE_LATERAL_RAISE",
+            "sets": 15,
+            "performedRepetitions": 147,
+            "countedRepetitions": 0,
+            "activityIsMapped": true,
+            "countedPerPerformedRepetition": 0.0
+          },
+          {
+            "performedActivity": "dumbbell_shoulder_press",
+            "countedAs": "BARBELL_SQUAT",
+            "sets": 12,
+            "performedRepetitions": 119,
+            "countedRepetitions": 0,
+            "activityIsMapped": true,
+            "countedPerPerformedRepetition": 0.0
+          },
+          {
+            "performedActivity": "dumbbell_shoulder_press",
+            "countedAs": "STEP_FORWARD_DYNAMIC_LUNGE",
+            "sets": 12,
+            "performedRepetitions": 119,
+            "countedRepetitions": 0,
+            "activityIsMapped": true,
+            "countedPerPerformedRepetition": 0.0
+          },
+          {
+            "performedActivity": "dumbbell_shoulder_press",
+            "countedAs": "SIDE_LATERAL_RAISE",
+            "sets": 12,
+            "performedRepetitions": 119,
+            "countedRepetitions": 0,
+            "activityIsMapped": true,
+            "countedPerPerformedRepetition": 0.0
+          },
+          {
+            "performedActivity": "lunges",
+            "countedAs": "DUMBBELL_CURL",
+            "sets": 15,
+            "performedRepetitions": 149,
+            "countedRepetitions": 0,
+            "activityIsMapped": true,
+            "countedPerPerformedRepetition": 0.0
+          },
+          {
+            "performedActivity": "lunges",
+            "countedAs": "OVERHEAD_PRESS",
+            "sets": 15,
+            "performedRepetitions": 149,
+            "countedRepetitions": 0,
+            "activityIsMapped": true,
+            "countedPerPerformedRepetition": 0.0
+          },
+          {
+            "performedActivity": "lunges",
+            "countedAs": "DUMBBELL_BENT_OVER_ROW",
+            "sets": 15,
+            "performedRepetitions": 149,
+            "countedRepetitions": 0,
+            "activityIsMapped": true,
+            "countedPerPerformedRepetition": 0.0
+          },
+          {
+            "performedActivity": "lunges",
+            "countedAs": "LYING_TRICEPS_EXTENSION",
+            "sets": 15,
+            "performedRepetitions": 149,
+            "countedRepetitions": 0,
+            "activityIsMapped": true,
+            "countedPerPerformedRepetition": 0.0
+          },
+          {
+            "performedActivity": "lunges",
+            "countedAs": "SIDE_LATERAL_RAISE",
+            "sets": 15,
+            "performedRepetitions": 149,
+            "countedRepetitions": 0,
+            "activityIsMapped": true,
+            "countedPerPerformedRepetition": 0.0
+          },
+          {
+            "performedActivity": "dumbbell_rows",
+            "countedAs": "OVERHEAD_PRESS",
+            "sets": 15,
+            "performedRepetitions": 150,
+            "countedRepetitions": 0,
+            "activityIsMapped": true,
+            "countedPerPerformedRepetition": 0.0
+          },
+          {
+            "performedActivity": "dumbbell_rows",
+            "countedAs": "SIDE_LATERAL_RAISE",
+            "sets": 15,
+            "performedRepetitions": 150,
+            "countedRepetitions": 0,
+            "activityIsMapped": true,
+            "countedPerPerformedRepetition": 0.0
+          },
+          {
+            "performedActivity": "situps",
+            "countedAs": "BARBELL_SQUAT",
+            "sets": 15,
+            "performedRepetitions": 150,
+            "countedRepetitions": 0,
+            "activityIsMapped": false,
+            "countedPerPerformedRepetition": 0.0
+          },
+          {
+            "performedActivity": "situps",
+            "countedAs": "OVERHEAD_PRESS",
+            "sets": 15,
+            "performedRepetitions": 150,
+            "countedRepetitions": 0,
+            "activityIsMapped": false,
+            "countedPerPerformedRepetition": 0.0
+          },
+          {
+            "performedActivity": "situps",
+            "countedAs": "LYING_TRICEPS_EXTENSION",
+            "sets": 15,
+            "performedRepetitions": 150,
+            "countedRepetitions": 0,
+            "activityIsMapped": false,
+            "countedPerPerformedRepetition": 0.0
+          },
+          {
+            "performedActivity": "situps",
+            "countedAs": "SIDE_LATERAL_RAISE",
+            "sets": 15,
+            "performedRepetitions": 150,
+            "countedRepetitions": 0,
+            "activityIsMapped": false,
+            "countedPerPerformedRepetition": 0.0
+          },
+          {
+            "performedActivity": "tricep_extensions",
+            "countedAs": "BARBELL_SQUAT",
+            "sets": 15,
+            "performedRepetitions": 153,
+            "countedRepetitions": 0,
+            "activityIsMapped": true,
+            "countedPerPerformedRepetition": 0.0
+          },
+          {
+            "performedActivity": "tricep_extensions",
+            "countedAs": "STEP_FORWARD_DYNAMIC_LUNGE",
+            "sets": 15,
+            "performedRepetitions": 153,
+            "countedRepetitions": 0,
+            "activityIsMapped": true,
+            "countedPerPerformedRepetition": 0.0
+          },
+          {
+            "performedActivity": "tricep_extensions",
+            "countedAs": "PUSH_UP",
+            "sets": 15,
+            "performedRepetitions": 153,
+            "countedRepetitions": 0,
+            "activityIsMapped": true,
+            "countedPerPerformedRepetition": 0.0
+          },
+          {
+            "performedActivity": "tricep_extensions",
+            "countedAs": "DUMBBELL_CURL",
+            "sets": 15,
+            "performedRepetitions": 153,
+            "countedRepetitions": 0,
+            "activityIsMapped": true,
+            "countedPerPerformedRepetition": 0.0
+          },
+          {
+            "performedActivity": "tricep_extensions",
+            "countedAs": "OVERHEAD_PRESS",
+            "sets": 15,
+            "performedRepetitions": 153,
+            "countedRepetitions": 0,
+            "activityIsMapped": true,
+            "countedPerPerformedRepetition": 0.0
+          },
+          {
+            "performedActivity": "tricep_extensions",
+            "countedAs": "DUMBBELL_BENT_OVER_ROW",
+            "sets": 15,
+            "performedRepetitions": 153,
+            "countedRepetitions": 0,
+            "activityIsMapped": true,
+            "countedPerPerformedRepetition": 0.0
+          },
+          {
+            "performedActivity": "tricep_extensions",
+            "countedAs": "SIDE_LATERAL_RAISE",
+            "sets": 15,
+            "performedRepetitions": 153,
+            "countedRepetitions": 0,
+            "activityIsMapped": true,
+            "countedPerPerformedRepetition": 0.0
+          },
+          {
+            "performedActivity": "bicep_curls",
+            "countedAs": "OVERHEAD_PRESS",
+            "sets": 16,
+            "performedRepetitions": 160,
+            "countedRepetitions": 0,
+            "activityIsMapped": true,
+            "countedPerPerformedRepetition": 0.0
+          },
+          {
+            "performedActivity": "lateral_shoulder_raises",
+            "countedAs": "BARBELL_SQUAT",
+            "sets": 13,
+            "performedRepetitions": 129,
+            "countedRepetitions": 0,
+            "activityIsMapped": true,
+            "countedPerPerformedRepetition": 0.0
+          },
+          {
+            "performedActivity": "lateral_shoulder_raises",
+            "countedAs": "STEP_FORWARD_DYNAMIC_LUNGE",
+            "sets": 13,
+            "performedRepetitions": 129,
+            "countedRepetitions": 0,
+            "activityIsMapped": true,
+            "countedPerPerformedRepetition": 0.0
+          },
+          {
+            "performedActivity": "lateral_shoulder_raises",
+            "countedAs": "DUMBBELL_CURL",
+            "sets": 13,
+            "performedRepetitions": 129,
+            "countedRepetitions": 0,
+            "activityIsMapped": true,
+            "countedPerPerformedRepetition": 0.0
+          },
+          {
+            "performedActivity": "lateral_shoulder_raises",
+            "countedAs": "OVERHEAD_PRESS",
+            "sets": 13,
+            "performedRepetitions": 129,
+            "countedRepetitions": 0,
+            "activityIsMapped": true,
+            "countedPerPerformedRepetition": 0.0
+          },
+          {
+            "performedActivity": "lateral_shoulder_raises",
+            "countedAs": "DUMBBELL_BENT_OVER_ROW",
+            "sets": 13,
+            "performedRepetitions": 129,
+            "countedRepetitions": 0,
+            "activityIsMapped": true,
+            "countedPerPerformedRepetition": 0.0
+          },
+          {
+            "performedActivity": "lateral_shoulder_raises",
+            "countedAs": "LYING_TRICEPS_EXTENSION",
+            "sets": 13,
+            "performedRepetitions": 129,
+            "countedRepetitions": 0,
+            "activityIsMapped": true,
+            "countedPerPerformedRepetition": 0.0
+          },
+          {
+            "performedActivity": "jumping_jacks",
+            "countedAs": "BARBELL_SQUAT",
+            "sets": 12,
+            "performedRepetitions": 121,
+            "countedRepetitions": 0,
+            "activityIsMapped": false,
+            "countedPerPerformedRepetition": 0.0
+          },
+          {
+            "performedActivity": "jumping_jacks",
+            "countedAs": "STEP_FORWARD_DYNAMIC_LUNGE",
+            "sets": 12,
+            "performedRepetitions": 121,
+            "countedRepetitions": 0,
+            "activityIsMapped": false,
+            "countedPerPerformedRepetition": 0.0
+          },
+          {
+            "performedActivity": "jumping_jacks",
+            "countedAs": "OVERHEAD_PRESS",
+            "sets": 12,
+            "performedRepetitions": 121,
+            "countedRepetitions": 0,
+            "activityIsMapped": false,
+            "countedPerPerformedRepetition": 0.0
+          },
+          {
+            "performedActivity": "jumping_jacks",
+            "countedAs": "LYING_TRICEPS_EXTENSION",
+            "sets": 12,
+            "performedRepetitions": 121,
+            "countedRepetitions": 0,
+            "activityIsMapped": false,
+            "countedPerPerformedRepetition": 0.0
+          }
+        ]
+      },
+      "level-camera": {
+        "byExercise": [
+          {
+            "exercise": "PUSH_UP",
+            "fidelity": "DIRECT",
+            "mappingNote": "Same movement. The gravity clause is silent here because a downloaded video carries no device sensor, so the push-up's posture requirement abstains.",
+            "sets": 15,
+            "labelledRepetitions": 147,
+            "countedRepetitions": 124,
+            "uncountedAttempts": 0,
+            "truePositives": 124,
+            "falsePositives": 0,
+            "falseNegatives": 23,
+            "meanAbsoluteError": 1.533,
+            "normalisedMeanAbsoluteError": 0.153,
+            "meanSignedError": -1.533,
+            "offByOneAccuracy": 0.667,
+            "exactMatchRate": 0.4,
+            "countPrecision": 1.0,
+            "countRecall": 0.844,
+            "countF1": 0.915
+          }
+        ],
+        "restFiring": [
+          {
+            "exercise": "PUSH_UP",
+            "workouts": 5,
+            "gaps": 147,
+            "restFrames": 284314,
+            "counted": 11,
+            "restMinutes": 158.0,
+            "countedPerRestMinute": 0.07
+          }
+        ],
+        "crossExerciseFiring": [
+          {
+            "performedActivity": "squats",
+            "countedAs": "PUSH_UP",
+            "sets": 15,
+            "performedRepetitions": 150,
+            "countedRepetitions": 0,
+            "activityIsMapped": true,
+            "countedPerPerformedRepetition": 0.0
+          },
+          {
+            "performedActivity": "dumbbell_shoulder_press",
+            "countedAs": "PUSH_UP",
+            "sets": 12,
+            "performedRepetitions": 119,
+            "countedRepetitions": 0,
+            "activityIsMapped": true,
+            "countedPerPerformedRepetition": 0.0
+          },
+          {
+            "performedActivity": "lunges",
+            "countedAs": "PUSH_UP",
+            "sets": 15,
+            "performedRepetitions": 149,
+            "countedRepetitions": 0,
+            "activityIsMapped": true,
+            "countedPerPerformedRepetition": 0.0
+          },
+          {
+            "performedActivity": "dumbbell_rows",
+            "countedAs": "PUSH_UP",
+            "sets": 15,
+            "performedRepetitions": 150,
+            "countedRepetitions": 0,
+            "activityIsMapped": true,
+            "countedPerPerformedRepetition": 0.0
+          },
+          {
+            "performedActivity": "situps",
+            "countedAs": "PUSH_UP",
+            "sets": 15,
+            "performedRepetitions": 150,
+            "countedRepetitions": 0,
+            "activityIsMapped": false,
+            "countedPerPerformedRepetition": 0.0
+          },
+          {
+            "performedActivity": "tricep_extensions",
+            "countedAs": "PUSH_UP",
+            "sets": 15,
+            "performedRepetitions": 153,
+            "countedRepetitions": 0,
+            "activityIsMapped": true,
+            "countedPerPerformedRepetition": 0.0
+          },
+          {
+            "performedActivity": "bicep_curls",
+            "countedAs": "PUSH_UP",
+            "sets": 16,
+            "performedRepetitions": 160,
+            "countedRepetitions": 0,
+            "activityIsMapped": true,
+            "countedPerPerformedRepetition": 0.0
+          },
+          {
+            "performedActivity": "lateral_shoulder_raises",
+            "countedAs": "PUSH_UP",
+            "sets": 13,
+            "performedRepetitions": 129,
+            "countedRepetitions": 0,
+            "activityIsMapped": true,
+            "countedPerPerformedRepetition": 0.0
+          },
+          {
+            "performedActivity": "jumping_jacks",
+            "countedAs": "PUSH_UP",
+            "sets": 12,
+            "performedRepetitions": 121,
+            "countedRepetitions": 0,
+            "activityIsMapped": false,
+            "countedPerPerformedRepetition": 0.0
+          }
+        ]
+      }
+    }
+  }
+}

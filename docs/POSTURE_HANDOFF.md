@@ -28,7 +28,9 @@ f7be706 §31 코칭 신뢰성 — 앵커·베타 침묵·평가 범위·음성 �
 
 **미커밋(작업 트리)**: `gradlew` 파일 모드 변경(100644→100755). 이 작업과 무관하고 세션 이전부터 있었다. git 에 등록된 모드가 100644 라 **새로 클론한 세션은 `chmod +x gradlew` 를 먼저 해야 한다.**
 
-**검증 상태**: 유닛 테스트 **133건 통과**, `assembleDebug` 성공, 실기기(Galaxy Note10+ SM-N976N) 설치·실행 확인. 단 §31a 변경은 전부 `PostureLive.kt`(Compose) 안이라 **유닛 테스트가 0건**이다 — 실기기 확인이 유일한 검증 수단이다.
+**§32 작업분(2026-09-05, 미커밋)**: 신규 `research/aihub_fitness/rule_confidence.py`·`RULE_CONFIDENCE.md`, 수정 `research/aihub_fitness/rules/rules_mp_v0.json` + `app/src/main/assets/posture/rules_mp_v0.json`(동일), `KOTLIN_PORTING_SPEC.md` §32·§33, `README.md`, `CLAUDE.md`, 이 문서. §33 분: 신규 `research/aihub_fitness/view_estimator.py`·`VIEW_ESTIMATOR.md`·`RULE_VIEWS.md`, `app/src/main/java/com/example/trex_kotlin/posture/PostureView.kt`, `app/src/test/java/.../ViewEstimatorTest.kt`, `app/src/test/resources/view_fixture.txt`; 수정 `PostureAnalyzer.kt`·`PostureRules.kt`·`PostureSetLog.kt`·`PostureSetReport.kt`·`PostureLive.kt`. `outputs/` 는 gitignore. 그리고 다른 계보의 미추적 `app/src/testDebug/`(이 브랜치에 없는 `pose.runtime` 을 import 해 유닛 테스트 컴파일을 깨던 파일)를 **`app/src/testDebug.other-lineage/` 로 개명**해 비활성화했다 — 되돌리려면 이름만 되돌리면 된다.
+
+**검증 상태**: 유닛 테스트 **140건 통과**(§33 의 `ViewEstimatorTest` 7건 포함, 2026-09-05), `assembleDebug` 성공, 실기기(Galaxy Note10+ SM-N976N) 설치·실행 확인. 단 §31a 변경은 전부 `PostureLive.kt`(Compose) 안이라 **유닛 테스트가 0건**이다 — 실기기 확인이 유일한 검증 수단이다.
 
 ---
 
@@ -101,6 +103,25 @@ WorkoutHistoryItem.postureCorrection → 기록 화면
 **후속 수정 (검증에서 발견)**: 앵커 폴백의 기준 시점이 잘못돼 있었다. `PoseSample.detected` 는 **가시 관절 수와 무관하게 항상 true** 라(관절 11개짜리 프레임도 detected), 검출 기준으로 세면 사람이 아직 프레임에 제대로 없는 동안 폴백이 다 흘러간다. 실측에서 앵커가 10.0초에 걸려 43.8초의 준비 동작이 그대로 집계에 들어갔다 — **즉 최초의 §31a 수정만으로는 이 세션이 고쳐지지 않았다.** 기준 시점을 `features.isNotEmpty()` 인 첫 프레임으로 바꿔서 해결했다.
 
 ---
+
+### §32 — 규칙별 오탐률·신뢰구간 + §28c 임계값 재적합 (2026-09-05, **미커밋**)
+
+`outputs/` 를 처음부터 재생성하고(파싱→QC→실험 B→룰엔진 v0→MP 재추론 166,923장→실험 A→재적합) `research/aihub_fitness/rule_confidence.py` 를 새로 만들어 ship/beta 규칙마다 출시 임계값 그대로의 정상 오탐률·검출률·AUC·균형정확도와 수행자 부트스트랩 95% 구간을 JSON `confidence` 필드에 실었다. 근거와 표는 스펙 §32 와 `RULE_CONFIDENCE.md`.
+
+- **§28c 가 통계를 바꾼 규칙 7건은 임계값이 GT 3D 분포 위에 있었다** — 덤벨 체스트 플라이 팔꿈치는 검출률 0(죽은 규칙), 사이드 크런치 양손은 정상 오탐률 0.77. MP 피처에서 임계값만 재적합했다(`threshold_before_s32` 보존).
+- **게이트 s32** 로 4건 beta 강등: 스쿼트 '고개 정면'(§4 의 실기기 오탐 규칙 — 이제 음성 침묵), 사이드 런지 앞다리(이 종목은 `provisionalOnly`), 스티프 데드 척추[lateral], 스텝 백워드 뒤다리(뒤 둘은 앱 미노출). ship 55→**51**, beta 16→**20**. 헤더 `counts` 정정.
+- 앱 코드 변경 없음(로더는 모르는 필드 무시). `app/src/main/assets/posture/rules_mp_v0.json` 이 연구 JSON 과 동일하게 갱신됨.
+- 환경: `.venv312` 에 pandas 3.0.5·pyarrow 25 설치, `research/aihub_fitness/models/pose_landmarker_full.task` 는 앱 에셋 복사본(gitignore).
+
+### §33 — 촬영 뷰 추정기 + 규칙별 판정 허용 뷰 (2026-09-05, **미커밋**)
+
+앱에 촬영 방향을 확인하는 코드가 없어 미러 비안전·정면 전용 규칙이 어느 방향에서든 점수에 들어가던 문제(§32 감사 4번). `research/aihub_fitness/view_estimator.py` 가 MP 월드 랜드마크의 어깨선·골반선 요(yaw)로 등급(C·B·D·SIDE·A·E·R)을 추정하고, `rule_confidence.py --views` 가 규칙마다 **추정 등급 기준**으로 판정 허용 목록 `views_ok` 를 계산해 JSON 에 넣었다. 앱은 `PostureView.kt` 가 같은 정의로 프레임 피처 `view_cos/view_sin` 을 내고, `evaluate` 가 창의 추정 등급이 `views_ok` 밖이면 유보한다.
+
+- **정답 교정이 핵심이었다**: 카메라 코드로 채점하면 정면 클립 16% 가 후방으로 "오분류"됐는데, GT 2D 어깨 순서로 보니 수행자가 실제로 등진 클립(13.7%, 케이블 종목 100%)이었다. 보정 정답 기준 등급 정확도 0.965 · 반구 0.982 (서서 종목, UNKNOWN 4.7% 제외).
+- 규칙 70개 중 학습 뷰에서 허용 55개, B·D 양쪽 허용 26개. **같은 종목의 규칙이 다른 뷰를 요구**하는 경우가 드러남(랫풀 B/D, 데드리프트 C/D) — `RULE_VIEWS.md` §3 종목별 최적 배치 표.
+- 세트 로그 `view{}` 필드 추가, 리포트 "유보 · 촬영 방향", 라이브 패널 방향 표시/경고. 테스트 `ViewEstimatorTest`(파리티 120 프레임 + 게이팅).
+- **실기기 미검증.** 검증 프로토콜과 채점기를 만들어 뒀다(`DEVICE_VALIDATION.md`, §6 6번).
+- **좌우 표기 정정**: 데이터셋의 B '전방사선L' 은 카메라 쪽에서 본 왼쪽 = 사용자의 오른쪽. 앱 등급 라벨·`ViewGuide.placement`·프로토콜 모두 **사용자 기준**으로 통일했고(B = 사용자 오른쪽 앞), 옆 등급 이름은 SIDE_L/R 대신 SIDE_B/SIDE_D(B·D 와 같은 쪽)로 바꿨다. 기기 로그 22세트(8/27~9/3)를 `outputs/logs/` 에 회수해 뒀다(gitignore).
 
 ## 4. 실기기 발견 — 스쿼트 5회 세션
 
@@ -178,10 +199,13 @@ WorkoutHistoryItem.postureCorrection → 기록 화면
 
 0. **`gradlew` 실행비트를 커밋할지 결정** (안 하면 새 클론에서 빌드 실패)
 1. **§31a 후속 수정을 실기기로 재검증** — 새 캡처가 있어야 `anchor_t_ms` 로 앵커 시점을 확인할 수 있다. 손에 있는 로그로는 불가능하다.
-2. **개인 기준 세트**(5.1 B) — '고개 정면'이 `required` 가 아니라 계속 잘못 지적한다. 단 5.2 의 세트 분할과 순서를 함께 판단할 것.
+2. **개인 기준 세트**(5.1 B) — '고개 정면'은 §32 게이트로 beta 가 되어 더는 음성으로 지적하지 않는다. 이 규칙을 ship 으로 되돌리는 길이 기준선(`threshold_rel` 6.39)이다. 단 5.2 의 세트 분할과 순서를 함께 판단할 것.
 3. **바닥 종목 실기기 체감 확인** — §31 로 자세 음성이 사라졌다.
 4. **기록 화면 %·92% 문턱 정리** — 라이브만 분수로 바꿔 화면 간 표기가 어긋나 있다.
 5. 보류 사유 + CTA(5.1 D) → 규칙 라벨 → 재보정 루프 → 위험 등급
+7. **바닥 종목 규정 → 구현** — `research/aihub_fitness/FLOOR_POSTURE_DEFINITION.md`(스펙 §34). 순서: 플랭크 홀드형 판정기(부호 있는 `hip_dev_ankle`, 2초 지속 이벤트, 정상 분포 임계) → 푸시업 깊이·몸통 일직선 렙별 판정 → 힙쓰러스트 렙 상단 → 크런치·Y 레이즈 스코프 축소 문구. 2026-09-10 플랭크 로그(자가 라벨 '무너짐', 규칙 OK)가 첫 실측 근거.
+8. **세트 끝 정리 동작 컷(§31b 후보)** — 2026-09-10 실측 3세트 모두 극값이 마지막 렙 뒤(폰으로 걸어옴·덤벨 내려놓음)에서 났다. 렙 카운터가 있는 종목은 집계 창을 마지막 렙 + 주기 1개에서 닫는다. 앵커 폴백 10초도 사용자 셋업(첫 렙 12·32·12초)보다 짧았다.
+6. **§33 실기기 대조** — 프로토콜은 `research/aihub_fitness/DEVICE_VALIDATION.md`(생성기 `device_validation_plan.py`). 새 APK 설치 → 최소 코스 16세트(맨몸) 순서대로 → `pull_logs.py` → `device_validation_check.py --since <날짜>`. 기기의 현재 빌드(9월 3일)는 §32·§33 이전이라 로그에 `view` 가 없다. 그 다음 `ViewGuide` 배치 안내를 `RULE_VIEWS.md` §3 의 최적 배치로 바꾸거나 뷰별 임계값(`thresholds_by_view`)을 검토.
 
 ---
 
@@ -202,4 +226,17 @@ WorkoutHistoryItem.postureCorrection → 기록 화면
 - 기록 화면은 아직 %·92% 문턱.
 - `pull_logs.py` 의 adb 경로가 Windows 하드코딩.
 - 초반 창은 렙 **완료** 기준으로 앵커한다 — 렙 1 자체는 창에서 빠진다(시간 폴백이 먼저 걸리면 포함).
-- `rules_mp_v0.json` 헤더의 `counts` 가 실제 분포와 불일치(ship 59/beta 12 vs 실제 55/16).
+- ~~`rules_mp_v0.json` 헤더의 `counts` 가 실제 분포와 불일치~~ → §32 에서 정정(51/20/70). 손으로 JSON 을 고치면 다시 어긋난다.
+- **로더의 `[all]` 필터가 ship 규칙을 버린다** (`PostureRules.kt:137`): 종목에 하위유형 규칙이 하나라도 있으면 그 종목의 `[all]` 규칙을 전부 떨어뜨리는데, 스탠딩 사이드 크런치 '척추의 중립'은 ship `[all]`(shoulder_h_R__mean, AUC 0.93)과 beta `[forward_lean]`(torso_incl__mean, 0.77)이 **다른 피처**라 라이브 경로(`includeBeta = true`)에서 ship 이 사라지고 beta 만 남는다. 라잉 트라이셉스도 같은 구조(앱 미노출). 필터를 조건 단위·동일 피처 한정으로 고치거나 export 에서 중복을 없애야 한다.
+- ~~뷰·미러 의존을 런타임이 확인하지 않는다~~ → §33 으로 게이팅. 남은 것: 옆(SIDE)은 미검증이라 전부 유보되고, 한 종목의 규칙이 서로 다른 뷰를 요구하면 한 배치로 다 판정할 수 없다(뷰별 임계값 또는 배치 안내 개선 필요). 실기기 대조 전.
+- 유닛 테스트 실행 전제: 다른 계보의 `app/src/testDebug*` 가 소스셋 이름으로 남아 있으면 컴파일이 깨진다(§2 참조).
+
+
+## 2026-09-11 — 바닥 8종목 구현 (§35)
+
+- floor_v0.3: beta 12 / exclude 2. 플랭크 유지 측정, 푸시업·니푸쉬업·힙쓰러스트 반복별 범위 평가, 크런치·Y 스코프 축소.
+- 새 파일 `FloorTemporal.kt`, `FloorTemporalTest.kt`. 라이브 참고 측정/자세 기준, 완료 상세·기록, 평가 종료 시각 로그 연결.
+- 마지막 3회 이상 규칙적 반복의 마지막 극점 + 1주기에서 최종 집계 종료. 원본 프레임 보존. 마지막 반복 미검출 자체는 미해결.
+- 153 JVM 테스트 및 debug APK 빌드 통과. 연결 기기에 설치·실측은 이번 작업에서 하지 않음.
+- `FLOOR_RULES_V03.md` 수치는 GT 탐색 결과이며 실기기 정확도가 아니다. 상세 정의·제약은 `KOTLIN_PORTING_SPEC.md` §35.
+- 다음 검증은 `FLOOR_DEVICE_VALIDATION.md`의 측면·반복/유지 프로토콜. 실제 사람 데이터 수집 없이 beta를 ship으로 올리지 말 것.

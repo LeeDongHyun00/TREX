@@ -27,6 +27,9 @@ data class PostureScope(
 
     /** 세트 시작 안내의 둘째 문장. 없으면 null. 짧게 — 항목은 각 최대 2개, 끝에 마침표. */
     val startLine: String? = when {
+        exercise == "크런치" -> "횟수와 머리 들림 근사를 기록해요. 견갑골 상승과 허리 접지는 판정할 수 없어요."
+        exercise == "Y - Exercise" -> "횟수와 팔 들림 근사를 기록해요. 목 정렬·양팔 높이·엄지 방향은 판정할 수 없어요."
+        exercise == "플랭크" -> "초기 안정 자세와의 변화 시간을 참고로 기록해요. 초기 자세가 올바른지는 판정하지 못해요."
         watched.isNotEmpty() -> buildString {
             val seen = watched.take(2).joinToString("·")
             append(seen).append(objectParticle(seen)).append(" 봐요.")

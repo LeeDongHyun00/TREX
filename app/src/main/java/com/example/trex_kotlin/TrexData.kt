@@ -94,6 +94,7 @@ fun PostureSetReport.toCorrection(): PostureCorrection {
     // REFERENCE 는 non-beta 헤드라인이 없으므로 첫 후보(베타)를 대표로 — beta 플래그가 같이 실려 UI 가 "참고" 로 낮춘다
     val lead = headline ?: candidates.firstOrNull()
     val focus = when {
+        exercise in com.example.trex_kotlin.posture.FloorTemporal.exercises && measurements.isNotEmpty() -> measurements.joinToString(" · ")
         mode == CoachMode.TRACK -> summaryLine
         verdict == SetVerdict.CLEAN -> if (betaOnly) "검증 중인 항목 기준으로는 이상 없었어요" else "자세 깨끗했어요"
         verdict == SetVerdict.UNJUDGED -> "자세 판정 없음"

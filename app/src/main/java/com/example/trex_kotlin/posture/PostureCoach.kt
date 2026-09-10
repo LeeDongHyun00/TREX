@@ -115,6 +115,8 @@ object CoachCues {
             val desc = rule.oppositeGuard?.desc?.takeIf { it.isNotBlank() } ?: "반대 방향"
             return CoachCue(rule.condition, "처음부터 반대 방향으로 벗어나 있어요 ($desc). 자세를 확인하세요.", "반대 방향으로 점점 벗어나요 ($desc). 자세를 확인하세요.")
         }
+        if (rule.exercise == "힙쓰러스트" && rule.condition.contains("고개") && rule.stat == "p10")
+            return CoachCue("고개", "처음부터 고개 각도가 참고 범위를 벗어났어요.", "고개 각도가 참고 범위를 벗어났어요.")
         val st = rule.subtype
         if (rule.condition.contains("척추")) {
             spineBySubtype[st ?: "all"]?.let { return it }
@@ -148,7 +150,8 @@ object CoachCues {
         rule.exercise == "크런치" && rule.condition.contains("견갑골") ->
             "머리 높이로 근사 판정 — 목만 당겨 올리는 동작은 구분하지 못해요"
         rule.exercise == "힙쓰러스트" && rule.condition.contains("고개") ->
-            "고개 '흔들림'으로 판정 — 계속 든 채 고정된 고개는 놓칠 수 있어요"
+            if (rule.stat == "p10") "코·귀·골반 투영 각도의 하위 10%를 측정해요. 바닥 접촉은 확인하지 못해요"
+            else "고개 흔들림으로 측정해요. 계속 든 채 고정된 고개는 놓칠 수 있어요"
         rule.condition.contains("경추 중립") ->
             "목 각도가 아니라 몸통-골반 라인으로 근사 판정해요"
         else -> null

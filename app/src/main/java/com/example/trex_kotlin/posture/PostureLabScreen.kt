@@ -883,7 +883,7 @@ private fun RuleResultRow(result: RuleResult, floor: Boolean = false) {
             )
         }
         Text(
-            text = "촬영 방향 ${ViewGuide.shortName(rule.view, floor)} · 연구 AUC ${"%.2f".format(rule.cvAuc)} / 균형정확도 ${"%.2f".format(rule.cvBalacc)}" +
+            text = "촬영 방향 ${ViewGuide.shortName(rule.view, floor)} · 연구 AUC ${if (rule.cvAuc.isFinite()) "%.2f".format(rule.cvAuc) else "미검증"} / 균형정확도 ${if (rule.cvBalacc.isFinite()) "%.2f".format(rule.cvBalacc) else "미검증"}" +
                 if (!rule.mirrorSafe) " · 좌우 미러 주의" else "",
             color = Color.White.copy(alpha = 0.4f),
             fontSize = 9.sp,

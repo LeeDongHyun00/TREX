@@ -71,6 +71,15 @@ data class PostureRule(
     val baselineGain: Float? = null,
     /** 반대 방향 가드 — 있으면 기본 방향이 정상일 때 반대측도 검사한다. */
     val oppositeGuard: OppositeGuard? = null,
+    /**
+     * 이 규칙을 판정해도 되는 촬영 방향(추정기 등급 문자, spec §33 JSON `views_ok`). 비어 있으면 게이팅 없음(종전 동작).
+     * 연구가 5뷰 카메라의 (클립,뷰)를 **추정기가 낸 등급**으로 나눠 출시 임계값의 오탐률·검출률·균형정확도를 잰 결과다 —
+     * 런타임이 보는 것도 추정기 출력이므로 같은 단위여야 자기 일관적이다. 표본이 없는 등급(옆 등)은 목록에 없다 = 유보.
+     */
+    val viewsOk: Set<String> = emptySet(),
+    val kind: String = "window",
+    val holdConfig: HoldConfig? = null,
+    val repConfig: RepRuleConfig? = null,
 ) {
     val violationText: String get() = "$feature $op ${fmt(threshold)}"
 
@@ -113,6 +122,9 @@ data class RuleResult(
     val rawValue: Float? = value,
     /** 위반일 때 어느 방향인지. OPPOSITE 는 반대측 가드(원값 기준) 위반. 위반이 아니면 null. */
     val direction: Direction? = null,
+    /** 유보(ABSTAIN)한 이유 — 짧은 명사구 ("촬영 방향 · 뒤", "기준선 필요"). 피처가 없어서 유보한 경우는 null. */
+    val abstainReason: String? = null,
+    val measurement: String? = null,
 )
 
 class PostureRuleSet(
@@ -166,31 +178,40 @@ class PostureRuleSet(
         includeBeta: Boolean = true,
         minFrames: Int = 8,
         baseline: Map<String, Float>? = null,
-    ): List<RuleResult> = rulesFor(exercise, includeBeta).map { rule ->
-        val n = agg.count(rule.baseFeature)
-        val raw = if (n >= minFrames) agg.stat(rule.baseFeature, rule.stat) else null
-        val b = baseline?.get(rule.feature)
-        val useBaseline = raw != null && b != null && rule.supportsBaseline
-        val value = if (useBaseline) raw!! - b!! else raw
-        var verdict = when {
-            value == null -> Verdict.ABSTAIN
-            // §28e: 기준선 필수 규칙은 기준선 없이 판정하지 않는다 — raw 임계가 기기 분포 중앙이라 오탐
-            rule.requiresBaseline && !useBaseline -> Verdict.ABSTAIN
-            useBaseline -> if (rule.isViolatedRelative(value)) Verdict.VIOLATION else Verdict.OK
-            rule.isViolated(value) -> Verdict.VIOLATION
-            else -> Verdict.OK
-        }
-        var direction: Direction? = if (verdict == Verdict.VIOLATION) Direction.PRIMARY else null
-        // 반대측 가드: 기본 방향이 정상일 때만, 기준선 없이 **원값**으로 검사(가드는 모집단 정상 분포 경계라 개인 보정 대상이 아님)
-        if (verdict == Verdict.OK && raw != null) {
-            rule.oppositeGuard?.let { g ->
-                if (g.isViolated(raw)) {
-                    verdict = Verdict.VIOLATION
-                    direction = Direction.OPPOSITE
+    ): List<RuleResult> {
+        // §33: 이 창의 촬영 방향. 프레임이 모자라거나 방향이 일관되지 않으면(UNKNOWN) 게이팅하지 않는다 = 종전 동작
+        val view = ViewEstimator.estimate(agg, minFrames)?.takeIf { it.cls != ViewEstimator.ViewClass.UNKNOWN }
+        return rulesFor(exercise, includeBeta).map { rule ->
+            if (rule.kind != "window") return@map RuleResult(rule, Verdict.ABSTAIN, null, 0, abstainReason = "시간·반복 측정 필요")
+            val n = agg.count(rule.baseFeature)
+            val raw = if (n >= minFrames) agg.stat(rule.baseFeature, rule.stat) else null
+            val b = baseline?.get(rule.feature)
+            val useBaseline = raw != null && b != null && rule.supportsBaseline
+            val value = if (useBaseline) raw!! - b!! else raw
+            val viewBlocked = view != null && rule.viewsOk.isNotEmpty() && view.letter !in rule.viewsOk
+            var reason: String? = null
+            var verdict = when {
+                value == null -> Verdict.ABSTAIN
+                // §33: 이 규칙이 검증된 촬영 방향이 아니다 — 판정하지 않는다 (뒤·옆·반대편에서 그대로 점수에 들어가던 결함)
+                viewBlocked -> { reason = "촬영 방향 · " + view!!.cls.label; Verdict.ABSTAIN }
+                // §28e: 기준선 필수 규칙은 기준선 없이 판정하지 않는다 — raw 임계가 기기 분포 중앙이라 오탐
+                rule.requiresBaseline && !useBaseline -> { reason = "기준선 필요"; Verdict.ABSTAIN }
+                useBaseline -> if (rule.isViolatedRelative(value)) Verdict.VIOLATION else Verdict.OK
+                rule.isViolated(value) -> Verdict.VIOLATION
+                else -> Verdict.OK
+            }
+            var direction: Direction? = if (verdict == Verdict.VIOLATION) Direction.PRIMARY else null
+            // 반대측 가드: 기본 방향이 정상일 때만, 기준선 없이 **원값**으로 검사(가드는 모집단 정상 분포 경계라 개인 보정 대상이 아님)
+            if (verdict == Verdict.OK && raw != null) {
+                rule.oppositeGuard?.let { g ->
+                    if (g.isViolated(raw)) {
+                        verdict = Verdict.VIOLATION
+                        direction = Direction.OPPOSITE
+                    }
                 }
             }
+            RuleResult(rule, verdict, value, n, baselineApplied = useBaseline, rawValue = raw, direction = direction, abstainReason = reason)
         }
-        RuleResult(rule, verdict, value, n, baselineApplied = useBaseline, rawValue = raw, direction = direction)
     }
 
     companion object {
@@ -218,6 +239,13 @@ class PostureRuleSet(
                     )
                 }
                 out += PostureRule(
+                    kind = o.optString("kind", "window"),
+                    holdConfig = o.optJSONObject("hold")?.let { h -> HoldConfig(
+                        h.getDouble("tol_up").toFloat(), h.getDouble("tol_down").toFloat(),
+                        h.getLong("baseline_ms"), h.getLong("min_break_ms")) },
+                    repConfig = o.optJSONObject("rep")?.let { r -> RepRuleConfig(
+                        r.getString("direction"), r.getDouble("threshold").toFloat(),
+                        r.getDouble("max_invalid_frac").toFloat(), r.getInt("min_reps")) },
                     id = o.getString("id"),
                     exercise = o.getString("exercise"),
                     condition = o.getString("condition"),
@@ -243,6 +271,7 @@ class PostureRuleSet(
                     baselineK = pb?.optInt("k", BaselineCollector.DEFAULT_SETS) ?: BaselineCollector.DEFAULT_SETS,
                     baselineGain = pb?.let { if (it.has("gain") && !it.isNull("gain")) it.getDouble("gain").toFloat() else null },
                     oppositeGuard = og,
+                    viewsOk = o.optJSONArray("views_ok")?.let { a -> buildSet { for (j in 0 until a.length()) add(a.getString(j)) } } ?: emptySet(),
                 )
             }
             return PostureRuleSet(

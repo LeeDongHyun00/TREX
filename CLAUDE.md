@@ -19,14 +19,14 @@ Android Kotlin/Jetpack Compose 운동·식단 앱. 핵심 기능은 **카메라 
 
 | 위치 | 내용 |
 |---|---|
-| `app/src/main/java/com/example/trex_kotlin/posture/` | 자세 엔진 — 피처·규칙·코칭·렙·리포트·기준선 |
+| `app/src/main/java/com/example/trex_kotlin/posture/` | 자세 엔진 — 피처·규칙·코칭·렙·리포트·기준선·촬영 뷰 추정(`PostureView.kt`) |
 | `app/src/main/java/com/example/trex_kotlin/` | 앱 화면 (`PostureLive.kt` = 실시간 세션, `TrexApp.kt` = 라우팅) |
 | `app/src/main/assets/posture/` | 규칙 JSON + MediaPipe 모델 |
 | `research/aihub_fitness/` | 연구 코드·문서. **`KOTLIN_PORTING_SPEC.md` 가 정본 스펙**(§1~§31a) |
 
 기능을 추가하면 `KOTLIN_PORTING_SPEC.md` 에 절을 추가하는 것이 저장소 관례다. 근거(왜)를 반드시 남긴다.
 
-**규칙셋의 실제 분포** — `rules_mp_v0.json` 141규칙 = ship **55** · beta **16** · exclude **70**(절반이 못 보는 규칙). `rules_floor_v0.json` 14규칙/8종목은 **전부 beta**. ⚠️ JSON 헤더의 `counts` 필드(`ship 59/beta 12`)는 **낡았다** — sanity check 로 쓰지 말고 `rules` 배열을 직접 집계하라.
+**규칙셋의 실제 분포** — `rules_mp_v0.json` 141규칙 = ship **51** · beta **20** · exclude **70**(절반이 못 보는 규칙, §32 게이트 이후). `rules_floor_v0.json` 14규칙/8종목은 **전부 beta**. 헤더 `counts` 는 §32 부터 `rule_confidence.py --apply` 가 실제 분포로 갱신하지만 JSON 을 손으로 고치면 다시 어긋난다 — sanity check 는 `rules` 배열 집계가 정본. ship/beta 규칙의 `confidence` 필드(정상 오탐률·검출률·AUC 95% 구간)는 **스튜디오 기준**이다(§32).
 
 **앱이 실제로 자세 평가를 도는 종목은 18개**(서서 18 + 바닥 8 매핑)이고, 게이트는 규칙 JSON 이 아니라 `PostureLive.kt` 의 `postureExerciseMap` + `Workout.postureSupported()` 다. 종목을 늘리거나 진입 경로를 손대는 작업은 반드시 이 map 을 지난다.
 
@@ -58,10 +58,12 @@ Android Kotlin/Jetpack Compose 운동·식단 앱. 핵심 기능은 **카메라 
 
 ## 알아야 할 함정
 
+- **규칙은 촬영 방향으로 게이팅된다(§33).** `PostureRuleSet.evaluate` 가 창의 `view_cos/view_sin` 에서 뷰 등급(C·B·D·SIDE·A·E·R)을 추정하고, 규칙 JSON `views_ok` 밖이면 ABSTAIN(`abstainReason` "촬영 방향 · …"). 옆(SIDE_B/SIDE_D)은 미검증 등급이라 **어떤 규칙도 허용하지 않는다 = 옆에서 찍으면 전부 유보**. 좌우는 **사용자 기준**이다 — B 는 사용자 오른쪽 앞(오른어깨가 카메라에 가까움), 데이터셋 이름 '전방사선L' 은 카메라 쪽에서 본 왼쪽. 실기기 검증 절차는 `research/aihub_fitness/DEVICE_VALIDATION.md`. 같은 종목의 규칙이 서로 다른 뷰를 요구할 수 있다(랫풀 B/D, 데드리프트 C/D — `RULE_VIEWS.md` §3). 뷰 추정이 UNKNOWN 이거나 프레임이 8 미만이거나 방향 피처가 없으면(바닥 경로) 게이팅하지 않는다.
+- **AIHub 카메라 코드는 실제 촬영 방향이 아니다.** 서서 종목 클립의 13.7%, 케이블 종목(케이블 푸시 다운·페이스 풀·케이블 크런치)은 100% 가 카메라 C 를 등지고 찍혔다. 뷰 관련 정답은 GT 2D 어깨 순서로 보정해서 써야 한다(§33).
 - **`PoseSample.detected` 는 가시 관절 수와 무관하게 항상 true** 다(`PostureAnalyzer.kt`). 관절 11개짜리 프레임도 detected 다. "사람이 화면에 있다"의 실질 판단은 **피처가 계산됐는지**(`features.isNotEmpty()`)로 해야 한다. 이걸 혼동해 앵커 폴백이 10초 일찍 걸린 실기기 오탐이 §31a 다.
 - **극값 통계(range/min/max)는 준비 동작 하나에 뒤집힌다.** §31a 실측: 준비 구간이 포함되면 `torso_incl__range` 68.6°, 실제 운동 구간만 보면 27.4°(임계 30.85°). 집계 창은 반드시 앵커 이후여야 한다.
 - **렙 카운터는 beta.** 실기기 라벨 세트에서 12개 중 9개 검출. KDoc 이 "±1 오차를 약속에 포함하지 않는다"고 못박았다. 게다가 **세트의 마지막 렙을 구조적으로 놓친다** — 상단 확정에 다음 하강이 필요하기 때문이다(§31a 로그에서 6사이클 중 5개만 카운트). 카운트를 의사결정 근거로 승격시키는 기능은 이 오차를 사용자에게 약속하게 된다.
-- **임계값은 스튜디오(AIHub) 기준이고 §9 재보정 전이다.** 그래서 점수는 분수로 표기하고, beta 는 참고이며, TRACK 은 점수가 없다. ship 규칙은 종목당 **0~3개**뿐이라(4개인 종목 없음) 한 건 위반이 점수의 3분의 1~전부를 깎는다.
+- **임계값은 스튜디오(AIHub) 기준이고 §9 재보정 전이다.** 그래서 점수는 분수로 표기하고, beta 는 참고이며, TRACK 은 점수가 없다. ship 규칙은 종목당 **0~3개**뿐이라(4개인 종목 없음) 한 건 위반이 점수의 3분의 1~전부를 깎는다. §32 실측: ship 규칙의 정상 클립 오탐률 중앙값 0.13, 오탐률 ≤ 10% 인 규칙은 55건 중 15건 — 스튜디오에서도 §9 출시 기준을 못 넘는다.
 - **개인 기준선은 종목마다 성격이 다르다.** 서서 종목 eligible 규칙의 gain 은 +0.02~+0.12(중앙값 ~+0.04). 바닥 종목 14규칙의 **기준선**은 폼 교정이 아니라 폰 위치 재배치(`mode: reanchor`)가 목적이다. `required = true` 는 저장소 통틀어 1건(바벨 스쿼트 '발바닥 지면 고정')이고 **그 규칙은 beta** 다. 다른 날 찍은 기준선은 이득이 사라질 수 있다(§19).
 - **`PostureRuleSet.rules` 는 EXCLUDE 규칙까지 담고 있다**(로더가 필터하지 않는다). `PostureScope` 가 이 전제 위에 서 있다 — 깨지면 "못 봄" 목록이 조용히 비어 거짓 안심으로 돌아간다.
 - **`PostureLive` 는 종목이 바뀌어도 재컴포지션되지 않는다**(같은 `AnimatedContent` 라우트). 그래서 세트 마감 람다는 종목·뷰를 **세트 시작 시점 값으로 인자 전달**받는다. 지금 값을 쓰면 종목이 어긋난다.

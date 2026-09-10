@@ -44,6 +44,8 @@ data class RuleOutcome(
     val fix: String,
     val note: String?,
     val cvAuc: Float,
+    /** 유보 이유 (spec §33 촬영 방향 / §28e 기준선). 유보가 아니거나 피처 부재면 null. */
+    val abstainReason: String? = null,
 ) {
     /** 화면 라벨 — OnsetState.label 과 같은 어휘, 세트 중간 위반(kind null + VIOLATION)만 "위반" 추가. */
     val label: String
@@ -53,7 +55,7 @@ data class RuleOutcome(
             OnsetKind.RECOVERED -> "교정됨"
             null -> when (overall) {
                 Verdict.VIOLATION -> "위반$dirSuffix"
-                Verdict.ABSTAIN -> "유보"
+                Verdict.ABSTAIN -> abstainReason?.let { "유보 · $it" } ?: "유보"
                 Verdict.OK -> "정상"
             }
         }
@@ -88,6 +90,7 @@ data class PostureSetReport(
     val repsValid: Int?,
     val repsPartial: Int?,
     val tempoMs: Long?,
+    val measurements: List<String> = emptyList(),
 ) {
     /** 실제로 판정한 규칙 수(OK+VIOLATION). accuracy 의 분모 — 유보를 정상으로 세지 않는다. */
     val judged: Int = items.count { it.overall == Verdict.OK || it.overall == Verdict.VIOLATION }
@@ -120,6 +123,7 @@ data class PostureSetReport(
         val nonBeta = candidates.filter { !it.beta }
         when {
             judged == 0 -> SetVerdict.UNJUDGED
+            exercise in FloorTemporal.exercises -> SetVerdict.REFERENCE
             nonBeta.any { it.rank <= 3 } -> SetVerdict.ISSUE
             nonBeta.isNotEmpty() -> SetVerdict.RECOVERED
             candidates.isNotEmpty() -> SetVerdict.REFERENCE
@@ -135,7 +139,7 @@ data class PostureSetReport(
     private val driftHeadline: RuleOutcome? = headline?.takeIf { it.kind == OnsetKind.DRIFT }
 
     /** 기록 화면 한 줄. */
-    val summaryLine: String = when (mode) {
+    val summaryLine: String = if (exercise in FloorTemporal.exercises) "자세 확정 판정 없음 · 참고 측정 ${measurements.size}건" else when (mode) {
         CoachMode.COACH -> when (verdict) {
             SetVerdict.UNJUDGED -> "자세 판정 없음"
             SetVerdict.CLEAN -> if (betaOnly) "참고 기준 이상 없음" else "자세 깨끗"
@@ -156,7 +160,7 @@ data class PostureSetReport(
     }
 
     /** 세트 종료 발화 한두 문장. */
-    val voiceLine: String = when (mode) {
+    val voiceLine: String = if (exercise in FloorTemporal.exercises) "세트를 기록했어요. 참고 측정은 화면에서 확인해 주세요." else when (mode) {
         CoachMode.COACH -> when (verdict) {
             SetVerdict.UNJUDGED -> "이번 세트는 화면에 충분히 잡히지 않아 자세를 판정하지 못했어요."
             SetVerdict.CLEAN -> if (betaOnly) "이번 세트, 검증 중인 항목 기준으로는 이상 없었어요." else "이번 세트 깨끗했어요."
@@ -188,10 +192,11 @@ data class PostureSetReport(
             repsValid: Int?,
             repsPartial: Int?,
             tempoMs: Long?,
+            measurements: List<String> = emptyList(),
         ): PostureSetReport {
             val onsetById = onset.associateBy { it.rule.id }
             val outcomes = results.map { rr ->
-                val st = onsetById[rr.rule.id]
+                val st = if (rr.rule.kind == "window") onsetById[rr.rule.id] else null
                 val kind = st?.kind
                 val direction = rr.direction ?: st?.direction
                 val cue = CoachCues.cueFor(rr.rule, direction ?: Direction.PRIMARY)
@@ -209,17 +214,18 @@ data class PostureSetReport(
                     overall = rr.verdict,
                     kind = kind,
                     direction = direction,
-                    observation = observation,
-                    fix = fix,
-                    note = CoachCues.measurementNote(rr.rule),
+                    observation = rr.measurement ?: observation,
+                    fix = if (rr.rule.kind == "window") fix else "",
+                    note = rr.measurement ?: CoachCues.measurementNote(rr.rule),
                     cvAuc = rr.rule.cvAuc,
+                    abstainReason = rr.abstainReason,
                 )
             }
             // 안정 정렬: 랭크 → ship 우선 → AUC 높은 순. 같은 키면 규칙셋 순서(status, -auc) 그대로.
             val sorted = outcomes.sortedWith(compareBy<RuleOutcome>({ it.rank }, { it.beta }, { -it.cvAuc }))
             return PostureSetReport(
                 setId = setId, exercise = exercise, workoutName = workoutName, mode = mode, frames = frames,
-                baselineActive = baselineActive, items = sorted, repsValid = repsValid, repsPartial = repsPartial, tempoMs = tempoMs,
+                baselineActive = baselineActive, items = sorted, measurements = measurements, repsValid = repsValid, repsPartial = repsPartial, tempoMs = tempoMs,
             )
         }
 
