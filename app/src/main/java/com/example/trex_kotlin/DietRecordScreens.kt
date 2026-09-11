@@ -122,10 +122,11 @@ enum class DietRecordLaunchAction {
     Manual,
 }
 
+// 중량(grams) 대신 인분(servings)으로 변경
 private data class RecognizedFood(
     val id: Int,
     val name: String,
-    val grams: Int,
+    val servings: Float,
     val nutrition: Nutrition,
 )
 
@@ -139,7 +140,7 @@ fun DietRecordRoute(
 ) {
     val initialFoods = remember(launchAction, recentFoods) {
         if (launchAction == DietRecordLaunchAction.Recent) {
-            recentFoods.mapIndexed { index, food -> food.toRecognized(index + 1, 100) }
+            recentFoods.mapIndexed { index, food -> food.toRecognized(index + 1, 1.0f) }
         } else {
             emptyList()
         }
@@ -666,30 +667,32 @@ private fun DietManualInputScreen(
     var stagedFoods by remember(initialFoods) { mutableStateOf(initialFoods) }
     var query by remember { mutableStateOf("") }
     var selectedName by remember { mutableStateOf<String?>(null) }
-    var grams by remember { mutableIntStateOf(100) }
+    var servings by remember { mutableFloatStateOf(1.0f) } // 기본 1인분
     var manualExpanded by remember { mutableStateOf(false) }
     var manualName by remember { mutableStateOf("") }
     var manualKcal by remember { mutableStateOf("") }
     var manualCarb by remember { mutableStateOf("") }
     var manualProtein by remember { mutableStateOf("") }
     var manualFat by remember { mutableStateOf("") }
+    
     val matches = remember(query) {
         if (query.isBlank()) emptyList() else foodDatabase.keys.filter { it.contains(query.trim()) }.take(5)
     }
     val selectedNutrition = selectedName?.let { foodDatabase[it] }
-    val scaledNutrition = selectedNutrition?.scaledBy(grams)
-    val draftFood = remember(selectedName, scaledNutrition, manualExpanded, manualName, manualKcal, manualCarb, manualProtein, manualFat, grams) {
+    val scaledNutrition = selectedNutrition?.scaledBy(servings)
+    
+    val draftFood = remember(selectedName, scaledNutrition, manualExpanded, manualName, manualKcal, manualCarb, manualProtein, manualFat, servings) {
         when {
             scaledNutrition != null && selectedName != null -> RecognizedFood(
                 id = 0,
                 name = selectedName.orEmpty(),
-                grams = grams,
+                servings = servings,
                 nutrition = scaledNutrition,
             )
             manualExpanded && manualName.isNotBlank() && manualKcal.isNotBlank() -> RecognizedFood(
                 id = 0,
                 name = manualName.trim(),
-                grams = grams,
+                servings = servings,
                 nutrition = Nutrition(
                     kcal = manualKcal.toIntOrNull() ?: 0,
                     carb = manualCarb.toDoubleOrNull() ?: 0.0,
@@ -706,7 +709,7 @@ private fun DietManualInputScreen(
     fun resetDraft() {
         query = ""
         selectedName = null
-        grams = 100
+        servings = 1.0f
         manualName = ""
         manualKcal = ""
         manualCarb = ""
@@ -747,7 +750,7 @@ private fun DietManualInputScreen(
                             Text("추가한 음식 ${stagedFoods.size}개", color = TrexGreenDeep, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                             stagedFoods.forEach { food ->
                                 Text(
-                                    text = "${food.name} · ${food.nutrition.kcal} kcal · 탄수 ${food.nutrition.carb.toInt()}g · 단백질 ${food.nutrition.protein.toInt()}g · 지방 ${food.nutrition.fat.toInt()}g",
+                                    text = "${food.name} · ${food.servings}인분 · ${food.nutrition.kcal} kcal · 탄수 ${food.nutrition.carb.toInt()}g · 단백질 ${food.nutrition.protein.toInt()}g · 지방 ${food.nutrition.fat.toInt()}g",
                                     color = TrexDark.copy(alpha = 0.68f),
                                     fontSize = 11.sp,
                                     maxLines = 1,
@@ -797,9 +800,9 @@ private fun DietManualInputScreen(
             if (selectedNutrition != null) {
                 item {
                     WeightAndNutritionEditor(
-                        grams = grams,
+                        servings = servings,
                         nutrition = scaledNutrition ?: selectedNutrition,
-                        onGrams = { grams = it.coerceIn(30, 600) },
+                        onServings = { servings = it.coerceIn(0.5f, 5.0f) },
                     )
                 }
             }
@@ -1164,11 +1167,12 @@ private fun RecognizedFoodCard(
     onDelete: () -> Unit,
 ) {
     var name by remember(food.id, editing) { mutableStateOf(food.name) }
-    var grams by remember(food.id, editing) { mutableStateOf(food.grams.toString()) }
+    var servings by remember(food.id, editing) { mutableStateOf(food.servings.toString()) }
     var kcal by remember(food.id, editing) { mutableStateOf(food.nutrition.kcal.toString()) }
     var carb by remember(food.id, editing) { mutableStateOf(food.nutrition.carb.toInt().toString()) }
     var protein by remember(food.id, editing) { mutableStateOf(food.nutrition.protein.toInt().toString()) }
     var fat by remember(food.id, editing) { mutableStateOf(food.nutrition.fat.toInt().toString()) }
+    
     val matches = remember(name) {
         if (name.isBlank() || foodDatabase.containsKey(name)) emptyList() else foodDatabase.keys.filter { it.contains(name) }.take(3)
     }
@@ -1214,7 +1218,7 @@ private fun RecognizedFoodCard(
                     Column(Modifier.weight(1f)) {
                         Text(food.name, color = TrexDark, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                         Text(
-                            "${food.grams}g · ${food.nutrition.kcal} kcal · 탄수 ${food.nutrition.carb.toInt()}g · 단백질 ${food.nutrition.protein.toInt()}g · 지방 ${food.nutrition.fat.toInt()}g",
+                            "${food.servings}인분 · ${food.nutrition.kcal} kcal · 탄수 ${food.nutrition.carb.toInt()}g · 단백질 ${food.nutrition.protein.toInt()}g · 지방 ${food.nutrition.fat.toInt()}g",
                             color = TrexDark.copy(alpha = 0.58f),
                             fontSize = 11.sp,
                             maxLines = 1,
@@ -1249,7 +1253,7 @@ private fun RecognizedFoodCard(
                             Surface(
                                 onClick = {
                                     name = match
-                                    val scaled = foodDatabase.getValue(match).scaledBy(grams.toIntOrNull() ?: 100)
+                                    val scaled = foodDatabase.getValue(match).scaledBy(servings.toFloatOrNull() ?: 1.0f)
                                     kcal = scaled.kcal.toString()
                                     carb = scaled.carb.toInt().toString()
                                     protein = scaled.protein.toInt().toString()
@@ -1262,7 +1266,7 @@ private fun RecognizedFoodCard(
                                 Text("$match · ${foodDatabase.getValue(match).kcal} kcal", color = TrexDark.copy(alpha = 0.78f), fontSize = 12.sp, modifier = Modifier.padding(10.dp))
                             }
                         }
-                        LightTrexTextField(grams, { grams = it.digitsOnly().take(4) }, "중량(g)", keyboardType = KeyboardType.Number)
+                        LightTrexTextField(servings, { servings = it.decimalOnly().take(4) }, "인분 (예: 1.5)", keyboardType = KeyboardType.Decimal)
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             LightTrexTextField(kcal, { kcal = it.digitsOnly() }, "kcal", keyboardType = KeyboardType.Number, modifier = Modifier.weight(1f))
                             LightTrexTextField(carb, { carb = it.decimalOnly() }, "탄수", keyboardType = KeyboardType.Decimal, modifier = Modifier.weight(1f))
@@ -1278,7 +1282,7 @@ private fun RecognizedFoodCard(
                                     onApply(
                                         food.copy(
                                             name = name.ifBlank { food.name },
-                                            grams = grams.toIntOrNull() ?: food.grams,
+                                            servings = servings.toFloatOrNull() ?: food.servings,
                                             nutrition = Nutrition(
                                                 kcal = kcal.toIntOrNull() ?: food.nutrition.kcal,
                                                 carb = carb.toDoubleOrNull() ?: food.nutrition.carb,
@@ -1354,9 +1358,9 @@ private fun AddFoodDashedCard(onClick: () -> Unit) {
 
 @Composable
 private fun WeightAndNutritionEditor(
-    grams: Int,
+    servings: Float,
     nutrition: Nutrition,
-    onGrams: (Int) -> Unit,
+    onServings: (Float) -> Unit,
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -1366,15 +1370,16 @@ private fun WeightAndNutritionEditor(
     ) {
         Column(Modifier.padding(14.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("중량", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                Text("먹은 양", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
                 Box(Modifier.width(96.dp)) {
-                    TrexTextField(grams.toString(), { it.toIntOrNull()?.let(onGrams) }, "g", keyboardType = KeyboardType.Number)
+                    TrexTextField(servings.toString(), { it.toFloatOrNull()?.let(onServings) }, "인분", keyboardType = KeyboardType.Decimal)
                 }
             }
             Slider(
-                value = grams.toFloat(),
-                onValueChange = { onGrams(it.toInt()) },
-                valueRange = 30f..600f,
+                value = servings,
+                onValueChange = { onServings((it * 2).roundToInt() / 2.0f) },
+                valueRange = 0.5f..5.0f,
+                steps = 8, // 0.5 ~ 5.0 사이 8개의 스텝 (1.0, 1.5 ... 4.5)
                 colors = SliderDefaults.colors(
                     thumbColor = TrexLime,
                     activeTrackColor = TrexLime,
@@ -1990,20 +1995,21 @@ private fun simulatedDetectedFoods(photoCount: Int, firstId: Int): List<Recogniz
         FoodEntry("샐러드", Nutrition(120, 8.0, 4.0, 7.0)),
     )
     return base.take(if (photoCount > 1) 1 else 3).mapIndexed { index, food ->
-        food.toRecognized(firstId + index, if (food.name == "현미밥") 150 else 100)
+        // 기존의 grams 대신 현미밥은 1.5인분, 나머지는 1.0인분으로 반환되도록 테스트 코드 수정
+        food.toRecognized(firstId + index, if (food.name == "현미밥") 1.5f else 1.0f)
     }
 }
 
-private fun FoodEntry.toRecognized(id: Int, grams: Int): RecognizedFood =
-    RecognizedFood(id = id, name = name, grams = grams, nutrition = nutrition)
+private fun FoodEntry.toRecognized(id: Int, servings: Float): RecognizedFood =
+    RecognizedFood(id = id, name = name, servings = servings, nutrition = nutrition)
 
-private fun Nutrition.scaledBy(grams: Int): Nutrition {
-    val scale = grams / 100.0
+// Nutrition 데이터 변환 시 servings(인분) 값만큼 곱해지도록 수정
+private fun Nutrition.scaledBy(servings: Float): Nutrition {
     return Nutrition(
-        kcal = (kcal * scale).toInt(),
-        carb = carb * scale,
-        protein = protein * scale,
-        fat = fat * scale,
+        kcal = (kcal * servings).toInt(),
+        carb = carb * servings,
+        protein = protein * servings,
+        fat = fat * servings,
     )
 }
 

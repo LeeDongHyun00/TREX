@@ -339,3 +339,43 @@ private fun Calendar.koreanDayOfWeek(): String = when (get(Calendar.DAY_OF_WEEK)
     Calendar.SATURDAY -> "토"
     else -> "일"
 }
+
+/**
+ * 음식의 1인분(기본 제공량) 기준 영양소 정보를 담는 데이터 클래스입니다.
+ */
+data class FoodConstant(
+    val id: Int,
+    val name: String,
+    val baseServingWeightG: Float, // 1인분 기준 그람(g) 수 (예: 100g)
+    val kcalPerServing: Float,     // 1인분 기준 칼로리
+    val carbsPerServing: Float,    // 1인분 기준 탄수화물
+    val proteinPerServing: Float,  // 1인분 기준 단백질
+    val fatPerServing: Float       // 1인분 기준 지방
+)
+
+/**
+ * 유저가 슬라이더와 텍스트 입력을 통해 최종 확정한 식단 기록 데이터입니다.
+ * 이 데이터가 서버(백엔드)로 전송됩니다.
+ */
+data class DietRecord(
+    val recordDate: String,
+    val foodName: String,
+    val servings: Float,        // 유저가 설정한 인분 (예: 1.5인분)
+    val totalKcal: Float,       // 유저가 직접 입력/수정한 최종 칼로리
+    val totalCarbs: Float,      // 유저가 직접 입력/수정한 최종 탄수화물
+    val totalProtein: Float,    // 유저가 직접 입력/수정한 최종 단백질
+    val totalFat: Float         // 유저가 직접 입력/수정한 최종 지방
+)
+
+object MockDataStore {
+    // 앱 개발 테스트를 위한 닭가슴살 1인분(100g) 기본 데이터
+    val chickenBreast = FoodConstant(
+        id = 1,
+        name = "닭가슴살",
+        baseServingWeightG = 100.0f,
+        kcalPerServing = 109.0f,
+        carbsPerServing = 0.0f,
+        proteinPerServing = 23.0f,
+        fatPerServing = 1.5f
+    )
+}
