@@ -42,6 +42,9 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
+# 대형 브리지 재생 산출물 — 원본 데이터에서 언제든 재생성하며 GitHub 제한을 넘는다.
+docs/bridge-sides.full-sweep.v1.json
+
 # OS
 .DS_Store
 Thumbs.db

@@ -86,6 +86,16 @@ data class SetLog(
      * 준비 동작(폰 놓고 걸어오기·바 세팅)이 range/min/max 통계를 통째로 뒤집기 때문에 창을 자른다.
      */
     val anchorTMs: Long? = null,
+    val assessmentEndTMs: Long? = null,
+    val measurements: List<String> = emptyList(),
+    /**
+     * 세트 전체 프레임의 촬영 방향 추정 (spec §33, `ViewEstimator`): 원형 평균 요(도)·결과 벡터 길이 R·등급 문자·프레임 수.
+     * null = 프레임에 view_cos/view_sin 이 없거나(§33 이전 로그·바닥 종목) 프레임 부족. 규칙 게이팅은 앵커 이후 창으로 따로 추정한다.
+     */
+    val viewYawDeg: Float? = null,
+    val viewR: Float? = null,
+    val viewClass: String? = null,
+    val viewFrames: Int? = null,
 ) {
     companion object {
         const val SCHEMA = "trex.posture.setlog/1"
@@ -124,6 +134,8 @@ data class SetLog(
             repRecords: List<RepRecord>? = null,
             mode: String? = null,
             anchorTMs: Long? = null,
+            assessmentEndTMs: Long? = null,
+            measurements: List<String> = emptyList(),
         ): SetLog {
             val frames = samples.mapIndexed { i, s ->
                 SetLogFrame(
@@ -136,6 +148,7 @@ data class SetLog(
             }
             val upFromGravity = samples.any { it.upFromGravity }
             val tilt = samples.lastOrNull { it.upFromGravity }?.let { tiltFromScreenUpDegrees(it.up) }
+            val view = ViewEstimator.estimate(frames.map { it.features })
             return SetLog(
                 setId = newSetId(now),
                 createdAtIso = nowIso(now),
@@ -165,6 +178,12 @@ data class SetLog(
                 repValid = repRecords?.map { it.valid },
                 mode = mode,
                 anchorTMs = anchorTMs,
+                assessmentEndTMs = assessmentEndTMs,
+                measurements = measurements,
+                viewYawDeg = view?.yawDeg,
+                viewR = view?.r,
+                viewClass = view?.letter,
+                viewFrames = view?.frames,
             )
         }
     }
@@ -192,7 +211,20 @@ object SetLogJson {
         sb.append("\"up_verified_frames\":").append(log.upVerifiedFrames).append(',')
         field(sb, "note", log.note)
         if (log.mode != null) field(sb, "mode", log.mode)
+        sb.append("\"measurements\":[")
+        log.measurements.forEachIndexed { i, value -> if (i > 0) sb.append(','); str(sb, value) }
+        sb.append("],")
+        if (log.assessmentEndTMs != null) { sb.append("\"assessment_end_t_ms\":").append(log.assessmentEndTMs).append(',') }
         if (log.anchorTMs != null) { sb.append("\"anchor_t_ms\":").append(log.anchorTMs).append(',') }
+        // 촬영 방향 추정 (spec §33) — 없으면 필드 부재 (§33 이전 로그·바닥 종목과 구분)
+        if (log.viewClass != null) {
+            sb.append("\"view\":{")
+            sb.append("\"yaw_deg\":").append(num(log.viewYawDeg, 2)).append(',')
+            sb.append("\"r\":").append(num(log.viewR, 3)).append(',')
+            field(sb, "class", log.viewClass)
+            sb.append("\"frames\":").append(log.viewFrames ?: 0)
+            sb.append("},")
+        }
         // 자동 렙 카운트 — 카운터가 돌았던 세트만 기록 (미적용 세트와 구분: 필드 부재 = 미적용)
         if (log.repCount != null) {
             sb.append("\"reps\":{")

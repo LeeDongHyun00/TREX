@@ -25,7 +25,7 @@ fun parseReps(reps: String): RepsSpec {
     val count = numbers.firstOrNull()?.coerceAtLeast(1) ?: 1
     val targetLabel = when {
         reps.contains("초") -> "${count}초"
-        reps.contains("분") && !reps.contains("회") -> reps
+        reps.contains("분") && !reps.contains("회") -> reps.replace(Regex("\\s*[×xX]\\s*\\d+세트.*"), "")
         else -> "${count}회"
     }
     return RepsSpec(count = count, sets = sets, targetLabel = targetLabel)
@@ -36,8 +36,7 @@ fun formatReps(count: Int, sets: Int): String =
 
 fun Workout.repsSpec(): RepsSpec = parseReps(reps)
 
-fun Workout.durationMinutes(): Int =
-    Regex("\\d+").find(duration)?.value?.toIntOrNull()?.coerceAtLeast(1) ?: 6
+fun Workout.durationMinutes(): Int = timing().minutes
 
 fun Workout.estimatedCalories(): Int {
     val multiplier = when (category) {
@@ -47,10 +46,11 @@ fun Workout.estimatedCalories(): Int {
         "코어", "복근" -> 5
         else -> 4
     }
-    return (durationMinutes() * multiplier).coerceAtLeast(24)
+    val timing = timing()
+    return (timing.workSeconds * timing.sets / 60.0 * multiplier).roundToInt().coerceAtLeast(1)
 }
 
-/** 세션 화면이 쓰는 실행 스펙. 휴식 시간은 아직 전 종목 공통 30초. */
+/** 세션 화면이 쓰는 실행 스펙. 설정한 세트 사이 휴식을 포함한다. */
 data class ExerciseSpec(
     val targetReps: Int,
     val targetLabel: String,
@@ -64,7 +64,7 @@ fun Workout.exerciseSpec(): ExerciseSpec {
         targetReps = spec.count,
         targetLabel = spec.targetLabel,
         totalSets = spec.sets,
-        restSeconds = 30,
+        restSeconds = timing().restSeconds,
     )
 }
 

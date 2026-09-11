@@ -52,6 +52,9 @@ data class Workout(
     val alt: WorkoutAlt? = null,
     /** 오늘 세션에서 완료했는지 (리디자인: 홈/운동 탭 진행률과 카드 번호 칩 상태). */
     val done: Boolean = false,
+    /** null이면 종목별 기본 속도/휴식. 기존 저장 계획과 호환한다. */
+    val secondsPerRep: Int? = null,
+    val restSeconds: Int? = null,
 )
 
 @Immutable
@@ -94,14 +97,17 @@ fun PostureSetReport.toCorrection(): PostureCorrection {
     // REFERENCE 는 non-beta 헤드라인이 없으므로 첫 후보(베타)를 대표로 — beta 플래그가 같이 실려 UI 가 "참고" 로 낮춘다
     val lead = headline ?: candidates.firstOrNull()
     val focus = when {
-        mode == CoachMode.TRACK -> summaryLine
+        (exercise in com.example.trex_kotlin.posture.FloorTemporal.exercises || judged == 0) && measurements.isNotEmpty() -> measurements.joinToString(" · ")
+        mode == CoachMode.TRACK -> (listOf(summaryLine) + measurements).joinToString(" · ")
         verdict == SetVerdict.CLEAN -> if (betaOnly) "검증 중인 항목 기준으로는 이상 없었어요" else "자세 깨끗했어요"
         verdict == SetVerdict.UNJUDGED -> "자세 판정 없음"
         // "좋아요, 무릎 자세가 교정됐어요" 는 코칭 발화 문장이라 "{운동}에서 {관찰}" 틀에 안 맞는다 — 기록용 관찰문으로
         verdict == SetVerdict.RECOVERED -> "${lead?.bodyPart ?: "자세"} 자세가 세트 후반에 교정됐어요"
         else -> lead?.observation ?: summaryLine
     }
-    val kind = when (verdict) {
+    val kind = if (mode == CoachMode.TRACK) {
+        if (judged == 0) "unjudged" else "reference"
+    } else when (verdict) {
         SetVerdict.ISSUE -> when (headline?.kind) {
             OnsetKind.HABIT -> "habit"
             OnsetKind.DRIFT -> "drift"
@@ -113,8 +119,8 @@ fun PostureSetReport.toCorrection(): PostureCorrection {
         focus = focus,
         kind = kind,
         bodyPart = lead?.bodyPart,
-        fix = lead?.fix?.takeIf { it.isNotBlank() && verdict != SetVerdict.RECOVERED },   // 교정된 세트에 "다음엔 …" 은 어긋난다
-        note = lead?.note,
+        fix = lead?.fix?.takeIf { mode != CoachMode.TRACK && it.isNotBlank() && verdict != SetVerdict.RECOVERED },
+        note = (listOfNotNull(lead?.note) + measurements.filterNot { focus.contains(it) }).joinToString(" · ").takeIf { it.isNotBlank() },
         beta = lead?.beta ?: false,
         setId = setId,
         mode = if (mode == CoachMode.TRACK) "track" else "coach",

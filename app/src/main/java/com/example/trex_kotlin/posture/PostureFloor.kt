@@ -46,6 +46,31 @@ private object M {
 
 class FloorFeatureExtractor {
 
+    /** 카메라와 이미지 재생이 같은 종목별 피처 경로를 사용한다. */
+    fun computeForExercise(exercise: String, xy: FloatArray, vis: FloatArray, width: Int, height: Int): Map<String, Float> =
+        compute(xy,vis,width,height) + sideFeatures(xy,vis,width,height) +
+            if(exercise == "플랭크") PlankGeometry.features(xy,vis,width,height) else emptyMap()
+
+    /** 개인 비교용 측별 기하. 반대쪽이 가려져도 보이는 쪽의 기준 수집은 계속한다. */
+    fun sideFeatures(xy: FloatArray, vis: FloatArray, width: Int, height: Int): Map<String, Float> = buildMap {
+        if (xy.size < 66 || vis.size < 33 || width <= 0 || height <= 0) return@buildMap
+        fun p(i: Int) = doubleArrayOf(xy[i*2].toDouble()*width, xy[i*2+1].toDouble()*height)
+        fun ok(vararg ids: Int) = ids.all { vis[it].isFinite() && vis[it] >= .5f && p(it).all(Double::isFinite) }
+        for ((side,offset) in listOf("L" to 0,"R" to 1)) {
+            val sh=11+offset; val el=13+offset; val wr=15+offset; val hp=23+offset; val kn=25+offset; val an=27+offset
+            fun value(name: String, ids: IntArray, calc: () -> Double) {
+                if (ok(*ids)) calc().takeIf(Double::isFinite)?.let { put("${name}_$side",it.toFloat()) }
+            }
+            value("elbow_ang",intArrayOf(sh,el,wr)) { ang(p(sh),p(el),p(wr)) }
+            value("knee_ang",intArrayOf(hp,kn,an)) { ang(p(hp),p(kn),p(an)) }
+            value("hip_ang",intArrayOf(sh,hp,kn)) { ang(p(sh),p(hp),p(kn)) }
+            if (!ok(sh,hp) || hypot(p(sh)[0]-p(hp)[0],p(sh)[1]-p(hp)[1]) < 10) continue
+            value("hip_dev_ankle",intArrayOf(sh,hp,an)) { devUp(p(hp),p(sh),p(an)) }
+            value("hip_dev_knee",intArrayOf(sh,hp,kn)) { devUp(p(hp),p(sh),p(kn)) }
+            value("hand_shoulder_off",intArrayOf(sh,hp,wr)) { devUp(p(wr),p(sh),p(hp)) }
+        }
+    }
+
     // 접지선 스트리밍 상태 (세트 단위 — 세트 시작 시 reset)
     private val histHip = ArrayList<DoubleArray>()
     private val histAnk = ArrayList<DoubleArray>()

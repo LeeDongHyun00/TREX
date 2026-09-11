@@ -21,6 +21,10 @@ android {
     }
 
     buildTypes {
+        debug {
+            // 평가 설치는 사용자의 기존 앱·운동 기록과 분리한다.
+            if (project.hasProperty("postureReplay")) applicationIdSuffix = ".replay"
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(

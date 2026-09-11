@@ -124,10 +124,11 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         )
     }
 
-    fun recordCompletedSession(elapsedSeconds: Int) {
+    fun recordCompletedSession(elapsedSeconds: Int, completedPlan: List<Workout> = workoutPlan.filter { it.done }) {
+        if (completedPlan.isEmpty()) return
         // 리포트 맵은 여기서 비우지 않는다 — 완료 화면이 같은 맵을 읽고, 다음 startSession 이 비운다
         workoutHistory = workoutHistory.replaceTodayWith(
-            createWorkoutHistoryDay(workoutPlan, elapsedSeconds, sessionPostureReports.toMap()),
+            createWorkoutHistoryDay(completedPlan, elapsedSeconds, sessionPostureReports.toMap()),
         )
         store.saveHistory(workoutHistory)
     }

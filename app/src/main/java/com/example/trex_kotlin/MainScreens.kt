@@ -474,7 +474,7 @@ private fun WorkoutExpandCard(
                     Column(Modifier.weight(1f).padding(start = 12.dp)) {
                         Text(workout.name, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                         Row(Modifier.padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text("${workout.reps} · ${workout.duration}", color = c.text3, fontSize = 11.5.sp)
+                            Text("${workout.reps} · ${workout.timing().totalSeconds.asClock()}", color = c.text3, fontSize = 11.5.sp)
                             if (workout.posture && workout.postureSupported()) {
                                 Row(
                                     Modifier.clip(RoundedCornerShape(999.dp)).background(c.primaryWash).padding(horizontal = 7.dp, vertical = 2.dp),
@@ -508,7 +508,7 @@ private fun WorkoutExpandCard(
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
                         GhostButton("대체 운동", onClick = onOpenAlt, icon = Icons.Rounded.Refresh, modifier = Modifier.weight(1f), height = 44.dp)
-                        GhostButton("세트 수정", onClick = onOpenSets, icon = Icons.Rounded.Edit, modifier = Modifier.weight(1f), height = 44.dp)
+                        GhostButton("운동 설정", onClick = onOpenSets, icon = Icons.Rounded.Edit, modifier = Modifier.weight(1f), height = 44.dp)
                     }
                     // 자세 교정 스위치 — 규칙 엔진 지원 종목에만. 미지원이면 안내만.
                     if (workout.postureSupported()) {
@@ -530,9 +530,9 @@ private fun WorkoutExpandCard(
                                 Column(Modifier.padding(start = 10.dp).weight(1f)) {
                                     Text("자세 교정 사용", fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold)
                                     Text(
-                                        // 켜져 있으면 "평가 2 · 검증 중 1 · 못 봄 2" 처럼 범위를 숫자로 — 막연한 기대를 줄인다
-                                        scope?.cardLine?.takeIf { on }
-                                            ?: if (on) "카메라로 실시간 자세 평가를 해줘룡" else "켜면 카메라로 자세를 평가해룡",
+                                        com.example.trex_kotlin.posture.ExerciseProfiles.forName(workout.name)?.let {
+                                            "${it.capture.title}에서 촬영 · " + if (it.comparisonOnly) "초반 대비 변화 측정" else "움직임과 자세 안내"
+                                        } ?: "시작 전에 촬영 위치를 안내해요",
                                         fontSize = 10.sp, color = if (on) c.primaryText.copy(alpha = 0.8f) else c.text3,
                                     )
                                 }
@@ -582,7 +582,7 @@ private fun WorkoutExpandCard(
                         ) {
                             Icon(Icons.Rounded.Visibility, contentDescription = null, tint = c.text3, modifier = Modifier.size(15.dp))
                             Text(
-                                "이 운동의 자세 평가는 준비 중이에룡",
+                                "이 운동은 타이머로 진행해요",
                                 color = c.text3, fontSize = 11.5.sp,
                                 modifier = Modifier.padding(start = 10.dp),
                             )

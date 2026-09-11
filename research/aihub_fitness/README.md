@@ -144,6 +144,33 @@ python baseline_thresholds.py   # eligible 규칙의 (value − 기준선) 임�
 앱은 `PostureFloor.kt` 가 같은 정의로 2D 피처를 계산해 기존 집계·코칭·세트 로그 파이프라인에 그대로 흘린다
 (파리티: `floor_port_fixture.txt`). 임계값은 바닥 높이 카메라로 재보정 전까지 참고용.
 
+## 규칙별 오탐률·신뢰구간 + §28c 임계값 재적합 (명세 §32)
+```bash
+python rule_confidence.py --refit-s28c                      # 보고만: outputs/rule_confidence.csv, RULE_CONFIDENCE.md
+python rule_confidence.py --refit-s28c --apply --gate s32   # JSON 갱신: confidence 필드·§28c 임계값·등급·헤더 counts
+cp rules/rules_mp_v0.json ../../app/src/main/assets/posture/rules_mp_v0.json
+```
+- 전제: `outputs/` 전체 — 파서 → `qc_kp3d` → `spine_subtypes` → `experiment_b --recompute-features` → `rule_engine_v0` → `mp_sample` → `mp_infer` → `experiment_a` → `experiment_a_refit`(+`--mirror-safe`). 2026-09-05 재생성 실측 약 1시간 10분(MP 재추론 38분, 6 워커).
+- 환경: pandas 3.0 에서 전 파이프라인 동작 확인. `models/pose_landmarker_full.task` 는 앱 에셋과 같은 파일(SHA `4eaa5eb7…`)을 복사하면 된다.
+- 출시 임계값을 그대로 두고 정상 오탐률·검출률·AUC·균형정확도와 수행자 부트스트랩 95% 구간을 낸다. §28c 로 통계가 바뀐 규칙은 임계값이 GT 3D 위에 있었으므로 MP 피처에서 임계값만 재적합한다.
+
+## 촬영 뷰 추정기 + 규칙별 판정 허용 뷰 (명세 §33)
+```bash
+python view_estimator.py                   # VIEW_ESTIMATOR.md, outputs/view_estimator.csv, outputs/view_thresholds.json, app/src/test/resources/view_fixture.txt
+python rule_confidence.py --views --apply  # RULE_VIEWS.md + 규칙 JSON 에 views_ok(추정 등급별 판정 허용 목록)·views_eval 주입
+cp rules/rules_mp_v0.json ../../app/src/main/assets/posture/rules_mp_v0.json
+```
+- 정답은 카메라 코드가 아니라 GT 2D 어깨 순서로 보정한 실제 방향이다(서서 종목의 13.7% 가 명목 정면을 등짐, 케이블 종목은 100%).
+- 임계값 상수(`PostureView.kt`)를 바꾸면 `view_estimator.py` 를 다시 돌려 픽스처를 재생성한다 — `ViewEstimatorTest` 가 파리티를 검사한다.
+
+### 실기기 검증 프로토콜 (명세 §33)
+```bash
+python device_validation_plan.py          # DEVICE_VALIDATION.md + outputs/device_validation_plan.csv (JSON 의 views_ok 에서 기대값 생성)
+python pull_logs.py                       # 기기 로그 회수 → outputs/logs/
+python device_validation_check.py --since 2026-09-06 [--course min|full] [--skip set_id,...]   # outputs/DEVICE_VALIDATION_RESULT.md
+```
+- 배치 좌우는 전부 사용자 기준(B = 사용자 오른쪽 앞). 순서대로 찍어야 채점기가 같은 종목의 세트를 시각 순서로 계획과 짝짓는다.
+
 ## 다음 단계 (예정)
 - 랩 화면 "로그 저장 ON"으로 자체 촬영(여러 사용자) → 내보내기 → 코치 라벨 `labels.csv` → `calibrate_from_logs.py` → 규칙 JSON 갱신·에셋 반영
 - 기준선 세트 로그(note=baseline)로 `threshold_rel` 재보정(MP 스케일), subject_id 입력 UI

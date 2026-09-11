@@ -115,6 +115,8 @@ object CoachCues {
             val desc = rule.oppositeGuard?.desc?.takeIf { it.isNotBlank() } ?: "반대 방향"
             return CoachCue(rule.condition, "처음부터 반대 방향으로 벗어나 있어요 ($desc). 자세를 확인하세요.", "반대 방향으로 점점 벗어나요 ($desc). 자세를 확인하세요.")
         }
+        if (rule.exercise == "힙쓰러스트" && rule.condition.contains("고개") && rule.stat == "p10")
+            return CoachCue("고개", "처음부터 고개 각도가 참고 범위를 벗어났어요.", "고개 각도가 참고 범위를 벗어났어요.")
         val st = rule.subtype
         if (rule.condition.contains("척추")) {
             spineBySubtype[st ?: "all"]?.let { return it }
@@ -148,7 +150,8 @@ object CoachCues {
         rule.exercise == "크런치" && rule.condition.contains("견갑골") ->
             "머리 높이로 근사 판정 — 목만 당겨 올리는 동작은 구분하지 못해요"
         rule.exercise == "힙쓰러스트" && rule.condition.contains("고개") ->
-            "고개 '흔들림'으로 판정 — 계속 든 채 고정된 고개는 놓칠 수 있어요"
+            if (rule.stat == "p10") "코·귀·골반 투영 각도의 하위 10%를 측정해요. 바닥 접촉은 확인하지 못해요"
+            else "고개 흔들림으로 측정해요. 계속 든 채 고정된 고개는 놓칠 수 있어요"
         rule.condition.contains("경추 중립") ->
             "목 각도가 아니라 몸통-골반 라인으로 근사 판정해요"
         else -> null
@@ -402,6 +405,21 @@ class SpeechCoach(context: Context) {
     private var tts: TextToSpeech? = null
 
     private val lock = Any()
+    private val traceExecutor = java.util.concurrent.Executors.newSingleThreadExecutor()
+
+    /** 판정/화면 상태와 실제 TTS 시작을 구별하는 개발 로그. 음성 파형·영상은 저장하지 않는다. */
+    fun traceFeedback(kind: String, text: String, utteranceId: String? = null) {
+        val now = System.currentTimeMillis()
+        val record = org.json.JSONObject().put("t_ms",now).put("kind",kind).put("text",text)
+            .put("utterance_id",utteranceId).put("muted",muted).put("ready",ready).toString()
+        runCatching { traceExecutor.execute {
+            runCatching {
+                val dir = java.io.File(appContext.getExternalFilesDir(null),"posture_logs").apply { mkdirs() }
+                val date = java.text.SimpleDateFormat("yyyyMMdd",Locale.US).format(java.util.Date(now))
+                java.io.File(dir,"feedback-$date.jsonl").appendText(record+"\n")
+            }
+        } }
+    }
     /** ready 전 대기 큐 (오래된 것부터). */
     private val pending = ArrayList<Pending>()
     /** 아직 끝나지 않은 발화 id — 비면 오디오 포커스를 놓는다. */
@@ -430,12 +448,12 @@ class SpeechCoach(context: Context) {
     val unavailableReason: String? get() = if (initialized) unavailable else null
 
     private val progress = object : UtteranceProgressListener() {
-        override fun onStart(utteranceId: String?) {}
-        override fun onDone(utteranceId: String?) = finished(utteranceId)
-        override fun onStop(utteranceId: String?, interrupted: Boolean) = finished(utteranceId)
+        override fun onStart(utteranceId: String?) { traceFeedback("tts_start","",utteranceId) }
+        override fun onDone(utteranceId: String?) { traceFeedback("tts_done","",utteranceId); finished(utteranceId) }
+        override fun onStop(utteranceId: String?, interrupted: Boolean) { traceFeedback("tts_stop","interrupted=$interrupted",utteranceId); finished(utteranceId) }
         @Deprecated("API 21 이전 시그니처 — 추상 메서드라 구현은 필요하다", ReplaceWith("onError(utteranceId, errorCode)"))
-        override fun onError(utteranceId: String?) = finished(utteranceId)
-        override fun onError(utteranceId: String?, errorCode: Int) = finished(utteranceId)
+        override fun onError(utteranceId: String?) { traceFeedback("tts_error","",utteranceId); finished(utteranceId) }
+        override fun onError(utteranceId: String?, errorCode: Int) { traceFeedback("tts_error","code=$errorCode",utteranceId); finished(utteranceId) }
     }
 
     init {
@@ -469,6 +487,7 @@ class SpeechCoach(context: Context) {
      * 아직 준비 전이면 큐에 담아 뒀다가 초기화 직후 말한다 — 세트 시작 안내가 통째로 사라지지 않도록.
      */
     fun speak(text: String, flush: Boolean = true) {
+        traceFeedback("speech_requested",text)
         if (muted) return
         if (!ready) {
             // 초기화가 끝났는데도 못 쓰는 상태면 영원히 못 말한다 — 담아 둘 이유가 없다
@@ -493,6 +512,8 @@ class SpeechCoach(context: Context) {
     }
 
     fun shutdown() {
+        traceFeedback("shutdown","")
+        traceExecutor.shutdown()
         synchronized(lock) {
             pending.clear()
             speaking.clear()
@@ -506,6 +527,7 @@ class SpeechCoach(context: Context) {
 
     private fun speakNow(text: String, flush: Boolean) {
         val id = "coach-${System.nanoTime()}"
+        traceFeedback("tts_submit",text,id)
         synchronized(lock) {
             if (flush) speaking.clear()             // 끊긴 발화는 onDone 이 오지 않는다
             speaking += id
@@ -515,7 +537,7 @@ class SpeechCoach(context: Context) {
             tts?.speak(text, if (flush) TextToSpeech.QUEUE_FLUSH else TextToSpeech.QUEUE_ADD, null, id)
         }.getOrNull()
         // 발화가 시작조차 못 하면 리스너가 안 오므로 여기서 포커스를 정리한다
-        if (rc != TextToSpeech.SUCCESS) finished(id)
+        if (rc != TextToSpeech.SUCCESS) { traceFeedback("tts_rejected","code=$rc",id); finished(id) }
     }
 
     /** 초기화 직후 대기 큐를 흘려보낸다. 오래된 요청은 이미 지난 상황이라 버린다. */

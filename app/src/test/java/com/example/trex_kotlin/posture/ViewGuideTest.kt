@@ -52,8 +52,9 @@ class ViewGuideTest {
 
         // 미러 안전하면 좌우를 강요하지 않는다
         assertTrue(ViewGuide.placement("B", floor = false, mirrorSafe = true).contains("좌우 어느 쪽이든"))
-        assertTrue(ViewGuide.placement("B", floor = false, mirrorSafe = false).contains("왼쪽"))
-        assertTrue(ViewGuide.placement("D", floor = false, mirrorSafe = false).contains("오른쪽"))
+        // §33: 좌우는 사용자 기준 — B 는 오른어깨가 카메라에 가까운 배치(사용자 오른쪽 앞). 데이터셋 이름 "전방사선L" 은 카메라 쪽에서 본 왼쪽.
+        assertTrue(ViewGuide.placement("B", floor = false, mirrorSafe = false).contains("사용자 기준 오른쪽"))
+        assertTrue(ViewGuide.placement("D", floor = false, mirrorSafe = false).contains("사용자 기준 왼쪽"))
     }
 
     @Test

@@ -93,6 +93,8 @@ class TrexStore(context: Context) {
                         WorkoutAlt(a.getString("name"), a.getString("reps"))
                     },
                     done = o.optBoolean("done", false),
+                    secondsPerRep = if (o.has("secondsPerRep")) o.optInt("secondsPerRep", 3).coerceIn(1, 15) else null,
+                    restSeconds = if (o.has("restSeconds")) o.optInt("restSeconds", 45).coerceIn(0, 600) else null,
                 )
             }
         }.getOrNull()
@@ -110,6 +112,8 @@ class TrexStore(context: Context) {
                 .put("category", w.category)
                 .put("done", w.done)
             w.alt?.let { o.put("alt", JSONObject().put("name", it.name).put("reps", it.reps)) }
+            w.secondsPerRep?.let { o.put("secondsPerRep", it) }
+            w.restSeconds?.let { o.put("restSeconds", it) }
             arr.put(o)
         }
         prefs.edit().putString(KEY_PLAN, arr.toString()).apply()

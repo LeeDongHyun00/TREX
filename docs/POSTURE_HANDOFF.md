@@ -1,5 +1,7 @@
 # 자세 평가 — 인수인계 (2026-09-03)
 
+> **최신 구현(2026-09-11, §41)**: [운동 진행·개인 관측 UX](SESSION_UX_IMPLEMENTATION.md). 카탈로그 57개 프로필(55개 카메라/2개 타이머), 항목별 초반 기준, 촬영 준비 안내, 횟수/속도/세트/휴식 설정, 자동 전환과 건너뛰기를 구현했다. 자세 화면의 REC/규칙 개수/바닥 긴 설명은 기본 노출에서 제거했다. 구형 기준선 TSV 자동 보정은 촬영/변형/버전 불명으로 중단하되 파일은 보존한다. JVM 213건, Note10+ 분리 앱 UI/자산 3건 통과. 일반 앱은 14:32:45에 `install -r`로 업데이트했으며 설치 APK SHA-256 일치와 `trex_store.xml` 바이트 불변을 확인했다. §39의 ‘정렬 OK여야 개인 기준 수집’ 정책은 §41에서 해제했으며 정렬 판정 자체는 그대로다.
+
 이 문서 하나로 이전 세션의 맥락 없이 작업을 이어갈 수 있게 쓴다. 판단 원칙·빌드 방법·함정은 저장소 루트 `CLAUDE.md`, 기능별 정본 스펙은 `research/aihub_fitness/KOTLIN_PORTING_SPEC.md`(§30·§31·§31a). 이 문서는 **무엇을 왜 그렇게 정했는지**와 **다음에 무엇을 할지**를 담는다.
 
 이 문서의 사실 주장은 작성 시점에 코드·로그로 대조 검증했다. 검증에서 실제로 틀린 것이 여러 건 나왔고 전부 반영했다 — 특히 §4 의 앵커 시점 계산은 처음에 틀렸었다.
@@ -28,7 +30,9 @@ f7be706 §31 코칭 신뢰성 — 앵커·베타 침묵·평가 범위·음성 �
 
 **미커밋(작업 트리)**: `gradlew` 파일 모드 변경(100644→100755). 이 작업과 무관하고 세션 이전부터 있었다. git 에 등록된 모드가 100644 라 **새로 클론한 세션은 `chmod +x gradlew` 를 먼저 해야 한다.**
 
-**검증 상태**: 유닛 테스트 **133건 통과**, `assembleDebug` 성공, 실기기(Galaxy Note10+ SM-N976N) 설치·실행 확인. 단 §31a 변경은 전부 `PostureLive.kt`(Compose) 안이라 **유닛 테스트가 0건**이다 — 실기기 확인이 유일한 검증 수단이다.
+**§32 작업분(2026-09-05, 미커밋)**: 신규 `research/aihub_fitness/rule_confidence.py`·`RULE_CONFIDENCE.md`, 수정 `research/aihub_fitness/rules/rules_mp_v0.json` + `app/src/main/assets/posture/rules_mp_v0.json`(동일), `KOTLIN_PORTING_SPEC.md` §32·§33, `README.md`, `CLAUDE.md`, 이 문서. §33 분: 신규 `research/aihub_fitness/view_estimator.py`·`VIEW_ESTIMATOR.md`·`RULE_VIEWS.md`, `app/src/main/java/com/example/trex_kotlin/posture/PostureView.kt`, `app/src/test/java/.../ViewEstimatorTest.kt`, `app/src/test/resources/view_fixture.txt`; 수정 `PostureAnalyzer.kt`·`PostureRules.kt`·`PostureSetLog.kt`·`PostureSetReport.kt`·`PostureLive.kt`. `outputs/` 는 gitignore. 그리고 다른 계보의 미추적 `app/src/testDebug/`(이 브랜치에 없는 `pose.runtime` 을 import 해 유닛 테스트 컴파일을 깨던 파일)를 **`app/src/testDebug.other-lineage/` 로 개명**해 비활성화했다 — 되돌리려면 이름만 되돌리면 된다.
+
+**검증 상태**: 유닛 테스트 **140건 통과**(§33 의 `ViewEstimatorTest` 7건 포함, 2026-09-05), `assembleDebug` 성공, 실기기(Galaxy Note10+ SM-N976N) 설치·실행 확인. 단 §31a 변경은 전부 `PostureLive.kt`(Compose) 안이라 **유닛 테스트가 0건**이다 — 실기기 확인이 유일한 검증 수단이다.
 
 ---
 
@@ -101,6 +105,25 @@ WorkoutHistoryItem.postureCorrection → 기록 화면
 **후속 수정 (검증에서 발견)**: 앵커 폴백의 기준 시점이 잘못돼 있었다. `PoseSample.detected` 는 **가시 관절 수와 무관하게 항상 true** 라(관절 11개짜리 프레임도 detected), 검출 기준으로 세면 사람이 아직 프레임에 제대로 없는 동안 폴백이 다 흘러간다. 실측에서 앵커가 10.0초에 걸려 43.8초의 준비 동작이 그대로 집계에 들어갔다 — **즉 최초의 §31a 수정만으로는 이 세션이 고쳐지지 않았다.** 기준 시점을 `features.isNotEmpty()` 인 첫 프레임으로 바꿔서 해결했다.
 
 ---
+
+### §32 — 규칙별 오탐률·신뢰구간 + §28c 임계값 재적합 (2026-09-05, **미커밋**)
+
+`outputs/` 를 처음부터 재생성하고(파싱→QC→실험 B→룰엔진 v0→MP 재추론 166,923장→실험 A→재적합) `research/aihub_fitness/rule_confidence.py` 를 새로 만들어 ship/beta 규칙마다 출시 임계값 그대로의 정상 오탐률·검출률·AUC·균형정확도와 수행자 부트스트랩 95% 구간을 JSON `confidence` 필드에 실었다. 근거와 표는 스펙 §32 와 `RULE_CONFIDENCE.md`.
+
+- **§28c 가 통계를 바꾼 규칙 7건은 임계값이 GT 3D 분포 위에 있었다** — 덤벨 체스트 플라이 팔꿈치는 검출률 0(죽은 규칙), 사이드 크런치 양손은 정상 오탐률 0.77. MP 피처에서 임계값만 재적합했다(`threshold_before_s32` 보존).
+- **게이트 s32** 로 4건 beta 강등: 스쿼트 '고개 정면'(§4 의 실기기 오탐 규칙 — 이제 음성 침묵), 사이드 런지 앞다리(이 종목은 `provisionalOnly`), 스티프 데드 척추[lateral], 스텝 백워드 뒤다리(뒤 둘은 앱 미노출). ship 55→**51**, beta 16→**20**. 헤더 `counts` 정정.
+- 앱 코드 변경 없음(로더는 모르는 필드 무시). `app/src/main/assets/posture/rules_mp_v0.json` 이 연구 JSON 과 동일하게 갱신됨.
+- 환경: `.venv312` 에 pandas 3.0.5·pyarrow 25 설치, `research/aihub_fitness/models/pose_landmarker_full.task` 는 앱 에셋 복사본(gitignore).
+
+### §33 — 촬영 뷰 추정기 + 규칙별 판정 허용 뷰 (2026-09-05, **미커밋**)
+
+앱에 촬영 방향을 확인하는 코드가 없어 미러 비안전·정면 전용 규칙이 어느 방향에서든 점수에 들어가던 문제(§32 감사 4번). `research/aihub_fitness/view_estimator.py` 가 MP 월드 랜드마크의 어깨선·골반선 요(yaw)로 등급(C·B·D·SIDE·A·E·R)을 추정하고, `rule_confidence.py --views` 가 규칙마다 **추정 등급 기준**으로 판정 허용 목록 `views_ok` 를 계산해 JSON 에 넣었다. 앱은 `PostureView.kt` 가 같은 정의로 프레임 피처 `view_cos/view_sin` 을 내고, `evaluate` 가 창의 추정 등급이 `views_ok` 밖이면 유보한다.
+
+- **정답 교정이 핵심이었다**: 카메라 코드로 채점하면 정면 클립 16% 가 후방으로 "오분류"됐는데, GT 2D 어깨 순서로 보니 수행자가 실제로 등진 클립(13.7%, 케이블 종목 100%)이었다. 보정 정답 기준 등급 정확도 0.965 · 반구 0.982 (서서 종목, UNKNOWN 4.7% 제외).
+- 규칙 70개 중 학습 뷰에서 허용 55개, B·D 양쪽 허용 26개. **같은 종목의 규칙이 다른 뷰를 요구**하는 경우가 드러남(랫풀 B/D, 데드리프트 C/D) — `RULE_VIEWS.md` §3 종목별 최적 배치 표.
+- 세트 로그 `view{}` 필드 추가, 리포트 "유보 · 촬영 방향", 라이브 패널 방향 표시/경고. 테스트 `ViewEstimatorTest`(파리티 120 프레임 + 게이팅).
+- **실기기 미검증.** 검증 프로토콜과 채점기를 만들어 뒀다(`DEVICE_VALIDATION.md`, §6 6번).
+- **좌우 표기 정정**: 데이터셋의 B '전방사선L' 은 카메라 쪽에서 본 왼쪽 = 사용자의 오른쪽. 앱 등급 라벨·`ViewGuide.placement`·프로토콜 모두 **사용자 기준**으로 통일했고(B = 사용자 오른쪽 앞), 옆 등급 이름은 SIDE_L/R 대신 SIDE_B/SIDE_D(B·D 와 같은 쪽)로 바꿨다. 기기 로그 22세트(8/27~9/3)를 `outputs/logs/` 에 회수해 뒀다(gitignore).
 
 ## 4. 실기기 발견 — 스쿼트 5회 세션
 
@@ -178,10 +201,13 @@ WorkoutHistoryItem.postureCorrection → 기록 화면
 
 0. **`gradlew` 실행비트를 커밋할지 결정** (안 하면 새 클론에서 빌드 실패)
 1. **§31a 후속 수정을 실기기로 재검증** — 새 캡처가 있어야 `anchor_t_ms` 로 앵커 시점을 확인할 수 있다. 손에 있는 로그로는 불가능하다.
-2. **개인 기준 세트**(5.1 B) — '고개 정면'이 `required` 가 아니라 계속 잘못 지적한다. 단 5.2 의 세트 분할과 순서를 함께 판단할 것.
+2. **개인 기준 세트**(5.1 B) — '고개 정면'은 §32 게이트로 beta 가 되어 더는 음성으로 지적하지 않는다. 이 규칙을 ship 으로 되돌리는 길이 기준선(`threshold_rel` 6.39)이다. 단 5.2 의 세트 분할과 순서를 함께 판단할 것.
 3. **바닥 종목 실기기 체감 확인** — §31 로 자세 음성이 사라졌다.
 4. **기록 화면 %·92% 문턱 정리** — 라이브만 분수로 바꿔 화면 간 표기가 어긋나 있다.
 5. 보류 사유 + CTA(5.1 D) → 규칙 라벨 → 재보정 루프 → 위험 등급
+7. **바닥 종목 규정 → 구현** — `research/aihub_fitness/FLOOR_POSTURE_DEFINITION.md`(스펙 §34). 순서: 플랭크 홀드형 판정기(부호 있는 `hip_dev_ankle`, 2초 지속 이벤트, 정상 분포 임계) → 푸시업 깊이·몸통 일직선 렙별 판정 → 힙쓰러스트 렙 상단 → 크런치·Y 레이즈 스코프 축소 문구. 2026-09-10 플랭크 로그(자가 라벨 '무너짐', 규칙 OK)가 첫 실측 근거.
+8. **세트 끝 정리 동작 컷(§31b 후보)** — 2026-09-10 실측 3세트 모두 극값이 마지막 렙 뒤(폰으로 걸어옴·덤벨 내려놓음)에서 났다. 렙 카운터가 있는 종목은 집계 창을 마지막 렙 + 주기 1개에서 닫는다. 앵커 폴백 10초도 사용자 셋업(첫 렙 12·32·12초)보다 짧았다.
+6. **§33 실기기 대조** — 프로토콜은 `research/aihub_fitness/DEVICE_VALIDATION.md`(생성기 `device_validation_plan.py`). 새 APK 설치 → 최소 코스 16세트(맨몸) 순서대로 → `pull_logs.py` → `device_validation_check.py --since <날짜>`. 기기의 현재 빌드(9월 3일)는 §32·§33 이전이라 로그에 `view` 가 없다. 그 다음 `ViewGuide` 배치 안내를 `RULE_VIEWS.md` §3 의 최적 배치로 바꾸거나 뷰별 임계값(`thresholds_by_view`)을 검토.
 
 ---
 
@@ -202,4 +228,55 @@ WorkoutHistoryItem.postureCorrection → 기록 화면
 - 기록 화면은 아직 %·92% 문턱.
 - `pull_logs.py` 의 adb 경로가 Windows 하드코딩.
 - 초반 창은 렙 **완료** 기준으로 앵커한다 — 렙 1 자체는 창에서 빠진다(시간 폴백이 먼저 걸리면 포함).
-- `rules_mp_v0.json` 헤더의 `counts` 가 실제 분포와 불일치(ship 59/beta 12 vs 실제 55/16).
+- ~~`rules_mp_v0.json` 헤더의 `counts` 가 실제 분포와 불일치~~ → §32 에서 정정(51/20/70). 손으로 JSON 을 고치면 다시 어긋난다.
+- **로더의 `[all]` 필터가 ship 규칙을 버린다** (`PostureRules.kt:137`): 종목에 하위유형 규칙이 하나라도 있으면 그 종목의 `[all]` 규칙을 전부 떨어뜨리는데, 스탠딩 사이드 크런치 '척추의 중립'은 ship `[all]`(shoulder_h_R__mean, AUC 0.93)과 beta `[forward_lean]`(torso_incl__mean, 0.77)이 **다른 피처**라 라이브 경로(`includeBeta = true`)에서 ship 이 사라지고 beta 만 남는다. 라잉 트라이셉스도 같은 구조(앱 미노출). 필터를 조건 단위·동일 피처 한정으로 고치거나 export 에서 중복을 없애야 한다.
+- ~~뷰·미러 의존을 런타임이 확인하지 않는다~~ → §33 으로 게이팅. 남은 것: 옆(SIDE)은 미검증이라 전부 유보되고, 한 종목의 규칙이 서로 다른 뷰를 요구하면 한 배치로 다 판정할 수 없다(뷰별 임계값 또는 배치 안내 개선 필요). 실기기 대조 전.
+- 유닛 테스트 실행 전제: 다른 계보의 `app/src/testDebug*` 가 소스셋 이름으로 남아 있으면 컴파일이 깨진다(§2 참조).
+
+
+## 2026-09-11 — 바닥 8종목 구현 (§35)
+
+- floor_v0.3: beta 12 / exclude 2. 플랭크 유지 측정, 푸시업·니푸쉬업·힙쓰러스트 반복별 범위 평가, 크런치·Y 스코프 축소.
+- 새 파일 `FloorTemporal.kt`, `FloorTemporalTest.kt`. 라이브 참고 측정/자세 기준, 완료 상세·기록, 평가 종료 시각 로그 연결.
+- 마지막 3회 이상 규칙적 반복의 마지막 극점 + 1주기에서 최종 집계 종료. 원본 프레임 보존. 마지막 반복 미검출 자체는 미해결.
+- 153 JVM 테스트 및 debug APK 빌드 통과. 연결 기기에 설치·실측은 이번 작업에서 하지 않음.
+- `FLOOR_RULES_V03.md` 수치는 GT 탐색 결과이며 실기기 정확도가 아니다. 상세 정의·제약은 `KOTLIN_PORTING_SPEC.md` §35.
+- 다음 검증은 `FLOOR_DEVICE_VALIDATION.md`의 측면·반복/유지 프로토콜. 실제 사람 데이터 수집 없이 beta를 ship으로 올리지 말 것.
+
+
+## 2026-09-11 — AIHub 실기기 재생 평가 (§37)
+
+- `DEVICE_REPLAY_INVENTORY.md`: 41종목/37,607클립, 앱 매핑 26종목. C:/T: 원본 tar 36개 직접 감사(파일명 5,915,534개), Validation Day07·Day19·Day32 원본 없음.
+- Bitmap VIDEO 추론 진입점과 최종 평가 `PostureAssessment`를 앱/계측 테스트가 공유한다. 재생용 별도 applicationId는 `com.example.trex_kotlin.replay`, `-PpostureReplay`로 빌드한다.
+- Training 바닥 32클립×5뷰 2,560장을 Note10+에 전송·실행. **160/160 완료 및 결과 회수·채점 완료.** USB 연결 해제 중 단말 계측은 계속 실행됐으며 재연결 후 `--collect`로 회수했다.
+- GPU 추론 중앙값 102ms/p95 120ms. 고정 권장 뷰의 window 조건 32사례는 앱 창 10건 판정/22건 유보, 전체 창 29건 판정/3건 유보. 전체 창에서도 니푸쉬업·푸시업 고개 위반 누락, 힙쓰러스트 고개 정상 오탐을 확인했다. `DEVICE_REPLAY_RESULTS.md`에 사례 ID·측정값을 기록했다.
+- 실행/회수/재개 절차: `research/aihub_fitness/DEVICE_REPLAY_STATUS.md`. 다음 검증에는 누락된 Validation 원본과 실제 시간·반복 정답이 필요하다. 짧은 합성 시간축의 유보율을 실제 운동 세션의 성능으로 해석하지 말 것.
+- 기존 JVM/평가 APK 빌드 및 추가 공유 평가 테스트 2건 통과. Training 재사용/합성 타임스탬프 조건을 숨기지 말 것.
+- 세션 시작 때 FloorFeedback/PostureLive/FloorTemporal/PostureScope/RuleHighlight의 기존 수정이 있었다. 평가 작업은 이를 보존했고, TextButton import 누락은 빌드에 필요해 추가했다.
+
+## 2026-09-11 — 초기 자세 비교와 정상 표본 표시 (§38)
+
+- 사용자 범위를 기존 데이터/관절 기반 로직/UX로 한정해 구현했다. 기존 COACH 규칙·등급을 유지하며 TRACK은 `PostureComparisonTracker`의 직접 비교로 바꿨다.
+- 초반 3개 완전한 관측 반복의 최소/최대 지점·이동 범위를 고정하고, 이후 같은 단계의 지속 변화와 복귀를 표시·발화한다. 플랭크는 초기 안정 5초 기준이다. 가림/일시정지는 비교를 끊으며 기준 재측정 버튼과 카메라 전환은 기준을 초기화한다.
+- 실제 단말 재생의 정상 클립에서 73개 방향/단계별 참고 범위를 내보냈다. `normal_pose_reference.tsv`는 소수 Training 표본 범위이며 새 정답 임계값이 아니다. 바닥 COACH에서 촬영 방향을 직접 선택해 볼 수 있다. 바로 옆은 표본이 없어 정상 비교 숫자를 제공하지 않는다.
+- `PostureComparisonUi.kt`에 수치·막대·재측정/방향 선택 UI를 연결하고 변화 기록은 measurements로 저장한다. TRACK의 기존 모집단 onset 발화/리포트 혼합을 제거했다. 현재 일반 debug APK 빌드는 `.replay`가 아닌 본래 패키지다.
+- 새 비교 테스트 17건 포함 전체 JVM 172건과 일반 debug APK 빌드 통과. 근거/한계는 스펙 §38. 완료 화면도 TRACK을 정확한 자세로 인증하지 않도록 문구를 분리했다. 모델·기존 규칙 JSON·AGENTS 지침은 수정하지 않았다. 이번 새 UI는 실기기 카메라/음성 재확인 전이다.
+
+## 2026-09-11 — 플랭크 직접 정렬 (§39, 최신)
+
+- `PlankAlignment.kt`: 고개 방향·목 기울기·골반 정렬 3개 beta가 초기 기준과 무관하게 지속 이탈/복귀를 측정한다. `floor_v0.4`는 beta 14/exclude 2. 예전 플랭크 hold는 대체됐다.
+- COACH 화면·부위 강조·참고 음성·기준선, TRACK 고개/골반 초기 대비 변화, 정상 범위 밖 초기 기준 수집 차단을 연결했다. 두 모드의 기준 계산은 동일하다.
+- 앞의 §38 'C=정면/바로 옆 표본 없음' 설명은 잘못된 방향 매핑이었다. 바닥 C는 측면이다. 측면 선택으로 고쳤으며 다른 사선의 정확한 방향을 추측해 표시하지 않는다.
+- 위 미해결 목록의 `[all]` 필터 누락은 수정했다. 동일 조건·피처·종류·등급만 중복 제거한다. 스탠딩 사이드 크런치 독립 ship을 보존한다.
+- 정상 Training 2명/26프레임 재사용으로 기하 탐색 범위를 넓혔다. 목 범위가 넓고 고개 정답 라벨이 없으며 대부분 재생 방향이 유보다. 정확도가 해결됐다고 말하지 않는다. 상세/재생성은 `PLANK_ALIGNMENT_V04.md`와 `plank_rules_v04.py`.
+- JVM 195건/일반 APK/Android 테스트 APK 빌드 통과. 원시 Android 좌표 320프레임 Python/Kotlin 파리티와 실시간/마감 평가 일치를 확인했다. 새 촬영 정확도 및 화면·TTS 사용성은 미검증이다.
+- 새 `posture_logs/feedback-YYYYMMDD.jsonl`은 화면에 전달한 상태와 TTS 요청/시작/완료를 남긴다. 기존 로그는 내부 골반 이탈 검출은 증명했지만 사용자가 실제로 안내를 받았는지는 증명하지 못했다.
+- Note10+ 기존 앱 업데이트 설치 완료(lastUpdateTime 2026-09-11 13:07:42). `PlankAssetTest` 2건도 실제 기기에서 통과했다. 앱 데이터 삭제는 없었고, 테스트는 자산/엔진 연결 확인이며 새 운동 촬영 평가는 아니다.
+
+## 2026-09-11 — 전체 개인화 설계 (§40, 미구현)
+
+- 사용자 요청: 현재 데이터로 최선을 하며 모든 운동의 개인화 기능을 **먼저 설계**. 새 모집/학습/출시 확대를 전제로 하지 않는다.
+- `PERSONALIZED_POSTURE_DESIGN.md`와 `PERSONALIZED_POSTURE_EXERCISES.md`가 설계 정본. 카탈로그 57개(현행 연결 27개 이름/26개 데이터 종목 + 미연결 30개), 초기 계획 별칭과 데이터에만 있는 운동의 경계를 포함한다.
+- 다음 구현은 관측 기준/교정 기준 분리부터. §39의 공통 기준 OK를 초기 변화 비교 수집에 요구하는 정책은 수정 대상이다. 초반 3회/5초는 원래 운동 중 자동 수집하고 정오와 무관하게 같은 쪽·같은 단계에서 비교한다. 교정 보정은 기존 eligible 항목의 MP 도메인 근거를 따로 확인한다.
+- 신호 없는 스탠딩 사이드 크런치도 비교가 비지 않도록 관측 창/단계 후보를 설계했다. 가림은 항목별, 모드는 정책만 변경, 기준 재설정 이력은 보존한다. 정답 라벨 이름과 실제 관측 피처가 다른 기존 규칙의 문구도 정정 대상이다.
+- 이번에는 설계 문서와 인수인계만 변경했다. 앱 코드·규칙 자산·기기 설치본은 §39 상태다.

@@ -20,7 +20,7 @@ class RuleHighlightTest {
         assertTrue(trunk.containsAll(setOf(11, 12, 23, 24, 27, 28)))
         // 발 피치 → 발+발목
         val foot = RuleHighlight.landmarksFor("foot_pitch_R")
-        assertTrue(foot.containsAll(setOf(29, 30, 31, 32, 27, 28)))
+        assertEquals(setOf(30, 32, 28), foot)
     }
 
     @Test

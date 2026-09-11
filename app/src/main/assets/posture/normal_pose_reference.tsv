@@ -1,0 +1,78 @@
+# trex.normal_pose_reference/1
+# source=Android VIDEO / full / SM-N976N / GPU / AIHub Training
+# 정상 표본의 관측 최솟값~최댓값. 표본이 작으며 자세 정오·음성·점수 임계값으로 사용하지 않는다.
+# 클립 내 양 끝 15% 구간의 중앙값. 실제 반복 시각 정답 없음. 운동 범위의 참고 비교용.
+# exercise	view	feature	phase	lower	upper	clips	people	source
+Y - Exercise	B	hand_shoulder_off	HIGH	-0.0027920	0.4572508	2	2	android_video_training
+Y - Exercise	B	hand_shoulder_off	LOW	-0.4328640	-0.2447682	2	2	android_video_training
+Y - Exercise	B	hand_shoulder_off	RANGE	0.2419762	0.8901148	2	2	android_video_training
+니푸쉬업	A	head_trunk_ang	HIGH	91.3333511	92.5844078	2	2	android_video_training
+니푸쉬업	A	head_trunk_ang	LOW	112.9105568	115.4964752	2	2	android_video_training
+니푸쉬업	A	wrist_shoulder_d	HIGH	1.2031778	1.3359987	2	2	android_video_training
+니푸쉬업	A	wrist_shoulder_d	LOW	0.4254465	0.7960778	2	2	android_video_training
+니푸쉬업	A	wrist_shoulder_d	RANGE	0.5399208	0.7777313	2	2	android_video_training
+니푸쉬업	B	head_trunk_ang	HIGH	80.7936020	86.4484863	2	2	android_video_training
+니푸쉬업	B	head_trunk_ang	LOW	94.9220581	101.9181023	2	2	android_video_training
+니푸쉬업	B	hip_dev_knee	HIGH	-0.0236474	0.1003420	2	2	android_video_training
+니푸쉬업	B	hip_dev_knee	LOW	-0.0583228	0.0022350	2	2	android_video_training
+니푸쉬업	B	wrist_shoulder_d	HIGH	0.9933282	1.1325048	2	2	android_video_training
+니푸쉬업	B	wrist_shoulder_d	LOW	0.4083151	0.6734047	2	2	android_video_training
+니푸쉬업	B	wrist_shoulder_d	RANGE	0.4591001	0.5850132	2	2	android_video_training
+라잉 레그 레이즈	A	head_trunk_ang	HIGH	69.5512543	76.7881393	2	2	android_video_training
+라잉 레그 레이즈	A	head_trunk_ang	LOW	65.9879189	77.8627701	2	2	android_video_training
+라잉 레그 레이즈	A	hip_ang	HIGH	168.7228699	173.1286316	2	2	android_video_training
+라잉 레그 레이즈	A	hip_ang	LOW	115.9293365	119.9782791	2	2	android_video_training
+라잉 레그 레이즈	A	hip_ang	RANGE	52.7935333	53.1503525	2	2	android_video_training
+라잉 레그 레이즈	B	head_trunk_ang	HIGH	77.3355980	81.6635895	2	2	android_video_training
+라잉 레그 레이즈	B	head_trunk_ang	LOW	76.7738876	85.1854553	2	2	android_video_training
+라잉 레그 레이즈	B	hip_ang	HIGH	171.3080521	171.3616180	2	2	android_video_training
+라잉 레그 레이즈	B	hip_ang	LOW	107.0140991	109.8985519	2	2	android_video_training
+라잉 레그 레이즈	B	hip_ang	RANGE	61.4095001	64.3475189	2	2	android_video_training
+라잉 레그 레이즈	C	head_trunk_ang	HIGH	70.9025955	80.4744873	2	2	android_video_training
+라잉 레그 레이즈	C	head_trunk_ang	LOW	72.8782806	90.4236870	2	2	android_video_training
+라잉 레그 레이즈	C	hip_ang	HIGH	168.4289932	171.4779358	2	2	android_video_training
+라잉 레그 레이즈	C	hip_ang	LOW	96.5597382	98.2813873	2	2	android_video_training
+라잉 레그 레이즈	C	hip_ang	RANGE	70.1476059	74.9181976	2	2	android_video_training
+라잉 레그 레이즈	D	head_trunk_ang	HIGH	70.0696678	87.0072327	2	2	android_video_training
+라잉 레그 레이즈	D	head_trunk_ang	LOW	67.7416954	83.9512329	2	2	android_video_training
+라잉 레그 레이즈	D	hip_ang	HIGH	170.6528854	178.2211609	2	2	android_video_training
+라잉 레그 레이즈	D	hip_ang	LOW	86.9575500	88.2319870	2	2	android_video_training
+라잉 레그 레이즈	D	hip_ang	RANGE	82.4208984	91.2636108	2	2	android_video_training
+라잉 레그 레이즈	E	head_trunk_ang	HIGH	76.4768219	77.5788460	2	2	android_video_training
+라잉 레그 레이즈	E	head_trunk_ang	LOW	75.8363495	83.9871216	2	2	android_video_training
+라잉 레그 레이즈	E	hip_ang	HIGH	162.5822983	178.5399933	2	2	android_video_training
+라잉 레그 레이즈	E	hip_ang	LOW	77.2801056	85.9913826	2	2	android_video_training
+라잉 레그 레이즈	E	hip_ang	RANGE	76.5909157	101.2598877	2	2	android_video_training
+시저크로스	B	head_trunk_ang	HIGH	42.1143227	63.6233330	2	2	android_video_training
+시저크로스	B	head_trunk_ang	LOW	57.4860001	72.5083847	2	2	android_video_training
+시저크로스	B	knee_gap2d	HIGH	0.4616016	0.4979542	2	2	android_video_training
+시저크로스	B	knee_gap2d	LOW	0.0442319	0.2144753	2	2	android_video_training
+시저크로스	B	knee_gap2d	RANGE	0.2834788	0.4173698	2	2	android_video_training
+시저크로스	E	head_trunk_ang	HIGH	58.0412560	60.2581749	2	2	android_video_training
+시저크로스	E	knee_gap2d	HIGH	0.5004985	0.5820743	2	2	android_video_training
+크런치	B	head_ground	HIGH	0.5075096	0.6204731	2	2	android_video_training
+크런치	C	head_ground	HIGH	0.3093631	0.5287132	2	2	android_video_training
+크런치	E	head_ground	LOW	0.1015449	0.2831732	2	2	android_video_training
+푸시업	A	head_trunk_ang	HIGH	77.3708725	94.9379501	2	2	android_video_training
+푸시업	A	head_trunk_ang	LOW	90.5734482	117.9958649	2	2	android_video_training
+푸시업	A	wrist_shoulder_d	HIGH	1.3296008	1.3446636	2	2	android_video_training
+푸시업	A	wrist_shoulder_d	LOW	0.5479984	0.6538947	2	2	android_video_training
+푸시업	A	wrist_shoulder_d	RANGE	0.6907690	0.7816024	2	2	android_video_training
+푸시업	B	head_trunk_ang	HIGH	64.3059235	79.1944122	2	2	android_video_training
+푸시업	B	head_trunk_ang	LOW	73.5218430	99.7056580	2	2	android_video_training
+푸시업	B	wrist_shoulder_d	HIGH	0.9641986	1.0327902	2	2	android_video_training
+푸시업	B	wrist_shoulder_d	LOW	0.4501998	0.6080031	2	2	android_video_training
+푸시업	B	wrist_shoulder_d	RANGE	0.4247870	0.5139988	2	2	android_video_training
+플랭크	E	hip_dev_ankle	HOLD	0.0621182	0.0963452	2	2	android_video_training
+힙쓰러스트	B	head_trunk_ang	HIGH	60.1527214	66.1516495	2	2	android_video_training
+힙쓰러스트	B	head_trunk_ang	LOW	76.2760658	89.9665375	2	2	android_video_training
+힙쓰러스트	B	hip_dev_ankle	HIGH	0.2273075	0.2729449	2	2	android_video_training
+힙쓰러스트	B	hip_dev_ankle	LOW	0.0212176	0.0725876	2	2	android_video_training
+힙쓰러스트	B	hip_dev_ankle	RANGE	0.2003573	0.2060899	2	2	android_video_training
+힙쓰러스트	C	head_trunk_ang	LOW	73.5283394	78.0874405	2	2	android_video_training
+힙쓰러스트	C	hip_dev_ankle	LOW	0.0224003	0.0623093	2	2	android_video_training
+힙쓰러스트	E	head_trunk_ang	HIGH	60.3948593	69.1932411	2	2	android_video_training
+힙쓰러스트	E	head_trunk_ang	LOW	74.7584763	79.5315094	2	2	android_video_training
+힙쓰러스트	E	hip_dev_ankle	HIGH	0.1683889	0.2021005	2	2	android_video_training
+힙쓰러스트	E	hip_dev_ankle	LOW	0.0071715	0.0186955	2	2	android_video_training
+힙쓰러스트	E	hip_dev_ankle	RANGE	0.1496934	0.1949290	2	2	android_video_training

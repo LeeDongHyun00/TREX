@@ -48,6 +48,8 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.key
+import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -73,7 +75,7 @@ import kotlinx.coroutines.delay
  * 화면 순서(guide→auth→find→onboarding→main→record→session→complete)상 앞으로 가면 오른쪽에서,
  * 뒤로 가면 왼쪽에서 들어온다.
  */
-private enum class RootRoute { Guide, Auth, Find, Onboarding, Main, Record, PostureSession, TimerSession, Complete, PostureLab, BaselineGuide }
+private enum class RootRoute { Guide, Auth, Find, Onboarding, Main, Record, TransitionSession, PostureSession, TimerSession, Complete, PostureLab, BaselineGuide }
 
 /** 메인 하단 시트. */
 sealed class MainSheet {
@@ -85,7 +87,8 @@ sealed class MainSheet {
     data object AddWorkout : MainSheet()
 }
 
-data class SetDraft(val id: String, val name: String, val count: Int, val unit: String, val sets: Int)
+data class SetDraft(val id: String, val name: String, val count: Int, val unit: String, val sets: Int,
+    val secondsPerRep: Int = 3, val restSeconds: Int = 45)
 
 fun Workout.setDraft(): SetDraft {
     val spec = repsSpec()
@@ -94,7 +97,8 @@ fun Workout.setDraft(): SetDraft {
         reps.contains("분") && !reps.contains("회") -> "분"
         else -> "회"
     }
-    return SetDraft(id = id, name = name, count = spec.count, unit = unit, sets = if (unit == "분") 0 else spec.sets)
+    return SetDraft(id = id, name = name, count = spec.count, unit = unit, sets = spec.sets,
+        secondsPerRep = timing().secondsPerRep, restSeconds = timing().restSeconds)
 }
 
 @Composable
@@ -112,10 +116,17 @@ fun TrexApp(app: AppViewModel = viewModel()) {
 
         var selectedTab by rememberSaveable { mutableStateOf(TrexTab.Home) }
         var subScreen by rememberSaveable { mutableStateOf("none") } // none | find | guide | record | postureLab | baselineGuide
-        var sessionIndex by rememberSaveable { mutableIntStateOf(-1) }
+        var progress by rememberSaveable(stateSaver = listSaver<SessionProgress, Any>(
+            save = { listOf(it.index, it.remainingMs, it.elapsedMs, it.completed.joinToString(","), it.skipped.joinToString(",")) },
+            restore = { SessionProgress(it[0] as Int, it[1] as Long, it[2] as Long,
+                (it[3] as String).split(',').mapNotNull(String::toIntOrNull).toSet(),
+                (it[4] as String).split(',').mapNotNull(String::toIntOrNull).toSet()) },
+        )) { mutableStateOf(SessionProgress(-1, 0)) }
+        val sessionIndex = progress.index
         var sessionDone by rememberSaveable { mutableStateOf(false) }
-        var sessionTimeLeft by rememberSaveable { mutableIntStateOf(0) }
-        var sessionElapsed by rememberSaveable { mutableIntStateOf(0) }
+        var sessionPlanKey by rememberSaveable { mutableStateOf("") }
+        val sessionTimeLeft = progress.secondsLeft
+        val sessionElapsed = (progress.elapsedMs / 1000).toInt()
         var sessionPaused by rememberSaveable { mutableStateOf(false) }
         // 카메라 권한을 거부한 운동 — 자세 평가 대신 **같은 운동을** 타이머로 돌린다(건너뛰지 않는다).
         // 세션 단위 상태라 다음 세션에서는 다시 권한을 물어본다.
@@ -123,78 +134,95 @@ fun TrexApp(app: AppViewModel = viewModel()) {
         // ✕ 종료 확인 — 완료한 운동이 있으면 "여기까지 기록" 을 물어본다(결정 3: 묻지 않고 버리지 않는다).
         var exitAsk by remember { mutableStateOf(false) }
         val appPaused = rememberTrexLifecyclePaused()
-        val pausedState = rememberUpdatedState(sessionPaused || appPaused)
+        val pausedState = rememberUpdatedState(sessionPaused || appPaused || exitAsk)
         val plan = app.workoutPlan
+        val planKey = plan.map { it.copy(done = false) }.toString()
+        val steps = remember(plan.map { it.copy(done = false) }) { buildSessionSteps(plan) }
+        val step = steps.getOrNull(sessionIndex)
+        val finalizers = remember { mutableMapOf<String, () -> Unit>() }
 
         // 세션 스코프 스피커 (spec §30): 라이브 화면이 소유하면 자세→타이머 전환마다 shutdown 이 세트 요약을 끊는다.
         // 여기서 만들어 라이브 화면·완료 화면이 같은 큐를 쓰고, 세션을 나갈 때 stop 한다.
         val speech = androidx.compose.runtime.remember { SpeechCoach(context) }
         androidx.compose.runtime.DisposableEffect(Unit) { onDispose { speech.shutdown() } }
-
-        fun sessionSeconds(w: Workout): Int = (w.durationMinutes() * 60).coerceAtLeast(30)
+        val startTone = remember { runCatching { android.media.ToneGenerator(android.media.AudioManager.STREAM_MUSIC, 50) }.getOrNull() }
+        androidx.compose.runtime.DisposableEffect(Unit) { onDispose { startTone?.release() } }
 
         fun startSession() {
-            val start = plan.indexOfFirst { !it.done }.takeIf { it >= 0 } ?: 0
-            if (plan.isEmpty()) return
-            // 이어하기(✕ 뒤 같은 날 재시작)면 이미 마친 운동의 리포트는 남긴다 — 최종 기록에 그 운동의 자세 칸이 비지 않게
-            app.clearSessionReports(keep = plan.take(start).map { it.id })
+            if (steps.isEmpty()) return
+            val doneIds = plan.filter { it.done }.map { it.id }.toSet()
+            val finished = doneIds.size == plan.size
+            val completed = if (finished) emptySet() else steps.filter {
+                it.phase == SessionPhase.WORK && it.originalId in doneIds
+            }.map { it.token }.toSet() + if (sessionPlanKey == planKey) progress.completed else emptySet()
+            val firstWork = steps.firstOrNull { it.phase == SessionPhase.WORK && it.token !in completed } ?: return
+            val first = steps.getOrNull(firstWork.token - 1)?.takeIf { it.phase != SessionPhase.WORK } ?: firstWork
+            if (finished) app.updatePlan(plan.map { it.copy(done = false) })
+            app.clearSessionReports(keep = steps.filter { it.token in completed }.map { it.workout.id })
             postureFallback.clear()
             exitAsk = false
             speech.stop()
-            sessionIndex = start
+            progress = SessionProgress(first.token, first.seconds * 1000L,
+                elapsedMs = if (finished || sessionPlanKey != planKey) 0 else progress.elapsedMs, completed = completed)
+            sessionPlanKey = planKey
             sessionDone = false
-            sessionElapsed = 0
             sessionPaused = false
-            sessionTimeLeft = sessionSeconds(plan[start])
         }
 
-        fun nextSession() {
-            val idx = sessionIndex
-            if (idx < 0) return
-            plan.getOrNull(idx)?.let { app.markWorkoutDone(it.id) }
-            val next = idx + 1
-            if (next >= plan.size) {
-                app.recordCompletedSession(sessionElapsed)
-                sessionIndex = -1
+        fun nextSession(expectedToken: Int, skip: Boolean) {
+            val current = steps.getOrNull(progress.index) ?: return
+            if (current.token != expectedToken) return
+            // 다음 화면/기록 병합 전에 세트 리포트를 확정한다. 화면 소멸 콜백보다 먼저다.
+            if (current.phase == SessionPhase.WORK) finalizers[current.workout.id]?.invoke()
+            speech.stop()
+            progress = progress.advance(steps, expectedToken, skip)
+            progress.completedOriginalIds(steps).forEach { app.markWorkoutDone(it) }
+            sessionPaused = false
+            if (progress.index < 0) {
+                app.recordCompletedSession((progress.elapsedMs / 1000).toInt(), progress.completedWorkouts(steps))
                 sessionDone = true
-            } else {
-                sessionIndex = next
-                sessionTimeLeft = sessionSeconds(plan[next])
-                sessionPaused = false
             }
         }
 
         fun exitSession() {
             speech.stop()
             exitAsk = false
-            sessionIndex = -1
+            progress = progress.copy(index = -1)
             sessionDone = false
             sessionPaused = false
             selectedTab = TrexTab.Home
         }
 
-        /** 완료한 운동까지 오늘 기록에 남기고 나간다 — 세트 리포트도 같이 접혀 들어간다. */
         fun exitAndRecord() {
-            app.recordCompletedSession(sessionElapsed)
+            app.recordCompletedSession(sessionElapsed, progress.completedWorkouts(steps))
             exitSession()
         }
 
-        // ✕ 는 바로 나가지 않는다: 완료한 운동이 있는데 묻지 않고 버리면 그날 출석·기록이 통째로 빈다.
         fun requestExit() {
-            if (plan.any { it.done }) exitAsk = true else exitSession()
+            if (progress.completed.isNotEmpty()) exitAsk = true else exitSession()
         }
 
-        LaunchedEffect(sessionIndex) {
-            while (sessionIndex >= 0) {
-                delay(1000)
-                if (!pausedState.value) {
-                    sessionElapsed += 1
-                    if (sessionTimeLeft > 0) sessionTimeLeft -= 1
-                }
+        val advanceLatest = rememberUpdatedState<(Int, Boolean) -> Unit> { token, skip -> nextSession(token, skip) }
+        LaunchedEffect(sessionIndex, sessionPaused, appPaused, exitAsk) {
+            val token = sessionIndex
+            var last = android.os.SystemClock.elapsedRealtime()
+            while (progress.index == token && token >= 0) {
+                delay(100)
+                val now = android.os.SystemClock.elapsedRealtime()
+                progress = progress.tick(now - last, pausedState.value)
+                last = now
+                if (!pausedState.value && progress.remainingMs == 0L) advanceLatest.value(token, false)
             }
         }
+        LaunchedEffect(sessionIndex) {
+            if (step?.phase == SessionPhase.WORK && !speech.muted) startTone?.startTone(android.media.ToneGenerator.TONE_PROP_ACK, 150)
+            if (step?.phase == SessionPhase.REST) speech.speak("쉬는 시간이에요", flush = true)
+            if (step?.phase == SessionPhase.PREPARE && step.workout.posture && step.workout.postureSupported())
+                speech.speak(com.example.trex_kotlin.posture.ExerciseProfiles.forName(step.workout.name)?.capture?.voice
+                    ?: "전신이 보이도록 휴대폰을 놓아 주세요", flush = true)
+        }
 
-        val sessionWorkout = plan.getOrNull(sessionIndex.coerceAtMost(plan.lastIndex))
+        val sessionWorkout = step?.workout
         val route = when {
             subScreen == "postureLab" -> RootRoute.PostureLab
             subScreen == "baselineGuide" -> RootRoute.BaselineGuide
@@ -205,7 +233,7 @@ fun TrexApp(app: AppViewModel = viewModel()) {
             !app.onboarded -> RootRoute.Onboarding
             sessionDone -> RootRoute.Complete
             sessionIndex >= 0 && sessionWorkout != null ->
-                if (sessionWorkout.posture && sessionWorkout.postureSupported() && sessionWorkout.id !in postureFallback) {
+                if (step.phase != SessionPhase.WORK) RootRoute.TransitionSession else if (sessionWorkout.posture && sessionWorkout.postureSupported() && sessionWorkout.id !in postureFallback) {
                     RootRoute.PostureSession
                 } else {
                     RootRoute.TimerSession
@@ -216,10 +244,13 @@ fun TrexApp(app: AppViewModel = viewModel()) {
 
         Box(Modifier.fillMaxSize().background(c.bg)) {
             AnimatedContent(
-                targetState = route,
+                targetState = route to sessionIndex,
                 transitionSpec = {
-                    val forward = targetState.ordinal >= initialState.ordinal
-                    if (forward) {
+                    val sessionTransition = initialState.second >= 0 || targetState.second >= 0
+                    val forward = targetState.first.ordinal >= initialState.first.ordinal
+                    if (sessionTransition) {
+                        fadeIn(tween(0)) togetherWith fadeOut(tween(0))
+                    } else if (forward) {
                         (slideInHorizontally(tween(360)) { it / 3 } + fadeIn(tween(300))) togetherWith
                             (slideOutHorizontally(tween(360)) { -it / 4 } + fadeOut(tween(240)))
                     } else {
@@ -228,7 +259,8 @@ fun TrexApp(app: AppViewModel = viewModel()) {
                     }
                 },
                 label = "trex-route",
-            ) { r ->
+            ) { (r, renderedIndex) ->
+                val renderedStep = steps.getOrNull(renderedIndex)
                 when (r) {
                     RootRoute.Guide -> GuideBookScreen(
                         onDone = {
@@ -250,7 +282,7 @@ fun TrexApp(app: AppViewModel = viewModel()) {
                     RootRoute.Onboarding -> OnboardingScreen(onDone = { profile -> app.completeOnboarding(profile) })
 
                     RootRoute.Complete -> SessionCompleteScreen(
-                        plan = plan,
+                        plan = progress.completedWorkouts(steps),
                         elapsedSeconds = sessionElapsed,
                         reports = app.sessionPostureReports,
                         onLabel = { setId, actualReps, repsSource, form -> app.labelPostureSet(setId, actualReps, repsSource, form) },
@@ -258,36 +290,38 @@ fun TrexApp(app: AppViewModel = viewModel()) {
                         onDone = { exitSession() },
                     )
 
-                    RootRoute.PostureSession -> sessionWorkout?.let { w ->
-                        PostureLiveSessionScreen(
-                            workout = w,
-                            index = sessionIndex,
-                            total = plan.size,
-                            timeLeft = sessionTimeLeft,
-                            totalSeconds = sessionSeconds(w),
-                            paused = sessionPaused || appPaused,
+                    RootRoute.TransitionSession -> renderedStep?.let { current ->
+                        SessionTransitionScreen(current, sessionTimeLeft, sessionPaused || appPaused,
                             onTogglePause = { sessionPaused = !sessionPaused },
-                            onNext = { nextSession() },
-                            onExit = { requestExit() },
+                            onNext = { nextSession(current.token, true) }, onExit = { requestExit() })
+                    }
+
+                    RootRoute.PostureSession -> renderedStep?.let { current -> key(current.workout.id) {
+                        val w = current.workout
+                        PostureLiveSessionScreen(
+                            workout = w, index = current.exerciseIndex, total = plan.size,
+                            setLabel = current.setLabel, timeLeft = sessionTimeLeft, totalSeconds = current.seconds,
+                            paused = sessionPaused || appPaused || exitAsk,
+                            onTogglePause = { sessionPaused = !sessionPaused },
+                            onNext = { nextSession(current.token, false) },
+                            onSkip = { nextSession(current.token, true) }, onExit = { requestExit() },
                             onSetReport = { app.addPostureReport(w.id, it) },
+                            registerFinalizer = { finish -> if (finish == null) finalizers.remove(w.id) else finalizers[w.id] = finish },
                             onFallbackToTimer = { if (w.id !in postureFallback) postureFallback.add(w.id) },
                             speech = speech,
                         )
-                    }
+                    } }
 
-                    RootRoute.TimerSession -> sessionWorkout?.let { w ->
+                    RootRoute.TimerSession -> renderedStep?.let { current -> key(current.workout.id) {
                         TimerSessionScreen(
-                            workout = w,
-                            index = sessionIndex,
-                            total = plan.size,
-                            timeLeft = sessionTimeLeft,
-                            totalSeconds = sessionSeconds(w),
-                            paused = sessionPaused || appPaused,
+                            workout = current.workout, index = current.exerciseIndex, total = plan.size,
+                            setLabel = current.setLabel, timeLeft = sessionTimeLeft, totalSeconds = current.seconds,
+                            paused = sessionPaused || appPaused || exitAsk,
                             onTogglePause = { sessionPaused = !sessionPaused },
-                            onNext = { nextSession() },
-                            onExit = { requestExit() },
+                            onNext = { nextSession(current.token, false) },
+                            onSkip = { nextSession(current.token, true) }, onExit = { requestExit() },
                         )
-                    }
+                    } }
 
                     RootRoute.Record -> RecordScreen(app = app, onBack = { subScreen = "none" })
 
@@ -306,7 +340,7 @@ fun TrexApp(app: AppViewModel = viewModel()) {
 
             if (exitAsk) {
                 SessionExitSheet(
-                    doneCount = plan.count { it.done },
+                    doneCount = progress.completed.size,
                     onRecord = { exitAndRecord() },
                     onDiscard = { exitSession() },
                     onCancel = { exitAsk = false },
@@ -340,7 +374,7 @@ private fun SessionExitSheet(
             ) {
                 Text("운동을 끝낼까요?", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                 Text(
-                    "완료한 ${doneCount}개 운동을 오늘 기록에 남길 수 있어요.",
+                    "완료한 ${doneCount}세트을 오늘 기록에 남길 수 있어요.",
                     color = Color.White.copy(alpha = 0.72f), fontSize = 13.sp, lineHeight = 19.sp, textAlign = TextAlign.Center,
                 )
                 Cta("여기까지 기록하고 끝내기", onClick = onRecord, modifier = Modifier.padding(top = 6.dp).fillMaxWidth())

@@ -265,6 +265,8 @@ private fun Workout.replacedWith(name: String, reps: String): Workout {
         duration = template?.duration ?: duration,
         category = template?.category ?: category,
         posture = posture && postureExerciseMap.containsKey(name),
+        secondsPerRep = null,
+        restSeconds = null,
     )
 }
 
@@ -277,18 +279,19 @@ private fun SetsSheet(app: AppViewModel, initial: SetDraft, onClose: () -> Unit)
     val step = if (draft.unit == "초") 5 else 1
     val minCount = if (draft.unit == "초") 10 else 1
     val summary = if (draft.sets > 0) {
-        val per = if (draft.unit == "초") draft.count else draft.count * 3
-        "예상 소요 약 ${((per * draft.sets + 45 * draft.sets) / 60).coerceAtLeast(1)}분 · 세트 사이 45초 휴식"
+        val per = when (draft.unit) { "초" -> draft.count; "분" -> draft.count * 60; else -> draft.count * draft.secondsPerRep }
+        "1세트 ${per.asClock()} · 총 ${(per * draft.sets + draft.restSeconds * (draft.sets - 1)).asClock()}" +
+            if (draft.sets > 1) " · 세트 사이 ${draft.restSeconds}초 휴식" else ""
     } else {
         "예상 소요 약 ${draft.count}분"
     }
 
     SheetHost(onDismiss = onClose) {
-        Column(Modifier.padding(horizontal = 20.dp).padding(bottom = 20.dp)) {
+        Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 20.dp)) {
             SheetHandle()
             Row(Modifier.padding(top = 12.dp, bottom = 16.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Kicker("세트 수정")
+                    Kicker("운동 설정")
                     Text(draft.name, color = c.text, fontSize = 17.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 2.dp))
                 }
                 SheetClose(onClose)
@@ -299,6 +302,8 @@ private fun SetsSheet(app: AppViewModel, initial: SetDraft, onClose: () -> Unit)
                     val rows = buildList {
                         add(Triple("count", if (draft.unit == "분") "시간" else "반복", if (draft.unit == "분") "1분 단위로 조절" else if (draft.unit == "초") "5초 단위로 조절" else "1회 단위로 조절"))
                         if (draft.sets > 0) add(Triple("sets", "세트", "1세트 단위로 조절"))
+                        if (draft.unit == "회") add(Triple("pace", "1회 소요 시간", "횟수 × 이 시간으로 세트 타이머를 계산해요"))
+                        if (draft.sets > 1) add(Triple("rest", "세트 사이 휴식", "0초면 바로 다음 세트로 이어져요"))
                     }
                     rows.forEachIndexed { i, (key, label, hint) ->
                         if (i > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(c.line))
@@ -307,16 +312,23 @@ private fun SetsSheet(app: AppViewModel, initial: SetDraft, onClose: () -> Unit)
                                 Text(label, fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold)
                                 Text(hint, color = c.text3, fontSize = 11.sp, modifier = Modifier.padding(top = 3.dp))
                             }
-                            val isCount = key == "count"
                             StepperControl(
-                                valueLabel = if (isCount) "${draft.count}${draft.unit}" else "${draft.sets}세트",
+                                valueLabel = when(key){"count"->"${draft.count}${draft.unit}";"sets"->"${draft.sets}세트";"pace"->"${draft.secondsPerRep}초";else->"${draft.restSeconds}초"},
                                 onDec = {
-                                    draft = if (isCount) draft.copy(count = (draft.count - step).coerceAtLeast(minCount))
-                                    else draft.copy(sets = (draft.sets - 1).coerceAtLeast(1))
+                                    draft = when(key){
+                                        "count" -> draft.copy(count=(draft.count-step).coerceAtLeast(minCount))
+                                        "sets" -> draft.copy(sets=(draft.sets-1).coerceAtLeast(1))
+                                        "pace" -> draft.copy(secondsPerRep=(draft.secondsPerRep-1).coerceAtLeast(1))
+                                        else -> draft.copy(restSeconds=(draft.restSeconds-15).coerceAtLeast(0))
+                                    }
                                 },
                                 onInc = {
-                                    draft = if (isCount) draft.copy(count = draft.count + step)
-                                    else draft.copy(sets = draft.sets + 1)
+                                    draft = when(key){
+                                        "count" -> draft.copy(count=(draft.count+step).coerceAtMost(if(draft.unit=="분")60 else if(draft.unit=="초")3600 else 999))
+                                        "sets" -> draft.copy(sets=(draft.sets+1).coerceAtMost(20))
+                                        "pace" -> draft.copy(secondsPerRep=(draft.secondsPerRep+1).coerceAtMost(15))
+                                        else -> draft.copy(restSeconds=(draft.restSeconds+15).coerceAtMost(600))
+                                    }
                                 },
                             )
                         }
@@ -339,9 +351,10 @@ private fun SetsSheet(app: AppViewModel, initial: SetDraft, onClose: () -> Unit)
                     icon = Icons.Rounded.Check,
                     onClick = {
                         val reps = if (draft.sets > 0) "${draft.count}${draft.unit} × ${draft.sets}세트" else "전신 ${draft.count}분"
-                        val per = if (draft.unit == "초") draft.count else draft.count * 3
-                        val duration = if (draft.sets > 0) "${((per * draft.sets + 45 * draft.sets) / 60).coerceAtLeast(1)}분" else "${draft.count}분"
-                        app.updatePlan(app.workoutPlan.map { if (it.id == draft.id) it.copy(reps = reps, duration = duration) else it })
+                        app.updatePlan(app.workoutPlan.map { if (it.id == draft.id) {
+                            val updated=it.copy(reps=reps,secondsPerRep=draft.secondsPerRep,restSeconds=draft.restSeconds)
+                            updated.copy(duration="${updated.timing().minutes}분")
+                        } else it })
                         onClose()
                     },
                     height = 52.dp,
@@ -903,7 +916,7 @@ private fun AddWorkoutSheet(app: AppViewModel, onClose: () -> Unit) {
                             }
                             Column(Modifier.padding(start = 12.dp).weight(1f)) {
                                 Text(t.name, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                                Text("${t.reps} · ${t.duration}", color = c.text3, fontSize = 11.sp, modifier = Modifier.padding(top = 2.dp))
+                                Text("${t.reps} · ${Workout("preview",t.name,t.reps,t.duration,false,t.category).timing().totalSeconds.asClock()}", color = c.text3, fontSize = 11.sp, modifier = Modifier.padding(top = 2.dp))
                             }
                             Box(Modifier.size(28.dp).clip(CircleShape).background(c.primaryWash), contentAlignment = Alignment.Center) {
                                 Icon(Icons.Rounded.Add, contentDescription = "추가", tint = c.primaryText, modifier = Modifier.size(14.dp))

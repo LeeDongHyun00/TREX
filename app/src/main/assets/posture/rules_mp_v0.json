@@ -1,6 +1,6 @@
 {
  "version": "mp_v0.1",
- "revision_note": "mp_v0.1: 미러 불변(좌/우 카메라 위치 무관) 재적합 결과를 우선 채택, 비제약 규칙은 alt_rule 로 보존. 미러 안전 규칙이 정본이 된 건수 16 | opposite_guard 7개 주입(양방향 검출, bidirectional_analysis.py) — 반대측은 정상 분포 밖 보수 경계, validated=false 는 검출률 미보증",
+ "revision_note": "mp_v0.1: 미러 불변(좌/우 카메라 위치 무관) 재적합 결과를 우선 채택, 비제약 규칙은 alt_rule 로 보존. 미러 안전 규칙이 정본이 된 건수 16 | opposite_guard 7개 주입(양방향 검출, bidirectional_analysis.py) — 반대측은 정상 분포 밖 보수 경계, validated=false 는 검출률 미보증 | §32 (rule_confidence.py): ship/beta 규칙에 confidence{정상 오탐률·검출률·AUC·균형정확도, 수행자 부트스트랩 95% 구간} 주입, §28c 통계 교체 규칙 10건 임계값 MP 재적합, 게이트 s32 로 4건 beta 강등, 헤더 counts 를 실제 분포로 갱신 | §33 views_ok 주입 70건(추정 뷰 등급별 판정 허용 목록, view_estimator.py)",
  "generated": "2026-08-23",
  "source": "AIHub 013 피트니스자세 (41종목, 수행자 113명) × MediaPipe pose_landmarker_full — 실험 A-2 (MP 피처 재적합, 수행자 GroupKFold, 종목당 ≤60클립)",
  "coordinate_convention": {
@@ -16,13 +16,13 @@
   "exclude": "AUC < 0.75 또는 GT 통제군 < 0.75 또는 cervical/unspecified/3D불량"
  },
  "counts": {
-  "ship": 59,
-  "beta": 12,
+  "ship": 51,
+  "beta": 20,
   "exclude": 70
  },
  "mirror_safe_counts": {
-  "ship": 53,
-  "beta": 11
+  "ship": 46,
+  "beta": 19
  },
  "rules": [
   {
@@ -58,7 +58,95 @@
    },
    "gt_auc_control": 0.9546,
    "gt_auc_full": 0.9874,
-   "cautions": []
+   "cautions": [],
+   "confidence": {
+    "method": "MP 재추론 표본, view_best_front 뷰, 출시 임계값 고정, 수행자 부트스트랩 B=1000 95% 구간 (rule_confidence.py, spec §32)",
+    "n": 60,
+    "n_normal": 25,
+    "n_violation": 35,
+    "n_performers": 28,
+    "normal_fpr": 0.08,
+    "normal_fpr_ci95": [
+     0.0,
+     0.2
+    ],
+    "normal_fpr_with_guard": null,
+    "tpr": 0.9714,
+    "tpr_ci95": [
+     0.9091,
+     1.0
+    ],
+    "balacc": 0.9457,
+    "balacc_ci95": [
+     0.876,
+     1.0
+    ],
+    "auc": 0.9806,
+    "auc_ci95": [
+     0.9434,
+     1.0
+    ],
+    "normal_median": 0.033664
+   },
+   "views_ok": [
+    "C"
+   ],
+   "views_eval": {
+    "A": {
+     "n": 45,
+     "normal_fpr": 0.7895,
+     "tpr": 1.0,
+     "balacc": 0.6053
+    },
+    "B": {
+     "n": 58,
+     "normal_fpr": 0.76,
+     "tpr": 1.0,
+     "balacc": 0.62
+    },
+    "C": {
+     "n": 72,
+     "normal_fpr": 0.1379,
+     "tpr": 0.9767,
+     "balacc": 0.9194
+    },
+    "D": {
+     "n": 49,
+     "normal_fpr": 0.9091,
+     "tpr": 1.0,
+     "balacc": 0.5455
+    },
+    "E": {
+     "n": 48,
+     "normal_fpr": 0.95,
+     "tpr": 1.0,
+     "balacc": 0.525
+    },
+    "R": {
+     "n": 1,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "SIDE_B": {
+     "n": 4,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "SIDE_D": {
+     "n": 1,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "UNKNOWN": {
+     "n": 22,
+     "normal_fpr": 0.875,
+     "tpr": 1.0,
+     "balacc": 0.5625
+    }
+   }
   },
   {
    "id": "굿모닝|척추의 중립[lateral]",
@@ -93,7 +181,95 @@
    },
    "gt_auc_control": 0.9546,
    "gt_auc_full": 0.9874,
-   "cautions": []
+   "cautions": [],
+   "confidence": {
+    "method": "MP 재추론 표본, view_best_front 뷰, 출시 임계값 고정, 수행자 부트스트랩 B=1000 95% 구간 (rule_confidence.py, spec §32)",
+    "n": 60,
+    "n_normal": 25,
+    "n_violation": 35,
+    "n_performers": 28,
+    "normal_fpr": 0.08,
+    "normal_fpr_ci95": [
+     0.0,
+     0.2
+    ],
+    "normal_fpr_with_guard": null,
+    "tpr": 0.9714,
+    "tpr_ci95": [
+     0.9118,
+     1.0
+    ],
+    "balacc": 0.9457,
+    "balacc_ci95": [
+     0.8786,
+     1.0
+    ],
+    "auc": 0.9806,
+    "auc_ci95": [
+     0.9466,
+     1.0
+    ],
+    "normal_median": 0.033664
+   },
+   "views_ok": [
+    "C"
+   ],
+   "views_eval": {
+    "A": {
+     "n": 45,
+     "normal_fpr": 0.7895,
+     "tpr": 1.0,
+     "balacc": 0.6053
+    },
+    "B": {
+     "n": 58,
+     "normal_fpr": 0.76,
+     "tpr": 1.0,
+     "balacc": 0.62
+    },
+    "C": {
+     "n": 72,
+     "normal_fpr": 0.1379,
+     "tpr": 0.9767,
+     "balacc": 0.9194
+    },
+    "D": {
+     "n": 49,
+     "normal_fpr": 0.9091,
+     "tpr": 1.0,
+     "balacc": 0.5455
+    },
+    "E": {
+     "n": 48,
+     "normal_fpr": 0.95,
+     "tpr": 1.0,
+     "balacc": 0.525
+    },
+    "R": {
+     "n": 1,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "SIDE_B": {
+     "n": 4,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "SIDE_D": {
+     "n": 1,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "UNKNOWN": {
+     "n": 22,
+     "normal_fpr": 0.875,
+     "tpr": 1.0,
+     "balacc": 0.5625
+    }
+   }
   },
   {
    "id": "굿모닝|무릎 구부린채 고정",
@@ -128,7 +304,96 @@
    },
    "gt_auc_control": 0.9543,
    "gt_auc_full": 0.9662,
-   "cautions": []
+   "cautions": [],
+   "confidence": {
+    "method": "MP 재추론 표본, view_best_front 뷰, 출시 임계값 고정, 수행자 부트스트랩 B=1000 95% 구간 (rule_confidence.py, spec §32)",
+    "n": 60,
+    "n_normal": 30,
+    "n_violation": 30,
+    "n_performers": 28,
+    "normal_fpr": 0.1667,
+    "normal_fpr_ci95": [
+     0.0322,
+     0.3333
+    ],
+    "normal_fpr_with_guard": null,
+    "tpr": 0.9,
+    "tpr_ci95": [
+     0.7826,
+     1.0
+    ],
+    "balacc": 0.8667,
+    "balacc_ci95": [
+     0.7643,
+     0.9474
+    ],
+    "auc": 0.9422,
+    "auc_ci95": [
+     0.8528,
+     0.9864
+    ],
+    "normal_median": 155.871269
+   },
+   "views_ok": [
+    "D",
+    "E"
+   ],
+   "views_eval": {
+    "A": {
+     "n": 45,
+     "normal_fpr": 0.2609,
+     "tpr": 0.3636,
+     "balacc": 0.5514
+    },
+    "B": {
+     "n": 58,
+     "normal_fpr": 0.6667,
+     "tpr": 0.8929,
+     "balacc": 0.6131
+    },
+    "C": {
+     "n": 72,
+     "normal_fpr": 0.1176,
+     "tpr": 0.3421,
+     "balacc": 0.6122
+    },
+    "D": {
+     "n": 49,
+     "normal_fpr": 0.1481,
+     "tpr": 0.8182,
+     "balacc": 0.835
+    },
+    "E": {
+     "n": 48,
+     "normal_fpr": 0.0909,
+     "tpr": 0.7308,
+     "balacc": 0.8199
+    },
+    "R": {
+     "n": 1,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "SIDE_B": {
+     "n": 4,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "SIDE_D": {
+     "n": 1,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "UNKNOWN": {
+     "n": 22,
+     "normal_fpr": 0.0769,
+     "tpr": 0.3333,
+     "balacc": 0.6282
+    }
+   }
   },
   {
    "id": "덤벨 인클라인 체스트 플라이|팔꿈치 살짝 구부린채 고정",
@@ -176,7 +441,78 @@
    },
    "gt_auc_control": 0.8992,
    "gt_auc_full": 0.9008,
-   "cautions": []
+   "cautions": [],
+   "confidence": {
+    "method": "MP 재추론 표본, view_best_front 뷰, 출시 임계값 고정, 수행자 부트스트랩 B=1000 95% 구간 (rule_confidence.py, spec §32)",
+    "n": 60,
+    "n_normal": 36,
+    "n_violation": 24,
+    "n_performers": 38,
+    "normal_fpr": 0.25,
+    "normal_fpr_ci95": [
+     0.1333,
+     0.3847
+    ],
+    "normal_fpr_with_guard": null,
+    "tpr": 0.875,
+    "tpr_ci95": [
+     0.7273,
+     1.0
+    ],
+    "balacc": 0.8125,
+    "balacc_ci95": [
+     0.7205,
+     0.9033
+    ],
+    "auc": 0.9109,
+    "auc_ci95": [
+     0.8345,
+     0.9747
+    ],
+    "normal_median": 131.801636
+   },
+   "views_ok": [
+    "SIDE_B",
+    "A"
+   ],
+   "views_eval": {
+    "A": {
+     "n": 120,
+     "normal_fpr": 0.25,
+     "tpr": 0.75,
+     "balacc": 0.75
+    },
+    "D": {
+     "n": 4,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "E": {
+     "n": 55,
+     "normal_fpr": 0.7941,
+     "tpr": 0.9524,
+     "balacc": 0.5791
+    },
+    "SIDE_B": {
+     "n": 60,
+     "normal_fpr": 0.25,
+     "tpr": 0.875,
+     "balacc": 0.8125
+    },
+    "SIDE_D": {
+     "n": 56,
+     "normal_fpr": 0.5312,
+     "tpr": 0.9583,
+     "balacc": 0.7135
+    },
+    "UNKNOWN": {
+     "n": 5,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    }
+   }
   },
   {
    "id": "덤벨 인클라인 체스트 플라이|수축 시 덤벨 어깨높이",
@@ -216,7 +552,78 @@
    },
    "gt_auc_control": 0.7578,
    "gt_auc_full": 0.8205,
-   "cautions": []
+   "cautions": [],
+   "confidence": {
+    "method": "MP 재추론 표본, view_best_front 뷰, 출시 임계값 고정, 수행자 부트스트랩 B=1000 95% 구간 (rule_confidence.py, spec §32)",
+    "n": 60,
+    "n_normal": 27,
+    "n_violation": 33,
+    "n_performers": 38,
+    "normal_fpr": 0.1852,
+    "normal_fpr_ci95": [
+     0.0435,
+     0.3478
+    ],
+    "normal_fpr_with_guard": null,
+    "tpr": 0.8485,
+    "tpr_ci95": [
+     0.7037,
+     0.9643
+    ],
+    "balacc": 0.8316,
+    "balacc_ci95": [
+     0.7238,
+     0.9176
+    ],
+    "auc": 0.8855,
+    "auc_ci95": [
+     0.7938,
+     0.9569
+    ],
+    "normal_median": 0.362027
+   },
+   "views_ok": [
+    "SIDE_B",
+    "SIDE_D"
+   ],
+   "views_eval": {
+    "A": {
+     "n": 120,
+     "normal_fpr": 0.6667,
+     "tpr": 0.8788,
+     "balacc": 0.6061
+    },
+    "D": {
+     "n": 4,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "E": {
+     "n": 55,
+     "normal_fpr": 0.4,
+     "tpr": 0.8333,
+     "balacc": 0.7167
+    },
+    "SIDE_B": {
+     "n": 60,
+     "normal_fpr": 0.1852,
+     "tpr": 0.8485,
+     "balacc": 0.8316
+    },
+    "SIDE_D": {
+     "n": 56,
+     "normal_fpr": 0.2,
+     "tpr": 0.7419,
+     "balacc": 0.771
+    },
+    "UNKNOWN": {
+     "n": 5,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    }
+   }
   },
   {
    "id": "덤벨 체스트 플라이|이완 시 덤벨 가슴높이",
@@ -251,7 +658,78 @@
    },
    "gt_auc_control": 0.9333,
    "gt_auc_full": 0.9037,
-   "cautions": []
+   "cautions": [],
+   "confidence": {
+    "method": "MP 재추론 표본, view_best_front 뷰, 출시 임계값 고정, 수행자 부트스트랩 B=1000 95% 구간 (rule_confidence.py, spec §32)",
+    "n": 60,
+    "n_normal": 28,
+    "n_violation": 32,
+    "n_performers": 39,
+    "normal_fpr": 0.1071,
+    "normal_fpr_ci95": [
+     0.0,
+     0.2258
+    ],
+    "normal_fpr_with_guard": null,
+    "tpr": 0.75,
+    "tpr_ci95": [
+     0.5925,
+     0.8846
+    ],
+    "balacc": 0.8214,
+    "balacc_ci95": [
+     0.7271,
+     0.9058
+    ],
+    "auc": 0.9196,
+    "auc_ci95": [
+     0.8577,
+     0.9705
+    ],
+    "normal_median": 0.906886
+   },
+   "views_ok": [
+    "SIDE_D",
+    "A"
+   ],
+   "views_eval": {
+    "A": {
+     "n": 120,
+     "normal_fpr": 0.0714,
+     "tpr": 0.6719,
+     "balacc": 0.8002
+    },
+    "D": {
+     "n": 9,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "E": {
+     "n": 58,
+     "normal_fpr": 0.037,
+     "tpr": 0.1613,
+     "balacc": 0.5621
+    },
+    "SIDE_B": {
+     "n": 60,
+     "normal_fpr": 0.0714,
+     "tpr": 0.5625,
+     "balacc": 0.7455
+    },
+    "SIDE_D": {
+     "n": 51,
+     "normal_fpr": 0.0,
+     "tpr": 0.5556,
+     "balacc": 0.7778
+    },
+    "UNKNOWN": {
+     "n": 2,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    }
+   }
   },
   {
    "id": "덤벨 체스트 플라이|팔꿈치 살짝 구부린채 고정",
@@ -265,12 +743,12 @@
    "stat": "mean",
    "family": "elbow",
    "op": ">",
-   "threshold": 154.484756,
-   "violation_if": "elbow_minside__max > 154.5",
+   "threshold": 138.2323,
+   "violation_if": "elbow_minside__mean > 138.232",
    "view_best_front": "D",
    "view_best_front_desc": "전방사선R(-40°)",
-   "cv_auc": 0.868,
-   "cv_balacc": 0.7835,
+   "cv_auc": 0.863,
+   "cv_balacc": 0.8193,
    "n": 60,
    "n_performers": 39,
    "view_best_any": "D",
@@ -287,8 +765,82 @@
    "gt_auc_control": 0.8889,
    "gt_auc_full": 0.8655,
    "cautions": [
-    "§28c: 극값(min)→mean 교체 — 극값은 렙 극단 프레임을 뽑아 결합·잡음에 취약. GT AUC 0.868, 결합 r=+0.09"
-   ]
+    "§28c: 극값(min)→mean 교체 — 극값은 렙 극단 프레임을 뽑아 결합·잡음에 취약. GT AUC 0.868, 결합 r=+0.09",
+    "§32: §28c 통계 교체 임계값은 GT 3D 기준이었음 — MP 피처(뷰 D)에서 임계값만 재적합 154.5→138.2 (cv AUC 0.86, 균형정확도 0.82)"
+   ],
+   "threshold_before_s32": 154.484756,
+   "cv_auc_before_s32": 0.868,
+   "cv_balacc_before_s32": 0.7835,
+   "confidence": {
+    "method": "MP 재추론 표본, view_best_front 뷰, 출시 임계값 고정, 수행자 부트스트랩 B=1000 95% 구간 (rule_confidence.py, spec §32)",
+    "n": 60,
+    "n_normal": 26,
+    "n_violation": 34,
+    "n_performers": 39,
+    "normal_fpr": 0.2308,
+    "normal_fpr_ci95": [
+     0.0571,
+     0.4251
+    ],
+    "normal_fpr_with_guard": null,
+    "tpr": 0.8529,
+    "tpr_ci95": [
+     0.7273,
+     0.9643
+    ],
+    "balacc": 0.8111,
+    "balacc_ci95": [
+     0.6995,
+     0.9152
+    ],
+    "auc": 0.8586,
+    "auc_ci95": [
+     0.7521,
+     0.9523
+    ],
+    "normal_median": 135.11895
+   },
+   "views_ok": [
+    "SIDE_B"
+   ],
+   "views_eval": {
+    "A": {
+     "n": 120,
+     "normal_fpr": 0.1923,
+     "tpr": 0.4265,
+     "balacc": 0.6171
+    },
+    "D": {
+     "n": 9,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "E": {
+     "n": 58,
+     "normal_fpr": 0.8462,
+     "tpr": 0.9062,
+     "balacc": 0.53
+    },
+    "SIDE_B": {
+     "n": 60,
+     "normal_fpr": 0.2308,
+     "tpr": 0.8529,
+     "balacc": 0.8111
+    },
+    "SIDE_D": {
+     "n": 51,
+     "normal_fpr": 0.2174,
+     "tpr": 0.6071,
+     "balacc": 0.6949
+    },
+    "UNKNOWN": {
+     "n": 2,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    }
+   }
   },
   {
    "id": "덤벨 컬|척추의 중립[all]",
@@ -336,7 +888,79 @@
    },
    "gt_auc_control": 0.8311,
    "gt_auc_full": 0.828,
-   "cautions": []
+   "cautions": [],
+   "confidence": {
+    "method": "MP 재추론 표본, view_best_front 뷰, 출시 임계값 고정, 수행자 부트스트랩 B=1000 95% 구간 (rule_confidence.py, spec §32)",
+    "n": 60,
+    "n_normal": 24,
+    "n_violation": 36,
+    "n_performers": 32,
+    "normal_fpr": 0.1667,
+    "normal_fpr_ci95": [
+     0.0435,
+     0.3333
+    ],
+    "normal_fpr_with_guard": null,
+    "tpr": 0.8611,
+    "tpr_ci95": [
+     0.7057,
+     0.9744
+    ],
+    "balacc": 0.8472,
+    "balacc_ci95": [
+     0.7457,
+     0.9333
+    ],
+    "auc": 0.9086,
+    "auc_ci95": [
+     0.8212,
+     0.9741
+    ],
+    "normal_median": -15.350555
+   },
+   "views_ok": [
+    "C",
+    "B",
+    "D"
+   ],
+   "views_eval": {
+    "A": {
+     "n": 55,
+     "normal_fpr": 0.0455,
+     "tpr": 0.4848,
+     "balacc": 0.7197
+    },
+    "B": {
+     "n": 60,
+     "normal_fpr": 0.0833,
+     "tpr": 0.6111,
+     "balacc": 0.7639
+    },
+    "C": {
+     "n": 61,
+     "normal_fpr": 0.08,
+     "tpr": 0.5833,
+     "balacc": 0.7517
+    },
+    "D": {
+     "n": 60,
+     "normal_fpr": 0.1667,
+     "tpr": 0.8611,
+     "balacc": 0.8472
+    },
+    "E": {
+     "n": 60,
+     "normal_fpr": 0.0,
+     "tpr": 0.2778,
+     "balacc": 0.6389
+    },
+    "UNKNOWN": {
+     "n": 4,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    }
+   }
   },
   {
    "id": "덤벨 컬|척추의 중립[flexion]",
@@ -384,7 +1008,79 @@
    },
    "gt_auc_control": 0.8311,
    "gt_auc_full": 0.828,
-   "cautions": []
+   "cautions": [],
+   "confidence": {
+    "method": "MP 재추론 표본, view_best_front 뷰, 출시 임계값 고정, 수행자 부트스트랩 B=1000 95% 구간 (rule_confidence.py, spec §32)",
+    "n": 60,
+    "n_normal": 24,
+    "n_violation": 36,
+    "n_performers": 32,
+    "normal_fpr": 0.1667,
+    "normal_fpr_ci95": [
+     0.0435,
+     0.3126
+    ],
+    "normal_fpr_with_guard": null,
+    "tpr": 0.8611,
+    "tpr_ci95": [
+     0.7096,
+     0.9722
+    ],
+    "balacc": 0.8472,
+    "balacc_ci95": [
+     0.75,
+     0.9357
+    ],
+    "auc": 0.9086,
+    "auc_ci95": [
+     0.8208,
+     0.9744
+    ],
+    "normal_median": -15.350555
+   },
+   "views_ok": [
+    "C",
+    "B",
+    "D"
+   ],
+   "views_eval": {
+    "A": {
+     "n": 55,
+     "normal_fpr": 0.0455,
+     "tpr": 0.4848,
+     "balacc": 0.7197
+    },
+    "B": {
+     "n": 60,
+     "normal_fpr": 0.0833,
+     "tpr": 0.6111,
+     "balacc": 0.7639
+    },
+    "C": {
+     "n": 61,
+     "normal_fpr": 0.08,
+     "tpr": 0.5833,
+     "balacc": 0.7517
+    },
+    "D": {
+     "n": 60,
+     "normal_fpr": 0.1667,
+     "tpr": 0.8611,
+     "balacc": 0.8472
+    },
+    "E": {
+     "n": 60,
+     "normal_fpr": 0.0,
+     "tpr": 0.2778,
+     "balacc": 0.6389
+    },
+    "UNKNOWN": {
+     "n": 4,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    }
+   }
   },
   {
    "id": "덤벨 컬|팔꿈치 위치 고정",
@@ -429,7 +1125,77 @@
    "gt_auc_full": 0.913,
    "cautions": [
     "한쪽(L/R) 지정 피처 — 카메라가 반대편이면 먼 쪽 관절이 되어 정밀도 변동. mean/minside/maxside 변형으로 대체 권장"
-   ]
+   ],
+   "confidence": {
+    "method": "MP 재추론 표본, view_best_front 뷰, 출시 임계값 고정, 수행자 부트스트랩 B=1000 95% 구간 (rule_confidence.py, spec §32)",
+    "n": 60,
+    "n_normal": 39,
+    "n_violation": 21,
+    "n_performers": 32,
+    "normal_fpr": 0.0769,
+    "normal_fpr_ci95": [
+     0.0,
+     0.2107
+    ],
+    "normal_fpr_with_guard": null,
+    "tpr": 0.8571,
+    "tpr_ci95": [
+     0.6664,
+     1.0
+    ],
+    "balacc": 0.8901,
+    "balacc_ci95": [
+     0.7686,
+     0.9868
+    ],
+    "auc": 0.9499,
+    "auc_ci95": [
+     0.8734,
+     1.0
+    ],
+    "normal_median": 0.158152
+   },
+   "views_ok": [
+    "D"
+   ],
+   "views_eval": {
+    "A": {
+     "n": 55,
+     "normal_fpr": 0.7143,
+     "tpr": 1.0,
+     "balacc": 0.6429
+    },
+    "B": {
+     "n": 60,
+     "normal_fpr": 0.8974,
+     "tpr": 0.9524,
+     "balacc": 0.5275
+    },
+    "C": {
+     "n": 61,
+     "normal_fpr": 0.4,
+     "tpr": 0.7143,
+     "balacc": 0.6571
+    },
+    "D": {
+     "n": 60,
+     "normal_fpr": 0.0769,
+     "tpr": 0.8571,
+     "balacc": 0.8901
+    },
+    "E": {
+     "n": 60,
+     "normal_fpr": 0.8462,
+     "tpr": 0.9524,
+     "balacc": 0.5531
+    },
+    "UNKNOWN": {
+     "n": 4,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    }
+   }
   },
   {
    "id": "딥스|상체 살짝 숙임 유지",
@@ -469,7 +1235,80 @@
    },
    "gt_auc_control": 0.9038,
    "gt_auc_full": 0.8536,
-   "cautions": []
+   "cautions": [],
+   "confidence": {
+    "method": "MP 재추론 표본, view_best_front 뷰, 출시 임계값 고정, 수행자 부트스트랩 B=1000 95% 구간 (rule_confidence.py, spec §32)",
+    "n": 60,
+    "n_normal": 33,
+    "n_violation": 27,
+    "n_performers": 25,
+    "normal_fpr": 0.2121,
+    "normal_fpr_ci95": [
+     0.0769,
+     0.3913
+    ],
+    "normal_fpr_with_guard": null,
+    "tpr": 1.0,
+    "tpr_ci95": [
+     1.0,
+     1.0
+    ],
+    "balacc": 0.8939,
+    "balacc_ci95": [
+     0.8043,
+     0.9616
+    ],
+    "auc": 0.9719,
+    "auc_ci95": [
+     0.9243,
+     0.9976
+    ],
+    "normal_median": 26.773352
+   },
+   "views_ok": [
+    "C",
+    "B",
+    "A",
+    "E"
+   ],
+   "views_eval": {
+    "A": {
+     "n": 60,
+     "normal_fpr": 0.2121,
+     "tpr": 0.8889,
+     "balacc": 0.8384
+    },
+    "B": {
+     "n": 60,
+     "normal_fpr": 0.2727,
+     "tpr": 1.0,
+     "balacc": 0.8636
+    },
+    "C": {
+     "n": 70,
+     "normal_fpr": 0.2564,
+     "tpr": 1.0,
+     "balacc": 0.8718
+    },
+    "D": {
+     "n": 49,
+     "normal_fpr": 0.3846,
+     "tpr": 1.0,
+     "balacc": 0.8077
+    },
+    "E": {
+     "n": 60,
+     "normal_fpr": 0.2727,
+     "tpr": 0.8148,
+     "balacc": 0.771
+    },
+    "UNKNOWN": {
+     "n": 1,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    }
+   }
   },
   {
    "id": "딥스|수축 시 고개 안 젖힘",
@@ -512,6 +1351,77 @@
     "method": "MP(B) 정상 med±3.0·MAD",
     "n_norm": 32,
     "validated": false
+   },
+   "confidence": {
+    "method": "MP 재추론 표본, view_best_front 뷰, 출시 임계값 고정, 수행자 부트스트랩 B=1000 95% 구간 (rule_confidence.py, spec §32)",
+    "n": 60,
+    "n_normal": 32,
+    "n_violation": 28,
+    "n_performers": 25,
+    "normal_fpr": 0.3125,
+    "normal_fpr_ci95": [
+     0.1515,
+     0.5
+    ],
+    "normal_fpr_with_guard": 0.3125,
+    "tpr": 1.0,
+    "tpr_ci95": [
+     1.0,
+     1.0
+    ],
+    "balacc": 0.8438,
+    "balacc_ci95": [
+     0.75,
+     0.9242
+    ],
+    "auc": 0.8906,
+    "auc_ci95": [
+     0.7628,
+     0.9667
+    ],
+    "normal_median": 97.853626
+   },
+   "views_ok": [
+    "B",
+    "D"
+   ],
+   "views_eval": {
+    "A": {
+     "n": 60,
+     "normal_fpr": 0.4062,
+     "tpr": 0.8214,
+     "balacc": 0.7076
+    },
+    "B": {
+     "n": 60,
+     "normal_fpr": 0.3125,
+     "tpr": 1.0,
+     "balacc": 0.8438
+    },
+    "C": {
+     "n": 70,
+     "normal_fpr": 0.3889,
+     "tpr": 0.9706,
+     "balacc": 0.7908
+    },
+    "D": {
+     "n": 49,
+     "normal_fpr": 0.2963,
+     "tpr": 1.0,
+     "balacc": 0.8519
+    },
+    "E": {
+     "n": 60,
+     "normal_fpr": 0.9062,
+     "tpr": 1.0,
+     "balacc": 0.5469
+    },
+    "UNKNOWN": {
+     "n": 1,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    }
    }
   },
   {
@@ -526,12 +1436,12 @@
    "stat": "p90",
    "family": "shoulder",
    "op": "<",
-   "threshold": 50.932575,
-   "violation_if": "shoulder_R__max < 50.93",
+   "threshold": 43.595791,
+   "violation_if": "shoulder_R__p90 < 43.5958",
    "view_best_front": "B",
    "view_best_front_desc": "전방사선L(+40°)",
-   "cv_auc": 0.76,
-   "cv_balacc": 0.7988,
+   "cv_auc": 0.8596,
+   "cv_balacc": 0.7398,
    "n": 60,
    "n_performers": 25,
    "view_best_any": "B",
@@ -557,8 +1467,83 @@
    "gt_auc_full": 0.9377,
    "cautions": [
     "한쪽(L/R) 지정 피처 — 카메라가 반대편이면 먼 쪽 관절이 되어 정밀도 변동. mean/minside/maxside 변형으로 대체 권장",
-    "§28c: 극값(max)→p90 교체 — 극값은 렙 극단 프레임을 뽑아 결합·잡음에 취약. GT AUC 0.760, 결합 r=+0.40"
-   ]
+    "§28c: 극값(max)→p90 교체 — 극값은 렙 극단 프레임을 뽑아 결합·잡음에 취약. GT AUC 0.760, 결합 r=+0.40",
+    "§32: §28c 통계 교체 임계값은 GT 3D 기준이었음 — MP 피처(뷰 B)에서 임계값만 재적합 50.93→43.6 (cv AUC 0.86, 균형정확도 0.74)"
+   ],
+   "threshold_before_s32": 50.932575,
+   "cv_auc_before_s32": 0.76,
+   "cv_balacc_before_s32": 0.7988,
+   "confidence": {
+    "method": "MP 재추론 표본, view_best_front 뷰, 출시 임계값 고정, 수행자 부트스트랩 B=1000 95% 구간 (rule_confidence.py, spec §32)",
+    "n": 60,
+    "n_normal": 28,
+    "n_violation": 32,
+    "n_performers": 25,
+    "normal_fpr": 0.1071,
+    "normal_fpr_ci95": [
+     0.0,
+     0.2
+    ],
+    "normal_fpr_with_guard": null,
+    "tpr": 0.6875,
+    "tpr_ci95": [
+     0.5171,
+     0.8276
+    ],
+    "balacc": 0.7902,
+    "balacc_ci95": [
+     0.695,
+     0.8718
+    ],
+    "auc": 0.865,
+    "auc_ci95": [
+     0.7807,
+     0.9365
+    ],
+    "normal_median": 54.974596
+   },
+   "views_ok": [
+    "B",
+    "D"
+   ],
+   "views_eval": {
+    "A": {
+     "n": 60,
+     "normal_fpr": 0.3214,
+     "tpr": 0.5312,
+     "balacc": 0.6049
+    },
+    "B": {
+     "n": 60,
+     "normal_fpr": 0.1071,
+     "tpr": 0.6875,
+     "balacc": 0.7902
+    },
+    "C": {
+     "n": 70,
+     "normal_fpr": 0.0882,
+     "tpr": 0.3889,
+     "balacc": 0.6503
+    },
+    "D": {
+     "n": 49,
+     "normal_fpr": 0.1364,
+     "tpr": 0.6667,
+     "balacc": 0.7652
+    },
+    "E": {
+     "n": 60,
+     "normal_fpr": 0.2143,
+     "tpr": 0.4688,
+     "balacc": 0.6272
+    },
+    "UNKNOWN": {
+     "n": 1,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    }
+   }
   },
   {
    "id": "라잉 트라이셉스 익스텐션|척추의 중립[all]",
@@ -593,7 +1578,71 @@
    },
    "gt_auc_control": 0.9285,
    "gt_auc_full": 0.9575,
-   "cautions": []
+   "cautions": [],
+   "confidence": {
+    "method": "MP 재추론 표본, view_best_front 뷰, 출시 임계값 고정, 수행자 부트스트랩 B=1000 95% 구간 (rule_confidence.py, spec §32)",
+    "n": 60,
+    "n_normal": 30,
+    "n_violation": 30,
+    "n_performers": 44,
+    "normal_fpr": 0.0333,
+    "normal_fpr_ci95": [
+     0.0,
+     0.1036
+    ],
+    "normal_fpr_with_guard": null,
+    "tpr": 0.8333,
+    "tpr_ci95": [
+     0.6897,
+     0.9678
+    ],
+    "balacc": 0.9,
+    "balacc_ci95": [
+     0.8268,
+     0.9821
+    ],
+    "auc": 0.9756,
+    "auc_ci95": [
+     0.9345,
+     1.0
+    ],
+    "normal_median": 82.353367
+   },
+   "views_ok": [
+    "A"
+   ],
+   "views_eval": {
+    "A": {
+     "n": 120,
+     "normal_fpr": 0.0333,
+     "tpr": 0.5833,
+     "balacc": 0.775
+    },
+    "D": {
+     "n": 9,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "E": {
+     "n": 60,
+     "normal_fpr": 0.2333,
+     "tpr": 0.6333,
+     "balacc": 0.7
+    },
+    "SIDE_B": {
+     "n": 60,
+     "normal_fpr": 0.9333,
+     "tpr": 0.9667,
+     "balacc": 0.5167
+    },
+    "SIDE_D": {
+     "n": 51,
+     "normal_fpr": 1.0,
+     "tpr": 1.0,
+     "balacc": 0.5
+    }
+   }
   },
   {
    "id": "라잉 트라이셉스 익스텐션|팔꿈치 위치 고정",
@@ -608,7 +1657,7 @@
    "family": "elbow",
    "op": ">",
    "threshold": 83.514374,
-   "violation_if": "elbow_minside__min > 83.51",
+   "violation_if": "elbow_minside__min > 83.5144",
    "view_best_front": "C",
    "view_best_front_desc": "정면",
    "cv_auc": 0.9094,
@@ -637,8 +1686,76 @@
    "gt_auc_control": 0.9231,
    "gt_auc_full": 0.8675,
    "cautions": [
-    "§28c: 주 동작과 강한 결합(정상 클립 내 r=-0.70) — 조건이 아니라 렙 위상을 따라갈 위험. 통계 교체로 해소 안 됨(조건-피처 재정의 필요). 실기기 오탐 관찰 대상"
-   ]
+    "§28c: 주 동작과 강한 결합(정상 클립 내 r=-0.70) — 조건이 아니라 렙 위상을 따라갈 위험. 통계 교체로 해소 안 됨(조건-피처 재정의 필요). 실기기 오탐 관찰 대상",
+    "§32: §28c 통계 교체 임계값은 GT 3D 기준이었음 — MP 피처(뷰 C)에서 임계값만 재적합 83.51→83.51 (cv AUC 0.91, 균형정확도 0.82)"
+   ],
+   "threshold_before_s32": 83.514374,
+   "cv_auc_before_s32": 0.9094,
+   "cv_balacc_before_s32": 0.8232,
+   "confidence": {
+    "method": "MP 재추론 표본, view_best_front 뷰, 출시 임계값 고정, 수행자 부트스트랩 B=1000 95% 구간 (rule_confidence.py, spec §32)",
+    "n": 60,
+    "n_normal": 30,
+    "n_violation": 30,
+    "n_performers": 44,
+    "normal_fpr": 0.1333,
+    "normal_fpr_ci95": [
+     0.027,
+     0.2729
+    ],
+    "normal_fpr_with_guard": null,
+    "tpr": 0.9,
+    "tpr_ci95": [
+     0.8,
+     1.0
+    ],
+    "balacc": 0.8833,
+    "balacc_ci95": [
+     0.7955,
+     0.96
+    ],
+    "auc": 0.92,
+    "auc_ci95": [
+     0.8416,
+     0.9832
+    ],
+    "normal_median": 75.838989
+   },
+   "views_ok": [
+    "A"
+   ],
+   "views_eval": {
+    "A": {
+     "n": 120,
+     "normal_fpr": 0.2833,
+     "tpr": 0.9167,
+     "balacc": 0.8167
+    },
+    "D": {
+     "n": 9,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "E": {
+     "n": 60,
+     "normal_fpr": 0.2,
+     "tpr": 0.4333,
+     "balacc": 0.6167
+    },
+    "SIDE_B": {
+     "n": 60,
+     "normal_fpr": 0.0333,
+     "tpr": 0.4,
+     "balacc": 0.6833
+    },
+    "SIDE_D": {
+     "n": 51,
+     "normal_fpr": 0.2593,
+     "tpr": 0.4167,
+     "balacc": 0.5787
+    }
+   }
   },
   {
    "id": "랫풀 다운|수축 시 적당한 상체 젖힘",
@@ -673,7 +1790,89 @@
    },
    "gt_auc_control": 0.9398,
    "gt_auc_full": 0.9622,
-   "cautions": []
+   "cautions": [],
+   "confidence": {
+    "method": "MP 재추론 표본, view_best_front 뷰, 출시 임계값 고정, 수행자 부트스트랩 B=1000 95% 구간 (rule_confidence.py, spec §32)",
+    "n": 60,
+    "n_normal": 33,
+    "n_violation": 27,
+    "n_performers": 25,
+    "normal_fpr": 0.1212,
+    "normal_fpr_ci95": [
+     0.0,
+     0.225
+    ],
+    "normal_fpr_with_guard": null,
+    "tpr": 1.0,
+    "tpr_ci95": [
+     1.0,
+     1.0
+    ],
+    "balacc": 0.9394,
+    "balacc_ci95": [
+     0.8875,
+     1.0
+    ],
+    "auc": 0.9731,
+    "auc_ci95": [
+     0.9192,
+     1.0
+    ],
+    "normal_median": 6.486027
+   },
+   "views_ok": [
+    "D"
+   ],
+   "views_eval": {
+    "A": {
+     "n": 41,
+     "normal_fpr": 0.7407,
+     "tpr": 1.0,
+     "balacc": 0.6296
+    },
+    "B": {
+     "n": 59,
+     "normal_fpr": 0.6129,
+     "tpr": 1.0,
+     "balacc": 0.6935
+    },
+    "C": {
+     "n": 71,
+     "normal_fpr": 0.3902,
+     "tpr": 0.7333,
+     "balacc": 0.6715
+    },
+    "D": {
+     "n": 52,
+     "normal_fpr": 0.1111,
+     "tpr": 1.0,
+     "balacc": 0.9444
+    },
+    "E": {
+     "n": 29,
+     "normal_fpr": 0.6667,
+     "tpr": 0.8182,
+     "balacc": 0.5758
+    },
+    "SIDE_B": {
+     "n": 1,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "SIDE_D": {
+     "n": 1,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "UNKNOWN": {
+     "n": 45,
+     "normal_fpr": 1.0,
+     "tpr": 1.0,
+     "balacc": 0.5
+    }
+   }
   },
   {
    "id": "랫풀 다운|수축 시 몸통-팔꿈치 사이 모아줌",
@@ -708,7 +1907,89 @@
    },
    "gt_auc_control": 0.8887,
    "gt_auc_full": 0.8677,
-   "cautions": []
+   "cautions": [],
+   "confidence": {
+    "method": "MP 재추론 표본, view_best_front 뷰, 출시 임계값 고정, 수행자 부트스트랩 B=1000 95% 구간 (rule_confidence.py, spec §32)",
+    "n": 60,
+    "n_normal": 27,
+    "n_violation": 33,
+    "n_performers": 25,
+    "normal_fpr": 0.1481,
+    "normal_fpr_ci95": [
+     0.0357,
+     0.3031
+    ],
+    "normal_fpr_with_guard": null,
+    "tpr": 0.9697,
+    "tpr_ci95": [
+     0.9,
+     1.0
+    ],
+    "balacc": 0.9108,
+    "balacc_ci95": [
+     0.8392,
+     0.9722
+    ],
+    "auc": 0.9787,
+    "auc_ci95": [
+     0.947,
+     1.0
+    ],
+    "normal_median": 23.956066
+   },
+   "views_ok": [
+    "B"
+   ],
+   "views_eval": {
+    "A": {
+     "n": 41,
+     "normal_fpr": 0.8095,
+     "tpr": 1.0,
+     "balacc": 0.5952
+    },
+    "B": {
+     "n": 59,
+     "normal_fpr": 0.12,
+     "tpr": 0.9706,
+     "balacc": 0.9253
+    },
+    "C": {
+     "n": 71,
+     "normal_fpr": 0.6216,
+     "tpr": 1.0,
+     "balacc": 0.6892
+    },
+    "D": {
+     "n": 52,
+     "normal_fpr": 0.8421,
+     "tpr": 0.9697,
+     "balacc": 0.5638
+    },
+    "E": {
+     "n": 29,
+     "normal_fpr": 0.9286,
+     "tpr": 1.0,
+     "balacc": 0.5357
+    },
+    "SIDE_B": {
+     "n": 1,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "SIDE_D": {
+     "n": 1,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "UNKNOWN": {
+     "n": 45,
+     "normal_fpr": 0.6316,
+     "tpr": 0.9231,
+     "balacc": 0.6457
+    }
+   }
   },
   {
    "id": "로잉머신|상체 과도한 젖힘 없음",
@@ -743,7 +2024,83 @@
    },
    "gt_auc_control": 0.8614,
    "gt_auc_full": 0.8594,
-   "cautions": []
+   "cautions": [],
+   "confidence": {
+    "method": "MP 재추론 표본, view_best_front 뷰, 출시 임계값 고정, 수행자 부트스트랩 B=1000 95% 구간 (rule_confidence.py, spec §32)",
+    "n": 60,
+    "n_normal": 40,
+    "n_violation": 20,
+    "n_performers": 25,
+    "normal_fpr": 0.3,
+    "normal_fpr_ci95": [
+     0.1697,
+     0.4596
+    ],
+    "normal_fpr_with_guard": null,
+    "tpr": 1.0,
+    "tpr_ci95": [
+     1.0,
+     1.0
+    ],
+    "balacc": 0.85,
+    "balacc_ci95": [
+     0.7702,
+     0.9151
+    ],
+    "auc": 0.9312,
+    "auc_ci95": [
+     0.8754,
+     0.9783
+    ],
+    "normal_median": -29.830643
+   },
+   "views_ok": [
+    "E"
+   ],
+   "views_eval": {
+    "A": {
+     "n": 40,
+     "normal_fpr": 0.5,
+     "tpr": 0.8571,
+     "balacc": 0.6786
+    },
+    "B": {
+     "n": 54,
+     "normal_fpr": 0.5,
+     "tpr": 1.0,
+     "balacc": 0.75
+    },
+    "D": {
+     "n": 28,
+     "normal_fpr": 0.5,
+     "tpr": 0.75,
+     "balacc": 0.625
+    },
+    "E": {
+     "n": 107,
+     "normal_fpr": 0.2192,
+     "tpr": 0.9706,
+     "balacc": 0.8757
+    },
+    "SIDE_B": {
+     "n": 1,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "SIDE_D": {
+     "n": 24,
+     "normal_fpr": 0.7647,
+     "tpr": 1.0,
+     "balacc": 0.6176
+    },
+    "UNKNOWN": {
+     "n": 46,
+     "normal_fpr": 0.963,
+     "tpr": 1.0,
+     "balacc": 0.5185
+    }
+   }
   },
   {
    "id": "바벨 데드리프트|바벨 궤적과 몸 밀착",
@@ -757,12 +2114,12 @@
    "stat": "p10",
    "family": "palm_lat",
    "op": "<",
-   "threshold": -0.1033,
-   "violation_if": "palm_lat__min < -0.1033",
+   "threshold": -0.037577,
+   "violation_if": "palm_lat__p10 < -0.037577",
    "view_best_front": "D",
    "view_best_front_desc": "전방사선R(-40°)",
-   "cv_auc": 0.601,
-   "cv_balacc": 0.9542,
+   "cv_auc": 0.9653,
+   "cv_balacc": 0.8958,
    "n": 60,
    "n_performers": 30,
    "view_best_any": "D",
@@ -788,8 +2145,88 @@
    "gt_auc_full": 0.9476,
    "cautions": [
     "반대칭 피처의 mean/min/max — 카메라 좌/우에 따라 부호 반전. std/range 변형 또는 절댓값 처리 필요",
-    "§28c: 극값(min)→p10 교체 — 극값은 렙 극단 프레임을 뽑아 결합·잡음에 취약. GT AUC 0.601, 결합 r=-0.03"
-   ]
+    "§28c: 극값(min)→p10 교체 — 극값은 렙 극단 프레임을 뽑아 결합·잡음에 취약. GT AUC 0.601, 결합 r=-0.03",
+    "§32: §28c 통계 교체 임계값은 GT 3D 기준이었음 — MP 피처(뷰 D)에서 임계값만 재적합 -0.1033→-0.03758 (cv AUC 0.97, 균형정확도 0.90)"
+   ],
+   "threshold_before_s32": -0.1033,
+   "cv_auc_before_s32": 0.601,
+   "cv_balacc_before_s32": 0.9542,
+   "confidence": {
+    "method": "MP 재추론 표본, view_best_front 뷰, 출시 임계값 고정, 수행자 부트스트랩 B=1000 95% 구간 (rule_confidence.py, spec §32)",
+    "n": 60,
+    "n_normal": 35,
+    "n_violation": 25,
+    "n_performers": 30,
+    "normal_fpr": 0.0571,
+    "normal_fpr_ci95": [
+     0.0,
+     0.1562
+    ],
+    "normal_fpr_with_guard": null,
+    "tpr": 1.0,
+    "tpr_ci95": [
+     1.0,
+     1.0
+    ],
+    "balacc": 0.9714,
+    "balacc_ci95": [
+     0.9219,
+     1.0
+    ],
+    "auc": 0.9829,
+    "auc_ci95": [
+     0.9334,
+     1.0
+    ],
+    "normal_median": -0.010935
+   },
+   "views_ok": [
+    "D"
+   ],
+   "views_eval": {
+    "A": {
+     "n": 55,
+     "normal_fpr": 0.875,
+     "tpr": 0.8696,
+     "balacc": 0.4973
+    },
+    "B": {
+     "n": 57,
+     "normal_fpr": 1.0,
+     "tpr": 1.0,
+     "balacc": 0.5
+    },
+    "C": {
+     "n": 60,
+     "normal_fpr": 0.9714,
+     "tpr": 0.8,
+     "balacc": 0.4143
+    },
+    "D": {
+     "n": 59,
+     "normal_fpr": 0.0588,
+     "tpr": 1.0,
+     "balacc": 0.9706
+    },
+    "E": {
+     "n": 55,
+     "normal_fpr": 0.7188,
+     "tpr": 0.6087,
+     "balacc": 0.445
+    },
+    "SIDE_D": {
+     "n": 1,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "UNKNOWN": {
+     "n": 13,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    }
+   }
   },
   {
    "id": "바벨 데드리프트|발과 무릎의 방향 일치",
@@ -803,12 +2240,12 @@
    "stat": "p10",
    "family": "knee_out",
    "op": "<",
-   "threshold": -0.029808,
-   "violation_if": "knee_out_mean__min < -0.02981",
+   "threshold": -0.026027,
+   "violation_if": "knee_out_mean__p10 < -0.026027",
    "view_best_front": "C",
    "view_best_front_desc": "정면",
-   "cv_auc": 0.94,
-   "cv_balacc": 0.7856,
+   "cv_auc": 0.9246,
+   "cv_balacc": 0.8642,
    "n": 60,
    "n_performers": 30,
    "view_best_any": "C",
@@ -826,7 +2263,8 @@
    "gt_auc_full": 0.9504,
    "cautions": [
     "valgus 는 정면(C) 뷰에서만 신뢰 (전방 사선에서 r≈0.5)",
-    "§28c: 극값(min)→p10 교체 — 극값은 렙 극단 프레임을 뽑아 결합·잡음에 취약. GT AUC 0.940, 결합 r=+0.00"
+    "§28c: 극값(min)→p10 교체 — 극값은 렙 극단 프레임을 뽑아 결합·잡음에 취약. GT AUC 0.940, 결합 r=+0.00",
+    "§32: §28c 통계 교체 임계값은 GT 3D 기준이었음 — MP 피처(뷰 C)에서 임계값만 재적합 -0.02981→-0.02603 (cv AUC 0.92, 균형정확도 0.86)"
    ],
    "opposite_guard": {
     "op": ">",
@@ -835,6 +2273,85 @@
     "method": "MP(C) 정상 med±3.0·MAD",
     "n_norm": 32,
     "validated": true
+   },
+   "threshold_before_s32": -0.029808,
+   "cv_auc_before_s32": 0.94,
+   "cv_balacc_before_s32": 0.7856,
+   "confidence": {
+    "method": "MP 재추론 표본, view_best_front 뷰, 출시 임계값 고정, 수행자 부트스트랩 B=1000 95% 구간 (rule_confidence.py, spec §32)",
+    "n": 60,
+    "n_normal": 32,
+    "n_violation": 28,
+    "n_performers": 30,
+    "normal_fpr": 0.1875,
+    "normal_fpr_ci95": [
+     0.0667,
+     0.3333
+    ],
+    "normal_fpr_with_guard": 0.1875,
+    "tpr": 0.9286,
+    "tpr_ci95": [
+     0.8148,
+     1.0
+    ],
+    "balacc": 0.8705,
+    "balacc_ci95": [
+     0.7734,
+     0.9512
+    ],
+    "auc": 0.9353,
+    "auc_ci95": [
+     0.8518,
+     0.991
+    ],
+    "normal_median": -0.022033
+   },
+   "views_ok": [
+    "C"
+   ],
+   "views_eval": {
+    "A": {
+     "n": 55,
+     "normal_fpr": 0.0,
+     "tpr": 0.0,
+     "balacc": 0.5
+    },
+    "B": {
+     "n": 57,
+     "normal_fpr": 0.4138,
+     "tpr": 0.8571,
+     "balacc": 0.7217
+    },
+    "C": {
+     "n": 60,
+     "normal_fpr": 0.1875,
+     "tpr": 0.9286,
+     "balacc": 0.8705
+    },
+    "D": {
+     "n": 59,
+     "normal_fpr": 0.0,
+     "tpr": 0.0,
+     "balacc": 0.5
+    },
+    "E": {
+     "n": 55,
+     "normal_fpr": 0.0357,
+     "tpr": 0.037,
+     "balacc": 0.5007
+    },
+    "SIDE_D": {
+     "n": 1,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "UNKNOWN": {
+     "n": 13,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    }
    }
   },
   {
@@ -870,7 +2387,87 @@
    },
    "gt_auc_control": 1.0,
    "gt_auc_full": 0.978,
-   "cautions": []
+   "cautions": [],
+   "confidence": {
+    "method": "MP 재추론 표본, view_best_front 뷰, 출시 임계값 고정, 수행자 부트스트랩 B=1000 95% 구간 (rule_confidence.py, spec §32)",
+    "n": 43,
+    "n_normal": 25,
+    "n_violation": 18,
+    "n_performers": 27,
+    "normal_fpr": 0.0,
+    "normal_fpr_ci95": [
+     0.0,
+     0.0
+    ],
+    "normal_fpr_with_guard": null,
+    "tpr": 0.9444,
+    "tpr_ci95": [
+     0.8332,
+     1.0
+    ],
+    "balacc": 0.9722,
+    "balacc_ci95": [
+     0.9166,
+     1.0
+    ],
+    "auc": 0.9956,
+    "auc_ci95": [
+     0.9711,
+     1.0
+    ],
+    "normal_median": 0.241976
+   },
+   "views_ok": [
+    "C",
+    "B",
+    "D",
+    "A",
+    "E"
+   ],
+   "views_eval": {
+    "A": {
+     "n": 42,
+     "normal_fpr": 0.08,
+     "tpr": 0.5882,
+     "balacc": 0.7541
+    },
+    "B": {
+     "n": 42,
+     "normal_fpr": 0.04,
+     "tpr": 0.8824,
+     "balacc": 0.9212
+    },
+    "C": {
+     "n": 41,
+     "normal_fpr": 0.0,
+     "tpr": 1.0,
+     "balacc": 1.0
+    },
+    "D": {
+     "n": 42,
+     "normal_fpr": 0.0,
+     "tpr": 0.9412,
+     "balacc": 0.9706
+    },
+    "E": {
+     "n": 42,
+     "normal_fpr": 0.0417,
+     "tpr": 0.8333,
+     "balacc": 0.8958
+    },
+    "SIDE_B": {
+     "n": 1,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "UNKNOWN": {
+     "n": 2,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    }
+   }
   },
   {
    "id": "바벨 런지|뒤다리 무릎 각도 90도",
@@ -884,12 +2481,12 @@
    "stat": "p10",
    "family": "hip_below_knee",
    "op": "<",
-   "threshold": 0.380446,
-   "violation_if": "hip_below_knee__min < 0.3804",
+   "threshold": 0.439694,
+   "violation_if": "hip_below_knee__p10 < 0.439694",
    "view_best_front": "D",
    "view_best_front_desc": "전방사선R(-40°)",
-   "cv_auc": 0.887,
-   "cv_balacc": 0.718,
+   "cv_auc": 0.9201,
+   "cv_balacc": 0.777,
    "n": 59,
    "n_performers": 33,
    "view_best_any": "E",
@@ -914,15 +2511,95 @@
    "gt_auc_control": 0.9468,
    "gt_auc_full": 0.8726,
    "cautions": [
-    "§28c: 극값(min)→p10 교체 — 극값은 렙 극단 프레임을 뽑아 결합·잡음에 취약. GT AUC 0.887, 결합 r=-0.20"
-   ]
+    "§28c: 극값(min)→p10 교체 — 극값은 렙 극단 프레임을 뽑아 결합·잡음에 취약. GT AUC 0.887, 결합 r=-0.20",
+    "§32: §28c 통계 교체 임계값은 GT 3D 기준이었음 — MP 피처(뷰 D)에서 임계값만 재적합 0.3804→0.4397 (cv AUC 0.92, 균형정확도 0.78)"
+   ],
+   "threshold_before_s32": 0.380446,
+   "cv_auc_before_s32": 0.887,
+   "cv_balacc_before_s32": 0.718,
+   "confidence": {
+    "method": "MP 재추론 표본, view_best_front 뷰, 출시 임계값 고정, 수행자 부트스트랩 B=1000 95% 구간 (rule_confidence.py, spec §32)",
+    "n": 59,
+    "n_normal": 42,
+    "n_violation": 17,
+    "n_performers": 33,
+    "normal_fpr": 0.1667,
+    "normal_fpr_ci95": [
+     0.0588,
+     0.2895
+    ],
+    "normal_fpr_with_guard": null,
+    "tpr": 0.8235,
+    "tpr_ci95": [
+     0.6427,
+     1.0
+    ],
+    "balacc": 0.8284,
+    "balacc_ci95": [
+     0.7082,
+     0.925
+    ],
+    "auc": 0.8894,
+    "auc_ci95": [
+     0.7608,
+     0.9838
+    ],
+    "normal_median": 0.463211
+   },
+   "views_ok": [
+    "D"
+   ],
+   "views_eval": {
+    "A": {
+     "n": 58,
+     "normal_fpr": 0.2683,
+     "tpr": 0.5882,
+     "balacc": 0.66
+    },
+    "B": {
+     "n": 58,
+     "normal_fpr": 0.1707,
+     "tpr": 0.4118,
+     "balacc": 0.6205
+    },
+    "C": {
+     "n": 57,
+     "normal_fpr": 0.0488,
+     "tpr": 0.25,
+     "balacc": 0.6006
+    },
+    "D": {
+     "n": 56,
+     "normal_fpr": 0.1538,
+     "tpr": 0.8235,
+     "balacc": 0.8348
+    },
+    "E": {
+     "n": 57,
+     "normal_fpr": 0.525,
+     "tpr": 0.7647,
+     "balacc": 0.6199
+    },
+    "SIDE_B": {
+     "n": 1,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "UNKNOWN": {
+     "n": 4,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    }
+   }
   },
   {
    "id": "바벨 스쿼트|고개 정면",
    "exercise": "바벨 스쿼트",
    "condition": "고개 정면",
    "subtype": null,
-   "status": "ship",
+   "status": "beta",
    "reason": "§28b 재설계: face_vs_torso__min 은 몸통-상대라 딥 스쿼트 하단의 상체 숙임과 결합(사용자 실측 r=-0.82~-0.92, 시선 정면인데도 위반). head_pitch__mean 은 GT AUC 0.899·깊이상관 -0.08·MP 충실도 0.80 — MP 재적합 CV AUC 0.795",
    "feature": "head_pitch__mean",
    "base_feature": "head_pitch",
@@ -952,7 +2629,8 @@
    "gt_auc_full": 0.9399,
    "cautions": [
     "임계 여유 얇음(사용자 소급 -12.7~-19.3 vs 임계 -17.2) — 기준선 재배치 권장",
-    "시선 정면 고정 라벨 세트로 최종 확정 필요 (§28b)"
+    "시선 정면 고정 라벨 세트로 최종 확정 필요 (§28b)",
+    "§32 게이트(s32) 미달 — AUC 하한 0.73<0.75 · 균형정확도 0.74<0.75 — ship에서 beta로"
    ],
    "opposite_guard": {
     "op": ">",
@@ -961,6 +2639,77 @@
     "method": "MP(B) 정상 med±3.0·MAD",
     "n_norm": 24,
     "validated": true
+   },
+   "confidence": {
+    "method": "MP 재추론 표본, view_best_front 뷰, 출시 임계값 고정, 수행자 부트스트랩 B=1000 95% 구간 (rule_confidence.py, spec §32)",
+    "n": 57,
+    "n_normal": 24,
+    "n_violation": 33,
+    "n_performers": 31,
+    "normal_fpr": 0.2083,
+    "normal_fpr_ci95": [
+     0.0556,
+     0.3667
+    ],
+    "normal_fpr_with_guard": 0.2083,
+    "tpr": 0.697,
+    "tpr_ci95": [
+     0.5143,
+     0.8387
+    ],
+    "balacc": 0.7443,
+    "balacc_ci95": [
+     0.6395,
+     0.8493
+    ],
+    "auc": 0.8523,
+    "auc_ci95": [
+     0.7345,
+     0.9549
+    ],
+    "normal_median": -27.669764
+   },
+   "status_before_s32": "ship",
+   "views_ok": [
+    "C"
+   ],
+   "views_eval": {
+    "A": {
+     "n": 57,
+     "normal_fpr": 0.6667,
+     "tpr": 0.9091,
+     "balacc": 0.6212
+    },
+    "B": {
+     "n": 57,
+     "normal_fpr": 0.2083,
+     "tpr": 0.697,
+     "balacc": 0.7443
+    },
+    "C": {
+     "n": 57,
+     "normal_fpr": 0.32,
+     "tpr": 0.9062,
+     "balacc": 0.7931
+    },
+    "D": {
+     "n": 56,
+     "normal_fpr": 0.2174,
+     "tpr": 0.6667,
+     "balacc": 0.7246
+    },
+    "E": {
+     "n": 56,
+     "normal_fpr": 0.8261,
+     "tpr": 1.0,
+     "balacc": 0.587
+    },
+    "UNKNOWN": {
+     "n": 1,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    }
    }
   },
   {
@@ -1004,7 +2753,81 @@
    },
    "gt_auc_control": 0.9357,
    "gt_auc_full": 0.8954,
-   "cautions": []
+   "cautions": [],
+   "confidence": {
+    "method": "MP 재추론 표본, view_best_front 뷰, 출시 임계값 고정, 수행자 부트스트랩 B=1000 95% 구간 (rule_confidence.py, spec §32)",
+    "n": 57,
+    "n_normal": 18,
+    "n_violation": 39,
+    "n_performers": 31,
+    "normal_fpr": 0.1111,
+    "normal_fpr_ci95": [
+     0.0,
+     0.2859
+    ],
+    "normal_fpr_with_guard": null,
+    "tpr": 0.8718,
+    "tpr_ci95": [
+     0.7561,
+     0.9688
+    ],
+    "balacc": 0.8803,
+    "balacc_ci95": [
+     0.7814,
+     0.9572
+    ],
+    "auc": 0.9217,
+    "auc_ci95": [
+     0.8276,
+     0.9823
+    ],
+    "normal_median": 20.655354
+   },
+   "views_ok": [
+    "C",
+    "B",
+    "D",
+    "A",
+    "E"
+   ],
+   "views_eval": {
+    "A": {
+     "n": 57,
+     "normal_fpr": 0.1667,
+     "tpr": 0.7949,
+     "balacc": 0.8141
+    },
+    "B": {
+     "n": 57,
+     "normal_fpr": 0.1111,
+     "tpr": 0.8718,
+     "balacc": 0.8803
+    },
+    "C": {
+     "n": 57,
+     "normal_fpr": 0.1667,
+     "tpr": 0.7949,
+     "balacc": 0.8141
+    },
+    "D": {
+     "n": 56,
+     "normal_fpr": 0.2353,
+     "tpr": 0.8718,
+     "balacc": 0.8183
+    },
+    "E": {
+     "n": 56,
+     "normal_fpr": 0.2941,
+     "tpr": 0.7949,
+     "balacc": 0.7504
+    },
+    "UNKNOWN": {
+     "n": 1,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    }
+   }
   },
   {
    "id": "바벨 스쿼트|척추의 중립[flexion]",
@@ -1047,7 +2870,81 @@
    },
    "gt_auc_control": 0.9357,
    "gt_auc_full": 0.8954,
-   "cautions": []
+   "cautions": [],
+   "confidence": {
+    "method": "MP 재추론 표본, view_best_front 뷰, 출시 임계값 고정, 수행자 부트스트랩 B=1000 95% 구간 (rule_confidence.py, spec §32)",
+    "n": 57,
+    "n_normal": 18,
+    "n_violation": 39,
+    "n_performers": 31,
+    "normal_fpr": 0.1111,
+    "normal_fpr_ci95": [
+     0.0,
+     0.2857
+    ],
+    "normal_fpr_with_guard": null,
+    "tpr": 0.8718,
+    "tpr_ci95": [
+     0.7576,
+     0.9706
+    ],
+    "balacc": 0.8803,
+    "balacc_ci95": [
+     0.7866,
+     0.9579
+    ],
+    "auc": 0.9217,
+    "auc_ci95": [
+     0.829,
+     0.9837
+    ],
+    "normal_median": 20.655354
+   },
+   "views_ok": [
+    "C",
+    "B",
+    "D",
+    "A",
+    "E"
+   ],
+   "views_eval": {
+    "A": {
+     "n": 57,
+     "normal_fpr": 0.1667,
+     "tpr": 0.7949,
+     "balacc": 0.8141
+    },
+    "B": {
+     "n": 57,
+     "normal_fpr": 0.1111,
+     "tpr": 0.8718,
+     "balacc": 0.8803
+    },
+    "C": {
+     "n": 57,
+     "normal_fpr": 0.1667,
+     "tpr": 0.7949,
+     "balacc": 0.8141
+    },
+    "D": {
+     "n": 56,
+     "normal_fpr": 0.2353,
+     "tpr": 0.8718,
+     "balacc": 0.8183
+    },
+    "E": {
+     "n": 56,
+     "normal_fpr": 0.2941,
+     "tpr": 0.7949,
+     "balacc": 0.7504
+    },
+    "UNKNOWN": {
+     "n": 1,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    }
+   }
   },
   {
    "id": "바벨 스쿼트|발바닥 지면 고정",
@@ -1148,6 +3045,76 @@
     "method": "MP(C) 정상 med±3.0·MAD",
     "n_norm": 27,
     "validated": true
+   },
+   "confidence": {
+    "method": "MP 재추론 표본, view_best_front 뷰, 출시 임계값 고정, 수행자 부트스트랩 B=1000 95% 구간 (rule_confidence.py, spec §32)",
+    "n": 56,
+    "n_normal": 27,
+    "n_violation": 29,
+    "n_performers": 30,
+    "normal_fpr": 0.1111,
+    "normal_fpr_ci95": [
+     0.0,
+     0.2502
+    ],
+    "normal_fpr_with_guard": 0.1481,
+    "tpr": 1.0,
+    "tpr_ci95": [
+     1.0,
+     1.0
+    ],
+    "balacc": 0.9444,
+    "balacc_ci95": [
+     0.8749,
+     1.0
+    ],
+    "auc": 0.9655,
+    "auc_ci95": [
+     0.8936,
+     1.0
+    ],
+    "normal_median": 0.067264
+   },
+   "views_ok": [
+    "C"
+   ],
+   "views_eval": {
+    "A": {
+     "n": 57,
+     "normal_fpr": 0.25,
+     "tpr": 0.7241,
+     "balacc": 0.7371
+    },
+    "B": {
+     "n": 57,
+     "normal_fpr": 0.4286,
+     "tpr": 0.931,
+     "balacc": 0.7512
+    },
+    "C": {
+     "n": 57,
+     "normal_fpr": 0.1111,
+     "tpr": 1.0,
+     "balacc": 0.9444
+    },
+    "D": {
+     "n": 56,
+     "normal_fpr": 0.4643,
+     "tpr": 0.7857,
+     "balacc": 0.6607
+    },
+    "E": {
+     "n": 56,
+     "normal_fpr": 0.0,
+     "tpr": 0.0,
+     "balacc": 0.5
+    },
+    "UNKNOWN": {
+     "n": 1,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    }
    }
   },
   {
@@ -1155,7 +3122,7 @@
    "exercise": "바벨 스티프 데드리프트",
    "condition": "척추의 중립",
    "subtype": "lateral",
-   "status": "ship",
+   "status": "beta",
    "reason": null,
    "feature": "shoulder_asym__std",
    "base_feature": "shoulder_asym",
@@ -1177,7 +3144,92 @@
    "personal_baseline": null,
    "gt_auc_control": 1.0,
    "gt_auc_full": 0.9813,
-   "cautions": []
+   "cautions": [
+    "§32 게이트(s32) 미달 — AUC 하한 0.72<0.75 — ship에서 beta로"
+   ],
+   "confidence": {
+    "method": "MP 재추론 표본, view_best_front 뷰, 출시 임계값 고정, 수행자 부트스트랩 B=1000 95% 구간 (rule_confidence.py, spec §32)",
+    "n": 41,
+    "n_normal": 16,
+    "n_violation": 25,
+    "n_performers": 24,
+    "normal_fpr": 0.25,
+    "normal_fpr_ci95": [
+     0.0588,
+     0.4615
+    ],
+    "normal_fpr_with_guard": null,
+    "tpr": 0.92,
+    "tpr_ci95": [
+     0.8276,
+     1.0
+    ],
+    "balacc": 0.835,
+    "balacc_ci95": [
+     0.7171,
+     0.9451
+    ],
+    "auc": 0.855,
+    "auc_ci95": [
+     0.7173,
+     0.9679
+    ],
+    "normal_median": 0.029026
+   },
+   "status_before_s32": "ship",
+   "views_ok": [
+    "C"
+   ],
+   "views_eval": {
+    "A": {
+     "n": 35,
+     "normal_fpr": 1.0,
+     "tpr": 0.9545,
+     "balacc": 0.4773
+    },
+    "B": {
+     "n": 38,
+     "normal_fpr": 0.8125,
+     "tpr": 0.9545,
+     "balacc": 0.571
+    },
+    "C": {
+     "n": 40,
+     "normal_fpr": 0.25,
+     "tpr": 0.9167,
+     "balacc": 0.8333
+    },
+    "D": {
+     "n": 40,
+     "normal_fpr": 0.5333,
+     "tpr": 0.92,
+     "balacc": 0.6933
+    },
+    "E": {
+     "n": 38,
+     "normal_fpr": 0.6429,
+     "tpr": 0.9167,
+     "balacc": 0.6369
+    },
+    "SIDE_B": {
+     "n": 4,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "SIDE_D": {
+     "n": 1,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "UNKNOWN": {
+     "n": 9,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    }
+   }
   },
   {
    "id": "바벨 스티프 데드리프트|바벨 궤적과 몸 밀착",
@@ -1191,12 +3243,12 @@
    "stat": "p90",
    "family": "palm_fwd_hip",
    "op": ">",
-   "threshold": 1.032541,
-   "violation_if": "palm_fwd_hip__max > 1.033",
+   "threshold": 1.011589,
+   "violation_if": "palm_fwd_hip__p90 > 1.01159",
    "view_best_front": "B",
    "view_best_front_desc": "전방사선L(+40°)",
-   "cv_auc": 0.961,
-   "cv_balacc": 0.8078,
+   "cv_auc": 0.9403,
+   "cv_balacc": 0.8257,
    "n": 60,
    "n_performers": 29,
    "view_best_any": "D",
@@ -1221,8 +3273,94 @@
    "gt_auc_control": 0.9382,
    "gt_auc_full": 0.9697,
    "cautions": [
-    "§28c: 극값(max)→p90 교체 — 극값은 렙 극단 프레임을 뽑아 결합·잡음에 취약. GT AUC 0.961, 결합 r=+0.46"
-   ]
+    "§28c: 극값(max)→p90 교체 — 극값은 렙 극단 프레임을 뽑아 결합·잡음에 취약. GT AUC 0.961, 결합 r=+0.46",
+    "§32: §28c 통계 교체 임계값은 GT 3D 기준이었음 — MP 피처(뷰 B)에서 임계값만 재적합 1.033→1.012 (cv AUC 0.94, 균형정확도 0.83)"
+   ],
+   "threshold_before_s32": 1.032541,
+   "cv_auc_before_s32": 0.961,
+   "cv_balacc_before_s32": 0.8078,
+   "confidence": {
+    "method": "MP 재추론 표본, view_best_front 뷰, 출시 임계값 고정, 수행자 부트스트랩 B=1000 95% 구간 (rule_confidence.py, spec §32)",
+    "n": 60,
+    "n_normal": 37,
+    "n_violation": 23,
+    "n_performers": 29,
+    "normal_fpr": 0.0811,
+    "normal_fpr_ci95": [
+     0.0,
+     0.1818
+    ],
+    "normal_fpr_with_guard": null,
+    "tpr": 0.7826,
+    "tpr_ci95": [
+     0.6,
+     0.9287
+    ],
+    "balacc": 0.8508,
+    "balacc_ci95": [
+     0.7556,
+     0.9351
+    ],
+    "auc": 0.9236,
+    "auc_ci95": [
+     0.8604,
+     0.9737
+    ],
+    "normal_median": 0.915793
+   },
+   "views_ok": [
+    "B"
+   ],
+   "views_eval": {
+    "A": {
+     "n": 51,
+     "normal_fpr": 0.0625,
+     "tpr": 0.2632,
+     "balacc": 0.6003
+    },
+    "B": {
+     "n": 57,
+     "normal_fpr": 0.1111,
+     "tpr": 0.8095,
+     "balacc": 0.8492
+    },
+    "C": {
+     "n": 59,
+     "normal_fpr": 0.4167,
+     "tpr": 0.4783,
+     "balacc": 0.5308
+    },
+    "D": {
+     "n": 59,
+     "normal_fpr": 0.1111,
+     "tpr": 0.6087,
+     "balacc": 0.7488
+    },
+    "E": {
+     "n": 57,
+     "normal_fpr": 0.0,
+     "tpr": 0.3333,
+     "balacc": 0.6667
+    },
+    "SIDE_B": {
+     "n": 4,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "SIDE_D": {
+     "n": 2,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "UNKNOWN": {
+     "n": 11,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    }
+   }
   },
   {
    "id": "바벨 컬|팔꿈치 위치 고정",
@@ -1267,7 +3405,83 @@
    "gt_auc_full": 0.9072,
    "cautions": [
     "한쪽(L/R) 지정 피처 — 카메라가 반대편이면 먼 쪽 관절이 되어 정밀도 변동. mean/minside/maxside 변형으로 대체 권장"
-   ]
+   ],
+   "confidence": {
+    "method": "MP 재추론 표본, view_best_front 뷰, 출시 임계값 고정, 수행자 부트스트랩 B=1000 95% 구간 (rule_confidence.py, spec §32)",
+    "n": 60,
+    "n_normal": 31,
+    "n_violation": 29,
+    "n_performers": 33,
+    "normal_fpr": 0.129,
+    "normal_fpr_ci95": [
+     0.0,
+     0.25
+    ],
+    "normal_fpr_with_guard": null,
+    "tpr": 0.8276,
+    "tpr_ci95": [
+     0.6667,
+     0.96
+    ],
+    "balacc": 0.8493,
+    "balacc_ci95": [
+     0.7514,
+     0.9355
+    ],
+    "auc": 0.9321,
+    "auc_ci95": [
+     0.8529,
+     0.9856
+    ],
+    "normal_median": 20.284498
+   },
+   "views_ok": [
+    "D"
+   ],
+   "views_eval": {
+    "A": {
+     "n": 56,
+     "normal_fpr": 0.4,
+     "tpr": 1.0,
+     "balacc": 0.8
+    },
+    "B": {
+     "n": 59,
+     "normal_fpr": 0.4839,
+     "tpr": 0.7857,
+     "balacc": 0.6509
+    },
+    "C": {
+     "n": 60,
+     "normal_fpr": 0.1613,
+     "tpr": 0.4138,
+     "balacc": 0.6263
+    },
+    "D": {
+     "n": 60,
+     "normal_fpr": 0.129,
+     "tpr": 0.8276,
+     "balacc": 0.8493
+    },
+    "E": {
+     "n": 60,
+     "normal_fpr": 0.4516,
+     "tpr": 0.7931,
+     "balacc": 0.6707
+    },
+    "SIDE_B": {
+     "n": 1,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "UNKNOWN": {
+     "n": 4,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    }
+   }
   },
   {
    "id": "바벨 컬|척추의 중립[all]",
@@ -1307,7 +3521,85 @@
    },
    "gt_auc_control": 0.9138,
    "gt_auc_full": 0.8302,
-   "cautions": []
+   "cautions": [],
+   "confidence": {
+    "method": "MP 재추론 표본, view_best_front 뷰, 출시 임계값 고정, 수행자 부트스트랩 B=1000 95% 구간 (rule_confidence.py, spec §32)",
+    "n": 60,
+    "n_normal": 25,
+    "n_violation": 35,
+    "n_performers": 33,
+    "normal_fpr": 0.16,
+    "normal_fpr_ci95": [
+     0.0,
+     0.3333
+    ],
+    "normal_fpr_with_guard": null,
+    "tpr": 0.9429,
+    "tpr_ci95": [
+     0.8609,
+     1.0
+    ],
+    "balacc": 0.8914,
+    "balacc_ci95": [
+     0.7959,
+     0.9688
+    ],
+    "auc": 0.9543,
+    "auc_ci95": [
+     0.8983,
+     0.9905
+    ],
+    "normal_median": 0.041267
+   },
+   "views_ok": [
+    "B",
+    "D",
+    "A"
+   ],
+   "views_eval": {
+    "A": {
+     "n": 56,
+     "normal_fpr": 0.0,
+     "tpr": 0.5312,
+     "balacc": 0.7656
+    },
+    "B": {
+     "n": 59,
+     "normal_fpr": 0.1667,
+     "tpr": 0.9429,
+     "balacc": 0.8881
+    },
+    "C": {
+     "n": 60,
+     "normal_fpr": 0.44,
+     "tpr": 0.9143,
+     "balacc": 0.7371
+    },
+    "D": {
+     "n": 60,
+     "normal_fpr": 0.08,
+     "tpr": 0.8,
+     "balacc": 0.86
+    },
+    "E": {
+     "n": 60,
+     "normal_fpr": 0.0,
+     "tpr": 0.4286,
+     "balacc": 0.7143
+    },
+    "SIDE_B": {
+     "n": 1,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "UNKNOWN": {
+     "n": 4,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    }
+   }
   },
   {
    "id": "바벨 컬|척추의 중립[flexion]",
@@ -1347,14 +3639,92 @@
    },
    "gt_auc_control": 0.9138,
    "gt_auc_full": 0.8302,
-   "cautions": []
+   "cautions": [],
+   "confidence": {
+    "method": "MP 재추론 표본, view_best_front 뷰, 출시 임계값 고정, 수행자 부트스트랩 B=1000 95% 구간 (rule_confidence.py, spec §32)",
+    "n": 60,
+    "n_normal": 25,
+    "n_violation": 35,
+    "n_performers": 33,
+    "normal_fpr": 0.16,
+    "normal_fpr_ci95": [
+     0.0,
+     0.3449
+    ],
+    "normal_fpr_with_guard": null,
+    "tpr": 0.9429,
+    "tpr_ci95": [
+     0.8438,
+     1.0
+    ],
+    "balacc": 0.8914,
+    "balacc_ci95": [
+     0.7971,
+     0.9722
+    ],
+    "auc": 0.9543,
+    "auc_ci95": [
+     0.8964,
+     0.9895
+    ],
+    "normal_median": 0.041267
+   },
+   "views_ok": [
+    "B",
+    "D",
+    "A"
+   ],
+   "views_eval": {
+    "A": {
+     "n": 56,
+     "normal_fpr": 0.0,
+     "tpr": 0.5312,
+     "balacc": 0.7656
+    },
+    "B": {
+     "n": 59,
+     "normal_fpr": 0.1667,
+     "tpr": 0.9429,
+     "balacc": 0.8881
+    },
+    "C": {
+     "n": 60,
+     "normal_fpr": 0.44,
+     "tpr": 0.9143,
+     "balacc": 0.7371
+    },
+    "D": {
+     "n": 60,
+     "normal_fpr": 0.08,
+     "tpr": 0.8,
+     "balacc": 0.86
+    },
+    "E": {
+     "n": 60,
+     "normal_fpr": 0.0,
+     "tpr": 0.4286,
+     "balacc": 0.7143
+    },
+    "SIDE_B": {
+     "n": 1,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "UNKNOWN": {
+     "n": 4,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    }
+   }
   },
   {
    "id": "사이드 런지|앞다리 무릎 각도 90도",
    "exercise": "사이드 런지",
    "condition": "앞다리 무릎 각도 90도",
    "subtype": null,
-   "status": "ship",
+   "status": "beta",
    "reason": null,
    "feature": "hip_asym__std",
    "base_feature": "hip_asym",
@@ -1382,7 +3752,88 @@
    },
    "gt_auc_control": 0.865,
    "gt_auc_full": 0.7995,
-   "cautions": []
+   "cautions": [
+    "§32 게이트(s32) 미달 — AUC 하한 0.73<0.75 — ship에서 beta로"
+   ],
+   "confidence": {
+    "method": "MP 재추론 표본, view_best_front 뷰, 출시 임계값 고정, 수행자 부트스트랩 B=1000 95% 구간 (rule_confidence.py, spec §32)",
+    "n": 58,
+    "n_normal": 35,
+    "n_violation": 23,
+    "n_performers": 29,
+    "normal_fpr": 0.2,
+    "normal_fpr_ci95": [
+     0.0625,
+     0.3684
+    ],
+    "normal_fpr_with_guard": null,
+    "tpr": 0.913,
+    "tpr_ci95": [
+     0.7727,
+     1.0
+    ],
+    "balacc": 0.8565,
+    "balacc_ci95": [
+     0.7539,
+     0.9432
+    ],
+    "auc": 0.8696,
+    "auc_ci95": [
+     0.7333,
+     0.9677
+    ],
+    "normal_median": 23.470198
+   },
+   "status_before_s32": "ship",
+   "views_ok": [
+    "C",
+    "B",
+    "D"
+   ],
+   "views_eval": {
+    "A": {
+     "n": 59,
+     "normal_fpr": 0.5405,
+     "tpr": 0.9091,
+     "balacc": 0.6843
+    },
+    "B": {
+     "n": 57,
+     "normal_fpr": 0.2059,
+     "tpr": 0.913,
+     "balacc": 0.8536
+    },
+    "C": {
+     "n": 66,
+     "normal_fpr": 0.3488,
+     "tpr": 0.8696,
+     "balacc": 0.7604
+    },
+    "D": {
+     "n": 54,
+     "normal_fpr": 0.2258,
+     "tpr": 0.8261,
+     "balacc": 0.8001
+    },
+    "E": {
+     "n": 60,
+     "normal_fpr": 0.5676,
+     "tpr": 0.913,
+     "balacc": 0.6727
+    },
+    "SIDE_D": {
+     "n": 1,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "UNKNOWN": {
+     "n": 1,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    }
+   }
   },
   {
    "id": "사이드 레터럴 레이즈|무릎 반동 없음",
@@ -1417,7 +3868,84 @@
    },
    "gt_auc_control": 0.8937,
    "gt_auc_full": 0.9529,
-   "cautions": []
+   "cautions": [],
+   "confidence": {
+    "method": "MP 재추론 표본, view_best_front 뷰, 출시 임계값 고정, 수행자 부트스트랩 B=1000 95% 구간 (rule_confidence.py, spec §32)",
+    "n": 60,
+    "n_normal": 32,
+    "n_violation": 28,
+    "n_performers": 34,
+    "normal_fpr": 0.125,
+    "normal_fpr_ci95": [
+     0.0303,
+     0.25
+    ],
+    "normal_fpr_with_guard": null,
+    "tpr": 0.9286,
+    "tpr_ci95": [
+     0.8077,
+     1.0
+    ],
+    "balacc": 0.9018,
+    "balacc_ci95": [
+     0.8294,
+     0.964
+    ],
+    "auc": 0.9196,
+    "auc_ci95": [
+     0.8571,
+     0.9829
+    ],
+    "normal_median": 2.448194
+   },
+   "views_ok": [
+    "D",
+    "E"
+   ],
+   "views_eval": {
+    "A": {
+     "n": 54,
+     "normal_fpr": 0.3214,
+     "tpr": 0.7692,
+     "balacc": 0.7239
+    },
+    "B": {
+     "n": 59,
+     "normal_fpr": 0.129,
+     "tpr": 0.5,
+     "balacc": 0.6855
+    },
+    "C": {
+     "n": 60,
+     "normal_fpr": 0.125,
+     "tpr": 0.3929,
+     "balacc": 0.6339
+    },
+    "D": {
+     "n": 60,
+     "normal_fpr": 0.125,
+     "tpr": 0.9286,
+     "balacc": 0.9018
+    },
+    "E": {
+     "n": 60,
+     "normal_fpr": 0.1562,
+     "tpr": 0.8214,
+     "balacc": 0.8326
+    },
+    "SIDE_B": {
+     "n": 1,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "UNKNOWN": {
+     "n": 6,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    }
+   }
   },
   {
    "id": "사이드 레터럴 레이즈|상관과 전완의 각도 고정",
@@ -1432,11 +3960,11 @@
    "family": "forearm_vert",
    "op": "<",
    "threshold": 75.997665,
-   "violation_if": "forearm_vert_mean__min < 76",
+   "violation_if": "forearm_vert_mean__min < 75.9977",
    "view_best_front": "D",
    "view_best_front_desc": "전방사선R(-40°)",
-   "cv_auc": 0.8688,
-   "cv_balacc": 0.829,
+   "cv_auc": 0.8974,
+   "cv_balacc": 0.8433,
    "n": 60,
    "n_performers": 34,
    "view_best_any": "A",
@@ -1462,8 +3990,89 @@
    "gt_auc_full": 0.893,
    "cautions": [
     "후방 뷰(A)에서 더 좋음 (AUC 0.93) — 촬영 가이드와 상충",
-    "§28c: 주 동작과 강한 결합(정상 클립 내 r=-0.96) — 조건이 아니라 렙 위상을 따라갈 위험. 통계 교체로 해소 안 됨(조건-피처 재정의 필요). 실기기 오탐 관찰 대상"
-   ]
+    "§28c: 주 동작과 강한 결합(정상 클립 내 r=-0.96) — 조건이 아니라 렙 위상을 따라갈 위험. 통계 교체로 해소 안 됨(조건-피처 재정의 필요). 실기기 오탐 관찰 대상",
+    "§32: §28c 통계 교체 임계값은 GT 3D 기준이었음 — MP 피처(뷰 D)에서 임계값만 재적합 76→76 (cv AUC 0.90, 균형정확도 0.84)"
+   ],
+   "threshold_before_s32": 75.997665,
+   "cv_auc_before_s32": 0.8688,
+   "cv_balacc_before_s32": 0.829,
+   "confidence": {
+    "method": "MP 재추론 표본, view_best_front 뷰, 출시 임계값 고정, 수행자 부트스트랩 B=1000 95% 구간 (rule_confidence.py, spec §32)",
+    "n": 60,
+    "n_normal": 30,
+    "n_violation": 30,
+    "n_performers": 34,
+    "normal_fpr": 0.3333,
+    "normal_fpr_ci95": [
+     0.12,
+     0.5295
+    ],
+    "normal_fpr_with_guard": null,
+    "tpr": 1.0,
+    "tpr_ci95": [
+     1.0,
+     1.0
+    ],
+    "balacc": 0.8333,
+    "balacc_ci95": [
+     0.7352,
+     0.94
+    ],
+    "auc": 0.88,
+    "auc_ci95": [
+     0.7802,
+     0.9667
+    ],
+    "normal_median": 84.012161
+   },
+   "views_ok": [
+    "C",
+    "D"
+   ],
+   "views_eval": {
+    "A": {
+     "n": 54,
+     "normal_fpr": 0.4815,
+     "tpr": 0.963,
+     "balacc": 0.7407
+    },
+    "B": {
+     "n": 59,
+     "normal_fpr": 0.3667,
+     "tpr": 0.9655,
+     "balacc": 0.7994
+    },
+    "C": {
+     "n": 60,
+     "normal_fpr": 0.3333,
+     "tpr": 0.8667,
+     "balacc": 0.7667
+    },
+    "D": {
+     "n": 60,
+     "normal_fpr": 0.3333,
+     "tpr": 1.0,
+     "balacc": 0.8333
+    },
+    "E": {
+     "n": 60,
+     "normal_fpr": 0.6,
+     "tpr": 0.9333,
+     "balacc": 0.6667
+    },
+    "SIDE_B": {
+     "n": 1,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "UNKNOWN": {
+     "n": 6,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    }
+   }
   },
   {
    "id": "스탠딩 니업|무릎 충분히 올라오고",
@@ -1498,7 +4107,92 @@
    },
    "gt_auc_control": 0.916,
    "gt_auc_full": 0.9366,
-   "cautions": []
+   "cautions": [],
+   "confidence": {
+    "method": "MP 재추론 표본, view_best_front 뷰, 출시 임계값 고정, 수행자 부트스트랩 B=1000 95% 구간 (rule_confidence.py, spec §32)",
+    "n": 58,
+    "n_normal": 38,
+    "n_violation": 20,
+    "n_performers": 40,
+    "normal_fpr": 0.1579,
+    "normal_fpr_ci95": [
+     0.0556,
+     0.2857
+    ],
+    "normal_fpr_with_guard": null,
+    "tpr": 1.0,
+    "tpr_ci95": [
+     1.0,
+     1.0
+    ],
+    "balacc": 0.9211,
+    "balacc_ci95": [
+     0.8571,
+     0.9722
+    ],
+    "auc": 0.9671,
+    "auc_ci95": [
+     0.9177,
+     0.9978
+    ],
+    "normal_median": 94.130119
+   },
+   "views_ok": [
+    "C",
+    "B",
+    "D",
+    "E"
+   ],
+   "views_eval": {
+    "A": {
+     "n": 57,
+     "normal_fpr": 0.6486,
+     "tpr": 0.95,
+     "balacc": 0.6507
+    },
+    "B": {
+     "n": 55,
+     "normal_fpr": 0.1667,
+     "tpr": 0.8947,
+     "balacc": 0.864
+    },
+    "C": {
+     "n": 63,
+     "normal_fpr": 0.15,
+     "tpr": 1.0,
+     "balacc": 0.925
+    },
+    "D": {
+     "n": 52,
+     "normal_fpr": 0.2353,
+     "tpr": 0.8333,
+     "balacc": 0.799
+    },
+    "E": {
+     "n": 58,
+     "normal_fpr": 0.3158,
+     "tpr": 1.0,
+     "balacc": 0.8421
+    },
+    "SIDE_B": {
+     "n": 3,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "SIDE_D": {
+     "n": 1,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "UNKNOWN": {
+     "n": 3,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    }
+   }
   },
   {
    "id": "스탠딩 니업|척추 중립[all]",
@@ -1533,7 +4227,92 @@
    },
    "gt_auc_control": 0.8986,
    "gt_auc_full": 0.9596,
-   "cautions": []
+   "cautions": [],
+   "confidence": {
+    "method": "MP 재추론 표본, view_best_front 뷰, 출시 임계값 고정, 수행자 부트스트랩 B=1000 95% 구간 (rule_confidence.py, spec §32)",
+    "n": 58,
+    "n_normal": 36,
+    "n_violation": 22,
+    "n_performers": 40,
+    "normal_fpr": 0.0833,
+    "normal_fpr_ci95": [
+     0.0,
+     0.2093
+    ],
+    "normal_fpr_with_guard": null,
+    "tpr": 0.9545,
+    "tpr_ci95": [
+     0.8421,
+     1.0
+    ],
+    "balacc": 0.9356,
+    "balacc_ci95": [
+     0.8573,
+     1.0
+    ],
+    "auc": 0.9583,
+    "auc_ci95": [
+     0.8646,
+     1.0
+    ],
+    "normal_median": 0.055322
+   },
+   "views_ok": [
+    "B",
+    "D",
+    "A",
+    "E"
+   ],
+   "views_eval": {
+    "A": {
+     "n": 57,
+     "normal_fpr": 0.0541,
+     "tpr": 0.65,
+     "balacc": 0.798
+    },
+    "B": {
+     "n": 55,
+     "normal_fpr": 0.1765,
+     "tpr": 0.9048,
+     "balacc": 0.8641
+    },
+    "C": {
+     "n": 63,
+     "normal_fpr": 0.6154,
+     "tpr": 0.9583,
+     "balacc": 0.6715
+    },
+    "D": {
+     "n": 52,
+     "normal_fpr": 0.0909,
+     "tpr": 0.9474,
+     "balacc": 0.9282
+    },
+    "E": {
+     "n": 58,
+     "normal_fpr": 0.0278,
+     "tpr": 0.6364,
+     "balacc": 0.8043
+    },
+    "SIDE_B": {
+     "n": 3,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "SIDE_D": {
+     "n": 1,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "UNKNOWN": {
+     "n": 3,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    }
+   }
   },
   {
    "id": "스탠딩 니업|척추 중립[forward_lean]",
@@ -1568,7 +4347,92 @@
    },
    "gt_auc_control": 0.8986,
    "gt_auc_full": 0.9596,
-   "cautions": []
+   "cautions": [],
+   "confidence": {
+    "method": "MP 재추론 표본, view_best_front 뷰, 출시 임계값 고정, 수행자 부트스트랩 B=1000 95% 구간 (rule_confidence.py, spec §32)",
+    "n": 58,
+    "n_normal": 36,
+    "n_violation": 22,
+    "n_performers": 40,
+    "normal_fpr": 0.0833,
+    "normal_fpr_ci95": [
+     0.0,
+     0.2122
+    ],
+    "normal_fpr_with_guard": null,
+    "tpr": 0.9545,
+    "tpr_ci95": [
+     0.8461,
+     1.0
+    ],
+    "balacc": 0.9356,
+    "balacc_ci95": [
+     0.8636,
+     1.0
+    ],
+    "auc": 0.9583,
+    "auc_ci95": [
+     0.8788,
+     1.0
+    ],
+    "normal_median": 0.055322
+   },
+   "views_ok": [
+    "B",
+    "D",
+    "A",
+    "E"
+   ],
+   "views_eval": {
+    "A": {
+     "n": 57,
+     "normal_fpr": 0.0541,
+     "tpr": 0.65,
+     "balacc": 0.798
+    },
+    "B": {
+     "n": 55,
+     "normal_fpr": 0.1765,
+     "tpr": 0.9048,
+     "balacc": 0.8641
+    },
+    "C": {
+     "n": 63,
+     "normal_fpr": 0.6154,
+     "tpr": 0.9583,
+     "balacc": 0.6715
+    },
+    "D": {
+     "n": 52,
+     "normal_fpr": 0.0909,
+     "tpr": 0.9474,
+     "balacc": 0.9282
+    },
+    "E": {
+     "n": 58,
+     "normal_fpr": 0.0278,
+     "tpr": 0.6364,
+     "balacc": 0.8043
+    },
+    "SIDE_B": {
+     "n": 3,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "SIDE_D": {
+     "n": 1,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "UNKNOWN": {
+     "n": 3,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    }
+   }
   },
   {
    "id": "스탠딩 사이드 크런치|양 손이 머리 뒤에 위치",
@@ -1582,12 +4446,12 @@
    "stat": "mean",
    "family": "palm_head_dist",
    "op": ">",
-   "threshold": 0.399757,
-   "violation_if": "palm_head_dist__min > 0.3998",
+   "threshold": 1.027222,
+   "violation_if": "palm_head_dist__mean > 1.02722",
    "view_best_front": "D",
    "view_best_front_desc": "전방사선R(-40°)",
-   "cv_auc": 0.944,
-   "cv_balacc": 0.8968,
+   "cv_auc": 0.9651,
+   "cv_balacc": 0.9302,
    "n": 57,
    "n_performers": 35,
    "view_best_any": "D",
@@ -1604,8 +4468,104 @@
    "gt_auc_control": 0.92,
    "gt_auc_full": 0.9395,
    "cautions": [
-    "§28c: 극값(min)→mean 교체 — 극값은 렙 극단 프레임을 뽑아 결합·잡음에 취약. GT AUC 0.944, 결합 r=-0.03"
-   ]
+    "§28c: 극값(min)→mean 교체 — 극값은 렙 극단 프레임을 뽑아 결합·잡음에 취약. GT AUC 0.944, 결합 r=-0.03",
+    "§32: §28c 통계 교체 임계값은 GT 3D 기준이었음 — MP 피처(뷰 D)에서 임계값만 재적합 0.3998→1.027 (cv AUC 0.97, 균형정확도 0.93)"
+   ],
+   "threshold_before_s32": 0.399757,
+   "cv_auc_before_s32": 0.944,
+   "cv_balacc_before_s32": 0.8968,
+   "confidence": {
+    "method": "MP 재추론 표본, view_best_front 뷰, 출시 임계값 고정, 수행자 부트스트랩 B=1000 95% 구간 (rule_confidence.py, spec §32)",
+    "n": 57,
+    "n_normal": 30,
+    "n_violation": 27,
+    "n_performers": 35,
+    "normal_fpr": 0.1,
+    "normal_fpr_ci95": [
+     0.0,
+     0.2
+    ],
+    "normal_fpr_with_guard": null,
+    "tpr": 0.9259,
+    "tpr_ci95": [
+     0.8286,
+     1.0
+    ],
+    "balacc": 0.913,
+    "balacc_ci95": [
+     0.8376,
+     0.9828
+    ],
+    "auc": 0.937,
+    "auc_ci95": [
+     0.8682,
+     1.0
+    ],
+    "normal_median": 0.519553
+   },
+   "views_ok": [
+    "C",
+    "B",
+    "D",
+    "A",
+    "E"
+   ],
+   "views_eval": {
+    "A": {
+     "n": 57,
+     "normal_fpr": 0.1,
+     "tpr": 0.9259,
+     "balacc": 0.913
+    },
+    "B": {
+     "n": 53,
+     "normal_fpr": 0.1071,
+     "tpr": 0.96,
+     "balacc": 0.9264
+    },
+    "C": {
+     "n": 69,
+     "normal_fpr": 0.0488,
+     "tpr": 0.8929,
+     "balacc": 0.922
+    },
+    "D": {
+     "n": 44,
+     "normal_fpr": 0.1429,
+     "tpr": 0.913,
+     "balacc": 0.8851
+    },
+    "E": {
+     "n": 49,
+     "normal_fpr": 0.1304,
+     "tpr": 0.8846,
+     "balacc": 0.8771
+    },
+    "R": {
+     "n": 1,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "SIDE_B": {
+     "n": 1,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "SIDE_D": {
+     "n": 5,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "UNKNOWN": {
+     "n": 9,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    }
+   }
   },
   {
    "id": "스탠딩 사이드 크런치|무릎이 몸통 측면에서 올라오는지 여부",
@@ -1650,7 +4610,95 @@
    "gt_auc_full": 0.947,
    "cautions": [
     "valgus 는 정면(C) 뷰에서만 신뢰 (전방 사선에서 r≈0.5)"
-   ]
+   ],
+   "confidence": {
+    "method": "MP 재추론 표본, view_best_front 뷰, 출시 임계값 고정, 수행자 부트스트랩 B=1000 95% 구간 (rule_confidence.py, spec §32)",
+    "n": 57,
+    "n_normal": 33,
+    "n_violation": 24,
+    "n_performers": 35,
+    "normal_fpr": 0.1818,
+    "normal_fpr_ci95": [
+     0.0645,
+     0.3549
+    ],
+    "normal_fpr_with_guard": null,
+    "tpr": 0.9167,
+    "tpr_ci95": [
+     0.8158,
+     1.0
+    ],
+    "balacc": 0.8674,
+    "balacc_ci95": [
+     0.7785,
+     0.9403
+    ],
+    "auc": 0.9255,
+    "auc_ci95": [
+     0.8611,
+     0.9851
+    ],
+    "normal_median": 0.042913
+   },
+   "views_ok": [
+    "C"
+   ],
+   "views_eval": {
+    "A": {
+     "n": 57,
+     "normal_fpr": 0.7576,
+     "tpr": 0.75,
+     "balacc": 0.4962
+    },
+    "B": {
+     "n": 53,
+     "normal_fpr": 0.5862,
+     "tpr": 0.875,
+     "balacc": 0.6444
+    },
+    "C": {
+     "n": 69,
+     "normal_fpr": 0.2558,
+     "tpr": 0.9231,
+     "balacc": 0.8336
+    },
+    "D": {
+     "n": 44,
+     "normal_fpr": 0.64,
+     "tpr": 0.7895,
+     "balacc": 0.5747
+    },
+    "E": {
+     "n": 49,
+     "normal_fpr": 0.0667,
+     "tpr": 0.1053,
+     "balacc": 0.5193
+    },
+    "R": {
+     "n": 1,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "SIDE_B": {
+     "n": 1,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "SIDE_D": {
+     "n": 5,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "UNKNOWN": {
+     "n": 9,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    }
+   }
   },
   {
    "id": "스탠딩 사이드 크런치|척추의 중립[all]",
@@ -1696,7 +4744,95 @@
    "cautions": [
     "어깨 높이(으쓱) 미세 변화는 MP 노이즈에 묻힘",
     "한쪽(L/R) 지정 피처 — 카메라가 반대편이면 먼 쪽 관절이 되어 정밀도 변동. mean/minside/maxside 변형으로 대체 권장"
-   ]
+   ],
+   "confidence": {
+    "method": "MP 재추론 표본, view_best_front 뷰, 출시 임계값 고정, 수행자 부트스트랩 B=1000 95% 구간 (rule_confidence.py, spec §32)",
+    "n": 57,
+    "n_normal": 33,
+    "n_violation": 24,
+    "n_performers": 35,
+    "normal_fpr": 0.1818,
+    "normal_fpr_ci95": [
+     0.0689,
+     0.3333
+    ],
+    "normal_fpr_with_guard": null,
+    "tpr": 0.9583,
+    "tpr_ci95": [
+     0.8621,
+     1.0
+    ],
+    "balacc": 0.8883,
+    "balacc_ci95": [
+     0.8026,
+     0.9546
+    ],
+    "auc": 0.9407,
+    "auc_ci95": [
+     0.8707,
+     0.9864
+    ],
+    "normal_median": 0.99969
+   },
+   "views_ok": [
+    "D"
+   ],
+   "views_eval": {
+    "A": {
+     "n": 57,
+     "normal_fpr": 0.1515,
+     "tpr": 0.5833,
+     "balacc": 0.7159
+    },
+    "B": {
+     "n": 53,
+     "normal_fpr": 0.7586,
+     "tpr": 0.625,
+     "balacc": 0.4332
+    },
+    "C": {
+     "n": 69,
+     "normal_fpr": 0.5122,
+     "tpr": 0.8571,
+     "balacc": 0.6725
+    },
+    "D": {
+     "n": 44,
+     "normal_fpr": 0.125,
+     "tpr": 0.95,
+     "balacc": 0.9125
+    },
+    "E": {
+     "n": 49,
+     "normal_fpr": 0.2581,
+     "tpr": 0.4444,
+     "balacc": 0.5932
+    },
+    "R": {
+     "n": 1,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "SIDE_B": {
+     "n": 1,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "SIDE_D": {
+     "n": 5,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "UNKNOWN": {
+     "n": 9,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    }
+   }
   },
   {
    "id": "스탠딩 사이드 크런치|시선 정면 유지",
@@ -1739,6 +4875,94 @@
     "method": "MP(C) 정상 med±3.0·MAD",
     "n_norm": 26,
     "validated": true
+   },
+   "confidence": {
+    "method": "MP 재추론 표본, view_best_front 뷰, 출시 임계값 고정, 수행자 부트스트랩 B=1000 95% 구간 (rule_confidence.py, spec §32)",
+    "n": 57,
+    "n_normal": 26,
+    "n_violation": 31,
+    "n_performers": 35,
+    "normal_fpr": 0.0769,
+    "normal_fpr_ci95": [
+     0.0,
+     0.1852
+    ],
+    "normal_fpr_with_guard": 0.1923,
+    "tpr": 0.6774,
+    "tpr_ci95": [
+     0.5278,
+     0.8571
+    ],
+    "balacc": 0.8002,
+    "balacc_ci95": [
+     0.7042,
+     0.899
+    ],
+    "auc": 0.8685,
+    "auc_ci95": [
+     0.7742,
+     0.9509
+    ],
+    "normal_median": -14.291791
+   },
+   "views_ok": [
+    "C"
+   ],
+   "views_eval": {
+    "A": {
+     "n": 57,
+     "normal_fpr": 0.3333,
+     "tpr": 0.5333,
+     "balacc": 0.6
+    },
+    "B": {
+     "n": 53,
+     "normal_fpr": 0.125,
+     "tpr": 0.4483,
+     "balacc": 0.6616
+    },
+    "C": {
+     "n": 69,
+     "normal_fpr": 0.1333,
+     "tpr": 0.6667,
+     "balacc": 0.7667
+    },
+    "D": {
+     "n": 44,
+     "normal_fpr": 0.0,
+     "tpr": 0.2727,
+     "balacc": 0.6364
+    },
+    "E": {
+     "n": 49,
+     "normal_fpr": 0.5,
+     "tpr": 0.8519,
+     "balacc": 0.6759
+    },
+    "R": {
+     "n": 1,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "SIDE_B": {
+     "n": 1,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "SIDE_D": {
+     "n": 5,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "UNKNOWN": {
+     "n": 9,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    }
    }
   },
   {
@@ -1782,14 +5006,98 @@
    },
    "gt_auc_control": 0.9551,
    "gt_auc_full": 0.955,
-   "cautions": []
+   "cautions": [],
+   "confidence": {
+    "method": "MP 재추론 표본, view_best_front 뷰, 출시 임계값 고정, 수행자 부트스트랩 B=1000 95% 구간 (rule_confidence.py, spec §32)",
+    "n": 60,
+    "n_normal": 41,
+    "n_violation": 19,
+    "n_performers": 35,
+    "normal_fpr": 0.0488,
+    "normal_fpr_ci95": [
+     0.0,
+     0.1282
+    ],
+    "normal_fpr_with_guard": null,
+    "tpr": 0.9474,
+    "tpr_ci95": [
+     0.8332,
+     1.0
+    ],
+    "balacc": 0.9493,
+    "balacc_ci95": [
+     0.8805,
+     1.0
+    ],
+    "auc": 0.9936,
+    "auc_ci95": [
+     0.9763,
+     1.0
+    ],
+    "normal_median": 145.416992
+   },
+   "views_ok": [
+    "B",
+    "D",
+    "E"
+   ],
+   "views_eval": {
+    "A": {
+     "n": 59,
+     "normal_fpr": 0.425,
+     "tpr": 0.8421,
+     "balacc": 0.7086
+    },
+    "B": {
+     "n": 58,
+     "normal_fpr": 0.0513,
+     "tpr": 0.9474,
+     "balacc": 0.948
+    },
+    "C": {
+     "n": 63,
+     "normal_fpr": 0.0,
+     "tpr": 0.0,
+     "balacc": 0.5
+    },
+    "D": {
+     "n": 56,
+     "normal_fpr": 0.0,
+     "tpr": 0.7778,
+     "balacc": 0.8889
+    },
+    "E": {
+     "n": 60,
+     "normal_fpr": 0.0976,
+     "tpr": 0.8947,
+     "balacc": 0.8986
+    },
+    "SIDE_B": {
+     "n": 2,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "SIDE_D": {
+     "n": 1,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "UNKNOWN": {
+     "n": 1,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    }
+   }
   },
   {
    "id": "스텝 백워드 다이나믹 런지|뒤다리 무릎 각도 90도",
    "exercise": "스텝 백워드 다이나믹 런지",
    "condition": "뒤다리 무릎 각도 90도",
    "subtype": null,
-   "status": "ship",
+   "status": "beta",
    "reason": null,
    "feature": "knee_minside__range",
    "base_feature": "knee_minside",
@@ -1826,8 +5134,90 @@
    "gt_auc_control": 0.8248,
    "gt_auc_full": 0.8808,
    "cautions": [
-    "후방 뷰(A)에서 더 좋음 (AUC 0.92) — 촬영 가이드와 상충"
-   ]
+    "후방 뷰(A)에서 더 좋음 (AUC 0.92) — 촬영 가이드와 상충",
+    "§32 게이트(s32) 미달 — AUC 0.78<0.85 · AUC 하한 0.67<0.75 · 정상 오탐률 0.36>0.35 — ship에서 beta로"
+   ],
+   "confidence": {
+    "method": "MP 재추론 표본, view_best_front 뷰, 출시 임계값 고정, 수행자 부트스트랩 B=1000 95% 구간 (rule_confidence.py, spec §32)",
+    "n": 60,
+    "n_normal": 45,
+    "n_violation": 15,
+    "n_performers": 35,
+    "normal_fpr": 0.3556,
+    "normal_fpr_ci95": [
+     0.2325,
+     0.5
+    ],
+    "normal_fpr_with_guard": null,
+    "tpr": 0.9333,
+    "tpr_ci95": [
+     0.8093,
+     1.0
+    ],
+    "balacc": 0.7889,
+    "balacc_ci95": [
+     0.7124,
+     0.8674
+    ],
+    "auc": 0.7793,
+    "auc_ci95": [
+     0.6736,
+     0.8731
+    ],
+    "normal_median": 80.33812
+   },
+   "status_before_s32": "ship",
+   "views_ok": [],
+   "views_eval": {
+    "A": {
+     "n": 59,
+     "normal_fpr": 0.4545,
+     "tpr": 1.0,
+     "balacc": 0.7727
+    },
+    "B": {
+     "n": 58,
+     "normal_fpr": 0.3721,
+     "tpr": 0.9333,
+     "balacc": 0.7806
+    },
+    "C": {
+     "n": 63,
+     "normal_fpr": 0.4167,
+     "tpr": 0.8667,
+     "balacc": 0.725
+    },
+    "D": {
+     "n": 56,
+     "normal_fpr": 0.4146,
+     "tpr": 0.9333,
+     "balacc": 0.7593
+    },
+    "E": {
+     "n": 60,
+     "normal_fpr": 0.5111,
+     "tpr": 0.8,
+     "balacc": 0.6444
+    },
+    "SIDE_B": {
+     "n": 2,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "SIDE_D": {
+     "n": 1,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "UNKNOWN": {
+     "n": 1,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    }
+   }
   },
   {
    "id": "스텝 포워드 다이나믹 런지|척추의 중립[lateral]",
@@ -1864,7 +5254,92 @@
    "gt_auc_full": 0.988,
    "cautions": [
     "표본 적음 (n=39, AUC 표준오차 ≈ ±0.06)"
-   ]
+   ],
+   "confidence": {
+    "method": "MP 재추론 표본, view_best_front 뷰, 출시 임계값 고정, 수행자 부트스트랩 B=1000 95% 구간 (rule_confidence.py, spec §32)",
+    "n": 39,
+    "n_normal": 19,
+    "n_violation": 20,
+    "n_performers": 30,
+    "normal_fpr": 0.1579,
+    "normal_fpr_ci95": [
+     0.0,
+     0.3333
+    ],
+    "normal_fpr_with_guard": null,
+    "tpr": 0.95,
+    "tpr_ci95": [
+     0.8333,
+     1.0
+    ],
+    "balacc": 0.8961,
+    "balacc_ci95": [
+     0.8021,
+     0.9773
+    ],
+    "auc": 0.9658,
+    "auc_ci95": [
+     0.9079,
+     1.0
+    ],
+    "normal_median": 0.050917
+   },
+   "views_ok": [
+    "C",
+    "B",
+    "D",
+    "E"
+   ],
+   "views_eval": {
+    "A": {
+     "n": 39,
+     "normal_fpr": 0.0526,
+     "tpr": 0.5,
+     "balacc": 0.7237
+    },
+    "B": {
+     "n": 36,
+     "normal_fpr": 0.1176,
+     "tpr": 0.9474,
+     "balacc": 0.9149
+    },
+    "C": {
+     "n": 41,
+     "normal_fpr": 0.0526,
+     "tpr": 0.8182,
+     "balacc": 0.8828
+    },
+    "D": {
+     "n": 33,
+     "normal_fpr": 0.1176,
+     "tpr": 0.8125,
+     "balacc": 0.8474
+    },
+    "E": {
+     "n": 39,
+     "normal_fpr": 0.0526,
+     "tpr": 0.65,
+     "balacc": 0.7987
+    },
+    "SIDE_B": {
+     "n": 2,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "SIDE_D": {
+     "n": 3,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "UNKNOWN": {
+     "n": 2,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    }
+   }
   },
   {
    "id": "스텝 포워드 다이나믹 런지|상체의 과조한 숙임/젖힘 여부",
@@ -1907,6 +5382,89 @@
     "method": "MP(D) 정상 med±3.0·MAD",
     "n_norm": 37,
     "validated": false
+   },
+   "confidence": {
+    "method": "MP 재추론 표본, view_best_front 뷰, 출시 임계값 고정, 수행자 부트스트랩 B=1000 95% 구간 (rule_confidence.py, spec §32)",
+    "n": 60,
+    "n_normal": 37,
+    "n_violation": 23,
+    "n_performers": 34,
+    "normal_fpr": 0.1622,
+    "normal_fpr_ci95": [
+     0.0588,
+     0.2821
+    ],
+    "normal_fpr_with_guard": 0.1622,
+    "tpr": 0.7391,
+    "tpr_ci95": [
+     0.5294,
+     0.9118
+    ],
+    "balacc": 0.7885,
+    "balacc_ci95": [
+     0.6684,
+     0.8952
+    ],
+    "auc": 0.8625,
+    "auc_ci95": [
+     0.7509,
+     0.9496
+    ],
+    "normal_median": -0.685407
+   },
+   "views_ok": [
+    "B",
+    "D"
+   ],
+   "views_eval": {
+    "A": {
+     "n": 60,
+     "normal_fpr": 0.6216,
+     "tpr": 1.0,
+     "balacc": 0.6892
+    },
+    "B": {
+     "n": 54,
+     "normal_fpr": 0.1818,
+     "tpr": 0.7143,
+     "balacc": 0.7662
+    },
+    "C": {
+     "n": 65,
+     "normal_fpr": 0.025,
+     "tpr": 0.16,
+     "balacc": 0.5675
+    },
+    "D": {
+     "n": 51,
+     "normal_fpr": 0.1765,
+     "tpr": 0.7059,
+     "balacc": 0.7647
+    },
+    "E": {
+     "n": 60,
+     "normal_fpr": 0.6486,
+     "tpr": 0.9565,
+     "balacc": 0.6539
+    },
+    "SIDE_B": {
+     "n": 5,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "SIDE_D": {
+     "n": 3,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "UNKNOWN": {
+     "n": 2,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    }
    }
   },
   {
@@ -1942,7 +5500,84 @@
    },
    "gt_auc_control": 0.9551,
    "gt_auc_full": 0.9513,
-   "cautions": []
+   "cautions": [],
+   "confidence": {
+    "method": "MP 재추론 표본, view_best_front 뷰, 출시 임계값 고정, 수행자 부트스트랩 B=1000 95% 구간 (rule_confidence.py, spec §32)",
+    "n": 60,
+    "n_normal": 27,
+    "n_violation": 33,
+    "n_performers": 26,
+    "normal_fpr": 0.1481,
+    "normal_fpr_ci95": [
+     0.0357,
+     0.2857
+    ],
+    "normal_fpr_with_guard": null,
+    "tpr": 0.9091,
+    "tpr_ci95": [
+     0.7931,
+     1.0
+    ],
+    "balacc": 0.8805,
+    "balacc_ci95": [
+     0.79,
+     0.9549
+    ],
+    "auc": 0.9293,
+    "auc_ci95": [
+     0.8437,
+     0.984
+    ],
+    "normal_median": 0.039417
+   },
+   "views_ok": [
+    "C",
+    "B"
+   ],
+   "views_eval": {
+    "A": {
+     "n": 58,
+     "normal_fpr": 0.7037,
+     "tpr": 0.9677,
+     "balacc": 0.632
+    },
+    "B": {
+     "n": 60,
+     "normal_fpr": 0.1154,
+     "tpr": 0.9118,
+     "balacc": 0.8982
+    },
+    "C": {
+     "n": 61,
+     "normal_fpr": 0.1481,
+     "tpr": 0.7941,
+     "balacc": 0.823
+    },
+    "D": {
+     "n": 58,
+     "normal_fpr": 0.4444,
+     "tpr": 0.7419,
+     "balacc": 0.6487
+    },
+    "E": {
+     "n": 59,
+     "normal_fpr": 0.963,
+     "tpr": 0.9062,
+     "balacc": 0.4716
+    },
+    "SIDE_B": {
+     "n": 2,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "UNKNOWN": {
+     "n": 2,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    }
+   }
   },
   {
    "id": "오버 헤드 프레스|무릎 반동 없음",
@@ -1977,7 +5612,86 @@
    },
    "gt_auc_control": 0.9833,
    "gt_auc_full": 0.9774,
-   "cautions": []
+   "cautions": [],
+   "confidence": {
+    "method": "MP 재추론 표본, view_best_front 뷰, 출시 임계값 고정, 수행자 부트스트랩 B=1000 95% 구간 (rule_confidence.py, spec §32)",
+    "n": 60,
+    "n_normal": 27,
+    "n_violation": 33,
+    "n_performers": 29,
+    "normal_fpr": 0.1852,
+    "normal_fpr_ci95": [
+     0.054,
+     0.3636
+    ],
+    "normal_fpr_with_guard": null,
+    "tpr": 1.0,
+    "tpr_ci95": [
+     1.0,
+     1.0
+    ],
+    "balacc": 0.9074,
+    "balacc_ci95": [
+     0.8182,
+     0.973
+    ],
+    "auc": 0.9809,
+    "auc_ci95": [
+     0.9451,
+     0.9986
+    ],
+    "normal_median": 2.479799
+   },
+   "views_ok": [
+    "C",
+    "B",
+    "D",
+    "E"
+   ],
+   "views_eval": {
+    "A": {
+     "n": 55,
+     "normal_fpr": 0.24,
+     "tpr": 0.7333,
+     "balacc": 0.7467
+    },
+    "B": {
+     "n": 59,
+     "normal_fpr": 0.0,
+     "tpr": 0.7812,
+     "balacc": 0.8906
+    },
+    "C": {
+     "n": 60,
+     "normal_fpr": 0.0357,
+     "tpr": 0.5625,
+     "balacc": 0.7634
+    },
+    "D": {
+     "n": 59,
+     "normal_fpr": 0.1923,
+     "tpr": 1.0,
+     "balacc": 0.9038
+    },
+    "E": {
+     "n": 60,
+     "normal_fpr": 0.2593,
+     "tpr": 1.0,
+     "balacc": 0.8704
+    },
+    "SIDE_B": {
+     "n": 2,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "UNKNOWN": {
+     "n": 5,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    }
+   }
   },
   {
    "id": "오버 헤드 프레스|전완 지면과 수직",
@@ -2017,7 +5731,84 @@
    },
    "gt_auc_control": 0.9542,
    "gt_auc_full": 0.8215,
-   "cautions": []
+   "cautions": [],
+   "confidence": {
+    "method": "MP 재추론 표본, view_best_front 뷰, 출시 임계값 고정, 수행자 부트스트랩 B=1000 95% 구간 (rule_confidence.py, spec §32)",
+    "n": 60,
+    "n_normal": 26,
+    "n_violation": 34,
+    "n_performers": 29,
+    "normal_fpr": 0.1154,
+    "normal_fpr_ci95": [
+     0.0,
+     0.2593
+    ],
+    "normal_fpr_with_guard": null,
+    "tpr": 0.8824,
+    "tpr_ci95": [
+     0.7692,
+     0.9706
+    ],
+    "balacc": 0.8835,
+    "balacc_ci95": [
+     0.7742,
+     0.9634
+    ],
+    "auc": 0.9265,
+    "auc_ci95": [
+     0.8483,
+     0.9897
+    ],
+    "normal_median": 1.59945
+   },
+   "views_ok": [
+    "C",
+    "B"
+   ],
+   "views_eval": {
+    "A": {
+     "n": 55,
+     "normal_fpr": 0.0435,
+     "tpr": 0.3125,
+     "balacc": 0.6345
+    },
+    "B": {
+     "n": 59,
+     "normal_fpr": 0.12,
+     "tpr": 0.8824,
+     "balacc": 0.8812
+    },
+    "C": {
+     "n": 60,
+     "normal_fpr": 0.3077,
+     "tpr": 0.8529,
+     "balacc": 0.7726
+    },
+    "D": {
+     "n": 59,
+     "normal_fpr": 0.0,
+     "tpr": 0.2647,
+     "balacc": 0.6324
+    },
+    "E": {
+     "n": 60,
+     "normal_fpr": 0.0385,
+     "tpr": 0.2941,
+     "balacc": 0.6278
+    },
+    "SIDE_B": {
+     "n": 2,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "UNKNOWN": {
+     "n": 5,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    }
+   }
   },
   {
    "id": "오버 헤드 프레스|척추의 중립[all]",
@@ -2065,7 +5856,86 @@
    },
    "gt_auc_control": 0.8222,
    "gt_auc_full": 0.8349,
-   "cautions": []
+   "cautions": [],
+   "confidence": {
+    "method": "MP 재추론 표본, view_best_front 뷰, 출시 임계값 고정, 수행자 부트스트랩 B=1000 95% 구간 (rule_confidence.py, spec §32)",
+    "n": 60,
+    "n_normal": 28,
+    "n_violation": 32,
+    "n_performers": 29,
+    "normal_fpr": 0.1071,
+    "normal_fpr_ci95": [
+     0.0,
+     0.2334
+    ],
+    "normal_fpr_with_guard": null,
+    "tpr": 0.7188,
+    "tpr_ci95": [
+     0.5,
+     0.8846
+    ],
+    "balacc": 0.8058,
+    "balacc_ci95": [
+     0.6937,
+     0.8995
+    ],
+    "auc": 0.865,
+    "auc_ci95": [
+     0.7558,
+     0.9528
+    ],
+    "normal_median": -5.037492
+   },
+   "views_ok": [
+    "C",
+    "B",
+    "D",
+    "A"
+   ],
+   "views_eval": {
+    "A": {
+     "n": 55,
+     "normal_fpr": 0.0,
+     "tpr": 0.5517,
+     "balacc": 0.7759
+    },
+    "B": {
+     "n": 59,
+     "normal_fpr": 0.1071,
+     "tpr": 0.7097,
+     "balacc": 0.8013
+    },
+    "C": {
+     "n": 60,
+     "normal_fpr": 0.069,
+     "tpr": 0.6129,
+     "balacc": 0.772
+    },
+    "D": {
+     "n": 59,
+     "normal_fpr": 0.2222,
+     "tpr": 0.8125,
+     "balacc": 0.7951
+    },
+    "E": {
+     "n": 60,
+     "normal_fpr": 0.0,
+     "tpr": 0.375,
+     "balacc": 0.6875
+    },
+    "SIDE_B": {
+     "n": 2,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "UNKNOWN": {
+     "n": 5,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    }
+   }
   },
   {
    "id": "오버 헤드 프레스|척추의 중립[flexion]",
@@ -2113,7 +5983,86 @@
    },
    "gt_auc_control": 0.8222,
    "gt_auc_full": 0.8349,
-   "cautions": []
+   "cautions": [],
+   "confidence": {
+    "method": "MP 재추론 표본, view_best_front 뷰, 출시 임계값 고정, 수행자 부트스트랩 B=1000 95% 구간 (rule_confidence.py, spec §32)",
+    "n": 60,
+    "n_normal": 28,
+    "n_violation": 32,
+    "n_performers": 29,
+    "normal_fpr": 0.1071,
+    "normal_fpr_ci95": [
+     0.0,
+     0.2333
+    ],
+    "normal_fpr_with_guard": null,
+    "tpr": 0.7188,
+    "tpr_ci95": [
+     0.5161,
+     0.8929
+    ],
+    "balacc": 0.8058,
+    "balacc_ci95": [
+     0.6995,
+     0.9048
+    ],
+    "auc": 0.865,
+    "auc_ci95": [
+     0.7527,
+     0.9517
+    ],
+    "normal_median": -5.037492
+   },
+   "views_ok": [
+    "C",
+    "B",
+    "D",
+    "A"
+   ],
+   "views_eval": {
+    "A": {
+     "n": 55,
+     "normal_fpr": 0.0,
+     "tpr": 0.5517,
+     "balacc": 0.7759
+    },
+    "B": {
+     "n": 59,
+     "normal_fpr": 0.1071,
+     "tpr": 0.7097,
+     "balacc": 0.8013
+    },
+    "C": {
+     "n": 60,
+     "normal_fpr": 0.069,
+     "tpr": 0.6129,
+     "balacc": 0.772
+    },
+    "D": {
+     "n": 59,
+     "normal_fpr": 0.2222,
+     "tpr": 0.8125,
+     "balacc": 0.7951
+    },
+    "E": {
+     "n": 60,
+     "normal_fpr": 0.0,
+     "tpr": 0.375,
+     "balacc": 0.6875
+    },
+    "SIDE_B": {
+     "n": 2,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "UNKNOWN": {
+     "n": 5,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    }
+   }
   },
   {
    "id": "케이블 푸시 다운|상체 과도한 숙임 없음",
@@ -2153,7 +6102,97 @@
    },
    "gt_auc_control": 0.9038,
    "gt_auc_full": 0.9055,
-   "cautions": []
+   "cautions": [],
+   "confidence": {
+    "method": "MP 재추론 표본, view_best_front 뷰, 출시 임계값 고정, 수행자 부트스트랩 B=1000 95% 구간 (rule_confidence.py, spec §32)",
+    "n": 60,
+    "n_normal": 28,
+    "n_violation": 32,
+    "n_performers": 27,
+    "normal_fpr": 0.1071,
+    "normal_fpr_ci95": [
+     0.0,
+     0.2692
+    ],
+    "normal_fpr_with_guard": null,
+    "tpr": 0.875,
+    "tpr_ci95": [
+     0.7353,
+     1.0
+    ],
+    "balacc": 0.8839,
+    "balacc_ci95": [
+     0.7821,
+     0.9678
+    ],
+    "auc": 0.9442,
+    "auc_ci95": [
+     0.8843,
+     0.991
+    ],
+    "normal_median": 5.308125
+   },
+   "views_ok": [
+    "A",
+    "E",
+    "R"
+   ],
+   "views_eval": {
+    "A": {
+     "n": 57,
+     "normal_fpr": 0.3214,
+     "tpr": 1.0,
+     "balacc": 0.8393
+    },
+    "B": {
+     "n": 26,
+     "normal_fpr": 0.7273,
+     "tpr": 1.0,
+     "balacc": 0.6364
+    },
+    "C": {
+     "n": 1,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "D": {
+     "n": 44,
+     "normal_fpr": 0.7391,
+     "tpr": 1.0,
+     "balacc": 0.6304
+    },
+    "E": {
+     "n": 58,
+     "normal_fpr": 0.2759,
+     "tpr": 0.8966,
+     "balacc": 0.8103
+    },
+    "R": {
+     "n": 57,
+     "normal_fpr": 0.1071,
+     "tpr": 0.8621,
+     "balacc": 0.8775
+    },
+    "SIDE_B": {
+     "n": 7,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "SIDE_D": {
+     "n": 4,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "UNKNOWN": {
+     "n": 46,
+     "normal_fpr": 1.0,
+     "tpr": 1.0,
+     "balacc": 0.5
+    }
+   }
   },
   {
    "id": "크로스 런지|앞다리 무릎 각도 90도",
@@ -2168,11 +6207,11 @@
    "family": "knee",
    "op": "<",
    "threshold": 13.024798,
-   "violation_if": "knee_maxside__std < 13.02",
+   "violation_if": "knee_maxside__std < 13.0248",
    "view_best_front": "D",
    "view_best_front_desc": "전방사선R(-40°)",
-   "cv_auc": 0.9658,
-   "cv_balacc": 0.8362,
+   "cv_auc": 0.9852,
+   "cv_balacc": 0.8709,
    "n": 60,
    "n_performers": 29,
    "view_best_any": "D",
@@ -2189,8 +6228,85 @@
    "gt_auc_control": 0.9812,
    "gt_auc_full": 0.979,
    "cautions": [
-    "§28c: 주 동작과 강한 결합(정상 클립 내 r=+0.89) — 조건이 아니라 렙 위상을 따라갈 위험. 통계 교체로 해소 안 됨(조건-피처 재정의 필요). 실기기 오탐 관찰 대상"
-   ]
+    "§28c: 주 동작과 강한 결합(정상 클립 내 r=+0.89) — 조건이 아니라 렙 위상을 따라갈 위험. 통계 교체로 해소 안 됨(조건-피처 재정의 필요). 실기기 오탐 관찰 대상",
+    "§32: §28c 통계 교체 임계값은 GT 3D 기준이었음 — MP 피처(뷰 D)에서 임계값만 재적합 13.02→13.02 (cv AUC 0.99, 균형정확도 0.87)"
+   ],
+   "threshold_before_s32": 13.024798,
+   "cv_auc_before_s32": 0.9658,
+   "cv_balacc_before_s32": 0.8362,
+   "confidence": {
+    "method": "MP 재추론 표본, view_best_front 뷰, 출시 임계값 고정, 수행자 부트스트랩 B=1000 95% 구간 (rule_confidence.py, spec §32)",
+    "n": 60,
+    "n_normal": 36,
+    "n_violation": 24,
+    "n_performers": 29,
+    "normal_fpr": 0.1111,
+    "normal_fpr_ci95": [
+     0.0263,
+     0.2223
+    ],
+    "normal_fpr_with_guard": null,
+    "tpr": 0.9583,
+    "tpr_ci95": [
+     0.8571,
+     1.0
+    ],
+    "balacc": 0.9236,
+    "balacc_ci95": [
+     0.8571,
+     0.9792
+    ],
+    "auc": 0.9711,
+    "auc_ci95": [
+     0.9401,
+     0.9962
+    ],
+    "normal_median": 23.835817
+   },
+   "views_ok": [
+    "C",
+    "B",
+    "D",
+    "E"
+   ],
+   "views_eval": {
+    "A": {
+     "n": 60,
+     "normal_fpr": 0.25,
+     "tpr": 0.6667,
+     "balacc": 0.7083
+    },
+    "B": {
+     "n": 57,
+     "normal_fpr": 0.0588,
+     "tpr": 0.8696,
+     "balacc": 0.9054
+    },
+    "C": {
+     "n": 60,
+     "normal_fpr": 0.2286,
+     "tpr": 0.92,
+     "balacc": 0.8457
+    },
+    "D": {
+     "n": 59,
+     "normal_fpr": 0.1111,
+     "tpr": 0.9565,
+     "balacc": 0.9227
+    },
+    "E": {
+     "n": 60,
+     "normal_fpr": 0.1111,
+     "tpr": 0.6667,
+     "balacc": 0.7778
+    },
+    "SIDE_B": {
+     "n": 4,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    }
+   }
   },
   {
    "id": "크로스 런지|상체 정면 균형잡기",
@@ -2219,7 +6335,78 @@
    "personal_baseline": null,
    "gt_auc_control": 0.8845,
    "gt_auc_full": 0.9001,
-   "cautions": []
+   "cautions": [],
+   "confidence": {
+    "method": "MP 재추론 표본, view_best_front 뷰, 출시 임계값 고정, 수행자 부트스트랩 B=1000 95% 구간 (rule_confidence.py, spec §32)",
+    "n": 60,
+    "n_normal": 21,
+    "n_violation": 39,
+    "n_performers": 29,
+    "normal_fpr": 0.2381,
+    "normal_fpr_ci95": [
+     0.0832,
+     0.4167
+    ],
+    "normal_fpr_with_guard": null,
+    "tpr": 0.9231,
+    "tpr_ci95": [
+     0.8286,
+     1.0
+    ],
+    "balacc": 0.8425,
+    "balacc_ci95": [
+     0.7467,
+     0.9292
+    ],
+    "auc": 0.9072,
+    "auc_ci95": [
+     0.8249,
+     0.9744
+    ],
+    "normal_median": -5.250305
+   },
+   "views_ok": [
+    "C",
+    "B"
+   ],
+   "views_eval": {
+    "A": {
+     "n": 60,
+     "normal_fpr": 0.9524,
+     "tpr": 1.0,
+     "balacc": 0.5238
+    },
+    "B": {
+     "n": 57,
+     "normal_fpr": 0.3333,
+     "tpr": 0.8889,
+     "balacc": 0.7778
+    },
+    "C": {
+     "n": 60,
+     "normal_fpr": 0.2381,
+     "tpr": 0.9231,
+     "balacc": 0.8425
+    },
+    "D": {
+     "n": 59,
+     "normal_fpr": 0.4286,
+     "tpr": 0.9474,
+     "balacc": 0.7594
+    },
+    "E": {
+     "n": 60,
+     "normal_fpr": 1.0,
+     "tpr": 0.9744,
+     "balacc": 0.4872
+    },
+    "SIDE_B": {
+     "n": 4,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    }
+   }
   },
   {
    "id": "페이스 풀|수축시 양 손과 이마 동일선상 위치",
@@ -2259,7 +6446,97 @@
    },
    "gt_auc_control": 0.9714,
    "gt_auc_full": 0.982,
-   "cautions": []
+   "cautions": [],
+   "confidence": {
+    "method": "MP 재추론 표본, view_best_front 뷰, 출시 임계값 고정, 수행자 부트스트랩 B=1000 95% 구간 (rule_confidence.py, spec §32)",
+    "n": 60,
+    "n_normal": 31,
+    "n_violation": 29,
+    "n_performers": 28,
+    "normal_fpr": 0.129,
+    "normal_fpr_ci95": [
+     0.0286,
+     0.2693
+    ],
+    "normal_fpr_with_guard": null,
+    "tpr": 0.9655,
+    "tpr_ci95": [
+     0.9,
+     1.0
+    ],
+    "balacc": 0.9182,
+    "balacc_ci95": [
+     0.85,
+     0.98
+    ],
+    "auc": 0.9766,
+    "auc_ci95": [
+     0.9469,
+     0.999
+    ],
+    "normal_median": 1.16516
+   },
+   "views_ok": [
+    "B",
+    "A",
+    "E"
+   ],
+   "views_eval": {
+    "A": {
+     "n": 61,
+     "normal_fpr": 0.1515,
+     "tpr": 0.9643,
+     "balacc": 0.9064
+    },
+    "B": {
+     "n": 36,
+     "normal_fpr": 0.2632,
+     "tpr": 0.7647,
+     "balacc": 0.7508
+    },
+    "C": {
+     "n": 4,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "D": {
+     "n": 29,
+     "normal_fpr": 0.4545,
+     "tpr": 0.7778,
+     "balacc": 0.6616
+    },
+    "E": {
+     "n": 57,
+     "normal_fpr": 0.2903,
+     "tpr": 1.0,
+     "balacc": 0.8548
+    },
+    "R": {
+     "n": 54,
+     "normal_fpr": 0.5172,
+     "tpr": 0.96,
+     "balacc": 0.7214
+    },
+    "SIDE_B": {
+     "n": 2,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "SIDE_D": {
+     "n": 4,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "UNKNOWN": {
+     "n": 48,
+     "normal_fpr": 0.5455,
+     "tpr": 0.8846,
+     "balacc": 0.6696
+    }
+   }
   },
   {
    "id": "프런트 레이즈|팔꿈치 살짝 구부린채 고정",
@@ -2294,7 +6571,84 @@
    },
    "gt_auc_control": 0.9709,
    "gt_auc_full": 0.9875,
-   "cautions": []
+   "cautions": [],
+   "confidence": {
+    "method": "MP 재추론 표본, view_best_front 뷰, 출시 임계값 고정, 수행자 부트스트랩 B=1000 95% 구간 (rule_confidence.py, spec §32)",
+    "n": 60,
+    "n_normal": 38,
+    "n_violation": 22,
+    "n_performers": 29,
+    "normal_fpr": 0.0526,
+    "normal_fpr_ci95": [
+     0.0,
+     0.1282
+    ],
+    "normal_fpr_with_guard": null,
+    "tpr": 0.9545,
+    "tpr_ci95": [
+     0.8499,
+     1.0
+    ],
+    "balacc": 0.951,
+    "balacc_ci95": [
+     0.893,
+     1.0
+    ],
+    "auc": 0.9713,
+    "auc_ci95": [
+     0.932,
+     1.0
+    ],
+    "normal_median": 148.302246
+   },
+   "views_ok": [
+    "B",
+    "D"
+   ],
+   "views_eval": {
+    "A": {
+     "n": 59,
+     "normal_fpr": 0.6579,
+     "tpr": 0.9048,
+     "balacc": 0.6234
+    },
+    "B": {
+     "n": 58,
+     "normal_fpr": 0.0541,
+     "tpr": 1.0,
+     "balacc": 0.973
+    },
+    "C": {
+     "n": 60,
+     "normal_fpr": 0.6579,
+     "tpr": 1.0,
+     "balacc": 0.6711
+    },
+    "D": {
+     "n": 60,
+     "normal_fpr": 0.0263,
+     "tpr": 0.6818,
+     "balacc": 0.8278
+    },
+    "E": {
+     "n": 60,
+     "normal_fpr": 0.2368,
+     "tpr": 0.6818,
+     "balacc": 0.7225
+    },
+    "SIDE_B": {
+     "n": 2,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "UNKNOWN": {
+     "n": 1,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    }
+   }
   },
   {
    "id": "프런트 레이즈|상체 뒤로 숙이지 않기",
@@ -2331,7 +6685,86 @@
    "gt_auc_full": 0.9667,
    "cautions": [
     "후방 뷰(A)에서 더 좋음 (AUC 1.00) — 촬영 가이드와 상충"
-   ]
+   ],
+   "confidence": {
+    "method": "MP 재추론 표본, view_best_front 뷰, 출시 임계값 고정, 수행자 부트스트랩 B=1000 95% 구간 (rule_confidence.py, spec §32)",
+    "n": 60,
+    "n_normal": 41,
+    "n_violation": 19,
+    "n_performers": 29,
+    "normal_fpr": 0.0976,
+    "normal_fpr_ci95": [
+     0.0222,
+     0.1951
+    ],
+    "normal_fpr_with_guard": null,
+    "tpr": 0.8947,
+    "tpr_ci95": [
+     0.7391,
+     1.0
+    ],
+    "balacc": 0.8986,
+    "balacc_ci95": [
+     0.8271,
+     0.9714
+    ],
+    "auc": 0.9422,
+    "auc_ci95": [
+     0.8665,
+     0.9943
+    ],
+    "normal_median": -3.367824
+   },
+   "views_ok": [
+    "B",
+    "D",
+    "A",
+    "E"
+   ],
+   "views_eval": {
+    "A": {
+     "n": 59,
+     "normal_fpr": 0.0,
+     "tpr": 0.8947,
+     "balacc": 0.9474
+    },
+    "B": {
+     "n": 58,
+     "normal_fpr": 0.1795,
+     "tpr": 0.8421,
+     "balacc": 0.8313
+    },
+    "C": {
+     "n": 60,
+     "normal_fpr": 0.1707,
+     "tpr": 0.4737,
+     "balacc": 0.6515
+    },
+    "D": {
+     "n": 60,
+     "normal_fpr": 0.0976,
+     "tpr": 0.8947,
+     "balacc": 0.8986
+    },
+    "E": {
+     "n": 60,
+     "normal_fpr": 0.0976,
+     "tpr": 0.9474,
+     "balacc": 0.9249
+    },
+    "SIDE_B": {
+     "n": 2,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "UNKNOWN": {
+     "n": 1,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    }
+   }
   },
   {
    "id": "행잉 레그 레이즈|어깨와 귀 사이 적당한 거리 유지",
@@ -2366,7 +6799,85 @@
    },
    "gt_auc_control": 0.9361,
    "gt_auc_full": 0.9521,
-   "cautions": []
+   "cautions": [],
+   "confidence": {
+    "method": "MP 재추론 표본, view_best_front 뷰, 출시 임계값 고정, 수행자 부트스트랩 B=1000 95% 구간 (rule_confidence.py, spec §32)",
+    "n": 60,
+    "n_normal": 36,
+    "n_violation": 24,
+    "n_performers": 30,
+    "normal_fpr": 0.0833,
+    "normal_fpr_ci95": [
+     0.0,
+     0.1852
+    ],
+    "normal_fpr_with_guard": null,
+    "tpr": 0.875,
+    "tpr_ci95": [
+     0.7307,
+     1.0
+    ],
+    "balacc": 0.8958,
+    "balacc_ci95": [
+     0.8124,
+     0.966
+    ],
+    "auc": 0.9502,
+    "auc_ci95": [
+     0.8928,
+     0.9938
+    ],
+    "normal_median": 1.639644
+   },
+   "views_ok": [
+    "C",
+    "B",
+    "D"
+   ],
+   "views_eval": {
+    "A": {
+     "n": 54,
+     "normal_fpr": 0.0,
+     "tpr": 0.0455,
+     "balacc": 0.5227
+    },
+    "B": {
+     "n": 56,
+     "normal_fpr": 0.0588,
+     "tpr": 0.6364,
+     "balacc": 0.7888
+    },
+    "C": {
+     "n": 60,
+     "normal_fpr": 0.0833,
+     "tpr": 0.8333,
+     "balacc": 0.875
+    },
+    "D": {
+     "n": 55,
+     "normal_fpr": 0.125,
+     "tpr": 0.7391,
+     "balacc": 0.8071
+    },
+    "E": {
+     "n": 51,
+     "normal_fpr": 0.0,
+     "tpr": 0.0,
+     "balacc": 0.5
+    },
+    "SIDE_B": {
+     "n": 4,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "UNKNOWN": {
+     "n": 20,
+     "normal_fpr": 0.0714,
+     "tpr": 0.0,
+     "balacc": 0.4643
+    }
+   }
   },
   {
    "id": "행잉 레그 레이즈|두 다리 사이 모아줌 유지",
@@ -2401,7 +6912,83 @@
    },
    "gt_auc_control": 0.882,
    "gt_auc_full": 0.8899,
-   "cautions": []
+   "cautions": [],
+   "confidence": {
+    "method": "MP 재추론 표본, view_best_front 뷰, 출시 임계값 고정, 수행자 부트스트랩 B=1000 95% 구간 (rule_confidence.py, spec §32)",
+    "n": 60,
+    "n_normal": 33,
+    "n_violation": 27,
+    "n_performers": 30,
+    "normal_fpr": 0.2121,
+    "normal_fpr_ci95": [
+     0.069,
+     0.3784
+    ],
+    "normal_fpr_with_guard": null,
+    "tpr": 0.9259,
+    "tpr_ci95": [
+     0.8182,
+     1.0
+    ],
+    "balacc": 0.8569,
+    "balacc_ci95": [
+     0.7552,
+     0.9387
+    ],
+    "auc": 0.9158,
+    "auc_ci95": [
+     0.8289,
+     0.9767
+    ],
+    "normal_median": 0.451241
+   },
+   "views_ok": [
+    "C"
+   ],
+   "views_eval": {
+    "A": {
+     "n": 54,
+     "normal_fpr": 0.0,
+     "tpr": 0.0,
+     "balacc": 0.5
+    },
+    "B": {
+     "n": 56,
+     "normal_fpr": 0.0323,
+     "tpr": 0.16,
+     "balacc": 0.5639
+    },
+    "C": {
+     "n": 60,
+     "normal_fpr": 0.2188,
+     "tpr": 0.8929,
+     "balacc": 0.8371
+    },
+    "D": {
+     "n": 55,
+     "normal_fpr": 0.1875,
+     "tpr": 0.5217,
+     "balacc": 0.6671
+    },
+    "E": {
+     "n": 51,
+     "normal_fpr": 0.0,
+     "tpr": 0.0435,
+     "balacc": 0.5217
+    },
+    "SIDE_B": {
+     "n": 4,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "UNKNOWN": {
+     "n": 20,
+     "normal_fpr": 0.0,
+     "tpr": 0.1,
+     "balacc": 0.55
+    }
+   }
   },
   {
    "id": "라잉 트라이셉스 익스텐션|척추의 중립[lumbar_swing]",
@@ -2436,7 +7023,69 @@
    },
    "gt_auc_control": 0.9139,
    "gt_auc_full": 0.9266,
-   "cautions": []
+   "cautions": [],
+   "confidence": {
+    "method": "MP 재추론 표본, view_best_front 뷰, 출시 임계값 고정, 수행자 부트스트랩 B=1000 95% 구간 (rule_confidence.py, spec §32)",
+    "n": 60,
+    "n_normal": 30,
+    "n_violation": 30,
+    "n_performers": 44,
+    "normal_fpr": 0.2,
+    "normal_fpr_ci95": [
+     0.0645,
+     0.3601
+    ],
+    "normal_fpr_with_guard": null,
+    "tpr": 0.6333,
+    "tpr_ci95": [
+     0.4167,
+     0.8261
+    ],
+    "balacc": 0.7167,
+    "balacc_ci95": [
+     0.5888,
+     0.8299
+    ],
+    "auc": 0.7733,
+    "auc_ci95": [
+     0.6263,
+     0.9013
+    ],
+    "normal_median": 77.083271
+   },
+   "views_ok": [],
+   "views_eval": {
+    "A": {
+     "n": 120,
+     "normal_fpr": 0.0167,
+     "tpr": 0.1667,
+     "balacc": 0.575
+    },
+    "D": {
+     "n": 9,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "E": {
+     "n": 60,
+     "normal_fpr": 0.0,
+     "tpr": 0.1333,
+     "balacc": 0.5667
+    },
+    "SIDE_B": {
+     "n": 60,
+     "normal_fpr": 0.2,
+     "tpr": 0.6333,
+     "balacc": 0.7167
+    },
+    "SIDE_D": {
+     "n": 51,
+     "normal_fpr": 0.3333,
+     "tpr": 0.7917,
+     "balacc": 0.7292
+    }
+   }
   },
   {
    "id": "바벨 로우|바벨 궤적과 몸 밀착",
@@ -2481,7 +7130,83 @@
    "gt_auc_full": 0.879,
    "cautions": [
     "반대칭 피처의 mean/min/max — 카메라 좌/우에 따라 부호 반전. std/range 변형 또는 절댓값 처리 필요"
-   ]
+   ],
+   "confidence": {
+    "method": "MP 재추론 표본, view_best_front 뷰, 출시 임계값 고정, 수행자 부트스트랩 B=1000 95% 구간 (rule_confidence.py, spec §32)",
+    "n": 60,
+    "n_normal": 28,
+    "n_violation": 32,
+    "n_performers": 28,
+    "normal_fpr": 0.1429,
+    "normal_fpr_ci95": [
+     0.0,
+     0.3333
+    ],
+    "normal_fpr_with_guard": null,
+    "tpr": 0.8438,
+    "tpr_ci95": [
+     0.7,
+     0.9584
+    ],
+    "balacc": 0.8504,
+    "balacc_ci95": [
+     0.7433,
+     0.9381
+    ],
+    "auc": 0.8895,
+    "auc_ci95": [
+     0.7949,
+     0.9609
+    ],
+    "normal_median": 0.007359
+   },
+   "views_ok": [
+    "D"
+   ],
+   "views_eval": {
+    "A": {
+     "n": 46,
+     "normal_fpr": 0.0,
+     "tpr": 0.08,
+     "balacc": 0.54
+    },
+    "B": {
+     "n": 59,
+     "normal_fpr": 0.7037,
+     "tpr": 0.3438,
+     "balacc": 0.32
+    },
+    "C": {
+     "n": 61,
+     "normal_fpr": 0.2069,
+     "tpr": 0.4062,
+     "balacc": 0.5997
+    },
+    "D": {
+     "n": 56,
+     "normal_fpr": 0.1538,
+     "tpr": 0.8333,
+     "balacc": 0.8397
+    },
+    "E": {
+     "n": 53,
+     "normal_fpr": 0.25,
+     "tpr": 0.2759,
+     "balacc": 0.5129
+    },
+    "SIDE_D": {
+     "n": 2,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "UNKNOWN": {
+     "n": 23,
+     "normal_fpr": 0.25,
+     "tpr": 0.1818,
+     "balacc": 0.4659
+    }
+   }
   },
   {
    "id": "바벨 로우|무릎 반동 없음",
@@ -2516,7 +7241,81 @@
    },
    "gt_auc_control": 0.8723,
    "gt_auc_full": 0.8781,
-   "cautions": []
+   "cautions": [],
+   "confidence": {
+    "method": "MP 재추론 표본, view_best_front 뷰, 출시 임계값 고정, 수행자 부트스트랩 B=1000 95% 구간 (rule_confidence.py, spec §32)",
+    "n": 60,
+    "n_normal": 31,
+    "n_violation": 29,
+    "n_performers": 28,
+    "normal_fpr": 0.2903,
+    "normal_fpr_ci95": [
+     0.147,
+     0.4643
+    ],
+    "normal_fpr_with_guard": null,
+    "tpr": 0.7586,
+    "tpr_ci95": [
+     0.5806,
+     0.9131
+    ],
+    "balacc": 0.7341,
+    "balacc_ci95": [
+     0.6075,
+     0.8358
+    ],
+    "auc": 0.7019,
+    "auc_ci95": [
+     0.54,
+     0.8362
+    ],
+    "normal_median": 6.843169
+   },
+   "views_ok": [],
+   "views_eval": {
+    "A": {
+     "n": 46,
+     "normal_fpr": 0.619,
+     "tpr": 0.4,
+     "balacc": 0.3905
+    },
+    "B": {
+     "n": 59,
+     "normal_fpr": 0.4,
+     "tpr": 0.3103,
+     "balacc": 0.4552
+    },
+    "C": {
+     "n": 61,
+     "normal_fpr": 0.2903,
+     "tpr": 0.7333,
+     "balacc": 0.7215
+    },
+    "D": {
+     "n": 56,
+     "normal_fpr": 0.2069,
+     "tpr": 0.1852,
+     "balacc": 0.4891
+    },
+    "E": {
+     "n": 53,
+     "normal_fpr": 0.3571,
+     "tpr": 0.44,
+     "balacc": 0.5414
+    },
+    "SIDE_D": {
+     "n": 2,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "UNKNOWN": {
+     "n": 23,
+     "normal_fpr": 0.0,
+     "tpr": 0.0,
+     "balacc": 0.5
+    }
+   }
   },
   {
    "id": "사이드 런지|척추의 중립[all]",
@@ -2551,7 +7350,83 @@
    },
    "gt_auc_control": 0.9446,
    "gt_auc_full": 0.8772,
-   "cautions": []
+   "cautions": [],
+   "confidence": {
+    "method": "MP 재추론 표본, view_best_front 뷰, 출시 임계값 고정, 수행자 부트스트랩 B=1000 95% 구간 (rule_confidence.py, spec §32)",
+    "n": 58,
+    "n_normal": 21,
+    "n_violation": 37,
+    "n_performers": 29,
+    "normal_fpr": 0.1905,
+    "normal_fpr_ci95": [
+     0.0,
+     0.4002
+    ],
+    "normal_fpr_with_guard": null,
+    "tpr": 0.7568,
+    "tpr_ci95": [
+     0.6087,
+     0.9111
+    ],
+    "balacc": 0.7831,
+    "balacc_ci95": [
+     0.6396,
+     0.9167
+    ],
+    "auc": 0.8211,
+    "auc_ci95": [
+     0.6925,
+     0.9341
+    ],
+    "normal_median": 17.290131
+   },
+   "views_ok": [
+    "B"
+   ],
+   "views_eval": {
+    "A": {
+     "n": 59,
+     "normal_fpr": 0.7619,
+     "tpr": 0.9474,
+     "balacc": 0.5927
+    },
+    "B": {
+     "n": 57,
+     "normal_fpr": 0.1905,
+     "tpr": 0.75,
+     "balacc": 0.7798
+    },
+    "C": {
+     "n": 66,
+     "normal_fpr": 0.0,
+     "tpr": 0.4889,
+     "balacc": 0.7444
+    },
+    "D": {
+     "n": 54,
+     "normal_fpr": 0.5238,
+     "tpr": 0.7576,
+     "balacc": 0.6169
+    },
+    "E": {
+     "n": 60,
+     "normal_fpr": 0.9524,
+     "tpr": 0.8974,
+     "balacc": 0.4725
+    },
+    "SIDE_D": {
+     "n": 1,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "UNKNOWN": {
+     "n": 1,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    }
+   }
   },
   {
    "id": "사이드 레터럴 레이즈|상체 반동 없음",
@@ -2586,7 +7461,84 @@
    },
    "gt_auc_control": 0.8629,
    "gt_auc_full": 0.8454,
-   "cautions": []
+   "cautions": [],
+   "confidence": {
+    "method": "MP 재추론 표본, view_best_front 뷰, 출시 임계값 고정, 수행자 부트스트랩 B=1000 95% 구간 (rule_confidence.py, spec §32)",
+    "n": 60,
+    "n_normal": 31,
+    "n_violation": 29,
+    "n_performers": 34,
+    "normal_fpr": 0.3226,
+    "normal_fpr_ci95": [
+     0.1724,
+     0.5
+    ],
+    "normal_fpr_with_guard": null,
+    "tpr": 0.8621,
+    "tpr_ci95": [
+     0.7096,
+     1.0
+    ],
+    "balacc": 0.7697,
+    "balacc_ci95": [
+     0.6616,
+     0.8565
+    ],
+    "auc": 0.8476,
+    "auc_ci95": [
+     0.7411,
+     0.9388
+    ],
+    "normal_median": 16.870197
+   },
+   "views_ok": [
+    "B",
+    "D"
+   ],
+   "views_eval": {
+    "A": {
+     "n": 54,
+     "normal_fpr": 0.3077,
+     "tpr": 0.6071,
+     "balacc": 0.6497
+    },
+    "B": {
+     "n": 59,
+     "normal_fpr": 0.3333,
+     "tpr": 0.8621,
+     "balacc": 0.7644
+    },
+    "C": {
+     "n": 60,
+     "normal_fpr": 0.3871,
+     "tpr": 0.7931,
+     "balacc": 0.703
+    },
+    "D": {
+     "n": 60,
+     "normal_fpr": 0.3226,
+     "tpr": 0.8276,
+     "balacc": 0.7525
+    },
+    "E": {
+     "n": 60,
+     "normal_fpr": 0.2903,
+     "tpr": 0.6207,
+     "balacc": 0.6652
+    },
+    "SIDE_B": {
+     "n": 1,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "UNKNOWN": {
+     "n": 6,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    }
+   }
   },
   {
    "id": "스탠딩 사이드 크런치|수축시 무릎과 팔꿈치가 충분히 가까움",
@@ -2621,7 +7573,97 @@
    },
    "gt_auc_control": 0.7973,
    "gt_auc_full": 0.8678,
-   "cautions": []
+   "cautions": [],
+   "confidence": {
+    "method": "MP 재추론 표본, view_best_front 뷰, 출시 임계값 고정, 수행자 부트스트랩 B=1000 95% 구간 (rule_confidence.py, spec §32)",
+    "n": 57,
+    "n_normal": 34,
+    "n_violation": 23,
+    "n_performers": 35,
+    "normal_fpr": 0.2059,
+    "normal_fpr_ci95": [
+     0.087,
+     0.3333
+    ],
+    "normal_fpr_with_guard": null,
+    "tpr": 0.7826,
+    "tpr_ci95": [
+     0.6087,
+     0.95
+    ],
+    "balacc": 0.7884,
+    "balacc_ci95": [
+     0.6881,
+     0.8851
+    ],
+    "auc": 0.8465,
+    "auc_ci95": [
+     0.7507,
+     0.9372
+    ],
+    "normal_median": 0.668578
+   },
+   "views_ok": [
+    "C",
+    "B",
+    "A"
+   ],
+   "views_eval": {
+    "A": {
+     "n": 57,
+     "normal_fpr": 0.2647,
+     "tpr": 0.7826,
+     "balacc": 0.759
+    },
+    "B": {
+     "n": 53,
+     "normal_fpr": 0.1818,
+     "tpr": 0.85,
+     "balacc": 0.8341
+    },
+    "C": {
+     "n": 69,
+     "normal_fpr": 0.2308,
+     "tpr": 0.8333,
+     "balacc": 0.8013
+    },
+    "D": {
+     "n": 44,
+     "normal_fpr": 0.2222,
+     "tpr": 0.6471,
+     "balacc": 0.7124
+    },
+    "E": {
+     "n": 49,
+     "normal_fpr": 0.3,
+     "tpr": 0.5789,
+     "balacc": 0.6395
+    },
+    "R": {
+     "n": 1,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "SIDE_B": {
+     "n": 1,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "SIDE_D": {
+     "n": 5,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "UNKNOWN": {
+     "n": 9,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    }
+   }
   },
   {
    "id": "스탠딩 사이드 크런치|척추의 중립[forward_lean]",
@@ -2658,7 +7700,95 @@
    "gt_auc_full": 0.9506,
    "cautions": [
     "후방 뷰(A)에서 더 좋음 (AUC 0.94) — 촬영 가이드와 상충"
-   ]
+   ],
+   "confidence": {
+    "method": "MP 재추론 표본, view_best_front 뷰, 출시 임계값 고정, 수행자 부트스트랩 B=1000 95% 구간 (rule_confidence.py, spec §32)",
+    "n": 56,
+    "n_normal": 33,
+    "n_violation": 23,
+    "n_performers": 34,
+    "normal_fpr": 0.2424,
+    "normal_fpr_ci95": [
+     0.1052,
+     0.4349
+    ],
+    "normal_fpr_with_guard": null,
+    "tpr": 0.7391,
+    "tpr_ci95": [
+     0.5417,
+     0.9231
+    ],
+    "balacc": 0.7484,
+    "balacc_ci95": [
+     0.6168,
+     0.8686
+    ],
+    "auc": 0.8129,
+    "auc_ci95": [
+     0.6637,
+     0.928
+    ],
+    "normal_median": 6.85111
+   },
+   "views_ok": [
+    "D"
+   ],
+   "views_eval": {
+    "A": {
+     "n": 56,
+     "normal_fpr": 0.1515,
+     "tpr": 0.6087,
+     "balacc": 0.7286
+    },
+    "B": {
+     "n": 52,
+     "normal_fpr": 0.3793,
+     "tpr": 0.913,
+     "balacc": 0.7669
+    },
+    "C": {
+     "n": 68,
+     "normal_fpr": 0.4878,
+     "tpr": 0.6296,
+     "balacc": 0.5709
+    },
+    "D": {
+     "n": 43,
+     "normal_fpr": 0.2083,
+     "tpr": 0.8421,
+     "balacc": 0.8169
+    },
+    "E": {
+     "n": 48,
+     "normal_fpr": 0.2581,
+     "tpr": 0.7059,
+     "balacc": 0.7239
+    },
+    "R": {
+     "n": 1,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "SIDE_B": {
+     "n": 1,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "SIDE_D": {
+     "n": 5,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "UNKNOWN": {
+     "n": 9,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    }
+   }
   },
   {
    "id": "스텝 백워드 다이나믹 런지|상체의 과조한 숙임/젖힘 여부",
@@ -2703,6 +7833,88 @@
     "method": "MP(D) 정상 med±3.0·MAD",
     "n_norm": 40,
     "validated": false
+   },
+   "confidence": {
+    "method": "MP 재추론 표본, view_best_front 뷰, 출시 임계값 고정, 수행자 부트스트랩 B=1000 95% 구간 (rule_confidence.py, spec §32)",
+    "n": 60,
+    "n_normal": 40,
+    "n_violation": 20,
+    "n_performers": 35,
+    "normal_fpr": 0.125,
+    "normal_fpr_ci95": [
+     0.0312,
+     0.2354
+    ],
+    "normal_fpr_with_guard": 0.125,
+    "tpr": 0.7,
+    "tpr_ci95": [
+     0.5,
+     0.8825
+    ],
+    "balacc": 0.7875,
+    "balacc_ci95": [
+     0.6739,
+     0.8825
+    ],
+    "auc": 0.8225,
+    "auc_ci95": [
+     0.7128,
+     0.9158
+    ],
+    "normal_median": 0.480577
+   },
+   "views_ok": [
+    "D"
+   ],
+   "views_eval": {
+    "A": {
+     "n": 59,
+     "normal_fpr": 0.3846,
+     "tpr": 0.9,
+     "balacc": 0.7577
+    },
+    "B": {
+     "n": 58,
+     "normal_fpr": 0.1026,
+     "tpr": 0.4737,
+     "balacc": 0.6856
+    },
+    "C": {
+     "n": 63,
+     "normal_fpr": 0.0732,
+     "tpr": 0.1364,
+     "balacc": 0.5316
+    },
+    "D": {
+     "n": 56,
+     "normal_fpr": 0.1282,
+     "tpr": 0.7059,
+     "balacc": 0.7888
+    },
+    "E": {
+     "n": 60,
+     "normal_fpr": 0.45,
+     "tpr": 0.95,
+     "balacc": 0.75
+    },
+    "SIDE_B": {
+     "n": 2,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "SIDE_D": {
+     "n": 1,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "UNKNOWN": {
+     "n": 1,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    }
    }
   },
   {
@@ -2746,7 +7958,89 @@
    },
    "gt_auc_control": 0.7612,
    "gt_auc_full": 0.8098,
-   "cautions": []
+   "cautions": [],
+   "confidence": {
+    "method": "MP 재추론 표본, view_best_front 뷰, 출시 임계값 고정, 수행자 부트스트랩 B=1000 95% 구간 (rule_confidence.py, spec §32)",
+    "n": 60,
+    "n_normal": 19,
+    "n_violation": 41,
+    "n_performers": 34,
+    "normal_fpr": 0.2105,
+    "normal_fpr_ci95": [
+     0.05,
+     0.4118
+    ],
+    "normal_fpr_with_guard": null,
+    "tpr": 0.7561,
+    "tpr_ci95": [
+     0.619,
+     0.8919
+    ],
+    "balacc": 0.7728,
+    "balacc_ci95": [
+     0.6555,
+     0.8826
+    ],
+    "auc": 0.7792,
+    "auc_ci95": [
+     0.6676,
+     0.8906
+    ],
+    "normal_median": 0.050917
+   },
+   "views_ok": [
+    "B"
+   ],
+   "views_eval": {
+    "A": {
+     "n": 60,
+     "normal_fpr": 0.4737,
+     "tpr": 0.6098,
+     "balacc": 0.568
+    },
+    "B": {
+     "n": 54,
+     "normal_fpr": 0.1765,
+     "tpr": 0.7568,
+     "balacc": 0.7901
+    },
+    "C": {
+     "n": 65,
+     "normal_fpr": 0.2105,
+     "tpr": 0.6522,
+     "balacc": 0.7208
+    },
+    "D": {
+     "n": 51,
+     "normal_fpr": 0.3529,
+     "tpr": 0.6471,
+     "balacc": 0.6471
+    },
+    "E": {
+     "n": 60,
+     "normal_fpr": 0.3158,
+     "tpr": 0.7073,
+     "balacc": 0.6958
+    },
+    "SIDE_B": {
+     "n": 5,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "SIDE_D": {
+     "n": 3,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "UNKNOWN": {
+     "n": 2,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    }
+   }
   },
   {
    "id": "페이스 풀|상완의 외회전",
@@ -2781,7 +8075,95 @@
    },
    "gt_auc_control": 0.8713,
    "gt_auc_full": 0.8775,
-   "cautions": []
+   "cautions": [],
+   "confidence": {
+    "method": "MP 재추론 표본, view_best_front 뷰, 출시 임계값 고정, 수행자 부트스트랩 B=1000 95% 구간 (rule_confidence.py, spec §32)",
+    "n": 60,
+    "n_normal": 27,
+    "n_violation": 33,
+    "n_performers": 28,
+    "normal_fpr": 0.1852,
+    "normal_fpr_ci95": [
+     0.037,
+     0.3529
+    ],
+    "normal_fpr_with_guard": null,
+    "tpr": 0.8788,
+    "tpr_ci95": [
+     0.7272,
+     1.0
+    ],
+    "balacc": 0.8468,
+    "balacc_ci95": [
+     0.733,
+     0.9476
+    ],
+    "auc": 0.8328,
+    "auc_ci95": [
+     0.6696,
+     0.965
+    ],
+    "normal_median": 1.443473
+   },
+   "views_ok": [
+    "A"
+   ],
+   "views_eval": {
+    "A": {
+     "n": 62,
+     "normal_fpr": 0.2143,
+     "tpr": 0.7941,
+     "balacc": 0.7899
+    },
+    "B": {
+     "n": 36,
+     "normal_fpr": 0.25,
+     "tpr": 0.625,
+     "balacc": 0.6875
+    },
+    "C": {
+     "n": 5,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "D": {
+     "n": 29,
+     "normal_fpr": 0.375,
+     "tpr": 0.6154,
+     "balacc": 0.6202
+    },
+    "E": {
+     "n": 57,
+     "normal_fpr": 0.0741,
+     "tpr": 0.4333,
+     "balacc": 0.6796
+    },
+    "R": {
+     "n": 54,
+     "normal_fpr": 0.6538,
+     "tpr": 0.9286,
+     "balacc": 0.6374
+    },
+    "SIDE_B": {
+     "n": 3,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "SIDE_D": {
+     "n": 4,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "UNKNOWN": {
+     "n": 50,
+     "normal_fpr": 0.4286,
+     "tpr": 0.5278,
+     "balacc": 0.5496
+    }
+   }
   },
   {
    "id": "풀업|수축 시 몸통-팔꿈치 사이 모아줌",
@@ -2816,7 +8198,81 @@
    },
    "gt_auc_control": 0.8588,
    "gt_auc_full": 0.8788,
-   "cautions": []
+   "cautions": [],
+   "confidence": {
+    "method": "MP 재추론 표본, view_best_front 뷰, 출시 임계값 고정, 수행자 부트스트랩 B=1000 95% 구간 (rule_confidence.py, spec §32)",
+    "n": 60,
+    "n_normal": 23,
+    "n_violation": 37,
+    "n_performers": 26,
+    "normal_fpr": 0.3913,
+    "normal_fpr_ci95": [
+     0.2069,
+     0.619
+    ],
+    "normal_fpr_with_guard": null,
+    "tpr": 0.9459,
+    "tpr_ci95": [
+     0.8611,
+     1.0
+    ],
+    "balacc": 0.7773,
+    "balacc_ci95": [
+     0.6696,
+     0.8656
+    ],
+    "auc": 0.8484,
+    "auc_ci95": [
+     0.7558,
+     0.9188
+    ],
+    "normal_median": 21.938206
+   },
+   "views_ok": [],
+   "views_eval": {
+    "A": {
+     "n": 59,
+     "normal_fpr": 0.6957,
+     "tpr": 0.9444,
+     "balacc": 0.6244
+    },
+    "B": {
+     "n": 52,
+     "normal_fpr": 0.4286,
+     "tpr": 0.9355,
+     "balacc": 0.7535
+    },
+    "C": {
+     "n": 56,
+     "normal_fpr": 0.5882,
+     "tpr": 0.8974,
+     "balacc": 0.6546
+    },
+    "D": {
+     "n": 43,
+     "normal_fpr": 0.5789,
+     "tpr": 0.875,
+     "balacc": 0.648
+    },
+    "E": {
+     "n": 51,
+     "normal_fpr": 0.7778,
+     "tpr": 0.9697,
+     "balacc": 0.596
+    },
+    "SIDE_B": {
+     "n": 3,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "UNKNOWN": {
+     "n": 36,
+     "normal_fpr": 0.625,
+     "tpr": 0.9,
+     "balacc": 0.6375
+    }
+   }
   },
   {
    "id": "프런트 레이즈|손목 어깨 또는 턱선까지 올리기",
@@ -2851,7 +8307,87 @@
    },
    "gt_auc_control": 0.8052,
    "gt_auc_full": 0.8922,
-   "cautions": []
+   "cautions": [],
+   "confidence": {
+    "method": "MP 재추론 표본, view_best_front 뷰, 출시 임계값 고정, 수행자 부트스트랩 B=1000 95% 구간 (rule_confidence.py, spec §32)",
+    "n": 60,
+    "n_normal": 26,
+    "n_violation": 34,
+    "n_performers": 29,
+    "normal_fpr": 0.0385,
+    "normal_fpr_ci95": [
+     0.0,
+     0.1304
+    ],
+    "normal_fpr_with_guard": null,
+    "tpr": 0.7353,
+    "tpr_ci95": [
+     0.5714,
+     0.871
+    ],
+    "balacc": 0.8484,
+    "balacc_ci95": [
+     0.7729,
+     0.9189
+    ],
+    "auc": 0.8518,
+    "auc_ci95": [
+     0.7467,
+     0.9402
+    ],
+    "normal_median": 0.760368
+   },
+   "views_ok": [
+    "C",
+    "B",
+    "D",
+    "A",
+    "E"
+   ],
+   "views_eval": {
+    "A": {
+     "n": 59,
+     "normal_fpr": 0.0769,
+     "tpr": 0.6364,
+     "balacc": 0.7797
+    },
+    "B": {
+     "n": 58,
+     "normal_fpr": 0.04,
+     "tpr": 0.7273,
+     "balacc": 0.8436
+    },
+    "C": {
+     "n": 60,
+     "normal_fpr": 0.0769,
+     "tpr": 0.7059,
+     "balacc": 0.8145
+    },
+    "D": {
+     "n": 60,
+     "normal_fpr": 0.0769,
+     "tpr": 0.7353,
+     "balacc": 0.8292
+    },
+    "E": {
+     "n": 60,
+     "normal_fpr": 0.0385,
+     "tpr": 0.6176,
+     "balacc": 0.7896
+    },
+    "SIDE_B": {
+     "n": 2,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    },
+    "UNKNOWN": {
+     "n": 1,
+     "normal_fpr": null,
+     "tpr": null,
+     "balacc": null
+    }
+   }
   },
   {
    "id": "굿모닝|시선 방향 유지",
