@@ -87,6 +87,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
@@ -371,7 +373,7 @@ fun PostureLiveSessionScreen(
     // ---- 세션 모드 (spec §29): 코치(초보 기본) / 기록(숙련). 종목별 저장. 정책 레이어만 바꾼다 —
     //      판정·임계값·로그는 두 모드에서 동일하게 계산된다 (모든 사용자 원칙).
     val modeStore = remember { ModeStore(context) }
-    var mode by remember { mutableStateOf(CoachMode.COACH) }
+    var mode by remember(workout.name) { mutableStateOf(modeStore.get(workout.name)) }
     val modeRef = remember { arrayOf(CoachMode.COACH) }
     modeRef[0] = mode
     // TRACK 음성은 모집단 정상/위반 전환이 아니라 직접적인 초기 대비 비교에서만 나온다.
@@ -609,7 +611,6 @@ fun PostureLiveSessionScreen(
         repFast = false
         repTempoMs = null
         synchronized(repRecords) { repRecords.clear() }
-        mode = modeStore.get(workout.name)
         comparisonSpeech.clear()
         comparisonRef[0] = PostureComparisonTracker(aihubExercise, (ComparisonMetrics.forExercise(aihubExercise, rs.rules) +
             profile?.let(com.example.trex_kotlin.posture.ExerciseProfiles::metrics).orEmpty()).distinctBy { it.feature },
@@ -911,11 +912,21 @@ fun PostureLiveSessionScreen(
         }
     }
 
+    val modeControl: @Composable () -> Unit = {
+        ModeSwitch(mode) { selected ->
+            mode = selected; modeRef[0] = selected
+            modeStore.set(workout.name, selected)
+            speech.stop(); comparisonSpeech.clear()
+            coachBanner = null; provisionalNote = null
+            violHighlight = emptySet(); provisionalHighlight = emptySet()
+            // 모드를 바꿔도 현재 세트 초반 기준과 누적 횟수는 유지한다.
+        }
+    }
     val panel: @Composable (Modifier) -> Unit = { mod ->
         if (preparing && profile != null) CapturePreparationPanel(
             profile, sample, sampleAt, paused, useFrontCamera, muted,
             onMute = { muted = !muted }, onCamera = { useFrontCamera = !useFrontCamera },
-            speech = speech, onStart = onPrepared, onExit = onExit, modifier = mod,
+            speech = speech, onStart = onPrepared, onExit = onExit, modifier = mod, modeControl = modeControl,
             cameraError = cameraError ?: stats?.error?.let { "몸을 인식할 수 없어요. 직접 기록으로 계속할 수 있어요." }, onFallback = onFallbackToTimer,
         ) else Column(mod) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
@@ -943,6 +954,7 @@ fun PostureLiveSessionScreen(
                     }
                 }
             }
+            modeControl()
             WorkoutSessionActions(workout, repetitions, repRef[0] != null, paused,
                 onTogglePause, onRepetitions, onPartial, onSkip,
                 onExit = {
@@ -1025,24 +1037,18 @@ private fun GlassIcon(
 @Composable
 private fun ModeSwitch(mode: CoachMode, onSelect: (CoachMode) -> Unit) {
     val c = Trex.c
-    Row(
-        Modifier.clip(RoundedCornerShape(999.dp)).background(c.surface).padding(2.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        listOf(CoachMode.COACH to "코치", CoachMode.TRACK to "기록").forEach { (m, label) ->
-            val sel = m == mode
-            Surface(
-                onClick = { if (!sel) onSelect(m) },
-                shape = RoundedCornerShape(999.dp),
-                color = if (sel) c.primary else Color.Transparent,
-                contentColor = if (sel) Color.White else c.text2,
-            ) {
-                Text(
-                    label, fontSize = 10.sp, fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp),
-                )
-            }
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(Modifier.weight(1f)) {
+            Text("기록 모드", color = c.text, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+            Text(if (mode == CoachMode.TRACK) "처음 자세와의 변화만 안내해요." else "끄면 자세 교정을 안내해요.",
+                color = c.text2, fontSize = 11.sp)
         }
+        androidx.compose.material3.Switch(
+            checked = mode == CoachMode.TRACK,
+            onCheckedChange = { onSelect(if (it) CoachMode.TRACK else CoachMode.COACH) },
+            modifier = Modifier.semantics { contentDescription = "기록 모드" },
+        )
     }
 }
 

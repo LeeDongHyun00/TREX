@@ -13,6 +13,8 @@ import androidx.compose.material.icons.automirrored.rounded.VolumeOff
 import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material.icons.rounded.Cameraswitch
 import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.Pause
+import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -43,6 +45,7 @@ internal fun CapturePreparationPanel(
     frontCamera: Boolean, muted: Boolean, onMute: () -> Unit, onCamera: () -> Unit,
     speech: SpeechCoach, onStart: () -> Unit, onExit: () -> Unit, modifier: Modifier = Modifier,
     cameraError: String? = null, onFallback: () -> Unit = {},
+    modeControl: @Composable () -> Unit = {},
 ) {
     val c = Trex.c
     val tone = remember { runCatching { android.media.ToneGenerator(android.media.AudioManager.STREAM_MUSIC, 60) }.getOrNull() }
@@ -63,9 +66,9 @@ internal fun CapturePreparationPanel(
                 if (!speech.muted) {
                     speech.speak(profile.preparationInstruction, flush = true)
                     val deadline = SystemClock.elapsedRealtime() + 12000L
-                    while (!speech.muted && speech.isSpeaking && SystemClock.elapsedRealtime() < deadline) delay(50)
+                    while (!speech.muted && controller.state.phase == PreparationPhase.IDLE && speech.isSpeaking && SystemClock.elapsedRealtime() < deadline) delay(50)
                     // TTS 콜백 누락에도 준비가 무한히 멈추지 않는다.
-                    if (speech.isSpeaking) speech.stop()
+                    if (controller.state.phase == PreparationPhase.IDLE && speech.isSpeaking) speech.stop()
                 }
                 introductionGiven = true
             }
@@ -127,7 +130,9 @@ internal fun CapturePreparationPanel(
             Text(cameraError, color = c.text2, fontSize = 13.sp)
             TextButton(onClick = { cancel(); onFallback() }) { Text("자세 비교 없이 계속", color = c.text) }
         }
-        if(state.restarts>=2) Text("인식이 계속 끊기면 아래에서 5초 후 시작할 수 있어요.",color=c.text2,fontSize=12.sp)
+        if(state.restarts>=2) Text("인식이 계속 끊기면 준비를 건너뛰고 시작할 수 있어요.",color=c.text2,fontSize=12.sp)
+        }
+        modeControl()
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             TextButton(onClick = {
                 if (!paused) { userPaused=false; speech.stop(); controller.manual(SystemClock.elapsedRealtime(),5);state=controller.state }
@@ -138,13 +143,17 @@ internal fun CapturePreparationPanel(
                 if (muted) Icons.AutoMirrored.Rounded.VolumeOff else Icons.AutoMirrored.Rounded.VolumeUp,
                 onMute, Modifier.width(48.dp))
             SessionTool("카메라", "카메라 전환", Icons.Rounded.Cameraswitch, { cancel(); onCamera() }, Modifier.width(48.dp))
-        }
+            SessionTool(if (userPaused) "재개" else "일시정지", if (userPaused) "재개" else "일시정지",
+                if (userPaused) Icons.Rounded.PlayArrow else Icons.Rounded.Pause,
+                { if (!paused && !delivered) { userPaused=!userPaused; if(userPaused)cancel() } }, Modifier.width(56.dp))
         }
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             GhostButton("나가기", { cancel(); onExit() }, Modifier.weight(1f))
-            Cta(if(userPaused) "재개" else "일시정지", {
-                userPaused=!userPaused
-                if(userPaused)cancel()
+            Cta("준비 건너뛰기", {
+                // 준비만 종료한다. 운동 완료/세트 건너뛰기 콜백을 호출하지 않는다.
+                if (!paused && !delivered) {
+                    delivered=true; cancel(); start()
+                }
             }, Modifier.weight(1.8f), enabled = !paused && !delivered)
 
         }

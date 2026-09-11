@@ -286,6 +286,38 @@ class SessionFlowTest {
         }
     }
 
+    @Test fun preparationSkipStartsSameExerciseAndRecordModePersists() = isolated { store ->
+        store.guideDone=true;store.loggedIn=true;store.onboarded=true;store.themeMode=ThemeMode.Light
+        store.planDoneEpochDay=java.time.LocalDate.now().toEpochDay()
+        store.savePlan(listOf(Workout("skip-preparation","플랭크","90초 × 2세트","99분",true,"코어")))
+        val modes=com.example.trex_kotlin.posture.ModeStore(context)
+        val before=modes.get("플랭크")
+        try {
+            modes.set("플랭크",com.example.trex_kotlin.posture.CoachMode.COACH)
+            ActivityScenario.launch(MainActivity::class.java).use {
+                click("운동");click("운동 시작");await("준비 건너뛰기",20000)
+                click("기록 모드");await("처음 자세와의 변화만 안내해요.")
+                assertEquals(com.example.trex_kotlin.posture.CoachMode.TRACK,modes.get("플랭크"))
+                click("일시정지");capture("record-mode-preparation")
+                click("준비 건너뛰기");await("이 세트 건너뛰기")
+                assertNull(find("운동 준비"));assertNull(find("완료 세트"))
+                assertNotNull(find("플랭크"));assertFalse(TrexStore(context).loadPlan()!!.single().done)
+                await("처음 자세와의 변화만 안내해요.");capture("record-mode-active")
+                click("일시정지")
+                click("기록 모드");await("끄면 자세 교정을 안내해요.")
+                assertEquals(com.example.trex_kotlin.posture.CoachMode.COACH,modes.get("플랭크"))
+                click("기록 모드")
+            }
+            ActivityScenario.launch(MainActivity::class.java).use {
+                click("운동");click("운동 시작");await("준비 건너뛰기",20000)
+                await("처음 자세와의 변화만 안내해요.")
+                click("5초 후 시작");await("시작까지")
+                click("준비 건너뛰기");await("이 세트 건너뛰기")
+                assertNull(find("운동 준비"));assertFalse(TrexStore(context).loadPlan()!!.single().done)
+            }
+        } finally { modes.set("플랭크",before) }
+    }
+
     @Test fun calendarRetentionPersistsAndDietWeekUsesActualDates() = isolated { store ->
         store.guideDone=true;store.loggedIn=true;store.onboarded=true;store.themeMode=ThemeMode.Light
         val today=java.time.LocalDate.now().toEpochDay()
