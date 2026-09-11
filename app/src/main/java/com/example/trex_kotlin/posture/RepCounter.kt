@@ -25,7 +25,10 @@ class RepCounter(
     val signal: RepSignal,
     private val refractoryMs: Long = 1_200L,
     private val maxGapMs: Long = Long.MAX_VALUE,
+    /** 세션 목표 카운트는 다음 하강 대신 준비 위치 복귀로 완료한다. 기존 재생 패리티는 기본값을 유지한다. */
+    completeOnReturn: Boolean = false,
 ) {
+    private val returnTracker = if (completeOnReturn) ReturnRepTracker(signal.minAmp, refractoryMs) else null
     var reps: Int = 0
         private set
     val repTimesMs = ArrayList<Long>()
@@ -51,6 +54,7 @@ class RepCounter(
     private var dtMs: Float? = null          // 샘플 간격 지수평활 (평활 모드 판단)
 
     fun reset() {
+        returnTracker?.reset()
         reps = 0
         repTimesMs.clear()
         periodMs = null
@@ -65,6 +69,12 @@ class RepCounter(
         lastCycleMax = Float.NaN
     }
 
+    /** 일시정지·카메라 재배치 전후를 한 반복으로 잇지 않는다. 완료한 수는 유지한다. */
+    fun resetCycle() {
+        returnTracker?.resetCycle()
+        dirn = 0; ext = Float.NaN; pendingBottom = Float.NaN; rawCount = 0; dtMs = null; prevT = null
+    }
+
     /** @return 이 프레임에서 렙이 완료됐으면 true. value=null(가림)·물리범위 밖이면 일시정지. */
     fun onFrame(tMs: Long, value: Float?): Boolean {
         if (value == null || !value.isFinite()) return false
@@ -74,6 +84,7 @@ class RepCounter(
 
         // 바닥 경로에서는 가림·일시정지 전후를 한 반복으로 이어 세지 않는다.
         if (prevT?.let { tMs - it > maxGapMs || tMs <= it } == true) {
+            returnTracker?.resetCycle()
             dirn = 0; ext = Float.NaN; pendingBottom = Float.NaN; rawCount = 0; dtMs = null
         }
         prevT?.let { p ->
@@ -85,6 +96,17 @@ class RepCounter(
         rawCount++
         // 평활: 촘촘한 샘플링(≤350ms)일 때만 — 성긴 신호 평활은 렙 꼭대기를 지운다 (AIHub 실측)
         val v = if (rawCount >= 3 && (dtMs ?: 999f) <= 350f) median3(raw3) else value
+
+        returnTracker?.let { tracker ->
+            val cycle = tracker.onFrame(tMs, v) ?: return false
+            if (lastRepAt > Long.MIN_VALUE / 4) {
+                val p = tMs - lastRepAt
+                periodMs = periodMs?.let { (it + p) / 2 } ?: p
+            }
+            reps++; repTimesMs.add(tMs); lastRepAt = tMs
+            lastCycleMin = cycle.min; lastCycleMax = cycle.max
+            return true
+        }
 
         if (ext.isNaN()) {
             ext = v

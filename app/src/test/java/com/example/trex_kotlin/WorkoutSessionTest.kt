@@ -48,17 +48,51 @@ class WorkoutSessionTest {
         assertEquals(2,p.index);assertEquals(p,p.advance(steps,1,false))
         assertTrue(p.completed.isEmpty());assertEquals(setOf(1),p.skipped)
     }
-    @Test fun allTimersCanReachCompletionWithoutButtonPresses() {
+    @Test fun preparationAndRepetitionsNeverExpire() {
+        val steps = buildSessionSteps(listOf(workout()))
+        var p = SessionProgress(0, 0).tick(600000, false, steps[0].timed, false)
+        assertFalse(p.targetReached(steps[0])); assertEquals(0L, p.elapsedMs)
+        p = p.advance(steps, 0, false)
+        p = p.tick(600000, false, steps[1].timed)
+        assertFalse(p.targetReached(steps[1])); assertEquals(600000L, p.elapsedMs)
+        p = p.setRepetitions(steps, 1, 12)
+        assertTrue(p.targetReached(steps[1]))
+        p = p.advance(steps, 1, false)
+        assertEquals(SessionPhase.REST, steps[p.index].phase)
+        p = p.tick(60000, false, steps[p.index].timed)
+        assertTrue(p.targetReached(steps[p.index]))
+    }
+    @Test fun countsAreEditableAndStaleEventsCannotAffectNextSet() {
+        val steps = buildSessionSteps(listOf(workout()))
+        var p = SessionProgress(1,0).setRepetitions(steps,1,12).setRepetitions(steps,1,8)
+        assertFalse(p.targetReached(steps[1]))
+        p = p.advance(steps,1,true)
+        assertTrue(p.completed.isEmpty())
+        assertEquals("8회 × 1세트",p.completedWorkouts(steps).single().reps)
+        assertEquals(p,p.setRepetitions(steps,1,99))
+        assertTrue(p.completedOriginalIds(steps).isEmpty())
+    }
+    @Test fun exitingKeepsPartialCountWithoutCertifyingCompletion() {
         val steps=buildSessionSteps(listOf(workout()))
-        var p=SessionProgress(0,steps[0].seconds*1000L)
-        while(p.index>=0){p=p.tick(p.remainingMs,false);p=p.advance(steps,p.index,false)}
-        assertEquals(3,p.completedWorkouts(steps).size)
-        assertEquals(setOf("squat"),p.completedOriginalIds(steps))
+        val p=SessionProgress(1,0).setRepetitions(steps,1,7).captureCount(steps[1])
+        assertEquals("7회 × 1세트",p.completedWorkouts(steps).single().reps)
+        assertTrue(p.completed.isEmpty());assertFalse(p.completedWorkouts(steps).single().done)
+        assertTrue(p.setRepetitions(steps,1,0).captureCount(steps[1]).completedWorkouts(steps).isEmpty())
+    }
+    @Test fun explicitTargetKeepsTimeIndependentFromObservationAndLegacyText() {
+        val time = workout().copy(target=WorkoutTarget.Duration(10))
+        val steps=buildSessionSteps(listOf(time))
+        assertTrue(steps[1].timed)
+        assertEquals("10초", steps[1].workout.repsSpec().targetLabel)
+        val p=SessionProgress(1,10000).tick(10000,false,steps[1].timed)
+        assertTrue(p.targetReached(steps[1]))
+        assertEquals(p,p.setRepetitions(steps,1,12))
+        assertFalse(steps[0].timed)
     }
     @Test fun skippingASetDoesNotCertifyTheWholeExerciseCompleted() {
         val steps=buildSessionSteps(listOf(workout("8회 × 2세트")))
         var p=SessionProgress(0,1)
-        while(p.index>=0){val i=p.index;p=p.advance(steps,i,i==1)}
+        while(p.index>=0){val i=p.index;p=p.setRepetitions(steps,i,if(i==1)0 else 8);p=p.advance(steps,i,i==1)}
         assertEquals(1,p.completedWorkouts(steps).size);assertTrue(p.completedOriginalIds(steps).isEmpty())
     }
 }

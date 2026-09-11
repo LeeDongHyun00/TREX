@@ -27,11 +27,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.rounded.BarChart
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.FitnessCenter
 import androidx.compose.material.icons.rounded.Home
+import androidx.compose.material.icons.rounded.MoreHoriz
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.PhotoCamera
 import androidx.compose.material.icons.rounded.PlayArrow
@@ -75,16 +77,18 @@ import kotlinx.coroutines.delay
  * 화면 순서(guide→auth→find→onboarding→main→record→session→complete)상 앞으로 가면 오른쪽에서,
  * 뒤로 가면 왼쪽에서 들어온다.
  */
-private enum class RootRoute { Guide, Auth, Find, Onboarding, Main, Record, TransitionSession, PostureSession, TimerSession, Complete, PostureLab, BaselineGuide }
+private enum class RootRoute { Guide, Auth, Find, Onboarding, Main, Record, DietRecord, TransitionSession, PostureSession, TimerSession, Complete, PostureLab, BaselineGuide }
 
 /** 메인 하단 시트. */
 sealed class MainSheet {
+    data class WorkoutEditor(val selectedId: String? = null) : MainSheet()
     data class Alt(val workout: Workout) : MainSheet()
     data class Sets(val draft: SetDraft) : MainSheet()
     data object Goals : MainSheet()
     data class Manual(val slot: String) : MainSheet()
     data object Photo : MainSheet()
     data object AddWorkout : MainSheet()
+    data object ProfileSettings : MainSheet()
 }
 
 data class SetDraft(val id: String, val name: String, val count: Int, val unit: String, val sets: Int,
@@ -111,16 +115,26 @@ fun TrexApp(app: AppViewModel = viewModel()) {
             context.findTrexActivity()?.window?.let { w ->
                 w.statusBarColor = c.bg.toArgb()
                 w.navigationBarColor = c.bg.toArgb()
+                androidx.core.view.WindowCompat.getInsetsController(w, w.decorView).apply {
+                    isAppearanceLightStatusBars = !c.isDark
+                    isAppearanceLightNavigationBars = !c.isDark
+                }
             }
         }
 
         var selectedTab by rememberSaveable { mutableStateOf(TrexTab.Home) }
         var subScreen by rememberSaveable { mutableStateOf("none") } // none | find | guide | record | postureLab | baselineGuide
         var progress by rememberSaveable(stateSaver = listSaver<SessionProgress, Any>(
-            save = { listOf(it.index, it.remainingMs, it.elapsedMs, it.completed.joinToString(","), it.skipped.joinToString(",")) },
+            save = { listOf(it.index, it.remainingMs, it.elapsedMs, it.completed.joinToString(","), it.skipped.joinToString(","),
+                it.repetitions, it.recordedCounts.entries.joinToString(",") { entry -> "${entry.key}:${entry.value}" }) },
             restore = { SessionProgress(it[0] as Int, it[1] as Long, it[2] as Long,
                 (it[3] as String).split(',').mapNotNull(String::toIntOrNull).toSet(),
-                (it[4] as String).split(',').mapNotNull(String::toIntOrNull).toSet()) },
+                (it[4] as String).split(',').mapNotNull(String::toIntOrNull).toSet(),
+                it.getOrNull(5) as? Int ?: 0,
+                (it.getOrNull(6) as? String).orEmpty().split(',').mapNotNull { pair ->
+                    val parts = pair.split(':'); val key = parts.firstOrNull()?.toIntOrNull(); val value = parts.getOrNull(1)?.toIntOrNull()
+                    if (key != null && value != null) key to value else null
+                }.toMap()) },
         )) { mutableStateOf(SessionProgress(-1, 0)) }
         val sessionIndex = progress.index
         var sessionDone by rememberSaveable { mutableStateOf(false) }
@@ -134,6 +148,12 @@ fun TrexApp(app: AppViewModel = viewModel()) {
         // ✕ 종료 확인 — 완료한 운동이 있으면 "여기까지 기록" 을 물어본다(결정 3: 묻지 않고 버리지 않는다).
         var exitAsk by remember { mutableStateOf(false) }
         val appPaused = rememberTrexLifecyclePaused()
+        LaunchedEffect(appPaused, sessionIndex >= 0) {
+            if (!appPaused) while (true) {
+                app.refreshCalendar(resetPlan = sessionIndex < 0)
+                delay(30_000)
+            }
+        }
         val pausedState = rememberUpdatedState(sessionPaused || appPaused || exitAsk)
         val plan = app.workoutPlan
         val planKey = plan.map { it.copy(done = false) }.toString()
@@ -158,12 +178,14 @@ fun TrexApp(app: AppViewModel = viewModel()) {
             val firstWork = steps.firstOrNull { it.phase == SessionPhase.WORK && it.token !in completed } ?: return
             val first = steps.getOrNull(firstWork.token - 1)?.takeIf { it.phase != SessionPhase.WORK } ?: firstWork
             if (finished) app.updatePlan(plan.map { it.copy(done = false) })
-            app.clearSessionReports(keep = steps.filter { it.token in completed }.map { it.workout.id })
+            val recordedCounts = if (finished || sessionPlanKey != planKey) emptyMap() else progress.recordedCounts
+            app.clearSessionReports(keep = steps.filter { it.token in completed || it.token in recordedCounts }.map { it.workout.id })
             postureFallback.clear()
             exitAsk = false
             speech.stop()
             progress = SessionProgress(first.token, first.seconds * 1000L,
-                elapsedMs = if (finished || sessionPlanKey != planKey) 0 else progress.elapsedMs, completed = completed)
+                elapsedMs = if (finished || sessionPlanKey != planKey) 0 else progress.elapsedMs, completed = completed,
+                recordedCounts = recordedCounts)
             sessionPlanKey = planKey
             sessionDone = false
             sessionPaused = false
@@ -199,7 +221,11 @@ fun TrexApp(app: AppViewModel = viewModel()) {
         }
 
         fun requestExit() {
-            if (progress.completed.isNotEmpty()) exitAsk = true else exitSession()
+            steps.getOrNull(progress.index)?.let { current ->
+                if (current.phase == SessionPhase.WORK) finalizers[current.workout.id]?.invoke()
+                progress = progress.captureCount(current)
+            }
+            if (progress.completed.isNotEmpty() || progress.recordedCounts.isNotEmpty()) exitAsk = true else exitSession()
         }
 
         val advanceLatest = rememberUpdatedState<(Int, Boolean) -> Unit> { token, skip -> nextSession(token, skip) }
@@ -209,17 +235,20 @@ fun TrexApp(app: AppViewModel = viewModel()) {
             while (progress.index == token && token >= 0) {
                 delay(100)
                 val now = android.os.SystemClock.elapsedRealtime()
-                progress = progress.tick(now - last, pausedState.value)
+                progress = progress.tick(now - last, pausedState.value, timed = step?.timed == true,
+                    trackElapsed = step?.phase != SessionPhase.PREPARE)
                 last = now
-                if (!pausedState.value && progress.remainingMs == 0L) advanceLatest.value(token, false)
+                if (!pausedState.value && step?.timed == true && progress.targetReached(step)) advanceLatest.value(token, false)
+            }
+        }
+        LaunchedEffect(sessionIndex, progress.repetitions, sessionPaused, appPaused, exitAsk) {
+            if (!pausedState.value && step?.phase == SessionPhase.WORK && !step.timed && progress.targetReached(step)) {
+                advanceLatest.value(step.token, false)
             }
         }
         LaunchedEffect(sessionIndex) {
             if (step?.phase == SessionPhase.WORK && !speech.muted) startTone?.startTone(android.media.ToneGenerator.TONE_PROP_ACK, 150)
             if (step?.phase == SessionPhase.REST) speech.speak("쉬는 시간이에요", flush = true)
-            if (step?.phase == SessionPhase.PREPARE && step.workout.posture && step.workout.postureSupported())
-                speech.speak(com.example.trex_kotlin.posture.ExerciseProfiles.forName(step.workout.name)?.capture?.voice
-                    ?: "전신이 보이도록 휴대폰을 놓아 주세요", flush = true)
         }
 
         val sessionWorkout = step?.workout
@@ -233,18 +262,28 @@ fun TrexApp(app: AppViewModel = viewModel()) {
             !app.onboarded -> RootRoute.Onboarding
             sessionDone -> RootRoute.Complete
             sessionIndex >= 0 && sessionWorkout != null ->
-                if (step.phase != SessionPhase.WORK) RootRoute.TransitionSession else if (sessionWorkout.posture && sessionWorkout.postureSupported() && sessionWorkout.id !in postureFallback) {
+                if (step.phase == SessionPhase.REST) RootRoute.TransitionSession else if (sessionWorkout.posture && sessionWorkout.postureSupported() && sessionWorkout.id !in postureFallback) {
                     RootRoute.PostureSession
-                } else {
+                } else if (step.phase == SessionPhase.PREPARE) RootRoute.TransitionSession else {
                     RootRoute.TimerSession
                 }
             subScreen == "record" -> RootRoute.Record
+            subScreen == "dietRecord" -> RootRoute.DietRecord
             else -> RootRoute.Main
+        }
+
+        androidx.activity.compose.BackHandler(enabled = sessionIndex >= 0 || subScreen != "none") {
+            if (sessionIndex >= 0) requestExit() else subScreen = "none"
         }
 
         Box(Modifier.fillMaxSize().background(c.bg)) {
             AnimatedContent(
                 targetState = route to sessionIndex,
+                // 준비→운동은 같은 세트의 카메라·분석기를 유지하고 UI/기록 모드만 바꾼다.
+                contentKey = { (screen, token) ->
+                    if (screen == RootRoute.PostureSession) screen to steps.getOrNull(token)?.workout?.id
+                    else screen to token
+                },
                 transitionSpec = {
                     val sessionTransition = initialState.second >= 0 || targetState.second >= 0
                     val forward = targetState.first.ordinal >= initialState.first.ordinal
@@ -272,9 +311,6 @@ fun TrexApp(app: AppViewModel = viewModel()) {
                     RootRoute.Auth -> AuthScreen(
                         onLogin = { app.completeLogin() },
                         onOpenFind = { subScreen = "find" },
-                        onOpenGuide = { subScreen = "guide" },
-                        onOpenPostureLab = { subScreen = "postureLab" },
-                        onOpenBaselineGuide = { subScreen = "baselineGuide" },
                     )
 
                     RootRoute.Find -> FindAccountScreen(onBack = { subScreen = "none" })
@@ -291,7 +327,7 @@ fun TrexApp(app: AppViewModel = viewModel()) {
                     )
 
                     RootRoute.TransitionSession -> renderedStep?.let { current ->
-                        SessionTransitionScreen(current, sessionTimeLeft, sessionPaused || appPaused,
+                        SessionTransitionScreen(current, sessionTimeLeft, sessionPaused || appPaused || exitAsk,
                             onTogglePause = { sessionPaused = !sessionPaused },
                             onNext = { nextSession(current.token, true) }, onExit = { requestExit() })
                     }
@@ -305,10 +341,16 @@ fun TrexApp(app: AppViewModel = viewModel()) {
                             onTogglePause = { sessionPaused = !sessionPaused },
                             onNext = { nextSession(current.token, false) },
                             onSkip = { nextSession(current.token, true) }, onExit = { requestExit() },
+                            repetitions = progress.repetitions,
+                            onRepetitions = { count -> progress = progress.setRepetitions(steps, current.token, count) },
+                            onRepDetected = { if (!pausedState.value) progress = progress.setRepetitions(steps, current.token, progress.repetitions + 1) },
+                            onPartial = { nextSession(current.token, true) },
                             onSetReport = { app.addPostureReport(w.id, it) },
                             registerFinalizer = { finish -> if (finish == null) finalizers.remove(w.id) else finalizers[w.id] = finish },
                             onFallbackToTimer = { if (w.id !in postureFallback) postureFallback.add(w.id) },
                             speech = speech,
+                            preparing = current.phase == SessionPhase.PREPARE,
+                            onPrepared = { nextSession(current.token, true) },
                         )
                     } }
 
@@ -320,10 +362,14 @@ fun TrexApp(app: AppViewModel = viewModel()) {
                             onTogglePause = { sessionPaused = !sessionPaused },
                             onNext = { nextSession(current.token, false) },
                             onSkip = { nextSession(current.token, true) }, onExit = { requestExit() },
+                            repetitions = progress.repetitions,
+                            onRepetitions = { count -> progress = progress.setRepetitions(steps, current.token, count) },
+                            onPartial = { nextSession(current.token, true) },
                         )
                     } }
 
                     RootRoute.Record -> RecordScreen(app = app, onBack = { subScreen = "none" })
+                    RootRoute.DietRecord -> DietRecordScreen(app = app, onBack = { subScreen = "none" })
 
                     RootRoute.PostureLab -> PostureLabScreen(onClose = { subScreen = "none" })
                     RootRoute.BaselineGuide -> BaselineGuideScreen(onClose = { subScreen = "none" })
@@ -334,13 +380,14 @@ fun TrexApp(app: AppViewModel = viewModel()) {
                         onTabSelected = { selectedTab = it },
                         onStartWorkout = { startSession() },
                         onOpenRecord = { subScreen = "record" },
+                        onOpenDietRecord = { subScreen = "dietRecord" },
                     )
                 }
             }
 
             if (exitAsk) {
                 SessionExitSheet(
-                    doneCount = progress.completed.size,
+                    doneCount = progress.completedWorkouts(steps).size,
                     onRecord = { exitAndRecord() },
                     onDiscard = { exitSession() },
                     onCancel = { exitAsk = false },
@@ -374,7 +421,7 @@ private fun SessionExitSheet(
             ) {
                 Text("운동을 끝낼까요?", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                 Text(
-                    "완료한 ${doneCount}세트을 오늘 기록에 남길 수 있어요.",
+                    "수행한 ${doneCount}세트를 기록할 수 있어요. 목표보다 적게 한 횟수도 남겨요.",
                     color = Color.White.copy(alpha = 0.72f), fontSize = 13.sp, lineHeight = 19.sp, textAlign = TextAlign.Center,
                 )
                 Cta("여기까지 기록하고 끝내기", onClick = onRecord, modifier = Modifier.padding(top = 6.dp).fillMaxWidth())
@@ -385,6 +432,7 @@ private fun SessionExitSheet(
     }
 }
 
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 private fun MainTabs(
     app: AppViewModel,
@@ -392,19 +440,20 @@ private fun MainTabs(
     onTabSelected: (TrexTab) -> Unit,
     onStartWorkout: () -> Unit,
     onOpenRecord: () -> Unit,
+    onOpenDietRecord: () -> Unit,
 ) {
     val c = Trex.c
     var navExpanded by rememberSaveable { mutableStateOf(false) }
     var sheet by androidx.compose.runtime.remember { mutableStateOf<MainSheet?>(null) }
     var lastTabOrdinal by rememberSaveable { mutableIntStateOf(selectedTab.ordinal) }
 
-    // 운동/식단 탭 진입 260ms 후 리모컨으로 확장 (디자인의 armExpand)
+    androidx.activity.compose.BackHandler(enabled = sheet != null || navExpanded) {
+        when { sheet != null -> sheet = null; else -> navExpanded = false }
+    }
+
+    // 탭과 조작부가 같은 입력에 반응한다. 지연 뒤 한 번 더 늘어나는 전환을 없앤다.
     LaunchedEffect(selectedTab) {
-        navExpanded = false
-        if (selectedTab == TrexTab.Workout || selectedTab == TrexTab.Diet) {
-            delay(260)
-            navExpanded = true
-        }
+        navExpanded = selectedTab in setOf(TrexTab.Workout, TrexTab.Diet)
     }
 
     Box(Modifier.fillMaxSize().background(c.bg)) {
@@ -413,11 +462,11 @@ private fun MainTabs(
             transitionSpec = {
                 val forward = targetState.ordinal >= initialState.ordinal
                 if (forward) {
-                    (slideInHorizontally(tween(340)) { it / 3 } + fadeIn(tween(280))) togetherWith
-                        (slideOutHorizontally(tween(340)) { -it / 4 } + fadeOut(tween(220)))
+                    (slideInHorizontally(tween(200)) { 24 } + fadeIn(tween(180))) togetherWith
+                        (slideOutHorizontally(tween(200)) { -16 } + fadeOut(tween(220)))
                 } else {
-                    (slideInHorizontally(tween(340)) { -it / 3 } + fadeIn(tween(280))) togetherWith
-                        (slideOutHorizontally(tween(340)) { it / 4 } + fadeOut(tween(220)))
+                    (slideInHorizontally(tween(200)) { -24 } + fadeIn(tween(180))) togetherWith
+                        (slideOutHorizontally(tween(200)) { 16 } + fadeOut(tween(220)))
                 }
             },
             label = "tab-content",
@@ -438,6 +487,7 @@ private fun MainTabs(
 
                 TrexTab.Diet -> DietTabScreen(
                     app = app,
+                    onOpenRecord = onOpenDietRecord,
                     onOpenGoals = { sheet = MainSheet.Goals },
                     onOpenPhoto = { sheet = MainSheet.Photo },
                     onOpenManual = { slot -> sheet = MainSheet.Manual(slot) },
@@ -456,7 +506,7 @@ private fun MainTabs(
             selectedTab = selectedTab,
             expanded = navExpanded,
             onTab = { tab ->
-                if (tab == selectedTab && (tab == TrexTab.Workout || tab == TrexTab.Diet)) {
+                if (tab == selectedTab && tab != TrexTab.Home) {
                     navExpanded = !navExpanded
                 } else {
                     onTabSelected(tab)
@@ -464,10 +514,18 @@ private fun MainTabs(
             },
             onCollapse = { navExpanded = false },
             onPrimary = {
-                if (selectedTab == TrexTab.Diet) sheet = MainSheet.Photo else onStartWorkout()
+                when (selectedTab) {
+                    TrexTab.Diet -> sheet = MainSheet.Photo
+                    TrexTab.Profile -> sheet = MainSheet.ProfileSettings
+                    else -> onStartWorkout()
+                }
             },
             onSecondary = {
-                if (selectedTab == TrexTab.Diet) sheet = MainSheet.Manual(currentMealId()) else onOpenRecord()
+                when (selectedTab) {
+                    TrexTab.Diet -> sheet = MainSheet.Manual(currentMealId())
+                    TrexTab.Profile -> onOpenRecord()
+                    else -> onOpenRecord()
+                }
             },
             modifier = Modifier
                 .align(Alignment.BottomCenter)
@@ -481,6 +539,7 @@ private fun MainTabs(
                 MainSheetHost(app = app, sheet = s, onClose = { sheet = null })
             }
         }
+
     }
 }
 
@@ -498,8 +557,9 @@ private fun MorphNav(
     modifier: Modifier = Modifier,
 ) {
     val c = Trex.c
-    val remoteOn = expanded && (selectedTab == TrexTab.Workout || selectedTab == TrexTab.Diet)
+    val remoteOn = expanded && selectedTab in setOf(TrexTab.Workout, TrexTab.Diet)
     val isDiet = selectedTab == TrexTab.Diet
+    val isProfile = selectedTab == TrexTab.Profile
     val tabs = TrexTab.entries
 
     data class Slot(
@@ -535,24 +595,24 @@ private fun MorphNav(
                 elevated = active,
             )
         } else {
-            val primaryIdx = if (isDiet) 2 else 1
-            val secondaryIdx = if (isDiet) 1 else 2
+            val primaryIdx = 3
+            val secondaryIdx = 1
             when (i) {
-                3 -> Slot(
+                0 -> Slot(
                     weight = 1f, bg = c.surface, fg = c.text2, line = c.line, alpha = 1f,
-                    icon = Icons.AutoMirrored.Rounded.ArrowForward, label = "뒤로", showLabel = false,
+                    icon = Icons.AutoMirrored.Rounded.ArrowBack, label = "뒤로가기", showLabel = false,
                     onClick = onCollapse, elevated = false,
                 )
                 primaryIdx -> Slot(
                     weight = 3.1f, bg = c.primary, fg = Color.White, line = c.primary, alpha = 1f,
-                    icon = if (isDiet) Icons.Rounded.PhotoCamera else Icons.Rounded.PlayArrow,
-                    label = if (isDiet) "사진 기록" else "운동 시작", showLabel = true,
+                    icon = if (isProfile) Icons.Rounded.Person else if (isDiet) Icons.Rounded.PhotoCamera else Icons.Rounded.PlayArrow,
+                    label = if (isProfile) "설정" else if (isDiet) "사진 기록" else "운동 시작", showLabel = true,
                     onClick = onPrimary, elevated = true,
                 )
                 secondaryIdx -> Slot(
                     weight = 2.4f, bg = c.surface, fg = c.primaryText, line = c.line, alpha = 1f,
                     icon = if (isDiet) Icons.Rounded.Edit else Icons.Rounded.BarChart,
-                    label = if (isDiet) "직접 입력" else "기록", showLabel = true,
+                    label = if (isProfile) "운동 기록" else if (isDiet) "직접 입력" else "운동 기록", showLabel = true,
                     onClick = onSecondary, elevated = false,
                 )
                 else -> Slot(
@@ -566,9 +626,9 @@ private fun MorphNav(
 
     Row(modifier = modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         slots.forEachIndexed { i, slot ->
-            val weight by animateFloatAsState(slot.weight, tween(400), label = "nav-w$i")
+            val weight = slot.weight
             val alpha by animateFloatAsState(slot.alpha, tween(260), label = "nav-a$i")
-            val h by animateDpAsState(if (remoteOn) 56.dp else 54.dp, tween(300), label = "nav-h$i")
+            val h = 56.dp
             Surface(
                 onClick = slot.onClick,
                 enabled = slot.alpha > 0.1f,
@@ -580,7 +640,7 @@ private fun MorphNav(
                 color = slot.bg,
                 contentColor = slot.fg,
                 border = androidx.compose.foundation.BorderStroke(1.dp, slot.line),
-                shadowElevation = if (slot.elevated) 8.dp else 3.dp,
+                shadowElevation = if (slot.elevated) 3.dp else 1.dp,
             ) {
                 Row(
                     modifier = Modifier.fillMaxSize(),

@@ -95,6 +95,11 @@ class TrexStore(context: Context) {
                     done = o.optBoolean("done", false),
                     secondsPerRep = if (o.has("secondsPerRep")) o.optInt("secondsPerRep", 3).coerceIn(1, 15) else null,
                     restSeconds = if (o.has("restSeconds")) o.optInt("restSeconds", 45).coerceIn(0, 600) else null,
+                    target = when (o.optString("targetKind")) {
+                        "duration" -> WorkoutTarget.Duration(o.optInt("targetAmount", 30).coerceIn(1, 3600))
+                        "repetitions" -> WorkoutTarget.Repetitions(o.optInt("targetAmount", 12).coerceIn(1, 999))
+                        else -> null
+                    },
                 )
             }
         }.getOrNull()
@@ -114,6 +119,10 @@ class TrexStore(context: Context) {
             w.alt?.let { o.put("alt", JSONObject().put("name", it.name).put("reps", it.reps)) }
             w.secondsPerRep?.let { o.put("secondsPerRep", it) }
             w.restSeconds?.let { o.put("restSeconds", it) }
+            w.resolvedTarget().let { goal ->
+                o.put("targetKind", if (goal is WorkoutTarget.Duration) "duration" else "repetitions")
+                o.put("targetAmount", goal.amount)
+            }
             arr.put(o)
         }
         prefs.edit().putString(KEY_PLAN, arr.toString()).apply()
@@ -149,6 +158,21 @@ class TrexStore(context: Context) {
                 )
             }
         }.getOrNull()
+    }
+
+    /** 만료된 날짜만 지운다. 남은 기록의 알 수 없는/구버전 필드도 그대로 보존한다. */
+    fun pruneExpiredHistory(today: Long) {
+        val raw = prefs.getString(KEY_HISTORY, null) ?: return
+        runCatching {
+            val before = JSONArray(raw)
+            val after = JSONArray()
+            for (i in 0 until before.length()) {
+                val entry = before.get(i)
+                val epochDay = (entry as? JSONObject)?.optLong("epochDay", Long.MAX_VALUE) ?: Long.MAX_VALUE
+                if (epochDay >= today - (RECORD_WINDOW_DAYS - 1)) after.put(entry)
+            }
+            if (after.length() != before.length()) prefs.edit().putString(KEY_HISTORY, after.toString()).apply()
+        }
     }
 
     fun saveHistory(history: List<WorkoutHistoryDay>) {

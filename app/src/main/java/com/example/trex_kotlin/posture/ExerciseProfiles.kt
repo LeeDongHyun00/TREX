@@ -2,17 +2,24 @@ package com.example.trex_kotlin.posture
 
 /** 촬영 방향의 좌우는 운동하는 사람 기준이다. 바닥 측면과 서서 C(정면)를 혼동하지 않는다. */
 enum class CapturePosition(val title: String, val placement: String, val voice: String) {
-    FRONT("정면", "몸의 정면에 휴대폰을 놓으세요. 머리부터 발끝까지 담아 주세요.", "휴대폰을 정면에 놓고, 머리부터 발끝까지 담아 주세요"),
-    RIGHT_FRONT("오른쪽 앞", "본인의 오른쪽 앞 30~45도에 놓으세요. 오른어깨가 카메라에 더 가까워요.", "휴대폰을 오른쪽 앞에 비스듬히 놓고 전신을 담아 주세요"),
-    LEFT_FRONT("왼쪽 앞", "본인의 왼쪽 앞 30~45도에 놓으세요. 왼어깨가 카메라에 더 가까워요.", "휴대폰을 왼쪽 앞에 비스듬히 놓고 전신을 담아 주세요"),
-    SIDE("몸 옆", "몸의 옆모습이 보이게 놓으세요. 머리와 손발을 모두 담고 카메라를 고정해 주세요.", "휴대폰을 몸 옆에 놓고 머리와 손발을 모두 담아 주세요"),
-    FLOOR_SIDE("몸 옆 · 낮게", "몸통 높이에 가깝게 낮춰 놓으세요. 발쪽으로 치우치지 않고 옆모습 전체를 담아 주세요.", "휴대폰을 몸 옆에 낮게 놓고, 머리부터 발끝까지 담아 주세요"),
-    FLOOR_FRONT("몸 앞 · 비스듬히", "양팔과 양다리가 겹치지 않게 몸 앞에서 비스듬히 담아 주세요.", "양팔과 양다리가 보이도록 몸 앞에서 비스듬히 담아 주세요"),
+    FRONT("정면", "가슴이 휴대폰을 향하게 서 주세요.", "가슴이 휴대폰을 향하게 서 주세요"),
+    RIGHT_FRONT("오른쪽 앞", "오른어깨가 휴대폰에 더 가까워지도록 몸을 돌려 주세요.", "오른어깨가 휴대폰에 더 가까워지도록 몸을 돌려 주세요"),
+    LEFT_FRONT("왼쪽 앞", "왼어깨가 휴대폰에 더 가까워지도록 몸을 돌려 주세요.", "왼어깨가 휴대폰에 더 가까워지도록 몸을 돌려 주세요"),
+    SIDE("몸 옆", "휴대폰에 몸의 옆면이 보이도록 돌아서 주세요.", "휴대폰에 몸의 옆면이 보이도록 돌아서 주세요"),
+    FLOOR_SIDE("몸 옆 · 낮게", "휴대폰에 몸의 옆면이 보이도록 자리 잡아 주세요.", "몸의 옆면이 보이도록 편하게 앉거나 무릎을 대고 준비해 주세요"),
+    FLOOR_FRONT("몸 앞 · 비스듬히", "양팔과 양다리가 겹치지 않도록 몸을 비스듬히 돌려 주세요.", "양팔과 양다리가 겹치지 않도록 몸을 비스듬히 돌려 주세요"),
 }
 
 enum class ObservationKind { REPS, HOLD, WINDOW, GUIDE }
 data class ExerciseProfile(val name: String, val referenceExercise: String?, val capture: CapturePosition,
     val floor: Boolean, val kind: ObservationKind, val metricFeatures: List<String>) {
+    val preparationDirection get() = when(capture) {
+        CapturePosition.SIDE -> "측면"
+        CapturePosition.FLOOR_SIDE -> "낮은 측면"
+        CapturePosition.FLOOR_FRONT -> "앞쪽 사선"
+        else -> capture.title
+    }
+    val preparationInstruction get() = "권장 촬영 방향은 ${preparationDirection}입니다. ${capture.voice}. 몸이 화면에 잡히면 5초 뒤 시작해요."
     val cameraEnabled get() = kind != ObservationKind.GUIDE
     val comparisonOnly get() = referenceExercise == null
     val startHint get() = when(kind) {

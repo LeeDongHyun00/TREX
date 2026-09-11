@@ -18,6 +18,9 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -90,9 +93,6 @@ private val loginAnimationFrames = intArrayOf(
 fun AuthScreen(
     onLogin: () -> Unit,
     onOpenFind: () -> Unit,
-    onOpenGuide: () -> Unit,
-    onOpenPostureLab: () -> Unit = {},
-    onOpenBaselineGuide: () -> Unit = {},
 ) {
     val c = Trex.c
     var signupMode by rememberSaveable { mutableStateOf(false) }
@@ -225,17 +225,6 @@ fun AuthScreen(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text("아이디/비밀번호 찾기", color = c.text2, fontSize = 12.sp, fontWeight = FontWeight.Medium, modifier = Modifier.clickable(onClick = onOpenFind))
-                Box(Modifier.padding(horizontal = 12.dp).width(1.dp).height(11.dp).background(c.line))
-                Text("가이드북", color = c.text2, fontSize = 12.sp, fontWeight = FontWeight.Medium, modifier = Modifier.clickable(onClick = onOpenGuide))
-            }
-            Row(
-                Modifier.fillMaxWidth().padding(top = 10.dp, bottom = 22.dp),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text("자세 교정 실험실", color = c.text3, fontSize = 11.sp, modifier = Modifier.clickable(onClick = onOpenPostureLab))
-                Box(Modifier.padding(horizontal = 10.dp).width(1.dp).height(10.dp).background(c.line))
-                Text("자세 기준선 설정", color = c.text3, fontSize = 11.sp, modifier = Modifier.clickable(onClick = onOpenBaselineGuide))
             }
         }
     }

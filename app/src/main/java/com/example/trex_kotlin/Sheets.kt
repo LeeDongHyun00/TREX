@@ -64,12 +64,14 @@ import kotlinx.coroutines.delay
 @Composable
 fun MainSheetHost(app: AppViewModel, sheet: MainSheet, onClose: () -> Unit) {
     when (sheet) {
-        is MainSheet.Alt -> AltSheet(app, sheet.workout, onClose)
-        is MainSheet.Sets -> SetsSheet(app, sheet.draft, onClose)
+        is MainSheet.WorkoutEditor -> WorkoutEditorSheet(app, sheet.selectedId, onClose)
+        is MainSheet.Alt -> WorkoutEditorSheet(app, sheet.workout.id, onClose, initialMode = "replace")
+        is MainSheet.Sets -> WorkoutEditorSheet(app, sheet.draft.id, onClose)
         MainSheet.Goals -> GoalsSheet(app, onClose)
         is MainSheet.Manual -> ManualSheet(app, sheet.slot, onClose)
         MainSheet.Photo -> PhotoSheet(app, onClose)
-        MainSheet.AddWorkout -> AddWorkoutSheet(app, onClose)
+        MainSheet.AddWorkout -> WorkoutEditorSheet(app, null, onClose, initialMode = "add")
+        MainSheet.ProfileSettings -> ProfileSettingsSheet(app, onClose)
     }
 }
 
@@ -367,43 +369,37 @@ private fun SetsSheet(app: AppViewModel, initial: SetDraft, onClose: () -> Unit)
 
 // ============================================================= 영양 목표
 
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 private fun GoalsSheet(app: AppViewModel, onClose: () -> Unit) {
     val c = Trex.c
-    val g = app.targetGoal
-    SheetHost(onDismiss = onClose) {
-        Column(Modifier.padding(20.dp)) {
-            SheetTitleRow("영양 목표 수정", "하루 목표를 맞춰봐룡", onClose)
-            Spacer(Modifier.height(16.dp))
-            DCard(radius = 22.dp) {
-                Column {
-                    data class GoalRow(val label: String, val hint: String, val unit: String, val v: Int, val onSet: (Int) -> Unit, val stepN: Int)
-                    val rows = listOf(
-                        GoalRow("하루 칼로리", "50 kcal 단위", "kcal", g.kcal, { app.setTargetGoal(g.copy(kcal = it)) }, 50),
-                        GoalRow("탄수화물", "5g 단위", "g", g.carb.toInt(), { app.setTargetGoal(g.copy(carb = it.toDouble())) }, 5),
-                        GoalRow("단백질", "5g 단위", "g", g.protein.toInt(), { app.setTargetGoal(g.copy(protein = it.toDouble())) }, 5),
-                        GoalRow("지방", "5g 단위", "g", g.fat.toInt(), { app.setTargetGoal(g.copy(fat = it.toDouble())) }, 5),
-                    )
-                    rows.forEachIndexed { i, row ->
-                        if (i > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(c.line))
-                        Row(Modifier.padding(horizontal = 16.dp, vertical = 15.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Column(Modifier.weight(1f)) {
-                                Text(row.label, fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold)
-                                Text(row.hint, color = c.text3, fontSize = 11.sp, modifier = Modifier.padding(top = 2.dp))
-                            }
-                            StepperControl(
-                                valueLabel = "${row.v}",
-                                onDec = { row.onSet((row.v - row.stepN).coerceAtLeast(0)) },
-                                onInc = { row.onSet(row.v + row.stepN) },
-                                valueMinWidth = 56.dp,
-                            )
-                        }
+    var goal by remember { mutableStateOf(app.targetGoal) }
+    androidx.compose.material3.ModalBottomSheet(onDismissRequest = onClose, containerColor = c.sheet,
+        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        Column(Modifier.fillMaxWidth().heightIn(max = 600.dp).padding(horizontal = 24.dp).padding(bottom = 24.dp)) {
+            Text("영양 목표 수정", color = c.text, fontSize = 24.sp, fontWeight = FontWeight.SemiBold)
+            Spacer(Modifier.height(18.dp))
+            Column(Modifier.weight(1f, false).verticalScroll(rememberScrollState())) {
+            data class GoalRow(val label: String, val value: Int, val step: Int, val unit: String, val update: (Int) -> Unit)
+            listOf(
+                GoalRow("하루 칼로리", goal.kcal, 50, "kcal") { goal = goal.copy(kcal = it.coerceIn(800, 5000)) },
+                GoalRow("탄수화물", goal.carb.toInt(), 5, "g") { goal = goal.copy(carb = it.coerceIn(0, 800).toDouble()) },
+                GoalRow("단백질", goal.protein.toInt(), 5, "g") { goal = goal.copy(protein = it.coerceIn(0, 400).toDouble()) },
+                GoalRow("지방", goal.fat.toInt(), 5, "g") { goal = goal.copy(fat = it.coerceIn(0, 250).toDouble()) },
+            ).forEach { row ->
+                Row(Modifier.fillMaxWidth().padding(vertical = 15.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(row.label, color = c.text, fontSize = 16.sp)
+                        Text(row.unit, color = c.text2, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
                     }
+                    StepperControl("${row.value}", { row.update(row.value - row.step) }, { row.update(row.value + row.step) }, label = row.label, valueMinWidth = 62.dp)
                 }
             }
-            Spacer(Modifier.height(12.dp))
-            WashBanner("탄단지 합이 칼로리 목표와 크게 다르면 알려줄게룡", Icons.Rounded.Info)
-            Cta("목표 저장", icon = Icons.Rounded.Check, onClick = onClose, modifier = Modifier.padding(top = 16.dp).fillMaxWidth())
+            }
+            Row(Modifier.padding(top = 18.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                GhostButton("취소", onClose, Modifier.weight(1f))
+                Cta("목표 저장", { app.setTargetGoal(goal); onClose() }, modifier = Modifier.weight(1.7f))
+            }
         }
     }
 }
@@ -793,14 +789,14 @@ private fun PhotoSheet(app: AppViewModel, onClose: () -> Unit) {
 
 // ============================================================= 운동 추가
 
-private data class WorkoutTemplate(val name: String, val reps: String, val duration: String, val category: String, val posture: Boolean)
+internal data class WorkoutTemplate(val name: String, val reps: String, val duration: String, val category: String, val posture: Boolean)
 
 /**
  * 운동 카탈로그 — posture 플래그는 규칙 엔진이 실제로 지원하는 종목(postureExerciseMap)에만 켠다.
  * 지원 종목은 rules_mp_v0(서서 하는 종목) + rules_floor_v0.1(바닥 종목, 전부 beta) 기준이다.
  * 바이시클 크런치는 MP 충실도 게이트(spec §25a) 후 남은 규칙이 없어 posture=false.
  */
-private val workoutCatalog = mapOf(
+internal val workoutCatalog = mapOf(
     "하체" to listOf(
         WorkoutTemplate("기본 스쿼트", "12회 × 3세트", "8분", "하체", true),
         WorkoutTemplate("바벨 스쿼트", "10회 × 3세트", "10분", "하체", true),

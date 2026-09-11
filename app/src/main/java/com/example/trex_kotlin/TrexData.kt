@@ -55,6 +55,8 @@ data class Workout(
     /** null이면 종목별 기본 속도/휴식. 기존 저장 계획과 호환한다. */
     val secondsPerRep: Int? = null,
     val restSeconds: Int? = null,
+    /** 목표 단위는 실행 종료 조건이다. null은 기존 문자열 계획을 읽는 호환 경로다. */
+    val target: WorkoutTarget? = null,
 )
 
 @Immutable
@@ -368,7 +370,7 @@ fun List<WorkoutHistoryDay>.replaceTodayWith(record: WorkoutHistoryDay): List<Wo
     } else {
         this + record
     }
-    return updated.sortedBy { it.epochDay }.takeLast(7)
+    return updated.retainVisibleWorkoutHistory(record.epochDay).sortedBy { it.epochDay }
 }
 
 fun WorkoutHistoryDay.totalMinutes(): Int =

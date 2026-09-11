@@ -91,7 +91,7 @@ val categoryTips = mapOf(
     "유산소" to "리듬을 일정하게, 착지는 부드럽게 해주세룡",
 )
 
-private val tabContentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 50.dp, bottom = 110.dp)
+internal val tabContentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 50.dp, bottom = 110.dp)
 
 // ============================================================= HOME
 
@@ -132,7 +132,7 @@ fun HomeScreen(
                     )
                     Text("안녕하세룡!", color = c.text, fontSize = 21.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 4.dp))
                 }
-                RoundIcon(Icons.Rounded.Notifications, onClick = {}, size = 40.dp, contentDescription = "알림")
+
             }
         }
 
@@ -164,7 +164,7 @@ fun HomeScreen(
 
         // 오늘 섭취 — 칼로리 링 + 탄단지 (리디자인의 홈 메인 카드)
         item {
-            DCard(radius = 28.dp) {
+            DCard(modifier = Modifier.clickable(onClickLabel = "식단 보기", onClick = onGoDiet), radius = 28.dp) {
                 Column(Modifier.padding(20.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Kicker("오늘 섭취")
@@ -305,630 +305,54 @@ fun HomeScreen(
 
 // ============================================================= WORKOUT TAB
 
-@Composable
-fun WorkoutTabScreen(
-    app: AppViewModel,
-    onOpenAlt: (Workout) -> Unit,
-    onOpenSets: (Workout) -> Unit,
-    onAddWorkout: () -> Unit,
-) {
-    val c = Trex.c
-    val plan = app.workoutPlan
-    val doneCount = plan.count { it.done }
-    var openWorkout by remember { mutableStateOf(plan.firstOrNull { !it.done }?.id) }
-
-    val listState = rememberLazyListState()
-    val haptic = LocalHapticFeedback.current
-    // 요약 / 날씨 카드 다음부터가 순서를 바꿀 수 있는 구간이다
-    val reorder = rememberReorderState(
-        listState = listState,
-        canDrag = { it - WORKOUT_LIST_HEADER_COUNT in app.workoutPlan.indices },
-        onMove = { from, to ->
-            app.updatePlan(
-                app.workoutPlan.moved(from - WORKOUT_LIST_HEADER_COUNT, to - WORKOUT_LIST_HEADER_COUNT),
-            )
-        },
-        // 드래그 중에는 펼침 상태를 건드리지 않는다 — 카드를 접으면 목록이 손가락 밑에서 밀려 엉뚱한 자리로 바뀐다
-        onFeedback = { feedback ->
-            when (feedback) {
-                ReorderFeedback.Lift -> haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                ReorderFeedback.Move -> haptic.performHapticFeedback(HapticFeedbackType.SegmentTick)
-                ReorderFeedback.Drop -> haptic.performHapticFeedback(HapticFeedbackType.GestureEnd)
-            }
-        },
-    )
-
-    LazyColumn(
-        state = listState,
-        modifier = Modifier.fillMaxSize().background(c.bg),
-        contentPadding = tabContentPadding,
-        verticalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        item(key = "summary") {
-            Row(verticalAlignment = Alignment.Top) {
-                Column(Modifier.weight(1f)) {
-                    Kicker("오늘의 운동")
-                    TitleBig(
-                        if (plan.isNotEmpty() && doneCount >= plan.size) "오늘 루틴 완료"
-                        else "${plan.size}개 루틴, 약 ${plan.sumOf { it.durationMinutes() }}분",
-                    )
-                    Text("${doneCount}개 완료 · 남은 ${plan.size - doneCount}개", color = c.text2, fontSize = 12.sp, modifier = Modifier.padding(top = 5.dp))
-                }
-                RoundIcon(Icons.Rounded.Add, onClick = onAddWorkout, size = 40.dp, contentDescription = "운동 추가")
-            }
-            Spacer(Modifier.height(14.dp))
-            TrackBar(progress = if (plan.isEmpty()) 0f else doneCount / plan.size.toFloat())
-            if (plan.size > 1) {
-                Row(Modifier.padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Rounded.DragIndicator, contentDescription = null, tint = c.text3, modifier = Modifier.size(13.dp))
-                    Text(
-                        "카드를 길게 눌러 순서를 바꿔룡",
-                        color = c.text3, fontSize = 11.sp, fontWeight = FontWeight.Medium,
-                        modifier = Modifier.padding(start = 5.dp),
-                    )
-                }
-            }
-        }
-
-        // 날씨 카드 — 중립 서피스 + 소프트 아이콘 버블 + 실내 추천 칩 (경고 워시 대신 차분한 톤)
-        item(key = "weather") {
-            DCard(radius = 22.dp) {
-                Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        Modifier.size(42.dp).clip(RoundedCornerShape(15.dp)).background(c.surface2),
-                        contentAlignment = Alignment.Center,
-                    ) { Icon(Icons.Rounded.Cloud, contentDescription = null, tint = c.text2, modifier = Modifier.size(19.dp)) }
-                    Column(Modifier.padding(start = 12.dp).weight(1f)) {
-                        Row(verticalAlignment = Alignment.Bottom) {
-                            Text("비 예보", fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold)
-                            Text("6.4 mm/h", color = c.text3, fontSize = 11.5.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(start = 6.dp, bottom = 1.dp))
-                        }
-                        Text("오늘은 실내 루틴이 좋아룡", color = c.text3, fontSize = 11.sp, modifier = Modifier.padding(top = 2.dp))
-                    }
-                    WashPill("실내 추천")
-                }
-            }
-        }
-
-        items(count = plan.size, key = { plan[it].id }) { i ->
-            val w = plan[i]
-            val dragging = reorder.isDragging(w.id)
-            WorkoutExpandCard(
-                workout = w,
-                index = i,
-                open = openWorkout == w.id,
-                dragging = dragging,
-                // 들고 있는 카드는 translationY 로 직접 움직이므로 자리 애니메이션을 꺼둔다
-                modifier = Modifier
-                    .animateItem(
-                        fadeInSpec = null,
-                        placementSpec = if (dragging) null else tween(260),
-                        fadeOutSpec = null,
-                    )
-                    .reorderable(reorder, w.id),
-                onToggleOpen = { openWorkout = if (openWorkout == w.id) null else w.id },
-                onOpenAlt = { onOpenAlt(w) },
-                onOpenSets = { onOpenSets(w) },
-                onTogglePosture = { app.togglePosture(w.id) },
-            )
-        }
-    }
-}
-
-/** 운동 탭 LazyColumn 에서 루틴 카드가 시작되는 인덱스 (요약 + 날씨 카드). */
-private const val WORKOUT_LIST_HEADER_COUNT = 2
-
-@Composable
-private fun WorkoutExpandCard(
-    workout: Workout,
-    index: Int,
-    open: Boolean,
-    dragging: Boolean,
-    modifier: Modifier = Modifier,
-    onToggleOpen: () -> Unit,
-    onOpenAlt: () -> Unit,
-    onOpenSets: () -> Unit,
-    onTogglePosture: () -> Unit,
-) {
-    val c = Trex.c
-    val chevron by animateFloatAsState(if (open) 180f else 0f, tween(300), label = "chev")
-    // 들어 올림 정도(0~1) — 살짝 커지고 그림자가 깊어지는 iOS 식 "리프트"
-    val lift by animateFloatAsState(if (dragging) 1f else 0f, tween(200), label = "lift")
-    Surface(
-        modifier = modifier
-            .fillMaxWidth()
-            .graphicsLayer {
-                val scale = 1f + 0.028f * lift
-                scaleX = scale
-                scaleY = scale
-            }
-            .animateContentSize(tween(320)),
-        shape = RoundedCornerShape(24.dp),
-        color = c.surface,
-        contentColor = c.text,
-        border = BorderStroke(1.dp, if (open || dragging) c.primarySoftLine else c.line),
-        shadowElevation = (2 + 16 * lift).dp,
-    ) {
-        Column {
-            // 드래그로 들려 있는 동안에는 탭으로 펼쳐지지 않게 막는다 (손을 뗄 때 오작동 방지)
-            Surface(onClick = { if (!dragging) onToggleOpen() }, color = Color.Transparent, contentColor = c.text) {
-                Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 15.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        Modifier
-                            .size(38.dp)
-                            .clip(RoundedCornerShape(13.dp))
-                            .background(if (workout.done || dragging) c.primary else if (open) c.primaryWash else c.surface2),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        // 들고 있는 동안에는 순번 대신 이동 그립을 보여준다
-                        if (dragging) {
-                            Icon(Icons.Rounded.DragIndicator, contentDescription = null, tint = Color.White, modifier = Modifier.size(17.dp))
-                        } else {
-                            Text(
-                                (index + 1).toString().padStart(2, '0'),
-                                color = if (workout.done) Color.White else if (open) c.primaryText else c.text3,
-                                fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
-                            )
-                        }
-                    }
-                    Column(Modifier.weight(1f).padding(start = 12.dp)) {
-                        Text(workout.name, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-                        Row(Modifier.padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text("${workout.reps} · ${workout.timing().totalSeconds.asClock()}", color = c.text3, fontSize = 11.5.sp)
-                            if (workout.posture && workout.postureSupported()) {
-                                Row(
-                                    Modifier.clip(RoundedCornerShape(999.dp)).background(c.primaryWash).padding(horizontal = 7.dp, vertical = 2.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
-                                    Icon(Icons.Rounded.Visibility, contentDescription = null, tint = c.primaryText, modifier = Modifier.size(9.dp))
-                                    Text("자세교정", color = c.primaryText, fontSize = 9.5.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 3.dp))
-                                }
-                            }
-                        }
-                    }
-                    Icon(
-                        Icons.Rounded.KeyboardArrowDown, contentDescription = null, tint = c.text3,
-                        modifier = Modifier.size(17.dp).rotate(chevron).alpha(1f - lift),
-                    )
-                }
-            }
-            if (open) {
-                Column(Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            workout.category,
-                            color = c.text2, fontSize = 11.sp, fontWeight = FontWeight.Medium,
-                            modifier = Modifier.clip(RoundedCornerShape(999.dp)).background(c.surface2).padding(horizontal = 10.dp, vertical = 5.dp),
-                        )
-                        Text(
-                            categoryTips[workout.category].orEmpty(),
-                            color = c.text3, fontSize = 11.5.sp, lineHeight = 16.sp,
-                            modifier = Modifier.padding(start = 8.dp).weight(1f),
-                        )
-                    }
-                    Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                        GhostButton("대체 운동", onClick = onOpenAlt, icon = Icons.Rounded.Refresh, modifier = Modifier.weight(1f), height = 44.dp)
-                        GhostButton("운동 설정", onClick = onOpenSets, icon = Icons.Rounded.Edit, modifier = Modifier.weight(1f), height = 44.dp)
-                    }
-                    // 자세 교정 스위치 — 규칙 엔진 지원 종목에만. 미지원이면 안내만.
-                    if (workout.postureSupported()) {
-                        val on = workout.posture
-                        // 이 종목에서 무엇을 보고 무엇을 못 보는지 (spec §31) — 켜기 전에 밝힌다.
-                        // 데드리프트처럼 '척추의 중립' 이 전부 exclude 인 종목은 허리를 말아도 "깨끗" 이라 나오므로,
-                        // 범위를 모르면 침묵을 "완벽하다" 로 읽게 된다.
-                        val scope = rememberPostureScope(postureExerciseMap[workout.name])
-                        var scopeOpen by remember(workout.id) { mutableStateOf(false) }
-                        Surface(
-                            onClick = onTogglePosture,
-                            shape = RoundedCornerShape(15.dp),
-                            color = if (on) c.primaryWash else c.surface2,
-                            contentColor = if (on) c.primaryText else c.text2,
-                            border = BorderStroke(1.dp, if (on) c.primarySoftLine else c.line),
-                        ) {
-                            Row(Modifier.fillMaxWidth().height(46.dp).padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Rounded.Visibility, contentDescription = null, modifier = Modifier.size(16.dp))
-                                Column(Modifier.padding(start = 10.dp).weight(1f)) {
-                                    Text("자세 교정 사용", fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold)
-                                    Text(
-                                        com.example.trex_kotlin.posture.ExerciseProfiles.forName(workout.name)?.let {
-                                            "${it.capture.title}에서 촬영 · " + if (it.comparisonOnly) "초반 대비 변화 측정" else "움직임과 자세 안내"
-                                        } ?: "시작 전에 촬영 위치를 안내해요",
-                                        fontSize = 10.sp, color = if (on) c.primaryText.copy(alpha = 0.8f) else c.text3,
-                                    )
-                                }
-                                Box(
-                                    Modifier
-                                        .width(38.dp).height(22.dp)
-                                        .clip(RoundedCornerShape(999.dp))
-                                        .background(if (on) c.primary else c.track)
-                                        .padding(2.dp),
-                                    contentAlignment = if (on) Alignment.CenterEnd else Alignment.CenterStart,
-                                ) {
-                                    Box(Modifier.size(18.dp).clip(CircleShape).background(Color.White))
-                                }
-                            }
-                        }
-                        // 무엇을 보나요 — 규칙셋에서 만든 3줄. 켜기 전에도 열 수 있다.
-                        scope?.let { sc ->
-                            Column(Modifier.padding(top = 6.dp)) {
-                                Text(
-                                    if (scopeOpen) "무엇을 보나요? ▴" else "무엇을 보나요? ▾",
-                                    color = c.text3, fontSize = 11.sp, fontWeight = FontWeight.SemiBold,
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .clickable { scopeOpen = !scopeOpen }
-                                        .padding(vertical = 3.dp, horizontal = 2.dp),
-                                )
-                                if (scopeOpen) {
-                                    sc.introLines.forEach { line ->
-                                        Text(
-                                            "· $line",
-                                            color = c.text3, fontSize = 11.sp, lineHeight = 16.sp,
-                                            modifier = Modifier.padding(top = 3.dp),
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    } else {
-                        Row(
-                            Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(15.dp))
-                                .background(c.surface2)
-                                .border(1.dp, c.line, RoundedCornerShape(15.dp))
-                                .padding(horizontal = 14.dp, vertical = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Icon(Icons.Rounded.Visibility, contentDescription = null, tint = c.text3, modifier = Modifier.size(15.dp))
-                            Text(
-                                "이 운동은 타이머로 진행해요",
-                                color = c.text3, fontSize = 11.5.sp,
-                                modifier = Modifier.padding(start = 10.dp),
-                            )
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
 // ============================================================= DIET TAB
 
 @Composable
-fun DietTabScreen(
-    app: AppViewModel,
-    onOpenGoals: () -> Unit,
-    onOpenPhoto: () -> Unit,
-    onOpenManual: (String) -> Unit,
-) {
+fun DietTabScreen(app: AppViewModel, onOpenGoals: () -> Unit, onOpenPhoto: () -> Unit, onOpenManual: (String) -> Unit, onOpenRecord: () -> Unit) {
     val c = Trex.c
     val foods = app.dietFor(0)
     val total = foods.values.flatten().totalNutrition()
     val goal = app.targetGoal
-    val kcalPct = if (goal.kcal > 0) total.kcal * 100 / goal.kcal else 0
-    val remain = goal.kcal - total.kcal
-
-    LazyColumn(
-        modifier = Modifier.fillMaxSize().background(c.bg),
-        contentPadding = tabContentPadding,
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
+    LazyColumn(Modifier.fillMaxSize().background(c.bg), contentPadding = tabContentPadding) {
         item {
-            Kicker("오늘의 식단")
-            TitleBig("바로 보고, 바로 채우고", size = 21)
-        }
-
-        item {
-            DCard(radius = 28.dp) {
-                Column {
-                    Column(Modifier.padding(20.dp)) {
-                        // 헤더에 % 를 빼고 링 안에는 수치만 — 텍스트가 링 밖으로 넘치지 않게
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Kicker("오늘 섭취")
-                            Spacer(Modifier.weight(1f))
-                            WashPill("목표 ${goal.kcal} kcal · $kcalPct%")
-                        }
-                        Row(Modifier.padding(top = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-                            RingGauge(progress = if (goal.kcal > 0) total.kcal / goal.kcal.toFloat() else 0f, size = 118.dp, stroke = 11.dp) {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Text(
-                                        "${total.kcal}",
-                                        color = c.text,
-                                        fontSize = if (total.kcal >= 10_000) 21.sp else 27.sp,
-                                        fontWeight = FontWeight.SemiBold,
-                                        lineHeight = 28.sp,
-                                        maxLines = 1,
-                                    )
-                                    Text("kcal", color = c.text3, fontSize = 10.sp, modifier = Modifier.padding(top = 2.dp))
-                                }
-                            }
-                            Spacer(Modifier.width(20.dp))
-                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(13.dp)) {
-                                MacroBar("탄수", total.carb.toInt(), goal.carb.toInt(), c.primary, barHeight = 7.dp)
-                                MacroBar("단백질", total.protein.toInt(), goal.protein.toInt(), c.lime, barHeight = 7.dp)
-                                MacroBar("지방", total.fat.toInt(), goal.fat.toInt(), c.warn, barHeight = 7.dp)
-                            }
-                        }
-                        Text(
-                            text = if (remain > 0) "$remain kcal 더 먹을 수 있어룡" else "오늘 목표를 채웠어룡",
-                            color = c.text3, fontSize = 11.5.sp, modifier = Modifier.padding(top = 16.dp),
-                        )
-                    }
-                    Surface(onClick = onOpenGoals, color = c.surface2, contentColor = c.text) {
-                        Row(
-                            Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 14.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Box(
-                                Modifier.size(30.dp).clip(RoundedCornerShape(10.dp)).background(c.surface).border(1.dp, c.line, RoundedCornerShape(10.dp)),
-                                contentAlignment = Alignment.Center,
-                            ) { Icon(Icons.Rounded.Tune, contentDescription = null, tint = c.primaryText, modifier = Modifier.size(14.dp)) }
-                            Text("영양 목표 수정", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 11.dp).weight(1f))
-                            Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, contentDescription = null, tint = c.text3, modifier = Modifier.size(16.dp))
-                        }
-                    }
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text("오늘 식단", color = c.text, fontSize = 30.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                androidx.compose.material3.IconButton(onClick = onOpenGoals) {
+                    Icon(Icons.Rounded.Edit, contentDescription = "영양 목표 수정", tint = c.primaryText)
                 }
             }
-        }
-
-        item {
-            Surface(
-                onClick = onOpenPhoto,
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(20.dp),
-                color = c.surface,
-                contentColor = c.text,
-                border = BorderStroke(1.dp, c.line),
-            ) {
-                Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        Modifier.size(40.dp).clip(RoundedCornerShape(14.dp)).background(c.primary),
-                        contentAlignment = Alignment.Center,
-                    ) { Icon(Icons.Rounded.PhotoCamera, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp)) }
-                    Column(Modifier.padding(start = 12.dp).weight(1f)) {
-                        Text("사진으로 식단 기록", fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold)
-                        Text("찍으면 음식·영양정보를 자동으로 채워줘룡", color = c.text3, fontSize = 11.sp, modifier = Modifier.padding(top = 2.dp))
-                    }
-                    Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, contentDescription = null, tint = c.text3, modifier = Modifier.size(17.dp))
-                }
-            }
-        }
-
-        items(count = mealMetas.size, key = { mealMetas[it].id }) { i ->
-            val meta = mealMetas[i]
-            val list = foods[meta.id].orEmpty()
-            val empty = list.isEmpty()
-            DCard(radius = 20.dp) {
-                Column(Modifier.padding(15.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            Modifier.size(40.dp).clip(CircleShape).background(if (empty) c.surface2 else c.primaryWash),
-                            contentAlignment = Alignment.Center,
-                        ) { Icon(mealIcon(meta.id), contentDescription = null, tint = if (empty) c.text3 else c.primaryText, modifier = Modifier.size(18.dp)) }
-                        Column(Modifier.padding(start = 12.dp).weight(1f)) {
-                            Text(meta.label, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                            Text(
-                                if (empty) "기록 전" else "${list.totalNutrition().kcal} kcal · ${list.sumOf { it.qty }}개",
-                                color = c.text3, fontSize = 11.5.sp, modifier = Modifier.padding(top = 2.dp),
-                            )
-                        }
-                        Surface(
-                            onClick = { onOpenManual(meta.id) },
-                            modifier = Modifier.size(34.dp),
-                            shape = CircleShape,
-                            color = if (empty) c.primary else c.surface2,
-                            contentColor = if (empty) Color.White else c.primaryText,
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(if (empty) Icons.Rounded.Add else Icons.Rounded.Edit, contentDescription = "기록", modifier = Modifier.size(15.dp))
-                            }
-                        }
-                    }
-                    if (!empty) {
-                        Row(Modifier.padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                            list.take(4).forEach {
-                                Text(
-                                    if (it.qty > 1) "${it.name} ×${it.qty}" else it.name,
-                                    color = c.text2, fontSize = 11.sp, fontWeight = FontWeight.Medium,
-                                    modifier = Modifier.clip(RoundedCornerShape(999.dp)).background(c.surface2).padding(horizontal = 10.dp, vertical = 5.dp),
-                                )
-                            }
-                        }
+            Row(Modifier.padding(vertical = 30.dp), verticalAlignment = Alignment.CenterVertically) {
+                RingGauge(if (goal.kcal > 0) total.kcal.toFloat() / goal.kcal else 0f, 118.dp, 7.dp) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("${total.kcal}", color = c.text, fontSize = 26.sp, fontWeight = FontWeight.SemiBold)
+                        Text("kcal", color = c.text2, fontSize = 12.sp)
                     }
                 }
-            }
-        }
-
-        item {
-            Column {
-                Kicker("추천 식단")
-                Row(
-                    Modifier
-                        .padding(top = 10.dp)
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(c.primaryWash)
-                        .border(1.dp, c.primarySoftLine, RoundedCornerShape(20.dp))
-                        .padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Box(
-                        Modifier.size(44.dp).clip(RoundedCornerShape(14.dp)).background(c.primary),
-                        contentAlignment = Alignment.Center,
-                    ) { Icon(Icons.Rounded.Restaurant, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp)) }
-                    Column(Modifier.padding(start = 12.dp).weight(1f)) {
-                        Text("초보자용 · 약 520 kcal", color = c.text3, fontSize = 11.sp)
-                        Text("고단백 저녁 한끼", color = c.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 2.dp))
-                        Text("연어 스테이크 · 퀴노아 · 브로콜리", color = c.text2, fontSize = 11.sp, modifier = Modifier.padding(top = 2.dp))
-                    }
+                Column(Modifier.weight(1f).padding(start = 22.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                    MacroBar("탄수", total.carb.toInt(), goal.carb.toInt(), c.primary)
+                    MacroBar("단백질", total.protein.toInt(), goal.protein.toInt(), c.primary)
+                    MacroBar("지방", total.fat.toInt(), goal.fat.toInt(), c.primary)
                 }
             }
+            Text("목표 ${goal.kcal} kcal", color = c.text2, fontSize = 13.sp, modifier = Modifier.padding(bottom = 22.dp))
+            DietRecordLink(onOpenRecord)
+        }
+        items(mealMetas.size, key = { mealMetas[it].id }) { i ->
+            val meal = mealMetas[i]; val entries = foods[meal.id].orEmpty()
+            Column(Modifier.fillMaxWidth().padding(vertical = 20.dp)) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text(meal.label, color = c.text, fontSize = 20.sp, fontWeight = FontWeight.Medium)
+                    Text(if (entries.isEmpty()) "기록 전" else "${entries.totalNutrition().kcal} kcal", color = c.text2, fontSize = 13.sp)
+                }
+                if (entries.isNotEmpty()) Text(entries.joinToString(" · ") { if (it.qty > 1) "${it.name} ×${it.qty}" else it.name },
+                    color = c.text2, fontSize = 14.sp, lineHeight = 22.sp, modifier = Modifier.padding(top = 9.dp))
+            }
+            Box(Modifier.fillMaxWidth().height(1.dp).background(c.line))
         }
     }
 }
 
 // ============================================================= PROFILE TAB
-
-@Composable
-fun ProfileTabScreen(
-    app: AppViewModel,
-    onOpenRecord: () -> Unit,
-    onLogout: () -> Unit,
-) {
-    val c = Trex.c
-    val profile = app.profile
-    val settingGroups = listOf(
-        listOf(
-            Triple(Icons.Rounded.Person, "프로필 편집", "이름 · 사진 · 목표"),
-            Triple(Icons.Rounded.ManageAccounts, "계정 관리", "이메일 · 비밀번호 · 연결된 계정"),
-        ),
-        listOf(
-            Triple(Icons.Rounded.Notifications, "알림", "운동 · 식단 리마인더"),
-            Triple(Icons.Rounded.Language, "언어", "한국어"),
-            Triple(Icons.Rounded.Security, "개인정보 보호", "카메라 · 기록 데이터"),
-        ),
-        listOf(
-            Triple(Icons.AutoMirrored.Rounded.Help, "도움말", "자세 인식이 안 될 때"),
-            Triple(Icons.Rounded.Description, "약관 및 정책", "서비스 이용약관"),
-        ),
-    )
-
-    LazyColumn(
-        modifier = Modifier.fillMaxSize().background(c.bg),
-        contentPadding = tabContentPadding,
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        item {
-            Kicker("내 정보")
-            TitleBig("설정", size = 21)
-        }
-
-        item {
-            DCard(radius = 22.dp) {
-                Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        Modifier.size(52.dp).clip(CircleShape).background(c.primary),
-                        contentAlignment = Alignment.Center,
-                    ) { Icon(Icons.Rounded.Person, contentDescription = null, tint = Color.White, modifier = Modifier.size(24.dp)) }
-                    Column(Modifier.padding(start = 13.dp).weight(1f)) {
-                        Text("사용자", fontSize = 15.5.sp, fontWeight = FontWeight.SemiBold)
-                        Text(
-                            "${profile.heightCm.toInt()}cm · ${profile.weightKg.toInt()}kg · ${profile.age}세",
-                            color = c.text3, fontSize = 11.5.sp, modifier = Modifier.padding(top = 2.dp),
-                        )
-                        Box(Modifier.padding(top = 7.dp)) { WashPill("${profileGoalLabel(profile.goal)} 루틴 진행중") }
-                    }
-                    Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, contentDescription = null, tint = c.text3, modifier = Modifier.size(17.dp))
-                }
-            }
-        }
-
-        // 화면 모드
-        item {
-            DCard(radius = 20.dp) {
-                Column(Modifier.padding(16.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        SettingIcon(
-                            when (app.themeMode) {
-                                ThemeMode.Dark -> Icons.Rounded.DarkMode
-                                ThemeMode.Light -> Icons.Rounded.LightMode
-                                ThemeMode.System -> Icons.Rounded.Brightness4
-                            },
-                        )
-                        Column(Modifier.padding(start = 12.dp).weight(1f)) {
-                            Text("화면 모드", fontSize = 13.5.sp, fontWeight = FontWeight.Medium)
-                            Text(
-                                when (app.themeMode) {
-                                    ThemeMode.System -> "시스템 설정에 맞춰룡"
-                                    ThemeMode.Dark -> "항상 다크로 보여룡"
-                                    ThemeMode.Light -> "항상 라이트로 보여룡"
-                                },
-                                color = c.text3, fontSize = 11.sp, modifier = Modifier.padding(top = 2.dp),
-                            )
-                        }
-                    }
-                    Spacer(Modifier.height(13.dp))
-                    SegmentedTabs(
-                        options = listOf("라이트", "다크", "시스템"),
-                        selected = when (app.themeMode) {
-                            ThemeMode.Light -> 0
-                            ThemeMode.Dark -> 1
-                            ThemeMode.System -> 2
-                        },
-                        onSelect = { app.setTheme(listOf(ThemeMode.Light, ThemeMode.Dark, ThemeMode.System)[it]) },
-                        height = 38.dp,
-                        filled = true,
-                    )
-                }
-            }
-        }
-
-        item {
-            DCard(radius = 20.dp) {
-                Surface(onClick = onOpenRecord, color = Color.Transparent, contentColor = c.text) {
-                    Row(Modifier.fillMaxWidth().padding(15.dp), verticalAlignment = Alignment.CenterVertically) {
-                        SettingIcon(Icons.Rounded.BarChart)
-                        Column(Modifier.padding(start = 12.dp).weight(1f)) {
-                            Text("운동 기록", fontSize = 13.5.sp, fontWeight = FontWeight.Medium)
-                            Text("일주일 기록과 정확도 보기", color = c.text3, fontSize = 11.sp, modifier = Modifier.padding(top = 2.dp))
-                        }
-                        Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, contentDescription = null, tint = c.text3, modifier = Modifier.size(15.dp))
-                    }
-                }
-            }
-        }
-
-        items(count = settingGroups.size) { gi ->
-            DCard(radius = 20.dp) {
-                Column {
-                    settingGroups[gi].forEachIndexed { ri, (icon, label, sub) ->
-                        if (ri > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(c.line))
-                        Surface(onClick = {}, color = Color.Transparent, contentColor = c.text) {
-                            Row(Modifier.fillMaxWidth().padding(horizontal = 15.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-                                SettingIcon(icon)
-                                Column(Modifier.padding(start = 12.dp).weight(1f)) {
-                                    Text(label, fontSize = 13.5.sp, fontWeight = FontWeight.Medium)
-                                    Text(sub, color = c.text3, fontSize = 11.sp, modifier = Modifier.padding(top = 2.dp))
-                                }
-                                Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, contentDescription = null, tint = c.text3, modifier = Modifier.size(15.dp))
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        item {
-            Column {
-                Surface(
-                    onClick = onLogout,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(18.dp),
-                    color = c.errWash,
-                    contentColor = c.err,
-                    border = BorderStroke(1.dp, c.errLine),
-                ) {
-                    Row(
-                        Modifier.padding(15.dp),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Icon(Icons.AutoMirrored.Rounded.Logout, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Text("로그아웃", fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 8.dp))
-                    }
-                }
-                Text(
-                    "TREX v1.0.0",
-                    color = c.text3, fontSize = 11.sp, fontWeight = FontWeight.Medium,
-                    modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                )
-            }
-        }
-    }
-}
 
 // ============================================================= 공용 조각
 

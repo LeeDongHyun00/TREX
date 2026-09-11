@@ -96,6 +96,20 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     var workoutHistory by mutableStateOf(store.loadHistory() ?: seedWorkoutHistory(todayPlan))
         private set
 
+    var calendarDay by mutableStateOf(LocalDate.now().toEpochDay())
+        private set
+
+    /** 앱 복귀와 날짜 경계에서도 화면의 조회 기간과 저장 기간을 맞춘다. */
+    fun refreshCalendar(today: Long = LocalDate.now().toEpochDay(), resetPlan: Boolean = true) {
+        calendarDay = today
+        val retained = workoutHistory.retainVisibleWorkoutHistory(today)
+        if (retained != workoutHistory) { workoutHistory = retained; store.pruneExpiredHistory(today) }
+        if (resetPlan && store.planDoneEpochDay != today) {
+            if (workoutPlan.any { it.done }) updatePlan(workoutPlan.map { it.copy(done = false) })
+            store.planDoneEpochDay = today
+        }
+    }
+
     init {
         // 어제 완료한 계획은 오늘 다시 처음부터 — done 플래그는 하루 단위다
         val today = LocalDate.now().toEpochDay()
@@ -104,6 +118,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             store.savePlan(workoutPlan)
         }
         store.planDoneEpochDay = today
+        refreshCalendar(today)
     }
 
     fun updatePlan(plan: List<Workout>) {
@@ -211,9 +226,9 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     private fun epochDayFor(offset: Int): Long = LocalDate.now().toEpochDay() + offset
 
     fun dietFor(offset: Int): Map<String, List<FoodEntry>> =
-        dietByDay[epochDayFor(offset)] ?: emptyDietSlots()
+        dietByDay[calendarDay + offset] ?: emptyDietSlots()
 
-    fun waterFor(offset: Int): Int = waterByDay[epochDayFor(offset)] ?: 0
+    fun waterFor(offset: Int): Int = waterByDay[calendarDay + offset] ?: 0
 
     fun addWater(offset: Int) {
         val key = epochDayFor(offset)

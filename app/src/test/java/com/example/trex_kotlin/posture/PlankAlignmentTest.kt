@@ -146,7 +146,7 @@ class PlankAlignmentTest {
             if(c[0]=="CASE"){check();id=c.drop(1).joinToString("/");t=PlankAlignmentTracker(rules);samples.clear();times.clear()}
             else {val ms=c[1].toLong();val w=c[2].toInt();val h=c[3].toInt();val xy=c[4].split(',').map{it.toFloat()}.toFloatArray();val vis=c[5].split(',').map{it.toFloat()}.toFloatArray()
                 val features=PlankGeometry.features(xy,vis,w,h)
-                val expected=c[6].split(';').filter { it.isNotEmpty() }.associate { field ->
+                val expected=c.getOrNull(6).orEmpty().split(';').filter { it.isNotEmpty() }.associate { field ->
                     val (key,value)=field.split('=');key to value.toFloat()
                 }
                 val actual=features.filterKeys { it in setOf(PlankGeometry.HIP,PlankGeometry.HEAD,PlankGeometry.NECK) }

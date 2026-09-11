@@ -502,6 +502,9 @@ class SpeechCoach(context: Context) {
         speakNow(text, flush)
     }
 
+    /** 준비 설명이 숫자 안내에 잘리지 않도록 대기/발화 여부를 제공한다. */
+    val isSpeaking: Boolean get() = synchronized(lock) { pending.isNotEmpty() || speaking.isNotEmpty() }
+
     fun stop() {
         synchronized(lock) {
             pending.clear()

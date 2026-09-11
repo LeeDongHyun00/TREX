@@ -1,5 +1,9 @@
 package com.example.trex_kotlin
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.runtime.getValue
+
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -196,7 +200,7 @@ fun Cta(
         shape = RoundedCornerShape(18.dp),
         color = if (enabled) c.primary else c.track,
         contentColor = if (enabled) Color.White else c.text3,
-        shadowElevation = if (enabled) 6.dp else 0.dp,
+        shadowElevation = if (enabled) 2.dp else 0.dp,
     ) {
         Row(
             modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
@@ -421,6 +425,7 @@ fun RingGauge(
     content: @Composable () -> Unit,
 ) {
     val c = Trex.c
+    val displayProgress by animateFloatAsState(progress.coerceIn(0f, 1f), tween(240), label = "ring-progress")
     Box(modifier = modifier.size(size), contentAlignment = Alignment.Center) {
         Canvas(Modifier.fillMaxSize()) {
             val sw = stroke.toPx()
@@ -429,7 +434,7 @@ fun RingGauge(
             drawArc(
                 color = c.primary,
                 startAngle = -90f,
-                sweepAngle = progress.coerceIn(0f, 1f) * 360f,
+                sweepAngle = displayProgress * 360f,
                 useCenter = false,
                 style = Stroke(sw, cap = StrokeCap.Round),
                 topLeft = Offset(sw / 2f, sw / 2f),
@@ -479,6 +484,7 @@ fun StepperControl(
     onInc: () -> Unit,
     decIcon: ImageVector = Icons.Rounded.Remove,
     valueMinWidth: Dp = 48.dp,
+    label: String = "",
 ) {
     val c = Trex.c
     Row(
@@ -490,8 +496,8 @@ fun StepperControl(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(3.dp),
     ) {
-        Surface(onClick = onDec, modifier = Modifier.size(32.dp), shape = CircleShape, color = Color.Transparent, contentColor = c.text2) {
-            Box(contentAlignment = Alignment.Center) { Icon(decIcon, contentDescription = "감소", modifier = Modifier.size(15.dp)) }
+        Surface(onClick = onDec, modifier = Modifier.size(44.dp), shape = CircleShape, color = Color.Transparent, contentColor = c.text2) {
+            Box(contentAlignment = Alignment.Center) { Icon(decIcon, contentDescription = "$label 감소".trim(), modifier = Modifier.size(17.dp)) }
         }
         Text(
             valueLabel,
@@ -502,10 +508,10 @@ fun StepperControl(
             modifier = Modifier.width(valueMinWidth),
         )
         Surface(
-            onClick = onInc, modifier = Modifier.size(32.dp), shape = CircleShape,
+            onClick = onInc, modifier = Modifier.size(44.dp), shape = CircleShape,
             color = c.surface, contentColor = c.primaryText, shadowElevation = 1.dp,
         ) {
-            Box(contentAlignment = Alignment.Center) { Icon(Icons.Rounded.Add, contentDescription = "증가", modifier = Modifier.size(15.dp)) }
+            Box(contentAlignment = Alignment.Center) { Icon(Icons.Rounded.Add, contentDescription = "$label 증가".trim(), modifier = Modifier.size(17.dp)) }
         }
     }
 }
