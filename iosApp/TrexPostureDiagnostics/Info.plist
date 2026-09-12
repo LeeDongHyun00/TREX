@@ -22,8 +22,10 @@
     <string>$(CURRENT_PROJECT_VERSION)</string>
     <key>LSRequiresIPhoneOS</key>
     <true/>
-    <key>NSCameraUsageDescription</key>
-    <string>카메라 영상과 관절 인식의 개발 진단에 사용합니다. M0에서는 카메라를 실행하지 않습니다.</string>
+    <key>NSMotionUsageDescription</key>
+	<string>촬영 중 디바이스의 원본 중력값과 센서 시각을 진단합니다.</string>
+	<key>NSCameraUsageDescription</key>
+    <string>시작 버튼을 누르면 카메라 프리뷰와 영상 크기·방향을 진단합니다. 영상은 저장하지 않습니다.</string>
     <key>UIApplicationSceneManifest</key>
     <dict>
         <key>UIApplicationSupportsMultipleScenes</key>
