@@ -75,7 +75,7 @@ import androidx.compose.material.icons.rounded.PhotoCamera
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
+import com.example.trex_kotlin.TrexText as Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -434,15 +434,16 @@ fun PostureLiveSessionScreen(
     // 회전해도 Activity 가 유지되므로(configChanges), 화면 회전값은 configuration 변화마다 다시 읽는다.
     // 분석 스레드가 매 프레임 읽으므로 ref 로도 전달한다.
     val configuration = LocalConfiguration.current
-    val displayRotation = remember(configuration) {
-        @Suppress("DEPRECATION")
-        (context.getSystemService(Context.WINDOW_SERVICE) as WindowManager).defaultDisplay.rotation
-    }
+    val displayRotation = rememberTrexDisplayRotation()
     val rotationRef = remember { intArrayOf(displayRotation) }
     rotationRef[0] = displayRotation
     // ImageAnalysis 는 바인딩 시점의 회전값을 갖고 있어, 회전 후에는 직접 갱신해야 이미지가 바로 선다.
     val analysisRef = remember { arrayOfNulls<ImageAnalysis>(1) }
-    LaunchedEffect(displayRotation) { analysisRef[0]?.targetRotation = displayRotation }
+    val previewRef = remember { arrayOfNulls<Preview>(1) }
+    LaunchedEffect(displayRotation) {
+        analysisRef[0]?.targetRotation = displayRotation
+        previewRef[0]?.targetRotation = displayRotation
+    }
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
     var useFrontCamera by remember { mutableStateOf(true) }
@@ -674,7 +675,8 @@ fun PostureLiveSessionScreen(
             .setAspectRatioStrategy(AspectRatioStrategy.RATIO_4_3_FALLBACK_AUTO_STRATEGY)
             .setResolutionStrategy(ResolutionStrategy(Size(640, 480), ResolutionStrategy.FALLBACK_RULE_CLOSEST_HIGHER_THEN_LOWER))
             .build()
-        val preview = Preview.Builder().setResolutionSelector(previewSelector).build()
+        val preview = Preview.Builder().setResolutionSelector(previewSelector).setTargetRotation(displayRotation).build()
+        previewRef[0] = preview
             .also { it.surfaceProvider = previewView.surfaceProvider }
         val analysis = ImageAnalysis.Builder()
             .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
@@ -868,12 +870,37 @@ fun PostureLiveSessionScreen(
         }
     }
 
-    // ---- UI: 카메라 영역과 조작 영역을 **분리**한다 (spec §25c).
-    //      이전에는 풀블리드 카메라 위에 패널을 얹어 하단 31% 가 가려졌고, FILL_CENTER 라 영상의
-    //      좌우(세로 모드) 37% 가 잘려 보여 사용자가 프레이밍을 확인할 수 없었다.
-    //      이제 FIT_CENTER 로 카메라가 보는 전체를 남는 공간에 꽉 채우고, 패널은 그 바깥에 둔다.
-    val glass = if (c.isDark) Color(0xE61B2115) else Color(0xF2FFFFFF)
+    // 제어판은 영상 위에서 이동한다. FIT_CENTER와 카메라 크기는 열고 닫을 때 유지한다.
+    val panelController = remember(workout.id, useFrontCamera, displayRotation) { LivePanelController() }
+    var panelVisible by remember(panelController) { mutableStateOf(true) }
+    val currentPanelSample by rememberUpdatedState(sample)
+    val currentPanelSampleAt by rememberUpdatedState(sampleAt)
+    val keepPanelOpen by rememberUpdatedState(preparing || paused || cameraError != null)
+    LaunchedEffect(panelController) {
+        while (true) {
+            val now = android.os.SystemClock.elapsedRealtime()
+            val scale = if (now - currentPanelSampleAt in 0..900) currentPanelSample.panelBodyScale() else null
+            panelVisible = panelController.update(now, scale, keepPanelOpen)
+            kotlinx.coroutines.delay(150)
+        }
+    }
+    val panelProgress by animateFloatAsState(if (preparing || panelVisible) 1f else 0f, tween(280), label = "live-panel")
+    fun openPanel() { panelController.reveal(android.os.SystemClock.elapsedRealtime()); panelVisible = true }
+    fun closePanel() { if (!paused) { panelController.collapse(android.os.SystemClock.elapsedRealtime()); panelVisible = false } }
+
     val onCam = Color.White
+
+    val liveMessage = when {
+                        paused -> "일시정지"
+                        mode == CoachMode.TRACK || profile?.comparisonOnly == true -> comparison.message
+                        isFloorExercise -> floorFeedback?.message ?: "옆모습을 화면에 담아 주세요."
+                        !coverage.ok -> coverage.message
+                        viewEst?.cls?.let { !it.front && it != ViewEstimator.ViewClass.UNKNOWN } == true ->
+                            profile?.capture?.placement ?: "전신이 보이도록 자리 잡아 주세요."
+                        coachBanner != null -> coachBanner!!.message
+                        sample.features.isNotEmpty() -> "움직임을 비교하고 있어요."
+                        else -> "전신을 화면에 담아 주세요."
+                    }
 
     val cameraArea: @Composable (Modifier) -> Unit = { mod ->
         Box(mod.background(Color.Black)) {
@@ -894,6 +921,7 @@ fun PostureLiveSessionScreen(
                     .height(96.dp)
                     .background(Brush.verticalGradient(listOf(Color(0x99000000), Color.Transparent))),
             )
+            Column(Modifier.fillMaxWidth()) {
             Row(
                 Modifier
                     .statusBarsPadding()
@@ -908,12 +936,39 @@ fun PostureLiveSessionScreen(
                     Text(workout.name, color = onCam, fontSize = 22.sp, fontWeight = FontWeight.SemiBold,
                         modifier = Modifier.padding(top = 4.dp))
                 }
+                if (!preparing) Surface(shape = RoundedCornerShape(18.dp), color = Color(0xAA10140E)) {
+                    Column(Modifier.padding(horizontal = 14.dp, vertical = 10.dp), horizontalAlignment = Alignment.End) {
+                        if (workout.resolvedTarget() is WorkoutTarget.Duration) {
+                            RingGauge(1f - timeLeft.toFloat() / totalSeconds.coerceAtLeast(1), 66.dp, 3.dp) {
+                                Text(timeLeft.asClock(), color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+                            }
+                        } else Text("${repetitions}회", color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.SemiBold)
+                        Text(if (workout.resolvedTarget() is WorkoutTarget.Duration) "목표 ${totalSeconds.asClock()}" else "목표 ${workout.resolvedTarget().amount}회",
+                            color = Color.White.copy(alpha = .8f), fontSize = 11.sp)
+                    }
+                }
+            }
+            if (!preparing && !panelVisible) {
+                Surface(shape = RoundedCornerShape(16.dp), color = Color(0xAA10140E),
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
+                    Text(liveMessage, color = Color.White, fontSize = 14.sp,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 9.dp))
+                }
+            }
+            }
+            if (!preparing && !panelVisible) {
+                TextButton(onClick = { openPanel() }, modifier = Modifier.align(Alignment.BottomEnd)
+                    .navigationBarsPadding().padding(16.dp).heightIn(min = 48.dp)
+                    .clip(RoundedCornerShape(24.dp)).background(Color(0xCC10140E))) {
+                    Text("제어판 열기", color = Color.White, fontSize = 14.sp, modifier = Modifier.padding(horizontal = 12.dp))
+                }
             }
         }
     }
 
     val modeControl: @Composable () -> Unit = {
-        ModeSwitch(mode) { selected ->
+        CoachModeControl(mode, preparing) { selected ->
+            openPanel()
             mode = selected; modeRef[0] = selected
             modeStore.set(workout.name, selected)
             speech.stop(); comparisonSpeech.clear()
@@ -931,20 +986,8 @@ fun PostureLiveSessionScreen(
         ) else Column(mod) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(18.dp)) {
-                WorkoutGoalDisplay(workout, repetitions, timeLeft, totalSeconds, compact = true)
                 Column(Modifier.weight(1f)) {
-                    val message = when {
-                        paused -> "일시정지"
-                        mode == CoachMode.TRACK || profile?.comparisonOnly == true -> comparison.message
-                        isFloorExercise -> floorFeedback?.message ?: "옆모습을 화면에 담아 주세요."
-                        !coverage.ok -> coverage.message
-                        viewEst?.cls?.let { !it.front && it != ViewEstimator.ViewClass.UNKNOWN } == true ->
-                            profile?.capture?.placement ?: "전신이 보이도록 자리 잡아 주세요."
-                        coachBanner != null -> coachBanner!!.message
-                        sample.features.isNotEmpty() -> "움직임을 비교하고 있어요."
-                        else -> "전신을 화면에 담아 주세요."
-                    }
-                    AnimatedContent(targetState = message,
+                    AnimatedContent(targetState = liveMessage,
                         transitionSpec = { fadeIn(tween(180)) togetherWith fadeOut(tween(120)) }, label = "coach-cue") { msg ->
                         Text(msg, color = c.text, fontSize = 15.sp, lineHeight = 22.sp)
                     }
@@ -952,6 +995,11 @@ fun PostureLiveSessionScreen(
                         Text(if (repRef[0] == null) "직접 횟수 기록" else "자동 횟수 · 참고", color = c.text2,
                             fontSize = 11.sp, modifier = Modifier.padding(top = 6.dp))
                     }
+                }
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                TextButton(onClick = { closePanel() }, enabled = !paused) {
+                    Text("제어판 접기", color = c.text2, fontSize = 12.sp)
                 }
             }
             modeControl()
@@ -974,34 +1022,16 @@ fun PostureLiveSessionScreen(
         }
     }
 
-    // 세로: 카메라가 남는 세로 공간을 전부 차지하고 패널은 그 아래. 가로: 카메라 좌측, 패널 우측 고정폭.
     Box(Modifier.fillMaxSize().background(c.bg)) {
-        if (isLandscape) {
-            Row(Modifier.fillMaxSize()) {
-                cameraArea(Modifier.weight(1f).fillMaxHeight())
-                panel(
-                    Modifier
-                        .width(320.dp)
-                        .fillMaxHeight()
-                        .then(if (preparing) Modifier else Modifier.verticalScroll(rememberScrollState()))
-                        .statusBarsPadding()
-                        .navigationBarsPadding()
-                        .padding(horizontal = 12.dp, vertical = 10.dp),
-                )
-            }
-        } else {
-            Column(Modifier.fillMaxSize()) {
-                cameraArea(Modifier.fillMaxWidth().weight(1f))
-                panel(
-                    Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = (configuration.screenHeightDp * .55f).dp)
-                        .then(if (preparing) Modifier else Modifier.verticalScroll(rememberScrollState()))
-                        .navigationBarsPadding()
-                        .padding(horizontal = 12.dp, vertical = 10.dp),
-                )
-            }
-        }
+        PostureAdaptiveLayout(
+            preparing = preparing, immersive = !preparing, panelProgress = panelProgress,
+            camera = { cameraArea(Modifier.fillMaxSize()) },
+            controls = {
+                panel(Modifier.fillMaxSize().clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)).background(c.bg)
+                    .then(if (preparing) Modifier else Modifier.verticalScroll(rememberScrollState()))
+                    .padding(horizontal = 12.dp, vertical = 10.dp))
+            },
+        )
     }
 }
 
@@ -1030,25 +1060,6 @@ private fun GlassIcon(
         Box(contentAlignment = Alignment.Center) {
             Icon(icon, contentDescription = contentDescription, modifier = Modifier.size(17.dp))
         }
-    }
-}
-
-/** 코치/기록 모드 전환 (spec §29). 종목별로 저장되므로 스쿼트는 기록, 새 종목은 코치일 수 있다. */
-@Composable
-private fun ModeSwitch(mode: CoachMode, onSelect: (CoachMode) -> Unit) {
-    val c = Trex.c
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        Column(Modifier.weight(1f)) {
-            Text("기록 모드", color = c.text, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-            Text(if (mode == CoachMode.TRACK) "처음 자세와의 변화만 안내해요." else "끄면 자세 교정을 안내해요.",
-                color = c.text2, fontSize = 11.sp)
-        }
-        androidx.compose.material3.Switch(
-            checked = mode == CoachMode.TRACK,
-            onCheckedChange = { onSelect(if (it) CoachMode.TRACK else CoachMode.COACH) },
-            modifier = Modifier.semantics { contentDescription = "기록 모드" },
-        )
     }
 }
 

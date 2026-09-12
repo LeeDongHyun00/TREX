@@ -45,7 +45,7 @@ import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.RestartAlt
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
+import com.example.trex_kotlin.TrexText as Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -153,6 +153,7 @@ fun SessionTransitionScreen(step: SessionStep, timeLeft: Int, paused: Boolean,
 fun SessionCompleteScreen(
     plan: List<Workout>,
     elapsedSeconds: Int,
+    elapsedByWorkout: Map<String, Int> = emptyMap(),
     reports: Map<String, PostureSetReport> = emptyMap(),
     /** (setId, actualReps, repsSource "edited"|"confirmed"|null, form). */
     onLabel: (setId: String, actualReps: Int?, repsSource: String?, form: FormLabel?) -> Unit = { _, _, _, _ -> },
@@ -162,7 +163,7 @@ fun SessionCompleteScreen(
 ) {
     val c = Trex.c
     val doneCount = plan.count { it.done }
-    val kcal = plan.sumOf { it.estimatedCalories() }
+    val kcal = plan.sumOf { it.estimatedCalories(elapsedByWorkout[it.id] ?: 0) }
     // plan 순서로 늘어놓은 리포트 — 헤드라인 선택과 운동별 행이 같은 순서를 쓴다
     val ordered = plan.mapNotNull { reports[it.id] }
     val headline = sessionHeadline(ordered)

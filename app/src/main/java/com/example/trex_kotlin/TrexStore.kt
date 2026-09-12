@@ -12,10 +12,52 @@ import org.json.JSONObject
  * 기록이 통째로 사라졌다. SharedPreferences + JSON 으로 단순하게 저장하고, 서버가 붙으면
  * 이 클래스만 원격 동기화 구현으로 교체한다.
  */
-class TrexStore(context: Context) {
+class TrexStore(context: Context, preferenceName: String = "trex_store") {
 
     private val prefs: SharedPreferences =
-        context.applicationContext.getSharedPreferences("trex_store", Context.MODE_PRIVATE)
+        context.applicationContext.getSharedPreferences(preferenceName, Context.MODE_PRIVATE)
+
+    init { removeLegacyDemoData() }
+
+    /** 원본 JSON을 보존하며 샘플 날짜만 제거한다. 백업·정리·완료 표식은 한 번에 저장한다. */
+    private fun removeLegacyDemoData() {
+        if (prefs.getBoolean("demo_cleanup_v2", false)) return
+        val edit = prefs.edit()
+        val historyRaw = prefs.getString(KEY_HISTORY, null)
+        loadHistory()?.let { days ->
+            val before = JSONArray(historyRaw)
+            val after = JSONArray()
+            days.forEachIndexed { index, day ->
+                val rawDay = before.getJSONObject(index)
+                val knownDay = setOf("epochDay", "dayLabel", "dateLabel", "items", "averageMinutes", "averageCalories")
+                val knownItem = setOf("workoutName", "reps", "durationMinutes", "calories", "accuracy", "postureFocus", "category", "durationSeconds")
+                val rawItems = rawDay.getJSONArray("items")
+                val plain = rawDay.keys().asSequence().all { it in knownDay } && (0 until rawItems.length()).all { i ->
+                    rawItems.getJSONObject(i).keys().asSequence().all { it in knownItem }
+                }
+                if (!plain || !LegacyDemoData.isSampleDay(day)) after.put(rawDay)
+            }
+            if (after.length() != before.length()) {
+                edit.putString("before_demo_cleanup_history", historyRaw).putString(KEY_HISTORY, after.toString())
+            }
+        }
+        val dietRaw = prefs.getString(KEY_DIET, null)
+        loadDiet()?.let { days ->
+            val after = JSONObject(dietRaw)
+            var changed = false
+            days.forEach { (day, slots) ->
+                val rawSlots = after.getJSONObject(day.toString())
+                val knownFood = setOf("name", "kcal", "carb", "protein", "fat", "qty")
+                val plain = rawSlots.keys().asSequence().all { slot ->
+                    val foods = rawSlots.getJSONArray(slot)
+                    (0 until foods.length()).all { i -> foods.getJSONObject(i).keys().asSequence().all { it in knownFood } }
+                }
+                if (plain && LegacyDemoData.isSampleDiet(slots)) { after.remove(day.toString()); changed = true }
+            }
+            if (changed) edit.putString("before_demo_cleanup_diet", dietRaw).putString(KEY_DIET, after.toString())
+        }
+        edit.putBoolean("demo_cleanup_v2", true).commit()
+    }
 
     // ---- 진행 플래그
 
@@ -152,6 +194,8 @@ class TrexStore(context: Context) {
                             durationMinutes = it.getInt("durationMinutes"),
                             calories = it.getInt("calories"),
                             postureCorrection = if (legacy) null else readPostureCorrection(it),
+                            durationSeconds = it.optInt("durationSeconds", -1).takeIf { seconds -> seconds >= 0 },
+                            category = it.optString("category").takeIf(String::isNotBlank),
                             accuracy = if (legacy) null else it.optInt("accuracy", -1).takeIf { a -> a >= 0 },
                         )
                     },
@@ -187,6 +231,8 @@ class TrexStore(context: Context) {
                         .put("durationMinutes", item.durationMinutes)
                         .put("calories", item.calories)
                         .put("accuracy", item.accuracy ?: -1)
+                        .put("category", item.category ?: "")
+                        .put("durationSeconds", item.durationSeconds ?: -1)
                         .also { o -> writePostureCorrection(o, item.postureCorrection) },
                 )
             }

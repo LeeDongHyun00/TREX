@@ -88,11 +88,13 @@ data class SessionProgress(
     val repetitions: Int = 0,
     /** 수동 보정과 부분 수행을 원본 카메라 검출 수와 구분해 보존한다. */
     val recordedCounts: Map<Int, Int> = emptyMap(),
+    val workMillis: Map<Int, Long> = emptyMap(),
 ) {
     val secondsLeft get() = ((remainingMs.coerceAtLeast(0) + 999) / 1000).toInt()
-    fun tick(deltaMs: Long, paused: Boolean, timed: Boolean = true, trackElapsed: Boolean = true): SessionProgress = if (paused || index < 0) this else {
+    fun tick(deltaMs: Long, paused: Boolean, timed: Boolean = true, trackElapsed: Boolean = true, trackWork: Boolean = false): SessionProgress = if (paused || index < 0) this else {
         val consumed = if (timed) deltaMs.coerceAtLeast(0).coerceAtMost(remainingMs.coerceAtLeast(0)) else deltaMs.coerceAtLeast(0)
-        copy(remainingMs = if (timed) remainingMs - consumed else remainingMs, elapsedMs = elapsedMs + if (trackElapsed) consumed else 0)
+        copy(remainingMs = if (timed) remainingMs - consumed else remainingMs, elapsedMs = elapsedMs + if (trackElapsed) consumed else 0,
+            workMillis = if (trackWork) workMillis + (index to ((workMillis[index] ?: 0L) + consumed)) else workMillis)
     }
     fun setRepetitions(steps: List<SessionStep>, expectedToken: Int, value: Int): SessionProgress {
         val step = steps.getOrNull(index) ?: return this
@@ -124,3 +126,7 @@ data class SessionProgress(
     fun completedOriginalIds(steps: List<SessionStep>): Set<String> = steps.filter { it.phase == SessionPhase.WORK }.groupBy { it.originalId }
         .filterValues { group -> group.all { it.token in completed } }.keys
 }
+
+/** 휴식/준비는 제외하고 세트별 실제 가동 시간을 전달한다. */
+fun SessionProgress.workDurations(steps: List<SessionStep>): Map<String, Int> = steps.filter { it.phase == SessionPhase.WORK }
+    .associate { it.workout.id to ((workMillis[it.token] ?: 0L) / 1000).toInt() }

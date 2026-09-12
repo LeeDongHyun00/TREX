@@ -38,7 +38,7 @@ fun Workout.repsSpec(): RepsSpec = parseReps(reps)
 
 fun Workout.durationMinutes(): Int = timing().minutes
 
-fun Workout.estimatedCalories(): Int {
+fun Workout.estimatedCalories(elapsedSeconds: Int? = null): Int {
     val multiplier = when (category) {
         "유산소" -> 8
         "하체" -> 7
@@ -47,7 +47,7 @@ fun Workout.estimatedCalories(): Int {
         else -> 4
     }
     val timing = timing()
-    return (timing.workSeconds * timing.sets / 60.0 * multiplier).roundToInt().coerceAtLeast(1)
+    return ((elapsedSeconds ?: (timing.workSeconds * timing.sets)).coerceAtLeast(0) / 60.0 * multiplier).roundToInt().coerceAtLeast(0)
 }
 
 /** 세션 화면이 쓰는 실행 스펙. 설정한 세트 사이 휴식을 포함한다. */

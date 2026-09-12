@@ -34,7 +34,7 @@ import androidx.compose.material.icons.rounded.Restaurant
 import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
+import com.example.trex_kotlin.TrexText as Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -79,8 +79,8 @@ private val guidePages = listOf(
         asset = "trext_guideImage_phone3.svg",
     ),
     GuidePage(
-        headline = "사진 한 장으로\n식단 기록을 시작하세요",
-        body = "식사 사진을 고르면 음식을 분석하고 탄단지까지 정리해줘룡",
+        headline = "먹은 음식을 골라\n식단을 기록해룡",
+        body = "먹은 음식을 선택하면 칼로리와 탄단지까지 정리해룡",
         slot = "photo diet log",
         asset = "trext_guideImage_phone4.svg",
     ),
@@ -123,7 +123,7 @@ fun GuideBookScreen(onDone: () -> Unit) {
 
 @Composable
 private fun GuideCaption(page: Int, modifier: Modifier = Modifier) {
-    val titles = listOf("휴대폰을 놓고,\n전신을 담으세요.", "움직임을 보며,\n자세를 비교해요.", "운동의 변화를\n기록으로 남겨요.", "사진 한 장으로\n식단을 기록하세요.")
+    val titles = listOf("휴대폰을 놓고,\n전신을 담으세요.", "움직임을 보며,\n자세를 비교해요.", "운동의 변화를\n기록으로 남겨요.", "먹은 음식을 골라\n식단을 기록해룡.")
     Column(modifier) {
         Text(titles[page], color = Trex.c.text, fontSize = 27.sp, lineHeight = 35.sp, fontWeight = FontWeight.SemiBold)
     }

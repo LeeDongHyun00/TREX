@@ -52,7 +52,7 @@ import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
+import com.example.trex_kotlin.TrexText as Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -68,6 +68,9 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.imageResource
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -119,7 +122,7 @@ fun AuthScreen(
             .background(c.bg)
             .imePadding()
             .padding(horizontal = 26.dp)
-            .padding(top = 56.dp),
+            .verticalScroll(rememberScrollState()).padding(vertical = 20.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         // 로고 카드 + 워드마크
@@ -130,19 +133,14 @@ fun AuthScreen(
             border = BorderStroke(1.dp, c.line),
             shadowElevation = 2.dp,
         ) {
-            Image(
-                painter = painterResource(loginAnimationFrames[frame]),
-                contentDescription = "TREX",
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize(),
-            )
+            LoginLogo(frame, Modifier.fillMaxSize().padding(5.dp))
         }
         Text(
             "TREX",
             color = c.primaryText, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 5.sp,
             modifier = Modifier.padding(top = 12.dp),
         )
-        Text("바로 보고, 바로 고치고", color = c.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 3.dp))
+        Text("움직임을 보고 함께 운동해룡", color = c.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 3.dp))
 
         SegmentedTabs(
             options = listOf("로그인", "회원가입"),
@@ -153,9 +151,7 @@ fun AuthScreen(
 
         Column(
             Modifier
-                .weight(1f)
                 .fillMaxWidth()
-                .verticalScroll(rememberScrollState())
                 .padding(top = 18.dp),
         ) {
             AnimatedContent(
@@ -817,4 +813,20 @@ fun hasThreeConsecutiveDays(dayMask: Int): Boolean {
         if (first && second && third) return true
     }
     return false
+}
+
+/** 원본은 720×1280 투명 캔버스다. 애니메이션 전체에 같은 로고 영역을 사용해 중앙이 흔들리지 않게 한다. */
+@Composable
+internal fun LoginLogo(frame: Int, modifier: Modifier = Modifier) {
+    val bitmap = androidx.compose.ui.graphics.ImageBitmap.imageResource(loginAnimationFrames[frame])
+    androidx.compose.foundation.Canvas(modifier.semantics { contentDescription = "TREX 로고" }) {
+        val side = size.minDimension.toInt()
+        drawImage(
+            image = bitmap,
+            srcOffset = androidx.compose.ui.unit.IntOffset(180, 180),
+            srcSize = androidx.compose.ui.unit.IntSize(360, 360),
+            dstOffset = androidx.compose.ui.unit.IntOffset((size.width.toInt() - side) / 2, (size.height.toInt() - side) / 2),
+            dstSize = androidx.compose.ui.unit.IntSize(side, side),
+        )
+    }
 }

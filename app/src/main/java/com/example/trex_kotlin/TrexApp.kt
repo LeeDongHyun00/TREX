@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -40,7 +41,11 @@ import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Restaurant
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
+import com.example.trex_kotlin.TrexText as Text
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
@@ -126,13 +131,18 @@ fun TrexApp(app: AppViewModel = viewModel()) {
         var subScreen by rememberSaveable { mutableStateOf("none") } // none | find | guide | record | postureLab | baselineGuide
         var progress by rememberSaveable(stateSaver = listSaver<SessionProgress, Any>(
             save = { listOf(it.index, it.remainingMs, it.elapsedMs, it.completed.joinToString(","), it.skipped.joinToString(","),
-                it.repetitions, it.recordedCounts.entries.joinToString(",") { entry -> "${entry.key}:${entry.value}" }) },
+                it.repetitions, it.recordedCounts.entries.joinToString(",") { entry -> "${entry.key}:${entry.value}" },
+                it.workMillis.entries.joinToString(",") { entry -> "${entry.key}:${entry.value}" }) },
             restore = { SessionProgress(it[0] as Int, it[1] as Long, it[2] as Long,
                 (it[3] as String).split(',').mapNotNull(String::toIntOrNull).toSet(),
                 (it[4] as String).split(',').mapNotNull(String::toIntOrNull).toSet(),
                 it.getOrNull(5) as? Int ?: 0,
                 (it.getOrNull(6) as? String).orEmpty().split(',').mapNotNull { pair ->
                     val parts = pair.split(':'); val key = parts.firstOrNull()?.toIntOrNull(); val value = parts.getOrNull(1)?.toIntOrNull()
+                    if (key != null && value != null) key to value else null
+                }.toMap(),
+                (it.getOrNull(7) as? String).orEmpty().split(',').mapNotNull { pair ->
+                    val parts = pair.split(':'); val key = parts.firstOrNull()?.toIntOrNull(); val value = parts.getOrNull(1)?.toLongOrNull()
                     if (key != null && value != null) key to value else null
                 }.toMap()) },
         )) { mutableStateOf(SessionProgress(-1, 0)) }
@@ -201,7 +211,7 @@ fun TrexApp(app: AppViewModel = viewModel()) {
             progress.completedOriginalIds(steps).forEach { app.markWorkoutDone(it) }
             sessionPaused = false
             if (progress.index < 0) {
-                app.recordCompletedSession((progress.elapsedMs / 1000).toInt(), progress.completedWorkouts(steps))
+                app.recordCompletedSession((progress.elapsedMs / 1000).toInt(), progress.completedWorkouts(steps), progress.workDurations(steps))
                 sessionDone = true
             }
         }
@@ -216,7 +226,7 @@ fun TrexApp(app: AppViewModel = viewModel()) {
         }
 
         fun exitAndRecord() {
-            app.recordCompletedSession(sessionElapsed, progress.completedWorkouts(steps))
+            app.recordCompletedSession(sessionElapsed, progress.completedWorkouts(steps), progress.workDurations(steps))
             exitSession()
         }
 
@@ -236,7 +246,7 @@ fun TrexApp(app: AppViewModel = viewModel()) {
                 delay(100)
                 val now = android.os.SystemClock.elapsedRealtime()
                 progress = progress.tick(now - last, pausedState.value, timed = step?.timed == true,
-                    trackElapsed = step?.phase != SessionPhase.PREPARE)
+                    trackElapsed = step?.phase != SessionPhase.PREPARE, trackWork = step?.phase == SessionPhase.WORK)
                 last = now
                 if (!pausedState.value && step?.timed == true && progress.targetReached(step)) advanceLatest.value(token, false)
             }
@@ -276,126 +286,136 @@ fun TrexApp(app: AppViewModel = viewModel()) {
             if (sessionIndex >= 0) requestExit() else subScreen = "none"
         }
 
-        Box(Modifier.fillMaxSize().background(c.bg)) {
-            AnimatedContent(
-                targetState = route to sessionIndex,
-                // 준비→운동은 같은 세트의 카메라·분석기를 유지하고 UI/기록 모드만 바꾼다.
-                contentKey = { (screen, token) ->
-                    if (screen == RootRoute.PostureSession) screen to steps.getOrNull(token)?.workout?.id
-                    else screen to token
-                },
-                transitionSpec = {
-                    val sessionTransition = initialState.second >= 0 || targetState.second >= 0
-                    val forward = targetState.first.ordinal >= initialState.first.ordinal
-                    if (sessionTransition) {
-                        fadeIn(tween(0)) togetherWith fadeOut(tween(0))
-                    } else if (forward) {
-                        (slideInHorizontally(tween(360)) { it / 3 } + fadeIn(tween(300))) togetherWith
+        CompositionLocalProvider(LocalTrexFold provides rememberTrexFold()) {
+            Box(Modifier.fillMaxSize().background(c.bg).safeDrawingPadding()) {
+                TrexContentFrame(maxWidth = if (route in setOf(RootRoute.Auth, RootRoute.Find, RootRoute.Onboarding)) 600.dp else 840.dp,
+                useWholeWindow = route == RootRoute.PostureSession) {
+                    AnimatedContent(
+                    targetState = route to sessionIndex,
+                    // 준비→운동은 같은 세트의 카메라·분석기를 유지하고 UI/기록 모드만 바꾼다.
+                    contentKey = { (screen, token) ->
+                        if (screen == RootRoute.PostureSession) screen to steps.getOrNull(token)?.workout?.id
+                        else screen to token
+                    },
+                    transitionSpec = {
+                        val sessionTransition = initialState.second >= 0 || targetState.second >= 0
+                        val forward = targetState.first.ordinal >= initialState.first.ordinal
+                        if (sessionTransition) {
+                            fadeIn(tween(0)) togetherWith fadeOut(tween(0))
+                        } else if (forward) {
+                            (slideInHorizontally(tween(360)) { it / 3 } + fadeIn(tween(300))) togetherWith
                             (slideOutHorizontally(tween(360)) { -it / 4 } + fadeOut(tween(240)))
-                    } else {
-                        (slideInHorizontally(tween(360)) { -it / 3 } + fadeIn(tween(300))) togetherWith
+                        } else {
+                            (slideInHorizontally(tween(360)) { -it / 3 } + fadeIn(tween(300))) togetherWith
                             (slideOutHorizontally(tween(360)) { it / 4 } + fadeOut(tween(240)))
+                        }
+                    },
+                    label = "trex-route",
+                    ) { (r, renderedIndex) ->
+                        val renderedStep = steps.getOrNull(renderedIndex)
+                        when (r) {
+                            RootRoute.Guide -> GuideBookScreen(
+                            onDone = {
+                                app.completeGuide()
+                                subScreen = "none"
+                            },
+                            )
+
+                            RootRoute.Auth -> AuthScreen(
+                            onLogin = { app.completeLogin() },
+                            onOpenFind = { subScreen = "find" },
+                            )
+
+                            RootRoute.Find -> FindAccountScreen(onBack = { subScreen = "none" })
+
+                            RootRoute.Onboarding -> OnboardingScreen(onDone = { profile -> app.completeOnboarding(profile) })
+
+                            RootRoute.Complete -> SessionCompleteScreen(
+                            plan = progress.completedWorkouts(steps),
+                            elapsedSeconds = sessionElapsed,
+                            elapsedByWorkout = progress.workDurations(steps),
+                            reports = app.sessionPostureReports,
+                            onLabel = { setId, actualReps, repsSource, form -> app.labelPostureSet(setId, actualReps, repsSource, form) },
+                            speak = { speech.speak(it, flush = false) },
+                            onDone = { exitSession() },
+                            )
+
+                            RootRoute.TransitionSession -> renderedStep?.let { current ->
+                                SessionTransitionScreen(current, sessionTimeLeft, sessionPaused || appPaused || exitAsk,
+                                onTogglePause = { sessionPaused = !sessionPaused },
+                                onNext = { nextSession(current.token, true) }, onExit = { requestExit() })
+                            }
+
+                            RootRoute.PostureSession -> renderedStep?.let { current -> key(current.workout.id) {
+                                    val w = current.workout
+                                    PostureLiveSessionScreen(
+                                    workout = w, index = current.exerciseIndex, total = plan.size,
+                                    setLabel = current.setLabel, timeLeft = sessionTimeLeft, totalSeconds = current.seconds,
+                                    paused = sessionPaused || appPaused || exitAsk,
+                                    onTogglePause = { sessionPaused = !sessionPaused },
+                                    onNext = { nextSession(current.token, false) },
+                                    onSkip = { nextSession(current.token, true) }, onExit = { requestExit() },
+                                    repetitions = progress.repetitions,
+                                    onRepetitions = { count -> progress = progress.setRepetitions(steps, current.token, count) },
+                                    onRepDetected = { if (!pausedState.value) progress = progress.setRepetitions(steps, current.token, progress.repetitions + 1) },
+                                    onPartial = { nextSession(current.token, true) },
+                                    onSetReport = { app.addPostureReport(w.id, it) },
+                                    registerFinalizer = { finish -> if (finish == null) finalizers.remove(w.id) else finalizers[w.id] = finish },
+                                    onFallbackToTimer = { if (w.id !in postureFallback) postureFallback.add(w.id) },
+                                    speech = speech,
+                                    preparing = current.phase == SessionPhase.PREPARE,
+                                    onPrepared = { nextSession(current.token, true) },
+                                    )
+                                } }
+
+                            RootRoute.TimerSession -> renderedStep?.let { current -> key(current.workout.id) {
+                                    TimerSessionScreen(
+                                    workout = current.workout, index = current.exerciseIndex, total = plan.size,
+                                    setLabel = current.setLabel, timeLeft = sessionTimeLeft, totalSeconds = current.seconds,
+                                    paused = sessionPaused || appPaused || exitAsk,
+                                    onTogglePause = { sessionPaused = !sessionPaused },
+                                    onNext = { nextSession(current.token, false) },
+                                    onSkip = { nextSession(current.token, true) }, onExit = { requestExit() },
+                                    repetitions = progress.repetitions,
+                                    onRepetitions = { count -> progress = progress.setRepetitions(steps, current.token, count) },
+                                    onPartial = { nextSession(current.token, true) },
+                                    )
+                                } }
+
+                            RootRoute.Record -> RecordScreen(app = app, onBack = { subScreen = "none" })
+                            RootRoute.DietRecord -> DietRecordScreen(app = app, onBack = { subScreen = "none" })
+
+                            RootRoute.PostureLab -> PostureLabScreen(onClose = { subScreen = "none" })
+                            RootRoute.BaselineGuide -> BaselineGuideScreen(onClose = { subScreen = "none" })
+
+                            RootRoute.Main -> MainTabs(
+                            app = app,
+                            selectedTab = selectedTab,
+                            onTabSelected = { selectedTab = it },
+                            onStartWorkout = { startSession() },
+                            onOpenRecord = { subScreen = "record" },
+                            onOpenDietRecord = { subScreen = "dietRecord" },
+                            )
+                        }
                     }
-                },
-                label = "trex-route",
-            ) { (r, renderedIndex) ->
-                val renderedStep = steps.getOrNull(renderedIndex)
-                when (r) {
-                    RootRoute.Guide -> GuideBookScreen(
-                        onDone = {
-                            app.completeGuide()
-                            subScreen = "none"
-                        },
-                    )
 
-                    RootRoute.Auth -> AuthScreen(
-                        onLogin = { app.completeLogin() },
-                        onOpenFind = { subScreen = "find" },
-                    )
-
-                    RootRoute.Find -> FindAccountScreen(onBack = { subScreen = "none" })
-
-                    RootRoute.Onboarding -> OnboardingScreen(onDone = { profile -> app.completeOnboarding(profile) })
-
-                    RootRoute.Complete -> SessionCompleteScreen(
-                        plan = progress.completedWorkouts(steps),
-                        elapsedSeconds = sessionElapsed,
-                        reports = app.sessionPostureReports,
-                        onLabel = { setId, actualReps, repsSource, form -> app.labelPostureSet(setId, actualReps, repsSource, form) },
-                        speak = { speech.speak(it, flush = false) },
-                        onDone = { exitSession() },
-                    )
-
-                    RootRoute.TransitionSession -> renderedStep?.let { current ->
-                        SessionTransitionScreen(current, sessionTimeLeft, sessionPaused || appPaused || exitAsk,
-                            onTogglePause = { sessionPaused = !sessionPaused },
-                            onNext = { nextSession(current.token, true) }, onExit = { requestExit() })
+                    if (exitAsk) {
+                        TrexContentFrame(maxWidth = 600.dp) {
+                            SessionExitSheet(
+                            doneCount = progress.completedWorkouts(steps).size,
+                            onRecord = { exitAndRecord() },
+                            onDiscard = { exitSession() },
+                            onCancel = { exitAsk = false },
+                            )
+                        }
                     }
-
-                    RootRoute.PostureSession -> renderedStep?.let { current -> key(current.workout.id) {
-                        val w = current.workout
-                        PostureLiveSessionScreen(
-                            workout = w, index = current.exerciseIndex, total = plan.size,
-                            setLabel = current.setLabel, timeLeft = sessionTimeLeft, totalSeconds = current.seconds,
-                            paused = sessionPaused || appPaused || exitAsk,
-                            onTogglePause = { sessionPaused = !sessionPaused },
-                            onNext = { nextSession(current.token, false) },
-                            onSkip = { nextSession(current.token, true) }, onExit = { requestExit() },
-                            repetitions = progress.repetitions,
-                            onRepetitions = { count -> progress = progress.setRepetitions(steps, current.token, count) },
-                            onRepDetected = { if (!pausedState.value) progress = progress.setRepetitions(steps, current.token, progress.repetitions + 1) },
-                            onPartial = { nextSession(current.token, true) },
-                            onSetReport = { app.addPostureReport(w.id, it) },
-                            registerFinalizer = { finish -> if (finish == null) finalizers.remove(w.id) else finalizers[w.id] = finish },
-                            onFallbackToTimer = { if (w.id !in postureFallback) postureFallback.add(w.id) },
-                            speech = speech,
-                            preparing = current.phase == SessionPhase.PREPARE,
-                            onPrepared = { nextSession(current.token, true) },
-                        )
-                    } }
-
-                    RootRoute.TimerSession -> renderedStep?.let { current -> key(current.workout.id) {
-                        TimerSessionScreen(
-                            workout = current.workout, index = current.exerciseIndex, total = plan.size,
-                            setLabel = current.setLabel, timeLeft = sessionTimeLeft, totalSeconds = current.seconds,
-                            paused = sessionPaused || appPaused || exitAsk,
-                            onTogglePause = { sessionPaused = !sessionPaused },
-                            onNext = { nextSession(current.token, false) },
-                            onSkip = { nextSession(current.token, true) }, onExit = { requestExit() },
-                            repetitions = progress.repetitions,
-                            onRepetitions = { count -> progress = progress.setRepetitions(steps, current.token, count) },
-                            onPartial = { nextSession(current.token, true) },
-                        )
-                    } }
-
-                    RootRoute.Record -> RecordScreen(app = app, onBack = { subScreen = "none" })
-                    RootRoute.DietRecord -> DietRecordScreen(app = app, onBack = { subScreen = "none" })
-
-                    RootRoute.PostureLab -> PostureLabScreen(onClose = { subScreen = "none" })
-                    RootRoute.BaselineGuide -> BaselineGuideScreen(onClose = { subScreen = "none" })
-
-                    RootRoute.Main -> MainTabs(
-                        app = app,
-                        selectedTab = selectedTab,
-                        onTabSelected = { selectedTab = it },
-                        onStartWorkout = { startSession() },
-                        onOpenRecord = { subScreen = "record" },
-                        onOpenDietRecord = { subScreen = "dietRecord" },
-                    )
                 }
             }
-
-            if (exitAsk) {
-                SessionExitSheet(
-                    doneCount = progress.completedWorkouts(steps).size,
-                    onRecord = { exitAndRecord() },
-                    onDiscard = { exitSession() },
-                    onCancel = { exitAsk = false },
-                )
-            }
         }
+
     }
 }
+
 
 /**
  * 세션 ✕ 확인 — 완료한 운동을 오늘 기록에 남길지 묻는다.
@@ -456,7 +476,10 @@ private fun MainTabs(
         navExpanded = selectedTab in setOf(TrexTab.Workout, TrexTab.Diet)
     }
 
+    val density = LocalDensity.current
+    var navSpace by remember { mutableStateOf(110.dp) }
     Box(Modifier.fillMaxSize().background(c.bg)) {
+        CompositionLocalProvider(LocalTrexNavSpace provides navSpace) {
         AnimatedContent(
             targetState = selectedTab,
             transitionSpec = {
@@ -476,6 +499,7 @@ private fun MainTabs(
                     app = app,
                     onGoWorkout = { onTabSelected(TrexTab.Workout) },
                     onGoDiet = { onTabSelected(TrexTab.Diet) },
+                    onRecordMeal = { sheet = MainSheet.Manual(currentMealId()) },
                 )
 
                 TrexTab.Workout -> WorkoutTabScreen(
@@ -499,6 +523,7 @@ private fun MainTabs(
                     onLogout = { app.logout() },
                 )
             }
+        }
         }
         SideEffect { lastTabOrdinal = selectedTab.ordinal }
 
@@ -529,6 +554,7 @@ private fun MainTabs(
             },
             modifier = Modifier
                 .align(Alignment.BottomCenter)
+                .onSizeChanged { navSpace = with(density) { it.height.toDp() } + 12.dp }
                 .navigationBarsPadding()
                 .padding(horizontal = 16.dp)
                 .padding(bottom = 16.dp),
@@ -624,6 +650,7 @@ private fun MorphNav(
         }
     }
 
+    val largeText = LocalDensity.current.fontScale > 1.3f
     Row(modifier = modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         slots.forEachIndexed { i, slot ->
             val weight = slot.weight
@@ -634,7 +661,7 @@ private fun MorphNav(
                 enabled = slot.alpha > 0.1f,
                 modifier = Modifier
                     .weight(weight.coerceAtLeast(0.0001f))
-                    .height(h)
+                    .heightIn(min = h)
                     .alpha(alpha),
                 shape = RoundedCornerShape(999.dp),
                 color = slot.bg,
@@ -642,8 +669,15 @@ private fun MorphNav(
                 border = androidx.compose.foundation.BorderStroke(1.dp, slot.line),
                 shadowElevation = if (slot.elevated) 3.dp else 1.dp,
             ) {
-                Row(
-                    modifier = Modifier.fillMaxSize(),
+                if (largeText) {
+                    Column(Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 10.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(slot.icon, contentDescription = slot.label, modifier = Modifier.size(19.dp))
+                        if (slot.showLabel) Text(slot.label, fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold,
+                            textAlign = TextAlign.Center)
+                    }
+                } else Row(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 17.dp),
                     horizontalArrangement = androidx.compose.foundation.layout.Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {

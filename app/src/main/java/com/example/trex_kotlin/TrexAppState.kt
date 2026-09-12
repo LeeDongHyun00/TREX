@@ -93,7 +93,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     var workoutPlan by mutableStateOf(store.loadPlan() ?: todayPlan)
         private set
 
-    var workoutHistory by mutableStateOf(store.loadHistory() ?: seedWorkoutHistory(todayPlan))
+    var workoutHistory by mutableStateOf(store.loadHistory() ?: emptyList())
         private set
 
     var calendarDay by mutableStateOf(LocalDate.now().toEpochDay())
@@ -139,11 +139,11 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         )
     }
 
-    fun recordCompletedSession(elapsedSeconds: Int, completedPlan: List<Workout> = workoutPlan.filter { it.done }) {
+    fun recordCompletedSession(elapsedSeconds: Int, completedPlan: List<Workout> = workoutPlan.filter { it.done }, elapsedByWorkout: Map<String, Int> = emptyMap()) {
         if (completedPlan.isEmpty()) return
         // 리포트 맵은 여기서 비우지 않는다 — 완료 화면이 같은 맵을 읽고, 다음 startSession 이 비운다
         workoutHistory = workoutHistory.replaceTodayWith(
-            createWorkoutHistoryDay(completedPlan, elapsedSeconds, sessionPostureReports.toMap()),
+            createWorkoutHistoryDay(completedPlan, elapsedSeconds, sessionPostureReports.toMap(), elapsedByWorkout),
         )
         store.saveHistory(workoutHistory)
     }
@@ -216,7 +216,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     // ---- 식단 (epochDay 기준 저장, 화면에는 오늘 기준 offset 으로 노출)
 
     var dietByDay by mutableStateOf(
-        store.loadDiet() ?: mapOf(LocalDate.now().toEpochDay() to seedFoods()),
+        store.loadDiet() ?: emptyMap(),
     )
         private set
 

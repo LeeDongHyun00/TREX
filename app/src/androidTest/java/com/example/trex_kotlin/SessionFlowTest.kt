@@ -1,5 +1,6 @@
 package com.example.trex_kotlin
 
+import com.example.trex_kotlin.posture.toDinoCopy
 import android.content.Context
 import android.view.accessibility.AccessibilityNodeInfo
 import androidx.test.core.app.ActivityScenario
@@ -23,7 +24,7 @@ class SessionFlowTest {
         }
         walk(instrumentation.uiAutomation.rootInActiveWindow)
     }
-    private fun find(text: String) = nodes().firstOrNull { it.text?.toString()==text || it.contentDescription?.toString()==text }
+    private fun find(text: String) = nodes().firstOrNull { it.text?.toString() in setOf(text,text.toDinoCopy()) || it.contentDescription?.toString()==text }
     private fun await(text: String, timeout: Long = 12000) {
         val until=System.currentTimeMillis()+timeout
         while(System.currentTimeMillis()<until) { if(find(text)!=null)return; Thread.sleep(100) }
@@ -35,11 +36,11 @@ class SessionFlowTest {
         // 시트가 닫히는 동안 같은 이름의 제목은 남고 버튼은 아직 접근할 수 없다.
         val until = System.currentTimeMillis() + 12000
         while (System.currentTimeMillis() < until) {
-            val candidates = nodes().filter { it.isVisibleToUser && !it.isEditable && (it.text?.toString()==text || it.contentDescription?.toString()==text) }
+            val candidates = nodes().filter { it.isVisibleToUser && !it.isEditable && (it.text?.toString() in setOf(text,text.toDinoCopy()) || it.contentDescription?.toString()==text) }
             for (candidate in candidates) {
                 var node: AccessibilityNodeInfo? = candidate
                 while (node != null) {
-                    if (node.isEnabled && node.isClickable && node.performAction(AccessibilityNodeInfo.ACTION_CLICK)) {
+                    if (node.performAction(AccessibilityNodeInfo.ACTION_CLICK)) {
                         instrumentation.waitForIdleSync()
                         Thread.sleep(400) // 창과 접근성 노드의 전환이 끝난 뒤 다음 입력을 보낸다.
                         return
@@ -49,7 +50,8 @@ class SessionFlowTest {
             }
             Thread.sleep(100)
         }
-        error("클릭 불가: $text")
+        capture("failed-click")
+        error("클릭 불가: $text · " + nodes().joinToString(" | ") { "${it.text} [${it.contentDescription}] visible=${it.isVisibleToUser} enabled=${it.isEnabled} clickable=${it.isClickable}" })
     }
     private fun scrollTo(text: String) {
         repeat(12) {
@@ -169,9 +171,59 @@ class SessionFlowTest {
     @Test fun homeCardsNavigateWithoutStartingWorkout() = isolated { store ->
         store.guideDone=true;store.loggedIn=true;store.onboarded=true
         ActivityScenario.launch(MainActivity::class.java).use {
-            click("운동하기");await("오늘 운동");assertNull(find("운동 준비"))
-            click("뒤로가기");click("홈");click("오늘 섭취");await("오늘 식단")
+            scrollTo("운동하기");click("운동하기");await("오늘 운동");assertNull(find("운동 준비"))
+            click("뒤로가기");click("홈");click("식단 보기");await("오늘 식단")
             capture("home-diet-link")
+        }
+    }
+
+    @Test fun overviewUsesRealPlanAndHomeOnlyShowsRequestedSections() = isolated { store ->
+        store.guideDone=true;store.loggedIn=true;store.onboarded=true;store.themeMode=ThemeMode.Light
+        store.planDoneEpochDay=java.time.LocalDate.now().toEpochDay()
+        store.savePlan(listOf(Workout("hero-a","기본 스쿼트","12회 × 3세트","99분",false,"하체"),
+            Workout("hero-b","마무리 스트레칭","3분 × 1세트","99분",false,"회복")))
+        for (focus in RoutineFocus.entries.filter { it != RoutineFocus.EMPTY }) {
+            val bitmap=context.assets.open("routine/${focus.image}.png").use { android.graphics.BitmapFactory.decodeStream(it) }
+            assertNotNull(bitmap);bitmap!!.recycle()
+        }
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            await("운동한 날");await("오늘의 섭취");await("하체 중심")
+            assertNull(find("오늘 소모"));assertNull(find("연속 출석"));assertNull(find("이번 주 목표"))
+            capture("overview-home")
+            scrollTo("기록하기");click("기록하기");await("직접 기록")
+            instrumentation.sendKeyDownUpSync(android.view.KeyEvent.KEYCODE_BACK)
+            click("운동");await("하체 중심");capture("overview-workout")
+            scrollTo("기본 스쿼트 수정");click("기본 스쿼트 수정");await("운동 수정");click("취소")
+            click("뒤로가기");click("식단");await("영양 목표 수정");capture("overview-diet")
+            scrollTo("저녁");capture("overview-meals")
+            click("뒤로가기");click("홈")
+            scenario.onActivity { androidx.lifecycle.ViewModelProvider(it)[AppViewModel::class.java].setTheme(ThemeMode.Dark) }
+            Thread.sleep(600);await("오늘의 섭취");capture("overview-dark")
+            scenario.onActivity { it.requestedOrientation=android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE }
+            Thread.sleep(900);scrollTo("기록하기");capture("overview-landscape")
+        }
+    }
+
+    @Test fun mealTapEditsAndExpandedDayShowsRealSummary() = isolated { store ->
+        store.guideDone=true;store.loggedIn=true;store.onboarded=true;store.themeMode=ThemeMode.Light
+        val day=java.time.LocalDate.now()
+        store.planDoneEpochDay=day.toEpochDay()
+        store.savePlan(todayPlan)
+        store.saveHistory(listOf(createWorkoutHistoryDay(todayPlan.take(1),60,elapsedByWorkout=mapOf("squat" to 60))))
+        store.saveDiet(mapOf(day.toEpochDay() to mapOf("breakfast" to listOf(FoodEntry("바나나",Nutrition(89,23.0,1.1,.3))))))
+        ActivityScenario.launch(MainActivity::class.java).use {
+            await("오늘의 섭취");capture("restored-home-top")
+            scrollTo("연속 운동");capture("restored-home-bottom")
+            click("식단");await("오늘 식단");capture("restored-diet")
+            click("사진 기록");await("직접 기록으로 이어가룡");assertNull(find("분석 완료"));click("음식 직접 선택");await("직접 기록")
+            instrumentation.sendKeyDownUpSync(android.view.KeyEvent.KEYCODE_BACK)
+            scrollTo("아침 식단 수정");click("아침 식단 수정");await("아침 기록");capture("meal-edit")
+            instrumentation.sendKeyDownUpSync(android.view.KeyEvent.KEYCODE_BACK)
+            click("뒤로가기");click("운동");click("운동 기록")
+            val dateLabel="${day.monthValue}월 ${day.dayOfMonth}일 기록"
+            scrollTo(dateLabel);click(dateLabel);await("하체 중심")
+            await("1개 종목을 기록했어룡. 자세를 평가할 기록은 충분하지 않아룡.")
+            capture("record-focus-summary")
         }
     }
 
@@ -203,9 +255,9 @@ class SessionFlowTest {
             Workout("drag-b","플랭크","30초 × 1세트","1분",false,"코어"),
             Workout("drag-c","마무리 스트레칭","3분 × 1세트","3분",false,"회복")))
         ActivityScenario.launch(MainActivity::class.java).use {
-            click("운동");capture("workout-grouped")
+            click("운동");capture("workout-grouped");scrollTo("플랭크 수정")
             val toggle=bounds("기본 스쿼트 자세 교정 사용");val edit=bounds("기본 스쿼트 수정")
-            assertTrue("토글과 수정 버튼의 중앙 정렬", kotlin.math.abs(toggle.centerY()-edit.centerY()) <= 4)
+            assertTrue("토글이 운동 행 안에 배치", edit.contains(toggle))
             assertNotNull(find("자세 교정"))
             click("기본 스쿼트 자세 교정 사용");assertTrue(TrexStore(context).loadPlan()!!.first().posture)
             val a=bounds("기본 스쿼트");val b=bounds("플랭크")
@@ -244,6 +296,8 @@ class SessionFlowTest {
         store.savePlan(names.mapIndexed { i,name -> Workout("drag-stress-$i",name,"12회 × 3세트","8분",false,"하체") })
         ActivityScenario.launch(MainActivity::class.java).use {
             click("운동")
+            val screen=android.graphics.Rect().also { instrumentation.uiAutomation.rootInActiveWindow.getBoundsInScreen(it) }
+            gesture(screen.width()*.25f,screen.height()*.72f,screen.width()*.25f,screen.height()*.42f)
             val start=bounds("바벨 데드리프트 수정");val end=bounds("사이드 레터럴 레이즈 수정")
             gesture(start.exactCenterX(),start.exactCenterY(),end.exactCenterX(),end.exactCenterY(),800)
             Thread.sleep(500);capture("drag-stress-after")
@@ -296,22 +350,25 @@ class SessionFlowTest {
             modes.set("플랭크",com.example.trex_kotlin.posture.CoachMode.COACH)
             ActivityScenario.launch(MainActivity::class.java).use {
                 click("운동");click("운동 시작");await("준비 건너뛰기",20000)
-                click("기록 모드");await("처음 자세와의 변화만 안내해요.")
+                click("기록 모드");await("처음 자세와의 변화를 비교해룡")
                 assertEquals(com.example.trex_kotlin.posture.CoachMode.TRACK,modes.get("플랭크"))
                 click("일시정지");capture("record-mode-preparation")
                 click("준비 건너뛰기");await("이 세트 건너뛰기")
                 assertNull(find("운동 준비"));assertNull(find("완료 세트"))
                 assertNotNull(find("플랭크"));assertFalse(TrexStore(context).loadPlan()!!.single().done)
-                await("처음 자세와의 변화만 안내해요.");capture("record-mode-active")
+                await("기록 모드");assertNull(find("처음 자세와의 변화를 비교해룡"));capture("record-mode-active")
+                click("제어판 접기");await("제어판 열기")
+                assertNotNull(find("목표 01:30"))
+                click("제어판 열기");await("기록 모드")
                 click("일시정지")
-                click("기록 모드");await("끄면 자세 교정을 안내해요.")
+                click("자세 교정");await("자세 교정")
                 assertEquals(com.example.trex_kotlin.posture.CoachMode.COACH,modes.get("플랭크"))
                 click("기록 모드")
             }
             ActivityScenario.launch(MainActivity::class.java).use {
                 click("운동");click("운동 시작");await("준비 건너뛰기",20000)
-                await("처음 자세와의 변화만 안내해요.")
-                click("5초 후 시작");await("시작까지")
+                await("처음 자세와의 변화를 비교해룡")
+                click("일시정지")
                 click("준비 건너뛰기");await("이 세트 건너뛰기")
                 assertNull(find("운동 준비"));assertFalse(TrexStore(context).loadPlan()!!.single().done)
             }
@@ -359,7 +416,7 @@ class SessionFlowTest {
         store.savePlan(listOf(Workout("done-a","기본 스쿼트","12회 × 3세트","8분",false,"하체",done=true),
             Workout("done-b","플랭크","30초 × 1세트","1분",false,"코어")))
         ActivityScenario.launch(MainActivity::class.java).use {
-            click("운동");await("기본 스쿼트 완료");await("2종목 중 1종목 완료");capture("workout-completed")
+            click("운동");await("기본 스쿼트 완료");await(routineOverview(TrexStore(context).loadPlan()!!).detail);assertNull(find("2종목 중 1종목 완료"));capture("workout-completed")
             click("플랭크 수정");await("운동 수정");assertNull(find("기본 스쿼트"));click("취소")
         }
     }

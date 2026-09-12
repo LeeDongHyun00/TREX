@@ -3,6 +3,7 @@ package com.example.trex_kotlin
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -27,6 +28,7 @@ import kotlin.math.roundToInt
 import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material3.*
+import com.example.trex_kotlin.TrexText as Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -141,23 +143,21 @@ fun WorkoutTabScreen(app: AppViewModel, onOpenAlt: (Workout) -> Unit, onOpenSets
                     }
                 } finally { finishDrag(dropped) }
             }
-        }, state=state, contentPadding=tabContentPadding) {
+        }, state=state, contentPadding=tabContentPadding, verticalArrangement=Arrangement.spacedBy(10.dp)) {
             item(key="workout-header") {
                 Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
                     Text("오늘 운동",color=c.text,fontSize=30.sp,fontWeight=FontWeight.SemiBold,modifier=Modifier.weight(1f))
                     IconButton(onClick=onAddWorkout,enabled=canClick) { Icon(Icons.Rounded.Add,"운동 추가",tint=c.primaryText) }
                 }
-                val completed=plan.count { it.done }
-                Text(if(completed>0) "${plan.size}종목 중 ${completed}종목 완료" else "${plan.size}종목 · ${plan.sumOf { it.repsSpec().sets }}세트",
-                    color=c.text2,fontSize=14.sp,modifier=Modifier.padding(top=8.dp,bottom=26.dp))
+                Spacer(Modifier.height(22.dp))
+                RoutineHero(remember(plan) { routineOverview(plan) })
+                Text("운동 목록", color=c.text, fontSize=18.sp, fontWeight=FontWeight.Medium,
+                    modifier=Modifier.padding(top=24.dp,bottom=4.dp))
             }
             if(plan.isEmpty()) item(key="empty") { Text("오늘 할 운동을 추가해 보세요.",color=c.text2,modifier=Modifier.padding(vertical=32.dp)) }
             itemsIndexed(displayedPlan,key={_,w->w.id}) { index,workout ->
                 val dragging=draggedId==workout.id
-                val first=workout.id==plan.firstOrNull()?.id
-                val last=workout.id==plan.lastOrNull()?.id
-                val rowShape=RoundedCornerShape(topStart=if(first)20.dp else 0.dp,topEnd=if(first)20.dp else 0.dp,
-                    bottomStart=if(last)20.dp else 0.dp,bottomEnd=if(last)20.dp else 0.dp)
+                val rowShape=RoundedCornerShape(22.dp)
                 Box(Modifier.animateItem(placementSpec=if(dragging)null else spring(stiffness=600f))
                     .onGloballyPositioned { coordinates ->
                         val origin=coordinates.positionInRoot()
@@ -167,7 +167,7 @@ fun WorkoutTabScreen(app: AppViewModel, onOpenAlt: (Workout) -> Unit, onOpenSets
                             CustomAccessibilityAction("아래로 이동"){moveAccessibly(workout.id,1)},CustomAccessibilityAction("삭제"){deleteId=workout.id;true})
                     }) {
                     if(dragging) Spacer(Modifier.fillMaxWidth().height(with(density){draggedHeight.toDp()}).clearAndSetSemantics { })
-                    else key(first,last) { WorkoutSwipeRow(workout,rowShape,swipeReset,gesturesEnabled=canClick,last=last,
+                    else { WorkoutSwipeRow(workout,rowShape,swipeReset,gesturesEnabled=canClick,last=true,
                         onEdit={if(draggedId==null && !settleBlock)app.workoutPlan.firstOrNull{it.id==workout.id}?.let(onOpenSets)},
                         onDelete={if(draggedId==null && !settleBlock)deleteId=workout.id},
                         onPosture={enabled->if(draggedId==null && !settleBlock)app.updatePlan(app.workoutPlan.map{if(it.id==workout.id)it.copy(posture=enabled)else it})}) }
@@ -207,6 +207,8 @@ private fun WorkoutSwipeRow(workout: Workout, shape: RoundedCornerShape, reset: 
             Icon(Icons.Rounded.DeleteOutline, "${workout.name} 삭제", tint = Color.White)
         }
         Column(Modifier.fillMaxWidth().graphicsLayer { translationX = displayed }.background(if(workout.done)c.primary.copy(alpha=.10f)else c.surface)
+            .clickable(enabled = gesturesEnabled, onClickLabel = "운동 수정") { if (!swiping && offset == 0f) onEdit() }
+            .semantics { contentDescription = "${workout.name} 수정" }
             .pointerInput(workout.id, gesturesEnabled) {
                 if (gesturesEnabled) detectHorizontalDragGestures(
                     onDragStart = { swiping = true },
@@ -232,9 +234,7 @@ private fun WorkoutSwipeRow(workout: Workout, shape: RoundedCornerShape, reset: 
                                 contentDescription = "${workout.name} 자세 교정 사용"
                                 stateDescription = if (!workout.postureSupported()) "미지원" else if (workout.posture) "사용 중" else "꺼짐"
                             })
-                        IconButton(onClick = onEdit, enabled = gesturesEnabled, modifier = Modifier.padding(start = 4.dp)) {
-                            Icon(Icons.Rounded.Edit, "${workout.name} 수정", tint = c.primaryText, modifier = Modifier.size(21.dp))
-                        }
+
                     }
                     Text(if (workout.postureSupported()) "자세 교정" else "미지원", color = c.text2,
                         fontSize = 10.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.width(52.dp))

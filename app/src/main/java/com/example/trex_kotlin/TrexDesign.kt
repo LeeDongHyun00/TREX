@@ -13,6 +13,8 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -20,6 +22,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -37,7 +40,7 @@ import androidx.compose.material.icons.rounded.Remove
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
+import com.example.trex_kotlin.TrexText as Text
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
@@ -59,6 +62,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -196,14 +200,14 @@ fun Cta(
     Surface(
         onClick = onClick,
         enabled = enabled,
-        modifier = modifier.height(height),
+        modifier = modifier.heightIn(min = height),
         shape = RoundedCornerShape(18.dp),
         color = if (enabled) c.primary else c.track,
         contentColor = if (enabled) Color.White else c.text3,
         shadowElevation = if (enabled) 2.dp else 0.dp,
     ) {
         Row(
-            modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 16.dp),
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -211,7 +215,7 @@ fun Cta(
                 Icon(icon, contentDescription = null, modifier = Modifier.size(17.dp))
                 Spacer(Modifier.width(7.dp))
             }
-            Text(text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
         }
     }
 }
@@ -229,14 +233,14 @@ fun GhostButton(
     val c = Trex.c
     Surface(
         onClick = onClick,
-        modifier = modifier.height(height),
+        modifier = modifier.heightIn(min = height),
         shape = RoundedCornerShape(18.dp),
         color = c.surface2,
         contentColor = tone ?: c.text2,
         border = BorderStroke(1.dp, c.line),
     ) {
         Row(
-            modifier = Modifier.fillMaxSize().padding(horizontal = 14.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 14.dp),
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -244,7 +248,7 @@ fun GhostButton(
                 Icon(icon, contentDescription = null, modifier = Modifier.size(15.dp), tint = c.primaryText)
                 Spacer(Modifier.width(6.dp))
             }
-            Text(text, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(text, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
         }
     }
 }
@@ -464,11 +468,12 @@ fun TrackBar(progress: Float, color: Color = Trex.c.primary, height: Dp = 6.dp, 
 
 /** 라벨 + 값/목표 + 진행 바 (탄단지). */
 @Composable
-fun MacroBar(label: String, value: Int, goal: Int, color: Color, barHeight: Dp = 6.dp) {
+fun MacroBar(label: String, value: Int, goal: Int, color: Color, barHeight: Dp = 6.dp, showPercent: Boolean = false) {
     val c = Trex.c
     Column {
         Row(verticalAlignment = Alignment.Bottom) {
             Text(label, color = c.text2, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+            if (showPercent && goal > 0) Text("${value * 100 / goal}%", color = c.primaryText, fontSize = 10.sp, modifier = Modifier.padding(horizontal = 6.dp))
             Text("$value / ${goal}g", color = c.text3, fontSize = 10.5.sp, fontWeight = FontWeight.Medium)
         }
         Spacer(Modifier.height(5.dp))
@@ -522,14 +527,14 @@ fun SheetHost(onDismiss: () -> Unit, content: @Composable () -> Unit) {
     val c = Trex.c
     Box(
         modifier = Modifier
-            .fillMaxSize()
+            .fillMaxSize().imePadding()
             .background(Color(0xB01A2010))
             .clickable(interactionSource = remember2(), indication = null, onClick = onDismiss),
         contentAlignment = Alignment.BottomCenter,
     ) {
         Surface(
             modifier = Modifier
-                .fillMaxWidth()
+                .widthIn(max = 600.dp).fillMaxWidth()
                 .clickable(interactionSource = remember2(), indication = null, onClick = {}),
             shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
             color = c.sheet,

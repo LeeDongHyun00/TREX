@@ -15,6 +15,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material3.*
+import com.example.trex_kotlin.TrexText as Text
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
@@ -79,7 +80,7 @@ fun RecordScreen(app: AppViewModel, onBack: () -> Unit) {
                                     Text("${date.monthValue}.${date.dayOfMonth}", color = c.text2, fontSize = 14.sp)
                                     if (date == today) Text("오늘", color = c.primaryText, fontSize = 12.sp)
                                 }
-                                Text(if (record?.items?.isNotEmpty() == true) "${record.items.size}세트 · ${record.totalMinutes()}분" else "기록 없음",
+                                Text(if (record?.items?.isNotEmpty() == true) "${record.items.size}세트 · ${record.durationLabel()}" else "기록 없음",
                                     color = c.text2, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
                             }
                             Icon(Icons.Rounded.ChevronRight, null, tint = c.text3, modifier = Modifier.size(20.dp).rotate(chevron))
@@ -90,6 +91,13 @@ fun RecordScreen(app: AppViewModel, onBack: () -> Unit) {
                                 HorizontalDivider(color = c.line)
                                 if (record?.items?.isNotEmpty() != true) Text("이날 저장된 운동이 없어요.", color = c.text2,
                                     fontSize = 14.sp, modifier = Modifier.padding(vertical = 20.dp))
+                                if (record?.items?.isNotEmpty() == true) {
+                                    Text(recordWorkoutFocus(record).title, color = c.text, fontSize = 22.sp,
+                                        fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 20.dp))
+                                    Text(dayWorkoutAssessment(record), color = c.text2, fontSize = 13.sp, lineHeight = 21.sp,
+                                        modifier = Modifier.padding(top = 8.dp, bottom = 16.dp))
+                                    HorizontalDivider(color = c.line)
+                                }
                                 record?.items?.forEachIndexed { i, item ->
                                     Column(Modifier.fillMaxWidth().padding(vertical = 16.dp)) {
                                         Text(item.workoutName, color = c.text, fontSize = 16.sp, fontWeight = FontWeight.Medium)
@@ -182,16 +190,4 @@ private fun selfLabelText(pc: PostureCorrection): String? {
         pc.actualReps?.let { add("실제 ${it}회") }
     }
     return if (parts.isEmpty()) null else (listOf("내 평가") + parts).joinToString(" · ")
-}
-
-private fun dayTitle(record: WorkoutHistoryDay): String {
-    val cats = record.items.map { it.workoutName }
-    return when {
-        cats.size >= 4 -> "전신 루틴"
-        cats.any { it.contains("스쿼트") || it.contains("런지") } && cats.any { it.contains("플랭크") || it.contains("버드독") } -> "하체 + 코어"
-        cats.any { it.contains("스쿼트") || it.contains("런지") } -> "하체 루틴"
-        cats.any { it.contains("플랭크") } -> "코어 루틴"
-        cats.any { it.contains("스트레칭") } -> "가벼운 스트레칭"
-        else -> "운동 루틴"
-    }
 }
