@@ -95,7 +95,8 @@ class WorkoutMathTest {
     fun workoutDurationAndCaloriesDegradeGracefully() {
         val stretch = Workout("s", "스트레칭", "전신 6분", "6분", posture = false, category = "회복")
         assertEquals(6, stretch.durationMinutes())
-        assertTrue(stretch.estimatedCalories() >= 24)
+        assertEquals(24, stretch.estimatedCalories(360))
+        assertEquals(0, stretch.estimatedCalories(0))
         val noNumber = Workout("n", "자유", "자유", "자유", posture = false, category = "기타")
         assertEquals(6, noNumber.durationMinutes())
     }

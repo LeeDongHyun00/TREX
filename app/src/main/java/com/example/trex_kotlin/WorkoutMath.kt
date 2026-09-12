@@ -39,7 +39,8 @@ fun Workout.repsSpec(): RepsSpec = parseReps(reps)
 fun Workout.durationMinutes(): Int =
     Regex("\\d+").find(duration)?.value?.toIntOrNull()?.coerceAtLeast(1) ?: 6
 
-fun Workout.estimatedCalories(): Int {
+/** 종목별 분당 계수에 일시정지를 제외한 진행 시간을 곱한 거친 추정치이며 센서 측정값이 아니다. */
+fun Workout.estimatedCalories(activeSeconds: Int): Int {
     val multiplier = when (category) {
         "유산소" -> 8
         "하체" -> 7
@@ -47,7 +48,7 @@ fun Workout.estimatedCalories(): Int {
         "코어", "복근" -> 5
         else -> 4
     }
-    return (durationMinutes() * multiplier).coerceAtLeast(24)
+    return (activeSeconds.coerceAtLeast(0) / 60.0 * multiplier).roundToInt()
 }
 
 /** 세션 화면이 쓰는 실행 스펙. 휴식 시간은 아직 전 종목 공통 30초. */

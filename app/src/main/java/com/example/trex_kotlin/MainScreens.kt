@@ -56,7 +56,7 @@ import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
+import com.example.trex_kotlin.TrexText as Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -91,7 +91,8 @@ val categoryTips = mapOf(
     "유산소" to "리듬을 일정하게, 착지는 부드럽게 해주세룡",
 )
 
-private val tabContentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 50.dp, bottom = 110.dp)
+private val tabContentPadding: PaddingValues
+    @Composable get() = PaddingValues(start = 20.dp, end = 20.dp, top = 20.dp, bottom = LocalTrexNavSpace.current)
 
 // ============================================================= HOME
 
@@ -247,7 +248,7 @@ fun HomeScreen(
                 DCard(modifier = Modifier.weight(1f), radius = 22.dp) {
                     Column(Modifier.padding(16.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("오늘 소모", color = c.text3, fontSize = 11.sp, modifier = Modifier.weight(1f))
+                            Text("오늘 추정 소모", color = c.text3, fontSize = 11.sp, modifier = Modifier.weight(1f))
                             Icon(Icons.Rounded.LocalFireDepartment, contentDescription = null, tint = c.warn, modifier = Modifier.size(15.dp))
                         }
                         Row(Modifier.padding(top = 10.dp), verticalAlignment = Alignment.Bottom) {
@@ -319,7 +320,7 @@ fun WorkoutTabScreen(
 
     val listState = rememberLazyListState()
     val haptic = LocalHapticFeedback.current
-    // 요약 / 날씨 카드 다음부터가 순서를 바꿀 수 있는 구간이다
+    // 요약 카드 다음부터가 순서를 바꿀 수 있는 구간이다
     val reorder = rememberReorderState(
         listState = listState,
         canDrag = { it - WORKOUT_LIST_HEADER_COUNT in app.workoutPlan.indices },
@@ -362,30 +363,10 @@ fun WorkoutTabScreen(
                 Row(Modifier.padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Rounded.DragIndicator, contentDescription = null, tint = c.text3, modifier = Modifier.size(13.dp))
                     Text(
-                        "카드를 길게 눌러 순서를 바꿔룡",
+                        "짧게 누르면 수정하고, 길게 누르면 순서를 바꿔룡",
                         color = c.text3, fontSize = 11.sp, fontWeight = FontWeight.Medium,
                         modifier = Modifier.padding(start = 5.dp),
                     )
-                }
-            }
-        }
-
-        // 날씨 카드 — 중립 서피스 + 소프트 아이콘 버블 + 실내 추천 칩 (경고 워시 대신 차분한 톤)
-        item(key = "weather") {
-            DCard(radius = 22.dp) {
-                Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        Modifier.size(42.dp).clip(RoundedCornerShape(15.dp)).background(c.surface2),
-                        contentAlignment = Alignment.Center,
-                    ) { Icon(Icons.Rounded.Cloud, contentDescription = null, tint = c.text2, modifier = Modifier.size(19.dp)) }
-                    Column(Modifier.padding(start = 12.dp).weight(1f)) {
-                        Row(verticalAlignment = Alignment.Bottom) {
-                            Text("비 예보", fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold)
-                            Text("6.4 mm/h", color = c.text3, fontSize = 11.5.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(start = 6.dp, bottom = 1.dp))
-                        }
-                        Text("오늘은 실내 루틴이 좋아룡", color = c.text3, fontSize = 11.sp, modifier = Modifier.padding(top = 2.dp))
-                    }
-                    WashPill("실내 추천")
                 }
             }
         }
@@ -415,8 +396,8 @@ fun WorkoutTabScreen(
     }
 }
 
-/** 운동 탭 LazyColumn 에서 루틴 카드가 시작되는 인덱스 (요약 + 날씨 카드). */
-private const val WORKOUT_LIST_HEADER_COUNT = 2
+/** 운동 탭 LazyColumn 에서 루틴 카드가 시작되는 인덱스 (요약 카드). */
+private const val WORKOUT_LIST_HEADER_COUNT = 1
 
 @Composable
 private fun WorkoutExpandCard(
@@ -451,7 +432,7 @@ private fun WorkoutExpandCard(
     ) {
         Column {
             // 드래그로 들려 있는 동안에는 탭으로 펼쳐지지 않게 막는다 (손을 뗄 때 오작동 방지)
-            Surface(onClick = { if (!dragging) onToggleOpen() }, color = Color.Transparent, contentColor = c.text) {
+            Surface(onClick = { if (!dragging) onOpenSets() }, color = Color.Transparent, contentColor = c.text) {
                 Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 15.dp), verticalAlignment = Alignment.CenterVertically) {
                     Box(
                         Modifier
@@ -472,7 +453,7 @@ private fun WorkoutExpandCard(
                         }
                     }
                     Column(Modifier.weight(1f).padding(start = 12.dp)) {
-                        Text(workout.name, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                        androidx.compose.material3.Text(workout.name, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                         Row(Modifier.padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             Text("${workout.reps} · ${workout.duration}", color = c.text3, fontSize = 11.5.sp)
                             if (workout.posture && workout.postureSupported()) {
@@ -486,10 +467,14 @@ private fun WorkoutExpandCard(
                             }
                         }
                     }
-                    Icon(
-                        Icons.Rounded.KeyboardArrowDown, contentDescription = null, tint = c.text3,
-                        modifier = Modifier.size(17.dp).rotate(chevron).alpha(1f - lift),
-                    )
+                    androidx.compose.material3.IconButton(onClick = { if (!dragging) onToggleOpen() }) {
+                        Icon(
+                            Icons.Rounded.KeyboardArrowDown,
+                            contentDescription = if (open) "운동 상세 접기" else "운동 상세 펼치기",
+                            tint = c.text3,
+                            modifier = Modifier.size(17.dp).rotate(chevron).alpha(1f - lift),
+                        )
+                    }
                 }
             }
             if (open) {
@@ -508,7 +493,6 @@ private fun WorkoutExpandCard(
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
                         GhostButton("대체 운동", onClick = onOpenAlt, icon = Icons.Rounded.Refresh, modifier = Modifier.weight(1f), height = 44.dp)
-                        GhostButton("세트 수정", onClick = onOpenSets, icon = Icons.Rounded.Edit, modifier = Modifier.weight(1f), height = 44.dp)
                     }
                     // 자세 교정 스위치 — 규칙 엔진 지원 종목에만. 미지원이면 안내만.
                     if (workout.postureSupported()) {
@@ -741,31 +725,7 @@ fun DietTabScreen(
             }
         }
 
-        item {
-            Column {
-                Kicker("추천 식단")
-                Row(
-                    Modifier
-                        .padding(top = 10.dp)
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(c.primaryWash)
-                        .border(1.dp, c.primarySoftLine, RoundedCornerShape(20.dp))
-                        .padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Box(
-                        Modifier.size(44.dp).clip(RoundedCornerShape(14.dp)).background(c.primary),
-                        contentAlignment = Alignment.Center,
-                    ) { Icon(Icons.Rounded.Restaurant, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp)) }
-                    Column(Modifier.padding(start = 12.dp).weight(1f)) {
-                        Text("초보자용 · 약 520 kcal", color = c.text3, fontSize = 11.sp)
-                        Text("고단백 저녁 한끼", color = c.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 2.dp))
-                        Text("연어 스테이크 · 퀴노아 · 브로콜리", color = c.text2, fontSize = 11.sp, modifier = Modifier.padding(top = 2.dp))
-                    }
-                }
-            }
-        }
+
     }
 }
 
@@ -872,7 +832,7 @@ fun ProfileTabScreen(
                         SettingIcon(Icons.Rounded.BarChart)
                         Column(Modifier.padding(start = 12.dp).weight(1f)) {
                             Text("운동 기록", fontSize = 13.5.sp, fontWeight = FontWeight.Medium)
-                            Text("일주일 기록과 정확도 보기", color = c.text3, fontSize = 11.sp, modifier = Modifier.padding(top = 2.dp))
+                            Text("일주일 동안의 운동 기록을 확인해룡", color = c.text3, fontSize = 11.sp, modifier = Modifier.padding(top = 2.dp))
                         }
                         Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, contentDescription = null, tint = c.text3, modifier = Modifier.size(15.dp))
                     }

@@ -8,6 +8,8 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -32,7 +34,7 @@ import androidx.compose.material.icons.rounded.Restaurant
 import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
+import com.example.trex_kotlin.TrexText as Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -59,27 +61,27 @@ private data class GuidePage(
 
 private val guidePages = listOf(
     GuidePage(
-        headline = "움직임이 잘 보이도록\n카메라를 세워두세요",
+        headline = "움직임이 잘 보이도록\n카메라를 세워두세룡",
         body = "전신과 주요 관절이 화면 안에 들어오면 TREX가 자세 변화를 더 정확하게 읽어줘룡",
         slot = "camera setup",
         asset = "trex_guideImage_phone1.svg",
     ),
     GuidePage(
-        headline = "실시간 피드백으로\n루틴의 흐름을 유지하세요",
+        headline = "실시간 피드백으로\n루틴의 흐름을 유지해룡",
         body = "동작 중 필요한 교정 신호를 바로 확인하고, 세트가 끝날 때까지 같은 리듬으로 운동해룡",
         slot = "live feedback",
         asset = "trext_guideImage_phone2.svg",
     ),
     GuidePage(
-        headline = "운동이 끝나면\n기록을 한눈에 정리해요",
+        headline = "운동이 끝나면\n기록을 한눈에 정리해룡",
         body = "완료한 운동과 개선 포인트를 하루 단위로 남겨 다음 루틴을 더 쉽게 이어가룡",
         slot = "weekly record",
         asset = "trext_guideImage_phone3.svg",
     ),
     GuidePage(
-        headline = "사진 한 장으로\n식단 기록을 시작하세요",
-        body = "식사 사진을 고르면 음식을 분석하고 탄단지까지 정리해줘룡",
-        slot = "photo diet log",
+        headline = "먹은 음식을 골라서\n식단을 기록해룡",
+        body = "먹은 음식과 수량을 직접 선택하면 칼로리와 탄단지 합계를 확인할 수 있어룡",
+        slot = "식단 기록",
         asset = "trext_guideImage_phone4.svg",
     ),
 )
@@ -93,7 +95,7 @@ fun GuideBookScreen(onDone: () -> Unit) {
 
     Column(Modifier.fillMaxSize().background(c.bg)) {
         Row(
-            Modifier.padding(start = 22.dp, end = 22.dp, top = 48.dp),
+            Modifier.padding(start = 22.dp, end = 22.dp, top = 20.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
@@ -114,9 +116,9 @@ fun GuideBookScreen(onDone: () -> Unit) {
             )
         }
 
-        Column(Modifier.weight(1f).padding(start = 22.dp, end = 22.dp, top = 22.dp)) {
+        Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(start = 22.dp, end = 22.dp, top = 22.dp)) {
             Surface(
-                modifier = Modifier.weight(1f).fillMaxWidth(),
+                modifier = Modifier.height(240.dp).fillMaxWidth(),
                 shape = RoundedCornerShape(32.dp),
                 color = c.surface,
                 border = BorderStroke(1.dp, c.line),

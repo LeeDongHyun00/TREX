@@ -136,6 +136,9 @@ data class WorkoutHistoryItem(
     val postureCorrection: PostureCorrection? = null,
     /** 자세 정확도(%) — 자세 엔진이 산출. 없으면 null 로 두고 UI 에서 숨긴다. */
     val accuracy: Int? = null,
+    val workoutId: String? = null,
+    /** 새 기록은 실제 진행 시간을 초 단위로 보존한다. null은 구버전 기록이다. */
+    val durationSeconds: Int? = null,
 )
 
 @Immutable
@@ -253,24 +256,6 @@ val foodDatabase = linkedMapOf(
     "아몬드" to Nutrition(160, 6.0, 6.0, 14.0),
 )
 
-fun seedFoods(): Map<String, List<FoodEntry>> = mapOf(
-    "breakfast" to listOf(
-        FoodEntry("오트밀", Nutrition(150, 27.0, 5.0, 3.0)),
-        FoodEntry("바나나", Nutrition(89, 23.0, 1.1, 0.3)),
-        FoodEntry("아몬드", Nutrition(160, 6.0, 6.0, 14.0)),
-    ),
-    "lunch" to listOf(
-        FoodEntry("닭가슴살", Nutrition(165, 0.0, 31.0, 3.6)),
-        FoodEntry("현미밥", Nutrition(220, 46.0, 5.0, 1.7)),
-        FoodEntry("샐러드", Nutrition(120, 8.0, 4.0, 7.0)),
-    ),
-    "snack" to listOf(
-        FoodEntry("사과", Nutrition(95, 25.0, 0.5, 0.3)),
-        FoodEntry("그릭요거트", Nutrition(100, 4.0, 17.0, 0.0)),
-    ),
-    "dinner" to emptyList(),
-)
-
 fun emptyDietSlots(): Map<String, List<FoodEntry>> =
     mealMetas.associate { it.id to emptyList() }
 
@@ -291,68 +276,35 @@ fun Iterable<FoodEntry>.totalNutrition(): Nutrition =
         )
     }
 
-/**
- * 첫 실행 데모용 시드 기록 (백엔드 연동 전). 저장소가 비어 있을 때만 쓰인다.
- * 시드에는 자세 데이터를 넣지 않는다: 지어낸 지적은 실데이터의 신뢰를 깎는다.
- */
-fun seedWorkoutHistory(plan: List<Workout> = todayPlan): List<WorkoutHistoryDay> {
-    val calendar = Calendar.getInstance()
-    val todayEpoch = LocalDate.now().toEpochDay()
-
-    return (0..6).map { index ->
-        val dayCalendar = calendar.clone() as Calendar
-        dayCalendar.add(Calendar.DAY_OF_MONTH, index - 6)
-        val selected = plan.rotate(index).take(2 + index % 3)
-        val items = selected.map { workout ->
-            WorkoutHistoryItem(
-                workoutName = workout.name,
-                reps = workout.reps,
-                durationMinutes = workout.durationMinutes(),
-                calories = workout.estimatedCalories(),
-                postureCorrection = null,
-                accuracy = null,
-            )
-        }
-
-        WorkoutHistoryDay(
-            epochDay = todayEpoch - (6 - index),
-            dayLabel = dayCalendar.koreanDayOfWeek(),
-            dateLabel = "${dayCalendar.get(Calendar.MONTH) + 1}/${dayCalendar.get(Calendar.DAY_OF_MONTH)}",
-            items = items,
-            averageMinutes = (items.sumOf { it.durationMinutes } - 4 - index % 2).coerceAtLeast(8),
-            averageCalories = (items.sumOf { it.calories } - 28 - index * 2).coerceAtLeast(80),
-        )
-    }
-}
-
 /** @param reports workoutId → 이번 세션의 세트 리포트. 자세를 켠 운동이라도 리포트가 없으면 항목의 자세 칸은 null 이다(판정 안 한 것을 지어내지 않는다). */
 fun createWorkoutHistoryDay(
     plan: List<Workout>,
     elapsedSeconds: Int,
     reports: Map<String, PostureSetReport> = emptyMap(),
+    elapsedByWorkout: Map<String, Int> = emptyMap(),
 ): WorkoutHistoryDay {
     val calendar = Calendar.getInstance()
-    val items = plan.map { workout ->
+    val items = plan.filter { it.done }.map { workout ->
         val report = reports[workout.id]
         WorkoutHistoryItem(
             workoutName = workout.name,
             reps = workout.reps,
-            durationMinutes = workout.durationMinutes(),
-            calories = workout.estimatedCalories(),
+            durationMinutes = (elapsedByWorkout[workout.id] ?: 0) / 60,
+            calories = workout.estimatedCalories(elapsedByWorkout[workout.id] ?: 0),
             postureCorrection = report?.toCorrection(),
             accuracy = report?.accuracy,
+            workoutId = workout.id,
+            durationSeconds = elapsedByWorkout[workout.id] ?: 0,
         )
     }
-    val totalMinutes = (elapsedSeconds / 60).takeIf { it > 0 } ?: items.sumOf { it.durationMinutes }
-    val totalCalories = items.sumOf { it.calories }
 
     return WorkoutHistoryDay(
         epochDay = LocalDate.now().toEpochDay(),
         dayLabel = calendar.koreanDayOfWeek(),
         dateLabel = "${calendar.get(Calendar.MONTH) + 1}/${calendar.get(Calendar.DAY_OF_MONTH)}",
         items = items,
-        averageMinutes = (totalMinutes - 5).coerceAtLeast(8),
-        averageCalories = (totalCalories - 35).coerceAtLeast(80),
+        averageMinutes = 0,
+        averageCalories = 0,
     )
 }
 
@@ -367,7 +319,7 @@ fun List<WorkoutHistoryDay>.replaceTodayWith(record: WorkoutHistoryDay): List<Wo
 }
 
 fun WorkoutHistoryDay.totalMinutes(): Int =
-    items.sumOf { it.durationMinutes }
+    items.sumOf { it.durationSeconds ?: (it.durationMinutes * 60) } / 60
 
 fun WorkoutHistoryDay.totalCalories(): Int =
     items.sumOf { it.calories }
@@ -382,25 +334,7 @@ fun WorkoutHistoryDay.summaryText(): String {
         return "${corrected.workoutName}에서 ${corrected.postureCorrection?.focus.orEmpty()}."
     }
 
-    val minuteDiff = totalMinutes() - averageMinutes
-    val calorieDiff = totalCalories() - averageCalories
-    val minuteText = if (minuteDiff >= 0) {
-        "평소보다 ${minuteDiff}분 더 운동하고"
-    } else {
-        "평소보다 ${-minuteDiff}분 적게 운동하고"
-    }
-    val calorieText = if (calorieDiff >= 0) {
-        "${calorieDiff}kcal 더 소모했어요."
-    } else {
-        "${-calorieDiff}kcal 덜 소모했어요."
-    }
-    return "$minuteText $calorieText"
-}
-
-private fun List<Workout>.rotate(offset: Int): List<Workout> {
-    if (isEmpty()) return emptyList()
-    val start = offset % size
-    return drop(start) + take(start)
+    return "${items.size}개 운동을 기록했어룡"
 }
 
 fun Calendar.koreanDayOfWeek(): String = when (get(Calendar.DAY_OF_WEEK)) {

@@ -16,6 +16,9 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -33,7 +36,7 @@ import androidx.compose.material.icons.rounded.Remove
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
+import com.example.trex_kotlin.TrexText as Text
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
@@ -192,14 +195,14 @@ fun Cta(
     Surface(
         onClick = onClick,
         enabled = enabled,
-        modifier = modifier.height(height),
+        modifier = modifier.heightIn(min = height),
         shape = RoundedCornerShape(18.dp),
         color = if (enabled) c.primary else c.track,
         contentColor = if (enabled) Color.White else c.text3,
         shadowElevation = if (enabled) 6.dp else 0.dp,
     ) {
         Row(
-            modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -207,7 +210,7 @@ fun Cta(
                 Icon(icon, contentDescription = null, modifier = Modifier.size(17.dp))
                 Spacer(Modifier.width(7.dp))
             }
-            Text(text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
         }
     }
 }
@@ -499,7 +502,9 @@ fun StepperControl(
             fontSize = 14.sp,
             fontWeight = FontWeight.SemiBold,
             textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-            modifier = Modifier.width(valueMinWidth),
+            modifier = Modifier.widthIn(min = valueMinWidth),
+            maxLines = 1,
+            softWrap = false,
         )
         Surface(
             onClick = onInc, modifier = Modifier.size(32.dp), shape = CircleShape,
@@ -517,12 +522,14 @@ fun SheetHost(onDismiss: () -> Unit, content: @Composable () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxSize()
+            .imePadding()
             .background(Color(0xB01A2010))
             .clickable(interactionSource = remember2(), indication = null, onClick = onDismiss),
         contentAlignment = Alignment.BottomCenter,
     ) {
         Surface(
             modifier = Modifier
+                .widthIn(max = 600.dp)
                 .fillMaxWidth()
                 .clickable(interactionSource = remember2(), indication = null, onClick = {}),
             shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),

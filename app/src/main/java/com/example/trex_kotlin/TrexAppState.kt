@@ -93,7 +93,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     var workoutPlan by mutableStateOf(store.loadPlan() ?: todayPlan)
         private set
 
-    var workoutHistory by mutableStateOf(store.loadHistory() ?: seedWorkoutHistory(todayPlan))
+    var workoutHistory by mutableStateOf(store.loadHistory() ?: emptyList())
         private set
 
     init {
@@ -111,7 +111,10 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         store.savePlan(plan)
     }
 
-    fun markWorkoutDone(id: String) {
+    val sessionDurations = mutableStateMapOf<String, Int>()
+
+    fun markWorkoutDone(id: String, seconds: Int = 0) {
+        sessionDurations[id] = seconds.coerceAtLeast(0)
         updatePlan(workoutPlan.map { if (it.id == id) it.copy(done = true) else it })
     }
 
@@ -127,7 +130,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     fun recordCompletedSession(elapsedSeconds: Int) {
         // 리포트 맵은 여기서 비우지 않는다 — 완료 화면이 같은 맵을 읽고, 다음 startSession 이 비운다
         workoutHistory = workoutHistory.replaceTodayWith(
-            createWorkoutHistoryDay(workoutPlan, elapsedSeconds, sessionPostureReports.toMap()),
+            createWorkoutHistoryDay(workoutPlan, elapsedSeconds, sessionPostureReports.toMap(), sessionDurations.toMap()),
         )
         store.saveHistory(workoutHistory)
     }
@@ -143,6 +146,14 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     /** [keep] 에 든 운동(이어하기로 이미 마친 것)의 리포트는 남기고 나머지를 비운다. */
     fun clearSessionReports(keep: Collection<String> = emptyList()) {
         val keepSet = keep.toSet()
+        sessionDurations.keys.filter { it !in keepSet }.forEach { sessionDurations.remove(it) }
+        // 앱 재시작 후 이어하기도 이미 기록한 실제 시간을 유지한다.
+        todayRecord?.items?.forEach { item ->
+            val id = item.workoutId ?: workoutPlan.firstOrNull { it.name == item.workoutName && it.reps == item.reps }?.id
+            if (id != null && id in keepSet && id !in sessionDurations) {
+                sessionDurations[id] = item.durationSeconds ?: item.durationMinutes * 60
+            }
+        }
         sessionPostureReports.keys.filter { it !in keepSet }.forEach { sessionPostureReports.remove(it) }
     }
 
@@ -200,7 +211,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     // ---- 식단 (epochDay 기준 저장, 화면에는 오늘 기준 offset 으로 노출)
 
     var dietByDay by mutableStateOf(
-        store.loadDiet() ?: mapOf(LocalDate.now().toEpochDay() to seedFoods()),
+        store.loadDiet() ?: emptyMap(),
     )
         private set
 

@@ -10,6 +10,10 @@ data class RepRuleConfig(val direction: String, val threshold: Float, val fracti
 data class HoldSnapshot(
     val baseline: Float?, val measuredMs: Long, val inBandMs: Long,
     val firstBreakMs: Long?, val direction: String?, val samples: Int,
+    /** 첫 이탈 이력과 별개인 현재 상태. 가림이면 null, 범위 안이면 0. */
+    val currentSide: Int? = null,
+    val currentSideMs: Long = 0,
+    val breakMs: Long = 2000,
 ) {
     val text: String get() = if (baseline == null) "초기 안정 자세를 5초간 측정하고 있어요"
         else "초기 자세 대비 범위 내 ${inBandMs / 1000}초 / 측정 ${measuredMs / 1000}초" +
@@ -28,10 +32,12 @@ class HoldTracker(private val config: HoldConfig) {
     private var firstBreak: Long? = null
     private var firstDirection: String? = null
     private var count = 0
+    private var currentSide: Int? = null
 
     fun add(t: Long, value: Float?) {
         val gap = previous?.let { t - it }
         if (value == null || !value.isFinite() || (gap != null && (gap <= 0 || gap > 750))) {
+            currentSide = null
             previous = null; sideStart = null; previousSide = 0
             if (baseline == null) initial.clear()
             if (value == null || !value.isFinite() || (gap != null && gap <= 0)) return
@@ -51,6 +57,7 @@ class HoldTracker(private val config: HoldConfig) {
         }
         val delta = value - baseline!!
         val side = when { delta > config.up -> 1; delta < -config.down -> -1; else -> 0 }
+        currentSide = side
         val dt = previous?.let { t - it } ?: 0L
         measured += dt
         if (side == 0 && previousSide == 0) inBand += dt
@@ -63,7 +70,9 @@ class HoldTracker(private val config: HoldConfig) {
         previous = t; previousSide = side; count++
     }
 
-    fun snapshot() = HoldSnapshot(baseline, measured, inBand, firstBreak, firstDirection, count)
+    fun snapshot() = HoldSnapshot(baseline, measured, inBand, firstBreak, firstDirection, count,
+        currentSide, if (currentSide != null && currentSide != 0) (previous ?: 0) - (sideStart ?: previous ?: 0) else 0,
+        config.breakMs)
 }
 
 object FloorTemporal {

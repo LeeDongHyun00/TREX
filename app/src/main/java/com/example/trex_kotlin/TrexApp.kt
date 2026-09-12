@@ -12,6 +12,8 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -21,6 +23,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -38,7 +41,9 @@ import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Restaurant
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
+import com.example.trex_kotlin.TrexText as Text
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
@@ -56,6 +61,8 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -115,6 +122,7 @@ fun TrexApp(app: AppViewModel = viewModel()) {
         var sessionIndex by rememberSaveable { mutableIntStateOf(-1) }
         var sessionDone by rememberSaveable { mutableStateOf(false) }
         var sessionTimeLeft by rememberSaveable { mutableIntStateOf(0) }
+        var exerciseElapsed by rememberSaveable { mutableIntStateOf(0) }
         var sessionElapsed by rememberSaveable { mutableIntStateOf(0) }
         var sessionPaused by rememberSaveable { mutableStateOf(false) }
         // 카메라 권한을 거부한 운동 — 자세 평가 대신 **같은 운동을** 타이머로 돌린다(건너뛰지 않는다).
@@ -144,6 +152,7 @@ fun TrexApp(app: AppViewModel = viewModel()) {
             sessionIndex = start
             sessionDone = false
             sessionElapsed = 0
+            exerciseElapsed = 0
             sessionPaused = false
             sessionTimeLeft = sessionSeconds(plan[start])
         }
@@ -151,7 +160,8 @@ fun TrexApp(app: AppViewModel = viewModel()) {
         fun nextSession() {
             val idx = sessionIndex
             if (idx < 0) return
-            plan.getOrNull(idx)?.let { app.markWorkoutDone(it.id) }
+            plan.getOrNull(idx)?.let { app.markWorkoutDone(it.id, exerciseElapsed) }
+            exerciseElapsed = 0
             val next = idx + 1
             if (next >= plan.size) {
                 app.recordCompletedSession(sessionElapsed)
@@ -189,6 +199,7 @@ fun TrexApp(app: AppViewModel = viewModel()) {
                 delay(1000)
                 if (!pausedState.value) {
                     sessionElapsed += 1
+                    exerciseElapsed += 1
                     if (sessionTimeLeft > 0) sessionTimeLeft -= 1
                 }
             }
@@ -214,103 +225,113 @@ fun TrexApp(app: AppViewModel = viewModel()) {
             else -> RootRoute.Main
         }
 
-        Box(Modifier.fillMaxSize().background(c.bg)) {
-            AnimatedContent(
-                targetState = route,
-                transitionSpec = {
-                    val forward = targetState.ordinal >= initialState.ordinal
-                    if (forward) {
-                        (slideInHorizontally(tween(360)) { it / 3 } + fadeIn(tween(300))) togetherWith
-                            (slideOutHorizontally(tween(360)) { -it / 4 } + fadeOut(tween(240)))
-                    } else {
-                        (slideInHorizontally(tween(360)) { -it / 3 } + fadeIn(tween(300))) togetherWith
-                            (slideOutHorizontally(tween(360)) { it / 4 } + fadeOut(tween(240)))
-                    }
-                },
-                label = "trex-route",
-            ) { r ->
-                when (r) {
-                    RootRoute.Guide -> GuideBookScreen(
-                        onDone = {
-                            app.completeGuide()
-                            subScreen = "none"
+        CompositionLocalProvider(LocalTrexFold provides rememberTrexFold()) {
+            Box(Modifier.fillMaxSize().background(c.bg).safeDrawingPadding()) {
+                TrexContentFrame(
+                    maxWidth = if (route == RootRoute.Auth || route == RootRoute.Find || route == RootRoute.Onboarding) 600.dp else 840.dp,
+                    useWholeWindow = route == RootRoute.PostureSession,
+                ) {
+                    AnimatedContent(
+                        targetState = route,
+                        transitionSpec = {
+                            val forward = targetState.ordinal >= initialState.ordinal
+                            if (forward) {
+                                (slideInHorizontally(tween(360)) { it / 3 } + fadeIn(tween(300))) togetherWith
+                                    (slideOutHorizontally(tween(360)) { -it / 4 } + fadeOut(tween(240)))
+                            } else {
+                                (slideInHorizontally(tween(360)) { -it / 3 } + fadeIn(tween(300))) togetherWith
+                                    (slideOutHorizontally(tween(360)) { it / 4 } + fadeOut(tween(240)))
+                            }
                         },
-                    )
+                        label = "trex-route",
+                    ) { r ->
+                        when (r) {
+                            RootRoute.Guide -> GuideBookScreen(
+                                onDone = {
+                                    app.completeGuide()
+                                    subScreen = "none"
+                                },
+                            )
 
-                    RootRoute.Auth -> AuthScreen(
-                        onLogin = { app.completeLogin() },
-                        onOpenFind = { subScreen = "find" },
-                        onOpenGuide = { subScreen = "guide" },
-                        onOpenPostureLab = { subScreen = "postureLab" },
-                        onOpenBaselineGuide = { subScreen = "baselineGuide" },
-                    )
+                            RootRoute.Auth -> AuthScreen(
+                                onLogin = { app.completeLogin() },
+                                onOpenFind = { subScreen = "find" },
+                                onOpenGuide = { subScreen = "guide" },
+                                onOpenPostureLab = { subScreen = "postureLab" },
+                                onOpenBaselineGuide = { subScreen = "baselineGuide" },
+                            )
 
-                    RootRoute.Find -> FindAccountScreen(onBack = { subScreen = "none" })
+                            RootRoute.Find -> FindAccountScreen(onBack = { subScreen = "none" })
 
-                    RootRoute.Onboarding -> OnboardingScreen(onDone = { profile -> app.completeOnboarding(profile) })
+                            RootRoute.Onboarding -> OnboardingScreen(onDone = { profile -> app.completeOnboarding(profile) })
 
-                    RootRoute.Complete -> SessionCompleteScreen(
-                        plan = plan,
-                        elapsedSeconds = sessionElapsed,
-                        reports = app.sessionPostureReports,
-                        onLabel = { setId, actualReps, repsSource, form -> app.labelPostureSet(setId, actualReps, repsSource, form) },
-                        speak = { speech.speak(it, flush = false) },
-                        onDone = { exitSession() },
-                    )
+                            RootRoute.Complete -> SessionCompleteScreen(
+                                plan = plan,
+                                elapsedSeconds = sessionElapsed,
+                                elapsedByWorkout = app.sessionDurations,
+                                reports = app.sessionPostureReports,
+                                onLabel = { setId, actualReps, repsSource, form -> app.labelPostureSet(setId, actualReps, repsSource, form) },
+                                speak = { speech.speak(it, flush = false) },
+                                onDone = { exitSession() },
+                            )
 
-                    RootRoute.PostureSession -> sessionWorkout?.let { w ->
-                        PostureLiveSessionScreen(
-                            workout = w,
-                            index = sessionIndex,
-                            total = plan.size,
-                            timeLeft = sessionTimeLeft,
-                            totalSeconds = sessionSeconds(w),
-                            paused = sessionPaused || appPaused,
-                            onTogglePause = { sessionPaused = !sessionPaused },
-                            onNext = { nextSession() },
-                            onExit = { requestExit() },
-                            onSetReport = { app.addPostureReport(w.id, it) },
-                            onFallbackToTimer = { if (w.id !in postureFallback) postureFallback.add(w.id) },
-                            speech = speech,
-                        )
+                            RootRoute.PostureSession -> sessionWorkout?.let { w ->
+                                PostureLiveSessionScreen(
+                                    workout = w,
+                                    index = sessionIndex,
+                                    total = plan.size,
+                                    timeLeft = sessionTimeLeft,
+                                    totalSeconds = sessionSeconds(w),
+                                    paused = sessionPaused || appPaused,
+                                    onTogglePause = { sessionPaused = !sessionPaused },
+                                    onNext = { nextSession() },
+                                    onExit = { requestExit() },
+                                    onSetReport = { app.addPostureReport(w.id, it) },
+                                    onFallbackToTimer = { if (w.id !in postureFallback) postureFallback.add(w.id) },
+                                    speech = speech,
+                                )
+                            }
+
+                            RootRoute.TimerSession -> sessionWorkout?.let { w ->
+                                TimerSessionScreen(
+                                    workout = w,
+                                    index = sessionIndex,
+                                    total = plan.size,
+                                    timeLeft = sessionTimeLeft,
+                                    totalSeconds = sessionSeconds(w),
+                                    paused = sessionPaused || appPaused,
+                                    onTogglePause = { sessionPaused = !sessionPaused },
+                                    onNext = { nextSession() },
+                                    onExit = { requestExit() },
+                                )
+                            }
+
+                            RootRoute.Record -> RecordScreen(app = app, onBack = { subScreen = "none" })
+
+                            RootRoute.PostureLab -> PostureLabScreen(onClose = { subScreen = "none" })
+                            RootRoute.BaselineGuide -> BaselineGuideScreen(onClose = { subScreen = "none" })
+
+                            RootRoute.Main -> MainTabs(
+                                app = app,
+                                selectedTab = selectedTab,
+                                onTabSelected = { selectedTab = it },
+                                onStartWorkout = { startSession() },
+                                onOpenRecord = { subScreen = "record" },
+                            )
+                        }
                     }
 
-                    RootRoute.TimerSession -> sessionWorkout?.let { w ->
-                        TimerSessionScreen(
-                            workout = w,
-                            index = sessionIndex,
-                            total = plan.size,
-                            timeLeft = sessionTimeLeft,
-                            totalSeconds = sessionSeconds(w),
-                            paused = sessionPaused || appPaused,
-                            onTogglePause = { sessionPaused = !sessionPaused },
-                            onNext = { nextSession() },
-                            onExit = { requestExit() },
-                        )
-                    }
-
-                    RootRoute.Record -> RecordScreen(app = app, onBack = { subScreen = "none" })
-
-                    RootRoute.PostureLab -> PostureLabScreen(onClose = { subScreen = "none" })
-                    RootRoute.BaselineGuide -> BaselineGuideScreen(onClose = { subScreen = "none" })
-
-                    RootRoute.Main -> MainTabs(
-                        app = app,
-                        selectedTab = selectedTab,
-                        onTabSelected = { selectedTab = it },
-                        onStartWorkout = { startSession() },
-                        onOpenRecord = { subScreen = "record" },
-                    )
                 }
-            }
-
-            if (exitAsk) {
-                SessionExitSheet(
-                    doneCount = plan.count { it.done },
-                    onRecord = { exitAndRecord() },
-                    onDiscard = { exitSession() },
-                    onCancel = { exitAsk = false },
-                )
+                if (exitAsk) {
+                    TrexContentFrame(maxWidth = 600.dp) {
+                        SessionExitSheet(
+                            doneCount = plan.count { it.done },
+                            onRecord = { exitAndRecord() },
+                            onDiscard = { exitSession() },
+                            onCancel = { exitAsk = false },
+                        )
+                    }
+                }
             }
         }
     }
@@ -333,6 +354,7 @@ private fun SessionExitSheet(
             Column(
                 Modifier
                     .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
                     .navigationBarsPadding()
                     .padding(horizontal = 22.dp, vertical = 22.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -373,7 +395,10 @@ private fun MainTabs(
         }
     }
 
+    val density = LocalDensity.current
+    var navSpace by remember { mutableStateOf(110.dp) }
     Box(Modifier.fillMaxSize().background(c.bg)) {
+        CompositionLocalProvider(LocalTrexNavSpace provides navSpace) {
         AnimatedContent(
             targetState = selectedTab,
             transitionSpec = {
@@ -416,6 +441,7 @@ private fun MainTabs(
                 )
             }
         }
+        }
         SideEffect { lastTabOrdinal = selectedTab.ordinal }
 
         MorphNav(
@@ -437,6 +463,7 @@ private fun MainTabs(
             },
             modifier = Modifier
                 .align(Alignment.BottomCenter)
+                .onSizeChanged { navSpace = with(density) { it.height.toDp() } + 12.dp }
                 .navigationBarsPadding()
                 .padding(horizontal = 16.dp)
                 .padding(bottom = 16.dp),
@@ -467,6 +494,7 @@ private fun MorphNav(
     val remoteOn = expanded && (selectedTab == TrexTab.Workout || selectedTab == TrexTab.Diet)
     val isDiet = selectedTab == TrexTab.Diet
     val tabs = TrexTab.entries
+    val largeText = LocalDensity.current.fontScale > 1.3f
 
     data class Slot(
         val weight: Float,
@@ -540,7 +568,7 @@ private fun MorphNav(
                 enabled = slot.alpha > 0.1f,
                 modifier = Modifier
                     .weight(weight.coerceAtLeast(0.0001f))
-                    .height(h)
+                    .heightIn(min = h)
                     .alpha(alpha),
                 shape = RoundedCornerShape(999.dp),
                 color = slot.bg,
@@ -548,8 +576,16 @@ private fun MorphNav(
                 border = androidx.compose.foundation.BorderStroke(1.dp, slot.line),
                 shadowElevation = if (slot.elevated) 8.dp else 3.dp,
             ) {
-                Row(
-                    modifier = Modifier.fillMaxSize(),
+                if (largeText) {
+                    Column(
+                        Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 8.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        Icon(slot.icon, contentDescription = slot.label, modifier = Modifier.size(19.dp))
+                        if (slot.showLabel) Text(slot.label, fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
+                    }
+                } else Row(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 17.dp),
                     horizontalArrangement = androidx.compose.foundation.layout.Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {

@@ -393,6 +393,8 @@ class LiveCoach(
  *  - **오디오 포커스**: 헬스장 음악 위로 들려야 한다. 발화 동안만 DUCK 포커스를 잡고 마지막 발화가 끝나면 놓는다.
  *  - **상태 노출**: 한국어 음성이 없으면 영원히 무음인데 화면이 이유를 말하지 못했다 → [unavailableReason].
  */
+enum class SpeechPlaybackState { IDLE, SPEAKING, COMPLETED, ERROR }
+
 class SpeechCoach(context: Context) {
 
     private data class Pending(val text: String, val atMs: Long)
@@ -429,16 +431,22 @@ class SpeechCoach(context: Context) {
     @Volatile
     private var unavailable: String? = null
 
+    @Volatile
+    var playbackState: SpeechPlaybackState = SpeechPlaybackState.IDLE
+        private set
+    @Volatile
+    private var playbackError: String? = null
+
     /** 초기화가 끝났는데 음성을 못 쓰는 이유(한국어). 아직 초기화 중이거나 정상이면 null — 화면 배너용. */
-    val unavailableReason: String? get() = if (initialized) unavailable else null
+    val unavailableReason: String? get() = if (initialized) unavailable ?: playbackError else null
 
     private val progress = object : UtteranceProgressListener() {
-        override fun onStart(utteranceId: String?) {}
-        override fun onDone(utteranceId: String?) = finished(utteranceId)
+        override fun onStart(utteranceId: String?) { playbackState = SpeechPlaybackState.SPEAKING; playbackError = null }
+        override fun onDone(utteranceId: String?) { playbackState = SpeechPlaybackState.COMPLETED; finished(utteranceId) }
         override fun onStop(utteranceId: String?, interrupted: Boolean) = finished(utteranceId)
         @Deprecated("API 21 이전 시그니처 — 추상 메서드라 구현은 필요하다", ReplaceWith("onError(utteranceId, errorCode)"))
-        override fun onError(utteranceId: String?) = finished(utteranceId)
-        override fun onError(utteranceId: String?, errorCode: Int) = finished(utteranceId)
+        override fun onError(utteranceId: String?) = playbackFailed(utteranceId)
+        override fun onError(utteranceId: String?, errorCode: Int) = playbackFailed(utteranceId)
     }
 
     init {
@@ -487,6 +495,7 @@ class SpeechCoach(context: Context) {
     }
 
     fun stop() {
+        playbackState = SpeechPlaybackState.IDLE
         synchronized(lock) {
             pending.clear()
             speaking.clear()
@@ -508,6 +517,7 @@ class SpeechCoach(context: Context) {
     }
 
     private fun speakNow(text: String, flush: Boolean) {
+        playbackState = SpeechPlaybackState.IDLE
         val id = "coach-${System.nanoTime()}"
         synchronized(lock) {
             if (flush) speaking.clear()             // 끊긴 발화는 onDone 이 오지 않는다
@@ -515,10 +525,16 @@ class SpeechCoach(context: Context) {
         }
         requestFocus()
         val rc = runCatching {
-            tts?.speak(text, if (flush) TextToSpeech.QUEUE_FLUSH else TextToSpeech.QUEUE_ADD, null, id)
+            tts?.speak(text.toDinoCopy(), if (flush) TextToSpeech.QUEUE_FLUSH else TextToSpeech.QUEUE_ADD, null, id)
         }.getOrNull()
         // 발화가 시작조차 못 하면 리스너가 안 오므로 여기서 포커스를 정리한다
-        if (rc != TextToSpeech.SUCCESS) finished(id)
+        if (rc != TextToSpeech.SUCCESS) playbackFailed(id)
+    }
+
+    private fun playbackFailed(id: String?) {
+        playbackState = SpeechPlaybackState.ERROR
+        playbackError = "음성 재생에 실패했어요. 음성 확인을 다시 누르고 기기의 음성 설정을 확인해 주세요"
+        finished(id)
     }
 
     /** 초기화 직후 대기 큐를 흘려보낸다. 오래된 요청은 이미 지난 상황이라 버린다. */

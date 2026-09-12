@@ -45,7 +45,7 @@ import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.RestartAlt
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
+import com.example.trex_kotlin.TrexText as Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -103,27 +103,33 @@ fun TimerSessionScreen(
 ) {
     val c = Trex.c
     KeepScreenOn()
-    Column(Modifier.fillMaxSize().background(c.bg).padding(start = 20.dp, end = 20.dp, top = 50.dp)) {
+    androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize()) {
+    val compact = maxHeight < 480.dp
+    val ringSize = minOf(224.dp, (maxWidth - 40.dp).coerceAtLeast(80.dp))
+    Column(Modifier.fillMaxSize().background(c.bg).padding(horizontal = 20.dp, vertical = 16.dp)) {
         Row(verticalAlignment = Alignment.Top) {
             Column(Modifier.weight(1f)) {
                 Text("진행중 · ${index + 1}/$total", color = c.primaryText, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 0.8.sp)
-                Text(workout.name, color = c.text, fontSize = 19.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 5.dp))
+                androidx.compose.material3.Text(workout.name, color = c.text, fontSize = 19.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 5.dp))
             }
             RoundIcon(Icons.Rounded.Close, onClick = onExit, size = 38.dp, contentDescription = "종료")
         }
         Column(
-            Modifier.weight(1f).fillMaxWidth(),
+            Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
-            RingGauge(progress = 1f - (timeLeft / totalSeconds.toFloat()), size = 224.dp, stroke = 12.dp) {
+            if (compact) {
+                Text(timeLeft.asClock(), fontSize = 40.sp, fontWeight = FontWeight.Bold)
+                androidx.compose.material3.Text(workout.reps, color = c.text2, fontSize = 13.sp)
+            } else RingGauge(progress = 1f - (timeLeft / totalSeconds.toFloat()), size = ringSize, stroke = 12.dp) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("남은 시간", color = c.text3, fontSize = 11.sp)
                     Text(timeLeft.asClock(), color = c.text, fontSize = 44.sp, fontWeight = FontWeight.SemiBold, lineHeight = 46.sp, modifier = Modifier.padding(top = 5.dp))
-                    Text(workout.reps, color = c.primaryText, fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 6.dp))
+                    androidx.compose.material3.Text(workout.reps, color = c.primaryText, fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 6.dp))
                 }
             }
-            Row(
+            if (!compact) Row(
                 Modifier
                     .padding(top = 22.dp)
                     .clip(RoundedCornerShape(999.dp))
@@ -137,7 +143,7 @@ fun TimerSessionScreen(
             }
         }
         Row(
-            Modifier.padding(bottom = 26.dp),
+            Modifier.padding(top = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(14.dp),
         ) {
@@ -151,6 +157,7 @@ fun TimerSessionScreen(
         }
     }
 }
+}
 
 // ============================================================= 완료
 
@@ -162,6 +169,7 @@ fun TimerSessionScreen(
 fun SessionCompleteScreen(
     plan: List<Workout>,
     elapsedSeconds: Int,
+    elapsedByWorkout: Map<String, Int> = emptyMap(),
     reports: Map<String, PostureSetReport> = emptyMap(),
     /** (setId, actualReps, repsSource "edited"|"confirmed"|null, form). */
     onLabel: (setId: String, actualReps: Int?, repsSource: String?, form: FormLabel?) -> Unit = { _, _, _, _ -> },
@@ -171,12 +179,10 @@ fun SessionCompleteScreen(
 ) {
     val c = Trex.c
     val doneCount = plan.count { it.done }
-    val kcal = plan.filter { it.done }.sumOf { it.estimatedCalories() }
+    val kcal = plan.filter { it.done }.sumOf { it.estimatedCalories(elapsedByWorkout[it.id] ?: 0) }
     // plan 순서로 늘어놓은 리포트 — 헤드라인 선택과 운동별 행이 같은 순서를 쓴다
     val ordered = plan.mapNotNull { reports[it.id] }
-    // 제목이 바로 아래에서 지적한 내용을 뒤집어 말하지 않도록: 리포트가 없거나 전부 깨끗/교정일 때만 "정확하게".
-    // 유보·참고만 남은 세션도 판정하지 못한 것을 판정한 것처럼 단정하지 않는다.
-    val allClean = ordered.all { it.verdict == SetVerdict.CLEAN || it.verdict == SetVerdict.RECOVERED }
+    // 완료는 실제로 마친 행동만 표현한다. 판정 범위와 결과는 아래 리포트에서 따로 밝힌다.
     val headline = sessionHeadline(ordered)
 
     if (ordered.isNotEmpty()) SessionHeadlineVoice(headline, speak)
@@ -200,19 +206,19 @@ fun SessionCompleteScreen(
         }
         Text("DONE", color = c.primaryText, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 4.sp, modifier = Modifier.padding(top = 20.dp))
         Text(
-            if (allClean) "오늘도 정확하게 끝냈어룡" else "오늘도 끝까지 해냈어룡",
+            "오늘도 운동을 마쳤어룡",
             color = c.text, fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp),
         )
         Text(
-            "조금씩 좋아지고 있어요.\n내일 같은 시간에 만나룡.",
+            "완료한 운동을 기록했어룡.\n다음 운동도 함께해룡.",
             color = c.text2, fontSize = 13.sp, lineHeight = 21.sp, textAlign = TextAlign.Center,
             modifier = Modifier.padding(top = 8.dp),
         )
         Row(Modifier.padding(top = 24.dp).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf(
                 "$doneCount" to "완료 운동",
-                "${(elapsedSeconds / 60).coerceAtLeast(1)}분" to "총 시간",
-                "${kcal}kcal" to "소모 칼로리",
+                "${(elapsedSeconds / 60)}분" to "총 시간",
+                "${kcal}kcal" to "추정 소모 칼로리",
             ).forEach { (v, label) ->
                 Column(
                     Modifier

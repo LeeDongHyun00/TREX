@@ -25,13 +25,16 @@ import androidx.compose.material.icons.automirrored.rounded.TrendingUp
 import androidx.compose.material.icons.rounded.FitnessCenter
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
+import com.example.trex_kotlin.TrexText as Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -51,6 +54,8 @@ import java.util.Locale
 @Composable
 fun RecordScreen(app: AppViewModel, onBack: () -> Unit) {
     val c = Trex.c
+    val density = LocalDensity.current
+    var headerHeight by remember { mutableStateOf(70.dp) }
     val today = LocalDate.now()
     val weekDates = (6 downTo 0).map { today.minusDays(it.toLong()) }
     val days = weekDates.map { d -> d to app.workoutHistory.firstOrNull { it.epochDay == d.toEpochDay() } }
@@ -67,7 +72,7 @@ fun RecordScreen(app: AppViewModel, onBack: () -> Unit) {
     Box(Modifier.fillMaxSize().background(c.bg)) {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 112.dp, bottom = 26.dp),
+            contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = headerHeight + 12.dp, bottom = 26.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             item {
@@ -191,7 +196,7 @@ fun RecordScreen(app: AppViewModel, onBack: () -> Unit) {
                             }
                             Column(Modifier.padding(start = 12.dp).weight(1f)) {
                                 Text(
-                                    text = if (has) dayTitle(record!!) else if (date >= today) "예정" else "휴식",
+                                    text = if (has) dayTitle(record!!) else "기록 없음",
                                     color = if (has) c.text else c.text3,
                                     fontSize = 14.5.sp, fontWeight = FontWeight.SemiBold,
                                 )
@@ -223,8 +228,8 @@ fun RecordScreen(app: AppViewModel, onBack: () -> Unit) {
                                                 Modifier.size(26.dp).clip(RoundedCornerShape(9.dp)).background(c.surface).border(1.dp, c.line, RoundedCornerShape(9.dp)),
                                                 contentAlignment = Alignment.Center,
                                             ) { Icon(Icons.Rounded.FitnessCenter, contentDescription = null, tint = c.primaryText, modifier = Modifier.size(13.dp)) }
-                                            Text(item.workoutName, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 9.dp).weight(1f))
-                                            Text(item.reps, color = c.text3, fontSize = 10.5.sp, fontWeight = FontWeight.Medium)
+                                            androidx.compose.material3.Text(item.workoutName, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 9.dp).weight(1f))
+                                            androidx.compose.material3.Text(item.reps, color = c.text3, fontSize = 10.5.sp, fontWeight = FontWeight.Medium)
                                             item.accuracy?.let { acc ->
                                                 Text(
                                                     "$acc%",
@@ -282,13 +287,13 @@ fun RecordScreen(app: AppViewModel, onBack: () -> Unit) {
 
         // 상단 글래스 헤더
         Surface(
-            modifier = Modifier.align(Alignment.TopCenter).fillMaxWidth(),
+            modifier = Modifier.align(Alignment.TopCenter).fillMaxWidth().onSizeChanged { headerHeight = with(density) { it.height.toDp() } },
             color = c.navGlass,
             contentColor = c.text,
         ) {
             Column {
                 Row(
-                    Modifier.padding(start = 20.dp, end = 20.dp, top = 46.dp, bottom = 12.dp),
+                    Modifier.padding(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 12.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     RoundIcon(Icons.AutoMirrored.Rounded.KeyboardArrowLeft, onClick = onBack, contentDescription = "뒤로")

@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -41,7 +42,7 @@ import androidx.compose.material.icons.rounded.Timer
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
+import com.example.trex_kotlin.TrexText as Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -219,7 +220,7 @@ private fun AltPickRow(pick: AltPick, onPick: () -> Unit) {
                 )
             }
             Column(Modifier.padding(start = 11.dp).weight(1f)) {
-                Text(pick.name, fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold)
+                androidx.compose.material3.Text(pick.name, fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold)
                 Row(Modifier.padding(top = 3.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         pick.reps + (pick.duration?.let { " · $it" } ?: ""),
@@ -278,18 +279,18 @@ private fun SetsSheet(app: AppViewModel, initial: SetDraft, onClose: () -> Unit)
     val minCount = if (draft.unit == "초") 10 else 1
     val summary = if (draft.sets > 0) {
         val per = if (draft.unit == "초") draft.count else draft.count * 3
-        "예상 소요 약 ${((per * draft.sets + 45 * draft.sets) / 60).coerceAtLeast(1)}분 · 세트 사이 45초 휴식"
+        "세트 사이 45초 휴식을 가정하면 약 ${((per * draft.sets + 45 * draft.sets) / 60).coerceAtLeast(1)}분 걸려룡"
     } else {
-        "예상 소요 약 ${draft.count}분"
+        "약 ${draft.count}분 걸릴 예정이에룡"
     }
 
     SheetHost(onDismiss = onClose) {
-        Column(Modifier.padding(horizontal = 20.dp).padding(bottom = 20.dp)) {
+        Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 20.dp)) {
             SheetHandle()
             Row(Modifier.padding(top = 12.dp, bottom = 16.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Kicker("세트 수정")
-                    Text(draft.name, color = c.text, fontSize = 17.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 2.dp))
+                    androidx.compose.material3.Text(draft.name, color = c.text, fontSize = 17.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 2.dp))
                 }
                 SheetClose(onClose)
             }
@@ -297,13 +298,17 @@ private fun SetsSheet(app: AppViewModel, initial: SetDraft, onClose: () -> Unit)
             DCard(radius = 24.dp) {
                 Column {
                     val rows = buildList {
-                        add(Triple("count", if (draft.unit == "분") "시간" else "반복", if (draft.unit == "분") "1분 단위로 조절" else if (draft.unit == "초") "5초 단위로 조절" else "1회 단위로 조절"))
-                        if (draft.sets > 0) add(Triple("sets", "세트", "1세트 단위로 조절"))
+                        add(Triple("count", if (draft.unit == "분") "시간" else "반복", if (draft.unit == "분") "1분 단위로 조절해룡" else if (draft.unit == "초") "5초 단위로 조절해룡" else "1회 단위로 조절해룡"))
+                        if (draft.sets > 0) add(Triple("sets", "세트", "1세트 단위로 조절해룡"))
                     }
                     rows.forEachIndexed { i, (key, label, hint) ->
                         if (i > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(c.line))
-                        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Column(Modifier.weight(1f)) {
+                        androidx.compose.foundation.layout.FlowRow(
+                            Modifier.fillMaxWidth().padding(16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            Column(Modifier.widthIn(min = 120.dp).weight(1f)) {
                                 Text(label, fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold)
                                 Text(hint, color = c.text3, fontSize = 11.sp, modifier = Modifier.padding(top = 3.dp))
                             }
@@ -478,7 +483,7 @@ private fun ManualSheet(app: AppViewModel, initialSlot: String, onClose: () -> U
                                 if (i > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(c.line))
                                 Row(Modifier.padding(horizontal = 14.dp, vertical = 13.dp), verticalAlignment = Alignment.CenterVertically) {
                                     Column(Modifier.weight(1f)) {
-                                        Text(f.name, fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold)
+                                        androidx.compose.material3.Text(f.name, fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold)
                                         Text(
                                             "${f.nutrition.kcal * f.qty} kcal · 탄 ${(f.nutrition.carb * f.qty).toInt()} · 단 ${(f.nutrition.protein * f.qty).toInt()} · 지 ${(f.nutrition.fat * f.qty).toInt()}",
                                             color = c.text3, fontSize = 11.sp, modifier = Modifier.padding(top = 3.dp),
@@ -590,190 +595,19 @@ private fun ManualSheet(app: AppViewModel, initialSlot: String, onClose: () -> U
 
 // ============================================================= 사진 식단 기록
 
-private val photoDetected = listOf(
-    Triple(FoodEntry("현미밥", Nutrition(220, 46.0, 5.0, 1.7)), 96, "220 kcal · 탄수 46g · 단백질 5g · 지방 1.7g"),
-    Triple(FoodEntry("닭가슴살", Nutrition(165, 0.0, 31.0, 3.6)), 93, "165 kcal · 탄수 0g · 단백질 31g · 지방 3.6g"),
-    Triple(FoodEntry("샐러드", Nutrition(120, 8.0, 4.0, 7.0)), 88, "120 kcal · 탄수 8g · 단백질 4g · 지방 7g"),
-)
-
 @Composable
 private fun PhotoSheet(app: AppViewModel, onClose: () -> Unit) {
-    val c = Trex.c
-    var stage by remember { mutableStateOf("choose") }
-
-    LaunchedEffect(stage) {
-        if (stage == "analyzing") {
-            delay(1800)
-            stage = "result"
-        }
+    var manual by remember { mutableStateOf(false) }
+    if (manual) {
+        ManualSheet(app, currentMealId(), onClose)
+        return
     }
-
     SheetHost(onDismiss = onClose) {
         Column(Modifier.padding(20.dp).verticalScroll(rememberScrollState())) {
-            SheetTitleRow(
-                kicker = when (stage) {
-                    "result" -> "분석 완료"
-                    "analyzing" -> "AI 분석 중"
-                    else -> "사진 식단 기록"
-                },
-                title = when (stage) {
-                    "result" -> "3가지 음식을 찾았어룡"
-                    "analyzing" -> "잠시만 기다려주세룡"
-                    else -> "사진으로 빠르게"
-                },
-                onClose = onClose,
-            )
-
-            when (stage) {
-                "choose" -> Column(Modifier.padding(top = 16.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
-                    Surface(
-                        onClick = { stage = "analyzing" },
-                        shape = RoundedCornerShape(20.dp),
-                        color = c.primary,
-                        contentColor = Color.White,
-                        shadowElevation = 5.dp,
-                    ) {
-                        Row(Modifier.fillMaxWidth().padding(15.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Box(Modifier.size(44.dp).clip(RoundedCornerShape(15.dp)).background(Color.White.copy(alpha = 0.18f)), contentAlignment = Alignment.Center) {
-                                Icon(Icons.Rounded.PhotoCamera, contentDescription = null, modifier = Modifier.size(19.dp))
-                            }
-                            Column(Modifier.padding(start = 12.dp).weight(1f)) {
-                                Text("사진 찍기", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                                Text("카메라로 바로 촬영", fontSize = 11.sp, color = Color.White.copy(alpha = 0.8f), modifier = Modifier.padding(top = 2.dp))
-                            }
-                        }
-                    }
-                    Surface(
-                        onClick = { stage = "analyzing" },
-                        shape = RoundedCornerShape(20.dp),
-                        color = c.surface,
-                        contentColor = c.text,
-                        border = BorderStroke(1.dp, c.line),
-                    ) {
-                        Row(Modifier.fillMaxWidth().padding(15.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Box(Modifier.size(44.dp).clip(RoundedCornerShape(15.dp)).background(c.surface2), contentAlignment = Alignment.Center) {
-                                Icon(Icons.Rounded.Image, contentDescription = null, tint = c.primaryText, modifier = Modifier.size(19.dp))
-                            }
-                            Column(Modifier.padding(start = 12.dp).weight(1f)) {
-                                Text("갤러리에서 선택", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                                Text("앨범에서 음식 사진 가져오기", fontSize = 11.sp, color = c.text3, modifier = Modifier.padding(top = 2.dp))
-                            }
-                        }
-                    }
-                    Spacer(Modifier.height(6.dp))
-                    WashBanner("여러 음식이 한 접시에 있어도 자동으로 분리해서 인식해룡", Icons.Rounded.AutoAwesome)
-                }
-
-                "analyzing" -> Column(Modifier.padding(top = 16.dp)) {
-                    Box(
-                        Modifier
-                            .fillMaxWidth()
-                            .height(220.dp)
-                            .clip(RoundedCornerShape(24.dp))
-                            .background(c.stripeA),
-                    ) {
-                        Text(
-                            "food photo", color = c.text3, fontSize = 11.sp, fontWeight = FontWeight.Medium,
-                            modifier = Modifier.align(Alignment.Center),
-                        )
-                        Column(Modifier.align(Alignment.BottomStart).fillMaxWidth().background(c.sheet.copy(alpha = 0.92f)).padding(16.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Box(Modifier.size(8.dp).clip(CircleShape).background(c.primary))
-                                Text("음식을 인식하고 있어룡…", color = c.text2, fontSize = 12.sp, modifier = Modifier.padding(start = 8.dp))
-                            }
-                            LinearProgressIndicator(
-                                modifier = Modifier.padding(top = 10.dp).fillMaxWidth().height(6.dp).clip(RoundedCornerShape(999.dp)),
-                                color = c.primary,
-                                trackColor = c.track,
-                            )
-                        }
-                    }
-                    Row(Modifier.padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        listOf("인식", "분류", "영양 계산").forEachIndexed { i, label ->
-                            Column(
-                                Modifier
-                                    .weight(1f)
-                                    .clip(RoundedCornerShape(14.dp))
-                                    .background(c.surface2)
-                                    .border(1.dp, c.line, RoundedCornerShape(14.dp))
-                                    .padding(10.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                            ) {
-                                Text("${i + 1}단계", color = c.text3, fontSize = 10.sp)
-                                Text(label, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 3.dp))
-                            }
-                        }
-                    }
-                }
-
-                else -> Column(Modifier.padding(top = 16.dp)) {
-                    val totalK = photoDetected.sumOf { it.first.nutrition.kcal }
-                    DCard(radius = 24.dp) {
-                        Column(Modifier.padding(18.dp)) {
-                            Row(verticalAlignment = Alignment.Top) {
-                                Column(Modifier.weight(1f)) {
-                                    Kicker("총 칼로리")
-                                    Row(Modifier.padding(top = 7.dp), verticalAlignment = Alignment.Bottom) {
-                                        Text("$totalK", color = c.text, fontSize = 32.sp, fontWeight = FontWeight.SemiBold, lineHeight = 32.sp)
-                                        Text(" kcal", color = c.text3, fontSize = 14.sp, modifier = Modifier.padding(bottom = 4.dp))
-                                    }
-                                }
-                                WashPill(mealMetas.first { it.id == currentMealId() }.label)
-                            }
-                            Row(Modifier.padding(top = 14.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                listOf(
-                                    "탄수" to photoDetected.sumOf { it.first.nutrition.carb }.toInt(),
-                                    "단백질" to photoDetected.sumOf { it.first.nutrition.protein }.toInt(),
-                                    "지방" to photoDetected.sumOf { it.first.nutrition.fat }.toInt(),
-                                ).forEach { (label, v) ->
-                                    Column(
-                                        Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).background(c.surface2).padding(9.dp),
-                                        horizontalAlignment = Alignment.CenterHorizontally,
-                                    ) {
-                                        Text(label, color = c.text3, fontSize = 10.sp)
-                                        Text("${v}g", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 3.dp))
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    Text("인식된 음식", color = c.text3, fontSize = 11.sp, modifier = Modifier.padding(top = 16.dp))
-                    Column(Modifier.padding(top = 8.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
-                        photoDetected.forEach { (food, conf, detail) ->
-                            Row(
-                                Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(16.dp))
-                                    .background(c.surface)
-                                    .border(1.dp, c.line, RoundedCornerShape(16.dp))
-                                    .padding(12.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Column(Modifier.weight(1f)) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text(food.name, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                                        Spacer(Modifier.width(7.dp))
-                                        WashPill("$conf%")
-                                    }
-                                    Text(detail, color = c.text3, fontSize = 11.sp, modifier = Modifier.padding(top = 3.dp))
-                                }
-                                Box(Modifier.size(26.dp).clip(CircleShape).background(c.primary), contentAlignment = Alignment.Center) {
-                                    Icon(Icons.Rounded.Check, contentDescription = null, tint = Color.White, modifier = Modifier.size(13.dp))
-                                }
-                            }
-                        }
-                    }
-                    Cta(
-                        "식단에 저장",
-                        icon = Icons.Rounded.Check,
-                        onClick = {
-                            app.appendFoods(0, currentMealId(), photoDetected.map { it.first })
-                            onClose()
-                        },
-                        modifier = Modifier.padding(top = 18.dp).fillMaxWidth(),
-                    )
-                }
-            }
+            SheetTitleRow(kicker = "사진 식단 기록", title = "사진 분석은 준비 중이에룡", onClose = onClose)
+            Text("아직 사진에서 음식과 영양을 분석할 수 없어룡. 먹은 음식을 직접 선택해서 기록해주세룡",
+                color = Trex.c.text2, modifier = Modifier.padding(vertical = 18.dp))
+            Cta("직접 기록하기", onClick = { manual = true }, modifier = Modifier.fillMaxWidth())
         }
     }
 }
@@ -902,7 +736,7 @@ private fun AddWorkoutSheet(app: AppViewModel, onClose: () -> Unit) {
                                 Icon(Icons.Rounded.FitnessCenter, contentDescription = null, tint = c.primaryText, modifier = Modifier.size(17.dp))
                             }
                             Column(Modifier.padding(start = 12.dp).weight(1f)) {
-                                Text(t.name, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                                androidx.compose.material3.Text(t.name, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                                 Text("${t.reps} · ${t.duration}", color = c.text3, fontSize = 11.sp, modifier = Modifier.padding(top = 2.dp))
                             }
                             Box(Modifier.size(28.dp).clip(CircleShape).background(c.primaryWash), contentAlignment = Alignment.Center) {

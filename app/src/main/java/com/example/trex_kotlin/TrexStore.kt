@@ -12,10 +12,29 @@ import org.json.JSONObject
  * 기록이 통째로 사라졌다. SharedPreferences + JSON 으로 단순하게 저장하고, 서버가 붙으면
  * 이 클래스만 원격 동기화 구현으로 교체한다.
  */
-class TrexStore(context: Context) {
+class TrexStore(context: Context, preferenceName: String = "trex_store") {
 
     private val prefs: SharedPreferences =
-        context.applicationContext.getSharedPreferences("trex_store", Context.MODE_PRIVATE)
+        context.applicationContext.getSharedPreferences(preferenceName, Context.MODE_PRIVATE)
+
+    init { removeLegacyDemoData() }
+
+    /** 삭제 전 원본 JSON을 보관하고, 전체 지문이 일치하는 데모만 한 번 정리한다. */
+    private fun removeLegacyDemoData() {
+        if (prefs.getBoolean("demo_cleanup_v1", false)) return
+        val history = loadHistory()
+        val diet = loadDiet()
+        val cleanHistory = history?.filterNot(LegacyDemoData::isSampleDay)
+        val cleanDiet = diet?.filterValues { !LegacyDemoData.isSampleDiet(it) }
+        val backup = prefs.edit()
+        if (history != cleanHistory) backup.putString("before_demo_cleanup_history", prefs.getString(KEY_HISTORY, null))
+        if (diet != cleanDiet) backup.putString("before_demo_cleanup_diet", prefs.getString(KEY_DIET, null))
+        // 원본 백업이 디스크에 기록된 뒤 정리한다.
+        if (!backup.commit()) return
+        if (history != cleanHistory && cleanHistory != null) saveHistory(cleanHistory)
+        if (diet != cleanDiet && cleanDiet != null) saveDiet(cleanDiet)
+        prefs.edit().putBoolean("demo_cleanup_v1", true).apply()
+    }
 
     // ---- 진행 플래그
 
@@ -140,6 +159,8 @@ class TrexStore(context: Context) {
                             calories = it.getInt("calories"),
                             postureCorrection = if (legacy) null else readPostureCorrection(it),
                             accuracy = if (legacy) null else it.optInt("accuracy", -1).takeIf { a -> a >= 0 },
+                            workoutId = it.optString("workoutId").takeIf(String::isNotBlank),
+                            durationSeconds = it.optInt("durationSeconds", -1).takeIf { seconds -> seconds >= 0 },
                         )
                     },
                 )
@@ -159,6 +180,8 @@ class TrexStore(context: Context) {
                         .put("durationMinutes", item.durationMinutes)
                         .put("calories", item.calories)
                         .put("accuracy", item.accuracy ?: -1)
+                        .put("workoutId", item.workoutId ?: "")
+                        .put("durationSeconds", item.durationSeconds ?: -1)
                         .also { o -> writePostureCorrection(o, item.postureCorrection) },
                 )
             }
