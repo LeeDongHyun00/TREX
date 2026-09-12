@@ -1150,6 +1150,7 @@ JVM 244건 통과: 모든 카메라 종목에서 방향 문구가 5초 안내보
 ## §57 — Mac 구현 착수 범위와 자산 기준 (2026-09-13)
 
 - 사용자의 Mac 구현 준비 요청으로 실제 Mac 인수인계 `6a569ec`를 merge했다. Mac 원문은 유지하고 [구현 착수 계획](../../docs/ios-kmp/MAC_IMPLEMENTATION.md)을 추가했다. 초기 환경 검토 전용 지시는 M0~M2 구현 범위로 갱신한다.
+- 게시 직전 `37fd7d5`의 Mac 전체 실행 제안과 최신 연결 상태도 merge했다. iPhone 16 Plus(iOS 27 베타)와 Note10+(Android 12/API 31)는 Mac에 연결돼 있다. Mac의 전체 실행 제안 원문은 보존하고 통합 담당 지시에서 0A를 M0로 구체화, 3A의 평가 없는 OS 어댑터 부분만 M1/M2로 선행시켰다. Android 계측 코드는 Windows가, 두 단말 실행/회수는 Mac이 맡는다.
 - P1/P2 이전에도 OS 어댑터 위험을 확인할 수 있도록 M0 SwiftUI 진단 앱 → M1 카메라/Core Motion → M2 MediaPipe 관절 출력은 Mac이 선행한다. 공통 엔진 없이 점수·횟수·교정·기준선 로직을 Swift로 재작성하지 않으며 ‘평가 엔진 연결 전’을 표시한다. M3/P3 평가 기능은 실제 P1/P2 API와 생성 헤더를 받은 뒤 연결한다.
 - Intel/Xcode 16.2 관측을 반영했다. 기본 Native 타깃은 arm64이며 Intel 시뮬레이터는 선택 검증 타깃이다. 현재 기기/Xcode 실행 가능 여부를 먼저 확인하고 Kotlin 하향·OS 패치로 환경 문제를 우회하지 않는다. Pod 없는 진단 타깃과 Pod 소유 추론 타깃을 분리해 UI/카메라 검사와 SDK 링크 검사를 구분한다.
 - [ASSET_BASELINE.json](../../docs/ios-kmp/ASSET_BASELINE.json)은 Git `5237ba9`의 모델·규칙·정상 표본·기존 픽스처 8개 바이트 해시를 고정한다. `verify_ios_handoff.py`는 체크아웃의 내용/바이트 일치와 실제 규칙 배열 분포를 검사한다. 기본 모드는 텍스트 CRLF 차이만 허용하고 실제 raw 해시를 따로 보고한다. strict 모드는 줄바꿈 차이도 실패한다. 앱 번들·추론·규칙 파서 동등성을 검사하는 도구는 아니다.

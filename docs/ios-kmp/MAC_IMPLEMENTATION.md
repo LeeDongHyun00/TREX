@@ -2,7 +2,9 @@
 
 **갱신일: 2026-09-13 / 상태: 구현 작업 범위 확정, 앱·KMP 구현은 미착수**
 
-사용자의 Mac 구현 준비 요청에 따라 초기의 ‘환경 검토만’ 범위를 확장한다. [Mac 인수인계 `6a569ec`](https://github.com/LeeDongHyun00/TREX/commit/6a569ec)의 실제 환경과 설계 의견을 반영했다. 아래 M0~M2는 Mac이 지금 구현할 수 있다. P1/P2 공통 API가 필요한 M3은 후속이다. [ADR-056](../IOS_POSTURE_KMP_DESIGN.md)의 판정·좌표·세션 계약은 유지한다.
+사용자의 Mac 구현 준비 요청에 따라 초기의 ‘환경 검토만’ 범위를 확장한다. Mac 환경 검토 `6a569ec`와 [최신 연결·실행 계획 `37fd7d5`](https://github.com/LeeDongHyun00/TREX/commit/37fd7d5)를 반영했다. 아래 M0~M2는 Mac이 지금 구현할 수 있다. P1/P2 공통 API가 필요한 M3은 후속이다. [ADR-056](../IOS_POSTURE_KMP_DESIGN.md)의 판정·좌표·세션 계약은 유지한다.
+
+[MAC_IMPLEMENTATION_PLAN.md](MAC_IMPLEMENTATION_PLAN.md)는 Mac이 작성한 전체 이전·두 단말 검증 제안으로 원문을 보존한다. **이 문서는 Windows 통합 담당이 확정한 당장 착수할 작업 지시**다. Mac 계획의 0A를 M0로 구체화하고, 3A 중 평가 없는 카메라/센서/관절 어댑터만 M1/M2로 앞당긴다. 3A의 엔진 입력 연결과 3B의 세션 UI는 M3/P1/P2 이후로 유지한다. 문서마다 다른 엔진이나 검증 기준을 만드는 변경이 아니다.
 
 ## 1. 결정과 이유
 
@@ -18,7 +20,7 @@
 
 ## 2. 환경별 실행 경로
 
-Mac 관측값은 Intel `MacBookPro14,3`, macOS 14.8.4, Xcode 16.2, Java 21.0.10, CocoaPods 1.16.2다. 검사 당시 시뮬레이터 기기는 없고 iPhone은 오프라인이었다. 지금 연결 상태는 다시 확인한다. 오프라인 캐시의 iOS 26.4.1을 실측 버전으로 쓰지 않는다.
+Mac 관측값은 Intel `MacBookPro14,3`, macOS 14.8.4, Xcode 16.2, Java 21.0.10, CocoaPods 1.16.2다. 9월 13일 Mac 보고에서 iPhone 16 Plus는 유선 연결/페어링/Developer Mode 활성화, 실제 iOS **27.0 Beta (24A5424a)**로 확인됐다. Note10+ 5G는 Android **12/API 31**, USB ADB device다. 두 폰은 Mac에 연결돼 있고 앱 빌드·서명·실행은 아직 미검증이다. 이전 iPhone 오프라인/26.4.1 캐시는 최신 상태로 사용하지 않는다. 시뮬레이터 기기는 마지막 검사에서 0개였으며 필요할 때 다시 확인한다.
 
 Kotlin 2.3.21의 공식 Xcode 기준은 26.0이다. Xcode 26은 macOS 15.6 이상을 요구한다. 현재 도구 조합의 컴파일 실패는 아직 실측하지 않았다. 버전 표 차이를 앱 코드 오류로 해석하거나 성공으로 가정하지 않는다. [Kotlin 호환 표](https://kotlinlang.org/docs/multiplatform/multiplatform-compatibility-guide.html), [Apple Xcode 요구 사항](https://developer.apple.com/xcode/system-requirements)
 
@@ -26,6 +28,8 @@ Kotlin 2.3.21의 공식 Xcode 기준은 26.0이다. Xcode 26은 macOS 15.6 이�
 2. 기기 실행이 막혀도 소스 작성과 서명 없는 일반 iOS 대상 빌드를 분리해서 진행한다. 가능한 경우 설치된 런타임에 시뮬레이터를 만들어 UI 테스트한다. 이 성공은 실기기 실행/촬영 성공이 아니다.
 3. 연결 iPhone을 현재 Xcode가 지원하지 않으면 정확한 오류를 기록하고 실기기 검증을 미완료로 둔다. 지원되는 다른 Mac/Xcode 또는 호환되는 검증 기기를 사용하는 경로를 제안한다. OS 패치·기기 다운그레이드·전역 도구 변경으로 우회하지 않는다.
 4. KMP P1의 기본 타깃은 `iosArm64`, `iosSimulatorArm64`를 유지한다. Intel 시뮬레이터용 `iosX64`는 **선택 검증 타깃**으로 Windows가 별도 Gradle 변경에 추가한다. M0~M2에는 필요 없다. `iosX64` 추가만으로 Xcode 또는 MediaPipe 바이너리 호환이 해결되는 것은 아니다.
+
+iOS 27 베타 기기 연결 성공을 Xcode 16.2에서의 앱 실행 가능성으로 바꾸어 말하지 않는다. 먼저 지금 가능한 컴파일·서명·설치·실행을 나누어 확인한다. 베타 OS 한 대의 결과를 안정 OS나 최소 지원 iOS 16의 검증으로 확대하지 않는다. Windows는 연결된 Note10+를 직접 사용할 수 있다고 가정하지 않고, P0/회귀 소스 SHA·명령·산출물 해시를 전달하면 Mac이 실행/회수한다. 기존 앱 삭제나 사용자 데이터 초기화 없이 별도 진단 패키지를 우선 사용한다.
 
 ## 3. Mac의 작업 단위와 완료 조건
 

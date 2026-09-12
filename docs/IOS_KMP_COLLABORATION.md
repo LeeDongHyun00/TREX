@@ -74,7 +74,7 @@ git switch --track origin/codex/ios-kmp-mac
 
 **Windows의 다음 범위:** 설계 P0에서 기존 테스트·프레임/이벤트 기준을 확인한 뒤 P1 공통 계산 모듈을 추출한다. 이번 브랜치 공유 작업에서는 실행하지 않았다.
 
-**Mac의 다음 범위:** 환경 검토 `6a569ec`를 수신했다. [M0~M2 구현 계획](ios-kmp/MAC_IMPLEMENTATION.md)에 따라 KMP 의존성 없는 SwiftUI 진단 앱, 카메라·센서, MediaPipe 관절 출력까지 구현한다. 아직 평가 엔진이 없음을 표시하며 점수·횟수·교정 음성은 만들지 않는다. Intel/Xcode·실기기 실행 제약을 실제 명령/결과로 기록한다.
+**Mac의 다음 범위:** 환경 검토 `6a569ec`와 두 단말 연결·실행 계획 `37fd7d5`를 수신했다. [M0~M2 구현 계획](ios-kmp/MAC_IMPLEMENTATION.md)에 따라 KMP 의존성 없는 SwiftUI 진단 앱, 카메라·센서, MediaPipe 관절 출력까지 구현한다. 아직 평가 엔진이 없음을 표시하며 점수·횟수·교정 음성은 만들지 않는다. Intel/Xcode·실기기 실행 제약을 실제 명령/결과로 기록한다. 두 폰은 Mac에 연결돼 있으므로 Windows 작성 Android 계측도 Mac이 해당 SHA 기준으로 실행·회수한다.
 
 이후 Mac은 Windows가 공개한 P1 커밋으로 Kotlin/Native 계산을 검증하고, P2 facade를 받아 M3/P3의 평가 기능을 연결한다. P3 중 OS 어댑터 부분만 선행하는 결정이며 P1/P2의 완료 조건을 생략하지 않는다. Mac은 `iosApp/` 하위 ignore·프로젝트·Pod·문서·테스트를 소유하고, 공통 Gradle 변경은 Windows 담당으로 유지한다.
 
@@ -105,7 +105,7 @@ git merge origin/codex/ios-posture-kmp
 - 실제 관절 재생 자료가 추가로 필요하면 익명화·공유 가능 여부를 확인한 테스트 픽스처를 별도로 선정한다. 무시 규칙을 해제하거나 `git add -f`로 개인 로그/원본 데이터를 올리지 않는다.
 - `local.properties`, 서명키, 인증정보, 개인 설정, 로컬 SDK 경로는 공유하지 않는다. Xcode가 생성한 개인 상태·빌드 산출물도 iOS 프로젝트 추가 시 해당 ignore 규칙으로 제외한다.
 - 모델/규칙의 해시와 실제 테스트 입력이 다르면 결과 비교 전에 그 차이를 기록한다.
-- Mac 환경 검사 결과는 `6a569ec`에 있다. 아직 KMP 모듈, iOS 앱, Native 빌드 결과는 없다. 자산 확인 도구는 [구현 계획 §5](ios-kmp/MAC_IMPLEMENTATION.md)에 있다.
+- Mac 환경 검사 결과는 `6a569ec`, 최신 기기 연결과 Mac의 전체 실행 제안은 `37fd7d5`에 있다. 아직 KMP 모듈, iOS 앱, Native 빌드 결과는 없다. 자산 확인 도구와 당장 착수할 작업 지시는 [구현 계획](ios-kmp/MAC_IMPLEMENTATION.md)에 있다.
 
 ## 7. Mac Codex에 전달할 시작 문구
 

@@ -1,5 +1,7 @@
 # 자세 평가 — 인수인계 (2026-09-03)
 
+> **게시 전 최신 Mac 반영(2026-09-13)**: `37fd7d5`의 [전체 실행 제안](ios-kmp/MAC_IMPLEMENTATION_PLAN.md)과 두 폰 연결 보고를 함께 수신했다. iPhone 16 Plus는 iOS 27 베타/Developer Mode 활성화, Note10+는 Android 12/API 31로 Mac에 연결돼 있다. 남은 첫 검증은 진단 앱의 빌드·서명·설치·실행이며 연결 문제를 다시 미해결로 취급하지 않는다. 당장 착수할 범위는 [통합 담당의 M0~M2 지시](ios-kmp/MAC_IMPLEMENTATION.md), 전체 이전/두 단말 검증 제안은 Mac 원문을 따른다.
+
 > **최신 협업 지시(2026-09-13, §57)**: Mac의 실제 환경·설계 검토 `6a569ec`를 반영했다. [Mac 구현 착수 계획](ios-kmp/MAC_IMPLEMENTATION.md)에 따라 M0 SwiftUI 진단 앱 → M1 카메라·센서 → M2 MediaPipe 관절 출력을 공통 엔진과 독립적으로 구현한다. 초기의 ‘환경 검토만’ 지시는 이 범위로 대체한다. 평가는 미연결로 표시하고 P1/P2 실제 API 후 연결한다. Intel/Xcode 차이·iPhone 실행은 미해결이며 앱 구현/Native 빌드 성공을 뜻하지 않는다. 자산 기준 8개와 읽기 전용 검사 도구를 추가했다. Windows 텍스트의 CRLF 차이를 원본 바이트 일치와 구분한다. 아래의 Mac 미확인/양식 표현은 초기 시점 기록이며 현재 상태는 [Mac 인수인계](ios-kmp/MAC_STATUS.md)를 따른다.
 
 > **협업 소스 기준:** GitHub의 `5237ba9`는 아래 설계에서 분석한 로컬 `5c7118e`와 추적 파일 트리가 동일하다. GitHub의 파일 크기 제한에 걸린 로컬 조상 이력은 Windows에 보존하고, 원격의 동일 코드 위에 설계·협업 문서만 옮겼다. Mac에서는 `5237ba9` 및 협업 브랜치의 후속 커밋을 기준으로 이어간다. 상세 경위는 [협업 규약 §1](IOS_KMP_COLLABORATION.md)에 있다.
