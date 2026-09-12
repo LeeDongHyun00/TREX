@@ -1,0 +1,15 @@
+{
+  "schema": "trex.ios-handoff-assets/1",
+  "sourceCommit": "5237ba9d07662849fc2b23853672049ff2a950af",
+  "hashBasis": "Git blob bytes; text uses LF. Not an installed app bundle manifest.",
+  "files": [
+    {"path": "app/src/main/assets/posture/pose_landmarker_full.task", "text": false, "sha256": "4eaa5eb7a98365221087693fcc286334cf0858e2eb6e15b506aa4a7ecdcec4ad"},
+    {"path": "app/src/main/assets/posture/rules_mp_v0.json", "text": true, "sha256": "e6968a7fe958a106df6885cf9cfaf58b6031cbb2ec8035eadfee75cdef526ce4", "ruleCounts": {"ship": 51, "beta": 20, "exclude": 70}},
+    {"path": "app/src/main/assets/posture/rules_floor_v0.json", "text": true, "sha256": "3a23275d8a9bbd5174ec1c9e175323354826e68d90634b1714ea1d4e4e6ed21b", "ruleCounts": {"beta": 14, "exclude": 2}},
+    {"path": "app/src/main/assets/posture/normal_pose_reference.tsv", "text": true, "sha256": "c7a4498fc522d78a793a0df94461236f97fa4e45a4ae8f722684083fd235c7ac"},
+    {"path": "app/src/test/resources/posture_port_fixture.txt", "text": true, "sha256": "88f389686c038773cbf8dfa4c1489b231931f7573153b7b5e2ddf1e4d23556c8"},
+    {"path": "app/src/test/resources/floor_port_fixture.txt", "text": true, "sha256": "264d02d644fd2cb7b2808bbaa9f6a4036906c76f743215284cac15955f6e5d2b"},
+    {"path": "app/src/test/resources/view_fixture.txt", "text": true, "sha256": "9dc3dd1722361db47aeff89f576ebbb12554a41a3032520071a4e833f70389c1"},
+    {"path": "app/src/test/resources/plank_replay_fixture.tsv", "text": true, "sha256": "b9064630afa2e27a9873558da7c9ca4154357b803e1dfe9bbca4bec2f5ec88af"}
+  ]
+}

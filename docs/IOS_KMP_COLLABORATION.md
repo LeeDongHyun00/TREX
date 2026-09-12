@@ -2,7 +2,7 @@
 
 **작성일: 2026-09-12**
 
-**상태: 협업 기반 준비. KMP/iOS 구현은 아직 시작하지 않았다.**
+**상태(2026-09-13): Mac 환경 인수인계 반영, M0~M2 구현 착수 범위 확정. KMP/iOS 구현은 아직 시작하지 않았다.**
 
 **GitHub 기준 소스: `5237ba9` — 분석한 로컬 `5c7118e`와 추적 파일 트리가 동일하다.**
 
@@ -31,6 +31,8 @@ GitHub에 코드·설계·실행 결과의 요약을 공유하고 두 기기에�
 3. [IOS_POSTURE_KMP_DESIGN.md](IOS_POSTURE_KMP_DESIGN.md) — ADR-056, 아직 제안 상태
 4. 이 문서와 [Windows 상태](ios-kmp/WINDOWS_STATUS.md), [Mac 상태](ios-kmp/MAC_STATUS.md)
 5. 필요한 세부 규약은 [KOTLIN_PORTING_SPEC.md](../research/aihub_fitness/KOTLIN_PORTING_SPEC.md)
+
+Mac의 다음 구현 작업은 [MAC_IMPLEMENTATION.md](ios-kmp/MAC_IMPLEMENTATION.md)를 따른다. 이 문서의 M0~M2가 초기의 환경 검토 전용 범위를 대체한다. ADR의 평가 엔진 계약은 유지한다.
 
 설계의 `posture-core`, `TrexPosture`, 입력 DTO와 이벤트 이름은 아직 실제 API가 아니다. 문서만 보고 Mac에서 별도 엔진이나 임시 판정 로직을 만들지 않는다. 공통 API가 커밋되면 그 **정확한 커밋**을 상태 문서에 기록하고 사용한다.
 
@@ -72,9 +74,9 @@ git switch --track origin/codex/ios-kmp-mac
 
 **Windows의 다음 범위:** 설계 P0에서 기존 테스트·프레임/이벤트 기준을 확인한 뒤 P1 공통 계산 모듈을 추출한다. 이번 브랜치 공유 작업에서는 실행하지 않았다.
 
-**Mac의 첫 범위:** 저장소/브랜치/소스 확인, `xcodebuild -version`, `xcode-select -p`, `java -version`, `pod --version` 등 개발 환경 존재 여부, Apple Silicon/Intel, 시뮬레이터·실제 iPhone 확보 여부를 확인한다. 설치나 계정 설정을 했다고 가정하지 않는다. 설계를 읽고 Native/Swift 연결 장애를 `MAC_STATUS.md`에 남긴다. 우선 환경 검사와 설계 검토이며 P1 API 이전에 Swift 엔진을 따로 구현하지 않는다.
+**Mac의 다음 범위:** 환경 검토 `6a569ec`를 수신했다. [M0~M2 구현 계획](ios-kmp/MAC_IMPLEMENTATION.md)에 따라 KMP 의존성 없는 SwiftUI 진단 앱, 카메라·센서, MediaPipe 관절 출력까지 구현한다. 아직 평가 엔진이 없음을 표시하며 점수·횟수·교정 음성은 만들지 않는다. Intel/Xcode·실기기 실행 제약을 실제 명령/결과로 기록한다.
 
-이후 Mac은 Windows가 공개한 P1 커밋을 가져와 Kotlin/Native 빌드와 같은 픽스처를 검증한다. 입력 계약이 실제로 빌드되는 것이 확인되면 P3의 iOS 검증 앱으로 진행한다. 환경 준비가 되더라도 플랫폼 정확도 검증을 마친 것으로 쓰지 않는다.
+이후 Mac은 Windows가 공개한 P1 커밋으로 Kotlin/Native 계산을 검증하고, P2 facade를 받아 M3/P3의 평가 기능을 연결한다. P3 중 OS 어댑터 부분만 선행하는 결정이며 P1/P2의 완료 조건을 생략하지 않는다. Mac은 `iosApp/` 하위 ignore·프로젝트·Pod·문서·테스트를 소유하고, 공통 Gradle 변경은 Windows 담당으로 유지한다.
 
 ## 5. 변경을 주고받는 절차
 
@@ -82,7 +84,7 @@ git switch --track origin/codex/ios-kmp-mac
 2. 통합 브랜치와 상대 상태를 읽는다. 필요한 커밋이 아직 통합되지 않았다면 PR/상태에 정확한 SHA를 적고 의존성을 명시한다.
 3. 담당 파일을 수정하고 적절한 검사 후 **자기 상태 파일**을 갱신한다. 변경 요약·기준 API 커밋·명령/결과·미실행 항목·상대에게 필요한 일을 적는다.
 4. 목적별 작은 커밋을 자기 작업 브랜치에 push하고 PR의 base를 **`codex/ios-posture-kmp`**로 지정한다. `main`으로 PR을 만들지 않는다.
-5. 통합 담당은 상대 PR과 검사 결과를 읽고 merge한다. 소스 이력이 남도록 merge commit을 기본으로 한다. 이 문서 작성만으로 향후 PR이 자동 승인/머지되는 것은 아니다.
+5. 통합 담당은 상대 PR과 검사 결과를 읽고 merge한다. 소스 이력이 남도록 merge commit을 기본으로 한다. 이 문서 작성만으로 향후 PR이 자동 승인/머지되는 것은 아니다. 이번 2026-09-13 구현 준비 업데이트는 사용자의 브랜치 갱신 요청에 따라 Mac 문서 커밋을 merge하고 착수 문서/자산 검사 도구를 통합 브랜치에 직접 공유한다. 이후 앱 구현은 PR 절차를 따른다.
 6. 다음 작업 시작 전에 자기 브랜치에서 `git merge origin/codex/ios-posture-kmp`로 통합 변경을 가져온다. 충돌은 담당 영역과 테스트를 확인해 해결하며 상대 변경을 통째로 선택해 버리지 않는다.
 
 공통 API를 바꾸는 PR에는 최소한 `변경한 타입/메서드`, `소비 쪽 변경 필요 여부`, `통과한 플랫폼`, `검증하지 못한 플랫폼`을 적는다. Windows JVM 성공만으로 Native 성공이라고 쓰지 않는다.
@@ -103,13 +105,13 @@ git merge origin/codex/ios-posture-kmp
 - 실제 관절 재생 자료가 추가로 필요하면 익명화·공유 가능 여부를 확인한 테스트 픽스처를 별도로 선정한다. 무시 규칙을 해제하거나 `git add -f`로 개인 로그/원본 데이터를 올리지 않는다.
 - `local.properties`, 서명키, 인증정보, 개인 설정, 로컬 SDK 경로는 공유하지 않는다. Xcode가 생성한 개인 상태·빌드 산출물도 iOS 프로젝트 추가 시 해당 ignore 규칙으로 제외한다.
 - 모델/규칙의 해시와 실제 테스트 입력이 다르면 결과 비교 전에 그 차이를 기록한다.
-- 아직 KMP 모듈, iOS 앱, Native 빌드 결과, Mac 환경 검사 결과는 없다.
+- Mac 환경 검사 결과는 `6a569ec`에 있다. 아직 KMP 모듈, iOS 앱, Native 빌드 결과는 없다. 자산 확인 도구는 [구현 계획 §5](ios-kmp/MAC_IMPLEMENTATION.md)에 있다.
 
 ## 7. Mac Codex에 전달할 시작 문구
 
 아래 문구는 Mac의 TREX 저장소 작업에서 사용한다. 여기서 Mac 작업을 원격으로 시작하거나 메시지를 보낸 것은 아니다.
 
-> TREX의 iOS 자세 기능 확장을 Windows Codex와 함께 준비하려고 합니다. 저장소는 https://github.com/LeeDongHyun00/TREX 이고 통합 브랜치는 `codex/ios-posture-kmp`, 이 Mac의 작업 브랜치는 `codex/ios-kmp-mac`입니다. 기존 미커밋/미푸시 작업을 보존한 뒤 원격을 확인하고 Mac 작업 브랜치에서 진행하세요. 먼저 `AGENTS.md`, `docs/POSTURE_HANDOFF.md`, `docs/IOS_POSTURE_KMP_DESIGN.md`, `docs/IOS_KMP_COLLABORATION.md`, `docs/ios-kmp/WINDOWS_STATUS.md`, `docs/ios-kmp/MAC_STATUS.md`를 읽으세요. 이번 첫 작업은 Mac의 Xcode·Java·CocoaPods·시뮬레이터/실제 iPhone 환경 확인과 설계 검토입니다. 검사 결과와 막힌 점을 `MAC_STATUS.md`에 기록하고 Mac 브랜치에 커밋·푸시하세요. 공통 엔진/루트 Gradle/규칙을 독자 수정하거나 Swift 판정 엔진을 새로 만들지 마세요. 아직 설계 단계이므로 구현 API가 존재한다고 가정하지 말고, Windows의 P1 커밋이 공유되면 그 커밋을 기준으로 Kotlin/Native 검증에 이어가세요. `main` 및 통합 브랜치로 직접 푸시하지 마세요.
+> TREX의 `codex/ios-kmp-mac` 브랜치에서 기존 작업을 보존하고 원격 Mac 변경과 `origin/codex/ios-posture-kmp`를 가져오세요. `AGENTS.md`, `docs/POSTURE_HANDOFF.md`, ADR와 협업 규약, 양쪽 상태, `docs/ios-kmp/MAC_IMPLEMENTATION.md`를 읽으세요. 환경 검토만 하던 범위가 M0~M2 구현으로 갱신됐습니다. 자산 검사 도구를 실행한 뒤 M0 SwiftUI 진단 앱부터 만들고, M1 카메라·센서, M2 MediaPipe 관절 출력으로 이어가세요. KMP/Swift 판정 엔진은 대신 만들지 말고 `평가 엔진 연결 전` 상태를 유지하세요. 기기 실행 장애와 실제 검증 범위를 구분해 `MAC_STATUS.md`와 `iosApp/README.md`에 기록하고 Mac 브랜치에 커밋·푸시하세요. PR base는 `codex/ios-posture-kmp`입니다. P1/P2 API가 공개되면 해당 SHA를 기준으로 M3 공통 엔진 연결을 진행하세요.
 
 ## 8. 상태 공유 양식
 

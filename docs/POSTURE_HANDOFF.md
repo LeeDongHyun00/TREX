@@ -1,5 +1,7 @@
 # 자세 평가 — 인수인계 (2026-09-03)
 
+> **최신 협업 지시(2026-09-13, §57)**: Mac의 실제 환경·설계 검토 `6a569ec`를 반영했다. [Mac 구현 착수 계획](ios-kmp/MAC_IMPLEMENTATION.md)에 따라 M0 SwiftUI 진단 앱 → M1 카메라·센서 → M2 MediaPipe 관절 출력을 공통 엔진과 독립적으로 구현한다. 초기의 ‘환경 검토만’ 지시는 이 범위로 대체한다. 평가는 미연결로 표시하고 P1/P2 실제 API 후 연결한다. Intel/Xcode 차이·iPhone 실행은 미해결이며 앱 구현/Native 빌드 성공을 뜻하지 않는다. 자산 기준 8개와 읽기 전용 검사 도구를 추가했다. Windows 텍스트의 CRLF 차이를 원본 바이트 일치와 구분한다. 아래의 Mac 미확인/양식 표현은 초기 시점 기록이며 현재 상태는 [Mac 인수인계](ios-kmp/MAC_STATUS.md)를 따른다.
+
 > **협업 소스 기준:** GitHub의 `5237ba9`는 아래 설계에서 분석한 로컬 `5c7118e`와 추적 파일 트리가 동일하다. GitHub의 파일 크기 제한에 걸린 로컬 조상 이력은 Windows에 보존하고, 원격의 동일 코드 위에 설계·협업 문서만 옮겼다. Mac에서는 `5237ba9` 및 협업 브랜치의 후속 커밋을 기준으로 이어간다. 상세 경위는 [협업 규약 §1](IOS_KMP_COLLABORATION.md)에 있다.
 
 > **협업 브랜치 준비(2026-09-12)**: iOS 확장 설계를 Mac Codex와 공유하기 위해 `codex/ios-posture-kmp`를 통합 기준으로, `codex/ios-kmp-windows` / `codex/ios-kmp-mac`를 역할별 작업 브랜치로 사용한다. 읽기 순서·파일 소유권·Git 절차·Mac 시작 문구는 [협업 규약](IOS_KMP_COLLABORATION.md), 실제 작업 상태는 [Windows](ios-kmp/WINDOWS_STATUS.md) / [Mac](ios-kmp/MAC_STATUS.md)에 남긴다. Mac 상태의 초기 내용은 미확인 양식이며 원격 실행을 뜻하지 않는다. 이번 범위는 설계·협업 문서 공유이고 KMP/iOS 구현은 시작하지 않았다.
