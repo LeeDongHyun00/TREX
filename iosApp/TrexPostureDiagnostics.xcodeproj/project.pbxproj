@@ -1,0 +1,373 @@
+// !$*UTF8*$!
+{
+	"archiveVersion" = "1";
+	"classes" = {
+	};
+	"objectVersion" = "56";
+	"objects" = {
+		"000000000000000000000001" = {
+			"isa" = "PBXFileReference";
+			"explicitFileType" = "wrapper.application";
+			"includeInIndex" = "0";
+			"path" = "TrexPostureDiagnostics.app";
+			"sourceTree" = "BUILT_PRODUCTS_DIR";
+		};
+		"000000000000000000000002" = {
+			"isa" = "PBXFileReference";
+			"explicitFileType" = "wrapper.cfbundle";
+			"includeInIndex" = "0";
+			"path" = "TrexPostureDiagnosticsUITests.xctest";
+			"sourceTree" = "BUILT_PRODUCTS_DIR";
+		};
+		"000000000000000000000003" = {
+			"isa" = "PBXFileReference";
+			"lastKnownFileType" = "sourcecode.swift";
+			"path" = "TrexPostureDiagnosticsApp.swift";
+			"sourceTree" = "<group>";
+		};
+		"000000000000000000000004" = {
+			"isa" = "PBXFileReference";
+			"lastKnownFileType" = "sourcecode.swift";
+			"path" = "DiagnosticsView.swift";
+			"sourceTree" = "<group>";
+		};
+		"000000000000000000000005" = {
+			"isa" = "PBXFileReference";
+			"lastKnownFileType" = "text.plist.xml";
+			"path" = "Info.plist";
+			"sourceTree" = "<group>";
+		};
+		"000000000000000000000006" = {
+			"isa" = "PBXFileReference";
+			"lastKnownFileType" = "sourcecode.swift";
+			"path" = "DiagnosticsLaunchTests.swift";
+			"sourceTree" = "<group>";
+		};
+		"000000000000000000000007" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "000000000000000000000003";
+		};
+		"000000000000000000000008" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "000000000000000000000004";
+		};
+		"000000000000000000000009" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "000000000000000000000006";
+		};
+		"00000000000000000000000A" = {
+			"isa" = "PBXGroup";
+			"children" = (
+				"000000000000000000000003",
+				"000000000000000000000004",
+				"000000000000000000000005",
+			);
+			"path" = "TrexPostureDiagnostics";
+			"sourceTree" = "<group>";
+		};
+		"00000000000000000000000B" = {
+			"isa" = "PBXGroup";
+			"children" = (
+				"000000000000000000000006",
+			);
+			"path" = "TrexPostureDiagnosticsUITests";
+			"sourceTree" = "<group>";
+		};
+		"00000000000000000000000C" = {
+			"isa" = "PBXGroup";
+			"children" = (
+				"000000000000000000000001",
+				"000000000000000000000002",
+			);
+			"name" = "Products";
+			"sourceTree" = "<group>";
+		};
+		"00000000000000000000000D" = {
+			"isa" = "PBXGroup";
+			"children" = (
+				"00000000000000000000000A",
+				"00000000000000000000000B",
+				"00000000000000000000000C",
+			);
+			"sourceTree" = "<group>";
+		};
+		"00000000000000000000000E" = {
+			"isa" = "PBXSourcesBuildPhase";
+			"buildActionMask" = "2147483647";
+			"files" = (
+				"000000000000000000000007",
+				"000000000000000000000008",
+			);
+			"runOnlyForDeploymentPostprocessing" = "0";
+		};
+		"00000000000000000000000F" = {
+			"isa" = "PBXFrameworksBuildPhase";
+			"buildActionMask" = "2147483647";
+			"files" = (
+			);
+			"runOnlyForDeploymentPostprocessing" = "0";
+		};
+		"000000000000000000000010" = {
+			"isa" = "PBXResourcesBuildPhase";
+			"buildActionMask" = "2147483647";
+			"files" = (
+			);
+			"runOnlyForDeploymentPostprocessing" = "0";
+		};
+		"000000000000000000000011" = {
+			"isa" = "PBXSourcesBuildPhase";
+			"buildActionMask" = "2147483647";
+			"files" = (
+				"000000000000000000000009",
+			);
+			"runOnlyForDeploymentPostprocessing" = "0";
+		};
+		"000000000000000000000012" = {
+			"isa" = "PBXFrameworksBuildPhase";
+			"buildActionMask" = "2147483647";
+			"files" = (
+			);
+			"runOnlyForDeploymentPostprocessing" = "0";
+		};
+		"000000000000000000000013" = {
+			"isa" = "PBXResourcesBuildPhase";
+			"buildActionMask" = "2147483647";
+			"files" = (
+			);
+			"runOnlyForDeploymentPostprocessing" = "0";
+		};
+		"000000000000000000000014" = {
+			"isa" = "XCBuildConfiguration";
+			"buildSettings" = {
+				"CLANG_ENABLE_MODULES" = "YES";
+				"CLANG_ENABLE_OBJC_ARC" = "YES";
+				"SDKROOT" = "iphoneos";
+				"IPHONEOS_DEPLOYMENT_TARGET" = "16.0";
+				"SWIFT_VERSION" = "5.0";
+				"ENABLE_USER_SCRIPT_SANDBOXING" = "YES";
+				"GCC_C_LANGUAGE_STANDARD" = "gnu17";
+				"CLANG_CXX_LANGUAGE_STANDARD" = "gnu++20";
+				"DEBUG_INFORMATION_FORMAT" = "dwarf";
+				"ENABLE_TESTABILITY" = "YES";
+				"GCC_OPTIMIZATION_LEVEL" = "0";
+				"SWIFT_OPTIMIZATION_LEVEL" = "-Onone";
+				"SWIFT_ACTIVE_COMPILATION_CONDITIONS" = "DEBUG $(inherited)";
+				"ONLY_ACTIVE_ARCH" = "YES";
+			};
+			"name" = "Debug";
+		};
+		"000000000000000000000015" = {
+			"isa" = "XCBuildConfiguration";
+			"buildSettings" = {
+				"CLANG_ENABLE_MODULES" = "YES";
+				"CLANG_ENABLE_OBJC_ARC" = "YES";
+				"SDKROOT" = "iphoneos";
+				"IPHONEOS_DEPLOYMENT_TARGET" = "16.0";
+				"SWIFT_VERSION" = "5.0";
+				"ENABLE_USER_SCRIPT_SANDBOXING" = "YES";
+				"GCC_C_LANGUAGE_STANDARD" = "gnu17";
+				"CLANG_CXX_LANGUAGE_STANDARD" = "gnu++20";
+				"DEBUG_INFORMATION_FORMAT" = "dwarf-with-dsym";
+				"SWIFT_COMPILATION_MODE" = "wholemodule";
+				"SWIFT_OPTIMIZATION_LEVEL" = "-O";
+				"VALIDATE_PRODUCT" = "YES";
+			};
+			"name" = "Release";
+		};
+		"000000000000000000000016" = {
+			"isa" = "XCConfigurationList";
+			"buildConfigurations" = (
+				"000000000000000000000014",
+				"000000000000000000000015",
+			);
+			"defaultConfigurationIsVisible" = "0";
+			"defaultConfigurationName" = "Release";
+		};
+		"000000000000000000000017" = {
+			"isa" = "XCBuildConfiguration";
+			"buildSettings" = {
+				"CODE_SIGN_STYLE" = "Automatic";
+				"CURRENT_PROJECT_VERSION" = "1";
+				"MARKETING_VERSION" = "0.1.0";
+				"PRODUCT_NAME" = "$(TARGET_NAME)";
+				"SUPPORTED_PLATFORMS" = "iphoneos iphonesimulator";
+				"SUPPORTS_MACCATALYST" = "NO";
+				"SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD" = "NO";
+				"TARGETED_DEVICE_FAMILY" = "1,2";
+				"LD_RUNPATH_SEARCH_PATHS" = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				"INFOPLIST_FILE" = "TrexPostureDiagnostics/Info.plist";
+				"PRODUCT_BUNDLE_IDENTIFIER" = "com.leedonghyun.trex.posturediagnostics";
+				"GENERATE_INFOPLIST_FILE" = "NO";
+			};
+			"name" = "Debug";
+		};
+		"000000000000000000000018" = {
+			"isa" = "XCBuildConfiguration";
+			"buildSettings" = {
+				"CODE_SIGN_STYLE" = "Automatic";
+				"CURRENT_PROJECT_VERSION" = "1";
+				"MARKETING_VERSION" = "0.1.0";
+				"PRODUCT_NAME" = "$(TARGET_NAME)";
+				"SUPPORTED_PLATFORMS" = "iphoneos iphonesimulator";
+				"SUPPORTS_MACCATALYST" = "NO";
+				"SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD" = "NO";
+				"TARGETED_DEVICE_FAMILY" = "1,2";
+				"LD_RUNPATH_SEARCH_PATHS" = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				"INFOPLIST_FILE" = "TrexPostureDiagnostics/Info.plist";
+				"PRODUCT_BUNDLE_IDENTIFIER" = "com.leedonghyun.trex.posturediagnostics";
+				"GENERATE_INFOPLIST_FILE" = "NO";
+			};
+			"name" = "Release";
+		};
+		"000000000000000000000019" = {
+			"isa" = "XCConfigurationList";
+			"buildConfigurations" = (
+				"000000000000000000000017",
+				"000000000000000000000018",
+			);
+			"defaultConfigurationIsVisible" = "0";
+			"defaultConfigurationName" = "Release";
+		};
+		"00000000000000000000001A" = {
+			"isa" = "XCBuildConfiguration";
+			"buildSettings" = {
+				"CODE_SIGN_STYLE" = "Automatic";
+				"CURRENT_PROJECT_VERSION" = "1";
+				"MARKETING_VERSION" = "0.1.0";
+				"PRODUCT_NAME" = "$(TARGET_NAME)";
+				"SUPPORTED_PLATFORMS" = "iphoneos iphonesimulator";
+				"SUPPORTS_MACCATALYST" = "NO";
+				"SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD" = "NO";
+				"TARGETED_DEVICE_FAMILY" = "1,2";
+				"LD_RUNPATH_SEARCH_PATHS" = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				"PRODUCT_BUNDLE_IDENTIFIER" = "com.leedonghyun.trex.posturediagnostics.uitests";
+				"GENERATE_INFOPLIST_FILE" = "YES";
+				"TEST_TARGET_NAME" = "TrexPostureDiagnostics";
+			};
+			"name" = "Debug";
+		};
+		"00000000000000000000001B" = {
+			"isa" = "XCBuildConfiguration";
+			"buildSettings" = {
+				"CODE_SIGN_STYLE" = "Automatic";
+				"CURRENT_PROJECT_VERSION" = "1";
+				"MARKETING_VERSION" = "0.1.0";
+				"PRODUCT_NAME" = "$(TARGET_NAME)";
+				"SUPPORTED_PLATFORMS" = "iphoneos iphonesimulator";
+				"SUPPORTS_MACCATALYST" = "NO";
+				"SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD" = "NO";
+				"TARGETED_DEVICE_FAMILY" = "1,2";
+				"LD_RUNPATH_SEARCH_PATHS" = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				"PRODUCT_BUNDLE_IDENTIFIER" = "com.leedonghyun.trex.posturediagnostics.uitests";
+				"GENERATE_INFOPLIST_FILE" = "YES";
+				"TEST_TARGET_NAME" = "TrexPostureDiagnostics";
+			};
+			"name" = "Release";
+		};
+		"00000000000000000000001C" = {
+			"isa" = "XCConfigurationList";
+			"buildConfigurations" = (
+				"00000000000000000000001A",
+				"00000000000000000000001B",
+			);
+			"defaultConfigurationIsVisible" = "0";
+			"defaultConfigurationName" = "Release";
+		};
+		"00000000000000000000001F" = {
+			"isa" = "PBXContainerItemProxy";
+			"containerPortal" = "000000000000000000000021";
+			"proxyType" = "1";
+			"remoteGlobalIDString" = "00000000000000000000001D";
+			"remoteInfo" = "TrexPostureDiagnostics";
+		};
+		"000000000000000000000020" = {
+			"isa" = "PBXTargetDependency";
+			"target" = "00000000000000000000001D";
+			"targetProxy" = "00000000000000000000001F";
+		};
+		"00000000000000000000001D" = {
+			"isa" = "PBXNativeTarget";
+			"buildConfigurationList" = "000000000000000000000019";
+			"buildPhases" = (
+				"00000000000000000000000E",
+				"00000000000000000000000F",
+				"000000000000000000000010",
+			);
+			"buildRules" = (
+			);
+			"dependencies" = (
+			);
+			"name" = "TrexPostureDiagnostics";
+			"productName" = "TrexPostureDiagnostics";
+			"productReference" = "000000000000000000000001";
+			"productType" = "com.apple.product-type.application";
+		};
+		"00000000000000000000001E" = {
+			"isa" = "PBXNativeTarget";
+			"buildConfigurationList" = "00000000000000000000001C";
+			"buildPhases" = (
+				"000000000000000000000011",
+				"000000000000000000000012",
+				"000000000000000000000013",
+			);
+			"buildRules" = (
+			);
+			"dependencies" = (
+				"000000000000000000000020",
+			);
+			"name" = "TrexPostureDiagnosticsUITests";
+			"productName" = "TrexPostureDiagnosticsUITests";
+			"productReference" = "000000000000000000000002";
+			"productType" = "com.apple.product-type.bundle.ui-testing";
+		};
+		"000000000000000000000021" = {
+			"isa" = "PBXProject";
+			"attributes" = {
+				"BuildIndependentTargetsInParallel" = "YES";
+				"LastSwiftUpdateCheck" = "1620";
+				"LastUpgradeCheck" = "1620";
+				"TargetAttributes" = {
+					"00000000000000000000001D" = {
+						"CreatedOnToolsVersion" = "16.2";
+						"ProvisioningStyle" = "Automatic";
+					};
+					"00000000000000000000001E" = {
+						"CreatedOnToolsVersion" = "16.2";
+						"TestTargetID" = "00000000000000000000001D";
+						"ProvisioningStyle" = "Automatic";
+					};
+				};
+			};
+			"buildConfigurationList" = "000000000000000000000016";
+			"compatibilityVersion" = "Xcode 14.0";
+			"developmentRegion" = "ko";
+			"hasScannedForEncodings" = "0";
+			"knownRegions" = (
+				"ko",
+				"en",
+				"Base",
+			);
+			"mainGroup" = "00000000000000000000000D";
+			"productRefGroup" = "00000000000000000000000C";
+			"projectDirPath" = "";
+			"projectRoot" = "";
+			"targets" = (
+				"00000000000000000000001D",
+				"00000000000000000000001E",
+			);
+		};
+	};
+	"rootObject" = "000000000000000000000021";
+}

@@ -1,0 +1,18 @@
+# Xcode가 생성하는 로컬 상태와 빌드 결과
+DerivedData/
+build/
+**/xcuserdata/
+*.xcuserstate
+*.xcresult/
+.DS_Store
+
+# 후속 M2 의존성: Podfile과 Podfile.lock은 추적한다.
+Pods/
+
+# 개인 서명/경로 설정은 공유하지 않는다.
+*.local.xcconfig
+*.mobileprovision
+*.provisionprofile
+*.p12
+*.cer
+*.ipa
