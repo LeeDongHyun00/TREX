@@ -80,8 +80,14 @@ final class CaptureController: NSObject, ObservableObject {
     private let deliveryLock = NSLock()
     private var pendingSnapshot: CaptureSnapshot?
     private var deliveryScheduled = false
+    // M2의 선택적 입력 소비자다. M1에는 기본 nil이며 MediaPipe를 import하지 않는다.
+    private let onFrame: ((CVPixelBuffer, CaptureFrame, Int, Bool) -> Void)?
+    private let onActivity: ((Int, Bool) -> Void)?
 
-    override init() {
+    init(onFrame: ((CVPixelBuffer, CaptureFrame, Int, Bool) -> Void)? = nil,
+         onActivity: ((Int, Bool) -> Void)? = nil) {
+        self.onFrame = onFrame
+        self.onActivity = onActivity
         super.init()
         motionQueue.maxConcurrentOperationCount = 1
         motionQueue.underlyingQueue = queue
@@ -217,6 +223,7 @@ final class CaptureController: NSObject, ObservableObject {
                 return
             }
             state.status = .running
+            onActivity?(epoch, true)
             if let camera = (session.inputs.first as? AVCaptureDeviceInput)?.device {
                 let size = CMVideoFormatDescriptionGetDimensions(camera.activeFormat.formatDescription)
                 state.sourceSize = "\(size.width) × \(size.height)"
@@ -263,6 +270,7 @@ final class CaptureController: NSObject, ObservableObject {
             gate.end()
             state.epoch = gate.epoch
         }
+        onActivity?(gate.epoch, false)
         output.setSampleBufferDelegate(nil, queue: nil)
         sink = nil
         motion.stopDeviceMotionUpdates()
@@ -277,13 +285,14 @@ final class CaptureController: NSObject, ObservableObject {
     }
 
     private func receive(_ sample: CMSampleBuffer, epoch: Int) {
-        // delegate 호출 안에서만 버퍼를 읽는다. 영상 저장/비동기 버퍼 대기열은 없다.
+        // M1은 delegate 안에서 메타데이터만 읽고, M2 소비자는 실행 1개·대기 1개로 버퍼를 제한한다.
         let now = Int64(DispatchTime.now().uptimeNanoseconds / 1_000_000)
         guard gate.accept(epoch: epoch, sampleTimeMs: now), let buffer = CMSampleBufferGetImageBuffer(sample) else { return }
         let pts = CMTimeGetSeconds(CMSampleBufferGetPresentationTimeStamp(sample)) * 1_000
         state.frame = CaptureFrame(frameId: gate.frameId, sampleTimeMs: now,
                                    sourceCaptureTimeMs: pts.isFinite ? pts : nil,
                                    width: CVPixelBufferGetWidth(buffer), height: CVPixelBufferGetHeight(buffer))
+        if let frame = state.frame { onFrame?(buffer, frame, epoch, state.front) }
         publish()
     }
 
