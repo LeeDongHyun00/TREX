@@ -1,5 +1,7 @@
 # 자세 평가 — 인수인계 (2026-09-03)
 
+> **협업 소스 기준:** GitHub의 `5237ba9`는 아래 설계에서 분석한 로컬 `5c7118e`와 추적 파일 트리가 동일하다. GitHub의 파일 크기 제한에 걸린 로컬 조상 이력은 Windows에 보존하고, 원격의 동일 코드 위에 설계·협업 문서만 옮겼다. Mac에서는 `5237ba9` 및 협업 브랜치의 후속 커밋을 기준으로 이어간다. 상세 경위는 [협업 규약 §1](IOS_KMP_COLLABORATION.md)에 있다.
+
 > **협업 브랜치 준비(2026-09-12)**: iOS 확장 설계를 Mac Codex와 공유하기 위해 `codex/ios-posture-kmp`를 통합 기준으로, `codex/ios-kmp-windows` / `codex/ios-kmp-mac`를 역할별 작업 브랜치로 사용한다. 읽기 순서·파일 소유권·Git 절차·Mac 시작 문구는 [협업 규약](IOS_KMP_COLLABORATION.md), 실제 작업 상태는 [Windows](ios-kmp/WINDOWS_STATUS.md) / [Mac](ios-kmp/MAC_STATUS.md)에 남긴다. Mac 상태의 초기 내용은 미확인 양식이며 원격 실행을 뜻하지 않는다. 이번 범위는 설계·협업 문서 공유이고 KMP/iOS 구현은 시작하지 않았다.
 
 > **최신 설계(2026-09-12, §56, 미구현)**: [iOS 자세 기능 KMP 설계](IOS_POSTURE_KMP_DESIGN.md). `5c7118e`를 기준으로 Kotlin 계산·세션 상태를 공통 모듈에 추출하고 Android Compose/iOS SwiftUI와 각 OS의 MediaPipe·센서·TTS를 연결하는 구조를 제안했다. 입력 좌표·시각·세트/촬영 token, 마감 멱등성, 카메라 구간 분리, 자산/로그 호환, 단계별 이전·롤백·검증 기준을 정의했다. 현재 바닥/세트 요약 beta 음성과 AGENTS 지침의 충돌은 목표 정책에서 차단하되 단순 코드 이동과 별도 변경으로 기록한다. 첫 후속은 기준 재생/성능 계측(P0)과 계산 모듈 추출(P1)이며, Mac/iPhone 확보와 지원 기기는 미확인이다. **이번 작업은 문서만 변경했고 KMP/iOS 구현·빌드·실기기 검증은 하지 않았다.** 아래 §55는 여전히 최신 앱 구현이다.

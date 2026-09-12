@@ -14,6 +14,8 @@ Kotlin Multiplatform(KMP) 공통 모듈에 자세 계산과 세션 상태를 모
 
 Windows·Mac에서 이어갈 때는 [협업 규약](IOS_KMP_COLLABORATION.md)의 통합/작업 브랜치와 담당 범위를 따른다. 구현 API와 실제 검사 결과는 [Windows 상태](ios-kmp/WINDOWS_STATUS.md), [Mac 상태](ios-kmp/MAC_STATUS.md)에 커밋 기준으로 공유한다.
 
+GitHub 협업 브랜치의 소스 출발점은 `5237ba9`다. 위 분석 기준인 로컬 `5c7118e`와 추적 파일 트리가 같음을 확인했다. 큰 파일이 포함된 로컬 이력을 보존하고 GitHub에서 받을 수 있는 동일 소스에 문서만 옮긴 경위는 협업 규약 §1에 기록했다.
+
 ## 1. 목적과 범위
 
 ### 필요한 결과
