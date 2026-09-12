@@ -1,14 +1,14 @@
 # Mac 작업 상태
 
-- **갱신일:** 2026-09-12 (KST), 실제 Mac에서 재점검
+- **갱신일:** 2026-09-13 (KST), 실기기 연결 상태와 구현 전 실행 설계 갱신
 - **담당:** Mac Codex
 - **작업 브랜치:** `codex/ios-kmp-mac`
 - **통합 브랜치:** `codex/ios-posture-kmp`
 - **가져온 통합 기준:** `36b8d115e554eadce8c4494740322a6dca696d9b`
 - **확인한 Windows HEAD:** `36b8d115e554eadce8c4494740322a6dca696d9b`
-- **검사 시작 Mac HEAD:** `c4b255bc01f3041e20e66c94a2c4df08eb5ecea0` — 통합 기준 대비 ahead 1 / behind 0
+- **이번 설계 시작 Mac HEAD:** `6a569ec569b131ffc95e6702ab042b5ca1a08855` — 통합 기준 대비 ahead 2 / behind 0
 - **검토한 앱 소스:** `5237ba9d07662849fc2b23853672049ff2a950af`. 검사 시작 HEAD의 `app/`, `gradle/`, 루트 빌드 파일과 Wrapper는 이 소스와 동일하다.
-- **현재 단계 / 담당 파일:** Mac 환경 점검·ADR-056 검토 완료, `docs/ios-kmp/MAC_STATUS.md`만 변경. P0 전체 완료나 P1 착수를 뜻하지 않는다.
+- **현재 단계 / 담당 파일:** 구현 전 실행 설계 완료. 이 상태 파일과 [MAC_IMPLEMENTATION_PLAN.md](MAC_IMPLEMENTATION_PLAN.md)를 변경한다. 새 문서는 Mac 담당의 검토 제안이며 정본 ADR/API 소유권은 변경하지 않는다. P0 전체 완료나 구현 착수를 뜻하지 않는다.
 - **실제 공통 API 계약 커밋:** **없음**. `posture-core`, `iosApp`, `TrexPosture` 프레임워크는 아직 없다.
 
 이전 [Mac 상태 커밋 c4b255b](https://github.com/LeeDongHyun00/TREX/commit/c4b255bc01f3041e20e66c94a2c4df08eb5ecea0)은 Linux 호스트의 한계를 기록했다. 그 이력을 보존하면서 실제 Mac 관측값으로 현재 상태를 갱신한다. 이전 Linux의 Java 21.0.11을 이 Mac의 버전으로 사용하지 않는다.
@@ -23,7 +23,9 @@
 
 ## 2. 실제 Mac 환경 검사
 
-2026-09-12 23:47~23:51 KST의 명령 결과다. 개인 SDK 경로, 기기 UDID/일련번호, 계정·서명 정보는 공유 문서에 넣지 않는다.
+**2026-09-13 연결 상태 갱신:** `devicectl`에서 iPhone 16 Plus의 유선 연결·페어링·개발자 모드 활성화·DDI 서비스 사용 가능을 확인했다. 실제 OS는 **iOS 27.0 Beta (24A5424a)**다. `adb devices -l`과 `getprop`에서는 **Galaxy Note10+ 5G (SM-N976N), Android 12 / API 31**이 USB `device` 상태이며 셸 응답이 정상임을 확인했다. 두 기기는 현재 Mac에 연결돼 있다. iPhone 오프라인 문제는 해소됐지만 앱 빌드·설치·실행은 아직 검증하지 않았다.
+
+아래 표는 **2026-09-12 23:47~23:51 KST의 환경 검사 이력**이다. iPhone 오프라인/OS 캐시 항목은 위 최신 조회로 대체한다. 개인 SDK 경로, 기기 UDID/일련번호, 계정·서명 정보는 공유 문서에 넣지 않는다.
 
 | 검사 명령 / 항목 | 실제 결과 | 판단 범위 |
 |---|---|---|
@@ -64,7 +66,9 @@ ADR-056의 초기 타깃 `iosArm64`는 실제 iPhone, `iosSimulatorArm64`는 App
 
 ### iPhone과 MediaPipe 연결
 
-등록된 iPhone은 있으나 현재 오프라인이다. 연결 후 실제 iOS 버전·Developer Mode·신뢰/서명·선택 Xcode의 기기 지원을 다시 확인해야 한다. MediaPipe의 카메라 검증은 실제 기기에서 진행하고, 시뮬레이터의 계산/화면 검증과 구분한다. 공식 iOS 설치 경로는 CocoaPods이며 ADR-056처럼 **Swift 앱 타깃이 MediaPipe Pod를 소유**하는 구성을 유지할 수 있다. 이전 상태 문서의 CocoaPods/SPM 재선택 제안은 필수 선행 과제로 두지 않는다. 다만 실제 Pod 해석·버전 잠금·선택 아키텍처 링크는 아직 실행하지 않았으므로 Android와 같은 `0.10.14`를 iOS에 임의 확정하지 않는다. [MediaPipe iOS 설치](https://developers.google.com/edge/mediapipe/solutions/setup_ios)
+iPhone은 9월 13일 유선 연결과 Developer Mode를 확인했고 실제 OS는 27.0 베타다. 서명·앱 빌드·실행은 미검증이다. Apple의 최신 표는 iOS 27 SDK를 Xcode 27 RC / macOS Tahoe 26.6 이상 조합으로 안내한다. 현재 Xcode 16.2의 기기 연결 성공만으로 개발 조합이 호환된다고 판단하지 않는다. [구현 전 실행 설계](MAC_IMPLEMENTATION_PLAN.md)의 작은 진단 앱 검사와 대안 환경 분기를 따른다. [Xcode 요구 사항](https://developer.apple.com/xcode/system-requirements)
+
+MediaPipe의 카메라 검증은 실제 기기에서 진행하고, 시뮬레이터의 계산/화면 검증과 구분한다. 공식 iOS 설치 경로는 CocoaPods이며 ADR-056처럼 **Swift 앱 타깃이 MediaPipe Pod를 소유**하는 구성을 유지할 수 있다. 이전 상태 문서의 CocoaPods/SPM 재선택 제안은 필수 선행 과제로 두지 않는다. 다만 실제 Pod 해석·버전 잠금·선택 아키텍처 링크는 아직 실행하지 않았으므로 Android와 같은 `0.10.14`를 iOS에 임의 확정하지 않는다. [MediaPipe iOS 설치](https://developers.google.com/edge/mediapipe/solutions/setup_ios)
 
 ## 4. ADR-056 / Native·Swift 연결 검토
 
@@ -108,11 +112,13 @@ Git 객체를 비교해 `5237ba9`와 검사 시작 HEAD의 앱/빌드 소스가 
 | Kotlin/Native 계산 테스트·framework 생성 | 공통 모듈/API 커밋이 없고 Xcode/호스트/타깃 차이도 미해결이다. |
 | Swift API 호출·iOS 앱 빌드 | P1/P2의 실제 API와 P3 앱이 미구현이다. |
 | Pod 해석·iOS 모델 실행 | Podfile/lock과 iOS 앱이 없다. CocoaPods 존재만 확인했다. |
-| 시뮬레이터 실행·실제 iPhone 촬영/TTS·20분 지속 검사 | 사용 가능한 가상 기기 0개, 등록 iPhone 오프라인. 연결/서명/모델 링크부터 검증해야 한다. |
+| 시뮬레이터 실행·실제 iPhone 촬영/TTS·20분 지속 검사 | 가상 기기는 이전 검사에서 0개였다. iPhone 유선 연결은 해소됐으나 새 앱·서명/모델 링크·실제 실행이 미검증이다. |
 
-1. Windows 통합 담당은 이 Mac의 Intel/Xcode 차이를 읽고 Native 검증 Mac과 `iosX64` 필요 여부를 P1 전제에 반영한다. 지원되는 Apple Silicon Mac을 우선 후보로 제안하되 장비 확보나 버전 변경은 아직 결정하지 않았다.
+1. [구현 전 실행 설계](MAC_IMPLEMENTATION_PLAN.md)에 따라 현재 Mac/iPhone에서 작은 진단 앱의 빌드·서명·설치·실행을 단계별로 확인하는 것을 구현 착수 후 첫 작업으로 제안한다. 실패하면 원인을 한정해 지원되는 Apple Silicon 검증 환경을 검토한다. 장비 확보·OS/도구 버전 변경·`iosX64` 추가는 아직 결정하지 않았다.
 2. Windows가 다음 구현에 착수할 때 P0 소스/자산/입력 해시, 공유 가능한 재생 입력, 현행/목표 정책의 기대값, 실행한 Android 검사를 공개한다. 개인 로그나 AIHub 원본을 Git 제외 대상에서 풀지 않는다.
 3. P1 커밋의 정확한 SHA, 공개 DTO/API, Native 타깃/테스트 작업, 리소스 로더 계약을 `WINDOWS_STATUS.md`에 기록한다. Swift 세션 facade는 P2에서 추가한다.
 4. Mac은 공유된 통합 커밋을 fetch/merge하고 해당 SHA와 실제 Xcode/SDK/아키텍처를 고정해 Native 검증을 이어간다. 이번에는 그 구현을 시작하지 않았다.
 
-이번 공유물은 이 상태 문서뿐이다. 커밋 전 기존 체크아웃의 HEAD/변경 없음, 로컬 문서 링크 4개, SHA-256 8개, 변경 파일이 이 문서 하나임을 검사했고 `git diff --check`도 통과했다. 원격을 다시 fetch해 세 협업 브랜치의 기준이 그대로임을 확인했다. Mac 작업 브랜치에 커밋·푸시하며 통합/Windows 브랜치에는 직접 쓰지 않는다.
+이전 환경 검사 커밋 `6a569ec`에서는 기존 체크아웃 보존, 로컬 링크 4개, SHA-256 8개, 문서 하나만 변경됨과 `git diff --check`를 확인했다. 이번에는 실행 설계 문서와 이 상태 파일 두 개만 공유한다. 새 설계는 Windows가 코드/테스트를 작성하고 Mac이 현재 연결된 두 기기에서 실행·회수하는 역할을 명시한다. 공통 엔진·진단 앱·iOS 앱 구현은 시작하지 않았고 원본 체크아웃도 유지한다. Mac 작업 브랜치에만 커밋·푸시한다.
+
+이번 설계 공유 전 검사는 로컬 문서 링크 11개, 기존 자산/픽스처 해시 8개, 문서 두 개만 변경됨과 기존 체크아웃 보존을 확인했다. `git diff --check`를 통과했으며 앱/Native 테스트는 실행하지 않았다.
