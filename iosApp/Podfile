@@ -1,0 +1,9 @@
+source 'https://cdn.cocoapods.org/'
+platform :ios, '16.0'
+project 'TrexPostureDiagnostics.xcodeproj'
+
+# M0/M1 진단 타깃에는 Pod를 연결하지 않는다.
+target 'TrexPostureInference' do
+  use_frameworks! :linkage => :static
+  pod 'MediaPipeTasksVision', '1.0.0'
+end

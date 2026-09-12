@@ -104,7 +104,7 @@ struct CaptureDiagnosticsView: View {
 }
 
 /// 프리뷰 셀이 스크롤 밖에 있어도 현재 화면 방향을 추적한다.
-private struct InterfaceOrientationReader: UIViewRepresentable {
+struct InterfaceOrientationReader: UIViewRepresentable {
     let onChange: (AVCaptureVideoOrientation) -> Void
     func makeUIView(context: Context) -> OrientationSurface {
         let view = OrientationSurface()
@@ -114,7 +114,7 @@ private struct InterfaceOrientationReader: UIViewRepresentable {
     func updateUIView(_ uiView: OrientationSurface, context: Context) { uiView.setNeedsLayout() }
 }
 
-private final class OrientationSurface: UIView {
+final class OrientationSurface: UIView {
     var onChange: ((AVCaptureVideoOrientation) -> Void)?
     private var previous: AVCaptureVideoOrientation?
     override func layoutSubviews() {
