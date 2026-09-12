@@ -5,6 +5,46 @@
 	};
 	"objectVersion" = "56";
 	"objects" = {
+		"000000000000000000000064" = {
+			"isa" = "PBXFileReference";
+			"lastKnownFileType" = "sourcecode.swift";
+			"path" = "CaptureGate.swift";
+			"sourceTree" = "<group>";
+		};
+		"000000000000000000000065" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "000000000000000000000064";
+		};
+		"000000000000000000000066" = {
+			"isa" = "PBXFileReference";
+			"lastKnownFileType" = "sourcecode.swift";
+			"path" = "CaptureController.swift";
+			"sourceTree" = "<group>";
+		};
+		"000000000000000000000067" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "000000000000000000000066";
+		};
+		"000000000000000000000068" = {
+			"isa" = "PBXFileReference";
+			"lastKnownFileType" = "sourcecode.swift";
+			"path" = "CaptureDiagnosticsView.swift";
+			"sourceTree" = "<group>";
+		};
+		"000000000000000000000069" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "000000000000000000000068";
+		};
+		"00000000000000000000006E" = {
+			"isa" = "PBXFileReference";
+			"lastKnownFileType" = "sourcecode.swift";
+			"path" = "CameraDiagnosticsTests.swift";
+			"sourceTree" = "<group>";
+		};
+		"00000000000000000000006F" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "00000000000000000000006E";
+		};
 		"000000000000000000000001" = {
 			"isa" = "PBXFileReference";
 			"explicitFileType" = "wrapper.application";
@@ -61,6 +101,9 @@
 				"000000000000000000000003",
 				"000000000000000000000004",
 				"000000000000000000000005",
+				"000000000000000000000064",
+				"000000000000000000000066",
+				"000000000000000000000068",
 			);
 			"path" = "TrexPostureDiagnostics";
 			"sourceTree" = "<group>";
@@ -69,6 +112,7 @@
 			"isa" = "PBXGroup";
 			"children" = (
 				"000000000000000000000006",
+				"00000000000000000000006E",
 			);
 			"path" = "TrexPostureDiagnosticsUITests";
 			"sourceTree" = "<group>";
@@ -97,6 +141,9 @@
 			"files" = (
 				"000000000000000000000007",
 				"000000000000000000000008",
+				"000000000000000000000065",
+				"000000000000000000000067",
+				"000000000000000000000069",
 			);
 			"runOnlyForDeploymentPostprocessing" = "0";
 		};
@@ -119,6 +166,7 @@
 			"buildActionMask" = "2147483647";
 			"files" = (
 				"000000000000000000000009",
+				"00000000000000000000006F",
 			);
 			"runOnlyForDeploymentPostprocessing" = "0";
 		};

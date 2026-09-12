@@ -1,7 +1,7 @@
 import SwiftUI
 import OSLog
 
-/// M0는 앱 실행 경로만 확인한다. 판정/카메라/관절의 대체 구현을 넣지 않는다.
+/// M0의 실행 진단과 M1 진입점을 제공한다. 판정 엔진은 연결하지 않는다.
 struct DiagnosticsView: View {
     @Environment(\.scenePhase) private var scenePhase
     @State private var responseChecks = 0
@@ -27,11 +27,16 @@ struct DiagnosticsView: View {
                         Text("지금은 앱 화면과 조작 응답을 확인합니다. 자세 판정과 운동 기록은 제공하지 않습니다.")
                             .font(.body)
 
-                        Label("카메라·관절 연결은 다음 단계입니다", systemImage: "camera")
+                        Label("카메라·센서는 별도 진단 화면에서 확인합니다", systemImage: "camera")
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                     }
                     .padding(.vertical, 8)
+                }
+
+                Section {
+                    NavigationLink("카메라·센서 진단") { CaptureDiagnosticsView() }
+                        .accessibilityIdentifier("diagnostics.openCapture")
                 }
 
                 Section("화면 조작 확인") {
