@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -65,12 +64,14 @@ import kotlinx.coroutines.delay
 @Composable
 fun MainSheetHost(app: AppViewModel, sheet: MainSheet, onClose: () -> Unit) {
     when (sheet) {
-        is MainSheet.Alt -> AltSheet(app, sheet.workout, onClose)
-        is MainSheet.Sets -> SetsSheet(app, sheet.draft, onClose)
+        is MainSheet.WorkoutEditor -> WorkoutEditorSheet(app, sheet.selectedId, onClose)
+        is MainSheet.Alt -> WorkoutEditorSheet(app, sheet.workout.id, onClose, initialMode = "replace")
+        is MainSheet.Sets -> WorkoutEditorSheet(app, sheet.draft.id, onClose)
         MainSheet.Goals -> GoalsSheet(app, onClose)
         is MainSheet.Manual -> ManualSheet(app, sheet.slot, onClose)
         MainSheet.Photo -> PhotoSheet(app, onClose)
-        MainSheet.AddWorkout -> AddWorkoutSheet(app, onClose)
+        MainSheet.AddWorkout -> WorkoutEditorSheet(app, null, onClose, initialMode = "add")
+        MainSheet.ProfileSettings -> ProfileSettingsSheet(app, onClose)
     }
 }
 
@@ -220,7 +221,7 @@ private fun AltPickRow(pick: AltPick, onPick: () -> Unit) {
                 )
             }
             Column(Modifier.padding(start = 11.dp).weight(1f)) {
-                androidx.compose.material3.Text(pick.name, fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold)
+                Text(pick.name, fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold)
                 Row(Modifier.padding(top = 3.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         pick.reps + (pick.duration?.let { " · $it" } ?: ""),
@@ -266,6 +267,8 @@ private fun Workout.replacedWith(name: String, reps: String): Workout {
         duration = template?.duration ?: duration,
         category = template?.category ?: category,
         posture = posture && postureExerciseMap.containsKey(name),
+        secondsPerRep = null,
+        restSeconds = null,
     )
 }
 
@@ -278,10 +281,11 @@ private fun SetsSheet(app: AppViewModel, initial: SetDraft, onClose: () -> Unit)
     val step = if (draft.unit == "초") 5 else 1
     val minCount = if (draft.unit == "초") 10 else 1
     val summary = if (draft.sets > 0) {
-        val per = if (draft.unit == "초") draft.count else draft.count * 3
-        "세트 사이 45초 휴식을 가정하면 약 ${((per * draft.sets + 45 * draft.sets) / 60).coerceAtLeast(1)}분 걸려룡"
+        val per = when (draft.unit) { "초" -> draft.count; "분" -> draft.count * 60; else -> draft.count * draft.secondsPerRep }
+        "1세트 ${per.asClock()} · 총 ${(per * draft.sets + draft.restSeconds * (draft.sets - 1)).asClock()}" +
+            if (draft.sets > 1) " · 세트 사이 ${draft.restSeconds}초 휴식" else ""
     } else {
-        "약 ${draft.count}분 걸릴 예정이에룡"
+        "예상 소요 약 ${draft.count}분"
     }
 
     SheetHost(onDismiss = onClose) {
@@ -289,8 +293,8 @@ private fun SetsSheet(app: AppViewModel, initial: SetDraft, onClose: () -> Unit)
             SheetHandle()
             Row(Modifier.padding(top = 12.dp, bottom = 16.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Kicker("세트 수정")
-                    androidx.compose.material3.Text(draft.name, color = c.text, fontSize = 17.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 2.dp))
+                    Kicker("운동 설정")
+                    Text(draft.name, color = c.text, fontSize = 17.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 2.dp))
                 }
                 SheetClose(onClose)
             }
@@ -298,30 +302,35 @@ private fun SetsSheet(app: AppViewModel, initial: SetDraft, onClose: () -> Unit)
             DCard(radius = 24.dp) {
                 Column {
                     val rows = buildList {
-                        add(Triple("count", if (draft.unit == "분") "시간" else "반복", if (draft.unit == "분") "1분 단위로 조절해룡" else if (draft.unit == "초") "5초 단위로 조절해룡" else "1회 단위로 조절해룡"))
-                        if (draft.sets > 0) add(Triple("sets", "세트", "1세트 단위로 조절해룡"))
+                        add(Triple("count", if (draft.unit == "분") "시간" else "반복", if (draft.unit == "분") "1분 단위로 조절" else if (draft.unit == "초") "5초 단위로 조절" else "1회 단위로 조절"))
+                        if (draft.sets > 0) add(Triple("sets", "세트", "1세트 단위로 조절"))
+                        if (draft.unit == "회") add(Triple("pace", "1회 소요 시간", "횟수 × 이 시간으로 세트 타이머를 계산해요"))
+                        if (draft.sets > 1) add(Triple("rest", "세트 사이 휴식", "0초면 바로 다음 세트로 이어져요"))
                     }
                     rows.forEachIndexed { i, (key, label, hint) ->
                         if (i > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(c.line))
-                        androidx.compose.foundation.layout.FlowRow(
-                            Modifier.fillMaxWidth().padding(16.dp),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
-                        ) {
-                            Column(Modifier.widthIn(min = 120.dp).weight(1f)) {
+                        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) {
                                 Text(label, fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold)
                                 Text(hint, color = c.text3, fontSize = 11.sp, modifier = Modifier.padding(top = 3.dp))
                             }
-                            val isCount = key == "count"
                             StepperControl(
-                                valueLabel = if (isCount) "${draft.count}${draft.unit}" else "${draft.sets}세트",
+                                valueLabel = when(key){"count"->"${draft.count}${draft.unit}";"sets"->"${draft.sets}세트";"pace"->"${draft.secondsPerRep}초";else->"${draft.restSeconds}초"},
                                 onDec = {
-                                    draft = if (isCount) draft.copy(count = (draft.count - step).coerceAtLeast(minCount))
-                                    else draft.copy(sets = (draft.sets - 1).coerceAtLeast(1))
+                                    draft = when(key){
+                                        "count" -> draft.copy(count=(draft.count-step).coerceAtLeast(minCount))
+                                        "sets" -> draft.copy(sets=(draft.sets-1).coerceAtLeast(1))
+                                        "pace" -> draft.copy(secondsPerRep=(draft.secondsPerRep-1).coerceAtLeast(1))
+                                        else -> draft.copy(restSeconds=(draft.restSeconds-15).coerceAtLeast(0))
+                                    }
                                 },
                                 onInc = {
-                                    draft = if (isCount) draft.copy(count = draft.count + step)
-                                    else draft.copy(sets = draft.sets + 1)
+                                    draft = when(key){
+                                        "count" -> draft.copy(count=(draft.count+step).coerceAtMost(if(draft.unit=="분")60 else if(draft.unit=="초")3600 else 999))
+                                        "sets" -> draft.copy(sets=(draft.sets+1).coerceAtMost(20))
+                                        "pace" -> draft.copy(secondsPerRep=(draft.secondsPerRep+1).coerceAtMost(15))
+                                        else -> draft.copy(restSeconds=(draft.restSeconds+15).coerceAtMost(600))
+                                    }
                                 },
                             )
                         }
@@ -344,9 +353,10 @@ private fun SetsSheet(app: AppViewModel, initial: SetDraft, onClose: () -> Unit)
                     icon = Icons.Rounded.Check,
                     onClick = {
                         val reps = if (draft.sets > 0) "${draft.count}${draft.unit} × ${draft.sets}세트" else "전신 ${draft.count}분"
-                        val per = if (draft.unit == "초") draft.count else draft.count * 3
-                        val duration = if (draft.sets > 0) "${((per * draft.sets + 45 * draft.sets) / 60).coerceAtLeast(1)}분" else "${draft.count}분"
-                        app.updatePlan(app.workoutPlan.map { if (it.id == draft.id) it.copy(reps = reps, duration = duration) else it })
+                        app.updatePlan(app.workoutPlan.map { if (it.id == draft.id) {
+                            val updated=it.copy(reps=reps,secondsPerRep=draft.secondsPerRep,restSeconds=draft.restSeconds)
+                            updated.copy(duration="${updated.timing().minutes}분")
+                        } else it })
                         onClose()
                     },
                     height = 52.dp,
@@ -359,43 +369,37 @@ private fun SetsSheet(app: AppViewModel, initial: SetDraft, onClose: () -> Unit)
 
 // ============================================================= 영양 목표
 
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 private fun GoalsSheet(app: AppViewModel, onClose: () -> Unit) {
     val c = Trex.c
-    val g = app.targetGoal
-    SheetHost(onDismiss = onClose) {
-        Column(Modifier.padding(20.dp)) {
-            SheetTitleRow("영양 목표 수정", "하루 목표를 맞춰봐룡", onClose)
-            Spacer(Modifier.height(16.dp))
-            DCard(radius = 22.dp) {
-                Column {
-                    data class GoalRow(val label: String, val hint: String, val unit: String, val v: Int, val onSet: (Int) -> Unit, val stepN: Int)
-                    val rows = listOf(
-                        GoalRow("하루 칼로리", "50 kcal 단위", "kcal", g.kcal, { app.setTargetGoal(g.copy(kcal = it)) }, 50),
-                        GoalRow("탄수화물", "5g 단위", "g", g.carb.toInt(), { app.setTargetGoal(g.copy(carb = it.toDouble())) }, 5),
-                        GoalRow("단백질", "5g 단위", "g", g.protein.toInt(), { app.setTargetGoal(g.copy(protein = it.toDouble())) }, 5),
-                        GoalRow("지방", "5g 단위", "g", g.fat.toInt(), { app.setTargetGoal(g.copy(fat = it.toDouble())) }, 5),
-                    )
-                    rows.forEachIndexed { i, row ->
-                        if (i > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(c.line))
-                        Row(Modifier.padding(horizontal = 16.dp, vertical = 15.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Column(Modifier.weight(1f)) {
-                                Text(row.label, fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold)
-                                Text(row.hint, color = c.text3, fontSize = 11.sp, modifier = Modifier.padding(top = 2.dp))
-                            }
-                            StepperControl(
-                                valueLabel = "${row.v}",
-                                onDec = { row.onSet((row.v - row.stepN).coerceAtLeast(0)) },
-                                onInc = { row.onSet(row.v + row.stepN) },
-                                valueMinWidth = 56.dp,
-                            )
-                        }
+    var goal by remember { mutableStateOf(app.targetGoal) }
+    androidx.compose.material3.ModalBottomSheet(onDismissRequest = onClose, containerColor = c.sheet,
+        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        Column(Modifier.fillMaxWidth().heightIn(max = 600.dp).padding(horizontal = 24.dp).padding(bottom = 24.dp)) {
+            Text("영양 목표 수정", color = c.text, fontSize = 24.sp, fontWeight = FontWeight.SemiBold)
+            Spacer(Modifier.height(18.dp))
+            Column(Modifier.weight(1f, false).verticalScroll(rememberScrollState())) {
+            data class GoalRow(val label: String, val value: Int, val step: Int, val unit: String, val update: (Int) -> Unit)
+            listOf(
+                GoalRow("하루 칼로리", goal.kcal, 50, "kcal") { goal = goal.copy(kcal = it.coerceIn(800, 5000)) },
+                GoalRow("탄수화물", goal.carb.toInt(), 5, "g") { goal = goal.copy(carb = it.coerceIn(0, 800).toDouble()) },
+                GoalRow("단백질", goal.protein.toInt(), 5, "g") { goal = goal.copy(protein = it.coerceIn(0, 400).toDouble()) },
+                GoalRow("지방", goal.fat.toInt(), 5, "g") { goal = goal.copy(fat = it.coerceIn(0, 250).toDouble()) },
+            ).forEach { row ->
+                Row(Modifier.fillMaxWidth().padding(vertical = 15.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(row.label, color = c.text, fontSize = 16.sp)
+                        Text(row.unit, color = c.text2, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
                     }
+                    StepperControl("${row.value}", { row.update(row.value - row.step) }, { row.update(row.value + row.step) }, label = row.label, valueMinWidth = 62.dp)
                 }
             }
-            Spacer(Modifier.height(12.dp))
-            WashBanner("탄단지 합이 칼로리 목표와 크게 다르면 알려줄게룡", Icons.Rounded.Info)
-            Cta("목표 저장", icon = Icons.Rounded.Check, onClick = onClose, modifier = Modifier.padding(top = 16.dp).fillMaxWidth())
+            }
+            Row(Modifier.padding(top = 18.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                GhostButton("취소", onClose, Modifier.weight(1f))
+                Cta("목표 저장", { app.setTargetGoal(goal); onClose() }, modifier = Modifier.weight(1.7f))
+            }
         }
     }
 }
@@ -444,7 +448,6 @@ private fun ManualSheet(app: AppViewModel, initialSlot: String, onClose: () -> U
                     Column(Modifier.padding(18.dp)) {
                         Row(verticalAlignment = Alignment.Bottom) {
                             Column(Modifier.weight(1f)) {
-                                Kicker("이 끼니 합계")
                                 Row(Modifier.padding(top = 6.dp), verticalAlignment = Alignment.Bottom) {
                                     Text("${total.kcal}", color = c.text, fontSize = 30.sp, fontWeight = FontWeight.SemiBold, lineHeight = 30.sp)
                                     Text(" kcal", color = c.text3, fontSize = 13.sp, modifier = Modifier.padding(bottom = 3.dp))
@@ -483,7 +486,7 @@ private fun ManualSheet(app: AppViewModel, initialSlot: String, onClose: () -> U
                                 if (i > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(c.line))
                                 Row(Modifier.padding(horizontal = 14.dp, vertical = 13.dp), verticalAlignment = Alignment.CenterVertically) {
                                     Column(Modifier.weight(1f)) {
-                                        androidx.compose.material3.Text(f.name, fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold)
+                                        Text(f.name, fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold)
                                         Text(
                                             "${f.nutrition.kcal * f.qty} kcal · 탄 ${(f.nutrition.carb * f.qty).toInt()} · 단 ${(f.nutrition.protein * f.qty).toInt()} · 지 ${(f.nutrition.fat * f.qty).toInt()}",
                                             color = c.text3, fontSize = 11.sp, modifier = Modifier.padding(top = 3.dp),
@@ -595,6 +598,7 @@ private fun ManualSheet(app: AppViewModel, initialSlot: String, onClose: () -> U
 
 // ============================================================= 사진 식단 기록
 
+/** 분석기가 연결되기 전에는 고정 음식·정확도를 분석 결과처럼 저장하지 않는다. */
 @Composable
 private fun PhotoSheet(app: AppViewModel, onClose: () -> Unit) {
     var manual by remember { mutableStateOf(false) }
@@ -602,26 +606,27 @@ private fun PhotoSheet(app: AppViewModel, onClose: () -> Unit) {
         ManualSheet(app, currentMealId(), onClose)
         return
     }
+    val c = Trex.c
     SheetHost(onDismiss = onClose) {
-        Column(Modifier.padding(20.dp).verticalScroll(rememberScrollState())) {
-            SheetTitleRow(kicker = "사진 식단 기록", title = "사진 분석은 준비 중이에룡", onClose = onClose)
-            Text("아직 사진에서 음식과 영양을 분석할 수 없어룡. 먹은 음식을 직접 선택해서 기록해주세룡",
-                color = Trex.c.text2, modifier = Modifier.padding(vertical = 18.dp))
-            Cta("직접 기록하기", onClick = { manual = true }, modifier = Modifier.fillMaxWidth())
+        Column(Modifier.fillMaxWidth().padding(22.dp).verticalScroll(rememberScrollState())) {
+            SheetTitleRow("사진 식단 기록", "직접 기록으로 이어가룡", onClose)
+            Text("사진 분석은 아직 연결되지 않았어룡. 먹은 음식을 직접 선택해 기록해 주세룡.",
+                color = c.text2, fontSize = 14.sp, lineHeight = 22.sp, modifier = Modifier.padding(vertical = 22.dp))
+            Cta("음식 직접 선택", { manual = true }, Modifier.fillMaxWidth())
         }
     }
 }
 
 // ============================================================= 운동 추가
 
-private data class WorkoutTemplate(val name: String, val reps: String, val duration: String, val category: String, val posture: Boolean)
+internal data class WorkoutTemplate(val name: String, val reps: String, val duration: String, val category: String, val posture: Boolean)
 
 /**
  * 운동 카탈로그 — posture 플래그는 규칙 엔진이 실제로 지원하는 종목(postureExerciseMap)에만 켠다.
  * 지원 종목은 rules_mp_v0(서서 하는 종목) + rules_floor_v0.1(바닥 종목, 전부 beta) 기준이다.
  * 바이시클 크런치는 MP 충실도 게이트(spec §25a) 후 남은 규칙이 없어 posture=false.
  */
-private val workoutCatalog = mapOf(
+internal val workoutCatalog = mapOf(
     "하체" to listOf(
         WorkoutTemplate("기본 스쿼트", "12회 × 3세트", "8분", "하체", true),
         WorkoutTemplate("바벨 스쿼트", "10회 × 3세트", "10분", "하체", true),
@@ -736,8 +741,8 @@ private fun AddWorkoutSheet(app: AppViewModel, onClose: () -> Unit) {
                                 Icon(Icons.Rounded.FitnessCenter, contentDescription = null, tint = c.primaryText, modifier = Modifier.size(17.dp))
                             }
                             Column(Modifier.padding(start = 12.dp).weight(1f)) {
-                                androidx.compose.material3.Text(t.name, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                                Text("${t.reps} · ${t.duration}", color = c.text3, fontSize = 11.sp, modifier = Modifier.padding(top = 2.dp))
+                                Text(t.name, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                                Text("${t.reps} · ${Workout("preview",t.name,t.reps,t.duration,false,t.category).timing().totalSeconds.asClock()}", color = c.text3, fontSize = 11.sp, modifier = Modifier.padding(top = 2.dp))
                             }
                             Box(Modifier.size(28.dp).clip(CircleShape).background(c.primaryWash), contentAlignment = Alignment.Center) {
                                 Icon(Icons.Rounded.Add, contentDescription = "추가", tint = c.primaryText, modifier = Modifier.size(14.dp))

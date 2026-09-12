@@ -25,7 +25,7 @@ fun parseReps(reps: String): RepsSpec {
     val count = numbers.firstOrNull()?.coerceAtLeast(1) ?: 1
     val targetLabel = when {
         reps.contains("초") -> "${count}초"
-        reps.contains("분") && !reps.contains("회") -> reps
+        reps.contains("분") && !reps.contains("회") -> reps.replace(Regex("\\s*[×xX]\\s*\\d+세트.*"), "")
         else -> "${count}회"
     }
     return RepsSpec(count = count, sets = sets, targetLabel = targetLabel)
@@ -36,11 +36,9 @@ fun formatReps(count: Int, sets: Int): String =
 
 fun Workout.repsSpec(): RepsSpec = parseReps(reps)
 
-fun Workout.durationMinutes(): Int =
-    Regex("\\d+").find(duration)?.value?.toIntOrNull()?.coerceAtLeast(1) ?: 6
+fun Workout.durationMinutes(): Int = timing().minutes
 
-/** 종목별 분당 계수에 일시정지를 제외한 진행 시간을 곱한 거친 추정치이며 센서 측정값이 아니다. */
-fun Workout.estimatedCalories(activeSeconds: Int): Int {
+fun Workout.estimatedCalories(elapsedSeconds: Int? = null): Int {
     val multiplier = when (category) {
         "유산소" -> 8
         "하체" -> 7
@@ -48,10 +46,11 @@ fun Workout.estimatedCalories(activeSeconds: Int): Int {
         "코어", "복근" -> 5
         else -> 4
     }
-    return (activeSeconds.coerceAtLeast(0) / 60.0 * multiplier).roundToInt()
+    val timing = timing()
+    return ((elapsedSeconds ?: (timing.workSeconds * timing.sets)).coerceAtLeast(0) / 60.0 * multiplier).roundToInt().coerceAtLeast(0)
 }
 
-/** 세션 화면이 쓰는 실행 스펙. 휴식 시간은 아직 전 종목 공통 30초. */
+/** 세션 화면이 쓰는 실행 스펙. 설정한 세트 사이 휴식을 포함한다. */
 data class ExerciseSpec(
     val targetReps: Int,
     val targetLabel: String,
@@ -65,7 +64,7 @@ fun Workout.exerciseSpec(): ExerciseSpec {
         targetReps = spec.count,
         targetLabel = spec.targetLabel,
         totalSets = spec.sets,
-        restSeconds = 30,
+        restSeconds = timing().restSeconds,
     )
 }
 

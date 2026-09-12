@@ -14,13 +14,17 @@ android {
         applicationId = "com.example.trex_kotlin"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 3
+        versionName = "1.1.0-preview.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
+        debug {
+            // 평가 설치는 사용자의 기존 앱·운동 기록과 분리한다.
+            if (project.hasProperty("postureReplay")) applicationIdSuffix = ".replay"
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(
@@ -49,11 +53,11 @@ kotlin {
 }
 
 dependencies {
+    implementation("androidx.window:window:1.5.0")
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
-    implementation("androidx.window:window:1.5.0")
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.graphics)

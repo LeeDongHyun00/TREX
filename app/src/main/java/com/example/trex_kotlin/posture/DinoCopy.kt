@@ -18,5 +18,5 @@ fun String.toDinoCopy(): String {
     val nouns = setOf("필요", "주요", "중요", "수요", "개요", "요요", "민요", "동요", "가요")
     return result.replace(Regex("([가-힣]+)요(?=[\\s.!?…。·—,:;\\)\\]▴▾]|$)")) {
         if (it.value in nouns) it.value else it.groupValues[1] + "룡"
-    }
+    }.replace(Regex("\\.+(?=\\s|$|[\"'”’)])"), "")
 }

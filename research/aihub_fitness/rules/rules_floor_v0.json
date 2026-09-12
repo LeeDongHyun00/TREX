@@ -1,7 +1,7 @@
 {
- "version": "floor_v0.3",
- "generated": "2026-09-10",
- "source": "export_floor_rules.py (AIHub 2D, 종목당 단일 뷰, 스트리밍 접지선, 위쪽=양수 정준화, MP 충실도 게이트 ρ≥0.35 — floor_mp_gap.py 실측) | v0.3 floor_rules_v03.py: §34 처분표 적용(hold/rep 종류, 힙쓰러스트 상단 고장 수정, 판정 중단 2)",
+ "version": "floor_v0.4",
+ "generated": "2026-09-11",
+ "source": "export_floor_rules.py (AIHub 2D, 종목당 단일 뷰, 스트리밍 접지선, 위쪽=양수 정준화, MP 충실도 게이트 ρ≥0.35 — floor_mp_gap.py 실측) | v0.3 floor_rules_v03.py: §34 처분표 적용(hold/rep 종류, 힙쓰러스트 상단 고장 수정, 판정 중단 2) | §39 plank_rules_v04.py: 플랭크 고개/골반 직접 정렬",
  "rules": [
   {
    "id": "floor|Y - Exercise|경추 중립 또는 후인(retraction) 유지",
@@ -390,47 +390,6 @@
    }
   },
   {
-   "id": "floor|플랭크|몸통과 엉덩이의 정렬 유지",
-   "exercise": "플랭크",
-   "condition": "몸통과 엉덩이의 정렬 유지",
-   "subtype": null,
-   "status": "beta",
-   "reason": "§34 재정의: 세트 mean(방향 없음, 연기 임계 133°)은 실기기 무너짐(2026-09-10, 골반 +0.13·25~30°)을 평균 158° 로 통과시켰다. 홀드형 — 사용자 자신의 초반 안정 구간(5초) 중앙값을 기준으로 위/아래 허용폭을 2초 이상 벗어나면 무너짐 이벤트. 허용폭 = AIHub 정상 클립의 클립 내 위/아래 폭 중앙값(위 0.06, 아래 0.06 어깨-발목 선 길이). 검증: 클립 내 산포 AUC 0.70",
-   "feature": "hip_dev_ankle",
-   "base_feature": "hip_dev_ankle",
-   "stat": "hold",
-   "family": "floor2d",
-   "op": ">",
-   "threshold": 0.06,
-   "view_best_front": "B",
-   "view_best_front_desc": "몸 옆에서 약간 비스듬히, 바닥 높이",
-   "cv_auc": null,
-   "cv_balacc": null,
-   "n": 207,
-   "mp_fidelity": 0.648,
-   "mirror_safe": true,
-   "cautions": [
-    "허용폭·2초는 제안값 — 실기기 세트 로그로 확정(DEVICE_VALIDATION). 방향 문구는 CoachCues.directional 과 동일",
-    "AIHub 클립은 성긴 16프레임이라 '2초 지속' 자체는 검증 불가 — 유닛 테스트와 실기기로만"
-   ],
-   "mode": "floor2d",
-   "normal_median": null,
-   "normal_fpr": null,
-   "personal_baseline": null,
-   "kind": "hold",
-   "hold": {
-    "feature": "hip_dev_ankle",
-    "tol_up": 0.06,
-    "tol_down": 0.06,
-    "min_break_ms": 2000,
-    "baseline_ms": 5000,
-    "up_label": "엉덩이 솟음",
-    "down_label": "엉덩이 처짐"
-   },
-   "exploratory_clip_auc": 0.7006,
-   "validation_scope": "GT 클립 내 탐색 통계. 새 시간/반복 판정 및 실기기 정확도는 미검증."
-  },
-  {
    "id": "floor|힙쓰러스트|고개 들지 않기",
    "exercise": "힙쓰러스트",
    "condition": "고개 들지 않기",
@@ -504,6 +463,147 @@
    },
    "exploratory_clip_auc": 0.8426,
    "validation_scope": "GT 클립 내 탐색 통계. 새 시간/반복 판정 및 실기기 정확도는 미검증."
+  },
+  {
+   "id": "floor|플랭크|몸통과 엉덩이의 정렬 유지",
+   "exercise": "플랭크",
+   "condition": "몸통과 엉덩이의 정렬 유지",
+   "subtype": null,
+   "status": "beta",
+   "reason": "§39: 초기 자세를 빼지 않는 직접 정렬 검사. 기하학적 0을 포함하는 탐색 허용폭과 관측 조건을 통과한 Android 정상 표본 p2~p98에 여유폭을 더한 범위의 합집합. 고개 독립 정답 라벨은 없으며 2클립 정상 표본 재사용 설정이다. 독립 성능이 아니다.",
+   "feature": "plank_hip_offset",
+   "base_feature": "plank_hip_offset",
+   "stat": "alignment",
+   "family": "floor2d",
+   "op": "band",
+   "threshold": 0.124,
+   "view_best_front": "C",
+   "view_best_front_desc": "몸 옆에서, 전신이 길게 보이게",
+   "cv_auc": null,
+   "cv_balacc": null,
+   "n": 0,
+   "mp_fidelity": null,
+   "mirror_safe": true,
+   "cautions": [
+    "측면 관측 조건을 통과한 한쪽 관절만 사용",
+    "1초 지속·경계 80% 복귀·가림 유보",
+    "고개 정답 라벨 없음. 정상 라벨 표본에서도 투영/정의 불일치 가능. 출시 검증 전 참고 안내"
+   ],
+   "mode": "floor2d",
+   "normal_median": null,
+   "normal_fpr": null,
+   "personal_baseline": null,
+   "kind": "alignment",
+   "hold": null,
+   "exploratory_clip_auc": null,
+   "validation_scope": "기하 합성 관절·실제 Android 좌표 재생. 실제 사용자 자세 정답 정확도 미검증.",
+   "alignment": {
+    "lower": -0.06,
+    "upper": 0.124,
+    "sustain_ms": 1000
+   },
+   "reference": {
+    "clips": 2,
+    "people": 2,
+    "frames": 26,
+    "margin": 0.015,
+    "results_sha256": "359ae2255273ddfbeb31408a2d2e0abefb50567424dcc26a6c0f68b301474210",
+    "training_reuse": true
+   }
+  },
+  {
+   "id": "floor|플랭크|고개 젖힘과 숙임",
+   "exercise": "플랭크",
+   "condition": "고개 젖힘과 숙임",
+   "subtype": null,
+   "status": "beta",
+   "reason": "§39: 초기 자세를 빼지 않는 직접 정렬 검사. 기하학적 0을 포함하는 탐색 허용폭과 관측 조건을 통과한 Android 정상 표본 p2~p98에 여유폭을 더한 범위의 합집합. 고개 독립 정답 라벨은 없으며 2클립 정상 표본 재사용 설정이다. 독립 성능이 아니다.",
+   "feature": "plank_head_pitch",
+   "base_feature": "plank_head_pitch",
+   "stat": "alignment",
+   "family": "floor2d",
+   "op": "band",
+   "threshold": 25.0,
+   "view_best_front": "C",
+   "view_best_front_desc": "몸 옆에서, 전신이 길게 보이게",
+   "cv_auc": null,
+   "cv_balacc": null,
+   "n": 0,
+   "mp_fidelity": null,
+   "mirror_safe": true,
+   "cautions": [
+    "측면 관측 조건을 통과한 한쪽 관절만 사용",
+    "1초 지속·경계 80% 복귀·가림 유보",
+    "고개 정답 라벨 없음. 정상 라벨 표본에서도 투영/정의 불일치 가능. 출시 검증 전 참고 안내"
+   ],
+   "mode": "floor2d",
+   "normal_median": null,
+   "normal_fpr": null,
+   "personal_baseline": null,
+   "kind": "alignment",
+   "hold": null,
+   "exploratory_clip_auc": null,
+   "validation_scope": "기하 합성 관절·실제 Android 좌표 재생. 실제 사용자 자세 정답 정확도 미검증.",
+   "alignment": {
+    "lower": -42.748,
+    "upper": 25.0,
+    "sustain_ms": 1000
+   },
+   "reference": {
+    "clips": 2,
+    "people": 2,
+    "frames": 26,
+    "margin": 5,
+    "results_sha256": "359ae2255273ddfbeb31408a2d2e0abefb50567424dcc26a6c0f68b301474210",
+    "training_reuse": true
+   }
+  },
+  {
+   "id": "floor|플랭크|목과 몸통의 정렬 유지",
+   "exercise": "플랭크",
+   "condition": "목과 몸통의 정렬 유지",
+   "subtype": null,
+   "status": "beta",
+   "reason": "§39: 초기 자세를 빼지 않는 직접 정렬 검사. 기하학적 0을 포함하는 탐색 허용폭과 관측 조건을 통과한 Android 정상 표본 p2~p98에 여유폭을 더한 범위의 합집합. 고개 독립 정답 라벨은 없으며 2클립 정상 표본 재사용 설정이다. 독립 성능이 아니다.",
+   "feature": "plank_neck_pitch",
+   "base_feature": "plank_neck_pitch",
+   "stat": "alignment",
+   "family": "floor2d",
+   "op": "band",
+   "threshold": 31.474,
+   "view_best_front": "C",
+   "view_best_front_desc": "몸 옆에서, 전신이 길게 보이게",
+   "cv_auc": null,
+   "cv_balacc": null,
+   "n": 0,
+   "mp_fidelity": null,
+   "mirror_safe": true,
+   "cautions": [
+    "측면 관측 조건을 통과한 한쪽 관절만 사용",
+    "1초 지속·경계 80% 복귀·가림 유보",
+    "고개 정답 라벨 없음. 정상 라벨 표본에서도 투영/정의 불일치 가능. 출시 검증 전 참고 안내"
+   ],
+   "mode": "floor2d",
+   "normal_median": null,
+   "normal_fpr": null,
+   "personal_baseline": null,
+   "kind": "alignment",
+   "hold": null,
+   "exploratory_clip_auc": null,
+   "validation_scope": "기하 합성 관절·실제 Android 좌표 재생. 실제 사용자 자세 정답 정확도 미검증.",
+   "alignment": {
+    "lower": -76.181,
+    "upper": 31.474,
+    "sustain_ms": 1000
+   },
+   "reference": {
+    "clips": 2,
+    "people": 2,
+    "frames": 26,
+    "margin": 5,
+    "results_sha256": "359ae2255273ddfbeb31408a2d2e0abefb50567424dcc26a6c0f68b301474210",
+    "training_reuse": true
+   }
   }
  ],
  "kinds": {
@@ -512,8 +612,7 @@
   "rep": "렙별 사이클 극값 vs 임계값 — 미달 렙이 max(min_reps, 렙×max_invalid_frac) 이상이면 위반"
  },
  "counts": {
-  "ship": 0,
-  "beta": 12,
-  "exclude": 2
+  "exclude": 2,
+  "beta": 14
  }
 }

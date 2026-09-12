@@ -19,21 +19,44 @@ class TrexStore(context: Context, preferenceName: String = "trex_store") {
 
     init { removeLegacyDemoData() }
 
-    /** 삭제 전 원본 JSON을 보관하고, 전체 지문이 일치하는 데모만 한 번 정리한다. */
+    /** 원본 JSON을 보존하며 샘플 날짜만 제거한다. 백업·정리·완료 표식은 한 번에 저장한다. */
     private fun removeLegacyDemoData() {
-        if (prefs.getBoolean("demo_cleanup_v1", false)) return
-        val history = loadHistory()
-        val diet = loadDiet()
-        val cleanHistory = history?.filterNot(LegacyDemoData::isSampleDay)
-        val cleanDiet = diet?.filterValues { !LegacyDemoData.isSampleDiet(it) }
-        val backup = prefs.edit()
-        if (history != cleanHistory) backup.putString("before_demo_cleanup_history", prefs.getString(KEY_HISTORY, null))
-        if (diet != cleanDiet) backup.putString("before_demo_cleanup_diet", prefs.getString(KEY_DIET, null))
-        // 원본 백업이 디스크에 기록된 뒤 정리한다.
-        if (!backup.commit()) return
-        if (history != cleanHistory && cleanHistory != null) saveHistory(cleanHistory)
-        if (diet != cleanDiet && cleanDiet != null) saveDiet(cleanDiet)
-        prefs.edit().putBoolean("demo_cleanup_v1", true).apply()
+        if (prefs.getBoolean("demo_cleanup_v2", false)) return
+        val edit = prefs.edit()
+        val historyRaw = prefs.getString(KEY_HISTORY, null)
+        loadHistory()?.let { days ->
+            val before = JSONArray(historyRaw)
+            val after = JSONArray()
+            days.forEachIndexed { index, day ->
+                val rawDay = before.getJSONObject(index)
+                val knownDay = setOf("epochDay", "dayLabel", "dateLabel", "items", "averageMinutes", "averageCalories")
+                val knownItem = setOf("workoutName", "reps", "durationMinutes", "calories", "accuracy", "postureFocus", "category", "durationSeconds")
+                val rawItems = rawDay.getJSONArray("items")
+                val plain = rawDay.keys().asSequence().all { it in knownDay } && (0 until rawItems.length()).all { i ->
+                    rawItems.getJSONObject(i).keys().asSequence().all { it in knownItem }
+                }
+                if (!plain || !LegacyDemoData.isSampleDay(day)) after.put(rawDay)
+            }
+            if (after.length() != before.length()) {
+                edit.putString("before_demo_cleanup_history", historyRaw).putString(KEY_HISTORY, after.toString())
+            }
+        }
+        val dietRaw = prefs.getString(KEY_DIET, null)
+        loadDiet()?.let { days ->
+            val after = JSONObject(dietRaw)
+            var changed = false
+            days.forEach { (day, slots) ->
+                val rawSlots = after.getJSONObject(day.toString())
+                val knownFood = setOf("name", "kcal", "carb", "protein", "fat", "qty")
+                val plain = rawSlots.keys().asSequence().all { slot ->
+                    val foods = rawSlots.getJSONArray(slot)
+                    (0 until foods.length()).all { i -> foods.getJSONObject(i).keys().asSequence().all { it in knownFood } }
+                }
+                if (plain && LegacyDemoData.isSampleDiet(slots)) { after.remove(day.toString()); changed = true }
+            }
+            if (changed) edit.putString("before_demo_cleanup_diet", dietRaw).putString(KEY_DIET, after.toString())
+        }
+        edit.putBoolean("demo_cleanup_v2", true).commit()
     }
 
     // ---- 진행 플래그
@@ -112,6 +135,13 @@ class TrexStore(context: Context, preferenceName: String = "trex_store") {
                         WorkoutAlt(a.getString("name"), a.getString("reps"))
                     },
                     done = o.optBoolean("done", false),
+                    secondsPerRep = if (o.has("secondsPerRep")) o.optInt("secondsPerRep", 3).coerceIn(1, 15) else null,
+                    restSeconds = if (o.has("restSeconds")) o.optInt("restSeconds", 45).coerceIn(0, 600) else null,
+                    target = when (o.optString("targetKind")) {
+                        "duration" -> WorkoutTarget.Duration(o.optInt("targetAmount", 30).coerceIn(1, 3600))
+                        "repetitions" -> WorkoutTarget.Repetitions(o.optInt("targetAmount", 12).coerceIn(1, 999))
+                        else -> null
+                    },
                 )
             }
         }.getOrNull()
@@ -129,6 +159,12 @@ class TrexStore(context: Context, preferenceName: String = "trex_store") {
                 .put("category", w.category)
                 .put("done", w.done)
             w.alt?.let { o.put("alt", JSONObject().put("name", it.name).put("reps", it.reps)) }
+            w.secondsPerRep?.let { o.put("secondsPerRep", it) }
+            w.restSeconds?.let { o.put("restSeconds", it) }
+            w.resolvedTarget().let { goal ->
+                o.put("targetKind", if (goal is WorkoutTarget.Duration) "duration" else "repetitions")
+                o.put("targetAmount", goal.amount)
+            }
             arr.put(o)
         }
         prefs.edit().putString(KEY_PLAN, arr.toString()).apply()
@@ -158,14 +194,29 @@ class TrexStore(context: Context, preferenceName: String = "trex_store") {
                             durationMinutes = it.getInt("durationMinutes"),
                             calories = it.getInt("calories"),
                             postureCorrection = if (legacy) null else readPostureCorrection(it),
-                            accuracy = if (legacy) null else it.optInt("accuracy", -1).takeIf { a -> a >= 0 },
-                            workoutId = it.optString("workoutId").takeIf(String::isNotBlank),
                             durationSeconds = it.optInt("durationSeconds", -1).takeIf { seconds -> seconds >= 0 },
+                            category = it.optString("category").takeIf(String::isNotBlank),
+                            accuracy = if (legacy) null else it.optInt("accuracy", -1).takeIf { a -> a >= 0 },
                         )
                     },
                 )
             }
         }.getOrNull()
+    }
+
+    /** 만료된 날짜만 지운다. 남은 기록의 알 수 없는/구버전 필드도 그대로 보존한다. */
+    fun pruneExpiredHistory(today: Long) {
+        val raw = prefs.getString(KEY_HISTORY, null) ?: return
+        runCatching {
+            val before = JSONArray(raw)
+            val after = JSONArray()
+            for (i in 0 until before.length()) {
+                val entry = before.get(i)
+                val epochDay = (entry as? JSONObject)?.optLong("epochDay", Long.MAX_VALUE) ?: Long.MAX_VALUE
+                if (epochDay >= today - (RECORD_WINDOW_DAYS - 1)) after.put(entry)
+            }
+            if (after.length() != before.length()) prefs.edit().putString(KEY_HISTORY, after.toString()).apply()
+        }
     }
 
     fun saveHistory(history: List<WorkoutHistoryDay>) {
@@ -180,7 +231,7 @@ class TrexStore(context: Context, preferenceName: String = "trex_store") {
                         .put("durationMinutes", item.durationMinutes)
                         .put("calories", item.calories)
                         .put("accuracy", item.accuracy ?: -1)
-                        .put("workoutId", item.workoutId ?: "")
+                        .put("category", item.category ?: "")
                         .put("durationSeconds", item.durationSeconds ?: -1)
                         .also { o -> writePostureCorrection(o, item.postureCorrection) },
                 )

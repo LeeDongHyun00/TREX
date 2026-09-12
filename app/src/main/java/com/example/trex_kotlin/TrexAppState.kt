@@ -96,6 +96,20 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     var workoutHistory by mutableStateOf(store.loadHistory() ?: emptyList())
         private set
 
+    var calendarDay by mutableStateOf(LocalDate.now().toEpochDay())
+        private set
+
+    /** 앱 복귀와 날짜 경계에서도 화면의 조회 기간과 저장 기간을 맞춘다. */
+    fun refreshCalendar(today: Long = LocalDate.now().toEpochDay(), resetPlan: Boolean = true) {
+        calendarDay = today
+        val retained = workoutHistory.retainVisibleWorkoutHistory(today)
+        if (retained != workoutHistory) { workoutHistory = retained; store.pruneExpiredHistory(today) }
+        if (resetPlan && store.planDoneEpochDay != today) {
+            if (workoutPlan.any { it.done }) updatePlan(workoutPlan.map { it.copy(done = false) })
+            store.planDoneEpochDay = today
+        }
+    }
+
     init {
         // 어제 완료한 계획은 오늘 다시 처음부터 — done 플래그는 하루 단위다
         val today = LocalDate.now().toEpochDay()
@@ -104,6 +118,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             store.savePlan(workoutPlan)
         }
         store.planDoneEpochDay = today
+        refreshCalendar(today)
     }
 
     fun updatePlan(plan: List<Workout>) {
@@ -111,10 +126,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         store.savePlan(plan)
     }
 
-    val sessionDurations = mutableStateMapOf<String, Int>()
-
-    fun markWorkoutDone(id: String, seconds: Int = 0) {
-        sessionDurations[id] = seconds.coerceAtLeast(0)
+    fun markWorkoutDone(id: String) {
         updatePlan(workoutPlan.map { if (it.id == id) it.copy(done = true) else it })
     }
 
@@ -127,10 +139,11 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         )
     }
 
-    fun recordCompletedSession(elapsedSeconds: Int) {
+    fun recordCompletedSession(elapsedSeconds: Int, completedPlan: List<Workout> = workoutPlan.filter { it.done }, elapsedByWorkout: Map<String, Int> = emptyMap()) {
+        if (completedPlan.isEmpty()) return
         // 리포트 맵은 여기서 비우지 않는다 — 완료 화면이 같은 맵을 읽고, 다음 startSession 이 비운다
         workoutHistory = workoutHistory.replaceTodayWith(
-            createWorkoutHistoryDay(workoutPlan, elapsedSeconds, sessionPostureReports.toMap(), sessionDurations.toMap()),
+            createWorkoutHistoryDay(completedPlan, elapsedSeconds, sessionPostureReports.toMap(), elapsedByWorkout),
         )
         store.saveHistory(workoutHistory)
     }
@@ -146,14 +159,6 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     /** [keep] 에 든 운동(이어하기로 이미 마친 것)의 리포트는 남기고 나머지를 비운다. */
     fun clearSessionReports(keep: Collection<String> = emptyList()) {
         val keepSet = keep.toSet()
-        sessionDurations.keys.filter { it !in keepSet }.forEach { sessionDurations.remove(it) }
-        // 앱 재시작 후 이어하기도 이미 기록한 실제 시간을 유지한다.
-        todayRecord?.items?.forEach { item ->
-            val id = item.workoutId ?: workoutPlan.firstOrNull { it.name == item.workoutName && it.reps == item.reps }?.id
-            if (id != null && id in keepSet && id !in sessionDurations) {
-                sessionDurations[id] = item.durationSeconds ?: item.durationMinutes * 60
-            }
-        }
         sessionPostureReports.keys.filter { it !in keepSet }.forEach { sessionPostureReports.remove(it) }
     }
 
@@ -221,9 +226,9 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     private fun epochDayFor(offset: Int): Long = LocalDate.now().toEpochDay() + offset
 
     fun dietFor(offset: Int): Map<String, List<FoodEntry>> =
-        dietByDay[epochDayFor(offset)] ?: emptyDietSlots()
+        dietByDay[calendarDay + offset] ?: emptyDietSlots()
 
-    fun waterFor(offset: Int): Int = waterByDay[epochDayFor(offset)] ?: 0
+    fun waterFor(offset: Int): Int = waterByDay[calendarDay + offset] ?: 0
 
     fun addWater(offset: Int) {
         val key = epochDayFor(offset)

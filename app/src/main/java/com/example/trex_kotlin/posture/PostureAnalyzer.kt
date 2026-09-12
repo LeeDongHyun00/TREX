@@ -143,8 +143,6 @@ class PostureAnalyzer(
     fun analyze(image: ImageProxy, timestampMs: Long, up: Vec3 = SCREEN_UP): PoseSample {
         val fromGravity = up !== SCREEN_UP
         if (!ensureReady()) return PoseSample.empty(up = up, fromGravity = fromGravity)
-        val lm = landmarker ?: return PoseSample.empty(up = up, fromGravity = fromGravity)
-
         // YUV → Bitmap 변환은 실제 추론 프레임에서만 (스킵된 프레임은 비용 0)
         val src = try {
             image.toBitmap()
@@ -153,6 +151,20 @@ class PostureAnalyzer(
         }
         val rotation = image.imageInfo.rotationDegrees
         val upright = rotateInto(src, rotation)
+
+        return try {
+            analyzeBitmap(upright, timestampMs, up)
+        } finally {
+            if (upright !== src) src.recycle()
+        }
+    }
+
+    /** 회전 보정된 이미지 재생 입력. 카메라와 동일한 VIDEO 추론·관절 변환 경로를 사용한다.
+     * 비트맵 소유권은 호출자에게 있다. 저장 이미지에는 IMU가 없으므로 기본값은 SCREEN_UP이다. */
+    fun analyzeBitmap(upright: Bitmap, timestampMs: Long, up: Vec3 = SCREEN_UP): PoseSample {
+        val fromGravity = up !== SCREEN_UP
+        if (!ensureReady()) return PoseSample.empty(up = up, fromGravity = fromGravity)
+        val lm = landmarker ?: return PoseSample.empty(up = up, fromGravity = fromGravity)
 
         val ts = maxOf(timestampMs, lastTimestampMs + 1)
         lastTimestampMs = ts
@@ -167,8 +179,6 @@ class PostureAnalyzer(
         recordStat(inferMs)
         val w = upright.width
         val h = upright.height
-        if (upright !== src) src.recycle()
-
         val landmarks = result?.landmarks()?.firstOrNull()
         val world = result?.worldLandmarks()?.firstOrNull()
         if (landmarks == null || world == null || landmarks.size < MP_LANDMARK_COUNT) {

@@ -23,7 +23,6 @@ data class FloorFeedback(
 /** §36: 바닥 참고 피드백 전용 정책. 규칙 등급·점수·서서 종목의 음성 정책은 바꾸지 않는다. */
 class FloorFeedbackController(private val exercise: String, rules: List<PostureRule>) {
     private val activeRules = rules.filter { it.exercise == exercise && it.status != RuleStatus.EXCLUDE }
-    private val activeRuleIds = activeRules.map { it.id }.toSet()
     private val repRule = activeRules.firstOrNull { it.repConfig != null }
     private val holdRule = activeRules.firstOrNull { it.holdConfig != null }
     private data class Issue(val id: String, val message: String, val points: Set<Int>, val recovery: String)
@@ -44,12 +43,17 @@ class FloorFeedbackController(private val exercise: String, rules: List<PostureR
     private var lastMode: CoachMode? = null
 
     /** 테스트와 앱이 같은 진입점을 사용한다. voiceEnabled=false인 동안 발화 쿨다운은 소비하지 않는다. */
-    @Synchronized
     fun update(
         now: Long, features: Map<String, Float>, hold: HoldSnapshot?, windows: List<OnsetState>,
         rep: RepRecord? = null, anchored: Boolean = true, observable: Boolean = true,
         paused: Boolean = false, mode: CoachMode = CoachMode.COACH, voiceEnabled: Boolean = true,
+        alignment: AlignmentSnapshot? = null,
     ): FloorFeedback {
+        if (alignment != null && !paused) {
+            if (mode == CoachMode.TRACK) return FloorFeedback(FloorFeedbackPhase.MEASURING,
+                "초기 자세와 고개·골반의 변화를 비교하고 있어요")
+            return alignmentFeedback(now,alignment,voiceEnabled)
+        }
         val gap = lastFrame?.let { now - it }
         if (gap != null && (gap <= 0 || gap > 1000) || lastMode != null && lastMode != mode) clearObservation()
         lastFrame = now; lastMode = mode
@@ -62,8 +66,7 @@ class FloorFeedbackController(private val exercise: String, rules: List<PostureR
         if (!anchored || holdRule != null && hold?.baseline == null) {
             clearObservation()
             val msg = if (holdRule != null) "몸을 옆에서 비추고 처음 자세를 5초간 유지해 주세요" else "몸 전체가 보이면 편하게 동작을 시작해 주세요"
-            return FloorFeedback(FloorFeedbackPhase.PREPARING, msg,
-                speech = voice("prepare", msg, now, voiceEnabled, 20000))
+            return FloorFeedback(FloorFeedbackPhase.PREPARING, msg)
         }
         if (measuredSince == null) measuredSince = now
         val candidates = ArrayList<Issue>()
@@ -91,7 +94,7 @@ class FloorFeedbackController(private val exercise: String, rules: List<PostureR
                 if (exercise == "힙쓰러스트") setOf(11, 12, 23, 24, 25, 26) else setOf(11, 12, 13, 14, 15, 16),
                 "최근 두 번의 동작이 참고 범위 안으로 들어왔어요")
         }
-        val live = windows.filter { st -> st.rule.id in activeRuleIds && st.rule.kind == "window" &&
+        val live = windows.filter { st -> st.rule.id in activeRules.map { it.id } && st.rule.kind == "window" &&
             features[st.rule.baseFeature]?.isFinite() == true && mode == CoachMode.COACH }
         val violations = live.filter { it.recent == Verdict.VIOLATION }
         since.keys.retainAll(violations.map { it.rule.id }.toSet())
@@ -101,9 +104,9 @@ class FloorFeedbackController(private val exercise: String, rules: List<PostureR
         }
         val chosen = candidates.firstOrNull { it.id == active?.id } ?: candidates.firstOrNull()
         if (chosen != null) {
-            active = chosen; goodSince = null; recoveryUntil = 0; readyAnnounced = true
+            active = chosen; goodSince = null; recoveryUntil = 0
             return FloorFeedback(FloorFeedbackPhase.ATTENTION, chosen.message, chosen.points,
-                voice(chosen.id, "참고 안내예요. ${chosen.message}", now, voiceEnabled, 12000), chosen.id)
+                voice(chosen.id, "참고 안내예요. ${chosen.message}", now, voiceEnabled, 20000), chosen.id)
         }
         val previous = active
         if (previous != null) {
@@ -127,19 +130,15 @@ class FloorFeedbackController(private val exercise: String, rules: List<PostureR
             }
         }
         if (now < recoveryUntil) return FloorFeedback(FloorFeedbackPhase.RECOVERED, recoveryMessage,
-            speech = voice("recovery", recoveryMessage, now, voiceEnabled, 12000))
+            speech = voice("recovery", recoveryMessage, now, voiceEnabled, 20000))
         val limited = activeRules.isEmpty()
         val msg = when {
-            limited && exercise == "크런치" -> "머리 들림과 반복을 측정 중이에요. 견갑골·허리 접지는 판정하지 못해요"
-            limited -> "팔 들림과 반복을 측정 중이에요. 목·엄지 방향은 판정하지 못해요"
+            limited && exercise == "크런치" -> "머리 들림의 변화를 측정하고 있어요 · 참고"
+            limited -> "팔 들림의 변화를 측정하고 있어요 · 참고"
             mode == CoachMode.TRACK -> "움직임을 기록하고 있어요. 처음 자세와의 변화만 안내해요"
             else -> "움직임을 측정 중이에요. 참고 범위를 벗어나면 알려드려요"
         }
-        val readyVoice = if (!readyAnnounced && now - measuredSince!! >= 2000) {
-            voice("ready", if (limited) msg else "측정을 시작했어요. 변화가 지속되면 알려드릴게요", now, voiceEnabled, 20000)
-                ?.also { readyAnnounced = true }
-        } else null
-        return FloorFeedback(FloorFeedbackPhase.MEASURING, msg, speech = readyVoice)
+        return FloorFeedback(FloorFeedbackPhase.MEASURING, msg)
     }
 
     private fun clearObservation() {
@@ -147,8 +146,25 @@ class FloorFeedbackController(private val exercise: String, rules: List<PostureR
         badReps = 0; goodReps = 0; lastRep = null; measuredSince = null
     }
 
+    private fun alignmentFeedback(now: Long, state: AlignmentSnapshot, enabled: Boolean): FloorFeedback {
+        val issue = state.issue
+        if (issue != null) return FloorFeedback(FloorFeedbackPhase.ATTENTION,issue.message,issue.points,
+            voice(issue.rule.id+":"+issue.side,"참고 안내예요. ${issue.message}",now,enabled,20000),issue.rule.id)
+        val recovery = state.recovery
+        if (recovery != null) return FloorFeedback(FloorFeedbackPhase.RECOVERED,recovery.message,
+            speech=voice("alignment-recovery",recovery.message,now,enabled,20000))
+        if (!state.placementReady) return FloorFeedback(FloorFeedbackPhase.UNAVAILABLE,
+            "몸 옆에서 어깨부터 발목까지 길게 담아주세요. 다리를 펴고 플랭크 자세를 잡아주세요",
+            speech=voice("plank-placement","몸 옆에서 어깨부터 발목까지 보이게 해주세요",now,enabled,15000))
+        val missing = state.items.firstOrNull { it.value == null }
+        if (missing != null) return FloorFeedback(FloorFeedbackPhase.UNAVAILABLE,
+            "${if(missing.head) "고개" else "골반"} 관절이 안 보여요. 보이는 항목만 계속 확인하고 있어요")
+        return FloorFeedback(FloorFeedbackPhase.MEASURING,
+            if(state.referenceEligible) "관측한 고개와 골반이 정렬 범위 안에 있어요 · 참고" else "고개와 골반 정렬의 지속 여부를 확인하고 있어요")
+    }
+
     private fun voice(key: String, text: String, now: Long, enabled: Boolean, cooldown: Long): String? {
-        if (!enabled || lastVoice?.let { now - it < 4000 } == true || voiced[key]?.let { now - it < cooldown } == true) return null
+        if (!enabled || lastVoice?.let { now - it < 8000 } == true || voiced[key]?.let { now - it < cooldown } == true) return null
         lastVoice = now; voiced[key] = now
         return text
     }

@@ -1,44 +1,28 @@
 package com.example.trex_kotlin
 
+import androidx.compose.animation.*
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.ui.draw.clip
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
-import androidx.compose.material.icons.automirrored.rounded.TrendingUp
-import androidx.compose.material.icons.rounded.FitnessCenter
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Surface
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.ChevronRight
+import androidx.compose.material3.*
 import com.example.trex_kotlin.TrexText as Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.semantics.*
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -47,236 +31,90 @@ import java.time.LocalDate
 import java.time.format.TextStyle
 import java.util.Locale
 
-/**
- * 주간 운동 기록 화면 (리디자인 — 기록 탭 대신 리모컨/프로필에서 진입).
- * 주간 요약 카드(막대 그래프 탭 → 해당 일 선택) + 일별 상세 카드.
- */
+/** 날짜는 접힌 목록으로 시작한다. 숫자 요약과 실제 저장 내용을 분리한다. */
 @Composable
 fun RecordScreen(app: AppViewModel, onBack: () -> Unit) {
     val c = Trex.c
-    val density = LocalDensity.current
-    var headerHeight by remember { mutableStateOf(70.dp) }
-    val today = LocalDate.now()
-    val weekDates = (6 downTo 0).map { today.minusDays(it.toLong()) }
-    val days = weekDates.map { d -> d to app.workoutHistory.firstOrNull { it.epochDay == d.toEpochDay() } }
-    var selectedDay by rememberSaveable { mutableIntStateOf(days.indexOfLast { it.second?.items?.isNotEmpty() == true }.coerceAtLeast(0)) }
-
-    val totalCount = days.sumOf { it.second?.items?.size ?: 0 }
-    val accDays = days.mapNotNull { it.second }.flatMap { it.items }.mapNotNull { it.accuracy }
-    val avgAcc = if (accDays.isEmpty()) null else accDays.average().toInt()
-    val activeDayCount = days.count { it.second?.items?.isNotEmpty() == true }
-    val totalMinutes = days.sumOf { it.second?.totalMinutes() ?: 0 }
-    val maxItems = days.maxOf { it.second?.items?.size ?: 0 }.coerceAtLeast(1)
-    val rangeLabel = "${weekDates.first().monthValue}월 ${weekDates.first().dayOfMonth}일 – ${weekDates.last().dayOfMonth}일"
-
-    Box(Modifier.fillMaxSize().background(c.bg)) {
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = headerHeight + 12.dp, bottom = 26.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
-        ) {
-            item {
-                DCard(radius = 26.dp) {
-                    Column(Modifier.padding(18.dp)) {
-                        Row(verticalAlignment = Alignment.Top) {
-                            Column(Modifier.weight(1f)) {
-                                Kicker("이번 주 완료")
-                                Row(Modifier.padding(top = 7.dp), verticalAlignment = Alignment.Bottom) {
-                                    Text("$totalCount", color = c.text, fontSize = 32.sp, fontWeight = FontWeight.SemiBold, lineHeight = 32.sp)
-                                    Text("개", color = c.text3, fontSize = 14.sp, modifier = Modifier.padding(bottom = 3.dp))
-                                }
-                            }
-                            if (avgAcc != null) {
-                                Row(
-                                    Modifier.clip(RoundedCornerShape(999.dp)).background(c.primaryWash).padding(horizontal = 11.dp, vertical = 6.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
-                                    Icon(Icons.AutoMirrored.Rounded.TrendingUp, contentDescription = null, tint = c.primaryText, modifier = Modifier.size(12.dp))
-                                    Text("평균 $avgAcc%", color = c.primaryText, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 4.dp))
-                                }
-                            }
-                        }
-                        Row(
-                            Modifier.padding(top = 18.dp).height(112.dp),
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        ) {
-                            days.forEachIndexed { i, (date, record) ->
-                                val n = record?.items?.size ?: 0
-                                val sel = selectedDay == i
-                                Column(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .fillMaxHeight()
-                                        .clickable { selectedDay = i },
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                                ) {
-                                    Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.BottomCenter) {
-                                        Box(
-                                            Modifier
-                                                .fillMaxWidth()
-                                                .height(((n / maxItems.toFloat()) * 84).coerceAtLeast(4f).dp)
-                                                .clip(RoundedCornerShape(topStart = 9.dp, topEnd = 9.dp, bottomStart = 4.dp, bottomEnd = 4.dp))
-                                                .background(if (n == 0) c.track else if (sel) c.primary else c.primarySoftLine),
-                                        )
-                                    }
-                                    Box(
-                                        Modifier
-                                            .width(24.dp).height(20.dp)
-                                            .clip(RoundedCornerShape(7.dp))
-                                            .background(if (sel) c.primary else Color.Transparent),
-                                        contentAlignment = Alignment.Center,
-                                    ) {
-                                        Text(
-                                            date.dayOfWeek.getDisplayName(TextStyle.NARROW, Locale.KOREAN),
-                                            color = if (sel) Color.White else c.text3, fontSize = 10.sp, fontWeight = FontWeight.SemiBold,
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                        Box(Modifier.padding(top = 16.dp).fillMaxWidth().height(1.dp).background(c.line))
-                        Row(Modifier.padding(top = 15.dp).fillMaxWidth()) {
-                            listOf(
-                                "${activeDayCount}일" to "운동한 날",
-                                "${totalMinutes}분" to "총 운동 시간",
-                                "${app.attendanceStreak()}일" to "최장 연속",
-                            ).forEach { (v, label) ->
-                                Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Text(v, color = c.text, fontSize = 17.sp, fontWeight = FontWeight.SemiBold, lineHeight = 17.sp)
-                                    Text(label, color = c.text3, fontSize = 10.5.sp, modifier = Modifier.padding(top = 5.dp))
-                                }
-                            }
-                        }
-                    }
+    val today = LocalDate.ofEpochDay(app.calendarDay)
+    val days = (0..6).map { today.minusDays(it.toLong()) }.map { date ->
+        date to app.workoutHistory.firstOrNull { it.epochDay == date.toEpochDay() }
+    }
+    var expanded by rememberSaveable { mutableStateOf<Long?>(null) }
+    val listState = rememberLazyListState()
+    val scope = rememberCoroutineScope()
+    val activeDays = days.count { it.second?.items?.isNotEmpty() == true }
+    val minutes = days.sumOf { it.second?.totalMinutes() ?: 0 }
+    Column(Modifier.fillMaxSize().background(c.bg).statusBarsPadding().navigationBarsPadding()) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "기록 뒤로가기", tint = c.text) }
+            Text("운동 기록", color = c.text, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+        }
+        LazyColumn(Modifier.weight(1f), state = listState, contentPadding = PaddingValues(horizontal = 20.dp, vertical = 22.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            item(key = "summary") {
+                Text("최근 7일", color = c.text, fontSize = 30.sp, fontWeight = FontWeight.SemiBold)
+                Text("${days.last().first.monthValue}.${days.last().first.dayOfMonth} – ${today.monthValue}.${today.dayOfMonth}",
+                    color = c.text2, fontSize = 14.sp, modifier = Modifier.padding(top = 6.dp))
+                Row(Modifier.fillMaxWidth().padding(top = 28.dp, bottom = 26.dp), horizontalArrangement = Arrangement.spacedBy(44.dp)) {
+                    RecordMetric("${activeDays}일", "운동한 날")
+                    RecordMetric("${minutes}분", "운동 시간")
+                }
+                RecordWeekChart(days.reversed(), expanded) { day ->
+                    expanded = day
+                    scope.launch { listState.animateScrollToItem(1 + days.indexOfFirst { it.first.toEpochDay() == day }) }
                 }
             }
-
-            item {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Kicker("일별 상세")
-                    Spacer(Modifier.weight(1f))
-                    Text("막대를 누르면 하루가 선택돼룡", color = c.text3, fontSize = 11.sp)
-                }
-            }
-
-            items(count = days.size) { i ->
-                val (date, record) = days[i]
-                val sel = selectedDay == i
-                val has = record?.items?.isNotEmpty() == true
-                val dayAcc = record?.items?.mapNotNull { it.accuracy }?.takeIf { it.isNotEmpty() }?.average()?.toInt()
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(24.dp),
-                    color = if (has) c.surface else Color.Transparent,
-                    contentColor = c.text,
-                    border = androidx.compose.foundation.BorderStroke(1.dp, if (sel && has) c.primarySoftLine else c.line),
-                    shadowElevation = if (sel && has) 2.dp else 0.dp,
-                ) {
+            items(days.size, key = { days[it].first.toEpochDay() }) { index ->
+                val (date, record) = days[index]
+                val open = expanded == date.toEpochDay()
+                val chevron by animateFloatAsState(if (open) 90f else 0f, tween(220), label = "record-chevron")
+                Surface(shape = RoundedCornerShape(20.dp), color = c.surface, modifier = Modifier.fillMaxWidth()) {
                     Column {
-                        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Column(
-                                Modifier
-                                    .size(44.dp)
-                                    .clip(RoundedCornerShape(15.dp))
-                                    .background(if (has) (if (sel) c.primary else c.primaryWash) else c.surface2),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.Center,
-                            ) {
-                                Text(
-                                    date.dayOfWeek.getDisplayName(TextStyle.NARROW, Locale.KOREAN),
-                                    color = (if (has) (if (sel) Color.White else c.primaryText) else c.text3).copy(alpha = 0.75f),
-                                    fontSize = 9.5.sp, fontWeight = FontWeight.SemiBold,
-                                )
-                                Text(
-                                    "${date.dayOfMonth}",
-                                    color = if (has) (if (sel) Color.White else c.primaryText) else c.text3,
-                                    fontSize = 15.sp, fontWeight = FontWeight.SemiBold,
-                                )
-                            }
-                            Column(Modifier.padding(start = 12.dp).weight(1f)) {
-                                Text(
-                                    text = if (has) dayTitle(record!!) else "기록 없음",
-                                    color = if (has) c.text else c.text3,
-                                    fontSize = 14.5.sp, fontWeight = FontWeight.SemiBold,
-                                )
-                                Text(
-                                    text = if (has) "${record!!.items.size}개 운동 · ${record.totalMinutes()}분" else if (date >= today) "아직 기록 전" else "기록 없음",
-                                    color = c.text3, fontSize = 11.5.sp, modifier = Modifier.padding(top = 3.dp),
-                                )
-                            }
-                            if (has && dayAcc != null) {
-                                Column(horizontalAlignment = Alignment.End) {
-                                    Text("$dayAcc%", color = c.primaryText, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-                                    Text("정확도", color = c.text3, fontSize = 9.5.sp)
+                        Row(Modifier.fillMaxWidth().clickable { expanded = if (open) null else date.toEpochDay() }
+                            .semantics { contentDescription = "${date.monthValue}월 ${date.dayOfMonth}일 기록"; stateDescription = if (open) "펼침" else "접힘" }
+                            .padding(horizontal = 20.dp, vertical = 20.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) {
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                    Text(date.dayOfWeek.getDisplayName(TextStyle.FULL, Locale.KOREAN), color = c.text,
+                                        fontSize = 17.sp, fontWeight = FontWeight.Medium)
+                                    Text("${date.monthValue}.${date.dayOfMonth}", color = c.text2, fontSize = 14.sp)
+                                    if (date == today) Text("오늘", color = c.primaryText, fontSize = 12.sp)
                                 }
+                                Text(if (record?.items?.isNotEmpty() == true) "${record.items.size}세트 · ${record.durationLabel()}" else "기록 없음",
+                                    color = c.text2, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
                             }
+                            Icon(Icons.Rounded.ChevronRight, null, tint = c.text3, modifier = Modifier.size(20.dp).rotate(chevron))
                         }
-                        if (has) {
-                            Column(Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                record!!.items.forEach { item ->
-                                    Column(
-                                        Modifier
-                                            .fillMaxWidth()
-                                            .clip(RoundedCornerShape(18.dp))
-                                            .background(c.surface2)
-                                            .border(1.dp, c.line, RoundedCornerShape(18.dp))
-                                            .padding(horizontal = 14.dp, vertical = 13.dp),
-                                    ) {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Box(
-                                                Modifier.size(26.dp).clip(RoundedCornerShape(9.dp)).background(c.surface).border(1.dp, c.line, RoundedCornerShape(9.dp)),
-                                                contentAlignment = Alignment.Center,
-                                            ) { Icon(Icons.Rounded.FitnessCenter, contentDescription = null, tint = c.primaryText, modifier = Modifier.size(13.dp)) }
-                                            androidx.compose.material3.Text(item.workoutName, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 9.dp).weight(1f))
-                                            androidx.compose.material3.Text(item.reps, color = c.text3, fontSize = 10.5.sp, fontWeight = FontWeight.Medium)
-                                            item.accuracy?.let { acc ->
-                                                Text(
-                                                    "$acc%",
-                                                    color = if (acc >= 92) c.primaryText else c.text3,
-                                                    fontSize = 10.sp, fontWeight = FontWeight.SemiBold,
-                                                    modifier = Modifier
-                                                        .padding(start = 8.dp)
-                                                        .clip(RoundedCornerShape(999.dp))
-                                                        .background(if (acc >= 92) c.primaryWash else c.surface)
-                                                        .padding(horizontal = 8.dp, vertical = 3.dp),
-                                                )
-                                            }
-                                        }
+                        AnimatedVisibility(open, enter = expandVertically(tween(250)) + fadeIn(tween(180)),
+                            exit = shrinkVertically(tween(220)) + fadeOut(tween(120))) {
+                            Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 8.dp)) {
+                                HorizontalDivider(color = c.line)
+                                if (record?.items?.isNotEmpty() != true) Text("이날 저장된 운동이 없어요.", color = c.text2,
+                                    fontSize = 14.sp, modifier = Modifier.padding(vertical = 20.dp))
+                                if (record?.items?.isNotEmpty() == true) {
+                                    Text(recordWorkoutFocus(record).title, color = c.text, fontSize = 22.sp,
+                                        fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 20.dp))
+                                    Text(dayWorkoutAssessment(record), color = c.text2, fontSize = 13.sp, lineHeight = 21.sp,
+                                        modifier = Modifier.padding(top = 8.dp, bottom = 16.dp))
+                                    HorizontalDivider(color = c.line)
+                                }
+                                record?.items?.forEachIndexed { i, item ->
+                                    Column(Modifier.fillMaxWidth().padding(vertical = 16.dp)) {
+                                        Text(item.workoutName, color = c.text, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                                        Text(item.reps, color = c.text2, fontSize = 13.sp, modifier = Modifier.padding(top = 5.dp))
                                         item.postureCorrection?.let { pc ->
                                             val (line1, line2) = postureLines(pc)
-                                            val selfLabel = selfLabelText(pc)
-                                            val appReps = pc.repsValid?.let { it + (pc.repsPartial ?: 0) }
-                                            Row(Modifier.padding(top = 10.dp).height(IntrinsicSize.Min)) {
-                                                // 막대 색은 판정 종류로 — 정확도 문턱(92%)은 TRACK 에서 accuracy 가 null 이라 기준이 못 된다
-                                                Box(
-                                                    Modifier.width(2.dp).fillMaxHeight().clip(RoundedCornerShape(999.dp))
-                                                        .background(postureBarColor(c, pc)),
-                                                )
-                                                Column(Modifier.padding(start = 8.dp).weight(1f)) {
-                                                    Text(line1, color = c.text2, fontSize = 11.5.sp, lineHeight = 16.sp)
-                                                    line2?.let { Text(it, color = c.text3, fontSize = 11.5.sp, lineHeight = 16.sp) }
-                                                    if (selfLabel != null) {
-                                                        Row(Modifier.padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                                                            Text(
-                                                                selfLabel,
-                                                                color = c.text2, fontSize = 10.sp, fontWeight = FontWeight.Medium,
-                                                                modifier = Modifier
-                                                                    .clip(RoundedCornerShape(999.dp))
-                                                                    .background(c.surface)
-                                                                    .border(1.dp, c.line, RoundedCornerShape(999.dp))
-                                                                    .padding(horizontal = 8.dp, vertical = 3.dp),
-                                                            )
-                                                            // 앱 카운트와 사용자 라벨이 다르면 그대로 드러낸다 — 카운터 오차를 숨기지 않는다
-                                                            if (pc.actualReps != null && appReps != null && appReps != pc.actualReps) {
-                                                                Text("(앱 $appReps)", color = c.text3, fontSize = 10.sp, modifier = Modifier.padding(start = 6.dp))
-                                                            }
-                                                        }
-                                                    }
-                                                }
+                                            Column(Modifier.padding(top = 10.dp)) {
+                                                Text(line1, color = c.text2, fontSize = 13.sp, lineHeight = 20.sp)
+                                                line2?.let { Text(it, color = c.text2, fontSize = 13.sp, lineHeight = 20.sp) }
+                                                selfLabelText(pc)?.let { Text(it, color = c.primaryText, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp)) }
+                                                val detected = pc.repsValid?.let { it + (pc.repsPartial ?: 0) }
+                                                if (pc.actualReps != null && detected != null && pc.actualReps != detected)
+                                                    Text("앱 검출 ${detected}회", color = c.text3, fontSize = 12.sp)
                                             }
                                         }
                                     }
+                                    if (i < record.items.lastIndex) HorizontalDivider(color = c.line)
                                 }
                             }
                         }
@@ -284,28 +122,39 @@ fun RecordScreen(app: AppViewModel, onBack: () -> Unit) {
                 }
             }
         }
+    }
+}
 
-        // 상단 글래스 헤더
-        Surface(
-            modifier = Modifier.align(Alignment.TopCenter).fillMaxWidth().onSizeChanged { headerHeight = with(density) { it.height.toDp() } },
-            color = c.navGlass,
-            contentColor = c.text,
-        ) {
-            Column {
-                Row(
-                    Modifier.padding(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    RoundIcon(Icons.AutoMirrored.Rounded.KeyboardArrowLeft, onClick = onBack, contentDescription = "뒤로")
-                    Column(Modifier.padding(start = 12.dp).weight(1f)) {
-                        Kicker("운동 기록")
-                        Text(rangeLabel, fontSize = 15.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 2.dp))
-                    }
-                    WashPill("주간")
+/** 막대 높이는 실제 저장된 완료 세트 수다. 기록 없는 날은 바닥 선만 남긴다. */
+@Composable
+private fun RecordWeekChart(days: List<Pair<LocalDate, WorkoutHistoryDay?>>, selected: Long?, onSelect: (Long) -> Unit) {
+    val c = Trex.c
+    val maximum = days.maxOf { it.second?.items?.size ?: 0 }.coerceAtLeast(1)
+    Text("완료 세트", color = c.text2, fontSize = 12.sp)
+    Row(Modifier.fillMaxWidth().padding(top = 10.dp, bottom = 22.dp).height(144.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        days.forEach { (date, record) ->
+            val count = record?.items?.size ?: 0
+            val fraction by animateFloatAsState(count.toFloat() / maximum, tween(280), label = "record-bar")
+            Column(Modifier.weight(1f).fillMaxHeight().clickable { onSelect(date.toEpochDay()) }
+                .semantics { contentDescription = "${date.monthValue}월 ${date.dayOfMonth}일 그래프 · ${count}세트" },
+                horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("$count", color = c.text2, fontSize = 11.sp)
+                Box(Modifier.weight(1f).fillMaxWidth().padding(top = 6.dp, bottom = 8.dp), contentAlignment = Alignment.BottomCenter) {
+                    Box(Modifier.widthIn(max = 28.dp).fillMaxWidth().height((88f * fraction).coerceAtLeast(2f).dp)
+                        .clip(RoundedCornerShape(5.dp)).background(if (count == 0) c.track else if (selected == date.toEpochDay()) c.primaryText else c.primary))
                 }
-                Box(Modifier.fillMaxWidth().height(1.dp).background(c.line))
+                Text(date.dayOfWeek.getDisplayName(TextStyle.NARROW, Locale.KOREAN), color = c.text2, fontSize = 12.sp)
+                Text("${date.dayOfMonth}", color = c.text3, fontSize = 10.sp)
             }
         }
+    }
+}
+
+@Composable
+private fun RecordMetric(value: String, label: String) {
+    Column {
+        Text(value, color = Trex.c.text, fontSize = 28.sp, fontWeight = FontWeight.SemiBold)
+        Text(label, color = Trex.c.text2, fontSize = 13.sp, modifier = Modifier.padding(top = 5.dp))
     }
 }
 
@@ -318,7 +167,7 @@ private fun postureLines(pc: PostureCorrection): Pair<String, String?> {
     if (pc.mode == "track") return pc.focus to null
     return when (pc.kind) {
         "clean" -> pc.focus to null   // "자세 깨끗했어요" 또는 베타만 판정된 세트의 "검증 중인 항목 기준으로는 이상 없었어요"
-        "unjudged" -> "자세 판정 없음 — 화면에 충분히 잡히지 않았어요" to null
+        "unjudged" -> pc.focus.ifBlank { "자세 판정 없음" } to null
         "habit", "drift", "violation", "recovered" -> pc.focus to pc.fix?.takeIf { it.isNotBlank() }?.let { "다음엔 $it" }
         "reference" -> "참고: ${pc.focus} (검증 중인 항목)" to null
         // kind 없는 항목은 TrexStore 가 로드 시 버린다(§30 이전 목업) — 남아 있어도 지어낸 지적 문구는 쓰지 않는다
@@ -341,16 +190,4 @@ private fun selfLabelText(pc: PostureCorrection): String? {
         pc.actualReps?.let { add("실제 ${it}회") }
     }
     return if (parts.isEmpty()) null else (listOf("내 평가") + parts).joinToString(" · ")
-}
-
-private fun dayTitle(record: WorkoutHistoryDay): String {
-    val cats = record.items.map { it.workoutName }
-    return when {
-        cats.size >= 4 -> "전신 루틴"
-        cats.any { it.contains("스쿼트") || it.contains("런지") } && cats.any { it.contains("플랭크") || it.contains("버드독") } -> "하체 + 코어"
-        cats.any { it.contains("스쿼트") || it.contains("런지") } -> "하체 루틴"
-        cats.any { it.contains("플랭크") } -> "코어 루틴"
-        cats.any { it.contains("스트레칭") } -> "가벼운 스트레칭"
-        else -> "운동 루틴"
-    }
 }

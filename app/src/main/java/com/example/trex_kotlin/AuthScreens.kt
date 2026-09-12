@@ -18,6 +18,9 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -93,9 +96,6 @@ private val loginAnimationFrames = intArrayOf(
 fun AuthScreen(
     onLogin: () -> Unit,
     onOpenFind: () -> Unit,
-    onOpenGuide: () -> Unit,
-    onOpenPostureLab: () -> Unit = {},
-    onOpenBaselineGuide: () -> Unit = {},
 ) {
     val c = Trex.c
     var signupMode by rememberSaveable { mutableStateOf(false) }
@@ -122,8 +122,7 @@ fun AuthScreen(
             .background(c.bg)
             .imePadding()
             .padding(horizontal = 26.dp)
-            .verticalScroll(rememberScrollState())
-            .padding(vertical = 20.dp),
+            .verticalScroll(rememberScrollState()).padding(vertical = 20.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         // 로고 카드 + 워드마크
@@ -134,7 +133,7 @@ fun AuthScreen(
             border = BorderStroke(1.dp, c.line),
             shadowElevation = 2.dp,
         ) {
-            LoginLogo(frame = frame, modifier = Modifier.fillMaxSize().padding(5.dp))
+            LoginLogo(frame, Modifier.fillMaxSize().padding(5.dp))
         }
         Text(
             "TREX",
@@ -205,7 +204,7 @@ fun AuthScreen(
                                     if (agree) Icon(Icons.Rounded.Check, contentDescription = null, tint = Color.White, modifier = Modifier.size(13.dp))
                                 }
                                 Text(
-                                    "서비스 약관 및 개인정보 처리방침에 동의해룡",
+                                    "서비스 약관 및 개인정보 처리방침에 동의합니다",
                                     color = c.text, fontSize = 12.5.sp, lineHeight = 17.sp,
                                     modifier = Modifier.padding(start = 11.dp).weight(1f),
                                 )
@@ -222,17 +221,6 @@ fun AuthScreen(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text("아이디/비밀번호 찾기", color = c.text2, fontSize = 12.sp, fontWeight = FontWeight.Medium, modifier = Modifier.clickable(onClick = onOpenFind))
-                Box(Modifier.padding(horizontal = 12.dp).width(1.dp).height(11.dp).background(c.line))
-                Text("가이드북", color = c.text2, fontSize = 12.sp, fontWeight = FontWeight.Medium, modifier = Modifier.clickable(onClick = onOpenGuide))
-            }
-            Row(
-                Modifier.fillMaxWidth().padding(top = 10.dp, bottom = 22.dp),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text("자세 교정 실험실", color = c.text3, fontSize = 11.sp, modifier = Modifier.clickable(onClick = onOpenPostureLab))
-                Box(Modifier.padding(horizontal = 10.dp).width(1.dp).height(10.dp).background(c.line))
-                Text("자세 기준선 설정", color = c.text3, fontSize = 11.sp, modifier = Modifier.clickable(onClick = onOpenBaselineGuide))
             }
         }
     }
@@ -250,8 +238,8 @@ fun FindAccountScreen(onBack: () -> Unit) {
 
     BackHandler(onBack = onBack)
 
-    Column(Modifier.fillMaxSize().background(c.bg).imePadding().verticalScroll(rememberScrollState())) {
-        Column(Modifier.padding(start = 24.dp, end = 24.dp, top = 20.dp)) {
+    Column(Modifier.fillMaxSize().background(c.bg).imePadding()) {
+        Column(Modifier.padding(start = 24.dp, end = 24.dp, top = 52.dp)) {
             Kicker("RECOVER", color = c.primaryText)
             TitleBig("아이디 / 비밀번호 찾기")
         }
@@ -266,8 +254,10 @@ fun FindAccountScreen(onBack: () -> Unit) {
         }
         Column(
             Modifier
+                .weight(1f)
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = 24.dp)
-                .padding(top = 20.dp, bottom = 20.dp),
+                .padding(top = 20.dp),
         ) {
             if (sent) {
                 Column(
@@ -320,16 +310,16 @@ fun FindAccountScreen(onBack: () -> Unit) {
 private data class OnbChoice(val id: String, val label: String, val desc: String, val icon: ImageVector)
 
 private val onbGoals = listOf(
-    OnbChoice("muscle", "근육 증가", "중량과 분할 루틴에 집중해룡", Icons.Rounded.FitnessCenter),
-    OnbChoice("diet", "다이어트", "유산소와 고반복 운동을 해룡", Icons.Rounded.LocalFireDepartment),
-    OnbChoice("stamina", "체력 향상", "전신 기능성 운동을 해룡", Icons.Rounded.PlayArrow),
-    OnbChoice("maintain", "유지", "균형 잡힌 루틴으로 체력을 유지해룡", Icons.Rounded.Check),
+    OnbChoice("muscle", "근육 증가", "무거운 중량 위주, 분할 루틴 중심", Icons.Rounded.FitnessCenter),
+    OnbChoice("diet", "다이어트", "유산소와 고반복 운동 중심", Icons.Rounded.LocalFireDepartment),
+    OnbChoice("stamina", "체력 향상", "전신 기능성 운동 중심", Icons.Rounded.PlayArrow),
+    OnbChoice("maintain", "유지", "현재 체력 유지, 균형 잡힌 루틴", Icons.Rounded.Check),
 )
 
 private val onbPlaces = listOf(
-    OnbChoice("gym", "헬스장", "기구와 머신을 사용해룡", Icons.Rounded.FitnessCenter),
-    OnbChoice("home", "홈트", "집에서 운동해룡", Icons.Rounded.Home),
-    OnbChoice("both", "둘 다", "상황에 맞춰 바꿔룡", Icons.Rounded.Check),
+    OnbChoice("gym", "헬스장", "기구와 머신 기반", Icons.Rounded.FitnessCenter),
+    OnbChoice("home", "홈트", "집에서 가능한 루틴", Icons.Rounded.Home),
+    OnbChoice("both", "둘 다", "상황에 맞춰 전환", Icons.Rounded.Check),
 )
 
 private data class EquipCat(val name: String, val items: List<String>)
@@ -463,7 +453,7 @@ fun OnboardingScreen(onDone: (UserProfile) -> Unit) {
                                 .clickable { goal = "general"; step = 1 }
                                 .padding(vertical = 8.dp),
                         )
-                        Text("건너뛰면 기본 전신 운동 루틴으로 시작해룡", color = c.text3, fontSize = 11.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+                        Text("건너뛰면 범용 전신 운동 루틴으로 시작합니다.", color = c.text3, fontSize = 11.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
                     }
 
                     1 -> Column {
@@ -596,7 +586,7 @@ fun OnboardingScreen(onDone: (UserProfile) -> Unit) {
                                                         .padding(14.dp),
                                                     verticalAlignment = Alignment.CenterVertically,
                                                 ) {
-                                                    androidx.compose.material3.Text(cat.name, fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                                                    Text(cat.name, fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
                                                     Text("$pickedN/${cat.items.size}", color = if (pickedN > 0) c.primaryText else c.text3, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
                                                     Icon(
                                                         Icons.Rounded.KeyboardArrowDown, contentDescription = null, tint = c.text3,

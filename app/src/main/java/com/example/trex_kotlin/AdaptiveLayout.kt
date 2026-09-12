@@ -16,6 +16,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -75,22 +77,41 @@ fun TrexContentFrame(maxWidth: Dp = 840.dp, useWholeWindow: Boolean = false, con
 
 /** 카메라와 패널을 같은 Composition 위치에서 측정·배치해 전환 중 View 중복 연결을 막는다. */
 @Composable
-fun PostureAdaptiveLayout(camera: @Composable () -> Unit, controls: @Composable () -> Unit) {
+fun PostureAdaptiveLayout(preparing: Boolean = false, immersive: Boolean = false, panelProgress: Float = 1f,
+    header: @Composable () -> Unit = {}, camera: @Composable () -> Unit, controls: @Composable () -> Unit) {
     val fold = LocalTrexFold.current
     var origin by remember { mutableStateOf(Offset.Zero) }
     Layout(
         content = {
             Box(Modifier.fillMaxSize()) { camera() }
             Box(Modifier.fillMaxSize()) { controls() }
+            Box { header() }
         },
-        modifier = Modifier.fillMaxSize().onGloballyPositioned { origin = it.positionInWindow() },
+        modifier = Modifier.fillMaxSize().clipToBounds().onGloballyPositioned { origin = it.positionInWindow() },
     ) { children, constraints ->
-        val regions = sessionRegions(constraints.maxWidth, constraints.maxHeight, fold?.localTo(origin), density)
-        val cameraView = children[0].measure(Constraints.fixed(regions.camera.width, regions.camera.height))
+        val regions = sessionRegions(constraints.maxWidth, constraints.maxHeight, fold?.localTo(origin), density, preparing)
+        val headerView = children[2].measure(Constraints(maxWidth = minOf(regions.camera.width, (440 * density).toInt()),
+            maxHeight = (regions.camera.height - 64 * density).toInt().coerceAtLeast(0)))
+        val cameraRect = if (immersive) pipCameraRegion(constraints.maxWidth, constraints.maxHeight, regions,
+            fold?.localTo(origin), density, panelProgress, headerView.height) else regions.camera
+        val cameraView = children[0].measure(Constraints.fixed(cameraRect.width, cameraRect.height))
         val controlView = children[1].measure(Constraints.fixed(regions.controls.width, regions.controls.height))
         layout(constraints.maxWidth, constraints.maxHeight) {
-            cameraView.place(regions.camera.left, regions.camera.top)
-            controlView.place(regions.controls.left, regions.controls.top)
+            cameraView.placeWithLayer(cameraRect.left, cameraRect.top) {
+                shape = RoundedCornerShape((if (immersive) 24f * panelProgress else 0f).dp)
+                clip = true
+            }
+            val side = immersive && regions.controls.left > 0
+            controlView.place(regions.controls.left + (if (side) (1f - panelProgress) * regions.controls.width else 0f).roundToInt(),
+                regions.controls.top + (if (side) 0f else (1f - panelProgress) * regions.controls.height).roundToInt())
+            if (immersive) {
+                // 펼쳤을 때는 영상 밖, 접었을 때는 얼굴에서 먼 하단 조작부 위에 표시한다.
+                val split = splitAroundFold(constraints.maxWidth, constraints.maxHeight, fold?.localTo(origin)) != null
+                val dockTop = if (split) cameraRect.bottom - headerView.height - ((1f - panelProgress) * 84 * density).roundToInt()
+                    else cameraRect.bottom - ((1f - panelProgress) * (headerView.height + 84 * density)).roundToInt()
+                headerView.place((cameraRect.left + cameraRect.right - headerView.width) / 2,
+                    dockTop.coerceIn(regions.camera.top, (constraints.maxHeight - headerView.height).coerceAtLeast(regions.camera.top)))
+            }
         }
     }
 }

@@ -42,6 +42,9 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
+# 대형 브리지 재생 산출물 — 원본 데이터에서 언제든 재생성하며 GitHub 제한을 넘는다.
+docs/bridge-sides.full-sweep.v1.json
+
 # OS
 .DS_Store
 Thumbs.db
@@ -68,3 +71,6 @@ research/aihub_fitness/logs/
 
 # 파리티 픽스처는 테스트가 쓰는 .txt 만 추적 (.json 은 동일 내용의 참고본)
 app/src/test/resources/posture_port_fixture.json
+
+# 로컬 Python 런타임
+.venv312/

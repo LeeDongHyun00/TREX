@@ -110,8 +110,8 @@ class PostureScopeTest {
         assertFalse(s.hasAnyJudgement)
         assertTrue(s.provisionalOnly)
         assertEquals(listOf("엉덩이", "고개"), s.provisional)
-        assertTrue(s.startLine!!.contains("초기 안정 자세"))
-        assertTrue(s.startLine!!.contains("올바른지는 판정하지 못해요"))
+        assertTrue(s.startLine!!.contains("고개와 골반 정렬"))
+        assertTrue(s.startLine!!.contains("참고"))
         assertEquals("검증 중 2", s.cardLine)
     }
 

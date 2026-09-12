@@ -2,7 +2,7 @@ package com.example.trex_kotlin
 
 /** 구버전 데모의 정확한 전체 지문. 사용자 기록과 일부 값만 같다는 이유로 지우지 않는다. */
 internal object LegacyDemoData {
-    fun isSampleDay(day: WorkoutHistoryDay): Boolean = legacyHistory.any {
+    fun isSampleDay(day: WorkoutHistoryDay): Boolean = (legacyHistory + recentHistory).any {
         day.items == it.items && day.averageMinutes == it.averageMinutes && day.averageCalories == it.averageCalories
     }
 
@@ -35,9 +35,9 @@ private val legacyItems = listOf(
     WorkoutHistoryItem("마무리 스트레칭", "전신 6분", 6, 24),
 )
 
-private val legacyHistory = (0..6).map { index ->
-        val start = index % legacyItems.size
-        val items = (legacyItems.drop(start) + legacyItems.take(start)).take(2 + index % 3)
+private fun histories(source: List<WorkoutHistoryItem>) = (0..6).map { index ->
+        val start = index % source.size
+        val items = (source.drop(start) + source.take(start)).take(2 + index % 3)
         WorkoutHistoryDay(
             epochDay = 0,
             dayLabel = "",
@@ -47,4 +47,13 @@ private val legacyHistory = (0..6).map { index ->
             averageCalories = (items.sumOf { it.calories } - 28 - index * 2).coerceAtLeast(80),
         )
     }
+private val legacyHistory = histories(legacyItems)
+private val recentHistory = histories(listOf(
+    WorkoutHistoryItem("기본 스쿼트", "12회 x 3세트", 4, 13),
+    WorkoutHistoryItem("플랭크", "60초 x 3세트", 5, 15),
+    WorkoutHistoryItem("런지", "10회 x 3세트", 4, 14),
+    WorkoutHistoryItem("푸쉬업 입문", "8회 x 3세트", 4, 7),
+    WorkoutHistoryItem("마무리 스트레칭", "전신 6분", 6, 24),
+))
+
 }

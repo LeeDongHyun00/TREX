@@ -139,7 +139,7 @@ data class PostureSetReport(
     private val driftHeadline: RuleOutcome? = headline?.takeIf { it.kind == OnsetKind.DRIFT }
 
     /** 기록 화면 한 줄. */
-    val summaryLine: String = if (exercise in FloorTemporal.exercises) "자세 확정 판정 없음 · 참고 측정 ${measurements.size}건" else when (mode) {
+    val summaryLine: String = if (exercise in FloorTemporal.exercises || judged == 0 && measurements.isNotEmpty()) "참고 측정 · 자세 확정 판정 없음" else when (mode) {
         CoachMode.COACH -> when (verdict) {
             SetVerdict.UNJUDGED -> "자세 판정 없음"
             SetVerdict.CLEAN -> if (betaOnly) "참고 기준 이상 없음" else "자세 깨끗"

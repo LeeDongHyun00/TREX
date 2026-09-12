@@ -8,11 +8,11 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -61,27 +61,27 @@ private data class GuidePage(
 
 private val guidePages = listOf(
     GuidePage(
-        headline = "움직임이 잘 보이도록\n카메라를 세워두세룡",
+        headline = "움직임이 잘 보이도록\n카메라를 세워두세요",
         body = "전신과 주요 관절이 화면 안에 들어오면 TREX가 자세 변화를 더 정확하게 읽어줘룡",
         slot = "camera setup",
         asset = "trex_guideImage_phone1.svg",
     ),
     GuidePage(
-        headline = "실시간 피드백으로\n루틴의 흐름을 유지해룡",
+        headline = "실시간 피드백으로\n루틴의 흐름을 유지하세요",
         body = "동작 중 필요한 교정 신호를 바로 확인하고, 세트가 끝날 때까지 같은 리듬으로 운동해룡",
         slot = "live feedback",
         asset = "trext_guideImage_phone2.svg",
     ),
     GuidePage(
-        headline = "운동이 끝나면\n기록을 한눈에 정리해룡",
+        headline = "운동이 끝나면\n기록을 한눈에 정리해요",
         body = "완료한 운동과 개선 포인트를 하루 단위로 남겨 다음 루틴을 더 쉽게 이어가룡",
         slot = "weekly record",
         asset = "trext_guideImage_phone3.svg",
     ),
     GuidePage(
-        headline = "먹은 음식을 골라서\n식단을 기록해룡",
-        body = "먹은 음식과 수량을 직접 선택하면 칼로리와 탄단지 합계를 확인할 수 있어룡",
-        slot = "식단 기록",
+        headline = "먹은 음식을 골라\n식단을 기록해룡",
+        body = "먹은 음식을 선택하면 칼로리와 탄단지까지 정리해룡",
+        slot = "photo diet log",
         asset = "trext_guideImage_phone4.svg",
     ),
 )
@@ -92,114 +92,40 @@ fun GuideBookScreen(onDone: () -> Unit) {
     val c = Trex.c
     var page by rememberSaveable { mutableIntStateOf(0) }
     val last = page == guidePages.lastIndex
-
-    Column(Modifier.fillMaxSize().background(c.bg)) {
-        Row(
-            Modifier.padding(start = 22.dp, end = 22.dp, top = 20.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+    val largeText = androidx.compose.ui.platform.LocalDensity.current.fontScale > 1.3f
+    Column(Modifier.fillMaxSize().background(c.bg).navigationBarsPadding()) {
+        Box(Modifier.weight(1f).fillMaxWidth()) {
+            AnimatedContent(targetState = page,
+                transitionSpec = { fadeIn(tween(220)) togetherWith fadeOut(tween(160)) },
+                label = "guide-image", modifier = Modifier.fillMaxSize()) { p ->
+                GuideSvgImage(guidePages[p].asset, Modifier.fillMaxSize())
+            }
+            if (!largeText) {
+                Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(260.dp)
+                    .background(Brush.verticalGradient(listOf(Color.Transparent, c.bg.copy(alpha = .94f), c.bg))))
+                GuideCaption(page, Modifier.align(Alignment.BottomStart).padding(horizontal = 26.dp, vertical = 20.dp))
+            }
+            Row(Modifier.statusBarsPadding().padding(26.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 guidePages.indices.forEach { i ->
-                    val w by animateDpAsState(if (i == page) 26.dp else 10.dp, tween(340), label = "guide-dot$i")
-                    Box(
-                        Modifier
-                            .width(w).height(4.dp)
-                            .clip(RoundedCornerShape(999.dp))
-                            .background(if (i == page) c.primary else c.track),
-                    )
+                    Box(Modifier.width(if (i == page) 24.dp else 8.dp).height(4.dp).clip(RoundedCornerShape(3.dp))
+                        .background(if (i == page) c.primary else c.text3.copy(alpha = .4f)))
                 }
             }
-            Text(
-                "건너뛰기",
-                color = c.text3, fontSize = 12.sp, fontWeight = FontWeight.Medium,
-                modifier = Modifier.clickable(onClick = onDone).padding(horizontal = 2.dp, vertical = 4.dp),
-            )
         }
+        if (largeText) GuideCaption(page, Modifier.padding(horizontal = 26.dp, vertical = 12.dp))
+        Row(Modifier.fillMaxWidth().padding(horizontal = 22.dp).padding(top = 8.dp, bottom = 24.dp),
+            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            GhostButton(if (page == 0) "건너뛰기" else "이전", onClick = { if (page == 0) onDone() else page-- }, modifier = Modifier.width(100.dp))
+            Cta(if (last) "시작하기" else "다음", onClick = { if (last) onDone() else page++ }, modifier = Modifier.weight(1f))
+        }
+    }
+}
 
-        Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(start = 22.dp, end = 22.dp, top = 22.dp)) {
-            Surface(
-                modifier = Modifier.height(240.dp).fillMaxWidth(),
-                shape = RoundedCornerShape(32.dp),
-                color = c.surface,
-                border = BorderStroke(1.dp, c.line),
-                shadowElevation = 2.dp,
-            ) {
-                Box(
-                    Modifier
-                        .fillMaxSize()
-                        .background(
-                            Brush.radialGradient(
-                                colors = listOf(c.primaryWash, Color.Transparent),
-                                radius = 700f,
-                            ),
-                        ),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    AnimatedContent(
-                        targetState = page,
-                        transitionSpec = {
-                            if (targetState > initialState) {
-                                (slideInHorizontally(tween(340)) { it / 3 } + fadeIn()) togetherWith
-                                    (slideOutHorizontally(tween(340)) { -it / 4 } + fadeOut())
-                            } else {
-                                (slideInHorizontally(tween(340)) { -it / 3 } + fadeIn()) togetherWith
-                                    (slideOutHorizontally(tween(340)) { it / 4 } + fadeOut())
-                            }
-                        },
-                        label = "guide-card",
-                        modifier = Modifier.fillMaxSize(),
-                    ) { p ->
-                        val g = guidePages[p]
-                        Box(Modifier.fillMaxSize()) {
-                            // 공룡 일러스트 (원본 가이드 SVG)
-                            GuideSvgImage(assetName = g.asset, modifier = Modifier.fillMaxSize().padding(12.dp))
-                            Text(
-                                g.slot,
-                                color = c.text3, fontSize = 11.sp, fontWeight = FontWeight.Medium, letterSpacing = 0.5.sp,
-                                modifier = Modifier
-                                    .align(Alignment.BottomCenter)
-                                    .padding(bottom = 14.dp)
-                                    .clip(RoundedCornerShape(999.dp))
-                                    .background(c.surface.copy(alpha = 0.92f))
-                                    .padding(horizontal = 12.dp, vertical = 6.dp),
-                            )
-                        }
-                    }
-                }
-            }
-            AnimatedContent(
-                targetState = page,
-                transitionSpec = { (fadeIn(tween(300)) togetherWith fadeOut(tween(200))) },
-                label = "guide-copy",
-            ) { p ->
-                val g = guidePages[p]
-                Column(Modifier.padding(top = 24.dp)) {
-                    Text(g.headline, color = c.text, fontSize = 25.sp, lineHeight = 33.sp, fontWeight = FontWeight.Bold)
-                    Text(g.body, color = c.text2, fontSize = 13.5.sp, lineHeight = 22.sp, modifier = Modifier.padding(top = 11.dp))
-                }
-            }
-        }
-
-        Row(
-            Modifier.padding(start = 22.dp, end = 22.dp, top = 20.dp, bottom = 24.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            Box(Modifier.alpha(if (page == 0) 0.4f else 1f)) {
-                RoundIcon(
-                    Icons.AutoMirrored.Rounded.ArrowBack,
-                    onClick = { if (page > 0) page -= 1 },
-                    size = 54.dp,
-                    contentDescription = "이전",
-                )
-            }
-            Cta(
-                text = if (last) "시작하기" else "다음",
-                onClick = { if (last) onDone() else page += 1 },
-                icon = Icons.AutoMirrored.Rounded.ArrowForward,
-                modifier = Modifier.weight(1f),
-            )
-        }
+@Composable
+private fun GuideCaption(page: Int, modifier: Modifier = Modifier) {
+    val titles = listOf("휴대폰을 놓고,\n전신을 담으세요.", "움직임을 보며,\n자세를 비교해요.", "운동의 변화를\n기록으로 남겨요.", "먹은 음식을 골라\n식단을 기록해룡.")
+    Column(modifier) {
+        Text(titles[page], color = Trex.c.text, fontSize = 27.sp, lineHeight = 35.sp, fontWeight = FontWeight.SemiBold)
     }
 }
 
@@ -226,17 +152,21 @@ private fun GuideSvgImage(assetName: String, modifier: Modifier = Modifier) {
             }
         },
         update = { webView ->
+            if (webView.tag != assetName) {
+            webView.tag = assetName
             val html = """
                 <!doctype html>
                 <html><head><meta name="viewport" content="width=device-width, initial-scale=1.0">
                 <style>
                   html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:transparent}
                   body{display:flex;align-items:center;justify-content:center}
-                  img{width:100%;height:100%;object-fit:contain;display:block}
+                  img{width:100%;height:100%;object-fit:cover;object-position:50% 35%;display:block}
                 </style></head>
                 <body><img src="$assetName"></body></html>
             """.trimIndent()
             webView.loadDataWithBaseURL("file:///android_asset/guid_img/", html, "text/html", "UTF-8", null)
+            }
         },
+        onRelease = { it.destroy() },
     )
 }

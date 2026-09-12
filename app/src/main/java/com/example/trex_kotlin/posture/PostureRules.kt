@@ -80,6 +80,7 @@ data class PostureRule(
     val kind: String = "window",
     val holdConfig: HoldConfig? = null,
     val repConfig: RepRuleConfig? = null,
+    val alignmentConfig: AlignmentConfig? = null,
 ) {
     val violationText: String get() = "$feature $op ${fmt(threshold)}"
 
@@ -144,10 +145,14 @@ class PostureRuleSet(
             it.exercise == exercise &&
                 (it.status == RuleStatus.SHIP || (includeBeta && it.status == RuleStatus.BETA))
         }
-            // 하위유형이 있으면 그것이 정본. [all] 은 다른 하위유형이 있을 때만 중복이므로 제거 (spec §7)
+            // 동일 조건·피처·판정 유형·등급의 하위유형만 [all]을 대체한다 (§39).
+            // 다른 부위를 재거나 beta인 규칙 때문에 독립 ship 규칙을 숨기면 안 된다.
             .let { list ->
-                val hasSpecific = list.any { it.subtype != null && it.subtype != "all" }
-                if (hasSpecific) list.filter { it.subtype != "all" } else list
+                val specific = list.filter { it.subtype != null && it.subtype != "all" }
+                list.filter { rule -> rule.subtype != "all" || specific.none {
+                    it.condition == rule.condition && it.feature == rule.feature &&
+                        it.kind == rule.kind && it.status == rule.status
+                } }
             }
             .sortedWith(compareBy({ it.status }, { -it.cvAuc }))
 
@@ -240,6 +245,8 @@ class PostureRuleSet(
                 }
                 out += PostureRule(
                     kind = o.optString("kind", "window"),
+                    alignmentConfig = o.optJSONObject("alignment")?.let { a -> AlignmentConfig(
+                        a.getDouble("lower").toFloat(), a.getDouble("upper").toFloat(), a.getLong("sustain_ms")) },
                     holdConfig = o.optJSONObject("hold")?.let { h -> HoldConfig(
                         h.getDouble("tol_up").toFloat(), h.getDouble("tol_down").toFloat(),
                         h.getLong("baseline_ms"), h.getLong("min_break_ms")) },

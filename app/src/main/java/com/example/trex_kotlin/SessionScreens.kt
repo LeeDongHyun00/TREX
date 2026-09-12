@@ -91,72 +91,56 @@ import java.util.Locale
 
 @Composable
 fun TimerSessionScreen(
-    workout: Workout,
-    index: Int,
-    total: Int,
-    timeLeft: Int,
-    totalSeconds: Int,
-    paused: Boolean,
-    onTogglePause: () -> Unit,
-    onNext: () -> Unit,
-    onExit: () -> Unit,
+    workout: Workout, index: Int, total: Int, timeLeft: Int, totalSeconds: Int,
+    paused: Boolean, onTogglePause: () -> Unit, onNext: () -> Unit, onExit: () -> Unit,
+    setLabel: String = "1 / 1 세트", onSkip: () -> Unit = onNext,
+    repetitions: Int = 0, onRepetitions: (Int) -> Unit = {}, onPartial: () -> Unit = onSkip,
 ) {
     val c = Trex.c
     KeepScreenOn()
-    androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize()) {
-    val compact = maxHeight < 480.dp
-    val ringSize = minOf(224.dp, (maxWidth - 40.dp).coerceAtLeast(80.dp))
-    Column(Modifier.fillMaxSize().background(c.bg).padding(horizontal = 20.dp, vertical = 16.dp)) {
-        Row(verticalAlignment = Alignment.Top) {
-            Column(Modifier.weight(1f)) {
-                Text("진행중 · ${index + 1}/$total", color = c.primaryText, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 0.8.sp)
-                androidx.compose.material3.Text(workout.name, color = c.text, fontSize = 19.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 5.dp))
-            }
-            RoundIcon(Icons.Rounded.Close, onClick = onExit, size = 38.dp, contentDescription = "종료")
+    Column(Modifier.fillMaxSize().background(c.bg).statusBarsPadding().navigationBarsPadding().padding(22.dp)) {
+        Text(workout.name, color = c.text, fontSize = 28.sp, fontWeight = FontWeight.SemiBold)
+        Text("${index + 1}/$total 운동 · $setLabel", color = c.text2, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
+        Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+            WorkoutGoalDisplay(workout, repetitions, timeLeft, totalSeconds)
+            Text(if (paused) "일시정지" else if (workout.resolvedTarget() is WorkoutTarget.Repetitions) "직접 횟수 기록" else "시간 측정",
+                color = c.text2, fontSize = 14.sp, modifier = Modifier.padding(top = 28.dp))
         }
-        Column(
-            Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-        ) {
-            if (compact) {
-                Text(timeLeft.asClock(), fontSize = 40.sp, fontWeight = FontWeight.Bold)
-                androidx.compose.material3.Text(workout.reps, color = c.text2, fontSize = 13.sp)
-            } else RingGauge(progress = 1f - (timeLeft / totalSeconds.toFloat()), size = ringSize, stroke = 12.dp) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("남은 시간", color = c.text3, fontSize = 11.sp)
-                    Text(timeLeft.asClock(), color = c.text, fontSize = 44.sp, fontWeight = FontWeight.SemiBold, lineHeight = 46.sp, modifier = Modifier.padding(top = 5.dp))
-                    androidx.compose.material3.Text(workout.reps, color = c.primaryText, fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 6.dp))
-                }
-            }
-            if (!compact) Row(
-                Modifier
-                    .padding(top = 22.dp)
-                    .clip(RoundedCornerShape(999.dp))
-                    .background(c.surface)
-                    .border(1.dp, c.line, RoundedCornerShape(999.dp))
-                    .padding(horizontal = 14.dp, vertical = 9.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Icon(Icons.Rounded.FitnessCenter, contentDescription = null, tint = c.primaryText, modifier = Modifier.size(14.dp))
-                Text("${workout.category} · 자세 교정 미사용", color = c.text2, fontSize = 11.5.sp, modifier = Modifier.padding(start = 8.dp))
-            }
-        }
-        Row(
-            Modifier.padding(top = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(14.dp),
-        ) {
-            RoundIcon(
-                if (paused) Icons.Rounded.PlayArrow else Icons.Rounded.Pause,
-                onClick = onTogglePause,
-                size = 52.dp,
-                contentDescription = "일시정지",
-            )
-            Cta("다음 운동", icon = Icons.Rounded.Check, onClick = onNext, height = 56.dp, modifier = Modifier.weight(1f))
-        }
+        WorkoutSessionActions(workout, repetitions, false, paused, onTogglePause, onRepetitions, onPartial, onSkip, onExit)
     }
 }
+
+/** 준비는 직접 시작한다. 휴식에만 원형 타이머와 자동 전환을 제공한다. */
+@Composable
+fun SessionTransitionScreen(step: SessionStep, timeLeft: Int, paused: Boolean,
+    onTogglePause: () -> Unit, onNext: () -> Unit, onExit: () -> Unit) {
+    KeepScreenOn()
+    val c = Trex.c
+    val preparing = step.phase == SessionPhase.PREPARE
+    if (preparing) {
+        TimedPreparationScreen(step, paused, onTogglePause, onNext, onExit)
+        return
+    }
+    Column(Modifier.fillMaxSize().background(c.bg).statusBarsPadding().navigationBarsPadding().padding(24.dp)) {
+        Text("세트 사이 휴식", color = c.primaryText, fontSize = 14.sp)
+        Text(step.workout.name, color = c.text, fontSize = 28.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 12.dp))
+        Text("${step.setLabel} · ${step.workout.repsSpec().targetLabel}", color = c.text2, modifier = Modifier.padding(top = 8.dp))
+        Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally) {
+                RingGauge(progress = (1f - timeLeft.toFloat() / step.seconds.coerceAtLeast(1)).coerceIn(0f, 1f), size = 224.dp, stroke = 9.dp) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(timeLeft.asClock(), color = c.text, fontSize = 44.sp, fontWeight = FontWeight.SemiBold)
+                        Text(if (paused) "일시정지" else "남은 휴식", color = c.text2, fontSize = 13.sp)
+                    }
+                }
+        }
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            GhostButton(if (paused) "재개" else "일시정지",
+                onClick = onTogglePause, modifier = Modifier.width(100.dp))
+            Cta("휴식 끝내기", onClick = onNext, modifier = Modifier.weight(1f))
+        }
+    }
 }
 
 // ============================================================= 완료
@@ -179,10 +163,9 @@ fun SessionCompleteScreen(
 ) {
     val c = Trex.c
     val doneCount = plan.count { it.done }
-    val kcal = plan.filter { it.done }.sumOf { it.estimatedCalories(elapsedByWorkout[it.id] ?: 0) }
+    val kcal = plan.sumOf { it.estimatedCalories(elapsedByWorkout[it.id] ?: 0) }
     // plan 순서로 늘어놓은 리포트 — 헤드라인 선택과 운동별 행이 같은 순서를 쓴다
     val ordered = plan.mapNotNull { reports[it.id] }
-    // 완료는 실제로 마친 행동만 표현한다. 판정 범위와 결과는 아래 리포트에서 따로 밝힌다.
     val headline = sessionHeadline(ordered)
 
     if (ordered.isNotEmpty()) SessionHeadlineVoice(headline, speak)
@@ -191,41 +174,33 @@ fun SessionCompleteScreen(
         Modifier
             .fillMaxSize()
             .background(c.bg)
-            // 스크롤이 생기면 내용이 시스템 바 밑으로 들어갈 수 있다 — 다른 화면과 같이 인셋을 먼저 뺀다
             .statusBarsPadding()
             .navigationBarsPadding()
-            // 운동 5개 + 펼침이면 화면을 넘는다. 스크롤 컨테이너는 최소 높이를 화면 높이 그대로 넘겨주므로
-            // 내용이 짧을 때는 아래 Arrangement.Center 가 예전처럼 중앙 정렬로 동작한다.
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 28.dp, vertical = 32.dp),
+            .padding(horizontal = 24.dp).padding(bottom = 22.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Surface(modifier = Modifier.size(82.dp), shape = CircleShape, color = c.primary, contentColor = Color.White, shadowElevation = 8.dp) {
-            Box(contentAlignment = Alignment.Center) { Icon(Icons.Rounded.Check, contentDescription = null, modifier = Modifier.size(38.dp)) }
+        Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(vertical = 32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+        Surface(modifier = Modifier.size(56.dp), shape = CircleShape, color = c.primary, contentColor = Color.White) {
+            Box(contentAlignment = Alignment.Center) { Icon(Icons.Rounded.Check, contentDescription = null, modifier = Modifier.size(28.dp)) }
         }
-        Text("DONE", color = c.primaryText, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 4.sp, modifier = Modifier.padding(top = 20.dp))
         Text(
-            "오늘도 운동을 마쳤어룡",
-            color = c.text, fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp),
+            if (plan.isEmpty()) "운동을 마쳤어요" else "오늘 운동을 기록했어요",
+            color = c.text, fontSize = 24.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 20.dp),
         )
-        Text(
-            "완료한 운동을 기록했어룡.\n다음 운동도 함께해룡.",
-            color = c.text2, fontSize = 13.sp, lineHeight = 21.sp, textAlign = TextAlign.Center,
-            modifier = Modifier.padding(top = 8.dp),
-        )
+        val partial = plan.count { !it.done }
+        if (partial > 0) Text("부분 수행 ${partial}세트도 함께 저장했어요.", color = c.text2,
+            fontSize = 13.sp, modifier = Modifier.padding(top = 10.dp))
         Row(Modifier.padding(top = 24.dp).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf(
-                "$doneCount" to "완료 운동",
-                "${(elapsedSeconds / 60)}분" to "총 시간",
-                "${kcal}kcal" to "추정 소모 칼로리",
+                "$doneCount" to "완료 세트",
+                elapsedSeconds.asClock() to "총 시간",
+                "${kcal}kcal" to "예상 소모",
             ).forEach { (v, label) ->
                 Column(
                     Modifier
                         .weight(1f)
-                        .clip(RoundedCornerShape(18.dp))
-                        .background(c.surface)
-                        .border(1.dp, c.line, RoundedCornerShape(18.dp))
                         .padding(vertical = 13.dp, horizontal = 8.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
@@ -237,7 +212,8 @@ fun SessionCompleteScreen(
         if (ordered.isNotEmpty()) {
             PostureSessionBlock(reports = ordered, headline = headline, onLabel = onLabel, modifier = Modifier.padding(top = 20.dp))
         }
-        Cta("홈으로", icon = Icons.Rounded.Home, onClick = onDone, modifier = Modifier.padding(top = 26.dp).fillMaxWidth())
+        }
+        Cta("홈으로", icon = Icons.Rounded.Home, onClick = onDone, modifier = Modifier.padding(top = 12.dp).fillMaxWidth())
     }
 }
 
@@ -267,7 +243,7 @@ private fun sessionHeadline(reports: List<PostureSetReport>): String {
     }
     return when {
         reports.any { it.exercise in FloorTemporal.exercises } -> "바닥 운동의 참고 측정을 기록했어요. 자세 확정 판정은 제공하지 않아요"
-        reports.all { it.verdict == SetVerdict.UNJUDGED } -> "자세를 판정할 만큼 화면에 잡히지 않았어요"
+        reports.all { it.verdict == SetVerdict.UNJUDGED } -> if (reports.any { it.measurements.isNotEmpty() }) "초반 대비 움직임을 기록했어요" else "자세를 판정할 만큼 화면에 잡히지 않았어요"
         reports.all { it.mode == CoachMode.TRACK && it.verdict != SetVerdict.UNJUDGED } -> "세트 안에서 흐트러진 부위 없이 기록됐어요"
         reports.all { it.mode == CoachMode.COACH && it.verdict == SetVerdict.CLEAN } -> "오늘 자세 깨끗했어요"
         else -> "판정한 세트에서는 지적할 부위가 없었어요"
@@ -485,7 +461,7 @@ private fun TrackSetDetail(r: PostureSetReport) {
         r.callout?.let { h ->
             Text(h.observation, color = if (h.kind == OnsetKind.DRIFT) c.warn else c.primaryText, fontSize = 12.sp, lineHeight = 17.sp)
         }
-        if (r.judged == 0) Text("자세 측정 없음 · ${r.frames}프레임", color = c.text3, fontSize = 11.sp)
+        if (r.judged == 0) Text("자세 규칙 판정 없음 · ${r.frames}프레임", color = c.text3, fontSize = 11.sp)
         if (r.demoted.isNotEmpty()) {
             Text(
                 "측정 기록 ${r.demoted.size}건 " + if (showDemoted) "▴" else "▾",

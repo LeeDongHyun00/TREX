@@ -65,6 +65,12 @@ object RuleHighlight {
     )
 
     fun landmarksFor(baseFeature: String): Set<Int> {
+        if (baseFeature.endsWith("_L") || baseFeature.endsWith("_R")) {
+            val left = baseFeature.endsWith("_L")
+            return landmarksFor(baseFeature.dropLast(2)).filter { it == 0 || (if (left) it % 2 == 1 else it % 2 == 0) }.toSet()
+        }
+        if (baseFeature == PlankGeometry.HEAD || baseFeature == PlankGeometry.NECK) return HEAD + SHOULDERS
+        if (baseFeature == PlankGeometry.HIP) return SHOULDERS + HIPS + ANKLES
         // wrist가 wrist_shoulder_d를 가리지 않도록 가장 구체적인 정의를 먼저 고른다.
         return PREFIX_MAP.filter { baseFeature.startsWith(it.first) }.maxByOrNull { it.first.length }?.second.orEmpty()
     }
