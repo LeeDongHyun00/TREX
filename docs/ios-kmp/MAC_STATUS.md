@@ -1,17 +1,18 @@
 # Mac 작업 상태
 
-- **갱신일:** 2026-09-13 (KST), M1 카메라·센서 구현과 실기기/시뮬레이터 검증 결과 반영
+- **갱신일:** 2026-09-13 (KST), M2 관절 추론 구현·검증 결과 반영
 - **담당:** Mac Codex
 - **작업 브랜치:** `codex/ios-kmp-mac`
 - **통합 브랜치:** `codex/ios-posture-kmp`
-- **가져온 통합 기준:** `adbe91d4f2e6545859198e6f75da52c6e9dac27c` — 사용자 승인으로 M0 PR #1 검토·merge 후 수신
+- **가져온 통합 기준:** `145da7cb1039d860bf5ed133ce046383091a3a31` — 사용자 승인으로 M1 PR #2 검토·merge 후 수신
 - **확인한 Windows HEAD:** `7eb1f40aeed3f0bd4f41803955c7bfd5023e7978`
-- **이번 M1 시작 Mac HEAD:** `37ad9bf1f3e0846f382268f2f0db755bcf0c0eaf`
+- **이번 M2 시작 Mac HEAD:** `9152f3373c1940aa5c9f1f4c55af6b8a4f0a982b`
+- **M2 검증 소스 커밋:** [`3efba9b97c17ff5deea854d41a6dea711e7bef9e`](https://github.com/LeeDongHyun00/TREX/commit/3efba9b97c17ff5deea854d41a6dea711e7bef9e)
 - **M1 검증 소스 커밋:** [`80209a32eea8ec940d76983e11da0c803c117f9e`](https://github.com/LeeDongHyun00/TREX/commit/80209a32eea8ec940d76983e11da0c803c117f9e)
 - **M0 소스 커밋:** [`bee02682d285da8b9dfb3b750b11a9453f08c851`](https://github.com/LeeDongHyun00/TREX/commit/bee02682d285da8b9dfb3b750b11a9453f08c851). 실기기 UI 테스트는 이 소스에서 실행했다. 앞선 일반 iOS/시뮬레이터 검사와의 소스 차이는 파일 끝 빈 줄 정리뿐이며 기능 변경은 없다.
 - **Android/자산 기준:** `5237ba9d07662849fc2b23853672049ff2a950af`. `app/`, `gradle/`, 루트 빌드 파일과 Wrapper는 변경하지 않았다.
-- **현재 단계 / 담당 파일:** **M1 카메라·센서 구현, 일반 iOS 빌드, iPhone 설치·실행·입력 검사 및 시뮬레이터 검사 완료.** 상세는 §8. `iosApp/`와 이 상태 파일을 공유한다. M2 관절 추론은 후속이다.
-- **실제 공통 API 계약 커밋:** **없음**. `iosApp` M0/M1을 구현했고 `posture-core`·`TrexPosture` 프레임워크·Swift 판정 엔진은 만들지 않았다.
+- **현재 단계 / 담당 파일:** **M2 관절 추론 구현·실기기 4종 검사 및 시뮬레이터 검사 완료.** 실기기는 종합 3건 통과 후 준비된 촬영 조건에서 33점 1건을 별도 재검증했다. 실제 범위와 미완료는 §9. `iosApp/`와 이 상태 파일을 공유한다. M3 공통 연결은 후속이다.
+- **실제 공통 API 계약 커밋:** **없음**. `iosApp` M0/M1/M2를 구현했고 `posture-core`·`TrexPosture` 프레임워크·Swift 판정 엔진은 만들지 않았다.
 
 이전 [Mac 상태 커밋 c4b255b](https://github.com/LeeDongHyun00/TREX/commit/c4b255bc01f3041e20e66c94a2c4df08eb5ecea0)은 Linux 호스트의 한계를 기록했다. 그 이력을 보존하면서 실제 Mac 관측값으로 현재 상태를 갱신한다. 이전 Linux의 Java 21.0.11을 이 Mac의 버전으로 사용하지 않는다.
 
@@ -35,7 +36,7 @@ git merge --ff-only origin/codex/ios-posture-kmp
 
 ## 2. 실제 Mac 환경 검사
 
-**2026-09-13 연결 상태 갱신:** `devicectl`에서 iPhone 16 Plus의 유선 연결·페어링·개발자 모드 활성화·DDI 서비스 사용 가능을 확인했다. 실제 OS는 **iOS 27.0 Beta (24A5424a)**다. `adb devices -l`과 `getprop`에서는 **Galaxy Note10+ 5G (SM-N976N), Android 12 / API 31**이 USB `device` 상태이며 셸 응답이 정상임을 확인했다. 두 기기는 현재 Mac에 연결돼 있다. M0 결과는 §6, 이번 M1의 실제 빌드·설치·실행 결과는 §8에 기록한다. Android 앱 설치/테스트는 이번에 실행하지 않았다.
+**2026-09-13 연결 상태 갱신:** `devicectl`에서 iPhone 16 Plus의 유선 연결·페어링·개발자 모드 활성화·DDI 서비스 사용 가능을 확인했다. 실제 OS는 **iOS 27.0 Beta (24A5424a)**다. `adb devices -l`과 `getprop`에서는 **Galaxy Note10+ 5G (SM-N976N), Android 12 / API 31**이 USB `device` 상태이며 셸 응답이 정상임을 확인했다. 두 기기는 현재 Mac에 연결돼 있다. M0 결과는 §6, M1은 §8, M2는 §9에 기록한다. Android 앱 설치/테스트는 이번에 실행하지 않았다.
 
 아래 표는 **2026-09-12 23:47~23:51 KST의 환경 검사 이력**이다. iPhone 오프라인/OS 캐시 항목은 위 최신 조회로 대체한다. 개인 SDK 경로, 기기 UDID/일련번호, 계정·서명 정보는 공유 문서에 넣지 않는다.
 
@@ -114,7 +115,7 @@ Git 객체를 비교해 `5237ba9`와 검사 시작 HEAD의 Android 앱/빌드 �
 | `app/src/test/resources/view_fixture.txt` | `9dc3dd1722361db47aeff89f576ebbb12554a41a3032520071a4e833f70389c1` |
 | `app/src/test/resources/plank_replay_fixture.tsv` | `b9064630afa2e27a9873558da7c9ca4154357b803e1dfe9bbca4bec2f5ec88af` |
 
-이는 체크아웃의 파일 동일성 확인이며 해당 픽스처를 사용하는 JVM/Native 테스트 실행 결과가 아니다. M0 번들에는 모델·규칙·정상 표본이 없으므로 **설치 번들의 자산 해시 검사는 해당 없음**이다. M2에서 실제 복사된 번들의 해시를 추가로 검사해야 한다.
+이는 체크아웃의 파일 동일성 확인이며 해당 픽스처를 사용하는 JVM/Native 테스트 실행 결과가 아니다. M0 번들에는 모델·규칙·정상 표본이 없으므로 **설치 번들의 자산 해시 검사는 해당 없음**이다. M2의 실제 복사 번들 검사는 §9에 별도로 기록했다.
 
 ## 6. M0 구현과 실제 검증 결과
 
@@ -152,13 +153,13 @@ Git 객체를 비교해 `5237ba9`와 검사 시작 HEAD의 Android 앱/빌드 �
 | 미실행 항목 | 이유 / 다음 단계 |
 |---|---|
 | M1 추가 조건 | 핵심 실기기 검사는 §8에서 통과했다. 제한된 권한(restricted), 다른 앱의 카메라 점유, 센서 자체 오류/부재, 강제 런타임 오류의 실기기 재현은 아직 없다. |
-| M2 MediaPipe·모델 번들 검사 | 추론 타깃/Podfile/lock/모델 복사는 아직 없다. M0 타깃은 Pod/KMP 없이 유지하고 별도 `TrexPostureInference` 타깃에서 진행한다. |
+| M2 후속 검증 | §9의 실제 결과와 제한을 따른다. 고정 표적 좌표/미러의 물리 검증, iOS 16/안정 OS, 20분 지속 검사는 별도다. |
 | P1 Kotlin/Native 계산·framework·M3 연결 | Windows의 실제 공개 API 커밋이 없다. SHA·생성 헤더·Native 태스크·픽스처 로더·허용 오차를 받아 진행한다. Intel/Xcode 제약은 §3대로 별도 검증한다. |
 | P2 세션·음성/저장 이벤트·동등성 | 세션 facade가 아직 없다. Swift에 대체 엔진을 만들지 않는다. |
 | Android 단위 테스트·APK 설치·계측 | Android 소스를 수정하지 않았다. 연결 Note10+에는 이번 앱 설치/삭제를 하지 않았다. Windows의 P0 소스 SHA·명령·산출물 해시를 받은 뒤 실행/회수한다. |
-| iOS 16/안정 OS/iPad/Release·배포·20분 지속 검사 | 이번 검증 대상은 Debug M0/M1, 시뮬레이터 18.3.1 및 iPhone 27.0 베타 한 대다. 최소 지원/전체 기기/출시 검증이 아니다. |
+| iOS 16/안정 OS/iPad/Release·배포·20분 지속 검사 | 이번 검증 대상은 Debug M0/M1/M2, 시뮬레이터 18.3.1 및 iPhone 27.0 베타 한 대다. 최소 지원/전체 기기/출시 검증이 아니다. |
 
-M0는 사용자 승인에 따라 통합됐다. Windows는 이 Mac 브랜치의 M1 변경을 `codex/ios-posture-kmp` 기준으로 검토할 수 있다. ADR·정본 스펙·인수인계의 ‘iOS 앱 미구현’ 상태는 통합 담당이 구현 범위에 맞춰 갱신한다. Mac은 다음 M2를 별도 작업 단위로 진행하고, P1/P2가 공개될 때 정확한 계약 SHA를 받아 연결한다. 공통 엔진·Android 앱·규칙·모델·루트 Gradle은 이번 변경에 포함하지 않는다.
+M0와 M1은 각각 사용자 승인에 따라 통합됐다. Windows는 이 Mac 브랜치의 M2 변경을 `codex/ios-posture-kmp` 기준으로 검토할 수 있다. ADR·정본 스펙·인수인계의 ‘iOS 앱 미구현’ 상태는 통합 담당이 구현 범위에 맞춰 갱신한다. Mac은 M2를 별도 작업 단위로 공유하고, P1/P2가 공개될 때 정확한 계약 SHA를 받아 연결한다. 공통 엔진·Android 앱·규칙·모델·루트 Gradle은 이번 변경에 포함하지 않는다.
 
 ## 8. M1 카메라·센서 구현과 실제 검증
 
@@ -198,4 +199,61 @@ M0는 사용자 승인에 따라 통합됐다. Windows는 이 Mac 브랜치의 M
 
 공유 전 프로젝트 의미/파싱·scheme·한국어 권한/마이크 미사용·개인 설정 ignore·문서 링크·`git diff --check`를 확인했다. 기존 체크아웃은 `feature/posture-coach-reliability` / `5237ba9`와 깨끗한 작업 트리를 유지한다. Android 소스/설치 데이터, 공통 엔진, 원본 자산, 루트 Gradle은 변경하지 않았다. 실제 프리뷰/테스트 화면 녹화, 중력 샘플, 기기 식별자, 서명키·프로파일은 Git에 올리지 않는다.
 
-**다음 단계는 M2다.** 별도 `TrexPostureInference` 타깃과 MediaPipe Pod 버전 잠금·Full 모델 번들 해시를 확인하고, VIDEO 모드 33점/미검출/오류·직렬 추론·늦은 결과 폐기를 검증한다. 현재 관절 추론·각도·판정·횟수·점수·교정·KMP 연결은 구현하지 않았다. M1 성공은 P0/P1/P2 완료나 iOS 정확도/출시 보장이 아니다.
+**M1 완료 당시의 다음 단계는 M2였다(현재 결과는 §9).** 별도 `TrexPostureInference` 타깃과 MediaPipe Pod 버전 잠금·Full 모델 번들 해시를 확인하고, VIDEO 모드 33점/미검출/오류·직렬 추론·늦은 결과 폐기를 검증한다. M1 시점에는 관절 추론·각도·판정·횟수·점수·교정·KMP 연결을 구현하지 않았다. M1 성공은 P0/P1/P2 완료나 iOS 정확도/출시 보장이 아니다.
+
+## 9. M2 관절 추론 구현과 검증
+
+### 통합·구현 범위
+
+사용자가 **M1 검토 후 통합**을 명시적으로 승인했다. [M1 PR #2](https://github.com/LeeDongHyun00/TREX/pull/2)의 10개 변경 파일, HEAD `9152f3373c1940aa5c9f1f4c55af6b8a4f0a982b`, M1 실제 검사 결과와 merge 가능 상태를 검토한 뒤 해당 HEAD를 지정해 merge했다. 별도 GitHub CI는 없었다. 결과 `145da7cb1039d860bf5ed133ce046383091a3a31`을 로컬 M2 변경을 보존한 채 fast-forward로 받았다. M2도 별도 커밋/초안 PR로 공유하며 자동 통합하지 않는다.
+
+별도 `TrexPostureInference` 앱/scheme, `TrexPostureInferenceUITests`, Podfile/lock/workspace를 추가했다. 기존 `TrexPostureDiagnostics`의 소스/리소스/링크/빌드 설정 객체는 의미 비교에서 동일하며 Pod 의존성이 없다. 공유 캡처 객체에 선택적 프레임/활동 소비자를 추가하고 화면 방향 읽기만 공유한다. Xcodeproj/CocoaPods 저장 형식 때문에 프로젝트 파일의 주석/정렬 diff가 커졌지만 기존 타깃의 설정을 변경하지 않았다.
+
+M2는 Full 모델로 VIDEO/CPU/1명, detection·presence·tracking 각 0.5, segmentation false를 사용한다. 실제 normalized/world 각각 33점의 ID·raw 좌표·optional visibility/presence를 복사하며 world는 원본 미터다. Swift cm·부호·confidence 결합·중력 엔진 축 변환은 없다. 승인 단조 ms를 VIDEO 시각으로 쓰고 카메라 PTS·완료 시각을 구분한다. 진단 세션만 있으며 phaseEpoch=0, setToken=nil이다.
+
+추론은 직렬 1건, 대기 버퍼는 최신 1건으로 제한한다. 시작/정지·전후면·회전·백그라운드 경계에서 세대를 바꾸며 지난 세대의 완료는 버린다. 표시 이미지는 실제 분석한 버퍼로 만들어 관절과 함께 비율/전면 미러를 적용한다. 원본 좌표는 미러하지 않는다. 카메라 영상·관절·중력을 파일에 저장하지 않는다. 합성 검정 프레임 및 잘못된 모델 경로 검사는 합성 출처를 화면에 명시하며 실제 SDK를 호출한다.
+
+모든 상태에서 **평가 엔진 연결 전**을 유지한다. 검출은 관절 반환이며 정상 자세 판정이 아니다. Swift 판정 엔진·각도·규칙·운동 횟수·점수·기준선·교정·KMP/Gradle/Android 변경은 없다.
+
+### SDK·자산
+
+`pod trunk info`와 실제 spec/설치 결과로 **MediaPipeTasksVision 1.0.0 / MediaPipeTasksCommon 1.0.0**을 고정했다. CocoaPods 1.16.2이며 lock의 spec checksum은 Vision `2a0e74fd13f7a5df9eae3716b21e459806c65ce9`, Common `520bf860a59a3425471fdd516d82263d2ced5700`이다. 두 내려받은 XCFramework의 Info.plist에 **ios-arm64 및 ios-arm64_x86_64-simulator**가 들어 있었다. Pod 버전 하향/바이너리 패치/post_install 우회는 없다.
+
+원본 8개 자산/픽스처 strict 검사와 실제 앱 번들 4개 파일 검사에서 §5와 같은 raw SHA-256을 확인했다. `iosApp/verify_bundle_assets.py`는 빌드된 앱 파일과 번들 기준표를 저장소 정본과 대조한다. 앱의 `BundleAssets`도 모델 생성 전에 자기 번들 4개 SHA-256을 검사하며 불일치 시 추론 오류로 처리한다. 규칙/정상 표본은 해시만 확인하며 Swift로 파싱/평가하지 않는다.
+
+### 실제 명령과 결과 — 2026-09-13
+
+공통 인자는 `-workspace iosApp/TrexPostureDiagnostics.xcworkspace -scheme TrexPostureInference -configuration Debug`다. 도구는 Xcode 16.2 / SDK 18.2 / Intel Mac, 실기기는 iPhone 16 Plus iOS 27.0 Beta (24A5424a), 시뮬레이터는 iOS 18.3.1이다. 개인 서명/기기 ID, DerivedData·xcresult·화면 첨부는 로컬에만 보존한다. 재현은 [README의 M2 명령](../../iosApp/README.md#m2-관절-추론-앱)을 따른다.
+
+| 구분 | 실제 명령/대상 | 결과와 범위 |
+|---|---|---|
+| SDK 설치 | `LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8 pod install` | **0**, Vision/Common 1.0.0 설치·lock 생성 |
+| 원본 자산 strict | `python3 research/aihub_fitness/verify_ios_handoff.py --strict-bytes` | **0**, 8/8 바이트 일치 |
+| 번들 자산 | `python3 iosApp/verify_bundle_assets.py <M2.app>` | **0**, arm64/x86_64 빌드 번들 4/4 SHA 및 기준표 바이트 일치 |
+| 순수 계약 검사 | `swiftc …/LatestOnlyScheduler.swift …/OverlayProjection.swift iosApp/Tests/M2/main.swift …` 후 실행 | 각각 **0**, 실행/대기 상한·최신 교체·중복/늦은 완료·100회 합성 재설정·비율/미러/비정상 크기 검사 |
+| M1 순수 회귀 | `swiftc …/CaptureGate.swift iosApp/Tests/main.swift …` 후 실행 | 각각 **0**, 0ms/300ms·역행/중복·늦은 촬영 세대·100회 합성 재시작 |
+| M2 일반 iOS 컴파일 | `xcodebuild … -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO build` | **0 / BUILD SUCCEEDED**, 최종 arm64 소스. 설치/실행 검증과 구분 |
+| M2 산출물 서명 | `codesign --verify --deep --strict <signed M2.app>` | **0**, 최종 자동 서명 산출물 |
+| M2 iPhone 빌드·UI 검사 | `xcodebuild … -destination 'id=<iPhone ID>' -xcconfig iosApp/Signing.local.xcconfig -allowProvisioningUpdates -allowProvisioningDeviceRegistration -parallel-testing-enabled NO test` | 종합 실행 **65**, **3건 통과·1건 실패**, 252.125초. 카메라 lifecycle/지연 폐기/SDK 합성 검사는 통과. 33점 조건 미충족은 아래 단독 재검사로 별도 확인 |
+| 실제 iPhone 33점 검출 | 같은 대상의 `testDeviceDetects33RawLandmarks` | 사용자 촬영 준비 후 최종 소스에서 `-only-testing:TrexPostureInferenceUITests/InferenceDiagnosticsTests/testDeviceDetects33RawLandmarks test`: **0 / TEST SUCCEEDED**, **1건 통과·실패 0**. 실제 카메라 normalized/world 33/33. 앞선 두 실행도 통과(14.290초, 14.376초)했고 분석 이미지 위 오버레이를 직접 확인. 종합 실행의 45초 미충족 이력과 구분 |
+| M2 시뮬레이터 빌드·UI 검사 | `xcodebuild … -destination 'platform=iOS Simulator,id=<SIM ID>' -parallel-testing-enabled NO test` | **0 / TEST SUCCEEDED**, **1건 통과·3건 skip·실패 0**, 113.777초. 실제 x86_64 SDK의 합성 미검출·오류·복구. 세 실카메라 검사는 skip |
+| iPhone 별도 설치 | `xcrun devicectl device install app --device <iPhone ID> <signed M2.app>` | **0**, 별도 bundle ID로 설치. 기존 M0/M1 앱 보존 |
+| iPhone 별도 실행 | `xcrun devicectl device process launch --device <iPhone ID> com.leedonghyun.trex.postureinference` | **0**, 최종 앱 프로세스 실행 |
+| 시뮬레이터 별도 설치·실행 | `xcrun simctl install …` 후 `simctl launch … com.leedonghyun.trex.postureinference` | 각각 **0**, 설치 후 프로세스 실행 |
+| M0/M1 Pod 독립성 | Pods/개인 설정 없는 임시 복사본의 `.xcodeproj`, `TrexPostureDiagnostics`, 일반 iOS unsigned build | **0 / BUILD SUCCEEDED**, 이전 타깃의 실제 독립 빌드 |
+| M0/M1 시뮬레이터 회귀 | 기존 `.xcodeproj`/scheme으로 `xcodebuild … test` | **0 / TEST SUCCEEDED**, **3건 통과·1건 skip·실패 0**, 38.128초. M0 화면·권한 거부·카메라 부재 |
+
+실기기 카메라 lifecycle은 전면 촬영 → 자산 4/4 → 시각 증가 → 가로/세로 실제 버퍼 크기와 epoch 증가 → 후면 전환 → 백그라운드 2초/복귀 → 정지를 확인했다. 별도 지연 검사는 카메라 시작 전 스위치 value=1을 확인한 뒤 실행/대기=1/1, 최대 대기 1, 정지 후 폐기 증가와 0/0 큐·0/0 관절, 재시작을 확인했다. SDK 합성 검사는 검정 프레임 미검출·증가하는 VIDEO 시각·잘못된 모델 경로 오류·다시 검정 프레임 복구를 검사했다. 모두 평가 엔진 미연결을 유지했다.
+
+### 실패 이력과 한계
+
+- 초기 UI 검사 빌드는 종료 코드 65: 새 UI 테스트 타깃의 PRODUCT_NAME 누락으로 `-Runner.app/PlugIns/.xctest` 출력이 충돌했다. 앱 단독 빌드 성공과 구분한다. PRODUCT_NAME을 TARGET_NAME으로 지정해 해결했다. 수정 도구의 UTF-8 locale 누락으로 한 번 재적용이 실패한 뒤 파일 수정으로 반영했다.
+- 첫 iPhone UI 실행은 무료 개발 프로파일의 설치 앱 3개 제한으로 M2 앱 설치 전에 실패했고 검사 실행을 중단했다(75). 별도 실행 시도도 `application … is not installed`였다. 기존 M0/M1 **XCTest 러너만** 제거해 슬롯을 확보했다. 사용자용 TREX 진단 앱과 데이터는 삭제하지 않았다. 이후 M2 앱/러너 설치와 실제 검사를 진행했다.
+- 첫 설치 성공 후 iPhone 전체 검사는 2건 통과·1건 실패(65)였다. 실제 33점/SDK 합성 검사는 통과했지만 지연 후 폐기 검사가 실패했다. 로컬 XCTest 녹화에서 스위치가 꺼져 있음을 확인했다. 테스트가 SwiftUI Switch 컨테이너를 탭한 것만으로 지연 활성화를 가정한 문제였다. 실제 스위치를 누르고 value=1 및 실행/대기=1/1을 기다리도록 보완했다.
+- 다음 검사에서는 촬영 중 비활성 합성 버튼을 스크롤 기준으로 찾지 못했다(65). 지연 검사를 별도 분리해 카메라 시작 전 활성 스위치 값을 확인했고 실기기의 대기 1건/늦은 결과 폐기는 통과했다. 이후 카메라 lifecycle 검사만 가로 화면에서 관성 스와이프가 짧은 epoch 행을 지나쳐 실패했다(65). 검사 스크롤을 절반 화면 드래그 후 정지 방식으로 보완했다. 이 실패들은 추론 성공 집계와 구분한다.
+- 최종 종합 검사에서 카메라 lifecycle·지연 폐기·SDK 합성 입력은 통과했으나 33점 조건은 45초 안에 다시 충족되지 않았다. 앞선 실제 검출/오버레이 성공과 구분해 기록하며 종합 성공이나 전신 검출 보장을 주장하지 않는다. 사용자가 다시 촬영 준비를 완료한 뒤 **동일 최종 소스의 33점 단독 재검사에서 종료 코드 0/1건 통과**를 확인했다. 따라서 4종 검사 각각의 통과는 확인했지만 한 번의 종합 실행에서 4건이 모두 통과했다고 기록하지 않는다.
+- 실제 33점 반환은 운동 자세의 정확성·전신 가시성·규칙 판정 성공이 아니다. 검정 프레임 미검출/잘못된 모델 경로 오류 검사는 실제 SDK에 **명시적 합성 입력**을 제공한 결과다. 실제 카메라의 무인 장면 전체 조건이나 손상 모델 파일의 모든 오류 유형을 대체하지 않는다.
+- 비율/미러 투영의 합성 좌표 검사와 실제 회전 버퍼 확인은 있으나 고정 표적을 이용한 물리적 좌우/각도 오차 대조는 미완료다. 실기기 한 대의 iOS 27 베타 Debug 결과를 iOS 16/안정 OS/iPad/Release/20분 지속/출시 지원으로 확대하지 않는다.
+- P1 공개 DTO/생성 헤더/Native 태스크 및 P2 세션 facade가 아직 없다. M3은 정확한 Windows 계약 SHA를 받은 후 픽스처 → 세션 재생 → 실제 카메라 순으로 진행한다. M2 성공은 공통 엔진 동등성이나 P0/P1/P2 완료가 아니다.
+
+공유 전 프로젝트 의미/권한/XML·문서 링크·개인정보 제외·ignore·`git diff --check`를 확인했다. 원래 로컬 체크아웃은 `feature/posture-coach-reliability` / `5237ba9` 및 깨끗한 작업 트리를 유지한다. 소스 커밋과 이 상태 문서를 Mac 브랜치에 공유하며, 다음 작업은 Windows의 실제 P1/P2 계약 수신 이후 M3이다.
