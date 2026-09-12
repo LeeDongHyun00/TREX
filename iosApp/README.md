@@ -116,6 +116,23 @@ xcrun simctl launch '<시뮬레이터 ID>' com.leedonghyun.trex.posturediagnosti
 
 ## 공유 범위와 후속
 
+### 2026-09-13 실제 검사
+
+검증 소스는 [`bee02682d285da8b9dfb3b750b11a9453f08c851`](https://github.com/LeeDongHyun00/TREX/commit/bee02682d285da8b9dfb3b750b11a9453f08c851)이다. Xcode 16.2 / SDK 18.2 / Intel Mac에서 실행했다. 실기기 테스트는 이 소스에서 실행했고, 앞선 일반 iOS/시뮬레이터 검사와의 소스 차이는 파일 끝 빈 줄 정리뿐이다.
+
+| 검사 | 대상 | 실제 결과 |
+|---|---|---|
+| 자산 기본/strict 검사 | 체크아웃 8개 자산/픽스처 | 각각 종료 코드 0, 8/8 바이트 일치 |
+| 서명 없는 build | generic iOS, arm64 | 종료 코드 0 |
+| 서명 build | 연결 iPhone, 로컬 xcconfig/자동 서명 | 초기 팀 누락은 65, 사용자 설정 후 0 |
+| 설치 | iPhone 16 Plus, iOS 27.0 Beta (24A5424a) | devicectl 종료 코드 0 |
+| 실행 | 위 iPhone | 초기 개발자 신뢰 관련 오류는 1, 사용자 신뢰 후 0 |
+| 화면/버튼 UI 테스트 | 위 iPhone | 종료 코드 0, 1건 통과·실패 0, 화면 캡처 |
+| 빌드/화면 UI 테스트 | 전용 iPhone 16 Plus 시뮬레이터, iOS 18.3.1 | 종료 코드 0, 1건 통과·실패 0 |
+| 별도 설치/실행 | 위 시뮬레이터 | simctl install/launch 각각 종료 코드 0 |
+
+실기기 UI 테스트는 위 iPhone 서명 빌드 명령의 마지막 `build`를 `-parallel-testing-enabled NO test`로 바꾸고 새 `-resultBundlePath`를 지정해 실행한다. 공통 명령·단계별 정확한 실패 이력과 판단 범위는 [MAC_STATUS.md §6](../docs/ios-kmp/MAC_STATUS.md#6-m0-구현과-실제-검증-결과)에 기록했다. 현재 도구에서 이 M0 앱의 실행이 통과했음을 뜻하며, KMP/MediaPipe나 전체 OS 호환 검증으로 확대하지 않는다.
+
 `iosApp/.gitignore`는 build/DerivedData/Pods/xcuserdata/개인 xcconfig·서명을 제외한다. 프로젝트·공유 scheme·소스·테스트를 추적하고, M2에서 추가하는 Podfile.lock도 추적한다. M0는 Pod/KMP 없는 진단 타깃을 유지하며 M2의 별도 `TrexPostureInference` 타깃과 구분한다.
 
 아직 카메라/센서/추론/공통 엔진 테스트, iOS 16 실기기, 안정 OS 전체 지원, 출시 검증은 없다. 현재 iPhone의 연결·개발자 모드와 M0 앱의 실제 빌드·설치·실행 결과는 상태 문서에서 각각 확인한다.
