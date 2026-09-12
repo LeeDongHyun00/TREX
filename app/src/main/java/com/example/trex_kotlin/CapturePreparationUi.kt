@@ -43,7 +43,7 @@ import kotlin.math.sin
 internal fun CapturePreparationPanel(
     profile: ExerciseProfile, sample: PoseSample, sampleAt: Long, paused: Boolean,
     frontCamera: Boolean, muted: Boolean, onMute: () -> Unit, onCamera: () -> Unit,
-    speech: SpeechCoach, onStart: () -> Unit, onExit: () -> Unit, modifier: Modifier = Modifier,
+    speech: SpeechCoach, onStart: (skipped: Boolean) -> Unit, onExit: () -> Unit, modifier: Modifier = Modifier,
     cameraError: String? = null, onFallback: () -> Unit = {},
     modeControl: @Composable () -> Unit = {},
 ) {
@@ -90,7 +90,7 @@ internal fun CapturePreparationPanel(
             delay(100)
             if (latestPaused || userPaused) { controller.cancel(); state = controller.state; continue }
             state = controller.tick(SystemClock.elapsedRealtime())
-            if (state.phase == PreparationPhase.STARTED && !delivered) { delivered = true; start() }
+            if (state.phase == PreparationPhase.STARTED && !delivered) { delivered = true; start(false) }
         }
     }
     LaunchedEffect(state.phase, state.seconds, state.trackingHold, muted) {
@@ -143,16 +143,15 @@ internal fun CapturePreparationPanel(
                 if (muted) Icons.AutoMirrored.Rounded.VolumeOff else Icons.AutoMirrored.Rounded.VolumeUp,
                 onMute, Modifier.width(48.dp))
             SessionTool("카메라", "카메라 전환", Icons.Rounded.Cameraswitch, { cancel(); onCamera() }, Modifier.width(48.dp))
-            SessionTool(if (userPaused) "재개" else "일시정지", if (userPaused) "재개" else "일시정지",
-                if (userPaused) Icons.Rounded.PlayArrow else Icons.Rounded.Pause,
-                { if (!paused && !delivered) { userPaused=!userPaused; if(userPaused)cancel() } }, Modifier.width(56.dp))
+            PreparationPauseAction(userPaused, !paused && !delivered,
+                { userPaused = !userPaused; if (userPaused) cancel() }, Modifier.width(104.dp))
         }
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             GhostButton("나가기", { cancel(); onExit() }, Modifier.weight(1f))
             Cta("준비 건너뛰기", {
                 // 준비만 종료한다. 운동 완료/세트 건너뛰기 콜백을 호출하지 않는다.
                 if (!paused && !delivered) {
-                    delivered=true; cancel(); start()
+                    delivered=true; cancel(); start(true)
                 }
             }, Modifier.weight(1.8f), enabled = !paused && !delivered)
 

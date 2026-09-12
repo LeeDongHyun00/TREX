@@ -448,7 +448,6 @@ private fun ManualSheet(app: AppViewModel, initialSlot: String, onClose: () -> U
                     Column(Modifier.padding(18.dp)) {
                         Row(verticalAlignment = Alignment.Bottom) {
                             Column(Modifier.weight(1f)) {
-                                Kicker("이 끼니 합계")
                                 Row(Modifier.padding(top = 6.dp), verticalAlignment = Alignment.Bottom) {
                                     Text("${total.kcal}", color = c.text, fontSize = 30.sp, fontWeight = FontWeight.SemiBold, lineHeight = 30.sp)
                                     Text(" kcal", color = c.text3, fontSize = 13.sp, modifier = Modifier.padding(bottom = 3.dp))

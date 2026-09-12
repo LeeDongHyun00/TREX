@@ -217,7 +217,7 @@ class SessionFlowTest {
             click("식단");await("오늘 식단");capture("restored-diet")
             click("사진 기록");await("직접 기록으로 이어가룡");assertNull(find("분석 완료"));click("음식 직접 선택");await("직접 기록")
             instrumentation.sendKeyDownUpSync(android.view.KeyEvent.KEYCODE_BACK)
-            scrollTo("아침 식단 수정");click("아침 식단 수정");await("아침 기록");capture("meal-edit")
+            scrollTo("아침 식단 수정");click("아침 식단 수정");await("아침 기록");assertNull(find("이 끼니 합계"));capture("meal-edit")
             instrumentation.sendKeyDownUpSync(android.view.KeyEvent.KEYCODE_BACK)
             click("뒤로가기");click("운동");click("운동 기록")
             val dateLabel="${day.monthValue}월 ${day.dayOfMonth}일 기록"
@@ -312,6 +312,25 @@ class SessionFlowTest {
         }
     }
 
+    @Test fun briefPreparationEntryShowsPanelOnlyForSkip() = isolated { store ->
+        store.guideDone=true;store.loggedIn=true;store.onboarded=true;store.themeMode=ThemeMode.Light
+        store.planDoneEpochDay=java.time.LocalDate.now().toEpochDay()
+        store.savePlan(listOf(Workout("brief-entry","플랭크","90초 × 1세트","2분",true,"코어")))
+        ActivityScenario.launch(MainActivity::class.java).use {
+            click("운동");click("운동 시작");await("준비 건너뛰기",20000)
+            click("일시정지");click("준비 건너뛰기")
+            await("제어판 접기");capture("larger-preview")
+        }
+        ActivityScenario.launch(MainActivity::class.java).use {
+            click("운동");click("운동 시작");await("5초 후 시작",20000)
+            if (find("음성 안내 끄기") != null) click("음성 안내 끄기")
+            click("5초 후 시작");await("제어판 열기",8000)
+            assertNull(find("운동 준비"))
+            assertTrue(find("제어판 접기")?.isVisibleToUser != true)
+            capture("countdown-immersive")
+        }
+    }
+
     @Test fun cameraPreparationCancelsOnBackgroundAndStartsAtCountdownEnd() = isolated { store ->
         store.guideDone=true;store.loggedIn=true;store.onboarded=true;store.themeMode=ThemeMode.Light
         store.planDoneEpochDay=java.time.LocalDate.now().toEpochDay()
@@ -334,7 +353,7 @@ class SessionFlowTest {
             click("음성 안내 끄기");await("음성 안내 켜기")
             click("5초 후 시작");capture("capture-countdown")
             assertNotNull(find("운동 준비"));assertNull(find("완료 세트"))
-            await("이 세트 건너뛰기",12000)
+            await("제어판 열기",12000)
             assertNull(find("운동 준비"))
             await("완료 세트");assertTrue(TrexStore(context).loadPlan()!!.single().done)
         }
@@ -355,7 +374,7 @@ class SessionFlowTest {
                 click("일시정지");capture("record-mode-preparation")
                 click("준비 건너뛰기");await("이 세트 건너뛰기")
                 assertNull(find("운동 준비"));assertNull(find("완료 세트"))
-                assertNotNull(find("플랭크"));assertFalse(TrexStore(context).loadPlan()!!.single().done)
+                assertNotNull(find("플랭크 · 1 / 2 세트"));assertFalse(TrexStore(context).loadPlan()!!.single().done)
                 await("기록 모드");assertNull(find("처음 자세와의 변화를 비교해룡"));capture("record-mode-active")
                 click("제어판 접기");await("제어판 열기")
                 assertNotNull(find("목표 01:30"))
@@ -456,6 +475,7 @@ class SessionFlowTest {
                 await("몸 옆 · 낮게")
                 capture("capture-floor-prepare")
                 click("5초 후 시작")
+                await("제어판 열기",15000);click("제어판 열기")
                 await("이 세트 건너뛰기",15000)
                 await("카메라 전환",20000)
                 assertNull(find("운동 메뉴"));assertNull(find("측정 상세 · 촬영 안내"))

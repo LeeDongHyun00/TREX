@@ -26,12 +26,32 @@ internal class LivePanelController {
     private var absentAt: Long? = null
     private var closeAt: Long? = null
     private var holdUntil = 0L
+    private var awaitingInitialFraming = false
 
-    fun reveal(now: Long) { visible = true; holdUntil = now + 8000; stableAt = null }
+    fun reveal(now: Long) { visible = true; holdUntil = now + 8000; stableAt = null; awaitingInitialFraming = false }
     fun collapse(now: Long) { visible = false; holdUntil = now + 1000; absentAt = null; closeAt = null }
 
-    fun update(now: Long, scale: Float?, forceVisible: Boolean): Boolean {
+    /** 준비 완료는 즉시 몰입한다. 건너뛰기는 첫 전신 관측 1초만 기다린다. */
+    fun beginSession(now: Long, skipped: Boolean) {
+        reference = null; stableAt = null; absentAt = null; closeAt = null
+        holdUntil = now
+        awaitingInitialFraming = skipped
+        visible = skipped
+        if (!skipped) collapse(now)
+    }
+
+    fun update(now: Long, scale: Float?, forceVisible: Boolean, fullBody: Boolean = true): Boolean {
         if (forceVisible) { reveal(now); return visible }
+        if (awaitingInitialFraming) {
+            if (!fullBody || scale == null) stableAt = null
+            else {
+                if (stableAt == null) stableAt = now
+                if (now - stableAt!! >= 1000) {
+                    reference = scale; awaitingInitialFraming = false; collapse(now)
+                }
+            }
+            return visible
+        }
         if (scale == null) {
             stableAt = null; closeAt = null
             if (absentAt == null) absentAt = now
@@ -47,6 +67,7 @@ internal class LivePanelController {
             if (now - closeAt!! >= 700) visible = true
         } else {
             closeAt = null
+            if (!fullBody) { stableAt = null; return visible }
             if (stableAt == null) stableAt = now
             if (now - stableAt!! >= 3000 && now >= holdUntil) visible = false
         }

@@ -74,6 +74,7 @@ fun WorkoutSessionActions(
     onTogglePause: () -> Unit, onRepetitions: (Int) -> Unit, onPartial: () -> Unit,
     onSkip: () -> Unit, onExit: () -> Unit,
     directTools: (@Composable RowScope.() -> Unit)? = null,
+    onExpandCamera: (() -> Unit)? = null,
 ) {
     val c = Trex.c
     val repetitions = workout.resolvedTarget() is WorkoutTarget.Repetitions
@@ -95,6 +96,18 @@ fun WorkoutSessionActions(
         directTools?.invoke(this)
         SessionTool("건너뛰기", "이 세트 건너뛰기", Icons.Rounded.SkipNext, { open("skip") }, Modifier.weight(1f))
     }
+    if (onExpandCamera != null) {
+        if (repetitions) TextButton(onClick = { open("count") }) {
+            Icon(Icons.Rounded.Edit, null, modifier = Modifier.size(18.dp))
+            Text(if (automatic) "횟수 수정" else "횟수 기록", modifier = Modifier.padding(start = 8.dp), color = c.text)
+        }
+        Row(Modifier.fillMaxWidth().padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            CameraExpandAction(onExpandCamera, !paused, Modifier.weight(1f))
+            Cta(if (paused) "운동 계속" else "일시정지", onTogglePause,
+                icon = if (paused) Icons.Rounded.PlayArrow else Icons.Rounded.Pause,
+                modifier = Modifier.weight(1.25f).semantics { contentDescription = if (paused) "재개" else "일시정지" }, height = 56.dp)
+        }
+    } else {
     Row(Modifier.fillMaxWidth().padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         if (repetitions) GhostButton(if (automatic) "횟수 수정" else if (paused) "재개" else "일시정지",
@@ -103,6 +116,7 @@ fun WorkoutSessionActions(
             onClick = { if (repetitions && !automatic) open("count") else onTogglePause() },
             icon = if (repetitions && !automatic) Icons.Rounded.Edit else if (paused) Icons.Rounded.PlayArrow else Icons.Rounded.Pause,
             modifier = Modifier.weight(1f), height = 56.dp)
+    }
     }
     if (overlay == "skip") {
         AlertDialog(

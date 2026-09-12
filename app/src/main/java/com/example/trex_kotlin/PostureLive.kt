@@ -661,7 +661,10 @@ fun PostureLiveSessionScreen(
     // FIT_CENTER: 카메라가 보는 **전체**를 보여준다. FILL_CENTER 는 4:3 영상을 긴 화면에 채우느라
     // 좌우(세로 모드) 또는 상하(가로 모드)를 잘라내, 사용자가 실제 분석 범위보다 좁게 보고 프레이밍을 그르쳤다.
     val previewView = remember {
-        PreviewView(context).apply { scaleType = PreviewView.ScaleType.FIT_CENTER }
+        PreviewView(context).apply {
+            scaleType = PreviewView.ScaleType.FIT_CENTER
+            implementationMode = PreviewView.ImplementationMode.COMPATIBLE
+        }
     }
 
     LaunchedEffect(useFrontCamera) {
@@ -870,21 +873,35 @@ fun PostureLiveSessionScreen(
         }
     }
 
-    // 제어판은 영상 위에서 이동한다. FIT_CENTER와 카메라 크기는 열고 닫을 때 유지한다.
+    // 제어판의 실제 경계를 따라 PiP를 확장한다. FIT_CENTER와 같은 CameraX 연결을 유지한다.
     val panelController = remember(workout.id, useFrontCamera, displayRotation) { LivePanelController() }
     var panelVisible by remember(panelController) { mutableStateOf(true) }
+    var preparationSkipped by remember(workout.id) { mutableStateOf(true) }
+    var countdownEntry by remember(workout.id) { mutableStateOf(false) }
     val currentPanelSample by rememberUpdatedState(sample)
     val currentPanelSampleAt by rememberUpdatedState(sampleAt)
     val keepPanelOpen by rememberUpdatedState(preparing || paused || cameraError != null)
-    LaunchedEffect(panelController) {
+    LaunchedEffect(panelController, preparing) {
+        if (preparing) { panelVisible = true; return@LaunchedEffect }
+        panelController.beginSession(android.os.SystemClock.elapsedRealtime(), preparationSkipped)
+        panelVisible = panelController.visible
         while (true) {
             val now = android.os.SystemClock.elapsedRealtime()
             val scale = if (now - currentPanelSampleAt in 0..900) currentPanelSample.panelBodyScale() else null
-            panelVisible = panelController.update(now, scale, keepPanelOpen)
+            val fullBody = scale != null && profile?.let {
+                com.example.trex_kotlin.posture.CaptureFraming.inspect(currentPanelSample, it.capture, it.floor).ready
+            } == true
+            panelVisible = panelController.update(now, scale, keepPanelOpen, fullBody)
             kotlinx.coroutines.delay(150)
         }
     }
-    val panelProgress by animateFloatAsState(if (preparing || panelVisible) 1f else 0f, tween(280), label = "live-panel")
+    val panelAnimation = remember { androidx.compose.animation.core.Animatable(1f) }
+    LaunchedEffect(preparing, panelVisible) {
+        if (preparing) panelAnimation.snapTo(1f)
+        else if (countdownEntry) { panelAnimation.snapTo(0f); countdownEntry = false }
+        else panelAnimation.animateTo(if (panelVisible) 1f else 0f, tween(280))
+    }
+    val panelProgress = if (!preparing && countdownEntry) 0f else panelAnimation.value
     fun openPanel() { panelController.reveal(android.os.SystemClock.elapsedRealtime()); panelVisible = true }
     fun closePanel() { if (!paused) { panelController.collapse(android.os.SystemClock.elapsedRealtime()); panelVisible = false } }
 
@@ -914,54 +931,15 @@ fun PostureLiveSessionScreen(
                 plankSide = alignment.visibleSide.takeIf { alignment.placementReady && mode == CoachMode.COACH && !paused },
                 modifier = Modifier.fillMaxSize(),
             )
-            // 상단 스크림 + 컨트롤 (영상 위에 겹치지만 사람은 보통 화면 중앙에 잡히므로 최소 높이만)
-            Box(
-                Modifier
-                    .fillMaxWidth()
-                    .height(96.dp)
-                    .background(Brush.verticalGradient(listOf(Color(0x99000000), Color.Transparent))),
-            )
-            Column(Modifier.fillMaxWidth()) {
-            Row(
-                Modifier
-                    .statusBarsPadding()
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
-                    .fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(Modifier.weight(1f).padding(horizontal = 6.dp)) {
-                    val goal = workout.resolvedTarget()
-                    Text(if (preparing) "$setLabel · 목표 ${goal.amount}${if (goal is WorkoutTarget.Duration) "초" else "회"}"
-                        else "${index + 1}/$total 운동 · $setLabel", color = onCam.copy(alpha = .8f), fontSize = 12.sp)
-                    Text(workout.name, color = onCam, fontSize = 22.sp, fontWeight = FontWeight.SemiBold,
-                        modifier = Modifier.padding(top = 4.dp))
-                }
-                if (!preparing) Surface(shape = RoundedCornerShape(18.dp), color = Color(0xAA10140E)) {
-                    Column(Modifier.padding(horizontal = 14.dp, vertical = 10.dp), horizontalAlignment = Alignment.End) {
-                        if (workout.resolvedTarget() is WorkoutTarget.Duration) {
-                            RingGauge(1f - timeLeft.toFloat() / totalSeconds.coerceAtLeast(1), 66.dp, 3.dp) {
-                                Text(timeLeft.asClock(), color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
-                            }
-                        } else Text("${repetitions}회", color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.SemiBold)
-                        Text(if (workout.resolvedTarget() is WorkoutTarget.Duration) "목표 ${totalSeconds.asClock()}" else "목표 ${workout.resolvedTarget().amount}회",
-                            color = Color.White.copy(alpha = .8f), fontSize = 11.sp)
-                    }
-                }
+            if (preparing) Column(Modifier.fillMaxWidth().background(Brush.verticalGradient(
+                listOf(Color(0xBB10140E), Color.Transparent))).padding(20.dp)) {
+                val goal = workout.resolvedTarget()
+                Text("$setLabel · 목표 ${goal.amount}${if (goal is WorkoutTarget.Duration) "초" else "회"}", color = Color.White, fontSize = 13.sp)
+                Text(workout.name, color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
             }
             if (!preparing && !panelVisible) {
-                Surface(shape = RoundedCornerShape(16.dp), color = Color(0xAA10140E),
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
-                    Text(liveMessage, color = Color.White, fontSize = 14.sp,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 9.dp))
-                }
-            }
-            }
-            if (!preparing && !panelVisible) {
-                TextButton(onClick = { openPanel() }, modifier = Modifier.align(Alignment.BottomEnd)
-                    .navigationBarsPadding().padding(16.dp).heightIn(min = 48.dp)
-                    .clip(RoundedCornerShape(24.dp)).background(Color(0xCC10140E))) {
-                    Text("제어판 열기", color = Color.White, fontSize = 14.sp, modifier = Modifier.padding(horizontal = 12.dp))
-                }
+                LiveQuickActions(onOpen = { openPanel() }, onPause = onTogglePause,
+                    modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(16.dp))
             }
         }
     }
@@ -981,7 +959,12 @@ fun PostureLiveSessionScreen(
         if (preparing && profile != null) CapturePreparationPanel(
             profile, sample, sampleAt, paused, useFrontCamera, muted,
             onMute = { muted = !muted }, onCamera = { useFrontCamera = !useFrontCamera },
-            speech = speech, onStart = onPrepared, onExit = onExit, modifier = mod, modeControl = modeControl,
+            speech = speech, onStart = { skipped ->
+                preparationSkipped = skipped
+                countdownEntry = !skipped
+                panelVisible = skipped
+                onPrepared()
+            }, onExit = onExit, modifier = mod, modeControl = modeControl,
             cameraError = cameraError ?: stats?.error?.let { "몸을 인식할 수 없어요. 직접 기록으로 계속할 수 있어요." }, onFallback = onFallbackToTimer,
         ) else Column(mod) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
@@ -997,11 +980,6 @@ fun PostureLiveSessionScreen(
                     }
                 }
             }
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                TextButton(onClick = { closePanel() }, enabled = !paused) {
-                    Text("제어판 접기", color = c.text2, fontSize = 12.sp)
-                }
-            }
             modeControl()
             WorkoutSessionActions(workout, repetitions, repRef[0] != null, paused,
                 onTogglePause, onRepetitions, onPartial, onSkip,
@@ -1009,6 +987,7 @@ fun PostureLiveSessionScreen(
                     finalizeRef[0]?.invoke(aihubExercise, workout.name, isFloorExercise)?.let(onSetReport)
                     onExit()
                 },
+                onExpandCamera = { closePanel() },
                 directTools = {
                     SessionTool(if (muted) "음성 꺼짐" else "음성 켜짐", if (muted) "음성 안내 켜기" else "음성 안내 끄기",
                         if (muted) Icons.AutoMirrored.Rounded.VolumeOff else Icons.AutoMirrored.Rounded.VolumeUp,
@@ -1025,6 +1004,11 @@ fun PostureLiveSessionScreen(
     Box(Modifier.fillMaxSize().background(c.bg)) {
         PostureAdaptiveLayout(
             preparing = preparing, immersive = !preparing, panelProgress = panelProgress,
+            header = {
+                if (!preparing) LiveWorkoutHud(workout, repetitions, timeLeft, totalSeconds, setLabel, paused,
+                    compact = configuration.screenHeightDp < 500,
+                    message = liveMessage.takeIf { !panelVisible })
+            },
             camera = { cameraArea(Modifier.fillMaxSize()) },
             controls = {
                 panel(Modifier.fillMaxSize().clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)).background(c.bg)

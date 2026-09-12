@@ -537,7 +537,8 @@ class SpeechCoach(context: Context) {
         }
         requestFocus()
         val rc = runCatching {
-            tts?.speak(text.toDinoCopy(), if (flush) TextToSpeech.QUEUE_FLUSH else TextToSpeech.QUEUE_ADD, null, id)
+            // 음성은 원본 존댓말을 읽는다. 화면의 공룡 어미 변환은 TrexText에서만 적용한다.
+            tts?.speak(text, if (flush) TextToSpeech.QUEUE_FLUSH else TextToSpeech.QUEUE_ADD, null, id)
         }.getOrNull()
         // 발화가 시작조차 못 하면 리스너가 안 오므로 여기서 포커스를 정리한다
         if (rc != TextToSpeech.SUCCESS) { traceFeedback("tts_rejected","code=$rc",id); finished(id) }

@@ -84,29 +84,56 @@ class RestorationUiTest {
         compose.runOnIdle { horizontal=false;dimensions=DpSize(360.dp,640.dp) }
         compose.waitForIdle();assertEquals(1,starts);assertEquals(0,disposes)
     }
-    @Test fun immersivePanelDoesNotResizeOrRemountCamera() {
+    @Test fun pipExpandsWithoutRemountingAndKeepsHudInPlace() {
         var progress by mutableStateOf(1f)
         var starts = 0
         compose.setContent {
             Box(Modifier.requiredSize(360.dp,640.dp)) {
                 PostureAdaptiveLayout(immersive = true, panelProgress = progress,
+                    header = { androidx.compose.material3.Text("3회", Modifier.testTag("persistent-count")) },
                     camera = {
                         DisposableEffect(Unit) { starts++; onDispose {} }
                         Box(Modifier.fillMaxSize().testTag("immersive-camera")) {
-                            androidx.compose.material3.Text("3회", Modifier.testTag("persistent-count"))
                         }
                     },
                     controls = { Box(Modifier.fillMaxSize().testTag("moving-panel")) })
             }
         }
         val before = compose.onNodeWithTag("immersive-camera").getUnclippedBoundsInRoot()
+        val hudBefore = compose.onNodeWithTag("persistent-count").getUnclippedBoundsInRoot()
+        assertTrue(hudBefore.top >= before.bottom)
+        assertTrue(before.bottom <= compose.onNodeWithTag("moving-panel").getUnclippedBoundsInRoot().top)
         compose.runOnIdle { progress = 0f }
         compose.onNodeWithTag("persistent-count").assertIsDisplayed()
         compose.onNodeWithTag("moving-panel").assertIsNotDisplayed()
-        assertEquals(before, compose.onNodeWithTag("immersive-camera").getUnclippedBoundsInRoot())
+        assertTrue(before.height < compose.onNodeWithTag("immersive-camera").getUnclippedBoundsInRoot().height)
+        val hudAfter = compose.onNodeWithTag("persistent-count").getUnclippedBoundsInRoot()
+        assertTrue(hudAfter.top > hudBefore.top)
         compose.runOnIdle { progress = 1f }
         compose.onNodeWithTag("moving-panel").assertIsDisplayed()
         assertEquals(1, starts)
+    }
+    @Test fun centeredGoalAndPauseActionsRemainReadableAtLargeText() {
+        var fontScale by mutableStateOf(1f)
+        compose.setContent {
+            val density = LocalDensity.current
+            CompositionLocalProvider(LocalDensity provides Density(density.density, fontScale)) {
+                TrexAppTheme(ThemeMode.Light) {
+                    Column(Modifier.width(320.dp)) {
+                        LiveWorkoutHud(todayPlan[1].copy(target=WorkoutTarget.Duration(90)),0,64,90,"1 / 2 세트",false,false,null)
+                        Row { CameraExpandAction({},true,Modifier.weight(1f)); PreparationPauseAction(false,true,{},Modifier.width(104.dp)) }
+                    }
+                }
+            }
+        }
+        compose.onNodeWithText("01:04").assertIsDisplayed()
+        compose.onNodeWithText("목표 01:30").assertIsDisplayed()
+        snapshot("pip-centered-goal")
+        compose.runOnIdle { fontScale=2f }
+        compose.onNodeWithText("01:04").assertIsDisplayed()
+        compose.onNodeWithText("목표 01:30").assertIsDisplayed()
+        compose.onNodeWithContentDescription("제어판 접기").assertHeightIsAtLeast(48.dp)
+        snapshot("pip-goal-large")
     }
     @Test fun logoAndInputSurviveNarrowToWideResize() {
         var width by mutableStateOf(320.dp)
