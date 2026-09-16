@@ -69,7 +69,7 @@ fun MainSheetHost(app: AppViewModel, sheet: MainSheet, onClose: () -> Unit) {
         is MainSheet.Sets -> WorkoutEditorSheet(app, sheet.draft.id, onClose)
         MainSheet.Goals -> GoalsSheet(app, onClose)
         is MainSheet.Manual -> ManualSheet(app, sheet.slot, onClose)
-        MainSheet.Photo -> PhotoSheet(app, onClose)
+        MainSheet.Photo -> PhotoFoodSheet(app, onClose)
         MainSheet.AddWorkout -> WorkoutEditorSheet(app, null, onClose, initialMode = "add")
         MainSheet.ProfileSettings -> ProfileSettingsSheet(app, onClose)
     }
@@ -407,7 +407,7 @@ private fun GoalsSheet(app: AppViewModel, onClose: () -> Unit) {
 // ============================================================= 직접 기록 (수량 스테퍼 + 검색)
 
 @Composable
-private fun ManualSheet(app: AppViewModel, initialSlot: String, onClose: () -> Unit) {
+internal fun ManualSheet(app: AppViewModel, initialSlot: String, onClose: () -> Unit) {
     val c = Trex.c
     var slot by remember { mutableStateOf(initialSlot) }
     var query by remember { mutableStateOf("") }
@@ -592,27 +592,6 @@ private fun ManualSheet(app: AppViewModel, initialSlot: String, onClose: () -> U
                 )
                 Cta("기록 완료", icon = Icons.Rounded.Check, onClick = onClose, height = 52.dp, modifier = Modifier.weight(1f))
             }
-        }
-    }
-}
-
-// ============================================================= 사진 식단 기록
-
-/** 분석기가 연결되기 전에는 고정 음식·정확도를 분석 결과처럼 저장하지 않는다. */
-@Composable
-private fun PhotoSheet(app: AppViewModel, onClose: () -> Unit) {
-    var manual by remember { mutableStateOf(false) }
-    if (manual) {
-        ManualSheet(app, currentMealId(), onClose)
-        return
-    }
-    val c = Trex.c
-    SheetHost(onDismiss = onClose) {
-        Column(Modifier.fillMaxWidth().padding(22.dp).verticalScroll(rememberScrollState())) {
-            SheetTitleRow("사진 식단 기록", "직접 기록으로 이어가룡", onClose)
-            Text("사진 분석은 아직 연결되지 않았어룡. 먹은 음식을 직접 선택해 기록해 주세룡.",
-                color = c.text2, fontSize = 14.sp, lineHeight = 22.sp, modifier = Modifier.padding(vertical = 22.dp))
-            Cta("음식 직접 선택", { manual = true }, Modifier.fillMaxWidth())
         }
     }
 }
