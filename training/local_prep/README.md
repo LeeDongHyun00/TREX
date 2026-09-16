@@ -9,10 +9,13 @@ AI Hub 는 해외 IP 다운로드를 막아 Colab 에서 직접 받을 수 없�
 - 코드 → 음식명·영양: `44.음식분류 AI 데이터 영양DB.xlsx` 의 행 순서가 코드 정렬 순서와 1:1 (2번째 행 `-` 만 제외). `build_class_map.js` 가 대분류 경계 15곳을 출력해 검증한다 → `class_map.csv`(index, code, name, 1인분 중량, kcal, 탄/당/지/단, 나트륨).
 - 대분류: 01 밥 · 02 면/만두 · 03 죽/스프 · 04 국/탕/찌개 · 05 찜 · 06 구이 · 07 전 · 08 볶음 · 09 조림 · 10 튀김 · 11 무침/나물 · 12 김치 · 13 젓갈/장 · 14 회 · 15 떡 · 16 한과.
 
+## 범위 (2026-09-16 결정)
+사용자 선택으로 Validation 원천 7묶음 중 **4묶음만** 받는다: `11` 무침·나물(15GB) + `04` 국·탕·찌개(31GB) + `06_07_08` 구이·전·볶음(30GB) + `09_10` 조림·튀김·치킨(18GB) = 94GB, 214클래스, 42,716장, 약 32시간. 빠지는 것: 밥·면·만두·김치·회·떡. 전체 7묶음은 177GB/61시간이라 이어받기가 안 되는 상황에서 위험이 크다고 봤다.
+
 ## 절차
 1. `aihubshell` 로 라벨 zip(44878)·영양DB(44887) 다운로드 → 해제. 키는 aihubshell 안내 페이지에서 발급(이메일).
 2. `node build_class_map.js` → `class_map.json/csv`.
-3. `bash pipeline.sh <API키>` — 묶음을 순서대로 다운로드 → 해제 → `prep_dataset.js add` → 원본 삭제. 속도가 약 0.7MB/s 라 묶음당 6~12시간, 전체 3일. `pipeline.log` 로 진행 확인. `images_<이름>/` 에 zip 을 직접(Innorix) 넣어 두면 다운로드를 건너뛴다.
+3. `bash pipeline.sh <API키> [묶음…]` — 묶음마다 다운로드 → 해제 → `prep_dataset.js add` → 원본 삭제. **서버가 Range 요청을 거부해 이어받기가 안 된다**(`curl: (33) … Cannot resume`). `dl.sh` 가 120초간 50KB/s 미만이면 끊고 **처음부터** 다시 받는다(최대 30회). 속도는 약 0.85MB/s = 시간당 3GB. 실측: 15GB 묶음 약 5시간, 끊김은 가끔 발생하나 재시도로 넘어간다. 이미 돌고 있는 다운로드가 있으면 `run_all.sh` 가 끝나기를 기다렸다가 큐를 이어간다 — **동시 다운로드는 하지 않는다**(멈춤 원인 의심).
 4. `node prep_dataset.js finalize` → `dataset_final/`(포함된 클래스만 0..nc-1 재배열, data.yaml, food_labels.txt, nutrition.json).
 5. `dataset_final` 을 zip → Drive 업로드 → Colab.
 
