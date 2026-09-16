@@ -3,23 +3,28 @@ package com.example.trex_kotlin.food
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Canvas
+import android.graphics.Color
 import android.graphics.Matrix
 import android.net.Uri
 import android.util.Log
 import androidx.exifinterface.media.ExifInterface
 import org.tensorflow.lite.DataType
 import org.tensorflow.lite.Interpreter
+import java.io.ByteArrayInputStream
+import java.io.FileInputStream
 import java.io.FileNotFoundException
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import java.nio.channels.FileChannel
 
 /**
- * 온디바이스 음식 인식 결과. 사진 원본은 어떤 경우에도 기기 밖으로 전송하지 않는다(Privacy-by-Design).
+ * 온디바이스 음식 인식 결과. 사진 원본은 어떤 경우에도 기기 밖으로 전송하지 않는다.
  */
 sealed interface FoodDetectionResult {
     data class Success(val foods: List<DetectedFood>) : FoodDetectionResult
 
-    /** assets에 모델 파일이 아직 없음. yolov8n_food.tflite가 준비되면 파일만 넣으면 실추론으로 전환된다. */
+    /** assets에 yolov8n_food.tflite 가 없다(빌드에서 빠졌을 때). 파일을 넣으면 그대로 실추론으로 전환된다. */
     data object ModelMissing : FoodDetectionResult
 
     data object Error : FoodDetectionResult
@@ -30,11 +35,11 @@ data class DetectedFood(val name: String, val confidence: Float)
 /**
  * YOLOv8 TFLite 모델을 앱 수명 동안 1회만 로드해 재사용하는 음식 인식기.
  *
- * - 모델: assets/models/yolov8n_food.tflite (한식 파인튜닝 YOLOv8n → TFLite 변환본)
+ * - 모델: assets/models/yolov8n_food.tflite (AI Hub 한식 이미지로 파인튜닝한 YOLOv8n → TFLite, float32 입출력)
  * - 라벨: assets/models/food_labels.txt — 학습 시 클래스 인덱스 순서대로 한 줄에 하나.
  *   '#'으로 시작하는 줄은 음식이 아닌 클래스로 취급해 인식 결과에서 제외한다.
  *
- * detect()는 블로킹 호출이므로 반드시 백그라운드 디스패처에서 부른다.
+ * detect()·warmUp()은 블로킹 호출이므로 반드시 백그라운드 디스패처에서 부른다.
  */
 object FoodDetector {
 
@@ -44,11 +49,23 @@ object FoodDetector {
     private const val CONFIDENCE_THRESHOLD = 0.40f
     private const val MAX_FOODS_PER_ANALYSIS = 5
     private const val NUM_THREADS = 4
+    private const val LETTERBOX_GRAY = 114
 
     private val lock = Any()
     private var interpreter: Interpreter? = null
     private var labels: List<String> = emptyList()
     private var modelMissing = false
+
+    /** 시트를 열 때 미리 불러, 첫 분석이 모델 로딩 지연까지 떠안지 않게 한다. */
+    fun warmUp(context: Context) {
+        synchronized(lock) {
+            try {
+                loadInterpreter(context.applicationContext)
+            } catch (e: Exception) {
+                Log.w(TAG, "모델 예열 실패", e)
+            }
+        }
+    }
 
     fun detect(context: Context, bitmaps: List<Bitmap>): FoodDetectionResult {
         if (bitmaps.isEmpty()) return FoodDetectionResult.Error
@@ -82,30 +99,43 @@ object FoodDetector {
     private fun loadInterpreter(context: Context): Interpreter? {
         interpreter?.let { return it }
         if (modelMissing) return null
-        val modelBytes = try {
-            context.assets.open(MODEL_PATH).use { it.readBytes() }
+        val model = try {
+            openModel(context)
         } catch (e: FileNotFoundException) {
             modelMissing = true
             Log.w(TAG, "$MODEL_PATH 가 assets에 없어 모델 없이 동작한다")
             return null
         }
         labels = context.assets.open(LABELS_PATH).bufferedReader().readLines()
-            .map { it.trim().removePrefix("\uFEFF") } // 첫 줄 UTF-8 BOM 제거
+            .map { it.trim().removePrefix("﻿") } // 첫 줄 UTF-8 BOM 제거
             .filter { it.isNotEmpty() }
-        val buffer = ByteBuffer.allocateDirect(modelBytes.size).order(ByteOrder.nativeOrder())
-        buffer.put(modelBytes)
-        buffer.rewind()
-        val engine = Interpreter(buffer, Interpreter.Options().apply { setNumThreads(NUM_THREADS) })
+        val engine = Interpreter(model, Interpreter.Options().apply { setNumThreads(NUM_THREADS) })
         // preprocess가 float32 입력을 전제한다. Ultralytics의 INT8 export도 입출력은 float32로
         // 유지되므로 호환되지만, 입출력까지 int8로 변환된 모델이 들어오면 여기서 명확히 걸러낸다.
         val inputType = engine.getInputTensor(0).dataType()
         if (inputType != DataType.FLOAT32) {
             engine.close()
-            throw IllegalStateException(
-                "모델 입력 타입이 $inputType 이다. float32 입출력을 유지한 TFLite 변환본을 사용하라"
-            )
+            throw IllegalStateException("모델 입력 타입이 $inputType 이다. float32 입출력을 유지한 TFLite 변환본을 사용하라")
         }
         return engine.also { interpreter = it }
+    }
+
+    /**
+     * .tflite 는 AGP 기본 noCompress 목록에 있어 보통 mmap 으로 열린다(힙 복사 없음).
+     * 압축돼 들어간 빌드면 openFd 가 실패하므로 힙으로 읽는 경로로 내려간다. 파일 자체가 없으면 FileNotFoundException.
+     */
+    private fun openModel(context: Context): ByteBuffer {
+        try {
+            context.assets.openFd(MODEL_PATH).use { fd ->
+                FileInputStream(fd.fileDescriptor).channel.use { channel ->
+                    return channel.map(FileChannel.MapMode.READ_ONLY, fd.startOffset, fd.declaredLength)
+                }
+            }
+        } catch (e: FileNotFoundException) {
+            // openFd 는 파일이 없을 때와 압축돼 있을 때 모두 이 예외를 던진다 — 아래 open 으로 존재 여부를 가린다.
+        }
+        val bytes = context.assets.open(MODEL_PATH).use { it.readBytes() }
+        return ByteBuffer.allocateDirect(bytes.size).order(ByteOrder.nativeOrder()).put(bytes).also { it.rewind() }
     }
 
     private fun runInference(engine: Interpreter, bitmap: Bitmap): Map<String, Float> {
@@ -144,10 +174,24 @@ object FoodDetector {
     }
 
     private fun preprocess(bitmap: Bitmap, width: Int, height: Int): ByteBuffer {
-        val resized = Bitmap.createScaledBitmap(bitmap, width, height, true)
+        // Ultralytics 학습·평가와 같은 letterbox: 비율을 유지해 맞추고 남는 영역은 회색(114)으로 채운다.
+        // 정사각형으로 늘리면(stretch) 학습 분포와 달라져 confidence 가 떨어진다.
+        val scale = minOf(width.toFloat() / bitmap.width, height.toFloat() / bitmap.height)
+        val scaledW = (bitmap.width * scale).toInt().coerceAtLeast(1)
+        val scaledH = (bitmap.height * scale).toInt().coerceAtLeast(1)
+        val boxed = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        Canvas(boxed).apply {
+            drawColor(Color.rgb(LETTERBOX_GRAY, LETTERBOX_GRAY, LETTERBOX_GRAY))
+            drawBitmap(
+                Bitmap.createScaledBitmap(bitmap, scaledW, scaledH, true),
+                ((width - scaledW) / 2).toFloat(),
+                ((height - scaledH) / 2).toFloat(),
+                null,
+            )
+        }
         val buffer = ByteBuffer.allocateDirect(width * height * 3 * 4).order(ByteOrder.nativeOrder())
         val pixels = IntArray(width * height)
-        resized.getPixels(pixels, 0, width, 0, 0, width, height)
+        boxed.getPixels(pixels, 0, width, 0, 0, width, height)
         pixels.forEach { pixel ->
             buffer.putFloat(((pixel shr 16) and 0xFF) / 255f)
             buffer.putFloat(((pixel shr 8) and 0xFF) / 255f)
@@ -169,34 +213,39 @@ fun Bitmap.scaledToMax(maxDimension: Int): Bitmap {
 }
 
 /**
- * 갤러리 Uri를 추론용 Bitmap으로 디코딩한다. 저사양 기기 OOM을 피하기 위해 최대 변을 제한하고,
- * EXIF 회전을 반영한다. 실패하면 null.
+ * 카메라 회전각(ImageInfo.rotationDegrees) 또는 EXIF 방향(회전 + 좌우 반전)을 적용한다.
+ * 변환이 없으면 원본을 그대로 돌려준다. 촬영·갤러리 경로가 같은 헬퍼를 쓴다.
+ */
+fun Bitmap.rotated(degrees: Int, flipped: Boolean = false): Bitmap {
+    if (degrees == 0 && !flipped) return this
+    val matrix = Matrix()
+    if (flipped) matrix.preScale(-1f, 1f)
+    matrix.postRotate(degrees.toFloat())
+    return Bitmap.createBitmap(this, 0, 0, width, height, matrix, true)
+}
+
+/**
+ * 갤러리 Uri를 추론·표시용 Bitmap으로 디코딩한다. 스트림을 한 번만 읽어 크기 확인·디코딩·EXIF 에 같이 쓰고,
+ * 최대 변을 [maxDimension] 이하로 정확히 맞춘 뒤(저사양 기기 OOM 방지) EXIF 회전·반전을 반영한다. 실패하면 null.
  */
 fun decodeScaledBitmap(context: Context, uri: Uri, maxDimension: Int = 1280): Bitmap? = try {
-    val resolver = context.contentResolver
-    val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-    resolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) }
-    var sampleSize = 1
-    while (bounds.outWidth / (sampleSize * 2) >= maxDimension || bounds.outHeight / (sampleSize * 2) >= maxDimension) {
-        sampleSize *= 2
-    }
-    val options = BitmapFactory.Options().apply { inSampleSize = sampleSize }
-    val bitmap = resolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, options) }
-    if (bitmap == null) {
+    val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+    if (bytes == null) {
         null
     } else {
-        val rotation = resolver.openInputStream(uri)?.use { stream ->
-            when (ExifInterface(stream).getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)) {
-                ExifInterface.ORIENTATION_ROTATE_90 -> 90f
-                ExifInterface.ORIENTATION_ROTATE_180 -> 180f
-                ExifInterface.ORIENTATION_ROTATE_270 -> 270f
-                else -> 0f
-            }
-        } ?: 0f
-        if (rotation == 0f) {
-            bitmap
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+        // inSampleSize 는 2의 거듭제곱이라 최대 변이 maxDimension 의 2배 미만까지만 보장된다 — 디코딩 뒤 scaledToMax 로 정확히 맞춘다.
+        var sampleSize = 1
+        while (bounds.outWidth / (sampleSize * 2) >= maxDimension || bounds.outHeight / (sampleSize * 2) >= maxDimension) {
+            sampleSize *= 2
+        }
+        val decoded = BitmapFactory.decodeByteArray(bytes, 0, bytes.size, BitmapFactory.Options().apply { inSampleSize = sampleSize })
+        if (decoded == null) {
+            null
         } else {
-            Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, Matrix().apply { postRotate(rotation) }, true)
+            val exif = ExifInterface(ByteArrayInputStream(bytes))
+            decoded.scaledToMax(maxDimension).rotated(exif.rotationDegrees, exif.isFlipped)
         }
     }
 } catch (e: Exception) {

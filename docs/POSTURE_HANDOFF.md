@@ -311,3 +311,13 @@ WorkoutHistoryItem.postureCorrection → 기록 화면
 - 다음 구현은 관측 기준/교정 기준 분리부터. §39의 공통 기준 OK를 초기 변화 비교 수집에 요구하는 정책은 수정 대상이다. 초반 3회/5초는 원래 운동 중 자동 수집하고 정오와 무관하게 같은 쪽·같은 단계에서 비교한다. 교정 보정은 기존 eligible 항목의 MP 도메인 근거를 따로 확인한다.
 - 신호 없는 스탠딩 사이드 크런치도 비교가 비지 않도록 관측 창/단계 후보를 설계했다. 가림은 항목별, 모드는 정책만 변경, 기준 재설정 이력은 보존한다. 정답 라벨 이름과 실제 관측 피처가 다른 기존 규칙의 문구도 정정 대상이다.
 - 이번에는 설계 문서와 인수인계만 변경했다. 앱 코드·규칙 자산·기기 설치본은 §39 상태다.
+
+## 2026-09-16 — 음식 인식 온디바이스 연결 (§F1, 사진 식단 기록 파트)
+
+- 브랜치 `feature/food-recognition-v2`(배포 라인 `feature/posture-coach-reliability` 5237ba9 에서 분기). 구현 739f0ef + 준수 검사·코드 리뷰 반영 커밋. 설계 근거·한계는 `docs/FOOD_RECOGNITION.md`.
+- 리디자인의 `PhotoSheet` 스텁("사진 분석은 아직 연결되지 않았어룡")을 `PhotoFoodSheet.kt` 로 교체: 촬영(CameraX)/갤러리(Photo Picker 5장) → `food/FoodDetector`(LiteRT, `assets/models/yolov8n_food.tflite` 30클래스, letterbox) → 결과 확인(끼니·qty 스테퍼·confidence 표시·근사치 고지) → `appendFoods`. 사진은 기기 밖으로 나가지 않고 디스크에도 쓰지 않는다.
+- 판단 원칙 적용: 시뮬레이션 결과 없음(모델 부재·분석 오류·검출 0건은 원인별 제목의 실패 화면), confidence 0.40 미만은 결과에 넣지 않음, `foodDatabase` 에 추가한 30종 영양값은 식약처 DB 연동 전 1인분 근사치임을 화면에 고지.
+- 자세 엔진(`posture/`, 규칙 JSON, `postureExerciseMap`)은 건드리지 않았다. `ManualSheet` 를 internal 로 연 것이 `Sheets.kt` 의 유일한 구조 변경. 조원 브랜치 `feature/food` 의 인분 슬라이더는 미채택(qty 스테퍼로 통일).
+- 검증: JDK 21 `assembleDebug` 성공, JVM 270건 통과. **실기기 촬영·인식 정확도·다중 음식 사진은 미검증.** 모델 mAP 는 저장소에 기록되지 않았다.
+- 환경: Studio 내장 jbr 이 JDK 25 라 Gradle 8.13 이 시작 단계에서 실패한다 — `~/.jdks/jbr-21.0.11` 로 빌드. 사용자 폰(SM-F956N)의 8월 설치본은 다른 디버그 키라 `install -r` 이 거부된다.
+- 다음: 실기기 검증 → 오탐/미탐 사례 수집 → 임계값·letterbox 확인 → 식약처 영양 DB 연동 → AI Hub 74번(박스 어노테이션)으로 재학습 시 노트북 4번 셀 재작성.

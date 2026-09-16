@@ -3,7 +3,6 @@ package com.example.trex_kotlin
 import android.Manifest
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
-import android.graphics.Matrix
 import android.net.Uri
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -74,10 +73,13 @@ import com.example.trex_kotlin.TrexText as Text
 import com.example.trex_kotlin.food.FoodDetectionResult
 import com.example.trex_kotlin.food.FoodDetector
 import com.example.trex_kotlin.food.decodeScaledBitmap
+import com.example.trex_kotlin.food.rotated
 import com.example.trex_kotlin.food.scaledToMax
+import java.util.concurrent.Executors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 
 // ============================================================= 사진 식단 기록
 
@@ -91,7 +93,7 @@ private fun List<RecognizedItem>.toEntries(): List<FoodEntry> =
 
 /**
  * 사진 식단 기록 시트: 촬영/갤러리 → 온디바이스 YOLO 분석 → 결과 확인(끼니·수량) → 현재 끼니에 저장.
- * 사진은 기기 밖으로 나가지 않는다. 분석이 안 됐으면 결과를 만들지 않는다 — 고정 음식을 결과처럼 저장하지 않는다.
+ * 사진은 기기 밖으로 나가지 않고 디스크에도 쓰지 않는다. 분석이 안 됐으면 결과를 만들지 않는다 — 고정 음식을 결과처럼 저장하지 않는다.
  */
 @Composable
 internal fun PhotoFoodSheet(app: AppViewModel, onClose: () -> Unit) {
@@ -106,14 +108,20 @@ internal fun PhotoFoodSheet(app: AppViewModel, onClose: () -> Unit) {
     var step by remember { mutableStateOf(PhotoStep.Pick) }
     var photos by remember { mutableStateOf<List<Bitmap>>(emptyList()) }
     var pickedUris by remember { mutableStateOf<List<Uri>>(emptyList()) }
+    var fromGallery by remember { mutableStateOf(false) }
     var analysisRequest by remember { mutableIntStateOf(0) }
     var progress by remember { mutableFloatStateOf(0f) }
+    var failureTitle by remember { mutableStateOf("") }
     var failure by remember { mutableStateOf("") }
     var items by remember { mutableStateOf<List<RecognizedItem>>(emptyList()) }
+
+    // 모델(12MB)·인터프리터 초기화를 첫 분석이 아니라 시트를 여는 시점에 미리 해 둔다.
+    LaunchedEffect(Unit) { withContext(Dispatchers.Default) { FoodDetector.warmUp(context) } }
 
     fun analyze(bitmaps: List<Bitmap>, uris: List<Uri>) {
         photos = bitmaps
         pickedUris = uris
+        fromGallery = uris.isNotEmpty()
         progress = 0f
         analysisRequest++
         step = PhotoStep.Analyzing
@@ -121,6 +129,12 @@ internal fun PhotoFoodSheet(app: AppViewModel, onClose: () -> Unit) {
     val galleryLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.PickMultipleVisualMedia(maxItems = 5),
     ) { uris -> if (uris.isNotEmpty()) analyze(emptyList(), uris) }
+    fun openGallery() = galleryLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+    fun retry() {
+        photos = emptyList()
+        if (fromGallery) openGallery() else step = PhotoStep.Camera
+    }
+    val retryLabel = if (fromGallery) "다시 선택하기" else "다시 촬영하기"
 
     // analysisRequest 를 키로 써서, 아래에서 photos 를 갱신해도 효과가 재시작되지 않게 한다.
     LaunchedEffect(step, analysisRequest) {
@@ -138,12 +152,14 @@ internal fun PhotoFoodSheet(app: AppViewModel, onClose: () -> Unit) {
             progress = (progress + 0.05f).coerceAtMost(0.9f)
         }
         val (result, bitmaps) = job.await()
-        photos = bitmaps
+        // 화면에는 첫 장만 보여주므로 나머지는 상태에 붙들어 두지 않는다(갤러리 5장 × 수 MB).
+        photos = bitmaps.take(1)
         pickedUris = emptyList()
         progress = 1f
         delay(200)
         when (result) {
             is FoodDetectionResult.Success -> if (result.foods.isEmpty()) {
+                failureTitle = "음식을 찾지 못했어룡"
                 failure = "사진에서 음식을 찾지 못했어요. 음식이 잘 보이게 다시 찍어 주세요."
                 step = PhotoStep.Failed
             } else {
@@ -151,10 +167,12 @@ internal fun PhotoFoodSheet(app: AppViewModel, onClose: () -> Unit) {
                 step = PhotoStep.Result
             }
             FoodDetectionResult.ModelMissing -> {
+                failureTitle = "인식 모델이 없어룡"
                 failure = "음식 인식 모델이 앱에 설치되어 있지 않아요. 직접 입력으로 기록해 주세요."
                 step = PhotoStep.Failed
             }
             FoodDetectionResult.Error -> {
+                failureTitle = "분석하지 못했어룡"
                 failure = "분석 중 문제가 생겼어요. 다시 시도하거나 직접 입력해 주세요."
                 step = PhotoStep.Failed
             }
@@ -166,7 +184,8 @@ internal fun PhotoFoodSheet(app: AppViewModel, onClose: () -> Unit) {
         PhotoStep.Camera -> "음식이 잘 보이게 찍어 주세룡"
         PhotoStep.Analyzing -> "사진을 살펴보고 있어룡"
         PhotoStep.Result -> "인식한 음식을 확인해 주세룡"
-        PhotoStep.Failed -> "음식을 찾지 못했어룡"
+        // 원인(검출 0건·모델 부재·분석 오류)마다 다르다 — 판정하지 않은 것을 "못 찾았다"고 말하지 않는다.
+        PhotoStep.Failed -> failureTitle
     }
 
     SheetHost(onDismiss = onClose) {
@@ -183,7 +202,7 @@ internal fun PhotoFoodSheet(app: AppViewModel, onClose: () -> Unit) {
                 when (step) {
                     PhotoStep.Pick -> PickStep(
                         onCamera = { step = PhotoStep.Camera },
-                        onGallery = { galleryLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
+                        onGallery = { openGallery() },
                         onManual = { manual = true },
                     )
                     PhotoStep.Camera -> CameraStep(
@@ -196,19 +215,21 @@ internal fun PhotoFoodSheet(app: AppViewModel, onClose: () -> Unit) {
                         photo = photos.firstOrNull(),
                         slot = slot,
                         items = items,
+                        retryLabel = if (fromGallery) "다시 선택" else "다시 촬영",
                         onSlot = { slot = it },
                         onQty = { index, delta ->
                             items = items.mapIndexedNotNull { i, item ->
                                 if (i != index) item else (item.qty + delta).let { q -> if (q <= 0) null else item.copy(qty = q) }
                             }
                         },
-                        onRetake = { photos = emptyList(); step = PhotoStep.Camera },
+                        onRetry = { retry() },
                         onSave = {
                             app.appendFoods(0, slot, items.toEntries())
                             onClose()
                         },
-                        onManual = {
-                            // 인식된 것은 먼저 담고, 빠진 음식은 직접 기록 시트에서 이어서 추가한다.
+                        onSaveAndManual = {
+                            // 인식된 것을 이 끼니에 먼저 담고, 빠진 음식은 직접 기록 시트에서 이어서 추가한다.
+                            // 직접 기록 시트가 같은 끼니를 열어 방금 담은 항목을 스테퍼로 바로 고칠 수 있다.
                             val entries = items.toEntries()
                             if (entries.isNotEmpty()) app.appendFoods(0, slot, entries)
                             manual = true
@@ -217,7 +238,8 @@ internal fun PhotoFoodSheet(app: AppViewModel, onClose: () -> Unit) {
                     PhotoStep.Failed -> FailedStep(
                         photo = photos.firstOrNull(),
                         message = failure,
-                        onRetake = { photos = emptyList(); step = PhotoStep.Camera },
+                        retryLabel = retryLabel,
+                        onRetry = { retry() },
                         onManual = { manual = true },
                     )
                 }
@@ -285,13 +307,18 @@ private fun CameraStep(onCapture: (Bitmap) -> Unit, onBack: () -> Unit, onManual
     LaunchedEffect(Unit) { if (!hasPermission) permissionLauncher.launch(Manifest.permission.CAMERA) }
 
     val imageCapture = remember { ImageCapture.Builder().setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY).build() }
+    // 촬영 결과(수천만 화소 JPEG)의 디코딩·축소·회전은 메인 스레드에서 하지 않는다.
+    val captureExecutor = remember { Executors.newSingleThreadExecutor() }
     var cameraProvider by remember { mutableStateOf<ProcessCameraProvider?>(null) }
     var cameraReleased by remember { mutableStateOf(false) }
     var capturing by remember { mutableStateOf(false) }
+    var cameraError by remember { mutableStateOf<String?>(null) } // 카메라를 열지 못함 — 촬영 불가
+    var captureError by remember { mutableStateOf<String?>(null) } // 한 번의 촬영 실패 — 재시도 가능
     DisposableEffect(Unit) {
         onDispose {
             cameraReleased = true
             cameraProvider?.unbindAll()
+            captureExecutor.shutdown()
         }
     }
 
@@ -310,14 +337,21 @@ private fun CameraStep(onCapture: (Bitmap) -> Unit, onBack: () -> Unit, onManual
                         }
                         val providerFuture = ProcessCameraProvider.getInstance(ctx)
                         providerFuture.addListener({
-                            val provider = providerFuture.get()
                             // 시트가 먼저 닫힌 뒤 리스너가 실행되면 바인딩하지 않는다(카메라 점유 누수 방지).
                             if (cameraReleased) return@addListener
-                            cameraProvider = provider
-                            val preview = Preview.Builder().build()
-                            preview.setSurfaceProvider(view.surfaceProvider)
-                            provider.unbindAll()
-                            provider.bindToLifecycle(lifecycleOwner, CameraSelector.DEFAULT_BACK_CAMERA, preview, imageCapture)
+                            try {
+                                val provider = providerFuture.get()
+                                cameraProvider = provider
+                                val preview = Preview.Builder().build()
+                                preview.setSurfaceProvider(view.surfaceProvider)
+                                provider.unbindAll()
+                                provider.bindToLifecycle(lifecycleOwner, CameraSelector.DEFAULT_BACK_CAMERA, preview, imageCapture)
+                                cameraError = null
+                            } catch (e: Exception) {
+                                // 후면 카메라가 없거나 다른 앱이 점유 중인 경우 — 앱을 죽이지 않고 갤러리/직접 입력으로 안내한다.
+                                Log.w("PhotoFoodSheet", "카메라 열기 실패", e)
+                                cameraError = "카메라를 열 수 없어요. 다른 앱이 카메라를 쓰고 있지 않은지 확인하거나 갤러리에서 선택해 주세요."
+                            }
                         }, ContextCompat.getMainExecutor(ctx))
                         view
                     },
@@ -335,6 +369,9 @@ private fun CameraStep(onCapture: (Bitmap) -> Unit, onBack: () -> Unit, onManual
                 }
             }
         }
+        (cameraError ?: captureError)?.let { message ->
+            Box(Modifier.padding(top = 10.dp)) { WashBanner(message, Icons.Rounded.Info, warnTone = true) }
+        }
         Row(Modifier.padding(top = 14.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
             GhostButton("뒤로", onBack, Modifier.weight(1f), height = 52.dp)
             Cta(
@@ -342,32 +379,32 @@ private fun CameraStep(onCapture: (Bitmap) -> Unit, onBack: () -> Unit, onManual
                 icon = Icons.Rounded.PhotoCamera,
                 height = 52.dp,
                 modifier = Modifier.weight(2f),
-                enabled = hasPermission && !capturing,
+                enabled = hasPermission && !capturing && cameraError == null,
                 onClick = {
                     if (!capturing) {
                         capturing = true
+                        captureError = null
+                        val mainExecutor = ContextCompat.getMainExecutor(context)
                         imageCapture.takePicture(
-                            ContextCompat.getMainExecutor(context),
+                            captureExecutor,
                             object : ImageCapture.OnImageCapturedCallback() {
                                 override fun onCaptureSuccess(image: ImageProxy) {
-                                    // 원본(수천만 화소)을 그대로 들고 있으면 저사양 기기에서 OOM 위험이 있어 추론·표시용 크기로 줄인다.
+                                    // 축소를 먼저 하고 회전한다 — 원본 크기 복사본을 하나 더 만들지 않기 위해서다(저사양 기기 OOM 방지).
                                     val bitmap = image.use { proxy ->
-                                        val raw = proxy.toBitmap()
-                                        val degrees = proxy.imageInfo.rotationDegrees
-                                        val rotated = if (degrees == 0) {
-                                            raw
-                                        } else {
-                                            Bitmap.createBitmap(raw, 0, 0, raw.width, raw.height, Matrix().apply { postRotate(degrees.toFloat()) }, true)
-                                        }
-                                        rotated.scaledToMax(1280)
+                                        proxy.toBitmap().scaledToMax(1280).rotated(proxy.imageInfo.rotationDegrees)
                                     }
-                                    capturing = false
-                                    onCapture(bitmap)
+                                    mainExecutor.execute {
+                                        capturing = false
+                                        onCapture(bitmap)
+                                    }
                                 }
 
                                 override fun onError(exception: ImageCaptureException) {
                                     Log.w("PhotoFoodSheet", "촬영 실패", exception)
-                                    capturing = false
+                                    mainExecutor.execute {
+                                        capturing = false
+                                        captureError = "촬영에 실패했어요. 다시 시도해 주세요."
+                                    }
                                 }
                             },
                         )
@@ -405,11 +442,12 @@ private fun ResultStep(
     photo: Bitmap?,
     slot: String,
     items: List<RecognizedItem>,
+    retryLabel: String,
     onSlot: (String) -> Unit,
     onQty: (index: Int, delta: Int) -> Unit,
-    onRetake: () -> Unit,
+    onRetry: () -> Unit,
     onSave: () -> Unit,
-    onManual: () -> Unit,
+    onSaveAndManual: () -> Unit,
 ) {
     val c = Trex.c
     val slotIndex = mealMetas.indexOfFirst { it.id == slot }.coerceAtLeast(0)
@@ -460,7 +498,9 @@ private fun ResultStep(
                 }
             }
             Text("합계 ${total.kcal} kcal · 탄 ${total.carb.toInt()} · 단 ${total.protein.toInt()} · 지 ${total.fat.toInt()}", color = c.text, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-            Text("잘못 인식된 음식은 빼고, 빠진 음식은 직접 추가에서 더해 주세요. 수량은 1인분 기준이에요.", color = c.text3, fontSize = 11.5.sp, lineHeight = 17.sp)
+            // 검증된 수치가 아니라는 사실을 숨기지 않는다 — 30종 영양값은 식약처 DB 연동 전 1인분 근사치다.
+            WashBanner("영양값은 1인분 기준 근사치예요. 식약처 영양 DB를 연결하기 전까지의 임시 수치라 참고용으로 봐 주세요.", Icons.Rounded.Info)
+            Text("잘못 인식된 음식은 빼고, 빠진 음식은 직접 추가에서 더해 주세요.", color = c.text3, fontSize = 11.5.sp, lineHeight = 17.sp)
         }
         Box(Modifier.fillMaxWidth().height(1.dp).background(c.line))
         Row(
@@ -469,12 +509,12 @@ private fun ResultStep(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Text(
-                "다시 촬영", color = c.text3, fontSize = 12.5.sp, fontWeight = FontWeight.Medium,
-                modifier = Modifier.clip(RoundedCornerShape(10.dp)).clickable(onClick = onRetake).padding(horizontal = 6.dp, vertical = 8.dp),
+                retryLabel, color = c.text3, fontSize = 12.5.sp, fontWeight = FontWeight.Medium,
+                modifier = Modifier.clip(RoundedCornerShape(10.dp)).clickable(onClick = onRetry).padding(horizontal = 6.dp, vertical = 8.dp),
             )
             Text(
-                "직접 추가", color = c.text3, fontSize = 12.5.sp, fontWeight = FontWeight.Medium,
-                modifier = Modifier.clip(RoundedCornerShape(10.dp)).clickable(onClick = onManual).padding(horizontal = 6.dp, vertical = 8.dp),
+                "기록하고 직접 추가", color = c.text3, fontSize = 12.5.sp, fontWeight = FontWeight.Medium,
+                modifier = Modifier.clip(RoundedCornerShape(10.dp)).clickable(onClick = onSaveAndManual).padding(horizontal = 6.dp, vertical = 8.dp),
             )
             Cta(
                 text = "${entries.sumOf { it.qty }}개 기록하기",
@@ -489,7 +529,7 @@ private fun ResultStep(
 }
 
 @Composable
-private fun FailedStep(photo: Bitmap?, message: String, onRetake: () -> Unit, onManual: () -> Unit) {
+private fun FailedStep(photo: Bitmap?, message: String, retryLabel: String, onRetry: () -> Unit, onManual: () -> Unit) {
     val c = Trex.c
     Column(Modifier.fillMaxSize().padding(horizontal = 20.dp).padding(bottom = 20.dp)) {
         PhotoPreview(photo, Modifier.fillMaxWidth().height(220.dp), dim = true)
@@ -498,7 +538,7 @@ private fun FailedStep(photo: Bitmap?, message: String, onRetake: () -> Unit, on
             modifier = Modifier.fillMaxWidth().padding(top = 18.dp),
         )
         Spacer(Modifier.weight(1f))
-        GhostButton("다시 촬영하기", onRetake, Modifier.fillMaxWidth(), icon = Icons.Rounded.Refresh)
+        GhostButton(retryLabel, onRetry, Modifier.fillMaxWidth(), icon = Icons.Rounded.Refresh)
         Cta(text = "직접 입력하기", onClick = onManual, icon = Icons.Rounded.Edit, modifier = Modifier.padding(top = 10.dp).fillMaxWidth())
     }
 }
