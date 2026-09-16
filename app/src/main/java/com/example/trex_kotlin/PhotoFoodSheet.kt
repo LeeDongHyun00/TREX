@@ -90,8 +90,11 @@ private enum class PhotoStep { Pick, Camera, Analyzing, Result, Failed }
 /** 결과·실패 화면에 보여줄 사진 썸네일의 최대 변. 갤러리 5장을 다 보여줘도 메모리가 수 MB 안에 머문다. */
 private const val THUMBNAIL_MAX_PX = 512
 
-/** 인식 결과 한 줄. 수량은 직접 기록 시트와 같은 qty 스테퍼로 조절한다. nutrition 이 없으면 기록에서 제외한다. */
-private data class RecognizedItem(val name: String, val nutrition: Nutrition?, val confidence: Float, val qty: Int = 1)
+/**
+ * 인식 결과 한 줄. 수량은 직접 기록 시트와 같은 qty 스테퍼로 조절한다. nutrition 이 없으면 기록에서 제외한다.
+ * [photoIndex] 는 이 음식이 잡힌 사진(여러 장일 때 어느 사진인지 보여준다).
+ */
+private data class RecognizedItem(val name: String, val nutrition: Nutrition?, val confidence: Float, val photoIndex: Int, val qty: Int = 1)
 
 private fun List<RecognizedItem>.toEntries(): List<FoodEntry> =
     mapNotNull { item -> item.nutrition?.let { FoodEntry(item.name, it, item.qty) } }
@@ -168,7 +171,7 @@ internal fun PhotoFoodSheet(app: AppViewModel, onClose: () -> Unit) {
                 failure = "사진에서 음식을 찾지 못했어요. 음식이 잘 보이게 다시 찍어 주세요."
                 step = PhotoStep.Failed
             } else {
-                items = result.foods.map { RecognizedItem(it.name, foodDatabase[it.name], it.confidence) }
+                items = result.foods.map { RecognizedItem(it.name, foodDatabase[it.name], it.confidence, it.photoIndex) }
                 step = PhotoStep.Result
             }
             FoodDetectionResult.ModelMissing -> {
@@ -476,6 +479,11 @@ private fun ResultStep(
                     items.forEachIndexed { i, item ->
                         if (i > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(c.line))
                         Row(Modifier.padding(horizontal = 14.dp, vertical = 13.dp), verticalAlignment = Alignment.CenterVertically) {
+                            // 여러 장을 분석했을 때는 이 음식이 잡힌 사진을 번호와 함께 보여준다.
+                            if (photos.size > 1) {
+                                PhotoThumb(photos.getOrNull(item.photoIndex), number = item.photoIndex + 1, size = 44.dp)
+                                Spacer(Modifier.width(12.dp))
+                            }
                             Column(Modifier.weight(1f)) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Text(item.name, fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold)
@@ -556,16 +564,41 @@ private fun PhotoStrip(photos: List<Bitmap>, modifier: Modifier, dim: Boolean = 
         return
     }
     Row(modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        photos.forEach { photo ->
-            PhotoPreview(photo, Modifier.fillMaxHeight().width(150.dp), dim)
+        photos.forEachIndexed { index, photo ->
+            Box(Modifier.fillMaxHeight().width(150.dp)) {
+                PhotoPreview(photo, Modifier.fillMaxSize(), dim)
+                NumberBadge(index + 1, Modifier.padding(8.dp))
+            }
         }
+    }
+}
+
+/** 결과 행 옆에 붙는 작은 사진 — 어느 사진에서 인식됐는지 번호와 함께 보여준다. */
+@Composable
+private fun PhotoThumb(photo: Bitmap?, number: Int, size: androidx.compose.ui.unit.Dp) {
+    Box(Modifier.size(size)) {
+        PhotoPreview(photo, Modifier.fillMaxSize())
+        NumberBadge(number, Modifier.padding(3.dp), small = true)
+    }
+}
+
+@Composable
+private fun NumberBadge(number: Int, modifier: Modifier = Modifier, small: Boolean = false) {
+    Box(
+        modifier
+            .size(if (small) 16.dp else 22.dp)
+            .clip(RoundedCornerShape(999.dp))
+            .background(Color.Black.copy(alpha = 0.62f)),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text("$number", color = Color.White, fontSize = if (small) 9.sp else 11.sp, fontWeight = FontWeight.Bold)
     }
 }
 
 @Composable
 private fun PhotoPreview(photo: Bitmap?, modifier: Modifier, dim: Boolean = false) {
     val c = Trex.c
-    Box(modifier.clip(RoundedCornerShape(22.dp)).background(c.surface2), contentAlignment = Alignment.Center) {
+    Box(modifier.clip(RoundedCornerShape(14.dp)).background(c.surface2), contentAlignment = Alignment.Center) {
         if (photo != null) {
             androidx.compose.foundation.Image(
                 bitmap = photo.asImageBitmap(),

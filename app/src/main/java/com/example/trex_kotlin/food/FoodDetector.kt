@@ -30,7 +30,8 @@ sealed interface FoodDetectionResult {
     data object Error : FoodDetectionResult
 }
 
-data class DetectedFood(val name: String, val confidence: Float)
+/** [photoIndex] 는 여러 장 중 이 음식의 최고 점수가 나온 사진의 인덱스 — 결과 화면에서 어느 사진에서 잡혔는지 보여준다. */
+data class DetectedFood(val name: String, val confidence: Float, val photoIndex: Int)
 
 /**
  * YOLOv8 TFLite 모델을 앱 수명 동안 1회만 로드해 재사용하는 음식 인식기.
@@ -77,17 +78,19 @@ object FoodDetector {
                 return FoodDetectionResult.Error
             }
             return try {
-                // 사진 여러 장이면 인식된 음식을 라벨 기준으로 합치고, 같은 음식은 최고 confidence만 남긴다.
-                val merged = LinkedHashMap<String, Float>()
-                bitmaps.forEach { bitmap ->
+                // 사진 여러 장이면 인식된 음식을 라벨 기준으로 합치고, 같은 음식은 최고 confidence(와 그 사진)만 남긴다.
+                val merged = LinkedHashMap<String, DetectedFood>()
+                bitmaps.forEachIndexed { index, bitmap ->
                     runInference(engine, bitmap).forEach { (name, confidence) ->
-                        merged.merge(name, confidence, ::maxOf)
+                        val previous = merged[name]
+                        if (previous == null || confidence > previous.confidence) {
+                            merged[name] = DetectedFood(name, confidence, index)
+                        }
                     }
                 }
-                val foods = merged.entries
-                    .sortedByDescending { it.value }
+                val foods = merged.values
+                    .sortedByDescending { it.confidence }
                     .take(MAX_FOODS_PER_ANALYSIS)
-                    .map { DetectedFood(it.key, it.value) }
                 FoodDetectionResult.Success(foods)
             } catch (e: Exception) {
                 Log.e(TAG, "추론 실패", e)
