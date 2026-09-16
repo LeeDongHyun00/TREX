@@ -18,6 +18,7 @@ import androidx.camera.view.PreviewView
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -29,6 +30,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -84,6 +86,9 @@ import kotlinx.coroutines.withContext
 // ============================================================= 사진 식단 기록
 
 private enum class PhotoStep { Pick, Camera, Analyzing, Result, Failed }
+
+/** 결과·실패 화면에 보여줄 사진 썸네일의 최대 변. 갤러리 5장을 다 보여줘도 메모리가 수 MB 안에 머문다. */
+private const val THUMBNAIL_MAX_PX = 512
 
 /** 인식 결과 한 줄. 수량은 직접 기록 시트와 같은 qty 스테퍼로 조절한다. nutrition 이 없으면 기록에서 제외한다. */
 private data class RecognizedItem(val name: String, val nutrition: Nutrition?, val confidence: Float, val qty: Int = 1)
@@ -152,8 +157,8 @@ internal fun PhotoFoodSheet(app: AppViewModel, onClose: () -> Unit) {
             progress = (progress + 0.05f).coerceAtMost(0.9f)
         }
         val (result, bitmaps) = job.await()
-        // 화면에는 첫 장만 보여주므로 나머지는 상태에 붙들어 두지 않는다(갤러리 5장 × 수 MB).
-        photos = bitmaps.take(1)
+        // 화면에는 썸네일만 필요하다 — 추론용 1280px 비트맵(장당 수 MB)을 붙들지 않고 작은 사본만 상태에 남긴다.
+        photos = bitmaps.map { it.scaledToMax(THUMBNAIL_MAX_PX) }
         pickedUris = emptyList()
         progress = 1f
         delay(200)
@@ -210,9 +215,9 @@ internal fun PhotoFoodSheet(app: AppViewModel, onClose: () -> Unit) {
                         onBack = { step = PhotoStep.Pick },
                         onManual = { manual = true },
                     )
-                    PhotoStep.Analyzing -> AnalyzingStep(photo = photos.firstOrNull(), progress = progress)
+                    PhotoStep.Analyzing -> AnalyzingStep(photos = photos, progress = progress)
                     PhotoStep.Result -> ResultStep(
-                        photo = photos.firstOrNull(),
+                        photos = photos,
                         slot = slot,
                         items = items,
                         retryLabel = if (fromGallery) "다시 선택" else "다시 촬영",
@@ -236,7 +241,7 @@ internal fun PhotoFoodSheet(app: AppViewModel, onClose: () -> Unit) {
                         },
                     )
                     PhotoStep.Failed -> FailedStep(
-                        photo = photos.firstOrNull(),
+                        photos = photos,
                         message = failure,
                         retryLabel = retryLabel,
                         onRetry = { retry() },
@@ -416,7 +421,7 @@ private fun CameraStep(onCapture: (Bitmap) -> Unit, onBack: () -> Unit, onManual
 }
 
 @Composable
-private fun AnalyzingStep(photo: Bitmap?, progress: Float) {
+private fun AnalyzingStep(photos: List<Bitmap>, progress: Float) {
     val c = Trex.c
     // 분석은 전부 온디바이스라 '업로드' 문구를 쓰지 않는다.
     val status = when {
@@ -425,7 +430,7 @@ private fun AnalyzingStep(photo: Bitmap?, progress: Float) {
         else -> "영양 정보 계산 중"
     }
     Column(Modifier.fillMaxSize().padding(horizontal = 20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        PhotoPreview(photo, Modifier.fillMaxWidth().height(240.dp))
+        PhotoStrip(photos, Modifier.fillMaxWidth().height(240.dp))
         LinearProgressIndicator(
             progress = { progress.coerceIn(0f, 1f) },
             modifier = Modifier.padding(top = 22.dp).fillMaxWidth().height(8.dp).clip(RoundedCornerShape(999.dp)),
@@ -439,7 +444,7 @@ private fun AnalyzingStep(photo: Bitmap?, progress: Float) {
 
 @Composable
 private fun ResultStep(
-    photo: Bitmap?,
+    photos: List<Bitmap>,
     slot: String,
     items: List<RecognizedItem>,
     retryLabel: String,
@@ -458,7 +463,7 @@ private fun ResultStep(
             Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            PhotoPreview(photo, Modifier.fillMaxWidth().height(150.dp))
+            PhotoStrip(photos, Modifier.fillMaxWidth().height(150.dp))
             SegmentedTabs(
                 options = mealMetas.map { it.label },
                 selected = slotIndex,
@@ -529,10 +534,10 @@ private fun ResultStep(
 }
 
 @Composable
-private fun FailedStep(photo: Bitmap?, message: String, retryLabel: String, onRetry: () -> Unit, onManual: () -> Unit) {
+private fun FailedStep(photos: List<Bitmap>, message: String, retryLabel: String, onRetry: () -> Unit, onManual: () -> Unit) {
     val c = Trex.c
     Column(Modifier.fillMaxSize().padding(horizontal = 20.dp).padding(bottom = 20.dp)) {
-        PhotoPreview(photo, Modifier.fillMaxWidth().height(220.dp), dim = true)
+        PhotoStrip(photos, Modifier.fillMaxWidth().height(220.dp), dim = true)
         Text(
             message, color = c.text2, fontSize = 13.sp, lineHeight = 20.sp, textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth().padding(top = 18.dp),
@@ -540,6 +545,20 @@ private fun FailedStep(photo: Bitmap?, message: String, retryLabel: String, onRe
         Spacer(Modifier.weight(1f))
         GhostButton(retryLabel, onRetry, Modifier.fillMaxWidth(), icon = Icons.Rounded.Refresh)
         Cta(text = "직접 입력하기", onClick = onManual, icon = Icons.Rounded.Edit, modifier = Modifier.padding(top = 10.dp).fillMaxWidth())
+    }
+}
+
+/** 사진이 한 장이면 크게, 여러 장이면 가로로 넘겨 보는 썸네일 줄. 갤러리 5장을 골랐는데 첫 장만 보이던 문제를 없앤다. */
+@Composable
+private fun PhotoStrip(photos: List<Bitmap>, modifier: Modifier, dim: Boolean = false) {
+    if (photos.size <= 1) {
+        PhotoPreview(photos.firstOrNull(), modifier, dim)
+        return
+    }
+    Row(modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        photos.forEach { photo ->
+            PhotoPreview(photo, Modifier.fillMaxHeight().width(150.dp), dim)
+        }
     }
 }
 

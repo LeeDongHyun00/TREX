@@ -113,6 +113,11 @@ object FoodDetector {
         // preprocess가 float32 입력을 전제한다. Ultralytics의 INT8 export도 입출력은 float32로
         // 유지되므로 호환되지만, 입출력까지 int8로 변환된 모델이 들어오면 여기서 명확히 걸러낸다.
         val inputType = engine.getInputTensor(0).dataType()
+        Log.i(
+            TAG,
+            "모델 로드: 입력 ${engine.getInputTensor(0).shape().contentToString()} $inputType, " +
+                "출력 ${engine.getOutputTensor(0).shape().contentToString()}, 라벨 ${labels.size}종",
+        )
         if (inputType != DataType.FLOAT32) {
             engine.close()
             throw IllegalStateException("모델 입력 타입이 $inputType 이다. float32 입출력을 유지한 TFLite 변환본을 사용하라")
@@ -139,10 +144,13 @@ object FoodDetector {
     }
 
     private fun runInference(engine: Interpreter, bitmap: Bitmap): Map<String, Float> {
-        val inputShape = engine.getInputTensor(0).shape() // [1, H, W, 3]
-        val inputHeight = inputShape[1]
-        val inputWidth = inputShape[2]
-        val input = preprocess(bitmap, inputWidth, inputHeight)
+        // 입력은 NHWC [1, H, W, 3](Ultralytics 기본) 또는 NCHW [1, 3, H, W](ONNX 경유 변환본) 둘 다 온다.
+        // 실측: 2026-09-09 변환본은 NCHW 였고, NHWC 로 가정하면 640×3 짜리 버퍼를 만들어 run() 이 예외로 죽는다.
+        val inputShape = engine.getInputTensor(0).shape()
+        val channelsFirst = inputShape[1] == 3 && inputShape[3] != 3
+        val inputHeight = if (channelsFirst) inputShape[2] else inputShape[1]
+        val inputWidth = if (channelsFirst) inputShape[3] else inputShape[2]
+        val input = preprocess(bitmap, inputWidth, inputHeight, channelsFirst)
 
         // YOLOv8 TFLite export의 출력은 [1, 4+클래스수, 박스수]. 반대 배치도 방어적으로 처리한다.
         val outputShape = engine.getOutputTensor(0).shape()
@@ -156,24 +164,36 @@ object FoodDetector {
         }
         val boxes = if (channelFirst) outputShape[2] else outputShape[1]
         val output = Array(1) { Array(outputShape[1]) { FloatArray(outputShape[2]) } }
+        val startedAt = System.nanoTime()
         engine.run(input, output)
+        val elapsedMs = (System.nanoTime() - startedAt) / 1_000_000
 
         // 현재 UX는 "무슨 음식인지"만 쓰므로 박스 좌표·NMS 없이 클래스별 최고 confidence만 뽑는다.
+        val best = FloatArray(labels.size)
+        for (c in labels.indices) {
+            for (b in 0 until boxes) {
+                val score = if (channelFirst) output[0][4 + c][b] else output[0][b][4 + c]
+                if (score > best[c]) best[c] = score
+            }
+        }
+        // 임계값과 무관하게 상위 5개를 남긴다 — "왜 못 잡았나"(근소 미달 vs 엉뚱한 클래스)를 실기기 로그로 가리기 위해서다.
+        val ranked = labels.indices
+            .filter { !labels[it].startsWith("#") }
+            .sortedByDescending { best[it] }
+            .take(5)
+            .joinToString { "${labels[it]} ${"%.2f".format(best[it])}" }
+        Log.d(TAG, "추론 ${elapsedMs}ms · 상위 점수: $ranked (임계 $CONFIDENCE_THRESHOLD)")
+
         val detected = LinkedHashMap<String, Float>()
         for (c in labels.indices) {
             val name = labels[c]
             if (name.startsWith("#")) continue
-            var best = 0f
-            for (b in 0 until boxes) {
-                val score = if (channelFirst) output[0][4 + c][b] else output[0][b][4 + c]
-                if (score > best) best = score
-            }
-            if (best >= CONFIDENCE_THRESHOLD) detected[name] = best
+            if (best[c] >= CONFIDENCE_THRESHOLD) detected[name] = best[c]
         }
         return detected
     }
 
-    private fun preprocess(bitmap: Bitmap, width: Int, height: Int): ByteBuffer {
+    private fun preprocess(bitmap: Bitmap, width: Int, height: Int, channelsFirst: Boolean): ByteBuffer {
         // Ultralytics 학습·평가와 같은 letterbox: 비율을 유지해 맞추고 남는 영역은 회색(114)으로 채운다.
         // 정사각형으로 늘리면(stretch) 학습 분포와 달라져 confidence 가 떨어진다.
         val scale = minOf(width.toFloat() / bitmap.width, height.toFloat() / bitmap.height)
@@ -192,10 +212,18 @@ object FoodDetector {
         val buffer = ByteBuffer.allocateDirect(width * height * 3 * 4).order(ByteOrder.nativeOrder())
         val pixels = IntArray(width * height)
         boxed.getPixels(pixels, 0, width, 0, 0, width, height)
-        pixels.forEach { pixel ->
-            buffer.putFloat(((pixel shr 16) and 0xFF) / 255f)
-            buffer.putFloat(((pixel shr 8) and 0xFF) / 255f)
-            buffer.putFloat((pixel and 0xFF) / 255f)
+        if (channelsFirst) {
+            // NCHW: R 평면 전체 → G 평면 → B 평면 순으로 채운다.
+            for (shift in intArrayOf(16, 8, 0)) {
+                pixels.forEach { pixel -> buffer.putFloat(((pixel shr shift) and 0xFF) / 255f) }
+            }
+        } else {
+            // NHWC: 픽셀마다 R, G, B.
+            pixels.forEach { pixel ->
+                buffer.putFloat(((pixel shr 16) and 0xFF) / 255f)
+                buffer.putFloat(((pixel shr 8) and 0xFF) / 255f)
+                buffer.putFloat((pixel and 0xFF) / 255f)
+            }
         }
         buffer.rewind()
         return buffer
