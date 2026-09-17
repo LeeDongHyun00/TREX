@@ -42,7 +42,8 @@ class RepCounterTest {
         // 실기기 푸시업 baseline 1/3 (82프레임, 가림 프레임 포함) — 파이썬 스트리밍 카운터 = 4렙
         val lines = javaClass.classLoader!!.getResourceAsStream("rep_fixture_baseline1.txt")!!
             .bufferedReader().readLines().filter { !it.startsWith("#") && it.isNotBlank() }
-        val c = counter()
+        // 과거 Python은 7,989~12,321ms 가림 전후를 연결했다. 명시적 호환 재생에서만 유지한다.
+        val c = RepCounter.forLegacyReplay(counter().signal)
         for (ln in lines) {
             val (t, v) = ln.split(",", limit = 2)
             c.onFrame(t.toLong(), v.takeIf { it.isNotBlank() }?.toFloat())
@@ -50,6 +51,34 @@ class RepCounterTest {
         assertEquals(4, c.reps)
         // 불응기: 렙 간격이 전부 1.2s 이상
         c.repTimesMs.zipWithNext { a, b -> assertTrue("렙 간격 ${b - a}ms", b - a >= 1_200L) }
+    }
+
+    @Test
+    fun strictDeviceReplayMatchesIndependentVisibleSegmentsInsteadOfBridgingTheGap() {
+        val frames = javaClass.classLoader!!.getResourceAsStream("rep_fixture_baseline1.txt")!!
+            .bufferedReader().useLines { lines ->
+                lines.filter { !it.startsWith("#") && it.isNotBlank() }.map { line ->
+                    val (t, v) = line.split(",", limit = 2)
+                    t.toLong() to v.takeIf { it.isNotBlank() }?.toFloat()
+                }.toList()
+            }
+        val strict = counter()
+        val legacy = RepCounter.forLegacyReplay(strict.signal)
+        var segment = counter()
+        val independentlyCompleted = arrayListOf<Long>()
+        for ((t, value) in frames) {
+            strict.onFrame(t, value)
+            legacy.onFrame(t, value)
+            if (value == null) {
+                independentlyCompleted += segment.repTimesMs
+                segment = counter()
+            } else segment.onFrame(t, value)
+        }
+        independentlyCompleted += segment.repTimesMs
+        assertEquals(4, legacy.reps) // 이전 재생 결과도 계속 검사한다.
+        assertEquals(3, strict.reps)
+        assertEquals(independentlyCompleted, strict.repTimesMs)
+        assertEquals(legacy.repTimesMs.drop(1), strict.repTimesMs)
     }
 
     @Test

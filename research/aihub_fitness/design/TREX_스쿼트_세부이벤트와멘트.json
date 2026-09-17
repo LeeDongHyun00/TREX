@@ -1,0 +1,5405 @@
+{
+  "schema_version": "squat-fine-events-research-2",
+  "date": "2026-09-17",
+  "exercise": "양발 바벨 백스쿼트",
+  "scope": "관찰 이벤트와 교정 문구 설계. 실행 가능한 검증 완료 규칙이 아님.",
+  "atomic_event_count": 37,
+  "expanded_message_count": 52,
+  "global_gates": [
+    "confirmed_exercise_variant",
+    "known_segment_phase",
+    "stable_camera",
+    "required_landmarks_or_rgb_visible",
+    "validated_feature_noise_floor",
+    "deviation_exceeds_validated_contextual_band",
+    "validated_persistence",
+    "registered_exceptions_checked",
+    "valid_side_identity",
+    "safe_message_timing"
+  ],
+  "intent_policy": "고의 여부는 영상에서 추론하지 않음. 사용자 선언 테스트 의도는 별도 필드.",
+  "decision_states": [
+    "allowed_variant",
+    "task_deviation",
+    "measurement_uncertain",
+    "unsupported",
+    "unknown_pattern"
+  ],
+  "events": [
+    {
+      "id": "SF01",
+      "part": "발",
+      "event": "한쪽 발 전체가 지지면에서 떨어짐",
+      "observable_trigger_candidate": "발 윤곽 전체와 지지면 사이 이격을 영상으로 확인. heel/toe 좌표는 보조.",
+      "exclusions": "신발이나 고정 웨지의 원래 높이와 실제 지지면을 고려. 관절점 상승만으로 확정 금지. 준비·랙에서 걸어나오기·랙 복귀·사용자가 선언한 재설정에는 적용하지 않음. 카메라 이동·가림 제외.",
+      "observation_template": "{side} 발 전체가 지지면에서 떨어졌어요.",
+      "action_template": "안전하게 중량을 거치한 뒤 양발 지지와 위치를 다시 준비하세요.",
+      "recheck": "재설정한 동일 조건의 유효 반복에서 지지면과 발의 관계 유지. 압력·하중 분배가 정상이라고 확정하지 않음.",
+      "feedback_class": "support",
+      "side_variants": [
+        "left",
+        "right"
+      ],
+      "validation_status": "research",
+      "automatic_coaching_enabled": false,
+      "thresholds": null,
+      "gate_profile": "form_evaluation",
+      "observation_contract": {
+        "evidence_sources": [
+          "rgb_foot_roi",
+          "visible_support_surface",
+          "pose_landmarks_auxiliary"
+        ],
+        "allowed_views": [
+          "validated_contact_visible_view"
+        ],
+        "allowed_phases_for_existing_message": [
+          "descent",
+          "bottom",
+          "ascent",
+          "active_between_reps"
+        ],
+        "required_observability_rule": "all_event_specific_features_visible_or_supported_by_validated_diagnostic",
+        "minimum_roi_resolution": null,
+        "minimum_detectable_change": null,
+        "persistence_ms": null,
+        "enter_threshold": null,
+        "exit_threshold": null,
+        "phase_or_side_not_supported": "abstain_from_that_specific_message",
+        "camera_rgb_pose_timestamp_alignment_required": true,
+        "medical_cause_inferred": false
+      },
+      "excludes": [
+        "setup",
+        "rack_exit",
+        "rack_return",
+        "declared_reset",
+        "allowed_registered_variant",
+        "below_validated_resolution",
+        "invalid_view_or_tracking"
+      ],
+      "exclusion_detail": "신발이나 고정 웨지의 원래 높이와 실제 지지면을 고려. 관절점 상승만으로 확정 금지. 준비·랙에서 걸어나오기·랙 복귀·사용자가 선언한 재설정에는 적용하지 않음. 카메라 이동·가림 제외.",
+      "suppresses": [
+        {
+          "event_ids": [
+            "SF02",
+            "SF03",
+            "SF04",
+            "SF05"
+          ],
+          "scope": "same_foot_same_contact_loss_episode",
+          "mode": "speech_only_keep_atomic_evidence"
+        }
+      ],
+      "invalidates": [
+        {
+          "event_ids": [
+            "SK01",
+            "SK02",
+            "SP01"
+          ],
+          "scope": "dependent_on_changed_foot_or_support_baseline",
+          "until": "reviewed_stance_reset_and_new_stable_support_epoch",
+          "effect": "not_evaluable_no_form_pass"
+        }
+      ],
+      "reference_contract": {
+        "required_references": [
+          "support_geometry",
+          "foot_appearance"
+        ],
+        "required_binding_fields": [
+          "profile_id",
+          "profile_version",
+          "reference_source",
+          "reference_review_status",
+          "view_id",
+          "camera_epoch",
+          "support_baseline_epoch"
+        ],
+        "phase_and_depth_matched_comparison": false,
+        "user_average_is_normative_reference": false,
+        "reference_update": "explicit_reviewed_reset_or_profile_change_never_automatic_absorption_of_deviation",
+        "missing_required_reference": "observation_only_or_not_evaluable_no_corrective_speech",
+        "reference_values": null
+      },
+      "delivery_contract": {
+        "status": "research_disabled",
+        "existing_message_is_candidate_only": true,
+        "safe_delivery": "validated_support_response_when_evidence_current",
+        "max_once_per_episode": true,
+        "cooldown_ms": null,
+        "valid_for_ms": null,
+        "revalidate_before_speech": [
+          "evidence_status",
+          "phase_and_tense",
+          "side_identity_if_used",
+          "reference_epoch",
+          "selected_profile",
+          "not_superseded"
+        ],
+        "cancel_on": [
+          "event_resolved_before_delivery",
+          "evidence_invalidated",
+          "reference_epoch_changed",
+          "profile_changed",
+          "expired",
+          "higher_priority_action_selected"
+        ],
+        "past_event": "reviewed_past_tense_summary_or_cancel_never_stale_present_tense",
+        "in_motion_foot_reposition_instruction_allowed": false,
+        "loaded_unloaded_action_templates_interchangeable": false
+      },
+      "recheck_contract": {
+        "result_states": [
+          "improved_same_conditions",
+          "unchanged",
+          "worse_or_compensated",
+          "not_evaluable",
+          "new_conditions_result",
+          "not_applicable"
+        ],
+        "requires_observed_comparable_followup": true,
+        "compare_keys": [
+          "profile_version",
+          "view_id",
+          "camera_epoch",
+          "reviewed_support_epoch",
+          "target_range",
+          "phase",
+          "load_condition",
+          "tempo_condition"
+        ],
+        "changed_conditions": "new_conditions_result_not_original_condition_success",
+        "missing_observation": "not_evaluable",
+        "absence_of_event_means_success": false,
+        "compensation_events": [],
+        "detail": "재설정한 동일 조건의 유효 반복에서 지지면과 발의 관계 유지. 압력·하중 분배가 정상이라고 확정하지 않음."
+      }
+    },
+    {
+      "id": "SF02",
+      "part": "발",
+      "event": "뒤꿈치 이격",
+      "observable_trigger_candidate": "낮은 측면의 신발 뒤꿈치–지지면 간격이 증가하고 앞쪽 접촉은 보임.",
+      "exclusions": "신발이나 고정 웨지의 원래 높이와 실제 지지면을 고려. 관절점 상승만으로 확정 금지. 준비·랙에서 걸어나오기·랙 복귀·사용자가 선언한 재설정에는 적용하지 않음. 카메라 이동·가림 제외.",
+      "observation_template": "{side} 발 뒤꿈치가 지지면에서 들렸어요.",
+      "action_template": "다음 반복은 발 전체의 지지를 유지할 수 있는 범위로 조정해 보세요.",
+      "recheck": "재설정한 동일 조건의 유효 반복에서 지지면과 발의 관계 유지. 압력·하중 분배가 정상이라고 확정하지 않음. 깊이를 바꾸면 낮춘 범위의 성공으로 기록.",
+      "feedback_class": "form",
+      "side_variants": [
+        "left",
+        "right"
+      ],
+      "validation_status": "research",
+      "automatic_coaching_enabled": false,
+      "thresholds": null,
+      "gate_profile": "form_evaluation",
+      "observation_contract": {
+        "evidence_sources": [
+          "rgb_foot_roi",
+          "visible_support_surface",
+          "pose_landmarks_auxiliary"
+        ],
+        "allowed_views": [
+          "low_side_heel_visible"
+        ],
+        "allowed_phases_for_existing_message": [
+          "descent",
+          "bottom",
+          "ascent"
+        ],
+        "required_observability_rule": "all_event_specific_features_visible_or_supported_by_validated_diagnostic",
+        "minimum_roi_resolution": null,
+        "minimum_detectable_change": null,
+        "persistence_ms": null,
+        "enter_threshold": null,
+        "exit_threshold": null,
+        "phase_or_side_not_supported": "abstain_from_that_specific_message",
+        "camera_rgb_pose_timestamp_alignment_required": true,
+        "medical_cause_inferred": false
+      },
+      "excludes": [
+        "setup",
+        "rack_exit",
+        "rack_return",
+        "declared_reset",
+        "allowed_registered_variant",
+        "below_validated_resolution",
+        "invalid_view_or_tracking"
+      ],
+      "exclusion_detail": "신발이나 고정 웨지의 원래 높이와 실제 지지면을 고려. 관절점 상승만으로 확정 금지. 준비·랙에서 걸어나오기·랙 복귀·사용자가 선언한 재설정에는 적용하지 않음. 카메라 이동·가림 제외.",
+      "suppresses": [],
+      "invalidates": [],
+      "reference_contract": {
+        "required_references": [
+          "support_geometry",
+          "foot_appearance"
+        ],
+        "required_binding_fields": [
+          "profile_id",
+          "profile_version",
+          "reference_source",
+          "reference_review_status",
+          "view_id",
+          "camera_epoch",
+          "support_baseline_epoch"
+        ],
+        "phase_and_depth_matched_comparison": false,
+        "user_average_is_normative_reference": false,
+        "reference_update": "explicit_reviewed_reset_or_profile_change_never_automatic_absorption_of_deviation",
+        "missing_required_reference": "observation_only_or_not_evaluable_no_corrective_speech",
+        "reference_values": null
+      },
+      "delivery_contract": {
+        "status": "research_disabled",
+        "existing_message_is_candidate_only": true,
+        "safe_delivery": "stable_top_or_between_reps_or_rest_after_context_recheck",
+        "max_once_per_episode": true,
+        "cooldown_ms": null,
+        "valid_for_ms": null,
+        "revalidate_before_speech": [
+          "evidence_status",
+          "phase_and_tense",
+          "side_identity_if_used",
+          "reference_epoch",
+          "selected_profile",
+          "not_superseded"
+        ],
+        "cancel_on": [
+          "event_resolved_before_delivery",
+          "evidence_invalidated",
+          "reference_epoch_changed",
+          "profile_changed",
+          "expired",
+          "higher_priority_action_selected"
+        ],
+        "past_event": "reviewed_past_tense_summary_or_cancel_never_stale_present_tense",
+        "in_motion_foot_reposition_instruction_allowed": false,
+        "loaded_unloaded_action_templates_interchangeable": false
+      },
+      "recheck_contract": {
+        "result_states": [
+          "improved_same_conditions",
+          "unchanged",
+          "worse_or_compensated",
+          "not_evaluable",
+          "new_conditions_result",
+          "not_applicable"
+        ],
+        "requires_observed_comparable_followup": true,
+        "compare_keys": [
+          "profile_version",
+          "view_id",
+          "camera_epoch",
+          "reviewed_support_epoch",
+          "target_range",
+          "phase",
+          "load_condition",
+          "tempo_condition"
+        ],
+        "changed_conditions": "new_conditions_result_not_original_condition_success",
+        "missing_observation": "not_evaluable",
+        "absence_of_event_means_success": false,
+        "compensation_events": [],
+        "detail": "재설정한 동일 조건의 유효 반복에서 지지면과 발의 관계 유지. 압력·하중 분배가 정상이라고 확정하지 않음. 깊이를 바꾸면 낮춘 범위의 성공으로 기록."
+      }
+    },
+    {
+      "id": "SF03",
+      "part": "발",
+      "event": "앞꿈치 이격",
+      "observable_trigger_candidate": "낮은 측면의 앞꿈치–지지면 간격. 발목 굽힘만으로 접촉 추정 금지.",
+      "exclusions": "신발이나 고정 웨지의 원래 높이와 실제 지지면을 고려. 관절점 상승만으로 확정 금지. 준비·랙에서 걸어나오기·랙 복귀·사용자가 선언한 재설정에는 적용하지 않음. 카메라 이동·가림 제외.",
+      "observation_template": "{side} 발 앞부분이 지지면에서 들렸어요.",
+      "action_template": "안전하게 중량을 거치한 뒤 양발 지지와 위치를 다시 준비하세요.",
+      "recheck": "재설정한 동일 조건의 유효 반복에서 지지면과 발의 관계 유지. 압력·하중 분배가 정상이라고 확정하지 않음.",
+      "feedback_class": "setup",
+      "side_variants": [
+        "left",
+        "right"
+      ],
+      "validation_status": "research",
+      "automatic_coaching_enabled": false,
+      "thresholds": null,
+      "gate_profile": "form_evaluation",
+      "observation_contract": {
+        "evidence_sources": [
+          "rgb_foot_roi",
+          "visible_support_surface",
+          "pose_landmarks_auxiliary"
+        ],
+        "allowed_views": [
+          "low_side_forefoot_visible"
+        ],
+        "allowed_phases_for_existing_message": [
+          "descent",
+          "bottom",
+          "ascent"
+        ],
+        "required_observability_rule": "all_event_specific_features_visible_or_supported_by_validated_diagnostic",
+        "minimum_roi_resolution": null,
+        "minimum_detectable_change": null,
+        "persistence_ms": null,
+        "enter_threshold": null,
+        "exit_threshold": null,
+        "phase_or_side_not_supported": "abstain_from_that_specific_message",
+        "camera_rgb_pose_timestamp_alignment_required": true,
+        "medical_cause_inferred": false
+      },
+      "excludes": [
+        "setup",
+        "rack_exit",
+        "rack_return",
+        "declared_reset",
+        "allowed_registered_variant",
+        "below_validated_resolution",
+        "invalid_view_or_tracking"
+      ],
+      "exclusion_detail": "신발이나 고정 웨지의 원래 높이와 실제 지지면을 고려. 관절점 상승만으로 확정 금지. 준비·랙에서 걸어나오기·랙 복귀·사용자가 선언한 재설정에는 적용하지 않음. 카메라 이동·가림 제외.",
+      "suppresses": [],
+      "invalidates": [],
+      "reference_contract": {
+        "required_references": [
+          "support_geometry",
+          "foot_appearance"
+        ],
+        "required_binding_fields": [
+          "profile_id",
+          "profile_version",
+          "reference_source",
+          "reference_review_status",
+          "view_id",
+          "camera_epoch",
+          "support_baseline_epoch"
+        ],
+        "phase_and_depth_matched_comparison": false,
+        "user_average_is_normative_reference": false,
+        "reference_update": "explicit_reviewed_reset_or_profile_change_never_automatic_absorption_of_deviation",
+        "missing_required_reference": "observation_only_or_not_evaluable_no_corrective_speech",
+        "reference_values": null
+      },
+      "delivery_contract": {
+        "status": "research_disabled",
+        "existing_message_is_candidate_only": true,
+        "safe_delivery": "stable_top_or_between_reps_or_rest_after_context_recheck",
+        "max_once_per_episode": true,
+        "cooldown_ms": null,
+        "valid_for_ms": null,
+        "revalidate_before_speech": [
+          "evidence_status",
+          "phase_and_tense",
+          "side_identity_if_used",
+          "reference_epoch",
+          "selected_profile",
+          "not_superseded"
+        ],
+        "cancel_on": [
+          "event_resolved_before_delivery",
+          "evidence_invalidated",
+          "reference_epoch_changed",
+          "profile_changed",
+          "expired",
+          "higher_priority_action_selected"
+        ],
+        "past_event": "reviewed_past_tense_summary_or_cancel_never_stale_present_tense",
+        "in_motion_foot_reposition_instruction_allowed": false,
+        "loaded_unloaded_action_templates_interchangeable": false
+      },
+      "recheck_contract": {
+        "result_states": [
+          "improved_same_conditions",
+          "unchanged",
+          "worse_or_compensated",
+          "not_evaluable",
+          "new_conditions_result",
+          "not_applicable"
+        ],
+        "requires_observed_comparable_followup": true,
+        "compare_keys": [
+          "profile_version",
+          "view_id",
+          "camera_epoch",
+          "reviewed_support_epoch",
+          "target_range",
+          "phase",
+          "load_condition",
+          "tempo_condition"
+        ],
+        "changed_conditions": "new_conditions_result_not_original_condition_success",
+        "missing_observation": "not_evaluable",
+        "absence_of_event_means_success": false,
+        "compensation_events": [],
+        "detail": "재설정한 동일 조건의 유효 반복에서 지지면과 발의 관계 유지. 압력·하중 분배가 정상이라고 확정하지 않음."
+      }
+    },
+    {
+      "id": "SF04",
+      "part": "발",
+      "event": "발 안쪽 가장자리 이격",
+      "observable_trigger_candidate": "발 안쪽 윤곽·바닥 접촉을 충분한 영상 해상도로 확인. Pose만으로 불가.",
+      "exclusions": "신발이나 고정 웨지의 원래 높이와 실제 지지면을 고려. 관절점 상승만으로 확정 금지. 정상 신발 굴곡·윤곽 변화 제외. 준비·랙에서 걸어나오기·랙 복귀·사용자가 선언한 재설정에는 적용하지 않음. 카메라 이동·가림 제외.",
+      "observation_template": "{side} 발 안쪽 가장자리가 지지면에서 들렸어요.",
+      "action_template": "안전하게 중량을 거치한 뒤 양발 지지와 위치를 다시 준비하세요.",
+      "recheck": "재설정한 동일 조건의 유효 반복에서 지지면과 발의 관계 유지. 압력·하중 분배가 정상이라고 확정하지 않음.",
+      "feedback_class": "setup",
+      "side_variants": [
+        "left",
+        "right"
+      ],
+      "validation_status": "research",
+      "automatic_coaching_enabled": false,
+      "thresholds": null,
+      "gate_profile": "form_evaluation",
+      "observation_contract": {
+        "evidence_sources": [
+          "rgb_foot_roi",
+          "visible_support_surface",
+          "pose_landmarks_auxiliary"
+        ],
+        "allowed_views": [
+          "medial_shoe_edge_visible"
+        ],
+        "allowed_phases_for_existing_message": [
+          "descent",
+          "bottom",
+          "ascent"
+        ],
+        "required_observability_rule": "all_event_specific_features_visible_or_supported_by_validated_diagnostic",
+        "minimum_roi_resolution": null,
+        "minimum_detectable_change": null,
+        "persistence_ms": null,
+        "enter_threshold": null,
+        "exit_threshold": null,
+        "phase_or_side_not_supported": "abstain_from_that_specific_message",
+        "camera_rgb_pose_timestamp_alignment_required": true,
+        "medical_cause_inferred": false
+      },
+      "excludes": [
+        "setup",
+        "rack_exit",
+        "rack_return",
+        "declared_reset",
+        "allowed_registered_variant",
+        "below_validated_resolution",
+        "invalid_view_or_tracking"
+      ],
+      "exclusion_detail": "신발이나 고정 웨지의 원래 높이와 실제 지지면을 고려. 관절점 상승만으로 확정 금지. 정상 신발 굴곡·윤곽 변화 제외. 준비·랙에서 걸어나오기·랙 복귀·사용자가 선언한 재설정에는 적용하지 않음. 카메라 이동·가림 제외.",
+      "suppresses": [],
+      "invalidates": [],
+      "reference_contract": {
+        "required_references": [
+          "support_geometry",
+          "foot_appearance"
+        ],
+        "required_binding_fields": [
+          "profile_id",
+          "profile_version",
+          "reference_source",
+          "reference_review_status",
+          "view_id",
+          "camera_epoch",
+          "support_baseline_epoch"
+        ],
+        "phase_and_depth_matched_comparison": false,
+        "user_average_is_normative_reference": false,
+        "reference_update": "explicit_reviewed_reset_or_profile_change_never_automatic_absorption_of_deviation",
+        "missing_required_reference": "observation_only_or_not_evaluable_no_corrective_speech",
+        "reference_values": null
+      },
+      "delivery_contract": {
+        "status": "research_disabled",
+        "existing_message_is_candidate_only": true,
+        "safe_delivery": "stable_top_or_between_reps_or_rest_after_context_recheck",
+        "max_once_per_episode": true,
+        "cooldown_ms": null,
+        "valid_for_ms": null,
+        "revalidate_before_speech": [
+          "evidence_status",
+          "phase_and_tense",
+          "side_identity_if_used",
+          "reference_epoch",
+          "selected_profile",
+          "not_superseded"
+        ],
+        "cancel_on": [
+          "event_resolved_before_delivery",
+          "evidence_invalidated",
+          "reference_epoch_changed",
+          "profile_changed",
+          "expired",
+          "higher_priority_action_selected"
+        ],
+        "past_event": "reviewed_past_tense_summary_or_cancel_never_stale_present_tense",
+        "in_motion_foot_reposition_instruction_allowed": false,
+        "loaded_unloaded_action_templates_interchangeable": false
+      },
+      "recheck_contract": {
+        "result_states": [
+          "improved_same_conditions",
+          "unchanged",
+          "worse_or_compensated",
+          "not_evaluable",
+          "new_conditions_result",
+          "not_applicable"
+        ],
+        "requires_observed_comparable_followup": true,
+        "compare_keys": [
+          "profile_version",
+          "view_id",
+          "camera_epoch",
+          "reviewed_support_epoch",
+          "target_range",
+          "phase",
+          "load_condition",
+          "tempo_condition"
+        ],
+        "changed_conditions": "new_conditions_result_not_original_condition_success",
+        "missing_observation": "not_evaluable",
+        "absence_of_event_means_success": false,
+        "compensation_events": [],
+        "detail": "재설정한 동일 조건의 유효 반복에서 지지면과 발의 관계 유지. 압력·하중 분배가 정상이라고 확정하지 않음."
+      }
+    },
+    {
+      "id": "SF05",
+      "part": "발",
+      "event": "발 바깥쪽 가장자리 이격",
+      "observable_trigger_candidate": "발 바깥쪽 윤곽·바닥 접촉을 충분한 영상 해상도로 확인. Pose만으로 불가.",
+      "exclusions": "신발이나 고정 웨지의 원래 높이와 실제 지지면을 고려. 관절점 상승만으로 확정 금지. 정상 신발 굴곡·윤곽 변화 제외. 준비·랙에서 걸어나오기·랙 복귀·사용자가 선언한 재설정에는 적용하지 않음. 카메라 이동·가림 제외.",
+      "observation_template": "{side} 발 바깥쪽 가장자리가 지지면에서 들렸어요.",
+      "action_template": "안전하게 중량을 거치한 뒤 양발 지지와 위치를 다시 준비하세요.",
+      "recheck": "재설정한 동일 조건의 유효 반복에서 지지면과 발의 관계 유지. 압력·하중 분배가 정상이라고 확정하지 않음.",
+      "feedback_class": "setup",
+      "side_variants": [
+        "left",
+        "right"
+      ],
+      "validation_status": "research",
+      "automatic_coaching_enabled": false,
+      "thresholds": null,
+      "gate_profile": "form_evaluation",
+      "observation_contract": {
+        "evidence_sources": [
+          "rgb_foot_roi",
+          "visible_support_surface",
+          "pose_landmarks_auxiliary"
+        ],
+        "allowed_views": [
+          "lateral_shoe_edge_visible"
+        ],
+        "allowed_phases_for_existing_message": [
+          "descent",
+          "bottom",
+          "ascent"
+        ],
+        "required_observability_rule": "all_event_specific_features_visible_or_supported_by_validated_diagnostic",
+        "minimum_roi_resolution": null,
+        "minimum_detectable_change": null,
+        "persistence_ms": null,
+        "enter_threshold": null,
+        "exit_threshold": null,
+        "phase_or_side_not_supported": "abstain_from_that_specific_message",
+        "camera_rgb_pose_timestamp_alignment_required": true,
+        "medical_cause_inferred": false
+      },
+      "excludes": [
+        "setup",
+        "rack_exit",
+        "rack_return",
+        "declared_reset",
+        "allowed_registered_variant",
+        "below_validated_resolution",
+        "invalid_view_or_tracking"
+      ],
+      "exclusion_detail": "신발이나 고정 웨지의 원래 높이와 실제 지지면을 고려. 관절점 상승만으로 확정 금지. 정상 신발 굴곡·윤곽 변화 제외. 준비·랙에서 걸어나오기·랙 복귀·사용자가 선언한 재설정에는 적용하지 않음. 카메라 이동·가림 제외.",
+      "suppresses": [],
+      "invalidates": [],
+      "reference_contract": {
+        "required_references": [
+          "support_geometry",
+          "foot_appearance"
+        ],
+        "required_binding_fields": [
+          "profile_id",
+          "profile_version",
+          "reference_source",
+          "reference_review_status",
+          "view_id",
+          "camera_epoch",
+          "support_baseline_epoch"
+        ],
+        "phase_and_depth_matched_comparison": false,
+        "user_average_is_normative_reference": false,
+        "reference_update": "explicit_reviewed_reset_or_profile_change_never_automatic_absorption_of_deviation",
+        "missing_required_reference": "observation_only_or_not_evaluable_no_corrective_speech",
+        "reference_values": null
+      },
+      "delivery_contract": {
+        "status": "research_disabled",
+        "existing_message_is_candidate_only": true,
+        "safe_delivery": "stable_top_or_between_reps_or_rest_after_context_recheck",
+        "max_once_per_episode": true,
+        "cooldown_ms": null,
+        "valid_for_ms": null,
+        "revalidate_before_speech": [
+          "evidence_status",
+          "phase_and_tense",
+          "side_identity_if_used",
+          "reference_epoch",
+          "selected_profile",
+          "not_superseded"
+        ],
+        "cancel_on": [
+          "event_resolved_before_delivery",
+          "evidence_invalidated",
+          "reference_epoch_changed",
+          "profile_changed",
+          "expired",
+          "higher_priority_action_selected"
+        ],
+        "past_event": "reviewed_past_tense_summary_or_cancel_never_stale_present_tense",
+        "in_motion_foot_reposition_instruction_allowed": false,
+        "loaded_unloaded_action_templates_interchangeable": false
+      },
+      "recheck_contract": {
+        "result_states": [
+          "improved_same_conditions",
+          "unchanged",
+          "worse_or_compensated",
+          "not_evaluable",
+          "new_conditions_result",
+          "not_applicable"
+        ],
+        "requires_observed_comparable_followup": true,
+        "compare_keys": [
+          "profile_version",
+          "view_id",
+          "camera_epoch",
+          "reviewed_support_epoch",
+          "target_range",
+          "phase",
+          "load_condition",
+          "tempo_condition"
+        ],
+        "changed_conditions": "new_conditions_result_not_original_condition_success",
+        "missing_observation": "not_evaluable",
+        "absence_of_event_means_success": false,
+        "compensation_events": [],
+        "detail": "재설정한 동일 조건의 유효 반복에서 지지면과 발의 관계 유지. 압력·하중 분배가 정상이라고 확정하지 않음."
+      }
+    },
+    {
+      "id": "SF06",
+      "part": "발",
+      "event": "반복 중 발의 바깥쪽 위치 이동",
+      "observable_trigger_candidate": "고정된 지지면 기준에서 발 자체 이동을 먼저 확인하고, 준비 때 고정한 몸 기준축으로 방향 분류. 몸 중심만 움직인 경우 제외. 몸 중심에서 멀어짐. 앞뒤 방향은 측면/검증한 지지면 투영이 필요.",
+      "exclusions": "준비·랙에서 걸어나오기·랙 복귀·사용자가 선언한 재설정에는 적용하지 않음. 카메라 이동·가림 제외. 미끄러짐과 들어서 디딤의 과정이 안 보이면 원인을 말하지 않음.",
+      "observation_template": "{side} 발 위치가 반복 중 바깥쪽으로 바뀌었어요.",
+      "action_template": "안전하게 중량을 거치한 뒤 양발 지지와 위치를 다시 준비하세요.",
+      "recheck": "발 기준을 새로 확인한 뒤 반복 중 위치가 유지되는지 측정. 바뀐 위치를 자동 정답으로 수용하지 않음.",
+      "feedback_class": "setup",
+      "side_variants": [
+        "left",
+        "right"
+      ],
+      "validation_status": "research",
+      "automatic_coaching_enabled": false,
+      "thresholds": null,
+      "gate_profile": "form_evaluation",
+      "observation_contract": {
+        "evidence_sources": [
+          "validated_rgb_foot_tracking",
+          "static_background_or_calibrated_support_plane",
+          "pose_landmarks_auxiliary"
+        ],
+        "allowed_views": [
+          "validated_frontal_or_floor_projection"
+        ],
+        "allowed_phases_for_existing_message": [
+          "descent",
+          "bottom",
+          "ascent",
+          "active_between_reps"
+        ],
+        "required_observability_rule": "all_event_specific_features_visible_or_supported_by_validated_diagnostic",
+        "minimum_roi_resolution": null,
+        "minimum_detectable_change": null,
+        "persistence_ms": null,
+        "enter_threshold": null,
+        "exit_threshold": null,
+        "phase_or_side_not_supported": "abstain_from_that_specific_message",
+        "camera_rgb_pose_timestamp_alignment_required": true,
+        "medical_cause_inferred": false
+      },
+      "excludes": [
+        "setup",
+        "rack_exit",
+        "rack_return",
+        "declared_reset",
+        "allowed_registered_variant",
+        "below_validated_resolution",
+        "invalid_view_or_tracking"
+      ],
+      "exclusion_detail": "준비·랙에서 걸어나오기·랙 복귀·사용자가 선언한 재설정에는 적용하지 않음. 카메라 이동·가림 제외. 미끄러짐과 들어서 디딤의 과정이 안 보이면 원인을 말하지 않음.",
+      "suppresses": [],
+      "invalidates": [
+        {
+          "event_ids": [
+            "SK01",
+            "SK02",
+            "SP01"
+          ],
+          "scope": "dependent_on_changed_foot_or_support_baseline",
+          "until": "reviewed_stance_reset_and_new_stable_support_epoch",
+          "effect": "not_evaluable_no_form_pass"
+        }
+      ],
+      "reference_contract": {
+        "required_references": [
+          "support_geometry",
+          "reviewed_stance",
+          "body_axes"
+        ],
+        "required_binding_fields": [
+          "profile_id",
+          "profile_version",
+          "reference_source",
+          "reference_review_status",
+          "view_id",
+          "camera_epoch",
+          "support_baseline_epoch"
+        ],
+        "phase_and_depth_matched_comparison": false,
+        "user_average_is_normative_reference": false,
+        "reference_update": "explicit_reviewed_reset_or_profile_change_never_automatic_absorption_of_deviation",
+        "missing_required_reference": "observation_only_or_not_evaluable_no_corrective_speech",
+        "reference_values": null
+      },
+      "delivery_contract": {
+        "status": "research_disabled",
+        "existing_message_is_candidate_only": true,
+        "safe_delivery": "stable_top_or_between_reps_or_rest_after_context_recheck",
+        "max_once_per_episode": true,
+        "cooldown_ms": null,
+        "valid_for_ms": null,
+        "revalidate_before_speech": [
+          "evidence_status",
+          "phase_and_tense",
+          "side_identity_if_used",
+          "reference_epoch",
+          "selected_profile",
+          "not_superseded"
+        ],
+        "cancel_on": [
+          "event_resolved_before_delivery",
+          "evidence_invalidated",
+          "reference_epoch_changed",
+          "profile_changed",
+          "expired",
+          "higher_priority_action_selected"
+        ],
+        "past_event": "reviewed_past_tense_summary_or_cancel_never_stale_present_tense",
+        "in_motion_foot_reposition_instruction_allowed": false,
+        "loaded_unloaded_action_templates_interchangeable": false
+      },
+      "recheck_contract": {
+        "result_states": [
+          "improved_same_conditions",
+          "unchanged",
+          "worse_or_compensated",
+          "not_evaluable",
+          "new_conditions_result",
+          "not_applicable"
+        ],
+        "requires_observed_comparable_followup": true,
+        "compare_keys": [
+          "profile_version",
+          "view_id",
+          "camera_epoch",
+          "reviewed_support_epoch",
+          "target_range",
+          "phase",
+          "load_condition",
+          "tempo_condition"
+        ],
+        "changed_conditions": "new_conditions_result_not_original_condition_success",
+        "missing_observation": "not_evaluable",
+        "absence_of_event_means_success": false,
+        "compensation_events": [],
+        "detail": "발 기준을 새로 확인한 뒤 반복 중 위치가 유지되는지 측정. 바뀐 위치를 자동 정답으로 수용하지 않음."
+      }
+    },
+    {
+      "id": "SF07",
+      "part": "발",
+      "event": "반복 중 발의 안쪽 위치 이동",
+      "observable_trigger_candidate": "고정된 지지면 기준에서 발 자체 이동을 먼저 확인하고, 준비 때 고정한 몸 기준축으로 방향 분류. 몸 중심만 움직인 경우 제외. 몸 중심에 가까워짐. 앞뒤 방향은 측면/검증한 지지면 투영이 필요.",
+      "exclusions": "준비·랙에서 걸어나오기·랙 복귀·사용자가 선언한 재설정에는 적용하지 않음. 카메라 이동·가림 제외. 미끄러짐과 들어서 디딤의 과정이 안 보이면 원인을 말하지 않음.",
+      "observation_template": "{side} 발 위치가 반복 중 안쪽으로 바뀌었어요.",
+      "action_template": "안전하게 중량을 거치한 뒤 양발 지지와 위치를 다시 준비하세요.",
+      "recheck": "발 기준을 새로 확인한 뒤 반복 중 위치가 유지되는지 측정. 바뀐 위치를 자동 정답으로 수용하지 않음.",
+      "feedback_class": "setup",
+      "side_variants": [
+        "left",
+        "right"
+      ],
+      "validation_status": "research",
+      "automatic_coaching_enabled": false,
+      "thresholds": null,
+      "gate_profile": "form_evaluation",
+      "observation_contract": {
+        "evidence_sources": [
+          "validated_rgb_foot_tracking",
+          "static_background_or_calibrated_support_plane",
+          "pose_landmarks_auxiliary"
+        ],
+        "allowed_views": [
+          "validated_frontal_or_floor_projection"
+        ],
+        "allowed_phases_for_existing_message": [
+          "descent",
+          "bottom",
+          "ascent",
+          "active_between_reps"
+        ],
+        "required_observability_rule": "all_event_specific_features_visible_or_supported_by_validated_diagnostic",
+        "minimum_roi_resolution": null,
+        "minimum_detectable_change": null,
+        "persistence_ms": null,
+        "enter_threshold": null,
+        "exit_threshold": null,
+        "phase_or_side_not_supported": "abstain_from_that_specific_message",
+        "camera_rgb_pose_timestamp_alignment_required": true,
+        "medical_cause_inferred": false
+      },
+      "excludes": [
+        "setup",
+        "rack_exit",
+        "rack_return",
+        "declared_reset",
+        "allowed_registered_variant",
+        "below_validated_resolution",
+        "invalid_view_or_tracking"
+      ],
+      "exclusion_detail": "준비·랙에서 걸어나오기·랙 복귀·사용자가 선언한 재설정에는 적용하지 않음. 카메라 이동·가림 제외. 미끄러짐과 들어서 디딤의 과정이 안 보이면 원인을 말하지 않음.",
+      "suppresses": [],
+      "invalidates": [
+        {
+          "event_ids": [
+            "SK01",
+            "SK02",
+            "SP01"
+          ],
+          "scope": "dependent_on_changed_foot_or_support_baseline",
+          "until": "reviewed_stance_reset_and_new_stable_support_epoch",
+          "effect": "not_evaluable_no_form_pass"
+        }
+      ],
+      "reference_contract": {
+        "required_references": [
+          "support_geometry",
+          "reviewed_stance",
+          "body_axes"
+        ],
+        "required_binding_fields": [
+          "profile_id",
+          "profile_version",
+          "reference_source",
+          "reference_review_status",
+          "view_id",
+          "camera_epoch",
+          "support_baseline_epoch"
+        ],
+        "phase_and_depth_matched_comparison": false,
+        "user_average_is_normative_reference": false,
+        "reference_update": "explicit_reviewed_reset_or_profile_change_never_automatic_absorption_of_deviation",
+        "missing_required_reference": "observation_only_or_not_evaluable_no_corrective_speech",
+        "reference_values": null
+      },
+      "delivery_contract": {
+        "status": "research_disabled",
+        "existing_message_is_candidate_only": true,
+        "safe_delivery": "stable_top_or_between_reps_or_rest_after_context_recheck",
+        "max_once_per_episode": true,
+        "cooldown_ms": null,
+        "valid_for_ms": null,
+        "revalidate_before_speech": [
+          "evidence_status",
+          "phase_and_tense",
+          "side_identity_if_used",
+          "reference_epoch",
+          "selected_profile",
+          "not_superseded"
+        ],
+        "cancel_on": [
+          "event_resolved_before_delivery",
+          "evidence_invalidated",
+          "reference_epoch_changed",
+          "profile_changed",
+          "expired",
+          "higher_priority_action_selected"
+        ],
+        "past_event": "reviewed_past_tense_summary_or_cancel_never_stale_present_tense",
+        "in_motion_foot_reposition_instruction_allowed": false,
+        "loaded_unloaded_action_templates_interchangeable": false
+      },
+      "recheck_contract": {
+        "result_states": [
+          "improved_same_conditions",
+          "unchanged",
+          "worse_or_compensated",
+          "not_evaluable",
+          "new_conditions_result",
+          "not_applicable"
+        ],
+        "requires_observed_comparable_followup": true,
+        "compare_keys": [
+          "profile_version",
+          "view_id",
+          "camera_epoch",
+          "reviewed_support_epoch",
+          "target_range",
+          "phase",
+          "load_condition",
+          "tempo_condition"
+        ],
+        "changed_conditions": "new_conditions_result_not_original_condition_success",
+        "missing_observation": "not_evaluable",
+        "absence_of_event_means_success": false,
+        "compensation_events": [],
+        "detail": "발 기준을 새로 확인한 뒤 반복 중 위치가 유지되는지 측정. 바뀐 위치를 자동 정답으로 수용하지 않음."
+      }
+    },
+    {
+      "id": "SF08",
+      "part": "발",
+      "event": "반복 중 발의 앞쪽 위치 이동",
+      "observable_trigger_candidate": "고정된 지지면 기준에서 발 자체 이동을 먼저 확인하고, 준비 때 고정한 몸 기준축으로 방향 분류. 몸 중심만 움직인 경우 제외. 발 방향 기준 앞쪽으로 이동. 앞뒤 방향은 측면/검증한 지지면 투영이 필요.",
+      "exclusions": "준비·랙에서 걸어나오기·랙 복귀·사용자가 선언한 재설정에는 적용하지 않음. 카메라 이동·가림 제외. 미끄러짐과 들어서 디딤의 과정이 안 보이면 원인을 말하지 않음.",
+      "observation_template": "{side} 발 위치가 반복 중 앞쪽으로 바뀌었어요.",
+      "action_template": "안전하게 중량을 거치한 뒤 양발 지지와 위치를 다시 준비하세요.",
+      "recheck": "발 기준을 새로 확인한 뒤 반복 중 위치가 유지되는지 측정. 바뀐 위치를 자동 정답으로 수용하지 않음.",
+      "feedback_class": "setup",
+      "side_variants": [
+        "left",
+        "right"
+      ],
+      "validation_status": "research",
+      "automatic_coaching_enabled": false,
+      "thresholds": null,
+      "gate_profile": "form_evaluation",
+      "observation_contract": {
+        "evidence_sources": [
+          "validated_rgb_foot_tracking",
+          "static_background_or_calibrated_support_plane",
+          "pose_landmarks_auxiliary"
+        ],
+        "allowed_views": [
+          "validated_side_or_floor_projection"
+        ],
+        "allowed_phases_for_existing_message": [
+          "descent",
+          "bottom",
+          "ascent",
+          "active_between_reps"
+        ],
+        "required_observability_rule": "all_event_specific_features_visible_or_supported_by_validated_diagnostic",
+        "minimum_roi_resolution": null,
+        "minimum_detectable_change": null,
+        "persistence_ms": null,
+        "enter_threshold": null,
+        "exit_threshold": null,
+        "phase_or_side_not_supported": "abstain_from_that_specific_message",
+        "camera_rgb_pose_timestamp_alignment_required": true,
+        "medical_cause_inferred": false
+      },
+      "excludes": [
+        "setup",
+        "rack_exit",
+        "rack_return",
+        "declared_reset",
+        "allowed_registered_variant",
+        "below_validated_resolution",
+        "invalid_view_or_tracking"
+      ],
+      "exclusion_detail": "준비·랙에서 걸어나오기·랙 복귀·사용자가 선언한 재설정에는 적용하지 않음. 카메라 이동·가림 제외. 미끄러짐과 들어서 디딤의 과정이 안 보이면 원인을 말하지 않음.",
+      "suppresses": [],
+      "invalidates": [
+        {
+          "event_ids": [
+            "SK01",
+            "SK02",
+            "SP01"
+          ],
+          "scope": "dependent_on_changed_foot_or_support_baseline",
+          "until": "reviewed_stance_reset_and_new_stable_support_epoch",
+          "effect": "not_evaluable_no_form_pass"
+        }
+      ],
+      "reference_contract": {
+        "required_references": [
+          "support_geometry",
+          "reviewed_stance",
+          "body_axes"
+        ],
+        "required_binding_fields": [
+          "profile_id",
+          "profile_version",
+          "reference_source",
+          "reference_review_status",
+          "view_id",
+          "camera_epoch",
+          "support_baseline_epoch"
+        ],
+        "phase_and_depth_matched_comparison": false,
+        "user_average_is_normative_reference": false,
+        "reference_update": "explicit_reviewed_reset_or_profile_change_never_automatic_absorption_of_deviation",
+        "missing_required_reference": "observation_only_or_not_evaluable_no_corrective_speech",
+        "reference_values": null
+      },
+      "delivery_contract": {
+        "status": "research_disabled",
+        "existing_message_is_candidate_only": true,
+        "safe_delivery": "stable_top_or_between_reps_or_rest_after_context_recheck",
+        "max_once_per_episode": true,
+        "cooldown_ms": null,
+        "valid_for_ms": null,
+        "revalidate_before_speech": [
+          "evidence_status",
+          "phase_and_tense",
+          "side_identity_if_used",
+          "reference_epoch",
+          "selected_profile",
+          "not_superseded"
+        ],
+        "cancel_on": [
+          "event_resolved_before_delivery",
+          "evidence_invalidated",
+          "reference_epoch_changed",
+          "profile_changed",
+          "expired",
+          "higher_priority_action_selected"
+        ],
+        "past_event": "reviewed_past_tense_summary_or_cancel_never_stale_present_tense",
+        "in_motion_foot_reposition_instruction_allowed": false,
+        "loaded_unloaded_action_templates_interchangeable": false
+      },
+      "recheck_contract": {
+        "result_states": [
+          "improved_same_conditions",
+          "unchanged",
+          "worse_or_compensated",
+          "not_evaluable",
+          "new_conditions_result",
+          "not_applicable"
+        ],
+        "requires_observed_comparable_followup": true,
+        "compare_keys": [
+          "profile_version",
+          "view_id",
+          "camera_epoch",
+          "reviewed_support_epoch",
+          "target_range",
+          "phase",
+          "load_condition",
+          "tempo_condition"
+        ],
+        "changed_conditions": "new_conditions_result_not_original_condition_success",
+        "missing_observation": "not_evaluable",
+        "absence_of_event_means_success": false,
+        "compensation_events": [],
+        "detail": "발 기준을 새로 확인한 뒤 반복 중 위치가 유지되는지 측정. 바뀐 위치를 자동 정답으로 수용하지 않음."
+      }
+    },
+    {
+      "id": "SF09",
+      "part": "발",
+      "event": "반복 중 발의 뒤쪽 위치 이동",
+      "observable_trigger_candidate": "고정된 지지면 기준에서 발 자체 이동을 먼저 확인하고, 준비 때 고정한 몸 기준축으로 방향 분류. 몸 중심만 움직인 경우 제외. 발 방향 기준 뒤쪽으로 이동. 앞뒤 방향은 측면/검증한 지지면 투영이 필요.",
+      "exclusions": "준비·랙에서 걸어나오기·랙 복귀·사용자가 선언한 재설정에는 적용하지 않음. 카메라 이동·가림 제외. 미끄러짐과 들어서 디딤의 과정이 안 보이면 원인을 말하지 않음.",
+      "observation_template": "{side} 발 위치가 반복 중 뒤쪽으로 바뀌었어요.",
+      "action_template": "안전하게 중량을 거치한 뒤 양발 지지와 위치를 다시 준비하세요.",
+      "recheck": "발 기준을 새로 확인한 뒤 반복 중 위치가 유지되는지 측정. 바뀐 위치를 자동 정답으로 수용하지 않음.",
+      "feedback_class": "setup",
+      "side_variants": [
+        "left",
+        "right"
+      ],
+      "validation_status": "research",
+      "automatic_coaching_enabled": false,
+      "thresholds": null,
+      "gate_profile": "form_evaluation",
+      "observation_contract": {
+        "evidence_sources": [
+          "validated_rgb_foot_tracking",
+          "static_background_or_calibrated_support_plane",
+          "pose_landmarks_auxiliary"
+        ],
+        "allowed_views": [
+          "validated_side_or_floor_projection"
+        ],
+        "allowed_phases_for_existing_message": [
+          "descent",
+          "bottom",
+          "ascent",
+          "active_between_reps"
+        ],
+        "required_observability_rule": "all_event_specific_features_visible_or_supported_by_validated_diagnostic",
+        "minimum_roi_resolution": null,
+        "minimum_detectable_change": null,
+        "persistence_ms": null,
+        "enter_threshold": null,
+        "exit_threshold": null,
+        "phase_or_side_not_supported": "abstain_from_that_specific_message",
+        "camera_rgb_pose_timestamp_alignment_required": true,
+        "medical_cause_inferred": false
+      },
+      "excludes": [
+        "setup",
+        "rack_exit",
+        "rack_return",
+        "declared_reset",
+        "allowed_registered_variant",
+        "below_validated_resolution",
+        "invalid_view_or_tracking"
+      ],
+      "exclusion_detail": "준비·랙에서 걸어나오기·랙 복귀·사용자가 선언한 재설정에는 적용하지 않음. 카메라 이동·가림 제외. 미끄러짐과 들어서 디딤의 과정이 안 보이면 원인을 말하지 않음.",
+      "suppresses": [],
+      "invalidates": [
+        {
+          "event_ids": [
+            "SK01",
+            "SK02",
+            "SP01"
+          ],
+          "scope": "dependent_on_changed_foot_or_support_baseline",
+          "until": "reviewed_stance_reset_and_new_stable_support_epoch",
+          "effect": "not_evaluable_no_form_pass"
+        }
+      ],
+      "reference_contract": {
+        "required_references": [
+          "support_geometry",
+          "reviewed_stance",
+          "body_axes"
+        ],
+        "required_binding_fields": [
+          "profile_id",
+          "profile_version",
+          "reference_source",
+          "reference_review_status",
+          "view_id",
+          "camera_epoch",
+          "support_baseline_epoch"
+        ],
+        "phase_and_depth_matched_comparison": false,
+        "user_average_is_normative_reference": false,
+        "reference_update": "explicit_reviewed_reset_or_profile_change_never_automatic_absorption_of_deviation",
+        "missing_required_reference": "observation_only_or_not_evaluable_no_corrective_speech",
+        "reference_values": null
+      },
+      "delivery_contract": {
+        "status": "research_disabled",
+        "existing_message_is_candidate_only": true,
+        "safe_delivery": "stable_top_or_between_reps_or_rest_after_context_recheck",
+        "max_once_per_episode": true,
+        "cooldown_ms": null,
+        "valid_for_ms": null,
+        "revalidate_before_speech": [
+          "evidence_status",
+          "phase_and_tense",
+          "side_identity_if_used",
+          "reference_epoch",
+          "selected_profile",
+          "not_superseded"
+        ],
+        "cancel_on": [
+          "event_resolved_before_delivery",
+          "evidence_invalidated",
+          "reference_epoch_changed",
+          "profile_changed",
+          "expired",
+          "higher_priority_action_selected"
+        ],
+        "past_event": "reviewed_past_tense_summary_or_cancel_never_stale_present_tense",
+        "in_motion_foot_reposition_instruction_allowed": false,
+        "loaded_unloaded_action_templates_interchangeable": false
+      },
+      "recheck_contract": {
+        "result_states": [
+          "improved_same_conditions",
+          "unchanged",
+          "worse_or_compensated",
+          "not_evaluable",
+          "new_conditions_result",
+          "not_applicable"
+        ],
+        "requires_observed_comparable_followup": true,
+        "compare_keys": [
+          "profile_version",
+          "view_id",
+          "camera_epoch",
+          "reviewed_support_epoch",
+          "target_range",
+          "phase",
+          "load_condition",
+          "tempo_condition"
+        ],
+        "changed_conditions": "new_conditions_result_not_original_condition_success",
+        "missing_observation": "not_evaluable",
+        "absence_of_event_means_success": false,
+        "compensation_events": [],
+        "detail": "발 기준을 새로 확인한 뒤 반복 중 위치가 유지되는지 측정. 바뀐 위치를 자동 정답으로 수용하지 않음."
+      }
+    },
+    {
+      "id": "SF10",
+      "part": "발",
+      "event": "반복 중 발끝이 바깥쪽으로 회전",
+      "observable_trigger_candidate": "발 중심의 이동과 분리한 heel-toe 방향 및 신발 윤곽 변화.",
+      "exclusions": "준비·랙에서 걸어나오기·랙 복귀·사용자가 선언한 재설정에는 적용하지 않음. 카메라 이동·가림 제외. 원래 발끝이 바깥을 향한 정상 준비 자세 제외.",
+      "observation_template": "{side} 발끝 방향이 반복 중 바깥쪽으로 바뀌었어요.",
+      "action_template": "안전하게 중량을 거치한 뒤 양발 지지와 위치를 다시 준비하세요.",
+      "recheck": "다음 반복에서 설정한 발 방향 유지. 절대 발끝 각도를 보편 정답으로 강제하지 않음.",
+      "feedback_class": "setup",
+      "side_variants": [
+        "left",
+        "right"
+      ],
+      "validation_status": "research",
+      "automatic_coaching_enabled": false,
+      "thresholds": null,
+      "gate_profile": "form_evaluation",
+      "observation_contract": {
+        "evidence_sources": [
+          "validated_rgb_foot_tracking",
+          "static_background_or_calibrated_support_plane",
+          "pose_landmarks_auxiliary"
+        ],
+        "allowed_views": [
+          "shoe_orientation_visible"
+        ],
+        "allowed_phases_for_existing_message": [
+          "descent",
+          "bottom",
+          "ascent",
+          "active_between_reps"
+        ],
+        "required_observability_rule": "all_event_specific_features_visible_or_supported_by_validated_diagnostic",
+        "minimum_roi_resolution": null,
+        "minimum_detectable_change": null,
+        "persistence_ms": null,
+        "enter_threshold": null,
+        "exit_threshold": null,
+        "phase_or_side_not_supported": "abstain_from_that_specific_message",
+        "camera_rgb_pose_timestamp_alignment_required": true,
+        "medical_cause_inferred": false
+      },
+      "excludes": [
+        "setup",
+        "rack_exit",
+        "rack_return",
+        "declared_reset",
+        "allowed_registered_variant",
+        "below_validated_resolution",
+        "invalid_view_or_tracking"
+      ],
+      "exclusion_detail": "준비·랙에서 걸어나오기·랙 복귀·사용자가 선언한 재설정에는 적용하지 않음. 카메라 이동·가림 제외. 원래 발끝이 바깥을 향한 정상 준비 자세 제외.",
+      "suppresses": [],
+      "invalidates": [
+        {
+          "event_ids": [
+            "SK01",
+            "SK02",
+            "SP01"
+          ],
+          "scope": "dependent_on_changed_foot_or_support_baseline",
+          "until": "reviewed_stance_reset_and_new_stable_support_epoch",
+          "effect": "not_evaluable_no_form_pass"
+        }
+      ],
+      "reference_contract": {
+        "required_references": [
+          "reviewed_stance",
+          "body_axes"
+        ],
+        "required_binding_fields": [
+          "profile_id",
+          "profile_version",
+          "reference_source",
+          "reference_review_status",
+          "view_id",
+          "camera_epoch",
+          "support_baseline_epoch"
+        ],
+        "phase_and_depth_matched_comparison": false,
+        "user_average_is_normative_reference": false,
+        "reference_update": "explicit_reviewed_reset_or_profile_change_never_automatic_absorption_of_deviation",
+        "missing_required_reference": "observation_only_or_not_evaluable_no_corrective_speech",
+        "reference_values": null
+      },
+      "delivery_contract": {
+        "status": "research_disabled",
+        "existing_message_is_candidate_only": true,
+        "safe_delivery": "stable_top_or_between_reps_or_rest_after_context_recheck",
+        "max_once_per_episode": true,
+        "cooldown_ms": null,
+        "valid_for_ms": null,
+        "revalidate_before_speech": [
+          "evidence_status",
+          "phase_and_tense",
+          "side_identity_if_used",
+          "reference_epoch",
+          "selected_profile",
+          "not_superseded"
+        ],
+        "cancel_on": [
+          "event_resolved_before_delivery",
+          "evidence_invalidated",
+          "reference_epoch_changed",
+          "profile_changed",
+          "expired",
+          "higher_priority_action_selected"
+        ],
+        "past_event": "reviewed_past_tense_summary_or_cancel_never_stale_present_tense",
+        "in_motion_foot_reposition_instruction_allowed": false,
+        "loaded_unloaded_action_templates_interchangeable": false
+      },
+      "recheck_contract": {
+        "result_states": [
+          "improved_same_conditions",
+          "unchanged",
+          "worse_or_compensated",
+          "not_evaluable",
+          "new_conditions_result",
+          "not_applicable"
+        ],
+        "requires_observed_comparable_followup": true,
+        "compare_keys": [
+          "profile_version",
+          "view_id",
+          "camera_epoch",
+          "reviewed_support_epoch",
+          "target_range",
+          "phase",
+          "load_condition",
+          "tempo_condition"
+        ],
+        "changed_conditions": "new_conditions_result_not_original_condition_success",
+        "missing_observation": "not_evaluable",
+        "absence_of_event_means_success": false,
+        "compensation_events": [],
+        "detail": "다음 반복에서 설정한 발 방향 유지. 절대 발끝 각도를 보편 정답으로 강제하지 않음."
+      }
+    },
+    {
+      "id": "SF11",
+      "part": "발",
+      "event": "반복 중 발끝이 안쪽으로 회전",
+      "observable_trigger_candidate": "발 중심의 이동과 분리한 heel-toe 방향 및 신발 윤곽 변화.",
+      "exclusions": "준비·랙에서 걸어나오기·랙 복귀·사용자가 선언한 재설정에는 적용하지 않음. 카메라 이동·가림 제외.",
+      "observation_template": "{side} 발끝 방향이 반복 중 안쪽으로 바뀌었어요.",
+      "action_template": "안전하게 중량을 거치한 뒤 양발 지지와 위치를 다시 준비하세요.",
+      "recheck": "다음 반복에서 설정한 발 방향 유지. 회전이 가려지면 위치 변화까지만 보고.",
+      "feedback_class": "setup",
+      "side_variants": [
+        "left",
+        "right"
+      ],
+      "validation_status": "research",
+      "automatic_coaching_enabled": false,
+      "thresholds": null,
+      "gate_profile": "form_evaluation",
+      "observation_contract": {
+        "evidence_sources": [
+          "validated_rgb_foot_tracking",
+          "static_background_or_calibrated_support_plane",
+          "pose_landmarks_auxiliary"
+        ],
+        "allowed_views": [
+          "shoe_orientation_visible"
+        ],
+        "allowed_phases_for_existing_message": [
+          "descent",
+          "bottom",
+          "ascent",
+          "active_between_reps"
+        ],
+        "required_observability_rule": "all_event_specific_features_visible_or_supported_by_validated_diagnostic",
+        "minimum_roi_resolution": null,
+        "minimum_detectable_change": null,
+        "persistence_ms": null,
+        "enter_threshold": null,
+        "exit_threshold": null,
+        "phase_or_side_not_supported": "abstain_from_that_specific_message",
+        "camera_rgb_pose_timestamp_alignment_required": true,
+        "medical_cause_inferred": false
+      },
+      "excludes": [
+        "setup",
+        "rack_exit",
+        "rack_return",
+        "declared_reset",
+        "allowed_registered_variant",
+        "below_validated_resolution",
+        "invalid_view_or_tracking"
+      ],
+      "exclusion_detail": "준비·랙에서 걸어나오기·랙 복귀·사용자가 선언한 재설정에는 적용하지 않음. 카메라 이동·가림 제외.",
+      "suppresses": [],
+      "invalidates": [
+        {
+          "event_ids": [
+            "SK01",
+            "SK02",
+            "SP01"
+          ],
+          "scope": "dependent_on_changed_foot_or_support_baseline",
+          "until": "reviewed_stance_reset_and_new_stable_support_epoch",
+          "effect": "not_evaluable_no_form_pass"
+        }
+      ],
+      "reference_contract": {
+        "required_references": [
+          "reviewed_stance",
+          "body_axes"
+        ],
+        "required_binding_fields": [
+          "profile_id",
+          "profile_version",
+          "reference_source",
+          "reference_review_status",
+          "view_id",
+          "camera_epoch",
+          "support_baseline_epoch"
+        ],
+        "phase_and_depth_matched_comparison": false,
+        "user_average_is_normative_reference": false,
+        "reference_update": "explicit_reviewed_reset_or_profile_change_never_automatic_absorption_of_deviation",
+        "missing_required_reference": "observation_only_or_not_evaluable_no_corrective_speech",
+        "reference_values": null
+      },
+      "delivery_contract": {
+        "status": "research_disabled",
+        "existing_message_is_candidate_only": true,
+        "safe_delivery": "stable_top_or_between_reps_or_rest_after_context_recheck",
+        "max_once_per_episode": true,
+        "cooldown_ms": null,
+        "valid_for_ms": null,
+        "revalidate_before_speech": [
+          "evidence_status",
+          "phase_and_tense",
+          "side_identity_if_used",
+          "reference_epoch",
+          "selected_profile",
+          "not_superseded"
+        ],
+        "cancel_on": [
+          "event_resolved_before_delivery",
+          "evidence_invalidated",
+          "reference_epoch_changed",
+          "profile_changed",
+          "expired",
+          "higher_priority_action_selected"
+        ],
+        "past_event": "reviewed_past_tense_summary_or_cancel_never_stale_present_tense",
+        "in_motion_foot_reposition_instruction_allowed": false,
+        "loaded_unloaded_action_templates_interchangeable": false
+      },
+      "recheck_contract": {
+        "result_states": [
+          "improved_same_conditions",
+          "unchanged",
+          "worse_or_compensated",
+          "not_evaluable",
+          "new_conditions_result",
+          "not_applicable"
+        ],
+        "requires_observed_comparable_followup": true,
+        "compare_keys": [
+          "profile_version",
+          "view_id",
+          "camera_epoch",
+          "reviewed_support_epoch",
+          "target_range",
+          "phase",
+          "load_condition",
+          "tempo_condition"
+        ],
+        "changed_conditions": "new_conditions_result_not_original_condition_success",
+        "missing_observation": "not_evaluable",
+        "absence_of_event_means_success": false,
+        "compensation_events": [],
+        "detail": "다음 반복에서 설정한 발 방향 유지. 회전이 가려지면 위치 변화까지만 보고."
+      }
+    },
+    {
+      "id": "SF12",
+      "part": "발",
+      "event": "반복 사이 발 위치가 계속 변경됨",
+      "observable_trigger_candidate": "기립 도달 뒤 다음 하강 전 발 재배치 반복. 기립만으로 준비 상태라고 판정하지 않음.",
+      "exclusions": "준비·랙에서 걸어나오기·랙 복귀·사용자가 선언한 재설정에는 적용하지 않음. 카메라 이동·가림 제외.",
+      "observation_template": "반복 사이마다 발 위치가 바뀌고 있어요.",
+      "action_template": "중량을 안전하게 거치한 뒤 발 위치를 정하고 다시 시작해 보세요.",
+      "recheck": "새 준비 후 발 안정 확인. 자발적 재설정이었다면 오류 대신 준비 이벤트로 기록.",
+      "feedback_class": "setup",
+      "side_variants": [
+        "none"
+      ],
+      "validation_status": "research",
+      "automatic_coaching_enabled": false,
+      "thresholds": null,
+      "gate_profile": "form_evaluation",
+      "observation_contract": {
+        "evidence_sources": [
+          "validated_rgb_foot_tracking",
+          "static_background_or_calibrated_support_plane",
+          "pose_landmarks_auxiliary"
+        ],
+        "allowed_views": [
+          "validated_stance_visible_view"
+        ],
+        "allowed_phases_for_existing_message": [
+          "active_between_reps"
+        ],
+        "required_observability_rule": "all_event_specific_features_visible_or_supported_by_validated_diagnostic",
+        "minimum_roi_resolution": null,
+        "minimum_detectable_change": null,
+        "persistence_ms": null,
+        "enter_threshold": null,
+        "exit_threshold": null,
+        "phase_or_side_not_supported": "abstain_from_that_specific_message",
+        "camera_rgb_pose_timestamp_alignment_required": true,
+        "medical_cause_inferred": false
+      },
+      "excludes": [
+        "setup",
+        "rack_exit",
+        "rack_return",
+        "declared_reset",
+        "allowed_registered_variant",
+        "below_validated_resolution",
+        "invalid_view_or_tracking"
+      ],
+      "exclusion_detail": "준비·랙에서 걸어나오기·랙 복귀·사용자가 선언한 재설정에는 적용하지 않음. 카메라 이동·가림 제외.",
+      "suppresses": [],
+      "invalidates": [
+        {
+          "event_ids": [
+            "SK01",
+            "SK02",
+            "SP01"
+          ],
+          "scope": "dependent_on_changed_foot_or_support_baseline",
+          "until": "reviewed_stance_reset_and_new_stable_support_epoch",
+          "effect": "not_evaluable_no_form_pass"
+        }
+      ],
+      "reference_contract": {
+        "required_references": [
+          "reviewed_stance"
+        ],
+        "required_binding_fields": [
+          "profile_id",
+          "profile_version",
+          "reference_source",
+          "reference_review_status",
+          "view_id",
+          "camera_epoch",
+          "support_baseline_epoch"
+        ],
+        "phase_and_depth_matched_comparison": false,
+        "user_average_is_normative_reference": false,
+        "reference_update": "explicit_reviewed_reset_or_profile_change_never_automatic_absorption_of_deviation",
+        "missing_required_reference": "observation_only_or_not_evaluable_no_corrective_speech",
+        "reference_values": null
+      },
+      "delivery_contract": {
+        "status": "research_disabled",
+        "existing_message_is_candidate_only": true,
+        "safe_delivery": "stable_top_or_between_reps_or_rest_after_context_recheck",
+        "max_once_per_episode": true,
+        "cooldown_ms": null,
+        "valid_for_ms": null,
+        "revalidate_before_speech": [
+          "evidence_status",
+          "phase_and_tense",
+          "side_identity_if_used",
+          "reference_epoch",
+          "selected_profile",
+          "not_superseded"
+        ],
+        "cancel_on": [
+          "event_resolved_before_delivery",
+          "evidence_invalidated",
+          "reference_epoch_changed",
+          "profile_changed",
+          "expired",
+          "higher_priority_action_selected"
+        ],
+        "past_event": "reviewed_past_tense_summary_or_cancel_never_stale_present_tense",
+        "in_motion_foot_reposition_instruction_allowed": false,
+        "loaded_unloaded_action_templates_interchangeable": false
+      },
+      "recheck_contract": {
+        "result_states": [
+          "improved_same_conditions",
+          "unchanged",
+          "worse_or_compensated",
+          "not_evaluable",
+          "new_conditions_result",
+          "not_applicable"
+        ],
+        "requires_observed_comparable_followup": true,
+        "compare_keys": [
+          "profile_version",
+          "view_id",
+          "camera_epoch",
+          "reviewed_support_epoch",
+          "target_range",
+          "phase",
+          "load_condition",
+          "tempo_condition"
+        ],
+        "changed_conditions": "new_conditions_result_not_original_condition_success",
+        "missing_observation": "not_evaluable",
+        "absence_of_event_means_success": false,
+        "compensation_events": [],
+        "detail": "새 준비 후 발 안정 확인. 자발적 재설정이었다면 오류 대신 준비 이벤트로 기록."
+      }
+    },
+    {
+      "id": "SK01",
+      "part": "무릎",
+      "event": "검토한 경로보다 안쪽으로 벗어남",
+      "observable_trigger_candidate": "정면의 같은 쪽 무릎 경로를 발 위치·방향 및 동일 깊이와 비교. 발 기준이 안정될 때만.",
+      "exclusions": "준비·랙에서 걸어나오기·랙 복귀·사용자가 선언한 재설정에는 적용하지 않음. 카메라 이동·가림 제외. 자연스러운 경로 변화·사선 투영·의도한 다른 변형 제외.",
+      "observation_template": "내려가거나 올라올 때 {side} 무릎이 설정한 경로보다 안쪽으로 이동했어요.",
+      "action_template": "무릎이 발이 향한 방향을 따라 움직이게 해 보세요.",
+      "recheck": "같은 깊이에서 목표 경로 편차 감소, 반대 방향 과교정·발 들림 없음.",
+      "feedback_class": "form",
+      "side_variants": [
+        "left",
+        "right"
+      ],
+      "validation_status": "research",
+      "automatic_coaching_enabled": false,
+      "thresholds": null,
+      "gate_profile": "form_evaluation",
+      "observation_contract": {
+        "evidence_sources": [
+          "pose_landmarks",
+          "validated_foot_reference"
+        ],
+        "allowed_views": [
+          "validated_frontal"
+        ],
+        "allowed_phases_for_existing_message": [
+          "descent",
+          "ascent"
+        ],
+        "required_observability_rule": "all_event_specific_features_visible_or_supported_by_validated_diagnostic",
+        "minimum_roi_resolution": null,
+        "minimum_detectable_change": null,
+        "persistence_ms": null,
+        "enter_threshold": null,
+        "exit_threshold": null,
+        "phase_or_side_not_supported": "abstain_from_that_specific_message",
+        "camera_rgb_pose_timestamp_alignment_required": true,
+        "medical_cause_inferred": false
+      },
+      "excludes": [
+        "setup",
+        "rack_exit",
+        "rack_return",
+        "declared_reset",
+        "allowed_registered_variant",
+        "below_validated_resolution",
+        "invalid_view_or_tracking"
+      ],
+      "exclusion_detail": "준비·랙에서 걸어나오기·랙 복귀·사용자가 선언한 재설정에는 적용하지 않음. 카메라 이동·가림 제외. 자연스러운 경로 변화·사선 투영·의도한 다른 변형 제외.",
+      "suppresses": [],
+      "invalidates": [],
+      "reference_contract": {
+        "required_references": [
+          "reviewed_knee_path_by_phase_and_depth",
+          "reviewed_stance"
+        ],
+        "required_binding_fields": [
+          "profile_id",
+          "profile_version",
+          "reference_source",
+          "reference_review_status",
+          "view_id",
+          "camera_epoch",
+          "support_baseline_epoch"
+        ],
+        "phase_and_depth_matched_comparison": true,
+        "user_average_is_normative_reference": false,
+        "reference_update": "explicit_reviewed_reset_or_profile_change_never_automatic_absorption_of_deviation",
+        "missing_required_reference": "observation_only_or_not_evaluable_no_corrective_speech",
+        "reference_values": null
+      },
+      "delivery_contract": {
+        "status": "research_disabled",
+        "existing_message_is_candidate_only": true,
+        "safe_delivery": "stable_top_or_between_reps_or_rest_after_context_recheck",
+        "max_once_per_episode": true,
+        "cooldown_ms": null,
+        "valid_for_ms": null,
+        "revalidate_before_speech": [
+          "evidence_status",
+          "phase_and_tense",
+          "side_identity_if_used",
+          "reference_epoch",
+          "selected_profile",
+          "not_superseded"
+        ],
+        "cancel_on": [
+          "event_resolved_before_delivery",
+          "evidence_invalidated",
+          "reference_epoch_changed",
+          "profile_changed",
+          "expired",
+          "higher_priority_action_selected"
+        ],
+        "past_event": "reviewed_past_tense_summary_or_cancel_never_stale_present_tense",
+        "in_motion_foot_reposition_instruction_allowed": false,
+        "loaded_unloaded_action_templates_interchangeable": false
+      },
+      "recheck_contract": {
+        "result_states": [
+          "improved_same_conditions",
+          "unchanged",
+          "worse_or_compensated",
+          "not_evaluable",
+          "new_conditions_result",
+          "not_applicable"
+        ],
+        "requires_observed_comparable_followup": true,
+        "compare_keys": [
+          "profile_version",
+          "view_id",
+          "camera_epoch",
+          "reviewed_support_epoch",
+          "target_range",
+          "phase",
+          "load_condition",
+          "tempo_condition"
+        ],
+        "changed_conditions": "new_conditions_result_not_original_condition_success",
+        "missing_observation": "not_evaluable",
+        "absence_of_event_means_success": false,
+        "compensation_events": [
+          "SK02",
+          "SF01",
+          "SF04",
+          "SF05"
+        ],
+        "detail": "같은 깊이에서 목표 경로 편차 감소, 반대 방향 과교정·발 들림 없음."
+      }
+    },
+    {
+      "id": "SK02",
+      "part": "무릎",
+      "event": "검토한 경로보다 바깥쪽으로 벗어남",
+      "observable_trigger_candidate": "정면의 발 기준과 운동 단계별 무릎 경로. 단순 무릎 간격 증가만으로 발화 금지.",
+      "exclusions": "준비·랙에서 걸어나오기·랙 복귀·사용자가 선언한 재설정에는 적용하지 않음. 카메라 이동·가림 제외. 발끝 방향에 맞춘 정상 바깥 이동·와이드 변형·카메라 회전 제외.",
+      "observation_template": "{side} 무릎이 설정한 경로보다 바깥쪽으로 이동했어요.",
+      "action_template": "무릎을 더 벌리려 하지 말고 발이 향한 방향을 따라 움직여 보세요.",
+      "recheck": "같은 깊이에서 과도한 경로 편차 감소. 무릎을 안으로 모으는 과교정 없음.",
+      "feedback_class": "form",
+      "side_variants": [
+        "left",
+        "right"
+      ],
+      "validation_status": "research",
+      "automatic_coaching_enabled": false,
+      "thresholds": null,
+      "gate_profile": "form_evaluation",
+      "observation_contract": {
+        "evidence_sources": [
+          "pose_landmarks",
+          "validated_foot_reference"
+        ],
+        "allowed_views": [
+          "validated_frontal"
+        ],
+        "allowed_phases_for_existing_message": [
+          "descent",
+          "ascent"
+        ],
+        "required_observability_rule": "all_event_specific_features_visible_or_supported_by_validated_diagnostic",
+        "minimum_roi_resolution": null,
+        "minimum_detectable_change": null,
+        "persistence_ms": null,
+        "enter_threshold": null,
+        "exit_threshold": null,
+        "phase_or_side_not_supported": "abstain_from_that_specific_message",
+        "camera_rgb_pose_timestamp_alignment_required": true,
+        "medical_cause_inferred": false
+      },
+      "excludes": [
+        "setup",
+        "rack_exit",
+        "rack_return",
+        "declared_reset",
+        "allowed_registered_variant",
+        "below_validated_resolution",
+        "invalid_view_or_tracking"
+      ],
+      "exclusion_detail": "준비·랙에서 걸어나오기·랙 복귀·사용자가 선언한 재설정에는 적용하지 않음. 카메라 이동·가림 제외. 발끝 방향에 맞춘 정상 바깥 이동·와이드 변형·카메라 회전 제외.",
+      "suppresses": [],
+      "invalidates": [],
+      "reference_contract": {
+        "required_references": [
+          "reviewed_knee_path_by_phase_and_depth",
+          "reviewed_stance"
+        ],
+        "required_binding_fields": [
+          "profile_id",
+          "profile_version",
+          "reference_source",
+          "reference_review_status",
+          "view_id",
+          "camera_epoch",
+          "support_baseline_epoch"
+        ],
+        "phase_and_depth_matched_comparison": true,
+        "user_average_is_normative_reference": false,
+        "reference_update": "explicit_reviewed_reset_or_profile_change_never_automatic_absorption_of_deviation",
+        "missing_required_reference": "observation_only_or_not_evaluable_no_corrective_speech",
+        "reference_values": null
+      },
+      "delivery_contract": {
+        "status": "research_disabled",
+        "existing_message_is_candidate_only": true,
+        "safe_delivery": "stable_top_or_between_reps_or_rest_after_context_recheck",
+        "max_once_per_episode": true,
+        "cooldown_ms": null,
+        "valid_for_ms": null,
+        "revalidate_before_speech": [
+          "evidence_status",
+          "phase_and_tense",
+          "side_identity_if_used",
+          "reference_epoch",
+          "selected_profile",
+          "not_superseded"
+        ],
+        "cancel_on": [
+          "event_resolved_before_delivery",
+          "evidence_invalidated",
+          "reference_epoch_changed",
+          "profile_changed",
+          "expired",
+          "higher_priority_action_selected"
+        ],
+        "past_event": "reviewed_past_tense_summary_or_cancel_never_stale_present_tense",
+        "in_motion_foot_reposition_instruction_allowed": false,
+        "loaded_unloaded_action_templates_interchangeable": false
+      },
+      "recheck_contract": {
+        "result_states": [
+          "improved_same_conditions",
+          "unchanged",
+          "worse_or_compensated",
+          "not_evaluable",
+          "new_conditions_result",
+          "not_applicable"
+        ],
+        "requires_observed_comparable_followup": true,
+        "compare_keys": [
+          "profile_version",
+          "view_id",
+          "camera_epoch",
+          "reviewed_support_epoch",
+          "target_range",
+          "phase",
+          "load_condition",
+          "tempo_condition"
+        ],
+        "changed_conditions": "new_conditions_result_not_original_condition_success",
+        "missing_observation": "not_evaluable",
+        "absence_of_event_means_success": false,
+        "compensation_events": [
+          "SK01",
+          "SF01",
+          "SF04",
+          "SF05"
+        ],
+        "detail": "같은 깊이에서 과도한 경로 편차 감소. 무릎을 안으로 모으는 과교정 없음."
+      }
+    },
+    {
+      "id": "SK03",
+      "part": "무릎",
+      "event": "양쪽 굽힘 범위·시점 차이",
+      "observable_trigger_candidate": "양측이 보이는 뷰에서 같은 단계의 무릎각·골반 높이·시점 비교.",
+      "exclusions": "카메라 비대칭, 몸 회전, 가림, 합의된 좌우 차이 제외.",
+      "observation_template": "양쪽 무릎이 굽혀지는 범위나 시점이 달라졌어요.",
+      "action_template": "편안하게 정한 범위에서 양쪽을 함께 굽혔다 펴 보세요.",
+      "recheck": "큰 편차가 줄고 양쪽 목표 범위 유지. 작은 체형 차이를 강제로 없애지 않음.",
+      "feedback_class": "form",
+      "side_variants": [
+        "none"
+      ],
+      "validation_status": "research",
+      "automatic_coaching_enabled": false,
+      "thresholds": null,
+      "gate_profile": "form_evaluation",
+      "observation_contract": {
+        "evidence_sources": [
+          "pose_landmarks"
+        ],
+        "allowed_views": [
+          "validated_bilateral_visible_view"
+        ],
+        "allowed_phases_for_existing_message": [
+          "descent",
+          "ascent"
+        ],
+        "required_observability_rule": "all_event_specific_features_visible_or_supported_by_validated_diagnostic",
+        "minimum_roi_resolution": null,
+        "minimum_detectable_change": null,
+        "persistence_ms": null,
+        "enter_threshold": null,
+        "exit_threshold": null,
+        "phase_or_side_not_supported": "abstain_from_that_specific_message",
+        "camera_rgb_pose_timestamp_alignment_required": false,
+        "medical_cause_inferred": false,
+        "required_subtype": [
+          "range_difference",
+          "timing_difference"
+        ]
+      },
+      "excludes": [
+        "setup",
+        "rack_exit",
+        "rack_return",
+        "declared_reset",
+        "allowed_registered_variant",
+        "below_validated_resolution",
+        "invalid_view_or_tracking"
+      ],
+      "exclusion_detail": "카메라 비대칭, 몸 회전, 가림, 합의된 좌우 차이 제외.",
+      "suppresses": [],
+      "invalidates": [],
+      "reference_contract": {
+        "required_references": [
+          "reviewed_bilateral_phase_and_range"
+        ],
+        "required_binding_fields": [
+          "profile_id",
+          "profile_version",
+          "reference_source",
+          "reference_review_status",
+          "view_id",
+          "camera_epoch",
+          "support_baseline_epoch"
+        ],
+        "phase_and_depth_matched_comparison": true,
+        "user_average_is_normative_reference": false,
+        "reference_update": "explicit_reviewed_reset_or_profile_change_never_automatic_absorption_of_deviation",
+        "missing_required_reference": "observation_only_or_not_evaluable_no_corrective_speech",
+        "reference_values": null
+      },
+      "delivery_contract": {
+        "status": "research_disabled",
+        "existing_message_is_candidate_only": true,
+        "safe_delivery": "stable_top_or_between_reps_or_rest_after_context_recheck",
+        "max_once_per_episode": true,
+        "cooldown_ms": null,
+        "valid_for_ms": null,
+        "revalidate_before_speech": [
+          "evidence_status",
+          "phase_and_tense",
+          "side_identity_if_used",
+          "reference_epoch",
+          "selected_profile",
+          "not_superseded"
+        ],
+        "cancel_on": [
+          "event_resolved_before_delivery",
+          "evidence_invalidated",
+          "reference_epoch_changed",
+          "profile_changed",
+          "expired",
+          "higher_priority_action_selected"
+        ],
+        "past_event": "reviewed_past_tense_summary_or_cancel_never_stale_present_tense",
+        "in_motion_foot_reposition_instruction_allowed": false,
+        "loaded_unloaded_action_templates_interchangeable": false
+      },
+      "recheck_contract": {
+        "result_states": [
+          "improved_same_conditions",
+          "unchanged",
+          "worse_or_compensated",
+          "not_evaluable",
+          "new_conditions_result",
+          "not_applicable"
+        ],
+        "requires_observed_comparable_followup": true,
+        "compare_keys": [
+          "profile_version",
+          "view_id",
+          "camera_epoch",
+          "reviewed_support_epoch",
+          "target_range",
+          "phase",
+          "load_condition",
+          "tempo_condition"
+        ],
+        "changed_conditions": "new_conditions_result_not_original_condition_success",
+        "missing_observation": "not_evaluable",
+        "absence_of_event_means_success": false,
+        "compensation_events": [],
+        "detail": "큰 편차가 줄고 양쪽 목표 범위 유지. 작은 체형 차이를 강제로 없애지 않음."
+      }
+    },
+    {
+      "id": "SK04",
+      "part": "무릎",
+      "event": "등록한 상단 복귀 미도달",
+      "observable_trigger_candidate": "측면 무릎·고관절과 골반 높이의 복귀 확인.",
+      "exclusions": "상단 폄을 생략한 의도적 부분 반복과 개인 제한 범위는 별도 변형.",
+      "observation_template": "정한 시작 높이까지 돌아오기 전에 다음 반복을 시작했어요.",
+      "action_template": "편안하게 선 시작 위치로 돌아온 뒤 다음 반복을 해 보세요.",
+      "recheck": "상단 복귀 후 다음 반복. 무릎을 뒤로 밀어 과신전시키는 지시 금지.",
+      "feedback_class": "form",
+      "side_variants": [
+        "none"
+      ],
+      "validation_status": "research",
+      "automatic_coaching_enabled": false,
+      "thresholds": null,
+      "gate_profile": "form_evaluation",
+      "observation_contract": {
+        "evidence_sources": [
+          "pose_landmarks"
+        ],
+        "allowed_views": [
+          "validated_side"
+        ],
+        "allowed_phases_for_existing_message": [
+          "top_transition_to_descent"
+        ],
+        "required_observability_rule": "all_event_specific_features_visible_or_supported_by_validated_diagnostic",
+        "minimum_roi_resolution": null,
+        "minimum_detectable_change": null,
+        "persistence_ms": null,
+        "enter_threshold": null,
+        "exit_threshold": null,
+        "phase_or_side_not_supported": "abstain_from_that_specific_message",
+        "camera_rgb_pose_timestamp_alignment_required": false,
+        "medical_cause_inferred": false
+      },
+      "excludes": [
+        "setup",
+        "rack_exit",
+        "rack_return",
+        "declared_reset",
+        "allowed_registered_variant",
+        "below_validated_resolution",
+        "invalid_view_or_tracking"
+      ],
+      "exclusion_detail": "상단 폄을 생략한 의도적 부분 반복과 개인 제한 범위는 별도 변형.",
+      "suppresses": [],
+      "invalidates": [],
+      "reference_contract": {
+        "required_references": [
+          "reviewed_top_position"
+        ],
+        "required_binding_fields": [
+          "profile_id",
+          "profile_version",
+          "reference_source",
+          "reference_review_status",
+          "view_id",
+          "camera_epoch",
+          "support_baseline_epoch"
+        ],
+        "phase_and_depth_matched_comparison": false,
+        "user_average_is_normative_reference": false,
+        "reference_update": "explicit_reviewed_reset_or_profile_change_never_automatic_absorption_of_deviation",
+        "missing_required_reference": "observation_only_or_not_evaluable_no_corrective_speech",
+        "reference_values": null
+      },
+      "delivery_contract": {
+        "status": "research_disabled",
+        "existing_message_is_candidate_only": true,
+        "safe_delivery": "stable_top_or_between_reps_or_rest_after_context_recheck",
+        "max_once_per_episode": true,
+        "cooldown_ms": null,
+        "valid_for_ms": null,
+        "revalidate_before_speech": [
+          "evidence_status",
+          "phase_and_tense",
+          "side_identity_if_used",
+          "reference_epoch",
+          "selected_profile",
+          "not_superseded"
+        ],
+        "cancel_on": [
+          "event_resolved_before_delivery",
+          "evidence_invalidated",
+          "reference_epoch_changed",
+          "profile_changed",
+          "expired",
+          "higher_priority_action_selected"
+        ],
+        "past_event": "reviewed_past_tense_summary_or_cancel_never_stale_present_tense",
+        "in_motion_foot_reposition_instruction_allowed": false,
+        "loaded_unloaded_action_templates_interchangeable": false
+      },
+      "recheck_contract": {
+        "result_states": [
+          "improved_same_conditions",
+          "unchanged",
+          "worse_or_compensated",
+          "not_evaluable",
+          "new_conditions_result",
+          "not_applicable"
+        ],
+        "requires_observed_comparable_followup": true,
+        "compare_keys": [
+          "profile_version",
+          "view_id",
+          "camera_epoch",
+          "reviewed_support_epoch",
+          "target_range",
+          "phase",
+          "load_condition",
+          "tempo_condition"
+        ],
+        "changed_conditions": "new_conditions_result_not_original_condition_success",
+        "missing_observation": "not_evaluable",
+        "absence_of_event_means_success": false,
+        "compensation_events": [],
+        "detail": "상단 복귀 후 다음 반복. 무릎을 뒤로 밀어 과신전시키는 지시 금지."
+      }
+    },
+    {
+      "id": "SP01",
+      "part": "골반",
+      "event": "한쪽으로 큰 이동",
+      "observable_trigger_candidate": "정면 골반 중심의 발 지지 구간 대비 좌우 변화.",
+      "exclusions": "카메라 이동·몸 회전·개인 정상 변화 제외. 실제 하중 분배 확정 불가.",
+      "observation_template": "골반이 {side}으로 치우치며 올라오고 있어요.",
+      "action_template": "몸의 중심이 양발 사이에서 움직이도록 해 보세요.",
+      "recheck": "같은 깊이에서 좌우 편차 감소. 힘이 균등해졌다는 주장 금지.",
+      "feedback_class": "form",
+      "side_variants": [
+        "left",
+        "right"
+      ],
+      "validation_status": "research",
+      "automatic_coaching_enabled": false,
+      "thresholds": null,
+      "gate_profile": "form_evaluation",
+      "observation_contract": {
+        "evidence_sources": [
+          "pose_landmarks",
+          "validated_foot_reference"
+        ],
+        "allowed_views": [
+          "validated_frontal"
+        ],
+        "allowed_phases_for_existing_message": [
+          "ascent"
+        ],
+        "required_observability_rule": "all_event_specific_features_visible_or_supported_by_validated_diagnostic",
+        "minimum_roi_resolution": null,
+        "minimum_detectable_change": null,
+        "persistence_ms": null,
+        "enter_threshold": null,
+        "exit_threshold": null,
+        "phase_or_side_not_supported": "abstain_from_that_specific_message",
+        "camera_rgb_pose_timestamp_alignment_required": true,
+        "medical_cause_inferred": false
+      },
+      "excludes": [
+        "setup",
+        "rack_exit",
+        "rack_return",
+        "declared_reset",
+        "allowed_registered_variant",
+        "below_validated_resolution",
+        "invalid_view_or_tracking"
+      ],
+      "exclusion_detail": "카메라 이동·몸 회전·개인 정상 변화 제외. 실제 하중 분배 확정 불가.",
+      "suppresses": [],
+      "invalidates": [],
+      "reference_contract": {
+        "required_references": [
+          "reviewed_pelvis_path_by_phase_and_depth",
+          "reviewed_stance"
+        ],
+        "required_binding_fields": [
+          "profile_id",
+          "profile_version",
+          "reference_source",
+          "reference_review_status",
+          "view_id",
+          "camera_epoch",
+          "support_baseline_epoch"
+        ],
+        "phase_and_depth_matched_comparison": true,
+        "user_average_is_normative_reference": false,
+        "reference_update": "explicit_reviewed_reset_or_profile_change_never_automatic_absorption_of_deviation",
+        "missing_required_reference": "observation_only_or_not_evaluable_no_corrective_speech",
+        "reference_values": null
+      },
+      "delivery_contract": {
+        "status": "research_disabled",
+        "existing_message_is_candidate_only": true,
+        "safe_delivery": "stable_top_or_between_reps_or_rest_after_context_recheck",
+        "max_once_per_episode": true,
+        "cooldown_ms": null,
+        "valid_for_ms": null,
+        "revalidate_before_speech": [
+          "evidence_status",
+          "phase_and_tense",
+          "side_identity_if_used",
+          "reference_epoch",
+          "selected_profile",
+          "not_superseded"
+        ],
+        "cancel_on": [
+          "event_resolved_before_delivery",
+          "evidence_invalidated",
+          "reference_epoch_changed",
+          "profile_changed",
+          "expired",
+          "higher_priority_action_selected"
+        ],
+        "past_event": "reviewed_past_tense_summary_or_cancel_never_stale_present_tense",
+        "in_motion_foot_reposition_instruction_allowed": false,
+        "loaded_unloaded_action_templates_interchangeable": false
+      },
+      "recheck_contract": {
+        "result_states": [
+          "improved_same_conditions",
+          "unchanged",
+          "worse_or_compensated",
+          "not_evaluable",
+          "new_conditions_result",
+          "not_applicable"
+        ],
+        "requires_observed_comparable_followup": true,
+        "compare_keys": [
+          "profile_version",
+          "view_id",
+          "camera_epoch",
+          "reviewed_support_epoch",
+          "target_range",
+          "phase",
+          "load_condition",
+          "tempo_condition"
+        ],
+        "changed_conditions": "new_conditions_result_not_original_condition_success",
+        "missing_observation": "not_evaluable",
+        "absence_of_event_means_success": false,
+        "compensation_events": [],
+        "detail": "같은 깊이에서 좌우 편차 감소. 힘이 균등해졌다는 주장 금지."
+      }
+    },
+    {
+      "id": "SP02",
+      "part": "골반",
+      "event": "골반선 기울기 변화",
+      "observable_trigger_candidate": "양측 hip이 보이는 정면에서 단계별 높이차.",
+      "exclusions": "가려진 hip 추정점·카메라 롤·체형의 고정 차이 제외.",
+      "observation_template": "올라올 때 골반의 좌우 높이 차이가 커졌어요.",
+      "action_template": "양쪽이 함께 올라오는 작은 범위부터 해 보세요.",
+      "recheck": "높이차 변화 감소와 목표 범위 유지. 범위를 바꾸면 별도 조건.",
+      "feedback_class": "form",
+      "side_variants": [
+        "none"
+      ],
+      "validation_status": "research",
+      "automatic_coaching_enabled": false,
+      "thresholds": null,
+      "gate_profile": "form_evaluation",
+      "observation_contract": {
+        "evidence_sources": [
+          "pose_landmarks"
+        ],
+        "allowed_views": [
+          "validated_frontal"
+        ],
+        "allowed_phases_for_existing_message": [
+          "ascent"
+        ],
+        "required_observability_rule": "all_event_specific_features_visible_or_supported_by_validated_diagnostic",
+        "minimum_roi_resolution": null,
+        "minimum_detectable_change": null,
+        "persistence_ms": null,
+        "enter_threshold": null,
+        "exit_threshold": null,
+        "phase_or_side_not_supported": "abstain_from_that_specific_message",
+        "camera_rgb_pose_timestamp_alignment_required": false,
+        "medical_cause_inferred": false
+      },
+      "excludes": [
+        "setup",
+        "rack_exit",
+        "rack_return",
+        "declared_reset",
+        "allowed_registered_variant",
+        "below_validated_resolution",
+        "invalid_view_or_tracking"
+      ],
+      "exclusion_detail": "가려진 hip 추정점·카메라 롤·체형의 고정 차이 제외.",
+      "suppresses": [],
+      "invalidates": [],
+      "reference_contract": {
+        "required_references": [
+          "reviewed_pelvis_tilt_by_phase"
+        ],
+        "required_binding_fields": [
+          "profile_id",
+          "profile_version",
+          "reference_source",
+          "reference_review_status",
+          "view_id",
+          "camera_epoch",
+          "support_baseline_epoch"
+        ],
+        "phase_and_depth_matched_comparison": true,
+        "user_average_is_normative_reference": false,
+        "reference_update": "explicit_reviewed_reset_or_profile_change_never_automatic_absorption_of_deviation",
+        "missing_required_reference": "observation_only_or_not_evaluable_no_corrective_speech",
+        "reference_values": null
+      },
+      "delivery_contract": {
+        "status": "research_disabled",
+        "existing_message_is_candidate_only": true,
+        "safe_delivery": "stable_top_or_between_reps_or_rest_after_context_recheck",
+        "max_once_per_episode": true,
+        "cooldown_ms": null,
+        "valid_for_ms": null,
+        "revalidate_before_speech": [
+          "evidence_status",
+          "phase_and_tense",
+          "side_identity_if_used",
+          "reference_epoch",
+          "selected_profile",
+          "not_superseded"
+        ],
+        "cancel_on": [
+          "event_resolved_before_delivery",
+          "evidence_invalidated",
+          "reference_epoch_changed",
+          "profile_changed",
+          "expired",
+          "higher_priority_action_selected"
+        ],
+        "past_event": "reviewed_past_tense_summary_or_cancel_never_stale_present_tense",
+        "in_motion_foot_reposition_instruction_allowed": false,
+        "loaded_unloaded_action_templates_interchangeable": false
+      },
+      "recheck_contract": {
+        "result_states": [
+          "improved_same_conditions",
+          "unchanged",
+          "worse_or_compensated",
+          "not_evaluable",
+          "new_conditions_result",
+          "not_applicable"
+        ],
+        "requires_observed_comparable_followup": true,
+        "compare_keys": [
+          "profile_version",
+          "view_id",
+          "camera_epoch",
+          "reviewed_support_epoch",
+          "target_range",
+          "phase",
+          "load_condition",
+          "tempo_condition"
+        ],
+        "changed_conditions": "new_conditions_result_not_original_condition_success",
+        "missing_observation": "not_evaluable",
+        "absence_of_event_means_success": false,
+        "compensation_events": [],
+        "detail": "높이차 변화 감소와 목표 범위 유지. 범위를 바꾸면 별도 조건."
+      }
+    },
+    {
+      "id": "SP03",
+      "part": "골반",
+      "event": "골반이 어깨보다 먼저 급하게 상승",
+      "observable_trigger_candidate": "측면에서 최하단 이후 골반·어깨 상승 시점 및 몸통 방향 변화.",
+      "exclusions": "로우바 등 등록 변형의 정상 작은 선행 움직임 제외.",
+      "observation_template": "엉덩이가 먼저 올라가며 몸통이 더 숙여지고 있어요.",
+      "action_template": "엉덩이와 가슴이 함께 올라오게 해 보세요.",
+      "recheck": "같은 깊이·유사 속도에서 상승 시점차와 몸통 급변 감소.",
+      "feedback_class": "form",
+      "side_variants": [
+        "none"
+      ],
+      "validation_status": "research",
+      "automatic_coaching_enabled": false,
+      "thresholds": null,
+      "gate_profile": "form_evaluation",
+      "observation_contract": {
+        "evidence_sources": [
+          "pose_landmarks",
+          "monotonic_timestamps"
+        ],
+        "allowed_views": [
+          "validated_side"
+        ],
+        "allowed_phases_for_existing_message": [
+          "ascent"
+        ],
+        "required_observability_rule": "all_event_specific_features_visible_or_supported_by_validated_diagnostic",
+        "minimum_roi_resolution": null,
+        "minimum_detectable_change": null,
+        "persistence_ms": null,
+        "enter_threshold": null,
+        "exit_threshold": null,
+        "phase_or_side_not_supported": "abstain_from_that_specific_message",
+        "camera_rgb_pose_timestamp_alignment_required": true,
+        "medical_cause_inferred": false
+      },
+      "excludes": [
+        "setup",
+        "rack_exit",
+        "rack_return",
+        "declared_reset",
+        "allowed_registered_variant",
+        "below_validated_resolution",
+        "invalid_view_or_tracking"
+      ],
+      "exclusion_detail": "로우바 등 등록 변형의 정상 작은 선행 움직임 제외.",
+      "suppresses": [],
+      "invalidates": [],
+      "reference_contract": {
+        "required_references": [
+          "reviewed_hip_shoulder_timing_by_variant"
+        ],
+        "required_binding_fields": [
+          "profile_id",
+          "profile_version",
+          "reference_source",
+          "reference_review_status",
+          "view_id",
+          "camera_epoch",
+          "support_baseline_epoch"
+        ],
+        "phase_and_depth_matched_comparison": true,
+        "user_average_is_normative_reference": false,
+        "reference_update": "explicit_reviewed_reset_or_profile_change_never_automatic_absorption_of_deviation",
+        "missing_required_reference": "observation_only_or_not_evaluable_no_corrective_speech",
+        "reference_values": null
+      },
+      "delivery_contract": {
+        "status": "research_disabled",
+        "existing_message_is_candidate_only": true,
+        "safe_delivery": "stable_top_or_between_reps_or_rest_after_context_recheck",
+        "max_once_per_episode": true,
+        "cooldown_ms": null,
+        "valid_for_ms": null,
+        "revalidate_before_speech": [
+          "evidence_status",
+          "phase_and_tense",
+          "side_identity_if_used",
+          "reference_epoch",
+          "selected_profile",
+          "not_superseded"
+        ],
+        "cancel_on": [
+          "event_resolved_before_delivery",
+          "evidence_invalidated",
+          "reference_epoch_changed",
+          "profile_changed",
+          "expired",
+          "higher_priority_action_selected"
+        ],
+        "past_event": "reviewed_past_tense_summary_or_cancel_never_stale_present_tense",
+        "in_motion_foot_reposition_instruction_allowed": false,
+        "loaded_unloaded_action_templates_interchangeable": false
+      },
+      "recheck_contract": {
+        "result_states": [
+          "improved_same_conditions",
+          "unchanged",
+          "worse_or_compensated",
+          "not_evaluable",
+          "new_conditions_result",
+          "not_applicable"
+        ],
+        "requires_observed_comparable_followup": true,
+        "compare_keys": [
+          "profile_version",
+          "view_id",
+          "camera_epoch",
+          "reviewed_support_epoch",
+          "target_range",
+          "phase",
+          "load_condition",
+          "tempo_condition"
+        ],
+        "changed_conditions": "new_conditions_result_not_original_condition_success",
+        "missing_observation": "not_evaluable",
+        "absence_of_event_means_success": false,
+        "compensation_events": [],
+        "detail": "같은 깊이·유사 속도에서 상승 시점차와 몸통 급변 감소."
+      }
+    },
+    {
+      "id": "ST01",
+      "part": "몸통",
+      "event": "등록한 변형보다 급격한 전방 숙임",
+      "observable_trigger_candidate": "측면 몸통의 부호 있는 기울기와 단계.",
+      "exclusions": "스쿼트에 필요한 전방 기울기·체형·바 위치 차이 제외. 허리 말림 확정 불가.",
+      "observation_template": "이 구간에서 몸통이 앞쪽으로 급하게 더 숙여졌어요.",
+      "action_template": "중량을 안전하게 거치한 뒤 무게와 범위를 조정하고 다시 시도해 보세요.",
+      "recheck": "새 조건에서 급변 감소. 낮춘 조건의 성공을 원래 조건의 교정 성공과 구분. 요추 중립 교정으로 표현하지 않음.",
+      "feedback_class": "setup",
+      "side_variants": [
+        "none"
+      ],
+      "validation_status": "research",
+      "automatic_coaching_enabled": false,
+      "thresholds": null,
+      "gate_profile": "form_evaluation",
+      "observation_contract": {
+        "evidence_sources": [
+          "pose_landmarks",
+          "monotonic_timestamps"
+        ],
+        "allowed_views": [
+          "validated_side"
+        ],
+        "allowed_phases_for_existing_message": [
+          "descent",
+          "bottom",
+          "ascent"
+        ],
+        "required_observability_rule": "all_event_specific_features_visible_or_supported_by_validated_diagnostic",
+        "minimum_roi_resolution": null,
+        "minimum_detectable_change": null,
+        "persistence_ms": null,
+        "enter_threshold": null,
+        "exit_threshold": null,
+        "phase_or_side_not_supported": "abstain_from_that_specific_message",
+        "camera_rgb_pose_timestamp_alignment_required": true,
+        "medical_cause_inferred": false
+      },
+      "excludes": [
+        "setup",
+        "rack_exit",
+        "rack_return",
+        "declared_reset",
+        "allowed_registered_variant",
+        "below_validated_resolution",
+        "invalid_view_or_tracking"
+      ],
+      "exclusion_detail": "스쿼트에 필요한 전방 기울기·체형·바 위치 차이 제외. 허리 말림 확정 불가.",
+      "suppresses": [
+        {
+          "event_ids": [
+            "SP03"
+          ],
+          "scope": "same_hip_shoulder_trunk_ascent_episode_only_when_ST01_setup_action_selected",
+          "mode": "speech_only"
+        }
+      ],
+      "invalidates": [],
+      "reference_contract": {
+        "required_references": [
+          "reviewed_trunk_path_by_variant_and_phase"
+        ],
+        "required_binding_fields": [
+          "profile_id",
+          "profile_version",
+          "reference_source",
+          "reference_review_status",
+          "view_id",
+          "camera_epoch",
+          "support_baseline_epoch"
+        ],
+        "phase_and_depth_matched_comparison": true,
+        "user_average_is_normative_reference": false,
+        "reference_update": "explicit_reviewed_reset_or_profile_change_never_automatic_absorption_of_deviation",
+        "missing_required_reference": "observation_only_or_not_evaluable_no_corrective_speech",
+        "reference_values": null
+      },
+      "delivery_contract": {
+        "status": "research_disabled",
+        "existing_message_is_candidate_only": true,
+        "safe_delivery": "stable_top_or_between_reps_or_rest_after_context_recheck",
+        "max_once_per_episode": true,
+        "cooldown_ms": null,
+        "valid_for_ms": null,
+        "revalidate_before_speech": [
+          "evidence_status",
+          "phase_and_tense",
+          "side_identity_if_used",
+          "reference_epoch",
+          "selected_profile",
+          "not_superseded"
+        ],
+        "cancel_on": [
+          "event_resolved_before_delivery",
+          "evidence_invalidated",
+          "reference_epoch_changed",
+          "profile_changed",
+          "expired",
+          "higher_priority_action_selected"
+        ],
+        "past_event": "reviewed_past_tense_summary_or_cancel_never_stale_present_tense",
+        "in_motion_foot_reposition_instruction_allowed": false,
+        "loaded_unloaded_action_templates_interchangeable": false
+      },
+      "recheck_contract": {
+        "result_states": [
+          "improved_same_conditions",
+          "unchanged",
+          "worse_or_compensated",
+          "not_evaluable",
+          "new_conditions_result",
+          "not_applicable"
+        ],
+        "requires_observed_comparable_followup": true,
+        "compare_keys": [
+          "profile_version",
+          "view_id",
+          "camera_epoch",
+          "reviewed_support_epoch",
+          "target_range",
+          "phase",
+          "load_condition",
+          "tempo_condition"
+        ],
+        "changed_conditions": "new_conditions_result_not_original_condition_success",
+        "missing_observation": "not_evaluable",
+        "absence_of_event_means_success": false,
+        "compensation_events": [],
+        "detail": "새 조건에서 급변 감소. 낮춘 조건의 성공을 원래 조건의 교정 성공과 구분. 요추 중립 교정으로 표현하지 않음."
+      }
+    },
+    {
+      "id": "ST02",
+      "part": "몸통",
+      "event": "기립 마무리에서 뒤로 젖힘",
+      "observable_trigger_candidate": "측면 상단에서 몸통 후방 이동·기울기.",
+      "exclusions": "카메라 왜곡·등록한 자연스러운 기립 위치 제외.",
+      "observation_template": "마무리할 때 몸통을 뒤로 젖히고 있어요.",
+      "action_template": "몸통을 뒤로 더 젖히지 말고 편안하게 선 위치에서 멈춰 보세요.",
+      "recheck": "상단 뒤젖힘 감소. 허리 내부 곡선 판정 아님.",
+      "feedback_class": "form",
+      "side_variants": [
+        "none"
+      ],
+      "validation_status": "research",
+      "automatic_coaching_enabled": false,
+      "thresholds": null,
+      "gate_profile": "form_evaluation",
+      "observation_contract": {
+        "evidence_sources": [
+          "pose_landmarks"
+        ],
+        "allowed_views": [
+          "validated_side"
+        ],
+        "allowed_phases_for_existing_message": [
+          "top"
+        ],
+        "required_observability_rule": "all_event_specific_features_visible_or_supported_by_validated_diagnostic",
+        "minimum_roi_resolution": null,
+        "minimum_detectable_change": null,
+        "persistence_ms": null,
+        "enter_threshold": null,
+        "exit_threshold": null,
+        "phase_or_side_not_supported": "abstain_from_that_specific_message",
+        "camera_rgb_pose_timestamp_alignment_required": false,
+        "medical_cause_inferred": false
+      },
+      "excludes": [
+        "setup",
+        "rack_exit",
+        "rack_return",
+        "declared_reset",
+        "allowed_registered_variant",
+        "below_validated_resolution",
+        "invalid_view_or_tracking"
+      ],
+      "exclusion_detail": "카메라 왜곡·등록한 자연스러운 기립 위치 제외.",
+      "suppresses": [],
+      "invalidates": [],
+      "reference_contract": {
+        "required_references": [
+          "reviewed_top_position"
+        ],
+        "required_binding_fields": [
+          "profile_id",
+          "profile_version",
+          "reference_source",
+          "reference_review_status",
+          "view_id",
+          "camera_epoch",
+          "support_baseline_epoch"
+        ],
+        "phase_and_depth_matched_comparison": false,
+        "user_average_is_normative_reference": false,
+        "reference_update": "explicit_reviewed_reset_or_profile_change_never_automatic_absorption_of_deviation",
+        "missing_required_reference": "observation_only_or_not_evaluable_no_corrective_speech",
+        "reference_values": null
+      },
+      "delivery_contract": {
+        "status": "research_disabled",
+        "existing_message_is_candidate_only": true,
+        "safe_delivery": "stable_top_or_between_reps_or_rest_after_context_recheck",
+        "max_once_per_episode": true,
+        "cooldown_ms": null,
+        "valid_for_ms": null,
+        "revalidate_before_speech": [
+          "evidence_status",
+          "phase_and_tense",
+          "side_identity_if_used",
+          "reference_epoch",
+          "selected_profile",
+          "not_superseded"
+        ],
+        "cancel_on": [
+          "event_resolved_before_delivery",
+          "evidence_invalidated",
+          "reference_epoch_changed",
+          "profile_changed",
+          "expired",
+          "higher_priority_action_selected"
+        ],
+        "past_event": "reviewed_past_tense_summary_or_cancel_never_stale_present_tense",
+        "in_motion_foot_reposition_instruction_allowed": false,
+        "loaded_unloaded_action_templates_interchangeable": false
+      },
+      "recheck_contract": {
+        "result_states": [
+          "improved_same_conditions",
+          "unchanged",
+          "worse_or_compensated",
+          "not_evaluable",
+          "new_conditions_result",
+          "not_applicable"
+        ],
+        "requires_observed_comparable_followup": true,
+        "compare_keys": [
+          "profile_version",
+          "view_id",
+          "camera_epoch",
+          "reviewed_support_epoch",
+          "target_range",
+          "phase",
+          "load_condition",
+          "tempo_condition"
+        ],
+        "changed_conditions": "new_conditions_result_not_original_condition_success",
+        "missing_observation": "not_evaluable",
+        "absence_of_event_means_success": false,
+        "compensation_events": [],
+        "detail": "상단 뒤젖힘 감소. 허리 내부 곡선 판정 아님."
+      }
+    },
+    {
+      "id": "ST03",
+      "part": "몸통",
+      "event": "좌우 기울기 변화",
+      "observable_trigger_candidate": "정면 몸통선의 부호 있는 측굴과 골반의 독립 이동.",
+      "exclusions": "몸 전체의 이동과 기울기 분리. 카메라 롤 제외.",
+      "observation_template": "몸통이 {side}으로 기울고 있어요.",
+      "action_template": "몸통이 한쪽으로 꺾이지 않는 범위에서 움직여 보세요.",
+      "recheck": "같은 단계의 측굴 변화 감소, 반대쪽 과교정 없음.",
+      "feedback_class": "form",
+      "side_variants": [
+        "left",
+        "right"
+      ],
+      "validation_status": "research",
+      "automatic_coaching_enabled": false,
+      "thresholds": null,
+      "gate_profile": "form_evaluation",
+      "observation_contract": {
+        "evidence_sources": [
+          "pose_landmarks"
+        ],
+        "allowed_views": [
+          "validated_frontal"
+        ],
+        "allowed_phases_for_existing_message": [
+          "descent",
+          "bottom",
+          "ascent"
+        ],
+        "required_observability_rule": "all_event_specific_features_visible_or_supported_by_validated_diagnostic",
+        "minimum_roi_resolution": null,
+        "minimum_detectable_change": null,
+        "persistence_ms": null,
+        "enter_threshold": null,
+        "exit_threshold": null,
+        "phase_or_side_not_supported": "abstain_from_that_specific_message",
+        "camera_rgb_pose_timestamp_alignment_required": false,
+        "medical_cause_inferred": false
+      },
+      "excludes": [
+        "setup",
+        "rack_exit",
+        "rack_return",
+        "declared_reset",
+        "allowed_registered_variant",
+        "below_validated_resolution",
+        "invalid_view_or_tracking"
+      ],
+      "exclusion_detail": "몸 전체의 이동과 기울기 분리. 카메라 롤 제외.",
+      "suppresses": [],
+      "invalidates": [],
+      "reference_contract": {
+        "required_references": [
+          "reviewed_trunk_pelvis_relation"
+        ],
+        "required_binding_fields": [
+          "profile_id",
+          "profile_version",
+          "reference_source",
+          "reference_review_status",
+          "view_id",
+          "camera_epoch",
+          "support_baseline_epoch"
+        ],
+        "phase_and_depth_matched_comparison": true,
+        "user_average_is_normative_reference": false,
+        "reference_update": "explicit_reviewed_reset_or_profile_change_never_automatic_absorption_of_deviation",
+        "missing_required_reference": "observation_only_or_not_evaluable_no_corrective_speech",
+        "reference_values": null
+      },
+      "delivery_contract": {
+        "status": "research_disabled",
+        "existing_message_is_candidate_only": true,
+        "safe_delivery": "stable_top_or_between_reps_or_rest_after_context_recheck",
+        "max_once_per_episode": true,
+        "cooldown_ms": null,
+        "valid_for_ms": null,
+        "revalidate_before_speech": [
+          "evidence_status",
+          "phase_and_tense",
+          "side_identity_if_used",
+          "reference_epoch",
+          "selected_profile",
+          "not_superseded"
+        ],
+        "cancel_on": [
+          "event_resolved_before_delivery",
+          "evidence_invalidated",
+          "reference_epoch_changed",
+          "profile_changed",
+          "expired",
+          "higher_priority_action_selected"
+        ],
+        "past_event": "reviewed_past_tense_summary_or_cancel_never_stale_present_tense",
+        "in_motion_foot_reposition_instruction_allowed": false,
+        "loaded_unloaded_action_templates_interchangeable": false
+      },
+      "recheck_contract": {
+        "result_states": [
+          "improved_same_conditions",
+          "unchanged",
+          "worse_or_compensated",
+          "not_evaluable",
+          "new_conditions_result",
+          "not_applicable"
+        ],
+        "requires_observed_comparable_followup": true,
+        "compare_keys": [
+          "profile_version",
+          "view_id",
+          "camera_epoch",
+          "reviewed_support_epoch",
+          "target_range",
+          "phase",
+          "load_condition",
+          "tempo_condition"
+        ],
+        "changed_conditions": "new_conditions_result_not_original_condition_success",
+        "missing_observation": "not_evaluable",
+        "absence_of_event_means_success": false,
+        "compensation_events": [],
+        "detail": "같은 단계의 측굴 변화 감소, 반대쪽 과교정 없음."
+      }
+    },
+    {
+      "id": "ST04",
+      "part": "몸통",
+      "event": "반복 중 몸 방향이 크게 바뀜",
+      "observable_trigger_candidate": "어깨·골반 투영과 RGB 방향 정보를 함께 사용.",
+      "exclusions": "어깨폭 변화 하나로 3D 회전 확정 금지. 뷰가 바뀌면 후속 규칙 유보.",
+      "observation_template": "반복 중 몸이 향하는 방향이 바뀌었어요.",
+      "action_template": "안전하게 중량을 거치한 뒤 양발 지지와 위치를 다시 준비하세요.",
+      "recheck": "방향을 재설정한 새 구간에서 관찰. 몸 회전을 발·무릎 오류 여러 개로 중복 발화하지 않음.",
+      "feedback_class": "setup",
+      "side_variants": [
+        "none"
+      ],
+      "validation_status": "research",
+      "automatic_coaching_enabled": false,
+      "thresholds": null,
+      "gate_profile": "form_evaluation",
+      "observation_contract": {
+        "evidence_sources": [
+          "pose_landmarks",
+          "rgb_body_orientation"
+        ],
+        "allowed_views": [
+          "validated_orientation_visible_view"
+        ],
+        "allowed_phases_for_existing_message": [
+          "descent",
+          "bottom",
+          "ascent",
+          "active_between_reps"
+        ],
+        "required_observability_rule": "all_event_specific_features_visible_or_supported_by_validated_diagnostic",
+        "minimum_roi_resolution": null,
+        "minimum_detectable_change": null,
+        "persistence_ms": null,
+        "enter_threshold": null,
+        "exit_threshold": null,
+        "phase_or_side_not_supported": "abstain_from_that_specific_message",
+        "camera_rgb_pose_timestamp_alignment_required": true,
+        "medical_cause_inferred": false
+      },
+      "excludes": [
+        "setup",
+        "rack_exit",
+        "rack_return",
+        "declared_reset",
+        "allowed_registered_variant",
+        "below_validated_resolution",
+        "invalid_view_or_tracking"
+      ],
+      "exclusion_detail": "어깨폭 변화 하나로 3D 회전 확정 금지. 뷰가 바뀌면 후속 규칙 유보.",
+      "suppresses": [],
+      "invalidates": [
+        {
+          "event_ids": [
+            "SB01",
+            "SB02",
+            "SF01",
+            "SF02",
+            "SF03",
+            "SF04",
+            "SF05",
+            "SF06",
+            "SF07",
+            "SF08",
+            "SF09",
+            "SF10",
+            "SF11",
+            "SF12",
+            "SH01",
+            "SH02",
+            "SH03",
+            "SK01",
+            "SK02",
+            "SK03",
+            "SK04",
+            "SP01",
+            "SP02",
+            "SP03",
+            "SR01",
+            "SR02",
+            "SR03",
+            "SR04",
+            "ST01",
+            "ST02",
+            "ST03"
+          ],
+          "scope": "rules_whose_validated_view_was_changed",
+          "until": "validated_view_and_reference_reestablished",
+          "effect": "not_evaluable"
+        }
+      ],
+      "reference_contract": {
+        "required_references": [
+          "reviewed_body_orientation"
+        ],
+        "required_binding_fields": [
+          "profile_id",
+          "profile_version",
+          "reference_source",
+          "reference_review_status",
+          "view_id",
+          "camera_epoch",
+          "support_baseline_epoch"
+        ],
+        "phase_and_depth_matched_comparison": false,
+        "user_average_is_normative_reference": false,
+        "reference_update": "explicit_reviewed_reset_or_profile_change_never_automatic_absorption_of_deviation",
+        "missing_required_reference": "observation_only_or_not_evaluable_no_corrective_speech",
+        "reference_values": null
+      },
+      "delivery_contract": {
+        "status": "research_disabled",
+        "existing_message_is_candidate_only": true,
+        "safe_delivery": "stable_top_or_between_reps_or_rest_after_context_recheck",
+        "max_once_per_episode": true,
+        "cooldown_ms": null,
+        "valid_for_ms": null,
+        "revalidate_before_speech": [
+          "evidence_status",
+          "phase_and_tense",
+          "side_identity_if_used",
+          "reference_epoch",
+          "selected_profile",
+          "not_superseded"
+        ],
+        "cancel_on": [
+          "event_resolved_before_delivery",
+          "evidence_invalidated",
+          "reference_epoch_changed",
+          "profile_changed",
+          "expired",
+          "higher_priority_action_selected"
+        ],
+        "past_event": "reviewed_past_tense_summary_or_cancel_never_stale_present_tense",
+        "in_motion_foot_reposition_instruction_allowed": false,
+        "loaded_unloaded_action_templates_interchangeable": false
+      },
+      "recheck_contract": {
+        "result_states": [
+          "improved_same_conditions",
+          "unchanged",
+          "worse_or_compensated",
+          "not_evaluable",
+          "new_conditions_result",
+          "not_applicable"
+        ],
+        "requires_observed_comparable_followup": true,
+        "compare_keys": [
+          "profile_version",
+          "view_id",
+          "camera_epoch",
+          "reviewed_support_epoch",
+          "target_range",
+          "phase",
+          "load_condition",
+          "tempo_condition"
+        ],
+        "changed_conditions": "new_conditions_result_not_original_condition_success",
+        "missing_observation": "not_evaluable",
+        "absence_of_event_means_success": false,
+        "compensation_events": [],
+        "detail": "방향을 재설정한 새 구간에서 관찰. 몸 회전을 발·무릎 오류 여러 개로 중복 발화하지 않음."
+      }
+    },
+    {
+      "id": "SH01",
+      "part": "머리",
+      "event": "몸통 대비 큰 고개 젖힘",
+      "observable_trigger_candidate": "측면 얼굴/귀–어깨와 몸통 관계.",
+      "exclusions": "눈의 시선·경추 분절은 확인하지 못함. 정상 몸통 동반 움직임 제외.",
+      "observation_template": "고개가 몸통에 비해 뒤로 많이 젖혀졌어요.",
+      "action_template": "목을 편하게 두고 머리가 몸통과 함께 움직이게 해 보세요.",
+      "recheck": "같은 뷰에서 큰 상대 편차 감소.",
+      "feedback_class": "form",
+      "side_variants": [
+        "none"
+      ],
+      "validation_status": "research",
+      "automatic_coaching_enabled": false,
+      "thresholds": null,
+      "gate_profile": "form_evaluation",
+      "observation_contract": {
+        "evidence_sources": [
+          "pose_landmarks",
+          "head_orientation_features"
+        ],
+        "allowed_views": [
+          "validated_head_visible_side"
+        ],
+        "allowed_phases_for_existing_message": [
+          "descent",
+          "bottom",
+          "ascent"
+        ],
+        "required_observability_rule": "all_event_specific_features_visible_or_supported_by_validated_diagnostic",
+        "minimum_roi_resolution": null,
+        "minimum_detectable_change": null,
+        "persistence_ms": null,
+        "enter_threshold": null,
+        "exit_threshold": null,
+        "phase_or_side_not_supported": "abstain_from_that_specific_message",
+        "camera_rgb_pose_timestamp_alignment_required": true,
+        "medical_cause_inferred": false
+      },
+      "excludes": [
+        "setup",
+        "rack_exit",
+        "rack_return",
+        "declared_reset",
+        "allowed_registered_variant",
+        "below_validated_resolution",
+        "invalid_view_or_tracking"
+      ],
+      "exclusion_detail": "눈의 시선·경추 분절은 확인하지 못함. 정상 몸통 동반 움직임 제외.",
+      "suppresses": [],
+      "invalidates": [],
+      "reference_contract": {
+        "required_references": [
+          "reviewed_head_trunk_relation"
+        ],
+        "required_binding_fields": [
+          "profile_id",
+          "profile_version",
+          "reference_source",
+          "reference_review_status",
+          "view_id",
+          "camera_epoch",
+          "support_baseline_epoch"
+        ],
+        "phase_and_depth_matched_comparison": false,
+        "user_average_is_normative_reference": false,
+        "reference_update": "explicit_reviewed_reset_or_profile_change_never_automatic_absorption_of_deviation",
+        "missing_required_reference": "observation_only_or_not_evaluable_no_corrective_speech",
+        "reference_values": null
+      },
+      "delivery_contract": {
+        "status": "research_disabled",
+        "existing_message_is_candidate_only": true,
+        "safe_delivery": "stable_top_or_between_reps_or_rest_after_context_recheck",
+        "max_once_per_episode": true,
+        "cooldown_ms": null,
+        "valid_for_ms": null,
+        "revalidate_before_speech": [
+          "evidence_status",
+          "phase_and_tense",
+          "side_identity_if_used",
+          "reference_epoch",
+          "selected_profile",
+          "not_superseded"
+        ],
+        "cancel_on": [
+          "event_resolved_before_delivery",
+          "evidence_invalidated",
+          "reference_epoch_changed",
+          "profile_changed",
+          "expired",
+          "higher_priority_action_selected"
+        ],
+        "past_event": "reviewed_past_tense_summary_or_cancel_never_stale_present_tense",
+        "in_motion_foot_reposition_instruction_allowed": false,
+        "loaded_unloaded_action_templates_interchangeable": false
+      },
+      "recheck_contract": {
+        "result_states": [
+          "improved_same_conditions",
+          "unchanged",
+          "worse_or_compensated",
+          "not_evaluable",
+          "new_conditions_result",
+          "not_applicable"
+        ],
+        "requires_observed_comparable_followup": true,
+        "compare_keys": [
+          "profile_version",
+          "view_id",
+          "camera_epoch",
+          "reviewed_support_epoch",
+          "target_range",
+          "phase",
+          "load_condition",
+          "tempo_condition"
+        ],
+        "changed_conditions": "new_conditions_result_not_original_condition_success",
+        "missing_observation": "not_evaluable",
+        "absence_of_event_means_success": false,
+        "compensation_events": [],
+        "detail": "같은 뷰에서 큰 상대 편차 감소."
+      }
+    },
+    {
+      "id": "SH02",
+      "part": "머리",
+      "event": "몸통 대비 큰 고개 숙임",
+      "observable_trigger_candidate": "측면 얼굴/귀–어깨와 몸통 관계.",
+      "exclusions": "화면 가림·개인 기준과 의도한 시선 차이 제외.",
+      "observation_template": "고개가 몸통에 비해 아래로 많이 숙여졌어요.",
+      "action_template": "목을 편하게 두고 머리가 몸통과 함께 움직이게 해 보세요.",
+      "recheck": "몸통 대비 큰 상대 편차 감소. 수평 응시 강제 금지.",
+      "feedback_class": "form",
+      "side_variants": [
+        "none"
+      ],
+      "validation_status": "research",
+      "automatic_coaching_enabled": false,
+      "thresholds": null,
+      "gate_profile": "form_evaluation",
+      "observation_contract": {
+        "evidence_sources": [
+          "pose_landmarks",
+          "head_orientation_features"
+        ],
+        "allowed_views": [
+          "validated_head_visible_side"
+        ],
+        "allowed_phases_for_existing_message": [
+          "descent",
+          "bottom",
+          "ascent"
+        ],
+        "required_observability_rule": "all_event_specific_features_visible_or_supported_by_validated_diagnostic",
+        "minimum_roi_resolution": null,
+        "minimum_detectable_change": null,
+        "persistence_ms": null,
+        "enter_threshold": null,
+        "exit_threshold": null,
+        "phase_or_side_not_supported": "abstain_from_that_specific_message",
+        "camera_rgb_pose_timestamp_alignment_required": true,
+        "medical_cause_inferred": false
+      },
+      "excludes": [
+        "setup",
+        "rack_exit",
+        "rack_return",
+        "declared_reset",
+        "allowed_registered_variant",
+        "below_validated_resolution",
+        "invalid_view_or_tracking"
+      ],
+      "exclusion_detail": "화면 가림·개인 기준과 의도한 시선 차이 제외.",
+      "suppresses": [],
+      "invalidates": [],
+      "reference_contract": {
+        "required_references": [
+          "reviewed_head_trunk_relation"
+        ],
+        "required_binding_fields": [
+          "profile_id",
+          "profile_version",
+          "reference_source",
+          "reference_review_status",
+          "view_id",
+          "camera_epoch",
+          "support_baseline_epoch"
+        ],
+        "phase_and_depth_matched_comparison": false,
+        "user_average_is_normative_reference": false,
+        "reference_update": "explicit_reviewed_reset_or_profile_change_never_automatic_absorption_of_deviation",
+        "missing_required_reference": "observation_only_or_not_evaluable_no_corrective_speech",
+        "reference_values": null
+      },
+      "delivery_contract": {
+        "status": "research_disabled",
+        "existing_message_is_candidate_only": true,
+        "safe_delivery": "stable_top_or_between_reps_or_rest_after_context_recheck",
+        "max_once_per_episode": true,
+        "cooldown_ms": null,
+        "valid_for_ms": null,
+        "revalidate_before_speech": [
+          "evidence_status",
+          "phase_and_tense",
+          "side_identity_if_used",
+          "reference_epoch",
+          "selected_profile",
+          "not_superseded"
+        ],
+        "cancel_on": [
+          "event_resolved_before_delivery",
+          "evidence_invalidated",
+          "reference_epoch_changed",
+          "profile_changed",
+          "expired",
+          "higher_priority_action_selected"
+        ],
+        "past_event": "reviewed_past_tense_summary_or_cancel_never_stale_present_tense",
+        "in_motion_foot_reposition_instruction_allowed": false,
+        "loaded_unloaded_action_templates_interchangeable": false
+      },
+      "recheck_contract": {
+        "result_states": [
+          "improved_same_conditions",
+          "unchanged",
+          "worse_or_compensated",
+          "not_evaluable",
+          "new_conditions_result",
+          "not_applicable"
+        ],
+        "requires_observed_comparable_followup": true,
+        "compare_keys": [
+          "profile_version",
+          "view_id",
+          "camera_epoch",
+          "reviewed_support_epoch",
+          "target_range",
+          "phase",
+          "load_condition",
+          "tempo_condition"
+        ],
+        "changed_conditions": "new_conditions_result_not_original_condition_success",
+        "missing_observation": "not_evaluable",
+        "absence_of_event_means_success": false,
+        "compensation_events": [],
+        "detail": "몸통 대비 큰 상대 편차 감소. 수평 응시 강제 금지."
+      }
+    },
+    {
+      "id": "SH03",
+      "part": "머리",
+      "event": "화면 확인 등을 위한 큰 고개 돌림",
+      "observable_trigger_candidate": "얼굴 방향의 지속 변화.",
+      "exclusions": "의도·시선을 직접 읽지 않음. 원인을 화면 확인으로 단정하지 않음.",
+      "observation_template": "운동 중 고개 방향이 크게 바뀌었어요.",
+      "action_template": "시작 전에 정한 편안한 지점을 보고 안내는 음성으로 들어보세요.",
+      "recheck": "큰 방향 전환 감소. 얼굴이 가려지면 성공 판정 유보.",
+      "feedback_class": "form",
+      "side_variants": [
+        "none"
+      ],
+      "validation_status": "research",
+      "automatic_coaching_enabled": false,
+      "thresholds": null,
+      "gate_profile": "form_evaluation",
+      "observation_contract": {
+        "evidence_sources": [
+          "pose_landmarks",
+          "head_orientation_features"
+        ],
+        "allowed_views": [
+          "validated_face_visible_view"
+        ],
+        "allowed_phases_for_existing_message": [
+          "descent",
+          "bottom",
+          "ascent"
+        ],
+        "required_observability_rule": "all_event_specific_features_visible_or_supported_by_validated_diagnostic",
+        "minimum_roi_resolution": null,
+        "minimum_detectable_change": null,
+        "persistence_ms": null,
+        "enter_threshold": null,
+        "exit_threshold": null,
+        "phase_or_side_not_supported": "abstain_from_that_specific_message",
+        "camera_rgb_pose_timestamp_alignment_required": true,
+        "medical_cause_inferred": false
+      },
+      "excludes": [
+        "setup",
+        "rack_exit",
+        "rack_return",
+        "declared_reset",
+        "allowed_registered_variant",
+        "below_validated_resolution",
+        "invalid_view_or_tracking"
+      ],
+      "exclusion_detail": "의도·시선을 직접 읽지 않음. 원인을 화면 확인으로 단정하지 않음.",
+      "suppresses": [],
+      "invalidates": [],
+      "reference_contract": {
+        "required_references": [
+          "reviewed_head_trunk_relation"
+        ],
+        "required_binding_fields": [
+          "profile_id",
+          "profile_version",
+          "reference_source",
+          "reference_review_status",
+          "view_id",
+          "camera_epoch",
+          "support_baseline_epoch"
+        ],
+        "phase_and_depth_matched_comparison": false,
+        "user_average_is_normative_reference": false,
+        "reference_update": "explicit_reviewed_reset_or_profile_change_never_automatic_absorption_of_deviation",
+        "missing_required_reference": "observation_only_or_not_evaluable_no_corrective_speech",
+        "reference_values": null
+      },
+      "delivery_contract": {
+        "status": "research_disabled",
+        "existing_message_is_candidate_only": true,
+        "safe_delivery": "stable_top_or_between_reps_or_rest_after_context_recheck",
+        "max_once_per_episode": true,
+        "cooldown_ms": null,
+        "valid_for_ms": null,
+        "revalidate_before_speech": [
+          "evidence_status",
+          "phase_and_tense",
+          "side_identity_if_used",
+          "reference_epoch",
+          "selected_profile",
+          "not_superseded"
+        ],
+        "cancel_on": [
+          "event_resolved_before_delivery",
+          "evidence_invalidated",
+          "reference_epoch_changed",
+          "profile_changed",
+          "expired",
+          "higher_priority_action_selected"
+        ],
+        "past_event": "reviewed_past_tense_summary_or_cancel_never_stale_present_tense",
+        "in_motion_foot_reposition_instruction_allowed": false,
+        "loaded_unloaded_action_templates_interchangeable": false
+      },
+      "recheck_contract": {
+        "result_states": [
+          "improved_same_conditions",
+          "unchanged",
+          "worse_or_compensated",
+          "not_evaluable",
+          "new_conditions_result",
+          "not_applicable"
+        ],
+        "requires_observed_comparable_followup": true,
+        "compare_keys": [
+          "profile_version",
+          "view_id",
+          "camera_epoch",
+          "reviewed_support_epoch",
+          "target_range",
+          "phase",
+          "load_condition",
+          "tempo_condition"
+        ],
+        "changed_conditions": "new_conditions_result_not_original_condition_success",
+        "missing_observation": "not_evaluable",
+        "absence_of_event_means_success": false,
+        "compensation_events": [],
+        "detail": "큰 방향 전환 감소. 얼굴이 가려지면 성공 판정 유보."
+      }
+    },
+    {
+      "id": "SR01",
+      "part": "범위",
+      "event": "정한 하단 목표 미도달",
+      "observable_trigger_candidate": "측면 골반 하강과 무릎·고관절 범위.",
+      "exclusions": "부분 반복·통증에 따른 범위 변경·가림 제외.",
+      "observation_template": "정한 내려가기 범위에 아직 도달하지 않았어요.",
+      "action_template": "통제할 수 있는 범위에서 정한 목표까지 천천히 내려가 보세요.",
+      "recheck": "목표 도달과 다른 필수 정렬 유지.",
+      "feedback_class": "form",
+      "side_variants": [
+        "none"
+      ],
+      "validation_status": "research",
+      "automatic_coaching_enabled": false,
+      "thresholds": null,
+      "gate_profile": "form_evaluation",
+      "observation_contract": {
+        "evidence_sources": [
+          "pose_landmarks"
+        ],
+        "allowed_views": [
+          "validated_side"
+        ],
+        "allowed_phases_for_existing_message": [
+          "bottom_confirmed_after_reversal"
+        ],
+        "required_observability_rule": "all_event_specific_features_visible_or_supported_by_validated_diagnostic",
+        "minimum_roi_resolution": null,
+        "minimum_detectable_change": null,
+        "persistence_ms": null,
+        "enter_threshold": null,
+        "exit_threshold": null,
+        "phase_or_side_not_supported": "abstain_from_that_specific_message",
+        "camera_rgb_pose_timestamp_alignment_required": false,
+        "medical_cause_inferred": false
+      },
+      "excludes": [
+        "setup",
+        "rack_exit",
+        "rack_return",
+        "declared_reset",
+        "allowed_registered_variant",
+        "below_validated_resolution",
+        "invalid_view_or_tracking"
+      ],
+      "exclusion_detail": "부분 반복·통증에 따른 범위 변경·가림 제외.",
+      "suppresses": [],
+      "invalidates": [],
+      "reference_contract": {
+        "required_references": [
+          "reviewed_bottom_target"
+        ],
+        "required_binding_fields": [
+          "profile_id",
+          "profile_version",
+          "reference_source",
+          "reference_review_status",
+          "view_id",
+          "camera_epoch",
+          "support_baseline_epoch"
+        ],
+        "phase_and_depth_matched_comparison": false,
+        "user_average_is_normative_reference": false,
+        "reference_update": "explicit_reviewed_reset_or_profile_change_never_automatic_absorption_of_deviation",
+        "missing_required_reference": "observation_only_or_not_evaluable_no_corrective_speech",
+        "reference_values": null
+      },
+      "delivery_contract": {
+        "status": "research_disabled",
+        "existing_message_is_candidate_only": true,
+        "safe_delivery": "stable_top_or_between_reps_or_rest_after_context_recheck",
+        "max_once_per_episode": true,
+        "cooldown_ms": null,
+        "valid_for_ms": null,
+        "revalidate_before_speech": [
+          "evidence_status",
+          "phase_and_tense",
+          "side_identity_if_used",
+          "reference_epoch",
+          "selected_profile",
+          "not_superseded"
+        ],
+        "cancel_on": [
+          "event_resolved_before_delivery",
+          "evidence_invalidated",
+          "reference_epoch_changed",
+          "profile_changed",
+          "expired",
+          "higher_priority_action_selected"
+        ],
+        "past_event": "reviewed_past_tense_summary_or_cancel_never_stale_present_tense",
+        "in_motion_foot_reposition_instruction_allowed": false,
+        "loaded_unloaded_action_templates_interchangeable": false
+      },
+      "recheck_contract": {
+        "result_states": [
+          "improved_same_conditions",
+          "unchanged",
+          "worse_or_compensated",
+          "not_evaluable",
+          "new_conditions_result",
+          "not_applicable"
+        ],
+        "requires_observed_comparable_followup": true,
+        "compare_keys": [
+          "profile_version",
+          "view_id",
+          "camera_epoch",
+          "reviewed_support_epoch",
+          "target_range",
+          "phase",
+          "load_condition",
+          "tempo_condition"
+        ],
+        "changed_conditions": "new_conditions_result_not_original_condition_success",
+        "missing_observation": "not_evaluable",
+        "absence_of_event_means_success": false,
+        "compensation_events": [],
+        "detail": "목표 도달과 다른 필수 정렬 유지."
+      }
+    },
+    {
+      "id": "SR02",
+      "part": "범위",
+      "event": "합의한 하단 목표를 넘음",
+      "observable_trigger_candidate": "측면 합의한 훈련 범위와 하단 비교.",
+      "exclusions": "깊은 스쿼트 자체는 오류가 아님. 목표가 명확할 때 과제 이탈로만 분류.",
+      "observation_template": "이번에 정한 범위보다 더 내려갔어요.",
+      "action_template": "이번 세트는 정한 목표 지점에서 방향을 바꿔 보세요.",
+      "recheck": "합의 범위 유지. 더 깊다는 이유로 위험·손상 판정 금지.",
+      "feedback_class": "detail",
+      "side_variants": [
+        "none"
+      ],
+      "validation_status": "research",
+      "automatic_coaching_enabled": false,
+      "thresholds": null,
+      "gate_profile": "form_evaluation",
+      "observation_contract": {
+        "evidence_sources": [
+          "pose_landmarks"
+        ],
+        "allowed_views": [
+          "validated_side"
+        ],
+        "allowed_phases_for_existing_message": [
+          "bottom_confirmed_after_reversal"
+        ],
+        "required_observability_rule": "all_event_specific_features_visible_or_supported_by_validated_diagnostic",
+        "minimum_roi_resolution": null,
+        "minimum_detectable_change": null,
+        "persistence_ms": null,
+        "enter_threshold": null,
+        "exit_threshold": null,
+        "phase_or_side_not_supported": "abstain_from_that_specific_message",
+        "camera_rgb_pose_timestamp_alignment_required": false,
+        "medical_cause_inferred": false
+      },
+      "excludes": [
+        "setup",
+        "rack_exit",
+        "rack_return",
+        "declared_reset",
+        "allowed_registered_variant",
+        "below_validated_resolution",
+        "invalid_view_or_tracking"
+      ],
+      "exclusion_detail": "깊은 스쿼트 자체는 오류가 아님. 목표가 명확할 때 과제 이탈로만 분류.",
+      "suppresses": [],
+      "invalidates": [],
+      "reference_contract": {
+        "required_references": [
+          "reviewed_bottom_target"
+        ],
+        "required_binding_fields": [
+          "profile_id",
+          "profile_version",
+          "reference_source",
+          "reference_review_status",
+          "view_id",
+          "camera_epoch",
+          "support_baseline_epoch"
+        ],
+        "phase_and_depth_matched_comparison": false,
+        "user_average_is_normative_reference": false,
+        "reference_update": "explicit_reviewed_reset_or_profile_change_never_automatic_absorption_of_deviation",
+        "missing_required_reference": "observation_only_or_not_evaluable_no_corrective_speech",
+        "reference_values": null
+      },
+      "delivery_contract": {
+        "status": "research_disabled",
+        "existing_message_is_candidate_only": true,
+        "safe_delivery": "stable_top_or_between_reps_or_rest_after_context_recheck",
+        "max_once_per_episode": true,
+        "cooldown_ms": null,
+        "valid_for_ms": null,
+        "revalidate_before_speech": [
+          "evidence_status",
+          "phase_and_tense",
+          "side_identity_if_used",
+          "reference_epoch",
+          "selected_profile",
+          "not_superseded"
+        ],
+        "cancel_on": [
+          "event_resolved_before_delivery",
+          "evidence_invalidated",
+          "reference_epoch_changed",
+          "profile_changed",
+          "expired",
+          "higher_priority_action_selected"
+        ],
+        "past_event": "reviewed_past_tense_summary_or_cancel_never_stale_present_tense",
+        "in_motion_foot_reposition_instruction_allowed": false,
+        "loaded_unloaded_action_templates_interchangeable": false
+      },
+      "recheck_contract": {
+        "result_states": [
+          "improved_same_conditions",
+          "unchanged",
+          "worse_or_compensated",
+          "not_evaluable",
+          "new_conditions_result",
+          "not_applicable"
+        ],
+        "requires_observed_comparable_followup": true,
+        "compare_keys": [
+          "profile_version",
+          "view_id",
+          "camera_epoch",
+          "reviewed_support_epoch",
+          "target_range",
+          "phase",
+          "load_condition",
+          "tempo_condition"
+        ],
+        "changed_conditions": "new_conditions_result_not_original_condition_success",
+        "missing_observation": "not_evaluable",
+        "absence_of_event_means_success": false,
+        "compensation_events": [],
+        "detail": "합의 범위 유지. 더 깊다는 이유로 위험·손상 판정 금지."
+      }
+    },
+    {
+      "id": "SR03",
+      "part": "제어",
+      "event": "하단의 반복적인 급반전·튀는 궤적",
+      "observable_trigger_candidate": "실제 시간 기반 골반·몸통 궤적 및 추가 왕복.",
+      "exclusions": "stretch-shortening 활용·파워/반동 변형과 구별. 속도만으로 오류 금지.",
+      "observation_template": "정한 방식보다 하단 전환이 급해지고 있어요.",
+      "action_template": "이번에는 내려가는 동작과 올라오는 동작을 천천히 이어 보세요.",
+      "recheck": "동일 목표 범위에서 등록한 전환 패턴 유지.",
+      "feedback_class": "form",
+      "side_variants": [
+        "none"
+      ],
+      "validation_status": "research",
+      "automatic_coaching_enabled": false,
+      "thresholds": null,
+      "gate_profile": "form_evaluation",
+      "observation_contract": {
+        "evidence_sources": [
+          "pose_landmarks",
+          "monotonic_timestamps"
+        ],
+        "allowed_views": [
+          "validated_side"
+        ],
+        "allowed_phases_for_existing_message": [
+          "bottom_transition"
+        ],
+        "required_observability_rule": "all_event_specific_features_visible_or_supported_by_validated_diagnostic",
+        "minimum_roi_resolution": null,
+        "minimum_detectable_change": null,
+        "persistence_ms": null,
+        "enter_threshold": null,
+        "exit_threshold": null,
+        "phase_or_side_not_supported": "abstain_from_that_specific_message",
+        "camera_rgb_pose_timestamp_alignment_required": true,
+        "medical_cause_inferred": false,
+        "required_subtype": [
+          "abrupt_transition",
+          "extra_partial_oscillation"
+        ]
+      },
+      "excludes": [
+        "setup",
+        "rack_exit",
+        "rack_return",
+        "declared_reset",
+        "allowed_registered_variant",
+        "below_validated_resolution",
+        "invalid_view_or_tracking"
+      ],
+      "exclusion_detail": "stretch-shortening 활용·파워/반동 변형과 구별. 속도만으로 오류 금지.",
+      "suppresses": [],
+      "invalidates": [],
+      "reference_contract": {
+        "required_references": [
+          "reviewed_transition_pattern"
+        ],
+        "required_binding_fields": [
+          "profile_id",
+          "profile_version",
+          "reference_source",
+          "reference_review_status",
+          "view_id",
+          "camera_epoch",
+          "support_baseline_epoch"
+        ],
+        "phase_and_depth_matched_comparison": false,
+        "user_average_is_normative_reference": false,
+        "reference_update": "explicit_reviewed_reset_or_profile_change_never_automatic_absorption_of_deviation",
+        "missing_required_reference": "observation_only_or_not_evaluable_no_corrective_speech",
+        "reference_values": null
+      },
+      "delivery_contract": {
+        "status": "research_disabled",
+        "existing_message_is_candidate_only": true,
+        "safe_delivery": "stable_top_or_between_reps_or_rest_after_context_recheck",
+        "max_once_per_episode": true,
+        "cooldown_ms": null,
+        "valid_for_ms": null,
+        "revalidate_before_speech": [
+          "evidence_status",
+          "phase_and_tense",
+          "side_identity_if_used",
+          "reference_epoch",
+          "selected_profile",
+          "not_superseded"
+        ],
+        "cancel_on": [
+          "event_resolved_before_delivery",
+          "evidence_invalidated",
+          "reference_epoch_changed",
+          "profile_changed",
+          "expired",
+          "higher_priority_action_selected"
+        ],
+        "past_event": "reviewed_past_tense_summary_or_cancel_never_stale_present_tense",
+        "in_motion_foot_reposition_instruction_allowed": false,
+        "loaded_unloaded_action_templates_interchangeable": false
+      },
+      "recheck_contract": {
+        "result_states": [
+          "improved_same_conditions",
+          "unchanged",
+          "worse_or_compensated",
+          "not_evaluable",
+          "new_conditions_result",
+          "not_applicable"
+        ],
+        "requires_observed_comparable_followup": true,
+        "compare_keys": [
+          "profile_version",
+          "view_id",
+          "camera_epoch",
+          "reviewed_support_epoch",
+          "target_range",
+          "phase",
+          "load_condition",
+          "tempo_condition"
+        ],
+        "changed_conditions": "new_conditions_result_not_original_condition_success",
+        "missing_observation": "not_evaluable",
+        "absence_of_event_means_success": false,
+        "compensation_events": [],
+        "detail": "동일 목표 범위에서 등록한 전환 패턴 유지."
+      }
+    },
+    {
+      "id": "SR04",
+      "part": "제어",
+      "event": "등록한 하강 템포에서 벗어남",
+      "observable_trigger_candidate": "실제 timestamp와 연속 관찰의 하강 시간·속도.",
+      "exclusions": "빠른 수행 자체는 잘못이 아님. 계획 템포 없으면 관측 변화만 기록.",
+      "observation_template": "내려가는 속도가 정한 리듬보다 빨라졌어요.",
+      "action_template": "이번에 정한 리듬에 맞춰 내려가 보세요.",
+      "recheck": "정한 템포 회복과 범위 유지. 시간 정보 없는 이미지로 검증 불가.",
+      "feedback_class": "detail",
+      "side_variants": [
+        "none"
+      ],
+      "validation_status": "research",
+      "automatic_coaching_enabled": false,
+      "thresholds": null,
+      "gate_profile": "form_evaluation",
+      "observation_contract": {
+        "evidence_sources": [
+          "pose_landmarks",
+          "monotonic_timestamps"
+        ],
+        "allowed_views": [
+          "validated_side"
+        ],
+        "allowed_phases_for_existing_message": [
+          "descent_complete"
+        ],
+        "required_observability_rule": "all_event_specific_features_visible_or_supported_by_validated_diagnostic",
+        "minimum_roi_resolution": null,
+        "minimum_detectable_change": null,
+        "persistence_ms": null,
+        "enter_threshold": null,
+        "exit_threshold": null,
+        "phase_or_side_not_supported": "abstain_from_that_specific_message",
+        "camera_rgb_pose_timestamp_alignment_required": true,
+        "medical_cause_inferred": false,
+        "existing_message_direction": "faster_than_registered_descent_tempo_only",
+        "slower_tempo": "log_only_until_reviewed_direction_specific_message_exists"
+      },
+      "excludes": [
+        "setup",
+        "rack_exit",
+        "rack_return",
+        "declared_reset",
+        "allowed_registered_variant",
+        "below_validated_resolution",
+        "invalid_view_or_tracking"
+      ],
+      "exclusion_detail": "빠른 수행 자체는 잘못이 아님. 계획 템포 없으면 관측 변화만 기록.",
+      "suppresses": [],
+      "invalidates": [],
+      "reference_contract": {
+        "required_references": [
+          "reviewed_descent_tempo"
+        ],
+        "required_binding_fields": [
+          "profile_id",
+          "profile_version",
+          "reference_source",
+          "reference_review_status",
+          "view_id",
+          "camera_epoch",
+          "support_baseline_epoch"
+        ],
+        "phase_and_depth_matched_comparison": false,
+        "user_average_is_normative_reference": false,
+        "reference_update": "explicit_reviewed_reset_or_profile_change_never_automatic_absorption_of_deviation",
+        "missing_required_reference": "observation_only_or_not_evaluable_no_corrective_speech",
+        "reference_values": null
+      },
+      "delivery_contract": {
+        "status": "research_disabled",
+        "existing_message_is_candidate_only": true,
+        "safe_delivery": "stable_top_or_between_reps_or_rest_after_context_recheck",
+        "max_once_per_episode": true,
+        "cooldown_ms": null,
+        "valid_for_ms": null,
+        "revalidate_before_speech": [
+          "evidence_status",
+          "phase_and_tense",
+          "side_identity_if_used",
+          "reference_epoch",
+          "selected_profile",
+          "not_superseded"
+        ],
+        "cancel_on": [
+          "event_resolved_before_delivery",
+          "evidence_invalidated",
+          "reference_epoch_changed",
+          "profile_changed",
+          "expired",
+          "higher_priority_action_selected"
+        ],
+        "past_event": "reviewed_past_tense_summary_or_cancel_never_stale_present_tense",
+        "in_motion_foot_reposition_instruction_allowed": false,
+        "loaded_unloaded_action_templates_interchangeable": false
+      },
+      "recheck_contract": {
+        "result_states": [
+          "improved_same_conditions",
+          "unchanged",
+          "worse_or_compensated",
+          "not_evaluable",
+          "new_conditions_result",
+          "not_applicable"
+        ],
+        "requires_observed_comparable_followup": true,
+        "compare_keys": [
+          "profile_version",
+          "view_id",
+          "camera_epoch",
+          "reviewed_support_epoch",
+          "target_range",
+          "phase",
+          "load_condition",
+          "tempo_condition"
+        ],
+        "changed_conditions": "new_conditions_result_not_original_condition_success",
+        "missing_observation": "not_evaluable",
+        "absence_of_event_means_success": false,
+        "compensation_events": [],
+        "detail": "정한 템포 회복과 범위 유지. 시간 정보 없는 이미지로 검증 불가."
+      }
+    },
+    {
+      "id": "SB01",
+      "part": "기구",
+      "event": "바벨 양끝 높이차 변화",
+      "observable_trigger_candidate": "실제 바 양끝 물체 추적과 카메라 수평 확인.",
+      "exclusions": "손목선만으로 바 기울기 확정 금지. 가림/원근 제외.",
+      "observation_template": "바벨 양쪽 높이 차이가 커졌어요.",
+      "action_template": "중량을 안전하게 거치한 뒤 바 지지와 손 위치를 다시 확인하세요.",
+      "recheck": "새 세트에서 바 높이차와 몸통 편위 재평가.",
+      "feedback_class": "setup",
+      "side_variants": [
+        "none"
+      ],
+      "validation_status": "research",
+      "automatic_coaching_enabled": false,
+      "thresholds": null,
+      "gate_profile": "form_evaluation",
+      "observation_contract": {
+        "evidence_sources": [
+          "rgb_bar_endpoints",
+          "camera_level_reference"
+        ],
+        "allowed_views": [
+          "both_bar_endpoints_visible"
+        ],
+        "allowed_phases_for_existing_message": [
+          "descent",
+          "bottom",
+          "ascent"
+        ],
+        "required_observability_rule": "all_event_specific_features_visible_or_supported_by_validated_diagnostic",
+        "minimum_roi_resolution": null,
+        "minimum_detectable_change": null,
+        "persistence_ms": null,
+        "enter_threshold": null,
+        "exit_threshold": null,
+        "phase_or_side_not_supported": "abstain_from_that_specific_message",
+        "camera_rgb_pose_timestamp_alignment_required": true,
+        "medical_cause_inferred": false
+      },
+      "excludes": [
+        "setup",
+        "rack_exit",
+        "rack_return",
+        "declared_reset",
+        "allowed_registered_variant",
+        "below_validated_resolution",
+        "invalid_view_or_tracking"
+      ],
+      "exclusion_detail": "손목선만으로 바 기울기 확정 금지. 가림/원근 제외.",
+      "suppresses": [],
+      "invalidates": [],
+      "reference_contract": {
+        "required_references": [
+          "reviewed_bar_support"
+        ],
+        "required_binding_fields": [
+          "profile_id",
+          "profile_version",
+          "reference_source",
+          "reference_review_status",
+          "view_id",
+          "camera_epoch",
+          "support_baseline_epoch"
+        ],
+        "phase_and_depth_matched_comparison": false,
+        "user_average_is_normative_reference": false,
+        "reference_update": "explicit_reviewed_reset_or_profile_change_never_automatic_absorption_of_deviation",
+        "missing_required_reference": "observation_only_or_not_evaluable_no_corrective_speech",
+        "reference_values": null
+      },
+      "delivery_contract": {
+        "status": "research_disabled",
+        "existing_message_is_candidate_only": true,
+        "safe_delivery": "stable_top_or_between_reps_or_rest_after_context_recheck",
+        "max_once_per_episode": true,
+        "cooldown_ms": null,
+        "valid_for_ms": null,
+        "revalidate_before_speech": [
+          "evidence_status",
+          "phase_and_tense",
+          "side_identity_if_used",
+          "reference_epoch",
+          "selected_profile",
+          "not_superseded"
+        ],
+        "cancel_on": [
+          "event_resolved_before_delivery",
+          "evidence_invalidated",
+          "reference_epoch_changed",
+          "profile_changed",
+          "expired",
+          "higher_priority_action_selected"
+        ],
+        "past_event": "reviewed_past_tense_summary_or_cancel_never_stale_present_tense",
+        "in_motion_foot_reposition_instruction_allowed": false,
+        "loaded_unloaded_action_templates_interchangeable": false
+      },
+      "recheck_contract": {
+        "result_states": [
+          "improved_same_conditions",
+          "unchanged",
+          "worse_or_compensated",
+          "not_evaluable",
+          "new_conditions_result",
+          "not_applicable"
+        ],
+        "requires_observed_comparable_followup": true,
+        "compare_keys": [
+          "profile_version",
+          "view_id",
+          "camera_epoch",
+          "reviewed_support_epoch",
+          "target_range",
+          "phase",
+          "load_condition",
+          "tempo_condition"
+        ],
+        "changed_conditions": "new_conditions_result_not_original_condition_success",
+        "missing_observation": "not_evaluable",
+        "absence_of_event_means_success": false,
+        "compensation_events": [],
+        "detail": "새 세트에서 바 높이차와 몸통 편위 재평가."
+      }
+    },
+    {
+      "id": "SB02",
+      "part": "기구",
+      "event": "바가 지지 위치에서 이동",
+      "observable_trigger_candidate": "바와 실제 어깨/등 지지 관계를 RGB로 확인.",
+      "exclusions": "그립·바 위치가 보이지 않으면 유보. 손 위치만으로 미끄러짐 단정 금지.",
+      "observation_template": "바벨의 지지 위치가 움직이고 있어요.",
+      "action_template": "반복을 이어가지 말고 중량을 안전하게 거치해 주세요.",
+      "recheck": "하중 해제 후 지지 재설정. 다시 시작한 세트에서 확인.",
+      "feedback_class": "support",
+      "side_variants": [
+        "none"
+      ],
+      "validation_status": "research",
+      "automatic_coaching_enabled": false,
+      "thresholds": null,
+      "gate_profile": "form_evaluation",
+      "observation_contract": {
+        "evidence_sources": [
+          "rgb_bar_and_actual_support_relation"
+        ],
+        "allowed_views": [
+          "bar_support_visible"
+        ],
+        "allowed_phases_for_existing_message": [
+          "descent",
+          "bottom",
+          "ascent",
+          "active_between_reps"
+        ],
+        "required_observability_rule": "all_event_specific_features_visible_or_supported_by_validated_diagnostic",
+        "minimum_roi_resolution": null,
+        "minimum_detectable_change": null,
+        "persistence_ms": null,
+        "enter_threshold": null,
+        "exit_threshold": null,
+        "phase_or_side_not_supported": "abstain_from_that_specific_message",
+        "camera_rgb_pose_timestamp_alignment_required": false,
+        "medical_cause_inferred": false
+      },
+      "excludes": [
+        "setup",
+        "rack_exit",
+        "rack_return",
+        "declared_reset",
+        "allowed_registered_variant",
+        "below_validated_resolution",
+        "invalid_view_or_tracking"
+      ],
+      "exclusion_detail": "그립·바 위치가 보이지 않으면 유보. 손 위치만으로 미끄러짐 단정 금지.",
+      "suppresses": [],
+      "invalidates": [],
+      "reference_contract": {
+        "required_references": [
+          "reviewed_bar_support"
+        ],
+        "required_binding_fields": [
+          "profile_id",
+          "profile_version",
+          "reference_source",
+          "reference_review_status",
+          "view_id",
+          "camera_epoch",
+          "support_baseline_epoch"
+        ],
+        "phase_and_depth_matched_comparison": false,
+        "user_average_is_normative_reference": false,
+        "reference_update": "explicit_reviewed_reset_or_profile_change_never_automatic_absorption_of_deviation",
+        "missing_required_reference": "observation_only_or_not_evaluable_no_corrective_speech",
+        "reference_values": null
+      },
+      "delivery_contract": {
+        "status": "research_disabled",
+        "existing_message_is_candidate_only": true,
+        "safe_delivery": "validated_support_response_when_evidence_current",
+        "max_once_per_episode": true,
+        "cooldown_ms": null,
+        "valid_for_ms": null,
+        "revalidate_before_speech": [
+          "evidence_status",
+          "phase_and_tense",
+          "side_identity_if_used",
+          "reference_epoch",
+          "selected_profile",
+          "not_superseded"
+        ],
+        "cancel_on": [
+          "event_resolved_before_delivery",
+          "evidence_invalidated",
+          "reference_epoch_changed",
+          "profile_changed",
+          "expired",
+          "higher_priority_action_selected"
+        ],
+        "past_event": "reviewed_past_tense_summary_or_cancel_never_stale_present_tense",
+        "in_motion_foot_reposition_instruction_allowed": false,
+        "loaded_unloaded_action_templates_interchangeable": false
+      },
+      "recheck_contract": {
+        "result_states": [
+          "improved_same_conditions",
+          "unchanged",
+          "worse_or_compensated",
+          "not_evaluable",
+          "new_conditions_result",
+          "not_applicable"
+        ],
+        "requires_observed_comparable_followup": true,
+        "compare_keys": [
+          "profile_version",
+          "view_id",
+          "camera_epoch",
+          "reviewed_support_epoch",
+          "target_range",
+          "phase",
+          "load_condition",
+          "tempo_condition"
+        ],
+        "changed_conditions": "new_conditions_result_not_original_condition_success",
+        "missing_observation": "not_evaluable",
+        "absence_of_event_means_success": false,
+        "compensation_events": [],
+        "detail": "하중 해제 후 지지 재설정. 다시 시작한 세트에서 확인."
+      }
+    },
+    {
+      "id": "SM01",
+      "part": "측정",
+      "event": "발 또는 필요한 관절이 가림",
+      "observable_trigger_candidate": "관절·발 윤곽의 가시성 부족.",
+      "exclusions": "이전 좌표를 정상 상태로 대입하지 않음.",
+      "observation_template": "발이 가려져 발 위치를 확인할 수 없어요.",
+      "action_template": "쉬는 동안 발과 바닥이 보이도록 촬영 위치를 조정해 주세요.",
+      "recheck": "재관찰 후 해당 항목만 복구. 가림 동안 교정 완료 처리 금지.",
+      "feedback_class": "measurement",
+      "side_variants": [
+        "none"
+      ],
+      "validation_status": "research",
+      "automatic_coaching_enabled": false,
+      "thresholds": null,
+      "gate_profile": "measurement_diagnostics",
+      "observation_contract": {
+        "evidence_sources": [
+          "landmark_and_required_roi_observability"
+        ],
+        "allowed_views": [
+          "any"
+        ],
+        "allowed_phases_for_existing_message": [
+          "any"
+        ],
+        "required_observability_rule": "all_event_specific_features_visible_or_supported_by_validated_diagnostic",
+        "minimum_roi_resolution": null,
+        "minimum_detectable_change": null,
+        "persistence_ms": null,
+        "enter_threshold": null,
+        "exit_threshold": null,
+        "phase_or_side_not_supported": "abstain_from_that_specific_message",
+        "camera_rgb_pose_timestamp_alignment_required": false,
+        "medical_cause_inferred": false,
+        "existing_message_scope": "foot_not_observable_only_other_missing_parts_require_reviewed_message"
+      },
+      "excludes": [],
+      "exclusion_detail": "이전 좌표를 정상 상태로 대입하지 않음.",
+      "suppresses": [],
+      "invalidates": [
+        {
+          "event_ids": [
+            "SB01",
+            "SB02",
+            "SF01",
+            "SF02",
+            "SF03",
+            "SF04",
+            "SF05",
+            "SF06",
+            "SF07",
+            "SF08",
+            "SF09",
+            "SF10",
+            "SF11",
+            "SF12",
+            "SH01",
+            "SH02",
+            "SH03",
+            "SK01",
+            "SK02",
+            "SK03",
+            "SK04",
+            "SP01",
+            "SP02",
+            "SP03",
+            "SR01",
+            "SR02",
+            "SR03",
+            "SR04",
+            "ST01",
+            "ST02",
+            "ST03",
+            "ST04"
+          ],
+          "scope": "only_rules_dependent_on_missing_or_invalid_evidence",
+          "until": "validated_diagnostic_recovery_and_required_reference_restored",
+          "effect": "not_evaluable_not_resolved"
+        }
+      ],
+      "reference_contract": {
+        "required_references": [],
+        "required_binding_fields": [],
+        "phase_and_depth_matched_comparison": false,
+        "user_average_is_normative_reference": false,
+        "reference_update": "explicit_reviewed_reset_or_profile_change_never_automatic_absorption_of_deviation",
+        "missing_required_reference": "observation_only_or_not_evaluable_no_corrective_speech",
+        "reference_values": null
+      },
+      "delivery_contract": {
+        "status": "research_disabled",
+        "existing_message_is_candidate_only": true,
+        "safe_delivery": "stable_top_or_between_reps_or_rest_after_context_recheck",
+        "max_once_per_episode": true,
+        "cooldown_ms": null,
+        "valid_for_ms": null,
+        "revalidate_before_speech": [
+          "evidence_status",
+          "phase_and_tense",
+          "side_identity_if_used",
+          "reference_epoch",
+          "selected_profile",
+          "not_superseded"
+        ],
+        "cancel_on": [
+          "event_resolved_before_delivery",
+          "evidence_invalidated",
+          "reference_epoch_changed",
+          "profile_changed",
+          "expired",
+          "higher_priority_action_selected"
+        ],
+        "past_event": "reviewed_past_tense_summary_or_cancel_never_stale_present_tense",
+        "in_motion_foot_reposition_instruction_allowed": false,
+        "loaded_unloaded_action_templates_interchangeable": false
+      },
+      "recheck_contract": {
+        "result_states": [
+          "improved_same_conditions",
+          "unchanged",
+          "worse_or_compensated",
+          "not_evaluable",
+          "new_conditions_result",
+          "not_applicable"
+        ],
+        "requires_observed_comparable_followup": true,
+        "compare_keys": [
+          "profile_version",
+          "view_id",
+          "camera_epoch",
+          "reviewed_support_epoch",
+          "target_range",
+          "phase",
+          "load_condition",
+          "tempo_condition"
+        ],
+        "changed_conditions": "new_conditions_result_not_original_condition_success",
+        "missing_observation": "not_evaluable",
+        "absence_of_event_means_success": false,
+        "compensation_events": [],
+        "detail": "재관찰 후 해당 항목만 복구. 가림 동안 교정 완료 처리 금지."
+      }
+    },
+    {
+      "id": "SM02",
+      "part": "측정",
+      "event": "좌우 ID 교환 또는 좌표 급점프",
+      "observable_trigger_candidate": "뼈 길이·좌우 연결·시간 연속성 검사.",
+      "exclusions": "실제 빠른 움직임과 추적 실패를 혼동하지 않음.",
+      "observation_template": "움직임을 안정적으로 추적하지 못하고 있어요.",
+      "action_template": "쉬는 동안 촬영 범위와 조명을 확인해 주세요.",
+      "recheck": "추적 회복 뒤 새 구간부터 판정. 실패 구간에 오류 멘트 생성 금지.",
+      "feedback_class": "measurement",
+      "side_variants": [
+        "none"
+      ],
+      "validation_status": "research",
+      "automatic_coaching_enabled": false,
+      "thresholds": null,
+      "gate_profile": "measurement_diagnostics",
+      "observation_contract": {
+        "evidence_sources": [
+          "tracking_continuity_diagnostics"
+        ],
+        "allowed_views": [
+          "any"
+        ],
+        "allowed_phases_for_existing_message": [
+          "any"
+        ],
+        "required_observability_rule": "all_event_specific_features_visible_or_supported_by_validated_diagnostic",
+        "minimum_roi_resolution": null,
+        "minimum_detectable_change": null,
+        "persistence_ms": null,
+        "enter_threshold": null,
+        "exit_threshold": null,
+        "phase_or_side_not_supported": "abstain_from_that_specific_message",
+        "camera_rgb_pose_timestamp_alignment_required": false,
+        "medical_cause_inferred": false
+      },
+      "excludes": [],
+      "exclusion_detail": "실제 빠른 움직임과 추적 실패를 혼동하지 않음.",
+      "suppresses": [],
+      "invalidates": [
+        {
+          "event_ids": [
+            "SB01",
+            "SB02",
+            "SF01",
+            "SF02",
+            "SF03",
+            "SF04",
+            "SF05",
+            "SF06",
+            "SF07",
+            "SF08",
+            "SF09",
+            "SF10",
+            "SF11",
+            "SF12",
+            "SH01",
+            "SH02",
+            "SH03",
+            "SK01",
+            "SK02",
+            "SK03",
+            "SK04",
+            "SP01",
+            "SP02",
+            "SP03",
+            "SR01",
+            "SR02",
+            "SR03",
+            "SR04",
+            "ST01",
+            "ST02",
+            "ST03",
+            "ST04"
+          ],
+          "scope": "only_rules_dependent_on_missing_or_invalid_evidence",
+          "until": "validated_diagnostic_recovery_and_required_reference_restored",
+          "effect": "not_evaluable_not_resolved"
+        }
+      ],
+      "reference_contract": {
+        "required_references": [],
+        "required_binding_fields": [],
+        "phase_and_depth_matched_comparison": false,
+        "user_average_is_normative_reference": false,
+        "reference_update": "explicit_reviewed_reset_or_profile_change_never_automatic_absorption_of_deviation",
+        "missing_required_reference": "observation_only_or_not_evaluable_no_corrective_speech",
+        "reference_values": null
+      },
+      "delivery_contract": {
+        "status": "research_disabled",
+        "existing_message_is_candidate_only": true,
+        "safe_delivery": "stable_top_or_between_reps_or_rest_after_context_recheck",
+        "max_once_per_episode": true,
+        "cooldown_ms": null,
+        "valid_for_ms": null,
+        "revalidate_before_speech": [
+          "evidence_status",
+          "phase_and_tense",
+          "side_identity_if_used",
+          "reference_epoch",
+          "selected_profile",
+          "not_superseded"
+        ],
+        "cancel_on": [
+          "event_resolved_before_delivery",
+          "evidence_invalidated",
+          "reference_epoch_changed",
+          "profile_changed",
+          "expired",
+          "higher_priority_action_selected"
+        ],
+        "past_event": "reviewed_past_tense_summary_or_cancel_never_stale_present_tense",
+        "in_motion_foot_reposition_instruction_allowed": false,
+        "loaded_unloaded_action_templates_interchangeable": false
+      },
+      "recheck_contract": {
+        "result_states": [
+          "improved_same_conditions",
+          "unchanged",
+          "worse_or_compensated",
+          "not_evaluable",
+          "new_conditions_result",
+          "not_applicable"
+        ],
+        "requires_observed_comparable_followup": true,
+        "compare_keys": [
+          "profile_version",
+          "view_id",
+          "camera_epoch",
+          "reviewed_support_epoch",
+          "target_range",
+          "phase",
+          "load_condition",
+          "tempo_condition"
+        ],
+        "changed_conditions": "new_conditions_result_not_original_condition_success",
+        "missing_observation": "not_evaluable",
+        "absence_of_event_means_success": false,
+        "compensation_events": [],
+        "detail": "추적 회복 뒤 새 구간부터 판정. 실패 구간에 오류 멘트 생성 금지."
+      }
+    },
+    {
+      "id": "SM03",
+      "part": "측정",
+      "event": "카메라가 움직이거나 기울어짐",
+      "observable_trigger_candidate": "정적 배경/폰 자세 정보와 전신의 공통 이동.",
+      "exclusions": "몸만 움직인 경우와 구분.",
+      "observation_template": "카메라 위치가 바뀌어 기준을 다시 확인해야 해요.",
+      "action_template": "쉬는 동안 휴대폰을 고정하고 다시 준비해 주세요.",
+      "recheck": "새 카메라 기준 구간. 이동 전후의 수치로 교정 성공 판정 금지.",
+      "feedback_class": "measurement",
+      "side_variants": [
+        "none"
+      ],
+      "validation_status": "research",
+      "automatic_coaching_enabled": false,
+      "thresholds": null,
+      "gate_profile": "measurement_diagnostics",
+      "observation_contract": {
+        "evidence_sources": [
+          "static_background_or_phone_pose_diagnostics"
+        ],
+        "allowed_views": [
+          "any"
+        ],
+        "allowed_phases_for_existing_message": [
+          "any"
+        ],
+        "required_observability_rule": "all_event_specific_features_visible_or_supported_by_validated_diagnostic",
+        "minimum_roi_resolution": null,
+        "minimum_detectable_change": null,
+        "persistence_ms": null,
+        "enter_threshold": null,
+        "exit_threshold": null,
+        "phase_or_side_not_supported": "abstain_from_that_specific_message",
+        "camera_rgb_pose_timestamp_alignment_required": false,
+        "medical_cause_inferred": false
+      },
+      "excludes": [],
+      "exclusion_detail": "몸만 움직인 경우와 구분.",
+      "suppresses": [],
+      "invalidates": [
+        {
+          "event_ids": [
+            "SB01",
+            "SB02",
+            "SF01",
+            "SF02",
+            "SF03",
+            "SF04",
+            "SF05",
+            "SF06",
+            "SF07",
+            "SF08",
+            "SF09",
+            "SF10",
+            "SF11",
+            "SF12",
+            "SH01",
+            "SH02",
+            "SH03",
+            "SK01",
+            "SK02",
+            "SK03",
+            "SK04",
+            "SP01",
+            "SP02",
+            "SP03",
+            "SR01",
+            "SR02",
+            "SR03",
+            "SR04",
+            "ST01",
+            "ST02",
+            "ST03",
+            "ST04"
+          ],
+          "scope": "only_rules_dependent_on_missing_or_invalid_evidence",
+          "until": "validated_diagnostic_recovery_and_required_reference_restored",
+          "effect": "not_evaluable_not_resolved"
+        }
+      ],
+      "reference_contract": {
+        "required_references": [],
+        "required_binding_fields": [],
+        "phase_and_depth_matched_comparison": false,
+        "user_average_is_normative_reference": false,
+        "reference_update": "explicit_reviewed_reset_or_profile_change_never_automatic_absorption_of_deviation",
+        "missing_required_reference": "observation_only_or_not_evaluable_no_corrective_speech",
+        "reference_values": null
+      },
+      "delivery_contract": {
+        "status": "research_disabled",
+        "existing_message_is_candidate_only": true,
+        "safe_delivery": "stable_top_or_between_reps_or_rest_after_context_recheck",
+        "max_once_per_episode": true,
+        "cooldown_ms": null,
+        "valid_for_ms": null,
+        "revalidate_before_speech": [
+          "evidence_status",
+          "phase_and_tense",
+          "side_identity_if_used",
+          "reference_epoch",
+          "selected_profile",
+          "not_superseded"
+        ],
+        "cancel_on": [
+          "event_resolved_before_delivery",
+          "evidence_invalidated",
+          "reference_epoch_changed",
+          "profile_changed",
+          "expired",
+          "higher_priority_action_selected"
+        ],
+        "past_event": "reviewed_past_tense_summary_or_cancel_never_stale_present_tense",
+        "in_motion_foot_reposition_instruction_allowed": false,
+        "loaded_unloaded_action_templates_interchangeable": false
+      },
+      "recheck_contract": {
+        "result_states": [
+          "improved_same_conditions",
+          "unchanged",
+          "worse_or_compensated",
+          "not_evaluable",
+          "new_conditions_result",
+          "not_applicable"
+        ],
+        "requires_observed_comparable_followup": true,
+        "compare_keys": [
+          "profile_version",
+          "view_id",
+          "camera_epoch",
+          "reviewed_support_epoch",
+          "target_range",
+          "phase",
+          "load_condition",
+          "tempo_condition"
+        ],
+        "changed_conditions": "new_conditions_result_not_original_condition_success",
+        "missing_observation": "not_evaluable",
+        "absence_of_event_means_success": false,
+        "compensation_events": [],
+        "detail": "새 카메라 기준 구간. 이동 전후의 수치로 교정 성공 판정 금지."
+      }
+    },
+    {
+      "id": "SM04",
+      "part": "분류",
+      "event": "현재 목록에 없는 동작/선택 운동 불일치",
+      "observable_trigger_candidate": "운동 단계·지지·궤적의 등록 프로필과 불일치.",
+      "exclusions": "낯선 동작을 위험·장난·악의로 분류하지 않음.",
+      "observation_template": "현재 동작이 선택한 스쿼트와 달라 자세 평가를 보류했어요.",
+      "action_template": "쉬는 동안 선택한 운동과 변형을 확인해 주세요.",
+      "recheck": "변형 확정 또는 사람 검토 후 규칙 추가. 판정 보류를 정상으로 계산하지 않음.",
+      "feedback_class": "measurement",
+      "side_variants": [
+        "none"
+      ],
+      "validation_status": "research",
+      "automatic_coaching_enabled": false,
+      "thresholds": null,
+      "gate_profile": "variant_mismatch",
+      "observation_contract": {
+        "evidence_sources": [
+          "valid_motion_sequence",
+          "selected_profile"
+        ],
+        "allowed_views": [
+          "validated_motion_visible_view"
+        ],
+        "allowed_phases_for_existing_message": [
+          "known_motion_segment"
+        ],
+        "required_observability_rule": "all_event_specific_features_visible_or_supported_by_validated_diagnostic",
+        "minimum_roi_resolution": null,
+        "minimum_detectable_change": null,
+        "persistence_ms": null,
+        "enter_threshold": null,
+        "exit_threshold": null,
+        "phase_or_side_not_supported": "abstain_from_that_specific_message",
+        "camera_rgb_pose_timestamp_alignment_required": true,
+        "medical_cause_inferred": false
+      },
+      "excludes": [],
+      "exclusion_detail": "낯선 동작을 위험·장난·악의로 분류하지 않음.",
+      "suppresses": [],
+      "invalidates": [
+        {
+          "event_ids": [
+            "SB01",
+            "SB02",
+            "SF01",
+            "SF02",
+            "SF03",
+            "SF04",
+            "SF05",
+            "SF06",
+            "SF07",
+            "SF08",
+            "SF09",
+            "SF10",
+            "SF11",
+            "SF12",
+            "SH01",
+            "SH02",
+            "SH03",
+            "SK01",
+            "SK02",
+            "SK03",
+            "SK04",
+            "SP01",
+            "SP02",
+            "SP03",
+            "SR01",
+            "SR02",
+            "SR03",
+            "SR04",
+            "ST01",
+            "ST02",
+            "ST03",
+            "ST04"
+          ],
+          "scope": "selected_squat_profile_form_rules",
+          "until": "variant_confirmed_or_reviewed_new_profile",
+          "effect": "not_evaluable"
+        }
+      ],
+      "reference_contract": {
+        "required_references": [
+          "selected_exercise_variant"
+        ],
+        "required_binding_fields": [
+          "profile_id",
+          "profile_version",
+          "reference_source",
+          "reference_review_status",
+          "view_id",
+          "camera_epoch",
+          "support_baseline_epoch"
+        ],
+        "phase_and_depth_matched_comparison": false,
+        "user_average_is_normative_reference": false,
+        "reference_update": "explicit_reviewed_reset_or_profile_change_never_automatic_absorption_of_deviation",
+        "missing_required_reference": "observation_only_or_not_evaluable_no_corrective_speech",
+        "reference_values": null
+      },
+      "delivery_contract": {
+        "status": "research_disabled",
+        "existing_message_is_candidate_only": true,
+        "safe_delivery": "stable_top_or_between_reps_or_rest_after_context_recheck",
+        "max_once_per_episode": true,
+        "cooldown_ms": null,
+        "valid_for_ms": null,
+        "revalidate_before_speech": [
+          "evidence_status",
+          "phase_and_tense",
+          "side_identity_if_used",
+          "reference_epoch",
+          "selected_profile",
+          "not_superseded"
+        ],
+        "cancel_on": [
+          "event_resolved_before_delivery",
+          "evidence_invalidated",
+          "reference_epoch_changed",
+          "profile_changed",
+          "expired",
+          "higher_priority_action_selected"
+        ],
+        "past_event": "reviewed_past_tense_summary_or_cancel_never_stale_present_tense",
+        "in_motion_foot_reposition_instruction_allowed": false,
+        "loaded_unloaded_action_templates_interchangeable": false
+      },
+      "recheck_contract": {
+        "result_states": [
+          "improved_same_conditions",
+          "unchanged",
+          "worse_or_compensated",
+          "not_evaluable",
+          "new_conditions_result",
+          "not_applicable"
+        ],
+        "requires_observed_comparable_followup": true,
+        "compare_keys": [
+          "profile_version",
+          "view_id",
+          "camera_epoch",
+          "reviewed_support_epoch",
+          "target_range",
+          "phase",
+          "load_condition",
+          "tempo_condition"
+        ],
+        "changed_conditions": "new_conditions_result_not_original_condition_success",
+        "missing_observation": "not_evaluable",
+        "absence_of_event_means_success": false,
+        "compensation_events": [],
+        "detail": "변형 확정 또는 사람 검토 후 규칙 추가. 판정 보류를 정상으로 계산하지 않음."
+      }
+    },
+    {
+      "id": "SU01",
+      "part": "미관측",
+      "event": "복압·근긴장·발바닥 압력 이상 주장",
+      "observable_trigger_candidate": "기본 관절점으로 직접 확인 불가.",
+      "exclusions": "자세의 겉모습으로 내부 힘·통증·의도를 확정하지 않음.",
+      "observation_template": "복압이나 발바닥 압력은 이 카메라로 확인할 수 없어요.",
+      "action_template": "사용자 요청 시 해당 운동의 일반 가이드를 제공하고 필요하면 지도자에게 확인하세요.",
+      "recheck": "자동 교정 성공 없음. 사용자 확인과 별도 계측을 구분.",
+      "feedback_class": "unobservable",
+      "side_variants": [
+        "none"
+      ],
+      "validation_status": "research",
+      "automatic_coaching_enabled": false,
+      "thresholds": null,
+      "gate_profile": "capability_explanation",
+      "observation_contract": {
+        "evidence_sources": [
+          "current_sensor_capability_registry"
+        ],
+        "allowed_views": [
+          "not_applicable"
+        ],
+        "allowed_phases_for_existing_message": [
+          "not_applicable"
+        ],
+        "required_observability_rule": "all_event_specific_features_visible_or_supported_by_validated_diagnostic",
+        "minimum_roi_resolution": null,
+        "minimum_detectable_change": null,
+        "persistence_ms": null,
+        "enter_threshold": null,
+        "exit_threshold": null,
+        "phase_or_side_not_supported": "abstain_from_that_specific_message",
+        "camera_rgb_pose_timestamp_alignment_required": false,
+        "medical_cause_inferred": false
+      },
+      "excludes": [],
+      "exclusion_detail": "자세의 겉모습으로 내부 힘·통증·의도를 확정하지 않음.",
+      "suppresses": [],
+      "invalidates": [],
+      "reference_contract": {
+        "required_references": [],
+        "required_binding_fields": [],
+        "phase_and_depth_matched_comparison": false,
+        "user_average_is_normative_reference": false,
+        "reference_update": "explicit_reviewed_reset_or_profile_change_never_automatic_absorption_of_deviation",
+        "missing_required_reference": "observation_only_or_not_evaluable_no_corrective_speech",
+        "reference_values": null
+      },
+      "delivery_contract": {
+        "status": "research_disabled",
+        "existing_message_is_candidate_only": true,
+        "safe_delivery": "user_requested_capability_explanation",
+        "max_once_per_episode": true,
+        "cooldown_ms": null,
+        "valid_for_ms": null,
+        "revalidate_before_speech": [
+          "evidence_status",
+          "phase_and_tense",
+          "side_identity_if_used",
+          "reference_epoch",
+          "selected_profile",
+          "not_superseded"
+        ],
+        "cancel_on": [
+          "event_resolved_before_delivery",
+          "evidence_invalidated",
+          "reference_epoch_changed",
+          "profile_changed",
+          "expired",
+          "higher_priority_action_selected"
+        ],
+        "past_event": "reviewed_past_tense_summary_or_cancel_never_stale_present_tense",
+        "in_motion_foot_reposition_instruction_allowed": false,
+        "loaded_unloaded_action_templates_interchangeable": false,
+        "action_template_is_internal_guidance_not_tts": true
+      },
+      "recheck_contract": {
+        "result_states": [
+          "not_applicable"
+        ],
+        "requires_observed_comparable_followup": false,
+        "compare_keys": [],
+        "changed_conditions": "new_conditions_result_not_original_condition_success",
+        "missing_observation": "not_evaluable",
+        "absence_of_event_means_success": false,
+        "compensation_events": [],
+        "detail": "자동 교정 성공 없음. 사용자 확인과 별도 계측을 구분."
+      }
+    }
+  ],
+  "expanded_messages": [
+    {
+      "event_id": "SF01",
+      "anatomical_side": "left",
+      "observation": "왼쪽 발 전체가 지지면에서 떨어졌어요.",
+      "action": "안전하게 중량을 거치한 뒤 양발 지지와 위치를 다시 준비하세요.",
+      "recheck": "재설정한 동일 조건의 유효 반복에서 지지면과 발의 관계 유지. 압력·하중 분배가 정상이라고 확정하지 않음."
+    },
+    {
+      "event_id": "SF01",
+      "anatomical_side": "right",
+      "observation": "오른쪽 발 전체가 지지면에서 떨어졌어요.",
+      "action": "안전하게 중량을 거치한 뒤 양발 지지와 위치를 다시 준비하세요.",
+      "recheck": "재설정한 동일 조건의 유효 반복에서 지지면과 발의 관계 유지. 압력·하중 분배가 정상이라고 확정하지 않음."
+    },
+    {
+      "event_id": "SF02",
+      "anatomical_side": "left",
+      "observation": "왼쪽 발 뒤꿈치가 지지면에서 들렸어요.",
+      "action": "다음 반복은 발 전체의 지지를 유지할 수 있는 범위로 조정해 보세요.",
+      "recheck": "재설정한 동일 조건의 유효 반복에서 지지면과 발의 관계 유지. 압력·하중 분배가 정상이라고 확정하지 않음. 깊이를 바꾸면 낮춘 범위의 성공으로 기록."
+    },
+    {
+      "event_id": "SF02",
+      "anatomical_side": "right",
+      "observation": "오른쪽 발 뒤꿈치가 지지면에서 들렸어요.",
+      "action": "다음 반복은 발 전체의 지지를 유지할 수 있는 범위로 조정해 보세요.",
+      "recheck": "재설정한 동일 조건의 유효 반복에서 지지면과 발의 관계 유지. 압력·하중 분배가 정상이라고 확정하지 않음. 깊이를 바꾸면 낮춘 범위의 성공으로 기록."
+    },
+    {
+      "event_id": "SF03",
+      "anatomical_side": "left",
+      "observation": "왼쪽 발 앞부분이 지지면에서 들렸어요.",
+      "action": "안전하게 중량을 거치한 뒤 양발 지지와 위치를 다시 준비하세요.",
+      "recheck": "재설정한 동일 조건의 유효 반복에서 지지면과 발의 관계 유지. 압력·하중 분배가 정상이라고 확정하지 않음."
+    },
+    {
+      "event_id": "SF03",
+      "anatomical_side": "right",
+      "observation": "오른쪽 발 앞부분이 지지면에서 들렸어요.",
+      "action": "안전하게 중량을 거치한 뒤 양발 지지와 위치를 다시 준비하세요.",
+      "recheck": "재설정한 동일 조건의 유효 반복에서 지지면과 발의 관계 유지. 압력·하중 분배가 정상이라고 확정하지 않음."
+    },
+    {
+      "event_id": "SF04",
+      "anatomical_side": "left",
+      "observation": "왼쪽 발 안쪽 가장자리가 지지면에서 들렸어요.",
+      "action": "안전하게 중량을 거치한 뒤 양발 지지와 위치를 다시 준비하세요.",
+      "recheck": "재설정한 동일 조건의 유효 반복에서 지지면과 발의 관계 유지. 압력·하중 분배가 정상이라고 확정하지 않음."
+    },
+    {
+      "event_id": "SF04",
+      "anatomical_side": "right",
+      "observation": "오른쪽 발 안쪽 가장자리가 지지면에서 들렸어요.",
+      "action": "안전하게 중량을 거치한 뒤 양발 지지와 위치를 다시 준비하세요.",
+      "recheck": "재설정한 동일 조건의 유효 반복에서 지지면과 발의 관계 유지. 압력·하중 분배가 정상이라고 확정하지 않음."
+    },
+    {
+      "event_id": "SF05",
+      "anatomical_side": "left",
+      "observation": "왼쪽 발 바깥쪽 가장자리가 지지면에서 들렸어요.",
+      "action": "안전하게 중량을 거치한 뒤 양발 지지와 위치를 다시 준비하세요.",
+      "recheck": "재설정한 동일 조건의 유효 반복에서 지지면과 발의 관계 유지. 압력·하중 분배가 정상이라고 확정하지 않음."
+    },
+    {
+      "event_id": "SF05",
+      "anatomical_side": "right",
+      "observation": "오른쪽 발 바깥쪽 가장자리가 지지면에서 들렸어요.",
+      "action": "안전하게 중량을 거치한 뒤 양발 지지와 위치를 다시 준비하세요.",
+      "recheck": "재설정한 동일 조건의 유효 반복에서 지지면과 발의 관계 유지. 압력·하중 분배가 정상이라고 확정하지 않음."
+    },
+    {
+      "event_id": "SF06",
+      "anatomical_side": "left",
+      "observation": "왼쪽 발 위치가 반복 중 바깥쪽으로 바뀌었어요.",
+      "action": "안전하게 중량을 거치한 뒤 양발 지지와 위치를 다시 준비하세요.",
+      "recheck": "발 기준을 새로 확인한 뒤 반복 중 위치가 유지되는지 측정. 바뀐 위치를 자동 정답으로 수용하지 않음."
+    },
+    {
+      "event_id": "SF06",
+      "anatomical_side": "right",
+      "observation": "오른쪽 발 위치가 반복 중 바깥쪽으로 바뀌었어요.",
+      "action": "안전하게 중량을 거치한 뒤 양발 지지와 위치를 다시 준비하세요.",
+      "recheck": "발 기준을 새로 확인한 뒤 반복 중 위치가 유지되는지 측정. 바뀐 위치를 자동 정답으로 수용하지 않음."
+    },
+    {
+      "event_id": "SF07",
+      "anatomical_side": "left",
+      "observation": "왼쪽 발 위치가 반복 중 안쪽으로 바뀌었어요.",
+      "action": "안전하게 중량을 거치한 뒤 양발 지지와 위치를 다시 준비하세요.",
+      "recheck": "발 기준을 새로 확인한 뒤 반복 중 위치가 유지되는지 측정. 바뀐 위치를 자동 정답으로 수용하지 않음."
+    },
+    {
+      "event_id": "SF07",
+      "anatomical_side": "right",
+      "observation": "오른쪽 발 위치가 반복 중 안쪽으로 바뀌었어요.",
+      "action": "안전하게 중량을 거치한 뒤 양발 지지와 위치를 다시 준비하세요.",
+      "recheck": "발 기준을 새로 확인한 뒤 반복 중 위치가 유지되는지 측정. 바뀐 위치를 자동 정답으로 수용하지 않음."
+    },
+    {
+      "event_id": "SF08",
+      "anatomical_side": "left",
+      "observation": "왼쪽 발 위치가 반복 중 앞쪽으로 바뀌었어요.",
+      "action": "안전하게 중량을 거치한 뒤 양발 지지와 위치를 다시 준비하세요.",
+      "recheck": "발 기준을 새로 확인한 뒤 반복 중 위치가 유지되는지 측정. 바뀐 위치를 자동 정답으로 수용하지 않음."
+    },
+    {
+      "event_id": "SF08",
+      "anatomical_side": "right",
+      "observation": "오른쪽 발 위치가 반복 중 앞쪽으로 바뀌었어요.",
+      "action": "안전하게 중량을 거치한 뒤 양발 지지와 위치를 다시 준비하세요.",
+      "recheck": "발 기준을 새로 확인한 뒤 반복 중 위치가 유지되는지 측정. 바뀐 위치를 자동 정답으로 수용하지 않음."
+    },
+    {
+      "event_id": "SF09",
+      "anatomical_side": "left",
+      "observation": "왼쪽 발 위치가 반복 중 뒤쪽으로 바뀌었어요.",
+      "action": "안전하게 중량을 거치한 뒤 양발 지지와 위치를 다시 준비하세요.",
+      "recheck": "발 기준을 새로 확인한 뒤 반복 중 위치가 유지되는지 측정. 바뀐 위치를 자동 정답으로 수용하지 않음."
+    },
+    {
+      "event_id": "SF09",
+      "anatomical_side": "right",
+      "observation": "오른쪽 발 위치가 반복 중 뒤쪽으로 바뀌었어요.",
+      "action": "안전하게 중량을 거치한 뒤 양발 지지와 위치를 다시 준비하세요.",
+      "recheck": "발 기준을 새로 확인한 뒤 반복 중 위치가 유지되는지 측정. 바뀐 위치를 자동 정답으로 수용하지 않음."
+    },
+    {
+      "event_id": "SF10",
+      "anatomical_side": "left",
+      "observation": "왼쪽 발끝 방향이 반복 중 바깥쪽으로 바뀌었어요.",
+      "action": "안전하게 중량을 거치한 뒤 양발 지지와 위치를 다시 준비하세요.",
+      "recheck": "다음 반복에서 설정한 발 방향 유지. 절대 발끝 각도를 보편 정답으로 강제하지 않음."
+    },
+    {
+      "event_id": "SF10",
+      "anatomical_side": "right",
+      "observation": "오른쪽 발끝 방향이 반복 중 바깥쪽으로 바뀌었어요.",
+      "action": "안전하게 중량을 거치한 뒤 양발 지지와 위치를 다시 준비하세요.",
+      "recheck": "다음 반복에서 설정한 발 방향 유지. 절대 발끝 각도를 보편 정답으로 강제하지 않음."
+    },
+    {
+      "event_id": "SF11",
+      "anatomical_side": "left",
+      "observation": "왼쪽 발끝 방향이 반복 중 안쪽으로 바뀌었어요.",
+      "action": "안전하게 중량을 거치한 뒤 양발 지지와 위치를 다시 준비하세요.",
+      "recheck": "다음 반복에서 설정한 발 방향 유지. 회전이 가려지면 위치 변화까지만 보고."
+    },
+    {
+      "event_id": "SF11",
+      "anatomical_side": "right",
+      "observation": "오른쪽 발끝 방향이 반복 중 안쪽으로 바뀌었어요.",
+      "action": "안전하게 중량을 거치한 뒤 양발 지지와 위치를 다시 준비하세요.",
+      "recheck": "다음 반복에서 설정한 발 방향 유지. 회전이 가려지면 위치 변화까지만 보고."
+    },
+    {
+      "event_id": "SF12",
+      "anatomical_side": "none",
+      "observation": "반복 사이마다 발 위치가 바뀌고 있어요.",
+      "action": "중량을 안전하게 거치한 뒤 발 위치를 정하고 다시 시작해 보세요.",
+      "recheck": "새 준비 후 발 안정 확인. 자발적 재설정이었다면 오류 대신 준비 이벤트로 기록."
+    },
+    {
+      "event_id": "SK01",
+      "anatomical_side": "left",
+      "observation": "내려가거나 올라올 때 왼쪽 무릎이 설정한 경로보다 안쪽으로 이동했어요.",
+      "action": "무릎이 발이 향한 방향을 따라 움직이게 해 보세요.",
+      "recheck": "같은 깊이에서 목표 경로 편차 감소, 반대 방향 과교정·발 들림 없음."
+    },
+    {
+      "event_id": "SK01",
+      "anatomical_side": "right",
+      "observation": "내려가거나 올라올 때 오른쪽 무릎이 설정한 경로보다 안쪽으로 이동했어요.",
+      "action": "무릎이 발이 향한 방향을 따라 움직이게 해 보세요.",
+      "recheck": "같은 깊이에서 목표 경로 편차 감소, 반대 방향 과교정·발 들림 없음."
+    },
+    {
+      "event_id": "SK02",
+      "anatomical_side": "left",
+      "observation": "왼쪽 무릎이 설정한 경로보다 바깥쪽으로 이동했어요.",
+      "action": "무릎을 더 벌리려 하지 말고 발이 향한 방향을 따라 움직여 보세요.",
+      "recheck": "같은 깊이에서 과도한 경로 편차 감소. 무릎을 안으로 모으는 과교정 없음."
+    },
+    {
+      "event_id": "SK02",
+      "anatomical_side": "right",
+      "observation": "오른쪽 무릎이 설정한 경로보다 바깥쪽으로 이동했어요.",
+      "action": "무릎을 더 벌리려 하지 말고 발이 향한 방향을 따라 움직여 보세요.",
+      "recheck": "같은 깊이에서 과도한 경로 편차 감소. 무릎을 안으로 모으는 과교정 없음."
+    },
+    {
+      "event_id": "SK03",
+      "anatomical_side": "none",
+      "observation": "양쪽 무릎이 굽혀지는 범위나 시점이 달라졌어요.",
+      "action": "편안하게 정한 범위에서 양쪽을 함께 굽혔다 펴 보세요.",
+      "recheck": "큰 편차가 줄고 양쪽 목표 범위 유지. 작은 체형 차이를 강제로 없애지 않음."
+    },
+    {
+      "event_id": "SK04",
+      "anatomical_side": "none",
+      "observation": "정한 시작 높이까지 돌아오기 전에 다음 반복을 시작했어요.",
+      "action": "편안하게 선 시작 위치로 돌아온 뒤 다음 반복을 해 보세요.",
+      "recheck": "상단 복귀 후 다음 반복. 무릎을 뒤로 밀어 과신전시키는 지시 금지."
+    },
+    {
+      "event_id": "SP01",
+      "anatomical_side": "left",
+      "observation": "골반이 왼쪽으로 치우치며 올라오고 있어요.",
+      "action": "몸의 중심이 양발 사이에서 움직이도록 해 보세요.",
+      "recheck": "같은 깊이에서 좌우 편차 감소. 힘이 균등해졌다는 주장 금지."
+    },
+    {
+      "event_id": "SP01",
+      "anatomical_side": "right",
+      "observation": "골반이 오른쪽으로 치우치며 올라오고 있어요.",
+      "action": "몸의 중심이 양발 사이에서 움직이도록 해 보세요.",
+      "recheck": "같은 깊이에서 좌우 편차 감소. 힘이 균등해졌다는 주장 금지."
+    },
+    {
+      "event_id": "SP02",
+      "anatomical_side": "none",
+      "observation": "올라올 때 골반의 좌우 높이 차이가 커졌어요.",
+      "action": "양쪽이 함께 올라오는 작은 범위부터 해 보세요.",
+      "recheck": "높이차 변화 감소와 목표 범위 유지. 범위를 바꾸면 별도 조건."
+    },
+    {
+      "event_id": "SP03",
+      "anatomical_side": "none",
+      "observation": "엉덩이가 먼저 올라가며 몸통이 더 숙여지고 있어요.",
+      "action": "엉덩이와 가슴이 함께 올라오게 해 보세요.",
+      "recheck": "같은 깊이·유사 속도에서 상승 시점차와 몸통 급변 감소."
+    },
+    {
+      "event_id": "ST01",
+      "anatomical_side": "none",
+      "observation": "이 구간에서 몸통이 앞쪽으로 급하게 더 숙여졌어요.",
+      "action": "중량을 안전하게 거치한 뒤 무게와 범위를 조정하고 다시 시도해 보세요.",
+      "recheck": "새 조건에서 급변 감소. 낮춘 조건의 성공을 원래 조건의 교정 성공과 구분. 요추 중립 교정으로 표현하지 않음."
+    },
+    {
+      "event_id": "ST02",
+      "anatomical_side": "none",
+      "observation": "마무리할 때 몸통을 뒤로 젖히고 있어요.",
+      "action": "몸통을 뒤로 더 젖히지 말고 편안하게 선 위치에서 멈춰 보세요.",
+      "recheck": "상단 뒤젖힘 감소. 허리 내부 곡선 판정 아님."
+    },
+    {
+      "event_id": "ST03",
+      "anatomical_side": "left",
+      "observation": "몸통이 왼쪽으로 기울고 있어요.",
+      "action": "몸통이 한쪽으로 꺾이지 않는 범위에서 움직여 보세요.",
+      "recheck": "같은 단계의 측굴 변화 감소, 반대쪽 과교정 없음."
+    },
+    {
+      "event_id": "ST03",
+      "anatomical_side": "right",
+      "observation": "몸통이 오른쪽으로 기울고 있어요.",
+      "action": "몸통이 한쪽으로 꺾이지 않는 범위에서 움직여 보세요.",
+      "recheck": "같은 단계의 측굴 변화 감소, 반대쪽 과교정 없음."
+    },
+    {
+      "event_id": "ST04",
+      "anatomical_side": "none",
+      "observation": "반복 중 몸이 향하는 방향이 바뀌었어요.",
+      "action": "안전하게 중량을 거치한 뒤 양발 지지와 위치를 다시 준비하세요.",
+      "recheck": "방향을 재설정한 새 구간에서 관찰. 몸 회전을 발·무릎 오류 여러 개로 중복 발화하지 않음."
+    },
+    {
+      "event_id": "SH01",
+      "anatomical_side": "none",
+      "observation": "고개가 몸통에 비해 뒤로 많이 젖혀졌어요.",
+      "action": "목을 편하게 두고 머리가 몸통과 함께 움직이게 해 보세요.",
+      "recheck": "같은 뷰에서 큰 상대 편차 감소."
+    },
+    {
+      "event_id": "SH02",
+      "anatomical_side": "none",
+      "observation": "고개가 몸통에 비해 아래로 많이 숙여졌어요.",
+      "action": "목을 편하게 두고 머리가 몸통과 함께 움직이게 해 보세요.",
+      "recheck": "몸통 대비 큰 상대 편차 감소. 수평 응시 강제 금지."
+    },
+    {
+      "event_id": "SH03",
+      "anatomical_side": "none",
+      "observation": "운동 중 고개 방향이 크게 바뀌었어요.",
+      "action": "시작 전에 정한 편안한 지점을 보고 안내는 음성으로 들어보세요.",
+      "recheck": "큰 방향 전환 감소. 얼굴이 가려지면 성공 판정 유보."
+    },
+    {
+      "event_id": "SR01",
+      "anatomical_side": "none",
+      "observation": "정한 내려가기 범위에 아직 도달하지 않았어요.",
+      "action": "통제할 수 있는 범위에서 정한 목표까지 천천히 내려가 보세요.",
+      "recheck": "목표 도달과 다른 필수 정렬 유지."
+    },
+    {
+      "event_id": "SR02",
+      "anatomical_side": "none",
+      "observation": "이번에 정한 범위보다 더 내려갔어요.",
+      "action": "이번 세트는 정한 목표 지점에서 방향을 바꿔 보세요.",
+      "recheck": "합의 범위 유지. 더 깊다는 이유로 위험·손상 판정 금지."
+    },
+    {
+      "event_id": "SR03",
+      "anatomical_side": "none",
+      "observation": "정한 방식보다 하단 전환이 급해지고 있어요.",
+      "action": "이번에는 내려가는 동작과 올라오는 동작을 천천히 이어 보세요.",
+      "recheck": "동일 목표 범위에서 등록한 전환 패턴 유지."
+    },
+    {
+      "event_id": "SR04",
+      "anatomical_side": "none",
+      "observation": "내려가는 속도가 정한 리듬보다 빨라졌어요.",
+      "action": "이번에 정한 리듬에 맞춰 내려가 보세요.",
+      "recheck": "정한 템포 회복과 범위 유지. 시간 정보 없는 이미지로 검증 불가."
+    },
+    {
+      "event_id": "SB01",
+      "anatomical_side": "none",
+      "observation": "바벨 양쪽 높이 차이가 커졌어요.",
+      "action": "중량을 안전하게 거치한 뒤 바 지지와 손 위치를 다시 확인하세요.",
+      "recheck": "새 세트에서 바 높이차와 몸통 편위 재평가."
+    },
+    {
+      "event_id": "SB02",
+      "anatomical_side": "none",
+      "observation": "바벨의 지지 위치가 움직이고 있어요.",
+      "action": "반복을 이어가지 말고 중량을 안전하게 거치해 주세요.",
+      "recheck": "하중 해제 후 지지 재설정. 다시 시작한 세트에서 확인."
+    },
+    {
+      "event_id": "SM01",
+      "anatomical_side": "none",
+      "observation": "발이 가려져 발 위치를 확인할 수 없어요.",
+      "action": "쉬는 동안 발과 바닥이 보이도록 촬영 위치를 조정해 주세요.",
+      "recheck": "재관찰 후 해당 항목만 복구. 가림 동안 교정 완료 처리 금지."
+    },
+    {
+      "event_id": "SM02",
+      "anatomical_side": "none",
+      "observation": "움직임을 안정적으로 추적하지 못하고 있어요.",
+      "action": "쉬는 동안 촬영 범위와 조명을 확인해 주세요.",
+      "recheck": "추적 회복 뒤 새 구간부터 판정. 실패 구간에 오류 멘트 생성 금지."
+    },
+    {
+      "event_id": "SM03",
+      "anatomical_side": "none",
+      "observation": "카메라 위치가 바뀌어 기준을 다시 확인해야 해요.",
+      "action": "쉬는 동안 휴대폰을 고정하고 다시 준비해 주세요.",
+      "recheck": "새 카메라 기준 구간. 이동 전후의 수치로 교정 성공 판정 금지."
+    },
+    {
+      "event_id": "SM04",
+      "anatomical_side": "none",
+      "observation": "현재 동작이 선택한 스쿼트와 달라 자세 평가를 보류했어요.",
+      "action": "쉬는 동안 선택한 운동과 변형을 확인해 주세요.",
+      "recheck": "변형 확정 또는 사람 검토 후 규칙 추가. 판정 보류를 정상으로 계산하지 않음."
+    },
+    {
+      "event_id": "SU01",
+      "anatomical_side": "none",
+      "observation": "복압이나 발바닥 압력은 이 카메라로 확인할 수 없어요.",
+      "action": "사용자 요청 시 해당 운동의 일반 가이드를 제공하고 필요하면 지도자에게 확인하세요.",
+      "recheck": "자동 교정 성공 없음. 사용자 확인과 별도 계측을 구분."
+    }
+  ],
+  "execution_contract_status": "structured_research_contract_not_executable_validated_detector",
+  "global_gates_apply_to": [
+    "form_evaluation"
+  ],
+  "gate_profiles": {
+    "form_evaluation": {
+      "all_of": [
+        "confirmed_exercise_variant",
+        "known_segment_phase",
+        "stable_camera",
+        "required_landmarks_or_rgb_visible",
+        "validated_feature_noise_floor",
+        "deviation_exceeds_validated_contextual_band",
+        "validated_persistence",
+        "registered_exceptions_checked",
+        "valid_side_identity",
+        "safe_message_timing"
+      ],
+      "on_failure": "not_evaluable_or_observation_only"
+    },
+    "measurement_diagnostics": {
+      "all_of": [
+        "diagnostic_evidence_valid",
+        "specific_failure_reason_supported",
+        "diagnostic_rule_validated",
+        "safe_message_timing"
+      ],
+      "must_not_require": [
+        "stable_camera",
+        "required_landmarks_or_rgb_visible",
+        "deviation_exceeds_validated_contextual_band",
+        "valid_side_identity"
+      ],
+      "on_failure": "generic_measurement_unavailable_no_specific_cause_claim"
+    },
+    "variant_mismatch": {
+      "all_of": [
+        "selected_profile_known",
+        "sufficient_valid_motion_observation",
+        "validated_variant_mismatch_evidence",
+        "safe_message_timing"
+      ],
+      "must_not_require": [
+        "confirmed_exercise_variant"
+      ],
+      "on_failure": "measurement_uncertain_not_unknown_variant"
+    },
+    "capability_explanation": {
+      "all_of": [
+        "user_request_or_relevant_feature_explanation",
+        "capability_claim_matches_current_sensor_configuration"
+      ],
+      "must_not_require": [
+        "stable_camera",
+        "required_landmarks_or_rgb_visible",
+        "known_segment_phase"
+      ],
+      "on_failure": "no_unsolicited_form_claim"
+    }
+  },
+  "episode_contract": {
+    "states": [
+      "not_evaluable",
+      "candidate",
+      "confirmed",
+      "resolved_observed",
+      "unresolved",
+      "expired"
+    ],
+    "required_runtime_fields": [
+      "episode_id",
+      "event_id",
+      "started_at_timestamp",
+      "last_evidence_timestamp",
+      "anatomical_side",
+      "phase",
+      "profile_id",
+      "profile_version",
+      "camera_epoch",
+      "support_baseline_epoch",
+      "evidence_status"
+    ],
+    "unknown_is_negative": false,
+    "absence_of_detection_is_resolution": false,
+    "new_epoch_on": [
+      "camera_change",
+      "reviewed_stance_reset",
+      "exercise_variant_change"
+    ],
+    "intent_inferred_from_video": false,
+    "declared_test_mode_changes_detection_or_form_decision": false
+  },
+  "arbitration_contract": {
+    "apply_evidence_invalidation_before_priority": true,
+    "form_delivery_order": [
+      "support",
+      "setup",
+      "form",
+      "detail"
+    ],
+    "diagnostic_delivery": "invalidate_only_dependent_form_evidence_then_deliver_supported_measurement_explanation",
+    "max_action_messages_per_delivery_window": 1,
+    "retain_suppressed_observations_in_log": true,
+    "suppression_scope": [
+      "same_episode",
+      "overlapping_time",
+      "matching_anatomical_side_or_explicit_whole_body_scope"
+    ],
+    "unknown_combination": "retain_supported_atomic_observations_do_not_generate_unreviewed_combined_action",
+    "severity_escalation": "only_validated_observed_combination_of_magnitude_persistence_and_support_instability",
+    "clinical_risk_inferred_from_event_class": false
+  },
+  "count_quality_contract": {
+    "motion_count_separate_from_form_flags": true,
+    "track_evaluable_coverage_per_rule": true,
+    "unsupported_rule_counts_as_pass": false,
+    "invalidated_required_phase_evidence": "do_not_infer_or_bridge_count_transition_without_validated_policy",
+    "unobserved_foot_quality_invalidates_all_counting": false
+  },
+  "release_contract": {
+    "enabled_scope_key": [
+      "event_id",
+      "exercise_profile_version",
+      "view_id",
+      "capture_conditions",
+      "detector_version",
+      "message_policy_version"
+    ],
+    "required_evidence": [
+      "held_out_person_and_session_detection_results",
+      "allowed_variant_false_positive_results",
+      "side_and_direction_results",
+      "abstention_and_evaluable_coverage",
+      "message_timing_and_comprehension_review",
+      "comparable_followup_and_overcorrection_review"
+    ],
+    "all_current_events_enabled": false,
+    "numeric_acceptance_thresholds": null,
+    "null_threshold_or_missing_release_evidence": "automatic_coaching_disabled",
+    "expanded_messages_are_approved_runtime_tts": false
+  }
+}

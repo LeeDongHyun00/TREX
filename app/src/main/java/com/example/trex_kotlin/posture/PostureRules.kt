@@ -121,7 +121,7 @@ data class RuleResult(
     val baselineApplied: Boolean = false,
     /** 기준선 적용 전 원값 (baselineApplied 가 false 면 value 와 같다). */
     val rawValue: Float? = value,
-    /** 위반일 때 어느 방향인지. OPPOSITE 는 반대측 가드(원값 기준) 위반. 위반이 아니면 null. */
+    /** 관측 편차의 방향. OPPOSITE 미검증 유보에도 남겨 정상으로 오해하지 않게 한다. */
     val direction: Direction? = null,
     /** 유보(ABSTAIN)한 이유 — 짧은 명사구 ("촬영 방향 · 뒤", "기준선 필요"). 피처가 없어서 유보한 경우는 null. */
     val abstainReason: String? = null,
@@ -184,8 +184,8 @@ class PostureRuleSet(
         minFrames: Int = 8,
         baseline: Map<String, Float>? = null,
     ): List<RuleResult> {
-        // §33: 이 창의 촬영 방향. 프레임이 모자라거나 방향이 일관되지 않으면(UNKNOWN) 게이팅하지 않는다 = 종전 동작
-        val view = ViewEstimator.estimate(agg, minFrames)?.takeIf { it.cls != ViewEstimator.ViewClass.UNKNOWN }
+        // 방향 제한이 있는 규칙은 방향을 확인한 창에서만 판정한다. 모름은 허용된 방향이 아니다.
+        val view = ViewEstimator.estimate(agg, minFrames)
         return rulesFor(exercise, includeBeta).map { rule ->
             if (rule.kind != "window") return@map RuleResult(rule, Verdict.ABSTAIN, null, 0, abstainReason = "시간·반복 측정 필요")
             val n = agg.count(rule.baseFeature)
@@ -193,10 +193,12 @@ class PostureRuleSet(
             val b = baseline?.get(rule.feature)
             val useBaseline = raw != null && b != null && rule.supportsBaseline
             val value = if (useBaseline) raw!! - b!! else raw
-            val viewBlocked = view != null && rule.viewsOk.isNotEmpty() && view.letter !in rule.viewsOk
+            val viewUnknown = rule.viewsOk.isNotEmpty() && (view == null || view.cls == ViewEstimator.ViewClass.UNKNOWN)
+            val viewBlocked = rule.viewsOk.isNotEmpty() && view != null && view.letter !in rule.viewsOk
             var reason: String? = null
             var verdict = when {
                 value == null -> Verdict.ABSTAIN
+                viewUnknown -> { reason = "촬영 방향 · 확인할 수 없음"; Verdict.ABSTAIN }
                 // §33: 이 규칙이 검증된 촬영 방향이 아니다 — 판정하지 않는다 (뒤·옆·반대편에서 그대로 점수에 들어가던 결함)
                 viewBlocked -> { reason = "촬영 방향 · " + view!!.cls.label; Verdict.ABSTAIN }
                 // §28e: 기준선 필수 규칙은 기준선 없이 판정하지 않는다 — raw 임계가 기기 분포 중앙이라 오탐
@@ -210,8 +212,11 @@ class PostureRuleSet(
             if (verdict == Verdict.OK && raw != null) {
                 rule.oppositeGuard?.let { g ->
                     if (g.isViolated(raw)) {
-                        verdict = Verdict.VIOLATION
+                        // primary가 정상이더라도 관측된 반대 편차는 정상으로 확정할 수 없다.
+                        // 라벨 검증이 없는 방향은 ship 규칙의 점수·음성 자격을 상속하지 않는다.
+                        verdict = if (g.validated) Verdict.VIOLATION else Verdict.ABSTAIN
                         direction = Direction.OPPOSITE
+                        if (!g.validated) reason = "반대 방향 · 미검증 (${g.desc})"
                     }
                 }
             }

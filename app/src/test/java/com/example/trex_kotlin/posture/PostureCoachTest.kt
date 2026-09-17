@@ -77,21 +77,23 @@ class PostureCoachTest {
     fun recoveredIsAnnouncedAfterCorrection() {
         val c = LiveCoach(rs, "바벨 스쿼트", windowFrames = 8, minFrames = 8, persistence = 1, ruleCooldownMs = 0, globalGapMs = 0)
         var t = 0L
-        repeat(8) { c.onFrame(frame(-0.05f, 0f)); t += 300 }
+        repeat(8) { t += 300; c.onFrame(t, frame(-0.05f, 0f)) }
         val first = c.evaluate(t)
         assertEquals(OnsetKind.HABIT, first!!.kind)
+        assertTrue(c.onFeedbackDelivered(first, t))
         // 교정: 최근 창이 정상으로
         var rec: CoachEvent? = null
         repeat(9) {
-            c.onFrame(frame(0.06f, 0f)); t += 300
+            t += 300; c.onFrame(t, frame(0.06f, 0f))
             val e = c.evaluate(t)
             if (e?.kind == OnsetKind.RECOVERED) rec = e
         }
         assertNotNull(rec)
-        assertTrue(rec!!.message.contains("교정"))
+        assertTrue(rec!!.message.contains("참고 범위"))
+        assertFalse(rec!!.message.contains("교정됐"))
         // 교정됨은 한 번만
         var again = 0
-        repeat(5) { c.onFrame(frame(0.06f, 0f)); t += 300; if (c.evaluate(t)?.kind == OnsetKind.RECOVERED) again++ }
+        repeat(5) { t += 300; c.onFrame(t, frame(0.06f, 0f)); if (c.evaluate(t)?.kind == OnsetKind.RECOVERED) again++ }
         assertEquals(0, again)
     }
 
@@ -138,7 +140,8 @@ class PostureCoachTest {
         // 폴백
         val fb = CoachCues.cueFor(rule("x", "알 수 없는 조건", "knee_mean__mean", "<", 0f))
         assertTrue(fb.habit.contains("알 수 없는 조건"))
-        assertTrue(fb.recovered.contains("교정"))
+        assertTrue(fb.recovered.contains("참고 범위"))
+        assertFalse(fb.recovered.contains("교정됐"))
     }
 
     // ---- 양방향(반대측 가드) — spec §23, BIDIRECTIONAL.md
@@ -173,21 +176,22 @@ class PostureCoachTest {
     fun coachSpeaksOutwardKneeCueAndRecovers() {
         val c = LiveCoach(rsGuard, "바벨 스쿼트", windowFrames = 8, minFrames = 8, persistence = 2, ruleCooldownMs = 0, globalGapMs = 0)
         var t = 0L
-        repeat(9) { c.onFrame(frame(0.30f, 0f)); t += 300 }
+        repeat(9) { t += 300; c.onFrame(t, frame(0.30f, 0f)) }
         c.evaluate(t)                                                  // streak 1
-        c.onFrame(frame(0.30f, 0f)); t += 300
+        t += 300; c.onFrame(t, frame(0.30f, 0f))
         val ev = c.evaluate(t)
         assertNotNull(ev)
         assertEquals(OnsetKind.HABIT, ev!!.kind)
         assertEquals(Direction.OPPOSITE, ev.direction)
         assertTrue(ev.message.contains("바깥"))
+        assertTrue(c.onFeedbackDelivered(ev, t))
         val st = c.lastStates.first { it.rule.id == guardedKneeRule.id }
         assertEquals(Direction.OPPOSITE, st.direction)
         assertTrue(st.label.contains("반대측"))
         // 교정 → RECOVERED
         var rec: CoachEvent? = null
         repeat(10) {
-            c.onFrame(frame(0.05f, 0f)); t += 300
+            t += 300; c.onFrame(t, frame(0.05f, 0f))
             val e = c.evaluate(t)
             if (e?.kind == OnsetKind.RECOVERED) rec = e
         }

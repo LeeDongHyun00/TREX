@@ -155,7 +155,8 @@ class PostureAnalyzer(
         return try {
             analyzeBitmap(upright, timestampMs, up)
         } finally {
-            if (upright !== src) src.recycle()
+            // toBitmap()의 소유자는 이 함수다. 회전 0도에서도 매 프레임 원본을 해제한다.
+            if (!src.isRecycled) src.recycle()
         }
     }
 
@@ -181,7 +182,7 @@ class PostureAnalyzer(
         val h = upright.height
         val landmarks = result?.landmarks()?.firstOrNull()
         val world = result?.worldLandmarks()?.firstOrNull()
-        if (landmarks == null || world == null || landmarks.size < MP_LANDMARK_COUNT) {
+        if (landmarks == null || world == null || landmarks.size < MP_LANDMARK_COUNT || world.size < MP_LANDMARK_COUNT) {
             return PoseSample.empty(inferMs, w, h, up, fromGravity)
         }
 
@@ -191,9 +192,12 @@ class PostureAnalyzer(
             val p = landmarks[i]
             xy[i * 2] = p.x()
             xy[i * 2 + 1] = p.y()
-            val v = p.visibility().orElse(1f)
-            val pr = p.presence().orElse(1f)
-            vis[i] = minOf(v, pr)
+            val v = p.visibility().orElse(0f)
+            val pr = p.presence().orElse(0f)
+            val wp = world[i]
+            // 화면 밖 추정점과 비정상 수치를 관측한 관절로 승격하지 않는다.
+            vis[i] = if (v.isFinite() && pr.isFinite() && p.x() in 0f..1f && p.y() in 0f..1f &&
+                wp.x().isFinite() && wp.y().isFinite() && wp.z().isFinite()) minOf(v, pr).coerceIn(0f, 1f) else 0f
         }
 
         // 월드 좌표: m → cm, y/z 부호 반전 (spec §3)

@@ -107,7 +107,7 @@ class ViewEstimatorTest {
         assertEquals(ViewEstimator.ViewClass.B, e.cls)
         assertEquals(10, e.frames)
 
-        // 좌우가 반반 뒤집히는 창 — 결과 벡터가 짧아 UNKNOWN (게이팅 안 함)
+        // 좌우가 반반 뒤집히는 창 — 결과 벡터가 짧아 UNKNOWN (방향 제한 규칙은 유보)
         val mixed = FeatureAggregator()
         repeat(5) { mixed.add(ViewEstimator.frameFeatures(skeleton(33f))) }
         repeat(5) { mixed.add(ViewEstimator.frameFeatures(skeleton(-147f))) }
@@ -157,15 +157,35 @@ class ViewEstimatorTest {
     }
 
     @Test
-    fun noGatingWithoutViewsOkOrWithoutViewFeatures() {
+    fun missingViewOnlyAbstainsWhenRuleRequiresView() {
         // views_ok 가 비어 있으면 종전 동작 — 어느 방향이든 판정
         val open = PostureRuleSet("v", "d", listOf(rule(emptySet())))
         assertEquals(Verdict.VIOLATION, open.evaluate("바벨 스쿼트", agg(-0.10f, 125f)).single().verdict)
-        // 프레임에 방향 피처가 없으면(§33 이전 경로·바닥 종목) 게이팅하지 않는다
+        // 방향 제한 규칙은 방향 피처가 없으면 유보한다. 별도 뷰 독립/바닥 규칙은 views_ok를 비워 둔다.
         val gated = PostureRuleSet("v", "d", listOf(rule(setOf("C"))))
         val r = gated.evaluate("바벨 스쿼트", agg(-0.10f, null)).single()
-        assertEquals(Verdict.VIOLATION, r.verdict)
-        assertNull(r.abstainReason)
+        assertEquals(Verdict.ABSTAIN, r.verdict)
+        assertEquals("촬영 방향 · 확인할 수 없음", r.abstainReason)
+        assertEquals(Verdict.VIOLATION, open.evaluate("바벨 스쿼트", agg(-0.10f, null)).single().verdict)
+    }
+
+    @Test
+    fun unknownOrInsufficientViewNeverCertifiesAnAllowedDirection() {
+        val gated = PostureRuleSet("v", "d", listOf(rule(setOf("C"))))
+        for (value in listOf(-0.10f, 0.05f)) {
+            val mixed = FeatureAggregator()
+            repeat(10) { i ->
+                mixed.add(mapOf("knee_out_mean" to value) + ViewEstimator.frameFeatures(skeleton(if (i % 2 == 0) 0f else 180f)))
+            }
+            val unknown = gated.evaluate("바벨 스쿼트", mixed).single()
+            assertEquals(Verdict.ABSTAIN, unknown.verdict)
+            assertEquals("촬영 방향 · 확인할 수 없음", unknown.abstainReason)
+
+            val few = FeatureAggregator()
+            repeat(10) { i -> few.add(mapOf("knee_out_mean" to value) +
+                if (i < 7) ViewEstimator.frameFeatures(skeleton(0f)) else emptyMap()) }
+            assertEquals(Verdict.ABSTAIN, gated.evaluate("바벨 스쿼트", few).single().verdict)
+        }
     }
 
     @Test

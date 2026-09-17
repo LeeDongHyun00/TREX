@@ -1,7 +1,8 @@
 package com.example.trex_kotlin.posture
 
 /**
- * 자동 렙 카운터 v4 — 반전(reversal) 방식 (spec §27, 라벨 세트 실측으로 확정).
+ * 자동 렙 카운터 — 실시간 복귀 FSM과 과거 반전(reversal) 재생 경로.
+ * 아래 v4 수치는 과거 관측 손실 유지 정책의 실측이며, 현재 복귀 FSM의 정확도 검증이 아니다.
  *
  * v3(창 분위수 밴드)의 실측 결함 2건이 라벨 세트(깊3·얕3·깊3·얕3=12)에서 드러나 교체했다:
  *  (a) 손목-붕괴 잡프레임(값≈0.01)이 창 p10 을 끌어내려 밴드 전체가 내려앉음 → 얕은 렙 미카운트
@@ -24,11 +25,15 @@ package com.example.trex_kotlin.posture
 class RepCounter(
     val signal: RepSignal,
     private val refractoryMs: Long = 1_200L,
-    private val maxGapMs: Long = Long.MAX_VALUE,
+    /** 유효 표본 사이의 최대 간격. 성긴 과거 재생만 필요하면 명시적으로 더 크게 설정한다. */
+    private val maxGapMs: Long = 1_500L,
     /** 세션 목표 카운트는 다음 하강 대신 준비 위치 복귀로 완료한다. 기존 재생 패리티는 기본값을 유지한다. */
     completeOnReturn: Boolean = false,
+    /** 과거 Python 재생의 가림 연결 결과 비교에만 사용한다. 실시간 복귀 FSM에서는 허용하지 않는다. */
+    private val legacyReplayRetainsMissingCycle: Boolean = false,
 ) {
-    private val returnTracker = if (completeOnReturn) ReturnRepTracker(signal.minAmp, refractoryMs) else null
+    init { require(!completeOnReturn || !legacyReplayRetainsMissingCycle) }
+    private val returnTracker = if (completeOnReturn) ReturnRepTracker(signal.minAmp, refractoryMs, maxGapMs) else null
     var reps: Int = 0
         private set
     val repTimesMs = ArrayList<Long>()
@@ -69,36 +74,45 @@ class RepCounter(
         lastCycleMax = Float.NaN
     }
 
-    /** 일시정지·카메라 재배치 전후를 한 반복으로 잇지 않는다. 완료한 수는 유지한다. */
-    fun resetCycle() {
+    /**
+     * 핵심 관절 가림·사람 이탈·일시정지·카메라 재배치 전후를 한 반복으로 잇지 않는다.
+     * 완료 수·완료 시각·마지막 완료 극값은 보존하고 준비 기준·진행 반복·평활·주기 추정은 폐기한다.
+     * 호출자가 분석 자체를 생략한 경우에도 이 API를 호출해야 한다. 새 시계는 reset()에서만 허용한다.
+     */
+    fun onObservationLost() {
         returnTracker?.resetCycle()
-        dirn = 0; ext = Float.NaN; pendingBottom = Float.NaN; rawCount = 0; dtMs = null; prevT = null
+        dirn = 0; ext = Float.NaN; pendingBottom = Float.NaN; rawCount = 0; dtMs = null
+        periodMs = null; lastRepAt = Long.MIN_VALUE / 2
     }
 
-    /** @return 이 프레임에서 렙이 완료됐으면 true. value=null(가림)·물리범위 밖이면 일시정지. */
+    fun resetCycle() = onObservationLost()
+
+    /**
+     * 같은 단조 시계의 증가하는 ms를 받는다. 중복/역행 표본은 무시하고 진행 반복을 무효화한다.
+     * null·비유한 값·물리범위 밖은 관측 손실이다. 이후 표본과 누락된 운동 구간을 이어 세지 않는다.
+     * @return 이 프레임에서 관측된 사이클이 완료됐으면 true.
+     */
     fun onFrame(tMs: Long, value: Float?): Boolean {
-        if (value == null || !value.isFinite()) return false
+        val plausible = value != null && value.isFinite() &&
+            (signal.plausibleMin == null || value >= signal.plausibleMin) &&
+            (signal.plausibleMax == null || value <= signal.plausibleMax)
+        // 명시적 옛 재생만 누락 구간을 멈췄다가 잇는다. 기본/실시간 경로는 바로 폐기한다.
+        if (legacyReplayRetainsMissingCycle && !plausible) return false
+        val previous = prevT
+        if (previous != null && tMs <= previous) { onObservationLost(); return false }
+        if (previous != null && tMs - previous > maxGapMs) onObservationLost()
+        prevT = tMs
+        if (value == null || !value.isFinite()) { onObservationLost(); return false }
         val plo = signal.plausibleMin
         val phi = signal.plausibleMax
-        if ((plo != null && value < plo) || (phi != null && value > phi)) return false
-
-        // 바닥 경로에서는 가림·일시정지 전후를 한 반복으로 이어 세지 않는다.
-        if (prevT?.let { tMs - it > maxGapMs || tMs <= it } == true) {
-            returnTracker?.resetCycle()
-            dirn = 0; ext = Float.NaN; pendingBottom = Float.NaN; rawCount = 0; dtMs = null
+        if ((plo != null && value < plo) || (phi != null && value > phi)) {
+            onObservationLost(); return false
         }
-        prevT?.let { p ->
-            val d = (tMs - p).toFloat()
-            if (d > 0f && d < 2_000f) dtMs = dtMs?.let { it * 0.7f + d * 0.3f } ?: d
-        }
-        prevT = tMs
-        raw3[rawCount % 3] = value
-        rawCount++
-        // 평활: 촘촘한 샘플링(≤350ms)일 때만 — 성긴 신호 평활은 렙 꼭대기를 지운다 (AIHub 실측)
-        val v = if (rawCount >= 3 && (dtMs ?: 999f) <= 350f) median3(raw3) else value
 
+        // 복귀 FSM은 원표본의 방향 히스테리시스로 잡음을 거른다. 300ms의 3점 중앙값은
+        // 정지 없는 끝점 한 표본을 지워 다음 복귀까지 놓치므로 이 경로에는 적용하지 않는다.
         returnTracker?.let { tracker ->
-            val cycle = tracker.onFrame(tMs, v) ?: return false
+            val cycle = tracker.onFrame(tMs, value) ?: return false
             if (lastRepAt > Long.MIN_VALUE / 4) {
                 val p = tMs - lastRepAt
                 periodMs = periodMs?.let { (it + p) / 2 } ?: p
@@ -107,6 +121,15 @@ class RepCounter(
             lastCycleMin = cycle.min; lastCycleMax = cycle.max
             return true
         }
+
+        // 과거 반전 재생 경로의 평활은 유지한다. 관측 손실 처리 강화로 과거 재생 수와 달라질 수 있다.
+        previous?.let { p ->
+            val d = (tMs - p).toFloat()
+            if (d > 0f && d < 2_000f) dtMs = dtMs?.let { it * 0.7f + d * 0.3f } ?: d
+        }
+        raw3[rawCount % 3] = value
+        rawCount++
+        val v = if (rawCount >= 3 && (dtMs ?: 999f) <= 350f) median3(raw3) else value
 
         if (ext.isNaN()) {
             ext = v
@@ -149,6 +172,14 @@ class RepCounter(
     }
 
     companion object {
+        /**
+         * 과거 Python v4와의 수치 패리티 조사 전용. 가림을 가로지르는 허위 사이클을 포함할 수 있다.
+         * 라이브 카운트·목표 달성·정자세 판정에는 사용하지 않는다. 실제 앱은 기본 엄격 정책을 쓴다.
+         */
+        fun forLegacyReplay(signal: RepSignal): RepCounter = RepCounter(
+            signal, maxGapMs = Long.MAX_VALUE, legacyReplayRetainsMissingCycle = true,
+        )
+
         /** 종목에 카운터가 정의돼 있고 등척성이 아니면 생성 (플랭크 등은 HoldTimer 대상 — 카운터 미적용). */
         fun forExercise(exercise: String): RepCounter? {
             val sig = RepSignals.byExercise[exercise] ?: return null

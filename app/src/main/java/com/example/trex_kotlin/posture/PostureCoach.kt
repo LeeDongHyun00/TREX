@@ -14,7 +14,7 @@ import java.util.Locale
  * 원리: 세트 **초반 창**(첫 W프레임)과 **최근 창**(마지막 W프레임)을 같은 규칙으로 따로 평가한다.
  *  - 둘 다 위반            → HABIT   "처음부터 …"            (AIHub 연기 위반과 같은 유형 — 임계값이 검증된 영역)
  *  - 초반 정상 → 최근 위반  → DRIFT   "점점 … 흐트러지고 있어요"
- *  - 위반이었다가 최근 정상 → RECOVERED "좋아요, … 교정됐어요"
+ *  - 전달이 확인된 안내 이후 새 관측 창이 정상 → RECOVERED (관측 항목의 회복이며 교정 효과 보증 아님)
  * 8프레임 창으로도 규칙 AUC 가 유지된다(AIHub GT: 첫 8프레임 0.912 vs 전체 16프레임 0.903).
  *
  * 발화 억제: 같은 규칙은 persistence 회 연속 위반일 때만, 규칙당 쿨다운, 전체 최소 간격 — 한 번에 한 문장만 고른다.
@@ -24,7 +24,7 @@ import java.util.Locale
 enum class OnsetKind { HABIT, DRIFT, RECOVERED }
 
 data class CoachCue(val bodyPart: String, val habit: String, val drift: String) {
-    val recovered: String get() = "좋아요, $bodyPart 자세가 교정됐어요."
+    val recovered: String get() = "최근 관측 구간에서 $bodyPart 항목이 참고 범위로 돌아왔어요."
 }
 
 /** 조건명(+하위유형) → 한국어 코칭 문구. 라벨명이 아니라 **실제 연기된 편차**(DEFINITION_QUALITY 요건 3) 기준으로 쓴다. */
@@ -167,6 +167,9 @@ data class CoachEvent(
     val recentValue: Float?,
     /** 위반 방향 (RECOVERED 이벤트는 null). */
     val direction: Direction? = null,
+    /** 전달 확인 콜백을 현재 관측 구간과 연결하는 식별자. */
+    val eventId: Long = 0L,
+    val observationEpoch: Long = 0L,
 )
 
 /** 규칙 하나의 현재 상태 (UI 표시·세트 요약용). */
@@ -179,13 +182,14 @@ data class OnsetState(
     val kind: OnsetKind?,
     /** 최근 창 위반의 방향 (위반이 아니면 null). */
     val direction: Direction? = null,
+    val abstainReason: String? = null,
 ) {
     val label: String
         get() = when (kind) {
             OnsetKind.HABIT -> "처음부터$dirSuffix"
             OnsetKind.DRIFT -> "점점 흐트러짐$dirSuffix"
-            OnsetKind.RECOVERED -> "교정됨"
-            null -> if (recent == Verdict.ABSTAIN) "유보" else "정상"
+            OnsetKind.RECOVERED -> "관측 회복"
+            null -> if (recent == Verdict.ABSTAIN) abstainReason ?: "유보" else "정상"
         }
 
     private val dirSuffix: String get() = if (direction == Direction.OPPOSITE) " (반대측)" else ""
@@ -200,9 +204,13 @@ data class OnsetState(
  * 기본값이 false 인 이유는 기존 호출부(자세 랩 화면)와 기존 테스트가 앵커 없이 즉시 판정하기 때문이다.
  *
  * **베타 침묵**: 베타(미보정) 규칙은 라이브에서 말하지 않는다 — 화면·리포트에는 '참고'로 남지만 음성은
- * 검증된(ship) 규칙만 낸다(§28 실기기 오탐 3건이 전부 베타/미보정 규칙이었다). [speakBeta] 의 기본값은
- * [requireAnchor] 를 따라간다: 라이브 경로(앵커 사용)는 침묵, 기존 호출부는 종전대로 발화.
+ * 검증된(ship) 규칙만 낸다(§28 실기기 오탐 3건이 전부 베타/미보정 규칙이었다).
+ * 라이브 호출부는 [speakBeta]를 false로 준다. 기본값 true는 기존 랩 호출부와 호환한다.
  * 판정 자체는 그대로다 — [lastStates]·[summarize] 에는 베타 규칙도 전부 들어간다.
+ *
+ * [onFrame]의 시간은 세션 내 단조 시각이다. [onObservationLost]는 실시간 창만 무효화할 수 있고,
+ * [reset]은 세션 기록·쿨다운·앵커까지 초기화한다. 안내 이벤트 생성은 실제 전달이 아니다.
+ * [onFeedbackDelivered]로 전달을 확인한 뒤 새 프레임만으로 회복을 평가한다.
  */
 class LiveCoach(
     private val ruleSet: PostureRuleSet,
@@ -223,20 +231,41 @@ class LiveCoach(
     private val persistence: Int = 2,
     private val ruleCooldownMs: Long = 12_000L,
     private val globalGapMs: Long = 4_000L,
+    private val maxFrameGapMs: Long = 1_500L,
+    private val recoveryPersistence: Int = 2,
 ) {
     private val frames = ArrayList<Map<String, Float>>()
+    private val frameTimes = ArrayList<Long?>()
+    private val observedFeatures = ruleSet.rulesFor(exercise, includeBeta).map { it.baseFeature }.toSet()
     private val earlyAgg = FeatureAggregator()
     private val streak = HashMap<String, Int>()
     private val lastSpokenAt = HashMap<String, Long>()
-    private val spokenKind = HashMap<String, OnsetKind>()
+    private data class Receipt(val firstFrameIndex: Int, val deliveredAtMs: Long)
+    private val delivered = HashMap<String, Receipt>()
+    private val pendingEvents = HashMap<String, CoachEvent>()
+    private val recoveryStreak = HashMap<String, Int>()
+    private val recoveredRules = HashSet<String>()
+    private var segmentStart = 0
+    private var lastFrameAtMs: Long? = null
+    private var frameRevision = 0L
+    private var evaluatedRevision = -1L
+    private var nextEventId = 1L
+    private var observationEpoch = 0L
     private var lastGlobalAt = 0L
     private var anchored = !requireAnchor
+
+    init {
+        require(windowFrames >= minFrames && minFrames > 0)
+        require(persistence > 0 && recoveryPersistence > 0 && maxFrameGapMs > 0)
+    }
 
     @Volatile
     var lastStates: List<OnsetState> = emptyList()
         private set
 
     val frameCount: Int get() = frames.size
+    /** 손실 이후 현재 연속 관측 구간의 프레임 수. */
+    val currentFrameCount: Int get() = frames.size - segmentStart
 
     /** 초반 창이 실제 운동 구간에 놓였는지. false 면 판정도 발화도 없다. */
     val isAnchored: Boolean get() = anchored
@@ -249,37 +278,97 @@ class LiveCoach(
     @Synchronized
     fun anchor(): Boolean {
         if (anchored) return false
-        frames.clear()
-        earlyAgg.reset()
-        streak.clear()
-        lastStates = emptyList()
+        onObservationLost(preserveSessionHistory = false)
         anchored = true
         return true
-        // spokenKind/lastSpokenAt/lastGlobalAt 은 유지 — 앵커 전엔 말한 적이 없고, 억제 상태를 되돌릴 이유도 없다
     }
 
+    @Synchronized
     fun reset() {
-        frames.clear()
-        earlyAgg.reset()
-        streak.clear()
+        onObservationLost(preserveSessionHistory = false)
+        lastFrameAtMs = null
         lastSpokenAt.clear()
-        spokenKind.clear()
         lastGlobalAt = 0L
-        lastStates = emptyList()
         anchored = !requireAnchor
     }
 
-    /** 검출된 프레임의 피처를 넣는다 (분석 스레드). 앵커 전 프레임은 준비 동작이라 버린다. */
+    /**
+     * 가림·일시정지·촬영 변경 경계. 앵커와 발화 쿨다운은 보존하지만 현재 창·연속성·전달 확인은 무효화한다.
+     * true면 세션 frameCount/과거 샘플은 보존한다. summarize는 마지막 연속 구간만 비교한다.
+     * false면 보관 샘플도 버린다. 새 세트에는 앵커까지 초기화하는 [reset]을 사용한다.
+     */
+    @Synchronized
+    fun onObservationLost(preserveSessionHistory: Boolean = true) {
+        if (!preserveSessionHistory) { frames.clear(); frameTimes.clear() }
+        segmentStart = frames.size
+        earlyAgg.reset()
+        streak.clear()
+        recoveryStreak.clear()
+        delivered.clear()
+        pendingEvents.clear()
+        recoveredRules.clear()
+        lastStates = emptyList()
+        observationEpoch++
+        evaluatedRevision = frameRevision
+    }
+
+    /**
+     * 실시간 입력. 긴 간격은 새 관측 구간을 만들고, 중복·역행 프레임은 버린다.
+     * 빈/운동 피처 없는 프레임도 관측 손실이다. 추가적인 관절 품질 게이트는 호출부가 적용한다.
+     */
+    @Synchronized
+    fun onFrame(nowMs: Long, features: Map<String, Float>): Boolean {
+        if (!anchored) return false
+        val previous = lastFrameAtMs
+        if (nowMs < 0L || (previous != null && nowMs <= previous)) {
+            onObservationLost()
+            return false
+        }
+        if (previous != null && nowMs - previous > maxFrameGapMs) onObservationLost()
+        // 과거 타임스탬프 없는 랩 창을 실제 시각이 있는 창에 섞지 않는다.
+        if (currentFrameCount > 0 && frameTimes.lastOrNull() == null) onObservationLost()
+        lastFrameAtMs = nowMs
+        return appendFrame(features, nowMs)
+    }
+
+    /**
+     * 과거 연구 재생/랩 호환 입력. 실제 시간의 공백·지연을 확인할 수 없으므로 실사용은 시간 인자 API를 쓴다.
+     * 이 입력으로는 전달 후 시각을 검증할 수 없어 RECOVERED를 만들지 않는다.
+     */
     @Synchronized
     fun onFrame(features: Map<String, Float>) {
         if (!anchored) return
-        frames += features
-        if (frames.size <= windowFrames) earlyAgg.add(features)
+        if (lastFrameAtMs != null) { onObservationLost(); lastFrameAtMs = null }
+        appendFrame(features, null)
+    }
+
+    private fun appendFrame(features: Map<String, Float>, nowMs: Long?): Boolean {
+        val usable = features.filterValues { it.isFinite() }
+        if (usable.keys.none { it in observedFeatures }) { onObservationLost(); return false }
+        frames += usable
+        frameTimes += nowMs
+        frameRevision++
+        if (currentFrameCount <= windowFrames) earlyAgg.add(usable)
+        return true
+    }
+
+    /**
+     * 실제 화면 전달 확인 또는 TTS 완료 시 호출한다. 요청·큐 등록·음소거·실패를 전달 완료로 취급하지 않는다.
+     * 손실 이전/다른 코치의 이벤트와 오래된 콜백은 거절한다. 관측·전달 시각은 같은 단조 시계여야 한다.
+     */
+    @Synchronized
+    fun onFeedbackDelivered(event: CoachEvent, deliveredAtMs: Long): Boolean {
+        if (event.kind == OnsetKind.RECOVERED || event.observationEpoch != observationEpoch ||
+            pendingEvents[event.rule.id] !== event || deliveredAtMs < event.atMs || lastFrameAtMs == null) return false
+        delivered[event.rule.id] = Receipt(frames.size, deliveredAtMs)
+        pendingEvents.remove(event.rule.id) // 같은 전달 콜백의 재진입은 새 관측 시작점을 만들지 않는다.
+        recoveryStreak[event.rule.id] = 0
+        return true
     }
 
     private fun recentAggregator(): FeatureAggregator {
         val agg = FeatureAggregator()
-        val from = maxOf(0, frames.size - windowFrames)
+        val from = maxOf(segmentStart, frames.size - windowFrames)
         for (i in from until frames.size) agg.add(frames[i])
         return agg
     }
@@ -294,8 +383,15 @@ class LiveCoach(
         recent == Verdict.VIOLATION && early == Verdict.VIOLATION -> OnsetKind.HABIT
         recent == Verdict.VIOLATION && early == Verdict.OK -> OnsetKind.DRIFT
         recent == Verdict.VIOLATION -> OnsetKind.HABIT          // 초반 창이 아직 안 찼으면 = 세트 초반 위반 = 처음부터
-        recent == Verdict.OK && spokenKind[ruleId] in setOf(OnsetKind.HABIT, OnsetKind.DRIFT) -> OnsetKind.RECOVERED
+        recent == Verdict.OK && hasFreshRecoveryWindow(ruleId) -> OnsetKind.RECOVERED
         else -> null
+    }
+
+    private fun hasFreshRecoveryWindow(ruleId: String): Boolean {
+        val receipt = delivered[ruleId] ?: return false
+        val from = maxOf(segmentStart, frames.size - windowFrames)
+        if (from < receipt.firstFrameIndex || frames.size - from < minFrames) return false
+        return (from until frames.size).all { i -> frameTimes[i]?.let { it > receipt.deliveredAtMs } == true }
     }
 
     /**
@@ -304,7 +400,11 @@ class LiveCoach(
     @Synchronized
     fun evaluate(nowMs: Long): CoachEvent? {
         if (!anchored) return null       // 준비 동작 구간 — lastStates 도 비워 둬야 화면의 붉은 강조가 안 뜬다
-        if (frames.size < minFrames) return null
+        lastFrameAtMs?.let { last ->
+            if (nowMs < last || nowMs - last > maxFrameGapMs) { onObservationLost(); return null }
+        }
+        if (currentFrameCount < minFrames || evaluatedRevision == frameRevision) return null
+        evaluatedRevision = frameRevision // 같은 샘플의 재평가를 연속 관측으로 세지 않는다.
         val recentAgg = recentAggregator()
         val recentRes = ruleSet.evaluate(exercise, recentAgg, includeBeta, minFrames, baseline)
         val earlyRes = ruleSet.evaluate(exercise, earlyAgg, includeBeta, minFrames, baseline).associateBy { it.rule.id }
@@ -315,9 +415,12 @@ class LiveCoach(
             val er = earlyRes[rr.rule.id]
             val early = er?.verdict ?: Verdict.ABSTAIN
             val kind = classify(early, rr.verdict, rr.rule.id)
-            val st = OnsetState(rr.rule, early, rr.verdict, er?.value, rr.value, kind, direction = rr.direction)
+            val st = OnsetState(rr.rule, early, rr.verdict, er?.value, rr.value, kind,
+                direction = rr.direction, abstainReason = rr.abstainReason)
             states += st
             if (rr.verdict == Verdict.VIOLATION) {
+                recoveryStreak[rr.rule.id] = 0
+                recoveredRules.remove(rr.rule.id)
                 val s = (streak[rr.rule.id] ?: 0) + 1
                 streak[rr.rule.id] = s
                 if (s >= persistence && kind != null && speakable(rr.rule) && canSpeak(rr.rule.id, nowMs)) {
@@ -328,12 +431,18 @@ class LiveCoach(
                 }
             } else {
                 streak[rr.rule.id] = 0
+                recoveryStreak[rr.rule.id] = if (kind == OnsetKind.RECOVERED) (recoveryStreak[rr.rule.id] ?: 0) + 1 else 0
+                // 유보를 사이에 둔 회복은 해당 안내의 성공 증거로 이어 붙이지 않는다.
+                if (rr.verdict == Verdict.ABSTAIN) delivered.remove(rr.rule.id)
             }
         }
-        lastStates = states
-        // 위반 후보가 없으면 '교정됨' 한 번
+        lastStates = states.map { st ->
+            if (st.kind == OnsetKind.RECOVERED && (recoveryStreak[st.rule.id] ?: 0) < recoveryPersistence) st.copy(kind = null) else st
+        }
+        // 위반 후보가 없으면 전달 이후의 관측 회복을 한 번 알린다.
         val pick = candidate ?: states.firstOrNull {
-            it.kind == OnsetKind.RECOVERED && speakable(it.rule) && canSpeak(it.rule.id, nowMs, recovered = true)
+            it.kind == OnsetKind.RECOVERED && (recoveryStreak[it.rule.id] ?: 0) >= recoveryPersistence &&
+                speakable(it.rule) && canSpeak(it.rule.id, nowMs, recovered = true)
         }
         if (pick == null) return null
         val base = CoachCues.cueFor(pick.rule, pick.direction ?: Direction.PRIMARY)
@@ -347,8 +456,16 @@ class LiveCoach(
         }
         lastSpokenAt[pick.rule.id] = nowMs
         lastGlobalAt = nowMs
-        spokenKind[pick.rule.id] = pick.kind
-        return CoachEvent(pick.rule, pick.kind, msg, nowMs, pick.earlyValue, pick.recentValue, direction = pick.direction)
+        val event = CoachEvent(pick.rule, pick.kind, msg, nowMs, pick.earlyValue, pick.recentValue,
+            direction = pick.direction, eventId = nextEventId++, observationEpoch = observationEpoch)
+        if (pick.kind == OnsetKind.RECOVERED) {
+            delivered.remove(pick.rule.id)
+            pendingEvents.remove(pick.rule.id)
+            recoveredRules += pick.rule.id
+        } else {
+            pendingEvents[pick.rule.id] = event
+        }
+        return event
     }
 
     /** 발화 후보 자격 — 베타는 화면·리포트엔 남기고 음성만 막는다. */
@@ -361,13 +478,13 @@ class LiveCoach(
         return nowMs - last >= (if (recovered) globalGapMs else ruleCooldownMs)
     }
 
-    /** 세트 종료 후 요약: 전반 창(첫 W) vs 후반 창(마지막 W) 으로 규칙별 onset 분류. */
+    /** 마지막 연속 관측 구간의 초반/후반 비교. 가림·촬영 변경 이전과 이후를 비교하지 않는다. */
     @Synchronized
     fun summarize(): List<OnsetState> {
         if (!anchored) return emptyList()
-        if (frames.size < minFrames) return emptyList()
-        val earlyRes = ruleSet.evaluate(exercise, aggregatorOf(0 until windowFrames), includeBeta, minFrames, baseline).associateBy { it.rule.id }
-        val lateRes = ruleSet.evaluate(exercise, aggregatorOf(maxOf(0, frames.size - windowFrames) until frames.size), includeBeta, minFrames, baseline)
+        if (currentFrameCount < minFrames) return emptyList()
+        val earlyRes = ruleSet.evaluate(exercise, aggregatorOf(segmentStart until minOf(frames.size, segmentStart + windowFrames)), includeBeta, minFrames, baseline).associateBy { it.rule.id }
+        val lateRes = ruleSet.evaluate(exercise, aggregatorOf(maxOf(segmentStart, frames.size - windowFrames) until frames.size), includeBeta, minFrames, baseline)
         return lateRes.map { lr ->
             val er = earlyRes[lr.rule.id]
             val early = er?.verdict ?: Verdict.ABSTAIN
@@ -375,12 +492,33 @@ class LiveCoach(
                 lr.verdict == Verdict.VIOLATION && early == Verdict.VIOLATION -> OnsetKind.HABIT
                 lr.verdict == Verdict.VIOLATION && early == Verdict.OK -> OnsetKind.DRIFT
                 lr.verdict == Verdict.VIOLATION -> OnsetKind.HABIT
-                lr.verdict == Verdict.OK && early == Verdict.VIOLATION -> OnsetKind.RECOVERED
+                lr.verdict == Verdict.OK && early == Verdict.VIOLATION && lr.rule.id in recoveredRules -> OnsetKind.RECOVERED
                 else -> null
             }
-            OnsetState(lr.rule, early, lr.verdict, er?.value, lr.value, kind, direction = lr.direction)
+            OnsetState(lr.rule, early, lr.verdict, er?.value, lr.value, kind,
+                direction = lr.direction, abstainReason = lr.abstainReason)
         }
     }
+}
+
+/** TTS 요청/시작과 완료를 분리한다. 중단된 발화의 늦은 onDone은 전달 확인을 만들지 않는다. */
+internal class SpeechDeliveryTracker {
+    private val callbacks = HashMap<String, () -> Unit>()
+
+    @Synchronized
+    fun register(id: String, flush: Boolean, onDelivered: (() -> Unit)?) {
+        if (flush) callbacks.clear()
+        if (onDelivered != null) callbacks[id] = onDelivered
+    }
+
+    fun completed(id: String) {
+        val callback = synchronized(this) { callbacks.remove(id) }
+        // 앱/코치 콜백은 트래커 락 밖에서 호출한다. 같은 id는 한 번만 완료된다.
+        if (callback != null) runCatching { callback() }
+    }
+
+    @Synchronized fun discard(id: String) { callbacks.remove(id) }
+    @Synchronized fun clear() { callbacks.clear() }
 }
 
 /**
@@ -395,7 +533,7 @@ class LiveCoach(
  */
 class SpeechCoach(context: Context) {
 
-    private data class Pending(val text: String, val atMs: Long)
+    private data class Pending(val text: String, val atMs: Long, val onDelivered: (() -> Unit)?)
 
     private val appContext = context.applicationContext
     private val audioManager = runCatching {
@@ -424,6 +562,7 @@ class SpeechCoach(context: Context) {
     private val pending = ArrayList<Pending>()
     /** 아직 끝나지 않은 발화 id — 비면 오디오 포커스를 놓는다. */
     private val speaking = LinkedHashSet<String>()
+    private val delivery = SpeechDeliveryTracker()
     private var focusRequest: AudioFocusRequest? = null
 
     @Volatile
@@ -449,7 +588,12 @@ class SpeechCoach(context: Context) {
 
     private val progress = object : UtteranceProgressListener() {
         override fun onStart(utteranceId: String?) { traceFeedback("tts_start","",utteranceId) }
-        override fun onDone(utteranceId: String?) { traceFeedback("tts_done","",utteranceId); finished(utteranceId) }
+        override fun onDone(utteranceId: String?) {
+            traceFeedback("tts_done","",utteranceId)
+            // 완료한 음성만 전달 확인. onStart/요청/오류/중단은 확인하지 않는다.
+            utteranceId?.let { delivery.completed(it) }
+            finished(utteranceId)
+        }
         override fun onStop(utteranceId: String?, interrupted: Boolean) { traceFeedback("tts_stop","interrupted=$interrupted",utteranceId); finished(utteranceId) }
         @Deprecated("API 21 이전 시그니처 — 추상 메서드라 구현은 필요하다", ReplaceWith("onError(utteranceId, errorCode)"))
         override fun onError(utteranceId: String?) { traceFeedback("tts_error","",utteranceId); finished(utteranceId) }
@@ -485,8 +629,9 @@ class SpeechCoach(context: Context) {
     /**
      * 말한다. 진행 중인 문장은 끊고 최신 안내를 우선한다(flush).
      * 아직 준비 전이면 큐에 담아 뒀다가 초기화 직후 말한다 — 세트 시작 안내가 통째로 사라지지 않도록.
+     * onDelivered는 onDone에서만 한 번 호출한다. 큐 폐기·중단·실패·음소거는 완료가 아니다.
      */
-    fun speak(text: String, flush: Boolean = true) {
+    fun speak(text: String, flush: Boolean = true, onDelivered: (() -> Unit)? = null) {
         traceFeedback("speech_requested",text)
         if (muted) return
         if (!ready) {
@@ -494,12 +639,12 @@ class SpeechCoach(context: Context) {
             if (initialized) return
             synchronized(lock) {
                 if (flush) pending.clear()          // flush = "지금 이것만" 이라는 뜻
-                pending += Pending(text, System.currentTimeMillis())
+                pending += Pending(text, android.os.SystemClock.elapsedRealtime(), onDelivered)
                 while (pending.size > MAX_PENDING) pending.removeAt(0)
             }
             return
         }
-        speakNow(text, flush)
+        speakNow(text, flush, onDelivered)
     }
 
     /** 준비 설명이 숫자 안내에 잘리지 않도록 대기/발화 여부를 제공한다. */
@@ -509,6 +654,7 @@ class SpeechCoach(context: Context) {
         synchronized(lock) {
             pending.clear()
             speaking.clear()
+            delivery.clear()
         }
         runCatching { tts?.stop() }
         abandonFocus()
@@ -520,6 +666,7 @@ class SpeechCoach(context: Context) {
         synchronized(lock) {
             pending.clear()
             speaking.clear()
+            delivery.clear()
         }
         runCatching { tts?.stop() }
         runCatching { tts?.shutdown() }
@@ -528,12 +675,13 @@ class SpeechCoach(context: Context) {
         ready = false
     }
 
-    private fun speakNow(text: String, flush: Boolean) {
+    private fun speakNow(text: String, flush: Boolean, onDelivered: (() -> Unit)? = null) {
         val id = "coach-${System.nanoTime()}"
         traceFeedback("tts_submit",text,id)
         synchronized(lock) {
             if (flush) speaking.clear()             // 끊긴 발화는 onDone 이 오지 않는다
             speaking += id
+            delivery.register(id, flush, onDelivered)
         }
         requestFocus()
         val rc = runCatching {
@@ -546,18 +694,19 @@ class SpeechCoach(context: Context) {
 
     /** 초기화 직후 대기 큐를 흘려보낸다. 오래된 요청은 이미 지난 상황이라 버린다. */
     private fun flushPending() {
-        val now = System.currentTimeMillis()
+        val now = android.os.SystemClock.elapsedRealtime()
         val due = synchronized(lock) {
             val out = pending.filter { now - it.atMs <= PENDING_TTL_MS }
             pending.clear()
             out
         }
         if (!ready || muted) return
-        for (p in due) speakNow(p.text, flush = false)
+        for (p in due) speakNow(p.text, flush = false, onDelivered = p.onDelivered)
     }
 
     private fun finished(utteranceId: String?) {
         val id = utteranceId ?: return
+        delivery.discard(id)
         val idle = synchronized(lock) {
             speaking.remove(id)
             speaking.isEmpty()

@@ -52,7 +52,7 @@ data class RuleOutcome(
         get() = when (kind) {
             OnsetKind.HABIT -> "처음부터$dirSuffix"
             OnsetKind.DRIFT -> "점점 흐트러짐$dirSuffix"
-            OnsetKind.RECOVERED -> "교정됨"
+            OnsetKind.RECOVERED -> "관측 회복"
             null -> when (overall) {
                 Verdict.VIOLATION -> "위반$dirSuffix"
                 Verdict.ABSTAIN -> abstainReason?.let { "유보 · $it" } ?: "유보"
@@ -142,8 +142,8 @@ data class PostureSetReport(
     val summaryLine: String = if (exercise in FloorTemporal.exercises || judged == 0 && measurements.isNotEmpty()) "참고 측정 · 자세 확정 판정 없음" else when (mode) {
         CoachMode.COACH -> when (verdict) {
             SetVerdict.UNJUDGED -> "자세 판정 없음"
-            SetVerdict.CLEAN -> if (betaOnly) "참고 기준 이상 없음" else "자세 깨끗"
-            SetVerdict.RECOVERED -> "${headline!!.bodyPart} 교정됨"
+            SetVerdict.CLEAN -> if (betaOnly) "참고 기준 이상 없음" else "판정한 항목 범위 내"
+            SetVerdict.RECOVERED -> "${headline!!.bodyPart} 관측 회복"
             SetVerdict.ISSUE -> "${headline!!.bodyPart} · ${headline.label}"
             SetVerdict.REFERENCE -> "참고 ${candidates.size}건"
         }
@@ -163,8 +163,8 @@ data class PostureSetReport(
     val voiceLine: String = if (exercise in FloorTemporal.exercises) "세트를 기록했어요. 참고 측정은 화면에서 확인해 주세요." else when (mode) {
         CoachMode.COACH -> when (verdict) {
             SetVerdict.UNJUDGED -> "이번 세트는 화면에 충분히 잡히지 않아 자세를 판정하지 못했어요."
-            SetVerdict.CLEAN -> if (betaOnly) "이번 세트, 검증 중인 항목 기준으로는 이상 없었어요." else "이번 세트 깨끗했어요."
-            SetVerdict.RECOVERED -> "좋아요, ${headline!!.bodyPart} 자세가 세트 후반에 교정됐어요."
+            SetVerdict.CLEAN -> if (betaOnly) "이번 세트, 검증 중인 항목 기준으로는 이상 없었어요." else "이번 세트에서 판정한 항목은 참고 범위 안에 있었어요."
+            SetVerdict.RECOVERED -> "세트 후반에 관측한 ${headline!!.bodyPart} 항목이 참고 범위로 돌아왔어요."
             SetVerdict.ISSUE -> headline!!.let { h -> if (h.fix.isBlank()) "${h.observation}." else "${h.observation}. 다음엔 ${h.fix}." }
             SetVerdict.REFERENCE -> "${candidates.first().observation}. 아직 검증 중인 항목이라 참고만 하세요."
         }
@@ -202,7 +202,7 @@ data class PostureSetReport(
                 val cue = CoachCues.cueFor(rr.rule, direction ?: Direction.PRIMARY)
                 val (observation, fix) = when (kind) {
                     OnsetKind.DRIFT -> splitCue(cue.drift)
-                    OnsetKind.RECOVERED -> cue.recovered.trimEnd().removeSuffix(".") to splitCue(cue.habit).second
+                    OnsetKind.RECOVERED -> cue.recovered.trimEnd().removeSuffix(".") to ""
                     OnsetKind.HABIT -> splitCue(cue.habit)
                     null -> splitCue(cue.habit).let { (o, f) -> o.removePrefix("처음부터 ") to f }
                 }

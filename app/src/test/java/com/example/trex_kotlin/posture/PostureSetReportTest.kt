@@ -111,8 +111,8 @@ class PostureSetReportTest {
         )
         assertEquals(SetVerdict.CLEAN, r.verdict)
         assertEquals(100, r.accuracy)
-        assertEquals("이번 세트 깨끗했어요.", r.voiceLine)
-        assertEquals("자세 깨끗", r.summaryLine)
+        assertEquals("이번 세트에서 판정한 항목은 참고 범위 안에 있었어요.", r.voiceLine)
+        assertEquals("판정한 항목 범위 내", r.summaryLine)
         assertNull(r.headline)
         assertEquals("정상", r.items.first().label)
     }
@@ -236,12 +236,12 @@ class PostureSetReportTest {
         assertEquals(SetVerdict.RECOVERED, r.verdict)
         val h = r.headline!!
         assertEquals(4, h.rank)
-        assertEquals("교정됨", h.label)
-        assertEquals("좋아요, 무릎 자세가 교정됐어요", h.observation)
-        assertEquals("무릎을 발끝 방향으로 벌리세요", h.fix)
-        assertTrue(r.voiceLine.contains("교정됐어요"))
-        assertEquals("좋아요, 무릎 자세가 세트 후반에 교정됐어요.", r.voiceLine)
-        assertEquals("무릎 교정됨", r.summaryLine)
+        assertEquals("관측 회복", h.label)
+        assertEquals("최근 관측 구간에서 무릎 항목이 참고 범위로 돌아왔어요", h.observation)
+        assertEquals("", h.fix)
+        assertFalse(r.voiceLine.contains("교정됐어요"))
+        assertEquals("세트 후반에 관측한 무릎 항목이 참고 범위로 돌아왔어요.", r.voiceLine)
+        assertEquals("무릎 관측 회복", r.summaryLine)
         assertEquals(100, r.accuracy)
     }
 

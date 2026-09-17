@@ -6,14 +6,15 @@ object PostureAssessment {
         rules: PostureRuleSet, exercise: String, samples: List<PoseSample>, times: List<Long>,
         startAt: Long, endAt: Long, reps: List<RepRecord>, baseline: Map<String, Float>? = null,
         minFrames: Int = 8,
+        contextStartAt: Long = Long.MIN_VALUE,
     ): List<RuleResult> {
         require(samples.size == times.size)
         val agg = FeatureAggregator()
-        samples.forEachIndexed { i, s -> if (times[i] > startAt && times[i] <= endAt) agg.add(s.features) }
+        samples.forEachIndexed { i, s -> if (times[i] >= contextStartAt && times[i] > startAt && times[i] <= endAt) agg.add(s.features) }
         val t0 = times.firstOrNull() ?: 0L
         // 정렬 검사는 자체 준비 자세 게이트를 사용한다. 초기 앵커/기준이 만들어지기 전의 오류도 평가한다.
         val alignment = PlankAlignmentTracker(rules.rulesFor(exercise))
-        samples.forEachIndexed { i, s -> if (times[i] <= endAt) alignment.add(times[i]-t0,s.features) }
+        samples.forEachIndexed { i, s -> if (times[i] >= contextStartAt && times[i] <= endAt) alignment.add(times[i]-t0,s.features) }
         val alignmentResults = alignment.results().associateBy { it.rule.id }
         return rules.evaluate(exercise, agg, true, minFrames, baseline).map { result ->
             when (result.rule.kind) {
@@ -21,11 +22,11 @@ object PostureAssessment {
                 "hold" -> {
                     val tracker = result.rule.holdConfig?.let { HoldTracker(it) }
                     samples.forEachIndexed { i, s ->
-                        if (times[i] > startAt && times[i] <= endAt) tracker?.add(times[i] - t0, s.features[result.rule.baseFeature])
+                        if (times[i] >= contextStartAt && times[i] > startAt && times[i] <= endAt) tracker?.add(times[i] - t0, s.features[result.rule.baseFeature])
                     }
                     tracker?.snapshot()?.let { FloorTemporal.holdResult(result.rule, it) } ?: result
                 }
-                "rep" -> FloorTemporal.repResult(result.rule, reps.filter { it.tMs <= endAt })
+                "rep" -> FloorTemporal.repResult(result.rule, reps.filter { it.tMs >= contextStartAt && it.tMs <= endAt })
                 else -> result
             }
         }
