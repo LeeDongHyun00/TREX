@@ -26,7 +26,7 @@ for item in $QUEUE; do
   if ! find "$dir" \( -iname '*.zip' -o -name '*.part*' \) | grep -q . ; then
     if [ ! -s "$dir/download.tar" ] || [ "$(stat -c %s "$dir/download.tar")" -lt 1000000000 ]; then
       log "[$name] 다운로드 시작 (${gb}GB, 약 $((gb * 1024 / 52))분 예상)"
-      bash "$ROOT/tools/dl.sh" "$key" "$dir" "$KEY" || { log "[$name] 다운로드 실패 — 다음 묶음으로"; continue; }
+      bash "$ROOT/tools/dl.sh" "$key" "$dir" "$KEY" "$gb" || { log "[$name] 다운로드 실패 — 다음 묶음으로"; continue; }
       log "[$name] 다운로드 완료: $(tail -1 "$dir/dl.log")"
     fi
   fi
@@ -55,7 +55,8 @@ for item in $QUEUE; do
 
   # 3) 640px 변환 (이미 변환된 파일은 건너뜀)
   log "[$name] 변환 시작"
-  if node "$ROOT/tools/prep_dataset.js" add --images "$dir/unz" --classes all >> "$ROOT/pipeline.log" 2>&1; then
+  before=$(ls "$ROOT/dataset_640/images/train" 2>/dev/null | wc -l)
+  if node "$ROOT/tools/prep_dataset.js" add --images "$dir/unz" --classes all >> "$ROOT/pipeline.log" 2>&1 && [ "$(ls "$ROOT/dataset_640/images/train" 2>/dev/null | wc -l)" -gt "$before" ]; then
     rm -rf "$dir/unz" "$zip" "$dir"/122.*
     touch "$dir/.done"
     log "[$name] 완료. 디스크 여유: $(df -h "$ROOT" | tail -1 | awk '{print $4}')"
