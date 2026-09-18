@@ -50,6 +50,12 @@ for item in $QUEUE; do
   if [ ! -d "$dir/unz" ]; then
     log "[$name] zip 해제 ($(du -h "$zip" | cut -f1))"
     mkdir -p "$dir/unz" && unzip -qo "$zip" -d "$dir/unz" 2>>"$ROOT/pipeline.log"
+    # 여러 대분류를 묶은 파일은 중첩 zip 이다(09_10.zip 안에 09.zip, 10.zip). 한 겹 더 푼다.
+    while find "$dir/unz" -iname '*.zip' | grep -q . ; do
+      inner="$(find "$dir/unz" -iname '*.zip' | head -1)"
+      log "[$name] 내부 zip 해제: $(basename "$inner") ($(du -h "$inner" | cut -f1))"
+      unzip -qo "$inner" -d "$(dirname "$inner")" 2>>"$ROOT/pipeline.log" && rm -f "$inner"
+    done
     log "[$name] 해제 완료: $(find "$dir/unz" -type f | wc -l)개"
   fi
 
