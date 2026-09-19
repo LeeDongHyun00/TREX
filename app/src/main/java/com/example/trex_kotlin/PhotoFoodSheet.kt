@@ -511,8 +511,12 @@ private fun ResultStep(
                 }
             }
             Text("합계 ${total.kcal} kcal · 탄 ${total.carb.toInt()} · 단 ${total.protein.toInt()} · 지 ${total.fat.toInt()}", color = c.text, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-            // 검증된 수치가 아니라는 사실을 숨기지 않는다 — 30종 영양값은 식약처 DB 연동 전 1인분 근사치다.
-            WashBanner("영양값은 1인분 기준 근사치예요. 식약처 영양 DB를 연결하기 전까지의 임시 수치라 참고용으로 봐 주세요.", Icons.Rounded.Info)
+            // 실측값(AI Hub 영양DB)과 추정값을 같은 확신으로 말하지 않는다 — 추정이 섞였을 때만 그렇다고 밝힌다.
+            if (items.any { it.name in approximateNutritionNames }) {
+                WashBanner("일부 항목은 아직 실측 영양값이 없어 추정치로 보여드려요. 참고용으로 봐 주세요.", Icons.Rounded.Info)
+            } else {
+                WashBanner("영양값은 1인분 기준이에요. 실제로 드신 양이 다르면 수량으로 조절해 주세요.", Icons.Rounded.Info)
+            }
             Text("잘못 인식된 음식은 빼고, 빠진 음식은 직접 추가에서 더해 주세요.", color = c.text3, fontSize = 11.5.sp, lineHeight = 17.sp)
         }
         Box(Modifier.fillMaxWidth().height(1.dp).background(c.line))

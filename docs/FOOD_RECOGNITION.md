@@ -18,8 +18,8 @@ MainSheet.Photo → PhotoFoodSheet
 |---|---|
 | `app/src/main/java/com/example/trex_kotlin/PhotoFoodSheet.kt` | 시트 UI·단계 상태·저장 |
 | `app/src/main/java/com/example/trex_kotlin/food/FoodDetector.kt` | 모델 로딩(mmap)·letterbox 전처리·추론·라벨 매핑, 이미지 디코딩/회전 헬퍼 |
-| `app/src/main/assets/models/yolov8n_food.tflite`, `food_labels.txt` | AI Hub 한식 이미지로 파인튜닝한 YOLOv8n(30클래스), float32 입출력 |
-| `TrexData.kt` `foodDatabase` | 라벨 30종과 1:1 — 1인분 기준 **근사** 영양값(식약처 DB 연동 전 임시) |
+| `app/src/main/assets/models/yolov8n_food.tflite`, `food_labels.txt` | AI Hub 한식 이미지로 파인튜닝한 YOLOv8n, float32 입출력. 현재 탑재본은 30클래스(2026-09-09)이고 214클래스 재학습이 진행 중이다 |
+| `TrexData.kt` `foodDatabase` | 244종. 214종은 AI Hub 74번 영양DB **1인분 실측값**, 구 모델 전용 21종과 일반 식품 9종은 **추정값**(`approximateNutritionNames`) |
 | `training/train_food_yolov8_colab.ipynb` | 학습·TFLite 변환·앱 호환성 검증 노트북 |
 
 ## 왜 이렇게 했나
@@ -27,7 +27,8 @@ MainSheet.Photo → PhotoFoodSheet
 - **온디바이스만.** 사진은 네트워크로 나가지 않고 디스크에도 쓰지 않는다(촬영은 메모리 `ImageProxy`, 갤러리는 읽기 전용 Picker). 저장소에 INTERNET 권한이 없고, 화면 문구("기기 안에서만 분석")가 코드와 일치한다.
 - **시뮬레이션 결과 없음.** 예전 스텁은 고정 음식을 결과처럼 보여줬다. 지금은 모델이 없거나 추론이 실패하면 결과를 만들지 않고 원인별 실패 화면으로 간다(CLAUDE.md 원칙 1 — 판정하지 않은 것을 판정처럼 말하지 않는다).
 - **confidence 를 그대로 보여준다.** 0.40 미만은 결과에 넣지 않고, 넣은 항목에는 "확신 NN%"를 붙인다. 이 값은 보정되지 않은 raw score 라 확률로 읽으면 안 되지만, 숨기는 것보다 드러내는 쪽이 원칙에 가깝다고 봤다.
-- **영양값은 근사치라고 화면에 적는다.** 30종 값은 큐레이션된 기존 9종과 같은 확신으로 표시하면 안 된다(원칙 2). 결과 화면 배너로 고지하고, 식약처 영양 DB 연동 때 교체한다.
+- **실측값과 추정값을 구분해 고지한다.** 2026-09-19 재학습 데이터 준비로 확신 관계가 뒤집혔다 — 214종은 AI Hub 공식 영양DB 실측 1인분 값이고, 오히려 구 모델 전용 21종과 일반 식품 9종이 추정값이다. 결과에 추정값이 섞였을 때만 그렇다고 밝히고(`approximateNutritionNames`), 아니면 "1인분 기준"이라는 전제만 안내한다. 앱이 양을 추정하지 않으므로 그 전제 자체는 어느 쪽이든 근사다.
+- **모델·라벨·DB 는 함께 갱신한다.** 2026-09-19 에 DB 만 214종으로 바꿨다가, assets 에 남아 있던 구 모델 라벨 30종 중 21종이 영양값을 잃은 적이 있다 — 컴파일도 기존 테스트 270건도 이를 잡지 못했다. `FoodLabelDatabaseTest` 가 라벨 ⊆ `foodDatabase` 를 검사해 재발을 막는다.
 - **양은 qty 스테퍼로 통일.** 조원 브랜치(`feature/food`)의 인분(0.5~5) 슬라이더는 채택하지 않았다 — 직접 기록 시트가 이미 qty(정수)를 쓰고 있어 사진 기록만 다르게 가면 저장 구조가 둘로 갈린다. 인분이 필요하면 두 시트를 함께 바꾼다.
 - **클래스별 최고 confidence, NMS 없음.** 현재 UX는 "무슨 음식인지"만 쓰므로 박스 좌표가 필요 없다. 같은 음식이 여러 개 있어도 1개로 잡히며, 수량은 사용자가 스테퍼로 맞춘다.
 - **letterbox 전처리.** Ultralytics 학습·평가와 같은 방식(비율 유지 + 회색 114 패딩). 정사각형으로 늘리면 학습 분포와 달라져 confidence 가 떨어진다.
