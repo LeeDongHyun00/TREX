@@ -353,6 +353,13 @@ fun PostureLiveSessionScreen(
     val repPattern = workout.resolvedRepPattern()
     val repRef = remember { arrayOfNulls<ExerciseRepTracker>(1) }
     val repProfileRef = remember { arrayOfNulls<ExerciseRepProfile>(1) }
+    var engineProvenance by remember { mutableStateOf<com.example.trex_kotlin.posture.EngineProvenance?>(null) }
+    val evaluationEngineLabel = if (!context.packageName.endsWith(".replay")) null else when (engineProvenance?.repEngine) {
+        com.example.trex_kotlin.posture.EngineVersions.REP -> "새 횟수 엔진 v1 · 복귀·좌우 관측"
+        "hold-observation/1" -> "유지 시간 관측 · 횟수 엔진 미적용"
+        "manual" -> "직접 횟수 기록 · 자동 엔진 미적용"
+        else -> "평가 엔진 준비 중"
+    }
     val recentRepView = remember { RecentRepView() }
     var observedReps by remember { mutableStateOf<RepObservationSummary?>(null) }
     var repObservationReason by remember { mutableStateOf<String?>(null) }
@@ -585,6 +592,7 @@ fun PostureLiveSessionScreen(
                 // 렙별 극값 t 도 세트 상대시각으로 (프레임·repTimesMs 와 같은 기준)
                 repRecords = reps?.map { it.relativeTo(t0) },
                 observedReps = rc?.let { it.counts.summary(it.pattern) },
+                engineProvenance = engineProvenance,
                 mode = if (modeRef[0] == CoachMode.TRACK) "track" else "coach",
                 // 집계 창의 시작 — results 가 이 시점 이후 프레임만 본다는 사실을 로그에 남긴다
                 anchorTMs = anchorAtRef[0].takeIf { it > 0L }?.let { it - t0 },
@@ -655,6 +663,21 @@ fun PostureLiveSessionScreen(
                     }
                     ExerciseRepTracker(RepMovementPattern.SIMULTANEOUS, commonSignal = configured)
                 }
+            // 설치 이름뿐 아니라 실제 생성된 추적기·프로필을 화면, 진단 로그, 세트 파일에 함께 남긴다.
+            engineProvenance = com.example.trex_kotlin.posture.EngineProvenance(
+                applicationId = context.packageName,
+                repEngine = when {
+                    repRef[0] != null -> com.example.trex_kotlin.posture.EngineVersions.REP
+                    configuredProfile?.isometric == true -> "hold-observation/1"
+                    else -> "manual"
+                },
+                repProfile = configuredProfile?.let { "${com.example.trex_kotlin.posture.EngineVersions.PROFILES}:${it.exercise}" }
+                    ?: "legacy-signal-adapter".takeIf { repRef[0] != null },
+                repPattern = repRef[0]?.pattern?.name,
+                formEngine = "${com.example.trex_kotlin.posture.EngineVersions.FORM}:${rs.version}",
+                poseEstimator = com.example.trex_kotlin.posture.EngineVersions.POSE,
+            )
+            android.util.Log.i("TrexEngine", "exercise=$aihubExercise runtime=$engineProvenance")
             recentRepView.reset()
             observedReps = repRef[0]?.let { it.counts.summary(it.pattern) }
             repObservationReason = null
@@ -1104,6 +1127,7 @@ fun PostureLiveSessionScreen(
             }, onExit = onExit, modifier = mod, modeControl = modeControl,
             cameraError = cameraError ?: stats?.error?.let { "몸을 인식할 수 없어요. 직접 기록으로 계속할 수 있어요." }, onFallback = onFallbackToTimer,
             repCountHint = workout.repCountExplanation(),
+            evaluationEngineLabel = evaluationEngineLabel,
             captureOverride = com.example.trex_kotlin.posture.CapturePosition.FRONT.takeIf {
                 repProfile?.frontForBothChannels == true && repPattern in listOf(RepMovementPattern.SIMULTANEOUS, RepMovementPattern.ALTERNATING_EACH)
             },
@@ -1147,6 +1171,7 @@ fun PostureLiveSessionScreen(
                 if (!preparing) LiveWorkoutHud(workout, repetitions, timeLeft, totalSeconds, setLabel, paused,
                     compact = configuration.screenHeightDp < 500,
                     message = liveMessage.takeIf { !panelVisible },
+                    evaluationEngineLabel = evaluationEngineLabel,
                     repDetail = observedReps?.let {
                         if (it.both > 0) "양쪽 함께 ${it.both}회" else it.detail.takeIf(String::isNotEmpty)
                     })

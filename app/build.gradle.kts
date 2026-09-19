@@ -16,6 +16,7 @@ android {
         targetSdk = 36
         versionCode = 3
         versionName = "1.1.0-preview.2"
+        manifestPlaceholders["applicationLabel"] = "@string/app_name"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -23,7 +24,11 @@ android {
     buildTypes {
         debug {
             // 평가 설치는 사용자의 기존 앱·운동 기록과 분리한다.
-            if (project.hasProperty("postureReplay")) applicationIdSuffix = ".replay"
+            if (project.hasProperty("postureReplay")) {
+                applicationIdSuffix = ".replay"
+                versionNameSuffix = "-engine-eval"
+                manifestPlaceholders["applicationLabel"] = "TREX 엔진 평가"
+            }
         }
         release {
             isMinifyEnabled = false

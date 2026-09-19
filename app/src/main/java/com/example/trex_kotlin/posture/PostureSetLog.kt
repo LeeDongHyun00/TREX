@@ -101,6 +101,8 @@ data class SetLog(
     val observedReps: RepObservationSummary? = null,
     /** 측별 메타데이터가 있는 원시 반복 목록. 구형 record만 주면 부재로 남긴다. */
     val repDetails: List<RepRecord>? = null,
+    /** 실제 실행 경로. null이면 이전 로그를 현재 엔진에 귀속하지 않고 필드를 생략한다. */
+    val engineProvenance: EngineProvenance? = null,
 ) {
     companion object {
         const val SCHEMA = "trex.posture.setlog/1"
@@ -142,6 +144,7 @@ data class SetLog(
             assessmentEndTMs: Long? = null,
             measurements: List<String> = emptyList(),
             observedReps: RepObservationSummary? = null,
+            engineProvenance: EngineProvenance? = null,
         ): SetLog {
             val frames = samples.mapIndexed { i, s ->
                 SetLogFrame(
@@ -192,6 +195,7 @@ data class SetLog(
                 viewFrames = view?.frames,
                 observedReps = observedReps,
                 repDetails = repRecords?.takeIf { records -> records.any { it.side != null || it.details != null } }?.toList(),
+                engineProvenance = engineProvenance,
             )
         }
     }
@@ -211,6 +215,17 @@ object SetLogJson {
         field(sb, "rules_version", log.rulesVersion)
         field(sb, "model", log.model)
         field(sb, "delegate", log.delegate)
+        log.engineProvenance?.let { engine ->
+            sb.append("\"engine\":{")
+            field(sb, "application_id", engine.applicationId)
+            field(sb, "rep_engine", engine.repEngine)
+            field(sb, "rep_profile", engine.repProfile)
+            field(sb, "rep_pattern", engine.repPattern)
+            field(sb, "form_engine", engine.formEngine)
+            sb.append("\"pose_estimator\":")
+            str(sb, engine.poseEstimator)
+            sb.append("},")
+        }
         sb.append("\"front_camera\":").append(log.frontCamera).append(',')
         sb.append("\"up_from_gravity\":").append(log.upFromGravity).append(',')
         sb.append("\"tilt_deg\":").append(num(log.tiltDeg)).append(',')

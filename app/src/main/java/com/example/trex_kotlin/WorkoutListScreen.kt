@@ -56,6 +56,7 @@ internal fun List<Workout>.moveWorkout(id: String, targetId: String): List<Worko
 @Composable
 fun WorkoutTabScreen(app: AppViewModel, onOpenAlt: (Workout) -> Unit, onOpenSets: (Workout) -> Unit, onAddWorkout: () -> Unit) {
     val c = Trex.c
+    val isEngineEvaluation = androidx.compose.ui.platform.LocalContext.current.packageName.endsWith(".replay")
     val state = rememberLazyListState()
     val haptics = LocalHapticFeedback.current
     val edge = with(LocalDensity.current) { 72.dp.toPx() }
@@ -146,7 +147,12 @@ fun WorkoutTabScreen(app: AppViewModel, onOpenAlt: (Workout) -> Unit, onOpenSets
         }, state=state, contentPadding=tabContentPadding, verticalArrangement=Arrangement.spacedBy(10.dp)) {
             item(key="workout-header") {
                 Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
-                    Text("오늘 운동",color=c.text,fontSize=30.sp,fontWeight=FontWeight.SemiBold,modifier=Modifier.weight(1f))
+                    Column(Modifier.weight(1f)) {
+                        Text(if (isEngineEvaluation) "TREX 엔진 평가" else "오늘 운동",
+                            color=c.text,fontSize=30.sp,fontWeight=FontWeight.SemiBold)
+                        if (isEngineEvaluation) Text("새 횟수 엔진 시험 · 자세 교정 규칙 검증 중",
+                            color=c.text2,fontSize=12.sp,lineHeight=17.sp)
+                    }
                     IconButton(onClick=onAddWorkout,enabled=canClick) { Icon(Icons.Rounded.Add,"운동 추가",tint=c.primaryText) }
                 }
                 Spacer(Modifier.height(22.dp))

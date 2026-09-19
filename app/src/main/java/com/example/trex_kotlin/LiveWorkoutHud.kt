@@ -21,11 +21,15 @@ import com.example.trex_kotlin.TrexText as Text
 /** 얼굴 앞을 비우고 하단의 낮은 표시줄에 진행 정보를 모은다. */
 @Composable
 internal fun LiveWorkoutHud(workout: Workout, repetitions: Int, timeLeft: Int, totalSeconds: Int,
-    setLabel: String, paused: Boolean, compact: Boolean, message: String?, repDetail: String? = null) {
+    setLabel: String, paused: Boolean, compact: Boolean, message: String?, repDetail: String? = null,
+    evaluationEngineLabel: String? = null) {
     val duration = workout.resolvedTarget() is WorkoutTarget.Duration
     Surface(color = Color(0xEB111610), shape = RoundedCornerShape(20.dp),
         modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp)) {
         Column(Modifier.padding(horizontal = 14.dp, vertical = 8.dp)) {
+            evaluationEngineLabel?.let {
+                Text(it, color = Color(0xFFB8DD83), fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+            }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(if (duration) timeLeft.asClock() else "${repetitions}회", color = Color.White,
                     fontSize = if (compact) 28.sp else 32.sp, fontWeight = FontWeight.Bold, maxLines = 1)

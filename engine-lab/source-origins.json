@@ -1,0 +1,46 @@
+[
+  {
+    "source": "app/src/main/java/com/example/trex_kotlin/posture/ReturnRepTracker.kt",
+    "sha256": "8ffcec36717b9b2aa0f2e441a2dfdd77d085fcf901c2a13597aaa22c5dfa3a58"
+  },
+  {
+    "source": "app/src/main/java/com/example/trex_kotlin/posture/ExerciseRepTracker.kt",
+    "sha256": "96f68880a0902916045879f4dcdd2d96ef1e825d6a5c0d4e811c9342ae5957c7"
+  },
+  {
+    "source": "app/src/main/java/com/example/trex_kotlin/posture/ExerciseRepProfiles.kt",
+    "sha256": "3085f459a0ca7477c43f656c87c5d29b72c707bee0a4c825a5f8afc5458fac66"
+  },
+  {
+    "source": "app/src/main/java/com/example/trex_kotlin/posture/RecentRepView.kt",
+    "sha256": "e74bc917c27251896eeeac812ced85f4d79f9dafa94517725c88fe704afb8f84"
+  },
+  {
+    "source": "app/src/main/java/com/example/trex_kotlin/posture/PostureCore.kt",
+    "sha256": "5b3cf5c3a2551edbe8f314711115e4d592bc17fa94939dee64a516ef0ec7da53"
+  },
+  {
+    "source": "app/src/main/java/com/example/trex_kotlin/posture/PostureView.kt",
+    "sha256": "14d55930ffd916440e7e86fbc2a6fe66d50d8cb4a3b094da4724057dc9a0fe08"
+  },
+  {
+    "source": "app/src/main/java/com/example/trex_kotlin/posture/PostureFloor.kt",
+    "sha256": "1605b8eea2d5d8c0a4fc631c9a650ce70bf54a963bf7c6d12c6ed3f7ae2b612f",
+    "usage": "바닥 관절 기하, 결측/이력 제한 변경"
+  },
+  {
+    "source": "app/src/main/java/com/example/trex_kotlin/posture/RepCounter.kt",
+    "sha256": "a0073446e799203cb8d2e4495cac194bf36def1cbbe12d8ffd572593506a09bd",
+    "usage": "RepSignal 데이터 타입만 분리. 카운터/규칙 레지스트리는 제외"
+  },
+  {
+    "source": "app/src/main/assets/posture/pose_landmarker_full.task",
+    "sha256": "4eaa5eb7a98365221087693fcc286334cf0858e2eb6e15b506aa4a7ecdcec4ad",
+    "usage": "MediaPipe 모델 자산 재사용"
+  },
+  {
+    "source": "research/aihub_fitness/design/TREX_147항목_설계목록.json",
+    "sha256": "f0c2129d7ec803179790bae9daeb6861a66ea2ca33d060a690d07aa77530434f",
+    "usage": "자동 실행하지 않는 연구 범위 표시"
+  }
+]
