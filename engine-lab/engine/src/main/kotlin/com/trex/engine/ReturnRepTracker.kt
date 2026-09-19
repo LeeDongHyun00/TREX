@@ -16,9 +16,13 @@ class ReturnRepTracker(
     private val minAmp: Float,
     private val refractoryMs: Long = 1200L,
     private val maxGapMs: Long = 1500L,
+    private val startMin: Float? = null,
+    private val startMax: Float? = null,
+    private val outboundSign: Int = 0,
 ) {
-    data class Cycle(val min: Float, val max: Float)
+    data class Cycle(val min: Float, val max: Float, val startMs: Long = 0)
     private enum class Phase { PREPARING, READY, OUTBOUND, RETURNING }
+    val moving: Boolean get() = phase == Phase.OUTBOUND || phase == Phase.RETURNING
 
     init {
         require(minAmp.isFinite() && minAmp > 0f)
@@ -68,6 +72,10 @@ class ReturnRepTracker(
         val homeBand = minAmp * .22f
         val turnBand = minAmp * .25f
         if (phase == Phase.PREPARING) {
+            // 출발 구간의 넓은 관측 조건이다. 정자세 각도나 사용자의 목표 깊이가 아니다.
+            if (startMin?.let { value < it } == true || startMax?.let { value > it } == true) {
+                resetCycle(); return null
+            }
             if (stableAt == null || maxOf(stableMax, value) - minOf(stableMin, value) > homeBand) {
                 stableAt = tMs; stableMin = value; stableMax = value; stableCount = 1
             } else {
@@ -85,6 +93,9 @@ class ReturnRepTracker(
         if (phase == Phase.READY) {
             if (abs(offset) <= homeBand) { lastHomeAt = tMs; return null }
             direction = if (offset > 0f) 1f else -1f
+            if (outboundSign != 0 && direction.toInt() != outboundSign) {
+                onObservationLost(); return null
+            }
             startAt = lastHomeAt
             low = minOf(anchor, value); high = maxOf(anchor, value)
             peakDistance = 0f; excursionSamples = 0; returnSamples = 0
@@ -111,7 +122,7 @@ class ReturnRepTracker(
         if (abs(offset) <= homeBand) {
             val complete = phase == Phase.RETURNING && excursionSamples >= 2 && returnSamples >= 2 &&
                 tMs - startAt >= refractoryMs && lastCountAt?.let { tMs - it >= refractoryMs } != false
-            val cycle = if (complete) Cycle(low, high) else null
+            val cycle = if (complete) Cycle(low, high, startAt) else null
             // 너무 짧거나 덜 관측된 왕복은 여기서 폐기한다. 이후 가만히 선 시간을 더해 살리지 않는다.
             ready(tMs)
             if (complete) lastCountAt = tMs

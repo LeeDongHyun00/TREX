@@ -11,12 +11,12 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.trex_kotlin"
+        applicationId = "com.example.trex_kotlin.v2"
         minSdk = 26
         targetSdk = 36
         versionCode = 3
-        versionName = "1.1.0-preview.2"
-        manifestPlaceholders["applicationLabel"] = "@string/app_name"
+        versionName = "2.0.0-observation-preview"
+        manifestPlaceholders["applicationLabel"] = "trex_v2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -58,6 +58,7 @@ kotlin {
 }
 
 dependencies {
+    implementation(project(":pose-engine"))
     implementation("androidx.window:window:1.5.0")
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)

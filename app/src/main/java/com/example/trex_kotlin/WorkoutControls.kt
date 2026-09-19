@@ -76,6 +76,7 @@ fun WorkoutSessionActions(
     onSkip: () -> Unit, onExit: () -> Unit,
     directTools: (@Composable RowScope.() -> Unit)? = null,
     onExpandCamera: (() -> Unit)? = null,
+    onComplete: (() -> Unit)? = null,
 ) {
     val c = Trex.c
     val repetitions = workout.resolvedTarget() is WorkoutTarget.Repetitions
@@ -97,7 +98,14 @@ fun WorkoutSessionActions(
         directTools?.invoke(this)
         SessionTool("건너뛰기", "이 세트 건너뛰기", Icons.Rounded.SkipNext, { open("skip") }, Modifier.weight(1f))
     }
-    if (onExpandCamera != null) {
+    if (onComplete != null) {
+        Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment=Alignment.CenterVertically,
+            horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+            if(repetitions) TextButton({open("count")}) { Text(if(automatic) "횟수 수정" else "횟수 기록",color=c.text2) }
+            GhostButton(if(paused) "재개" else "일시정지",onTogglePause,Modifier.weight(1f))
+            Cta("세트 완료",onComplete,modifier=Modifier.weight(1.25f),height=56.dp)
+        }
+    } else if (onExpandCamera != null) {
         if (repetitions) TextButton(onClick = { open("count") }) {
             Icon(Icons.Rounded.Edit, null, modifier = Modifier.size(18.dp))
             Text(if (automatic) "횟수 수정" else "횟수 기록", modifier = Modifier.padding(start = 8.dp), color = c.text)
@@ -160,10 +168,10 @@ fun WorkoutSessionActions(
                 Row(Modifier.padding(top = 20.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     GhostButton("닫기", onClick = { close() }, modifier = Modifier.weight(1f))
                     if (overlay == "count") {
-                        Cta(if (draft >= workout.resolvedTarget().amount) "기록 완료" else if (automatic) "적용" else "여기까지 기록",
+                        Cta(if (onComplete != null) "적용" else if (draft >= workout.resolvedTarget().amount) "기록 완료" else if (automatic) "적용" else "여기까지 기록",
                             onClick = {
                                 onRepetitions(draft)
-                                if (!automatic && draft < workout.resolvedTarget().amount) { close(false); onPartial() }
+                                if (onComplete == null && !automatic && draft < workout.resolvedTarget().amount) { close(false); onPartial() }
                                 else { close(false); if (paused) onTogglePause() }
                             }, modifier = Modifier.weight(1.5f))
                     } else Cta("돌아가기", onClick = { close() }, modifier = Modifier.weight(1.5f))

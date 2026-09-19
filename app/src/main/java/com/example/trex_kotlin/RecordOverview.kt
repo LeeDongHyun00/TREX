@@ -3,7 +3,8 @@ package com.example.trex_kotlin
 /** 구 기록은 카탈로그의 정확한 종목명으로만 보완한다. 알 수 없는 종목은 전신으로 남긴다. */
 internal fun recordWorkoutFocus(day: WorkoutHistoryDay): RoutineFocus {
     val plan = day.items.mapIndexed { index, item ->
-        val category = item.category ?: workoutCatalog.entries.firstOrNull { (_, entries) -> entries.any { it.name == item.workoutName } }?.key
+        val canonical = com.trex.engine.ExerciseCatalog.canonical(item.workoutName)
+        val category = item.category ?: workoutCatalog.entries.firstOrNull { (_, entries) -> entries.any { it.name == canonical } }?.key
             ?: todayPlan.firstOrNull { it.name == item.workoutName }?.category ?: "전신"
         Workout("record-$index", item.workoutName, "1회 x 1세트", "", false, category,
             target = WorkoutTarget.Duration((item.durationSeconds ?: (item.durationMinutes * 60)).coerceAtLeast(1)), restSeconds = 0)

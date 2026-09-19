@@ -56,7 +56,7 @@ data class ExerciseRepProfile(
         if (isometric) return emptySet()
         val (left, right, common) = selectedSignals(pattern)
         return listOfNotNull(left, right, common).flatMap { signal ->
-            listOf(signal.feature) + channelRequirements[signal.feature].orEmpty()
+            listOf(signal.feature) + channelRequirements[signal.feature].orEmpty() + signal.supportingMotion.keys + listOfNotNull(signal.signChangeFeature)
         }.toSet()
     }
 
@@ -84,7 +84,8 @@ data class ExerciseRepProfile(
         val (left, right, common) = selectedSignals(pattern)
         val selected = listOfNotNull(left, right, common)
         val accepted = selected.filter { signal ->
-            (setOf(signal.feature) + channelRequirements[signal.feature].orEmpty()).all { features[it]?.isFinite() == true }
+            (setOf(signal.feature) + channelRequirements[signal.feature].orEmpty() + signal.supportingMotion.keys + listOfNotNull(signal.signChangeFeature))
+                .all { features[it]?.isFinite() == true }
         }
         if (accepted.isEmpty()) return RepProfileObservation(emptyMap(), "반복 측정에 필요한 관절이 보이지 않습니다")
         val out = features.filterValues { it.isFinite() }.toMutableMap()
@@ -163,7 +164,7 @@ object ExerciseRepProfiles {
         common("라잉 레그 레이즈", "hip_ang", 25f, "누운 양다리 레그 레이즈", "보이는 측의 2D 고관절각 왕복입니다. 허리 바닥 접촉과 다리 높이의 보편적 정답을 판정하지 않습니다.", true),
         common("시저크로스", "knee_gap2d", .25f, "누워 다리를 좌우로 교차", "간격은 어느 다리가 위인지 알려주지 않습니다. 수직 가위차기 변형과 분리하며 좌우 개별 횟수는 추정하지 않습니다.", true,
             "벌어진 위치→교차→다시 벌어진 위치의 관측 왕복 1회; 좌우 교차 한 쌍과는 다를 수 있음"),
-    )
+    ).map(MovementContracts::apply)
 
     private fun key(name: String) = name.filterNot(Char::isWhitespace).lowercase()
     private val aliases = mapOf("런지" to "스텝 포워드 다이나믹 런지", "기본 스쿼트" to "바벨 스쿼트",
@@ -171,7 +172,7 @@ object ExerciseRepProfiles {
         "레그 레이즈" to "라잉 레그 레이즈", "Y 레이즈" to "Y - Exercise")
     private val byName = buildMap<String, ExerciseRepProfile> {
         for (profile in all) put(key(profile.exercise), profile)
-        for ((alias, canonical) in aliases) put(key(alias), all.first { it.exercise == canonical })
+        for ((alias, canonical) in aliases) put(key(alias), getValue(key(canonical)))
     }
     fun forExercise(canonicalOrAlias: String): ExerciseRepProfile? = byName[key(canonicalOrAlias)]
 }

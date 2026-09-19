@@ -1,5 +1,7 @@
 # TREX 실험실
 
+> 2026-09-20: 제품의 `:pose-engine`도 이 `engine/` 디렉터리를 직접 컴파일합니다. `PoseEvaluationEngine` (`LabEngine` 호환 별칭)의 변경은 두 앱에 동일하게 적용됩니다. 루트 검증은 `gradlew :pose-engine:test :app:testDebugUnitTest`입니다.
+
 26종 운동 엔진을 기존 TREX에 이식하기 전에 시험하기 위한 별도 Android 앱입니다.
 로그인·루틴·식단·운동 자동 전환 없이 운동 선택 → 카메라 → 종료 → 실제 횟수/메모 → 로그 보내기만 제공합니다.
 

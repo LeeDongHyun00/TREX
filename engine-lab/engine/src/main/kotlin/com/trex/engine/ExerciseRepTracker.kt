@@ -192,6 +192,10 @@ class ExerciseRepTracker(
         val pairLeft = pendingLeft ?: return emptyList()
         val pairRight = pendingRight ?: return emptyList()
         pendingLeft = null; pendingRight = null
+        // 두 완료 시각만 가까운 순차 동작은 양팔 동시 동작이 아니다.
+        val overlap = minOf(pairLeft.tMs, pairRight.tMs) - maxOf(pairLeft.startMs, pairRight.startMs)
+        val shorter = minOf(pairLeft.tMs - pairLeft.startMs, pairRight.tMs - pairRight.startMs)
+        if (shorter <= 0 || overlap < shorter * .6f) return emptyList()
         return listOf(emit(timeMs, RepSide.BOTH, left = pairLeft, right = pairRight))
     }
 
@@ -203,9 +207,9 @@ class ExerciseRepTracker(
 
     private fun advance(counter: ReturnChannel, timeMs: Long, features: Map<String, Float>): RepRecord? {
         if (!observable(counter.signal, features)) closeTimingSegment()
-        if (!counter.onFrame(timeMs, features[counter.signal.feature])) return null
+        if (!counter.onFrame(timeMs, features[counter.signal.feature], features)) return null
         return RepRecord(timeMs, counter.lastCycleMin, counter.lastCycleMax,
-            counter.signal.isValidRep(counter.lastCycleMin, counter.lastCycleMax))
+            counter.signal.isValidRep(counter.lastCycleMin, counter.lastCycleMax), counter.lastStartMs)
     }
 
     private fun emit(

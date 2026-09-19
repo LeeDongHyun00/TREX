@@ -107,7 +107,7 @@ fun TimerSessionScreen(
             Text(if (paused) "일시정지" else if (workout.resolvedTarget() is WorkoutTarget.Repetitions) "직접 횟수 기록" else "시간 측정",
                 color = c.text2, fontSize = 14.sp, modifier = Modifier.padding(top = 28.dp))
         }
-        WorkoutSessionActions(workout, repetitions, false, paused, onTogglePause, onRepetitions, onPartial, onSkip, onExit)
+        WorkoutSessionActions(workout, repetitions, false, paused, onTogglePause, onRepetitions, onPartial, onSkip, onExit,onComplete=onNext)
     }
 }
 

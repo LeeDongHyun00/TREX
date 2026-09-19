@@ -346,6 +346,11 @@ class PoseFrame(val joints: Map<String, Vec3?>, up: Vec3 = Vec3(0f, 1f, 0f)) {
             val hip = if (side == 'L') lHip else rHip
             if (el != null && wr != null) put("forearm_vert_$side", angleVec(wr - el, up))
             if (sh != null && el != null) put("upperarm_vert_$side", angleVec(el - sh, up))
+            if (sh != null && el != null && xb != null && zb != null) {
+                val arm = el - sh
+                val lateral = abs(arm dot xb); val forward = abs(arm dot zb)
+                if (lateral + forward > 5f) put("raise_lateral_$side", lateral / (lateral + forward))
+            }
             if (sh != null && el != null && hip != null) {
                 perpFromLine(el, hip, sh)?.let { (perp, len) -> put("elbow_torso_$side", perp.norm / len) }
             }

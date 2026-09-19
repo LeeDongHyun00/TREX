@@ -92,6 +92,9 @@ data class PostureSetReport(
     val tempoMs: Long?,
     val measurements: List<String> = emptyList(),
     val observedReps: RepObservationSummary? = null,
+    val observationEngine: Boolean = false,
+    val userEnteredReps: Int? = null,
+    val rangeGoalReps: Int? = null,
 ) {
     /** 실제로 판정한 규칙 수(OK+VIOLATION). accuracy 의 분모 — 유보를 정상으로 세지 않는다. */
     val judged: Int = items.count { it.overall == Verdict.OK || it.overall == Verdict.VIOLATION }
@@ -161,7 +164,7 @@ data class PostureSetReport(
     }
 
     /** 세트 종료 발화 한두 문장. */
-    val voiceLine: String = if (exercise in FloorTemporal.exercises) "세트를 기록했어요. 참고 측정은 화면에서 확인해 주세요." else when (mode) {
+    val voiceLine: String = if (exercise in FloorTemporal.exercises || judged == 0 && measurements.isNotEmpty()) "세트를 기록했어요. 관측 내용은 화면에서 확인해 주세요." else when (mode) {
         CoachMode.COACH -> when (verdict) {
             SetVerdict.UNJUDGED -> "이번 세트는 화면에 충분히 잡히지 않아 자세를 판정하지 못했어요."
             SetVerdict.CLEAN -> if (betaOnly) "이번 세트, 검증 중인 항목 기준으로는 이상 없었어요." else "이번 세트에서 판정한 항목은 참고 범위 안에 있었어요."

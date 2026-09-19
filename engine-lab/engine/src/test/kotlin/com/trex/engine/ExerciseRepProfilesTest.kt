@@ -54,7 +54,12 @@ class ExerciseRepProfilesTest {
             val signals = if (p.commonSignal != null) listOfNotNull(p.commonSignal) else listOfNotNull(p.leftSignal, p.rightSignal)
             for ((i, step) in wave.withIndex()) {
                 val f = p.requiredFeatures().associateWith { 1f }.toMutableMap()
-                for (s in signals) f[s.feature] = 10f + step * s.minAmp
+                for (s in signals) {
+                    val anchor = s.startMin?.let { it + if(s.minAmp < 1) .4f else 15f } ?: s.startMax?.let { it - s.minAmp } ?: 10f
+                    f[s.feature] = anchor + step * s.minAmp * if(s.outboundSign == -1) -1 else 1
+                    for((key,amp) in s.supportingMotion) f[key] = step*amp*2
+                    s.signChangeFeature?.let { f[it]=if(step>.7f) -.2f else .2f }
+                }
                 val observed = p.observe(f, view = if (p.floor) null else ViewEstimator.ViewClass.C, qualityOk = true)
                 assertTrue(p.exercise, observed.accepted)
                 tracker.onFrame(i * 400L, observed.features)
@@ -78,9 +83,10 @@ class ExerciseRepProfilesTest {
                 view = ViewEstimator.ViewClass.C, qualityOk = true)
             tracker.onFrame(i * 400L, observation.features)
         }
-        assertEquals(2, tracker.counts.total)
+        // 오른팔은 굽힌 상태에서 시작했다. 처음 관측한 중간 구간을 완전 반복으로 세지 않는다.
+        assertEquals(1, tracker.counts.total)
         assertEquals(1, tracker.counts.left)
-        assertEquals(1, tracker.counts.right)
+        assertEquals(0, tracker.counts.right)
     }
 
     @Test fun alternatingKneeUpsKeepHipSidesAndRequireKneeObservation() {
@@ -169,7 +175,7 @@ class ExerciseRepProfilesTest {
         assertFalse(p.observe(frame, view = ViewEstimator.ViewClass.D, qualityOk = true).accepted)
         assertTrue(p.observe(frame, RepMovementPattern.LEFT_ONLY, ViewEstimator.ViewClass.D, true).accepted)
         val floor = profile("푸시업")
-        assertTrue(floor.observe(mapOf("wrist_shoulder_d" to 1f), view = null, qualityOk = true).accepted)
+        assertTrue(floor.observe(mapOf("wrist_shoulder_d" to 1f, "visible_elbow_angle" to 170f), view = null, qualityOk = true).accepted)
         assertFalse(floor.observe(emptyMap(), view = null, qualityOk = true).accepted)
         assertFalse(floor.observe(mapOf("wrist_shoulder_d" to 1f), view = null, qualityOk = false).accepted)
     }

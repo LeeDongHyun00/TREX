@@ -51,6 +51,8 @@ class PoseSample(
     val upFlipped: Boolean = false,
     /** 자가검증으로 up 방향을 확인할 수 있었는지 (false = 누운 자세/관절 부족 등으로 미검증). */
     val upVerified: Boolean = false,
+    /** 재생 가능한 원본 월드 좌표(m). v2는 이 입력에서 공유 엔진의 피처를 계산한다. */
+    val rawWorld: FloatArray = FloatArray(MP_LANDMARK_COUNT * 3),
 ) {
     companion object {
         fun empty(inferMs: Long = 0L, w: Int = 0, h: Int = 0, up: Vec3 = SCREEN_UP, fromGravity: Boolean = false) = PoseSample(
@@ -241,6 +243,10 @@ class PostureAnalyzer(
             upFromGravity = fromGravity,
             upFlipped = sanity.flipped,
             upVerified = sanity.verified,
+            rawWorld = FloatArray(MP_LANDMARK_COUNT * 3) { i ->
+                val p = world[i / 3]
+                when (i % 3) { 0 -> p.x(); 1 -> p.y(); else -> p.z() }
+            },
         )
     }
 

@@ -90,7 +90,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     // ---- 운동 계획 / 기록
 
-    var workoutPlan by mutableStateOf(store.loadPlan() ?: todayPlan)
+    var workoutPlan by mutableStateOf(normalizeV2Plan(store.loadPlan() ?: todayPlan))
         private set
 
     var workoutHistory by mutableStateOf(store.loadHistory() ?: emptyList())
@@ -122,8 +122,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun updatePlan(plan: List<Workout>) {
-        workoutPlan = plan
-        store.savePlan(plan)
+        workoutPlan = normalizeV2Plan(plan)
+        store.savePlan(workoutPlan)
     }
 
     fun markWorkoutDone(id: String) {
@@ -140,10 +140,17 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun recordCompletedSession(elapsedSeconds: Int, completedPlan: List<Workout> = workoutPlan.filter { it.done }, elapsedByWorkout: Map<String, Int> = emptyMap()) {
-        if (completedPlan.isEmpty()) return
+        // 범위 충족은 0회여도 관측한 반복은 기록한다. 목표 충족 수를 실제 수행 횟수로 바꾸지 않는다.
+        val observed = sessionPostureReports.entries.filter { (id,report) ->
+            completedPlan.none { it.id==id } && report.observationEngine && (report.userEnteredReps ?: report.observedReps?.total ?: 0)>0
+        }.mapNotNull { (id,report) -> workoutPlan.firstOrNull { it.id==id.substringBefore("::set:") }?.copy(
+            id=id,reps="${report.userEnteredReps ?: report.observedReps?.total ?: 0}회 × 1세트",
+            target=WorkoutTarget.Repetitions(report.userEnteredReps ?: report.observedReps?.total ?: 0),done=false) }
+        val recordedPlan=completedPlan+observed
+        if (recordedPlan.isEmpty()) return
         // 리포트 맵은 여기서 비우지 않는다 — 완료 화면이 같은 맵을 읽고, 다음 startSession 이 비운다
         workoutHistory = workoutHistory.replaceTodayWith(
-            createWorkoutHistoryDay(completedPlan, elapsedSeconds, sessionPostureReports.toMap(), elapsedByWorkout),
+            createWorkoutHistoryDay(recordedPlan, elapsedSeconds, sessionPostureReports.toMap(), elapsedByWorkout),
         )
         store.saveHistory(workoutHistory)
     }

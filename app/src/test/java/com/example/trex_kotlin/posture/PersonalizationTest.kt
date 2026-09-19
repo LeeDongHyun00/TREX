@@ -6,21 +6,20 @@ import org.junit.Test
 
 class PersonalizationTest {
     @Test fun everyCatalogExerciseHasOneExplicitProfile() {
-        val source=File("src/main/java/com/example/trex_kotlin/Sheets.kt").readText()
-        val names=Regex("WorkoutTemplate\\(\"([^\"]+)\"").findAll(source).map { it.groupValues[1] }.toSet()
-        assertEquals(57,names.size)
+        val names=com.example.trex_kotlin.workoutCatalog.values.flatten().map { it.name }.toSet()
+        assertEquals(26,names.size)
         assertEquals(names,ExerciseProfiles.all.map { it.name }.toSet())
-        assertEquals(57,ExerciseProfiles.all.size)
-        assertEquals(27,ExerciseProfiles.all.count { it.referenceExercise != null })
-        assertEquals(2,ExerciseProfiles.all.count { it.kind == ObservationKind.GUIDE })
+        assertEquals(26,ExerciseProfiles.all.size)
+        assertEquals(26,ExerciseProfiles.all.count { it.referenceExercise != null })
+        assertEquals(0,ExerciseProfiles.all.count { it.kind == ObservationKind.GUIDE })
         assertTrue(ExerciseProfiles.all.filter { it.cameraEnabled }.all { it.metricFeatures.isNotEmpty() && it.capture.voice.isNotBlank() })
     }
 
     @Test fun guidedBundlesDoNotBorrowUnrelatedRulesAndVariantsStaySeparate() {
-        assertFalse(ExerciseProfiles.forName("마무리 스트레칭")!!.cameraEnabled)
+        assertNull(ExerciseProfiles.forName("마무리 스트레칭"))
         assertNull(ExerciseProfiles.forName("푸쉬업 입문"))
-        assertNull(ExerciseProfiles.forName("벽 푸쉬업")!!.referenceExercise)
-        assertNotEquals(ExerciseProfiles.forName("바벨 스쿼트")!!.name,ExerciseProfiles.forName("기본 스쿼트")!!.name)
+        assertNull(ExerciseProfiles.forName("벽 푸쉬업"))
+        assertEquals(ExerciseProfiles.forName("바벨 스쿼트")!!.name,ExerciseProfiles.forName("기본 스쿼트")!!.name)
         assertEquals(CapturePosition.RIGHT_FRONT,ExerciseProfiles.forName("런지")!!.capture)
         assertEquals(CapturePosition.FLOOR_SIDE,ExerciseProfiles.forName("플랭크")!!.capture)
     }
@@ -39,8 +38,8 @@ class PersonalizationTest {
     @Test fun stableHipCanBeCollectedWhileHeadMoves() {
         val metrics=ExerciseProfiles.metrics(ExerciseProfiles.forName("플랭크")!!)
         val t=PostureComparisonTracker("플랭크",metrics)
-        for(ms in 0L..10000L step 250) t.add(ms,mapOf(PlankGeometry.HIP to .1f,PlankGeometry.HEAD to if(ms%500==0L)0f else 40f))
-        assertEquals(listOf(PlankGeometry.HIP),t.snapshot.values.map { it.metric.feature })
+        for(ms in 0L..10000L step 250) t.add(ms,mapOf("hip_dev_ankle" to .1f,"head_trunk_ang" to if(ms%500==0L)0f else 40f))
+        assertEquals(listOf("hip_dev_ankle"),t.snapshot.values.map { it.metric.feature })
     }
 
     @Test fun observationWindowsKeepLeftAndRightIndependentWithoutClaimingRepPhases() {

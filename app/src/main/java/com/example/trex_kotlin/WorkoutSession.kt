@@ -62,7 +62,7 @@ data class SessionStep(
 
 /** 세트별 고유 ID로 리포트를 보존한다. 휴식은 마지막 세트 뒤에는 넣지 않는다. */
 fun buildSessionSteps(plan: List<Workout>): List<SessionStep> = buildList {
-    plan.forEachIndexed { exerciseIndex, workout ->
+    normalizeV2Plan(plan).forEachIndexed { exerciseIndex, workout ->
         val timing = workout.timing()
         fun addStep(phase: SessionPhase, set: Int, seconds: Int) {
             val targetLabel = when (val goal = workout.resolvedTarget()) {
@@ -92,8 +92,8 @@ data class SessionProgress(
 ) {
     val secondsLeft get() = ((remainingMs.coerceAtLeast(0) + 999) / 1000).toInt()
     fun tick(deltaMs: Long, paused: Boolean, timed: Boolean = true, trackElapsed: Boolean = true, trackWork: Boolean = false): SessionProgress = if (paused || index < 0) this else {
-        val consumed = if (timed) deltaMs.coerceAtLeast(0).coerceAtMost(remainingMs.coerceAtLeast(0)) else deltaMs.coerceAtLeast(0)
-        copy(remainingMs = if (timed) remainingMs - consumed else remainingMs, elapsedMs = elapsedMs + if (trackElapsed) consumed else 0,
+        val consumed = if (timed && !trackWork) deltaMs.coerceAtLeast(0).coerceAtMost(remainingMs.coerceAtLeast(0)) else deltaMs.coerceAtLeast(0)
+        copy(remainingMs = if (timed) (remainingMs - consumed).coerceAtLeast(0) else remainingMs, elapsedMs = elapsedMs + if (trackElapsed) consumed else 0,
             workMillis = if (trackWork) workMillis + (index to ((workMillis[index] ?: 0L) + consumed)) else workMillis)
     }
     fun setRepetitions(steps: List<SessionStep>, expectedToken: Int, value: Int): SessionProgress {

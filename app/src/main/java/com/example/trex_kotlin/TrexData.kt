@@ -147,6 +147,7 @@ fun PostureSetReport.toCorrection(): PostureCorrection {
         observedBothReps = observedReps?.both,
         observedUnknownReps = observedReps?.unknown,
         repMovementPattern = observedReps?.pattern,
+        actualReps = userEnteredReps,
     )
 }
 
@@ -204,51 +205,10 @@ data class GoalItem(
 )
 
 val todayPlan = listOf(
-    Workout(
-        id = "squat",
-        name = "기본 스쿼트",
-        reps = "12회 x 3세트",
-        duration = "8분",
-        posture = true,
-        category = "하체",
-        alt = WorkoutAlt("의자 스쿼트", "10회 x 3세트"),
-    ),
-    Workout(
-        id = "plank",
-        name = "플랭크",
-        reps = "60초 x 3세트",
-        duration = "5분",
-        posture = false,
-        category = "코어",
-        alt = WorkoutAlt("데드버그", "12회 x 3세트"),
-    ),
-    Workout(
-        id = "lunge",
-        name = "런지",
-        reps = "10회 x 3세트",
-        duration = "10분",
-        posture = true,
-        category = "하체",
-        alt = WorkoutAlt("제자리 스텝업", "12회 x 3세트"),
-    ),
-    Workout(
-        id = "pushup",
-        name = "푸쉬업 입문",
-        reps = "8회 x 3세트",
-        duration = "6분",
-        posture = false,
-        category = "상체",
-        alt = WorkoutAlt("벽 푸쉬업", "12회 x 3세트"),
-    ),
-    Workout(
-        id = "stretch",
-        name = "마무리 스트레칭",
-        reps = "전신 6분",
-        duration = "6분",
-        posture = false,
-        category = "회복",
-        alt = WorkoutAlt("폼롤러 마무리", "전신 5분"),
-    ),
+    Workout("squat", "바벨 스쿼트", "10회 × 3세트", "8분", true, "하체"),
+    Workout("plank", "플랭크", "30초 × 3세트", "6분", true, "코어"),
+    Workout("lunge", "스텝 포워드 다이나믹 런지", "10회 × 3세트", "8분", true, "하체"),
+    Workout("pushup", "니푸쉬업", "8회 × 3세트", "6분", true, "상체"),
 )
 
 val onboardingGoals = listOf(
@@ -256,7 +216,7 @@ val onboardingGoals = listOf(
     GoalItem("diet", "다이어트를 목표로 해룡!", "유산소 + 식단 관리"),
     GoalItem("simple", "간단하게 운동만 하고 싶어룡!", "하루 10분 루틴"),
     GoalItem("core", "탄탄한 코어 잡고싶어룡!", "플랭크 · 복근 루틴"),
-    GoalItem("posture", "자세부터 바로잡고 싶어룡!", "거북목 · 골반 교정"),
+    GoalItem("posture", "자세부터 바로잡고 싶어룡!", "운동 중 움직임 관측"),
 )
 
 val mealMetas = listOf(
@@ -311,7 +271,8 @@ fun createWorkoutHistoryDay(
         val seconds = elapsedByWorkout[workout.id]?.coerceAtLeast(0) ?: 0
         WorkoutHistoryItem(
             workoutName = workout.name,
-            reps = workout.reps,
+            reps = if(report?.observationEngine == true && (report.observedReps != null || report.userEnteredReps != null) && workout.resolvedTarget() is WorkoutTarget.Repetitions)
+                "${report.userEnteredReps ?: report.observedReps?.total ?: 0}회 × 1세트" else workout.reps,
             durationMinutes = seconds / 60,
             durationSeconds = seconds,
             calories = workout.estimatedCalories(seconds),

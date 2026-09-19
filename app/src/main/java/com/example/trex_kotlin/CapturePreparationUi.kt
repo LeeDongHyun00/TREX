@@ -118,7 +118,7 @@ internal fun CapturePreparationPanel(
         Text("운동 준비", color = c.text, fontSize = 19.sp, fontWeight = FontWeight.SemiBold)
         evaluationEngineLabel?.let {
             Text(it, color = c.primaryText, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-            Text("자세 교정은 기존 규칙과 함께 검증 중이에요", color = c.text2, fontSize = 11.sp)
+            Text("움직임을 관측하며 정자세로 판정하지 않아요", color = c.text2, fontSize = 11.sp)
         }
         Text(if(userPaused) "준비를 잠시 멈췄어요." else preparationInstruction, color = c.text2, fontSize = 12.sp)
         repCountHint?.takeIf { it.isNotBlank() }?.let {

@@ -235,7 +235,8 @@ fun TrexApp(app: AppViewModel = viewModel()) {
                 if (current.phase == SessionPhase.WORK) finalizers[current.workout.id]?.invoke()
                 progress = progress.captureCount(current)
             }
-            if (progress.completed.isNotEmpty() || progress.recordedCounts.isNotEmpty()) exitAsk = true else exitSession()
+            if (progress.completed.isNotEmpty() || progress.recordedCounts.isNotEmpty() ||
+                app.sessionPostureReports.values.any { it.observationEngine && (it.userEnteredReps ?: it.observedReps?.total ?: 0)>0 }) exitAsk = true else exitSession()
         }
 
         val advanceLatest = rememberUpdatedState<(Int, Boolean) -> Unit> { token, skip -> nextSession(token, skip) }
@@ -248,12 +249,14 @@ fun TrexApp(app: AppViewModel = viewModel()) {
                 progress = progress.tick(now - last, pausedState.value, timed = step?.timed == true,
                     trackElapsed = step?.phase != SessionPhase.PREPARE, trackWork = step?.phase == SessionPhase.WORK)
                 last = now
-                if (!pausedState.value && step?.timed == true && progress.targetReached(step)) advanceLatest.value(token, false)
+                if (!pausedState.value && step?.phase == SessionPhase.REST && progress.targetReached(step)) advanceLatest.value(token, false)
             }
         }
-        LaunchedEffect(sessionIndex, progress.repetitions, sessionPaused, appPaused, exitAsk) {
-            if (!pausedState.value && step?.phase == SessionPhase.WORK && !step.timed && progress.targetReached(step)) {
-                advanceLatest.value(step.token, false)
+        var goalAnnouncedToken by remember { mutableIntStateOf(-1) }
+        LaunchedEffect(sessionIndex, progress.repetitions, progress.secondsLeft, sessionPaused, appPaused, exitAsk) {
+            if (!pausedState.value && step?.phase == SessionPhase.WORK && progress.targetReached(step) && goalAnnouncedToken != step.token) {
+                goalAnnouncedToken = step.token
+                speech.speak("목표에 도달했어요. 세트 완료를 눌러 기록해 주세요.", flush = false)
             }
         }
         LaunchedEffect(sessionIndex) {

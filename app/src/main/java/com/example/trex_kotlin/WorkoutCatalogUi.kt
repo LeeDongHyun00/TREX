@@ -53,7 +53,8 @@ internal fun WorkoutCatalogBrowser(current: Workout?, onPick: (WorkoutTemplate) 
     val state = androidx.compose.foundation.lazy.rememberLazyListState()
     val recommendations = remember(current?.name) { current?.let(::recommendedReplacements).orEmpty() }
     val results = when {
-        query.isNotBlank() -> workoutCatalog.values.flatten().filter { it.name.contains(query.trim(), true) }
+        query.isNotBlank() -> workoutCatalog.values.flatten().filter { it.name.contains(query.trim(), true) ||
+            com.trex.engine.ExerciseCatalog.canonical(query.trim()) == it.name }
         tabs[selected] == "추천" -> recommendations
         tabs[selected] == "전체" -> workoutCatalog.values.flatten()
         else -> workoutCatalog[tabs[selected]].orEmpty()
