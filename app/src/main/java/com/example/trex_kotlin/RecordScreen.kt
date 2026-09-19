@@ -108,9 +108,9 @@ fun RecordScreen(app: AppViewModel, onBack: () -> Unit) {
                                                 Text(line1, color = c.text2, fontSize = 13.sp, lineHeight = 20.sp)
                                                 line2?.let { Text(it, color = c.text2, fontSize = 13.sp, lineHeight = 20.sp) }
                                                 selfLabelText(pc)?.let { Text(it, color = c.primaryText, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp)) }
-                                                val detected = pc.repsValid?.let { it + (pc.repsPartial ?: 0) }
-                                                if (pc.actualReps != null && detected != null && pc.actualReps != detected)
-                                                    Text("앱 검출 ${detected}회", color = c.text3, fontSize = 12.sp)
+                                                pc.repObservationPresentation().lines.forEach {
+                                                    Text(it, color = c.text3, fontSize = 12.sp, lineHeight = 18.sp)
+                                                }
                                             }
                                         }
                                     }
@@ -166,9 +166,10 @@ private fun postureLines(pc: PostureCorrection): Pair<String, String?> {
     // TRACK 은 판정이 아니라 측정값(summaryLine)만 — 모집단 기준을 숙련자에게 지적으로 보이지 않는다(spec §29)
     if (pc.mode == "track") return pc.focus to null
     return when (pc.kind) {
-        "clean" -> pc.focus to null   // "자세 깨끗했어요" 또는 베타만 판정된 세트의 "검증 중인 항목 기준으로는 이상 없었어요"
+        "clean" -> (if (pc.beta) "참고 기준 이상 없음" else "판정한 항목 범위 내") to null
         "unjudged" -> pc.focus.ifBlank { "자세 판정 없음" } to null
-        "habit", "drift", "violation", "recovered" -> pc.focus to pc.fix?.takeIf { it.isNotBlank() }?.let { "다음엔 $it" }
+        "recovered" -> "${pc.bodyPart?.let { "$it " }.orEmpty()}관측 회복" to null
+        "habit", "drift", "violation" -> pc.focus to pc.fix?.takeIf { it.isNotBlank() }?.let { "다음엔 $it" }
         "reference" -> "참고: ${pc.focus} (검증 중인 항목)" to null
         // kind 없는 항목은 TrexStore 가 로드 시 버린다(§30 이전 목업) — 남아 있어도 지어낸 지적 문구는 쓰지 않는다
         else -> pc.focus to null

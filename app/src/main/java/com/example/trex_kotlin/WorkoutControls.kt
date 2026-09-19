@@ -62,6 +62,7 @@ fun WorkoutGoalDisplay(workout: Workout, count: Int, timeLeft: Int, totalSeconds
                 Text(" / ${goal.amount}회", color = c.text2, fontSize = if (compact) 18.sp else 24.sp,
                     modifier = Modifier.padding(bottom = if (compact) 6.dp else 12.dp))
             }
+            workout.repCountExplanation()?.let { Text(it, color = c.text2, fontSize = 12.sp) }
         }
     }
 }
@@ -144,6 +145,8 @@ fun WorkoutSessionActions(
                 Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()).padding(top = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     if (overlay == "count") {
+                        workout.repCountExplanation()?.let { Text(it, color = c.text2, fontSize = 13.sp) }
+                        if (automatic) Text("수정한 총횟수와 카메라의 좌우 관측 기록은 따로 보존돼요.", color = c.text2, fontSize = 12.sp)
                         Row(Modifier.fillMaxWidth().padding(vertical = 22.dp), horizontalArrangement = Arrangement.Center) {
                             StepperControl("${draft}회", { draft = (draft - 1).coerceAtLeast(0) }, { draft = (draft + 1).coerceAtMost(999) })
                         }

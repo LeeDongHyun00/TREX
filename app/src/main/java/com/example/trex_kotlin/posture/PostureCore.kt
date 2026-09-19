@@ -361,6 +361,10 @@ class PoseFrame(val joints: Map<String, Vec3?>, up: Vec3 = Vec3(0f, 1f, 0f)) {
         if (torsoLen != null) {
             val dL = if (lKn != null && lEl != null) (lKn - lEl).norm else null
             val dR = if (rKn != null && rEl != null) (rKn - rEl).norm else null
+            // 같은 쪽 무릎·팔꿈치 접근 관측. 양쪽 min만으로는 교대 동작의 측을 보존할 수 없다.
+            // 무릎 올림의 반복 신호와 함께 사용하며 팔만 내리는 동작을 반복으로 인증하지 않는다.
+            put("knee_elbow_dist_L", dL?.let { it / torsoLen })
+            put("knee_elbow_dist_R", dR?.let { it / torsoLen })
             val d = when {
                 dL != null && dR != null -> minOf(dL, dR)
                 dL != null -> dL

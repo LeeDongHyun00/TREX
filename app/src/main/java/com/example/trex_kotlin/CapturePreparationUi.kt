@@ -46,25 +46,30 @@ internal fun CapturePreparationPanel(
     speech: SpeechCoach, onStart: (skipped: Boolean) -> Unit, onExit: () -> Unit, modifier: Modifier = Modifier,
     cameraError: String? = null, onFallback: () -> Unit = {},
     modeControl: @Composable () -> Unit = {},
+    repCountHint: String? = null,
+    captureOverride: CapturePosition? = null,
 ) {
     val c = Trex.c
+    // 수행 방식의 촬영 조건은 문구뿐 아니라 시범·범위 확인·방향 확인·음성에도 동일하게 적용한다.
+    val capture = captureOverride ?: profile.capture
+    val preparationInstruction = remember(profile, capture) { profile.copy(capture = capture).preparationInstruction }
     val tone = remember { runCatching { android.media.ToneGenerator(android.media.AudioManager.STREAM_MUSIC, 60) }.getOrNull() }
     DisposableEffect(tone) { onDispose { runCatching { tone?.release() } } }
-    val controller = remember(profile.name) { CapturePreparationController(profile.floor) }
-    var state by remember { mutableStateOf(controller.state) }
+    val controller = remember(profile.name, capture) { CapturePreparationController(profile.floor) }
+    var state by remember(controller) { mutableStateOf(controller.state) }
     var userPaused by rememberSaveable { mutableStateOf(false) }
-    val direction = remember(profile.name, frontCamera) { CaptureDirectionWindow(profile.capture, profile.floor) }
+    val direction = remember(profile.name, capture, frontCamera) { CaptureDirectionWindow(capture, profile.floor) }
     val latestPaused by rememberUpdatedState(paused)
     val start by rememberUpdatedState(onStart)
-    var delivered by remember { mutableStateOf(false) }
-    var introductionGiven by remember(profile.name) { mutableStateOf(false) }
+    var delivered by remember(controller) { mutableStateOf(false) }
+    var introductionGiven by remember(profile.name, capture) { mutableStateOf(false) }
     fun cancel() { controller.cancel(); state = controller.state; speech.stop() }
-    LaunchedEffect(frontCamera, paused, userPaused) {
+    LaunchedEffect(frontCamera, paused, userPaused, controller) {
         cancel(); direction.clear()
         if (!paused && !userPaused) {
             if (!introductionGiven) {
                 if (!speech.muted) {
-                    speech.speak(profile.preparationInstruction, flush = true)
+                    speech.speak(preparationInstruction, flush = true)
                     val deadline = SystemClock.elapsedRealtime() + 12000L
                     while (!speech.muted && controller.state.phase == PreparationPhase.IDLE && speech.isSpeaking && SystemClock.elapsedRealtime() < deadline) delay(50)
                     // TTS 콜백 누락에도 준비가 무한히 멈추지 않는다.
@@ -78,10 +83,10 @@ internal fun CapturePreparationPanel(
             }
         }
     }
-    DisposableEffect(Unit) { onDispose { controller.cancel(); speech.stop() } }
-    LaunchedEffect(sampleAt) {
+    DisposableEffect(controller) { onDispose { controller.cancel(); speech.stop() } }
+    LaunchedEffect(sampleAt, controller) {
         if (!latestPaused && !userPaused && sampleAt > 0L) {
-            controller.observe(sampleAt, direction.check(CaptureFraming.inspect(sample, profile.capture, profile.floor),sample.features))
+            controller.observe(sampleAt, direction.check(CaptureFraming.inspect(sample, capture, profile.floor),sample.features))
             state = controller.state
         }
     }
@@ -110,7 +115,10 @@ internal fun CapturePreparationPanel(
     Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text("운동 준비", color = c.text, fontSize = 19.sp, fontWeight = FontWeight.SemiBold)
-        Text(if(userPaused) "준비를 잠시 멈췄어요." else profile.preparationInstruction, color = c.text2, fontSize = 12.sp)
+        Text(if(userPaused) "준비를 잠시 멈췄어요." else preparationInstruction, color = c.text2, fontSize = 12.sp)
+        repCountHint?.takeIf { it.isNotBlank() }?.let {
+            Text(it, color = c.text, fontSize = 12.sp, lineHeight = 17.sp)
+        }
         Row(Modifier.fillMaxWidth().heightIn(min = 114.dp), verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             if (counting) RingGauge(state.progress, 110.dp, 5.dp) {
@@ -118,9 +126,9 @@ internal fun CapturePreparationPanel(
                     Text("${state.seconds}", color = c.text, fontSize = 36.sp, fontWeight = FontWeight.SemiBold)
                     Text(if(state.trackingHold) "잠시 확인 중" else "시작까지", color = c.text2, fontSize = 11.sp)
                 }
-            } else CaptureDirectionDemo(profile.capture, frontCamera, Modifier.size(114.dp))
+            } else CaptureDirectionDemo(capture, frontCamera, Modifier.size(114.dp))
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(profile.capture.placement, color = c.text, fontSize = 15.sp, lineHeight = 21.sp)
+                Text(capture.placement, color = c.text, fontSize = 15.sp, lineHeight = 21.sp)
                 if(active && state.message != "몸이 화면에 잡히면 5초 뒤 시작해요.") Text(state.message, color=c.text2, fontSize=12.sp, lineHeight=17.sp)
                 Text(if (profile.floor) "무릎을 대거나 편하게 앉아 준비하세요." else "휴대폰은 고정 · 몸만 움직여 주세요.",
                     color = c.text2, fontSize = 12.sp, lineHeight = 17.sp)

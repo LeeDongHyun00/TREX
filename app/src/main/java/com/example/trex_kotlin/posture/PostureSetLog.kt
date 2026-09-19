@@ -68,7 +68,8 @@ data class SetLog(
     val upFlippedFrames: Int = 0,
     val upVerifiedFrames: Int = 0,
     /** 자동 렙 카운트 (spec §27, 스키마 호환 추가 필드). null = 카운터 미적용 종목.
-     *  repCount = 완료 사이클 전체, repInvalid = 그중 ROM 미달 무효 렙 (유효 = count − invalid). */
+     *  repCount = 완료 사이클 전체, repInvalid = 명시적 ROM 미달 수다.
+     *  valid=null은 미판정이므로 count−invalid를 정상 자세 횟수로 해석하지 않는다. */
     val repCount: Int? = null,
     val repTimesMs: List<Long>? = null,
     val repSignal: String? = null,
@@ -96,6 +97,10 @@ data class SetLog(
     val viewR: Float? = null,
     val viewClass: String? = null,
     val viewFrames: Int? = null,
+    /** 명시적으로 선택한 횟수 단위와 카메라 관측 집계. null은 측별 기록 도입 전이다. */
+    val observedReps: RepObservationSummary? = null,
+    /** 측별 메타데이터가 있는 원시 반복 목록. 구형 record만 주면 부재로 남긴다. */
+    val repDetails: List<RepRecord>? = null,
 ) {
     companion object {
         const val SCHEMA = "trex.posture.setlog/1"
@@ -136,6 +141,7 @@ data class SetLog(
             anchorTMs: Long? = null,
             assessmentEndTMs: Long? = null,
             measurements: List<String> = emptyList(),
+            observedReps: RepObservationSummary? = null,
         ): SetLog {
             val frames = samples.mapIndexed { i, s ->
                 SetLogFrame(
@@ -169,7 +175,7 @@ data class SetLog(
                 note = note,
                 upFlippedFrames = samples.count { it.upFlipped },
                 upVerifiedFrames = samples.count { it.upVerified },
-                repCount = repCount,
+                repCount = repCount ?: observedReps?.total,
                 repTimesMs = repTimesMs,
                 repSignal = repSignal,
                 repInvalid = repInvalid,
@@ -184,6 +190,8 @@ data class SetLog(
                 viewR = view?.r,
                 viewClass = view?.letter,
                 viewFrames = view?.frames,
+                observedReps = observedReps,
+                repDetails = repRecords?.takeIf { records -> records.any { it.side != null || it.details != null } }?.toList(),
             )
         }
     }
@@ -248,6 +256,40 @@ object SetLogJson {
             log.repValid?.let { v ->
                 sb.append(",\"valid\":[")
                 v.forEachIndexed { i, x -> if (i > 0) sb.append(','); sb.append(x?.toString() ?: "null") }
+                sb.append(']')
+            }
+            log.observedReps?.let { observed ->
+                sb.append(','); field(sb, "pattern", observed.pattern)
+                sb.append("\"total\":").append(observed.total).append(',')
+                sb.append("\"left\":").append(observed.left).append(',')
+                sb.append("\"right\":").append(observed.right).append(',')
+                sb.append("\"both\":").append(observed.both).append(',')
+                sb.append("\"unknown\":").append(observed.unknown)
+            }
+            log.repDetails?.let { records ->
+                sb.append(",\"events\":[")
+                records.forEachIndexed { i, record ->
+                    if (i > 0) sb.append(',')
+                    sb.append("{\"t_ms\":").append(record.tMs).append(',')
+                    field(sb, "side", record.side?.name)
+                    sb.append("\"min\":").append(num(record.cycleMin)).append(',')
+                    sb.append("\"max\":").append(num(record.cycleMax)).append(',')
+                    sb.append("\"valid\":").append(record.valid?.toString() ?: "null")
+                    record.details?.let { details ->
+                        sb.append(",\"details\":{")
+                        details.entries.forEachIndexed { j, (side, raw) ->
+                            if (j > 0) sb.append(',')
+                            str(sb, side.name); sb.append(":{")
+                            field(sb, "signal", raw.signalFeature)
+                            sb.append("\"t_ms\":").append(raw.tMs).append(',')
+                            sb.append("\"min\":").append(num(raw.cycleMin)).append(',')
+                            sb.append("\"max\":").append(num(raw.cycleMax)).append(',')
+                            sb.append("\"valid\":").append(raw.valid?.toString() ?: "null").append('}')
+                        }
+                        sb.append('}')
+                    }
+                    sb.append('}')
+                }
                 sb.append(']')
             }
             sb.append("},")

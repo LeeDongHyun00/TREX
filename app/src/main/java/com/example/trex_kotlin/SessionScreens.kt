@@ -239,14 +239,14 @@ private fun sessionHeadline(reports: List<PostureSetReport>): String {
         return "${r.workoutName} ${r.candidates.first().bodyPart} — 검증 중인 항목이라 참고만 하세요"
     }
     reports.firstOrNull { it.verdict == SetVerdict.RECOVERED && it.callout != null }?.let { r ->
-        return "${r.workoutName} ${r.callout!!.bodyPart} — 세트 후반에 교정됐어요"
+        return "${r.workoutName} ${r.callout!!.bodyPart} — 후반 관측이 참고 범위로 돌아왔어요"
     }
     return when {
         reports.any { it.exercise in FloorTemporal.exercises } -> "바닥 운동의 참고 측정을 기록했어요. 자세 확정 판정은 제공하지 않아요"
         reports.all { it.verdict == SetVerdict.UNJUDGED } -> if (reports.any { it.measurements.isNotEmpty() }) "초반 대비 움직임을 기록했어요" else "자세를 판정할 만큼 화면에 잡히지 않았어요"
-        reports.all { it.mode == CoachMode.TRACK && it.verdict != SetVerdict.UNJUDGED } -> "세트 안에서 흐트러진 부위 없이 기록됐어요"
-        reports.all { it.mode == CoachMode.COACH && it.verdict == SetVerdict.CLEAN } -> "오늘 자세 깨끗했어요"
-        else -> "판정한 세트에서는 지적할 부위가 없었어요"
+        reports.all { it.mode == CoachMode.TRACK && it.verdict != SetVerdict.UNJUDGED } -> "세트 안에서 관측한 움직임을 기록했어요"
+        reports.all { it.mode == CoachMode.COACH && it.verdict == SetVerdict.CLEAN } -> "이번에 판정한 항목은 참고 범위 안에 있었어요"
+        else -> "관측 결과를 기록했어요. 세트별 판정 범위를 확인해 주세요"
     }
 }
 
@@ -280,7 +280,7 @@ private data class SetLabelDraft(
 
     companion object {
         fun initial(r: PostureSetReport) =
-            SetLabelDraft(reps = r.repsValid?.let { it + (r.repsPartial ?: 0) }, repsTouched = false, repsConfirmed = false, form = null, saved = false)
+            SetLabelDraft(reps = r.observedReps?.total ?: r.repsValid?.let { it + (r.repsPartial ?: 0) }, repsTouched = false, repsConfirmed = false, form = null, saved = false)
     }
 }
 
@@ -340,7 +340,8 @@ private fun PostureSetRow(
                     Spacer(Modifier.width(8.dp))
                     VerdictChip(report)
                 }
-                Text(report.summaryLine, color = c.text2, fontSize = 11.5.sp, lineHeight = 16.sp, modifier = Modifier.padding(top = 4.dp))
+                val summary = if (report.mode == CoachMode.TRACK) report.repObservationPresentation().summary ?: report.summaryLine else report.summaryLine
+                Text(summary, color = c.text2, fontSize = 11.5.sp, lineHeight = 16.sp, modifier = Modifier.padding(top = 4.dp))
             }
             Icon(
                 Icons.Rounded.ExpandMore, contentDescription = if (expanded) "접기" else "펼치기", tint = c.text3,
@@ -368,8 +369,8 @@ private fun VerdictChip(report: PostureSetReport) {
         Triple("기록", c.text2, c.surface2)
     } else {
         when (report.verdict) {
-            SetVerdict.CLEAN -> Triple("깨끗", c.primaryText, c.primaryWash)
-            SetVerdict.RECOVERED -> Triple("교정됨", c.primaryText, c.primaryWash)
+            SetVerdict.CLEAN -> Triple("판정 범위 내", c.primaryText, c.primaryWash)
+            SetVerdict.RECOVERED -> Triple("관측 회복", c.primaryText, c.primaryWash)
             SetVerdict.ISSUE -> {
                 val h = report.headline
                 if (h != null && h.kind == OnsetKind.DRIFT) Triple(h.label, c.warn, c.warnWash) else Triple(h?.label ?: "위반", c.err, c.errWash)
@@ -437,7 +438,7 @@ private fun CoachSetDetail(r: PostureSetReport) {
             },
             color = c.text3, fontSize = 11.sp,
         )
-        r.repsValid?.let { valid -> Text(if (r.exercise in FloorTemporal.exercises) "참고 · 검출 ${valid + (r.repsPartial ?: 0)}회 · 범위 미달 ${r.repsPartial ?: 0}회" else "렙 유효 $valid · 무효 ${r.repsPartial ?: 0}", color = c.text3, fontSize = 11.sp) }
+        r.repObservationPresentation().lines.forEach { Text(it, color = c.text3, fontSize = 11.sp) }
         r.highlights.filter { it.ruleId != lead?.ruleId }.forEach { OutcomeLine(it) }
         h?.note?.let { Text("ⓘ $it", color = c.text3, fontSize = 10.5.sp, lineHeight = 15.sp) }
     }
@@ -449,14 +450,8 @@ private fun TrackSetDetail(r: PostureSetReport) {
     val c = Trex.c
     var showDemoted by remember(r.setId) { mutableStateOf(false) }
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        val parts = buildList {
-            r.repsValid?.let { valid ->
-                val partial = r.repsPartial ?: 0
-                add("${valid + partial}렙" + if (partial > 0) " · 파셜 $partial" else "")
-            }
-            r.tempoMs?.let { add("템포 " + String.format(Locale.US, "%.1f초", it / 1000f)) }
-        }
-        if (parts.isNotEmpty()) Text(parts.joinToString(" · "), color = c.text, fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold)
+        r.repObservationPresentation().lines.forEach { Text(it, color = c.text2, fontSize = 11.sp) }
+        r.tempoMs?.let { Text("최근 관측 템포 " + String.format(Locale.US, "%.1f초", it / 1000f), color = c.text, fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold) }
         // 세트 내 변화는 본인 초반 창 대비라 기록 모드에도 보여 준다
         r.callout?.let { h ->
             Text(h.observation, color = if (h.kind == OnsetKind.DRIFT) c.warn else c.primaryText, fontSize = 12.sp, lineHeight = 17.sp)

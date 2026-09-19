@@ -2,7 +2,7 @@
 
 Android Kotlin/Jetpack Compose 운동·식단 앱. 핵심 기능은 **카메라 자세 평가**이고, 이 저장소의 어려운 결정은 거의 전부 자세 평가에서 나온다.
 
-이어받는 세션은 **`docs/POSTURE_HANDOFF.md` 를 먼저 읽는다** — 최신 작업은 §56(2026-09-17, 통합 검증 진행 중)이다. §30·§31·§31a 등의 과거 측정과 최신 구현을 구분한다.
+이어받는 세션은 **`docs/POSTURE_HANDOFF.md` 를 먼저 읽는다** — 최신 작업은 §57(2026-09-19, 좌우 반복 통합·기기 검증)이다. 현재 작업 브랜치는 `feature/pose-evaluation-engine`이며, §30·§31·§31a 등의 과거 측정과 최신 구현을 구분한다.
 
 ## 이 프로젝트의 판단 원칙 (가장 중요)
 
@@ -22,7 +22,7 @@ Android Kotlin/Jetpack Compose 운동·식단 앱. 핵심 기능은 **카메라 
 | `app/src/main/java/com/example/trex_kotlin/posture/` | 자세 엔진 — 피처·규칙·코칭·렙·리포트·기준선·촬영 뷰 추정(`PostureView.kt`) |
 | `app/src/main/java/com/example/trex_kotlin/` | 앱 화면 (`PostureLive.kt` = 실시간 세션, `TrexApp.kt` = 라우팅) |
 | `app/src/main/assets/posture/` | 규칙 JSON + MediaPipe 모델 |
-| `research/aihub_fitness/` | 연구 코드·문서. **`KOTLIN_PORTING_SPEC.md` 가 정본 스펙**(최신 §56; 검증 상태도 해당 절 확인) |
+| `research/aihub_fitness/` | 연구 코드·문서. **`KOTLIN_PORTING_SPEC.md` 가 정본 스펙**(최신 §57; 검증 상태도 해당 절 확인) |
 
 기능을 추가하면 `KOTLIN_PORTING_SPEC.md` 에 절을 추가하는 것이 저장소 관례다. 근거(왜)를 반드시 남긴다.
 

@@ -91,6 +91,7 @@ data class PostureSetReport(
     val repsPartial: Int?,
     val tempoMs: Long?,
     val measurements: List<String> = emptyList(),
+    val observedReps: RepObservationSummary? = null,
 ) {
     /** 실제로 판정한 규칙 수(OK+VIOLATION). accuracy 의 분모 — 유보를 정상으로 세지 않는다. */
     val judged: Int = items.count { it.overall == Verdict.OK || it.overall == Verdict.VIOLATION }
@@ -193,6 +194,7 @@ data class PostureSetReport(
             repsPartial: Int?,
             tempoMs: Long?,
             measurements: List<String> = emptyList(),
+            observedReps: RepObservationSummary? = null,
         ): PostureSetReport {
             val onsetById = onset.associateBy { it.rule.id }
             val outcomes = results.map { rr ->
@@ -226,6 +228,7 @@ data class PostureSetReport(
             return PostureSetReport(
                 setId = setId, exercise = exercise, workoutName = workoutName, mode = mode, frames = frames,
                 baselineActive = baselineActive, items = sorted, measurements = measurements, repsValid = repsValid, repsPartial = repsPartial, tempoMs = tempoMs,
+                observedReps = observedReps,
             )
         }
 

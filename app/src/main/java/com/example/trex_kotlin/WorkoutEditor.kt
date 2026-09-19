@@ -77,6 +77,25 @@ fun WorkoutEditorSheet(app: AppViewModel, initialId: String?, onClose: () -> Uni
                         EditorNumberRow(if (timed) "운동 시간" else "목표 횟수", if (timed) "${goal.amount}초" else "${goal.amount}회",
                             onDec = { update { w -> w.withGoal(if (timed) WorkoutTarget.Duration((goal.amount - 5).coerceAtLeast(1)) else WorkoutTarget.Repetitions((goal.amount - 1).coerceAtLeast(1)), w.repsSpec().sets) } },
                             onInc = { update { w -> w.withGoal(if (timed) WorkoutTarget.Duration((goal.amount + 5).coerceAtMost(3600)) else WorkoutTarget.Repetitions((goal.amount + 1).coerceAtMost(999)), w.repsSpec().sets) } })
+                        if (!timed) selected.repProfile()?.allowedPatterns?.takeIf { it.size > 1 }?.let { patterns ->
+                            Text("횟수 세는 방식", color = c.text, fontSize = 16.sp, modifier = Modifier.padding(top = 12.dp, bottom = 10.dp))
+                            patterns.chunked(2).forEach { row ->
+                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    row.forEach { pattern ->
+                                        FilterChip(selected = selected.resolvedRepPattern() == pattern,
+                                            onClick = { update { it.copy(repMovementPattern = pattern) } },
+                                            label = { Text(selected.repPatternLabel(pattern)) }, modifier = Modifier.weight(1f),
+                                            colors = FilterChipDefaults.filterChipColors(
+                                                containerColor = c.sheet, labelColor = c.text2,
+                                                selectedContainerColor = c.primaryWash, selectedLabelColor = c.primaryText),
+                                            border = androidx.compose.foundation.BorderStroke(1.dp,
+                                                if (selected.resolvedRepPattern() == pattern) c.primaryText else c.line))
+                                    }
+                                    if (row.size == 1) Spacer(Modifier.weight(1f))
+                                }
+                            }
+                            selected.repCountExplanation()?.let { Text(it, color = c.text2, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp, bottom = 8.dp)) }
+                        }
                         EditorNumberRow("세트", "${selected.repsSpec().sets}세트",
                             onDec = { update { w -> w.withGoal(goal, (w.repsSpec().sets - 1).coerceAtLeast(1)) } },
                             onInc = { update { w -> w.withGoal(goal, (w.repsSpec().sets + 1).coerceAtMost(20)) } })

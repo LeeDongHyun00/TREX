@@ -2,6 +2,7 @@ package com.example.trex_kotlin
 
 import android.content.Context
 import android.content.SharedPreferences
+import com.example.trex_kotlin.posture.RepMovementPattern
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -142,6 +143,8 @@ class TrexStore(context: Context, preferenceName: String = "trex_store") {
                         "repetitions" -> WorkoutTarget.Repetitions(o.optInt("targetAmount", 12).coerceIn(1, 999))
                         else -> null
                     },
+                    // 새 버전에서 추가된 알 수 없는 방식도 계획 전체를 버리지 않고 종목 기본값으로 읽는다.
+                    repMovementPattern = RepMovementPattern.entries.firstOrNull { it.name == o.optString("repMovementPattern") },
                 )
             }
         }.getOrNull()
@@ -161,6 +164,7 @@ class TrexStore(context: Context, preferenceName: String = "trex_store") {
             w.alt?.let { o.put("alt", JSONObject().put("name", it.name).put("reps", it.reps)) }
             w.secondsPerRep?.let { o.put("secondsPerRep", it) }
             w.restSeconds?.let { o.put("restSeconds", it) }
+            w.repMovementPattern?.let { o.put("repMovementPattern", it.name) }
             w.resolvedTarget().let { goal ->
                 o.put("targetKind", if (goal is WorkoutTarget.Duration) "duration" else "repetitions")
                 o.put("targetAmount", goal.amount)
@@ -272,6 +276,11 @@ class TrexStore(context: Context, preferenceName: String = "trex_store") {
             tempoMs = o.optLong("postureTempoMs", -1L).takeIf { it >= 0L },
             actualReps = o.optInt("postureActualReps", -1).takeIf { it >= 0 },
             formLabel = o.optString("postureFormLabel").takeIf { it.isNotEmpty() },
+            observedLeftReps = o.optInt("postureObservedLeftReps", -1).takeIf { it >= 0 },
+            observedRightReps = o.optInt("postureObservedRightReps", -1).takeIf { it >= 0 },
+            observedBothReps = o.optInt("postureObservedBothReps", -1).takeIf { it >= 0 },
+            observedUnknownReps = o.optInt("postureObservedUnknownReps", -1).takeIf { it >= 0 },
+            repMovementPattern = o.optString("postureRepMovementPattern").takeIf { it.isNotEmpty() && !o.isNull("postureRepMovementPattern") },
         )
     }
 
@@ -292,6 +301,11 @@ class TrexStore(context: Context, preferenceName: String = "trex_store") {
         o.put("postureTempoMs", pc.tempoMs ?: -1L)
         o.put("postureActualReps", pc.actualReps ?: -1)
         pc.formLabel?.let { o.put("postureFormLabel", it) }
+        pc.observedLeftReps?.let { o.put("postureObservedLeftReps", it) }
+        pc.observedRightReps?.let { o.put("postureObservedRightReps", it) }
+        pc.observedBothReps?.let { o.put("postureObservedBothReps", it) }
+        pc.observedUnknownReps?.let { o.put("postureObservedUnknownReps", it) }
+        pc.repMovementPattern?.let { o.put("postureRepMovementPattern", it) }
     }
 
     // ---- 식단 (epochDay → 슬롯 → 음식들)

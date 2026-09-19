@@ -57,6 +57,8 @@ data class Workout(
     val restSeconds: Int? = null,
     /** 목표 단위는 실행 종료 조건이다. null은 기존 문자열 계획을 읽는 호환 경로다. */
     val target: WorkoutTarget? = null,
+    /** null이면 종목 프로필의 기본 수행 방식. 구버전 계획은 이 기본값을 사용한다. */
+    val repMovementPattern: com.example.trex_kotlin.posture.RepMovementPattern? = null,
 )
 
 @Immutable
@@ -67,7 +69,7 @@ data class WorkoutAlt(
 
 /**
  * 기록 항목에 접혀 들어가는 세트 리포트 요약 (spec §30). [focus] 는 관찰 문장(끝 마침표 없음) —
- * CLEAN 이면 "자세 깨끗", UNJUDGED 면 "자세 판정 없음", TRACK 이면 summaryLine. 나머지는 리포트에서 그대로 옮긴 값이고
+ * CLEAN·RECOVERED도 세트 리포트의 판정 범위와 관측 회복 표현을 유지한다. 전체 자세 정상이나 교정 완료를 뜻하지 않는다.
  * [actualReps]/[formLabel] 만 완료 화면의 자가 라벨로 나중에 채워진다. 새 필드는 전부 기본값 null 이라 구버전 저장 기록도 그대로 읽힌다.
  */
 @Immutable
@@ -89,6 +91,16 @@ data class PostureCorrection(
     val tempoMs: Long? = null,
     val actualReps: Int? = null,
     val formLabel: String? = null,
+    /**
+     * 엔진이 관측한 사용자 기준 좌우 횟수. 수동 입력 [actualReps]와 독립이며, 미관측·구버전 값은 0이 아닌 null이다.
+     * 양쪽 동시 1회는 left/right 각각 1회와 both 1회로 표현하므로 네 값을 더해서 총횟수로 쓰지 않는다.
+     */
+    val observedLeftReps: Int? = null,
+    val observedRightReps: Int? = null,
+    val observedBothReps: Int? = null,
+    val observedUnknownReps: Int? = null,
+    /** 관측 당시 수행 방식의 enum 이름. null은 기록에 방식 정보가 없음을 뜻한다. */
+    val repMovementPattern: String? = null,
 )
 
 /**
@@ -101,10 +113,9 @@ fun PostureSetReport.toCorrection(): PostureCorrection {
     val focus = when {
         (exercise in com.example.trex_kotlin.posture.FloorTemporal.exercises || judged == 0) && measurements.isNotEmpty() -> measurements.joinToString(" · ")
         mode == CoachMode.TRACK -> (listOf(summaryLine) + measurements).joinToString(" · ")
-        verdict == SetVerdict.CLEAN -> if (betaOnly) "검증 중인 항목 기준으로는 이상 없었어요" else "자세 깨끗했어요"
+        verdict == SetVerdict.CLEAN -> summaryLine
         verdict == SetVerdict.UNJUDGED -> "자세 판정 없음"
-        // "좋아요, 무릎 자세가 교정됐어요" 는 코칭 발화 문장이라 "{운동}에서 {관찰}" 틀에 안 맞는다 — 기록용 관찰문으로
-        verdict == SetVerdict.RECOVERED -> "${lead?.bodyPart ?: "자세"} 자세가 세트 후반에 교정됐어요"
+        verdict == SetVerdict.RECOVERED -> summaryLine
         else -> lead?.observation ?: summaryLine
     }
     val kind = if (mode == CoachMode.TRACK) {
@@ -131,6 +142,11 @@ fun PostureSetReport.toCorrection(): PostureCorrection {
         repsValid = repsValid,
         repsPartial = repsPartial,
         tempoMs = tempoMs,
+        observedLeftReps = observedReps?.left,
+        observedRightReps = observedReps?.right,
+        observedBothReps = observedReps?.both,
+        observedUnknownReps = observedReps?.unknown,
+        repMovementPattern = observedReps?.pattern,
     )
 }
 

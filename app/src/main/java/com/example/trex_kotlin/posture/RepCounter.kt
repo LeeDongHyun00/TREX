@@ -341,7 +341,16 @@ object RepSignals {
 
 /** 완료된 렙 하나의 기록 — 사이클 극값과 ROM 판정. 세트 로그에 렙별로 남겨 후반 드리프트(피로)
  *  분석을 오프라인에서 가능하게 한다 (spec §29 — 숙련자 계기판의 원자재). */
-data class RepRecord(val tMs: Long, val cycleMin: Float, val cycleMax: Float, val valid: Boolean?)
+data class RepRecord(
+    val tMs: Long,
+    val cycleMin: Float,
+    val cycleMax: Float,
+    val valid: Boolean?,
+    /** null은 측별 기록 도입 전이다. UNKNOWN과 구분한다. */
+    val side: RepSide? = null,
+    /** 서로 다른 측의 피처·극값·완료 시각을 합치지 않고 보존한다. */
+    val details: Map<RepSide, RepCycleDetail>? = null,
+)
 
 object RepMetrics {
     /**
