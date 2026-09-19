@@ -322,3 +322,22 @@ WorkoutHistoryItem.postureCorrection → 기록 화면
 - 환경: Studio 내장 jbr 이 JDK 25 라 Gradle 8.13 이 시작 단계에서 실패한다 — `~/.jdks/jbr-21.0.11` 로 빌드. 사용자 폰(SM-F956N)의 8월 설치본은 다른 디버그 키라 `install -r` 이 거부된다.
 - 다음: 실기기 검증 → 오탐/미탐 사례 수집 → 임계값·letterbox 확인 → 식약처 영양 DB 연동 → AI Hub 74번(박스 어노테이션)으로 재학습 시 노트북 4번 셀 재작성.
 - **2026-09-16 실기기 1차(SM-F956N)**: 폴드 펼침/접힘 UI·촬영 정상. 첫 시도는 전부 "분석 중 문제" — 모델 입력이 NCHW `[1,3,640,640]` 인데 NHWC 로 가정한 버그(수정: 텐서 형태로 배치 판별, 로드 시 형태 로그). 수정 후 추론은 되지만 **인식률이 낮다**(사용자 체감). 원인 구분용으로 추론마다 상위 5개 점수·소요 ms 를 `FoodDetector` D 로그로 남기게 했고, 갤러리 여러 장이 첫 장만 보이던 UX 는 썸네일 줄(512px 사본)로 고쳤다 — 이 두 변경은 빌드만 통과했고 **실기기 재확인 전**. 다음 세션: 라벨 안 음식 5~10장 촬영 → `adb logcat -d -s FoodDetector` 로 점수 분포 확인 → 근소 미달이면 임계값 0.40 조정, 엉뚱한 클래스면 데이터/재학습(AI Hub 74번) 검토. 백그라운드 `adb logcat` 을 켠 채 `logcat -d` 를 부르면 멈추므로 하나만 쓴다.
+
+## 2026-09-19 — 음식 인식 재학습 데이터 준비 (§F2)
+
+- **현재 브랜치 `feature/food-recognition-v2`** (배포 라인 `feature/posture-coach-reliability` 5237ba9 에서 분기, origin 에 아직 push 안 함).
+- **학습 데이터 완성**: `C:\Workspace\TREXihub74_raw\dataset.tar`(2.58GB, git 밖) = AI Hub 74번 Validation 4묶음 → **214클래스 42,669장**(train 36,254/val 6,415, 클래스당 중앙값 199장). 대분류 04 국·탕·찌개 / 06_07_08 구이·전·볶음 / 09_10 조림·튀김·치킨 / 11 무침·나물. 밥·면·만두·김치·회·떡은 범위에서 제외(사용자 결정).
+- **앱 영양 DB 선반영**: `foodDatabase` 를 223종(모델 214 + 일반 식품 9)으로 교체, AI Hub 영양DB 1인분 실측값. 라벨↔DB 1:1 정합 확인(누락 0·중복 0). **학습 산출물만 assets 에 넣으면 바로 동작한다.**
+- **다음 단계**: dataset.tar → Drive `MyDrive/trex/dataset.tar` 업로드 → `training/train_food_yolov8_colab.ipynb`(G4 GPU+고용량 RAM, 1~9번 셀) → `trex_food_model.zip` → `app/src/main/assets/models/` 의 tflite·labels 교체 → 실기기 검증.
+- **전처리 도구** `training/local_prep/`(pipeline.sh·dl.sh·merge_parts.js·prep_dataset.js·gen_food_db.js). AI Hub 는 해외 IP 다운로드를 막아 Colab 에서 받을 수 없어 PC 에서 받는다.
+- **다운로드 함정(전부 수정됨)**: ①서버가 Range 거부 → 이어받기 불가, 끊기면 처음부터 ②curl rc=0 이어도 부분 파일일 수 있어 예상 크기 90
+## 2026-09-19 — 음식 인식 재학습 데이터 준비 (§F2)
+
+- **현재 브랜치 `feature/food-recognition-v2`** (배포 라인 `feature/posture-coach-reliability` 5237ba9 에서 분기, origin 에 아직 push 안 함).
+- **학습 데이터 완성**: `C:\Workspace\TREX\aihub74_raw\dataset.tar`(2.58GB, git 밖) = AI Hub 74번 Validation 4묶음 → **214클래스 42,669장**(train 36,254/val 6,415, 클래스당 중앙값 199장). 대분류 04 국·탕·찌개 / 06_07_08 구이·전·볶음 / 09_10 조림·튀김·치킨 / 11 무침·나물. 밥·면·만두·김치·회·떡은 범위에서 제외(사용자 결정).
+- **앱 영양 DB 선반영**: `foodDatabase` 를 223종(모델 214 + 일반 식품 9)으로 교체, AI Hub 영양DB 1인분 실측값. 라벨↔DB 1:1 정합 확인(누락 0·중복 0). **학습 산출물만 assets 에 넣으면 바로 동작한다.**
+- **다음 단계**: dataset.tar → Drive `MyDrive/trex/dataset.tar` 업로드 → `training/train_food_yolov8_colab.ipynb`(G4 GPU+고용량 RAM, 1~9번 셀) → `trex_food_model.zip` → `app/src/main/assets/models/` 의 tflite·labels 교체 → 실기기 검증.
+- **전처리 도구** `training/local_prep/`(pipeline.sh·dl.sh·merge_parts.js·prep_dataset.js·gen_food_db.js). AI Hub 는 해외 IP 다운로드를 막아 Colab 에서 받을 수 없어 PC 에서 받는다.
+- **다운로드 함정(전부 수정됨)**: ①서버가 Range 거부 → 이어받기 불가, 끊기면 처음부터 ②curl rc=0 이어도 부분 파일일 수 있어 예상 크기 90% 검증 필요 ③tar 안이 1GiB 조각(`.part<오프셋>`, 오프셋순 병합 필수)이고 여러 대분류 묶음은 **중첩 zip** ④Windows 에서 만든 zip 은 경로 구분자가 백슬래시라 리눅스에서 못 푼다 → tar 사용.
+- **네트워크**: Wi-Fi(MediaTek MT7925, Power Saving=Auto)에서 30GB 묶음이 3회 실패 16시간. **유선 전환 후 42~49분에 재시도 없이 완료**. 시스템 절전 설정은 정상이었고 원인은 Wi-Fi 어댑터 절전(관리자 권한 필요해 미변경).
+- **미검증**: 새 모델의 실기기 촬영 정확도. 기존 30클래스 모델은 치킨·만두국 정도만 인식됐다(2026-09-16 실측).
