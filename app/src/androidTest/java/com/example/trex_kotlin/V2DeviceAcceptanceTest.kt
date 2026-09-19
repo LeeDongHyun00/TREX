@@ -21,6 +21,28 @@ import java.io.File
 class V2DeviceAcceptanceTest {
     private val instrumentation=InstrumentationRegistry.getInstrumentation()
     private val context=instrumentation.targetContext
+    @Test fun bundledRulesProduceReferenceScoreAndDeliveredKoreanCorrection() {
+        val rules=PostureRuleSet.load(context)
+        val feedback=V2FormFeedback(rules,"바벨 스쿼트")
+        var t=SystemClock.elapsedRealtime()
+        feedback.accept(t,mapOf("torso_incl" to 10f,"view_cos" to 1f,"view_sin" to 0f),true)
+        var cue:String?=null
+        repeat(16) { i -> t+=200;feedback.accept(t,mapOf("torso_incl" to if(i%2==0) 10f else 55f,
+            "view_cos" to 1f,"view_sin" to 0f),false)?.let {cue=it} }
+        assertEquals(0,V2FormFeedback.score(feedback.current,CoachMode.COACH))
+        assertNotNull(cue);assertFalse(cue!!.contains("무릎"));assertFalse(cue!!.contains("척추"))
+        assertFalse(V2FormFeedback(rules,"바벨 데드리프트").supported)
+        val delivered=java.util.concurrent.CountDownLatch(1)
+        lateinit var voice:SpeechCoach
+        instrumentation.runOnMainSync { voice=SpeechCoach(context) }
+        try {
+            val deadline=SystemClock.elapsedRealtime()+10000
+            while(!voice.ready && SystemClock.elapsedRealtime()<deadline) Thread.sleep(100)
+            assertTrue("한국어 TTS 준비",voice.ready)
+            instrumentation.runOnMainSync { voice.speak("교정 음성 테스트입니다. $cue",onDelivered={delivered.countDown()}) }
+            assertTrue("교정 문장의 TTS 완료 콜백",delivered.await(25,java.util.concurrent.TimeUnit.SECONDS))
+        } finally { instrumentation.runOnMainSync { voice.shutdown() } }
+    }
     private fun nodes():List<AccessibilityNodeInfo> = buildList {
         fun walk(n:AccessibilityNodeInfo?) { if(n==null)return;add(n);for(i in 0 until n.childCount)walk(n.getChild(i)) }
         walk(instrumentation.uiAutomation.rootInActiveWindow)
@@ -68,12 +90,12 @@ class V2DeviceAcceptanceTest {
         screenshot("v2-timer-target");click("세트 완료");await("완료 세트")
         assertTrue(TrexStore(context).loadHistory().orEmpty().flatMap{it.items}.any{it.workoutName=="플랭크"})
     }
-    @Test fun cameraSessionCanPauseSwitchResumeAndPersistObservationOnlySummary() = isolated(
+    @Test fun cameraSessionCanPauseSwitchResumeAndPersistFeedbackPolicy() = isolated(
         Workout("v2-test-camera","바벨 스쿼트","1회 × 1세트","1분",true,"하체",restSeconds=0,target=WorkoutTarget.Repetitions(1))) {
         val folder=File(context.noBackupFilesDir,"pose_v2")
         val before=folder.listFiles().orEmpty().map{it.name}.toSet()
         click("운동");click("운동 시작");await("준비 건너뛰기");click("준비 건너뛰기")
-        await("trex_v2 · 동작 관측");Thread.sleep(4500)
+        await("trex_v2 · 자세 교정");Thread.sleep(4500)
         click("일시정지");click("카메라 전환");click("재개");Thread.sleep(3000)
         screenshot("v2-camera-observation");click("세트 완료");await("완료 세트")
         val deadline=SystemClock.elapsedRealtime()+5000
@@ -82,7 +104,9 @@ class V2DeviceAcceptanceTest {
             file=folder.listFiles().orEmpty().firstOrNull{it.name !in before && it.name.endsWith("summary.json")};Thread.sleep(100)
         }
         val result=JSONObject(requireNotNull(file).readText())
-        assertEquals("trex-observation/2.0.0",result.getString("engine"));assertFalse(result.getBoolean("corrective_voice"))
+        assertEquals("trex-observation/2.0.0",result.getString("engine"));assertTrue(result.getBoolean("corrective_voice"))
+        assertEquals(V2FormFeedback.POLICY_VERSION,result.getString("feedback_policy"))
+        assertTrue(result.isNull("reference_score"))
         assertFalse(result.getBoolean("baseline_applied"));assertEquals("UNJUDGED",result.getString("form_verdict"))
         assertTrue(result.getInt("frames")>0)
         assertTrue(folder.listFiles().orEmpty().none{it.name !in before && it.name.endsWith("frames.jsonl")})

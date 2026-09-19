@@ -14,8 +14,8 @@ android {
         applicationId = "com.example.trex_kotlin.v2"
         minSdk = 26
         targetSdk = 36
-        versionCode = 3
-        versionName = "2.0.0-observation-preview"
+        versionCode = 4
+        versionName = "2.0.1-feedback-preview"
         manifestPlaceholders["applicationLabel"] = "trex_v2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"

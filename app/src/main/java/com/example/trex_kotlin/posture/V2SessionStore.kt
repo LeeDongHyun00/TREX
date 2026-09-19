@@ -32,7 +32,8 @@ class V2SessionStore(context: Context) {
         executor.execute { runCatching { File(folder, "$id.frames.jsonl").appendText(row.toString()+"\n"); prune() } }
     }
     fun summary(id: String, exercise: String, pattern: String, fromFloor: Boolean, goal: Float?, actual: Int,
-        corrected: Boolean, output: EngineOutput?, profile: String, elapsedMs: Long) {
+        corrected: Boolean, output: EngineOutput?, profile: String, elapsedMs: Long,
+        report: PostureSetReport? = null, correctiveVoice: Boolean = false) {
         val hash = MessageDigest.getInstance("SHA-256").digest(profile.toByteArray()).joinToString("") { "%02x".format(it) }
         val row = JSONObject().put("schema",2).put("engine",ENGINE_VERSION).put("model_sha256",modelHash).put("profile_sha256",hash)
             .put("exercise",exercise).put("pattern",pattern).put("deadlift_from_floor",fromFloor).put("range_goal",goal)
@@ -40,7 +41,13 @@ class V2SessionStore(context: Context) {
             .put("observed_reps",output?.counts?.total ?: 0).put("left",output?.counts?.left ?: 0).put("right",output?.counts?.right ?: 0)
             .put("range_met",output?.rangeMet).put("observed_hold_ms",output?.observedHoldMs ?: 0)
             .put("elapsed_ms",elapsedMs).put("accepted_frames",output?.acceptedFrames ?: 0).put("frames",output?.totalFrames ?: 0)
-            .put("form_verdict","UNJUDGED").put("corrective_voice",false).put("baseline_applied",false)
+            .put("form_verdict",report?.verdict?.name ?: "UNJUDGED").put("corrective_voice",correctiveVoice).put("baseline_applied",false)
+            .put("feedback_policy",V2FormFeedback.POLICY_VERSION).put("reference_score",report?.accuracy ?: JSONObject.NULL)
+            .put("judged_items",report?.shipJudged ?: 0).put("in_range_items",report?.shipOk ?: 0)
+            .put("form_items",JSONArray().also { rows -> report?.items?.forEach { item ->
+                rows.put(JSONObject().put("id",item.ruleId).put("label",item.condition).put("verdict",item.overall.name)
+                    .put("abstain_reason",item.abstainReason))
+            } })
         executor.execute { runCatching { File(folder,"$id.summary.json").writeText(row.toString()) } }
     }
     private fun prune() {

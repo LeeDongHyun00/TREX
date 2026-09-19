@@ -434,6 +434,7 @@ private fun CoachSetDetail(r: PostureSetReport) {
             when {
                 r.judged == 0 -> "판정 없음 · ${r.frames}프레임"
                 r.betaOnly -> "검증 중인 항목만 ${r.betaJudged}건 · 점수 없음"
+                r.observationEngine && r.accuracy != null -> "관측 항목 참고 점수 ${r.accuracy}점 · 범위 내 ${r.shipOk}/${r.shipJudged} · 보류 ${r.abstained}"
                 else -> "정상 ${r.shipOk} / 판정 ${r.shipJudged} · 보류 ${r.abstained}" + if (r.betaJudged > 0) " · 참고 ${r.betaJudged}건" else ""
             },
             color = c.text3, fontSize = 11.sp,

@@ -114,6 +114,11 @@ private fun PostureV2Content(
     val profile = remember(fromFloor) { MovementContracts.deadliftStart(base, fromFloor) }
     val goal = remember(rangeText) { rangeText.toFloatOrNull()?.takeIf { it.isFinite() && it > 0 }?.let(::RangeGoal) }
     val engine = remember(profile, goal) { LabEngine(profile, pattern, goal) }
+    val feedback = remember { V2FormFeedback(PostureRuleSet.load(context), base.exercise) }
+    var formItems by remember { mutableStateOf<List<RuleOutcome>>(emptyList()) }
+    var correction by remember { mutableStateOf<String?>(null) }
+    var correctionAt by remember { mutableLongStateOf(0L) }
+    val formView = remember { arrayOfNulls<String>(1) }
     val extractor = remember(engine) { LandmarkFeatures() }
     val boundary = remember { ObservationEpoch() }
     val analyzer = remember { PostureAnalyzer(context, PoseModel.FULL, preferGpu=true) }
@@ -129,10 +134,14 @@ private fun PostureV2Content(
     var output by remember { mutableStateOf<EngineOutput?>(null) }
     var cameraError by remember { mutableStateOf<String?>(null) }
     var useFront by remember { mutableStateOf(transferred?.front ?: true) }
-    var muted by remember { mutableStateOf(speech.muted) }
+    var muted by remember { mutableStateOf(false) }
     var manualActual by remember { mutableStateOf<Int?>(null) }
     val actualEdited = manualActual != null
-    var mode by remember { mutableStateOf(ModeStore(context).get(workout.name)) }
+    var mode by remember { mutableStateOf(if (!prefs.getBoolean("feedback:${base.exercise}", false)) {
+        ModeStore(context).set(workout.name, CoachMode.COACH)
+        prefs.edit().putBoolean("feedback:${base.exercise}", true).apply()
+        CoachMode.COACH
+    } else ModeStore(context).get(workout.name)) }
     val liveEngine = rememberUpdatedState(engine)
     val liveExtractor = rememberUpdatedState(extractor)
     val running = rememberUpdatedState(!paused && !preparing && !settings)
@@ -155,7 +164,8 @@ private fun PostureV2Content(
     }
     LaunchedEffect(muted) { speech.muted=muted; if(muted) speech.stop() }
     LaunchedEffect(paused, preparing, settings, useFront, rotation, engine) {
-        boundary.invalidate { engine.interrupt(); extractor.reset() }
+        boundary.invalidate { engine.interrupt(); extractor.reset(); feedback.interrupt() }
+        formItems=emptyList(); correction=null; speech.stop()
         sample=PoseSample.empty(); sampleAt=0
         output=output?.copy(measurements=emptyMap(), phase="UNOBSERVABLE", status="촬영 위치를 다시 확인합니다")
         if (!preparing && startedAt[0] == 0L) startedAt[0]=SystemClock.elapsedRealtime()
@@ -166,7 +176,8 @@ private fun PostureV2Content(
         while(true) {
             delay(250)
             if(sampleAt>0 && SystemClock.elapsedRealtime()-sampleAt>1000) {
-                boundary.invalidate { engine.interrupt(); extractor.reset() }
+                boundary.invalidate { engine.interrupt(); extractor.reset(); feedback.interrupt() }
+                formItems=emptyList(); correction=null; speech.stop()
                 sample=PoseSample.empty(); sampleAt=0
                 output=output?.copy(measurements=emptyMap(), phase="UNOBSERVABLE", status="영상이 늦어 관측을 잠시 멈췄어요")
             }
@@ -174,6 +185,7 @@ private fun PostureV2Content(
     }
     fun finish() = boundary.exclusive {
         if(preparingNow.value || !finalized.compareAndSet(false,true)) return@exclusive
+        speech.stop()
         val result=latestOutput[0]
         val count=result?.counts
         val lines=buildList {
@@ -188,14 +200,16 @@ private fun PostureV2Content(
                 }
             }
             add(profile.limitations)
-            add("정자세 점수와 자동 교정 음성은 제공하지 않습니다")
+            add("관측 항목 참고 점수 · AIHub 기준이며 전신 자세의 정확도가 아닙니다")
+            if (!feedback.supported) add("이 운동은 점수·교정 음성에 사용할 수 있는 항목이 아직 없습니다")
         }
-        store.summary(setId,profile.exercise,pattern.name,fromFloor,goal?.amplitude,manualActual ?: actualNow.value,actualEdited,result,profile.toString(),
-            (SystemClock.elapsedRealtime()-startedAt[0]).coerceAtLeast(0))
-        onReportNow.value(PostureSetReport(setId,profile.exercise,"${workout.name} · $setLabel",modeNow.value,
-            result?.totalFrames ?: 0,false,emptyList(),null,null,null,lines,
+        val report=PostureSetReport(setId,profile.exercise,"${workout.name} · $setLabel",modeNow.value,
+            result?.totalFrames ?: 0,false,feedback.summary(),null,null,null,lines,
             count?.let { RepObservationSummary(pattern.name,it.total,it.left,it.right,it.both,it.unknown) },
-            observationEngine=true,userEnteredReps=manualActual,rangeGoalReps=result?.rangeMet))
+            observationEngine=true,userEnteredReps=manualActual,rangeGoalReps=result?.rangeMet)
+        store.summary(setId,profile.exercise,pattern.name,fromFloor,goal?.amplitude,manualActual ?: actualNow.value,actualEdited,result,profile.toString(),
+            (SystemClock.elapsedRealtime()-startedAt[0]).coerceAtLeast(0),report,modeNow.value==CoachMode.COACH && !speech.muted)
+        onReportNow.value(report)
     }
     val finishNow = rememberUpdatedState<() -> Unit> { finish() }
     DisposableEffect(preparing) {
@@ -209,7 +223,8 @@ private fun PostureV2Content(
         val result=output ?: return@LaunchedEffect
         if(result.counts.total>spokenCount) {
             spokenCount=result.counts.total
-            if(result.events.any { goal?.met(it) != false } && !paused && !speech.muted) speech.speak("${result.rangeMet ?: result.counts.total}", flush=false)
+            if(result.events.any { goal?.met(it) != false } && !paused && !speech.muted &&
+                SystemClock.elapsedRealtime()-correctionAt>4000 && !speech.isSpeaking) speech.speak("${result.rangeMet ?: result.counts.total}", flush=false)
         }
     }
     LaunchedEffect(useFront, rotation) {
@@ -238,23 +253,36 @@ private fun PostureV2Content(
                         observed.imageWidth,observed.imageHeight),profile.floor)
                     val fresh=SystemClock.elapsedRealtime()-now<=1000
                     val result=if(wasRunning && running.value) liveEngine.value.process(now,f,fresh && f.isNotEmpty(),floorNow.value) else null
+                    var cue: String? = null
+                    var feedbackReset = false
                     if(result!=null) {
+                        feedbackReset=result.phase=="UNOBSERVABLE" || formView[0]!=result.view || latestOutput[0]?.epoch!=result.epoch
+                        if(feedbackReset) feedback.interrupt()
+                        formView[0]=result.view
+                        if(result.phase!="UNOBSERVABLE") cue=feedback.accept(now,f,result.events.isNotEmpty() || profile.isometric && result.observedHoldMs>=1000)
                         latestOutput[0]=result
                         if(diagnosticNow.value) store.frame(setId,observed,f,result)
                     }
+                    val feedbackItems=feedback.current
                     main.execute {
                         boundary.applyIfCurrent(ticket) {
-                            if(!closing.get()) {
+                            if(!closing.get() && !finalized.get() && SystemClock.elapsedRealtime()-now<=1000) {
                                 sample=if(fresh) observed else PoseSample.empty(); sampleAt=now
                                 if(result!=null) output=result
+                                formItems=feedbackItems
+                                if(feedbackReset) { correction=null; speech.stop() }
+                                if(cue!=null && running.value && modeNow.value==CoachMode.COACH) {
+                                    correction=cue; correctionAt=now
+                                    if(!speech.muted) speech.speak(cue,flush=true)
+                                } else if(now-correctionAt>6000) correction=null
                                 cameraError=analyzer.stats().error
                             }
                         }
                     }
                 }
             } catch(e:Exception) {
-                boundary.applyIfCurrent(ticket) { liveEngine.value.interrupt(); liveExtractor.value.reset() }
-                main.execute { boundary.applyIfCurrent(ticket) { cameraError="몸을 인식하지 못했어요. 직접 기록으로 계속할 수 있어요." } }
+                boundary.applyIfCurrent(ticket) { liveEngine.value.interrupt(); liveExtractor.value.reset(); feedback.interrupt() }
+                main.execute { boundary.applyIfCurrent(ticket) { formItems=emptyList(); correction=null; speech.stop(); cameraError="몸을 인식하지 못했어요. 직접 기록으로 계속할 수 있어요." } }
             } finally { image.close() }
         }
         try {
@@ -281,7 +309,7 @@ private fun PostureV2Content(
     }
     PostureAdaptiveLayout(preparing=preparing, immersive=!preparing, panelProgress=1f,
         header={ if(!preparing) LiveWorkoutHud(workout,repetitions,timeLeft,totalSeconds,setLabel,paused,compact=false,message=null,
-            evaluationEngineLabel="trex_v2 · 동작 관측",repDetail=output?.let {
+            evaluationEngineLabel="trex_v2 · ${if(mode==CoachMode.COACH) "자세 교정" else "동작 기록"}",repDetail=output?.let {
                 if(profile.isometric) "관측 유지 ${it.observedHoldMs/1000}초 · 정렬 미평가"
                 else "카메라 ${it.counts.total}회" + (it.rangeMet?.let { n -> " · 선택 범위 ${n}회" } ?: "") }) },
         camera={
@@ -298,6 +326,14 @@ private fun PostureV2Content(
                 modeControl={ TextButton({settings=true}) { Text("관측 설정 · 범위 / 출발 / 진단",color=c.primaryText) } })
             else Column(Modifier.fillMaxSize().background(c.bg).verticalScroll(rememberScrollState()).padding(12.dp),verticalArrangement=Arrangement.spacedBy(6.dp)) {
                 Text(message,color=c.text,fontSize=15.sp)
+                if(mode==CoachMode.COACH) {
+                    val score=V2FormFeedback.score(formItems,mode)
+                    val judged=formItems.count { !it.beta && it.overall!=Verdict.ABSTAIN }
+                    Text(if(score!=null) "관측 항목 참고 점수 ${score}점 · 범위 내 ${formItems.count { it.overall==Verdict.OK }}/$judged 항목"
+                        else if(!feedback.supported) "이 운동은 점수·교정 항목 검증 중입니다" else "점수 — · 연속 동작과 촬영 방향을 확인하고 있습니다",color=c.text,fontSize=14.sp)
+                    if(score!=null) Text("현재 관측 창 · 전신 자세의 정확도가 아닙니다",color=c.text2,fontSize=11.sp)
+                    correction?.let { Text(it,color=c.primaryText,fontSize=14.sp) }
+                }
                 output?.comparison?.takeIf { output?.phase != "UNOBSERVABLE" }?.let { Text(it,color=c.text2,fontSize=12.sp) }
                 Text("관측 횟수는 참고값이에요. 목표 도달 후 직접 세트를 완료해 주세요.",color=c.text2,fontSize=11.sp)
                 if(goal!=null) Text("선택한 범위를 충족한 반복으로 목표를 셉니다",color=c.text2,fontSize=11.sp)
@@ -318,10 +354,10 @@ private fun PostureV2Content(
             Text(profile.limitations,fontSize=13.sp)
             if(preparing) {
                 Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                    FilterChip(mode==CoachMode.COACH,{mode=CoachMode.COACH;ModeStore(context).set(workout.name,mode)},label={Text("동작 안내")})
+                    FilterChip(mode==CoachMode.COACH,{mode=CoachMode.COACH;ModeStore(context).set(workout.name,mode)},label={Text("교정 음성 · 점수")})
                     FilterChip(mode==CoachMode.TRACK,{mode=CoachMode.TRACK;ModeStore(context).set(workout.name,mode)},label={Text("기록")})
                 }
-                Text("두 모드 모두 같은 움직임을 측정하며 자세 정답을 판정하지 않습니다.",fontSize=12.sp)
+                Text("교정 모드는 관측 항목의 참고 점수와 음성을 제공합니다. 기록 모드는 이를 표시하지 않습니다. 판정할 수 없는 항목은 점수에서 제외합니다.",fontSize=12.sp)
             }
             if(preparing && !profile.isometric) {
                 val angle = (profile.commonSignal ?: profile.leftSignal)?.minAmp?.let { it>=10 } == true
