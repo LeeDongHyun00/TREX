@@ -30,7 +30,7 @@ AI Hub 는 해외 IP 다운로드를 막아 Colab 에서 직접 받을 수 없�
 
 이 저장소는 공개(github.com/LeeDongHyun00/TREX)라, 두는 것과 두지 않는 것을 나눈다.
 
-- **둔다**: 앱이 실제로 쓰는 214종의 이름과 1인분 영양값 — `nutrition_214.json`, `food_labels_214.txt`, 앱의 `TrexData.kt`. 데이터셋을 활용해 앱을 만들라는 본래 목적에 해당하는 파생물이다.
+- **둔다**: 앱이 실제로 쓰는 342종의 이름과 1인분 영양값 — `nutrition_342.json`, `food_labels_342.txt`, 앱의 `TrexData.kt`. 데이터셋을 활용해 앱을 만들라는 본래 목적에 해당하는 파생물이다.
 - **두지 않는다**: 400종 전체 영양표(`class_map.csv`, `class_map.json`)와 원천 이미지. 원본 표를 그대로 옮기는 것에 가까워 승인 절차를 우회시킬 소지가 있다. `.gitignore` 에 있으며 필요하면 `build_class_map.js` 로 다시 만든다.
 
 데이터셋을 다른 용도로 쓰거나 저장소를 외부에 더 널리 공개할 때는 AI Hub 이용약관을 다시 확인할 것.
