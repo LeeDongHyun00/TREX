@@ -171,7 +171,7 @@ internal fun PhotoFoodSheet(app: AppViewModel, onClose: () -> Unit) {
                 failure = "사진에서 음식을 찾지 못했어요. 음식이 잘 보이게 다시 찍어 주세요."
                 step = PhotoStep.Failed
             } else {
-                items = result.foods.map { RecognizedItem(it.name, foodDatabase[it.name], it.confidence, it.photoIndex) }
+                items = result.foods.map { RecognizedItem(it.name, app.findFood(it.name), it.confidence, it.photoIndex) }
                 step = PhotoStep.Result
             }
             FoodDetectionResult.ModelMissing -> {

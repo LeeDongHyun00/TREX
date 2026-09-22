@@ -23,6 +23,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
@@ -54,6 +55,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -415,7 +417,7 @@ internal fun ManualSheet(app: AppViewModel, initialSlot: String, onClose: () -> 
     val total = slotFoods.totalNutrition()
     val goal = app.targetGoal
     val slotIndex = mealMetas.indexOfFirst { it.id == slot }.coerceAtLeast(0)
-    val matches = foodDatabase.keys.filter { it.contains(query.trim()) }
+    val matches = app.searchFoods(query)
 
     SheetHost(onDismiss = onClose) {
         Column(Modifier.fillMaxHeight(0.92f)) {
@@ -536,13 +538,21 @@ internal fun ManualSheet(app: AppViewModel, initialSlot: String, onClose: () -> 
                 }
                 Column(Modifier.padding(top = 10.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
                     if (matches.isEmpty()) {
-                        Text(
-                            "검색 결과가 없어룡", color = c.text3, fontSize = 12.sp,
-                            modifier = Modifier.fillMaxWidth().padding(top = 6.dp), textAlign = TextAlign.Center,
-                        )
+                        if (query.isBlank()) {
+                            Text(
+                                "음식 이름을 검색해 보세룡", color = c.text3, fontSize = 12.sp,
+                                modifier = Modifier.fillMaxWidth().padding(top = 6.dp), textAlign = TextAlign.Center,
+                            )
+                        } else {
+                            // 기본 DB 에도 내 음식에도 없으면 직접 등록한다 — 등록해 두면 다음부터 검색으로 바로 담을 수 있다.
+                            CustomFoodForm(name = query.trim()) { nutrition ->
+                                app.addCustomFood(query.trim(), nutrition)
+                                app.appendFoods(0, slot, listOf(FoodEntry(query.trim(), nutrition)))
+                                query = ""
+                            }
+                        }
                     }
-                    matches.forEach { name ->
-                        val n = foodDatabase.getValue(name)
+                    matches.forEach { (name, n, isCustom) ->
                         val added = slotFoods.any { it.name == name }
                         Surface(
                             onClick = { app.appendFoods(0, slot, listOf(FoodEntry(name, n))) },
@@ -553,7 +563,11 @@ internal fun ManualSheet(app: AppViewModel, initialSlot: String, onClose: () -> 
                         ) {
                             Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Column(Modifier.weight(1f)) {
-                                    Text(name, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(name, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                                        // 직접 등록한 음식은 영양값이 사용자가 적은 값이라 기본 DB 와 구분해 표시한다.
+                                        if (isCustom) Text("내 음식", color = c.primaryText, fontSize = 10.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 6.dp))
+                                    }
                                     Text(
                                         "${n.kcal} kcal · 탄 ${n.carb.toInt()} · 단 ${n.protein.toInt()} · 지 ${n.fat.toInt()}",
                                         color = c.text3, fontSize = 11.sp, modifier = Modifier.padding(top = 2.dp),
@@ -596,6 +610,84 @@ internal fun ManualSheet(app: AppViewModel, initialSlot: String, onClose: () -> 
     }
 }
 
+/**
+ * 기본 DB 에 없는 음식을 사용자가 등록하는 폼. 등록한 값은 기기에만 저장되고 검색에서 "내 음식" 으로 뜬다.
+ * 칼로리만 필수다 — 탄단지를 모르면 비워 두고 0 으로 기록한다(모르는 값을 지어내지 않는다).
+ */
+@Composable
+private fun CustomFoodForm(name: String, onAdd: (Nutrition) -> Unit) {
+    val c = Trex.c
+    var kcal by remember(name) { mutableStateOf("") }
+    var carb by remember(name) { mutableStateOf("") }
+    var protein by remember(name) { mutableStateOf("") }
+    var fat by remember(name) { mutableStateOf("") }
+    val kcalValue = kcal.toIntOrNull()
+
+    DCard(modifier = Modifier.padding(top = 6.dp), radius = 20.dp) {
+        Column(Modifier.padding(16.dp)) {
+            Text("\"$name\" 을(를) 직접 등록할까룡?", color = c.text, fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold)
+            Text(
+                "1인분 기준으로 적어 주세룡. 등록하면 다음부터 검색으로 바로 담을 수 있어룡",
+                color = c.text3, fontSize = 11.5.sp, lineHeight = 17.sp, modifier = Modifier.padding(top = 4.dp),
+            )
+            Row(Modifier.padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                NumberField(kcal, { kcal = it }, "칼로리", Modifier.weight(1f))
+                NumberField(carb, { carb = it }, "탄수(g)", Modifier.weight(1f))
+            }
+            Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                NumberField(protein, { protein = it }, "단백질(g)", Modifier.weight(1f))
+                NumberField(fat, { fat = it }, "지방(g)", Modifier.weight(1f))
+            }
+            Cta(
+                text = "등록하고 담기",
+                icon = Icons.Rounded.Add,
+                enabled = kcalValue != null,
+                height = 48.dp,
+                modifier = Modifier.padding(top = 12.dp).fillMaxWidth(),
+                onClick = {
+                    val v = kcalValue ?: return@Cta
+                    onAdd(
+                        Nutrition(
+                            kcal = v,
+                            carb = carb.toDoubleOrNull() ?: 0.0,
+                            protein = protein.toDoubleOrNull() ?: 0.0,
+                            fat = fat.toDoubleOrNull() ?: 0.0,
+                        ),
+                    )
+                },
+            )
+        }
+    }
+}
+
+/** 숫자만 받는 작은 입력칸. 빈 값은 "모름" 으로 두고 0 으로 기록한다. */
+@Composable
+private fun NumberField(value: String, onChange: (String) -> Unit, placeholder: String, modifier: Modifier = Modifier) {
+    val c = Trex.c
+    BasicTextField(
+        value = value,
+        onValueChange = { raw -> onChange(raw.filter { it.isDigit() || it == '.' }.take(6)) },
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+        textStyle = TextStyle(color = c.text, fontSize = 13.sp),
+        cursorBrush = SolidColor(c.primary),
+        modifier = modifier,
+        decorationBox = { inner ->
+            Box(
+                Modifier
+                    .height(44.dp)
+                    .clip(RoundedCornerShape(13.dp))
+                    .background(c.field)
+                    .border(1.dp, c.fieldLine, RoundedCornerShape(13.dp))
+                    .padding(horizontal = 12.dp),
+                contentAlignment = Alignment.CenterStart,
+            ) {
+                if (value.isEmpty()) Text(placeholder, color = c.text3, fontSize = 12.5.sp)
+                inner()
+            }
+        },
+    )
+}
 // ============================================================= 운동 추가
 
 internal data class WorkoutTemplate(val name: String, val reps: String, val duration: String, val category: String, val posture: Boolean)

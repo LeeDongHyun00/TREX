@@ -236,6 +236,36 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         store.saveWater(waterByDay)
     }
 
+    /**
+     * 사용자가 직접 등록한 음식. 모델 클래스와 기본 DB(350종)에 없는 집밥·간편식·브랜드 제품을 담는다.
+     * 기기 안에만 저장한다 — 서버로 올리지 않는다.
+     */
+    var customFoods by mutableStateOf(store.loadCustomFoods() ?: emptyMap())
+        private set
+
+    /** 이름이 같으면 사용자가 등록한 값이 기본 DB 를 덮는다 — 본인이 고친 값을 존중한다. */
+    fun findFood(name: String): Nutrition? = customFoods[name] ?: foodDatabase[name]
+
+    /** 검색 결과. 사용자 등록분을 앞에 둔다(두 번째 값이 true 면 사용자 등록). */
+    fun searchFoods(query: String): List<Triple<String, Nutrition, Boolean>> {
+        val q = query.trim()
+        if (q.isEmpty()) return emptyList()
+        val mine = customFoods.filterKeys { it.contains(q) }.map { (n, v) -> Triple(n, v, true) }
+        val base = foodDatabase.filterKeys { it.contains(q) && it !in customFoods }.map { (n, v) -> Triple(n, v, false) }
+        return mine + base
+    }
+
+    fun addCustomFood(name: String, nutrition: Nutrition) {
+        val key = name.trim()
+        if (key.isEmpty()) return
+        customFoods = customFoods + (key to nutrition)
+        store.saveCustomFoods(customFoods)
+    }
+
+    fun removeCustomFood(name: String) {
+        customFoods = customFoods - name
+        store.saveCustomFoods(customFoods)
+    }
     /** 슬롯에 음식 추가 (사진/수동 기록 플로우의 결과). 같은 이름은 수량을 올린다. */
     fun appendFoods(offset: Int, slot: String, foods: List<FoodEntry>) {
         mutateSlots(offset) { slots ->
