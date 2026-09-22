@@ -244,14 +244,19 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         private set
 
     /** 이름이 같으면 사용자가 등록한 값이 기본 DB 를 덮는다 — 본인이 고친 값을 존중한다. */
-    fun findFood(name: String): Nutrition? = customFoods[name] ?: foodDatabase[name]
+    fun findFood(name: String): Nutrition? =
+        customFoods[name] ?: foodDatabase[name] ?: foodNameAliases[name]?.let { foodDatabase[it] }
 
     /** 검색 결과. 사용자 등록분을 앞에 둔다(두 번째 값이 true 면 사용자 등록). */
     fun searchFoods(query: String): List<Triple<String, Nutrition, Boolean>> {
         val q = query.trim()
         if (q.isEmpty()) return emptyList()
+        // 사용자가 쓰는 다른 이름으로 쳐도 찾히게 한다(흰쌀밥 → 쌀밥).
+        val viaAlias = foodNameAliases.filterKeys { it.contains(q) }.values.toSet()
         val mine = customFoods.filterKeys { it.contains(q) }.map { (n, v) -> Triple(n, v, true) }
-        val base = foodDatabase.filterKeys { it.contains(q) && it !in customFoods }.map { (n, v) -> Triple(n, v, false) }
+        val base = foodDatabase
+            .filterKeys { (it.contains(q) || it in viaAlias) && it !in customFoods }
+            .map { (n, v) -> Triple(n, v, false) }
         return mine + base
     }
 
