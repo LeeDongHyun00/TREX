@@ -1,11 +1,25 @@
 #!/usr/bin/env bash
 # 마지막 묶음(12_13_14_15_16) 변환이 끝나면 finalize + dataset.tar 까지 이어서 한다.
 # 파이프라인 자체는 finalize 를 부르지 않는다("다음: …" 로그만 남긴다).
+#
+# 사용: nohup bash tools/after_last_bundle.sh >> after.log 2>&1 &
+#   터미널을 닫아도 살아 있어야 한다. 에이전트 도구의 백그라운드는 셸이 끝나면 같이 죽고,
+#   bash -lc 로 감싸 띄우면 로그인 셸이 프로필을 읽느라 본체가 안 뜨는 경우가 있었다.
+#   띄운 뒤 .after_last_bundle.lock 이 생겼는지로 본체가 돌기 시작했는지 확인할 것.
 set -u
 ROOT="C:/Workspace/TREX/aihub74_raw"
 DIR="$ROOT/images_12_13_14_15_16"
 LOG="$ROOT/pipeline.log"
 say() { echo "$(date '+%m-%d %H:%M:%S') [after] $*" | tee -a "$LOG"; }
+
+# 한 번만 돌게 잠근다. 두 벌이 동시에 finalize 하면 한쪽이 dataset_final 을 지우는 사이
+# 다른 쪽이 쓰다가 EPERM 으로 깨진다(2026-09-23 실제로 겪음). mkdir 은 원자적이다.
+LOCK="$ROOT/.after_last_bundle.lock"
+if ! mkdir "$LOCK" 2>/dev/null; then
+  echo "[after] 이미 실행 중이다($LOCK). 빠진다." >&2
+  exit 0
+fi
+trap 'rmdir "$LOCK" 2>/dev/null' EXIT
 
 # 1) 변환 완료(.done) 또는 실패를 기다린다. 둘 중 뭐가 와도 빠져나온다.
 while [ ! -f "$DIR/.done" ]; do
