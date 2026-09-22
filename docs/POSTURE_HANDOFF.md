@@ -326,14 +326,6 @@ WorkoutHistoryItem.postureCorrection → 기록 화면
 ## 2026-09-19 — 음식 인식 재학습 데이터 준비 (§F2)
 
 - **현재 브랜치 `feature/food-recognition-v2`** (배포 라인 `feature/posture-coach-reliability` 5237ba9 에서 분기, origin 에 아직 push 안 함).
-- **학습 데이터 완성**: `C:\Workspace\TREXihub74_raw\dataset.tar`(2.58GB, git 밖) = AI Hub 74번 Validation 4묶음 → **214클래스 42,669장**(train 36,254/val 6,415, 클래스당 중앙값 199장). 대분류 04 국·탕·찌개 / 06_07_08 구이·전·볶음 / 09_10 조림·튀김·치킨 / 11 무침·나물. 밥·면·만두·김치·회·떡은 범위에서 제외(사용자 결정).
-- **앱 영양 DB 선반영**: `foodDatabase` 를 223종(모델 214 + 일반 식품 9)으로 교체, AI Hub 영양DB 1인분 실측값. 라벨↔DB 1:1 정합 확인(누락 0·중복 0). **학습 산출물만 assets 에 넣으면 바로 동작한다.**
-- **다음 단계**: dataset.tar → Drive `MyDrive/trex/dataset.tar` 업로드 → `training/train_food_yolov8_colab.ipynb`(G4 GPU+고용량 RAM, 1~9번 셀) → `trex_food_model.zip` → `app/src/main/assets/models/` 의 tflite·labels 교체 → 실기기 검증.
-- **전처리 도구** `training/local_prep/`(pipeline.sh·dl.sh·merge_parts.js·prep_dataset.js·gen_food_db.js). AI Hub 는 해외 IP 다운로드를 막아 Colab 에서 받을 수 없어 PC 에서 받는다.
-- **다운로드 함정(전부 수정됨)**: ①서버가 Range 거부 → 이어받기 불가, 끊기면 처음부터 ②curl rc=0 이어도 부분 파일일 수 있어 예상 크기 90
-## 2026-09-19 — 음식 인식 재학습 데이터 준비 (§F2)
-
-- **현재 브랜치 `feature/food-recognition-v2`** (배포 라인 `feature/posture-coach-reliability` 5237ba9 에서 분기, origin 에 아직 push 안 함).
 - **학습 데이터 완성**: `C:\Workspace\TREX\aihub74_raw\dataset.tar`(2.58GB, git 밖) = AI Hub 74번 Validation 4묶음 → **214클래스 42,669장**(train 36,254/val 6,415, 클래스당 중앙값 199장). 대분류 04 국·탕·찌개 / 06_07_08 구이·전·볶음 / 09_10 조림·튀김·치킨 / 11 무침·나물. 밥·면·만두·김치·회·떡은 범위에서 제외(사용자 결정).
 - **앱 영양 DB 선반영**: `foodDatabase` 를 223종(모델 214 + 일반 식품 9)으로 교체, AI Hub 영양DB 1인분 실측값. 라벨↔DB 1:1 정합 확인(누락 0·중복 0). **학습 산출물만 assets 에 넣으면 바로 동작한다.**
 - **다음 단계**: dataset.tar → Drive `MyDrive/trex/dataset.tar` 업로드 → `training/train_food_yolov8_colab.ipynb`(G4 GPU+고용량 RAM, 1~9번 셀) → `trex_food_model.zip` → `app/src/main/assets/models/` 의 tflite·labels 교체 → 실기기 검증.
@@ -341,3 +333,19 @@ WorkoutHistoryItem.postureCorrection → 기록 화면
 - **다운로드 함정(전부 수정됨)**: ①서버가 Range 거부 → 이어받기 불가, 끊기면 처음부터 ②curl rc=0 이어도 부분 파일일 수 있어 예상 크기 90% 검증 필요 ③tar 안이 1GiB 조각(`.part<오프셋>`, 오프셋순 병합 필수)이고 여러 대분류 묶음은 **중첩 zip** ④Windows 에서 만든 zip 은 경로 구분자가 백슬래시라 리눅스에서 못 푼다 → tar 사용.
 - **네트워크**: Wi-Fi(MediaTek MT7925, Power Saving=Auto)에서 30GB 묶음이 3회 실패 16시간. **유선 전환 후 42~49분에 재시도 없이 완료**. 시스템 절전 설정은 정상이었고 원인은 Wi-Fi 어댑터 절전(관리자 권한 필요해 미변경).
 - **미검증**: 새 모델의 실기기 촬영 정확도. 기존 30클래스 모델은 치킨·만두국 정도만 인식됐다(2026-09-16 실측).
+
+## 2026-09-23 — 음식 인식 342클래스 탑재·평가 (§F3)
+
+- **브랜치 `feature/food-recognition-v2`, origin 에 아직 push 안 함.** `feature/posture-coach-reliability` 위 커밋 36개. push 절차·PR 초안·제외 항목은 `docs/PUSH_CHECKLIST.md` 에 따로 정리했다. 저장소가 공개라 **직접 확인하고 실행할 것**.
+- **모델 342클래스 탑재**: `yolov8n_food.tflite` INT8 3.6MB, AI Hub 74번 Validation 6묶음 68,176장 학습. 214→342 로 늘리며 **밥 8종이 들어왔다**(이전에 `01` 묶음을 안 받아 흰쌀밥이 아예 없었다).
+- **앱 쪽 추가**: 사진 라이트박스(`PhotoLightbox`, 미리보기 1024px), 직접 등록 음식(`customFoods` — 기기 저장·검색 우선순위·덮어쓰기), 검색 별칭 16개(`foodNameAliases`: 흰쌀밥→쌀밥 등). 테스트 284건 통과.
+- **평가 결과(`docs/FOOD_EVAL_RESULTS.md`)가 이번의 핵심이다**:
+  - held-out 밥 8종 399장 → **Top-1 73% / 검출률 73%**. **쌀밥은 76% 로 오히려 상위권** — "흰쌀밥을 못 잡는다"는 체감은 이 조건에서 재현되지 않았다.
+  - 실제 식탁 사진 16장 → **검출 36%, 사진당 손볼 횟수 1.8회**.
+  - **같은 모델·같은 클래스인데 73% vs 36%.** 다른 것은 사진 구도다 — 학습 사진은 그릇 하나가 화면을 채우고, 실제 식탁 사진은 그릇이 화면의 1/5~1/10 이다.
+  - **Top-1 과 검출률이 거의 같다 = 임계값 0.40 은 병목이 아니다.** 임계값 조정은 근거 없음으로 제외했다(낮춰도 오검출만 는다).
+- **다음 후보는 타일 추론**이고 `training/eval_heldout_colab.ipynb` 마지막 두 셀에 **실험만 먼저** 넣어 뒀다(전체 1회 vs 2×2 vs 3×3, 20% 겹침). 앱 코드는 **아직 안 고쳤다** — 검출이 늘고 오검출이 크게 늘지 않는지 수치를 보고 정한다. `grid=1` 행이 실사용 평가와 같은 계산이라 검출 9/25 가 그대로 나와야 셀이 맞는 것이다.
+- **커버리지(`docs/FOOD_COVERAGE_FINDINGS.md`)**: 실사용 사진 16장의 기대 음식 52개 중 학습됨 48% · 미수신 묶음 6% · **AI Hub 에 아예 없음 46%**(피자·우동·덴푸라·가라아게·초밥 총칭 등). 절반은 데이터로 해결되지 않는다 — 직접 등록 기능이 그 몫이다.
+- **미검증**: 별칭 검색·직접 등록 폼·라이트박스는 빌드·설치만 했고 **사용자가 기기에서 써 보지 않았다**.
+- **`class_map.csv`/`class_map.json`(AI Hub 400종 영양 원표)은 `.gitignore` 에 있다.** 공개 저장소에 두면 AI Hub 승인 절차를 우회시킬 소지가 있다. 앱이 쓰는 342종 파생값만 `TrexData.kt` 에 남긴다.
+- **AI Hub API 키는 대화에 노출됐다. 사용자가 재발급할 것.** 저장소 히스토리·커밋 메시지 출현은 0건으로 확인했다(스크립트는 전부 인자로 받는다).

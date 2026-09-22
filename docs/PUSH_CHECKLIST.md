@@ -4,9 +4,9 @@
 
 ## 무엇을 올리나
 
-브랜치 `feature/food-recognition-v2` 는 `feature/posture-coach-reliability`(이미 origin 에 있음) 위에 **커밋 33개**를 쌓았다. push 하면 이 33개만 올라간다 — 조원의 자세 작업은 이미 올라가 있어 중복되지 않는다.
+브랜치 `feature/food-recognition-v2` 는 `feature/posture-coach-reliability`(이미 origin 에 있음) 위에 **커밋 36개**를 쌓았다. push 하면 이 36개만 올라간다 — 조원의 자세 작업은 이미 올라가 있어 중복되지 않는다.
 
-변경 규모: **38파일, +6,789 / −26**
+변경 규모: **40파일, +7,001 / −26**
 
 | 영역 | 내용 |
 |---|---|
@@ -28,7 +28,19 @@
 - **사용자 식단 사진 16장** — 개인 사진이라 저장소에 넣지 않았다. 평가 패키지(`eval_real.tar`)도 로컬에만 있다.
 - **AI Hub API 키** — 전체 히스토리와 커밋 메시지를 검사했다. **출현 0건.** 스크립트는 전부 인자로 받는다(`dl.sh "$3"`).
 
-## 올리기 전 확인
+## 확인 완료 (2026-09-23 04:30, 이 세션에서 실행함)
+
+| 항목 | 결과 |
+|---|---|
+| 미커밋 변경 | 없음 |
+| 올라갈 커밋 | 36개 |
+| API 키 출현 (`A799AD2A`) | **0건** |
+| JVM 유닛 테스트 | 42클래스 **284건 전부 통과** (실패 0 · 오류 0) |
+
+테스트는 `app/` 에 변경이 없어 gradle 이 UP-TO-DATE 로 건너뛰었다. 결과 XML 을 직접 집계한 수치다.
+**push 직전에 다시 돌릴 필요는 없다** — 그 사이 `app/` 을 고쳤다면 그때 돌린다.
+
+## 직접 확인할 것 (선택)
 
 ```bash
 cd C:/Workspace/TREX/TREX_UI
@@ -36,7 +48,7 @@ cd C:/Workspace/TREX/TREX_UI
 # 1) 미커밋 변경이 없는지
 git status --short
 
-# 2) 올라갈 커밋 확인 (33개여야 한다)
+# 2) 올라갈 커밋 확인 (36개여야 한다)
 git log --oneline origin/feature/posture-coach-reliability..HEAD
 
 # 3) 키가 섞이지 않았는지 (0 이어야 한다)
