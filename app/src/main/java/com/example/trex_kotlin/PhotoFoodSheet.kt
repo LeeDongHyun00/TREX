@@ -19,6 +19,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -69,6 +70,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.example.trex_kotlin.TrexText as Text
@@ -87,8 +90,11 @@ import kotlinx.coroutines.withContext
 
 private enum class PhotoStep { Pick, Camera, Analyzing, Result, Failed }
 
-/** 결과·실패 화면에 보여줄 사진 썸네일의 최대 변. 갤러리 5장을 다 보여줘도 메모리가 수 MB 안에 머문다. */
-private const val THUMBNAIL_MAX_PX = 512
+/**
+ * 결과·실패 화면과 라이트박스가 함께 쓰는 사진의 최대 변. 전체 화면으로 키워도 버틸 만하면서,
+ * 갤러리 5장을 다 들고 있어도 메모리가 감당되는 선으로 잡았다(장당 약 4MB).
+ */
+private const val PREVIEW_MAX_PX = 1024
 
 /**
  * 인식 결과 한 줄. 수량은 직접 기록 시트와 같은 qty 스테퍼로 조절한다. nutrition 이 없으면 기록에서 제외한다.
@@ -122,6 +128,7 @@ internal fun PhotoFoodSheet(app: AppViewModel, onClose: () -> Unit) {
     var failureTitle by remember { mutableStateOf("") }
     var failure by remember { mutableStateOf("") }
     var items by remember { mutableStateOf<List<RecognizedItem>>(emptyList()) }
+    var zoomed by remember { mutableStateOf<Bitmap?>(null) }
 
     // 모델(12MB)·인터프리터 초기화를 첫 분석이 아니라 시트를 여는 시점에 미리 해 둔다.
     LaunchedEffect(Unit) { withContext(Dispatchers.Default) { FoodDetector.warmUp(context) } }
@@ -161,7 +168,7 @@ internal fun PhotoFoodSheet(app: AppViewModel, onClose: () -> Unit) {
         }
         val (result, bitmaps) = job.await()
         // 화면에는 썸네일만 필요하다 — 추론용 1280px 비트맵(장당 수 MB)을 붙들지 않고 작은 사본만 상태에 남긴다.
-        photos = bitmaps.map { it.scaledToMax(THUMBNAIL_MAX_PX) }
+        photos = bitmaps.map { it.scaledToMax(PREVIEW_MAX_PX) }
         pickedUris = emptyList()
         progress = 1f
         delay(200)
@@ -218,9 +225,10 @@ internal fun PhotoFoodSheet(app: AppViewModel, onClose: () -> Unit) {
                         onBack = { step = PhotoStep.Pick },
                         onManual = { manual = true },
                     )
-                    PhotoStep.Analyzing -> AnalyzingStep(photos = photos, progress = progress)
+                    PhotoStep.Analyzing -> AnalyzingStep(photos = photos, progress = progress, onZoom = { zoomed = it })
                     PhotoStep.Result -> ResultStep(
                         photos = photos,
+                        onZoom = { zoomed = it },
                         slot = slot,
                         items = items,
                         retryLabel = if (fromGallery) "다시 선택" else "다시 촬영",
@@ -245,6 +253,7 @@ internal fun PhotoFoodSheet(app: AppViewModel, onClose: () -> Unit) {
                     )
                     PhotoStep.Failed -> FailedStep(
                         photos = photos,
+                        onZoom = { zoomed = it },
                         message = failure,
                         retryLabel = retryLabel,
                         onRetry = { retry() },
@@ -254,6 +263,8 @@ internal fun PhotoFoodSheet(app: AppViewModel, onClose: () -> Unit) {
             }
         }
     }
+
+    zoomed?.let { photo -> PhotoLightbox(photo) { zoomed = null } }
 }
 
 @Composable
@@ -424,7 +435,7 @@ private fun CameraStep(onCapture: (Bitmap) -> Unit, onBack: () -> Unit, onManual
 }
 
 @Composable
-private fun AnalyzingStep(photos: List<Bitmap>, progress: Float) {
+private fun AnalyzingStep(photos: List<Bitmap>, progress: Float, onZoom: (Bitmap) -> Unit) {
     val c = Trex.c
     // 분석은 전부 온디바이스라 '업로드' 문구를 쓰지 않는다.
     val status = when {
@@ -433,7 +444,7 @@ private fun AnalyzingStep(photos: List<Bitmap>, progress: Float) {
         else -> "영양 정보 계산 중"
     }
     Column(Modifier.fillMaxSize().padding(horizontal = 20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        PhotoStrip(photos, Modifier.fillMaxWidth().height(240.dp))
+        PhotoStrip(photos, Modifier.fillMaxWidth().height(240.dp), onZoom = onZoom)
         LinearProgressIndicator(
             progress = { progress.coerceIn(0f, 1f) },
             modifier = Modifier.padding(top = 22.dp).fillMaxWidth().height(8.dp).clip(RoundedCornerShape(999.dp)),
@@ -448,6 +459,7 @@ private fun AnalyzingStep(photos: List<Bitmap>, progress: Float) {
 @Composable
 private fun ResultStep(
     photos: List<Bitmap>,
+    onZoom: (Bitmap) -> Unit,
     slot: String,
     items: List<RecognizedItem>,
     retryLabel: String,
@@ -466,7 +478,7 @@ private fun ResultStep(
             Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            PhotoStrip(photos, Modifier.fillMaxWidth().height(150.dp))
+            PhotoStrip(photos, Modifier.fillMaxWidth().height(150.dp), onZoom = onZoom)
             SegmentedTabs(
                 options = mealMetas.map { it.label },
                 selected = slotIndex,
@@ -546,10 +558,10 @@ private fun ResultStep(
 }
 
 @Composable
-private fun FailedStep(photos: List<Bitmap>, message: String, retryLabel: String, onRetry: () -> Unit, onManual: () -> Unit) {
+private fun FailedStep(photos: List<Bitmap>, message: String, retryLabel: String, onZoom: (Bitmap) -> Unit, onRetry: () -> Unit, onManual: () -> Unit) {
     val c = Trex.c
     Column(Modifier.fillMaxSize().padding(horizontal = 20.dp).padding(bottom = 20.dp)) {
-        PhotoStrip(photos, Modifier.fillMaxWidth().height(220.dp), dim = true)
+        PhotoStrip(photos, Modifier.fillMaxWidth().height(220.dp), dim = true, onZoom = onZoom)
         Text(
             message, color = c.text2, fontSize = 13.sp, lineHeight = 20.sp, textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth().padding(top = 18.dp),
@@ -562,15 +574,15 @@ private fun FailedStep(photos: List<Bitmap>, message: String, retryLabel: String
 
 /** 사진이 한 장이면 크게, 여러 장이면 가로로 넘겨 보는 썸네일 줄. 갤러리 5장을 골랐는데 첫 장만 보이던 문제를 없앤다. */
 @Composable
-private fun PhotoStrip(photos: List<Bitmap>, modifier: Modifier, dim: Boolean = false) {
+private fun PhotoStrip(photos: List<Bitmap>, modifier: Modifier, dim: Boolean = false, onZoom: (Bitmap) -> Unit = {}) {
     if (photos.size <= 1) {
-        PhotoPreview(photos.firstOrNull(), modifier, dim)
+        PhotoPreview(photos.firstOrNull(), modifier, dim, onZoom)
         return
     }
     Row(modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         photos.forEachIndexed { index, photo ->
             Box(Modifier.fillMaxHeight().width(150.dp)) {
-                PhotoPreview(photo, Modifier.fillMaxSize(), dim)
+                PhotoPreview(photo, Modifier.fillMaxSize(), dim, onZoom)
                 NumberBadge(index + 1, Modifier.padding(8.dp))
             }
         }
@@ -600,9 +612,15 @@ private fun NumberBadge(number: Int, modifier: Modifier = Modifier, small: Boole
 }
 
 @Composable
-private fun PhotoPreview(photo: Bitmap?, modifier: Modifier, dim: Boolean = false) {
+private fun PhotoPreview(photo: Bitmap?, modifier: Modifier, dim: Boolean = false, onZoom: (Bitmap) -> Unit = {}) {
     val c = Trex.c
-    Box(modifier.clip(RoundedCornerShape(14.dp)).background(c.surface2), contentAlignment = Alignment.Center) {
+    Box(
+        modifier
+            .clip(RoundedCornerShape(14.dp))
+            .background(c.surface2)
+            .then(if (photo != null) Modifier.clickable { onZoom(photo) } else Modifier),
+        contentAlignment = Alignment.Center,
+    ) {
         if (photo != null) {
             androidx.compose.foundation.Image(
                 bitmap = photo.asImageBitmap(),
@@ -614,5 +632,30 @@ private fun PhotoPreview(photo: Bitmap?, modifier: Modifier, dim: Boolean = fals
             Icon(Icons.Rounded.RestaurantMenu, contentDescription = null, tint = c.text3, modifier = Modifier.size(36.dp))
         }
         if (dim) Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.35f)))
+    }
+}
+
+/**
+ * 사진을 전체 화면으로 크게 본다. 시트 안에 그리면 시트 영역에 잘리므로 Dialog 로 띄운다.
+ * 아무 데나 누르거나 뒤로가기로 닫는다.
+ */
+@Composable
+private fun PhotoLightbox(photo: Bitmap, onDismiss: () -> Unit) {
+    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        Box(
+            Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.94f))
+                .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onDismiss),
+            contentAlignment = Alignment.Center,
+        ) {
+            androidx.compose.foundation.Image(
+                bitmap = photo.asImageBitmap(),
+                contentDescription = "사진 크게 보기",
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 48.dp),
+            )
+            Box(Modifier.align(Alignment.TopEnd).padding(16.dp)) { SheetClose(onDismiss) }
+        }
     }
 }
