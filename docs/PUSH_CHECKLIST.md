@@ -4,7 +4,7 @@
 
 ## 무엇을 올리나
 
-브랜치 `feature/food-recognition-v2` 는 `feature/posture-coach-reliability`(이미 origin 에 있음) 위에 **커밋 38개**를 쌓았다. push 하면 이 38개만 올라간다 — 조원의 자세 작업은 이미 올라가 있어 중복되지 않는다.
+브랜치 `feature/food-recognition-v2` 는 `feature/posture-coach-reliability`(이미 origin 에 있음) 위에 **음식 인식 관련 커밋만** 쌓았다. push 하면 그것만 올라간다 — 조원의 자세 작업은 이미 올라가 있어 중복되지 않는다.
 
 변경 규모: **40파일, +7,001 / −26**
 
@@ -33,7 +33,7 @@
 | 항목 | 결과 |
 |---|---|
 | 미커밋 변경 | 없음 |
-| 올라갈 커밋 | 38개 |
+| 올라갈 커밋 | 전부 음식 인식 작업 (`git log --oneline origin/feature/posture-coach-reliability..HEAD` 로 확인) |
 | API 키 출현 (`A799AD2A`) | **0건** |
 | JVM 유닛 테스트 | 42클래스 **284건 전부 통과** (실패 0 · 오류 0) |
 
@@ -48,7 +48,7 @@ cd C:/Workspace/TREX/TREX_UI
 # 1) 미커밋 변경이 없는지
 git status --short
 
-# 2) 올라갈 커밋 확인 (38개여야 한다)
+# 2) 올라갈 커밋 확인 — 음식 인식 작업만 있어야 한다(자세 커밋이 섞이면 분기점이 틀린 것)
 git log --oneline origin/feature/posture-coach-reliability..HEAD
 
 # 3) 키가 섞이지 않았는지 (0 이어야 한다)
