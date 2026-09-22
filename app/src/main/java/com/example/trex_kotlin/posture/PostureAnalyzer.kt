@@ -53,9 +53,14 @@ class PoseSample(
     val upVerified: Boolean = false,
     /** 재생 가능한 원본 월드 좌표(m). v2는 이 입력에서 공유 엔진의 피처를 계산한다. */
     val rawWorld: FloatArray = FloatArray(MP_LANDMARK_COUNT * 3),
+    /** 추정기의 원본 출력. 적용된 가시성 게이트와 구분해 재생 자료에 남긴다. */
+    val rawVisibility: FloatArray = FloatArray(MP_LANDMARK_COUNT),
+    val rawPresence: FloatArray = FloatArray(MP_LANDMARK_COUNT),
+    val normalizedZ: FloatArray = FloatArray(MP_LANDMARK_COUNT),
+    val inferenceSucceeded: Boolean = true,
 ) {
     companion object {
-        fun empty(inferMs: Long = 0L, w: Int = 0, h: Int = 0, up: Vec3 = SCREEN_UP, fromGravity: Boolean = false) = PoseSample(
+        fun empty(inferMs: Long = 0L, w: Int = 0, h: Int = 0, up: Vec3 = SCREEN_UP, fromGravity: Boolean = false, inferenceSucceeded: Boolean = true) = PoseSample(
             detected = false,
             normalizedXy = FloatArray(MP_LANDMARK_COUNT * 2),
             visibility = FloatArray(MP_LANDMARK_COUNT),
@@ -66,6 +71,7 @@ class PoseSample(
             imageHeight = h,
             up = up,
             upFromGravity = fromGravity,
+            inferenceSucceeded = inferenceSucceeded,
         )
     }
 }
@@ -185,7 +191,7 @@ class PostureAnalyzer(
         val landmarks = result?.landmarks()?.firstOrNull()
         val world = result?.worldLandmarks()?.firstOrNull()
         if (landmarks == null || world == null || landmarks.size < MP_LANDMARK_COUNT || world.size < MP_LANDMARK_COUNT) {
-            return PoseSample.empty(inferMs, w, h, up, fromGravity)
+            return PoseSample.empty(inferMs, w, h, up, fromGravity, inferenceSucceeded = result != null)
         }
 
         val xy = FloatArray(MP_LANDMARK_COUNT * 2)
@@ -247,6 +253,9 @@ class PostureAnalyzer(
                 val p = world[i / 3]
                 when (i % 3) { 0 -> p.x(); 1 -> p.y(); else -> p.z() }
             },
+            rawVisibility = FloatArray(MP_LANDMARK_COUNT) { landmarks[it].visibility().orElse(0f) },
+            rawPresence = FloatArray(MP_LANDMARK_COUNT) { landmarks[it].presence().orElse(0f) },
+            normalizedZ = FloatArray(MP_LANDMARK_COUNT) { landmarks[it].z() },
         )
     }
 

@@ -1,3 +1,5 @@
+import java.security.MessageDigest
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -17,6 +19,25 @@ android {
         versionCode = 4
         versionName = "2.0.1-feedback-preview"
         manifestPlaceholders["applicationLabel"] = "trex_v2"
+        val studio = project.hasProperty("validationStudio")
+        manifestPlaceholders["allowBackup"] = (!studio).toString()
+        buildConfigField("boolean", "VALIDATION_STUDIO", studio.toString())
+        if (studio) {
+            // MediaPipe 0.10.14에는 x86_64 JNI가 없으므로 지원되는 휴대폰 ABI로 고정한다.
+            ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }
+            applicationId = "com.example.trex_kotlin.validation"
+            versionCode = 1
+            versionName = "1.0.0-validation-preview"
+            manifestPlaceholders["applicationLabel"] = "TREX 검증"
+        }
+        val digest = MessageDigest.getInstance("SHA-256")
+        listOf(file("src/main/java"), rootProject.file("engine-lab/engine/src/main/kotlin"), file("src/main/assets/posture"))
+            .flatMap { root -> root.walkTopDown().filter { it.isFile && it.extension in listOf("kt", "json") }.toList() }
+            .sortedBy { it.invariantSeparatorsPath }.forEach { source ->
+                digest.update(source.relativeTo(rootProject.projectDir).invariantSeparatorsPath.toByteArray())
+                digest.update(source.readBytes())
+            }
+        buildConfigField("String", "SOURCE_FINGERPRINT", "\"${digest.digest().joinToString("") { "%02x".format(it) }}\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -44,10 +65,14 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
     androidResources {
         // MediaPipe 모델(.task)은 압축되면 AssetFileDescriptor 로 열 수 없다
         noCompress += "task"
+        if (project.hasProperty("validationStudio")) {
+            ignoreAssetsPattern = "!.svn:!.git:!.ds_store:!*.scc:.*:<dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~:exercise_gifs"
+        }
     }
 }
 

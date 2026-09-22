@@ -8,7 +8,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            TrexApp()
+            if (BuildConfig.VALIDATION_STUDIO) com.example.trex_kotlin.validation.ValidationStudio() else TrexApp()
         }
     }
 }

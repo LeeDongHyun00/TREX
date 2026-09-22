@@ -15,6 +15,10 @@ class V2FormFeedback(rules: PostureRuleSet, private val exercise: String) {
     var current: List<RuleOutcome> = emptyList()
         private set
     val supported: Boolean get() = eligible.isNotEmpty()
+    /** 검증 재생에서 판정 시각·측정값을 함께 보존하기 위한 읽기 전용 진단이다. */
+    var evaluatedAtMs: Long? = null
+        private set
+    fun evidence(): List<OnsetState> = coach.lastStates
 
     fun interrupt() {
         coach.onObservationLost()
@@ -23,6 +27,7 @@ class V2FormFeedback(rules: PostureRuleSet, private val exercise: String) {
         frames = 0
         previous = emptyMap()
         current = emptyList()
+        evaluatedAtMs = null
     }
 
     /** 첫 완결 반복 이후부터 평가한다. 가림 이후에도 새 반복을 확인해야 다시 시작한다. */
@@ -41,6 +46,7 @@ class V2FormFeedback(rules: PostureRuleSet, private val exercise: String) {
         if (!coach.onFrame(now, features)) { interrupt(); return null }
         if (++frames % 8 != 0) return null
         val event = coach.evaluate(now)
+        evaluatedAtMs = now
         val states = coach.lastStates
         current = states.map { state ->
             val stable = state.recent != Verdict.ABSTAIN && previous[state.rule.id]?.let {
