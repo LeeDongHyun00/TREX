@@ -1,5 +1,7 @@
 # 자세 평가 — 인수인계 (최신 갱신 2026-09-23)
 
+> **§64 — 검증 앱 GitHub 배포(2026-09-23)**: 사용자가 새 브랜치에서 앱을 다운로드하고 역할을 이해할 수 있도록 요청했다. `codex/validation-studio`를 원격에 생성하고 해당 README를 검증 앱 소개·사용 순서·26종·다운로드 안내로 교체한다. `validation-v1.0.0-preview` 사전 릴리스는 §63에서 검증한 동일 APK를 사용한다. 앱 구현 커밋과 문서/태그 커밋을 구분하며 상세 계약은 [검증 앱 배포](VALIDATION_STUDIO_RELEASE.md)를 따른다. 원격 게시 상태는 GitHub 릴리스와 `build/validation-release/publish-result.json`에서 확인한다.
+
 > **최신 작업 §63 — 검증 수집 앱(2026-09-23)**: `codex/validation-studio`에서 사용자 요청으로 [검증 스튜디오](VALIDATION_STUDIO.md)를 설계·구현했다. `-PvalidationStudio` → **TREX 검증 / com.example.trex_kotlin.validation** 별도 APK다. 26종 영상 촬영/가져오기, 실제 디코더 PTS와 원본 모델 좌표, 독립 정답 구간·초안/개정, 반복/플랭크 유지/자세 시간 평가, 동일 좌표 재생·ZIP을 연결한다. 구형 비교는 태그 소스의 반복 코어이며 구형 APK 전체/음성 정책 재현이 아니다. v2는 제품 엔진·피드백 정책을 그대로 호출한다. `main`과 원격 릴리스는 변경하지 않는다. APK·검사 결과는 `build/validation-release/`와 설계 문서의 검증 절을 확인한다. 실제 사람·휴대폰 촬영 검증은 아직이며 에뮬레이터 합성 MP4 검사를 운동 정확도로 표현하지 않는다.
 
 > **최신 배포 작업(2026-09-23, §62)**: 사용자가 `main`을 유지하고 `feature/pose-evaluation-engine`의 README에서 이 대화의 `trex_v2`를 두 번째 버전으로 소개하도록 요청했다. §60·§61 구현과 함께 첫 버전 비교, 26종 관측/16종 30항목 교정 지원표, `v2.0.1-feedback-preview` APK 다운로드를 준비한다. 실험실 APK가 아니다. [v2 배포 문서](ANDROID_V2_RELEASE.md)를 따른다. 실제 원격 반영·배포 파일 상태는 GitHub 브랜치와 릴리스에서 확인한다.
