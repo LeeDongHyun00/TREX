@@ -34,7 +34,7 @@
 |---|---|
 | 미커밋 변경 | 없음 |
 | 올라갈 커밋 | 전부 음식 인식 작업 (`git log --oneline origin/feature/posture-coach-reliability..HEAD` 로 확인) |
-| API 키 출현 (`A799AD2A`) | **0건** |
+| AI Hub API 키 출현 | **0건** (UUID 형태 문자열이 diff 에 아예 없음) |
 | JVM 유닛 테스트 | 42클래스 **284건 전부 통과** (실패 0 · 오류 0) |
 
 테스트는 `app/` 에 변경이 없어 gradle 이 UP-TO-DATE 로 건너뛰었다. 결과 XML 을 직접 집계한 수치다.
@@ -51,8 +51,9 @@ git status --short
 # 2) 올라갈 커밋 확인 — 음식 인식 작업만 있어야 한다(자세 커밋이 섞이면 분기점이 틀린 것)
 git log --oneline origin/feature/posture-coach-reliability..HEAD
 
-# 3) 키가 섞이지 않았는지 (0 이어야 한다)
-git log -p origin/feature/posture-coach-reliability..HEAD | grep -c "aihubapikey.*[A-F0-9]\{8\}-"
+# 3) 키가 섞이지 않았는지 — 아무것도 안 나와야 한다.
+#    키 앞자리를 여기 적으면 이 문서 자체가 걸려 늘 실패로 보인다. 형태로 찾는다.
+git log -p origin/feature/posture-coach-reliability..HEAD | grep -oE "[A-F0-9]{8}-[A-F0-9]{4}-[A-F0-9]{4}-[A-F0-9]{4}-[A-F0-9]{12}" | sort -u
 
 # 4) 테스트
 export JAVA_HOME="C:/Users/cys17/.jdks/jbr-21.0.11"
