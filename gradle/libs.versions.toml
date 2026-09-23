@@ -12,6 +12,8 @@ lifecycle = "2.10.0"
 composeBom = "2026.04.01"
 camerax = "1.4.2"
 mediapipeTasksVision = "0.10.14"
+litert = "1.2.0"
+exifinterface = "1.3.7"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -36,6 +38,9 @@ androidx-camera-camera2 = { group = "androidx.camera", name = "camera-camera2", 
 androidx-camera-lifecycle = { group = "androidx.camera", name = "camera-lifecycle", version.ref = "camerax" }
 androidx-camera-view = { group = "androidx.camera", name = "camera-view", version.ref = "camerax" }
 mediapipe-tasks-vision = { group = "com.google.mediapipe", name = "tasks-vision", version.ref = "mediapipeTasksVision" }
+# TFLite 후속 LiteRT — 자바 패키지(org.tensorflow.lite)는 그대로이며 16KB 페이지 기기를 지원한다.
+litert = { group = "com.google.ai.edge.litert", name = "litert", version.ref = "litert" }
+androidx-exifinterface = { group = "androidx.exifinterface", name = "exifinterface", version.ref = "exifinterface" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

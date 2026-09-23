@@ -236,6 +236,51 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         store.saveWater(waterByDay)
     }
 
+    /**
+     * 사용자가 직접 등록한 음식. 모델 클래스와 기본 DB(350종)에 없는 집밥·간편식·브랜드 제품을 담는다.
+     * 기기 안에만 저장한다 — 서버로 올리지 않는다.
+     */
+    var customFoods by mutableStateOf(store.loadCustomFoods() ?: emptyMap())
+        private set
+
+    /** 이름이 같으면 사용자가 등록한 값이 기본 DB 를 덮는다 — 본인이 고친 값을 존중한다. */
+    fun findFood(name: String): Nutrition? =
+        customFoods[name] ?: foodDatabase[name] ?: foodNameAliases[name]?.let { foodDatabase[it] }
+
+    /** 검색 결과. 사용자 등록분을 앞에 둔다(두 번째 값이 true 면 사용자 등록). */
+    fun searchFoods(query: String): List<Triple<String, Nutrition, Boolean>> {
+        val q = query.trim()
+        if (q.isEmpty()) return emptyList()
+        // 사용자가 쓰는 다른 이름으로 쳐도 찾히게 한다(흰쌀밥 → 쌀밥).
+        val viaAlias = foodNameAliases.filterKeys { it.contains(q) }.values.toSet()
+        val mine = customFoods.filterKeys { it.contains(q) }.map { (n, v) -> Triple(n, v, true) }
+        val base = foodDatabase
+            .filterKeys { (it.contains(q) || it in viaAlias) && it !in customFoods }
+            .map { (n, v) -> Triple(n, v, false) }
+        return mine + base
+    }
+
+    fun addCustomFood(name: String, nutrition: Nutrition) {
+        val key = name.trim()
+        if (key.isEmpty()) return
+        customFoods = customFoods + (key to nutrition)
+        store.saveCustomFoods(customFoods)
+    }
+
+    fun removeCustomFood(name: String) {
+        customFoods = customFoods - name
+        store.saveCustomFoods(customFoods)
+    }
+
+    /**
+     * 지금까지 기록한 식단에서 자주 담은 음식 순. 검색어가 비어 있는 화면의 첫 목록으로 쓴다.
+     *
+     * 따로 저장하지 않고 기존 기록에서 센다 — 빈도표를 새로 저장하면 지우기·이전·기록과의
+     * 불일치가 따라붙는데, 기록 자체가 이미 정답이라 그럴 이유가 없다. 세는 규칙은
+     * [frequentFoodsOf] 에 있다(테스트가 같은 함수를 부른다).
+     */
+    fun frequentFoods(limit: Int = 8): List<Pair<String, Nutrition>> =
+        frequentFoodsOf(dietByDay, limit, ::findFood)
     /** 슬롯에 음식 추가 (사진/수동 기록 플로우의 결과). 같은 이름은 수량을 올린다. */
     fun appendFoods(offset: Int, slot: String, foods: List<FoodEntry>) {
         mutateSlots(offset) { slots ->

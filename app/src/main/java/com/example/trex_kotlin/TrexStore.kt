@@ -370,6 +370,38 @@ class TrexStore(context: Context, preferenceName: String = "trex_store") {
         prefs.edit().putString(KEY_WATER, root.toString()).apply()
     }
 
+    // ---- 사용자가 직접 등록한 음식 (모델·기본 DB 에 없는 집밥·간편식 등)
+
+    fun loadCustomFoods(): Map<String, Nutrition>? = prefs.getString(KEY_CUSTOM_FOODS, null)?.let { raw ->
+        runCatching {
+            val root = JSONObject(raw)
+            buildMap {
+                root.keys().forEach { name ->
+                    val o = root.getJSONObject(name)
+                    put(
+                        name,
+                        Nutrition(
+                            kcal = o.getInt("kcal"),
+                            carb = o.getDouble("carb"),
+                            protein = o.getDouble("protein"),
+                            fat = o.getDouble("fat"),
+                        ),
+                    )
+                }
+            }
+        }.getOrNull()
+    }
+
+    fun saveCustomFoods(foods: Map<String, Nutrition>) {
+        val root = JSONObject()
+        foods.forEach { (name, n) ->
+            root.put(
+                name,
+                JSONObject().put("kcal", n.kcal).put("carb", n.carb).put("protein", n.protein).put("fat", n.fat),
+            )
+        }
+        prefs.edit().putString(KEY_CUSTOM_FOODS, root.toString()).apply()
+    }
     // ---- 영양 목표 (null 이면 프로필 기반 추천값 사용)
 
     fun loadGoalOverride(): Nutrition? = prefs.getString(KEY_GOAL, null)?.let { raw ->
@@ -409,5 +441,6 @@ class TrexStore(context: Context, preferenceName: String = "trex_store") {
         const val KEY_DIET = "diet"
         const val KEY_WATER = "water"
         const val KEY_GOAL = "goal_override"
+        const val KEY_CUSTOM_FOODS = "custom_foods"
     }
 }
