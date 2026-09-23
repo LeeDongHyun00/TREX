@@ -77,11 +77,26 @@ macOS/Linux 기준:
 
 ## 프로젝트 구조
 
+이 저장소는 앱과 서버를 함께 두는 **모노레포**입니다. 둘은 서로 독립된 빌드이고, 루트의
+`./gradlew` 는 **Android 앱만** 빌드합니다. 서버는 `server/` 안에서 따로 빌드합니다.
+
+| 위치 | 내용 | 빌드 |
+|---|---|---|
+| `app/` | Android Compose 앱 (Kotlin) | 루트 `./gradlew :app:assembleDebug` |
+| `server/` | REST API 서버 (Spring Boot / Java 17) | `cd server && ./gradlew bootRun` |
+| `research/` | 자세 평가 연구 코드·스펙 | — |
+| `docs/` | 설계 근거·인수인계 문서 | — |
+| `assets/` | 디자인·원본 이미지 자료 | — |
+| `trex_design_react/` | React 기반 디자인 프로토타입 | — |
+
+앱 코드 세부:
+
 - `app/src/main/java/com/example/trex_kotlin/`: Android Compose 앱 코드
 - `app/src/main/res/`: Android 리소스
 - `app/src/main/res/drawable-nodpi/`: 로그인 애니메이션 프레임 이미지 등 원본 크기 리소스
-- `assets/`: 디자인/원본 이미지 자료
-- `trex_design_react/`: React 기반 디자인 프로토타입
+
+서버 설정: `server/src/main/resources/application-example.yml` 을 복사해 쓰고, `JWT_SECRET`
+은 환경변수로 주입합니다. 예시 파일의 기본값은 로컬 개발용 자리표시자입니다.
 
 ## Git에 포함하지 않는 파일
 
