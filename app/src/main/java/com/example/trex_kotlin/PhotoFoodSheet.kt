@@ -33,9 +33,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
@@ -44,6 +46,7 @@ import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.PhotoCamera
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Remove
+import androidx.compose.material.icons.rounded.SwapHoriz
 import androidx.compose.material.icons.rounded.RestaurantMenu
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
@@ -96,11 +99,23 @@ private enum class PhotoStep { Pick, Camera, Analyzing, Result, Failed }
  */
 private const val PREVIEW_MAX_PX = 1024
 
+/** [PhotoFoodSheet] 의 음식 고르기 대상이 "새로 추가" 임을 나타내는 값. 0 이상은 바꿀 줄의 위치다. */
+private const val ADD_NEW = -1
+
 /**
- * 인식 결과 한 줄. 수량은 직접 기록 시트와 같은 qty 스테퍼로 조절한다. nutrition 이 없으면 기록에서 제외한다.
- * [photoIndex] 는 이 음식이 잡힌 사진(여러 장일 때 어느 사진인지 보여준다).
+ * 결과 한 줄. 수량은 직접 기록 시트와 같은 qty 스테퍼로 조절한다. nutrition 이 없으면 기록에서 제외한다.
+ *
+ * [confidence] 와 [photoIndex] 가 **둘 다 null 이면 사용자가 직접 고른 항목**이다. 모델이 판정한 게
+ * 아니므로 확신도를 붙이지 않고(판정하지 않은 것을 판정한 것처럼 말하지 않는다), 출처 사진도 없다 —
+ * 아무 사진이나 붙이면 그 사진에서 잡힌 것처럼 보인다.
  */
-private data class RecognizedItem(val name: String, val nutrition: Nutrition?, val confidence: Float, val photoIndex: Int, val qty: Int = 1)
+private data class RecognizedItem(
+    val name: String,
+    val nutrition: Nutrition?,
+    val confidence: Float?,
+    val photoIndex: Int?,
+    val qty: Int = 1,
+)
 
 private fun List<RecognizedItem>.toEntries(): List<FoodEntry> =
     mapNotNull { item -> item.nutrition?.let { FoodEntry(item.name, it, item.qty) } }
@@ -129,6 +144,8 @@ internal fun PhotoFoodSheet(app: AppViewModel, onClose: () -> Unit) {
     var failure by remember { mutableStateOf("") }
     var items by remember { mutableStateOf<List<RecognizedItem>>(emptyList()) }
     var zoomed by remember { mutableStateOf<Bitmap?>(null) }
+    // 음식 고르기 창의 대상. null 이면 닫힘, ADD_NEW 면 새로 추가, 0 이상이면 그 줄을 바꾼다.
+    var pickTarget by remember { mutableStateOf<Int?>(null) }
 
     // 모델(12MB)·인터프리터 초기화를 첫 분석이 아니라 시트를 여는 시점에 미리 해 둔다.
     LaunchedEffect(Unit) { withContext(Dispatchers.Default) { FoodDetector.warmUp(context) } }
@@ -238,6 +255,9 @@ internal fun PhotoFoodSheet(app: AppViewModel, onClose: () -> Unit) {
                                 if (i != index) item else (item.qty + delta).let { q -> if (q <= 0) null else item.copy(qty = q) }
                             }
                         },
+                        hasApproximateNutrition = items.any { it.name in approximateNutritionNames || it.name in app.customFoods },
+                        onAdd = { pickTarget = ADD_NEW },
+                        onReplace = { index -> pickTarget = index },
                         onRetry = { retry() },
                         onSave = {
                             app.appendFoods(0, slot, items.toEntries())
@@ -265,6 +285,28 @@ internal fun PhotoFoodSheet(app: AppViewModel, onClose: () -> Unit) {
     }
 
     zoomed?.let { photo -> PhotoLightbox(photo) { zoomed = null } }
+
+    pickTarget?.let { target ->
+        FoodPicker(
+            app = app,
+            title = items.getOrNull(target)?.let { "${it.name} 을(를) 바꾸기" } ?: "빠진 음식 추가",
+            onPick = { name, nutrition ->
+                items = if (target == ADD_NEW) {
+                    // 이미 있는 음식을 또 고르면 줄을 늘리지 않고 수량만 올린다 — 스테퍼와 같은 규칙이다.
+                    val at = items.indexOfFirst { it.name == name }
+                    if (at >= 0) items.mapIndexed { i, item -> if (i == at) item.copy(qty = item.qty + 1) else item }
+                    else items + RecognizedItem(name, nutrition, confidence = null, photoIndex = null)
+                } else {
+                    // 바꿔 넣은 이름은 모델이 판정한 게 아니다. 확신도와 출처 사진을 떼어 낸다.
+                    items.mapIndexed { i, item ->
+                        if (i == target) item.copy(name = name, nutrition = nutrition, confidence = null, photoIndex = null) else item
+                    }
+                }
+                pickTarget = null
+            },
+            onDismiss = { pickTarget = null },
+        )
+    }
 }
 
 @Composable
@@ -463,8 +505,11 @@ private fun ResultStep(
     slot: String,
     items: List<RecognizedItem>,
     retryLabel: String,
+    hasApproximateNutrition: Boolean,
     onSlot: (String) -> Unit,
     onQty: (index: Int, delta: Int) -> Unit,
+    onAdd: () -> Unit,
+    onReplace: (index: Int) -> Unit,
     onRetry: () -> Unit,
     onSave: () -> Unit,
     onSaveAndManual: () -> Unit,
@@ -493,13 +538,41 @@ private fun ResultStep(
                         Row(Modifier.padding(horizontal = 14.dp, vertical = 13.dp), verticalAlignment = Alignment.CenterVertically) {
                             // 여러 장을 분석했을 때는 이 음식이 잡힌 사진을 번호와 함께 보여준다.
                             if (photos.size > 1) {
-                                PhotoThumb(photos.getOrNull(item.photoIndex), number = item.photoIndex + 1, size = 44.dp)
+                                val from = item.photoIndex
+                                if (from != null) {
+                                    PhotoThumb(photos.getOrNull(from), number = from + 1, size = 44.dp)
+                                } else {
+                                    // 직접 고른 항목은 출처 사진이 없다. 아무 사진이나 붙이면 거기서 잡힌 것처럼 보인다.
+                                    Box(
+                                        Modifier.size(44.dp).clip(RoundedCornerShape(14.dp)).background(c.surface2),
+                                        contentAlignment = Alignment.Center,
+                                    ) {
+                                        Icon(Icons.Rounded.Add, contentDescription = null, tint = c.text3, modifier = Modifier.size(16.dp))
+                                    }
+                                }
                                 Spacer(Modifier.width(12.dp))
                             }
                             Column(Modifier.weight(1f)) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                Row(
+                                    Modifier
+                                        .clip(RoundedCornerShape(9.dp))
+                                        .clickable { onReplace(i) }
+                                        .padding(horizontal = 5.dp, vertical = 3.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
                                     Text(item.name, fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold)
-                                    Text("확신 ${(item.confidence * 100).toInt()}%", color = c.text3, fontSize = 10.5.sp, modifier = Modifier.padding(start = 6.dp))
+                                    Spacer(Modifier.width(4.dp))
+                                    Icon(
+                                        Icons.Rounded.SwapHoriz, contentDescription = "다른 음식으로 바꾸기",
+                                        tint = c.text3, modifier = Modifier.size(14.dp),
+                                    )
+                                    // 확신도는 모델이 판정했을 때만 붙인다. 직접 고른 것에 붙이면 안 한 판정을 한 것처럼 말하게 된다.
+                                    val confidence = item.confidence
+                                    if (confidence != null) {
+                                        Text("확신 ${(confidence * 100).toInt()}%", color = c.text3, fontSize = 10.5.sp, modifier = Modifier.padding(start = 6.dp))
+                                    } else {
+                                        Text("직접 고름", color = c.primaryText, fontSize = 10.5.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 6.dp))
+                                    }
                                 }
                                 val n = item.nutrition
                                 Text(
@@ -520,16 +593,29 @@ private fun ResultStep(
                             )
                         }
                     }
+                    // 놓친 음식을 이 자리에서 더한다. 저장한 뒤 직접 기록 시트로 가는 길보다 짧다.
+                    if (items.isNotEmpty()) Box(Modifier.fillMaxWidth().height(1.dp).background(c.line))
+                    Row(
+                        Modifier.fillMaxWidth().clickable(onClick = onAdd).padding(horizontal = 14.dp, vertical = 13.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Box(Modifier.size(28.dp).clip(CircleShape).background(c.surface2), contentAlignment = Alignment.Center) {
+                            Icon(Icons.Rounded.Add, contentDescription = null, tint = c.primaryText, modifier = Modifier.size(14.dp))
+                        }
+                        Spacer(Modifier.width(10.dp))
+                        Text("빠진 음식 추가", color = c.text2, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                    }
                 }
             }
             Text("합계 ${total.kcal} kcal · 탄 ${total.carb.toInt()} · 단 ${total.protein.toInt()} · 지 ${total.fat.toInt()}", color = c.text, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
             // 실측값(AI Hub 영양DB)과 추정값을 같은 확신으로 말하지 않는다 — 추정이 섞였을 때만 그렇다고 밝힌다.
-            if (items.any { it.name in approximateNutritionNames }) {
+            // 직접 등록한 음식도 사용자가 적은 값이라 실측이 아니다(hasApproximateNutrition 이 둘 다 본다).
+            if (hasApproximateNutrition) {
                 WashBanner("일부 항목은 아직 실측 영양값이 없어 추정치로 보여드려요. 참고용으로 봐 주세요.", Icons.Rounded.Info)
             } else {
                 WashBanner("영양값은 1인분 기준이에요. 실제로 드신 양이 다르면 수량으로 조절해 주세요.", Icons.Rounded.Info)
             }
-            Text("잘못 인식된 음식은 빼고, 빠진 음식은 직접 추가에서 더해 주세요.", color = c.text3, fontSize = 11.5.sp, lineHeight = 17.sp)
+            Text("음식 이름을 누르면 다른 음식으로 바꿀 수 있어요. 잘못 인식된 건 수량을 줄여 빼 주세요.", color = c.text3, fontSize = 11.5.sp, lineHeight = 17.sp)
         }
         Box(Modifier.fillMaxWidth().height(1.dp).background(c.line))
         Row(

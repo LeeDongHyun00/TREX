@@ -60,6 +60,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import kotlinx.coroutines.delay
 
 /** 메인 하단 시트 라우터 (리디자인). */
@@ -610,6 +612,142 @@ internal fun ManualSheet(app: AppViewModel, initialSlot: String, onClose: () -> 
     }
 }
 
+/**
+ * 음식을 하나 골라 돌려주는 창.
+ *
+ * 사진 결과 화면의 "빠진 음식 추가"와 "잘못 잡힌 이름 바꾸기"가 이 화면을 함께 쓴다 —
+ * 둘 다 "무슨 음식인지 고른다"는 같은 일이라 UI 를 나눌 이유가 없다.
+ *
+ * 검색어가 비어 있으면 자주 먹는 음식을 먼저 보여준다. 실사용 평가에서 사진 한 장당
+ * 손보는 횟수가 1.8회였는데(docs/FOOD_EVAL_RESULTS.md), 늘 먹는 밥·국을 매번 이름으로
+ * 찾게 하는 것이 그중 큰 몫이었다.
+ *
+ * 검색해도 없으면 [CustomFoodForm] 으로 이어져 그 자리에서 등록하고 바로 고를 수 있다.
+ */
+@Composable
+internal fun FoodPicker(
+    app: AppViewModel,
+    title: String,
+    onPick: (String, Nutrition) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val c = Trex.c
+    var query by remember { mutableStateOf("") }
+    val trimmed = query.trim()
+    val matches = app.searchFoods(query)
+    val frequent = app.frequentFoods()
+
+    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        Column(
+            Modifier
+                .fillMaxWidth(0.92f)
+                .fillMaxHeight(0.82f)
+                .clip(RoundedCornerShape(26.dp))
+                .background(c.sheet),
+        ) {
+            Row(
+                Modifier.padding(start = 20.dp, end = 20.dp, top = 18.dp, bottom = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Kicker("음식 고르기")
+                    Text(title, color = c.text, fontSize = 16.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 2.dp))
+                }
+                SheetClose(onDismiss)
+            }
+            Box(Modifier.padding(horizontal = 20.dp)) {
+                BasicTextField(
+                    value = query,
+                    onValueChange = { query = it },
+                    singleLine = true,
+                    textStyle = TextStyle(color = c.text, fontSize = 13.5.sp),
+                    cursorBrush = SolidColor(c.primary),
+                    decorationBox = { inner ->
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .height(46.dp)
+                                .clip(RoundedCornerShape(15.dp))
+                                .background(c.field)
+                                .border(1.dp, c.fieldLine, RoundedCornerShape(15.dp))
+                                .padding(horizontal = 14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(Icons.Rounded.Search, contentDescription = null, tint = c.text3, modifier = Modifier.size(15.dp))
+                            Spacer(Modifier.width(9.dp))
+                            Box(Modifier.weight(1f)) {
+                                if (query.isBlank()) Text("음식 이름 검색", color = c.text3, fontSize = 13.5.sp)
+                                inner()
+                            }
+                        }
+                    },
+                )
+            }
+            Column(
+                Modifier
+                    .weight(1f)
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 20.dp)
+                    .padding(top = 12.dp, bottom = 20.dp),
+                verticalArrangement = Arrangement.spacedBy(7.dp),
+            ) {
+                when {
+                    trimmed.isEmpty() && frequent.isEmpty() ->
+                        Text(
+                            "음식 이름을 검색해 보세룡", color = c.text3, fontSize = 12.sp,
+                            modifier = Modifier.fillMaxWidth().padding(top = 6.dp), textAlign = TextAlign.Center,
+                        )
+                    trimmed.isEmpty() -> {
+                        Text("자주 먹는 음식", color = c.text3, fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold)
+                        frequent.forEach { (name, n) ->
+                            FoodPickRow(name, n, isCustom = name in app.customFoods) { onPick(name, n) }
+                        }
+                    }
+                    matches.isEmpty() ->
+                        // 기본 DB 에도 내 음식에도 없다. 등록하면 바로 고른 것으로 친다 —
+                        // 등록만 하고 다시 찾게 하면 방금 한 일을 한 번 더 시키는 셈이다.
+                        CustomFoodForm(name = trimmed) { nutrition ->
+                            app.addCustomFood(trimmed, nutrition)
+                            onPick(trimmed, nutrition)
+                        }
+                    else -> matches.forEach { (name, n, isCustom) ->
+                        FoodPickRow(name, n, isCustom) { onPick(name, n) }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** [FoodPicker] 의 한 줄. 누르면 그 음식으로 확정된다. */
+@Composable
+private fun FoodPickRow(name: String, n: Nutrition, isCustom: Boolean, onClick: () -> Unit) {
+    val c = Trex.c
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(18.dp),
+        color = c.surface,
+        contentColor = c.text,
+        border = BorderStroke(1.dp, c.line),
+    ) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(name, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                    // 직접 등록한 음식은 영양값이 사용자가 적은 값이라 기본 DB 와 구분해 표시한다.
+                    if (isCustom) Text("내 음식", color = c.primaryText, fontSize = 10.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 6.dp))
+                }
+                Text(
+                    "${n.kcal} kcal · 탄 ${n.carb.toInt()} · 단 ${n.protein.toInt()} · 지 ${n.fat.toInt()}",
+                    color = c.text3, fontSize = 11.sp, modifier = Modifier.padding(top = 2.dp),
+                )
+            }
+            Box(Modifier.size(28.dp).clip(CircleShape).background(c.surface2), contentAlignment = Alignment.Center) {
+                Icon(Icons.Rounded.Check, contentDescription = "고르기", tint = c.primaryText, modifier = Modifier.size(14.dp))
+            }
+        }
+    }
+}
 /**
  * 기본 DB 에 없는 음식을 사용자가 등록하는 폼. 등록한 값은 기기에만 저장되고 검색에서 "내 음식" 으로 뜬다.
  * 칼로리만 필수다 — 탄단지를 모르면 비워 두고 0 으로 기록한다(모르는 값을 지어내지 않는다).
