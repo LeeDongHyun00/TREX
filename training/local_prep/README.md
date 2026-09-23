@@ -17,7 +17,15 @@ AI Hub 는 해외 IP 다운로드를 막아 Colab 에서 직접 받을 수 없�
 2. `node build_class_map.js` → `class_map.json/csv`.
 3. `bash pipeline.sh <API키> [묶음…]` — 묶음마다 다운로드 → 해제 → `prep_dataset.js add` → 원본 삭제. **서버가 Range 요청을 거부해 이어받기가 안 된다**(`curl: (33) … Cannot resume`). `dl.sh` 가 120초간 50KB/s 미만이면 끊고 **처음부터** 다시 받는다(최대 30회). 속도는 약 0.85MB/s = 시간당 3GB. 실측: 15GB 묶음 약 5시간, 끊김은 가끔 발생하나 재시도로 넘어간다. 이미 돌고 있는 다운로드가 있으면 `run_all.sh` 가 끝나기를 기다렸다가 큐를 이어간다 — **동시 다운로드는 하지 않는다**(멈춤 원인 의심).
 4. `node prep_dataset.js finalize` → `dataset_final/`(포함된 클래스만 0..nc-1 재배열, data.yaml, food_labels.txt, nutrition.json).
-5. `dataset_final` 을 zip → Drive 업로드 → Colab.
+5. `dataset_final` 을 **tar 로** 묶어 Drive(`MyDrive/trex/dataset.tar`) 업로드 → Colab.
+   ```bash
+   tar -cf dataset.tar -C dataset_final .   # ← -C 로 들어가서 . 을 만다
+   ```
+   `tar -cf dataset.tar dataset_final` 로 하면 **안에 폴더가 한 겹 더 생긴다.** 그러면 Colab 에서
+   `/content/dataset/data.yaml` 대신 `/content/dataset/dataset_final/data.yaml` 이 되어 학습 노트북
+   4번 셀이 assert 로 죽는다(2026-09-23 실제로 겪음). `after_last_bundle.sh` 는 고쳤고, 노트북 2번 셀도
+   폴더가 한 겹 더 있으면 끌어올리도록 방어해 뒀다. zip 은 쓰지 않는다 — Windows zip 은 경로 구분자가
+   백슬래시라 리눅스에서 못 푼다.
 
 ## 변환 규칙
 - 그릇 박스(클래스 0)는 버리고 음식 박스만 전역 index 로 쓴다. EXIF 회전을 적용한 표시 크기가 XML 크기와 같은지 처음 5장으로 검사한다(어긋나면 중단).

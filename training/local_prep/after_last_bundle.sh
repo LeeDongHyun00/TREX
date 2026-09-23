@@ -45,7 +45,10 @@ if [ -f "$ROOT/dataset.tar" ]; then
   say "기존 tar 를 dataset_342.tar 로 보관(342클래스 재현용)"
 fi
 say "dataset.tar 생성 중"
-if (cd "$ROOT" && tar -cf dataset.tar dataset_final); then
+# -C 로 들어가서 . 을 만다. `tar -cf x.tar dataset_final` 로 하면 tar 안에 폴더가 한 겹 더 생겨
+# Colab 노트북이 기대하는 /content/dataset/data.yaml 대신 .../dataset_final/data.yaml 이 된다
+# (2026-09-23 실제로 이렇게 만들어 학습 노트북 4번 셀이 assert 로 죽었다).
+if (cd "$ROOT" && tar -cf dataset.tar -C dataset_final .); then
   say "완료: dataset.tar $(du -h "$ROOT/dataset.tar" | cut -f1) · 클래스 $(wc -l < "$ROOT/dataset_final/food_labels.txt")종"
   say "다음: Drive MyDrive/trex/dataset.tar 로 올리고 training/train_food_yolov8_colab.ipynb 실행"
 else
