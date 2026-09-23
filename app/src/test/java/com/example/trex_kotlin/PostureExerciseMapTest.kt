@@ -34,8 +34,20 @@ class PostureExerciseMapTest {
 
     @Test
     fun standingExercisesStillMapped() {
-        assertEquals("바벨 스쿼트", postureExerciseMap["기본 스쿼트"])
+        assertEquals("바벨 스쿼트", postureExerciseMap["바벨 스쿼트"])
         assertEquals("행잉 레그 레이즈", postureExerciseMap["행잉 레그 레이즈"])
-        assertTrue(postureExerciseMap.size >= 27)
+        // Bodyweight squat borrowed the barbell standard; it is no longer mapped.
+        assertFalse(postureExerciseMap.containsKey("기본 스쿼트"))
+        assertEquals(26, postureExerciseMap.size)
+        assertEquals(26, postureExerciseMap.values.toSet().size)
+    }
+
+    @Test
+    fun catalogContainsOnlyAihubMappedExercises() {
+        // The catalog is trimmed to AIHub-backed exercises so every pick has a real rule basis.
+        val catalog = workoutCatalog.values.flatten()
+        assertEquals(postureExerciseMap.keys, catalog.map { it.name }.toSet())
+        assertTrue(catalog.all { it.posture && Workout("t", it.name, it.reps, it.duration, true, it.category).postureSupported() })
+        assertTrue(todayPlan.all { it.name in postureExerciseMap })
     }
 }

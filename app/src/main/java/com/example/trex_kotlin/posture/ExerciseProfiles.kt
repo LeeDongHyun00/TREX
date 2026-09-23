@@ -30,7 +30,10 @@ data class ExerciseProfile(val name: String, val referenceExercise: String?, val
     }
 }
 
-/** 57개 카탈로그의 공통 계약. 미검증 종목에는 다른 운동의 정답 규칙을 이식하지 않는다. */
+/**
+ * 26개 카탈로그(AIHub 규칙 종목과 1:1, spec §56)의 공통 계약. 미검증 종목에는 다른 운동의 정답 규칙을 이식하지 않는다.
+ * 카탈로그 밖 이름(예전 저장 루틴의 종목)은 프로필이 없어 카메라를 켜지 않는다.
+ */
 object ExerciseProfiles {
     private val legs = listOf("knee_L", "knee_R", "hip_L", "hip_R", "torso_pitch")
     private val arms = listOf("elbow_L", "elbow_R", "elbow_torso_L", "elbow_torso_R", "torso_pitch")
@@ -44,8 +47,8 @@ object ExerciseProfiles {
             add(ExerciseProfile(name, ref, capture, floor, if (alternating) ObservationKind.WINDOW else kind, features))
         }
         val c=CapturePosition.FRONT; val b=CapturePosition.RIGHT_FRONT; val d=CapturePosition.LEFT_FRONT
-        val side=CapturePosition.SIDE; val low=CapturePosition.FLOOR_SIDE; val oblique=CapturePosition.FLOOR_FRONT
-        p("기본 스쿼트","바벨 스쿼트",c,legs); p("바벨 스쿼트","바벨 스쿼트",c,legs)
+        val low=CapturePosition.FLOOR_SIDE; val oblique=CapturePosition.FLOOR_FRONT
+        p("바벨 스쿼트","바벨 스쿼트",c,legs)
         p("런지","스텝 포워드 다이나믹 런지",b,legs); p("바벨 런지","바벨 런지",d,legs)
         p("사이드 런지","사이드 런지",b,legs); p("크로스 런지","크로스 런지",c,legs)
         p("바벨 데드리프트","바벨 데드리프트",c,legs); p("굿모닝","굿모닝",c,legs)
@@ -64,29 +67,6 @@ object ExerciseProfiles {
         p("힙 쓰러스트","힙쓰러스트",low,listOf("hip_dev_knee_L","hip_dev_knee_R","hip_ang_L","hip_ang_R"),true)
         p("시저 크로스","시저크로스",oblique,floorLegs+"ankle_gap2d",true)
         p("Y 레이즈","Y - Exercise",oblique,listOf("hand_shoulder_off_L","hand_shoulder_off_R"),true)
-        p("불가리안 스플릿 스쿼트",null,b,legs)
-        p("글루트 브릿지",null,low,listOf("hip_dev_knee_L","hip_dev_knee_R"),true)
-        p("월 싯",null,side,legs,kind=ObservationKind.HOLD)
-        p("카프 레이즈",null,side,listOf("heel_lift_L","heel_lift_R"))
-        p("인클라인 푸쉬업",null,side,floorArms,true); p("벽 푸쉬업",null,side,floorArms,true)
-        p("밴드 로우",null,b,arms)
-        p("사이드 플랭크",null,side,listOf("hip_dev_ankle_L","hip_dev_ankle_R"),true,ObservationKind.HOLD)
-        p("플랭크 숄더탭",null,oblique,listOf("shoulder_asym2d")+floorArms,true)
-        p("버드독",null,oblique,floorLegs+floorArms,true); p("데드버그",null,oblique,floorLegs+floorArms,true)
-        p("할로우 홀드",null,low,floorLegs+listOf("hand_shoulder_off_L","hand_shoulder_off_R"),true,ObservationKind.HOLD)
-        p("힙 브릿지 홀드",null,low,listOf("hip_dev_knee_L","hip_dev_knee_R"),true,ObservationKind.HOLD)
-        p("리버스 크런치",null,low,floorLegs,true); p("바이시클 크런치",null,oblique,floorLegs,true)
-        p("러시안 트위스트",null,oblique,listOf("hand_shoulder_off_L","hand_shoulder_off_R"),true)
-        p("제자리 걷기",null,c,listOf("knee_h_L","knee_h_R")); p("하이 니",null,b,listOf("knee_h_L","knee_h_R"))
-        p("마운틴 클라이머",null,oblique,floorLegs,true); p("점핑잭",null,c,raises+"stance_w")
-        p("스텝업",null,b,legs); p("스키터 점프",null,c,listOf("stance_w","torso_roll","knee_L","knee_R"))
-        p("섀도 복싱",null,b,arms); p("버피",null,b,legs+arms)
-        p("마무리 스트레칭",null,c,emptyList(),kind=ObservationKind.GUIDE)
-        p("캣카우 스트레칭",null,low,listOf("hip_ang_L","hip_ang_R","head_trunk_ang"),true)
-        p("차일드 포즈",null,low,floorLegs,true,ObservationKind.HOLD)
-        p("폼롤러 마무리",null,c,emptyList(),kind=ObservationKind.GUIDE)
-        p("햄스트링 스트레칭",null,side,legs,kind=ObservationKind.HOLD)
-        p("흉추 회전 스트레칭",null,oblique,listOf("hand_shoulder_off_L","hand_shoulder_off_R"),true)
     }
     fun forName(name: String): ExerciseProfile? = all.firstOrNull { it.name == name }
     fun forReference(name: String): ExerciseProfile? = forName(name) ?: all.firstOrNull { it.referenceExercise == name }

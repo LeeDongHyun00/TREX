@@ -98,12 +98,10 @@ private fun SheetTitleRow(kicker: String, title: String, onClose: () -> Unit) {
 // ============================================================= 대체 운동
 
 private val altFallbacks = mapOf(
-    "하체" to listOf(WorkoutAlt("글루트 브릿지", "12회 × 3세트"), WorkoutAlt("카프 레이즈", "15회 × 3세트")),
-    "코어" to listOf(WorkoutAlt("버드독", "10회 × 3세트"), WorkoutAlt("사이드 플랭크", "30초 × 3세트")),
-    "복근" to listOf(WorkoutAlt("데드버그", "12회 × 3세트"), WorkoutAlt("사이드 플랭크", "30초 × 3세트")),
-    "상체" to listOf(WorkoutAlt("니 푸쉬업", "10회 × 3세트"), WorkoutAlt("밴드 로우", "12회 × 3세트")),
-    "유산소" to listOf(WorkoutAlt("제자리 걷기", "60초 × 4세트"), WorkoutAlt("스텝업", "12회 × 3세트")),
-    "회복" to listOf(WorkoutAlt("캣카우 스트레칭", "전신 5분"), WorkoutAlt("차일드 포즈", "전신 4분")),
+    "하체" to listOf(WorkoutAlt("런지", "10회 × 3세트"), WorkoutAlt("힙 쓰러스트", "12회 × 3세트")),
+    "코어" to listOf(WorkoutAlt("크런치", "15회 × 3세트"), WorkoutAlt("레그 레이즈", "12회 × 3세트")),
+    "복근" to listOf(WorkoutAlt("크런치", "15회 × 3세트"), WorkoutAlt("플랭크", "45초 × 3세트")),
+    "상체" to listOf(WorkoutAlt("니 푸쉬업", "10회 × 3세트"), WorkoutAlt("랫풀 다운", "12회 × 3세트")),
 )
 
 /** 대체 운동 칩의 첫 항목 — 카테고리가 아니라 "추천 묶음"을 고르는 자리다. */
@@ -856,13 +854,14 @@ private fun NumberField(value: String, onChange: (String) -> Unit, placeholder: 
 internal data class WorkoutTemplate(val name: String, val reps: String, val duration: String, val category: String, val posture: Boolean)
 
 /**
- * 운동 카탈로그 — posture 플래그는 규칙 엔진이 실제로 지원하는 종목(postureExerciseMap)에만 켠다.
- * 지원 종목은 rules_mp_v0(서서 하는 종목) + rules_floor_v0.1(바닥 종목, 전부 beta) 기준이다.
- * 바이시클 크런치는 MP 충실도 게이트(spec §25a) 후 남은 규칙이 없어 posture=false.
+ * 운동 카탈로그 — AIHub 피트니스 자세 데이터에 규칙 근거가 있는 26종목만 둔다(spec §56).
+ * 앱 이름과 AIHub 종목이 1:1 이고 전부 postureExerciseMap 에 있다. 데이터에 없는 종목을 남기면
+ * 카메라는 켜지는데 판정 근거가 없어, 비교 전용 안내가 자세 평가처럼 읽힌다.
+ * 기본 스쿼트는 AIHub 에 맨몸 스쿼트가 없어 바벨 스쿼트 기준을 빌려 쓰던 종목이라 뺐다.
+ * 바이시클 크런치는 MP 충실도 게이트(spec §25a) 후 남은 규칙이 없어 처음부터 제외.
  */
 internal val workoutCatalog = mapOf(
     "하체" to listOf(
-        WorkoutTemplate("기본 스쿼트", "12회 × 3세트", "8분", "하체", true),
         WorkoutTemplate("바벨 스쿼트", "10회 × 3세트", "10분", "하체", true),
         WorkoutTemplate("런지", "10회 × 3세트", "10분", "하체", true),
         WorkoutTemplate("바벨 런지", "10회 × 3세트", "10분", "하체", true),
@@ -871,10 +870,6 @@ internal val workoutCatalog = mapOf(
         WorkoutTemplate("바벨 데드리프트", "10회 × 3세트", "10분", "하체", true),
         WorkoutTemplate("굿모닝", "12회 × 3세트", "8분", "하체", true),
         WorkoutTemplate("힙 쓰러스트", "12회 × 3세트", "8분", "하체", true),
-        WorkoutTemplate("불가리안 스플릿 스쿼트", "10회 × 3세트", "9분", "하체", false),
-        WorkoutTemplate("글루트 브릿지", "12회 × 3세트", "7분", "하체", false),
-        WorkoutTemplate("월 싯", "45초 × 3세트", "6분", "하체", false),
-        WorkoutTemplate("카프 레이즈", "15회 × 3세트", "6분", "하체", false),
     ),
     "상체" to listOf(
         WorkoutTemplate("오버헤드 프레스", "10회 × 3세트", "9분", "상체", true),
@@ -888,47 +883,17 @@ internal val workoutCatalog = mapOf(
         WorkoutTemplate("푸쉬업", "12회 × 3세트", "7분", "상체", true),
         WorkoutTemplate("니 푸쉬업", "10회 × 3세트", "7분", "상체", true),
         WorkoutTemplate("Y 레이즈", "12회 × 3세트", "6분", "상체", true),
-        WorkoutTemplate("인클라인 푸쉬업", "12회 × 3세트", "7분", "상체", false),
-        WorkoutTemplate("벽 푸쉬업", "12회 × 3세트", "6분", "상체", false),
-        WorkoutTemplate("밴드 로우", "12회 × 3세트", "8분", "상체", false),
     ),
     "코어" to listOf(
         WorkoutTemplate("플랭크", "45초 × 3세트", "6분", "코어", true),
-        WorkoutTemplate("사이드 플랭크", "30초 × 3세트", "6분", "코어", false),
-        WorkoutTemplate("플랭크 숄더탭", "16회 × 3세트", "7분", "코어", false),
-        WorkoutTemplate("버드독", "10회 × 3세트", "7분", "코어", false),
-        WorkoutTemplate("데드버그", "12회 × 3세트", "7분", "코어", false),
-        WorkoutTemplate("할로우 홀드", "30초 × 3세트", "6분", "코어", false),
-        WorkoutTemplate("힙 브릿지 홀드", "40초 × 3세트", "6분", "코어", false),
     ),
     "복근" to listOf(
         WorkoutTemplate("스탠딩 사이드 크런치", "12회 × 3세트", "7분", "복근", true),
         WorkoutTemplate("스탠딩 니업", "12회 × 3세트", "7분", "복근", true),
         WorkoutTemplate("행잉 레그 레이즈", "10회 × 3세트", "8분", "복근", true),
         WorkoutTemplate("크런치", "15회 × 3세트", "6분", "복근", true),
-        WorkoutTemplate("리버스 크런치", "12회 × 3세트", "6분", "복근", false),
-        WorkoutTemplate("바이시클 크런치", "20회 × 3세트", "7분", "복근", false),
         WorkoutTemplate("레그 레이즈", "12회 × 3세트", "7분", "복근", true),
         WorkoutTemplate("시저 크로스", "20회 × 3세트", "7분", "복근", true),
-        WorkoutTemplate("러시안 트위스트", "20회 × 3세트", "7분", "복근", false),
-    ),
-    "유산소" to listOf(
-        WorkoutTemplate("제자리 걷기", "60초 × 4세트", "8분", "유산소", false),
-        WorkoutTemplate("하이 니", "30초 × 4세트", "7분", "유산소", false),
-        WorkoutTemplate("마운틴 클라이머", "20회 × 3세트", "8분", "유산소", false),
-        WorkoutTemplate("점핑잭", "30회 × 3세트", "7분", "유산소", false),
-        WorkoutTemplate("스텝업", "12회 × 3세트", "9분", "유산소", false),
-        WorkoutTemplate("스키터 점프", "20회 × 3세트", "7분", "유산소", false),
-        WorkoutTemplate("섀도 복싱", "60초 × 3세트", "8분", "유산소", false),
-        WorkoutTemplate("버피", "10회 × 3세트", "8분", "유산소", false),
-    ),
-    "회복" to listOf(
-        WorkoutTemplate("마무리 스트레칭", "전신 6분", "6분", "회복", false),
-        WorkoutTemplate("캣카우 스트레칭", "전신 5분", "5분", "회복", false),
-        WorkoutTemplate("차일드 포즈", "전신 4분", "4분", "회복", false),
-        WorkoutTemplate("폼롤러 마무리", "전신 5분", "5분", "회복", false),
-        WorkoutTemplate("햄스트링 스트레칭", "전신 5분", "5분", "회복", false),
-        WorkoutTemplate("흉추 회전 스트레칭", "전신 4분", "4분", "회복", false),
     ),
 )
 

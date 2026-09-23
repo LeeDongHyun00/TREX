@@ -28,7 +28,7 @@ Android Kotlin/Jetpack Compose 운동·식단 앱. 핵심 기능은 **카메라 
 
 **규칙셋의 실제 분포** — `rules_mp_v0.json` 141규칙 = ship **51** · beta **20** · exclude **70**(절반이 못 보는 규칙, §32 게이트 이후). `rules_floor_v0.json` 14규칙/8종목은 **전부 beta**. 헤더 `counts` 는 §32 부터 `rule_confidence.py --apply` 가 실제 분포로 갱신하지만 JSON 을 손으로 고치면 다시 어긋난다 — sanity check 는 `rules` 배열 집계가 정본. ship/beta 규칙의 `confidence` 필드(정상 오탐률·검출률·AUC 95% 구간)는 **스튜디오 기준**이다(§32).
 
-**앱이 실제로 자세 평가를 도는 종목은 18개**(서서 18 + 바닥 8 매핑)이고, 게이트는 규칙 JSON 이 아니라 `PostureLive.kt` 의 `postureExerciseMap` + `Workout.postureSupported()` 다. 종목을 늘리거나 진입 경로를 손대는 작업은 반드시 이 map 을 지난다.
+**운동 카탈로그는 AIHub 26종목**(서서 18 + 바닥 8, §56)이고 `workoutCatalog`·`ExerciseProfiles.all`·`postureExerciseMap` 이 같은 26개 이름을 갖는다. 게이트는 규칙 JSON 이 아니라 `PostureLive.kt` 의 `postureExerciseMap` + `Workout.postureSupported()`(프로필 존재 여부) 다. 종목을 늘리거나 진입 경로를 손대는 작업은 반드시 이 map 을 지난다.
 
 ## 빌드·테스트
 

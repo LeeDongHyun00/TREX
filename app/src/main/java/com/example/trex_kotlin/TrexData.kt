@@ -212,15 +212,16 @@ data class GoalItem(
     val description: String,
 )
 
+/** 첫 실행 기본 루틴 — 카탈로그(AIHub 26종목) 안에서만 고른다. id 는 저장·기록 호환을 위해 유지한다. */
 val todayPlan = listOf(
     Workout(
         id = "squat",
-        name = "기본 스쿼트",
+        name = "바벨 스쿼트",
         reps = "12회 x 3세트",
-        duration = "8분",
+        duration = "10분",
         posture = true,
         category = "하체",
-        alt = WorkoutAlt("의자 스쿼트", "10회 x 3세트"),
+        alt = WorkoutAlt("런지", "10회 x 3세트"),
     ),
     Workout(
         id = "plank",
@@ -229,7 +230,7 @@ val todayPlan = listOf(
         duration = "5분",
         posture = false,
         category = "코어",
-        alt = WorkoutAlt("데드버그", "12회 x 3세트"),
+        alt = WorkoutAlt("크런치", "15회 x 3세트"),
     ),
     Workout(
         id = "lunge",
@@ -238,25 +239,16 @@ val todayPlan = listOf(
         duration = "10분",
         posture = true,
         category = "하체",
-        alt = WorkoutAlt("제자리 스텝업", "12회 x 3세트"),
+        alt = WorkoutAlt("바벨 런지", "10회 x 3세트"),
     ),
     Workout(
         id = "pushup",
-        name = "푸쉬업 입문",
+        name = "니 푸쉬업",
         reps = "8회 x 3세트",
         duration = "6분",
         posture = false,
         category = "상체",
-        alt = WorkoutAlt("벽 푸쉬업", "12회 x 3세트"),
-    ),
-    Workout(
-        id = "stretch",
-        name = "마무리 스트레칭",
-        reps = "전신 6분",
-        duration = "6분",
-        posture = false,
-        category = "회복",
-        alt = WorkoutAlt("폼롤러 마무리", "전신 5분"),
+        alt = WorkoutAlt("푸쉬업", "12회 x 3세트"),
     ),
 )
 

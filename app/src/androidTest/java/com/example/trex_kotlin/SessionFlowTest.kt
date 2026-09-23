@@ -88,32 +88,32 @@ class SessionFlowTest {
     @Test fun perExerciseEditorPersistsIndependentTargetsAndPosture() = isolated { store ->
         store.guideDone=true;store.loggedIn=true;store.onboarded=true
         store.planDoneEpochDay=java.time.LocalDate.now().toEpochDay()
-        store.savePlan(listOf(Workout("edit-a","기본 스쿼트","2회 × 2세트","99분",false,"하체",restSeconds=4),
+        store.savePlan(listOf(Workout("edit-a","바벨 스쿼트","2회 × 2세트","99분",false,"하체",restSeconds=4),
             Workout("edit-b","플랭크","30초 × 1세트","99분",false,"코어",restSeconds=60)))
         ActivityScenario.launch(MainActivity::class.java).use {
             click("운동");capture("workout-flat")
-            click("기본 스쿼트 수정")
+            click("바벨 스쿼트 수정")
             await("운동 수정")
             assertNull(find("플랭크"))
             scrollTo("목표 횟수 증가");click("목표 횟수 증가")
             scrollTo("세트 증가");click("세트 증가")
             scrollTo("세트 간 휴식 증가");click("세트 간 휴식 증가")
-            scrollTo("기본 스쿼트 자세 비교");click("기본 스쿼트 자세 비교")
+            scrollTo("바벨 스쿼트 자세 비교");click("바벨 스쿼트 자세 비교")
             capture("workout-editor");click("저장")
             val saved=TrexStore(context).loadPlan()!!
             assertEquals(WorkoutTarget.Repetitions(3),saved[0].target)
             assertEquals(3,saved[0].repsSpec().sets);assertEquals(9,saved[0].restSeconds)
             assertTrue(saved[0].posture);assertFalse(saved[1].posture)
             assertEquals(WorkoutTarget.Duration(30),saved[1].target)
-            click("기본 스쿼트 수정");scrollTo("종목 변경");click("종목 변경")
+            click("바벨 스쿼트 수정");scrollTo("종목 변경");click("종목 변경")
             await("운동 검색");await("추천 대체 운동");assertNull(find("허벅지·엉덩이"));capture("replacement-categories")
             val search=nodes().first { it.isEditable }
             assertTrue(search.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, android.os.Bundle().apply {
-                putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE,"월 싯")
+                putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE,"플랭크")
             }))
-            click("월 싯 선택");click("저장")
+            click("플랭크 선택");click("저장")
             val changed=TrexStore(context).loadPlan()!!.first()
-            assertEquals("edit-a",changed.id);assertEquals("월 싯",changed.name)
+            assertEquals("edit-a",changed.id);assertEquals("플랭크",changed.name)
             assertTrue(changed.resolvedTarget() is WorkoutTarget.Duration)
         }
     }
@@ -180,7 +180,7 @@ class SessionFlowTest {
     @Test fun overviewUsesRealPlanAndHomeOnlyShowsRequestedSections() = isolated { store ->
         store.guideDone=true;store.loggedIn=true;store.onboarded=true;store.themeMode=ThemeMode.Light
         store.planDoneEpochDay=java.time.LocalDate.now().toEpochDay()
-        store.savePlan(listOf(Workout("hero-a","기본 스쿼트","12회 × 3세트","99분",false,"하체"),
+        store.savePlan(listOf(Workout("hero-a","바벨 스쿼트","12회 × 3세트","99분",false,"하체"),
             Workout("hero-b","마무리 스트레칭","3분 × 1세트","99분",false,"회복")))
         for (focus in RoutineFocus.entries.filter { it != RoutineFocus.EMPTY }) {
             val bitmap=context.assets.open("routine/${focus.image}.png").use { android.graphics.BitmapFactory.decodeStream(it) }
@@ -193,7 +193,7 @@ class SessionFlowTest {
             scrollTo("기록하기");click("기록하기");await("직접 기록")
             instrumentation.sendKeyDownUpSync(android.view.KeyEvent.KEYCODE_BACK)
             click("운동");await("하체 중심");capture("overview-workout")
-            scrollTo("기본 스쿼트 수정");click("기본 스쿼트 수정");await("운동 수정");click("취소")
+            scrollTo("바벨 스쿼트 수정");click("바벨 스쿼트 수정");await("운동 수정");click("취소")
             click("뒤로가기");click("식단");await("영양 목표 수정");capture("overview-diet")
             scrollTo("저녁");capture("overview-meals")
             click("뒤로가기");click("홈")
@@ -251,16 +251,16 @@ class SessionFlowTest {
 
     @Test fun longPressReordersAndSwipeRequiresDeleteConfirmation() = isolated { store ->
         store.guideDone=true;store.loggedIn=true;store.onboarded=true;store.themeMode=ThemeMode.Light
-        store.savePlan(listOf(Workout("drag-a","기본 스쿼트","12회 × 3세트","8분",false,"하체"),
+        store.savePlan(listOf(Workout("drag-a","바벨 스쿼트","12회 × 3세트","8분",false,"하체"),
             Workout("drag-b","플랭크","30초 × 1세트","1분",false,"코어"),
             Workout("drag-c","마무리 스트레칭","3분 × 1세트","3분",false,"회복")))
         ActivityScenario.launch(MainActivity::class.java).use {
             click("운동");capture("workout-grouped");scrollTo("플랭크 수정")
-            val toggle=bounds("기본 스쿼트 자세 교정 사용");val edit=bounds("기본 스쿼트 수정")
+            val toggle=bounds("바벨 스쿼트 자세 교정 사용");val edit=bounds("바벨 스쿼트 수정")
             assertTrue("토글이 운동 행 안에 배치", edit.contains(toggle))
             assertNotNull(find("자세 교정"))
-            click("기본 스쿼트 자세 교정 사용");assertTrue(TrexStore(context).loadPlan()!!.first().posture)
-            val a=bounds("기본 스쿼트");val b=bounds("플랭크")
+            click("바벨 스쿼트 자세 교정 사용");assertTrue(TrexStore(context).loadPlan()!!.first().posture)
+            val a=bounds("바벨 스쿼트");val b=bounds("플랭크")
             gesture(a.left+24f,a.exactCenterY(),a.left+24f,b.exactCenterY(),700)
             assertEquals(listOf("drag-b","drag-a","drag-c"),TrexStore(context).loadPlan()!!.map { it.id })
             capture("workout-reordered")
@@ -282,10 +282,10 @@ class SessionFlowTest {
             Workout("add-recovery","마무리 스트레칭","3분 × 1세트","3분",false,"회복")))
         ActivityScenario.launch(MainActivity::class.java).use {
             click("운동");click("운동 추가");await("하체 카테고리")
-            click("상체 카테고리");assertNull(find("기본 스쿼트 선택"));click("하체 카테고리");await("기본 스쿼트 선택");capture("add-category")
-            click("기본 스쿼트 선택");click("추가");Thread.sleep(400)
+            click("상체 카테고리");assertNull(find("바벨 스쿼트 선택"));click("하체 카테고리");await("바벨 스쿼트 선택");capture("add-category")
+            click("바벨 스쿼트 선택");click("추가");Thread.sleep(400)
             val saved=TrexStore(context).loadPlan()!!
-            assertEquals(listOf("플랭크","기본 스쿼트","마무리 스트레칭"),saved.map { it.name })
+            assertEquals(listOf("플랭크","바벨 스쿼트","마무리 스트레칭"),saved.map { it.name })
             assertEquals("add-work",saved.first().id);assertEquals("add-recovery",saved.last().id)
         }
     }
@@ -432,11 +432,11 @@ class SessionFlowTest {
     @Test fun completedWorkoutHasVisibleCheckAndSummary() = isolated { store ->
         store.guideDone=true;store.loggedIn=true;store.onboarded=true;store.themeMode=ThemeMode.Light
         store.planDoneEpochDay=java.time.LocalDate.now().toEpochDay()
-        store.savePlan(listOf(Workout("done-a","기본 스쿼트","12회 × 3세트","8분",false,"하체",done=true),
+        store.savePlan(listOf(Workout("done-a","바벨 스쿼트","12회 × 3세트","8분",false,"하체",done=true),
             Workout("done-b","플랭크","30초 × 1세트","1분",false,"코어")))
         ActivityScenario.launch(MainActivity::class.java).use {
-            click("운동");await("기본 스쿼트 완료");await(routineOverview(TrexStore(context).loadPlan()!!).detail);assertNull(find("2종목 중 1종목 완료"));capture("workout-completed")
-            click("플랭크 수정");await("운동 수정");assertNull(find("기본 스쿼트"));click("취소")
+            click("운동");await("바벨 스쿼트 완료");await(routineOverview(TrexStore(context).loadPlan()!!).detail);assertNull(find("2종목 중 1종목 완료"));capture("workout-completed")
+            click("플랭크 수정");await("운동 수정");assertNull(find("바벨 스쿼트"));click("취소")
         }
     }
 
@@ -448,7 +448,7 @@ class SessionFlowTest {
             val store=TrexStore(context)
             store.guideDone=true;store.loggedIn=true;store.onboarded=true
             store.planDoneEpochDay=java.time.LocalDate.now().toEpochDay()
-            val plan=listOf(Workout("flow-a","기본 스쿼트","2회 × 2세트","99분",false,"하체",secondsPerRep=3,restSeconds=4),
+            val plan=listOf(Workout("flow-a","바벨 스쿼트","2회 × 2세트","99분",false,"하체",secondsPerRep=3,restSeconds=4),
                 Workout("flow-b","플랭크","60초 × 1세트","99분",true,"코어"))
             store.savePlan(plan)
             assertEquals(3,TrexStore(context).loadPlan()!!.first().secondsPerRep)

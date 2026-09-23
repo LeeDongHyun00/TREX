@@ -161,7 +161,6 @@ import kotlin.coroutines.suspendCoroutine
 
 /** 앱 운동명 → AIHub 규칙 종목 매핑 — 여기 있는 운동만 자세 교정을 켤 수 있다. */
 val postureExerciseMap: Map<String, String> = mapOf(
-    "기본 스쿼트" to "바벨 스쿼트",
     "바벨 스쿼트" to "바벨 스쿼트",
     "런지" to "스텝 포워드 다이나믹 런지",
     "바벨 런지" to "바벨 런지",
