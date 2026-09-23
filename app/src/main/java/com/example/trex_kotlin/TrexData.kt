@@ -158,6 +158,31 @@ data class WorkoutHistoryDay(
     val averageCalories: Int,
 )
 
+/**
+ * 기록에서 자주 담은 음식을 센다.
+ *
+ * [AppViewModel.frequentFoods] 와 테스트가 **같은 코드를 부르게** 하려고 밖으로 뺐다. 규칙을
+ * 테스트에 복제하면 어긋난다 — 실제로 CustomFoodTest 의 복제본이 별칭 분기를 놓친 채 남아 있다.
+ *
+ * **수량이 아니라 담은 횟수로 센다.** 3인분 한 번보다 1인분 두 번이 더 자주 먹은 것이다.
+ * [resolve] 가 null 을 주는 이름은 뺀다 — 눌러도 담기지 않는 항목이 되기 때문이다.
+ */
+internal fun frequentFoodsOf(
+    diet: Map<Long, Map<String, List<FoodEntry>>>,
+    limit: Int,
+    resolve: (String) -> Nutrition?,
+): List<Pair<String, Nutrition>> =
+    diet.values
+        .flatMap { slots -> slots.values.flatten() }
+        .groupingBy { it.name }
+        .eachCount()
+        .entries
+        .sortedWith(compareByDescending<Map.Entry<String, Int>> { it.value }.thenBy { it.key })
+        .asSequence()
+        .mapNotNull { (name, _) -> resolve(name)?.let { name to it } }
+        .take(limit)
+        .toList()
+
 @Immutable
 data class Nutrition(
     val kcal: Int,

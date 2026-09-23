@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -70,6 +71,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -99,23 +101,63 @@ private enum class PhotoStep { Pick, Camera, Analyzing, Result, Failed }
  */
 private const val PREVIEW_MAX_PX = 1024
 
-/** [PhotoFoodSheet] 의 음식 고르기 대상이 "새로 추가" 임을 나타내는 값. 0 이상은 바꿀 줄의 위치다. */
-private const val ADD_NEW = -1
+/**
+ * 음식 고르기 창이 무엇을 하려는지. 인덱스 센티넬(-1) 대신 타입으로 가른다 —
+ * 센티넬이면 "제목은 추가인데 동작은 바꾸기" 같은 어긋난 상태가 표현 가능해진다.
+ */
+private sealed interface PickTarget {
+    /** 목록에 없는 음식을 새로 더한다. */
+    data object Add : PickTarget
+
+    /** [index] 번째 줄을 다른 음식으로 바꾼다. */
+    data class Replace(val index: Int) : PickTarget
+}
 
 /**
- * 결과 한 줄. 수량은 직접 기록 시트와 같은 qty 스테퍼로 조절한다. nutrition 이 없으면 기록에서 제외한다.
+ * 결과 한 줄이 어디서 왔는지.
  *
- * [confidence] 와 [photoIndex] 가 **둘 다 null 이면 사용자가 직접 고른 항목**이다. 모델이 판정한 게
- * 아니므로 확신도를 붙이지 않고(판정하지 않은 것을 판정한 것처럼 말하지 않는다), 출처 사진도 없다 —
- * 아무 사진이나 붙이면 그 사진에서 잡힌 것처럼 보인다.
+ * 확신도와 출처 사진을 각각 nullable 로 두면 한쪽만 채워진 상태가 만들어져 화면에서 말이
+ * 엇갈린다("확신 62%"와 "직접 고름"이 같이 뜨는 식). 타입으로 묶어 그걸 막는다.
  */
+private sealed interface FoodSource {
+    /** 모델이 [photoIndex] 번째 사진에서 [confidence] 로 잡았다. */
+    data class Detected(val confidence: Float, val photoIndex: Int) : FoodSource
+
+    /**
+     * 사용자가 직접 골랐다. 확신도도 출처 사진도 없다 —
+     * 판정하지 않은 것을 판정한 것처럼 말하지 않고, 아무 사진이나 붙여 거기서 잡힌 것처럼 보이게 하지 않는다.
+     */
+    data object Picked : FoodSource
+}
+
+/** 결과 한 줄. 수량은 직접 기록 시트와 같은 qty 스테퍼로 조절한다. nutrition 이 없으면 기록에서 제외한다. */
 private data class RecognizedItem(
     val name: String,
     val nutrition: Nutrition?,
-    val confidence: Float?,
-    val photoIndex: Int?,
+    val source: FoodSource,
     val qty: Int = 1,
 )
+
+/**
+ * 같은 이름을 한 줄로 합친다. 저장 경로의 [AppViewModel.appendFoods] 와 같은 규칙이라,
+ * 저장 전 화면과 저장된 기록이 어긋나지 않는다.
+ *
+ * 합치지 않으면 "쌀밥 1 / 쌀밥 1" 두 줄이 생겨, 한 줄을 지워 뺐다고 생각해도 다른 줄이 남는다.
+ *
+ * 영양값은 없을 때만 뒤에서 채운다. 직접 등록으로 방금 적은 값이 버려지는 것을 막으면서도,
+ * 이미 있는 줄의 값을 조용히 바꾸지는 않는다.
+ */
+private fun List<RecognizedItem>.mergedByName(): List<RecognizedItem> =
+    fold(emptyList()) { acc, item ->
+        val at = acc.indexOfFirst { it.name == item.name }
+        if (at < 0) {
+            acc + item
+        } else {
+            acc.mapIndexed { i, kept ->
+                if (i == at) kept.copy(qty = kept.qty + item.qty, nutrition = kept.nutrition ?: item.nutrition) else kept
+            }
+        }
+    }
 
 private fun List<RecognizedItem>.toEntries(): List<FoodEntry> =
     mapNotNull { item -> item.nutrition?.let { FoodEntry(item.name, it, item.qty) } }
@@ -144,8 +186,8 @@ internal fun PhotoFoodSheet(app: AppViewModel, onClose: () -> Unit) {
     var failure by remember { mutableStateOf("") }
     var items by remember { mutableStateOf<List<RecognizedItem>>(emptyList()) }
     var zoomed by remember { mutableStateOf<Bitmap?>(null) }
-    // 음식 고르기 창의 대상. null 이면 닫힘, ADD_NEW 면 새로 추가, 0 이상이면 그 줄을 바꾼다.
-    var pickTarget by remember { mutableStateOf<Int?>(null) }
+    // 음식 고르기 창의 대상. null 이면 닫힘.
+    var pickTarget by remember { mutableStateOf<PickTarget?>(null) }
 
     // 모델(12MB)·인터프리터 초기화를 첫 분석이 아니라 시트를 여는 시점에 미리 해 둔다.
     LaunchedEffect(Unit) { withContext(Dispatchers.Default) { FoodDetector.warmUp(context) } }
@@ -195,7 +237,9 @@ internal fun PhotoFoodSheet(app: AppViewModel, onClose: () -> Unit) {
                 failure = "사진에서 음식을 찾지 못했어요. 음식이 잘 보이게 다시 찍어 주세요."
                 step = PhotoStep.Failed
             } else {
-                items = result.foods.map { RecognizedItem(it.name, app.findFood(it.name), it.confidence, it.photoIndex) }
+                items = result.foods.map {
+                    RecognizedItem(it.name, app.findFood(it.name), FoodSource.Detected(it.confidence, it.photoIndex))
+                }
                 step = PhotoStep.Result
             }
             FoodDetectionResult.ModelMissing -> {
@@ -256,8 +300,8 @@ internal fun PhotoFoodSheet(app: AppViewModel, onClose: () -> Unit) {
                             }
                         },
                         hasApproximateNutrition = items.any { it.name in approximateNutritionNames || it.name in app.customFoods },
-                        onAdd = { pickTarget = ADD_NEW },
-                        onReplace = { index -> pickTarget = index },
+                        onAdd = { pickTarget = PickTarget.Add },
+                        onReplace = { index -> pickTarget = PickTarget.Replace(index) },
                         onRetry = { retry() },
                         onSave = {
                             app.appendFoods(0, slot, items.toEntries())
@@ -287,20 +331,19 @@ internal fun PhotoFoodSheet(app: AppViewModel, onClose: () -> Unit) {
     zoomed?.let { photo -> PhotoLightbox(photo) { zoomed = null } }
 
     pickTarget?.let { target ->
+        // 제목과 동작을 같은 한 번의 읽기에서 뽑는다. 따로 읽으면 그 사이 목록이 바뀌었을 때
+        // 제목은 "추가"인데 동작은 "바꾸기"로 가서 아무 일도 안 일어나는 상태가 된다.
+        val replacing = (target as? PickTarget.Replace)?.let { items.getOrNull(it.index) }
         FoodPicker(
             app = app,
-            title = items.getOrNull(target)?.let { "${it.name} 을(를) 바꾸기" } ?: "빠진 음식 추가",
+            title = replacing?.let { "${it.name} 을(를) 바꾸기" } ?: "빠진 음식 추가",
             onPick = { name, nutrition ->
-                items = if (target == ADD_NEW) {
-                    // 이미 있는 음식을 또 고르면 줄을 늘리지 않고 수량만 올린다 — 스테퍼와 같은 규칙이다.
-                    val at = items.indexOfFirst { it.name == name }
-                    if (at >= 0) items.mapIndexed { i, item -> if (i == at) item.copy(qty = item.qty + 1) else item }
-                    else items + RecognizedItem(name, nutrition, confidence = null, photoIndex = null)
+                val picked = RecognizedItem(name, nutrition, FoodSource.Picked)
+                items = if (replacing == null) {
+                    (items + picked).mergedByName()
                 } else {
-                    // 바꿔 넣은 이름은 모델이 판정한 게 아니다. 확신도와 출처 사진을 떼어 낸다.
-                    items.mapIndexed { i, item ->
-                        if (i == target) item.copy(name = name, nutrition = nutrition, confidence = null, photoIndex = null) else item
-                    }
+                    // 바꿔 넣은 이름은 모델이 판정한 게 아니다. 판정 흔적을 떼어 낸다.
+                    items.map { if (it === replacing) picked.copy(qty = it.qty) else it }.mergedByName()
                 }
                 pickTarget = null
             },
@@ -538,7 +581,7 @@ private fun ResultStep(
                         Row(Modifier.padding(horizontal = 14.dp, vertical = 13.dp), verticalAlignment = Alignment.CenterVertically) {
                             // 여러 장을 분석했을 때는 이 음식이 잡힌 사진을 번호와 함께 보여준다.
                             if (photos.size > 1) {
-                                val from = item.photoIndex
+                                val from = (item.source as? FoodSource.Detected)?.photoIndex
                                 if (from != null) {
                                     PhotoThumb(photos.getOrNull(from), number = from + 1, size = 44.dp)
                                 } else {
@@ -555,9 +598,11 @@ private fun ResultStep(
                             Column(Modifier.weight(1f)) {
                                 Row(
                                     Modifier
-                                        .clip(RoundedCornerShape(9.dp))
-                                        .clickable { onReplace(i) }
-                                        .padding(horizontal = 5.dp, vertical = 3.dp),
+                                        .clip(RoundedCornerShape(10.dp))
+                                        // 이 커밋의 핵심 동선이라 최소 터치 크기를 지킨다.
+                                        .heightIn(min = 40.dp)
+                                        .clickable(role = Role.Button, onClickLabel = "다른 음식으로 바꾸기") { onReplace(i) }
+                                        .padding(horizontal = 6.dp),
                                     verticalAlignment = Alignment.CenterVertically,
                                 ) {
                                     Text(item.name, fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold)
@@ -567,17 +612,17 @@ private fun ResultStep(
                                         tint = c.text3, modifier = Modifier.size(14.dp),
                                     )
                                     // 확신도는 모델이 판정했을 때만 붙인다. 직접 고른 것에 붙이면 안 한 판정을 한 것처럼 말하게 된다.
-                                    val confidence = item.confidence
-                                    if (confidence != null) {
-                                        Text("확신 ${(confidence * 100).toInt()}%", color = c.text3, fontSize = 10.5.sp, modifier = Modifier.padding(start = 6.dp))
-                                    } else {
-                                        Text("직접 고름", color = c.primaryText, fontSize = 10.5.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 6.dp))
+                                    when (val source = item.source) {
+                                        is FoodSource.Detected ->
+                                            Text("확신 ${(source.confidence * 100).toInt()}%", color = c.text3, fontSize = 10.5.sp, modifier = Modifier.padding(start = 6.dp))
+                                        FoodSource.Picked ->
+                                            Text("직접 고름", color = c.primaryText, fontSize = 10.5.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 6.dp))
                                     }
                                 }
                                 val n = item.nutrition
                                 Text(
                                     if (n == null) {
-                                        "영양 정보가 없어 기록에서 제외돼요 · 직접 입력으로 추가해 주세요"
+                                        "영양 정보가 없어 기록에서 제외돼요 · 이름을 눌러 다른 음식으로 바꿔 주세요"
                                     } else {
                                         "${n.kcal * item.qty} kcal · 탄 ${(n.carb * item.qty).toInt()} · 단 ${(n.protein * item.qty).toInt()} · 지 ${(n.fat * item.qty).toInt()}"
                                     },

@@ -12,9 +12,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -634,84 +637,93 @@ internal fun FoodPicker(
     val c = Trex.c
     var query by remember { mutableStateOf("") }
     val trimmed = query.trim()
-    val matches = app.searchFoods(query)
-    val frequent = app.frequentFoods()
+    // 한 글자 칠 때마다 이 본문이 다시 도는데, 빈도 집계는 기록 전체를 훑는다.
+    // 검색 중에는 쓰지도 않으므로 기록·내 음식이 바뀔 때만 다시 센다.
+    val matches = remember(trimmed, app.customFoods) { app.searchFoods(trimmed) }
+    val frequent = remember(app.dietByDay, app.customFoods) { app.frequentFoods() }
 
-    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        Column(
-            Modifier
-                .fillMaxWidth(0.92f)
-                .fillMaxHeight(0.82f)
-                .clip(RoundedCornerShape(26.dp))
-                .background(c.sheet),
-        ) {
-            Row(
-                Modifier.padding(start = 20.dp, end = 20.dp, top = 18.dp, bottom = 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(Modifier.weight(1f)) {
-                    Kicker("음식 고르기")
-                    Text(title, color = c.text, fontSize = 16.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 2.dp))
-                }
-                SheetClose(onDismiss)
-            }
-            Box(Modifier.padding(horizontal = 20.dp)) {
-                BasicTextField(
-                    value = query,
-                    onValueChange = { query = it },
-                    singleLine = true,
-                    textStyle = TextStyle(color = c.text, fontSize = 13.5.sp),
-                    cursorBrush = SolidColor(c.primary),
-                    decorationBox = { inner ->
-                        Row(
-                            Modifier
-                                .fillMaxWidth()
-                                .height(46.dp)
-                                .clip(RoundedCornerShape(15.dp))
-                                .background(c.field)
-                                .border(1.dp, c.fieldLine, RoundedCornerShape(15.dp))
-                                .padding(horizontal = 14.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Icon(Icons.Rounded.Search, contentDescription = null, tint = c.text3, modifier = Modifier.size(15.dp))
-                            Spacer(Modifier.width(9.dp))
-                            Box(Modifier.weight(1f)) {
-                                if (query.isBlank()) Text("음식 이름 검색", color = c.text3, fontSize = 13.5.sp)
-                                inner()
-                            }
-                        }
-                    },
-                )
-            }
+    Dialog(
+        onDismissRequest = onDismiss,
+        // 화면의 유일한 입력칸이 이 안에 있다. 인셋을 창이 알아서 맞추게 두면 키보드가 올라올 때
+        // 목록 아래쪽과 "등록하고 담기" 버튼이 가린다. SheetHost 와 같은 조합으로 직접 맞춘다.
+        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
+    ) {
+        Box(Modifier.fillMaxSize().imePadding().navigationBarsPadding(), contentAlignment = Alignment.Center) {
             Column(
                 Modifier
-                    .weight(1f)
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 20.dp)
-                    .padding(top = 12.dp, bottom = 20.dp),
-                verticalArrangement = Arrangement.spacedBy(7.dp),
+                    .fillMaxWidth(0.92f)
+                    .fillMaxHeight(0.82f)
+                    .clip(RoundedCornerShape(26.dp))
+                    .background(c.sheet),
             ) {
-                when {
-                    trimmed.isEmpty() && frequent.isEmpty() ->
-                        Text(
-                            "음식 이름을 검색해 보세룡", color = c.text3, fontSize = 12.sp,
-                            modifier = Modifier.fillMaxWidth().padding(top = 6.dp), textAlign = TextAlign.Center,
-                        )
-                    trimmed.isEmpty() -> {
-                        Text("자주 먹는 음식", color = c.text3, fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold)
-                        frequent.forEach { (name, n) ->
-                            FoodPickRow(name, n, isCustom = name in app.customFoods) { onPick(name, n) }
-                        }
+                Row(
+                    Modifier.padding(start = 20.dp, end = 20.dp, top = 18.dp, bottom = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Kicker("음식 고르기")
+                        Text(title, color = c.text, fontSize = 16.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 2.dp))
                     }
-                    matches.isEmpty() ->
-                        // 기본 DB 에도 내 음식에도 없다. 등록하면 바로 고른 것으로 친다 —
-                        // 등록만 하고 다시 찾게 하면 방금 한 일을 한 번 더 시키는 셈이다.
-                        CustomFoodForm(name = trimmed) { nutrition ->
-                            app.addCustomFood(trimmed, nutrition)
-                            onPick(trimmed, nutrition)
+                    SheetClose(onDismiss)
+                }
+                Box(Modifier.padding(horizontal = 20.dp)) {
+                    BasicTextField(
+                        value = query,
+                        onValueChange = { query = it },
+                        singleLine = true,
+                        textStyle = TextStyle(color = c.text, fontSize = 13.5.sp),
+                        cursorBrush = SolidColor(c.primary),
+                        decorationBox = { inner ->
+                            Row(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .height(46.dp)
+                                    .clip(RoundedCornerShape(15.dp))
+                                    .background(c.field)
+                                    .border(1.dp, c.fieldLine, RoundedCornerShape(15.dp))
+                                    .padding(horizontal = 14.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Icon(Icons.Rounded.Search, contentDescription = null, tint = c.text3, modifier = Modifier.size(15.dp))
+                                Spacer(Modifier.width(9.dp))
+                                Box(Modifier.weight(1f)) {
+                                    if (query.isBlank()) Text("음식 이름 검색", color = c.text3, fontSize = 13.5.sp)
+                                    inner()
+                                }
+                            }
+                        },
+                    )
+                }
+                Column(
+                    Modifier
+                        .weight(1f)
+                        .verticalScroll(rememberScrollState())
+                        .padding(horizontal = 20.dp)
+                        .padding(top = 12.dp, bottom = 20.dp),
+                    verticalArrangement = Arrangement.spacedBy(7.dp),
+                ) {
+                    when {
+                        trimmed.isEmpty() && frequent.isEmpty() ->
+                            Text(
+                                "음식 이름을 검색해 보세룡", color = c.text3, fontSize = 12.sp,
+                                modifier = Modifier.fillMaxWidth().padding(top = 6.dp), textAlign = TextAlign.Center,
+                            )
+                        trimmed.isEmpty() -> {
+                            Text("자주 먹는 음식", color = c.text3, fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold)
+                            frequent.forEach { (name, n) ->
+                                FoodPickRow(name, n, isCustom = name in app.customFoods) { onPick(name, n) }
+                            }
                         }
-                    else -> matches.forEach { (name, n, isCustom) ->
-                        FoodPickRow(name, n, isCustom) { onPick(name, n) }
+                        matches.isEmpty() ->
+                            // 기본 DB 에도 내 음식에도 없다. 등록하면 바로 고른 것으로 친다 —
+                            // 등록만 하고 다시 찾게 하면 방금 한 일을 한 번 더 시키는 셈이다.
+                            CustomFoodForm(name = trimmed) { nutrition ->
+                                app.addCustomFood(trimmed, nutrition)
+                                onPick(trimmed, nutrition)
+                            }
+                        else -> matches.forEach { (name, n, isCustom) ->
+                            FoodPickRow(name, n, isCustom) { onPick(name, n) }
+                        }
                     }
                 }
             }

@@ -276,22 +276,11 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
      * 지금까지 기록한 식단에서 자주 담은 음식 순. 검색어가 비어 있는 화면의 첫 목록으로 쓴다.
      *
      * 따로 저장하지 않고 기존 기록에서 센다 — 빈도표를 새로 저장하면 지우기·이전·기록과의
-     * 불일치가 따라붙는데, 기록 자체가 이미 정답이라 그럴 이유가 없다.
-     *
-     * **수량이 아니라 담은 횟수로 센다.** 3인분 한 번보다 1인분 두 번이 더 자주 먹은 것이다.
-     *
-     * 영양값을 찾을 수 없는 이름은 뺀다. 기록한 뒤 내 음식에서 지운 경우가 그렇고, 그대로
-     * 내놓으면 눌러도 담기지 않는 항목이 된다.
+     * 불일치가 따라붙는데, 기록 자체가 이미 정답이라 그럴 이유가 없다. 세는 규칙은
+     * [frequentFoodsOf] 에 있다(테스트가 같은 함수를 부른다).
      */
     fun frequentFoods(limit: Int = 8): List<Pair<String, Nutrition>> =
-        dietByDay.values
-            .flatMap { slots -> slots.values.flatten() }
-            .groupingBy { it.name }
-            .eachCount()
-            .entries
-            .sortedWith(compareByDescending<Map.Entry<String, Int>> { it.value }.thenBy { it.key })
-            .mapNotNull { (name, _) -> findFood(name)?.let { name to it } }
-            .take(limit)
+        frequentFoodsOf(dietByDay, limit, ::findFood)
     /** 슬롯에 음식 추가 (사진/수동 기록 플로우의 결과). 같은 이름은 수량을 올린다. */
     fun appendFoods(offset: Int, slot: String, foods: List<FoodEntry>) {
         mutateSlots(offset) { slots ->
