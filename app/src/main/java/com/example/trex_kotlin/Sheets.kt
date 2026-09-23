@@ -616,11 +616,16 @@ private fun FoodSearchField(query: String, onQuery: (String) -> Unit) {
  * 찾게 하는 것이 그중 큰 몫이었다.
  *
  * 검색해도 없으면 [CustomFoodForm] 으로 이어져 그 자리에서 등록하고 바로 고를 수 있다.
+ *
+ * [candidates] 는 **모델이 봤지만 임계값에 못 미쳐 결과에서 뺀 것**이다. 결과로 단정하지 않되
+ * 이미 계산된 신호를 버리지 않으려고 여기서만 보여준다 — 고르는 것은 사용자이고, 고른 순간
+ * 그 항목은 모델 판정이 아니라 사용자 선택으로 기록된다.
  */
 @Composable
 internal fun FoodPicker(
     app: AppViewModel,
     title: String,
+    candidates: List<Pair<String, Float>> = emptyList(),
     onPick: (String, Nutrition) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -666,13 +671,34 @@ internal fun FoodPicker(
                     verticalArrangement = Arrangement.spacedBy(7.dp),
                 ) {
                     when {
-                        trimmed.isEmpty() && frequent.isEmpty() ->
+                        trimmed.isEmpty() && frequent.isEmpty() && candidates.isEmpty() ->
                             Text(
                                 "음식 이름을 검색해 보세룡", color = c.text3, fontSize = 12.sp,
                                 modifier = Modifier.fillMaxWidth().padding(top = 6.dp), textAlign = TextAlign.Center,
                             )
                         trimmed.isEmpty() -> {
-                            Text("자주 먹는 음식", color = c.text3, fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold)
+                            if (candidates.isNotEmpty()) {
+                                Text("사진에서 비슷하게 본 것", color = c.text3, fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold)
+                                Text(
+                                    "확실하지 않아 결과에는 넣지 않았어요. 맞는 게 있으면 골라 주세요.",
+                                    color = c.text3, fontSize = 11.sp, modifier = Modifier.padding(bottom = 2.dp),
+                                )
+                                candidates.forEach { (name, _) ->
+                                    val n = app.findFood(name)
+                                    if (n != null) {
+                                        FoodRow(
+                                            name, n, isCustom = name in app.customFoods,
+                                            badgeIcon = Icons.Rounded.Check, badgeFilled = false, badgeDescription = "고르기",
+                                        ) { onPick(name, n) }
+                                    }
+                                }
+                            }
+                            if (frequent.isNotEmpty()) {
+                                Text(
+                                    "자주 먹는 음식", color = c.text3, fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold,
+                                    modifier = if (candidates.isEmpty()) Modifier else Modifier.padding(top = 6.dp),
+                                )
+                            }
                             frequent.forEach { (name, n) ->
                                 FoodRow(
                                     name, n, isCustom = name in app.customFoods,

@@ -185,6 +185,8 @@ internal fun PhotoFoodSheet(app: AppViewModel, onClose: () -> Unit) {
     var failureTitle by remember { mutableStateOf("") }
     var failure by remember { mutableStateOf("") }
     var items by remember { mutableStateOf<List<RecognizedItem>>(emptyList()) }
+    // 임계 미만이라 결과에 넣지 않은 후보. "빠진 음식 추가"에서 고를 거리로만 쓴다.
+    var candidates by remember { mutableStateOf<List<Pair<String, Float>>>(emptyList()) }
     var zoomed by remember { mutableStateOf<Bitmap?>(null) }
     // 음식 고르기 창의 대상. null 이면 닫힘.
     var pickTarget by remember { mutableStateOf<PickTarget?>(null) }
@@ -240,6 +242,10 @@ internal fun PhotoFoodSheet(app: AppViewModel, onClose: () -> Unit) {
                 items = result.foods.map {
                     RecognizedItem(it.name, app.findFood(it.name), FoodSource.Detected(it.confidence, it.photoIndex))
                 }
+                // 영양값을 못 찾는 이름은 골라도 기록에 못 들어가므로 후보에서 뺀다.
+                candidates = result.candidates
+                    .filter { app.findFood(it.name) != null }
+                    .map { it.name to it.confidence }
                 step = PhotoStep.Result
             }
             FoodDetectionResult.ModelMissing -> {
@@ -337,6 +343,8 @@ internal fun PhotoFoodSheet(app: AppViewModel, onClose: () -> Unit) {
         FoodPicker(
             app = app,
             title = replacing?.let { "${it.name} 을(를) 바꾸기" } ?: "빠진 음식 추가",
+            // 이미 목록에 든 것은 빼고 넘긴다. 바꾸기는 그 줄을 다른 것으로 만드는 일이라 후보가 그대로 쓸모 있다.
+            candidates = candidates.filterNot { (name, _) -> items.any { it.name == name } },
             onPick = { name, nutrition ->
                 val picked = RecognizedItem(name, nutrition, FoodSource.Picked)
                 items = if (replacing == null) {

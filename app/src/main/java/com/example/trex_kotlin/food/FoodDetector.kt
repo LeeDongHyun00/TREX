@@ -22,7 +22,20 @@ import java.nio.channels.FileChannel
  * 온디바이스 음식 인식 결과. 사진 원본은 어떤 경우에도 기기 밖으로 전송하지 않는다.
  */
 sealed interface FoodDetectionResult {
-    data class Success(val foods: List<DetectedFood>) : FoodDetectionResult
+    /**
+     * [foods] 는 임계값을 넘어 결과로 보여줄 음식.
+     *
+     * [candidates] 는 **임계값에 못 미쳐 결과에서 뺀 것**이다. 기록에 자동으로 들어가지 않고,
+     * 사용자가 "빠진 음식 추가"를 눌렀을 때 고를 거리로만 쓴다 — 모델이 판정하지 못한 것을
+     * 판정한 것처럼 내놓지 않으면서, 이미 계산해 둔 신호를 버리지 않기 위한 절충이다.
+     *
+     * 이 모델은 "음식 없음"을 배운 적이 없어(학습 이미지 전부가 음식 1개짜리다) 무엇을 넣든
+     * 늘 무언가를 뱉는다. 그래서 낮은 점수는 확률이 아니라 **순서**로만 의미가 있다.
+     */
+    data class Success(
+        val foods: List<DetectedFood>,
+        val candidates: List<DetectedFood> = emptyList(),
+    ) : FoodDetectionResult
 
     /** assets에 yolov8n_food.tflite 가 없다(빌드에서 빠졌을 때). 파일을 넣으면 그대로 실추론으로 전환된다. */
     data object ModelMissing : FoodDetectionResult
@@ -49,6 +62,15 @@ object FoodDetector {
     private const val LABELS_PATH = "models/food_labels.txt"
     private const val CONFIDENCE_THRESHOLD = 0.40f
     private const val MAX_FOODS_PER_ANALYSIS = 5
+
+    /**
+     * 후보로도 내놓지 않는 바닥값. 이 아래는 순서에도 의미가 없는 잡음으로 본다.
+     * 임계값(0.40)과 달리 근거가 약한 값이다 — 실사용 사진으로 재보고 조정할 것.
+     */
+    private const val CANDIDATE_FLOOR = 0.10f
+
+    /** 후보 목록의 최대 개수. 훑어보는 목록이라 길면 오히려 고르기 어렵다. */
+    private const val MAX_CANDIDATES = 8
     private const val NUM_THREADS = 4
     private const val LETTERBOX_GRAY = 114
 
@@ -88,10 +110,16 @@ object FoodDetector {
                         }
                     }
                 }
-                val foods = merged.values
-                    .sortedByDescending { it.confidence }
+                val ranked = merged.values.sortedByDescending { it.confidence }
+                val foods = ranked
+                    .filter { it.confidence >= CONFIDENCE_THRESHOLD }
                     .take(MAX_FOODS_PER_ANALYSIS)
-                FoodDetectionResult.Success(foods)
+                // 결과에 이미 든 것은 후보에서 뺀다 — 같은 이름을 두 곳에 보여줄 이유가 없다.
+                val shown = foods.mapTo(HashSet()) { it.name }
+                val candidates = ranked
+                    .filter { it.confidence < CONFIDENCE_THRESHOLD && it.name !in shown }
+                    .take(MAX_CANDIDATES)
+                FoodDetectionResult.Success(foods, candidates)
             } catch (e: Exception) {
                 Log.e(TAG, "추론 실패", e)
                 FoodDetectionResult.Error
@@ -187,13 +215,15 @@ object FoodDetector {
             .joinToString { "${labels[it]} ${"%.2f".format(best[it])}" }
         Log.d(TAG, "추론 ${elapsedMs}ms · 상위 점수: $ranked (임계 $CONFIDENCE_THRESHOLD)")
 
-        val detected = LinkedHashMap<String, Float>()
+        // 임계값이 아니라 바닥값으로 자른다. 임계 미만은 결과에 넣지 않지만 후보로는 쓰므로,
+        // 여기서 버리면 detect() 가 나눌 수 없다.
+        val scored = LinkedHashMap<String, Float>()
         for (c in labels.indices) {
             val name = labels[c]
             if (name.startsWith("#")) continue
-            if (best[c] >= CONFIDENCE_THRESHOLD) detected[name] = best[c]
+            if (best[c] >= CANDIDATE_FLOOR) scored[name] = best[c]
         }
-        return detected
+        return scored
     }
 
     private fun preprocess(bitmap: Bitmap, width: Int, height: Int, channelsFirst: Boolean): ByteBuffer {
