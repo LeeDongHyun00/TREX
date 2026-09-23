@@ -415,7 +415,7 @@ fun PostureLabScreen(onClose: () -> Unit) {
         ) {
             Spacer(Modifier.height(12.dp))
             ExercisePicker(
-                exercises = ruleSet?.exercises.orEmpty(),
+                exercises = ruleSet?.exercises.orEmpty().filter { ExerciseProfiles.forReference(it) != null },
                 selected = exercise,
                 onSelect = {
                     exercise = it

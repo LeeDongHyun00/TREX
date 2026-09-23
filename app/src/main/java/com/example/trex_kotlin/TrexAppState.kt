@@ -90,7 +90,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     // ---- 운동 계획 / 기록
 
-    var workoutPlan by mutableStateOf(store.loadPlan() ?: todayPlan)
+    var workoutPlan by mutableStateOf((store.loadPlan() ?: todayPlan).aihubOnly())
         private set
 
     var workoutHistory by mutableStateOf(store.loadHistory() ?: emptyList())
@@ -122,8 +122,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun updatePlan(plan: List<Workout>) {
-        workoutPlan = plan
-        store.savePlan(plan)
+        workoutPlan = plan.aihubOnly()
+        store.savePlan(workoutPlan)
     }
 
     fun markWorkoutDone(id: String) {

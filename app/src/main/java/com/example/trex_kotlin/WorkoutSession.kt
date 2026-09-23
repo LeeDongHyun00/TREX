@@ -62,7 +62,7 @@ data class SessionStep(
 
 /** 세트별 고유 ID로 리포트를 보존한다. 휴식은 마지막 세트 뒤에는 넣지 않는다. */
 fun buildSessionSteps(plan: List<Workout>): List<SessionStep> = buildList {
-    plan.forEachIndexed { exerciseIndex, workout ->
+    plan.aihubOnly().forEachIndexed { exerciseIndex, workout ->
         val timing = workout.timing()
         fun addStep(phase: SessionPhase, set: Int, seconds: Int) {
             val targetLabel = when (val goal = workout.resolvedTarget()) {

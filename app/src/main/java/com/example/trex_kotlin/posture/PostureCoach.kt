@@ -110,6 +110,7 @@ object CoachCues {
     )
 
     fun cueFor(rule: PostureRule, direction: Direction? = Direction.PRIMARY): CoachCue {
+        EvidenceCues.forRule(rule, direction)?.let { return it }
         if (direction == Direction.OPPOSITE) {
             for (en in oppositeEntries) if (en.pattern.containsMatchIn(rule.condition)) return en.cue
             val desc = rule.oppositeGuard?.desc?.takeIf { it.isNotBlank() } ?: "반대 방향"
@@ -293,7 +294,7 @@ class LiveCoach(
     private fun classify(early: Verdict, recent: Verdict, ruleId: String): OnsetKind? = when {
         recent == Verdict.VIOLATION && early == Verdict.VIOLATION -> OnsetKind.HABIT
         recent == Verdict.VIOLATION && early == Verdict.OK -> OnsetKind.DRIFT
-        recent == Verdict.VIOLATION -> OnsetKind.HABIT          // 초반 창이 아직 안 찼으면 = 세트 초반 위반 = 처음부터
+        recent == Verdict.VIOLATION -> null // 초반을 못 봤다면 '처음부터'였다고 추측하지 않는다.
         recent == Verdict.OK && spokenKind[ruleId] in setOf(OnsetKind.HABIT, OnsetKind.DRIFT) -> OnsetKind.RECOVERED
         else -> null
     }
@@ -302,7 +303,7 @@ class LiveCoach(
      * 최근 창을 평가하고, 말할 이벤트가 있으면 1개 반환. 분석 스레드에서 프레임마다 호출해도 된다(억제 로직이 빈도를 제어).
      */
     @Synchronized
-    fun evaluate(nowMs: Long): CoachEvent? {
+    fun evaluate(nowMs: Long, canEmit: Boolean = true): CoachEvent? {
         if (!anchored) return null       // 준비 동작 구간 — lastStates 도 비워 둬야 화면의 붉은 강조가 안 뜬다
         if (frames.size < minFrames) return null
         val recentAgg = recentAggregator()
@@ -331,6 +332,7 @@ class LiveCoach(
             }
         }
         lastStates = states
+        if (!canEmit) return null // 바쁜 음성 채널 때문에 말하지 못한 사건에 쿨다운을 소비하지 않는다.
         // 위반 후보가 없으면 '교정됨' 한 번
         val pick = candidate ?: states.firstOrNull {
             it.kind == OnsetKind.RECOVERED && speakable(it.rule) && canSpeak(it.rule.id, nowMs, recovered = true)
@@ -374,7 +376,7 @@ class LiveCoach(
             val kind = when {
                 lr.verdict == Verdict.VIOLATION && early == Verdict.VIOLATION -> OnsetKind.HABIT
                 lr.verdict == Verdict.VIOLATION && early == Verdict.OK -> OnsetKind.DRIFT
-                lr.verdict == Verdict.VIOLATION -> OnsetKind.HABIT
+                lr.verdict == Verdict.VIOLATION -> null
                 lr.verdict == Verdict.OK && early == Verdict.VIOLATION -> OnsetKind.RECOVERED
                 else -> null
             }
@@ -504,6 +506,13 @@ class SpeechCoach(context: Context) {
 
     /** 준비 설명이 숫자 안내에 잘리지 않도록 대기/발화 여부를 제공한다. */
     val isSpeaking: Boolean get() = synchronized(lock) { pending.isNotEmpty() || speaking.isNotEmpty() }
+
+    /** 숫자·실시간 지시는 발화 중이면 버린다. 큐에 밀린 과거 지시를 나중에 재생하지 않는다. */
+    fun speakCurrent(text: String): Boolean = synchronized(lock) {
+        if (!ready || muted || pending.isNotEmpty() || speaking.isNotEmpty()) return@synchronized false
+        speak(text, flush = true)
+        true
+    }
 
     fun stop() {
         synchronized(lock) {

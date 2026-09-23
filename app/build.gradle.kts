@@ -14,8 +14,8 @@ android {
         applicationId = "com.example.trex_kotlin"
         minSdk = 26
         targetSdk = 36
-        versionCode = 3
-        versionName = "1.1.0-preview.2"
+        versionCode = 4
+        versionName = "1.2.0-preview.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -43,6 +43,7 @@ android {
     androidResources {
         // MediaPipe 모델(.task)은 압축되면 AssetFileDescriptor 로 열 수 없다
         noCompress += "task"
+        noCompress += "tflite"
     }
 }
 
@@ -69,6 +70,8 @@ dependencies {
     implementation(libs.androidx.camera.lifecycle)
     implementation(libs.androidx.camera.view)
     implementation(libs.mediapipe.tasks.vision)
+    // 작은 시험용 동작 모델은 CPU에서 실행. MediaPipe GPU와 실행 자원을 분리한다.
+    implementation("com.google.ai.edge.litert:litert:1.4.2")
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

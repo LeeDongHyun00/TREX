@@ -17,7 +17,19 @@ class TrexStore(context: Context, preferenceName: String = "trex_store") {
     private val prefs: SharedPreferences =
         context.applicationContext.getSharedPreferences(preferenceName, Context.MODE_PRIVATE)
 
-    init { removeLegacyDemoData() }
+    init { removeLegacyDemoData(); restrictPlanToAiHub() }
+
+    /** 기존 계획 원문을 보관한 뒤 실행 대상만 축소한다. 기록·라벨은 변경하지 않는다. */
+    private fun restrictPlanToAiHub() {
+        if (prefs.getBoolean("aihub26_plan_v1", false)) return
+        val raw = prefs.getString(KEY_PLAN, null)
+        val plan = loadPlan()
+        if (plan != null && plan != plan.aihubOnly()) {
+            prefs.edit().putString("before_aihub26_plan", raw).commit()
+            savePlan(plan.aihubOnly())
+        }
+        prefs.edit().putBoolean("aihub26_plan_v1", true).commit()
+    }
 
     /** 원본 JSON을 보존하며 샘플 날짜만 제거한다. 백업·정리·완료 표식은 한 번에 저장한다. */
     private fun removeLegacyDemoData() {
@@ -149,7 +161,7 @@ class TrexStore(context: Context, preferenceName: String = "trex_store") {
 
     fun savePlan(plan: List<Workout>) {
         val arr = JSONArray()
-        plan.forEach { w ->
+        plan.aihubOnly().forEach { w ->
             val o = JSONObject()
                 .put("id", w.id)
                 .put("name", w.name)
@@ -269,6 +281,7 @@ class TrexStore(context: Context, preferenceName: String = "trex_store") {
             abstained = o.optInt("postureAbstained", -1).takeIf { it >= 0 },
             repsValid = o.optInt("postureRepsValid", -1).takeIf { it >= 0 },
             repsPartial = o.optInt("postureRepsPartial", -1).takeIf { it >= 0 },
+            repsUnknown = o.optInt("postureRepsUnknown", -1).takeIf { it >= 0 },
             tempoMs = o.optLong("postureTempoMs", -1L).takeIf { it >= 0L },
             actualReps = o.optInt("postureActualReps", -1).takeIf { it >= 0 },
             formLabel = o.optString("postureFormLabel").takeIf { it.isNotEmpty() },
@@ -289,6 +302,7 @@ class TrexStore(context: Context, preferenceName: String = "trex_store") {
         o.put("postureAbstained", pc.abstained ?: -1)
         o.put("postureRepsValid", pc.repsValid ?: -1)
         o.put("postureRepsPartial", pc.repsPartial ?: -1)
+        o.put("postureRepsUnknown", pc.repsUnknown ?: -1)
         o.put("postureTempoMs", pc.tempoMs ?: -1L)
         o.put("postureActualReps", pc.actualReps ?: -1)
         pc.formLabel?.let { o.put("postureFormLabel", it) }

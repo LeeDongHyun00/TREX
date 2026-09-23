@@ -59,15 +59,31 @@ class FloorFeatureExtractor {
         for ((side,offset) in listOf("L" to 0,"R" to 1)) {
             val sh=11+offset; val el=13+offset; val wr=15+offset; val hp=23+offset; val kn=25+offset; val an=27+offset
             fun value(name: String, ids: IntArray, calc: () -> Double) {
-                if (ok(*ids)) calc().takeIf(Double::isFinite)?.let { put("${name}_$side",it.toFloat()) }
+                if (ok(*ids)) calc().takeIf(Double::isFinite)?.let {
+                    put("${name}_$side",it.toFloat())
+                    put("${name}_${side}_quality",ids.minOf { index -> vis[index] })
+                }
             }
             value("elbow_ang",intArrayOf(sh,el,wr)) { ang(p(sh),p(el),p(wr)) }
             value("knee_ang",intArrayOf(hp,kn,an)) { ang(p(hp),p(kn),p(an)) }
             value("hip_ang",intArrayOf(sh,hp,kn)) { ang(p(sh),p(hp),p(kn)) }
+            value("shoulder_arm_ang",intArrayOf(hp,sh,el)) { ang(p(hp),p(sh),p(el)) }
             if (!ok(sh,hp) || hypot(p(sh)[0]-p(hp)[0],p(sh)[1]-p(hp)[1]) < 10) continue
+            val torso = hypot(p(sh)[0]-p(hp)[0],p(sh)[1]-p(hp)[1])
+            fun distance(a: Int, b: Int) = hypot(p(a)[0]-p(b)[0],p(a)[1]-p(b)[1]) / torso
+            value("wrist_shoulder_d",intArrayOf(sh,hp,wr)) { distance(wr,sh) }
+            value("shoulder_knee_d",intArrayOf(sh,hp,kn)) { distance(sh,kn) }
+            value("ankle_shoulder_d",intArrayOf(sh,hp,an)) { distance(an,sh) }
             value("hip_dev_ankle",intArrayOf(sh,hp,an)) { devUp(p(hp),p(sh),p(an)) }
             value("hip_dev_knee",intArrayOf(sh,hp,kn)) { devUp(p(hp),p(sh),p(kn)) }
             value("hand_shoulder_off",intArrayOf(sh,hp,wr)) { devUp(p(wr),p(sh),p(hp)) }
+        }
+        if (ok(11,12,23,24,27,28)) {
+            fun midpoint(a: Int, b: Int) = doubleArrayOf((p(a)[0]+p(b)[0])/2,(p(a)[1]+p(b)[1])/2)
+            val sh = midpoint(11,12); val hp = midpoint(23,24)
+            val dx=sh[0]-hp[0]; val dy=sh[1]-hp[1]; val len2=dx*dx+dy*dy
+            if (len2 >= 100.0) put("ankle_cross2d", (((p(27)[0]-p(28)[0]) * -dy +
+                (p(27)[1]-p(28)[1]) * dx) / len2).toFloat())
         }
     }
 
@@ -223,4 +239,7 @@ fun PoseSample.withFeatures(newFeatures: Map<String, Float>): PoseSample = PoseS
     upFromGravity = upFromGravity,
     upFlipped = upFlipped,
     upVerified = upVerified,
+    rawWorld = rawWorld,
+    rawVisibility = rawVisibility,
+    rawPresence = rawPresence,
 )

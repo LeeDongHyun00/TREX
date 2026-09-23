@@ -127,7 +127,22 @@ import com.example.trex_kotlin.posture.PoseModel
 import com.example.trex_kotlin.posture.PoseSample
 import com.example.trex_kotlin.posture.PostureAnalyzer
 import com.example.trex_kotlin.posture.PostureRule
-import com.example.trex_kotlin.posture.RepCounter
+import com.example.trex_kotlin.posture.MotionRepCounter
+import com.example.trex_kotlin.posture.MotionContracts
+import com.example.trex_kotlin.posture.MotionPhase
+import com.example.trex_kotlin.posture.MotionTrace
+import com.example.trex_kotlin.posture.ActionShadowEngine
+import com.example.trex_kotlin.posture.PosePacketV2
+import com.example.trex_kotlin.posture.MotionTraceFrame
+import com.example.trex_kotlin.posture.CaptureTimeline
+import com.example.trex_kotlin.posture.SampleCadence
+import com.example.trex_kotlin.posture.KneeDirectionObserver
+import com.example.trex_kotlin.posture.DirectionObservation
+import com.example.trex_kotlin.posture.MotionSpeechArbiter
+import com.example.trex_kotlin.posture.MotionActivity
+import com.example.trex_kotlin.posture.MotionActivityTracker
+import com.example.trex_kotlin.posture.SideMotionComparison
+import com.example.trex_kotlin.posture.MotionCompletion
 import com.example.trex_kotlin.posture.RepMetrics
 import com.example.trex_kotlin.posture.RepRecord
 import com.example.trex_kotlin.posture.RuleHighlight
@@ -160,37 +175,8 @@ import kotlin.coroutines.suspendCoroutine
  */
 
 /** 앱 운동명 → AIHub 규칙 종목 매핑 — 여기 있는 운동만 자세 교정을 켤 수 있다. */
-val postureExerciseMap: Map<String, String> = mapOf(
-    "기본 스쿼트" to "바벨 스쿼트",
-    "바벨 스쿼트" to "바벨 스쿼트",
-    "런지" to "스텝 포워드 다이나믹 런지",
-    "바벨 런지" to "바벨 런지",
-    "사이드 런지" to "사이드 런지",
-    "크로스 런지" to "크로스 런지",
-    "바벨 데드리프트" to "바벨 데드리프트",
-    "굿모닝" to "굿모닝",
-    "딥스" to "딥스",
-    "오버헤드 프레스" to "오버 헤드 프레스",
-    "덤벨 컬" to "덤벨 컬",
-    "바벨 컬" to "바벨 컬",
-    "사이드 레터럴 레이즈" to "사이드 레터럴 레이즈",
-    "프런트 레이즈" to "프런트 레이즈",
-    "랫풀 다운" to "랫풀 다운",
-    "업라이트로우" to "업라이트로우",
-    "스탠딩 사이드 크런치" to "스탠딩 사이드 크런치",
-    "스탠딩 니업" to "스탠딩 니업",
-    "행잉 레그 레이즈" to "행잉 레그 레이즈",
-    // 바닥 종목 (rules_floor_v0.1 — 2D 평면 경로, 전부 beta·임계값 미보정, spec §25/§25a).
-    // 바이시클 크런치는 MP 충실도 게이트 후 남은 규칙이 없어 제외.
-    "푸쉬업" to "푸시업",
-    "니 푸쉬업" to "니푸쉬업",
-    "플랭크" to "플랭크",
-    "크런치" to "크런치",
-    "레그 레이즈" to "라잉 레그 레이즈",
-    "힙 쓰러스트" to "힙쓰러스트",
-    "시저 크로스" to "시저크로스",
-    "Y 레이즈" to "Y - Exercise",
-)
+val postureExerciseMap: Map<String, String> =
+    com.example.trex_kotlin.posture.ExerciseProfiles.all.associate { it.name to requireNotNull(it.referenceExercise) }
 
 fun Workout.postureSupported(): Boolean = com.example.trex_kotlin.posture.ExerciseProfiles.forName(name)?.cameraEnabled == true
 
@@ -340,7 +326,23 @@ fun PostureLiveSessionScreen(
 
     // ---- 자동 렙 카운터 (spec §27): 종목별 렙 신호의 히스테리시스 사이클. 분석 스레드에서 갱신.
     //      등척성(플랭크)·미등록 종목은 null. 카운트는 beta — ±1 오차가 구조적이라 참고 표시.
-    val repRef = remember { arrayOfNulls<RepCounter>(1) }
+    val repRef = remember { arrayOfNulls<MotionRepCounter>(1) }
+    val directionRef = remember { arrayOfNulls<KneeDirectionObserver>(1) }
+    var directions by remember { mutableStateOf<List<DirectionObservation>>(emptyList()) }
+    var motionPhase by remember { mutableStateOf(MotionPhase.UNOBSERVABLE) }
+    var repUnknown by remember { mutableIntStateOf(0) }
+    val motionTrace = remember { MotionTrace() }
+    val actionEngine = remember { ActionShadowEngine(context) }
+    val actionPrefs = remember { context.getSharedPreferences("posture_action", Context.MODE_PRIVATE) }
+    var actionCapture by remember { mutableStateOf(actionPrefs.getBoolean("capture_joints", false)) }
+    LaunchedEffect(actionCapture) { actionEngine.setCaptureEnabled(actionCapture) }
+    DisposableEffect(actionEngine) { onDispose { actionEngine.close() } }
+    val motionSpeech = remember { MotionSpeechArbiter() }
+    val sampleCadence = remember { SampleCadence(SESSION_SAMPLE_INTERVAL_MS) }
+    val activityTracker = remember { MotionActivityTracker() }
+    var motionActivity by remember { mutableStateOf(MotionActivity.UNOBSERVABLE) }
+    val motionEpoch = remember { java.util.concurrent.atomic.AtomicInteger(0) }
+    val sideComparisonRef = remember { arrayOfNulls<SideMotionComparison>(1) }
     var repCount by remember { mutableIntStateOf(0) }      // 유효 렙
     var repInvalid by remember { mutableIntStateOf(0) }    // ROM 미달 렙 — 코치: 무효+사유 발화, 기록: 파셜 집계만 (§29)
     val onRepLatest = rememberUpdatedState(onRepDetected)
@@ -417,7 +419,8 @@ fun PostureLiveSessionScreen(
     val analyzer = remember { PostureAnalyzer(context, PoseModel.FULL, preferGpu = true) }
     DisposableEffect(analyzer) { onDispose { analyzer.close() } }
     val executor = remember { Executors.newSingleThreadExecutor() }
-    val policy = remember { InferencePolicy(sampleIntervalMs = SESSION_SAMPLE_INTERVAL_MS) }
+    // FULL 모델과 열 보호는 유지. 실제 속도는 기기 추론시간에 제한되며 300ms 상한만 해제한다.
+    val policy = remember { InferencePolicy(sampleIntervalMs = 80L) }
     val lastInferAt = remember { longArrayOf(0L) }
     val thermal = remember { ThermalMonitor(context) }
     val thermalRef = remember { intArrayOf(InferencePolicy.THERMAL_NONE) }
@@ -494,7 +497,7 @@ fun PostureLiveSessionScreen(
             recordedTimesMs.clear()
             aggregator.reset()
         }
-        if (samples.size < MIN_FRAMES_FOR_LOG) return@fin null
+        if (samples.isEmpty()) return@fin null // 짧은 1회 세트도 기록. 자세 판정의 최소 프레임 수는 별도 유지.
         // onset(처음부터/점점/교정됨) 분류는 여기서 — coachRef 는 다음 종목의 LaunchedEffect 에서 새 코치로 바뀐다
         val onset = runCatching { coachRef[0]?.summarize().orEmpty() }.getOrDefault(emptyList())
         val t0 = times.firstOrNull() ?: 0L
@@ -510,7 +513,10 @@ fun PostureLiveSessionScreen(
         val startAt = anchorAtRef[0].takeIf { it > 0L } ?: Long.MAX_VALUE
         results = PostureAssessment.evaluate(rs, ex, samples, times, startAt, endAt, reps.orEmpty(), baselineRef[0], MIN_FRAMES_FOR_LOG)
         val measurementLines = results.mapNotNull { it.measurement }.toMutableList()
+        if (rc != null) measurementLines += "관측 반복 ${reps.orEmpty().size}회 · 가동범위 참고 기준 충족 ${reps.orEmpty().count { it.valid == true }}회 · 미달 ${reps.orEmpty().count { it.valid == false }}회 · 미확인 ${reps.orEmpty().count { it.valid == null }}회"
+        if (rc != null) measurementLines += rc.contract.countHint
         measurementLines += comparisonRef[0]?.report(endAt, t0).orEmpty()
+        measurementLines += sideComparisonRef[0]?.report(endAt,t0).orEmpty()
         comparisonRef[0]?.snapshot?.values?.take(2)?.forEach { measurementLines += "초반 비교 · ${it.detail}" }
         if (floor && measurementLines.isEmpty()) {
             val observed = samples.indices.lastOrNull { times[it] > startAt && times[it] <= endAt && samples[it].features.isNotEmpty() }?.let { samples[it].features }.orEmpty()
@@ -541,6 +547,12 @@ fun PostureLiveSessionScreen(
             mode = if (modeRef[0] == CoachMode.TRACK) "track" else "coach",
             // 집계 창의 시작 — results 가 이 시점 이후 프레임만 본다는 사실을 로그에 남긴다
             anchorTMs = anchorAtRef[0].takeIf { it > 0L }?.let { it - t0 },
+        ).copy(
+            repUnknown = reps?.count { it.valid == null }, repSides = reps?.map { it.side },
+            motionVersion = MotionContracts.VERSION,
+            motionFrames = motionTrace.snapshot().map { it.copy(tMs = it.tMs - t0) },
+            motionFramesDropped = motionTrace.dropped,
+            action = actionEngine.snapshot(t0),
         )
         // 분석 executor 는 화면 종료 시 shutdown 되므로 순서에 의존하지 않도록 별도 스레드에서 기록한다.
         Thread {
@@ -560,8 +572,9 @@ fun PostureLiveSessionScreen(
             onset = if (modeRef[0] == CoachMode.TRACK || endAt < (times.lastOrNull() ?: endAt)) emptyList() else onset,
             measurements = measurementLines,
             // 렙 카운터 미적용 종목은 null. 유효 = 전체 사이클 − ROM 미달(코치의 "무효" = 기록의 "파셜", §29)
-            repsValid = rc?.let { it.reps - repInvalidRef[0] },
+            repsValid = reps?.count { it.valid == true },
             repsPartial = rc?.let { repInvalidRef[0] },
+            repsUnknown = reps?.count { it.valid == null },
             tempoMs = repTimes?.let { RepMetrics.medianPeriodMs(it) },
         )
     }
@@ -582,6 +595,8 @@ fun PostureLiveSessionScreen(
     }
     LaunchedEffect(ruleSet, workout.id) {
         val rs = ruleSet ?: return@LaunchedEffect
+        synchronized(recordedSamples) {
+        motionEpoch.incrementAndGet()
         // 구형 기준선 TSV에는 변형·촬영 방향·MP 피처 버전이 없다. 다른 촬영의 정답 보정으로 자동 적용하지 않는다.
         // 파일과 개발용 기준선 가이드는 보존하며, 실시간 개인화는 현재 세트의 항목별 observedStart를 사용한다.
         val baselineValues: Map<String, Float>? = null
@@ -591,12 +606,14 @@ fun PostureLiveSessionScreen(
         // speakBeta=false: 미보정 규칙은 화면·리포트에 '참고' 로만 남기고 음성은 검증된 규칙만 낸다 (§28 오탐 3건이 전부 베타).
         coachRef[0] = LiveCoach(rs, aihubExercise, baseline = baselineValues, requireAnchor = true, speakBeta = false)
         coachBanner = null   // 이전 종목의 배너·ⓘ 근거 주석이 새 종목에 오귀속되지 않도록
-        repRef[0] = RepCounter.forExercise(aihubExercise)?.let { counter ->
-            val config = rs.rulesFor(aihubExercise).firstOrNull { it.kind == "rep" }?.repConfig
-            if (config != null) RepCounter(counter.signal.copy(romDirection = config.direction, romThreshold = config.threshold, romValidated = false), maxGapMs = 1500L, completeOnReturn = true)
-            else if (isFloorExercise) RepCounter(counter.signal.copy(romThreshold = null, romDirection = null, romValidated = false), maxGapMs = 1500L, completeOnReturn = true)
-            else RepCounter(counter.signal, maxGapMs = 1500L, completeOnReturn = true)
-        }
+        repRef[0] = MotionRepCounter.forExercise(aihubExercise, rs.rules)
+        directionRef[0] = KneeDirectionObserver(aihubExercise)
+        directions = emptyList(); motionPhase = MotionPhase.UNOBSERVABLE
+        repUnknown = 0; deliveredReps = 0
+        sampleCadence.reset(); motionTrace.clear(); motionSpeech.reset()
+        actionEngine.resetSession()
+        activityTracker.reset(); motionActivity = MotionActivity.UNOBSERVABLE; motionEpoch.incrementAndGet()
+        finalized.set(false)
         repCount = 0
         repInvalid = 0
         repInvalidRef[0] = 0
@@ -617,6 +634,9 @@ fun PostureLiveSessionScreen(
             profile?.let(com.example.trex_kotlin.posture.ExerciseProfiles::metrics).orEmpty()).distinctBy { it.feature },
             observationKind = profile?.kind, variantId = workout.name)
         comparison = ComparisonSnapshot()
+        sideComparisonRef[0] = repRef[0]?.contract?.takeIf(SideMotionComparison::applies)?.let {
+            SideMotionComparison(it,comparisonRef[0]?.metrics.orEmpty())
+        }
         referenceView = null
         normalMatches = emptyList()
         holdRef[0] = ruleSet?.rulesFor(aihubExercise)?.firstOrNull { it.holdConfig != null }?.holdConfig?.let { HoldTracker(it) }
@@ -630,26 +650,50 @@ fun PostureLiveSessionScreen(
         coverage = CoverageReport.OK
         coverageStreak[0] = 0
         viewEst = null
-
+        }
     }
 
-    LaunchedEffect(useFrontCamera) {
+    LaunchedEffect(useFrontCamera, displayRotation) {
+        motionEpoch.incrementAndGet()
+        actionEngine.breakContinuity()
+        synchronized(recordedSamples) {
+        synchronized(repRecords) { repRef[0]?.resetCycle() }
+        directionRef[0]?.reset(); directions = emptyList()
+        motionPhase = MotionPhase.UNOBSERVABLE
+        activityTracker.reset(); motionActivity = MotionActivity.UNOBSERVABLE
+        if (recordedFrames > 0) synchronized(recordedSamples) {
+            motionTrace.add(MotionTraceFrame((motionTrace.snapshot().lastOrNull()?.tMs ?: System.currentTimeMillis())+1,
+                MotionPhase.UNOBSERVABLE.name,emptyMap(),0,0))
+            coachRef[0] = ruleSet?.let { LiveCoach(it,aihubExercise,requireAnchor=true,speakBeta=false) }
+            coachBanner = null; aggregator.reset(); anchored = false; anchoredRef[0] = false
+            anchorAtRef[0] = 0; detectStartRef[0] = 0
+        }
         comparisonRef[0]?.reset()
+        sideComparisonRef[0]?.reset()
         alignmentRef[0] = if (aihubExercise == "플랭크") ruleSet?.let { PlankAlignmentTracker(it.rulesFor(aihubExercise)) } else null
         alignment = AlignmentSnapshot()
         comparison = ComparisonSnapshot()
         comparisonSpeech.clear()
         referenceView = null
         normalMatches = emptyList()
+        }
     }
     LaunchedEffect(paused) {
         if (paused) {
+            motionEpoch.incrementAndGet()
+            actionEngine.breakContinuity()
+            synchronized(recordedSamples) {
             synchronized(repRecords) { repRef[0]?.resetCycle() }
+            directionRef[0]?.reset(); directions = emptyList(); motionPhase = MotionPhase.PAUSED
+            motionActivity = MotionActivity.PAUSED; activityTracker.reset()
+            motionTrace.add(MotionTraceFrame((motionTrace.snapshot().lastOrNull()?.tMs ?: System.currentTimeMillis())+1,MotionPhase.PAUSED.name,emptyMap(),0,0))
             alignment = alignmentRef[0]?.add(System.currentTimeMillis(),emptyMap()) ?: AlignmentSnapshot()
             comparisonRef[0]?.unavailable("일시정지 · 처음 기준은 유지하고 진행 중 반복은 다시 측정해요")
+            sideComparisonRef[0]?.unavailable()
             comparison = comparisonRef[0]?.snapshot ?: ComparisonSnapshot()
             comparisonSpeech.clear()
             normalMatches = emptyList()
+            }
         }
     }
 
@@ -687,16 +731,20 @@ fun PostureLiveSessionScreen(
             .setTargetRotation(rotationRef[0])
             .build()
         analysisRef[0] = analysis   // 회전 시 targetRotation 갱신용
+        val captureTimeline = CaptureTimeline()
         analysis.setAnalyzer(executor) { image ->
-            val now = System.currentTimeMillis()
+            val scheduledAt = android.os.SystemClock.elapsedRealtime()
             val phase = if (pausedRef[0]) InferencePhase.IDLE else InferencePhase.RECORDING
-            if (!policy.shouldInfer(now, lastInferAt[0], phase, thermalRef[0])) {
+            if (!policy.shouldInfer(scheduledAt, lastInferAt[0], phase, thermalRef[0])) {
                 image.close()
                 return@setAnalyzer
             }
-            lastInferAt[0] = now
+            lastInferAt[0] = scheduledAt
+            val now = captureTimeline.map(image.imageInfo.timestamp, System.currentTimeMillis())
+            if (now == null) { image.close(); return@setAnalyzer }
             try {
                 val wasPreparing = preparingRef.value
+                val observedEpoch = motionEpoch.get()
                 val capturedAt = android.os.SystemClock.elapsedRealtime()
                 val up = gravity.gravityDevice
                     ?.let { gravityUpInWorld(it, rotationRef[0], frontRef[0]) }
@@ -706,11 +754,23 @@ fun PostureLiveSessionScreen(
                 sampleAt = capturedAt
                 stats = analyzer.stats()
                 // 전환 직전에 추론을 시작한 준비 프레임도 엔진/기준/로그로 들어가지 않는다.
-                if (wasPreparing || preparingRef.value) return@setAnalyzer
+                if (wasPreparing || preparingRef.value || observedEpoch != motionEpoch.get()) return@setAnalyzer
+                if (!pausedRef[0] && !finalized.get()) actionEngine.offer(
+                    PosePacketV2.from(s, now, image.imageInfo.timestamp, observedEpoch, frontRef[0]),
+                    comparisonRef[0]?.exercise ?: aihubExercise, thermalRef[0],
+                )
                 if (s.detected) everDetected = true
                 if (!s.detected || pausedRef[0]) {
+                    synchronized(repRecords) { repRef[0]?.onFrame(now,emptyMap()) }
+                    directionRef[0]?.reset(); directions = emptyList()
+                    motionPhase = if (pausedRef[0]) MotionPhase.PAUSED else MotionPhase.UNOBSERVABLE
+                    motionActivity = if (pausedRef[0]) MotionActivity.PAUSED else MotionActivity.UNOBSERVABLE
+                    activityTracker.reset()
+                    motionTrace.add(MotionTraceFrame(now,motionPhase.name,emptyMap(),0,s.inferMs))
+                    coachBanner = null; violHighlight = emptySet(); provisionalHighlight = emptySet()
                     alignment = alignmentRef[0]?.add(now,emptyMap()) ?: AlignmentSnapshot()
                     comparisonRef[0]?.unavailable()
+                    sideComparisonRef[0]?.unavailable()
                     comparison = comparisonRef[0]?.snapshot ?: ComparisonSnapshot()
                     normalMatches = emptyList()
                     holdRef[0]?.add(now - (recordedTimesMs.firstOrNull() ?: now), null)
@@ -722,6 +782,8 @@ fun PostureLiveSessionScreen(
                     }
                 }
                 if (s.detected && !pausedRef[0] && !finalized.get()) {
+                    synchronized(recordedSamples) {
+                    if (finalized.get() || observedEpoch != motionEpoch.get()) return@setAnalyzer
                     // 바닥 종목: 중력 기반 3D 피처 대신 2D 평면 피처 (가림 시 피처 단위 유보 포함)
                     val features = if (floorRef[0]) {
                         floorExtractor.computeForExercise(comparisonRef[0]?.exercise.orEmpty(),s.normalizedXy,s.visibility,s.imageWidth,s.imageHeight)
@@ -730,7 +792,9 @@ fun PostureLiveSessionScreen(
                     }
                     var newFloorRep: RepRecord? = null
                     var comparisonPeakAt: Long? = null
+                    var motionEvents: List<MotionCompletion> = emptyList()
                     var floorObservable = features.isNotEmpty()
+                    val slowSample = sampleCadence.accept(now)
                     alignmentRef[0]?.let { alignment = it.add(now,features) }
                     // 촬영 커버리지 — 규칙이 요구하는 부위가 화면에 있는가
                     if (floorRef[0] && alignmentRef[0] == null) {
@@ -751,7 +815,7 @@ fun PostureLiveSessionScreen(
                             ?: FloorTemporal.observation(aihubExercise, features).ifEmpty { "동작을 측정하고 있어요" }
                     }
                     // aggregator 도 같은 락 안에서 — 세트 마감의 evaluate/reset 과 겹치면 CME 로 결과가 비어 UNJUDGED 오판정이 난다
-                    synchronized(recordedSamples) {
+                    if (slowSample) synchronized(recordedSamples) {
                         aggregator.add(features)
                         recordedSamples.add(if (floorRef[0]) s.withFeatures(features) else s)
                         recordedTimesMs.add(now)
@@ -761,9 +825,16 @@ fun PostureLiveSessionScreen(
                     }
                     repRef[0]?.let { rc ->
                         // repTimesMs 갱신은 세트 마감의 복사와 같은 락 안에서
-                        val completed = synchronized(repRecords) { rc.onFrame(now, features[rc.signal.feature]) }
-                        if (completed) {
-                            comparisonPeakAt = rc.repTimesMs.lastOrNull()
+                        val completed = synchronized(repRecords) { rc.onFrame(now, features) }
+                        motionEvents = completed
+                        motionPhase = rc.phase
+                        motionActivity = activityTracker.update(now,rc.contract,rc.phase,features)
+                        if (rc.phase == MotionPhase.OUTBOUND && coachRef[0]?.anchor() == true) {
+                            anchored = true; anchoredRef[0] = true; anchorAtRef[0] = now
+                            aggregator.reset()
+                        }
+                        for (event in completed) {
+                            comparisonPeakAt = event.atMs
                             // 첫 렙이 끝났다 = 여기부터가 진짜 운동 구간. 초반 창과 **세트 집계**를 여기로 옮긴다 (spec §31).
                             if (coachRef[0]?.anchor() == true) {
                                 anchored = true; anchoredRef[0] = true; anchorAtRef[0] = now
@@ -773,17 +844,28 @@ fun PostureLiveSessionScreen(
                             // ROM 유효성 (수정판): 사이클 극값이 데이터 기준 미달이면 미달 렙.
                             // 코치 모드 = 무효로 판정하고 사유를 말한다 (REP_VALIDITY.md, 심판 방식).
                             // 기록 모드 = "파셜"로 집계만 — 숙련자의 파셜은 기법이지 잘못이 아니다 (§29).
-                            val valid = rc.signal.isValidRep(rc.lastCycleMin, rc.lastCycleMax)
-                            val record = RepRecord(now, rc.lastCycleMin, rc.lastCycleMax, valid)
+                            val valid = rc.signal.isValidRep(event.min, event.max)
+                            val record = RepRecord(event.atMs, event.min, event.max, valid, event.side.name)
                             synchronized(repRecords) { repRecords.add(record) }
                             if (floorRef[0]) newFloorRep = record
                             if (valid != false) repCount++ else { repInvalid++; repInvalidRef[0] = repInvalid }
+                            if (valid == null) repUnknown++
                             repTempoMs = RepMetrics.medianPeriodMs(rc.repTimesMs)
                             // 빠른 렙 자가진단: 주기가 1.5s 아래면 3.3fps 로는 놓칠 수 있다 (렙당 4샘플 하한 실측)
                             repFast = (rc.periodMs ?: Long.MAX_VALUE) < 1_500L
                         }
+                        directions = directionRef[0]?.add(now, features,
+                            rc.phase != MotionPhase.UNOBSERVABLE && s.upVerified).orEmpty()
+                        if (rc.phase == MotionPhase.UNOBSERVABLE) {
+                            coachBanner = null; violHighlight = emptySet(); provisionalHighlight = emptySet()
+                        }
+                        val keys = rc.contract.channels.flatMap { listOf(it.primary,it.support,it.primary+"_quality",it.support+"_quality") }.toSet() + rc.signal.feature +
+                            setOf("knee_track_L","knee_track_R","knee_L","knee_R")
+                        motionTrace.add(MotionTraceFrame(now,rc.phase.name,features.filterKeys { it in keys },completed.size,s.inferMs,directions.map { it.key }))
                     }
-                    coachRef[0]?.let { coach ->
+                    if (coachBanner?.let { now - it.atMs > 5000 } == true || directions.isNotEmpty()) coachBanner = null
+                    // 새 방향 관측은 아직 beta: 화면의 참고/강조에만 사용하고 음성 교정으로 승격하지 않는다.
+                    if (slowSample) coachRef[0]?.let { coach ->
                         // 앵커 폴백: 렙 신호가 없는 종목(등척성·컬·레이즈류)이거나 첫 렙이 너무 늦으면 시간으로 앵커한다.
                         if (!coach.isAnchored) {
                             // 기준 시점은 '검출' 이 아니라 '측정 가능' 이다 — PostureAnalyzer 는 가시 관절이 몇 개든
@@ -799,7 +881,8 @@ fun PostureLiveSessionScreen(
                             }
                         }
                         coach.onFrame(features)
-                        val ev = coach.evaluate(now)
+                        val ev = coach.evaluate(now, modeRef[0] != CoachMode.TRACK && directions.isEmpty() &&
+                            speech.ready && !speech.muted && !speech.isSpeaking && now > boundaryUntil[0])
                         val track = modeRef[0] == CoachMode.TRACK
                         // 강조를 두 갈래로: 검증된(ship) 위반만 붉게, 미보정(beta)은 '참고' 색 — 같은 붉은색이면
                         // 말하지 않기로 한 규칙이 화면에서는 확신처럼 보인다.
@@ -822,13 +905,14 @@ fun PostureLiveSessionScreen(
                         if (floorRef[0]) {
                             // 바닥 피드백은 아래의 시간·반복 상태기가 한 번만 발화한다.
                         } else if (!coverage.ok) {
-                            if (now - lastCoverageSpeakAt[0] > COVERAGE_SPEAK_GAP_MS) {
+                            if (!speech.isSpeaking && now - lastCoverageSpeakAt[0] > COVERAGE_SPEAK_GAP_MS) {
                                 lastCoverageSpeakAt[0] = now
                                 speech.speak(coverage.message + ". " + coverage.fix, flush = flush)
                             }
-                        } else if (ev != null && !track) {
+                        } else if (ev != null && !track && directions.isEmpty()) {
                             coachBanner = ev
-                            speech.speak(ev.message, flush = flush)
+                            if (motionSpeech.offer(now,ev.rule.id,ev.atMs,speech.ready && !speech.muted && !speech.isSpeaking && flush))
+                                speech.speakCurrent(ev.message)
                         }
                         // 점수는 리포트와 같은 분모로 — 검증된(ship) 규칙만. 베타를 섞으면 화면과 리포트가 다른 숫자를 말한다.
                         val states = coach.lastStates.filter { it.rule.status != RuleStatus.BETA }
@@ -837,20 +921,27 @@ fun PostureLiveSessionScreen(
                         if (ok + bad > 0) scoreOk = ok to (ok + bad)
                     }
                     comparisonRef[0]?.let { tracker ->
+                        val sideComparison=sideComparisonRef[0]
+                        if (sideComparison != null) {
+                            comparison=sideComparison.add(now,features,motionEvents,anchoredRef[0])
+                            normalMatches=emptyList() // 측별 새 신호에 모집단 평균 피처의 정답 기준을 전용하지 않는다.
+                        } else {
                         if (floorObservable) comparison = tracker.add(now, features, comparisonPeakAt,
                             anchoredRef[0] || alignmentRef[0] != null || profile?.comparisonOnly == true,
                             referenceEligible = true)
                         else { tracker.unavailable(); comparison = tracker.snapshot }
                         normalMatches = normalReferenceRef[0].compare(tracker.exercise, referenceViewRef[0], tracker.latestSignature, tracker.metrics)
+                        }
                         if (modeRef[0] == CoachMode.TRACK || profile?.comparisonOnly == true) comparisonSpeech.next(now, comparison,
-                            speech.ready && !speech.muted && now > boundaryUntil[0])?.let { speech.speak(it, flush = true) }
+                            speech.ready && !speech.muted && !speech.isSpeaking && now > boundaryUntil[0])?.let { speech.speak(it, flush = true) }
                     }
                     if (floorRef[0]) {
                         floorFeedback = floorFeedbackRef[0]?.update(now, features, holdRef[0]?.snapshot(),
                             coachRef[0]?.lastStates.orEmpty(), newFloorRep, anchoredRef[0], floorObservable,
-                            mode = modeRef[0], voiceEnabled = modeRef[0] != CoachMode.TRACK && speech.ready && !speech.muted && now > boundaryUntil[0],
+                            mode = modeRef[0], voiceEnabled = modeRef[0] != CoachMode.TRACK && speech.ready && !speech.muted && !speech.isSpeaking && now > boundaryUntil[0],
                             alignment = alignment.takeIf { alignmentRef[0] != null })
                         if (modeRef[0] != CoachMode.TRACK) floorFeedback?.speech?.let { speech.speak(it, flush = true) }
+                    }
                     }
                 }
             } catch (_: Throwable) {
@@ -912,9 +1003,12 @@ fun PostureLiveSessionScreen(
                         mode == CoachMode.TRACK || profile?.comparisonOnly == true -> comparison.message
                         isFloorExercise -> floorFeedback?.message ?: "옆모습을 화면에 담아 주세요."
                         !coverage.ok -> coverage.message
+                        repRef[0] != null && motionPhase == MotionPhase.UNOBSERVABLE -> "동작을 측정하기 어려워요. 필요한 관절이 보이게 해주세요."
+                        directions.isNotEmpty() -> directions.joinToString(" · ") { it.text.substringBefore(".") } + ". 무릎과 발끝의 진행 방향을 확인해 주세요."
                         viewEst?.cls?.let { !it.front && it != ViewEstimator.ViewClass.UNKNOWN } == true ->
                             profile?.capture?.placement ?: "전신이 보이도록 자리 잡아 주세요."
                         coachBanner != null -> coachBanner!!.message
+                        comparison.state == ComparisonState.CHANGED -> "참고 변화 · " + comparison.message
                         sample.features.isNotEmpty() -> "움직임을 비교하고 있어요."
                         else -> "전신을 화면에 담아 주세요."
                     }
@@ -926,7 +1020,8 @@ fun PostureLiveSessionScreen(
             if (!preparing) LivePoseOverlay(
                 sample = sample, mirror = useFrontCamera, tint = c.lime,
                 highlight = if (mode == CoachMode.TRACK || paused) emptySet() else if (isFloorExercise) floorFeedback?.landmarks.orEmpty() else violHighlight,
-                provisional = if (paused) emptySet() else if (mode == CoachMode.TRACK) comparison.landmarks else provisionalHighlight,
+                provisional = if (paused) emptySet() else if (mode == CoachMode.TRACK) comparison.landmarks else
+                    provisionalHighlight + directions.flatMap { it.landmarks } + comparison.landmarks,
                 visibilityCut = if (isFloorExercise) 0.35f else 0.5f,
                 plankSide = alignment.visibleSide.takeIf { alignment.placementReady && mode == CoachMode.COACH && !paused },
                 modifier = Modifier.fillMaxSize(),
@@ -945,6 +1040,7 @@ fun PostureLiveSessionScreen(
     }
 
     val modeControl: @Composable () -> Unit = {
+        Column {
         CoachModeControl(mode, preparing) { selected ->
             openPanel()
             mode = selected; modeRef[0] = selected
@@ -953,6 +1049,18 @@ fun PostureLiveSessionScreen(
             coachBanner = null; provisionalNote = null
             violHighlight = emptySet(); provisionalHighlight = emptySet()
             // 모드를 바꿔도 현재 세트 초반 기준과 누적 횟수는 유지한다.
+        }
+        if (preparing || paused) Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("동작 분석 개선용 관절 기록", color = c.text, fontSize = 12.sp)
+                Text("영상 없이 기기에 저장 · 자동 전송 없음", color = c.text2, fontSize = 10.sp)
+            }
+            androidx.compose.material3.Switch(checked = actionCapture, onCheckedChange = {
+                actionCapture = it
+                actionEngine.setCaptureEnabled(it)
+                actionPrefs.edit().putBoolean("capture_joints", it).apply()
+            })
+        }
         }
     }
     val panel: @Composable (Modifier) -> Unit = { mod ->
@@ -975,8 +1083,11 @@ fun PostureLiveSessionScreen(
                         Text(msg, color = c.text, fontSize = 15.sp, lineHeight = 22.sp)
                     }
                     if (workout.resolvedTarget() is WorkoutTarget.Repetitions) {
-                        Text(if (repRef[0] == null) "직접 횟수 기록" else "자동 횟수 · 참고", color = c.text2,
+                        Text(if (repRef[0] == null) "직접 횟수 기록" else "관측 ${repCount + repInvalid}회 · 범위 기준 충족 ${repCount - repUnknown} · 미달 $repInvalid · 미확인 $repUnknown", color = c.text2,
                             fontSize = 11.sp, modifier = Modifier.padding(top = 6.dp))
+                        repRef[0]?.let { rc -> Text(rc.contract.countHint + " · " + motionPhase.label,
+                            color = c.text2, fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp))
+                            Text(motionActivity.label, color = c.text2, fontSize = 11.sp) }
                     }
                 }
             }
@@ -1021,9 +1132,7 @@ fun PostureLiveSessionScreen(
 
 /** 렙 카운트 알림 — 음성이 되면 숫자로, 안 되면 짧은 톤으로. 코칭 문구를 끊지 않게 큐에 붙인다. */
 private fun speakRep(speech: SpeechCoach, tone: ToneGenerator?, n: Int) {
-    if (speech.ready) {
-        speech.speak(n.toString(), flush = false)
-    } else {
+    if (!speech.speakCurrent(n.toString())) {
         runCatching { tone?.startTone(ToneGenerator.TONE_PROP_BEEP, 90) }
     }
 }

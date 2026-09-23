@@ -4,8 +4,8 @@ TREX는 Android Kotlin과 Jetpack Compose로 만든 운동/식단 관리 앱입�
 
 ## Android 체험판 다운로드
 
-**[TREX APK 다운로드 · v1.1.0-preview.2](https://github.com/LeeDongHyun00/TREX/releases/download/v1.1.0-preview.2/TREX-1.1.0-preview.2.apk)**
-[릴리스 설명 및 파일 확인](https://github.com/LeeDongHyun00/TREX/releases/tag/v1.1.0-preview.2)
+**[TREX APK 다운로드 · v1.2.0-preview.1](https://github.com/LeeDongHyun00/TREX/releases/download/v1.2.0-preview.1/TREX-1.2.0-preview.1.apk)**
+[릴리스 설명 및 파일 확인](https://github.com/LeeDongHyun00/TREX/releases/tag/v1.2.0-preview.1)
 
 휴대폰 한 대로 운동 루틴을 진행하고, 카메라에 잡힌 관절을 바탕으로 자세 변화를 확인해 보세요. 운동에 맞는 촬영 방향을 먼저 안내하고, 몸이 화면에 들어오면 5초 카운트다운 후 시작합니다. 짧은 인식 끊김에는 남은 준비 시간을 유지하며, 준비가 진행되지 않으면 오른쪽 아래 **준비 건너뛰기**로 바로 시작할 수 있습니다.
 
@@ -18,7 +18,9 @@ TREX는 Android Kotlin과 Jetpack Compose로 만든 운동/식단 관리 앱입�
 - 큰 카메라 미리보기와 하단 횟수·목표 표시, 5초 준비 완료 시 전체 화면 시작
 - **자세 교정 / 기록 모드**를 직접 선택하는 모드 바, 끼니 시간대를 구분하는 상징
 
-2026-09-12 업데이트: 준비를 건너뛰면 제어판을 먼저 보여주고 전신이 연속 1초 잡히면 접습니다. 준비·평가 음성은 일반 존댓말로 안내합니다. 기존 다운로드 링크에서 수정 APK를 다시 받을 수 있습니다
+2026-09-23 업데이트: AIHub 연결 **26종목**으로 서비스 범위를 정리하고, 운동별 단계·좌우를 분리한 카운터와 무릎 방향의 참고 표시를 연결했습니다. 관측 횟수와 가동범위 충족·미달·미확인을 구분합니다. 이전 계획은 원문을 백업한 뒤 지원 종목으로 정리하며 과거 운동 기록은 유지합니다.
+
+AIHub 관절로 학습한 약 **43KB 운동 종류 모델**도 포함합니다. 아직 모르는 행동을 충분히 거르지 못하므로 **시험 실행만 하며 횟수·점수·음성 교정에는 사용하지 않습니다**. 준비 또는 일시정지 화면에서 `동작 분석 개선용 관절 기록`을 켜면 영상 없이 관절 좌표만 기기에 저장합니다. 기본값은 꺼짐이며 자동 전송은 없습니다. [구현·측정 결과와 한계](docs/POSTURE_ACTION_MODEL_IMPLEMENTATION.md)
 
 ### 설치 방법
 
@@ -30,7 +32,7 @@ TREX는 Android Kotlin과 Jetpack Compose로 만든 운동/식단 관리 앱입�
 
 운동 기록은 오늘을 포함한 최근 7일을 보관하며, 기간이 지난 기록은 앱 실행·복귀 시 정리됩니다. 기존 동일 서명의 TREX는 앱을 삭제하지 않고 업데이트할 수 있습니다. 서명이 다른 개발 APK와 충돌하면 기록 보존을 위해 기존 앱을 먼저 삭제하지 말고 확인해 주세요.
 
-구현 소스: [`feature/posture-coach-reliability`](https://github.com/LeeDongHyun00/TREX/tree/feature/posture-coach-reliability). APK는 Git 저장소에 넣지 않고 GitHub Releases에서 제공합니다. 파일 무결성은 릴리스의 `SHA256SUMS.txt`로 확인할 수 있습니다.
+구현 소스: [`codex/posture-action-model-preview`](https://github.com/LeeDongHyun00/TREX/tree/codex/posture-action-model-preview). APK는 Git 저장소에 넣지 않고 GitHub Releases에서 제공합니다. 파일 무결성은 릴리스의 `SHA256SUMS.txt`로 확인할 수 있습니다.
 
 ## 개발 환경
 
@@ -45,7 +47,7 @@ TREX는 Android Kotlin과 Jetpack Compose로 만든 운동/식단 관리 앱입�
 1. 저장소를 클론합니다.
 
    ```powershell
-   git clone --branch feature/posture-coach-reliability https://github.com/LeeDongHyun00/TREX.git
+   git clone --branch codex/posture-action-model-preview https://github.com/LeeDongHyun00/TREX.git
    cd TREX
    ```
 

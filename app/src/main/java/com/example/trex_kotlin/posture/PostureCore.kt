@@ -271,6 +271,20 @@ class PoseFrame(val joints: Map<String, Vec3?>, up: Vec3 = Vec3(0f, 1f, 0f)) {
             if (heel != null && foot != null) {
                 val len = (heel - foot).norm
                 if (len > 3f) put("heel_lift_$side", h(heel - foot) / len)
+                if (knee != null && ankle != null && xb != null) {
+                    // 발의 진행 방향에 수직인 무릎 위치. +는 해당 다리의 바깥, -는 안쪽.
+                    // 새 관측 피처이며 기존 knee_out 임계값으로 판정하지 않는다.
+                    val footHorizontal = flat(foot - heel)
+                    val shin = (knee - ankle).norm
+                    if (footHorizontal.norm > 6f && footHorizontal.norm > len * .5f && shin > 10f) {
+                        val forward = footHorizontal.unit()
+                        val lateral = forward?.let { up.cross(it).unit() }
+                        if (lateral != null && abs(lateral.dot(xb)) > .25f) {
+                            val outward = if (lateral.dot(xb) * sign >= 0f) lateral else lateral * -1f
+                            put("knee_track_$side", (knee - ankle).dot(outward) / shin)
+                        }
+                    }
+                }
             }
             if (hip != null && knee != null && ankle != null) {
                 val hb = body(hip); val kb = body(knee); val ab = body(ankle)
@@ -344,6 +358,8 @@ class PoseFrame(val joints: Map<String, Vec3?>, up: Vec3 = Vec3(0f, 1f, 0f)) {
             val el = if (side == 'L') lEl else rEl
             val wr = if (side == 'L') lWr else rWr
             val hip = if (side == 'L') lHip else rHip
+            val palm = if (side == 'L') lPa else rPa
+            if (sh != null && palm != null && torsoLen != null) put("palm_h_sh_$side", h(palm - sh) / torsoLen)
             if (el != null && wr != null) put("forearm_vert_$side", angleVec(wr - el, up))
             if (sh != null && el != null) put("upperarm_vert_$side", angleVec(el - sh, up))
             if (sh != null && el != null && hip != null) {

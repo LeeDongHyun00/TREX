@@ -108,7 +108,7 @@ fun RecordScreen(app: AppViewModel, onBack: () -> Unit) {
                                                 Text(line1, color = c.text2, fontSize = 13.sp, lineHeight = 20.sp)
                                                 line2?.let { Text(it, color = c.text2, fontSize = 13.sp, lineHeight = 20.sp) }
                                                 selfLabelText(pc)?.let { Text(it, color = c.primaryText, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp)) }
-                                                val detected = pc.repsValid?.let { it + (pc.repsPartial ?: 0) }
+                                                val detected = pc.repsValid?.let { it + (pc.repsPartial ?: 0) + (pc.repsUnknown ?: 0) }
                                                 if (pc.actualReps != null && detected != null && pc.actualReps != detected)
                                                     Text("앱 검출 ${detected}회", color = c.text3, fontSize = 12.sp)
                                             }

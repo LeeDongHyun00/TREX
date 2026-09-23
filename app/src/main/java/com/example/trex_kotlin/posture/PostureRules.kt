@@ -184,7 +184,7 @@ class PostureRuleSet(
         minFrames: Int = 8,
         baseline: Map<String, Float>? = null,
     ): List<RuleResult> {
-        // §33: 이 창의 촬영 방향. 프레임이 모자라거나 방향이 일관되지 않으면(UNKNOWN) 게이팅하지 않는다 = 종전 동작
+        // 검증된 뷰를 요구하는 규칙은 방향 미확인도 유보한다.
         val view = ViewEstimator.estimate(agg, minFrames)?.takeIf { it.cls != ViewEstimator.ViewClass.UNKNOWN }
         return rulesFor(exercise, includeBeta).map { rule ->
             if (rule.kind != "window") return@map RuleResult(rule, Verdict.ABSTAIN, null, 0, abstainReason = "시간·반복 측정 필요")
@@ -193,12 +193,12 @@ class PostureRuleSet(
             val b = baseline?.get(rule.feature)
             val useBaseline = raw != null && b != null && rule.supportsBaseline
             val value = if (useBaseline) raw!! - b!! else raw
-            val viewBlocked = view != null && rule.viewsOk.isNotEmpty() && view.letter !in rule.viewsOk
+            val viewBlocked = rule.viewsOk.isNotEmpty() && (view == null || view.letter !in rule.viewsOk)
             var reason: String? = null
             var verdict = when {
                 value == null -> Verdict.ABSTAIN
                 // §33: 이 규칙이 검증된 촬영 방향이 아니다 — 판정하지 않는다 (뒤·옆·반대편에서 그대로 점수에 들어가던 결함)
-                viewBlocked -> { reason = "촬영 방향 · " + view!!.cls.label; Verdict.ABSTAIN }
+                viewBlocked -> { reason = view?.let { "촬영 방향 · " + it.cls.label } ?: "촬영 방향 미확인"; Verdict.ABSTAIN }
                 // §28e: 기준선 필수 규칙은 기준선 없이 판정하지 않는다 — raw 임계가 기기 분포 중앙이라 오탐
                 rule.requiresBaseline && !useBaseline -> { reason = "기준선 필요"; Verdict.ABSTAIN }
                 useBaseline -> if (rule.isViolatedRelative(value)) Verdict.VIOLATION else Verdict.OK

@@ -4,6 +4,7 @@ package com.example.trex_kotlin
 internal fun recordWorkoutFocus(day: WorkoutHistoryDay): RoutineFocus {
     val plan = day.items.mapIndexed { index, item ->
         val category = item.category ?: workoutCatalog.entries.firstOrNull { (_, entries) -> entries.any { it.name == item.workoutName } }?.key
+            ?: (if (item.workoutName == "기본 스쿼트") "하체" else null)
             ?: todayPlan.firstOrNull { it.name == item.workoutName }?.category ?: "전신"
         Workout("record-$index", item.workoutName, "1회 x 1세트", "", false, category,
             target = WorkoutTarget.Duration((item.durationSeconds ?: (item.durationMinutes * 60)).coerceAtLeast(1)), restSeconds = 0)

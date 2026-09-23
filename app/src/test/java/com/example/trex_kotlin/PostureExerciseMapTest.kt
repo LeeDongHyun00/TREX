@@ -34,8 +34,9 @@ class PostureExerciseMapTest {
 
     @Test
     fun standingExercisesStillMapped() {
-        assertEquals("바벨 스쿼트", postureExerciseMap["기본 스쿼트"])
+        assertEquals("바벨 스쿼트", postureExerciseMap["바벨 스쿼트"])
         assertEquals("행잉 레그 레이즈", postureExerciseMap["행잉 레그 레이즈"])
-        assertTrue(postureExerciseMap.size >= 27)
+        assertEquals(26, postureExerciseMap.size)
+        assertEquals(26, postureExerciseMap.values.toSet().size)
     }
 }

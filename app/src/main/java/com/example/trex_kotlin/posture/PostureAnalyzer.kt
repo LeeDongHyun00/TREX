@@ -51,6 +51,10 @@ class PoseSample(
     val upFlipped: Boolean = false,
     /** 자가검증으로 up 방향을 확인할 수 있었는지 (false = 누운 자세/관절 부족 등으로 미검증). */
     val upVerified: Boolean = false,
+    /** 학습 입력용 원래 MP world(m, y-down)와 별도 확신값. 규칙 좌표계와 혼합하지 않는다. */
+    val rawWorld: FloatArray? = null,
+    val rawVisibility: FloatArray? = null,
+    val rawPresence: FloatArray? = null,
 ) {
     companion object {
         fun empty(inferMs: Long = 0L, w: Int = 0, h: Int = 0, up: Vec3 = SCREEN_UP, fromGravity: Boolean = false) = PoseSample(
@@ -187,12 +191,20 @@ class PostureAnalyzer(
 
         val xy = FloatArray(MP_LANDMARK_COUNT * 2)
         val vis = FloatArray(MP_LANDMARK_COUNT)
+        val rawV = FloatArray(MP_LANDMARK_COUNT)
+        val rawP = FloatArray(MP_LANDMARK_COUNT)
+        val rawW = FloatArray(MP_LANDMARK_COUNT * 3)
         for (i in 0 until MP_LANDMARK_COUNT) {
             val p = landmarks[i]
             xy[i * 2] = p.x()
             xy[i * 2 + 1] = p.y()
             val v = p.visibility().orElse(1f)
             val pr = p.presence().orElse(1f)
+            rawV[i] = v
+            rawP[i] = pr
+            rawW[i * 3] = world[i].x()
+            rawW[i * 3 + 1] = world[i].y()
+            rawW[i * 3 + 2] = world[i].z()
             vis[i] = minOf(v, pr)
         }
 
@@ -237,6 +249,9 @@ class PostureAnalyzer(
             upFromGravity = fromGravity,
             upFlipped = sanity.flipped,
             upVerified = sanity.verified,
+            rawWorld = rawW,
+            rawVisibility = rawV,
+            rawPresence = rawP,
         )
     }
 

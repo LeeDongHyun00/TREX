@@ -157,15 +157,15 @@ class ViewEstimatorTest {
     }
 
     @Test
-    fun noGatingWithoutViewsOkOrWithoutViewFeatures() {
+    fun unknownViewAbstainsWhenRuleRequiresVerifiedView() {
         // views_ok 가 비어 있으면 종전 동작 — 어느 방향이든 판정
         val open = PostureRuleSet("v", "d", listOf(rule(emptySet())))
         assertEquals(Verdict.VIOLATION, open.evaluate("바벨 스쿼트", agg(-0.10f, 125f)).single().verdict)
-        // 프레임에 방향 피처가 없으면(§33 이전 경로·바닥 종목) 게이팅하지 않는다
+        // 방향 피처가 없으면 검증된 방향인지 확인할 수 없으므로 유보한다.
         val gated = PostureRuleSet("v", "d", listOf(rule(setOf("C"))))
         val r = gated.evaluate("바벨 스쿼트", agg(-0.10f, null)).single()
-        assertEquals(Verdict.VIOLATION, r.verdict)
-        assertNull(r.abstainReason)
+        assertEquals(Verdict.ABSTAIN, r.verdict)
+        assertEquals("촬영 방향 미확인",r.abstainReason)
     }
 
     @Test

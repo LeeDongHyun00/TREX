@@ -89,7 +89,7 @@ class LiveCoachAnchorTest {
         assertNotNull(ev)
         assertEquals(kneeRule.id, ev!!.rule.id)
         assertEquals(OnsetKind.HABIT, ev!!.kind)           // 준비 구간이 초반 창에 섞였다면 DRIFT 가 됐을 것
-        assertTrue(ev!!.message.startsWith("처음부터"))
+        assertTrue(ev!!.message.startsWith("관측한 구간"))
 
         // 대조군: 앵커를 쓰지 않으면 같은 입력이 DRIFT 로 잘못 분류된다
         val legacy = coach(requireAnchor = false)

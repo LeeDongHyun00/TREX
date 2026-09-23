@@ -27,6 +27,9 @@ data class ComparisonValue(
         recovered -> "${metric.label}이 처음 측정 범위로 돌아왔어요"
         phase == ComparisonPhase.RANGE || phase == ComparisonPhase.WINDOW_RANGE -> "처음보다 ${metric.label}의 움직임 범위가 ${if (delta < 0) "작아졌어요" else "커졌어요"}"
         metric.feature.startsWith("hip_dev") || metric.feature == PlankGeometry.HIP -> (if (phase == ComparisonPhase.HOLD) "" else "반복의 같은 지점에서 ") + "처음보다 골반이 ${if (delta > 0) "위" else "아래"}로 이동했어요"
+        metric.feature.startsWith("knee_track") -> "반복의 같은 지점에서 처음보다 ${metric.label}이 ${if (delta > 0) "바깥쪽" else "안쪽"}으로 이동했어요"
+        metric.feature.startsWith("elbow_torso") -> "반복의 같은 지점에서 ${metric.label}가 몸통에서 ${if (delta > 0) "멀어졌어요" else "가까워졌어요"}"
+        metric.feature == "head_pitch" -> "반복의 같은 지점에서 고개가 처음보다 ${if (delta > 0) "들렸어요" else "숙여졌어요"}"
         else -> "${metric.label}이 처음보다 ${if (delta > 0) "커졌어요" else "작아졌어요"}"
     }
 }
@@ -68,7 +71,14 @@ object ComparisonMetrics {
             if (rules.any { it.exercise == exercise && it.status != RuleStatus.EXCLUDE && it.baseFeature == "head_trunk_ang" })
                 ComparisonMetric("head_trunk_ang", "투영 고개각", "°", 8f) else null,
         ) else listOf(ComparisonMetric("torso_incl", "몸통 기울기", "°", 8f))
-        return listOf(primary(exercise, signal)) + extra
+        val sideMetrics = if (exercise in FloorTemporal.exercises) emptyList() else buildList {
+            add(ComparisonMetric("head_pitch","고개 기울기","°",8f))
+            for ((side,name) in listOf("L" to "왼쪽","R" to "오른쪽")) {
+                add(ComparisonMetric("elbow_torso_$side","$name 팔꿈치","정규화 비율",.08f))
+                add(ComparisonMetric("knee_track_$side","$name 무릎","정규화 비율",.08f))
+            }
+        }
+        return listOf(primary(exercise, signal)) + extra + sideMetrics
     }
 }
 
@@ -173,7 +183,9 @@ class PostureComparisonTracker(
             updateHold(timeMs, features)
             return snapshot
         }
-        frames += ComparisonFrame(timeMs, features.toMap())
+        if (start == null) start = timeMs - 1 // 처음 관측한 동작도 비교에 포함한다.
+        val keys=metrics.map { it.feature }.toSet()+listOfNotNull(signal?.feature)
+        frames += ComparisonFrame(timeMs, features.filterKeys { it in keys })
         if (windowOnly) {
             if (start == null) start = timeMs
             if (timeMs - start!! >= 3000) {
@@ -182,7 +194,7 @@ class PostureComparisonTracker(
             }
             return snapshot
         }
-        if (frames.size > 128 || start?.let { timeMs - it > 30000 } == true) {
+        if (frames.size > 512 || start?.let { timeMs - it > 30000 } == true) {
             // 반복을 확정하지 못해도 관측 창의 범위를 제공한다. 이를 반복 단계로 부르지 않는다.
             accept(timeMs, windowSignature()); frames.clear(); start = timeMs
         }

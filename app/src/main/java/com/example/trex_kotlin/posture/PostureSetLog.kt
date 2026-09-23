@@ -73,6 +73,13 @@ data class SetLog(
     val repTimesMs: List<Long>? = null,
     val repSignal: String? = null,
     val repInvalid: Int? = null,
+    val repUnknown: Int? = null,
+    val repSides: List<String?>? = null,
+    val motionVersion: String? = null,
+    val motionFrames: List<MotionTraceFrame> = emptyList(),
+    val motionFramesDropped: Int = 0,
+    /** 별도 동작 모델의 시험 결과. 계수/자세 판정의 근거로 쓰지 않는다. */
+    val action: ActionSessionLog? = null,
     /** 렙별 사이클 극값·ROM 판정 (spec §29). 후반 드리프트(피로)·깊이 일관성을 오프라인에서
      *  렙 단위로 분석할 수 있게 한다 — repTimesMs 와 같은 순서. */
     val repMins: List<Float>? = null,
@@ -210,6 +217,7 @@ object SetLogJson {
         sb.append("\"up_flipped_frames\":").append(log.upFlippedFrames).append(',')
         sb.append("\"up_verified_frames\":").append(log.upVerifiedFrames).append(',')
         field(sb, "note", log.note)
+        log.action?.let { sb.append("\"action\":").append(ActionLogJson.encode(it)).append(',') }
         if (log.mode != null) field(sb, "mode", log.mode)
         sb.append("\"measurements\":[")
         log.measurements.forEachIndexed { i, value -> if (i > 0) sb.append(','); str(sb, value) }
@@ -230,6 +238,7 @@ object SetLogJson {
             sb.append("\"reps\":{")
             sb.append("\"count\":").append(log.repCount).append(',')
             sb.append("\"invalid\":").append(log.repInvalid ?: 0).append(',')
+            if (log.repUnknown != null) sb.append("\"unknown\":").append(log.repUnknown).append(',')
             field(sb, "signal", log.repSignal)
             sb.append("\"t_ms\":[")
             log.repTimesMs.orEmpty().forEachIndexed { i, t -> if (i > 0) sb.append(','); sb.append(t) }
@@ -250,7 +259,31 @@ object SetLogJson {
                 v.forEachIndexed { i, x -> if (i > 0) sb.append(','); sb.append(x?.toString() ?: "null") }
                 sb.append(']')
             }
+            log.repSides?.let { sides ->
+                sb.append(",\"side\":[")
+                sides.forEachIndexed { i, side -> if (i > 0) sb.append(','); if (side == null) sb.append("null") else str(sb, side) }
+                sb.append(']')
+            }
             sb.append("},")
+        }
+        log.motionVersion?.let { version ->
+            sb.append("\"motion\":{")
+            field(sb,"version",version)
+            sb.append("\"dropped\":").append(log.motionFramesDropped).append(',')
+            sb.append("\"frames\":[")
+            log.motionFrames.forEachIndexed { i, f ->
+                if (i > 0) sb.append(',')
+                sb.append("{\"t_ms\":").append(f.tMs).append(',')
+                field(sb,"phase",f.phase)
+                sb.append("\"completed\":").append(f.completed).append(',')
+                sb.append("\"infer_ms\":").append(f.inferMs).append(',')
+                sb.append("\"observations\":[")
+                f.observations.forEachIndexed { j, v -> if (j > 0) sb.append(','); str(sb,v) }
+                sb.append("],\"features\":{")
+                f.features.entries.forEachIndexed { j, e -> if (j > 0) sb.append(','); str(sb,e.key); sb.append(':').append(if(e.value.isFinite())e.value.toString() else "null") }
+                sb.append("}}")
+            }
+            sb.append("]},")
         }
         sb.append("\"frames\":[")
         log.frames.forEachIndexed { i, f ->

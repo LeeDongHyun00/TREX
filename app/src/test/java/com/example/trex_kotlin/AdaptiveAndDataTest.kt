@@ -60,7 +60,7 @@ class AdaptiveAndDataTest {
     }
 
     @Test fun completedRecordUsesActualTimeAndNoInventedAverage() {
-        val done = todayPlan[0].copy(done = true)
+        val done = Workout("squat", "바벨 스쿼트", "12회", "8분", true, "하체", done = true)
         val record = createWorkoutHistoryDay(listOf(done), 30, elapsedByWorkout = mapOf(done.id to 30))
         assertEquals(30, record.items.single().durationSeconds)
         assertEquals(0, record.totalMinutes())

@@ -280,7 +280,7 @@ private data class SetLabelDraft(
 
     companion object {
         fun initial(r: PostureSetReport) =
-            SetLabelDraft(reps = r.repsValid?.let { it + (r.repsPartial ?: 0) }, repsTouched = false, repsConfirmed = false, form = null, saved = false)
+            SetLabelDraft(reps = r.repsValid?.let { it + (r.repsPartial ?: 0) + (r.repsUnknown ?: 0) }, repsTouched = false, repsConfirmed = false, form = null, saved = false)
     }
 }
 
@@ -437,7 +437,7 @@ private fun CoachSetDetail(r: PostureSetReport) {
             },
             color = c.text3, fontSize = 11.sp,
         )
-        r.repsValid?.let { valid -> Text(if (r.exercise in FloorTemporal.exercises) "참고 · 검출 ${valid + (r.repsPartial ?: 0)}회 · 범위 미달 ${r.repsPartial ?: 0}회" else "렙 유효 $valid · 무효 ${r.repsPartial ?: 0}", color = c.text3, fontSize = 11.sp) }
+        r.repsValid?.let { valid -> Text("관측 ${valid + (r.repsPartial ?: 0) + (r.repsUnknown ?: 0)}회 · 가동범위 참고 기준 충족 $valid · 미달 ${r.repsPartial ?: 0} · 미확인 ${r.repsUnknown ?: 0}", color = c.text3, fontSize = 11.sp) }
         r.highlights.filter { it.ruleId != lead?.ruleId }.forEach { OutcomeLine(it) }
         h?.note?.let { Text("ⓘ $it", color = c.text3, fontSize = 10.5.sp, lineHeight = 15.sp) }
     }
@@ -452,7 +452,8 @@ private fun TrackSetDetail(r: PostureSetReport) {
         val parts = buildList {
             r.repsValid?.let { valid ->
                 val partial = r.repsPartial ?: 0
-                add("${valid + partial}렙" + if (partial > 0) " · 파셜 $partial" else "")
+                add("${valid + partial + (r.repsUnknown ?: 0)}렙" + if (partial > 0) " · 파셜 $partial" else "")
+                if ((r.repsUnknown ?: 0) > 0) add("가동범위 미확인 ${r.repsUnknown}")
             }
             r.tempoMs?.let { add("템포 " + String.format(Locale.US, "%.1f초", it / 1000f)) }
         }

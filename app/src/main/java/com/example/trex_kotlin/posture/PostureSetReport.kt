@@ -91,6 +91,7 @@ data class PostureSetReport(
     val repsPartial: Int?,
     val tempoMs: Long?,
     val measurements: List<String> = emptyList(),
+    val repsUnknown: Int? = null,
 ) {
     /** 실제로 판정한 규칙 수(OK+VIOLATION). accuracy 의 분모 — 유보를 정상으로 세지 않는다. */
     val judged: Int = items.count { it.overall == Verdict.OK || it.overall == Verdict.VIOLATION }
@@ -134,7 +135,7 @@ data class PostureSetReport(
     /** COACH 이고 검증된 규칙 판정이 하나라도 있을 때만 점수. TRACK 은 모집단 판정을 점수로 보이지 않는다(§29). 베타는 분모에 안 들어간다. */
     val accuracy: Int? = if (mode == CoachMode.COACH && shipJudged > 0) Math.round(100f * shipOk / shipJudged) else null
 
-    private val reps: Int? = repsValid?.let { it + (repsPartial ?: 0) }
+    private val reps: Int? = repsValid?.let { it + (repsPartial ?: 0) + (repsUnknown ?: 0) }
     private val tempoText: String? = tempoMs?.let { String.format(Locale.US, "%.1f초", it / 1000f) }
     private val driftHeadline: RuleOutcome? = headline?.takeIf { it.kind == OnsetKind.DRIFT }
 
@@ -193,6 +194,7 @@ data class PostureSetReport(
             repsPartial: Int?,
             tempoMs: Long?,
             measurements: List<String> = emptyList(),
+            repsUnknown: Int? = null,
         ): PostureSetReport {
             val onsetById = onset.associateBy { it.rule.id }
             val outcomes = results.map { rr ->
@@ -225,7 +227,7 @@ data class PostureSetReport(
             val sorted = outcomes.sortedWith(compareBy<RuleOutcome>({ it.rank }, { it.beta }, { -it.cvAuc }))
             return PostureSetReport(
                 setId = setId, exercise = exercise, workoutName = workoutName, mode = mode, frames = frames,
-                baselineActive = baselineActive, items = sorted, measurements = measurements, repsValid = repsValid, repsPartial = repsPartial, tempoMs = tempoMs,
+                baselineActive = baselineActive, items = sorted, measurements = measurements, repsValid = repsValid, repsPartial = repsPartial, tempoMs = tempoMs, repsUnknown = repsUnknown,
             )
         }
 

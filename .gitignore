@@ -74,3 +74,5 @@ app/src/test/resources/posture_port_fixture.json
 
 # 로컬 Python 런타임
 .venv312/
+.venv-action/
+release-artifacts/

@@ -184,12 +184,12 @@ data class RepSignal(
     val plausibleMin: Float? = null,
     val plausibleMax: Float? = null,
 ) {
-    /** 완료된 렙의 ROM 유효성. null = ROM 기준 없음(항상 유효 취급). */
+    /** 완료된 렙의 ROM 참고 판정. null = 기준 또는 측정 없음. 정자세로 세면 안 된다. */
     fun isValidRep(cycleMin: Float, cycleMax: Float): Boolean? {
         val thr = romThreshold ?: return null
         return when (romDirection) {
-            "min" -> cycleMin <= thr
-            "max" -> cycleMax >= thr
+            "min" -> cycleMin.takeIf(Float::isFinite)?.let { it <= thr }
+            "max" -> cycleMax.takeIf(Float::isFinite)?.let { it >= thr }
             else -> null
         }
     }
@@ -310,7 +310,7 @@ object RepSignals {
 
 /** 완료된 렙 하나의 기록 — 사이클 극값과 ROM 판정. 세트 로그에 렙별로 남겨 후반 드리프트(피로)
  *  분석을 오프라인에서 가능하게 한다 (spec §29 — 숙련자 계기판의 원자재). */
-data class RepRecord(val tMs: Long, val cycleMin: Float, val cycleMax: Float, val valid: Boolean?)
+data class RepRecord(val tMs: Long, val cycleMin: Float, val cycleMax: Float, val valid: Boolean?, val side: String? = null)
 
 object RepMetrics {
     /**

@@ -49,7 +49,7 @@ object RuleHighlight {
         "palm_head_dist" to WRISTS + HEAD, "palm" to WRISTS, "hand_shoulder_off" to WRISTS + SHOULDERS,
         "wrist_shoulder_d" to WRISTS + SHOULDERS,
         // 하체
-        "knee_out" to KNEES + FEET, "kneefoot" to KNEES + FEET, "knee_gap" to KNEES,
+        "knee_out" to KNEES + FEET, "knee_track" to KNEES + ANKLES + FEET, "kneefoot" to KNEES + FEET, "knee_gap" to KNEES,
         "knee_elbow_dist" to KNEES + ELBOWS, "knee_shoulder_d" to KNEES + SHOULDERS,
         "knee_lat" to KNEES, "knee_fwd" to KNEES, "knee_h" to KNEES, "knee_dev" to KNEES,
         "knee_ground" to KNEES, "knee_ang" to HIPS + KNEES + ANKLES, "knee" to KNEES,

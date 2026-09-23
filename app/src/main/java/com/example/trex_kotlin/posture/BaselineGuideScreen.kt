@@ -195,7 +195,7 @@ private fun BaselineExerciseList(
                 }
             }
             Spacer(Modifier.height(12.dp))
-            val exercises = ruleSet.baselineExercises
+            val exercises = ruleSet.baselineExercises.filter { ExerciseProfiles.forReference(it) != null }
             if (exercises.isEmpty()) {
                 Text("기준선 대상 규칙이 없습니다 (rules JSON 에 personal_baseline.threshold_rel 이 없음).", color = TrexWarning, fontSize = 12.sp)
             }

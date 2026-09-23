@@ -26,6 +26,14 @@ class PostureCoachTest {
 
     private fun frame(kneeOut: Float, torsoPitch: Float) = mapOf("knee_out_mean" to kneeOut, "torso_pitch" to torsoPitch)
 
+    @Test fun busyVoiceDoesNotConsumeTheFirstInstruction() {
+        val c=LiveCoach(rs,"바벨 스쿼트",persistence=1)
+        repeat(10) { c.onFrame(frame(-.1f,0f)) }
+        assertNull(c.evaluate(3000,canEmit=false))
+        assertTrue(c.lastStates.any { it.recent==Verdict.VIOLATION })
+        assertNotNull(c.evaluate(3300,canEmit=true))
+    }
+
     @Test
     fun habitFromTheStartIsSpokenOncePersistent() {
         val c = LiveCoach(rs, "바벨 스쿼트", windowFrames = 8, minFrames = 8, persistence = 2, ruleCooldownMs = 12_000, globalGapMs = 4_000)
@@ -39,7 +47,7 @@ class PostureCoachTest {
         assertNotNull(ev)
         assertEquals(OnsetKind.HABIT, ev!!.kind)
         assertEquals("발과 무릎의 방향 일치", ev.rule.condition)
-        assertTrue(ev.message.startsWith("처음부터"))
+        assertTrue(ev.message.startsWith("관측한 구간"))
         assertTrue(ev.message.contains("무릎"))
         // 쿨다운: 곧바로 다시는 안 말함
         c.onFrame(frame(-0.05f, 0f)); t += 300
@@ -63,7 +71,7 @@ class PostureCoachTest {
         }
         assertNotNull(ev)
         assertEquals(OnsetKind.DRIFT, ev!!.kind)
-        assertTrue(ev!!.message.contains("점점"))
+        assertTrue(ev!!.message.contains("초반 측정과 비교"))
         val st = c.lastStates.first { it.rule == kneeRule }
         assertEquals(Verdict.OK, st.early)
         assertEquals(Verdict.VIOLATION, st.recent)
@@ -123,20 +131,23 @@ class PostureCoachTest {
             "양 손이 머리 뒤에 위치", "무릎 충분히 올라오고", "두 다리 사이 모아줌 유지", "어깨와 귀 사이 적당한 거리 유지", "상완의 외회전",
             "수축시 양 손과 이마 동일선상 위치", "팔꿈치가 손목 리드", "시선 위쪽 유지", "상체 과도한 젖힘 없음", "상체의 과조한 숙임/젖힘 여부")
         for (cnd in known) {
-            val cue = CoachCues.cueFor(rule("x", cnd, "knee_mean__mean", "<", 0f))
+            val cue = CoachCues.cueFor(rule("x", cnd, "unmeasured__mean", "<", 0f))
             assertFalse("카탈로그 누락: $cnd", cue.habit.contains("조건을 벗어나"))
             assertTrue(cue.habit.startsWith("처음부터"))
             assertTrue(cue.drift.contains("점점"))
         }
         // 척추 하위유형
         val flex = CoachCues.cueFor(rule("x", "척추의 중립", "head_pitch__mean", "<", 0f, subtype = "flexion"))
-        assertTrue(flex.habit.contains("등이 말려"))
+        assertTrue(flex.habit.contains("고개"))
+        assertFalse("고개 기울기만으로 등 곡률을 단정하면 안 됨",flex.habit.contains("등이 말려"))
         val lat = CoachCues.cueFor(rule("x", "척추의 중립", "shoulder_asym__std", ">", 0f, subtype = "lateral"))
-        assertTrue(lat.habit.contains("옆으로"))
+        assertTrue(lat.habit.contains("변동"))
+        assertFalse("std에는 기울어진 방향 정보가 없음",lat.habit.contains("옆으로"))
         val all = CoachCues.cueFor(rule("x", "척추 중립", "sh_over_hip_fwd__mean", ">", 0f, subtype = "all"))
-        assertTrue(all.habit.contains("척추"))
+        assertTrue(all.habit.contains("어깨"))
+        assertFalse(all.habit.contains("척추 중립이 무너"))
         // 폴백
-        val fb = CoachCues.cueFor(rule("x", "알 수 없는 조건", "knee_mean__mean", "<", 0f))
+        val fb = CoachCues.cueFor(rule("x", "알 수 없는 조건", "unmeasured__mean", "<", 0f))
         assertTrue(fb.habit.contains("알 수 없는 조건"))
         assertTrue(fb.recovered.contains("교정"))
     }
@@ -180,7 +191,7 @@ class PostureCoachTest {
         assertNotNull(ev)
         assertEquals(OnsetKind.HABIT, ev!!.kind)
         assertEquals(Direction.OPPOSITE, ev.direction)
-        assertTrue(ev.message.contains("바깥"))
+        assertTrue(ev.message.contains("측방 위치"))
         val st = c.lastStates.first { it.rule.id == guardedKneeRule.id }
         assertEquals(Direction.OPPOSITE, st.direction)
         assertTrue(st.label.contains("반대측"))
@@ -198,16 +209,17 @@ class PostureCoachTest {
     fun oppositeCueCatalogAndFallback() {
         val g = rule("x", "발과 무릎의 방향 일치", "knee_out_mean__mean", "<", 0f)
         val cue = CoachCues.cueFor(g, Direction.OPPOSITE)
-        assertTrue(cue.habit.contains("바깥"))
-        assertTrue(cue.drift.contains("점점"))
+        assertTrue(cue.habit.contains("측방 위치"))
+        assertFalse("발 기준 부호가 없는 피처로 안/밖을 지시하지 않음",cue.habit.contains("바깥"))
+        assertTrue(cue.drift.contains("초반 측정과 비교"))
         // 기본 방향은 기존 문구 그대로
-        assertTrue(CoachCues.cueFor(g, Direction.PRIMARY).habit.contains("안쪽"))
-        assertTrue(CoachCues.cueFor(g).habit.contains("안쪽"))
+        assertTrue(CoachCues.cueFor(g, Direction.PRIMARY).habit.contains("측방 위치"))
+        assertTrue(CoachCues.cueFor(g).habit.contains("측방 위치"))
         // 고개/상체 반대측
-        assertTrue(CoachCues.cueFor(rule("x", "고개 정면", "face_vs_torso__min", "<", 0f), Direction.OPPOSITE).habit.contains("젖혀"))
-        assertTrue(CoachCues.cueFor(rule("x", "상체의 과조한 숙임/젖힘 여부", "torso_pitch__min", "<", 0f), Direction.OPPOSITE).habit.contains("숙여"))
+        assertTrue(CoachCues.cueFor(rule("x", "고개 정면", "face_vs_torso__min", "<", 0f), Direction.OPPOSITE).habit.contains("상대 방향"))
+        assertTrue(CoachCues.cueFor(rule("x", "상체의 과조한 숙임/젖힘 여부", "torso_pitch__min", "<", 0f), Direction.OPPOSITE).habit.contains("앞쪽"))
         // 카탈로그에 없는 조건은 가드 설명으로 폴백
-        val fb = rule("x", "무릎 반동 없음", "knee_mean__mean", "<", 0f)
+        val fb = rule("x", "무릎 반동 없음", "unmeasured__mean", "<", 0f)
             .copy(oppositeGuard = OppositeGuard(">", 1f, "반대 테스트", validated = false, nNorm = 10))
         val fbCue = CoachCues.cueFor(fb, Direction.OPPOSITE)
         assertTrue(fbCue.habit.contains("반대 테스트"))

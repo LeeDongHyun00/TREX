@@ -48,7 +48,7 @@ class PostureScopeTest {
         val s = PostureScope.of(deadlift, DL)
         assertEquals(listOf("무릎", "상체"), s.watched)
         assertEquals(listOf("손목"), s.provisional)
-        assertEquals(listOf("등·허리", "시선"), s.blind)     // 규칙 JSON 등장 순서 유지
+        assertEquals(listOf("등·허리", "고개"), s.blind)     // 얼굴 방향 피처는 안구 시선을 측정하지 않는다.
         assertTrue(s.hasAnyJudgement)
         assertFalse(s.provisionalOnly)
     }
