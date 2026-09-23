@@ -1,0 +1,4619 @@
+{
+ "source": "MM-Fit pose_3d (dataset's own 3D pose, not MediaPipe)",
+ "configs": {
+  "live": {
+   "바벨 스쿼트": {
+    "sets": 64,
+    "truth": 639,
+    "detected": 576,
+    "valid": 161,
+    "MAE": 0.984375,
+    "OBO": 0.8125,
+    "exact": 0.53125,
+    "under": 30,
+    "over": 0,
+    "zeroSets": 1,
+    "precision": 1.0,
+    "recall": 0.9014084507042254,
+    "countF1": 0.9481481481481481,
+    "valueCoverage": 1.0,
+    "feature": "knee_mean",
+    "minAmp": 35.0,
+    "perSet": [
+     {
+      "set": "w00/w00_set00_squats.cap",
+      "truth": 10,
+      "detected": 0,
+      "valid": 0,
+      "samples": 52,
+      "valueFrames": 52
+     },
+     {
+      "set": "w00/w00_set01_squats.cap",
+      "truth": 10,
+      "detected": 4,
+      "valid": 1,
+      "samples": 59,
+      "valueFrames": 59
+     },
+     {
+      "set": "w00/w00_set02_squats.cap",
+      "truth": 10,
+      "detected": 6,
+      "valid": 4,
+      "samples": 58,
+      "valueFrames": 58
+     },
+     {
+      "set": "w01/w01_set00_squats.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 5,
+      "samples": 58,
+      "valueFrames": 58
+     },
+     {
+      "set": "w01/w01_set01_squats.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 9,
+      "samples": 62,
+      "valueFrames": 62
+     },
+     {
+      "set": "w01/w01_set02_squats.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 9,
+      "samples": 63,
+      "valueFrames": 63
+     },
+     {
+      "set": "w02/w02_set00_squats.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 0,
+      "samples": 73,
+      "valueFrames": 73
+     },
+     {
+      "set": "w02/w02_set01_squats.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 0,
+      "samples": 77,
+      "valueFrames": 77
+     },
+     {
+      "set": "w02/w02_set02_squats.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 0,
+      "samples": 77,
+      "valueFrames": 77
+     },
+     {
+      "set": "w03/w03_set00_squats.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 6,
+      "samples": 59,
+      "valueFrames": 59
+     },
+     {
+      "set": "w03/w03_set01_squats.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 5,
+      "samples": 59,
+      "valueFrames": 59
+     },
+     {
+      "set": "w03/w03_set02_squats.cap",
+      "truth": 10,
+      "detected": 8,
+      "valid": 5,
+      "samples": 57,
+      "valueFrames": 57
+     },
+     {
+      "set": "w04/w04_set00_squats.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 0,
+      "samples": 83,
+      "valueFrames": 83
+     },
+     {
+      "set": "w04/w04_set01_squats.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 0,
+      "samples": 91,
+      "valueFrames": 91
+     },
+     {
+      "set": "w04/w04_set02_squats.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 0,
+      "samples": 85,
+      "valueFrames": 85
+     },
+     {
+      "set": "w05/w05_set00_squats.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 0,
+      "samples": 62,
+      "valueFrames": 62
+     },
+     {
+      "set": "w05/w05_set01_squats.cap",
+      "truth": 10,
+      "detected": 8,
+      "valid": 0,
+      "samples": 61,
+      "valueFrames": 61
+     },
+     {
+      "set": "w05/w05_set02_squats.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 0,
+      "samples": 70,
+      "valueFrames": 70
+     },
+     {
+      "set": "w06/w06_set00_squats.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 9,
+      "samples": 65,
+      "valueFrames": 65
+     },
+     {
+      "set": "w06/w06_set01_squats.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 9,
+      "samples": 67,
+      "valueFrames": 67
+     },
+     {
+      "set": "w06/w06_set02_squats.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 10,
+      "samples": 70,
+      "valueFrames": 70
+     },
+     {
+      "set": "w07/w07_set00_squats.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 0,
+      "samples": 91,
+      "valueFrames": 91
+     },
+     {
+      "set": "w07/w07_set01_squats.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 0,
+      "samples": 80,
+      "valueFrames": 80
+     },
+     {
+      "set": "w07/w07_set02_squats.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 0,
+      "samples": 80,
+      "valueFrames": 80
+     },
+     {
+      "set": "w08/w08_set00_squats.cap",
+      "truth": 10,
+      "detected": 6,
+      "valid": 4,
+      "samples": 61,
+      "valueFrames": 61
+     },
+     {
+      "set": "w08/w08_set01_squats.cap",
+      "truth": 10,
+      "detected": 6,
+      "valid": 6,
+      "samples": 62,
+      "valueFrames": 62
+     },
+     {
+      "set": "w08/w08_set02_squats.cap",
+      "truth": 10,
+      "detected": 6,
+      "valid": 6,
+      "samples": 61,
+      "valueFrames": 61
+     },
+     {
+      "set": "w09/w09_set00_squats.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 0,
+      "samples": 88,
+      "valueFrames": 88
+     },
+     {
+      "set": "w09/w09_set01_squats.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 0,
+      "samples": 75,
+      "valueFrames": 75
+     },
+     {
+      "set": "w09/w09_set02_squats.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 0,
+      "samples": 84,
+      "valueFrames": 84
+     },
+     {
+      "set": "w10/w10_set00_squats.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 9,
+      "samples": 68,
+      "valueFrames": 68
+     },
+     {
+      "set": "w10/w10_set01_squats.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 9,
+      "samples": 65,
+      "valueFrames": 65
+     },
+     {
+      "set": "w10/w10_set02_squats.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 10,
+      "samples": 73,
+      "valueFrames": 73
+     },
+     {
+      "set": "w11/w11_set00_squats.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 0,
+      "samples": 89,
+      "valueFrames": 89
+     },
+     {
+      "set": "w11/w11_set01_squats.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 1,
+      "samples": 87,
+      "valueFrames": 87
+     },
+     {
+      "set": "w11/w11_set02_squats.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 0,
+      "samples": 82,
+      "valueFrames": 82
+     },
+     {
+      "set": "w12/w12_set00_squats.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 0,
+      "samples": 65,
+      "valueFrames": 65
+     },
+     {
+      "set": "w12/w12_set01_squats.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 0,
+      "samples": 62,
+      "valueFrames": 62
+     },
+     {
+      "set": "w12/w12_set02_squats.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 0,
+      "samples": 64,
+      "valueFrames": 64
+     },
+     {
+      "set": "w13/w13_set00_squats.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 0,
+      "samples": 65,
+      "valueFrames": 65
+     },
+     {
+      "set": "w13/w13_set01_squats.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 0,
+      "samples": 66,
+      "valueFrames": 66
+     },
+     {
+      "set": "w13/w13_set02_squats.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 0,
+      "samples": 60,
+      "valueFrames": 60
+     },
+     {
+      "set": "w14/w14_set00_squats.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 3,
+      "samples": 61,
+      "valueFrames": 61
+     },
+     {
+      "set": "w14/w14_set01_squats.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 4,
+      "samples": 61,
+      "valueFrames": 61
+     },
+     {
+      "set": "w14/w14_set02_squats.cap",
+      "truth": 10,
+      "detected": 8,
+      "valid": 6,
+      "samples": 60,
+      "valueFrames": 60
+     },
+     {
+      "set": "w15/w15_set00_squats.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 0,
+      "samples": 83,
+      "valueFrames": 83
+     },
+     {
+      "set": "w15/w15_set01_squats.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 0,
+      "samples": 85,
+      "valueFrames": 85
+     },
+     {
+      "set": "w15/w15_set02_squats.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 0,
+      "samples": 75,
+      "valueFrames": 75
+     },
+     {
+      "set": "w16/w16_set00_squats.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 0,
+      "samples": 78,
+      "valueFrames": 78
+     },
+     {
+      "set": "w16/w16_set01_squats.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 0,
+      "samples": 67,
+      "valueFrames": 67
+     },
+     {
+      "set": "w16/w16_set02_squats.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 0,
+      "samples": 64,
+      "valueFrames": 64
+     },
+     {
+      "set": "w17/w17_set00_squats.cap",
+      "truth": 11,
+      "detected": 11,
+      "valid": 0,
+      "samples": 83,
+      "valueFrames": 83
+     },
+     {
+      "set": "w17/w17_set01_squats.cap",
+      "truth": 7,
+      "detected": 7,
+      "valid": 0,
+      "samples": 50,
+      "valueFrames": 50
+     },
+     {
+      "set": "w17/w17_set02_squats.cap",
+      "truth": 11,
+      "detected": 11,
+      "valid": 0,
+      "samples": 76,
+      "valueFrames": 76
+     },
+     {
+      "set": "w17/w17_set03_squats.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 0,
+      "samples": 70,
+      "valueFrames": 70
+     },
+     {
+      "set": "w18/w18_set00_squats.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 0,
+      "samples": 83,
+      "valueFrames": 83
+     },
+     {
+      "set": "w18/w18_set01_squats.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 1,
+      "samples": 88,
+      "valueFrames": 88
+     },
+     {
+      "set": "w18/w18_set02_squats.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 0,
+      "samples": 86,
+      "valueFrames": 86
+     },
+     {
+      "set": "w19/w19_set00_squats.cap",
+      "truth": 10,
+      "detected": 8,
+      "valid": 0,
+      "samples": 59,
+      "valueFrames": 59
+     },
+     {
+      "set": "w19/w19_set01_squats.cap",
+      "truth": 10,
+      "detected": 8,
+      "valid": 0,
+      "samples": 58,
+      "valueFrames": 58
+     },
+     {
+      "set": "w19/w19_set02_squats.cap",
+      "truth": 10,
+      "detected": 7,
+      "valid": 0,
+      "samples": 57,
+      "valueFrames": 57
+     },
+     {
+      "set": "w20/w20_set00_squats.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 10,
+      "samples": 93,
+      "valueFrames": 93
+     },
+     {
+      "set": "w20/w20_set01_squats.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 10,
+      "samples": 92,
+      "valueFrames": 92
+     },
+     {
+      "set": "w20/w20_set02_squats.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 10,
+      "samples": 98,
+      "valueFrames": 98
+     }
+    ]
+   },
+   "스텝 포워드 다이나믹 런지": {
+    "sets": 62,
+    "truth": 624,
+    "detected": 62,
+    "valid": 62,
+    "MAE": 9.064516129032258,
+    "OBO": 0.0,
+    "exact": 0.0,
+    "under": 62,
+    "over": 0,
+    "zeroSets": 39,
+    "precision": 1.0,
+    "recall": 0.09935897435897435,
+    "countF1": 0.18075801749271134,
+    "valueCoverage": 1.0,
+    "feature": "knee_out_mean",
+    "minAmp": 0.1,
+    "perSet": [
+     {
+      "set": "w00/w00_set09_lunges.cap",
+      "truth": 10,
+      "detected": 2,
+      "valid": 2,
+      "samples": 98,
+      "valueFrames": 98
+     },
+     {
+      "set": "w00/w00_set10_lunges.cap",
+      "truth": 10,
+      "detected": 1,
+      "valid": 1,
+      "samples": 97,
+      "valueFrames": 97
+     },
+     {
+      "set": "w00/w00_set11_lunges.cap",
+      "truth": 10,
+      "detected": 1,
+      "valid": 1,
+      "samples": 102,
+      "valueFrames": 102
+     },
+     {
+      "set": "w01/w01_set09_lunges.cap",
+      "truth": 10,
+      "detected": 0,
+      "valid": 0,
+      "samples": 99,
+      "valueFrames": 99
+     },
+     {
+      "set": "w01/w01_set10_lunges.cap",
+      "truth": 10,
+      "detected": 0,
+      "valid": 0,
+      "samples": 82,
+      "valueFrames": 82
+     },
+     {
+      "set": "w01/w01_set11_lunges.cap",
+      "truth": 10,
+      "detected": 0,
+      "valid": 0,
+      "samples": 89,
+      "valueFrames": 89
+     },
+     {
+      "set": "w02/w02_set09_lunges.cap",
+      "truth": 10,
+      "detected": 0,
+      "valid": 0,
+      "samples": 92,
+      "valueFrames": 92
+     },
+     {
+      "set": "w02/w02_set10_lunges.cap",
+      "truth": 10,
+      "detected": 0,
+      "valid": 0,
+      "samples": 98,
+      "valueFrames": 98
+     },
+     {
+      "set": "w02/w02_set11_lunges.cap",
+      "truth": 10,
+      "detected": 0,
+      "valid": 0,
+      "samples": 99,
+      "valueFrames": 99
+     },
+     {
+      "set": "w03/w03_set09_lunges.cap",
+      "truth": 10,
+      "detected": 3,
+      "valid": 3,
+      "samples": 91,
+      "valueFrames": 91
+     },
+     {
+      "set": "w03/w03_set10_lunges.cap",
+      "truth": 10,
+      "detected": 5,
+      "valid": 5,
+      "samples": 91,
+      "valueFrames": 91
+     },
+     {
+      "set": "w03/w03_set11_lunges.cap",
+      "truth": 10,
+      "detected": 5,
+      "valid": 5,
+      "samples": 92,
+      "valueFrames": 92
+     },
+     {
+      "set": "w04/w04_set09_lunges.cap",
+      "truth": 10,
+      "detected": 0,
+      "valid": 0,
+      "samples": 104,
+      "valueFrames": 104
+     },
+     {
+      "set": "w04/w04_set10_lunges.cap",
+      "truth": 10,
+      "detected": 0,
+      "valid": 0,
+      "samples": 103,
+      "valueFrames": 103
+     },
+     {
+      "set": "w05/w05_set09_lunges.cap",
+      "truth": 10,
+      "detected": 5,
+      "valid": 5,
+      "samples": 95,
+      "valueFrames": 95
+     },
+     {
+      "set": "w05/w05_set10_lunges.cap",
+      "truth": 10,
+      "detected": 5,
+      "valid": 5,
+      "samples": 98,
+      "valueFrames": 98
+     },
+     {
+      "set": "w05/w05_set11_lunges.cap",
+      "truth": 11,
+      "detected": 6,
+      "valid": 6,
+      "samples": 101,
+      "valueFrames": 101
+     },
+     {
+      "set": "w06/w06_set09_lunges.cap",
+      "truth": 10,
+      "detected": 3,
+      "valid": 3,
+      "samples": 102,
+      "valueFrames": 102
+     },
+     {
+      "set": "w06/w06_set10_lunges.cap",
+      "truth": 10,
+      "detected": 3,
+      "valid": 3,
+      "samples": 91,
+      "valueFrames": 91
+     },
+     {
+      "set": "w06/w06_set11_lunges.cap",
+      "truth": 10,
+      "detected": 2,
+      "valid": 2,
+      "samples": 96,
+      "valueFrames": 96
+     },
+     {
+      "set": "w07/w07_set09_lunges.cap",
+      "truth": 10,
+      "detected": 0,
+      "valid": 0,
+      "samples": 104,
+      "valueFrames": 104
+     },
+     {
+      "set": "w07/w07_set10_lunges.cap",
+      "truth": 10,
+      "detected": 0,
+      "valid": 0,
+      "samples": 98,
+      "valueFrames": 98
+     },
+     {
+      "set": "w07/w07_set11_lunges.cap",
+      "truth": 10,
+      "detected": 0,
+      "valid": 0,
+      "samples": 98,
+      "valueFrames": 98
+     },
+     {
+      "set": "w08/w08_set21_lunges.cap",
+      "truth": 10,
+      "detected": 0,
+      "valid": 0,
+      "samples": 108,
+      "valueFrames": 108
+     },
+     {
+      "set": "w08/w08_set22_lunges.cap",
+      "truth": 10,
+      "detected": 0,
+      "valid": 0,
+      "samples": 101,
+      "valueFrames": 101
+     },
+     {
+      "set": "w08/w08_set23_lunges.cap",
+      "truth": 10,
+      "detected": 0,
+      "valid": 0,
+      "samples": 95,
+      "valueFrames": 95
+     },
+     {
+      "set": "w09/w09_set09_lunges.cap",
+      "truth": 10,
+      "detected": 0,
+      "valid": 0,
+      "samples": 103,
+      "valueFrames": 103
+     },
+     {
+      "set": "w09/w09_set10_lunges.cap",
+      "truth": 10,
+      "detected": 0,
+      "valid": 0,
+      "samples": 100,
+      "valueFrames": 100
+     },
+     {
+      "set": "w09/w09_set11_lunges.cap",
+      "truth": 10,
+      "detected": 0,
+      "valid": 0,
+      "samples": 97,
+      "valueFrames": 97
+     },
+     {
+      "set": "w10/w10_set09_lunges.cap",
+      "truth": 10,
+      "detected": 0,
+      "valid": 0,
+      "samples": 110,
+      "valueFrames": 110
+     },
+     {
+      "set": "w10/w10_set10_lunges.cap",
+      "truth": 10,
+      "detected": 0,
+      "valid": 0,
+      "samples": 108,
+      "valueFrames": 108
+     },
+     {
+      "set": "w10/w10_set11_lunges.cap",
+      "truth": 10,
+      "detected": 0,
+      "valid": 0,
+      "samples": 104,
+      "valueFrames": 104
+     },
+     {
+      "set": "w11/w11_set09_lunges.cap",
+      "truth": 10,
+      "detected": 0,
+      "valid": 0,
+      "samples": 108,
+      "valueFrames": 108
+     },
+     {
+      "set": "w11/w11_set10_lunges.cap",
+      "truth": 10,
+      "detected": 1,
+      "valid": 1,
+      "samples": 103,
+      "valueFrames": 103
+     },
+     {
+      "set": "w11/w11_set11_lunges.cap",
+      "truth": 10,
+      "detected": 1,
+      "valid": 1,
+      "samples": 98,
+      "valueFrames": 98
+     },
+     {
+      "set": "w12/w12_set09_lunges.cap",
+      "truth": 10,
+      "detected": 3,
+      "valid": 3,
+      "samples": 80,
+      "valueFrames": 80
+     },
+     {
+      "set": "w12/w12_set10_lunges.cap",
+      "truth": 10,
+      "detected": 3,
+      "valid": 3,
+      "samples": 74,
+      "valueFrames": 74
+     },
+     {
+      "set": "w12/w12_set11_lunges.cap",
+      "truth": 10,
+      "detected": 2,
+      "valid": 2,
+      "samples": 74,
+      "valueFrames": 74
+     },
+     {
+      "set": "w13/w13_set09_lunges.cap",
+      "truth": 10,
+      "detected": 0,
+      "valid": 0,
+      "samples": 91,
+      "valueFrames": 91
+     },
+     {
+      "set": "w13/w13_set10_lunges.cap",
+      "truth": 10,
+      "detected": 0,
+      "valid": 0,
+      "samples": 97,
+      "valueFrames": 97
+     },
+     {
+      "set": "w13/w13_set11_lunges.cap",
+      "truth": 10,
+      "detected": 0,
+      "valid": 0,
+      "samples": 81,
+      "valueFrames": 81
+     },
+     {
+      "set": "w14/w14_set24_lunges.cap",
+      "truth": 10,
+      "detected": 0,
+      "valid": 0,
+      "samples": 96,
+      "valueFrames": 96
+     },
+     {
+      "set": "w14/w14_set25_lunges.cap",
+      "truth": 10,
+      "detected": 2,
+      "valid": 2,
+      "samples": 94,
+      "valueFrames": 94
+     },
+     {
+      "set": "w14/w14_set26_lunges.cap",
+      "truth": 10,
+      "detected": 1,
+      "valid": 1,
+      "samples": 91,
+      "valueFrames": 91
+     },
+     {
+      "set": "w15/w15_set09_lunges.cap",
+      "truth": 10,
+      "detected": 0,
+      "valid": 0,
+      "samples": 93,
+      "valueFrames": 93
+     },
+     {
+      "set": "w15/w15_set10_lunges.cap",
+      "truth": 10,
+      "detected": 3,
+      "valid": 3,
+      "samples": 95,
+      "valueFrames": 95
+     },
+     {
+      "set": "w15/w15_set11_lunges.cap",
+      "truth": 10,
+      "detected": 2,
+      "valid": 2,
+      "samples": 93,
+      "valueFrames": 93
+     },
+     {
+      "set": "w16/w16_set10_lunges.cap",
+      "truth": 10,
+      "detected": 0,
+      "valid": 0,
+      "samples": 106,
+      "valueFrames": 106
+     },
+     {
+      "set": "w16/w16_set11_lunges.cap",
+      "truth": 10,
+      "detected": 0,
+      "valid": 0,
+      "samples": 97,
+      "valueFrames": 97
+     },
+     {
+      "set": "w16/w16_set12_lunges.cap",
+      "truth": 10,
+      "detected": 0,
+      "valid": 0,
+      "samples": 109,
+      "valueFrames": 109
+     },
+     {
+      "set": "w17/w17_set11_lunges.cap",
+      "truth": 10,
+      "detected": 0,
+      "valid": 0,
+      "samples": 89,
+      "valueFrames": 89
+     },
+     {
+      "set": "w17/w17_set12_lunges.cap",
+      "truth": 10,
+      "detected": 0,
+      "valid": 0,
+      "samples": 84,
+      "valueFrames": 84
+     },
+     {
+      "set": "w17/w17_set13_lunges.cap",
+      "truth": 14,
+      "detected": 0,
+      "valid": 0,
+      "samples": 120,
+      "valueFrames": 120
+     },
+     {
+      "set": "w18/w18_set09_lunges.cap",
+      "truth": 10,
+      "detected": 0,
+      "valid": 0,
+      "samples": 107,
+      "valueFrames": 107
+     },
+     {
+      "set": "w18/w18_set10_lunges.cap",
+      "truth": 10,
+      "detected": 0,
+      "valid": 0,
+      "samples": 99,
+      "valueFrames": 99
+     },
+     {
+      "set": "w18/w18_set11_lunges.cap",
+      "truth": 10,
+      "detected": 0,
+      "valid": 0,
+      "samples": 100,
+      "valueFrames": 100
+     },
+     {
+      "set": "w19/w19_set09_lunges.cap",
+      "truth": 10,
+      "detected": 0,
+      "valid": 0,
+      "samples": 118,
+      "valueFrames": 118
+     },
+     {
+      "set": "w19/w19_set10_lunges.cap",
+      "truth": 10,
+      "detected": 0,
+      "valid": 0,
+      "samples": 96,
+      "valueFrames": 96
+     },
+     {
+      "set": "w19/w19_set11_lunges.cap",
+      "truth": 10,
+      "detected": 0,
+      "valid": 0,
+      "samples": 90,
+      "valueFrames": 90
+     },
+     {
+      "set": "w20/w20_set06_lunges.cap",
+      "truth": 10,
+      "detected": 0,
+      "valid": 0,
+      "samples": 115,
+      "valueFrames": 115
+     },
+     {
+      "set": "w20/w20_set07_lunges.cap",
+      "truth": 9,
+      "detected": 1,
+      "valid": 1,
+      "samples": 105,
+      "valueFrames": 105
+     },
+     {
+      "set": "w20/w20_set08_lunges.cap",
+      "truth": 10,
+      "detected": 2,
+      "valid": 2,
+      "samples": 113,
+      "valueFrames": 113
+     }
+    ]
+   },
+   "덤벨 컬": {
+    "sets": 59,
+    "truth": 599,
+    "detected": 512,
+    "valid": 14,
+    "MAE": 1.4745762711864407,
+    "OBO": 0.6440677966101694,
+    "exact": 0.423728813559322,
+    "under": 34,
+    "over": 0,
+    "zeroSets": 0,
+    "precision": 1.0,
+    "recall": 0.8547579298831386,
+    "countF1": 0.9216921692169217,
+    "valueCoverage": 1.0,
+    "feature": "elbow_mean",
+    "minAmp": 35.0,
+    "perSet": [
+     {
+      "set": "w00/w00_set21_bicep_curls.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 0,
+      "samples": 61,
+      "valueFrames": 61
+     },
+     {
+      "set": "w00/w00_set22_bicep_curls.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 0,
+      "samples": 57,
+      "valueFrames": 57
+     },
+     {
+      "set": "w00/w00_set23_bicep_curls.cap",
+      "truth": 10,
+      "detected": 7,
+      "valid": 0,
+      "samples": 53,
+      "valueFrames": 53
+     },
+     {
+      "set": "w01/w01_set23_bicep_curls.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 0,
+      "samples": 60,
+      "valueFrames": 60
+     },
+     {
+      "set": "w01/w01_set24_bicep_curls.cap",
+      "truth": 10,
+      "detected": 7,
+      "valid": 0,
+      "samples": 59,
+      "valueFrames": 59
+     },
+     {
+      "set": "w01/w01_set25_bicep_curls.cap",
+      "truth": 10,
+      "detected": 7,
+      "valid": 0,
+      "samples": 58,
+      "valueFrames": 58
+     },
+     {
+      "set": "w02/w02_set21_bicep_curls.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 0,
+      "samples": 69,
+      "valueFrames": 69
+     },
+     {
+      "set": "w02/w02_set22_bicep_curls.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 0,
+      "samples": 69,
+      "valueFrames": 69
+     },
+     {
+      "set": "w02/w02_set23_bicep_curls.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 0,
+      "samples": 69,
+      "valueFrames": 69
+     },
+     {
+      "set": "w03/w03_set21_bicep_curls.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 0,
+      "samples": 65,
+      "valueFrames": 65
+     },
+     {
+      "set": "w03/w03_set22_bicep_curls.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 0,
+      "samples": 66,
+      "valueFrames": 66
+     },
+     {
+      "set": "w03/w03_set23_bicep_curls.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 0,
+      "samples": 64,
+      "valueFrames": 64
+     },
+     {
+      "set": "w04/w04_set20_bicep_curls.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 1,
+      "samples": 79,
+      "valueFrames": 79
+     },
+     {
+      "set": "w05/w05_set21_bicep_curls.cap",
+      "truth": 10,
+      "detected": 8,
+      "valid": 0,
+      "samples": 59,
+      "valueFrames": 59
+     },
+     {
+      "set": "w05/w05_set22_bicep_curls.cap",
+      "truth": 10,
+      "detected": 6,
+      "valid": 0,
+      "samples": 57,
+      "valueFrames": 57
+     },
+     {
+      "set": "w05/w05_set23_bicep_curls.cap",
+      "truth": 11,
+      "detected": 7,
+      "valid": 0,
+      "samples": 62,
+      "valueFrames": 62
+     },
+     {
+      "set": "w06/w06_set21_bicep_curls.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 0,
+      "samples": 71,
+      "valueFrames": 71
+     },
+     {
+      "set": "w06/w06_set22_bicep_curls.cap",
+      "truth": 10,
+      "detected": 8,
+      "valid": 0,
+      "samples": 68,
+      "valueFrames": 68
+     },
+     {
+      "set": "w06/w06_set23_bicep_curls.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 0,
+      "samples": 70,
+      "valueFrames": 70
+     },
+     {
+      "set": "w07/w07_set21_bicep_curls.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 0,
+      "samples": 68,
+      "valueFrames": 68
+     },
+     {
+      "set": "w07/w07_set22_bicep_curls.cap",
+      "truth": 10,
+      "detected": 6,
+      "valid": 0,
+      "samples": 66,
+      "valueFrames": 66
+     },
+     {
+      "set": "w08/w08_set18_bicep_curls.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 0,
+      "samples": 70,
+      "valueFrames": 70
+     },
+     {
+      "set": "w08/w08_set19_bicep_curls.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 0,
+      "samples": 71,
+      "valueFrames": 71
+     },
+     {
+      "set": "w08/w08_set20_bicep_curls.cap",
+      "truth": 11,
+      "detected": 7,
+      "valid": 0,
+      "samples": 82,
+      "valueFrames": 82
+     },
+     {
+      "set": "w09/w09_set21_bicep_curls.cap",
+      "truth": 14,
+      "detected": 14,
+      "valid": 0,
+      "samples": 97,
+      "valueFrames": 97
+     },
+     {
+      "set": "w09/w09_set22_bicep_curls.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 0,
+      "samples": 63,
+      "valueFrames": 63
+     },
+     {
+      "set": "w09/w09_set23_bicep_curls.cap",
+      "truth": 10,
+      "detected": 7,
+      "valid": 0,
+      "samples": 58,
+      "valueFrames": 58
+     },
+     {
+      "set": "w10/w10_set21_bicep_curls.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 0,
+      "samples": 78,
+      "valueFrames": 78
+     },
+     {
+      "set": "w10/w10_set22_bicep_curls.cap",
+      "truth": 10,
+      "detected": 8,
+      "valid": 0,
+      "samples": 76,
+      "valueFrames": 76
+     },
+     {
+      "set": "w10/w10_set23_bicep_curls.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 0,
+      "samples": 80,
+      "valueFrames": 80
+     },
+     {
+      "set": "w11/w11_set21_bicep_curls.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 0,
+      "samples": 74,
+      "valueFrames": 74
+     },
+     {
+      "set": "w11/w11_set22_bicep_curls.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 0,
+      "samples": 72,
+      "valueFrames": 72
+     },
+     {
+      "set": "w11/w11_set23_bicep_curls.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 0,
+      "samples": 69,
+      "valueFrames": 69
+     },
+     {
+      "set": "w12/w12_set21_bicep_curls.cap",
+      "truth": 10,
+      "detected": 2,
+      "valid": 0,
+      "samples": 44,
+      "valueFrames": 44
+     },
+     {
+      "set": "w13/w13_set21_bicep_curls.cap",
+      "truth": 10,
+      "detected": 6,
+      "valid": 0,
+      "samples": 50,
+      "valueFrames": 50
+     },
+     {
+      "set": "w13/w13_set22_bicep_curls.cap",
+      "truth": 10,
+      "detected": 5,
+      "valid": 0,
+      "samples": 46,
+      "valueFrames": 46
+     },
+     {
+      "set": "w13/w13_set23_bicep_curls.cap",
+      "truth": 12,
+      "detected": 8,
+      "valid": 0,
+      "samples": 70,
+      "valueFrames": 70
+     },
+     {
+      "set": "w14/w14_set18_bicep_curls.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 0,
+      "samples": 68,
+      "valueFrames": 68
+     },
+     {
+      "set": "w14/w14_set19_bicep_curls.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 0,
+      "samples": 69,
+      "valueFrames": 69
+     },
+     {
+      "set": "w14/w14_set20_bicep_curls.cap",
+      "truth": 10,
+      "detected": 6,
+      "valid": 0,
+      "samples": 69,
+      "valueFrames": 69
+     },
+     {
+      "set": "w15/w15_set21_bicep_curls.cap",
+      "truth": 10,
+      "detected": 7,
+      "valid": 0,
+      "samples": 65,
+      "valueFrames": 65
+     },
+     {
+      "set": "w15/w15_set22_bicep_curls.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 0,
+      "samples": 66,
+      "valueFrames": 66
+     },
+     {
+      "set": "w15/w15_set23_bicep_curls.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 0,
+      "samples": 65,
+      "valueFrames": 65
+     },
+     {
+      "set": "w16/w16_set23_bicep_curls.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 0,
+      "samples": 72,
+      "valueFrames": 72
+     },
+     {
+      "set": "w16/w16_set24_bicep_curls.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 0,
+      "samples": 83,
+      "valueFrames": 83
+     },
+     {
+      "set": "w16/w16_set25_bicep_curls.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 0,
+      "samples": 88,
+      "valueFrames": 88
+     },
+     {
+      "set": "w17/w17_set24_bicep_curls.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 1,
+      "samples": 70,
+      "valueFrames": 70
+     },
+     {
+      "set": "w17/w17_set25_bicep_curls.cap",
+      "truth": 11,
+      "detected": 8,
+      "valid": 0,
+      "samples": 69,
+      "valueFrames": 69
+     },
+     {
+      "set": "w17/w17_set26_bicep_curls.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 0,
+      "samples": 65,
+      "valueFrames": 65
+     },
+     {
+      "set": "w18/w18_set21_bicep_curls.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 0,
+      "samples": 61,
+      "valueFrames": 61
+     },
+     {
+      "set": "w18/w18_set22_bicep_curls.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 0,
+      "samples": 68,
+      "valueFrames": 68
+     },
+     {
+      "set": "w18/w18_set23_bicep_curls.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 0,
+      "samples": 67,
+      "valueFrames": 67
+     },
+     {
+      "set": "w19/w19_set21_bicep_curls.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 1,
+      "samples": 79,
+      "valueFrames": 79
+     },
+     {
+      "set": "w19/w19_set22_bicep_curls.cap",
+      "truth": 10,
+      "detected": 8,
+      "valid": 4,
+      "samples": 75,
+      "valueFrames": 75
+     },
+     {
+      "set": "w19/w19_set23_bicep_curls.cap",
+      "truth": 10,
+      "detected": 6,
+      "valid": 3,
+      "samples": 69,
+      "valueFrames": 69
+     },
+     {
+      "set": "w19/w19_set24_bicep_curls.cap",
+      "truth": 10,
+      "detected": 7,
+      "valid": 4,
+      "samples": 73,
+      "valueFrames": 73
+     },
+     {
+      "set": "w20/w20_set18_bicep_curls.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 0,
+      "samples": 91,
+      "valueFrames": 91
+     },
+     {
+      "set": "w20/w20_set19_bicep_curls.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 0,
+      "samples": 91,
+      "valueFrames": 91
+     },
+     {
+      "set": "w20/w20_set20_bicep_curls.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 0,
+      "samples": 91,
+      "valueFrames": 91
+     }
+    ]
+   }
+  },
+  "live+elbow_minside": {
+   "덤벨 컬": {
+    "sets": 59,
+    "truth": 599,
+    "detected": 523,
+    "valid": 523,
+    "MAE": 1.2881355932203389,
+    "OBO": 0.7457627118644068,
+    "exact": 0.4915254237288136,
+    "under": 30,
+    "over": 0,
+    "zeroSets": 0,
+    "precision": 1.0,
+    "recall": 0.8731218697829716,
+    "countF1": 0.9322638146167557,
+    "valueCoverage": 1.0,
+    "feature": "elbow_minside",
+    "minAmp": 35.0,
+    "perSet": [
+     {
+      "set": "w00/w00_set21_bicep_curls.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 10,
+      "samples": 61,
+      "valueFrames": 61
+     },
+     {
+      "set": "w00/w00_set22_bicep_curls.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 9,
+      "samples": 57,
+      "valueFrames": 57
+     },
+     {
+      "set": "w00/w00_set23_bicep_curls.cap",
+      "truth": 10,
+      "detected": 8,
+      "valid": 8,
+      "samples": 53,
+      "valueFrames": 53
+     },
+     {
+      "set": "w01/w01_set23_bicep_curls.cap",
+      "truth": 10,
+      "detected": 8,
+      "valid": 8,
+      "samples": 60,
+      "valueFrames": 60
+     },
+     {
+      "set": "w01/w01_set24_bicep_curls.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 9,
+      "samples": 59,
+      "valueFrames": 59
+     },
+     {
+      "set": "w01/w01_set25_bicep_curls.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 9,
+      "samples": 58,
+      "valueFrames": 58
+     },
+     {
+      "set": "w02/w02_set21_bicep_curls.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 10,
+      "samples": 69,
+      "valueFrames": 69
+     },
+     {
+      "set": "w02/w02_set22_bicep_curls.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 10,
+      "samples": 69,
+      "valueFrames": 69
+     },
+     {
+      "set": "w02/w02_set23_bicep_curls.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 9,
+      "samples": 69,
+      "valueFrames": 69
+     },
+     {
+      "set": "w03/w03_set21_bicep_curls.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 10,
+      "samples": 65,
+      "valueFrames": 65
+     },
+     {
+      "set": "w03/w03_set22_bicep_curls.cap",
+      "truth": 10,
+      "detected": 7,
+      "valid": 7,
+      "samples": 66,
+      "valueFrames": 66
+     },
+     {
+      "set": "w03/w03_set23_bicep_curls.cap",
+      "truth": 10,
+      "detected": 7,
+      "valid": 7,
+      "samples": 64,
+      "valueFrames": 64
+     },
+     {
+      "set": "w04/w04_set20_bicep_curls.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 9,
+      "samples": 79,
+      "valueFrames": 79
+     },
+     {
+      "set": "w05/w05_set21_bicep_curls.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 10,
+      "samples": 59,
+      "valueFrames": 59
+     },
+     {
+      "set": "w05/w05_set22_bicep_curls.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 10,
+      "samples": 57,
+      "valueFrames": 57
+     },
+     {
+      "set": "w05/w05_set23_bicep_curls.cap",
+      "truth": 11,
+      "detected": 11,
+      "valid": 11,
+      "samples": 62,
+      "valueFrames": 62
+     },
+     {
+      "set": "w06/w06_set21_bicep_curls.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 9,
+      "samples": 71,
+      "valueFrames": 71
+     },
+     {
+      "set": "w06/w06_set22_bicep_curls.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 9,
+      "samples": 68,
+      "valueFrames": 68
+     },
+     {
+      "set": "w06/w06_set23_bicep_curls.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 10,
+      "samples": 70,
+      "valueFrames": 70
+     },
+     {
+      "set": "w07/w07_set21_bicep_curls.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 10,
+      "samples": 68,
+      "valueFrames": 68
+     },
+     {
+      "set": "w07/w07_set22_bicep_curls.cap",
+      "truth": 10,
+      "detected": 3,
+      "valid": 3,
+      "samples": 66,
+      "valueFrames": 66
+     },
+     {
+      "set": "w08/w08_set18_bicep_curls.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 9,
+      "samples": 70,
+      "valueFrames": 70
+     },
+     {
+      "set": "w08/w08_set19_bicep_curls.cap",
+      "truth": 10,
+      "detected": 8,
+      "valid": 8,
+      "samples": 71,
+      "valueFrames": 71
+     },
+     {
+      "set": "w08/w08_set20_bicep_curls.cap",
+      "truth": 11,
+      "detected": 9,
+      "valid": 9,
+      "samples": 82,
+      "valueFrames": 82
+     },
+     {
+      "set": "w09/w09_set21_bicep_curls.cap",
+      "truth": 14,
+      "detected": 13,
+      "valid": 13,
+      "samples": 97,
+      "valueFrames": 97
+     },
+     {
+      "set": "w09/w09_set22_bicep_curls.cap",
+      "truth": 10,
+      "detected": 7,
+      "valid": 7,
+      "samples": 63,
+      "valueFrames": 63
+     },
+     {
+      "set": "w09/w09_set23_bicep_curls.cap",
+      "truth": 10,
+      "detected": 5,
+      "valid": 5,
+      "samples": 58,
+      "valueFrames": 58
+     },
+     {
+      "set": "w10/w10_set21_bicep_curls.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 9,
+      "samples": 78,
+      "valueFrames": 78
+     },
+     {
+      "set": "w10/w10_set22_bicep_curls.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 9,
+      "samples": 76,
+      "valueFrames": 76
+     },
+     {
+      "set": "w10/w10_set23_bicep_curls.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 10,
+      "samples": 80,
+      "valueFrames": 80
+     },
+     {
+      "set": "w11/w11_set21_bicep_curls.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 9,
+      "samples": 74,
+      "valueFrames": 74
+     },
+     {
+      "set": "w11/w11_set22_bicep_curls.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 10,
+      "samples": 72,
+      "valueFrames": 72
+     },
+     {
+      "set": "w11/w11_set23_bicep_curls.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 10,
+      "samples": 69,
+      "valueFrames": 69
+     },
+     {
+      "set": "w12/w12_set21_bicep_curls.cap",
+      "truth": 10,
+      "detected": 1,
+      "valid": 1,
+      "samples": 44,
+      "valueFrames": 44
+     },
+     {
+      "set": "w13/w13_set21_bicep_curls.cap",
+      "truth": 10,
+      "detected": 6,
+      "valid": 6,
+      "samples": 50,
+      "valueFrames": 50
+     },
+     {
+      "set": "w13/w13_set22_bicep_curls.cap",
+      "truth": 10,
+      "detected": 6,
+      "valid": 6,
+      "samples": 46,
+      "valueFrames": 46
+     },
+     {
+      "set": "w13/w13_set23_bicep_curls.cap",
+      "truth": 12,
+      "detected": 11,
+      "valid": 11,
+      "samples": 70,
+      "valueFrames": 70
+     },
+     {
+      "set": "w14/w14_set18_bicep_curls.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 9,
+      "samples": 68,
+      "valueFrames": 68
+     },
+     {
+      "set": "w14/w14_set19_bicep_curls.cap",
+      "truth": 10,
+      "detected": 7,
+      "valid": 7,
+      "samples": 69,
+      "valueFrames": 69
+     },
+     {
+      "set": "w14/w14_set20_bicep_curls.cap",
+      "truth": 10,
+      "detected": 5,
+      "valid": 5,
+      "samples": 69,
+      "valueFrames": 69
+     },
+     {
+      "set": "w15/w15_set21_bicep_curls.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 10,
+      "samples": 65,
+      "valueFrames": 65
+     },
+     {
+      "set": "w15/w15_set22_bicep_curls.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 10,
+      "samples": 66,
+      "valueFrames": 66
+     },
+     {
+      "set": "w15/w15_set23_bicep_curls.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 10,
+      "samples": 65,
+      "valueFrames": 65
+     },
+     {
+      "set": "w16/w16_set23_bicep_curls.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 10,
+      "samples": 72,
+      "valueFrames": 72
+     },
+     {
+      "set": "w16/w16_set24_bicep_curls.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 10,
+      "samples": 83,
+      "valueFrames": 83
+     },
+     {
+      "set": "w16/w16_set25_bicep_curls.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 10,
+      "samples": 88,
+      "valueFrames": 88
+     },
+     {
+      "set": "w17/w17_set24_bicep_curls.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 10,
+      "samples": 70,
+      "valueFrames": 70
+     },
+     {
+      "set": "w17/w17_set25_bicep_curls.cap",
+      "truth": 11,
+      "detected": 10,
+      "valid": 10,
+      "samples": 69,
+      "valueFrames": 69
+     },
+     {
+      "set": "w17/w17_set26_bicep_curls.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 10,
+      "samples": 65,
+      "valueFrames": 65
+     },
+     {
+      "set": "w18/w18_set21_bicep_curls.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 10,
+      "samples": 61,
+      "valueFrames": 61
+     },
+     {
+      "set": "w18/w18_set22_bicep_curls.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 10,
+      "samples": 68,
+      "valueFrames": 68
+     },
+     {
+      "set": "w18/w18_set23_bicep_curls.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 10,
+      "samples": 67,
+      "valueFrames": 67
+     },
+     {
+      "set": "w19/w19_set21_bicep_curls.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 10,
+      "samples": 79,
+      "valueFrames": 79
+     },
+     {
+      "set": "w19/w19_set22_bicep_curls.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 10,
+      "samples": 75,
+      "valueFrames": 75
+     },
+     {
+      "set": "w19/w19_set23_bicep_curls.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 10,
+      "samples": 69,
+      "valueFrames": 69
+     },
+     {
+      "set": "w19/w19_set24_bicep_curls.cap",
+      "truth": 10,
+      "detected": 3,
+      "valid": 3,
+      "samples": 73,
+      "valueFrames": 73
+     },
+     {
+      "set": "w20/w20_set18_bicep_curls.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 10,
+      "samples": 91,
+      "valueFrames": 91
+     },
+     {
+      "set": "w20/w20_set19_bicep_curls.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 10,
+      "samples": 91,
+      "valueFrames": 91
+     },
+     {
+      "set": "w20/w20_set20_bicep_curls.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 10,
+      "samples": 91,
+      "valueFrames": 91
+     }
+    ]
+   }
+  },
+  "live+knee_mean": {
+   "스텝 포워드 다이나믹 런지": {
+    "sets": 62,
+    "truth": 624,
+    "detected": 523,
+    "valid": 523,
+    "MAE": 1.6290322580645162,
+    "OBO": 0.6774193548387096,
+    "exact": 0.4838709677419355,
+    "under": 32,
+    "over": 0,
+    "zeroSets": 0,
+    "precision": 1.0,
+    "recall": 0.8381410256410257,
+    "countF1": 0.911944202266783,
+    "valueCoverage": 1.0,
+    "feature": "knee_mean",
+    "minAmp": 35.0,
+    "perSet": [
+     {
+      "set": "w00/w00_set09_lunges.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 10,
+      "samples": 98,
+      "valueFrames": 98
+     },
+     {
+      "set": "w00/w00_set10_lunges.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 9,
+      "samples": 97,
+      "valueFrames": 97
+     },
+     {
+      "set": "w00/w00_set11_lunges.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 9,
+      "samples": 102,
+      "valueFrames": 102
+     },
+     {
+      "set": "w01/w01_set09_lunges.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 9,
+      "samples": 99,
+      "valueFrames": 99
+     },
+     {
+      "set": "w01/w01_set10_lunges.cap",
+      "truth": 10,
+      "detected": 8,
+      "valid": 8,
+      "samples": 82,
+      "valueFrames": 82
+     },
+     {
+      "set": "w01/w01_set11_lunges.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 9,
+      "samples": 89,
+      "valueFrames": 89
+     },
+     {
+      "set": "w02/w02_set09_lunges.cap",
+      "truth": 10,
+      "detected": 6,
+      "valid": 6,
+      "samples": 92,
+      "valueFrames": 92
+     },
+     {
+      "set": "w02/w02_set10_lunges.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 10,
+      "samples": 98,
+      "valueFrames": 98
+     },
+     {
+      "set": "w02/w02_set11_lunges.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 9,
+      "samples": 99,
+      "valueFrames": 99
+     },
+     {
+      "set": "w03/w03_set09_lunges.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 10,
+      "samples": 91,
+      "valueFrames": 91
+     },
+     {
+      "set": "w03/w03_set10_lunges.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 10,
+      "samples": 91,
+      "valueFrames": 91
+     },
+     {
+      "set": "w03/w03_set11_lunges.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 10,
+      "samples": 92,
+      "valueFrames": 92
+     },
+     {
+      "set": "w04/w04_set09_lunges.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 10,
+      "samples": 104,
+      "valueFrames": 104
+     },
+     {
+      "set": "w04/w04_set10_lunges.cap",
+      "truth": 10,
+      "detected": 8,
+      "valid": 8,
+      "samples": 103,
+      "valueFrames": 103
+     },
+     {
+      "set": "w05/w05_set09_lunges.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 9,
+      "samples": 95,
+      "valueFrames": 95
+     },
+     {
+      "set": "w05/w05_set10_lunges.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 10,
+      "samples": 98,
+      "valueFrames": 98
+     },
+     {
+      "set": "w05/w05_set11_lunges.cap",
+      "truth": 11,
+      "detected": 11,
+      "valid": 11,
+      "samples": 101,
+      "valueFrames": 101
+     },
+     {
+      "set": "w06/w06_set09_lunges.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 10,
+      "samples": 102,
+      "valueFrames": 102
+     },
+     {
+      "set": "w06/w06_set10_lunges.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 10,
+      "samples": 91,
+      "valueFrames": 91
+     },
+     {
+      "set": "w06/w06_set11_lunges.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 10,
+      "samples": 96,
+      "valueFrames": 96
+     },
+     {
+      "set": "w07/w07_set09_lunges.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 9,
+      "samples": 104,
+      "valueFrames": 104
+     },
+     {
+      "set": "w07/w07_set10_lunges.cap",
+      "truth": 10,
+      "detected": 8,
+      "valid": 8,
+      "samples": 98,
+      "valueFrames": 98
+     },
+     {
+      "set": "w07/w07_set11_lunges.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 10,
+      "samples": 98,
+      "valueFrames": 98
+     },
+     {
+      "set": "w08/w08_set21_lunges.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 10,
+      "samples": 108,
+      "valueFrames": 108
+     },
+     {
+      "set": "w08/w08_set22_lunges.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 10,
+      "samples": 101,
+      "valueFrames": 101
+     },
+     {
+      "set": "w08/w08_set23_lunges.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 10,
+      "samples": 95,
+      "valueFrames": 95
+     },
+     {
+      "set": "w09/w09_set09_lunges.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 10,
+      "samples": 103,
+      "valueFrames": 103
+     },
+     {
+      "set": "w09/w09_set10_lunges.cap",
+      "truth": 10,
+      "detected": 7,
+      "valid": 7,
+      "samples": 100,
+      "valueFrames": 100
+     },
+     {
+      "set": "w09/w09_set11_lunges.cap",
+      "truth": 10,
+      "detected": 3,
+      "valid": 3,
+      "samples": 97,
+      "valueFrames": 97
+     },
+     {
+      "set": "w10/w10_set09_lunges.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 10,
+      "samples": 110,
+      "valueFrames": 110
+     },
+     {
+      "set": "w10/w10_set10_lunges.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 10,
+      "samples": 108,
+      "valueFrames": 108
+     },
+     {
+      "set": "w10/w10_set11_lunges.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 10,
+      "samples": 104,
+      "valueFrames": 104
+     },
+     {
+      "set": "w11/w11_set09_lunges.cap",
+      "truth": 10,
+      "detected": 8,
+      "valid": 8,
+      "samples": 108,
+      "valueFrames": 108
+     },
+     {
+      "set": "w11/w11_set10_lunges.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 10,
+      "samples": 103,
+      "valueFrames": 103
+     },
+     {
+      "set": "w11/w11_set11_lunges.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 10,
+      "samples": 98,
+      "valueFrames": 98
+     },
+     {
+      "set": "w12/w12_set09_lunges.cap",
+      "truth": 10,
+      "detected": 6,
+      "valid": 6,
+      "samples": 80,
+      "valueFrames": 80
+     },
+     {
+      "set": "w12/w12_set10_lunges.cap",
+      "truth": 10,
+      "detected": 1,
+      "valid": 1,
+      "samples": 74,
+      "valueFrames": 74
+     },
+     {
+      "set": "w12/w12_set11_lunges.cap",
+      "truth": 10,
+      "detected": 6,
+      "valid": 6,
+      "samples": 74,
+      "valueFrames": 74
+     },
+     {
+      "set": "w13/w13_set09_lunges.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 10,
+      "samples": 91,
+      "valueFrames": 91
+     },
+     {
+      "set": "w13/w13_set10_lunges.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 9,
+      "samples": 97,
+      "valueFrames": 97
+     },
+     {
+      "set": "w13/w13_set11_lunges.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 9,
+      "samples": 81,
+      "valueFrames": 81
+     },
+     {
+      "set": "w14/w14_set24_lunges.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 10,
+      "samples": 96,
+      "valueFrames": 96
+     },
+     {
+      "set": "w14/w14_set25_lunges.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 10,
+      "samples": 94,
+      "valueFrames": 94
+     },
+     {
+      "set": "w14/w14_set26_lunges.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 10,
+      "samples": 91,
+      "valueFrames": 91
+     },
+     {
+      "set": "w15/w15_set09_lunges.cap",
+      "truth": 10,
+      "detected": 8,
+      "valid": 8,
+      "samples": 93,
+      "valueFrames": 93
+     },
+     {
+      "set": "w15/w15_set10_lunges.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 9,
+      "samples": 95,
+      "valueFrames": 95
+     },
+     {
+      "set": "w15/w15_set11_lunges.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 9,
+      "samples": 93,
+      "valueFrames": 93
+     },
+     {
+      "set": "w16/w16_set10_lunges.cap",
+      "truth": 10,
+      "detected": 5,
+      "valid": 5,
+      "samples": 106,
+      "valueFrames": 106
+     },
+     {
+      "set": "w16/w16_set11_lunges.cap",
+      "truth": 10,
+      "detected": 2,
+      "valid": 2,
+      "samples": 97,
+      "valueFrames": 97
+     },
+     {
+      "set": "w16/w16_set12_lunges.cap",
+      "truth": 10,
+      "detected": 8,
+      "valid": 8,
+      "samples": 109,
+      "valueFrames": 109
+     },
+     {
+      "set": "w17/w17_set11_lunges.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 9,
+      "samples": 89,
+      "valueFrames": 89
+     },
+     {
+      "set": "w17/w17_set12_lunges.cap",
+      "truth": 10,
+      "detected": 5,
+      "valid": 5,
+      "samples": 84,
+      "valueFrames": 84
+     },
+     {
+      "set": "w17/w17_set13_lunges.cap",
+      "truth": 14,
+      "detected": 11,
+      "valid": 11,
+      "samples": 120,
+      "valueFrames": 120
+     },
+     {
+      "set": "w18/w18_set09_lunges.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 10,
+      "samples": 107,
+      "valueFrames": 107
+     },
+     {
+      "set": "w18/w18_set10_lunges.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 10,
+      "samples": 99,
+      "valueFrames": 99
+     },
+     {
+      "set": "w18/w18_set11_lunges.cap",
+      "truth": 10,
+      "detected": 5,
+      "valid": 5,
+      "samples": 100,
+      "valueFrames": 100
+     },
+     {
+      "set": "w19/w19_set09_lunges.cap",
+      "truth": 10,
+      "detected": 2,
+      "valid": 2,
+      "samples": 118,
+      "valueFrames": 118
+     },
+     {
+      "set": "w19/w19_set10_lunges.cap",
+      "truth": 10,
+      "detected": 1,
+      "valid": 1,
+      "samples": 96,
+      "valueFrames": 96
+     },
+     {
+      "set": "w19/w19_set11_lunges.cap",
+      "truth": 10,
+      "detected": 7,
+      "valid": 7,
+      "samples": 90,
+      "valueFrames": 90
+     },
+     {
+      "set": "w20/w20_set06_lunges.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 10,
+      "samples": 115,
+      "valueFrames": 115
+     },
+     {
+      "set": "w20/w20_set07_lunges.cap",
+      "truth": 9,
+      "detected": 9,
+      "valid": 9,
+      "samples": 105,
+      "valueFrames": 105
+     },
+     {
+      "set": "w20/w20_set08_lunges.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 10,
+      "samples": 113,
+      "valueFrames": 113
+     }
+    ]
+   }
+  },
+  "live+knee_minside": {
+   "스텝 포워드 다이나믹 런지": {
+    "sets": 62,
+    "truth": 624,
+    "detected": 430,
+    "valid": 430,
+    "MAE": 3.129032258064516,
+    "OBO": 0.3709677419354839,
+    "exact": 0.24193548387096775,
+    "under": 47,
+    "over": 0,
+    "zeroSets": 2,
+    "precision": 1.0,
+    "recall": 0.6891025641025641,
+    "countF1": 0.8159392789373814,
+    "valueCoverage": 1.0,
+    "feature": "knee_minside",
+    "minAmp": 35.0,
+    "perSet": [
+     {
+      "set": "w00/w00_set09_lunges.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 10,
+      "samples": 98,
+      "valueFrames": 98
+     },
+     {
+      "set": "w00/w00_set10_lunges.cap",
+      "truth": 10,
+      "detected": 7,
+      "valid": 7,
+      "samples": 97,
+      "valueFrames": 97
+     },
+     {
+      "set": "w00/w00_set11_lunges.cap",
+      "truth": 10,
+      "detected": 8,
+      "valid": 8,
+      "samples": 102,
+      "valueFrames": 102
+     },
+     {
+      "set": "w01/w01_set09_lunges.cap",
+      "truth": 10,
+      "detected": 7,
+      "valid": 7,
+      "samples": 99,
+      "valueFrames": 99
+     },
+     {
+      "set": "w01/w01_set10_lunges.cap",
+      "truth": 10,
+      "detected": 2,
+      "valid": 2,
+      "samples": 82,
+      "valueFrames": 82
+     },
+     {
+      "set": "w01/w01_set11_lunges.cap",
+      "truth": 10,
+      "detected": 2,
+      "valid": 2,
+      "samples": 89,
+      "valueFrames": 89
+     },
+     {
+      "set": "w02/w02_set09_lunges.cap",
+      "truth": 10,
+      "detected": 3,
+      "valid": 3,
+      "samples": 92,
+      "valueFrames": 92
+     },
+     {
+      "set": "w02/w02_set10_lunges.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 10,
+      "samples": 98,
+      "valueFrames": 98
+     },
+     {
+      "set": "w02/w02_set11_lunges.cap",
+      "truth": 10,
+      "detected": 6,
+      "valid": 6,
+      "samples": 99,
+      "valueFrames": 99
+     },
+     {
+      "set": "w03/w03_set09_lunges.cap",
+      "truth": 10,
+      "detected": 8,
+      "valid": 8,
+      "samples": 91,
+      "valueFrames": 91
+     },
+     {
+      "set": "w03/w03_set10_lunges.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 9,
+      "samples": 91,
+      "valueFrames": 91
+     },
+     {
+      "set": "w03/w03_set11_lunges.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 10,
+      "samples": 92,
+      "valueFrames": 92
+     },
+     {
+      "set": "w04/w04_set09_lunges.cap",
+      "truth": 10,
+      "detected": 8,
+      "valid": 8,
+      "samples": 104,
+      "valueFrames": 104
+     },
+     {
+      "set": "w04/w04_set10_lunges.cap",
+      "truth": 10,
+      "detected": 6,
+      "valid": 6,
+      "samples": 103,
+      "valueFrames": 103
+     },
+     {
+      "set": "w05/w05_set09_lunges.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 9,
+      "samples": 95,
+      "valueFrames": 95
+     },
+     {
+      "set": "w05/w05_set10_lunges.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 10,
+      "samples": 98,
+      "valueFrames": 98
+     },
+     {
+      "set": "w05/w05_set11_lunges.cap",
+      "truth": 11,
+      "detected": 11,
+      "valid": 11,
+      "samples": 101,
+      "valueFrames": 101
+     },
+     {
+      "set": "w06/w06_set09_lunges.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 10,
+      "samples": 102,
+      "valueFrames": 102
+     },
+     {
+      "set": "w06/w06_set10_lunges.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 10,
+      "samples": 91,
+      "valueFrames": 91
+     },
+     {
+      "set": "w06/w06_set11_lunges.cap",
+      "truth": 10,
+      "detected": 8,
+      "valid": 8,
+      "samples": 96,
+      "valueFrames": 96
+     },
+     {
+      "set": "w07/w07_set09_lunges.cap",
+      "truth": 10,
+      "detected": 8,
+      "valid": 8,
+      "samples": 104,
+      "valueFrames": 104
+     },
+     {
+      "set": "w07/w07_set10_lunges.cap",
+      "truth": 10,
+      "detected": 6,
+      "valid": 6,
+      "samples": 98,
+      "valueFrames": 98
+     },
+     {
+      "set": "w07/w07_set11_lunges.cap",
+      "truth": 10,
+      "detected": 6,
+      "valid": 6,
+      "samples": 98,
+      "valueFrames": 98
+     },
+     {
+      "set": "w08/w08_set21_lunges.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 9,
+      "samples": 108,
+      "valueFrames": 108
+     },
+     {
+      "set": "w08/w08_set22_lunges.cap",
+      "truth": 10,
+      "detected": 6,
+      "valid": 6,
+      "samples": 101,
+      "valueFrames": 101
+     },
+     {
+      "set": "w08/w08_set23_lunges.cap",
+      "truth": 10,
+      "detected": 6,
+      "valid": 6,
+      "samples": 95,
+      "valueFrames": 95
+     },
+     {
+      "set": "w09/w09_set09_lunges.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 9,
+      "samples": 103,
+      "valueFrames": 103
+     },
+     {
+      "set": "w09/w09_set10_lunges.cap",
+      "truth": 10,
+      "detected": 5,
+      "valid": 5,
+      "samples": 100,
+      "valueFrames": 100
+     },
+     {
+      "set": "w09/w09_set11_lunges.cap",
+      "truth": 10,
+      "detected": 1,
+      "valid": 1,
+      "samples": 97,
+      "valueFrames": 97
+     },
+     {
+      "set": "w10/w10_set09_lunges.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 9,
+      "samples": 110,
+      "valueFrames": 110
+     },
+     {
+      "set": "w10/w10_set10_lunges.cap",
+      "truth": 10,
+      "detected": 8,
+      "valid": 8,
+      "samples": 108,
+      "valueFrames": 108
+     },
+     {
+      "set": "w10/w10_set11_lunges.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 9,
+      "samples": 104,
+      "valueFrames": 104
+     },
+     {
+      "set": "w11/w11_set09_lunges.cap",
+      "truth": 10,
+      "detected": 8,
+      "valid": 8,
+      "samples": 108,
+      "valueFrames": 108
+     },
+     {
+      "set": "w11/w11_set10_lunges.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 9,
+      "samples": 103,
+      "valueFrames": 103
+     },
+     {
+      "set": "w11/w11_set11_lunges.cap",
+      "truth": 10,
+      "detected": 7,
+      "valid": 7,
+      "samples": 98,
+      "valueFrames": 98
+     },
+     {
+      "set": "w12/w12_set09_lunges.cap",
+      "truth": 10,
+      "detected": 0,
+      "valid": 0,
+      "samples": 80,
+      "valueFrames": 80
+     },
+     {
+      "set": "w12/w12_set10_lunges.cap",
+      "truth": 10,
+      "detected": 0,
+      "valid": 0,
+      "samples": 74,
+      "valueFrames": 74
+     },
+     {
+      "set": "w12/w12_set11_lunges.cap",
+      "truth": 10,
+      "detected": 5,
+      "valid": 5,
+      "samples": 74,
+      "valueFrames": 74
+     },
+     {
+      "set": "w13/w13_set09_lunges.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 10,
+      "samples": 91,
+      "valueFrames": 91
+     },
+     {
+      "set": "w13/w13_set10_lunges.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 10,
+      "samples": 97,
+      "valueFrames": 97
+     },
+     {
+      "set": "w13/w13_set11_lunges.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 10,
+      "samples": 81,
+      "valueFrames": 81
+     },
+     {
+      "set": "w14/w14_set24_lunges.cap",
+      "truth": 10,
+      "detected": 6,
+      "valid": 6,
+      "samples": 96,
+      "valueFrames": 96
+     },
+     {
+      "set": "w14/w14_set25_lunges.cap",
+      "truth": 10,
+      "detected": 7,
+      "valid": 7,
+      "samples": 94,
+      "valueFrames": 94
+     },
+     {
+      "set": "w14/w14_set26_lunges.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 10,
+      "samples": 91,
+      "valueFrames": 91
+     },
+     {
+      "set": "w15/w15_set09_lunges.cap",
+      "truth": 10,
+      "detected": 7,
+      "valid": 7,
+      "samples": 93,
+      "valueFrames": 93
+     },
+     {
+      "set": "w15/w15_set10_lunges.cap",
+      "truth": 10,
+      "detected": 4,
+      "valid": 4,
+      "samples": 95,
+      "valueFrames": 95
+     },
+     {
+      "set": "w15/w15_set11_lunges.cap",
+      "truth": 10,
+      "detected": 6,
+      "valid": 6,
+      "samples": 93,
+      "valueFrames": 93
+     },
+     {
+      "set": "w16/w16_set10_lunges.cap",
+      "truth": 10,
+      "detected": 5,
+      "valid": 5,
+      "samples": 106,
+      "valueFrames": 106
+     },
+     {
+      "set": "w16/w16_set11_lunges.cap",
+      "truth": 10,
+      "detected": 2,
+      "valid": 2,
+      "samples": 97,
+      "valueFrames": 97
+     },
+     {
+      "set": "w16/w16_set12_lunges.cap",
+      "truth": 10,
+      "detected": 4,
+      "valid": 4,
+      "samples": 109,
+      "valueFrames": 109
+     },
+     {
+      "set": "w17/w17_set11_lunges.cap",
+      "truth": 10,
+      "detected": 8,
+      "valid": 8,
+      "samples": 89,
+      "valueFrames": 89
+     },
+     {
+      "set": "w17/w17_set12_lunges.cap",
+      "truth": 10,
+      "detected": 3,
+      "valid": 3,
+      "samples": 84,
+      "valueFrames": 84
+     },
+     {
+      "set": "w17/w17_set13_lunges.cap",
+      "truth": 14,
+      "detected": 7,
+      "valid": 7,
+      "samples": 120,
+      "valueFrames": 120
+     },
+     {
+      "set": "w18/w18_set09_lunges.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 10,
+      "samples": 107,
+      "valueFrames": 107
+     },
+     {
+      "set": "w18/w18_set10_lunges.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 9,
+      "samples": 99,
+      "valueFrames": 99
+     },
+     {
+      "set": "w18/w18_set11_lunges.cap",
+      "truth": 10,
+      "detected": 7,
+      "valid": 7,
+      "samples": 100,
+      "valueFrames": 100
+     },
+     {
+      "set": "w19/w19_set09_lunges.cap",
+      "truth": 10,
+      "detected": 2,
+      "valid": 2,
+      "samples": 118,
+      "valueFrames": 118
+     },
+     {
+      "set": "w19/w19_set10_lunges.cap",
+      "truth": 10,
+      "detected": 1,
+      "valid": 1,
+      "samples": 96,
+      "valueFrames": 96
+     },
+     {
+      "set": "w19/w19_set11_lunges.cap",
+      "truth": 10,
+      "detected": 8,
+      "valid": 8,
+      "samples": 90,
+      "valueFrames": 90
+     },
+     {
+      "set": "w20/w20_set06_lunges.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 10,
+      "samples": 115,
+      "valueFrames": 115
+     },
+     {
+      "set": "w20/w20_set07_lunges.cap",
+      "truth": 9,
+      "detected": 9,
+      "valid": 9,
+      "samples": 105,
+      "valueFrames": 105
+     },
+     {
+      "set": "w20/w20_set08_lunges.cap",
+      "truth": 10,
+      "detected": 10,
+      "valid": 10,
+      "samples": 113,
+      "valueFrames": 113
+     }
+    ]
+   }
+  },
+  "reversal": {
+   "바벨 스쿼트": {
+    "sets": 64,
+    "truth": 639,
+    "detected": 566,
+    "valid": 161,
+    "MAE": 1.140625,
+    "OBO": 0.921875,
+    "exact": 0.0,
+    "under": 64,
+    "over": 0,
+    "zeroSets": 0,
+    "precision": 1.0,
+    "recall": 0.8857589984350548,
+    "countF1": 0.9394190871369296,
+    "valueCoverage": 1.0,
+    "feature": "knee_mean",
+    "minAmp": 35.0,
+    "perSet": [
+     {
+      "set": "w00/w00_set00_squats.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 5,
+      "samples": 52,
+      "valueFrames": 52
+     },
+     {
+      "set": "w00/w00_set01_squats.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 1,
+      "samples": 59,
+      "valueFrames": 59
+     },
+     {
+      "set": "w00/w00_set02_squats.cap",
+      "truth": 10,
+      "detected": 8,
+      "valid": 4,
+      "samples": 58,
+      "valueFrames": 58
+     },
+     {
+      "set": "w01/w01_set00_squats.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 5,
+      "samples": 58,
+      "valueFrames": 58
+     },
+     {
+      "set": "w01/w01_set01_squats.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 9,
+      "samples": 62,
+      "valueFrames": 62
+     },
+     {
+      "set": "w01/w01_set02_squats.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 8,
+      "samples": 63,
+      "valueFrames": 63
+     },
+     {
+      "set": "w02/w02_set00_squats.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 0,
+      "samples": 73,
+      "valueFrames": 73
+     },
+     {
+      "set": "w02/w02_set01_squats.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 0,
+      "samples": 77,
+      "valueFrames": 77
+     },
+     {
+      "set": "w02/w02_set02_squats.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 0,
+      "samples": 77,
+      "valueFrames": 77
+     },
+     {
+      "set": "w03/w03_set00_squats.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 6,
+      "samples": 59,
+      "valueFrames": 59
+     },
+     {
+      "set": "w03/w03_set01_squats.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 5,
+      "samples": 59,
+      "valueFrames": 59
+     },
+     {
+      "set": "w03/w03_set02_squats.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 6,
+      "samples": 57,
+      "valueFrames": 57
+     },
+     {
+      "set": "w04/w04_set00_squats.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 0,
+      "samples": 83,
+      "valueFrames": 83
+     },
+     {
+      "set": "w04/w04_set01_squats.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 0,
+      "samples": 91,
+      "valueFrames": 91
+     },
+     {
+      "set": "w04/w04_set02_squats.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 0,
+      "samples": 85,
+      "valueFrames": 85
+     },
+     {
+      "set": "w05/w05_set00_squats.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 0,
+      "samples": 62,
+      "valueFrames": 62
+     },
+     {
+      "set": "w05/w05_set01_squats.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 0,
+      "samples": 61,
+      "valueFrames": 61
+     },
+     {
+      "set": "w05/w05_set02_squats.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 0,
+      "samples": 70,
+      "valueFrames": 70
+     },
+     {
+      "set": "w06/w06_set00_squats.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 9,
+      "samples": 65,
+      "valueFrames": 65
+     },
+     {
+      "set": "w06/w06_set01_squats.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 9,
+      "samples": 67,
+      "valueFrames": 67
+     },
+     {
+      "set": "w06/w06_set02_squats.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 9,
+      "samples": 70,
+      "valueFrames": 70
+     },
+     {
+      "set": "w07/w07_set00_squats.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 0,
+      "samples": 91,
+      "valueFrames": 91
+     },
+     {
+      "set": "w07/w07_set01_squats.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 0,
+      "samples": 80,
+      "valueFrames": 80
+     },
+     {
+      "set": "w07/w07_set02_squats.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 0,
+      "samples": 80,
+      "valueFrames": 80
+     },
+     {
+      "set": "w08/w08_set00_squats.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 4,
+      "samples": 61,
+      "valueFrames": 61
+     },
+     {
+      "set": "w08/w08_set01_squats.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 6,
+      "samples": 62,
+      "valueFrames": 62
+     },
+     {
+      "set": "w08/w08_set02_squats.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 7,
+      "samples": 61,
+      "valueFrames": 61
+     },
+     {
+      "set": "w09/w09_set00_squats.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 0,
+      "samples": 88,
+      "valueFrames": 88
+     },
+     {
+      "set": "w09/w09_set01_squats.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 0,
+      "samples": 75,
+      "valueFrames": 75
+     },
+     {
+      "set": "w09/w09_set02_squats.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 0,
+      "samples": 84,
+      "valueFrames": 84
+     },
+     {
+      "set": "w10/w10_set00_squats.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 9,
+      "samples": 68,
+      "valueFrames": 68
+     },
+     {
+      "set": "w10/w10_set01_squats.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 8,
+      "samples": 65,
+      "valueFrames": 65
+     },
+     {
+      "set": "w10/w10_set02_squats.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 9,
+      "samples": 73,
+      "valueFrames": 73
+     },
+     {
+      "set": "w11/w11_set00_squats.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 0,
+      "samples": 89,
+      "valueFrames": 89
+     },
+     {
+      "set": "w11/w11_set01_squats.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 1,
+      "samples": 87,
+      "valueFrames": 87
+     },
+     {
+      "set": "w11/w11_set02_squats.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 0,
+      "samples": 82,
+      "valueFrames": 82
+     },
+     {
+      "set": "w12/w12_set00_squats.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 0,
+      "samples": 65,
+      "valueFrames": 65
+     },
+     {
+      "set": "w12/w12_set01_squats.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 0,
+      "samples": 62,
+      "valueFrames": 62
+     },
+     {
+      "set": "w12/w12_set02_squats.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 0,
+      "samples": 64,
+      "valueFrames": 64
+     },
+     {
+      "set": "w13/w13_set00_squats.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 0,
+      "samples": 65,
+      "valueFrames": 65
+     },
+     {
+      "set": "w13/w13_set01_squats.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 0,
+      "samples": 66,
+      "valueFrames": 66
+     },
+     {
+      "set": "w13/w13_set02_squats.cap",
+      "truth": 10,
+      "detected": 8,
+      "valid": 0,
+      "samples": 60,
+      "valueFrames": 60
+     },
+     {
+      "set": "w14/w14_set00_squats.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 2,
+      "samples": 61,
+      "valueFrames": 61
+     },
+     {
+      "set": "w14/w14_set01_squats.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 4,
+      "samples": 61,
+      "valueFrames": 61
+     },
+     {
+      "set": "w14/w14_set02_squats.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 7,
+      "samples": 60,
+      "valueFrames": 60
+     },
+     {
+      "set": "w15/w15_set00_squats.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 0,
+      "samples": 83,
+      "valueFrames": 83
+     },
+     {
+      "set": "w15/w15_set01_squats.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 0,
+      "samples": 85,
+      "valueFrames": 85
+     },
+     {
+      "set": "w15/w15_set02_squats.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 0,
+      "samples": 75,
+      "valueFrames": 75
+     },
+     {
+      "set": "w16/w16_set00_squats.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 0,
+      "samples": 78,
+      "valueFrames": 78
+     },
+     {
+      "set": "w16/w16_set01_squats.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 0,
+      "samples": 67,
+      "valueFrames": 67
+     },
+     {
+      "set": "w16/w16_set02_squats.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 0,
+      "samples": 64,
+      "valueFrames": 64
+     },
+     {
+      "set": "w17/w17_set00_squats.cap",
+      "truth": 11,
+      "detected": 10,
+      "valid": 0,
+      "samples": 83,
+      "valueFrames": 83
+     },
+     {
+      "set": "w17/w17_set01_squats.cap",
+      "truth": 7,
+      "detected": 6,
+      "valid": 0,
+      "samples": 50,
+      "valueFrames": 50
+     },
+     {
+      "set": "w17/w17_set02_squats.cap",
+      "truth": 11,
+      "detected": 10,
+      "valid": 0,
+      "samples": 76,
+      "valueFrames": 76
+     },
+     {
+      "set": "w17/w17_set03_squats.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 0,
+      "samples": 70,
+      "valueFrames": 70
+     },
+     {
+      "set": "w18/w18_set00_squats.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 0,
+      "samples": 83,
+      "valueFrames": 83
+     },
+     {
+      "set": "w18/w18_set01_squats.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 1,
+      "samples": 88,
+      "valueFrames": 88
+     },
+     {
+      "set": "w18/w18_set02_squats.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 0,
+      "samples": 86,
+      "valueFrames": 86
+     },
+     {
+      "set": "w19/w19_set00_squats.cap",
+      "truth": 10,
+      "detected": 7,
+      "valid": 0,
+      "samples": 59,
+      "valueFrames": 59
+     },
+     {
+      "set": "w19/w19_set01_squats.cap",
+      "truth": 10,
+      "detected": 7,
+      "valid": 0,
+      "samples": 58,
+      "valueFrames": 58
+     },
+     {
+      "set": "w19/w19_set02_squats.cap",
+      "truth": 10,
+      "detected": 6,
+      "valid": 0,
+      "samples": 57,
+      "valueFrames": 57
+     },
+     {
+      "set": "w20/w20_set00_squats.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 9,
+      "samples": 93,
+      "valueFrames": 93
+     },
+     {
+      "set": "w20/w20_set01_squats.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 9,
+      "samples": 92,
+      "valueFrames": 92
+     },
+     {
+      "set": "w20/w20_set02_squats.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 9,
+      "samples": 98,
+      "valueFrames": 98
+     }
+    ]
+   },
+   "스텝 포워드 다이나믹 런지": {
+    "sets": 62,
+    "truth": 624,
+    "detected": 48,
+    "valid": 47,
+    "MAE": 9.290322580645162,
+    "OBO": 0.0,
+    "exact": 0.0,
+    "under": 62,
+    "over": 0,
+    "zeroSets": 43,
+    "precision": 1.0,
+    "recall": 0.07692307692307693,
+    "countF1": 0.14285714285714288,
+    "valueCoverage": 1.0,
+    "feature": "knee_out_mean",
+    "minAmp": 0.1,
+    "perSet": [
+     {
+      "set": "w00/w00_set09_lunges.cap",
+      "truth": 10,
+      "detected": 1,
+      "valid": 1,
+      "samples": 98,
+      "valueFrames": 98
+     },
+     {
+      "set": "w00/w00_set10_lunges.cap",
+      "truth": 10,
+      "detected": 0,
+      "valid": 0,
+      "samples": 97,
+      "valueFrames": 97
+     },
+     {
+      "set": "w00/w00_set11_lunges.cap",
+      "truth": 10,
+      "detected": 0,
+      "valid": 0,
+      "samples": 102,
+      "valueFrames": 102
+     },
+     {
+      "set": "w01/w01_set09_lunges.cap",
+      "truth": 10,
+      "detected": 0,
+      "valid": 0,
+      "samples": 99,
+      "valueFrames": 99
+     },
+     {
+      "set": "w01/w01_set10_lunges.cap",
+      "truth": 10,
+      "detected": 0,
+      "valid": 0,
+      "samples": 82,
+      "valueFrames": 82
+     },
+     {
+      "set": "w01/w01_set11_lunges.cap",
+      "truth": 10,
+      "detected": 0,
+      "valid": 0,
+      "samples": 89,
+      "valueFrames": 89
+     },
+     {
+      "set": "w02/w02_set09_lunges.cap",
+      "truth": 10,
+      "detected": 0,
+      "valid": 0,
+      "samples": 92,
+      "valueFrames": 92
+     },
+     {
+      "set": "w02/w02_set10_lunges.cap",
+      "truth": 10,
+      "detected": 0,
+      "valid": 0,
+      "samples": 98,
+      "valueFrames": 98
+     },
+     {
+      "set": "w02/w02_set11_lunges.cap",
+      "truth": 10,
+      "detected": 0,
+      "valid": 0,
+      "samples": 99,
+      "valueFrames": 99
+     },
+     {
+      "set": "w03/w03_set09_lunges.cap",
+      "truth": 10,
+      "detected": 2,
+      "valid": 2,
+      "samples": 91,
+      "valueFrames": 91
+     },
+     {
+      "set": "w03/w03_set10_lunges.cap",
+      "truth": 10,
+      "detected": 4,
+      "valid": 4,
+      "samples": 91,
+      "valueFrames": 91
+     },
+     {
+      "set": "w03/w03_set11_lunges.cap",
+      "truth": 10,
+      "detected": 4,
+      "valid": 4,
+      "samples": 92,
+      "valueFrames": 92
+     },
+     {
+      "set": "w04/w04_set09_lunges.cap",
+      "truth": 10,
+      "detected": 0,
+      "valid": 0,
+      "samples": 104,
+      "valueFrames": 104
+     },
+     {
+      "set": "w04/w04_set10_lunges.cap",
+      "truth": 10,
+      "detected": 0,
+      "valid": 0,
+      "samples": 103,
+      "valueFrames": 103
+     },
+     {
+      "set": "w05/w05_set09_lunges.cap",
+      "truth": 10,
+      "detected": 4,
+      "valid": 4,
+      "samples": 95,
+      "valueFrames": 95
+     },
+     {
+      "set": "w05/w05_set10_lunges.cap",
+      "truth": 10,
+      "detected": 4,
+      "valid": 4,
+      "samples": 98,
+      "valueFrames": 98
+     },
+     {
+      "set": "w05/w05_set11_lunges.cap",
+      "truth": 11,
+      "detected": 5,
+      "valid": 5,
+      "samples": 101,
+      "valueFrames": 101
+     },
+     {
+      "set": "w06/w06_set09_lunges.cap",
+      "truth": 10,
+      "detected": 3,
+      "valid": 3,
+      "samples": 102,
+      "valueFrames": 102
+     },
+     {
+      "set": "w06/w06_set10_lunges.cap",
+      "truth": 10,
+      "detected": 3,
+      "valid": 3,
+      "samples": 91,
+      "valueFrames": 91
+     },
+     {
+      "set": "w06/w06_set11_lunges.cap",
+      "truth": 10,
+      "detected": 1,
+      "valid": 1,
+      "samples": 96,
+      "valueFrames": 96
+     },
+     {
+      "set": "w07/w07_set09_lunges.cap",
+      "truth": 10,
+      "detected": 0,
+      "valid": 0,
+      "samples": 104,
+      "valueFrames": 104
+     },
+     {
+      "set": "w07/w07_set10_lunges.cap",
+      "truth": 10,
+      "detected": 0,
+      "valid": 0,
+      "samples": 98,
+      "valueFrames": 98
+     },
+     {
+      "set": "w07/w07_set11_lunges.cap",
+      "truth": 10,
+      "detected": 0,
+      "valid": 0,
+      "samples": 98,
+      "valueFrames": 98
+     },
+     {
+      "set": "w08/w08_set21_lunges.cap",
+      "truth": 10,
+      "detected": 0,
+      "valid": 0,
+      "samples": 108,
+      "valueFrames": 108
+     },
+     {
+      "set": "w08/w08_set22_lunges.cap",
+      "truth": 10,
+      "detected": 0,
+      "valid": 0,
+      "samples": 101,
+      "valueFrames": 101
+     },
+     {
+      "set": "w08/w08_set23_lunges.cap",
+      "truth": 10,
+      "detected": 0,
+      "valid": 0,
+      "samples": 95,
+      "valueFrames": 95
+     },
+     {
+      "set": "w09/w09_set09_lunges.cap",
+      "truth": 10,
+      "detected": 0,
+      "valid": 0,
+      "samples": 103,
+      "valueFrames": 103
+     },
+     {
+      "set": "w09/w09_set10_lunges.cap",
+      "truth": 10,
+      "detected": 0,
+      "valid": 0,
+      "samples": 100,
+      "valueFrames": 100
+     },
+     {
+      "set": "w09/w09_set11_lunges.cap",
+      "truth": 10,
+      "detected": 0,
+      "valid": 0,
+      "samples": 97,
+      "valueFrames": 97
+     },
+     {
+      "set": "w10/w10_set09_lunges.cap",
+      "truth": 10,
+      "detected": 0,
+      "valid": 0,
+      "samples": 110,
+      "valueFrames": 110
+     },
+     {
+      "set": "w10/w10_set10_lunges.cap",
+      "truth": 10,
+      "detected": 0,
+      "valid": 0,
+      "samples": 108,
+      "valueFrames": 108
+     },
+     {
+      "set": "w10/w10_set11_lunges.cap",
+      "truth": 10,
+      "detected": 0,
+      "valid": 0,
+      "samples": 104,
+      "valueFrames": 104
+     },
+     {
+      "set": "w11/w11_set09_lunges.cap",
+      "truth": 10,
+      "detected": 0,
+      "valid": 0,
+      "samples": 108,
+      "valueFrames": 108
+     },
+     {
+      "set": "w11/w11_set10_lunges.cap",
+      "truth": 10,
+      "detected": 0,
+      "valid": 0,
+      "samples": 103,
+      "valueFrames": 103
+     },
+     {
+      "set": "w11/w11_set11_lunges.cap",
+      "truth": 10,
+      "detected": 0,
+      "valid": 0,
+      "samples": 98,
+      "valueFrames": 98
+     },
+     {
+      "set": "w12/w12_set09_lunges.cap",
+      "truth": 10,
+      "detected": 2,
+      "valid": 2,
+      "samples": 80,
+      "valueFrames": 80
+     },
+     {
+      "set": "w12/w12_set10_lunges.cap",
+      "truth": 10,
+      "detected": 2,
+      "valid": 2,
+      "samples": 74,
+      "valueFrames": 74
+     },
+     {
+      "set": "w12/w12_set11_lunges.cap",
+      "truth": 10,
+      "detected": 2,
+      "valid": 2,
+      "samples": 74,
+      "valueFrames": 74
+     },
+     {
+      "set": "w13/w13_set09_lunges.cap",
+      "truth": 10,
+      "detected": 0,
+      "valid": 0,
+      "samples": 91,
+      "valueFrames": 91
+     },
+     {
+      "set": "w13/w13_set10_lunges.cap",
+      "truth": 10,
+      "detected": 0,
+      "valid": 0,
+      "samples": 97,
+      "valueFrames": 97
+     },
+     {
+      "set": "w13/w13_set11_lunges.cap",
+      "truth": 10,
+      "detected": 0,
+      "valid": 0,
+      "samples": 81,
+      "valueFrames": 81
+     },
+     {
+      "set": "w14/w14_set24_lunges.cap",
+      "truth": 10,
+      "detected": 0,
+      "valid": 0,
+      "samples": 96,
+      "valueFrames": 96
+     },
+     {
+      "set": "w14/w14_set25_lunges.cap",
+      "truth": 10,
+      "detected": 1,
+      "valid": 1,
+      "samples": 94,
+      "valueFrames": 94
+     },
+     {
+      "set": "w14/w14_set26_lunges.cap",
+      "truth": 10,
+      "detected": 0,
+      "valid": 0,
+      "samples": 91,
+      "valueFrames": 91
+     },
+     {
+      "set": "w15/w15_set09_lunges.cap",
+      "truth": 10,
+      "detected": 0,
+      "valid": 0,
+      "samples": 93,
+      "valueFrames": 93
+     },
+     {
+      "set": "w15/w15_set10_lunges.cap",
+      "truth": 10,
+      "detected": 0,
+      "valid": 0,
+      "samples": 95,
+      "valueFrames": 95
+     },
+     {
+      "set": "w15/w15_set11_lunges.cap",
+      "truth": 10,
+      "detected": 0,
+      "valid": 0,
+      "samples": 93,
+      "valueFrames": 93
+     },
+     {
+      "set": "w16/w16_set10_lunges.cap",
+      "truth": 10,
+      "detected": 0,
+      "valid": 0,
+      "samples": 106,
+      "valueFrames": 106
+     },
+     {
+      "set": "w16/w16_set11_lunges.cap",
+      "truth": 10,
+      "detected": 0,
+      "valid": 0,
+      "samples": 97,
+      "valueFrames": 97
+     },
+     {
+      "set": "w16/w16_set12_lunges.cap",
+      "truth": 10,
+      "detected": 0,
+      "valid": 0,
+      "samples": 109,
+      "valueFrames": 109
+     },
+     {
+      "set": "w17/w17_set11_lunges.cap",
+      "truth": 10,
+      "detected": 1,
+      "valid": 1,
+      "samples": 89,
+      "valueFrames": 89
+     },
+     {
+      "set": "w17/w17_set12_lunges.cap",
+      "truth": 10,
+      "detected": 0,
+      "valid": 0,
+      "samples": 84,
+      "valueFrames": 84
+     },
+     {
+      "set": "w17/w17_set13_lunges.cap",
+      "truth": 14,
+      "detected": 0,
+      "valid": 0,
+      "samples": 120,
+      "valueFrames": 120
+     },
+     {
+      "set": "w18/w18_set09_lunges.cap",
+      "truth": 10,
+      "detected": 0,
+      "valid": 0,
+      "samples": 107,
+      "valueFrames": 107
+     },
+     {
+      "set": "w18/w18_set10_lunges.cap",
+      "truth": 10,
+      "detected": 0,
+      "valid": 0,
+      "samples": 99,
+      "valueFrames": 99
+     },
+     {
+      "set": "w18/w18_set11_lunges.cap",
+      "truth": 10,
+      "detected": 0,
+      "valid": 0,
+      "samples": 100,
+      "valueFrames": 100
+     },
+     {
+      "set": "w19/w19_set09_lunges.cap",
+      "truth": 10,
+      "detected": 0,
+      "valid": 0,
+      "samples": 118,
+      "valueFrames": 118
+     },
+     {
+      "set": "w19/w19_set10_lunges.cap",
+      "truth": 10,
+      "detected": 1,
+      "valid": 1,
+      "samples": 96,
+      "valueFrames": 96
+     },
+     {
+      "set": "w19/w19_set11_lunges.cap",
+      "truth": 10,
+      "detected": 0,
+      "valid": 0,
+      "samples": 90,
+      "valueFrames": 90
+     },
+     {
+      "set": "w20/w20_set06_lunges.cap",
+      "truth": 10,
+      "detected": 2,
+      "valid": 1,
+      "samples": 115,
+      "valueFrames": 115
+     },
+     {
+      "set": "w20/w20_set07_lunges.cap",
+      "truth": 9,
+      "detected": 2,
+      "valid": 2,
+      "samples": 105,
+      "valueFrames": 105
+     },
+     {
+      "set": "w20/w20_set08_lunges.cap",
+      "truth": 10,
+      "detected": 4,
+      "valid": 4,
+      "samples": 113,
+      "valueFrames": 113
+     }
+    ]
+   },
+   "덤벨 컬": {
+    "sets": 59,
+    "truth": 599,
+    "detected": 450,
+    "valid": 14,
+    "MAE": 2.5254237288135593,
+    "OBO": 0.5254237288135594,
+    "exact": 0.0,
+    "under": 59,
+    "over": 0,
+    "zeroSets": 0,
+    "precision": 1.0,
+    "recall": 0.7512520868113522,
+    "countF1": 0.857959961868446,
+    "valueCoverage": 1.0,
+    "feature": "elbow_mean",
+    "minAmp": 35.0,
+    "perSet": [
+     {
+      "set": "w00/w00_set21_bicep_curls.cap",
+      "truth": 10,
+      "detected": 7,
+      "valid": 0,
+      "samples": 61,
+      "valueFrames": 61
+     },
+     {
+      "set": "w00/w00_set22_bicep_curls.cap",
+      "truth": 10,
+      "detected": 6,
+      "valid": 0,
+      "samples": 57,
+      "valueFrames": 57
+     },
+     {
+      "set": "w00/w00_set23_bicep_curls.cap",
+      "truth": 10,
+      "detected": 5,
+      "valid": 0,
+      "samples": 53,
+      "valueFrames": 53
+     },
+     {
+      "set": "w01/w01_set23_bicep_curls.cap",
+      "truth": 10,
+      "detected": 8,
+      "valid": 0,
+      "samples": 60,
+      "valueFrames": 60
+     },
+     {
+      "set": "w01/w01_set24_bicep_curls.cap",
+      "truth": 10,
+      "detected": 7,
+      "valid": 0,
+      "samples": 59,
+      "valueFrames": 59
+     },
+     {
+      "set": "w01/w01_set25_bicep_curls.cap",
+      "truth": 10,
+      "detected": 6,
+      "valid": 0,
+      "samples": 58,
+      "valueFrames": 58
+     },
+     {
+      "set": "w02/w02_set21_bicep_curls.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 0,
+      "samples": 69,
+      "valueFrames": 69
+     },
+     {
+      "set": "w02/w02_set22_bicep_curls.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 0,
+      "samples": 69,
+      "valueFrames": 69
+     },
+     {
+      "set": "w02/w02_set23_bicep_curls.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 0,
+      "samples": 69,
+      "valueFrames": 69
+     },
+     {
+      "set": "w03/w03_set21_bicep_curls.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 0,
+      "samples": 65,
+      "valueFrames": 65
+     },
+     {
+      "set": "w03/w03_set22_bicep_curls.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 0,
+      "samples": 66,
+      "valueFrames": 66
+     },
+     {
+      "set": "w03/w03_set23_bicep_curls.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 0,
+      "samples": 64,
+      "valueFrames": 64
+     },
+     {
+      "set": "w04/w04_set20_bicep_curls.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 1,
+      "samples": 79,
+      "valueFrames": 79
+     },
+     {
+      "set": "w05/w05_set21_bicep_curls.cap",
+      "truth": 10,
+      "detected": 4,
+      "valid": 0,
+      "samples": 59,
+      "valueFrames": 59
+     },
+     {
+      "set": "w05/w05_set22_bicep_curls.cap",
+      "truth": 10,
+      "detected": 5,
+      "valid": 0,
+      "samples": 57,
+      "valueFrames": 57
+     },
+     {
+      "set": "w05/w05_set23_bicep_curls.cap",
+      "truth": 11,
+      "detected": 5,
+      "valid": 0,
+      "samples": 62,
+      "valueFrames": 62
+     },
+     {
+      "set": "w06/w06_set21_bicep_curls.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 0,
+      "samples": 71,
+      "valueFrames": 71
+     },
+     {
+      "set": "w06/w06_set22_bicep_curls.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 0,
+      "samples": 68,
+      "valueFrames": 68
+     },
+     {
+      "set": "w06/w06_set23_bicep_curls.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 0,
+      "samples": 70,
+      "valueFrames": 70
+     },
+     {
+      "set": "w07/w07_set21_bicep_curls.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 0,
+      "samples": 68,
+      "valueFrames": 68
+     },
+     {
+      "set": "w07/w07_set22_bicep_curls.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 0,
+      "samples": 66,
+      "valueFrames": 66
+     },
+     {
+      "set": "w08/w08_set18_bicep_curls.cap",
+      "truth": 10,
+      "detected": 6,
+      "valid": 0,
+      "samples": 70,
+      "valueFrames": 70
+     },
+     {
+      "set": "w08/w08_set19_bicep_curls.cap",
+      "truth": 10,
+      "detected": 8,
+      "valid": 0,
+      "samples": 71,
+      "valueFrames": 71
+     },
+     {
+      "set": "w08/w08_set20_bicep_curls.cap",
+      "truth": 11,
+      "detected": 5,
+      "valid": 0,
+      "samples": 82,
+      "valueFrames": 82
+     },
+     {
+      "set": "w09/w09_set21_bicep_curls.cap",
+      "truth": 14,
+      "detected": 11,
+      "valid": 0,
+      "samples": 97,
+      "valueFrames": 97
+     },
+     {
+      "set": "w09/w09_set22_bicep_curls.cap",
+      "truth": 10,
+      "detected": 7,
+      "valid": 0,
+      "samples": 63,
+      "valueFrames": 63
+     },
+     {
+      "set": "w09/w09_set23_bicep_curls.cap",
+      "truth": 10,
+      "detected": 6,
+      "valid": 0,
+      "samples": 58,
+      "valueFrames": 58
+     },
+     {
+      "set": "w10/w10_set21_bicep_curls.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 0,
+      "samples": 78,
+      "valueFrames": 78
+     },
+     {
+      "set": "w10/w10_set22_bicep_curls.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 0,
+      "samples": 76,
+      "valueFrames": 76
+     },
+     {
+      "set": "w10/w10_set23_bicep_curls.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 0,
+      "samples": 80,
+      "valueFrames": 80
+     },
+     {
+      "set": "w11/w11_set21_bicep_curls.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 0,
+      "samples": 74,
+      "valueFrames": 74
+     },
+     {
+      "set": "w11/w11_set22_bicep_curls.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 0,
+      "samples": 72,
+      "valueFrames": 72
+     },
+     {
+      "set": "w11/w11_set23_bicep_curls.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 0,
+      "samples": 69,
+      "valueFrames": 69
+     },
+     {
+      "set": "w12/w12_set21_bicep_curls.cap",
+      "truth": 10,
+      "detected": 4,
+      "valid": 0,
+      "samples": 44,
+      "valueFrames": 44
+     },
+     {
+      "set": "w13/w13_set21_bicep_curls.cap",
+      "truth": 10,
+      "detected": 4,
+      "valid": 0,
+      "samples": 50,
+      "valueFrames": 50
+     },
+     {
+      "set": "w13/w13_set22_bicep_curls.cap",
+      "truth": 10,
+      "detected": 2,
+      "valid": 0,
+      "samples": 46,
+      "valueFrames": 46
+     },
+     {
+      "set": "w13/w13_set23_bicep_curls.cap",
+      "truth": 12,
+      "detected": 7,
+      "valid": 0,
+      "samples": 70,
+      "valueFrames": 70
+     },
+     {
+      "set": "w14/w14_set18_bicep_curls.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 0,
+      "samples": 68,
+      "valueFrames": 68
+     },
+     {
+      "set": "w14/w14_set19_bicep_curls.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 0,
+      "samples": 69,
+      "valueFrames": 69
+     },
+     {
+      "set": "w14/w14_set20_bicep_curls.cap",
+      "truth": 10,
+      "detected": 6,
+      "valid": 0,
+      "samples": 69,
+      "valueFrames": 69
+     },
+     {
+      "set": "w15/w15_set21_bicep_curls.cap",
+      "truth": 10,
+      "detected": 6,
+      "valid": 0,
+      "samples": 65,
+      "valueFrames": 65
+     },
+     {
+      "set": "w15/w15_set22_bicep_curls.cap",
+      "truth": 10,
+      "detected": 7,
+      "valid": 0,
+      "samples": 66,
+      "valueFrames": 66
+     },
+     {
+      "set": "w15/w15_set23_bicep_curls.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 0,
+      "samples": 65,
+      "valueFrames": 65
+     },
+     {
+      "set": "w16/w16_set23_bicep_curls.cap",
+      "truth": 10,
+      "detected": 8,
+      "valid": 0,
+      "samples": 72,
+      "valueFrames": 72
+     },
+     {
+      "set": "w16/w16_set24_bicep_curls.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 0,
+      "samples": 83,
+      "valueFrames": 83
+     },
+     {
+      "set": "w16/w16_set25_bicep_curls.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 0,
+      "samples": 88,
+      "valueFrames": 88
+     },
+     {
+      "set": "w17/w17_set24_bicep_curls.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 1,
+      "samples": 70,
+      "valueFrames": 70
+     },
+     {
+      "set": "w17/w17_set25_bicep_curls.cap",
+      "truth": 11,
+      "detected": 7,
+      "valid": 0,
+      "samples": 69,
+      "valueFrames": 69
+     },
+     {
+      "set": "w17/w17_set26_bicep_curls.cap",
+      "truth": 10,
+      "detected": 8,
+      "valid": 0,
+      "samples": 65,
+      "valueFrames": 65
+     },
+     {
+      "set": "w18/w18_set21_bicep_curls.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 0,
+      "samples": 61,
+      "valueFrames": 61
+     },
+     {
+      "set": "w18/w18_set22_bicep_curls.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 0,
+      "samples": 68,
+      "valueFrames": 68
+     },
+     {
+      "set": "w18/w18_set23_bicep_curls.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 0,
+      "samples": 67,
+      "valueFrames": 67
+     },
+     {
+      "set": "w19/w19_set21_bicep_curls.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 1,
+      "samples": 79,
+      "valueFrames": 79
+     },
+     {
+      "set": "w19/w19_set22_bicep_curls.cap",
+      "truth": 10,
+      "detected": 5,
+      "valid": 4,
+      "samples": 75,
+      "valueFrames": 75
+     },
+     {
+      "set": "w19/w19_set23_bicep_curls.cap",
+      "truth": 10,
+      "detected": 5,
+      "valid": 3,
+      "samples": 69,
+      "valueFrames": 69
+     },
+     {
+      "set": "w19/w19_set24_bicep_curls.cap",
+      "truth": 10,
+      "detected": 6,
+      "valid": 4,
+      "samples": 73,
+      "valueFrames": 73
+     },
+     {
+      "set": "w20/w20_set18_bicep_curls.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 0,
+      "samples": 91,
+      "valueFrames": 91
+     },
+     {
+      "set": "w20/w20_set19_bicep_curls.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 0,
+      "samples": 91,
+      "valueFrames": 91
+     },
+     {
+      "set": "w20/w20_set20_bicep_curls.cap",
+      "truth": 10,
+      "detected": 9,
+      "valid": 0,
+      "samples": 91,
+      "valueFrames": 91
+     }
+    ]
+   }
+  }
+ }
+}
