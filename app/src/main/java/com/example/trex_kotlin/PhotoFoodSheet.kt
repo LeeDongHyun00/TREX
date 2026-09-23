@@ -306,6 +306,7 @@ internal fun PhotoFoodSheet(app: AppViewModel, onClose: () -> Unit) {
                             }
                         },
                         hasApproximateNutrition = items.any { it.name in approximateNutritionNames || it.name in app.customFoods },
+                        candidateCount = candidates.count { (name, _) -> items.none { it.name == name } },
                         onAdd = { pickTarget = PickTarget.Add },
                         onReplace = { index -> pickTarget = PickTarget.Replace(index) },
                         onRetry = { retry() },
@@ -557,6 +558,8 @@ private fun ResultStep(
     items: List<RecognizedItem>,
     retryLabel: String,
     hasApproximateNutrition: Boolean,
+    /** 임계 미만이라 결과에서 뺀 후보의 개수. 0 이면 알리지 않는다. */
+    candidateCount: Int,
     onSlot: (String) -> Unit,
     onQty: (index: Int, delta: Int) -> Unit,
     onAdd: () -> Unit,
@@ -657,6 +660,14 @@ private fun ResultStep(
                         }
                         Spacer(Modifier.width(10.dp))
                         Text("빠진 음식 추가", color = c.text2, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                        // 후보가 있다는 것을 눌러 보기 전에 알린다. 있는 줄 모르면 없는 기능이다.
+                        // 개수만 말하고 무슨 음식인지는 말하지 않는다 — 확실하지 않은 것을 결과처럼 읽히게 하지 않는다.
+                        if (candidateCount > 0) {
+                            Text(
+                                "사진에서 본 후보 ${candidateCount}개", color = c.text3, fontSize = 11.sp,
+                                modifier = Modifier.padding(start = 6.dp),
+                            )
+                        }
                     }
                 }
             }
