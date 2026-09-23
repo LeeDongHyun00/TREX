@@ -325,7 +325,7 @@ WorkoutHistoryItem.postureCorrection → 기록 화면
 
 ## 2026-09-19 — 음식 인식 재학습 데이터 준비 (§F2)
 
-- **현재 브랜치 `feature/food-recognition-v2`** (배포 라인 `feature/posture-coach-reliability` 5237ba9 에서 분기, origin 에 아직 push 안 함).
+- 작업 브랜치 `feature/food-recognition-v2` (배포 라인 `feature/posture-coach-reliability` 5237ba9 에서 분기). **2026-09-23 PR #4 로 머지되고 브랜치는 삭제됐다** — 아래 §F4 참조.
 - **학습 데이터 완성**: `C:\Workspace\TREX\aihub74_raw\dataset.tar`(2.58GB, git 밖) = AI Hub 74번 Validation 4묶음 → **214클래스 42,669장**(train 36,254/val 6,415, 클래스당 중앙값 199장). 대분류 04 국·탕·찌개 / 06_07_08 구이·전·볶음 / 09_10 조림·튀김·치킨 / 11 무침·나물. 밥·면·만두·김치·회·떡은 범위에서 제외(사용자 결정).
 - **앱 영양 DB 선반영**: `foodDatabase` 를 223종(모델 214 + 일반 식품 9)으로 교체, AI Hub 영양DB 1인분 실측값. 라벨↔DB 1:1 정합 확인(누락 0·중복 0). **학습 산출물만 assets 에 넣으면 바로 동작한다.**
 - **다음 단계**: dataset.tar → Drive `MyDrive/trex/dataset.tar` 업로드 → `training/train_food_yolov8_colab.ipynb`(G4 GPU+고용량 RAM, 1~9번 셀) → `trex_food_model.zip` → `app/src/main/assets/models/` 의 tflite·labels 교체 → 실기기 검증.
@@ -336,7 +336,7 @@ WorkoutHistoryItem.postureCorrection → 기록 화면
 
 ## 2026-09-23 — 음식 인식 342클래스 탑재·평가 (§F3)
 
-- **브랜치 `feature/food-recognition-v2`, origin 에 아직 push 안 함.** `feature/posture-coach-reliability` 위 커밋 36개. push 절차·PR 초안·제외 항목은 `docs/PUSH_CHECKLIST.md` 에 따로 정리했다. 저장소가 공개라 **직접 확인하고 실행할 것**.
+- 브랜치 `feature/food-recognition-v2` 는 **2026-09-23 PR #4 로 머지됐다**(§F4). 제외 항목·공개 저장소 주의는 `docs/PUSH_CHECKLIST.md` 에 남아 있다.
 - **모델 342클래스 탑재**: `yolov8n_food.tflite` INT8 3.6MB, AI Hub 74번 Validation 6묶음 68,176장 학습. 214→342 로 늘리며 **밥 8종이 들어왔다**(이전에 `01` 묶음을 안 받아 흰쌀밥이 아예 없었다).
 - **앱 쪽 추가**: 사진 라이트박스(`PhotoLightbox`, 미리보기 1024px), 직접 등록 음식(`customFoods` — 기기 저장·검색 우선순위·덮어쓰기), 검색 별칭 16개(`foodNameAliases`: 흰쌀밥→쌀밥 등). 테스트 284건 통과.
 - **평가 결과(`docs/FOOD_EVAL_RESULTS.md`)가 이번의 핵심이다**:
@@ -355,3 +355,14 @@ WorkoutHistoryItem.postureCorrection → 기록 화면
   - 확인된 것은 **동작**이다. 인식 정확도(실사용 36%)는 그대로다.
 - **`class_map.csv`/`class_map.json`(AI Hub 400종 영양 원표)은 `.gitignore` 에 있다.** 공개 저장소에 두면 AI Hub 승인 절차를 우회시킬 소지가 있다. 앱이 쓰는 342종 파생값만 `TrexData.kt` 에 남긴다.
 - **AI Hub API 키는 대화에 노출됐다. 사용자가 재발급할 것.** 저장소 히스토리·커밋 메시지 출현은 0건으로 확인했다(스크립트는 전부 인자로 받는다).
+
+## 2026-09-23 — 음식 인식·server 통합 머지 (§F4)
+
+- **개발 라인 `feature/posture-coach-reliability` 에 둘 다 들어갔다.** PR #4(음식 인식, 48커밋/44파일) → `2bf0eb5`, PR #5(server 통합, 8커밋/54파일) → `e8f76d8`. 두 PR 은 건드린 파일이 하나도 겹치지 않아 충돌 없이 들어갔다.
+- **base 를 `main` 이 아니라 개발 라인으로 잡았다.** 처음 PR 이 기본값 `main` 으로 열려 314파일이 됐다 — 조원의 자세 작업이 통째로 섞인다. base 를 바꾸니 44파일이 됐다. 다음에 PR 을 열 때도 같은 함정이 있다.
+- **머지 방식은 merge commit 이다. squash 를 쓰면 안 된다** — #5 는 서버 커밋 6개(`b470450`~`609f13e`)를 보존하려고 subtree 로 합친 것이라 squash 하면 목적이 사라진다. 머지 후 그 6개가 히스토리에 남아 있는 것을 확인했다.
+- **합친 상태에서 다시 검증했다**: `assembleDebug` 성공, JVM **292건 통과**. 각 브랜치가 통과한 것과 합친 결과가 통과하는 것은 다른 얘기다.
+- **저장소 구조가 모노레포가 됐다.** `app/`(안드로이드) + `server/`(Spring Boot, 53파일) + `research/` + `training/` + `trex_design_react/`. **루트 `./gradlew` 는 서버를 빌드하지 않는다** — `settings.gradle.kts` 가 `include(":app")` 만 하므로 서버는 `cd server && ./gradlew` 로 따로 빌드한다.
+- **정리한 브랜치**: `feature/food-recognition-v2`·`feature/server-monorepo-v2`(머지 완료), `feature/server-monorepo`(구버전, 2026-04 에 `main` 기준으로 같은 작업을 했던 것). 구버전의 2커밋은 개발 라인에 없어 삭제하면 사라지므로 **태그 `archive/server-monorepo-v1`** 으로 남겼다(저장소의 기존 관례인 `archive/barbell-squat-validation` 과 같은 방식).
+- **실기기 확인 완료(SM-F956N)**: 사진 결과 화면의 추가·바꾸기·자주 먹는 음식, 고르기 창의 키보드 가림까지 사용자가 직접 확인했다. 확인된 것은 **동작**이고 인식 정확도(실사용 36%)는 그대로다.
+- **다음 후보**: ① 400클래스 재학습(`dataset.tar` 준비됨, 도달률 이득 +4%p라 우선순위 낮음) ② 실사용 구도 문제 — 타일 추론은 기각됐고(§F3) 남은 길은 실제 식탁 사진으로 파인튜닝인데 데이터 수집부터라 범위가 크다.
