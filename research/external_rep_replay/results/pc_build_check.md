@@ -106,3 +106,59 @@ AdaptiveAndDataTest > noPostureDataAndTrackNeverBecomePositiveJudgements FAILED
 - `androidTest` 1건 — `RestorationUiTest.kt:27` `createAndroidComposeRule` deprecated(빌드 #1 과 동일). 빌드 #1 에 있던 `AiHubReplayTest.kt:82` 의 `!!` 경고는 사라졌다.
 
 컴파일 오류·실패 테스트 없음. 설치는 하지 않았다.
+
+## 빌드 #3 (`696955d`, 브랜치 `claude/rep-validation-env`)
+
+렙 검증 모드(`2dd9fb2`)·Gate A PC 파이프라인(`3712072`)·런북(`d52b619`)이 들어간 첫 빌드. 이 컨테이너에서 처음 실제 컴파일된 앱 파일: `TrexApp.kt`(검증 표시 파일 읽기·자동 진행 끄기), `PostureLive.kt`(validation 인자·음성 끄기/복원·배너), `LiveWorkoutHud.kt`(hideCount), `PostureAnalyzer.kt`(`PoseSample.world` — MediaPipe worldLandmarks 의 x()/y()/z()).
+
+### gradle — 세 작업 모두 성공
+
+| 작업 | 결과 | 시간 |
+|---|---|---:|
+| `:app:testDebugUnitTest` | **성공** — 45개 클래스 **350개 전부 통과** (실패 0 · 오류 0 · 건너뜀 0) | 27s (24 tasks: 6 실행 / 18 up-to-date) |
+| `:app:assembleDebug` | **성공** — `app\build\outputs\apk\debug\app-debug.apk` **122,091,053 B** | 6s |
+| `:app:compileDebugAndroidTestKotlin` | **성공** (컴파일만) | 2s |
+
+빌드 #2 의 348개 +2 — 기대한 새 테스트 둘 다 있고 통과: `PostureSetLogTest.validationModeAddsCoordinatesAndProductLogsStayByteIdentical`, `PostureSetLogTest.validationFlagIsAFileInTheAppFolder`(클래스 8 → 10). 골든 `setlog_s58_fixture.txt` 는 주석 4줄 + **데이터 4줄**.
+
+### 경고
+
+**`app` 본 소스(`compileDebugKotlin`) 경고 0건** — `PostureAnalyzer.kt` 의 world 채우기 포함, 새 코드에서 나온 경고 없음.
+
+- 테스트 소스 2건 — `PostureSetLogTest.kt:84` 불필요한 `!!` ×2(`Float`). 빌드 #2 에 있던 `PostureSetReportTest:135` 는 사라졌다.
+- `androidTest` 2건 — `RestorationUiTest.kt:27` `createAndroidComposeRule` deprecated(빌드 #1·#2 와 동일), `AiHubReplayTest.kt:82` 불필요한 `!!`(`Long`; 빌드 #2 에서 사라졌다가 이 브랜치에서 다시 나타남 — 병합 기반이 다르다).
+
+### 연구 파이프라인 드라이런 (worktree 의 `.venv-mp`, 전역 설치 없음)
+
+| 명령 | 결과 |
+|---|---|
+| `pull_phone.py --self-test` | **19/20** — 아래 1건 실패 |
+| `gate_a.py dry-run --out <저장소 밖 임시 폴더>` | 첫 실행 **실패** → 재생기 재빌드 뒤 **18/18 통과**(5.7s) |
+
+**self-test 실패 1건** — `명령: -s 기기 번호가 앞에`(`pull_phone.py:345`). 테스트가 `Adb(Path("/x/adb"), "SER9").cmd("pull","a","b") == ["/x/adb", "-s", "SER9", ...]` 를 기대하는데, 윈도우에서 `str(Path("/x/adb"))` 는 `'\x\adb'` 다(확인함). `cmd()` 자체(`pull_phone.py:113-117`)는 `[str(exe), "-s", serial, *args]` 로 정상이고, **테스트 기대값이 POSIX 경로 문자열을 하드코딩한 것**이다. `3712072`(wip) 탓. 실기기 명령(`devices`·`pull`·`validation status`)은 전부 정상 동작했다.
+
+**gate_a 첫 실패** — `replay-jvm` 설치 바이너리가 14:49(`claude/check-exercise-count-bi05w4` 빌드) 것이라 이 브랜치가 `Replay.kt` 에 넣은 `--dump-features`(75줄 변경)를 몰랐고, 그 인자를 매니페스트 경로로 읽다 `readManifest(Replay.kt:393)` 에서 죽었다. `gate_a.py:153` 은 재생기 **존재만** 확인하고 소스가 새로워도 다시 빌드하지 않는다(런북의 "필요하면 스스로 빌드한다"와 다르다 — 없을 때만 안내 문구를 낸다). `gradlew.bat -p research\external_rep_replay\replay-jvm test installDist` 로 재빌드(15s, **테스트 46개 통과** — 지난 41개 +5 `ReplayCaptureTest`) 뒤 18/18. 코드는 고치지 않았다.
+
+### 휴대폰
+
+- `pull_phone.py devices`: `R3CMB04LLNZ  device`(SM-N976N, adb 는 `%LOCALAPPDATA%` 의 platform-tools). 인증됨.
+- 기기 앱: `com.example.trex_kotlin` **versionName 1.2.0-preview.1, versionCode 4**, 마지막 갱신 2026-09-23 12:08.
+- 검증 모드 표시 파일: **off**(켜지 않았다). 기기에서 아무것도 지우지 않았다.
+- 설치 전 백업 → `data\phone\backup-20260924T1530\`(`data/` 는 `.gitignore:63` 대상, 커밋 안 함). 이름·크기만:
+
+| 파일 | 크기 |
+|---|---:|
+| `sets-20260912.jsonl` | 2,500,096 B |
+| `sets-20260923.jsonl` | 8,550,731 B |
+| `feedback-20260912.jsonl` | 71,415 B |
+| `feedback-20260914.jsonl` | 776 B |
+| `feedback-20260923.jsonl` | 47,878 B |
+| `pull_manifest.json` | 859 B |
+| `shared_prefs/trex_store.xml` | 4,996 B |
+| `shared_prefs/trex_posture.xml` | 226 B |
+| `shared_prefs/posture_action.xml` | 122 B |
+| `shared_prefs/WebViewChromiumPrefs.xml` | 266 B |
+
+  (shared_prefs 는 `run-as ls` 출력의 CR 때문에 첫 시도에서 1개만 저장돼, CR 을 떼고 다시 받아 4개 모두 0 바이트 아님을 확인한 **뒤에** 설치를 시도했다.)
+
+- **설치 거부 — 멈춤.** `adb install -r app-debug.apk` → `Failure [INSTALL_FAILED_VERSION_DOWNGRADE: Package Verification Result]`. 서명 불일치가 아니라 **versionCode 역행**이다: 이 브랜치의 `app/build.gradle.kts:17` 은 `versionCode = 3`(`3322628` 이후 변동 없음, versionName `1.1.0-preview.2`)인데 기기의 1.2.0-preview.1 은 `versionCode 4`(`8907f0f` "26종목 동작 계수와 학습 모델 시험 실행 배포" — 이 브랜치 이력에 없다). uninstall 도 `-d`(강제 다운그레이드)도 하지 않았다. 기기 앱은 그대로 versionCode 4 다.
