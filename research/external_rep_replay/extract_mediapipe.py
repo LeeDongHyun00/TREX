@@ -17,7 +17,7 @@
     발열          발열 배수 1.0 (감속 없음) 가정
 
 사용법
-    python extract_mediapipe.py mmfit  <mm-fit 라벨 루트> --videos <영상 폴더> --out <출력>
+    python extract_mediapipe.py mmfit  <mm-fit 라벨 루트> --videos <영상 폴더> --out <출력> [--pre-s 15 --post-s 10] [--workouts w00]
     python extract_mediapipe.py rehab  <REHAB24-6 루트(Segmentation.csv)> --videos <영상 폴더> --out <출력>
 """
 from __future__ import annotations
@@ -113,30 +113,45 @@ def video_info(path: Path) -> tuple[float, int]:
     return fps, frames
 
 
-def mmfit_jobs(root: Path, videos: Path, out: Path) -> tuple[list[dict], list[dict]]:
+def mmfit_jobs(root: Path, videos: Path, out: Path, pre_s: float, post_s: float, workouts: list[str] | None,
+               video_glob: str) -> tuple[list[dict], list[dict]]:
+    """세트마다 [라벨 시작 − pre_s, 라벨 끝 + post_s] 를 추출한다. 앞뒤 구간은 세트 전 준비·세트 뒤 정리 동작의
+    헛카운트를 재기 위한 음성 구간이다 — 다만 이웃 세트의 라벨 구간(±0.5s)과는 겹치지 않게 자른다.
+    채점은 index 의 label 시각(startMs/endMs)과 capture 시각(captureStartMs/captureEndMs)으로 구간을 나눈다."""
     jobs, sets = [], []
     for label_path in sorted(root.glob("w??/w??_labels.csv")):
         w = label_path.parent.name
-        candidates = sorted(videos.glob(f"**/{w}*.mp4"))
+        if workouts and w not in workouts:
+            continue
+        candidates = sorted(videos.glob(video_glob.format(w=w)))
         if not candidates:
-            print(f"skip {w}: no video", file=sys.stderr)
+            print(f"skip {w}: no video ({video_glob.format(w=w)})", file=sys.stderr)
             continue
         video = candidates[0]
-        fps, _ = video_info(video)
+        fps, frame_total = video_info(video)
         rows = [r for r in csv.reader(label_path.open(newline="")) if r]
         rows.sort(key=lambda r: int(r[0]))
+        spans = [(int(r[0]), int(r[1])) for r in rows]
         for ordinal, (start, end, reps, activity) in enumerate(rows):
             activity = activity.strip()
             exercise = MMFIT_ACTIVITIES.get(activity)
             if exercise is None:
                 continue
+            start, end = int(start), int(end)
+            lo = start - max(MMFIT_MARGIN_FRAMES, int(round(pre_s * fps)))
+            hi = end + max(MMFIT_MARGIN_FRAMES, int(round(post_s * fps)))
+            if ordinal > 0:
+                lo = max(lo, spans[ordinal - 1][1] + MMFIT_MARGIN_FRAMES + 1)
+            if ordinal + 1 < len(spans):
+                hi = min(hi, spans[ordinal + 1][0] - MMFIT_MARGIN_FRAMES - 1)
+            lo, hi = max(0, lo), min(frame_total - 1, hi)
             name = f"{w}/{w}_set{ordinal:02d}_{activity}.cap"
-            jobs.append({"video": str(video), "fps": fps, "start": int(start) - MMFIT_MARGIN_FRAMES,
-                         "end": int(end) + MMFIT_MARGIN_FRAMES, "capture": str(out / name),
+            jobs.append({"video": str(video), "fps": fps, "start": lo, "end": hi, "capture": str(out / name),
                          "meta": {"source": "mmfit_mediapipe", "workout": w, "activity": activity}})
+            ms = lambda f: int(round(f * 1000.0 / fps))
             sets.append({"workout": w, "ordinal": ordinal, "activity": activity, "exercise": exercise,
-                         "truthReps": int(reps), "startMs": int(round(int(start) * 1000.0 / fps)),
-                         "endMs": int(round(int(end) * 1000.0 / fps)), "capture": name})
+                         "truthReps": int(reps), "startMs": ms(start), "endMs": ms(end),
+                         "captureStartMs": ms(lo), "captureEndMs": ms(hi), "capture": name})
     return jobs, sets
 
 
@@ -178,21 +193,30 @@ def main() -> int:
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--cameras", nargs="*", default=["17", "18"])
     parser.add_argument("--workers", type=int, default=max(1, mp_proc.cpu_count()))
+    parser.add_argument("--pre-s", type=float, default=0.5, help="MM-Fit: 세트 라벨 앞 음성 구간(초)")
+    parser.add_argument("--post-s", type=float, default=0.5, help="MM-Fit: 세트 라벨 뒤 음성 구간(초)")
+    parser.add_argument("--workouts", nargs="*", default=None, help="MM-Fit: 처리할 워크아웃만 (한 개씩 받아 처리할 때)")
+    parser.add_argument("--video-glob", default="**/{w}*.mp4", help="MM-Fit: 영상 파일 패턴, {w} = 워크아웃 이름")
     args = parser.parse_args()
 
     if args.dataset == "mmfit":
-        jobs, sets = mmfit_jobs(args.root, args.videos, args.out)
+        jobs, sets = mmfit_jobs(args.root, args.videos, args.out, args.pre_s, args.post_s, args.workouts, args.video_glob)
     else:
         jobs, sets = rehab_jobs(args.root, args.videos, args.out, args.cameras)
     sha = model_sha()
     with mp_proc.Pool(args.workers) as pool:
         for done in pool.imap_unordered(infer_segment, jobs):
             print(f"  {done['capture']}: {done['samples']} samples {done['outcomes']}", file=sys.stderr, flush=True)
+    args.out.mkdir(parents=True, exist_ok=True)
+    index_path = args.out / "index.json"
+    # 워크아웃을 한 개씩 받아 처리해도 index 가 덮이지 않게, 같은 캡처 이름만 갈아 끼운다.
+    previous = json.loads(index_path.read_text(encoding="utf-8")).get("sets", []) if index_path.is_file() else []
+    fresh = {s["capture"] for s in sets}
+    merged = [s for s in previous if s["capture"] not in fresh] + sets
     index = {"source": f"{args.dataset} video → MediaPipe (app model, VIDEO, app cadence)", "modelSha256": sha,
              "analysisLongSide": ANALYSIS_LONG_SIDE, "cadenceMs": APP_SAMPLE_INTERVAL_MS, "warmupMs": WARMUP_MS,
-             "sets": sets}
-    args.out.mkdir(parents=True, exist_ok=True)
-    (args.out / "index.json").write_text(json.dumps(index, ensure_ascii=False, indent=1), encoding="utf-8")
+             "preS": args.pre_s, "postS": args.post_s, "sets": merged}
+    index_path.write_text(json.dumps(index, ensure_ascii=False, indent=1), encoding="utf-8")
     return 0
 
 
