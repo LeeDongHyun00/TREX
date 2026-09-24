@@ -150,8 +150,7 @@ def tolerance(signal: str) -> float:
 
 
 def dump_features(cap: Path, out: Path) -> list[dict]:
-    if not run_replay.REPLAY_BIN.is_file():
-        raise SystemExit(f"재생기가 없다: {run_replay.REPLAY_BIN}\n  (cd replay-jvm && gradle -q test installDist)")
+    run_replay.require_fresh_replay()
     subprocess.run([str(run_replay.REPLAY_BIN), "--dump-features", str(cap), str(out)], check=True, capture_output=True)
     return [json.loads(x) for x in out.read_text(encoding="utf-8").splitlines() if x.strip()]
 

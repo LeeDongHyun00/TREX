@@ -46,6 +46,24 @@ HERE = Path(__file__).resolve().parent
 REPLAY_BIN = HERE / "replay-jvm" / "build" / "install" / "trex-rep-replay" / "bin" / (
     "trex-rep-replay.bat" if sys.platform == "win32" else "trex-rep-replay")
 
+REPLAY_SOURCES = (HERE / "replay-jvm" / "src", HERE / "replay-jvm" / "build.gradle.kts",
+                  HERE.parents[1] / "app" / "src" / "main" / "java" / "com" / "example" / "trex_kotlin" / "posture")
+
+
+def require_fresh_replay() -> Path:
+    """설치된 재생기가 지금 소스로 빌드됐는지 확인한다 — 브랜치를 바꾼 뒤 옛 바이너리가 새 옵션(--dump-features 등)을
+    모른 채 인자를 매니페스트로 읽고 죽은 일이 있다(빌드 #3). 자동 빌드는 하지 않는다(윈도우 gradlew.bat·맥/리눅스 gradle 이 갈린다)."""
+    stamp = REPLAY_BIN.parent.parent / "lib" / ".built"   # build.gradle.kts stampInstall — installDist 마다 새로 쓴다
+    how = "(cd replay-jvm && gradle -q test installDist — 윈도우는 gradlew.bat -p research\\external_rep_replay\\replay-jvm test installDist)"
+    if not REPLAY_BIN.is_file():
+        raise SystemExit(f"재생기가 없다: {REPLAY_BIN}\n  {how}")
+    newest = max((q.stat().st_mtime for src in REPLAY_SOURCES
+                  for q in ([src] if src.is_file() else src.rglob("*.kt"))), default=0.0)
+    if not stamp.is_file() or newest > stamp.stat().st_mtime:
+        raise SystemExit(f"재생기가 소스보다 오래됐다(브랜치를 바꿨거나 소스를 고쳤다) — 다시 빌드한다:\n  {how}")
+    return REPLAY_BIN
+
+
 SET_MARGIN_MS = 500          # 세트 창 = 라벨 ± 0.5 s (stress_battery.py·README §4 와 같다)
 MAX_GAP_MS = 1500            # RepCounter.forSession 의 끊김 초기화 기준
 

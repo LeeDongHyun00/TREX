@@ -34,3 +34,11 @@ sourceSets {
 }
 
 application { mainClass.set("trex.replay.ReplayKt") }
+
+// installDist 가 끝날 때마다(최신이라 건너뛰어도) 표시 파일을 새로 쓴다 — gradle 은 내용이 같으면 jar 를 다시 쓰지 않아 jar 시각으로는
+// '지금 소스로 빌드됐는가' 를 알 수 없다. run_replay.require_fresh_replay 가 이 파일 시각을 소스 시각과 견준다(빌드 #3: 옛 바이너리 사고).
+val stampInstall by tasks.registering {
+    outputs.upToDateWhen { false }
+    doLast { layout.buildDirectory.file("install/trex-rep-replay/lib/.built").get().asFile.writeText("${System.currentTimeMillis()}\n") }
+}
+tasks.named("installDist") { finalizedBy(stampInstall) }

@@ -342,7 +342,7 @@ def self_test(work: Path) -> int:
 
     # 2) 명령 구성 — 기기 번호, 원격 셸 한 인자
     a = Adb(Path("/x/adb"), "SER9", runner=lambda c: (0, ""))
-    check("명령: -s 기기 번호가 앞에", a.cmd("pull", "a", "b") == ["/x/adb", "-s", "SER9", "pull", "a", "b"])
+    check("명령: -s 기기 번호가 앞에", a.cmd("pull", "a", "b") == [str(Path("/x/adb")), "-s", "SER9", "pull", "a", "b"])   # 윈도우는 '\\x\\adb' 
     try:
         a.shell(f"rm -rf {LOG_DIR}")
         blocked = False

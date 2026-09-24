@@ -252,8 +252,7 @@ def synth_frames(spec: tuple, seed: int) -> tuple[list[dict], dict]:
 
 def dump_features(frames: list[dict], meta: dict, work: Path, name: str) -> list[dict]:
     """프레임 → 랜드마크 캡처(U 줄 포함) → Replay --dump-features → 프레임별 피처 사전(앱 순서)."""
-    if not run_replay.REPLAY_BIN.is_file():
-        raise SystemExit(f"재생기가 없다: {run_replay.REPLAY_BIN}\n  (cd replay-jvm && gradle -q test installDist)")
+    run_replay.require_fresh_replay()
     lines = []
     for f in frames:
         lines.append(capture_format.up_line(f["t_ms"], [repr(v) for v in f["up"]]))
