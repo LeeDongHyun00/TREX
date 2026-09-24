@@ -73,3 +73,36 @@ AdaptiveAndDataTest > noPostureDataAndTrackNeverBecomePositiveJudgements FAILED
   - `AiHubReplayTest.kt:82` — 불필요한 `!!`(`Long`).
 
 컴파일 오류는 한 건도 없다. `9a48fd5` 의 새 코어는 꺼져 있는(opt-in) 상태로 들어와 있어 유닛 테스트 결과에 기본 경로로는 영향을 주지 않는다.
+
+## 빌드 #2 (`30e349f`)
+
+런지류 "왼쪽 + 오른쪽 한 번씩 = 1회" 변경(`3e77c60`)이 들어간 첫 빌드. 그 위의 `79f79fe`·`48e6785`·`30e349f` 는 연구 스크립트·문서만이다. 이 컨테이너에서 통째로 컴파일된 적이 없던 `PostureLive.kt`·`SessionScreens.kt`·`TrexAppState.kt`·`LiveWorkoutHud.kt`·`WorkoutSession.kt` 가 여기서 처음 실제 컴파일됐다.
+
+### 결과 — 세 작업 모두 성공
+
+| 작업 | 결과 | 시간 |
+|---|---|---:|
+| `:app:testDebugUnitTest` | **성공** — 45개 클래스 **348개 전부 통과** (실패 0 · 오류 0 · 건너뜀 0) | 21s (24 tasks: 7 실행 / 17 up-to-date) |
+| `:app:assembleDebug` | **성공** — `app\build\outputs\apk\debug\app-debug.apk` **122,086,654 B** | 5s |
+| `:app:compileDebugAndroidTestKotlin` | **성공** (컴파일만 — 기기 없음) | 3s |
+
+빌드 #1 의 327개에서 **+21**. 기대한 새 테스트가 전부 있고 통과한다:
+
+| 클래스 | 개수 | 비고 |
+|---|---:|---|
+| `RepUnitTest` | **16** | 새 클래스(`3e77c60`) |
+| `SetLabelStoreTest` | 6 | +1 |
+| `WorkoutSessionTest` | 14 | +1 — `lungeAutoAdvanceWaitsForTheSecondSideOfTheLastPair` 확인 |
+| `PostureSetLogTest` | 8 | 골든 `setlog_s58_fixture.txt` 는 주석 4줄 + **데이터 3줄**(셋째 줄이 좌우 짝 단위) — 3줄 비교 통과 |
+| `RepCounterTest` | 12 | 변동 없음 |
+
+런지 관련으로 이름 붙은 테스트 7개(`lungeAutoAdvance…`, `lungeComparisonKeepsItsRecordedUnit…`, `lungeCountsOnKneeMean…`, `lungeRepIsALeftPlusRightPair…`, `lungeSessionCountsOnlyWhenTheSecondSideIsDone`, `lungeSessionPairRomIsShort…`, `lungesStateTheLeftPlusRightRule…`)가 모두 통과다.
+
+### 경고
+
+**`app` 본 소스(`compileDebugKotlin`) 경고 0건** — `3e77c60` 이 새로 넣은 `RepUnit.kt` 와 고친 `PostureLive.kt`·`SessionScreens.kt`·`TrexAppState.kt`·`LiveWorkoutHud.kt`·`WorkoutSession.kt` 에서 나온 경고는 없다. `PostureLive.kt` 의 `@Suppress("DEPRECATION")` 은 빌드 #1 과 같이 억제가 유지된다.
+
+- 테스트 소스 3건 — 전부 불필요한 `!!`: `PostureSetLogTest.kt:84` 2건(`Float`), `PostureSetReportTest.kt:135`(`RuleOutcome`). 빌드 #1 의 5건에서 `PostureComparisonTest:188`·`RepCounterTest:126` 두 건은 사라졌다.
+- `androidTest` 1건 — `RestorationUiTest.kt:27` `createAndroidComposeRule` deprecated(빌드 #1 과 동일). 빌드 #1 에 있던 `AiHubReplayTest.kt:82` 의 `!!` 경고는 사라졌다.
+
+컴파일 오류·실패 테스트 없음. 설치는 하지 않았다.
