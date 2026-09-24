@@ -47,3 +47,29 @@ AdaptiveAndDataTest > noPostureDataAndTrackNeverBecomePositiveJudgements FAILED
 ## §56 과 무관한 실패
 
 없다. 나머지 292개는 통과했다.
+
+## 빌드 #1 (`e366723`)
+
+`59878d3`(AdaptiveAndDataTest 수정)·`9a48fd5`(새 렙 코어·런지 신호 교체·ROM 표시·세트 로그 필드·런지류 준비 안내)·`da90111`·`e366723` 을 포함한 상태. 이 컨테이너에서 안드로이드 빌드가 안 돼 `PostureLive.kt`·`SessionScreens.kt`·`RecordOverview.kt`·`AiHubReplayTest.kt` 는 여기서 처음 실제 컴파일됐다.
+
+### 결과 — 세 작업 모두 성공
+
+| 작업 | 결과 | 시간 |
+|---|---|---:|
+| `:app:testDebugUnitTest` | **성공** — 44개 클래스 **327개 전부 통과** (실패 0 · 오류 0 · 건너뜀 0) | 27s (24 tasks: 7 실행 / 17 up-to-date) |
+| `:app:assembleDebug` | **성공** | 7s |
+| `:app:compileDebugAndroidTestKotlin` | **성공** (컴파일만 — 기기 없음) | 4s |
+
+지난 절의 유일한 실패였던 `AdaptiveAndDataTest > noPostureDataAndTrackNeverBecomePositiveJudgements` 는 통과한다. `59878d3` 의 퇴역 종목 분류 표가 `기본 스쿼트` 의 초점을 다시 `LOWER` 로 만든다. 테스트 수는 293 → **327**(+34)로 늘었고 새로 늘어난 것까지 전부 통과다.
+
+### 경고
+
+**`app` 본 소스(`compileDebugKotlin`)는 경고 0건이다.** `9a48fd5` 가 새로 들여온 코드에서 나온 경고는 없다.
+
+- `PostureLive.kt:493` 의 `@Suppress("DEPRECATION")` 은 **의도대로 동작한다** — 494행 `packageManager.getPackageInfo(packageName, 0)` 가 API 33+ 에서 deprecated 인데, 억제가 걸려 있어 경고가 나오지 않는다. 대체 API(`PackageManager.PackageInfoFlags`)는 API 33 이상만 있고 이 앱의 `minSdk` 는 26 이라, 지금 형태를 유지하려면 이 억제가 필요하다. 억제를 떼려면 `Build.VERSION.SDK_INT` 분기를 넣어야 한다.
+- 테스트 소스 경고 5건 — 전부 불필요한 `!!`: `PostureComparisonTest.kt:188`(`RepSignal`), `PostureSetLogTest.kt:84` 2건(`Float`), `PostureSetReportTest.kt:135`(`RuleOutcome`), `RepCounterTest.kt:126`(`Float`).
+- `androidTest` 경고 2건:
+  - `RestorationUiTest.kt:27` — `createAndroidComposeRule` 이 deprecated. 대체는 `androidx.compose.ui.test.junit4.v2.createAndroidComposeRule` 이고, v2 는 `UnconfinedTestDispatcher` 대신 `StandardTestDispatcher` 를 쓴다. **즉시 실행에 기대는 테스트는 명시적 동기화가 필요해질 수 있다** — 옮길 때 그냥 치환하면 안 된다.
+  - `AiHubReplayTest.kt:82` — 불필요한 `!!`(`Long`).
+
+컴파일 오류는 한 건도 없다. `9a48fd5` 의 새 코어는 꺼져 있는(opt-in) 상태로 들어와 있어 유닛 테스트 결과에 기본 경로로는 영향을 주지 않는다.
