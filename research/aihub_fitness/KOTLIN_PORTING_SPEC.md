@@ -1156,7 +1156,7 @@ JVM 244건 통과: 모든 카메라 종목에서 방향 문구가 5초 안내보
   ROM 이 없는 반복은 '유효' 가 아니라 '범위 미판정'. TRACK 비교 지표는 `comparisonFeature` 로 `knee_out_mean` 0.10 을 유지한다. 미검증 ROM 은 '참고', TRACK 음성은 '파셜' 을 말하지 않는다.
   **이 카운터는 §1 수용 기준을 하나도 넘지 못한다**(MM-Fit 3D: 세트 정확 일치 0.48 · ±1 0.68, 세트 앞 15 s·뒤 10 s 를 이어 재생하면 앞·뒤 헛카운트 0.11·0.34/세트, 앞뒤 포함 과다 7/62세트) — beta.
   교체의 값은 거의 못 세던 신호(앞뒤 창 재생에서 62세트 중 43세트 0회)를 대부분 세게 된 것이다. 대가: 런지에서 목표 도달 자동 진행(§42)이 실제로 걸리기 시작하고,
-  MM-Fit 앞 15 s 재생에서 4/62세트는 세트 전 움직임이 더해져 마지막 실제 반복 전에 목표에 닿는다(교체 전 0 — 목표에 닿는 일 자체가 없었다). 반복 정의는 '한 걸음 = 1회' 로 준비 안내가 밝힌다(§58).
+  MM-Fit 앞 15 s 재생에서 4/62세트는 세트 전 움직임이 더해져 마지막 실제 반복 전에 목표에 닿는다(교체 전 0 — 목표에 닿는 일 자체가 없었다). 반복 정의는 §59 에서 사용자 결정으로 런지류 '좌우 한 번씩 = 1회' 가 됐다 — 목표 P회는 2P 걸음에서 닿으므로 이 조기 도달 수는 그대로다.
   런지 자동 진행을 Gate A 까지 끌지는 사용자 결정(설계 §15 #23).
 - 새 코어(구현·테스트, 앱에서 꺼짐): 복귀 히스테리시스(휴식 → 하강 → 반전 → 75% 복귀에서 확정, 재하강 폴백, 불응기 0.8 s, 평활 없음).
   `RepSignal.polarity` 가 있는 신호만 쓰는 opt-in 이고(극성을 틀리면 모든 세트가 마지막 반복을 잃는다), 세 종목 모두 Gate A 전까지 `null` = 기존 경로.
@@ -1200,16 +1200,90 @@ JVM 244건 통과: 모든 카메라 종목에서 방향 문구가 5초 안내보
   TRACK 은 미달 0 을 표기하지 않는다(VALIDATED·REFERENCE — 예전 '파셜 0' 생략과 같다). COACH 펼침은 0 도 적는다('무효 0'·'범위 미달 0회' — 예전 형식). 바닥 종목은 검증 기준이 붙어 와도 REFERENCE 로 낮춘다(규칙이 전부 beta — 세션 구성에서는 생기지 않는 조합). 세션에서 실제 분포: VALIDATED = 바벨 런지·딥스, NONE = 런지와 rep 규칙 설정이 없는 바닥 종목(크런치·라잉 레그 레이즈·시저크로스·Y - Exercise), 나머지 카운터 종목 = REFERENCE.
   왜: 예전 표시는 ROM 기준이 없는 렙을 "유효" 로 합산했다 — 신호를 교체한 런지는 "렙 유효 10 · 무효 0", rep 설정이 없는 바닥 종목은 "범위 미달 0회" 로, 판정하지 않은 것을 판정한 것처럼 보였을 것이다. 미검증 기준(대부분의 서서 종목)의 미달은 코치 "무효"·기록 "파셜" 로 표시됐다(TRACK 세트 끝 음성 문구 `voiceLine` 에도 '파셜' 이 들어 있었지만 e0e4c2f 이후 말하지는 않았다).
   **예외로 남긴 것**: 바닥 종목의 실시간 참고 안내(`FloorFeedbackController`, 코드 주석의 '§36' 정책 — 이 스펙에 §36 절은 없다)는 beta 바닥 rep 규칙의 범위 미달을 COACH 에서 "참고 안내예요. …" 로 말한다.
-  이 변경 전부터의 동작이라 건드리지 않았다 — 원칙 #2(beta 는 음성으로 말하지 않는다)·§35("바닥 세트는 자세 교정 음성을 제공하지 않는다")와 부딪치므로 유지 여부는 사용자 결정(설계 §15 #22). 수는 바꾸지 않는다 — `repCount + repInvalid`(검출 전체)가 그대로 진행·자동 넘김(§42)으로 가고, ROM 은 수를 줄이지 않는다. `repsValid` 필드 이름은 저장 호환 때문에 두되 뜻은 "ROM 미달로 판정되지 않은 렙" 이다.
+  이 변경 전부터의 동작이라 건드리지 않았다 — 원칙 #2(beta 는 음성으로 말하지 않는다)·§35("바닥 세트는 자세 교정 음성을 제공하지 않는다")와 부딪치므로 유지 여부는 사용자 결정(설계 §15 #22). 수는 바꾸지 않는다 — `repCount + repInvalid`(검출 전체)가 그대로 진행·자동 넘김(§42)으로 가고(§59 부터 표시 단위 — 런지류는 좌우 쌍의 수), ROM 은 수를 줄이지 않는다. `repsValid` 필드 이름은 저장 호환 때문에 두되 뜻은 "ROM 미달로 판정되지 않은 렙" 이다.
 - **세트 로그 단계 0** (`PostureSetLog.kt`, 스키마 호환 추가 — null 이면 키 부재 = 이전 로그): `app_version`(versionName), `thermal{start, changes[{t_ms,status}]}`(첫 프레임 시점 열 상태와 세트 중 변화, API 29 미만이면 부재), `reps.engine`("return_v1" 지금 / "hysteresis_v1" 새 코어), `reps.config{feature,min_amp,refractory_ms,max_gap_ms,complete_on_return,polarity?,return_fraction?,first_pair_window_ms?,later_window_ms?,min_ratio?,max_ratio?,rom_direction?,rom_threshold?,rom_tier}`(값은 `RepEngineLog.of(counter)` 가 카운터에서 읽은 **실제** 구성 — `RepCounter.effective*`, 코어·시작 확정의 값), `reps.resets[{t_ms,after_t_ms,reason}]`(일시정지 "pause"·카메라 전환 "camera_switch" 의 `resetCycle`. `t_ms` = 누른 시각, `after_t_ms` = 리셋 직전에 카운터가 처리한 마지막 프레임, null = 아직 없음. 카운터가 돈 세트는 빈 목록이라도 남긴다), `reps.pending{unconfirmed,in_progress,dropped[]}`(새 코어만 — 레거시는 부재). 시각은 전부 세트 상대(프레임 `t_ms` 기준).
   왜: Gate A(폰 개발 데이터)에서 "그 세트를 어떤 빌드·카운터·구성이 셌는가, 언제 사이클을 버렸는가, 발열로 샘플 간격이 바뀌었는가" 를 로그만으로 갈라야 새 코어 전후와 세트 경계 헛카운트(§57)를 귀속할 수 있다. 화면 회전은 카운터를 리셋하지 않는다(코드에 그런 호출이 없다) — 리셋 사유는 둘뿐이다. 구성값은 복사한 상수가 아니라 카운터에서 읽는다(`RepCounter` 가 `refractoryMs`·`maxGapMs`·`completeOnReturn`·`effective*` 를 공개) — 복사한 상수는 `forSession` 이 바뀌어도 로그가 옛 값을 적는다.
   `after_t_ms` 가 필요한 이유: 프레임의 `t_ms` 는 추론 **전** 시각이고 리셋과 `onFrame` 은 같은 락 안에서 순서가 정해진다. 추론 중(~60 ms)에 누른 전환은 누른 시각보다 이른 프레임보다도 먼저 적용되므로, 누른 시각으로 자르면 재생이 리셋을 한 프레임 늦게 놓는다(합성 자가 검증 H/H2 가 그 차이로 카운트가 갈리는 것을 확인).
 - 새 코어 대비(휴면): `PostureLive` 는 완료 프레임마다 `newlyPublished` 의 사이클 수만큼 센다(시작 확정이 첫 두 사이클을 한 프레임에 발표하므로 +2 가능). 레거시 경로는 이 목록이 늘 비어 있어 지금처럼 한 프레임 한 회다.
   새 코어의 `resetCycle()`(일시정지·카메라 전환)은 진행 중 사이클과 **보류(확정 대기) 사이클**을 함께 버린다 — 남기면 리셋 앞의 한 번이 리셋 뒤 첫 사이클과 짝지어 +2 로 발표된다(원칙 #1). 끊김(maxGap 초과)은 진행 중 사이클만 버린다(프로토타입·배터리와 같다).
-- **런지류 반복 정의를 준비 안내에** (`ExerciseProfile.statesSideCount`, `ALTERNATING_COUNT_RULE`): 런지·바벨 런지·사이드 런지·크로스 런지의 준비 안내(화면·음성)에 "번갈아 하는 동작은 한쪽 1회를 1회로 셉니다." 를 넣었다.
-  덤벨 컬·스탠딩 니업은 교대 동작(`alternating`)이지만 넣지 않는다 — 카운트 신호가 두 팔·두 엉덩이 평균이라 한쪽 1회가 세진다는 보장이 없다(MM-Fit 교대 컬 영상에서 지금 카운터 재현율 0.09). 지키지 못하는 정의를 안내하지 않는다(원칙 #1).
-  왜: 신호 교체로 런지의 목표 도달 자동 진행이 실제로 걸리는데, "10회" 목표가 한 걸음 = 1회(한쪽 5회)라는 것을 모르면 사용자가 기대보다 일찍 세트가 끝난다(설계 §4.4·§4.8). 정의 자체와 런지 자동 진행 유지는 사용자 결정(설계 §15 #18·#23).
+- **런지류 반복 정의를 준비 안내에** — **§59 가 대체했다.** 이 절의 빌드는 `ExerciseProfile.statesSideCount` 로 런지류 준비 안내에 걸음 단위 정의("번갈아 하는 동작은 한쪽 1회를 1회로 셉니다.")를 넣었다.
+  사용자가 그 정의를 뒤집어(2026-09-24, 설계 §15 #18) 지금은 `ExerciseProfile.repUnit` 과 "왼쪽과 오른쪽을 한 번씩 해야 1회로 셉니다." 이고, 표시 수·진행이 좌우 쌍 단위다(§59).
+  남은 판단은 그대로다: 덤벨 컬·스탠딩 니업은 교대 동작(`alternating`)이지만 짝 규칙을 안내하지 않는다 — 카운트 신호가 두 팔·두 엉덩이 평균이라 쪽별 사이클을 약속할 수 없다(MM-Fit 교대 컬 영상에서 지금 카운터 재현율 0.09, 원칙 #1).
+  왜 시작 전에 밝히는가: 신호 교체로 런지의 목표 도달 자동 진행이 실제로 걸리고(자동 진행 유지는 사용자 결정, 설계 §15 #23), 사용자가 "10회" 의 단위를 모르면 기대와 다른 때에 세트가 끝난다(설계 §4.4·§4.8).
 - **재생·로그 형식 잠금**: `app/src/test/resources/setlog_s58_fixture.txt`(골든 줄 2개 — 레거시·새 코어)를 `PostureSetLogTest` 가 `SetLogJson.encode` 와 바이트 비교하고, `setlog_captures.py --self-test` 가 같은 파일을 읽어 변환·파이썬 인코더 사본과 비교한다 — 키 이름·순서·숫자 형식이 한쪽만 바뀌면 둘 중 하나가 깨진다(`.jsonl` 은 .gitignore 대상이라 `.txt`).
   재생기(`Replay.kt`)의 hysteresis 구성은 극성을 로그(`reps.config.polarity`) → 등록부 → 연구 표(세 대상 종목 + 기기 픽스처가 있는 푸시업류) 순서로 정하고, 모르면 재생하지 않는다(틀린 극성은 모든 세트의 마지막 반복을 잃는다).
   `AiHubReplayTest`(폰 재생)도 `RepCounter.forSession` 을 부른다 — 예전의 손으로 만든 반전형 구성은 앱과 다른 카운터·앵커 시점을 쟀다.
 - 검증 상태: 이 컨테이너는 안드로이드 빌드가 불가(Google Maven 차단). 순수 posture 파일(편집본)은 안드로이드 타입 스텁을 둔 JVM 스크래치 빌드에서 컴파일하고 `app/src/test/.../posture` 30개 클래스 **244개** 테스트를 돌려 전부 통과했다(리뷰 반영 뒤 — RepHysteresisTest 22·PostureSetLogTest 7·PostureSetReportTest 20·CapturePreparationTest 포함). `PostureLive.kt`·`SessionScreens.kt`(Compose)와 `AiHubReplayTest`(androidTest)는 바뀐 줄을 원문 그대로 떼어 실제 posture API 에 대고 타입 검사만 했다. **PC 에서 `./gradlew :app:testDebugUnitTest` 와 `./gradlew :app:assembleDebug` 가 남아 있다.** 폰 동작(열 이벤트 중복, 리셋 시각, 화면 문구, 준비 안내 음성 길이)은 Gate A 에서 확인한다.
+
+## §59 — 런지류 좌우 한 쌍 = 1회 (2026-09-24, 사용자 결정 — PC 빌드 검증 대기)
+
+**사용자 결정**(원문): "런지 자동진행 유지하고 한쪽 1회하고 다른 한쪽 안했으면 다른쪽도 진행한다음 두 쪽 진행이 전부 완료되어야지 1세트로 해".
+앱은 이것을 **왼쪽 한 번 + 오른쪽 한 번 = 1회**로 구현했다 — 목표 10회 = 왼 10 + 오른 10(20걸음). 한쪽만 했을 때는 표시 수가 오르지 않고 화면에 '반대쪽 차례' 가 뜨며,
+두 쪽을 다 해야 1회가 오른다. 목표 도달 자동 진행(§42)은 유지하므로 세트는 두 쪽이 모두 목표에 닿은 뒤 넘어간다. §58 의 걸음 단위 정의("한쪽 1회를 1회로")는 폐기(설계 §15 #18·#23).
+
+- **대상 — 런지·바벨 런지·사이드 런지·크로스 런지만** (`ExerciseProfile.repUnit = RepUnit.SIDE_PAIR`, `statesSideCount` 는 없앴다). 카운터(`RepCounter`·`RepHysteresis`·`ReturnRepTracker`)는 바꾸지 않았다 —
+  무릎 신호(런지 `knee_mean` · 크로스 런지 `knee_mean` · 바벨 런지 `knee_minside` · 사이드 런지 `knee_minside`)가 걸음마다 한 번 내려가 **사이클 하나 = 한 걸음**이고,
+  새 순수 파일 `posture/RepUnit.kt` 의 `RepUnitAccumulator` 가 연속한 두 사이클을 1회로 묶는다.
+  덤벨 컬·스탠딩 니업은 교대 동작(`alternating` 은 메타데이터로 남음)이지만 `RepUnit.CYCLE` 이다 — 두 팔·두 다리 **평균** 신호(`elbow_mean`·`hip_mean`)라 양쪽을 함께 하는 반복은 이미 한 사이클 = 양쪽 = 1회이고,
+  한쪽씩 번갈아 하는 반복은 쪽별 사이클도 쪽 귀속도 없다(MM-Fit 교대 컬 영상 재현율 0.09). 지킬 수 없는 짝 규칙을 약속하지 않는다(원칙 #1). 나머지 종목·바닥 종목도 `CYCLE`.
+- **화면·음성** (`PostureLive.kt`, `LiveWorkoutHud.kt`, `ExerciseProfiles.kt`):
+  - 준비 안내(화면·음성): 런지류에만 "왼쪽과 오른쪽을 한 번씩 해야 1회로 셉니다." (`ALTERNATING_COUNT_RULE`, "5초" 문장 앞).
+  - HUD '목표 N회' 옆에 "좌우 한 번씩 = 1회", 첫 쪽을 마친 동안 "반대쪽 차례"(강조). 접힌 제어판 라벨 "자동 횟수 · 참고 · 좌우 한 번씩 = 1회 [· 반대쪽 차례]".
+    **화면 전용** — 어느 쪽인지 모르고(번갈아 한다는 가정) 한쪽을 몰아서 하는 사용자에게는 틀리므로 말하지 않는다(원칙 #6). 숫자 음성(`speakRep`)은 바뀌지 않았고 표시 수만 말한다.
+    HUD 에도 둔 이유: 운동 중에는 제어판이 접혀(`LivePanelController.beginSession`) 라벨만으로는 보이지 않는다.
+  - `repCount`/`repInvalid`·`onRepDetected`(진행·자동 넘김)·숫자 음성이 1회 완료에 한 번씩 — 표시 단위다. 세트마다 카운터를 만들 때 그 세트 종목의 단위(`RepUnit.forSession(profile, floor)`)로 누적기를 함께 만든다(이 화면은 종목이 바뀌어도 재구성되지 않을 수 있다 — CLAUDE.md 함정).
+    카운터 완료 프레임의 처리(발표된 사이클 → 렙 기록 + 표시 단위의 완료 회·반쪽·템포)는 화면 코드가 아니라 순수 함수 `RepUnitAccumulator.onCounterFrame` 이다 —
+    사용자가 요구한 동작("두 쪽을 다 해야 1회", 자동 진행)이 테스트 없는 Compose 코드에만 있으면 걸음마다 세도록 되돌려도 아무 테스트도 깨지지 않는다.
+    `RepUnitTest`(세션 카운터 `RepCounter.forSession` 에 합성 걸음 신호 → 표시 [0,1,1,2,2,3], 짝 ROM, 쪽 사이 일시정지, 새 코어의 첫 두 걸음 동시 발표)와
+    `WorkoutSessionTest.lungeAutoAdvanceWaitsForTheSecondSideOfTheLastPair`(→ `SessionProgress.targetReached`: 목표 3회는 5걸음째까지 거짓, 6걸음째 참)가 잠근다.
+  - 짝의 ROM(`RepUnitAccumulator.combine`): 어느 쪽이라도 미달 → 미달, 아니고 어느 쪽이라도 미판정 → 미판정, 둘 다 충족 → 충족. 판정하지 않은 쪽을 충족으로 올리지 않는다(원칙 #1).
+  - 완료 화면 자가 라벨: 런지류는 "실제 몇 회 하셨어요?" 아래에 "좌우 한 번씩 = 1회" 를 보인다(`SessionScreens.SelfLabelSlot`, 화면 전용) — 스테퍼가 쌍의 수로
+    시작하므로 단위를 밝히지 않으면 걸음을 세는 사용자가 두 배를 적는다. `labels/set_labels.jsonl` 에 그 세트 화면의 단위 `rep_unit` 을 함께 적는다(알 때만 — 없으면
+    키 부재, `rep_truth.csv` 는 열이 고정이라 넣지 않는다).
+  - 일시정지·카메라 전환은 이미 센 첫 쪽을 **지킨다**(`onCounterCycleReset` 은 아무것도 바꾸지 않는다) — 카운터가 이미 발표한 실제 걸음이고 사용자는 쪽 사이에 쉴 수 있다.
+    카운터 리셋이 버리는 끝나지 않은 사이클·확정 대기 후보(잡음일 수 있는 것)와 다르다.
+  - 첫 반복 앵커·비교 시작·빠른 렙 자가진단은 여전히 카운터 **사이클**에서 걸린다(움직임의 성질).
+- **세트 리포트** (`PostureSetReport.kt`): `repsValid`·`repsPartial`·`tempoMs` 가 표시 단위(템포 = 1회 완료 간격 = 두 걸음). 새 필드 `repUnit`·`repHalfPending`.
+  좌우 쌍 세트의 렙 줄(`repDetailLine`)에 " · 좌우 한 번씩 = 1회", 세트 끝에 짝 없는 한쪽이 남았으면 " · 반대쪽 없이 끝난 한쪽은 세지 않음". `RepRomTier` 문구·`voiceLine`·`summaryLine` 은 그대로(수는 이미 쌍).
+  **짝의 ROM 단계는 걸음 단위 검증에서 물려받은 것이다**: 바벨 런지의 VALIDATED(knee_minside ≤ 112.0852°)는 사이클(한 걸음) 하나에서 검증된 기준이고, 짝은 두 걸음 판정을
+  합친다(한쪽이라도 미달이면 미달). 짝 단위의 오판정률은 재지 않았다 — 걸음마다 오판정률 p 면 짝은 약 2p 일 수 있다. 화면의 '렙 유효 · 무효' 는 "두 걸음 중 하나라도
+  검증 기준에 못 미쳤다" 는 뜻이다(`RepRomTier` KDoc). `voiceLine`('N렙 파셜 m')은 지금 부르는 곳이 없어(§58) 짝 판정이 음성으로 나가지는 않는다 — 다시 연결할 때
+  걸음 단위 표기로 할지 정한다.
+- **세트 로그** (`PostureSetLog.kt`, 스키마 호환 추가 — `valid` 뒤·`engine` 앞, null 이면 키 부재 = 이전 로그): `reps.unit`("cycle"|"side_pair"), `reps.cycles_per_rep`(1|2),
+  `reps.completed`(화면에 보인 수), `reps.half_pending`(true 일 때만). **`reps.count`·`t_ms`·`min`/`max`/`valid`·`invalid` 는 카운터 사이클 그대로다** — 재생 파리티가 사이클을 센다.
+  골든 픽스처(`setlog_s58_fixture.txt`)에 셋째 줄(바벨 런지, 사이클 [true,false,true] → completed 1, half_pending, 일시정지 리셋)을 더했다. 앞 두 줄은 바이트 그대로. 파이썬 인코더 사본(`setlog_captures.py`)도 같이 바꿨다.
+- **예상 시간** (`WorkoutSession.kt`): `WorkoutPacing.secondsPerRep` = 한 동작 시간 × `ExerciseProfiles.forName(name)?.repUnit?.cyclesPerRep ?: 1` — 런지류 1회 = 4 s × 2 = **8 s**.
+  왜: 목표 10회가 20걸음이 됐으므로 한 걸음 시간으로 두면 세트 시간을 절반으로 잡는다. 단위를 프로필에서 읽어 자동 횟수와 예상 시간이 같은 정의를 쓴다.
+  효과: 런지 10회 × 3세트의 세트당 운동 시간 추정 40 s → 80 s, 루틴 예상 분·(경과 시간 없이 만든) 칼로리 추정이 런지 몫만큼 대략 두 배(= 20걸음과 맞다).
+  사용자가 이미 저장한 페이스(`secondsPerRep`, 편집한 런지는 옛 기본 4 가 저장돼 있다)는 그대로 우선한다 — 이 값은 이제 과소 추정이고 이관하지 않았다. 상한 15 s/회는 그대로(런지는 걸음당 7.5 s).
+- **연구** (`research/external_rep_replay/side_attribution.py`, 설계 §18, MM-Fit 개발 데이터 — 성능 주장 아님):
+  쌍 단위 floor(사이클/2) 세트 정확 일치 새 코어 0.98 · 지금 앱 0.19(걸음 단위 0.97 · 0.18). 자동 진행 시점은 걸음 단위 목표 2P 와 모든 세트에서 같다.
+  MediaPipe 걸음 좌우 판별은 정면에서 3D 기준과 0.983 이지만 확신 있는 이름 바뀜이라 판별로 센 min(L, R) 은 0.84 — **카운트·다음 쪽 이름에 쓰지 않는다**(설계 §15 #24).
+  3D 기준을 믿을 수 있는 47세트는 전부 완전 교대(floor = min). 사이드·크로스 런지는 재지 않았다.
+- **알려진 한계**: 쌍은 교대 가정이다. 한쪽을 몰아서 하면 총수는 맞지만 도중 '반대쪽 차례' 가 틀린다. 카운터(beta)가 한 걸음을 놓치거나 더하면 짝이 한 걸음 밀린다 —
+  세트 앞 헛사이클이 홀수면 세트 내내, 마지막 걸음을 놓치면 반쪽이 남아 목표에 닿지 않는다(✓ 또는 한 걸음 더). 걸음 단위 목표에도 같은 한 걸음 노출이 있었다.
+  **세트 앞 헛사이클이 홀수인 세트에서는 사용자 규칙 자체가 깨진다**: 준비 동작 한 번이 첫 '쪽' 이 되어 실제로는 한쪽만 하고도 1회가 오르고(HUD 는 실제 걸음 전에
+  '반대쪽 차례'), 그 뒤 1회는 매번 사용자의 첫 쪽에서 오르며, 자동 진행은 마지막 쌍의 둘째 쪽 전에 걸린다(MM-Fit 새 코어 16/62세트 — 개발 데이터, 앱의 세트 시작과 다른
+  세트 사이 휴식 창). 막는 장치는 없다 — 후보(오래된 반쪽 버리기, 첫 쌍 전 '반대쪽 차례' 숨기기)는 쪽 사이에 쉬는 사용자의 첫 쪽을 버리거나 맞는 안내를 숨기는
+  대가가 있어 Gate A 자료로 정한다(설계 §4.4·§15 #26).
+- **연구 도구에 주는 영향** (`research/external_rep_replay`, README §9): 재생·파리티는 **카운터 사이클**을 센다(`reps.count` 와 재생 사이클). `reps.unit` 이 없는 로그는
+  이 절 이전 빌드라 표시도 걸음이었다(사이클 단위로 읽는다).
+  - `setlog_captures.py`: 런지류 자가 라벨(완료 화면 스테퍼·`rep_truth.csv`)은 화면 단위(쌍)다 — `truthDisplayedReps`(라벨 그대로)와 사이클 범위 `truthCyclesMin`~`truthCyclesMax`
+    (2P ~ 2P+1, 짝 없는 한쪽)로 적고, `truthReps`(run_replay·parity_core 가 정확한 정답으로 쓰는 사이클 수)는 범위가 한 값일 때만 채운다 — 쌍 라벨이면 None 이라,
+    짝 없는 한쪽으로 끝난 정직한 세트가 run_replay 에서 과다로 채점되지 않는다. confirmed 도 같다. `set_labels.jsonl` 의 `rep_unit` → `labelUnit`·`labelUnitMatchesLog`.
+  - `score_phone_reps.py`: 런지는 **두 단위**로 채점한다 — 걸음(정답 = 집계 왼 + 오른, 예측 = `reps.count`·재생 사이클; 쌍 자가 라벨은 걸음 정답에 넣지 않는다)과
+    쌍(정답 = min(왼, 오른) 또는 같은 단위 자가 라벨, 예측 = 재생 사이클 // 2·그 빌드가 쌍으로 보였을 때의 `reps.completed`). 쌍 표에 위상 밀림(세트 앞 헛사이클 홀수)과
+    반사실 조기 자동 진행을 싣고, 런지 Gate B 는 두 단위 모두 통과해야 통과다. 팔별 집계가 있는 컬 세트(`altcurl`)는 쌍 표에 참고로 싣는다(예측 = 사이클 그대로).
+  - 수집 프로토콜(`REP_VALIDATION.md`, `rep_validation_plan.py`): 런지 세트는 10걸음 = 앱 표시 5회(쌍), 집계는 `tally_left`·`tally_right`(+ 영상이면 `tally_order`),
+    완료 화면에는 min(왼, 오른). Gate A 에 런지 한쪽 몰아 하기 `sideblock`·번갈아 하는 컬 `altcurl` 각 1세트(둘 다 판정 밖). 덤벨 컬의 판정 세트는 양팔 동시다 —
+    컬 Gate B 판정은 **양팔 동시 컬에 대한 판정**이다(번갈아 하는 컬은 앱이 쪽을 가리지 못한다, 설계 §7·§15 #25).
+  - 남은 것: `run_replay.py` 에는 쌍 단위 출력이 없다(쌍 라벨 세트는 사이클 정답이 없어 unlabeled 로 빠진다 — 쌍 단위 채점은 score_phone_reps).
+- **검증 상태**: 이 컨테이너는 안드로이드 빌드 불가. 공용 JVM 스크래치 하네스(순수 posture 파일 + 테스트, `RepUnit.kt` 심볼릭 링크 추가) **265/265**(32 클래스, 하네스 자체의 골든 덤프 1 포함 — 저장소 posture 테스트 264. `RepUnitTest` 16
+  (세션 경로 7 포함) · `SetLabelStoreTest` 6 · `PostureSetLogTest` 8 · `PostureSetReportTest` 21 포함), replay-jvm 41/41, `setlog_captures.py --self-test` 46/46(3줄 골든 바이트 비교,
+  쌍 라벨의 사이클 정답 없음·run_replay 채점·라벨 단위), `score_phone_reps.py --self-test` 42/42(런지 두 단위·번갈아 하는 컬), `side_attribution.py --self-test` 32/32.
+  `WorkoutSessionTest` 14/14(`lungeRepIsALeftPlusRightPairSoItsPaceIsTwoSteps`·`lungeAutoAdvanceWaitsForTheSecondSideOfTheLastPair`)·`RoutineOverviewTest` 6/6 은 앱 파일 사본을 둔 별도 JVM 하네스에서.
+  `PostureLive.kt`(세트 마감·카운터 생성·분석 루프·일시정지·카메라 전환·패널 라벨·HUD 표기)·`TrexAppState.kt`(라벨)·`SessionScreens.kt`(스테퍼 단위 조건)는 바뀐 줄을
+  원문 그대로 떼어 실제 posture API 에 대고 컴파일했다 — 전체 파일(`LiveWorkoutHud.kt` 포함)은 컴파일하지 않았다.
+  바뀐 기대값(사용자 결정 때문): `CapturePreparationTest` 의 런지 안내 문장·`repUnit`(그리고 "한쪽 1회" 금지를 모든 프로필로 넓힘), `PostureSetLogTest`·파이썬 자체 검사의 골든 줄 수 2 → 3. 지운 단정은 없다.
+  **PC 에서 `./gradlew :app:testDebugUnitTest` 와 `./gradlew :app:assembleDebug` 가 남아 있다**(직전 빌드 #1, `e366723` 기준 327/327 통과 — `research/external_rep_replay/results/pc_build_check.md`).
+  폰에서 볼 것: 반쪽 동안의 HUD 표기, 쪽 사이 일시정지, 사이드·크로스 런지가 실제로 걸음마다 한 사이클인지(과제의 전제이지 기기에서 확인한 것이 아니다).
