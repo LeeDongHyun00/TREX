@@ -15,7 +15,7 @@ dependencies {
 val appRoot = rootDir.resolve("../../../app/src")
 val postureMain = appRoot.resolve("main/java/com/example/trex_kotlin/posture")
 val postureTest = appRoot.resolve("test/java/com/example/trex_kotlin/posture")
-val engineFiles = listOf("PostureCore.kt", "RepCounter.kt", "ReturnRepTracker.kt")
+val engineFiles = listOf("PostureCore.kt", "RepCounter.kt", "ReturnRepTracker.kt", "RepHysteresis.kt")
 
 sourceSets {
     main {
@@ -25,7 +25,7 @@ sourceSets {
     test {
         // 앱 저장소의 카운터 유닛 테스트를 그대로 돌려, 여기서 컴파일한 카운터가 앱 테스트가 기대하는 그 카운터인지 확인한다.
         kotlin.srcDir(postureTest)
-        kotlin.include("RepCounterTest.kt", "ReturnRepTrackerTest.kt")
+        kotlin.include("RepCounterTest.kt", "ReturnRepTrackerTest.kt", "RepHysteresisTest.kt")
         resources.srcDir(appRoot.resolve("test/resources"))
         resources.include("rep_fixture_baseline1.txt")
     }

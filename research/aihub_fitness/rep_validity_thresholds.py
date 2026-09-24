@@ -31,10 +31,11 @@ HERE = Path(__file__).resolve().parent
 DATA = Path(r"C:/Users/hp276/Desktop/trex/.claude/worktrees/correct-exercise-form-6ddf55/research/aihub_fitness/outputs")
 OUT = HERE / "outputs"
 
+from app_signals import check_mirror
 from features import apply_qc_mask, compute_frame_features, load_kp3d
 from rep_signal_survey import FLOOR_VIEW, floor_series
 
-# 앱 RepSignals.kt 와 반드시 일치 (검증 게이트가 main 에서 대조). 종목 → 렙 신호.
+# 앱 RepSignals.kt 와 반드시 일치 (main 첫 줄의 check_mirror 가 대조 — 다르면 멈춘다). 종목 → 렙 신호.
 APP_SIGNALS = {
     # 바닥
     "푸시업": "wrist_shoulder_d", "니푸쉬업": "wrist_shoulder_d", "크런치": "head_ground",
@@ -44,7 +45,7 @@ APP_SIGNALS = {
     "바벨 데드리프트": "hip_mean", "바벨 스티프 데드리프트": "hip_mean", "굿모닝": "hip_mean",
     "바벨 스쿼트": "knee_mean", "버피 테스트": "knee_mean", "크로스 런지": "knee_mean",
     "바벨 런지": "knee_minside", "사이드 런지": "knee_minside",
-    "스텝 포워드 다이나믹 런지": "knee_out_mean", "스텝 백워드 다이나믹 런지": "hip_mean", "스탠딩 니업": "hip_mean",
+    "스텝 포워드 다이나믹 런지": "knee_mean", "스텝 백워드 다이나믹 런지": "hip_mean", "스탠딩 니업": "hip_mean",
     # 팔꿈치·전완·손
     "풀업": "elbow_mean", "딥스": "elbow_mean", "바벨 로우": "elbow_mean", "덤벨 벤트오버 로우": "elbow_mean",
     "바벨 컬": "elbow_mean", "덤벨 컬": "elbow_mean", "페이스 풀": "elbow_mean",
@@ -55,6 +56,11 @@ APP_SIGNALS = {
     "덤벨 풀 오버": "palm_h_sh", "로잉머신": "palm_fwd_knee",
     "행잉 레그 레이즈": "hip_below_knee", "케이블 크런치": "knee_elbow_dist",
 }
+
+# ROM 기준을 뽑지 않는 종목 — 앱이 ROM 을 판정하지 않는다(isValidRep = null → 화면 '범위 미판정', spec §58).
+#  스텝 포워드 다이나믹 런지: 카운트 신호를 knee_out_mean → knee_mean 으로 바꾸며 옛 ROM(−0.0076, knee_out_mean 단위)을 뗐다.
+#  knee_mean 의 이 방법 후보(AIHub 0.6 s 표본 p90 ≈ 146.6°)는 "조금만 굽혀도 유효" 라 기준 구실을 못 한다(설계 §10).
+NO_ROM = {"스텝 포워드 다이나믹 런지"}
 
 # ROM 검증용 기존 조건 (있는 종목만) — 위반 클립의 무효율이 정상보다 높아야 판별력 인정
 ROM_CONDS = {
@@ -90,6 +96,7 @@ def cycles_with_extrema(series: np.ndarray, frac: float = 0.15) -> list[tuple[fl
 
 
 def main() -> None:
+    check_mirror(APP_SIGNALS, "rep_validity_thresholds.APP_SIGNALS")
     clips = pd.read_parquet(DATA / "clips.parquet")
     conds = pd.read_parquet(DATA / "conditions.parquet")
     ids, arr = load_kp3d(DATA)
@@ -103,6 +110,9 @@ def main() -> None:
 
     rows, ktable = [], []
     for ex, sig in APP_SIGNALS.items():
+        if ex in NO_ROM:
+            print(f"  [skip] {ex}: ROM 을 뽑지 않는 종목(NO_ROM)")
+            continue
         floor = ex in FLOOR_VIEW
         if floor:
             F, _ = floor_series(ex, FLOOR_VIEW[ex])

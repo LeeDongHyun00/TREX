@@ -17,11 +17,13 @@
 
 | 파일 | 역할 |
 |---|---|
-| `replay-jvm/` | 앱 소스 `PostureCore.kt`·`RepCounter.kt`·`ReturnRepTracker.kt` 를 **복사 없이 그 자리에서** 컴파일하는 Kotlin/JVM 재생기 |
+| `replay-jvm/` | 앱 소스 `PostureCore.kt`·`RepCounter.kt`·`ReturnRepTracker.kt`·`RepHysteresis.kt` 를 **복사 없이 그 자리에서** 컴파일하는 Kotlin/JVM 재생기 |
 | `extract_mediapipe.py` | 영상 → MediaPipe 캡처 (MM-Fit 세트 / REHAB24-6 녹화) |
 | `mmfit_pose3d_captures.py` | MM-Fit `pose_3d.npy` → 같은 형식의 캡처 (보조 실험) |
 | `capture_format.py` | 캡처 형식, 앱 추론 주기 |
 | `run_replay.py` | 매니페스트 생성 → 재생 → 채점 (세트 반복 수, 반복 경계 F1) |
+| `prototype_counter.py` · `stress_battery.py` · `parity_core.py` | 새 코어 프로토타입(§8) · 시작 확정 정책 배터리(설계 §12·§13) · Kotlin 새 코어 ↔ 프로토타입 세트별 파리티 |
+| §9 의 도구들 | 휴대폰 세트 로그 재생·채점·검증 프로토콜(휴대폰 연결 전 준비분) |
 | `results/` | 요약 수치 (원본 캡처는 `data/` — git 제외) |
 
 ## 2. 앱과 맞춘 것, 다른 것
@@ -30,6 +32,8 @@
 - 카운터 구성: `PostureLive` 의 서서 하는 종목 경로 그대로 — `RepCounter(signal, maxGapMs = 1500, completeOnReturn = true)`.
   `rules_mp_v0.json` 에 `kind=rep` 규칙이 없어 신호·ROM 기준은 `RepSignals` 등록부 값이다.
 - 신호: 스쿼트 `knee_mean`(35°), 런지(앱 '런지' = 스텝 포워드 다이나믹 런지) `knee_out_mean`(0.10), 덤벨 컬 `elbow_mean`(35°).
+  (§4·§7 을 잰 2026-09-23 시점의 앱 신호다. 2026-09-24 에 앱 런지 신호를 `knee_mean`(35°)으로 바꿨다 — 설계 §4.1, spec §57. 지금 `live` 구성의 런지는
+  `knee_mean` 이고 옛 신호는 진단 구성 `live+knee_out_mean` 으로 남았다, §9.)
 - 추론 후처리: `PostureAnalyzer.analyzeBitmap` 과 같은 순서(visibility·presence 최솟값, 0.5 미만 관절 제외,
   m→cm·y·z 반전, `checkUpSanity`, `PoseFrame.features()`). 이 부분만 Android 타입 때문에 절차를 옮겨 적었다(`Replay.kt` 머리 주석).
 - MediaPipe: 앱 번들 모델(`posture/pose_landmarker_full.task`, SHA `4eaa5eb7…` — 다른 계열 측정과 같은 파일),
@@ -167,3 +171,39 @@ MM-Fit 자체 3D 포즈에서 세트 카운트·휴식 헛카운트·세트 직�
 
 `noise_stress.py` 는 같은 프로토타입과 현재 엔진(JVM)에 관절 지터·한 프레임 튐·검출 끊김·추론 간격 지터·발열 감속·깊은 굴곡 편향을 단계별로 넣어
 어느 크기에서 무엇이 먼저 무너지는지 잰다(설계 문서 §9). 폰 잡음의 실측 분포가 없으므로 학습 데이터가 아니라 안전 여유의 측정이다.
+
+## 9. 휴대폰 없이 준비한 배관 (2026-09-24)
+
+휴대폰을 연결할 수 없는 동안 만든 도구다. 전부 합성 데이터나 기존 MM-Fit 3D 로 한 번 이상 돌렸고, 결과 파일은 `data/mm-fit/exp_plumbing/`(git 제외)에 있다.
+
+| 파일 | 역할 | 검증 |
+|---|---|---|
+| `run_replay.py` (개정) | `captureStartMs/EndMs` 가 있는 index 면 세트 창(라벨 ± 0.5 s) 밖 발화를 앞·뒤 헛카운트로 가른다. 구성 `hysteresis`(새 코어)·신호 후보, 항상-N 기준선, 사람별 행, 사람 ≥ 5명이면 군집 부트스트랩 95% 구간, 세트 로그 파리티 표(로그의 `reps.engine` 이 가리키는 구성에서만) | 0.5 s 캡처에서 README §4·코어 포팅 수치를 그대로 재현 |
+| `setlog_captures.py` | 휴대폰 세트 로그(`sets-*.jsonl`) → 피처 캡처 `*.fcap` + index. 자가 라벨 edited/confirmed 를 나눈다. spec §58 필드(`reps.engine`·`config`·`resets`(누른 시각 + `after_t_ms`)·`pending`, `thermal`, `app_version`)를 넘긴다 | `--self-test` 34/34 (손으로 쓴 로그 왕복, 옛 로그, 리셋 재생, 추론 중에 누른 전환의 `after_t_ms` 순서(H/H2), 새 코어 로그의 버림·대기, 실기기 baseline1 = 현재 카운터 0 · 새 코어 4, **코틀린 `SetLogJson` 골든 줄**(`app/src/test/resources/setlog_s58_fixture.txt`)과 파이썬 인코더 사본의 바이트 일치·변환) |
+| `replay-jvm` `Replay.kt` (개정) | `*.fcap` 읽기(`readFeatureCapture`), 매니페스트 7~10열(floor·규칙 ROM·새 코어 극성), 로그의 리셋을 앱과 같은 순서(`after_t_ms` 가 있으면 그보다 늦은 첫 프레임 앞)로 `resetCycle()`, 파리티 필드(카운트·시각·ROM·버림·대기), 연구용 파생 신호 `*_minside_both`, 값 프레임 구간 `valueSpans`. hysteresis 구성은 극성을 로그 → 등록부 → 연구 표(세 대상 종목 + 푸시업류) 순서로 정하고 모르면 재생하지 않는다 | `gradle test` 41/41 |
+| `parity_core.py` | Kotlin 새 코어(재생기 hysteresis) ↔ 프로토타입(`prototype_counter.py` + first8+amp) 세트별 파리티 — 같은 입력(재생기 신호값)에서 카운트·발화 시각·확정 대기, 프로토타입 피처에서 카운트 | MM-Fit 3D 244/244 (불일치 0, 종료 코드로 알린다) |
+| `mmfit_pair_compare.py` | MediaPipe 캡처 ↔ pose_3d 짝짓기: 지연(교차상관)·좌우·각도 오차(깊이별)·휴식 지터·튐·끊김·같은 시각 3D 대비 카운트 차이. `synth` 는 도구 검증용 합성 캡처 | `selftest` 17/17 (지연 4 복원, 잡음 없으면 카운트 차이 0/54, 주입 끊김·먼 팔 가림·지터·튐을 되찾음) |
+| `phone_noise.py` | 캡처·세트 로그에서 추론 간격(발열 대리)·추론 지연·로그의 열 상태별 간격·휴식 σ·튐·끊김 | 합성·세트 로그·피처 캡처에서 실행 |
+| `score_phone_reps.py` | 계획표와 로그 짝짓기, 정답 등급(집계표 / edited / confirmed=순환), Clopper-Pearson 단측 경계, 항상-계획 기준선, 정지 표지 + 오프라인 사이클로 앞·뒤 헛카운트(경계 게이트는 로그가 센 신호의 게이트 — 옛 런지 로그는 `knee_out_mean` 0.10), Gate B 판정 | `--self-test` 16/16 (설계 §7 세트 수 29·46·61·76·149·59·93 재현, 경계 게이트 출처) |
+| `rep_validation_plan.py` → `REP_VALIDATION.md` | 파일럿 · Gate A · Gate B 수집 프로토콜과 무작위 계획표 CSV | 생성·구조 확인 |
+
+바뀐 동작: 매니페스트는 캡처 폴더가 아니라 `--out` 폴더에 쓰고 캡처 경로를 절대경로로 적는다. 세트 앞뒤 헛카운트의 **분당** 비율은 창 길이가 아니라
+카운터가 값을 실제로 본 시간(`valueSpans`, 1.5 s 넘는 틈으로 끊은 구간)으로 나눈다 — 사람이 안 잡힌 프레임은 헛카운트를 낼 수 없다. 세트당 비율은 그대로다.
+hysteresis 행은 극성을 아는 종목에만 만든다(`HYSTERESIS_POLARITY`). 재생 결과의 `valid` 는 ROM 판정이 참인 반복만이다 —
+ROM 기준이 없는 신호(지금의 런지 `knee_mean`)는 `romUnjudged` 로 가고 표에는 '유효/미달/미판정' 으로 나온다(설계 §4.5). 런지 `live` 는 이제 `knee_mean` 이라
+§4 표의 런지 행(`knee_out_mean`)은 진단 구성 `live+knee_out_mean` 으로 남았다.
+
+**MM-Fit 3D 에 세트 앞 15 s · 뒤 10 s 를 이어 붙인 재생** (`mmfit_pair_compare.py synth --lag 0` 에 잡음 0 → `run_replay.py`, 개발 데이터, MediaPipe 아님).
+세트 창 정확 일치 / 앞 헛카운트·세트 / 뒤 헛카운트·세트 / 앞뒤까지 이어 센 전체의 정확 일치:
+
+| 종목 | 현재 엔진 (live) | 새 코어 (hysteresis) | 항상 10 |
+|---|---|---|---|
+| 스쿼트 `knee_mean` | 0.50 / 0.00 / 0.31 / 0.64 | 0.97 / 0.00 / 0.09 / 0.92 | 0.95 |
+| 런지 `knee_mean` | 0.44 / 0.11 / 0.34 / 0.45 | 0.94 / 0.21 / 0.11 / 0.74 | 0.95 |
+| 컬 `elbow_mean` | 0.15 (재현율 0.467) / 0.24 / 0.36 / 0.14 | 0.95 / 0.25 / 0.36 / 0.53 | 0.92 |
+
+- 현재 엔진은 앞 창이 붙으면 컬 재현율이 0.855 → 0.467 로 무너진다 — 세트 전 휴식 자세를 기준으로 고정한 채 세트를 맞는다(§4 해석 3과 같은 원인).
+  앱에서는 2세트부터 준비 카운트다운 없이 카운터가 돌므로(설계 §14) 같은 노출이 있다.
+- 새 코어는 세트 안은 지키지만(0.94~0.97), 앞뒤 움직임까지 센 전체는 런지 0.74 · 컬 0.53 으로 항상-10 아래다. 세트 경계가 가장 큰 위험이라는 설계 §14 와 같은 방향이다.
+  MM-Fit 의 앞뒤 창은 세트 사이 휴식이지 카운트다운 직후가 아니므로 크기는 폰(Gate A)에서 다시 잰다.
+- 앞 창이 붙으면 새 코어도 세트 안 과다 카운트가 생긴다(런지 2세트 · 컬 1세트, 0.5 s 캡처에서는 0).

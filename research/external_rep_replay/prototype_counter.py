@@ -3,7 +3,8 @@
 
 목적: REP_ENGINE_DESIGN.md 의 카운터 코어 제안이 현재 라이브 엔진(ReturnRepTracker)보다 나은지,
 같은 입력(MM-Fit pose_3d, 앱 간격 300ms)에서 세트 카운트와 **음성 구간(휴식·타 종목)** 을 함께 잰다.
-파이썬 프로토타입이고 앱 코드가 아니다. 상수는 전부 모집단 값(각도 게이트 35° 등)이며 MM-Fit 에 맞추지 않았다.
+파이썬 프로토타입이고 앱 코드가 아니다. 코어 상수(각도 게이트 35°·f 0.25·불응기 0.8 s)는 설계값이며 MM-Fit 결과로 조정하지 않았다.
+평활 여부와 시작 확정 정책은 MM-Fit(개발 데이터)에서 비교해 골랐다(설계 §4.2·§12·§13) — 성능 약속이 아니다.
 
 카운터 규약 (한 사이클 = 휴식 → 하강 → 반전 → 복귀):
   REST : 휴식 기준 r = 마지막 발화 이후의 최댓값. v ≤ r − h 이면 하강 시작(사이클 기준 r0 = r).
@@ -15,6 +16,12 @@
 교대 종목: 좌·우 신호에 카운터를 하나씩 두고, 반대쪽이 W ms 안에 발화했으면 같은 반복으로 합친다(동시 수행 = 1회).
 종목 문맥 게이트(선택): 스쿼트 — 사이클 안에서 고관절각이 r 대비 ≥ 20° 내려가야 한다(걷기 배제).
                         컬 — 팔꿈치 바닥 시점의 어깨각 < 90°(머리 위 신전·프레스 배제).
+
+극성(polarity): 코어는 "휴식 = 신호 최댓값" 을 가정한다(관절각은 반복 중 작아진다 = falling). 반복 중 커지는 신호(rising)를
+  그대로 넣으면 휴식이 신호 최솟값 쪽에서 잡혀 세트의 마지막 반복을 잃는다(stress_battery.py 의 mirror 조건).
+  그래서 극성은 신호마다 명시하는 opt-in 이고, 명시하지 않은 신호는 앱에서 기존 ReturnRepTracker 를 쓴다(설계 §4.2).
+시작 확정 정책(confirm): 첫 발화는 보류하고 첫 쌍 창 안에 진폭이 비슷한 두 번째 사이클이 오면 둘을 함께 발표한다.
+  POLICIES 에 설계 §4.3 후보들이 있다. 기본 consistency() 는 옛 4s/4s(§9 잡음 표의 재현용)다.
 
 사용법: python prototype_counter.py ../../data/mm-fit/mm-fit --out ../../data/mm-fit/exp_proto
 """
@@ -54,18 +61,25 @@ def features(pose):
     f["knee_mean"] = (f["knee_L"] + f["knee_R"]) / 2
     f["elbow_mean"] = (f["elbow_L"] + f["elbow_R"]) / 2
     f["hip_mean"] = (f["hip_L"] + f["hip_R"]) / 2
+    # 앱(PostureCore)과 같이 minside = 좌우 중 작은 쪽. 한쪽이 없으면 앱은 있는 쪽을 쓴다(가림 조건은 stress_battery.py 가 흉내 낸다).
+    f["knee_minside"] = np.minimum(f["knee_L"], f["knee_R"])
+    f["elbow_minside"] = np.minimum(f["elbow_L"], f["elbow_R"])
     return f
 
 
 class Counter:
-    def __init__(self, h, f=0.25, refractory_ms=800, smooth=False, context=None, min_cycle_ms=0):
+    def __init__(self, h, f=0.25, refractory_ms=800, smooth=False, context=None, min_cycle_ms=0, polarity="falling"):
         # min_cycle_ms: 하강 시작부터 발화까지의 최소 시간. 잡음 사이클은 2~3샘플(≤900ms)이고 실제 반복은 그보다 길다(설계 §9).
+        # polarity: "falling" = 반복 중 값이 작아지는 신호(휴식 = 최댓값, 앱 RepPolarity.DOWN). "rising"(UP) 이면 부호를 뒤집어 같은 상태기계에 넣는다.
+        if polarity not in ("falling", "rising"):
+            raise ValueError(polarity)
         self.h, self.f, self.ref, self.smooth, self.context, self.min_cycle = h, f, refractory_ms, smooth, context, min_cycle_ms
+        self.sign = 1.0 if polarity == "falling" else -1.0
         self.reset()
 
     def reset(self):
         self.state = "REST"; self.r = None; self.r0 = None; self.m = None; self.amax = None
-        self.last_fire = -10**9; self.raw = []; self.fires = []; self.amps = []; self.cycle_ctx = []; self.last_t = None
+        self.last_fire = -10**9; self.raw = []; self.fires = []; self.amps = []; self.durs = []; self.cycle_ctx = []; self.last_t = None
 
     def _value(self, v):
         self.raw.append(v)
@@ -77,6 +91,7 @@ class Counter:
         """ctx: 문맥 게이트용 보조값(스쿼트 hip_mean, 컬 shoulder). 발화하면 True."""
         if v is None or not np.isfinite(v):
             return False
+        v = self.sign * v
         # maxGap 1.5 s: 가림·끊김 전후를 한 반복으로 잇지 않는다(설계 §4.2 — 현재 엔진과 같은 값). 확정된 수는 지킨다.
         if self.last_t is not None and t_ms - self.last_t > 1500:
             self.state, self.r, self.raw = "REST", None, []
@@ -112,7 +127,7 @@ class Counter:
         if ok and self.context is not None:
             ok = self.context(self)
         if ok:
-            self.fires.append(t_ms); self.amps.append(self.r0 - self.m); self.last_fire = t_ms
+            self.fires.append(t_ms); self.amps.append(self.r0 - self.m); self.durs.append(t_ms - self.desc_t); self.last_fire = t_ms
         # 다음 사이클 준비: 재하강 폴백이면 이미 내려가는 중이므로 DESC 로, 아니면 REST 로
         if v <= self.amax - self.h:
             self.state, self.r0, self.m, self.cycle_ctx, self.desc_t = "DESC", self.amax, v, [ctx], t_ms
@@ -133,18 +148,57 @@ def curl_context(c: Counter):
     return bool(vals) and min(vals) < 90.0
 
 
-def consistency(fires, amps, window_ms=4000, ratio=(0.5, 2.0)):
-    """세트 시작 확정: 첫 발화는 보류하고, window 안에 진폭이 비슷한 두 번째 사이클이 오면 둘을 함께 발표한다.
-    이후 발화는 직전 발표 사이클과 진폭이 비슷해야 한다(고립된 한 번의 움직임은 반복이 아니다). 보류가 window 안에
-    확정되지 않으면 버린다. 앱에서는 '첫 두 회를 함께 확정' 으로 표시된다."""
-    out, pend = [], None   # pend = (t, amp)
-    for t, a in zip(fires, amps):
-        if pend is not None and t - pend[0] <= window_ms and ratio[0] <= a / max(pend[1], 1e-6) <= ratio[1]:
+# 설계 §4.3 의 시작 확정 후보. first_ms = 첫 쌍 창, later_ms = 이후 반복의 시간 창(None = 진폭 비만),
+# tempo_k = 첫 쌍 창을 max(first_ms, tempo_k × 보류 사이클 길이) 로 늘린다. "none" 은 확정 없이 모든 발화를 센다.
+POLICIES = {
+    "none": None,
+    "4s/4s": dict(first_ms=4000, later_ms=4000),
+    "first8+amp": dict(first_ms=8000, later_ms=None),
+    "first10+amp": dict(first_ms=10000, later_ms=None),
+    "tempo": dict(first_ms=4000, later_ms=None, tempo_k=2.5),
+    # 사후 탐색(설계 §12 선택 후보 아님): 이후 반복에도 8 s 창을 두어 세트 뒤 헛카운트를 얼마나 줄이는지 본다
+    "first8/later8": dict(first_ms=8000, later_ms=8000),
+    # 사후 탐색: 첫 쌍 창 = max(8 s, 2.5 × 첫 사이클 길이) — 반복당 8 s 를 넘는 느린 세트에서 첫 쌍이 영영 안 맺히는 절벽을 보려고
+    "first8|tempo": dict(first_ms=8000, later_ms=None, tempo_k=2.5),
+}
+
+
+def confirm(fires, amps, durs=None, first_ms=4000, later_ms=4000, ratio=(0.5, 2.0), tempo_k=None, drop_unpaired=True):
+    """세트 시작 확정. 반환: (발표된 발화 시각 리스트, 끝까지 보류된 후보 [(t, amp)] — 세지 않고 로그에 남길 것).
+
+    - 첫 발화는 보류한다. 첫 쌍 창 안에 진폭 비가 ratio 안인 두 번째 사이클이 오면 둘을 함께 발표한다.
+    - 확정 뒤의 발화는 직전 발표 사이클과 진폭 비가 ratio 안이어야 한다(later_ms 가 있으면 시간 창도).
+      어긋나면 새 보류 후보가 되고, 다음 사이클과 쌍을 이루면 둘 다 발표된다(재확정).
+    - drop_unpaired=True(앱 `RepStartConfirmation` 과 같다): 보류 후보는 **바로 다음 사이클** 하나로만 해소된다 —
+      짝이 맞으면 함께 발표, 아니면 버린다. 그래서 발표 순서가 항상 발화 순서다.
+      False(옛 프로토타입, §5·§9 표): 짝이 안 맞아도 다음 사이클이 직전 발표와 맞으면 보류를 남겨 두어, 더 뒤의 사이클과
+      짝지어 순서를 거슬러 발표할 수 있었다.
+    - 세트가 끝날 때 보류 중인 후보는 세지 않는다 — 한 번의 고립된 움직임은 반복이 아니다.
+    """
+    out, pend, last = [], None, None      # pend = (t, amp, window_ms)
+    for i, (t, a) in enumerate(zip(fires, amps)):
+        if pend is not None and t - pend[0] <= pend[2] and ratio[0] <= a / max(pend[1], 1e-6) <= ratio[1]:
             out += [pend[0], t]; pend = None; last = (t, a); continue
-        if out and t - out[-1] <= window_ms and ratio[0] <= a / max(last[1], 1e-6) <= ratio[1]:
+        if drop_unpaired:
+            pend = None
+        if out and (later_ms is None or t - out[-1] <= later_ms) and ratio[0] <= a / max(last[1], 1e-6) <= ratio[1]:
             out.append(t); last = (t, a); continue
-        pend = (t, a)
-    return out
+        win = first_ms if tempo_k is None or durs is None else max(first_ms, tempo_k * durs[i])
+        pend = (t, a, win)
+    return out, ([(pend[0], pend[1])] if pend is not None else [])
+
+
+def apply_policy(name, fires, amps, durs=None):
+    """정책 이름으로 확정을 적용한다. 반환 (발표 시각, 보류 후보)."""
+    cfg = POLICIES[name]
+    if cfg is None:
+        return list(fires), []
+    return confirm(fires, amps, durs, **cfg)
+
+
+def consistency(fires, amps, window_ms=4000, ratio=(0.5, 2.0)):
+    """옛 §4.3 (4s/4s) — §5·§9 표의 재현용. 새 정책은 apply_policy() 를 쓴다."""
+    return confirm(fires, amps, None, first_ms=window_ms, later_ms=window_ms, ratio=ratio, drop_unpaired=False)[0]
 
 
 def run_counter(kind, F, idx, cadence, smooth, gated, merge_ms=500, consist=False):

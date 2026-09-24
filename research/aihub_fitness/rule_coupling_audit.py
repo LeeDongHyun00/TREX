@@ -30,15 +30,19 @@ HERE = Path(__file__).resolve().parent
 DATA = Path(r"C:/Users/hp276/Desktop/trex/.claude/worktrees/correct-exercise-form-6ddf55/research/aihub_fitness/outputs")
 OUT = HERE / "outputs"
 
+from app_signals import check_mirror
 from features import apply_qc_mask, compute_frame_features, load_kp3d
 from sklearn.metrics import roc_auc_score
 
-# 종목별 렙 신호 (RepSignals.kt 와 동일 — 주 동작 진폭의 대용)
+# 종목별 렙 신호 (RepSignals.kt 와 동일 — 주 동작 진폭의 대용). main 첫 줄의 check_mirror 가 공통 종목을 대조한다.
+# 런지는 2026-09-24 에 앱과 같이 knee_out_mean → knee_mean 으로 바꿨다. 그 전에 만든 §28c 결과(RULE_COUPLING_AUDIT.md)의 런지 행은
+# 앞으로 딛는 런지에서 거의 움직이지 않는 knee_out_mean 을 깊이 대용으로 썼다 — 게이트 A(결합) 판정이 사실상 시험되지 않았으므로
+# 다시 돌려야 한다(데이터 경로가 이 컨테이너에 없어 아직 못 돌렸다).
 REP_SIGNAL = {
     "바벨 데드리프트": "hip_mean", "바벨 스티프 데드리프트": "hip_mean", "굿모닝": "hip_mean",
     "바벨 스쿼트": "knee_mean", "버피 테스트": "knee_mean", "크로스 런지": "knee_mean",
     "바벨 런지": "knee_minside", "사이드 런지": "knee_minside",
-    "스텝 포워드 다이나믹 런지": "knee_out_mean", "스텝 백워드 다이나믹 런지": "hip_mean",
+    "스텝 포워드 다이나믹 런지": "knee_mean", "스텝 백워드 다이나믹 런지": "hip_mean",
     "스탠딩 니업": "hip_mean", "풀업": "elbow_mean", "딥스": "elbow_mean", "바벨 로우": "elbow_mean",
     "덤벨 벤트오버 로우": "elbow_mean", "바벨 컬": "elbow_mean", "덤벨 컬": "elbow_mean",
     "페이스 풀": "elbow_mean", "랫풀 다운": "forearm_vert_mean", "사이드 레터럴 레이즈": "forearm_vert_mean",
@@ -81,6 +85,7 @@ def oriented_auc(x: np.ndarray, y: np.ndarray) -> float:
 
 
 def main() -> None:
+    check_mirror(REP_SIGNAL, "rule_coupling_audit.REP_SIGNAL")
     doc = json.load(open(HERE / "rules" / "rules_mp_v0.json", encoding="utf-8"))
     active = [r for r in doc["rules"] if r["status"] != "exclude"]
     clips = pd.read_parquet(DATA / "clips.parquet")
