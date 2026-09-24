@@ -12,22 +12,26 @@ enum class CapturePosition(val title: String, val placement: String, val voice: 
 
 enum class ObservationKind { REPS, HOLD, WINDOW, GUIDE }
 
-/** 걸음마다 1회로 세는 교대 종목의 자동 횟수 정의 — 준비 안내(화면·음성)에 그대로 들어간다([ExerciseProfile.statesSideCount]). */
-const val ALTERNATING_COUNT_RULE = "번갈아 하는 동작은 한쪽 1회를 1회로 셉니다."
+/**
+ * 좌우 한 번씩을 1회로 세는 종목([RepUnit.SIDE_PAIR])의 자동 횟수 정의 — 준비 안내(화면·음성)에 그대로 들어간다.
+ * 사용자 결정(2026-09-24): "왼쪽 1회 + 오른쪽 1회 = 1회". 목표 10회 = 왼 10 + 오른 10. 이전 문장("한쪽 1회를 1회로")은 폐기.
+ */
+const val ALTERNATING_COUNT_RULE = "왼쪽과 오른쪽을 한 번씩 해야 1회로 셉니다."
 
 /**
- * @property alternating 좌우를 번갈아 하는 종목(런지류·덤벨 컬·스탠딩 니업).
- * @property statesSideCount 준비 안내에 [ALTERNATING_COUNT_RULE] 을 넣는 종목 — **런지류만**. 런지는 걸음마다 두 무릎이 함께 굽어
- *   무릎 신호(knee_mean·knee_minside)가 걸음마다 한 번 내려가므로 자동 횟수가 실제로 한쪽 1회 = 1회로 센다(왼·오른 5+5 = 10,
- *   MM-Fit 라벨과 같은 정의 — docs/REP_ENGINE_DESIGN.md §4.4). 목표 도달 자동 진행(spec §42)이 이 수로 넘어가므로 "한쪽 10회" 를
- *   기대한 사용자는 한쪽 5회에서 세트가 끝난다 — 그래서 시작 전에 밝힌다(설계 §4.8).
- *   덤벨 컬·스탠딩 니업은 두 팔·두 엉덩이의 **평균** 신호(elbow_mean·hip_mean)라 한쪽만 움직이면 신호가 절반만 움직여 한쪽 1회가
- *   세진다는 보장이 없다(MM-Fit 교대 컬 영상 MediaPipe: 지금 카운터 재현율 0.09) — 지키지 못하는 정의를 말하지 않는다(원칙 #1).
- *   정의 자체는 사용자 결정(§15 #18).
+ * @property alternating 좌우를 번갈아 하는 종목(런지류·덤벨 컬·스탠딩 니업) — 동작의 성질(메타데이터)이다. 횟수 단위는 [repUnit] 이 정한다.
+ * @property repUnit 자동 횟수의 표시 단위 — **런지류만** [RepUnit.SIDE_PAIR], 나머지는 [RepUnit.CYCLE].
+ *   사용자 결정(2026-09-24): 교대 동작은 "왼쪽과 오른쪽을 한 번씩 = 1회" 로 센다(목표 10회 = 왼 10 + 오른 10, 한쪽만 하면 수가 오르지 않는다).
+ *   런지류는 걸음마다 무릎이 굽어 무릎 신호(knee_mean·knee_minside)가 걸음마다 한 번 내려간다 — 카운터 사이클 하나가 한 걸음이므로
+ *   사이클 둘을 1회로 묶는다(`RepUnitAccumulator`). 목표 도달 자동 진행(spec §42)은 유지하므로 세트는 두 쪽을 다 한 뒤에 넘어간다.
+ *   이 정의는 시작 전에 밝힌다([ALTERNATING_COUNT_RULE], 설계 §4.8).
+ *   덤벨 컬·스탠딩 니업은 [RepUnit.CYCLE] 이고 안내에 짝 규칙을 넣지 않는다. 카운트 신호가 두 팔·두 다리의 **평균**(elbow_mean·hip_mean)이라
+ *   양쪽을 함께 하는 반복은 한 사이클 = 양쪽 = 1회로 이미 같은 정의다. 한쪽씩 번갈아 하는 반복은 평균 신호가 절반만 움직여 한쪽이 한 사이클로
+ *   잡힌다는 보장이 없고(MM-Fit 교대 컬 영상 MediaPipe: 지금 카운터 재현율 0.09) 쪽별 귀속도 없다 — 지키지 못하는 정의를 말하지 않는다(원칙 #1).
  */
 data class ExerciseProfile(val name: String, val referenceExercise: String?, val capture: CapturePosition,
     val floor: Boolean, val kind: ObservationKind, val metricFeatures: List<String>, val alternating: Boolean = false,
-    val statesSideCount: Boolean = false) {
+    val repUnit: RepUnit = RepUnit.CYCLE) {
     val preparationDirection get() = when(capture) {
         CapturePosition.SIDE -> "측면"
         CapturePosition.FLOOR_SIDE -> "낮은 측면"
@@ -35,7 +39,7 @@ data class ExerciseProfile(val name: String, val referenceExercise: String?, val
         else -> capture.title
     }
     val preparationInstruction get() = "권장 촬영 방향은 ${preparationDirection}입니다. ${capture.voice}. " +
-        (if (statesSideCount) "$ALTERNATING_COUNT_RULE " else "") + "몸이 화면에 잡히면 5초 뒤 시작해요."
+        (if (repUnit == RepUnit.SIDE_PAIR) "$ALTERNATING_COUNT_RULE " else "") + "몸이 화면에 잡히면 5초 뒤 시작해요."
     val cameraEnabled get() = kind != ObservationKind.GUIDE
     val comparisonOnly get() = referenceExercise == null
     val startHint get() = when(kind) {
@@ -62,7 +66,7 @@ object ExerciseProfiles {
             val lunges = setOf("런지","바벨 런지","사이드 런지","크로스 런지")
             val alternating = name in lunges || name in setOf("덤벨 컬","스탠딩 니업")
             add(ExerciseProfile(name, ref, capture, floor, if (alternating) ObservationKind.WINDOW else kind, features, alternating,
-                statesSideCount = name in lunges))
+                repUnit = if (name in lunges) RepUnit.SIDE_PAIR else RepUnit.CYCLE))
         }
         val c=CapturePosition.FRONT; val b=CapturePosition.RIGHT_FRONT; val d=CapturePosition.LEFT_FRONT
         val low=CapturePosition.FLOOR_SIDE; val oblique=CapturePosition.FLOOR_FRONT

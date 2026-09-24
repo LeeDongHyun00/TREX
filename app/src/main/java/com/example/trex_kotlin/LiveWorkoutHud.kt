@@ -18,10 +18,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.trex_kotlin.TrexText as Text
 
-/** 얼굴 앞을 비우고 하단의 낮은 표시줄에 진행 정보를 모은다. */
+/**
+ * 얼굴 앞을 비우고 하단의 낮은 표시줄에 진행 정보를 모은다.
+ * @param countNote 목표 옆의 짧은 횟수 표기(반복 목표에서만) — 좌우 짝 단위 종목의 "좌우 한 번씩 = 1회" / "반대쪽 차례"(사용자 결정 2026-09-24).
+ *   화면 전용이다. [countNoteActive] 면 강조색(사용자가 할 다음 동작).
+ */
 @Composable
 internal fun LiveWorkoutHud(workout: Workout, repetitions: Int, timeLeft: Int, totalSeconds: Int,
-    setLabel: String, paused: Boolean, compact: Boolean, message: String?) {
+    setLabel: String, paused: Boolean, compact: Boolean, message: String?,
+    countNote: String? = null, countNoteActive: Boolean = false) {
     val duration = workout.resolvedTarget() is WorkoutTarget.Duration
     Surface(color = Color(0xEB111610), shape = RoundedCornerShape(20.dp),
         modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp)) {
@@ -44,6 +49,10 @@ internal fun LiveWorkoutHud(workout: Workout, repetitions: Int, timeLeft: Int, t
                         }
                         Text(if (duration) "목표 ${totalSeconds.asClock()}" else "목표 ${workout.resolvedTarget().amount}회",
                             color = Color.White, fontSize = 14.sp)
+                        if (!duration && countNote != null) Text(countNote,
+                            color = if (countNoteActive) Color(0xFFB8DD83) else Color.White.copy(alpha = .75f),
+                            fontSize = 12.sp, fontWeight = if (countNoteActive) FontWeight.SemiBold else FontWeight.Normal,
+                            maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                 }
             }

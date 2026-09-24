@@ -24,6 +24,12 @@ data class SetSelfLabel(
     val repsSource: String?,
     val form: FormLabel?,
     val createdAtIso: String,
+    /**
+     * 라벨을 적을 때 화면에 보인 횟수 단위(`RepUnit.key` — "cycle"|"side_pair"), 모르면 null(키를 쓰지 않는다 — 이전 줄과 같은 형식).
+     * 런지류(좌우 짝, spec §59)의 [actualReps] 는 걸음이 아니라 **좌우 한 쌍**의 수다 — 세트 로그를 잇지 않고도 라벨을 읽을 수 있게 함께 적는다.
+     * rep_truth.csv 에는 넣지 않는다(열이 고정이다 — 헤더가 바뀌면 기존 파일과 섞여 파싱이 깨진다).
+     */
+    val repUnit: String? = null,
 )
 
 class SetLabelStore(private val dir: File) {
@@ -78,6 +84,8 @@ class SetLabelStore(private val dir: File) {
             if (label.form == null) sb.append("null") else SetLogJson.str(sb, label.form.key)
             sb.append(',')
             sb.append("\"created_at\":"); SetLogJson.str(sb, label.createdAtIso)
+            // 표시 단위는 알 때만 — 없으면 키 부재(이전 형식 그대로)
+            if (label.repUnit != null) { sb.append(",\"rep_unit\":"); SetLogJson.str(sb, label.repUnit) }
             sb.append('}')
             return sb.toString()
         }

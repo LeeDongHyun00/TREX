@@ -28,6 +28,9 @@ import java.util.UUID
  * `reps.engine`, `reps.config{feature,min_amp,refractory_ms,max_gap_ms,complete_on_return,polarity?,return_fraction?,
  * first_pair_window_ms?,later_window_ms?,min_ratio?,max_ratio?,rom_direction?,rom_threshold?,rom_tier}`(값은 카운터가 실제로 쓴 구성),
  * `reps.resets[{t_ms,after_t_ms,reason}]`, `reps.pending{unconfirmed,in_progress,dropped[]}`(새 코어만).
+ * 표시 단위(사용자 결정 2026-09-24, `RepUnit`) 추가 필드(선택 — 부재 = 이전 로그): `reps.unit`("cycle"|"side_pair"), `reps.cycles_per_rep`,
+ * `reps.completed`(화면에 보인 횟수), `reps.half_pending`(세트 끝에 짝을 못 채운 한쪽이 남았을 때만 true — 아니면 키 없음).
+ * `reps.count`·`t_ms`·`min`/`max`/`valid`·`invalid` 는 여전히 **카운터 사이클** 단위다(재생 파리티가 사이클에 기댄다).
  * org.json 은 Android 유닛 테스트에서 스텁이라 직접 직렬화한다 (PostureCoreParityTest 와 같은 이유).
  */
 
@@ -188,6 +191,15 @@ data class SetLog(
     val thermalChanges: List<ThermalEvent>? = null,
     /** 앱 versionName. */
     val appVersion: String? = null,
+    /**
+     * 표시 횟수 단위 (사용자 결정 2026-09-24) — 카운터 사이클 몇 개를 화면의 1회로 셌는가. null = 이 필드 이전 로그(그때는 늘 사이클 = 1회).
+     * [repCount]·렙별 배열은 이 단위와 무관하게 **사이클**이다. `reps.unit`·`reps.cycles_per_rep` 로 적는다.
+     */
+    val repUnit: RepUnit? = null,
+    /** 화면에 보인(진행·자동 넘김에 쓴) 완료 횟수 — [repUnit] 단위. `reps.completed`. */
+    val repCompleted: Int? = null,
+    /** 세트 끝에 반대쪽을 못 채운 한쪽이 남았다(세지 않았다). true 일 때만 `reps.half_pending` 을 적는다. */
+    val repHalfPending: Boolean = false,
 ) {
     companion object {
         const val SCHEMA = "trex.posture.setlog/1"
@@ -235,6 +247,9 @@ data class SetLog(
             thermalStart: Int? = null,
             thermalChanges: List<ThermalEvent>? = null,
             appVersion: String? = null,
+            repUnit: RepUnit? = null,
+            repCompleted: Int? = null,
+            repHalfPending: Boolean = false,
         ): SetLog {
             val frames = samples.mapIndexed { i, s ->
                 SetLogFrame(
@@ -290,6 +305,9 @@ data class SetLog(
                 thermalStart = thermalStart,
                 thermalChanges = thermalChanges,
                 appVersion = appVersion,
+                repUnit = repUnit,
+                repCompleted = repCompleted,
+                repHalfPending = repHalfPending,
             )
         }
     }
@@ -367,6 +385,13 @@ object SetLogJson {
                 sb.append(",\"valid\":[")
                 v.forEachIndexed { i, x -> if (i > 0) sb.append(','); sb.append(x?.toString() ?: "null") }
                 sb.append(']')
+            }
+            // 표시 단위 (사용자 결정 2026-09-24) — 위의 수·배열은 사이클, completed 는 화면에 보인 횟수. 없으면 키 부재 (이전 로그)
+            log.repUnit?.let { u ->
+                sb.append(",\"unit\":"); str(sb, u.key)
+                sb.append(",\"cycles_per_rep\":").append(u.cyclesPerRep)
+                log.repCompleted?.let { sb.append(",\"completed\":").append(it) }
+                if (log.repHalfPending) sb.append(",\"half_pending\":true")
             }
             // spec §58 단계 0 — 카운터 구성·리셋·미완 후보. 없으면 키 부재 (이전 로그)
             log.repEngine?.let { e ->

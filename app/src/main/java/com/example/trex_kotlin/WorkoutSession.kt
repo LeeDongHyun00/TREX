@@ -1,5 +1,6 @@
 package com.example.trex_kotlin
 
+import com.example.trex_kotlin.posture.ExerciseProfiles
 import kotlin.math.ceil
 
 /** 자세 관측 방식과 독립된 운동 목표. 반복 운동의 예상 시간은 종료 조건이 아니다. */
@@ -22,7 +23,17 @@ data class WorkoutTiming(val repetitions: Int, val sets: Int, val secondsPerRep:
 }
 
 object WorkoutPacing {
-    fun secondsPerRep(name: String, category: String): Int = when (name) {
+    /**
+     * 1회 예상 시간(초) — 예상 소요 시간에만 쓴다(종료 조건이 아니다). = 한 동작(카운터 사이클) 시간 × 1회를 이루는 동작 수.
+     * 런지류(런지·바벨 런지·사이드 런지·크로스 런지)는 "왼쪽과 오른쪽을 한 번씩 = 1회"(사용자 결정 2026-09-24, `RepUnit.SIDE_PAIR`)라
+     * 1회가 두 걸음이다 — 한 걸음 4초 × 2 = 8초. 목표 10회 = 20걸음이므로 한 걸음 시간으로 두면 세트 시간을 절반으로 잡는다.
+     * 동작 수는 프로필의 표시 단위에서 읽는다 — 자동 횟수가 세는 단위와 예상 시간이 같은 정의를 쓰게.
+     */
+    fun secondsPerRep(name: String, category: String): Int = secondsPerMovement(name, category) *
+        (ExerciseProfiles.forName(name)?.repUnit?.cyclesPerRep ?: 1)
+
+    /** 한 동작(런지류는 한 걸음) 예상 시간(초). */
+    private fun secondsPerMovement(name: String, category: String): Int = when (name) {
         "바벨 데드리프트", "바벨 스쿼트", "바벨 런지", "런지", "사이드 런지", "크로스 런지", "불가리안 스플릿 스쿼트", "버피", "버피 테스트" -> 4
         "점핑잭", "하이 니", "마운틴 클라이머", "스키터 점프", "제자리 걷기" -> 2
         else -> if (category == "회복") 4 else 3

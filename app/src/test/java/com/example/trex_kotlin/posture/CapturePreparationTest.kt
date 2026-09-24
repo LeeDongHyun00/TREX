@@ -11,26 +11,38 @@ class CapturePreparationTest {
             assertTrue(text.indexOf(profile.capture.voice) < text.indexOf("5초"))
         }
     }
-    @Test fun lungesStateTheOneSideOneRepRuleBeforeTheStart() {
-        // 앱 '런지' 는 카운트 신호 교체(knee_mean) 뒤 목표 도달 자동 진행(spec §42)이 실제로 걸린다 — 한 걸음 = 1회라는 정의를
-        // 시작 전에 밝힌다(설계 §4.4·§4.8). 런지는 걸음마다 두 무릎이 함께 굽어 카운터가 실제로 그렇게 센다.
+    @Test fun lungesStateTheLeftPlusRightRuleBeforeTheStart() {
+        // 사용자 결정(2026-09-24): 교대 동작은 "왼쪽과 오른쪽을 한 번씩 = 1회" — 런지류는 카운터 사이클(한 걸음) 둘을 1회로 묶는다.
+        // 목표 도달 자동 진행(spec §42)은 유지되므로 두 쪽을 다 해야 세트가 넘어간다 — 그 정의를 시작 전에 밝힌다(설계 §4.8).
+        // (예전 문장 "번갈아 하는 동작은 한쪽 1회를 1회로 셉니다." 는 이 결정으로 뒤집혔다 — 이 테스트의 기대값도 그래서 바뀌었다.)
+        assertEquals("왼쪽과 오른쪽을 한 번씩 해야 1회로 셉니다.", ALTERNATING_COUNT_RULE)
         val lunge = ExerciseProfiles.forName("런지")!!
-        assertTrue(lunge.alternating && lunge.statesSideCount)
+        assertTrue(lunge.alternating)
+        assertEquals(RepUnit.SIDE_PAIR, lunge.repUnit)
         assertTrue(lunge.preparationInstruction.contains(ALTERNATING_COUNT_RULE))
         assertTrue(lunge.preparationInstruction.indexOf(ALTERNATING_COUNT_RULE) < lunge.preparationInstruction.indexOf("5초"))
         assertEquals(setOf("런지", "바벨 런지", "사이드 런지", "크로스 런지", "덤벨 컬", "스탠딩 니업"),
             ExerciseProfiles.all.filter { it.alternating }.map { it.name }.toSet())
         assertEquals(setOf("런지", "바벨 런지", "사이드 런지", "크로스 런지"),
-            ExerciseProfiles.all.filter { it.statesSideCount }.map { it.name }.toSet())
-        ExerciseProfiles.all.filter { !it.statesSideCount }.forEach { assertFalse(it.name, it.preparationInstruction.contains("한쪽 1회")) }
+            ExerciseProfiles.all.filter { it.repUnit == RepUnit.SIDE_PAIR }.map { it.name }.toSet())
+        ExerciseProfiles.all.filter { it.repUnit == RepUnit.SIDE_PAIR }.forEach {
+            assertTrue(it.name, it.preparationInstruction.contains(ALTERNATING_COUNT_RULE))
+            assertFalse(it.name, it.floor)   // 짝 단위는 서서 하는 런지류뿐 — 바닥 종목은 늘 사이클 단위
+        }
+        // 짝이 아닌 종목은 짝 규칙도, 폐기된 "한쪽 1회" 정의도 말하지 않는다
+        ExerciseProfiles.all.filter { it.repUnit == RepUnit.CYCLE }.forEach {
+            assertFalse(it.name, it.preparationInstruction.contains(ALTERNATING_COUNT_RULE))
+            assertFalse(it.name, it.preparationInstruction.contains("한 번씩"))
+        }
+        ExerciseProfiles.all.forEach { assertFalse(it.name, it.preparationInstruction.contains("한쪽 1회")) }
     }
-    @Test fun averagedTwoLimbSignalsDoNotPromiseTheOneSideRule() {
-        // 덤벨 컬·스탠딩 니업은 교대 동작이지만 카운트 신호가 두 팔·두 엉덩이 평균이라 한쪽만 움직이면 절반만 움직인다 —
-        // 지키지 못하는 횟수 정의를 안내에 넣지 않는다(원칙 #1, 설계 §4.4).
+    @Test fun averagedTwoLimbSignalsDoNotPromiseTheSideRule() {
+        // 덤벨 컬·스탠딩 니업은 교대 동작이지만 카운트 신호가 두 팔·두 엉덩이 평균이다 — 양쪽을 함께 하는 반복은 한 사이클 = 양쪽 = 1회로
+        // 이미 같은 정의이고, 한쪽씩 번갈아 하는 반복은 쪽별 귀속이 없어 짝으로 셀 수 없다. 지키지 못하는 정의를 안내에 넣지 않는다(원칙 #1, 설계 §4.4).
         for (name in listOf("덤벨 컬", "스탠딩 니업")) {
             val p = ExerciseProfiles.forName(name)!!
             assertTrue(name, p.alternating)
-            assertFalse(name, p.statesSideCount)
+            assertEquals(name, RepUnit.CYCLE, p.repUnit)
             assertFalse(name, p.preparationInstruction.contains(ALTERNATING_COUNT_RULE))
         }
     }

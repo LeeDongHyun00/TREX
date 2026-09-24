@@ -26,12 +26,30 @@ readFeatureCapture)에 그대로 넣으면 (1) 로그를 쓴 앱의 카운트와
     넘긴다(PostureLive 와 같은 우선순위).
 없는 필드는 전부 null — 옛 로그다. 추측으로 채우지 않는다.
 
+표시 단위 (사용자 결정 2026-09-24 — 런지류는 "왼쪽과 오른쪽을 한 번씩 = 1회", 앱 `RepUnit`)
+    reps.count · t_ms · min/max/valid · invalid 는 늘 **카운터 사이클**(런지 = 한 걸음)이다 — 재생 파리티는 이 단위로만 본다.
+    reps.unit("cycle"|"side_pair") · cycles_per_rep · completed(화면에 보인 수 = 진행·자동 넘김에 쓴 수) · half_pending(세트 끝에
+    짝 없이 남은 한쪽, true 일 때만 키) → index repUnit · cyclesPerRep · loggedCompleted · loggedHalfPending.
+    키가 없으면 그 필드 이전 로그다 — 그때 화면은 늘 사이클 = 1회였으므로 repUnit="cycle"(repUnitFrom 에 출처).
+    loggedDisplayedReps = 화면에 보인 수(completed, 없으면 count // cycles_per_rep). loggedUnitConsistent = completed·half_pending 이
+    count 와 맞는가(앱 누적기는 세트 안에서 반쪽을 버리지 않으므로 completed = count // 2, half_pending = count 가 홀수).
+    currentUnit = **지금 앱**이 그 종목을 보이는 단위(SIDE_PAIR_AIHUB) — 재생 카운트를 지금 화면 수로 바꿀 때 쓴다.
+
 자가 라벨(spec §30) — 정답
     labels: rep_truth.csv(set_id,reps_min,reps_max,exercise,form,source,created_at) 와 set_labels.jsonl(또는 labels/set_labels.jsonl)
     source=edited    사용자가 스테퍼로 고친 값 → index truthReps (재생 채점의 정답)
     source=confirmed 앱 카운트를 보고 "맞아요" 한 값 → confirmedReps 에만. **순환**: 앱 카운트와 같아서, 이것을 정답으로 쓰면
                      재생 검증이 자기 답을 채점한다. --truth-confirmed 를 주면 정답에 넣되 truthSource 에 표시한다.
-    독립 정답(종이 집계표)은 score_phone_reps.py 가 계획표와 함께 붙인다.
+    라벨은 **그 세트의 화면 단위**로 적힌다(완료 화면 스테퍼는 화면에 보인 수로 시작한다). 그래서 둘 다 적는다:
+        truthDisplayedReps / confirmedDisplayedReps   라벨 그대로(화면 단위, 단위는 truthUnit)
+        truthCyclesMin~Max / confirmedCyclesMin~Max   카운터 사이클 범위 = 라벨 × cycles_per_rep ~ + (cycles_per_rep − 1). 좌우 짝이면
+                                                      화면이 짝 없이 끝난 한쪽을 세지 않으므로 라벨 P 쌍은 2P 또는 2P+1 걸음이다.
+        truthReps / confirmedReps                     **사이클 수가 하나로 정해질 때만** 그 값(재생·run_replay·parity_core 가 정답으로 쓰는
+                                                      단위), 범위면 None(truthCyclesExact=false) — 한 걸음 모르는 값을 정답처럼 넣으면
+                                                      짝 없는 한쪽으로 끝난 정직한 세트가 과다 카운트로 채점된다. 쌍 단위 채점은
+                                                      score_phone_reps.py 가 truthDisplayedReps 로 한다.
+    set_labels.jsonl 의 rep_unit(앱이 라벨을 적을 때 화면 단위, 없으면 모름) → labelUnit · labelUnitMatchesLog(로그 reps.unit 과 같은가).
+    독립 정답(종이 집계표)은 score_phone_reps.py 가 계획표와 함께 붙인다(런지는 왼·오른 걸음을 따로 센다).
 
 알려진 파리티 깨짐 경로 (재생기 머리 주석과 같다): spec §58 **이전** 로그에는 일시정지·카메라 전환의 resetCycle() 이 없다(1.5 s 넘는
 틈으로만 드러난다), after_t_ms 가 없는 리셋은 누른 시각으로 자르므로 한 프레임 어긋날 수 있다, 로그 값의 소수 5자리 반올림,
@@ -63,6 +81,33 @@ FIXTURE_BASELINE1 = REPO / "app" / "src" / "test" / "resources" / "rep_fixture_b
 # 코틀린 SetLogJson 이 쓴 §58 골든 줄 — PostureSetLogTest 가 같은 줄을 요구하고, 여기 자가 검증이 그대로 읽는다(형식 어긋남 방지)
 GOLDEN_FIXTURE = REPO / "app" / "src" / "test" / "resources" / "setlog_s58_fixture.txt"
 SCHEMA = "trex.posture.setlog/1"
+# 표시 단위(사용자 결정 2026-09-24) — ExerciseProfiles.kt 의 `lunges`(앱 이름, repUnit = SIDE_PAIR)를 PostureLive.postureExerciseMap 으로
+# 옮긴 AIHub 이름(= 로그의 exercise). 자가 검증이 두 코틀린 파일을 읽어 이 표와 맞는지 본다(어긋나면 실패).
+SIDE_PAIR_APP = ("런지", "바벨 런지", "사이드 런지", "크로스 런지")
+SIDE_PAIR_AIHUB = frozenset({"스텝 포워드 다이나믹 런지", "바벨 런지", "사이드 런지", "크로스 런지"})
+UNIT_CYCLES = {"cycle": 1, "side_pair": 2}     # RepUnit.key → cyclesPerRep
+PROFILES_KT = REPO / "app" / "src" / "main" / "java" / "com" / "example" / "trex_kotlin" / "posture" / "ExerciseProfiles.kt"
+POSTURE_LIVE_KT = REPO / "app" / "src" / "main" / "java" / "com" / "example" / "trex_kotlin" / "PostureLive.kt"
+
+
+def current_unit(exercise: str | None, floor: bool) -> str:
+    """지금 앱이 이 종목(AIHub 이름)의 자동 횟수를 보이는 단위. 바닥 경로는 늘 사이클(PostureLive: isFloorExercise → CYCLE)."""
+    return "side_pair" if (exercise in SIDE_PAIR_AIHUB and not floor) else "cycle"
+
+
+def kotlin_side_pair_exercises() -> tuple[set[str] | None, set[str] | None]:
+    """(ExerciseProfiles.kt 의 lunges 앱 이름, 그것을 postureExerciseMap 으로 옮긴 AIHub 이름). 파일이 없거나 못 읽으면 None."""
+    try:
+        prof = PROFILES_KT.read_text(encoding="utf-8")
+        live = POSTURE_LIVE_KT.read_text(encoding="utf-8")
+    except OSError:
+        return None, None
+    m = re.search(r"val lunges\s*=\s*setOf\(([^)]*)\)", prof)
+    if not m or "SIDE_PAIR" not in prof[m.end():m.end() + 600]:
+        return None, None
+    apps = set(re.findall(r'"([^"]+)"', m.group(1)))
+    mapping = dict(re.findall(r'^\s*"([^"]+)"\s+to\s+"([^"]+)"', live, flags=re.M))
+    return apps, {mapping.get(a, f"?{a}") for a in apps}
 
 
 class _Num(float):
@@ -129,7 +174,7 @@ def load_labels(paths: list[Path]) -> dict[str, dict]:
             files.append(p)
     labels: dict[str, dict] = {}
 
-    def put(set_id, reps, source, form, created):
+    def put(set_id, reps, source, form, created, unit=None):
         if not set_id:
             return
         prev = labels.get(set_id)
@@ -138,7 +183,10 @@ def load_labels(paths: list[Path]) -> dict[str, dict]:
         # 렙 없는 라벨(폼만)은 렙이 있는 라벨을 덮지 않는다
         if prev is not None and reps is None and prev["reps"] is not None:
             return
-        labels[set_id] = {"reps": reps, "source": source or None, "form": form or None, "createdAt": created}
+        # 화면 단위(set_labels.jsonl 의 rep_unit, spec §59)는 같은 라벨의 csv 줄(단위 열 없음)이 덮어 지우지 않는다
+        if unit is None and prev is not None and prev.get("createdAt") == created:
+            unit = prev.get("unit")
+        labels[set_id] = {"reps": reps, "source": source or None, "form": form or None, "createdAt": created, "unit": unit}
 
     for f in files:
         if f.suffix == ".csv":
@@ -153,7 +201,7 @@ def load_labels(paths: list[Path]) -> dict[str, dict]:
             for line in f.read_text(encoding="utf-8").splitlines():
                 if line.strip():
                     d = json.loads(line)
-                    put(d.get("set_id"), d.get("actual_reps"), d.get("reps_source"), d.get("form"), d.get("created_at"))
+                    put(d.get("set_id"), d.get("actual_reps"), d.get("reps_source"), d.get("form"), d.get("created_at"), d.get("rep_unit"))
     return labels
 
 
@@ -211,6 +259,13 @@ def convert(log: dict, source: str, floor_exercises: set[str], rep_rules: dict) 
         "thermalChanges": [[int(c.get("t_ms", 0)), c.get("status")] for c in (log.get("thermal") or {}).get("changes", [])]
         if isinstance(log.get("thermal"), dict) else None,
         "appVersion": log.get("app_version"), "truthReps": None, "truthSource": None, "confirmedReps": None, "labelForm": None,
+        # 표시 단위 — 로그에 없으면 옛 로그(사이클 = 1회). 라벨은 이 단위로 적혀 있다(attach_labels)
+        "repUnit": "cycle", "cyclesPerRep": 1, "repUnitFrom": "default(카운터 없음)",
+        "currentUnit": current_unit(exercise, floor), "loggedCompleted": None, "loggedHalfPending": None,
+        "loggedDisplayedReps": None, "loggedUnitConsistent": None,
+        "truthDisplayedReps": None, "truthCyclesMin": None, "truthCyclesMax": None, "truthCyclesExact": None, "truthUnit": None,
+        "confirmedDisplayedReps": None, "confirmedCyclesMin": None, "confirmedCyclesMax": None, "confirmedMatchesLog": None,
+        "labelUnit": None, "labelUnitMatchesLog": None,
         "logFile": source,
     }
     if exercise in rep_rules:
@@ -252,6 +307,19 @@ def convert(log: dict, source: str, floor_exercises: set[str], rep_rules: dict) 
             meta["loggedSignal"] = str(signal)
         if isinstance(valid, list):
             meta["loggedValid"] = ",".join("null" if v is None else ("true" if v else "false") for v in valid)
+        # 표시 단위 — count 는 사이클, completed 는 화면 수. 모르는 단위 이름은 추측하지 않고 그대로 두되 사이클 수는 로그 값만 믿는다
+        unit = reps.get("unit")
+        count = int(reps["count"])
+        if unit is not None:
+            cpr = int(reps.get("cycles_per_rep") or UNIT_CYCLES.get(str(unit), 1))
+            completed = reps.get("completed")
+            half = bool(reps.get("half_pending", False))
+            entry.update({"repUnit": str(unit), "cyclesPerRep": cpr, "repUnitFrom": "log",
+                          "loggedCompleted": None if completed is None else int(completed), "loggedHalfPending": half,
+                          "loggedDisplayedReps": int(completed) if completed is not None else count // cpr,
+                          "loggedUnitConsistent": (completed is None or int(completed) == count // cpr) and half == (count % cpr != 0)})
+        else:
+            entry.update({"repUnitFrom": "default(옛 로그 = 사이클)", "loggedDisplayedReps": count})
 
     lines = [f"# setlog_captures.py — {set_id} ({source})",
              "H\t" + "\t".join(f"{k}={str(v).replace(chr(9), ' ')}" for k, v in meta.items())]
@@ -267,18 +335,31 @@ def convert(log: dict, source: str, floor_exercises: set[str], rep_rules: dict) 
 
 
 def attach_labels(entry: dict, labels: dict[str, dict], truth_confirmed: bool) -> None:
+    """라벨은 그 세트의 화면 단위(entry repUnit)다. *DisplayedReps = 라벨 그대로, *CyclesMin~Max = 사이클 범위(라벨 × cyclesPerRep ~
+    짝 없이 끝난 한쪽까지), *Reps = 범위가 한 값일 때만 그 사이클 수(아니면 None — run_replay 가 정확한 정답으로 쓴다). 사이클 단위면 넷이 같다."""
     lab = labels.get(entry["setId"])
     if not lab:
         return
     entry["labelForm"] = lab["form"]
+    if lab.get("unit") is not None:
+        entry["labelUnit"] = lab["unit"]
+        entry["labelUnitMatchesLog"] = lab["unit"] == (entry.get("repUnit") or "cycle")
     if lab["reps"] is None:
         return
+    reps, cpr = int(lab["reps"]), int(entry.get("cyclesPerRep") or 1)
+    lo, hi = reps * cpr, reps * cpr + (cpr - 1)
+    exact = lo if lo == hi else None
     if lab["source"] == "confirmed":
-        entry["confirmedReps"] = lab["reps"]
-        if truth_confirmed:
-            entry["truthReps"], entry["truthSource"] = lab["reps"], "confirmed(순환)"
+        entry.update({"confirmedReps": exact, "confirmedDisplayedReps": reps, "confirmedCyclesMin": lo, "confirmedCyclesMax": hi,
+                      # 순환 라벨은 화면 수와 같아야 한다 — 같은 단위(화면 단위)로 비교한다
+                      "confirmedMatchesLog": None if entry.get("loggedDisplayedReps") is None else reps == entry["loggedDisplayedReps"]})
+        if not truth_confirmed:
+            return
+        source = "confirmed(순환)"
     else:
-        entry["truthReps"], entry["truthSource"] = lab["reps"], lab["source"] or "label"
+        source = lab["source"] or "label"
+    entry.update({"truthReps": exact, "truthSource": source, "truthDisplayedReps": reps, "truthCyclesMin": lo, "truthCyclesMax": hi,
+                  "truthCyclesExact": lo == hi, "truthUnit": entry.get("repUnit") or "cycle"})
 
 
 def build(inputs: list[Path], out: Path, label_paths: list[Path], since: str | None = None, until: str | None = None,
@@ -388,6 +469,12 @@ def encode_setlog(log: dict, legacy: bool = False) -> str:
             s += ",\"min\":[" + ",".join(_kt_num(x) for x in reps["min"]) + "]"
             s += ",\"max\":[" + ",".join(_kt_num(x) for x in reps["max"]) + "]"
             s += ",\"valid\":[" + ",".join("null" if x is None else ("true" if x else "false") for x in reps["valid"]) + "]"
+        if not legacy and reps.get("unit") is not None:   # 표시 단위(사용자 결정 2026-09-24) — SetLogJson 과 같이 valid 뒤, engine 앞
+            s += f",\"unit\":{_kt_str(reps['unit'])},\"cycles_per_rep\":{reps['cycles_per_rep']}"
+            if reps.get("completed") is not None:
+                s += f",\"completed\":{reps['completed']}"
+            if reps.get("half_pending"):   # true 일 때만 키가 있다
+                s += ",\"half_pending\":true"
         if not legacy and reps.get("engine") is not None:   # spec §58 단계 0 — SetLogJson 의 필드 순서
             c = reps["config"]
             s += f",\"engine\":{_kt_str(reps['engine'])},\"config\":{{\"feature\":{_kt_str(c['feature'])},\"min_amp\":{_kt_num(c['min_amp'])}"
@@ -513,7 +600,15 @@ def _golden_logs() -> list[dict]:
                      "engine": "hysteresis_v1", "config": _config("knee_mean", "hysteresis_v1"), "resets": [],
                      "pending": {"unconfirmed": (900, 300, 92.25, 170.0, False), "in_progress": (600, 90.0, 168.5),
                                  "dropped": [(250, 0, 120.0, 170.0, True)]}}}
-    return [base, core]
+    # 표시 단위 좌우 짝: 바벨 런지 3걸음 [충족, 미달, 충족] → 1회(미달 쌍) + 세트 끝에 남은 한쪽. 수·배열은 사이클 그대로
+    lunge_config = {"feature": "knee_minside", "min_amp": 35.0, "refractory_ms": 1200, "max_gap_ms": 1500, "complete_on_return": True,
+                    "rom_direction": "min", "rom_threshold": 112.0852, "rom_tier": "validated"}
+    pair = {**base, "set_id": "20260924T021000-gold0003", "created_at": "2026-09-24T02:10:30Z", "exercise": "바벨 런지",
+            "reps": {"count": 3, "invalid": 1, "signal": "knee_minside", "t_ms": [300, 600, 900], "min": [100.5, 118.75, 95.5],
+                     "max": [170.0, 168.0, 169.5], "valid": [True, False, True],
+                     "unit": "side_pair", "cycles_per_rep": 2, "completed": 1, "half_pending": True,
+                     "engine": "return_v1", "config": lunge_config, "resets": [(450, "pause", 300)]}}
+    return [base, core, pair]
 
 
 def _synthetic_logs(pass2: dict | None) -> tuple[list[str], list[str], list[str]]:
@@ -609,6 +704,109 @@ def _synthetic_logs(pass2: dict | None) -> tuple[list[str], list[str], list[str]
     labels = [json.dumps({"set_id": "20260924T011000-dddd0004", "exercise": "바벨 스쿼트", "actual_reps": None,
                           "reps_source": None, "form": "good", "created_at": "2026-09-24T01:20:20Z"}, ensure_ascii=False)]
     return logs, truth, labels
+
+
+def _side_pair_self_test(work: Path, check) -> None:
+    """좌우 짝 표시 단위(사용자 결정 2026-09-24): 홀수 걸음 로그(짝 없이 남은 한쪽) · 라벨 단위 변환 · 같은 단위의 파리티 · 옛 로그 기본값."""
+    import run_replay  # noqa: PLC0415
+
+    rng = random.Random(20260925)
+    # 런지 5걸음(상단 1 s 멈춤 — 레거시도 다 센다): 사이클 5 = 화면 2회 + 짝 없는 한쪽
+    frames = _squat_frames(rng, reps=5, period_s=3.0, still_s=2.5, bottom=95.0, rest=170.0, hold_s=1.0)
+    base = {"subject_id": "s-test0001", "exercise": "스텝 포워드 다이나믹 런지", "note": "session:런지 assessment_end_ms=20000 ",
+            "mode": "coach", "measurements": ["참고 · 합성"], "frames": frames}
+    ids = {"P1": "20260925T010000-pair0001", "P2": "20260925T010500-pair0002", "P3": "20260925T011000-pair0003",
+           "P4": "20260925T011500-pair0004"}
+
+    def logs(block_of) -> list[str]:
+        out = []
+        for k, (key, sid) in enumerate(ids.items()):
+            out.append(encode_setlog({**base, "set_id": sid, "created_at": f"2026-09-25T01:{k * 5:02d}:30Z", "reps": block_of(key)}))
+        return out
+
+    # 1차: 카운트 자리 0 인 레거시 로그 → 재생으로 앱(같은 카운터)이 적었을 사이클 수를 얻는다
+    d1 = work / "pair_logs1"
+    d1.mkdir(parents=True, exist_ok=True)
+    (d1 / "sets-20260925.jsonl").write_text("\n".join(logs(lambda k: None)) + "\n", encoding="utf-8")
+    idx1 = build([d1], work / "pair_cap1", [d1])
+    _, res1, _ = run_replay.replay_index(work / "pair_cap1", work / "pair_res1", {"live"})
+    r = res1[f"{run_replay.set_key(idx1['sets'][0])}|live"]
+    c = r["reps"]
+    times = list(r["publishedMs"])
+
+    def block(key: str) -> dict:
+        b = {"count": c, "invalid": 0, "signal": "knee_mean", "t_ms": times, "min": [95.0] * c, "max": [170.0] * c,
+             "valid": [None] * c, "engine": "return_v1", "config": _config("knee_mean", "return_v1"), "resets": []}
+        b["config"].pop("rom_direction")   # 런지 knee_mean 은 ROM 기준이 없다(rom_tier reference)
+        if key == "P4":
+            return b                                            # 표시 단위 이전 빌드: unit 키 없음(그때 화면 = 걸음)
+        b.update({"unit": "side_pair", "cycles_per_rep": 2, "completed": c // 2, "half_pending": c % 2 == 1})
+        if key == "P3":
+            b["completed"] = c // 2 + 1                         # 음성 대조: 화면 수가 사이클과 안 맞는 로그
+        return b
+
+    d2 = work / "pair_logs2"
+    d2.mkdir(parents=True, exist_ok=True)
+    (d2 / "sets-20260925.jsonl").write_text("\n".join(logs(block)) + "\n", encoding="utf-8")
+    # 라벨은 화면 단위: P1 edited 2(쌍), P2 confirmed 2(쌍 — 화면 수와 같다), P4 edited 5(옛 빌드 화면 = 걸음)
+    (d2 / "rep_truth.csv").write_text("\n".join([
+        "set_id,reps_min,reps_max,exercise,form,source,created_at",
+        f"{ids['P1']},2,2,스텝 포워드 다이나믹 런지,,edited,2026-09-25T02:00:00Z",
+        f"{ids['P2']},2,2,스텝 포워드 다이나믹 런지,,confirmed,2026-09-25T02:00:01Z",
+        f"{ids['P4']},5,5,스텝 포워드 다이나믹 런지,,edited,2026-09-25T02:00:02Z"]) + "\n", encoding="utf-8")
+    # 앱은 같은 라벨을 labels/set_labels.jsonl 에도 쓰고 거기에만 화면 단위(rep_unit)를 적는다(SetLabelStore). P3 는 폼만 + 로그와 다른 단위(음성 대조)
+    (d2 / "labels").mkdir(exist_ok=True)
+    (d2 / "labels" / "set_labels.jsonl").write_text("\n".join([
+        json.dumps({"set_id": ids["P1"], "exercise": "스텝 포워드 다이나믹 런지", "actual_reps": 2, "reps_source": "edited", "form": None,
+                    "created_at": "2026-09-25T02:00:00Z", "rep_unit": "side_pair"}, ensure_ascii=False),
+        json.dumps({"set_id": ids["P3"], "exercise": "스텝 포워드 다이나믹 런지", "actual_reps": None, "reps_source": None, "form": "good",
+                    "created_at": "2026-09-25T02:00:03Z", "rep_unit": "cycle"}, ensure_ascii=False)]) + "\n", encoding="utf-8")
+    idx = build([d2], work / "pair_cap2", [d2])
+    by = {e["setId"][-8:]: e for e in idx["sets"]}
+    p1, p2, p3, p4 = by["pair0001"], by["pair0002"], by["pair0003"], by["pair0004"]
+    check("짝: 합성 5걸음을 레거시 카운터가 5사이클로 센다(홀수 — 짝 없는 한쪽이 남는다)", c == 5, str(c))
+    check("짝: 로그의 unit·cycles_per_rep·completed·half_pending → index (사이클 수는 그대로)",
+          p1["repUnit"] == "side_pair" and p1["cyclesPerRep"] == 2 and p1["repUnitFrom"] == "log" and p1["loggedReps"] == c
+          and p1["loggedCompleted"] == c // 2 and p1["loggedHalfPending"] is (c % 2 == 1)
+          and p1["loggedDisplayedReps"] == c // 2 and p1["loggedUnitConsistent"] is True and p1["currentUnit"] == "side_pair",
+          json.dumps({k: p1[k] for k in ("repUnit", "cyclesPerRep", "loggedReps", "loggedCompleted", "loggedHalfPending",
+                                          "loggedDisplayedReps", "loggedUnitConsistent")}, ensure_ascii=False))
+    check("짝: edited 2쌍 → 화면 단위 2 · 사이클 4~5(짝 없는 한쪽) · 정확하지 않아 사이클 정답(truthReps)은 없음",
+          p1["truthDisplayedReps"] == 2 and p1["truthReps"] is None and p1["truthCyclesMin"] == 4 and p1["truthCyclesMax"] == 5
+          and p1["truthCyclesExact"] is False and p1["truthUnit"] == "side_pair" and p1["truthSource"] == "edited",
+          f"{p1['truthDisplayedReps']} {p1['truthReps']} {p1['truthCyclesMin']}~{p1['truthCyclesMax']} {p1['truthCyclesExact']}")
+    check("짝: confirmed 2쌍 → 정답 아님, 사이클 4~5(정확한 사이클 수 없음), 화면 수(completed)와 같은 단위로 비교해 일치",
+          p2["truthReps"] is None and p2["confirmedDisplayedReps"] == 2 and p2["confirmedReps"] is None
+          and p2["confirmedCyclesMin"] == 4 and p2["confirmedCyclesMax"] == 5 and p2["confirmedMatchesLog"] is True,
+          f"{p2['confirmedDisplayedReps']} {p2['confirmedReps']} {p2['confirmedCyclesMin']}~{p2['confirmedCyclesMax']} {p2['confirmedMatchesLog']}")
+    check("짝: 라벨 jsonl 의 rep_unit → labelUnit, 로그 단위와 대조(P1 일치 · P3 불일치 · P4 단위 없음), csv 줄이 단위를 지우지 않는다",
+          p1["labelUnit"] == "side_pair" and p1["labelUnitMatchesLog"] is True and p3["labelUnit"] == "cycle"
+          and p3["labelUnitMatchesLog"] is False and p3["labelForm"] == "good" and p3["truthReps"] is None
+          and p4["labelUnit"] is None and p4["labelUnitMatchesLog"] is None,
+          f"{p1['labelUnit']} {p1['labelUnitMatchesLog']} · {p3['labelUnit']} {p3['labelUnitMatchesLog']} · {p4['labelUnit']}")
+    check("짝(음성 대조): completed 가 count // 2 와 다르면 loggedUnitConsistent=false", p3["loggedUnitConsistent"] is False)
+    check("짝: unit 없는 옛 런지 로그 → 사이클 단위(출처 표시), 라벨 5 = 사이클 5 정확, 지금 앱 단위는 side_pair",
+          p4["repUnit"] == "cycle" and p4["repUnitFrom"].startswith("default") and p4["loggedDisplayedReps"] == c
+          and p4["truthReps"] == 5 and p4["truthDisplayedReps"] == 5 and p4["truthCyclesExact"] is True
+          and p4["currentUnit"] == "side_pair" and p4["loggedHalfPending"] is None)
+    _, res, _ = run_replay.replay_index(work / "pair_cap2", work / "pair_res2", {"live"})
+    q1 = res[f"{run_replay.set_key(p1)}|live"]
+    check("짝: 재생 파리티는 사이클끼리(재생 5 = 로그 count 5), 화면 수는 재생 // 2 = completed",
+          q1.get("parityCount") is True and q1.get("parityTimes") is True and q1["reps"] // p1["cyclesPerRep"] == p1["loggedCompleted"],
+          f"재생 {q1['reps']} 로그 {q1.get('loggedReps')} completed {p1['loggedCompleted']}")
+    # run_replay 는 truthReps 를 정확한 사이클 정답으로 채점한다 — 쌍 라벨(P1: 2쌍, 실제 5걸음)을 4로 넣으면 정직한 5걸음이 과다로 채점된다
+    rows = run_replay.set_rows(idx["sets"], res, "live", None)
+    by_row = {r["set"]: r for r in rows}
+    m = run_replay.metrics(rows)
+    check("짝: run_replay 채점 — 쌍 라벨 세트는 사이클 정답 없음(unlabeled), 정확한 옛 라벨(P4 5)만 채점해 과다 0",
+          by_row[p1["capture"]]["truth"] is None and by_row[p1["capture"]]["detected"] == c and by_row[p4["capture"]]["truth"] == 5
+          and m["sets"] == 1 and m["unlabeled"] == 3 and m["over"] == 0 and m["exact"] == 1.0,
+          json.dumps({k: m.get(k) for k in ("sets", "unlabeled", "exact", "over")}))
+    apps, aihub = kotlin_side_pair_exercises()
+    check("짝: SIDE_PAIR_AIHUB = ExerciseProfiles.kt lunges(SIDE_PAIR) → postureExerciseMap (코틀린과 어긋나지 않음)",
+          apps == set(SIDE_PAIR_APP) and aihub == set(SIDE_PAIR_AIHUB), f"{apps} → {aihub}")
+    check("짝: 바닥 경로·다른 종목은 사이클 단위", current_unit("바벨 런지", True) == "cycle" and current_unit("바벨 스쿼트", False) == "cycle"
+          and current_unit("덤벨 컬", False) == "cycle")
 
 
 def self_test(work: Path) -> int:
@@ -737,11 +935,11 @@ def self_test(work: Path) -> int:
     golden = [ln for ln in GOLDEN_FIXTURE.read_text(encoding="utf-8").splitlines() if ln.strip() and not ln.startswith("#")]
     mine = [encode_setlog(d) for d in _golden_logs()]
     diff = next((i for i, (x, y) in enumerate(zip(golden, mine)) if x != y), None)
-    check("골든: 파이썬 인코더 사본 = 코틀린 SetLogJson 줄 (바이트까지)", len(golden) == len(mine) == 2 and diff is None,
+    check("골든: 파이썬 인코더 사본 = 코틀린 SetLogJson 줄 (바이트까지)", len(golden) == len(mine) == 3 and diff is None,
           "" if diff is None else f"줄 {diff + 1}: …{next(golden[diff][k-40:k+40] for k in range(len(golden[diff])) if k >= len(mine[diff]) or golden[diff][k] != mine[diff][k])}…")
     floor_ex, rep_rules = rule_tables()
     gl = [convert(parse_line(ln), f"golden:{i}", floor_ex, rep_rules) for i, ln in enumerate(golden, 1)]
-    (g0_text, g0), (_, g1) = gl
+    (g0_text, g0), (_, g1) = gl[:2]
     check("골든: 변환기가 코틀린 줄의 §58 필드를 읽는다 — 리셋(누른 시각·after)·열·버전",
           g0["loggedEngine"] == "return_v1" and g0["loggedResets"] == [[-120, "camera_switch"], [410, "pause"]]
           and g0["loggedResetsAfterMs"] == [None, 300] and "loggedResetsAfterMs=none,300" in g0_text
@@ -753,6 +951,15 @@ def self_test(work: Path) -> int:
           and c1.get("later_window_ms", "missing") is None and c1.get("min_ratio") == 0.5 and c1.get("max_ratio") == 2
           and c1.get("refractory_ms") == 800 and g1["loggedPendingMs"] == 900 and g1["loggedDroppedMs"] == [250]
           and g1["loggedInProgress"] is True, json.dumps(c1, ensure_ascii=False))
+
+    g2 = gl[2][1]
+    check("골든: 좌우 짝 줄 — 사이클 3(count·배열 그대로) · 화면 1 · 짝 없는 한쪽 · 단위 일치 · 옛 줄은 사이클 기본값",
+          g2["repUnit"] == "side_pair" and g2["cyclesPerRep"] == 2 and g2["loggedReps"] == 3 and g2["loggedCompleted"] == 1
+          and g2["loggedHalfPending"] is True and g2["loggedDisplayedReps"] == 1 and g2["loggedUnitConsistent"] is True
+          and g2["loggedValid"] == [True, False, True] and g0["repUnit"] == "cycle" and g0["loggedDisplayedReps"] == 1
+          and g0["loggedHalfPending"] is None, json.dumps({k: g2[k] for k in ("repUnit", "loggedReps", "loggedCompleted",
+                                                                              "loggedHalfPending", "loggedUnitConsistent")}))
+    _side_pair_self_test(work, check)
 
     summary = run_replay.summarize(idx, res, names, 10, None, 200, 1)
     live = summary["configs"]["live"]

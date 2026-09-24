@@ -191,10 +191,13 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
         store.saveHistory(workoutHistory)
 
-        val exercise = sessionPostureReports.values.firstOrNull { it.setId == setId }?.exercise
+        val report = sessionPostureReports.values.firstOrNull { it.setId == setId }
+        val exercise = report?.exercise
             ?: workoutHistory.asSequence().flatMap { it.items.asSequence() }.firstOrNull { it.postureCorrection?.setId == setId }?.workoutName
             ?: ""
-        val label = SetSelfLabel(setId = setId, exercise = exercise, actualReps = actualReps, repsSource = repsSource, form = form, createdAtIso = SetLog.nowIso())
+        // 라벨의 단위 = 그 세트 화면의 횟수 단위(런지류는 좌우 한 쌍, spec §59). 리포트가 이미 비워졌으면 모름(null — 세트 로그의 reps.unit 이 정본)
+        val label = SetSelfLabel(setId = setId, exercise = exercise, actualReps = actualReps, repsSource = repsSource, form = form,
+            createdAtIso = SetLog.nowIso(), repUnit = report?.repUnit?.key)
         val labelStore = SetLabelStore(getApplication<Application>())
         // 파일 IO 는 메인 스레드 밖에서 — SetLogStore 저장과 같은 이유
         Thread { runCatching { labelStore.append(label) } }.start()

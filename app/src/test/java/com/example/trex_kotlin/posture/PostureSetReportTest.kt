@@ -344,6 +344,37 @@ class PostureSetReportTest {
         assertEquals("참고 · 검출 6회 · 범위 미판정", crunch.repDetailLine)
     }
 
+    // ---- 사용자 결정(2026-09-24): 런지류는 좌우 한 번씩 = 1회 — 리포트의 수는 표시 단위(짝), 단위는 렙 줄에서만 밝힌다
+
+    @Test
+    fun sidePairRepLineNamesTheUnitAndTheUncountedHalf() {
+        fun lunge(mode: CoachMode, valid: Int, partial: Int, tier: RepRomTier, half: Boolean = false, unit: RepUnit? = RepUnit.SIDE_PAIR) =
+            PostureSetReport.build("set-4", "바벨 런지", "바벨 런지", mode, 40, false, listOf(res(kneeRule, Verdict.OK)), emptyList(),
+                valid, partial, 8000L, repRom = tier, repUnit = unit, repHalfPending = half)
+        // 검증 ROM(바벨 런지): '무효 2' 는 걸음이 아니라 짝의 수 — 단위를 붙인다. 판정 말(유효·무효)은 그대로(RepRomTier)
+        assertEquals("렙 유효 8 · 무효 2 · 좌우 한 번씩 = 1회", lunge(CoachMode.COACH, 8, 2, RepRomTier.VALIDATED).repDetailLine)
+        // 기준 없음(런지)·미검증(크로스 런지·사이드 런지): 같은 말 + 단위
+        assertEquals("참고 · 검출 10회 · 범위 미판정 · 좌우 한 번씩 = 1회", lunge(CoachMode.COACH, 10, 0, RepRomTier.NONE).repDetailLine)
+        assertEquals("참고 · 검출 10회 · 범위 미달 1회 · 좌우 한 번씩 = 1회", lunge(CoachMode.COACH, 9, 1, RepRomTier.REFERENCE).repDetailLine)
+        // 세트 끝에 짝 없이 남은 한쪽: 세지 않았다고 화면에 밝힌다
+        assertEquals("참고 · 검출 9회 · 범위 미판정 · 좌우 한 번씩 = 1회 · 반대쪽 없이 끝난 한쪽은 세지 않음",
+            lunge(CoachMode.COACH, 9, 0, RepRomTier.NONE, half = true).repDetailLine)
+        val track = lunge(CoachMode.TRACK, 8, 2, RepRomTier.VALIDATED, half = true)
+        assertEquals("10렙 · 파셜 2 · 좌우 한 번씩 = 1회 · 반대쪽 없이 끝난 한쪽은 세지 않음", track.repDetailLine)
+        // 음성·기록 한 줄은 그대로 — 수는 HUD 와 같은 단위이고, 단위·반쪽 안내는 화면 전용이다(원칙 #6)
+        assertEquals("10렙 · 파셜 2 · 템포 8.0초", track.summaryLine)
+        assertEquals("10렙 파셜 2, 템포 8.0초.", track.voiceLine)
+        val coach = lunge(CoachMode.COACH, 9, 0, RepRomTier.NONE, half = true)
+        assertFalse(coach.voiceLine.contains("좌우") || coach.voiceLine.contains("한쪽") || coach.voiceLine.contains("반대쪽"))
+        // 사이클 단위·모름(null)은 지금과 같은 줄 — 단위 말이 붙지 않고, 반쪽 플래그도 짝 단위가 아니면 쓰지 않는다
+        for (unit in listOf(RepUnit.CYCLE, null)) {
+            assertEquals("참고 · 검출 10회 · 범위 미판정", lunge(CoachMode.COACH, 10, 0, RepRomTier.NONE, half = true, unit = unit).repDetailLine)
+        }
+        // 렙 카운터 미적용이면 단위가 있어도 렙 줄이 없다
+        assertNull(PostureSetReport.build("set-5", "바벨 런지", "바벨 런지", CoachMode.COACH, 40, false, emptyList(), emptyList(),
+            null, null, null, repUnit = RepUnit.SIDE_PAIR, repHalfPending = true).repDetailLine)
+    }
+
     @Test
     fun formLabelRoundTrips() {
         for (f in FormLabel.values()) assertEquals(f, FormLabel.from(f.key))

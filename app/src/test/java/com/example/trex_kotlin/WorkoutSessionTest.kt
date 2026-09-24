@@ -20,6 +20,59 @@ class WorkoutSessionTest {
         assertEquals(48,timing.workSeconds);assertEquals(264,timing.totalSeconds)
         assertEquals(5,workout().durationMinutes())
     }
+    @Test fun lungeRepIsALeftPlusRightPairSoItsPaceIsTwoSteps() {
+        // 사용자 결정(2026-09-24): 런지류 1회 = 왼쪽 + 오른쪽 한 번씩(두 걸음). 한 걸음 4초 × 2 = 8초 — 목표 10회 = 20걸음 = 80초.
+        for (name in listOf("런지","바벨 런지","사이드 런지","크로스 런지")) {
+            assertEquals(name,8,WorkoutPacing.secondsPerRep(name,"하체"))
+            assertEquals(name,80,Workout("l",name,"10회 × 3세트","999분",false,"하체").timing().workSeconds)
+        }
+        // 교대 동작이어도 평균 신호로 한 사이클 = 1회인 종목과 다른 종목은 그대로
+        assertEquals(3,WorkoutPacing.secondsPerRep("덤벨 컬","상체"))
+        assertEquals(3,WorkoutPacing.secondsPerRep("스탠딩 니업","코어"))
+        assertEquals(4,WorkoutPacing.secondsPerRep("바벨 스쿼트","하체"))
+        assertEquals(4,WorkoutPacing.secondsPerRep("불가리안 스플릿 스쿼트","하체"))   // 카탈로그 밖 이름(프로필 없음) = 사이클 단위
+        // 사용자가 정한 1회 시간은 그대로 쓴다
+        assertEquals(40,Workout("l","런지","10회 × 1세트","999분",false,"하체",secondsPerRep=4).timing().workSeconds)
+    }
+    /**
+     * 사용자 결정(2026-09-24): "두 쪽 진행이 전부 완료되어야지" — 카운터 사이클(걸음) → 표시 단위(RepUnitAccumulator.onCounterFrame, PostureLive 분석
+     * 루프가 부르는 그 함수) → onRepDetected 와 같은 +1 → SessionProgress.targetReached(자동 진행 조건)의 실제 경로를 잇는다.
+     * [name] 은 앱 운동 이름(프로필), [aihub] 는 카운터 종목(PostureLive 의 postureExerciseMap 값).
+     * @return 걸음(반복)마다 그 뒤의 목표 도달 여부.
+     */
+    private fun autoAdvanceAfterEachMovement(name: String, target: Int, movements: Int, pauseAfter: Int? = null, aihub: String = name): List<Boolean> {
+        val steps=buildSessionSteps(listOf(Workout("w",name,"${target}회 × 1세트","999분",false,"하체")))
+        val work=steps.first{it.phase==SessionPhase.WORK}
+        var p=SessionProgress(work.token,0)
+        val counter=com.example.trex_kotlin.posture.RepCounter.forSession(aihub,floor=false)!!
+        val acc=com.example.trex_kotlin.posture.RepUnitAccumulator(
+            com.example.trex_kotlin.posture.RepUnit.forSession(com.example.trex_kotlin.posture.ExerciseProfiles.forName(name),floor=false))
+        val records=ArrayList<com.example.trex_kotlin.posture.RepRecord>()
+        var t=0L
+        fun frame(v: Float) {
+            if(counter.onFrame(t,v)) {
+                val tally=com.example.trex_kotlin.posture.RepUnitAccumulator.onCounterFrame(counter,t,records,acc)
+                repeat(tally.completedReps){ p=p.setRepetitions(steps,work.token,p.repetitions+1) }   // TrexApp onRepDetected
+            }
+            t+=300L
+        }
+        repeat(8){frame(170f)}
+        return (1..movements).map { k ->
+            for(i in 0..8) frame(170f-75f*kotlin.math.sin(Math.PI*i/8).toFloat())
+            repeat(5){frame(170f)}
+            if(pauseAfter==k){counter.resetCycle();acc.onCounterCycleReset();repeat(6){frame(170f)}}
+            p.targetReached(work)
+        }
+    }
+    @Test fun lungeAutoAdvanceWaitsForTheSecondSideOfTheLastPair() {
+        // 목표 3회 = 왼 3 + 오른 3: 5걸음째(마지막 쌍의 첫 쪽)까지는 넘어가지 않고 6걸음째에 넘어간다
+        assertEquals(listOf(false,false,false,false,false,true),autoAdvanceAfterEachMovement("바벨 런지",3,6))
+        assertEquals(listOf(false,false,false,false,false,true),autoAdvanceAfterEachMovement("런지",3,6,aihub="스텝 포워드 다이나믹 런지"))
+        // 쪽 사이 일시정지는 끝낸 첫 쪽을 지운다거나 한 걸음을 1회로 세지 않는다
+        assertEquals(listOf(false,false,false,true),autoAdvanceAfterEachMovement("바벨 런지",2,4,pauseAfter=1))
+        // 사이클 단위 종목은 반복마다 1회 — 목표 2회는 둘째 반복에서
+        assertEquals(listOf(false,true,true),autoAdvanceAfterEachMovement("바벨 스쿼트",2,3))
+    }
     @Test fun holdDurationIsNotMultipliedByRepPace() {
         assertEquals(30,workout("30초 × 1세트").timing().totalSeconds)
         assertEquals(360,workout("전신 6분").timing().workSeconds)

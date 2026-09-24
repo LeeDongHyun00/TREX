@@ -27,6 +27,9 @@ enum class SetVerdict { CLEAN, ISSUE, RECOVERED, REFERENCE, UNJUDGED }
  *                '무효'·'파셜' 이라는 말도, 음성도 없다(베타 규칙과 같은 정책 — §28 오탐이 전부 미보정 기준에서 나왔다).
  *  - [VALIDATED] AIHub ROM 조건으로 판별력이 검증된 기준. 지금까지의 유효/무효(COACH)·파셜(TRACK) 표기와 발화를 유지한다.
  * 어느 단계든 수행 횟수는 줄이지 않는다 — ROM 은 표시 정책이지 카운트가 아니다(진행·자동 넘김은 검출 전체, spec §42).
+ * 좌우 짝 단위([RepUnit.SIDE_PAIR], 런지류)에서 한 회의 판정은 두 걸음(사이클)의 판정을 합친 것이다(`RepUnitAccumulator.combine` — 한쪽이라도 미달이면 미달).
+ * [VALIDATED] 는 걸음 하나에서 검증된 기준이라 짝 단위의 오판정률은 따로 재지 않았다(걸음마다 p 면 짝은 약 2p) — 짝의 '무효' 는
+ * "두 걸음 중 하나라도 검증 기준에 못 미쳤다" 는 뜻이다(spec §59).
  */
 enum class RepRomTier {
     NONE, REFERENCE, VALIDATED;
@@ -112,8 +115,9 @@ data class PostureSetReport(
     /** 랭킹순 정렬된 전체 규칙 (ABSTAIN 포함). */
     val items: List<RuleOutcome>,
     /**
-     * 렙 카운터 미적용 종목이면 null. [repsValid] + [repsPartial] = 검출 전체(진행·자동 넘김에 쓰는 수, spec §42).
+     * 렙 카운터 미적용 종목이면 null. [repsValid] + [repsPartial] = 검출 전체(진행·자동 넘김에 쓰는 수, spec §42) — **표시 단위**([repUnit])다.
      * [repsValid] 는 "ROM 미달로 판정되지 않은 렙" 이다 — ROM 을 판정하지 않은 렙도 여기 들어가므로 이름만 보고 '유효' 라고 말하지 않는다.
+     * 좌우 짝 단위에서 1회의 판정은 두 쪽을 합친 것이다(한쪽이라도 미달이면 미달, 아니고 한쪽이라도 미판정이면 미판정 — `RepUnitAccumulator.combine`).
      */
     val repsValid: Int?,
     /** ROM 기준 미달로 판정된 렙 수. 어떤 말로 보일지는 [repRom] 이 정한다(NONE 이면 항상 0). */
@@ -122,6 +126,13 @@ data class PostureSetReport(
     val measurements: List<String> = emptyList(),
     /** 이 세트 카운터 신호의 ROM 판정 단계 (spec §58). null = 모름 → [RepRomTier.NONE] 으로 다룬다. */
     val repRom: RepRomTier? = null,
+    /**
+     * 표시 횟수 단위(사용자 결정 2026-09-24). null = 모름 → 사이클 단위로 다룬다. [repsValid]·[repsPartial]·[tempoMs] 가 이 단위다
+     * (템포 = 1회 완료 시각의 간격 — 좌우 짝이면 두 걸음).
+     */
+    val repUnit: RepUnit? = null,
+    /** 세트 끝에 반대쪽을 못 채운 한쪽이 남았다 — 세지 않았다. [RepUnit.SIDE_PAIR] 일 때만 의미가 있다. */
+    val repHalfPending: Boolean = false,
 ) {
     /** 실제로 판정한 규칙 수(OK+VIOLATION). accuracy 의 분모 — 유보를 정상으로 세지 않는다. */
     val judged: Int = items.count { it.overall == Verdict.OK || it.overall == Verdict.VIOLATION }
@@ -186,13 +197,20 @@ data class PostureSetReport(
     }
 
     /**
+     * 좌우 짝 단위의 렙 줄 꼬리 — 맨 숫자가 걸음 수로 읽히지 않게 단위를 밝히고("좌우 한 번씩 = 1회"), 세트 끝에 남은 한쪽이 있으면 세지 않았다고 적는다.
+     * '무효 2'·'범위 미달 2회' 도 걸음이 아니라 짝의 수다. 화면 전용 — 음성([voiceLine])·기록 한 줄([summaryLine])에는 붙이지 않는다(수는 HUD 와 같은 단위).
+     */
+    private val unitTail: List<String> = if (repUnit == RepUnit.SIDE_PAIR)
+        listOfNotNull(SIDE_PAIR_UNIT_HINT, SIDE_PAIR_HALF_UNCOUNTED.takeIf { repHalfPending }) else emptyList()
+
+    /**
      * 완료 화면 펼침의 렙 한 줄(렙 카운터 미적용이면 null). 수는 검출 전체이고, ROM 은 [romTier] 가 허락하는 말로만 붙인다.
      * COACH 는 검증 기준에서만 "렙 유효 n · 무효 m"(미달 0 도 적는다 — 기존 형식), 미검증 기준은 '참고 · 범위 미달 m회'(0 도 적는다),
      * 기준 없음은 '참고 · 검출 n회 · 범위 미판정' — 카운트 자체가 beta 라(HUD '자동 횟수 · 참고') 검증 기준이 없는 줄은 '참고' 로 연다.
      * TRACK 은 "n렙" + ROM 조각(미달 0 은 적지 않는다).
      */
     val repDetailLine: String? = reps?.let { n ->
-        when (mode) {
+        val head = when (mode) {
             CoachMode.COACH -> when (romTier) {
                 RepRomTier.VALIDATED -> "렙 유효 ${n - romShort} · 무효 $romShort"
                 RepRomTier.REFERENCE -> "참고 · 검출 ${n}회 · 범위 미달 ${romShort}회"
@@ -200,6 +218,7 @@ data class PostureSetReport(
             }
             CoachMode.TRACK -> listOfNotNull("${n}렙", trackRomText).joinToString(" · ")
         }
+        (listOf(head) + unitTail).joinToString(" · ")
     }
 
     /** 기록 화면 한 줄. */
@@ -259,6 +278,8 @@ data class PostureSetReport(
             tempoMs: Long?,
             measurements: List<String> = emptyList(),
             repRom: RepRomTier? = null,
+            repUnit: RepUnit? = null,
+            repHalfPending: Boolean = false,
         ): PostureSetReport {
             val onsetById = onset.associateBy { it.rule.id }
             val outcomes = results.map { rr ->
@@ -292,7 +313,7 @@ data class PostureSetReport(
             return PostureSetReport(
                 setId = setId, exercise = exercise, workoutName = workoutName, mode = mode, frames = frames,
                 baselineActive = baselineActive, items = sorted, measurements = measurements, repsValid = repsValid, repsPartial = repsPartial, tempoMs = tempoMs,
-                repRom = repRom,
+                repRom = repRom, repUnit = repUnit, repHalfPending = repHalfPending,
             )
         }
 

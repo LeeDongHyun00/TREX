@@ -236,7 +236,50 @@ class PostureSetLogTest {
             repPending = RepPendingState(RepCycle(900L, 300L, 92.25f, 170f), RepCandidate(600L, 90f, 168.5f)),
             repDropped = listOf(RepCycle(250L, 0L, 120f, 170f, byRedescent = true)),
         )
-        return listOf(base, newCore)
+        // 표시 단위 좌우 짝(사용자 결정 2026-09-24): 바벨 런지 3걸음 [충족, 미달, 충족] → 1회(미달 쌍) + 세트 끝에 남은 한쪽.
+        // count·t_ms·min/max/valid·invalid 는 사이클 단위 그대로, completed 는 화면에 보인 횟수. 두 쪽 사이의 일시정지 리셋 하나.
+        val sidePair = base.copy(
+            setId = "20260924T021000-gold0003", createdAtIso = "2026-09-24T02:10:30Z", exercise = "바벨 런지",
+            repCount = 3, repTimesMs = listOf(300L, 600L, 900L), repSignal = "knee_minside", repInvalid = 1,
+            repMins = listOf(100.5f, 118.75f, 95.5f), repMaxs = listOf(170f, 168f, 169.5f), repValid = listOf(true, false, true),
+            repEngine = RepEngineLog.of(RepCounter.forSession("바벨 런지", floor = false)!!),
+            repResets = listOf(RepResetEvent(450L, "pause", afterTMs = 300L)),
+            repUnit = RepUnit.SIDE_PAIR, repCompleted = 1, repHalfPending = true,
+        )
+        return listOf(base, newCore, sidePair)
+    }
+
+    @Test
+    fun encodesDisplayedUnitNextToCycleFields() {
+        // 사용자 결정(2026-09-24): 런지류는 좌우 한 번씩 = 1회. 로그의 count·렙별 배열·invalid 는 **사이클** 그대로(재생 파리티가 기댄다),
+        // 화면에 보인 수는 completed, 단위는 unit·cycles_per_rep, 세트 끝에 짝 없이 남은 한쪽은 half_pending(true 일 때만).
+        val samples = List(3) { sample(true, mapOf("knee_minside" to 170f)) }
+        val records = listOf(RepRecord(1000L, 100f, 170f, true), RepRecord(2500L, 118f, 169f, false), RepRecord(4000L, 99f, 170f, true))
+        val pair = SetLogJson.encode(SetLog.build("바벨 런지", samples, emptyList(), "mp_v0", "full", "GPU", true, 300L, now = Date(0L),
+            repCount = 3, repTimesMs = records.map { it.tMs }, repSignal = "knee_minside", repInvalid = 1, repRecords = records,
+            repUnit = RepUnit.SIDE_PAIR, repCompleted = 1, repHalfPending = true))
+        assertTrue(pair.contains("\"count\":3,\"invalid\":1,"))
+        assertTrue(pair.contains("\"valid\":[true,false,true],\"unit\":\"side_pair\",\"cycles_per_rep\":2,\"completed\":1,\"half_pending\":true}"))
+        // 짝을 다 채운 세트는 half_pending 키가 없다
+        val even = SetLogJson.encode(SetLog.build("바벨 런지", samples, emptyList(), "mp_v0", "full", "GPU", true, 300L, now = Date(0L),
+            repCount = 2, repTimesMs = listOf(1000L, 2500L), repSignal = "knee_minside", repInvalid = 0,
+            repUnit = RepUnit.SIDE_PAIR, repCompleted = 1))
+        assertTrue(even.contains("\"unit\":\"side_pair\",\"cycles_per_rep\":2,\"completed\":1}"))
+        assertFalse(even.contains("half_pending"))
+        // 사이클 단위: completed = count
+        val cycle = SetLogJson.encode(SetLog.build("바벨 스쿼트", samples, emptyList(), "mp_v0", "full", "GPU", true, 300L, now = Date(0L),
+            repCount = 2, repTimesMs = listOf(1000L, 2500L), repSignal = "knee_mean", repInvalid = 0,
+            repUnit = RepUnit.CYCLE, repCompleted = 2))
+        assertTrue(cycle.contains("\"unit\":\"cycle\",\"cycles_per_rep\":1,\"completed\":2}"))
+        assertFalse(cycle.contains("half_pending"))
+        // 단위를 주지 않으면(이전 로그) 키 자체가 없다 — 부재 = "그때는 늘 사이클 = 1회"
+        val old = SetLogJson.encode(SetLog.build("바벨 스쿼트", samples, emptyList(), "mp_v0", "full", "GPU", true, 300L, now = Date(0L), repCount = 2))
+        for (key in listOf("unit", "cycles_per_rep", "completed", "half_pending")) assertFalse(key, old.contains("\"$key\":"))
+        // 카운터가 없는 세트(reps 블록 없음)에는 단위도 없다
+        val noCounter = SetLogJson.encode(SetLog.build("플랭크", samples, emptyList(), "mp_v0", "full", "GPU", true, 300L, now = Date(0L),
+            repUnit = RepUnit.CYCLE, repCompleted = 0))
+        assertFalse(noCounter.contains("\"reps\":"))
+        assertFalse(noCounter.contains("\"unit\":"))
     }
 
     @Test

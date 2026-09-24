@@ -56,6 +56,27 @@ class SetLabelStoreTest {
         assertTrue(store.labelsFile.readLines(Charsets.UTF_8)[1].contains("\"reps_source\":\"edited\""))
     }
 
+    /**
+     * 런지류(좌우 짝, spec §59)의 라벨은 쌍의 수다 — jsonl 에 화면 단위를 함께 적는다. 단위를 모르면 키가 없다(이전 줄과 같은 형식),
+     * rep_truth.csv 는 열이 고정이라 단위를 넣지 않는다(rep_replay.py·setlog_captures.py 가 헤더로 읽는다).
+     */
+    @Test
+    fun sidePairLabelNamesItsDisplayUnitInJsonlOnly() {
+        val store = SetLabelStore(tmp.newFolder("posture_logs"))
+        store.append(SetSelfLabel("s1", "바벨 런지", 10, "edited", null, "2026-09-24T01:02:03Z", repUnit = RepUnit.SIDE_PAIR.key))
+        store.append(label("s2", 8, null))
+        val json = store.labelsFile.readLines(Charsets.UTF_8)
+        assertEquals(
+            "{\"set_id\":\"s1\",\"exercise\":\"바벨 런지\",\"actual_reps\":10,\"reps_source\":\"edited\",\"form\":null," +
+                "\"created_at\":\"2026-09-24T01:02:03Z\",\"rep_unit\":\"side_pair\"}",
+            json[0],
+        )
+        assertFalse(json[1].contains("rep_unit"))
+        val truth = store.truthFile.readLines(Charsets.UTF_8)
+        assertEquals(SetLabelStore.TRUTH_HEADER, truth[0])
+        assertEquals("s1,10,10,바벨 런지,,edited,2026-09-24T01:02:03Z", truth[1])
+    }
+
     @Test
     fun csvQuotesCommaAndQuote() {
         val store = SetLabelStore(tmp.newFolder("posture_logs"))
