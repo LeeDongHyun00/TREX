@@ -376,3 +376,12 @@ WorkoutHistoryItem.postureCorrection → 기록 화면
 - **MM-Fit 영상·REHAB24-6 은 zenodo.org 가 막혀 미실행**. 사용자가 따로 받는 중. 받으면 README §6 명령으로 MediaPipe 경로를 돌린다.
 - **설계**: `docs/REP_ENGINE_DESIGN.md`(§57). 프로토타입(`prototype_counter.py`)이 세트 정확 일치 0.97/0.95/0.98 을 냈다. 구현은 단계 1(신호 교체)부터.
 - 판단: MM-Fit 은 세트 횟수·음성 구간의 정답으로만 쓴다(피험자 홀드아웃, 항상-10 기준선 병기). ROM·깊이 기준은 MM-Fit 에 맞추지 않는다.
+
+## 2026-09-24 (후속) — 횟수 엔진 v2: 코어 구현(꺼짐)·런지 신호 교체·MM-Fit 영상·REHAB 사전 등록 (§57·§58)
+
+- **커밋**: `59878d3`(§56 후속 — 뺀 종목의 지난 기록 분류 보존), `9a48fd5`(앱: 새 코어 `RepHysteresis`+시작 확정 — **polarity 가 전부 null 이라 꺼져 있음**, `RepCounter.forSession`, 런지 `knee_mean` 교체+ROM 제거, ROM 표시 정직성 `RepRomTier`, 세트 로그 단계 0 필드, 런지류 준비 안내 "한쪽 1회 = 1회"), `da90111`(설계 v2·스트레스 배터리·폰 재생/채점 도구), `e366723`(MM-Fit 영상 결과 §16·REHAB 사전 등록 §17).
+- **빌드**: 이 컨테이너는 안드로이드 빌드 불가. 사용자 PC 첫 빌드(§56 시점)는 293개 중 1개 실패 → `59878d3` 로 고침. 새 앱 코드(`9a48fd5`)의 PC 빌드·유닛 테스트는 **요청해 둔 상태**(결과는 `research/external_rep_replay/results/pc_build_check.md` 의 "빌드 #1" 절로 온다). JVM 쪽: replay-jvm 41/41, posture 패키지 스크래치 컴파일 246/246.
+- **MM-Fit 영상(MediaPipe, 185세트)**: 새 코어 스쿼트 1.00 · 런지 0.97, 지금 앱 0.33 · 0.18(항상 10: 0.95 · 0.95). 컬은 `elbow_mean` 이 영상에서 0.00, `elbow_minside` 0.85 — 미해결. 세트 경계 헛카운트가 가장 큰 위험(런지 세트 앞 0.35/세트, 2/3 가 준비 동작이 첫 쌍으로 짝지어진 것). MM-Fit 영상 w16~w20 은 라벨보다 최대 5.8 s 앞서 `mmfit_align.py` 로 정답 창을 옮겨 채점한다.
+- **REHAB24-6**: 설계에 안 쓴 첫 자료. 판정 기준(설계 §17: P1~P4, 두 카메라)과 채점기를 **실행 전에** 커밋했고 PC 에 실행을 요청했다. CC BY-NC + 저장소 public → 파생 캡처는 올리지 않고 집계만.
+- **사용자 결정 대기**(설계 §15): #15 세트 경계 해법, #16 1회 세트 = 0회, #17 반복당 8 s 초과, #18 교대 정의, #19 신뢰 등급 표시, #20 RepCount 라이선스, #21 사람·기기(폰 USB), #22 바닥 참고 음성, #23 런지 자동 진행 유지 여부.
+- **폰이 필요한 것**: AIHub 이미지 폰 재생, Gate A(수집 절차 `research/external_rep_replay/REP_VALIDATION.md`), Gate B.
