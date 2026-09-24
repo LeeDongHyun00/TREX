@@ -1,0 +1,1721 @@
+{
+ "note": "MM-Fit 은 개발 데이터 — 타당성이지 성능 주장이 아니다. 3D 기준은 단안 추정이라 참 좌우 정답이 아니다.",
+ "constants": {
+  "stepZigzagDeg": 30.0,
+  "curlZigzagDeg": 35.0,
+  "deepBandDeg": 15.0,
+  "consistent": 0.8,
+  "setMarginMs": 500,
+  "liveWindowCapMs": 4000,
+  "refSamplePadMs": 150,
+  "appUp": [
+   0.0,
+   1.0,
+   0.0
+  ]
+ },
+ "q1": {
+  "MediaPipe 정렬": {
+   "live": {
+    "sets": 62,
+    "oddTruthSets": 2,
+    "step": {
+     "sets": 62,
+     "exact": 0.1774193548387097,
+     "within1": 0.4032258064516129,
+     "overSets": 0,
+     "underSets": 51,
+     "MAE": 3.064516129032258
+    },
+    "pair": {
+     "sets": 62,
+     "exact": 0.1935483870967742,
+     "within1": 0.6129032258064516,
+     "overSets": 0,
+     "underSets": 50,
+     "MAE": 1.7096774193548387
+    },
+    "pairEvenTruthOnly": {
+     "sets": 60,
+     "exact": 0.18333333333333332,
+     "within1": 0.6166666666666667,
+     "overSets": 0,
+     "underSets": 49,
+     "MAE": 1.7166666666666666
+    },
+    "pairExactStepWrong": 1,
+    "stepErrWhenHidden": {
+     "-1": 1
+    },
+    "alwaysFivePairs": {
+     "sets": 62,
+     "exact": 0.967741935483871,
+     "within1": 0.9838709677419355,
+     "overSets": 1,
+     "underSets": 1,
+     "MAE": 0.04838709677419355
+    },
+    "withWindows": {
+     "pair": {
+      "sets": 62,
+      "exact": 0.3064516129032258,
+      "within1": 0.7096774193548387,
+      "overSets": 3,
+      "underSets": 40,
+      "MAE": 1.4516129032258065
+     },
+     "step": {
+      "sets": 62,
+      "exact": 0.1935483870967742,
+      "within1": 0.5483870967741935,
+      "overSets": 10,
+      "underSets": 40,
+      "MAE": 2.629032258064516
+     },
+     "setsLeadOdd": 17
+    }
+   },
+   "hysteresis": {
+    "sets": 62,
+    "oddTruthSets": 2,
+    "step": {
+     "sets": 62,
+     "exact": 0.967741935483871,
+     "within1": 1.0,
+     "overSets": 1,
+     "underSets": 1,
+     "MAE": 0.03225806451612903
+    },
+    "pair": {
+     "sets": 62,
+     "exact": 0.9838709677419355,
+     "within1": 1.0,
+     "overSets": 0,
+     "underSets": 1,
+     "MAE": 0.016129032258064516
+    },
+    "pairEvenTruthOnly": {
+     "sets": 60,
+     "exact": 0.9833333333333333,
+     "within1": 1.0,
+     "overSets": 0,
+     "underSets": 1,
+     "MAE": 0.016666666666666666
+    },
+    "pairExactStepWrong": 1,
+    "stepErrWhenHidden": {
+     "1": 1
+    },
+    "alwaysFivePairs": {
+     "sets": 62,
+     "exact": 0.967741935483871,
+     "within1": 0.9838709677419355,
+     "overSets": 1,
+     "underSets": 1,
+     "MAE": 0.04838709677419355
+    },
+    "withWindows": {
+     "pair": {
+      "sets": 62,
+      "exact": 0.7903225806451613,
+      "within1": 1.0,
+      "overSets": 13,
+      "underSets": 0,
+      "MAE": 0.20967741935483872
+     },
+     "step": {
+      "sets": 62,
+      "exact": 0.5645161290322581,
+      "within1": 0.7903225806451613,
+      "overSets": 27,
+      "underSets": 0,
+      "MAE": 0.6774193548387096
+     },
+     "setsLeadOdd": 16
+    }
+   }
+  },
+  "3D (pose_3d)": {
+   "live": {
+    "sets": 62,
+    "oddTruthSets": 2,
+    "step": {
+     "sets": 62,
+     "exact": 0.4838709677419355,
+     "within1": 0.6774193548387096,
+     "overSets": 0,
+     "underSets": 32,
+     "MAE": 1.6290322580645162
+    },
+    "pair": {
+     "sets": 62,
+     "exact": 0.4838709677419355,
+     "within1": 0.7741935483870968,
+     "overSets": 0,
+     "underSets": 32,
+     "MAE": 0.9838709677419355
+    },
+    "pairEvenTruthOnly": {
+     "sets": 60,
+     "exact": 0.4666666666666667,
+     "within1": 0.7666666666666667,
+     "overSets": 0,
+     "underSets": 32,
+     "MAE": 1.0166666666666666
+    },
+    "pairExactStepWrong": 0,
+    "stepErrWhenHidden": {},
+    "alwaysFivePairs": {
+     "sets": 62,
+     "exact": 0.967741935483871,
+     "within1": 0.9838709677419355,
+     "overSets": 1,
+     "underSets": 1,
+     "MAE": 0.04838709677419355
+    }
+   },
+   "hysteresis": {
+    "sets": 62,
+    "oddTruthSets": 2,
+    "step": {
+     "sets": 62,
+     "exact": 0.967741935483871,
+     "within1": 0.967741935483871,
+     "overSets": 0,
+     "underSets": 2,
+     "MAE": 0.0967741935483871
+    },
+    "pair": {
+     "sets": 62,
+     "exact": 0.967741935483871,
+     "within1": 0.9838709677419355,
+     "overSets": 0,
+     "underSets": 2,
+     "MAE": 0.04838709677419355
+    },
+    "pairEvenTruthOnly": {
+     "sets": 60,
+     "exact": 0.9666666666666667,
+     "within1": 0.9833333333333333,
+     "overSets": 0,
+     "underSets": 2,
+     "MAE": 0.05
+    },
+    "pairExactStepWrong": 0,
+    "stepErrWhenHidden": {},
+    "alwaysFivePairs": {
+     "sets": 62,
+     "exact": 0.967741935483871,
+     "within1": 0.9838709677419355,
+     "overSets": 1,
+     "underSets": 1,
+     "MAE": 0.04838709677419355
+    }
+   }
+  }
+ },
+ "q2": {
+  "reference": {
+   "sets": 62,
+   "oddTruthSets": 2,
+   "countMatchesTruth": 61,
+   "countWithin1": 62,
+   "steps": 625,
+   "stepsDecided": 622,
+   "switchFraction": 0.9498207885304659,
+   "switchPairs": 558,
+   "setsLRDiffer": 10,
+   "setsLRDifferBy2": 7,
+   "setsFloorNeMin": 8,
+   "runningMismatchFraction": 0.0976,
+   "runningInstants": 625,
+   "kneeCueAgreement": 0.842443729903537,
+   "kneeCueCompared": 622,
+   "kneeForwardPositive": 1.0,
+   "kneeForwardChecked": 1250,
+   "marginMmMedian": 523.5334608628277,
+   "marginMmP5": 179.56905812328233,
+   "upByWorkout": {
+    "w00": [
+     0.048,
+     -0.243,
+     0.969
+    ],
+    "w01": [
+     0.064,
+     -0.233,
+     0.97
+    ],
+    "w02": [
+     0.051,
+     -0.251,
+     0.967
+    ],
+    "w03": [
+     0.026,
+     -0.232,
+     0.972
+    ],
+    "w04": [
+     0.043,
+     -0.24,
+     0.97
+    ],
+    "w05": [
+     0.047,
+     -0.264,
+     0.963
+    ],
+    "w06": [
+     0.05,
+     -0.262,
+     0.964
+    ],
+    "w07": [
+     0.031,
+     -0.263,
+     0.964
+    ],
+    "w08": [
+     0.053,
+     -0.282,
+     0.958
+    ],
+    "w09": [
+     0.014,
+     -0.28,
+     0.96
+    ],
+    "w10": [
+     0.032,
+     -0.278,
+     0.96
+    ],
+    "w11": [
+     0.005,
+     -0.284,
+     0.959
+    ],
+    "w12": [
+     0.034,
+     -0.296,
+     0.955
+    ],
+    "w13": [
+     0.008,
+     -0.323,
+     0.946
+    ],
+    "w14": [
+     0.054,
+     -0.296,
+     0.954
+    ],
+    "w15": [
+     0.037,
+     -0.301,
+     0.953
+    ],
+    "w16": [
+     0.025,
+     -0.284,
+     0.958
+    ],
+    "w17": [
+     0.001,
+     -0.272,
+     0.962
+    ],
+    "w18": [
+     -0.023,
+     -0.289,
+     0.957
+    ],
+    "w19": [
+     -0.002,
+     -0.26,
+     0.966
+    ],
+    "w20": [
+     -0.014,
+     -0.265,
+     0.964
+    ]
+   }
+  },
+  "referenceByGroup": {
+   "w00-w15": {
+    "sets": 47,
+    "oddTruthSets": 1,
+    "countMatchesTruth": 47,
+    "countWithin1": 47,
+    "steps": 471,
+    "stepsDecided": 471,
+    "switchFraction": 1.0,
+    "switchPairs": 424,
+    "setsLRDiffer": 1,
+    "setsLRDifferBy2": 0,
+    "setsFloorNeMin": 0,
+    "runningMismatchFraction": 0.0,
+    "runningInstants": 471,
+    "kneeCueAgreement": 0.821656050955414,
+    "kneeCueCompared": 471,
+    "kneeForwardPositive": 1.0,
+    "kneeForwardChecked": 942,
+    "marginMmMedian": 536.7984937063412,
+    "marginMmP5": 279.51768570860673
+   },
+   "w16-w20": {
+    "sets": 15,
+    "oddTruthSets": 1,
+    "countMatchesTruth": 14,
+    "countWithin1": 15,
+    "steps": 154,
+    "stepsDecided": 151,
+    "switchFraction": 0.7910447761194029,
+    "switchPairs": 134,
+    "setsLRDiffer": 9,
+    "setsLRDifferBy2": 7,
+    "setsFloorNeMin": 8,
+    "runningMismatchFraction": 0.3961038961038961,
+    "runningInstants": 154,
+    "kneeCueAgreement": 0.9072847682119205,
+    "kneeCueCompared": 151,
+    "kneeForwardPositive": 1.0,
+    "kneeForwardChecked": 308,
+    "marginMmMedian": 458.0939908218816,
+    "marginMmP5": 27.132661541639322
+   }
+  },
+  "sourceDisagreement": {
+   "w00-w15": {
+    "sets": 47,
+    "refAlternates": 47,
+    "mpAlternates": 42,
+    "neitherAlternates": 0,
+    "refStartsR": 43,
+    "disagreeSteps": 8,
+    "disagreeAllMpCuesFlipped": 8,
+    "disagree_refR_mpL": 8
+   },
+   "w16-w20": {
+    "sets": 15,
+    "refAlternates": 7,
+    "mpAlternates": 14,
+    "neitherAlternates": 1,
+    "refStartsR": 10,
+    "disagreeSteps": 16,
+    "disagreeAllMpCuesFlipped": 15,
+    "disagree_refL_mpR": 6,
+    "disagree_refR_mpL": 10
+   }
+  },
+  "mpAtReferenceSteps": {
+   "all": {
+    "front": {
+     "compared": 622,
+     "agree": 598,
+     "agreement": 0.9614147909967846,
+     "undecided": 0,
+     "refAmbiguous": 3
+    },
+    "kneeH": {
+     "compared": 622,
+     "agree": 596,
+     "agreement": 0.9581993569131833,
+     "undecided": 0,
+     "refAmbiguous": 3
+    },
+    "imgY": {
+     "compared": 622,
+     "agree": 581,
+     "agreement": 0.9340836012861736,
+     "undecided": 0,
+     "refAmbiguous": 3
+    }
+   },
+   "w00-w15": {
+    "front": {
+     "compared": 471,
+     "agree": 463,
+     "agreement": 0.9830148619957537,
+     "undecided": 0,
+     "refAmbiguous": 0
+    },
+    "kneeH": {
+     "compared": 471,
+     "agree": 461,
+     "agreement": 0.9787685774946921,
+     "undecided": 0,
+     "refAmbiguous": 0
+    },
+    "imgY": {
+     "compared": 471,
+     "agree": 448,
+     "agreement": 0.9511677282377919,
+     "undecided": 0,
+     "refAmbiguous": 0
+    }
+   },
+   "w16-w20": {
+    "front": {
+     "compared": 151,
+     "agree": 135,
+     "agreement": 0.8940397350993378,
+     "undecided": 0,
+     "refAmbiguous": 3
+    },
+    "kneeH": {
+     "compared": 151,
+     "agree": 135,
+     "agreement": 0.8940397350993378,
+     "undecided": 0,
+     "refAmbiguous": 3
+    },
+    "imgY": {
+     "compared": 151,
+     "agree": 133,
+     "agreement": 0.8807947019867549,
+     "undecided": 0,
+     "refAmbiguous": 3
+    }
+   },
+   "frontByMargin": {
+    "margin0cm": {
+     "compared": 622,
+     "agree": 598,
+     "agreement": 0.9614147909967846,
+     "undecided": 0,
+     "refAmbiguous": 3
+    },
+    "margin10cm": {
+     "compared": 618,
+     "agree": 594,
+     "agreement": 0.9611650485436893,
+     "undecided": 4,
+     "refAmbiguous": 3
+    },
+    "margin20cm": {
+     "compared": 611,
+     "agree": 587,
+     "agreement": 0.9607201309328969,
+     "undecided": 11,
+     "refAmbiguous": 3
+    }
+   }
+  },
+  "counterCycles": {
+   "live": {
+    "cycles": 434,
+    "cleanCycles": 409,
+    "mergedCycles": 25,
+    "spuriousCycles": 0,
+    "frontAgreement": {
+     "margin0cm": {
+      "compared": 403,
+      "agree": 388,
+      "agreement": 0.9627791563275434,
+      "undecided": 0,
+      "refAmbiguous": 31
+     },
+     "margin10cm": {
+      "compared": 394,
+      "agree": 380,
+      "agreement": 0.9644670050761421,
+      "undecided": 9,
+      "refAmbiguous": 31
+     },
+     "margin20cm": {
+      "compared": 387,
+      "agree": 373,
+      "agreement": 0.9638242894056848,
+      "undecided": 16,
+      "refAmbiguous": 31
+     }
+    },
+    "allCues": {
+     "front": {
+      "compared": 403,
+      "agree": 388,
+      "agreement": 0.9627791563275434,
+      "undecided": 0,
+      "refAmbiguous": 31
+     },
+     "kneeH": {
+      "compared": 403,
+      "agree": 381,
+      "agreement": 0.9454094292803971,
+      "undecided": 0,
+      "refAmbiguous": 31
+     },
+     "imgY": {
+      "compared": 403,
+      "agree": 367,
+      "agreement": 0.9106699751861043,
+      "undecided": 0,
+      "refAmbiguous": 31
+     }
+    },
+    "frontByGroup": {
+     "w00-w15": {
+      "compared": 334,
+      "agree": 326,
+      "agreement": 0.9760479041916168,
+      "undecided": 0,
+      "refAmbiguous": 16
+     },
+     "w16-w20": {
+      "compared": 69,
+      "agree": 62,
+      "agreement": 0.8985507246376812,
+      "undecided": 0,
+      "refAmbiguous": 15
+     }
+    },
+    "frontCleanCyclesOnly": {
+     "compared": 397,
+     "agree": 382,
+     "agreement": 0.9622166246851386,
+     "undecided": 0,
+     "refAmbiguous": 12
+    },
+    "frontWrong": {
+     "n": 15,
+     "decided": 403,
+     "absCmSorted": [
+      6.4,
+      37.2,
+      40.3,
+      42.7,
+      43.7,
+      43.7,
+      44.7,
+      45.9,
+      47.9,
+      51.5,
+      51.9,
+      60.1,
+      66.0,
+      70.8,
+      74.6
+     ],
+     "absCmMedian": 45.9,
+     "overLargestMarginCm": 14,
+     "correctAbsCmMedian": 58.0,
+     "bySubject": {
+      "P0": 1,
+      "P1": 5,
+      "u:w00": 2,
+      "u:w16": 1,
+      "u:w17": 4,
+      "u:w19": 2
+     },
+     "byWorkout": {
+      "w00": 2,
+      "w02": 2,
+      "w04": 2,
+      "w07": 1,
+      "w10": 1,
+      "w16": 1,
+      "w17": 4,
+      "w19": 2
+     }
+    },
+    "display": {
+     "floor": {
+      "sets": 62,
+      "exact": 0.1935483870967742,
+      "within1": 0.6129032258064516,
+      "overSets": 0,
+      "underSets": 50,
+      "MAE": 1.7096774193548387
+     },
+     "strictMp": {
+      "sets": 62,
+      "exact": 0.16129032258064516,
+      "within1": 0.5161290322580645,
+      "overSets": 0,
+      "underSets": 52,
+      "MAE": 1.967741935483871
+     },
+     "strict3d": {
+      "sets": 62,
+      "exact": 0.1935483870967742,
+      "within1": 0.4838709677419355,
+      "overSets": 0,
+      "underSets": 50,
+      "MAE": 2.193548387096774
+     }
+    },
+    "setsFloorNeStrictMp": 14,
+    "setsFloorNeStrict3d": 20,
+    "earlyReach": {
+     "step": {
+      "early": 8,
+      "judged": 21,
+      "notReached": 40,
+      "earlyWithLeadCycles": 8
+     },
+     "pair": {
+      "early": 8,
+      "judged": 21,
+      "notReached": 40,
+      "earlyWithLeadCycles": 8
+     }
+    }
+   },
+   "hysteresis": {
+    "cycles": 624,
+    "cleanCycles": 622,
+    "mergedCycles": 1,
+    "spuriousCycles": 1,
+    "frontAgreement": {
+     "margin0cm": {
+      "compared": 615,
+      "agree": 594,
+      "agreement": 0.9658536585365853,
+      "undecided": 0,
+      "refAmbiguous": 9
+     },
+     "margin10cm": {
+      "compared": 600,
+      "agree": 581,
+      "agreement": 0.9683333333333334,
+      "undecided": 15,
+      "refAmbiguous": 9
+     },
+     "margin20cm": {
+      "compared": 591,
+      "agree": 573,
+      "agreement": 0.9695431472081218,
+      "undecided": 24,
+      "refAmbiguous": 9
+     }
+    },
+    "allCues": {
+     "front": {
+      "compared": 615,
+      "agree": 594,
+      "agreement": 0.9658536585365853,
+      "undecided": 0,
+      "refAmbiguous": 9
+     },
+     "kneeH": {
+      "compared": 615,
+      "agree": 588,
+      "agreement": 0.9560975609756097,
+      "undecided": 0,
+      "refAmbiguous": 9
+     },
+     "imgY": {
+      "compared": 615,
+      "agree": 568,
+      "agreement": 0.9235772357723577,
+      "undecided": 0,
+      "refAmbiguous": 9
+     }
+    },
+    "frontByGroup": {
+     "w00-w15": {
+      "compared": 470,
+      "agree": 457,
+      "agreement": 0.9723404255319149,
+      "undecided": 0,
+      "refAmbiguous": 1
+     },
+     "w16-w20": {
+      "compared": 145,
+      "agree": 137,
+      "agreement": 0.9448275862068966,
+      "undecided": 0,
+      "refAmbiguous": 8
+     }
+    },
+    "frontCleanCyclesOnly": {
+     "compared": 615,
+     "agree": 594,
+     "agreement": 0.9658536585365853,
+     "undecided": 0,
+     "refAmbiguous": 7
+    },
+    "frontWrong": {
+     "n": 21,
+     "decided": 615,
+     "absCmSorted": [
+      0.7,
+      6.4,
+      15.0,
+      24.2,
+      37.2,
+      40.3,
+      42.7,
+      43.7,
+      43.7,
+      44.7,
+      45.9,
+      47.8,
+      47.9,
+      51.5,
+      51.5,
+      51.9,
+      60.1,
+      66.0,
+      70.8,
+      74.6,
+      80.2
+     ],
+     "absCmMedian": 45.9,
+     "overLargestMarginCm": 18,
+     "correctAbsCmMedian": 58.8,
+     "bySubject": {
+      "P0": 2,
+      "P1": 9,
+      "u:w00": 2,
+      "u:w16": 2,
+      "u:w17": 4,
+      "u:w19": 2
+     },
+     "byWorkout": {
+      "w00": 2,
+      "w01": 1,
+      "w02": 4,
+      "w04": 3,
+      "w07": 2,
+      "w10": 1,
+      "w16": 2,
+      "w17": 4,
+      "w19": 2
+     }
+    },
+    "display": {
+     "floor": {
+      "sets": 62,
+      "exact": 0.9838709677419355,
+      "within1": 1.0,
+      "overSets": 0,
+      "underSets": 1,
+      "MAE": 0.016129032258064516
+     },
+     "strictMp": {
+      "sets": 62,
+      "exact": 0.8387096774193549,
+      "within1": 0.9516129032258065,
+      "overSets": 0,
+      "underSets": 10,
+      "MAE": 0.20967741935483872
+     },
+     "strict3d": {
+      "sets": 62,
+      "exact": 0.8709677419354839,
+      "within1": 0.9193548387096774,
+      "overSets": 0,
+      "underSets": 8,
+      "MAE": 0.27419354838709675
+     }
+    },
+    "setsFloorNeStrictMp": 9,
+    "setsFloorNeStrict3d": 7,
+    "earlyReach": {
+     "step": {
+      "early": 18,
+      "judged": 61,
+      "notReached": 0,
+      "earlyWithLeadCycles": 17
+     },
+     "pair": {
+      "early": 18,
+      "judged": 61,
+      "notReached": 0,
+      "earlyWithLeadCycles": 17
+     }
+    }
+   }
+  },
+  "counterCyclesByGroup": {
+   "live": {
+    "w00-w15": {
+     "cycles": 350,
+     "cleanCycles": 336,
+     "mergedCycles": 14,
+     "spuriousCycles": 0,
+     "frontAgreement": {
+      "margin0cm": {
+       "compared": 334,
+       "agree": 326,
+       "agreement": 0.9760479041916168,
+       "undecided": 0,
+       "refAmbiguous": 16
+      },
+      "margin10cm": {
+       "compared": 326,
+       "agree": 319,
+       "agreement": 0.9785276073619632,
+       "undecided": 8,
+       "refAmbiguous": 16
+      },
+      "margin20cm": {
+       "compared": 320,
+       "agree": 313,
+       "agreement": 0.978125,
+       "undecided": 14,
+       "refAmbiguous": 16
+      }
+     },
+     "allCues": {
+      "front": {
+       "compared": 334,
+       "agree": 326,
+       "agreement": 0.9760479041916168,
+       "undecided": 0,
+       "refAmbiguous": 16
+      },
+      "kneeH": {
+       "compared": 334,
+       "agree": 319,
+       "agreement": 0.9550898203592815,
+       "undecided": 0,
+       "refAmbiguous": 16
+      },
+      "imgY": {
+       "compared": 334,
+       "agree": 306,
+       "agreement": 0.9161676646706587,
+       "undecided": 0,
+       "refAmbiguous": 16
+      }
+     },
+     "frontByGroup": {
+      "w00-w15": {
+       "compared": 334,
+       "agree": 326,
+       "agreement": 0.9760479041916168,
+       "undecided": 0,
+       "refAmbiguous": 16
+      },
+      "w16-w20": {
+       "compared": 0,
+       "agree": 0,
+       "agreement": NaN,
+       "undecided": 0,
+       "refAmbiguous": 0
+      }
+     },
+     "frontCleanCyclesOnly": {
+      "compared": 329,
+      "agree": 321,
+      "agreement": 0.9756838905775076,
+      "undecided": 0,
+      "refAmbiguous": 7
+     },
+     "frontWrong": {
+      "n": 8,
+      "decided": 334,
+      "absCmSorted": [
+       6.4,
+       37.2,
+       40.3,
+       45.9,
+       47.9,
+       51.5,
+       51.9,
+       60.1
+      ],
+      "absCmMedian": 46.9,
+      "overLargestMarginCm": 7,
+      "correctAbsCmMedian": 58.6,
+      "bySubject": {
+       "P0": 1,
+       "P1": 5,
+       "u:w00": 2
+      },
+      "byWorkout": {
+       "w00": 2,
+       "w02": 2,
+       "w04": 2,
+       "w07": 1,
+       "w10": 1
+      }
+     },
+     "display": {
+      "floor": {
+       "sets": 47,
+       "exact": 0.23404255319148937,
+       "within1": 0.6808510638297872,
+       "overSets": 0,
+       "underSets": 36,
+       "MAE": 1.4893617021276595
+      },
+      "strictMp": {
+       "sets": 47,
+       "exact": 0.19148936170212766,
+       "within1": 0.574468085106383,
+       "overSets": 0,
+       "underSets": 38,
+       "MAE": 1.7659574468085106
+      },
+      "strict3d": {
+       "sets": 47,
+       "exact": 0.23404255319148937,
+       "within1": 0.5957446808510638,
+       "overSets": 0,
+       "underSets": 36,
+       "MAE": 1.7659574468085106
+      }
+     },
+     "setsFloorNeStrictMp": 12,
+     "setsFloorNeStrict3d": 11,
+     "earlyReach": {
+      "step": {
+       "early": 7,
+       "judged": 20,
+       "notReached": 27,
+       "earlyWithLeadCycles": 7
+      },
+      "pair": {
+       "early": 7,
+       "judged": 20,
+       "notReached": 27,
+       "earlyWithLeadCycles": 7
+      }
+     }
+    },
+    "w16-w20": {
+     "cycles": 84,
+     "cleanCycles": 73,
+     "mergedCycles": 11,
+     "spuriousCycles": 0,
+     "frontAgreement": {
+      "margin0cm": {
+       "compared": 69,
+       "agree": 62,
+       "agreement": 0.8985507246376812,
+       "undecided": 0,
+       "refAmbiguous": 15
+      },
+      "margin10cm": {
+       "compared": 68,
+       "agree": 61,
+       "agreement": 0.8970588235294118,
+       "undecided": 1,
+       "refAmbiguous": 15
+      },
+      "margin20cm": {
+       "compared": 67,
+       "agree": 60,
+       "agreement": 0.8955223880597015,
+       "undecided": 2,
+       "refAmbiguous": 15
+      }
+     },
+     "allCues": {
+      "front": {
+       "compared": 69,
+       "agree": 62,
+       "agreement": 0.8985507246376812,
+       "undecided": 0,
+       "refAmbiguous": 15
+      },
+      "kneeH": {
+       "compared": 69,
+       "agree": 62,
+       "agreement": 0.8985507246376812,
+       "undecided": 0,
+       "refAmbiguous": 15
+      },
+      "imgY": {
+       "compared": 69,
+       "agree": 61,
+       "agreement": 0.8840579710144928,
+       "undecided": 0,
+       "refAmbiguous": 15
+      }
+     },
+     "frontByGroup": {
+      "w00-w15": {
+       "compared": 0,
+       "agree": 0,
+       "agreement": NaN,
+       "undecided": 0,
+       "refAmbiguous": 0
+      },
+      "w16-w20": {
+       "compared": 69,
+       "agree": 62,
+       "agreement": 0.8985507246376812,
+       "undecided": 0,
+       "refAmbiguous": 15
+      }
+     },
+     "frontCleanCyclesOnly": {
+      "compared": 68,
+      "agree": 61,
+      "agreement": 0.8970588235294118,
+      "undecided": 0,
+      "refAmbiguous": 5
+     },
+     "frontWrong": {
+      "n": 7,
+      "decided": 69,
+      "absCmSorted": [
+       42.7,
+       43.7,
+       43.7,
+       44.7,
+       66.0,
+       70.8,
+       74.6
+      ],
+      "absCmMedian": 44.7,
+      "overLargestMarginCm": 7,
+      "correctAbsCmMedian": 53.8,
+      "bySubject": {
+       "u:w16": 1,
+       "u:w17": 4,
+       "u:w19": 2
+      },
+      "byWorkout": {
+       "w16": 1,
+       "w17": 4,
+       "w19": 2
+      }
+     },
+     "display": {
+      "floor": {
+       "sets": 15,
+       "exact": 0.06666666666666667,
+       "within1": 0.4,
+       "overSets": 0,
+       "underSets": 14,
+       "MAE": 2.4
+      },
+      "strictMp": {
+       "sets": 15,
+       "exact": 0.06666666666666667,
+       "within1": 0.3333333333333333,
+       "overSets": 0,
+       "underSets": 14,
+       "MAE": 2.6
+      },
+      "strict3d": {
+       "sets": 15,
+       "exact": 0.06666666666666667,
+       "within1": 0.13333333333333333,
+       "overSets": 0,
+       "underSets": 14,
+       "MAE": 3.533333333333333
+      }
+     },
+     "setsFloorNeStrictMp": 2,
+     "setsFloorNeStrict3d": 9,
+     "earlyReach": {
+      "step": {
+       "early": 1,
+       "judged": 1,
+       "notReached": 13,
+       "earlyWithLeadCycles": 1
+      },
+      "pair": {
+       "early": 1,
+       "judged": 1,
+       "notReached": 13,
+       "earlyWithLeadCycles": 1
+      }
+     }
+    }
+   },
+   "hysteresis": {
+    "w00-w15": {
+     "cycles": 471,
+     "cleanCycles": 470,
+     "mergedCycles": 0,
+     "spuriousCycles": 1,
+     "frontAgreement": {
+      "margin0cm": {
+       "compared": 470,
+       "agree": 457,
+       "agreement": 0.9723404255319149,
+       "undecided": 0,
+       "refAmbiguous": 1
+      },
+      "margin10cm": {
+       "compared": 458,
+       "agree": 447,
+       "agreement": 0.9759825327510917,
+       "undecided": 12,
+       "refAmbiguous": 1
+      },
+      "margin20cm": {
+       "compared": 450,
+       "agree": 440,
+       "agreement": 0.9777777777777777,
+       "undecided": 20,
+       "refAmbiguous": 1
+      }
+     },
+     "allCues": {
+      "front": {
+       "compared": 470,
+       "agree": 457,
+       "agreement": 0.9723404255319149,
+       "undecided": 0,
+       "refAmbiguous": 1
+      },
+      "kneeH": {
+       "compared": 470,
+       "agree": 451,
+       "agreement": 0.9595744680851064,
+       "undecided": 0,
+       "refAmbiguous": 1
+      },
+      "imgY": {
+       "compared": 470,
+       "agree": 435,
+       "agreement": 0.925531914893617,
+       "undecided": 0,
+       "refAmbiguous": 1
+      }
+     },
+     "frontByGroup": {
+      "w00-w15": {
+       "compared": 470,
+       "agree": 457,
+       "agreement": 0.9723404255319149,
+       "undecided": 0,
+       "refAmbiguous": 1
+      },
+      "w16-w20": {
+       "compared": 0,
+       "agree": 0,
+       "agreement": NaN,
+       "undecided": 0,
+       "refAmbiguous": 0
+      }
+     },
+     "frontCleanCyclesOnly": {
+      "compared": 470,
+      "agree": 457,
+      "agreement": 0.9723404255319149,
+      "undecided": 0,
+      "refAmbiguous": 0
+     },
+     "frontWrong": {
+      "n": 13,
+      "decided": 470,
+      "absCmSorted": [
+       0.7,
+       6.4,
+       15.0,
+       24.2,
+       37.2,
+       40.3,
+       45.9,
+       47.8,
+       47.9,
+       51.5,
+       51.5,
+       51.9,
+       60.1
+      ],
+      "absCmMedian": 45.9,
+      "overLargestMarginCm": 10,
+      "correctAbsCmMedian": 59.3,
+      "bySubject": {
+       "P0": 2,
+       "P1": 9,
+       "u:w00": 2
+      },
+      "byWorkout": {
+       "w00": 2,
+       "w01": 1,
+       "w02": 4,
+       "w04": 3,
+       "w07": 2,
+       "w10": 1
+      }
+     },
+     "display": {
+      "floor": {
+       "sets": 47,
+       "exact": 0.9787234042553191,
+       "within1": 1.0,
+       "overSets": 0,
+       "underSets": 1,
+       "MAE": 0.02127659574468085
+      },
+      "strictMp": {
+       "sets": 47,
+       "exact": 0.7872340425531915,
+       "within1": 0.9361702127659575,
+       "overSets": 0,
+       "underSets": 10,
+       "MAE": 0.2765957446808511
+      },
+      "strict3d": {
+       "sets": 47,
+       "exact": 0.9787234042553191,
+       "within1": 1.0,
+       "overSets": 0,
+       "underSets": 1,
+       "MAE": 0.02127659574468085
+      }
+     },
+     "setsFloorNeStrictMp": 9,
+     "setsFloorNeStrict3d": 0,
+     "earlyReach": {
+      "step": {
+       "early": 14,
+       "judged": 47,
+       "notReached": 0,
+       "earlyWithLeadCycles": 13
+      },
+      "pair": {
+       "early": 14,
+       "judged": 47,
+       "notReached": 0,
+       "earlyWithLeadCycles": 13
+      }
+     }
+    },
+    "w16-w20": {
+     "cycles": 153,
+     "cleanCycles": 152,
+     "mergedCycles": 1,
+     "spuriousCycles": 0,
+     "frontAgreement": {
+      "margin0cm": {
+       "compared": 145,
+       "agree": 137,
+       "agreement": 0.9448275862068966,
+       "undecided": 0,
+       "refAmbiguous": 8
+      },
+      "margin10cm": {
+       "compared": 142,
+       "agree": 134,
+       "agreement": 0.9436619718309859,
+       "undecided": 3,
+       "refAmbiguous": 8
+      },
+      "margin20cm": {
+       "compared": 141,
+       "agree": 133,
+       "agreement": 0.9432624113475178,
+       "undecided": 4,
+       "refAmbiguous": 8
+      }
+     },
+     "allCues": {
+      "front": {
+       "compared": 145,
+       "agree": 137,
+       "agreement": 0.9448275862068966,
+       "undecided": 0,
+       "refAmbiguous": 8
+      },
+      "kneeH": {
+       "compared": 145,
+       "agree": 137,
+       "agreement": 0.9448275862068966,
+       "undecided": 0,
+       "refAmbiguous": 8
+      },
+      "imgY": {
+       "compared": 145,
+       "agree": 133,
+       "agreement": 0.9172413793103448,
+       "undecided": 0,
+       "refAmbiguous": 8
+      }
+     },
+     "frontByGroup": {
+      "w00-w15": {
+       "compared": 0,
+       "agree": 0,
+       "agreement": NaN,
+       "undecided": 0,
+       "refAmbiguous": 0
+      },
+      "w16-w20": {
+       "compared": 145,
+       "agree": 137,
+       "agreement": 0.9448275862068966,
+       "undecided": 0,
+       "refAmbiguous": 8
+      }
+     },
+     "frontCleanCyclesOnly": {
+      "compared": 145,
+      "agree": 137,
+      "agreement": 0.9448275862068966,
+      "undecided": 0,
+      "refAmbiguous": 7
+     },
+     "frontWrong": {
+      "n": 8,
+      "decided": 145,
+      "absCmSorted": [
+       42.7,
+       43.7,
+       43.7,
+       44.7,
+       66.0,
+       70.8,
+       74.6,
+       80.2
+      ],
+      "absCmMedian": 55.4,
+      "overLargestMarginCm": 8,
+      "correctAbsCmMedian": 56.1,
+      "bySubject": {
+       "u:w16": 2,
+       "u:w17": 4,
+       "u:w19": 2
+      },
+      "byWorkout": {
+       "w16": 2,
+       "w17": 4,
+       "w19": 2
+      }
+     },
+     "display": {
+      "floor": {
+       "sets": 15,
+       "exact": 1.0,
+       "within1": 1.0,
+       "overSets": 0,
+       "underSets": 0,
+       "MAE": 0.0
+      },
+      "strictMp": {
+       "sets": 15,
+       "exact": 1.0,
+       "within1": 1.0,
+       "overSets": 0,
+       "underSets": 0,
+       "MAE": 0.0
+      },
+      "strict3d": {
+       "sets": 15,
+       "exact": 0.5333333333333333,
+       "within1": 0.6666666666666666,
+       "overSets": 0,
+       "underSets": 7,
+       "MAE": 1.0666666666666667
+      }
+     },
+     "setsFloorNeStrictMp": 0,
+     "setsFloorNeStrict3d": 7,
+     "earlyReach": {
+      "step": {
+       "early": 4,
+       "judged": 14,
+       "notReached": 0,
+       "earlyWithLeadCycles": 4
+      },
+      "pair": {
+       "early": 4,
+       "judged": 14,
+       "notReached": 0,
+       "earlyWithLeadCycles": 4
+      }
+     }
+    }
+   }
+  }
+ },
+ "q3": {
+  "MediaPipe 정렬 · 교대 컬": {
+   "lanes": {
+    "sets": 59,
+    "exact": 0.8983050847457628,
+    "within1": 0.9152542372881356,
+    "overSets": 0,
+    "underSets": 6,
+    "MAE": 0.3220338983050847
+   },
+   "unlabeled": 0,
+   "underSetsWeakLaneCoverageBelow": 5,
+   "laneCountDiff": {
+    "0": 50,
+    "1": 4,
+    "2": 1,
+    "≥3": 4
+   },
+   "singles": {
+    "live": {
+     "cyclesVsPairs": {
+      "sets": 59,
+      "exact": 0.03389830508474576,
+      "within1": 0.0847457627118644,
+      "overSets": 0,
+      "underSets": 57,
+      "MAE": 4.186440677966102
+     },
+     "floorHalfVsPairs": {
+      "sets": 59,
+      "exact": 0.0,
+      "within1": 0.0,
+      "overSets": 0,
+      "underSets": 59,
+      "MAE": 4.762711864406779
+     }
+    },
+    "hysteresis": {
+     "cyclesVsPairs": {
+      "sets": 59,
+      "exact": 0.1016949152542373,
+      "within1": 0.1864406779661017,
+      "overSets": 0,
+      "underSets": 53,
+      "MAE": 3.6440677966101696
+     },
+     "floorHalfVsPairs": {
+      "sets": 59,
+      "exact": 0.0,
+      "within1": 0.0,
+      "overSets": 0,
+      "underSets": 59,
+      "MAE": 4.47457627118644
+     }
+    },
+    "hysteresis+elbow_minside": {
+     "cyclesVsPairs": {
+      "sets": 59,
+      "exact": 0.01694915254237288,
+      "within1": 0.01694915254237288,
+      "overSets": 58,
+      "underSets": 0,
+      "MAE": 4.915254237288136
+     },
+     "floorHalfVsPairs": {
+      "sets": 59,
+      "exact": 0.8813559322033898,
+      "within1": 0.9830508474576272,
+      "overSets": 0,
+      "underSets": 7,
+      "MAE": 0.15254237288135594
+     }
+    }
+   },
+   "truthNote": "floor(정답/2)"
+  },
+  "3D · 교대 컬": {
+   "lanes": {
+    "sets": 59,
+    "exact": 1.0,
+    "within1": 1.0,
+    "overSets": 0,
+    "underSets": 0,
+    "MAE": 0.0
+   },
+   "unlabeled": 0,
+   "underSetsWeakLaneCoverageBelow": 0,
+   "laneCountDiff": {
+    "0": 54,
+    "1": 4,
+    "2": 1
+   },
+   "singles": {
+    "live": {
+     "cyclesVsPairs": {
+      "sets": 59,
+      "exact": 0.01694915254237288,
+      "within1": 0.1016949152542373,
+      "overSets": 57,
+      "underSets": 1,
+      "MAE": 3.7288135593220337
+     },
+     "floorHalfVsPairs": {
+      "sets": 59,
+      "exact": 0.423728813559322,
+      "within1": 0.7288135593220338,
+      "overSets": 0,
+      "underSets": 34,
+      "MAE": 0.8983050847457628
+     }
+    },
+    "hysteresis": {
+     "cyclesVsPairs": {
+      "sets": 59,
+      "exact": 0.0,
+      "within1": 0.0,
+      "overSets": 59,
+      "underSets": 0,
+      "MAE": 5.0508474576271185
+     },
+     "floorHalfVsPairs": {
+      "sets": 59,
+      "exact": 0.9661016949152542,
+      "within1": 1.0,
+      "overSets": 0,
+      "underSets": 2,
+      "MAE": 0.03389830508474576
+     }
+    },
+    "hysteresis+elbow_minside": {
+     "cyclesVsPairs": {
+      "sets": 59,
+      "exact": 0.0,
+      "within1": 0.0,
+      "overSets": 59,
+      "underSets": 0,
+      "MAE": 5.101694915254237
+     },
+     "floorHalfVsPairs": {
+      "sets": 59,
+      "exact": 1.0,
+      "within1": 1.0,
+      "overSets": 0,
+      "underSets": 0,
+      "MAE": 0.0
+     }
+    }
+   },
+   "truthNote": "floor(정답/2)"
+  },
+  "합성 동시 컬 (3D 거울, 팔 사이 0 ms)": {
+   "lanes": {
+    "sets": 109,
+    "exact": 1.0,
+    "within1": 1.0,
+    "overSets": 0,
+    "underSets": 0,
+    "MAE": 0.0
+   },
+   "unlabeled": 9,
+   "underSetsWeakLaneCoverageBelow": 0,
+   "laneCountDiff": {
+    "0": 109
+   },
+   "singles": {
+    "live": {
+     "cyclesVsPairs": {
+      "sets": 109,
+      "exact": 0.7706422018348624,
+      "within1": 0.9541284403669725,
+      "overSets": 0,
+      "underSets": 25,
+      "MAE": 0.30275229357798167
+     },
+     "floorHalfVsPairs": {
+      "sets": 109,
+      "exact": 0.0,
+      "within1": 0.0,
+      "overSets": 0,
+      "underSets": 109,
+      "MAE": 3.073394495412844
+     }
+    },
+    "hysteresis": {
+     "cyclesVsPairs": {
+      "sets": 109,
+      "exact": 1.0,
+      "within1": 1.0,
+      "overSets": 0,
+      "underSets": 0,
+      "MAE": 0.0
+     },
+     "floorHalfVsPairs": {
+      "sets": 109,
+      "exact": 0.0,
+      "within1": 0.0,
+      "overSets": 0,
+      "underSets": 109,
+      "MAE": 3.018348623853211
+     }
+    },
+    "hysteresis+elbow_minside": {
+     "cyclesVsPairs": {
+      "sets": 109,
+      "exact": 1.0,
+      "within1": 1.0,
+      "overSets": 0,
+      "underSets": 0,
+      "MAE": 0.0
+     },
+     "floorHalfVsPairs": {
+      "sets": 109,
+      "exact": 0.0,
+      "within1": 0.0,
+      "overSets": 0,
+      "underSets": 109,
+      "MAE": 3.018348623853211
+     }
+    }
+   },
+   "truthNote": "원래 팔 컬 수 = 동시 컬 수"
+  },
+  "합성 동시 컬 (3D 거울, 팔 사이 300 ms)": {
+   "lanes": {
+    "sets": 109,
+    "exact": 1.0,
+    "within1": 1.0,
+    "overSets": 0,
+    "underSets": 0,
+    "MAE": 0.0
+   },
+   "unlabeled": 9,
+   "underSetsWeakLaneCoverageBelow": 0,
+   "laneCountDiff": {
+    "0": 109
+   },
+   "singles": {
+    "live": {
+     "cyclesVsPairs": {
+      "sets": 109,
+      "exact": 0.5137614678899083,
+      "within1": 0.944954128440367,
+      "overSets": 0,
+      "underSets": 53,
+      "MAE": 0.5779816513761468
+     },
+     "floorHalfVsPairs": {
+      "sets": 109,
+      "exact": 0.0,
+      "within1": 0.0,
+      "overSets": 0,
+      "underSets": 109,
+      "MAE": 3.091743119266055
+     }
+    },
+    "hysteresis": {
+     "cyclesVsPairs": {
+      "sets": 109,
+      "exact": 1.0,
+      "within1": 1.0,
+      "overSets": 0,
+      "underSets": 0,
+      "MAE": 0.0
+     },
+     "floorHalfVsPairs": {
+      "sets": 109,
+      "exact": 0.0,
+      "within1": 0.0,
+      "overSets": 0,
+      "underSets": 109,
+      "MAE": 3.018348623853211
+     }
+    },
+    "hysteresis+elbow_minside": {
+     "cyclesVsPairs": {
+      "sets": 109,
+      "exact": 1.0,
+      "within1": 1.0,
+      "overSets": 0,
+      "underSets": 0,
+      "MAE": 0.0
+     },
+     "floorHalfVsPairs": {
+      "sets": 109,
+      "exact": 0.0,
+      "within1": 0.0,
+      "overSets": 0,
+      "underSets": 109,
+      "MAE": 3.018348623853211
+     }
+    }
+   },
+   "truthNote": "원래 팔 컬 수 = 동시 컬 수"
+  }
+ }
+}
