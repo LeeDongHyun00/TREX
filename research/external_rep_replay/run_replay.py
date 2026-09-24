@@ -42,7 +42,9 @@ from collections import defaultdict
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-REPLAY_BIN = HERE / "replay-jvm" / "build" / "install" / "trex-rep-replay" / "bin" / "trex-rep-replay"
+# installDist 는 두 실행 스크립트를 만든다 — 윈도우(사용자 PC)에서는 .bat 이어야 subprocess 가 실행한다
+REPLAY_BIN = HERE / "replay-jvm" / "build" / "install" / "trex-rep-replay" / "bin" / (
+    "trex-rep-replay.bat" if sys.platform == "win32" else "trex-rep-replay")
 
 SET_MARGIN_MS = 500          # 세트 창 = 라벨 ± 0.5 s (stress_battery.py·README §4 와 같다)
 MAX_GAP_MS = 1500            # RepCounter.forSession 의 끊김 초기화 기준

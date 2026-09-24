@@ -1,0 +1,2274 @@
+{
+ "maxLagFrames": 300,
+ "minR": 0.8,
+ "workouts": {
+  "w00": {
+   "fps": 30.000000594822676,
+   "sets": 9,
+   "trusted": 9,
+   "fit": {
+    "a": 0.29903669902202845,
+    "bFramesPerS": -0.00020339490002985454,
+    "maxResidualFrames": 0.7378117448316802,
+    "points": 9
+   }
+  },
+  "w01": {
+   "fps": 30.00000266222749,
+   "sets": 9,
+   "trusted": 9,
+   "fit": {
+    "a": 0.2897070464676516,
+    "bFramesPerS": -0.00017280755431632166,
+    "maxResidualFrames": 0.7224643080055099,
+    "points": 9
+   }
+  },
+  "w02": {
+   "fps": 30.0,
+   "sets": 9,
+   "trusted": 9,
+   "fit": {
+    "a": 0.6311701328322549,
+    "bFramesPerS": -0.0005110308107315532,
+    "maxResidualFrames": 1.4113307666038564,
+    "points": 9
+   }
+  },
+  "w03": {
+   "fps": 29.999998768005142,
+   "sets": 9,
+   "trusted": 9,
+   "fit": {
+    "a": 0.0,
+    "bFramesPerS": 0.0,
+    "maxResidualFrames": 0.0,
+    "points": 9
+   }
+  },
+  "w04": {
+   "fps": 29.999998723295654,
+   "sets": 6,
+   "trusted": 6,
+   "fit": {
+    "a": -0.5151165655896579,
+    "bFramesPerS": 0.000805310037660686,
+    "maxResidualFrames": 0.5627029592796071,
+    "points": 6
+   }
+  },
+  "w05": {
+   "fps": 30.000000695316825,
+   "sets": 9,
+   "trusted": 9,
+   "fit": {
+    "a": 0.0,
+    "bFramesPerS": 0.0,
+    "maxResidualFrames": 0.0,
+    "points": 9
+   }
+  },
+  "w06": {
+   "fps": 29.999994755324263,
+   "sets": 9,
+   "trusted": 8,
+   "fit": {
+    "a": 0.7519442883334884,
+    "bFramesPerS": -0.00039940961233796764,
+    "maxResidualFrames": 1.4270978603604154,
+    "points": 8
+   }
+  },
+  "w07": {
+   "fps": 30.0,
+   "sets": 8,
+   "trusted": 8,
+   "fit": {
+    "a": 0.12589025191470876,
+    "bFramesPerS": -0.00028177908673715,
+    "maxResidualFrames": 0.5529017777445766,
+    "points": 8
+   }
+  },
+  "w08": {
+   "fps": 30.00000117184758,
+   "sets": 9,
+   "trusted": 8,
+   "fit": {
+    "a": -0.01587640869874158,
+    "bFramesPerS": 0.00015708789957039372,
+    "maxResidualFrames": 0.7991056321808695,
+    "points": 8
+   }
+  },
+  "w09": {
+   "fps": 30.0,
+   "sets": 9,
+   "trusted": 9,
+   "fit": {
+    "a": 0.06391882345926832,
+    "bFramesPerS": -0.0001234272696691332,
+    "maxResidualFrames": 0.7231114464488577,
+    "points": 9
+   }
+  },
+  "w10": {
+   "fps": 29.999998516107723,
+   "sets": 9,
+   "trusted": 9,
+   "fit": {
+    "a": 0.3342458119564667,
+    "bFramesPerS": -0.00020083125224030671,
+    "maxResidualFrames": 0.9069907785091142,
+    "points": 9
+   }
+  },
+  "w11": {
+   "fps": 30.00000174623696,
+   "sets": 9,
+   "trusted": 9,
+   "fit": {
+    "a": 0.4438525176601901,
+    "bFramesPerS": -0.00047119585612589,
+    "maxResidualFrames": 0.6059093772482678,
+    "points": 9
+   }
+  },
+  "w12": {
+   "fps": 30.000003546969683,
+   "sets": 7,
+   "trusted": 7,
+   "fit": {
+    "a": 0.4221345546074659,
+    "bFramesPerS": -0.00017134125706327996,
+    "maxResidualFrames": 0.7201244368706924,
+    "points": 7
+   }
+  },
+  "w13": {
+   "fps": 29.99999891148963,
+   "sets": 9,
+   "trusted": 9,
+   "fit": {
+    "a": 0.21337266184814138,
+    "bFramesPerS": -0.0004308854497332624,
+    "maxResidualFrames": 0.5878015241660455,
+    "points": 9
+   }
+  },
+  "w14": {
+   "fps": 30.000000610212528,
+   "sets": 9,
+   "trusted": 9,
+   "fit": {
+    "a": -0.04830416213901912,
+    "bFramesPerS": -6.979583898217366e-05,
+    "maxResidualFrames": 0.8742108006856582,
+    "points": 9
+   }
+  },
+  "w15": {
+   "fps": 30.000000661960875,
+   "sets": 9,
+   "trusted": 9,
+   "fit": {
+    "a": 0.38465605907315975,
+    "bFramesPerS": -0.00019621475828084185,
+    "maxResidualFrames": 0.7810276828191831,
+    "points": 9
+   }
+  },
+  "w16": {
+   "fps": 30.00000303172733,
+   "sets": 9,
+   "trusted": 9,
+   "fit": {
+    "a": -7.691967180922347,
+    "bFramesPerS": -0.033800678989861506,
+    "maxResidualFrames": 8.221048254002127,
+    "points": 9
+   }
+  },
+  "w17": {
+   "fps": 30.0,
+   "sets": 10,
+   "trusted": 8,
+   "fit": {
+    "a": 0.12684648143486094,
+    "bFramesPerS": -0.050271870266616114,
+    "maxResidualFrames": 1.5536325456698208,
+    "points": 8
+   }
+  },
+  "w18": {
+   "fps": 29.99999892534751,
+   "sets": 9,
+   "trusted": 8,
+   "fit": {
+    "a": 0.7042885874675958,
+    "bFramesPerS": -0.05061203545214225,
+    "maxResidualFrames": 0.6928724780651323,
+    "points": 8
+   }
+  },
+  "w19": {
+   "fps": 29.999997709687815,
+   "sets": 10,
+   "trusted": 10,
+   "fit": {
+    "a": 16.1149684509781,
+    "bFramesPerS": -0.022517068407438296,
+    "maxResidualFrames": 18.26181372104593,
+    "points": 10
+   }
+  },
+  "w20": {
+   "fps": 30.000001013737872,
+   "sets": 9,
+   "trusted": 9,
+   "fit": {
+    "a": -0.10426671695716534,
+    "bFramesPerS": -0.050230233944540036,
+    "maxResidualFrames": 0.8673768219166647,
+    "points": 9
+   }
+  }
+ },
+ "sets": {
+  "w00/w00_set00_squats.cap": {
+   "workout": "w00",
+   "exercise": "바벨 스쿼트",
+   "labelStartMs": 134667,
+   "xcorrLagFrames": 0,
+   "r": 0.9858664862911091,
+   "r0": 0.9858664862911091,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w00/w00_set01_squats.cap": {
+   "workout": "w00",
+   "exercise": "바벨 스쿼트",
+   "labelStartMs": 181167,
+   "xcorrLagFrames": 1,
+   "r": 0.9836878086168935,
+   "r0": 0.9805001727111332,
+   "usedLagFrames": 1,
+   "how": "xcorr",
+   "shiftMs": 33
+  },
+  "w00/w00_set02_squats.cap": {
+   "workout": "w00",
+   "exercise": "바벨 스쿼트",
+   "labelStartMs": 240000,
+   "xcorrLagFrames": 0,
+   "r": 0.9872170475841987,
+   "r0": 0.9872170475841987,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w00/w00_set09_lunges.cap": {
+   "workout": "w00",
+   "exercise": "스텝 포워드 다이나믹 런지",
+   "labelStartMs": 738233,
+   "xcorrLagFrames": 0,
+   "r": 0.9804482610608357,
+   "r0": 0.9804482610608357,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w00/w00_set10_lunges.cap": {
+   "workout": "w00",
+   "exercise": "스텝 포워드 다이나믹 런지",
+   "labelStartMs": 846367,
+   "xcorrLagFrames": 0,
+   "r": 0.9849950118191172,
+   "r0": 0.9849950118191172,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w00/w00_set11_lunges.cap": {
+   "workout": "w00",
+   "exercise": "스텝 포워드 다이나믹 런지",
+   "labelStartMs": 975900,
+   "xcorrLagFrames": 0,
+   "r": 0.9782378558788721,
+   "r0": 0.9782378558788721,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w00/w00_set21_bicep_curls.cap": {
+   "workout": "w00",
+   "exercise": "덤벨 컬",
+   "labelStartMs": 1698500,
+   "xcorrLagFrames": 0,
+   "r": 0.9750827403590161,
+   "r0": 0.9750827403590161,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w00/w00_set22_bicep_curls.cap": {
+   "workout": "w00",
+   "exercise": "덤벨 컬",
+   "labelStartMs": 1735133,
+   "xcorrLagFrames": 0,
+   "r": 0.9741839399663555,
+   "r0": 0.9741839399663555,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w00/w00_set23_bicep_curls.cap": {
+   "workout": "w00",
+   "exercise": "덤벨 컬",
+   "labelStartMs": 1765533,
+   "xcorrLagFrames": 0,
+   "r": 0.9800330665415683,
+   "r0": 0.9800330665415683,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w01/w01_set00_squats.cap": {
+   "workout": "w01",
+   "exercise": "바벨 스쿼트",
+   "labelStartMs": 70433,
+   "xcorrLagFrames": 1,
+   "r": 0.9816330405521972,
+   "r0": 0.9816202162614038,
+   "usedLagFrames": 1,
+   "how": "xcorr",
+   "shiftMs": 33
+  },
+  "w01/w01_set01_squats.cap": {
+   "workout": "w01",
+   "exercise": "바벨 스쿼트",
+   "labelStartMs": 107000,
+   "xcorrLagFrames": 0,
+   "r": 0.9645529985506434,
+   "r0": 0.9645529985506434,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w01/w01_set02_squats.cap": {
+   "workout": "w01",
+   "exercise": "바벨 스쿼트",
+   "labelStartMs": 169533,
+   "xcorrLagFrames": 0,
+   "r": 0.9895982622704069,
+   "r0": 0.9895982622704069,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w01/w01_set09_lunges.cap": {
+   "workout": "w01",
+   "exercise": "스텝 포워드 다이나믹 런지",
+   "labelStartMs": 812000,
+   "xcorrLagFrames": 0,
+   "r": 0.980701331564341,
+   "r0": 0.980701331564341,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w01/w01_set10_lunges.cap": {
+   "workout": "w01",
+   "exercise": "스텝 포워드 다이나믹 런지",
+   "labelStartMs": 968667,
+   "xcorrLagFrames": 0,
+   "r": 0.9821035948468123,
+   "r0": 0.9821035948468123,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w01/w01_set11_lunges.cap": {
+   "workout": "w01",
+   "exercise": "스텝 포워드 다이나믹 런지",
+   "labelStartMs": 1112133,
+   "xcorrLagFrames": 0,
+   "r": 0.979460146548082,
+   "r0": 0.979460146548082,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w01/w01_set23_bicep_curls.cap": {
+   "workout": "w01",
+   "exercise": "덤벨 컬",
+   "labelStartMs": 1824433,
+   "xcorrLagFrames": 0,
+   "r": 0.9817633217588092,
+   "r0": 0.9817633217588092,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w01/w01_set24_bicep_curls.cap": {
+   "workout": "w01",
+   "exercise": "덤벨 컬",
+   "labelStartMs": 2100633,
+   "xcorrLagFrames": 0,
+   "r": 0.9762459896909393,
+   "r0": 0.9762459896909393,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w01/w01_set25_bicep_curls.cap": {
+   "workout": "w01",
+   "exercise": "덤벨 컬",
+   "labelStartMs": 2136633,
+   "xcorrLagFrames": 0,
+   "r": 0.9760970944192526,
+   "r0": 0.9760970944192526,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w02/w02_set00_squats.cap": {
+   "workout": "w02",
+   "exercise": "바벨 스쿼트",
+   "labelStartMs": 83167,
+   "xcorrLagFrames": 2,
+   "r": 0.975734752459186,
+   "r0": 0.9707103376808455,
+   "usedLagFrames": 2,
+   "how": "xcorr",
+   "shiftMs": 67
+  },
+  "w02/w02_set01_squats.cap": {
+   "workout": "w02",
+   "exercise": "바벨 스쿼트",
+   "labelStartMs": 117333,
+   "xcorrLagFrames": 0,
+   "r": 0.9843405089530508,
+   "r0": 0.9843405089530508,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w02/w02_set02_squats.cap": {
+   "workout": "w02",
+   "exercise": "바벨 스쿼트",
+   "labelStartMs": 170300,
+   "xcorrLagFrames": 0,
+   "r": 0.9642996730508177,
+   "r0": 0.9642996730508177,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w02/w02_set09_lunges.cap": {
+   "workout": "w02",
+   "exercise": "스텝 포워드 다이나믹 런지",
+   "labelStartMs": 802400,
+   "xcorrLagFrames": 0,
+   "r": 0.9828421008801718,
+   "r0": 0.9828421008801718,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w02/w02_set10_lunges.cap": {
+   "workout": "w02",
+   "exercise": "스텝 포워드 다이나믹 런지",
+   "labelStartMs": 917833,
+   "xcorrLagFrames": 0,
+   "r": 0.9862066126966551,
+   "r0": 0.9862066126966551,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w02/w02_set11_lunges.cap": {
+   "workout": "w02",
+   "exercise": "스텝 포워드 다이나믹 런지",
+   "labelStartMs": 968900,
+   "xcorrLagFrames": 0,
+   "r": 0.9828109762555085,
+   "r0": 0.9828109762555085,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w02/w02_set21_bicep_curls.cap": {
+   "workout": "w02",
+   "exercise": "덤벨 컬",
+   "labelStartMs": 1988767,
+   "xcorrLagFrames": -1,
+   "r": 0.9361174973465162,
+   "r0": 0.933163093179879,
+   "usedLagFrames": -1,
+   "how": "xcorr",
+   "shiftMs": -33
+  },
+  "w02/w02_set22_bicep_curls.cap": {
+   "workout": "w02",
+   "exercise": "덤벨 컬",
+   "labelStartMs": 2030600,
+   "xcorrLagFrames": 0,
+   "r": 0.9531907888887634,
+   "r0": 0.9531907888887634,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w02/w02_set23_bicep_curls.cap": {
+   "workout": "w02",
+   "exercise": "덤벨 컬",
+   "labelStartMs": 2079700,
+   "xcorrLagFrames": 0,
+   "r": 0.9460787898197159,
+   "r0": 0.9460787898197159,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w03/w03_set00_squats.cap": {
+   "workout": "w03",
+   "exercise": "바벨 스쿼트",
+   "labelStartMs": 126767,
+   "xcorrLagFrames": 0,
+   "r": 0.9919744394213521,
+   "r0": 0.9919744394213521,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w03/w03_set01_squats.cap": {
+   "workout": "w03",
+   "exercise": "바벨 스쿼트",
+   "labelStartMs": 156933,
+   "xcorrLagFrames": 0,
+   "r": 0.9918362642218895,
+   "r0": 0.9918362642218895,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w03/w03_set02_squats.cap": {
+   "workout": "w03",
+   "exercise": "바벨 스쿼트",
+   "labelStartMs": 185833,
+   "xcorrLagFrames": 0,
+   "r": 0.9898420606996617,
+   "r0": 0.9898420606996617,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w03/w03_set09_lunges.cap": {
+   "workout": "w03",
+   "exercise": "스텝 포워드 다이나믹 런지",
+   "labelStartMs": 811500,
+   "xcorrLagFrames": 0,
+   "r": 0.9432624189570277,
+   "r0": 0.9432624189570277,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w03/w03_set10_lunges.cap": {
+   "workout": "w03",
+   "exercise": "스텝 포워드 다이나믹 런지",
+   "labelStartMs": 868200,
+   "xcorrLagFrames": 0,
+   "r": 0.9587914564981596,
+   "r0": 0.9587914564981596,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w03/w03_set11_lunges.cap": {
+   "workout": "w03",
+   "exercise": "스텝 포워드 다이나믹 런지",
+   "labelStartMs": 911233,
+   "xcorrLagFrames": 0,
+   "r": 0.9506120161125763,
+   "r0": 0.9506120161125763,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w03/w03_set21_bicep_curls.cap": {
+   "workout": "w03",
+   "exercise": "덤벨 컬",
+   "labelStartMs": 1593767,
+   "xcorrLagFrames": 0,
+   "r": 0.9661809381492268,
+   "r0": 0.9661809381492268,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w03/w03_set22_bicep_curls.cap": {
+   "workout": "w03",
+   "exercise": "덤벨 컬",
+   "labelStartMs": 1650300,
+   "xcorrLagFrames": 0,
+   "r": 0.988829623008331,
+   "r0": 0.988829623008331,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w03/w03_set23_bicep_curls.cap": {
+   "workout": "w03",
+   "exercise": "덤벨 컬",
+   "labelStartMs": 1721167,
+   "xcorrLagFrames": 0,
+   "r": 0.9869868211405581,
+   "r0": 0.9869868211405581,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w04/w04_set00_squats.cap": {
+   "workout": "w04",
+   "exercise": "바벨 스쿼트",
+   "labelStartMs": 96633,
+   "xcorrLagFrames": -1,
+   "r": 0.9897531713463266,
+   "r0": 0.9879392291133853,
+   "usedLagFrames": -1,
+   "how": "xcorr",
+   "shiftMs": -33
+  },
+  "w04/w04_set01_squats.cap": {
+   "workout": "w04",
+   "exercise": "바벨 스쿼트",
+   "labelStartMs": 135667,
+   "xcorrLagFrames": 0,
+   "r": 0.9717152365784928,
+   "r0": 0.9717152365784928,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w04/w04_set02_squats.cap": {
+   "workout": "w04",
+   "exercise": "바벨 스쿼트",
+   "labelStartMs": 201400,
+   "xcorrLagFrames": 0,
+   "r": 0.9825005818949815,
+   "r0": 0.9825005818949815,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w04/w04_set09_lunges.cap": {
+   "workout": "w04",
+   "exercise": "스텝 포워드 다이나믹 런지",
+   "labelStartMs": 743567,
+   "xcorrLagFrames": 0,
+   "r": 0.970779693653318,
+   "r0": 0.970779693653318,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w04/w04_set10_lunges.cap": {
+   "workout": "w04",
+   "exercise": "스텝 포워드 다이나믹 런지",
+   "labelStartMs": 922633,
+   "xcorrLagFrames": 0,
+   "r": 0.9871680995550071,
+   "r0": 0.9871680995550071,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w04/w04_set20_bicep_curls.cap": {
+   "workout": "w04",
+   "exercise": "덤벨 컬",
+   "labelStartMs": 1738000,
+   "xcorrLagFrames": 1,
+   "r": 0.8133568719933787,
+   "r0": 0.7913228758592222,
+   "usedLagFrames": 1,
+   "how": "xcorr",
+   "shiftMs": 33
+  },
+  "w05/w05_set00_squats.cap": {
+   "workout": "w05",
+   "exercise": "바벨 스쿼트",
+   "labelStartMs": 94333,
+   "xcorrLagFrames": 0,
+   "r": 0.9792535351899241,
+   "r0": 0.9792535351899241,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w05/w05_set01_squats.cap": {
+   "workout": "w05",
+   "exercise": "바벨 스쿼트",
+   "labelStartMs": 121167,
+   "xcorrLagFrames": 0,
+   "r": 0.9735067770015788,
+   "r0": 0.9735067770015788,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w05/w05_set02_squats.cap": {
+   "workout": "w05",
+   "exercise": "바벨 스쿼트",
+   "labelStartMs": 170400,
+   "xcorrLagFrames": 0,
+   "r": 0.9844387041595939,
+   "r0": 0.9844387041595939,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w05/w05_set09_lunges.cap": {
+   "workout": "w05",
+   "exercise": "스텝 포워드 다이나믹 런지",
+   "labelStartMs": 560700,
+   "xcorrLagFrames": 0,
+   "r": 0.9822792370446825,
+   "r0": 0.9822792370446825,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w05/w05_set10_lunges.cap": {
+   "workout": "w05",
+   "exercise": "스텝 포워드 다이나믹 런지",
+   "labelStartMs": 654533,
+   "xcorrLagFrames": 0,
+   "r": 0.9835487465769462,
+   "r0": 0.9835487465769462,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w05/w05_set11_lunges.cap": {
+   "workout": "w05",
+   "exercise": "스텝 포워드 다이나믹 런지",
+   "labelStartMs": 757833,
+   "xcorrLagFrames": 0,
+   "r": 0.9854418246855836,
+   "r0": 0.9854418246855836,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w05/w05_set21_bicep_curls.cap": {
+   "workout": "w05",
+   "exercise": "덤벨 컬",
+   "labelStartMs": 1542067,
+   "xcorrLagFrames": 0,
+   "r": 0.9617351666199054,
+   "r0": 0.9617351666199054,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w05/w05_set22_bicep_curls.cap": {
+   "workout": "w05",
+   "exercise": "덤벨 컬",
+   "labelStartMs": 1579333,
+   "xcorrLagFrames": 0,
+   "r": 0.9628885807590537,
+   "r0": 0.9628885807590537,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w05/w05_set23_bicep_curls.cap": {
+   "workout": "w05",
+   "exercise": "덤벨 컬",
+   "labelStartMs": 1616067,
+   "xcorrLagFrames": 0,
+   "r": 0.9573427746985519,
+   "r0": 0.9573427746985519,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w06/w06_set00_squats.cap": {
+   "workout": "w06",
+   "exercise": "바벨 스쿼트",
+   "labelStartMs": 62467,
+   "xcorrLagFrames": 1,
+   "r": 0.9919248115243264,
+   "r0": 0.9913156696676506,
+   "usedLagFrames": 1,
+   "how": "xcorr",
+   "shiftMs": 33
+  },
+  "w06/w06_set01_squats.cap": {
+   "workout": "w06",
+   "exercise": "바벨 스쿼트",
+   "labelStartMs": 102633,
+   "xcorrLagFrames": 0,
+   "r": 0.9940962772207795,
+   "r0": 0.9940962772207795,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w06/w06_set02_squats.cap": {
+   "workout": "w06",
+   "exercise": "바벨 스쿼트",
+   "labelStartMs": 142967,
+   "xcorrLagFrames": 0,
+   "r": 0.9933803431604536,
+   "r0": 0.9933803431604536,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w06/w06_set09_lunges.cap": {
+   "workout": "w06",
+   "exercise": "스텝 포워드 다이나믹 런지",
+   "labelStartMs": 448267,
+   "xcorrLagFrames": 2,
+   "r": 0.9666933097091418,
+   "r0": 0.9530335560127963,
+   "usedLagFrames": 2,
+   "how": "xcorr",
+   "shiftMs": 67
+  },
+  "w06/w06_set10_lunges.cap": {
+   "workout": "w06",
+   "exercise": "스텝 포워드 다이나믹 런지",
+   "labelStartMs": 651367,
+   "xcorrLagFrames": 1,
+   "r": 0.9486334606645153,
+   "r0": 0.939369550723606,
+   "usedLagFrames": 1,
+   "how": "xcorr",
+   "shiftMs": 33
+  },
+  "w06/w06_set11_lunges.cap": {
+   "workout": "w06",
+   "exercise": "스텝 포워드 다이나믹 런지",
+   "labelStartMs": 700067,
+   "xcorrLagFrames": 0,
+   "r": 0.9434051469894451,
+   "r0": 0.9434051469894451,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w06/w06_set21_bicep_curls.cap": {
+   "workout": "w06",
+   "exercise": "덤벨 컬",
+   "labelStartMs": 1449533,
+   "xcorrLagFrames": 0,
+   "r": 0.972581732688582,
+   "r0": 0.972581732688582,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w06/w06_set22_bicep_curls.cap": {
+   "workout": "w06",
+   "exercise": "덤벨 컬",
+   "labelStartMs": 1489033,
+   "xcorrLagFrames": 0,
+   "r": 0.9719312028606181,
+   "r0": 0.9719312028606181,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w06/w06_set23_bicep_curls.cap": {
+   "workout": "w06",
+   "exercise": "덤벨 컬",
+   "labelStartMs": 1527333,
+   "xcorrLagFrames": 62,
+   "r": 0.7448172480292536,
+   "r0": 0.5988937298846426,
+   "usedLagFrames": 0,
+   "how": "fit",
+   "shiftMs": 0
+  },
+  "w07/w07_set00_squats.cap": {
+   "workout": "w07",
+   "exercise": "바벨 스쿼트",
+   "labelStartMs": 91667,
+   "xcorrLagFrames": 0,
+   "r": 0.9884644950385835,
+   "r0": 0.9884644950385835,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w07/w07_set01_squats.cap": {
+   "workout": "w07",
+   "exercise": "바벨 스쿼트",
+   "labelStartMs": 149400,
+   "xcorrLagFrames": 0,
+   "r": 0.9877673314918579,
+   "r0": 0.9877673314918579,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w07/w07_set02_squats.cap": {
+   "workout": "w07",
+   "exercise": "바벨 스쿼트",
+   "labelStartMs": 188633,
+   "xcorrLagFrames": 0,
+   "r": 0.9765629927579197,
+   "r0": 0.9765629927579197,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w07/w07_set09_lunges.cap": {
+   "workout": "w07",
+   "exercise": "스텝 포워드 다이나믹 런지",
+   "labelStartMs": 815233,
+   "xcorrLagFrames": 0,
+   "r": 0.9851967961738133,
+   "r0": 0.9851967961738133,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w07/w07_set10_lunges.cap": {
+   "workout": "w07",
+   "exercise": "스텝 포워드 다이나믹 런지",
+   "labelStartMs": 883667,
+   "xcorrLagFrames": 0,
+   "r": 0.9724473479865975,
+   "r0": 0.9724473479865975,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w07/w07_set11_lunges.cap": {
+   "workout": "w07",
+   "exercise": "스텝 포워드 다이나믹 런지",
+   "labelStartMs": 1051267,
+   "xcorrLagFrames": 0,
+   "r": 0.9726416875915821,
+   "r0": 0.9726416875915821,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w07/w07_set21_bicep_curls.cap": {
+   "workout": "w07",
+   "exercise": "덤벨 컬",
+   "labelStartMs": 1909700,
+   "xcorrLagFrames": 0,
+   "r": 0.936047411520109,
+   "r0": 0.936047411520109,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w07/w07_set22_bicep_curls.cap": {
+   "workout": "w07",
+   "exercise": "덤벨 컬",
+   "labelStartMs": 2033467,
+   "xcorrLagFrames": -1,
+   "r": 0.9554634393168814,
+   "r0": 0.9464079116147484,
+   "usedLagFrames": -1,
+   "how": "xcorr",
+   "shiftMs": -33
+  },
+  "w08/w08_set00_squats.cap": {
+   "workout": "w08",
+   "exercise": "바벨 스쿼트",
+   "labelStartMs": 65933,
+   "xcorrLagFrames": 0,
+   "r": 0.977292224090245,
+   "r0": 0.977292224090245,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w08/w08_set01_squats.cap": {
+   "workout": "w08",
+   "exercise": "바벨 스쿼트",
+   "labelStartMs": 100200,
+   "xcorrLagFrames": 0,
+   "r": 0.984903599652701,
+   "r0": 0.984903599652701,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w08/w08_set02_squats.cap": {
+   "workout": "w08",
+   "exercise": "바벨 스쿼트",
+   "labelStartMs": 141300,
+   "xcorrLagFrames": 0,
+   "r": 0.9900601901272102,
+   "r0": 0.9900601901272102,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w08/w08_set18_bicep_curls.cap": {
+   "workout": "w08",
+   "exercise": "덤벨 컬",
+   "labelStartMs": 1218033,
+   "xcorrLagFrames": 0,
+   "r": 0.9533701100779572,
+   "r0": 0.9533701100779572,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w08/w08_set19_bicep_curls.cap": {
+   "workout": "w08",
+   "exercise": "덤벨 컬",
+   "labelStartMs": 1257733,
+   "xcorrLagFrames": 63,
+   "r": 0.7803303543663608,
+   "r0": 0.7351981282991804,
+   "usedLagFrames": 0,
+   "how": "fit",
+   "shiftMs": 0
+  },
+  "w08/w08_set20_bicep_curls.cap": {
+   "workout": "w08",
+   "exercise": "덤벨 컬",
+   "labelStartMs": 1335500,
+   "xcorrLagFrames": 0,
+   "r": 0.9153029693012537,
+   "r0": 0.9153029693012537,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w08/w08_set21_lunges.cap": {
+   "workout": "w08",
+   "exercise": "스텝 포워드 다이나믹 런지",
+   "labelStartMs": 1379933,
+   "xcorrLagFrames": 1,
+   "r": 0.9703606111804054,
+   "r0": 0.9655770598591956,
+   "usedLagFrames": 1,
+   "how": "xcorr",
+   "shiftMs": 33
+  },
+  "w08/w08_set22_lunges.cap": {
+   "workout": "w08",
+   "exercise": "스텝 포워드 다이나믹 런지",
+   "labelStartMs": 1443133,
+   "xcorrLagFrames": 0,
+   "r": 0.9626670317172892,
+   "r0": 0.9626670317172892,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w08/w08_set23_lunges.cap": {
+   "workout": "w08",
+   "exercise": "스텝 포워드 다이나믹 런지",
+   "labelStartMs": 1490367,
+   "xcorrLagFrames": 0,
+   "r": 0.9842410389656118,
+   "r0": 0.9842410389656118,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w09/w09_set00_squats.cap": {
+   "workout": "w09",
+   "exercise": "바벨 스쿼트",
+   "labelStartMs": 125167,
+   "xcorrLagFrames": 0,
+   "r": 0.9928446850747853,
+   "r0": 0.9928446850747853,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w09/w09_set01_squats.cap": {
+   "workout": "w09",
+   "exercise": "바벨 스쿼트",
+   "labelStartMs": 261200,
+   "xcorrLagFrames": 0,
+   "r": 0.9932698794008942,
+   "r0": 0.9932698794008942,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w09/w09_set02_squats.cap": {
+   "workout": "w09",
+   "exercise": "바벨 스쿼트",
+   "labelStartMs": 382300,
+   "xcorrLagFrames": 0,
+   "r": 0.99259857869824,
+   "r0": 0.99259857869824,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w09/w09_set09_lunges.cap": {
+   "workout": "w09",
+   "exercise": "스텝 포워드 다이나믹 런지",
+   "labelStartMs": 990867,
+   "xcorrLagFrames": 0,
+   "r": 0.9859072468892696,
+   "r0": 0.9859072468892696,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w09/w09_set10_lunges.cap": {
+   "workout": "w09",
+   "exercise": "스텝 포워드 다이나믹 런지",
+   "labelStartMs": 1085467,
+   "xcorrLagFrames": 0,
+   "r": 0.9848444731263504,
+   "r0": 0.9848444731263504,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w09/w09_set11_lunges.cap": {
+   "workout": "w09",
+   "exercise": "스텝 포워드 다이나믹 런지",
+   "labelStartMs": 1266833,
+   "xcorrLagFrames": 0,
+   "r": 0.9863112175994614,
+   "r0": 0.9863112175994614,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w09/w09_set21_bicep_curls.cap": {
+   "workout": "w09",
+   "exercise": "덤벨 컬",
+   "labelStartMs": 2761200,
+   "xcorrLagFrames": -1,
+   "r": 0.9409106139295188,
+   "r0": 0.9408342720186532,
+   "usedLagFrames": -1,
+   "how": "xcorr",
+   "shiftMs": -33
+  },
+  "w09/w09_set22_bicep_curls.cap": {
+   "workout": "w09",
+   "exercise": "덤벨 컬",
+   "labelStartMs": 2852700,
+   "xcorrLagFrames": 0,
+   "r": 0.9454509738172512,
+   "r0": 0.9454509738172512,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w09/w09_set23_bicep_curls.cap": {
+   "workout": "w09",
+   "exercise": "덤벨 컬",
+   "labelStartMs": 3037000,
+   "xcorrLagFrames": 0,
+   "r": 0.9366262059036528,
+   "r0": 0.9366262059036528,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w10/w10_set00_squats.cap": {
+   "workout": "w10",
+   "exercise": "바벨 스쿼트",
+   "labelStartMs": 90133,
+   "xcorrLagFrames": 0,
+   "r": 0.9948076504933109,
+   "r0": 0.9948076504933109,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w10/w10_set01_squats.cap": {
+   "workout": "w10",
+   "exercise": "바벨 스쿼트",
+   "labelStartMs": 125367,
+   "xcorrLagFrames": 0,
+   "r": 0.9943635935649556,
+   "r0": 0.9943635935649556,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w10/w10_set02_squats.cap": {
+   "workout": "w10",
+   "exercise": "바벨 스쿼트",
+   "labelStartMs": 161667,
+   "xcorrLagFrames": 0,
+   "r": 0.9927047083306609,
+   "r0": 0.9927047083306609,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w10/w10_set09_lunges.cap": {
+   "workout": "w10",
+   "exercise": "스텝 포워드 다이나믹 런지",
+   "labelStartMs": 878300,
+   "xcorrLagFrames": 1,
+   "r": 0.9742501946950972,
+   "r0": 0.9705649954985489,
+   "usedLagFrames": 1,
+   "how": "xcorr",
+   "shiftMs": 33
+  },
+  "w10/w10_set10_lunges.cap": {
+   "workout": "w10",
+   "exercise": "스텝 포워드 다이나믹 런지",
+   "labelStartMs": 939067,
+   "xcorrLagFrames": 1,
+   "r": 0.9731363293537447,
+   "r0": 0.9728948457666097,
+   "usedLagFrames": 1,
+   "how": "xcorr",
+   "shiftMs": 33
+  },
+  "w10/w10_set11_lunges.cap": {
+   "workout": "w10",
+   "exercise": "스텝 포워드 다이나믹 런지",
+   "labelStartMs": 993867,
+   "xcorrLagFrames": 0,
+   "r": 0.9816371819682891,
+   "r0": 0.9816371819682891,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w10/w10_set21_bicep_curls.cap": {
+   "workout": "w10",
+   "exercise": "덤벨 컬",
+   "labelStartMs": 2127433,
+   "xcorrLagFrames": -1,
+   "r": 0.975145114394762,
+   "r0": 0.9718028723325715,
+   "usedLagFrames": -1,
+   "how": "xcorr",
+   "shiftMs": -33
+  },
+  "w10/w10_set22_bicep_curls.cap": {
+   "workout": "w10",
+   "exercise": "덤벨 컬",
+   "labelStartMs": 2321167,
+   "xcorrLagFrames": 0,
+   "r": 0.9753501978249669,
+   "r0": 0.9753501978249669,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w10/w10_set23_bicep_curls.cap": {
+   "workout": "w10",
+   "exercise": "덤벨 컬",
+   "labelStartMs": 2362500,
+   "xcorrLagFrames": 0,
+   "r": 0.9685990742520029,
+   "r0": 0.9685990742520029,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w11/w11_set00_squats.cap": {
+   "workout": "w11",
+   "exercise": "바벨 스쿼트",
+   "labelStartMs": 102067,
+   "xcorrLagFrames": 1,
+   "r": 0.9907868965663069,
+   "r0": 0.9888330623946826,
+   "usedLagFrames": 1,
+   "how": "xcorr",
+   "shiftMs": 33
+  },
+  "w11/w11_set01_squats.cap": {
+   "workout": "w11",
+   "exercise": "바벨 스쿼트",
+   "labelStartMs": 196300,
+   "xcorrLagFrames": 0,
+   "r": 0.9840124895940517,
+   "r0": 0.9840124895940517,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w11/w11_set02_squats.cap": {
+   "workout": "w11",
+   "exercise": "바벨 스쿼트",
+   "labelStartMs": 290900,
+   "xcorrLagFrames": 0,
+   "r": 0.9822441359733813,
+   "r0": 0.9822441359733813,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w11/w11_set09_lunges.cap": {
+   "workout": "w11",
+   "exercise": "스텝 포워드 다이나믹 런지",
+   "labelStartMs": 827267,
+   "xcorrLagFrames": 0,
+   "r": 0.9789449234564584,
+   "r0": 0.9789449234564584,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w11/w11_set10_lunges.cap": {
+   "workout": "w11",
+   "exercise": "스텝 포워드 다이나믹 런지",
+   "labelStartMs": 891000,
+   "xcorrLagFrames": 0,
+   "r": 0.976907767640885,
+   "r0": 0.976907767640885,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w11/w11_set11_lunges.cap": {
+   "workout": "w11",
+   "exercise": "스텝 포워드 다이나믹 런지",
+   "labelStartMs": 989533,
+   "xcorrLagFrames": 0,
+   "r": 0.9838807451462445,
+   "r0": 0.9838807451462445,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w11/w11_set21_bicep_curls.cap": {
+   "workout": "w11",
+   "exercise": "덤벨 컬",
+   "labelStartMs": 1670833,
+   "xcorrLagFrames": 0,
+   "r": 0.9508866582419333,
+   "r0": 0.9508866582419333,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w11/w11_set22_bicep_curls.cap": {
+   "workout": "w11",
+   "exercise": "덤벨 컬",
+   "labelStartMs": 1731500,
+   "xcorrLagFrames": 0,
+   "r": 0.9562535074194591,
+   "r0": 0.9562535074194591,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w11/w11_set23_bicep_curls.cap": {
+   "workout": "w11",
+   "exercise": "덤벨 컬",
+   "labelStartMs": 1778333,
+   "xcorrLagFrames": -1,
+   "r": 0.9534432411244281,
+   "r0": 0.9499371122339691,
+   "usedLagFrames": -1,
+   "how": "xcorr",
+   "shiftMs": -33
+  },
+  "w12/w12_set00_squats.cap": {
+   "workout": "w12",
+   "exercise": "바벨 스쿼트",
+   "labelStartMs": 193733,
+   "xcorrLagFrames": 1,
+   "r": 0.9628711117235037,
+   "r0": 0.9502251998344816,
+   "usedLagFrames": 1,
+   "how": "xcorr",
+   "shiftMs": 33
+  },
+  "w12/w12_set01_squats.cap": {
+   "workout": "w12",
+   "exercise": "바벨 스쿼트",
+   "labelStartMs": 240433,
+   "xcorrLagFrames": 0,
+   "r": 0.9668632793038402,
+   "r0": 0.9668632793038402,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w12/w12_set02_squats.cap": {
+   "workout": "w12",
+   "exercise": "바벨 스쿼트",
+   "labelStartMs": 298833,
+   "xcorrLagFrames": 0,
+   "r": 0.971261033155336,
+   "r0": 0.971261033155336,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w12/w12_set09_lunges.cap": {
+   "workout": "w12",
+   "exercise": "스텝 포워드 다이나믹 런지",
+   "labelStartMs": 736033,
+   "xcorrLagFrames": 0,
+   "r": 0.9753998029914313,
+   "r0": 0.9753998029914313,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w12/w12_set10_lunges.cap": {
+   "workout": "w12",
+   "exercise": "스텝 포워드 다이나믹 런지",
+   "labelStartMs": 830267,
+   "xcorrLagFrames": 1,
+   "r": 0.9783111102019797,
+   "r0": 0.9771756820611162,
+   "usedLagFrames": 1,
+   "how": "xcorr",
+   "shiftMs": 33
+  },
+  "w12/w12_set11_lunges.cap": {
+   "workout": "w12",
+   "exercise": "스텝 포워드 다이나믹 런지",
+   "labelStartMs": 937267,
+   "xcorrLagFrames": 0,
+   "r": 0.9751267604885182,
+   "r0": 0.9751267604885182,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w12/w12_set21_bicep_curls.cap": {
+   "workout": "w12",
+   "exercise": "덤벨 컬",
+   "labelStartMs": 2336767,
+   "xcorrLagFrames": 0,
+   "r": 0.9826893253049053,
+   "r0": 0.9826893253049053,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w13/w13_set00_squats.cap": {
+   "workout": "w13",
+   "exercise": "바벨 스쿼트",
+   "labelStartMs": 182900,
+   "xcorrLagFrames": 0,
+   "r": 0.9856571957774456,
+   "r0": 0.9856571957774456,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w13/w13_set01_squats.cap": {
+   "workout": "w13",
+   "exercise": "바벨 스쿼트",
+   "labelStartMs": 230667,
+   "xcorrLagFrames": 0,
+   "r": 0.987522116026485,
+   "r0": 0.987522116026485,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w13/w13_set02_squats.cap": {
+   "workout": "w13",
+   "exercise": "바벨 스쿼트",
+   "labelStartMs": 307933,
+   "xcorrLagFrames": 0,
+   "r": 0.9839435906052968,
+   "r0": 0.9839435906052968,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w13/w13_set09_lunges.cap": {
+   "workout": "w13",
+   "exercise": "스텝 포워드 다이나믹 런지",
+   "labelStartMs": 795500,
+   "xcorrLagFrames": 0,
+   "r": 0.9388167324547986,
+   "r0": 0.9388167324547986,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w13/w13_set10_lunges.cap": {
+   "workout": "w13",
+   "exercise": "스텝 포워드 다이나믹 런지",
+   "labelStartMs": 866767,
+   "xcorrLagFrames": 0,
+   "r": 0.9617447216487276,
+   "r0": 0.9617447216487276,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w13/w13_set11_lunges.cap": {
+   "workout": "w13",
+   "exercise": "스텝 포워드 다이나믹 런지",
+   "labelStartMs": 993067,
+   "xcorrLagFrames": 0,
+   "r": 0.9673785903231844,
+   "r0": 0.9673785903231844,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w13/w13_set21_bicep_curls.cap": {
+   "workout": "w13",
+   "exercise": "덤벨 컬",
+   "labelStartMs": 1859367,
+   "xcorrLagFrames": 0,
+   "r": 0.950656941533218,
+   "r0": 0.950656941533218,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w13/w13_set22_bicep_curls.cap": {
+   "workout": "w13",
+   "exercise": "덤벨 컬",
+   "labelStartMs": 1902633,
+   "xcorrLagFrames": -1,
+   "r": 0.9606702212875158,
+   "r0": 0.9594944268866626,
+   "usedLagFrames": -1,
+   "how": "xcorr",
+   "shiftMs": -33
+  },
+  "w13/w13_set23_bicep_curls.cap": {
+   "workout": "w13",
+   "exercise": "덤벨 컬",
+   "labelStartMs": 1959533,
+   "xcorrLagFrames": -1,
+   "r": 0.963125779760474,
+   "r0": 0.9588204871954696,
+   "usedLagFrames": -1,
+   "how": "xcorr",
+   "shiftMs": -33
+  },
+  "w14/w14_set00_squats.cap": {
+   "workout": "w14",
+   "exercise": "바벨 스쿼트",
+   "labelStartMs": 54200,
+   "xcorrLagFrames": 0,
+   "r": 0.9918091693933229,
+   "r0": 0.9918091693933229,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w14/w14_set01_squats.cap": {
+   "workout": "w14",
+   "exercise": "바벨 스쿼트",
+   "labelStartMs": 97933,
+   "xcorrLagFrames": 0,
+   "r": 0.9889260500166449,
+   "r0": 0.9889260500166449,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w14/w14_set02_squats.cap": {
+   "workout": "w14",
+   "exercise": "바벨 스쿼트",
+   "labelStartMs": 155333,
+   "xcorrLagFrames": 0,
+   "r": 0.9902328248934681,
+   "r0": 0.9902328248934681,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w14/w14_set18_bicep_curls.cap": {
+   "workout": "w14",
+   "exercise": "덤벨 컬",
+   "labelStartMs": 1110167,
+   "xcorrLagFrames": -1,
+   "r": 0.9537173247250772,
+   "r0": 0.9532177146328858,
+   "usedLagFrames": -1,
+   "how": "xcorr",
+   "shiftMs": -33
+  },
+  "w14/w14_set19_bicep_curls.cap": {
+   "workout": "w14",
+   "exercise": "덤벨 컬",
+   "labelStartMs": 1149767,
+   "xcorrLagFrames": 0,
+   "r": 0.965020203677032,
+   "r0": 0.965020203677032,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w14/w14_set20_bicep_curls.cap": {
+   "workout": "w14",
+   "exercise": "덤벨 컬",
+   "labelStartMs": 1192333,
+   "xcorrLagFrames": 0,
+   "r": 0.9545221677101889,
+   "r0": 0.9545221677101889,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w14/w14_set24_lunges.cap": {
+   "workout": "w14",
+   "exercise": "스텝 포워드 다이나믹 런지",
+   "labelStartMs": 1359633,
+   "xcorrLagFrames": 0,
+   "r": 0.9761451206463467,
+   "r0": 0.9761451206463467,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w14/w14_set25_lunges.cap": {
+   "workout": "w14",
+   "exercise": "스텝 포워드 다이나믹 런지",
+   "labelStartMs": 1466767,
+   "xcorrLagFrames": 0,
+   "r": 0.9635708191288744,
+   "r0": 0.9635708191288744,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w14/w14_set26_lunges.cap": {
+   "workout": "w14",
+   "exercise": "스텝 포워드 다이나믹 런지",
+   "labelStartMs": 1512667,
+   "xcorrLagFrames": 0,
+   "r": 0.969365360534222,
+   "r0": 0.969365360534222,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w15/w15_set00_squats.cap": {
+   "workout": "w15",
+   "exercise": "바벨 스쿼트",
+   "labelStartMs": 135933,
+   "xcorrLagFrames": 0,
+   "r": 0.9762195393589475,
+   "r0": 0.9762195393589475,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w15/w15_set01_squats.cap": {
+   "workout": "w15",
+   "exercise": "바벨 스쿼트",
+   "labelStartMs": 233467,
+   "xcorrLagFrames": 0,
+   "r": 0.9812008800722365,
+   "r0": 0.9812008800722365,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w15/w15_set02_squats.cap": {
+   "workout": "w15",
+   "exercise": "바벨 스쿼트",
+   "labelStartMs": 309833,
+   "xcorrLagFrames": 1,
+   "r": 0.9789373402845716,
+   "r0": 0.977874605593992,
+   "usedLagFrames": 1,
+   "how": "xcorr",
+   "shiftMs": 33
+  },
+  "w15/w15_set09_lunges.cap": {
+   "workout": "w15",
+   "exercise": "스텝 포워드 다이나믹 런지",
+   "labelStartMs": 654367,
+   "xcorrLagFrames": 0,
+   "r": 0.9789331681210648,
+   "r0": 0.9789331681210648,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w15/w15_set10_lunges.cap": {
+   "workout": "w15",
+   "exercise": "스텝 포워드 다이나믹 런지",
+   "labelStartMs": 730500,
+   "xcorrLagFrames": 0,
+   "r": 0.9753206049529993,
+   "r0": 0.9753206049529993,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w15/w15_set11_lunges.cap": {
+   "workout": "w15",
+   "exercise": "스텝 포워드 다이나믹 런지",
+   "labelStartMs": 844400,
+   "xcorrLagFrames": 1,
+   "r": 0.9792825400028954,
+   "r0": 0.978456282004932,
+   "usedLagFrames": 1,
+   "how": "xcorr",
+   "shiftMs": 33
+  },
+  "w15/w15_set21_bicep_curls.cap": {
+   "workout": "w15",
+   "exercise": "덤벨 컬",
+   "labelStartMs": 1477300,
+   "xcorrLagFrames": 0,
+   "r": 0.9209613977103396,
+   "r0": 0.9209613977103396,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w15/w15_set22_bicep_curls.cap": {
+   "workout": "w15",
+   "exercise": "덤벨 컬",
+   "labelStartMs": 1511500,
+   "xcorrLagFrames": 0,
+   "r": 0.9362769026619965,
+   "r0": 0.9362769026619965,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w15/w15_set23_bicep_curls.cap": {
+   "workout": "w15",
+   "exercise": "덤벨 컬",
+   "labelStartMs": 1553233,
+   "xcorrLagFrames": 0,
+   "r": 0.9346927571829174,
+   "r0": 0.9346927571829174,
+   "usedLagFrames": 0,
+   "how": "xcorr",
+   "shiftMs": 0
+  },
+  "w16/w16_set00_squats.cap": {
+   "workout": "w16",
+   "exercise": "바벨 스쿼트",
+   "labelStartMs": 125733,
+   "xcorrLagFrames": -6,
+   "r": 0.943340630734294,
+   "r0": 0.7742791826346804,
+   "usedLagFrames": -6,
+   "how": "xcorr",
+   "shiftMs": -200
+  },
+  "w16/w16_set01_squats.cap": {
+   "workout": "w16",
+   "exercise": "바벨 스쿼트",
+   "labelStartMs": 193967,
+   "xcorrLagFrames": -10,
+   "r": 0.9264237512330865,
+   "r0": 0.4722722333262478,
+   "usedLagFrames": -10,
+   "how": "xcorr",
+   "shiftMs": -333
+  },
+  "w16/w16_set02_squats.cap": {
+   "workout": "w16",
+   "exercise": "바벨 스쿼트",
+   "labelStartMs": 247100,
+   "xcorrLagFrames": -13,
+   "r": 0.917785038578925,
+   "r0": 0.16884962993104727,
+   "usedLagFrames": -13,
+   "how": "xcorr",
+   "shiftMs": -433
+  },
+  "w16/w16_set10_lunges.cap": {
+   "workout": "w16",
+   "exercise": "스텝 포워드 다이나믹 런지",
+   "labelStartMs": 876433,
+   "xcorrLagFrames": -44,
+   "r": 0.8410185379929569,
+   "r0": -0.6627301800464955,
+   "usedLagFrames": -44,
+   "how": "xcorr",
+   "shiftMs": -1467
+  },
+  "w16/w16_set11_lunges.cap": {
+   "workout": "w16",
+   "exercise": "스텝 포워드 다이나믹 런지",
+   "labelStartMs": 949300,
+   "xcorrLagFrames": -48,
+   "r": 0.9102785094026261,
+   "r0": -0.46381405308080137,
+   "usedLagFrames": -48,
+   "how": "xcorr",
+   "shiftMs": -1600
+  },
+  "w16/w16_set12_lunges.cap": {
+   "workout": "w16",
+   "exercise": "스텝 포워드 다이나믹 런지",
+   "labelStartMs": 1051500,
+   "xcorrLagFrames": -51,
+   "r": 0.9152063127423871,
+   "r0": -0.5713437362386539,
+   "usedLagFrames": -51,
+   "how": "xcorr",
+   "shiftMs": -1700
+  },
+  "w16/w16_set23_bicep_curls.cap": {
+   "workout": "w16",
+   "exercise": "덤벨 컬",
+   "labelStartMs": 2026800,
+   "xcorrLagFrames": -71,
+   "r": 0.9695685579895463,
+   "r0": 0.4373083496267166,
+   "usedLagFrames": -71,
+   "how": "xcorr",
+   "shiftMs": -2367
+  },
+  "w16/w16_set24_bicep_curls.cap": {
+   "workout": "w16",
+   "exercise": "덤벨 컬",
+   "labelStartMs": 2114033,
+   "xcorrLagFrames": -75,
+   "r": 0.9673003650108934,
+   "r0": 0.7166796239259082,
+   "usedLagFrames": -75,
+   "how": "xcorr",
+   "shiftMs": -2500
+  },
+  "w16/w16_set25_bicep_curls.cap": {
+   "workout": "w16",
+   "exercise": "덤벨 컬",
+   "labelStartMs": 2201100,
+   "xcorrLagFrames": -82,
+   "r": 0.9664084869604996,
+   "r0": 0.8005431294302748,
+   "usedLagFrames": -82,
+   "how": "xcorr",
+   "shiftMs": -2733
+  },
+  "w17/w17_set00_squats.cap": {
+   "workout": "w17",
+   "exercise": "바벨 스쿼트",
+   "labelStartMs": 76500,
+   "xcorrLagFrames": -4,
+   "r": 0.9429291579929993,
+   "r0": 0.8735080815691982,
+   "usedLagFrames": -4,
+   "how": "xcorr",
+   "shiftMs": -133
+  },
+  "w17/w17_set01_squats.cap": {
+   "workout": "w17",
+   "exercise": "바벨 스쿼트",
+   "labelStartMs": 134267,
+   "xcorrLagFrames": -6,
+   "r": 0.9449842849279527,
+   "r0": 0.7179528611034591,
+   "usedLagFrames": -6,
+   "how": "xcorr",
+   "shiftMs": -200
+  },
+  "w17/w17_set02_squats.cap": {
+   "workout": "w17",
+   "exercise": "바벨 스쿼트",
+   "labelStartMs": 176167,
+   "xcorrLagFrames": -8,
+   "r": 0.9590388519226727,
+   "r0": 0.5604369031653594,
+   "usedLagFrames": -8,
+   "how": "xcorr",
+   "shiftMs": -267
+  },
+  "w17/w17_set03_squats.cap": {
+   "workout": "w17",
+   "exercise": "바벨 스쿼트",
+   "labelStartMs": 220200,
+   "xcorrLagFrames": -11,
+   "r": 0.9347356929268165,
+   "r0": 0.3836980058673174,
+   "usedLagFrames": -11,
+   "how": "xcorr",
+   "shiftMs": -367
+  },
+  "w17/w17_set11_lunges.cap": {
+   "workout": "w17",
+   "exercise": "스텝 포워드 다이나믹 런지",
+   "labelStartMs": 667833,
+   "xcorrLagFrames": -35,
+   "r": 0.963469125744379,
+   "r0": -0.6404819014722596,
+   "usedLagFrames": -35,
+   "how": "xcorr",
+   "shiftMs": -1167
+  },
+  "w17/w17_set12_lunges.cap": {
+   "workout": "w17",
+   "exercise": "스텝 포워드 다이나믹 런지",
+   "labelStartMs": 728033,
+   "xcorrLagFrames": -36,
+   "r": 0.9600674736038362,
+   "r0": -0.6233260711375468,
+   "usedLagFrames": -36,
+   "how": "xcorr",
+   "shiftMs": -1200
+  },
+  "w17/w17_set13_lunges.cap": {
+   "workout": "w17",
+   "exercise": "스텝 포워드 다이나믹 런지",
+   "labelStartMs": 808433,
+   "xcorrLagFrames": -41,
+   "r": 0.960243854317351,
+   "r0": -0.6278400564027444,
+   "usedLagFrames": -41,
+   "how": "xcorr",
+   "shiftMs": -1367
+  },
+  "w17/w17_set24_bicep_curls.cap": {
+   "workout": "w17",
+   "exercise": "덤벨 컬",
+   "labelStartMs": 1509000,
+   "xcorrLagFrames": -75,
+   "r": 0.5851446585290616,
+   "r0": -0.00900095265278986,
+   "usedLagFrames": -76,
+   "how": "fit",
+   "shiftMs": -2533
+  },
+  "w17/w17_set25_bicep_curls.cap": {
+   "workout": "w17",
+   "exercise": "덤벨 컬",
+   "labelStartMs": 1599833,
+   "xcorrLagFrames": -80,
+   "r": 0.7428694951729393,
+   "r0": -0.3985411371132409,
+   "usedLagFrames": -80,
+   "how": "fit",
+   "shiftMs": -2667
+  },
+  "w17/w17_set26_bicep_curls.cap": {
+   "workout": "w17",
+   "exercise": "덤벨 컬",
+   "labelStartMs": 1644633,
+   "xcorrLagFrames": -82,
+   "r": 0.8031771845955156,
+   "r0": -0.5644412673651679,
+   "usedLagFrames": -82,
+   "how": "xcorr",
+   "shiftMs": -2733
+  },
+  "w18/w18_set00_squats.cap": {
+   "workout": "w18",
+   "exercise": "바벨 스쿼트",
+   "labelStartMs": 59500,
+   "xcorrLagFrames": -3,
+   "r": 0.9866692936561117,
+   "r0": 0.9554232148122361,
+   "usedLagFrames": -3,
+   "how": "xcorr",
+   "shiftMs": -100
+  },
+  "w18/w18_set01_squats.cap": {
+   "workout": "w18",
+   "exercise": "바벨 스쿼트",
+   "labelStartMs": 118867,
+   "xcorrLagFrames": -5,
+   "r": 0.9899804963569955,
+   "r0": 0.8594381252714516,
+   "usedLagFrames": -5,
+   "how": "xcorr",
+   "shiftMs": -167
+  },
+  "w18/w18_set02_squats.cap": {
+   "workout": "w18",
+   "exercise": "바벨 스쿼트",
+   "labelStartMs": 255433,
+   "xcorrLagFrames": -12,
+   "r": 0.9828965187681589,
+   "r0": 0.4359017989073268,
+   "usedLagFrames": -12,
+   "how": "xcorr",
+   "shiftMs": -400
+  },
+  "w18/w18_set09_lunges.cap": {
+   "workout": "w18",
+   "exercise": "스텝 포워드 다이나믹 런지",
+   "labelStartMs": 1027300,
+   "xcorrLagFrames": -51,
+   "r": 0.9641631972567306,
+   "r0": -0.7538141475181355,
+   "usedLagFrames": -51,
+   "how": "xcorr",
+   "shiftMs": -1700
+  },
+  "w18/w18_set10_lunges.cap": {
+   "workout": "w18",
+   "exercise": "스텝 포워드 다이나믹 런지",
+   "labelStartMs": 1284867,
+   "xcorrLagFrames": -64,
+   "r": 0.9573828542740832,
+   "r0": -0.06920241336475753,
+   "usedLagFrames": -64,
+   "how": "xcorr",
+   "shiftMs": -2133
+  },
+  "w18/w18_set11_lunges.cap": {
+   "workout": "w18",
+   "exercise": "스텝 포워드 다이나믹 런지",
+   "labelStartMs": 1507267,
+   "xcorrLagFrames": -76,
+   "r": 0.92544259409991,
+   "r0": 0.45920835292425805,
+   "usedLagFrames": -76,
+   "how": "xcorr",
+   "shiftMs": -2533
+  },
+  "w18/w18_set21_bicep_curls.cap": {
+   "workout": "w18",
+   "exercise": "덤벨 컬",
+   "labelStartMs": 2958700,
+   "xcorrLagFrames": -149,
+   "r": 0.9248159718181932,
+   "r0": 0.22796688785442829,
+   "usedLagFrames": -149,
+   "how": "xcorr",
+   "shiftMs": -4967
+  },
+  "w18/w18_set22_bicep_curls.cap": {
+   "workout": "w18",
+   "exercise": "덤벨 컬",
+   "labelStartMs": 3232900,
+   "xcorrLagFrames": -163,
+   "r": 0.9167079932634248,
+   "r0": 0.05509484254752654,
+   "usedLagFrames": -163,
+   "how": "xcorr",
+   "shiftMs": -5433
+  },
+  "w18/w18_set23_bicep_curls.cap": {
+   "workout": "w18",
+   "exercise": "덤벨 컬",
+   "labelStartMs": 3404667,
+   "xcorrLagFrames": -173,
+   "r": 0.7380949088624366,
+   "r0": 0.17276875241940023,
+   "usedLagFrames": -172,
+   "how": "fit",
+   "shiftMs": -5733
+  },
+  "w19/w19_set00_squats.cap": {
+   "workout": "w19",
+   "exercise": "바벨 스쿼트",
+   "labelStartMs": 33800,
+   "xcorrLagFrames": -2,
+   "r": 0.9857204847219734,
+   "r0": 0.9473067859888002,
+   "usedLagFrames": -2,
+   "how": "xcorr",
+   "shiftMs": -67
+  },
+  "w19/w19_set01_squats.cap": {
+   "workout": "w19",
+   "exercise": "바벨 스쿼트",
+   "labelStartMs": 82300,
+   "xcorrLagFrames": -4,
+   "r": 0.9813740858218858,
+   "r0": 0.8364071617533942,
+   "usedLagFrames": -4,
+   "how": "xcorr",
+   "shiftMs": -133
+  },
+  "w19/w19_set02_squats.cap": {
+   "workout": "w19",
+   "exercise": "바벨 스쿼트",
+   "labelStartMs": 128967,
+   "xcorrLagFrames": 25,
+   "r": 0.987853780889259,
+   "r0": -0.7555255562193299,
+   "usedLagFrames": 25,
+   "how": "xcorr",
+   "shiftMs": 833
+  },
+  "w19/w19_set09_lunges.cap": {
+   "workout": "w19",
+   "exercise": "스텝 포워드 다이나믹 런지",
+   "labelStartMs": 664333,
+   "xcorrLagFrames": 17,
+   "r": 0.9517665857402439,
+   "r0": 0.2077555556037725,
+   "usedLagFrames": 17,
+   "how": "xcorr",
+   "shiftMs": 567
+  },
+  "w19/w19_set10_lunges.cap": {
+   "workout": "w19",
+   "exercise": "스텝 포워드 다이나믹 런지",
+   "labelStartMs": 724200,
+   "xcorrLagFrames": 14,
+   "r": 0.9611792574503253,
+   "r0": 0.30573646081624206,
+   "usedLagFrames": 14,
+   "how": "xcorr",
+   "shiftMs": 467
+  },
+  "w19/w19_set11_lunges.cap": {
+   "workout": "w19",
+   "exercise": "스텝 포워드 다이나믹 런지",
+   "labelStartMs": 779867,
+   "xcorrLagFrames": 12,
+   "r": 0.9503375923799665,
+   "r0": 0.40176857523577414,
+   "usedLagFrames": 12,
+   "how": "xcorr",
+   "shiftMs": 400
+  },
+  "w19/w19_set21_bicep_curls.cap": {
+   "workout": "w19",
+   "exercise": "덤벨 컬",
+   "labelStartMs": 1461000,
+   "xcorrLagFrames": -21,
+   "r": 0.9290708035121055,
+   "r0": -0.19446770181320697,
+   "usedLagFrames": -21,
+   "how": "xcorr",
+   "shiftMs": -700
+  },
+  "w19/w19_set22_bicep_curls.cap": {
+   "workout": "w19",
+   "exercise": "덤벨 컬",
+   "labelStartMs": 1504000,
+   "xcorrLagFrames": -22,
+   "r": 0.9153342191799269,
+   "r0": -0.36859830314895575,
+   "usedLagFrames": -22,
+   "how": "xcorr",
+   "shiftMs": -733
+  },
+  "w19/w19_set23_bicep_curls.cap": {
+   "workout": "w19",
+   "exercise": "덤벨 컬",
+   "labelStartMs": 1603400,
+   "xcorrLagFrames": -25,
+   "r": 0.8996700630334863,
+   "r0": -0.6425207204175808,
+   "usedLagFrames": -25,
+   "how": "xcorr",
+   "shiftMs": -833
+  },
+  "w19/w19_set24_bicep_curls.cap": {
+   "workout": "w19",
+   "exercise": "덤벨 컬",
+   "labelStartMs": 1640467,
+   "xcorrLagFrames": -27,
+   "r": 0.9103552727874865,
+   "r0": -0.7140190715680361,
+   "usedLagFrames": -27,
+   "how": "xcorr",
+   "shiftMs": -900
+  },
+  "w20/w20_set00_squats.cap": {
+   "workout": "w20",
+   "exercise": "바벨 스쿼트",
+   "labelStartMs": 72600,
+   "xcorrLagFrames": -4,
+   "r": 0.9933149789737498,
+   "r0": 0.9392350636272274,
+   "usedLagFrames": -4,
+   "how": "xcorr",
+   "shiftMs": -133
+  },
+  "w20/w20_set01_squats.cap": {
+   "workout": "w20",
+   "exercise": "바벨 스쿼트",
+   "labelStartMs": 134233,
+   "xcorrLagFrames": -6,
+   "r": 0.9941798461343746,
+   "r0": 0.8521807236813618,
+   "usedLagFrames": -6,
+   "how": "xcorr",
+   "shiftMs": -200
+  },
+  "w20/w20_set02_squats.cap": {
+   "workout": "w20",
+   "exercise": "바벨 스쿼트",
+   "labelStartMs": 219967,
+   "xcorrLagFrames": -11,
+   "r": 0.9962756306510178,
+   "r0": 0.6423269619589367,
+   "usedLagFrames": -11,
+   "how": "xcorr",
+   "shiftMs": -367
+  },
+  "w20/w20_set06_lunges.cap": {
+   "workout": "w20",
+   "exercise": "스텝 포워드 다이나믹 런지",
+   "labelStartMs": 680833,
+   "xcorrLagFrames": -35,
+   "r": 0.9838462886870458,
+   "r0": -0.4506839473043821,
+   "usedLagFrames": -35,
+   "how": "xcorr",
+   "shiftMs": -1167
+  },
+  "w20/w20_set07_lunges.cap": {
+   "workout": "w20",
+   "exercise": "스텝 포워드 다이나믹 런지",
+   "labelStartMs": 764667,
+   "xcorrLagFrames": -39,
+   "r": 0.9837894731684305,
+   "r0": -0.4913275192409898,
+   "usedLagFrames": -39,
+   "how": "xcorr",
+   "shiftMs": -1300
+  },
+  "w20/w20_set08_lunges.cap": {
+   "workout": "w20",
+   "exercise": "스텝 포워드 다이나믹 런지",
+   "labelStartMs": 879733,
+   "xcorrLagFrames": -44,
+   "r": 0.9808629895632894,
+   "r0": -0.5653072325361029,
+   "usedLagFrames": -44,
+   "how": "xcorr",
+   "shiftMs": -1467
+  },
+  "w20/w20_set18_bicep_curls.cap": {
+   "workout": "w20",
+   "exercise": "덤벨 컬",
+   "labelStartMs": 2236433,
+   "xcorrLagFrames": -113,
+   "r": 0.9579427786036969,
+   "r0": -0.6070603747285093,
+   "usedLagFrames": -113,
+   "how": "xcorr",
+   "shiftMs": -3767
+  },
+  "w20/w20_set19_bicep_curls.cap": {
+   "workout": "w20",
+   "exercise": "덤벨 컬",
+   "labelStartMs": 2323833,
+   "xcorrLagFrames": -117,
+   "r": 0.951038029359576,
+   "r0": -0.7267815646873652,
+   "usedLagFrames": -117,
+   "how": "xcorr",
+   "shiftMs": -3900
+  },
+  "w20/w20_set20_bicep_curls.cap": {
+   "workout": "w20",
+   "exercise": "덤벨 컬",
+   "labelStartMs": 2424100,
+   "xcorrLagFrames": -121,
+   "r": 0.9357410407123696,
+   "r0": -0.6479231582550382,
+   "usedLagFrames": -121,
+   "how": "xcorr",
+   "shiftMs": -4033
+  }
+ }
+}

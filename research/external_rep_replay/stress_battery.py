@@ -36,8 +36,8 @@ first8|tempo — 사후 탐색은 선택 규칙에 들어가지 않는다)을 �
     python stress_battery.py ../../data/mm-fit/mm-fit --out results/design_v2_battery.json \
         [--per-set ../../data/mm-fit/exp_design_v2/per_set.json]
 결과 JSON 의 preregistrationSha12 는 실행 시점 설계 문서 §12 본문의 해시다 — 본문이 바뀌면 달라진다. 이 해시는 "이 결과가 이
-§12 본문으로 판정됐다" 를 묶을 뿐 **§12 가 결과보다 먼저 쓰였다는 증거는 아니다**. 순서의 증거는 §12 만 담은 커밋을 결과보다 먼저
-남기는 것이다(설계 §13 머리 참고).
+§12 본문으로 판정됐다" 를 묶을 뿐 **§12 가 결과보다 먼저 쓰였다는 증거는 아니다**. §12 는 결과와 같은 커밋에 들어갔고
+순서는 세션 기록으로만 뒷받침된다(설계 §13 머리 참고).
 """
 from __future__ import annotations
 
@@ -482,7 +482,7 @@ def write_md(path: Path, res, base, syn, syn_occ, sel, skipped, prereg_sha):
          "복귀 히스테리시스 코어(게이트 35°, f = 0.25, 불응기 0.8 s, 평활 없음). **MM-Fit 은 개발 데이터다** — 21개 워크아웃 전부를",
          "이전 실험에서 이미 봤다. 정책 사이의 비교이지 일반화 성능이 아니다.",
          f"사전 등록 규칙: `docs/REP_ENGINE_DESIGN.md` §12 (배터리 실행 시 본문 sha256 앞 12자리 `{prereg_sha}`).",
-         "해시는 이 결과와 §12 본문을 묶을 뿐, §12 가 먼저 쓰였다는 증거는 아니다 — 순서는 §12 만 담은 커밋으로 남긴다(설계 §13).", "",
+         "해시는 이 결과와 §12 본문을 묶을 뿐, §12 가 먼저 쓰였다는 증거는 아니다 — §12 는 결과와 같은 커밋에 들어갔다(설계 §13).", "",
          "정책:", ""]
     L += [f"- `{p}` — {POLICY_NOTE.get(p, '')}" for p in POLICY_NAMES]
     L += ["", "조합 `curl|elbow_minside_both` 는 진단용이다 — 한쪽 팔이 안 보이는 샘플을 버리는 minside(앱 PostureCore 는 보이는 쪽 값을 쓴다).",

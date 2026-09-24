@@ -3,11 +3,12 @@
 반복 정답이 있는 외부 데이터(MM-Fit, REHAB24-6)에 **지금 앱이 세션에서 쓰는 카운터**를 그대로 돌려,
 "AIHub 에서 뽑은 렙 로직이 연속 동작·휴대폰 조건에서도 통하는가"를 스쿼트·런지·덤벨 컬 세 종목에서 잰다.
 
-## 0. 상태 (2026-09-23)
+## 0. 상태 (2026-09-24)
 
 | 실험 | 상태 |
 |---|---|
-| **본 실험** — 영상 → MediaPipe(앱 모델) → 현재 카운터 | **미실행.** MM-Fit 영상과 REHAB24-6 은 zenodo.org 에 있는데 이 작업 환경의 네트워크 정책이 그 호스트를 거부했다. 코드는 준비·검증돼 있어 호스트가 허용되면 §6 명령으로 바로 돈다 |
+| **본 실험 (MM-Fit)** — 영상 → MediaPipe(앱 모델) → 현재 카운터·새 코어 | **실행함(§10).** zenodo.org 가 이 컨테이너에서 막혀 사용자 PC 에서 추출했다(캡처: 브랜치 `data/mmfit-mp-captures`, CC BY 4.0). 설계 `docs/REP_ENGINE_DESIGN.md` §16 |
+| **본 실험 (REHAB24-6)** | 판정 기준 사전 등록(설계 §17, `score_rehab_prereg.py`) → 사용자 PC 실행 대기. CC BY-NC 라 파생 캡처는 공개 저장소에 올리지 않고 집계만 |
 | **보조 실험** — MM-Fit 데이터셋 자체 3D 포즈 → 현재 카운터 | 실행함(§4). MediaPipe 결과를 대신하지 않는다 |
 
 `docs/mmfit-rep-counting.v1.md`·`docs/rehab-rep-f1.v1.md` 의 숫자는 **다른 계열 엔진**(`HeuristicFormCheckSession`,
@@ -21,7 +22,9 @@
 | `extract_mediapipe.py` | 영상 → MediaPipe 캡처 (MM-Fit 세트 / REHAB24-6 녹화) |
 | `mmfit_pose3d_captures.py` | MM-Fit `pose_3d.npy` → 같은 형식의 캡처 (보조 실험) |
 | `capture_format.py` | 캡처 형식, 앱 추론 주기 |
-| `run_replay.py` | 매니페스트 생성 → 재생 → 채점 (세트 반복 수, 반복 경계 F1) |
+| `run_replay.py` | 매니페스트 생성 → 재생 → 채점 (세트 반복 수, 반복 경계 F1). 윈도우에서는 재생기 `.bat` 을 부른다 |
+| `mmfit_align.py` | MM-Fit 영상 시간축 ↔ 라벨 정렬 — 세트별 지연(pose_3d 교차상관)으로 정답 창을 영상 시각으로 옮긴 index (§10) |
+| `score_rehab_prereg.py` | REHAB24-6 사전 등록 판정(설계 §17) — 발화 시각 경계 일치, 카메라별, 정자세/비정자세 재현율, P1~P4 |
 | `prototype_counter.py` · `stress_battery.py` · `parity_core.py` | 새 코어 프로토타입(§8) · 시작 확정 정책 배터리(설계 §12·§13) · Kotlin 새 코어 ↔ 프로토타입 세트별 파리티 |
 | §9 의 도구들 | 휴대폰 세트 로그 재생·채점·검증 프로토콜(휴대폰 연결 전 준비분) |
 | `results/` | 요약 수치 (원본 캡처는 `data/` — git 제외) |
@@ -128,7 +131,7 @@ python -m venv .venv-mp && .venv-mp/bin/pip install "mediapipe==0.10.14" opencv-
 python mmfit_pose3d_captures.py ../../data/mm-fit/mm-fit --out ../../data/mm-fit/captures_pose3d
 python run_replay.py ../../data/mm-fit/captures_pose3d --out ../../data/mm-fit/results_pose3d
 
-# 2) 본 실험 — zenodo.org 허용 후 영상을 받아서
+# 2) 본 실험 — 영상을 받아서 (이 컨테이너는 zenodo.org 가 막혀 사용자 PC 에서 돌렸다 — §10. 윈도우는 PYTHONUTF8=1)
 python extract_mediapipe.py mmfit ../../data/mm-fit/mm-fit --videos ../../data/mm-fit/videos --out ../../data/mm-fit/captures_mp
 python run_replay.py ../../data/mm-fit/captures_mp --out ../../data/mm-fit/results_mp
 python extract_mediapipe.py rehab ../../data/rehab24-6 --videos ../../data/rehab24-6/videos --out ../../data/rehab24-6/captures_mp
@@ -207,3 +210,30 @@ ROM 기준이 없는 신호(지금의 런지 `knee_mean`)는 `romUnjudged` 로 �
 - 새 코어는 세트 안은 지키지만(0.94~0.97), 앞뒤 움직임까지 센 전체는 런지 0.74 · 컬 0.53 으로 항상-10 아래다. 세트 경계가 가장 큰 위험이라는 설계 §14 와 같은 방향이다.
   MM-Fit 의 앞뒤 창은 세트 사이 휴식이지 카운트다운 직후가 아니므로 크기는 폰(Gate A)에서 다시 잰다.
 - 앞 창이 붙으면 새 코어도 세트 안 과다 카운트가 생긴다(런지 2세트 · 컬 1세트, 0.5 s 캡처에서는 0).
+
+## 10. 본 실험 — MM-Fit 영상 → MediaPipe (2026-09-24)
+
+사용자 PC 가 MM-Fit 21개 워크아웃 영상(Zenodo 7672767)을 한 개씩 받아 `extract_mediapipe.py mmfit --pre-s 15 --post-s 10` 으로 뽑았다
+(앱 모델 SHA `4eaa5eb7…`, VIDEO, 300 ms, 긴 변 640, CPU 델리게이트 — 앱은 GPU 우선). 185세트(스쿼트 64 · 런지 62 · 컬 59), 캡처는 브랜치 `data/mmfit-mp-captures`.
+
+```bash
+git show origin/data/mmfit-mp-captures:mmfit_mp_captures.zip > ../../data/mm-fit/mp_captures.zip && unzip -q ../../data/mm-fit/mp_captures.zip -d ../../data/mm-fit/mp_captures
+python mmfit_align.py ../../data/mm-fit/mp_captures ../../data/mm-fit/mm-fit --out ../../data/mm-fit/mp_captures_aligned
+python run_replay.py ../../data/mm-fit/mp_captures_aligned --out <결과> \
+    --configs live,live+knee_out_mean,live+elbow_minside,hysteresis,hysteresis+knee_minside,hysteresis+elbow_minside
+python mmfit_pair_compare.py compare <w00~w15 만 담은 캡처 폴더> ../../data/mm-fit/mm-fit --out <결과>
+```
+
+- **w16~w20 은 영상이 라벨보다 점점 앞선다**(초당 약 −0.05프레임, 후반 컬 세트에서 −2.5~−5.8 s; w19 는 +30프레임 도약). w00~w15 는 지연 0.
+  `mmfit_align.py` 가 세트마다 지연을 재 정답 창만 옮긴다 — 카운터는 그대로다. 짝짓기(`mmfit_pair_compare.py`)는 워크아웃당 지연 하나를 가정하므로 w00~w15 로만 돌렸다.
+- 결과: `results/mmfit_mp/replay_aligned.md`(판정 표) · `replay_raw.md`(보정 전) · `pair_w00_15.md`(3D 짝짓기) · `alignment.json`(세트별 지연) ·
+  `replay_aligned.summary.json`(세트별 행을 뺀 요약). 해석은 설계 §16.
+
+| 세트 정확 일치 (재현율) | 스쿼트 | 런지 | 컬 |
+|---|---|---|---|
+| 항상 10 | 0.95 | 0.95 | 0.92 |
+| 지금 앱 `live` | 0.33 (0.73) | 0.18 (0.70) — 교체 전 `knee_out_mean` 0.00 (0.08) | 0.00 (0.09) |
+| 새 코어 `hysteresis` | 1.00 (1.00) | 0.97 (1.00) | `elbow_mean` 0.00 (0.14) · `elbow_minside` 0.85 (0.98) |
+
+같은 샘플 시각의 3D 와 비교하면(w00~w15) MediaPipe 는 새 코어의 스쿼트·런지 카운트를 세트당 ±0.04회밖에 바꾸지 않는다. MediaPipe 는 무릎을 약 9° 더 굽게,
+깊이 굽힌 팔꿈치를 24~29° 얕게 읽고, 휴식 지터 σ 는 2.0~2.8°(3D 0.9°)다. 세트 앞 헛카운트는 런지에서 3D 의 약 2배다(0.17 → 0.36/세트).
