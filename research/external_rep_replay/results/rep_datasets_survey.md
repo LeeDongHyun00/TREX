@@ -92,14 +92,17 @@ Kinetics 가 10초 클립이라 **한 영상에 렙이 2~3개뿐**이다. TREX �
 | `ovr/` | Kinetics·Ego4D 주석 JSON | 39MB |
 | `repcount_a/annotations/` | 반복별 경계 CSV 3개(EveryShotCounts 경유) | 728KB |
 | `repcount_a/*.jsonl` | HF 미러 개수 라벨 | 27KB |
-| `repcount_a/lance/validation.lance` | RepCount-A 영상 패키지 일부 | 1.24GB |
 | `ucfrep/` | 반복별 경계 CSV 2개 | 229KB |
 | `countix_fitness/` | Countix-Fitness 주석 2개 + 영상 안내 | 74KB |
+
+합계 약 40MB. 영상 바이트는 하나도 남기지 않았다.
 
 **영상은 받지 않았다.** 이유를 단계별로 적는다.
 
 1. **Countix·OVR** — YouTube ID 만 제공. 개별 YouTube 다운로드는 하지 말라는 지시가 있어 제외.
-2. **RepCount-A** — 공식은 OneDrive/BaiduNetdisk 이고 둘 다 암호가 걸려 있다. OneDrive 공유 링크는 Graph API 로 목록을 못 읽는다(`userContentMigrated` 오류). 유일한 프로그램적 경로는 비공식 HF 미러 `lmms-lab-eval/repcounta-lance` 인데 **Lance 컬럼 포맷 단일 파일**이라 클래스별로 잘라 받을 수 없다 — train 6.98GB + test 1.49GB + validation 1.24GB = **약 9.7GB 를 통째로** 받아야 스쿼트 135개가 나온다. "스쿼트·런지·컬 관련 클래스만" 이라는 조건과 맞지 않고, 이 PC 의 C: 는 **여유 54GB(사용률 95%)** 다. 포맷 확인용으로 validation(1.24GB)만 받고 멈췄다. 읽으려면 `pip install pylance` 가 추가로 필요한데 사용자 파이썬 환경을 건드리는 일이라 하지 않았다.
+2. **RepCount-A** — 공식은 OneDrive/BaiduNetdisk 이고 둘 다 암호가 걸려 있다. OneDrive 공유 링크는 Graph API 로 목록을 못 읽는다(`userContentMigrated` 오류). 유일한 프로그램적 경로는 비공식 HF 미러 `lmms-lab-eval/repcounta-lance` 인데 **Lance 컬럼 포맷 단일 파일**이라 클래스별로 잘라 받을 수 없다 — train 6.98GB + test 1.49GB + validation 1.24GB = **약 9.7GB 를 통째로** 받아야 스쿼트 135개가 나온다. "스쿼트·런지·컬 관련 클래스만" 이라는 조건과 맞지 않고, 이 PC 의 C: 는 **여유 55GB(사용률 95%)** 다. 그래서 받지 않았다.
+   - 포맷만 HTTP Range 로 앞 64바이트를 읽어 확인했다: 파일 머리가 `ftypisom…isomiso2avc1mp41` 로 **MP4 블롭이 그대로 들어 있는 구조**다. 다만 행 단위로 꺼내려면 `pip install pylance` 가 필요하고, 그건 사용자 파이썬 환경을 건드리는 일이라 하지 않았다.
+   - ⚠️ 이 미러는 **다운로드가 조용히 잘린다.** validation 파일을 한 번 받아 보니 API 가 보고한 1,236,373,231 바이트 중 469,468,400 바이트만 오고도 `curl` 이 종료코드 0 을 반환했다. 나중에 실제로 받을 때는 **받은 바이트 수를 API 의 `size` 와 대조**하고 `curl -C -` 로 이어받아야 한다. 잘린 파일은 지웠다.
 3. **InfiniteRep** — 원 배포처(`marketplace.infinity.ai`)가 응답하지 않고 GitHub `toinfinityai/InfiniteRep` 은 404 다. 남은 미러 `FatimahEmadEldin/infiniterep-physiotherapy`(1.13GB, 클래스별 폴더라 squat·curl 만 받을 수 있었다)에서 squat 샘플 zip 을 열어보니 **786개 항목이 전부 `iseg`/`cseg` 세그멘테이션 마스크 PNG** 였다. RGB 프레임도 렙 라벨 JSON 도 없다. 받아도 쓸 수 없어 중단하고 지웠다.
 4. **UCFRep** — UCF101 전체(약 6.5GB)를 받아야 하고, 그중 반복 라벨이 있는 스쿼트는 `BodyWeightSquats` 21개뿐이다. 비용 대비 수확이 낮아 이번엔 보류.
 5. **Fit3D·FLAG3D·FLEX** — 전부 신청·승인이 필요하고 자동으로 받을 수 없다. Fit3D 와 FLEX 는 명시적으로 상업 이용 금지다.
