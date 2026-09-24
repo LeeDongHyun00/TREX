@@ -1144,6 +1144,7 @@ JVM 244건 통과: 모든 카메라 종목에서 방향 문구가 5초 안내보
 - 예전에 저장된 루틴의 카탈로그 밖 종목(예: 마무리 스트레칭)은 지우지 않는다. 프로필이 없어 `postureSupported()` 가 false 가 되므로 카메라 없이 타이머로만 진행한다. 이름별 페이스·휴식·부위 분류(`WorkoutPacing`, `workoutRegion`)와 레거시 기록 정리(`LegacyDemoData`)는 이 호환을 위해 그대로 둔다
 - 크런치·Y - Exercise 는 바닥 규칙이 exclude 1개뿐이라 매핑돼 있어도 위반을 판정하는 규칙이 없다. 26종목 유지 요청에 따라 남겼다. 화면에서 이 공백을 따로 알리는 작업은 하지 않았다
 - 규칙 JSON·임계값·규칙 등급은 바꾸지 않았다
+- **후속 (2026-09-24, PC 첫 빌드가 잡음)**: 분류(`category`)를 저장하지 않던 때의 운동 기록은 `recordWorkoutFocus` 가 종목명을 카탈로그 → `todayPlan` 에서 찾아 초점을 되찾는데, 뺀 종목이 전부 "전신" 으로 떨어져 **업데이트만으로 지난 기록의 표시가 바뀌었다**(`AdaptiveAndDataTest` 의 기본 스쿼트 → 하체 기대가 실패 — `research/external_rep_replay/results/pc_build_check.md`). 뺀 31종목과 옛 `todayPlan` 의 "푸쉬업 입문" 의 원래 분류를 `retiredWorkoutCategories`(`RecordOverview.kt`)에 두고 세 번째 순서로 찾는다. 지난 기록 표시에만 쓰고, 현재 카탈로그·`todayPlan` 과 이름이 겹치지 않는다는 것을 테스트가 고정한다(겹치면 분류의 정본이 둘이 된다). 대체 운동 이름(예: 의자 스쿼트)은 §56 전에도 찾지 못해 전신이었으므로 그대로 둔다
 
 ## §57 — 휴대폰 횟수 엔진 설계 (2026-09-24, 설계만)
 

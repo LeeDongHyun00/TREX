@@ -95,6 +95,18 @@ class AdaptiveAndDataTest {
         assertTrue(dayWorkoutAssessment(day(PostureCorrection("관측",kind="clean",judged=3))).contains("평가 가능한"))
         assertEquals(RoutineFocus.LOWER, recordWorkoutFocus(day(null)))
     }
+    @Test fun retiredCatalogNamesKeepTheirFocusInOldRecords() {
+        fun focusOf(name: String) = recordWorkoutFocus(WorkoutHistoryDay(0, "", "", listOf(WorkoutHistoryItem(name, "1회", 5, 10)), 0, 0))
+        assertEquals(RoutineFocus.LOWER, focusOf("월 싯"))
+        assertEquals(RoutineFocus.UPPER, focusOf("푸쉬업 입문"))
+        assertEquals(RoutineFocus.CORE, focusOf("러시안 트위스트"))
+        assertEquals(RoutineFocus.CARDIO, focusOf("버피"))
+        assertEquals(RoutineFocus.RECOVERY, focusOf("마무리 스트레칭"))
+        assertEquals(RoutineFocus.FULL, focusOf("처음 보는 종목"))
+        // 표가 현재 카탈로그 이름을 가리면 분류의 정본이 둘이 된다
+        val live = workoutCatalog.values.flatten().map { it.name }.toSet() + todayPlan.map { it.name }
+        assertTrue(retiredWorkoutCategories.keys.none { it in live })
+    }
     @Test fun sessionTimeSurvivesAdvanceAndExcludesRestAndPause() {
         val steps=buildSessionSteps(todayPlan.take(1))
         var progress=SessionProgress(1,0).tick(30000,false,false,true,true)
