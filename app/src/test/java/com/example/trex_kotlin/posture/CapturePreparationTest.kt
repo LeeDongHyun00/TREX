@@ -11,6 +11,29 @@ class CapturePreparationTest {
             assertTrue(text.indexOf(profile.capture.voice) < text.indexOf("5초"))
         }
     }
+    @Test fun lungesStateTheOneSideOneRepRuleBeforeTheStart() {
+        // 앱 '런지' 는 카운트 신호 교체(knee_mean) 뒤 목표 도달 자동 진행(spec §42)이 실제로 걸린다 — 한 걸음 = 1회라는 정의를
+        // 시작 전에 밝힌다(설계 §4.4·§4.8). 런지는 걸음마다 두 무릎이 함께 굽어 카운터가 실제로 그렇게 센다.
+        val lunge = ExerciseProfiles.forName("런지")!!
+        assertTrue(lunge.alternating && lunge.statesSideCount)
+        assertTrue(lunge.preparationInstruction.contains(ALTERNATING_COUNT_RULE))
+        assertTrue(lunge.preparationInstruction.indexOf(ALTERNATING_COUNT_RULE) < lunge.preparationInstruction.indexOf("5초"))
+        assertEquals(setOf("런지", "바벨 런지", "사이드 런지", "크로스 런지", "덤벨 컬", "스탠딩 니업"),
+            ExerciseProfiles.all.filter { it.alternating }.map { it.name }.toSet())
+        assertEquals(setOf("런지", "바벨 런지", "사이드 런지", "크로스 런지"),
+            ExerciseProfiles.all.filter { it.statesSideCount }.map { it.name }.toSet())
+        ExerciseProfiles.all.filter { !it.statesSideCount }.forEach { assertFalse(it.name, it.preparationInstruction.contains("한쪽 1회")) }
+    }
+    @Test fun averagedTwoLimbSignalsDoNotPromiseTheOneSideRule() {
+        // 덤벨 컬·스탠딩 니업은 교대 동작이지만 카운트 신호가 두 팔·두 엉덩이 평균이라 한쪽만 움직이면 절반만 움직인다 —
+        // 지키지 못하는 횟수 정의를 안내에 넣지 않는다(원칙 #1, 설계 §4.4).
+        for (name in listOf("덤벨 컬", "스탠딩 니업")) {
+            val p = ExerciseProfiles.forName(name)!!
+            assertTrue(name, p.alternating)
+            assertFalse(name, p.statesSideCount)
+            assertFalse(name, p.preparationInstruction.contains(ALTERNATING_COUNT_RULE))
+        }
+    }
     @Test fun guidanceKeepsAnatomicalRightAndLeft() {
         val right=ExerciseProfiles.all.first { it.capture==CapturePosition.RIGHT_FRONT }
         val left=ExerciseProfiles.all.first { it.capture==CapturePosition.LEFT_FRONT }

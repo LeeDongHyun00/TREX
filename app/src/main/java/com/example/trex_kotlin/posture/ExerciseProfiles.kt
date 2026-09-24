@@ -11,15 +11,31 @@ enum class CapturePosition(val title: String, val placement: String, val voice: 
 }
 
 enum class ObservationKind { REPS, HOLD, WINDOW, GUIDE }
+
+/** 걸음마다 1회로 세는 교대 종목의 자동 횟수 정의 — 준비 안내(화면·음성)에 그대로 들어간다([ExerciseProfile.statesSideCount]). */
+const val ALTERNATING_COUNT_RULE = "번갈아 하는 동작은 한쪽 1회를 1회로 셉니다."
+
+/**
+ * @property alternating 좌우를 번갈아 하는 종목(런지류·덤벨 컬·스탠딩 니업).
+ * @property statesSideCount 준비 안내에 [ALTERNATING_COUNT_RULE] 을 넣는 종목 — **런지류만**. 런지는 걸음마다 두 무릎이 함께 굽어
+ *   무릎 신호(knee_mean·knee_minside)가 걸음마다 한 번 내려가므로 자동 횟수가 실제로 한쪽 1회 = 1회로 센다(왼·오른 5+5 = 10,
+ *   MM-Fit 라벨과 같은 정의 — docs/REP_ENGINE_DESIGN.md §4.4). 목표 도달 자동 진행(spec §42)이 이 수로 넘어가므로 "한쪽 10회" 를
+ *   기대한 사용자는 한쪽 5회에서 세트가 끝난다 — 그래서 시작 전에 밝힌다(설계 §4.8).
+ *   덤벨 컬·스탠딩 니업은 두 팔·두 엉덩이의 **평균** 신호(elbow_mean·hip_mean)라 한쪽만 움직이면 신호가 절반만 움직여 한쪽 1회가
+ *   세진다는 보장이 없다(MM-Fit 교대 컬 영상 MediaPipe: 지금 카운터 재현율 0.09) — 지키지 못하는 정의를 말하지 않는다(원칙 #1).
+ *   정의 자체는 사용자 결정(§15 #18).
+ */
 data class ExerciseProfile(val name: String, val referenceExercise: String?, val capture: CapturePosition,
-    val floor: Boolean, val kind: ObservationKind, val metricFeatures: List<String>) {
+    val floor: Boolean, val kind: ObservationKind, val metricFeatures: List<String>, val alternating: Boolean = false,
+    val statesSideCount: Boolean = false) {
     val preparationDirection get() = when(capture) {
         CapturePosition.SIDE -> "측면"
         CapturePosition.FLOOR_SIDE -> "낮은 측면"
         CapturePosition.FLOOR_FRONT -> "앞쪽 사선"
         else -> capture.title
     }
-    val preparationInstruction get() = "권장 촬영 방향은 ${preparationDirection}입니다. ${capture.voice}. 몸이 화면에 잡히면 5초 뒤 시작해요."
+    val preparationInstruction get() = "권장 촬영 방향은 ${preparationDirection}입니다. ${capture.voice}. " +
+        (if (statesSideCount) "$ALTERNATING_COUNT_RULE " else "") + "몸이 화면에 잡히면 5초 뒤 시작해요."
     val cameraEnabled get() = kind != ObservationKind.GUIDE
     val comparisonOnly get() = referenceExercise == null
     val startHint get() = when(kind) {
@@ -43,8 +59,10 @@ object ExerciseProfiles {
     val all: List<ExerciseProfile> = buildList {
         fun p(name: String, ref: String?, capture: CapturePosition, features: List<String>, floor: Boolean = false,
               kind: ObservationKind = if (ref == null) ObservationKind.WINDOW else ObservationKind.REPS) {
-            val alternating = name in setOf("런지","바벨 런지","사이드 런지","크로스 런지","덤벨 컬","스탠딩 니업")
-            add(ExerciseProfile(name, ref, capture, floor, if (alternating) ObservationKind.WINDOW else kind, features))
+            val lunges = setOf("런지","바벨 런지","사이드 런지","크로스 런지")
+            val alternating = name in lunges || name in setOf("덤벨 컬","스탠딩 니업")
+            add(ExerciseProfile(name, ref, capture, floor, if (alternating) ObservationKind.WINDOW else kind, features, alternating,
+                statesSideCount = name in lunges))
         }
         val c=CapturePosition.FRONT; val b=CapturePosition.RIGHT_FRONT; val d=CapturePosition.LEFT_FRONT
         val low=CapturePosition.FLOOR_SIDE; val oblique=CapturePosition.FLOOR_FRONT

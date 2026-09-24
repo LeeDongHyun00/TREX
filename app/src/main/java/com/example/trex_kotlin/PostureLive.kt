@@ -128,8 +128,13 @@ import com.example.trex_kotlin.posture.PoseSample
 import com.example.trex_kotlin.posture.PostureAnalyzer
 import com.example.trex_kotlin.posture.PostureRule
 import com.example.trex_kotlin.posture.RepCounter
+import com.example.trex_kotlin.posture.RepCycle
+import com.example.trex_kotlin.posture.RepEngineLog
 import com.example.trex_kotlin.posture.RepMetrics
+import com.example.trex_kotlin.posture.RepPendingState
 import com.example.trex_kotlin.posture.RepRecord
+import com.example.trex_kotlin.posture.RepResetEvent
+import com.example.trex_kotlin.posture.RepRomTier
 import com.example.trex_kotlin.posture.RuleHighlight
 import com.example.trex_kotlin.posture.RuleStatus
 import com.example.trex_kotlin.posture.RuleResult
@@ -141,6 +146,7 @@ import com.example.trex_kotlin.posture.SetLog
 import com.example.trex_kotlin.posture.SetLogStore
 import com.example.trex_kotlin.posture.SpeechCoach
 import com.example.trex_kotlin.posture.SubjectId
+import com.example.trex_kotlin.posture.ThermalEvent
 import com.example.trex_kotlin.posture.ThermalMonitor
 import com.example.trex_kotlin.posture.ViewEstimator
 import com.example.trex_kotlin.posture.Verdict
@@ -212,7 +218,10 @@ private const val ANCHOR_FALLBACK_WITH_COUNTER_MS = 10_000L
 /** '참고(베타)' 배너 갱신 최소 간격 — 말하지 않는 표시라도 매 프레임 바뀌면 읽을 수 없다 */
 private const val PROVISIONAL_NOTE_GAP_MS = 3_000L
 
-/** 세트당 무효 렙 사유 발화 상한 — 같은 문장을 렙마다 반복하면 잔소리가 되고 자세 지적을 큐 뒤로 민다 */
+/**
+ * 세트당 무효 렙 사유 발화 상한 — 같은 문장을 렙마다 반복하면 잔소리가 되고 자세 지적을 큐 뒤로 민다.
+ * (지금 라이브 경로는 ROM 사유를 말하지 않는다. 되살린다면 검증된 기준(`RepRomTier.VALIDATED`)에서만 — spec §58)
+ */
 private const val MAX_INVALID_CUES = 2
 
 /** 촬영 안내 음성 최소 간격 — 자세를 고치는 데 시간이 걸리므로 자주 말하지 않는다 */
@@ -340,8 +349,10 @@ fun PostureLiveSessionScreen(
     // ---- 자동 렙 카운터 (spec §27): 종목별 렙 신호의 히스테리시스 사이클. 분석 스레드에서 갱신.
     //      등척성(플랭크)·미등록 종목은 null. 카운트는 beta — ±1 오차가 구조적이라 참고 표시.
     val repRef = remember { arrayOfNulls<RepCounter>(1) }
-    var repCount by remember { mutableIntStateOf(0) }      // 유효 렙
-    var repInvalid by remember { mutableIntStateOf(0) }    // ROM 미달 렙 — 코치: 무효+사유 발화, 기록: 파셜 집계만 (§29)
+    // 두 수의 합 = 검출 전체(진행·자동 넘김, spec §42). ROM 은 합을 줄이지 않는다.
+    // 어떤 말로 보일지는 세트 리포트의 RepRomTier 가 정한다(spec §58): 검증 기준만 유효/무효·파셜, 미검증은 '참고 · 범위 미달', 기준 없음은 '범위 미판정'.
+    var repCount by remember { mutableIntStateOf(0) }      // ROM 미달로 판정되지 않은 렙 (ROM 을 판정하지 않은 렙 포함 — '유효' 가 아니다)
+    var repInvalid by remember { mutableIntStateOf(0) }    // ROM 기준 미달로 판정된 렙
     val onRepLatest = rememberUpdatedState(onRepDetected)
     var deliveredReps by remember { mutableIntStateOf(0) }
     LaunchedEffect(repCount + repInvalid) {
@@ -366,6 +377,11 @@ fun PostureLiveSessionScreen(
     var repFast by remember { mutableStateOf(false) }
     var repTempoMs by remember { mutableStateOf<Long?>(null) }   // 렙 간격 중앙값 — 기록 모드 계기판 (§29)
     val repRecords = remember { ArrayList<RepRecord>() }         // 렙별 극값 — 세트 로그에 남김 (분석 스레드에서 추가)
+    // 세트 중 카운터 리셋 사건 (절대 ms) — 세트 로그 단계 0 (spec §58). repRecords 락 안에서 쌓고 마감에서 세트 상대시각으로 바꾼다.
+    // afterTMs = 리셋 직전에 카운터가 처리한 마지막 프레임 시각. 프레임 시각은 추론 **전** 에 잡히므로(~60 ms), 누른 시각만으로는
+    // 재생이 리셋을 한 프레임 늦게 적용할 수 있다 — 같은 락 안의 순서를 그대로 남긴다.
+    val repResets = remember { ArrayList<RepResetEvent>() }
+    val lastCounterFrameAt = remember { longArrayOf(0L) }   // 0 = 이 세트에서 카운터가 아직 프레임을 보지 않았다
     // 위반 부위 시각화 (수정할점 #1): 위반 중 규칙의 관절을 스켈레톤에서 붉게 강조
     var violHighlight by remember { mutableStateOf<Set<Int>>(emptySet()) }
 
@@ -420,10 +436,16 @@ fun PostureLiveSessionScreen(
     val lastInferAt = remember { longArrayOf(0L) }
     val thermal = remember { ThermalMonitor(context) }
     val thermalRef = remember { intArrayOf(InferencePolicy.THERMAL_NONE) }
+    // 열 상태 변화 이력 (절대 ms, 상태) — 세트 로그 단계 0 (spec §58). 열 상태는 추론 간격을 바꿔 렙당 샘플 수를 바꾼다.
+    // 메인 스레드(리스너·마감)에서만 만지지만 락으로 감싼다. API 29 미만이면 비어 있다.
+    val thermalHistory = remember { ArrayList<Pair<Long, Int>>() }
     val gravity = remember { GravityTracker(context) }
     DisposableEffect(Unit) {
         gravity.start()
-        thermal.start(ContextCompat.getMainExecutor(context)) { s -> thermalRef[0] = s }
+        thermal.start(ContextCompat.getMainExecutor(context)) { s ->
+            thermalRef[0] = s
+            synchronized(thermalHistory) { if (thermalHistory.lastOrNull()?.second != s) thermalHistory += System.currentTimeMillis() to s }
+        }
         onDispose {
             gravity.stop()
             thermal.stop()
@@ -467,6 +489,9 @@ fun PostureLiveSessionScreen(
     val aggregator = remember { FeatureAggregator() }
     val logStore = remember { SetLogStore(context) }
     val subjectId = remember { SubjectId.get(context) }
+    // 어떤 빌드가 센 세트인지 — 폰 검증 전후 빌드를 로그만으로 가른다 (spec §58 단계 0)
+    @Suppress("DEPRECATION")
+    val appVersion = remember { runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull() }
     var savedSets by remember { mutableIntStateOf(0) }
     var recordedFrames by remember { mutableIntStateOf(0) }
     LaunchedEffect(Unit) { savedSets = runCatching { logStore.totalSets() }.getOrDefault(0) }
@@ -500,10 +525,34 @@ fun PostureLiveSessionScreen(
         val rc = repRef[0]
         val reps: List<RepRecord>?
         val repTimes: List<Long>?
+        val resets: List<RepResetEvent>?
+        val pending: RepPendingState?
+        val dropped: List<RepCycle>?
         synchronized(repRecords) {
             reps = if (rc != null) ArrayList(repRecords) else null
             repTimes = rc?.repTimesMs?.toList()   // 분석 스레드의 onFrame 과 같은 락 안에서 복사
+            // 세트 로그 단계 0 (spec §58) — 전부 세트 상대시각(프레임 t_ms 와 같은 기준). 첫 프레임 전 사건은 음수로 남는다.
+            resets = if (rc != null) repResets.map { e -> RepResetEvent(e.tMs - t0, e.reason, e.afterTMs?.let { it - t0 }) } else null
+            // 세지 않은 후보·버린 사이클은 새 코어만 노출한다 — 레거시(지금 앱)는 null. 없는 정보를 빈 값으로 지어내지 않는다.
+            pending = rc?.takeIf { it.usesHysteresis }?.pendingAtSetEnd()?.let { p ->
+                RepPendingState(
+                    p.unconfirmed?.let { it.copy(tMs = it.tMs - t0, startMs = it.startMs - t0) },
+                    p.inProgress?.let { it.copy(startMs = it.startMs - t0) },
+                )
+            }
+            dropped = rc?.takeIf { it.usesHysteresis }?.droppedReps?.map { it.copy(tMs = it.tMs - t0, startMs = it.startMs - t0) }
             repRecords.clear()
+            repResets.clear()
+        }
+        // 열 상태: 첫 프레임 시점 값(그 전 마지막 변화, 없으면 정책이 쓰던 기본값)과 세트 중 변화. 열 상태 API 가 없으면 null.
+        val tLast = times.lastOrNull() ?: t0
+        val thermalStart: Int?
+        val thermalChanges: List<ThermalEvent>?
+        synchronized(thermalHistory) {
+            thermalStart = if (!thermal.supported) null
+                else thermalHistory.lastOrNull { it.first <= t0 }?.second ?: InferencePolicy.THERMAL_NONE
+            thermalChanges = if (!thermal.supported) null
+                else thermalHistory.filter { it.first > t0 && it.first <= tLast }.map { ThermalEvent(it.first - t0, it.second) }
         }
         val endAt = AssessmentWindow.end(times.lastOrNull() ?: t0, repTimes.orEmpty())
         val startAt = anchorAtRef[0].takeIf { it > 0L } ?: Long.MAX_VALUE
@@ -540,6 +589,14 @@ fun PostureLiveSessionScreen(
             mode = if (modeRef[0] == CoachMode.TRACK) "track" else "coach",
             // 집계 창의 시작 — results 가 이 시점 이후 프레임만 본다는 사실을 로그에 남긴다
             anchorTMs = anchorAtRef[0].takeIf { it > 0L }?.let { it - t0 },
+            // spec §58 단계 0 — 폰 검증에서 그 세트를 어떤 카운터·구성·빌드가 셌는지, 언제 사이클을 버렸는지, 열 상태가 어땠는지
+            repEngine = rc?.let { RepEngineLog.of(it) },
+            repResets = resets,
+            repPending = pending,
+            repDropped = dropped,
+            thermalStart = thermalStart,
+            thermalChanges = thermalChanges,
+            appVersion = appVersion,
         )
         // 분석 executor 는 화면 종료 시 shutdown 되므로 순서에 의존하지 않도록 별도 스레드에서 기록한다.
         Thread {
@@ -558,10 +615,12 @@ fun PostureLiveSessionScreen(
             results = results,
             onset = if (modeRef[0] == CoachMode.TRACK || endAt < (times.lastOrNull() ?: endAt)) emptyList() else onset,
             measurements = measurementLines,
-            // 렙 카운터 미적용 종목은 null. 유효 = 전체 사이클 − ROM 미달(코치의 "무효" = 기록의 "파셜", §29)
+            // 렙 카운터 미적용 종목은 null. repsValid = 전체 사이클 − ROM 미달(ROM 을 판정하지 않은 렙 포함), 합 = 검출 전체.
+            // 이 수를 어떤 말로 보일지는 repRom 단계가 정한다(spec §58) — 검증 기준만 코치 "무효"·기록 "파셜"(§29).
             repsValid = rc?.let { it.reps - repInvalidRef[0] },
             repsPartial = rc?.let { repInvalidRef[0] },
             tempoMs = repTimes?.let { RepMetrics.medianPeriodMs(it) },
+            repRom = rc?.let { RepRomTier.of(it.signal) },
         )
     }
     // 세트(운동) 경계 안전망: ✓/✕ 가 이미 마감했으면 멱등으로 null. 마감 없이 화면이 사라질 때(액티비티 종료 등)만
@@ -590,12 +649,10 @@ fun PostureLiveSessionScreen(
         // speakBeta=false: 미보정 규칙은 화면·리포트에 '참고' 로만 남기고 음성은 검증된 규칙만 낸다 (§28 오탐 3건이 전부 베타).
         coachRef[0] = LiveCoach(rs, aihubExercise, baseline = baselineValues, requireAnchor = true, speakBeta = false)
         coachBanner = null   // 이전 종목의 배너·ⓘ 근거 주석이 새 종목에 오귀속되지 않도록
-        repRef[0] = RepCounter.forExercise(aihubExercise)?.let { counter ->
-            val config = rs.rulesFor(aihubExercise).firstOrNull { it.kind == "rep" }?.repConfig
-            if (config != null) RepCounter(counter.signal.copy(romDirection = config.direction, romThreshold = config.threshold, romValidated = false), maxGapMs = 1500L, completeOnReturn = true)
-            else if (isFloorExercise) RepCounter(counter.signal.copy(romThreshold = null, romDirection = null, romValidated = false), maxGapMs = 1500L, completeOnReturn = true)
-            else RepCounter(counter.signal, maxGapMs = 1500L, completeOnReturn = true)
-        }
+        // 세션 카운터 구성은 RepCounter.forSession 한 곳에 있다 — 재생기(replay-jvm)가 같은 함수를 불러 "앱과 같은 구성" 을 구조로 보장한다.
+        // 규칙 JSON 의 kind=rep 설정이 있으면 그 ROM 으로 덮고(검증 표시 끔), 없고 바닥 종목이면 ROM 을 뗀다. 미등록·등척성은 null.
+        val repConfig = rs.rulesFor(aihubExercise).firstOrNull { it.kind == "rep" }?.repConfig
+        repRef[0] = RepCounter.forSession(aihubExercise, repConfig?.direction, repConfig?.threshold, floor = isFloorExercise)
         repCount = 0
         repInvalid = 0
         repInvalidRef[0] = 0
@@ -610,7 +667,7 @@ fun PostureLiveSessionScreen(
         provisionalHighlight = emptySet()
         repFast = false
         repTempoMs = null
-        synchronized(repRecords) { repRecords.clear() }
+        synchronized(repRecords) { repRecords.clear(); repResets.clear(); lastCounterFrameAt[0] = 0L }
         comparisonSpeech.clear()
         comparisonRef[0] = PostureComparisonTracker(aihubExercise, (ComparisonMetrics.forExercise(aihubExercise, rs.rules) +
             profile?.let(com.example.trex_kotlin.posture.ExerciseProfiles::metrics).orEmpty()).distinctBy { it.feature },
@@ -643,7 +700,10 @@ fun PostureLiveSessionScreen(
     }
     LaunchedEffect(paused) {
         if (paused) {
-            synchronized(repRecords) { repRef[0]?.resetCycle() }
+            // 일시정지 전후를 한 반복으로 잇지 않는다 — 리셋 사건은 세트 로그에 남긴다 (spec §58)
+            synchronized(repRecords) {
+                repRef[0]?.let { it.resetCycle(); repResets += RepResetEvent(System.currentTimeMillis(), "pause", lastCounterFrameAt[0].takeIf { t -> t > 0L }) }
+            }
             alignment = alignmentRef[0]?.add(System.currentTimeMillis(),emptyMap()) ?: AlignmentSnapshot()
             comparisonRef[0]?.unavailable("일시정지 · 처음 기준은 유지하고 진행 중 반복은 다시 측정해요")
             comparison = comparisonRef[0]?.snapshot ?: ComparisonSnapshot()
@@ -760,7 +820,7 @@ fun PostureLiveSessionScreen(
                     }
                     repRef[0]?.let { rc ->
                         // repTimesMs 갱신은 세트 마감의 복사와 같은 락 안에서
-                        val completed = synchronized(repRecords) { rc.onFrame(now, features[rc.signal.feature]) }
+                        val completed = synchronized(repRecords) { lastCounterFrameAt[0] = now; rc.onFrame(now, features[rc.signal.feature]) }
                         if (completed) {
                             comparisonPeakAt = rc.repTimesMs.lastOrNull()
                             // 첫 렙이 끝났다 = 여기부터가 진짜 운동 구간. 초반 창과 **세트 집계**를 여기로 옮긴다 (spec §31).
@@ -769,14 +829,20 @@ fun PostureLiveSessionScreen(
                                 // 세트 점수·판정의 집계기도 같이 비운다 — 준비 동작이 range/min/max 통계를 통째로 뒤집는다
                                 synchronized(recordedSamples) { aggregator.reset() }
                             }
-                            // ROM 유효성 (수정판): 사이클 극값이 데이터 기준 미달이면 미달 렙.
-                            // 코치 모드 = 무효로 판정하고 사유를 말한다 (REP_VALIDITY.md, 심판 방식).
-                            // 기록 모드 = "파셜"로 집계만 — 숙련자의 파셜은 기법이지 잘못이 아니다 (§29).
-                            val valid = rc.signal.isValidRep(rc.lastCycleMin, rc.lastCycleMax)
-                            val record = RepRecord(now, rc.lastCycleMin, rc.lastCycleMax, valid)
-                            synchronized(repRecords) { repRecords.add(record) }
-                            if (floorRef[0]) newFloorRep = record
-                            if (valid != false) repCount++ else { repInvalid++; repInvalidRef[0] = repInvalid }
+                            // 새 코어는 첫 두 사이클을 한 프레임에 함께 발표한다(onFrame 한 번에 +2) — 발표된 사이클마다 한 회로 센다.
+                            // 레거시 경로(지금 앱)는 newlyPublished 가 늘 비어 있어 이 프레임의 한 사이클(lastCycleMin/Max)만 — 동작 그대로다.
+                            val cycles = rc.newlyPublished.map { Triple(it.tMs, it.min, it.max) }
+                                .ifEmpty { listOf(Triple(now, rc.lastCycleMin, rc.lastCycleMax)) }
+                            for ((cycleAt, cycleMin, cycleMax) in cycles) {
+                                // ROM 유효성: 사이클 극값이 데이터 기준 미달이면 미달 렙. null = 기준 없음 — 미달이 아니므로 수를 줄이지 않지만
+                                // '유효' 라고 보이지도 않는다. 판정값을 어떤 말로 보일지는 세트 리포트의 RepRomTier 가 정한다(spec §58):
+                                // 검증 기준만 코치 "무효"·기록 "파셜", 미검증 기준은 화면 '참고 · 범위 미달' 만, 기준 없음은 '범위 미판정'.
+                                val valid = rc.signal.isValidRep(cycleMin, cycleMax)
+                                val record = RepRecord(cycleAt, cycleMin, cycleMax, valid)
+                                synchronized(repRecords) { repRecords.add(record) }
+                                if (floorRef[0]) newFloorRep = record
+                                if (valid != false) repCount++ else { repInvalid++; repInvalidRef[0] = repInvalid }
+                            }
                             repTempoMs = RepMetrics.medianPeriodMs(rc.repTimesMs)
                             // 빠른 렙 자가진단: 주기가 1.5s 아래면 3.3fps 로는 놓칠 수 있다 (렙당 4샘플 하한 실측)
                             repFast = (rc.periodMs ?: Long.MAX_VALUE) < 1_500L
@@ -994,7 +1060,9 @@ fun PostureLiveSessionScreen(
                     SessionTool("카메라", "카메라 전환", Icons.Rounded.Cameraswitch, {
                         useFrontCamera = !useFrontCamera
                         comparisonRef[0]?.reset(); comparison = ComparisonSnapshot(); comparisonSpeech.clear()
-                        synchronized(repRecords) { repRef[0]?.resetCycle() }
+                        synchronized(repRecords) {
+                            repRef[0]?.let { it.resetCycle(); repResets += RepResetEvent(System.currentTimeMillis(), "camera_switch", lastCounterFrameAt[0].takeIf { t -> t > 0L }) }
+                        }
                     }, Modifier.weight(1f))
                 })
         }

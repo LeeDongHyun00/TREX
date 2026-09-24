@@ -24,6 +24,10 @@ import java.util.UUID
  *  "results":[{"rule_id":"바벨 스쿼트|발과 무릎의 방향 일치","verdict":"VIOLATION","value":0.004,"n":18,
  *              "baseline_applied":false,"value_rel":null}]}   // value 는 항상 절대값, verdict 는 재배치 반영
  * ```
+ * spec §58 단계 0 추가 필드(전부 선택 — 부재 = 이전 로그): `app_version`, `thermal{start,changes[{t_ms,status}]}`,
+ * `reps.engine`, `reps.config{feature,min_amp,refractory_ms,max_gap_ms,complete_on_return,polarity?,return_fraction?,
+ * first_pair_window_ms?,later_window_ms?,min_ratio?,max_ratio?,rom_direction?,rom_threshold?,rom_tier}`(값은 카운터가 실제로 쓴 구성),
+ * `reps.resets[{t_ms,after_t_ms,reason}]`, `reps.pending{unconfirmed,in_progress,dropped[]}`(새 코어만).
  * org.json 은 Android 유닛 테스트에서 스텁이라 직접 직렬화한다 (PostureCoreParityTest 와 같은 이유).
  */
 
@@ -48,6 +52,77 @@ data class SetLogResult(
     val valueRel: Float? = null,
 )
 
+/**
+ * 세트 로그의 렙 카운터 구성 (spec §58 단계 0) — 같은 프레임을 오프라인에서 **같은 카운터로** 다시 돌릴 수 있게 남긴다.
+ * 폰 검증(Gate A)에서 "그 세트를 어떤 카운터가 셌는가" 를 로그만으로 가를 수 있어야 새 코어를 켜고 끈 전후를 비교할 수 있다.
+ *
+ * @property engine [ENGINE_RETURN](복귀형 `ReturnRepTracker` — 지금 앱) | [ENGINE_HYSTERESIS](`RepHysteresis` + 시작 확정, 폰 검증 전 비활성).
+ * @property polarity "down"|"up". null = 레거시 경로(방향 개념 없음).
+ * @property returnFraction·firstPairWindowMs·laterWindowMs·minRatio·maxRatio 새 코어 전용(레거시는 null — 키도 없다).
+ *   laterWindowMs 는 새 코어에서도 null 일 수 있다(= 이후 반복은 진폭 비만 본다, 설계 §4.3) — 그때는 JSON null 로 적는다.
+ * @property romTier [RepRomTier.key] — 화면·음성이 ROM 을 어떤 확신으로 말했는가.
+ */
+data class RepEngineLog(
+    val engine: String,
+    val feature: String,
+    val minAmp: Float,
+    val refractoryMs: Long,
+    val maxGapMs: Long,
+    val completeOnReturn: Boolean,
+    val polarity: String? = null,
+    val returnFraction: Float? = null,
+    val firstPairWindowMs: Long? = null,
+    val laterWindowMs: Long? = null,
+    val minRatio: Float? = null,
+    val maxRatio: Float? = null,
+    val romDirection: String? = null,
+    val romThreshold: Float? = null,
+    val romTier: String? = null,
+) {
+    companion object {
+        const val ENGINE_RETURN = "return_v1"
+        const val ENGINE_HYSTERESIS = "hysteresis_v1"
+
+        /**
+         * 카운터가 **실제로 쓰는** 구성을 읽어 적는다(`RepCounter.effective*`·코어·시작 확정의 값) — 복사한 상수가 아니라서
+         * `forSession` 의 구성이나 코어 기본값이 바뀌어도 로그가 거짓이 되지 않는다. Gate A 재생 파리티가 이 블록에 기댄다.
+         */
+        fun of(counter: RepCounter): RepEngineLog {
+            val s = counter.signal
+            val confirm = counter.confirmationConfig
+            return RepEngineLog(
+                engine = if (counter.usesHysteresis) ENGINE_HYSTERESIS else ENGINE_RETURN,
+                feature = s.feature,
+                minAmp = s.minAmp,
+                refractoryMs = counter.effectiveRefractoryMs,
+                maxGapMs = counter.effectiveMaxGapMs,
+                completeOnReturn = counter.effectiveCompleteOnReturn,
+                polarity = s.polarity?.name?.lowercase(),
+                returnFraction = counter.returnFraction,
+                firstPairWindowMs = confirm?.firstPairWindowMs,
+                laterWindowMs = confirm?.laterWindowMs,
+                minRatio = confirm?.minRatio,
+                maxRatio = confirm?.maxRatio,
+                romDirection = s.romDirection,
+                romThreshold = s.romThreshold,
+                romTier = RepRomTier.of(s).key,
+            )
+        }
+    }
+}
+
+/**
+ * 세트 중 카운터의 진행 사이클을 버린 사건 (spec §58). 시각은 전부 세트 상대 ms(프레임 t_ms 와 같은 기준). reason: "pause" | "camera_switch".
+ * @property tMs 사용자가 누른(일시정지가 걸린) 벽시계 시각.
+ * @property afterTMs 리셋 **직전에 카운터가 처리한 마지막 프레임**의 t_ms. null = 이 세트에서 카운터가 아직 프레임을 본 적 없다.
+ *   재생은 t_ms > afterTMs 인 첫 프레임 앞에서 리셋해야 앱과 순서가 같다 — 프레임의 t_ms 는 추론 **전** 시각이라,
+ *   추론 중(~60 ms)에 누른 전환은 t_ms 가 누른 시각보다 이른 프레임보다도 먼저 적용된다([tMs] 로 자르면 한 프레임 어긋난다).
+ */
+data class RepResetEvent(val tMs: Long, val reason: String, val afterTMs: Long? = null)
+
+/** 세트 중 열 상태 변화 (`PowerManager.THERMAL_STATUS_*`) — [tMs] 는 세트 상대 ms. 열 상태는 추론 간격을 바꾼다(InferencePolicy). */
+data class ThermalEvent(val tMs: Long, val status: Int)
+
 data class SetLog(
     val setId: String,
     val createdAtIso: String,
@@ -68,7 +143,8 @@ data class SetLog(
     val upFlippedFrames: Int = 0,
     val upVerifiedFrames: Int = 0,
     /** 자동 렙 카운트 (spec §27, 스키마 호환 추가 필드). null = 카운터 미적용 종목.
-     *  repCount = 완료 사이클 전체, repInvalid = 그중 ROM 미달 무효 렙 (유효 = count − invalid). */
+     *  repCount = 완료(발표) 사이클 전체, repInvalid = 그중 ROM 기준 미달로 판정된 렙. count − invalid 는 "미달로 판정되지 않은 렙" 이고
+     *  ROM 을 판정하지 않은 렙(기준 없음)도 포함한다 — '유효' 가 아니다(spec §58, reps.config.rom_tier 가 판정 단계). */
     val repCount: Int? = null,
     val repTimesMs: List<Long>? = null,
     val repSignal: String? = null,
@@ -96,6 +172,22 @@ data class SetLog(
     val viewR: Float? = null,
     val viewClass: String? = null,
     val viewFrames: Int? = null,
+    /**
+     * spec §58 단계 0 — 폰 검증 로그의 재현 정보. 전부 스키마 호환 추가 필드이고 null 이면 키 자체를 쓰지 않는다(부재 = 이전 로그).
+     * [repEngine]·[repResets] 는 `reps` 객체 안, [thermalStart]/[thermalChanges] 는 `thermal`, [appVersion] 은 `app_version`.
+     */
+    val repEngine: RepEngineLog? = null,
+    /** 세트 중 카운터 리셋 사건. 카운터가 돈 §58 이후 세트는 사건이 없어도 빈 목록으로 남긴다. */
+    val repResets: List<RepResetEvent>? = null,
+    /** 세트 종료 시 **세지 않은** 후보(새 코어만 노출). null = 레거시 경로 또는 이전 로그 — 레거시는 이 정보를 갖지 않는다. */
+    val repPending: RepPendingState? = null,
+    /** 시작 확정을 못 받아 버려진 사이클(새 코어만). [repPending] 과 함께 `reps.pending` 에 들어간다. */
+    val repDropped: List<RepCycle>? = null,
+    /** 세트 첫 프레임 시점의 열 상태. null = 이전 로그 또는 열 상태 API 없음(API 29 미만). */
+    val thermalStart: Int? = null,
+    val thermalChanges: List<ThermalEvent>? = null,
+    /** 앱 versionName. */
+    val appVersion: String? = null,
 ) {
     companion object {
         const val SCHEMA = "trex.posture.setlog/1"
@@ -136,6 +228,13 @@ data class SetLog(
             anchorTMs: Long? = null,
             assessmentEndTMs: Long? = null,
             measurements: List<String> = emptyList(),
+            repEngine: RepEngineLog? = null,
+            repResets: List<RepResetEvent>? = null,
+            repPending: RepPendingState? = null,
+            repDropped: List<RepCycle>? = null,
+            thermalStart: Int? = null,
+            thermalChanges: List<ThermalEvent>? = null,
+            appVersion: String? = null,
         ): SetLog {
             val frames = samples.mapIndexed { i, s ->
                 SetLogFrame(
@@ -184,6 +283,13 @@ data class SetLog(
                 viewR = view?.r,
                 viewClass = view?.letter,
                 viewFrames = view?.frames,
+                repEngine = repEngine,
+                repResets = repResets,
+                repPending = repPending,
+                repDropped = repDropped,
+                thermalStart = thermalStart,
+                thermalChanges = thermalChanges,
+                appVersion = appVersion,
             )
         }
     }
@@ -211,6 +317,7 @@ object SetLogJson {
         sb.append("\"up_verified_frames\":").append(log.upVerifiedFrames).append(',')
         field(sb, "note", log.note)
         if (log.mode != null) field(sb, "mode", log.mode)
+        if (log.appVersion != null) field(sb, "app_version", log.appVersion)
         sb.append("\"measurements\":[")
         log.measurements.forEachIndexed { i, value -> if (i > 0) sb.append(','); str(sb, value) }
         sb.append("],")
@@ -224,6 +331,17 @@ object SetLogJson {
             field(sb, "class", log.viewClass)
             sb.append("\"frames\":").append(log.viewFrames ?: 0)
             sb.append("},")
+        }
+        // 열 상태 (spec §58) — 세트 첫 프레임 시점 값 + 세트 중 변화. 없으면 필드 부재 (이전 로그·API 29 미만)
+        if (log.thermalStart != null) {
+            sb.append("\"thermal\":{")
+            sb.append("\"start\":").append(log.thermalStart).append(',')
+            sb.append("\"changes\":[")
+            log.thermalChanges.orEmpty().forEachIndexed { i, e ->
+                if (i > 0) sb.append(',')
+                sb.append("{\"t_ms\":").append(e.tMs).append(",\"status\":").append(e.status).append('}')
+            }
+            sb.append("]},")
         }
         // 자동 렙 카운트 — 카운터가 돌았던 세트만 기록 (미적용 세트와 구분: 필드 부재 = 미적용)
         if (log.repCount != null) {
@@ -249,6 +367,53 @@ object SetLogJson {
                 sb.append(",\"valid\":[")
                 v.forEachIndexed { i, x -> if (i > 0) sb.append(','); sb.append(x?.toString() ?: "null") }
                 sb.append(']')
+            }
+            // spec §58 단계 0 — 카운터 구성·리셋·미완 후보. 없으면 키 부재 (이전 로그)
+            log.repEngine?.let { e ->
+                sb.append(",\"engine\":"); str(sb, e.engine)
+                sb.append(",\"config\":{")
+                sb.append("\"feature\":"); str(sb, e.feature)
+                sb.append(",\"min_amp\":").append(num(e.minAmp))
+                sb.append(",\"refractory_ms\":").append(e.refractoryMs)
+                sb.append(",\"max_gap_ms\":").append(e.maxGapMs)
+                sb.append(",\"complete_on_return\":").append(e.completeOnReturn)
+                e.polarity?.let { sb.append(",\"polarity\":"); str(sb, it) }
+                e.returnFraction?.let { sb.append(",\"return_fraction\":").append(num(it)) }
+                e.firstPairWindowMs?.let {
+                    // 시작 확정 구성(새 코어만) — 이후 반복의 시간 창은 null(진폭 비만)도 값이라 명시해 적는다
+                    sb.append(",\"first_pair_window_ms\":").append(it)
+                    sb.append(",\"later_window_ms\":").append(e.laterWindowMs?.toString() ?: "null")
+                    sb.append(",\"min_ratio\":").append(num(e.minRatio)).append(",\"max_ratio\":").append(num(e.maxRatio))
+                }
+                e.romDirection?.let { sb.append(",\"rom_direction\":"); str(sb, it) }
+                e.romThreshold?.let { sb.append(",\"rom_threshold\":").append(num(it)) }
+                e.romTier?.let { sb.append(",\"rom_tier\":"); str(sb, it) }
+                sb.append('}')
+            }
+            log.repResets?.let { v ->
+                sb.append(",\"resets\":[")
+                v.forEachIndexed { i, r ->
+                    if (i > 0) sb.append(',')
+                    sb.append("{\"t_ms\":").append(r.tMs)
+                    sb.append(",\"after_t_ms\":").append(r.afterTMs?.toString() ?: "null")
+                    sb.append(",\"reason\":"); str(sb, r.reason); sb.append('}')
+                }
+                sb.append(']')
+            }
+            // 세지 않은 후보 — 새 코어만. 객체가 있으면 안쪽의 null 은 "새 코어였고 그 후보는 없었다" 는 뜻이다
+            log.repPending?.let { p ->
+                sb.append(",\"pending\":{\"unconfirmed\":")
+                val u = p.unconfirmed
+                if (u == null) sb.append("null") else cycle(sb, u)
+                sb.append(",\"in_progress\":")
+                val c = p.inProgress
+                if (c == null) sb.append("null") else {
+                    sb.append("{\"start_t_ms\":").append(c.startMs)
+                    sb.append(",\"min\":").append(num(c.min)).append(",\"max\":").append(num(c.max)).append('}')
+                }
+                sb.append(",\"dropped\":[")
+                log.repDropped.orEmpty().forEachIndexed { i, d -> if (i > 0) sb.append(','); cycle(sb, d) }
+                sb.append("]}")
             }
             sb.append("},")
         }
@@ -291,6 +456,13 @@ object SetLogJson {
         }
         sb.append("]}")
         return sb.toString()
+    }
+
+    /** 발화한 사이클 하나 — 시각은 호출 쪽이 세트 상대로 바꿔 넘긴다. */
+    private fun cycle(sb: StringBuilder, c: RepCycle) {
+        sb.append("{\"t_ms\":").append(c.tMs).append(",\"start_t_ms\":").append(c.startMs)
+        sb.append(",\"min\":").append(num(c.min)).append(",\"max\":").append(num(c.max))
+        sb.append(",\"by_redescent\":").append(c.byRedescent).append('}')
     }
 
     private fun field(sb: StringBuilder, key: String, value: String?) {

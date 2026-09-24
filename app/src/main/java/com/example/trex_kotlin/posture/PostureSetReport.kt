@@ -19,6 +19,31 @@ import java.util.Locale
 
 enum class SetVerdict { CLEAN, ISSUE, RECOVERED, REFERENCE, UNJUDGED }
 
+/**
+ * 렙 ROM(가동범위) 판정을 **어떤 확신으로** 말할 수 있는가 (spec §58, 원칙 #1·#2). 신호의 ROM 설정은 세트 안에서 바뀌지 않으므로 세트 단위다.
+ *  - [NONE]      ROM 기준 없음(예: 카운트 신호를 knee_mean 으로 바꾸며 기준을 뗀 런지). 판정하지 않았으므로 '범위 미판정' —
+ *                유효로 세지도, 유효라고 보이지도 않는다.
+ *  - [REFERENCE] 기준은 있으나 판별력 미검증(`romValidated = false`). 화면에 '참고 · 범위 미달 N회' 로만 보이고,
+ *                '무효'·'파셜' 이라는 말도, 음성도 없다(베타 규칙과 같은 정책 — §28 오탐이 전부 미보정 기준에서 나왔다).
+ *  - [VALIDATED] AIHub ROM 조건으로 판별력이 검증된 기준. 지금까지의 유효/무효(COACH)·파셜(TRACK) 표기와 발화를 유지한다.
+ * 어느 단계든 수행 횟수는 줄이지 않는다 — ROM 은 표시 정책이지 카운트가 아니다(진행·자동 넘김은 검출 전체, spec §42).
+ */
+enum class RepRomTier {
+    NONE, REFERENCE, VALIDATED;
+
+    /** 세트 로그 값. */
+    val key: String get() = name.lowercase()
+
+    companion object {
+        /** `RepSignal.isValidRep` 가 null 을 돌려주는 설정(임계값 없음·방향 불명)은 NONE. */
+        fun of(signal: RepSignal): RepRomTier = when {
+            signal.romThreshold == null || (signal.romDirection != "min" && signal.romDirection != "max") -> NONE
+            signal.romValidated -> VALIDATED
+            else -> REFERENCE
+        }
+    }
+}
+
 /** 사용자 자가 라벨 — 좋았음 / 의도적 변형(스타일) / 무너짐. 직렬화 값은 [key]. */
 enum class FormLabel(val key: String, val displayName: String) {
     GOOD("good", "좋았음"), INTENDED("intended", "의도적 변형"), BROKE("broke", "무너짐");
@@ -86,11 +111,17 @@ data class PostureSetReport(
     val baselineActive: Boolean,
     /** 랭킹순 정렬된 전체 규칙 (ABSTAIN 포함). */
     val items: List<RuleOutcome>,
-    /** 렙 카운터 미적용 종목이면 null. */
+    /**
+     * 렙 카운터 미적용 종목이면 null. [repsValid] + [repsPartial] = 검출 전체(진행·자동 넘김에 쓰는 수, spec §42).
+     * [repsValid] 는 "ROM 미달로 판정되지 않은 렙" 이다 — ROM 을 판정하지 않은 렙도 여기 들어가므로 이름만 보고 '유효' 라고 말하지 않는다.
+     */
     val repsValid: Int?,
+    /** ROM 기준 미달로 판정된 렙 수. 어떤 말로 보일지는 [repRom] 이 정한다(NONE 이면 항상 0). */
     val repsPartial: Int?,
     val tempoMs: Long?,
     val measurements: List<String> = emptyList(),
+    /** 이 세트 카운터 신호의 ROM 판정 단계 (spec §58). null = 모름 → [RepRomTier.NONE] 으로 다룬다. */
+    val repRom: RepRomTier? = null,
 ) {
     /** 실제로 판정한 규칙 수(OK+VIOLATION). accuracy 의 분모 — 유보를 정상으로 세지 않는다. */
     val judged: Int = items.count { it.overall == Verdict.OK || it.overall == Verdict.VIOLATION }
@@ -138,6 +169,39 @@ data class PostureSetReport(
     private val tempoText: String? = tempoMs?.let { String.format(Locale.US, "%.1f초", it / 1000f) }
     private val driftHeadline: RuleOutcome? = headline?.takeIf { it.kind == OnsetKind.DRIFT }
 
+    /**
+     * 표시·발화에 쓰는 ROM 단계. 구성을 모르면(null) NONE — 모르는 판정을 유효로 말하지 않는다.
+     * 바닥 종목은 규칙이 전부 beta 라 검증 기준이 붙어 와도 참고 이상으로 말하지 않는다(세션 구성에서는 생기지 않는 조합 — 방어).
+     */
+    val romTier: RepRomTier = (repRom ?: RepRomTier.NONE).let {
+        if (it == RepRomTier.VALIDATED && exercise in FloorTemporal.exercises) RepRomTier.REFERENCE else it
+    }
+    private val romShort: Int = repsPartial ?: 0
+
+    /** TRACK 요약·펼침에서 렙 수 뒤에 붙는 ROM 조각(없으면 null). 음성에는 쓰지 않는다 — 파셜 발화는 검증 기준에서만([voiceLine]). */
+    private val trackRomText: String? = when (romTier) {
+        RepRomTier.VALIDATED -> if (romShort > 0) "파셜 $romShort" else null
+        RepRomTier.REFERENCE -> if (romShort > 0) "참고 · 범위 미달 ${romShort}회" else null
+        RepRomTier.NONE -> "범위 미판정"
+    }
+
+    /**
+     * 완료 화면 펼침의 렙 한 줄(렙 카운터 미적용이면 null). 수는 검출 전체이고, ROM 은 [romTier] 가 허락하는 말로만 붙인다.
+     * COACH 는 검증 기준에서만 "렙 유효 n · 무효 m"(미달 0 도 적는다 — 기존 형식), 미검증 기준은 '참고 · 범위 미달 m회'(0 도 적는다),
+     * 기준 없음은 '참고 · 검출 n회 · 범위 미판정' — 카운트 자체가 beta 라(HUD '자동 횟수 · 참고') 검증 기준이 없는 줄은 '참고' 로 연다.
+     * TRACK 은 "n렙" + ROM 조각(미달 0 은 적지 않는다).
+     */
+    val repDetailLine: String? = reps?.let { n ->
+        when (mode) {
+            CoachMode.COACH -> when (romTier) {
+                RepRomTier.VALIDATED -> "렙 유효 ${n - romShort} · 무효 $romShort"
+                RepRomTier.REFERENCE -> "참고 · 검출 ${n}회 · 범위 미달 ${romShort}회"
+                RepRomTier.NONE -> "참고 · 검출 ${n}회 · 범위 미판정"
+            }
+            CoachMode.TRACK -> listOfNotNull("${n}렙", trackRomText).joinToString(" · ")
+        }
+    }
+
     /** 기록 화면 한 줄. */
     val summaryLine: String = if (exercise in FloorTemporal.exercises || judged == 0 && measurements.isNotEmpty()) "참고 측정 · 자세 확정 판정 없음" else when (mode) {
         CoachMode.COACH -> when (verdict) {
@@ -150,7 +214,7 @@ data class PostureSetReport(
         CoachMode.TRACK -> buildList {
             if (reps != null) {
                 add("${reps}렙")
-                if ((repsPartial ?: 0) > 0) add("파셜 $repsPartial")
+                trackRomText?.let { add(it) }
             } else {
                 add("기록됨")
             }
@@ -169,7 +233,8 @@ data class PostureSetReport(
             SetVerdict.REFERENCE -> "${candidates.first().observation}. 아직 검증 중인 항목이라 참고만 하세요."
         }
         CoachMode.TRACK -> buildList {
-            if (reps != null) add("${reps}렙" + if ((repsPartial ?: 0) > 0) " 파셜 $repsPartial" else "")
+            // 파셜은 검증된 ROM 기준에서만 말한다 — 미검증 기준·기준 없음은 화면에만(참고·미판정) 남기고 음성으로는 렙 수만.
+            if (reps != null) add("${reps}렙" + if (romTier == RepRomTier.VALIDATED && romShort > 0) " 파셜 $romShort" else "")
             tempoText?.let { add("템포 $it") }
             driftHeadline?.let { add(it.observation) }
         }.let { if (it.isEmpty()) "기록됐어요." else it.joinToString(", ") + "." }
@@ -193,6 +258,7 @@ data class PostureSetReport(
             repsPartial: Int?,
             tempoMs: Long?,
             measurements: List<String> = emptyList(),
+            repRom: RepRomTier? = null,
         ): PostureSetReport {
             val onsetById = onset.associateBy { it.rule.id }
             val outcomes = results.map { rr ->
@@ -226,6 +292,7 @@ data class PostureSetReport(
             return PostureSetReport(
                 setId = setId, exercise = exercise, workoutName = workoutName, mode = mode, frames = frames,
                 baselineActive = baselineActive, items = sorted, measurements = measurements, repsValid = repsValid, repsPartial = repsPartial, tempoMs = tempoMs,
+                repRom = repRom,
             )
         }
 

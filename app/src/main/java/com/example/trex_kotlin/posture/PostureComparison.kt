@@ -40,9 +40,16 @@ data class ComparisonSnapshot(
     val landmarks: Set<Int> get() = focus?.metric?.landmarks.orEmpty()
 }
 
-/** 기존 앱에서 계산되는 피처만 사용한다. 신호를 몸의 높이로 오인하지 않도록 각도/정규화 단위를 유지한다. */
+/**
+ * 기존 앱에서 계산되는 피처만 사용한다. 신호를 몸의 높이로 오인하지 않도록 각도/정규화 단위를 유지한다.
+ *
+ * 비교는 카운트 신호가 아니라 **비교 신호**(`RepSignal.comparisonSignal()`)를 쓴다 (spec §58). 카운트 신호를 바꿔도
+ * (런지: knee_out_mean → knee_mean) 사용자가 이미 쌓은 초기 대비 비교의 단위가 조용히 바뀌지 않게 한다.
+ * `comparisonSignal()` 은 멱등이라 이미 비교 신호를 받은 경로에서 다시 불러도 같다.
+ */
 object ComparisonMetrics {
     fun primary(exercise: String, signal: RepSignal): ComparisonMetric {
+        val s = signal.comparisonSignal()
         val label = when (exercise) {
             "푸시업", "니푸쉬업" -> "가슴 이동 범위"
             "힙쓰러스트" -> "골반 이동 범위"
@@ -51,14 +58,14 @@ object ComparisonMetrics {
             "시저크로스" -> "다리 벌림 범위(투영)"
             else -> "반복 움직임 범위"
         }
-        val angle = signal.minAmp >= 20f
-        return ComparisonMetric(signal.feature, label, if (angle) "°" else "정규화 비율", if (angle) 8f else .06f)
+        val angle = s.minAmp >= 20f
+        return ComparisonMetric(s.feature, label, if (angle) "°" else "정규화 비율", if (angle) 8f else .06f)
     }
 
     fun forExercise(exercise: String, rules: List<PostureRule>): List<ComparisonMetric> {
         if (exercise == "플랭크") return listOf(ComparisonMetric(PlankGeometry.HIP, "골반 정렬", "정규화 비율", .06f),
             ComparisonMetric(PlankGeometry.HEAD, "고개 기울기", "°", 8f),ComparisonMetric(PlankGeometry.NECK,"목 정렬","°",8f))
-        val signal = RepSignals.byExercise[exercise] ?: return emptyList()
+        val signal = RepSignals.byExercise[exercise]?.comparisonSignal() ?: return emptyList()
         val extra = if (exercise in FloorTemporal.exercises) listOfNotNull(
             when (exercise) {
                 "푸시업" -> ComparisonMetric("hip_dev_ankle", "골반 정렬", "정규화 비율", .06f)
@@ -81,31 +88,36 @@ object PhaseSignature {
         return if (sorted.size % 2 == 0) (sorted[sorted.size / 2 - 1] + sorted[sorted.size / 2]) / 2 else sorted[sorted.size / 2]
     }
 
+    /** [signal] 은 비교 신호로 바꿔 쓴다 — 카운트 신호를 넘겨도 비교 단위(런지 knee_out_mean)로 반복 양 끝을 가른다 (spec §58). */
     fun compute(frames: List<ComparisonFrame>, signal: RepSignal, metrics: List<ComparisonMetric>): Map<String, Float> {
         if (frames.size < 6) return emptyMap()
-        val usable = frames.filter { it.features[signal.feature]?.let { v -> v.isFinite() &&
-            (signal.plausibleMin == null || v >= signal.plausibleMin) && (signal.plausibleMax == null || v <= signal.plausibleMax) } == true }
+        val s = signal.comparisonSignal()
+        val usable = frames.filter { it.features[s.feature]?.let { v -> v.isFinite() &&
+            (s.plausibleMin == null || v >= s.plausibleMin) && (s.plausibleMax == null || v <= s.plausibleMax) } == true }
         if (usable.size < 6 || usable.size < frames.size * .8) return emptyMap()
-        val xs = usable.map { it.features.getValue(signal.feature) }
+        val xs = usable.map { it.features.getValue(s.feature) }
         val lo = xs.min(); val hi = xs.max(); val amp = hi - lo
-        if (amp < signal.minAmp) return emptyMap()
-        val groups = mapOf(ComparisonPhase.LOW to usable.filter { it.features.getValue(signal.feature) <= lo + .15f * amp },
-            ComparisonPhase.HIGH to usable.filter { it.features.getValue(signal.feature) >= hi - .15f * amp })
+        if (amp < s.minAmp) return emptyMap()
+        val groups = mapOf(ComparisonPhase.LOW to usable.filter { it.features.getValue(s.feature) <= lo + .15f * amp },
+            ComparisonPhase.HIGH to usable.filter { it.features.getValue(s.feature) >= hi - .15f * amp })
         return buildMap {
             for (metric in metrics) for ((phase, group) in groups) {
                 val values = group.mapNotNull { it.features[metric.feature]?.takeIf(Float::isFinite) }
                 if (values.size >= 2 && values.size >= group.size * .8) put("${metric.feature}|${phase.name}", median(values))
             }
             // 양 끝이 모두 관측된 경우만 이동 범위도 남긴다.
-            val a = get("${signal.feature}|LOW"); val b = get("${signal.feature}|HIGH")
-            if (a != null && b != null) put("${signal.feature}|RANGE", b - a)
+            val a = get("${s.feature}|LOW"); val b = get("${s.feature}|HIGH")
+            if (a != null && b != null) put("${s.feature}|RANGE", b - a)
         }
     }
 }
 
-/** 기준은 항목별로 모으고 고정한다. 정자세 규칙의 통과 여부는 관측 기준의 자격이 아니다. */
+/**
+ * 기준은 항목별로 모으고 고정한다. 정자세 규칙의 통과 여부는 관측 기준의 자격이 아니다.
+ * 기본 [signal] 은 등록부의 **비교 신호**다(카운트 신호와 다를 수 있다 — 런지, spec §58).
+ */
 class PostureComparisonTracker(
-    val exercise: String, val metrics: List<ComparisonMetric>, val signal: RepSignal? = RepSignals.byExercise[exercise],
+    val exercise: String, val metrics: List<ComparisonMetric>, val signal: RepSignal? = RepSignals.byExercise[exercise]?.comparisonSignal(),
     private val baselineCount: Int = 3, private val observationKind: ObservationKind? = null,
     val variantId: String = exercise,
 ) {

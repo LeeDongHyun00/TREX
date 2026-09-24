@@ -437,23 +437,21 @@ private fun CoachSetDetail(r: PostureSetReport) {
             },
             color = c.text3, fontSize = 11.sp,
         )
-        r.repsValid?.let { valid -> Text(if (r.exercise in FloorTemporal.exercises) "참고 · 검출 ${valid + (r.repsPartial ?: 0)}회 · 범위 미달 ${r.repsPartial ?: 0}회" else "렙 유효 $valid · 무효 ${r.repsPartial ?: 0}", color = c.text3, fontSize = 11.sp) }
+        // 렙 줄의 말은 ROM 판정 단계가 정한다(spec §58) — 검증 기준만 "유효·무효", 미검증은 '참고 · 범위 미달', 기준 없음은 '범위 미판정'
+        r.repDetailLine?.let { Text(it, color = c.text3, fontSize = 11.sp) }
         r.highlights.filter { it.ruleId != lead?.ruleId }.forEach { OutcomeLine(it) }
         h?.note?.let { Text("ⓘ $it", color = c.text3, fontSize = 10.5.sp, lineHeight = 15.sp) }
     }
 }
 
-/** TRACK 펼침: 템포·렙(파셜), 세트 내 변화, 접힌 측정 기록(판정이 아니라 측정 — §29). */
+/** TRACK 펼침: 템포·렙(ROM 은 판정 단계가 허락하는 말로만 — 파셜은 검증 기준만, spec §58), 세트 내 변화, 접힌 측정 기록(판정이 아니라 측정 — §29). */
 @Composable
 private fun TrackSetDetail(r: PostureSetReport) {
     val c = Trex.c
     var showDemoted by remember(r.setId) { mutableStateOf(false) }
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         val parts = buildList {
-            r.repsValid?.let { valid ->
-                val partial = r.repsPartial ?: 0
-                add("${valid + partial}렙" + if (partial > 0) " · 파셜 $partial" else "")
-            }
+            r.repDetailLine?.let { add(it) }
             r.tempoMs?.let { add("템포 " + String.format(Locale.US, "%.1f초", it / 1000f)) }
         }
         if (parts.isNotEmpty()) Text(parts.joinToString(" · "), color = c.text, fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold)

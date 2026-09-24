@@ -20,18 +20,75 @@ package com.example.trex_kotlin.posture
  *
  * 참고: AIHub 0.6s(렙당 3~4샘플) 오프라인 분석은 밴드 v3(batch)가 우세 — 연구 코드는 그대로 두고
  * 이 클래스는 기기 스트리밍(렙당 10~17샘플) 전용이다. 밀도별 알고리즘 분리는 확립된 원칙.
+ *
+ * 경로는 셋이고 `signal.polarity` 가 가른다 (docs/REP_ENGINE_DESIGN.md §4.2·§4.3):
+ *  - polarity = null, completeOnReturn = false → 반전형(위 v4). 연구 재생 파리티용.
+ *  - polarity = null, completeOnReturn = true  → 복귀형(`ReturnRepTracker`, spec §42). **지금 앱 세션이 쓰는 것.**
+ *  - polarity != null → 복귀 히스테리시스 코어(`RepHysteresis`) + 시작 확정(`RepStartConfirmation`).
+ *    평활하지 않고, 준비 자세·상단 체류를 요구하지 않으며, 첫 두 사이클을 함께 발표한다. 이 경로에서는
+ *    생성자의 refractoryMs·maxGapMs·completeOnReturn 을 쓰지 않고 코어의 설계값(0.8 s · 1.5 s, 복귀 완료)을 쓴다.
+ *    폰 검증 전이라 `RepSignals` 의 어느 종목도 polarity 를 켜지 않는다 — 앱 동작은 바뀌지 않았다.
+ * polarity = null 인 두 경로의 동작은 새 코어 도입 전과 같다(새 분기는 전부 polarity != null 일 때만 탄다 —
+ * 기존 유닛 테스트 19개가 수정 없이 통과해야 한다).
  */
 class RepCounter(
     val signal: RepSignal,
-    private val refractoryMs: Long = 1_200L,
-    private val maxGapMs: Long = Long.MAX_VALUE,
+    /** 레거시 경로의 불응기. 새 코어 경로는 쓰지 않는다 — 실제 값은 [effectiveRefractoryMs]. */
+    val refractoryMs: Long = 1_200L,
+    /** 레거시 경로의 끊김 초기화 기준. 새 코어 경로는 쓰지 않는다 — 실제 값은 [effectiveMaxGapMs]. */
+    val maxGapMs: Long = Long.MAX_VALUE,
     /** 세션 목표 카운트는 다음 하강 대신 준비 위치 복귀로 완료한다. 기존 재생 패리티는 기본값을 유지한다. */
-    completeOnReturn: Boolean = false,
+    val completeOnReturn: Boolean = false,
 ) {
-    private val returnTracker = if (completeOnReturn) ReturnRepTracker(signal.minAmp, refractoryMs) else null
+    private val hysteresis = signal.polarity?.let { RepHysteresis(signal.minAmp, it) }
+    private val confirmation = if (hysteresis != null) RepStartConfirmation() else null
+    private val returnTracker = if (completeOnReturn && hysteresis == null) ReturnRepTracker(signal.minAmp, refractoryMs) else null
     var reps: Int = 0
         private set
     val repTimesMs = ArrayList<Long>()
+
+    /** 새 코어 경로인가 (signal.polarity != null). */
+    val usesHysteresis: Boolean get() = hysteresis != null
+
+    /**
+     * 이 카운터가 **실제로 쓰는** 구성 — 세트 로그(`RepEngineLog`)가 이 값을 그대로 적는다(복사한 상수는 조용히 어긋난다).
+     * 새 코어 경로는 생성자의 불응기·끊김 기준 대신 코어의 값을 쓰고, 복귀 완료는 코어의 성질이다.
+     */
+    val effectiveRefractoryMs: Long get() = hysteresis?.refractoryMs ?: refractoryMs
+    val effectiveMaxGapMs: Long get() = hysteresis?.maxGapMs ?: maxGapMs
+    val effectiveCompleteOnReturn: Boolean get() = hysteresis != null || completeOnReturn
+
+    /** 새 코어의 복귀 잔여 비율(f). 레거시 경로는 null. */
+    val returnFraction: Float? get() = hysteresis?.returnFraction
+
+    /** 새 코어의 시작 확정 구성(값만 — 내부 상태는 내보내지 않는다). 레거시 경로는 null. */
+    val confirmationConfig: RepConfirmationConfig? get() = confirmation?.config
+
+    /**
+     * 새 코어 경로에서 발표된(= 센) 사이클, 발화 순서대로 — 각자의 발화 시각과 원값 극값을 갖는다.
+     * 레거시 경로에서는 비어 있다(레거시는 [lastCycleMin]/[lastCycleMax] 만 노출한다).
+     * 내부 목록의 보기라 onFrame 과 같은 락 안에서 복사해 쓴다([repTimesMs] 와 같다).
+     */
+    val publishedReps: List<RepCycle> get() = confirmation?.published ?: emptyList()
+
+    /**
+     * 직전 onFrame 에서 새로 발표된 사이클들. 시작 확정은 첫 두 사이클을 **한 프레임에 함께** 발표하므로
+     * onFrame 이 true 를 돌려줘도 [reps] 가 2 늘 수 있다 — 호출 쪽은 이 목록의 크기만큼 센다. 레거시 경로에서는 비어 있다.
+     */
+    var newlyPublished: List<RepCycle> = emptyList()
+        private set
+
+    /** 발화했지만 시작 확정을 기다리는 사이클 수(0 또는 1). 세지 않는다 — 화면에는 '감지 중' 으로만 쓸 수 있다(설계 §4.8). */
+    val pendingReps: Int get() = if (confirmation?.pending != null) 1 else 0
+
+    /** 확정되지 못하고 버려진 사이클 — 세트 로그용. 레거시 경로에서는 비어 있다. */
+    val droppedReps: List<RepCycle> get() = confirmation?.dropped ?: emptyList()
+
+    /**
+     * 세트 종료 시점의 미완 상태 — **세지 않고** 로그에 '미완 후보' 로 남긴다(설계 §4.2·§4.7).
+     * 절반만 올라온 동작이나 짝을 못 만난 한 번의 사이클을 한 회로 만들지 않는다. 레거시 경로에서는 둘 다 null.
+     */
+    fun pendingAtSetEnd(): RepPendingState = RepPendingState(confirmation?.pending, hysteresis?.candidate())
 
     /** 방금 완료된 렙의 사이클 극값 (onFrame 이 true 를 돌려준 직후 유효). */
     var lastCycleMin: Float = Float.NaN
@@ -55,6 +112,9 @@ class RepCounter(
 
     fun reset() {
         returnTracker?.reset()
+        hysteresis?.reset()
+        confirmation?.reset()
+        newlyPublished = emptyList()
         reps = 0
         repTimesMs.clear()
         periodMs = null
@@ -69,18 +129,27 @@ class RepCounter(
         lastCycleMax = Float.NaN
     }
 
-    /** 일시정지·카메라 재배치 전후를 한 반복으로 잇지 않는다. 완료한 수는 유지한다. */
+    /**
+     * 일시정지·카메라 재배치 전후를 한 반복으로 잇지 않는다. 완료(발표)한 수는 유지한다.
+     * 새 코어: 진행 중 사이클과 **확정 대기(보류) 사이클**을 함께 버린다(버린 사이클은 [droppedReps] 로 — 로그용).
+     * 보류를 남기면 리셋 앞의 한 번이 리셋 뒤 첫 사이클과 짝지어 +2 로 발표돼, 사람이 멈췄던 경계를 넘어 센다(설계 §4.7, 원칙 #1).
+     * 끊김(검출 공백 > maxGap)은 이 함수가 아니다 — 코어가 진행 중 사이클만 버리고 보류의 수명은 짝 창이 정한다(프로토타입·배터리와 같다).
+     */
     fun resetCycle() {
         returnTracker?.resetCycle()
+        hysteresis?.resetCycle()
+        confirmation?.dropPending()
         dirn = 0; ext = Float.NaN; pendingBottom = Float.NaN; rawCount = 0; dtMs = null; prevT = null
     }
 
     /** @return 이 프레임에서 렙이 완료됐으면 true. value=null(가림)·물리범위 밖이면 일시정지. */
     fun onFrame(tMs: Long, value: Float?): Boolean {
+        if (hysteresis != null) newlyPublished = emptyList()
         if (value == null || !value.isFinite()) return false
         val plo = signal.plausibleMin
         val phi = signal.plausibleMax
         if ((plo != null && value < plo) || (phi != null && value > phi)) return false
+        if (hysteresis != null) return onFrameHysteresis(tMs, value, hysteresis, confirmation!!)
 
         // 바닥 경로에서는 가림·일시정지 전후를 한 반복으로 이어 세지 않는다.
         if (prevT?.let { tMs - it > maxGapMs || tMs <= it } == true) {
@@ -148,11 +217,58 @@ class RepCounter(
         return false
     }
 
+    /** 새 코어 경로 — 원값 그대로(평활 없음). 레거시 필드(raw3·dtMs·dirn 등)는 건드리지 않는다. */
+    private fun onFrameHysteresis(tMs: Long, value: Float, core: RepHysteresis, confirm: RepStartConfirmation): Boolean {
+        val cycle = core.onFrame(tMs, value) ?: return false
+        val out = confirm.offer(cycle)
+        if (out.isEmpty()) return false
+        for (c in out) {
+            if (lastRepAt > Long.MIN_VALUE / 4) {
+                val p = c.tMs - lastRepAt
+                periodMs = periodMs?.let { (it + p) / 2 } ?: p
+            }
+            reps++
+            repTimesMs.add(c.tMs)
+            lastRepAt = c.tMs
+        }
+        val newest = out.last()
+        lastCycleMin = newest.min
+        lastCycleMax = newest.max
+        newlyPublished = out
+        return true
+    }
+
     companion object {
         /** 종목에 카운터가 정의돼 있고 등척성이 아니면 생성 (플랭크 등은 HoldTimer 대상 — 카운터 미적용). */
         fun forExercise(exercise: String): RepCounter? {
             val sig = RepSignals.byExercise[exercise] ?: return null
             return if (sig.isometric) null else RepCounter(sig)
+        }
+
+        /**
+         * 세션 카운터 — `PostureLive` 가 세트마다 만드는 구성을 한 곳에 모은 순수 함수.
+         * 재생기(`research/external_rep_replay/replay-jvm`)가 같은 함수를 불러 "앱과 같은 구성" 을 구조로 보장한다.
+         *
+         *  - 규칙 JSON 에 kind=rep 규칙의 rep 설정이 있으면 그 ROM 방향·임계값으로 덮는다(검증 표시는 끈다).
+         *  - 없고 바닥 종목이면 ROM 을 뗀다(바닥 ROM 은 규칙 설정이 있을 때만 쓴다).
+         *  - 서서 하는 종목은 등록부 신호 그대로.
+         * 전부 maxGapMs = 1500, completeOnReturn = true. 새 코어 사용 여부는 신호의 polarity 가 정한다.
+         *
+         * `RepRuleConfig` 는 FloorTemporal.kt 에 있어 재생기가 컴파일하지 않으므로 방향·임계값을 원시값으로 받는다.
+         * 둘 다 있어야 규칙 설정으로 본다(`RepRuleConfig` 의 두 필드는 null 이 될 수 없다).
+         *
+         * @return 등록부에 없거나 등척성 종목이면 null (= `forExercise` 가 null 인 경우와 같다).
+         */
+        fun forSession(exercise: String, ruleRomDirection: String? = null, ruleRomThreshold: Float? = null, floor: Boolean): RepCounter? {
+            val sig = RepSignals.byExercise[exercise] ?: return null
+            if (sig.isometric) return null
+            val signal = when {
+                ruleRomDirection != null && ruleRomThreshold != null ->
+                    sig.copy(romDirection = ruleRomDirection, romThreshold = ruleRomThreshold, romValidated = false)
+                floor -> sig.copy(romThreshold = null, romDirection = null, romValidated = false)
+                else -> sig
+            }
+            return RepCounter(signal, maxGapMs = 1500L, completeOnReturn = true)
         }
 
         private fun median3(a: FloatArray): Float {
@@ -183,8 +299,41 @@ data class RepSignal(
     /** 물리 타당 범위 (모집단: AIHub 프레임 분포) — 밖의 값은 측정 붕괴로 보고 일시정지. */
     val plausibleMin: Float? = null,
     val plausibleMax: Float? = null,
+    /**
+     * 새 카운터 코어(복귀 히스테리시스, `RepHysteresis`)를 쓸 때의 반복 방향. null = 레거시 경로 그대로.
+     * 코어는 "휴식 = 신호의 휴식 쪽 끝" 을 가정하므로 방향을 모르는 신호에 켜면 마지막 반복을 잃는다 —
+     * 그래서 종목별로 명시해 켜고(opt-in), 폰 라벨 검증 전에는 등록부 어느 종목에도 켜지 않는다.
+     */
+    val polarity: RepPolarity? = null,
+    /**
+     * TRACK 비교(`PostureComparison`)가 볼 신호. null = [feature]/[minAmp] 와 같다.
+     * 카운트 신호를 바꿔도 비교 지표(초기 대비 변화)의 의미가 조용히 바뀌지 않게 둘을 떼어 둔다 — 비교 기준은
+     * 사용자가 이미 쌓은 기록의 단위라, 카운트 개선이 기록의 단위를 바꾸면 안 된다.
+     */
+    val comparisonFeature: String? = null,
+    val comparisonMinAmp: Float? = null,
 ) {
-    /** 완료된 렙의 ROM 유효성. null = ROM 기준 없음(항상 유효 취급). */
+    /**
+     * 비교용 신호 — [comparisonFeature]/[comparisonMinAmp] 가 있으면 그것으로 바꾼 사본, 없으면 자기 자신.
+     * 피처가 바뀌면 ROM·물리 범위는 카운트 신호의 단위라 떼어 낸다(다른 피처에 붙이면 의미가 없다).
+     */
+    fun comparisonSignal(): RepSignal {
+        if (comparisonFeature == null && comparisonMinAmp == null) return this
+        val f = comparisonFeature ?: feature
+        val sameFeature = f == feature
+        return copy(
+            feature = f, minAmp = comparisonMinAmp ?: minAmp, polarity = null,
+            comparisonFeature = null, comparisonMinAmp = null,
+            romDirection = if (sameFeature) romDirection else null, romThreshold = if (sameFeature) romThreshold else null,
+            romValidated = sameFeature && romValidated, romCue = if (sameFeature) romCue else null,
+            plausibleMin = if (sameFeature) plausibleMin else null, plausibleMax = if (sameFeature) plausibleMax else null,
+        )
+    }
+
+    /**
+     * 완료된 렙의 ROM 판정. null = 판정하지 않음(기준 없음·방향 불명) — 미달로 세지 않아 수는 줄지 않지만 '유효' 도 아니다
+     * (화면은 '범위 미판정', spec §58). true/false 를 어떤 확신으로 말할지는 `RepRomTier` 가 정한다.
+     */
     fun isValidRep(cycleMin: Float, cycleMax: Float): Boolean? {
         val thr = romThreshold ?: return null
         return when (romDirection) {
@@ -207,6 +356,8 @@ data class RepSignal(
  * 확정 전까지 카운트는 참고용이며 ±1 오차를 약속에 포함하지 않는다.
  */
 object RepSignals {
+    // 새 카운터 코어(polarity)는 어느 종목에도 켜지 않는다 — 바벨 스쿼트·스텝 포워드 다이나믹 런지·덤벨 컬(모두 DOWN)이
+    // 첫 대상이지만 폰 라벨 세트 검증(설계 §7 단계 4) 전이라 앱의 카운트 동작은 레거시 복귀형 그대로 둔다(원칙 #2).
     private const val ANGLE = 35f      // 각도형 게이트: 플랭크 유지 중 잡음 바닥(10~30°/5s) 위
     private const val NORM = 0.25f     // 몸통 정규화 거리형
     private const val NORM_S = 0.10f   // 작은 스케일 정규화형 (이탈·높이차)
@@ -236,7 +387,8 @@ object RepSignals {
         "크로스 런지" to Rom("min", 115.6725f, false, null),
         "바벨 런지" to Rom("min", 112.0852f, true, "무릎을 충분히 굽혀 주세요"),
         "사이드 런지" to Rom("min", 106.0722f, false, null),
-        "스텝 포워드 다이나믹 런지" to Rom("min", -0.0076f, false, null),
+        // 스텝 포워드 다이나믹 런지: ROM 없음 → 판정하지 않는다(isValidRep = null, 화면 '범위 미판정' — spec §58).
+        // 옛 기준(knee_out_mean −0.0076)은 신호 교체와 함께 뗐다 — 아래 base() 의 신호 교체 주석 참고.
         "스텝 백워드 다이나믹 런지" to Rom("min", 141.7641f, false, null),
         "스탠딩 니업" to Rom("min", 142.7811f, false, null),
         "풀업" to Rom("min", 80.3965f, false, null),
@@ -284,10 +436,27 @@ object RepSignals {
         put("크로스 런지", RepSignal("knee_mean", ANGLE))
         put("바벨 런지", RepSignal("knee_minside", ANGLE))
         put("사이드 런지", RepSignal("knee_minside", ANGLE))
-        put("스텝 포워드 다이나믹 런지", RepSignal("knee_out_mean", NORM_S))
+        // 앱 '런지'. 카운트 신호를 knee_out_mean(0.10) → knee_mean(35°) 으로 바꿨다 (REP_ENGINE_DESIGN.md §4.1·§10).
+        //  - 앞으로 딛는 런지에서 무릎은 옆으로 벌어지지 않아 knee_out_mean 에 반복이 거의 담기지 않는다(좌우가 상쇄된다).
+        //    AIHub GT 3D 에서도 사이클 스윙 중앙값 0.047 로 게이트 0.10 을 넘는 사이클이 15% 뿐이었다 — 설문이 고른 신호에
+        //    검증 없이 물리 게이트를 붙인 설정이었다. MM-Fit 3D 연속 세트(현재 복귀형 카운터 그대로): 재현율 0.10 → 0.84.
+        //    그래도 이 카운터는 §1 수용 기준 밖이다(MM-Fit 세트 정확 일치 0.48, 세트 앞뒤 헛카운트 — 설계 §0·§14). beta 다.
+        //  - 양 무릎이 함께 굽으므로 평균 무릎각. 게이트 35° 는 다른 각도형 신호와 같은 모집단 값(잡음 바닥)이고 어느
+        //    데이터셋에도 맞추지 않았다. 이 경로(레거시 코어)의 신호는 knee_mean 으로 정했다(knee_minside 는 기존 코어에서 열세).
+        //    knee_minside 와의 재비교는 새 코어를 켤 때(Gate A)의 일이다(설계 §4.1·§15 #11).
+        //  - 반복 정의는 MM-Fit 라벨과 같은 '한 걸음 = 1회'(왼·오른 5+5 = 10). 목표 도달 자동 진행(§42)이 이 수로 넘어가므로
+        //    준비 안내가 이 정의를 밝힌다(ExerciseProfiles '런지', 설계 §4.4·§15 #18).
+        //  - 같은 변경에서 ROM(knee_out_mean −0.0076)을 뗐다. 단위가 다른 신호의 기준이라 붙여 두면 거짓 판정이 된다.
+        //    knee_mean 의 AIHub 후보(146.6°)는 "조금만 굽혀도 유효" 라 기준 구실을 못 해 쓰지 않는다 → ROM 없음(null).
+        //  - TRACK 비교는 기존 기록의 단위(knee_out_mean · 0.10)를 유지한다 — comparisonFeature/comparisonMinAmp.
+        put("스텝 포워드 다이나믹 런지", RepSignal("knee_mean", ANGLE, comparisonFeature = "knee_out_mean", comparisonMinAmp = NORM_S))
         put("스텝 백워드 다이나믹 런지", RepSignal("hip_mean", ANGLE))
         put("스탠딩 니업", RepSignal("hip_mean", ANGLE))
         // ---- 팔꿈치 각 계열 (풀업·랫풀·딥스·로우·컬·페이스풀)
+        // 덤벨 컬은 카운트 신호를 elbow_mean 으로 유지한다(설계 §4.4·§15 #9). 교대 컬에서는 한쪽 팔을 보는 minside 가 후보지만
+        // 이 피처(elbow_minside)는 한쪽 팔이 가려지면 보이는 쪽 값을 쓰는데(PostureCore), 교대 컬에서 굽힌 먼 팔이 사라진 샘플에
+        // 신호가 휴식 값으로 튀어 사이클이 쪼개진다 — MM-Fit 먼 팔 가림 흉내에서 과다 카운트. 후보는 "양팔이 모두 보일 때만 min" 인
+        // 카운터 전용 신호이고, MM-Fit 3D 재생에는 MediaPipe 의 가시성 탈락이 없어서, 교체는 MM-Fit 영상(MediaPipe) 결과를 보고 정한다.
         for (ex in listOf("풀업", "딥스", "바벨 로우", "덤벨 벤트오버 로우", "바벨 컬", "덤벨 컬", "페이스 풀")) {
             put(ex, RepSignal("elbow_mean", ANGLE))
         }
@@ -307,6 +476,13 @@ object RepSignals {
         // 미등록(신뢰 가능한 앱 가용 신호 없음): 스탠딩 사이드 크런치 — 오카운트보다 미표시가 정직
     }
 }
+
+/**
+ * 세트 종료 시점에 **세지 않은** 것 — 새 코어 경로만 채운다(설계 §4.2·§4.9).
+ * @property unconfirmed 발화했지만 짝(시작 확정)을 못 만난 사이클.
+ * @property inProgress 되돌아오는 중이던(ASC) 후보 — 절반만 올라온 동작을 한 회로 만들지 않는다.
+ */
+data class RepPendingState(val unconfirmed: RepCycle?, val inProgress: RepCandidate?)
 
 /** 완료된 렙 하나의 기록 — 사이클 극값과 ROM 판정. 세트 로그에 렙별로 남겨 후반 드리프트(피로)
  *  분석을 오프라인에서 가능하게 한다 (spec §29 — 숙련자 계기판의 원자재). */

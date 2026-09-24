@@ -35,8 +35,8 @@ class PostureSetReportTest {
 
     private fun build(
         results: List<RuleResult>, onset: List<OnsetState> = emptyList(), mode: CoachMode = CoachMode.COACH,
-        repsValid: Int? = null, repsPartial: Int? = null, tempoMs: Long? = null,
-    ) = PostureSetReport.build("set-1", "바벨 스쿼트", "스쿼트", mode, 40, false, results, onset, repsValid, repsPartial, tempoMs)
+        repsValid: Int? = null, repsPartial: Int? = null, tempoMs: Long? = null, repRom: RepRomTier? = null,
+    ) = PostureSetReport.build("set-1", "바벨 스쿼트", "스쿼트", mode, 40, false, results, onset, repsValid, repsPartial, tempoMs, repRom = repRom)
 
     // a. 랭킹
     @Test
@@ -126,7 +126,8 @@ class PostureSetReportTest {
                 onset(kneeRule, OnsetKind.HABIT, Verdict.VIOLATION, Verdict.VIOLATION),
                 onset(torsoRule, OnsetKind.DRIFT, Verdict.OK, Verdict.VIOLATION),
             ),
-            mode = CoachMode.TRACK, repsValid = 8, repsPartial = 2, tempoMs = 1500L,
+            // 파셜 표기·발화는 검증된 ROM 기준에서만 (spec §58) — 이 테스트는 그 경로의 문구를 고정한다
+            mode = CoachMode.TRACK, repsValid = 8, repsPartial = 2, tempoMs = 1500L, repRom = RepRomTier.VALIDATED,
         )
         assertEquals(listOf(kneeRule.id), r.demoted.map { it.ruleId })
         assertEquals(listOf(torsoRule.id), r.candidates.map { it.ruleId })
@@ -154,7 +155,8 @@ class PostureSetReportTest {
         assertEquals(1, r.demoted.size)
         assertNull(r.accuracy)
         // 파셜 0 은 표기하지 않는다
-        val r2 = build(results = listOf(res(kneeRule, Verdict.OK)), mode = CoachMode.TRACK, repsValid = 5, repsPartial = 0, tempoMs = 2040L)
+        val r2 = build(results = listOf(res(kneeRule, Verdict.OK)), mode = CoachMode.TRACK, repsValid = 5, repsPartial = 0, tempoMs = 2040L,
+            repRom = RepRomTier.VALIDATED)
         assertEquals("5렙, 템포 2.0초.", r2.voiceLine)
         assertEquals("5렙 · 템포 2.0초", r2.summaryLine)
     }
@@ -165,7 +167,7 @@ class PostureSetReportTest {
         val r = build(
             results = listOf(res(kneeRule, Verdict.VIOLATION), res(torsoRule, Verdict.OK)),
             onset = listOf(onset(kneeRule, null), onset(torsoRule, null)),
-            mode = CoachMode.TRACK, repsValid = 6, repsPartial = 0, tempoMs = 2000L,
+            mode = CoachMode.TRACK, repsValid = 6, repsPartial = 0, tempoMs = 2000L, repRom = RepRomTier.VALIDATED,
         )
         assertTrue(r.candidates.isEmpty())
         assertNull(r.headline)
@@ -261,6 +263,85 @@ class PostureSetReportTest {
         assertTrue(h.observation.contains("바깥"))
         assertEquals(Direction.OPPOSITE, h.direction)
         assertNotNull(r.headline)
+    }
+
+    // ---- spec §58: 렙 ROM 표시 정직성 — 판정하지 않은 것은 '범위 미판정', 미검증 기준은 '참고' 로만, 음성은 검증 기준에서만
+
+    @Test
+    fun romTierFollowsSignalConfiguration() {
+        assertEquals(RepRomTier.VALIDATED, RepRomTier.of(RepSignals.byExercise.getValue("딥스")))
+        assertEquals(RepRomTier.REFERENCE, RepRomTier.of(RepSignals.byExercise.getValue("바벨 스쿼트")))
+        // 런지는 카운트 신호를 바꾸며 ROM 을 뗐다 — 판정하지 않는다
+        assertEquals(RepRomTier.NONE, RepRomTier.of(RepSignals.byExercise.getValue("스텝 포워드 다이나믹 런지")))
+        assertEquals(RepRomTier.NONE, RepRomTier.of(RepSignal("x", 1f)))
+        assertEquals(RepRomTier.NONE, RepRomTier.of(RepSignal("x", 1f, romDirection = "mid", romThreshold = 1f, romValidated = true)))
+        // 세션 구성(PostureLive 와 같은 forSession): 바닥은 규칙 설정이 없으면 ROM 을 떼고, 규칙 설정은 검증 표시를 끈다
+        assertEquals(RepRomTier.NONE, RepRomTier.of(RepCounter.forSession("크런치", floor = true)!!.signal))
+        assertEquals(RepRomTier.REFERENCE, RepRomTier.of(RepCounter.forSession("푸시업", "min", 0.71f, floor = true)!!.signal))
+        assertEquals(RepRomTier.VALIDATED, RepRomTier.of(RepCounter.forSession("바벨 런지", floor = false)!!.signal))
+        assertEquals("reference", RepRomTier.REFERENCE.key)
+    }
+
+    @Test
+    fun unjudgedRomIsNeverShownOrSpokenAsValid() {
+        for (tier in listOf(RepRomTier.NONE, null)) {   // 모름(null)도 판정 안 함으로 다룬다
+            val coach = build(results = listOf(res(kneeRule, Verdict.OK)), repsValid = 8, repsPartial = 0, tempoMs = 1500L, repRom = tier)
+            assertEquals(RepRomTier.NONE, coach.romTier)
+            // 카운트는 beta — 검증 기준이 없는 줄은 '참고' 로 연다(바닥 종목의 예전 표기 '참고 · 검출 …' 과 같다)
+            assertEquals("참고 · 검출 8회 · 범위 미판정", coach.repDetailLine)
+            assertFalse(coach.repDetailLine!!.contains("유효"))
+            assertFalse(coach.voiceLine.contains("유효") || coach.voiceLine.contains("무효"))
+            val track = build(results = listOf(res(kneeRule, Verdict.OK)), mode = CoachMode.TRACK, repsValid = 8, repsPartial = 0, tempoMs = 1500L, repRom = tier)
+            assertEquals("8렙 · 범위 미판정 · 템포 1.5초", track.summaryLine)
+            assertEquals("8렙 · 범위 미판정", track.repDetailLine)
+            // 음성은 렙 수만 — 판정하지 않은 범위를 말로 만들지 않는다
+            assertEquals("8렙, 템포 1.5초.", track.voiceLine)
+        }
+    }
+
+    @Test
+    fun referenceRomIsScreenOnlyAndNeverInvalidOrPartial() {
+        val coach = build(results = listOf(res(kneeRule, Verdict.OK)), repsValid = 8, repsPartial = 2, repRom = RepRomTier.REFERENCE)
+        assertEquals("참고 · 검출 10회 · 범위 미달 2회", coach.repDetailLine)
+        assertFalse(coach.repDetailLine!!.contains("무효"))
+        assertFalse(coach.voiceLine.contains("무효") || coach.voiceLine.contains("파셜") || coach.voiceLine.contains("범위"))
+        val track = build(results = listOf(res(kneeRule, Verdict.OK)), mode = CoachMode.TRACK, repsValid = 8, repsPartial = 2, tempoMs = 1500L,
+            repRom = RepRomTier.REFERENCE)
+        assertEquals("10렙 · 참고 · 범위 미달 2회 · 템포 1.5초", track.summaryLine)
+        assertEquals("10렙 · 참고 · 범위 미달 2회", track.repDetailLine)
+        assertEquals("10렙, 템포 1.5초.", track.voiceLine)
+        assertFalse(track.summaryLine.contains("파셜") || track.voiceLine.contains("파셜"))
+        // 미달 0 은 표기하지 않는다 (검증 기준의 파셜 0 과 같다)
+        val none = build(results = listOf(res(kneeRule, Verdict.OK)), mode = CoachMode.TRACK, repsValid = 6, repsPartial = 0, repRom = RepRomTier.REFERENCE)
+        assertEquals("6렙", none.summaryLine)
+    }
+
+    @Test
+    fun validatedRomKeepsValidInvalidAndPartialWording() {
+        val coach = build(results = listOf(res(kneeRule, Verdict.OK)), repsValid = 8, repsPartial = 2, repRom = RepRomTier.VALIDATED)
+        assertEquals("렙 유효 8 · 무효 2", coach.repDetailLine)
+        val track = build(results = listOf(res(kneeRule, Verdict.OK)), mode = CoachMode.TRACK, repsValid = 8, repsPartial = 2, repRom = RepRomTier.VALIDATED)
+        assertEquals("10렙 · 파셜 2", track.repDetailLine)
+        assertEquals("10렙 파셜 2.", track.voiceLine)
+    }
+
+    @Test
+    fun romNeverChangesTheDetectedCountAndFloorStaysReference() {
+        // 수는 검출 전체 — ROM 단계와 무관하게 valid + partial (진행·자동 넘김과 같은 수, spec §42)
+        for (tier in RepRomTier.values()) {
+            val r = build(results = emptyList(), mode = CoachMode.TRACK, repsValid = 7, repsPartial = 3, repRom = tier)
+            assertTrue(r.repDetailLine!!.startsWith("10렙"))
+        }
+        assertNull(build(results = emptyList()).repDetailLine)   // 렙 카운터 미적용
+        // 바닥 종목은 규칙이 전부 beta — 검증 기준이 붙어 와도 참고로 낮춘다
+        val floor = PostureSetReport.build("set-2", "푸시업", "푸쉬업", CoachMode.COACH, 40, false, emptyList(), emptyList(), 5, 1, null,
+            repRom = RepRomTier.VALIDATED)
+        assertEquals(RepRomTier.REFERENCE, floor.romTier)
+        assertEquals("참고 · 검출 6회 · 범위 미달 1회", floor.repDetailLine)
+        // rep 규칙 설정이 없는 바닥 종목(크런치 등)은 ROM 을 떼므로 NONE — 그래도 '참고' 표기는 남는다
+        val crunch = PostureSetReport.build("set-3", "크런치", "크런치", CoachMode.COACH, 40, false, emptyList(), emptyList(), 6, 0, null,
+            repRom = RepRomTier.of(RepCounter.forSession("크런치", floor = true)!!.signal))
+        assertEquals("참고 · 검출 6회 · 범위 미판정", crunch.repDetailLine)
     }
 
     @Test

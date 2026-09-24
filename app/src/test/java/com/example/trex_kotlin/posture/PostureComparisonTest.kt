@@ -175,6 +175,27 @@ class PostureComparisonTest {
         assertTrue(range.changed && range.relativePercent!! < -25f)
     }
 
+    @Test fun lungeComparisonKeepsItsRecordedUnitAfterCountingSignalSwap() {
+        // spec §58: 런지 카운트 신호는 knee_mean 으로 바꿨지만 TRACK 비교는 기존 기록의 단위(knee_out_mean · 0.10)를 유지한다
+        val lunge = "스텝 포워드 다이나믹 런지"
+        assertEquals("knee_mean", RepSignals.byExercise.getValue(lunge).feature)
+        val primary = ComparisonMetrics.forExercise(lunge, emptyList()).first()
+        assertEquals("knee_out_mean", primary.feature)
+        assertEquals("정규화 비율", primary.unit)
+        assertEquals(.06f, primary.noiseFloor, 1e-6f)
+        val tracker = PostureComparisonTracker(lunge, listOf(primary))
+        assertEquals("knee_out_mean", tracker.signal!!.feature)
+        assertEquals(.10f, tracker.signal!!.minAmp, 1e-6f)
+        // 카운트 신호를 그대로 넘겨도 반복 양 끝은 비교 신호로 가른다
+        val frames = shape.mapIndexed { i, v -> ComparisonFrame(i * 300L, mapOf("knee_out_mean" to .2f * v, "knee_mean" to 90f + 80f * v)) }
+        val signature = PhaseSignature.compute(frames, RepSignals.byExercise.getValue(lunge), listOf(primary))
+        assertEquals(setOf("knee_out_mean|LOW", "knee_out_mean|HIGH", "knee_out_mean|RANGE"), signature.keys)
+        assertEquals(.2f, signature.getValue("knee_out_mean|RANGE"), 1e-5f)
+        // 비교 신호를 따로 두지 않은 종목은 카운트 신호 그대로
+        assertEquals("knee_mean", ComparisonMetrics.forExercise("바벨 스쿼트", emptyList()).first().feature)
+        assertSame(RepSignals.byExercise.getValue("바벨 스쿼트"), RepSignals.byExercise.getValue("바벨 스쿼트").comparisonSignal())
+    }
+
     @Test fun reportUsesSetRelativeTimeAndExcludesAfterCutoff() {
         val f = feed(); f.learn(); val cutoff = f.time
         f.cycle(.6f); f.cycle(.6f)

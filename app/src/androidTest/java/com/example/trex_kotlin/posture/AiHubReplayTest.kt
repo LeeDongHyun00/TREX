@@ -49,12 +49,10 @@ class AiHubReplayTest {
                     check(analyzer.ensureReady()) { analyzer.stats().error ?: "모델 생성 실패" }
                     val extractor = FloorFeatureExtractor()
                     val coach = LiveCoach(rules, ex, baseline = null, requireAnchor = true, speakBeta = false)
-                    val counter = RepCounter.forExercise(ex)?.let { c ->
-                        val cfg = rules.rulesFor(ex).firstOrNull { it.kind == "rep" }?.repConfig
-                        if (cfg != null) RepCounter(c.signal.copy(romDirection = cfg.direction, romThreshold = cfg.threshold, romValidated = false), maxGapMs = 1500)
-                        else if (isFloor) RepCounter(c.signal.copy(romDirection = null, romThreshold = null, romValidated = false), maxGapMs = 1500)
-                        else c
-                    }
+                    // 앱 세션과 같은 카운터 구성 — PostureLive 도 이 팩토리를 부른다(복귀형·maxGap 1.5 s·규칙/바닥 ROM, spec §58).
+                    // 손으로 만든 구성(예전: 반전형·서서 하는 종목 maxGap 무제한)은 앱과 다른 카운터·앵커 시점을 쟀다.
+                    val cfg = rules.rulesFor(ex).firstOrNull { it.kind == "rep" }?.repConfig
+                    val counter = RepCounter.forSession(ex, cfg?.direction, cfg?.threshold, floor = isFloor)
                     val samples = ArrayList<PoseSample>()
                     val times = ArrayList<Long>()
                     val reps = ArrayList<RepRecord>()
@@ -73,8 +71,10 @@ class AiHubReplayTest {
                         samples.add(sample); times.add(t); full.add(sample.features)
                         if (sample.detected) {
                             if (counter?.onFrame(t, sample.features[counter.signal.feature]) == true) {
-                                reps += RepRecord(t, counter.lastCycleMin, counter.lastCycleMax,
-                                    counter.signal.isValidRep(counter.lastCycleMin, counter.lastCycleMax))
+                                // 앱처럼 발표된 사이클마다 한 회 — 새 코어는 한 프레임에 둘을 발표할 수 있다(레거시는 이 프레임의 한 사이클)
+                                val cycles = counter.newlyPublished.map { Triple(it.tMs, it.min, it.max) }
+                                    .ifEmpty { listOf(Triple(t, counter.lastCycleMin, counter.lastCycleMax)) }
+                                for ((at, lo, hi) in cycles) reps += RepRecord(at, lo, hi, counter.signal.isValidRep(lo, hi))
                                 if (coach.anchor()) anchor = t
                             }
                             if (sample.features.isNotEmpty() && firstMeasured == null) firstMeasured = t
