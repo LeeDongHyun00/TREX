@@ -137,6 +137,7 @@ import com.example.trex_kotlin.posture.RepResetEvent
 import com.example.trex_kotlin.posture.RepRomTier
 import com.example.trex_kotlin.posture.RepUnit
 import com.example.trex_kotlin.posture.RepUnitAccumulator
+import com.example.trex_kotlin.posture.RepValidation
 import com.example.trex_kotlin.posture.SIDE_PAIR_NEXT_HINT
 import com.example.trex_kotlin.posture.SIDE_PAIR_UNIT_HINT
 import com.example.trex_kotlin.posture.RuleHighlight
@@ -259,6 +260,8 @@ fun PostureLiveSessionScreen(
     onRepDetected: () -> Unit = {},
     onPartial: () -> Unit = onSkip,
     preparing: Boolean = false,
+    /** 렙 검증 모드(spec §61, `RepValidation`) — 숫자 숨김·음성 끔·세트 로그에 좌표. 자동 진행 끄기는 TrexApp 이 한다. */
+    validation: Boolean = false,
     onPrepared: () -> Unit = {},
 ) {
     val c = Trex.c
@@ -326,6 +329,8 @@ fun PostureLiveSessionScreen(
     // 바닥 종목은 중력/3D 피처 대신 2D 평면 피처를 쓴다 (spec §25). 분석 스레드에서 매 프레임 읽으므로 ref 로 전달.
     val isFloorExercise = profile?.floor == true || aihubExercise in floorExercises
     val floorRef = remember { booleanArrayOf(false) }
+    // 세트 시작 시점의 검증 모드 — 세트 마감이 지금 값이 아니라 이 값을 쓴다(이 화면은 종목이 바뀌어도 재생성되지 않을 수 있다)
+    val validationRef = remember { booleanArrayOf(false) }
     floorRef[0] = isFloorExercise
     val floorExtractor = remember { FloorFeatureExtractor() }
     val holdRef = remember { arrayOfNulls<HoldTracker>(1) }
@@ -431,8 +436,20 @@ fun PostureLiveSessionScreen(
     DisposableEffect(repTone) { onDispose { runCatching { repTone?.release() } } }
     var muted by remember { mutableStateOf(speech.muted) }
     LaunchedEffect(repetitions) {
-        if (repetitions > 0 && !paused && !muted && repRef[0] != null) speakRep(speech, repTone, repetitions)
+        if (repetitions > 0 && !paused && !muted && !validation && repRef[0] != null) speakRep(speech, repTone, repetitions)
     }
+    // 검증 모드는 음성을 끈다 — 코칭·숫자 발화가 동작과 템포를 바꾼다(원칙 #6). 사용자가 다시 켤 수는 있다(배너가 알린다).
+    // 플래그는 TrexApp 이 파일에서 비동기로 읽는다 — 세트 시작보다 늦게 도착해도 그 세트 로그에 반영되게 여기서도 맞춘다(단계가 바뀔 때만 바뀐다)
+    // 켜기 전 음성 상태를 기억했다가 검증 모드가 꺼지거나 화면을 떠날 때 되돌린다 — SpeechCoach 는 세션 사이에 공유되므로 그대로 두면 계속 꺼진다
+    val muteBeforeValidation = remember { arrayOfNulls<Boolean>(1) }
+    LaunchedEffect(validation) {
+        validationRef[0] = validation
+        if (validation) {
+            if (muteBeforeValidation[0] == null) muteBeforeValidation[0] = muted
+            muted = true
+        } else muteBeforeValidation[0]?.let { muted = it; muteBeforeValidation[0] = null }
+    }
+    DisposableEffect(Unit) { onDispose { muteBeforeValidation[0]?.let { speech.muted = it } } }
     LaunchedEffect(muted) {
         speech.muted = muted
         if (muted) speech.stop()
@@ -623,6 +640,8 @@ fun PostureLiveSessionScreen(
             thermalStart = thermalStart,
             thermalChanges = thermalChanges,
             appVersion = appVersion,
+            // 검증 모드 세트만 좌표(xy·w·up)와 이미지 크기를 남긴다(spec §61) — 세트 시작 시점 값
+            validation = validationRef[0],
             // 표시 단위(사용자 결정 2026-09-24) — 화면에 보인 수와 세트 끝에 남은 한쪽
             repUnit = unitUsed,
             repCompleted = unitCompleted,
@@ -688,6 +707,7 @@ fun PostureLiveSessionScreen(
         repRef[0] = RepCounter.forSession(aihubExercise, repConfig?.direction, repConfig?.threshold, floor = isFloorExercise)
         // 표시 단위는 이 세트 종목의 프로필에서 — 바닥 종목·프로필 없는 종목은 사이클 단위. 누적기는 아래 락 안에서 카운터와 함께 만든다.
         val unit = RepUnit.forSession(profile, isFloorExercise)
+        validationRef[0] = validation
         repUnit = unit
         repHalfPending = false
         repCount = 0
@@ -1084,7 +1104,7 @@ fun PostureLiveSessionScreen(
                         val autoLabel = listOfNotNull("자동 횟수 · 참고",
                             SIDE_PAIR_UNIT_HINT.takeIf { repUnit == RepUnit.SIDE_PAIR },
                             SIDE_PAIR_NEXT_HINT.takeIf { repUnit == RepUnit.SIDE_PAIR && repHalfPending }).joinToString(" · ")
-                        Text(if (repRef[0] == null) "직접 횟수 기록" else autoLabel, color = c.text2,
+                        Text(if (repRef[0] == null) "직접 횟수 기록" else if (validation) RepValidation.BANNER else autoLabel, color = c.text2,
                             fontSize = 11.sp, modifier = Modifier.padding(top = 6.dp))
                     }
                 }
@@ -1121,7 +1141,10 @@ fun PostureLiveSessionScreen(
             header = {
                 if (!preparing) LiveWorkoutHud(workout, repetitions, timeLeft, totalSeconds, setLabel, paused,
                     compact = configuration.screenHeightDp < 500,
-                    message = liveMessage.takeIf { !panelVisible },
+                    // 검증 모드는 배너가 먼저 — 켜져 있음을 늘 보인다
+                    message = if (validation) RepValidation.BANNER else liveMessage.takeIf { !panelVisible },
+                    // 검증 모드는 자동 횟수 숫자를 숨긴다 — 집계자가 앱 숫자에 끌려가지 않게(세는 것·로그는 그대로)
+                    hideCount = validation && repRef[0] != null,
                     // 운동 중에는 제어판이 접혀 있어(몰입) 좌우 짝 표기를 HUD 에도 둔다 — 한쪽을 마친 동안 '반대쪽 차례', 아니면 단위
                     countNote = if (repRef[0] != null && repUnit == RepUnit.SIDE_PAIR)
                         (if (repHalfPending) SIDE_PAIR_NEXT_HINT else SIDE_PAIR_UNIT_HINT) else null,

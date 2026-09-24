@@ -246,7 +246,46 @@ class PostureSetLogTest {
             repResets = listOf(RepResetEvent(450L, "pause", afterTMs = 300L)),
             repUnit = RepUnit.SIDE_PAIR, repCompleted = 1, repHalfPending = true,
         )
-        return listOf(base, newCore, sidePair)
+        // 렙 검증 모드(spec §61): 세트에 validation·image, 검출 프레임마다 xy(33×2)·w(33×3)·up. 값은 이진 소수로 정확히 떨어지게 골랐다
+        // (코틀린 float 과 파이썬 double 의 소수 4자리 반올림이 갈리지 않게). 넷째 프레임은 미검출이라 좌표 키가 없다.
+        fun lmFrame(t: Long, knee: Float) = frame(t, knee).copy(
+            xy = FloatArray(MP_LANDMARK_COUNT * 2) { k -> (k % 16) / 16f },
+            world = FloatArray(MP_LANDMARK_COUNT * 3) { k -> ((k % 8) - 4) / 8f },
+            up = floatArrayOf(0f, 1f, 0.125f))
+        val validation = base.copy(
+            setId = "20260924T021500-gold0004", createdAtIso = "2026-09-24T02:15:30Z",
+            frames = listOf(lmFrame(0L, 170f), lmFrame(300L, 131.5f), lmFrame(600L, 92.25f), SetLogFrame(900L, 55L, 0, null, emptyMap())),
+            validation = true, imageWidth = 360, imageHeight = 640,
+        )
+        return listOf(base, newCore, sidePair, validation)
+    }
+
+    @Test
+    fun validationModeAddsCoordinatesAndProductLogsStayByteIdentical() {
+        val samples = listOf(sample(true, mapOf("knee_mean" to 170f)), sample(false, emptyMap()))
+        val plain = SetLogJson.encode(SetLog.build("바벨 스쿼트", samples, emptyList(), "mp_v0", "full", "GPU", true, 300L, now = Date(0L)))
+        for (key in listOf("validation", "image", "xy", "w", "up")) assertFalse(key, plain.contains("\"$key\":"))
+        val withWorld = samples.map { if (it.detected) PoseSample(true, FloatArray(66) { 0.5f }, it.visibility, it.features, 30, 60L, 360, 640,
+            up = Vec3(0f, 1f, 0f), world = FloatArray(99) { 0.25f }) else it }
+        val v = SetLogJson.encode(SetLog.build("바벨 스쿼트", withWorld, emptyList(), "mp_v0", "full", "GPU", true, 300L, now = Date(0L), validation = true))
+        assertTrue(v.contains("\"validation\":true,\"image\":{\"w\":360,\"h\":640},"))
+        assertTrue(v.contains("\"xy\":[0.5,"))
+        assertTrue(v.contains("\"w\":[0.25,"))
+        assertTrue(v.contains("\"up\":[0,1,0],\"features\""))
+        // 미검출 프레임은 좌표 키가 없다 — 한 세트에 xy 는 검출 프레임 수만큼
+        assertEquals(1, Regex("\"xy\":").findAll(v).count())
+    }
+
+    @Test
+    fun validationFlagIsAFileInTheAppFolder() {
+        val dir = tmp.newFolder("files")
+        assertFalse(RepValidation.isOn(dir))
+        assertFalse(RepValidation.isOn(null))
+        java.io.File(dir, RepValidation.FLAG_FILE).writeText("")
+        assertTrue(RepValidation.isOn(dir))
+        // 같은 이름의 폴더는 켜짐이 아니다
+        val other = tmp.newFolder("other"); java.io.File(other, RepValidation.FLAG_FILE).mkdirs()
+        assertFalse(RepValidation.isOn(other))
     }
 
     @Test

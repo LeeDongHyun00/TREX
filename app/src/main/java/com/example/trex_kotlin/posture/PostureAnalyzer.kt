@@ -51,6 +51,12 @@ class PoseSample(
     val upFlipped: Boolean = false,
     /** 자가검증으로 up 방향을 확인할 수 있었는지 (false = 누운 자세/관절 부족 등으로 미검증). */
     val upVerified: Boolean = false,
+    /**
+     * MediaPipe 월드 랜드마크 원값(m, MediaPipe 부호 그대로 — y 아래·z 카메라 쪽 음수), 33×3 = x0,y0,z0,…. 검출 프레임만, 아니면 null.
+     * 피처 계산에는 쓰지 않는다(피처는 가시성 거른 cm·부호 반전 좌표). 검증 모드 세트 로그가 이 값을 남겨 오프라인에서 같은 후처리를
+     * 다시 돌리고(재생 파리티) 좌우 판별·화면 잘림 같은 새 분석을 폰 데이터로 할 수 있게 한다 (spec §61).
+     */
+    val world: FloatArray? = null,
 ) {
     companion object {
         fun empty(inferMs: Long = 0L, w: Int = 0, h: Int = 0, up: Vec3 = SCREEN_UP, fromGravity: Boolean = false) = PoseSample(
@@ -187,6 +193,7 @@ class PostureAnalyzer(
 
         val xy = FloatArray(MP_LANDMARK_COUNT * 2)
         val vis = FloatArray(MP_LANDMARK_COUNT)
+        val rawWorld = FloatArray(MP_LANDMARK_COUNT * 3)
         for (i in 0 until MP_LANDMARK_COUNT) {
             val p = landmarks[i]
             xy[i * 2] = p.x()
@@ -194,6 +201,8 @@ class PostureAnalyzer(
             val v = p.visibility().orElse(1f)
             val pr = p.presence().orElse(1f)
             vis[i] = minOf(v, pr)
+            val wp = world[i]
+            rawWorld[i * 3] = wp.x(); rawWorld[i * 3 + 1] = wp.y(); rawWorld[i * 3 + 2] = wp.z()
         }
 
         // 월드 좌표: m → cm, y/z 부호 반전 (spec §3)
@@ -237,6 +246,7 @@ class PostureAnalyzer(
             upFromGravity = fromGravity,
             upFlipped = sanity.flipped,
             upVerified = sanity.verified,
+            world = rawWorld,
         )
     }
 

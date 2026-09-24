@@ -41,6 +41,12 @@ data class SetLogFrame(
     /** 33개 랜드마크 가시성(min(visibility, presence)). null 이면 기록 생략. */
     val visibility: FloatArray?,
     val features: Map<String, Float>,
+    /** 검증 모드(spec §61)에서만: 정규화 이미지 좌표 33×2. null 이면 키 생략. */
+    val xy: FloatArray? = null,
+    /** 검증 모드에서만: MediaPipe 월드 랜드마크 원값 33×3 (m, MediaPipe 부호). */
+    val world: FloatArray? = null,
+    /** 검증 모드에서만: 이 프레임 피처에 쓴 up 벡터 (x, y, z). */
+    val up: FloatArray? = null,
 )
 
 data class SetLogResult(
@@ -200,6 +206,13 @@ data class SetLog(
     val repCompleted: Int? = null,
     /** 세트 끝에 반대쪽을 못 채운 한쪽이 남았다(세지 않았다). true 일 때만 `reps.half_pending` 을 적는다. */
     val repHalfPending: Boolean = false,
+    /**
+     * 검증 모드 세트(spec §61 — 폰 검증 Gate A). true 면 `"validation":true` 와 분석 이미지 크기 `image`, 프레임마다 `xy`·`w`·`up` 을 쓴다.
+     * false(기본) 면 키 자체가 없다 — 제품 로그는 바이트 그대로.
+     */
+    val validation: Boolean = false,
+    val imageWidth: Int? = null,
+    val imageHeight: Int? = null,
 ) {
     companion object {
         const val SCHEMA = "trex.posture.setlog/1"
@@ -250,16 +263,22 @@ data class SetLog(
             repUnit: RepUnit? = null,
             repCompleted: Int? = null,
             repHalfPending: Boolean = false,
+            validation: Boolean = false,
         ): SetLog {
             val frames = samples.mapIndexed { i, s ->
+                val lm = validation && s.detected
                 SetLogFrame(
                     tMs = sampleTimesMs?.getOrNull(i) ?: (i * sampleIntervalMs),
                     inferMs = s.inferMs,
                     visibleJointCount = s.visibleJointCount,
                     visibility = if (includeVisibility && s.detected) s.visibility else null,
                     features = if (s.detected) s.features else emptyMap(),
+                    xy = if (lm) s.normalizedXy else null,
+                    world = if (lm) s.world else null,
+                    up = if (lm) floatArrayOf(s.up.x, s.up.y, s.up.z) else null,
                 )
             }
+            val firstImage = samples.firstOrNull { it.detected }
             val upFromGravity = samples.any { it.upFromGravity }
             val tilt = samples.lastOrNull { it.upFromGravity }?.let { tiltFromScreenUpDegrees(it.up) }
             val view = ViewEstimator.estimate(frames.map { it.features })
@@ -308,6 +327,9 @@ data class SetLog(
                 repUnit = repUnit,
                 repCompleted = repCompleted,
                 repHalfPending = repHalfPending,
+                validation = validation,
+                imageWidth = if (validation) firstImage?.imageWidth else null,
+                imageHeight = if (validation) firstImage?.imageHeight else null,
             )
         }
     }
@@ -336,6 +358,12 @@ object SetLogJson {
         field(sb, "note", log.note)
         if (log.mode != null) field(sb, "mode", log.mode)
         if (log.appVersion != null) field(sb, "app_version", log.appVersion)
+        // 검증 모드(spec §61) — 제품 로그에는 키가 없다
+        if (log.validation) {
+            sb.append("\"validation\":true,")
+            if (log.imageWidth != null && log.imageHeight != null)
+                sb.append("\"image\":{\"w\":").append(log.imageWidth).append(",\"h\":").append(log.imageHeight).append("},")
+        }
         sb.append("\"measurements\":[")
         log.measurements.forEachIndexed { i, value -> if (i > 0) sb.append(','); str(sb, value) }
         sb.append("],")
@@ -457,6 +485,9 @@ object SetLogJson {
                 sb.append(']')
             }
             sb.append(',')
+            floats(sb, "xy", f.xy)
+            floats(sb, "w", f.world)
+            floats(sb, "up", f.up)
             sb.append("\"features\":{")
             var first = true
             for ((k, v) in f.features) {
@@ -494,6 +525,14 @@ object SetLogJson {
         str(sb, key); sb.append(':')
         if (value == null) sb.append("null") else str(sb, value)
         sb.append(',')
+    }
+
+    /** 검증 모드 좌표 배열 — null 이면 키를 쓰지 않는다. 소수 4자리, NaN → null. */
+    private fun floats(sb: StringBuilder, key: String, v: FloatArray?) {
+        if (v == null) return
+        sb.append('"').append(key).append("\":[")
+        v.forEachIndexed { k, x -> if (k > 0) sb.append(','); sb.append(num(x, 4)) }
+        sb.append("],")
     }
 
     internal fun num(v: Float?, decimals: Int = 5): String {

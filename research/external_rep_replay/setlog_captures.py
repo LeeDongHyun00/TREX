@@ -448,6 +448,10 @@ def encode_setlog(log: dict, legacy: bool = False) -> str:
             p.append(f"\"mode\":{_kt_str(log['mode'])},")
         if log.get("app_version") is not None:
             p.append(f"\"app_version\":{_kt_str(log['app_version'])},")
+        if log.get("validation"):   # 렙 검증 모드(spec §61) — 제품 로그에는 키가 없다
+            p.append("\"validation\":true,")
+            if log.get("image") is not None:
+                p.append("\"image\":{" + f"\"w\":{log['image']['w']},\"h\":{log['image']['h']}" + "},")
         p.append("\"measurements\":[" + ",".join(_kt_str(m) for m in log.get("measurements", [])) + "],")
         if log.get("assessment_end_t_ms") is not None:
             p.append(f"\"assessment_end_t_ms\":{log['assessment_end_t_ms']},")
@@ -503,8 +507,10 @@ def encode_setlog(log: dict, legacy: bool = False) -> str:
     for f in log["frames"]:
         vis = "null" if f.get("vis") is None else "[" + ",".join(_kt_num(x, 3) for x in f["vis"]) + "]"
         feats = ",".join(f"{_kt_str(k)}:{_kt_num(v)}" for k, v in f["features"].items())
+        lm = "".join(f"\"{k}\":[" + ",".join(_kt_num(x, 4) for x in f[k]) + "],"
+                     for k in ("xy", "w", "up") if f.get(k) is not None)   # 검증 모드 좌표 — 없으면 키도 없다
         fr.append("{" + f"\"t_ms\":{f['t_ms']},\"infer_ms\":{f['infer_ms']},\"visible\":{f['visible']},\"vis\":{vis},"
-                  f"\"features\":" + "{" + feats + "}}")
+                  + lm + "\"features\":" + "{" + feats + "}}")
     p.append("\"frames\":[" + ",".join(fr) + "],")
     p.append("\"results\":[{\"rule_id\":\"x|y\",\"verdict\":\"ABSTAIN\",\"value\":null,\"n\":0,\"baseline_applied\":false,\"value_rel\":null}]}")
     return "".join(p)
@@ -608,7 +614,12 @@ def _golden_logs() -> list[dict]:
                      "max": [170.0, 168.0, 169.5], "valid": [True, False, True],
                      "unit": "side_pair", "cycles_per_rep": 2, "completed": 1, "half_pending": True,
                      "engine": "return_v1", "config": lunge_config, "resets": [(450, "pause", 300)]}}
-    return [base, core, pair]
+    # 렙 검증 모드(spec §61): validation·image, 검출 프레임마다 xy·w·up(이진 소수라 코틀린 float 과 반올림이 갈리지 않는다), 넷째 프레임 미검출
+    lm = {"xy": [(k % 16) / 16 for k in range(66)], "w": [((k % 8) - 4) / 8 for k in range(99)], "up": [0.0, 1.0, 0.125]}
+    valid_frames = [{**f, **lm} for f in frames[:3]] + [{"t_ms": 900, "infer_ms": 55, "visible": 0, "vis": None, "features": {}}]
+    validation = {**base, "set_id": "20260924T021500-gold0004", "created_at": "2026-09-24T02:15:30Z", "frames": valid_frames,
+                  "validation": True, "image": {"w": 360, "h": 640}}
+    return [base, core, pair, validation]
 
 
 def _synthetic_logs(pass2: dict | None) -> tuple[list[str], list[str], list[str]]:
@@ -935,7 +946,7 @@ def self_test(work: Path) -> int:
     golden = [ln for ln in GOLDEN_FIXTURE.read_text(encoding="utf-8").splitlines() if ln.strip() and not ln.startswith("#")]
     mine = [encode_setlog(d) for d in _golden_logs()]
     diff = next((i for i, (x, y) in enumerate(zip(golden, mine)) if x != y), None)
-    check("골든: 파이썬 인코더 사본 = 코틀린 SetLogJson 줄 (바이트까지)", len(golden) == len(mine) == 3 and diff is None,
+    check("골든: 파이썬 인코더 사본 = 코틀린 SetLogJson 줄 (바이트까지)", len(golden) == len(mine) == 4 and diff is None,
           "" if diff is None else f"줄 {diff + 1}: …{next(golden[diff][k-40:k+40] for k in range(len(golden[diff])) if k >= len(mine[diff]) or golden[diff][k] != mine[diff][k])}…")
     floor_ex, rep_rules = rule_tables()
     gl = [convert(parse_line(ln), f"golden:{i}", floor_ex, rep_rules) for i, ln in enumerate(golden, 1)]

@@ -1,5 +1,8 @@
 package com.example.trex_kotlin
 
+import com.example.trex_kotlin.posture.RepValidation
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
@@ -251,8 +254,14 @@ fun TrexApp(app: AppViewModel = viewModel()) {
                 if (!pausedState.value && step?.timed == true && progress.targetReached(step)) advanceLatest.value(token, false)
             }
         }
-        LaunchedEffect(sessionIndex, progress.repetitions, sessionPaused, appPaused, exitAsk) {
-            if (!pausedState.value && step?.phase == SessionPhase.WORK && !step.timed && progress.targetReached(step)) {
+        // 렙 검증 모드(spec §61): 앱 전용 폴더의 표시 파일로 켠다 — 단계가 바뀔 때마다 다시 읽어 세션 사이에 켜고 끌 수 있다
+        var repValidation by remember { mutableStateOf(false) }
+        LaunchedEffect(sessionIndex) {
+            repValidation = withContext(Dispatchers.IO) { RepValidation.isOn(context.getExternalFilesDir(null)) }
+        }
+        LaunchedEffect(sessionIndex, progress.repetitions, sessionPaused, appPaused, exitAsk, repValidation) {
+            // 검증 모드는 목표에 닿아도 넘기지 않는다 — 세트는 ✓ 로만 끝난다(세트 뒤 헛카운트·마지막 반복까지 잰다)
+            if (!repValidation && !pausedState.value && step?.phase == SessionPhase.WORK && !step.timed && progress.targetReached(step)) {
                 advanceLatest.value(step.token, false)
             }
         }
@@ -364,6 +373,7 @@ fun TrexApp(app: AppViewModel = viewModel()) {
                                     onFallbackToTimer = { if (w.id !in postureFallback) postureFallback.add(w.id) },
                                     speech = speech,
                                     preparing = current.phase == SessionPhase.PREPARE,
+                                    validation = repValidation,
                                     onPrepared = { nextSession(current.token, true) },
                                     )
                                 } }

@@ -223,4 +223,5 @@ fun PoseSample.withFeatures(newFeatures: Map<String, Float>): PoseSample = PoseS
     upFromGravity = upFromGravity,
     upFlipped = upFlipped,
     upVerified = upVerified,
+    world = world,
 )
