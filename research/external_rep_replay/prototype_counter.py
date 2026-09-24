@@ -58,13 +58,14 @@ def features(pose):
 
 
 class Counter:
-    def __init__(self, h, f=0.25, refractory_ms=800, smooth=False, context=None):
-        self.h, self.f, self.ref, self.smooth, self.context = h, f, refractory_ms, smooth, context
+    def __init__(self, h, f=0.25, refractory_ms=800, smooth=False, context=None, min_cycle_ms=0):
+        # min_cycle_ms: 하강 시작부터 발화까지의 최소 시간. 잡음 사이클은 2~3샘플(≤900ms)이고 실제 반복은 그보다 길다(설계 §9).
+        self.h, self.f, self.ref, self.smooth, self.context, self.min_cycle = h, f, refractory_ms, smooth, context, min_cycle_ms
         self.reset()
 
     def reset(self):
         self.state = "REST"; self.r = None; self.r0 = None; self.m = None; self.amax = None
-        self.last_fire = -10**9; self.raw = []; self.fires = []; self.amps = []; self.cycle_ctx = []
+        self.last_fire = -10**9; self.raw = []; self.fires = []; self.amps = []; self.cycle_ctx = []; self.last_t = None
 
     def _value(self, v):
         self.raw.append(v)
@@ -76,6 +77,10 @@ class Counter:
         """ctx: 문맥 게이트용 보조값(스쿼트 hip_mean, 컬 shoulder). 발화하면 True."""
         if v is None or not np.isfinite(v):
             return False
+        # maxGap 1.5 s: 가림·끊김 전후를 한 반복으로 잇지 않는다(설계 §4.2 — 현재 엔진과 같은 값). 확정된 수는 지킨다.
+        if self.last_t is not None and t_ms - self.last_t > 1500:
+            self.state, self.r, self.raw = "REST", None, []
+        self.last_t = t_ms
         v = self._value(v)
         if self.r is None:
             self.r = v
@@ -83,7 +88,7 @@ class Counter:
             self.r = max(self.r, v)
             if ctx is not None: self.ctx_rest = ctx if not hasattr(self, "ctx_rest") else max(self.ctx_rest, ctx)
             if v <= self.r - self.h:
-                self.state, self.r0, self.m, self.cycle_ctx = "DESC", self.r, v, [ctx]
+                self.state, self.r0, self.m, self.cycle_ctx, self.desc_t = "DESC", self.r, v, [ctx], t_ms
             return False
         if self.state == "DESC":
             self.cycle_ctx.append(ctx)
@@ -103,14 +108,14 @@ class Counter:
             self.amax = max(self.amax, v)
         if not fired:
             return False
-        ok = t_ms - self.last_fire >= self.ref
+        ok = t_ms - self.last_fire >= self.ref and t_ms - self.desc_t >= self.min_cycle
         if ok and self.context is not None:
             ok = self.context(self)
         if ok:
             self.fires.append(t_ms); self.amps.append(self.r0 - self.m); self.last_fire = t_ms
         # 다음 사이클 준비: 재하강 폴백이면 이미 내려가는 중이므로 DESC 로, 아니면 REST 로
         if v <= self.amax - self.h:
-            self.state, self.r0, self.m, self.cycle_ctx = "DESC", self.amax, v, [ctx]
+            self.state, self.r0, self.m, self.cycle_ctx, self.desc_t = "DESC", self.amax, v, [ctx], t_ms
             self.r = self.amax
         else:
             self.state, self.r = "REST", v
