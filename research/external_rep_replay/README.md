@@ -10,6 +10,7 @@
 | **본 실험 (MM-Fit)** — 영상 → MediaPipe(앱 모델) → 현재 카운터·새 코어 | **실행함(§10).** zenodo.org 가 이 컨테이너에서 막혀 사용자 PC 에서 추출했다(캡처: 브랜치 `data/mmfit-mp-captures`, CC BY 4.0). 설계 `docs/REP_ENGINE_DESIGN.md` §16 |
 | **본 실험 (REHAB24-6)** | 판정 기준 사전 등록(설계 §17, `score_rehab_prereg.py`) → 사용자 PC 실행 대기. CC BY-NC 라 파생 캡처는 공개 저장소에 올리지 않고 집계만 |
 | **보조 실험** — MM-Fit 데이터셋 자체 3D 포즈 → 현재 카운터 | 실행함(§4). MediaPipe 결과를 대신하지 않는다 |
+| **폰 검증 Gate A** — 검증 모드 세션 → 회수 → 채점·프레이밍·무결성 보고서 | PC 파이프라인 준비 완료, 합성 드라이런 통과(§12). 폰 세션 대기 — 절차 `GATE_A_RUNBOOK.md` |
 
 `docs/mmfit-rep-counting.v1.md`·`docs/rehab-rep-f1.v1.md` 의 숫자는 **다른 계열 엔진**(`HeuristicFormCheckSession`,
 `app/src/testDebug.other-lineage`)의 측정이다. 지금 앱의 `RepCounter`(복귀형)와는 알고리즘이 다르다.
@@ -18,7 +19,7 @@
 
 | 파일 | 역할 |
 |---|---|
-| `replay-jvm/` | 앱 소스 `PostureCore.kt`·`RepCounter.kt`·`ReturnRepTracker.kt`·`RepHysteresis.kt` 를 **복사 없이 그 자리에서** 컴파일하는 Kotlin/JVM 재생기 |
+| `replay-jvm/` | 앱 소스 `PostureCore.kt`·`RepCounter.kt`·`ReturnRepTracker.kt`·`RepHysteresis.kt`·`PostureView.kt`(방향 피처) 를 **복사 없이 그 자리에서** 컴파일하는 Kotlin/JVM 재생기. `--dump-features` 로 랜드마크 캡처의 프레임별 앱 피처를 낸다(§12) |
 | `extract_mediapipe.py` | 영상 → MediaPipe 캡처 (MM-Fit 세트 / REHAB24-6 녹화) |
 | `mmfit_pose3d_captures.py` | MM-Fit `pose_3d.npy` → 같은 형식의 캡처 (보조 실험) |
 | `capture_format.py` | 캡처 형식, 앱 추론 주기 |
@@ -27,6 +28,7 @@
 | `score_rehab_prereg.py` | REHAB24-6 사전 등록 판정(설계 §17) — 발화 시각 경계 일치, 카메라별, 정자세/비정자세 재현율, P1~P4 |
 | `prototype_counter.py` · `stress_battery.py` · `parity_core.py` | 새 코어 프로토타입(§8) · 시작 확정 정책 배터리(설계 §12·§13) · Kotlin 새 코어 ↔ 프로토타입 세트별 파리티 |
 | §9 의 도구들 | 휴대폰 세트 로그 재생·채점·검증 프로토콜(휴대폰 연결 전 준비분) |
+| §12 의 도구들 | 폰 검증 Gate A 한 번에 돌리기 — `pull_phone.py`(adb 회수·검증 모드 스위치) · `gate_a.py`(보고서) · `make_phone_fixture.py`(폰 없는 드라이런 픽스처), 절차 `GATE_A_RUNBOOK.md` |
 | `results/` | 요약 수치 (원본 캡처는 `data/` — git 제외) |
 
 ## 2. 앱과 맞춘 것, 다른 것
@@ -182,8 +184,8 @@ MM-Fit 자체 3D 포즈에서 세트 카운트·휴식 헛카운트·세트 직�
 | 파일 | 역할 | 검증 |
 |---|---|---|
 | `run_replay.py` (개정) | `captureStartMs/EndMs` 가 있는 index 면 세트 창(라벨 ± 0.5 s) 밖 발화를 앞·뒤 헛카운트로 가른다. 구성 `hysteresis`(새 코어)·신호 후보, 항상-N 기준선, 사람별 행, 사람 ≥ 5명이면 군집 부트스트랩 95% 구간, 세트 로그 파리티 표(로그의 `reps.engine` 이 가리키는 구성에서만) | 0.5 s 캡처에서 README §4·코어 포팅 수치를 그대로 재현 |
-| `setlog_captures.py` | 휴대폰 세트 로그(`sets-*.jsonl`) → 피처 캡처 `*.fcap` + index. 자가 라벨 edited/confirmed 를 나눈다. spec §58 필드(`reps.engine`·`config`·`resets`(누른 시각 + `after_t_ms`)·`pending`, `thermal`, `app_version`)를 넘긴다. **표시 단위**(spec §59, 런지류 좌우 한 쌍 = 1회): `reps.unit`·`cycles_per_rep`·`completed`·`half_pending` → `repUnit`·`loggedDisplayedReps`·`loggedHalfPending`·`loggedUnitConsistent`(없으면 옛 로그 = 사이클), 지금 앱 단위 `currentUnit`(`SIDE_PAIR_AIHUB`, 코틀린과 대조). 라벨은 화면 단위라 둘 다 적는다 — `truthDisplayedReps`(라벨 그대로)와 사이클 범위 `truthCyclesMin`~`truthCyclesMax`(라벨 × 사이클/회 ~ +1, 짝 없이 끝난 한쪽). `truthReps`(run_replay·parity_core 가 정확한 정답으로 쓰는 사이클 수)는 범위가 한 값일 때만 채우고 쌍 라벨이면 None — 짝 없는 한쪽으로 끝난 정직한 세트를 과다로 채점하지 않게. `set_labels.jsonl` 의 `rep_unit`(앱이 라벨을 적을 때의 화면 단위) → `labelUnit`·`labelUnitMatchesLog` | `--self-test` 46/46 (손으로 쓴 로그 왕복, 옛 로그, 리셋 재생, 추론 중에 누른 전환의 `after_t_ms` 순서(H/H2), 새 코어 로그의 버림·대기, 실기기 baseline1 = 현재 카운터 0 · 새 코어 4, **코틀린 `SetLogJson` 골든 줄**(`app/src/test/resources/setlog_s58_fixture.txt`, 좌우 짝 줄 포함)과 파이썬 인코더 사본의 바이트 일치·변환, 좌우 짝: 홀수 5걸음 로그 → 화면 2 + 반쪽, edited/confirmed 2쌍 → 사이클 4~5(사이클 정답 없음), run_replay 채점에서 쌍 라벨 세트가 과다로 잡히지 않음, 라벨 jsonl 의 화면 단위 대조, 사이클끼리 파리티, completed 불일치 음성 대조, unit 없는 옛 런지 로그, 코틀린 종목 표 대조) |
-| `replay-jvm` `Replay.kt` (개정) | `*.fcap` 읽기(`readFeatureCapture`), 매니페스트 7~10열(floor·규칙 ROM·새 코어 극성), 로그의 리셋을 앱과 같은 순서(`after_t_ms` 가 있으면 그보다 늦은 첫 프레임 앞)로 `resetCycle()`, 파리티 필드(카운트·시각·ROM·버림·대기), 연구용 파생 신호 `*_minside_both`, 값 프레임 구간 `valueSpans`. hysteresis 구성은 극성을 로그 → 등록부 → 연구 표(세 대상 종목 + 푸시업류) 순서로 정하고 모르면 재생하지 않는다 | `gradle test` 41/41 |
+| `setlog_captures.py` | 휴대폰 세트 로그(`sets-*.jsonl`) → 피처 캡처 `*.fcap` + index. 자가 라벨 edited/confirmed 를 나눈다. spec §58 필드(`reps.engine`·`config`·`resets`(누른 시각 + `after_t_ms`)·`pending`, `thermal`, `app_version`)를 넘긴다. **표시 단위**(spec §59, 런지류 좌우 한 쌍 = 1회): `reps.unit`·`cycles_per_rep`·`completed`·`half_pending` → `repUnit`·`loggedDisplayedReps`·`loggedHalfPending`·`loggedUnitConsistent`(없으면 옛 로그 = 사이클), 지금 앱 단위 `currentUnit`(`SIDE_PAIR_AIHUB`, 코틀린과 대조). 라벨은 화면 단위라 둘 다 적는다 — `truthDisplayedReps`(라벨 그대로)와 사이클 범위 `truthCyclesMin`~`truthCyclesMax`(라벨 × 사이클/회 ~ +1, 짝 없이 끝난 한쪽). `truthReps`(run_replay·parity_core 가 정확한 정답으로 쓰는 사이클 수)는 범위가 한 값일 때만 채우고 쌍 라벨이면 None — 짝 없는 한쪽으로 끝난 정직한 세트를 과다로 채점하지 않게. `set_labels.jsonl` 의 `rep_unit`(앱이 라벨을 적을 때의 화면 단위) → `labelUnit`·`labelUnitMatchesLog` | `--self-test` 46/46 — §12 이후 49/49 (손으로 쓴 로그 왕복, 옛 로그, 리셋 재생, 추론 중에 누른 전환의 `after_t_ms` 순서(H/H2), 새 코어 로그의 버림·대기, 실기기 baseline1 = 현재 카운터 0 · 새 코어 4, **코틀린 `SetLogJson` 골든 줄**(`app/src/test/resources/setlog_s58_fixture.txt`, 좌우 짝 줄 포함)과 파이썬 인코더 사본의 바이트 일치·변환, 좌우 짝: 홀수 5걸음 로그 → 화면 2 + 반쪽, edited/confirmed 2쌍 → 사이클 4~5(사이클 정답 없음), run_replay 채점에서 쌍 라벨 세트가 과다로 잡히지 않음, 라벨 jsonl 의 화면 단위 대조, 사이클끼리 파리티, completed 불일치 음성 대조, unit 없는 옛 런지 로그, 코틀린 종목 표 대조) |
+| `replay-jvm` `Replay.kt` (개정) | `*.fcap` 읽기(`readFeatureCapture`), 매니페스트 7~10열(floor·규칙 ROM·새 코어 극성), 로그의 리셋을 앱과 같은 순서(`after_t_ms` 가 있으면 그보다 늦은 첫 프레임 앞)로 `resetCycle()`, 파리티 필드(카운트·시각·ROM·버림·대기), 연구용 파생 신호 `*_minside_both`, 값 프레임 구간 `valueSpans`. hysteresis 구성은 극성을 로그 → 등록부 → 연구 표(세 대상 종목 + 푸시업류) 순서로 정하고 모르면 재생하지 않는다 | `gradle test` 41/41 — §12 이후 46/46 |
 | `parity_core.py` | Kotlin 새 코어(재생기 hysteresis) ↔ 프로토타입(`prototype_counter.py` + first8+amp) 세트별 파리티 — 같은 입력(재생기 신호값)에서 카운트·발화 시각·확정 대기, 프로토타입 피처에서 카운트 | MM-Fit 3D 244/244 (불일치 0, 종료 코드로 알린다) |
 | `mmfit_pair_compare.py` | MediaPipe 캡처 ↔ pose_3d 짝짓기: 지연(교차상관)·좌우·각도 오차(깊이별)·휴식 지터·튐·끊김·같은 시각 3D 대비 카운트 차이. `synth` 는 도구 검증용 합성 캡처 | `selftest` 17/17 (지연 4 복원, 잡음 없으면 카운트 차이 0/54, 주입 끊김·먼 팔 가림·지터·튐을 되찾음) |
 | `phone_noise.py` | 캡처·세트 로그에서 추론 간격(발열 대리)·추론 지연·로그의 열 상태별 간격·휴식 σ·튐·끊김 | 합성·세트 로그·피처 캡처에서 실행 |
@@ -295,3 +297,31 @@ python side_attribution.py            # 기존 정렬 재생(exp_mp/aligned) + 3
 - 안 된다(지금): 좌우 판별로 카운트를 정하기(min(L, R)) · 다음 쪽을 이름으로 말하기('왼쪽 차례') — 틀림이 확신 있는 이름 바뀜이라 화면·음성 모두 사용자를
   잘못 이끈다(원칙 #6). 세트 앞 헛사이클의 위상 밀림을 좌우 판별로 바로잡는 것도 같은 이유로 검증되지 않았다.
 - 모른다: 앱 권장 B 대각·휴대폰 조건에서의 좌우 판별, 한쪽을 몰아서 하는 사용자의 빈도, 실제 동시 컬에서 레인의 팔 가림 — Gate A 에서 좌우 순서를 자가 라벨로 모아야 답이 나온다.
+
+## 12. 폰 검증 Gate A 파이프라인 (2026-09-24, spec §61)
+
+앱의 렙 검증 모드(표시 파일 `rep_validation.on` — 숫자 숨김·자동 진행 끔·음성 끔, 세트 로그에 `validation`·`image`·프레임별 `xy`·`w`·`up`)로 찍은
+세트를 PC 에서 몇 줄로 보고서까지 만든다. 절차·주의(설치 함정, 집계 규칙)는 `GATE_A_RUNBOOK.md`.
+
+```bash
+python pull_phone.py validation on                  # 폰 표시 파일 — 기기에서 지우는 명령은 이것의 off 뿐
+python pull_phone.py pull --out ../../data/phone/20261001   # posture_logs 를 같은 구조로 복사 + pull_manifest.json (기기에서 지우지 않음)
+python gate_a.py run ../../data/phone/20261001 --plan ../../data/phone_rep/plan_gateA.csv --out ../../data/phone/20261001_gateA
+python gate_a.py dry-run --out <임시 폴더>           # 폰·데이터셋 없이 전 과정 검사(합성 픽스처)
+```
+
+| 파일 | 역할 | 검증 |
+|---|---|---|
+| `pull_phone.py` (새) | adb 찾기(`--adb` → `$ADB` → PATH → `$ANDROID_HOME`·`$ANDROID_SDK_ROOT` → `%LOCALAPPDATA%\Android\Sdk` → `~/Library/Android/sdk` → `~/Android/Sdk`), `devices`, `pull`(세트 로그·`rep_truth.csv`·`labels/set_labels.jsonl`·`feedback-*.jsonl` 만, 크기 대조, 매니페스트), `validation on/off/status`. 표준 라이브러리만, 윈도우·맥·리눅스 같은 명령. 기기의 원격 셸 명령 중 삭제·이동은 표시 파일 `rm -f` 하나만 통과하고 나머지는 코드가 막는다 | `--self-test` 20/20 (찾기 순서 8단, 가짜 adb 스크립트로 devices·표시 파일·회수·크기·'기기 파일이 줄지 않음'·rm 은 표시 파일 하나뿐, 로그 폴더 없음 안내) |
+| `gate_a.py` (새) | `run`: `setlog_captures.build` → `score_phone_reps.score`(Gate A 점추정, live·hysteresis·신호 후보) → `phone_noise.run` → 프레이밍(종목 × 세로/가로: 필수 관절이 화면 밖이거나 가시성 < 0.5 인 검출 프레임 비율·긴 잘림·관절군·몸 높이 — 스쿼트·런지류 = `rehab_diagnose.LOWER`, 컬 = 어깨·팔꿈치·손목) → 피처 무결성(`.cap` 을 `Replay --dump-features` 로 다시 계산해 로그 신호와 비교, 각도 0.05° · 거리 0.001) → `report.md`(설계 §7 나가는 조건 점검표, 틀린 세트의 자동 원인 후보, 표). `dry-run`: 픽스처 → 같은 파이프라인 → 기대값 검사, 실패하면 종료 코드 1 | `dry-run` 18/18 (아래) |
+| `make_phone_fixture.py` (새) | 데이터셋 없이 절차적 33관절 골격(MediaPipe 순서·부호)으로 검증 모드 세션을 만든다 — 스쿼트·런지(왼·오른 번갈아) × 세로 360×640·가로 640×360, 중간 40% 동안 무릎·발목이 화면 밖인 세로 스쿼트, 앞뒤 준비·정리 동작 세트, 7걸음(짝 없는 한쪽) 런지. 피처는 `Replay --dump-features`(앱 소스), reps 블록은 지금 빌드 live 재생(런지는 `side_pair` 필드), 세트 `view` 는 PostureView.kt 상수로 분류, 로그는 `encode_setlog`(코틀린 골든과 바이트 일치 검사된 사본). 계획표(`rep_validation_plan.FIELDS`, 집계 = 정답)·자가 라벨도 쓴다. 결정적(같은 seed → 같은 바이트) | 드라이런이 쓴다 |
+| `setlog_captures.py` (개정) | 검증 모드 로그(`xy`·`w` 가 있는 프레임) → 랜드마크 캡처 `<set_id>.cap` 도 쓴다: H `source=phone-setlog`·`setId`·`exercise`·`imageW`·`imageH`·`validation=1`, 검출 프레임마다 `U`(up 그대로) + `F`(vis = 로그 vis, pres = nan, 월드 = `w`), 미검출 = `F t 0`. index 에 `landmarkCapture`·`validation`·`imageW`·`imageH` | `--self-test` 49/49 (+3: 골든 넷째 줄 → `.cap` → `capture_format.read_capture` 왕복의 xy·w·up·미검출, 검증 아닌 줄은 캡처 없음, 재생기가 U 줄 캡처를 읽음) |
+| `capture_format.py` (개정) | `U <tMs> <x>,<y>,<z>` 줄(바로 다음 F 줄의 up) 정의, `up_line`, 표준 라이브러리 리더 `read_capture` | setlog_captures 자가 검사 |
+| `replay-jvm` `Replay.kt` (개정) | 캡처의 `U` 줄(다음 F 줄 하나에만, 시각이 다르면 멈춘다 — 없으면 전처럼 SCREEN_UP), `nan` 숫자 읽기(capture_format 이 쓰는 표기), 프레임 피처에 `ViewEstimator.frameFeatures` 추가(앱과 같은 사전 — 카운터 신호는 그대로), `--dump-features <cap> <out.jsonl>`, 결과 줄에 카운터 실제 구성 `refractoryMs`·`maxGapMs`·`completeOnReturn`·`romValidated` | `gradle test` 46/46 (앱 테스트 41 + `ReplayCaptureTest` 5: U 줄 없음 = 명시적 화면 세로축, U 줄은 다음 프레임에만·관절각 불변·up 의존 피처는 바뀜, 시각 어긋남 거부, dump = 재생 함수 값·미검출·가시성 < 0.5, 구성 필드) |
+| `phone_noise.py` (개정) | 본문을 `run(inputs, out, signal)` 으로 뺐다(gate_a 가 부른다). CLI 출력은 같다 | 드라이런 |
+
+**드라이런 결과** (`gate_a.py dry-run`, 합성 7세트 — 도구 검사이지 카운터 성능이 아니다): 계획 짝짓기 7/7, 정답 전부 집계, app = live 재생 7/7,
+깨끗한 6세트는 live = 정답, 잘림 세트(세로 스쿼트 8회)는 live 3 · hysteresis 4. 프레이밍: 그 세트 잘림 0.385(무릎 0.26 · 발목 0.385 · 엉덩이 0.02),
+가장 긴 잘림 12.7 s, 나머지 0 → 스쿼트 세로 칸 0.192 · 가로 0. 무결성: 732 프레임 최대 차 5×10⁻⁶(로그 피처 5자리 반올림), 음성 대조(한 프레임 +1°)는 잡힌다.
+실기기 로그는 좌표를 반올림하기 **전**에 피처를 계산하므로 최대 차가 이보다 크다(허용 오차 0.05° 는 그 몫).
+

@@ -15,7 +15,8 @@ dependencies {
 val appRoot = rootDir.resolve("../../../app/src")
 val postureMain = appRoot.resolve("main/java/com/example/trex_kotlin/posture")
 val postureTest = appRoot.resolve("test/java/com/example/trex_kotlin/posture")
-val engineFiles = listOf("PostureCore.kt", "RepCounter.kt", "ReturnRepTracker.kt", "RepHysteresis.kt")
+// PostureView.kt = ViewEstimator.frameFeatures — 앱 PostureAnalyzer 가 프레임 피처에 더하는 방향 피처(--dump-features 가 앱 피처 사전 전체를 낸다)
+val engineFiles = listOf("PostureCore.kt", "RepCounter.kt", "ReturnRepTracker.kt", "RepHysteresis.kt", "PostureView.kt")
 
 sourceSets {
     main {
@@ -25,7 +26,8 @@ sourceSets {
     test {
         // 앱 저장소의 카운터 유닛 테스트를 그대로 돌려, 여기서 컴파일한 카운터가 앱 테스트가 기대하는 그 카운터인지 확인한다.
         kotlin.srcDir(postureTest)
-        kotlin.include("RepCounterTest.kt", "ReturnRepTrackerTest.kt", "RepHysteresisTest.kt")
+        // trex/** = 재생기 자체 테스트(src/test/kotlin — U 줄·--dump-features, spec §61)
+        kotlin.include("RepCounterTest.kt", "ReturnRepTrackerTest.kt", "RepHysteresisTest.kt", "trex/**")
         resources.srcDir(appRoot.resolve("test/resources"))
         resources.include("rep_fixture_baseline1.txt")
     }

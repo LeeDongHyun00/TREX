@@ -8,6 +8,7 @@ import com.example.trex_kotlin.posture.RepPolarity
 import com.example.trex_kotlin.posture.RepSignal
 import com.example.trex_kotlin.posture.RepSignals
 import com.example.trex_kotlin.posture.Vec3
+import com.example.trex_kotlin.posture.ViewEstimator
 import com.example.trex_kotlin.posture.checkUpSanity
 import com.example.trex_kotlin.posture.mid
 import java.io.File
@@ -18,6 +19,8 @@ import java.io.File
  * 캡처 형식 (extract_mediapipe.py 가 쓴다, 탭 구분):
  *   # ...                                 주석
  *   H <key>=<value> ...                   메타
+ *   U <tMs> <x>,<y>,<z>                   (선택) 바로 다음 F 줄에 쓸 up 벡터 — 휴대폰 검증 로그(spec §61)의 프레임별 `up`
+ *                                         (앱이 그 프레임 피처에 실제로 쓴 값 = IMU 중력축, 자가검증 보정 후). 없으면 SCREEN_UP
  *   F <tMs> <poses> [<i>:<x>,<y>,<vis>,<pres>,<wx>,<wy>,<wz> ...]
  *     x,y = 정규화 이미지 좌표, vis·pres = 정규화 랜드마크의 visibility·presence, wx..wz = 월드 좌표(m)
  *
@@ -28,9 +31,11 @@ import java.io.File
  *   3) 월드 좌표 m → cm, y·z 부호 반전 (spec §3)
  *   4) Joints.SINGLE / Joints.PAIR 로 관절 사전을 만든다
  *   5) checkUpSanity 로 up 뒤집힘을 보정한다. 영상에는 IMU 가 없으므로 up = 화면 세로축(0,1,0) —
- *      앱이 중력 센서를 못 쓸 때의 폴백(SCREEN_UP)과 같다
- *   6) PoseFrame(joints, up).features()
- * ViewEstimator.frameFeatures 는 렙 신호와 무관해 계산하지 않는다.
+ *      앱이 중력 센서를 못 쓸 때의 폴백(SCREEN_UP)과 같다. 캡처에 U 줄이 있으면(휴대폰 검증 로그) 그 up 을 쓴다
+ *   6) PoseFrame(joints, up).features() + ViewEstimator.frameFeatures(joints) — 앱과 같은 피처 사전(방향 피처는 렙 신호와
+ *      무관하지만 --dump-features 가 로그의 피처 사전 전체와 견줄 수 있게 함께 낸다)
+ * --dump-features <capture.cap> <out.jsonl>: 재생과 **같은 함수(frameFeatures)** 로 F 줄마다 {"t":ms,"detected":b,"features":{...}}
+ * 한 줄 — 검증 로그의 좌표에서 피처를 다시 계산해 로그 피처와 견주는 무결성 검사(gate_a.py)와 합성 픽스처(make_phone_fixture.py)가 쓴다.
  *
  * 카운터 구성은 PostureLive 의 서서 하는 종목 경로와 같다(rules_mp_v0.json 에 kind=rep 규칙이 없다):
  *   live       = RepCounter.forSession(exercise, floor = false)            ← 앱 세션이 실제로 쓰는 것(같은 함수를 부른다)
@@ -63,14 +68,19 @@ private const val MIN_VISIBILITY = 0.5f
 private const val MP_LANDMARK_COUNT = 33
 private val SCREEN_UP = Vec3(0f, 1f, 0f)
 
-/** 한 프레임의 추론 결과. poses = 0 이면 landmarks 는 비어 있다. */
-class CaptureFrame(val tMs: Long, val poses: Int, val image: Array<FloatArray?>, val world: Array<Vec3?>)
+/** 한 프레임의 추론 결과. poses = 0 이면 landmarks 는 비어 있다. up = null 이면 SCREEN_UP(U 줄 없음 — 영상 캡처). */
+class CaptureFrame(val tMs: Long, val poses: Int, val image: Array<FloatArray?>, val world: Array<Vec3?>, val up: Vec3? = null)
 
 class Capture(val meta: Map<String, String>, val frames: List<CaptureFrame>)
+
+/** 캡처 숫자. capture_format.py 는 값이 없는 visibility·presence 를 파이썬 표기 "nan" 으로 쓴다(자바 parseFloat 는 "NaN" 만 읽는다). */
+private fun capFloat(text: String): Float = if (text.equals("nan", ignoreCase = true)) Float.NaN else text.toFloat()
 
 fun readCapture(file: File): Capture {
     val meta = LinkedHashMap<String, String>()
     val frames = ArrayList<CaptureFrame>()
+    // U 줄의 up — 바로 다음 F 줄 하나에만 쓴다(시각이 같아야 한다. 어긋나면 캡처가 깨진 것이라 멈춘다)
+    var pendingUp: Pair<Long, Vec3>? = null
     file.forEachLine { line ->
         if (line.isBlank() || line.startsWith("#")) return@forEachLine
         val parts = line.split('\t')
@@ -79,20 +89,32 @@ fun readCapture(file: File): Capture {
                 val i = kv.indexOf('=')
                 if (i > 0) meta[kv.substring(0, i)] = kv.substring(i + 1)
             }
+            "U" -> {
+                check(pendingUp == null) { "U line without F line at t=${pendingUp?.first}" }
+                val v = parts[2].split(',').map { it.toFloat() }
+                pendingUp = parts[1].toLong() to Vec3(v[0], v[1], v[2])
+            }
             "F" -> {
                 val image = arrayOfNulls<FloatArray>(MP_LANDMARK_COUNT)
                 val world = arrayOfNulls<Vec3>(MP_LANDMARK_COUNT)
                 for (entry in parts.drop(3)) {
                     val colon = entry.indexOf(':')
                     val idx = entry.substring(0, colon).toInt()
-                    val v = entry.substring(colon + 1).split(',').map { it.toFloat() }
+                    val v = entry.substring(colon + 1).split(',').map(::capFloat)
                     image[idx] = floatArrayOf(v[0], v[1], v[2], v[3])
                     world[idx] = Vec3(v[4], v[5], v[6])
                 }
-                frames += CaptureFrame(parts[1].toLong(), parts[2].toInt(), image, world)
+                val t = parts[1].toLong()
+                val up = pendingUp?.let { (ut, u) ->
+                    check(ut == t) { "U line t=$ut does not match next F line t=$t" }
+                    u
+                }
+                pendingUp = null
+                frames += CaptureFrame(t, parts[2].toInt(), image, world, up)
             }
         }
     }
+    check(pendingUp == null) { "trailing U line without F line" }
     return Capture(meta, frames)
 }
 
@@ -167,10 +189,29 @@ fun frameFeatures(frame: CaptureFrame, stats: FrameStats): Map<String, Float>? {
         val b = pts.getOrNull(pair.second)
         joints[name] = if (a != null && b != null) mid(a, b) else a ?: b
     }
-    val sanity = checkUpSanity(joints, SCREEN_UP)
-    val up = if (sanity.flipped) (SCREEN_UP * -1f).unit() ?: SCREEN_UP else SCREEN_UP
+    val base = frame.up ?: SCREEN_UP
+    val sanity = checkUpSanity(joints, base)
+    val up = if (sanity.flipped) (base * -1f).unit() ?: base else base
     if (sanity.flipped) stats.upFlipped++
-    return PoseFrame(joints, up).features()
+    return PoseFrame(joints, up).features() + ViewEstimator.frameFeatures(joints)
+}
+
+/**
+ * --dump-features: F 줄마다 재생 경로와 같은 frameFeatures 결과를 한 줄씩. 사람 없음(poses 0·관절 누락)은 detected=false, features={}.
+ * 값은 Float.toString 그대로(반올림 없음), NaN·무한대는 null — 비교하는 쪽이 로그의 소수 5자리 반올림을 허용 오차로 다룬다.
+ */
+fun dumpFeatures(capture: Capture, out: File): Int {
+    val stats = FrameStats()
+    out.bufferedWriter().use { w ->
+        for (frame in capture.frames) {
+            val feats = frameFeatures(frame, stats)
+            w.write("{\"t\":${frame.tMs},\"detected\":${feats != null},\"features\":{")
+            w.write(feats.orEmpty().entries.joinToString(",") { (k, v) -> "\"$k\":${num(v)}" })
+            w.write("}}")
+            w.newLine()
+        }
+    }
+    return capture.frames.size
 }
 
 class FrameStats {
@@ -311,6 +352,9 @@ fun run(job: Job, meta: Map<String, String>, frames: List<InputFrame>, stats: Fr
         "id" to job.id, "capture" to job.capture, "exercise" to job.exercise, "mode" to job.mode,
         "feature" to rc.signal.feature, "minAmp" to rc.signal.minAmp,
         "romDirection" to rc.signal.romDirection, "romThreshold" to rc.signal.romThreshold,
+        // 카운터가 실제로 쓰는 구성(RepEngineLog.of 와 같은 출처) — 합성 픽스처가 로그 reps.config 를 앱처럼 적을 수 있게
+        "romValidated" to rc.signal.romValidated, "refractoryMs" to rc.effectiveRefractoryMs,
+        "maxGapMs" to rc.effectiveMaxGapMs, "completeOnReturn" to rc.effectiveCompleteOnReturn,
         "floor" to job.floor,
         "frames" to stats.frames, "detectedFrames" to stats.detected, "valueFrames" to stats.withValue,
         "upFlipped" to stats.upFlipped, "firstMs" to first, "lastMs" to last,
@@ -377,7 +421,7 @@ private fun cycleJson(c: RepCycle): String = "[${c.tMs},${c.startMs},${num(c.min
 
 private class Raw(val text: String)
 
-private fun num(v: Float): String = if (v.isFinite()) v.toString() else "null"
+internal fun num(v: Float): String = if (v.isFinite()) v.toString() else "null"
 
 private fun json(map: Map<String, Any?>): String = map.entries.joinToString(",", "{", "}") { (k, v) ->
     val value = when (v) {
@@ -406,9 +450,16 @@ fun readManifest(file: File): List<Job> = file.readLines()
 /**
  * 사용법: replay <manifest.tsv> <results.jsonl> [series-dir] — 매니페스트의 캡처 경로는 매니페스트 기준 상대경로.
  * 캡처가 *.fcap 이면 피처 수준 캡처(세트 로그), 아니면 랜드마크 캡처로 읽는다.
+ *        replay --dump-features <capture.cap> <out.jsonl> — 랜드마크 캡처의 프레임별 피처(재생과 같은 후처리)
  */
 fun main(args: Array<String>) {
-    require(args.size >= 2) { "usage: replay <manifest.tsv> <results.jsonl> [series-dir]" }
+    if (args.firstOrNull() == "--dump-features") {
+        require(args.size == 3) { "usage: replay --dump-features <capture.cap> <out.jsonl>" }
+        val n = dumpFeatures(readCapture(File(args[1])), File(args[2]))
+        System.err.println("dumped $n frames")
+        return
+    }
+    require(args.size >= 2) { "usage: replay <manifest.tsv> <results.jsonl> [series-dir]\n       replay --dump-features <capture.cap> <out.jsonl>" }
     val manifest = File(args[0])
     val jobs = readManifest(manifest)
     val seriesDir = args.getOrNull(2)?.let { File(it).apply { mkdirs() } }

@@ -6,6 +6,7 @@ PostureAnalyzer.analyzeBitmap 과 같은 후처리로 피처로 바꾼 뒤 현�
 
     # 주석
     H key=value ...
+    U <tMs> <x>,<y>,<z>        (선택) 바로 다음 F 줄의 up 벡터 — 휴대폰 검증 로그(spec §61)에서 온 캡처만. 없으면 재생기가 화면 세로축
     F <tMs> <poses> <i>:<x>,<y>,<vis>,<pres>,<wx>,<wy>,<wz> ... (33개)
 
 x,y 는 정규화 이미지 좌표, vis·pres 는 정규화 랜드마크의 visibility·presence,
@@ -55,6 +56,45 @@ def _num(v: float | None) -> str:
     if v is None:
         return "nan"
     return f"{v:.5f}"
+
+
+def up_line(t_ms: int, up: Sequence[float | str]) -> str:
+    """U 줄. 값이 문자열이면(세트 로그에 적힌 그대로) 옮기고, 숫자면 repr — 반올림하지 않는다."""
+    return f"U\t{t_ms}\t" + ",".join(v if isinstance(v, str) else repr(float(v)) for v in up)
+
+
+def read_capture(path: Path) -> tuple[dict[str, str], list[dict]]:
+    """캡처 읽기(표준 라이브러리). 반환 (메타, 프레임) — 프레임 = {"t", "poses", "landmarks": {i: 7-튜플(float, nan 허용)},
+    "up": (x, y, z) | None}. U 줄은 바로 다음 F 줄에 붙는다(시각이 다르면 ValueError — 재생기와 같은 규약)."""
+    meta: dict[str, str] = {}
+    frames: list[dict] = []
+    pending: tuple[int, tuple[float, float, float]] | None = None
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if not line or line.startswith("#"):
+            continue
+        parts = line.split("\t")
+        if parts[0] == "H":
+            for kv in parts[1:]:
+                k, _, v = kv.partition("=")
+                meta[k] = v
+        elif parts[0] == "U":
+            if pending is not None:
+                raise ValueError(f"U 줄 뒤에 F 줄이 없다 (t={pending[0]})")
+            x, y, z = (float(q) for q in parts[2].split(","))
+            pending = (int(parts[1]), (x, y, z))
+        elif parts[0] == "F":
+            t = int(parts[1])
+            if pending is not None and pending[0] != t:
+                raise ValueError(f"U 줄 시각 {pending[0]} ≠ 다음 F 줄 시각 {t}")
+            lms = {}
+            for cell in parts[3:]:
+                i, _, rest = cell.partition(":")
+                lms[int(i)] = tuple(float(q) for q in rest.split(","))
+            frames.append({"t": t, "poses": int(parts[2]), "landmarks": lms, "up": pending[1] if pending else None})
+            pending = None
+    if pending is not None:
+        raise ValueError("마지막 U 줄 뒤에 F 줄이 없다")
+    return meta, frames
 
 
 def write_capture(path: Path, meta: dict[str, object], lines: Iterable[str]) -> int:

@@ -244,24 +244,32 @@ def markdown(summary: dict, sources: list[str]) -> str:
     return "\n".join(L) + "\n"
 
 
+def run(inputs: list[Path], out: Path, signal: str | None = None) -> str | None:
+    """입력 → <out>/noise_summary.json·.md. 세트가 없으면 None (gate_a.py 도 이 함수를 부른다)."""
+    series = load_inputs(inputs, signal)
+    if not series:
+        return None
+    sets = [set_stats(s) for s in series]
+    summary = summarize(sets)
+    out.mkdir(parents=True, exist_ok=True)
+    per_set = [{k: v for k, v in s.items() if k not in ("dt", "restDiffs", "dtThermal")} for s in sets]
+    (out / "noise_summary.json").write_text(json.dumps({"inputs": [str(p) for p in inputs], "byExerciseSignal": summary,
+                                                        "perSet": per_set}, ensure_ascii=False, indent=1, default=float), encoding="utf-8")
+    md = markdown(summary, [p.name for p in inputs])
+    (out / "noise_summary.md").write_text(md, encoding="utf-8")
+    return md
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("inputs", nargs="+", type=Path)
     ap.add_argument("--out", type=Path, required=True)
     ap.add_argument("--signal", default=None, help="모든 세트에 이 신호를 쓴다")
     args = ap.parse_args()
-    series = load_inputs(args.inputs, args.signal)
-    if not series:
+    md = run(args.inputs, args.out, args.signal)
+    if md is None:
         print("입력에서 세트를 찾지 못했다", file=sys.stderr)
         return 1
-    sets = [set_stats(s) for s in series]
-    summary = summarize(sets)
-    args.out.mkdir(parents=True, exist_ok=True)
-    per_set = [{k: v for k, v in s.items() if k not in ("dt", "restDiffs", "dtThermal")} for s in sets]
-    (args.out / "noise_summary.json").write_text(json.dumps({"inputs": [str(p) for p in args.inputs], "byExerciseSignal": summary,
-                                                             "perSet": per_set}, ensure_ascii=False, indent=1, default=float), encoding="utf-8")
-    md = markdown(summary, [p.name for p in args.inputs])
-    (args.out / "noise_summary.md").write_text(md, encoding="utf-8")
     print(md)
     return 0
 

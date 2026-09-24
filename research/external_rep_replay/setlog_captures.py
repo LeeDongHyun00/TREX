@@ -26,6 +26,15 @@ readFeatureCapture)에 그대로 넣으면 (1) 로그를 쓴 앱의 카운트와
     넘긴다(PostureLive 와 같은 우선순위).
 없는 필드는 전부 null — 옛 로그다. 추측으로 채우지 않는다.
 
+렙 검증 모드 로그(spec §61 — `"validation":true`, 프레임마다 `xy`·`w`·`up`) → 랜드마크 캡처 `<set_id>.cap` 도 함께 쓴다(capture_format)
+    H source=phone-setlog setId exercise imageW imageH validation=1
+    검출 프레임: U <t_ms> <up 그대로> 다음 F <t_ms> 1 <i>:<x>,<y>,<vis>,nan,<wx>,<wy>,<wz>
+        vis = 로그 vis(= 앱의 min(visibility, presence), 소수 3자리), 없으면 nan(재생기는 1 로 본다). pres = nan — min 은 이미 vis 에 있다.
+        wx·wy·wz = 로그 `w`(MediaPipe 월드 좌표 원본 부호, m) — 재생기가 앱처럼 cm·부호 반전을 한다
+    검출 안 된 프레임(좌표 키 없음): F <t_ms> 0
+    index 에 landmarkCapture(상대 경로)·validation·imageW·imageH. 이 캡처로 (1) 화면 잘림(프레이밍)을 재고 (2) Replay --dump-features 로
+    피처를 다시 계산해 로그 피처와 견준다(gate_a.py) — 로그의 좌표 4자리·가시성 3자리 반올림 때문에 비트 단위 일치는 아니다.
+
 표시 단위 (사용자 결정 2026-09-24 — 런지류는 "왼쪽과 오른쪽을 한 번씩 = 1회", 앱 `RepUnit`)
     reps.count · t_ms · min/max/valid · invalid 는 늘 **카운터 사이클**(런지 = 한 걸음)이다 — 재생 파리티는 이 단위로만 본다.
     reps.unit("cycle"|"side_pair") · cycles_per_rep · completed(화면에 보인 수 = 진행·자동 넘김에 쓴 수) · half_pending(세트 끝에
@@ -72,6 +81,8 @@ import re
 import sys
 import tempfile
 from pathlib import Path
+
+import capture_format
 
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[1]
@@ -266,6 +277,9 @@ def convert(log: dict, source: str, floor_exercises: set[str], rep_rules: dict) 
         "truthDisplayedReps": None, "truthCyclesMin": None, "truthCyclesMax": None, "truthCyclesExact": None, "truthUnit": None,
         "confirmedDisplayedReps": None, "confirmedCyclesMin": None, "confirmedCyclesMax": None, "confirmedMatchesLog": None,
         "labelUnit": None, "labelUnitMatchesLog": None,
+        # 렙 검증 모드(spec §61) — 좌표가 있으면 build 가 landmarkCapture 를 채운다
+        "validation": bool(log.get("validation")), "imageW": (log.get("image") or {}).get("w") if isinstance(log.get("image"), dict) else None,
+        "imageH": (log.get("image") or {}).get("h") if isinstance(log.get("image"), dict) else None, "landmarkCapture": None,
         "logFile": source,
     }
     if exercise in rep_rules:
@@ -334,6 +348,37 @@ def convert(log: dict, source: str, floor_exercises: set[str], rep_rules: dict) 
     return "\n".join(lines) + "\n", entry
 
 
+def landmark_capture(log: dict, entry: dict) -> str | None:
+    """검증 모드 로그의 프레임 좌표 → capture_format 캡처 텍스트. 좌표(`xy`·`w`)가 있는 프레임이 하나도 없으면 None."""
+    frames = log.get("frames") or []
+    if not any(f.get("xy") is not None and f.get("w") is not None for f in frames):
+        return None
+    meta = {"source": "phone-setlog", "setId": entry["setId"], "exercise": entry["exercise"],
+            "imageW": "" if entry["imageW"] is None else entry["imageW"], "imageH": "" if entry["imageH"] is None else entry["imageH"],
+            "validation": "1" if entry["validation"] else "0"}
+    lines = [f"# setlog_captures.py — {entry['setId']} 랜드마크 ({entry['logFile']})",
+             "H\t" + "\t".join(f"{k}={str(v).replace(chr(9), ' ')}" for k, v in meta.items())]
+    for f in frames:
+        t = int(f.get("t_ms", 0))
+        xy, w = f.get("xy"), f.get("w")
+        if xy is None or w is None or len(xy) != 2 * capture_format.LANDMARKS or len(w) != 3 * capture_format.LANDMARKS:
+            lines.append(capture_format.frame_line(t, None))
+            continue
+        if f.get("up") is not None:
+            lines.append(capture_format.up_line(t, [_num_text(v) or "nan" for v in f["up"]]))
+        vis = f.get("vis")
+        lms = []
+        for i in range(capture_format.LANDMARKS):
+            v = vis[i] if isinstance(vis, list) and i < len(vis) and vis[i] is not None else None
+            # None(null — NaN 이던 값)은 nan 으로: 재생기는 없는 가시성을 1 로 본다(앱의 orElse(1f))
+            lms.append((xy[2 * i], xy[2 * i + 1], v, None, w[3 * i], w[3 * i + 1], w[3 * i + 2]))
+        if any(x is None for lm in lms for k, x in enumerate(lm) if k not in (2, 3)):
+            lines.append(capture_format.frame_line(t, None))   # 좌표가 null(NaN) 인 프레임은 재생기가 어차피 사람 없음으로 본다
+            continue
+        lines.append(capture_format.frame_line(t, lms))
+    return "\n".join(lines) + "\n"
+
+
 def attach_labels(entry: dict, labels: dict[str, dict], truth_confirmed: bool) -> None:
     """라벨은 그 세트의 화면 단위(entry repUnit)다. *DisplayedReps = 라벨 그대로, *CyclesMin~Max = 사이클 범위(라벨 × cyclesPerRep ~
     짝 없이 끝난 한쪽까지), *Reps = 범위가 한 값일 때만 그 사이클 수(아니면 None — run_replay 가 정확한 정답으로 쓴다). 사이클 단위면 넷이 같다."""
@@ -388,6 +433,10 @@ def build(inputs: list[Path], out: Path, label_paths: list[Path], since: str | N
         seen.add(entry["setId"])
         attach_labels(entry, labels, truth_confirmed)
         (out / entry["capture"]).write_text(text, encoding="utf-8")
+        lm_text = landmark_capture(log, entry)
+        if lm_text is not None:
+            entry["landmarkCapture"] = f"{entry['setId']}.cap"   # 피처 캡처와 같은 이름 규약
+            (out / entry["landmarkCapture"]).write_text(lm_text, encoding="utf-8")
         index["sets"].append(entry)
     (out / "index.json").write_text(json.dumps(index, ensure_ascii=False, indent=1), encoding="utf-8")
     return index
@@ -820,6 +869,58 @@ def _side_pair_self_test(work: Path, check) -> None:
           and current_unit("덤벨 컬", False) == "cycle")
 
 
+def _validation_self_test(work: Path, golden: list[str], check) -> None:
+    """렙 검증 모드(spec §61): 골든 넷째 줄(코틀린 SetLogJson 이 쓴 validation 로그) → 랜드마크 캡처 → capture_format 로 다시 읽어
+    xy·w·up 이 로그와 같은가, 검증 아닌 줄은 캡처를 만들지 않는가, 재생기가 U 줄 캡처를 읽는가."""
+    import subprocess  # noqa: PLC0415
+    import run_replay  # noqa: PLC0415
+
+    d = work / "validation_logs"
+    d.mkdir(parents=True, exist_ok=True)
+    (d / "sets-20260924.jsonl").write_text("\n".join(golden) + "\n", encoding="utf-8")
+    idx = build([d], work / "validation_cap", [d])
+    by = {e["setId"][-8:]: e for e in idx["sets"]}
+    v = by.get("gold0004", {})
+    others = [by[k] for k in ("gold0001", "gold0002", "gold0003") if k in by]
+    check("검증 모드: validation 로그만 랜드마크 캡처 + index(validation·이미지 크기), 나머지 셋은 없음(제품 로그)",
+          v.get("validation") is True and v.get("landmarkCapture") == "20260924T021500-gold0004.cap" and v.get("imageW") == 360
+          and v.get("imageH") == 640 and len(others) == 3
+          and all(o["landmarkCapture"] is None and o["validation"] is False and o["imageW"] is None for o in others),
+          json.dumps({k: v.get(k) for k in ("validation", "landmarkCapture", "imageW", "imageH")}))
+    if not v.get("landmarkCapture"):
+        return
+    cap = work / "validation_cap" / v["landmarkCapture"]
+    meta, frames = capture_format.read_capture(cap)
+    log = parse_line(golden[3])
+    same = len(frames) == len(log["frames"])
+    for fr, lf in zip(frames, log["frames"]):
+        if fr["t"] != int(lf["t_ms"]):
+            same = False
+        if lf.get("xy") is None:
+            same &= fr["poses"] == 0 and not fr["landmarks"] and fr["up"] is None
+            continue
+        lms = fr["landmarks"]
+        same &= fr["poses"] == 1 and len(lms) == 33
+        same &= all(lms[i][0] == float(lf["xy"][2 * i]) and lms[i][1] == float(lf["xy"][2 * i + 1]) for i in range(33))
+        same &= all(tuple(lms[i][4:7]) == tuple(float(q) for q in lf["w"][3 * i:3 * i + 3]) for i in range(33))
+        same &= fr["up"] == tuple(float(q) for q in lf["up"])
+        # 로그 vis 가 null(가시성 미기록) → nan: 재생기는 1 로 본다
+        same &= all(math.isnan(lms[i][2]) and math.isnan(lms[i][3]) for i in range(33))
+    check("검증 모드 왕복: .cap → capture_format.read_capture 의 xy·w·up·미검출 프레임이 골든 줄과 같다",
+          same and meta.get("source") == "phone-setlog" and meta.get("validation") == "1" and meta.get("imageW") == "360"
+          and meta.get("setId") == v["setId"] and sum(fr["up"] is not None for fr in frames) == 3,
+          f"frames {len(frames)} meta {meta}")
+    if run_replay.REPLAY_BIN.is_file():
+        out = work / "validation_dump.jsonl"
+        subprocess.run([str(run_replay.REPLAY_BIN), "--dump-features", str(cap), str(out)], check=True, capture_output=True)
+        rows = [json.loads(x) for x in out.read_text(encoding="utf-8").splitlines() if x.strip()]
+        check("검증 모드: 재생기가 U 줄 캡처를 읽는다(--dump-features 프레임 수·검출 여부가 로그와 같다)",
+              [r["t"] for r in rows] == [0, 300, 600, 900] and [r["detected"] for r in rows] == [True, True, True, False],
+              str([(r["t"], r["detected"]) for r in rows]))
+    else:
+        check("검증 모드: 재생기 빌드 필요 (cd replay-jvm && gradle -q test installDist)", False, str(run_replay.REPLAY_BIN))
+
+
 def self_test(work: Path) -> int:
     import run_replay  # noqa: PLC0415 — 같은 폴더의 재생·채점 도구
 
@@ -970,6 +1071,7 @@ def self_test(work: Path) -> int:
           and g2["loggedValid"] == [True, False, True] and g0["repUnit"] == "cycle" and g0["loggedDisplayedReps"] == 1
           and g0["loggedHalfPending"] is None, json.dumps({k: g2[k] for k in ("repUnit", "loggedReps", "loggedCompleted",
                                                                               "loggedHalfPending", "loggedUnitConsistent")}))
+    _validation_self_test(work, golden, check)
     _side_pair_self_test(work, check)
 
     summary = run_replay.summarize(idx, res, names, 10, None, 200, 1)
