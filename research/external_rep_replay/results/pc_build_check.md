@@ -228,3 +228,6 @@ versionCode 5 / versionName `1.2.0-repval.1`(`4a50a34`) 빌드. 트리거 worktr
 | `run_replay.py --configs live` (11:37 세트, 10회) | 파리티 10/10, 정확 8, `repForm` 표 = 설계 §21.7 |
 
 깨졌던 것: 테스트 3건이 새 의미(요약 줄에 시작 자세 없음·방향별 수·이월 규칙)에 맞춰 갱신됐고, 음성 연속 판단이 `eventFor` 호출 이력에 기대던 결함을 `onCycle` 기록으로 옮겼다.
+
+## 빌드 #8 (`0de7db4` + §21.8 — 발끝 위반 반복의 발 너비 유보)
+`:app:testDebugUnitTest` 373 · `:app:assembleDebug` 성공 · replay-jvm 50. 재생(11:37): 발 너비 오탐 4 → 0(유보 6), 정확 8/10 그대로.

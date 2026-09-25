@@ -61,6 +61,11 @@ data class RepFormCheck(
      * 무릎이 따라 들어와 `knee_out` 이 떨어진다. "무릎" 만 말하면 사용자가 바꾼 것(발)을 못 짚는다). 판정·정확 계산에는 영향 없다.
      */
     val causes: List<String> = emptyList(),
+    /**
+     * 같은 반복에서 위반이면 이 검사의 **측정 자체가 무효**가 되는 검사 id — 결과는 유보(§21.8 실측: 발끝을 안으로 돌리면 앞발을 축으로
+     * 뒤꿈치·발목이 벌어져 발목 간격이 ×1.6~1.8 로 읽힌다. 발을 디딘 자리는 그대로인데 "넓어졌어요" 는 방향이 틀린 말이다).
+     */
+    val invalidatedBy: List<String> = emptyList(),
 ) {
     init { require(lo != null || hi != null) { "$id: 허용 띠가 없다" } }
 
@@ -175,7 +180,14 @@ class RepFormEvaluator(
             baselineAtMs = phases.top.last().first
             for (c in checks) if (c.phase == RepPhase.START) startList += evaluateStart(c)
         }
-        val outcomes = checks.filter { it.phase != RepPhase.START }.map { evaluate(it, phases) }
+        val raw = checks.filter { it.phase != RepPhase.START }.map { evaluate(it, phases) }
+        // 측정을 무효로 만드는 검사가 같은 반복에서 위반이면 유보 — 틀린 방향의 말보다 침묵이 낫다(원칙 #6)
+        val violated = raw.filter { it.verdict == Verdict.VIOLATION }.map { it.check.id }.toSet()
+        val outcomes = raw.map { o ->
+            val by = o.check.invalidatedBy.firstOrNull { it in violated }
+            if (by == null || o.verdict == Verdict.ABSTAIN) o
+            else o.copy(verdict = Verdict.ABSTAIN, direction = null, abstainReason = "${checks.first { it.id == by }.bodyPart} 위반으로 측정 무효")
+        }
         val prev = repList.lastOrNull()
         val consecutive = outcomes.filter { o -> o.check.ship && o.verdict == Verdict.VIOLATION && prev?.flagged?.any { it.check.id == o.check.id } == true }
             .map { it.check.id }.toSet()
@@ -478,8 +490,9 @@ object RepFormSpecs {
             RepFormCheck("repform|$ex|발 간격", ex, "발 간격(반복)", "발 너비", RuleStatus.BETA, "stance_sh", RepPhase.STANDING, RepFormStat.EXTREME, RepFormRef.START_RATIO,
                 lo = 0.8f, hi = 1.25f, lowText = "발 너비가 시작보다 좁아졌어요", highText = "발 너비가 시작보다 넓어졌어요", lowLabel = "좁음", highLabel = "넓음",
                 fix = "발을 어깨 너비로 다시 두세요",
-                reason = "실기기 11:37 세트: 넓힌 반복 ×1.6~1.9, 정상 ×1.0~1.12. 서 있는 프레임(앞뒤)만 쓰는 이유 — 바닥에서는 무릎이 벌어지며 발목 랜드마크가 따라가 발 너비가 부풀고(정상 2회 바닥 ×1.31, 10회 ×1.5), 하강하며 발을 벌린 반복(3회)은 복귀 뒤 서 있는 프레임(×1.6)에서 드러난다",
-                cautions = listOf(PROVISIONAL)),
+                reason = "실기기 11:37 세트: 넓힌 반복 ×1.4~1.9, 정상 ×1.0~1.12. 서 있는 프레임(앞뒤)만 쓰는 이유 — 바닥에서는 무릎이 벌어지며 발목 랜드마크가 따라가 발 너비가 부풀고(정상 2회 바닥 ×1.31, 10회 ×1.5), 하강하며 발을 벌린 반복(3회)은 복귀 뒤 서 있는 프레임(×1.6)에서 드러난다",
+                cautions = listOf(PROVISIONAL, "발목 간격은 발끝 회전에 오염된다(§21.8: 발끝만 안으로 모은 7·8회가 ×1.8) — 같은 반복에 발끝 위반이 있으면 유보. 회전 불변 측정점(발 중심·발끝 간격)은 검증 모드 좌표로 찾는다"),
+                invalidatedBy = listOf("repform|$ex|발끝 방향")),
             RepFormCheck("repform|$ex|발끝 방향|시작", ex, "발끝 방향(시작)", "발끝", RuleStatus.BETA, "toe_out_maxside", RepPhase.START, RepFormStat.MEDIAN, RepFormRef.NONE,
                 lo = -5f, hi = 35f, lowText = "발끝이 안으로 모여 있어요", highText = "발끝이 바깥으로 많이 벌어져 있어요", lowLabel = "안쪽", highLabel = "바깥",
                 fix = "발끝을 살짝만 바깥으로 두세요", unit = "°",
