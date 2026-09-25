@@ -19,9 +19,10 @@ class RepFormTest {
 
     private class Frames(private val ev: RepFormEvaluator) {
         var t = 0L
-        fun frame(knee: Float, stance: Float = 1.0f, toe: Float = 20f, kneeOut: Float = 0.15f, torso: Float = 5f, maxside: Float = knee + 3f) {
+        fun frame(knee: Float, stance: Float = 1.0f, toe: Float = 20f, kneeOut: Float = 0.15f, torso: Float = 5f, maxside: Float = knee + 3f,
+                  asym: Float = -5f, roll: Float = 2f) {
             ev.onFrame(t, mapOf("knee_mean" to knee, "knee_maxside" to maxside, "stance_2d" to stance, "toe_out_maxside" to toe,
-                "knee_out_mean" to kneeOut, "torso_incl" to torso))
+                "knee_out_mean" to kneeOut, "torso_incl" to torso, "knee_asym" to asym, "torso_roll" to roll))
             t += 300
         }
         /** 서 있음 n프레임 → 스쿼트 한 사이클 → 복귀. 바닥 3프레임에 bottomKneeOut, 최대 상체 기울기 torsoMax. */
@@ -263,6 +264,42 @@ class RepFormTest {
         repeat(10) { agg.add(mapOf("knee_out_mean" to 0.1f, "torso_incl" to 5f, "stance_sh" to 1f)) }
         val res = merged.evaluate("바벨 스쿼트", agg, true, 8, null).associateBy { it.rule.id }
         assertEquals(Verdict.ABSTAIN, res.getValue("repform|바벨 스쿼트|발 간격").verdict)
+    }
+
+    @Test
+    fun standingLevelFollowsTheStartPostureKneeAngleAfterBaseline() {
+        // 12:19 세트 3·6회: 반복 뒤 서 있는 프레임(155~157°)이 사이클 최대(164) − 7.7 띠 밖 → 창이 앞쪽에 치우쳐 발끝을 놓쳤다.
+        // 시작 자세(163)가 있으면 163 − 10.5 = 152.5 위는 서 있음 — 복귀 뒤 156° 프레임의 발끝(+30)이 창에 들어와 검출된다
+        val ev = evaluator(); val f = Frames(ev)
+        f.rep(ev = ev)
+        repeat(2) { f.frame(163f) }   // 하강 직전 서 있는 프레임 2개(발끝 20)
+        for ((knee, toe) in listOf(140f to 20f, 110f to 20f, 92f to 20f, 95f to 20f, 100f to 20f, 130f to 20f, 156f to 50f, 156f to 50f, 157f to 50f)) f.frame(knee, toe = toe)
+        val r = ev.onCycle(f.t - 300, 92f, 163f)
+        val toeO = r.outcomes.first { it.check.id == "repform|바벨 스쿼트|발끝 방향" }
+        // 서 있음 = 앞 2 + 뒤 3(156·156·157 ≥ 152.5) → 중앙값 50 → +30 위반. 옛 띠(164 − 7.7 = 156.3)면 뒤는 157 하나뿐이라 중앙값 20 → 놓친다
+        assertEquals(Verdict.VIOLATION, toeO.verdict)
+        assertEquals(30f, toeO.value!!, 1e-3f)
+    }
+
+    @Test
+    fun hipRiseAndLateralChecksReadTheirOwnWindows() {
+        val ev = evaluator(); val f = Frames(ev)
+        f.rep(ev = ev)
+        // hip rise: 바닥 상체 25° → 올라오며 50° 로 더 숙여짐(RISE 25 > 20)
+        repeat(5) { f.frame(163f) }
+        for ((knee, torso) in listOf(140f to 12f, 110f to 20f, 92f to 25f, 100f to 40f, 120f to 50f, 140f to 30f, 158f to 8f, 163f to 5f)) f.frame(knee, torso = torso)
+        val rise = ev.onCycle(f.t - 300, 92f, 163f)
+        val h = rise.flagged.single()
+        assertEquals("repform|바벨 스쿼트|엉덩이 먼저 상승", h.check.id)
+        assertEquals(25f, h.value!!, 1e-3f)
+        assertTrue(rise.correct)   // beta
+        // 좌우: 바닥에서 왼 무릎이 40° 더 굽음(asym −40) → LOW(왼쪽 쏠림); 몸통 좌우 기울기 +20 → 위반
+        repeat(5) { f.frame(163f) }
+        for (knee in listOf(140f, 110f, 92f, 95f, 100f, 130f, 158f, 163f)) f.frame(knee, asym = if (knee < 116f) -40f else -5f, roll = if (knee < 130f) 26f else 2f)
+        val lat = ev.onCycle(f.t - 300, 92f, 163f)
+        val ids = lat.flagged.map { it.check.id to it.direction }
+        assertTrue(ids.contains("repform|바벨 스쿼트|좌우 무릎 비대칭" to FormDirection.LOW))
+        assertTrue(ids.contains("repform|바벨 스쿼트|몸통 좌우 기울기" to FormDirection.HIGH))
     }
 
     @Test

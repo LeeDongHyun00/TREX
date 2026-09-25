@@ -237,3 +237,6 @@ versionCode 5 / versionName `1.2.0-repval.1`(`4a50a34`) 빌드. 트리거 worktr
 
 ## 빌드 #10 (`969d808` + §21.10 — 모집단 띠·좌표 상시)
 `:app:testDebugUnitTest` 374 · `:app:assembleDebug` 성공 · replay-jvm 50. REHAB 18세트(208회)·MM-Fit 64세트(498회) 재생 — 정상 반복 오탐률 표는 설계 §21.10.
+
+## 빌드 #11 (`295533a` + §21.11)
+`:app:testDebugUnitTest` 376 · `:app:assembleDebug` 성공 · replay-jvm 50. REHAB·MM-Fit 재생: 새 검사 셋 정상 오탐 ≤ 2 %, 발끝 실기기 3/4.

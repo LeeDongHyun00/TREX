@@ -19,14 +19,18 @@ import kotlin.math.abs
  */
 enum class RepPhase { START, TOP, BOTTOM, CYCLE,
     /** 반복 앞뒤로 서 있던 프레임(하강 직전 상단 + 복귀 뒤 서 있음) — 발 너비·발끝처럼 서 있을 때만 정확하고, 반복 중에 바뀌면 복귀 뒤에 드러나는 것. */
-    STANDING }
+    STANDING,
+    /** 바닥(사이클 최소)부터 끝까지 — 올라오는 구간. 엉덩이가 먼저 올라오는(hip rise) 시간적 오류의 자리. */
+    ASCENT }
 
 /** 기준 — NONE: 절대값(모집단 띠), START_RATIO: 시작 자세 대비 비율, START_DELTA: 시작 자세 대비 차. */
 enum class RepFormRef { NONE, START_RATIO, START_DELTA }
 
 enum class RepFormStat { MEDIAN, MEAN, MAX, MIN,
     /** 시작 기준에서 **가장 멀리 벗어난** 프레임 값(비율은 1, 차는 0 에서) — 상대 기준 검사 전용. 앞뒤 어느 쪽에서 벗어났든 잡는다. */
-    EXTREME }
+    EXTREME,
+    /** 구간 최대 − 구간 첫 값. ASCENT 에 쓰면 "바닥에서 올라오며 얼마나 더 커졌나"(상체가 바닥보다 더 숙여지면 엉덩이가 먼저 올라온 것). */
+    RISE }
 
 /** 위반 방향 — 허용 띠의 아래(LOW)·위(HIGH). */
 enum class FormDirection { LOW, HIGH }
@@ -172,7 +176,10 @@ class RepFormEvaluator(
     fun onCycle(endMs: Long, cycleMin: Float, cycleMax: Float): RepFormRep {
         val window = buf.filter { it.first <= endMs }
         buf.removeAll { it.first <= endMs }
-        val phases = segment(carry, window, cycleMin, cycleMax)
+        // 서 있음 판정(§21.10): 시작 자세가 있으면 그 무릎각 − 0.3h(≈ 10°) — 사이클 최대 − 0.22h 는 반복 뒤 서 있는 프레임(최대보다 몇 도 낮다)을 놓쳐
+        // 발끝 검사 창이 앞쪽(옛 자세)에 치우쳤다(12:19 세트 3·6회). 첫 반복은 시작 자세가 아직 없어 사이클 최대 기준.
+        val standingLevel = baseline?.get(signalFeature)?.let { it - STANDING_BAND_REF * minAmp } ?: (cycleMax - STANDING_BAND * minAmp)
+        val phases = segment(carry, window, cycleMin, cycleMax, standingLevel)
         carry = phases.trailingStanding
         if (phases.top.isEmpty()) noTopCount++
         if (baseline == null && phases.top.size >= 2) {
@@ -230,6 +237,8 @@ class RepFormEvaluator(
         val cycle: List<Pair<Long, Map<String, Float>>>,
         /** 이 창의 끝에서 서 있던 프레임 — 다음 반복의 상단 창에 이월. */
         val trailingStanding: List<Pair<Long, Map<String, Float>>>,
+        /** 바닥부터 끝까지(올라오는 구간). */
+        val ascent: List<Pair<Long, Map<String, Float>>>,
     )
 
     /**
@@ -237,16 +246,15 @@ class RepFormEvaluator(
      * 직전 창의 끝(복귀해 서 있던 프레임, [prefix])까지 거슬러 본다. 준비 동작이 길어도 하강 직전만 본다.
      * 바닥 = 최소 + 진폭/3 아래(이 창만). 사이클 = 상단 끝 다음부터 끝까지(이 창만).
      */
-    private fun segment(prefix: List<Pair<Long, Map<String, Float>>>, window: List<Pair<Long, Map<String, Float>>>, cycleMin: Float, cycleMax: Float): Phases {
+    private fun segment(prefix: List<Pair<Long, Map<String, Float>>>, window: List<Pair<Long, Map<String, Float>>>, cycleMin: Float, cycleMax: Float, standing: Float): Phases {
         val pre = prefix.filter { it.second.containsKey(signalFeature) }
         val own = window.filter { it.second.containsKey(signalFeature) }
-        if (own.isEmpty()) return Phases(emptyList(), emptyList(), window, emptyList())
+        if (own.isEmpty()) return Phases(emptyList(), emptyList(), window, emptyList(), emptyList())
         val sig = pre + own
         val v = sig.map { it.second.getValue(signalFeature) }
         val n0 = pre.size
         var idxMin = n0
         for (i in n0 until v.size) if (v[i] < v[idxMin]) idxMin = i
-        val standing = cycleMax - STANDING_BAND * minAmp
         var topEnd = -1
         for (i in idxMin downTo 0) if (v[i] >= standing) { topEnd = i; break }
         val topAll = if (topEnd < 0) emptyList() else (maxOf(0, topEnd - TOP_FRAMES + 1)..topEnd).filter { v[it] >= standing }
@@ -258,7 +266,7 @@ class RepFormEvaluator(
         val cycle = sig.subList(maxOf(topEnd + 1, n0), sig.size)
         var tailStart = v.size
         while (tailStart > n0 && v[tailStart - 1] >= standing && v.size - tailStart < TOP_FRAMES) tailStart--
-        return Phases(top, bottom, cycle, sig.subList(tailStart, v.size))
+        return Phases(top, bottom, cycle, sig.subList(tailStart, v.size), sig.subList(idxMin, sig.size))
     }
 
     private fun medians(frames: List<Pair<Long, Map<String, Float>>>): Map<String, Float> {
@@ -281,6 +289,7 @@ class RepFormEvaluator(
         val frames = when (c.phase) {
             RepPhase.TOP -> p.top; RepPhase.BOTTOM -> p.bottom; RepPhase.CYCLE -> p.cycle; RepPhase.START -> emptyList()
             RepPhase.STANDING -> p.top + p.trailingStanding
+            RepPhase.ASCENT -> p.ascent
         }
         val values = frames.mapNotNull { it.second[c.feature] }
         val need = if (c.stat == RepFormStat.MAX || c.stat == RepFormStat.MIN || c.stat == RepFormStat.EXTREME) 1 else 2
@@ -309,8 +318,10 @@ class RepFormEvaluator(
     }
 
     companion object {
-        /** 서 있음 판정 띠 — `ReturnRepTracker` 의 복귀 띠(0.22h)와 같은 비율. */
+        /** 서 있음 판정 띠(시작 자세 전) — `ReturnRepTracker` 의 복귀 띠(0.22h)와 같은 비율. */
         const val STANDING_BAND = 0.22f
+        /** 서 있음 판정 띠(시작 자세 뒤) — 시작 무릎각 − 0.3h(35° 면 10.5°). 반복 뒤 서 있는 프레임이 최대보다 몇 도 낮아도 잡는다(§21.10). */
+        const val STANDING_BAND_REF = 0.3f
         /** 상단 창 길이(프레임) — 300 ms 샘플링 ≈ 1.5 s. */
         const val TOP_FRAMES = 5
         private const val CAP = 2_000
@@ -321,6 +332,7 @@ class RepFormEvaluator(
             RepFormStat.MIN -> values.min()
             RepFormStat.MEDIAN -> values.sorted().let { s -> if (s.size % 2 == 1) s[s.size / 2] else (s[s.size / 2 - 1] + s[s.size / 2]) / 2f }
             RepFormStat.EXTREME -> error("EXTREME 은 상대 기준 검사에서 evaluate 가 직접 고른다")
+            RepFormStat.RISE -> values.max() - values.first()
         }
     }
 }
@@ -470,6 +482,11 @@ object RepFormSpecs {
                 fix = "가슴을 들고 몸통을 세우세요", unit = "°",
                 reason = "정면 폰은 척추 굴곡을 못 본다 — 기울기 최대(반복 안)로 큰 숙임만 잡는다. 실기기 허리 굽힘 2회 63~67° vs 정상 14~39°",
                 cautions = listOf(PROVISIONAL, "정면에서는 '말림' 이 아니라 '숙임' 이다 — 미세한 말림은 못 본다")),
+            RepFormCheck("repform|$ex|엉덩이 먼저 상승", ex, "엉덩이 먼저 상승(반복)", "엉덩이", RuleStatus.BETA, "torso_incl", RepPhase.ASCENT, RepFormStat.RISE, RepFormRef.NONE,
+                lo = null, hi = 20f, lowText = null, highText = "올라올 때 엉덩이가 먼저 올라와 상체가 더 숙여졌어요", lowLabel = null, highLabel = "먼저 상승",
+                fix = "무릎과 엉덩이를 같이 펴세요", unit = "°",
+                reason = "카탈로그 #13(hip rise, Schoenfeld 2010): 올라오며 무릎보다 엉덩이가 먼저 펴지면 바닥보다 상체가 더 숙여진다 — 올라오는 구간의 상체 기울기 최대 − 바닥 값. 정상 반복 p95: REHAB 정면 15°·세로 5°·MM-Fit 7°(§21.11) → 20°(오탐 REHAB 정면 2 %)",
+                cautions = listOf(PROVISIONAL, "정면 기울기 기반 — 옆면이 더 정확하다")),
             RepFormCheck("repform|$ex|무릎 안쪽 모임", ex, "무릎 안쪽 모임(반복)", "무릎", RuleStatus.SHIP, "knee_out_mean", RepPhase.BOTTOM, RepFormStat.MEAN, RepFormRef.NONE,
                 lo = 0.0f, hi = null, lowText = "바닥에서 무릎이 안쪽으로 모였어요", highText = null, lowLabel = "안쪽", highLabel = null,
                 fix = "무릎을 발끝 방향으로 두세요",
@@ -482,6 +499,16 @@ object RepFormSpecs {
                 fix = "무릎을 발끝 방향에 맞추세요", causes = listOf("repform|$ex|발끝 방향", "repform|$ex|발 간격"),
                 reason = "AIHub 에 '과도 벌림' 클립이 없어 위쪽 경계가 없었다 — 일부러 벌린 반복이 '교정됐어요' 로 읽힘. 재생(2026-09-25): 바닥 창 평균은 정상 반복도 0.34~0.35(09:51 세트)까지 가고 일부러 벌린 반복(0.26~0.30 프레임 최대)과 겹친다 — 이 피처·창으로는 갈라지지 않는다. 0.40 은 정상 위쪽 여유일 뿐 검출 근거가 없다",
                 cautions = listOf(PROVISIONAL, "knee_out 바닥 평균은 일부러 벌린 반복과 무릎을 넓게 쓰는 정상 반복을 구분하지 못했다(재생) — 무릎이 발보다 바깥인지(knee_gap ÷ stance) 같은 다른 피처 후보")),
+            RepFormCheck("repform|$ex|좌우 무릎 비대칭", ex, "좌우 무릎 비대칭(반복)", "좌우 균형", RuleStatus.BETA, "knee_asym", RepPhase.BOTTOM, RepFormStat.MEAN, RepFormRef.NONE,
+                lo = -30f, hi = 30f, lowText = "바닥에서 왼쪽 무릎이 더 굽었어요 — 체중이 왼쪽으로 쏠린 것 같아요", highText = "바닥에서 오른쪽 무릎이 더 굽었어요 — 체중이 오른쪽으로 쏠린 것 같아요",
+                lowLabel = "왼쪽 쏠림", highLabel = "오른쪽 쏠림", fix = "양발에 체중을 고르게 두세요", unit = "°",
+                reason = "카탈로그 #9(좌우 체중 쏠림): 바닥에서 두 무릎각의 차(왼 − 오른, MediaPipe 몸 기준 좌우). 정상 반복 p5~p95 −18~+13°(§21.11), 실기기 무릎 들기 ±73~129°. ±30 오탐 0 %",
+                cautions = listOf(PROVISIONAL, "정면에서 무릎각 좌우 차는 카메라 사선에 민감하다 — 정면(C)에서만")),
+            RepFormCheck("repform|$ex|몸통 좌우 기울기", ex, "몸통 좌우 기울기(반복)", "몸통", RuleStatus.BETA, "torso_roll", RepPhase.CYCLE, RepFormStat.EXTREME, RepFormRef.START_DELTA,
+                lo = -20f, hi = 20f, lowText = "몸통이 옆으로 기울었어요", highText = "몸통이 옆으로 기울었어요", lowLabel = "기울음", highLabel = "기울음",
+                fix = "양 어깨 높이를 맞추세요", unit = "°",
+                reason = "카탈로그 #9: 반복 중 몸통 좌우 기울기(torso_roll)가 시작 자세에서 가장 멀어진 값. 정상 반복 p5~p95 −12~+14°(§21.11) — ±12 는 오탐 9~15 %, ±20 으로",
+                cautions = listOf(PROVISIONAL)),
             RepFormCheck("repform|$ex|발 간격|시작", ex, "발 간격(시작)", "발 너비", RuleStatus.BETA, Stance2d.FEATURE, RepPhase.START, RepFormStat.MEDIAN, RepFormRef.NONE,
                 lo = 0.5f, hi = 1.8f, lowText = "발이 어깨보다 좁아요", highText = "발이 어깨보다 많이 넓어요", lowLabel = "좁음", highLabel = "넓음",
                 fix = "발을 어깨 너비로 벌려 주세요",
