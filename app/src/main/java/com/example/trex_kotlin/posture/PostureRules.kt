@@ -10,20 +10,7 @@ import org.json.JSONObject
  * "집계 통계값이 임계값을 넘으면 위반" 형태의 단일 피처 규칙이다.
  */
 
-enum class RuleStatus { SHIP, BETA, EXCLUDE;
-    companion object {
-        fun from(s: String): RuleStatus = when (s) {
-            "ship" -> SHIP
-            "beta" -> BETA
-            else -> EXCLUDE
-        }
-    }
-}
-
-enum class Verdict { OK, VIOLATION, ABSTAIN }
-
-/** 위반 방향 — PRIMARY 는 라벨로 검증된 방향(예: 스쿼트 무릎 '안쪽'), OPPOSITE 는 반대측 가드(예: '바깥'). */
-enum class Direction { PRIMARY, OPPOSITE }
+// RuleStatus·Verdict·Direction 은 RuleTypes.kt — 안드로이드 의존이 없는 파일이라 재생기(replay-jvm)도 컴파일한다(§62a RepForm 이 쓴다).
 
 /**
  * 반대측 가드 (spec §23, BIDIRECTIONAL.md). 같은 피처의 정상 분포 반대쪽 경계(med±3·MAD, MP 스케일).
@@ -220,20 +207,21 @@ class PostureRuleSet(
     }
 
     /**
-     * 폰 규칙셋(spec §62, `rules_phone_v0.json`)을 뒤에 붙인 사본. AIHub 조건 밖의 항목(발끝 방향 등) — 근거는 폰 라벨 세트로 만든다.
-     * 자산이 없거나 깨졌으면 그대로 돌려준다(있는 규칙을 잃지 않는다). 버전은 `…+phone_v0.1` 로 이어 붙는다.
+     * 반복별 검사(`RepFormSpecs`, spec §62a)를 규칙으로 뒤에 붙인 사본 — 범위 문장·리포트 행·상태 표시용(판정은 `RepFormSummary` 가 채운다).
+     * 반복 검사가 **대체하는** 창 규칙(`RepFormSpecs.supersedes` — 스쿼트 무릎 방향 세트 평균)은 beta 로 낮춘다: 음성·점수·헤드라인에서 빠지고
+     * 리포트엔 '참고' 로 남는다. 버전은 `…+repform_v0.1` 로 이어 붙는다. AIHub 조건 밖의 항목이 여기 온다(사용자 결정 2026-09-25).
      */
-    fun plusPhone(context: Context): PostureRuleSet = try {
-        val phone = load(context, PHONE_RULES_ASSET)
-        PostureRuleSet("$version+${phone.version}", generated, rules + phone.rules)
-    } catch (_: Throwable) {
-        this
+    fun plusRepForm(): PostureRuleSet {
+        val demoted = rules.map { r ->
+            if (r.id in RepFormSpecs.supersedes && r.status == RuleStatus.SHIP)
+                r.copy(status = RuleStatus.BETA, cautions = r.cautions + "§62a: 반복 창 검사(${RepFormSpecs.supersedes.getValue(r.id)})가 판정을 대신한다 — 세트 평균은 서 있는 프레임이 결정해 실기기 오탐")
+            else r
+        }
+        return PostureRuleSet("$version+${RepFormSpecs.VERSION}", generated, demoted + RepFormSpecs.asRules())
     }
 
     companion object {
         const val ASSET_PATH = "posture/rules_mp_v0.json"
-        /** AIHub 조건 밖의 규칙(spec §62). 전부 폰 라벨 데이터로 근거를 만드는 중이라 확정 전엔 beta. */
-        const val PHONE_RULES_ASSET = "posture/rules_phone_v0.json"
 
         fun load(context: Context, assetPath: String = ASSET_PATH): PostureRuleSet {
             val text = context.assets.open(assetPath).bufferedReader().use { it.readText() }

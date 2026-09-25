@@ -206,3 +206,15 @@ versionCode 5 / versionName `1.2.0-repval.1`(`4a50a34`) 빌드. 트리거 worktr
 
 중간에 깨졌던 것 2건과 원인: (1) 골든 픽스처 — 스쿼트 config 에 `identity` 가 붙어 첫·둘째·넷째 줄이 바뀜(의도된 형식 변경, 픽스처·파이썬 사본 갱신). (2) `comparisonSignal()` 에서 판별 게이트를 떼려고 사본을 만들자 "비교 신호 = 자기 자신" 을 `assertSame` 으로 잠근 테스트 2개가 깨짐 → 되돌림(비교 추적기는 두 인자 onFrame 이라 게이트가 어차피 동작하지 않는다).
 폰에는 설치하지 않았다(기기 앱은 빌드 #4 그대로).
+
+## 빌드 #6 (미커밋 작업 트리, `cd104ce` + §62a — 반복별 자세 검사·정확 횟수)
+
+| 작업 | 결과 |
+|---|---|
+| `:app:testDebugUnitTest` | **성공** — **370개 전부 통과**(빌드 #5 의 358 + `RepFormTest` 9 · `StanceWidthTest` 2 · `PostureSetLogTest` +1) |
+| `:app:assembleDebug` | **성공** |
+| `-p research\external_rep_replay\replay-jvm test installDist` | **성공** — 50개 통과 (소스 목록에 `RepForm.kt`·`RuleTypes.kt` 추가) |
+| `setlog_captures.py --self-test` / `gate_a.py dry-run` | **49/49** / **18/18** — 골든 4줄 불변(rep_form 블록은 평가기가 있는 세트만) |
+| `run_replay.py --configs live` (오늘 4세트) | 파리티 0/0 · 6/6 · 11 vs 12(의도된 기각) · 7/7. `repForm`: 설계 §21.5 |
+
+깨졌던 것과 원인: (1) 재생기 컴파일 — `RepForm.kt` 가 `PostureRule`·`RuleResult`(안드로이드·org.json 의존 파일)를 써서 → 규칙셋 연결을 `RepFormRules.kt` 로 떼고 `RuleStatus`·`Verdict`·`Direction` 을 `RuleTypes.kt` 로 옮김. (2) 테스트 픽스처 — 바닥 창(최소 + 진폭/3)이 110° 하강 프레임을 포함해 무릎 평균이 임계를 넘음 → 픽스처를 실제처럼(굽힘과 함께 무릎값이 변함) 고침. (3) 무릎 과도 벌림 0.25 가 정상 반복(0.34~0.35)에 걸림 → 0.40, beta 유지.

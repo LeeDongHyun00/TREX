@@ -118,7 +118,7 @@ fun PostureLabScreen(onClose: () -> Unit) {
                 PostureRuleSet("${standing.version}+${floor.version}", standing.generated, standing.rules + floor.rules)
             } catch (_: Throwable) {
                 standing
-            }.plusPhone(context)
+            }.plusRepForm()
         } catch (t: Throwable) {
             loadError = t.message ?: t.toString()
         }

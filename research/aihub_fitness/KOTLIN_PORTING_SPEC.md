@@ -1354,3 +1354,15 @@ JVM 244건 통과: 모든 카메라 종목에서 방향 문구가 5초 안내보
 
 ### 다음
 2층 나머지(좌우 무릎 차·엉덩이 하강·발 제자리 — 오늘 로그로 계산 가능, 임계는 사람 2~3명 뒤), 3층(반복 창 통계 — 무릎 규칙의 세트 평균 오탐이 직접 원인), 1층(시작 자세 검사 — 발 간격 비율 피처부터), RECOVERED 문구, 반복 0회 세트의 자세 판정 억제.
+
+## §62a — 반복별 자세 검사·정확 횟수 구현 (2026-09-25 후속, 설계 §21)
+
+- **정본이 바뀌었다**: §62 의 `rules_phone_v0.json` 은 삭제하고 반복별 검사 등록부 **`RepFormSpecs`(코드)** 로 대체했다. 이유 — 재생기(replay-jvm)가 org.json 없이 앱과 같은 검사를 돌려야 Gate A 가 검사의 오탐·검출을 잰다(§61 의 카운터 파리티와 같은 구조). 상태·띠·문장이 한 곳에 있다. `RepFormSpecs.asRules()` 가 규칙셋에 `kind: "rep_form"` 규칙으로 붙어 범위 문장·리포트 행·상태 표시를 맡고, 판정은 `RepFormSummary.ruleResult` 가 채운다(`PostureAssessment`). `rules_version` 은 `mp_v0.1+floor_v0.4+repform_v0.1`.
+- **`PostureRuleSet.plusRepForm()`**(4곳: PostureLive·PostureScopeCache·BaselineGuide·PostureLab): 반복 검사가 대체하는 창 규칙(`RepFormSpecs.supersedes` — 스쿼트 `발과 무릎의 방향 일치`)을 **beta 로 낮춘다**. 그 규칙의 세트 평균은 서 있는 프레임이 결정해 바닥이 정상인 세트에 "무릎 안쪽" 4번을 냈다(10:52 세트). 음성·점수·헤드라인에서 빠지고 리포트 '참고' 로 남는다. 무릎은 반복 검사 ship 이 맡아 범위 문장에서 계속 '봄' 이다.
+- **평가기** `RepFormEvaluator`(`RepForm.kt`): 카운터보다 먼저 프레임을 받고(`onFrame`), 센 사이클마다 창을 닫아 판정(`onCycle`), 기각 사이클은 창을 버린다(`onRejected`). 위상 자르기 — 상단 = 사이클 최소값 앞에서 마지막으로 서 있던 프레임(신호 ≥ 최대 − 0.22h)부터 거꾸로 ≤ 5개, 바닥 = 최소 + 진폭/3 아래, 사이클 = 상단 끝 다음부터. 시작 자세 = 첫 상단 창의 중앙값(피처별), 그때 START 검사 1회. 판별 샘플 2개 미만이면 유보(위반 아님).
+- **정확 횟수**: `PostureLive` 가 ship 검사 위반 회를 `repIncorrect` 로 세고 목표 진행(`onRepDetected`)에서 뺀다 — 반복 수(`repCount+repInvalid`)는 그대로, HUD `countNote` "반복 N · 정확 M". 숫자 발화도 정확 수를 따른다(진행 수). ship 사건은 2회 연속 + 쿨다운일 때 음성 + 화면(`formNote`), beta 사건은 `provisionalNote`(참고).
+- **피처**: `stance_sh`(발목 간격 ÷ 어깨 너비, 수평·월드 — `stance_w` 골반 정규화는 서 있을 때 ×0.78 헛경보·바닥 두 배). `toe_out_*` 는 **발목→발끝**으로 바꿨다(§62 는 뒤꿈치→발끝) — 정면·바닥 폰에서 오른 뒤꿈치가 91% 프레임에서 안 보였다(발목 96%). 사람별 상수 편향은 시작 대비 검사가 상쇄.
+- **로그** `rep_form{version, baseline_t_ms, baseline{feature:value}, start[], reps[{t_ms, correct, checks[{id,v,value,raw,ref,dir}]}], rejected, no_top}` — 평가기가 있는 종목만. 인코더는 `RepFormLog.toJson` 하나(세트 로그·재생기 공용, 숫자 형식은 `SetLogJson.num` 과 같다). 골든 4줄 불변. 재생기 출력 `repForm`·`repFormCorrect`·`repFormFlags`·`repFormLines`.
+- **공유 타입 이동**: `RuleStatus`·`Verdict`·`Direction` → `RuleTypes.kt`(안드로이드 의존 없음, 재생기 소스 목록에 추가). 규칙셋 연결(`asRules`·`ruleResult`)은 `RepFormRules.kt`(앱 전용).
+- **검증**: 유닛 370/370(+`RepFormTest` 9·`StanceWidthTest` 2·`ToeOutTest` 개정·`PostureSetLogTest` +1), replay-jvm 50/50, 드라이런 18/18, `setlog_captures --self-test` 49/49. 재생 확인은 설계 §21.5 — 09:52 세트의 허리 굽힘 2회만 '상체 숙임' 으로 잡히고, 발 너비·발끝 반복 검사는 옛 로그에 피처가 없어 유보(새 세트 필요).
+- **임계 관측**(잠정값의 근거이자 한계): 무릎 과도 벌림 바닥 평균은 정상 반복(0.34~0.35)과 일부러 벌린 반복이 겹쳐 0.40 으로 넓혔다 — 검출 근거 없음, beta. 09:52 허리 굽힘 반복 하나가 무릎 안쪽 모임(ship, 0.02) 에도 걸렸다 — 굽히며 무릎이 모였는지 다음 세트에서 본다.

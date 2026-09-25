@@ -454,3 +454,12 @@ WorkoutHistoryItem.postureCorrection → 기록 화면
   - 문서: spec §62, 설계 §15 #30~33 + §20(4층 구조), REP_VALIDATION §10(지정 오류 세트), 런북 §1.3.
 - **다음**: ① 이 상태 커밋·푸시(사용자 확인) → 폰 설치(백업 먼저, `install -r`) → 스쿼트 오류 세트 한 번 더(발끝 벌림 구간에서 `toe_out_maxside` 가 실제로 40° 를 넘는지 — 잠정 임계의 첫 근거) ② 2층 나머지(좌우 무릎 차·엉덩이 하강·발 제자리) ③ 3층 반복 창 통계(무릎 규칙 세트 평균 오탐의 직접 원인) ④ 1층 시작 자세 검사(발 간격 비율 피처) ⑤ RECOVERED 문구·반복 0회 세트 자세 판정 억제 ⑥ Gate A 계획표에 지정 오류 세트 행 추가(`rep_validation_plan.py`).
 - **함정**: 재생 파리티는 이제 `onFrame` 셋째 인자에 기댄다 — 두 인자로 돌리면 스쿼트 카운트가 로그보다 많아진다. `rules_phone_v0.json` 은 손으로 관리(`counts` 를 `rules` 와 맞출 것). `toe_out` 은 옛 로그에 없다(피처만 로그되므로 재계산 불가) — 새 세트부터.
+
+## 2026-09-25 (후속 2) — 서비스 수준 스쿼트: 반복별 자세 검사·정확 횟수 (§62a, 설계 §21, 브랜치 `claude/rep-validation-env`)
+
+- **사용자가 10:52 세트(7회)에서 세 불만**: 어깨 너비 교정 없음 · 피드백이 "무릎 안쪽" 하나뿐(신뢰성 0) · 발 너비·발끝이 틀려도 횟수로. 로그가 전부 뒷받침(설계 §21.1). 그 뒤 "서비스 출시 수준 설계" 요청 → 설계 §21 → "실시해".
+- **결정(사용자)**: `반복 N · 정확 M` — ship 검사 위반 회는 목표 진행에서 뺀다. 반복 수는 안 줄인다.
+- **구현**: `RepForm.kt`(평가기·등록부 `RepFormSpecs`·로그), `RepFormRules.kt`(규칙셋 연결), `RuleTypes.kt`(공유 enum 이동), `stance_sh` 피처, `toe_out` 발목 기준으로 변경, `PostureRuleSet.plusRepForm()`(`rules_phone_v0.json` 삭제 — §62a 에 이유), `PostureAssessment` rep_form 결과, 세트 로그 `rep_form` 블록, `PostureLive` 정확 횟수·HUD·음성/참고 사건, 재생기 lockstep + `repForm` 출력. 유닛 370/370, replay-jvm 50/50, 드라이런 18/18, self-test 49/49.
+- **재생 확인(설계 §21.5)**: 09:52 세트 허리 굽힘 2회만 '상체 숙임'(57°·60°), 무릎 들기 기각 유지. **발 너비·발끝 반복 검사는 옛 로그에 피처가 없어 유보** — 새 세트가 첫 실측이다. 무릎 과도 벌림 띠는 정상 반복(0.34~0.35)에 걸려 0.40 으로 넓힘(검출 근거 없음, beta).
+- **다음**: ① 폰 설치 후 지정 오류 세트 1회 — 이번엔 `stance_sh`·`toe_out`(발목) 이 로그에 남아 발 너비·발끝 검사가 처음으로 판정된다. 재생 명령: `setlog_captures.py <로그> --out <캡처>` → `run_replay.py <캡처> --out <결과> --configs live` → `replay.jsonl` 의 `repForm`. ② 세트 전 시작 자세 안내(준비 단계) ③ 판별 게이트 후보(좌우 무릎 차·엉덩이 하강) ④ 지정 오류 세트 3명 → 임계 확정 → 정적 검사 ship.
+- **함정**: `RepForm.kt`·`RuleTypes.kt` 는 재생기 소스 목록(`replay-jvm/build.gradle.kts` engineFiles)에 있다 — 안드로이드·org.json·`PostureRule` 을 쓰면 재생기 빌드가 깨진다. 평가기는 카운터 **앞에서** `onFrame` 을 받아야 한다(순서가 바뀌면 사이클 끝 프레임이 다음 창으로 간다). ship 반복 검사는 하나(무릎 안쪽 모임)라 지금 '정확' 은 그 검사 하나의 결과다.

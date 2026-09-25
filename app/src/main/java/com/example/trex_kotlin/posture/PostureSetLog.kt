@@ -206,6 +206,8 @@ data class SetLog(
     val repRejected: List<RepRejected>? = null,
     /** 센 사이클마다의 판별 신호 스윙(`reps.identity_swing`, [repTimesMs] 와 같은 순서, 판정 안 한 사이클은 null). 판별 신호가 있는 종목만. */
     val repIdentitySwings: List<Float?>? = null,
+    /** 반복별 자세 검사(spec §62a) — `rep_form` 블록. 평가기가 있는 종목(지금 바벨 스쿼트)만, 없으면 키 부재. */
+    val repForm: RepFormLog? = null,
     /** 세트 첫 프레임 시점의 열 상태. null = 이전 로그 또는 열 상태 API 없음(API 29 미만). */
     val thermalStart: Int? = null,
     val thermalChanges: List<ThermalEvent>? = null,
@@ -273,6 +275,7 @@ data class SetLog(
             repDropped: List<RepCycle>? = null,
             repRejected: List<RepRejected>? = null,
             repIdentitySwings: List<Float?>? = null,
+            repForm: RepFormLog? = null,
             thermalStart: Int? = null,
             thermalChanges: List<ThermalEvent>? = null,
             appVersion: String? = null,
@@ -339,6 +342,7 @@ data class SetLog(
                 repDropped = repDropped,
                 repRejected = repRejected,
                 repIdentitySwings = repIdentitySwings,
+                repForm = repForm,
                 thermalStart = thermalStart,
                 thermalChanges = thermalChanges,
                 appVersion = appVersion,
@@ -508,6 +512,8 @@ object SetLogJson {
             }
             sb.append("},")
         }
+        // 반복별 자세 검사(spec §62a) — 평가기가 있는 종목만. reps 블록 뒤, frames 앞
+        log.repForm?.let { sb.append("\"rep_form\":").append(repForm(it)).append(',') }
         sb.append("\"frames\":[")
         log.frames.forEachIndexed { i, f ->
             if (i > 0) sb.append(',')
@@ -553,6 +559,9 @@ object SetLogJson {
     }
 
     /** 발화한 사이클 하나 — 시각은 호출 쪽이 세트 상대로 바꿔 넘긴다. */
+    /** `rep_form` 블록(spec §62a) — 인코딩은 [RepFormLog.toJson] 하나다(재생기도 같은 함수를 쓴다). */
+    fun repForm(log: RepFormLog): String = log.toJson()
+
     private fun cycle(sb: StringBuilder, c: RepCycle) {
         sb.append("{\"t_ms\":").append(c.tMs).append(",\"start_t_ms\":").append(c.startMs)
         sb.append(",\"min\":").append(num(c.min)).append(",\"max\":").append(num(c.max))

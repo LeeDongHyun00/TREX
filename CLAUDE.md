@@ -27,7 +27,7 @@ Android Kotlin/Jetpack Compose 운동·식단 앱. 핵심 기능은 **카메라 
 
 기능을 추가하면 `KOTLIN_PORTING_SPEC.md` 에 절을 추가하는 것이 저장소 관례다. 근거(왜)를 반드시 남긴다.
 
-**규칙셋의 실제 분포** — 세 파일이 합쳐진다: `rules_mp_v0.json`(AIHub 서서) + `rules_floor_v0.json`(바닥) + **`rules_phone_v0.json`(AIHub 밖, §62 — 손으로 관리, 지금 beta 1: 스쿼트 발끝 방향)**. `PostureRuleSet.plusPhone` 이 붙이고 `rules_version` 은 `mp_v0.1+floor_v0.4+phone_v0.1`. `rules_mp_v0.json` 141규칙 = ship **51** · beta **20** · exclude **70**(절반이 못 보는 규칙, §32 게이트 이후). `rules_floor_v0.json` 14규칙/8종목은 **전부 beta**. 헤더 `counts` 는 §32 부터 `rule_confidence.py --apply` 가 실제 분포로 갱신하지만 JSON 을 손으로 고치면 다시 어긋난다 — sanity check 는 `rules` 배열 집계가 정본. ship/beta 규칙의 `confidence` 필드(정상 오탐률·검출률·AUC 95% 구간)는 **스튜디오 기준**이다(§32).
+**규칙셋의 실제 분포** — 세션 규칙셋 = `rules_mp_v0.json`(AIHub 서서) + `rules_floor_v0.json`(바닥) + **`RepFormSpecs.asRules()`(반복별 자세 검사, §62a — 코드가 정본, 스쿼트 7검사: ship 1 '무릎 안쪽 모임(반복)')**. `PostureRuleSet.plusRepForm()` 이 붙이고 스쿼트 `발과 무릎의 방향 일치` 창 규칙을 beta 로 낮춘다(`RepFormSpecs.supersedes`). `rules_version` 은 `mp_v0.1+floor_v0.4+repform_v0.1`. `rules_mp_v0.json` 141규칙 = ship **51** · beta **20** · exclude **70**(절반이 못 보는 규칙, §32 게이트 이후). `rules_floor_v0.json` 14규칙/8종목은 **전부 beta**. 헤더 `counts` 는 §32 부터 `rule_confidence.py --apply` 가 실제 분포로 갱신하지만 JSON 을 손으로 고치면 다시 어긋난다 — sanity check 는 `rules` 배열 집계가 정본. ship/beta 규칙의 `confidence` 필드(정상 오탐률·검출률·AUC 95% 구간)는 **스튜디오 기준**이다(§32).
 
 **운동 카탈로그는 AIHub 26종목**(서서 18 + 바닥 8, §56)이고 `workoutCatalog`·`ExerciseProfiles.all`·`postureExerciseMap` 이 같은 26개 이름을 갖는다. 게이트는 규칙 JSON 이 아니라 `PostureLive.kt` 의 `postureExerciseMap` + `Workout.postureSupported()`(프로필 존재 여부) 다. 종목을 늘리거나 진입 경로를 손대는 작업은 반드시 이 map 을 지난다.
 
@@ -63,6 +63,7 @@ Android Kotlin/Jetpack Compose 운동·식단 앱. 핵심 기능은 **카메라 
 - **AIHub 카메라 코드는 실제 촬영 방향이 아니다.** 서서 종목 클립의 13.7%, 케이블 종목(케이블 푸시 다운·페이스 풀·케이블 크런치)은 100% 가 카메라 C 를 등지고 찍혔다. 뷰 관련 정답은 GT 2D 어깨 순서로 보정해서 써야 한다(§33).
 - **`PoseSample.detected` 는 가시 관절 수와 무관하게 항상 true** 다(`PostureAnalyzer.kt`). 관절 11개짜리 프레임도 detected 다. "사람이 화면에 있다"의 실질 판단은 **피처가 계산됐는지**(`features.isNotEmpty()`)로 해야 한다. 이걸 혼동해 앵커 폴백이 10초 일찍 걸린 실기기 오탐이 §31a 다.
 - **극값 통계(range/min/max)는 준비 동작 하나에 뒤집힌다.** §31a 실측: 준비 구간이 포함되면 `torso_incl__range` 68.6°, 실제 운동 구간만 보면 27.4°(임계 30.85°). 집계 창은 반드시 앵커 이후여야 한다.
+- **바벨 스쿼트에는 반복별 자세 검사와 '정확' 횟수가 있다(§62a, 설계 §21).** `RepFormEvaluator` 가 카운터의 사이클 창(상단·바닥·사이클) 안에서만 재고, 시작 자세(첫 상단 창)를 개인 기준으로 쓴다. ship 검사 위반 회는 **목표 진행에서 빠진다**(반복 수는 그대로, HUD "반복 N · 정확 M"). 세트 평균 규칙에 검사를 더하면 안 된다 — 10:52 세트에서 세트 평균 무릎 규칙이 서 있는 프레임을 보고 4번 오탐했다. 재생기가 같은 평가기를 돌리므로 `RepForm.kt`·`RuleTypes.kt` 는 안드로이드 의존을 가지면 안 된다(규칙셋 연결은 `RepFormRules.kt`).
 - **바벨 스쿼트 카운트에는 반복 판별 게이트가 있다(§62).** `knee_mean` 사이클이 나도 그 창에서 `knee_maxside` 스윙이 35° 미만이면 세지 않고 `reps.rejected` 에 남긴다(한쪽 무릎 들기 차단). 재생기·테스트의 두 인자 `onFrame(t, v)` 는 판별 없이 센다 — **파리티를 볼 때는 반드시 셋째 인자를 준다**(`Replay.kt` 가 그렇게 한다). 자세 규칙은 판별 신호가 아니다.
 - **렙 카운터는 beta.** 실기기 라벨 세트에서 12개 중 9개 검출. KDoc 이 "±1 오차를 약속에 포함하지 않는다"고 못박았다. 게다가 **세트의 마지막 렙을 구조적으로 놓친다** — 상단 확정에 다음 하강이 필요하기 때문이다(§31a 로그에서 6사이클 중 5개만 카운트). 카운트를 의사결정 근거로 승격시키는 기능은 이 오차를 사용자에게 약속하게 된다.
 - **임계값은 스튜디오(AIHub) 기준이고 §9 재보정 전이다.** 그래서 점수는 분수로 표기하고, beta 는 참고이며, TRACK 은 점수가 없다. ship 규칙은 종목당 **0~3개**뿐이라(4개인 종목 없음) 한 건 위반이 점수의 3분의 1~전부를 깎는다. §32 실측: ship 규칙의 정상 클립 오탐률 중앙값 0.13, 오탐률 ≤ 10% 인 규칙은 55건 중 15건 — 스튜디오에서도 §9 출시 기준을 못 넘는다.

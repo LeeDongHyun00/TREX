@@ -271,10 +271,13 @@ class PoseFrame(val joints: Map<String, Vec3?>, up: Vec3 = Vec3(0f, 1f, 0f)) {
             if (heel != null && foot != null) {
                 val len = (heel - foot).norm
                 if (len > 3f) put("heel_lift_$side", h(heel - foot) / len)
-                // spec §62 발끝 방향: 뒤꿈치→발끝을 수평면에 눕혀 몸 앞 방향(z)과 이루는 각(°), 바깥쪽이 +(knee_out 과 같은 부호 규약).
-                // AIHub 스쿼트 조건에 없는 항목 — 임계값은 폰 라벨 세트로 만든다. 수평 발 길이 3 cm 미만(발이 카메라를 정확히 향해 z 만 남는 경우는
-                // 아니고, 관절이 겹친 붕괴)이면 계산하지 않는다.
-                val fd = bodyDir(flat(foot - heel))
+            }
+            // spec §62 발끝 방향: 발목→발끝을 수평면에 눕혀 몸 앞 방향(z)과 이루는 각(°), 바깥쪽이 +(knee_out 과 같은 부호 규약).
+            // 뒤꿈치가 아니라 발목에서 재는 이유: 정면·바닥에 놓은 폰에서 오른 뒤꿈치(30)가 91% 프레임에서 안 보였다(실기기 2026-09-25) —
+            // 발목은 96%. 발목이 뒤꿈치보다 조금 앞·위라 각도에 사람별 상수 편향이 있지만 시작 자세 대비 검사(RepForm)에서 상쇄된다.
+            // 수평 발 길이 3 cm 미만(관절이 겹친 붕괴)이면 계산하지 않는다.
+            if (ankle != null && foot != null) {
+                val fd = bodyDir(flat(foot - ankle))
                 if (fd != null && hypot(fd.x, fd.z) >= 3f) put("toe_out_$side", (atan2(sign * fd.x, fd.z) * RAD).toFloat())
             }
             if (hip != null && knee != null && ankle != null) {
@@ -321,6 +324,12 @@ class PoseFrame(val joints: Map<String, Vec3?>, up: Vec3 = Vec3(0f, 1f, 0f)) {
             if (kneeMid != null) put("hip_below_knee", h(hipMid - kneeMid) / legLen)
         }
         if (lAn != null && rAn != null && hipW != null) put("stance_w", (lAn - rAn).norm / hipW)
+        // §62a 발 너비 — 어깨 너비 기준(수평). stance_w 의 골반 정규화는 골반 폭이 좁고 흔들려 서 있을 때도 ×0.78 헛경보, 바닥에서 두 배로 뛰었다.
+        // 어깨는 안정적이고 "발 간격 = 어깨 너비" 가 사용자 공식이라 분모를 어깨로 둔다. 같은 높이의 수평 거리라 원근이 상쇄된다.
+        if (lAn != null && rAn != null && lSh != null && rSh != null) {
+            val sw = flat(lSh - rSh).norm
+            if (sw >= 15f) put("stance_sh", flat(lAn - rAn).norm / sw)
+        }
 
         // §28b: heel_lift = 발 내부 기하 좌우 평균 — '발바닥 지면 고정' 재설계 피처 (heel 29/30 필요)
         run {

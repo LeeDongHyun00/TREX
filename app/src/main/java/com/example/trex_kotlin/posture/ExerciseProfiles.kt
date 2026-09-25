@@ -103,7 +103,7 @@ object ExerciseProfiles {
             PlankGeometry.HEAD->"고개 기울기"; PlankGeometry.NECK->"목 정렬"
             "head_ground"->"머리 들림(근사)"; "head_trunk_ang"->"투영 고개각"
             "hand_shoulder_off"->"손 위치(투영)"; "shoulder_asym2d"->"어깨 높이 차이"
-            "stance_w","ankle_gap2d"->"다리 간격"; "toe_out"->"발끝 방향"; else->base
+            "stance_w","ankle_gap2d"->"다리 간격"; "stance_sh"->"발 너비(어깨 기준)"; "toe_out"->"발끝 방향"; else->base
         }
         val angle=base in setOf("knee","knee_ang","hip","hip_ang","elbow","elbow_ang","upperarm_vert","torso_pitch","torso_roll","head_trunk_ang",PlankGeometry.HEAD,PlankGeometry.NECK)
         ComparisonMetric(feature,side+label,if(angle) "°" else "정규화 비율",if(angle)8f else .06f)

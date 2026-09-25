@@ -302,7 +302,8 @@ data class PostureSetReport(
                     kind = kind,
                     direction = direction,
                     observation = rr.measurement ?: observation,
-                    fix = if (rr.rule.kind == "window") fix else "",
+                    // 반복 창 검사(§62a)는 검사가 가진 교정문 — 관찰문은 measurement 에 이미 방향이 들어 있다
+                    fix = when (rr.rule.kind) { "window" -> fix; "rep_form" -> RepFormSpecs.checkOf(rr.rule.id)?.fix ?: fix; else -> "" },
                     note = rr.measurement ?: CoachCues.measurementNote(rr.rule),
                     cvAuc = rr.rule.cvAuc,
                     abstainReason = rr.abstainReason,

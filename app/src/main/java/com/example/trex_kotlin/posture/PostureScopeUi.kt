@@ -34,7 +34,7 @@ object PostureScopeCache {
                 PostureRuleSet("${standing.version}+${floor.version}", standing.generated, standing.rules + floor.rules)
             } catch (_: Throwable) {
                 standing
-            }.plusPhone(context)   // spec §62 — 폰 규칙의 조건도 범위 문장('검증 중')에 들어가야 한다
+            }.plusRepForm()   // spec §62a — 반복 검사의 조건도 범위 문장에 들어가야 한다
         }.getOrNull()
         if (loaded != null) merged = loaded
         return loaded

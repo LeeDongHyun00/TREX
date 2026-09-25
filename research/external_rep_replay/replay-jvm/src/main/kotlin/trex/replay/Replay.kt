@@ -4,6 +4,7 @@ import com.example.trex_kotlin.posture.Joints
 import com.example.trex_kotlin.posture.PoseFrame
 import com.example.trex_kotlin.posture.RepCounter
 import com.example.trex_kotlin.posture.RepCycle
+import com.example.trex_kotlin.posture.RepFormSpecs
 import com.example.trex_kotlin.posture.RepPolarity
 import com.example.trex_kotlin.posture.RepSignal
 import com.example.trex_kotlin.posture.RepSignals
@@ -295,6 +296,9 @@ fun run(job: Job, meta: Map<String, String>, frames: List<InputFrame>, stats: Fr
         return json(mapOf("id" to job.id, "error" to "no polarity for ${job.exercise} (새 코어 극성 미정 — 재생하지 않음)"))
     }
     val rc = counterFor(job) ?: return json(mapOf("id" to job.id, "error" to "no counter for ${job.exercise}"))
+    // 반복별 자세 검사(spec §62a) — 앱 세션 구성(live, 신호 교체 없음)에서만 앱과 같은 평가기를 나란히 돌린다. Gate A 가 이 검사의 오탐·검출을 잰다.
+    val rf = if (job.mode == "live" && job.feature == null) RepFormSpecs.evaluatorFor(job.exercise, rc) else null
+    var rejectedSeen = 0
     val repTimes = ArrayList<Long>()
     val cycles = ArrayList<String>()
     // ROM 판정은 셋으로 센다: 유효(true)·미달(false)·미판정(null = 그 신호에 ROM 기준이 없다).
@@ -329,7 +333,13 @@ fun run(job: Job, meta: Map<String, String>, frames: List<InputFrame>, stats: Fr
             ?.append(SERIES_FEATURES.joinToString("\t") { features[it]?.toString() ?: "" })?.append('\n')
         // 반복 판별 신호(spec §62)도 앱과 같은 프레임 값으로 준다 — 없는 종목은 null(종전과 같다). 파리티가 이 인자에 기댄다.
         val identity = rc.signal.identityFeature?.let { signalValue(features, it) }
-        if (rc.onFrame(frame.tMs, value, identity)) {
+        rf?.onFrame(frame.tMs, features)   // 앱과 같은 순서: 카운터보다 먼저
+        val fired = rc.onFrame(frame.tMs, value, identity)
+        if (rf != null && rc.rejectedReps.size > rejectedSeen) {
+            for (i in rejectedSeen until rc.rejectedReps.size) rf.onRejected(rc.rejectedReps[i].tMs)
+            rejectedSeen = rc.rejectedReps.size
+        }
+        if (fired) {
             // 새 코어는 첫 두 사이클을 한 프레임에 함께 발표한다 — 발표된 사이클마다 한 번씩 센다(앱이 숫자를 올리는 방식).
             val published = rc.newlyPublished.ifEmpty { null }
             if (published == null) {
@@ -338,7 +348,9 @@ fun run(job: Job, meta: Map<String, String>, frames: List<InputFrame>, stats: Fr
                 validSeq += ok?.toString() ?: "null"
                 repTimes += frame.tMs
                 cycles += "[${num(rc.lastCycleMin)},${num(rc.lastCycleMax)},${ok ?: "null"}]"
+                rf?.onCycle(frame.tMs, rc.lastCycleMin, rc.lastCycleMax)
             } else for (c in published) {
+                rf?.onCycle(c.tMs, c.min, c.max)
                 val ok = rc.signal.isValidRep(c.min, c.max)
                 when (ok) { true -> valid++; false -> invalid++; null -> unjudged++ }
                 validSeq += ok?.toString() ?: "null"
@@ -379,6 +391,11 @@ fun run(job: Job, meta: Map<String, String>, frames: List<InputFrame>, stats: Fr
         "identityMinAmp" to rc.signal.identityMinAmp,
         "rejected" to Raw(rc.rejectedReps.joinToString(",", "[", "]") { "[${it.tMs},${num(it.min)},${num(it.max)},${num(it.identitySwing)}]" }),
         "identitySwing" to Raw(rc.identitySwings.joinToString(",", "[", "]") { it?.let(::num) ?: "null" }),
+        // 반복별 자세 검사(§62a) — 세트 로그 rep_form 블록과 같은 인코딩(SetLogJson.repForm), 시각은 캡처 상대 그대로
+        "repForm" to rf?.let { Raw(it.summary().toLog(0L).toJson()) },
+        "repFormCorrect" to rf?.summary()?.correct,
+        "repFormFlags" to rf?.summary()?.flagLine(),
+        "repFormLines" to rf?.summary()?.lines()?.joinToString(" | "),
     )
     out.putAll(parity(meta, rc, validSeq))
     return json(out)

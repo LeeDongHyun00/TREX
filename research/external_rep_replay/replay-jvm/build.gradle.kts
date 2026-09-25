@@ -16,7 +16,8 @@ val appRoot = rootDir.resolve("../../../app/src")
 val postureMain = appRoot.resolve("main/java/com/example/trex_kotlin/posture")
 val postureTest = appRoot.resolve("test/java/com/example/trex_kotlin/posture")
 // PostureView.kt = ViewEstimator.frameFeatures — 앱 PostureAnalyzer 가 프레임 피처에 더하는 방향 피처(--dump-features 가 앱 피처 사전 전체를 낸다)
-val engineFiles = listOf("PostureCore.kt", "RepCounter.kt", "ReturnRepTracker.kt", "RepHysteresis.kt", "PostureView.kt")
+// RepForm.kt(반복별 자세 검사, spec §62a) + RuleTypes.kt(그것이 쓰는 RuleStatus·Verdict) — 규칙셋 연결(RepFormRules.kt)은 안드로이드 의존이라 뺀다
+val engineFiles = listOf("PostureCore.kt", "RepCounter.kt", "ReturnRepTracker.kt", "RepHysteresis.kt", "PostureView.kt", "RepForm.kt", "RuleTypes.kt")
 
 sourceSets {
     main {
