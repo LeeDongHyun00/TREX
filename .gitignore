@@ -52,6 +52,8 @@ Thumbs.db
 # Research outputs (AIHub parsed tables, experiment results)
 research/aihub_fitness/outputs*/
 research/aihub_fitness/models/
+# 카메라 관측성 연구 산출물 — 수백 MB, REHAB24-6(CC BY-NC) 파생 캡처 포함이라 커밋·공개 금지
+research/camera_observability/outputs/
 __pycache__/
 *.pyc
 venv/
