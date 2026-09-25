@@ -61,6 +61,7 @@ object RuleHighlight {
         "heel_lift" to FEET, "foot_pitch" to FEET + ANKLES, "foot_y" to FEET, "foot" to FEET,
         "toe_out" to FEET + ANKLES,   // §62 발끝 방향
         "stance_sh" to ANKLES + SHOULDERS,   // §62a 발 너비(어깨 기준)
+        "stance_2d" to ANKLES + SHOULDERS,   // §62a 후속 3 이미지 2D 발 너비
         "shoulder_ground" to SHOULDERS, "shoulder_dev" to SHOULDERS + HIPS + WRISTS,
         "shoulder_arm_ang" to HIPS + SHOULDERS + ELBOWS, "shoulder" to SHOULDERS,
         "hip_asym" to HIPS, "spine" to TORSO,

@@ -8,6 +8,7 @@ import com.example.trex_kotlin.posture.RepFormSpecs
 import com.example.trex_kotlin.posture.RepPolarity
 import com.example.trex_kotlin.posture.RepSignal
 import com.example.trex_kotlin.posture.RepSignals
+import com.example.trex_kotlin.posture.Stance2d
 import com.example.trex_kotlin.posture.Vec3
 import com.example.trex_kotlin.posture.ViewEstimator
 import com.example.trex_kotlin.posture.checkUpSanity
@@ -194,7 +195,9 @@ fun frameFeatures(frame: CaptureFrame, stats: FrameStats): Map<String, Float>? {
     val sanity = checkUpSanity(joints, base)
     val up = if (sanity.flipped) (base * -1f).unit() ?: base else base
     if (sanity.flipped) stats.upFlipped++
-    return PoseFrame(joints, up).features() + ViewEstimator.frameFeatures(joints)
+    // 앱 PostureAnalyzer 와 같은 순서·같은 함수 — 이미지 2D 발 너비(§62a 후속 3)
+    val xy = FloatArray(MP_LANDMARK_COUNT * 2) { k -> frame.image[k / 2]!![k % 2] }
+    return PoseFrame(joints, up).features() + ViewEstimator.frameFeatures(joints) + Stance2d.features(xy, vis, MIN_VISIBILITY)
 }
 
 /**

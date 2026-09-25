@@ -231,3 +231,6 @@ versionCode 5 / versionName `1.2.0-repval.1`(`4a50a34`) 빌드. 트리거 worktr
 
 ## 빌드 #8 (`0de7db4` + §21.8 — 발끝 위반 반복의 발 너비 유보)
 `:app:testDebugUnitTest` 373 · `:app:assembleDebug` 성공 · replay-jvm 50. 재생(11:37): 발 너비 오탐 4 → 0(유보 6), 정확 8/10 그대로.
+
+## 빌드 #9 (`2ccfcb8` + §21.9 — 이미지 2D 발 너비 `stance_2d`)
+`:app:testDebugUnitTest` 374 · `:app:assembleDebug` 성공 · replay-jvm 50(소스 목록 +`Stance2d.kt`). 12:19 검증 세트 랜드마크 경로 재생: 발 너비 오탐 0/8·검출 2/2.

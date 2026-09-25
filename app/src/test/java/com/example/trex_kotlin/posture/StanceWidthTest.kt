@@ -31,6 +31,23 @@ class StanceWidthTest {
     }
 
     @Test
+    fun image2dRatioUsesAnkleAndShoulderXGaps() {
+        // §62a 후속 3: 정규화 이미지 x 만 쓴다 — 발목 0.3~0.7(폭 0.4), 어깨 0.4~0.6(폭 0.2) → 2.0. y·깊이는 무관
+        val xy = FloatArray(66); val vis = FloatArray(33) { 1f }
+        fun put(i: Int, x: Float, y: Float) { xy[i * 2] = x; xy[i * 2 + 1] = y }
+        put(11, 0.4f, 0.3f); put(12, 0.6f, 0.3f); put(27, 0.3f, 0.9f); put(28, 0.7f, 0.9f)
+        assertEquals(2.0f, Stance2d.of(xy, vis, 0.5f)!!, 1e-5f)
+        assertEquals(2.0f, Stance2d.features(xy, vis, 0.5f).getValue("stance_2d"), 1e-5f)
+        // 발목 하나라도 가시성 미달이면 없음(유보)
+        vis[28] = 0.2f
+        assertNull(Stance2d.of(xy, vis, 0.5f))
+        vis[28] = 1f
+        // 어깨가 겹치면(옆모습) 없음
+        put(12, 0.42f, 0.3f)
+        assertNull(Stance2d.of(xy, vis, 0.5f))
+    }
+
+    @Test
     fun abstainsWhenShouldersCollapse() {
         // 어깨 너비 15 cm 미만(관절 겹침)이면 비율을 만들지 않는다
         assertNull(frame(40f, shoulderGap = 10f).features()["stance_sh"])

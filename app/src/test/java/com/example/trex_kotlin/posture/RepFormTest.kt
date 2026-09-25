@@ -20,7 +20,7 @@ class RepFormTest {
     private class Frames(private val ev: RepFormEvaluator) {
         var t = 0L
         fun frame(knee: Float, stance: Float = 1.0f, toe: Float = 20f, kneeOut: Float = 0.15f, torso: Float = 5f, maxside: Float = knee + 3f) {
-            ev.onFrame(t, mapOf("knee_mean" to knee, "knee_maxside" to maxside, "stance_sh" to stance, "toe_out_maxside" to toe,
+            ev.onFrame(t, mapOf("knee_mean" to knee, "knee_maxside" to maxside, "stance_2d" to stance, "toe_out_maxside" to toe,
                 "knee_out_mean" to kneeOut, "torso_incl" to torso))
             t += 300
         }
@@ -45,7 +45,7 @@ class RepFormTest {
         val ev = evaluator(); val f = Frames(ev)
         val r1 = f.rep(ev = ev)
         assertNotNull(ev.baseline)
-        assertEquals(1.0f, ev.baseline!!.getValue("stance_sh"), 1e-4f)
+        assertEquals(1.0f, ev.baseline!!.getValue("stance_2d"), 1e-4f)
         assertEquals(20f, ev.baseline!!.getValue("toe_out_maxside"), 1e-4f)
         // 시작 자세 검사(절대 띠) 두 개가 한 번 판정됐다 — 둘 다 정상
         assertEquals(2, ev.startOutcomes.size)
@@ -59,15 +59,12 @@ class RepFormTest {
         assertEquals(1.5f, r2.flagged[0].value!!, 1e-3f)
         assertFalse(r2.outcomes.any { it.check.id.contains("무릎") && it.verdict == Verdict.VIOLATION })
         assertTrue(r2.correct)   // beta — 정확은 깎이지 않는다(원칙 #2)
-        // 발끝을 벌린(+18°) 반복 — 발끝이 걸리고, 발 너비는 **유보**(§21.8: 발끝 회전이 발목 간격을 오염시킨다 — 11:37 세트 7·8회 ×1.8 헛경보)
+        // 발을 넓히고 발끝도 벌린(+18°) 반복 — 둘 다 걸린다(2D 발 너비는 발끝 회전에 불변이라 §21.8 의 유보가 필요 없다, §21.9)
         val r3 = f.rep(stance = 1.5f, toe = 38f, ev = ev)
-        assertEquals(listOf("repform|바벨 스쿼트|발끝 방향"), r3.flagged.map { it.check.id })
-        assertEquals(18f, r3.flagged[0].value!!, 1e-3f)
-        val st = r3.outcomes.first { it.check.id == "repform|바벨 스쿼트|발 간격" }
-        assertEquals(Verdict.ABSTAIN, st.verdict)
-        assertEquals("발끝 위반으로 측정 무효", st.abstainReason)
-        // 좁힘·안쪽도 방향을 갖는다
-        val r4 = f.rep(stance = 0.7f, ev = ev)
+        assertEquals(listOf("repform|바벨 스쿼트|발 간격", "repform|바벨 스쿼트|발끝 방향"), r3.flagged.map { it.check.id })
+        assertEquals(18f, r3.flagged[1].value!!, 1e-3f)
+        // 좁힘·안쪽도 방향을 갖는다 (띠 0.7~1.4)
+        val r4 = f.rep(stance = 0.6f, ev = ev)
         assertEquals(listOf(FormDirection.LOW), r4.flagged.map { it.direction })
         assertEquals(FormDirection.LOW, f.rep(toe = 8f, ev = ev).flagged.single().direction)
     }
@@ -171,13 +168,13 @@ class RepFormTest {
     fun setLevelRuleResultsFollowTheFloorRepConvention() {
         val ev = evaluator(); val f = Frames(ev)
         f.rep(ev = ev)
-        repeat(4) { f.rep(stance = 1.4f, ev = ev) }   // 5회 중 4회 넓음
+        repeat(4) { f.rep(stance = 1.6f, ev = ev) }   // 5회 중 4회 넓음
         f.rep(toe = 38f, ev = ev)                      // 6회 중 1회 발끝
         val s = ev.summary()
         val rules = RepFormSpecs.asRules().associateBy { it.id }
         val stance = s.ruleResult(rules.getValue("repform|바벨 스쿼트|발 간격"))!!
         assertEquals(Verdict.VIOLATION, stance.verdict)
-        assertTrue(stance.measurement!!, stance.measurement!!.contains("5회 중 넓음 4회"))   // 발끝을 벌린 1회는 발 너비 유보 → 판정 5회
+        assertTrue(stance.measurement!!, stance.measurement!!.contains("6회 중 넓음 4회"))
         assertTrue(stance.measurement!!.startsWith("참고 · 발 너비"))
         val toe = s.ruleResult(rules.getValue("repform|바벨 스쿼트|발끝 방향"))!!
         assertEquals(Verdict.OK, toe.verdict)   // 1회는 max(2, 34%) 미만
@@ -239,7 +236,7 @@ class RepFormTest {
         assertEquals("발끝이 시작보다 안으로 모였어요 — 무릎이 따라 움직였어요. 발끝을 시작 자세로 되돌리세요.", e.message)
         // 방향이 섞인 검사는 방향별로 센다
         f.rep(toe = 38f, ev = ev)
-        assertEquals("무릎 안쪽 2회 · 발끝 안쪽 2회 · 바깥 1회", ev.summary().flagLine())   // 발 너비는 발끝 위반 반복에서 유보
+        assertEquals("무릎 안쪽 2회 · 발 너비 넓음 2회 · 발끝 안쪽 2회 · 바깥 1회", ev.summary().flagLine())
     }
 
     @Test
