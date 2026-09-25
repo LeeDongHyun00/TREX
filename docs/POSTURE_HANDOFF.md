@@ -386,7 +386,7 @@ WorkoutHistoryItem.postureCorrection → 기록 화면
 - **사용자 결정 대기**(설계 §15): #15 세트 경계 해법, #16 1회 세트 = 0회, #17 반복당 8 s 초과, #19 신뢰 등급 표시, #20 RepCount 라이선스, #21 사람·기기(폰 USB), #22 바닥 참고 음성. (#18 교대 정의·#23 런지 자동 진행은 같은 날 결정됐다 — 아래 후속 2.)
 - **폰이 필요한 것**: AIHub 이미지 폰 재생, Gate A(수집 절차 `research/external_rep_replay/REP_VALIDATION.md`), Gate B.
 
-## 2026-09-24 (후속 2) — 런지류 "좌우 한 번씩 = 1회" (§59, 미커밋)
+## 2026-09-24 (후속 2) — 런지류 "좌우 한 번씩 = 1회" (§59, `3e77c60` — PC 빌드 #2 에서 348개 통과)
 
 - **사용자 결정**: "런지 자동진행 유지하고 한쪽 1회하고 다른 한쪽 안했으면 다른쪽도 진행한다음 두 쪽 진행이 전부 완료되어야지 1세트로 해" → 런지·바벨 런지·사이드 런지·크로스 런지는 **왼 1 + 오른 1 = 1회**(목표 10회 = 20걸음), 자동 진행 유지(설계 §15 #18·#23 결정). 옛 준비 안내 "한쪽 1회를 1회로" 는 폐기.
 - **구현**: 카운터는 그대로(걸음마다 한 사이클). 새 `posture/RepUnit.kt` 의 `RepUnitAccumulator` 가 두 사이클을 1회로 묶고, 표시 수·숫자 음성·진행·자동 넘김·리포트·템포·예상 시간(런지 1회 8 s)이 쌍 단위다. '반대쪽 차례' 는 **화면에만**(쪽을 모른다 — 원칙 #6). 컬·니업은 평균 신호라 사이클 = 1회 그대로.
@@ -395,3 +395,47 @@ WorkoutHistoryItem.postureCorrection → 기록 화면
 - **연구**(설계 §18, MM-Fit 개발 데이터): 쌍 표시 floor(걸음/2) 는 걸음 단위만큼 정확하고(새 코어 0.98), MediaPipe 좌우 판별(0.983)은 확신 있는 이름 바뀜이라 카운트·"왼쪽 차례" 에 쓰지 않는다(#24). 한쪽을 몰아서 하는 사용자 빈도·B 대각 판별은 Gate A.
 - **연구 도구**: 채점기는 런지를 걸음·쌍 두 단위로 채점하고(Gate B 는 둘 다 통과해야), 쌍 자가 라벨은 사이클 정답(`truthReps`)을 두지 않는다(run_replay 가 짝 없는 한쪽 세트를 과다로 채점하지 않게). 프로토콜은 런지 10걸음 = 5회, 왼·오른 따로 집계, Gate A 에 `sideblock`·`altcurl`(판정 밖), 컬 판정 세트는 양팔 동시.
 - **남은 것**: PC `:app:testDebugUnitTest`·`:app:assembleDebug`(`PostureLive.kt`·`LiveWorkoutHud.kt`·`SessionScreens.kt`·`TrexAppState.kt` 는 조각 컴파일만), **쌍 위상 밀림 대책**(세트 앞 헛사이클이 홀수면 한쪽만 하고도 1회가 오르고 마지막 쌍의 둘째 쪽 전에 자동 진행 — 사용자 규칙 위반, 막는 장치 없음, 설계 §15 #26 · Gate A), 번갈아 하는 컬의 범위(#25 — 컬 Gate B 판정은 양팔 동시만), 저장된 런지 페이스(옛 기본 4 s 가 이제 쌍당 4 s 로 읽힌다) 이관 여부, `run_replay.py` 의 쌍 단위 출력.
+
+## 2026-09-25 — 렙 검증 모드와 Gate A 환경 (§60·§61, 브랜치 `claude/rep-validation-env`)
+
+**이어받는 세션은 여기부터.** 이 절은 클라우드 세션 `session_019m8EMMH9piZAV5Eo4qDAG8` 의 인수인계다.
+
+### 브랜치
+- `claude/check-exercise-count-bi05w4` — §56~§60 까지(런지 좌우 짝, REHAB 판정). 푸시 완료, PC 빌드 #2 통과.
+- **`claude/rep-validation-env`** — 위에서 갈라져 병합까지 포함한 **최신 작업 브랜치**. 이어서 할 일은 전부 여기서 한다.
+  - `2dd9fb2` 앱 검증 모드(아래), `3712072`·`d52b619` PC 파이프라인·런북·spec §61, `c2160fb` 재생기 최신 검사·윈도우 테스트 수정,
+    `4a50a34` **versionCode 5 / versionName 1.2.0-repval.1**(아래 '폰' 참고).
+- PR 은 만들지 않았다.
+
+### 무엇이 있나
+- **앱 검증 모드**(`posture/RepValidation.kt`): 폰의 `/sdcard/Android/data/com.example.trex_kotlin/files/rep_validation.on` 이 있으면 켜진다.
+  자동 진행 끔(✓ 로만 세트 끝) · 음성 끔(끝나면 원래대로) · 횟수 숫자 "검증 중" · 배너 · 세트 로그에 `validation`·`image`·프레임별 `xy`·`w`·`up`.
+  꺼져 있으면 로그가 바이트 그대로(골든 `setlog_s58_fixture.txt` 앞 3줄 불변, 넷째 줄이 검증 모드).
+- **PC 파이프라인**(`research/external_rep_replay/`, README §12): `pull_phone.py`(adb 찾기·회수·`validation on|off|status`, 기기에서 지우는 명령 없음),
+  `gate_a.py run|dry-run`, `make_phone_fixture.py`, `Replay --dump-features`. 절차서 **`GATE_A_RUNBOOK.md`**.
+- 검증: 앱 유닛 테스트 350/350(PC 빌드 #3), 드라이런 18/18(리눅스·윈도우), setlog_captures 49/49, pull_phone 20/20, score_phone_reps 42/42, replay-jvm 46/46.
+
+### 폰 (SM-N976N, PC 에 USB 연결됨)
+- 폰에는 다른 브랜치 `codex/posture-action-model-preview`(`8907f0f`, 동작 모델 시험, versionCode 4)의 앱이 깔려 있었다.
+  검증 빌드(versionCode 3)는 `INSTALL_FAILED_VERSION_DOWNGRADE` 로 거부 → **사용자 결정: versionCode 5 로 올려 `install -r`**(데이터 유지, 동작 모델 시험 기능은 이 빌드에 없어 빠짐,
+  그 빌드의 기록 필드 `postureRepsUnknown` 은 기록을 다시 저장할 때 빠질 수 있음).
+- 백업: PC worktree 의 `data\phone\backup-20260924T1530\`(세트 로그 5개 + shared_prefs 4개). 빌드 #4 가 새 백업을 하나 더 만든다. `data/` 는 ignore 대상.
+- **빌드 #4(설치 포함)는 요청만 해 둔 상태**다. 결과는 `research/external_rep_replay/results/pc_build_check.md` 의 "## 빌드 #4" 절로 이 브랜치에 푸시된다.
+  PC 작업은 원격 세션 `session_01Qz72v6fTH4mEnDPneuYUs6`(worktree `../trex-repcheck`)이 트리거로 받아 한다. 데스크톱에서 직접 이어간다면 트리거 없이 그 worktree 에서 명령을 직접 돌리면 된다.
+- 검증 모드 표시 파일은 **꺼 둔 상태**다(평소 운동에 영향이 없게).
+
+### 바로 다음에 할 일
+1. `git fetch && git checkout claude/rep-validation-env && git pull` 후 `pc_build_check.md` 의 빌드 #4 절 확인. 없으면(미실행) 직접:
+   `gradlew.bat :app:testDebugUnitTest :app:assembleDebug` → 백업(`GATE_A_RUNBOOK.md` §0) → `adb install -r app\build\outputs\apk\debug\app-debug.apk`(**uninstall·`-d` 금지**).
+   설치 뒤 `adb shell dumpsys package com.example.trex_kotlin | findstr version` 이 versionCode 5, 앱 실행·크래시 없음, 로그 크기 보존 확인.
+2. 재생기: 브랜치를 바꾸면 `gate_a.py` 가 "재생기가 소스보다 오래됐다" 로 멈춘다 — `gradlew.bat -p research\external_rep_replay\replay-jvm test installDist`.
+3. 파일럿 → Gate A 세션: `GATE_A_RUNBOOK.md` §1 순서(`pull_phone.py validation on` → `rep_validation_plan.py --csv pilot|gateA` → 세트 → `pull_phone.py pull` → **`validation off`**) → `gate_a.py run`.
+   보고서의 프레이밍 표(세로 촬영 하체 잘림, §60)가 서비스 트랙 (A) 프레이밍 게이트의 첫 근거가 된다.
+4. 서비스 트랙(설계 §19.3, 전부 **사전 등록 후** 구현): (A) 프레이밍 게이트, (B) 세트별 적응 게이트 `clamp(k × 첫 쌍 진폭, h_min, 35°)`, (C) 시작 자세 게이트.
+   REHAB 은 원인까지 본 자료라 다시 쓰면 새 사전 등록 1회·"반개발 자료" 표시. 서비스 판정은 Gate B 에서만.
+
+### 이 세션에서 내린 판단
+- 검증 모드는 화면 메뉴가 아니라 표시 파일 — 일반 사용자가 켤 길이 없어야 하고, 검증은 어차피 USB.
+- 좌표는 소수 4자리, 미검출 프레임은 키 생략(null 이 아니라). 월드 좌표는 MediaPipe 원값(m, 원부호) — 앱 피처용 cm·부호 반전 좌표가 아니다.
+- 재생기 최신 여부는 jar 시각이 아니라 `installDist` 마다 새로 쓰는 `lib/.built` 로 본다(gradle 은 내용이 같으면 jar 를 다시 쓰지 않는다).
+- 이 컨테이너의 스크래치 JVM 하네스(안드로이드 없는 posture 컴파일)는 클라우드 전용이다 — 데스크톱은 `gradlew :app:testDebugUnitTest` 를 직접 돌린다.
