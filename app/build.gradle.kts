@@ -14,8 +14,8 @@ android {
         applicationId = "com.example.trex_kotlin"
         minSdk = 26
         targetSdk = 36
-        versionCode = 3
-        versionName = "1.1.0-preview.2"
+        versionCode = 5
+        versionName = "1.2.0-repval.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
