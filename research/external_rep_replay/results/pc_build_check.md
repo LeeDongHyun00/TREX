@@ -218,3 +218,13 @@ versionCode 5 / versionName `1.2.0-repval.1`(`4a50a34`) 빌드. 트리거 worktr
 | `run_replay.py --configs live` (오늘 4세트) | 파리티 0/0 · 6/6 · 11 vs 12(의도된 기각) · 7/7. `repForm`: 설계 §21.5 |
 
 깨졌던 것과 원인: (1) 재생기 컴파일 — `RepForm.kt` 가 `PostureRule`·`RuleResult`(안드로이드·org.json 의존 파일)를 써서 → 규칙셋 연결을 `RepFormRules.kt` 로 떼고 `RuleStatus`·`Verdict`·`Direction` 을 `RuleTypes.kt` 로 옮김. (2) 테스트 픽스처 — 바닥 창(최소 + 진폭/3)이 110° 하강 프레임을 포함해 무릎 평균이 임계를 넘음 → 픽스처를 실제처럼(굽힘과 함께 무릎값이 변함) 고침. (3) 무릎 과도 벌림 0.25 가 정상 반복(0.34~0.35)에 걸림 → 0.40, beta 유지.
+
+## 빌드 #7 (미커밋 작업 트리, `e594be5` + §21.7 — 서 있는 프레임 EXTREME·이월·원인 우선 문장)
+
+| 작업 | 결과 |
+|---|---|
+| `:app:testDebugUnitTest` / `:app:assembleDebug` | **성공** — **373개 전부 통과**(+`RepFormTest` 3) |
+| `-p research\external_rep_replay\replay-jvm test installDist` | **성공** — 50개 |
+| `run_replay.py --configs live` (11:37 세트, 10회) | 파리티 10/10, 정확 8, `repForm` 표 = 설계 §21.7 |
+
+깨졌던 것: 테스트 3건이 새 의미(요약 줄에 시작 자세 없음·방향별 수·이월 규칙)에 맞춰 갱신됐고, 음성 연속 판단이 `eventFor` 호출 이력에 기대던 결함을 `onCycle` 기록으로 옮겼다.

@@ -28,8 +28,8 @@ fun RepFormSummary.ruleResult(rule: PostureRule, viewOk: Boolean = true): RuleRe
     val k = bad.size
     val verdict = if (k >= maxOf(2, ceil(0.34 * n).toInt())) Verdict.VIOLATION else Verdict.OK
     val majority = bad.groupingBy { it.direction }.eachCount().maxByOrNull { it.value }?.key
-    val extreme = bad.mapNotNull { it.value }.let { vs -> if (vs.isEmpty()) null else if (majority == FormDirection.LOW) vs.min() else vs.max() }
-    val body = if (k == 0) "${n}회 모두 정상" else "${n}회 중 ${k}회 ${c.label(majority ?: FormDirection.HIGH)}" + (extreme?.let { "(최대 ${c.format(it)})" } ?: "")
+    val extreme = bad.filter { it.direction == majority }.mapNotNull { it.value }.let { vs -> if (vs.isEmpty()) null else if (majority == FormDirection.LOW) vs.min() else vs.max() }
+    val body = if (k == 0) "${n}회 모두 정상" else "${n}회 중 " + directionCounts(c, bad) + (extreme?.let { "(최대 ${c.format(it)})" } ?: "")
     return RuleResult(rule, verdict, k.toFloat() / n, n, direction = if (verdict == Verdict.VIOLATION) Direction.PRIMARY else null,
         measurement = (if (c.ship) "" else "참고 · ") + "${c.bodyPart} · $body")
 }

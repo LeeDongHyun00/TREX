@@ -17,12 +17,16 @@ import kotlin.math.abs
  * 정확(correct) = ship 검사 위반이 없는 반복. beta 는 정확을 깎지 못하고(원칙 #2), 판정 못 한 검사(ABSTAIN)는 위반이 아니다(원칙 #1).
  * 목표 진행은 정확한 회로 간다(사용자 결정 2026-09-25) — 반복 수 자체는 줄지 않는다.
  */
-enum class RepPhase { START, TOP, BOTTOM, CYCLE }
+enum class RepPhase { START, TOP, BOTTOM, CYCLE,
+    /** 반복 앞뒤로 서 있던 프레임(하강 직전 상단 + 복귀 뒤 서 있음) — 발 너비·발끝처럼 서 있을 때만 정확하고, 반복 중에 바뀌면 복귀 뒤에 드러나는 것. */
+    STANDING }
 
 /** 기준 — NONE: 절대값(모집단 띠), START_RATIO: 시작 자세 대비 비율, START_DELTA: 시작 자세 대비 차. */
 enum class RepFormRef { NONE, START_RATIO, START_DELTA }
 
-enum class RepFormStat { MEDIAN, MEAN, MAX, MIN }
+enum class RepFormStat { MEDIAN, MEAN, MAX, MIN,
+    /** 시작 기준에서 **가장 멀리 벗어난** 프레임 값(비율은 1, 차는 0 에서) — 상대 기준 검사 전용. 앞뒤 어느 쪽에서 벗어났든 잡는다. */
+    EXTREME }
 
 /** 위반 방향 — 허용 띠의 아래(LOW)·위(HIGH). */
 enum class FormDirection { LOW, HIGH }
@@ -52,6 +56,11 @@ data class RepFormCheck(
     val reason: String,
     val unit: String = "",
     val cautions: List<String> = emptyList(),
+    /**
+     * 같은 반복에서 위반이면 이 검사의 **원인**으로 보는 검사 id — 발화 문장이 원인을 먼저 말한다(§21.5 실측: 발끝을 안으로 모으면
+     * 무릎이 따라 들어와 `knee_out` 이 떨어진다. "무릎" 만 말하면 사용자가 바꾼 것(발)을 못 짚는다). 판정·정확 계산에는 영향 없다.
+     */
+    val causes: List<String> = emptyList(),
 ) {
     init { require(lo != null || hi != null) { "$id: 허용 띠가 없다" } }
 
@@ -92,7 +101,13 @@ data class RepFormOutcome(
     val abstainReason: String? = null,
 )
 
-data class RepFormRep(val index: Int, val tMs: Long, val outcomes: List<RepFormOutcome>) {
+data class RepFormRep(
+    val index: Int,
+    val tMs: Long,
+    val outcomes: List<RepFormOutcome>,
+    /** 이 반복과 직전 반복에서 연속으로 위반한 ship 검사 id — 음성은 이것에만 붙는다(한 번 튐은 화면만, 원칙 #6). 평가기가 사이클마다 채운다. */
+    val consecutiveShip: Set<String> = emptySet(),
+) {
     val flagged: List<RepFormOutcome> get() = outcomes.filter { it.verdict == Verdict.VIOLATION }
 
     /** ship 검사 위반이 없다. ABSTAIN 은 위반이 아니고(원칙 #1), beta 는 정확을 깎지 못한다(원칙 #2). */
@@ -109,10 +124,11 @@ class RepFormEvaluator(
     private val cooldownMs: Long = 12_000L,
 ) {
     private var buf = ArrayList<Pair<Long, Map<String, Float>>>()
+    /** 직전 사이클 창의 끝에서 서 있던 프레임(≤ TOP_FRAMES) — 다음 반복의 '하강 직전 상단' 에 이월한다(§21.5: 쉬지 않고 이어 하면 상단이 1프레임뿐). */
+    private var carry: List<Pair<Long, Map<String, Float>>> = emptyList()
     private val repList = ArrayList<RepFormRep>()
     private val startList = ArrayList<RepFormOutcome>()
     private val lastSpokenAt = HashMap<String, Long>()
-    private val lastViolatedRep = HashMap<String, Int>()
     private var rejectedCount = 0
     private var noTopCount = 0
 
@@ -126,7 +142,7 @@ class RepFormEvaluator(
     val startOutcomes: List<RepFormOutcome> get() = startList
 
     fun reset() {
-        buf.clear(); repList.clear(); startList.clear(); lastSpokenAt.clear(); lastViolatedRep.clear()
+        buf.clear(); carry = emptyList(); repList.clear(); startList.clear(); lastSpokenAt.clear()
         baseline = null; baselineAtMs = null; rejectedCount = 0; noTopCount = 0
     }
 
@@ -140,6 +156,7 @@ class RepFormEvaluator(
     /** 판별 게이트가 기각한 사이클 — 그 창의 프레임을 버린다(평가하지 않는다). */
     fun onRejected(endMs: Long) {
         buf.removeAll { it.first <= endMs }
+        carry = emptyList()   // 기각 창의 끝은 서 있던 프레임인지 모른다(극값을 받지 않는다) — 이월하지 않는다
         rejectedCount++
     }
 
@@ -150,7 +167,8 @@ class RepFormEvaluator(
     fun onCycle(endMs: Long, cycleMin: Float, cycleMax: Float): RepFormRep {
         val window = buf.filter { it.first <= endMs }
         buf.removeAll { it.first <= endMs }
-        val phases = segment(window, cycleMin, cycleMax)
+        val phases = segment(carry, window, cycleMin, cycleMax)
+        carry = phases.trailingStanding
         if (phases.top.isEmpty()) noTopCount++
         if (baseline == null && phases.top.size >= 2) {
             baseline = medians(phases.top)
@@ -158,7 +176,10 @@ class RepFormEvaluator(
             for (c in checks) if (c.phase == RepPhase.START) startList += evaluateStart(c)
         }
         val outcomes = checks.filter { it.phase != RepPhase.START }.map { evaluate(it, phases) }
-        val rep = RepFormRep(repList.size + 1, endMs, outcomes)
+        val prev = repList.lastOrNull()
+        val consecutive = outcomes.filter { o -> o.check.ship && o.verdict == Verdict.VIOLATION && prev?.flagged?.any { it.check.id == o.check.id } == true }
+            .map { it.check.id }.toSet()
+        val rep = RepFormRep(repList.size + 1, endMs, outcomes, consecutive)
         repList += rep
         return rep
     }
@@ -169,20 +190,19 @@ class RepFormEvaluator(
      */
     fun eventFor(rep: RepFormRep, nowMs: Long): RepFormEvent? {
         val flagged = rep.flagged
-        val consecutive = HashSet<String>()
-        for (o in flagged) if (o.check.ship) {
-            if (lastViolatedRep[o.check.id] == rep.index - 1) consecutive += o.check.id
-            lastViolatedRep[o.check.id] = rep.index
-        }
         for (o in flagged) {
             val d = o.direction ?: continue
             val c = o.check
             if (c.ship) {
-                if (c.id !in consecutive) continue
+                if (c.id !in rep.consecutiveShip) continue
                 val last = lastSpokenAt[c.id]
                 if (last != null && nowMs - last < cooldownMs) continue
                 lastSpokenAt[c.id] = nowMs
-                return RepFormEvent(c, d, "${c.text(d)}. ${c.fix}.", ship = true)
+                // 같은 반복에서 원인 검사가 위반이면 원인을 먼저 말한다 — 사용자가 바꾼 것을 짚어야 교정이 된다
+                val cause = c.causes.firstNotNullOfOrNull { id -> flagged.firstOrNull { it.check.id == id && it.direction != null } }
+                val msg = if (cause == null) "${c.text(d)}. ${c.fix}."
+                    else "${cause.check.text(cause.direction!!)} — ${c.bodyPart}이 따라 움직였어요. ${cause.check.fix}."
+                return RepFormEvent(c, d, msg, ship = true)
             }
             return RepFormEvent(c, d, c.text(d), ship = false)
         }
@@ -192,25 +212,41 @@ class RepFormEvaluator(
     fun summary(): RepFormSummary =
         RepFormSummary(checks, baseline, baselineAtMs, startList.toList(), repList.toList(), rejectedCount, noTopCount)
 
-    private class Phases(val top: List<Pair<Long, Map<String, Float>>>, val bottom: List<Pair<Long, Map<String, Float>>>, val cycle: List<Pair<Long, Map<String, Float>>>)
+    private class Phases(
+        val top: List<Pair<Long, Map<String, Float>>>,
+        val bottom: List<Pair<Long, Map<String, Float>>>,
+        val cycle: List<Pair<Long, Map<String, Float>>>,
+        /** 이 창의 끝에서 서 있던 프레임 — 다음 반복의 상단 창에 이월. */
+        val trailingStanding: List<Pair<Long, Map<String, Float>>>,
+    )
 
     /**
      * 창을 위상으로 나눈다. 상단 = 사이클 최소값 앞에서 마지막으로 서 있던 프레임(신호 ≥ 최대 − 0.22h)부터 거꾸로 ≤ 5개 —
-     * 준비 동작이 길어도 하강 직전만 본다. 바닥 = 최소 + 진폭/3 아래. 사이클 = 상단 끝 다음부터 끝까지.
+     * 직전 창의 끝(복귀해 서 있던 프레임, [prefix])까지 거슬러 본다. 준비 동작이 길어도 하강 직전만 본다.
+     * 바닥 = 최소 + 진폭/3 아래(이 창만). 사이클 = 상단 끝 다음부터 끝까지(이 창만).
      */
-    private fun segment(window: List<Pair<Long, Map<String, Float>>>, cycleMin: Float, cycleMax: Float): Phases {
-        val sig = window.filter { it.second.containsKey(signalFeature) }
-        if (sig.isEmpty()) return Phases(emptyList(), emptyList(), window)
+    private fun segment(prefix: List<Pair<Long, Map<String, Float>>>, window: List<Pair<Long, Map<String, Float>>>, cycleMin: Float, cycleMax: Float): Phases {
+        val pre = prefix.filter { it.second.containsKey(signalFeature) }
+        val own = window.filter { it.second.containsKey(signalFeature) }
+        if (own.isEmpty()) return Phases(emptyList(), emptyList(), window, emptyList())
+        val sig = pre + own
         val v = sig.map { it.second.getValue(signalFeature) }
-        var idxMin = 0
-        for (i in v.indices) if (v[i] < v[idxMin]) idxMin = i
+        val n0 = pre.size
+        var idxMin = n0
+        for (i in n0 until v.size) if (v[i] < v[idxMin]) idxMin = i
         val standing = cycleMax - STANDING_BAND * minAmp
         var topEnd = -1
         for (i in idxMin downTo 0) if (v[i] >= standing) { topEnd = i; break }
-        val top = if (topEnd < 0) emptyList() else (maxOf(0, topEnd - TOP_FRAMES + 1)..topEnd).filter { v[it] >= standing }.map { sig[it] }
+        val topAll = if (topEnd < 0) emptyList() else (maxOf(0, topEnd - TOP_FRAMES + 1)..topEnd).filter { v[it] >= standing }
+        // 이 창 자체에 서 있던 프레임이 2개 이상이면 이월분은 버린다 — 반복 사이에 발을 옮겼으면 이월분은 옛 자세라 "돌아온 첫 반복" 을 헛경보로 만든다
+        val topOwn = topAll.filter { it >= n0 }
+        val top = (if (topOwn.size >= 2) topOwn else topAll).map { sig[it] }
         val bottomLevel = cycleMin + (cycleMax - cycleMin) / 3f
-        val bottom = sig.indices.filter { v[it] <= bottomLevel }.map { sig[it] }
-        return Phases(top, bottom, sig.drop(topEnd + 1))
+        val bottom = (n0 until v.size).filter { v[it] <= bottomLevel }.map { sig[it] }
+        val cycle = sig.subList(maxOf(topEnd + 1, n0), sig.size)
+        var tailStart = v.size
+        while (tailStart > n0 && v[tailStart - 1] >= standing && v.size - tailStart < TOP_FRAMES) tailStart--
+        return Phases(top, bottom, cycle, sig.subList(tailStart, v.size))
     }
 
     private fun medians(frames: List<Pair<Long, Map<String, Float>>>): Map<String, Float> {
@@ -230,13 +266,27 @@ class RepFormEvaluator(
     }
 
     private fun evaluate(c: RepFormCheck, p: Phases): RepFormOutcome {
-        val frames = when (c.phase) { RepPhase.TOP -> p.top; RepPhase.BOTTOM -> p.bottom; RepPhase.CYCLE -> p.cycle; RepPhase.START -> emptyList() }
+        val frames = when (c.phase) {
+            RepPhase.TOP -> p.top; RepPhase.BOTTOM -> p.bottom; RepPhase.CYCLE -> p.cycle; RepPhase.START -> emptyList()
+            RepPhase.STANDING -> p.top + p.trailingStanding
+        }
         val values = frames.mapNotNull { it.second[c.feature] }
-        val need = if (c.stat == RepFormStat.MAX || c.stat == RepFormStat.MIN) 1 else 2
+        val need = if (c.stat == RepFormStat.MAX || c.stat == RepFormStat.MIN || c.stat == RepFormStat.EXTREME) 1 else 2
         if (values.size < need) return RepFormOutcome(c, Verdict.ABSTAIN, null, null, null, null, values.size,
-            if (c.phase == RepPhase.TOP && p.top.isEmpty()) "하강 직전 상단 없음" else "창에 ${c.feature} 부족")
-        val raw = stat(values, c.stat)
+            if ((c.phase == RepPhase.TOP || c.phase == RepPhase.STANDING) && frames.isEmpty()) "서 있는 프레임 없음" else "창에 ${c.feature} 부족")
         val ref = if (c.ref == RepFormRef.NONE) null else baseline?.get(c.feature)
+        if (c.stat == RepFormStat.EXTREME) {
+            // 상대 기준에서 가장 멀리 벗어난 프레임 — 반복 중에 발을 옮기면 복귀 뒤 서 있는 프레임에서 드러난다(11:37 세트 3회)
+            if (ref == null || (c.ref == RepFormRef.START_RATIO && abs(ref) < 1e-6f))
+                return RepFormOutcome(c, Verdict.ABSTAIN, null, null, ref, null, values.size, "시작 자세 기준 없음")
+            val rels = values.map { if (c.ref == RepFormRef.START_RATIO) it / ref else it - ref }
+            val neutral = if (c.ref == RepFormRef.START_RATIO) 1f else 0f
+            var best = 0
+            for (i in rels.indices) if (abs(rels[i] - neutral) > abs(rels[best] - neutral)) best = i
+            val d = c.judge(rels[best])
+            return RepFormOutcome(c, if (d == null) Verdict.OK else Verdict.VIOLATION, rels[best], values[best], ref, d, values.size)
+        }
+        val raw = stat(values, c.stat)
         val value = when (c.ref) {
             RepFormRef.NONE -> raw
             RepFormRef.START_RATIO -> if (ref == null || abs(ref) < 1e-6f) return RepFormOutcome(c, Verdict.ABSTAIN, null, raw, ref, null, values.size, "시작 자세 기준 없음") else raw / ref
@@ -258,6 +308,7 @@ class RepFormEvaluator(
             RepFormStat.MAX -> values.max()
             RepFormStat.MIN -> values.min()
             RepFormStat.MEDIAN -> values.sorted().let { s -> if (s.size % 2 == 1) s[s.size / 2] else (s[s.size / 2 - 1] + s[s.size / 2]) / 2f }
+            RepFormStat.EXTREME -> error("EXTREME 은 상대 기준 검사에서 evaluate 가 직접 고른다")
         }
     }
 }
@@ -278,15 +329,15 @@ data class RepFormSummary(
     /** 검사 하나의 반복별 결과(반복 순서). */
     fun outcomesOf(check: RepFormCheck): List<RepFormOutcome> = reps.mapNotNull { r -> r.outcomes.firstOrNull { it.check.id == check.id } }
 
-    /** 완료 화면·기록의 요약 줄. 정확 수는 ship 검사가 있을 때만(없으면 '정확' 이라는 말을 쓰지 않는다). */
+    /** 위반 목록의 방향별 요약 — "넓음 3회" 또는 섞이면 "바깥 2회 · 안쪽 2회". */
+    fun directionCounts(check: RepFormCheck, bad: List<RepFormOutcome>): String =
+        bad.groupingBy { it.direction ?: FormDirection.HIGH }.eachCount().entries
+            .sortedByDescending { it.value }.joinToString(" · ") { (dir, k) -> "${check.label(dir)} ${k}회" }
+
+    /** 완료 화면·기록의 요약 줄. 정확 수는 ship 검사가 있을 때만(없으면 '정확' 이라는 말을 쓰지 않는다). 시작 자세는 규칙 행에 있어 여기선 없을 때만 말한다. */
     fun lines(): List<String> = buildList {
         if (reps.isEmpty()) return@buildList
         if (baseline == null) add("시작 자세를 잡지 못해 시작 기준 검사(발 너비·발끝)는 못 했어요")
-        else {
-            val startText = start.filter { it.value != null }.joinToString(" · ") { o -> "${o.check.bodyPart} ${o.check.format(o.value!!)}" }
-            val startBad = start.filter { it.verdict == Verdict.VIOLATION }
-            if (startText.isNotEmpty()) add("시작 자세 · $startText" + if (startBad.isEmpty()) " · 정상 범위" else " — " + startBad.joinToString(", ") { it.check.text(it.direction!!) })
-        }
         // 검사별 위반 수는 규칙 행(ruleResult 의 measurement)에 있다 — 여기서는 행에 없는 것만: 시작 자세, 정확 수, 못 잰 반복
         if (hasShip) add("정확 $correct / ${reps.size}회")
         if (noTop > 0) add("하강 직전 상단을 못 잡은 반복 ${noTop}회 — 그 회는 발 너비·발끝 비교를 못 했어요")
@@ -296,10 +347,7 @@ data class RepFormSummary(
     fun flagLine(): String? {
         val parts = checks.filter { it.phase != RepPhase.START }.mapNotNull { c ->
             val bad = outcomesOf(c).filter { it.verdict == Verdict.VIOLATION }
-            if (bad.isEmpty()) null else {
-                val dir = bad.groupingBy { it.direction }.eachCount().maxByOrNull { it.value }?.key ?: FormDirection.HIGH
-                "${c.bodyPart} ${c.label(dir)} ${bad.size}회"
-            }
+            if (bad.isEmpty()) null else "${c.bodyPart} ${directionCounts(c, bad)}"
         }
         return parts.takeIf { it.isNotEmpty() }?.joinToString(" · ")
     }
@@ -414,10 +462,12 @@ object RepFormSpecs {
                 lo = 0.02388f, hi = null, lowText = "바닥에서 무릎이 안쪽으로 모였어요", highText = null, lowLabel = "안쪽", highLabel = null,
                 fix = "무릎을 발끝 방향으로 두세요",
                 reason = "AIHub 검증 임계(0.02388, 정상 오탐 0.11)를 조건이 드러나는 바닥 구간에 적용. 세트 평균 규칙은 서 있는 프레임(−0.02)이 결정해 바닥이 정상인 세트에 '무릎 안쪽' 4번(실기기 2026-09-25)",
-                cautions = listOf("정면(C)에서만", "바닥 구간 평균 — 실기기 정상 바닥 0.08~0.30 대비 여유 큼")),
+                cautions = listOf("정면(C)에서만", "바닥 구간 평균 — 실기기 정상 바닥 0.08~0.30 대비 여유 큼",
+                    "knee_out 은 발 자세를 따른다(11:37 세트: 발끝 −21°·발 너비 ×1.8 인 반복에서 −0.01~0.02) — AIHub 임계는 보통 스탠스 전제. 같은 반복에 발 위반이 있으면 문장이 발을 먼저 말한다"),
+                causes = listOf("repform|$ex|발끝 방향", "repform|$ex|발 간격")),
             RepFormCheck("repform|$ex|무릎 과도 벌림", ex, "무릎 과도 벌림(반복)", "무릎", RuleStatus.BETA, "knee_out_mean", RepPhase.BOTTOM, RepFormStat.MEAN, RepFormRef.NONE,
                 lo = null, hi = 0.40f, lowText = null, highText = "바닥에서 무릎이 과하게 벌어졌어요", lowLabel = null, highLabel = "벌림",
-                fix = "무릎을 발끝 방향에 맞추세요",
+                fix = "무릎을 발끝 방향에 맞추세요", causes = listOf("repform|$ex|발끝 방향", "repform|$ex|발 간격"),
                 reason = "AIHub 에 '과도 벌림' 클립이 없어 위쪽 경계가 없었다 — 일부러 벌린 반복이 '교정됐어요' 로 읽힘. 재생(2026-09-25): 바닥 창 평균은 정상 반복도 0.34~0.35(09:51 세트)까지 가고 일부러 벌린 반복(0.26~0.30 프레임 최대)과 겹친다 — 이 피처·창으로는 갈라지지 않는다. 0.40 은 정상 위쪽 여유일 뿐 검출 근거가 없다",
                 cautions = listOf(PROVISIONAL, "knee_out 바닥 평균은 일부러 벌린 반복과 무릎을 넓게 쓰는 정상 반복을 구분하지 못했다(재생) — 무릎이 발보다 바깥인지(knee_gap ÷ stance) 같은 다른 피처 후보")),
             RepFormCheck("repform|$ex|발 간격|시작", ex, "발 간격(시작)", "발 너비", RuleStatus.BETA, "stance_sh", RepPhase.START, RepFormStat.MEDIAN, RepFormRef.NONE,
@@ -425,20 +475,20 @@ object RepFormSpecs {
                 fix = "발을 어깨 너비로 벌려 주세요",
                 reason = "사용자 결정: 스쿼트 발 간격은 어깨 너비. 발목 간격 ÷ 어깨 너비(수평, 월드) — 서 있을 때 재므로 깊이에 흔들리지 않는다",
                 cautions = listOf(PROVISIONAL, "넓은 스탠스(스모)는 정당한 변형일 수 있다 — 세트 전 안내로만")),
-            RepFormCheck("repform|$ex|발 간격", ex, "발 간격(반복)", "발 너비", RuleStatus.BETA, "stance_sh", RepPhase.TOP, RepFormStat.MEDIAN, RepFormRef.START_RATIO,
+            RepFormCheck("repform|$ex|발 간격", ex, "발 간격(반복)", "발 너비", RuleStatus.BETA, "stance_sh", RepPhase.STANDING, RepFormStat.EXTREME, RepFormRef.START_RATIO,
                 lo = 0.8f, hi = 1.25f, lowText = "발 너비가 시작보다 좁아졌어요", highText = "발 너비가 시작보다 넓어졌어요", lowLabel = "좁음", highLabel = "넓음",
                 fix = "발을 어깨 너비로 다시 두세요",
-                reason = "실기기 10:52 세트: 일부러 넓힌 반복 ×1.28~1.49, 정상 ×0.99~1.13. 골반 정규화(stance_w)는 ×0.78 헛경보 — 어깨 정규화로 교체",
+                reason = "실기기 11:37 세트: 넓힌 반복 ×1.6~1.9, 정상 ×1.0~1.12. 서 있는 프레임(앞뒤)만 쓰는 이유 — 바닥에서는 무릎이 벌어지며 발목 랜드마크가 따라가 발 너비가 부풀고(정상 2회 바닥 ×1.31, 10회 ×1.5), 하강하며 발을 벌린 반복(3회)은 복귀 뒤 서 있는 프레임(×1.6)에서 드러난다",
                 cautions = listOf(PROVISIONAL)),
             RepFormCheck("repform|$ex|발끝 방향|시작", ex, "발끝 방향(시작)", "발끝", RuleStatus.BETA, "toe_out_maxside", RepPhase.START, RepFormStat.MEDIAN, RepFormRef.NONE,
                 lo = -5f, hi = 35f, lowText = "발끝이 안으로 모여 있어요", highText = "발끝이 바깥으로 많이 벌어져 있어요", lowLabel = "안쪽", highLabel = "바깥",
                 fix = "발끝을 살짝만 바깥으로 두세요", unit = "°",
                 reason = "관용 발끝 각 5~30°. 발목→발끝 수평각(뒤꿈치는 정면·낮은 폰에서 91% 안 보임)",
                 cautions = listOf(PROVISIONAL, "발끝(31/32)·발목이 화면 안이어야 한다 — 잘리면 유보")),
-            RepFormCheck("repform|$ex|발끝 방향", ex, "발끝 방향(반복)", "발끝", RuleStatus.BETA, "toe_out_maxside", RepPhase.TOP, RepFormStat.MEDIAN, RepFormRef.START_DELTA,
+            RepFormCheck("repform|$ex|발끝 방향", ex, "발끝 방향(반복)", "발끝", RuleStatus.BETA, "toe_out_maxside", RepPhase.STANDING, RepFormStat.EXTREME, RepFormRef.START_DELTA,
                 lo = -8f, hi = 8f, lowText = "발끝이 시작보다 안으로 모였어요", highText = "발끝이 시작보다 바깥으로 벌어졌어요", lowLabel = "안쪽", highLabel = "바깥",
                 fix = "발끝을 시작 자세로 되돌리세요", unit = "°",
-                reason = "실기기 10:52 세트: 일부러 벌린 반복 +18°, 정상 −3~+6°. 절대 임계 40° 는 놓쳤다(기준 22° 인 사람) — 시작 자세 대비로",
+                reason = "실기기 11:37 세트: 벌린 반복 +13~+21°, 모은 반복 −21~−22°, 정상 −2~+5°. 절대 임계 40° 는 놓쳤다(기준 22~33° 인 사람) — 시작 자세 대비로. 서 있는 프레임만(바닥에서는 발목 랜드마크가 흔들려 +8°)",
                 cautions = listOf(PROVISIONAL)),
         )
     }
