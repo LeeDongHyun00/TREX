@@ -420,7 +420,9 @@ WorkoutHistoryItem.postureCorrection → 기록 화면
   검증 빌드(versionCode 3)는 `INSTALL_FAILED_VERSION_DOWNGRADE` 로 거부 → **사용자 결정: versionCode 5 로 올려 `install -r`**(데이터 유지, 동작 모델 시험 기능은 이 빌드에 없어 빠짐,
   그 빌드의 기록 필드 `postureRepsUnknown` 은 기록을 다시 저장할 때 빠질 수 있음).
 - 백업: PC worktree 의 `data\phone\backup-20260924T1530\`(세트 로그 5개 + shared_prefs 4개). 빌드 #4 가 새 백업을 하나 더 만든다. `data/` 는 ignore 대상.
-- **빌드 #4(설치 포함)는 요청만 해 둔 상태**다. 결과는 `research/external_rep_replay/results/pc_build_check.md` 의 "## 빌드 #4" 절로 이 브랜치에 푸시된다.
+- **빌드 #4(설치 포함)는 실행되지 않았다** — 요청 시각(2026-09-25 00:10 UTC)에 PC 원격 세션의 환경이 삭제돼(`environment_deleted`) 트리거가 받지 못했다. 아래 '바로 다음에 할 일' 1번을 데스크톱에서 직접 한다.
+  그 직전 PC 세션 요약에는 **별도 패키지 `com.example.trex_kotlin.sujeongbon`("trex수정본", versionCode 3)을 설치했고 worktree 에 미커밋 변경 2건**이 있다고 적혀 있다(이 세션이 한 일이 아니다 — 어느 브랜치로 빌드했는지 확인 필요). 원래 앱과 나란히 깔리는 이름이라, 검증 빌드도 같은 방식으로 깔면 버전 역행 문제 없이 기존 앱을 건드리지 않는다 — 사용자에게 먼저 묻는다.
+- (원래 계획) 결과는 `research/external_rep_replay/results/pc_build_check.md` 의 "## 빌드 #4" 절로 이 브랜치에 푸시된다.
   PC 작업은 원격 세션 `session_01Qz72v6fTH4mEnDPneuYUs6`(worktree `../trex-repcheck`)이 트리거로 받아 한다. 데스크톱에서 직접 이어간다면 트리거 없이 그 worktree 에서 명령을 직접 돌리면 된다.
 - 검증 모드 표시 파일은 **꺼 둔 상태**다(평소 운동에 영향이 없게).
 
