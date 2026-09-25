@@ -441,3 +441,16 @@ WorkoutHistoryItem.postureCorrection → 기록 화면
 - 좌표는 소수 4자리, 미검출 프레임은 키 생략(null 이 아니라). 월드 좌표는 MediaPipe 원값(m, 원부호) — 앱 피처용 cm·부호 반전 좌표가 아니다.
 - 재생기 최신 여부는 jar 시각이 아니라 `installDist` 마다 새로 쓰는 `lib/.built` 로 본다(gradle 은 내용이 같으면 jar 를 다시 쓰지 않는다).
 - 이 컨테이너의 스크래치 JVM 하네스(안드로이드 없는 posture 컴파일)는 클라우드 전용이다 — 데스크톱은 `gradlew :app:testDebugUnitTest` 를 직접 돌린다.
+
+## 2026-09-25 (후속) — 빌드 #4 설치 · 실기기 오류 세트 · 근거 출처 결정 · 반복 판별 게이트 · 발끝 방향 (§62, 브랜치 `claude/rep-validation-env`, 미커밋)
+
+- **빌드 #4 완료**(`pc_build_check.md` "빌드 #4"): 테스트 350/350, `install -r` 성공 → 폰 **versionCode 5 / 1.2.0-repval.1**, 기록 보존, 크래시 없음. 재생기 46/46, 드라이런 18/18, pull_phone 20/20. 백업 `data\phone\backup-20260925T0918\`.
+- **폰에 TREX 가 여럿이다**: 이름 "TREX" 가 둘(`com.example.trex_kotlin` = 검증 빌드, `…replay` = 옛 1.1.0), "trex수정본"(`…sujeongbon`, 1.1.0-preview.2, 사용자가 이날 아침 두 세트를 여기서 함), "trex_v2", "TREX 검증"(이름과 달리 1.0.0 옛 시험판 — 검증 모드 없음), "TREX 실험실". **Gate A 는 앱 정보 → 버전 `1.2.0-repval.1` 인 것만.**
+- **실기기 오류 세트(09:52, 바벨 스쿼트, 정면, 검증 모드 off)** — 사용자가 의도한 오류를 섞어 12회: 정상 3 · 무릎 벌림 2 · 발끝 벌림 2 · 허리 굽힘 2 · 무릎 들기(7번 중 1 카운트) · 정상 2. 로그 `data/phone/20260925-main/`(git 무시). 발견: 무릎 규칙의 세트 평균은 서 있는 프레임이 정한다(오탐), 발끝 방향은 피처가 없어 못 봄, 무릎 들기가 `knee_mean` 을 65° 흔들어 카운트, 무릎을 과하게 벌리면 "교정됐어요"(규칙이 한 방향), 스쿼트 0회인 1세트에 자세 위반. 전부 spec §62 표.
+- **사용자 결정: 근거 출처를 AIHub 로 한정하지 않는다.** "AIHub 에서 못 잡는 건 우리가 새로 발견하고 보완, 발 간격 = 어깨 너비는 공식, AIHub 에 없다는 이유의 보수성 폐지." 원칙 #2·#4 는 유지(출처만 폰 라벨 세트로). CLAUDE.md 원칙 #2·#4 문구 갱신, **원칙 #7(횟수와 자세는 다른 질문)** 추가. "자세 복합 확인 뒤 카운트" 는 기각(그 세트가 0회가 됨).
+- **구현(전부 테스트 통과 358/358, 재생기 50/50, 드라이런 18/18, `setlog_captures --self-test` 49/49, `assembleDebug` 성공 — 폰에는 아직 설치 안 함)**:
+  - 반복 판별 게이트 `RepSignal.identityFeature` — 바벨 스쿼트 `knee_maxside` 35°. `RepCounter.onFrame(t, v, identity)`. 로그 `reps.config.identity`·`reps.rejected`·`reps.identity_swing`. 골든 픽스처 갱신(파이썬 사본 동기). **재생으로 확인: 오늘 3세트 → 0/0 · 6/6 · 11(로그 12), 기각 = t=57780 무릎 들기(스윙 14°), 남은 11회 스윙 65~102°.**
+  - `toe_out_*` 피처(`PostureCore`, `ToeOutTest`) + `rules_phone_v0.json`(`phone|바벨 스쿼트|발끝 방향`, p90 > 40° **잠정·beta**) + `PostureRuleSet.plusPhone`(4곳). 코치 문구·강조·비교 이름.
+  - 문서: spec §62, 설계 §15 #30~33 + §20(4층 구조), REP_VALIDATION §10(지정 오류 세트), 런북 §1.3.
+- **다음**: ① 이 상태 커밋·푸시(사용자 확인) → 폰 설치(백업 먼저, `install -r`) → 스쿼트 오류 세트 한 번 더(발끝 벌림 구간에서 `toe_out_maxside` 가 실제로 40° 를 넘는지 — 잠정 임계의 첫 근거) ② 2층 나머지(좌우 무릎 차·엉덩이 하강·발 제자리) ③ 3층 반복 창 통계(무릎 규칙 세트 평균 오탐의 직접 원인) ④ 1층 시작 자세 검사(발 간격 비율 피처) ⑤ RECOVERED 문구·반복 0회 세트 자세 판정 억제 ⑥ Gate A 계획표에 지정 오류 세트 행 추가(`rep_validation_plan.py`).
+- **함정**: 재생 파리티는 이제 `onFrame` 셋째 인자에 기댄다 — 두 인자로 돌리면 스쿼트 카운트가 로그보다 많아진다. `rules_phone_v0.json` 은 손으로 관리(`counts` 를 `rules` 와 맞출 것). `toe_out` 은 옛 로그에 없다(피처만 로그되므로 재계산 불가) — 새 세트부터.

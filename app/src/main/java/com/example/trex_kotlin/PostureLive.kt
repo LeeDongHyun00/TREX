@@ -133,6 +133,7 @@ import com.example.trex_kotlin.posture.RepEngineLog
 import com.example.trex_kotlin.posture.RepMetrics
 import com.example.trex_kotlin.posture.RepPendingState
 import com.example.trex_kotlin.posture.RepRecord
+import com.example.trex_kotlin.posture.RepRejected
 import com.example.trex_kotlin.posture.RepResetEvent
 import com.example.trex_kotlin.posture.RepRomTier
 import com.example.trex_kotlin.posture.RepUnit
@@ -323,7 +324,7 @@ fun PostureLiveSessionScreen(
                 PostureRuleSet("${standing.version}+${floor.version}", standing.generated, standing.rules + floor.rules)
             } catch (_: Throwable) {
                 standing
-            }
+            }.plusPhone(context)   // spec §62 폰 규칙(발끝 방향 등) — AIHub 밖 항목
         }.onSuccess { ruleSet = it }
     }
     // 바닥 종목은 중력/3D 피처 대신 2D 평면 피처를 쓴다 (spec §25). 분석 스레드에서 매 프레임 읽으므로 ref 로 전달.
@@ -556,6 +557,8 @@ fun PostureLiveSessionScreen(
         val resets: List<RepResetEvent>?
         val pending: RepPendingState?
         val dropped: List<RepCycle>?
+        val rejected: List<RepRejected>?
+        val identitySwings: List<Float?>?
         // 표시 단위의 세트 결과 — 리포트(완료 화면·기록)와 로그의 reps.completed 가 화면에 보인 수와 같은 값을 쓴다
         val unitUsed: RepUnit?
         val unitCompleted: Int?
@@ -583,6 +586,9 @@ fun PostureLiveSessionScreen(
                 )
             }
             dropped = rc?.takeIf { it.usesHysteresis }?.droppedReps?.map { it.copy(tMs = it.tMs - t0, startMs = it.startMs - t0) }
+            // 반복 판별 게이트(spec §62) — 판별 신호가 있는 종목만 목록(비어 있어도). 없는 종목은 null = 키 없음
+            rejected = rc?.takeIf { it.signal.identityFeature != null }?.rejectedReps?.map { it.copy(tMs = it.tMs - t0) }
+            identitySwings = rc?.takeIf { it.signal.identityFeature != null }?.identitySwings?.toList()
             repRecords.clear()
             repResets.clear()
         }
@@ -637,6 +643,8 @@ fun PostureLiveSessionScreen(
             repResets = resets,
             repPending = pending,
             repDropped = dropped,
+            repRejected = rejected,
+            repIdentitySwings = identitySwings,
             thermalStart = thermalStart,
             thermalChanges = thermalChanges,
             appVersion = appVersion,
@@ -883,7 +891,11 @@ fun PostureLiveSessionScreen(
                     }
                     repRef[0]?.let { rc ->
                         // repTimesMs 갱신은 세트 마감의 복사와 같은 락 안에서
-                        val completed = synchronized(repRecords) { lastCounterFrameAt[0] = now; rc.onFrame(now, features[rc.signal.feature]) }
+                        // 판별 신호(spec §62 — 스쿼트 knee_maxside)는 카운트 신호와 같은 프레임 값으로 준다. 없는 종목은 null 이라 종전과 같다.
+                        val completed = synchronized(repRecords) {
+                            lastCounterFrameAt[0] = now
+                            rc.onFrame(now, features[rc.signal.feature], rc.signal.identityFeature?.let { features[it] })
+                        }
                         if (completed) {
                             comparisonPeakAt = rc.repTimesMs.lastOrNull()
                             // 첫 렙이 끝났다 = 여기부터가 진짜 운동 구간. 초반 창과 **세트 집계**를 여기로 옮긴다 (spec §31).

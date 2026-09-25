@@ -327,7 +327,9 @@ fun run(job: Job, meta: Map<String, String>, frames: List<InputFrame>, stats: Fr
         }
         series?.append(frame.tMs)?.append('\t')?.append(value ?: "")?.append('\t')
             ?.append(SERIES_FEATURES.joinToString("\t") { features[it]?.toString() ?: "" })?.append('\n')
-        if (rc.onFrame(frame.tMs, value)) {
+        // 반복 판별 신호(spec §62)도 앱과 같은 프레임 값으로 준다 — 없는 종목은 null(종전과 같다). 파리티가 이 인자에 기댄다.
+        val identity = rc.signal.identityFeature?.let { signalValue(features, it) }
+        if (rc.onFrame(frame.tMs, value, identity)) {
             // 새 코어는 첫 두 사이클을 한 프레임에 함께 발표한다 — 발표된 사이클마다 한 번씩 센다(앱이 숫자를 올리는 방식).
             val published = rc.newlyPublished.ifEmpty { null }
             if (published == null) {
@@ -372,6 +374,11 @@ fun run(job: Job, meta: Map<String, String>, frames: List<InputFrame>, stats: Fr
         "inProgress" to (rc.pendingAtSetEnd().inProgress != null),
         "droppedMs" to Raw(rc.droppedReps.joinToString(",", "[", "]") { it.tMs.toString() }),
         "publishedCycles" to Raw(rc.publishedReps.joinToString(",", "[", "]", transform = ::cycleJson)),
+        // 반복 판별 게이트(spec §62) — 판별 신호가 있는 종목만 값이 있다. rejected = [t_ms, min, max, swing], identitySwing 은 센 사이클 순서(null = 미판정)
+        "identityFeature" to rc.signal.identityFeature,
+        "identityMinAmp" to rc.signal.identityMinAmp,
+        "rejected" to Raw(rc.rejectedReps.joinToString(",", "[", "]") { "[${it.tMs},${num(it.min)},${num(it.max)},${num(it.identitySwing)}]" }),
+        "identitySwing" to Raw(rc.identitySwings.joinToString(",", "[", "]") { it?.let(::num) ?: "null" }),
     )
     out.putAll(parity(meta, rc, validSeq))
     return json(out)

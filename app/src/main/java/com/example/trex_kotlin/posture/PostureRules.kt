@@ -219,8 +219,21 @@ class PostureRuleSet(
         }
     }
 
+    /**
+     * 폰 규칙셋(spec §62, `rules_phone_v0.json`)을 뒤에 붙인 사본. AIHub 조건 밖의 항목(발끝 방향 등) — 근거는 폰 라벨 세트로 만든다.
+     * 자산이 없거나 깨졌으면 그대로 돌려준다(있는 규칙을 잃지 않는다). 버전은 `…+phone_v0.1` 로 이어 붙는다.
+     */
+    fun plusPhone(context: Context): PostureRuleSet = try {
+        val phone = load(context, PHONE_RULES_ASSET)
+        PostureRuleSet("$version+${phone.version}", generated, rules + phone.rules)
+    } catch (_: Throwable) {
+        this
+    }
+
     companion object {
         const val ASSET_PATH = "posture/rules_mp_v0.json"
+        /** AIHub 조건 밖의 규칙(spec §62). 전부 폰 라벨 데이터로 근거를 만드는 중이라 확정 전엔 beta. */
+        const val PHONE_RULES_ASSET = "posture/rules_phone_v0.json"
 
         fun load(context: Context, assetPath: String = ASSET_PATH): PostureRuleSet {
             val text = context.assets.open(assetPath).bufferedReader().use { it.readText() }

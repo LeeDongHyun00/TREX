@@ -271,6 +271,11 @@ class PoseFrame(val joints: Map<String, Vec3?>, up: Vec3 = Vec3(0f, 1f, 0f)) {
             if (heel != null && foot != null) {
                 val len = (heel - foot).norm
                 if (len > 3f) put("heel_lift_$side", h(heel - foot) / len)
+                // spec §62 발끝 방향: 뒤꿈치→발끝을 수평면에 눕혀 몸 앞 방향(z)과 이루는 각(°), 바깥쪽이 +(knee_out 과 같은 부호 규약).
+                // AIHub 스쿼트 조건에 없는 항목 — 임계값은 폰 라벨 세트로 만든다. 수평 발 길이 3 cm 미만(발이 카메라를 정확히 향해 z 만 남는 경우는
+                // 아니고, 관절이 겹친 붕괴)이면 계산하지 않는다.
+                val fd = bodyDir(flat(foot - heel))
+                if (fd != null && hypot(fd.x, fd.z) >= 3f) put("toe_out_$side", (atan2(sign * fd.x, fd.z) * RAD).toFloat())
             }
             if (hip != null && knee != null && ankle != null) {
                 val hb = body(hip); val kb = body(knee); val ab = body(ankle)
@@ -291,6 +296,14 @@ class PoseFrame(val joints: Map<String, Vec3?>, up: Vec3 = Vec3(0f, 1f, 0f)) {
         }
         val koL = f["knee_out_L"]; val koR = f["knee_out_R"]
         if (koL != null && koR != null) put("knee_out_mean", (koL + koR) / 2f)
+        // 발끝 방향(§62): 평균은 양쪽이 있을 때만, 더 벌어진 쪽(maxside)은 보이는 쪽만으로도 — 한 발만 벌어져도 잡는다
+        val toL = f["toe_out_L"]; val toR = f["toe_out_R"]
+        if (toL != null && toR != null) { put("toe_out_mean", (toL + toR) / 2f); put("toe_out_asym", toL - toR) }
+        when {
+            toL != null && toR != null -> put("toe_out_maxside", maxOf(toL, toR))
+            toL != null -> put("toe_out_maxside", toL)
+            toR != null -> put("toe_out_maxside", toR)
+        }
         // kneefoot_mean 은 연구 코드가 nanmean 을 쓰므로 한쪽만 있어도 그 값을 쓴다
         val kfL = f["kneefoot_L"]; val kfR = f["kneefoot_R"]
         when {

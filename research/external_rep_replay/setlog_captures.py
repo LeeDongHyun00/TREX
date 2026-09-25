@@ -540,7 +540,15 @@ def encode_setlog(log: dict, legacy: bool = False) -> str:
                 s += f",\"min_ratio\":{_kt_num(c['min_ratio'])},\"max_ratio\":{_kt_num(c['max_ratio'])}"
             if c.get("rom_direction"):
                 s += f",\"rom_direction\":{_kt_str(c['rom_direction'])},\"rom_threshold\":{_kt_num(c['rom_threshold'])}"
-            s += f",\"rom_tier\":{_kt_str(c.get('rom_tier', 'reference'))}}}"
+            s += f",\"rom_tier\":{_kt_str(c.get('rom_tier', 'reference'))}"
+            if c.get("identity"):   # 반복 판별 게이트(spec §62) — 판별 신호가 있는 종목만 키가 있다
+                s += f",\"identity\":{{\"feature\":{_kt_str(c['identity']['feature'])},\"min_amp\":{_kt_num(c['identity']['min_amp'])}}}"
+            s += "}"
+            if reps.get("rejected") is not None:   # 세지 않은 사이클 = (t_ms, min, max, swing) — 판별 신호가 있는 종목은 비어 있어도 키가 있다
+                s += ",\"rejected\":[" + ",".join("{" + f"\"t_ms\":{q[0]},\"min\":{_kt_num(q[1])},\"max\":{_kt_num(q[2])},\"swing\":{_kt_num(q[3])}" + "}"
+                                                for q in reps["rejected"]) + "]"
+            if reps.get("identity_swing") is not None:
+                s += ",\"identity_swing\":[" + ",".join(_kt_num(x) for x in reps["identity_swing"]) + "]"
             # 리셋 = (누른 시각, 사유, 리셋 직전에 카운터가 처리한 마지막 프레임 | None) — SetLogJson 과 같이 after_t_ms 를 늘 적는다
             s += ",\"resets\":[" + ",".join("{" + f"\"t_ms\":{r[0]},\"after_t_ms\":{'null' if r[2] is None else r[2]},\"reason\":{_kt_str(r[1])}" + "}"
                                             for r in reps.get("resets", [])) + "]"
@@ -605,7 +613,9 @@ def _squat_frames(rng: random.Random, reps: int, period_s: float, still_s: float
 def _config(signal: str, engine: str) -> dict:
     """RepEngineLog.of 가 적는 구성(지금 등록부의 바벨 스쿼트 신호 · forSession 구성 / 새 코어는 설계 v2 결정값)."""
     c = {"feature": signal, "min_amp": 35.0, "refractory_ms": 1200, "max_gap_ms": 1500, "complete_on_return": True,
-         "rom_direction": "min", "rom_threshold": 97.8905, "rom_tier": "reference"}
+         "rom_direction": "min", "rom_threshold": 97.8905, "rom_tier": "reference",
+         # 반복 판별 게이트(spec §62) — 바벨 스쿼트 등록부: 더 편 쪽 무릎도 35° 굽어야 스쿼트
+         "identity": {"feature": "knee_maxside", "min_amp": 35.0}}
     if engine == "hysteresis_v1":
         c.update({"refractory_ms": 800, "polarity": "down", "return_fraction": 0.25, "first_pair_window_ms": 8000,
                   "later_window_ms": None, "min_ratio": 0.5, "max_ratio": 2.0})
@@ -649,10 +659,13 @@ def _golden_logs() -> list[dict]:
             "thermal": {"start": 0, "changes": [(600, 1)]}, "frames": frames,
             "reps": {"count": 1, "invalid": 0, "signal": "knee_mean", "t_ms": [900], "min": [92.25], "max": [170.0],
                      "valid": [True], "engine": "return_v1", "config": _config("knee_mean", "return_v1"),
+                     # 반복 판별 게이트(spec §62): 센 사이클의 판별 스윙, 세지 않은 사이클 하나(무릎 들기)
+                     "rejected": [(1200, 118.0, 170.0, 12.5)], "identity_swing": [71.5],
                      "resets": [(-120, "camera_switch", None), (410, "pause", 300)]}}
     core = {**base, "set_id": "20260924T020500-gold0002", "created_at": "2026-09-24T02:05:30Z", "mode": "track",
             "reps": {"count": 0, "invalid": 0, "signal": "knee_mean", "t_ms": [], "min": [], "max": [], "valid": [],
                      "engine": "hysteresis_v1", "config": _config("knee_mean", "hysteresis_v1"), "resets": [],
+                     "rejected": [], "identity_swing": [],
                      "pending": {"unconfirmed": (900, 300, 92.25, 170.0, False), "in_progress": (600, 90.0, 168.5),
                                  "dropped": [(250, 0, 120.0, 170.0, True)]}}}
     # 표시 단위 좌우 짝: 바벨 런지 3걸음 [충족, 미달, 충족] → 1회(미달 쌍) + 세트 끝에 남은 한쪽. 수·배열은 사이클 그대로

@@ -30,6 +30,13 @@ package com.example.trex_kotlin.posture
  *    폰 검증 전이라 `RepSignals` 의 어느 종목도 polarity 를 켜지 않는다 — 앱 동작은 바뀌지 않았다.
  * polarity = null 인 두 경로의 동작은 새 코어 도입 전과 같다(새 분기는 전부 polarity != null 일 때만 탄다 —
  * 기존 유닛 테스트 19개가 수정 없이 통과해야 한다).
+ *
+ * 반복 판별 게이트 (spec §62, 설계 §20) — 세 경로 모두에 같은 규칙으로 붙는다.
+ *  카운트 신호가 사이클을 냈을 때 `signal.identityFeature` 의 그 사이클 창 스윙이 `identityMinAmp` 미만이면 **세지 않고** [rejectedReps] 에 남긴다.
+ *  "좋은 반복인가" 가 아니라 "이 종목의 반복인가" 를 묻는다: 바벨 스쿼트의 knee_mean 은 양 무릎 평균이라 한쪽 무릎만 들어도(제자리 걷기)
+ *  65° 가 흔들려 35° 게이트를 넘는다(2026-09-25 실기기 세트 — 7번 중 1번이 카운트됨). 더 편 쪽 무릎(knee_maxside)도 35° 굽어야 한다는
+ *  조건으로 그 세트의 스쿼트 12회는 전부 남고 무릎 들기 7번은 전부 걸렸다. 판별 신호 샘플이 창에 2개 미만이면 판정하지 않고 센다
+ *  (모르는 것을 기각으로 만들지 않는다 — 원칙 #1). 자세 규칙의 위반은 게이트가 아니다 — 자세는 세트 판정과 리포트의 몫이다.
  */
 class RepCounter(
     val signal: RepSignal,
@@ -96,6 +103,21 @@ class RepCounter(
     var lastCycleMax: Float = Float.NaN
         private set
 
+    /**
+     * 반복 판별 게이트가 **세지 않은** 사이클 — 세트 로그 `reps.rejected`. 판별 신호가 없는 종목은 늘 비어 있다.
+     * [repTimesMs] 와 같은 락 안에서 복사해 쓴다.
+     */
+    val rejectedReps = ArrayList<RepRejected>()
+
+    /**
+     * 센 사이클마다의 판별 신호 스윙 — [repTimesMs] 와 같은 순서·길이. 판별 신호가 없는 종목은 비어 있고,
+     * 그 사이클 창에 판별 샘플이 2개 미만이면 null(판정하지 않고 셌다). Gate A 가 게이트 여유를 재는 원자재.
+     */
+    val identitySwings = ArrayList<Float?>()
+
+    private val identitySamples = ArrayList<Pair<Long, Float>>()
+    private var identityGateAt = Long.MIN_VALUE / 2   // 마지막으로 판별한 사이클의 끝 — 다음 창은 그 뒤부터
+
     /** 최근 렙 주기(ms) 지수평활 추정 — 빠른 렙 자가진단·적응 샘플링 신호. */
     var periodMs: Long? = null
         private set
@@ -127,6 +149,10 @@ class RepCounter(
         dtMs = null
         lastCycleMin = Float.NaN
         lastCycleMax = Float.NaN
+        rejectedReps.clear()
+        identitySwings.clear()
+        identitySamples.clear()
+        identityGateAt = Long.MIN_VALUE / 2
     }
 
     /**
@@ -140,11 +166,20 @@ class RepCounter(
         hysteresis?.resetCycle()
         confirmation?.dropPending()
         dirn = 0; ext = Float.NaN; pendingBottom = Float.NaN; rawCount = 0; dtMs = null; prevT = null
+        identitySamples.clear()   // 리셋 앞의 판별 샘플을 리셋 뒤 첫 사이클 창에 섞지 않는다
     }
 
-    /** @return 이 프레임에서 렙이 완료됐으면 true. value=null(가림)·물리범위 밖이면 일시정지. */
-    fun onFrame(tMs: Long, value: Float?): Boolean {
+    /**
+     * @param identity 반복 판별 신호(`signal.identityFeature`)의 이 프레임 값. 판별 신호가 없는 종목이거나 이 프레임에서 계산되지 않았으면 null —
+     *   재생기·테스트의 기존 두 인자 호출은 그대로 컴파일된다(판별 없이 종전과 같이 센다).
+     * @return 이 프레임에서 렙이 완료됐으면 true. value=null(가림)·물리범위 밖이면 일시정지.
+     */
+    fun onFrame(tMs: Long, value: Float?, identity: Float? = null): Boolean {
         if (hysteresis != null) newlyPublished = emptyList()
+        if (signal.identityFeature != null && identity != null && identity.isFinite()) {
+            identitySamples += tMs to identity
+            if (identitySamples.size > IDENTITY_SAMPLE_CAP) identitySamples.subList(0, IDENTITY_SAMPLE_CAP / 2).clear()
+        }
         if (value == null || !value.isFinite()) return false
         val plo = signal.plausibleMin
         val phi = signal.plausibleMax
@@ -155,6 +190,7 @@ class RepCounter(
         if (prevT?.let { tMs - it > maxGapMs || tMs <= it } == true) {
             returnTracker?.resetCycle()
             dirn = 0; ext = Float.NaN; pendingBottom = Float.NaN; rawCount = 0; dtMs = null
+            identitySamples.removeAll { it.first < tMs }   // 끊김 앞의 판별 샘플도 버린다(이 프레임 것은 새 창의 첫 샘플)
         }
         prevT?.let { p ->
             val d = (tMs - p).toFloat()
@@ -168,6 +204,7 @@ class RepCounter(
 
         returnTracker?.let { tracker ->
             val cycle = tracker.onFrame(tMs, v) ?: return false
+            if (!identityAdmits(tMs, cycle.min, cycle.max)) return false
             if (lastRepAt > Long.MIN_VALUE / 4) {
                 val p = tMs - lastRepAt
                 periodMs = periodMs?.let { (it + p) / 2 } ?: p
@@ -197,17 +234,19 @@ class RepCounter(
             } else if (ext - v >= h) {                     // 하락이 h 를 넘음 → 상단 확정
                 var fired = false
                 if (!pendingBottom.isNaN() && tMs - lastRepAt >= refractoryMs) {
-                    if (lastRepAt > Long.MIN_VALUE / 4) {
-                        val p = tMs - lastRepAt
-                        periodMs = periodMs?.let { (it + p) / 2 } ?: p
+                    if (identityAdmits(tMs, pendingBottom, ext)) {
+                        if (lastRepAt > Long.MIN_VALUE / 4) {
+                            val p = tMs - lastRepAt
+                            periodMs = periodMs?.let { (it + p) / 2 } ?: p
+                        }
+                        reps++
+                        repTimesMs.add(extT)
+                        lastCycleMin = pendingBottom
+                        lastCycleMax = ext
+                        lastRepAt = tMs
+                        fired = true
                     }
-                    reps++
-                    repTimesMs.add(extT)
-                    lastCycleMin = pendingBottom
-                    lastCycleMax = ext
-                    lastRepAt = tMs
-                    pendingBottom = Float.NaN              // 카운트된 하단만 소거 — 불응기 기각 시엔 유지
-                    fired = true
+                    pendingBottom = Float.NaN              // 카운트·기각된 하단만 소거 — 불응기 기각 시엔 유지
                 }
                 dirn = -1
                 ext = v; extT = tMs
@@ -220,7 +259,11 @@ class RepCounter(
     /** 새 코어 경로 — 원값 그대로(평활 없음). 레거시 필드(raw3·dtMs·dirn 등)는 건드리지 않는다. */
     private fun onFrameHysteresis(tMs: Long, value: Float, core: RepHysteresis, confirm: RepStartConfirmation): Boolean {
         val cycle = core.onFrame(tMs, value) ?: return false
-        val out = confirm.offer(cycle)
+        val published = confirm.offer(cycle)
+        if (published.isEmpty()) return false
+        // 판별 게이트는 발표된 사이클마다 — 함께 발표된 첫 두 사이클 중 하나만 기각될 수 있다. `confirmation.published`(→ [publishedReps])에는
+        // 기각된 사이클도 남는다(코어의 발표 기록). 세는 것은 여기서 통과한 사이클뿐이다.
+        val out = published.filter { identityAdmits(it.tMs, it.min, it.max) }
         if (out.isEmpty()) return false
         for (c in out) {
             if (lastRepAt > Long.MIN_VALUE / 4) {
@@ -238,7 +281,30 @@ class RepCounter(
         return true
     }
 
+    /**
+     * 반복 판별 게이트 — 카운트 신호가 낸 사이클(끝 [endMs])을 셀지 정한다. 판별 신호가 없는 종목은 늘 true.
+     * 창 = (직전에 판별한 사이클의 끝, endMs]. 창의 판별 샘플이 2개 미만이면 판정하지 않고 true(스윙 null 로 기록).
+     * 기각된 사이클은 [rejectedReps] 에, 센 사이클의 스윙은 [identitySwings] 에 남긴다. 어느 쪽이든 창은 소비된다.
+     */
+    private fun identityAdmits(endMs: Long, cycleMin: Float, cycleMax: Float): Boolean {
+        val h = signal.identityMinAmp
+        if (signal.identityFeature == null || h == null) return true
+        var lo = Float.POSITIVE_INFINITY; var hi = Float.NEGATIVE_INFINITY; var n = 0
+        for ((t, v) in identitySamples) if (t > identityGateAt && t <= endMs) { if (v < lo) lo = v; if (v > hi) hi = v; n++ }
+        identityGateAt = endMs
+        identitySamples.removeAll { it.first <= endMs }
+        val swing = if (n >= 2) hi - lo else null
+        if (swing != null && swing < h) {
+            rejectedReps += RepRejected(endMs, cycleMin, cycleMax, swing)
+            return false
+        }
+        identitySwings += swing
+        return true
+    }
+
     companion object {
+        /** 판별 샘플 상한(300 ms 샘플링 10분). 넘으면 앞 절반을 버린다 — 사이클이 한 번도 안 난 긴 세트에서 무한히 쌓이지 않게. */
+        private const val IDENTITY_SAMPLE_CAP = 2_000
         /** 종목에 카운터가 정의돼 있고 등척성이 아니면 생성 (플랭크 등은 HoldTimer 대상 — 카운터 미적용). */
         fun forExercise(exercise: String): RepCounter? {
             val sig = RepSignals.byExercise[exercise] ?: return null
@@ -312,18 +378,29 @@ data class RepSignal(
      */
     val comparisonFeature: String? = null,
     val comparisonMinAmp: Float? = null,
+    /**
+     * 반복 판별 신호 (spec §62, 설계 §20) — 카운트 신호가 낸 사이클을 셀지 정하는 둘째 신호. null = 게이트 없음(종전과 같다).
+     * 사이클 창 안에서 이 신호의 스윙이 [identityMinAmp] 미만이면 그 사이클은 이 종목의 반복이 아니다(세지 않고 로그).
+     * 바벨 스쿼트: `knee_maxside`(더 편 쪽 무릎) 35° — 양 무릎이 함께 굽어야 스쿼트다. 게이트 값은 카운트 신호와 같은 모집단 상수(잡음 바닥)라
+     * 새 상수를 만들지 않는다. 자세 규칙(무릎 방향·척추 등)은 판별 신호가 **아니다** — 자세 위반은 세트 판정·리포트로 간다.
+     */
+    val identityFeature: String? = null,
+    val identityMinAmp: Float? = null,
 ) {
     /**
      * 비교용 신호 — [comparisonFeature]/[comparisonMinAmp] 가 있으면 그것으로 바꾼 사본, 없으면 자기 자신.
      * 피처가 바뀌면 ROM·물리 범위는 카운트 신호의 단위라 떼어 낸다(다른 피처에 붙이면 의미가 없다).
      */
     fun comparisonSignal(): RepSignal {
+        // 판별 게이트(§62)는 그대로 둔다 — 비교 추적기는 onFrame 에 판별 값을 주지 않으므로(두 인자 호출) 게이트가 동작하지 않는다.
+        // 여기서 사본을 만들면 "비교 신호 = 자기 자신" 을 assertSame 으로 잠근 테스트(PostureComparisonTest·RepHysteresisTest)가 깨진다.
         if (comparisonFeature == null && comparisonMinAmp == null) return this
         val f = comparisonFeature ?: feature
         val sameFeature = f == feature
         return copy(
             feature = f, minAmp = comparisonMinAmp ?: minAmp, polarity = null,
             comparisonFeature = null, comparisonMinAmp = null,
+            identityFeature = null, identityMinAmp = null,   // 비교 지표는 사이클을 세지 않는다 — 판별 게이트는 카운트의 성질
             romDirection = if (sameFeature) romDirection else null, romThreshold = if (sameFeature) romThreshold else null,
             romValidated = sameFeature && romValidated, romCue = if (sameFeature) romCue else null,
             plausibleMin = if (sameFeature) plausibleMin else null, plausibleMax = if (sameFeature) plausibleMax else null,
@@ -431,7 +508,10 @@ object RepSignals {
         // ---- 서서: 힙 힌지 (설문 hip_R 0.98~1.00 → 앱 가용 hip_mean)
         for (ex in listOf("바벨 데드리프트", "바벨 스티프 데드리프트", "굿모닝")) put(ex, RepSignal("hip_mean", ANGLE))
         // ---- 스쿼트·런지·버피 (무릎각 계열)
-        put("바벨 스쿼트", RepSignal("knee_mean", ANGLE))
+        // 바벨 스쿼트: 카운트는 양 무릎 평균, 판별은 더 편 쪽 무릎(spec §62). 평균만 보면 한쪽 무릎 들기(제자리 걷기)가 65° 를 흔들어 카운트된다
+        // (2026-09-25 실기기 세트: 무릎 들기 7번 중 1번 카운트, 스쿼트 바닥의 knee_maxside 66~126° vs 무릎 들기 156~163°). 런지류는
+        // 한쪽 무릎만 굽는 종목이라 이 게이트를 붙이지 않는다(knee_minside 카운트 신호가 이미 그 성질이다).
+        put("바벨 스쿼트", RepSignal("knee_mean", ANGLE, identityFeature = "knee_maxside", identityMinAmp = ANGLE))
         put("버피 테스트", RepSignal("knee_mean", ANGLE))
         put("크로스 런지", RepSignal("knee_mean", ANGLE))
         put("바벨 런지", RepSignal("knee_minside", ANGLE))
@@ -485,6 +565,12 @@ object RepSignals {
  * @property inProgress 되돌아오는 중이던(ASC) 후보 — 절반만 올라온 동작을 한 회로 만들지 않는다.
  */
 data class RepPendingState(val unconfirmed: RepCycle?, val inProgress: RepCandidate?)
+
+/**
+ * 반복 판별 게이트가 세지 않은 사이클 (spec §62) — 세트 로그 `reps.rejected`.
+ * @property tMs 사이클이 끝난(카운트 신호가 발화한) 프레임 시각. @property identitySwing 그 사이클 창의 판별 신호 스윙(게이트 미만).
+ */
+data class RepRejected(val tMs: Long, val min: Float, val max: Float, val identitySwing: Float)
 
 /** 완료된 렙 하나의 기록 — 사이클 극값과 ROM 판정. 세트 로그에 렙별로 남겨 후반 드리프트(피로)
  *  분석을 오프라인에서 가능하게 한다 (spec §29 — 숙련자 계기판의 원자재). */

@@ -183,6 +183,87 @@ class RepCounterTest {
         assertTrue(sig.invalidCue.contains("끝까지"))
     }
 
+    // ---- 반복 판별 게이트 (spec §62) — 2026-09-25 실기기 세트의 재현: 무릎 들기(제자리 걷기)는 knee_mean 을 흔들지만 스쿼트가 아니다
+
+    /** 세션 카운터(앱 경로) 에 (knee_mean, knee_maxside) 를 300 ms 간격으로 넣는다. */
+    private fun feed(c: RepCounter, t0: Long, pairs: List<Pair<Float, Float?>>): Long {
+        var t = t0
+        for ((mean, maxside) in pairs) { c.onFrame(t, mean, maxside); t += 300 }
+        return t
+    }
+    private val stand = List(3) { 162f to 163f }
+    /** 양 무릎이 함께 굽는 스쿼트: 평균 162→95→162, 더 편 무릎 163→100→163. */
+    private val squat = listOf(150f to 152f, 120f to 125f, 95f to 100f, 100f to 104f, 130f to 135f, 155f to 158f, 161f to 162f, 162f to 163f, 162f to 163f)
+    /** 한쪽 무릎 들기: 평균은 162→100 으로 같은 폭이 흔들리지만 더 편 무릎은 158~163 그대로. */
+    private val march = listOf(150f to 161f, 110f to 160f, 100f to 158f, 140f to 161f, 160f to 162f, 162f to 163f, 162f to 163f)
+
+    @Test
+    fun squatIdentityGateRejectsSingleLegKneeRaise() {
+        val c = RepCounter.forSession("바벨 스쿼트", floor = false)!!
+        assertEquals("knee_maxside", c.signal.identityFeature)
+        assertEquals(35f, c.signal.identityMinAmp!!, 1e-6f)
+        var t = feed(c, 0L, stand + squat)
+        assertEquals(1, c.reps)
+        t = feed(c, t, march)
+        assertEquals("무릎 들기는 스쿼트가 아니다 — 세지 않는다", 1, c.reps)
+        assertEquals(1, c.rejectedReps.size)
+        val r = c.rejectedReps.single()
+        assertTrue("swing=${r.identitySwing}", r.identitySwing < 35f)
+        assertTrue("min=${r.min}", r.min <= 115f)   // 카운트 신호는 사이클을 냈다(3점 평활로 바닥 100 → 110) — 기각 사유는 판별 신호
+        feed(c, t, squat)
+        assertEquals(2, c.reps)
+        // 센 사이클의 판별 스윙은 repTimesMs 와 나란히, 전부 게이트 이상
+        assertEquals(2, c.identitySwings.size)
+        c.identitySwings.forEach { assertTrue("swing=$it", it != null && it >= 35f) }
+        // 기각은 불응기·주기 추정을 건드리지 않는다(반복이 아니었으므로)
+        assertEquals(2, c.repTimesMs.size)
+    }
+
+    @Test
+    fun identityGateAbstainsWhenIdentitySignalIsMissing() {
+        // 판별 신호가 안 잡히면(무릎 하나 가림) 판정하지 않고 종전처럼 센다 — 모르는 것을 기각으로 만들지 않는다(원칙 #1)
+        val c = RepCounter.forSession("바벨 스쿼트", floor = false)!!
+        feed(c, 0L, (stand + squat).map { it.first to null })
+        assertEquals(1, c.reps)
+        assertEquals(listOf<Float?>(null), c.identitySwings)
+        assertTrue(c.rejectedReps.isEmpty())
+        // 두 인자 호출(재생기·기존 테스트)도 같은 뜻이다
+        val c2 = RepCounter.forSession("바벨 스쿼트", floor = false)!!
+        var t = 0L
+        for ((mean, _) in stand + squat) { c2.onFrame(t, mean); t += 300 }
+        assertEquals(1, c2.reps)
+    }
+
+    @Test
+    fun onlySquatHasAnIdentityGate() {
+        // 런지류는 한쪽 무릎만 굽는 종목 — 게이트를 붙이면 반복을 버린다. 그 외 종목도 종전 그대로.
+        for (ex in listOf("바벨 런지", "스텝 포워드 다이나믹 런지", "덤벨 컬", "바벨 데드리프트", "푸시업")) {
+            val sig = RepSignals.byExercise.getValue(ex)
+            assertNull(ex, sig.identityFeature)
+        }
+        // 비교 신호를 따로 두는 종목(런지)의 비교 사본에는 판별 게이트가 붙지 않는다. 스쿼트의 비교 신호는 자기 자신(assertSame 계약)이지만
+        // 비교 추적기는 판별 값을 주지 않는 두 인자 onFrame 을 쓰므로 게이트가 동작하지 않는다.
+        assertNull(RepSignals.byExercise.getValue("스텝 포워드 다이나믹 런지").comparisonSignal().identityFeature)
+    }
+
+    @Test
+    fun identityGateAppliesPerPublishedCycleOnTheNewCore() {
+        // 새 코어는 첫 두 사이클을 함께 발표한다 — 판별은 사이클마다: 스쿼트 + 무릎 들기 쌍이면 스쿼트만 센다
+        val sig = RepSignals.byExercise.getValue("바벨 스쿼트").copy(polarity = RepPolarity.DOWN)
+        val c = RepCounter(sig, maxGapMs = 1500L, completeOnReturn = true)
+        assertTrue(c.usesHysteresis)
+        val frames = listOf(162f to 163f, 162f to 163f, 120f to 125f, 95f to 100f, 100f to 104f, 135f to 140f, 150f to 155f,   // 스쿼트: 발화 t=1800(보류)
+            162f to 163f, 120f to 160f, 100f to 159f, 140f to 161f, 155f to 162f)                                          // 무릎 들기: 발화 t=3300 → 쌍 발표
+        feed(c, 0L, frames)
+        assertEquals(1, c.reps)
+        assertEquals(listOf(1800L), c.repTimesMs)
+        assertEquals(1, c.rejectedReps.size)
+        assertEquals(3300L, c.rejectedReps.single().tMs)
+        assertEquals(1, c.newlyPublished.size)
+        // 코어의 발표 기록에는 둘 다 남는다(세는 것은 통과한 사이클뿐)
+        assertEquals(2, c.publishedReps.size)
+    }
+
     @Test
     fun medianPeriodIsRobustToOneOutlierGap() {
         // §29 기록 모드 템포: 렙 사이에 휴식 하나가 끼어도 중앙값은 흔들리지 않는다 (EMA 는 끌려간다)

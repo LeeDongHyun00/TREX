@@ -162,3 +162,47 @@ AdaptiveAndDataTest > noPostureDataAndTrackNeverBecomePositiveJudgements FAILED
   (shared_prefs 는 `run-as ls` 출력의 CR 때문에 첫 시도에서 1개만 저장돼, CR 을 떼고 다시 받아 4개 모두 0 바이트 아님을 확인한 **뒤에** 설치를 시도했다.)
 
 - **설치 거부 — 멈춤.** `adb install -r app-debug.apk` → `Failure [INSTALL_FAILED_VERSION_DOWNGRADE: Package Verification Result]`. 서명 불일치가 아니라 **versionCode 역행**이다: 이 브랜치의 `app/build.gradle.kts:17` 은 `versionCode = 3`(`3322628` 이후 변동 없음, versionName `1.1.0-preview.2`)인데 기기의 1.2.0-preview.1 은 `versionCode 4`(`8907f0f` "26종목 동작 계수와 학습 모델 시험 실행 배포" — 이 브랜치 이력에 없다). uninstall 도 `-d`(강제 다운그레이드)도 하지 않았다. 기기 앱은 그대로 versionCode 4 다.
+
+## 빌드 #4 (`f0cb5ac`, 브랜치 `claude/rep-validation-env`) — 설치 포함
+
+versionCode 5 / versionName `1.2.0-repval.1`(`4a50a34`) 빌드. 트리거 worktree(`../trex-repcheck`)가 아니라 **데스크톱 저장소에서 직접** 돌렸다(2026-09-25). 환경은 위 표와 같다(JDK 21.0.11).
+
+### gradle — 전부 성공
+
+| 작업 | 결과 | 시간 |
+|---|---|---:|
+| `:app:testDebugUnitTest` + `:app:assembleDebug` | **성공** — 45개 클래스 **350개 전부 통과**(실패 0 · 오류 0 · 건너뜀 0), `app-debug.apk` **120,997,897 B** | 53s (44 tasks 전부 실행) |
+| `-p research\external_rep_replay\replay-jvm test installDist` | **성공** — **46개 통과**, `lib/.built` 갱신 | 16s |
+
+빌드 #3 과 테스트 수가 같다(350). 이번은 깨끗한 빌드라 `compileDebugKotlin` 이 실제로 돌아 본 소스 경고 7건이 보였다 — `SettingsScreen.kt:67`·`WorkoutCatalogUi.kt:64`(deprecated), `TrexStore.kt:46`(플랫폼 타입), `PostureCoach.kt:324`·`PostureRules.kt:195/201`(불필요한 `!!`). 빌드 #3 의 "본 소스 경고 0건"은 그 작업이 up-to-date 였던 증분 빌드라 직접 비교되지 않는다. 검증 모드가 건드린 파일에서 나온 경고는 없다.
+
+### 연구 파이프라인 (`../trex-repcheck/.venv-mp` 의 파이썬)
+
+| 명령 | 결과 |
+|---|---|
+| `pull_phone.py --self-test` | **20/20** — 빌드 #3 의 윈도우 실패 1건(`c2160fb` 에서 고침)이 사라졌다 |
+| `gate_a.py dry-run --out <저장소 밖 임시 폴더>` | **18/18** (6.9s) — 재생기 재빌드 직후라 '오래됨' 검사에 걸리지 않음 |
+
+### 휴대폰 (SM-N976N, `R3CMB04LLNZ`)
+
+- 설치 전: versionName 1.2.0-preview.1, **versionCode 4**, 마지막 갱신 2026-09-23 12:08.
+- 설치 전 백업 → `data\phone\backup-20260925T0918\`(`data/` 는 ignore 대상, 커밋 안 함). 빌드 #3 백업과 같은 10개 파일, 세트·피드백 로그는 바이트 수까지 같고 `trex_store.xml` 만 4,996 → **4,997 B**(09:05 에 앱이 다시 저장). 4개 shared_prefs 모두 0 바이트 아님, `trex_store.xml` 이 `</map>` 으로 끝나는 것 확인 **뒤에** 설치했다.
+- `adb install -r app-debug.apk` → **Success**. uninstall·`-d` 쓰지 않음.
+- 설치 후: `dumpsys package` → **versionCode 5, versionName 1.2.0-repval.1**, 갱신 2026-09-25 09:20:54.
+- 실행: 런처로 띄워 `MainActivity` 가 resumed, 홈 화면 정상 표시, `logcat -b crash` 비어 있음(FATAL 없음).
+- 보존: 기기 `posture_logs/` 5개 파일 크기가 설치 전과 **전부 같다**, shared_prefs 4개 그대로.
+- 검증 모드 표시 파일: **off** 그대로(켜지 않았다). 기기에서 아무것도 지우지 않았다.
+
+## 빌드 #5 (미커밋 작업 트리, `f0cb5ac` + §62 — 반복 판별 게이트·발끝 방향·폰 규칙셋)
+
+| 작업 | 결과 |
+|---|---|
+| `:app:testDebugUnitTest` | **성공** — **358개 전부 통과**(빌드 #4 의 350 + `RepCounterTest` 4 · `ToeOutTest` 3 · `PostureSetLogTest` 1) |
+| `:app:assembleDebug` | **성공** |
+| `-p research\external_rep_replay\replay-jvm test installDist` | **성공** — 50개 통과 |
+| `setlog_captures.py --self-test` | **49/49** — 골든 픽스처 4줄을 파이썬 인코더로 다시 썼고 코틀린 `PostureSetLogTest` 가 같은 줄을 요구한다 |
+| `gate_a.py dry-run` | **18/18** |
+| `run_replay.py --configs live` (오늘 실기기 3세트) | 0/0 · 6/6 · **11 vs 로그 12** — 차이는 의도된 것(판별 게이트가 무릎 들기 사이클 t=57780 을 기각, 스윙 14.1°) |
+
+중간에 깨졌던 것 2건과 원인: (1) 골든 픽스처 — 스쿼트 config 에 `identity` 가 붙어 첫·둘째·넷째 줄이 바뀜(의도된 형식 변경, 픽스처·파이썬 사본 갱신). (2) `comparisonSignal()` 에서 판별 게이트를 떼려고 사본을 만들자 "비교 신호 = 자기 자신" 을 `assertSame` 으로 잠근 테스트 2개가 깨짐 → 되돌림(비교 추적기는 두 인자 onFrame 이라 게이트가 어차피 동작하지 않는다).
+폰에는 설치하지 않았다(기기 앱은 빌드 #4 그대로).

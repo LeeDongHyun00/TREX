@@ -31,6 +31,8 @@ import java.util.UUID
  * 표시 단위(사용자 결정 2026-09-24, `RepUnit`) 추가 필드(선택 — 부재 = 이전 로그): `reps.unit`("cycle"|"side_pair"), `reps.cycles_per_rep`,
  * `reps.completed`(화면에 보인 횟수), `reps.half_pending`(세트 끝에 짝을 못 채운 한쪽이 남았을 때만 true — 아니면 키 없음).
  * `reps.count`·`t_ms`·`min`/`max`/`valid`·`invalid` 는 여전히 **카운터 사이클** 단위다(재생 파리티가 사이클에 기댄다).
+ * 반복 판별 게이트(spec §62) 추가 필드 — 판별 신호가 있는 종목만(없으면 키 부재): `reps.config.identity{feature,min_amp}`,
+ * `reps.rejected[{t_ms,min,max,swing}]`(세지 않은 사이클), `reps.identity_swing[]`(센 사이클의 판별 스윙, `t_ms` 와 같은 순서, 미판정은 null).
  * org.json 은 Android 유닛 테스트에서 스텁이라 직접 직렬화한다 (PostureCoreParityTest 와 같은 이유).
  */
 
@@ -87,6 +89,9 @@ data class RepEngineLog(
     val romDirection: String? = null,
     val romThreshold: Float? = null,
     val romTier: String? = null,
+    /** 반복 판별 게이트(spec §62) — `config.identity{feature,min_amp}`. 판별 신호가 없는 종목은 null 이고 키가 없다. */
+    val identityFeature: String? = null,
+    val identityMinAmp: Float? = null,
 ) {
     companion object {
         const val ENGINE_RETURN = "return_v1"
@@ -115,6 +120,8 @@ data class RepEngineLog(
                 romDirection = s.romDirection,
                 romThreshold = s.romThreshold,
                 romTier = RepRomTier.of(s).key,
+                identityFeature = s.identityFeature,
+                identityMinAmp = s.identityFeature?.let { s.identityMinAmp },
             )
         }
     }
@@ -192,6 +199,13 @@ data class SetLog(
     val repPending: RepPendingState? = null,
     /** 시작 확정을 못 받아 버려진 사이클(새 코어만). [repPending] 과 함께 `reps.pending` 에 들어간다. */
     val repDropped: List<RepCycle>? = null,
+    /**
+     * 반복 판별 게이트(spec §62)가 세지 않은 사이클 — `reps.rejected[{t_ms,min,max,swing}]`. 판별 신호가 있는 종목만 목록(비어 있어도)이고
+     * 없는 종목·이전 로그는 null(키 없음). 시각은 세트 상대 ms.
+     */
+    val repRejected: List<RepRejected>? = null,
+    /** 센 사이클마다의 판별 신호 스윙(`reps.identity_swing`, [repTimesMs] 와 같은 순서, 판정 안 한 사이클은 null). 판별 신호가 있는 종목만. */
+    val repIdentitySwings: List<Float?>? = null,
     /** 세트 첫 프레임 시점의 열 상태. null = 이전 로그 또는 열 상태 API 없음(API 29 미만). */
     val thermalStart: Int? = null,
     val thermalChanges: List<ThermalEvent>? = null,
@@ -257,6 +271,8 @@ data class SetLog(
             repResets: List<RepResetEvent>? = null,
             repPending: RepPendingState? = null,
             repDropped: List<RepCycle>? = null,
+            repRejected: List<RepRejected>? = null,
+            repIdentitySwings: List<Float?>? = null,
             thermalStart: Int? = null,
             thermalChanges: List<ThermalEvent>? = null,
             appVersion: String? = null,
@@ -321,6 +337,8 @@ data class SetLog(
                 repResets = repResets,
                 repPending = repPending,
                 repDropped = repDropped,
+                repRejected = repRejected,
+                repIdentitySwings = repIdentitySwings,
                 thermalStart = thermalStart,
                 thermalChanges = thermalChanges,
                 appVersion = appVersion,
@@ -441,7 +459,27 @@ object SetLogJson {
                 e.romDirection?.let { sb.append(",\"rom_direction\":"); str(sb, it) }
                 e.romThreshold?.let { sb.append(",\"rom_threshold\":").append(num(it)) }
                 e.romTier?.let { sb.append(",\"rom_tier\":"); str(sb, it) }
+                // 반복 판별 게이트(spec §62) — 판별 신호가 있는 종목만 키가 있다
+                e.identityFeature?.let { f ->
+                    sb.append(",\"identity\":{\"feature\":"); str(sb, f)
+                    sb.append(",\"min_amp\":").append(num(e.identityMinAmp)).append('}')
+                }
                 sb.append('}')
+            }
+            // 판별 게이트가 세지 않은 사이클과 센 사이클의 판별 스윙 — 판별 신호가 있는 종목만(없으면 키 부재)
+            log.repRejected?.let { v ->
+                sb.append(",\"rejected\":[")
+                v.forEachIndexed { i, r ->
+                    if (i > 0) sb.append(',')
+                    sb.append("{\"t_ms\":").append(r.tMs).append(",\"min\":").append(num(r.min)).append(",\"max\":").append(num(r.max))
+                    sb.append(",\"swing\":").append(num(r.identitySwing)).append('}')
+                }
+                sb.append(']')
+            }
+            log.repIdentitySwings?.let { v ->
+                sb.append(",\"identity_swing\":[")
+                v.forEachIndexed { i, x -> if (i > 0) sb.append(','); sb.append(num(x)) }
+                sb.append(']')
             }
             log.repResets?.let { v ->
                 sb.append(",\"resets\":[")

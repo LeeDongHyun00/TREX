@@ -138,8 +138,10 @@ class PostureSetLogTest {
         assertTrue(json.contains("\"thermal\":{\"start\":0,\"changes\":[{\"t_ms\":6000,\"status\":2}]}"))
         assertTrue(json.contains("\"engine\":\"return_v1\""))
         // 지금 앱의 복귀형 구성(forSession: 불응기 1.2 s · 끊김 1.5 s · 복귀 완료) — polarity 가 없으면(레거시) 새 코어 키도 없다
+        // 스쿼트는 판별 게이트(spec §62)가 있어 config 끝에 identity 블록이 붙는다
         assertTrue(json.contains("\"config\":{\"feature\":\"knee_mean\",\"min_amp\":35,\"refractory_ms\":1200,\"max_gap_ms\":1500," +
-            "\"complete_on_return\":true,\"rom_direction\":\"min\",\"rom_threshold\":97.8905,\"rom_tier\":\"reference\"}"))
+            "\"complete_on_return\":true,\"rom_direction\":\"min\",\"rom_threshold\":97.8905,\"rom_tier\":\"reference\"," +
+            "\"identity\":{\"feature\":\"knee_maxside\",\"min_amp\":35}}"))
         // 리셋은 누른 시각(t_ms)과 그 직전에 카운터가 본 마지막 프레임(after_t_ms)을 함께 — 추론 중에 누른 전환은 after 가 t 보다 늦을 수 있다
         assertTrue(json.contains("\"resets\":[{\"t_ms\":4200,\"after_t_ms\":4050,\"reason\":\"pause\"}," +
             "{\"t_ms\":9100,\"after_t_ms\":9120,\"reason\":\"camera_switch\"}]"))
@@ -226,6 +228,8 @@ class PostureSetLogTest {
             repEngine = RepEngineLog.of(RepCounter.forSession("바벨 스쿼트", floor = false)!!),
             // 첫 프레임 전의 전환(카운터가 본 프레임 없음 → after null)과 추론 중에 누른 일시정지(after 가 누른 시각보다 앞 프레임)
             repResets = listOf(RepResetEvent(-120L, "camera_switch", afterTMs = null), RepResetEvent(410L, "pause", afterTMs = 300L)),
+            // 반복 판별 게이트(spec §62): 센 사이클의 판별 스윙과 세지 않은 사이클 하나(무릎 들기 — 카운트 신호는 사이클을 냈지만 더 편 무릎은 12.5° 뿐)
+            repRejected = listOf(RepRejected(1200L, 118f, 170f, 12.5f)), repIdentitySwings = listOf(71.5f),
             thermalStart = 0, thermalChanges = listOf(ThermalEvent(600L, 1)), appVersion = "0.9.1-debug",
         )
         val core = RepCounter(RepSignals.byExercise.getValue("바벨 스쿼트").copy(polarity = RepPolarity.DOWN), maxGapMs = 1500L, completeOnReturn = true)
@@ -233,6 +237,7 @@ class PostureSetLogTest {
             setId = "20260924T020500-gold0002", createdAtIso = "2026-09-24T02:05:30Z", mode = "track",
             repCount = 0, repTimesMs = emptyList(), repMins = emptyList(), repMaxs = emptyList(), repValid = emptyList(),
             repEngine = RepEngineLog.of(core), repResets = emptyList(),
+            repRejected = emptyList(), repIdentitySwings = emptyList(),   // 판별 신호가 있는 종목은 센 것이 없어도 빈 목록(키 있음)
             repPending = RepPendingState(RepCycle(900L, 300L, 92.25f, 170f), RepCandidate(600L, 90f, 168.5f)),
             repDropped = listOf(RepCycle(250L, 0L, 120f, 170f, byRedescent = true)),
         )
@@ -245,6 +250,7 @@ class PostureSetLogTest {
             repEngine = RepEngineLog.of(RepCounter.forSession("바벨 런지", floor = false)!!),
             repResets = listOf(RepResetEvent(450L, "pause", afterTMs = 300L)),
             repUnit = RepUnit.SIDE_PAIR, repCompleted = 1, repHalfPending = true,
+            repRejected = null, repIdentitySwings = null,   // 런지는 판별 신호가 없다 — 키 없음
         )
         // 렙 검증 모드(spec §61): 세트에 validation·image, 검출 프레임마다 xy(33×2)·w(33×3)·up. 값은 이진 소수로 정확히 떨어지게 골랐다
         // (코틀린 float 과 파이썬 double 의 소수 4자리 반올림이 갈리지 않게). 넷째 프레임은 미검출이라 좌표 키가 없다.
@@ -274,6 +280,22 @@ class PostureSetLogTest {
         assertTrue(v.contains("\"up\":[0,1,0],\"features\""))
         // 미검출 프레임은 좌표 키가 없다 — 한 세트에 xy 는 검출 프레임 수만큼
         assertEquals(1, Regex("\"xy\":").findAll(v).count())
+    }
+
+    @Test
+    fun identityGateFieldsAppearOnlyForSignalsThatHaveOne() {
+        // spec §62: 스쿼트(판별 신호 knee_maxside)는 config.identity·rejected·identity_swing 을 쓰고, 런지(판별 없음)는 키가 없다
+        val samples = List(3) { sample(true, mapOf("knee_mean" to 170f)) }
+        val squat = SetLogJson.encode(SetLog.build("바벨 스쿼트", samples, emptyList(), "mp_v0", "full", "GPU", true, 300L, now = Date(0L),
+            repCount = 2, repTimesMs = listOf(1000L, 2500L), repSignal = "knee_mean", repInvalid = 0,
+            repEngine = RepEngineLog.of(RepCounter.forSession("바벨 스쿼트", floor = false)!!), repResets = emptyList(),
+            repRejected = listOf(RepRejected(1800L, 118f, 170f, 12.5f)), repIdentitySwings = listOf(71.5f, null)))
+        assertTrue(squat.contains("\"rom_tier\":\"reference\",\"identity\":{\"feature\":\"knee_maxside\",\"min_amp\":35}}"))
+        assertTrue(squat.contains("\"rejected\":[{\"t_ms\":1800,\"min\":118,\"max\":170,\"swing\":12.5}],\"identity_swing\":[71.5,null],\"resets\":[]"))
+        val lunge = SetLogJson.encode(SetLog.build("바벨 런지", samples, emptyList(), "mp_v0", "full", "GPU", true, 300L, now = Date(0L),
+            repCount = 1, repTimesMs = listOf(1000L), repSignal = "knee_minside", repInvalid = 0,
+            repEngine = RepEngineLog.of(RepCounter.forSession("바벨 런지", floor = false)!!), repResets = emptyList()))
+        for (key in listOf("identity", "rejected", "identity_swing")) assertFalse(key, lunge.contains("\"$key\":"))
     }
 
     @Test
