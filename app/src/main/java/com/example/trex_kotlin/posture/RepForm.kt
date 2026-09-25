@@ -501,7 +501,8 @@ object RepFormSpecs {
                 lo = -8f, hi = 8f, lowText = "발끝이 시작보다 안으로 모였어요", highText = "발끝이 시작보다 바깥으로 벌어졌어요", lowLabel = "안쪽", highLabel = "바깥",
                 fix = "발끝을 시작 자세로 되돌리세요", unit = "°",
                 reason = "실기기 11:37 세트: 벌린 반복 +13~+21°, 모은 반복 −21~−22°, 정상 −2~+5°. 절대 임계 40° 는 놓쳤다(기준 22~33° 인 사람) — 시작 자세 대비로. 서 있는 프레임만(바닥에서는 발목 랜드마크가 흔들려 +8°)",
-                cautions = listOf(PROVISIONAL)),
+                cautions = listOf(PROVISIONAL, "넓게 서면 발끝 그대로여도 +20~+28° 로 읽힌다(12:19 세트 7·8회, 사용자 확인 — 원근 + MediaPipe 편향, §21.9). 발 너비가 바뀐 반복에서는 유보. 보정식은 스탠스만 바꾼 세트가 모이면"),
+                invalidatedBy = listOf("repform|$ex|발 간격")),
         )
     }
 }
