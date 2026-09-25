@@ -234,3 +234,6 @@ versionCode 5 / versionName `1.2.0-repval.1`(`4a50a34`) 빌드. 트리거 worktr
 
 ## 빌드 #9 (`2ccfcb8` + §21.9 — 이미지 2D 발 너비 `stance_2d`)
 `:app:testDebugUnitTest` 374 · `:app:assembleDebug` 성공 · replay-jvm 50(소스 목록 +`Stance2d.kt`). 12:19 검증 세트 랜드마크 경로 재생: 발 너비 오탐 0/8·검출 2/2.
+
+## 빌드 #10 (`969d808` + §21.10 — 모집단 띠·좌표 상시)
+`:app:testDebugUnitTest` 374 · `:app:assembleDebug` 성공 · replay-jvm 50. REHAB 18세트(208회)·MM-Fit 64세트(498회) 재생 — 정상 반복 오탐률 표는 설계 §21.10.

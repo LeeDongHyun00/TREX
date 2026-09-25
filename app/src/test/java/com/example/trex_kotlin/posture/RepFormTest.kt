@@ -53,33 +53,33 @@ class RepFormTest {
         // 첫 반복: 자기 자신이 기준이라 상대 검사는 정상, 바닥 무릎 0.15 정상 → 정확
         assertTrue(r1.correct); assertTrue(r1.flagged.isEmpty())
         // 발을 넓힌(×1.5) 반복 — 발 너비만 걸리고 무릎은 걸리지 않는다(서 있는 프레임 중 가장 벗어난 값 — 픽스처는 반복 내내 같은 값)
-        val r2 = f.rep(stance = 1.5f, ev = ev)
+        val r2 = f.rep(stance = 1.6f, ev = ev)
         assertEquals(listOf("repform|바벨 스쿼트|발 간격"), r2.flagged.map { it.check.id })
         assertEquals(FormDirection.HIGH, r2.flagged[0].direction)
-        assertEquals(1.5f, r2.flagged[0].value!!, 1e-3f)
+        assertEquals(1.6f, r2.flagged[0].value!!, 1e-3f)
         assertFalse(r2.outcomes.any { it.check.id.contains("무릎") && it.verdict == Verdict.VIOLATION })
         assertTrue(r2.correct)   // beta — 정확은 깎이지 않는다(원칙 #2)
         // 발을 넓히고 발끝 값도 +18° 인 반복 — 발 너비만 걸리고 발끝은 **유보**(§21.9: 넓게 서면 발끝 그대로여도 +20~28° 로 읽힌다, 사용자 확인)
-        val r3 = f.rep(stance = 1.5f, toe = 38f, ev = ev)
+        val r3 = f.rep(stance = 1.6f, toe = 38f, ev = ev)
         assertEquals(listOf("repform|바벨 스쿼트|발 간격"), r3.flagged.map { it.check.id })
         val toeAb = r3.outcomes.first { it.check.id == "repform|바벨 스쿼트|발끝 방향" }
         assertEquals(Verdict.ABSTAIN, toeAb.verdict); assertEquals("발 너비 위반으로 측정 무효", toeAb.abstainReason)
-        // 좁힘·안쪽도 방향을 갖는다 (띠 0.7~1.4)
-        val r4 = f.rep(stance = 0.6f, ev = ev)
+        // 좁힘·안쪽도 방향을 갖는다 (띠 0.6~1.5 · ±15°)
+        val r4 = f.rep(stance = 0.5f, ev = ev)
         assertEquals(listOf(FormDirection.LOW), r4.flagged.map { it.direction })
-        assertEquals(FormDirection.LOW, f.rep(toe = 8f, ev = ev).flagged.single().direction)
+        assertEquals(FormDirection.LOW, f.rep(toe = 0f, ev = ev).flagged.single().direction)
     }
 
     @Test
     fun shipKneeCheckUsesTheBottomWindowAndOnlyItReducesCorrect() {
         val ev = evaluator(); val f = Frames(ev)
         f.rep(ev = ev)
-        // 바닥에서 무릎이 모임(0.00) — 서 있는 프레임(−0.02)이 아니라 바닥 구간이 판정한다
-        val bad = f.rep(bottomKneeOut = 0.0f, ev = ev)
+        // 바닥에서 무릎이 엉덩이–발목 선 안쪽(−0.04) — 서 있는 프레임(−0.02)이 아니라 바닥 구간이 판정한다
+        val bad = f.rep(bottomKneeOut = -0.04f, ev = ev)
         val knee = bad.flagged.single()
         assertEquals("repform|바벨 스쿼트|무릎 안쪽 모임", knee.check.id)
         assertTrue(knee.check.ship)
-        assertTrue("bottom mean=${knee.value}", knee.value!! < 0.02388f)   // 바닥 창 평균(110° 프레임 포함) 0.0125
+        assertTrue("bottom mean=${knee.value}", knee.value!! < 0f)   // 바닥 창 평균(110° 프레임 포함) −0.0225
         assertFalse(bad.correct)
         // 바닥이 정상(0.20)이면 서 있는 프레임이 −0.02 라도 무릎은 정상 — 세트 평균 규칙의 오탐이 여기서 사라진다
         val good = f.rep(bottomKneeOut = 0.20f, ev = ev)
@@ -139,7 +139,7 @@ class RepFormTest {
     @Test
     fun startPostureBandFlagsWideStanceBeforeTheSet() {
         val ev = evaluator(); val f = Frames(ev)
-        f.rep(stance = 1.8f, toe = 40f, ev = ev)
+        f.rep(stance = 2.0f, toe = 50f, ev = ev)   // 시작 띠 0.5~1.8 · −5~45°
         val start = ev.startOutcomes.associateBy { it.check.id }
         assertEquals(FormDirection.HIGH, start.getValue("repform|바벨 스쿼트|발 간격|시작").direction)
         assertEquals(FormDirection.HIGH, start.getValue("repform|바벨 스쿼트|발끝 방향|시작").direction)
@@ -150,16 +150,16 @@ class RepFormTest {
     fun shipEventsNeedTwoConsecutiveViolationsAndBetaEventsAreScreenOnly() {
         val ev = evaluator(); val f = Frames(ev)
         f.rep(ev = ev)
-        val one = f.rep(bottomKneeOut = 0.0f, ev = ev)
+        val one = f.rep(bottomKneeOut = -0.04f, ev = ev)
         assertNull("한 번 튐은 말하지 않는다", ev.eventFor(one, 10_000L))
-        val two = f.rep(bottomKneeOut = 0.0f, ev = ev)
+        val two = f.rep(bottomKneeOut = -0.04f, ev = ev)
         val ev2 = ev.eventFor(two, 20_000L)
         assertNotNull(ev2); assertTrue(ev2!!.ship)
         assertEquals("바닥에서 무릎이 안쪽으로 모였어요. 무릎을 발끝 방향으로 두세요.", ev2.message)
-        val three = f.rep(bottomKneeOut = 0.0f, ev = ev)
+        val three = f.rep(bottomKneeOut = -0.04f, ev = ev)
         assertNull("쿨다운 안에서는 다시 말하지 않는다", ev.eventFor(three, 25_000L))
         // beta 는 반복마다 화면용 사건(ship 아님)
-        val wide = f.rep(stance = 1.5f, ev = ev)
+        val wide = f.rep(stance = 1.6f, ev = ev)
         val evB = ev.eventFor(wide, 60_000L)
         assertNotNull(evB); assertFalse(evB!!.ship)
         assertEquals("발 너비가 시작보다 넓어졌어요", evB.message)
@@ -228,8 +228,8 @@ class RepFormTest {
         // 11:37 세트 7~8회: 발끝 −21°·발 너비 ×1.8 → 무릎이 따라 들어와 knee_out ≈ 0. 무릎만 말하면 사용자가 바꾼 것(발)을 못 짚는다
         val ev = evaluator(); val f = Frames(ev)
         f.rep(ev = ev)
-        f.rep(toe = 0f, bottomKneeOut = 0.0f, ev = ev)          // 12:19 세트 3·4회: 발끝 안쪽만(발 너비 그대로)
-        val two = f.rep(toe = 0f, bottomKneeOut = 0.0f, ev = ev)
+        f.rep(toe = 0f, bottomKneeOut = -0.04f, ev = ev)          // 12:19 세트 3·4회: 발끝 안쪽만(발 너비 그대로)
+        val two = f.rep(toe = 0f, bottomKneeOut = -0.04f, ev = ev)
         assertFalse(two.correct)   // 정확은 여전히 ship 무릎 검사가 깎는다
         val e = ev.eventFor(two, 30_000L)!!
         assertTrue(e.ship)

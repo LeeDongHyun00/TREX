@@ -283,9 +283,15 @@ data class SetLog(
             repCompleted: Int? = null,
             repHalfPending: Boolean = false,
             validation: Boolean = false,
+            /**
+             * 검출 프레임마다 좌표(`xy`·`w`·`up`)와 `image` 를 쓴다(§62a 후속 5). 기본은 검증 모드와 같지만 세션은 **항상 켠다** —
+             * 알고리즘의 입력이 없으면 출력(피처)만으로는 측정 결함을 못 가른다(12:19 세트: 좌표가 있어서 3D 발목이 발 회전에 흔들리는 걸 알았다).
+             * 검증 모드는 이제 횟수 정답 수집용(숫자 숨김·음성·자동 진행)만 맡는다.
+             */
+            coordinates: Boolean = validation,
         ): SetLog {
             val frames = samples.mapIndexed { i, s ->
-                val lm = validation && s.detected
+                val lm = coordinates && s.detected
                 SetLogFrame(
                     tMs = sampleTimesMs?.getOrNull(i) ?: (i * sampleIntervalMs),
                     inferMs = s.inferMs,
@@ -350,8 +356,8 @@ data class SetLog(
                 repCompleted = repCompleted,
                 repHalfPending = repHalfPending,
                 validation = validation,
-                imageWidth = if (validation) firstImage?.imageWidth else null,
-                imageHeight = if (validation) firstImage?.imageHeight else null,
+                imageWidth = if (coordinates) firstImage?.imageWidth else null,
+                imageHeight = if (coordinates) firstImage?.imageHeight else null,
             )
         }
     }
@@ -380,12 +386,10 @@ object SetLogJson {
         field(sb, "note", log.note)
         if (log.mode != null) field(sb, "mode", log.mode)
         if (log.appVersion != null) field(sb, "app_version", log.appVersion)
-        // 검증 모드(spec §61) — 제품 로그에는 키가 없다
-        if (log.validation) {
-            sb.append("\"validation\":true,")
-            if (log.imageWidth != null && log.imageHeight != null)
-                sb.append("\"image\":{\"w\":").append(log.imageWidth).append(",\"h\":").append(log.imageHeight).append("},")
-        }
+        // 검증 모드(spec §61)는 키 하나 — 좌표·이미지 크기는 검증 모드와 무관하게 좌표를 남긴 세트면 쓴다(§62a 후속 5, 세션은 항상)
+        if (log.validation) sb.append("\"validation\":true,")
+        if (log.imageWidth != null && log.imageHeight != null)
+            sb.append("\"image\":{\"w\":").append(log.imageWidth).append(",\"h\":").append(log.imageHeight).append("},")
         sb.append("\"measurements\":[")
         log.measurements.forEachIndexed { i, value -> if (i > 0) sb.append(','); str(sb, value) }
         sb.append("],")

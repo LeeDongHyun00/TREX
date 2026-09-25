@@ -668,6 +668,8 @@ fun PostureLiveSessionScreen(
             appVersion = appVersion,
             // 검증 모드 세트만 좌표(xy·w·up)와 이미지 크기를 남긴다(spec §61) — 세트 시작 시점 값
             validation = validationRef[0],
+            // 좌표는 항상 남긴다(§62a 후속 5) — 검증 모드가 아니라도 측정 결함(발 회전에 흔들리는 3D 발목 등)을 좌표로 가릴 수 있어야 한다
+            coordinates = true,
             // 표시 단위(사용자 결정 2026-09-24) — 화면에 보인 수와 세트 끝에 남은 한쪽
             repUnit = unitUsed,
             repCompleted = unitCompleted,
