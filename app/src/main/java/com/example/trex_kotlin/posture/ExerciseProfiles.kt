@@ -70,7 +70,7 @@ object ExerciseProfiles {
         }
         val c=CapturePosition.FRONT; val b=CapturePosition.RIGHT_FRONT; val d=CapturePosition.LEFT_FRONT
         val low=CapturePosition.FLOOR_SIDE; val oblique=CapturePosition.FLOOR_FRONT
-        p("바벨 스쿼트","바벨 스쿼트",c,legs)
+        p("기본 스쿼트","바벨 스쿼트",c,legs)   // 앱 이름 "기본 스쿼트"(사용자 결정 2026-09-25 저녁) — AIHub 참조·규칙·로그는 "바벨 스쿼트" 그대로
         p("런지","스텝 포워드 다이나믹 런지",b,legs); p("바벨 런지","바벨 런지",d,legs)
         p("사이드 런지","사이드 런지",b,legs); p("크로스 런지","크로스 런지",c,legs)
         p("바벨 데드리프트","바벨 데드리프트",c,legs); p("굿모닝","굿모닝",c,legs)

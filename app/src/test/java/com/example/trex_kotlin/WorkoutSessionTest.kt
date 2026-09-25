@@ -13,7 +13,7 @@ class WorkoutSessionTest {
         assertEquals("unjudged",correction.kind);assertNull(report.accuracy)
     }
     private fun workout(reps: String = "12회 × 3세트", rest: Int = 60) =
-        Workout("squat","바벨 스쿼트",reps,"999분",false,"하체",secondsPerRep=4,restSeconds=rest)
+        Workout("squat","기본 스쿼트",reps,"999분",false,"하체",secondsPerRep=4,restSeconds=rest)
 
     @Test fun timeComesFromRepsAndOnlyTheGapsBetweenSets() {
         val timing=workout().timing()
@@ -29,7 +29,7 @@ class WorkoutSessionTest {
         // 교대 동작이어도 평균 신호로 한 사이클 = 1회인 종목과 다른 종목은 그대로
         assertEquals(3,WorkoutPacing.secondsPerRep("덤벨 컬","상체"))
         assertEquals(3,WorkoutPacing.secondsPerRep("스탠딩 니업","코어"))
-        assertEquals(4,WorkoutPacing.secondsPerRep("바벨 스쿼트","하체"))
+        assertEquals(4,WorkoutPacing.secondsPerRep("기본 스쿼트","하체"))
         assertEquals(4,WorkoutPacing.secondsPerRep("불가리안 스플릿 스쿼트","하체"))   // 카탈로그 밖 이름(프로필 없음) = 사이클 단위
         // 사용자가 정한 1회 시간은 그대로 쓴다
         assertEquals(40,Workout("l","런지","10회 × 1세트","999분",false,"하체",secondsPerRep=4).timing().workSeconds)

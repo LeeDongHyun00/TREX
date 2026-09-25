@@ -212,11 +212,21 @@ data class GoalItem(
     val description: String,
 )
 
+/**
+ * 종목 표시 이름의 개명 이력 — 저장된 루틴·기록의 옛 이름을 로드 시 지금 이름으로 바꾼다.
+ * "바벨 스쿼트" → "기본 스쿼트"(사용자 결정 2026-09-25 저녁). AIHub 참조 이름(규칙·카운터·세트 로그의 `exercise`)은 그대로 "바벨 스쿼트" —
+ * 앱 이름 → AIHub 이름은 `postureExerciseMap` 이 잇는다.
+ */
+object WorkoutNames {
+    private val renamed = mapOf("바벨 스쿼트" to "기본 스쿼트")
+    fun canonical(name: String): String = renamed[name] ?: name
+}
+
 /** 첫 실행 기본 루틴 — 카탈로그(AIHub 26종목) 안에서만 고른다. id 는 저장·기록 호환을 위해 유지한다. */
 val todayPlan = listOf(
     Workout(
         id = "squat",
-        name = "바벨 스쿼트",
+        name = "기본 스쿼트",
         reps = "12회 x 3세트",
         duration = "10분",
         posture = true,

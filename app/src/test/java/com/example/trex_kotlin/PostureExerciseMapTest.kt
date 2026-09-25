@@ -34,10 +34,11 @@ class PostureExerciseMapTest {
 
     @Test
     fun standingExercisesStillMapped() {
-        assertEquals("바벨 스쿼트", postureExerciseMap["바벨 스쿼트"])
+        assertEquals("바벨 스쿼트", postureExerciseMap["기본 스쿼트"])
         assertEquals("행잉 레그 레이즈", postureExerciseMap["행잉 레그 레이즈"])
-        // Bodyweight squat borrowed the barbell standard; it is no longer mapped.
-        assertFalse(postureExerciseMap.containsKey("기본 스쿼트"))
+        // 옛 표시 이름 "바벨 스쿼트" 는 map 키가 아니다(앱 이름은 "기본 스쿼트", 값이 AIHub 이름) — 저장된 옛 이름은 WorkoutNames.canonical 이 바꾼다
+        assertFalse(postureExerciseMap.containsKey("바벨 스쿼트"))
+        assertEquals("기본 스쿼트", WorkoutNames.canonical("바벨 스쿼트"))
         assertEquals(26, postureExerciseMap.size)
         assertEquals(26, postureExerciseMap.values.toSet().size)
     }

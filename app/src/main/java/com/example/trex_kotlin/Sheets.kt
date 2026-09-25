@@ -857,12 +857,12 @@ internal data class WorkoutTemplate(val name: String, val reps: String, val dura
  * 운동 카탈로그 — AIHub 피트니스 자세 데이터에 규칙 근거가 있는 26종목만 둔다(spec §56).
  * 앱 이름과 AIHub 종목이 1:1 이고 전부 postureExerciseMap 에 있다. 데이터에 없는 종목을 남기면
  * 카메라는 켜지는데 판정 근거가 없어, 비교 전용 안내가 자세 평가처럼 읽힌다.
- * 기본 스쿼트는 AIHub 에 맨몸 스쿼트가 없어 바벨 스쿼트 기준을 빌려 쓰던 종목이라 뺐다.
+ * "기본 스쿼트" 는 AIHub 바벨 스쿼트의 앱 표시 이름이다(사용자 결정 2026-09-25 저녁, 이전엔 "바벨 스쿼트" 로 노출). 저장된 옛 이름은 로드 시 바꾼다(WorkoutNames.canonical).
  * 바이시클 크런치는 MP 충실도 게이트(spec §25a) 후 남은 규칙이 없어 처음부터 제외.
  */
 internal val workoutCatalog = mapOf(
     "하체" to listOf(
-        WorkoutTemplate("바벨 스쿼트", "10회 × 3세트", "10분", "하체", true),
+        WorkoutTemplate("기본 스쿼트", "10회 × 3세트", "10분", "하체", true),
         WorkoutTemplate("런지", "10회 × 3세트", "10분", "하체", true),
         WorkoutTemplate("바벨 런지", "10회 × 3세트", "10분", "하체", true),
         WorkoutTemplate("사이드 런지", "10회 × 3세트", "9분", "하체", true),

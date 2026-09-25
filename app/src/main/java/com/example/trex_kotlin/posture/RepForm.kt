@@ -70,6 +70,18 @@ data class RepFormCheck(
      * 뒤꿈치·발목이 벌어져 발목 간격이 ×1.6~1.8 로 읽힌다. 발을 디딘 자리는 그대로인데 "넓어졌어요" 는 방향이 틀린 말이다).
      */
     val invalidatedBy: List<String> = emptyList(),
+    /**
+     * 창의 프레임 수 상한 — TOP 이면 하강 직전 마지막 N 프레임만(§21.12: 발끝은 0.6~0.9 s = 300 ms 에서 2~3 프레임이 적정,
+     * 복귀 직후 프레임은 과도 상태라 넣지 않는다). null = 위상 창 전체.
+     */
+    val windowFrames: Int? = null,
+    /**
+     * HIGH 위반의 추가 조건(AND) — 창 통계 원값 ÷ 시작 자세의 [absRefFeature] 가 [absMin] 이상일 때만 위반. 발 너비: 시작 대비 ×1.4(바뀌었다)
+     * **이고** 시작 어깨 대비 1.5(어깨 너비를 넘었다). 상대만 쓰면 시작 기준이 어긋난 세트(16:13)가 통째로 위반이 되고, 절대만 쓰면 카메라 높이에
+     * 따라 오탐 6~16 %(A7b). 시작 자세에 그 피처가 없으면 조건을 못 재므로 유보.
+     */
+    val absRefFeature: String? = null,
+    val absMin: Float? = null,
 ) {
     init { require(lo != null || hi != null) { "$id: 허용 띠가 없다" } }
 
@@ -146,13 +158,19 @@ class RepFormEvaluator(
         private set
     var baselineAtMs: Long? = null
         private set
+    /**
+     * 시작 발 너비 기준을 첫 반복의 바닥에서 잡았다(§21.12) — 첫 상단 창 안에서 발목 간격이 10 % 넘게 움직였을 때(발을 옮기고 바로 앉음, 16:13 세트:
+     * 60 → 97 px 로 21회 전부 '넓음'). 사용자에게 "첫 반복을 기준으로 잡았어요" 라고 밝힌다.
+     */
+    var baselineFromFirstBottom: Boolean = false
+        private set
 
     val reps: List<RepFormRep> get() = repList
     val startOutcomes: List<RepFormOutcome> get() = startList
 
     fun reset() {
         buf.clear(); carry = emptyList(); repList.clear(); startList.clear(); lastSpokenAt.clear()
-        baseline = null; baselineAtMs = null; rejectedCount = 0; noTopCount = 0
+        baseline = null; baselineAtMs = null; baselineFromFirstBottom = false; rejectedCount = 0; noTopCount = 0
     }
 
     /** 검출된 프레임마다(카운터 onFrame **앞에서**). 피처 없는 프레임은 창에 들어가지 않는다. */
@@ -183,7 +201,16 @@ class RepFormEvaluator(
         carry = phases.trailingStanding
         if (phases.top.isEmpty()) noTopCount++
         if (baseline == null && phases.top.size >= 2) {
-            baseline = medians(phases.top)
+            val b = HashMap(medians(phases.top))
+            // 시작 발 너비 안정성(§21.12): 상단 창 안에서 발목 간격이 10 % 넘게 움직였으면 발을 옮기던 중 — 그 중앙값은 옛 자세다.
+            // 이 반복의 바닥 발목 간격을 기준으로 삼는다(첫 반복은 비율 1 → 정상). 안정 규칙은 발 너비에만 — 발끝은 상단 그대로.
+            val seps = phases.top.mapNotNull { it.second[Stance2d.ANKLE_SEP] }
+            if (seps.size >= 2 && seps.min() > 1e-6f && seps.max() / seps.min() > START_STABLE_RATIO) {
+                val bottomSeps = phases.bottom.mapNotNull { it.second[Stance2d.ANKLE_SEP] }
+                if (bottomSeps.isNotEmpty()) { b[Stance2d.ANKLE_SEP] = stat(bottomSeps, RepFormStat.MEDIAN); baselineFromFirstBottom = true }
+                else b.remove(Stance2d.ANKLE_SEP)
+            }
+            baseline = b
             baselineAtMs = phases.top.last().first
             for (c in checks) if (c.phase == RepPhase.START) startList += evaluateStart(c)
         }
@@ -206,14 +233,15 @@ class RepFormEvaluator(
     /**
      * 이 반복에서 말할 사건. ship 은 **같은 검사가 2회 연속** 위반이고 쿨다운이 지났을 때만(한 번 튐은 화면만) — 음성은 즉시 몸을 바꾸는 채널이다(원칙 #6).
      * beta 는 화면 '참고' 용이라 반복마다 돌려준다(음성 아님). 우선순위 = 검사 순서.
+     * [gate] = 이 회가 횟수에서 빠지는 모드(COACH, §62b) — 첫 위반부터 말한다(쿨다운은 그대로). 빠진 회를 침묵하면 사용자는 카운트가 죽은 줄 안다.
      */
-    fun eventFor(rep: RepFormRep, nowMs: Long): RepFormEvent? {
+    fun eventFor(rep: RepFormRep, nowMs: Long, gate: Boolean = false): RepFormEvent? {
         val flagged = rep.flagged
         for (o in flagged) {
             val d = o.direction ?: continue
             val c = o.check
             if (c.ship) {
-                if (c.id !in rep.consecutiveShip) continue
+                if (!gate && c.id !in rep.consecutiveShip) continue
                 val last = lastSpokenAt[c.id]
                 if (last != null && nowMs - last < cooldownMs) continue
                 lastSpokenAt[c.id] = nowMs
@@ -229,7 +257,7 @@ class RepFormEvaluator(
     }
 
     fun summary(): RepFormSummary =
-        RepFormSummary(checks, baseline, baselineAtMs, startList.toList(), repList.toList(), rejectedCount, noTopCount)
+        RepFormSummary(checks, baseline, baselineAtMs, startList.toList(), repList.toList(), rejectedCount, noTopCount, baselineFromFirstBottom)
 
     private class Phases(
         val top: List<Pair<Long, Map<String, Float>>>,
@@ -286,11 +314,12 @@ class RepFormEvaluator(
     }
 
     private fun evaluate(c: RepFormCheck, p: Phases): RepFormOutcome {
-        val frames = when (c.phase) {
+        val all = when (c.phase) {
             RepPhase.TOP -> p.top; RepPhase.BOTTOM -> p.bottom; RepPhase.CYCLE -> p.cycle; RepPhase.START -> emptyList()
             RepPhase.STANDING -> p.top + p.trailingStanding
             RepPhase.ASCENT -> p.ascent
         }
+        val frames = c.windowFrames?.let { n -> if (all.size > n) all.subList(all.size - n, all.size) else all } ?: all
         val values = frames.mapNotNull { it.second[c.feature] }
         val need = if (c.stat == RepFormStat.MAX || c.stat == RepFormStat.MIN || c.stat == RepFormStat.EXTREME) 1 else 2
         if (values.size < need) return RepFormOutcome(c, Verdict.ABSTAIN, null, null, null, null, values.size,
@@ -313,7 +342,13 @@ class RepFormEvaluator(
             RepFormRef.START_RATIO -> if (ref == null || abs(ref) < 1e-6f) return RepFormOutcome(c, Verdict.ABSTAIN, null, raw, ref, null, values.size, "시작 자세 기준 없음") else raw / ref
             RepFormRef.START_DELTA -> if (ref == null) return RepFormOutcome(c, Verdict.ABSTAIN, null, raw, null, null, values.size, "시작 자세 기준 없음") else raw - ref
         }
-        val d = c.judge(value)
+        var d = c.judge(value)
+        if (d == FormDirection.HIGH && c.absRefFeature != null && c.absMin != null) {
+            // 절대 척도(시작 어깨 등)로 한 번 더 — 상대 변화만으로는 '스타일이 바뀜' 과 '어깨 너비를 넘음' 을 못 가른다
+            val absRef = baseline?.get(c.absRefFeature)
+            if (absRef == null || abs(absRef) < 1e-6f) return RepFormOutcome(c, Verdict.ABSTAIN, value, raw, ref, null, values.size, "시작 자세에 ${c.absRefFeature} 없음")
+            if (raw / absRef < c.absMin) d = null
+        }
         return RepFormOutcome(c, if (d == null) Verdict.OK else Verdict.VIOLATION, value, raw, ref, d, values.size)
     }
 
@@ -324,6 +359,8 @@ class RepFormEvaluator(
         const val STANDING_BAND_REF = 0.3f
         /** 상단 창 길이(프레임) — 300 ms 샘플링 ≈ 1.5 s. */
         const val TOP_FRAMES = 5
+        /** 시작 상단 창 안 발목 간격 최대÷최소가 이보다 크면 '발을 옮기던 중' — 발 너비 기준을 첫 반복 바닥에서 잡는다(§21.12). */
+        const val START_STABLE_RATIO = 1.10f
         private const val CAP = 2_000
 
         fun stat(values: List<Float>, stat: RepFormStat): Float = when (stat) {
@@ -346,6 +383,7 @@ data class RepFormSummary(
     val reps: List<RepFormRep>,
     val rejected: Int,
     val noTop: Int,
+    val baselineFromFirstBottom: Boolean = false,
 ) {
     val hasShip: Boolean get() = checks.any { it.ship && it.phase != RepPhase.START }
     val correct: Int get() = reps.count { it.correct }
@@ -362,6 +400,7 @@ data class RepFormSummary(
     fun lines(): List<String> = buildList {
         if (reps.isEmpty()) return@buildList
         if (baseline == null) add("시작 자세를 잡지 못해 시작 기준 검사(발 너비·발끝)는 못 했어요")
+        else if (baselineFromFirstBottom) add("시작할 때 발을 옮기고 있어서 발 너비 기준은 첫 반복으로 잡았어요")
         // 검사별 위반 수는 규칙 행(ruleResult 의 measurement)에 있다 — 여기서는 행에 없는 것만: 시작 자세, 정확 수, 못 잰 반복
         if (hasShip) add("정확 $correct / ${reps.size}회")
         if (noTop > 0) add("하강 직전 상단을 못 잡은 반복 ${noTop}회 — 그 회는 발 너비·발끝 비교를 못 했어요")
@@ -379,10 +418,10 @@ data class RepFormSummary(
     fun toLog(t0: Long): RepFormLog = RepFormLog(
         version = RepFormSpecs.VERSION,
         baselineTMs = baselineAtMs?.let { it - t0 },
-        baseline = baseline?.filterKeys { k -> checks.any { it.feature == k } }.orEmpty(),
+        baseline = baseline?.filterKeys { k -> checks.any { it.feature == k || it.absRefFeature == k } }.orEmpty(),
         start = start.map { RepFormLog.Check(it.check.id, it.verdict.name, it.value, it.raw, it.reference, it.direction?.name) },
         reps = reps.map { r -> RepFormLog.Rep(r.tMs - t0, r.correct, r.outcomes.map { RepFormLog.Check(it.check.id, it.verdict.name, it.value, it.raw, it.reference, it.direction?.name) }) },
-        rejected = rejected, noTop = noTop,
+        rejected = rejected, noTop = noTop, baselineFromFirstBottom = baselineFromFirstBottom,
     )
 }
 
@@ -395,6 +434,8 @@ data class RepFormLog(
     val reps: List<Rep>,
     val rejected: Int,
     val noTop: Int,
+    /** 발 너비 기준을 첫 반복 바닥에서 잡았다(§62b) — 로그 키 `baseline_from_first_bottom`. */
+    val baselineFromFirstBottom: Boolean = false,
 ) {
     data class Check(val id: String, val verdict: String, val value: Float?, val raw: Float?, val reference: Float?, val direction: String?)
     data class Rep(val tMs: Long, val correct: Boolean, val checks: List<Check>)
@@ -402,7 +443,7 @@ data class RepFormLog(
     /**
      * `rep_form` 블록의 JSON — 세트 로그(`SetLogJson`)와 재생기가 같은 문자열을 낸다(재생기는 org.json 도 SetLogJson 도 컴파일하지 않는다).
      * 숫자 형식은 `SetLogJson.num`(고정 소수 5자리, 끝 0·점 제거, NaN → null) 과 같다.
-     * `{"version","baseline_t_ms","baseline":{feature:value},"start":[check],"reps":[{"t_ms","correct","checks":[check]}],"rejected","no_top"}`,
+     * `{"version","baseline_t_ms","baseline":{feature:value},"start":[check],"reps":[{"t_ms","correct","checks":[check]}],"rejected","no_top","baseline_from_first_bottom"}`,
      * check = `{"id","v","value","raw","ref","dir"}` (없는 값은 null).
      */
     fun toJson(): String {
@@ -425,7 +466,8 @@ data class RepFormLog(
             r.checks.forEachIndexed { j, c -> if (j > 0) sb.append(','); check(c) }
             sb.append("]}")
         }
-        sb.append("],\"rejected\":").append(rejected).append(",\"no_top\":").append(noTop).append('}')
+        sb.append("],\"rejected\":").append(rejected).append(",\"no_top\":").append(noTop)
+        sb.append(",\"baseline_from_first_bottom\":").append(baselineFromFirstBottom).append('}')
         return sb.toString()
     }
 
@@ -454,12 +496,13 @@ data class RepFormLog(
  * 반복별 검사 등록부 — 코드가 정본이다(`RepSignals` 와 같은 자리). 규칙 JSON 이 아닌 이유: 재생기(replay-jvm)가 org.json 없이 같은 검사를
  * 돌려야 하고(Gate A 가 이 검사를 잰다), 상태(ship/beta)·문장·띠가 한 곳에 있어야 한다. 범위 문장·리포트 행은 [asRules] 가 규칙셋에 붙인다.
  *
- * 임계값의 출처(spec §62a): 잠정값은 2026-09-25 실기기 두 세트(한 사람)에서 골랐고 **확정이 아니다** — 지정 오류 세트 3명 이후 확정.
- * 그동안 beta(화면·리포트 '참고'). ship 은 하나 — 무릎 안쪽 모임(바닥): AIHub 검증 임계(0.02388)를 그 조건이 물리적으로 드러나는
- * 바닥 구간에 적용한 것이라, 세트 평균 규칙(서 있는 프레임이 결정)을 대체한다([supersedes]).
+ * 임계값의 출처(spec §62a·§62b): 잠정값은 2026-09-25 실기기 세트(한 사람)와 모집단 재생(REHAB·MM-Fit, `research/camera_observability/A7b`)에서
+ * 골랐고 **확정이 아니다** — 지정 오류 세트 3명 이후 확정. ship 은 셋 — 무릎 안쪽 모임(바닥, AIHub 임계를 바닥 구간에), 발 간격(반복, 바닥 2D 발목
+ * 간격 ÷ 시작 ×1.4 AND ÷ 시작 어깨 1.5: 정면 정상 반복 오탐 0/243·폰 넓힘 7/7), 발끝 방향(반복, 2D 발목→발끝 각 시작 대비 ±15°: 정면 오탐 0~4 %·
+ * 폰 검출 5/6). ship 은 COACH 에서 그 회를 횟수에서 뺀다(사용자 결정 2026-09-25, `docs/SQUAT_FOOT_RULES_RESEARCH.md`).
  */
 object RepFormSpecs {
-    const val VERSION = "repform_v0.1"
+    const val VERSION = "repform_v0.2"
 
     /** 이 검사가 대체하는 창 규칙 id — 세션 규칙셋에서 beta 로 낮춘다(음성·점수·헤드라인에서 빠지고 리포트엔 '참고'로 남는다). */
     val supersedes: Map<String, String> = mapOf("바벨 스쿼트|발과 무릎의 방향 일치" to "repform|바벨 스쿼트|무릎 안쪽 모임")
@@ -477,11 +520,11 @@ object RepFormSpecs {
         val ex = "바벨 스쿼트"
         return listOf(
             // 우선순위 순 — 발화·화면 사건은 이 순서의 첫 위반
-            RepFormCheck("repform|$ex|상체 숙임", ex, "상체 숙임(반복)", "상체", RuleStatus.BETA, "torso_incl", RepPhase.CYCLE, RepFormStat.MAX, RepFormRef.START_DELTA,
+            RepFormCheck("repform|$ex|상체 숙임", ex, "상체 숙임(반복)", "상체", RuleStatus.SHIP, "torso_incl", RepPhase.CYCLE, RepFormStat.MAX, RepFormRef.START_DELTA,
                 lo = null, hi = 45f, lowText = null, highText = "상체가 시작보다 많이 숙여졌어요", lowLabel = null, highLabel = "숙임",
                 fix = "가슴을 들고 몸통을 세우세요", unit = "°",
-                reason = "정면 폰은 척추 굴곡을 못 본다 — 기울기 최대(반복 안)로 큰 숙임만 잡는다. 실기기 허리 굽힘 2회 63~67° vs 정상 14~39°",
-                cautions = listOf(PROVISIONAL, "정면에서는 '말림' 이 아니라 '숙임' 이다 — 미세한 말림은 못 본다")),
+                reason = "정면 폰은 척추 굴곡을 못 본다 — 기울기 최대(반복 안)로 큰 숙임만 잡는다. 실기기 허리 굽힘 2회 63~67° vs 정상 14~39°. ship 승격(사용자 결정 2026-09-25 저녁, 실기기 시험 뒤 \"허리 굽혔을 때도 똑같이 막아\") — 정상 반복 오탐 REHAB 정면 0 %·세로 0 %·MM-Fit 1 %(§21.10), 실기기 검출 2/2(57~60°). COACH 에서 이 회는 횟수에서 빠진다(§62b)",
+                cautions = listOf("정면에서는 '말림' 이 아니라 '숙임' 이다 — 미세한 말림은 못 본다", "월드 기울기(중력 up) 기반 — up 오류 세트(16:13)에서는 시작 자세도 같이 틀려 차가 무의미해질 수 있다(up 방어 작업 대기)", "지정 오류 세트 3명 이후 띠 확정")),
             RepFormCheck("repform|$ex|엉덩이 먼저 상승", ex, "엉덩이 먼저 상승(반복)", "엉덩이", RuleStatus.BETA, "torso_incl", RepPhase.ASCENT, RepFormStat.RISE, RepFormRef.NONE,
                 lo = null, hi = 20f, lowText = null, highText = "올라올 때 엉덩이가 먼저 올라와 상체가 더 숙여졌어요", lowLabel = null, highLabel = "먼저 상승",
                 fix = "무릎과 엉덩이를 같이 펴세요", unit = "°",
@@ -514,22 +557,26 @@ object RepFormSpecs {
                 fix = "발을 어깨 너비로 벌려 주세요",
                 reason = "사용자 결정: 스쿼트 발 간격은 어깨 너비. 이미지 2D 발목 x 간격 ÷ 어깨 x 간격 — 월드 3D 발목 간격은 발끝 회전에 흔들린다(12:19 검증 세트 좌표: 3D −18 % vs 2D ±5 %). 정상 서기 0.9~1.15(1명), 넓게 2.2",
                 cautions = listOf(PROVISIONAL, "넓은 스탠스(스모)는 정당한 변형일 수 있다 — 세트 전 안내로만", "절대 비율은 카메라 높이에 따라 다르다(§21.10: 폰 바닥 0.88~1.16, REHAB 정면 1.07~1.65, MM-Fit 0.45~1.29) — 이 띠는 극단만 걸러낸다")),
-            RepFormCheck("repform|$ex|발 간격", ex, "발 간격(반복)", "발 너비", RuleStatus.BETA, Stance2d.FEATURE, RepPhase.STANDING, RepFormStat.EXTREME, RepFormRef.START_RATIO,
-                lo = 0.6f, hi = 1.5f, lowText = "발 너비가 시작보다 좁아졌어요", highText = "발 너비가 시작보다 넓어졌어요", lowLabel = "좁음", highLabel = "넓음",
+            RepFormCheck("repform|$ex|발 간격", ex, "발 간격(반복)", "발 너비", RuleStatus.SHIP, Stance2d.ANKLE_SEP, RepPhase.BOTTOM, RepFormStat.MEDIAN, RepFormRef.START_RATIO,
+                lo = null, hi = 1.4f, lowText = null, highText = "발 너비가 시작보다 넓어졌어요", lowLabel = null, highLabel = "넓음",
+                fix = "발을 어깨 너비로 다시 두세요", absRefFeature = Stance2d.SHOULDER_SEP, absMin = 1.5f,
+                reason = "§21.12(A7b): 반복 바닥 구간의 2D 발목 x 간격 중앙값 ÷ 시작 발목 간격 — 정면 정상 반복 오탐 0/243(REHAB 51·MM-Fit 192, 진짜 300 ms), 폰 넓힘 7/7(×1.53~2.35), 정상·발끝 회전·무릎 모음 반복 오탐 0/27, 유보 0~2 %. 프레임별 어깨로 나누던 옛 방식(stance_2d 극값)은 어깨 한 프레임(26 px)에 ×3.21, 직전 창 이월에 ×1.90 오탐(16:16 세트). 절대 조건(÷ 시작 어깨 ≥ 1.5)은 시작 기준이 어긋난 세트(16:13: 발 모은 채 시작 → 21회 '넓음')를 막는다",
+                cautions = listOf("정면(C)에서만 — 사선 뷰(B/D)는 앉을 때 원근으로 발목 간격이 변해 오탐 4 %", "절대 1.5 는 잠정(폰 1명 정상 1.05~1.36, 모집단 p95 1.42~1.65, 카메라 높이 의존) — 폰 세트 3명 이후 확정", "×1.4 는 모집단 C 오탐 0, 폰 넓힘 최소 ×1.53 과의 여유 0.13")),
+            RepFormCheck("repform|$ex|발 간격|좁음", ex, "발 간격 좁아짐(반복)", "발 너비", RuleStatus.BETA, Stance2d.ANKLE_SEP, RepPhase.BOTTOM, RepFormStat.MEDIAN, RepFormRef.START_RATIO,
+                lo = 0.7f, hi = null, lowText = "발 너비가 시작보다 좁아졌어요", highText = null, lowLabel = "좁음", highLabel = null,
                 fix = "발을 어깨 너비로 다시 두세요",
-                reason = "12:19 검증 세트(좌표): 2D 발목 비는 발끝 안쪽 ×0.97~1.01·바깥 ×1.03~1.05(불변), 넓게 ×2.0~2.2, 끝의 정상 ×0.83~0.94(같은 사람의 정상도 ±15 % 흔들린다 → 띠 0.7~1.4). 월드 3D(stance_sh)는 발끝 안쪽에서 ×0.82(이 세트)·×1.8(11:37) 로 회전에 오염돼 뺐다. 서 있는 프레임(앞뒤)만 — 바닥에서는 무릎이 벌어지며 부푼다",
-                cautions = listOf(PROVISIONAL, "띠 0.6~1.5: 정상 반복 오탐 REHAB 정면 1 %·세로 2 %·MM-Fit 3 %(§21.10, 0.7~1.4 는 6 %). 넓게(×1.8~2.2) 검출은 그대로, 좁힘 검출은 약해진다", "시작 자세 5프레임 하나가 기준이라 그 순간이 평소와 다르면 세트 전체가 어긋난다(12:19: 시작 1.10 vs 끝 0.91~1.03)")),
-            RepFormCheck("repform|$ex|발끝 방향|시작", ex, "발끝 방향(시작)", "발끝", RuleStatus.BETA, "toe_out_maxside", RepPhase.START, RepFormStat.MEDIAN, RepFormRef.NONE,
-                lo = -5f, hi = 45f, lowText = "발끝이 안으로 모여 있어요", highText = "발끝이 바깥으로 많이 벌어져 있어요", lowLabel = "안쪽", highLabel = "바깥",
+                reason = "좁아짐은 스타일일 수 있어 참고만(횟수 게이트 아님). 바닥 발목 간격 ÷ 시작 < 0.7 — 모집단 정상 반복 오탐 0 %(A7b 1d)",
+                cautions = listOf(PROVISIONAL, "검출 근거 없음(일부러 좁힌 세트가 없다)")),
+            RepFormCheck("repform|$ex|발끝 방향|시작", ex, "발끝 방향(시작)", "발끝", RuleStatus.BETA, Stance2d.TOE_MAXSIDE, RepPhase.START, RepFormStat.MEDIAN, RepFormRef.NONE,
+                lo = -5f, hi = 50f, lowText = "발끝이 안으로 모여 있어요", highText = "발끝이 바깥으로 많이 벌어져 있어요", lowLabel = "안쪽", highLabel = "바깥",
                 fix = "발끝을 살짝만 바깥으로 두세요", unit = "°",
-                reason = "관용 발끝 각 5~30° 에 측정 편향을 더한 띠 — 정상 시작 발끝 각: 폰 바닥 22~33°, REHAB 정면 20~38°, MM-Fit p5~p95 13~34°(§21.10). 발목→발끝 수평각(뒤꿈치는 정면·낮은 폰에서 91% 안 보임)",
-                cautions = listOf(PROVISIONAL, "발끝(31/32)·발목이 화면 안이어야 한다 — 잘리면 유보")),
-            RepFormCheck("repform|$ex|발끝 방향", ex, "발끝 방향(반복)", "발끝", RuleStatus.BETA, "toe_out_maxside", RepPhase.STANDING, RepFormStat.MEDIAN, RepFormRef.START_DELTA,
+                reason = "관용 발끝 각 5~30° 에 이미지 2D 측정 편향을 더한 띠 — 이 사용자 정상 22~34°(0.75 m 폰), 바닥 폰은 +21~24° 더 크게 읽는다(A1). 극단만",
+                cautions = listOf(PROVISIONAL, "발끝(31/32)·발목이 화면 안이어야 한다 — 잘리면 유보", "카메라 높이에 따라 영점이 움직여 세트 전 안내로만")),
+            RepFormCheck("repform|$ex|발끝 방향", ex, "발끝 방향(반복)", "발끝", RuleStatus.SHIP, Stance2d.TOE_MAXSIDE, RepPhase.TOP, RepFormStat.MEDIAN, RepFormRef.START_DELTA,
                 lo = -15f, hi = 15f, lowText = "발끝이 시작보다 안으로 모였어요", highText = "발끝이 시작보다 바깥으로 벌어졌어요", lowLabel = "안쪽", highLabel = "바깥",
-                fix = "발끝을 시작 자세로 되돌리세요", unit = "°",
-                reason = "실기기 11:37 세트: 벌린 반복 +13~+21°, 모은 반복 −21~−22°, 정상 −2~+5°. 절대 임계 40° 는 놓쳤다(기준 22~33° 인 사람) — 시작 자세 대비로. 서 있는 프레임만(바닥에서는 발목 랜드마크가 흔들려 +8°)",
-                cautions = listOf(PROVISIONAL, "넓게 서면 발끝 그대로여도 +20~+28° 로 읽힌다(12:19 세트 7·8회, 사용자 확인 — 원근 + MediaPipe 편향, §21.9). 발 너비가 바뀐 반복에서는 유보. 보정식은 스탠스만 바꾼 세트가 모이면",
-                    "한 사람 띠 ±8° 는 모집단에서 정상 반복 오탐 31~35 %(§21.10: 발끝 각의 반복 간 흔들림이 크다) — 서 있는 프레임 중앙값·±15° 로. 일부러 돌린 반복(±18~25°)은 여전히 걸린다"),
+                fix = "발끝을 시작 자세로 되돌리세요", unit = "°", windowFrames = 3,
+                reason = "§21.12(A7a·A7b): 이미지 2D 발목→발끝 각(더 벌어진 쪽), 하강 직전 서 있는 ≤3프레임(0.6~0.9 s) 중앙값, 시작 대비 ±15°. 정면 정상 반복 오탐 REHAB 0 %·MM-Fit 4 %, 폰 검출 5/6(벌림 +18~+22°, 모음 −45°). 월드 3D 각(옛 피처)은 실제 회전을 2D 의 6할로 반영해(z 가 GHUM 추정치) 같은 회를 +11~+12° 로 읽어 놓쳤다. '한쪽만 넘어도' 는 검출을 못 늘리고 오탐만 두 배라 채택 안 함",
+                cautions = listOf("정면(C)에서만 — 사선에서는 기울기 0.26~0.75", "넓게 서면 발끝 그대로여도 모든 판독이 +14~+30°(A6·A7b, MediaPipe 편향 — 원근이 아님) → 발 너비 위반 반복은 유보", "놓친 1건(16:16 3회)은 랜드마크가 움직이지 않았다 — 원인 미확정(테이프 실험 대기)", "300 ms 에서 서 있는 프레임 2개 이상일 때만 — 쉬지 않고 이어 하면 유보"),
                 invalidatedBy = listOf("repform|$ex|발 간격")),
         )
     }

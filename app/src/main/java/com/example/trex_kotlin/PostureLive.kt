@@ -176,7 +176,7 @@ import kotlin.coroutines.suspendCoroutine
 
 /** 앱 운동명 → AIHub 규칙 종목 매핑 — 여기 있는 운동만 자세 교정을 켤 수 있다. */
 val postureExerciseMap: Map<String, String> = mapOf(
-    "바벨 스쿼트" to "바벨 스쿼트",
+    "기본 스쿼트" to "바벨 스쿼트",   // 표시 이름만 바뀜 — 규칙·카운터·로그의 종목 이름은 AIHub 그대로
     "런지" to "스텝 포워드 다이나믹 런지",
     "바벨 런지" to "바벨 런지",
     "사이드 런지" to "사이드 런지",
@@ -951,14 +951,17 @@ fun PostureLiveSessionScreen(
                             }
                             repCount += tally.repsNotShort
                             repInvalid += tally.repsShort
-                            repIncorrect += formReps.count { !it.correct }
+                            // COACH 만 ship 위반 회를 횟수에서 뺀다(spec §62b, 사용자 결정 2026-09-25). TRACK 은 전부 센다 — 게이트 없음.
+                            val gate = modeRef[0] == CoachMode.COACH && !floorRef[0]
+                            if (gate) repIncorrect += formReps.count { !it.correct }
                             formReps.lastOrNull()?.let { rep ->
                                 if (rep.correct) formNote = null
-                                rf!!.eventFor(rep, now)?.let { ev ->
-                                    if (ev.ship && modeRef[0] != CoachMode.TRACK && !floorRef[0]) {
-                                        // ship 검사(2회 연속 위반)만 음성 — 즉시 몸을 바꾸는 채널이라 보수적으로(원칙 #6)
-                                        formNote = ev.message
-                                        speech.speak(ev.message, flush = now > boundaryUntil[0])
+                                rf!!.eventFor(rep, now, gate = gate)?.let { ev ->
+                                    if (ev.ship && gate) {
+                                        // 빠진 회는 그 자리에서 이유를 말한다 — 침묵하면 카운트가 죽은 줄 안다. 쿨다운(12 s)은 평가기가 건다.
+                                        val msg = "${ev.message} 이 회는 세지 않았어요."
+                                        formNote = msg
+                                        speech.speak(msg, flush = now > boundaryUntil[0])
                                     } else if (!ev.ship) {
                                         provisionalNote = ev.message   // beta 는 화면 '참고' 로만 — 침묵이 "이상 없음" 으로 읽히면 안 된다
                                     }
@@ -1211,8 +1214,8 @@ fun PostureLiveSessionScreen(
                     // 운동 중에는 제어판이 접혀 있어(몰입) 좌우 짝 표기를 HUD 에도 둔다 — 한쪽을 마친 동안 '반대쪽 차례', 아니면 단위
                     countNote = when {
                         repRef[0] != null && repUnit == RepUnit.SIDE_PAIR -> if (repHalfPending) SIDE_PAIR_NEXT_HINT else SIDE_PAIR_UNIT_HINT
-                        // ship 자세 검사 위반 회는 목표 수에 안 들어간다(§62a) — 반복 수는 줄이지 않고 나란히 보인다
-                        repIncorrect > 0 -> "반복 ${repCount + repInvalid} · 정확 ${repCount + repInvalid - repIncorrect}"
+                        // COACH: ship 자세 검사 위반 회는 횟수에서 뺀다(§62b) — 큰 숫자가 정확 수, 감지 수는 나란히
+                        repIncorrect > 0 -> "감지 ${repCount + repInvalid}회 중 정확 ${repCount + repInvalid - repIncorrect}회만 셌어요"
                         else -> null
                     },
                     countNoteActive = repHalfPending)

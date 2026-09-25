@@ -14,7 +14,7 @@ Android Kotlin/Jetpack Compose 운동·식단 앱. 핵심 기능은 **카메라 
 4. **모든 사용자 원칙.** 특정 사용자군을 위해 모집단 파라미터를 바꾸지 않는다. 모드는 발화·표시 정책만 가른다. 모집단이 AIHub 연기자에서 실사용자로 바뀌어도 이 원칙은 같다.
 5. **못 보는 것을 밝힌다.** 종목마다 `exclude` 규칙이 있다. 예: **바벨** 데드리프트의 '척추의 중립'은 전부 exclude 라, 허리를 말아도 ship 규칙만 통과하면 "깨끗"이 나온다. `PostureScope` 가 이 범위를 문장으로 만든다.
 6. **오탐이 사용자를 잘못 교정시킨다.** 음성 코칭은 사용자가 즉시 몸을 바꾸게 만드는 채널이라, 화면 표시보다 훨씬 보수적으로 다룬다.
-7. **횟수와 자세는 다른 질문이다(§62).** 카운트는 "이 종목의 반복인가"(동작 판별 — 스쿼트는 양 무릎이 굽어야)만 묻고, 자세 위반은 세트 판정·리포트로 간다. 자세 위반을 카운트 게이트로 쓰면 오탐 하나가 한 회를 지운다 — 2026-09-25 실기기 세트에 그 규칙을 적용하면 12회가 0회가 된다.
+7. **횟수와 자세는 다른 질문이다(§62) — 단 COACH 모드는 예외다(§62b, 사용자 결정 2026-09-25).** 카운터는 "이 종목의 반복인가"(동작 판별 — 스쿼트는 양 무릎이 굽어야)만 묻고 사이클을 그대로 센다. **COACH 에서는 ship 반복 검사(무릎 안쪽 모임·발 너비·발끝 방향) 위반 회를 표시·음성·목표 진행에서 뺀다**(HUD 큰 숫자 = 정확 수, 빠진 회는 그 자리에서 이유를 말한다). **TRACK 은 전부 센다.** 오탐 하나가 한 회를 지우므로 게이트에 드는 검사는 모집단 정상 반복 오탐률(정면, 진짜 300 ms) ≤ 2 % 가 입장 조건이고 유보는 통과다 — 2026-09-25 옛 발 너비 검사(프레임별 어깨 정규화·서 있는 극값)를 게이트로 썼다면 16:13 세트 21회가 0회였다. 근거·설계는 `docs/SQUAT_FOOT_RULES_RESEARCH.md`.
 
 ## 구조
 
@@ -27,9 +27,9 @@ Android Kotlin/Jetpack Compose 운동·식단 앱. 핵심 기능은 **카메라 
 
 기능을 추가하면 `KOTLIN_PORTING_SPEC.md` 에 절을 추가하는 것이 저장소 관례다. 근거(왜)를 반드시 남긴다.
 
-**규칙셋의 실제 분포** — 세션 규칙셋 = `rules_mp_v0.json`(AIHub 서서) + `rules_floor_v0.json`(바닥) + **`RepFormSpecs.asRules()`(반복별 자세 검사, §62a — 코드가 정본, 스쿼트 7검사: ship 1 '무릎 안쪽 모임(반복)')**. `PostureRuleSet.plusRepForm()` 이 붙이고 스쿼트 `발과 무릎의 방향 일치` 창 규칙을 beta 로 낮춘다(`RepFormSpecs.supersedes`). `rules_version` 은 `mp_v0.1+floor_v0.4+repform_v0.1`. `rules_mp_v0.json` 141규칙 = ship **51** · beta **20** · exclude **70**(절반이 못 보는 규칙, §32 게이트 이후). `rules_floor_v0.json` 14규칙/8종목은 **전부 beta**. 헤더 `counts` 는 §32 부터 `rule_confidence.py --apply` 가 실제 분포로 갱신하지만 JSON 을 손으로 고치면 다시 어긋난다 — sanity check 는 `rules` 배열 집계가 정본. ship/beta 규칙의 `confidence` 필드(정상 오탐률·검출률·AUC 95% 구간)는 **스튜디오 기준**이다(§32).
+**규칙셋의 실제 분포** — 세션 규칙셋 = `rules_mp_v0.json`(AIHub 서서) + `rules_floor_v0.json`(바닥) + **`RepFormSpecs.asRules()`(반복별 자세 검사, §62a·§62b — 코드가 정본, 스쿼트 11검사: ship 3 '무릎 안쪽 모임'·'발 간격'·'발끝 방향'(반복))**. `PostureRuleSet.plusRepForm()` 이 붙이고 스쿼트 `발과 무릎의 방향 일치` 창 규칙을 beta 로 낮춘다(`RepFormSpecs.supersedes`). `rules_version` 은 `mp_v0.1+floor_v0.4+repform_v0.2`. 발 너비·발끝은 **이미지 2D 피처**(`Stance2d.kt`: `ankle_sep_2d`·`shoulder_sep_2d`·`toe2d_*`)로 잰다 — 월드 3D 는 발끝 회전에 흔들리고 z 가 추정치라(§62b) 쓰지 않는다. `rules_mp_v0.json` 141규칙 = ship **51** · beta **20** · exclude **70**(절반이 못 보는 규칙, §32 게이트 이후). `rules_floor_v0.json` 14규칙/8종목은 **전부 beta**. 헤더 `counts` 는 §32 부터 `rule_confidence.py --apply` 가 실제 분포로 갱신하지만 JSON 을 손으로 고치면 다시 어긋난다 — sanity check 는 `rules` 배열 집계가 정본. ship/beta 규칙의 `confidence` 필드(정상 오탐률·검출률·AUC 95% 구간)는 **스튜디오 기준**이다(§32).
 
-**운동 카탈로그는 AIHub 26종목**(서서 18 + 바닥 8, §56)이고 `workoutCatalog`·`ExerciseProfiles.all`·`postureExerciseMap` 이 같은 26개 이름을 갖는다. 게이트는 규칙 JSON 이 아니라 `PostureLive.kt` 의 `postureExerciseMap` + `Workout.postureSupported()`(프로필 존재 여부) 다. 종목을 늘리거나 진입 경로를 손대는 작업은 반드시 이 map 을 지난다.
+**운동 카탈로그는 AIHub 26종목**(서서 18 + 바닥 8, §56)이고 `workoutCatalog`·`ExerciseProfiles.all`·`postureExerciseMap` 이 같은 26개 **앱 이름**을 갖는다. 앱 이름과 AIHub 이름이 다른 종목이 하나 있다 — **"기본 스쿼트"(앱) = "바벨 스쿼트"(AIHub, 규칙·카운터·세트 로그의 `exercise`)**, 사용자 결정 2026-09-25 저녁. 저장된 옛 이름은 `WorkoutNames.canonical` 이 로드 시 바꾼다. 게이트는 규칙 JSON 이 아니라 `PostureLive.kt` 의 `postureExerciseMap` + `Workout.postureSupported()`(프로필 존재 여부) 다. 종목을 늘리거나 진입 경로를 손대는 작업은 반드시 이 map 을 지난다.
 
 ## 빌드·테스트
 

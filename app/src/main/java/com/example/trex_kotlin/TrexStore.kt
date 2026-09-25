@@ -126,7 +126,7 @@ class TrexStore(context: Context, preferenceName: String = "trex_store") {
                 val o = arr.getJSONObject(i)
                 Workout(
                     id = o.getString("id"),
-                    name = o.getString("name"),
+                    name = WorkoutNames.canonical(o.getString("name")),   // 개명된 종목("바벨 스쿼트" → "기본 스쿼트")은 로드 시 바꾼다
                     reps = o.getString("reps"),
                     duration = o.getString("duration"),
                     posture = o.getBoolean("posture"),
@@ -189,7 +189,7 @@ class TrexStore(context: Context, preferenceName: String = "trex_store") {
                         // §30 이전 기록(postureKind 없음)의 자세 칸·정확도는 전부 시드 목업/하드코딩이었다 — 실데이터와 섞이지 않게 버린다
                         val legacy = it.optString("postureKind").isEmpty()
                         WorkoutHistoryItem(
-                            workoutName = it.getString("workoutName"),
+                            workoutName = WorkoutNames.canonical(it.getString("workoutName")),
                             reps = it.getString("reps"),
                             durationMinutes = it.getInt("durationMinutes"),
                             calories = it.getInt("calories"),

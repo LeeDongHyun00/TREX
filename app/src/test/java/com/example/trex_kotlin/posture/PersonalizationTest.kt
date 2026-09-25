@@ -23,7 +23,9 @@ class PersonalizationTest {
         assertNull(ExerciseProfiles.forName("마무리 스트레칭"))
         assertNull(ExerciseProfiles.forName("푸쉬업 입문"))
         assertNull(ExerciseProfiles.forName("벽 푸쉬업"))
-        assertNull(ExerciseProfiles.forName("기본 스쿼트"))
+        assertNull(ExerciseProfiles.forName("불가리안 스플릿 스쿼트"))
+        // "기본 스쿼트" 는 2026-09-25 부터 바벨 스쿼트의 앱 이름 — 프로필이 있고 AIHub 참조는 바벨 스쿼트
+        assertEquals("바벨 스쿼트", ExerciseProfiles.forName("기본 스쿼트")!!.referenceExercise)
         assertEquals(CapturePosition.RIGHT_FRONT,ExerciseProfiles.forName("런지")!!.capture)
         assertEquals(CapturePosition.FLOOR_SIDE,ExerciseProfiles.forName("플랭크")!!.capture)
     }

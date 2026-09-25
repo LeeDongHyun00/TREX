@@ -34,12 +34,12 @@ object WorkoutPacing {
 
     /** 한 동작(런지류는 한 걸음) 예상 시간(초). */
     private fun secondsPerMovement(name: String, category: String): Int = when (name) {
-        "바벨 데드리프트", "바벨 스쿼트", "바벨 런지", "런지", "사이드 런지", "크로스 런지", "불가리안 스플릿 스쿼트", "버피", "버피 테스트" -> 4
+        "바벨 데드리프트", "기본 스쿼트", "바벨 런지", "런지", "사이드 런지", "크로스 런지", "불가리안 스플릿 스쿼트", "버피", "버피 테스트" -> 4
         "점핑잭", "하이 니", "마운틴 클라이머", "스키터 점프", "제자리 걷기" -> 2
         else -> if (category == "회복") 4 else 3
     }
     fun restSeconds(name: String, category: String): Int = when {
-        name in setOf("바벨 데드리프트", "바벨 스쿼트", "바벨 런지", "오버헤드 프레스", "딥스", "불가리안 스플릿 스쿼트") -> 120
+        name in setOf("바벨 데드리프트", "기본 스쿼트", "바벨 런지", "오버헤드 프레스", "딥스", "불가리안 스플릿 스쿼트") -> 120
         category in setOf("유산소", "회복") -> 30
         category in setOf("코어", "복근") -> 45
         else -> 60
