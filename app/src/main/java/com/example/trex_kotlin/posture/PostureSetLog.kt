@@ -92,6 +92,15 @@ data class RepEngineLog(
     /** 반복 판별 게이트(spec §62) — `config.identity{feature,min_amp}`. 판별 신호가 없는 종목은 null 이고 키가 없다. */
     val identityFeature: String? = null,
     val identityMinAmp: Float? = null,
+    /** 팔별 경로(spec §62c) — `config.paired{left,right}`·`config.reject{feature:max_swing}`·`config.rom_ratio/rom_abs_min/rom_ref_min`. 아니면 키 없음. */
+    val pairedFeatures: Pair<String, String>? = null,
+    val rejectFeatures: Map<String, Float> = emptyMap(),
+    val romRatio: Float? = null,
+    val romAbsMin: Float? = null,
+    val romRefMin: Float? = null,
+    val romAuxFeature: String? = null,
+    val romAuxRatio: Float? = null,
+    val romAuxFloor: Float? = null,
 ) {
     companion object {
         const val ENGINE_RETURN = "return_v1"
@@ -122,6 +131,10 @@ data class RepEngineLog(
                 romTier = RepRomTier.of(s).key,
                 identityFeature = s.identityFeature,
                 identityMinAmp = s.identityFeature?.let { s.identityMinAmp },
+                pairedFeatures = s.pairedFeatures,
+                rejectFeatures = s.rejectFeatures,
+                romRatio = s.romRatio, romAbsMin = s.romAbsMin, romRefMin = s.romRefMin,
+                romAuxFeature = s.romAuxFeature, romAuxRatio = s.romAuxRatio, romAuxFloor = s.romAuxFloor,
             )
         }
     }
@@ -206,6 +219,8 @@ data class SetLog(
     val repRejected: List<RepRejected>? = null,
     /** 센 사이클마다의 판별 신호 스윙(`reps.identity_swing`, [repTimesMs] 와 같은 순서, 판정 안 한 사이클은 null). 판별 신호가 있는 종목만. */
     val repIdentitySwings: List<Float?>? = null,
+    /** 팔별 경로(spec §62c)의 팔 사이클 — `reps.arms`. 아니면 null(키 없음). */
+    val repArmCycles: List<ArmCycle>? = null,
     /** 반복별 자세 검사(spec §62a) — `rep_form` 블록. 평가기가 있는 종목(지금 바벨 스쿼트)만, 없으면 키 부재. */
     val repForm: RepFormLog? = null,
     /** 세트 첫 프레임 시점의 열 상태. null = 이전 로그 또는 열 상태 API 없음(API 29 미만). */
@@ -275,6 +290,7 @@ data class SetLog(
             repDropped: List<RepCycle>? = null,
             repRejected: List<RepRejected>? = null,
             repIdentitySwings: List<Float?>? = null,
+            repArmCycles: List<ArmCycle>? = null,
             repForm: RepFormLog? = null,
             thermalStart: Int? = null,
             thermalChanges: List<ThermalEvent>? = null,
@@ -348,6 +364,7 @@ data class SetLog(
                 repDropped = repDropped,
                 repRejected = repRejected,
                 repIdentitySwings = repIdentitySwings,
+                repArmCycles = repArmCycles,
                 repForm = repForm,
                 thermalStart = thermalStart,
                 thermalChanges = thermalChanges,
@@ -472,6 +489,17 @@ object SetLogJson {
                     sb.append(",\"identity\":{\"feature\":"); str(sb, f)
                     sb.append(",\"min_amp\":").append(num(e.identityMinAmp)).append('}')
                 }
+                // 팔별 경로(spec §62c) — 있을 때만 키
+                e.pairedFeatures?.let { (l, r) ->
+                    sb.append(",\"paired\":{\"left\":"); str(sb, l); sb.append(",\"right\":"); str(sb, r); sb.append('}')
+                    sb.append(",\"reject\":{")
+                    e.rejectFeatures.entries.sortedBy { it.key }.forEachIndexed { i, (k, v) -> if (i > 0) sb.append(','); str(sb, k); sb.append(':').append(num(v)) }
+                    sb.append('}')
+                    e.romRatio?.let { sb.append(",\"rom_ratio\":").append(num(it)) }
+                    e.romAbsMin?.let { sb.append(",\"rom_abs_min\":").append(num(it)) }
+                    e.romRefMin?.let { sb.append(",\"rom_ref_min\":").append(num(it)) }
+                    e.romAuxFeature?.let { sb.append(",\"rom_aux\":{\"feature\":"); str(sb, it); sb.append(",\"ratio\":").append(num(e.romAuxRatio)).append(",\"floor\":").append(num(e.romAuxFloor)).append('}') }
+                }
                 sb.append('}')
             }
             // 판별 게이트가 세지 않은 사이클과 센 사이클의 판별 스윙 — 판별 신호가 있는 종목만(없으면 키 부재)
@@ -480,7 +508,24 @@ object SetLogJson {
                 v.forEachIndexed { i, r ->
                     if (i > 0) sb.append(',')
                     sb.append("{\"t_ms\":").append(r.tMs).append(",\"min\":").append(num(r.min)).append(",\"max\":").append(num(r.max))
-                    sb.append(",\"swing\":").append(num(r.identitySwing)).append('}')
+                    sb.append(",\"swing\":").append(num(r.identitySwing))
+                    r.feature?.let { sb.append(",\"feature\":"); str(sb, it) }   // 팔별 경로의 기각 피처(spec §62c) — 판별 게이트는 키 없음
+                    sb.append('}')
+                }
+                sb.append(']')
+            }
+            // 팔별 경로(spec §62c): 각 팔이 낸 사이클 — 회로 묶이기 전 원자재. 없으면 키 부재
+            log.repArmCycles?.let { v ->
+                sb.append(",\"arms\":[")
+                v.forEachIndexed { i, c ->
+                    if (i > 0) sb.append(',')
+                    sb.append("{\"arm\":\"").append(c.arm).append("\",\"t_ms\":").append(c.tMs).append(",\"start_ms\":").append(c.startMs).append(",\"min\":").append(num(c.min)).append(",\"max\":").append(num(c.max))
+                    sb.append(",\"amp\":").append(num(c.amp)).append(",\"valid\":").append(c.valid?.toString() ?: "null")
+                    c.auxAmp?.let { sb.append(",\"aux_amp\":").append(num(it)) }
+                    c.auxMin?.let { sb.append(",\"aux_min\":").append(num(it)) }
+                    c.rejectFeature?.let { sb.append(",\"reject\":"); str(sb, it) }
+                    if (c.orphan) sb.append(",\"orphan\":true")
+                    sb.append('}')
                 }
                 sb.append(']')
             }

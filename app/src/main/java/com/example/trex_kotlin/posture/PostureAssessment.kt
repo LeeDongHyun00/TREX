@@ -10,6 +10,8 @@ object PostureAssessment {
         repForm: RepFormSummary? = null,
         /** 세트의 촬영 방향이 반복 검사의 전제(정면)에 맞는가. 아니면 rep_form 결과는 유보. */
         repFormViewOk: Boolean = true,
+        /** 세트의 추정 뷰 등급 글자(C·B·D…). 알면 반복 검사마다 자기 뷰(§62c)로 가른다 — UNKNOWN·미추정은 null. */
+        repFormViewLetter: String? = null,
     ): List<RuleResult> {
         require(samples.size == times.size)
         val agg = FeatureAggregator()
@@ -31,7 +33,7 @@ object PostureAssessment {
                 }
                 "rep" -> FloorTemporal.repResult(result.rule, reps.filter { it.tMs <= endAt })
                 // 반복 창 검사(§62a) — 평가기가 없었던 세트(다른 종목·이전 로그)는 유보 그대로
-                "rep_form" -> repForm?.ruleResult(result.rule, repFormViewOk) ?: result.copy(abstainReason = "반복 창 측정 없음")
+                "rep_form" -> repForm?.ruleResult(result.rule, repFormViewOk, repFormViewLetter) ?: result.copy(abstainReason = "반복 창 측정 없음")
                 else -> result
             }
         }

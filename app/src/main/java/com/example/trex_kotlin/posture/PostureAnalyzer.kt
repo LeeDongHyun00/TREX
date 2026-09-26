@@ -232,7 +232,11 @@ class PostureAnalyzer(
         val frame = PoseFrame(joints, upUsed)
         // §33: 촬영 방향 피처(view_cos/view_sin)도 같은 프레임 피처로 — 집계·로그·규칙 게이팅이 추가 배선 없이 받는다
         // §62a 후속 3: 이미지 2D 발 너비 — 월드 발목 간격은 발끝 회전에 흔들린다(Stance2d 주석). 재생기 frameFeatures 도 같은 함수
-        val features = frame.features() + ViewEstimator.frameFeatures(joints) + Stance2d.features(xy, vis, MIN_VISIBILITY, w.toFloat() / h)
+        // §62c: 컬의 팔꿈치 앞 이탈·몸통 기울기는 이미지 2D + 촬영 방위 부호(Arm2d). 재생기 frameFeatures 도 같은 순서·같은 함수
+        val viewF = ViewEstimator.frameFeatures(joints)
+        val aspect = w.toFloat() / h
+        val features = frame.features() + viewF + Stance2d.features(xy, vis, MIN_VISIBILITY, aspect) +
+            Arm2d.features(xy, vis, MIN_VISIBILITY, aspect, Arm2d.yawOf(viewF))
         val visibleCount = vis.count { it >= MIN_VISIBILITY }
         return PoseSample(
             detected = true,

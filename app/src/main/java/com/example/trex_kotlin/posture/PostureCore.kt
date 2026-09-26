@@ -378,6 +378,8 @@ class PoseFrame(val joints: Map<String, Vec3?>, up: Vec3 = Vec3(0f, 1f, 0f)) {
         val fvL = f["forearm_vert_L"]; val fvR = f["forearm_vert_R"]
         if (fvL != null && fvR != null) put("forearm_vert_mean", (fvL + fvR) / 2f)
         if (lSh != null && rSh != null && shW != null) put("shoulder_asym", h(lSh - rSh) / shW)
+        // 팔꿈치 간격 ÷ 어깨 폭(월드) — 컬 '팔꿈치 벌어짐' 참고(spec §62c, beta). 정상 컬도 수축 시 +0.1~0.2 늘어난다(B2)
+        if (lEl != null && rEl != null && shW != null) put("elbow_gap_sh", (lEl - rEl).norm / shW)
 
         // ---- 무릎-팔꿈치
         if (torsoLen != null) {

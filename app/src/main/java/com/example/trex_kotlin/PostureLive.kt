@@ -82,6 +82,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -137,6 +138,8 @@ import com.example.trex_kotlin.posture.RepMetrics
 import com.example.trex_kotlin.posture.RepPendingState
 import com.example.trex_kotlin.posture.RepRecord
 import com.example.trex_kotlin.posture.RepRejected
+import com.example.trex_kotlin.posture.RomShort
+import com.example.trex_kotlin.posture.ArmCycle
 import com.example.trex_kotlin.posture.RepResetEvent
 import com.example.trex_kotlin.posture.RepRomTier
 import com.example.trex_kotlin.posture.RepUnit
@@ -232,6 +235,8 @@ private const val PROVISIONAL_NOTE_GAP_MS = 3_000L
  * (지금 라이브 경로는 ROM 사유를 말하지 않는다. 되살린다면 검증된 기준(`RepRomTier.VALIDATED`)에서만 — spec §58)
  */
 private const val MAX_INVALID_CUES = 2
+/** 반복 검사 위반 부위를 칠해 두는 시간 — 다음 회(컬 1.5~3 s)가 끝나기 전후. */
+private const val FORM_HIGHLIGHT_MS = 2_500L
 
 /** 촬영 안내 음성 최소 간격 — 자세를 고치는 데 시간이 걸리므로 자주 말하지 않는다 */
 private const val COVERAGE_SPEAK_GAP_MS = 8_000L
@@ -377,15 +382,25 @@ fun PostureLiveSessionScreen(
     // 반복별 자세 검사(spec §62a, 설계 §21): ship 검사를 위반한 회는 **목표 진행에 넣지 않는다**(사용자 결정 2026-09-25) — 반복 수 자체는 줄지 않고
     // HUD 에 '반복 N · 정확 M' 으로 보인다. beta 검사는 정확을 깎지 못한다(원칙 #2).
     var repIncorrect by remember { mutableIntStateOf(0) }
+    // 본인 기준 비율 ROM 종목(덤벨 컬, spec §62c)은 ROM 미달 회('부분')를 화면 횟수·목표 진행에서 뺀다 — 미검증 절대 ROM 종목은 종전대로 센다
+    var repPartialExcluded by remember { mutableStateOf(false) }
     val repFormRef = remember { arrayOfNulls<RepFormEvaluator>(1) }
     val rejectedSeenRef = remember { intArrayOf(0) }
     var formNote by remember { mutableStateOf<String?>(null) }   // 마지막 ship 반복 검사 문장(화면). 정확한 회가 나오면 지운다
     val onRepLatest = rememberUpdatedState(onRepDetected)
     var deliveredReps by remember { mutableIntStateOf(0) }
-    LaunchedEffect(repCount + repInvalid - repIncorrect) {
-        val detected = repCount + repInvalid - repIncorrect
-        repeat((detected - deliveredReps).coerceAtLeast(0)) { onRepLatest.value() }
-        deliveredReps = detected
+    // ---- 세션 모드 (spec §29): 코치(초보 기본) / 기록(숙련). 종목별 저장. 정책 레이어만 바꾼다 —
+    //      판정·임계값·로그는 두 모드에서 동일하게 계산된다 (모든 사용자 원칙).
+    val modeStore = remember { ModeStore(context) }
+    var mode by remember(workout.name) { mutableStateOf(modeStore.get(workout.name)) }
+    val modeRef = remember { arrayOf(CoachMode.COACH) }
+    modeRef[0] = mode
+    // 부분 제외도 COACH 만 — TRACK 은 세지 않는 기능 없이 전부 센다(사용자 결정 2026-09-25)
+    val partialExcludedNow = repPartialExcluded && mode == CoachMode.COACH
+    val repCounted = repCount + (if (partialExcludedNow) 0 else repInvalid) - repIncorrect
+    LaunchedEffect(repCounted) {
+        repeat((repCounted - deliveredReps).coerceAtLeast(0)) { onRepLatest.value() }
+        deliveredReps = repCounted
     }
     // 무효 렙 사유 발화 횟수 — 세트당 상한(MAX_INVALID_CUES). 렙마다 같은 말을 반복하면 코칭이 잔소리가 되고,
     // 정작 들어야 할 자세 지적이 큐 뒤로 밀린다.
@@ -410,13 +425,17 @@ fun PostureLiveSessionScreen(
     val lastCounterFrameAt = remember { longArrayOf(0L) }   // 0 = 이 세트에서 카운터가 아직 프레임을 보지 않았다
     // 위반 부위 시각화 (수정할점 #1): 위반 중 규칙의 관절을 스켈레톤에서 붉게 강조
     var violHighlight by remember { mutableStateOf<Set<Int>>(emptySet()) }
+    // 반복별 자세 검사 위반 부위(§62c 후속 4) — 그 회가 끝난 순간부터 FORM_HIGHLIGHT_MS 동안 칠한다(창 규칙과 달리 '지금' 이 아니라 '방금 그 회' 의 판정이다).
+    // ship = 붉게, beta = '참고' 색. 다음 회가 깨끗하면 바로 지운다. 스탬프가 바뀔 때마다 타이머를 다시 건다
+    var formHighlight by remember { mutableStateOf<Set<Int>>(emptySet()) }
+    var formProvHighlight by remember { mutableStateOf<Set<Int>>(emptySet()) }
+    var formHighlightStamp by remember { mutableLongStateOf(0L) }
+    LaunchedEffect(formHighlightStamp) {
+        if (formHighlightStamp == 0L) return@LaunchedEffect
+        kotlinx.coroutines.delay(FORM_HIGHLIGHT_MS)
+        formHighlight = emptySet(); formProvHighlight = emptySet()
+    }
 
-    // ---- 세션 모드 (spec §29): 코치(초보 기본) / 기록(숙련). 종목별 저장. 정책 레이어만 바꾼다 —
-    //      판정·임계값·로그는 두 모드에서 동일하게 계산된다 (모든 사용자 원칙).
-    val modeStore = remember { ModeStore(context) }
-    var mode by remember(workout.name) { mutableStateOf(modeStore.get(workout.name)) }
-    val modeRef = remember { arrayOf(CoachMode.COACH) }
-    modeRef[0] = mode
     // TRACK 음성은 모집단 정상/위반 전환이 아니라 직접적인 초기 대비 비교에서만 나온다.
 
     // ---- 촬영 커버리지 (spec §25b): 규칙이 요구하는 부위가 화면에 없으면 '왜'와 '어떻게'를 안내한다.
@@ -568,6 +587,7 @@ fun PostureLiveSessionScreen(
         val dropped: List<RepCycle>?
         val rejected: List<RepRejected>?
         val identitySwings: List<Float?>?
+        val armCycles: List<ArmCycle>?
         val formSummary: RepFormSummary?
         // 표시 단위의 세트 결과 — 리포트(완료 화면·기록)와 로그의 reps.completed 가 화면에 보인 수와 같은 값을 쓴다
         val unitUsed: RepUnit?
@@ -597,8 +617,9 @@ fun PostureLiveSessionScreen(
             }
             dropped = rc?.takeIf { it.usesHysteresis }?.droppedReps?.map { it.copy(tMs = it.tMs - t0, startMs = it.startMs - t0) }
             // 반복 판별 게이트(spec §62) — 판별 신호가 있는 종목만 목록(비어 있어도). 없는 종목은 null = 키 없음
-            rejected = rc?.takeIf { it.signal.identityFeature != null }?.rejectedReps?.map { it.copy(tMs = it.tMs - t0) }
+            rejected = rc?.takeIf { it.signal.identityFeature != null || it.paired }?.rejectedReps?.map { it.copy(tMs = it.tMs - t0) }
             identitySwings = rc?.takeIf { it.signal.identityFeature != null }?.identitySwings?.toList()
+            armCycles = rc?.takeIf { it.paired }?.armCycles?.map { it.copy(tMs = it.tMs - t0, startMs = it.startMs - t0) }
             // 반복별 자세 검사 요약(§62a) — 같은 락 안에서 굳히고 다음 세트를 위해 비운다
             formSummary = repFormRef[0]?.summary()
             repFormRef[0]?.reset(); rejectedSeenRef[0] = 0
@@ -618,9 +639,12 @@ fun PostureLiveSessionScreen(
         val endAt = AssessmentWindow.end(times.lastOrNull() ?: t0, repTimes.orEmpty())
         val startAt = anchorAtRef[0].takeIf { it > 0L } ?: Long.MAX_VALUE
         // 반복 창 검사는 정면 기하를 전제한다 — 세트의 추정 방향이 정면(C)이 아니면 유보(방향 불명·미추정은 통과)
-        val viewOkForForm = viewEst?.let { it.cls == ViewEstimator.ViewClass.UNKNOWN || it.letter == "C" } ?: true
+        // 반복 검사가 전제하는 뷰는 종목마다 다르다(스쿼트 C, 컬 B/D — §62c). 추정 불가(UNKNOWN)면 게이팅하지 않는다
+        val formViews = RepFormSpecs.viewsFor(ex)
+        val viewOkForForm = viewEst?.let { it.cls == ViewEstimator.ViewClass.UNKNOWN || it.letter in formViews } ?: true
+        val formViewLetter = viewEst?.takeIf { it.cls != ViewEstimator.ViewClass.UNKNOWN }?.letter
         results = PostureAssessment.evaluate(rs, ex, samples, times, startAt, endAt, reps.orEmpty(), baselineRef[0], MIN_FRAMES_FOR_LOG,
-            repForm = formSummary, repFormViewOk = viewOkForForm)
+            repForm = formSummary, repFormViewOk = viewOkForForm, repFormViewLetter = formViewLetter)
         val measurementLines = results.mapNotNull { it.measurement }.toMutableList()
         formSummary?.let { measurementLines += it.lines() }
         measurementLines += comparisonRef[0]?.report(endAt, t0).orEmpty()
@@ -662,6 +686,7 @@ fun PostureLiveSessionScreen(
             repDropped = dropped,
             repRejected = rejected,
             repIdentitySwings = identitySwings,
+            repArmCycles = armCycles,
             repForm = formSummary?.toLog(t0),
             thermalStart = thermalStart,
             thermalChanges = thermalChanges,
@@ -733,7 +758,8 @@ fun PostureLiveSessionScreen(
         // 규칙 JSON 의 kind=rep 설정이 있으면 그 ROM 으로 덮고(검증 표시 끔), 없고 바닥 종목이면 ROM 을 뗀다. 미등록·등척성은 null.
         val repConfig = rs.rulesFor(aihubExercise).firstOrNull { it.kind == "rep" }?.repConfig
         repRef[0] = RepCounter.forSession(aihubExercise, repConfig?.direction, repConfig?.threshold, floor = isFloorExercise)
-        // 반복별 자세 검사(§62a) — 등록부에 있는 종목(지금 바벨 스쿼트)만. 카운터의 신호·게이트로 창을 자른다
+        repPartialExcluded = repRef[0]?.signal?.romExcludesShort == true
+        // 반복별 자세 검사(§62a·§62c) — 등록부에 있는 종목(바벨 스쿼트·덤벨 컬)만. 카운터의 신호·게이트로 창을 자른다
         repFormRef[0] = repRef[0]?.let { RepFormSpecs.evaluatorFor(aihubExercise, it) }
         rejectedSeenRef[0] = 0
         repIncorrect = 0
@@ -754,6 +780,7 @@ fun PostureLiveSessionScreen(
         provisionalNote = null
         provisionalAtRef[0] = 0L
         provisionalHighlight = emptySet()
+        formHighlight = emptySet(); formProvHighlight = emptySet(); formHighlightStamp = 0L
         repFast = false
         repTempoMs = null
         synchronized(repRecords) {
@@ -921,7 +948,8 @@ fun PostureLiveSessionScreen(
                         val completed = synchronized(repRecords) {
                             lastCounterFrameAt[0] = now
                             rf?.onFrame(now, features)   // 카운터보다 먼저 — 이 프레임이 사이클 창에 들어간 뒤 사이클이 끝나야 한다
-                            val done = rc.onFrame(now, features[rc.signal.feature], rc.signal.identityFeature?.let { features[it] })
+                            // 팔별 경로(덤벨 컬, §62c)는 두 팔 값·기각 피처를 쓴다 — 그 밖은 카운트 신호 + 판별 신호(종전과 같다)
+                            val done = rc.onFrameFeatures(now, features)
                             // 판별 게이트가 기각한 사이클은 자기 창을 소비한다(§62a) — 무릎 들기 구간이 다음 스쿼트의 바닥으로 읽히지 않게
                             if (rf != null && rc.rejectedReps.size > rejectedSeenRef[0]) {
                                 for (i in rejectedSeenRef[0] until rc.rejectedReps.size) rf.onRejected(rc.rejectedReps[i].tMs)
@@ -953,13 +981,37 @@ fun PostureLiveSessionScreen(
                             repInvalid += tally.repsShort
                             // COACH 만 ship 위반 회를 횟수에서 뺀다(spec §62b, 사용자 결정 2026-09-25). TRACK 은 전부 센다 — 게이트 없음.
                             val gate = modeRef[0] == CoachMode.COACH && !floorRef[0]
-                            if (gate) repIncorrect += formReps.count { !it.correct }
-                            formReps.lastOrNull()?.let { rep ->
+                            // 부분(ROM 미달)으로 이미 빠진 회는 자세 위반으로 다시 빼지 않는다 — 같은 회를 두 번 빼면 화면 수가 실제보다 준다(폰 15:34 세트 6·8회)
+                            if (gate) repIncorrect += formReps.indices.count { i -> !formReps[i].correct && !(rc.signal.romExcludesShort && tally.records.getOrNull(i)?.valid == false) }
+                            // 틀린 부위를 스켈레톤에 칠한다(§62c 후속 4) — COACH·서서만(TRACK 은 모집단 기준 '틀림' 을 칠하지 않는다, §29)
+                            if (gate) formReps.lastOrNull()?.let { rep ->
+                                val (red, prov) = RuleHighlight.forRepForm(rep.outcomes)
+                                formHighlight = red; formProvHighlight = prov
+                                formHighlightStamp = if (red.isEmpty() && prov.isEmpty()) 0L else now
+                            }
+                            // 부분(ROM 미달)으로 빠진 회는 그 자리에서 사유를 말한다(spec §62c 후속 3) — 숫자가 안 올라가는데 침묵하면 카운트가 죽은 줄 안다.
+                            // 사유는 손목이 보여 준 끝(덜 올림/덜 폄). 세트당 처음 MAX_INVALID_CUES 번은 교정 문장까지, 그 뒤는 짧게 — 같은 말 반복은 잔소리다
+                            val shortReason = if (gate && rc.signal.romExcludesShort && tally.repsShort > 0)
+                                (rc.newlyPublishedShort.lastOrNull { it != null } ?: RomShort.RANGE) else null
+                            if (shortReason != null) {
+                                val msg = if (invalidCuesRef[0] < MAX_INVALID_CUES) "${rc.signal.shortCue(shortReason)}. 이 회는 세지 않았어요."
+                                    else when (shortReason) {
+                                        RomShort.TOP -> "덜 올려서 세지 않았어요."
+                                        RomShort.BOTTOM -> "덜 펴서 세지 않았어요."
+                                        RomShort.RANGE -> "범위가 부족해 세지 않았어요."
+                                    }
+                                invalidCuesRef[0]++
+                                formNote = msg
+                                speech.speak(msg, flush = now > boundaryUntil[0])
+                            }
+                            // 부분 회를 말했으면 같은 프레임의 자세 사건은 말하지 않는다 — 한 회에 한 사유(그 회가 빠진 이유가 ROM 이다)
+                            if (shortReason == null) formReps.lastOrNull()?.let { rep ->
                                 if (rep.correct) formNote = null
                                 rf!!.eventFor(rep, now, gate = gate)?.let { ev ->
                                     if (ev.ship && gate) {
                                         // 빠진 회는 그 자리에서 이유를 말한다 — 침묵하면 카운트가 죽은 줄 안다. 쿨다운(12 s)은 평가기가 건다.
-                                        val msg = "${ev.message} 이 회는 세지 않았어요."
+                                        // 2단 검사(§62c 팔꿈치 이탈)의 코칭 단계 위반은 회를 빼지 않으므로 그 말을 붙이지 않는다
+                                        val msg = if (ev.gated) "${ev.message} 이 회는 세지 않았어요." else ev.message
                                         formNote = msg
                                         speech.speak(msg, flush = now > boundaryUntil[0])
                                     } else if (!ev.ship) {
@@ -971,6 +1023,15 @@ fun PostureLiveSessionScreen(
                             repHalfPending = tally.halfPending
                             // 빠른 렙 자가진단: 주기가 1.5s 아래면 3.3fps 로는 놓칠 수 있다 (렙당 4샘플 하한 실측) — 움직임(사이클)의 성질이라 사이클 기준
                             repFast = (rc.periodMs ?: Long.MAX_VALUE) < 1_500L
+                        }
+                        // 유지 자세(§62c 후속 6) — 반복 없이 숙인 채 있어도 말한다(스쿼트의 창 규칙 '척추의 중립' 과 같은 역할). COACH·서서만.
+                        // 이 프레임에 회가 끝났으면 그 회의 판정이 말한다(한 동작에 한 번)
+                        if (!completed && rf != null && modeRef[0] == CoachMode.COACH && !floorRef[0]) {
+                            synchronized(repRecords) { rf.liveEvent(now) }?.let { ev ->
+                                formNote = ev.message
+                                speech.speak(ev.message, flush = now > boundaryUntil[0])
+                                formHighlight = RuleHighlight.landmarksFor(ev.check.feature); formProvHighlight = emptySet(); formHighlightStamp = now
+                            }
                         }
                     }
                     coachRef[0]?.let { coach ->
@@ -1116,8 +1177,8 @@ fun PostureLiveSessionScreen(
             if (preparing) PreparationFramingOverlay(sample, Modifier.fillMaxSize())
             if (!preparing) LivePoseOverlay(
                 sample = sample, mirror = useFrontCamera, tint = c.lime,
-                highlight = if (mode == CoachMode.TRACK || paused) emptySet() else if (isFloorExercise) floorFeedback?.landmarks.orEmpty() else violHighlight,
-                provisional = if (paused) emptySet() else if (mode == CoachMode.TRACK) comparison.landmarks else provisionalHighlight,
+                highlight = if (mode == CoachMode.TRACK || paused) emptySet() else if (isFloorExercise) floorFeedback?.landmarks.orEmpty() else violHighlight + formHighlight,
+                provisional = if (paused) emptySet() else if (mode == CoachMode.TRACK) comparison.landmarks else (provisionalHighlight + formProvHighlight) - formHighlight,
                 visibilityCut = if (isFloorExercise) 0.35f else 0.5f,
                 plankSide = alignment.visibleSide.takeIf { alignment.placementReady && mode == CoachMode.COACH && !paused },
                 modifier = Modifier.fillMaxSize(),
@@ -1143,6 +1204,7 @@ fun PostureLiveSessionScreen(
             speech.stop(); comparisonSpeech.clear()
             coachBanner = null; provisionalNote = null
             violHighlight = emptySet(); provisionalHighlight = emptySet()
+            formHighlight = emptySet(); formProvHighlight = emptySet()
             // 모드를 바꿔도 현재 세트 초반 기준과 누적 횟수는 유지한다.
         }
     }
@@ -1214,8 +1276,11 @@ fun PostureLiveSessionScreen(
                     // 운동 중에는 제어판이 접혀 있어(몰입) 좌우 짝 표기를 HUD 에도 둔다 — 한쪽을 마친 동안 '반대쪽 차례', 아니면 단위
                     countNote = when {
                         repRef[0] != null && repUnit == RepUnit.SIDE_PAIR -> if (repHalfPending) SIDE_PAIR_NEXT_HINT else SIDE_PAIR_UNIT_HINT
-                        // COACH: ship 자세 검사 위반 회는 횟수에서 뺀다(§62b) — 큰 숫자가 정확 수, 감지 수는 나란히
-                        repIncorrect > 0 -> "감지 ${repCount + repInvalid}회 중 정확 ${repCount + repInvalid - repIncorrect}회만 셌어요"
+                        // COACH: ship 자세 검사 위반 회는 횟수에서 뺀다(§62b) — 큰 숫자가 정확 수, 감지 수는 나란히. 부분 반복(§62c)도 같은 줄에
+                        repIncorrect > 0 || (partialExcludedNow && repInvalid > 0) ->
+                            "감지 ${repCount + repInvalid}회 중 ${repCounted}회만 셌어요" +
+                                (if (partialExcludedNow && repInvalid > 0) " · 부분 ${repInvalid}회" else "") +
+                                (if (repIncorrect > 0) " · 자세 ${repIncorrect}회" else "")
                         else -> null
                     },
                     countNoteActive = repHalfPending)

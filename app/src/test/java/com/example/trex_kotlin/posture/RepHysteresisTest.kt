@@ -404,6 +404,6 @@ class RepHysteresisTest {
         val squat = RepSignals.byExercise.getValue("바벨 스쿼트")
         assertTrue(squat.comparisonSignal() === squat)
         // 덤벨 컬은 영상 단계 결과 전까지 elbow_mean.
-        assertEquals("elbow_mean", RepSignals.byExercise.getValue("덤벨 컬").feature)
+        assertEquals("elbow_minside", RepSignals.byExercise.getValue("덤벨 컬").feature)
     }
 }

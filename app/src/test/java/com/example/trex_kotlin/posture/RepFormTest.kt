@@ -324,9 +324,9 @@ class RepFormTest {
         assertEquals(RuleStatus.BETA, merged.rules.first { it.id == knee.id }.status)
         assertEquals(RuleStatus.SHIP, merged.rules.first { it.id == spine.id }.status)
         val added = merged.rules.filter { it.kind == "rep_form" }
-        assertEquals(squat.size, added.size)
-        assertTrue(added.all { it.exercise == "바벨 스쿼트" && it.viewsOk == setOf("C") })
-        assertEquals(4, added.count { it.status == RuleStatus.SHIP })   // 상체 숙임 · 무릎 안쪽 모임 · 발 간격 · 발끝 방향(§62b)
+        assertEquals(RepFormSpecs.byExercise.values.flatten().size, added.size)   // 등록부 전체(스쿼트 + 컬, §62c)
+        assertTrue(added.filter { it.exercise == "바벨 스쿼트" }.all { it.viewsOk == setOf("C") })
+        assertEquals(8, added.count { it.status == RuleStatus.SHIP })   // 스쿼트 4(상체·무릎·발 간격·발끝) + 컬 4(허리 굽힘·뜸·옆 벌림·앞 이탈, §62c)
         // 범위 문장: 무릎·발 너비·발끝·상체는 '봄'(반복 검사 ship), 엉덩이(hip rise)는 '검증 중'
         val scope = PostureScope.of(merged, "바벨 스쿼트")
         assertTrue(scope.watched.containsAll(listOf("등·허리", "무릎")))
@@ -386,5 +386,248 @@ class RepFormTest {
         assertNull(RepFormSpecs.evaluatorFor("바벨 런지", lunge))
         assertNotNull(RepFormSpecs.checkOf("repform|바벨 스쿼트|발끝 방향"))
         assertNull(RepFormSpecs.checkOf("바벨 스쿼트|발과 무릎의 방향 일치"))
+    }
+}
+
+/** 덤벨 컬 반복 검사(spec §62c) — 2단 팔꿈치 앞 이탈(코칭·차단), beta 몸통·벌어짐, 사선 뷰 전제. */
+class RepFormCurlTest {
+    private val curl = RepFormSpecs.byExercise.getValue("덤벨 컬")
+    private fun evaluator() = RepFormEvaluator(curl, "elbow_minside", 35f)
+
+    private class Frames(private val ev: RepFormEvaluator) {
+        var t = 0L
+        fun frame(elbow: Float, fwd: Float = 0.02f, tilt: Float = 0.0f, gap: Float = 1.3f, lat: Float = 0.12f, rise: Float = -0.50f, wrist: Float = -0.90f, incl: Float = 5f,
+                  yaw: Float? = null) {
+            val m = hashMapOf("elbow_minside" to elbow, Arm2d.ELBOW_FWD_MEAN to fwd, Arm2d.TORSO_TILT to tilt, "elbow_gap_sh" to gap,
+                Arm2d.ELBOW_LAT_MAX to lat, Arm2d.ELBOW_RISE_MAX to rise, Arm2d.WRIST_H_MAX to wrist, "torso_incl" to incl)
+            // 방향 피처(뷰) — 주면 반복 창 뷰 게이팅이 작동한다(§62c 후속 6). 안 주면 종전처럼 반복 뷰 없음
+            yaw?.let { val r = Math.toRadians(it.toDouble()); m[ViewEstimator.FEAT_COS] = kotlin.math.cos(r).toFloat(); m[ViewEstimator.FEAT_SIN] = kotlin.math.sin(r).toFloat() }
+            ev.onFrame(t, m); t += 300
+        }
+        /** 이완(팔 늘어뜨림) 5프레임 → 수축 → 복귀. 수축 구간(바닥)에 fwd·tilt·gap·lat, 창 최대에 rise·wrist. */
+        /** [topIncl] = 이완(상단) 프레임의 몸통 기울기 — 숙인 채 시작하는 반복을 만든다. */
+        fun rep(fwd: Float = 0.02f, tilt: Float = 0.0f, gap: Float = 1.3f, lat: Float = 0.14f, rise: Float = -0.52f, wrist: Float = -0.10f, incl: Float = 5f,
+                topIncl: Float = 5f, yaw: Float? = null, ev: RepFormEvaluator): RepFormRep {
+            repeat(5) { frame(165f, incl = topIncl, yaw = yaw) }
+            frame(140f, wrist = -0.60f, incl = topIncl, yaw = yaw); frame(100f, fwd, tilt, gap, lat, rise, -0.30f, incl, yaw); frame(80f, fwd, tilt, gap, lat, rise, wrist, incl, yaw)
+            frame(85f, fwd, tilt, gap, lat, rise, wrist, incl, yaw); frame(100f, fwd, tilt, gap, lat, rise, -0.30f, incl, yaw); frame(140f, wrist = -0.60f, incl = topIncl, yaw = yaw)
+            frame(163f, incl = topIncl, yaw = yaw); frame(165f, incl = topIncl, yaw = yaw)
+            return ev.onCycle(t - 300, 80f, 165f)
+        }
+    }
+
+    @Test
+    fun elbowDriftHasACoachingTierAndAStricterCountGate() {
+        val ev = evaluator(); val f = Frames(ev)
+        val r1 = f.rep(ev = ev)                             // 시작 자세 fwd 0.02
+        assertTrue(r1.correct); assertTrue(r1.flagged.isEmpty())
+        // 코칭 단계: 시작 대비 +0.08(원값 0.10 ≥ 0.09) — 위반이지만 차단은 아니다(+0.12·0.12 미만) → 정확은 유지
+        val cue = f.rep(fwd = 0.10f, ev = ev)
+        val o = cue.outcomes.first { it.check.id == "repform|덤벨 컬|팔꿈치 앞 이탈" }
+        assertEquals(Verdict.VIOLATION, o.verdict); assertFalse(o.gate); assertTrue(cue.correct)
+        val e = ev.eventFor(cue, 30_000L, gate = true)!!
+        assertTrue(e.ship); assertFalse("코칭 단계 — 회를 빼지 않았다", e.gated)
+        assertEquals("팔꿈치가 앞으로 나갔어요. 팔꿈치를 옆구리에 고정하세요.", e.message)
+        // 차단 단계: +0.14(원값 0.16) → 정확에서 빠진다
+        val gated = f.rep(fwd = 0.16f, ev = ev)
+        val og = gated.outcomes.first { it.check.id == "repform|덤벨 컬|팔꿈치 앞 이탈" }
+        assertTrue(og.gate); assertFalse(gated.correct)
+        // 절대 조건: 시작이 이미 앞으로 나가 있어(0.10) 시작 대비 +0.08 이지만 원값 0.18 ≥ 0.12 → 차단; 반대로 시작 대비 크지만 원값이 0.09 미만이면 위반 아님
+        val ev2 = evaluator(); val f2 = Frames(ev2)
+        f2.rep(fwd = 0.10f, ev = ev2)
+        assertFalse(f2.rep(fwd = 0.24f, ev = ev2).correct)
+        val ev3 = evaluator(); val f3 = Frames(ev3)
+        f3.rep(fwd = -0.10f, ev = ev3)
+        assertEquals(Verdict.OK, f3.rep(fwd = 0.0f, ev = ev3).outcomes.first { it.check.id == "repform|덤벨 컬|팔꿈치 앞 이탈" }.verdict)
+    }
+
+    @Test
+    fun forwardLeanIsSpokenAndDropsTheRepLikeTheSquat() {
+        // 스쿼트 '상체 숙임' 과 같은 1단 정책: 위반 = 음성 + COACH 에서 그 회를 세지 않음
+        val ev = evaluator(); val f = Frames(ev)
+        assertTrue(f.rep(ev = ev).correct)                  // 그 반복 시작 기울기 5°
+        val lean = f.rep(incl = 32f, ev = ev)              // +27°
+        val o = lean.outcomes.first { it.check.id == "repform|덤벨 컬|상체 숙임" }
+        assertEquals(Verdict.VIOLATION, o.verdict); assertTrue(o.gate); assertFalse(lean.correct)
+        val e = ev.eventFor(lean, 60_000L, gate = true)!!
+        assertEquals("repform|덤벨 컬|상체 숙임", e.check.id); assertTrue(e.gated)
+        assertEquals("상체가 많이 숙여졌어요. 가슴을 들고 몸통을 세운 채 팔만 움직이세요.", e.message)
+        assertTrue(f.rep(incl = 20f, ev = ev).correct)     // +15° — 폰 정상 p95(+13°) 근처는 통과
+        val squat = RepFormSpecs.byExercise.getValue("바벨 스쿼트").first { it.id == "repform|바벨 스쿼트|상체 숙임" }
+        val curlLean = curl.first { it.id == "repform|덤벨 컬|상체 숙임" }
+        assertEquals(squat.feature, curlLean.feature); assertEquals(squat.status, curlLean.status)
+        assertNull("스쿼트처럼 1단", curlLean.gateHi)
+    }
+
+    @Test
+    fun eachRepIsGatedByItsOwnWindowView() {
+        // 반복마다 그 창의 방향으로 거른다(§62c 후속 6) — 사선(B, yaw +30°)으로 한 회는 정면 전용 '옆 벌림' 을 유보(회를 빼지도 칠하지도 않음)하고,
+        // 정면으로 돌아온 회는 다시 판정한다. 세트 누적 뷰는 옆으로 돌아선 구간에 끌려가 그 뒤 정면 반복까지 유보시켰다(11:14 세트)
+        val ev = evaluator(); val f = Frames(ev)
+        assertEquals("C", f.rep(yaw = 0f, ev = ev).view)
+        val oblique = f.rep(lat = 0.60f, yaw = 30f, ev = ev)
+        val o = oblique.outcomes.first { it.check.id == "repform|덤벨 컬|팔꿈치 옆 벌림" }
+        assertEquals(Verdict.ABSTAIN, o.verdict); assertEquals("촬영 방향 · B", o.abstainReason); assertTrue(oblique.correct); assertEquals("B", oblique.view)
+        val front = f.rep(lat = 0.60f, yaw = 2f, ev = ev)
+        assertEquals("C", front.view); assertFalse(front.correct)
+        // 세트 결과: 반복 뷰가 있으면 세트 뷰로 다시 거르지 않는다 — 방향이 섞인 세트를 통째로 유보하지 않는다
+        val rule = RepFormSpecs.asRules().first { it.id == "repform|덤벨 컬|팔꿈치 옆 벌림" }
+        assertTrue(ev.summary().ruleResult(rule, viewLetter = "B")!!.verdict != Verdict.ABSTAIN)
+        // 반복 뷰가 없는 세트(방향 피처 없음)는 종전처럼 세트 뷰로 거른다
+        val ev2 = evaluator(); val f2 = Frames(ev2)
+        repeat(3) { f2.rep(ev = ev2) }
+        assertEquals(Verdict.ABSTAIN, ev2.summary().ruleResult(rule, viewLetter = "B")!!.verdict)
+    }
+
+    @Test
+    fun leaningThroughTheWholeRepIsCaughtAgainstTheMostUprightTopOfTheSet() {
+        // 11:14 세트: 숙인 채 컬을 하면 그 반복의 시작부터 숙어 있다 — 그 반복 시작 대비(REP_DELTA)는 −2~+3° 로 통과했다. 세트에서 가장 곧았던 상단 대비로 잰다
+        val ev = evaluator(); val f = Frames(ev)
+        assertTrue(f.rep(ev = ev).correct)                                   // 상단 5° — 세트 최소
+        val lean = f.rep(incl = 36f, topIncl = 38f, ev = ev)                 // 시작부터 숙임: 창 최대 38 − 5 = +33
+        val o = lean.outcomes.first { it.check.id == "repform|덤벨 컬|상체 숙임" }
+        assertEquals(Verdict.VIOLATION, o.verdict); assertEquals(33f, o.value!!, 0.01f); assertEquals(5f, o.reference!!, 0.01f)
+        assertFalse(lean.correct)
+        assertTrue("다시 서면 통과", f.rep(ev = ev).correct)
+    }
+
+    @Test
+    fun aPickupPollutedFirstTopDoesNotBlindTheCheck() {
+        // 09:59·15:33 세트: 첫 상단 창에 덤벨을 집으려 숙인 프레임(45°)이 들어갔다 — 세트 시작 기준이면 그 뒤 모든 회가 음수로 읽혀 영영 못 걸린다.
+        // 세트 최소는 다음 반복의 곧은 상단(8°)으로 내려간다
+        val ev = evaluator(); val f = Frames(ev)
+        val first = f.rep(incl = 10f, topIncl = 45f, ev = ev)
+        assertEquals(Verdict.OK, first.outcomes.first { it.check.id == "repform|덤벨 컬|상체 숙임" }.verdict)
+        assertTrue(f.rep(incl = 10f, topIncl = 8f, ev = ev).correct)
+        val lean = f.rep(incl = 38f, topIncl = 35f, ev = ev)                 // 38 − 8 = +30
+        assertFalse(lean.correct)
+    }
+
+    @Test
+    fun holdingALeanWithoutCurlingIsSpokenLikeTheSquatWindowRule() {
+        // 11:14 세트 58~73 s: 숙인 채 16초 멈춰 있었다 — 반복이 끝나지 않아 반복 판정이 오지 않았다. 팔을 내린 채 약 4초(14프레임) 숙여 있으면 말한다
+        val ev = evaluator(); val f = Frames(ev)
+        repeat(14) { f.frame(165f, incl = 40f) }
+        assertNull("첫 반복 전(기준 없음) — 덤벨을 집으려 숙인 자세는 지적하지 않는다", ev.liveEvent(f.t))
+        f.rep(ev = ev)                                                          // 기준(세트 최소 5°)
+        repeat(13) { f.frame(165f, incl = 40f) }
+        assertNull("4초가 안 됐다", ev.liveEvent(f.t))
+        f.frame(165f, incl = 40f)
+        val e = ev.liveEvent(f.t)!!
+        assertEquals("repform|덤벨 컬|상체 숙임", e.check.id); assertFalse("반복이 아니다 — 세지 않음과 무관", e.gated)
+        assertEquals("상체가 숙여져 있어요. 가슴을 들고 몸통을 세운 채 팔만 움직이세요.", e.message)
+        f.frame(165f, incl = 40f)
+        assertNull("쿨다운", ev.liveEvent(f.t))
+        assertEquals(1, ev.summary().live.size)
+        // 팔을 굽히는 중이면(반복 중) 유지 사건이 아니다 — 그 회는 반복 끝 판정이 말한다
+        val ev2 = evaluator(); val f2 = Frames(ev2)
+        f2.rep(ev = ev2)
+        repeat(13) { f2.frame(165f, incl = 40f) }; f2.frame(100f, incl = 40f)
+        assertNull(ev2.liveEvent(f2.t))
+        // 옆으로 돌아서(SIDE, yaw 60°) 숙이면 검사의 뷰 밖 — 말하지 않는다
+        val ev3 = evaluator(); val f3 = Frames(ev3)
+        f3.rep(yaw = 0f, ev = ev3)
+        repeat(14) { f3.frame(165f, incl = 40f, yaw = 60f) }
+        assertNull(ev3.liveEvent(f3.t))
+        // 팔을 내린 채 60° 넘게 숙임 = 덤벨을 내려놓는 중 — 말하지 않는다
+        val ev4 = evaluator(); val f4 = Frames(ev4)
+        f4.rep(ev = ev4)
+        repeat(14) { f4.frame(165f, incl = 80f) }
+        assertNull(ev4.liveEvent(f4.t))
+    }
+
+    @Test
+    fun violatedPartsArePaintedRedForShipAndProvisionalForBeta() {
+        val ev = evaluator(); val f = Frames(ev)
+        f.rep(ev = ev)
+        val (red, prov) = RuleHighlight.forRepForm(f.rep(incl = 40f, gap = 1.9f, ev = ev).outcomes)
+        assertEquals("허리 → 어깨·골반", setOf(11, 12, 23, 24), red)
+        assertEquals("벌어짐(beta) → 팔꿈치, 참고 색", setOf(13, 14), prov)
+        val (red2, _) = RuleHighlight.forRepForm(f.rep(lat = 0.60f, ev = ev).outcomes)
+        assertEquals("옆 벌림 → 어깨·팔꿈치", setOf(11, 12, 13, 14), red2)
+        val (red3, prov3) = RuleHighlight.forRepForm(f.rep(ev = ev).outcomes)
+        assertTrue(red3.isEmpty() && prov3.isEmpty())
+    }
+
+    @Test
+    fun torsoSwingAndFlareAreBetaScreenOnly() {
+        val ev = evaluator(); val f = Frames(ev)
+        f.rep(ev = ev)
+        val back = f.rep(tilt = -0.15f, ev = ev)           // 올릴 때 뒤로 젖힘
+        val t = back.flagged.single()
+        assertEquals("repform|덤벨 컬|몸통 반동", t.check.id); assertEquals(FormDirection.LOW, t.direction); assertTrue(back.correct)
+        val flare = f.rep(gap = 1.9f, ev = ev)
+        assertEquals("repform|덤벨 컬|팔꿈치 벌어짐", flare.flagged.single().check.id); assertTrue(flare.correct)
+        assertEquals("팔꿈치가 옆으로 벌어졌어요", ev.eventFor(flare, 90_000L)!!.message)
+    }
+
+    @Test
+    fun curlRulesExpectObliqueViewsAndAbstainElsewhere() {
+        assertEquals(setOf("B", "C", "D"), RepFormSpecs.viewsFor("덤벨 컬"))   // 벌어짐(beta)은 정면도 — 규칙별 뷰는 ruleResult 가 가른다
+        assertEquals(setOf("C"), RepFormSpecs.viewsFor("바벨 스쿼트"))
+        val rules = RepFormSpecs.asRules().filter { it.exercise == "덤벨 컬" }
+        assertEquals(setOf("B", "D"), rules.first { it.id == "repform|덤벨 컬|팔꿈치 앞 이탈" }.viewsOk)
+        assertEquals(4, rules.count { it.status == RuleStatus.SHIP })
+        val ev = evaluator(); val f = Frames(ev)
+        f.rep(ev = ev); f.rep(fwd = 0.16f, ev = ev)
+        val drift = rules.first { it.id == "repform|덤벨 컬|팔꿈치 앞 이탈" }
+        val res = ev.summary().ruleResult(drift, viewLetter = "C")!!
+        assertEquals(Verdict.ABSTAIN, res.verdict)
+        assertEquals("촬영 방향 · 앞 비스듬히 아님", res.abstainReason)
+        assertEquals(Verdict.OK, ev.summary().ruleResult(drift, viewLetter = "D")!!.verdict)   // 2회 중 1회 < max(2, 34 %) — 세트 규약
+    }
+
+    @Test
+    fun setLevelCurlResultUsesPerRuleViews() {
+        val ev = evaluator(); val f = Frames(ev)
+        f.rep(ev = ev); f.rep(fwd = 0.16f, ev = ev); f.rep(fwd = 0.16f, gap = 1.9f, ev = ev)
+        val rules = RepFormSpecs.asRules().filter { it.exercise == "덤벨 컬" }.associateBy { it.id }
+        val s = ev.summary()
+        // 정면(C): 앞 이탈·몸통은 유보, 벌어짐(B/C/D)은 판정한다
+        assertEquals(Verdict.ABSTAIN, s.ruleResult(rules.getValue("repform|덤벨 컬|팔꿈치 앞 이탈"), viewLetter = "C")!!.verdict)
+        assertEquals(Verdict.ABSTAIN, s.ruleResult(rules.getValue("repform|덤벨 컬|몸통 반동"), viewLetter = "C")!!.verdict)
+        assertEquals(Verdict.OK, s.ruleResult(rules.getValue("repform|덤벨 컬|팔꿈치 벌어짐"), viewLetter = "C")!!.verdict)   // 3회 중 1회 < max(2, 34 %)
+        // 사선(D): 앞 이탈 3회 중 2회 위반 → 세트 위반
+        assertEquals(Verdict.VIOLATION, s.ruleResult(rules.getValue("repform|덤벨 컬|팔꿈치 앞 이탈"), viewLetter = "D")!!.verdict)
+    }
+
+    @Test
+    fun frontalFlareHasTwoTiersAndLiftedElbowIsGated() {
+        // 2026-09-26 실기기 13회(정면 C): 벌림 4회 lat 0.44~0.46(시작 0.11~0.13), 반동 3회 손목 최고 +0.20~+0.24, 정상 lat 0.12~0.18·손목 −0.07~−0.12
+        val ev = evaluator(); val f = Frames(ev)
+        val r1 = f.rep(ev = ev)
+        assertTrue(r1.correct)
+        // 코칭 단계(+0.15 이고 ≥ 0.30 — 원값 0.31): 위반이지만 차단은 아니다(+0.20·0.35 미만)
+        val cue = f.rep(lat = 0.31f, ev = ev)
+        val o = cue.outcomes.first { it.check.id == "repform|덤벨 컬|팔꿈치 옆 벌림" }
+        assertEquals(Verdict.VIOLATION, o.verdict); assertFalse(o.gate); assertTrue(cue.correct)
+        // 차단 단계(실기기 0.45): 정확에서 빠진다
+        val wide = f.rep(lat = 0.45f, ev = ev)
+        val ow = wide.outcomes.first { it.check.id == "repform|덤벨 컬|팔꿈치 옆 벌림" }
+        assertTrue(ow.gate); assertFalse(wide.correct)
+        assertEquals("팔꿈치가 옆으로 벌어졌어요. 팔꿈치를 옆구리에 붙이세요.", ev.eventFor(wide, 30_000L, gate = true)!!.message)
+        // 반동: 손목이 어깨 위(+0.22) → '팔꿈치 뜸' ship 위반 = 차단(1단). 보조 '높이 상승' 은 beta
+        val swing = f.rep(wrist = 0.22f, rise = -0.25f, ev = ev)
+        val ids = swing.flagged.map { it.check.id }
+        assertTrue(ids.contains("repform|덤벨 컬|팔꿈치 뜸")); assertTrue(ids.contains("repform|덤벨 컬|팔꿈치 높이 상승"))
+        assertFalse(swing.correct)
+        val e = ev.eventFor(swing, 60_000L, gate = true)!!
+        assertEquals("repform|덤벨 컬|팔꿈치 뜸", e.check.id); assertTrue(e.gated)
+        // 정면 검사는 사선 뷰에서 유보, 앞 이탈은 정면에서 유보 — 검사별 뷰
+        val rules = RepFormSpecs.asRules().filter { it.exercise == "덤벨 컬" }.associateBy { it.id }
+        val sm = ev.summary()
+        assertEquals(Verdict.ABSTAIN, sm.ruleResult(rules.getValue("repform|덤벨 컬|팔꿈치 옆 벌림"), viewLetter = "D")!!.verdict)
+        assertEquals(Verdict.ABSTAIN, sm.ruleResult(rules.getValue("repform|덤벨 컬|팔꿈치 뜸"), viewLetter = "B")!!.verdict)
+        assertTrue(sm.ruleResult(rules.getValue("repform|덤벨 컬|팔꿈치 옆 벌림"), viewLetter = "C")!!.verdict != Verdict.ABSTAIN)
+    }
+
+    @Test
+    fun curlWindowRulesAreDemotedBecauseRepChecksReplaceThem() {
+        val elbow = PostureRule("덤벨 컬|팔꿈치 위치 고정", "덤벨 컬", "팔꿈치 위치 고정", null, RuleStatus.SHIP, null,
+            "elbow_torso_R__mean", "elbow_torso_R", "mean", "world", ">", 0.193f, "D", "앞 비스듬히", .9f, .8f, 56, false, emptyList())
+        val spine = elbow.copy(id = "덤벨 컬|척추의 중립[all]", condition = "척추의 중립", subtype = "all", feature = "head_pitch__mean", baseFeature = "head_pitch", op = "<", threshold = -19.9f)
+        val merged = PostureRuleSet("mp_v0.1", "", listOf(elbow, spine)).plusRepForm()
+        assertEquals(RuleStatus.BETA, merged.rules.first { it.id == elbow.id }.status)
+        assertEquals(RuleStatus.BETA, merged.rules.first { it.id == spine.id }.status)
     }
 }

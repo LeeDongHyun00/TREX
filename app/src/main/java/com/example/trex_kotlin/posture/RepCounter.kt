@@ -118,6 +118,45 @@ class RepCounter(
     private val identitySamples = ArrayList<Pair<Long, Float>>()
     private var identityGateAt = Long.MIN_VALUE / 2   // 마지막으로 판별한 사이클의 끝 — 다음 창은 그 뒤부터
 
+    // ---- 팔별 경로 (spec §62c) — signal.pairedFeatures 가 있을 때만. 자식 카운터는 같은 구성(불응기·끊김·복귀 완료)으로 각자 센다.
+    private val arms: Array<RepCounter>? = signal.pairedFeatures?.let { (l, r) ->
+        arrayOf(l, r).map { f ->
+            // 자식은 새 코어(복귀 히스테리시스, DOWN = 휴식이 신호의 높은 쪽 = 팔을 편 각) — 설계 §18.3 의 팔별 카운터가 이 코어였다(MediaPipe 교대 컬
+            // 세트 정확 0.90). 레거시 복귀형을 팔별로 돌리면 MM-Fit 59세트에서 거의 세지 못했다(재생 2026-09-26: 세트 정확 0.05).
+            RepCounter(signal.copy(feature = f, pairedFeatures = null, identityFeature = null, identityMinAmp = null, rejectFeatures = emptyMap(),
+                romDirection = null, romThreshold = null, romRatio = null, comparisonFeature = null, comparisonMinAmp = null,
+                polarity = RepPolarity.DOWN),
+                refractoryMs, maxGapMs, completeOnReturn)
+        }.toTypedArray()
+    }
+    /** 팔별 경로인가. */
+    val paired: Boolean get() = arms != null
+    /** 방금 완료된 회의 ROM 판정(팔별 경로 — 본인 기준 비율). 레거시·새 코어 경로는 null(`RepSignal.isValidRep` 가 판정). */
+    var lastCycleValid: Boolean? = null
+        private set
+    /** 팔별 경로에서 이 프레임에 완료된 회들의 ROM 판정 — [newlyPublished] 와 같은 순서·길이. */
+    var newlyPublishedValid: List<Boolean?> = emptyList()
+        private set
+    /** 팔별 경로에서 이 프레임에 완료된 회들의 ROM 미달 사유 — [newlyPublishedValid] 와 같은 순서·길이, 미달이 아니면 null. 부분 회의 음성 사유(`PostureLive`). */
+    var newlyPublishedShort: List<RomShort?> = emptyList()
+        private set
+    /** 팔별 경로에서 각 팔이 낸 사이클 전부(회로 묶이기 전·기각 포함) — 세트 로그 `reps.arms`. [repTimesMs] 와 같은 락 안에서 복사한다. */
+    val armCycles = ArrayList<ArmCycle>()
+    private val armVirtual = IntArray(2)                          // 안 보이는 팔 대신 센 회
+    private val armLastSeen = LongArray(2) { Long.MIN_VALUE / 2 }
+    private val armAmps = arrayOf(ArrayList<Float>(), ArrayList<Float>())   // 기준 확보용 첫 사이클 진폭
+    private val armRef = arrayOf<Float?>(null, null)              // A0 (NaN = 기준 미확보로 확정)
+    private val armQueue = arrayOf(ArrayDeque<ArmCycle>(), ArrayDeque<ArmCycle>())      // 아직 회로 묶이지 않은 팔 사이클
+    private val rejectSamples = HashMap<String, ArrayList<Pair<Long, Float>>>()
+    private val auxSamples = arrayOf(ArrayList<Pair<Long, Float>>(), ArrayList<Pair<Long, Float>>())   // 보조 ROM 피처(팔별)
+    private val auxAmps = arrayOf(ArrayList<Float>(), ArrayList<Float>())
+    private val auxRef = arrayOf<Float?>(null, null)
+    private var pairGateAt = Long.MIN_VALUE / 2
+    private var pairsSeen = 0                                     // 센 회 + 기각한 회
+    /** 짝 없이 버린 팔 사이클(조각) 수 — 로그용. 그 사이클은 [armCycles] 에 `orphan` 으로 남는다. */
+    var armOrphans = 0
+        private set
+
     /** 최근 렙 주기(ms) 지수평활 추정 — 빠른 렙 자가진단·적응 샘플링 신호. */
     var periodMs: Long? = null
         private set
@@ -153,6 +192,14 @@ class RepCounter(
         identitySwings.clear()
         identitySamples.clear()
         identityGateAt = Long.MIN_VALUE / 2
+        arms?.forEach { it.reset() }
+        lastCycleValid = null; newlyPublishedValid = emptyList(); newlyPublishedShort = emptyList()
+        armCycles.clear()
+        armVirtual.fill(0); armLastSeen.fill(Long.MIN_VALUE / 2)
+        armAmps.forEach { it.clear() }; armRef.fill(null); armQueue.forEach { it.clear() }
+        rejectSamples.clear(); pairGateAt = Long.MIN_VALUE / 2; pairsSeen = 0
+        auxSamples.forEach { it.clear() }; auxAmps.forEach { it.clear() }; auxRef.fill(null)
+        armOrphans = 0
     }
 
     /**
@@ -167,7 +214,204 @@ class RepCounter(
         confirmation?.dropPending()
         dirn = 0; ext = Float.NaN; pendingBottom = Float.NaN; rawCount = 0; dtMs = null; prevT = null
         identitySamples.clear()   // 리셋 앞의 판별 샘플을 리셋 뒤 첫 사이클 창에 섞지 않는다
+        arms?.forEach { it.resetCycle() }
+        rejectSamples.clear()     // 기각 창도 같다. 반대 팔을 기다리는 사이클(armQueue)은 이미 낸 실제 동작이라 버리지 않는다(RepUnitAccumulator 와 같은 결정)
     }
+
+    /**
+     * 프레임 피처 사전으로 한 프레임 처리 — `PostureLive`·재생기가 부르는 입구. 팔별 경로가 아니면 [onFrame] 과 같다
+     * (카운트 신호 값 + 판별 신호 값). 팔별 경로(spec §62c):
+     *  1) 기각 피처 표본을 모은다  2) 두 팔에 각자 값을 준다(가려진 팔은 null = 일시정지)  3) 팔이 사이클을 내면 [armCycles] 에 남기고 그 팔의
+     *  ROM(본인 기준 비율)을 판정한다  4) min(nL + 가상, nR + 가상) 이 늘면 회 하나를 완료 — 기각 게이트(창 스윙)를 지나면 센다.
+     * @return 이 프레임에서 회가 완료됐으면 true(팔별 경로에서는 한 프레임에 최대 한 회).
+     */
+    fun onFrameFeatures(tMs: Long, features: Map<String, Float>): Boolean {
+        val a = arms ?: return onFrame(tMs, features[signal.feature], signal.identityFeature?.let { features[it] })
+        lastCycleValid = null; newlyPublished = emptyList(); newlyPublishedValid = emptyList(); newlyPublishedShort = emptyList()
+        for ((tpl, _) in signal.rejectFeatures) for (f in if ("{side}" in tpl) listOf(tpl.replace("{side}", "L"), tpl.replace("{side}", "R")) else listOf(tpl)) {
+            val v = features[f] ?: continue
+            if (!v.isFinite()) continue
+            val list = rejectSamples.getOrPut(f) { ArrayList() }
+            list += tMs to v
+            if (list.size > IDENTITY_SAMPLE_CAP) list.subList(0, IDENTITY_SAMPLE_CAP / 2).clear()
+        }
+        signal.romAuxFeature?.let { tpl ->
+            for (i in 0..1) {
+                val v = features[tpl.replace("{side}", if (i == 0) "L" else "R")] ?: continue
+                if (!v.isFinite()) continue
+                auxSamples[i] += tMs to v
+                if (auxSamples[i].size > IDENTITY_SAMPLE_CAP) auxSamples[i].subList(0, IDENTITY_SAMPLE_CAP / 2).clear()
+            }
+        }
+        val (fl, fr) = signal.pairedFeatures!!
+        val fired = BooleanArray(2)
+        val newArm = arrayOf(ArrayList<ArmCycle>(2), ArrayList<ArmCycle>(2))   // 이 프레임에 각 팔이 낸 사이클(발표 순서)
+        for (i in 0..1) {
+            val v = features[if (i == 0) fl else fr]
+            if (v != null && v.isFinite()) armLastSeen[i] = tMs
+            if (!a[i].onFrame(tMs, v)) continue
+            // 자식(새 코어)은 첫 두 사이클을 한 프레임에 함께 발표한다 — 발표된 사이클마다 하나씩
+            for (c in a[i].newlyPublished) {
+                val amp = c.amplitude
+                val side = if (i == 0) 'L' else 'R'
+                // 기각 게이트는 팔 사이클 단위(그 팔의 구간 [startMs, tMs], "{side}" 자리엔 그 팔) — 두 팔 구간을 합치면 교대 컬의 정상 반복이 걸린다(MM-Fit 재생: 세트 정확 0.66)
+                val reject = rejectFor(side, c.startMs, c.tMs)
+                // 보조 창은 팔 사이클 창 그대로 [startMs, tMs]. 새 코어 사이클은 복귀 75 % 지점에서 끝나 그 회의 완전 신전(손목 최저)은 창 뒤에 남지만, 창의 앞 끝(하강 직전)이
+                // 직전 매달린 자세라 아래 끝 판정은 "이 회가 매달린 자세에서 시작했는가" 가 된다. 앞 여유(1 s)를 두면 첫 회 창에 덤벨을 드는 동작이 들어가 기준이 부풀고
+                // (MM-Fit 재생 2026-09-26: 손목 기준 1.1~2.6 vs 이후 회 0.7~1.0, 부분 오탐 33건) 그 뒤 정상 회가 전부 '부분' 이 된다 — 쓰지 않는다
+                val aux = auxWindow(i, c.startMs, c.tMs)
+                // 월드 진폭 판정과 보조(2D 손목) 판정의 결합: 한쪽이 미판정이면 다른 쪽을 따르고, 둘 다 있으면 둘 다 충족해야 유효
+                val worldV = armRomValid(i, amp); val auxV = auxRomValid(i, aux)
+                val valid = when { auxV == null -> worldV; worldV == null -> auxV; else -> worldV && auxV }
+                // 미달 사유: 손목이 아래 끝에 못 닿았으면 '덜 폄', 아래 끝은 닿았는데 손목 진폭이 모자라면 '덜 올림', 월드 진폭만 모자라면 어느 끝인지 모른다
+                val short = when {
+                    valid != false -> null
+                    aux != null && signal.romAuxFloor != null && aux.second > signal.romAuxFloor -> RomShort.BOTTOM
+                    auxV == false -> RomShort.TOP
+                    else -> RomShort.RANGE
+                }
+                val ac = ArmCycle(side, c.tMs, c.startMs, c.min, c.max, amp, valid, reject?.first, reject?.second, aux?.first, aux?.second, romShort = short)
+                armCycles += ac; armQueue[i].addLast(ac); newArm[i] += ac; fired[i] = true
+            }
+        }
+        if (!fired[0] && !fired[1]) return false
+        // 먼 팔 가림(동시 컬): 한 팔이 ARM_ABSENT_MS 넘게 안 보이는 동안 다른 팔이 사이클을 내면 그 회는 보이는 팔로 센다 — 안 보이는 팔 자리에 보이는 팔 사이클을 둔다
+        for (i in 0..1) if (fired[i]) {
+            val o = 1 - i
+            // 발표된 사이클마다 그 사이클의 복사본 — 마지막 것만 복사하면 함께 발표된 첫 두 사이클의 앞 것이 겹침 짝을 못 찾아 조각으로 버려진다
+            if (tMs - armLastSeen[o] > ARM_ABSENT_MS) for (c in newArm[i]) { armVirtual[o]++; armQueue[o].addLast(c.copy(arm = if (o == 0) 'L' else 'R')) }
+        }
+        val published = ArrayList<RepCycle>(2); val valids = ArrayList<Boolean?>(2); val shorts = ArrayList<RomShort?>(2)
+        var counted = false
+        while (armQueue[0].isNotEmpty() && armQueue[1].isNotEmpty()) {
+            val cl = armQueue[0].first(); val cr = armQueue[1].first()
+            // 짝 판정은 쌍마다(spec §62c). 두 팔 사이클 창이 겹치면 동시 컬의 한 회. 안 겹치면 먼저 끝난 팔의 다음 사이클을 본다 — 그것이 반대 팔 사이클과
+            // 겹치면 앞선 것은 짝 없는 조각(한 팔의 이중 굴곡: 폰 2026-09-25 15:34 세트 9회 왼팔 45.9°)이라 버리고, 아직 돌아오는 중이면 기다린다.
+            // 어느 쪽도 아니면 교대 컬(왼 다음 오른)이라 순서대로 짝짓는다. 세트 단위 규약(첫 쌍으로 동시/교대 확정)은 못 쓴다 — MM-Fit 교대 컬 13세트의
+            // 첫 쌍이 100 % 겹쳤고(첫 사이클 창이 세트 시작부터), 폰 세트 하나는 교대에서 동시로 바꿨다. 조각을 순서로 짝지으면 그 뒤 모든 회의 왼·오른이
+            // 한 사이클씩 어긋난다(13회 세트의 부분 2회가 0회로)
+            if (overlapRatio(cl, cr) < PAIR_OVERLAP_MIN) {
+                val e = if (cl.tMs <= cr.tMs) 0 else 1                  // 먼저 끝난 쪽
+                val late = if (e == 0) cr else cl
+                val next = armQueue[e].elementAtOrNull(1)
+                if (next != null) {
+                    if (overlapRatio(next, late) >= PAIR_OVERLAP_MIN) {
+                        val orphan = armQueue[e].removeFirst()
+                        val k = armCycles.indexOfLast { it === orphan }
+                        if (k >= 0) armCycles[k] = orphan.copy(orphan = true)
+                        armOrphans++
+                        continue
+                    }
+                } else {
+                    // 같은 팔의 다음 사이클이 반대 팔 사이클의 전반부에 시작해 아직 돌아오는 중이면(동시 컬에서 한 프레임 늦는 팔) 그 사이클이 끝날 때 다시 본다
+                    val ps = a[e].pendingAtSetEnd()
+                    val ipStart = ps.inProgress?.startMs ?: ps.unconfirmed?.startMs
+                    if (ipStart != null && ipStart < late.startMs + (late.tMs - late.startMs) / 2) break
+                }
+            }
+            armQueue[0].removeFirst(); armQueue[1].removeFirst()
+            pairsSeen++
+            val valid = combineValid(cl.valid, cr.valid)
+            val late = if (cr.tMs >= cl.tMs) cr else cl          // 회를 완성한(늦은) 팔의 사이클이 회의 극값·시각
+            pairGateAt = late.tMs
+            // 어느 팔 사이클이든 기각됐으면 그 회는 '이 종목이 아님'
+            val bad = listOf(cl, cr).firstOrNull { it.rejectFeature != null }
+            if (bad != null) { rejectedReps += RepRejected(late.tMs, bad.min, bad.max, bad.rejectSwing ?: 0f, bad.rejectFeature); continue }
+            if (lastRepAt > Long.MIN_VALUE / 4) {
+                val p = late.tMs - lastRepAt
+                periodMs = periodMs?.let { (it + p) / 2 } ?: p
+            }
+            reps++; repTimesMs.add(late.tMs); lastRepAt = late.tMs
+            lastCycleMin = late.min; lastCycleMax = late.max; lastCycleValid = valid
+            published += RepCycle(late.tMs, late.startMs, late.min, late.max); valids += valid
+            // 두 팔 사유를 한 회로: 덜 폄 > 덜 올림 > 불명(덜 폄은 손목이 직접 보여 준 것이라 가장 확실하다)
+            shorts += if (valid != false) null else listOfNotNull(cl.romShort, cr.romShort).let { r ->
+                when { RomShort.BOTTOM in r -> RomShort.BOTTOM; RomShort.TOP in r -> RomShort.TOP; else -> RomShort.RANGE }
+            }
+            counted = true
+        }
+        for (i in 0..1) auxSamples[i].removeAll { it.first < tMs - REJECT_KEEP_MS }
+        // 기각 표본은 두 팔이 모두 지나간 구간만 버린다(반대 팔 사이클이 아직 그 구간을 볼 수 있다)
+        val keepFrom = minOf(armQueue[0].firstOrNull()?.startMs ?: Long.MAX_VALUE, armQueue[1].firstOrNull()?.startMs ?: Long.MAX_VALUE, tMs - REJECT_KEEP_MS)
+        rejectSamples.values.forEach { l -> l.removeAll { it.first < keepFrom } }
+        newlyPublished = published; newlyPublishedValid = valids; newlyPublishedShort = shorts
+        return counted
+    }
+
+    /**
+     * 기각 게이트(spec §62c) — 팔 [side] 의 사이클 구간 [[startMs], [endMs]] 에서 기각 피처("{side}" 는 그 팔로) 스윙이 상한을 넘으면 (피처, 스윙).
+     * 표본 2개 미만이면 판정하지 않는다(원칙 #1).
+     */
+    private fun rejectFor(side: Char, startMs: Long, endMs: Long): Pair<String, Float>? {
+        for ((tpl, maxSwing) in signal.rejectFeatures) {
+            val f = tpl.replace("{side}", side.toString())
+            val list = rejectSamples[f] ?: continue
+            var lo = Float.POSITIVE_INFINITY; var hi = Float.NEGATIVE_INFINITY; var n = 0
+            for ((t, v) in list) if (t >= startMs && t <= endMs) { if (v < lo) lo = v; if (v > hi) hi = v; n++ }
+            if (n >= 2 && hi - lo > maxSwing) return f to (hi - lo)
+        }
+        return null
+    }
+
+    /** 두 팔 사이클 창의 겹침 비 — 겹친 길이 ÷ 짧은 창 길이(0~1). 동시 컬의 짝 판정. */
+    private fun overlapRatio(x: ArmCycle, y: ArmCycle): Float {
+        val ov = (minOf(x.tMs, y.tMs) - maxOf(x.startMs, y.startMs)).coerceAtLeast(0L)
+        val shorter = minOf(x.tMs - x.startMs, y.tMs - y.startMs).coerceAtLeast(1L)
+        return ov.toFloat() / shorter
+    }
+
+    /** 팔 [arm] 의 보조 ROM 피처 창 (진폭, 최소) — 표본 2개 미만이면 null. */
+    private fun auxWindow(arm: Int, startMs: Long, endMs: Long): Pair<Float, Float>? {
+        if (signal.romAuxFeature == null) return null
+        var lo = Float.POSITIVE_INFINITY; var hi = Float.NEGATIVE_INFINITY; var n = 0
+        for ((t, v) in auxSamples[arm]) if (t >= startMs && t <= endMs) { if (v < lo) lo = v; if (v > hi) hi = v; n++ }
+        return if (n >= 2) (hi - lo) to lo else null
+    }
+
+    /**
+     * 보조 ROM 판정(spec §62c B4): 창 진폭 ≥ [RepSignal.romAuxRatio] × 그 팔 첫 [RepSignal.romRefCycles] 창 진폭 중앙값 이고 창 최소 ≤ [RepSignal.romAuxFloor].
+     * 기준 전(첫 사이클들)·표본 없음 = null. 기준을 이루는 사이클도 아래 끝은 판정한다.
+     */
+    private fun auxRomValid(arm: Int, aux: Pair<Float, Float>?): Boolean? {
+        val ratio = signal.romAuxRatio ?: return null
+        if (aux == null) return null
+        val (amp, lo) = aux
+        val floorOk = signal.romAuxFloor?.let { lo <= it } ?: true
+        val ref = auxRef[arm]
+        if (ref == null) {
+            val amps = auxAmps[arm]
+            amps += amp
+            if (amps.size >= signal.romRefCycles) auxRef[arm] = amps.sorted().let { s -> if (s.size % 2 == 1) s[s.size / 2] else (s[s.size / 2 - 1] + s[s.size / 2]) / 2f }
+            return if (floorOk) null else false
+        }
+        return amp >= ratio * ref && floorOk
+    }
+
+    /** 팔 [arm] 의 사이클 진폭 [amp] 를 본인 기준 비율 ROM 으로 판정한다. 기준 전·기준 미확보·비율 ROM 없음 = null. */
+    private fun armRomValid(arm: Int, amp: Float): Boolean? {
+        val ratio = signal.romRatio ?: return null
+        val ref = armRef[arm]
+        if (ref == null) {
+            val amps = armAmps[arm]
+            amps += amp
+            if (amps.size < signal.romRefCycles) return null
+            val a0 = amps.sorted().let { s -> if (s.size % 2 == 1) s[s.size / 2] else (s[s.size / 2 - 1] + s[s.size / 2]) / 2f }
+            armRef[arm] = if (signal.romRefMin != null && a0 < signal.romRefMin) Float.NaN else a0
+            return null                                   // 기준을 이룬 사이클 자신은 판정하지 않는다(이미 셌다)
+        }
+        if (ref.isNaN()) return null
+        return amp >= maxOf(ratio * ref, signal.romAbsMin ?: 0f)
+    }
+
+    /** 두 팔 사이클의 ROM 판정을 한 회로: 미달이 하나라도 있으면 false, 아니고 미판정이 있으면 null, 아니면 true(`RepUnitAccumulator.combine` 과 같은 규약 — 재생기는 RepUnit.kt 를 컴파일하지 않는다). */
+    private fun combineValid(l: Boolean?, r: Boolean?): Boolean? = when {
+        l == false || r == false -> false
+        l == null || r == null -> null
+        else -> true
+    }
+
+    /** 팔별 경로의 본인 기준 진폭(왼, 오른) — 화면·로그용. 기준 전은 null, 미확보(첫 사이클이 너무 얕음)는 NaN. */
+    val armReference: Pair<Float?, Float?> get() = armRef[0] to armRef[1]
 
     /**
      * @param identity 반복 판별 신호(`signal.identityFeature`)의 이 프레임 값. 판별 신호가 없는 종목이거나 이 프레임에서 계산되지 않았으면 null —
@@ -305,6 +549,12 @@ class RepCounter(
     companion object {
         /** 판별 샘플 상한(300 ms 샘플링 10분). 넘으면 앞 절반을 버린다 — 사이클이 한 번도 안 난 긴 세트에서 무한히 쌓이지 않게. */
         private const val IDENTITY_SAMPLE_CAP = 2_000
+        /** 팔별 경로에서 한 팔이 이보다 오래 안 보이면(피처 없음) 다른 팔의 사이클을 그 회로 센다 — 폰 1세트에서 오른팔이 8 s 미검출(B2). */
+        const val ARM_ABSENT_MS = 2_500L
+        /** 기각 표본 보관 하한(ms) — 반대 팔 사이클이 늦게 발표돼도 자기 구간을 볼 수 있게 이만큼은 남긴다. */
+        const val REJECT_KEEP_MS = 10_000L
+        /** 두 팔 사이클이 한 회(동시 컬)로 묶이는 창 겹침 하한(짧은 창 대비). 이보다 덜 겹치면 순서(교대 컬)로 짝짓되, 다음 사이클이 이만큼 겹치면 앞선 것은 조각. */
+        const val PAIR_OVERLAP_MIN = 0.5f
         /** 종목에 카운터가 정의돼 있고 등척성이 아니면 생성 (플랭크 등은 HoldTimer 대상 — 카운터 미적용). */
         fun forExercise(exercise: String): RepCounter? {
             val sig = RepSignals.byExercise[exercise] ?: return null
@@ -362,6 +612,9 @@ data class RepSignal(
     val romThreshold: Float? = null,
     val romValidated: Boolean = false,
     val romCue: String? = null,
+    /** 팔별 경로의 미달 사유별 문구(spec §62c 후속 3) — 덜 올림 / 덜 폄. 없으면 [romCue]. */
+    val romCueTop: String? = null,
+    val romCueBottom: String? = null,
     /** 물리 타당 범위 (모집단: AIHub 프레임 분포) — 밖의 값은 측정 붕괴로 보고 일시정지. */
     val plausibleMin: Float? = null,
     val plausibleMax: Float? = null,
@@ -386,7 +639,46 @@ data class RepSignal(
      */
     val identityFeature: String? = null,
     val identityMinAmp: Float? = null,
+    /**
+     * 팔별(좌·우) 신호로 세는 종목(덤벨 컬, spec §62c·설계 §22): (왼쪽 피처, 오른쪽 피처). 자식 카운터 둘이 각자 사이클을 내고
+     * **완료 = min(nL, nR) 증가** — 동시 컬은 사이클마다 1회, 교대 컬은 왼 + 오른 = 1회(런지 결정과 같은 단위)가 한 식으로 된다.
+     * 두 팔 평균(`elbow_mean`)은 교대 컬에서 한 팔 스윙의 절반만 움직여 MM-Fit 교대 59세트 재현율 0.09 였다(B2).
+     * 한 팔이 [RepCounter.ARM_ABSENT_MS] 넘게 안 보이는 동안 다른 팔이 사이클을 내면 그 회는 보이는 팔로 센다(동시 컬의 먼 팔 가림).
+     * 판별 게이트([identityFeature])는 이 경로에서 쓰지 않고 [rejectFeatures] 가 그 자리다.
+     */
+    val pairedFeatures: Pair<String, String>? = null,
+    /**
+     * '이 종목이 아님' 기각 게이트(팔별 경로만) — 그 팔 사이클 구간에서 이 피처의 스윙(최대 − 최소)이 값을 **넘으면** 세지 않고
+     * [RepCounter.rejectedReps] 에 남긴다. 컬: `torso_tilt2d` 0.30(≈ 24°, 몸통을 젖히거나 숙이며 들어 올림 — 사선 뷰에서만 정의되고 정면·측면이면
+     * 키가 없어 판정하지 않는다. 월드 `torso_incl` 은 정면에서 45~110° 로 튀어 못 쓴다), `upperarm_vert_{side}` 60°(그 팔의 상완 대스윙 — 정상 p99 45°,
+     * MM-Fit 정상 최대 55°, 폰 비컬 구간 91~115°; "{side}" 는 사이클을 낸 팔 L/R). 창은 **팔 사이클 구간**이다 — 두 팔 구간을 합치면 교대 컬 정상 반복이
+     * 걸린다(MM-Fit 재생 세트 정확 0.66 → 팔 단위로). 자세 검사가 아니라 동작 판별이다(원칙 #7).
+     */
+    val rejectFeatures: Map<String, Float> = emptyMap(),
+    /**
+     * 본인 기준 비율 ROM(spec §62c, B2): 그 팔 첫 [romRefCycles] 사이클 진폭의 중앙값 A0 가 [romRefMin] 이상일 때 기준이 되고, 이후 사이클은
+     * 진폭 ≥ max([romRatio]·A0, [romAbsMin]) 이면 유효, 아니면 '부분'. 기준 전·기준 미확보는 판정하지 않는다(null).
+     * 절대 각 임계(옛 81.3°)는 GT 척도라 MediaPipe 월드각(수축 시 +33~39° 편향, 정답과 상관 0.04)에 못 쓴다 — 진폭(상관 0.56~0.73)만 신호다.
+     * "같은 팔 첫 2회의 0.7" 이 정답 반복 94 % 유지(절대 각 69 %). 팔별 경로만.
+     */
+    val romRatio: Float? = null,
+    val romAbsMin: Float? = null,
+    val romRefMin: Float? = null,
+    val romRefCycles: Int = 2,
+    /** ROM 미달 회('부분')를 화면 횟수·목표 진행에서 뺀다 — 본인 기준 비율 ROM 이 있는 종목만. 미검증 절대 ROM 종목은 종전대로 센다. */
+    val romExcludesShort: Boolean = false,
+    /**
+     * 보조 ROM 피처(팔별, "{side}" 는 L/R) — 그 팔 사이클 창의 **진폭(최대 − 최소)** 이 그 팔 첫 [romRefCycles] 창 진폭 중앙값의 [romAuxRatio] 미만이거나,
+     * 창 **최소** 가 [romAuxFloor] 보다 크면(다 안 폄) 부분. 컬: 2D 손목 높이 `wrist_h2d_{side}`(B4 — 정면에서 월드 팔꿈치각 진폭보다 진실에 가깝다,
+     * 비율 0.8 에서 정답 손실 2 %·폰 짧은 회 2/2, 아래 끝 −0.75 에서 정답 손실 0.5 %). 표본 2개 미만이면 판정하지 않는다.
+     */
+    val romAuxFeature: String? = null,
+    val romAuxRatio: Float? = null,
+    val romAuxFloor: Float? = null,
 ) {
+    /** 팔별 경로인가. */
+    val paired: Boolean get() = pairedFeatures != null
+
     /**
      * 비교용 신호 — [comparisonFeature]/[comparisonMinAmp] 가 있으면 그것으로 바꾼 사본, 없으면 자기 자신.
      * 피처가 바뀌면 ROM·물리 범위는 카운트 신호의 단위라 떼어 낸다(다른 피처에 붙이면 의미가 없다).
@@ -401,8 +693,11 @@ data class RepSignal(
             feature = f, minAmp = comparisonMinAmp ?: minAmp, polarity = null,
             comparisonFeature = null, comparisonMinAmp = null,
             identityFeature = null, identityMinAmp = null,   // 비교 지표는 사이클을 세지 않는다 — 판별 게이트는 카운트의 성질
+            pairedFeatures = null, rejectFeatures = emptyMap(), romRatio = null, romAbsMin = null, romRefMin = null, romExcludesShort = false,
+            romAuxFeature = null, romAuxRatio = null, romAuxFloor = null,
             romDirection = if (sameFeature) romDirection else null, romThreshold = if (sameFeature) romThreshold else null,
             romValidated = sameFeature && romValidated, romCue = if (sameFeature) romCue else null,
+            romCueTop = null, romCueBottom = null,
             plausibleMin = if (sameFeature) plausibleMin else null, plausibleMax = if (sameFeature) plausibleMax else null,
         )
     }
@@ -422,6 +717,13 @@ data class RepSignal(
 
     val invalidCue: String
         get() = romCue ?: "동작 범위가 부족했어요. 끝까지 움직여 주세요"
+
+    /** 미달 사유별 음성 문구 — 사유별 문구가 없으면 [invalidCue]. */
+    fun shortCue(reason: RomShort?): String = when (reason) {
+        RomShort.TOP -> romCueTop
+        RomShort.BOTTOM -> romCueBottom
+        else -> null
+    } ?: invalidCue
 }
 
 /**
@@ -473,7 +775,7 @@ object RepSignals {
         "바벨 로우" to Rom("min", 112.6863f, false, null),
         "덤벨 벤트오버 로우" to Rom("min", 113.4363f, false, null),
         "바벨 컬" to Rom("min", 66.4238f, false, null),
-        "덤벨 컬" to Rom("min", 81.3342f, false, null),
+        // 덤벨 컬: 절대 ROM(81.3°, GT 척도)을 뗐다 — 팔별 본인 기준 비율 ROM 으로(base() 의 신호 정의, spec §62c)
         "페이스 풀" to Rom("min", 84.0116f, false, null),
         "랫풀 다운" to Rom("max", 19.2011f, false, null),
         "사이드 레터럴 레이즈" to Rom("min", 107.4791f, false, null),
@@ -539,9 +841,27 @@ object RepSignals {
         // elbow_minside(한쪽이 가려지면 보이는 쪽 — PostureCore)다: 합성 가림은 이 폴백이 과다 카운트를 낸다고 예측했지만 실제 영상에서는
         // 재현되지 않았고 "양팔 보일 때만" 이 오히려 나빴다(0.77 vs 0.86, 설계 §16.4). 새 코어로도 0.85 라 항상-10(0.92) 아래 —
         // 레거시 경로에 minside 를 줘도 0.03 이라 지금 바꿀 이유가 없고, 새 코어를 켤 때(Gate A) 함께 정한다.
-        for (ex in listOf("풀업", "딥스", "바벨 로우", "덤벨 벤트오버 로우", "바벨 컬", "덤벨 컬", "페이스 풀")) {
+        for (ex in listOf("풀업", "딥스", "바벨 로우", "덤벨 벤트오버 로우", "바벨 컬", "페이스 풀")) {
             put(ex, RepSignal("elbow_mean", ANGLE))
         }
+        // 덤벨 컬(spec §62c, 설계 §22, 연구 docs/CURL_RULES_RESEARCH.md): 팔별 신호 elbow_L/elbow_R 로 세고 완료 = min(nL, nR).
+        //  - 위의 elbow_mean 은 교대 컬에서 두 팔 스윙의 절반만 움직여 MM-Fit 교대 59세트 재현율 0.09. 팔별 카운터(설계 §18.3)는 세트 정확 0.85~0.90.
+        //  - `feature` = elbow_minside 는 반복별 자세 검사(RepFormEvaluator)의 창 분할·비교 지표용 — 카운트는 pairedFeatures 가 한다.
+        //  - ROM: 절대 각(81.3°)은 GT 척도(MediaPipe 월드각 수축 시 +33~39° 편향, 정답과 상관 0.04)라 폐기. 그 팔 첫 2사이클 진폭(≥ 50°)의
+        //    0.7 이상이고 45° 이상이면 유효 — 정답 반복 94 % 유지(절대 각 69 %). 미달은 '부분' 으로 세지 않는다(romExcludesShort).
+        //    기준은 첫 3사이클 중앙값: 첫 사이클 창에 덤벨을 드는 동작이 끼어 진폭이 부풀기 일쑤라(MM-Fit) 첫 2회 중앙값이면 그 뒤 정상 회가 부분이 된다
+        //    (재생 2026-09-26: 부분 오탐 41 → 21 / 629 팔 사이클). 셋째 회까지는 판정하지 않는다.
+        //    보조(B4, 정면): 2D 손목 높이 창 진폭 ≥ 0.8 × 첫 2회(정답 손실 2 %, 폰 짧은 회 2/2 — 월드 비율 0.7 은 0.87~1.01 로 놓쳤다) 이고 창 최소 ≤ −0.75(다 안 폄, 손실 0.5 %).
+        //  - 기각(컬 아님): 그 팔 사이클 구간의 2D 몸통 기울기 비 범위 > 0.30(≈ 24°, 사선 뷰에서만 정의 — 정면이면 판정 안 함), 그 팔 상완 스윙 > 60°.
+        //    월드 몸통 기울기(torso_incl 25°)는 정면 MM-Fit 정상 반복에서 45~110° 로 튀어 16회를 기각했다(2026-09-26 재생) — B1 대로 월드는 못 쓴다.
+        //    상완 50° 는 정상 반복 4회 기각(50~55°) → 60°(0회). 폰 비컬 구간(몸통 25~36°·상완 91~115°)은 여전히 걸린다.
+        put("덤벨 컬", RepSignal("elbow_minside", ANGLE, pairedFeatures = "elbow_L" to "elbow_R",
+            rejectFeatures = mapOf(Arm2d.TORSO_TILT to 0.30f, "upperarm_vert_{side}" to 60f),
+            romRatio = 0.7f, romAbsMin = 45f, romRefMin = 50f, romRefCycles = 3, romValidated = true, romExcludesShort = true,
+            romAuxFeature = "wrist_h2d_{side}", romAuxRatio = 0.8f, romAuxFloor = -0.75f,
+            romCue = "덜 올렸거나 덜 내렸어요. 팔꿈치를 끝까지 접었다 펴 주세요",
+            romCueTop = "끝까지 올리지 않았어요. 덤벨을 어깨 앞까지 올려 주세요",
+            romCueBottom = "팔을 끝까지 펴지 않았어요. 내릴 때 팔꿈치를 다 펴 주세요"))
         put("랫풀 다운", RepSignal("forearm_vert_mean", ANGLE))
         // ---- 전완 수직도 계열 (들어올림)
         for (ex in listOf("사이드 레터럴 레이즈", "프런트 레이즈", "업라이트로우", "덤벨 체스트 플라이", "덤벨 인클라인 체스트 플라이")) {
@@ -568,9 +888,27 @@ data class RepPendingState(val unconfirmed: RepCycle?, val inProgress: RepCandid
 
 /**
  * 반복 판별 게이트가 세지 않은 사이클 (spec §62) — 세트 로그 `reps.rejected`.
- * @property tMs 사이클이 끝난(카운트 신호가 발화한) 프레임 시각. @property identitySwing 그 사이클 창의 판별 신호 스윙(게이트 미만).
+ * @property tMs 사이클이 끝난(카운트 신호가 발화한) 프레임 시각. @property identitySwing 그 사이클 창의 판별 신호 스윙(게이트 미만) —
+ *   팔별 경로의 기각 게이트(spec §62c)에서는 상한을 **넘은** 기각 피처의 스윙이고 [feature] 가 그 피처다(판별 게이트는 null).
  */
-data class RepRejected(val tMs: Long, val min: Float, val max: Float, val identitySwing: Float)
+data class RepRejected(val tMs: Long, val min: Float, val max: Float, val identitySwing: Float, val feature: String? = null)
+
+/**
+ * 팔별 경로(spec §62c)에서 한 팔이 낸 사이클 — 세트 로그 `reps.arms`. 회로 묶이기 전 원자재라 기각된 회의 사이클도 있다.
+ * @property amp 진폭(max − min). @property valid 본인 기준 비율 ROM 판정(기준 전·미확보는 null).
+ */
+data class ArmCycle(val arm: Char, val tMs: Long, val startMs: Long, val min: Float, val max: Float, val amp: Float, val valid: Boolean?,
+                    /** 기각 게이트에 걸린 피처와 스윙(spec §62c) — 걸리지 않았으면 null. 이 사이클이 이루는 회는 세지 않는다. */
+                    val rejectFeature: String? = null, val rejectSwing: Float? = null,
+                    /** 보조 ROM(2D 손목 높이) 창 진폭·최소 — 표본이 없으면 null. */
+                    val auxAmp: Float? = null, val auxMin: Float? = null,
+                    /** 짝 없이 버린 조각(같은 팔의 다음 사이클이 반대 팔 사이클과 겹쳤다) — 회가 되지 않았다. */
+                    val orphan: Boolean = false,
+                    /** ROM 미달 사유 — [valid] 가 false 일 때만. */
+                    val romShort: RomShort? = null)
+
+/** 팔별 경로의 ROM 미달 사유(spec §62c 후속 3) — 음성 사유를 고른다. TOP = 덜 올림, BOTTOM = 덜 폄(아래 끝 미도달), RANGE = 어느 끝인지 모름. */
+enum class RomShort { TOP, BOTTOM, RANGE }
 
 /** 완료된 렙 하나의 기록 — 사이클 극값과 ROM 판정. 세트 로그에 렙별로 남겨 후반 드리프트(피로)
  *  분석을 오프라인에서 가능하게 한다 (spec §29 — 숙련자 계기판의 원자재). */

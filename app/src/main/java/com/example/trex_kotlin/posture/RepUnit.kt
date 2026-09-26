@@ -139,8 +139,10 @@ class RepUnitAccumulator(val unit: RepUnit) {
             val added = ArrayList<RepRecord>(cycles.size)
             var notShort = 0
             var short = 0
-            for ((tMs, cycleMin, cycleMax) in cycles) {
-                val valid = counter.signal.isValidRep(cycleMin, cycleMax)
+            for ((k, c) in cycles.withIndex()) {
+                val (tMs, cycleMin, cycleMax) = c
+                // 팔별 경로(spec §62c)는 본인 기준 비율 ROM 을 카운터가 회마다 판정한다 — 절대 임계 isValidRep 는 그 경로에 없다
+                val valid = if (counter.paired) counter.newlyPublishedValid.getOrNull(k) else counter.signal.isValidRep(cycleMin, cycleMax)
                 val record = RepRecord(tMs, cycleMin, cycleMax, valid)
                 records += record
                 added += record

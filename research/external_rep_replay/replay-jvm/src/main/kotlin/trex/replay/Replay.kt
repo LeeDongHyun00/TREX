@@ -9,6 +9,7 @@ import com.example.trex_kotlin.posture.RepPolarity
 import com.example.trex_kotlin.posture.RepSignal
 import com.example.trex_kotlin.posture.RepSignals
 import com.example.trex_kotlin.posture.Stance2d
+import com.example.trex_kotlin.posture.Arm2d
 import com.example.trex_kotlin.posture.Vec3
 import com.example.trex_kotlin.posture.ViewEstimator
 import com.example.trex_kotlin.posture.checkUpSanity
@@ -197,7 +198,10 @@ fun frameFeatures(frame: CaptureFrame, stats: FrameStats): Map<String, Float>? {
     if (sanity.flipped) stats.upFlipped++
     // 앱 PostureAnalyzer 와 같은 순서·같은 함수 — 이미지 2D 발 너비(§62a 후속 3)
     val xy = FloatArray(MP_LANDMARK_COUNT * 2) { k -> frame.image[k / 2]!![k % 2] }
-    return PoseFrame(joints, up).features() + ViewEstimator.frameFeatures(joints) + Stance2d.features(xy, vis, MIN_VISIBILITY)
+    // §62c: 컬의 2D 팔·몸통 피처(Arm2d)도 앱과 같은 순서·같은 함수. 캡처에는 이미지 크기가 없어 세로 480×640(0.75)을 가정한다
+    val viewF = ViewEstimator.frameFeatures(joints)
+    return PoseFrame(joints, up).features() + viewF + Stance2d.features(xy, vis, MIN_VISIBILITY) +
+        Arm2d.features(xy, vis, MIN_VISIBILITY, Stance2d.DEFAULT_ASPECT, Arm2d.yawOf(viewF))
 }
 
 /**
@@ -335,9 +339,9 @@ fun run(job: Job, meta: Map<String, String>, frames: List<InputFrame>, stats: Fr
         series?.append(frame.tMs)?.append('\t')?.append(value ?: "")?.append('\t')
             ?.append(SERIES_FEATURES.joinToString("\t") { features[it]?.toString() ?: "" })?.append('\n')
         // 반복 판별 신호(spec §62)도 앱과 같은 프레임 값으로 준다 — 없는 종목은 null(종전과 같다). 파리티가 이 인자에 기댄다.
-        val identity = rc.signal.identityFeature?.let { signalValue(features, it) }
         rf?.onFrame(frame.tMs, features)   // 앱과 같은 순서: 카운터보다 먼저
-        val fired = rc.onFrame(frame.tMs, value, identity)
+        // 앱과 같은 입구(spec §62c): 팔별 경로는 두 팔 값·기각 피처를, 그 밖은 카운트 신호 값 + 판별 신호 값을 쓴다. 파리티가 이 호출에 기댄다.
+        val fired = rc.onFrameFeatures(frame.tMs, features)
         if (rf != null && rc.rejectedReps.size > rejectedSeen) {
             for (i in rejectedSeen until rc.rejectedReps.size) rf.onRejected(rc.rejectedReps[i].tMs)
             rejectedSeen = rc.rejectedReps.size
@@ -346,21 +350,24 @@ fun run(job: Job, meta: Map<String, String>, frames: List<InputFrame>, stats: Fr
             // 새 코어는 첫 두 사이클을 한 프레임에 함께 발표한다 — 발표된 사이클마다 한 번씩 센다(앱이 숫자를 올리는 방식).
             val published = rc.newlyPublished.ifEmpty { null }
             if (published == null) {
-                val ok = rc.signal.isValidRep(rc.lastCycleMin, rc.lastCycleMax)
+                val ok = if (rc.paired) rc.lastCycleValid else rc.signal.isValidRep(rc.lastCycleMin, rc.lastCycleMax)
                 when (ok) { true -> valid++; false -> invalid++; null -> unjudged++ }
                 validSeq += ok?.toString() ?: "null"
                 repTimes += frame.tMs
                 cycles += "[${num(rc.lastCycleMin)},${num(rc.lastCycleMax)},${ok ?: "null"}]"
                 rf?.onCycle(frame.tMs, rc.lastCycleMin, rc.lastCycleMax)
-            } else for (c in published) {
+            } else for ((k, c) in published.withIndex()) {
                 rf?.onCycle(c.tMs, c.min, c.max)
-                val ok = rc.signal.isValidRep(c.min, c.max)
+                // 팔별 경로(spec §62c)의 회 유효는 두 팔 사이클의 ROM(월드 각 비율 + 2D 손목 보조)으로 정해진다 — 앱 RepUnit.onCounterFrame 과 같은 출처(파리티)
+                val ok = if (rc.paired) rc.newlyPublishedValid.getOrNull(k) else rc.signal.isValidRep(c.min, c.max)
                 when (ok) { true -> valid++; false -> invalid++; null -> unjudged++ }
                 validSeq += ok?.toString() ?: "null"
                 repTimes += frame.tMs
                 cycles += "[${num(c.min)},${num(c.max)},${ok ?: "null"}]"
             }
         }
+        // 유지 자세 사건(spec §62c 후속 6) — 앱(COACH)과 같은 자리: 이 프레임에 회가 끝나지 않았을 때만. 로그 rep_form.live 로 오탐을 잰다
+        if (!fired) rf?.liveEvent(frame.tMs)
     }
     if (series != null) File(seriesDir, "${job.id}.tsv").writeText(series.toString())
     val first = frames.firstOrNull()?.tMs
@@ -392,8 +399,12 @@ fun run(job: Job, meta: Map<String, String>, frames: List<InputFrame>, stats: Fr
         // 반복 판별 게이트(spec §62) — 판별 신호가 있는 종목만 값이 있다. rejected = [t_ms, min, max, swing], identitySwing 은 센 사이클 순서(null = 미판정)
         "identityFeature" to rc.signal.identityFeature,
         "identityMinAmp" to rc.signal.identityMinAmp,
-        "rejected" to Raw(rc.rejectedReps.joinToString(",", "[", "]") { "[${it.tMs},${num(it.min)},${num(it.max)},${num(it.identitySwing)}]" }),
+        "rejected" to Raw(rc.rejectedReps.joinToString(",", "[", "]") { r -> "[${r.tMs},${num(r.min)},${num(r.max)},${num(r.identitySwing)}" + (r.feature?.let { ",\"$it\"" } ?: "") + "]" }),
         "identitySwing" to Raw(rc.identitySwings.joinToString(",", "[", "]") { it?.let(::num) ?: "null" }),
+        // 팔별 경로(spec §62c) — 각 팔의 사이클(진폭·ROM 판정)과 본인 기준 진폭
+        "arms" to Raw(rc.armCycles.joinToString(",", "[", "]") { "[\"${it.arm}\",${it.tMs},${it.startMs},${num(it.min)},${num(it.max)},${num(it.amp)},${it.valid?.toString() ?: "null"},${it.auxAmp?.let(::num) ?: "null"},${it.auxMin?.let(::num) ?: "null"},${it.orphan}]" }),
+        "armOrphans" to rc.armOrphans,
+        "armReference" to Raw("[${rc.armReference.first?.let(::num) ?: "null"},${rc.armReference.second?.let(::num) ?: "null"}]"),
         // 반복별 자세 검사(§62a) — 세트 로그 rep_form 블록과 같은 인코딩(SetLogJson.repForm), 시각은 캡처 상대 그대로
         "repForm" to rf?.let { Raw(it.summary().toLog(0L).toJson()) },
         "repFormCorrect" to rf?.summary()?.correct,

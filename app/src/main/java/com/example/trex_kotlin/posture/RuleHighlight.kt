@@ -65,6 +65,11 @@ object RuleHighlight {
         "shoulder_ground" to SHOULDERS, "shoulder_dev" to SHOULDERS + HIPS + WRISTS,
         "shoulder_arm_ang" to HIPS + SHOULDERS + ELBOWS, "shoulder" to SHOULDERS,
         "hip_asym" to HIPS, "spine" to TORSO,
+        // 반복별 자세 검사의 이미지 2D 피처(§62b·§62c) — 문구가 가리키는 부위와 맞춘다
+        "toe2d" to FEET + ANKLES, "ankle_sep_2d" to ANKLES, "shoulder_sep_2d" to SHOULDERS,
+        "wrist_h2d" to ELBOWS + WRISTS,          // '팔꿈치 뜸' — 손목 높이로 재지만 말은 팔꿈치
+        "elbow_lat2d" to SHOULDERS + ELBOWS, "elbow_rise2d" to SHOULDERS + ELBOWS,
+        "elbow_fwd2d" to ELBOWS + TORSO, "torso_tilt2d" to TORSO, "elbow_gap" to ELBOWS,
     )
 
     fun landmarksFor(baseFeature: String): Set<Int> {
@@ -76,6 +81,17 @@ object RuleHighlight {
         if (baseFeature == PlankGeometry.HIP) return SHOULDERS + HIPS + ANKLES
         // wrist가 wrist_shoulder_d를 가리지 않도록 가장 구체적인 정의를 먼저 고른다.
         return PREFIX_MAP.filter { baseFeature.startsWith(it.first) }.maxByOrNull { it.first.length }?.second.orEmpty()
+    }
+
+    /**
+     * 반복별 자세 검사 한 회의 위반 부위 — (검증 ship 위반, 참고 beta 위반). ship 은 붉게, beta 는 '참고' 색으로 칠한다(원칙 #2).
+     * 유보(촬영 방향·측정 무효)는 칠하지 않는다(원칙 #1).
+     */
+    fun forRepForm(outcomes: List<RepFormOutcome>): Pair<Set<Int>, Set<Int>> {
+        val bad = outcomes.filter { it.verdict == Verdict.VIOLATION }
+        val ship = bad.filter { it.check.ship }.flatMap { landmarksFor(it.check.feature) }.toSet()
+        val beta = bad.filter { !it.check.ship }.flatMap { landmarksFor(it.check.feature) }.toSet() - ship
+        return ship to beta
     }
 
     /** 위반 중인 규칙들의 강조 관절 합집합. */

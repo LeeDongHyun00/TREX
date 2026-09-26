@@ -11,9 +11,14 @@ import kotlin.math.ceil
  * 규칙셋의 rep_form 규칙(`RepFormSpecs.asRules`)에 대응하는 세트 결과. 판정한 반복이 2회 미만이면 유보, 위반 반복이 max(2, 34%) 이상이면 위반
  * (바닥 kind=rep 규칙과 같은 규약). 정면(C)이 아니면 유보 — 검사는 정면 기하를 전제한다.
  */
-fun RepFormSummary.ruleResult(rule: PostureRule, viewOk: Boolean = true): RuleResult? {
+fun RepFormSummary.ruleResult(rule: PostureRule, viewOk: Boolean = true, viewLetter: String? = null): RuleResult? {
     val c = checks.firstOrNull { it.id == rule.id } ?: return null
-    if (!viewOk) return RuleResult(rule, Verdict.ABSTAIN, null, 0, abstainReason = "촬영 방향 · 정면 아님")
+    // 뷰는 검사마다 다르다(§62c: 컬 앞 이탈·몸통은 사선 B/D, 벌어짐은 B/C/D, 스쿼트는 C). 반복마다 그 반복 창의 뷰로 이미 유보했으면(§62c 후속 6)
+    // 세트 뷰로 다시 거르지 않는다 — 방향이 섞인 세트(11:14: 정면 반복 + 옆으로 돌아선 구간)를 통째로 유보하지 않게. 반복 뷰가 없으면(방향 피처 없음) 종전처럼
+    // 세트 뷰 등급(viewLetter)으로 검사별, 그것도 모르면 viewOk 로
+    val perRepView = c.phase != RepPhase.START && reps.any { it.view != null }
+    val ok = perRepView || (if (viewLetter != null) viewLetter in c.views else viewOk)
+    if (!ok) return RuleResult(rule, Verdict.ABSTAIN, null, 0, abstainReason = if ("C" in c.views) "촬영 방향 · 정면 아님" else "촬영 방향 · 앞 비스듬히 아님")
     if (c.phase == RepPhase.START) {
         val o = start.firstOrNull { it.check.id == c.id }
             ?: return RuleResult(rule, Verdict.ABSTAIN, null, 0, abstainReason = "시작 자세를 못 잡음")
@@ -40,9 +45,9 @@ fun RepFormSpecs.asRules(): List<PostureRule> = byExercise.values.flatten().map 
     PostureRule(
         id = c.id, exercise = c.exercise, condition = c.condition, subtype = null, status = c.status, reason = c.reason,
         feature = "${c.feature}__${c.stat.name.lowercase()}", baseFeature = c.feature, stat = c.stat.name.lowercase(), family = "repform",
-        op = if (c.hi != null) ">" else "<", threshold = c.hi ?: c.lo!!, view = "C", viewDesc = "정면",
+        op = if (c.hi != null) ">" else "<", threshold = c.hi ?: c.lo!!, view = c.views.first(), viewDesc = if ("C" in c.views) "정면" else "앞 비스듬히",
         cvAuc = Float.NaN, cvBalacc = Float.NaN, sampleN = 0, mirrorSafe = true, cautions = c.cautions,
-        viewsOk = setOf("C"), kind = "rep_form",
+        viewsOk = c.views, kind = "rep_form",
     )
 }
 

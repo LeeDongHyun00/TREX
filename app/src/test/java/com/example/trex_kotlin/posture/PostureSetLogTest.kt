@@ -305,7 +305,7 @@ class PostureSetLogTest {
         val log = RepFormLog(
             version = "repform_v0.1", baselineTMs = 1200L, baseline = mapOf("toe_out_maxside" to 22f, "stance_sh" to 1.07f),
             start = listOf(RepFormLog.Check("repform|바벨 스쿼트|발 간격|시작", "OK", 1.07f, 1.07f, null, null)),
-            reps = listOf(RepFormLog.Rep(3600L, true, listOf(RepFormLog.Check("repform|바벨 스쿼트|발 간격", "VIOLATION", 1.49f, 1.59f, 1.07f, "HIGH")))),
+            reps = listOf(RepFormLog.Rep(3600L, true, listOf(RepFormLog.Check("repform|바벨 스쿼트|발 간격", "VIOLATION", 1.49f, 1.59f, 1.07f, "HIGH", gate = true)))),
             rejected = 1, noTop = 0,
         )
         val json = SetLogJson.encode(SetLog.build("바벨 스쿼트", samples, emptyList(), "mp_v0", "full", "GPU", true, 300L, now = Date(0L),
@@ -313,7 +313,7 @@ class PostureSetLogTest {
             repEngine = RepEngineLog.of(RepCounter.forSession("바벨 스쿼트", floor = false)!!), repResets = emptyList(), repForm = log))
         assertTrue(json.contains("\"resets\":[]},\"rep_form\":{\"version\":\"repform_v0.1\",\"baseline_t_ms\":1200,\"baseline\":{\"stance_sh\":1.07,\"toe_out_maxside\":22}," +
             "\"start\":[{\"id\":\"repform|바벨 스쿼트|발 간격|시작\",\"v\":\"OK\",\"value\":1.07,\"raw\":1.07,\"ref\":null,\"dir\":null}]," +
-            "\"reps\":[{\"t_ms\":3600,\"correct\":true,\"checks\":[{\"id\":\"repform|바벨 스쿼트|발 간격\",\"v\":\"VIOLATION\",\"value\":1.49,\"raw\":1.59,\"ref\":1.07,\"dir\":\"HIGH\"}]}]," +
+            "\"reps\":[{\"t_ms\":3600,\"correct\":true,\"checks\":[{\"id\":\"repform|바벨 스쿼트|발 간격\",\"v\":\"VIOLATION\",\"value\":1.49,\"raw\":1.59,\"ref\":1.07,\"dir\":\"HIGH\",\"gate\":true}]}]," +
             "\"rejected\":1,\"no_top\":0,\"baseline_from_first_bottom\":false},\"frames\":["))
         val none = SetLogJson.encode(SetLog.build("바벨 스쿼트", samples, emptyList(), "mp_v0", "full", "GPU", true, 300L, now = Date(0L), repCount = 1))
         assertFalse(none.contains("\"rep_form\":"))

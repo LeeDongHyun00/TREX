@@ -2,6 +2,7 @@ package com.example.trex_kotlin.posture
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
@@ -51,5 +52,28 @@ class StanceWidthTest {
     fun abstainsWhenShouldersCollapse() {
         // 어깨 너비 15 cm 미만(관절 겹침)이면 비율을 만들지 않는다
         assertNull(frame(40f, shoulderGap = 10f).features()["stance_sh"])
+    }
+
+    @Test
+    fun arm2dFrontalFeaturesFollowTheGeometry() {
+        // 정면(비미러): 사람 왼쪽이 화면 +x. 어깨 (0.35,0.30)·(0.65,0.30), 골반 (0.40,0.60)·(0.60,0.60) → 몸통 0.30(높이 단위, aspect 1)
+        val xy = FloatArray(66); val vis = FloatArray(33) { 1f }
+        fun put(i: Int, x: Float, y: Float) { xy[i * 2] = x; xy[i * 2 + 1] = y }
+        put(11, 0.65f, 0.30f); put(12, 0.35f, 0.30f); put(23, 0.60f, 0.60f); put(24, 0.40f, 0.60f)
+        put(13, 0.78f, 0.45f); put(14, 0.30f, 0.45f)      // 왼 팔꿈치 바깥 +0.13/0.30, 오른 팔꿈치 바깥 +0.05/0.30
+        put(15, 0.70f, 0.33f); put(16, 0.30f, 0.60f)      // 왼 손목 어깨 아래 0.03(−0.1 몸통), 오른 손목 0.30 아래(−1.0 몸통)
+        val f = Arm2d.features(xy, vis, 0.5f, aspect = 1f, yawDeg = 0f)
+        assertEquals(0.13f / 0.30f, f.getValue(Arm2d.ELBOW_LAT_L), 1e-4f)
+        assertEquals(0.05f / 0.30f, f.getValue(Arm2d.ELBOW_LAT_R), 1e-4f)
+        assertEquals(0.13f / 0.30f, f.getValue(Arm2d.ELBOW_LAT_MAX), 1e-4f)
+        assertEquals(-0.15f / 0.30f, f.getValue(Arm2d.ELBOW_RISE_L), 1e-4f)
+        assertEquals(-0.03f / 0.30f, f.getValue(Arm2d.WRIST_H_L), 1e-4f)
+        assertEquals(-0.30f / 0.30f, f.getValue(Arm2d.WRIST_H_R), 1e-4f)
+        assertEquals(-0.03f / 0.30f, f.getValue(Arm2d.WRIST_H_MAX), 1e-4f)
+        assertNull("정면에서는 앞/뒤 부호가 없다", f[Arm2d.ELBOW_FWD_MEAN]); assertNull(f[Arm2d.TORSO_TILT])
+        // 사선(D, yaw −35°): 앞 = 화면 −x. 왼 팔꿈치는 몸통 선(x 0.5)에서 +0.28 → 뒤(−), 오른 팔꿈치 −0.20 → 앞(+)
+        val g = Arm2d.features(xy, vis, 0.5f, aspect = 1f, yawDeg = -35f)
+        assertTrue(g.getValue(Arm2d.ELBOW_FWD_L) < 0f); assertTrue(g.getValue(Arm2d.ELBOW_FWD_R) > 0f)
+        assertEquals(0f, g.getValue(Arm2d.TORSO_TILT), 1e-4f)
     }
 }
