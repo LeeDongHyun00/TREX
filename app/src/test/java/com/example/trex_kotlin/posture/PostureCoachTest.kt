@@ -122,11 +122,13 @@ class PostureCoachTest {
             "상체 살짝 숙임 유지", "수축 시 고개 안 젖힘", "이완 시 팔꿈치 각도 90도", "팔꿈치 위치 고정", "팔꿈치 살짝 구부린채 고정",
             "양 손이 머리 뒤에 위치", "무릎 충분히 올라오고", "두 다리 사이 모아줌 유지", "어깨와 귀 사이 적당한 거리 유지", "상완의 외회전",
             "수축시 양 손과 이마 동일선상 위치", "팔꿈치가 손목 리드", "시선 위쪽 유지", "상체 과도한 젖힘 없음", "상체의 과조한 숙임/젖힘 여부")
-        for (cnd in known) {
+        for (cnd in known + listOf("무릎 쏠림(걸음)", "어깨 기울기(걸음)")) {
             val cue = CoachCues.cueFor(rule("x", cnd, "knee_mean__mean", "<", 0f))
             assertFalse("카탈로그 누락: $cnd", cue.habit.contains("조건을 벗어나"))
             assertTrue(cue.habit.startsWith("처음부터"))
             assertTrue(cue.drift.contains("점점"))
+            // 시작 시점을 모르는 위반(§63 CURRENT)은 '처음부터' 없이 말한다
+            assertFalse(cue.current.contains("처음부터")); assertTrue(cue.current.isNotBlank())
         }
         // 척추 하위유형
         val flex = CoachCues.cueFor(rule("x", "척추의 중립", "head_pitch__mean", "<", 0f, subtype = "flexion"))

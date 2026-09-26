@@ -198,7 +198,8 @@ class RepUnitTest {
     @Test
     fun sessionUnitComesFromTheProfileAndTheFloorPathIsAlwaysCycles() {
         for (name in listOf("런지", "바벨 런지", "사이드 런지", "크로스 런지")) {
-            assertEquals(name, RepUnit.SIDE_PAIR, RepUnit.forSession(ExerciseProfiles.forName(name), floor = false))
+            // 런지만 쪽별(§63) — 나머지 런지류는 두 걸음 = 1회
+            assertEquals(name, if (name == "런지") RepUnit.SIDE_EACH else RepUnit.SIDE_PAIR, RepUnit.forSession(ExerciseProfiles.forName(name), floor = false))
             assertEquals(name, RepUnit.CYCLE, RepUnit.forSession(ExerciseProfiles.forName(name), floor = true))
         }
         for (name in listOf("덤벨 컬", "스탠딩 니업", "바벨 스쿼트")) {

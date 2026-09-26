@@ -267,9 +267,9 @@ def report(s: dict, fr: dict, integ: dict, index: dict, results: dict, headline:
     for p in preds:
         for ex in TARGETS:
             ok, parts = _criteria(tiers.get(ex, {}).get("all", {}).get(p, {}))
-            checks.append((f"§1 점추정 — {ex} · `{p}`" + (" · 걸음" if setlog_captures.current_unit(ex, False) == "side_pair" else ""),
+            checks.append((f"§1 점추정 — {ex} · `{p}`" + (" · 걸음" if setlog_captures.current_unit(ex, False) in setlog_captures.PAIR_UNITS else ""),
                            ok, " · ".join(parts)))
-            if setlog_captures.current_unit(ex, False) == "side_pair":
+            if setlog_captures.current_unit(ex, False) in setlog_captures.PAIR_UNITS:
                 ok2, parts2 = _criteria(dtiers.get(ex, {}).get("all", {}).get(p, {}))
                 checks.append((f"§1 점추정 — {ex} · `{p}` · 쌍(화면)", ok2, " · ".join(parts2)))
     wrong = {p: [r for r in rows if r["truth"] is not None and r["pred"].get(p) is not None and r["pred"][p] != r["truth"]]

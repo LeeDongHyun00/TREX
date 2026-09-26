@@ -81,6 +81,7 @@ data class RuleOutcome(
             OnsetKind.HABIT -> "처음부터$dirSuffix"
             OnsetKind.DRIFT -> "점점 흐트러짐$dirSuffix"
             OnsetKind.RECOVERED -> "교정됨"
+            OnsetKind.CURRENT -> "위반$dirSuffix"
             null -> when (overall) {
                 Verdict.VIOLATION -> "위반$dirSuffix"
                 Verdict.ABSTAIN -> abstainReason?.let { "유보 · $it" } ?: "유보"
@@ -96,9 +97,9 @@ data class RuleOutcome(
      */
     val rank: Int
         get() = when {
-            overall == Verdict.VIOLATION && (kind == OnsetKind.HABIT || kind == OnsetKind.DRIFT) -> 0
+            overall == Verdict.VIOLATION && (kind == OnsetKind.HABIT || kind == OnsetKind.DRIFT || kind == OnsetKind.CURRENT) -> 0
             kind == OnsetKind.DRIFT -> 1
-            kind == OnsetKind.HABIT -> 2
+            kind == OnsetKind.HABIT || kind == OnsetKind.CURRENT -> 2
             overall == Verdict.VIOLATION && kind == null -> 3
             kind == OnsetKind.RECOVERED -> 4
             else -> 9
@@ -133,6 +134,8 @@ data class PostureSetReport(
     val repUnit: RepUnit? = null,
     /** 세트 끝에 반대쪽을 못 채운 한쪽이 남았다 — 세지 않았다. [RepUnit.SIDE_PAIR] 일 때만 의미가 있다. */
     val repHalfPending: Boolean = false,
+    /** 쪽별 카운트(런지 [RepUnit.SIDE_EACH], §63). */
+    val repSides: SideTallies? = null,
 ) {
     /** 실제로 판정한 규칙 수(OK+VIOLATION). accuracy 의 분모 — 유보를 정상으로 세지 않는다. */
     val judged: Int = items.count { it.overall == Verdict.OK || it.overall == Verdict.VIOLATION }
@@ -200,8 +203,12 @@ data class PostureSetReport(
      * 좌우 짝 단위의 렙 줄 꼬리 — 맨 숫자가 걸음 수로 읽히지 않게 단위를 밝히고("좌우 한 번씩 = 1회"), 세트 끝에 남은 한쪽이 있으면 세지 않았다고 적는다.
      * '무효 2'·'범위 미달 2회' 도 걸음이 아니라 짝의 수다. 화면 전용 — 음성([voiceLine])·기록 한 줄([summaryLine])에는 붙이지 않는다(수는 HUD 와 같은 단위).
      */
-    private val unitTail: List<String> = if (repUnit == RepUnit.SIDE_PAIR)
-        listOfNotNull(SIDE_PAIR_UNIT_HINT, SIDE_PAIR_HALF_UNCOUNTED.takeIf { repHalfPending }) else emptyList()
+    private val unitTail: List<String> = when {
+        repUnit == RepUnit.SIDE_PAIR -> listOfNotNull(SIDE_PAIR_UNIT_HINT, SIDE_PAIR_HALF_UNCOUNTED.takeIf { repHalfPending })
+        repUnit == RepUnit.SIDE_EACH && repSides != null -> listOf(repSides.reportLine(mode == CoachMode.COACH))
+        repUnit == RepUnit.SIDE_EACH -> listOf(SIDE_PAIR_UNIT_HINT)
+        else -> emptyList()
+    }
 
     /**
      * 완료 화면 펼침의 렙 한 줄(렙 카운터 미적용이면 null). 수는 검출 전체이고, ROM 은 [romTier] 가 허락하는 말로만 붙인다.
@@ -280,6 +287,7 @@ data class PostureSetReport(
             repRom: RepRomTier? = null,
             repUnit: RepUnit? = null,
             repHalfPending: Boolean = false,
+            repSides: SideTallies? = null,
         ): PostureSetReport {
             val onsetById = onset.associateBy { it.rule.id }
             val outcomes = results.map { rr ->
@@ -291,6 +299,7 @@ data class PostureSetReport(
                     OnsetKind.DRIFT -> splitCue(cue.drift)
                     OnsetKind.RECOVERED -> cue.recovered.trimEnd().removeSuffix(".") to splitCue(cue.habit).second
                     OnsetKind.HABIT -> splitCue(cue.habit)
+                    OnsetKind.CURRENT -> splitCue(cue.current)
                     null -> splitCue(cue.habit).let { (o, f) -> o.removePrefix("처음부터 ") to f }
                 }
                 RuleOutcome(
@@ -314,7 +323,7 @@ data class PostureSetReport(
             return PostureSetReport(
                 setId = setId, exercise = exercise, workoutName = workoutName, mode = mode, frames = frames,
                 baselineActive = baselineActive, items = sorted, measurements = measurements, repsValid = repsValid, repsPartial = repsPartial, tempoMs = tempoMs,
-                repRom = repRom, repUnit = repUnit, repHalfPending = repHalfPending,
+                repRom = repRom, repUnit = repUnit, repHalfPending = repHalfPending, repSides = repSides,
             )
         }
 

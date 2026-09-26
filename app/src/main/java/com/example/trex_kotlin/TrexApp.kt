@@ -181,8 +181,13 @@ fun TrexApp(app: AppViewModel = viewModel()) {
         val startTone = remember { runCatching { android.media.ToneGenerator(android.media.AudioManager.STREAM_MUSIC, 50) }.getOrNull() }
         androidx.compose.runtime.DisposableEffect(Unit) { onDispose { startTone?.release() } }
 
+        // 목표에 처음 닿은 시각(단계 token 별) — 자동 진행의 발화 기다림이 반복마다 다시 늘어나지 않게(§63).
+        // token 은 단계 번호라 세션마다 0 부터 다시 쓰인다 — 세션 시작·종료·넘김에서 지운다(안 지우면 두 번째 세션부터 옛 시각으로 기다림 없이 넘어가 마지막 말을 잘랐다)
+        val advanceHoldFrom = remember { HashMap<Int, Long>() }
+
         fun startSession() {
             if (steps.isEmpty()) return
+            advanceHoldFrom.clear()
             val doneIds = plan.filter { it.done }.map { it.id }.toSet()
             val finished = doneIds.size == plan.size
             val completed = if (finished) emptySet() else steps.filter {
@@ -210,6 +215,7 @@ fun TrexApp(app: AppViewModel = viewModel()) {
             // 다음 화면/기록 병합 전에 세트 리포트를 확정한다. 화면 소멸 콜백보다 먼저다.
             if (current.phase == SessionPhase.WORK) finalizers[current.workout.id]?.invoke()
             speech.stop()
+            advanceHoldFrom.remove(expectedToken)
             progress = progress.advance(steps, expectedToken, skip)
             progress.completedOriginalIds(steps).forEach { app.markWorkoutDone(it) }
             sessionPaused = false
@@ -221,6 +227,7 @@ fun TrexApp(app: AppViewModel = viewModel()) {
 
         fun exitSession() {
             speech.stop()
+            advanceHoldFrom.clear()
             exitAsk = false
             progress = progress.copy(index = -1)
             sessionDone = false
@@ -262,7 +269,19 @@ fun TrexApp(app: AppViewModel = viewModel()) {
         LaunchedEffect(sessionIndex, progress.repetitions, sessionPaused, appPaused, exitAsk, repValidation) {
             // 검증 모드는 목표에 닿아도 넘기지 않는다 — 세트는 ✓ 로만 끝난다(세트 뒤 헛카운트·마지막 반복까지 잰다)
             if (!repValidation && !pausedState.value && step?.phase == SessionPhase.WORK && !step.timed && progress.targetReached(step)) {
-                advanceLatest.value(step.token, false)
+                // 마지막 걸음·회의 판정·안내 발화가 끝날 때까지 최대 2 s 기다린다(§63) — 넘어가며 speech.stop() 이 마지막 말을 잘랐다("6" 뒤 0.7 s 에 넘어감).
+                // 이 효과는 반복 수가 바뀔 때마다 다시 시작하므로 기다림의 시작은 처음 목표에 닿은 시각으로 고정한다
+                val t0 = advanceHoldFrom.getOrPut(step.token) { android.os.SystemClock.elapsedRealtime() }
+                var quiet = 0
+                while (true) {
+                    quiet = if (speech.isSpeaking) 0 else quiet + 1
+                    if (AdvanceHold.due(android.os.SystemClock.elapsedRealtime() - t0, quiet)) break
+                    delay(AdvanceHold.POLL_MS)
+                }
+                if (!pausedState.value && progress.targetReached(step)) advanceLatest.value(step.token, false)
+            } else if (step != null && !progress.targetReached(step)) {
+                // 목표에서 다시 내려갔다(횟수 수정) — 다음에 닿을 때 기다림을 새로 시작한다
+                advanceHoldFrom.remove(step.token)
             }
         }
         LaunchedEffect(sessionIndex) {

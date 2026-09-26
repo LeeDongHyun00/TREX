@@ -96,14 +96,19 @@ SCHEMA = "trex.posture.setlog/1"
 # 옮긴 AIHub 이름(= 로그의 exercise). 자가 검증이 두 코틀린 파일을 읽어 이 표와 맞는지 본다(어긋나면 실패).
 SIDE_PAIR_APP = ("런지", "바벨 런지", "사이드 런지", "크로스 런지")
 SIDE_PAIR_AIHUB = frozenset({"스텝 포워드 다이나믹 런지", "바벨 런지", "사이드 런지", "크로스 런지"})
-UNIT_CYCLES = {"cycle": 1, "side_pair": 2}     # RepUnit.key → cyclesPerRep
+# 런지(앱 이름 "런지")는 쪽별 카운트(spec §63, 사용자 결정 2026-09-26) — 화면 수 = min(왼, 오른)(TRACK 풀). 사이클 두 개가 한 쌍인 것은 같다
+SIDE_EACH_AIHUB = frozenset({"스텝 포워드 다이나믹 런지"})
+UNIT_CYCLES = {"cycle": 1, "side_pair": 2, "side_each": 2}     # RepUnit.key → cyclesPerRep
+PAIR_UNITS = ("side_pair", "side_each")    # 두 걸음(왼 + 오른) = 1회로 보이는 단위
 PROFILES_KT = REPO / "app" / "src" / "main" / "java" / "com" / "example" / "trex_kotlin" / "posture" / "ExerciseProfiles.kt"
 POSTURE_LIVE_KT = REPO / "app" / "src" / "main" / "java" / "com" / "example" / "trex_kotlin" / "PostureLive.kt"
 
 
 def current_unit(exercise: str | None, floor: bool) -> str:
     """지금 앱이 이 종목(AIHub 이름)의 자동 횟수를 보이는 단위. 바닥 경로는 늘 사이클(PostureLive: isFloorExercise → CYCLE)."""
-    return "side_pair" if (exercise in SIDE_PAIR_AIHUB and not floor) else "cycle"
+    if floor or exercise not in SIDE_PAIR_AIHUB:
+        return "cycle"
+    return "side_each" if exercise in SIDE_EACH_AIHUB else "side_pair"
 
 
 def kotlin_side_pair_exercises() -> tuple[set[str] | None, set[str] | None]:
@@ -328,10 +333,25 @@ def convert(log: dict, source: str, floor_exercises: set[str], rep_rules: dict) 
             cpr = int(reps.get("cycles_per_rep") or UNIT_CYCLES.get(str(unit), 1))
             completed = reps.get("completed")
             half = bool(reps.get("half_pending", False))
+            sides = reps.get("sides") if isinstance(reps.get("sides"), dict) else None
+            if str(unit) == "side_each":
+                # 쪽별 카운트: completed = TRACK 풀의 min(왼, 오른) — 걸음 아닌 사이클·목표 넘은 걸음은 빠져 count // 2 와 다르다. 반쪽 대기는 없다
+                track = (sides or {}).get("track") if isinstance((sides or {}).get("track"), dict) else None
+                consistent = (track is not None and (completed is None or int(completed) == int(track.get("pairs", -1)))
+                              and not half)
+            else:
+                consistent = (completed is None or int(completed) == count // cpr) and half == (count % cpr != 0)
             entry.update({"repUnit": str(unit), "cyclesPerRep": cpr, "repUnitFrom": "log",
                           "loggedCompleted": None if completed is None else int(completed), "loggedHalfPending": half,
                           "loggedDisplayedReps": int(completed) if completed is not None else count // cpr,
-                          "loggedUnitConsistent": (completed is None or int(completed) == count // cpr) and half == (count % cpr != 0)})
+                          "loggedUnitConsistent": consistent, "loggedSides": sides})
+            if sides is not None:
+                # 재생기가 앱처럼 목표로 쪽별 상한을 두고, 쪽별 수를 로그와 견준다(paritySides)
+                if sides.get("target") is not None:
+                    meta["loggedSidesTarget"] = str(int(sides["target"]))
+                t = sides.get("track") if isinstance(sides.get("track"), dict) else None
+                if t is not None:
+                    meta["loggedSidesTrack"] = ",".join(str(int(t.get(k, 0))) for k in ("L", "R", "U", "extra", "pairs"))
         else:
             entry.update({"repUnitFrom": "default(옛 로그 = 사이클)", "loggedDisplayedReps": count})
 
@@ -841,7 +861,8 @@ def _side_pair_self_test(work: Path, check) -> None:
     check("짝: 로그의 unit·cycles_per_rep·completed·half_pending → index (사이클 수는 그대로)",
           p1["repUnit"] == "side_pair" and p1["cyclesPerRep"] == 2 and p1["repUnitFrom"] == "log" and p1["loggedReps"] == c
           and p1["loggedCompleted"] == c // 2 and p1["loggedHalfPending"] is (c % 2 == 1)
-          and p1["loggedDisplayedReps"] == c // 2 and p1["loggedUnitConsistent"] is True and p1["currentUnit"] == "side_pair",
+          # 지금 앱의 런지(스텝 포워드)는 쪽별 카운트(side_each, spec §63) — 옛 로그의 단위(side_pair)는 로그 값 그대로
+          and p1["loggedDisplayedReps"] == c // 2 and p1["loggedUnitConsistent"] is True and p1["currentUnit"] == "side_each",
           json.dumps({k: p1[k] for k in ("repUnit", "cyclesPerRep", "loggedReps", "loggedCompleted", "loggedHalfPending",
                                           "loggedDisplayedReps", "loggedUnitConsistent")}, ensure_ascii=False))
     check("짝: edited 2쌍 → 화면 단위 2 · 사이클 4~5(짝 없는 한쪽) · 정확하지 않아 사이클 정답(truthReps)은 없음",
@@ -858,10 +879,10 @@ def _side_pair_self_test(work: Path, check) -> None:
           and p4["labelUnit"] is None and p4["labelUnitMatchesLog"] is None,
           f"{p1['labelUnit']} {p1['labelUnitMatchesLog']} · {p3['labelUnit']} {p3['labelUnitMatchesLog']} · {p4['labelUnit']}")
     check("짝(음성 대조): completed 가 count // 2 와 다르면 loggedUnitConsistent=false", p3["loggedUnitConsistent"] is False)
-    check("짝: unit 없는 옛 런지 로그 → 사이클 단위(출처 표시), 라벨 5 = 사이클 5 정확, 지금 앱 단위는 side_pair",
+    check("짝: unit 없는 옛 런지 로그 → 사이클 단위(출처 표시), 라벨 5 = 사이클 5 정확, 지금 앱 단위는 side_each(§63)",
           p4["repUnit"] == "cycle" and p4["repUnitFrom"].startswith("default") and p4["loggedDisplayedReps"] == c
           and p4["truthReps"] == 5 and p4["truthDisplayedReps"] == 5 and p4["truthCyclesExact"] is True
-          and p4["currentUnit"] == "side_pair" and p4["loggedHalfPending"] is None)
+          and p4["currentUnit"] == "side_each" and p4["loggedHalfPending"] is None)
     _, res, _ = run_replay.replay_index(work / "pair_cap2", work / "pair_res2", {"live"})
     q1 = res[f"{run_replay.set_key(p1)}|live"]
     check("짝: 재생 파리티는 사이클끼리(재생 5 = 로그 count 5), 화면 수는 재생 // 2 = completed",
@@ -880,6 +901,9 @@ def _side_pair_self_test(work: Path, check) -> None:
           apps == set(SIDE_PAIR_APP) and aihub == set(SIDE_PAIR_AIHUB), f"{apps} → {aihub}")
     check("짝: 바닥 경로·다른 종목은 사이클 단위", current_unit("바벨 런지", True) == "cycle" and current_unit("바벨 스쿼트", False) == "cycle"
           and current_unit("덤벨 컬", False) == "cycle")
+    check("짝: 런지(스텝 포워드)는 쪽별 카운트(side_each), 다른 런지류는 좌우 짝",
+          current_unit("스텝 포워드 다이나믹 런지", False) == "side_each" and current_unit("바벨 런지", False) == "side_pair"
+          and "SIDE_EACH" in PROFILES_KT.read_text(encoding="utf-8"))
 
 
 def _validation_self_test(work: Path, golden: list[str], check) -> None:

@@ -16,15 +16,20 @@ class CapturePreparationTest {
         // 목표 도달 자동 진행(spec §42)은 유지되므로 두 쪽을 다 해야 세트가 넘어간다 — 그 정의를 시작 전에 밝힌다(설계 §4.8).
         // (예전 문장 "번갈아 하는 동작은 한쪽 1회를 1회로 셉니다." 는 이 결정으로 뒤집혔다 — 이 테스트의 기대값도 그래서 바뀌었다.)
         assertEquals("왼쪽과 오른쪽을 한 번씩 해야 1회로 셉니다.", ALTERNATING_COUNT_RULE)
+        // 런지만 쪽별로 따로 센다(§63, 사용자 결정 2026-09-26) — 그 규칙을 시작 전에 밝힌다. 바벨·사이드·크로스 런지는 두 걸음 = 1회 그대로
         val lunge = ExerciseProfiles.forName("런지")!!
         assertTrue(lunge.alternating)
-        assertEquals(RepUnit.SIDE_PAIR, lunge.repUnit)
-        assertTrue(lunge.preparationInstruction.contains(ALTERNATING_COUNT_RULE))
-        assertTrue(lunge.preparationInstruction.indexOf(ALTERNATING_COUNT_RULE) < lunge.preparationInstruction.indexOf("5초"))
+        assertEquals(RepUnit.SIDE_EACH, lunge.repUnit)
+        assertTrue(lunge.preparationInstruction.contains(SIDE_EACH_COUNT_RULE))
+        assertTrue(lunge.preparationInstruction.indexOf(SIDE_EACH_COUNT_RULE) < lunge.preparationInstruction.indexOf("5초"))
+        assertFalse(lunge.preparationInstruction.contains(ALTERNATING_COUNT_RULE))
+        val barbell = ExerciseProfiles.forName("바벨 런지")!!
+        assertTrue(barbell.preparationInstruction.indexOf(ALTERNATING_COUNT_RULE) < barbell.preparationInstruction.indexOf("5초"))
         assertEquals(setOf("런지", "바벨 런지", "사이드 런지", "크로스 런지", "덤벨 컬", "스탠딩 니업"),
             ExerciseProfiles.all.filter { it.alternating }.map { it.name }.toSet())
-        assertEquals(setOf("런지", "바벨 런지", "사이드 런지", "크로스 런지"),
+        assertEquals(setOf("바벨 런지", "사이드 런지", "크로스 런지"),
             ExerciseProfiles.all.filter { it.repUnit == RepUnit.SIDE_PAIR }.map { it.name }.toSet())
+        assertEquals(setOf("런지"), ExerciseProfiles.all.filter { it.repUnit == RepUnit.SIDE_EACH }.map { it.name }.toSet())
         ExerciseProfiles.all.filter { it.repUnit == RepUnit.SIDE_PAIR }.forEach {
             assertTrue(it.name, it.preparationInstruction.contains(ALTERNATING_COUNT_RULE))
             assertFalse(it.name, it.floor)   // 짝 단위는 서서 하는 런지류뿐 — 바닥 종목은 늘 사이클 단위

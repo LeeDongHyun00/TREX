@@ -13,7 +13,9 @@ class ReturnRepTracker(private val minAmp: Float, private val refractoryMs: Long
     private var stableAt: Long? = null
     private var stableValue = 0f
     private var stableCount = 0
-    private var moving = false
+    /** 준비 자세에서 최소 진폭 이상 벗어나 복귀를 기다리는 중 — 세지 않는 조회용(§63 놓친 얕은 걸음은 이때 알리지 않는다). */
+    var moving = false
+        private set
     private var startAt = 0L
     private var low = 0f
     private var high = 0f

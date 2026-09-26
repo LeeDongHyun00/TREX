@@ -65,6 +65,12 @@ class RepCounter(
     val usesHysteresis: Boolean get() = hysteresis != null
 
     /**
+     * 걸음(반복) 도중인가 — 세지 않는 조회(§63). 레거시는 준비 자세에서 최소 진폭 이상 벗어나 복귀를 기다리는 중, 새 코어는 진행·확정 대기 후보가 있을 때.
+     * 놓친 얕은 걸음 알림(`RepFormEvaluator.missedDipEvent`)이 카운터가 곧 셀 걸음에 "덜 내려갔어요" 를 말하지 않게 한다.
+     */
+    val midCycle: Boolean get() = returnTracker?.moving ?: (hysteresis?.candidate() != null || confirmation?.pending != null)
+
+    /**
      * 이 카운터가 **실제로 쓰는** 구성 — 세트 로그(`RepEngineLog`)가 이 값을 그대로 적는다(복사한 상수는 조용히 어긋난다).
      * 새 코어 경로는 생성자의 불응기·끊김 기준 대신 코어의 값을 쓰고, 복귀 완료는 코어의 성질이다.
      */

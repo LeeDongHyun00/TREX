@@ -595,6 +595,7 @@ fun PostureLabScreen(onClose: () -> Unit) {
                         OnsetKind.HABIT -> TrexError.copy(alpha = 0.25f)
                         OnsetKind.DRIFT -> TrexWarning.copy(alpha = 0.25f)
                         OnsetKind.RECOVERED -> TrexLime.copy(alpha = 0.2f)
+                        OnsetKind.CURRENT -> TrexError.copy(alpha = 0.25f)
                         null -> Color.White.copy(alpha = 0.06f)
                     },
                     modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
@@ -602,7 +603,7 @@ fun PostureLabScreen(onClose: () -> Unit) {
                     Column(Modifier.padding(horizontal = 10.dp, vertical = 6.dp)) {
                         Text(
                             text = ev?.let {
-                                (when (it.kind) { OnsetKind.HABIT -> "처음부터 · "; OnsetKind.DRIFT -> "점점 흐트러짐 · "; OnsetKind.RECOVERED -> "교정됨 · " }) +
+                                (when (it.kind) { OnsetKind.HABIT -> "처음부터 · "; OnsetKind.DRIFT -> "점점 흐트러짐 · "; OnsetKind.RECOVERED -> "교정됨 · "; OnsetKind.CURRENT -> "위반 · " }) +
                                     it.rule.condition + (if (it.direction == Direction.OPPOSITE) " (반대측)" else "")
                             } ?: "코칭 대기 — 초반 ${MIN_FRAMES_FOR_VERDICT}프레임 후 판정 시작",
                             color = Color.White,

@@ -504,7 +504,7 @@ private fun SelfLabelSlot(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 // 좌우 짝 단위(런지류, spec §59)의 스테퍼는 화면 수와 같은 단위(쌍)로 시작한다 — 단위를 밝히지 않으면 걸음을 세는 사용자가
                 // 두 배를 적고(10 + 10 걸음 → "20"), 연구 도구는 그 라벨을 쌍으로 읽는다. 화면 전용(음성 없음).
-                val sidePair = report.repUnit == RepUnit.SIDE_PAIR
+                val sidePair = report.repUnit == RepUnit.SIDE_PAIR || report.repUnit == RepUnit.SIDE_EACH
                 Column(Modifier.weight(1f)) {
                     Text(if (sidePair) "실제 몇 회 하셨어요?" else "실제 몇 개 하셨어요?", color = c.text2, fontSize = 12.sp)
                     if (sidePair) Text(SIDE_PAIR_UNIT_HINT, color = c.text3, fontSize = 11.sp)

@@ -239,6 +239,8 @@ data class SetLog(
     val repCompleted: Int? = null,
     /** 세트 끝에 반대쪽을 못 채운 한쪽이 남았다(세지 않았다). true 일 때만 `reps.half_pending` 을 적는다. */
     val repHalfPending: Boolean = false,
+    /** 쪽별 카운트(런지 [RepUnit.SIDE_EACH], §63) — `reps.sides`. [repCompleted] 는 TRACK 풀의 쌍(스쿼트 선례: completed 는 자세로 뺀 회를 빼지 않았다). */
+    val repSides: SideTallies? = null,
     /**
      * 검증 모드 세트(spec §61 — 폰 검증 Gate A). true 면 `"validation":true` 와 분석 이미지 크기 `image`, 프레임마다 `xy`·`w`·`up` 을 쓴다.
      * false(기본) 면 키 자체가 없다 — 제품 로그는 바이트 그대로.
@@ -301,6 +303,7 @@ data class SetLog(
             repUnit: RepUnit? = null,
             repCompleted: Int? = null,
             repHalfPending: Boolean = false,
+            repSides: SideTallies? = null,
             validation: Boolean = false,
             /**
              * 검출 프레임마다 좌표(`xy`·`w`·`up`)와 `image` 를 쓴다(§62a 후속 5). 기본은 검증 모드와 같지만 세션은 **항상 켠다** —
@@ -376,6 +379,7 @@ data class SetLog(
                 repUnit = repUnit,
                 repCompleted = repCompleted,
                 repHalfPending = repHalfPending,
+                repSides = repSides,
                 validation = validation,
                 imageWidth = if (coordinates) firstImage?.imageWidth else null,
                 imageHeight = if (coordinates) firstImage?.imageHeight else null,
@@ -467,6 +471,12 @@ object SetLogJson {
                 sb.append(",\"cycles_per_rep\":").append(u.cyclesPerRep)
                 log.repCompleted?.let { sb.append(",\"completed\":").append(it) }
                 if (log.repHalfPending) sb.append(",\"half_pending\":true")
+            }
+            // §63 쪽별 카운트 — 런지만(없으면 키 부재)
+            log.repSides?.let { s ->
+                fun tally(t: SideTally) = "{\"L\":${t.left},\"R\":${t.right},\"U\":${t.unknown},\"extra\":${t.extra},\"blocked\":${t.blocked},\"pairs\":${t.pairs}}"
+                sb.append(",\"sides\":{\"target\":").append(s.target?.toString() ?: "null")
+                    .append(",\"track\":").append(tally(s.track)).append(",\"coach\":").append(tally(s.coach)).append('}')
             }
             // spec §58 단계 0 — 카운터 구성·리셋·미완 후보. 없으면 키 부재 (이전 로그)
             log.repEngine?.let { e ->
@@ -707,5 +717,15 @@ class SetLogStore(private val dir: File) {
 
     fun clear() {
         files().forEach { it.delete() }
+    }
+
+    companion object {
+        /**
+         * 세트 로그 쓰기 전용 스레드(앱 수명) — 화면 수명과 무관하게 순서대로 쓴다. 세트마다 새 `Thread` 를 띄우면 화면이 사라지는 순간의
+         * 기록이 다른 정리 작업과 경합했고(2026-09-26 13:57 — 그때는 분석기 크래시가 프로세스를 죽였다), 실패는 조용히 삼켜졌다.
+         */
+        val writer: java.util.concurrent.ExecutorService = java.util.concurrent.Executors.newSingleThreadExecutor { r ->
+            Thread(r, "set-log-writer").apply { isDaemon = false }
+        }
     }
 }

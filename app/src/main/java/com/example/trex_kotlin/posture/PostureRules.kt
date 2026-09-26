@@ -214,7 +214,8 @@ class PostureRuleSet(
     fun plusRepForm(): PostureRuleSet {
         val demoted = rules.map { r ->
             if (r.id in RepFormSpecs.supersedes && r.status == RuleStatus.SHIP)
-                r.copy(status = RuleStatus.BETA, cautions = r.cautions + "§62a: 반복 창 검사(${RepFormSpecs.supersedes.getValue(r.id)})가 판정을 대신한다 — 세트 평균은 서 있는 프레임이 결정해 실기기 오탐")
+                r.copy(status = RuleStatus.BETA, cautions = r.cautions + ("반복 창 검사(${RepFormSpecs.supersedes.getValue(r.id)})가 판정을 대신한다 — " +
+                    (RepFormSpecs.supersedeNotes[r.id] ?: "§62a: 세트 평균은 서 있는 프레임이 결정해 실기기 오탐")))
             else r
         }
         return PostureRuleSet("$version+${RepFormSpecs.VERSION}", generated, demoted + RepFormSpecs.asRules())

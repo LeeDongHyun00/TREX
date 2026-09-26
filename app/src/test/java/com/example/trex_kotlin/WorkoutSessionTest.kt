@@ -4,6 +4,14 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class WorkoutSessionTest {
+    @Test fun autoAdvanceWaitsForSpeechAtMostTwoSeconds() {
+        // §63: 목표 도달 뒤 마지막 판정·안내 발화를 최대 2 s 기다린다 — 최소 0.3 s, 두 번 연달아 조용해야
+        assertFalse(AdvanceHold.due(299, 5))
+        assertTrue(AdvanceHold.due(300, 2))
+        assertFalse(AdvanceHold.due(1_999, 1))
+        assertTrue(AdvanceHold.due(2_000, 0))
+    }
+
     @Test fun observedOnlyExerciseKeepsPersonalMeasurementsInHistoryWithoutAccuracy() {
         val report=com.example.trex_kotlin.posture.PostureSetReport.build("id","벽 푸쉬업","벽 푸쉬업",
             com.example.trex_kotlin.posture.CoachMode.COACH,20,false,emptyList(),emptyList(),null,null,null,

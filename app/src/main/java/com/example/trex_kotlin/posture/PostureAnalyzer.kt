@@ -91,6 +91,12 @@ class PostureAnalyzer(
     private val preferGpu: Boolean = true,
 ) {
     private var landmarker: PoseLandmarker? = null
+    /**
+     * 닫힌 뒤에는 모델을 다시 만들지 않고 빈 샘플만 돌려준다. 추론(analyze·analyzeBitmap)과 [close] 는 같은 락(this)을 잡는다 —
+     * 화면이 사라질 때 메인 스레드의 close 가 분석 스레드에서 도는 detectForVideo 의 네이티브 그래프를 해제해
+     * SIGSEGV(PacketCreator.nativeCreateProto, 폰 2026-09-25 20:06·09-26 13:57 — 자동 진행 직후)로 앱이 죽고 그 세트 로그가 사라졌다.
+     */
+    @Volatile private var closed = false
     private var delegateName: String = "-"
     private var initError: String? = null
     private var lastTimestampMs = 0L
@@ -116,6 +122,7 @@ class PostureAnalyzer(
     /** 분석 스레드에서 호출. GPU → CPU 순으로 시도. */
     @Synchronized
     fun ensureReady(): Boolean {
+        if (closed) return false
         if (landmarker != null) return true
         if (initError != null) return false
         val order = if (preferGpu) listOf(Delegate.GPU, Delegate.CPU) else listOf(Delegate.CPU)
@@ -146,7 +153,9 @@ class PostureAnalyzer(
      * ImageProxy 를 소비하지 않는다 — 호출 측에서 close() 할 것.
      * @param up 중력 반대 방향(world 좌표계 단위벡터). IMU 를 못 쓰면 [SCREEN_UP].
      */
-    fun analyze(image: ImageProxy, timestampMs: Long, up: Vec3 = SCREEN_UP): PoseSample {
+    fun analyze(image: ImageProxy, timestampMs: Long, up: Vec3 = SCREEN_UP): PoseSample = synchronized(this) { analyzeImageLocked(image, timestampMs, up) }
+
+    private fun analyzeImageLocked(image: ImageProxy, timestampMs: Long, up: Vec3): PoseSample {
         val fromGravity = up !== SCREEN_UP
         if (!ensureReady()) return PoseSample.empty(up = up, fromGravity = fromGravity)
         // YUV → Bitmap 변환은 실제 추론 프레임에서만 (스킵된 프레임은 비용 0)
@@ -159,7 +168,7 @@ class PostureAnalyzer(
         val upright = rotateInto(src, rotation)
 
         return try {
-            analyzeBitmap(upright, timestampMs, up)
+            analyzeLocked(upright, timestampMs, up)
         } finally {
             if (upright !== src) src.recycle()
         }
@@ -167,7 +176,9 @@ class PostureAnalyzer(
 
     /** 회전 보정된 이미지 재생 입력. 카메라와 동일한 VIDEO 추론·관절 변환 경로를 사용한다.
      * 비트맵 소유권은 호출자에게 있다. 저장 이미지에는 IMU가 없으므로 기본값은 SCREEN_UP이다. */
-    fun analyzeBitmap(upright: Bitmap, timestampMs: Long, up: Vec3 = SCREEN_UP): PoseSample {
+    fun analyzeBitmap(upright: Bitmap, timestampMs: Long, up: Vec3 = SCREEN_UP): PoseSample = synchronized(this) { analyzeLocked(upright, timestampMs, up) }
+
+    private fun analyzeLocked(upright: Bitmap, timestampMs: Long, up: Vec3): PoseSample {
         val fromGravity = up !== SCREEN_UP
         if (!ensureReady()) return PoseSample.empty(up = up, fromGravity = fromGravity)
         val lm = landmarker ?: return PoseSample.empty(up = up, fromGravity = fromGravity)
@@ -235,8 +246,10 @@ class PostureAnalyzer(
         // §62c: 컬의 팔꿈치 앞 이탈·몸통 기울기는 이미지 2D + 촬영 방위 부호(Arm2d). 재생기 frameFeatures 도 같은 순서·같은 함수
         val viewF = ViewEstimator.frameFeatures(joints)
         val aspect = w.toFloat() / h
+        // §63: 런지 걸음 기하(앞다리·깊이·무릎 쏠림·어깨 높이) — 어깨선 요로. 재생기 frameFeatures 도 같은 순서·같은 함수
         val features = frame.features() + viewF + Stance2d.features(xy, vis, MIN_VISIBILITY, aspect) +
-            Arm2d.features(xy, vis, MIN_VISIBILITY, aspect, Arm2d.yawOf(viewF))
+            Arm2d.features(xy, vis, MIN_VISIBILITY, aspect, Arm2d.yawOf(viewF)) +
+            Lunge2d.features(frame, xy, vis, MIN_VISIBILITY, aspect, ViewEstimator.shoulderYawOf(viewF))
         val visibleCount = vis.count { it >= MIN_VISIBILITY }
         return PoseSample(
             detected = true,
@@ -286,7 +299,19 @@ class PostureAnalyzer(
         }
     }
 
+    /**
+     * 닫힘 표시만 — 락 없이 바로 돌아온다. 이 뒤로 들어오는 분석은 모델을 만들지 않고 돌아간다([ensureReady]).
+     * 메인 스레드는 이것만 부르고 실제 [close] 는 분석 스레드에 맡긴다 — 첫 프레임의 모델 준비(GPU, 수 초)를 메인이 기다리지 않게.
+     */
+    fun markClosed() { closed = true }
+
+    /** 진행 중인 추론이 끝날 때까지 기다린 뒤 닫는다(추론 한 번 ≈ 100 ms, 첫 프레임은 모델 준비까지). 여러 번 불러도 된다. 메인 스레드에서 부르지 않는다. */
     fun close() {
+        closed = true      // 락 밖에서 먼저 — 락을 기다리는 분석은 들어오자마자 돌아간다
+        synchronized(this) { closeLocked() }
+    }
+
+    private fun closeLocked() {
         try {
             landmarker?.close()
         } catch (_: Throwable) {

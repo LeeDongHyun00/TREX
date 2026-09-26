@@ -70,6 +70,9 @@ object RuleHighlight {
         "wrist_h2d" to ELBOWS + WRISTS,          // '팔꿈치 뜸' — 손목 높이로 재지만 말은 팔꿈치
         "elbow_lat2d" to SHOULDERS + ELBOWS, "elbow_rise2d" to SHOULDERS + ELBOWS,
         "elbow_fwd2d" to ELBOWS + TORSO, "torso_tilt2d" to TORSO, "elbow_gap" to ELBOWS,
+        // 런지 걸음 기하(§63)
+        "lunge_front_shin" to KNEES + ANKLES + FEET, "lunge_back_knee_h" to KNEES + ANKLES, "lunge" to HIPS + KNEES + ANKLES,
+        "sh_level2d" to SHOULDERS,
     )
 
     fun landmarksFor(baseFeature: String): Set<Int> {
@@ -91,6 +94,18 @@ object RuleHighlight {
         val bad = outcomes.filter { it.verdict == Verdict.VIOLATION }
         val ship = bad.filter { it.check.ship }.flatMap { landmarksFor(it.check.feature) }.toSet()
         val beta = bad.filter { !it.check.ship }.flatMap { landmarksFor(it.check.feature) }.toSet() - ship
+        return ship to beta
+    }
+
+    /**
+     * 걸음 하나의 위반 부위(§63) — 검사의 [RepFormCheck.highlight] 틀에서 `{front}` 를 그 걸음 앞다리(L/R)로 바꿔 **앞다리만** 칠한다.
+     * 쪽을 모르면 틀에서 `_{front}` 를 떼어 양쪽을 칠한다. 틀이 없는 검사는 [forRepForm] 과 같다.
+     */
+    fun forRepForm(rep: RepFormRep): Pair<Set<Int>, Set<Int>> {
+        fun feat(o: RepFormOutcome): String = o.check.highlight?.let { h -> rep.side?.let { h.replace("{front}", it.key) } ?: h.replace("_{front}", "") } ?: o.check.feature
+        val bad = rep.outcomes.filter { it.verdict == Verdict.VIOLATION }
+        val ship = bad.filter { it.check.ship }.flatMap { landmarksFor(feat(it)) }.toSet()
+        val beta = bad.filter { !it.check.ship }.flatMap { landmarksFor(feat(it)) }.toSet() - ship
         return ship to beta
     }
 

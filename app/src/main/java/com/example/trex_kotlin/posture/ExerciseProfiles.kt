@@ -21,6 +21,12 @@ enum class ObservationKind { REPS, HOLD, WINDOW, GUIDE }
 const val ALTERNATING_COUNT_RULE = "왼쪽과 오른쪽을 한 번씩 해야 1회로 셉니다."
 
 /**
+ * 쪽별로 따로 세는 종목([RepUnit.SIDE_EACH], 런지)의 준비 안내 — 사용자 결정(2026-09-26): 왼발 앞·오른발 앞을 따로 세고, 한쪽 목표를 다 채우면
+ * 반대쪽으로 안내한다. 목표 10회 = 왼 10 + 오른 10(쌍 기준은 그대로).
+ */
+const val SIDE_EACH_COUNT_RULE = "왼발 앞과 오른발 앞을 따로 셉니다. 한쪽을 다 채우면 반대쪽을 알려 드려요. 앞무릎은 80도 가까이 굽혀 주세요."
+
+/**
  * 본인 기준 반복 검사가 있는 종목의 시작 안내(§62c 후속 9) — 첫 반복들이 팔꿈치 위치의 기준이 된다. 처음부터 벌리면 그 벌림이 '정상' 이 되므로
  * 처음 두세 번을 바르게 하라고 먼저 밝힌다(모집단 띠로 기준을 자르는 장치는 큰 벌림만 막는다).
  */
@@ -51,7 +57,7 @@ data class ExerciseProfile(val name: String, val referenceExercise: String?, val
         else -> capture.title
     }
     val preparationInstruction get() = "권장 촬영 방향은 ${preparationDirection}입니다. ${capture.voice}. " +
-        (if (repUnit == RepUnit.SIDE_PAIR) "$ALTERNATING_COUNT_RULE " else "") + (referenceHint?.let { "$it " } ?: "") + "몸이 화면에 잡히면 5초 뒤 시작해요."
+        (if (repUnit == RepUnit.SIDE_PAIR) "$ALTERNATING_COUNT_RULE " else if (repUnit == RepUnit.SIDE_EACH) "$SIDE_EACH_COUNT_RULE " else "") + (referenceHint?.let { "$it " } ?: "") + "몸이 화면에 잡히면 5초 뒤 시작해요."
     val cameraEnabled get() = kind != ObservationKind.GUIDE
     val comparisonOnly get() = referenceExercise == null
     val startHint get() = when(kind) {
@@ -78,7 +84,8 @@ object ExerciseProfiles {
             val lunges = setOf("런지","바벨 런지","사이드 런지","크로스 런지")
             val alternating = name in lunges || name in setOf("덤벨 컬","스탠딩 니업")
             add(ExerciseProfile(name, ref, capture, floor, if (alternating) ObservationKind.WINDOW else kind, features, alternating,
-                repUnit = if (name in lunges) RepUnit.SIDE_PAIR else RepUnit.CYCLE, referenceHint = REFERENCE_HINTS[name]))
+                // 런지만 쪽별로 센다(§63 — 앞으로 딛는 런지만 앞다리 기하가 설계됐다). 바벨·사이드·크로스 런지는 두 걸음 = 1회 그대로
+                repUnit = if (name == "런지") RepUnit.SIDE_EACH else if (name in lunges) RepUnit.SIDE_PAIR else RepUnit.CYCLE, referenceHint = REFERENCE_HINTS[name]))
         }
         val c=CapturePosition.FRONT; val b=CapturePosition.RIGHT_FRONT; val d=CapturePosition.LEFT_FRONT
         val low=CapturePosition.FLOOR_SIDE; val oblique=CapturePosition.FLOOR_FRONT

@@ -28,6 +28,12 @@ import kotlin.math.sin
 object ViewEstimator {
     const val FEAT_COS = "view_cos"
     const val FEAT_SIN = "view_sin"
+    /**
+     * 어깨선만의 요(spec §63) — 런지는 골반선이 앞다리에 따라 ±15~35° 흔들려(저장 세트 바닥: 왼 앞 61~64°, 오른 앞 92~100° vs 어깨 72~86°)
+     * 걸음마다 뷰가 바뀐다. 반복 검사의 뷰·세트 중 방향 안내는 이것으로 잰다. [FEAT_COS]/[FEAT_SIN](어깨+골반)은 §33 규칙 게이팅 정의라 그대로 둔다.
+     */
+    const val FEAT_COS_SH = "view_cos_sh"
+    const val FEAT_SIN_SH = "view_sin_sh"
 
     // outputs/view_thresholds.json (§33) — 명목 방향과 일치하는 서서 종목 클립의 뷰별 분포에서 유도. 바꾸면 view_fixture.txt 도 재생성.
     const val B_SIGN = 1f                 // yaw 가 양수면 B 쪽 (B · SIDE_L · A)
@@ -63,7 +69,12 @@ object ViewEstimator {
     }
 
     /** 프레임 요(도). 어깨선·골반선 중 있는 것으로 계산, 둘 다 없으면 null. 연구 `frame_yaw` 와 같은 정의. */
-    fun frameYawDeg(joints: Map<String, Vec3?>): Float? {
+    fun frameYawDeg(joints: Map<String, Vec3?>): Float? = yawOfLines(joints, withHips = true)
+
+    /** 어깨 한 쌍만의 요(°). 어깨가 없거나 겹치면 null. */
+    fun shoulderYawDeg(joints: Map<String, Vec3?>): Float? = yawOfLines(joints, withHips = false)
+
+    private fun yawOfLines(joints: Map<String, Vec3?>, withHips: Boolean): Float? {
         var ux = 0f
         var uz = 0f
         var n = 0
@@ -78,7 +89,7 @@ object ViewEstimator {
             n += 1
         }
         line(joints[Joints.L_SHOULDER], joints[Joints.R_SHOULDER])
-        line(joints[Joints.L_HIP], joints[Joints.R_HIP])
+        if (withHips) line(joints[Joints.L_HIP], joints[Joints.R_HIP])
         if (n == 0) return null
         return Math.toDegrees(atan2(uz.toDouble(), ux.toDouble())).toFloat()
     }
@@ -87,7 +98,18 @@ object ViewEstimator {
     fun frameFeatures(joints: Map<String, Vec3?>): Map<String, Float> {
         val yaw = frameYawDeg(joints) ?: return emptyMap()
         val rad = Math.toRadians(yaw.toDouble())
-        return mapOf(FEAT_COS to cos(rad).toFloat(), FEAT_SIN to sin(rad).toFloat())
+        val out = HashMap<String, Float>(4)
+        out[FEAT_COS] = cos(rad).toFloat(); out[FEAT_SIN] = sin(rad).toFloat()
+        shoulderYawDeg(joints)?.let { sh -> val r = Math.toRadians(sh.toDouble()); out[FEAT_COS_SH] = cos(r).toFloat(); out[FEAT_SIN_SH] = sin(r).toFloat() }
+        return out
+    }
+
+    /** 피처 맵의 어깨 요(°) — [FEAT_COS_SH]/[FEAT_SIN_SH] 가 없으면 null. */
+    fun shoulderYawOf(features: Map<String, Float>): Float? {
+        val c = features[FEAT_COS_SH] ?: return null
+        val s = features[FEAT_SIN_SH] ?: return null
+        if (!c.isFinite() || !s.isFinite()) return null
+        return Math.toDegrees(atan2(s.toDouble(), c.toDouble())).toFloat()
     }
 
     fun classify(yawDeg: Float, r: Float = 1f): ViewClass {
@@ -117,13 +139,13 @@ object ViewEstimator {
     }
 
     /** 프레임 피처 목록에서 추정 (세트 로그용). */
-    fun estimate(frames: List<Map<String, Float>>, minFrames: Int = MIN_FRAMES): Estimate? {
+    fun estimate(frames: List<Map<String, Float>>, minFrames: Int = MIN_FRAMES, cosKey: String = FEAT_COS, sinKey: String = FEAT_SIN): Estimate? {
         var c = 0.0
         var s = 0.0
         var n = 0
         for (f in frames) {
-            val fc = f[FEAT_COS] ?: continue
-            val fs = f[FEAT_SIN] ?: continue
+            val fc = f[cosKey] ?: continue
+            val fs = f[sinKey] ?: continue
             if (!fc.isFinite() || !fs.isFinite()) continue
             c += fc; s += fs; n += 1
         }

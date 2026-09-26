@@ -146,6 +146,10 @@ import com.example.trex_kotlin.posture.RepUnit
 import com.example.trex_kotlin.posture.RepUnitAccumulator
 import com.example.trex_kotlin.posture.RepValidation
 import com.example.trex_kotlin.posture.SIDE_PAIR_NEXT_HINT
+import com.example.trex_kotlin.posture.SideStepCounter
+import com.example.trex_kotlin.posture.SideTallies
+import com.example.trex_kotlin.posture.TurnReminder
+import com.example.trex_kotlin.posture.StepSide
 import com.example.trex_kotlin.posture.SIDE_PAIR_UNIT_HINT
 import com.example.trex_kotlin.posture.RuleHighlight
 import com.example.trex_kotlin.posture.RuleStatus
@@ -237,6 +241,10 @@ private const val PROVISIONAL_NOTE_GAP_MS = 3_000L
 private const val MAX_INVALID_CUES = 2
 /** 옆으로 너무 돌아선 회의 안내 간격(§62c 후속 10) — 사선 검사가 전부 유보된 회를 침묵으로 두지 않는다. */
 private const val ANGLE_NOTE_GAP_MS = 15_000L
+/** 목표를 채운 쪽으로 더 디뎠을 때 반대쪽 안내 간격(§63). */
+private const val SIDE_CUE_GAP_MS = 8_000L
+/** 쪽·방향 안내를 TRACK 화면에 비교 문장보다 먼저 보이는 시간(§63) — TRACK 화면 문구는 비교 문장이라 formNote 가 보이지 않는다. */
+private const val GUIDE_NOTE_MS = 6_000L
 /** 반복 검사 위반 부위를 칠해 두는 시간 — 다음 회(컬 1.5~3 s)가 끝나기 전후. */
 private const val FORM_HIGHLIGHT_MS = 2_500L
 
@@ -376,6 +384,18 @@ fun PostureLiveSessionScreen(
     val repUnitRef = remember { arrayOfNulls<RepUnitAccumulator>(1) }
     var repUnit by remember { mutableStateOf(RepUnit.CYCLE) }       // 이 세트의 표시 단위 — 화면 표기용
     var repHalfPending by remember { mutableStateOf(false) }       // 첫 쪽을 마치고 반대쪽을 기다리는 중 — 화면 전용, 말하지 않는다(원칙 #6)
+    // 쪽별 카운트(런지 SIDE_EACH, §63 — 사용자 결정 2026-09-26): 왼발 앞·오른발 앞을 따로 세고 한쪽을 다 채우면 반대쪽을 안내한다
+    val sideCounterRef = remember { arrayOfNulls<SideStepCounter>(1) }
+    var sideTallies by remember { mutableStateOf<SideTallies?>(null) }
+    val sideCueAtRef = remember { longArrayOf(0L) }
+    // 쪽 안내·방향 안내(§63) — TRACK 에서도 보이게 따로 둔다(두 모드 모두의 안내). 몇 초 뒤 지운다
+    var guideNote by remember { mutableStateOf<String?>(null) }
+    var guideStamp by remember { mutableLongStateOf(0L) }
+    LaunchedEffect(guideStamp) {
+        if (guideStamp == 0L) return@LaunchedEffect
+        kotlinx.coroutines.delay(GUIDE_NOTE_MS)
+        guideNote = null
+    }
     // 두 수의 합 = 검출 전체(진행·자동 넘김, spec §42) — **표시 단위**다(좌우 짝이면 짝의 수). ROM 은 합을 줄이지 않는다.
     // 어떤 말로 보일지는 세트 리포트의 RepRomTier 가 정한다(spec §58): 검증 기준만 유효/무효·파셜, 미검증은 '참고 · 범위 미달', 기준 없음은 '범위 미판정'.
     // 짝의 ROM 판정은 두 쪽을 합친다 — 한쪽이라도 미달이면 미달, 아니고 한쪽이라도 미판정이면 미판정(RepUnitAccumulator.combine).
@@ -390,7 +410,10 @@ fun PostureLiveSessionScreen(
     val rejectedSeenRef = remember { intArrayOf(0) }
     var formNote by remember { mutableStateOf<String?>(null) }   // 마지막 ship 반복 검사 문장(화면). 정확한 회가 나오면 지운다
     val onRepLatest = rememberUpdatedState(onRepDetected)
+    val onRepetitionsLatest = rememberUpdatedState(onRepetitions)
     var deliveredReps by remember { mutableIntStateOf(0) }
+    /** 쪽별 카운트: 일시정지 중에 오른 쌍이 있다 — 풀리면 절대값으로 맞춘다. */
+    val sideSyncPending = remember { booleanArrayOf(false) }
     // ---- 세션 모드 (spec §29): 코치(초보 기본) / 기록(숙련). 종목별 저장. 정책 레이어만 바꾼다 —
     //      판정·임계값·로그는 두 모드에서 동일하게 계산된다 (모든 사용자 원칙).
     val modeStore = remember { ModeStore(context) }
@@ -399,8 +422,21 @@ fun PostureLiveSessionScreen(
     modeRef[0] = mode
     // 부분 제외도 COACH 만 — TRACK 은 세지 않는 기능 없이 전부 센다(사용자 결정 2026-09-25)
     val partialExcludedNow = repPartialExcluded && mode == CoachMode.COACH
-    val repCounted = repCount + (if (partialExcludedNow) 0 else repInvalid) - repIncorrect
-    LaunchedEffect(repCounted) {
+    // 쪽별 카운트 종목은 차감이 아니라 풀에서 다시 센다(사용자 결정 2026-09-26 "차감식으로 하지 말고") — 쌍 = min(왼, 오른), COACH 풀은 차단 걸음 제외
+    val repCounted = sideTallies?.of(mode == CoachMode.COACH)?.pairs ?: (repCount + (if (partialExcludedNow) 0 else repInvalid) - repIncorrect)
+    LaunchedEffect(repCounted, paused) {
+        if (sideTallies != null) {
+            // 쪽별 카운트는 쪽마다 목표에서 멈춰 쌍이 목표를 넘지 않는다 — 증가분으로 보내면 일시정지 중 버려진 +1 이 다음 걸음으로 돌아오지 않아
+            // 두 쪽이 다 ✓ 인데 세트가 넘어가지 않았다(검토 2026-09-26). 절대값으로 맞춘다: 오른 쌍은 바로, 일시정지 중에 오른 쌍은 풀린 뒤에.
+            // 직접 고친 수(횟수 수정)가 더 크면 건드리지 않는다
+            if (repCounted > deliveredReps) sideSyncPending[0] = true
+            deliveredReps = maxOf(deliveredReps, repCounted)
+            if (sideSyncPending[0] && !paused) {
+                sideSyncPending[0] = false
+                if (repCounted > repetitions) onRepetitionsLatest.value(repCounted)
+            }
+            return@LaunchedEffect
+        }
         repeat((repCounted - deliveredReps).coerceAtLeast(0)) { onRepLatest.value() }
         // 세트 안에서 줄어든 수(거둔 잠정 첫 회 §62c 후속 9·모드 전환)는 되돌리지 않고 이미 전한 수를 쥔다 — 다음 실제 회가 그 자리를 채우고,
         // 모드를 오가도 같은 회를 두 번 전하지 않는다. 세트가 바뀌면 세트 초기화가 0 으로 되돌린다
@@ -470,7 +506,8 @@ fun PostureLiveSessionScreen(
     DisposableEffect(repTone) { onDispose { runCatching { repTone?.release() } } }
     var muted by remember { mutableStateOf(speech.muted) }
     LaunchedEffect(repetitions) {
-        if (repetitions > 0 && !paused && !muted && !validation && repRef[0] != null) speakRep(speech, repTone, repetitions)
+        // 쪽별 카운트 종목은 걸음마다 쪽과 남은 수를 말한다(아래 분석 루프) — 쌍 숫자는 말하지 않는다
+        if (repetitions > 0 && !paused && !muted && !validation && repRef[0] != null && sideCounterRef[0] == null) speakRep(speech, repTone, repetitions)
     }
     // 검증 모드는 음성을 끈다 — 코칭·숫자 발화가 동작과 템포를 바꾼다(원칙 #6). 사용자가 다시 켤 수는 있다(배너가 알린다).
     // 플래그는 TrexApp 이 파일에서 비동기로 읽는다 — 세트 시작보다 늦게 도착해도 그 세트 로그에 반영되게 여기서도 맞춘다(단계가 바뀔 때만 바뀐다)
@@ -492,7 +529,6 @@ fun PostureLiveSessionScreen(
     val boundaryUntil = remember { longArrayOf(0L) }
 
     val analyzer = remember { PostureAnalyzer(context, PoseModel.FULL, preferGpu = true) }
-    DisposableEffect(analyzer) { onDispose { analyzer.close() } }
     val executor = remember { Executors.newSingleThreadExecutor() }
     val policy = remember { InferencePolicy(sampleIntervalMs = SESSION_SAMPLE_INTERVAL_MS) }
     val lastInferAt = remember { longArrayOf(0L) }
@@ -511,6 +547,9 @@ fun PostureLiveSessionScreen(
         onDispose {
             gravity.stop()
             thermal.stop()
+            // 분석기 닫기는 분석 스레드에서 — 진행 중 추론 뒤로 줄 세운다. 메인에서 닫으면 첫 프레임의 모델 준비(GPU, 수 초)를 기다리며 화면이 멈췄다(검토 2026-09-26)
+            analyzer.markClosed()
+            runCatching { executor.execute { analyzer.close() } }.onFailure { analyzer.close() }
             executor.shutdown()
         }
     }
@@ -601,16 +640,19 @@ fun PostureLiveSessionScreen(
         val unitInvalid: Int?
         val unitTimes: List<Long>?
         val halfPending: Boolean
+        val sides: SideTallies?
         synchronized(repRecords) {
             reps = if (rc != null) ArrayList(repRecords) else null
             // 누적기는 카운터와 함께 만든다. 없으면(생기지 않는 조합 — 방어) 사이클 = 1회로 되돌린다.
             val acc = repUnitRef[0]
             unitUsed = if (rc == null) null else acc?.unit ?: RepUnit.CYCLE
-            unitCompleted = if (rc == null) null else acc?.completed ?: rc.reps
+            unitCompleted = if (rc == null) null else sideCounterRef[0]?.track?.pairs ?: acc?.completed ?: rc.reps
             unitInvalid = if (rc == null) null else acc?.invalid ?: repRecords.count { it.valid == false }
             unitTimes = if (rc == null) null else acc?.repTimesMs ?: rc.repTimesMs.toList()
             // 세트 끝에 짝을 못 채운 한쪽 — 세지 않는다(진행에도 리포트 수에도 없다). 로그에만 남긴다(reps.half_pending).
-            halfPending = rc != null && acc?.pendingHalf == true
+            halfPending = rc != null && acc?.pendingHalf == true && sideCounterRef[0] == null
+            // 쪽별 카운트(§63) — 화면에 보인 쌍. completed 는 TRACK 풀(자세로 뺀 걸음을 빼지 않는다 — 스쿼트와 같은 약속)
+            sides = sideCounterRef[0]?.tallies()
             repTimes = rc?.repTimesMs?.toList()   // 분석 스레드의 onFrame 과 같은 락 안에서 복사
             // 세트 로그 단계 0 (spec §58) — 전부 세트 상대시각(프레임 t_ms 와 같은 기준). 첫 프레임 전 사건은 음수로 남는다.
             resets = if (rc != null) repResets.map { e -> RepResetEvent(e.tMs - t0, e.reason, e.afterTMs?.let { it - t0 }) } else null
@@ -707,14 +749,15 @@ fun PostureLiveSessionScreen(
             repUnit = unitUsed,
             repCompleted = unitCompleted,
             repHalfPending = halfPending,
+            repSides = sides,
         )
-        // 분석 executor 는 화면 종료 시 shutdown 되므로 순서에 의존하지 않도록 별도 스레드에서 기록한다.
-        Thread {
+        // 분석 executor 는 화면 종료 시 shutdown 되므로 앱 수명의 기록 스레드에서 쓴다. 실패는 삼키지 않고 feedback 로그에 남긴다
+        SetLogStore.writer.execute {
             runCatching {
                 logStore.append(log)
                 savedSets = logStore.totalSets()
-            }
-        }.start()
+            }.onFailure { speech.traceFeedback("set_log_failed", "${log.setId} ${it.javaClass.simpleName}: ${it.message}") }
+        }
         PostureSetReport.build(
             setId = log.setId,
             exercise = ex,
@@ -734,12 +777,15 @@ fun PostureLiveSessionScreen(
             repRom = rc?.let { RepRomTier.of(it.signal) },
             repUnit = unitUsed,
             repHalfPending = halfPending,
+            repSides = sides,
         )
     }
     // 세트(운동) 경계 안전망: ✓/✕ 가 이미 마감했으면 멱등으로 null. 마감 없이 화면이 사라질 때(액티비티 종료 등)만
     // 여기서 로그·리포트가 남는다 — 발화는 없다(화면이 이미 없다).
     DisposableEffect(workout.id, preparing) {
         if (preparing) return@DisposableEffect onDispose { }
+        // 새 세트 — 직전 세트의 마감(멱등 표시)을 푼다. 풀지 않으면 같은 화면에서 이어지는 세트의 프레임이 기록되지 않는다(:916)
+        finalized.set(false)
         val ex = aihubExercise
         val label = workout.name
         val floor = isFloorExercise
@@ -796,7 +842,15 @@ fun PostureLiveSessionScreen(
         synchronized(repRecords) {
             repRecords.clear(); repResets.clear(); lastCounterFrameAt[0] = 0L
             repUnitRef[0] = if (repRef[0] != null) RepUnitAccumulator(unit) else null
+            // 쪽별 카운트 — 걸음 쪽을 정하는 검사기가 있을 때만(런지). 목표는 세트 시작 시점 값(이 화면은 종목이 바뀌어도 재생성되지 않는다)
+            sideCounterRef[0] = if (unit == RepUnit.SIDE_EACH && repFormRef[0] != null && repRef[0] != null)
+                SideStepCounter((workout.resolvedTarget() as? WorkoutTarget.Repetitions)?.amount) else null
         }
+        // 첫 걸음 전부터 쪽별 표기('왼 10 · 오 10', '좌우 각 10회') — 비우면 첫 걸음까지 '0회 / 목표 10회' 로 보여 합계 10걸음으로 읽혔다
+        sideTallies = synchronized(repRecords) { sideCounterRef[0]?.tallies() }
+        sideCueAtRef[0] = 0L
+        sideSyncPending[0] = false
+        guideNote = null
         comparisonSpeech.clear()
         comparisonRef[0] = PostureComparisonTracker(aihubExercise, (ComparisonMetrics.forExercise(aihubExercise, rs.rules) +
             profile?.let(com.example.trex_kotlin.posture.ExerciseProfiles::metrics).orEmpty()).distinctBy { it.feature },
@@ -834,6 +888,7 @@ fun PostureLiveSessionScreen(
             synchronized(repRecords) {
                 repRef[0]?.let {
                     it.resetCycle(); repUnitRef[0]?.onCounterCycleReset()
+                    repFormRef[0]?.takeIf { f -> f.stepSides }?.discardWindow()   // 멈추기 전 프레임이 재개 뒤 걸음 창에 섞이지 않게(§63, 걸음 종목만 — 스쿼트·컬 파리티 유지)
                     repResets += RepResetEvent(System.currentTimeMillis(), "pause", lastCounterFrameAt[0].takeIf { t -> t > 0L })
                 }
             }
@@ -998,10 +1053,30 @@ fun PostureLiveSessionScreen(
                             // COACH 만 ship 위반 회를 횟수에서 뺀다(spec §62b, 사용자 결정 2026-09-25). TRACK 은 전부 센다 — 게이트 없음.
                             val gate = modeRef[0] == CoachMode.COACH && !floorRef[0]
                             // 부분(ROM 미달)으로 이미 빠진 회는 자세 위반으로 다시 빼지 않는다 — 같은 회를 두 번 빼면 화면 수가 실제보다 준다(폰 15:34 세트 6·8회)
-                            if (gate) repIncorrect += formReps.indices.count { i -> !formReps[i].correct && !(rc.signal.romExcludesShort && tally.records.getOrNull(i)?.valid == false) }
+                            if (gate && sideCounterRef[0] == null) repIncorrect += formReps.indices.count { i -> !formReps[i].correct && !(rc.signal.romExcludesShort && tally.records.getOrNull(i)?.valid == false) }
+                            // 쪽별 카운트(§63) — 걸음마다 그 걸음의 앞다리 쪽과 차단 여부로 두 풀에 넣는다(모드와 무관하게 둘 다 — 세트 중 모드를 바꿔도 맞게)
+                            val sc = sideCounterRef[0]
+                            val coachNow = modeRef[0] == CoachMode.COACH
+                            val sideEvs = if (sc == null) emptyList() else synchronized(repRecords) { formReps.filter { !it.notStep }.map { r -> sc.offer(r.tMs, r.side, blocked = !r.correct) } }
+                            if (sc != null) {
+                                sideTallies = synchronized(repRecords) { sc.tallies() }
+                                // 센 걸음마다 쪽과 남은 수를 말한다 — 숫자 발화와 같은 대기열(끊지 않음). 쪽을 모르는 걸음은 짧은 톤. 자세로 뺀 걸음은 번호 없음(사유를 말한다)
+                                val speakCounts = !speech.muted && !validationRef[0] && !pausedRef[0]
+                                for (se in sideEvs) {
+                                    val e = se.of(coachNow)
+                                    if (!e.counted || !speakCounts) continue
+                                    if (!e.known || !speech.ready) { runCatching { repTone?.startTone(ToneGenerator.TONE_PROP_BEEP, 90) }; continue }
+                                    val n = synchronized(repRecords) { sc.pool(coachNow).count(e.side) }
+                                    speech.speak(when (e.remaining) {
+                                        null -> "${e.side.label} $n"
+                                        0 -> "${e.side.label} 끝"
+                                        else -> "${e.side.label} ${e.remaining}개 남음"
+                                    }, flush = false)
+                                }
+                            }
                             // 틀린 부위를 스켈레톤에 칠한다(§62c 후속 4) — COACH·서서만(TRACK 은 모집단 기준 '틀림' 을 칠하지 않는다, §29)
                             if (gate) formReps.lastOrNull()?.let { rep ->
-                                val (red, prov) = RuleHighlight.forRepForm(rep.outcomes)
+                                val (red, prov) = RuleHighlight.forRepForm(rep)   // 걸음 검사는 앞다리만(§63), 그 밖은 종전과 같다
                                 formHighlight = red; formProvHighlight = prov
                                 formHighlightStamp = if (red.isEmpty() && prov.isEmpty()) 0L else now
                             }
@@ -1013,49 +1088,86 @@ fun PostureLiveSessionScreen(
                             // 부분(ROM 미달)으로 빠진 회의 사유(spec §62c 후속 3) — 손목이 보여 준 끝(덜 올림/덜 폄). 세트당 처음 MAX_INVALID_CUES 번은 교정 문장까지, 그 뒤는 짧게
                             val shortReason = if (gate && rc.signal.romExcludesShort && tally.repsShort > 0)
                                 (rc.newlyPublishedShort.lastOrNull { it != null } ?: RomShort.RANGE) else null
-                            if (formEv != null && formEv.ship && gate) {
+                            // 이 회(걸음)에서 할 말은 한 문장으로 이어 한 번에 보낸다(§63 후속 2) — 따로 보내면 뒤의 말이 보류된 앞의 말을 밀어내거나,
+                            // 대기열에 붙인 쪽 안내가 보류된 사유보다 먼저 나와 사유가 반대쪽 다리 얘기처럼 들렸다. 순서 = 사유 → 쪽 안내 → 방향 안내 → 출발 알림
+                            val say = ArrayList<String>()
+                            val screenOnly = ArrayList<String>()
+                            val sideEv = sideEvs.map { it.of(coachNow) }.let { es -> es.lastOrNull { it.switchTo != null } ?: es.lastOrNull() }
+                            // 목표를 채운 쪽으로 더 디딘 걸음은 자세를 말하지 않는다 — 어차피 세지 않는 걸음이라 "더 깊이" 는 끝난 다리를 고치라는 말이 된다
+                            val extraStep = sideEv != null && !sideEv.counted && !sideEv.blocked
+                            if (formEv != null && formEv.ship && gate && !extraStep) {
                                 // 빠진 회는 그 자리에서 이유를 말한다 — 침묵하면 카운트가 죽은 줄 안다. 첫 위반은 교정 문장까지, 같은 검사의 쿨다운(12 s) 안은 짧은 단서(brief).
                                 // 2단 검사의 코칭 단계 위반은 회를 빼지 않으므로 그 말을 붙이지 않는다
-                                val msg = when {
-                                    formEv.brief && formEv.gated -> "${formEv.message}, 이 회 제외."
+                                say += when {
+                                    formEv.brief && formEv.gated -> "${formEv.message}, ${if (sc != null) "이 걸음" else "이 회"} 제외."
                                     formEv.brief -> "${formEv.message}."
-                                    formEv.gated -> "${formEv.message} 이 회는 세지 않았어요."
+                                    formEv.gated -> "${formEv.message} ${if (sc != null) "이 걸음은" else "이 회는"} 세지 않았어요."
                                     else -> formEv.message
                                 }
-                                formNote = msg
-                                speech.speakLatest(msg)
                             } else if (shortReason != null) {
-                                val msg = if (invalidCuesRef[0] < MAX_INVALID_CUES) "${rc.signal.shortCue(shortReason)}. 이 회는 세지 않았어요."
+                                say += if (invalidCuesRef[0] < MAX_INVALID_CUES) "${rc.signal.shortCue(shortReason)}. 이 회는 세지 않았어요."
                                     else when (shortReason) {
                                         RomShort.TOP -> "덜 올려서 세지 않았어요."
                                         RomShort.BOTTOM -> "덜 펴서 세지 않았어요."
                                         RomShort.RANGE -> "범위가 부족해 세지 않았어요."
                                     }
                                 invalidCuesRef[0]++
-                                formNote = msg
-                                speech.speakLatest(msg)
-                            } else if (formEv != null && !formEv.ship) {
+                            } else if (formEv != null && !formEv.ship && !extraStep) {
                                 provisionalNote = formEv.message   // beta 는 화면 '참고' 로만 — 침묵이 "이상 없음" 으로 읽히면 안 된다
                             }
+                            // 쪽별 안내(§63) — 한쪽을 다 채운 순간 반대쪽을(쪽마다 한 번), 다 채운 쪽으로 더 디디면 다시 반대쪽을(8 s 에 한 번). 두 모드 모두(세는 방법 안내).
+                            // 검증 모드는 쓰지 않는다 — 앱이 센 수를 드러낸다(§61). 쪽을 모르는 걸음에서 나온 안내는 추정이라 화면에만(원칙 #6)
+                            if (sideEv != null && !validationRef[0]) {
+                                val msg = when {
+                                    sideEv.switchTo != null -> "이제 ${sideEv.switchTo.label} 다리를 앞으로 내디뎌 주세요."
+                                    sideEv.extraOnDone && now - sideCueAtRef[0] > SIDE_CUE_GAP_MS -> "${sideEv.side.label}은 다 했어요. ${sideEv.side.other.label} 다리를 앞으로 해 주세요."
+                                    else -> null
+                                }
+                                if (msg != null) {
+                                    sideCueAtRef[0] = now
+                                    if (sideEv.known) say += msg else screenOnly += msg
+                                    guideNote = msg; guideStamp = now
+                                }
+                            }
+                            // 세트 중 방향 안내(§63, 런지) — 옆으로 돌아서거나 정면으로 선 걸음이 3번 이어지면 종류마다 세트에서 한 번. 두 모드 모두(촬영 안내)
+                            if (rf?.turnReminderSteps != null) synchronized(repRecords) { rf.takeTurnReminder() }?.let { kind ->
+                                val msg = when (kind) {
+                                    TurnReminder.SIDE -> "옆으로 많이 돌아섰어요. 휴대폰 쪽으로 조금 돌아 45도쯤 비스듬히 서 주세요."
+                                    TurnReminder.FRONT -> "정면으로 서면 깊이와 좌우를 볼 수 없어요. 휴대폰에서 45도쯤 비스듬히 서 주세요."
+                                }
+                                say += msg
+                                guideNote = msg; guideStamp = now
+                            }
                             // 옆으로 너무 돌아선 회(§62c 후속 10) — 사선 검사가 전부 유보된다. 조용히 넘기면 "봤는데 괜찮았다" 로 읽힌다(원칙 #5). 15 s 에 한 번
-                            if (gate && lastRep?.turnedTooFar == true && now - angleNoteAtRef[0] > ANGLE_NOTE_GAP_MS) {
+                            if (gate && rf?.turnReminderSteps == null && lastRep?.turnedTooFar == true && now - angleNoteAtRef[0] > ANGLE_NOTE_GAP_MS) {
                                 angleNoteAtRef[0] = now
-                                val msg = "옆으로 너무 돌아서 이 회는 자세를 못 봤어요. 조금 덜 돌아 주세요."
-                                formNote = msg
-                                speech.speakLatest(msg)
+                                say += "옆으로 너무 돌아서 이 회는 자세를 못 봤어요. 조금 덜 돌아 주세요."
                             }
                             // 처음부터 틀린 출발(§62c 후속 9) — 본인 기준이 모집단에 거의 없는 값이면 세트에서 한 번 말한다. COACH·서서만, 방금 말한 반복 사건 뒤에 붙인다
-                            if (gate && rf != null) synchronized(repRecords) { rf.takeNotice(now) }?.let { ev ->
-                                formNote = ev.message
-                                speech.speakLatest(ev.message)
-                            }
+                            if (gate && rf != null) synchronized(repRecords) { rf.takeNotice(now) }?.let { ev -> say += ev.message }
+                            if (say.isNotEmpty() || screenOnly.isNotEmpty()) formNote = (say + screenOnly).joinToString(" ")
+                            if (say.isNotEmpty()) speech.speakLatest(say.joinToString(" "))
                             repTempoMs = tally.tempoMs
-                            repHalfPending = tally.halfPending
+                            // 쪽별 카운트는 '반쪽 대기' 가 없다(쪽마다 따로 센다) — 누적기의 두 걸음 짝을 쓰면 홀수 걸음마다 강조색이 켜졌다
+                            repHalfPending = tally.halfPending && sc == null
                             // 빠른 렙 자가진단: 주기가 1.5s 아래면 3.3fps 로는 놓칠 수 있다 (렙당 4샘플 하한 실측) — 움직임(사이클)의 성질이라 사이클 기준
                             repFast = (rc.periodMs ?: Long.MAX_VALUE) < 1_500L
                         }
                         // 유지 자세(§62c 후속 6) — 반복 없이 숙인 채 있어도 말한다(스쿼트의 창 규칙 '척추의 중립' 과 같은 역할). COACH·서서만.
                         // 이 프레임에 회가 끝났으면 그 회의 판정이 말한다(한 동작에 한 번)
+                        // 카운터가 세지 못한 얕은 걸음(§63, 사용자 결정 "80도 부근까지 굽혀지지 않으면 교정 멘트와 시각 표시") — 창을 바꾸므로 모드와 무관하게 부르고,
+                        // 말·강조는 COACH 만. 쿨다운(12 s) 안이면 짧은 단서
+                        if (!completed && rf != null && !floorRef[0]) {
+                            synchronized(repRecords) { rf.missedDipEvent(now, rc.midCycle, speak = modeRef[0] == CoachMode.COACH) }?.let { (ev, side) ->
+                                if (modeRef[0] == CoachMode.COACH) {
+                                    val msg = if (ev.brief) "${ev.message}, 이 걸음 제외." else "${ev.message} 이 걸음은 세지 않았어요."
+                                    formNote = msg
+                                    speech.speakLatest(msg)
+                                    formHighlight = RuleHighlight.landmarksFor(ev.check.highlight?.let { h -> side?.let { h.replace("{front}", it.key) } ?: h.replace("_{front}", "") } ?: ev.check.feature)
+                                    formProvHighlight = emptySet(); formHighlightStamp = now
+                                }
+                            }
+                        }
                         if (!completed && rf != null && modeRef[0] == CoachMode.COACH && !floorRef[0]) {
                             synchronized(repRecords) { rf.liveEvent(now) }?.let { ev ->
                                 formNote = ev.message
@@ -1094,7 +1206,7 @@ fun PostureLiveSessionScreen(
                             provisionalAtRef[0] = now
                             provisionalNote = betaStates.firstOrNull { it.recent == Verdict.VIOLATION }?.let { st ->
                                 val cue = CoachCues.cueFor(st.rule, st.direction ?: Direction.PRIMARY)
-                                PostureSetReport.splitCue(if (st.kind == OnsetKind.DRIFT) cue.drift else cue.habit).first
+                                PostureSetReport.splitCue(when (st.kind) { OnsetKind.DRIFT -> cue.drift; OnsetKind.HABIT -> cue.habit; else -> cue.current }).first
                             }
                         }
                         // 세트 경계 발화(요약·시작 안내)가 나가는 동안은 끊지 않고 뒤에 붙인다
@@ -1124,7 +1236,10 @@ fun PostureLiveSessionScreen(
                         else { tracker.unavailable(); comparison = tracker.snapshot }
                         normalMatches = normalReferenceRef[0].compare(tracker.exercise, referenceViewRef[0], tracker.latestSignature, tracker.metrics)
                         if (modeRef[0] == CoachMode.TRACK || profile?.comparisonOnly == true) comparisonSpeech.next(now, comparison,
-                            speech.ready && !speech.muted && now > boundaryUntil[0])?.let { speech.speak(it, flush = true) }
+                            speech.ready && !speech.muted && now > boundaryUntil[0])?.let {
+                                // 쪽별 카운트 종목은 걸음마다 쪽·남은 수를 대기열로 말한다 — 비교 문장이 끊으면(flush) 같은 프레임의 수와 쪽 안내가 사라졌다
+                                if (sideCounterRef[0] != null) speech.speakLatest(it) else speech.speak(it, flush = true)
+                            }
                     }
                     if (floorRef[0]) {
                         floorFeedback = floorFeedbackRef[0]?.update(now, features, holdRef[0]?.snapshot(),
@@ -1190,10 +1305,13 @@ fun PostureLiveSessionScreen(
 
     val liveMessage = when {
                         paused -> "일시정지"
+                        // 쪽·방향 안내는 두 모드 모두의 안내다 — TRACK 은 아래가 비교 문장이라 formNote 가 안 보여 따로 먼저 보인다(§63)
+                        mode == CoachMode.TRACK && guideNote != null -> guideNote!!
                         mode == CoachMode.TRACK || profile?.comparisonOnly == true -> comparison.message
                         isFloorExercise -> floorFeedback?.message ?: "옆모습을 화면에 담아 주세요."
                         !coverage.ok -> coverage.message
-                        viewEst?.cls?.let { !it.front && it != ViewEstimator.ViewClass.UNKNOWN } == true ->
+                        // 런지는 세트 중 방향 안내(걸음 검사기)가 배치 문구를 맡는다 — 옆 뷰에서도 판정하므로 교정 문장을 가리지 않는다(§63)
+                        repFormRef[0]?.turnReminderSteps == null && viewEst?.cls?.let { !it.front && it != ViewEstimator.ViewClass.UNKNOWN } == true ->
                             profile?.capture?.placement ?: "전신이 보이도록 자리 잡아 주세요."
                         formNote != null -> formNote!!
                         coachBanner != null -> coachBanner!!.message
@@ -1261,6 +1379,7 @@ fun PostureLiveSessionScreen(
                         // 좌우 짝 단위는 단위와, 한쪽을 마친 동안 '반대쪽 차례' 를 붙인다 — 화면 전용(쪽을 모르므로 말하지 않는다, 원칙 #6)
                         val autoLabel = listOfNotNull("자동 횟수 · 참고",
                             SIDE_PAIR_UNIT_HINT.takeIf { repUnit == RepUnit.SIDE_PAIR },
+                            "왼·오 따로 셈".takeIf { sideTallies != null },
                             SIDE_PAIR_NEXT_HINT.takeIf { repUnit == RepUnit.SIDE_PAIR && repHalfPending }).joinToString(" · ")
                         Text(if (repRef[0] == null) "직접 횟수 기록" else if (validation) RepValidation.BANNER else autoLabel, color = c.text2,
                             fontSize = 11.sp, modifier = Modifier.padding(top = 6.dp))
@@ -1285,6 +1404,7 @@ fun PostureLiveSessionScreen(
                         synchronized(repRecords) {
                             repRef[0]?.let {
                                 it.resetCycle(); repUnitRef[0]?.onCounterCycleReset()   // 끝낸 한쪽은 유지 — 일시정지와 같다
+                                repFormRef[0]?.takeIf { f -> f.stepSides }?.discardWindow()
                                 repResets += RepResetEvent(System.currentTimeMillis(), "camera_switch", lastCounterFrameAt[0].takeIf { t -> t > 0L })
                             }
                         }
@@ -1304,7 +1424,17 @@ fun PostureLiveSessionScreen(
                     // 검증 모드는 자동 횟수 숫자를 숨긴다 — 집계자가 앱 숫자에 끌려가지 않게(세는 것·로그는 그대로)
                     hideCount = validation && repRef[0] != null,
                     // 운동 중에는 제어판이 접혀 있어(몰입) 좌우 짝 표기를 HUD 에도 둔다 — 한쪽을 마친 동안 '반대쪽 차례', 아니면 단위
+                    sideCount = sideTallies?.takeIf { repRef[0] != null }?.headline(mode == CoachMode.COACH),
                     countNote = when {
+                        // 쪽별 카운트(§63): 한쪽을 다 채웠으면 반대쪽 차례, 좌우 미확인·자세로 뺀 걸음을 밝힌다
+                        // 검증 모드는 앱이 센 수·차례를 보이지 않는다(§61) — 단위만
+                        repRef[0] != null && sideTallies != null && validation -> "왼·오 따로 셈"
+                        repRef[0] != null && sideTallies != null -> sideTallies!!.let { st ->
+                            val coachNow = mode == CoachMode.COACH; val t = st.of(coachNow)
+                            listOfNotNull(st.next(coachNow)?.let { "${it.label} 차례" },
+                                "좌우 미확인 ${t.unknown}".takeIf { t.unknown > 0 },
+                                "자세로 뺀 걸음 ${t.blocked}".takeIf { coachNow && t.blocked > 0 }).joinToString(" · ").ifEmpty { null }
+                        }
                         repRef[0] != null && repUnit == RepUnit.SIDE_PAIR -> if (repHalfPending) SIDE_PAIR_NEXT_HINT else SIDE_PAIR_UNIT_HINT
                         // COACH: ship 자세 검사 위반 회는 횟수에서 뺀다(§62b) — 큰 숫자가 정확 수, 감지 수는 나란히. 부분 반복(§62c)도 같은 줄에
                         repIncorrect > 0 || (partialExcludedNow && repInvalid > 0) ->
@@ -1313,7 +1443,7 @@ fun PostureLiveSessionScreen(
                                 (if (repIncorrect > 0) " · 자세 ${repIncorrect}회" else "")
                         else -> null
                     },
-                    countNoteActive = repHalfPending)
+                    countNoteActive = !validation && (repHalfPending || sideTallies?.next(mode == CoachMode.COACH) != null))
             },
             camera = { cameraArea(Modifier.fillMaxSize()) },
             controls = {

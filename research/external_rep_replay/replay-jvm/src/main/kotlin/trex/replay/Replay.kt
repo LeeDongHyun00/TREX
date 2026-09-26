@@ -10,6 +10,9 @@ import com.example.trex_kotlin.posture.RepSignal
 import com.example.trex_kotlin.posture.RepSignals
 import com.example.trex_kotlin.posture.Stance2d
 import com.example.trex_kotlin.posture.Arm2d
+import com.example.trex_kotlin.posture.Lunge2d
+import com.example.trex_kotlin.posture.SideStepCounter
+import com.example.trex_kotlin.posture.StepSide
 import com.example.trex_kotlin.posture.Vec3
 import com.example.trex_kotlin.posture.ViewEstimator
 import com.example.trex_kotlin.posture.checkUpSanity
@@ -200,8 +203,11 @@ fun frameFeatures(frame: CaptureFrame, stats: FrameStats): Map<String, Float>? {
     val xy = FloatArray(MP_LANDMARK_COUNT * 2) { k -> frame.image[k / 2]!![k % 2] }
     // §62c: 컬의 2D 팔·몸통 피처(Arm2d)도 앱과 같은 순서·같은 함수. 캡처에는 이미지 크기가 없어 세로 480×640(0.75)을 가정한다
     val viewF = ViewEstimator.frameFeatures(joints)
-    return PoseFrame(joints, up).features() + viewF + Stance2d.features(xy, vis, MIN_VISIBILITY) +
-        Arm2d.features(xy, vis, MIN_VISIBILITY, Stance2d.DEFAULT_ASPECT, Arm2d.yawOf(viewF))
+    val pf = PoseFrame(joints, up)
+    // §63: 런지 걸음 기하도 앱과 같은 순서·같은 함수
+    return pf.features() + viewF + Stance2d.features(xy, vis, MIN_VISIBILITY) +
+        Arm2d.features(xy, vis, MIN_VISIBILITY, Stance2d.DEFAULT_ASPECT, Arm2d.yawOf(viewF)) +
+        Lunge2d.features(pf, xy, vis, MIN_VISIBILITY, Stance2d.DEFAULT_ASPECT, ViewEstimator.shoulderYawOf(viewF))
 }
 
 /**
@@ -305,6 +311,11 @@ fun run(job: Job, meta: Map<String, String>, frames: List<InputFrame>, stats: Fr
     val rc = counterFor(job) ?: return json(mapOf("id" to job.id, "error" to "no counter for ${job.exercise}"))
     // 반복별 자세 검사(spec §62a) — 앱 세션 구성(live, 신호 교체 없음)에서만 앱과 같은 평가기를 나란히 돌린다. Gate A 가 이 검사의 오탐·검출을 잰다.
     val rf = if (job.mode == "live" && job.feature == null) RepFormSpecs.evaluatorFor(job.exercise, rc) else null
+    // 쪽별 카운트(spec §63, 런지) — 앱처럼 걸음마다 그 걸음의 앞다리 쪽·차단으로 두 풀에 넣는다. 목표는 세트 로그 reps.sides.target(없으면 상한 없이) —
+    // 목표가 있어야 목표를 넘은 걸음(extra)·모르는 걸음 채우기가 앱과 같다
+    val sc = if (rf != null && job.exercise == RepFormSpecs.LUNGE) SideStepCounter(meta["loggedSidesTarget"]?.toIntOrNull()) else null
+    val stepSides = StringBuilder()
+    val dips = ArrayList<String>()
     var rejectedSeen = 0
     val repTimes = ArrayList<Long>()
     val cycles = ArrayList<String>()
@@ -324,7 +335,7 @@ fun run(job: Job, meta: Map<String, String>, frames: List<InputFrame>, stats: Fr
     val resets = resetThresholds(meta).sorted()
     var nextReset = 0
     for (frame in frames) {
-        while (nextReset < resets.size && resets[nextReset] <= frame.tMs) { rc.resetCycle(); nextReset++ }
+        while (nextReset < resets.size && resets[nextReset] <= frame.tMs) { rc.resetCycle(); rf?.takeIf { it.stepSides }?.discardWindow(); nextReset++ }
         stats.frames++
         prevT?.let { if (frame.tMs - it > SESSION_MAX_GAP_MS) gaps++ }
         prevT = frame.tMs
@@ -360,9 +371,9 @@ fun run(job: Job, meta: Map<String, String>, frames: List<InputFrame>, stats: Fr
                 validSeq += ok?.toString() ?: "null"
                 repTimes += frame.tMs
                 cycles += "[${num(rc.lastCycleMin)},${num(rc.lastCycleMax)},${ok ?: "null"}]"
-                rf?.onCycle(frame.tMs, rc.lastCycleMin, rc.lastCycleMax)
+                rf?.onCycle(frame.tMs, rc.lastCycleMin, rc.lastCycleMax)?.let { r -> if (sc != null) { if (r.notStep) stepSides.append('x') else { sc.offer(r.tMs, r.side, blocked = !r.correct); stepSides.append(r.side?.key ?: "?") } } }
             } else for ((k, c) in published.withIndex()) {
-                rf?.onCycle(c.tMs, c.min, c.max, c.startMs)
+                rf?.onCycle(c.tMs, c.min, c.max, c.startMs)?.let { r -> if (sc != null) { if (r.notStep) stepSides.append('x') else { sc.offer(r.tMs, r.side, blocked = !r.correct); stepSides.append(r.side?.key ?: "?") } } }
                 // 팔별 경로(spec §62c)의 회 유효는 두 팔 사이클의 ROM(월드 각 비율 + 2D 손목 보조)으로 정해진다 — 앱 RepUnit.onCounterFrame 과 같은 출처(파리티)
                 val ok = if (rc.paired) rc.newlyPublishedValid.getOrNull(k) else rc.signal.isValidRep(c.min, c.max)
                 when (ok) { true -> valid++; false -> invalid++; null -> unjudged++ }
@@ -372,6 +383,8 @@ fun run(job: Job, meta: Map<String, String>, frames: List<InputFrame>, stats: Fr
             }
         }
         // 유지 자세 사건(spec §62c 후속 6) — 앱(COACH)과 같은 자리: 이 프레임에 회가 끝나지 않았을 때만. 로그 rep_form.live 로 오탐을 잰다
+        // 놓친 얕은 걸음(spec §63) — 앱과 같은 자리·같은 조건(모드 무관, 회가 끝나지 않은 프레임). 사건 시각과 쪽을 남긴다
+        if (!fired) rf?.missedDipEvent(frame.tMs, rc.midCycle)?.let { (_, side) -> dips += "[${frame.tMs},\"${side?.key ?: "?"}\"]" }
         if (!fired) rf?.liveEvent(frame.tMs)
         // 처음부터 틀린 출발 알림(spec §62c 후속 9) — 앱처럼 회가 끝난 프레임에(로그 rep_form.live "…#기준")
         if (fired) rf?.takeNotice(frame.tMs)
@@ -418,6 +431,14 @@ fun run(job: Job, meta: Map<String, String>, frames: List<InputFrame>, stats: Fr
         "repFormCorrect" to rf?.summary()?.correct,
         "repFormFlags" to rf?.summary()?.flagLine(),
         "repFormLines" to rf?.summary()?.lines()?.joinToString(" | "),
+        // 쪽별 카운트(spec §63) — 걸음 쪽 순서("RRLL?…"), 두 풀의 쪽별 수, 놓친 얕은 걸음 사건
+        "stepSides" to sc?.let { stepSides.toString() },
+        "sidesTarget" to sc?.target,
+        "sidesTrack" to sc?.let { val t = it.track; Raw("{\"L\":${t.left},\"R\":${t.right},\"U\":${t.unknown},\"extra\":${t.extra},\"pairs\":${t.pairs}}") },
+        "sidesCoach" to sc?.let { val t = it.coach; Raw("{\"L\":${t.left},\"R\":${t.right},\"U\":${t.unknown},\"extra\":${t.extra},\"blocked\":${t.blocked},\"pairs\":${t.pairs}}") },
+        // 로그 reps.sides.track 과 같은가(L,R,U,extra,pairs) — 로그에 없으면 null(판정하지 않은 것을 일치로 적지 않는다)
+        "paritySides" to sc?.let { c -> meta["loggedSidesTrack"]?.let { it == listOf(c.track.left, c.track.right, c.track.unknown, c.track.extra, c.track.pairs).joinToString(",") } },
+        "missedDips" to sc?.let { Raw(dips.joinToString(",", "[", "]")) },
     )
     out.putAll(parity(meta, rc, validSeq))
     return json(out)

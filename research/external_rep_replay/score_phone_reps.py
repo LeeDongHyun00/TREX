@@ -284,6 +284,13 @@ def display_unit(e: dict) -> str:
     return e.get("currentUnit") or setlog_captures.current_unit(e.get("exercise"), bool(e.get("floor")))
 
 
+def same_display(a: str | None, b: str | None) -> bool:
+    """두 단위가 같은 화면 수를 보이는가 — 좌우 짝(side_pair)과 쪽별(side_each, spec §63)은 둘 다 '왼 + 오른 = 1회' 쌍이다
+    (side_each 는 min(왼, 오른), side_pair 는 걸음 // 2 — 번갈아 하면 같다)."""
+    a, b = a or "cycle", b or "cycle"
+    return a == b or (a in setlog_captures.PAIR_UNITS and b in setlog_captures.PAIR_UNITS)
+
+
 def truth_of(e: dict, row: dict | None) -> tuple[int | None, str | None]:
     """걸음(카운터 사이클) 단위 정답. 쌍 단위 자가 라벨은 걸음 수가 한 걸음 모호해(truthCyclesExact=false) 넣지 않는다."""
     if row is not None:
@@ -308,7 +315,7 @@ def display_truth_of(e: dict, row: dict | None) -> tuple[int | None, str | None]
     st = side_tally(row)
     if st is not None:
         return min(st["left"], st["right"]), "tally"
-    same_unit = (e.get("repUnit") or "cycle") == display_unit(e)
+    same_unit = same_display(e.get("repUnit"), display_unit(e))
     if same_unit and e.get("truthDisplayedReps") is not None and e.get("truthSource") == "edited":
         return e["truthDisplayedReps"], "edited"
     if same_unit and e.get("confirmedDisplayedReps") is not None:
@@ -467,7 +474,7 @@ def score(inputs: list[Path], out: Path, plan_path: Path | None, label_paths: li
         dtruth, dsource = display_truth_of(e, row)
         dpreds = {p: v // cpr for p, v in preds.items() if p not in ("app", "always")}
         dfires = {p: unit_fires(ts, cpr) for p, ts in fires.items() if p != "app"}
-        if e.get("loggedDisplayedReps") is not None and (e.get("repUnit") or "cycle") == unit:
+        if e.get("loggedDisplayedReps") is not None and same_display(e.get("repUnit"), unit):
             dpreds["app"] = e["loggedDisplayedReps"]
             dfires["app"] = unit_fires(fires.get("app"), cpr)
         dpreds["always"] = planned_disp
@@ -499,7 +506,7 @@ def score(inputs: list[Path], out: Path, plan_path: Path | None, label_paths: li
         summary["verdict"] = verdicts(rows, tiers["independent"], headline)
         # 쌍 단위 판정은 좌우 짝 종목에만 — 컬의 쌍 행(altcurl)은 참고용이고 판정에서 빠진다
         summary["displayVerdict"] = {ex: v for ex, v in verdicts(display_rows, tiers["independent"], headline).items()
-                                     if setlog_captures.current_unit(ex, False) == "side_pair"}
+                                     if setlog_captures.current_unit(ex, False) in setlog_captures.PAIR_UNITS}
         # 좌우 짝 종목은 두 단위가 모두 통과해야 통과 — 쌍 단위만의 통과는 내림이 한 걸음 과다를 숨긴 것일 수 있다
         for ex, dv in summary["displayVerdict"].items():
             cv = summary["verdict"].get(ex, {"verdict": "데이터 없음"})

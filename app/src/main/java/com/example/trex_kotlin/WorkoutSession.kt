@@ -141,3 +141,16 @@ data class SessionProgress(
 /** 휴식/준비는 제외하고 세트별 실제 가동 시간을 전달한다. */
 fun SessionProgress.workDurations(steps: List<SessionStep>): Map<String, Int> = steps.filter { it.phase == SessionPhase.WORK }
     .associate { it.workout.id to ((workMillis[it.token] ?: 0L) / 1000).toInt() }
+
+/**
+ * 목표 도달 자동 진행의 발화 기다림(§63) — 최대 [MAX_MS], 최소 [GRACE_MS] 뒤 [QUIET_POLLS] 번 연달아 조용하면 넘어간다.
+ * 넘어갈 때 `speech.stop()` 이 마지막 판정·안내를 잘랐다(런지 "6" 뒤 0.7 s). 두 번 조용해야 하는 이유: `SpeechCoach` 는 끝난 발화 뒤
+ * 보류한 코칭 문장을 이어 말하기 직전 아주 잠깐 조용하다.
+ */
+object AdvanceHold {
+    const val MAX_MS = 2_000L
+    const val GRACE_MS = 300L
+    const val QUIET_POLLS = 2
+    const val POLL_MS = 100L
+    fun due(elapsedMs: Long, quietPolls: Int): Boolean = elapsedMs >= MAX_MS || (elapsedMs >= GRACE_MS && quietPolls >= QUIET_POLLS)
+}

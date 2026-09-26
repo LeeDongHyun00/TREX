@@ -25,7 +25,12 @@ package com.example.trex_kotlin.posture
  */
 enum class RepUnit(val cyclesPerRep: Int, val key: String) {
     CYCLE(1, "cycle"),
-    SIDE_PAIR(2, "side_pair");
+    SIDE_PAIR(2, "side_pair"),
+    /**
+     * 런지(§63, 사용자 결정 2026-09-26): 왼발 앞·오른발 앞을 **따로** 센다(`SideStepCounter`) — 1회 = 한쪽씩 한 번, 목표는 쪽마다.
+     * 걸음 쪽을 모르는 경로(검사기 없음)에서는 [SIDE_PAIR] 와 같이 두 걸음 = 1회다(이 누적기는 그 대체 경로와 로그의 사이클 기록을 맡는다).
+     */
+    SIDE_EACH(2, "side_each");
 
     companion object {
         /**

@@ -15,16 +15,23 @@ import java.util.Locale
  *  - 둘 다 위반            → HABIT   "처음부터 …"            (AIHub 연기 위반과 같은 유형 — 임계값이 검증된 영역)
  *  - 초반 정상 → 최근 위반  → DRIFT   "점점 … 흐트러지고 있어요"
  *  - 위반이었다가 최근 정상 → RECOVERED "좋아요, … 교정됐어요"
+ *  - 초반 창 유보 → 최근 위반 → CURRENT "…" (언제부터인지 모른다 — '처음부터' 라고 말하지 않는다, spec §63·원칙 #1)
  * 8프레임 창으로도 규칙 AUC 가 유지된다(AIHub GT: 첫 8프레임 0.912 vs 전체 16프레임 0.903).
  *
  * 발화 억제: 같은 규칙은 persistence 회 연속 위반일 때만, 규칙당 쿨다운, 전체 최소 간격 — 한 번에 한 문장만 고른다.
  * 임계값은 습관형(AIHub)으로 보정된 값이므로 DRIFT 도 같은 임계값을 쓴다. 피로형 전용 임계값은 실측 로그 후 재보정 대상.
  */
 
-enum class OnsetKind { HABIT, DRIFT, RECOVERED }
+/**
+ * [CURRENT] = 최근 창은 위반인데 초반 창을 판정하지 못했다(촬영 방향 유보·피처 없음) — 언제 시작했는지 모른다. 전에는 HABIT 로 분류해
+ * "처음부터 …" 라고 말했다(런지 2026-09-26 13:56: 초반이 옆 방향 유보였을 가능성, 모든 종목에 해당).
+ */
+enum class OnsetKind { HABIT, DRIFT, RECOVERED, CURRENT }
 
 data class CoachCue(val bodyPart: String, val habit: String, val drift: String) {
     val recovered: String get() = "좋아요, $bodyPart 자세가 교정됐어요."
+    /** 시작 시점을 모르는 위반의 문구 — 습관 문구에서 '처음부터' 를 뗀다(모든 습관 문구가 "처음부터 " 로 시작한다). */
+    val current: String get() = habit.removePrefix("처음부터 ")
 }
 
 /** 조건명(+하위유형) → 한국어 코칭 문구. 라벨명이 아니라 **실제 연기된 편차**(DEFINITION_QUALITY 요건 3) 기준으로 쓴다. */
@@ -80,6 +87,9 @@ object CoachCues {
         e("전완 지면과 수직", "팔꿈치", "처음부터 팔꿈치가 앞으로 벌어져 있어요. 전완을 수직으로 세우세요.", "팔꿈치가 점점 앞으로 벌어져요. 전완을 수직으로 세우세요."),
         e("견갑대 고정|견갑골 하강|어깨 으쓱|승모근|어깨와 귀 사이", "어깨", "처음부터 어깨가 올라가 있어요. 어깨를 내리고 귀에서 멀어지게 하세요.", "어깨가 점점 올라가요. 어깨를 내리세요."),
         e("숄더패킹", "어깨", "처음부터 어깨가 풀려 있어요. 견갑골을 아래로 고정하세요.", "어깨가 점점 풀려요. 견갑골을 아래로 고정하세요."),
+        // 런지 걸음 검사(§63) — PostureScope 의 부위 이름. "척추" 가 들어가면 spineBySubtype 으로 간다
+        e("무릎 쏠림", "무릎", "처음부터 앞무릎이 발끝 쪽으로 쏠려요. 체중을 앞발 뒤꿈치에 두세요.", "앞무릎이 점점 발끝 쪽으로 쏠려요. 체중을 앞발 뒤꿈치에 두세요."),
+        e("어깨 기울기", "어깨", "처음부터 어깨가 한쪽으로 기울어 있어요. 양 어깨 높이를 맞추세요.", "어깨가 점점 한쪽으로 기울어요. 양 어깨 높이를 맞추세요."),
         e("앞다리 무릎 각도", "앞무릎", "처음부터 앞무릎 각도가 안 나와요. 앞다리를 90도까지 굽히세요.", "앞무릎 각도가 점점 얕아져요. 앞다리를 90도까지 굽히세요."),
         e("뒤다리 무릎 각도|뒷다리", "뒷무릎", "처음부터 뒷다리가 펴져 있어요. 뒷무릎을 바닥 쪽으로 더 굽히세요.", "뒷무릎이 점점 펴져요. 뒷무릎을 더 굽히세요."),
         e("상체 살짝 숙임", "상체", "처음부터 상체가 너무 서 있어요. 상체를 살짝 앞으로 숙이세요.", "상체가 점점 서요. 상체를 살짝 앞으로 숙이세요."),
@@ -194,6 +204,7 @@ data class OnsetState(
             OnsetKind.HABIT -> "처음부터$dirSuffix"
             OnsetKind.DRIFT -> "점점 흐트러짐$dirSuffix"
             OnsetKind.RECOVERED -> "교정됨"
+            OnsetKind.CURRENT -> "위반$dirSuffix"
             null -> if (recent == Verdict.ABSTAIN) "유보" else "정상"
         }
 
@@ -302,8 +313,8 @@ class LiveCoach(
     private fun classify(early: Verdict, recent: Verdict, ruleId: String): OnsetKind? = when {
         recent == Verdict.VIOLATION && early == Verdict.VIOLATION -> OnsetKind.HABIT
         recent == Verdict.VIOLATION && early == Verdict.OK -> OnsetKind.DRIFT
-        recent == Verdict.VIOLATION -> OnsetKind.HABIT          // 초반 창이 아직 안 찼으면 = 세트 초반 위반 = 처음부터
-        recent == Verdict.OK && spokenKind[ruleId] in setOf(OnsetKind.HABIT, OnsetKind.DRIFT) -> OnsetKind.RECOVERED
+        recent == Verdict.VIOLATION -> OnsetKind.CURRENT        // 초반 창을 판정하지 못했다(유보) — 언제부터인지 모른다
+        recent == Verdict.OK && spokenKind[ruleId] in setOf(OnsetKind.HABIT, OnsetKind.DRIFT, OnsetKind.CURRENT) -> OnsetKind.RECOVERED
         else -> null
     }
 
@@ -352,6 +363,7 @@ class LiveCoach(
             OnsetKind.HABIT -> cue.habit
             OnsetKind.DRIFT -> cue.drift
             OnsetKind.RECOVERED -> cue.recovered
+            OnsetKind.CURRENT -> cue.current
             null -> return null
         }
         lastSpokenAt[pick.rule.id] = nowMs
@@ -383,7 +395,7 @@ class LiveCoach(
             val kind = when {
                 lr.verdict == Verdict.VIOLATION && early == Verdict.VIOLATION -> OnsetKind.HABIT
                 lr.verdict == Verdict.VIOLATION && early == Verdict.OK -> OnsetKind.DRIFT
-                lr.verdict == Verdict.VIOLATION -> OnsetKind.HABIT
+                lr.verdict == Verdict.VIOLATION -> OnsetKind.CURRENT
                 lr.verdict == Verdict.OK && early == Verdict.VIOLATION -> OnsetKind.RECOVERED
                 else -> null
             }
