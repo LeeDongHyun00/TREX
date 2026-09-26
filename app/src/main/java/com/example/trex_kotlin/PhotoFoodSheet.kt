@@ -15,6 +15,16 @@ import androidx.camera.core.ImageProxy
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.offset
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -82,6 +92,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.example.trex_kotlin.TrexText as Text
 import com.example.trex_kotlin.food.FoodDetectionResult
 import com.example.trex_kotlin.food.FoodDetector
+import com.example.trex_kotlin.food.FoodRegion
 import com.example.trex_kotlin.food.decodeScaledBitmap
 import com.example.trex_kotlin.food.rotated
 import com.example.trex_kotlin.food.scaledToMax
@@ -111,6 +122,9 @@ private sealed interface PickTarget {
 
     /** [index] 번째 줄을 다른 음식으로 바꾼다. */
     data class Replace(val index: Int) : PickTarget
+
+    /** 사진의 "?" 자리([regionId])에 이름을 붙인다. 고른 음식은 그 자리와 이어진 줄이 된다. */
+    data class Name(val regionId: Int) : PickTarget
 }
 
 /**
@@ -130,12 +144,19 @@ private sealed interface FoodSource {
     data object Picked : FoodSource
 }
 
-/** 결과 한 줄. 수량은 직접 기록 시트와 같은 qty 스테퍼로 조절한다. nutrition 이 없으면 기록에서 제외한다. */
+/**
+ * 결과 한 줄. 수량은 직접 기록 시트와 같은 qty 스테퍼로 조절한다. nutrition 이 없으면 기록에서 제외한다.
+ *
+ * [regionIds] 는 이 줄이 사진의 어느 자리([FoodRegion.id])에서 왔는지 — 사진 위 이름표가 이것으로 정해진다.
+ * 자리의 이름표를 따로 들고 있지 않는 이유: 줄을 바꾸거나 지웠을 때 사진과 목록이 어긋나지 않게, 줄 하나만 정본으로 둔다.
+ * 줄이 지워지면 그 자리는 다시 "?" 가 되어 이름을 새로 붙일 수 있다.
+ */
 private data class RecognizedItem(
     val name: String,
     val nutrition: Nutrition?,
     val source: FoodSource,
     val qty: Int = 1,
+    val regionIds: Set<Int> = emptySet(),
 )
 
 /**
@@ -154,7 +175,11 @@ private fun List<RecognizedItem>.mergedByName(): List<RecognizedItem> =
             acc + item
         } else {
             acc.mapIndexed { i, kept ->
-                if (i == at) kept.copy(qty = kept.qty + item.qty, nutrition = kept.nutrition ?: item.nutrition) else kept
+                if (i == at) {
+                    kept.copy(qty = kept.qty + item.qty, nutrition = kept.nutrition ?: item.nutrition, regionIds = kept.regionIds + item.regionIds)
+                } else {
+                    kept
+                }
             }
         }
     }
@@ -187,6 +212,8 @@ internal fun PhotoFoodSheet(app: AppViewModel, onClose: () -> Unit) {
     var items by remember { mutableStateOf<List<RecognizedItem>>(emptyList()) }
     // 임계 미만이라 결과에 넣지 않은 후보. "빠진 음식 추가"에서 고를 거리로만 쓴다.
     var candidates by remember { mutableStateOf<List<Pair<String, Float>>>(emptyList()) }
+    // 2단계 인식이 찾은 자리. 비어 있으면 전체 사진 1회 경로라 사진 위에 아무것도 그리지 않는다.
+    var regions by remember { mutableStateOf<List<FoodRegion>>(emptyList()) }
     var zoomed by remember { mutableStateOf<Bitmap?>(null) }
     // 음식 고르기 창의 대상. null 이면 닫힘.
     var pickTarget by remember { mutableStateOf<PickTarget?>(null) }
@@ -234,13 +261,18 @@ internal fun PhotoFoodSheet(app: AppViewModel, onClose: () -> Unit) {
         progress = 1f
         delay(200)
         when (result) {
-            is FoodDetectionResult.Success -> if (result.foods.isEmpty()) {
+            // 이름이 하나도 안 붙었어도 자리를 찾았으면 결과로 간다 — "?" 를 눌러 이름을 붙이면 된다.
+            is FoodDetectionResult.Success -> if (result.foods.isEmpty() && result.regions.isEmpty()) {
                 failureTitle = "음식을 찾지 못했어룡"
                 failure = "사진에서 음식을 찾지 못했어요. 음식이 잘 보이게 다시 찍어 주세요."
                 step = PhotoStep.Failed
             } else {
-                items = result.foods.map {
-                    RecognizedItem(it.name, app.findFood(it.name), FoodSource.Detected(it.confidence, it.photoIndex))
+                regions = result.regions
+                items = result.foods.map { food ->
+                    RecognizedItem(
+                        food.name, app.findFood(food.name), FoodSource.Detected(food.confidence, food.photoIndex),
+                        regionIds = result.regions.filter { it.name == food.name }.mapTo(HashSet()) { it.id },
+                    )
                 }
                 // 영양값을 못 찾는 이름은 골라도 기록에 못 들어가므로 후보에서 뺀다.
                 candidates = result.candidates
@@ -295,6 +327,12 @@ internal fun PhotoFoodSheet(app: AppViewModel, onClose: () -> Unit) {
                     PhotoStep.Analyzing -> AnalyzingStep(photos = photos, progress = progress, onZoom = { zoomed = it })
                     PhotoStep.Result -> ResultStep(
                         photos = photos,
+                        regions = regions,
+                        labelOf = { region -> items.firstOrNull { region.id in it.regionIds }?.name },
+                        onRegion = { region ->
+                            val row = items.indexOfFirst { region.id in it.regionIds }
+                            pickTarget = if (row >= 0) PickTarget.Replace(row) else PickTarget.Name(region.id)
+                        },
                         onZoom = { zoomed = it },
                         slot = slot,
                         items = items,
@@ -341,18 +379,31 @@ internal fun PhotoFoodSheet(app: AppViewModel, onClose: () -> Unit) {
         // 제목과 동작을 같은 한 번의 읽기에서 뽑는다. 따로 읽으면 그 사이 목록이 바뀌었을 때
         // 제목은 "추가"인데 동작은 "바꾸기"로 가서 아무 일도 안 일어나는 상태가 된다.
         val replacing = (target as? PickTarget.Replace)?.let { items.getOrNull(it.index) }
+        val naming = (target as? PickTarget.Name)?.let { t -> regions.firstOrNull { it.id == t.regionId } }
+        // 자리에서 온 줄·자리를 고칠 때는 그 자리에서 본 상위 후보를 먼저 보여준다(정답이 3위 안에 드는 경우가 많다, FOOD_EVAL §8).
+        // 한 줄이 여러 자리에서 왔으면 가장 확신한 자리의 후보를 쓴다.
+        val spot = naming ?: replacing?.let { row -> regions.filter { it.id in row.regionIds }.maxByOrNull { it.confidence } }
+        val spotCandidates = spot?.top
+            ?.filter { (name, _) -> name != replacing?.name && app.findFood(name) != null }
+            .orEmpty()
         FoodPicker(
             app = app,
-            title = replacing?.let { "${it.name} 을(를) 바꾸기" } ?: "빠진 음식 추가",
+            title = when {
+                replacing != null -> "${replacing.name} 을(를) 바꾸기"
+                naming != null -> "이 자리의 음식 고르기"
+                else -> "빠진 음식 추가"
+            },
             // 이미 목록에 든 것은 빼고 넘긴다. 바꾸기는 그 줄을 다른 것으로 만드는 일이라 후보가 그대로 쓸모 있다.
-            candidates = candidates.filterNot { (name, _) -> items.any { it.name == name } },
+            // 자리 이름 붙이기는 이미 든 음식도 그대로 보여준다 — 같은 음식 한 그릇 더(수량 +1)일 수 있다.
+            candidates = if (spot != null) spotCandidates else candidates.filterNot { (name, _) -> items.any { it.name == name } },
+            candidatesTitle = if (spot != null) "이 자리에서 본 후보" else null,
             onPick = { name, nutrition ->
-                val picked = RecognizedItem(name, nutrition, FoodSource.Picked)
+                val picked = RecognizedItem(name, nutrition, FoodSource.Picked, regionIds = naming?.let { setOf(it.id) }.orEmpty())
                 items = if (replacing == null) {
                     (items + picked).mergedByName()
                 } else {
-                    // 바꿔 넣은 이름은 모델이 판정한 게 아니다. 판정 흔적을 떼어 낸다.
-                    items.map { if (it === replacing) picked.copy(qty = it.qty) else it }.mergedByName()
+                    // 바꿔 넣은 이름은 모델이 판정한 게 아니다. 판정 흔적을 떼어 낸다. 자리는 그대로 따라간다.
+                    items.map { if (it === replacing) picked.copy(qty = it.qty, regionIds = it.regionIds) else it }.mergedByName()
                 }
                 pickTarget = null
             },
@@ -553,6 +604,11 @@ private fun AnalyzingStep(photos: List<Bitmap>, progress: Float, onZoom: (Bitmap
 @Composable
 private fun ResultStep(
     photos: List<Bitmap>,
+    /** 2단계 인식이 찾은 자리. 비어 있으면 예전처럼 사진 줄만 보여준다(전체 사진 1회 경로). */
+    regions: List<FoodRegion>,
+    /** 자리의 이름표 — 그 자리와 이어진 줄의 이름. null 이면 "?" 다. */
+    labelOf: (FoodRegion) -> String?,
+    onRegion: (FoodRegion) -> Unit,
     onZoom: (Bitmap) -> Unit,
     slot: String,
     items: List<RecognizedItem>,
@@ -577,7 +633,21 @@ private fun ResultStep(
             Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            PhotoStrip(photos, Modifier.fillMaxWidth().height(150.dp), onZoom = onZoom)
+            if (regions.isEmpty()) {
+                PhotoStrip(photos, Modifier.fillMaxWidth().height(150.dp), onZoom = onZoom)
+            } else {
+                RegionPhotos(photos, regions, labelOf, onRegion, onZoom)
+                val unnamed = regions.count { labelOf(it) == null }
+                // "?" 는 기록에 들어가지 않는다. 음식이 아닌 자리(컵·빈 그릇)도 여기 섞이므로 지우라고 하지 않고 그냥 두면 된다고 말한다.
+                Text(
+                    if (unnamed > 0) {
+                        "이름을 모르는 자리 ${unnamed}곳 · 사진의 ? 를 눌러 알려 주세요. 음식이 아니면 그냥 두면 기록되지 않아요."
+                    } else {
+                        "사진의 이름표를 누르면 다른 음식으로 바꿀 수 있어요."
+                    },
+                    color = c.text3, fontSize = 11.5.sp, lineHeight = 17.sp,
+                )
+            }
             SegmentedTabs(
                 options = mealMetas.map { it.label },
                 selected = slotIndex,
@@ -735,6 +805,110 @@ private fun PhotoStrip(photos: List<Bitmap>, modifier: Modifier, dim: Boolean = 
                 PhotoPreview(photo, Modifier.fillMaxSize(), dim, onZoom)
                 NumberBadge(index + 1, Modifier.padding(8.dp))
             }
+        }
+    }
+}
+
+/**
+ * 2단계 인식 결과를 사진 위에 그린다. 한 장이면 크게, 여러 장이면 가로로 넘겨 본다.
+ *
+ * 자리마다 박스와 이름표를 단다 — 이름이 붙은 자리는 실선과 이름, 붙지 않은 자리는 점선과 "?".
+ * 자리를 누르면 [onRegion](이름 바꾸기 또는 이름 붙이기), 자리 밖을 누르면 [onZoom](크게 보기).
+ * 자리가 겹치면 더 작은 쪽을 고른다 — 큰 자리 안의 작은 반찬 그릇을 누를 수 있어야 한다.
+ */
+@Composable
+private fun RegionPhotos(
+    photos: List<Bitmap>,
+    regions: List<FoodRegion>,
+    labelOf: (FoodRegion) -> String?,
+    onRegion: (FoodRegion) -> Unit,
+    onZoom: (Bitmap) -> Unit,
+) {
+    if (photos.size <= 1) {
+        val photo = photos.firstOrNull() ?: return
+        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+            RegionPhoto(
+                photo, regions, labelOf, onRegion, onZoom,
+                Modifier.heightIn(max = 420.dp).aspectRatio(photo.width.toFloat() / photo.height, matchHeightConstraintsFirst = true),
+            )
+        }
+        return
+    }
+    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        photos.forEachIndexed { index, photo ->
+            Box {
+                RegionPhoto(
+                    photo, regions.filter { it.photoIndex == index }, labelOf, onRegion, onZoom,
+                    Modifier.height(280.dp).aspectRatio(photo.width.toFloat() / photo.height),
+                )
+                NumberBadge(index + 1, Modifier.padding(8.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun RegionPhoto(
+    photo: Bitmap,
+    regions: List<FoodRegion>,
+    labelOf: (FoodRegion) -> String?,
+    onRegion: (FoodRegion) -> Unit,
+    onZoom: (Bitmap) -> Unit,
+    modifier: Modifier,
+) {
+    val c = Trex.c
+    val named = c.primary
+    val dash = remember { PathEffect.dashPathEffect(floatArrayOf(14f, 10f)) }
+    BoxWithConstraints(
+        modifier
+            .clip(RoundedCornerShape(14.dp))
+            .background(c.surface2)
+            .pointerInput(regions) {
+                detectTapGestures { tap ->
+                    val x = tap.x / size.width
+                    val y = tap.y / size.height
+                    val hit = regions
+                        .filter { x in it.box.left..it.box.right && y in it.box.top..it.box.bottom }
+                        .minByOrNull { it.box.area }
+                    if (hit != null) onRegion(hit) else onZoom(photo)
+                }
+            },
+    ) {
+        androidx.compose.foundation.Image(
+            bitmap = photo.asImageBitmap(),
+            contentDescription = "인식한 사진",
+            contentScale = ContentScale.FillBounds,
+            modifier = Modifier.fillMaxSize(),
+        )
+        Canvas(Modifier.fillMaxSize()) {
+            val stroke = 2.dp.toPx()
+            regions.forEach { region ->
+                val known = labelOf(region) != null
+                val topLeft = Offset(region.box.left * size.width, region.box.top * size.height)
+                val boxSize = Size(region.box.width * size.width, region.box.height * size.height)
+                // 어두운 테두리를 먼저 깔아 밝은 식탁에서도 선이 보이게 한다.
+                drawRect(Color.Black.copy(alpha = 0.35f), topLeft, boxSize, style = Stroke(stroke + 2.dp.toPx()))
+                drawRect(
+                    if (known) named else Color.White, topLeft, boxSize,
+                    style = Stroke(stroke, pathEffect = if (known) null else dash),
+                )
+            }
+        }
+        regions.forEach { region ->
+            val label = labelOf(region)
+            Text(
+                label ?: "?",
+                color = Color.White,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                modifier = Modifier
+                    .offset(x = maxWidth * region.box.left, y = maxHeight * region.box.top)
+                    .padding(4.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(if (label != null) named else Color.Black.copy(alpha = 0.6f))
+                    .padding(horizontal = 6.dp, vertical = 2.dp),
+            )
         }
     }
 }

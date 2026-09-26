@@ -618,12 +618,16 @@ private fun FoodSearchField(query: String, onQuery: (String) -> Unit) {
  * [candidates] 는 **모델이 봤지만 임계값에 못 미쳐 결과에서 뺀 것**이다. 결과로 단정하지 않되
  * 이미 계산된 신호를 버리지 않으려고 여기서만 보여준다 — 고르는 것은 사용자이고, 고른 순간
  * 그 항목은 모델 판정이 아니라 사용자 선택으로 기록된다.
+ *
+ * [candidatesTitle] 이 있으면 후보가 **사진의 한 자리에서 본 상위 후보**라는 뜻이다(2단계 인식, FOOD_EVAL §8).
+ * 그 자리의 1위가 임계값을 넘었어도 사용자가 고치러 온 것이라, "결과에 넣지 않았다"는 안내를 붙이지 않는다.
  */
 @Composable
 internal fun FoodPicker(
     app: AppViewModel,
     title: String,
     candidates: List<Pair<String, Float>> = emptyList(),
+    candidatesTitle: String? = null,
     onPick: (String, Nutrition) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -676,9 +680,13 @@ internal fun FoodPicker(
                             )
                         trimmed.isEmpty() -> {
                             if (candidates.isNotEmpty()) {
-                                Text("사진에서 비슷하게 본 것", color = c.text3, fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold)
+                                Text(candidatesTitle ?: "사진에서 비슷하게 본 것", color = c.text3, fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold)
                                 Text(
-                                    "확실하지 않아 결과에는 넣지 않았어요. 맞는 게 있으면 골라 주세요.",
+                                    if (candidatesTitle != null) {
+                                        "모델이 이 자리를 보고 비슷하다고 한 순서예요. 맞는 게 없으면 검색해 주세요."
+                                    } else {
+                                        "확실하지 않아 결과에는 넣지 않았어요. 맞는 게 있으면 골라 주세요."
+                                    },
                                     color = c.text3, fontSize = 11.sp, modifier = Modifier.padding(bottom = 2.dp),
                                 )
                                 candidates.forEach { (name, _) ->
