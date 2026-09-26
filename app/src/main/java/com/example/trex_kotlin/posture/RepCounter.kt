@@ -46,9 +46,16 @@ class RepCounter(
     val maxGapMs: Long = Long.MAX_VALUE,
     /** 세션 목표 카운트는 다음 하강 대신 준비 위치 복귀로 완료한다. 기존 재생 패리티는 기본값을 유지한다. */
     val completeOnReturn: Boolean = false,
+    /**
+     * 새 코어의 시작 확정(`RepStartConfirmation` — 첫 사이클을 둘째가 확인할 때까지 보류했다가 둘을 함께 발표)을 쓰는가.
+     * 덤벨 컬 팔별 자식은 쓰지 않는다(§62c 후속 9): 회 = 두 팔 짝이라 화면 수가 0 → 2 로 뛰었고, 사선에서 가려졌던 먼 팔이 다시 보일 때마다
+     * 그 팔의 '첫' 사이클이 다시 보류돼 세트 중에도 회가 몇 초씩 늦게 한꺼번에 올랐다(12:38 세트: 4회가 8.8 s 늦게). 컬 준비 동작(덤벨 집기)은 팔을 편 채라
+     * 팔꿈치각 사이클이 거의 없어 확정이 막을 것이 적고, '컬 아님' 은 기각 게이트(몸통·상완 스윙)가 따로 막는다.
+     */
+    val startConfirmation: Boolean = true,
 ) {
     private val hysteresis = signal.polarity?.let { RepHysteresis(signal.minAmp, it) }
-    private val confirmation = if (hysteresis != null) RepStartConfirmation() else null
+    private val confirmation = if (hysteresis != null && startConfirmation) RepStartConfirmation() else null
     private val returnTracker = if (completeOnReturn && hysteresis == null) ReturnRepTracker(signal.minAmp, refractoryMs) else null
     var reps: Int = 0
         private set
@@ -126,7 +133,7 @@ class RepCounter(
             RepCounter(signal.copy(feature = f, pairedFeatures = null, identityFeature = null, identityMinAmp = null, rejectFeatures = emptyMap(),
                 romDirection = null, romThreshold = null, romRatio = null, comparisonFeature = null, comparisonMinAmp = null,
                 polarity = RepPolarity.DOWN),
-                refractoryMs, maxGapMs, completeOnReturn)
+                refractoryMs, maxGapMs, completeOnReturn, startConfirmation = false)
         }.toTypedArray()
     }
     /** 팔별 경로인가. */
@@ -153,6 +160,17 @@ class RepCounter(
     private val auxRef = arrayOf<Float?>(null, null)
     private var pairGateAt = Long.MIN_VALUE / 2
     private var pairsSeen = 0                                     // 센 회 + 기각한 회
+    /**
+     * 첫 회 잠정(§62c 후속 9) — 팔별 자식의 시작 확정을 걷어낸 대신 **회 단위**로: 첫 회를 바로 세되 [FIRST_REP_CONFIRM_MS] 안에 둘째 회가 없으면 거둔다.
+     * 준비 동작 한 번(MM-Fit 세트 첫머리 진폭 39~98° 사이클 뒤 10~16 s 쉼)은 세트의 시작이 아니다. 팔마다 확정하면 회 = 두 팔 짝이라 화면이 0 → 2 로 뛰고
+     * 가려졌던 팔이 다시 보일 때마다 회가 늦게 한꺼번에 올랐다. MM-Fit 59세트: 팔별 확정 세트 정확 0.76, 확정 없음 0.66, 회 단위 8 s 0.73(±1 셋 다 0.92).
+     */
+    private var tentativeFirstAt: Long? = null
+    /** 이 프레임에 첫 회를 거뒀다 — 앱·재생기가 그 회로 센 수·기록·자세 기준을 지운다. */
+    var newlyRetracted: Boolean = false
+        private set
+    /** 거둔 첫 회의 시각(로그 `reps.retracted`). */
+    val retractedReps = ArrayList<Long>()
     /** 짝 없이 버린 팔 사이클(조각) 수 — 로그용. 그 사이클은 [armCycles] 에 `orphan` 으로 남는다. */
     var armOrphans = 0
         private set
@@ -200,6 +218,7 @@ class RepCounter(
         rejectSamples.clear(); pairGateAt = Long.MIN_VALUE / 2; pairsSeen = 0
         auxSamples.forEach { it.clear() }; auxAmps.forEach { it.clear() }; auxRef.fill(null)
         armOrphans = 0
+        tentativeFirstAt = null; newlyRetracted = false; retractedReps.clear()
     }
 
     /**
@@ -216,6 +235,7 @@ class RepCounter(
         identitySamples.clear()   // 리셋 앞의 판별 샘플을 리셋 뒤 첫 사이클 창에 섞지 않는다
         arms?.forEach { it.resetCycle() }
         rejectSamples.clear()     // 기각 창도 같다. 반대 팔을 기다리는 사이클(armQueue)은 이미 낸 실제 동작이라 버리지 않는다(RepUnitAccumulator 와 같은 결정)
+        tentativeFirstAt = null   // 일시정지·재배치 앞에서 이미 보인 첫 회는 그대로 둔다(쉬는 동안 거두지 않는다)
     }
 
     /**
@@ -228,6 +248,8 @@ class RepCounter(
     fun onFrameFeatures(tMs: Long, features: Map<String, Float>): Boolean {
         val a = arms ?: return onFrame(tMs, features[signal.feature], signal.identityFeature?.let { features[it] })
         lastCycleValid = null; newlyPublished = emptyList(); newlyPublishedValid = emptyList(); newlyPublishedShort = emptyList()
+        newlyRetracted = false
+        tentativeFirstAt?.let { t0 -> if (reps == 1 && tMs - t0 > FIRST_REP_CONFIRM_MS) retractFirst() }
         for ((tpl, _) in signal.rejectFeatures) for (f in if ("{side}" in tpl) listOf(tpl.replace("{side}", "L"), tpl.replace("{side}", "R")) else listOf(tpl)) {
             val v = features[f] ?: continue
             if (!v.isFinite()) continue
@@ -245,7 +267,6 @@ class RepCounter(
         }
         val (fl, fr) = signal.pairedFeatures!!
         val fired = BooleanArray(2)
-        val newArm = arrayOf(ArrayList<ArmCycle>(2), ArrayList<ArmCycle>(2))   // 이 프레임에 각 팔이 낸 사이클(발표 순서)
         for (i in 0..1) {
             val v = features[if (i == 0) fl else fr]
             if (v != null && v.isFinite()) armLastSeen[i] = tMs
@@ -271,16 +292,28 @@ class RepCounter(
                     else -> RomShort.RANGE
                 }
                 val ac = ArmCycle(side, c.tMs, c.startMs, c.min, c.max, amp, valid, reject?.first, reject?.second, aux?.first, aux?.second, romShort = short)
-                armCycles += ac; armQueue[i].addLast(ac); newArm[i] += ac; fired[i] = true
+                armCycles += ac; armQueue[i].addLast(ac); fired[i] = true
             }
         }
-        if (!fired[0] && !fired[1]) return false
-        // 먼 팔 가림(동시 컬): 한 팔이 ARM_ABSENT_MS 넘게 안 보이는 동안 다른 팔이 사이클을 내면 그 회는 보이는 팔로 센다 — 안 보이는 팔 자리에 보이는 팔 사이클을 둔다
-        for (i in 0..1) if (fired[i]) {
+        // 먼 팔 가림(동시 컬): 한 팔이 ARM_ABSENT_MS 넘게 안 보이면 그 회는 보이는 팔로 센다 — 짝을 기다리는 보이는 팔 사이클 중 **반대 팔이 마지막으로 보인 뒤에
+        // 끝난 것**(그 팔은 그동안 안 보여 짝 사이클을 낼 수 없었다)마다 복사본을 반대 팔 자리에 둔다. 반대 팔이 이 세트에서 아직 사이클을 한 번도 내지 않았으면
+        // (처음부터 가려진 먼 팔) 기다리던 사이클 전부. 매 프레임 본다(§62c 후속 9) — 사이클이 난 프레임에만 붙이면, 반대 팔이 잠깐 보이던 때 끝난 사이클은
+        // 짝을 못 얻고 다음 사이클의 복사본에 밀려 조각으로 버려졌다(12:38 세트 첫 컬 100°, 12:36 세트 88~90 s 컬 101° — 팔별 시작 확정이 사이클을 늦게
+        // 함께 발표하던 때는 우연히 가려졌다). 반대 팔이 보이던 동안 끝난 사이클에는 붙이지 않는다 — 그 팔은 보였는데 굽히지 않았다(한 팔 조각), 그리고
+        // 기다리던 사이클 전부에 붙이면 잠깐 가려졌다 돌아온 팔의 늦은 사이클과 겹쳐 두 번 셌다(11:54 세트 21 → 25)
+        var addedVirtual = false
+        for (i in 0..1) {
             val o = 1 - i
-            // 발표된 사이클마다 그 사이클의 복사본 — 마지막 것만 복사하면 함께 발표된 첫 두 사이클의 앞 것이 겹침 짝을 못 찾아 조각으로 버려진다
-            if (tMs - armLastSeen[o] > ARM_ABSENT_MS) for (c in newArm[i]) { armVirtual[o]++; armQueue[o].addLast(c.copy(arm = if (o == 0) 'L' else 'R')) }
+            if (tMs - armLastSeen[o] <= ARM_ABSENT_MS) continue
+            val oSide = if (o == 0) 'L' else 'R'
+            val neverCycled = armCycles.none { it.arm == oSide }
+            val waiting = (armQueue[i].size - armQueue[o].size).coerceAtLeast(0)
+            for (c in armQueue[i].toList().takeLast(waiting)) {
+                if (!neverCycled && c.tMs <= armLastSeen[o]) continue
+                armVirtual[o]++; armQueue[o].addLast(c.copy(arm = oSide)); addedVirtual = true
+            }
         }
+        if (!fired[0] && !fired[1] && !addedVirtual) return false
         val published = ArrayList<RepCycle>(2); val valids = ArrayList<Boolean?>(2); val shorts = ArrayList<RomShort?>(2)
         var counted = false
         while (armQueue[0].isNotEmpty() && armQueue[1].isNotEmpty()) {
@@ -322,6 +355,7 @@ class RepCounter(
                 periodMs = periodMs?.let { (it + p) / 2 } ?: p
             }
             reps++; repTimesMs.add(late.tMs); lastRepAt = late.tMs
+            if (reps == 1) tentativeFirstAt = late.tMs else tentativeFirstAt = null     // 첫 회는 잠정, 둘째 회가 창 안에 오면 확정
             lastCycleMin = late.min; lastCycleMax = late.max; lastCycleValid = valid
             published += RepCycle(late.tMs, late.startMs, late.min, late.max); valids += valid
             // 두 팔 사유를 한 회로: 덜 폄 > 덜 올림 > 불명(덜 폄은 손목이 직접 보여 준 것이라 가장 확실하다)
@@ -351,6 +385,18 @@ class RepCounter(
             if (n >= 2 && hi - lo > maxSwing) return f to (hi - lo)
         }
         return null
+    }
+
+    /**
+     * 잠정 첫 회를 거둔다 — 세트가 아직 시작되지 않았던 것이다. 그 회와 그 회로 세운 본인 기준(팔 ROM·보조 ROM)을 지운다
+     * (준비 동작이 기준이 되면 그 뒤 정상 회가 부분으로 읽힌다). 팔 사이클 기록([armCycles])은 로그용이라 남긴다.
+     */
+    private fun retractFirst() {
+        repTimesMs.firstOrNull()?.let { retractedReps += it }
+        reps = 0; repTimesMs.clear(); lastRepAt = Long.MIN_VALUE / 2; periodMs = null
+        lastCycleMin = Float.NaN; lastCycleMax = Float.NaN
+        armAmps.forEach { it.clear() }; armRef.fill(null); auxAmps.forEach { it.clear() }; auxRef.fill(null)
+        tentativeFirstAt = null; newlyRetracted = true
     }
 
     /** 두 팔 사이클 창의 겹침 비 — 겹친 길이 ÷ 짧은 창 길이(0~1). 동시 컬의 짝 판정. */
@@ -428,7 +474,7 @@ class RepCounter(
         val plo = signal.plausibleMin
         val phi = signal.plausibleMax
         if ((plo != null && value < plo) || (phi != null && value > phi)) return false
-        if (hysteresis != null) return onFrameHysteresis(tMs, value, hysteresis, confirmation!!)
+        if (hysteresis != null) return onFrameHysteresis(tMs, value, hysteresis, confirmation)
 
         // 바닥 경로에서는 가림·일시정지 전후를 한 반복으로 이어 세지 않는다.
         if (prevT?.let { tMs - it > maxGapMs || tMs <= it } == true) {
@@ -501,9 +547,10 @@ class RepCounter(
     }
 
     /** 새 코어 경로 — 원값 그대로(평활 없음). 레거시 필드(raw3·dtMs·dirn 등)는 건드리지 않는다. */
-    private fun onFrameHysteresis(tMs: Long, value: Float, core: RepHysteresis, confirm: RepStartConfirmation): Boolean {
+    private fun onFrameHysteresis(tMs: Long, value: Float, core: RepHysteresis, confirm: RepStartConfirmation?): Boolean {
         val cycle = core.onFrame(tMs, value) ?: return false
-        val published = confirm.offer(cycle)
+        // 시작 확정이 없으면(컬 팔별 자식) 사이클을 바로 발표한다
+        val published = confirm?.offer(cycle) ?: listOf(cycle)
         if (published.isEmpty()) return false
         // 판별 게이트는 발표된 사이클마다 — 함께 발표된 첫 두 사이클 중 하나만 기각될 수 있다. `confirmation.published`(→ [publishedReps])에는
         // 기각된 사이클도 남는다(코어의 발표 기록). 세는 것은 여기서 통과한 사이클뿐이다.
@@ -553,6 +600,8 @@ class RepCounter(
         const val ARM_ABSENT_MS = 2_500L
         /** 기각 표본 보관 하한(ms) — 반대 팔 사이클이 늦게 발표돼도 자기 구간을 볼 수 있게 이만큼은 남긴다. */
         const val REJECT_KEEP_MS = 10_000L
+        /** 팔별 경로 첫 회 잠정 창(ms) — 첫 회 뒤 이 안에 둘째 회가 없으면 첫 회를 거둔다. 새 코어 시작 확정의 첫 짝 창과 같은 값. */
+        const val FIRST_REP_CONFIRM_MS = 8_000L
         /** 두 팔 사이클이 한 회(동시 컬)로 묶이는 창 겹침 하한(짧은 창 대비). 이보다 덜 겹치면 순서(교대 컬)로 짝짓되, 다음 사이클이 이만큼 겹치면 앞선 것은 조각. */
         const val PAIR_OVERLAP_MIN = 0.5f
         /** 종목에 카운터가 정의돼 있고 등척성이 아니면 생성 (플랭크 등은 HoldTimer 대상 — 카운터 미적용). */

@@ -45,7 +45,7 @@ class RepPairedTest {
         assertTrue(rc.paired); assertTrue(rc.signal.romExcludesShort)
         // 첫 세 사이클(진폭 85·85·85)의 중앙값이 기준 A0 = 85 → 유효 문턱 max(0.7×85, 45) = 59.5. 새 코어는 첫 두 사이클을 둘째가 끝날 때 함께 발표한다
         cycle(80f).forEach { f.frame(it, it) }
-        assertEquals("첫 사이클은 시작 확정 대기", 0, rc.reps)
+        assertEquals("첫 사이클부터 바로 센다 — 시작 확정 없음(0 → 2 로 뛰지 않는다, §62c 후속 9)", 1, rc.reps)
         cycle(80f).forEach { f.frame(it, it) }
         assertEquals(2, rc.reps)
         assertNull("기준을 이루는 사이클은 판정하지 않는다", f.lastValid)
@@ -62,16 +62,35 @@ class RepPairedTest {
     }
 
     @Test
+    fun aLoneFirstRepIsRetractedWhenNoSecondRepFollowsWithinTheWindow() {
+        // §62c 후속 9: 첫 회는 바로 센다(0 → 2 로 뛰지 않게) — 대신 8 s 안에 둘째 회가 없으면 준비 동작으로 보고 거둔다(MM-Fit 세트 첫머리 준비 동작)
+        val rc = counter(); val f = Feed(rc)
+        cycle(80f).forEach { f.frame(it, it) }
+        assertEquals(1, rc.reps)
+        repeat(30) { f.frame(165f, 165f) }                 // 9 s 쉼(팔을 내린 채)
+        assertEquals("둘째 회가 없어 첫 회를 거뒀다", 0, rc.reps)
+        assertEquals(1, rc.retractedReps.size)
+        assertEquals("그 회로 세운 ROM 기준도 지웠다", null to null, rc.armReference)
+        cycle(80f).forEach { f.frame(it, it) }
+        assertEquals("다음 실제 회가 새 첫 회", 1, rc.reps)
+        cycle(80f).forEach { f.frame(it, it) }
+        assertEquals(2, rc.reps)
+        repeat(30) { f.frame(165f, 165f) }
+        assertEquals("둘째 회가 창 안에 왔으면 첫 회는 확정 — 그 뒤 쉬어도 거두지 않는다", 2, rc.reps)
+        assertEquals(1, rc.retractedReps.size)
+    }
+
+    @Test
     fun alternatingCurlCountsOnePerLeftRightPair() {
         val rc = counter(); val f = Feed(rc)
         // 왼팔이 굽는 동안 오른팔은 펴 있음(165), 그다음 오른팔 — 두 팔 평균 신호였다면 절반만 움직인다
         cycle(80f).forEach { f.frame(it, 165f) }
         cycle(80f).forEach { f.frame(165f, it) }
-        assertEquals("양 팔 첫 사이클은 각자 시작 확정 대기", 0, rc.reps)
+        assertEquals("왼 + 오른 첫 사이클 = 1회", 1, rc.reps)
         cycle(80f).forEach { f.frame(it, 165f) }
-        assertEquals("왼팔 둘째 사이클로 왼팔 2회가 발표됐지만 오른팔은 아직", 0, rc.reps)
+        assertEquals("왼팔 둘째 사이클만으로는 회가 안 된다", 1, rc.reps)
         cycle(80f).forEach { f.frame(165f, it) }
-        assertEquals("오른팔 둘째 사이클 → 왼 + 오른 두 쌍 = 2회", 2, rc.reps)
+        assertEquals("오른팔 둘째 사이클 → 2회", 2, rc.reps)
         assertEquals(4, rc.armCycles.size)
         cycle(80f).forEach { f.frame(it, 165f) }
         cycle(80f).forEach { f.frame(165f, it) }
@@ -112,12 +131,12 @@ class RepPairedTest {
     @Test
     fun anArmHiddenLongerThanTheAbsenceWindowIsCountedByTheVisibleArm() {
         val rc = counter(); val f = Feed(rc)
-        cycle(80f).forEach { f.frame(it, it) }             // 양팔 첫 사이클(각자 확정 대기)
+        cycle(80f).forEach { f.frame(it, it) }             // 양팔 첫 사이클 = 1회
         // 오른팔이 사라진 채(피처 없음) 왼팔만 두 사이클 — 오른팔이 2.5 s 넘게 안 보이므로 왼팔 사이클을 회로 센다
         cycle(80f).forEach { f.frame(it, null) }
         cycle(80f).forEach { f.frame(it, null) }
         assertEquals("왼팔 발표 3사이클 = 3회(오른팔 자리는 왼팔 것으로)", 3, rc.reps)
-        assertEquals("오른팔 첫 사이클은 짝을 못 만나 발표되지 않았다", 0, rc.armCycles.count { it.arm == 'R' })
+        assertEquals("오른팔은 첫 사이클만 냈다(그 뒤로는 안 보임)", 1, rc.armCycles.count { it.arm == 'R' })
         assertEquals(3, rc.armCycles.count { it.arm == 'L' })
     }
 
@@ -125,8 +144,8 @@ class RepPairedTest {
     fun torsoSwingRejectsTheRepAsNotACurl() {
         val rc = counter(); val f = Feed(rc)
         cycle(80f).forEach { f.frame(it, it) }
-        assertEquals(0, rc.reps)
-        // 둘째 사이클에서 몸통을 뒤로 젖히며(2D 기울기 비 −0.35) 들어 올림 → 그 팔 사이클 구간의 스윙 > 0.30 → 기각. 첫 회(깨끗함)는 함께 발표돼 센다
+        assertEquals(1, rc.reps)
+        // 둘째 사이클에서 몸통을 뒤로 젖히며(2D 기울기 비 −0.35) 들어 올림 → 그 팔 사이클 구간의 스윙 > 0.30 → 기각. 첫 회(깨끗함)는 이미 셌다
         val frames = cycle(80f)
         frames.forEachIndexed { i, v -> f.frame(v, v, torso = if (i in 3..8) -0.35f else 0.02f) }
         assertEquals(1, rc.reps)

@@ -18,7 +18,7 @@ fun RepFormSummary.ruleResult(rule: PostureRule, viewOk: Boolean = true, viewLet
     // 세트 뷰 등급(viewLetter)으로 검사별, 그것도 모르면 viewOk 로
     val perRepView = c.phase != RepPhase.START && reps.any { it.view != null }
     val ok = perRepView || (if (viewLetter != null) viewLetter in c.views else viewOk)
-    if (!ok) return RuleResult(rule, Verdict.ABSTAIN, null, 0, abstainReason = if ("C" in c.views) "촬영 방향 · 정면 아님" else "촬영 방향 · 앞 비스듬히 아님")
+    if (!ok) return RuleResult(rule, Verdict.ABSTAIN, null, 0, abstainReason = "촬영 방향 · ${viewDescOf(c.views)} 아님")
     if (c.phase == RepPhase.START) {
         val o = start.firstOrNull { it.check.id == c.id }
             ?: return RuleResult(rule, Verdict.ABSTAIN, null, 0, abstainReason = "시작 자세를 못 잡음")
@@ -40,12 +40,19 @@ fun RepFormSummary.ruleResult(rule: PostureRule, viewOk: Boolean = true, viewLet
 }
 
 
+/** 검사 뷰 집합의 사람 말 — 정면(C 포함) / 옆(SIDE 만) / 앞 비스듬히(B/D). */
+private fun viewDescOf(views: Set<String>): String = when {
+    "C" in views -> "정면"
+    views.isNotEmpty() && views.all { it.startsWith("SIDE") } -> "옆"
+    else -> "앞 비스듬히"
+}
+
 /** 규칙셋에 붙일 rep_form 규칙 — 범위(`PostureScope`)·리포트 행·상태 표시용. 판정은 [RepFormSummary.ruleResult] 가 채운다. */
 fun RepFormSpecs.asRules(): List<PostureRule> = byExercise.values.flatten().map { c ->
     PostureRule(
         id = c.id, exercise = c.exercise, condition = c.condition, subtype = null, status = c.status, reason = c.reason,
         feature = "${c.feature}__${c.stat.name.lowercase()}", baseFeature = c.feature, stat = c.stat.name.lowercase(), family = "repform",
-        op = if (c.hi != null) ">" else "<", threshold = c.hi ?: c.lo!!, view = c.views.first(), viewDesc = if ("C" in c.views) "정면" else "앞 비스듬히",
+        op = if (c.hi != null) ">" else "<", threshold = c.hi ?: c.lo!!, view = c.views.first(), viewDesc = viewDescOf(c.views),
         cvAuc = Float.NaN, cvBalacc = Float.NaN, sampleN = 0, mirrorSafe = true, cautions = c.cautions,
         viewsOk = c.views, kind = "rep_form",
     )

@@ -15,6 +15,13 @@ import kotlin.math.sqrt
  * 사선 뷰(B/D)에서만 내는 것(부호가 요에 달림, B1):
  *  - `elbow_fwd2d_L/R/mean`: 골반→어깨 선에서 팔꿈치까지의 **앞쪽** 거리 ÷ 몸통. 앞 = +. '팔꿈치 위치 고정'(내밀기) 위반 AUC 0.96.
  *  - `torso_tilt2d`        : 어깨 중점이 골반 중점보다 앞으로 기운 비. 앞 숙임 = +.
+ *  - `elbow_lat2d_near`    : 카메라 쪽 팔(B = 오른팔, D = 왼팔) 하나의 바깥 가로 — `elbow_lat2d_{그 팔}` 과 같은 값(§62c 후속 7).
+ * 사선과 옆(|yaw| 16.4~81.7°)에서 내는 것:
+ *  - `elbow_fwd2d_near`    : 카메라 쪽 팔의 앞 성분 — **가까운 쪽 몸통 선**(가까운 골반→가까운 어깨)에서 팔꿈치까지의 앞쪽 거리 ÷ 몸통(§62c 후속 7).
+ *    먼 팔꿈치는 몸통 뒤에 가려 추정이 몸 쪽에 머물고(11:54 세트: 가시성 0.55~0.85, 벌려도 가로가 그대로) 양팔 평균은 그 팔이 안 보이면 없다.
+ *    기준선이 가운데 선이면 가까운 어깨가 반 어깨폭만큼 비켜 있는 상수(cos 요 × 반 어깨폭)가 들어가, 세트 안에서 각도가 바뀌면(21° → 40°) 정상 반복이 앞으로 읽힌다.
+ *    사선에서 카메라 쪽 팔꿈치의 화면 가로 = cos 요 × 옆 벌림 − sin 요 × 앞 이동 — 숫자 하나에 미지수 둘이라 앞과 '몸에서 떨어짐(옆 또는 뒤)' 까지만 가른다
+ *    (`docs/CURL_OBLIQUE_ELBOW_RESEARCH.md`).
  *
  * 왜 2D 인가: 월드 좌표의 앞 성분은 AUC 0.90 에 정상 세트 오탐 16 %(B1), 월드 팔꿈치각의 수축 최소는 정답과 상관 0.04(B2), 월드 몸통 기울기는 정면에서
  * 45~110° 로 튄다(MM-Fit 재생). 정면에서는 팔꿈치의 가로·세로 위치와 손목 높이가 가장 곧은 단서였다(B4: 폰 정답 세트 벌림 4/4·반동 3/3·짧은 회 2/2, 정상 오탐 0).
@@ -39,6 +46,8 @@ object Arm2d {
     const val WRIST_H_L = "wrist_h2d_L"
     const val WRIST_H_R = "wrist_h2d_R"
     const val WRIST_H_MAX = "wrist_h2d_max"
+    const val ELBOW_FWD_NEAR = "elbow_fwd2d_near"
+    const val ELBOW_LAT_NEAR = "elbow_lat2d_near"
 
     private const val L_SHOULDER = 11
     private const val R_SHOULDER = 12
@@ -66,6 +75,16 @@ object Arm2d {
         if (yawDeg == null || !yawDeg.isFinite()) return null
         val a = abs(yawDeg)
         if (a <= ViewEstimator.FRONT_MAX_DEG || a > ViewEstimator.OBLIQUE_MAX_DEG) return null
+        return if (yawDeg * ViewEstimator.B_SIGN > 0f) 1f else -1f
+    }
+
+    /**
+     * 가까운 팔 피처의 앞 방향 화면 부호 — 사선(B/D)과 옆(SIDE_B/SIDE_D, |yaw| 16.4~81.7°)에서 정의. +1 = B 쪽(오른어깨가 카메라에 가까움 = 가까운 팔은 오른팔).
+     */
+    fun nearSign(yawDeg: Float?): Float? {
+        if (yawDeg == null || !yawDeg.isFinite()) return null
+        val a = abs(yawDeg)
+        if (a <= ViewEstimator.FRONT_MAX_DEG || a >= ViewEstimator.REAR_MIN_DEG) return null
         return if (yawDeg * ViewEstimator.B_SIGN > 0f) 1f else -1f
     }
 
@@ -119,6 +138,25 @@ object Arm2d {
                 out[key] = v; sum += v; n++
             }
             if (n == 2) out[ELBOW_FWD_MEAN] = sum / 2f
+        }
+        // 가까운 팔(§62c 후속 7) — 카메라 쪽 팔 하나. 앞 성분은 사선·옆, 바깥 가로는 사선에서만(옆은 어깨 가로폭이 작아 앞 성분이 가로를 덮는다)
+        val nSign = nearSign(yawDeg)
+        if (nSign != null) {
+            val nearR = nSign > 0f
+            val nsh = if (nearR) R_SHOULDER else L_SHOULDER
+            val nel = if (nearR) R_ELBOW else L_ELBOW
+            val nhip = if (nearR) R_HIP else L_HIP
+            if (ok(nel)) {
+                val ndy = y(nsh) - y(nhip)
+                if (abs(ndy) >= 1e-4f) {
+                    val lineX = x(nhip) + (y(nel) - y(nhip)) / ndy * (x(nsh) - x(nhip))   // 팔꿈치 높이에서의 가까운 쪽 몸통 선 x
+                    out[ELBOW_FWD_NEAR] = nSign * (x(nel) - lineX) / torso
+                }
+                if (sign != null && abs(latDir) >= 1e-4f && shGap >= MIN_SHOULDER_X) {
+                    val outward = (if (nearR) -1f else 1f) * (if (latDir > 0) 1f else -1f)
+                    out[ELBOW_LAT_NEAR] = outward * (x(nel) - x(nsh)) / shGap
+                }
+            }
         }
         return out
     }

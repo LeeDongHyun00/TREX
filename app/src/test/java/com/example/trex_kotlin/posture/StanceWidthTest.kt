@@ -76,4 +76,31 @@ class StanceWidthTest {
         assertTrue(g.getValue(Arm2d.ELBOW_FWD_L) < 0f); assertTrue(g.getValue(Arm2d.ELBOW_FWD_R) > 0f)
         assertEquals(0f, g.getValue(Arm2d.TORSO_TILT), 1e-4f)
     }
+
+    @Test
+    fun arm2dNearArmFeaturesUseTheCameraSideArmAndItsOwnBodyLine() {
+        // §62c 후속 7 — 사선 D(요 −30°): 카메라 쪽 팔 = 왼팔, 앞 = 화면 −x. 먼(오른) 팔꿈치는 가려짐(가시성 0.2)
+        val xy = FloatArray(66); val vis = FloatArray(33) { 1f }
+        fun put(i: Int, x: Float, y: Float) { xy[i * 2] = x; xy[i * 2 + 1] = y }
+        put(11, 0.60f, 0.30f); put(12, 0.45f, 0.30f); put(23, 0.58f, 0.60f); put(24, 0.47f, 0.60f)   // 어깨·골반 중점 x 0.525 → 몸통 0.30
+        put(13, 0.66f, 0.45f); put(14, 0.40f, 0.45f)
+        vis[14] = 0.2f
+        val d = Arm2d.features(xy, vis, 0.5f, aspect = 1f, yawDeg = -30f)
+        assertNull("먼 팔꿈치가 없으면 양팔 평균도 없다", d[Arm2d.ELBOW_FWD_MEAN])
+        // 가까운 쪽 몸통 선(왼골반 (0.58,0.60) → 왼어깨 (0.60,0.30))은 팔꿈치 높이 0.45 에서 x 0.59 — 팔꿈치 0.66 은 화면 +0.07 = 뒤(앞이 −x)
+        assertEquals(-0.07f / 0.30f, d.getValue(Arm2d.ELBOW_FWD_NEAR), 1e-4f)
+        // 바깥 가로: 왼팔 바깥 = 사람 왼쪽 = 화면 +x(골반 순서) — (0.66 − 0.60) ÷ 어깨 가로폭 0.15
+        assertEquals(0.06f / 0.15f, d.getValue(Arm2d.ELBOW_LAT_NEAR), 1e-4f)
+        assertEquals(d.getValue(Arm2d.ELBOW_LAT_L), d.getValue(Arm2d.ELBOW_LAT_NEAR), 1e-6f)
+        // B(요 +30°): 카메라 쪽 팔 = 오른팔 — 오른 몸통 선(0.47,0.60 → 0.45,0.30)은 y 0.45 에서 x 0.46, 앞 = 화면 +x
+        vis[14] = 1f
+        val b = Arm2d.features(xy, vis, 0.5f, aspect = 1f, yawDeg = 30f)
+        assertEquals((0.40f - 0.46f) / 0.30f, b.getValue(Arm2d.ELBOW_FWD_NEAR), 1e-4f)
+        assertEquals(b.getValue(Arm2d.ELBOW_LAT_R), b.getValue(Arm2d.ELBOW_LAT_NEAR), 1e-6f)
+        // 정면(요 0°): 가까운 팔 피처 없음. 옆(요 +60°): 앞 성분만(바깥 가로는 사선에서만)
+        val c = Arm2d.features(xy, vis, 0.5f, aspect = 1f, yawDeg = 0f)
+        assertNull(c[Arm2d.ELBOW_FWD_NEAR]); assertNull(c[Arm2d.ELBOW_LAT_NEAR])
+        val side = Arm2d.features(xy, vis, 0.5f, aspect = 1f, yawDeg = 60f)
+        assertTrue(side.containsKey(Arm2d.ELBOW_FWD_NEAR)); assertNull(side[Arm2d.ELBOW_LAT_NEAR]); assertNull(side[Arm2d.ELBOW_FWD_MEAN])
+    }
 }

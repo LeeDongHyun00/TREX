@@ -326,7 +326,7 @@ class RepFormTest {
         val added = merged.rules.filter { it.kind == "rep_form" }
         assertEquals(RepFormSpecs.byExercise.values.flatten().size, added.size)   // 등록부 전체(스쿼트 + 컬, §62c)
         assertTrue(added.filter { it.exercise == "바벨 스쿼트" }.all { it.viewsOk == setOf("C") })
-        assertEquals(8, added.count { it.status == RuleStatus.SHIP })   // 스쿼트 4(상체·무릎·발 간격·발끝) + 컬 4(허리 굽힘·뜸·옆 벌림·앞 이탈, §62c)
+        assertEquals(9, added.count { it.status == RuleStatus.SHIP })   // 스쿼트 4(상체·무릎·발 간격·발끝) + 컬 5(상체 숙임·뜸·옆 벌림·앞 이탈·몸에서 떨어짐, §62c)
         // 범위 문장: 무릎·발 너비·발끝·상체는 '봄'(반복 검사 ship), 엉덩이(hip rise)는 '검증 중'
         val scope = PostureScope.of(merged, "바벨 스쿼트")
         assertTrue(scope.watched.containsAll(listOf("등·허리", "무릎")))
@@ -396,10 +396,14 @@ class RepFormCurlTest {
 
     private class Frames(private val ev: RepFormEvaluator) {
         var t = 0L
+        /** [fwdNear] = 카메라 쪽 팔 앞 성분(기본은 [fwd] 와 같다), [latNear] = 카메라 쪽 팔 바깥 가로(없으면 키 없음), [withMean] = 양팔 평균이 있는가(먼 팔꿈치가 보이는가). */
         fun frame(elbow: Float, fwd: Float = 0.02f, tilt: Float = 0.0f, gap: Float = 1.3f, lat: Float = 0.12f, rise: Float = -0.50f, wrist: Float = -0.90f, incl: Float = 5f,
-                  yaw: Float? = null) {
+                  yaw: Float? = null, latNear: Float? = null, fwdNear: Float? = fwd, withMean: Boolean = true) {
             val m = hashMapOf("elbow_minside" to elbow, Arm2d.ELBOW_FWD_MEAN to fwd, Arm2d.TORSO_TILT to tilt, "elbow_gap_sh" to gap,
                 Arm2d.ELBOW_LAT_MAX to lat, Arm2d.ELBOW_RISE_MAX to rise, Arm2d.WRIST_H_MAX to wrist, "torso_incl" to incl)
+            if (!withMean) m.remove(Arm2d.ELBOW_FWD_MEAN)
+            fwdNear?.let { m[Arm2d.ELBOW_FWD_NEAR] = it }
+            latNear?.let { m[Arm2d.ELBOW_LAT_NEAR] = it }
             // 방향 피처(뷰) — 주면 반복 창 뷰 게이팅이 작동한다(§62c 후속 6). 안 주면 종전처럼 반복 뷰 없음
             yaw?.let { val r = Math.toRadians(it.toDouble()); m[ViewEstimator.FEAT_COS] = kotlin.math.cos(r).toFloat(); m[ViewEstimator.FEAT_SIN] = kotlin.math.sin(r).toFloat() }
             ev.onFrame(t, m); t += 300
@@ -407,38 +411,233 @@ class RepFormCurlTest {
         /** 이완(팔 늘어뜨림) 5프레임 → 수축 → 복귀. 수축 구간(바닥)에 fwd·tilt·gap·lat, 창 최대에 rise·wrist. */
         /** [topIncl] = 이완(상단) 프레임의 몸통 기울기 — 숙인 채 시작하는 반복을 만든다. */
         fun rep(fwd: Float = 0.02f, tilt: Float = 0.0f, gap: Float = 1.3f, lat: Float = 0.14f, rise: Float = -0.52f, wrist: Float = -0.10f, incl: Float = 5f,
-                topIncl: Float = 5f, yaw: Float? = null, ev: RepFormEvaluator): RepFormRep {
-            repeat(5) { frame(165f, incl = topIncl, yaw = yaw) }
-            frame(140f, wrist = -0.60f, incl = topIncl, yaw = yaw); frame(100f, fwd, tilt, gap, lat, rise, -0.30f, incl, yaw); frame(80f, fwd, tilt, gap, lat, rise, wrist, incl, yaw)
-            frame(85f, fwd, tilt, gap, lat, rise, wrist, incl, yaw); frame(100f, fwd, tilt, gap, lat, rise, -0.30f, incl, yaw); frame(140f, wrist = -0.60f, incl = topIncl, yaw = yaw)
-            frame(163f, incl = topIncl, yaw = yaw); frame(165f, incl = topIncl, yaw = yaw)
+                topIncl: Float = 5f, yaw: Float? = null, latNear: Float? = null, topLat: Float = 0.12f, withMean: Boolean = true, ev: RepFormEvaluator): RepFormRep {
+            repeat(5) { frame(165f, lat = topLat, incl = topIncl, yaw = yaw, withMean = withMean) }
+            frame(140f, wrist = -0.60f, incl = topIncl, yaw = yaw, withMean = withMean)
+            frame(100f, fwd, tilt, gap, lat, rise, -0.30f, incl, yaw, latNear = latNear, withMean = withMean); frame(80f, fwd, tilt, gap, lat, rise, wrist, incl, yaw, latNear = latNear, withMean = withMean)
+            frame(85f, fwd, tilt, gap, lat, rise, wrist, incl, yaw, latNear = latNear, withMean = withMean); frame(100f, fwd, tilt, gap, lat, rise, -0.30f, incl, yaw, latNear = latNear, withMean = withMean)
+            frame(140f, wrist = -0.60f, incl = topIncl, yaw = yaw, withMean = withMean)
+            frame(163f, lat = topLat, incl = topIncl, yaw = yaw, withMean = withMean); frame(165f, lat = topLat, incl = topIncl, yaw = yaw, withMean = withMean)
             return ev.onCycle(t - 300, 80f, 165f)
         }
     }
 
     @Test
     fun elbowDriftHasACoachingTierAndAStricterCountGate() {
+        // §62c 후속 7: 카메라 쪽 팔 하나의 앞 성분, 본인 첫 3회 수축 중앙값 대비. 첫 3회는 기준을 이루므로 판정하지 않는다(유보 — 정상으로 세지 않는다)
         val ev = evaluator(); val f = Frames(ev)
-        val r1 = f.rep(ev = ev)                             // 시작 자세 fwd 0.02
-        assertTrue(r1.correct); assertTrue(r1.flagged.isEmpty())
-        // 코칭 단계: 시작 대비 +0.08(원값 0.10 ≥ 0.09) — 위반이지만 차단은 아니다(+0.12·0.12 미만) → 정확은 유지
-        val cue = f.rep(fwd = 0.10f, ev = ev)
+        repeat(3) {
+            val r = f.rep(ev = ev)                           // 수축 앞 성분 0.02 — 기준
+            assertEquals(Verdict.ABSTAIN, r.outcomes.first { it.check.id == "repform|덤벨 컬|팔꿈치 앞 이탈" }.verdict); assertTrue(r.correct)
+        }
+        // 코칭 단계: +0.13 — 위반이지만 차단은 아니다(+0.20 미만) → 정확은 유지
+        val cue = f.rep(fwd = 0.15f, ev = ev)
         val o = cue.outcomes.first { it.check.id == "repform|덤벨 컬|팔꿈치 앞 이탈" }
         assertEquals(Verdict.VIOLATION, o.verdict); assertFalse(o.gate); assertTrue(cue.correct)
+        assertEquals(0.02f, o.reference!!, 1e-4f)
         val e = ev.eventFor(cue, 30_000L, gate = true)!!
         assertTrue(e.ship); assertFalse("코칭 단계 — 회를 빼지 않았다", e.gated)
         assertEquals("팔꿈치가 앞으로 나갔어요. 팔꿈치를 옆구리에 고정하세요.", e.message)
-        // 차단 단계: +0.14(원값 0.16) → 정확에서 빠진다
-        val gated = f.rep(fwd = 0.16f, ev = ev)
-        val og = gated.outcomes.first { it.check.id == "repform|덤벨 컬|팔꿈치 앞 이탈" }
-        assertTrue(og.gate); assertFalse(gated.correct)
-        // 절대 조건: 시작이 이미 앞으로 나가 있어(0.10) 시작 대비 +0.08 이지만 원값 0.18 ≥ 0.12 → 차단; 반대로 시작 대비 크지만 원값이 0.09 미만이면 위반 아님
+        // 차단 단계: +0.21 → 정확에서 빠진다
+        val gated = f.rep(fwd = 0.23f, ev = ev)
+        assertTrue(gated.outcomes.first { it.check.id == "repform|덤벨 컬|팔꿈치 앞 이탈" }.gate); assertFalse(gated.correct)
+        // 뒤로(−)는 이 검사의 몫이 아니다 — 사선에서는 옆 벌림이 이 축에 '뒤로' 로 샌다
+        assertEquals(Verdict.OK, f.rep(fwd = -0.30f, ev = ev).outcomes.first { it.check.id == "repform|덤벨 컬|팔꿈치 앞 이탈" }.verdict)
+    }
+
+    @Test
+    fun forwardDriftIsJudgedFromTheNearArmEvenWhenTheFarElbowIsHidden() {
+        // 11:54 세트: 먼 팔꿈치가 몸통 뒤에 가려지면 양팔 평균이 없어 앞 이탈이 유보됐다 — 카메라 쪽 팔 하나로 판정한다
+        val ev = evaluator(); val f = Frames(ev)
+        repeat(3) { f.rep(withMean = false, ev = ev) }
+        val r = f.rep(fwd = 0.23f, withMean = false, ev = ev)
+        assertEquals(Verdict.VIOLATION, r.outcomes.first { it.check.id == "repform|덤벨 컬|팔꿈치 앞 이탈" }.verdict)
+        assertFalse(r.correct)
+    }
+
+    @Test
+    fun obliqueNearArmAwayFromTheBodyHasTwoTiers() {
+        // §62c 후속 7(11:54 D 세트): 카메라 쪽 팔꿈치가 몸에서 떨어짐(옆 또는 뒤 — 사선에서는 못 가른다). 본인 첫 3회 수축 대비 +0.25 코칭, +0.40 차단
+        val ev = evaluator(); val f = Frames(ev)
+        repeat(3) { f.rep(latNear = 0.18f, ev = ev) }
+        assertTrue(f.rep(latNear = 0.24f, ev = ev).correct)                        // +0.06 — 정상 흔들림
+        val cue = f.rep(latNear = 0.45f, ev = ev)                                   // +0.27 — 코칭
+        val o = cue.outcomes.first { it.check.id == "repform|덤벨 컬|팔꿈치 몸에서 떨어짐" }
+        assertEquals(Verdict.VIOLATION, o.verdict); assertFalse(o.gate); assertTrue(cue.correct)
+        assertEquals("팔꿈치가 몸에서 떨어졌어요. 팔꿈치를 옆구리에 붙이세요.", ev.eventFor(cue, 30_000L, gate = true)!!.message)
+        val wide = f.rep(latNear = 0.62f, ev = ev)                                  // +0.44 — 차단(큰 벌림)
+        assertTrue(wide.outcomes.first { it.check.id == "repform|덤벨 컬|팔꿈치 몸에서 떨어짐" }.gate); assertFalse(wide.correct)
+    }
+
+    @Test
+    fun awayReferenceIsTheSecondLowestContractionSoFar() {
+        // MM-Fit w19: 세트 첫 회가 −0.21 로 튀었다 — 그냥 최솟값이면 그 뒤 정상(0.05~0.12)이 전부 +0.26~+0.33 '떨어짐'. 두 번째로 작은 값은 튄 값 하나에 끌리지 않는다
+        // (−0.21 은 이제 하한 −0.15 아래라 모음에 들어가지도 않는다 — 하한 위에서 한 번 튄 값(−0.14)도 두 번째 값이 버틴다)
+        for (seq in listOf(listOf(-0.21f, 0.12f, 0.05f, 0.07f, 0.10f), listOf(-0.14f, 0.12f, 0.12f, 0.14f, 0.13f))) {
+            val ev = evaluator(); val f = Frames(ev)
+            for (x in seq) {
+                val r = f.rep(latNear = x, ev = ev)
+                assertTrue("$seq", r.outcomes.first { it.check.id == "repform|덤벨 컬|팔꿈치 몸에서 떨어짐" }.verdict != Verdict.VIOLATION)
+            }
+        }
+        // 11:54: 초반에 벌렸어도(0.27·0.42) 붙인 반복(0.17·0.16·0.14)이 나오면 기준이 내려가 그 뒤 벌림(0.44)을 잡는다
         val ev2 = evaluator(); val f2 = Frames(ev2)
-        f2.rep(fwd = 0.10f, ev = ev2)
-        assertFalse(f2.rep(fwd = 0.24f, ev = ev2).correct)
+        for (x in listOf(0.17f, 0.27f, 0.42f, 0.45f, 0.17f, 0.16f, 0.14f)) f2.rep(latNear = x, ev = ev2)
+        val flare = f2.rep(latNear = 0.44f, ev = ev2)
+        val o = flare.outcomes.first { it.check.id == "repform|덤벨 컬|팔꿈치 몸에서 떨어짐" }
+        assertEquals(Verdict.VIOLATION, o.verdict); assertEquals(0.16f, o.reference!!, 1e-4f)
+    }
+
+    @Test
+    fun forwardDriftDoesNotDragTheAwayReferenceDown() {
+        // §62c 후속 9(12:36·12:39 D 세트): 사선에서 팔꿈치가 앞으로 나가면 가까운 팔 가로가 음수로 샌다(화면 가로 = cos 요 × 바깥 − sin 요 × 앞).
+        // 그 값이 두 번 나오자 '두 번째로 작은 수축' 기준이 끌려 내려가 그 뒤 정상 반복(0.16~0.29)이 전부 떨어짐·차단이 됐다(12:36 정확 15/30).
+        // 같은 반복에서 앞 이탈이 위반이면 그 가로는 기준에 넣지 않는다 — 판정은 한다(앞으로 나간 반복의 가로는 낮게 읽혀 떨어짐으로는 안 걸린다)
+        val away = "repform|덤벨 컬|팔꿈치 몸에서 떨어짐"; val fwd = "repform|덤벨 컬|팔꿈치 앞 이탈"
+        val ev = evaluator(); val f = Frames(ev)
+        for (x in listOf(0.18f, 0.20f, 0.16f)) f.rep(latNear = x, ev = ev)           // 앞 기준 0.02 · 떨어짐 기준 0.18
+        repeat(2) {
+            val drift = f.rep(fwd = 0.34f, latNear = -0.05f, ev = ev)                // 앞 +0.32 위반 — 가로 −0.05 는 하한 위라 앞 이탈 위반으로만 걸러진다
+            assertEquals(Verdict.VIOLATION, drift.outcomes.first { it.check.id == fwd }.verdict)
+            assertEquals(Verdict.OK, drift.outcomes.first { it.check.id == away }.verdict)
+        }
+        for (x in listOf(0.25f, 0.29f, 0.20f)) {
+            val o = f.rep(latNear = x, ev = ev).outcomes.first { it.check.id == away }
+            assertEquals("$x", Verdict.OK, o.verdict); assertEquals(0.18f, o.reference!!, 1e-4f)
+        }
+        // 그래도 진짜 떨어짐은 잡는다
+        assertEquals(Verdict.VIOLATION, f.rep(latNear = 0.50f, ev = ev).outcomes.first { it.check.id == away }.verdict)
+        // 앞 이탈이 기준을 모으는 첫 3회에는 위반이 안 나온다 — 하한 −0.15(AIHub 사선 정상 수축 p5~p10) 아래 원값은 '붙음' 이 아니라 누설·튐이라 넣지 않는다
+        val ev2 = evaluator(); val f2 = Frames(ev2)
+        for (x in listOf(-0.30f, -0.26f)) assertEquals(Verdict.ABSTAIN, f2.rep(latNear = x, ev = ev2).outcomes.first { it.check.id == away }.verdict)
+        for (x in listOf(0.18f, 0.20f, 0.16f)) f2.rep(latNear = x, ev = ev2)
+        val o2 = f2.rep(latNear = 0.29f, ev = ev2).outcomes.first { it.check.id == away }
+        assertEquals(Verdict.OK, o2.verdict); assertEquals(0.18f, o2.reference!!, 1e-4f)
+    }
+
+    @Test
+    fun awayRepsDoNotDragTheForwardReferenceBack() {
+        // §62c 후속 9(12:41 D 세트) — 거꾸로도 샌다: 벌린 첫 두 회(가로 0.80·0.77, 절대 상한 0.72 위반)는 앞 성분이 '뒤로' 읽혀(−0.44) 첫 3회 중앙값 기준을
+        // −0.44 로 끌었다 — 본인 정상(−0.15) 반복이 +0.29 '앞으로'(차단)로 읽힐 자리이고, 벌린 11회는 "앞으로 나갔어요" 로 읽혔다.
+        // 같은 반복에서 떨어짐이 위반이면 그 앞 성분은 기준에 넣지 않는다
+        val away = "repform|덤벨 컬|팔꿈치 몸에서 떨어짐"; val fwd = "repform|덤벨 컬|팔꿈치 앞 이탈"
+        val ev = evaluator(); val f = Frames(ev)
+        repeat(2) {
+            val r = f.rep(fwd = -0.44f, latNear = 0.80f, ev = ev)
+            assertEquals(Verdict.VIOLATION, r.outcomes.first { it.check.id == away }.verdict)
+        }
+        repeat(4) {
+            val o = f.rep(fwd = -0.15f, latNear = 0.18f, ev = ev).outcomes.first { it.check.id == fwd }
+            assertTrue("본인 정상 반복은 앞으로 읽히지 않는다", o.verdict != Verdict.VIOLATION)
+        }
+        val o = f.rep(fwd = -0.14f, latNear = 0.20f, ev = ev).outcomes.first { it.check.id == fwd }
+        assertEquals(Verdict.OK, o.verdict); assertEquals(-0.15f, o.reference!!, 1e-4f)
+    }
+
+    @Test
+    fun flaredFromTheStartIsNotTakenAsNormalFrontal() {
+        // §62c 후속 9 — 정면: 팔을 늘어뜨린 자세부터 벌어져 있으면(이완 가로 0.33, AIHub 정상 p99 0.19) 기준을 0.19 로 자르고 한 번 알린다.
+        // 수축 원값 0.45 이상은 기준과 무관하게 차단
+        val ev = evaluator(); val f = Frames(ev)
+        val r1 = f.rep(topLat = 0.33f, lat = 0.40f, ev = ev)                  // 시작부터 벌림: 기준 0.33 이면 +0.07 로 정상이었을 것
+        val o1 = r1.outcomes.first { it.check.id == "repform|덤벨 컬|팔꿈치 옆 벌림" }
+        assertEquals(0.19f, o1.reference!!, 1e-4f)
+        assertEquals(Verdict.VIOLATION, o1.verdict); assertTrue("+0.21 이고 원값 0.40 ≥ 0.35 → 차단", o1.gate)
+        assertNull("첫 두 회는 알리지 않는다 — 첫 상단은 덤벨 집기에 오염되기 쉽다", ev.takeNotice(1_000L))
+        f.rep(topLat = 0.33f, lat = 0.40f, ev = ev); assertNull(ev.takeNotice(2_000L))
+        f.rep(topLat = 0.33f, lat = 0.40f, ev = ev)                           // 셋째에도 이완이 벌어져 있다 → 한 번 알린다
+        val n = ev.takeNotice(3_000L)!!
+        assertEquals("처음부터 팔꿈치가 옆으로 벌어져 있어요. 팔을 내렸을 때 팔꿈치를 옆구리에 붙이고 해 주세요.", n.message)
+        f.rep(topLat = 0.33f, lat = 0.40f, ev = ev)
+        assertNull("세트에서 한 번", ev.takeNotice(4_000L))
+        // 첫 상단만 오염(09:59 세트 0.50)이면 셋째에는 세트 최소가 내려와 알리지 않는다
+        val evP = evaluator(); val fP = Frames(evP)
+        fP.rep(topLat = 0.50f, lat = 0.15f, ev = evP); fP.rep(topLat = 0.12f, lat = 0.15f, ev = evP); fP.rep(topLat = 0.12f, lat = 0.15f, ev = evP)
+        assertNull(evP.takeNotice(3_000L))
+        // 절대 상한: 기준이 어떻든 수축 원값 0.46 은 차단
+        val ev2 = evaluator(); val f2 = Frames(ev2)
+        val wide = f2.rep(topLat = 0.12f, lat = 0.46f, ev = ev2)
+        assertTrue(wide.outcomes.first { it.check.id == "repform|덤벨 컬|팔꿈치 옆 벌림" }.gate)
+        // 띠 안의 사람(이완 0.15)은 자르지 않는다 — 알림도 없다
         val ev3 = evaluator(); val f3 = Frames(ev3)
-        f3.rep(fwd = -0.10f, ev = ev3)
-        assertEquals(Verdict.OK, f3.rep(fwd = 0.0f, ev = ev3).outcomes.first { it.check.id == "repform|덤벨 컬|팔꿈치 앞 이탈" }.verdict)
+        val ok = f3.rep(topLat = 0.15f, lat = 0.20f, ev = ev3)
+        assertEquals(0.15f, ok.outcomes.first { it.check.id == "repform|덤벨 컬|팔꿈치 옆 벌림" }.reference!!, 1e-4f)
+        assertNull(ev3.takeNotice(1_000L))
+    }
+
+    @Test
+    fun flaredFromTheStartIsNotTakenAsNormalOblique() {
+        // §62c 후속 9 — 사선 '몸에서 떨어짐': 세트 내내 벌려도(0.62) 기준을 모집단 p90(0.32)으로 잘라 +0.30 → 코칭, 0.75 는 +0.43 → 차단.
+        // 기준을 모으는 첫 두 회도 원값 0.72 이상이면 차단
+        val ev = evaluator(); val f = Frames(ev)
+        val first = f.rep(latNear = 0.75f, ev = ev)
+        val o = first.outcomes.first { it.check.id == "repform|덤벨 컬|팔꿈치 몸에서 떨어짐" }
+        assertEquals("기준을 모으는 중에도 절대 상한은 판정", Verdict.VIOLATION, o.verdict); assertTrue(o.gate)
+        f.rep(latNear = 0.62f, ev = ev)
+        val third = f.rep(latNear = 0.62f, ev = ev)                             // 두 번째로 작은 값 0.62 → 0.32 로 자름
+        val o3 = third.outcomes.first { it.check.id == "repform|덤벨 컬|팔꿈치 몸에서 떨어짐" }
+        assertEquals(0.32f, o3.reference!!, 1e-4f); assertEquals(Verdict.VIOLATION, o3.verdict); assertFalse(o3.gate)
+        assertEquals("처음부터 팔꿈치가 몸에서 떨어져 있어요. 옆구리에 붙이고 해 주세요.", ev.takeNotice(9_000L)!!.message)
+        assertTrue(ev.summary().live.any { it.id == "repform|덤벨 컬|팔꿈치 몸에서 떨어짐#기준" })
+        // 띠 안의 사람(0.18)은 그대로 — 그 뒤 0.45(+0.27)는 코칭
+        val ev2 = evaluator(); val f2 = Frames(ev2)
+        repeat(3) { f2.rep(latNear = 0.18f, ev = ev2) }
+        val r = f2.rep(latNear = 0.45f, ev = ev2)
+        assertEquals(0.18f, r.outcomes.first { it.check.id == "repform|덤벨 컬|팔꿈치 몸에서 떨어짐" }.reference!!, 1e-4f)
+        assertNull(ev2.takeNotice(1_000L))
+    }
+
+    @Test
+    fun firstRepsReferenceIsKeptPerView() {
+        // 카메라 쪽 팔은 뷰마다 다르다(D = 왼팔, B = 오른팔) — 기준을 뷰별로 따로 세운다. D 에서 세운 기준으로 B 반복을 재면 다른 팔을 견준다
+        val ev = evaluator(); val f = Frames(ev)
+        repeat(3) { f.rep(latNear = 0.18f, yaw = -30f, ev = ev) }
+        val d4 = f.rep(latNear = 0.50f, yaw = -30f, ev = ev)
+        assertEquals("D", d4.view)
+        assertEquals(Verdict.VIOLATION, d4.outcomes.first { it.check.id == "repform|덤벨 컬|팔꿈치 몸에서 떨어짐" }.verdict)
+        val b1 = f.rep(latNear = 0.50f, yaw = 30f, ev = ev)
+        assertEquals("B", b1.view)
+        assertEquals("B 로 돌아서면 그 뷰의 첫 3회가 다시 기준", Verdict.ABSTAIN, b1.outcomes.first { it.check.id == "repform|덤벨 컬|팔꿈치 몸에서 떨어짐" }.verdict)
+    }
+
+    @Test
+    fun sideViewReportsForwardAndBackAsBetaNotes() {
+        // 옆(SIDE_B, 요 +60°): 앞/뒤가 화면 가로에 거의 그대로 — 따로 말할 수 있다. 미검증 뷰라 beta(화면 '참고' — 정확·음성 영향 없음)
+        val ev = evaluator(); val f = Frames(ev)
+        repeat(3) { f.rep(yaw = 60f, ev = ev) }
+        val fwdRep = f.rep(fwd = 0.18f, yaw = 60f, ev = ev)
+        assertEquals("SIDE_B", fwdRep.view)
+        assertEquals(FormDirection.HIGH, fwdRep.outcomes.first { it.check.id == "repform|덤벨 컬|팔꿈치 앞뒤(옆)" }.direction)
+        assertTrue(fwdRep.correct)
+        assertEquals("사선 ship 검사는 옆에서 유보", Verdict.ABSTAIN, fwdRep.outcomes.first { it.check.id == "repform|덤벨 컬|팔꿈치 앞 이탈" }.verdict)
+        val back = f.rep(fwd = -0.20f, yaw = 60f, ev = ev)
+        assertEquals(FormDirection.LOW, back.outcomes.first { it.check.id == "repform|덤벨 컬|팔꿈치 앞뒤(옆)" }.direction)
+        val e = ev.eventFor(back, 30_000L, gate = true)!!
+        assertFalse(e.ship); assertEquals("팔꿈치가 뒤로 빠졌어요", e.message)
+        val rule = RepFormSpecs.asRules().first { it.id == "repform|덤벨 컬|팔꿈치 앞뒤(옆)" }
+        assertEquals("옆", rule.viewDesc)
+    }
+
+    @Test
+    fun frontalFlareReferenceIgnoresAPickupPollutedFirstTop() {
+        // 09:59 세트: 첫 상단 창(덤벨 집기)의 가로가 0.50 이라 시작 기준이면 벌린 반복(0.36~0.42)이 음수로 읽혔다 — 세트에서 가장 붙어 있던 이완 자세 대비로
+        val ev = evaluator(); val f = Frames(ev)
+        f.rep(topLat = 0.50f, lat = 0.15f, ev = ev)
+        f.rep(topLat = 0.12f, lat = 0.15f, ev = ev)
+        val flare = f.rep(topLat = 0.12f, lat = 0.42f, ev = ev)
+        val o = flare.outcomes.first { it.check.id == "repform|덤벨 컬|팔꿈치 옆 벌림" }
+        assertEquals(Verdict.VIOLATION, o.verdict); assertTrue(o.gate); assertEquals(0.12f, o.reference!!, 1e-4f)
+    }
+
+    @Test
+    fun aShipReasonIsSpokenEvenWhenAnEarlierBetaCheckAlsoFlagged() {
+        // 검사 순서상 beta('팔꿈치 높이 상승')가 ship('팔꿈치 앞 이탈')보다 앞이어도 회를 빼는 ship 사유를 말한다 — 빠진 회를 침묵하면 카운트가 죽은 줄 안다
+        val ev = evaluator(); val f = Frames(ev)
+        repeat(3) { f.rep(ev = ev) }
+        val r = f.rep(fwd = 0.23f, rise = -0.25f, ev = ev)
+        assertTrue(r.flagged.any { it.check.id == "repform|덤벨 컬|팔꿈치 높이 상승" })
+        val e = ev.eventFor(r, 30_000L, gate = true)!!
+        assertEquals("repform|덤벨 컬|팔꿈치 앞 이탈", e.check.id); assertTrue(e.gated)
     }
 
     @Test
@@ -563,13 +762,13 @@ class RepFormCurlTest {
 
     @Test
     fun curlRulesExpectObliqueViewsAndAbstainElsewhere() {
-        assertEquals(setOf("B", "C", "D"), RepFormSpecs.viewsFor("덤벨 컬"))   // 벌어짐(beta)은 정면도 — 규칙별 뷰는 ruleResult 가 가른다
+        assertEquals(setOf("B", "C", "D", "SIDE_B", "SIDE_D"), RepFormSpecs.viewsFor("덤벨 컬"))   // 옆은 앞뒤(beta)만 — 규칙별 뷰는 반복·ruleResult 가 가른다
         assertEquals(setOf("C"), RepFormSpecs.viewsFor("바벨 스쿼트"))
         val rules = RepFormSpecs.asRules().filter { it.exercise == "덤벨 컬" }
         assertEquals(setOf("B", "D"), rules.first { it.id == "repform|덤벨 컬|팔꿈치 앞 이탈" }.viewsOk)
-        assertEquals(4, rules.count { it.status == RuleStatus.SHIP })
+        assertEquals(5, rules.count { it.status == RuleStatus.SHIP })   // 상체 숙임·뜸·옆 벌림·앞 이탈·몸에서 떨어짐
         val ev = evaluator(); val f = Frames(ev)
-        f.rep(ev = ev); f.rep(fwd = 0.16f, ev = ev)
+        repeat(3) { f.rep(ev = ev) }; f.rep(fwd = 0.23f, ev = ev); f.rep(ev = ev)
         val drift = rules.first { it.id == "repform|덤벨 컬|팔꿈치 앞 이탈" }
         val res = ev.summary().ruleResult(drift, viewLetter = "C")!!
         assertEquals(Verdict.ABSTAIN, res.verdict)
@@ -580,13 +779,13 @@ class RepFormCurlTest {
     @Test
     fun setLevelCurlResultUsesPerRuleViews() {
         val ev = evaluator(); val f = Frames(ev)
-        f.rep(ev = ev); f.rep(fwd = 0.16f, ev = ev); f.rep(fwd = 0.16f, gap = 1.9f, ev = ev)
+        repeat(3) { f.rep(ev = ev) }; f.rep(ev = ev); f.rep(fwd = 0.23f, ev = ev); f.rep(fwd = 0.23f, gap = 1.9f, ev = ev)
         val rules = RepFormSpecs.asRules().filter { it.exercise == "덤벨 컬" }.associateBy { it.id }
         val s = ev.summary()
         // 정면(C): 앞 이탈·몸통은 유보, 벌어짐(B/C/D)은 판정한다
         assertEquals(Verdict.ABSTAIN, s.ruleResult(rules.getValue("repform|덤벨 컬|팔꿈치 앞 이탈"), viewLetter = "C")!!.verdict)
         assertEquals(Verdict.ABSTAIN, s.ruleResult(rules.getValue("repform|덤벨 컬|몸통 반동"), viewLetter = "C")!!.verdict)
-        assertEquals(Verdict.OK, s.ruleResult(rules.getValue("repform|덤벨 컬|팔꿈치 벌어짐"), viewLetter = "C")!!.verdict)   // 3회 중 1회 < max(2, 34 %)
+        assertEquals(Verdict.OK, s.ruleResult(rules.getValue("repform|덤벨 컬|팔꿈치 벌어짐"), viewLetter = "C")!!.verdict)   // 6회 중 1회 < max(2, 34 %)
         // 사선(D): 앞 이탈 3회 중 2회 위반 → 세트 위반
         assertEquals(Verdict.VIOLATION, s.ruleResult(rules.getValue("repform|덤벨 컬|팔꿈치 앞 이탈"), viewLetter = "D")!!.verdict)
     }

@@ -342,6 +342,11 @@ fun run(job: Job, meta: Map<String, String>, frames: List<InputFrame>, stats: Fr
         rf?.onFrame(frame.tMs, features)   // 앱과 같은 순서: 카운터보다 먼저
         // 앱과 같은 입구(spec §62c): 팔별 경로는 두 팔 값·기각 피처를, 그 밖은 카운트 신호 값 + 판별 신호 값을 쓴다. 파리티가 이 호출에 기댄다.
         val fired = rc.onFrameFeatures(frame.tMs, features)
+        if (rc.newlyRetracted) {
+            // 잠정 첫 회를 거뒀다(spec §62c 후속 9) — 앱처럼 그 회로 센 수·기록·자세 기준을 지운다(파리티)
+            valid = 0; invalid = 0; unjudged = 0; validSeq.clear(); repTimes.clear(); cycles.clear()
+            rf?.reset(); rejectedSeen = rc.rejectedReps.size
+        }
         if (rf != null && rc.rejectedReps.size > rejectedSeen) {
             for (i in rejectedSeen until rc.rejectedReps.size) rf.onRejected(rc.rejectedReps[i].tMs)
             rejectedSeen = rc.rejectedReps.size
@@ -368,6 +373,8 @@ fun run(job: Job, meta: Map<String, String>, frames: List<InputFrame>, stats: Fr
         }
         // 유지 자세 사건(spec §62c 후속 6) — 앱(COACH)과 같은 자리: 이 프레임에 회가 끝나지 않았을 때만. 로그 rep_form.live 로 오탐을 잰다
         if (!fired) rf?.liveEvent(frame.tMs)
+        // 처음부터 틀린 출발 알림(spec §62c 후속 9) — 앱처럼 회가 끝난 프레임에(로그 rep_form.live "…#기준")
+        if (fired) rf?.takeNotice(frame.tMs)
     }
     if (series != null) File(seriesDir, "${job.id}.tsv").writeText(series.toString())
     val first = frames.firstOrNull()?.tMs
@@ -399,6 +406,7 @@ fun run(job: Job, meta: Map<String, String>, frames: List<InputFrame>, stats: Fr
         // 반복 판별 게이트(spec §62) — 판별 신호가 있는 종목만 값이 있다. rejected = [t_ms, min, max, swing], identitySwing 은 센 사이클 순서(null = 미판정)
         "identityFeature" to rc.signal.identityFeature,
         "identityMinAmp" to rc.signal.identityMinAmp,
+        "retracted" to Raw(rc.retractedReps.joinToString(",", "[", "]")),
         "rejected" to Raw(rc.rejectedReps.joinToString(",", "[", "]") { r -> "[${r.tMs},${num(r.min)},${num(r.max)},${num(r.identitySwing)}" + (r.feature?.let { ",\"$it\"" } ?: "") + "]" }),
         "identitySwing" to Raw(rc.identitySwings.joinToString(",", "[", "]") { it?.let(::num) ?: "null" }),
         // 팔별 경로(spec §62c) — 각 팔의 사이클(진폭·ROM 판정)과 본인 기준 진폭

@@ -217,6 +217,8 @@ data class SetLog(
      * 없는 종목·이전 로그는 null(키 없음). 시각은 세트 상대 ms.
      */
     val repRejected: List<RepRejected>? = null,
+    /** 팔별 경로에서 거둔 잠정 첫 회의 시각(세트 상대 ms, §62c 후속 9) — `reps.retracted`. 없으면 키 없음. */
+    val repRetracted: List<Long>? = null,
     /** 센 사이클마다의 판별 신호 스윙(`reps.identity_swing`, [repTimesMs] 와 같은 순서, 판정 안 한 사이클은 null). 판별 신호가 있는 종목만. */
     val repIdentitySwings: List<Float?>? = null,
     /** 팔별 경로(spec §62c)의 팔 사이클 — `reps.arms`. 아니면 null(키 없음). */
@@ -289,6 +291,7 @@ data class SetLog(
             repPending: RepPendingState? = null,
             repDropped: List<RepCycle>? = null,
             repRejected: List<RepRejected>? = null,
+            repRetracted: List<Long>? = null,
             repIdentitySwings: List<Float?>? = null,
             repArmCycles: List<ArmCycle>? = null,
             repForm: RepFormLog? = null,
@@ -363,6 +366,7 @@ data class SetLog(
                 repPending = repPending,
                 repDropped = repDropped,
                 repRejected = repRejected,
+                repRetracted = repRetracted,
                 repIdentitySwings = repIdentitySwings,
                 repArmCycles = repArmCycles,
                 repForm = repForm,
@@ -503,6 +507,11 @@ object SetLogJson {
                 sb.append('}')
             }
             // 판별 게이트가 세지 않은 사이클과 센 사이클의 판별 스윙 — 판별 신호가 있는 종목만(없으면 키 부재)
+            log.repRetracted?.takeIf { it.isNotEmpty() }?.let { v ->
+                sb.append(",\"retracted\":[")
+                v.forEachIndexed { i, t -> if (i > 0) sb.append(','); sb.append(t) }
+                sb.append(']')
+            }
             log.repRejected?.let { v ->
                 sb.append(",\"rejected\":[")
                 v.forEachIndexed { i, r ->

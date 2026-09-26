@@ -21,6 +21,14 @@ enum class ObservationKind { REPS, HOLD, WINDOW, GUIDE }
 const val ALTERNATING_COUNT_RULE = "왼쪽과 오른쪽을 한 번씩 해야 1회로 셉니다."
 
 /**
+ * 본인 기준 반복 검사가 있는 종목의 시작 안내(§62c 후속 9) — 첫 반복들이 팔꿈치 위치의 기준이 된다. 처음부터 벌리면 그 벌림이 '정상' 이 되므로
+ * 처음 두세 번을 바르게 하라고 먼저 밝힌다(모집단 띠로 기준을 자르는 장치는 큰 벌림만 막는다).
+ */
+val REFERENCE_HINTS: Map<String, String> = mapOf(
+    "덤벨 컬" to "처음 두세 번은 팔꿈치를 옆구리에 붙이고 정확하게 해 주세요. 그 자세를 기준으로 봐요.",
+)
+
+/**
  * @property alternating 좌우를 번갈아 하는 종목(런지류·덤벨 컬·스탠딩 니업) — 동작의 성질(메타데이터)이다. 횟수 단위는 [repUnit] 이 정한다.
  * @property repUnit 자동 횟수의 표시 단위 — **런지류만** [RepUnit.SIDE_PAIR], 나머지는 [RepUnit.CYCLE].
  *   사용자 결정(2026-09-24): 교대 동작은 "왼쪽과 오른쪽을 한 번씩 = 1회" 로 센다(목표 10회 = 왼 10 + 오른 10, 한쪽만 하면 수가 오르지 않는다).
@@ -33,7 +41,9 @@ const val ALTERNATING_COUNT_RULE = "왼쪽과 오른쪽을 한 번씩 해야 1�
  */
 data class ExerciseProfile(val name: String, val referenceExercise: String?, val capture: CapturePosition,
     val floor: Boolean, val kind: ObservationKind, val metricFeatures: List<String>, val alternating: Boolean = false,
-    val repUnit: RepUnit = RepUnit.CYCLE) {
+    val repUnit: RepUnit = RepUnit.CYCLE,
+    /** 본인 기준을 쓰는 반복 검사가 있는 종목의 시작 안내(§62c 후속 9) — 첫 반복들이 기준이 되므로 처음을 바르게 하라고 밝힌다. */
+    val referenceHint: String? = null) {
     val preparationDirection get() = when(capture) {
         CapturePosition.SIDE -> "측면"
         CapturePosition.FLOOR_SIDE -> "낮은 측면"
@@ -41,7 +51,7 @@ data class ExerciseProfile(val name: String, val referenceExercise: String?, val
         else -> capture.title
     }
     val preparationInstruction get() = "권장 촬영 방향은 ${preparationDirection}입니다. ${capture.voice}. " +
-        (if (repUnit == RepUnit.SIDE_PAIR) "$ALTERNATING_COUNT_RULE " else "") + "몸이 화면에 잡히면 5초 뒤 시작해요."
+        (if (repUnit == RepUnit.SIDE_PAIR) "$ALTERNATING_COUNT_RULE " else "") + (referenceHint?.let { "$it " } ?: "") + "몸이 화면에 잡히면 5초 뒤 시작해요."
     val cameraEnabled get() = kind != ObservationKind.GUIDE
     val comparisonOnly get() = referenceExercise == null
     val startHint get() = when(kind) {
@@ -68,7 +78,7 @@ object ExerciseProfiles {
             val lunges = setOf("런지","바벨 런지","사이드 런지","크로스 런지")
             val alternating = name in lunges || name in setOf("덤벨 컬","스탠딩 니업")
             add(ExerciseProfile(name, ref, capture, floor, if (alternating) ObservationKind.WINDOW else kind, features, alternating,
-                repUnit = if (name in lunges) RepUnit.SIDE_PAIR else RepUnit.CYCLE))
+                repUnit = if (name in lunges) RepUnit.SIDE_PAIR else RepUnit.CYCLE, referenceHint = REFERENCE_HINTS[name]))
         }
         val c=CapturePosition.FRONT; val b=CapturePosition.RIGHT_FRONT; val d=CapturePosition.LEFT_FRONT
         val low=CapturePosition.FLOOR_SIDE; val oblique=CapturePosition.FLOOR_FRONT
@@ -77,7 +87,7 @@ object ExerciseProfiles {
         p("사이드 런지","사이드 런지",b,legs); p("크로스 런지","크로스 런지",c,legs)
         p("바벨 데드리프트","바벨 데드리프트",c,legs); p("굿모닝","굿모닝",c,legs)
         p("딥스","딥스",b,arms); p("오버헤드 프레스","오버 헤드 프레스",c,raises)
-        // 덤벨 컬 권장 = 왼어깨 쪽 45도 사선 D(사용자 결정 2026-09-26, 정면에서 되돌림) — 사선에서는 앞 이탈·상체 숙임을 판정하고, 정면 전용인 뜸·옆 벌림은 유보된다
+        // 덤벨 컬 권장 = 왼어깨 쪽 45도 사선 D(사용자 결정 2026-09-26, 정면에서 되돌림) — 사선에서는 앞 이탈·몸에서 떨어짐·상체 숙임을 판정하고, 정면 전용인 뜸·옆 벌림은 유보된다
         p("덤벨 컬","덤벨 컬",d,arms); p("바벨 컬","바벨 컬",d,arms)
         p("사이드 레터럴 레이즈","사이드 레터럴 레이즈",d,raises)
         p("프런트 레이즈","프런트 레이즈",b,raises); p("랫풀 다운","랫풀 다운",d,arms)

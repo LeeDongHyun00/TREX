@@ -400,7 +400,9 @@ fun PostureLiveSessionScreen(
     val repCounted = repCount + (if (partialExcludedNow) 0 else repInvalid) - repIncorrect
     LaunchedEffect(repCounted) {
         repeat((repCounted - deliveredReps).coerceAtLeast(0)) { onRepLatest.value() }
-        deliveredReps = repCounted
+        // 세트 안에서 줄어든 수(거둔 잠정 첫 회 §62c 후속 9·모드 전환)는 되돌리지 않고 이미 전한 수를 쥔다 — 다음 실제 회가 그 자리를 채우고,
+        // 모드를 오가도 같은 회를 두 번 전하지 않는다. 세트가 바뀌면 세트 초기화가 0 으로 되돌린다
+        deliveredReps = maxOf(deliveredReps, repCounted)
     }
     // 무효 렙 사유 발화 횟수 — 세트당 상한(MAX_INVALID_CUES). 렙마다 같은 말을 반복하면 코칭이 잔소리가 되고,
     // 정작 들어야 할 자세 지적이 큐 뒤로 밀린다.
@@ -586,6 +588,7 @@ fun PostureLiveSessionScreen(
         val pending: RepPendingState?
         val dropped: List<RepCycle>?
         val rejected: List<RepRejected>?
+        val retracted: List<Long>?
         val identitySwings: List<Float?>?
         val armCycles: List<ArmCycle>?
         val formSummary: RepFormSummary?
@@ -618,6 +621,7 @@ fun PostureLiveSessionScreen(
             dropped = rc?.takeIf { it.usesHysteresis }?.droppedReps?.map { it.copy(tMs = it.tMs - t0, startMs = it.startMs - t0) }
             // 반복 판별 게이트(spec §62) — 판별 신호가 있는 종목만 목록(비어 있어도). 없는 종목은 null = 키 없음
             rejected = rc?.takeIf { it.signal.identityFeature != null || it.paired }?.rejectedReps?.map { it.copy(tMs = it.tMs - t0) }
+            retracted = rc?.takeIf { it.paired }?.retractedReps?.map { it - t0 }
             identitySwings = rc?.takeIf { it.signal.identityFeature != null }?.identitySwings?.toList()
             armCycles = rc?.takeIf { it.paired }?.armCycles?.map { it.copy(tMs = it.tMs - t0, startMs = it.startMs - t0) }
             // 반복별 자세 검사 요약(§62a) — 같은 락 안에서 굳히고 다음 세트를 위해 비운다
@@ -685,6 +689,7 @@ fun PostureLiveSessionScreen(
             repPending = pending,
             repDropped = dropped,
             repRejected = rejected,
+            repRetracted = retracted,
             repIdentitySwings = identitySwings,
             repArmCycles = armCycles,
             repForm = formSummary?.toLog(t0),
@@ -771,6 +776,7 @@ fun PostureLiveSessionScreen(
         repHalfPending = false
         repCount = 0
         repInvalid = 0
+        deliveredReps = 0
         invalidCuesRef[0] = 0
         detectStartRef[0] = 0L
         anchored = false
@@ -950,6 +956,12 @@ fun PostureLiveSessionScreen(
                             rf?.onFrame(now, features)   // 카운터보다 먼저 — 이 프레임이 사이클 창에 들어간 뒤 사이클이 끝나야 한다
                             // 팔별 경로(덤벨 컬, §62c)는 두 팔 값·기각 피처를 쓴다 — 그 밖은 카운트 신호 + 판별 신호(종전과 같다)
                             val done = rc.onFrameFeatures(now, features)
+                            if (rc.newlyRetracted) {
+                                // 잠정 첫 회를 거뒀다(§62c 후속 9) — 8 s 안에 둘째 회가 없던 한 번의 동작(준비 동작)은 세트의 시작이 아니다. 그 회로 센 수·기록·
+                                // 자세 기준을 지운다. 이미 전한 1회(화면·진행)는 되돌리지 않는다 — 다음 실제 회가 그 자리를 채운다(deliveredReps 는 줄지 않는다)
+                                repRecords.clear(); rf?.reset(); rejectedSeenRef[0] = rc.rejectedReps.size
+                                repCount = 0; repInvalid = 0; repIncorrect = 0
+                            }
                             // 판별 게이트가 기각한 사이클은 자기 창을 소비한다(§62a) — 무릎 들기 구간이 다음 스쿼트의 바닥으로 읽히지 않게
                             if (rf != null && rc.rejectedReps.size > rejectedSeenRef[0]) {
                                 for (i in rejectedSeenRef[0] until rc.rejectedReps.size) rf.onRejected(rc.rejectedReps[i].tMs)
@@ -1018,6 +1030,11 @@ fun PostureLiveSessionScreen(
                                         provisionalNote = ev.message   // beta 는 화면 '참고' 로만 — 침묵이 "이상 없음" 으로 읽히면 안 된다
                                     }
                                 }
+                            }
+                            // 처음부터 틀린 출발(§62c 후속 9) — 본인 기준이 모집단에 거의 없는 값이면 세트에서 한 번 말한다. COACH·서서만, 방금 말한 반복 사건 뒤에 붙인다
+                            if (gate && rf != null) synchronized(repRecords) { rf.takeNotice(now) }?.let { ev ->
+                                formNote = ev.message
+                                speech.speak(ev.message, flush = false)
                             }
                             repTempoMs = tally.tempoMs
                             repHalfPending = tally.halfPending

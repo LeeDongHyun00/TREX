@@ -51,13 +51,17 @@ class CapturePreparationTest {
         val left=ExerciseProfiles.all.first { it.capture==CapturePosition.LEFT_FRONT }
         assertTrue(right.preparationInstruction.contains("오른어깨"))
         assertTrue(left.preparationInstruction.contains("왼어깨"))
-        // 사선은 각도까지 말한다(사용자 요청 2026-09-26)
+        // 사선은 각도까지 말한다(사용자 요청 2026-09-26) — 덤벨 컬은 왼어깨 쪽 45도
         assertTrue(right.preparationInstruction.contains("오른어깨가 휴대폰에 가까워지도록 45도쯤 비스듬히 서 주세요"))
         assertTrue(left.preparationInstruction.contains("왼어깨가 휴대폰에 가까워지도록 45도쯤 비스듬히 서 주세요"))
-        // 덤벨 컬은 왼어깨 쪽 45도(사용자 결정 2026-09-26)
         val curl = ExerciseProfiles.forName("덤벨 컬")!!
         assertEquals(CapturePosition.LEFT_FRONT, curl.capture)
         assertTrue(curl.preparationInstruction.contains("왼어깨가 휴대폰에 가까워지도록 45도쯤 비스듬히 서 주세요"))
+        // 첫 반복이 기준 — 처음을 바르게 하라고 시작 전에 밝힌다(§62c 후속 9). 5초 안내보다 앞
+        val hint = "처음 두세 번은 팔꿈치를 옆구리에 붙이고 정확하게 해 주세요."
+        assertTrue(curl.preparationInstruction.contains(hint))
+        assertTrue(curl.preparationInstruction.indexOf(hint) < curl.preparationInstruction.indexOf("5초"))
+        assertFalse(ExerciseProfiles.forName("기본 스쿼트")!!.preparationInstruction.contains(hint))
     }
 
     private val ready = CaptureFrame(true, "촬영 범위", listOf(.2f,.1f,.8f,.9f))
