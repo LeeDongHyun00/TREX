@@ -51,6 +51,9 @@ class CapturePreparationTest {
         val left=ExerciseProfiles.all.first { it.capture==CapturePosition.LEFT_FRONT }
         assertTrue(right.preparationInstruction.contains("오른어깨"))
         assertTrue(left.preparationInstruction.contains("왼어깨"))
+        // 사선은 각도까지 말한다(사용자 요청 2026-09-26)
+        assertTrue(right.preparationInstruction.contains("오른어깨가 휴대폰에 가까워지도록 45도쯤 비스듬히 서 주세요"))
+        assertTrue(left.preparationInstruction.contains("왼어깨가 휴대폰에 가까워지도록 45도쯤 비스듬히 서 주세요"))
     }
 
     private val ready = CaptureFrame(true, "촬영 범위", listOf(.2f,.1f,.8f,.9f))
