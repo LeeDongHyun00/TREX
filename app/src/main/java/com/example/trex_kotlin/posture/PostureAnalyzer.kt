@@ -1,0 +1,340 @@
+package com.example.trex_kotlin.posture
+
+import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Matrix
+import android.util.Log
+import androidx.camera.core.ImageProxy
+import com.google.mediapipe.framework.image.BitmapImageBuilder
+import com.google.mediapipe.tasks.core.BaseOptions
+import com.google.mediapipe.tasks.core.Delegate
+import com.google.mediapipe.tasks.vision.core.RunningMode
+import com.google.mediapipe.tasks.vision.poselandmarker.PoseLandmarker
+import com.google.mediapipe.tasks.vision.poselandmarker.PoseLandmarkerResult
+
+/**
+ * MediaPipe Pose Landmarker 래퍼 (spec §2~§3).
+ *
+ * 발열 대책 (PostureLabScreen 의 스케줄러와 짝):
+ *  - 델리게이트: GPU 우선, 실패 시 CPU 폴백. 랜드마커는 호출 스레드(분석 스레드)에서 지연 생성한다 — GPU 는 GL 컨텍스트가
+ *    생성 스레드에 묶이므로 같은 단일 스레드에서 생성·추론해야 한다.
+ *  - 메모리: 회전 비트맵을 재사용하고(Canvas+Matrix) ImageProxy→Bitmap 변환은 실제로 추론하는 프레임에서만 한다.
+ *  - 관측: 최근 추론 시간 EMA/평균, 총 횟수를 노출해 UI 와 로그에서 듀티를 볼 수 있게 한다.
+ */
+
+const val MP_LANDMARK_COUNT = 33
+private const val MIN_VISIBILITY = 0.5f
+private const val TAG = "PostureAnalyzer"
+
+enum class PoseModel(val asset: String, val label: String) {
+    FULL("posture/pose_landmarker_full.task", "full"),
+    LITE("posture/pose_landmarker_lite.task", "lite"),
+}
+
+/** 한 프레임 추론 결과. */
+class PoseSample(
+    val detected: Boolean,
+    /** 정규화 좌표 (회전 보정된 이미지 기준, 0..1). size = 33*2 (x,y 반복) */
+    val normalizedXy: FloatArray,
+    val visibility: FloatArray,
+    val features: Map<String, Float>,
+    val visibleJointCount: Int,
+    val inferMs: Long,
+    val imageWidth: Int,
+    val imageHeight: Int,
+    /** 이 프레임 계산에 쓴 up 벡터 (IMU 중력축 또는 화면 세로축 폴백). */
+    val up: Vec3 = SCREEN_UP,
+    /** up 이 IMU 에서 온 것인지 (false = 화면 세로축 가정). */
+    val upFromGravity: Boolean = false,
+    /** 관절 배치 자가검증(checkUpSanity)으로 up 을 뒤집어 보정했는지. */
+    val upFlipped: Boolean = false,
+    /** 자가검증으로 up 방향을 확인할 수 있었는지 (false = 누운 자세/관절 부족 등으로 미검증). */
+    val upVerified: Boolean = false,
+    /**
+     * MediaPipe 월드 랜드마크 원값(m, MediaPipe 부호 그대로 — y 아래·z 카메라 쪽 음수), 33×3 = x0,y0,z0,…. 검출 프레임만, 아니면 null.
+     * 피처 계산에는 쓰지 않는다(피처는 가시성 거른 cm·부호 반전 좌표). 검증 모드 세트 로그가 이 값을 남겨 오프라인에서 같은 후처리를
+     * 다시 돌리고(재생 파리티) 좌우 판별·화면 잘림 같은 새 분석을 폰 데이터로 할 수 있게 한다 (spec §61).
+     */
+    val world: FloatArray? = null,
+) {
+    companion object {
+        fun empty(inferMs: Long = 0L, w: Int = 0, h: Int = 0, up: Vec3 = SCREEN_UP, fromGravity: Boolean = false) = PoseSample(
+            detected = false,
+            normalizedXy = FloatArray(MP_LANDMARK_COUNT * 2),
+            visibility = FloatArray(MP_LANDMARK_COUNT),
+            features = emptyMap(),
+            visibleJointCount = 0,
+            inferMs = inferMs,
+            imageWidth = w,
+            imageHeight = h,
+            up = up,
+            upFromGravity = fromGravity,
+        )
+    }
+}
+
+/** 추론 통계 (UI 표시용 스냅샷). */
+data class AnalyzerStats(
+    val delegate: String,
+    val model: String,
+    val ready: Boolean,
+    val inferCount: Long,
+    val emaInferMs: Float,
+    val lastInferMs: Long,
+    val error: String?,
+)
+
+class PostureAnalyzer(
+    private val context: Context,
+    private val model: PoseModel = PoseModel.FULL,
+    private val preferGpu: Boolean = true,
+) {
+    private var landmarker: PoseLandmarker? = null
+    /**
+     * 닫힌 뒤에는 모델을 다시 만들지 않고 빈 샘플만 돌려준다. 추론(analyze·analyzeBitmap)과 [close] 는 같은 락(this)을 잡는다 —
+     * 화면이 사라질 때 메인 스레드의 close 가 분석 스레드에서 도는 detectForVideo 의 네이티브 그래프를 해제해
+     * SIGSEGV(PacketCreator.nativeCreateProto, 폰 2026-09-25 20:06·09-26 13:57 — 자동 진행 직후)로 앱이 죽고 그 세트 로그가 사라졌다.
+     */
+    @Volatile private var closed = false
+    private var delegateName: String = "-"
+    private var initError: String? = null
+    private var lastTimestampMs = 0L
+
+    // 회전 보정용 재사용 버퍼
+    private var uprightBitmap: Bitmap? = null
+    private val rotateMatrix = Matrix()
+    private val canvas = Canvas()
+
+    // 통계
+    @Volatile private var inferCount = 0L
+    @Volatile private var emaMs = 0f
+    @Volatile private var lastMs = 0L
+    @Volatile private var flippedCount = 0L
+
+    /** up 자가검증으로 보정한 프레임 수 (진단용). */
+    val upFlippedCount: Long get() = flippedCount
+
+    val isReady: Boolean get() = landmarker != null
+
+    fun stats() = AnalyzerStats(delegateName, model.label, landmarker != null, inferCount, emaMs, lastMs, initError)
+
+    /** 분석 스레드에서 호출. GPU → CPU 순으로 시도. */
+    @Synchronized
+    fun ensureReady(): Boolean {
+        if (closed) return false
+        if (landmarker != null) return true
+        if (initError != null) return false
+        val order = if (preferGpu) listOf(Delegate.GPU, Delegate.CPU) else listOf(Delegate.CPU)
+        for (d in order) {
+            try {
+                val opts = PoseLandmarker.PoseLandmarkerOptions.builder()
+                    .setBaseOptions(BaseOptions.builder().setModelAssetPath(model.asset).setDelegate(d).build())
+                    .setRunningMode(RunningMode.VIDEO)
+                    .setNumPoses(1)
+                    .setMinPoseDetectionConfidence(0.5f)
+                    .setMinPosePresenceConfidence(0.5f)
+                    .setMinTrackingConfidence(0.5f)
+                    .setOutputSegmentationMasks(false)
+                    .build()
+                landmarker = PoseLandmarker.createFromOptions(context, opts)
+                delegateName = if (d == Delegate.GPU) "GPU" else "CPU"
+                Log.i(TAG, "PoseLandmarker ready: model=${model.label} delegate=$delegateName")
+                return true
+            } catch (t: Throwable) {
+                Log.w(TAG, "delegate $d 생성 실패: ${t.message}")
+                if (d == order.last()) initError = "모델 로드 실패(${model.label}/${d}): ${t.message}"
+            }
+        }
+        return false
+    }
+
+    /**
+     * ImageProxy 를 소비하지 않는다 — 호출 측에서 close() 할 것.
+     * @param up 중력 반대 방향(world 좌표계 단위벡터). IMU 를 못 쓰면 [SCREEN_UP].
+     */
+    fun analyze(image: ImageProxy, timestampMs: Long, up: Vec3 = SCREEN_UP): PoseSample = synchronized(this) { analyzeImageLocked(image, timestampMs, up) }
+
+    private fun analyzeImageLocked(image: ImageProxy, timestampMs: Long, up: Vec3): PoseSample {
+        val fromGravity = up !== SCREEN_UP
+        if (!ensureReady()) return PoseSample.empty(up = up, fromGravity = fromGravity)
+        // YUV → Bitmap 변환은 실제 추론 프레임에서만 (스킵된 프레임은 비용 0)
+        val src = try {
+            image.toBitmap()
+        } catch (t: Throwable) {
+            return PoseSample.empty(up = up, fromGravity = fromGravity)
+        }
+        val rotation = image.imageInfo.rotationDegrees
+        val upright = rotateInto(src, rotation)
+
+        return try {
+            analyzeLocked(upright, timestampMs, up)
+        } finally {
+            if (upright !== src) src.recycle()
+        }
+    }
+
+    /** 회전 보정된 이미지 재생 입력. 카메라와 동일한 VIDEO 추론·관절 변환 경로를 사용한다.
+     * 비트맵 소유권은 호출자에게 있다. 저장 이미지에는 IMU가 없으므로 기본값은 SCREEN_UP이다. */
+    fun analyzeBitmap(upright: Bitmap, timestampMs: Long, up: Vec3 = SCREEN_UP): PoseSample = synchronized(this) { analyzeLocked(upright, timestampMs, up) }
+
+    private fun analyzeLocked(upright: Bitmap, timestampMs: Long, up: Vec3): PoseSample {
+        val fromGravity = up !== SCREEN_UP
+        if (!ensureReady()) return PoseSample.empty(up = up, fromGravity = fromGravity)
+        val lm = landmarker ?: return PoseSample.empty(up = up, fromGravity = fromGravity)
+
+        val ts = maxOf(timestampMs, lastTimestampMs + 1)
+        lastTimestampMs = ts
+        val started = System.nanoTime()
+        val result: PoseLandmarkerResult? = try {
+            lm.detectForVideo(BitmapImageBuilder(upright).build(), ts)
+        } catch (t: Throwable) {
+            Log.w(TAG, "detect 실패: ${t.message}")
+            null
+        }
+        val inferMs = (System.nanoTime() - started) / 1_000_000
+        recordStat(inferMs)
+        val w = upright.width
+        val h = upright.height
+        val landmarks = result?.landmarks()?.firstOrNull()
+        val world = result?.worldLandmarks()?.firstOrNull()
+        if (landmarks == null || world == null || landmarks.size < MP_LANDMARK_COUNT) {
+            return PoseSample.empty(inferMs, w, h, up, fromGravity)
+        }
+
+        val xy = FloatArray(MP_LANDMARK_COUNT * 2)
+        val vis = FloatArray(MP_LANDMARK_COUNT)
+        val rawWorld = FloatArray(MP_LANDMARK_COUNT * 3)
+        for (i in 0 until MP_LANDMARK_COUNT) {
+            val p = landmarks[i]
+            xy[i * 2] = p.x()
+            xy[i * 2 + 1] = p.y()
+            val v = p.visibility().orElse(1f)
+            val pr = p.presence().orElse(1f)
+            vis[i] = minOf(v, pr)
+            val wp = world[i]
+            rawWorld[i * 3] = wp.x(); rawWorld[i * 3 + 1] = wp.y(); rawWorld[i * 3 + 2] = wp.z()
+        }
+
+        // 월드 좌표: m → cm, y/z 부호 반전 (spec §3)
+        val pts = arrayOfNulls<Vec3>(MP_LANDMARK_COUNT)
+        for (i in 0 until MP_LANDMARK_COUNT) {
+            if (vis[i] < MIN_VISIBILITY) continue
+            val p = world[i]
+            pts[i] = Vec3(p.x() * 100f, -p.y() * 100f, -p.z() * 100f)
+        }
+
+        val joints = HashMap<String, Vec3?>(24)
+        for ((name, idx) in Joints.SINGLE) joints[name] = pts.getOrNull(idx)
+        for ((name, pair) in Joints.PAIR) {
+            val a = pts.getOrNull(pair.first)
+            val b = pts.getOrNull(pair.second)
+            joints[name] = if (a != null && b != null) mid(a, b) else a ?: b
+        }
+        // up 자가검증: IMU 부호/회전 매핑이 틀려 up 이 뒤집혔으면(골반이 발목 아래로 계산됨) −up 으로 보정 (spec §4)
+        val sanity = checkUpSanity(joints, up)
+        val upUsed = if (sanity.flipped) (up * -1f).unit() ?: up else up
+        if (sanity.flipped) {
+            flippedCount += 1
+            if (flippedCount == 1L || flippedCount % 50L == 0L) {
+                Log.w(TAG, "up 반전 감지·보정 (#$flippedCount): hip-ankle=${sanity.hipAboveAnkleCm} ear-shoulder=${sanity.earAboveShoulderCm}")
+            }
+        }
+        val frame = PoseFrame(joints, upUsed)
+        // §33: 촬영 방향 피처(view_cos/view_sin)도 같은 프레임 피처로 — 집계·로그·규칙 게이팅이 추가 배선 없이 받는다
+        // §62a 후속 3: 이미지 2D 발 너비 — 월드 발목 간격은 발끝 회전에 흔들린다(Stance2d 주석). 재생기 frameFeatures 도 같은 함수
+        // §62c: 컬의 팔꿈치 앞 이탈·몸통 기울기는 이미지 2D + 촬영 방위 부호(Arm2d). 재생기 frameFeatures 도 같은 순서·같은 함수
+        val viewF = ViewEstimator.frameFeatures(joints)
+        val aspect = w.toFloat() / h
+        // §63: 런지 걸음 기하(앞다리·깊이·무릎 쏠림·어깨 높이) — 어깨선 요로. 재생기 frameFeatures 도 같은 순서·같은 함수
+        val features = frame.features() + viewF + Stance2d.features(xy, vis, MIN_VISIBILITY, aspect) +
+            Arm2d.features(xy, vis, MIN_VISIBILITY, aspect, Arm2d.yawOf(viewF)) +
+            Lunge2d.features(frame, xy, vis, MIN_VISIBILITY, aspect, ViewEstimator.shoulderYawOf(viewF))
+        val visibleCount = vis.count { it >= MIN_VISIBILITY }
+        return PoseSample(
+            detected = true,
+            normalizedXy = xy,
+            visibility = vis,
+            features = features,
+            visibleJointCount = visibleCount,
+            inferMs = inferMs,
+            imageWidth = w,
+            imageHeight = h,
+            up = upUsed,
+            upFromGravity = fromGravity,
+            upFlipped = sanity.flipped,
+            upVerified = sanity.verified,
+            world = rawWorld,
+        )
+    }
+
+    /** 회전이 필요하면 재사용 비트맵에 그려서 반환(무할당), 0 이면 원본 그대로. */
+    private fun rotateInto(src: Bitmap, rotation: Int): Bitmap {
+        if (rotation == 0) return src
+        val swap = rotation == 90 || rotation == 270
+        val w = if (swap) src.height else src.width
+        val h = if (swap) src.width else src.height
+        var dst = uprightBitmap
+        if (dst == null || dst.width != w || dst.height != h || dst.isRecycled) {
+            dst?.recycle()
+            dst = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+            uprightBitmap = dst
+        }
+        rotateMatrix.reset()
+        rotateMatrix.postTranslate(-src.width / 2f, -src.height / 2f)
+        rotateMatrix.postRotate(rotation.toFloat())
+        rotateMatrix.postTranslate(w / 2f, h / 2f)
+        canvas.setBitmap(dst)
+        canvas.drawBitmap(src, rotateMatrix, null)
+        canvas.setBitmap(null)
+        return dst
+    }
+
+    private fun recordStat(ms: Long) {
+        inferCount += 1
+        lastMs = ms
+        emaMs = if (inferCount == 1L) ms.toFloat() else emaMs * 0.8f + ms * 0.2f
+        if (inferCount % 25L == 0L) {
+            Log.d(TAG, "infer #$inferCount model=${model.label} delegate=$delegateName ema=${"%.0f".format(emaMs)}ms last=${ms}ms")
+        }
+    }
+
+    /**
+     * 닫힘 표시만 — 락 없이 바로 돌아온다. 이 뒤로 들어오는 분석은 모델을 만들지 않고 돌아간다([ensureReady]).
+     * 메인 스레드는 이것만 부르고 실제 [close] 는 분석 스레드에 맡긴다 — 첫 프레임의 모델 준비(GPU, 수 초)를 메인이 기다리지 않게.
+     */
+    fun markClosed() { closed = true }
+
+    /** 진행 중인 추론이 끝날 때까지 기다린 뒤 닫는다(추론 한 번 ≈ 100 ms, 첫 프레임은 모델 준비까지). 여러 번 불러도 된다. 메인 스레드에서 부르지 않는다. */
+    fun close() {
+        closed = true      // 락 밖에서 먼저 — 락을 기다리는 분석은 들어오자마자 돌아간다
+        synchronized(this) { closeLocked() }
+    }
+
+    private fun closeLocked() {
+        try {
+            landmarker?.close()
+        } catch (_: Throwable) {
+        }
+        landmarker = null
+        uprightBitmap?.recycle()
+        uprightBitmap = null
+    }
+}
+
+/** 오버레이용 골격 연결 (MediaPipe 33점). */
+val POSE_CONNECTIONS: List<Pair<Int, Int>> = listOf(
+    // 얼굴
+    0 to 1, 1 to 2, 2 to 3, 3 to 7, 0 to 4, 4 to 5, 5 to 6, 6 to 8,
+    9 to 10,
+    // 몸통
+    11 to 12, 11 to 23, 12 to 24, 23 to 24,
+    // 왼팔
+    11 to 13, 13 to 15, 15 to 17, 15 to 19, 15 to 21, 17 to 19,
+    // 오른팔
+    12 to 14, 14 to 16, 16 to 18, 16 to 20, 16 to 22, 18 to 20,
+    // 왼다리
+    23 to 25, 25 to 27, 27 to 29, 27 to 31, 29 to 31,
+    // 오른다리
+    24 to 26, 26 to 28, 28 to 30, 28 to 32, 30 to 32,
+)

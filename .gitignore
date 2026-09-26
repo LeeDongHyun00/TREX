@@ -14,6 +14,11 @@ local.properties
 
 # Android Studio / IntelliJ
 .idea/
+*.hprof
+
+# Claude Code 작업 트리·로컬 설정 (저장소 내부에 생기지만 공유 대상 아님)
+.claude/worktrees/
+.claude/settings.local.json
 
 # Signing / secrets
 *.jks
@@ -37,6 +42,42 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
+# 대형 브리지 재생 산출물 — 원본 데이터에서 언제든 재생성하며 GitHub 제한을 넘는다.
+docs/bridge-sides.full-sweep.v1.json
+
 # OS
 .DS_Store
 Thumbs.db
+
+# Research outputs (AIHub parsed tables, experiment results)
+research/aihub_fitness/outputs*/
+research/aihub_fitness/models/
+# 카메라 관측성 연구 산출물 — 수백 MB, REHAB24-6(CC BY-NC) 파생 캡처 포함이라 커밋·공개 금지
+research/camera_observability/outputs/
+__pycache__/
+*.pyc
+venv/
+.venv/
+*.egg-info/
+.ipynb_checkpoints/
+
+# 원천 데이터셋 — AIHub 원본/압축본은 로컬(T:)에만 둔다 (라이선스·용량)
+data/
+*.tar
+*.tar.gz
+*.zip
+
+# 실기기 세트 로그 (adb pull 결과) — 개인 측정치라 저장소에 올리지 않는다
+research/aihub_fitness/logs/
+*.jsonl
+
+# 파리티 픽스처는 테스트가 쓰는 .txt 만 추적 (.json 은 동일 내용의 참고본)
+app/src/test/resources/posture_port_fixture.json
+
+# 로컬 Python 런타임
+.venv312/
+
+# AI Hub 영양DB 400종 원표 — 공개 저장소에 두지 않는다(재배포 소지). build_class_map.js 로 다시 만든다.
+class_map.csv
+class_map.json
+nutrition_400*.json

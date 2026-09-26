@@ -1,0 +1,843 @@
+{
+ "source": "mmfit video → MediaPipe (app model, VIDEO, app cadence) | mmfit_align.py: 정답 창을 영상 시각으로 옮김(세트별 상관 지연, r ≥ 0.8)",
+ "alwaysN": 10,
+ "setMarginMs": 500,
+ "subjectAssumption": "MM-Fit: P0·P1 = EDA 표, 나머지 워크아웃은 한 사람씩으로 가정(u:), --subject-map 으로 덮음",
+ "configs": {
+  "live": {
+   "덤벨 컬": {
+    "sets": 59,
+    "unlabeled": 0,
+    "exactWithWindows": 0.0,
+    "overWithWindows": 0,
+    "truth": 599,
+    "detected": 51,
+    "MAE": 9.288135593220339,
+    "OBO": 0.0,
+    "exact": 0.0,
+    "under": 59,
+    "over": 0,
+    "zeroSets": 38,
+    "precision": 1.0,
+    "recall": 0.08514190317195326,
+    "countF1": 0.15692307692307692,
+    "valid": 1,
+    "invalid": 68,
+    "romUnjudged": 0,
+    "pendingAtEnd": 0,
+    "inProgressAtEnd": 0,
+    "valueCoverage": 0.8613013698630136,
+    "feature": "elbow_mean",
+    "minAmp": 35.0,
+    "lead": {
+     "windows": 59,
+     "falseCounts": 5,
+     "perSet": 0.0847457627118644,
+     "setsWithFalse": 5,
+     "seconds": 801.2700000000001,
+     "observedSeconds": 637.002,
+     "perMinute": 0.47095613514557255
+    },
+    "after": {
+     "windows": 59,
+     "falseCounts": 13,
+     "perSet": 0.22033898305084745,
+     "setsWithFalse": 13,
+     "seconds": 599.2590000000001,
+     "observedSeconds": 468.36100000000005,
+     "perMinute": 1.6653820450464492
+    }
+   },
+   "바벨 스쿼트": {
+    "sets": 64,
+    "unlabeled": 0,
+    "exactWithWindows": 0.46875,
+    "overWithWindows": 2,
+    "truth": 639,
+    "detected": 469,
+    "MAE": 2.65625,
+    "OBO": 0.59375,
+    "exact": 0.328125,
+    "under": 43,
+    "over": 0,
+    "zeroSets": 6,
+    "precision": 1.0,
+    "recall": 0.7339593114241002,
+    "countF1": 0.8465703971119133,
+    "valid": 293,
+    "invalid": 208,
+    "romUnjudged": 0,
+    "pendingAtEnd": 0,
+    "inProgressAtEnd": 0,
+    "valueCoverage": 0.989934626958597,
+    "feature": "knee_mean",
+    "minAmp": 35.0,
+    "lead": {
+     "windows": 64,
+     "falseCounts": 1,
+     "perSet": 0.015625,
+     "setsWithFalse": 1,
+     "seconds": 911.0309999999998,
+     "observedSeconds": 887.9309999999998,
+     "perMinute": 0.06757281815816771
+    },
+    "after": {
+     "windows": 64,
+     "falseCounts": 31,
+     "perSet": 0.484375,
+     "setsWithFalse": 28,
+     "seconds": 601.002,
+     "observedSeconds": 595.302,
+     "perMinute": 3.1244645574851084
+    }
+   },
+   "스텝 포워드 다이나믹 런지": {
+    "sets": 62,
+    "unlabeled": 0,
+    "exactWithWindows": 0.1935483870967742,
+    "overWithWindows": 10,
+    "truth": 624,
+    "detected": 434,
+    "MAE": 3.064516129032258,
+    "OBO": 0.4032258064516129,
+    "exact": 0.1774193548387097,
+    "under": 51,
+    "over": 0,
+    "zeroSets": 3,
+    "precision": 1.0,
+    "recall": 0.6955128205128205,
+    "countF1": 0.8204158790170132,
+    "valid": 0,
+    "invalid": 0,
+    "romUnjudged": 485,
+    "pendingAtEnd": 0,
+    "inProgressAtEnd": 0,
+    "valueCoverage": 0.9898283534647171,
+    "feature": "knee_mean",
+    "minAmp": 35.0,
+    "lead": {
+     "windows": 62,
+     "falseCounts": 17,
+     "perSet": 0.27419354838709675,
+     "setsWithFalse": 17,
+     "seconds": 878.4979999999999,
+     "observedSeconds": 866.198,
+     "perMinute": 1.177559865065493
+    },
+    "after": {
+     "windows": 62,
+     "falseCounts": 34,
+     "perSet": 0.5483870967741935,
+     "setsWithFalse": 32,
+     "seconds": 599.6699999999998,
+     "observedSeconds": 587.9699999999998,
+     "perMinute": 3.469564773712946
+    }
+   }
+  },
+  "hysteresis": {
+   "덤벨 컬": {
+    "sets": 59,
+    "unlabeled": 0,
+    "exactWithWindows": 0.0,
+    "overWithWindows": 0,
+    "truth": 599,
+    "detected": 83,
+    "MAE": 8.745762711864407,
+    "OBO": 0.0,
+    "exact": 0.0,
+    "under": 59,
+    "over": 0,
+    "zeroSets": 34,
+    "precision": 1.0,
+    "recall": 0.13856427378964942,
+    "countF1": 0.24340175953079182,
+    "valid": 1,
+    "invalid": 98,
+    "romUnjudged": 0,
+    "pendingAtEnd": 29,
+    "inProgressAtEnd": 5,
+    "valueCoverage": 0.8613013698630136,
+    "feature": "elbow_mean",
+    "minAmp": 35.0,
+    "lead": {
+     "windows": 59,
+     "falseCounts": 3,
+     "perSet": 0.05084745762711865,
+     "setsWithFalse": 2,
+     "seconds": 801.2700000000001,
+     "observedSeconds": 637.002,
+     "perMinute": 0.28257368108734354
+    },
+    "after": {
+     "windows": 59,
+     "falseCounts": 13,
+     "perSet": 0.22033898305084745,
+     "setsWithFalse": 11,
+     "seconds": 599.2590000000001,
+     "observedSeconds": 468.36100000000005,
+     "perMinute": 1.6653820450464492
+    }
+   },
+   "바벨 스쿼트": {
+    "sets": 64,
+    "unlabeled": 0,
+    "exactWithWindows": 0.890625,
+    "overWithWindows": 7,
+    "truth": 639,
+    "detected": 639,
+    "MAE": 0.0,
+    "OBO": 1.0,
+    "exact": 1.0,
+    "under": 0,
+    "over": 0,
+    "zeroSets": 0,
+    "precision": 1.0,
+    "recall": 1.0,
+    "countF1": 1.0,
+    "valid": 565,
+    "invalid": 91,
+    "romUnjudged": 0,
+    "pendingAtEnd": 4,
+    "inProgressAtEnd": 3,
+    "valueCoverage": 0.989934626958597,
+    "feature": "knee_mean",
+    "minAmp": 35.0,
+    "lead": {
+     "windows": 64,
+     "falseCounts": 5,
+     "perSet": 0.078125,
+     "setsWithFalse": 1,
+     "seconds": 911.0309999999998,
+     "observedSeconds": 887.9309999999998,
+     "perMinute": 0.33786409079083857
+    },
+    "after": {
+     "windows": 64,
+     "falseCounts": 12,
+     "perSet": 0.1875,
+     "setsWithFalse": 7,
+     "seconds": 601.002,
+     "observedSeconds": 595.302,
+     "perMinute": 1.2094701512845583
+    }
+   },
+   "스텝 포워드 다이나믹 런지": {
+    "sets": 62,
+    "unlabeled": 0,
+    "exactWithWindows": 0.5645161290322581,
+    "overWithWindows": 27,
+    "truth": 624,
+    "detected": 624,
+    "MAE": 0.03225806451612903,
+    "OBO": 1.0,
+    "exact": 0.967741935483871,
+    "under": 1,
+    "over": 1,
+    "zeroSets": 0,
+    "precision": 0.9983974358974359,
+    "recall": 0.9983974358974359,
+    "countF1": 0.9983974358974359,
+    "valid": 0,
+    "invalid": 0,
+    "romUnjudged": 666,
+    "pendingAtEnd": 8,
+    "inProgressAtEnd": 0,
+    "valueCoverage": 0.9898283534647171,
+    "feature": "knee_mean",
+    "minAmp": 35.0,
+    "lead": {
+     "windows": 62,
+     "falseCounts": 22,
+     "perSet": 0.3548387096774194,
+     "setsWithFalse": 18,
+     "seconds": 878.4979999999999,
+     "observedSeconds": 866.198,
+     "perMinute": 1.5239010018494616
+    },
+    "after": {
+     "windows": 62,
+     "falseCounts": 20,
+     "perSet": 0.3225806451612903,
+     "setsWithFalse": 18,
+     "seconds": 599.6699999999998,
+     "observedSeconds": 587.9699999999998,
+     "perMinute": 2.040920455125262
+    }
+   }
+  },
+  "live+knee_out_mean": {
+   "스텝 포워드 다이나믹 런지": {
+    "sets": 62,
+    "unlabeled": 0,
+    "exactWithWindows": 0.0,
+    "overWithWindows": 0,
+    "truth": 624,
+    "detected": 52,
+    "MAE": 9.225806451612904,
+    "OBO": 0.0,
+    "exact": 0.0,
+    "under": 62,
+    "over": 0,
+    "zeroSets": 33,
+    "precision": 1.0,
+    "recall": 0.08333333333333333,
+    "countF1": 0.15384615384615385,
+    "valid": 0,
+    "invalid": 0,
+    "romUnjudged": 66,
+    "pendingAtEnd": 0,
+    "inProgressAtEnd": 0,
+    "valueCoverage": 0.9898283534647171,
+    "feature": "knee_out_mean",
+    "minAmp": 0.1,
+    "lead": {
+     "windows": 62,
+     "falseCounts": 6,
+     "perSet": 0.0967741935483871,
+     "setsWithFalse": 6,
+     "seconds": 878.4979999999999,
+     "observedSeconds": 866.198,
+     "perMinute": 0.41560936414076227
+    },
+    "after": {
+     "windows": 62,
+     "falseCounts": 8,
+     "perSet": 0.12903225806451613,
+     "setsWithFalse": 8,
+     "seconds": 599.6699999999998,
+     "observedSeconds": 587.9699999999998,
+     "perMinute": 0.8163681820501049
+    }
+   }
+  },
+  "hysteresis+knee_minside": {
+   "스텝 포워드 다이나믹 런지": {
+    "sets": 62,
+    "unlabeled": 0,
+    "exactWithWindows": 0.3387096774193548,
+    "overWithWindows": 41,
+    "truth": 624,
+    "detected": 631,
+    "MAE": 0.14516129032258066,
+    "OBO": 1.0,
+    "exact": 0.8548387096774194,
+    "under": 1,
+    "over": 8,
+    "zeroSets": 0,
+    "precision": 0.9873217115689382,
+    "recall": 0.9983974358974359,
+    "countF1": 0.9928286852589642,
+    "valid": 0,
+    "invalid": 0,
+    "romUnjudged": 701,
+    "pendingAtEnd": 12,
+    "inProgressAtEnd": 1,
+    "valueCoverage": 0.9987285441830897,
+    "feature": "knee_minside",
+    "minAmp": 35.0,
+    "lead": {
+     "windows": 62,
+     "falseCounts": 34,
+     "perSet": 0.5483870967741935,
+     "setsWithFalse": 24,
+     "seconds": 878.4979999999999,
+     "observedSeconds": 878.198,
+     "perMinute": 2.322938562829795
+    },
+    "after": {
+     "windows": 62,
+     "falseCounts": 36,
+     "perSet": 0.5806451612903226,
+     "setsWithFalse": 29,
+     "seconds": 599.6699999999998,
+     "observedSeconds": 599.0699999999998,
+     "perMinute": 3.6055886624267623
+    }
+   }
+  },
+  "live+elbow_minside": {
+   "덤벨 컬": {
+    "sets": 59,
+    "unlabeled": 0,
+    "exactWithWindows": 0.0847457627118644,
+    "overWithWindows": 2,
+    "truth": 599,
+    "detected": 222,
+    "MAE": 6.389830508474576,
+    "OBO": 0.2033898305084746,
+    "exact": 0.03389830508474576,
+    "under": 57,
+    "over": 0,
+    "zeroSets": 21,
+    "precision": 1.0,
+    "recall": 0.37061769616026713,
+    "countF1": 0.5408038976857491,
+    "valid": 0,
+    "invalid": 0,
+    "romUnjudged": 264,
+    "pendingAtEnd": 0,
+    "inProgressAtEnd": 0,
+    "valueCoverage": 0.9972602739726028,
+    "feature": "elbow_minside",
+    "minAmp": 35.0,
+    "lead": {
+     "windows": 59,
+     "falseCounts": 9,
+     "perSet": 0.15254237288135594,
+     "setsWithFalse": 9,
+     "seconds": 801.2700000000001,
+     "observedSeconds": 794.3700000000001,
+     "perMinute": 0.6797839797575437
+    },
+    "after": {
+     "windows": 59,
+     "falseCounts": 33,
+     "perSet": 0.559322033898305,
+     "setsWithFalse": 27,
+     "seconds": 599.2590000000001,
+     "observedSeconds": 599.2590000000001,
+     "perMinute": 3.30408053946624
+    }
+   }
+  },
+  "hysteresis+elbow_minside": {
+   "덤벨 컬": {
+    "sets": 59,
+    "unlabeled": 0,
+    "exactWithWindows": 0.4745762711864407,
+    "overWithWindows": 23,
+    "truth": 599,
+    "detected": 588,
+    "MAE": 0.22033898305084745,
+    "OBO": 0.9830508474576272,
+    "exact": 0.847457627118644,
+    "under": 8,
+    "over": 1,
+    "zeroSets": 0,
+    "precision": 0.9982993197278912,
+    "recall": 0.9799666110183639,
+    "countF1": 0.9890480202190397,
+    "valid": 0,
+    "invalid": 0,
+    "romUnjudged": 620,
+    "pendingAtEnd": 3,
+    "inProgressAtEnd": 7,
+    "valueCoverage": 0.9972602739726028,
+    "feature": "elbow_minside",
+    "minAmp": 35.0,
+    "lead": {
+     "windows": 59,
+     "falseCounts": 12,
+     "perSet": 0.2033898305084746,
+     "setsWithFalse": 8,
+     "seconds": 801.2700000000001,
+     "observedSeconds": 794.3700000000001,
+     "perMinute": 0.9063786396767248
+    },
+    "after": {
+     "windows": 59,
+     "falseCounts": 20,
+     "perSet": 0.3389830508474576,
+     "setsWithFalse": 16,
+     "seconds": 599.2590000000001,
+     "observedSeconds": 599.2590000000001,
+     "perMinute": 2.0024730542219635
+    }
+   }
+  }
+ },
+ "always": {
+  "바벨 스쿼트": {
+   "n": 10,
+   "sets": 64,
+   "exact": 0.953125,
+   "OBO": 0.984375,
+   "MAE": 0.078125,
+   "over": 1,
+   "recall": 0.9968701095461658
+  },
+  "스텝 포워드 다이나믹 런지": {
+   "n": 10,
+   "sets": 62,
+   "exact": 0.9516129032258065,
+   "OBO": 0.9838709677419355,
+   "MAE": 0.0967741935483871,
+   "over": 1,
+   "recall": 0.9919871794871795
+  },
+  "덤벨 컬": {
+   "n": 10,
+   "sets": 59,
+   "exact": 0.9152542372881356,
+   "OBO": 0.9661016949152542,
+   "MAE": 0.15254237288135594,
+   "over": 0,
+   "recall": 0.9849749582637729
+  }
+ },
+ "bootstrap": {
+  "live": {
+   "덤벨 컬": {
+    "subjects": 11,
+    "boot": 2000,
+    "seed": 20260924,
+    "exact": {
+     "point": 0.0,
+     "lo": 0.0,
+     "hi": 0.0
+    },
+    "recall": {
+     "point": 0.08514190317195326,
+     "lo": 0.031026252983293555,
+     "hi": 0.12657166806370496
+    },
+    "MAE": {
+     "point": 9.288135593220339,
+     "lo": 8.816326530612244,
+     "hi": 9.88888888888889
+    },
+    "exactMinusAlways": {
+     "point": -0.9152542372881356,
+     "lo": -0.9577464788732394,
+     "hi": -0.8387096774193549
+    },
+    "leadPerSet": {
+     "point": 0.0847457627118644,
+     "lo": 0.031746031746031744,
+     "hi": 0.14285714285714285
+    },
+    "afterPerSet": {
+     "point": 0.22033898305084745,
+     "lo": 0.09523809523809523,
+     "hi": 0.3448275862068966
+    }
+   },
+   "바벨 스쿼트": {
+    "subjects": 11,
+    "boot": 2000,
+    "seed": 20260924,
+    "exact": {
+     "point": 0.328125,
+     "lo": 0.08823529411764706,
+     "hi": 0.4430379746835443
+    },
+    "recall": {
+     "point": 0.7339593114241002,
+     "lo": 0.5722713864306784,
+     "hi": 0.7996357012750456
+    },
+    "MAE": {
+     "point": 2.65625,
+     "lo": 2.0,
+     "hi": 4.264705882352941
+    },
+    "exactMinusAlways": {
+     "point": -0.625,
+     "lo": -0.8541666666666666,
+     "hi": -0.4936708860759494
+    },
+    "leadPerSet": {
+     "point": 0.015625,
+     "lo": 0.0,
+     "hi": 0.0625
+    },
+    "afterPerSet": {
+     "point": 0.484375,
+     "lo": 0.36363636363636365,
+     "hi": 0.7291666666666666
+    }
+   },
+   "스텝 포워드 다이나믹 런지": {
+    "subjects": 11,
+    "boot": 2000,
+    "seed": 20260924,
+    "exact": {
+     "point": 0.1774193548387097,
+     "lo": 0.030303030303030304,
+     "hi": 0.2608695652173913
+    },
+    "recall": {
+     "point": 0.6955128205128205,
+     "lo": 0.5748502994011976,
+     "hi": 0.7580645161290323
+    },
+    "MAE": {
+     "point": 3.064516129032258,
+     "lo": 2.425531914893617,
+     "hi": 4.2727272727272725
+    },
+    "exactMinusAlways": {
+     "point": -0.7741935483870968,
+     "lo": -0.8852459016393442,
+     "hi": -0.6825396825396826
+    },
+    "leadPerSet": {
+     "point": 0.27419354838709675,
+     "lo": 0.14754098360655737,
+     "hi": 0.48484848484848486
+    },
+    "afterPerSet": {
+     "point": 0.5483870967741935,
+     "lo": 0.41935483870967744,
+     "hi": 0.8181818181818182
+    }
+   }
+  },
+  "hysteresis": {
+   "덤벨 컬": {
+    "subjects": 11,
+    "boot": 2000,
+    "seed": 20260924,
+    "exact": {
+     "point": 0.0,
+     "lo": 0.0,
+     "hi": 0.0
+    },
+    "recall": {
+     "point": 0.13856427378964942,
+     "lo": 0.036613272311212815,
+     "hi": 0.2190237797246558
+    },
+    "MAE": {
+     "point": 8.745762711864407,
+     "lo": 7.883116883116883,
+     "hi": 9.8
+    },
+    "exactMinusAlways": {
+     "point": -0.9152542372881356,
+     "lo": -0.9577464788732394,
+     "hi": -0.8387096774193549
+    },
+    "leadPerSet": {
+     "point": 0.05084745762711865,
+     "lo": 0.0,
+     "hi": 0.18604651162790697
+    },
+    "afterPerSet": {
+     "point": 0.22033898305084745,
+     "lo": 0.10869565217391304,
+     "hi": 0.35294117647058826
+    }
+   },
+   "바벨 스쿼트": {
+    "subjects": 11,
+    "boot": 2000,
+    "seed": 20260924,
+    "exact": {
+     "point": 1.0,
+     "lo": 1.0,
+     "hi": 1.0
+    },
+    "recall": {
+     "point": 1.0,
+     "lo": 1.0,
+     "hi": 1.0
+    },
+    "MAE": {
+     "point": 0.0,
+     "lo": 0.0,
+     "hi": 0.0
+    },
+    "exactMinusAlways": {
+     "point": 0.046875,
+     "lo": 0.0,
+     "hi": 0.17647058823529413
+    },
+    "leadPerSet": {
+     "point": 0.078125,
+     "lo": 0.0,
+     "hi": 0.3125
+    },
+    "afterPerSet": {
+     "point": 0.1875,
+     "lo": 0.0,
+     "hi": 0.4791666666666667
+    }
+   },
+   "스텝 포워드 다이나믹 런지": {
+    "subjects": 11,
+    "boot": 2000,
+    "seed": 20260924,
+    "exact": {
+     "point": 0.967741935483871,
+     "lo": 0.9166666666666666,
+     "hi": 1.0
+    },
+    "recall": {
+     "point": 0.9983974358974359,
+     "lo": 0.9936708860759493,
+     "hi": 1.0
+    },
+    "MAE": {
+     "point": 0.03225806451612903,
+     "lo": 0.0,
+     "hi": 0.08333333333333333
+    },
+    "exactMinusAlways": {
+     "point": 0.016129032258064516,
+     "lo": -0.04838709677419355,
+     "hi": 0.12121212121212122
+    },
+    "leadPerSet": {
+     "point": 0.3548387096774194,
+     "lo": 0.14583333333333334,
+     "hi": 0.574468085106383
+    },
+    "afterPerSet": {
+     "point": 0.3225806451612903,
+     "lo": 0.14285714285714285,
+     "hi": 0.574468085106383
+    }
+   }
+  },
+  "live+knee_out_mean": {
+   "스텝 포워드 다이나믹 런지": {
+    "subjects": 11,
+    "boot": 2000,
+    "seed": 20260924,
+    "exact": {
+     "point": 0.0,
+     "lo": 0.0,
+     "hi": 0.0
+    },
+    "recall": {
+     "point": 0.08333333333333333,
+     "lo": 0.057660626029654036,
+     "hi": 0.1288981288981289
+    },
+    "MAE": {
+     "point": 9.225806451612904,
+     "lo": 8.76595744680851,
+     "hi": 9.5
+    },
+    "exactMinusAlways": {
+     "point": -0.9516129032258065,
+     "lo": -1.0,
+     "hi": -0.8484848484848485
+    },
+    "leadPerSet": {
+     "point": 0.0967741935483871,
+     "lo": 0.03225806451612903,
+     "hi": 0.24242424242424243
+    },
+    "afterPerSet": {
+     "point": 0.12903225806451613,
+     "lo": 0.05434782608695652,
+     "hi": 0.2978723404255319
+    }
+   }
+  },
+  "hysteresis+knee_minside": {
+   "스텝 포워드 다이나믹 런지": {
+    "subjects": 11,
+    "boot": 2000,
+    "seed": 20260924,
+    "exact": {
+     "point": 0.8548387096774194,
+     "lo": 0.7575757575757576,
+     "hi": 0.9361702127659575
+    },
+    "recall": {
+     "point": 0.9983974358974359,
+     "lo": 0.9936708860759493,
+     "hi": 1.0
+    },
+    "MAE": {
+     "point": 0.14516129032258066,
+     "lo": 0.06382978723404255,
+     "hi": 0.24242424242424243
+    },
+    "exactMinusAlways": {
+     "point": -0.0967741935483871,
+     "lo": -0.19047619047619047,
+     "hi": 0.030303030303030304
+    },
+    "leadPerSet": {
+     "point": 0.5483870967741935,
+     "lo": 0.2857142857142857,
+     "hi": 0.9696969696969697
+    },
+    "afterPerSet": {
+     "point": 0.5806451612903226,
+     "lo": 0.358974358974359,
+     "hi": 0.9090909090909091
+    }
+   }
+  },
+  "live+elbow_minside": {
+   "덤벨 컬": {
+    "subjects": 11,
+    "boot": 2000,
+    "seed": 20260924,
+    "exact": {
+     "point": 0.03389830508474576,
+     "lo": 0.0,
+     "hi": 0.14285714285714285
+    },
+    "recall": {
+     "point": 0.37061769616026713,
+     "lo": 0.2987012987012987,
+     "hi": 0.5
+    },
+    "MAE": {
+     "point": 6.389830508474576,
+     "lo": 5.066666666666666,
+     "hi": 7.086956521739131
+    },
+    "exactMinusAlways": {
+     "point": -0.8813559322033898,
+     "lo": -0.9444444444444444,
+     "hi": -0.75
+    },
+    "leadPerSet": {
+     "point": 0.15254237288135594,
+     "lo": 0.0,
+     "hi": 0.22950819672131148
+    },
+    "afterPerSet": {
+     "point": 0.559322033898305,
+     "lo": 0.2857142857142857,
+     "hi": 0.8095238095238095
+    }
+   }
+  },
+  "hysteresis+elbow_minside": {
+   "덤벨 컬": {
+    "subjects": 11,
+    "boot": 2000,
+    "seed": 20260924,
+    "exact": {
+     "point": 0.847457627118644,
+     "lo": 0.6458333333333334,
+     "hi": 0.94
+    },
+    "recall": {
+     "point": 0.9799666110183639,
+     "lo": 0.9424460431654677,
+     "hi": 0.9953703703703703
+    },
+    "MAE": {
+     "point": 0.22033898305084745,
+     "lo": 0.06,
+     "hi": 0.6041666666666666
+    },
+    "exactMinusAlways": {
+     "point": -0.06779661016949153,
+     "lo": -0.23076923076923078,
+     "hi": 0.012987012987012988
+    },
+    "leadPerSet": {
+     "point": 0.2033898305084746,
+     "lo": 0.06451612903225806,
+     "hi": 0.2840909090909091
+    },
+    "afterPerSet": {
+     "point": 0.3389830508474576,
+     "lo": 0.1896551724137931,
+     "hi": 0.59375
+    }
+   }
+  }
+ }
+}

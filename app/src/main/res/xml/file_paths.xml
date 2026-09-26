@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- FileProvider 경로: 자세 세트 로그(JSONL) 공유용. SetLogStore 는 externalFilesDir(없으면 filesDir)/posture_logs 에 쓴다. -->
+<paths>
+    <external-files-path name="posture_logs" path="posture_logs/" />
+    <files-path name="posture_logs_internal" path="posture_logs/" />
+</paths>

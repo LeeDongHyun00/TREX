@@ -1,0 +1,117 @@
+package com.example.trex_kotlin.posture
+
+/**
+ * 위반 부위 시각화 (수정할점 #1): 위반 중인 규칙의 피처가 어느 관절을 재는지 → 스켈레톤에서
+ * 그 관절·연결선을 강조해 "어디가 틀렸는지" 눈으로 보이게 한다.
+ *
+ * 매핑은 피처 정의(무엇을 재는가)에서 역산 — FLOOR_REQUIREMENTS 의 부위 역산과 같은 원칙.
+ * 모르는 피처는 빈 집합(강조 없음) — 틀린 부위를 잘못 가리키는 것보다 안 가리키는 게 낫다.
+ */
+object RuleHighlight {
+
+    private const val NOSE = 0
+    private const val L_EAR = 7; private const val R_EAR = 8
+    private const val L_SH = 11; private const val R_SH = 12
+    private const val L_EL = 13; private const val R_EL = 14
+    private const val L_WR = 15; private const val R_WR = 16
+    private const val L_HIP = 23; private const val R_HIP = 24
+    private const val L_KNEE = 25; private const val R_KNEE = 26
+    private const val L_ANK = 27; private const val R_ANK = 28
+    private const val L_HEEL = 29; private const val R_HEEL = 30
+    private const val L_FOOT = 31; private const val R_FOOT = 32
+
+    private val HEAD = setOf(NOSE, L_EAR, R_EAR)
+    private val SHOULDERS = setOf(L_SH, R_SH)
+    private val ELBOWS = setOf(L_EL, R_EL)
+    private val WRISTS = setOf(L_WR, R_WR)
+    private val HIPS = setOf(L_HIP, R_HIP)
+    private val KNEES = setOf(L_KNEE, R_KNEE)
+    private val ANKLES = setOf(L_ANK, R_ANK)
+    private val FEET = setOf(L_HEEL, R_HEEL, L_FOOT, R_FOOT)
+    private val TORSO = SHOULDERS + HIPS
+
+    /** base feature → 강조할 MP 랜드마크. 접두 일치로 변형(_L/_R/_mean/_minside…)을 흡수한다. */
+    private val PREFIX_MAP: List<Pair<String, Set<Int>>> = listOf(
+        // 머리·시선
+        "head_pitch" to HEAD, "head_yaw" to HEAD, "face_vs_torso" to HEAD + SHOULDERS,
+        "face_vs_forward" to HEAD, "head_trunk_ang" to HEAD + HIPS, "ear_shoulder_gap" to HEAD + SHOULDERS,
+        "head_ground" to HEAD,
+        // 몸통·척추
+        "torso_incl" to TORSO, "torso_pitch" to TORSO, "torso_roll" to TORSO,
+        "sh_over_hip_fwd" to TORSO, "shoulder_asym" to SHOULDERS, "shoulder_h" to SHOULDERS,
+        "shoulder_neck_gap" to SHOULDERS, "trunk_ankle_ang" to TORSO + ANKLES,
+        "neck_over_ankle" to SHOULDERS + ANKLES, "hip_height_rel" to HIPS,
+        // 팔
+        "elbow_torso" to ELBOWS + TORSO, "elbow_wrist_h" to ELBOWS + WRISTS, "elbow_h" to ELBOWS,
+        "elbow_width" to ELBOWS, "elbow" to ELBOWS,
+        "forearm_vert" to ELBOWS + WRISTS, "upperarm_vert" to SHOULDERS + ELBOWS,
+        "grip_w" to WRISTS, "hand_h_asym" to WRISTS, "wrist" to WRISTS,
+        "palm_head_dist" to WRISTS + HEAD, "palm" to WRISTS, "hand_shoulder_off" to WRISTS + SHOULDERS,
+        "wrist_shoulder_d" to WRISTS + SHOULDERS,
+        // 하체
+        "knee_out" to KNEES + FEET, "kneefoot" to KNEES + FEET, "knee_gap" to KNEES,
+        "knee_elbow_dist" to KNEES + ELBOWS, "knee_shoulder_d" to KNEES + SHOULDERS,
+        "knee_lat" to KNEES, "knee_fwd" to KNEES, "knee_h" to KNEES, "knee_dev" to KNEES,
+        "knee_ground" to KNEES, "knee_ang" to HIPS + KNEES + ANKLES, "knee" to KNEES,
+        "hip_below_knee" to HIPS + KNEES, "hip_dev_ankle" to HIPS + SHOULDERS + ANKLES,
+        "hip_dev_knee" to HIPS + SHOULDERS + KNEES, "hip_ang" to SHOULDERS + HIPS + KNEES,
+        "hip_ground" to HIPS, "hip" to HIPS,
+        "stance_w" to ANKLES, "ankle_hip_d" to ANKLES + HIPS, "ankle_gap" to ANKLES,
+        "ankle_ground" to ANKLES, "ankle" to ANKLES,
+        "heel_lift" to FEET, "foot_pitch" to FEET + ANKLES, "foot_y" to FEET, "foot" to FEET,
+        "toe_out" to FEET + ANKLES,   // §62 발끝 방향
+        "stance_sh" to ANKLES + SHOULDERS,   // §62a 발 너비(어깨 기준)
+        "stance_2d" to ANKLES + SHOULDERS,   // §62a 후속 3 이미지 2D 발 너비
+        "shoulder_ground" to SHOULDERS, "shoulder_dev" to SHOULDERS + HIPS + WRISTS,
+        "shoulder_arm_ang" to HIPS + SHOULDERS + ELBOWS, "shoulder" to SHOULDERS,
+        "hip_asym" to HIPS, "spine" to TORSO,
+        // 반복별 자세 검사의 이미지 2D 피처(§62b·§62c) — 문구가 가리키는 부위와 맞춘다
+        "toe2d" to FEET + ANKLES, "ankle_sep_2d" to ANKLES, "shoulder_sep_2d" to SHOULDERS,
+        "wrist_h2d" to ELBOWS + WRISTS,          // '팔꿈치 뜸' — 손목 높이로 재지만 말은 팔꿈치
+        "elbow_lat2d" to SHOULDERS + ELBOWS, "elbow_rise2d" to SHOULDERS + ELBOWS,
+        "elbow_fwd2d" to ELBOWS + TORSO, "torso_tilt2d" to TORSO, "elbow_gap" to ELBOWS,
+        // 런지 걸음 기하(§63)
+        "lunge_front_shin" to KNEES + ANKLES + FEET, "lunge_back_knee_h" to KNEES + ANKLES, "lunge" to HIPS + KNEES + ANKLES,
+        "sh_level2d" to SHOULDERS,
+    )
+
+    fun landmarksFor(baseFeature: String): Set<Int> {
+        if (baseFeature.endsWith("_L") || baseFeature.endsWith("_R")) {
+            val left = baseFeature.endsWith("_L")
+            return landmarksFor(baseFeature.dropLast(2)).filter { it == 0 || (if (left) it % 2 == 1 else it % 2 == 0) }.toSet()
+        }
+        if (baseFeature == PlankGeometry.HEAD || baseFeature == PlankGeometry.NECK) return HEAD + SHOULDERS
+        if (baseFeature == PlankGeometry.HIP) return SHOULDERS + HIPS + ANKLES
+        // wrist가 wrist_shoulder_d를 가리지 않도록 가장 구체적인 정의를 먼저 고른다.
+        return PREFIX_MAP.filter { baseFeature.startsWith(it.first) }.maxByOrNull { it.first.length }?.second.orEmpty()
+    }
+
+    /**
+     * 반복별 자세 검사 한 회의 위반 부위 — (검증 ship 위반, 참고 beta 위반). ship 은 붉게, beta 는 '참고' 색으로 칠한다(원칙 #2).
+     * 유보(촬영 방향·측정 무효)는 칠하지 않는다(원칙 #1).
+     */
+    fun forRepForm(outcomes: List<RepFormOutcome>): Pair<Set<Int>, Set<Int>> {
+        val bad = outcomes.filter { it.verdict == Verdict.VIOLATION }
+        val ship = bad.filter { it.check.ship }.flatMap { landmarksFor(it.check.feature) }.toSet()
+        val beta = bad.filter { !it.check.ship }.flatMap { landmarksFor(it.check.feature) }.toSet() - ship
+        return ship to beta
+    }
+
+    /**
+     * 걸음 하나의 위반 부위(§63) — 검사의 [RepFormCheck.highlight] 틀에서 `{front}` 를 그 걸음 앞다리(L/R)로 바꿔 **앞다리만** 칠한다.
+     * 쪽을 모르면 틀에서 `_{front}` 를 떼어 양쪽을 칠한다. 틀이 없는 검사는 [forRepForm] 과 같다.
+     */
+    fun forRepForm(rep: RepFormRep): Pair<Set<Int>, Set<Int>> {
+        fun feat(o: RepFormOutcome): String = o.check.highlight?.let { h -> rep.side?.let { h.replace("{front}", it.key) } ?: h.replace("_{front}", "") } ?: o.check.feature
+        val bad = rep.outcomes.filter { it.verdict == Verdict.VIOLATION }
+        val ship = bad.filter { it.check.ship }.flatMap { landmarksFor(feat(it)) }.toSet()
+        val beta = bad.filter { !it.check.ship }.flatMap { landmarksFor(feat(it)) }.toSet() - ship
+        return ship to beta
+    }
+
+    /** 위반 중인 규칙들의 강조 관절 합집합. */
+    fun forViolations(states: List<OnsetState>): Set<Int> = states
+        .filter { it.recent == Verdict.VIOLATION }
+        .flatMap { landmarksFor(it.rule.baseFeature) }
+        .toSet()
+}

@@ -1,0 +1,423 @@
+{
+ "note": "집계만 — 녹화별 행 없음. 조정 없음(설계 §17).",
+ "gateDeg": 35.0,
+ "toleranceMs": 500,
+ "table": {
+  "hysteresis|바벨 스쿼트|cam17": {
+   "config": "hysteresis",
+   "exercise": "바벨 스쿼트",
+   "camera": "17",
+   "reps": 195,
+   "missed": 19,
+   "missModes": {
+    "신호 없음": 0,
+    "얕음": 14,
+    "확정 대기·버림": 3,
+    "시각 어긋남": 1,
+    "기타": 1
+   },
+   "missFirstRep": 3,
+   "missLastRep": 1,
+   "swingAllP10P50P90": [
+    39.278,
+    76.074,
+    100.15
+   ],
+   "swingHitP10P50P90": [
+    55.109,
+    77.921,
+    100.725
+   ],
+   "swingMissP10P50P90": [
+    19.663,
+    30.549,
+    70.303
+   ],
+   "repsBelowGate": 14,
+   "coverageP10P50P90": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "durationSP10P50P90": [
+    2.466,
+    3.166,
+    4.32
+   ],
+   "repsLongerThan8s": 0,
+   "cutFractionP50": [
+    0.0
+   ],
+   "bodyHeightP50": [
+    0.602
+   ]
+  },
+  "hysteresis|바벨 스쿼트|cam18": {
+   "config": "hysteresis",
+   "exercise": "바벨 스쿼트",
+   "camera": "18",
+   "reps": 195,
+   "missed": 94,
+   "missModes": {
+    "신호 없음": 88,
+    "얕음": 1,
+    "확정 대기·버림": 2,
+    "시각 어긋남": 1,
+    "기타": 2
+   },
+   "missFirstRep": 9,
+   "missLastRep": 2,
+   "swingAllP10P50P90": [
+    51.764,
+    80.741,
+    99.837
+   ],
+   "swingHitP10P50P90": [
+    56.929,
+    83.944,
+    100.131
+   ],
+   "swingMissP10P50P90": [
+    34.576,
+    35.612,
+    51.374
+   ],
+   "repsBelowGate": 90,
+   "coverageP10P50P90": [
+    0.0,
+    1.0,
+    1.0
+   ],
+   "durationSP10P50P90": [
+    2.466,
+    3.166,
+    4.32
+   ],
+   "repsLongerThan8s": 0,
+   "cutFractionP50": [
+    0.455
+   ],
+   "bodyHeightP50": [
+    0.492
+   ]
+  },
+  "hysteresis|스텝 포워드 다이나믹 런지|cam17": {
+   "config": "hysteresis",
+   "exercise": "스텝 포워드 다이나믹 런지",
+   "camera": "17",
+   "reps": 174,
+   "missed": 30,
+   "missModes": {
+    "신호 없음": 1,
+    "얕음": 25,
+    "확정 대기·버림": 1,
+    "시각 어긋남": 0,
+    "기타": 3
+   },
+   "missFirstRep": 6,
+   "missLastRep": 0,
+   "swingAllP10P50P90": [
+    28.925,
+    60.062,
+    86.919
+   ],
+   "swingHitP10P50P90": [
+    45.797,
+    64.048,
+    89.043
+   ],
+   "swingMissP10P50P90": [
+    14.576,
+    27.0,
+    38.245
+   ],
+   "repsBelowGate": 25,
+   "coverageP10P50P90": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "durationSP10P50P90": [
+    2.0,
+    3.3,
+    4.634
+   ],
+   "repsLongerThan8s": 0,
+   "cutFractionP50": [
+    0.0
+   ],
+   "bodyHeightP50": [
+    0.572
+   ]
+  },
+  "hysteresis|스텝 포워드 다이나믹 런지|cam18": {
+   "config": "hysteresis",
+   "exercise": "스텝 포워드 다이나믹 런지",
+   "camera": "18",
+   "reps": 174,
+   "missed": 25,
+   "missModes": {
+    "신호 없음": 0,
+    "얕음": 21,
+    "확정 대기·버림": 1,
+    "시각 어긋남": 0,
+    "기타": 3
+   },
+   "missFirstRep": 4,
+   "missLastRep": 0,
+   "swingAllP10P50P90": [
+    31.633,
+    63.785,
+    87.171
+   ],
+   "swingHitP10P50P90": [
+    45.706,
+    67.528,
+    90.192
+   ],
+   "swingMissP10P50P90": [
+    19.905,
+    28.955,
+    40.316
+   ],
+   "repsBelowGate": 22,
+   "coverageP10P50P90": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "durationSP10P50P90": [
+    2.0,
+    3.3,
+    4.634
+   ],
+   "repsLongerThan8s": 0,
+   "cutFractionP50": [
+    0.032
+   ],
+   "bodyHeightP50": [
+    0.481
+   ]
+  },
+  "live|바벨 스쿼트|cam17": {
+   "config": "live",
+   "exercise": "바벨 스쿼트",
+   "camera": "17",
+   "reps": 195,
+   "missed": 72,
+   "missModes": {
+    "신호 없음": 0,
+    "얕음": 14,
+    "확정 대기·버림": 0,
+    "시각 어긋남": 6,
+    "기타": 52
+   },
+   "missFirstRep": 3,
+   "missLastRep": 3,
+   "swingAllP10P50P90": [
+    39.278,
+    76.074,
+    100.15
+   ],
+   "swingHitP10P50P90": [
+    56.261,
+    76.888,
+    100.054
+   ],
+   "swingMissP10P50P90": [
+    29.149,
+    67.855,
+    99.936
+   ],
+   "repsBelowGate": 14,
+   "coverageP10P50P90": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "durationSP10P50P90": [
+    2.466,
+    3.166,
+    4.32
+   ],
+   "repsLongerThan8s": 0,
+   "cutFractionP50": [
+    0.0
+   ],
+   "bodyHeightP50": [
+    0.602
+   ]
+  },
+  "live|바벨 스쿼트|cam18": {
+   "config": "live",
+   "exercise": "바벨 스쿼트",
+   "camera": "18",
+   "reps": 195,
+   "missed": 119,
+   "missModes": {
+    "신호 없음": 88,
+    "얕음": 2,
+    "확정 대기·버림": 0,
+    "시각 어긋남": 3,
+    "기타": 26
+   },
+   "missFirstRep": 9,
+   "missLastRep": 5,
+   "swingAllP10P50P90": [
+    51.764,
+    80.741,
+    99.837
+   ],
+   "swingHitP10P50P90": [
+    51.444,
+    79.61,
+    98.163
+   ],
+   "swingMissP10P50P90": [
+    53.837,
+    85.264,
+    101.603
+   ],
+   "repsBelowGate": 90,
+   "coverageP10P50P90": [
+    0.0,
+    1.0,
+    1.0
+   ],
+   "durationSP10P50P90": [
+    2.466,
+    3.166,
+    4.32
+   ],
+   "repsLongerThan8s": 0,
+   "cutFractionP50": [
+    0.455
+   ],
+   "bodyHeightP50": [
+    0.492
+   ]
+  },
+  "live|스텝 포워드 다이나믹 런지|cam17": {
+   "config": "live",
+   "exercise": "스텝 포워드 다이나믹 런지",
+   "camera": "17",
+   "reps": 174,
+   "missed": 86,
+   "missModes": {
+    "신호 없음": 1,
+    "얕음": 25,
+    "확정 대기·버림": 0,
+    "시각 어긋남": 6,
+    "기타": 54
+   },
+   "missFirstRep": 6,
+   "missLastRep": 6,
+   "swingAllP10P50P90": [
+    28.925,
+    60.062,
+    86.919
+   ],
+   "swingHitP10P50P90": [
+    45.61,
+    64.221,
+    87.312
+   ],
+   "swingMissP10P50P90": [
+    21.807,
+    54.576,
+    86.882
+   ],
+   "repsBelowGate": 25,
+   "coverageP10P50P90": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "durationSP10P50P90": [
+    2.0,
+    3.3,
+    4.634
+   ],
+   "repsLongerThan8s": 0,
+   "cutFractionP50": [
+    0.0
+   ],
+   "bodyHeightP50": [
+    0.572
+   ]
+  },
+  "live|스텝 포워드 다이나믹 런지|cam18": {
+   "config": "live",
+   "exercise": "스텝 포워드 다이나믹 런지",
+   "camera": "18",
+   "reps": 174,
+   "missed": 74,
+   "missModes": {
+    "신호 없음": 0,
+    "얕음": 21,
+    "확정 대기·버림": 0,
+    "시각 어긋남": 9,
+    "기타": 44
+   },
+   "missFirstRep": 4,
+   "missLastRep": 4,
+   "swingAllP10P50P90": [
+    31.633,
+    63.785,
+    87.171
+   ],
+   "swingHitP10P50P90": [
+    49.911,
+    72.726,
+    92.151
+   ],
+   "swingMissP10P50P90": [
+    27.368,
+    46.046,
+    75.546
+   ],
+   "repsBelowGate": 22,
+   "coverageP10P50P90": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "durationSP10P50P90": [
+    2.0,
+    3.3,
+    4.634
+   ],
+   "repsLongerThan8s": 0,
+   "cutFractionP50": [
+    0.032
+   ],
+   "bodyHeightP50": [
+    0.481
+   ]
+  }
+ },
+ "pairedCameras": {
+  "바벨 스쿼트": {
+   "reps": 195,
+   "swing18minus17P10P50P90": [
+    -14.296,
+    -4.033,
+    6.613
+   ],
+   "hitBoth": 101,
+   "hitOnly17": 75,
+   "hitOnly18": 0
+  },
+  "스텝 포워드 다이나믹 런지": {
+   "reps": 174,
+   "swing18minus17P10P50P90": [
+    -18.535,
+    0.981,
+    24.648
+   ],
+   "hitBoth": 131,
+   "hitOnly17": 13,
+   "hitOnly18": 18
+  }
+ }
+}
