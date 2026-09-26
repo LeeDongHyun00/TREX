@@ -235,6 +235,8 @@ private const val PROVISIONAL_NOTE_GAP_MS = 3_000L
  * (지금 라이브 경로는 ROM 사유를 말하지 않는다. 되살린다면 검증된 기준(`RepRomTier.VALIDATED`)에서만 — spec §58)
  */
 private const val MAX_INVALID_CUES = 2
+/** 옆으로 너무 돌아선 회의 안내 간격(§62c 후속 10) — 사선 검사가 전부 유보된 회를 침묵으로 두지 않는다. */
+private const val ANGLE_NOTE_GAP_MS = 15_000L
 /** 반복 검사 위반 부위를 칠해 두는 시간 — 다음 회(컬 1.5~3 s)가 끝나기 전후. */
 private const val FORM_HIGHLIGHT_MS = 2_500L
 
@@ -407,6 +409,7 @@ fun PostureLiveSessionScreen(
     // 무효 렙 사유 발화 횟수 — 세트당 상한(MAX_INVALID_CUES). 렙마다 같은 말을 반복하면 코칭이 잔소리가 되고,
     // 정작 들어야 할 자세 지적이 큐 뒤로 밀린다.
     val invalidCuesRef = remember { intArrayOf(0) }
+    val angleNoteAtRef = remember { longArrayOf(0L) }
     // 앵커 폴백 기준시각 — 이 종목에서 사람이 처음 잡힌 때(0 = 아직). 종목 경계에서 리셋한다.
     val detectStartRef = remember { longArrayOf(0L) }
     var anchored by remember { mutableStateOf(false) }
@@ -778,6 +781,7 @@ fun PostureLiveSessionScreen(
         repInvalid = 0
         deliveredReps = 0
         invalidCuesRef[0] = 0
+        angleNoteAtRef[0] = 0L
         detectStartRef[0] = 0L
         anchored = false
         anchoredRef[0] = false
@@ -987,7 +991,7 @@ fun PostureLiveSessionScreen(
                             if (floorRef[0]) newFloorRep = tally.records.lastOrNull()
                             // 반복별 자세 검사(§62a) — 이 프레임에 센 사이클마다 창을 닫고 판정한다(사이클 = 1회인 종목만 등록돼 있다)
                             val formReps = if (rf == null) emptyList() else synchronized(repRecords) {
-                                tally.records.map { r -> rf.onCycle(r.tMs, r.cycleMin, r.cycleMax) }
+                                tally.records.map { r -> rf.onCycle(r.tMs, r.cycleMin, r.cycleMax, r.cycleStartMs) }
                             }
                             repCount += tally.repsNotShort
                             repInvalid += tally.repsShort
@@ -1001,11 +1005,26 @@ fun PostureLiveSessionScreen(
                                 formHighlight = red; formProvHighlight = prov
                                 formHighlightStamp = if (red.isEmpty() && prov.isEmpty()) 0L else now
                             }
-                            // 부분(ROM 미달)으로 빠진 회는 그 자리에서 사유를 말한다(spec §62c 후속 3) — 숫자가 안 올라가는데 침묵하면 카운트가 죽은 줄 안다.
-                            // 사유는 손목이 보여 준 끝(덜 올림/덜 폄). 세트당 처음 MAX_INVALID_CUES 번은 교정 문장까지, 그 뒤는 짧게 — 같은 말 반복은 잔소리다
+                            // 이 회에서 말할 것 하나(§62c 후속 10): **자세 사유(ship·COACH) > 가동 범위 사유**. 전에는 ROM 이 먼저라 팔꿈치를 앞으로 낸 회(손목이 덜
+                            // 내려가 ROM 도 걸린다)가 전부 "덜 폈어요" 로 나갔다(오늘 자세 위반 57회 중 19회). 코칭 문장은 speakLatest — 서로 끊지 않고 하나만 보류한다
+                            val lastRep = formReps.lastOrNull()
+                            val formEv = if (lastRep == null || rf == null) null else rf.eventFor(lastRep, now, gate = gate)
+                            if (lastRep?.correct == true) formNote = null
+                            // 부분(ROM 미달)으로 빠진 회의 사유(spec §62c 후속 3) — 손목이 보여 준 끝(덜 올림/덜 폄). 세트당 처음 MAX_INVALID_CUES 번은 교정 문장까지, 그 뒤는 짧게
                             val shortReason = if (gate && rc.signal.romExcludesShort && tally.repsShort > 0)
                                 (rc.newlyPublishedShort.lastOrNull { it != null } ?: RomShort.RANGE) else null
-                            if (shortReason != null) {
+                            if (formEv != null && formEv.ship && gate) {
+                                // 빠진 회는 그 자리에서 이유를 말한다 — 침묵하면 카운트가 죽은 줄 안다. 첫 위반은 교정 문장까지, 같은 검사의 쿨다운(12 s) 안은 짧은 단서(brief).
+                                // 2단 검사의 코칭 단계 위반은 회를 빼지 않으므로 그 말을 붙이지 않는다
+                                val msg = when {
+                                    formEv.brief && formEv.gated -> "${formEv.message}, 이 회 제외."
+                                    formEv.brief -> "${formEv.message}."
+                                    formEv.gated -> "${formEv.message} 이 회는 세지 않았어요."
+                                    else -> formEv.message
+                                }
+                                formNote = msg
+                                speech.speakLatest(msg)
+                            } else if (shortReason != null) {
                                 val msg = if (invalidCuesRef[0] < MAX_INVALID_CUES) "${rc.signal.shortCue(shortReason)}. 이 회는 세지 않았어요."
                                     else when (shortReason) {
                                         RomShort.TOP -> "덜 올려서 세지 않았어요."
@@ -1014,27 +1033,21 @@ fun PostureLiveSessionScreen(
                                     }
                                 invalidCuesRef[0]++
                                 formNote = msg
-                                speech.speak(msg, flush = now > boundaryUntil[0])
+                                speech.speakLatest(msg)
+                            } else if (formEv != null && !formEv.ship) {
+                                provisionalNote = formEv.message   // beta 는 화면 '참고' 로만 — 침묵이 "이상 없음" 으로 읽히면 안 된다
                             }
-                            // 부분 회를 말했으면 같은 프레임의 자세 사건은 말하지 않는다 — 한 회에 한 사유(그 회가 빠진 이유가 ROM 이다)
-                            if (shortReason == null) formReps.lastOrNull()?.let { rep ->
-                                if (rep.correct) formNote = null
-                                rf!!.eventFor(rep, now, gate = gate)?.let { ev ->
-                                    if (ev.ship && gate) {
-                                        // 빠진 회는 그 자리에서 이유를 말한다 — 침묵하면 카운트가 죽은 줄 안다. 쿨다운(12 s)은 평가기가 건다.
-                                        // 2단 검사(§62c 팔꿈치 이탈)의 코칭 단계 위반은 회를 빼지 않으므로 그 말을 붙이지 않는다
-                                        val msg = if (ev.gated) "${ev.message} 이 회는 세지 않았어요." else ev.message
-                                        formNote = msg
-                                        speech.speak(msg, flush = now > boundaryUntil[0])
-                                    } else if (!ev.ship) {
-                                        provisionalNote = ev.message   // beta 는 화면 '참고' 로만 — 침묵이 "이상 없음" 으로 읽히면 안 된다
-                                    }
-                                }
+                            // 옆으로 너무 돌아선 회(§62c 후속 10) — 사선 검사가 전부 유보된다. 조용히 넘기면 "봤는데 괜찮았다" 로 읽힌다(원칙 #5). 15 s 에 한 번
+                            if (gate && lastRep?.turnedTooFar == true && now - angleNoteAtRef[0] > ANGLE_NOTE_GAP_MS) {
+                                angleNoteAtRef[0] = now
+                                val msg = "옆으로 너무 돌아서 이 회는 자세를 못 봤어요. 조금 덜 돌아 주세요."
+                                formNote = msg
+                                speech.speakLatest(msg)
                             }
                             // 처음부터 틀린 출발(§62c 후속 9) — 본인 기준이 모집단에 거의 없는 값이면 세트에서 한 번 말한다. COACH·서서만, 방금 말한 반복 사건 뒤에 붙인다
                             if (gate && rf != null) synchronized(repRecords) { rf.takeNotice(now) }?.let { ev ->
                                 formNote = ev.message
-                                speech.speak(ev.message, flush = false)
+                                speech.speakLatest(ev.message)
                             }
                             repTempoMs = tally.tempoMs
                             repHalfPending = tally.halfPending
@@ -1046,7 +1059,7 @@ fun PostureLiveSessionScreen(
                         if (!completed && rf != null && modeRef[0] == CoachMode.COACH && !floorRef[0]) {
                             synchronized(repRecords) { rf.liveEvent(now) }?.let { ev ->
                                 formNote = ev.message
-                                speech.speak(ev.message, flush = now > boundaryUntil[0])
+                                speech.speakLatest(ev.message)
                                 formHighlight = RuleHighlight.landmarksFor(ev.check.feature); formProvHighlight = emptySet(); formHighlightStamp = now
                             }
                         }

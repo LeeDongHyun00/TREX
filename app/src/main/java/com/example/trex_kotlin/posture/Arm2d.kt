@@ -57,6 +57,12 @@ object Arm2d {
     private const val R_WRIST = 16
     private const val L_HIP = 23
     private const val R_HIP = 24
+    /**
+     * 가까운 팔 피처를 만드는 프레임 요 띠(§62c 후속 10, 임의값) — 반복 뷰 게이팅이 세트 잠금 뷰로 바뀌어, 사선으로 잠긴 세트에서 살짝 정면(10~16°)이나
+     * 옆 초입(46~60°)으로 흔들린 프레임도 재야 한다. 정면 띠(16.4°) 안쪽에서는 앞 성분이 약하고, 60° 밖에서는 어깨 가로폭(cos 요 ≤ 0.5)이 작아 가로 비가 흔들린다.
+     */
+    const val NEAR_MIN_DEG = 10f
+    const val NEAR_LAT_MAX_DEG = 60f
     /** 몸통 길이 하한(높이 정규화) — 이보다 짧으면 겹침·잘림. */
     private const val MIN_TORSO = 0.08f
     /** 어깨 x 간격 하한(높이 단위) — 옆모습·겹침이면 가로 비를 만들지 않는다. */
@@ -84,7 +90,7 @@ object Arm2d {
     fun nearSign(yawDeg: Float?): Float? {
         if (yawDeg == null || !yawDeg.isFinite()) return null
         val a = abs(yawDeg)
-        if (a <= ViewEstimator.FRONT_MAX_DEG || a >= ViewEstimator.REAR_MIN_DEG) return null
+        if (a <= NEAR_MIN_DEG || a >= ViewEstimator.REAR_MIN_DEG) return null
         return if (yawDeg * ViewEstimator.B_SIGN > 0f) 1f else -1f
     }
 
@@ -152,7 +158,7 @@ object Arm2d {
                     val lineX = x(nhip) + (y(nel) - y(nhip)) / ndy * (x(nsh) - x(nhip))   // 팔꿈치 높이에서의 가까운 쪽 몸통 선 x
                     out[ELBOW_FWD_NEAR] = nSign * (x(nel) - lineX) / torso
                 }
-                if (sign != null && abs(latDir) >= 1e-4f && shGap >= MIN_SHOULDER_X) {
+                if (abs(yawDeg!!) <= NEAR_LAT_MAX_DEG && abs(latDir) >= 1e-4f && shGap >= MIN_SHOULDER_X) {
                     val outward = (if (nearR) -1f else 1f) * (if (latDir > 0) 1f else -1f)
                     out[ELBOW_LAT_NEAR] = outward * (x(nel) - x(nsh)) / shGap
                 }

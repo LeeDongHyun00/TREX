@@ -134,8 +134,8 @@ class RepUnitAccumulator(val unit: RepUnit) {
          * 스레드: 스스로 동기화하지 않는다. 호출자는 [records]·[acc] 를 지키는 락(세트 마감의 복사와 같은 락) 안에서 부른다.
          */
         fun onCounterFrame(counter: RepCounter, frameMs: Long, records: MutableList<RepRecord>, acc: RepUnitAccumulator?): RepFrameTally {
-            val cycles = counter.newlyPublished.map { Triple(it.tMs, it.min, it.max) }
-                .ifEmpty { listOf(Triple(frameMs, counter.lastCycleMin, counter.lastCycleMax)) }
+            val cycles = counter.newlyPublished.map { RepRecord(it.tMs, it.min, it.max, null, it.startMs) }
+                .ifEmpty { listOf(RepRecord(frameMs, counter.lastCycleMin, counter.lastCycleMax, null)) }
             val added = ArrayList<RepRecord>(cycles.size)
             var notShort = 0
             var short = 0
@@ -143,7 +143,7 @@ class RepUnitAccumulator(val unit: RepUnit) {
                 val (tMs, cycleMin, cycleMax) = c
                 // 팔별 경로(spec §62c)는 본인 기준 비율 ROM 을 카운터가 회마다 판정한다 — 절대 임계 isValidRep 는 그 경로에 없다
                 val valid = if (counter.paired) counter.newlyPublishedValid.getOrNull(k) else counter.signal.isValidRep(cycleMin, cycleMax)
-                val record = RepRecord(tMs, cycleMin, cycleMax, valid)
+                val record = c.copy(valid = valid)
                 records += record
                 added += record
                 val rep = if (acc != null) acc.offer(tMs, valid) else UnitRep(tMs, valid)

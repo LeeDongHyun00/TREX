@@ -237,7 +237,11 @@ class RepFormTest {
         val evG = g.eventFor(first, 10_000L, gate = true)
         assertNotNull(evG); assertTrue(evG!!.ship)
         assertEquals("발 너비가 시작보다 넓어졌어요. 발을 어깨 너비로 다시 두세요.", evG.message)
-        assertNull("쿨다운은 게이트에서도 건다", g.eventFor(fg.rep(stance = 1.6f, ev = g), 15_000L, gate = true))
+        // 쿨다운 안의 위반은 게이트에서 침묵이 아니라 짧은 단서(§62c 후속 10) — 문장은 12 s 에 한 번, 단서는 회마다. 게이트가 아니면(TRACK) 종전대로 없음
+        val brief = g.eventFor(fg.rep(stance = 1.6f, ev = g), 15_000L, gate = true)!!
+        assertTrue(brief.brief); assertTrue(brief.gated); assertEquals("발 너비 넓음", brief.message)
+        assertNull(g.eventFor(fg.rep(stance = 1.6f, ev = g), 17_000L))
+        assertFalse("쿨다운이 지나면 다시 문장", g.eventFor(fg.rep(stance = 1.6f, ev = g), 30_000L, gate = true)!!.brief)
     }
 
     @Test
@@ -642,26 +646,145 @@ class RepFormCurlTest {
 
     @Test
     fun forwardLeanIsSpokenAndDropsTheRepLikeTheSquat() {
-        // 스쿼트 '상체 숙임' 과 같은 1단 정책: 위반 = 음성 + COACH 에서 그 회를 세지 않음
+        // 차단(+20°)은 스쿼트 '상체 숙임' 과 같은 정책: 위반 = 음성 + COACH 에서 그 회를 세지 않음. 그 아래 코칭 단계(+15°, §62c 후속 10)는 말만 한다 —
+        // 등 말림은 골반 접힘보다 목–골반 선이 덜 기울어 +15~+19° 에 걸렸다(13:49 세트 15회 +19)
         val ev = evaluator(); val f = Frames(ev)
-        assertTrue(f.rep(ev = ev).correct)                  // 그 반복 시작 기울기 5°
-        val lean = f.rep(incl = 32f, ev = ev)              // +27°
+        assertTrue(f.rep(ev = ev).correct)                  // 세트 최소 상단 기울기 5°
+        val lean = f.rep(incl = 32f, ev = ev)              // +27° → 차단
         val o = lean.outcomes.first { it.check.id == "repform|덤벨 컬|상체 숙임" }
         assertEquals(Verdict.VIOLATION, o.verdict); assertTrue(o.gate); assertFalse(lean.correct)
         val e = ev.eventFor(lean, 60_000L, gate = true)!!
         assertEquals("repform|덤벨 컬|상체 숙임", e.check.id); assertTrue(e.gated)
-        assertEquals("상체가 많이 숙여졌어요. 가슴을 들고 몸통을 세운 채 팔만 움직이세요.", e.message)
-        assertTrue(f.rep(incl = 20f, ev = ev).correct)     // +15° — 폰 정상 p95(+13°) 근처는 통과
+        assertEquals("등이 말리거나 상체가 숙여졌어요. 가슴을 들고 등을 편 채 팔만 움직이세요.", e.message)
+        assertTrue(f.rep(incl = 20f, ev = ev).correct)     // +15° — 띠 끝은 통과(폰 정상 p95 +13°)
+        val round = f.rep(incl = 22f, ev = ev)             // +17° → 코칭 단계: 위반이지만 회는 그대로
+        val oR = round.outcomes.first { it.check.id == "repform|덤벨 컬|상체 숙임" }
+        assertEquals(Verdict.VIOLATION, oR.verdict); assertFalse(oR.gate); assertTrue(round.correct)
         val squat = RepFormSpecs.byExercise.getValue("바벨 스쿼트").first { it.id == "repform|바벨 스쿼트|상체 숙임" }
         val curlLean = curl.first { it.id == "repform|덤벨 컬|상체 숙임" }
         assertEquals(squat.feature, curlLean.feature); assertEquals(squat.status, curlLean.status)
-        assertNull("스쿼트처럼 1단", curlLean.gateHi)
+        assertEquals(RepFormSpecs.LEAN_COACH_HI, curlLean.hi); assertEquals(RepFormSpecs.LEAN_HI, curlLean.gateHi)
+    }
+
+    @Test
+    fun setViewIsLockedFromTheFirstRepsAndOnlyABigTurnOverridesIt() {
+        // §62c 후속 10: 반복마다 뷰를 다시 정하면 요 추정이 흔들리는 만큼 검사 집합이 회마다 바뀐다(13:49 세트 −19~−45°, 회마다 C·D·SIDE_D).
+        // 최근 5회 요의 중앙값으로 잠그고(3회부터), 잠금에서 35° 넘게 돌아선 회만 자기 뷰. 잠금은 3회 이어진 돌아섬을 따라간다(9/25 11:06 세트: 사선 → 정면)
+        val away = "repform|덤벨 컬|팔꿈치 몸에서 떨어짐"
+        val ev = evaluator(); val f = Frames(ev)
+        assertNull(ev.lockedView)
+        repeat(3) { f.rep(latNear = 0.18f, yaw = -30f, ev = ev) }
+        assertEquals("D", ev.lockedView)
+        val side = f.rep(latNear = 0.60f, yaw = -50f, ev = ev)            // 자기 추정은 SIDE_D(46.2° 밖) — 잠금 안(20°)이라 D 로 판정
+        assertEquals("D", side.view); assertEquals("SIDE_D", side.viewRaw); assertFalse(side.turnedTooFar)
+        assertEquals(Verdict.VIOLATION, side.outcomes.first { it.check.id == away }.verdict)
+        val front = f.rep(latNear = 0.18f, yaw = -12f, ev = ev)           // 자기 추정은 C — 역시 D
+        assertEquals("D", front.view); assertEquals("C", front.viewRaw)
+        assertEquals(Verdict.OK, front.outcomes.first { it.check.id == away }.verdict)
+        assertEquals("방향 피처가 없는 회는 잠금 뷰", "D", f.rep(latNear = 0.18f, ev = ev).view)
+        val turned = f.rep(latNear = 0.18f, yaw = 30f, ev = ev)           // 반대쪽 사선으로 진짜 돌아섬(60°) → 자기 뷰 B
+        assertEquals("B", turned.view)
+        val far = f.rep(latNear = 0.18f, yaw = -75f, ev = ev)             // 옆으로 크게(45°) → SIDE_D, 전부 유보 + 안내 대상
+        assertEquals("SIDE_D", far.view); assertTrue(far.turnedTooFar)
+        assertEquals(Verdict.ABSTAIN, far.outcomes.first { it.check.id == away }.verdict)
+        // 잠금 전에 옆으로 선 회는 자기 뷰(SIDE) 그대로 — 안내 대상
+        val ev2 = evaluator(); val f2 = Frames(ev2)
+        assertTrue(f2.rep(yaw = -60f, ev = ev2).turnedTooFar)
+        // 세트 중에 진짜 정면으로 돌아서면(3회 이어짐) 잠금이 따라간다 — 사선 검사 대신 정면 검사가 돈다
+        val ev3 = evaluator(); val f3 = Frames(ev3)
+        repeat(3) { f3.rep(yaw = -30f, ev = ev3) }
+        assertEquals("D", ev3.lockedView)
+        assertEquals("한 회 정면은 잠금(D) 그대로", "D", f3.rep(lat = 0.60f, yaw = 0f, ev = ev3).view)
+        f3.rep(yaw = 2f, ev = ev3)
+        val third = f3.rep(lat = 0.60f, yaw = -3f, ev = ev3)
+        assertEquals("C", ev3.lockedView); assertEquals("C", third.view)
+        assertEquals(Verdict.VIOLATION, third.outcomes.first { it.check.id == "repform|덤벨 컬|팔꿈치 옆 벌림" }.verdict)
+    }
+
+    @Test
+    fun anUncountedCycleBetweenRepsDoesNotLeakIntoTheNextRepWindow() {
+        // 14:46 세트 16회: 등 말림 3회 뒤 짝이 안 맞아 버려진 팔 사이클(조각, 더 깊은 65°)이 다음 회 창에 접혀 들어가 창의 최소가 조각 쪽에 잡혔고
+        // 정상 회가 +23.6° '숙임' 으로 빠졌다 — 창은 '직전 회 끝 이후 전부' 가 아니라 이 회 사이클 시작 1.5 s 전부터(§62c 후속 10)
+        val lean = "repform|덤벨 컬|상체 숙임"
+        fun run(withStart: Boolean): RepFormRep {
+            val ev = evaluator(); val f = Frames(ev)
+            repeat(2) { f.rep(ev = ev) }
+            repeat(3) { f.frame(165f, incl = 30f) }; f.frame(70f, incl = 32f); f.frame(65f, incl = 32f); f.frame(160f, incl = 28f)   // 세지 않은 사이클(숙인 채)
+            val descent = f.t + 4 * 300
+            repeat(4) { f.frame(165f) }
+            f.frame(140f); f.frame(100f); f.frame(80f); f.frame(100f); f.frame(140f); f.frame(163f); f.frame(165f)                 // 정상 회
+            return ev.onCycle(f.t - 300, 80f, 165f, startMs = if (withStart) descent else null)
+        }
+        val fixed = run(withStart = true)
+        assertEquals(Verdict.OK, fixed.outcomes.first { it.check.id == lean }.verdict); assertTrue(fixed.correct)
+        val leaked = run(withStart = false)                                    // 레거시 경로(시작 시각 없음): 종전처럼 창 전체 — 조각의 숙임이 샌다
+        assertEquals(Verdict.VIOLATION, leaked.outcomes.first { it.check.id == lean }.verdict)
+    }
+
+    @Test
+    fun repViewObliqueBandExtendsBeyondTheSetRuleBand() {
+        // §62c 후속 10: 45° 안내가 세트 규칙 D 띠 끝(46.2°) 위 — 14:46 세트 1~4회가 −52~−47° 로 SIDE_D(전부 유보). 반복 검사는 55° 까지 사선으로 본다
+        val away = "repform|덤벨 컬|팔꿈치 몸에서 떨어짐"
+        val ev = evaluator(); val f = Frames(ev)
+        repeat(3) { f.rep(latNear = 0.18f, yaw = -50f, ev = ev) }
+        assertEquals("D", ev.lockedView)
+        val r = f.rep(latNear = 0.60f, yaw = -50f, ev = ev)
+        assertEquals("D", r.view); assertEquals("SIDE_D", r.viewRaw); assertFalse(r.turnedTooFar)
+        assertEquals("네 번째 회부터 기준이 서 있다(1~3회가 같은 뷰 모음)", Verdict.VIOLATION, r.outcomes.first { it.check.id == away }.verdict)
+        val ev2 = evaluator(); val f2 = Frames(ev2)
+        assertEquals("SIDE_D", f2.rep(yaw = -58f, ev = ev2).view)
+    }
+
+    @Test
+    fun aRoundedBackInvalidatesTheElbowLateralMeasurement() {
+        // 14:46 세트 등 말림 13~15회: 어깨가 말리면 어깨 가로폭 투영이 줄어 가까운 팔 가로 비가 0.39~0.49 로 부풀었다(월드 바깥은 정상) — 차단 단계 숙임이면 가로 검사는 유보.
+        // 코칭 단계(+17°)는 무효화하지 않는다
+        val away = "repform|덤벨 컬|팔꿈치 몸에서 떨어짐"; val lean = "repform|덤벨 컬|상체 숙임"
+        val ev = evaluator(); val f = Frames(ev)
+        repeat(3) { f.rep(latNear = 0.10f, yaw = -30f, ev = ev) }
+        val round = f.rep(latNear = 0.45f, incl = 30f, yaw = -30f, ev = ev)           // +25° 차단 + 가로 +0.35
+        assertTrue(round.outcomes.first { it.check.id == lean }.gate)
+        val o = round.outcomes.first { it.check.id == away }
+        assertEquals(Verdict.ABSTAIN, o.verdict); assertEquals("상체 위반으로 측정 무효", o.abstainReason)
+        assertEquals("말할 사유는 숙임", lean, ev.eventFor(round, 60_000L, gate = true)!!.check.id)
+        val mild = f.rep(latNear = 0.45f, incl = 22f, yaw = -30f, ev = ev)            // +17° 코칭 단계 — 가로 검사는 그대로 판정
+        assertFalse(mild.outcomes.first { it.check.id == lean }.gate)
+        assertEquals(Verdict.VIOLATION, mild.outcomes.first { it.check.id == away }.verdict)
+    }
+
+    @Test
+    fun oneContractionFrameIsEnoughToJudge() {
+        // §62c 후속 10: 300 ms 샘플링에서 수축 창이 1프레임인 빠른 반복 — 종전엔 중앙값에 값 2개를 요구해 유보(오늘 앞 이탈 59/178회)
+        val away = "repform|덤벨 컬|팔꿈치 몸에서 떨어짐"
+        val ev = evaluator(); val f = Frames(ev)
+        repeat(3) { f.rep(latNear = 0.18f, yaw = -30f, ev = ev) }
+        repeat(5) { f.frame(165f, yaw = -30f) }
+        f.frame(80f, latNear = 0.60f, yaw = -30f)
+        f.frame(165f, yaw = -30f); f.frame(165f, yaw = -30f)
+        val fast = ev.onCycle(f.t - 300, 80f, 165f)
+        val o = fast.outcomes.first { it.check.id == away }
+        assertEquals(1, o.samples); assertEquals(Verdict.VIOLATION, o.verdict); assertTrue(o.gate)
+    }
+
+    @Test
+    fun cooldownGivesABriefCueInsteadOfSilence() {
+        // §62c 후속 10: 같은 검사의 쿨다운(12 s) 안에서 다시 위반한 회 — 오늘 57회 중 16회가 이렇게 침묵했다. 문장은 12 s 에 한 번, 그 사이는 짧은 단서
+        val ev = evaluator(); val f = Frames(ev)
+        repeat(3) { f.rep(latNear = 0.18f, ev = ev) }
+        val a = ev.eventFor(f.rep(latNear = 0.62f, ev = ev), 30_000L, gate = true)!!
+        assertFalse(a.brief); assertTrue(a.gated)
+        val b = ev.eventFor(f.rep(latNear = 0.62f, ev = ev), 33_000L, gate = true)!!
+        assertTrue(b.brief); assertTrue(b.gated); assertEquals("팔꿈치 떨어짐", b.message)
+        val c = ev.eventFor(f.rep(latNear = 0.45f, ev = ev), 36_000L, gate = true)!!       // 코칭 단계(+0.27) — 단서만, 회는 그대로
+        assertTrue(c.brief); assertFalse(c.gated)
+        assertNull("게이트가 아니면(TRACK) 쿨다운 안은 종전대로 없음", ev.eventFor(f.rep(latNear = 0.62f, ev = ev), 38_000L))
+        assertFalse("쿨다운이 지나면 다시 문장", ev.eventFor(f.rep(latNear = 0.62f, ev = ev), 50_000L, gate = true)!!.brief)
     }
 
     @Test
     fun eachRepIsGatedByItsOwnWindowView() {
-        // 반복마다 그 창의 방향으로 거른다(§62c 후속 6) — 사선(B, yaw +30°)으로 한 회는 정면 전용 '옆 벌림' 을 유보(회를 빼지도 칠하지도 않음)하고,
-        // 정면으로 돌아온 회는 다시 판정한다. 세트 누적 뷰는 옆으로 돌아선 구간에 끌려가 그 뒤 정면 반복까지 유보시켰다(11:14 세트)
+        // 반복마다 그 창의 방향으로 거른다(§62c 후속 6; 후속 10 부터는 잠금 전 3회와 크게 돌아선 회) — 사선(B, yaw +30°)으로 한 회는 정면 전용 '옆 벌림' 을
+        // 유보(회를 빼지도 칠하지도 않음)하고, 정면으로 돌아온 회는 다시 판정한다. 세트 누적 뷰는 옆으로 돌아선 구간에 끌려가 그 뒤 정면 반복까지 유보시켰다(11:14 세트)
         val ev = evaluator(); val f = Frames(ev)
         assertEquals("C", f.rep(yaw = 0f, ev = ev).view)
         val oblique = f.rep(lat = 0.60f, yaw = 30f, ev = ev)
@@ -714,7 +837,7 @@ class RepFormCurlTest {
         f.frame(165f, incl = 40f)
         val e = ev.liveEvent(f.t)!!
         assertEquals("repform|덤벨 컬|상체 숙임", e.check.id); assertFalse("반복이 아니다 — 세지 않음과 무관", e.gated)
-        assertEquals("상체가 숙여져 있어요. 가슴을 들고 몸통을 세운 채 팔만 움직이세요.", e.message)
+        assertEquals("상체가 숙여져 있어요. 가슴을 들고 등을 편 채 팔만 움직이세요.", e.message)
         f.frame(165f, incl = 40f)
         assertNull("쿨다운", ev.liveEvent(f.t))
         assertEquals(1, ev.summary().live.size)

@@ -357,7 +357,8 @@ class RepCounter(
             reps++; repTimesMs.add(late.tMs); lastRepAt = late.tMs
             if (reps == 1) tentativeFirstAt = late.tMs else tentativeFirstAt = null     // 첫 회는 잠정, 둘째 회가 창 안에 오면 확정
             lastCycleMin = late.min; lastCycleMax = late.max; lastCycleValid = valid
-            published += RepCycle(late.tMs, late.startMs, late.min, late.max); valids += valid
+            // 회의 시작 = 먼저 시작한 팔의 사이클 시작(§62c 후속 10 — 반복 검사 창의 앞 경계). 극값·끝 시각은 늦은 팔
+            published += RepCycle(late.tMs, minOf(cl.startMs, cr.startMs), late.min, late.max); valids += valid
             // 두 팔 사유를 한 회로: 덜 폄 > 덜 올림 > 불명(덜 폄은 손목이 직접 보여 준 것이라 가장 확실하다)
             shorts += if (valid != false) null else listOfNotNull(cl.romShort, cr.romShort).let { r ->
                 when { RomShort.BOTTOM in r -> RomShort.BOTTOM; RomShort.TOP in r -> RomShort.TOP; else -> RomShort.RANGE }
@@ -961,7 +962,9 @@ enum class RomShort { TOP, BOTTOM, RANGE }
 
 /** 완료된 렙 하나의 기록 — 사이클 극값과 ROM 판정. 세트 로그에 렙별로 남겨 후반 드리프트(피로)
  *  분석을 오프라인에서 가능하게 한다 (spec §29 — 숙련자 계기판의 원자재). */
-data class RepRecord(val tMs: Long, val cycleMin: Float, val cycleMax: Float, val valid: Boolean?)
+data class RepRecord(val tMs: Long, val cycleMin: Float, val cycleMax: Float, val valid: Boolean?,
+                     /** 이 사이클의 시작 시각(새 코어·팔별 경로) — 반복 검사 창의 앞 경계(§62c 후속 10). 레거시 경로는 null(창 = 직전 회 끝 이후 전부). */
+                     val cycleStartMs: Long? = null)
 
 object RepMetrics {
     /**

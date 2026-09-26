@@ -133,8 +133,12 @@ data class RepFormCheck(
      */
     val refFloor: Float? = null,
     val refExcludedBy: List<String> = emptyList(),
+    /** 짧은 음성 단서(§62c 후속 10) — 같은 검사의 쿨다운 안에서 다시 위반한 회에 문장 대신 쓴다("팔꿈치 벌어짐"). null 이면 "부위 꼬리표". */
+    val cue: String? = null,
 ) {
     init { require(lo != null || hi != null) { "$id: 허용 띠가 없다" } }
+
+    fun cueFor(direction: FormDirection): String = cue ?: "$bodyPart ${label(direction)}"
 
     val ship: Boolean get() = status == RuleStatus.SHIP
 
@@ -181,9 +185,14 @@ data class RepFormRep(
     val outcomes: List<RepFormOutcome>,
     /** 이 반복과 직전 반복에서 연속으로 위반한 ship 검사 id — 음성은 이것에만 붙는다(한 번 튐은 화면만, 원칙 #6). 평가기가 사이클마다 채운다. */
     val consecutiveShip: Set<String> = emptySet(),
-    /** 이 반복 창의 촬영 뷰 글자(`ViewEstimator`) — 방향 피처가 부족하거나 흩어져 모르면 null(그 반복은 뷰로 거르지 않았다). */
+    /** 이 반복을 거른 촬영 뷰 글자(`ViewEstimator`) — 세트 잠금 뷰(§62c 후속 10) 또는 크게 돌아선 회의 자기 뷰. 모르면 null(그 반복은 뷰로 거르지 않았다). */
     val view: String? = null,
+    /** 이 반복 창 자체의 추정 뷰(잠그기 전 값). [view] 와 다르면 잠금이 이 회를 대신 정한 것. */
+    val viewRaw: String? = null,
 ) {
+    /** 옆(SIDE)으로 걸러진 회(잠금 전이거나 잠금에서 크게 돌아섬) — 사선 검사가 전부 유보된다. 화면·음성으로 밝힌다(원칙 #5). */
+    val turnedTooFar: Boolean get() = view == "SIDE_B" || view == "SIDE_D"
+
     val flagged: List<RepFormOutcome> get() = outcomes.filter { it.verdict == Verdict.VIOLATION }
 
     /** ship 검사의 차단 단계 위반이 없다. ABSTAIN 은 위반이 아니고(원칙 #1), beta 는 정확을 깎지 못하며(원칙 #2), 2단 검사의 코칭 단계 위반도 깎지 않는다(§62c). */
@@ -194,7 +203,9 @@ data class RepFormRep(
 data class RepFormLiveMark(val tMs: Long, val id: String, val value: Float)
 
 /** 반복 하나에서 말할(또는 화면에 남길) 사건 하나 — 우선순위 = 검사 순서. ship 만 음성. [gated] = 이 위반으로 회가 빠졌다(COACH). */
-data class RepFormEvent(val check: RepFormCheck, val direction: FormDirection, val message: String, val ship: Boolean, val gated: Boolean = ship)
+data class RepFormEvent(val check: RepFormCheck, val direction: FormDirection, val message: String, val ship: Boolean, val gated: Boolean = ship,
+    /** 쿨다운 안의 짧은 단서(§62c 후속 10) — [message] 는 문장이 아니라 단서("팔꿈치 벌어짐"). 화면·음성이 뒤에 붙일 말을 고른다. */
+    val brief: Boolean = false)
 
 class RepFormEvaluator(
     val checks: List<RepFormCheck>,
@@ -223,6 +234,17 @@ class RepFormEvaluator(
     private val lastSpokenAt = HashMap<String, Long>()
     private var rejectedCount = 0
     private var noTopCount = 0
+    /**
+     * 세트 뷰 잠금(§62c 후속 10) — 최근 [VIEW_WINDOW_REPS] 회 반복 요의 **중앙값**으로 뷰를 정하고(처음 [VIEW_LOCK_REPS] 회는 자기 뷰), 반복은 자기 추정이 그것과
+     * [VIEW_LOCK_TOLERANCE_DEG] 넘게 다를 때만 자기 뷰를 쓴다. 반복마다 다시 정하면(후속 6) 요 추정(월드 z)이 흔들리는 만큼 검사 집합이 회마다 바뀐다 —
+     * 13:49 세트는 한 세트 안에서 반복 요가 −19~−45° 라 회마다 C(정면 검사)·D(사선 검사)·SIDE_D(전부 유보)를 오갔다(오늘 178회 중 SIDE 11·C 30).
+     * 처음 3회로 고정하면 세트 중에 진짜 돌아선 사람을 놓친다(9/25 11:06 세트: 사선으로 시작해 정면으로 돌아 정면 벌림 2회를 잃었다) — 미끄러지는 중앙값은
+     * 한 회 튐(−50·−12)에는 안 움직이고 3회 이상 이어진 돌아섬은 따라간다. 원형 평균은 −30 과 +30 이 섞이면 0(정면)이 돼 쓰지 않는다.
+     */
+    private val viewYaws = ArrayDeque<Float>()
+    private var lockedYaw: Float? = null
+    var lockedView: String? = null
+        private set
 
     /** 시작 자세 — 첫 상단 창의 피처별 중앙값. 잡히기 전엔 null(상대 기준 검사는 유보). */
     var baseline: Map<String, Float>? = null
@@ -242,6 +264,7 @@ class RepFormEvaluator(
     fun reset() {
         buf.clear(); carry = emptyList(); repList.clear(); startList.clear(); lastSpokenAt.clear(); setMin.clear(); liveList.clear(); firstReps.clear(); setLow.clear(); noticed.clear(); notices.clear()
         baseline = null; baselineAtMs = null; baselineFromFirstBottom = false; rejectedCount = 0; noTopCount = 0
+        viewYaws.clear(); lockedYaw = null; lockedView = null
     }
 
     /** 검출된 프레임마다(카운터 onFrame **앞에서**). 피처 없는 프레임은 창에 들어가지 않는다. */
@@ -259,11 +282,16 @@ class RepFormEvaluator(
     }
 
     /**
-     * 카운터가 센 사이클 하나(끝 [endMs], 극값 [cycleMin]/[cycleMax]). 창 = 직전 사이클 끝 이후 ~ endMs.
+     * 카운터가 센 사이클 하나(끝 [endMs], 극값 [cycleMin]/[cycleMax], 시작 [startMs]). 창 = 사이클 시작 [WINDOW_LEAD_MS] 전 ~ endMs — 시작을 모르면(레거시 경로)
+     * 직전 사이클 끝 이후 전부. 직전 회 끝 이후 전부를 창으로 쓰면 그 사이의 **세지 않은 사이클**(짝 없는 팔 조각·기각되지 않은 준비 동작)이 이 회로 접혀 들어간다 —
+     * 14:46 세트 16회: 등 말림 3회 뒤 조각 하나(더 깊은 65°)가 창의 최소가 돼 사이클 구간이 조각 쪽에 잡혔고, 정상 회가 +23.6° '숙임' 으로 빠졌다(§62c 후속 10).
      * 첫 상단 창이 잡히면 시작 자세를 세우고 START 검사를 한 번 한다.
      */
-    fun onCycle(endMs: Long, cycleMin: Float, cycleMax: Float): RepFormRep {
-        val window = buf.filter { it.first <= endMs }
+    fun onCycle(endMs: Long, cycleMin: Float, cycleMax: Float, startMs: Long? = null): RepFormRep {
+        val from = startMs?.let { it - WINDOW_LEAD_MS }
+        val window = buf.filter { it.first <= endMs && (from == null || it.first >= from) }
+        // 창 앞을 잘랐으면 직전 회에서 이월한 서 있던 프레임도 옛것이다(사이에 다른 동작이 있었다) — 이 창의 앞머리가 하강 직전 상단이 된다
+        if (from != null && buf.any { it.first <= endMs && it.first < from }) carry = emptyList()
         buf.removeAll { it.first <= endMs }
         // 서 있음 판정(§21.10): 시작 자세가 있으면 그 무릎각 − 0.3h(≈ 10°) — 사이클 최대 − 0.22h 는 반복 뒤 서 있는 프레임(최대보다 몇 도 낮다)을 놓쳐
         // 발끝 검사 창이 앞쪽(옛 자세)에 치우쳤다(12:19 세트 3·6회). 첫 반복은 시작 자세가 아직 없어 사이클 최대 기준.
@@ -287,8 +315,10 @@ class RepFormEvaluator(
         }
         // 이 반복의 촬영 뷰 — 반복 창(상단 + 사이클) 프레임의 방향 피처 원형 평균(§62c 후속 6). 세트 누적 뷰는 옆으로 돌아선 구간 하나에 끌려가
         // 그 뒤 정면 반복까지 유보시켰다(11:14 세트: 누적 19.8° = B → 15~17회 정면 검사 전부 유보). 모르면(프레임 부족·흩어짐) 거르지 않는다
-        val repView = ViewEstimator.estimate((phases.top + phases.cycle).map { it.second }, REP_VIEW_MIN_FRAMES)
-            ?.takeIf { it.cls != ViewEstimator.ViewClass.UNKNOWN }?.letter
+        val repEst = ViewEstimator.estimate((phases.top + phases.cycle).map { it.second }, REP_VIEW_MIN_FRAMES)
+            ?.takeIf { it.cls != ViewEstimator.ViewClass.UNKNOWN }
+        val rawView = repEst?.letter
+        val repView = lockView(repEst)
         // 세트 최소 기준(SET_MIN_DELTA) — 이 반복의 상단 중앙값으로 먼저 갱신한다(이 반복이 세트에서 가장 곧으면 자기 자신이 기준).
         // 앞쪽 반구(C·B·D) 반복만 넣는다 — 상단(팔을 늘어뜨림)에는 앞 성분이 없어 가로 비가 정면·사선에서 거의 같지만(어깨 가로폭이 cos 요를 지운다),
         // 옆·뒤에서는 어깨 가로폭이 작아 값이 흔들린다. 11:54 세트는 정면 반복이 이미 벌린 채 시작해 정면만으로 세우면 벌림 6·7회를 놓쳤다
@@ -298,7 +328,8 @@ class RepFormEvaluator(
         }
         val raw = checks.filter { it.phase != RepPhase.START }.map { evaluate(it, phases, repView) }
         // 측정을 무효로 만드는 검사가 같은 반복에서 위반이면 유보 — 틀린 방향의 말보다 침묵이 낫다(원칙 #6)
-        val violated = raw.filter { it.verdict == Verdict.VIOLATION }.map { it.check.id }.toSet()
+        // 무효화는 **차단 단계** 위반만 — 2단 검사의 코칭 단계(컬 상체 숙임 +15~20°)는 측정을 깨뜨릴 만큼 크지 않다. 1단 검사는 위반 = 차단이라 종전과 같다
+        val violated = raw.filter { it.verdict == Verdict.VIOLATION && it.gate }.map { it.check.id }.toSet()
         val outcomes = raw.map { o ->
             val by = o.check.invalidatedBy.firstOrNull { it in violated }
             if (by == null || o.verdict == Verdict.ABSTAIN) o
@@ -313,7 +344,7 @@ class RepFormEvaluator(
         val prev = repList.lastOrNull()
         val consecutive = outcomes.filter { o -> o.check.ship && o.verdict == Verdict.VIOLATION && prev?.flagged?.any { it.check.id == o.check.id } == true }
             .map { it.check.id }.toSet()
-        val rep = RepFormRep(repList.size + 1, endMs, outcomes, consecutive, repView)
+        val rep = RepFormRep(repList.size + 1, endMs, outcomes, consecutive, repView, rawView)
         repList += rep
         return rep
     }
@@ -332,7 +363,11 @@ class RepFormEvaluator(
             if (c.ship) {
                 if (!gate && c.id !in rep.consecutiveShip) continue
                 val last = lastSpokenAt[c.id]
-                if (last != null && nowMs - last < cooldownMs) continue
+                if (last != null && nowMs - last < cooldownMs) {
+                    // 쿨다운 안이면 침묵 대신 짧은 단서(§62c 후속 10) — 횟수 게이트에서만. 빠진 회가 조용하면 카운트가 죽은 줄 안다(오늘 위반 57회 중 16회가 이렇게 침묵)
+                    if (!gate) continue
+                    return RepFormEvent(c, d, c.cueFor(d), ship = true, gated = o.gate, brief = true)
+                }
                 lastSpokenAt[c.id] = nowMs
                 // 같은 반복에서 원인 검사가 위반이면 원인을 먼저 말한다 — 사용자가 바꾼 것을 짚어야 교정이 된다
                 val cause = c.causes.firstNotNullOfOrNull { id -> flagged.firstOrNull { it.check.id == id && it.direction != null } }
@@ -450,6 +485,28 @@ class RepFormEvaluator(
 
     private fun firstKey(c: RepFormCheck, view: String?) = "${c.id}@${view ?: "-"}"
 
+    /** 이 반복을 거를 뷰 — 잠금 전엔 자기 추정, 잠금 후엔 잠금 뷰(크게 돌아선 회만 자기 뷰). 추정이 없으면 잠금 뷰(없으면 null = 거르지 않음). */
+    private fun lockView(est: ViewEstimator.Estimate?): String? {
+        if (est != null) { viewYaws.addLast(est.yawDeg); while (viewYaws.size > VIEW_WINDOW_REPS) viewYaws.removeFirst() }
+        if (viewYaws.size < VIEW_LOCK_REPS) return est?.let { classFor(it.yawDeg) }
+        val yaw = stat(viewYaws.toList(), RepFormStat.MEDIAN)
+        lockedYaw = yaw; lockedView = classFor(yaw)
+        if (est == null) return lockedView
+        return if (angleDiff(est.yawDeg, yaw) > VIEW_LOCK_TOLERANCE_DEG) classFor(est.yawDeg) else lockedView
+    }
+
+    /**
+     * 반복 검사용 뷰 등급 — 사선 띠를 [REP_OBLIQUE_MAX_DEG] 까지 넓힌다(임의값). 45° 안내가 세트 규칙의 D 띠 끝(46.2°) 위라 14:46 세트 1~4회가 −52~−47° 로
+     * SIDE_D(전부 유보)였고, 그 회들이 기준 모음에도 안 들어가 첫 벌림·첫 앞 이탈 회가 "기준 반복" 으로 유보됐다. 가까운 팔 가로는 60° 까지 만든다(`Arm2d`).
+     */
+    private fun classFor(yaw: Float): String {
+        val a = abs(yaw)
+        if (a > ViewEstimator.OBLIQUE_MAX_DEG && a <= REP_OBLIQUE_MAX_DEG) return if (yaw * ViewEstimator.B_SIGN > 0f) "B" else "D"
+        return ViewEstimator.classify(yaw).letter
+    }
+
+    private fun angleDiff(a: Float, b: Float): Float = abs(((a - b + 540f) % 360f) - 180f)
+
     /**
      * 본인 기준 모음에 이 반복의 원값을 넣는다(판정 뒤) — 모집단 하한 아래·같은 반복의 다른 축 위반·모음이 찬 뒤(FIRST_REPS)는 넣지 않는다(§62c 후속 9).
      * 사선 가까운 팔의 앞 성분과 가로는 같은 화면 가로 하나를 둘로 읽은 것이라, 한 축이 틀린 반복은 다른 축에 반대 부호로 샌다.
@@ -473,7 +530,9 @@ class RepFormEvaluator(
         }
         val frames = c.windowFrames?.let { n -> if (all.size > n) all.subList(all.size - n, all.size) else all } ?: all
         val values = frames.mapNotNull { it.second[c.feature] }
-        val need = if (c.stat == RepFormStat.MAX || c.stat == RepFormStat.MIN || c.stat == RepFormStat.EXTREME) 1 else 2
+        // 값 하나여도 판정한다(§62c 후속 10) — 300 ms 샘플링에서 수축 창은 1~3프레임이고 가까운 팔 피처는 그중 일부에만 있어, 둘을 요구하면
+        // 사선 검사가 반복의 3분의 1에서 유보됐다(오늘 앞 이탈 59/178회 "값 부족"). 값 하나의 중앙값은 그 값이다
+        val need = 1
         if (values.size < need) return RepFormOutcome(c, Verdict.ABSTAIN, null, null, null, null, values.size,
             if ((c.phase == RepPhase.TOP || c.phase == RepPhase.STANDING) && frames.isEmpty()) "서 있는 프레임 없음" else "창에 ${c.feature} 부족")
         val ref = when (c.ref) {
@@ -560,6 +619,16 @@ class RepFormEvaluator(
         const val START_STABLE_RATIO = 1.10f
         /** 반복 창 뷰 추정의 최소 프레임 — 컬 한 회 창은 300 ms 에서 4~10프레임이라 세트용 8 보다 낮다. 흩어진 방향은 결과 벡터 길이(0.7)가 거른다. */
         const val REP_VIEW_MIN_FRAMES = 4
+        /** 세트 뷰 잠금이 서는 최소 반복 수(§62c 후속 10) — 그 전 반복은 자기 뷰로 거른다. 임의값 */
+        const val VIEW_LOCK_REPS = 3
+        /** 잠금 뷰를 정하는 최근 반복 수 — 중앙값이라 2회까지의 튐은 무시하고 3회 이어진 돌아섬은 따라간다. 임의값 */
+        const val VIEW_WINDOW_REPS = 5
+        /** 반복 검사의 사선(B/D) 띠 상한(°) — 세트 규칙의 46.2° 보다 넓다. 임의값(45° 안내 + MediaPipe 요 흔들림) */
+        const val REP_OBLIQUE_MAX_DEG = 55f
+        /** 반복 창의 앞 경계 = 사이클 시작 이만큼 전(ms) — 하강 직전 상단 창(TOP_FRAMES × 300 ms)이 들어가게. */
+        const val WINDOW_LEAD_MS = 1_500L
+        /** 잠금 뷰 대신 자기 뷰를 쓰는 요 차이(°) — 사선(−30°)에서 정면(0°)·옆(−50°)으로 흔들린 회는 잠금이 맡고, 반대쪽 사선(+30°)으로 진짜 돌아선 회는 자기 뷰. 임의값 */
+        const val VIEW_LOCK_TOLERANCE_DEG = 35f
         /** [RepFormRef.FIRST_REPS_DELTA] 기준 반복 수 — ROM 기준(첫 3사이클)과 같다. 셋의 중앙값이라 기준 반복 하나가 틀어져도 버틴다. */
         const val FIRST_REPS_N = 3
         /** 처음부터 틀린 출발 알림을 볼 수 있는 첫 반복 번호 — 첫 상단의 덤벨 집기 오염을 지나서. */
@@ -640,7 +709,7 @@ data class RepFormSummary(
         baselineTMs = baselineAtMs?.let { it - t0 },
         baseline = baseline?.filterKeys { k -> checks.any { it.feature == k || it.absRefFeature == k } }.orEmpty(),
         start = start.map { RepFormLog.Check(it.check.id, it.verdict.name, it.value, it.raw, it.reference, it.direction?.name, it.gate) },
-        reps = reps.map { r -> RepFormLog.Rep(r.tMs - t0, r.correct, r.outcomes.map { RepFormLog.Check(it.check.id, it.verdict.name, it.value, it.raw, it.reference, it.direction?.name, it.gate) }, r.view) },
+        reps = reps.map { r -> RepFormLog.Rep(r.tMs - t0, r.correct, r.outcomes.map { RepFormLog.Check(it.check.id, it.verdict.name, it.value, it.raw, it.reference, it.direction?.name, it.gate) }, r.view, r.viewRaw) },
         rejected = rejected, noTop = noTop, baselineFromFirstBottom = baselineFromFirstBottom,
         live = live.map { it.copy(tMs = it.tMs - t0) },
     )
@@ -663,7 +732,7 @@ data class RepFormLog(
     /** [gate] = 위반이 횟수 차단 단계(§62c 2단 검사). 위반이 아니면 false — JSON 에는 true 일 때만 `"gate":true` 를 적는다. */
     data class Check(val id: String, val verdict: String, val value: Float?, val raw: Float?, val reference: Float?, val direction: String?, val gate: Boolean = false)
     /** [view] = 그 반복 창의 뷰 글자 — 있을 때만 키 `view`. */
-    data class Rep(val tMs: Long, val correct: Boolean, val checks: List<Check>, val view: String? = null)
+    data class Rep(val tMs: Long, val correct: Boolean, val checks: List<Check>, val view: String? = null, val viewRaw: String? = null)
 
     /**
      * `rep_form` 블록의 JSON — 세트 로그(`SetLogJson`)와 재생기가 같은 문자열을 낸다(재생기는 org.json 도 SetLogJson 도 컴파일하지 않는다).
@@ -691,6 +760,7 @@ data class RepFormLog(
             if (i > 0) sb.append(',')
             sb.append("{\"t_ms\":").append(r.tMs).append(",\"correct\":").append(r.correct)
             r.view?.let { sb.append(",\"view\":").append(str(it)) }
+            r.viewRaw?.takeIf { it != r.view }?.let { sb.append(",\"view_raw\":").append(str(it)) }
             sb.append(",\"checks\":[")
             r.checks.forEachIndexed { j, c -> if (j > 0) sb.append(','); check(c) }
             sb.append("]}")
@@ -770,20 +840,24 @@ object RepFormSpecs {
             // 스쿼트 '상체 숙임' 과 같은 검사·같은 정책(사용자 결정 2026-09-26 "스쿼트와 똑같이") — 1단: 위반 = 음성 + COACH 에서 그 회를 세지 않음.
             // 다른 것은 임계와 기준뿐: 스쿼트는 원래 숙이는 동작이라 시작 대비 45°, 컬은 몸통이 거의 안 움직여 세트에서 가장 곧았던 상단 대비 20°
             RepFormCheck("repform|$ex|상체 숙임", ex, "상체 숙임(반복)", "상체", RuleStatus.SHIP, "torso_incl", RepPhase.CYCLE, RepFormStat.MAX, RepFormRef.SET_MIN_DELTA,
-                lo = null, hi = LEAN_HI, lowText = null, highText = "상체가 많이 숙여졌어요", lowLabel = null, highLabel = "숙임",
-                fix = "가슴을 들고 몸통을 세운 채 팔만 움직이세요", unit = "°", views = setOf("C", "D"),
+                // 2단(§62c 후속 10, 임의값): 코칭 +15°(등 말림은 골반 접힘보다 목–골반 선이 덜 기울어 +15~+19° 에 걸린다 — 13:49 세트 15회 +19·12:36 세트 20·21회 +16·+17 통과),
+                // 차단은 종전 +20°(정상 오탐 근거가 있는 값). 문구는 둘을 다 덮는다 — 이 선 하나로는 척추 말림과 골반 접힘을 못 가른다
+                lo = null, hi = LEAN_COACH_HI, lowText = null, highText = "등이 말리거나 상체가 숙여졌어요", lowLabel = null, highLabel = "숙임",
+                fix = "가슴을 들고 등을 편 채 팔만 움직이세요", unit = "°", views = setOf("C", "D"), gateHi = LEAN_HI, cue = "상체 숙임",
                 liveHoldFrames = 14, liveText = "상체가 숙여져 있어요",
                 reason = "§62c 후속 6(사용자 \"숙이는 거 인식 못 해\"): 반복 창 몸통 기울기(목−골반 vs 중력 up) 최대 − **세트에서 가장 곧았던 상단 자세**(SET_MIN_DELTA). 그 반복 시작 대비(후속 4)는 숙인 채 반복하면 차이가 0 이라 11:14 세트 숙인 반복 3·5·12~14회(창 최대 36~45°)를 −2~+3° 로 전부 통과시켰고, 세트 시작 대비(스쿼트 방식)는 첫 상단이 덤벨 집기에 오염되면(09:59·15:33, 45°) 세트 전체가 음수로 읽힌다 — 가장 곧았던 상단은 두 실패를 함께 피한다. 연속 세트 재생: 폰 정상 75회 최대 +23.3°(+20° 초과 1회, 10:41 6회 — 숙임 여부 불명)·MM-Fit 123회 +20° 초과 1회(0.8 %); 11:14 정면 숙임 3·4·5회 +30·+23·+27 검출(2회 +18 은 숙이기 시작한 회). 반복 없이 팔을 내린 채 4초 숙여 있으면 유지 사건으로 말한다(스쿼트 창 규칙 '척추의 중립' 과 같은 역할 — 11:14 세트 58~73 s 는 숙인 채 16초 멈춰 반복 판정이 오지 않았다). 1단(스쿼트와 같은 정책): 반복 위반 = 음성 + COACH 횟수 제외",
                 cautions = listOf("정면에서는 앞 숙임과 뒤 젖힘을 못 가른다(깊이 축) — 뒤로 젖혀도 '숙여졌어요' 로 말할 수 있다(스쿼트와 같은 한계)", "세트 첫 반복부터 계속 숙이고 있으면 기준 자체가 숙은 자세다(스쿼트와 같은 한계)", "AIHub 세션(32클립·수십 분)을 한 세트로 본 상한: 정면 +20° 초과 13.9 %(GT 3D 4.0 %) — 긴 시간의 자세 이동이 섞인 과대 추정이지만 지정 오류 세트에서 정상 오탐이 나오면 25° 로 올린다", "옆(SIDE)·B 뷰는 판정하지 않는다 — 옆으로 돌아서 숙인 반복·유지는 유보(반복마다 그 창의 뷰로)", "중력 up 기반 — up 오류 세트에서는 유보되지 않는다(up 방어 작업 대기)", "미세한 척추 말림은 못 본다")),
             // ---- 정면(C) 검사 (B4 — AIHub 정면 정상 170클립·MM-Fit 598회로 오탐, 폰 13회 정답 세트로 검출)
             RepFormCheck("repform|$ex|팔꿈치 뜸", ex, "팔꿈치 뜸(반복)", "팔꿈치", RuleStatus.SHIP, Arm2d.WRIST_H_MAX, RepPhase.CYCLE, RepFormStat.MAX, RepFormRef.NONE,
                 lo = null, hi = 0.15f, lowText = null, highText = "들어 올릴 때 팔꿈치가 몸에서 떴어요", lowLabel = null, highLabel = "뜸",
-                fix = "반동 없이 팔꿈치를 옆구리에 고정하고 팔만 접으세요", views = front,
+                fix = "반동 없이 팔꿈치를 옆구리에 고정하고 팔만 접으세요", views = front, cue = "팔꿈치 뜸",
                 reason = "§62c(B4): 반동(어깨로 들어 올림)·으쓱·앞 내밀기가 정면에서는 모두 '손목이 어깨 위로 넘음' 으로 나타난다 — 사이클 창 손목 최고 높이(어깨 기준 ÷ 몸통) ≥ 0.15. 정상 반복 초과 MM-Fit 1.5 %(1명 습관)·AIHub 정상 1.8 %, 폰 반동 3/3(0.20~0.24)·정상 0/10. 반동 정점은 팔꿈치각 최소보다 1~2프레임 뒤라 수축 프레임 값이 아니라 창 최대",
                 cautions = listOf("정면(C)에서만", "반동·으쓱·앞 내밀기를 못 가른다(내밀기 43 % 겹침) → 문구는 '팔꿈치가 몸에서 뜸' 으로 포괄", "임계는 스튜디오·MM-Fit·폰 1명 — 지정 오류 세트 3명 이후 확정")),
             RepFormCheck("repform|$ex|팔꿈치 옆 벌림", ex, "팔꿈치 옆 벌림(반복)", "팔꿈치", RuleStatus.SHIP, Arm2d.ELBOW_LAT_MAX, RepPhase.BOTTOM, RepFormStat.MEDIAN, RepFormRef.SET_MIN_DELTA,
                 lo = null, hi = 0.15f, lowText = null, highText = "팔꿈치가 옆으로 벌어졌어요", lowLabel = null, highLabel = "옆 벌림",
-                fix = "팔꿈치를 옆구리에 붙이세요", absMin = 0.30f, gateHi = 0.20f, gateAbsMin = 0.35f, views = front,
+                fix = "팔꿈치를 옆구리에 붙이세요", absMin = 0.30f, gateHi = 0.20f, gateAbsMin = 0.35f, views = front, cue = "팔꿈치 벌어짐",
+                // 등이 말리거나 숙인 회는 어깨 가로폭 투영이 줄고 팔꿈치가 어깨 대비 옮겨져 가로 비가 부푼다(14:46 세트 등 말림 3회: 가까운 팔 0.39~0.49, 월드 바깥은 정상) — 측정 무효(§62c 후속 10)
+                invalidatedBy = listOf("repform|$ex|상체 숙임"),
                 // 처음부터 벌림(§62c 후속 9) — AIHub '팔꿈치 고정' 충족 677클립: 수축 원값 ≥ 0.45 는 0.3 %, 이완(팔 늘어뜨림) 가로 p99 0.19·≥ 0.30 은 0 %
                 absHi = 0.45f, refCap = 0.19f, refNotice = 0.30f,
                 noticeText = "처음부터 팔꿈치가 옆으로 벌어져 있어요. 팔을 내렸을 때 팔꿈치를 옆구리에 붙이고 해 주세요.",
@@ -798,14 +872,15 @@ object RepFormSpecs {
             // ---- 사선(B/D) 검사 (B1)
             RepFormCheck("repform|$ex|팔꿈치 앞 이탈", ex, "팔꿈치 앞 이탈(반복)", "팔꿈치", RuleStatus.SHIP, Arm2d.ELBOW_FWD_NEAR, RepPhase.BOTTOM, RepFormStat.MEDIAN, RepFormRef.FIRST_REPS_DELTA,
                 lo = null, hi = 0.12f, lowText = null, highText = "팔꿈치가 앞으로 나갔어요", lowLabel = null, highLabel = "앞으로",
-                fix = "팔꿈치를 옆구리에 고정하세요", gateHi = 0.20f, views = oblique,
+                fix = "팔꿈치를 옆구리에 고정하세요", gateHi = 0.20f, views = oblique, cue = "팔꿈치 앞으로",
                 // 기준 오염 막기(§62c 후속 9) — 몸에서 떨어진 반복은 이 축에 '뒤로' 샌다. 12:41 세트: 벌린 첫 두 회(가로 0.80·0.77, 절대 상한 위반)가 기준을 −0.44 로 끌었다
                 refExcludedBy = listOf("repform|$ex|팔꿈치 몸에서 떨어짐"),
                 reason = "§62c 후속 7(사용자 \"왼쪽만 보이니 작동을 안 한다\"): 카메라 쪽 팔 하나의 앞 성분(가까운 쪽 몸통 선에서 팔꿈치의 앞쪽 거리 ÷ 몸통), 수축 구간 중앙값 − 그 뷰의 첫 3회 수축 중앙값(본인 기준). 양팔 평균(§62c)은 먼 팔꿈치가 몸통 뒤에 가려지면 없어 유보됐다(11:54 세트). AIHub 뷰 D/B 가까운 팔: 앞 내밀기 판별 AUC 0.937·0.928(양팔 평균 0.958), 본인 수축 대비 +0.12 오탐 5.4·3.3 %·검출 88·80 %, +0.20 오탐 2.1·1.5 %·검출 62·49 %(단일 프레임 상한). 코칭 +0.12, 차단 +0.20(입장 조건 ≤ 2 % 경계)",
                 cautions = listOf("사선(B/D)에서만 — 정면에서는 앞 성분이 깊이 축이라 못 본다", "첫 3회가 기준이라 처음부터 팔꿈치를 내밀고 하면 못 잡는다(본인 기준의 한계)", "'몸에서 떨어짐' 이 위반인 반복은 기준에 넣지 않는다(벌린 반복은 이 축에 뒤로 샌다, §62c 후속 9) — 절대 상한(0.72) 밑으로 벌린 처음 몇 회는 막지 못한다", "사선에서는 옆 벌림이 이 축에 '뒤로' 새어(외전 1° = −0.5~−0.63°) 뒤 방향은 이 검사가 말하지 않는다 — '몸에서 떨어짐' 이 맡는다", "임계는 AIHub(4~6 m) 단일 프레임 수치 — 폰 지정 오류 세트로 확정")),
             RepFormCheck("repform|$ex|팔꿈치 몸에서 떨어짐", ex, "팔꿈치 몸에서 떨어짐(반복)", "팔꿈치", RuleStatus.SHIP, Arm2d.ELBOW_LAT_NEAR, RepPhase.BOTTOM, RepFormStat.MEDIAN, RepFormRef.SET_LOW_DELTA,
                 lo = null, hi = 0.25f, lowText = null, highText = "팔꿈치가 몸에서 떨어졌어요", lowLabel = null, highLabel = "떨어짐",
-                fix = "팔꿈치를 옆구리에 붙이세요", gateHi = 0.40f, views = oblique,
+                fix = "팔꿈치를 옆구리에 붙이세요", gateHi = 0.40f, views = oblique, cue = "팔꿈치 떨어짐",
+                invalidatedBy = listOf("repform|$ex|상체 숙임"),
                 // 처음부터 벌림(§62c 후속 9) — AIHub 사선 가까운 팔 수축 원값 p90 0.33(D)·0.31(B), p99 0.62·0.59. 기준을 p90 으로 자르면 처음부터 벌린 사람의 실효
                 // 임계는 코칭 0.57·차단 0.72(정상 사람은 그대로); 0.72 이상은 기준을 모으는 첫 두 회에도 차단. 기준이 p99(0.60) 이상이면 한 번 알린다
                 absHi = 0.72f, refCap = 0.32f, refNotice = 0.60f,
@@ -841,6 +916,8 @@ object RepFormSpecs {
      * MM-Fit 1/123(0.8 %) — 25° 면 11:14 정면 숙임 4회(+23°)를 놓친다.
      */
     const val LEAN_HI = 20f
+    /** 컬 상체 숙임의 코칭 단계(°, §62c 후속 10) — 차단은 [LEAN_HI]. 임의값(등 말림 폰 세트로 확정 전) */
+    const val LEAN_COACH_HI = 15f
 
     private fun squat(): List<RepFormCheck> {
         val ex = "바벨 스쿼트"

@@ -514,10 +514,33 @@ class SpeechCoach(context: Context) {
     /** 준비 설명이 숫자 안내에 잘리지 않도록 대기/발화 여부를 제공한다. */
     val isSpeaking: Boolean get() = synchronized(lock) { pending.isNotEmpty() || speaking.isNotEmpty() }
 
+    /** 코칭 문장 보류분(§62c 후속 10) — 말하는 중에 온 코칭 문장은 **하나만** 쥐고(나중 것이 앞 것을 덮음) 지금 발화가 끝나면 말한다. */
+    private var held: Pending? = null
+
+    /**
+     * 코칭 문장용(§62c 후속 10) — 끊지도(QUEUE_FLUSH), 줄 세우지도(QUEUE_ADD) 않는다. 오늘 코칭 문장 72개 중 26개가 다음 코칭 문장에 잘렸고(반복 2~3 s 간격에
+     * 문장은 5~7 s), 줄을 세우면 몇 회 뒤의 말이 된다. 말하는 중이면 보류분으로 쥐고 끝나면 말한다 — [HELD_TTL_MS] 넘게 묵은 보류분은 버린다(그 회는 지났다).
+     * flush 발화(촬영 안내·세트 경계)는 보류분도 지운다.
+     */
+    fun speakLatest(text: String) {
+        traceFeedback("speech_requested", text)
+        if (muted) return
+        if (!ready) {
+            if (initialized) return
+            synchronized(lock) { pending += Pending(text, System.currentTimeMillis()); while (pending.size > MAX_PENDING) pending.removeAt(0) }
+            return
+        }
+        val busy = synchronized(lock) {
+            if (speaking.isNotEmpty()) { held = Pending(text, System.currentTimeMillis()); true } else false
+        }
+        if (!busy) speakNow(text, flush = false)
+    }
+
     fun stop() {
         synchronized(lock) {
             pending.clear()
             speaking.clear()
+            held = null
         }
         runCatching { tts?.stop() }
         abandonFocus()
@@ -541,7 +564,7 @@ class SpeechCoach(context: Context) {
         val id = "coach-${System.nanoTime()}"
         traceFeedback("tts_submit",text,id)
         synchronized(lock) {
-            if (flush) speaking.clear()             // 끊긴 발화는 onDone 이 오지 않는다
+            if (flush) { speaking.clear(); held = null }   // 끊긴 발화는 onDone 이 오지 않는다. 보류한 코칭도 지난 말이 된다
             speaking += id
         }
         requestFocus()
@@ -567,11 +590,14 @@ class SpeechCoach(context: Context) {
 
     private fun finished(utteranceId: String?) {
         val id = utteranceId ?: return
-        val idle = synchronized(lock) {
+        val next = synchronized(lock) {
             speaking.remove(id)
-            speaking.isEmpty()
+            if (speaking.isNotEmpty()) return
+            val h = held; held = null
+            h?.takeIf { System.currentTimeMillis() - it.atMs <= HELD_TTL_MS }
         }
-        if (idle) abandonFocus()
+        // 보류한 코칭 문장이 있으면 이어서(TTS 콜백 스레드에서 speak 해도 된다), 없으면 포커스를 놓는다
+        if (next != null) speakNow(next.text, flush = false) else abandonFocus()
     }
 
     /** 발화 동안만 DUCK 포커스 — 음악을 끄지 않고 낮춘다. 실패해도 발화는 그대로 진행한다. */
@@ -603,5 +629,7 @@ class SpeechCoach(context: Context) {
         const val MAX_PENDING = 3
         /** 대기 요청 유효 시간(ms) — 이보다 오래된 안내는 이미 지난 상황. */
         const val PENDING_TTL_MS = 10_000L
+        /** 코칭 보류분의 수명(ms, §62c 후속 10) — 반복 한두 회 안. 넘으면 그 회는 이미 지났다. */
+        const val HELD_TTL_MS = 4_000L
     }
 }

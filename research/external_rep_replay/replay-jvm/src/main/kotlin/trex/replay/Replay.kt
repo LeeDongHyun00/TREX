@@ -362,7 +362,7 @@ fun run(job: Job, meta: Map<String, String>, frames: List<InputFrame>, stats: Fr
                 cycles += "[${num(rc.lastCycleMin)},${num(rc.lastCycleMax)},${ok ?: "null"}]"
                 rf?.onCycle(frame.tMs, rc.lastCycleMin, rc.lastCycleMax)
             } else for ((k, c) in published.withIndex()) {
-                rf?.onCycle(c.tMs, c.min, c.max)
+                rf?.onCycle(c.tMs, c.min, c.max, c.startMs)
                 // 팔별 경로(spec §62c)의 회 유효는 두 팔 사이클의 ROM(월드 각 비율 + 2D 손목 보조)으로 정해진다 — 앱 RepUnit.onCounterFrame 과 같은 출처(파리티)
                 val ok = if (rc.paired) rc.newlyPublishedValid.getOrNull(k) else rc.signal.isValidRep(c.min, c.max)
                 when (ok) { true -> valid++; false -> invalid++; null -> unjudged++ }

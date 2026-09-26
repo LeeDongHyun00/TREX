@@ -97,10 +97,14 @@ class StanceWidthTest {
         val b = Arm2d.features(xy, vis, 0.5f, aspect = 1f, yawDeg = 30f)
         assertEquals((0.40f - 0.46f) / 0.30f, b.getValue(Arm2d.ELBOW_FWD_NEAR), 1e-4f)
         assertEquals(b.getValue(Arm2d.ELBOW_LAT_R), b.getValue(Arm2d.ELBOW_LAT_NEAR), 1e-6f)
-        // 정면(요 0°): 가까운 팔 피처 없음. 옆(요 +60°): 앞 성분만(바깥 가로는 사선에서만)
+        // 정면(요 0°): 가까운 팔 피처 없음. 옆 초입(요 +60°, §62c 후속 10 띠 끝): 앞 성분과 바깥 가로 둘 다. 옆(요 +70°): 앞 성분만(가로는 어깨 가로폭이 작아 흔들린다)
         val c = Arm2d.features(xy, vis, 0.5f, aspect = 1f, yawDeg = 0f)
         assertNull(c[Arm2d.ELBOW_FWD_NEAR]); assertNull(c[Arm2d.ELBOW_LAT_NEAR])
-        val side = Arm2d.features(xy, vis, 0.5f, aspect = 1f, yawDeg = 60f)
+        val edge = Arm2d.features(xy, vis, 0.5f, aspect = 1f, yawDeg = 60f)
+        assertTrue(edge.containsKey(Arm2d.ELBOW_FWD_NEAR)); assertTrue(edge.containsKey(Arm2d.ELBOW_LAT_NEAR)); assertNull(edge[Arm2d.ELBOW_FWD_MEAN])
+        val side = Arm2d.features(xy, vis, 0.5f, aspect = 1f, yawDeg = 70f)
         assertTrue(side.containsKey(Arm2d.ELBOW_FWD_NEAR)); assertNull(side[Arm2d.ELBOW_LAT_NEAR]); assertNull(side[Arm2d.ELBOW_FWD_MEAN])
+        // 정면 띠 안쪽 12°: 사선으로 잠긴 세트에서 살짝 정면으로 흔들린 프레임도 잰다
+        assertTrue(Arm2d.features(xy, vis, 0.5f, aspect = 1f, yawDeg = 12f).containsKey(Arm2d.ELBOW_LAT_NEAR))
     }
 }
