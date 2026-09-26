@@ -321,3 +321,4 @@ MediaPipe 랜드마크 번호: 어깨 11/12, 골반 23/24, 무릎 25/26, 발목 
 | A5 문헌 | `A5_LITERATURE.md` | — | 출처 55건은 보고서 끝에 |
 | A6 넓은 스탠스 발끝 부풀림(후속) | `A6_REPORT.md` | `A6_toe_stance.py` | `A6/summary.md` |
 | A7 발끝·발 너비 판정과 COACH 횟수 게이트(후속, 2026-09-25 저녁) — 종합은 `docs/SQUAT_FOOT_RULES_RESEARCH.md` | `A7a_REPORT.md`(AIHub: 판독이 무엇을 따라가나), `A7b_REPORT.md`(모집단 오탐률·폰 검출), `A7c_NOTES.md`(MediaPipe 내부) | `A7a_toe_shin.py`, `A7b_lib.py`·`A7b_run.py`·`A7b_tables.py` | `A7a/`, `A7b/summary.md`·`reps.csv` |
+| B 덤벨 컬 — 반동·팔꿈치 이탈·벌어짐·1회 정의(2026-09-25 밤) — 종합은 `docs/CURL_RULES_RESEARCH.md` | `B1_REPORT.md`(AIHub 5뷰 판별력·ROM 척도), `B2_REPORT.md`(MM-Fit ROM 게이트·정상 분포), `B3_LITERATURE.md` | `B1_*.py`, `B2_*.py` | `B1/`, `B2/` |
