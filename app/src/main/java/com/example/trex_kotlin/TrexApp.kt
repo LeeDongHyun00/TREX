@@ -167,17 +167,40 @@ fun TrexApp(app: AppViewModel = viewModel()) {
                 delay(30_000)
             }
         }
-        val pausedState = rememberUpdatedState(sessionPaused || appPaused || exitAsk)
         val plan = app.workoutPlan
         val planKey = plan.map { it.copy(done = false) }.toString()
         val steps = remember(plan.map { it.copy(done = false) }) { buildSessionSteps(plan) }
         val step = steps.getOrNull(sessionIndex)
+        val guidePreferences = remember { context.getSharedPreferences("exercise_guides", Context.MODE_PRIVATE) }
+        var seenGuides by remember { mutableStateOf(guidePreferences.getStringSet("seen_v1", emptySet()).orEmpty().toSet()) }
+        var requestedGuide by rememberSaveable(sessionIndex, sessionPlanKey) { mutableStateOf<String?>(null) }
+        val introductionGuide = ExerciseGuides.introduction(step?.workout?.name,
+            step?.phase == SessionPhase.PREPARE, seenGuides)
+        val activeGuide = requestedGuide?.let(ExerciseGuides::forName) ?: introductionGuide
+        val showingIntroduction = requestedGuide == null && introductionGuide != null
+        // 초기 구성부터 시범이 시간을 막는다. 효과에서 뒤늦게 일시정지하면 준비가 먼저 진행될 수 있다.
+        val pausedState = rememberUpdatedState(sessionPaused || appPaused || exitAsk || activeGuide != null)
+        fun closeGuide(continuePreparation: Boolean) {
+            activeGuide?.let { guide ->
+                seenGuides = seenGuides + guide.name
+                guidePreferences.edit().putStringSet("seen_v1", seenGuides).apply()
+            }
+            requestedGuide = null
+            // 첫 안내의 명시적 준비 버튼만 진행한다. 스와이프·뒤로가기·다시 보기는 정지 상태로 남긴다.
+            if (!continuePreparation) sessionPaused = true
+        }
         val finalizers = remember { mutableMapOf<String, () -> Unit>() }
 
         // 세션 스코프 스피커 (spec §30): 라이브 화면이 소유하면 자세→타이머 전환마다 shutdown 이 세트 요약을 끊는다.
         // 여기서 만들어 라이브 화면·완료 화면이 같은 큐를 쓰고, 세션을 나갈 때 stop 한다.
         val speech = androidx.compose.runtime.remember { SpeechCoach(context) }
         androidx.compose.runtime.DisposableEffect(Unit) { onDispose { speech.shutdown() } }
+        fun showGuide(name: String) {
+            if (ExerciseGuides.forName(name) == null) return
+            sessionPaused = true
+            requestedGuide = name
+            speech.stop()
+        }
         val startTone = remember { runCatching { android.media.ToneGenerator(android.media.AudioManager.STREAM_MUSIC, 50) }.getOrNull() }
         androidx.compose.runtime.DisposableEffect(Unit) { onDispose { startTone?.release() } }
 
@@ -369,9 +392,10 @@ fun TrexApp(app: AppViewModel = viewModel()) {
                             )
 
                             RootRoute.TransitionSession -> renderedStep?.let { current ->
-                                SessionTransitionScreen(current, sessionTimeLeft, sessionPaused || appPaused || exitAsk,
+                                SessionTransitionScreen(current, sessionTimeLeft, pausedState.value,
                                 onTogglePause = { sessionPaused = !sessionPaused },
-                                onNext = { nextSession(current.token, true) }, onExit = { requestExit() })
+                                onNext = { nextSession(current.token, true) }, onExit = { requestExit() },
+                                onShowGuide = ExerciseGuides.forName(current.workout.name)?.let { { showGuide(current.workout.name) } })
                             }
 
                             RootRoute.PostureSession -> renderedStep?.let { current -> key(current.workout.id) {
@@ -379,7 +403,7 @@ fun TrexApp(app: AppViewModel = viewModel()) {
                                     PostureLiveSessionScreen(
                                     workout = w, index = current.exerciseIndex, total = plan.size,
                                     setLabel = current.setLabel, timeLeft = sessionTimeLeft, totalSeconds = current.seconds,
-                                    paused = sessionPaused || appPaused || exitAsk,
+                                    paused = pausedState.value,
                                     onTogglePause = { sessionPaused = !sessionPaused },
                                     onNext = { nextSession(current.token, false) },
                                     onSkip = { nextSession(current.token, true) }, onExit = { requestExit() },
@@ -394,6 +418,7 @@ fun TrexApp(app: AppViewModel = viewModel()) {
                                     preparing = current.phase == SessionPhase.PREPARE,
                                     validation = repValidation,
                                     onPrepared = { nextSession(current.token, true) },
+                                    onShowGuide = ExerciseGuides.forName(w.name)?.let { { showGuide(w.name) } },
                                     )
                                 } }
 
@@ -401,13 +426,14 @@ fun TrexApp(app: AppViewModel = viewModel()) {
                                     TimerSessionScreen(
                                     workout = current.workout, index = current.exerciseIndex, total = plan.size,
                                     setLabel = current.setLabel, timeLeft = sessionTimeLeft, totalSeconds = current.seconds,
-                                    paused = sessionPaused || appPaused || exitAsk,
+                                    paused = pausedState.value,
                                     onTogglePause = { sessionPaused = !sessionPaused },
                                     onNext = { nextSession(current.token, false) },
                                     onSkip = { nextSession(current.token, true) }, onExit = { requestExit() },
                                     repetitions = progress.repetitions,
                                     onRepetitions = { count -> progress = progress.setRepetitions(steps, current.token, count) },
                                     onPartial = { nextSession(current.token, true) },
+                                    onShowGuide = ExerciseGuides.forName(current.workout.name)?.let { { showGuide(current.workout.name) } },
                                     )
                                 } }
 
@@ -428,6 +454,13 @@ fun TrexApp(app: AppViewModel = viewModel()) {
                         }
                     }
 
+                    if (activeGuide != null) {
+                        ExerciseGuideSheet(activeGuide,
+                            onClose = { closeGuide(false) },
+                            confirmLabel = if (showingIntroduction) "준비 계속하기" else "운동 화면으로 돌아가기",
+                            onConfirm = { closeGuide(showingIntroduction) },
+                            sessionPaused = !showingIntroduction)
+                    }
                     if (exitAsk) {
                         TrexContentFrame(maxWidth = 600.dp) {
                             SessionExitSheet(

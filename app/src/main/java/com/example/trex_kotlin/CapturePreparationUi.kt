@@ -5,8 +5,6 @@ import android.os.SystemClock
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.VolumeOff
@@ -46,6 +44,9 @@ internal fun CapturePreparationPanel(
     speech: SpeechCoach, onStart: (skipped: Boolean) -> Unit, onExit: () -> Unit, modifier: Modifier = Modifier,
     cameraError: String? = null, onFallback: () -> Unit = {},
     modeControl: @Composable () -> Unit = {},
+    onShowGuide: (() -> Unit)? = null,
+    guideName: String = profile.name,
+    onTogglePause: () -> Unit = {},
 ) {
     val c = Trex.c
     val tone = remember { runCatching { android.media.ToneGenerator(android.media.AudioManager.STREAM_MUSIC, 60) }.getOrNull() }
@@ -106,11 +107,13 @@ internal fun CapturePreparationPanel(
         }
     }
     val counting = state.phase == PreparationPhase.COUNTDOWN
-    val active = state.phase != PreparationPhase.IDLE
     Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text("운동 준비", color = c.text, fontSize = 19.sp, fontWeight = FontWeight.SemiBold)
-        Text(if(userPaused) "준비를 잠시 멈췄어요." else profile.preparationInstruction, color = c.text2, fontSize = 12.sp)
+        Column(Modifier.weight(1f, fill = false), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text("운동 준비", color = c.text, fontSize = 19.sp, fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.weight(1f))
+            if (onShowGuide != null) ExerciseGuideButton(guideName, { cancel(); onShowGuide() })
+        }
         Row(Modifier.fillMaxWidth().heightIn(min = 114.dp), verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             if (counting) RingGauge(state.progress, 110.dp, 5.dp) {
@@ -121,16 +124,12 @@ internal fun CapturePreparationPanel(
             } else CaptureDirectionDemo(profile.capture, frontCamera, Modifier.size(114.dp))
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(profile.capture.placement, color = c.text, fontSize = 15.sp, lineHeight = 21.sp)
-                if(active && state.message != "몸이 화면에 잡히면 5초 뒤 시작해요.") Text(state.message, color=c.text2, fontSize=12.sp, lineHeight=17.sp)
-                Text(if (profile.floor) "무릎을 대거나 편하게 앉아 준비하세요." else "휴대폰은 고정 · 몸만 움직여 주세요.",
-                    color = c.text2, fontSize = 12.sp, lineHeight = 17.sp)
             }
         }
         if (cameraError != null) {
             Text(cameraError, color = c.text2, fontSize = 13.sp)
             TextButton(onClick = { cancel(); onFallback() }) { Text("자세 비교 없이 계속", color = c.text) }
         }
-        if(state.restarts>=2) Text("인식이 계속 끊기면 준비를 건너뛰고 시작할 수 있어요.",color=c.text2,fontSize=12.sp)
         }
         modeControl()
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -143,8 +142,11 @@ internal fun CapturePreparationPanel(
                 if (muted) Icons.AutoMirrored.Rounded.VolumeOff else Icons.AutoMirrored.Rounded.VolumeUp,
                 onMute, Modifier.width(48.dp))
             SessionTool("카메라", "카메라 전환", Icons.Rounded.Cameraswitch, { cancel(); onCamera() }, Modifier.width(48.dp))
-            PreparationPauseAction(userPaused, !paused && !delivered,
-                { userPaused = !userPaused; if (userPaused) cancel() }, Modifier.width(104.dp))
+            PreparationPauseAction(userPaused || paused, !delivered,
+                {
+                    if (paused) { userPaused = false; onTogglePause() }
+                    else { userPaused = !userPaused; if (userPaused) cancel() }
+                }, Modifier.width(104.dp))
         }
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             GhostButton("나가기", { cancel(); onExit() }, Modifier.weight(1f))

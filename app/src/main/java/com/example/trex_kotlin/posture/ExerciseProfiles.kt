@@ -32,7 +32,11 @@ const val SIDE_EACH_COUNT_RULE = "왼발 앞과 오른발 앞을 따로 셉니�
  */
 val REFERENCE_HINTS: Map<String, String> = mapOf(
     "덤벨 컬" to "처음 두세 번은 팔꿈치를 옆구리에 붙이고 정확하게 해 주세요. 그 자세를 기준으로 봐요.",
+    "바벨 컬" to "처음 두세 번은 팔꿈치를 옆구리에 붙이고 정확하게 해 주세요. 그 자세를 기준으로 봐요.",
 )
+
+/** 쪽별로 세는 런지(앱 이름) — `RepFormSpecs.STEP_LUNGES` 의 앱 쪽 이름. */
+val SIDE_EACH_LUNGES = setOf("런지", "바벨 런지")
 
 /**
  * @property alternating 좌우를 번갈아 하는 종목(런지류·덤벨 컬·스탠딩 니업) — 동작의 성질(메타데이터)이다. 횟수 단위는 [repUnit] 이 정한다.
@@ -84,8 +88,8 @@ object ExerciseProfiles {
             val lunges = setOf("런지","바벨 런지","사이드 런지","크로스 런지")
             val alternating = name in lunges || name in setOf("덤벨 컬","스탠딩 니업")
             add(ExerciseProfile(name, ref, capture, floor, if (alternating) ObservationKind.WINDOW else kind, features, alternating,
-                // 런지만 쪽별로 센다(§63 — 앞으로 딛는 런지만 앞다리 기하가 설계됐다). 바벨·사이드·크로스 런지는 두 걸음 = 1회 그대로
-                repUnit = if (name == "런지") RepUnit.SIDE_EACH else if (name in lunges) RepUnit.SIDE_PAIR else RepUnit.CYCLE, referenceHint = REFERENCE_HINTS[name]))
+                // 런지·바벨 런지는 쪽별로 센다(§63·§66 — 앞뒤로 딛는 걸음의 앞다리 기하). 사이드·크로스 런지는 두 걸음 = 1회 그대로(딛는 방향이 달라 쪽 기하가 없다)
+                repUnit = if (name in SIDE_EACH_LUNGES) RepUnit.SIDE_EACH else if (name in lunges) RepUnit.SIDE_PAIR else RepUnit.CYCLE, referenceHint = REFERENCE_HINTS[name]))
         }
         val c=CapturePosition.FRONT; val b=CapturePosition.RIGHT_FRONT; val d=CapturePosition.LEFT_FRONT
         val low=CapturePosition.FLOOR_SIDE; val oblique=CapturePosition.FLOOR_FRONT

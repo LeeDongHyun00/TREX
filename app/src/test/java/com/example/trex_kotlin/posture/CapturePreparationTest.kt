@@ -23,13 +23,17 @@ class CapturePreparationTest {
         assertTrue(lunge.preparationInstruction.contains(SIDE_EACH_COUNT_RULE))
         assertTrue(lunge.preparationInstruction.indexOf(SIDE_EACH_COUNT_RULE) < lunge.preparationInstruction.indexOf("5초"))
         assertFalse(lunge.preparationInstruction.contains(ALTERNATING_COUNT_RULE))
-        val barbell = ExerciseProfiles.forName("바벨 런지")!!
-        assertTrue(barbell.preparationInstruction.indexOf(ALTERNATING_COUNT_RULE) < barbell.preparationInstruction.indexOf("5초"))
+        // 바벨 런지도 쪽별(§66) — 좌우 짝 안내는 사이드 런지로 본다
+        assertTrue(ExerciseProfiles.forName("바벨 런지")!!.preparationInstruction.contains(SIDE_EACH_COUNT_RULE))
+        val side = ExerciseProfiles.forName("사이드 런지")!!
+        assertTrue(side.preparationInstruction.contains(ALTERNATING_COUNT_RULE))
+        assertTrue(side.preparationInstruction.indexOf(ALTERNATING_COUNT_RULE) < side.preparationInstruction.indexOf("5초"))
         assertEquals(setOf("런지", "바벨 런지", "사이드 런지", "크로스 런지", "덤벨 컬", "스탠딩 니업"),
             ExerciseProfiles.all.filter { it.alternating }.map { it.name }.toSet())
-        assertEquals(setOf("바벨 런지", "사이드 런지", "크로스 런지"),
+        assertEquals(setOf("사이드 런지", "크로스 런지"),
             ExerciseProfiles.all.filter { it.repUnit == RepUnit.SIDE_PAIR }.map { it.name }.toSet())
-        assertEquals(setOf("런지"), ExerciseProfiles.all.filter { it.repUnit == RepUnit.SIDE_EACH }.map { it.name }.toSet())
+        assertEquals("쪽별 카운트 = 걸음 검사기가 있는 런지(§63·§66)", SIDE_EACH_LUNGES,
+            ExerciseProfiles.all.filter { it.repUnit == RepUnit.SIDE_EACH }.map { it.name }.toSet())
         ExerciseProfiles.all.filter { it.repUnit == RepUnit.SIDE_PAIR }.forEach {
             assertTrue(it.name, it.preparationInstruction.contains(ALTERNATING_COUNT_RULE))
             assertFalse(it.name, it.floor)   // 짝 단위는 서서 하는 런지류뿐 — 바닥 종목은 늘 사이클 단위

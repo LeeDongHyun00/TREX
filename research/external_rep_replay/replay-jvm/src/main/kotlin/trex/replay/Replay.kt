@@ -313,7 +313,7 @@ fun run(job: Job, meta: Map<String, String>, frames: List<InputFrame>, stats: Fr
     val rf = if (job.mode == "live" && job.feature == null) RepFormSpecs.evaluatorFor(job.exercise, rc) else null
     // 쪽별 카운트(spec §63, 런지) — 앱처럼 걸음마다 그 걸음의 앞다리 쪽·차단으로 두 풀에 넣는다. 목표는 세트 로그 reps.sides.target(없으면 상한 없이) —
     // 목표가 있어야 목표를 넘은 걸음(extra)·모르는 걸음 채우기가 앱과 같다
-    val sc = if (rf != null && job.exercise == RepFormSpecs.LUNGE) SideStepCounter(meta["loggedSidesTarget"]?.toIntOrNull()) else null
+    val sc = if (rf != null && rf.stepSides) SideStepCounter(meta["loggedSidesTarget"]?.toIntOrNull()) else null
     val stepSides = StringBuilder()
     val dips = ArrayList<String>()
     var rejectedSeen = 0
@@ -501,6 +501,62 @@ private fun json(map: Map<String, Any?>): String = map.entries.joinToString(",",
     "\"$k\":$value"
 }
 
+/** 클립 경계 — 이만큼 벌어진 프레임 사이에서 클립을 나눈다(AIHub 캡처는 클립 사이에 5 s 틈을 둔다, aihub_captures.py). */
+private const val CLIP_GAP_MS = 1_000L
+
+/**
+ * --clip-eval: 짧은 클립(AIHub 키프레임 16장 = 반복 하나)마다 **새** 반복 검사기로 그 클립 하나를 한 반복으로 판정한다 — 카운터 없이 클립 전체가
+ * 한 사이클(극값 = 클립의 신호 최소·최대). 종목 = 캡처 메타 `exercise=`. 사람 사이의 기준이 섞이지 않게 클립마다 검사기를 새로 만든다.
+ * 그래서 본인 기준(FIRST_REPS·SET_LOW)은 기준이 서지 않아 유보되고, 세트 최소(SET_MIN)는 그 반복 상단 대비가 된다 —
+ * 채점기(family_scorecard.py)는 판정과 함께 원값(raw)의 조건별 분리도를 따로 본다. 판정 코드는 앱·재생과 같은 RepFormEvaluator 다.
+ * 한 줄 = {"i","t0","t1","frames","signalFrames","signal","min","max","amp","minAmp","repForm"} (repForm = RepFormLog JSON, 반복 1개).
+ */
+fun clipEval(capture: Capture, out: File): Int {
+    val exercise = capture.meta["exercise"] ?: error("capture meta exercise= 없음")
+    val floor = capture.meta["floor"] == "1"
+    val frames = inputFrames(capture, FrameStats())
+    val clips = ArrayList<List<InputFrame>>()
+    var cur = ArrayList<InputFrame>()
+    for (f in frames) {
+        if (cur.isNotEmpty() && f.tMs - cur.last().tMs >= CLIP_GAP_MS) { clips += cur; cur = ArrayList() }
+        cur += f
+    }
+    if (cur.isNotEmpty()) clips += cur
+    out.bufferedWriter().use { w ->
+        for ((k, clip) in clips.withIndex()) {
+            val rc = RepCounter.forSession(exercise, floor = floor)
+            val rf = rc?.let { RepFormSpecs.evaluatorFor(exercise, it) }
+            if (rc == null || rf == null) { w.write(json(mapOf("i" to k, "error" to "no rep-form checks for $exercise"))); w.newLine(); continue }
+            val sig = rc.signal.feature
+            val vals = ArrayList<Float>()
+            for (f in clip) {
+                val ft = f.features ?: continue
+                rf.onFrame(f.tMs, ft)
+                signalValue(ft, sig)?.let { vals += it }
+            }
+            val base = mapOf<String, Any?>("i" to k, "t0" to clip.first().tMs, "t1" to clip.last().tMs, "frames" to clip.size,
+                "signalFrames" to vals.size, "signal" to sig)
+            if (vals.size < 4) { w.write(json(base + ("error" to "signal frames < 4"))); w.newLine(); continue }
+            val mn = vals.min(); val mx = vals.max()
+            rf.onCycle(clip.last().tMs, mn, mx, clip.first().tMs)
+            w.write(json(base + mapOf("min" to mn, "max" to mx, "amp" to (mx - mn), "minAmp" to rc.signal.minAmp,
+                "repForm" to Raw(rf.summary().toLog(0L).toJson()))))
+            w.newLine()
+        }
+    }
+    return clips.size
+}
+
+/**
+ * --checks <종목>: 그 종목의 반복 검사 명세(RepFormSpecs 가 정본) — 채점기가 방향(hi/lo)·상태·뷰를 코드에서 읽게. 한 줄 = 검사 하나.
+ */
+fun checkSpecs(exercise: String): List<String> = RepFormSpecs.byExercise[exercise].orEmpty().map { c ->
+    json(mapOf("id" to c.id, "name" to c.id.substringAfterLast('|'), "status" to c.status.name, "gates" to c.gates,
+        "feature" to c.feature, "phase" to c.phase.name, "stat" to c.stat.name, "ref" to c.ref.name,
+        "lo" to c.lo, "hi" to c.hi, "gateHi" to c.gateHi, "views" to Raw(c.views.sorted().joinToString(",", "[", "]") { "\"$it\"" }),
+        "bodyPart" to c.bodyPart))
+}
+
 fun readManifest(file: File): List<Job> = file.readLines()
     .filter { it.isNotBlank() && !it.startsWith("#") }
     .map { line ->
@@ -518,6 +574,8 @@ fun readManifest(file: File): List<Job> = file.readLines()
  * 사용법: replay <manifest.tsv> <results.jsonl> [series-dir] — 매니페스트의 캡처 경로는 매니페스트 기준 상대경로.
  * 캡처가 *.fcap 이면 피처 수준 캡처(세트 로그), 아니면 랜드마크 캡처로 읽는다.
  *        replay --dump-features <capture.cap> <out.jsonl> — 랜드마크 캡처의 프레임별 피처(재생과 같은 후처리)
+ *        replay --clip-eval <capture.cap> <out.jsonl> — 클립마다 새 검사기로 한 반복 판정(AIHub 조건별 채점, [clipEval])
+ *        replay --checks <exercise> — 반복 검사 명세 JSON 줄([checkSpecs])
  */
 fun main(args: Array<String>) {
     if (args.firstOrNull() == "--dump-features") {
@@ -526,7 +584,19 @@ fun main(args: Array<String>) {
         System.err.println("dumped $n frames")
         return
     }
-    require(args.size >= 2) { "usage: replay <manifest.tsv> <results.jsonl> [series-dir]\n       replay --dump-features <capture.cap> <out.jsonl>" }
+    if (args.firstOrNull() == "--checks") {
+        require(args.size == 2) { "usage: replay --checks <exercise>" }
+        val out = java.io.PrintStream(System.out, true, "UTF-8")   // 콘솔 기본 인코딩(윈도 MS949)이 아니라 UTF-8 — 채점기가 읽는다
+        checkSpecs(args[1]).forEach(out::println)
+        return
+    }
+    if (args.firstOrNull() == "--clip-eval") {
+        require(args.size == 3) { "usage: replay --clip-eval <capture.cap> <out.jsonl>" }
+        val n = clipEval(readCapture(File(args[1])), File(args[2]))
+        System.err.println("evaluated $n clips")
+        return
+    }
+    require(args.size >= 2) { "usage: replay <manifest.tsv> <results.jsonl> [series-dir]\n       replay --dump-features <capture.cap> <out.jsonl>\n       replay --clip-eval <capture.cap> <out.jsonl>" }
     val manifest = File(args[0])
     val jobs = readManifest(manifest)
     val seriesDir = args.getOrNull(2)?.let { File(it).apply { mkdirs() } }

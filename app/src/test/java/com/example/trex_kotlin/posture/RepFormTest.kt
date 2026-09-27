@@ -324,15 +324,15 @@ class RepFormTest {
             "knee_out_mean__mean", "knee_out_mean", "mean", "world", "<", 0.02388f, "C", "정면", .96f, .94f, 56, true, emptyList())
         val spine = knee.copy(id = "바벨 스쿼트|척추의 중립[flexion]", condition = "척추의 중립", subtype = "flexion", feature = "torso_incl__range", baseFeature = "torso_incl", stat = "range", op = ">", threshold = 30.85f)
         val merged = PostureRuleSet("mp_v0.1", "", listOf(knee, spine)).plusRepForm()
-        assertEquals("mp_v0.1+repform_v0.3", merged.version)
+        assertEquals("mp_v0.1+repform_v0.4", merged.version)
         assertEquals(RuleStatus.BETA, merged.rules.first { it.id == knee.id }.status)
         assertEquals(RuleStatus.SHIP, merged.rules.first { it.id == spine.id }.status)
         val added = merged.rules.filter { it.kind == "rep_form" }
         assertEquals(RepFormSpecs.byExercise.values.flatten().size, added.size)   // 등록부 전체(스쿼트 + 컬, §62c)
         assertTrue(added.filter { it.exercise == "바벨 스쿼트" }.all { it.viewsOk == setOf("C") })
         // 스쿼트 4(상체·무릎·발 간격·발끝) + 컬 5(상체 숙임·뜸·옆 벌림·앞 이탈·몸에서 떨어짐, §62c) + 런지 3(깊이·상체 숙임·무릎 쏠림, §63 — 무릎 쏠림은 코칭 전용).
-        // 런지 어깨 기울기는 beta(폰 검출률 없음)
-        assertEquals(12, added.count { it.status == RuleStatus.SHIP })
+        // 런지 어깨 기울기는 beta(폰 검출률 없음). 계열 파일럿(§66): 바벨 컬(덤벨 컬과 같은 ship 5) + 바벨 런지(런지와 같은 ship 3)
+        assertEquals(20, added.count { it.status == RuleStatus.SHIP })
         // 범위 문장: 무릎·발 너비·발끝·상체는 '봄'(반복 검사 ship), 엉덩이(hip rise)는 '검증 중'
         val scope = PostureScope.of(merged, "바벨 스쿼트")
         assertTrue(scope.watched.containsAll(listOf("등·허리", "무릎")))
@@ -388,8 +388,9 @@ class RepFormTest {
     fun evaluatorFactoryFollowsTheRegistry() {
         val squatCounter = RepCounter.forSession("바벨 스쿼트", floor = false)!!
         assertNotNull(RepFormSpecs.evaluatorFor("바벨 스쿼트", squatCounter))
-        val lunge = RepCounter.forSession("바벨 런지", floor = false)!!
-        assertNull(RepFormSpecs.evaluatorFor("바벨 런지", lunge))
+        // 바벨 런지는 계열 파일럿(§66)으로 등록됐다 — 걸음 검사기(쪽별), 사이드 런지는 아직 없다
+        assertTrue(RepFormSpecs.evaluatorFor("바벨 런지", RepCounter.forSession("바벨 런지", floor = false)!!)!!.stepSides)
+        assertNull(RepFormSpecs.evaluatorFor("사이드 런지", RepCounter.forSession("사이드 런지", floor = false)!!))
         assertNotNull(RepFormSpecs.checkOf("repform|바벨 스쿼트|발끝 방향"))
         assertNull(RepFormSpecs.checkOf("바벨 스쿼트|발과 무릎의 방향 일치"))
     }

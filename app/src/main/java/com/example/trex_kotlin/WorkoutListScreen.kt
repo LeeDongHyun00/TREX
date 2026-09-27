@@ -173,6 +173,16 @@ fun WorkoutTabScreen(app: AppViewModel, onOpenAlt: (Workout) -> Unit, onOpenSets
                         onPosture={enabled->if(draggedId==null && !settleBlock)app.updatePlan(app.workoutPlan.map{if(it.id==workout.id)it.copy(posture=enabled)else it})}) }
                 }
             }
+            item(key="workout-add") {
+                Surface(onClick=onAddWorkout,enabled=canClick,modifier=Modifier.fillMaxWidth(),
+                    shape=RoundedCornerShape(22.dp),color=c.surface) {
+                    Row(Modifier.fillMaxWidth().heightIn(min=80.dp).padding(horizontal=18.dp),
+                        verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+                        Icon(Icons.Rounded.Add,contentDescription=null,tint=c.primaryText,modifier=Modifier.size(24.dp))
+                        Text("운동 추가하기",color=c.primaryText,fontSize=16.sp,fontWeight=FontWeight.Medium)
+                    }
+                }
+            }
         }
         // 떠 있는 행과 목록의 자리를 분리한다. 이동 애니메이션에 수동 translation을 더하지 않는다.
         plan.firstOrNull{it.id==draggedId}?.let { floating ->
@@ -224,6 +234,7 @@ private fun WorkoutSwipeRow(workout: Workout, shape: RoundedCornerShape, reset: 
                     }
                     Text(workout.reps + if (workout.repsSpec().sets > 1) " · 휴식 ${workout.timing().restSeconds}초" else "",
                         color = c.text2, fontSize = 12.sp, lineHeight = 18.sp, modifier = Modifier.padding(top = 7.dp))
+                    ExerciseGuidePreview(workout.name, enabled = gesturesEnabled)
 
                 }
                 Column(Modifier.padding(start = 10.dp)) {

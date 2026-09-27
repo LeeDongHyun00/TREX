@@ -97,7 +97,7 @@ SCHEMA = "trex.posture.setlog/1"
 SIDE_PAIR_APP = ("런지", "바벨 런지", "사이드 런지", "크로스 런지")
 SIDE_PAIR_AIHUB = frozenset({"스텝 포워드 다이나믹 런지", "바벨 런지", "사이드 런지", "크로스 런지"})
 # 런지(앱 이름 "런지")는 쪽별 카운트(spec §63, 사용자 결정 2026-09-26) — 화면 수 = min(왼, 오른)(TRACK 풀). 사이클 두 개가 한 쌍인 것은 같다
-SIDE_EACH_AIHUB = frozenset({"스텝 포워드 다이나믹 런지"})
+SIDE_EACH_AIHUB = frozenset({"스텝 포워드 다이나믹 런지", "바벨 런지"})     # §66: 바벨 런지도 쪽별
 UNIT_CYCLES = {"cycle": 1, "side_pair": 2, "side_each": 2}     # RepUnit.key → cyclesPerRep
 PAIR_UNITS = ("side_pair", "side_each")    # 두 걸음(왼 + 오른) = 1회로 보이는 단위
 PROFILES_KT = REPO / "app" / "src" / "main" / "java" / "com" / "example" / "trex_kotlin" / "posture" / "ExerciseProfiles.kt"
@@ -901,8 +901,9 @@ def _side_pair_self_test(work: Path, check) -> None:
           apps == set(SIDE_PAIR_APP) and aihub == set(SIDE_PAIR_AIHUB), f"{apps} → {aihub}")
     check("짝: 바닥 경로·다른 종목은 사이클 단위", current_unit("바벨 런지", True) == "cycle" and current_unit("바벨 스쿼트", False) == "cycle"
           and current_unit("덤벨 컬", False) == "cycle")
-    check("짝: 런지(스텝 포워드)는 쪽별 카운트(side_each), 다른 런지류는 좌우 짝",
-          current_unit("스텝 포워드 다이나믹 런지", False) == "side_each" and current_unit("바벨 런지", False) == "side_pair"
+    check("짝: 런지(스텝 포워드)·바벨 런지는 쪽별 카운트(side_each), 사이드·크로스 런지는 좌우 짝",
+          current_unit("스텝 포워드 다이나믹 런지", False) == "side_each" and current_unit("바벨 런지", False) == "side_each"
+          and current_unit("사이드 런지", False) == "side_pair"
           and "SIDE_EACH" in PROFILES_KT.read_text(encoding="utf-8"))
 
 
