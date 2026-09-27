@@ -1,19 +1,13 @@
-<?xml version="1.0" encoding="utf-8"?><!--
-   Sample data extraction rules file; uncomment and customize as necessary.
-   See https://developer.android.com/about/versions/12/backup-restore#xml-changes
-   for details.
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+   Android 12 이상의 백업·기기 이전 규칙.
+   내 음식 기억(food_memory.tsv)은 클라우드 백업에서 뺀다 — 폰 밖(서버)으로 내보내지 않는다(FOOD_EVAL §9).
+   새 폰으로 직접 옮기는 기기 이전(device-transfer)은 사용자가 가진 기기 사이라 그대로 둔다.
+   exclude 만 있으면 나머지는 그대로 백업된다.
 -->
 <data-extraction-rules>
     <cloud-backup>
-        <!-- TODO: Use <include> and <exclude> to control what is backed up.
-        <include .../>
-        <exclude .../>
-        -->
+        <exclude domain="file" path="food_memory.tsv" />
+        <exclude domain="file" path="food_memory.tsv.tmp" />
     </cloud-backup>
-    <!--
-    <device-transfer>
-        <include .../>
-        <exclude .../>
-    </device-transfer>
-    -->
 </data-extraction-rules>

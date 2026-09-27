@@ -15,6 +15,16 @@ import androidx.camera.core.ImageProxy
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.offset
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -33,6 +43,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -71,6 +82,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -82,6 +94,8 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.example.trex_kotlin.TrexText as Text
 import com.example.trex_kotlin.food.FoodDetectionResult
 import com.example.trex_kotlin.food.FoodDetector
+import com.example.trex_kotlin.food.FoodMemoryStore
+import com.example.trex_kotlin.food.FoodRegion
 import com.example.trex_kotlin.food.decodeScaledBitmap
 import com.example.trex_kotlin.food.rotated
 import com.example.trex_kotlin.food.scaledToMax
@@ -109,8 +123,14 @@ private sealed interface PickTarget {
     /** 목록에 없는 음식을 새로 더한다. */
     data object Add : PickTarget
 
-    /** [index] 번째 줄을 다른 음식으로 바꾼다. */
-    data class Replace(val index: Int) : PickTarget
+    /**
+     * [index] 번째 줄을 다른 음식으로 바꾼다. 사진의 자리를 눌러 왔으면 [regionId] 가 그 자리다 —
+     * 한 줄이 여러 자리(두 그릇 모두 "김치")에서 왔을 때 누른 자리만 떼어 바꾼다.
+     */
+    data class Replace(val index: Int, val regionId: Int? = null) : PickTarget
+
+    /** 사진의 "?" 자리([regionId])에 이름을 붙인다. 고른 음식은 그 자리와 이어진 줄이 된다. */
+    data class Name(val regionId: Int) : PickTarget
 }
 
 /**
@@ -128,14 +148,36 @@ private sealed interface FoodSource {
      * 판정하지 않은 것을 판정한 것처럼 말하지 않고, 아무 사진이나 붙여 거기서 잡힌 것처럼 보이게 하지 않는다.
      */
     data object Picked : FoodSource
+
+    /**
+     * 내 음식 기억이 이 자리를 전에 사용자가 고른 음식과 매우 비슷하다고 봤다([FoodMemory.AUTO_NAME_AT] 이상).
+     * 모델 판정도 이번의 직접 선택도 아니라 따로 둔다 — 화면에는 "기억한 음식" 으로 밝힌다.
+     */
+    data class Remembered(val similarity: Float, val photoIndex: Int) : FoodSource
 }
 
-/** 결과 한 줄. 수량은 직접 기록 시트와 같은 qty 스테퍼로 조절한다. nutrition 이 없으면 기록에서 제외한다. */
+/**
+ * 사진 위 자리의 이름표. [byModel] 은 모델이 이 자리에 붙인 이름 그대로인지 — 사용자가 붙이거나 바꾼 이름과
+ * 사진 위에서 같은 모양으로 그리면, 판정하지 않은 것을 판정한 것처럼 보인다(목록의 "직접 고름" 과 같은 이유).
+ */
+private data class RegionLabel(val name: String, val kind: LabelKind)
+
+/** 자리 이름표가 어디서 왔는지. 사진 위에서 모양으로 구분한다. */
+private enum class LabelKind { MODEL, MEMORY, USER }
+
+/**
+ * 결과 한 줄. 수량은 직접 기록 시트와 같은 qty 스테퍼로 조절한다. nutrition 이 없으면 기록에서 제외한다.
+ *
+ * [regionIds] 는 이 줄이 사진의 어느 자리([FoodRegion.id])에서 왔는지 — 사진 위 이름표가 이것으로 정해진다.
+ * 자리의 이름표를 따로 들고 있지 않는 이유: 줄을 바꾸거나 지웠을 때 사진과 목록이 어긋나지 않게, 줄 하나만 정본으로 둔다.
+ * 줄이 지워지면 그 자리는 다시 "?" 가 되어 이름을 새로 붙일 수 있다.
+ */
 private data class RecognizedItem(
     val name: String,
     val nutrition: Nutrition?,
     val source: FoodSource,
     val qty: Int = 1,
+    val regionIds: Set<Int> = emptySet(),
 )
 
 /**
@@ -143,6 +185,9 @@ private data class RecognizedItem(
  * 저장 전 화면과 저장된 기록이 어긋나지 않는다.
  *
  * 합치지 않으면 "쌀밥 1 / 쌀밥 1" 두 줄이 생겨, 한 줄을 지워 뺐다고 생각해도 다른 줄이 남는다.
+ *
+ * "?" 자리에 이미 있는 음식을 고르면 그 줄로 합쳐져 수량이 +1 된다. 그 줄의 출처(확신도 표시)는 앞 줄 것을 따르므로
+ * 모델이 잡은 줄에 사용자가 더한 한 그릇이 섞일 수 있다 — 사진 위에서는 자리마다 [RegionLabel.byModel] 로 구분된다.
  *
  * 영양값은 없을 때만 뒤에서 채운다. 직접 등록으로 방금 적은 값이 버려지는 것을 막으면서도,
  * 이미 있는 줄의 값을 조용히 바꾸지는 않는다.
@@ -154,7 +199,11 @@ private fun List<RecognizedItem>.mergedByName(): List<RecognizedItem> =
             acc + item
         } else {
             acc.mapIndexed { i, kept ->
-                if (i == at) kept.copy(qty = kept.qty + item.qty, nutrition = kept.nutrition ?: item.nutrition) else kept
+                if (i == at) {
+                    kept.copy(qty = kept.qty + item.qty, nutrition = kept.nutrition ?: item.nutrition, regionIds = kept.regionIds + item.regionIds)
+                } else {
+                    kept
+                }
             }
         }
     }
@@ -187,6 +236,10 @@ internal fun PhotoFoodSheet(app: AppViewModel, onClose: () -> Unit) {
     var items by remember { mutableStateOf<List<RecognizedItem>>(emptyList()) }
     // 임계 미만이라 결과에 넣지 않은 후보. "빠진 음식 추가"에서 고를 거리로만 쓴다.
     var candidates by remember { mutableStateOf<List<Pair<String, Float>>>(emptyList()) }
+    // 2단계 인식이 찾은 자리. 비어 있으면 전체 사진 1회 경로라 사진 위에 아무것도 그리지 않는다.
+    var regions by remember { mutableStateOf<List<FoodRegion>>(emptyList()) }
+    // 비어 보이는 자리(빈 그릇·컵, FoodRegion.looksEmpty)를 사진에 그릴지. 기본은 숨기고 개수만 알린다.
+    var showEmpty by remember { mutableStateOf(false) }
     var zoomed by remember { mutableStateOf<Bitmap?>(null) }
     // 음식 고르기 창의 대상. null 이면 닫힘.
     var pickTarget by remember { mutableStateOf<PickTarget?>(null) }
@@ -234,14 +287,31 @@ internal fun PhotoFoodSheet(app: AppViewModel, onClose: () -> Unit) {
         progress = 1f
         delay(200)
         when (result) {
-            is FoodDetectionResult.Success -> if (result.foods.isEmpty()) {
+            // 이름이 하나도 안 붙었어도 자리를 찾았으면 결과로 간다 — "?" 를 눌러 이름을 붙이면 된다.
+            is FoodDetectionResult.Success -> if (result.foods.isEmpty() && result.regions.isEmpty()) {
                 failureTitle = "음식을 찾지 못했어룡"
                 failure = "사진에서 음식을 찾지 못했어요. 음식이 잘 보이게 다시 찍어 주세요."
                 step = PhotoStep.Failed
             } else {
-                items = result.foods.map {
-                    RecognizedItem(it.name, app.findFood(it.name), FoodSource.Detected(it.confidence, it.photoIndex))
+                regions = result.regions
+                showEmpty = false
+                val detected = result.foods.map { food ->
+                    RecognizedItem(
+                        food.name, app.findFood(food.name), FoodSource.Detected(food.confidence, food.photoIndex),
+                        regionIds = result.regions.filter { it.name == food.name && it.rememberedName == null }.mapTo(HashSet()) { it.id },
+                    )
                 }
+                // 기억이 매우 비슷하다고 한 자리는 그 이름으로 줄을 만든다. 영양값을 못 찾는 이름(지운 내 음식)은 만들지 않는다.
+                val remembered = result.regions.mapNotNull { region ->
+                    val name = region.rememberedName ?: return@mapNotNull null
+                    val nutrition = app.findFood(name) ?: return@mapNotNull null
+                    RecognizedItem(
+                        name, nutrition, FoodSource.Remembered(region.remembered.first().second, region.photoIndex),
+                        regionIds = setOf(region.id),
+                    )
+                }
+                // 같은 이름이면 한 줄로 합친다. 기억으로 합쳐진 한 그릇이 수량을 늘리지 않게 수량은 1 로 둔다(모델 결과와 같은 규칙).
+                items = (detected + remembered).mergedByName().map { it.copy(qty = 1) }
                 // 영양값을 못 찾는 이름은 골라도 기록에 못 들어가므로 후보에서 뺀다.
                 candidates = result.candidates
                     .filter { app.findFood(it.name) != null }
@@ -295,6 +365,27 @@ internal fun PhotoFoodSheet(app: AppViewModel, onClose: () -> Unit) {
                     PhotoStep.Analyzing -> AnalyzingStep(photos = photos, progress = progress, onZoom = { zoomed = it })
                     PhotoStep.Result -> ResultStep(
                         photos = photos,
+                        regions = regions,
+                        showEmpty = showEmpty,
+                        onToggleEmpty = { showEmpty = !showEmpty },
+                        labelOf = { region ->
+                            items.firstOrNull { region.id in it.regionIds }?.let { row ->
+                                RegionLabel(
+                                    row.name,
+                                    // 사용자가 고른 줄(Picked)은 이름이 기억과 같아도 사용자 선택이다 — 기억이 붙인 줄을 지운 뒤
+                                    // "?" 에 같은 이름을 직접 고른 경우가 그렇다.
+                                    when {
+                                        row.name == region.name -> LabelKind.MODEL
+                                        row.name == region.rememberedName && row.source != FoodSource.Picked -> LabelKind.MEMORY
+                                        else -> LabelKind.USER
+                                    },
+                                )
+                            }
+                        },
+                        onRegion = { region ->
+                            val row = items.indexOfFirst { region.id in it.regionIds }
+                            pickTarget = if (row >= 0) PickTarget.Replace(row, region.id) else PickTarget.Name(region.id)
+                        },
                         onZoom = { zoomed = it },
                         slot = slot,
                         items = items,
@@ -312,6 +403,7 @@ internal fun PhotoFoodSheet(app: AppViewModel, onClose: () -> Unit) {
                         onRetry = { retry() },
                         onSave = {
                             app.appendFoods(0, slot, items.toEntries())
+                            rememberUserNamed(context, photos, regions, items)
                             onClose()
                         },
                         onSaveAndManual = {
@@ -319,6 +411,7 @@ internal fun PhotoFoodSheet(app: AppViewModel, onClose: () -> Unit) {
                             // 직접 기록 시트가 같은 끼니를 열어 방금 담은 항목을 스테퍼로 바로 고칠 수 있다.
                             val entries = items.toEntries()
                             if (entries.isNotEmpty()) app.appendFoods(0, slot, entries)
+                            rememberUserNamed(context, photos, regions, items)
                             manual = true
                         },
                     )
@@ -341,18 +434,52 @@ internal fun PhotoFoodSheet(app: AppViewModel, onClose: () -> Unit) {
         // 제목과 동작을 같은 한 번의 읽기에서 뽑는다. 따로 읽으면 그 사이 목록이 바뀌었을 때
         // 제목은 "추가"인데 동작은 "바꾸기"로 가서 아무 일도 안 일어나는 상태가 된다.
         val replacing = (target as? PickTarget.Replace)?.let { items.getOrNull(it.index) }
+        val naming = (target as? PickTarget.Name)?.let { t -> regions.firstOrNull { it.id == t.regionId } }
+        // 사진에서 누른 자리. 그 줄에 든 자리일 때만 쓴다(그 사이 목록이 바뀌었으면 줄 전체 바꾸기로 돌아간다).
+        val tapped = (target as? PickTarget.Replace)?.regionId
+            ?.takeIf { id -> replacing != null && id in replacing.regionIds }
+            ?.let { id -> regions.firstOrNull { it.id == id } }
+        // 자리에서 온 줄·자리를 고칠 때는 그 자리에서 본 상위 후보를 먼저 보여준다(정답이 3위 안에 드는 경우가 많다, FOOD_EVAL §8).
+        // 누른 자리가 있으면 그 자리, 목록에서 왔으면 그 줄의 자리 중 가장 확신한 자리의 후보를 쓴다.
+        val spot = naming ?: tapped ?: replacing?.let { row -> regions.filter { it.id in row.regionIds }.maxByOrNull { it.confidence } }
+        // 누른 자리가 여러 자리를 묶은 줄의 하나면, 그 자리만 떼어 새 줄로 만든다 — 두 그릇 중 하나만 틀렸을 수 있다.
+        val splitting = tapped != null && replacing != null && replacing.regionIds.size > 1
+        val spotRemembered = (naming ?: tapped)?.remembered.orEmpty()
+            .map { it.first }
+            .filter { it != replacing?.name && app.findFood(it) != null }
+        // 기억 후보에 이미 든 이름은 모델 후보에서 뺀다 — 같은 음식이 두 번 뜨지 않게.
+        val spotCandidates = spot?.top
+            ?.filter { (name, _) -> name != replacing?.name && name !in spotRemembered && app.findFood(name) != null }
+            .orEmpty()
+        // 누른 자리(또는 이름 붙일 자리)를 사진에서 잘라 고르는 창 맨 위에 보여준다. 목록에서 들어온 바꾸기는 자리를 누른 게 아니라 보여주지 않는다.
+        val shownSpot = naming ?: tapped
+        val spotPreview = remember(shownSpot?.id, photos) { shownSpot?.let { cropSpot(photos.getOrNull(it.photoIndex), it) } }
         FoodPicker(
             app = app,
-            title = replacing?.let { "${it.name} 을(를) 바꾸기" } ?: "빠진 음식 추가",
+            spotPreview = spotPreview,
+            title = when {
+                splitting -> "이 자리의 ${replacing.name} 을(를) 바꾸기"
+                replacing != null -> "${replacing.name} 을(를) 바꾸기"
+                naming != null -> "이 자리의 음식 고르기"
+                else -> "빠진 음식 추가"
+            },
             // 이미 목록에 든 것은 빼고 넘긴다. 바꾸기는 그 줄을 다른 것으로 만드는 일이라 후보가 그대로 쓸모 있다.
-            candidates = candidates.filterNot { (name, _) -> items.any { it.name == name } },
+            // 자리 이름 붙이기는 이미 든 음식도 그대로 보여준다 — 같은 음식 한 그릇 더(수량 +1)일 수 있다.
+            candidates = if (spot != null) spotCandidates else candidates.filterNot { (name, _) -> items.any { it.name == name } },
+            candidatesTitle = if (spot != null) "이 자리에서 본 후보" else null,
+            // 누른 자리와 비슷하다고 기억이 말한 음식. 모델 후보보다 위에 둔다 — 그 사람이 실제로 먹은 음식이다.
+            rememberedCandidates = spotRemembered,
             onPick = { name, nutrition ->
-                val picked = RecognizedItem(name, nutrition, FoodSource.Picked)
+                val picked = RecognizedItem(name, nutrition, FoodSource.Picked, regionIds = naming?.let { setOf(it.id) }.orEmpty())
                 items = if (replacing == null) {
                     (items + picked).mergedByName()
+                } else if (splitting) {
+                    val id = tapped.id
+                    (items.map { if (it === replacing) it.copy(regionIds = it.regionIds - id) else it } + picked.copy(regionIds = setOf(id)))
+                        .mergedByName()
                 } else {
-                    // 바꿔 넣은 이름은 모델이 판정한 게 아니다. 판정 흔적을 떼어 낸다.
-                    items.map { if (it === replacing) picked.copy(qty = it.qty) else it }.mergedByName()
+                    // 바꿔 넣은 이름은 모델이 판정한 게 아니다. 판정 흔적을 떼어 낸다. 자리는 그대로 따라간다.
+                    items.map { if (it === replacing) picked.copy(qty = it.qty, regionIds = it.regionIds) else it }.mergedByName()
                 }
                 pickTarget = null
             },
@@ -553,6 +680,13 @@ private fun AnalyzingStep(photos: List<Bitmap>, progress: Float, onZoom: (Bitmap
 @Composable
 private fun ResultStep(
     photos: List<Bitmap>,
+    /** 2단계 인식이 찾은 자리. 비어 있으면 예전처럼 사진 줄만 보여준다(전체 사진 1회 경로). */
+    regions: List<FoodRegion>,
+    showEmpty: Boolean,
+    onToggleEmpty: () -> Unit,
+    /** 자리의 이름표 — 그 자리와 이어진 줄의 이름. null 이면 "?" 다. */
+    labelOf: (FoodRegion) -> RegionLabel?,
+    onRegion: (FoodRegion) -> Unit,
     onZoom: (Bitmap) -> Unit,
     slot: String,
     items: List<RecognizedItem>,
@@ -577,7 +711,36 @@ private fun ResultStep(
             Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            PhotoStrip(photos, Modifier.fillMaxWidth().height(150.dp), onZoom = onZoom)
+            if (regions.isEmpty()) {
+                PhotoStrip(photos, Modifier.fillMaxWidth().height(150.dp), onZoom = onZoom)
+            } else {
+                // 이름표가 있는 자리는 늘 그린다. 이름 없고 비어 보이는 자리만 숨길 수 있다.
+                val hidden = regions.filter { labelOf(it) == null && it.looksEmpty }
+                val drawn = if (showEmpty) regions else regions - hidden.toSet()
+                RegionPhotos(photos, drawn, labelOf, onRegion, onZoom)
+                val unnamed = drawn.count { labelOf(it) == null }
+                // 모델이 이름을 알았는데 사용자가 줄을 지운 자리도 "?" 로 돌아가므로 "모르는" 이 아니라 "없는" 이라고 말한다.
+                // "?" 는 기록에 들어가지 않는다. 음식이 아닌 자리(컵·빈 그릇)도 여기 섞이므로 지우라고 하지 않고 그냥 두면 된다고 말한다.
+                Text(
+                    if (unnamed > 0) {
+                        "이름이 없는 자리 ${unnamed}곳 · 사진의 ? 를 눌러 알려 주세요. 음식이 아니면 그냥 두면 기록되지 않아요."
+                    } else {
+                        "사진의 이름표를 누르면 다른 음식으로 바꿀 수 있어요."
+                    },
+                    color = c.text3, fontSize = 11.5.sp, lineHeight = 17.sp,
+                )
+                // 숨긴 것은 숨겼다고 밝힌다 — 그중에는 단무지·생강 같은 작은 곁들이도 섞여 있다(FOOD_EVAL §8.3).
+                if (hidden.isNotEmpty()) {
+                    Text(
+                        if (showEmpty) "빈 그릇·컵으로 보이는 자리 ${hidden.size}곳 숨기기" else "빈 그릇·컵으로 보이는 자리 ${hidden.size}곳을 숨겼어요 · 보기",
+                        color = c.primaryText, fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable(role = Role.Button, onClick = onToggleEmpty)
+                            .padding(vertical = 6.dp),
+                    )
+                }
+            }
             SegmentedTabs(
                 options = mealMetas.map { it.label },
                 selected = slotIndex,
@@ -592,7 +755,11 @@ private fun ResultStep(
                         Row(Modifier.padding(horizontal = 14.dp, vertical = 13.dp), verticalAlignment = Alignment.CenterVertically) {
                             // 여러 장을 분석했을 때는 이 음식이 잡힌 사진을 번호와 함께 보여준다.
                             if (photos.size > 1) {
-                                val from = (item.source as? FoodSource.Detected)?.photoIndex
+                                val from = when (val source = item.source) {
+                                    is FoodSource.Detected -> source.photoIndex
+                                    is FoodSource.Remembered -> source.photoIndex
+                                    FoodSource.Picked -> null
+                                }
                                 if (from != null) {
                                     PhotoThumb(photos.getOrNull(from), number = from + 1, size = 44.dp)
                                 } else {
@@ -625,9 +792,17 @@ private fun ResultStep(
                                     // 확신도는 모델이 판정했을 때만 붙인다. 직접 고른 것에 붙이면 안 한 판정을 한 것처럼 말하게 된다.
                                     when (val source = item.source) {
                                         is FoodSource.Detected ->
-                                            Text("확신 ${(source.confidence * 100).toInt()}%", color = c.text3, fontSize = 10.5.sp, modifier = Modifier.padding(start = 6.dp))
+                                            // 모델이 잡은 줄에 기억이 붙인 자리가 합쳐졌으면 그렇다고 밝힌다 — 확신도는 모델이 잡은 자리의 것이다.
+                                            Text(
+                                                "확신 ${(source.confidence * 100).toInt()}%" +
+                                                    if (regions.any { it.id in item.regionIds && labelOf(it)?.kind == LabelKind.MEMORY }) " · 기억 포함" else "",
+                                                color = c.text3, fontSize = 10.5.sp, modifier = Modifier.padding(start = 6.dp),
+                                            )
                                         FoodSource.Picked ->
                                             Text("직접 고름", color = c.primaryText, fontSize = 10.5.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 6.dp))
+                                        // "직접 고름" 과 구분되게 강조색을 쓰지 않는다(사진 위에서는 연두 이름표로 구분된다).
+                                        is FoodSource.Remembered ->
+                                            Text("기억한 음식", color = c.text2, fontSize = 10.5.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(start = 6.dp))
                                     }
                                 }
                                 val n = item.nutrition
@@ -737,6 +912,171 @@ private fun PhotoStrip(photos: List<Bitmap>, modifier: Modifier, dim: Boolean = 
             }
         }
     }
+}
+
+/**
+ * 2단계 인식 결과를 사진 위에 그린다. 한 장이면 크게, 여러 장이면 가로로 넘겨 본다.
+ *
+ * 자리마다 박스와 이름표를 단다 — 이름이 붙은 자리는 실선과 이름, 붙지 않은 자리는 점선과 "?".
+ * 자리를 누르면 [onRegion](이름 바꾸기 또는 이름 붙이기), 자리 밖을 누르면 [onZoom](크게 보기).
+ * 자리가 겹치면 더 작은 쪽을 고른다 — 큰 자리 안의 작은 반찬 그릇을 누를 수 있어야 한다.
+ */
+@Composable
+private fun RegionPhotos(
+    photos: List<Bitmap>,
+    regions: List<FoodRegion>,
+    labelOf: (FoodRegion) -> RegionLabel?,
+    onRegion: (FoodRegion) -> Unit,
+    onZoom: (Bitmap) -> Unit,
+) {
+    if (photos.size <= 1) {
+        val photo = photos.firstOrNull() ?: return
+        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+            RegionPhoto(
+                photo, regions, labelOf, onRegion, onZoom,
+                Modifier.heightIn(max = 420.dp).aspectRatio(photo.width.toFloat() / photo.height, matchHeightConstraintsFirst = true),
+            )
+        }
+        return
+    }
+    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        photos.forEachIndexed { index, photo ->
+            Box {
+                RegionPhoto(
+                    photo, regions.filter { it.photoIndex == index }, labelOf, onRegion, onZoom,
+                    Modifier.height(280.dp).aspectRatio(photo.width.toFloat() / photo.height),
+                )
+                NumberBadge(index + 1, Modifier.padding(8.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun RegionPhoto(
+    photo: Bitmap,
+    regions: List<FoodRegion>,
+    labelOf: (FoodRegion) -> RegionLabel?,
+    onRegion: (FoodRegion) -> Unit,
+    onZoom: (Bitmap) -> Unit,
+    modifier: Modifier,
+) {
+    val c = Trex.c
+    val named = c.primary
+    val remembered = c.lime
+    val dash = remember { PathEffect.dashPathEffect(floatArrayOf(14f, 10f)) }
+    BoxWithConstraints(
+        modifier
+            .clip(RoundedCornerShape(14.dp))
+            .background(c.surface2)
+            .pointerInput(regions) {
+                detectTapGestures { tap ->
+                    val x = tap.x / size.width
+                    val y = tap.y / size.height
+                    val hit = regions
+                        .filter { x in it.box.left..it.box.right && y in it.box.top..it.box.bottom }
+                        .minByOrNull { it.box.area }
+                    if (hit != null) onRegion(hit) else onZoom(photo)
+                }
+            },
+    ) {
+        androidx.compose.foundation.Image(
+            bitmap = photo.asImageBitmap(),
+            contentDescription = "인식한 사진",
+            contentScale = ContentScale.FillBounds,
+            modifier = Modifier.fillMaxSize(),
+        )
+        Canvas(Modifier.fillMaxSize()) {
+            val stroke = 2.dp.toPx()
+            regions.forEach { region ->
+                val label = labelOf(region)
+                val topLeft = Offset(region.box.left * size.width, region.box.top * size.height)
+                val boxSize = Size(region.box.width * size.width, region.box.height * size.height)
+                // 어두운 테두리를 먼저 깔아 밝은 식탁에서도 선이 보이게 한다.
+                drawRect(Color.Black.copy(alpha = 0.35f), topLeft, boxSize, style = Stroke(stroke + 2.dp.toPx()))
+                // 모델 이름 = 강조색 실선, 기억한 이름 = 연두 실선, 직접 붙인 이름 = 흰 실선, 이름 없음 = 흰 점선.
+                drawRect(
+                    when (label?.kind) {
+                        LabelKind.MODEL -> named
+                        LabelKind.MEMORY -> remembered
+                        else -> Color.White
+                    },
+                    topLeft, boxSize,
+                    style = Stroke(stroke, pathEffect = if (label != null) null else dash),
+                )
+            }
+        }
+        regions.forEach { region ->
+            val label = labelOf(region)
+            val left = maxWidth * region.box.left
+            // 이름표는 박스 왼쪽 위에 붙는다. 사진 오른쪽 끝 박스의 긴 이름이 사진 밖으로 잘리지 않게 남은 폭 안에서 줄인다.
+            val room = (maxWidth - left - 8.dp).coerceAtLeast(28.dp)
+            Text(
+                // 기억한 이름은 "기억" 을 붙여 모델 판정이 아님을 밝힌다.
+                when (label?.kind) {
+                    null -> "?"
+                    LabelKind.MEMORY -> "기억 · ${label.name}"
+                    else -> label.name
+                },
+                // 모델 이름 = 강조색 바탕, 기억한 이름 = 연두 바탕, 직접 붙인 이름 = 흰 바탕, 이름 없음 = 어두운 바탕.
+                color = if (label == null || label.kind == LabelKind.MODEL) Color.White else Color.Black,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier
+                    .offset(x = left, y = maxHeight * region.box.top)
+                    .padding(4.dp)
+                    .widthIn(max = room)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(
+                        when (label?.kind) {
+                            null -> Color.Black.copy(alpha = 0.6f)
+                            LabelKind.MODEL -> named
+                            LabelKind.MEMORY -> remembered
+                            LabelKind.USER -> Color.White
+                        },
+                    )
+                    // 이름표가 박스 밖으로 나온 부분을 눌러도 그 자리로 간다. 없으면 옆 자리나 크게 보기로 새어 엉뚱한 음식을 바꾼다.
+                    .clickable(role = Role.Button, onClickLabel = if (label == null) "이 자리 이름 붙이기" else "다른 음식으로 바꾸기") { onRegion(region) }
+                    .padding(horizontal = 6.dp, vertical = 2.dp),
+            )
+        }
+    }
+}
+
+/**
+ * 기록할 때, 사용자가 사진의 자리에 **직접 붙이거나 바꾼** 이름을 내 음식 기억에 남긴다.
+ *
+ * 사용자가 모델 이름을 고친 자리는 모델이 붙였던 이름도 함께 남긴다(고침 기억) — 다음에 모델이 비슷한 자리에 같은 이름을 또 붙이면 고친 이름으로 바꾼다.
+ * 모델이 붙인 이름과 기억이 자동으로 붙인 이름은 남기지 않는다 — 사용자가 확인했다고 볼 근거가 약하고,
+ * 틀린 자동 이름이 다시 기억이 되면 같은 틀림이 스스로 굳는다. 기록하지 않고 닫으면 아무것도 남지 않는다.
+ * 기록된 줄(영양값이 있는 줄)의 자리만 남긴다.
+ */
+private fun rememberUserNamed(context: android.content.Context, photos: List<Bitmap>, regions: List<FoodRegion>, items: List<RecognizedItem>) {
+    val spots = regions.mapNotNull { region ->
+        val row = items.firstOrNull { region.id in it.regionIds && it.nutrition != null } ?: return@mapNotNull null
+        if (row.name == region.name) return@mapNotNull null
+        if (row.name == region.rememberedName && row.source != FoodSource.Picked) return@mapNotNull null
+        // 비어 보이는 자리는 다음 분석에서 기억과 견주지 않는다(FoodDetector.withMemory) — 남겨도 다시 찾아지지 않고 자리만 차지한다.
+        if (region.looksEmpty) return@mapNotNull null
+        val photo = photos.getOrNull(region.photoIndex) ?: return@mapNotNull null
+        FoodMemoryStore.Spot(row.name, photo, region.box, correctedFrom = region.name)
+    }
+    FoodMemoryStore.rememberAsync(context, spots)
+}
+
+/** 사진에서 [region] 자리를 둘레 10% 여유를 두고 잘라낸다. 고르는 창 맨 위 "누른 자리" 그림에 쓴다. */
+private fun cropSpot(photo: Bitmap?, region: FoodRegion): Bitmap? {
+    if (photo == null) return null
+    val box = region.box
+    val padX = box.width * 0.1f
+    val padY = box.height * 0.1f
+    val left = ((box.left - padX) * photo.width).toInt().coerceIn(0, photo.width - 1)
+    val top = ((box.top - padY) * photo.height).toInt().coerceIn(0, photo.height - 1)
+    val right = ((box.right + padX) * photo.width).toInt().coerceIn(left + 1, photo.width)
+    val bottom = ((box.bottom + padY) * photo.height).toInt().coerceIn(top + 1, photo.height)
+    return Bitmap.createBitmap(photo, left, top, right - left, bottom - top)
 }
 
 /** 결과 행 옆에 붙는 작은 사진 — 어느 사진에서 인식됐는지 번호와 함께 보여준다. */
