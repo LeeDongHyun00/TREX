@@ -182,12 +182,21 @@ data class FoodRegion(
     val box: PixelBox,
     val regionScore: Float,
     val top: List<Pair<String, Float>>,
+    /**
+     * 내 음식 기억([FoodMemory])에서 이 자리와 비슷한 이름들(이름, 유사도) — 유사도순, [FoodMemory.SUGGEST_AT] 이상만.
+     * 이름이 없고 비어 보이지 않는 자리만 본다(기억이 필요한 곳이 거기다). 기억이 비어 있으면 늘 빈 목록이다.
+     */
+    val remembered: List<Pair<String, Float>> = emptyList(),
 ) {
     val name: String? get() = top.firstOrNull()?.takeIf { it.second >= FoodRegions.NAME_THRESHOLD }?.first
     val confidence: Float get() = top.firstOrNull()?.second ?: 0f
 
     /** [FoodRegions.LOOKS_EMPTY_BELOW] 참고. 이름이 붙은 자리는 비어 보일 수 없다. */
     val looksEmpty: Boolean get() = confidence < FoodRegions.LOOKS_EMPTY_BELOW
+
+    /** 기억이 매우 비슷하다고 한 이름([FoodMemory.AUTO_NAME_AT] 이상). 모델 이름이 있으면 그쪽이 우선이라 null. */
+    val rememberedName: String?
+        get() = if (name != null) null else remembered.firstOrNull()?.takeIf { it.second >= FoodMemory.AUTO_NAME_AT }?.first
 }
 
 /**

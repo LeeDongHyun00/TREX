@@ -635,6 +635,8 @@ internal fun FoodPicker(
      * 고르는 창 맨 위에 그 자리를 보여준다.
      */
     spotPreview: android.graphics.Bitmap? = null,
+    /** 내 음식 기억이 이 자리와 비슷하다고 한 음식 이름. 사용자가 전에 이 사진 자리들에 직접 붙인 이름이다. */
+    rememberedCandidates: List<String> = emptyList(),
     onPick: (String, Nutrition) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -694,14 +696,33 @@ internal fun FoodPicker(
                     verticalArrangement = Arrangement.spacedBy(7.dp),
                 ) {
                     when {
-                        trimmed.isEmpty() && frequent.isEmpty() && candidates.isEmpty() ->
+                        trimmed.isEmpty() && frequent.isEmpty() && candidates.isEmpty() && rememberedCandidates.isEmpty() ->
                             Text(
                                 "음식 이름을 검색해 보세룡", color = c.text3, fontSize = 12.sp,
                                 modifier = Modifier.fillMaxWidth().padding(top = 6.dp), textAlign = TextAlign.Center,
                             )
                         trimmed.isEmpty() -> {
+                            if (rememberedCandidates.isNotEmpty()) {
+                                Text("기억한 음식", color = c.text3, fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold)
+                                Text(
+                                    "전에 비슷한 자리에 직접 고르셨던 음식이에요.",
+                                    color = c.text3, fontSize = 11.sp, modifier = Modifier.padding(bottom = 2.dp),
+                                )
+                                rememberedCandidates.forEach { name ->
+                                    val n = app.findFood(name)
+                                    if (n != null) {
+                                        FoodRow(
+                                            name, n, isCustom = name in app.customFoods,
+                                            badgeIcon = Icons.Rounded.Check, badgeFilled = false, badgeDescription = "고르기",
+                                        ) { onPick(name, n) }
+                                    }
+                                }
+                            }
                             if (candidates.isNotEmpty()) {
-                                Text(candidatesTitle ?: "사진에서 비슷하게 본 것", color = c.text3, fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold)
+                                Text(
+                                    candidatesTitle ?: "사진에서 비슷하게 본 것", color = c.text3, fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold,
+                                    modifier = if (rememberedCandidates.isEmpty()) Modifier else Modifier.padding(top = 6.dp),
+                                )
                                 Text(
                                     if (candidatesTitle != null) {
                                         "모델이 이 자리를 보고 비슷하다고 한 순서예요. 맞는 게 없으면 검색해 주세요."
