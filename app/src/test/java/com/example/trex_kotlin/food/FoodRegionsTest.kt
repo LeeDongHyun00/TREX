@@ -164,6 +164,15 @@ class FoodRegionsTest {
     }
 
     @Test
+    fun `모델이 아무것도 못 본 자리만 비어 보인다`() {
+        assertTrue(region(0, 0, "쌀밥" to 0.00f).looksEmpty)
+        assertTrue(region(0, 0, "쌀밥" to 0.019f).looksEmpty)
+        // 약한 신호라도 무언가를 본 자리는 "?" 로 남는다(단무지·된장찌개 등이 0.02~0.1 에 있었다).
+        assertTrue(!region(0, 0, "된장찌개" to 0.02f).looksEmpty)
+        assertTrue(!region(0, 0, "쌀밥" to 0.87f).looksEmpty)
+    }
+
+    @Test
     fun `이름 붙은 자리가 없는 사진만 전체 1회로 다시 본다`() {
         // 0번 사진은 이름이 붙었고, 1번은 "?" 만, 2번은 자리를 하나도 못 찾았다.
         val regions = listOf(region(0, 0, "쌀밥" to 0.8f), region(1, 1, "쌀밥" to 0.2f))

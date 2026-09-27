@@ -59,6 +59,15 @@ object FoodRegions {
     const val TOP_PER_REGION = 3
 
     /**
+     * 2단계 1위가 이 값보다 낮으면 "비어 보이는 자리" 로 본다 — 342종 모델이 그 자리에서 **아무 음식 모양도 못 본** 것이다
+     * (실기기 로그에서 이런 자리는 상위 3개가 전부 0.00 이었다). 화면은 이런 자리를 기본으로 숨기고 개수만 알린다.
+     *
+     * 식탁 사진 16장 실측(FOOD_EVAL §8.3): 이름 없는 자리 96곳 중 53곳이 0.02 미만이었고, 사람이 보니 그중 약 46곳이
+     * 빈 그릇·컵·물잔·소스 종지, 약 7곳이 단무지·생강·김치 같은 작은 곁들이였다. 그래서 지우지 않고 숨기며 다시 펼 수 있게 둔다.
+     */
+    const val LOOKS_EMPTY_BELOW = 0.02f
+
+    /**
      * 1단계 점수 바닥값. 실험에서 0.05 가 0.10·0.20 보다 그릇을 더 많이 찾았다(L 박스 재현 91% vs 84%·76%, §8.1).
      * 낮춰서 늘어나는 박스는 대부분 컵·빈 그릇이고, 2단계에서 이름이 붙지 않으면 "?" 로만 남아 기록에 들어가지 않는다.
      */
@@ -176,6 +185,9 @@ data class FoodRegion(
 ) {
     val name: String? get() = top.firstOrNull()?.takeIf { it.second >= FoodRegions.NAME_THRESHOLD }?.first
     val confidence: Float get() = top.firstOrNull()?.second ?: 0f
+
+    /** [FoodRegions.LOOKS_EMPTY_BELOW] 참고. 이름이 붙은 자리는 비어 보일 수 없다. */
+    val looksEmpty: Boolean get() = confidence < FoodRegions.LOOKS_EMPTY_BELOW
 }
 
 /**

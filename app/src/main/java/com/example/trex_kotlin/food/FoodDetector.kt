@@ -406,6 +406,7 @@ object FoodDetector {
     private var scratchBitmap: Bitmap? = null
     private var scratchPixels: IntArray? = null
     private var scratchBuffer: ByteBuffer? = null
+    private var scratchFloats: FloatArray? = null
 
     /** 회색으로 채운 입력 크기 캔버스에 [draw] 로 그린 뒤 0~1 float 버퍼로 옮긴다. 반환 버퍼는 다음 호출에서 덮어써진다. */
     private inline fun toInputBuffer(input: InputGeometry, draw: (Canvas) -> Unit): ByteBuffer {
@@ -423,19 +424,28 @@ object FoodDetector {
         buffer.clear()
         val pixels = scratchPixels?.takeIf { it.size == width * height } ?: IntArray(width * height).also { scratchPixels = it }
         boxed.getPixels(pixels, 0, width, 0, 0, width, height)
+        // 값을 float 배열에 먼저 채우고 버퍼에는 한 번에 넣는다. 640×640 입력이면 putFloat 가 123만 번 불려,
+        // 자리마다 입력을 만드는 2단계에서 실기기 한 자리당 약 100ms 가 걸렸다(모델만 27ms).
+        val count = width * height
+        val floats = scratchFloats?.takeIf { it.size == count * 3 } ?: FloatArray(count * 3).also { scratchFloats = it }
         if (input.channelsFirst) {
             // NCHW: R 평면 전체 → G 평면 → B 평면 순으로 채운다.
-            for (shift in intArrayOf(16, 8, 0)) {
-                pixels.forEach { pixel -> buffer.putFloat(((pixel shr shift) and 0xFF) / 255f) }
+            for (i in 0 until count) {
+                val pixel = pixels[i]
+                floats[i] = ((pixel shr 16) and 0xFF) / 255f
+                floats[count + i] = ((pixel shr 8) and 0xFF) / 255f
+                floats[2 * count + i] = (pixel and 0xFF) / 255f
             }
         } else {
             // NHWC: 픽셀마다 R, G, B.
-            pixels.forEach { pixel ->
-                buffer.putFloat(((pixel shr 16) and 0xFF) / 255f)
-                buffer.putFloat(((pixel shr 8) and 0xFF) / 255f)
-                buffer.putFloat((pixel and 0xFF) / 255f)
+            for (i in 0 until count) {
+                val pixel = pixels[i]
+                floats[3 * i] = ((pixel shr 16) and 0xFF) / 255f
+                floats[3 * i + 1] = ((pixel shr 8) and 0xFF) / 255f
+                floats[3 * i + 2] = (pixel and 0xFF) / 255f
             }
         }
+        buffer.asFloatBuffer().put(floats)
         buffer.rewind()
         return buffer
     }

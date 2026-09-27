@@ -15,6 +15,8 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -628,6 +630,11 @@ internal fun FoodPicker(
     title: String,
     candidates: List<Pair<String, Float>> = emptyList(),
     candidatesTitle: String? = null,
+    /**
+     * 사진에서 누른 자리를 잘라낸 그림. 겹친 "?" 여럿 중 무엇을 눌렀는지 사진만으로는 헷갈려서(실기기 사용 소감, 2026-09-27),
+     * 고르는 창 맨 위에 그 자리를 보여준다.
+     */
+    spotPreview: android.graphics.Bitmap? = null,
     onPick: (String, Nutrition) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -662,6 +669,20 @@ internal fun FoodPicker(
                         Text(title, color = c.text, fontSize = 16.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 2.dp))
                     }
                     SheetClose(onDismiss)
+                }
+                if (spotPreview != null) {
+                    androidx.compose.foundation.Image(
+                        bitmap = spotPreview.asImageBitmap(),
+                        contentDescription = "누른 자리",
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier
+                            .padding(horizontal = 20.dp)
+                            .padding(bottom = 10.dp)
+                            .fillMaxWidth()
+                            .height(120.dp)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(c.surface2),
+                    )
                 }
                 Box(Modifier.padding(horizontal = 20.dp)) { FoodSearchField(query) { query = it } }
                 Column(

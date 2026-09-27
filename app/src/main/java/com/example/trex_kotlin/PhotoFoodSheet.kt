@@ -228,6 +228,8 @@ internal fun PhotoFoodSheet(app: AppViewModel, onClose: () -> Unit) {
     var candidates by remember { mutableStateOf<List<Pair<String, Float>>>(emptyList()) }
     // 2단계 인식이 찾은 자리. 비어 있으면 전체 사진 1회 경로라 사진 위에 아무것도 그리지 않는다.
     var regions by remember { mutableStateOf<List<FoodRegion>>(emptyList()) }
+    // 비어 보이는 자리(빈 그릇·컵, FoodRegion.looksEmpty)를 사진에 그릴지. 기본은 숨기고 개수만 알린다.
+    var showEmpty by remember { mutableStateOf(false) }
     var zoomed by remember { mutableStateOf<Bitmap?>(null) }
     // 음식 고르기 창의 대상. null 이면 닫힘.
     var pickTarget by remember { mutableStateOf<PickTarget?>(null) }
@@ -282,6 +284,7 @@ internal fun PhotoFoodSheet(app: AppViewModel, onClose: () -> Unit) {
                 step = PhotoStep.Failed
             } else {
                 regions = result.regions
+                showEmpty = false
                 items = result.foods.map { food ->
                     RecognizedItem(
                         food.name, app.findFood(food.name), FoodSource.Detected(food.confidence, food.photoIndex),
@@ -342,6 +345,8 @@ internal fun PhotoFoodSheet(app: AppViewModel, onClose: () -> Unit) {
                     PhotoStep.Result -> ResultStep(
                         photos = photos,
                         regions = regions,
+                        showEmpty = showEmpty,
+                        onToggleEmpty = { showEmpty = !showEmpty },
                         labelOf = { region ->
                             items.firstOrNull { region.id in it.regionIds }?.let { RegionLabel(it.name, byModel = region.name == it.name) }
                         },
@@ -408,8 +413,12 @@ internal fun PhotoFoodSheet(app: AppViewModel, onClose: () -> Unit) {
         val spotCandidates = spot?.top
             ?.filter { (name, _) -> name != replacing?.name && app.findFood(name) != null }
             .orEmpty()
+        // 누른 자리(또는 이름 붙일 자리)를 사진에서 잘라 고르는 창 맨 위에 보여준다. 목록에서 들어온 바꾸기는 자리를 누른 게 아니라 보여주지 않는다.
+        val shownSpot = naming ?: tapped
+        val spotPreview = remember(shownSpot?.id, photos) { shownSpot?.let { cropSpot(photos.getOrNull(it.photoIndex), it) } }
         FoodPicker(
             app = app,
+            spotPreview = spotPreview,
             title = when {
                 splitting -> "이 자리의 ${replacing.name} 을(를) 바꾸기"
                 replacing != null -> "${replacing.name} 을(를) 바꾸기"
@@ -633,6 +642,8 @@ private fun ResultStep(
     photos: List<Bitmap>,
     /** 2단계 인식이 찾은 자리. 비어 있으면 예전처럼 사진 줄만 보여준다(전체 사진 1회 경로). */
     regions: List<FoodRegion>,
+    showEmpty: Boolean,
+    onToggleEmpty: () -> Unit,
     /** 자리의 이름표 — 그 자리와 이어진 줄의 이름. null 이면 "?" 다. */
     labelOf: (FoodRegion) -> RegionLabel?,
     onRegion: (FoodRegion) -> Unit,
@@ -663,8 +674,11 @@ private fun ResultStep(
             if (regions.isEmpty()) {
                 PhotoStrip(photos, Modifier.fillMaxWidth().height(150.dp), onZoom = onZoom)
             } else {
-                RegionPhotos(photos, regions, labelOf, onRegion, onZoom)
-                val unnamed = regions.count { labelOf(it) == null }
+                // 이름표가 있는 자리는 늘 그린다. 이름 없고 비어 보이는 자리만 숨길 수 있다.
+                val hidden = regions.filter { labelOf(it) == null && it.looksEmpty }
+                val drawn = if (showEmpty) regions else regions - hidden.toSet()
+                RegionPhotos(photos, drawn, labelOf, onRegion, onZoom)
+                val unnamed = drawn.count { labelOf(it) == null }
                 // 모델이 이름을 알았는데 사용자가 줄을 지운 자리도 "?" 로 돌아가므로 "모르는" 이 아니라 "없는" 이라고 말한다.
                 // "?" 는 기록에 들어가지 않는다. 음식이 아닌 자리(컵·빈 그릇)도 여기 섞이므로 지우라고 하지 않고 그냥 두면 된다고 말한다.
                 Text(
@@ -675,6 +689,17 @@ private fun ResultStep(
                     },
                     color = c.text3, fontSize = 11.5.sp, lineHeight = 17.sp,
                 )
+                // 숨긴 것은 숨겼다고 밝힌다 — 그중에는 단무지·생강 같은 작은 곁들이도 섞여 있다(FOOD_EVAL §8.3).
+                if (hidden.isNotEmpty()) {
+                    Text(
+                        if (showEmpty) "빈 그릇·컵으로 보이는 자리 ${hidden.size}곳 숨기기" else "빈 그릇·컵으로 보이는 자리 ${hidden.size}곳을 숨겼어요 · 보기",
+                        color = c.primaryText, fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable(role = Role.Button, onClick = onToggleEmpty)
+                            .padding(vertical = 6.dp),
+                    )
+                }
             }
             SegmentedTabs(
                 options = mealMetas.map { it.label },
@@ -954,6 +979,19 @@ private fun RegionPhoto(
             )
         }
     }
+}
+
+/** 사진에서 [region] 자리를 둘레 10% 여유를 두고 잘라낸다. 고르는 창 맨 위 "누른 자리" 그림에 쓴다. */
+private fun cropSpot(photo: Bitmap?, region: FoodRegion): Bitmap? {
+    if (photo == null) return null
+    val box = region.box
+    val padX = box.width * 0.1f
+    val padY = box.height * 0.1f
+    val left = ((box.left - padX) * photo.width).toInt().coerceIn(0, photo.width - 1)
+    val top = ((box.top - padY) * photo.height).toInt().coerceIn(0, photo.height - 1)
+    val right = ((box.right + padX) * photo.width).toInt().coerceIn(left + 1, photo.width)
+    val bottom = ((box.bottom + padY) * photo.height).toInt().coerceIn(top + 1, photo.height)
+    return Bitmap.createBitmap(photo, left, top, right - left, bottom - top)
 }
 
 /** 결과 행 옆에 붙는 작은 사진 — 어느 사진에서 인식됐는지 번호와 함께 보여준다. */
