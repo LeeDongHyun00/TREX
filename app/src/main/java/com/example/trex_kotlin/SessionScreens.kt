@@ -97,6 +97,7 @@ fun TimerSessionScreen(
     paused: Boolean, onTogglePause: () -> Unit, onNext: () -> Unit, onExit: () -> Unit,
     setLabel: String = "1 / 1 세트", onSkip: () -> Unit = onNext,
     repetitions: Int = 0, onRepetitions: (Int) -> Unit = {}, onPartial: () -> Unit = onSkip,
+    onShowGuide: (() -> Unit)? = null,
 ) {
     val c = Trex.c
     KeepScreenOn()
@@ -109,19 +110,20 @@ fun TimerSessionScreen(
             Text(if (paused) "일시정지" else if (workout.resolvedTarget() is WorkoutTarget.Repetitions) "직접 횟수 기록" else "시간 측정",
                 color = c.text2, fontSize = 14.sp, modifier = Modifier.padding(top = 28.dp))
         }
-        WorkoutSessionActions(workout, repetitions, false, paused, onTogglePause, onRepetitions, onPartial, onSkip, onExit)
+        WorkoutSessionActions(workout, repetitions, false, paused, onTogglePause, onRepetitions, onPartial, onSkip, onExit,
+            onShowGuide = onShowGuide)
     }
 }
 
 /** 준비는 직접 시작한다. 휴식에만 원형 타이머와 자동 전환을 제공한다. */
 @Composable
 fun SessionTransitionScreen(step: SessionStep, timeLeft: Int, paused: Boolean,
-    onTogglePause: () -> Unit, onNext: () -> Unit, onExit: () -> Unit) {
+    onTogglePause: () -> Unit, onNext: () -> Unit, onExit: () -> Unit, onShowGuide: (() -> Unit)? = null) {
     KeepScreenOn()
     val c = Trex.c
     val preparing = step.phase == SessionPhase.PREPARE
     if (preparing) {
-        TimedPreparationScreen(step, paused, onTogglePause, onNext, onExit)
+        TimedPreparationScreen(step, paused, onTogglePause, onNext, onExit, onShowGuide)
         return
     }
     Column(Modifier.fillMaxSize().background(c.bg).statusBarsPadding().navigationBarsPadding().padding(24.dp)) {
@@ -137,6 +139,7 @@ fun SessionTransitionScreen(step: SessionStep, timeLeft: Int, paused: Boolean,
                     }
                 }
         }
+        if (onShowGuide != null) ExerciseGuideButton(step.workout.name, onShowGuide)
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             GhostButton(if (paused) "재개" else "일시정지",
                 onClick = onTogglePause, modifier = Modifier.width(100.dp))

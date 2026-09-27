@@ -994,7 +994,7 @@ data class RepFormLog(
  * 폰 검출 5/6). ship 은 COACH 에서 그 회를 횟수에서 뺀다(사용자 결정 2026-09-25, `docs/SQUAT_FOOT_RULES_RESEARCH.md`).
  */
 object RepFormSpecs {
-    const val VERSION = "repform_v0.3"
+    const val VERSION = "repform_v0.4"
 
     /**
      * 이 검사가 대체하는 창 규칙 id — 세션 규칙셋에서 beta 로 낮춘다(음성·점수·헤드라인에서 빠지고 리포트엔 '참고'로 남는다).
@@ -1009,27 +1009,41 @@ object RepFormSpecs {
         // 런지(§63): 두 창 규칙 다 MediaPipe 정상 오탐 ~16 % — 걸음 검사가 맡는다
         "$LUNGE|상체의 과조한 숙임/젖힘 여부" to "repform|$LUNGE|상체 숙임",
         "$LUNGE|척추의 중립[lateral]" to "repform|$LUNGE|어깨 기울기",
+        // 계열 파일럿(§66): 바벨 컬·바벨 런지는 덤벨 컬·런지의 반복 검사를 그대로 쓴다 — 겹치는 창 규칙을 같은 방식으로 내린다
+        "바벨 컬|팔꿈치 위치 고정" to "repform|바벨 컬|팔꿈치 앞 이탈",
+        "바벨 컬|척추의 중립[all]" to "repform|바벨 컬|상체 숙임",
+        "바벨 컬|척추의 중립[flexion]" to "repform|바벨 컬|상체 숙임",
+        "$BARBELL_LUNGE|척추의 중립[lateral]" to "repform|$BARBELL_LUNGE|어깨 기울기",
     )
 
     /** 대체 사유(리포트 '참고' 주석) — 없으면 스쿼트 문장(세트 평균이 서 있는 프레임에 끌림). */
     val supersedeNotes: Map<String, String> = mapOf(
         "$LUNGE|상체의 과조한 숙임/젖힘 여부" to "세트 창의 최소 기울기라 뒤로 젖힘만 보고 앞 숙임은 못 봤다(MediaPipe 정상 오탐 16 %). 걸음마다 바닥에서 재는 '상체 숙임' 이 맡는다",
         "$LUNGE|척추의 중립[lateral]" to "어깨 높이차의 흔들림(표준편차)이라 기울인 채 유지하면 조용하고 숙이는 동작에 걸렸다(MediaPipe 정상 오탐 16 %). 걸음마다 재는 '어깨 기울기' 가 맡는다",
+        "$BARBELL_LUNGE|척추의 중립[lateral]" to "어깨 높이차의 범위(세트 창)라 준비 동작·바벨 올리기에 끌린다 — 걸음마다 재는 '어깨 기울기'(런지와 같은 검사) 가 맡는다",
+        "바벨 컬|척추의 중립[all]" to "어깨가 골반보다 앞에 있는 정도의 세트 평균이라 서 있는 프레임·바벨 드는 동작이 섞인다 — 반복마다 재는 '상체 숙임'(덤벨 컬과 같은 검사) 이 맡는다",
+        "바벨 컬|척추의 중립[flexion]" to "어깨가 골반보다 앞에 있는 정도의 세트 평균이라 서 있는 프레임·바벨 드는 동작이 섞인다 — 반복마다 재는 '상체 숙임'(덤벨 컬과 같은 검사) 이 맡는다",
     )
 
-    val byExercise: Map<String, List<RepFormCheck>> = mapOf("바벨 스쿼트" to squat(), "덤벨 컬" to curl(), LUNGE to lunge())
+    val byExercise: Map<String, List<RepFormCheck>> = mapOf("바벨 스쿼트" to squat(), "덤벨 컬" to curl(), LUNGE to lunge(),
+        // 계열 파일럿(§66, docs/EXERCISE_TIERS.md) — 같은 검사·같은 임계를 종목 이름만 바꿔 쓴다. 근거는 대리(덤벨 컬·런지 모집단) + AIHub 바벨 클립
+        "바벨 컬" to curl("바벨 컬"), BARBELL_LUNGE to lunge(BARBELL_LUNGE))
 
     fun evaluatorFor(exercise: String, counter: RepCounter): RepFormEvaluator? {
         val checks = byExercise[exercise] ?: return null
         // 런지: 어깨선 뷰·걸음 쪽·세트 중 방향 안내(3걸음)·놓친 얕은 걸음(깊이)
-        return if (exercise == LUNGE) RepFormEvaluator(checks, counter.signal.feature, counter.signal.minAmp,
+        return if (exercise in STEP_LUNGES) RepFormEvaluator(checks, counter.signal.feature, counter.signal.minAmp,
             viewCosKey = ViewEstimator.FEAT_COS_SH, viewSinKey = ViewEstimator.FEAT_SIN_SH, stepSides = true,
-            turnReminderSteps = 3, dipCheckId = "repform|$LUNGE|앞무릎 깊이")
+            turnReminderSteps = 3, dipCheckId = "repform|$exercise|앞무릎 깊이")
         else RepFormEvaluator(checks, counter.signal.feature, counter.signal.minAmp)
     }
 
     /** 런지(앱 이름 "런지")의 AIHub 이름 — 규칙·카운터·세트 로그의 `exercise`. */
     const val LUNGE = "스텝 포워드 다이나믹 런지"
+    /** 바벨 런지(§66) — 런지와 같은 걸음 검사·쪽별 카운트. 카운트 신호는 `knee_minside`(RepSignals). */
+    const val BARBELL_LUNGE = "바벨 런지"
+    /** 걸음 검사기(어깨선 뷰·걸음 쪽·방향 안내·놓친 얕은 걸음)를 쓰는 종목 — 쪽별 카운트(`RepUnit.SIDE_EACH`)와 짝이다. */
+    val STEP_LUNGES = setOf(LUNGE, BARBELL_LUNGE)
     /**
      * 런지 깊이 차단(°, 두 무릎 중 더 굽은 쪽의 바닥 최솟값) — 사용자 결정 2026-09-26 "80도 부근까지 굽혀지지 않으면 횟수 취소".
      * 80 그대로면 모집단 정상 걸음의 71 %(MM-Fit)·사용자 본인의 깊은 걸음(83.6°)까지 빠진다 — MediaPipe 3D 무릎각 오차(B 뷰 MAE 9.9°)만큼 더해 90.
@@ -1046,8 +1060,7 @@ object RepFormSpecs {
      * 폰 검출은 SIDE_B 세트(숙임 4/4·얕은 걸음 2/2 + 놓친 얕은 걸음 4/4). 뷰별 초과율은 검사마다 reason 에 둔다. 폰 근거는 1인 1세트라 임계는 여전히 잠정이다.
      * 어깨 기울기는 폰 검출률이 없어(사용자 세트가 전부 옆이라 유보) beta — 화면 '참고' 로만 보인다.
      */
-    private fun lunge(): List<RepFormCheck> {
-        val ex = LUNGE
+    private fun lunge(ex: String = LUNGE): List<RepFormCheck> {
         val notFront = setOf("B", "D", "SIDE_B", "SIDE_D", "A", "E")
         val lean = "repform|$ex|상체 숙임"
         return listOf(
@@ -1083,8 +1096,7 @@ object RepFormSpecs {
     /** 이 종목의 반복 검사가 전제하는 뷰 등급의 합집합 — 세트 결과의 뷰 게이팅(`PostureLive`)용. 등록부에 없으면 정면. */
     fun viewsFor(exercise: String): Set<String> = byExercise[exercise]?.flatMap { it.views }?.toSet() ?: setOf("C")
 
-    private fun curl(): List<RepFormCheck> {
-        val ex = "덤벨 컬"
+    private fun curl(ex: String = "덤벨 컬"): List<RepFormCheck> {
         val oblique = setOf("B", "D")
         val front = setOf("C")
         return listOf(

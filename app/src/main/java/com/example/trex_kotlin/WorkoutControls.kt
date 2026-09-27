@@ -75,6 +75,7 @@ fun WorkoutSessionActions(
     onSkip: () -> Unit, onExit: () -> Unit,
     directTools: (@Composable RowScope.() -> Unit)? = null,
     onExpandCamera: (() -> Unit)? = null,
+    onShowGuide: (() -> Unit)? = null,
 ) {
     val c = Trex.c
     val repetitions = workout.resolvedTarget() is WorkoutTarget.Repetitions
@@ -97,9 +98,13 @@ fun WorkoutSessionActions(
         SessionTool("건너뛰기", "이 세트 건너뛰기", Icons.Rounded.SkipNext, { open("skip") }, Modifier.weight(1f))
     }
     if (onExpandCamera != null) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween) {
         if (repetitions) TextButton(onClick = { open("count") }) {
             Icon(Icons.Rounded.Edit, null, modifier = Modifier.size(18.dp))
             Text(if (automatic) "횟수 수정" else "횟수 기록", modifier = Modifier.padding(start = 8.dp), color = c.text)
+        }
+        if (onShowGuide != null) ExerciseGuideButton(workout.name, onShowGuide)
         }
         Row(Modifier.fillMaxWidth().padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             CameraExpandAction(onExpandCamera, !paused, Modifier.weight(1f))
@@ -108,6 +113,7 @@ fun WorkoutSessionActions(
                 modifier = Modifier.weight(1.25f).semantics { contentDescription = if (paused) "재개" else "일시정지" }, height = 56.dp)
         }
     } else {
+    if (onShowGuide != null) ExerciseGuideButton(workout.name, onShowGuide)
     Row(Modifier.fillMaxWidth().padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         if (repetitions) GhostButton(if (automatic) "횟수 수정" else if (paused) "재개" else "일시정지",

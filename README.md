@@ -4,12 +4,14 @@ TREX는 Android Kotlin과 Jetpack Compose로 만든 운동/식단 관리 앱입�
 
 ## Android 체험판 다운로드
 
-**[TREX APK 다운로드 · v1.1.0-preview.2](https://github.com/LeeDongHyun00/TREX/releases/download/v1.1.0-preview.2/TREX-1.1.0-preview.2.apk)**
-[릴리스 설명 및 파일 확인](https://github.com/LeeDongHyun00/TREX/releases/tag/v1.1.0-preview.2)
+**[TREX APK 다운로드 · v1.3.0-preview.2](https://github.com/LeeDongHyun00/TREX/releases/download/v1.3.0-preview.2/TREX-1.3.0-preview.2.apk)**
+[릴리스 설명 및 파일 확인](https://github.com/LeeDongHyun00/TREX/releases/tag/v1.3.0-preview.2)
 
 휴대폰 한 대로 운동 루틴을 진행하고, 카메라에 잡힌 관절을 바탕으로 자세 변화를 확인해 보세요. 운동에 맞는 촬영 방향을 먼저 안내하고, 몸이 화면에 들어오면 5초 카운트다운 후 시작합니다. 짧은 인식 끊김에는 남은 준비 시간을 유지하며, 준비가 진행되지 않으면 오른쪽 아래 **준비 건너뛰기**로 바로 시작할 수 있습니다.
 
 - 운동별 횟수·시간·세트·휴식 설정, 길게 눌러 순서 변경, 스와이프 삭제
+- 운동 수정에서 세트·횟수/시간·세트 간 휴식을 숫자 휠로 설정하고, 목록 맨 아래에서 운동 추가
+- 기본 스쿼트·런지·덤벨 컬의 `운동 방법`: 자동 재생 시범과 운동 가이드·주의사항
 - 운동별 자세 교정 선택과 화면·음성 안내, 완료 상태 표시
 - **기록 모드**: 처음 자세를 기준으로 운동 중 변화를 안내하며 자동 횟수를 기록
 - 최근 7일 운동 기록과 날짜별 식단·섭취 영양 조회
@@ -18,7 +20,7 @@ TREX는 Android Kotlin과 Jetpack Compose로 만든 운동/식단 관리 앱입�
 - 큰 카메라 미리보기와 하단 횟수·목표 표시, 5초 준비 완료 시 전체 화면 시작
 - **자세 교정 / 기록 모드**를 직접 선택하는 모드 바, 끼니 시간대를 구분하는 상징
 
-2026-09-12 업데이트: 준비를 건너뛰면 제어판을 먼저 보여주고 전신이 연속 1초 잡히면 접습니다. 준비·평가 음성은 일반 존댓말로 안내합니다. 기존 다운로드 링크에서 수정 APK를 다시 받을 수 있습니다
+2026-09-27 업데이트: 운동 준비 화면의 설명을 촬영 그림과 방향 안내 중심으로 줄였습니다. 자세 평가의 일부 반복 검사와 종목 적용 범위도 갱신했습니다. 새 시범 3개는 두 자세를 번갈아 보여주는 시안이므로, 연속 동작 교육 영상이나 전문가 검증 자료로 해석하지 마세요. 이번 버전은 자동 테스트와 빌드로 확인했으며 실휴대폰 사용 검증은 사용자가 진행합니다.
 
 ### 설치 방법
 
@@ -30,7 +32,7 @@ TREX는 Android Kotlin과 Jetpack Compose로 만든 운동/식단 관리 앱입�
 
 운동 기록은 오늘을 포함한 최근 7일을 보관하며, 기간이 지난 기록은 앱 실행·복귀 시 정리됩니다. 기존 동일 서명의 TREX는 앱을 삭제하지 않고 업데이트할 수 있습니다. 서명이 다른 개발 APK와 충돌하면 기록 보존을 위해 기존 앱을 먼저 삭제하지 말고 확인해 주세요.
 
-구현 소스: [`feature/posture-coach-reliability`](https://github.com/LeeDongHyun00/TREX/tree/feature/posture-coach-reliability). APK는 Git 저장소에 넣지 않고 GitHub Releases에서 제공합니다. 파일 무결성은 릴리스의 `SHA256SUMS.txt`로 확인할 수 있습니다.
+구현 소스: [`main`](https://github.com/LeeDongHyun00/TREX/tree/main). APK는 Git 저장소에 넣지 않고 GitHub Releases에서 제공합니다. 파일 무결성은 릴리스의 `SHA256SUMS.txt`로 확인할 수 있습니다.
 
 ## 개발 환경
 
@@ -45,7 +47,7 @@ TREX는 Android Kotlin과 Jetpack Compose로 만든 운동/식단 관리 앱입�
 1. 저장소를 클론합니다.
 
    ```powershell
-   git clone --branch feature/posture-coach-reliability https://github.com/LeeDongHyun00/TREX.git
+   git clone --branch main https://github.com/LeeDongHyun00/TREX.git
    cd TREX
    ```
 
@@ -65,6 +67,7 @@ Windows PowerShell 기준:
 $env:JAVA_HOME='C:\Program Files\Android\Android Studio\jbr'
 $env:Path="$env:JAVA_HOME\bin;$env:Path"
 .\gradlew.bat assembleDebug
+.\gradlew.bat :app:assembleRelease
 .\gradlew.bat lintDebug
 ```
 
@@ -72,6 +75,7 @@ macOS/Linux 기준:
 
 ```bash
 ./gradlew assembleDebug
+./gradlew :app:assembleRelease
 ./gradlew lintDebug
 ```
 
@@ -106,6 +110,7 @@ macOS/Linux 기준:
 - `.gradle/`, `.kotlin/`, `build/`
 - `.idea/`
 - APK/AAB 산출물
+- `outputs/` 로컬 시안·검증·연구 산출물
 - 키스토어와 `.env` 파일
 
 ## 참고

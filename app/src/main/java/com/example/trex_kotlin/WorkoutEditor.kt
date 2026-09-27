@@ -27,14 +27,20 @@ fun WorkoutEditorSheet(app: AppViewModel, initialId: String?, onClose: () -> Uni
     val c = Trex.c
     val focus = LocalFocusManager.current
     val keyboard = LocalSoftwareKeyboardController.current
-    val original = remember { app.workoutPlan.firstOrNull { it.id == initialId } }
-    var selected by remember { mutableStateOf(original) }
-    var picking by remember { mutableStateOf(initialMode != "edit" || original == null) }
+    val original = remember(initialId) { app.workoutPlan.firstOrNull { it.id == initialId } }
+    var selected by remember(initialId) { mutableStateOf(original) }
+    var picking by remember(initialId, initialMode) { mutableStateOf(initialMode != "edit" || original == null) }
+    val timed = selected?.resolvedTarget() is WorkoutTarget.Duration
+    val wheelKey = Triple(selected?.id, selected?.name, timed)
+    val setWheel = remember(wheelKey) { WorkoutNumberWheelState(selected?.repsSpec()?.sets ?: 1, 1..20) }
+    val goalWheel = remember(wheelKey) { WorkoutNumberWheelState(selected?.resolvedTarget()?.amount ?: 12, if (timed) 1..3600 else 1..999) }
+    val restWheel = remember(wheelKey) { WorkoutNumberWheelState(selected?.timing()?.restSeconds ?: 60, 0..600) }
+    fun editedWorkout() = selected?.withEditorValues(timed, setWheel.value, goalWheel.value, restWheel.value)
     fun update(change: (Workout) -> Workout) { selected = selected?.let { change(it).copy(done = false) } }
     fun pick(template: WorkoutTemplate) {
         focus.clearFocus()
         keyboard?.hide()
-        val before = selected
+        val before = editedWorkout()
         val next = Workout(original?.id ?: before?.id ?: java.util.UUID.randomUUID().toString(), template.name,
             template.reps, template.duration,
             (before?.posture ?: template.posture) && ExerciseProfiles.forName(template.name)?.cameraEnabled == true, template.category,
@@ -42,7 +48,7 @@ fun WorkoutEditorSheet(app: AppViewModel, initialId: String?, onClose: () -> Uni
         selected = next.withGoal(next.resolvedTarget(), before?.repsSpec()?.sets ?: next.repsSpec().sets)
         picking = false
     }
-    ModalBottomSheet(onDismissRequest = onClose, containerColor = c.sheet,
+    ModalBottomSheet(onDismissRequest = onClose, containerColor = c.sheet, sheetGesturesEnabled = picking,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.fillMaxWidth().heightIn(max = 640.dp).imePadding().padding(horizontal = 22.dp).padding(bottom = 22.dp)) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -65,24 +71,19 @@ fun WorkoutEditorSheet(app: AppViewModel, initialId: String?, onClose: () -> Uni
                             }
                             Icon(Icons.Rounded.ChevronRight, null, tint = c.primaryText)
                         }
-                        val goal = selected.resolvedTarget()
-                        val timed = goal is WorkoutTarget.Duration
                         Spacer(Modifier.height(18.dp))
                         SegmentedTabs(listOf("횟수", "시간"), if (timed) 1 else 0, onSelect = { index ->
-                            update { w ->
+                            if ((index == 1) != timed) {
                                 val target = if (index == 1) WorkoutTarget.Duration(30) else WorkoutTarget.Repetitions(12)
-                                w.withGoal(target, w.repsSpec().sets)
+                                update { it.withEditorValues(timed, setWheel.value, goalWheel.value, restWheel.value)
+                                    .withGoal(target, setWheel.value) }
                             }
                         })
-                        EditorNumberRow(if (timed) "운동 시간" else "목표 횟수", if (timed) "${goal.amount}초" else "${goal.amount}회",
-                            onDec = { update { w -> w.withGoal(if (timed) WorkoutTarget.Duration((goal.amount - 5).coerceAtLeast(1)) else WorkoutTarget.Repetitions((goal.amount - 1).coerceAtLeast(1)), w.repsSpec().sets) } },
-                            onInc = { update { w -> w.withGoal(if (timed) WorkoutTarget.Duration((goal.amount + 5).coerceAtMost(3600)) else WorkoutTarget.Repetitions((goal.amount + 1).coerceAtMost(999)), w.repsSpec().sets) } })
-                        EditorNumberRow("세트", "${selected.repsSpec().sets}세트",
-                            onDec = { update { w -> w.withGoal(goal, (w.repsSpec().sets - 1).coerceAtLeast(1)) } },
-                            onInc = { update { w -> w.withGoal(goal, (w.repsSpec().sets + 1).coerceAtMost(20)) } })
-                        EditorNumberRow("세트 간 휴식", "${selected.timing().restSeconds}초",
-                            onDec = { update { w -> w.copy(restSeconds = (w.timing().restSeconds - 5).coerceAtLeast(0)) } },
-                            onInc = { update { w -> w.copy(restSeconds = (w.timing().restSeconds + 5).coerceAtMost(600)) } })
+                        Row(Modifier.fillMaxWidth().padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            WorkoutNumberWheel("세트", setWheel, "세트", Modifier.weight(1f))
+                            WorkoutNumberWheel(if (timed) "시간" else "횟수", goalWheel, if (timed) "초" else "회", Modifier.weight(1f))
+                            WorkoutNumberWheel("세트 간 휴식", restWheel, "초", Modifier.weight(1f))
+                        }
                         Row(Modifier.fillMaxWidth().padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) {
                                 Text("자세 비교", color = c.text, fontSize = 16.sp)
@@ -104,7 +105,7 @@ fun WorkoutEditorSheet(app: AppViewModel, initialId: String?, onClose: () -> Uni
                 Row(Modifier.padding(top = 20.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     GhostButton("취소", onClose, Modifier.weight(1f))
                     Cta(if (original == null) "추가" else "저장", {
-                        selected?.let { edited ->
+                        editedWorkout()?.let { edited ->
                             app.updatePlan(if (original == null) app.workoutPlan.insertBeforeRecovery(edited)
                                 else app.workoutPlan.map { if (it.id == original.id) edited else it })
                         }
@@ -120,10 +121,7 @@ fun WorkoutEditorSheet(app: AppViewModel, initialId: String?, onClose: () -> Uni
 fun Workout.withGoal(goal: WorkoutTarget, sets: Int): Workout = copy(target = goal,
     reps = "${goal.amount}${if (goal is WorkoutTarget.Duration) "초" else "회"} × ${sets.coerceIn(1, 20)}세트")
 
-@Composable
-private fun EditorNumberRow(label: String, value: String, onDec: () -> Unit, onInc: () -> Unit) {
-    Row(Modifier.fillMaxWidth().padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text(label, color = Trex.c.text, fontSize = 16.sp, modifier = Modifier.weight(1f))
-        StepperControl(value, onDec, onInc, valueMinWidth = 62.dp, label = label)
-    }
-}
+/** 저장 버튼을 누른 순간의 세 숫자를 함께 확정한다. 0초도 명시적인 설정으로 보존한다. */
+internal fun Workout.withEditorValues(timed: Boolean, sets: Int, amount: Int, rest: Int): Workout =
+    withGoal(if (timed) WorkoutTarget.Duration(amount.coerceIn(1, 3600)) else WorkoutTarget.Repetitions(amount.coerceIn(1, 999)), sets)
+        .copy(restSeconds = rest.coerceIn(0, 600), done = false)

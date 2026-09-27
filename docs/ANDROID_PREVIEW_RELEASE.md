@@ -1,5 +1,7 @@
 # Android 체험판 1.1.0-preview.2
 
+최신 체험판은 [1.3.0-preview.2](ANDROID_PREVIEW_RELEASE_1_3_0.md)를 따른다. 아래 내용은 1.1.0 배포 당시 기록이다.
+
 2026-09-12 · `feature/posture-coach-reliability` · 태그 `v1.1.0-preview.2`
 
 [APK 다운로드](https://github.com/LeeDongHyun00/TREX/releases/download/v1.1.0-preview.2/TREX-1.1.0-preview.2.apk) · [릴리스](https://github.com/LeeDongHyun00/TREX/releases/tag/v1.1.0-preview.2)

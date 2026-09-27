@@ -282,6 +282,7 @@ fun PostureLiveSessionScreen(
     /** 렙 검증 모드(spec §61, `RepValidation`) — 숫자 숨김·음성 끔·세트 로그에 좌표. 자동 진행 끄기는 TrexApp 이 한다. */
     validation: Boolean = false,
     onPrepared: () -> Unit = {},
+    onShowGuide: (() -> Unit)? = null,
 ) {
     val c = Trex.c
     KeepScreenOn()
@@ -1365,7 +1366,9 @@ fun PostureLiveSessionScreen(
                 countdownEntry = !skipped
                 panelVisible = skipped
                 onPrepared()
-            }, onExit = onExit, modifier = mod, modeControl = modeControl,
+            }, onExit = onExit, modifier = mod, modeControl = modeControl, onShowGuide = onShowGuide,
+            guideName = workout.name,
+            onTogglePause = onTogglePause,
             cameraError = cameraError ?: stats?.error?.let { "몸을 인식할 수 없어요. 직접 기록으로 계속할 수 있어요." }, onFallback = onFallbackToTimer,
         ) else Column(mod) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
@@ -1389,6 +1392,7 @@ fun PostureLiveSessionScreen(
             modeControl()
             WorkoutSessionActions(workout, repetitions, repRef[0] != null, paused,
                 onTogglePause, onRepetitions, onPartial, onSkip,
+                onShowGuide = onShowGuide,
                 onExit = {
                     finalizeRef[0]?.invoke(aihubExercise, workout.name, isFloorExercise)?.let(onSetReport)
                     onExit()

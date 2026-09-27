@@ -89,7 +89,10 @@ internal fun WorkoutCatalogBrowser(current: Workout?, onPick: (WorkoutTemplate) 
 private fun CatalogRow(template: WorkoutTemplate, onPick: (WorkoutTemplate) -> Unit) {
     Row(Modifier.fillMaxWidth().clickable { onPick(template) }.semantics { contentDescription = "${template.name} 선택" }
         .padding(vertical = 22.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text(template.name, color = Trex.c.text, fontSize = 16.sp, modifier = Modifier.weight(1f))
+        Column(Modifier.weight(1f)) {
+            Text(template.name, color = Trex.c.text, fontSize = 16.sp)
+            ExerciseGuidePreview(template.name)
+        }
         Icon(Icons.Rounded.ChevronRight, null, tint = Trex.c.text3, modifier = Modifier.size(18.dp))
     }
 }

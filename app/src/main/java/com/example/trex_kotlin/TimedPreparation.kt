@@ -18,7 +18,7 @@ import kotlin.math.ceil
 /** 카메라를 사용하지 않는 운동도 준비 시간을 제공한다. 목표 시간과는 별개다. */
 @Composable
 internal fun TimedPreparationScreen(step: SessionStep, paused: Boolean, onTogglePause: () -> Unit,
-    onNext: () -> Unit, onExit: () -> Unit) {
+    onNext: () -> Unit, onExit: () -> Unit, onShowGuide: (() -> Unit)? = null) {
     val c=Trex.c
     var remaining by remember(step.token) { mutableLongStateOf(5000L) }
     var total by remember(step.token) { mutableLongStateOf(5000L) }
@@ -40,6 +40,7 @@ internal fun TimedPreparationScreen(step: SessionStep, paused: Boolean, onToggle
         Text("운동 준비",color=c.text2,fontSize=14.sp)
         Text(step.workout.name,color=c.text,fontSize=28.sp,fontWeight=FontWeight.SemiBold,modifier=Modifier.padding(top=12.dp))
         Text("${step.setLabel} · ${step.workout.repsSpec().targetLabel}",color=c.text2,modifier=Modifier.padding(top=8.dp))
+        if (onShowGuide != null) ExerciseGuideButton(step.workout.name, onShowGuide)
         Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center) {
             RingGauge(1f-remaining.toFloat()/total,224.dp,9.dp) {
                 Column(horizontalAlignment=Alignment.CenterHorizontally) {
