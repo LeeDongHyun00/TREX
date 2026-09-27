@@ -10,8 +10,9 @@ import kotlin.math.sqrt
  * 1단계: 음식 위치 모델(YOLOE-11S, "food·bowl·plate…" 고정 어휘, 종류는 모른다)이 그릇을 찾는다.
  * 2단계: 그 자리를 잘라 342종 모델에 넣어 이름을 붙인다.
  *
- * 근거는 docs/FOOD_EVAL_RESULTS.md §8·§8.1. 한 장에 음식 1개짜리 사진만 배운 342종 모델은
- * 식탁 사진 전체에서 36% 를 잡지만, 그릇을 먼저 찾아 잘라 주면 56% 까지 잡고 그릇 자체는 약 90% 가 박스를 얻는다.
+ * 근거는 docs/FOOD_EVAL_RESULTS.md §8·§8.1·§8.2. 한 장에 음식 1개짜리 사진만 배운 342종 모델은 식탁 사진 16장에서
+ * 사진 전체로는 9/25(36%) 를 잡는다. 이 구성(YOLOE-S 탐지 전용 + 회색 여백 30% 자르기)은 PC 에서 12~13/25(48~52%) 이고,
+ * 1단계는 기준 박스(YOLO-World L, 사람이 세어 음식 52개 중 약 47개에 박스)의 91% 를 다시 찾는다. 앱 안에서는 아직 재지 않았다.
  * 정리 규칙(NMS·큰 박스 버리기·포함 박스 합치기)과 자르기 방식은 실험 코드
  * `training/two_stage_eval/two_stage.py` 의 `tidy`·`crop_gray` 와 같다 — 한쪽을 바꾸면 다른 쪽도 바꾼다.
  */
@@ -75,7 +76,7 @@ object FoodRegions {
     /**
      * 사진 한 장에서 2단계로 넘길 최대 자리 수. 평균은 7~8곳이지만 반찬이 많은 한 상(photo04)은 18곳이었다 —
      * 10 으로 자르면 점수 낮은 반찬 그릇부터 빠져 "전부 잡기" 가 깨진다. 2단계 1회가 폰에서 약 27ms 라 20곳이면 0.5초,
-     * 5장 최악 2.7초다. 그 이상은 기다림만 늘린다. 점수 높은 순으로 자른다.
+     * 5장 최악 2.7초다(모델 시간만의 추정, 앱 안에서는 미측정). 그 이상은 기다림만 늘린다. 점수 높은 순으로 자른다.
      */
     const val MAX_REGIONS_PER_PHOTO = 20
 
@@ -178,29 +179,46 @@ data class FoodRegion(
 }
 
 /**
- * 자리 목록을 결과 화면이 쓰는 두 목록으로 나눈다.
+ * 이름이 붙은 자리가 하나도 없는 사진의 번호. 이 사진들은 전체 사진 1회로도 본다([toResultLists] 의 fallback).
  *
- * - 결과: 이름이 붙은 자리를 이름별로 하나씩(여러 장·여러 자리에 같은 이름이면 최고 점수와 그 사진). 수량은 늘리지 않는다 —
- *   같은 그릇을 두 장에 찍은 것과 두 그릇을 구별할 수 없어서, 늘리면 한 끼를 두 번 적게 된다.
- * - 후보: 이름이 붙지 않은 이름들 중 어느 자리의 상위 3개에든 든 것, 점수순 [maxCandidates] 개. "빠진 음식 추가"에서만 보인다.
+ * 자리를 못 찾았거나(클로즈업 한 그릇은 화면 60% 를 넘어 버려진다) 컵·빈 그릇만 "?" 로 잡힌 사진을 그냥 두면,
+ * 예전 경로라면 잡았을 음식이 그 사진에서 통째로 빠지고 화면은 "여기엔 음식이 없다" 고 판정한 것처럼 보인다.
  */
-fun List<FoodRegion>.toResultLists(maxCandidates: Int = 8): Pair<List<DetectedFood>, List<DetectedFood>> {
+fun List<FoodRegion>.photosWithoutNames(photoCount: Int): List<Int> {
+    val named = filter { it.name != null }.mapTo(HashSet()) { it.photoIndex }
+    return (0 until photoCount).filter { it !in named }
+}
+
+/**
+ * 자리 목록(+ 자리 없이 전체 사진 1회로 본 결과 [fallback])을 결과 화면이 쓰는 두 목록으로 나눈다.
+ *
+ * - 결과: 이름이 붙은 자리와 [fallback] 중 임계값 이상을 이름별로 하나씩(여러 장·여러 자리에 같은 이름이면 최고 점수와 그 사진).
+ *   수량은 늘리지 않는다 — 같은 그릇을 두 장에 찍은 것과 두 그릇을 구별할 수 없어서, 늘리면 한 끼를 두 번 적게 된다.
+ *   개수 상한(전체 사진 1회 경로의 5개)은 두지 않는다 — 이름이 붙은 자리는 사진 위에 박스로 보이므로, 목록에서 빼면 박스와 목록이 어긋난다.
+ * - 후보: 결과에 들지 않은 이름 중 어느 자리의 상위 3개에든 들었거나 [fallback] 에서 임계 미만인 것, 점수순 [maxCandidates] 개.
+ *   "빠진 음식 추가"에서만 보인다.
+ */
+fun List<FoodRegion>.toResultLists(
+    fallback: List<DetectedFood> = emptyList(),
+    maxCandidates: Int = 8,
+): Pair<List<DetectedFood>, List<DetectedFood>> {
+    fun keepBest(map: LinkedHashMap<String, DetectedFood>, food: DetectedFood) {
+        val previous = map[food.name]
+        if (previous == null || food.confidence > previous.confidence) map[food.name] = food
+    }
     val named = LinkedHashMap<String, DetectedFood>()
     for (region in this) {
         val name = region.name ?: continue
-        val previous = named[name]
-        if (previous == null || region.confidence > previous.confidence) {
-            named[name] = DetectedFood(name, region.confidence, region.photoIndex)
-        }
+        keepBest(named, DetectedFood(name, region.confidence, region.photoIndex))
     }
+    fallback.filter { it.confidence >= FoodRegions.NAME_THRESHOLD }.forEach { keepBest(named, it) }
     val others = LinkedHashMap<String, DetectedFood>()
     for (region in this) {
         for ((name, score) in region.top) {
-            if (name in named) continue
-            val previous = others[name]
-            if (previous == null || score > previous.confidence) others[name] = DetectedFood(name, score, region.photoIndex)
+            if (name !in named) keepBest(others, DetectedFood(name, score, region.photoIndex))
         }
     }
+    fallback.filter { it.confidence < FoodRegions.NAME_THRESHOLD && it.name !in named }.forEach { keepBest(others, it) }
     return named.values.sortedByDescending { it.confidence } to
         others.values.sortedByDescending { it.confidence }.take(maxCandidates)
 }

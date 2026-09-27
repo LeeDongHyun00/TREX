@@ -43,6 +43,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -81,6 +82,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -120,8 +122,11 @@ private sealed interface PickTarget {
     /** 목록에 없는 음식을 새로 더한다. */
     data object Add : PickTarget
 
-    /** [index] 번째 줄을 다른 음식으로 바꾼다. */
-    data class Replace(val index: Int) : PickTarget
+    /**
+     * [index] 번째 줄을 다른 음식으로 바꾼다. 사진의 자리를 눌러 왔으면 [regionId] 가 그 자리다 —
+     * 한 줄이 여러 자리(두 그릇 모두 "김치")에서 왔을 때 누른 자리만 떼어 바꾼다.
+     */
+    data class Replace(val index: Int, val regionId: Int? = null) : PickTarget
 
     /** 사진의 "?" 자리([regionId])에 이름을 붙인다. 고른 음식은 그 자리와 이어진 줄이 된다. */
     data class Name(val regionId: Int) : PickTarget
@@ -145,6 +150,12 @@ private sealed interface FoodSource {
 }
 
 /**
+ * 사진 위 자리의 이름표. [byModel] 은 모델이 이 자리에 붙인 이름 그대로인지 — 사용자가 붙이거나 바꾼 이름과
+ * 사진 위에서 같은 모양으로 그리면, 판정하지 않은 것을 판정한 것처럼 보인다(목록의 "직접 고름" 과 같은 이유).
+ */
+private data class RegionLabel(val name: String, val byModel: Boolean)
+
+/**
  * 결과 한 줄. 수량은 직접 기록 시트와 같은 qty 스테퍼로 조절한다. nutrition 이 없으면 기록에서 제외한다.
  *
  * [regionIds] 는 이 줄이 사진의 어느 자리([FoodRegion.id])에서 왔는지 — 사진 위 이름표가 이것으로 정해진다.
@@ -164,6 +175,9 @@ private data class RecognizedItem(
  * 저장 전 화면과 저장된 기록이 어긋나지 않는다.
  *
  * 합치지 않으면 "쌀밥 1 / 쌀밥 1" 두 줄이 생겨, 한 줄을 지워 뺐다고 생각해도 다른 줄이 남는다.
+ *
+ * "?" 자리에 이미 있는 음식을 고르면 그 줄로 합쳐져 수량이 +1 된다. 그 줄의 출처(확신도 표시)는 앞 줄 것을 따르므로
+ * 모델이 잡은 줄에 사용자가 더한 한 그릇이 섞일 수 있다 — 사진 위에서는 자리마다 [RegionLabel.byModel] 로 구분된다.
  *
  * 영양값은 없을 때만 뒤에서 채운다. 직접 등록으로 방금 적은 값이 버려지는 것을 막으면서도,
  * 이미 있는 줄의 값을 조용히 바꾸지는 않는다.
@@ -328,10 +342,12 @@ internal fun PhotoFoodSheet(app: AppViewModel, onClose: () -> Unit) {
                     PhotoStep.Result -> ResultStep(
                         photos = photos,
                         regions = regions,
-                        labelOf = { region -> items.firstOrNull { region.id in it.regionIds }?.name },
+                        labelOf = { region ->
+                            items.firstOrNull { region.id in it.regionIds }?.let { RegionLabel(it.name, byModel = region.name == it.name) }
+                        },
                         onRegion = { region ->
                             val row = items.indexOfFirst { region.id in it.regionIds }
-                            pickTarget = if (row >= 0) PickTarget.Replace(row) else PickTarget.Name(region.id)
+                            pickTarget = if (row >= 0) PickTarget.Replace(row, region.id) else PickTarget.Name(region.id)
                         },
                         onZoom = { zoomed = it },
                         slot = slot,
@@ -380,15 +396,22 @@ internal fun PhotoFoodSheet(app: AppViewModel, onClose: () -> Unit) {
         // 제목은 "추가"인데 동작은 "바꾸기"로 가서 아무 일도 안 일어나는 상태가 된다.
         val replacing = (target as? PickTarget.Replace)?.let { items.getOrNull(it.index) }
         val naming = (target as? PickTarget.Name)?.let { t -> regions.firstOrNull { it.id == t.regionId } }
+        // 사진에서 누른 자리. 그 줄에 든 자리일 때만 쓴다(그 사이 목록이 바뀌었으면 줄 전체 바꾸기로 돌아간다).
+        val tapped = (target as? PickTarget.Replace)?.regionId
+            ?.takeIf { id -> replacing != null && id in replacing.regionIds }
+            ?.let { id -> regions.firstOrNull { it.id == id } }
         // 자리에서 온 줄·자리를 고칠 때는 그 자리에서 본 상위 후보를 먼저 보여준다(정답이 3위 안에 드는 경우가 많다, FOOD_EVAL §8).
-        // 한 줄이 여러 자리에서 왔으면 가장 확신한 자리의 후보를 쓴다.
-        val spot = naming ?: replacing?.let { row -> regions.filter { it.id in row.regionIds }.maxByOrNull { it.confidence } }
+        // 누른 자리가 있으면 그 자리, 목록에서 왔으면 그 줄의 자리 중 가장 확신한 자리의 후보를 쓴다.
+        val spot = naming ?: tapped ?: replacing?.let { row -> regions.filter { it.id in row.regionIds }.maxByOrNull { it.confidence } }
+        // 누른 자리가 여러 자리를 묶은 줄의 하나면, 그 자리만 떼어 새 줄로 만든다 — 두 그릇 중 하나만 틀렸을 수 있다.
+        val splitting = tapped != null && replacing != null && replacing.regionIds.size > 1
         val spotCandidates = spot?.top
             ?.filter { (name, _) -> name != replacing?.name && app.findFood(name) != null }
             .orEmpty()
         FoodPicker(
             app = app,
             title = when {
+                splitting -> "이 자리의 ${replacing.name} 을(를) 바꾸기"
                 replacing != null -> "${replacing.name} 을(를) 바꾸기"
                 naming != null -> "이 자리의 음식 고르기"
                 else -> "빠진 음식 추가"
@@ -401,6 +424,10 @@ internal fun PhotoFoodSheet(app: AppViewModel, onClose: () -> Unit) {
                 val picked = RecognizedItem(name, nutrition, FoodSource.Picked, regionIds = naming?.let { setOf(it.id) }.orEmpty())
                 items = if (replacing == null) {
                     (items + picked).mergedByName()
+                } else if (splitting) {
+                    val id = tapped.id
+                    (items.map { if (it === replacing) it.copy(regionIds = it.regionIds - id) else it } + picked.copy(regionIds = setOf(id)))
+                        .mergedByName()
                 } else {
                     // 바꿔 넣은 이름은 모델이 판정한 게 아니다. 판정 흔적을 떼어 낸다. 자리는 그대로 따라간다.
                     items.map { if (it === replacing) picked.copy(qty = it.qty, regionIds = it.regionIds) else it }.mergedByName()
@@ -607,7 +634,7 @@ private fun ResultStep(
     /** 2단계 인식이 찾은 자리. 비어 있으면 예전처럼 사진 줄만 보여준다(전체 사진 1회 경로). */
     regions: List<FoodRegion>,
     /** 자리의 이름표 — 그 자리와 이어진 줄의 이름. null 이면 "?" 다. */
-    labelOf: (FoodRegion) -> String?,
+    labelOf: (FoodRegion) -> RegionLabel?,
     onRegion: (FoodRegion) -> Unit,
     onZoom: (Bitmap) -> Unit,
     slot: String,
@@ -638,10 +665,11 @@ private fun ResultStep(
             } else {
                 RegionPhotos(photos, regions, labelOf, onRegion, onZoom)
                 val unnamed = regions.count { labelOf(it) == null }
+                // 모델이 이름을 알았는데 사용자가 줄을 지운 자리도 "?" 로 돌아가므로 "모르는" 이 아니라 "없는" 이라고 말한다.
                 // "?" 는 기록에 들어가지 않는다. 음식이 아닌 자리(컵·빈 그릇)도 여기 섞이므로 지우라고 하지 않고 그냥 두면 된다고 말한다.
                 Text(
                     if (unnamed > 0) {
-                        "이름을 모르는 자리 ${unnamed}곳 · 사진의 ? 를 눌러 알려 주세요. 음식이 아니면 그냥 두면 기록되지 않아요."
+                        "이름이 없는 자리 ${unnamed}곳 · 사진의 ? 를 눌러 알려 주세요. 음식이 아니면 그냥 두면 기록되지 않아요."
                     } else {
                         "사진의 이름표를 누르면 다른 음식으로 바꿀 수 있어요."
                     },
@@ -820,7 +848,7 @@ private fun PhotoStrip(photos: List<Bitmap>, modifier: Modifier, dim: Boolean = 
 private fun RegionPhotos(
     photos: List<Bitmap>,
     regions: List<FoodRegion>,
-    labelOf: (FoodRegion) -> String?,
+    labelOf: (FoodRegion) -> RegionLabel?,
     onRegion: (FoodRegion) -> Unit,
     onZoom: (Bitmap) -> Unit,
 ) {
@@ -851,7 +879,7 @@ private fun RegionPhotos(
 private fun RegionPhoto(
     photo: Bitmap,
     regions: List<FoodRegion>,
-    labelOf: (FoodRegion) -> String?,
+    labelOf: (FoodRegion) -> RegionLabel?,
     onRegion: (FoodRegion) -> Unit,
     onZoom: (Bitmap) -> Unit,
     modifier: Modifier,
@@ -883,30 +911,45 @@ private fun RegionPhoto(
         Canvas(Modifier.fillMaxSize()) {
             val stroke = 2.dp.toPx()
             regions.forEach { region ->
-                val known = labelOf(region) != null
+                val label = labelOf(region)
                 val topLeft = Offset(region.box.left * size.width, region.box.top * size.height)
                 val boxSize = Size(region.box.width * size.width, region.box.height * size.height)
                 // 어두운 테두리를 먼저 깔아 밝은 식탁에서도 선이 보이게 한다.
                 drawRect(Color.Black.copy(alpha = 0.35f), topLeft, boxSize, style = Stroke(stroke + 2.dp.toPx()))
+                // 모델 이름 = 강조색 실선, 직접 붙인 이름 = 흰 실선, 이름 없음 = 흰 점선.
                 drawRect(
-                    if (known) named else Color.White, topLeft, boxSize,
-                    style = Stroke(stroke, pathEffect = if (known) null else dash),
+                    if (label?.byModel == true) named else Color.White, topLeft, boxSize,
+                    style = Stroke(stroke, pathEffect = if (label != null) null else dash),
                 )
             }
         }
         regions.forEach { region ->
             val label = labelOf(region)
+            val left = maxWidth * region.box.left
+            // 이름표는 박스 왼쪽 위에 붙는다. 사진 오른쪽 끝 박스의 긴 이름이 사진 밖으로 잘리지 않게 남은 폭 안에서 줄인다.
+            val room = (maxWidth - left - 8.dp).coerceAtLeast(28.dp)
             Text(
-                label ?: "?",
-                color = Color.White,
+                label?.name ?: "?",
+                // 모델 이름 = 강조색 바탕, 직접 붙인 이름 = 흰 바탕, 이름 없음 = 어두운 바탕.
+                color = if (label != null && !label.byModel) Color.Black else Color.White,
                 fontSize = 11.sp,
                 fontWeight = FontWeight.SemiBold,
                 maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
                 modifier = Modifier
-                    .offset(x = maxWidth * region.box.left, y = maxHeight * region.box.top)
+                    .offset(x = left, y = maxHeight * region.box.top)
                     .padding(4.dp)
+                    .widthIn(max = room)
                     .clip(RoundedCornerShape(8.dp))
-                    .background(if (label != null) named else Color.Black.copy(alpha = 0.6f))
+                    .background(
+                        when {
+                            label == null -> Color.Black.copy(alpha = 0.6f)
+                            label.byModel -> named
+                            else -> Color.White
+                        },
+                    )
+                    // 이름표가 박스 밖으로 나온 부분을 눌러도 그 자리로 간다. 없으면 옆 자리나 크게 보기로 새어 엉뚱한 음식을 바꾼다.
+                    .clickable(role = Role.Button, onClickLabel = if (label == null) "이 자리 이름 붙이기" else "다른 음식으로 바꾸기") { onRegion(region) }
                     .padding(horizontal = 6.dp, vertical = 2.dp),
             )
         }

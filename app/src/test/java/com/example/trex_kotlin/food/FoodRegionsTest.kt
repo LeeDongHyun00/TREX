@@ -164,6 +164,27 @@ class FoodRegionsTest {
     }
 
     @Test
+    fun `이름 붙은 자리가 없는 사진만 전체 1회로 다시 본다`() {
+        // 0번 사진은 이름이 붙었고, 1번은 "?" 만, 2번은 자리를 하나도 못 찾았다.
+        val regions = listOf(region(0, 0, "쌀밥" to 0.8f), region(1, 1, "쌀밥" to 0.2f))
+        assertEquals(listOf(1, 2), regions.photosWithoutNames(3))
+    }
+
+    @Test
+    fun `전체 1회로 본 사진의 음식도 결과와 후보에 들어간다`() {
+        val regions = listOf(region(0, 0, "쌀밥" to 0.8f, "잡곡밥" to 0.1f))
+        val fallback = listOf(
+            DetectedFood("피자", 0.7f, 1),      // 임계 이상 → 결과
+            DetectedFood("쌀밥", 0.9f, 1),      // 이미 결과에 있는 이름 → 최고 점수로 한 줄
+            DetectedFood("양념치킨", 0.3f, 1),  // 임계 미만 → 후보
+        )
+        val (foods, candidates) = regions.toResultLists(fallback)
+        assertEquals(listOf("쌀밥", "피자"), foods.map { it.name })
+        assertEquals(1, foods[0].photoIndex)
+        assertEquals(listOf("양념치킨", "잡곡밥"), candidates.map { it.name })
+    }
+
+    @Test
     fun `이름이 하나도 안 붙어도 결과는 빈 목록이지 실패가 아니다`() {
         val (foods, candidates) = listOf(region(0, 0, "쌀밥" to 0.2f)).toResultLists()
         assertTrue(foods.isEmpty())

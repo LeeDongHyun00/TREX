@@ -63,7 +63,7 @@ data class DetectedFood(val name: String, val confidence: Float, val photoIndex:
  *
  * - 위치 모델: assets/models/food_region.tflite (YOLOE-11S 탐지 전용, "food·bowl·plate…" 고정 어휘, 8비트 동적 양자화).
  *   있으면 2단계 인식(그릇을 찾아 잘라서 이름)을 하고, 없거나 실패하면 전체 사진 1회 경로로 돌아간다 — 인식 자체가 막히지는 않는다.
- *   근거·측정은 docs/FOOD_EVAL_RESULTS.md §8·§8.1.
+ *   근거·측정은 docs/FOOD_EVAL_RESULTS.md §8·§8.1·§8.2.
  *
  * detect()·warmUp()은 블로킹 호출이므로 반드시 백그라운드 디스패처에서 부른다.
  */
@@ -124,9 +124,23 @@ object FoodDetector {
                 } catch (e: Exception) {
                     Log.e(TAG, "2단계 인식 실패 — 전체 사진 1회로 대신한다", e)
                     emptyList()
+                } catch (e: OutOfMemoryError) {
+                    // 자리 수만큼 자르기를 돌리는 경로라 저사양 기기에서 메모리가 모자랄 수 있다. 앱을 죽이지 않고 1회 경로로 간다.
+                    Log.e(TAG, "2단계 인식 중 메모리 부족 — 전체 사진 1회로 대신한다", e)
+                    emptyList()
                 }
                 if (regions.isNotEmpty()) {
-                    val (foods, candidates) = regions.toResultLists(MAX_CANDIDATES)
+                    // 이름이 하나도 안 붙은 사진은 전체 사진 1회로도 본다 — 그 사진의 음식이 통째로 빠지지 않게.
+                    // 여기서 나온 음식은 자리가 없어 사진 위 박스 없이 목록에만 들어간다.
+                    val fallback = try {
+                        regions.photosWithoutNames(bitmaps.size).flatMap { index ->
+                            runInference(engine, bitmaps[index]).map { (name, confidence) -> DetectedFood(name, confidence, index) }
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "자리 없는 사진의 전체 1회 인식 실패", e)
+                        emptyList()
+                    }
+                    val (foods, candidates) = regions.toResultLists(fallback, MAX_CANDIDATES)
                     return FoodDetectionResult.Success(foods, candidates, regions)
                 }
             }
@@ -200,8 +214,10 @@ object FoodDetector {
             val input = engine.getInputTensor(0)
             val output = engine.getOutputTensor(0)
             Log.i(TAG, "위치 모델 로드: 입력 ${input.shape().contentToString()} ${input.dataType()}, 출력 ${output.shape().contentToString()}")
-            check(input.dataType() == DataType.FLOAT32) { "위치 모델 입력 타입이 ${input.dataType()} 이다" }
-            check(output.shape().size == 3) { "위치 모델 출력 형태가 ${output.shape().contentToString()} 이다" }
+            if (input.dataType() != DataType.FLOAT32 || output.shape().size != 3) {
+                engine.close()
+                throw IllegalStateException("위치 모델 입출력이 맞지 않는다: ${input.dataType()} ${output.shape().contentToString()}")
+            }
             engine.also { regionInterpreter = it }
         } catch (e: FileNotFoundException) {
             regionUnavailable = "파일 없음"
@@ -374,6 +390,7 @@ object FoodDetector {
         val offsetX = (input.width - size) / 2f
         val offsetY = (input.height - size) / 2f
         return toInputBuffer(input) { canvas ->
+            // 원본 좌표는 버림한다 — 실험 코드(crop_gray 의 int())와 같다. 1픽셀 미만 차이다.
             canvas.drawBitmap(
                 bitmap,
                 Rect(box.left.toInt(), box.top.toInt(), box.right.toInt().coerceAtLeast(box.left.toInt() + 1), box.bottom.toInt().coerceAtLeast(box.top.toInt() + 1)),
@@ -383,19 +400,29 @@ object FoodDetector {
         }
     }
 
-    /** 회색으로 채운 입력 크기 캔버스에 [draw] 로 그린 뒤 0~1 float 버퍼로 옮긴다. */
+    // 입력 캔버스·픽셀·버퍼를 크기별로 한 벌만 두고 돌려 쓴다. 2단계는 자리마다(사진 5장 × 최대 20곳) 입력을 만드는데,
+    // 매번 새로 만들면 1회에 약 6.5MB 씩 할당돼 저사양 기기에서 GC·메모리 부족을 부른다. [lock] 안에서만 쓰고,
+    // run() 이 버퍼를 다 읽은 뒤에 다음 입력을 만들므로 한 벌로 충분하다.
+    private var scratchBitmap: Bitmap? = null
+    private var scratchPixels: IntArray? = null
+    private var scratchBuffer: ByteBuffer? = null
+
+    /** 회색으로 채운 입력 크기 캔버스에 [draw] 로 그린 뒤 0~1 float 버퍼로 옮긴다. 반환 버퍼는 다음 호출에서 덮어써진다. */
     private inline fun toInputBuffer(input: InputGeometry, draw: (Canvas) -> Unit): ByteBuffer {
         val width = input.width
         val height = input.height
-        val boxed = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        val boxed = scratchBitmap?.takeIf { it.width == width && it.height == height }
+            ?: Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888).also { scratchBitmap = it }
         Canvas(boxed).also { canvas ->
             canvas.drawColor(Color.rgb(LETTERBOX_GRAY, LETTERBOX_GRAY, LETTERBOX_GRAY))
             draw(canvas)
         }
-        val buffer = ByteBuffer.allocateDirect(width * height * 3 * 4).order(ByteOrder.nativeOrder())
-        val pixels = IntArray(width * height)
+        val bytes = width * height * 3 * 4
+        val buffer = scratchBuffer?.takeIf { it.capacity() == bytes }
+            ?: ByteBuffer.allocateDirect(bytes).order(ByteOrder.nativeOrder()).also { scratchBuffer = it }
+        buffer.clear()
+        val pixels = scratchPixels?.takeIf { it.size == width * height } ?: IntArray(width * height).also { scratchPixels = it }
         boxed.getPixels(pixels, 0, width, 0, 0, width, height)
-        boxed.recycle()
         if (input.channelsFirst) {
             // NCHW: R 평면 전체 → G 평면 → B 평면 순으로 채운다.
             for (shift in intArrayOf(16, 8, 0)) {
