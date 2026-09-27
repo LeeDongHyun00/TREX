@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
@@ -419,6 +420,8 @@ internal fun ManualSheet(app: AppViewModel, initialSlot: String, onClose: () -> 
     val c = Trex.c
     var slot by remember { mutableStateOf(initialSlot) }
     var query by remember { mutableStateOf("") }
+    // "새 음식으로 등록" 을 누른 검색어. 검색어가 바뀌면 자연히 닫힌다(값이 달라지므로).
+    var registering by remember { mutableStateOf<String?>(null) }
     val slotFoods = app.dietFor(0)[slot].orEmpty()
     val total = slotFoods.totalNutrition()
     val goal = app.targetGoal
@@ -550,6 +553,19 @@ internal fun ManualSheet(app: AppViewModel, initialSlot: String, onClose: () -> 
                             badgeDescription = "담기",
                         ) { app.appendFoods(0, slot, listOf(FoodEntry(name, n))) }
                     }
+                    // 비슷한 이름만 나오고 딱 맞는 음식이 없으면 새로 등록할 길을 남긴다("라멘" 을 치면 "라면" 만 나와 고를 수밖에 없었다).
+                    val typed = query.trim()
+                    if (typed.isNotEmpty() && listed.isNotEmpty() && listed.none { it.first == typed }) {
+                        if (registering == typed) {
+                            CustomFoodForm(name = typed) { nutrition ->
+                                app.addCustomFood(typed, nutrition)
+                                app.appendFoods(0, slot, listOf(FoodEntry(typed, nutrition)))
+                                query = ""
+                            }
+                        } else {
+                            RegisterNewFoodRow(typed) { registering = typed }
+                        }
+                    }
                 }
             }
 
@@ -642,6 +658,8 @@ internal fun FoodPicker(
 ) {
     val c = Trex.c
     var query by remember { mutableStateOf("") }
+    // "새 음식으로 등록" 을 누른 검색어. 검색어가 바뀌면 자연히 닫힌다(값이 달라지므로).
+    var registering by remember { mutableStateOf<String?>(null) }
     val trimmed = query.trim()
     // 한 글자 칠 때마다 이 본문이 다시 도는데, 빈도 집계는 기록 전체를 훑는다.
     // 검색 중에는 쓰지도 않으므로 기록·내 음식이 바뀔 때만 다시 센다.
@@ -761,11 +779,25 @@ internal fun FoodPicker(
                                 app.addCustomFood(trimmed, nutrition)
                                 onPick(trimmed, nutrition)
                             }
-                        else -> matches.forEach { (name, n, isCustom) ->
-                            FoodRow(
-                                name, n, isCustom,
-                                badgeIcon = Icons.Rounded.Check, badgeFilled = false, badgeDescription = "고르기",
-                            ) { onPick(name, n) }
+                        else -> {
+                            matches.forEach { (name, n, isCustom) ->
+                                FoodRow(
+                                    name, n, isCustom,
+                                    badgeIcon = Icons.Rounded.Check, badgeFilled = false, badgeDescription = "고르기",
+                                ) { onPick(name, n) }
+                            }
+                            // 비슷한 이름만 나오고 딱 맞는 음식이 없으면 새로 등록할 길을 남긴다(사용자 소감 2026-09-27:
+                            // "라멘" 을 치니 "라면" 말고는 방법이 없었다). 등록하면 바로 고른 것으로 친다.
+                            if (matches.none { it.first == trimmed }) {
+                                if (registering == trimmed) {
+                                    CustomFoodForm(name = trimmed) { nutrition ->
+                                        app.addCustomFood(trimmed, nutrition)
+                                        onPick(trimmed, nutrition)
+                                    }
+                                } else {
+                                    RegisterNewFoodRow(trimmed) { registering = trimmed }
+                                }
+                            }
                         }
                     }
                 }
@@ -825,6 +857,24 @@ private fun FoodRow(
  * 기본 DB 에 없는 음식을 사용자가 등록하는 폼. 등록한 값은 기기에만 저장되고 검색에서 "내 음식" 으로 뜬다.
  * 칼로리만 필수다 — 탄단지를 모르면 비워 두고 0 으로 기록한다(모르는 값을 지어내지 않는다).
  */
+/** 검색 결과 아래 "'이름' 새 음식으로 등록하기" 줄. 누르면 그 자리에 [CustomFoodForm] 이 열린다. */
+@Composable
+private fun RegisterNewFoodRow(name: String, onClick: () -> Unit) {
+    val c = Trex.c
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .clickable(role = Role.Button, onClick = onClick)
+            .padding(horizontal = 6.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(Icons.Rounded.Add, contentDescription = null, tint = c.primaryText, modifier = Modifier.size(18.dp))
+        Spacer(Modifier.width(8.dp))
+        Text("'${name}' 새 음식으로 등록하기", color = c.primaryText, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+    }
+}
+
 @Composable
 private fun CustomFoodForm(name: String, onAdd: (Nutrition) -> Unit) {
     val c = Trex.c
