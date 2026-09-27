@@ -72,6 +72,14 @@ class FoodMemoryTest {
     }
 
     @Test
+    fun `기억 이름이 붙은 사진은 전체 1회로 다시 보지 않는다`() {
+        // 다시 보면 같은 음식이 박스 없는 줄로 한 번 더 나와 한 끼가 두 번 기록된다.
+        val regions = listOf(region("쌀밥" to 0.1f, "엄마표 된장찌개" to 0.82f))
+        assertTrue(regions.photosWithoutNames(1).isEmpty())
+        assertEquals(listOf(0), listOf(region("쌀밥" to 0.1f, "피자" to 0.5f)).photosWithoutNames(1))
+    }
+
+    @Test
     fun `모델이 이름을 붙인 자리에는 기억 이름을 붙이지 않는다`() {
         assertNull(region("쌀밥" to 0.87f, "피자" to 0.95f).rememberedName)
         assertTrue(FoodMemory.SUGGEST_AT < FoodMemory.AUTO_NAME_AT)

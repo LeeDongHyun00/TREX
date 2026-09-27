@@ -11,7 +11,8 @@ import java.io.File
 
 /**
  * [FoodMemory] 를 앱 전용 저장소 파일 하나(`files/food_memory.tsv`)에 둔다.
- * 사진 자체는 저장하지 않는다 — 이름과 특징값(숫자 384개)만 남고, 기기 밖으로 나가지 않는다.
+ * 사진 자체는 저장하지 않는다 — 이름과 특징값(숫자 384개)만 남는다. 비교도 폰에서만 한다.
+ * 이 파일은 클라우드 자동 백업에서 뺐다(res/xml/backup_rules.xml·data_extraction_rules.xml). 새 폰으로 직접 옮기는 기기 이전에는 따라간다.
  */
 object FoodMemoryStore {
 

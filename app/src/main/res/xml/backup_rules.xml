@@ -1,13 +1,10 @@
-<?xml version="1.0" encoding="utf-8"?><!--
-   Sample backup rules file; uncomment and customize as necessary.
-   See https://developer.android.com/guide/topics/data/autobackup
-   for details.
-   Note: This file is ignored for devices older than API 31
-   See https://developer.android.com/about/versions/12/backup-restore
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+   Android 11 이하의 자동 백업 규칙(12 이상은 data_extraction_rules.xml).
+   내 음식 기억(food_memory.tsv, 음식 자리 그림의 특징값)은 클라우드 백업에서 뺀다 — 폰 밖으로 내보내지 않는다(FOOD_EVAL §9).
+   이 파일에 exclude 만 있으면 나머지는 그대로 백업된다.
 -->
 <full-backup-content>
-    <!--
-   <include domain="sharedpref" path="."/>
-   <exclude domain="sharedpref" path="device.xml"/>
--->
+    <exclude domain="file" path="food_memory.tsv" />
+    <exclude domain="file" path="food_memory.tsv.tmp" />
 </full-backup-content>

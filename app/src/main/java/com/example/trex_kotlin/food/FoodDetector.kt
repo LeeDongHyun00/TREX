@@ -324,6 +324,9 @@ object FoodDetector {
         } catch (e: Exception) {
             Log.e(TAG, "기억 비교 실패 — 기억 없이 보여준다", e)
             regions
+        } catch (e: OutOfMemoryError) {
+            Log.e(TAG, "기억 비교 중 메모리 부족 — 기억 없이 보여준다", e)
+            regions
         }
     }
 
@@ -337,6 +340,9 @@ object FoodDetector {
             embedWith(engine, photo, box)
         } catch (e: Exception) {
             Log.e(TAG, "특징값 계산 실패", e)
+            null
+        } catch (e: OutOfMemoryError) {
+            Log.e(TAG, "특징값 계산 중 메모리 부족", e)
             null
         }
     }
@@ -360,6 +366,11 @@ object FoodDetector {
         } catch (e: Exception) {
             embedUnavailable = true
             Log.e(TAG, "특징값 모델 로딩 실패 — 내 음식 기억을 쓰지 않는다", e)
+            null
+        } catch (e: OutOfMemoryError) {
+            // 22MB 모델이 압축돼 들어간 빌드는 힙으로 읽는다. 저사양 기기에서 앱을 죽이지 않고 기억만 끈다.
+            embedUnavailable = true
+            Log.e(TAG, "특징값 모델 로딩 중 메모리 부족 — 내 음식 기억을 쓰지 않는다", e)
             null
         }
     }

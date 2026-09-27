@@ -206,7 +206,9 @@ data class FoodRegion(
  * 예전 경로라면 잡았을 음식이 그 사진에서 통째로 빠지고 화면은 "여기엔 음식이 없다" 고 판정한 것처럼 보인다.
  */
 fun List<FoodRegion>.photosWithoutNames(photoCount: Int): List<Int> {
-    val named = filter { it.name != null }.mapTo(HashSet()) { it.photoIndex }
+    // 기억이 자동으로 이름을 붙인 사진도 이름 붙은 사진으로 친다. 안 그러면 전체 1회가 같은 음식을 박스 없는 줄로
+    // 한 번 더 내놓아 한 끼가 두 번 기록된다(코드 리뷰 2026-09-27).
+    val named = filter { it.name != null || it.rememberedName != null }.mapTo(HashSet()) { it.photoIndex }
     return (0 until photoCount).filter { it !in named }
 }
 

@@ -372,9 +372,11 @@ internal fun PhotoFoodSheet(app: AppViewModel, onClose: () -> Unit) {
                             items.firstOrNull { region.id in it.regionIds }?.let { row ->
                                 RegionLabel(
                                     row.name,
-                                    when (row.name) {
-                                        region.name -> LabelKind.MODEL
-                                        region.rememberedName -> LabelKind.MEMORY
+                                    // 사용자가 고른 줄(Picked)은 이름이 기억과 같아도 사용자 선택이다 — 기억이 붙인 줄을 지운 뒤
+                                    // "?" 에 같은 이름을 직접 고른 경우가 그렇다.
+                                    when {
+                                        row.name == region.name -> LabelKind.MODEL
+                                        row.name == region.rememberedName && row.source != FoodSource.Picked -> LabelKind.MEMORY
                                         else -> LabelKind.USER
                                     },
                                 )
@@ -442,8 +444,12 @@ internal fun PhotoFoodSheet(app: AppViewModel, onClose: () -> Unit) {
         val spot = naming ?: tapped ?: replacing?.let { row -> regions.filter { it.id in row.regionIds }.maxByOrNull { it.confidence } }
         // 누른 자리가 여러 자리를 묶은 줄의 하나면, 그 자리만 떼어 새 줄로 만든다 — 두 그릇 중 하나만 틀렸을 수 있다.
         val splitting = tapped != null && replacing != null && replacing.regionIds.size > 1
+        val spotRemembered = (naming ?: tapped)?.remembered.orEmpty()
+            .map { it.first }
+            .filter { it != replacing?.name && app.findFood(it) != null }
+        // 기억 후보에 이미 든 이름은 모델 후보에서 뺀다 — 같은 음식이 두 번 뜨지 않게.
         val spotCandidates = spot?.top
-            ?.filter { (name, _) -> name != replacing?.name && app.findFood(name) != null }
+            ?.filter { (name, _) -> name != replacing?.name && name !in spotRemembered && app.findFood(name) != null }
             .orEmpty()
         // 누른 자리(또는 이름 붙일 자리)를 사진에서 잘라 고르는 창 맨 위에 보여준다. 목록에서 들어온 바꾸기는 자리를 누른 게 아니라 보여주지 않는다.
         val shownSpot = naming ?: tapped
@@ -462,9 +468,7 @@ internal fun PhotoFoodSheet(app: AppViewModel, onClose: () -> Unit) {
             candidates = if (spot != null) spotCandidates else candidates.filterNot { (name, _) -> items.any { it.name == name } },
             candidatesTitle = if (spot != null) "이 자리에서 본 후보" else null,
             // 누른 자리와 비슷하다고 기억이 말한 음식. 모델 후보보다 위에 둔다 — 그 사람이 실제로 먹은 음식이다.
-            rememberedCandidates = shownSpot?.remembered.orEmpty()
-                .map { it.first }
-                .filter { it != replacing?.name && app.findFood(it) != null },
+            rememberedCandidates = spotRemembered,
             onPick = { name, nutrition ->
                 val picked = RecognizedItem(name, nutrition, FoodSource.Picked, regionIds = naming?.let { setOf(it.id) }.orEmpty())
                 items = if (replacing == null) {
@@ -788,11 +792,17 @@ private fun ResultStep(
                                     // 확신도는 모델이 판정했을 때만 붙인다. 직접 고른 것에 붙이면 안 한 판정을 한 것처럼 말하게 된다.
                                     when (val source = item.source) {
                                         is FoodSource.Detected ->
-                                            Text("확신 ${(source.confidence * 100).toInt()}%", color = c.text3, fontSize = 10.5.sp, modifier = Modifier.padding(start = 6.dp))
+                                            // 모델이 잡은 줄에 기억이 붙인 자리가 합쳐졌으면 그렇다고 밝힌다 — 확신도는 모델이 잡은 자리의 것이다.
+                                            Text(
+                                                "확신 ${(source.confidence * 100).toInt()}%" +
+                                                    if (regions.any { it.id in item.regionIds && labelOf(it)?.kind == LabelKind.MEMORY }) " · 기억 포함" else "",
+                                                color = c.text3, fontSize = 10.5.sp, modifier = Modifier.padding(start = 6.dp),
+                                            )
                                         FoodSource.Picked ->
                                             Text("직접 고름", color = c.primaryText, fontSize = 10.5.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 6.dp))
+                                        // "직접 고름" 과 구분되게 강조색을 쓰지 않는다(사진 위에서는 연두 이름표로 구분된다).
                                         is FoodSource.Remembered ->
-                                            Text("기억한 음식", color = c.primaryText, fontSize = 10.5.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 6.dp))
+                                            Text("기억한 음식", color = c.text2, fontSize = 10.5.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(start = 6.dp))
                                     }
                                 }
                                 val n = item.nutrition
@@ -1045,7 +1055,10 @@ private fun RegionPhoto(
 private fun rememberUserNamed(context: android.content.Context, photos: List<Bitmap>, regions: List<FoodRegion>, items: List<RecognizedItem>) {
     val spots = regions.mapNotNull { region ->
         val row = items.firstOrNull { region.id in it.regionIds && it.nutrition != null } ?: return@mapNotNull null
-        if (row.name == region.name || row.name == region.rememberedName) return@mapNotNull null
+        if (row.name == region.name) return@mapNotNull null
+        if (row.name == region.rememberedName && row.source != FoodSource.Picked) return@mapNotNull null
+        // 비어 보이는 자리는 다음 분석에서 기억과 견주지 않는다(FoodDetector.withMemory) — 남겨도 다시 찾아지지 않고 자리만 차지한다.
+        if (region.looksEmpty) return@mapNotNull null
         val photo = photos.getOrNull(region.photoIndex) ?: return@mapNotNull null
         Triple(row.name, photo, region.box)
     }
