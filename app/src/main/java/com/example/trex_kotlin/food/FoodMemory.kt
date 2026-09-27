@@ -16,11 +16,16 @@ import kotlin.math.sqrt
  * ImageNet MobileNet 은 18% 였다. DINOv2 는 Food-101(식당이 다 다른 사진)에서 기억 10종·3장일 때
  * 1위 64%·3위 안 79%, AI Hub 에서 86%·94% 였다(FOOD_EVAL §9, `training/two_stage_eval/memory_eval.py`).
  */
-data class MemoryEntry(val name: String, val vector: FloatArray, val savedAt: Long) {
+/**
+ * 기억 한 장. [correctedFrom] 은 사용자가 **모델이 붙인 이름을 고친** 기억일 때 모델이 원래 붙였던 이름이다(고침 기억).
+ * 다음에 모델이 비슷한 자리에 같은 이름을 또 붙이면 사용자가 고친 이름으로 바꾸는 데 쓴다. "?" 에 붙인 기억이면 null.
+ */
+data class MemoryEntry(val name: String, val vector: FloatArray, val savedAt: Long, val correctedFrom: String? = null) {
     override fun equals(other: Any?): Boolean =
-        other is MemoryEntry && other.name == name && other.savedAt == savedAt && other.vector.contentEquals(vector)
+        other is MemoryEntry && other.name == name && other.savedAt == savedAt && other.correctedFrom == correctedFrom &&
+            other.vector.contentEquals(vector)
 
-    override fun hashCode(): Int = (name.hashCode() * 31 + savedAt.hashCode()) * 31 + vector.contentHashCode()
+    override fun hashCode(): Int = ((name.hashCode() * 31 + savedAt.hashCode()) * 31 + vector.contentHashCode()) * 31 + correctedFrom.hashCode()
 }
 
 class FoodMemory(val entries: List<MemoryEntry> = emptyList()) {
@@ -31,9 +36,11 @@ class FoodMemory(val entries: List<MemoryEntry> = emptyList()) {
      * [vector] 와 가장 비슷한 기억을 이름별 최고 유사도(코사인)로 줄 세운다. 상위 [limit] 개.
      * 한 이름에 여러 장이 있으면 그중 가장 비슷한 한 장으로 센다 — 같은 음식도 담긴 모양이 다르기 때문이다.
      */
-    fun match(vector: FloatArray, limit: Int = 3): List<Pair<String, Float>> {
+    fun match(vector: FloatArray, limit: Int = 3, correctedFrom: String? = null): List<Pair<String, Float>> {
         val best = LinkedHashMap<String, Float>()
         for (e in entries) {
+            // 모델이 이름을 붙인 자리는 "그 이름을 고친" 기억하고만 견준다 — 모델이 맞게 본 음식을 다른 기억이 덮지 않게.
+            if (correctedFrom != null && e.correctedFrom != correctedFrom) continue
             val s = cosine(e.vector, vector)
             if (s > (best[e.name] ?: Float.NEGATIVE_INFINITY)) best[e.name] = s
         }
@@ -55,11 +62,18 @@ class FoodMemory(val entries: List<MemoryEntry> = emptyList()) {
     /** 이 이름의 기억을 모두 지운다. */
     fun forget(name: String): FoodMemory = FoodMemory(entries.filter { it.name != name })
 
-    /** 한 줄에 하나: `이름<TAB>저장시각<TAB>특징값(float32 리틀엔디언, Base64)`. 이름에 탭·줄바꿈은 들어오지 않게 저장 전에 공백으로 바꾼다. */
+    /** 모델이 [modelName] 을 붙였다가 사용자가 고친 기억이 있는가. 없으면 그 자리는 특징값을 뽑지 않는다(비용 절약). */
+    fun hasCorrectionOf(modelName: String): Boolean = entries.any { it.correctedFrom == modelName }
+
+    /**
+     * 한 줄에 하나: `이름<TAB>저장시각<TAB>특징값(float32 리틀엔디언, Base64)[<TAB>모델이 붙였던 이름]`.
+     * 넷째 칸은 고침 기억에만 있다(없으면 세 칸 — 먼저 만든 파일과 호환). 이름에 탭·줄바꿈은 저장 전에 공백으로 바꾼다.
+     */
     fun encode(): String = entries.joinToString("\n") { e ->
         val buf = ByteBuffer.allocate(e.vector.size * 4).order(ByteOrder.LITTLE_ENDIAN)
         e.vector.forEach { buf.putFloat(it) }
-        "${clean(e.name)}\t${e.savedAt}\t${Base64.getEncoder().encodeToString(buf.array())}"
+        "${clean(e.name)}\t${e.savedAt}\t${Base64.getEncoder().encodeToString(buf.array())}" +
+            (e.correctedFrom?.let { "\t${clean(it)}" } ?: "")
     }
 
     companion object {
@@ -80,12 +94,12 @@ class FoodMemory(val entries: List<MemoryEntry> = emptyList()) {
         fun decode(text: String): FoodMemory = FoodMemory(
             text.lineSequence().mapNotNull { line ->
                 val parts = line.split('\t')
-                if (parts.size != 3) return@mapNotNull null
+                if (parts.size !in 3..4) return@mapNotNull null
                 val bytes = runCatching { Base64.getDecoder().decode(parts[2]) }.getOrNull() ?: return@mapNotNull null
                 if (bytes.isEmpty() || bytes.size % 4 != 0) return@mapNotNull null
                 val buf = ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN)
                 val v = FloatArray(bytes.size / 4) { buf.getFloat() }
-                MemoryEntry(parts[0], v, parts[1].toLongOrNull() ?: 0L)
+                MemoryEntry(parts[0], v, parts[1].toLongOrNull() ?: 0L, parts.getOrNull(3)?.takeIf { it.isNotEmpty() })
             }.toList(),
         )
 

@@ -310,13 +310,24 @@ object FoodDetector {
         val startedAt = System.nanoTime()
         return try {
             regions.map { r ->
-                if (r.name != null || r.looksEmpty) return@map r
-                val v = embedWith(engine, bitmaps[r.photoIndex], r.box)
-                r.copy(remembered = memory.match(v).filter { it.second >= FoodMemory.SUGGEST_AT })
+                val modelName = r.name
+                when {
+                    modelName == null && r.looksEmpty -> r
+                    modelName == null -> {
+                        val v = embedWith(engine, bitmaps[r.photoIndex], r.box)
+                        r.copy(remembered = memory.match(v).filter { it.second >= FoodMemory.SUGGEST_AT })
+                    }
+                    // 모델 이름이 붙은 자리는 그 이름을 사용자가 고친 적이 있을 때만 본다.
+                    memory.hasCorrectionOf(modelName) -> {
+                        val v = embedWith(engine, bitmaps[r.photoIndex], r.box)
+                        r.copy(remembered = memory.match(v, correctedFrom = modelName).filter { it.second >= FoodMemory.SUGGEST_AT })
+                    }
+                    else -> r
+                }
             }.also { out ->
                 Log.d(
                     TAG,
-                    "기억 비교 ${out.count { it.name == null && !it.looksEmpty }}곳 · 기억 ${memory.entries.size}장 · " +
+                    "기억 비교 ${out.count { (it.name == null && !it.looksEmpty) || (it.name != null && memory.hasCorrectionOf(it.name!!)) }}곳 · 기억 ${memory.entries.size}장 · " +
                         "${(System.nanoTime() - startedAt) / 1_000_000}ms · " +
                         out.filter { it.remembered.isNotEmpty() }.joinToString { r -> r.remembered.joinToString("/") { "${it.first} ${"%.2f".format(it.second)}" } },
                 )

@@ -16,6 +16,9 @@ import java.io.File
  */
 object FoodMemoryStore {
 
+    /** 기억할 자리 하나. [correctedFrom] 은 사용자가 모델 이름을 고쳤을 때 모델이 붙였던 이름. */
+    data class Spot(val name: String, val photo: Bitmap, val box: PixelBox, val correctedFrom: String?)
+
     private const val TAG = "FoodMemory"
     private const val FILE_NAME = "food_memory.tsv"
 
@@ -39,25 +42,27 @@ object FoodMemoryStore {
     }
 
     /**
-     * 사용자가 사진의 자리에 직접 붙인 이름을 기억한다. [spots] 는 (이름, 사진, 사진 대비 0~1 자리).
+     * 사용자가 사진의 자리에 직접 붙인 이름을 기억한다. [spots] 는 이름·사진·사진 대비 0~1 자리·모델이 붙였던 이름(고친 경우).
      * 특징값 계산이 무거워 백그라운드에서 하고, 끝나면 파일에 한 번에 쓴다(중간에 앱이 죽어도 이전 파일이 남도록 임시 파일 → 이름 바꾸기).
      */
-    fun rememberAsync(context: Context, spots: List<Triple<String, Bitmap, PixelBox>>) {
+    fun rememberAsync(context: Context, spots: List<Spot>) {
         if (spots.isEmpty()) return
         val app = context.applicationContext
         scope.launch {
-            val vectors = spots.mapNotNull { (name, photo, box) ->
-                FoodDetector.embed(app, photo, box)?.let { name to it }
+            val vectors = spots.mapNotNull { spot ->
+                FoodDetector.embed(app, spot.photo, spot.box)?.let { spot to it }
             }
             if (vectors.isEmpty()) return@launch
             synchronized(lock) {
                 var memory = load(app)
                 val now = System.currentTimeMillis()
-                vectors.forEachIndexed { i, (name, v) -> memory = memory.plus(MemoryEntry(FoodMemory.clean(name), v, now + i)) }
+                vectors.forEachIndexed { i, (spot, v) ->
+                    memory = memory.plus(MemoryEntry(FoodMemory.clean(spot.name), v, now + i, spot.correctedFrom?.let(FoodMemory::clean)))
+                }
                 save(app, memory)
                 cached = memory
             }
-            Log.i(TAG, "기억 ${vectors.size}개 추가: ${vectors.joinToString { it.first }}")
+            Log.i(TAG, "기억 ${vectors.size}개 추가: ${vectors.joinToString { (spot, _) -> spot.name + (spot.correctedFrom?.let { " (모델: $it)" } ?: "") }}")
         }
     }
 

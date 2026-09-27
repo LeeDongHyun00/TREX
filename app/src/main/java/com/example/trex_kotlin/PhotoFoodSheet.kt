@@ -298,7 +298,7 @@ internal fun PhotoFoodSheet(app: AppViewModel, onClose: () -> Unit) {
                 val detected = result.foods.map { food ->
                     RecognizedItem(
                         food.name, app.findFood(food.name), FoodSource.Detected(food.confidence, food.photoIndex),
-                        regionIds = result.regions.filter { it.name == food.name }.mapTo(HashSet()) { it.id },
+                        regionIds = result.regions.filter { it.name == food.name && it.rememberedName == null }.mapTo(HashSet()) { it.id },
                     )
                 }
                 // 기억이 매우 비슷하다고 한 자리는 그 이름으로 줄을 만든다. 영양값을 못 찾는 이름(지운 내 음식)은 만들지 않는다.
@@ -1048,6 +1048,7 @@ private fun RegionPhoto(
 /**
  * 기록할 때, 사용자가 사진의 자리에 **직접 붙이거나 바꾼** 이름을 내 음식 기억에 남긴다.
  *
+ * 사용자가 모델 이름을 고친 자리는 모델이 붙였던 이름도 함께 남긴다(고침 기억) — 다음에 모델이 비슷한 자리에 같은 이름을 또 붙이면 고친 이름으로 바꾼다.
  * 모델이 붙인 이름과 기억이 자동으로 붙인 이름은 남기지 않는다 — 사용자가 확인했다고 볼 근거가 약하고,
  * 틀린 자동 이름이 다시 기억이 되면 같은 틀림이 스스로 굳는다. 기록하지 않고 닫으면 아무것도 남지 않는다.
  * 기록된 줄(영양값이 있는 줄)의 자리만 남긴다.
@@ -1060,7 +1061,7 @@ private fun rememberUserNamed(context: android.content.Context, photos: List<Bit
         // 비어 보이는 자리는 다음 분석에서 기억과 견주지 않는다(FoodDetector.withMemory) — 남겨도 다시 찾아지지 않고 자리만 차지한다.
         if (region.looksEmpty) return@mapNotNull null
         val photo = photos.getOrNull(region.photoIndex) ?: return@mapNotNull null
-        Triple(row.name, photo, region.box)
+        FoodMemoryStore.Spot(row.name, photo, region.box, correctedFrom = region.name)
     }
     FoodMemoryStore.rememberAsync(context, spots)
 }

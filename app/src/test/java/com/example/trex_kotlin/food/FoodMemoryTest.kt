@@ -80,8 +80,37 @@ class FoodMemoryTest {
     }
 
     @Test
-    fun `모델이 이름을 붙인 자리에는 기억 이름을 붙이지 않는다`() {
-        assertNull(region("쌀밥" to 0.87f, "피자" to 0.95f).rememberedName)
+    fun `고침 기억은 모델이 같은 이름을 붙였을 때만 견준다`() {
+        val memory = FoodMemory(
+            listOf(
+                MemoryEntry("생강", v(1f, 0f), 1, correctedFrom = "연어초밥"),
+                MemoryEntry("피자", v(1f, 0f), 2),
+            ),
+        )
+        // 모델이 "연어초밥" 이라고 한 자리 → 그 이름을 고친 기억(생강)만 본다. 피자는 모델이 맞게 본 음식을 덮을 수 있어 보지 않는다.
+        assertEquals(listOf("생강"), memory.match(v(1f, 0f), correctedFrom = "연어초밥").map { it.first })
+        assertTrue(memory.match(v(1f, 0f), correctedFrom = "돈가스").isEmpty())
+        // 이름 없는 자리는 모든 기억과 견준다.
+        assertEquals(setOf("생강", "피자"), memory.match(v(1f, 0f)).map { it.first }.toSet())
+        assertTrue(memory.hasCorrectionOf("연어초밥"))
+    }
+
+    @Test
+    fun `고침 기억은 모델 이름을 바꾸고 모델 결과에서 빠진다`() {
+        val fixed = region("연어초밥" to 0.72f, "생강" to 0.85f)
+        assertEquals("생강", fixed.rememberedName)
+        val (foods, _) = listOf(fixed).toResultLists()
+        assertTrue(foods.isEmpty())
+        // 기억이 모델과 같은 이름이면 바꿀 것이 없다.
+        assertNull(region("쌀밥" to 0.87f, "쌀밥" to 0.95f).rememberedName)
         assertTrue(FoodMemory.SUGGEST_AT < FoodMemory.AUTO_NAME_AT)
+    }
+
+    @Test
+    fun `고침 기억도 파일로 저장했다 읽으면 같고, 세 칸짜리 옛 줄도 읽는다`() {
+        val memory = FoodMemory(listOf(MemoryEntry("생강", v(0.5f, 0.5f), 7, correctedFrom = "연어초밥")))
+        assertEquals(memory.entries, FoodMemory.decode(memory.encode()).entries)
+        val old = FoodMemory(listOf(MemoryEntry("라멘", v(1f, 0f), 1))).encode()
+        assertNull(FoodMemory.decode(old).entries.single().correctedFrom)
     }
 }

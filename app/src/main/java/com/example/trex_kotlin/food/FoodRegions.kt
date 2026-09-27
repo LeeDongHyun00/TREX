@@ -184,7 +184,8 @@ data class FoodRegion(
     val top: List<Pair<String, Float>>,
     /**
      * 내 음식 기억([FoodMemory])에서 이 자리와 비슷한 이름들(이름, 유사도) — 유사도순, [FoodMemory.SUGGEST_AT] 이상만.
-     * 이름이 없고 비어 보이지 않는 자리만 본다(기억이 필요한 곳이 거기다). 기억이 비어 있으면 늘 빈 목록이다.
+     * 이름이 없고 비어 보이지 않는 자리는 모든 기억과 견준다. 모델이 이름을 붙인 자리는 **사용자가 그 이름을 고친 기억**
+     * (고침 기억, [MemoryEntry.correctedFrom])하고만 견준다. 기억이 비어 있으면 늘 빈 목록이다.
      */
     val remembered: List<Pair<String, Float>> = emptyList(),
 ) {
@@ -194,9 +195,12 @@ data class FoodRegion(
     /** [FoodRegions.LOOKS_EMPTY_BELOW] 참고. 이름이 붙은 자리는 비어 보일 수 없다. */
     val looksEmpty: Boolean get() = confidence < FoodRegions.LOOKS_EMPTY_BELOW
 
-    /** 기억이 매우 비슷하다고 한 이름([FoodMemory.AUTO_NAME_AT] 이상). 모델 이름이 있으면 그쪽이 우선이라 null. */
+    /**
+     * 기억이 매우 비슷하다고 한 이름([FoodMemory.AUTO_NAME_AT] 이상). 이름 없는 자리에는 이름을 붙이고,
+     * 모델 이름이 붙은 자리에서는 **고침 기억**만 모델 이름을 바꾼다 — 모델이 같은 음식을 같은 이름으로 또 잘못 볼 때다.
+     */
     val rememberedName: String?
-        get() = if (name != null) null else remembered.firstOrNull()?.takeIf { it.second >= FoodMemory.AUTO_NAME_AT }?.first
+        get() = remembered.firstOrNull()?.takeIf { it.second >= FoodMemory.AUTO_NAME_AT && it.first != name }?.first
 }
 
 /**
@@ -232,6 +236,8 @@ fun List<FoodRegion>.toResultLists(
     val named = LinkedHashMap<String, DetectedFood>()
     for (region in this) {
         val name = region.name ?: continue
+        // 고침 기억이 모델 이름을 바꾼 자리는 모델 결과에서 뺀다 — 화면이 기억 이름으로 줄을 만든다.
+        if (region.rememberedName != null) continue
         keepBest(named, DetectedFood(name, region.confidence, region.photoIndex))
     }
     fallback.filter { it.confidence >= FoodRegions.NAME_THRESHOLD }.forEach { keepBest(named, it) }
