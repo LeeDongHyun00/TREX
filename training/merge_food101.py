@@ -41,14 +41,16 @@ def iou(a, b):
     return ix / (ar(a) + ar(b) - ix + 1e-9)
 
 
-def main_box(yoloe, img_path, w, h):
+def main_box(yoloe, img_path):
     """위치 모델이 찾은 음식 자리 중 가장 큰 것(점수 0.1 이상). Food-101 사진은 음식 하나를 중심에 찍은 것이라 가장 큰 자리가 그 음식이다.
-    못 찾으면 사진 가운데 90% 를 쓴다."""
+    못 찾으면 사진 가운데 90% 를 쓴다. 가로·세로는 모델이 실제로 읽은 크기(orig_shape)를 쓴다 — PIL 은 EXIF 회전을 무시해
+    가로·세로가 뒤바뀐 사진에서 좌표가 1 을 넘었다(2026-09-28, 맥앤치즈 1장)."""
     r = yoloe.predict(str(img_path), conf=0.1, verbose=False, imgsz=640)[0]
+    h, w = r.orig_shape
     boxes = [b for b in r.boxes.xyxy.tolist() if (b[2] - b[0]) * (b[3] - b[1]) < 0.98 * w * h]
     if not boxes:
-        return [0.05 * w, 0.05 * h, 0.95 * w, 0.95 * h], False
-    return max(boxes, key=lambda b: (b[2] - b[0]) * (b[3] - b[1])), True
+        return [0.05 * w, 0.05 * h, 0.95 * w, 0.95 * h], False, w, h
+    return max(boxes, key=lambda b: (b[2] - b[0]) * (b[3] - b[1])), True, w, h
 
 
 def known_boxes(base, img_path, name_to_index, conf=0.5):
@@ -65,12 +67,11 @@ def known_boxes(base, img_path, name_to_index, conf=0.5):
 
 
 def yolo_line(ci, b, w, h):
-    x0, y0, x1, y1 = b
+    x0, y0, x1, y1 = max(0, b[0]), max(0, b[1]), min(w, b[2]), min(h, b[3])
     return f'{ci} {((x0 + x1) / 2 / w):.6f} {((y0 + y1) / 2 / h):.6f} {((x1 - x0) / w):.6f} {((y1 - y0) / h):.6f}'
 
 
 def merge(dataset: Path, food101: Path, base_pt: str | None, per_train: int, per_val: int, seed=42, log_every=500):
-    from PIL import Image
     from ultralytics import YOLO, YOLOE
     random.seed(seed)
     old = read_names(dataset)
@@ -92,9 +93,7 @@ def merge(dataset: Path, food101: Path, base_pt: str | None, per_train: int, per
                 src = food101 / 'images' / (f + '.jpg')
                 dst_img = dataset / 'images' / sub / f'f101_{folder}_{Path(f).name}.jpg'
                 dst_lbl = dataset / 'labels' / sub / f'f101_{folder}_{Path(f).name}.txt'
-                with Image.open(src) as im:
-                    w, h = im.size
-                mb, found = main_box(yoloe, src, w, h)
+                mb, found, w, h = main_box(yoloe, src)
                 lines = [yolo_line(ci, mb, w, h)]
                 for kci, kb in known_boxes(base, src, name_to_index):
                     if iou(kb, mb) < 0.4:   # 주 음식 자리와 겹치면 주 음식(새 클래스)이 맞다고 본다

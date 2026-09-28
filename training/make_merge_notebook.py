@@ -5,6 +5,9 @@ from pathlib import Path
 
 HERE = Path(__file__).parent
 script = (HERE / 'merge_food101.py').read_text(encoding='utf-8')
+uec_script = (HERE / 'merge_uec.py').read_text(encoding='utf-8')
+import sys
+UEC = '--uec' in sys.argv   # 둘째 판: Food-101 + UEC FOOD-256
 
 def md(text): return {'cell_type': 'markdown', 'metadata': {}, 'source': text}
 def code(text): return {'cell_type': 'code', 'metadata': {}, 'execution_count': None, 'outputs': [], 'source': text}
@@ -35,7 +38,7 @@ assert torch.cuda.is_available(), 'GPU 가 없다 — 런타임 → 런타임 �
 p = torch.cuda.get_device_properties(0); print(f'GPU: {p.name}, VRAM {p.total_memory / 1e9:.0f} GB')
 !free -g | head -2; df -h /content | tail -1
 """),
-code("""# 2. Drive 연결 + 경로
+code(("""# 2. Drive 연결 + 경로
 from google.colab import drive
 drive.mount('/content/drive')
 import os, glob
@@ -44,12 +47,14 @@ TREX = Path('/content/drive/MyDrive/trex')
 cands = [TREX / 'dataset.tar', TREX / 'dataset_342.tar']
 AIHUB_TAR = next((c for c in cands if c.exists()), None)
 assert AIHUB_TAR, f'AI Hub 데이터셋이 없다: {cands}'
-BASE_PT = TREX / 'runs' / 'food' / 'weights' / 'best.pt'
+BASE_PT = TREX / {BASE_REL!r}
 BASE_PT = str(BASE_PT) if BASE_PT.exists() else None
-RUNS_DIR = str(TREX / 'runs_merge')          # 학습 가중치(끊겨도 이어서 학습)
-OUT_DIR = TREX / 'merge_out'; OUT_DIR.mkdir(parents=True, exist_ok=True)
+RUNS_DIR = str(TREX / {RUNS_REL!r})          # 학습 가중치(끊겨도 이어서 학습)
+OUT_DIR = TREX / {OUT_REL!r}; OUT_DIR.mkdir(parents=True, exist_ok=True)
 print('AI Hub:', AIHUB_TAR, '| 이전 모델:', BASE_PT or '없음 — yolov8n 에서 시작, 한식 가짜 라벨·망각 비교 생략')
-"""),
+""").replace('{BASE_REL!r}', repr('runs_merge/merge/weights/best.pt' if UEC else 'runs/food/weights/best.pt'))
+       .replace('{RUNS_REL!r}', repr('runs_merge2' if UEC else 'runs_merge'))
+       .replace('{OUT_REL!r}', repr('merge_out2' if UEC else 'merge_out'))),
 code("""# 3. AI Hub 데이터셋 풀기
 import shutil
 DATASET = Path('/content/dataset')
@@ -85,7 +90,24 @@ else:
     print('이미 머지됨 —', len(NAMES), '종')
 DATA_YAML = DATASET / 'data.yaml'
 """),
-code("""# 6. 학습 — 이전 모델이 있으면 그 가중치에서 시작한다(머리만 435종으로 새로 맞춘다). 끊기면 RESUME = True 로 다시 실행
+] + ([
+code("""# 5-2. UEC FOOD-256 받기(Kaggle 사본 rkuo2000/uecfood256, 로그인 없이 받아진다) + 머지
+!pip install -q kagglehub
+import kagglehub
+UEC_ROOT = Path(kagglehub.dataset_download('rkuo2000/uecfood256'))
+UEC_DIR = next(p for p in [UEC_ROOT / 'UECFOOD256', UEC_ROOT] if (p / '1' / 'bb_info.txt').exists())
+print('UEC:', UEC_DIR)
+"""),
+code("%%writefile /content/merge_uec.py\n" + uec_script),
+code("""import merge_uec; importlib.reload(merge_uec)
+if not (DATASET / 'uec_stats.json').exists():
+    NAMES, uec_stats = merge_uec.merge(DATASET, UEC_DIR)
+else:
+    NAMES = [l.strip() for l in (DATASET / 'food_labels.txt').read_text(encoding='utf-8').splitlines() if l.strip()]
+    print('이미 머지됨 —', len(NAMES), '종')
+"""),
+] if UEC else []) + [
+code("""# 6. 학습 — 이전 모델이 있으면 그 가중치에서 시작한다(머리만 새 종 수로 다시 맞춘다). 끊기면 RESUME = True 로 다시 실행
 from ultralytics import YOLO
 RESUME = False
 last = Path(RUNS_DIR) / 'merge' / 'weights' / 'last.pt'
@@ -113,8 +135,9 @@ assert len(NAMES) + 4 in list(o['shape']), f"출력 {o['shape']} 가 {len(NAMES)
 shutil.copy(TFLITE, OUT_DIR / 'yolov8n_food.tflite')
 (OUT_DIR / 'food_labels.txt').write_text('\\n'.join(NAMES) + '\\n', encoding='utf-8')
 if (DATASET / 'nutrition.json').exists(): shutil.copy(DATASET / 'nutrition.json', OUT_DIR / 'nutrition_aihub.json')
-(OUT_DIR / 'new_classes.json').write_text(json.dumps(merge_food101.NEW_CLASSES, ensure_ascii=False), encoding='utf-8')
+(OUT_DIR / 'new_classes.json').write_text(json.dumps([n for n in NAMES if n not in OLD_NAMES], ensure_ascii=False), encoding='utf-8')
 shutil.copy(DATASET / 'merge_stats.json', OUT_DIR / 'merge_stats.json')
+if (DATASET / 'uec_stats.json').exists(): shutil.copy(DATASET / 'uec_stats.json', OUT_DIR / 'uec_stats.json')
 print('완료 — Drive MyDrive/trex/merge_out/ 에 저장:', sorted(os.listdir(OUT_DIR)))
 print(f"입력 {list(i['shape'])} · 출력 {list(o['shape'])} · {len(NAMES)}종")
 """),
@@ -144,6 +167,11 @@ try:
     new_new, new_new_map = val_on(BEST, NAMES, f101_val, 'val_f101')
     summary['새 35종 · Food-101 검증 mAP50'] = round(new_new_map, 3)
     summary['새 35종 클래스별 AP50'] = {n: round(v, 2) for n, v in sorted(new_new.items(), key=lambda x: -x[1]) if n not in OLD_NAMES}
+    uec_val = sorted(str(p) for p in (DATASET / 'images' / 'val').glob('uec_*.jpg'))
+    if uec_val:   # UEC 판: 실제 식탁(여러 음식) 사진이 섞인 검증 — 기존·새 음식 모두
+        uec_ap, uec_map = val_on(BEST, NAMES, uec_val, 'val_uec')
+        summary['UEC 검증(식탁 사진 포함) mAP50'] = round(uec_map, 3)
+        summary['UEC 검증 클래스별 AP50'] = {n: round(v, 2) for n, v in sorted(uec_ap.items(), key=lambda x: -x[1])}
     print(json.dumps(summary, ensure_ascii=False, indent=1))
     (OUT_DIR / 'eval_summary.json').write_text(json.dumps(summary, ensure_ascii=False, indent=1), encoding='utf-8')
 except Exception:
@@ -157,5 +185,5 @@ md("""### 아침에 할 일
 ]
 nb = {'cells': cells, 'metadata': {'accelerator': 'GPU', 'colab': {'gpuType': 'L4', 'machine_shape': 'hm'},
       'kernelspec': {'display_name': 'Python 3', 'name': 'python3'}}, 'nbformat': 4, 'nbformat_minor': 0}
-(HERE / 'train_food_merge_colab.ipynb').write_text(json.dumps(nb, ensure_ascii=False, indent=1), encoding='utf-8')
+(HERE / ('train_food_merge2_colab.ipynb' if UEC else 'train_food_merge_colab.ipynb')).write_text(json.dumps(nb, ensure_ascii=False, indent=1), encoding='utf-8')
 print('written', len(cells), 'cells')
