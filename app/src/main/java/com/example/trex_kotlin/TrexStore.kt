@@ -197,6 +197,7 @@ class TrexStore(context: Context, preferenceName: String = "trex_store") {
                             durationSeconds = it.optInt("durationSeconds", -1).takeIf { seconds -> seconds >= 0 },
                             category = it.optString("category").takeIf(String::isNotBlank),
                             accuracy = if (legacy) null else it.optInt("accuracy", -1).takeIf { a -> a >= 0 },
+                            loadSet = it.optJSONObject("loadSet")?.let { rawSet -> runCatching { LoadSetJson.decode(rawSet) }.getOrNull() },
                         )
                     },
                 )
@@ -233,6 +234,7 @@ class TrexStore(context: Context, preferenceName: String = "trex_store") {
                         .put("accuracy", item.accuracy ?: -1)
                         .put("category", item.category ?: "")
                         .put("durationSeconds", item.durationSeconds ?: -1)
+                        .also { o -> item.loadSet?.let { o.put("loadSet", LoadSetJson.encode(it)) } }
                         .also { o -> writePostureCorrection(o, item.postureCorrection) },
                 )
             }

@@ -164,6 +164,7 @@ fun SessionCompleteScreen(
     onLabel: (setId: String, actualReps: Int?, repsSource: String?, form: FormLabel?) -> Unit = { _, _, _, _ -> },
     /** 세션 스코프 스피커 — 라이브 화면의 음소거 상태를 그대로 따른다. */
     speak: (String) -> Unit = {},
+    fatigueContent: @Composable () -> Unit = {},
     onDone: () -> Unit,
 ) {
     val c = Trex.c
@@ -172,6 +173,7 @@ fun SessionCompleteScreen(
     // plan 순서로 늘어놓은 리포트 — 헤드라인 선택과 운동별 행이 같은 순서를 쓴다
     val ordered = plan.mapNotNull { reports[it.id] }
     val headline = sessionHeadline(ordered)
+    val completionScroll = rememberScrollState()
 
     if (ordered.isNotEmpty()) SessionHeadlineVoice(headline, speak)
 
@@ -185,7 +187,11 @@ fun SessionCompleteScreen(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(vertical = 32.dp),
+        // 실제 내용이 가용 높이를 넘는 경우만 스크롤한다. 기기 종류/방향으로 추측하지 않는다.
+        Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(
+            completionScroll, enabled = completionScroll.maxValue in 1 until Int.MAX_VALUE,
+            overscrollEffect = null,
+        ).padding(vertical = 32.dp),
             horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
         Surface(modifier = Modifier.size(56.dp), shape = CircleShape, color = c.primary, contentColor = Color.White) {
             Box(contentAlignment = Alignment.Center) { Icon(Icons.Rounded.Check, contentDescription = null, modifier = Modifier.size(28.dp)) }
@@ -214,6 +220,7 @@ fun SessionCompleteScreen(
                 }
             }
         }
+        fatigueContent()
         if (ordered.isNotEmpty()) {
             PostureSessionBlock(reports = ordered, headline = headline, onLabel = onLabel, modifier = Modifier.padding(top = 20.dp))
         }
@@ -232,21 +239,18 @@ private val PostureSetReport.callout: RuleOutcome?
     get() = headline?.takeIf { mode == CoachMode.COACH || it.kind == OnsetKind.DRIFT || it.kind == OnsetKind.RECOVERED }
 
 /**
- * 세션 헤드라인 한 줄 — 우선순위 ISSUE > REFERENCE > RECOVERED > (유보/깨끗). [reports] 는 plan 순서.
+ * 세션 헤드라인 한 줄 — 우선순위 ISSUE > RECOVERED > (기록/유보/깨끗). [reports] 는 plan 순서.
  * 판정하지 못한 세트가 섞이면 "오늘 자세 깨끗" 처럼 전체를 단정하지 않는다(정직성 원칙).
  */
-private fun sessionHeadline(reports: List<PostureSetReport>): String {
+internal fun sessionHeadline(reports: List<PostureSetReport>): String {
     reports.firstOrNull { it.verdict == SetVerdict.ISSUE && it.callout != null }?.let { r ->
         return "${r.workoutName} ${r.callout!!.bodyPart} — 오늘 가장 신경 쓸 부위예요"   // 그대로 발화되므로 문장으로
-    }
-    // TRACK 의 베타 후보는 행에 보여 줄 자리가 없다(callout 은 DRIFT/RECOVERED 만) — 헤드라인으로도 올리지 않는다
-    reports.firstOrNull { it.verdict == SetVerdict.REFERENCE && it.mode == CoachMode.COACH && it.candidates.isNotEmpty() && it.exercise !in FloorTemporal.exercises }?.let { r ->
-        return "${r.workoutName} ${r.candidates.first().bodyPart} — 검증 중인 항목이라 참고만 하세요"
     }
     reports.firstOrNull { it.verdict == SetVerdict.RECOVERED && it.callout != null }?.let { r ->
         return "${r.workoutName} ${r.callout!!.bodyPart} — 세트 후반에 교정됐어요"
     }
     return when {
+        reports.any { it.verdict == SetVerdict.REFERENCE } -> "운동별 자세 기록을 저장했어요"
         reports.any { it.exercise in FloorTemporal.exercises } -> "바닥 운동의 참고 측정을 기록했어요. 자세 확정 판정은 제공하지 않아요"
         reports.all { it.verdict == SetVerdict.UNJUDGED } -> if (reports.any { it.measurements.isNotEmpty() }) "초반 대비 움직임을 기록했어요" else "자세를 판정할 만큼 화면에 잡히지 않았어요"
         reports.all { it.mode == CoachMode.TRACK && it.verdict != SetVerdict.UNJUDGED } -> "세트 안에서 흐트러진 부위 없이 기록됐어요"
@@ -431,7 +435,7 @@ private fun CoachSetDetail(r: PostureSetReport) {
             }
         } else if (lead != null) {
             // 베타 규칙만 걸린 세트 — 관찰은 보이되 검증 중임을 붙인다(§28 오탐이 전부 베타/미보정)
-            Text("${lead.observation} — 아직 검증 중인 항목이라 참고만 하세요", color = c.text2, fontSize = 12.5.sp, lineHeight = 18.sp)
+            Text("${lead.observation} · 검증 중", color = c.text2, fontSize = 12.5.sp, lineHeight = 18.sp)
         }
         // 분모를 드러낸다 — 유보를 정상으로 세지 않고, 베타는 점수 밖("참고")이다. 판정이 없으면 점수줄 자체를 두지 않는다.
         Text(

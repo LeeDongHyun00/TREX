@@ -1,0 +1,9 @@
+TREX 해부학 파생 표시 자산 — CC BY-SA 4.0
+Z-Anatomy https://github.com/Z-Anatomy/Models-of-human-anatomy
+BodyParts3D — Database Center for Life Science, CC BY-SA 2.1 Japan
+https://creativecommons.org/licenses/by-sa/4.0/
+TREX 변경: 근육별 분리, 표면 정리, 리깅, 손 방향/차렷 자세, 정적 경량화.
+atlas.js는 수정 가능한 정점/삼각형과 근육 식별자를 포함한다.
+얼굴·손·발 피부: MakeHuman CC0. Three.js: MIT (라이브러리 헤더 참조).
+남성 기준 해부 형상이며 개인/성별 근육량을 측정한 모델이 아니다.
+HIP_FLEXORS 색은 모델에 있는 봉공근만 연결한다. 장요근 전체를 보여 주지 않는다.

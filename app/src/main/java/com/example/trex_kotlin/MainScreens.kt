@@ -99,7 +99,7 @@ internal val tabContentPadding: PaddingValues
 // ============================================================= HOME
 
 @Composable
-fun HomeScreen(app: AppViewModel, onGoWorkout: () -> Unit, onGoDiet: () -> Unit, onRecordMeal: () -> Unit) {
+fun HomeScreen(app: AppViewModel, onGoWorkout: () -> Unit, onGoDiet: () -> Unit, onRecordMeal: () -> Unit, onOpenMuscleLoad: () -> Unit = {}) {
     val c = Trex.c
     val today = LocalDate.now()
     val activeDays = app.workoutHistory.filter { it.items.isNotEmpty() }.map { it.epochDay }.toSet()
@@ -139,6 +139,7 @@ fun HomeScreen(app: AppViewModel, onGoWorkout: () -> Unit, onGoDiet: () -> Unit,
         }
         item { HomeNutrition(total, goal, onGoDiet) }
         item { HomeActionCards(overview, onGoWorkout, onRecordMeal) }
+        item { MuscleLoadHomeCard(app, onOpenMuscleLoad) }
         item { HomeActivityCards(app) }
     }
 }

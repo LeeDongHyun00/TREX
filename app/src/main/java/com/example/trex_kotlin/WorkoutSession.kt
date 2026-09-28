@@ -130,10 +130,10 @@ data class SessionProgress(
                 recordedCounts + (step.token to repetitions) else recordedCounts,
             skipped = if (step.phase == SessionPhase.WORK && !finished) skipped + step.token else skipped)
     }
-    fun completedWorkouts(steps: List<SessionStep>): List<Workout> = steps.filter { (it.token in completed || it.token in recordedCounts) && it.phase == SessionPhase.WORK }
+    fun completedWorkouts(steps: List<SessionStep>): List<Workout> = steps.filter { (it.token in completed || it.token in recordedCounts || (it.timed && (workMillis[it.token] ?: 0) >= 1000)) && it.phase == SessionPhase.WORK }
         .map { step -> recordedCounts[step.token]?.let { count ->
             step.workout.copy(done = step.token in completed, reps = "${count}회 × 1세트", target = WorkoutTarget.Repetitions(count))
-        } ?: step.workout.copy(done = true) }
+        } ?: step.workout.copy(done = step.token in completed) }
     fun completedOriginalIds(steps: List<SessionStep>): Set<String> = steps.filter { it.phase == SessionPhase.WORK }.groupBy { it.originalId }
         .filterValues { group -> group.all { it.token in completed } }.keys
 }
