@@ -6,8 +6,11 @@ from pathlib import Path
 HERE = Path(__file__).parent
 script = (HERE / 'merge_food101.py').read_text(encoding='utf-8')
 uec_script = (HERE / 'merge_uec.py').read_text(encoding='utf-8')
+web_script = (HERE / 'merge_web242.py').read_text(encoding='utf-8')
+cmp_script = (HERE / 'two_stage_eval' / 'compare_models.py').read_text(encoding='utf-8')
 import sys
-UEC = '--uec' in sys.argv   # 둘째 판: Food-101 + UEC FOOD-256
+WEB = '--web' in sys.argv   # 셋째 판: + AI Hub 242 웹 음식 사진(한식 실사)
+UEC = '--uec' in sys.argv or WEB   # 둘째 판: Food-101 + UEC FOOD-256
 
 def md(text): return {'cell_type': 'markdown', 'metadata': {}, 'source': text}
 def code(text): return {'cell_type': 'code', 'metadata': {}, 'execution_count': None, 'outputs': [], 'source': text}
@@ -52,9 +55,9 @@ BASE_PT = str(BASE_PT) if BASE_PT.exists() else None
 RUNS_DIR = str(TREX / {RUNS_REL!r})          # 학습 가중치(끊겨도 이어서 학습)
 OUT_DIR = TREX / {OUT_REL!r}; OUT_DIR.mkdir(parents=True, exist_ok=True)
 print('AI Hub:', AIHUB_TAR, '| 이전 모델:', BASE_PT or '없음 — yolov8n 에서 시작, 한식 가짜 라벨·망각 비교 생략')
-""").replace('{BASE_REL!r}', repr('runs_merge/merge/weights/best.pt' if UEC else 'runs/food/weights/best.pt'))
-       .replace('{RUNS_REL!r}', repr('runs_merge2' if UEC else 'runs_merge'))
-       .replace('{OUT_REL!r}', repr('merge_out2' if UEC else 'merge_out'))),
+""").replace('{BASE_REL!r}', repr('runs_merge2/merge/weights/best.pt' if WEB else 'runs_merge/merge/weights/best.pt' if UEC else 'runs/food/weights/best.pt'))
+       .replace('{RUNS_REL!r}', repr('runs_merge3' if WEB else 'runs_merge2' if UEC else 'runs_merge'))
+       .replace('{OUT_REL!r}', repr('merge_out3' if WEB else 'merge_out2' if UEC else 'merge_out'))),
 code("""# 3. AI Hub 데이터셋 풀기
 import shutil
 DATASET = Path('/content/dataset')
@@ -106,7 +109,25 @@ else:
     NAMES = [l.strip() for l in (DATASET / 'food_labels.txt').read_text(encoding='utf-8').splitlines() if l.strip()]
     print('이미 머지됨 —', len(NAMES), '종')
 """),
-] if UEC else []) + [
+] if UEC else []) + ([
+code("""# 5-3. AI Hub 242 웹 음식 사진(PC 에서 aihub242_fetch.py 로 모아 Drive 에 올린 aihub242_web.tar) 머지
+# 한식·양식·일식이 같은 웹 사진 스타일이라 "실사 = 서양 음식" 지름길을 끊는다(FOOD_EVAL §10).
+WEB_TAR = TREX / 'aihub242_web.tar'
+assert WEB_TAR.exists(), f'{WEB_TAR} 이 없다 — PC 에서 만든 tar 를 Drive trex/ 에 올린다'
+if not Path('/content/web242/labels').exists():
+    !mkdir -p /content/web242 && tar -xf "{WEB_TAR}" -C /content/web242
+WEB_DIR = next(p.parent for p in Path('/content/web242').rglob('meta.tsv'))
+print('웹 사진:', len(list((WEB_DIR / 'images').glob('*.jpg'))), '장')
+"""),
+code("%%writefile /content/merge_web242.py\n" + web_script),
+code("""import merge_web242; importlib.reload(merge_web242)
+if not (DATASET / 'web242_stats.json').exists():
+    NAMES = merge_web242.merge(DATASET, WEB_DIR)
+else:
+    NAMES = [l.strip() for l in (DATASET / 'food_labels.txt').read_text(encoding='utf-8').splitlines() if l.strip()]
+    print('이미 머지됨 —', len(NAMES), '종')
+"""),
+] if WEB else []) + [
 code("""# 6. 학습 — 이전 모델이 있으면 그 가중치에서 시작한다(머리만 새 종 수로 다시 맞춘다). 끊기면 RESUME = True 로 다시 실행
 from ultralytics import YOLO
 RESUME = False
@@ -177,6 +198,33 @@ try:
 except Exception:
     traceback.print_exc(); print('평가 실패 — 모델은 7번 셀에서 이미 Drive 에 저장됐다')
 """),
+] + ([
+code("%%writefile /content/compare_models.py\n" + cmp_script),
+code("""# 9. 식탁 사진 16장 판정 — Colab 검증 점수는 학습과 같은 분포라 실사용 성능을 못 본다(FOOD_EVAL §10). 앱과 같은 2단계로 잰다.
+# 필요한 것: Drive trex/eval_real.tar(사진 16장 + 정답표). 현재 앱 모델(342)·위치 모델은 GitHub 에서 받는다.
+!pip install -q ai-edge-litert
+import zipfile, subprocess
+REAL_TAR = TREX / 'eval_real.tar'
+if REAL_TAR.exists():
+    !mkdir -p /content/real && tar -xf "{REAL_TAR}" -C /content/real
+    REAL = next(p.parent for p in Path('/content/real').rglob('ground_truth_multi.csv'))
+    RAW = 'https://raw.githubusercontent.com/LeeDongHyun00/TREX/feature/food-two-stage/app/src/main/assets/models/'
+    for f in ('food_region.tflite', 'yolov8n_food.tflite', 'food_labels.txt'):
+        !curl -sL -o /content/app_{f} {RAW}{f}
+    def labels_of(tfl, out):   # ultralytics tflite 는 이름 목록을 파일 안(metadata.json)에 담는다
+        m = json.loads(zipfile.ZipFile(tfl).read('metadata.json')); names = [m['names'][k] for k in sorted(m['names'], key=int)]
+        Path(out).write_text('\\n'.join(names) + '\\n', encoding='utf-8'); return out
+    new_l = labels_of(str(OUT_DIR / 'yolov8n_food.tflite'), '/content/new_labels.txt')
+    env = dict(os.environ, TREX_EVAL_REAL=str(REAL), TREX_REGION_MODEL='/content/app_food_region.tflite')
+    r = subprocess.run(['python', '/content/compare_models.py', '/content/app_yolov8n_food.tflite', '/content/app_food_labels.txt',
+                        str(OUT_DIR / 'yolov8n_food.tflite'), new_l], capture_output=True, text=True, env=env)
+    print(r.stdout[-2000:], r.stderr[-1500:])
+    (OUT_DIR / 'real16.txt').write_text(r.stdout, encoding='utf-8')
+    print('판정: 새 모델의 "2단계" 검출이 옛 모델(342)의 13/25(52%) 보다 높고 오검출이 크게 늘지 않아야 앱에 넣는다.')
+else:
+    print('Drive trex/eval_real.tar 가 없어 식탁 사진 판정을 건너뛴다 — PC 에서 compare_models.py 로 잰다.')
+"""),
+] if WEB else []) + [
 md("""### 아침에 할 일
 - `MyDrive/trex/merge_out/eval_summary.json` 으로 **기존 음식 성능이 유지됐는지**(공통 클래스 AP50 이전 → 새)와 새 35종 성능을 본다.
 - 괜찮으면 `yolov8n_food.tflite`·`food_labels.txt` 를 앱 `assets/models/` 에 넣고, 새 35종 영양값을 `TrexData.kt` 에 추가한다(Food-101 에는 영양값이 없다 — 추정치로 표시).
@@ -185,5 +233,5 @@ md("""### 아침에 할 일
 ]
 nb = {'cells': cells, 'metadata': {'accelerator': 'GPU', 'colab': {'gpuType': 'L4', 'machine_shape': 'hm'},
       'kernelspec': {'display_name': 'Python 3', 'name': 'python3'}}, 'nbformat': 4, 'nbformat_minor': 0}
-(HERE / ('train_food_merge2_colab.ipynb' if UEC else 'train_food_merge_colab.ipynb')).write_text(json.dumps(nb, ensure_ascii=False, indent=1), encoding='utf-8')
+(HERE / ('train_food_merge3_colab.ipynb' if WEB else 'train_food_merge2_colab.ipynb' if UEC else 'train_food_merge_colab.ipynb')).write_text(json.dumps(nb, ensure_ascii=False, indent=1), encoding='utf-8')
 print('written', len(cells), 'cells')
