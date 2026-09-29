@@ -196,6 +196,24 @@ class RepUnitTest {
     }
 
     @Test
+    fun standingSeedFromPreparationKeepsTheFirstImmediateRep() {
+        // §89 후속 2: 카운트다운이 끝나자마자 내려가면 기준(3프레임 가만히)이 잡히기 전이라 첫 회가 버려졌다 — 준비 때 선 자세를 심으면 센다
+        val first = listOf(165f, 140f, 110f, 100f, 120f, 150f, 168f, 170f, 170f, 170f)
+        fun run(seed: Boolean): Int {
+            val rc = RepCounter.forSession("바벨 스쿼트", floor = false)!!
+            val prep = (0 until 5).map { i -> (-1500L + i * 300L) to mapOf("knee_mean" to 170f + (i % 2)) }
+            if (seed) rc.standingSeedFrom(prep, 0L)?.let { assertTrue(rc.seedStanding(0L, it)) }
+            first.forEachIndexed { i, v -> rc.onFrameFeatures(i * 300L, mapOf("knee_mean" to v, "knee_maxside" to v)) }
+            return rc.reps
+        }
+        assertEquals("심지 않으면 첫 회를 놓친다(종전)", 0, run(false))
+        assertEquals(1, run(true))
+        // 준비 때 움직이고 있었으면 심지 않는다
+        val rc = RepCounter.forSession("바벨 스쿼트", floor = false)!!
+        assertNull(rc.standingSeedFrom(listOf(-900L to mapOf("knee_mean" to 170f), -600L to mapOf("knee_mean" to 140f), -300L to mapOf("knee_mean" to 120f)), 0L))
+    }
+
+    @Test
     fun sessionUnitComesFromTheProfileAndTheFloorPathIsAlwaysCycles() {
         for (name in listOf("런지", "바벨 런지", "사이드 런지", "크로스 런지")) {
             // 런지·바벨 런지는 쪽별(§63·§66) — 사이드·크로스 런지는 두 걸음 = 1회

@@ -1,6 +1,7 @@
 package com.example.trex_kotlin.posture
 
 import kotlin.math.abs
+import kotlin.math.sqrt
 
 /**
  * 반복별 자세 검사 (설계 §21, spec §62a) — "횟수와 자세는 다른 질문" 의 자세 쪽.
@@ -193,7 +194,22 @@ data class RepFormOutcome(
     val abstainReason: String? = null,
     /** 위반이 **횟수 차단** 단계인가(§62c 2단 검사). 1단 검사에서는 위반 = 차단. OK·유보는 false. */
     val gate: Boolean = false,
+    /** 본인 기준이 서기 전 모집단 사전값으로 한 잠정 판정(§90) — 여유를 더 둔 판정이다. 로그 키 `warm`. */
+    val warmup: Boolean = false,
 )
+
+/**
+ * 반복 검사의 모집단 사전값(spec §90) — 생성 파일 [RepFormPriorTable] 의 한 칸(검사 × 뷰). 앱과 같은 검사기로 재생한 정상 반복(MM-Fit·REHAB)에서
+ * 사람(세트)마다 **수렴한 본인 기준**을 모은 분포다.
+ * @property ref 기준의 중앙값(첫 반복의 잠정 기준), @property refSpread 사람 간 퍼짐(1.4826 × MAD, 잠정 판정의 여유),
+ * @property refLo·refHi 기준이 들 수 있는 범위(처음부터 틀린 기준을 자르는 끝), @property rawLo·rawHi 정상 반복 원값 범위(기준 모음 입장), @property sets 근거 세트 수.
+ */
+data class RepFormPrior(val ref: Float, val refSpread: Float, val refLo: Float, val refHi: Float, val rawLo: Float, val rawHi: Float, val sets: Int)
+
+object RepFormPriors {
+    /** 검사 × 뷰의 사전값 — 표에 없거나 뷰를 모르면 null(그 검사는 종전처럼 본인 기준이 설 때까지 유보). */
+    fun of(checkId: String, view: String?): RepFormPrior? = view?.let { RepFormPriorTable.table[checkId]?.get(it) }
+}
 
 data class RepFormRep(
     val index: Int,
@@ -255,8 +271,12 @@ class RepFormEvaluator(
     val turnReminderSteps: Int? = null,
     /** 카운터가 세지 못한 얕은 걸음을 이 검사(깊이)로 알린다([missedDipEvent]). null = 없음. */
     private val dipCheckId: String? = null,
+    /** 모집단 사전값 찾기(§90) — 테스트가 바꿔 끼운다. */
+    private val priors: (String, String?) -> RepFormPrior? = RepFormPriors::of,
 ) {
     private var buf = ArrayList<Pair<Long, Map<String, Float>>>()
+    /** 모집단 정상 밖이라 기준 모음에 넣지 않은 원값(모음 키별, 같은 쪽으로 이어진 것만) — [LOCKOUT_REPS] 번 이어지면 그 사람의 자세로 받아들인다(§90). */
+    private val refRejects = HashMap<String, ArrayList<Float>>()
     /**
      * [RepFormRef.SET_MIN_DELTA] 기준 — 검사별로 지금까지 반복 상단 창 중앙값의 최솟값(검사 뷰 안의 반복만). 반복마다 그 반복의 상단으로 갱신한 뒤 판정한다.
      */
@@ -310,6 +330,7 @@ class RepFormEvaluator(
 
     fun reset() {
         buf.clear(); carry = emptyList(); repList.clear(); startList.clear(); lastSpokenAt.clear(); setMin.clear(); liveList.clear(); firstReps.clear(); setLow.clear(); noticed.clear(); notices.clear()
+        refRejects.clear()
         baseline = null; baselineAtMs = null; baselineFromFirstBottom = false; rejectedCount = 0; noTopCount = 0
         viewYaws.clear(); lockedYaw = null; lockedView = null
         turnStreak = 0; frontStreak = 0; turnReminded.clear(); turnDue = null
@@ -505,7 +526,9 @@ class RepFormEvaluator(
         val m = notices.removeFirstOrNull() ?: return null
         val c = checks.first { it.id == m.id }
         liveList += RepFormLiveMark(nowMs, "${c.id}#기준", m.value)
-        return RepFormEvent(c, FormDirection.HIGH, c.noticeText ?: "${c.text(FormDirection.HIGH)}. ${c.fix}.", ship = c.ship, gated = false)
+        val dir = if (c.hi == null) FormDirection.LOW else FormDirection.HIGH
+        // 전용 문장이 없으면 모집단 사전값으로 잡은 출발(§90)의 일반 문장 — "처음부터 … 일반 범위를 벗어나 있어요" + 고치는 말
+        return RepFormEvent(c, dir, c.noticeText ?: "처음부터 ${c.bodyPart} 자세가 일반 범위를 벗어나 있어요. ${c.fix}.", ship = c.ship, gated = false)
     }
 
     /** 세트 중 방향 안내(§63) — 옆으로 돌아섰거나 정면으로 선 걸음이 [turnReminderSteps] 이어졌으면 종류마다 세트에서 한 번. 부르면 지운다. */
@@ -672,9 +695,72 @@ class RepFormEvaluator(
         if (c.refFloor != null && v < c.refFloor) return
         if (c.refExcludedBy.any { it in flagged }) return
         if (c.refBySide && side == null) return      // 쪽을 모르는 걸음은 쪽별 기준에 넣지 않는다
-        val pool = pools.getOrPut(firstKey(c, repView, side)) { ArrayList() }
-        if (c.ref == RepFormRef.FIRST_REPS_DELTA && pool.size >= (c.refN ?: FIRST_REPS_N)) return
+        val key = firstKey(c, repView, side)
+        val pool = pools.getOrPut(key) { ArrayList() }
+        val cap = if (c.ref == RepFormRef.FIRST_REPS_DELTA) (c.refN ?: FIRST_REPS_N) else Int.MAX_VALUE
+        if (pool.size >= cap) return
+        // 모집단 정상 원값 범위 밖이거나 잠정 판정에서 위반인 반복은 기준에 넣지 않는다(§90 — 처음부터 틀린 자세가 기준이 되지 않게).
+        // 같은 쪽으로 LOCKOUT_REPS 번 이어지면 그 사람의 자세로 받아들이고 세트에서 한 번 알린다 — 안 받아들이면 모집단과 다른 정상인은 기준이 영영 서지 않는다
+        val prior = priors(c.id, repView)
+        if (prior != null) {
+            // 위반 쪽으로만 본다 — 반대쪽 밖은 틀림이 아니라 촬영 기하·스타일 차이다(폰 D 사선에서 사용자 정상 '앞 이탈' 원값 −0.2~−0.3 이 MM-Fit 범위
+            // −0.10 아래라 막혔고, 3번째에 "처음부터 벗어나 있어요" 헛알림이 났다). 반대쪽 누설은 종전 refFloor·refExcludedBy 가 막는다
+            val outside = (c.hi != null && v > prior.rawHi) || (c.lo != null && v < prior.rawLo) || (o.warmup && o.verdict == Verdict.VIOLATION)
+            // 기준이 서기 전(모으는 중)에만 받아들이기·알림이 있다 — 기준이 선 뒤의 위반 반복(세트 중 일부러 벌림 등)은 넣지 않을 뿐이다
+            val establishing = if (c.ref == RepFormRef.FIRST_REPS_DELTA) pool.size < cap else pool.size < SET_LOW_WARMUP
+            if (outside && !establishing) return
+            if (outside) {
+                val q = refRejects.getOrPut(key) { ArrayList() }
+                if (q.isNotEmpty() && (q.last() > prior.ref) != (v > prior.ref)) q.clear()
+                q += v
+                if (q.size < LOCKOUT_REPS) return
+                for (x in q) if (pool.size < cap) pool += x
+                q.clear()
+                if (c.ship && noticed.isEmpty() && (repView == null || repView in c.views)) { noticed.add(c.id); notices.addLast(RepFormLiveMark(0L, c.id, v)) }
+                return
+            }
+            refRejects.remove(key)
+        }
         pool += v
+    }
+
+    /**
+     * 본인 기준이 서기 전의 잠정 판정(§90) — 잠정 기준 = (모집단 기준 + 받아들인 본인 원값 합) ÷ (1 + n), 여유 = [WARMUP_Z] × 사람 간 퍼짐 ÷ √(1 + n).
+     * 처음엔 넓게(사람마다 다른 정상을 틀림으로 보지 않게), 본인 반복이 쌓일수록 좁게 — 모집단 평균 하나로 판정하면 사람 간 차이가 임계에 맞먹는
+     * 검사(런지 숙임: 사람 간 5.7° 대 임계 20°)에서 틀린다. 퍼짐이 작은 검사(컬 앞 이탈 0.005 대 0.12)는 첫 회부터 거의 제 임계로 본다.
+     */
+    private fun warmup(c: RepFormCheck, raw: Float, p: RepFormPrior, admitted: List<Float>, samples: Int, absViolation: Boolean): RepFormOutcome {
+        val n = admitted.size
+        val prov = (p.ref + admitted.sum()) / (1 + n)
+        val margin = WARMUP_Z * p.refSpread / sqrt(1f + n)
+        val ratio = c.ref == RepFormRef.START_RATIO
+        if (ratio && abs(prov) < 1e-6f) return RepFormOutcome(c, Verdict.ABSTAIN, null, raw, null, null, samples, "모집단 기준 없음")
+        val value = if (ratio) raw / prov else raw - prov
+        return finish(c, value, raw, prov, samples, absViolation, if (ratio) margin / abs(prov) else margin, warmup = true)
+    }
+
+    /** 판정의 마지막(방향·절대 척도·차단) — [margin] 만큼 띠를 넓혀 본다(본 판정은 0, 잠정 판정은 사전값 여유). */
+    private fun finish(c: RepFormCheck, value: Float, raw: Float, usedRef: Float?, samples: Int, absViolation: Boolean, margin: Float, warmup: Boolean): RepFormOutcome {
+        var d: FormDirection? = when {
+            c.lo != null && value < c.lo - margin -> FormDirection.LOW
+            c.hi != null && value > c.hi + margin -> FormDirection.HIGH
+            else -> null
+        }
+        var absRatio: Float? = null
+        if (d == FormDirection.HIGH && c.absMin != null) {
+            // 절대 척도로 한 번 더 — 상대 변화만으로는 '스타일이 바뀜' 과 '어깨 너비를 넘음' 을 못 가른다. absRefFeature 가 있으면 시작 자세의 그 값으로
+            // 나눈 비, 없으면 원값 자체가 절대 척도(컬의 2D 이탈 비는 이미 몸통 길이로 정규화돼 있다)
+            if (c.absRefFeature != null) {
+                val absRef = baseline?.get(c.absRefFeature)
+                if (absRef == null || abs(absRef) < 1e-6f) return RepFormOutcome(c, Verdict.ABSTAIN, value, raw, usedRef, null, samples, "시작 자세에 ${c.absRefFeature} 없음")
+                absRatio = raw / absRef
+            } else absRatio = raw
+            if (absRatio < c.absMin) d = null
+        }
+        if (absViolation) d = FormDirection.HIGH
+        // 2단 검사: 차단은 값·원값 모두 더 엄한 임계를 넘을 때만(HIGH). 1단(gateHi 없음)은 위반 = 차단. 절대 상한 위반은 늘 차단
+        val gate = c.gates && (absViolation || (d != null && (c.gateHi == null || (d == FormDirection.HIGH && value >= c.gateHi + margin && (c.gateAbsMin == null || (absRatio ?: raw) >= c.gateAbsMin)))))
+        return RepFormOutcome(c, if (d == null) Verdict.OK else Verdict.VIOLATION, value, raw, usedRef, d, samples, gate = gate, warmup = warmup)
     }
 
     private fun evaluate(c: RepFormCheck, p: Phases, repView: String?, side: StepSide? = null): RepFormOutcome {
@@ -712,11 +798,15 @@ class RepFormEvaluator(
         val raw = stat(values, c.stat)
         // 절대 상한(§62c 후속 9) — 모집단 정상에서 거의 안 나오는 원값은 기준 없이도 틀림이다. 기준이 없어 유보할 자리에서도 위반으로 판정한다
         val absViolation = c.absHi != null && raw >= c.absHi
+        // 모집단 사전값(§90) — 본인 기준이 서기 전의 잠정 판정·기준 자르기·출발 알림에 쓴다. 뷰 밖(판정 안 함)이면 쓰지 않는다
+        val prior = if (repView != null && repView in c.views) priors(c.id, repView) else null
         fun noRef(reason: String) = if (absViolation) RepFormOutcome(c, Verdict.VIOLATION, raw, raw, null, FormDirection.HIGH, values.size, gate = c.gates)
             else RepFormOutcome(c, Verdict.ABSTAIN, null, raw, null, null, values.size, reason)
         // 본인 기준(자르기 전)
         val selfRef: Float? = when (c.ref) {
             RepFormRef.NONE -> null
+            // 시작 자세·세트 최소가 없는 반복은 종전처럼 유보 — 그 반복은 대개 준비 동작(덤벨 집기)이 섞인 첫 회라, 사전값으로 판정하면 정면 컬 첫 회
+            // 상체 숙임(월드 몸통각 72~110°)이 차단 오탐 4건이 됐다(§90 재생). 이 검사들은 사전값으로 기준을 자르기만 한다
             RepFormRef.START_RATIO -> if (ref == null || abs(ref) < 1e-6f) return noRef("시작 자세 기준 없음") else ref
             RepFormRef.START_DELTA -> ref ?: return noRef("시작 자세 기준 없음")
             RepFormRef.REP_DELTA -> ref ?: return noRef("이 반복의 시작 자세 없음")
@@ -724,14 +814,21 @@ class RepFormEvaluator(
             // 기준을 이루는 반복 — 판정하지 않는다(유보는 정상이 아니다, 원칙 #1). 원값은 판정 뒤 [commitReference] 가 넣는다
             RepFormRef.FIRST_REPS_DELTA -> ref ?: run {
                 if (c.refBySide && side == null) return noRef("앞다리 쪽 모름")
-                return noRef("기준 반복 ${(firstReps[firstKey(c, repView, side)]?.size ?: 0) + 1}/${c.refN ?: FIRST_REPS_N}")
+                // 기준이 서기 전 — 모집단 사전값이 있으면 넓은 여유로 잠정 판정한다(§90). 없으면 종전처럼 유보
+                val admitted = firstReps[firstKey(c, repView, side)].orEmpty()
+                prior?.let { return warmup(c, raw, it, admitted, values.size, absViolation) }
+                return noRef("기준 반복 ${admitted.size + 1}/${c.refN ?: FIRST_REPS_N}")
             }
             RepFormRef.SET_LOW_DELTA -> {
                 // 이 반복을 넣어 본 모음(하한 아래는 빼고). 실제로 넣는 것은 판정 뒤라 다른 축 위반이면 빠지지만, 이 반복이 두 번째로 작은 값 이하면
                 // 자기 판정은 0 이하라 넣든 빼든 같다 — 넣어 보는 것은 셋째 반복부터 판정하기 위해서다(셋이면 중앙값)
                 if (c.refBySide && side == null) return noRef("앞다리 쪽 모름")
-                val pool = setLow[firstKey(c, repView, side)].orEmpty() + (if (c.refFloor == null || raw >= c.refFloor) listOf(raw) else emptyList())
-                if (pool.size <= SET_LOW_WARMUP) return noRef("기준 반복 ${pool.size}/$SET_LOW_WARMUP")
+                val admitted = setLow[firstKey(c, repView, side)].orEmpty()
+                val pool = admitted + (if (c.refFloor == null || raw >= c.refFloor) listOf(raw) else emptyList())
+                if (pool.size <= SET_LOW_WARMUP) {
+                    prior?.let { return warmup(c, raw, it, admitted, values.size, absViolation) }
+                    return noRef("기준 반복 ${pool.size}/$SET_LOW_WARMUP")
+                }
                 pool.sorted()[1]
             }
         }
@@ -742,29 +839,27 @@ class RepFormEvaluator(
             // 세트에서 한 번만 — 정면·사선 검사가 같은 벌림을 두 문장으로 거듭 말하지 않게(12:41 세트)
             noticed.add(c.id); notices.addLast(RepFormLiveMark(0L, c.id, selfRef))
         }
-        // 모집단 정상 띠 안으로 자른 기준 — 띠 안의 사람은 그대로, 처음부터 벌린 사람은 띠 끝이 기준이 된다
-        val usedRef: Float? = selfRef?.let { v -> c.refCap?.let { minOf(v, it) } ?: v }
+        // 모집단 사전값으로 잡은 '처음부터 틀린 출발' 알림(§90) — 전용 띠(refNotice)가 없는 ship 검사: 본인 기준이 모집단 기준 범위 밖이면 세트에서 한 번
+        if (selfRef != null && prior != null && c.refNotice == null && c.ship && repList.size + 1 >= NOTICE_MIN_REP && noticed.isEmpty() &&
+            ((c.hi != null && selfRef > prior.refHi) || (c.lo != null && selfRef < prior.refLo))) {
+            noticed.add(c.id); notices.addLast(RepFormLiveMark(0L, c.id, selfRef))
+        }
+        // 모집단 정상 띠 안으로 자른 기준 — 띠 안의 사람은 그대로, 처음부터 벌린 사람은 띠 끝이 기준이 된다.
+        // 사전값(§90)이 있으면 위반을 숨기는 쪽만 그 끝에서 자른다(높을수록 위반인 검사는 위에서, 낮을수록 위반인 검사는 아래에서)
+        val usedRef: Float? = selfRef?.let { v ->
+            var r = c.refCap?.let { minOf(v, it) } ?: v
+            if (prior != null) {
+                if (c.hi != null) r = minOf(r, prior.refHi)
+                if (c.lo != null) r = maxOf(r, prior.refLo)
+            }
+            r
+        }
         val value = when (c.ref) {
             RepFormRef.NONE -> raw
             RepFormRef.START_RATIO -> raw / usedRef!!
             else -> raw - usedRef!!
         }
-        var d = c.judge(value)
-        var absRatio: Float? = null
-        if (d == FormDirection.HIGH && c.absMin != null) {
-            // 절대 척도로 한 번 더 — 상대 변화만으로는 '스타일이 바뀜' 과 '어깨 너비를 넘음' 을 못 가른다. absRefFeature 가 있으면 시작 자세의 그 값으로
-            // 나눈 비, 없으면 원값 자체가 절대 척도(컬의 2D 이탈 비는 이미 몸통 길이로 정규화돼 있다)
-            if (c.absRefFeature != null) {
-                val absRef = baseline?.get(c.absRefFeature)
-                if (absRef == null || abs(absRef) < 1e-6f) return RepFormOutcome(c, Verdict.ABSTAIN, value, raw, usedRef, null, values.size, "시작 자세에 ${c.absRefFeature} 없음")
-                absRatio = raw / absRef
-            } else absRatio = raw
-            if (absRatio < c.absMin) d = null
-        }
-        if (absViolation) d = FormDirection.HIGH
-        // 2단 검사: 차단은 값·원값 모두 더 엄한 임계를 넘을 때만(HIGH). 1단(gateHi 없음)은 위반 = 차단. 절대 상한 위반은 늘 차단
-        val gate = c.gates && (absViolation || (d != null && (c.gateHi == null || (d == FormDirection.HIGH && value >= c.gateHi && (c.gateAbsMin == null || (absRatio ?: raw) >= c.gateAbsMin)))))
-        return RepFormOutcome(c, if (d == null) Verdict.OK else Verdict.VIOLATION, value, raw, usedRef, d, values.size, gate = gate)
+        return finish(c, value, raw, usedRef, values.size, absViolation, 0f, warmup = false)
     }
 
     companion object {
@@ -800,6 +895,10 @@ class RepFormEvaluator(
         const val VIEW_LOCK_TOLERANCE_DEG = 35f
         /** [RepFormRef.FIRST_REPS_DELTA] 기준 반복 수 — ROM 기준(첫 3사이클)과 같다. 셋의 중앙값이라 기준 반복 하나가 틀어져도 버틴다. */
         const val FIRST_REPS_N = 3
+        /** 잠정 판정(§90)의 여유 배수 — 사람 간 퍼짐의 이만큼(본인 반복이 쌓이면 ÷ √(1 + n)). 2 면 모집단 정상인의 약 95 % 가 여유 안이다. */
+        const val WARMUP_Z = 2f
+        /** 모집단 정상 밖 원값이 같은 쪽으로 이만큼 이어지면 그 사람의 자세로 받아들인다(§90, 갇힘 방지). */
+        const val LOCKOUT_REPS = 3
         /** 처음부터 틀린 출발 알림을 볼 수 있는 첫 반복 번호 — 첫 상단의 덤벨 집기 오염을 지나서. */
         const val NOTICE_MIN_REP = 3
         /** [RepFormRef.SET_LOW_DELTA] 기준만 모으는 첫 반복 수 — 셋째부터 '두 번째로 작은 값'(셋이면 중앙값)과 견준다. */
@@ -891,8 +990,8 @@ data class RepFormSummary(
         version = RepFormSpecs.VERSION,
         baselineTMs = baselineAtMs?.let { it - t0 },
         baseline = baseline?.filterKeys { k -> checks.any { it.feature == k || it.absRefFeature == k } }.orEmpty(),
-        start = start.map { RepFormLog.Check(it.check.id, it.verdict.name, it.value, it.raw, it.reference, it.direction?.name, it.gate) },
-        reps = reps.map { r -> RepFormLog.Rep(r.tMs - t0, r.correct, r.outcomes.map { RepFormLog.Check(it.check.id, it.verdict.name, it.value, it.raw, it.reference, it.direction?.name, it.gate) }, r.view, r.viewRaw, r.side?.key, r.standYawDeg, r.notStep) },
+        start = start.map { RepFormLog.Check(it.check.id, it.verdict.name, it.value, it.raw, it.reference, it.direction?.name, it.gate, it.warmup) },
+        reps = reps.map { r -> RepFormLog.Rep(r.tMs - t0, r.correct, r.outcomes.map { RepFormLog.Check(it.check.id, it.verdict.name, it.value, it.raw, it.reference, it.direction?.name, it.gate, it.warmup) }, r.view, r.viewRaw, r.side?.key, r.standYawDeg, r.notStep) },
         rejected = rejected, noTop = noTop, baselineFromFirstBottom = baselineFromFirstBottom,
         live = live.map { it.copy(tMs = it.tMs - t0) },
     )
@@ -913,7 +1012,9 @@ data class RepFormLog(
     val live: List<RepFormLiveMark> = emptyList(),
 ) {
     /** [gate] = 위반이 횟수 차단 단계(§62c 2단 검사). 위반이 아니면 false — JSON 에는 true 일 때만 `"gate":true` 를 적는다. */
-    data class Check(val id: String, val verdict: String, val value: Float?, val raw: Float?, val reference: Float?, val direction: String?, val gate: Boolean = false)
+    data class Check(val id: String, val verdict: String, val value: Float?, val raw: Float?, val reference: Float?, val direction: String?, val gate: Boolean = false,
+                     /** 모집단 사전값으로 한 잠정 판정(§90) — JSON 에는 true 일 때만 `"warm":true`. */
+                     val warm: Boolean = false)
     /** [view] = 그 반복 창의 뷰 글자 — 있을 때만 키 `view`. */
     data class Rep(val tMs: Long, val correct: Boolean, val checks: List<Check>, val view: String? = null, val viewRaw: String? = null,
                    val side: String? = null, val standYaw: Float? = null, val notStep: Boolean = false)
@@ -931,6 +1032,7 @@ data class RepFormLog(
             sb.append(",\"value\":").append(num(c.value)).append(",\"raw\":").append(num(c.raw)).append(",\"ref\":").append(num(c.reference))
             sb.append(",\"dir\":").append(c.direction?.let(::str) ?: "null")
             if (c.gate) sb.append(",\"gate\":true")
+            if (c.warm) sb.append(",\"warm\":true")
             sb.append('}')
         }
         sb.append("{\"version\":").append(str(version))
@@ -1025,9 +1127,47 @@ object RepFormSpecs {
         "바벨 컬|척추의 중립[flexion]" to "어깨가 골반보다 앞에 있는 정도의 세트 평균이라 서 있는 프레임·바벨 드는 동작이 섞인다 — 반복마다 재는 '상체 숙임'(덤벨 컬과 같은 검사) 이 맡는다",
     )
 
-    val byExercise: Map<String, List<RepFormCheck>> = mapOf("바벨 스쿼트" to squat(), "덤벨 컬" to curl(), LUNGE to lunge(),
+    val byExercise: Map<String, List<RepFormCheck>> = mapOf("바벨 스쿼트" to withLines("squat", squat()), "덤벨 컬" to withLines("curl", curl()),
+        LUNGE to withLines("lunge", lunge()),
         // 계열 파일럿(§66, docs/EXERCISE_TIERS.md) — 같은 검사·같은 임계를 종목 이름만 바꿔 쓴다. 근거는 대리(덤벨 컬·런지 모집단) + AIHub 바벨 클립
-        "바벨 컬" to curl("바벨 컬"), BARBELL_LUNGE to lunge(BARBELL_LUNGE))
+        "바벨 컬" to withLines("curl", curl("바벨 컬")), BARBELL_LUNGE to withLines("lunge", lunge(BARBELL_LUNGE)))
+
+    /**
+     * 대사 채우기(§90 대사 점검) — 검사 정의에 없는 **짧은 단서**(쿨다운 안에서 회를 뺄 때 문장 대신 말하는 말)와 **처음부터 틀린 출발 알림**
+     * (본인 기준이 모집단 기준 범위 밖일 때 세트에서 한 번)을 계열(squat·curl·lunge)별로 채운다. 정의에 이미 있으면 그대로 둔다.
+     * 단서가 없으면 "부위 꼬리표"("무릎 낮음" 등)로 떨어졌고, 알림 문장이 없으면 일반 문장("처음부터 … 일반 범위를 벗어나 있어요")으로 떨어졌다.
+     * 키 = 계열|검사 이름(id 의 종목 뒤 부분). 모든 검사에 문장·고치는 말·단서가 있는지 테스트가 지킨다(RepFormLinesTest).
+     */
+    // 함수로 둔다 — object 초기화 순서상 byExercise 가 먼저 만들어지며 이 표를 읽는다(val 이면 아직 null)
+    private fun lineFill(): Map<String, Pair<String?, String?>> = mapOf(
+        "squat|상체 숙임" to ("상체 숙임" to "처음부터 상체가 많이 숙여져 있어요. 가슴을 들고 몸통을 세운 채 시작해 주세요."),
+        "squat|엉덩이 먼저 상승" to ("엉덩이 먼저" to null),
+        "squat|무릎 안쪽 모임" to ("무릎 안쪽" to null),
+        "squat|무릎 과도 벌림" to ("무릎 벌어짐" to null),
+        "squat|좌우 무릎 비대칭" to ("한쪽 쏠림" to null),
+        "squat|몸통 좌우 기울기" to ("몸통 기울어짐" to null),
+        "squat|발 간격|시작" to ("발 너비" to null),
+        "squat|발 간격" to ("발 넓어짐" to "처음부터 발이 어깨보다 많이 넓어요. 발을 어깨 너비로 두고 시작해 주세요."),
+        "squat|발 간격|좁음" to ("발 좁아짐" to null),
+        "squat|발끝 방향|시작" to ("발끝 방향" to null),
+        "squat|발끝 방향" to ("발끝 방향" to "처음부터 발끝 방향이 일반 범위를 벗어나 있어요. 발끝을 살짝만 바깥으로 두고 시작해 주세요."),
+        "curl|상체 숙임" to (null to "처음부터 상체가 숙여져 있어요. 가슴을 들고 등을 편 채 시작해 주세요."),
+        "curl|팔꿈치 높이 상승" to ("팔꿈치 올라옴" to null),
+        "curl|팔꿈치 앞 이탈" to (null to "처음부터 팔꿈치가 앞으로 나가 있어요. 팔꿈치를 옆구리에 붙이고 해 주세요."),
+        "curl|몸통 반동" to ("몸통 반동" to null),
+        "curl|팔꿈치 벌어짐" to ("팔꿈치 벌어짐" to null),
+        "curl|팔꿈치 앞뒤(옆)" to ("팔꿈치 위치" to null),
+        "lunge|상체 숙임" to (null to "처음부터 상체가 많이 숙여져 있어요. 가슴을 들고 몸통을 세운 채 걸어 주세요."),
+    )
+
+    private fun withLines(family: String, checks: List<RepFormCheck>): List<RepFormCheck> {
+        val fill = lineFill()
+        return checks.map { c ->
+        val name = c.id.split('|').drop(2).joinToString("|")
+        val (cue, notice) = fill["$family|$name"] ?: return@map c
+        c.copy(cue = c.cue ?: cue, noticeText = c.noticeText ?: notice)
+        }
+    }
 
     fun evaluatorFor(exercise: String, counter: RepCounter): RepFormEvaluator? {
         val checks = byExercise[exercise] ?: return null
