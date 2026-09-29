@@ -7,7 +7,9 @@ import numpy as np
 from PIL import Image
 from ai_edge_litert.interpreter import Interpreter
 
-REPO = Path(__file__).resolve().parents[2]
+# 저장소 안에서 돌면 저장소 기준 기본 경로, Colab(/content) 처럼 저장소 밖이면 환경 변수로만 받는다.
+_here = Path(__file__).resolve()
+REPO = _here.parents[2] if len(_here.parents) > 2 else _here.parent
 import os
 ROOT = Path(os.environ.get('TREX_EVAL_REAL', REPO.parent / 'aihub74_raw' / 'eval_real'))
 REGION = Path(os.environ.get('TREX_REGION_MODEL', REPO / 'app/src/main/assets/models/food_region.tflite'))
