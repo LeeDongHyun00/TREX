@@ -15,7 +15,7 @@ ROOT = Path(os.environ.get('TREX_EVAL_REAL', REPO.parent / 'aihub74_raw' / 'eval
 REGION = Path(os.environ.get('TREX_REGION_MODEL', REPO / 'app/src/main/assets/models/food_region.tflite'))
 THRESHOLD = 0.40
 # 새 음식이 생기면 "맞힐 수 있는 음식" 도 늘어난다 — 원래 정답표(342종 기준)에 더한다.
-EXTRA_IN_CLASS = {'photo05.jpg': ['피자'], 'photo14.jpg': ['고로케'], 'photo02.jpg': ['야키토리']}   # 라벨에 없는 모델에서는 자동으로 빠진다
+EXTRA_IN_CLASS = {'photo05.jpg': ['피자'], 'photo14.jpg': ['고로케'], 'photo02.jpg': ['야키토리'], 'photo12.jpg': ['배추김치'], 'photo13.jpg': ['배추김치'], 'photo06.jpg': ['깍두기']}   # 라벨에 없는 모델에서는 자동으로 빠진다
 
 
 class Model:
