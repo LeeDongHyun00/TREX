@@ -333,6 +333,7 @@ fun run(job: Job, meta: Map<String, String>, frames: List<InputFrame>, stats: Fr
     // 세트 로그의 카운터 리셋(일시정지·카메라 전환, spec §58) — 앱처럼 그 자리에서 진행 사이클(과 새 코어의 보류 사이클)을 버린다.
     // 각 리셋을 "t_ms 가 이 값 이상인 첫 프레임 앞" 의 문턱으로 바꾼다: after 가 있으면 after + 1(없음 = 첫 프레임 앞), 없으면 누른 시각.
     val resets = resetThresholds(meta).sorted()
+    var pendingSeed: Float? = meta["loggedSeed"]?.toFloatOrNull()
     var nextReset = 0
     for (frame in frames) {
         while (nextReset < resets.size && resets[nextReset] <= frame.tMs) { rc.resetCycle(); rf?.takeIf { it.stepSides }?.discardWindow(); nextReset++ }
@@ -341,6 +342,8 @@ fun run(job: Job, meta: Map<String, String>, frames: List<InputFrame>, stats: Fr
         prevT = frame.tMs
         val features = frame.features ?: continue
         stats.detected++
+        // 앱이 준비 단계에서 심은 서 있는 기준(§89 후속 2, 로그 reps.config.seed) — 앱처럼 카운터가 처음 보는 프레임에 심는다
+        pendingSeed?.let { v -> rc.seedStanding(frame.tMs, v); pendingSeed = null }
         val value = signalValue(features, rc.signal.feature)
         if (value != null) {
             stats.withValue++
@@ -554,7 +557,9 @@ fun checkSpecs(exercise: String): List<String> = RepFormSpecs.byExercise[exercis
     json(mapOf("id" to c.id, "name" to c.id.substringAfterLast('|'), "status" to c.status.name, "gates" to c.gates,
         "feature" to c.feature, "phase" to c.phase.name, "stat" to c.stat.name, "ref" to c.ref.name,
         "lo" to c.lo, "hi" to c.hi, "gateHi" to c.gateHi, "views" to Raw(c.views.sorted().joinToString(",", "[", "]") { "\"$it\"" }),
-        "bodyPart" to c.bodyPart))
+        "bodyPart" to c.bodyPart, "highText" to c.highText, "lowText" to c.lowText, "fix" to c.fix, "cue" to c.cue,
+        "liveText" to c.liveText, "noticeText" to c.noticeText, "absHi" to c.absHi, "refCap" to c.refCap, "refNotice" to c.refNotice,
+        "phaseName" to c.phase.name))
 }
 
 fun readManifest(file: File): List<Job> = file.readLines()

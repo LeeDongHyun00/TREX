@@ -29,6 +29,16 @@ class ReturnRepTracker(private val minAmp: Float, private val refractoryMs: Long
     }
     fun reset() { resetCycle(); lastCountAt = null }
 
+    /**
+     * 서 있는 기준을 밖에서 준다(§89 후속 2) — 준비 카운트다운 동안 가만히 선 자세. 기준이 이미 있으면 무시하고 false.
+     * 기준은 신호가 3프레임(≥ 0.3 s) 가만히 있어야 잡혀서, 카운트다운이 끝나자마자 내려간 첫 회는 기준이 잡히기 전이라 버려졌다.
+     */
+    fun seed(tMs: Long, value: Float): Boolean {
+        if (anchor != null || !value.isFinite()) return false
+        anchor = value; low = value; high = value; startAt = tMs; stableAt = null; stableCount = 0
+        return true
+    }
+
     fun onFrame(tMs: Long, value: Float): Cycle? {
         val band = minAmp * .22f
         val origin = anchor

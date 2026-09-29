@@ -234,6 +234,7 @@ class RepCounter(
      * 끊김(검출 공백 > maxGap)은 이 함수가 아니다 — 코어가 진행 중 사이클만 버리고 보류의 수명은 짝 창이 정한다(프로토타입·배터리와 같다).
      */
     fun resetCycle() {
+        // 준비에서 심은 기준도 함께 버린다 — 일시정지·재배치 뒤의 자세는 준비 때와 다를 수 있다(다시 스스로 잡는다)
         returnTracker?.resetCycle()
         hysteresis?.resetCycle()
         confirmation?.dropPending()
@@ -251,6 +252,33 @@ class RepCounter(
      *  ROM(본인 기준 비율)을 판정한다  4) min(nL + 가상, nR + 가상) 이 늘면 회 하나를 완료 — 기각 게이트(창 스윙)를 지나면 센다.
      * @return 이 프레임에서 회가 완료됐으면 true(팔별 경로에서는 한 프레임에 최대 한 회).
      */
+    /** 준비 단계에서 심은 서 있는 기준값(§89 후속 2) — 세트 로그 `reps.config.seed`. 재생기가 같은 값을 첫 프레임에 심는다. 없으면 null. */
+    var standingSeed: Float? = null
+        private set
+
+    /**
+     * 서 있는 기준을 준비 프레임에서 심는다(§89 후속 2) — 복귀형(레거시) 경로만. 팔별·새 코어는 기준 자세 개념이 달라 건드리지 않는다.
+     * 첫 운동 프레임 시각 [tMs] 에 심는다(재생기가 로그의 값으로 같은 자리에 심을 수 있게). 심었으면 true.
+     */
+    fun seedStanding(tMs: Long, value: Float): Boolean {
+        val t = returnTracker ?: return false
+        if (!t.seed(tMs, value)) return false
+        standingSeed = value
+        return true
+    }
+
+    /**
+     * 준비 프레임([frames] = 시각·피처)에서 서 있는 기준값 — [atMs] 앞 [SEED_WINDOW_MS] 안의 카운트 신호 값이 3개 이상이고
+     * 모두 0.22 × 진폭(기준을 잡는 띠와 같은 폭) 안에 모여 있으면 그 중앙값. 움직이고 있었으면 null(심지 않고 종전처럼 스스로 잡는다).
+     */
+    fun standingSeedFrom(frames: List<Pair<Long, Map<String, Float>>>, atMs: Long): Float? {
+        if (returnTracker == null) return null
+        val vs = frames.filter { atMs - it.first in 0..SEED_WINDOW_MS }.mapNotNull { it.second[signal.feature]?.takeIf(Float::isFinite) }
+        if (vs.size < 3 || vs.max() - vs.min() > signal.minAmp * .22f) return null
+        val s = vs.sorted()
+        return if (s.size % 2 == 1) s[s.size / 2] else (s[s.size / 2 - 1] + s[s.size / 2]) / 2f
+    }
+
     fun onFrameFeatures(tMs: Long, features: Map<String, Float>): Boolean {
         val a = arms ?: return onFrame(tMs, features[signal.feature], signal.identityFeature?.let { features[it] })
         lastCycleValid = null; newlyPublished = emptyList(); newlyPublishedValid = emptyList(); newlyPublishedShort = emptyList()
@@ -609,6 +637,8 @@ class RepCounter(
         const val REJECT_KEEP_MS = 10_000L
         /** 팔별 경로 첫 회 잠정 창(ms) — 첫 회 뒤 이 안에 둘째 회가 없으면 첫 회를 거둔다. 새 코어 시작 확정의 첫 짝 창과 같은 값. */
         const val FIRST_REP_CONFIRM_MS = 8_000L
+        /** 서 있는 기준을 심을 준비 프레임 창(ms, §89 후속 2) — 운동 첫 프레임 앞 이만큼. 300 ms 추론이면 약 5프레임. */
+        const val SEED_WINDOW_MS = 1_500L
         /** 두 팔 사이클이 한 회(동시 컬)로 묶이는 창 겹침 하한(짧은 창 대비). 이보다 덜 겹치면 순서(교대 컬)로 짝짓되, 다음 사이클이 이만큼 겹치면 앞선 것은 조각. */
         const val PAIR_OVERLAP_MIN = 0.5f
         /** 종목에 카운터가 정의돼 있고 등척성이 아니면 생성 (플랭크 등은 HoldTimer 대상 — 카운터 미적용). */

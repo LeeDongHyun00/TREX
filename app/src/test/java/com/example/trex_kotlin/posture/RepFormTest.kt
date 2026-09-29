@@ -15,7 +15,8 @@ import org.junit.Test
 class RepFormTest {
 
     private val squat = RepFormSpecs.byExercise.getValue("바벨 스쿼트")
-    private fun evaluator() = RepFormEvaluator(squat, "knee_mean", 35f)
+    // 기준 모음·판정 규칙 자체를 보는 테스트 — 모집단 사전값(§90, 생성 표)은 빼고 본다(표가 다시 생성돼도 흔들리지 않게). 사전값은 LungeFormTest
+    private fun evaluator() = RepFormEvaluator(squat, "knee_mean", 35f, priors = { _, _ -> null })
 
     private class Frames(private val ev: RepFormEvaluator) {
         var t = 0L
@@ -239,7 +240,7 @@ class RepFormTest {
         assertEquals("발 너비가 시작보다 넓어졌어요. 발을 어깨 너비로 다시 두세요.", evG.message)
         // 쿨다운 안의 위반은 게이트에서 침묵이 아니라 짧은 단서(§62c 후속 10) — 문장은 12 s 에 한 번, 단서는 회마다. 게이트가 아니면(TRACK) 종전대로 없음
         val brief = g.eventFor(fg.rep(stance = 1.6f, ev = g), 15_000L, gate = true)!!
-        assertTrue(brief.brief); assertTrue(brief.gated); assertEquals("발 너비 넓음", brief.message)
+        assertTrue(brief.brief); assertTrue(brief.gated); assertEquals("짧은 단서(§90 대사 채우기)", "발 넓어짐", brief.message)
         assertNull(g.eventFor(fg.rep(stance = 1.6f, ev = g), 17_000L))
         assertFalse("쿨다운이 지나면 다시 문장", g.eventFor(fg.rep(stance = 1.6f, ev = g), 30_000L, gate = true)!!.brief)
     }
@@ -399,7 +400,7 @@ class RepFormTest {
 /** 덤벨 컬 반복 검사(spec §62c) — 2단 팔꿈치 앞 이탈(코칭·차단), beta 몸통·벌어짐, 사선 뷰 전제. */
 class RepFormCurlTest {
     private val curl = RepFormSpecs.byExercise.getValue("덤벨 컬")
-    private fun evaluator() = RepFormEvaluator(curl, "elbow_minside", 35f)
+    private fun evaluator() = RepFormEvaluator(curl, "elbow_minside", 35f, priors = { _, _ -> null })
 
     private class Frames(private val ev: RepFormEvaluator) {
         var t = 0L
