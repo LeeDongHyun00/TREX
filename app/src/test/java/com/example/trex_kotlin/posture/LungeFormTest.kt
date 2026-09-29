@@ -53,8 +53,10 @@ class LungeFormTest {
 
     // ---- 걸음 검사
     private val ex = RepFormSpecs.LUNGE
-    private fun evaluator() = RepFormEvaluator(RepFormSpecs.byExercise.getValue(ex), "knee_mean", 35f,
-        viewCosKey = ViewEstimator.FEAT_COS_SH, viewSinKey = ViewEstimator.FEAT_SIN_SH, stepSides = true, turnReminderSteps = 3, dipCheckId = "repform|$ex|앞무릎 깊이")
+    // 기본은 모집단 사전값 없이(종전 규칙) — 사전값(§90)은 아래 전용 테스트가 값을 정해 넣는다
+    private fun evaluator(priors: (String, String?) -> RepFormPrior? = { _, _ -> null }) = RepFormEvaluator(RepFormSpecs.byExercise.getValue(ex), "knee_mean", 35f,
+        viewCosKey = ViewEstimator.FEAT_COS_SH, viewSinKey = ViewEstimator.FEAT_SIN_SH, stepSides = true, turnReminderSteps = 3, dipCheckId = "repform|$ex|앞무릎 깊이",
+        priors = priors)
 
     private class Frames(val ev: RepFormEvaluator) {
         var t = 0L
@@ -110,6 +112,35 @@ class LungeFormTest {
         val gated = f.step(pitch = 32f, yaw = 70f)                           // +29 → 차단
         assertTrue(gated.o("상체 숙임").gate); assertFalse(gated.correct)
         assertEquals("정면에서는 판정하지 않는다", Verdict.ABSTAIN, Frames(evaluator()).let { g -> repeat(3) { g.step(pitch = 2f, yaw = 0f) }; g.step(pitch = 40f, yaw = 0f) }.o("상체 숙임").verdict)
+    }
+
+    // ---- 모집단 사전값(§90): 기준이 서기 전 첫 걸음 판정 · 모집단 밖 원값은 기준에 넣지 않음 · 같은 쪽 3번이면 받아들이고 알림 · 기준 자르기
+    private val leanPrior = RepFormPrior(ref = 5f, refSpread = 2f, refLo = 0f, refHi = 15f, rawLo = 0f, rawHi = 25f, sets = 30)
+    private fun leanPriors(): (String, String?) -> RepFormPrior? = { id, view -> if (id == "repform|$ex|상체 숙임" && view == "B") leanPrior else null }
+
+    @Test
+    fun firstStepIsJudgedAgainstThePopulationPrior() {
+        assertEquals("사전값이 없으면 종전처럼 기준 반복은 유보", Verdict.ABSTAIN, Frames(evaluator()).step(pitch = 45f).o("상체 숙임").verdict)
+        val f = Frames(evaluator(leanPriors()))
+        val first = f.step(pitch = 45f).o("상체 숙임")
+        // 잠정 기준 5°, 여유 2 × 2° = 4° → +40° 는 코칭(24) 도 차단(25 + 4) 도 넘는다
+        assertTrue(first.warmup); assertEquals(Verdict.VIOLATION, first.verdict); assertTrue(first.gate)
+        val ok = f.step(pitch = 6f).o("상체 숙임")
+        assertTrue(ok.warmup); assertEquals(Verdict.OK, ok.verdict)
+    }
+
+    @Test
+    fun outOfRangeStepsStayOutOfTheReferenceUntilTheyRepeatThenNoticeAndClamp() {
+        val ev = evaluator(leanPriors()); val f = Frames(ev)
+        // 원값 30°(모집단 정상 25° 밖) — 두 번은 기준에 넣지 않고, 같은 쪽 세 번째에 그 사람의 자세로 받아들이며 세트에서 한 번 알린다
+        repeat(2) { f.step(pitch = 30f) }
+        assertNull(ev.takeNotice(0L))
+        f.step(pitch = 30f)
+        val notice = ev.takeNotice(0L)!!
+        assertEquals("처음부터 상체가 많이 숙여져 있어요. 가슴을 들고 몸통을 세운 채 걸어 주세요.", notice.message)
+        // 받아들인 기준(30°)은 모집단 기준 범위 끝(15°)에서 잘린다 — +40° 는 +25° 로 읽혀 차단
+        val late = f.step(pitch = 40f).o("상체 숙임")
+        assertFalse(late.warmup); assertEquals(15f, late.reference!!, 1e-3f); assertTrue(late.gate)
     }
 
     @Test

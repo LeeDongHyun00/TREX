@@ -61,8 +61,14 @@ data class ExerciseProfile(val name: String, val referenceExercise: String?, val
         else -> capture.title
     }
     val preparationInstruction get() = "권장 촬영 방향은 ${preparationDirection}입니다. ${capture.voice}. " +
-        (if (repUnit == RepUnit.SIDE_PAIR) "$ALTERNATING_COUNT_RULE " else if (repUnit == RepUnit.SIDE_EACH) "$SIDE_EACH_COUNT_RULE " else "") + (referenceHint?.let { "$it " } ?: "") + "몸이 화면에 잡히면 5초 뒤 시작해요."
+        (if (repUnit == RepUnit.SIDE_PAIR) "$ALTERNATING_COUNT_RULE " else if (repUnit == RepUnit.SIDE_EACH) "$SIDE_EACH_COUNT_RULE " else "") + (referenceHint?.let { "$it " } ?: "") + "몸이 화면에 잡히면 3초 뒤 시작해요."
     val cameraEnabled get() = kind != ObservationKind.GUIDE
+    /**
+     * 준비 확인이 요구하는 몸 범위(§89) — 무릎·골반 피처를 쓰지 않는 서서 하는 팔 운동(컬·레이즈·프레스·랫풀·딥스)은 상체만.
+     * 가까이 찍어 다리가 화면 밖인 컬 세트가 전신 요구에 막혀 시작하지 못했다. 바닥 종목은 늘 전신(옆 사슬).
+     */
+    val framingRegion: FramingRegion get() =
+        if (!floor && metricFeatures.none { it.startsWith("knee") || it.startsWith("hip") }) FramingRegion.UPPER else FramingRegion.FULL
     val comparisonOnly get() = referenceExercise == null
     val startHint get() = when(kind) {
         ObservationKind.HOLD -> "처음 5초를 기준으로 유지 중 변화를 비교해요."

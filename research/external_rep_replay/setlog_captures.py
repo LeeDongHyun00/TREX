@@ -311,6 +311,8 @@ def convert(log: dict, source: str, floor_exercises: set[str], rep_rules: dict) 
                 meta["loggedResetsAfterMs"] = ",".join("none" if a is None else str(a) for a in after)
         if reps.get("engine"):
             meta["loggedEngine"] = str(reps["engine"])
+        if config and config.get("seed") is not None:
+            meta["loggedSeed"] = str(config["seed"])      # §89 후속 2: 준비 단계에서 심은 서 있는 기준 — 재생기가 첫 프레임에 심는다
         pend = reps.get("pending") if isinstance(reps.get("pending"), dict) else None
         if pend is not None:
             unc = pend.get("unconfirmed")

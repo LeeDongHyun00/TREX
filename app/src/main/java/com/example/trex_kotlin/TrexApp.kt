@@ -85,7 +85,7 @@ import kotlinx.coroutines.delay
  * 화면 순서(guide→auth→find→onboarding→main→record→session→complete)상 앞으로 가면 오른쪽에서,
  * 뒤로 가면 왼쪽에서 들어온다.
  */
-private enum class RootRoute { Guide, Auth, Find, Onboarding, Main, Record, DietRecord, TransitionSession, PostureSession, TimerSession, Complete, PostureLab, BaselineGuide }
+private enum class RootRoute { Guide, Auth, Find, Onboarding, Main, Record, DietRecord, MuscleLoad, TransitionSession, PostureSession, TimerSession, Complete, PostureLab, BaselineGuide }
 
 /** 메인 하단 시트. */
 sealed class MainSheet {
@@ -152,6 +152,15 @@ fun TrexApp(app: AppViewModel = viewModel()) {
         val sessionIndex = progress.index
         var sessionDone by rememberSaveable { mutableStateOf(false) }
         var sessionPlanKey by rememberSaveable { mutableStateOf("") }
+        var loadSessionId by rememberSaveable { mutableStateOf("") }
+        var loadEnds by rememberSaveable { mutableStateOf("") }
+        fun endTimes(): Map<Int, Long> = loadEnds.split(',').mapNotNull { entry ->
+            val p = entry.split(':'); val k = p.getOrNull(0)?.toIntOrNull(); val t = p.getOrNull(1)?.toLongOrNull()
+            if(k != null && t != null) k to t else null
+        }.toMap()
+        fun stampWork(token: Int) {
+            loadEnds = (endTimes() + (token to System.currentTimeMillis())).entries.joinToString(",") { "${it.key}:${it.value}" }
+        }
         val sessionTimeLeft = progress.secondsLeft
         val sessionElapsed = (progress.elapsedMs / 1000).toInt()
         var sessionPaused by rememberSaveable { mutableStateOf(false) }
@@ -164,6 +173,7 @@ fun TrexApp(app: AppViewModel = viewModel()) {
         LaunchedEffect(appPaused, sessionIndex >= 0) {
             if (!appPaused) while (true) {
                 app.refreshCalendar(resetPlan = sessionIndex < 0)
+                app.refreshMuscleLoad()
                 delay(30_000)
             }
         }
@@ -219,17 +229,29 @@ fun TrexApp(app: AppViewModel = viewModel()) {
             val firstWork = steps.firstOrNull { it.phase == SessionPhase.WORK && it.token !in completed } ?: return
             val first = steps.getOrNull(firstWork.token - 1)?.takeIf { it.phase != SessionPhase.WORK } ?: firstWork
             if (finished) app.updatePlan(plan.map { it.copy(done = false) })
-            val recordedCounts = if (finished || sessionPlanKey != planKey) emptyMap() else progress.recordedCounts
+            val recordedCounts = if (finished || sessionPlanKey != planKey) emptyMap() else progress.recordedCounts.filterKeys { it in completed }
+            // 종료 뒤 다시 시작한 미완료 세트는 새 수행이다. 이전 부분 수행 기록을 덮거나 다시 더하지 않는다.
+            loadSessionId = java.util.UUID.randomUUID().toString()
+            loadEnds = ""
             app.clearSessionReports(keep = steps.filter { it.token in completed || it.token in recordedCounts }.map { it.workout.id })
             postureFallback.clear()
             exitAsk = false
             speech.stop()
             progress = SessionProgress(first.token, first.seconds * 1000L,
                 elapsedMs = if (finished || sessionPlanKey != planKey) 0 else progress.elapsedMs, completed = completed,
-                recordedCounts = recordedCounts)
+                recordedCounts = recordedCounts,
+                workMillis = if (finished || sessionPlanKey != planKey) emptyMap() else progress.workMillis.filterKeys { it in completed })
             sessionPlanKey = planKey
             sessionDone = false
             sessionPaused = false
+        }
+
+        fun recordableWorkouts() = progress.loadRecordableWorkouts(steps,app.sessionPostureReports,endTimes().keys)
+        fun recordSession() {
+            val ends = endTimes()
+            val done = recordableWorkouts()
+            app.recordCompletedSession((progress.elapsedMs / 1000).toInt(), done, progress.workDurations(steps), loadSessionId,
+                steps.filter { it.token in ends }.associate { it.workout.id to ends.getValue(it.token) })
         }
 
         fun nextSession(expectedToken: Int, skip: Boolean) {
@@ -237,13 +259,14 @@ fun TrexApp(app: AppViewModel = viewModel()) {
             if (current.token != expectedToken) return
             // 다음 화면/기록 병합 전에 세트 리포트를 확정한다. 화면 소멸 콜백보다 먼저다.
             if (current.phase == SessionPhase.WORK) finalizers[current.workout.id]?.invoke()
+            if (current.phase == SessionPhase.WORK) stampWork(current.token)
             speech.stop()
             advanceHoldFrom.remove(expectedToken)
             progress = progress.advance(steps, expectedToken, skip)
             progress.completedOriginalIds(steps).forEach { app.markWorkoutDone(it) }
             sessionPaused = false
             if (progress.index < 0) {
-                app.recordCompletedSession((progress.elapsedMs / 1000).toInt(), progress.completedWorkouts(steps), progress.workDurations(steps))
+                recordSession()
                 sessionDone = true
             }
         }
@@ -259,16 +282,18 @@ fun TrexApp(app: AppViewModel = viewModel()) {
         }
 
         fun exitAndRecord() {
-            app.recordCompletedSession(sessionElapsed, progress.completedWorkouts(steps), progress.workDurations(steps))
+            recordSession()
             exitSession()
+            sessionDone = true
         }
 
         fun requestExit() {
             steps.getOrNull(progress.index)?.let { current ->
                 if (current.phase == SessionPhase.WORK) finalizers[current.workout.id]?.invoke()
+                if (current.phase == SessionPhase.WORK) stampWork(current.token)
                 progress = progress.captureCount(current)
             }
-            if (progress.completed.isNotEmpty() || progress.recordedCounts.isNotEmpty()) exitAsk = true else exitSession()
+            if (recordableWorkouts().isNotEmpty()) exitAsk = true else exitSession()
         }
 
         val advanceLatest = rememberUpdatedState<(Int, Boolean) -> Unit> { token, skip -> nextSession(token, skip) }
@@ -330,11 +355,12 @@ fun TrexApp(app: AppViewModel = viewModel()) {
                 }
             subScreen == "record" -> RootRoute.Record
             subScreen == "dietRecord" -> RootRoute.DietRecord
+            subScreen == "muscleLoad" -> RootRoute.MuscleLoad
             else -> RootRoute.Main
         }
 
-        androidx.activity.compose.BackHandler(enabled = sessionIndex >= 0 || subScreen != "none") {
-            if (sessionIndex >= 0) requestExit() else subScreen = "none"
+        androidx.activity.compose.BackHandler(enabled = sessionDone || sessionIndex >= 0 || subScreen != "none") {
+            if (sessionDone) exitSession() else if (sessionIndex >= 0) requestExit() else subScreen = "none"
         }
 
         CompositionLocalProvider(LocalTrexFold provides rememberTrexFold()) {
@@ -382,12 +408,15 @@ fun TrexApp(app: AppViewModel = viewModel()) {
                             RootRoute.Onboarding -> OnboardingScreen(onDone = { profile -> app.completeOnboarding(profile) })
 
                             RootRoute.Complete -> SessionCompleteScreen(
-                            plan = progress.completedWorkouts(steps),
+                            plan = recordableWorkouts(),
                             elapsedSeconds = sessionElapsed,
                             elapsedByWorkout = progress.workDurations(steps),
                             reports = app.sessionPostureReports,
                             onLabel = { setId, actualReps, repsSource, form -> app.labelPostureSet(setId, actualReps, repsSource, form) },
                             speak = { speech.speak(it, flush = false) },
+                            fatigueContent = {
+                                SessionMuscleMap(app, loadSessionId)
+                            },
                             onDone = { exitSession() },
                             )
 
@@ -439,6 +468,7 @@ fun TrexApp(app: AppViewModel = viewModel()) {
 
                             RootRoute.Record -> RecordScreen(app = app, onBack = { subScreen = "none" })
                             RootRoute.DietRecord -> DietRecordScreen(app = app, onBack = { subScreen = "none" })
+                            RootRoute.MuscleLoad -> MuscleLoadScreen(app = app, onBack = { subScreen = "none" })
 
                             RootRoute.PostureLab -> PostureLabScreen(onClose = { subScreen = "none" })
                             RootRoute.BaselineGuide -> BaselineGuideScreen(onClose = { subScreen = "none" })
@@ -450,6 +480,7 @@ fun TrexApp(app: AppViewModel = viewModel()) {
                             onStartWorkout = { startSession() },
                             onOpenRecord = { subScreen = "record" },
                             onOpenDietRecord = { subScreen = "dietRecord" },
+                            onOpenMuscleLoad = { subScreen = "muscleLoad" },
                             )
                         }
                     }
@@ -464,7 +495,7 @@ fun TrexApp(app: AppViewModel = viewModel()) {
                     if (exitAsk) {
                         TrexContentFrame(maxWidth = 600.dp) {
                             SessionExitSheet(
-                            doneCount = progress.completedWorkouts(steps).size,
+                            doneCount = recordableWorkouts().size,
                             onRecord = { exitAndRecord() },
                             onDiscard = { exitSession() },
                             onCancel = { exitAsk = false },
@@ -523,6 +554,7 @@ private fun MainTabs(
     onStartWorkout: () -> Unit,
     onOpenRecord: () -> Unit,
     onOpenDietRecord: () -> Unit,
+    onOpenMuscleLoad: () -> Unit,
 ) {
     val c = Trex.c
     var navExpanded by rememberSaveable { mutableStateOf(false) }
@@ -562,6 +594,7 @@ private fun MainTabs(
                     onGoWorkout = { onTabSelected(TrexTab.Workout) },
                     onGoDiet = { onTabSelected(TrexTab.Diet) },
                     onRecordMeal = { sheet = MainSheet.Manual(currentMealId()) },
+                    onOpenMuscleLoad = onOpenMuscleLoad,
                 )
 
                 TrexTab.Workout -> WorkoutTabScreen(

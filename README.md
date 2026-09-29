@@ -4,9 +4,8 @@ TREX는 Android Kotlin과 Jetpack Compose로 만든 운동/식단 관리 앱입�
 
 ## Android 체험판 다운로드
 
-**[TREX APK 다운로드 · v1.3.0-preview.2](https://github.com/LeeDongHyun00/TREX/releases/download/v1.3.0-preview.2/TREX-1.3.0-preview.2.apk)**
-[릴리스 설명 및 파일 확인](https://github.com/LeeDongHyun00/TREX/releases/tag/v1.3.0-preview.2)
-
+**[TREX APK 다운로드 · v1.3.0-preview.4](https://github.com/LeeDongHyun00/TREX/releases/tag/v1.3.0-preview.4)**
+[릴리스 설명 및 파일 확인](https://github.com/LeeDongHyun00/TREX/releases/tag/v1.3.0-preview.4)
 휴대폰 한 대로 운동 루틴을 진행하고, 카메라에 잡힌 관절을 바탕으로 자세 변화를 확인해 보세요. 운동에 맞는 촬영 방향을 먼저 안내하고, 몸이 화면에 들어오면 5초 카운트다운 후 시작합니다. 짧은 인식 끊김에는 남은 준비 시간을 유지하며, 준비가 진행되지 않으면 오른쪽 아래 **준비 건너뛰기**로 바로 시작할 수 있습니다.
 
 - 운동별 횟수·시간·세트·휴식 설정, 길게 눌러 순서 변경, 스와이프 삭제

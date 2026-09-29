@@ -408,6 +408,8 @@ fun PostureLiveSessionScreen(
     // 본인 기준 비율 ROM 종목(덤벨 컬, spec §62c)은 ROM 미달 회('부분')를 화면 횟수·목표 진행에서 뺀다 — 미검증 절대 ROM 종목은 종전대로 센다
     var repPartialExcluded by remember { mutableStateOf(false) }
     val repFormRef = remember { arrayOfNulls<RepFormEvaluator>(1) }
+    // 준비 단계의 최근 프레임(시각·피처) — 운동 첫 프레임에서 카운터의 서 있는 기준으로 심는다(§89 후속 2). 분석 스레드에서만 만진다
+    val prepFrames = remember { ArrayDeque<Pair<Long, Map<String, Float>>>() }
     val rejectedSeenRef = remember { intArrayOf(0) }
     var formNote by remember { mutableStateOf<String?>(null) }   // 마지막 ship 반복 검사 문장(화면). 정확한 회가 나오면 지운다
     val onRepLatest = rememberUpdatedState(onRepDetected)
@@ -954,7 +956,13 @@ fun PostureLiveSessionScreen(
                 sampleAt = capturedAt
                 stats = analyzer.stats()
                 // 전환 직전에 추론을 시작한 준비 프레임도 엔진/기준/로그로 들어가지 않는다.
-                if (wasPreparing || preparingRef.value) return@setAnalyzer
+                // 다만 서서 하는 종목은 최근 준비 프레임을 남겨 운동 첫 프레임에서 카운터의 서 있는 기준으로 쓴다(§89 후속 2)
+                if (wasPreparing || preparingRef.value) {
+                    if (!floorRef[0] && s.features.isNotEmpty()) synchronized(prepFrames) {
+                        prepFrames.addLast(now to s.features); while (prepFrames.size > 12) prepFrames.removeFirst()
+                    }
+                    return@setAnalyzer
+                }
                 if (s.detected) everDetected = true
                 if (!s.detected || pausedRef[0]) {
                     alignment = alignmentRef[0]?.add(now,emptyMap()) ?: AlignmentSnapshot()
@@ -1014,6 +1022,10 @@ fun PostureLiveSessionScreen(
                         val completed = synchronized(repRecords) {
                             lastCounterFrameAt[0] = now
                             rf?.onFrame(now, features)   // 카운터보다 먼저 — 이 프레임이 사이클 창에 들어간 뒤 사이클이 끝나야 한다
+                            // 운동 첫 프레임: 준비 카운트다운 동안 가만히 서 있던 자세를 카운터의 기준으로 심는다(§89 후속 2) — 기준이 잡히기 전에
+                            // 내려간 첫 회가 버려지지 않게. 움직이고 있었거나 준비 프레임이 없으면 심지 않는다(종전처럼 스스로 잡는다)
+                            val seedFrames = synchronized(prepFrames) { if (prepFrames.isEmpty()) null else prepFrames.toList().also { prepFrames.clear() } }
+                            if (seedFrames != null && !floorRef[0]) rc.standingSeedFrom(seedFrames, now)?.let { rc.seedStanding(now, it) }
                             // 팔별 경로(덤벨 컬, §62c)는 두 팔 값·기각 피처를 쓴다 — 그 밖은 카운트 신호 + 판별 신호(종전과 같다)
                             val done = rc.onFrameFeatures(now, features)
                             if (rc.newlyRetracted) {
@@ -1286,7 +1298,7 @@ fun PostureLiveSessionScreen(
             val now = android.os.SystemClock.elapsedRealtime()
             val scale = if (now - currentPanelSampleAt in 0..900) currentPanelSample.panelBodyScale() else null
             val fullBody = scale != null && profile?.let {
-                com.example.trex_kotlin.posture.CaptureFraming.inspect(currentPanelSample, it.capture, it.floor).ready
+                com.example.trex_kotlin.posture.CaptureFraming.inspect(currentPanelSample, it.capture, it.floor, it.framingRegion).ready
             } == true
             panelVisible = panelController.update(now, scale, keepPanelOpen, fullBody)
             kotlinx.coroutines.delay(150)

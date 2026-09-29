@@ -92,6 +92,8 @@ data class RepEngineLog(
     /** 반복 판별 게이트(spec §62) — `config.identity{feature,min_amp}`. 판별 신호가 없는 종목은 null 이고 키가 없다. */
     val identityFeature: String? = null,
     val identityMinAmp: Float? = null,
+    /** 준비 단계에서 심은 서 있는 기준값(§89 후속 2) — `config.seed`. 없으면 키 없음. */
+    val seed: Float? = null,
     /** 팔별 경로(spec §62c) — `config.paired{left,right}`·`config.reject{feature:max_swing}`·`config.rom_ratio/rom_abs_min/rom_ref_min`. 아니면 키 없음. */
     val pairedFeatures: Pair<String, String>? = null,
     val rejectFeatures: Map<String, Float> = emptyMap(),
@@ -131,6 +133,7 @@ data class RepEngineLog(
                 romTier = RepRomTier.of(s).key,
                 identityFeature = s.identityFeature,
                 identityMinAmp = s.identityFeature?.let { s.identityMinAmp },
+                seed = counter.standingSeed,
                 pairedFeatures = s.pairedFeatures,
                 rejectFeatures = s.rejectFeatures,
                 romRatio = s.romRatio, romAbsMin = s.romAbsMin, romRefMin = s.romRefMin,
@@ -488,6 +491,7 @@ object SetLogJson {
                 sb.append(",\"max_gap_ms\":").append(e.maxGapMs)
                 sb.append(",\"complete_on_return\":").append(e.completeOnReturn)
                 e.polarity?.let { sb.append(",\"polarity\":"); str(sb, it) }
+                e.seed?.let { sb.append(",\"seed\":").append(num(it)) }
                 e.returnFraction?.let { sb.append(",\"return_fraction\":").append(num(it)) }
                 e.firstPairWindowMs?.let {
                     // 시작 확정 구성(새 코어만) — 이후 반복의 시간 창은 null(진폭 비만)도 값이라 명시해 적는다

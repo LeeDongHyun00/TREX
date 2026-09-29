@@ -13,6 +13,13 @@ import com.example.trex_kotlin.posture.SetLabelStore
 import com.example.trex_kotlin.posture.SetLog
 import com.example.trex_kotlin.posture.SetSelfLabel
 import java.time.LocalDate
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import com.example.trex_kotlin.trainingload.*
 
 /**
  * 앱 서비스 상태의 단일 소유자.
@@ -96,6 +103,58 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     var workoutHistory by mutableStateOf(store.loadHistory() ?: emptyList())
         private set
 
+    private val muscleStore = MuscleLoadStore(application)
+    private val muscleLock = Mutex()
+    private val initialLegacyHistory = workoutHistory.toList()
+    var muscleLoad by mutableStateOf(LoadSnapshot())
+        private set
+    var muscleLoadLoading by mutableStateOf(true)
+        private set
+    var muscleLoadError by mutableStateOf<String?>(null)
+        private set
+    private var loadLedger = LoadLedger(emptyList(),emptyMap())
+    private val loadCorrections = mutableMapOf<String, Double?>()
+
+    fun refreshMuscleLoad() {
+        val ledger=loadLedger
+        viewModelScope.launch {
+            val next=withContext(Dispatchers.Default) { MuscleLoadEngine.snapshot(ledger.sets,System.currentTimeMillis(),ledger.doses) }
+            if(ledger === loadLedger) muscleLoad=next
+        }
+    }
+
+    fun syncMuscleLoad() {
+        val current = workoutHistory.flatMap { it.items }.mapNotNull { it.loadSet }
+        val legacy = legacyLoadSets(initialLegacyHistory, profile, System.currentTimeMillis())
+        val corrections = workoutHistory.flatMap { it.items }.mapNotNull { item ->
+            item.postureCorrection?.let { pc -> pc.setId?.let { it to pc.actualReps?.toDouble() } }
+        }.toMap() + loadCorrections
+        viewModelScope.launch {
+            muscleLock.withLock {
+                muscleLoadLoading = true
+                try {
+                    loadLedger = withContext(Dispatchers.IO) { muscleStore.sync(current, legacy, System.currentTimeMillis(), corrections) }
+                    // 저장과 계산이 모두 끝나야 완료 화면의 로딩을 해제한다.
+                    val ledger = loadLedger
+                    muscleLoad = withContext(Dispatchers.Default) {
+                        MuscleLoadEngine.snapshot(ledger.sets, System.currentTimeMillis(), ledger.doses)
+                    }
+                    muscleLoadError = null
+                } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                    throw cancelled
+                } catch (_: Exception) {
+                    muscleLoadError = "근육 기록을 불러오지 못했습니다. 다시 시도해 주세요."
+                } finally { muscleLoadLoading = false }
+            }
+        }
+    }
+
+    fun addMuscleRecommendation(name: String) {
+        val t = workoutCatalog.values.flatten().firstOrNull { it.name == name } ?: return
+        val w = Workout(java.util.UUID.randomUUID().toString(), t.name, t.reps, t.duration, t.posture, t.category)
+        updatePlan(workoutPlan + w)
+    }
+
     var calendarDay by mutableStateOf(LocalDate.now().toEpochDay())
         private set
 
@@ -119,6 +178,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
         store.planDoneEpochDay = today
         refreshCalendar(today)
+        syncMuscleLoad()
     }
 
     fun updatePlan(plan: List<Workout>) {
@@ -139,13 +199,19 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         )
     }
 
-    fun recordCompletedSession(elapsedSeconds: Int, completedPlan: List<Workout> = workoutPlan.filter { it.done }, elapsedByWorkout: Map<String, Int> = emptyMap()) {
+    fun recordCompletedSession(elapsedSeconds: Int, completedPlan: List<Workout> = workoutPlan.filter { it.done }, elapsedByWorkout: Map<String, Int> = emptyMap(),
+        sessionId: String = java.util.UUID.randomUUID().toString(), endedAt: Map<String, Long> = emptyMap()) {
         if (completedPlan.isEmpty()) return
         // 리포트 맵은 여기서 비우지 않는다 — 완료 화면이 같은 맵을 읽고, 다음 startSession 이 비운다
-        workoutHistory = workoutHistory.replaceTodayWith(
-            createWorkoutHistoryDay(completedPlan, elapsedSeconds, sessionPostureReports.toMap(), elapsedByWorkout),
-        )
+        val record = createWorkoutHistoryDay(completedPlan, elapsedSeconds, sessionPostureReports.toMap(), elapsedByWorkout)
+        val items = record.items.mapIndexed { i, item ->
+            val w = completedPlan[i]
+            item.copy(loadSet = workoutLoadSet(sessionId, w, endedAt[w.id] ?: System.currentTimeMillis(),
+                elapsedByWorkout[w.id] ?: 0, profile, sessionPostureReports[w.id]))
+        }
+        workoutHistory = workoutHistory.mergeSession(record.copy(items=items))
         store.saveHistory(workoutHistory)
+        syncMuscleLoad()
     }
 
     val todayRecord: WorkoutHistoryDay?
@@ -176,13 +242,15 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
      * 리포트가 이미 비워졌으면 기록 항목의 운동 이름으로 대신한다. [repsSource] 는 "edited"|"confirmed"|null.
      */
     fun labelPostureSet(setId: String, actualReps: Int?, repsSource: String?, form: FormLabel?) {
+        loadCorrections[setId] = actualReps?.toDouble()
         // setId 는 전역 유일 — 자정을 넘겨 저장해도 기록이 어제 날짜에 있을 수 있으니 날짜로 거르지 않는다
         workoutHistory = workoutHistory.map { day ->
             day.copy(
                 items = day.items.map { item ->
                     val pc = item.postureCorrection
                     if (pc != null && pc.setId == setId) {
-                        item.copy(postureCorrection = pc.copy(actualReps = actualReps, formLabel = form?.key))
+                        item.copy(postureCorrection = pc.copy(actualReps = actualReps, formLabel = form?.key),
+                            loadSet=item.loadSet?.copy(actualReps=actualReps?.toDouble()))
                     } else {
                         item
                     }
@@ -190,6 +258,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             )
         }
         store.saveHistory(workoutHistory)
+
+        syncMuscleLoad()
 
         val report = sessionPostureReports.values.firstOrNull { it.setId == setId }
         val exercise = report?.exercise

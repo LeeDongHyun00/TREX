@@ -1,0 +1,21 @@
+{
+  "repository": "Z-Anatomy/Models-of-human-anatomy",
+  "commit": "38649f4193adbe58e426ccac5670b8c4dde474ec",
+  "files": [
+    {
+      "file": "Z-Anatomy.zip",
+      "url": "https://raw.githubusercontent.com/Z-Anatomy/Models-of-human-anatomy/38649f4193adbe58e426ccac5670b8c4dde474ec/Z-Anatomy.zip",
+      "sha256": "e029688545627bd0214b269e1063143abb580aad72b2c2445d6d8a9a0d9da736"
+    },
+    {
+      "file": "License.txt",
+      "url": "https://raw.githubusercontent.com/Z-Anatomy/Models-of-human-anatomy/38649f4193adbe58e426ccac5670b8c4dde474ec/License.txt",
+      "sha256": "196b66b56551a862e59872f7cdb70e6d9a6ad84e9105962fca8ec28c14e97520"
+    },
+    {
+      "file": "Readme.md",
+      "url": "https://raw.githubusercontent.com/Z-Anatomy/Models-of-human-anatomy/38649f4193adbe58e426ccac5670b8c4dde474ec/Readme.md",
+      "sha256": "2439e8ccea759c644bbaf2f6fd48551fe054bfda30fd3d97d8384f75273466b3"
+    }
+  ]
+}

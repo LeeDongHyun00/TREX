@@ -145,6 +145,8 @@ data class WorkoutHistoryItem(
     val accuracy: Int? = null,
     val category: String? = null,
     val durationSeconds: Int? = null,
+    /** 세트 원장 재전송용 원본. 기존 기록에는 없으며 날짜 추정 이관으로 구분한다. */
+    val loadSet: com.example.trex_kotlin.trainingload.LoadSet? = null,
 )
 
 @Immutable
@@ -870,6 +872,15 @@ fun List<WorkoutHistoryDay>.replaceTodayWith(record: WorkoutHistoryDay): List<Wo
         this + record
     }
     return updated.retainVisibleWorkoutHistory(record.epochDay).sortedBy { it.epochDay }
+}
+
+/** 같은 세트 재저장은 갱신, 별도 세션은 누적한다. 기존 ID 없는 기록도 보존한다. */
+fun List<WorkoutHistoryDay>.mergeSession(record: WorkoutHistoryDay): List<WorkoutHistoryDay> {
+    val old = firstOrNull { it.epochDay == record.epochDay }
+    val ids = record.items.mapNotNull { it.loadSet?.id }.toSet()
+    val items = old?.items.orEmpty().filter { it.loadSet?.id !in ids } + record.items
+    return filterNot { it.epochDay == record.epochDay }.plus(record.copy(items=items))
+        .retainVisibleWorkoutHistory(record.epochDay).sortedBy { it.epochDay }
 }
 
 fun WorkoutHistoryDay.totalMinutes(): Int =

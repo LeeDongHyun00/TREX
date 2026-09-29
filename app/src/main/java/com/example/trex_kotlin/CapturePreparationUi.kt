@@ -37,6 +37,20 @@ import kotlin.math.cos
 import kotlin.math.sin
 
 /** 준비 전용 상태다. 라이브 엔진/개인 기준에는 프레임을 전달하지 않는다. */
+/**
+ * 같은 운동의 긴 준비 안내는 한 번만(§89) — 준비 패널은 세트마다 새로 만들어져 remember 가 사라지므로 프로세스 범위에 둔다.
+ * 30분이 지나면(다른 날·다른 세션) 다시 말한다. 두 번째 세트부터는 안내 없이 범위가 잡히면 바로 3초를 센다. 메인 스레드에서만 쓴다.
+ */
+/** 이유가 아닌 준비 문구 — 화면의 이유 줄에 띄우지 않는다. */
+private val GENERIC_PREPARATION_MESSAGES = setOf(PreparationState().message, "촬영 범위가 확인됐어요.", "곧 시작해요.")
+
+internal object PreparationIntro {
+    private const val REPEAT_AFTER_MS = 30 * 60_000L
+    private val spokenAt = HashMap<String, Long>()
+    fun due(name: String, now: Long): Boolean = spokenAt[name]?.let { now - it > REPEAT_AFTER_MS } ?: true
+    fun mark(name: String, now: Long) { spokenAt[name] = now }
+}
+
 @Composable
 internal fun CapturePreparationPanel(
     profile: ExerciseProfile, sample: PoseSample, sampleAt: Long, paused: Boolean,
@@ -63,26 +77,29 @@ internal fun CapturePreparationPanel(
     LaunchedEffect(frontCamera, paused, userPaused) {
         cancel(); direction.clear()
         if (!paused && !userPaused) {
-            if (!introductionGiven) {
-                if (!speech.muted) {
-                    speech.speak(profile.preparationInstruction, flush = true)
-                    val deadline = SystemClock.elapsedRealtime() + 12000L
-                    while (!speech.muted && controller.state.phase == PreparationPhase.IDLE && speech.isSpeaking && SystemClock.elapsedRealtime() < deadline) delay(50)
-                    // TTS 콜백 누락에도 준비가 무한히 멈추지 않는다.
-                    if (controller.state.phase == PreparationPhase.IDLE && speech.isSpeaking) speech.stop()
-                }
-                introductionGiven = true
+            // §89: 판정을 안내 음성과 겹친다 — 음성이 나오는 동안에도 범위·안정을 재고(카운트다운만 보류), 끝났을 때 이미 준비돼 있으면 바로 3초를 센다.
+            // 종전에는 음성(최대 12 s)이 끝나야 프레임을 보기 시작해 이미 서 있는 사용자도 17초쯤 기다렸다
+            controller.arm(SystemClock.elapsedRealtime()); state = controller.state
+            val now = SystemClock.elapsedRealtime()
+            if (!introductionGiven && !speech.muted && PreparationIntro.due(profile.name, now)) {
+                controller.holdStart(true)
+                speech.speak(profile.preparationInstruction, flush = true)
+                val deadline = now + 12000L
+                while (!speech.muted && controller.isAutomatic && speech.isSpeaking && SystemClock.elapsedRealtime() < deadline) delay(50)
+                // TTS 콜백 누락에도 준비가 무한히 멈추지 않는다. 직접 시작을 누른 경우 그 카운트는 건드리지 않는다
+                if (controller.isAutomatic && speech.isSpeaking) speech.stop()
+                controller.holdStart(false)
+                PreparationIntro.mark(profile.name, SystemClock.elapsedRealtime())
             }
-            // 직접 시작을 누른 경우 그 카운트를 다시 초기화하지 않는다.
-            if (controller.state.phase == PreparationPhase.IDLE) {
-                controller.arm(SystemClock.elapsedRealtime()); state=controller.state
-            }
+            introductionGiven = true
         }
     }
     DisposableEffect(Unit) { onDispose { controller.cancel(); speech.stop() } }
     LaunchedEffect(sampleAt) {
         if (!latestPaused && !userPaused && sampleAt > 0L) {
-            controller.observe(sampleAt, direction.check(CaptureFraming.inspect(sample, profile.capture, profile.floor),sample.features))
+            val framed = CaptureFraming.inspect(sample, profile.capture, profile.floor, profile.framingRegion)
+            // 방향 확인은 카운트다운 전에만 — 카운트 중 방향 흔들림으로 "1" 에서 막혀 처음으로 돌아갔다(§89 후속). 카운트 중 돌아서면 움직임 판단이 멈춘다
+            controller.observe(sampleAt, if (controller.state.phase == PreparationPhase.COUNTDOWN) framed else direction.check(framed, sample.features, sampleAt))
             state = controller.state
         }
     }
@@ -100,10 +117,27 @@ internal fun CapturePreparationPanel(
             else runCatching { tone?.startTone(android.media.ToneGenerator.TONE_PROP_BEEP, 100) }
         }
     }
-    LaunchedEffect(state.message, state.phase, muted) {
-        if (state.phase == PreparationPhase.WAITING && !muted) {
+    // 마지막으로 말한 준비 안내 — 처음으로 돌아간 이유를 바로 말한 뒤 같은 문장을 3.5 s 뒤에 되풀이하지 않게
+    var lastSpokenGuide by remember { mutableStateOf("") }
+    LaunchedEffect(state.message, state.phase, muted, introductionGiven) {
+        // 안내 음성이 끝난 뒤에만 — 음성 중에 바뀐 범위 안내가 긴 안내를 끊지 않게(§89)
+        if (state.phase == PreparationPhase.WAITING && !muted && introductionGiven && state.message != lastSpokenGuide) {
             delay(3500) // 방향 안내를 끊거나 흔들리는 관측을 연달아 발화하지 않는다.
-            if (!latestPaused) speech.speak(state.message, flush = true)
+            if (!latestPaused) { speech.speak(state.message, flush = true); lastSpokenGuide = state.message }
+        }
+    }
+    // 카운트다운이 멈추면 무엇이 안 보였는지(움직였는지) 말한다 — 한 프레임 튐은 말하지 않게 0.6 s 이어질 때만(§89 후속)
+    LaunchedEffect(state.trackingHold, muted) {
+        if (state.trackingHold && !muted && !paused) {
+            delay(600)
+            val now = controller.state
+            if (now.trackingHold && now.phase == PreparationPhase.COUNTDOWN && !latestPaused) { speech.speak(now.message, flush = true); lastSpokenGuide = now.message }
+        }
+    }
+    // 처음으로 돌아가면 그 이유를 바로 말한다("왼손이 안 보여요 … 다시 자리 잡으면 3초를 셉니다")
+    LaunchedEffect(state.restarts) {
+        if (state.restarts > 0 && !muted && !latestPaused && state.phase == PreparationPhase.WAITING) {
+            speech.speak(state.message, flush = true); lastSpokenGuide = state.message
         }
     }
     val counting = state.phase == PreparationPhase.COUNTDOWN
@@ -124,6 +158,11 @@ internal fun CapturePreparationPanel(
             } else CaptureDirectionDemo(profile.capture, frontCamera, Modifier.size(114.dp))
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(profile.capture.placement, color = c.text, fontSize = 15.sp, lineHeight = 21.sp)
+                // 멈춘·처음으로 돌아간·아직 못 잡은 이유를 화면에도 — 배치 안내만 떠 있으면 무엇이 문제인지 모른다(§89 후속)
+                val reason = state.message.takeIf {
+                    (state.trackingHold || state.phase == PreparationPhase.WAITING) && it !in GENERIC_PREPARATION_MESSAGES
+                }
+                if (reason != null) Text(reason, color = c.warn, fontSize = 14.sp, lineHeight = 20.sp, fontWeight = FontWeight.SemiBold)
             }
         }
         if (cameraError != null) {
