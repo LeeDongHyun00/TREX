@@ -5,8 +5,17 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -36,7 +45,7 @@ import com.example.trex_kotlin.TrexText as Text
 internal fun LiveWorkoutHud(workout: Workout, repetitions: Int, timeLeft: Int, totalSeconds: Int,
     setLabel: String, paused: Boolean, compact: Boolean, message: String?,
     countNote: String? = null, countNoteActive: Boolean = false, hideCount: Boolean = false, sideCount: String? = null,
-    elapsedSec: Int? = null, referenceNote: String? = null, modeLabel: String? = null) {
+    elapsedSec: Int? = null, referenceNote: String? = null, modeLabel: String? = null, breath: String? = null) {
     val duration = workout.resolvedTarget() is WorkoutTarget.Duration
     val target = workout.resolvedTarget().amount
     val lime = Color(0xFFB8DD83)
@@ -84,6 +93,15 @@ internal fun LiveWorkoutHud(workout: Workout, repetitions: Int, timeLeft: Int, t
                     Text("남음", color = dim, fontSize = 18.sp, modifier = Modifier.padding(bottom = if (compact) 8.dp else 14.dp))
                     Text("$repetitions / $target", color = dim, fontSize = 14.sp, modifier = Modifier.padding(bottom = if (compact) 8.dp else 14.dp))
                 }
+            }
+        }
+        // 호흡(§5) — 느리게 숨 쉬는 링 + 단어. 위상을 따라가는 표시라 소리가 없다
+        if (breath != null) {
+            val pulse = rememberInfiniteTransition(label = "breath")
+            val scale by pulse.animateFloat(0.75f, 1.2f, infiniteRepeatable(tween(2000, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "breath-scale")
+            Row(Modifier.padding(top = 2.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Box(Modifier.size(14.dp).scale(scale).border(2.dp, lime, CircleShape))
+                Text(breath, color = Color.White.copy(alpha = .8f), fontSize = 14.sp, maxLines = 1)
             }
         }
         if (!duration && countNote != null) Text(countNote, color = if (countNoteActive) lime else amber, fontSize = 13.sp,

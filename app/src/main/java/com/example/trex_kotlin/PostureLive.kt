@@ -485,6 +485,10 @@ fun PostureLiveSessionScreen(
     var stageLock by remember { mutableStateOf<BodyBox?>(null) }
     var personLost by remember { mutableStateOf(false) }
     var showCamera by remember { mutableStateOf(false) }
+    // 소리 간소화(§7): 횟수는 숫자 TTS 대신 짧은 틱(자세로 뺀 회는 낮은 틱, 마지막 3회는 이중 틱). 숫자 읽기는 토글 — 바닥 종목은 화면을 못 보므로 기본 켬
+    var speakNumbers by remember(workout.id) { mutableStateOf(isFloorExercise) }
+    // 호흡 표시(§5) — 카운터의 움직임 방향(-1 바닥 쪽·+1 복귀·0 모름). 분석 스레드가 프레임마다 쓴다. 판정과 무관
+    var breathDir by remember { mutableIntStateOf(0) }
     // 교정 화살표(§3) — 한 회에 하나, 음성 문장을 만든 사건이 만든다. 다음 회가 통과하면 지우고, 통과 없이 12 s 가 지나면 지운다(음성 쿨다운과 같은 수)
     var motionCue by remember { mutableStateOf<MotionCue?>(null) }
     LaunchedEffect(motionCue?.startedAt) {
@@ -534,7 +538,14 @@ fun PostureLiveSessionScreen(
     var muted by remember { mutableStateOf(speech.muted) }
     LaunchedEffect(repetitions) {
         // 쪽별 카운트 종목은 걸음마다 쪽과 남은 수를 말한다(아래 분석 루프) — 쌍 숫자는 말하지 않는다
-        if (repetitions > 0 && !paused && !muted && !validation && repRef[0] != null && sideCounterRef[0] == null) speakRep(speech, repTone, repetitions)
+        if (repetitions > 0 && !paused && !muted && !validation && repRef[0] != null && sideCounterRef[0] == null) {
+            if (speakNumbers) speakRep(speech, repTone, repetitions)
+            else {
+                // 틱 하나 = 센 회. 숫자는 화면 큰 글자가 맡는다(§7). 마지막 3회는 이중 틱
+                val remaining = (workout.resolvedTarget() as? WorkoutTarget.Repetitions)?.let { it.amount - repetitions } ?: Int.MAX_VALUE
+                repTick(repTone, if (remaining in 1..3) ToneGenerator.TONE_PROP_BEEP2 else ToneGenerator.TONE_PROP_ACK)
+            }
+        }
     }
     // 검증 모드는 음성을 끈다 — 코칭·숫자 발화가 동작과 템포를 바꾼다(원칙 #6). 사용자가 다시 켤 수는 있다(배너가 알린다).
     // 플래그는 TrexApp 이 파일에서 비동기로 읽는다 — 세트 시작보다 늦게 도착해도 그 세트 로그에 반영되게 여기서도 맞춘다(단계가 바뀔 때만 바뀐다)
@@ -865,6 +876,7 @@ fun PostureLiveSessionScreen(
         provisionalHighlight = emptySet()
         formHighlight = emptySet(); formProvHighlight = emptySet(); formHighlightStamp = 0L
         motionCue = null
+        breathDir = 0
         repFast = false
         repTempoMs = null
         synchronized(repRecords) {
@@ -980,6 +992,9 @@ fun PostureLiveSessionScreen(
                 sample = s
                 sampleAt = capturedAt
                 stats = analyzer.stats()
+                // 무대 배율 잠금·영상 복귀(§2) — 준비 단계부터. "사람이 있다" 는 detected 가 아니라 피처가 계산됐는지로(CLAUDE.md 함정). 바닥 종목은 가시성 cut 이 낮다
+                stageLock = stageFit.update(now, s.bodyBox(if (floorRef[0]) 0.35f else 0.5f))
+                personLost = stageFit.lost
                 // 전환 직전에 추론을 시작한 준비 프레임도 엔진/기준/로그로 들어가지 않는다.
                 // 다만 서서 하는 종목은 최근 준비 프레임을 남겨 운동 첫 프레임에서 카운터의 서 있는 기준으로 쓴다(§89 후속 2)
                 if (wasPreparing || preparingRef.value) {
@@ -989,9 +1004,6 @@ fun PostureLiveSessionScreen(
                     return@setAnalyzer
                 }
                 if (s.detected) everDetected = true
-                // 무대 배율 잠금·영상 복귀(§2) — "사람이 있다" 는 detected 가 아니라 피처가 계산됐는지로(CLAUDE.md 함정). 바닥 종목은 가시성 cut 이 낮다
-                stageLock = stageFit.update(now, s.bodyBox(if (floorRef[0]) 0.35f else 0.5f))
-                personLost = stageFit.lost
                 if (!s.detected || pausedRef[0]) {
                     alignment = alignmentRef[0]?.add(now,emptyMap()) ?: AlignmentSnapshot()
                     comparisonRef[0]?.unavailable()
@@ -1056,6 +1068,7 @@ fun PostureLiveSessionScreen(
                             if (seedFrames != null && !floorRef[0]) rc.standingSeedFrom(seedFrames, now)?.let { rc.seedStanding(now, it) }
                             // 팔별 경로(덤벨 컬, §62c)는 두 팔 값·기각 피처를 쓴다 — 그 밖은 카운트 신호 + 판별 신호(종전과 같다)
                             val done = rc.onFrameFeatures(now, features)
+                            breathDir = rc.motionDirection   // 호흡 표시(§5) — 위상을 따라간다, 앞서지 않는다
                             if (rc.newlyRetracted) {
                                 // 잠정 첫 회를 거뒀다(§62c 후속 9) — 8 s 안에 둘째 회가 없던 한 번의 동작(준비 동작)은 세트의 시작이 아니다. 그 회로 센 수·기록·
                                 // 자세 기준을 지운다. 이미 전한 1회(화면·진행)는 되돌리지 않는다 — 다음 실제 회가 그 자리를 채운다(deliveredReps 는 줄지 않는다)
@@ -1094,7 +1107,12 @@ fun PostureLiveSessionScreen(
                             // COACH 만 ship 위반 회를 횟수에서 뺀다(spec §62b, 사용자 결정 2026-09-25). TRACK 은 전부 센다 — 게이트 없음.
                             val gate = modeRef[0] == CoachMode.COACH && !floorRef[0]
                             // 부분(ROM 미달)으로 이미 빠진 회는 자세 위반으로 다시 빼지 않는다 — 같은 회를 두 번 빼면 화면 수가 실제보다 준다(폰 15:34 세트 6·8회)
-                            if (gate && sideCounterRef[0] == null) repIncorrect += formReps.indices.count { i -> !formReps[i].correct && !(rc.signal.romExcludesShort && tally.records.getOrNull(i)?.valid == false) }
+                            if (gate && sideCounterRef[0] == null) {
+                                val excluded = formReps.indices.count { i -> !formReps[i].correct && !(rc.signal.romExcludesShort && tally.records.getOrNull(i)?.valid == false) }
+                                repIncorrect += excluded
+                                // 자세로 뺀 회 = 낮은 틱(§7) — "이 회는 세지 않았어요" 문장을 대신한다. 화면은 큰 숫자가 멈추고 countNote 가 밝힌다
+                                if (excluded > 0 && !speech.muted && !validationRef[0] && !pausedRef[0]) repTick(repTone, ToneGenerator.TONE_PROP_NACK)
+                            }
                             // 쪽별 카운트(§63) — 걸음마다 그 걸음의 앞다리 쪽과 차단 여부로 두 풀에 넣는다(모드와 무관하게 둘 다 — 세트 중 모드를 바꿔도 맞게)
                             val sc = sideCounterRef[0]
                             val coachNow = modeRef[0] == CoachMode.COACH
@@ -1141,12 +1159,9 @@ fun PostureLiveSessionScreen(
                                 motionCue = MotionCue.of(formEv.check, formEv.direction, formHighlight, now)
                                 // 빠진 회는 그 자리에서 이유를 말한다 — 침묵하면 카운트가 죽은 줄 안다. 첫 위반은 교정 문장까지, 같은 검사의 쿨다운(12 s) 안은 짧은 단서(brief).
                                 // 2단 검사의 코칭 단계 위반은 회를 빼지 않으므로 그 말을 붙이지 않는다
-                                say += when {
-                                    formEv.brief && formEv.gated -> "${formEv.message}, ${if (sc != null) "이 걸음" else "이 회"} 제외."
-                                    formEv.brief -> "${formEv.message}."
-                                    formEv.gated -> "${formEv.message} ${if (sc != null) "이 걸음은" else "이 회는"} 세지 않았어요."
-                                    else -> formEv.message
-                                }
+                                // 소리 간소화(§7): "어디가" 는 화살표가 가리키니 말은 "어떻게"(고치는 말)만. 빠진 회는 낮은 틱이 알린다.
+                                // 쿨다운 안 재위반은 짧은 단서. 정책(COACH·ship·한 회 한 문장·speakLatest)은 그대로
+                                say += if (formEv.brief) "${formEv.message}." else "${formEv.check.fix}."
                             } else if (shortReason != null) {
                                 say += if (invalidCuesRef[0] < MAX_INVALID_CUES) "${rc.signal.shortCue(shortReason)}. 이 회는 세지 않았어요."
                                     else when (shortReason) {
@@ -1203,7 +1218,8 @@ fun PostureLiveSessionScreen(
                         if (!completed && rf != null && !floorRef[0]) {
                             synchronized(repRecords) { rf.missedDipEvent(now, rc.midCycle, speak = modeRef[0] == CoachMode.COACH) }?.let { (ev, side) ->
                                 if (modeRef[0] == CoachMode.COACH) {
-                                    val msg = if (ev.brief) "${ev.message}, 이 걸음 제외." else "${ev.message} 이 걸음은 세지 않았어요."
+                                    val msg = if (ev.brief) "${ev.message}." else "${ev.check.fix}."
+                                    if (!speech.muted && !validationRef[0]) repTick(repTone, ToneGenerator.TONE_PROP_NACK)   // 세지 않은 걸음 = 낮은 틱(§7)
                                     formNote = msg
                                     speech.speakLatest(msg)
                                     formHighlight = RuleHighlight.landmarksFor(ev.check.highlight?.let { h -> side?.let { h.replace("{front}", it.key) } ?: h.replace("_{front}", "") } ?: ev.check.feature)
@@ -1371,20 +1387,22 @@ fun PostureLiveSessionScreen(
     val cameraArea: @Composable (Modifier) -> Unit = { mod ->
         Box(mod.background(Color.Black)) {
             AndroidView(factory = { previewView }, modifier = Modifier.fillMaxSize())
-            if (preparing) PreparationFramingOverlay(sample, Modifier.fillMaxSize())
             // 검은 무대(§2) — 준비 단계는 영상(자리 잡기는 영상이 빠르다), 세트 중엔 뼈대만. 사람을 잃으면·사용자가 켜면 영상이 돌아온다.
             // 영상 유스케이스는 끊지 않는다(일부 기기에서 ImageAnalysis 단독 바인딩이 프레임률을 바꾼다, §8) — 검은 캔버스로 덮기만 한다
-            val stageDark = !preparing && !showCamera && !personLost
-            if (!preparing) SkeletonStage(
-                sample = sample, mirror = useFrontCamera, dark = stageDark, lock = stageLock,
-                highlight = if (mode == CoachMode.TRACK || paused) emptySet() else if (isFloorExercise) floorFeedback?.landmarks.orEmpty() else violHighlight + formHighlight,
-                provisional = if (paused) emptySet() else if (mode == CoachMode.TRACK) comparison.landmarks else (provisionalHighlight + formProvHighlight) - formHighlight,
+            // 준비 단계도 검은 무대다(사용자 결정 2026-10-02) — 자리 잡기는 프레임 테두리·점선 관절·잘린 변 발광이 안내하고, 몸이 없으면 영상이 돌아온다.
+            // 배율 잠금은 세트부터(준비 중 잠그면 세트 시작에 뼈대가 튄다)
+            val stageDark = !showCamera && !personLost
+            SkeletonStage(
+                sample = sample, mirror = useFrontCamera, dark = stageDark, lock = stageLock.takeIf { !preparing },
+                highlight = if (preparing || mode == CoachMode.TRACK || paused) emptySet() else if (isFloorExercise) floorFeedback?.landmarks.orEmpty() else violHighlight + formHighlight,
+                provisional = if (preparing || paused) emptySet() else if (mode == CoachMode.TRACK) comparison.landmarks else (provisionalHighlight + formProvHighlight) - formHighlight,
                 visibilityCut = if (isFloorExercise) 0.35f else 0.5f,
-                plankSide = alignment.visibleSide.takeIf { alignment.placementReady && mode == CoachMode.COACH && !paused },
+                plankSide = alignment.visibleSide.takeIf { !preparing && alignment.placementReady && mode == CoachMode.COACH && !paused },
                 // 화살표는 COACH·서서만(TRACK 은 앱이 가르치지 않는다 — 원칙 #3)
-                cue = motionCue.takeIf { mode == CoachMode.COACH && !paused && !isFloorExercise },
+                cue = motionCue.takeIf { !preparing && mode == CoachMode.COACH && !paused && !isFloorExercise },
                 modifier = Modifier.fillMaxSize(),
             )
+            if (preparing) PreparationFramingOverlay(sample, Modifier.fillMaxSize())   // 무대 위에 — 검은 배경이 덮지 않게
             if (preparing) Column(Modifier.fillMaxWidth().background(Brush.verticalGradient(
                 listOf(Color(0xBB10140E), Color.Transparent))).padding(20.dp)) {
                 val goal = workout.resolvedTarget()
@@ -1475,6 +1493,9 @@ fun PostureLiveSessionScreen(
                     // 무대 토글(§2.1) — 영상을 보고 싶을 때. 세션 동안 유지
                     SessionTool(if (showCamera) "영상" else "뼈대만", if (showCamera) "뼈대만 보기" else "카메라 영상 보기",
                         Icons.Rounded.PhotoCamera, { showCamera = !showCamera }, Modifier.weight(1f))
+                    // 숫자 읽기 토글(§7) — 기본은 틱. 바닥 종목은 화면을 못 보므로 기본 켬
+                    SessionTool(if (speakNumbers) "숫자 읽기" else "틱 소리", if (speakNumbers) "횟수를 틱 소리로" else "횟수를 숫자로 읽기",
+                        Icons.AutoMirrored.Rounded.VolumeUp, { speakNumbers = !speakNumbers }, Modifier.weight(1f))
                 })
         }
     }
@@ -1513,7 +1534,14 @@ fun PostureLiveSessionScreen(
                     elapsedSec = setElapsedSec,
                     // beta 는 '참고' 칩으로만(원칙 #2) — COACH 에서만(TRACK 은 모집단 기준 '틀림' 을 보이지 않는다, §29)
                     referenceNote = provisionalNote?.takeIf { mode == CoachMode.COACH && !validation },
-                    modeLabel = if (mode == CoachMode.TRACK) "TRACK" else "COACH")
+                    modeLabel = if (mode == CoachMode.TRACK) "TRACK" else "COACH",
+                    // 호흡(§5): 카운터 위상을 따라가는 표시. 카운터 없는 시간 목표(플랭크)는 "자연스럽게 호흡". 검증 모드·사람 없음·쉼이면 없음
+                    breath = when {
+                        validation || personLost || paused -> null
+                        repRef[0] != null -> com.example.trex_kotlin.posture.Breathing.word(aihubExercise, breathDir)
+                        workout.resolvedTarget() is WorkoutTarget.Duration -> com.example.trex_kotlin.posture.Breathing.NATURAL
+                        else -> null
+                    })
             },
             camera = { cameraArea(Modifier.fillMaxSize()) },
             controls = {
@@ -1524,6 +1552,9 @@ fun PostureLiveSessionScreen(
         )
     }
 }
+
+/** 틱(§7) — 센 회 ACK · 자세로 뺀 회 NACK · 마지막 3회 BEEP2. TTS 와 겹치지 않는 짧은 소리라 코칭 문장을 끊지 않는다. */
+private fun repTick(tone: ToneGenerator?, kind: Int) { runCatching { tone?.startTone(kind, 70) } }
 
 /** 렙 카운트 알림 — 음성이 되면 숫자로, 안 되면 짧은 톤으로. 코칭 문구를 끊지 않게 큐에 붙인다. */
 private fun speakRep(speech: SpeechCoach, tone: ToneGenerator?, n: Int) {

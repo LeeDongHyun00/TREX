@@ -71,6 +71,12 @@ class RepCounter(
     val midCycle: Boolean get() = returnTracker?.moving ?: (hysteresis?.candidate() != null || confirmation?.pending != null)
 
     /**
+     * 지금 움직이는 방향 — **화면 표시용**(호흡 표시, docs/LIVE_SCREEN_REDESIGN.md §5). 판정·카운트와 무관하고 로그에 남지 않는다.
+     * -1 = 바닥(극값) 쪽으로 가는 중, +1 = 복귀 중, 0 = 쉼·모름. 새 코어는 히스테리시스 위상, 레거시는 추적 방향. 걸음 추적기(런지)는 방향이 없어 0.
+     */
+    val motionDirection: Int get() = hysteresis?.let { when (it.phase) { RepHysteresis.Phase.DESC -> -1; RepHysteresis.Phase.ASC -> 1; else -> 0 } } ?: (if (returnTracker != null) 0 else dirn)
+
+    /**
      * 이 카운터가 **실제로 쓰는** 구성 — 세트 로그(`RepEngineLog`)가 이 값을 그대로 적는다(복사한 상수는 조용히 어긋난다).
      * 새 코어 경로는 생성자의 불응기·끊김 기준 대신 코어의 값을 쓰고, 복귀 완료는 코어의 성질이다.
      */

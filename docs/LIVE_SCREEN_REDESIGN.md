@@ -5,9 +5,11 @@
 > 엔진(`posture/`)·세트 로그 바이트는 바꾸지 않는다 — 이 문서는 **보여 주는 방식**만 다룬다.
 >
 > **구현 상태(브랜치 `redesign`)**: P0 무대(`SkeletonStage.kt`·`StageFit.kt`) · P1 화살표(`posture/FormMotion.kt`, `RepFormCheck.motion`) ·
-> §4 HUD(`LiveWorkoutHud.kt`, 엄지 줄 `LiveQuickActions`) 완료. §9 의 결정은 권장안으로 두었다 — 휴식은 별도 화면 유지(P4 미착수),
-> 횟수 소리는 종전 숫자 TTS 유지(P2 미착수), 영상은 치우고 자동 복귀·토글, beta 는 점·칩만. 호흡(P3) 미착수. 시안: 디자인 캔버스 "TREX 라이브 화면 시안".
-> 테스트: `StageFitTest`(배율 잠금·복귀) · `FormMotionTest`(ship 검사마다 화살표, beta 없음). `FAULT_LINES.md` 에 화살표 열은 아직 없다(재생기 `--checks` 출력에 필드를 더해야 한다).
+> §4 HUD(`LiveWorkoutHud.kt`, 엄지 줄 `LiveQuickActions`) · P2 소리(틱·고치는 말만·숫자 읽기 토글, `ToneGenerator` 톤 — SoundPool 샘플은 아직) ·
+> P3 호흡(`posture/Breathing.kt`, `RepCounter.motionDirection`) 완료. **준비 단계도 검은 무대**(사용자 결정 2026-10-02, 배율 잠금은 세트부터).
+> **§2.4 화면 보간**: 추론 300 ms 간격(3.3 fps)을 그대로 그리면 끊겨 보여 화면 좌표만 샘플 사이를 프레임마다 보간한다(판정·로그 불변, 한 간격 지연).
+> §9 결정은 권장안 — 휴식은 별도 화면 유지(P4 미착수), 영상은 치우고 자동 복귀·토글, beta 는 점·칩만. 시안: 디자인 캔버스 "TREX 라이브 화면 시안".
+> 테스트: `StageFitTest` · `FormMotionTest` · `BreathingTest`. `FAULT_LINES.md` 에 화살표 열은 아직 없다(재생기 `--checks` 출력에 필드를 더해야 한다).
 
 ## 0. 왜 이 방향이 맞나 (제1원리)
 

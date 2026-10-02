@@ -94,7 +94,31 @@ internal fun SkeletonStage(
             if (t >= MotionCue.PULSE_MS) break
         }
     }
+    // 화면용 좌표 보간(§2.4) — 추론은 300 ms 간격(3.3 fps)이라 그대로 그리면 뼈대가 끊겨 보인다. 새 샘플이 오면 직전 화면 좌표에서 새 좌표로
+    // 샘플 간격(80~400 ms)에 걸쳐 프레임마다 옮긴다. **표시만** 부드럽다 — 판정·카운터·로그는 원래 샘플 그대로. 한 간격만큼 늦게 보인다
+    val display = remember { FloatArray(MP_LANDMARK_COUNT * 2) }
+    val from = remember { FloatArray(MP_LANDMARK_COUNT * 2) }
+    val anim = remember { longArrayOf(0L, 0L, 0L) }   // t0 · 지속 · 직전 도착
+    var frameTick by remember { mutableLongStateOf(0L) }
+    LaunchedEffect(sample) {
+        if (!sample.detected || sample.normalizedXy.size < display.size) return@LaunchedEffect
+        val now = withFrameMillis { it }
+        val gap = now - anim[2]
+        anim[2] = now
+        val fresh = anim[0] == 0L || gap > 900L   // 첫 샘플·오래 끊긴 뒤는 바로 놓는다
+        anim[0] = now; anim[1] = gap.coerceIn(80L, 400L)
+        System.arraycopy(display, 0, from, 0, from.size)
+        if (fresh) { System.arraycopy(sample.normalizedXy, 0, display, 0, display.size); frameTick = now; return@LaunchedEffect }
+        while (true) {
+            val t = withFrameMillis { it }
+            val p = ((t - anim[0]).toFloat() / anim[1]).coerceIn(0f, 1f)
+            for (i in display.indices) display[i] = from[i] + (sample.normalizedXy[i] - from[i]) * p
+            frameTick = t
+            if (p >= 1f) break
+        }
+    }
     Canvas(modifier.then(if (dark) Modifier.background(Color.Black) else Modifier)) {
+        @Suppress("UNUSED_VARIABLE") val redraw = frameTick   // 보간 프레임마다 다시 그린다
         if (!sample.detected || sample.imageWidth <= 0) return@Canvas
         val imgW = sample.imageWidth.toFloat()
         val imgH = sample.imageHeight.toFloat()
@@ -120,8 +144,9 @@ internal fun SkeletonStage(
             val q = if (zoom == 1f && tx == bx && ty == by) p else Offset(tx + (p.x - bx) * zoom, ty + (p.y - by) * zoom)
             return Offset(if (mirror) size.width - q.x else q.x, q.y)
         }
+        val xy = if (anim[0] == 0L) sample.normalizedXy else display
         fun raw(i: Int): Offset? {
-            val x = sample.normalizedXy[i * 2]; val y = sample.normalizedXy[i * 2 + 1]
+            val x = xy[i * 2]; val y = xy[i * 2 + 1]
             if (!x.isFinite() || !y.isFinite()) return null
             return Offset(dx + x * drawW, dy + y * drawH)
         }
