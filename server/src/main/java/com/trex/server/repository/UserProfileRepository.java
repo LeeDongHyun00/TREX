@@ -10,4 +10,7 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, Intege
     boolean existsByUserId(Integer userId);
 
     Optional<UserProfile> findByUserId(Integer userId);
+
+    // 회원 탈퇴용.
+    long deleteByUserId(Integer userId);
 }

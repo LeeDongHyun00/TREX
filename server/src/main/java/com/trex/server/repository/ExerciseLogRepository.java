@@ -15,4 +15,7 @@ public interface ExerciseLogRepository extends JpaRepository<ExerciseLog, Intege
 
     // 파생 삭제 메서드는 엔티티를 로드한 뒤 삭제하므로 cascade로 하위 루틴도 함께 지워진다.
     long deleteByLogDateBefore(LocalDate cutoff);
+
+    // 회원 탈퇴용. 엔티티를 로드해 지우므로 하위 루틴도 cascade 로 지워진다.
+    long deleteByUserId(Integer userId);
 }

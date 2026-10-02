@@ -66,7 +66,12 @@ DELETE /api/auth/me                                           → 204 (회원과
 ## 5. 단계와 진행 상황
 
 - [x] **0단계 · 준비**: 이 문서, 서버 테스트가 새 저장소에서 바로 돌게(툴체인 자동 다운로드, 테스트 전용 설정)
-- [ ] **1단계 · 서버**: D2·D3 회원 구조, D8 구글 검증 + `/api/auth/oauth/google`, D5 동기화 API, 회원 탈퇴, `application-prod.yml`·PostgreSQL 드라이버, 테스트
+- [x] **1단계 · 서버**: D2·D3 회원 구조, D8 구글 검증 + `/api/auth/oauth/google`, D5 동기화 API, 회원 탈퇴, `application-prod.yml`·PostgreSQL 드라이버, 테스트 (2026-10-02, `feature/server-sync`)
+  - 코드: `entity/AuthProvider`·`User`(provider·providerId), `oauth/`(`GoogleTokenVerifier` 인터페이스 + `GoogleJwksTokenVerifier`), `AuthService.socialLogin`·`deleteAccount`, `entity/SyncItem`·`SyncService`·`SyncController`, `resources/application-prod.yml`.
+  - 테스트 19개 통과: `SocialSyncApiTest`(가짜 검증기로 API 흐름 10개), `GoogleJwksTokenVerifierTest`(테스트 키로 서명한 토큰으로 서명·발급자·대상·만료 8개).
+  - 동작 메모: `google_`·`kakao_` 로 시작하는 아이디로는 일반 가입이 안 된다(409, 소셜 내부 아이디 선점 방지). 소셜 회원은 비밀번호가 없어 `/login` 으로는 못 들어온다. 탈퇴한 회원의 기존 JWT 는 401. 탈퇴는 동기화·식단(하위 식사 포함)·운동·프로필·회원 순으로 지운다.
+  - 함정: `GoogleJwksTokenVerifier` 는 테스트용 생성자가 있어 공개 생성자에 `@Autowired` 가 꼭 필요하다(없으면 컨텍스트가 안 뜬다). `client-ids` 가 비면 구글 로그인은 항상 401 이고 서버 로그에 error 가 남는다.
+  - 아직 실제 구글 토큰으로는 확인하지 않았다 — 구글 클라우드 콘솔에서 OAuth 클라이언트(웹 1개 + 안드로이드 1개, 안드로이드는 패키지명·SHA-1)를 만든 뒤 2단계에서 확인한다.
 - [ ] **2단계 · 앱**: Retrofit/OkHttp, Credential Manager 구글 로그인, JWT 보관, 로그인 화면("Google로 계속하기"/"로그인 없이 사용"), `TrexStore` 쓰기 시 업로드(모아서·오프라인 대기)·시작 시 받기·첫 로그인 병합 질문
 - [ ] **3단계 · AWS 배포**: 예산 알림 → RDS → EC2 + Docker → 도메인·Caddy HTTPS → 환경 변수
 - [ ] **4단계 · 카카오**
@@ -82,4 +87,6 @@ cd server && ./gradlew test        # JDK 17 이 없으면 Gradle 이 자동으�
 
 ## 7. 다음 할 일
 
-1단계부터. 이 문서 5절의 체크를 갱신하며 진행한다.
+1. 구글 클라우드 콘솔: 프로젝트 → OAuth 동의 화면 → 클라이언트 ID(웹·안드로이드). 웹 클라이언트 ID 가 앱의 `serverClientId` 이자 서버 `GOOGLE_CLIENT_IDS` 다(비밀값 아님, 클라이언트 시크릿은 쓰지 않는다).
+2. 2단계(앱) 또는 3단계(AWS) — 앱을 먼저 하면 로컬 서버(에뮬레이터 `10.0.2.2:8080`, 실기기는 같은 와이파이의 PC IP + 개발용 cleartext 허용)로 확인한다.
+3. 이 문서 5절의 체크를 갱신하며 진행한다.
