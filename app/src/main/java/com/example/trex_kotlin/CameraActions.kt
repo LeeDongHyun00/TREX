@@ -35,24 +35,31 @@ internal fun CameraExpandAction(onClick: () -> Unit, enabled: Boolean, modifier:
     }
 }
 
-/** 영상만 볼 때도 엄지 쪽의 일시정지를 즉시 사용할 수 있다 */
+/**
+ * 무대 아래 엄지 줄(docs/LIVE_SCREEN_REDESIGN.md §4.3) — 일시정지 · 세트 끝 · 제어판. 다가와서 누르는 상황이라 셋 다 64 dp.
+ * 세트 끝은 지금까지 센 수로 세트를 마감한다 — 카운터가 마지막 회를 구조적으로 놓쳐 "1 남음" 에서 멈출 수 있어 큰 자리를 차지한다(§4.1).
+ */
 @Composable
-internal fun LiveQuickActions(onOpen: () -> Unit, onPause: () -> Unit, modifier: Modifier = Modifier) {
-    Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-        Surface(onClick = onOpen, modifier = Modifier.heightIn(min = 52.dp).semantics { contentDescription = "제어판 열기" },
-            shape = RoundedCornerShape(26.dp), color = Color(0xE6111610)) {
-            Row(Modifier.padding(horizontal = 18.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Icon(Icons.Rounded.Tune, null, tint = Color.White, modifier = Modifier.size(20.dp))
-                Text("제어", color = Color.White, fontSize = 14.sp)
+internal fun LiveQuickActions(onOpen: () -> Unit, onPause: () -> Unit, onFinish: () -> Unit, paused: Boolean, modifier: Modifier = Modifier) {
+    val glass = Color(0xB3000000)
+    val edge = BorderStroke(1.dp, Color.White.copy(alpha = .28f))
+    Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Surface(onClick = onPause, modifier = Modifier.weight(1f).height(64.dp).semantics { contentDescription = if (paused) "재개" else "일시정지" },
+            shape = RoundedCornerShape(20.dp), color = glass, border = edge) {
+            Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
+                Icon(if (paused) Icons.Rounded.PlayArrow else Icons.Rounded.Pause, null, tint = Color.White, modifier = Modifier.size(26.dp))
             }
         }
-        Spacer(Modifier.width(10.dp))
-        Surface(onClick = onPause, modifier = Modifier.heightIn(min = 52.dp), shape = RoundedCornerShape(26.dp), color = Color.White) {
-            Row(Modifier.padding(horizontal = 20.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Icon(Icons.Rounded.Pause, null, tint = Color(0xFF1A2314), modifier = Modifier.size(20.dp))
-                Text("일시정지", color = Color(0xFF1A2314), fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+        Surface(onClick = onFinish, modifier = Modifier.weight(2f).height(64.dp).semantics { contentDescription = "세트 끝" },
+            shape = RoundedCornerShape(20.dp), color = Color(0xE6FFFFFF)) {
+            Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
+                Text("세트 끝", color = Color(0xFF1A2314), fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+            }
+        }
+        Surface(onClick = onOpen, modifier = Modifier.width(64.dp).height(64.dp).semantics { contentDescription = "제어판 열기" },
+            shape = RoundedCornerShape(20.dp), color = glass, border = edge) {
+            Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
+                Icon(Icons.Rounded.Tune, null, tint = Color.White, modifier = Modifier.size(24.dp))
             }
         }
     }

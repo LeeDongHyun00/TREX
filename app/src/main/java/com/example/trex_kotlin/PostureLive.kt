@@ -121,9 +121,7 @@ import com.example.trex_kotlin.posture.InferencePhase
 import com.example.trex_kotlin.posture.InferencePolicy
 import com.example.trex_kotlin.posture.LiveCoach
 import com.example.trex_kotlin.posture.ModeStore
-import com.example.trex_kotlin.posture.MP_LANDMARK_COUNT
 import com.example.trex_kotlin.posture.OnsetKind
-import com.example.trex_kotlin.posture.POSE_CONNECTIONS
 import com.example.trex_kotlin.posture.PoseModel
 import com.example.trex_kotlin.posture.PoseSample
 import com.example.trex_kotlin.posture.PostureAnalyzer
@@ -247,6 +245,8 @@ private const val SIDE_CUE_GAP_MS = 8_000L
 private const val GUIDE_NOTE_MS = 6_000L
 /** 반복 검사 위반 부위를 칠해 두는 시간 — 다음 회(컬 1.5~3 s)가 끝나기 전후. */
 private const val FORM_HIGHLIGHT_MS = 2_500L
+/** 교정 화살표가 통과 없이 남는 시간(docs/LIVE_SCREEN_REDESIGN.md §3.2) — 음성 쿨다운(12 s)과 같은 수. */
+private const val MOTION_CUE_MS = 12_000L
 
 /** 촬영 안내 음성 최소 간격 — 자세를 고치는 데 시간이 걸리므로 자주 말하지 않는다 */
 private const val COVERAGE_SPEAK_GAP_MS = 8_000L
@@ -478,6 +478,30 @@ fun PostureLiveSessionScreen(
         if (formHighlightStamp == 0L) return@LaunchedEffect
         kotlinx.coroutines.delay(FORM_HIGHLIGHT_MS)
         formHighlight = emptySet(); formProvHighlight = emptySet()
+    }
+    // ---- 검은 무대(docs/LIVE_SCREEN_REDESIGN.md §2): 세트 시작 뒤 몸이 1 s 보이면 배율을 잠그고, 1.5 s 잃으면 영상으로 돌아간다.
+    //      분석 스레드가 프레임마다 갱신한다(sample 과 같은 경로). 사용자 토글은 세션 동안 유지된다
+    val stageFit = remember { StageFitController() }
+    var stageLock by remember { mutableStateOf<BodyBox?>(null) }
+    var personLost by remember { mutableStateOf(false) }
+    var showCamera by remember { mutableStateOf(false) }
+    // 교정 화살표(§3) — 한 회에 하나, 음성 문장을 만든 사건이 만든다. 다음 회가 통과하면 지우고, 통과 없이 12 s 가 지나면 지운다(음성 쿨다운과 같은 수)
+    var motionCue by remember { mutableStateOf<MotionCue?>(null) }
+    LaunchedEffect(motionCue?.startedAt) {
+        if (motionCue == null) return@LaunchedEffect
+        kotlinx.coroutines.delay(MOTION_CUE_MS)
+        motionCue = null
+    }
+    LaunchedEffect(preparing, workout.id) {
+        if (preparing) return@LaunchedEffect
+        stageFit.reset(); stageLock = null; personLost = false; motionCue = null
+    }
+    // 세트 경과(보조 정보 — 반복 운동의 시간은 끝내는 조건이 아니다). 일시정지 중엔 멈춘다
+    var setElapsedSec by remember { mutableIntStateOf(0) }
+    LaunchedEffect(preparing, workout.id) { setElapsedSec = 0 }
+    LaunchedEffect(preparing, paused, workout.id) {
+        if (preparing || paused) return@LaunchedEffect
+        while (true) { kotlinx.coroutines.delay(1000); setElapsedSec++ }
     }
 
     // TRACK 음성은 모집단 정상/위반 전환이 아니라 직접적인 초기 대비 비교에서만 나온다.
@@ -840,6 +864,7 @@ fun PostureLiveSessionScreen(
         provisionalAtRef[0] = 0L
         provisionalHighlight = emptySet()
         formHighlight = emptySet(); formProvHighlight = emptySet(); formHighlightStamp = 0L
+        motionCue = null
         repFast = false
         repTempoMs = null
         synchronized(repRecords) {
@@ -964,6 +989,9 @@ fun PostureLiveSessionScreen(
                     return@setAnalyzer
                 }
                 if (s.detected) everDetected = true
+                // 무대 배율 잠금·영상 복귀(§2) — "사람이 있다" 는 detected 가 아니라 피처가 계산됐는지로(CLAUDE.md 함정). 바닥 종목은 가시성 cut 이 낮다
+                stageLock = stageFit.update(now, s.bodyBox(if (floorRef[0]) 0.35f else 0.5f))
+                personLost = stageFit.lost
                 if (!s.detected || pausedRef[0]) {
                     alignment = alignmentRef[0]?.add(now,emptyMap()) ?: AlignmentSnapshot()
                     comparisonRef[0]?.unavailable()
@@ -1097,7 +1125,7 @@ fun PostureLiveSessionScreen(
                             // 내려가 ROM 도 걸린다)가 전부 "덜 폈어요" 로 나갔다(오늘 자세 위반 57회 중 19회). 코칭 문장은 speakLatest — 서로 끊지 않고 하나만 보류한다
                             val lastRep = formReps.lastOrNull()
                             val formEv = if (lastRep == null || rf == null) null else rf.eventFor(lastRep, now, gate = gate)
-                            if (lastRep?.correct == true) formNote = null
+                            if (lastRep?.correct == true) { formNote = null; motionCue = null }   // 통과한 회 — 화살표도 지운다(§3.2)
                             // 부분(ROM 미달)으로 빠진 회의 사유(spec §62c 후속 3) — 손목이 보여 준 끝(덜 올림/덜 폄). 세트당 처음 MAX_INVALID_CUES 번은 교정 문장까지, 그 뒤는 짧게
                             val shortReason = if (gate && rc.signal.romExcludesShort && tally.repsShort > 0)
                                 (rc.newlyPublishedShort.lastOrNull { it != null } ?: RomShort.RANGE) else null
@@ -1109,6 +1137,8 @@ fun PostureLiveSessionScreen(
                             // 목표를 채운 쪽으로 더 디딘 걸음은 자세를 말하지 않는다 — 어차피 세지 않는 걸음이라 "더 깊이" 는 끝난 다리를 고치라는 말이 된다
                             val extraStep = sideEv != null && !sideEv.counted && !sideEv.blocked
                             if (formEv != null && formEv.ship && gate && !extraStep) {
+                                // 음성 문장을 만든 그 사건이 화살표도 만든다(§3.2) — 두 채널이 다른 부위를 가리키지 않게
+                                motionCue = MotionCue.of(formEv.check, formEv.direction, formHighlight, now)
                                 // 빠진 회는 그 자리에서 이유를 말한다 — 침묵하면 카운트가 죽은 줄 안다. 첫 위반은 교정 문장까지, 같은 검사의 쿨다운(12 s) 안은 짧은 단서(brief).
                                 // 2단 검사의 코칭 단계 위반은 회를 빼지 않으므로 그 말을 붙이지 않는다
                                 say += when {
@@ -1178,6 +1208,7 @@ fun PostureLiveSessionScreen(
                                     speech.speakLatest(msg)
                                     formHighlight = RuleHighlight.landmarksFor(ev.check.highlight?.let { h -> side?.let { h.replace("{front}", it.key) } ?: h.replace("_{front}", "") } ?: ev.check.feature)
                                     formProvHighlight = emptySet(); formHighlightStamp = now
+                                    motionCue = MotionCue.of(ev.check, ev.direction, formHighlight, now)
                                 }
                             }
                         }
@@ -1186,6 +1217,7 @@ fun PostureLiveSessionScreen(
                                 formNote = ev.message
                                 speech.speakLatest(ev.message)
                                 formHighlight = RuleHighlight.landmarksFor(ev.check.feature); formProvHighlight = emptySet(); formHighlightStamp = now
+                                motionCue = MotionCue.of(ev.check, ev.direction, formHighlight, now)
                             }
                         }
                     }
@@ -1235,6 +1267,9 @@ fun PostureLiveSessionScreen(
                         } else if (ev != null && !track) {
                             coachBanner = ev
                             speech.speak(ev.message, flush = flush)
+                            // 세트 창 규칙(척추 중립 등)의 화살표 — 교정됨이면 지운다. 그릴 수 없는 규칙은 문장만(§3.1)
+                            if (ev.kind == com.example.trex_kotlin.posture.OnsetKind.RECOVERED) motionCue = null
+                            else MotionCue.ofWindow(ev, now)?.let { motionCue = it }
                         }
                         // 점수는 리포트와 같은 분모로 — 검증된(ship) 규칙만. 베타를 섞으면 화면과 리포트가 다른 숫자를 말한다.
                         val states = coach.lastStates.filter { it.rule.status != RuleStatus.BETA }
@@ -1316,7 +1351,8 @@ fun PostureLiveSessionScreen(
 
     val onCam = Color.White
 
-    val liveMessage = when {
+    // 화면 글자는 교정·촬영 안내만(§4) — 상태 문구("움직임을 비교하고 있어요")는 쓰지 않는다. null = 띄울 말이 없다
+    val liveMessage: String? = when {
                         paused -> "일시정지"
                         // 쪽·방향 안내는 두 모드 모두의 안내다 — TRACK 은 아래가 비교 문장이라 formNote 가 안 보여 따로 먼저 보인다(§63)
                         mode == CoachMode.TRACK && guideNote != null -> guideNote!!
@@ -1328,7 +1364,7 @@ fun PostureLiveSessionScreen(
                             profile?.capture?.placement ?: "전신이 보이도록 자리 잡아 주세요."
                         formNote != null -> formNote!!
                         coachBanner != null -> coachBanner!!.message
-                        sample.features.isNotEmpty() -> "움직임을 비교하고 있어요."
+                        sample.features.isNotEmpty() -> null
                         else -> "전신을 화면에 담아 주세요."
                     }
 
@@ -1336,12 +1372,17 @@ fun PostureLiveSessionScreen(
         Box(mod.background(Color.Black)) {
             AndroidView(factory = { previewView }, modifier = Modifier.fillMaxSize())
             if (preparing) PreparationFramingOverlay(sample, Modifier.fillMaxSize())
-            if (!preparing) LivePoseOverlay(
-                sample = sample, mirror = useFrontCamera, tint = c.lime,
+            // 검은 무대(§2) — 준비 단계는 영상(자리 잡기는 영상이 빠르다), 세트 중엔 뼈대만. 사람을 잃으면·사용자가 켜면 영상이 돌아온다.
+            // 영상 유스케이스는 끊지 않는다(일부 기기에서 ImageAnalysis 단독 바인딩이 프레임률을 바꾼다, §8) — 검은 캔버스로 덮기만 한다
+            val stageDark = !preparing && !showCamera && !personLost
+            if (!preparing) SkeletonStage(
+                sample = sample, mirror = useFrontCamera, dark = stageDark, lock = stageLock,
                 highlight = if (mode == CoachMode.TRACK || paused) emptySet() else if (isFloorExercise) floorFeedback?.landmarks.orEmpty() else violHighlight + formHighlight,
                 provisional = if (paused) emptySet() else if (mode == CoachMode.TRACK) comparison.landmarks else (provisionalHighlight + formProvHighlight) - formHighlight,
                 visibilityCut = if (isFloorExercise) 0.35f else 0.5f,
                 plankSide = alignment.visibleSide.takeIf { alignment.placementReady && mode == CoachMode.COACH && !paused },
+                // 화살표는 COACH·서서만(TRACK 은 앱이 가르치지 않는다 — 원칙 #3)
+                cue = motionCue.takeIf { mode == CoachMode.COACH && !paused && !isFloorExercise },
                 modifier = Modifier.fillMaxSize(),
             )
             if (preparing) Column(Modifier.fillMaxWidth().background(Brush.verticalGradient(
@@ -1351,7 +1392,13 @@ fun PostureLiveSessionScreen(
                 Text(workout.name, color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
             }
             if (!preparing && !panelVisible) {
-                LiveQuickActions(onOpen = { openPanel() }, onPause = onTogglePause,
+                LiveQuickActions(onOpen = { openPanel() }, onPause = onTogglePause, paused = paused,
+                    // 세트 끝 — 지금까지 센 수로 마감. 목표 미달이면 '여기까지 기록'(onPartial) 경로, 시간 목표는 바로 다음으로
+                    onFinish = {
+                        val goal = workout.resolvedTarget()
+                        if (goal is WorkoutTarget.Repetitions) { onRepetitions(repetitions); if (repetitions < goal.amount) onPartial() }
+                        else onNext()
+                    },
                     modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(16.dp))
             }
         }
@@ -1388,7 +1435,7 @@ fun PostureLiveSessionScreen(
                 Column(Modifier.weight(1f)) {
                     AnimatedContent(targetState = liveMessage,
                         transitionSpec = { fadeIn(tween(180)) togetherWith fadeOut(tween(120)) }, label = "coach-cue") { msg ->
-                        Text(msg, color = c.text, fontSize = 15.sp, lineHeight = 22.sp)
+                        Text(msg ?: "", color = c.text, fontSize = 15.sp, lineHeight = 22.sp)
                     }
                     if (workout.resolvedTarget() is WorkoutTarget.Repetitions) {
                         // 좌우 짝 단위는 단위와, 한쪽을 마친 동안 '반대쪽 차례' 를 붙인다 — 화면 전용(쪽을 모르므로 말하지 않는다, 원칙 #6)
@@ -1425,6 +1472,9 @@ fun PostureLiveSessionScreen(
                             }
                         }
                     }, Modifier.weight(1f))
+                    // 무대 토글(§2.1) — 영상을 보고 싶을 때. 세션 동안 유지
+                    SessionTool(if (showCamera) "영상" else "뼈대만", if (showCamera) "뼈대만 보기" else "카메라 영상 보기",
+                        Icons.Rounded.PhotoCamera, { showCamera = !showCamera }, Modifier.weight(1f))
                 })
         }
     }
@@ -1459,7 +1509,11 @@ fun PostureLiveSessionScreen(
                                 (if (repIncorrect > 0) " · 자세 ${repIncorrect}회" else "")
                         else -> null
                     },
-                    countNoteActive = !validation && (repHalfPending || sideTallies?.next(mode == CoachMode.COACH) != null))
+                    countNoteActive = !validation && (repHalfPending || sideTallies?.next(mode == CoachMode.COACH) != null),
+                    elapsedSec = setElapsedSec,
+                    // beta 는 '참고' 칩으로만(원칙 #2) — COACH 에서만(TRACK 은 모집단 기준 '틀림' 을 보이지 않는다, §29)
+                    referenceNote = provisionalNote?.takeIf { mode == CoachMode.COACH && !validation },
+                    modeLabel = if (mode == CoachMode.TRACK) "TRACK" else "COACH")
             },
             camera = { cameraArea(Modifier.fillMaxSize()) },
             controls = {
@@ -1499,78 +1553,6 @@ private fun GlassIcon(
     }
 }
 
-@Composable
-private fun LivePoseOverlay(
-    sample: PoseSample,
-    mirror: Boolean,
-    tint: Color,
-    /** 확인할 부위 — 서서 ship 위반, 바닥 지속 변화(참고). */
-    highlight: Set<Int> = emptySet(),
-    /** 미보정(beta) 규칙 위반 — 노랗게. 말하지 않는 판정이므로 붉은색과 같은 확신을 주면 안 된다 (spec §31). */
-    provisional: Set<Int> = emptySet(),
-    visibilityCut: Float = 0.5f,
-    plankSide: Int? = null,
-    modifier: Modifier = Modifier,
-) {
-    Canvas(modifier = modifier) {
-        if (!sample.detected || sample.imageWidth <= 0) return@Canvas
-        val imgW = sample.imageWidth.toFloat()
-        val imgH = sample.imageHeight.toFloat()
-        // PreviewView 가 FIT_CENTER 이므로 여기서도 min — max(FILL)를 쓰면 스켈레톤이 어긋난다
-        val scale = minOf(size.width / imgW, size.height / imgH)
-        val drawW = imgW * scale
-        val drawH = imgH * scale
-        val dx = (size.width - drawW) / 2f
-        val dy = (size.height - drawH) / 2f
-
-        fun point(i: Int): Offset {
-            val px = dx + sample.normalizedXy[i * 2] * drawW
-            val py = dy + sample.normalizedXy[i * 2 + 1] * drawH
-            return Offset(if (mirror) size.width - px else px, py)
-        }
-
-        val warn = Color(0xFFFF5A5A)
-        plankSide?.let { side ->
-            val shoulder = if(side == 0) 11 else 12
-            val ankle = if(side == 0) 27 else 28
-            drawLine(Color(0xFF58D8C7),point(shoulder),point(ankle),strokeWidth=3.dp.toPx(),
-                pathEffect=androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(12.dp.toPx(),7.dp.toPx())))
-        }
-        val provisionalColor = Color(0xFFFFC24B)   // 미보정 규칙 = 호박색. 붉은색과 같은 확신을 주지 않는다
-        POSE_CONNECTIONS.forEach { (a, b) ->
-            if (sample.visibility[a] >= visibilityCut && sample.visibility[b] >= visibilityCut) {
-                val hot = a in highlight && b in highlight   // 위반 부위의 연결선은 붉게 (수정할점 #1)
-                val soft = !hot && a in provisional && b in provisional
-                drawLine(
-                    color = when {
-                        hot -> warn.copy(alpha = 0.9f)
-                        soft -> provisionalColor.copy(alpha = 0.75f)
-                        else -> tint.copy(alpha = 0.55f)
-                    },
-                    start = point(a),
-                    end = point(b),
-                    strokeWidth = if (hot) 7f else if (soft) 5f else 4f,
-                    cap = StrokeCap.Round,
-                )
-            }
-        }
-        for (i in 0 until MP_LANDMARK_COUNT) {
-            if (sample.visibility[i] < visibilityCut) continue
-            val hot = i in highlight
-            val soft = !hot && i in provisional
-            if (hot) drawCircle(warn.copy(alpha = 0.22f), radius = 16f, center = point(i))
-            drawCircle(
-                color = when {
-                    hot -> warn
-                    soft -> provisionalColor
-                    else -> Color.White.copy(alpha = 0.85f)
-                },
-                radius = if (hot) 7f else if (soft) 6f else 4f,
-                center = point(i),
-            )
-        }
-    }
-}
 
 private suspend fun Context.awaitCameraProviderLive(): ProcessCameraProvider = suspendCoroutine { cont ->
     val future = ProcessCameraProvider.getInstance(this)

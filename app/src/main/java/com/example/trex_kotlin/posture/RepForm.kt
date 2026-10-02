@@ -143,6 +143,11 @@ data class RepFormCheck(
     val gates: Boolean = true,
     /** 위반 부위 강조용 피처 이름 틀 — `{front}` 가 걸음 앞다리(L/R)로 바뀐다(`RuleHighlight.forRepForm`). null 이면 [feature]. 판정과 무관. */
     val highlight: String? = null,
+    /**
+     * 교정 화살표(docs/LIVE_SCREEN_REDESIGN.md §3) — 위반 때 화면에 "어느 관절에서 어느 쪽으로" 를 그린다. ship 검사만 갖는다(음성과 같은 문턱 —
+     * beta 는 '참고' 점만, 원칙 #2). 판정과 무관. `FormMotionTest` 가 ship 검사마다 있는지 잠근다.
+     */
+    val motion: FormMotion? = null,
     /** 본인 기준 모음을 걸음 앞다리 쪽별로 따로 둔다(§63 어깨 기울기 — 앞다리에 따라 원근 오프셋이 뒤집힌다). */
     val refBySide: Boolean = false,
     /** [RepFormRef.FIRST_REPS_DELTA] 의 기준 반복 수 — null 이면 [RepFormEvaluator.FIRST_REPS_N]. */
@@ -1207,11 +1212,13 @@ object RepFormSpecs {
             RepFormCheck("repform|$ex|앞무릎 깊이", ex, "앞다리 무릎 각도 90도(걸음)", "앞무릎", RuleStatus.SHIP, "knee_minside", RepPhase.BOTTOM, RepFormStat.MIN, RepFormRef.NONE,
                 lo = null, hi = LUNGE_DEPTH_GATE_DEG, lowText = null, highText = "덜 내려갔어요", lowLabel = null, highLabel = "얕음",
                 fix = "앞무릎이 80도 가까이 굽도록 뒷무릎을 바닥 가까이 내려 주세요", unit = "°", views = notFront, cue = "더 깊이", highlight = "knee_ang_{front}",
+                motion = FormMotion(MotionAnchor.KNEES, high = MotionKind.DOWN),
                 reason = "§63(사용자 결정 2026-09-26 \"80도 부근까지 굽혀지지 않으면 교정 멘트와 시각 표시, 횟수 취소\"): 걸음 바닥 프레임에서 두 무릎 중 더 굽은 쪽(knee_minside, 월드 3D)의 최솟값 > 90°. 저장 세트: 깊은 걸음 62~78°, 얕은 걸음(센 2) 96·122° — 85~105° 어느 값이든 이 사용자는 완전히 갈린다. 모집단 정상 걸음 초과: MM-Fit 6.7 %(연속 300 ms), AIHub-MP B 키프레임 52 %(바닥이 아닌 프레임이 섞여 비관). 원칙 #7 의 입장 조건을 넘는 **사용자 결정 예외** — TRACK 은 빼지 않는다",
                 cautions = listOf("정면(C)에서는 판정하지 않는다 — 3D 무릎각 오차 ~14°, MM-Fit 정면 걸음 25 % 가 넘었다", "'80도' 는 앞무릎 목표, 판정은 90° — MediaPipe 3D 무릎각 오차(MAE ~10°)만큼 여유", "두 무릎 중 더 굽은 쪽이라 앞무릎은 90° 가 안 돼도 뒷무릎이 90° 이하면 통과한다(세는 쪽으로 틀린다)", "카운터가 세지 못한 얕은 걸음은 따로 찾아 알린다(RepFormEvaluator.missedDipEvent)", "치료용 런지(REHAB '올바름' 앞무릎 p50 110°)처럼 얕게 하는 방식은 COACH 에서 빠진다 — 기록 모드(TRACK)는 전부 센다")),
             RepFormCheck(lean, ex, "상체 숙임(걸음)", "상체", RuleStatus.SHIP, "torso_pitch", RepPhase.BOTTOM, RepFormStat.MEDIAN, RepFormRef.SET_LOW_DELTA,
                 lo = null, hi = 20f, lowText = null, highText = "상체가 많이 숙여졌어요", lowLabel = null, highLabel = "숙임",
                 fix = "가슴을 들고 몸통을 세우세요", unit = "°", views = notFront, gateHi = 25f, cue = "상체 숙임", refByView = false,
+                motion = FormMotion(MotionAnchor.SHOULDERS, high = MotionKind.UP),
                 // 기준 하한 — 좌우 이름 뒤바뀜·깊이 반전이면 몸통 z 축이 뒤집혀 숙임이 음수로 읽힌다. 정상 걸음 바닥 최소는 −4.2°(MM-Fit 460걸음)
                 refFloor = -10f,
                 reason = "§63(docs/LUNGE_RESEARCH.md §3-2): 허리 말림(척추 굽힘)은 MediaPipe 에 척추 점이 없어 못 본다 — 보이는 것은 상체 숙임. 걸음 바닥 torso_pitch 중앙값 − 지금까지 두 번째로 곧았던 걸음 바닥(SET_LOW_DELTA, 뷰 구분 없이 한 모음). 코칭 +20°, 차단 +25°. 정상 오탐(같은 규칙): MM-Fit +20 1.0 %·+25 1.0 %, REHAB 올바름 0.8·0 %, AIHub GT 0.4·0.2 %. 저장 세트 숙인 4걸음 +29~+38°, 나머지 ≤ +6.9°",
@@ -1219,6 +1226,7 @@ object RepFormSpecs {
             RepFormCheck("repform|$ex|무릎 쏠림", ex, "무릎 쏠림(걸음)", "무릎", RuleStatus.SHIP, Lunge2d.FRONT_SHIN, RepPhase.BOTTOM, RepFormStat.MAX, RepFormRef.NONE,
                 lo = null, hi = 45f, lowText = null, highText = "앞무릎이 발끝 쪽으로 많이 쏠렸어요", lowLabel = null, highLabel = "쏠림",
                 fix = "체중을 앞발 뒤꿈치에 두고 밀며 올라오세요", unit = "°", views = notFront, gates = false, cue = "무릎 쏠림", highlight = "kneefoot_{front}",
+                motion = FormMotion(MotionAnchor.KNEES, high = MotionKind.TOWARD_TORSO),
                 reason = "§63(사용자 결정 2026-09-26 \"무릎 발끝은 무릎 쏠림으로\"): 앞 정강이(발목→무릎)가 중력 up 에서 앞으로 기운 각(월드 3D 시상면)의 바닥 최댓값 > 45°. 무릎이 발끝을 넘는 것 자체는 오류가 아니고(Fry 2003) 부하가 무릎으로 쏠리는 정도의 문제라 '쏠림' 으로 말하고 횟수는 빼지 않는다(코칭 전용 — 음성은 2걸음 연속). 정상 초과: MM-Fit 사선 0.6~2.0 %·옆 5.1 %, AIHub GT 0 %, REHAB 0.7 %. 사용자 정상 깊은 걸음 33~34°",
                 cautions = listOf("발끝 랜드마크는 쓰지 않는다(2D 오차 5~9 cm) — 정강이 기울기로 본다", "옆에서 먼 다리가 앞이면 작게 읽혀 놓칠 수 있다", "양성 라벨이 어느 모집단에도 없어 검출률은 폰 지정 세트로만 잰다", "깊이 앉을수록 정강이도 더 기운다(상관 −0.4~−0.6)")),
             RepFormCheck("repform|$ex|어깨 기울기", ex, "어깨 기울기(걸음)", "어깨", RuleStatus.BETA, Lunge2d.SH_LEVEL_2D, RepPhase.BOTTOM, RepFormStat.MEDIAN, RepFormRef.FIRST_REPS_DELTA,
@@ -1248,18 +1256,20 @@ object RepFormSpecs {
                 // 차단은 종전 +20°(정상 오탐 근거가 있는 값). 문구는 둘을 다 덮는다 — 이 선 하나로는 척추 말림과 골반 접힘을 못 가른다
                 lo = null, hi = LEAN_COACH_HI, lowText = null, highText = "등이 말리거나 상체가 숙여졌어요", lowLabel = null, highLabel = "숙임",
                 fix = "가슴을 들고 등을 편 채 팔만 움직이세요", unit = "°", views = setOf("C", "D"), gateHi = LEAN_HI, cue = "상체 숙임",
-                liveHoldFrames = 14, liveText = "상체가 숙여져 있어요",
+                liveHoldFrames = 14, liveText = "상체가 숙여져 있어요", motion = FormMotion(MotionAnchor.SHOULDERS, high = MotionKind.UP),
                 reason = "§62c 후속 6(사용자 \"숙이는 거 인식 못 해\"): 반복 창 몸통 기울기(목−골반 vs 중력 up) 최대 − **세트에서 가장 곧았던 상단 자세**(SET_MIN_DELTA). 그 반복 시작 대비(후속 4)는 숙인 채 반복하면 차이가 0 이라 11:14 세트 숙인 반복 3·5·12~14회(창 최대 36~45°)를 −2~+3° 로 전부 통과시켰고, 세트 시작 대비(스쿼트 방식)는 첫 상단이 덤벨 집기에 오염되면(09:59·15:33, 45°) 세트 전체가 음수로 읽힌다 — 가장 곧았던 상단은 두 실패를 함께 피한다. 연속 세트 재생: 폰 정상 75회 최대 +23.3°(+20° 초과 1회, 10:41 6회 — 숙임 여부 불명)·MM-Fit 123회 +20° 초과 1회(0.8 %); 11:14 정면 숙임 3·4·5회 +30·+23·+27 검출(2회 +18 은 숙이기 시작한 회). 반복 없이 팔을 내린 채 4초 숙여 있으면 유지 사건으로 말한다(스쿼트 창 규칙 '척추의 중립' 과 같은 역할 — 11:14 세트 58~73 s 는 숙인 채 16초 멈춰 반복 판정이 오지 않았다). 1단(스쿼트와 같은 정책): 반복 위반 = 음성 + COACH 횟수 제외",
                 cautions = listOf("정면에서는 앞 숙임과 뒤 젖힘을 못 가른다(깊이 축) — 뒤로 젖혀도 '숙여졌어요' 로 말할 수 있다(스쿼트와 같은 한계)", "세트 첫 반복부터 계속 숙이고 있으면 기준 자체가 숙은 자세다(스쿼트와 같은 한계)", "AIHub 세션(32클립·수십 분)을 한 세트로 본 상한: 정면 +20° 초과 13.9 %(GT 3D 4.0 %) — 긴 시간의 자세 이동이 섞인 과대 추정이지만 지정 오류 세트에서 정상 오탐이 나오면 25° 로 올린다", "옆(SIDE)·B 뷰는 판정하지 않는다 — 옆으로 돌아서 숙인 반복·유지는 유보(반복마다 그 창의 뷰로)", "중력 up 기반 — up 오류 세트에서는 유보되지 않는다(up 방어 작업 대기)", "미세한 척추 말림은 못 본다")),
             // ---- 정면(C) 검사 (B4 — AIHub 정면 정상 170클립·MM-Fit 598회로 오탐, 폰 13회 정답 세트로 검출)
             RepFormCheck("repform|$ex|팔꿈치 뜸", ex, "팔꿈치 뜸(반복)", "팔꿈치", RuleStatus.SHIP, Arm2d.WRIST_H_MAX, RepPhase.CYCLE, RepFormStat.MAX, RepFormRef.NONE,
                 lo = null, hi = 0.15f, lowText = null, highText = "들어 올릴 때 팔꿈치가 몸에서 떴어요", lowLabel = null, highLabel = "뜸",
                 fix = "반동 없이 팔꿈치를 옆구리에 고정하고 팔만 접으세요", views = front, cue = "팔꿈치 뜸",
+                motion = FormMotion(MotionAnchor.ELBOWS, high = MotionKind.TOWARD_TORSO),
                 reason = "§62c(B4): 반동(어깨로 들어 올림)·으쓱·앞 내밀기가 정면에서는 모두 '손목이 어깨 위로 넘음' 으로 나타난다 — 사이클 창 손목 최고 높이(어깨 기준 ÷ 몸통) ≥ 0.15. 정상 반복 초과 MM-Fit 1.5 %(1명 습관)·AIHub 정상 1.8 %, 폰 반동 3/3(0.20~0.24)·정상 0/10. 반동 정점은 팔꿈치각 최소보다 1~2프레임 뒤라 수축 프레임 값이 아니라 창 최대",
                 cautions = listOf("정면(C)에서만", "반동·으쓱·앞 내밀기를 못 가른다(내밀기 43 % 겹침) → 문구는 '팔꿈치가 몸에서 뜸' 으로 포괄", "임계는 스튜디오·MM-Fit·폰 1명 — 지정 오류 세트 3명 이후 확정")),
             RepFormCheck("repform|$ex|팔꿈치 옆 벌림", ex, "팔꿈치 옆 벌림(반복)", "팔꿈치", RuleStatus.SHIP, Arm2d.ELBOW_LAT_MAX, RepPhase.BOTTOM, RepFormStat.MEDIAN, RepFormRef.SET_MIN_DELTA,
                 lo = null, hi = 0.15f, lowText = null, highText = "팔꿈치가 옆으로 벌어졌어요", lowLabel = null, highLabel = "옆 벌림",
                 fix = "팔꿈치를 옆구리에 붙이세요", absMin = 0.30f, gateHi = 0.20f, gateAbsMin = 0.35f, views = front, cue = "팔꿈치 벌어짐",
+                motion = FormMotion(MotionAnchor.ELBOWS, high = MotionKind.TOWARD_MIDLINE),
                 // 등이 말리거나 숙인 회는 어깨 가로폭 투영이 줄고 팔꿈치가 어깨 대비 옮겨져 가로 비가 부푼다(14:46 세트 등 말림 3회: 가까운 팔 0.39~0.49, 월드 바깥은 정상) — 측정 무효(§62c 후속 10)
                 invalidatedBy = listOf("repform|$ex|상체 숙임"),
                 // 처음부터 벌림(§62c 후속 9) — AIHub '팔꿈치 고정' 충족 677클립: 수축 원값 ≥ 0.45 는 0.3 %, 이완(팔 늘어뜨림) 가로 p99 0.19·≥ 0.30 은 0 %
@@ -1277,6 +1287,7 @@ object RepFormSpecs {
             RepFormCheck("repform|$ex|팔꿈치 앞 이탈", ex, "팔꿈치 앞 이탈(반복)", "팔꿈치", RuleStatus.SHIP, Arm2d.ELBOW_FWD_NEAR, RepPhase.BOTTOM, RepFormStat.MEDIAN, RepFormRef.FIRST_REPS_DELTA,
                 lo = null, hi = 0.12f, lowText = null, highText = "팔꿈치가 앞으로 나갔어요", lowLabel = null, highLabel = "앞으로",
                 fix = "팔꿈치를 옆구리에 고정하세요", gateHi = 0.20f, views = oblique, cue = "팔꿈치 앞으로",
+                motion = FormMotion(MotionAnchor.ELBOWS, high = MotionKind.TOWARD_TORSO),
                 // 기준 오염 막기(§62c 후속 9) — 몸에서 떨어진 반복은 이 축에 '뒤로' 샌다. 12:41 세트: 벌린 첫 두 회(가로 0.80·0.77, 절대 상한 위반)가 기준을 −0.44 로 끌었다
                 refExcludedBy = listOf("repform|$ex|팔꿈치 몸에서 떨어짐"),
                 reason = "§62c 후속 7(사용자 \"왼쪽만 보이니 작동을 안 한다\"): 카메라 쪽 팔 하나의 앞 성분(가까운 쪽 몸통 선에서 팔꿈치의 앞쪽 거리 ÷ 몸통), 수축 구간 중앙값 − 그 뷰의 첫 3회 수축 중앙값(본인 기준). 양팔 평균(§62c)은 먼 팔꿈치가 몸통 뒤에 가려지면 없어 유보됐다(11:54 세트). AIHub 뷰 D/B 가까운 팔: 앞 내밀기 판별 AUC 0.937·0.928(양팔 평균 0.958), 본인 수축 대비 +0.12 오탐 5.4·3.3 %·검출 88·80 %, +0.20 오탐 2.1·1.5 %·검출 62·49 %(단일 프레임 상한). 코칭 +0.12, 차단 +0.20(입장 조건 ≤ 2 % 경계)",
@@ -1284,6 +1295,7 @@ object RepFormSpecs {
             RepFormCheck("repform|$ex|팔꿈치 몸에서 떨어짐", ex, "팔꿈치 몸에서 떨어짐(반복)", "팔꿈치", RuleStatus.SHIP, Arm2d.ELBOW_LAT_NEAR, RepPhase.BOTTOM, RepFormStat.MEDIAN, RepFormRef.SET_LOW_DELTA,
                 lo = null, hi = 0.25f, lowText = null, highText = "팔꿈치가 몸에서 떨어졌어요", lowLabel = null, highLabel = "떨어짐",
                 fix = "팔꿈치를 옆구리에 붙이세요", gateHi = 0.40f, views = oblique, cue = "팔꿈치 떨어짐",
+                motion = FormMotion(MotionAnchor.ELBOWS, high = MotionKind.TOWARD_TORSO),
                 invalidatedBy = listOf("repform|$ex|상체 숙임"),
                 // 처음부터 벌림(§62c 후속 9) — AIHub 사선 가까운 팔 수축 원값 p90 0.33(D)·0.31(B), p99 0.62·0.59. 기준을 p90 으로 자르면 처음부터 벌린 사람의 실효
                 // 임계는 코칭 0.57·차단 0.72(정상 사람은 그대로); 0.72 이상은 기준을 모으는 첫 두 회에도 차단. 기준이 p99(0.60) 이상이면 한 번 알린다
@@ -1329,7 +1341,7 @@ object RepFormSpecs {
             // 우선순위 순 — 발화·화면 사건은 이 순서의 첫 위반
             RepFormCheck("repform|$ex|상체 숙임", ex, "상체 숙임(반복)", "상체", RuleStatus.SHIP, "torso_incl", RepPhase.CYCLE, RepFormStat.MAX, RepFormRef.START_DELTA,
                 lo = null, hi = 45f, lowText = null, highText = "상체가 시작보다 많이 숙여졌어요", lowLabel = null, highLabel = "숙임",
-                fix = "가슴을 들고 몸통을 세우세요", unit = "°",
+                fix = "가슴을 들고 몸통을 세우세요", unit = "°", motion = FormMotion(MotionAnchor.SHOULDERS, high = MotionKind.UP),
                 reason = "정면 폰은 척추 굴곡을 못 본다 — 기울기 최대(반복 안)로 큰 숙임만 잡는다. 실기기 허리 굽힘 2회 63~67° vs 정상 14~39°. ship 승격(사용자 결정 2026-09-25 저녁, 실기기 시험 뒤 \"허리 굽혔을 때도 똑같이 막아\") — 정상 반복 오탐 REHAB 정면 0 %·세로 0 %·MM-Fit 1 %(§21.10), 실기기 검출 2/2(57~60°). COACH 에서 이 회는 횟수에서 빠진다(§62b)",
                 cautions = listOf("정면에서는 '말림' 이 아니라 '숙임' 이다 — 미세한 말림은 못 본다", "월드 기울기(중력 up) 기반 — up 오류 세트(16:13)에서는 시작 자세도 같이 틀려 차가 무의미해질 수 있다(up 방어 작업 대기)", "지정 오류 세트 3명 이후 띠 확정")),
             RepFormCheck("repform|$ex|엉덩이 먼저 상승", ex, "엉덩이 먼저 상승(반복)", "엉덩이", RuleStatus.BETA, "torso_incl", RepPhase.ASCENT, RepFormStat.RISE, RepFormRef.NONE,
@@ -1339,7 +1351,7 @@ object RepFormSpecs {
                 cautions = listOf(PROVISIONAL, "정면 기울기 기반 — 옆면이 더 정확하다")),
             RepFormCheck("repform|$ex|무릎 안쪽 모임", ex, "무릎 안쪽 모임(반복)", "무릎", RuleStatus.SHIP, "knee_out_mean", RepPhase.BOTTOM, RepFormStat.MEAN, RepFormRef.NONE,
                 lo = 0.0f, hi = null, lowText = "바닥에서 무릎이 안쪽으로 모였어요", highText = null, lowLabel = "안쪽", highLabel = null,
-                fix = "무릎을 발끝 방향으로 두세요",
+                fix = "무릎을 발끝 방향으로 두세요", motion = FormMotion(MotionAnchor.KNEES, low = MotionKind.AWAY_MIDLINE),
                 reason = "무릎이 엉덩이–발목 선 안쪽(값 < 0)이면 valgus. AIHub 세트 평균 임계 0.02388 을 바닥 구간에 그대로 쓰면 정상 반복 오탐 REHAB 정면 8 %·MM-Fit 2 %(§21.10) — 0.0 으로 REHAB 4 %·0 %·0 %. 세트 평균 규칙은 서 있는 프레임(−0.02)이 결정해 바닥이 정상인 세트에 '무릎 안쪽' 4번(실기기 2026-09-25)",
                 cautions = listOf("정면(C)에서만", "바닥 구간 평균 — 실기기 정상 바닥 0.08~0.30 대비 여유 큼",
                     "knee_out 은 발 자세를 따른다(11:37 세트: 발끝 −21°·발 너비 ×1.8 인 반복에서 −0.01~0.02) — AIHub 임계는 보통 스탠스 전제. 같은 반복에 발 위반이 있으면 문장이 발을 먼저 말한다"),
@@ -1367,6 +1379,7 @@ object RepFormSpecs {
             RepFormCheck("repform|$ex|발 간격", ex, "발 간격(반복)", "발 너비", RuleStatus.SHIP, Stance2d.ANKLE_SEP, RepPhase.BOTTOM, RepFormStat.MEDIAN, RepFormRef.START_RATIO,
                 lo = null, hi = 1.4f, lowText = null, highText = "발 너비가 시작보다 넓어졌어요", lowLabel = null, highLabel = "넓음",
                 fix = "발을 어깨 너비로 다시 두세요", absRefFeature = Stance2d.SHOULDER_SEP, absMin = 1.5f,
+                motion = FormMotion(MotionAnchor.ANKLES, high = MotionKind.TOWARD_MIDLINE),
                 reason = "§21.12(A7b): 반복 바닥 구간의 2D 발목 x 간격 중앙값 ÷ 시작 발목 간격 — 정면 정상 반복 오탐 0/243(REHAB 51·MM-Fit 192, 진짜 300 ms), 폰 넓힘 7/7(×1.53~2.35), 정상·발끝 회전·무릎 모음 반복 오탐 0/27, 유보 0~2 %. 프레임별 어깨로 나누던 옛 방식(stance_2d 극값)은 어깨 한 프레임(26 px)에 ×3.21, 직전 창 이월에 ×1.90 오탐(16:16 세트). 절대 조건(÷ 시작 어깨 ≥ 1.5)은 시작 기준이 어긋난 세트(16:13: 발 모은 채 시작 → 21회 '넓음')를 막는다",
                 cautions = listOf("정면(C)에서만 — 사선 뷰(B/D)는 앉을 때 원근으로 발목 간격이 변해 오탐 4 %", "절대 1.5 는 잠정(폰 1명 정상 1.05~1.36, 모집단 p95 1.42~1.65, 카메라 높이 의존) — 폰 세트 3명 이후 확정", "×1.4 는 모집단 C 오탐 0, 폰 넓힘 최소 ×1.53 과의 여유 0.13")),
             RepFormCheck("repform|$ex|발 간격|좁음", ex, "발 간격 좁아짐(반복)", "발 너비", RuleStatus.BETA, Stance2d.ANKLE_SEP, RepPhase.BOTTOM, RepFormStat.MEDIAN, RepFormRef.START_RATIO,
@@ -1382,6 +1395,7 @@ object RepFormSpecs {
             RepFormCheck("repform|$ex|발끝 방향", ex, "발끝 방향(반복)", "발끝", RuleStatus.SHIP, Stance2d.TOE_MAXSIDE, RepPhase.TOP, RepFormStat.MEDIAN, RepFormRef.START_DELTA,
                 lo = -15f, hi = 15f, lowText = "발끝이 시작보다 안으로 모였어요", highText = "발끝이 시작보다 바깥으로 벌어졌어요", lowLabel = "안쪽", highLabel = "바깥",
                 fix = "발끝을 시작 자세로 되돌리세요", unit = "°", windowFrames = 3,
+                motion = FormMotion(MotionAnchor.FEET, high = MotionKind.ROTATE_IN, low = MotionKind.ROTATE_OUT),
                 reason = "§21.12(A7a·A7b): 이미지 2D 발목→발끝 각(더 벌어진 쪽), 하강 직전 서 있는 ≤3프레임(0.6~0.9 s) 중앙값, 시작 대비 ±15°. 정면 정상 반복 오탐 REHAB 0 %·MM-Fit 4 %, 폰 검출 5/6(벌림 +18~+22°, 모음 −45°). 월드 3D 각(옛 피처)은 실제 회전을 2D 의 6할로 반영해(z 가 GHUM 추정치) 같은 회를 +11~+12° 로 읽어 놓쳤다. '한쪽만 넘어도' 는 검출을 못 늘리고 오탐만 두 배라 채택 안 함",
                 cautions = listOf("정면(C)에서만 — 사선에서는 기울기 0.26~0.75", "넓게 서면 발끝 그대로여도 모든 판독이 +14~+30°(A6·A7b, MediaPipe 편향 — 원근이 아님) → 발 너비 위반 반복은 유보", "놓친 1건(16:16 3회)은 랜드마크가 움직이지 않았다 — 원인 미확정(테이프 실험 대기)", "300 ms 에서 서 있는 프레임 2개 이상일 때만 — 쉬지 않고 이어 하면 유보"),
                 invalidatedBy = listOf("repform|$ex|발 간격")),
