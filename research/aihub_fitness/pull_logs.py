@@ -106,6 +106,17 @@ def summarize() -> None:
               f"{(sum(tilts) / max(len(tilts), 1)) if tilts else float('nan'):>6.1f} "
               f"{viol:>6d}/{len(res):<7d}")
 
+    # 배치 지문(spec §91) — 세션 간 비교는 이 값이 같을 때만. 거리·높이는 어깨 폭·발목 행의 핀홀 추정(평균 체형 가정)
+    placed = [l for l in logs if l.get("placement")]
+    if placed:
+        print(f"\n--- 배치 지문 ({len(placed)}세트) — 피치/롤 중앙값(°) · 기울기 최대(°) · 거리(m) · 높이(m) · 추론(Hz) ---")
+        for l in sorted(placed, key=lambda x: x.get("created_at", "")):
+            p = l["placement"]
+            f = lambda k, d=2: "—" if p.get(k) is None else f"{p[k]:.{d}f}"
+            print(f"  {l.get('created_at', '')[:19]} {l['exercise']:14s} 피치 {f('pitch_deg'):>6s} 롤 {f('roll_deg'):>6s} "
+                  f"기울기최대 {f('tilt_max_deg'):>6s} 거리 {f('distance_m'):>5s} 높이 {f('height_m'):>5s} {f('fps', 1):>4s}Hz"
+                  + ("" if p.get("lens") else " (렌즈 정보 없음)"))
+
     # 측정 품질 경고 — 재보정에 쓸 수 있는 로그인지
     print("\n--- 품질 점검 ---")
     short = [l for l in logs if len(l["frames"]) < 16]

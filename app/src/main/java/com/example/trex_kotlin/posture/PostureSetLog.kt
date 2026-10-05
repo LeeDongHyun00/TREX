@@ -33,6 +33,8 @@ import java.util.UUID
  * `reps.count`·`t_ms`·`min`/`max`/`valid`·`invalid` 는 여전히 **카운터 사이클** 단위다(재생 파리티가 사이클에 기댄다).
  * 반복 판별 게이트(spec §62) 추가 필드 — 판별 신호가 있는 종목만(없으면 키 부재): `reps.config.identity{feature,min_amp}`,
  * `reps.rejected[{t_ms,min,max,swing}]`(세지 않은 사이클), `reps.identity_swing[]`(센 사이클의 판별 스윙, `t_ms` 와 같은 순서, 미판정은 null).
+ * 촬영 배치 지문(§91, 선택 — 부재 = 이전 로그): `placement{frames,pitch_deg,roll_deg,tilt_deg,tilt_max_deg,fps,infer_ms_med,
+ * lens{focal_mm,sensor_w_mm,sensor_h_mm,active_w,active_h,zoom}|null,f_px,distance_m,height_m}` — 정의·가정은 `CameraPlacement`.
  * org.json 은 Android 유닛 테스트에서 스텁이라 직접 직렬화한다 (PostureCoreParityTest 와 같은 이유).
  */
 
@@ -251,6 +253,11 @@ data class SetLog(
     val validation: Boolean = false,
     val imageWidth: Int? = null,
     val imageHeight: Int? = null,
+    /**
+     * 촬영 배치 지문(§91, `CameraPlacement`) — `placement{frames,pitch_deg,roll_deg,tilt_deg,tilt_max_deg,fps,infer_ms_med,lens{…},f_px,distance_m,height_m}`.
+     * null = 이 필드 이전 로그(키 없음). 헤더 `tilt_deg` 는 마지막 up 프레임 값이라 폰을 집어 든 각이 찍히므로(A4 §8 #5) 배치 비교는 이 블록의 중앙값을 쓴다.
+     */
+    val placement: CameraPlacement? = null,
 ) {
     companion object {
         const val SCHEMA = "trex.posture.setlog/1"
@@ -314,6 +321,8 @@ data class SetLog(
              * 검증 모드는 이제 횟수 정답 수집용(숫자 숨김·음성·자동 진행)만 맡는다.
              */
             coordinates: Boolean = validation,
+            /** 바인딩된 카메라의 렌즈 사양(§91). null 이면 배치 지문에 거리·높이가 빠진다(피치·롤·주기는 남는다). */
+            lens: LensInfo? = null,
         ): SetLog {
             val frames = samples.mapIndexed { i, s ->
                 val lm = coordinates && s.detected
@@ -332,6 +341,9 @@ data class SetLog(
             val upFromGravity = samples.any { it.upFromGravity }
             val tilt = samples.lastOrNull { it.upFromGravity }?.let { tiltFromScreenUpDegrees(it.up) }
             val view = ViewEstimator.estimate(frames.map { it.features })
+            // 배치 지문(§91) — 바닥 종목은 발목 행으로 높이를 추정하지 않는다(누운 발목은 바닥 위 8 cm 가 아니다)
+            val standing = ExerciseProfiles.forReference(exercise)?.floor != true
+            val placement = CameraPlacementEstimator.estimate(samples, sampleTimesMs ?: frames.map { it.tMs }, lens, standing)
             return SetLog(
                 setId = newSetId(now),
                 createdAtIso = nowIso(now),
@@ -386,6 +398,7 @@ data class SetLog(
                 validation = validation,
                 imageWidth = if (coordinates) firstImage?.imageWidth else null,
                 imageHeight = if (coordinates) firstImage?.imageHeight else null,
+                placement = placement,
             )
         }
     }
@@ -430,6 +443,29 @@ object SetLogJson {
             sb.append("\"r\":").append(num(log.viewR, 3)).append(',')
             field(sb, "class", log.viewClass)
             sb.append("\"frames\":").append(log.viewFrames ?: 0)
+            sb.append("},")
+        }
+        // 촬영 배치 지문(§91) — 없으면 필드 부재(이전 로그). 추정값은 소수 3자리(m·Hz), 각은 2자리
+        log.placement?.let { p ->
+            sb.append("\"placement\":{")
+            sb.append("\"frames\":").append(p.frames).append(',')
+            sb.append("\"pitch_deg\":").append(num(p.pitchDeg, 2)).append(',')
+            sb.append("\"roll_deg\":").append(num(p.rollDeg, 2)).append(',')
+            sb.append("\"tilt_deg\":").append(num(p.tiltDeg, 2)).append(',')
+            sb.append("\"tilt_max_deg\":").append(num(p.tiltMaxDeg, 2)).append(',')
+            sb.append("\"fps\":").append(num(p.fps, 3)).append(',')
+            sb.append("\"infer_ms_med\":").append(num(p.inferMsMed, 1)).append(',')
+            sb.append("\"lens\":")
+            val l = p.lens
+            if (l == null) sb.append("null") else {
+                sb.append("{\"focal_mm\":").append(num(l.focalMm, 3))
+                sb.append(",\"sensor_w_mm\":").append(num(l.sensorWMm, 3)).append(",\"sensor_h_mm\":").append(num(l.sensorHMm, 3))
+                sb.append(",\"active_w\":").append(l.activeW?.toString() ?: "null").append(",\"active_h\":").append(l.activeH?.toString() ?: "null")
+                sb.append(",\"zoom\":").append(num(l.zoom, 3)).append('}')
+            }
+            sb.append(",\"f_px\":").append(num(p.fPx, 1))
+            sb.append(",\"distance_m\":").append(num(p.distanceM, 3))
+            sb.append(",\"height_m\":").append(num(p.heightM, 3))
             sb.append("},")
         }
         // 열 상태 (spec §58) — 세트 첫 프레임 시점 값 + 세트 중 변화. 없으면 필드 부재 (이전 로그·API 29 미만)

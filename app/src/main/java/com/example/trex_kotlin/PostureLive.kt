@@ -714,6 +714,8 @@ fun PostureLiveSessionScreen(
             validation = refs.validationRef[0],
             // 좌표는 항상 남긴다(§62a 후속 5) — 검증 모드가 아니라도 측정 결함(발 회전에 흔들리는 3D 발목 등)을 좌표로 가릴 수 있어야 한다
             coordinates = true,
+            // 배치 지문(§91) — 피치·롤 중앙값·추론 주기에 렌즈 사양을 더해 거리·높이를 추정한다
+            lens = refs.lensRef[0],
             // 표시 단위(사용자 결정 2026-09-24) — 화면에 보인 수와 세트 끝에 남은 한쪽
             repUnit = unitUsed,
             repCompleted = unitCompleted,
@@ -1251,7 +1253,8 @@ fun PostureLiveSessionScreen(
         }
         val selector = if (useFrontCamera) CameraSelector.DEFAULT_FRONT_CAMERA else CameraSelector.DEFAULT_BACK_CAMERA
         try {
-            provider.bindToLifecycle(lifecycleOwner, selector, preview, analysis)
+            // 렌즈 사양은 세트 로그의 배치 지문(§91)에 들어간다 — 카메라를 바꾸면 다시 읽는다
+            refs.lensRef[0] = readLensInfo(provider.bindToLifecycle(lifecycleOwner, selector, preview, analysis))
             android.util.Log.d("TrexCamera", "bind ${workout.id}")
             kotlinx.coroutines.awaitCancellation()
         } catch (cancel: kotlinx.coroutines.CancellationException) {
@@ -1553,6 +1556,7 @@ private class LiveSessionRefs {
     val rotationRef = intArrayOf(android.view.Surface.ROTATION_0)   // 매 컴포지션에 displayRotation 으로 덮어쓴다
     val analysisRef = arrayOfNulls<ImageAnalysis>(1)
     val previewRef = arrayOfNulls<Preview>(1)
+    val lensRef = arrayOfNulls<com.example.trex_kotlin.posture.LensInfo>(1)   // 바인딩된 카메라의 렌즈 사양(§91 배치 지문)
     val frontRef = booleanArrayOf(true)
     val pausedRef = booleanArrayOf(false)
     val coachRef = arrayOfNulls<LiveCoach>(1)

@@ -2336,3 +2336,28 @@ PC Chromium 실제 자산 두 모드 색 반영/해제/회전 검사를 통과�
   - 처음부터 알림: 본인 기준 ship 검사 전부(스쿼트 상체·발 간격·발끝, 컬 상체·앞 이탈, 런지 숙임)
 - `RepFormLinesTest` 가 모든 검사에 방향별 문장·고치는 말·단서, 본인 기준 ship 검사에 처음부터 알림이 있는지 지킨다.
 - beta 검사(스쿼트 7·컬 4·런지 1)와 beta 창 규칙은 문장은 있지만 음성으로 말하지 않는다(원칙 #2). 폰 지정 오류 세트로 검출률을 재면 ship 으로 올린다.
+
+## §91. 세트 로그의 촬영 배치 지문 (2026-10-05)
+
+사용자 결정(2026-10-05): 높이·거리·화각 보정의 첫 단계로 **배치 기록**부터 한다(`docs/SQUAT_CAMERA_RESEARCH.md` §9 P1).
+
+*왜.* 같은 동작도 폰 높이·거리·기울기가 다르면 측정값이 움직인다(A1 모의: 바닥 폰 발끝 +21~24°·깊이 −6~−8°, 1 m 폰 깊이 +13°). 피처만 있는 로그로는 "자세가 달랐다" 와 "배치가 달랐다" 를 못 가른다. 세션 간 비교는 배치 지문이 같을 때만 하고(§6-1), 배치별 기준값(AIHub 3D 정답을 그 배치로 가상 촬영)도 이 값이 있어야 만든다. 3일 실기기 테스트(`docs/DEVICE_TEST_SCHEDULE_3DAYS.md`) 로그를 뒤에 보정 연구에 그대로 쓰기 위해 먼저 넣는다.
+
+*무엇을 남기나.* 세트 로그 헤더의 `placement` 블록(부재 = 이전 로그). 정의는 `posture/CameraPlacement.kt`.
+
+| 필드 | 값 | 근거 |
+|---|---|---|
+| `frames` | 피처 있고 up 이 IMU 에서 온 프레임 수 | 0 이면 각도는 null |
+| `pitch_deg`·`roll_deg`·`tilt_deg` | 프레임 up 의 **중앙값**. 피치 = asin(−up_z)(+ = 카메라가 위를 봄), 롤 = atan2(up_x, up_y) | A4_3_geometry.py 규약. 헤더 `tilt_deg` 는 마지막 프레임 값이라 폰을 집어 든 각이 찍혔다(A4 §8 #5) — 그 필드는 호환을 위해 그대로 두고 비교에는 이 블록을 쓴다 |
+| `tilt_max_deg` | 세트 중 기울기 최대 | 중앙값과 크게 다르면 세트 중 폰이 움직였다 |
+| `fps`·`infer_ms_med` | 실효 추론 주기(Hz)·추론 시간 중앙값 | A4 "실효 3.0 Hz" 를 세트마다 |
+| `lens{focal_mm,sensor_w_mm,sensor_h_mm,active_w,active_h,zoom}` | Camera2 특성(`CameraLens.kt`, 바인딩 직후) | 없으면 null |
+| `f_px` | focal_mm / 센서 긴 변 mm × 이미지 긴 변 px × zoom | 4:3 분석 스트림이 센서 긴 변을 크롭 없이 쓴다고 가정. 16:9 센서를 자르는 기기는 과소 |
+| `distance_m` | f · 월드 어깨 폭(m) / 이미지 어깨 폭(px) 의 중앙값(양 어깨 vis ≥ 0.5) | A4 교차 확인 (c). MediaPipe 월드 척도는 평균 체형 가정 — 실제 키가 x % 크면 거리도 x % 크다 |
+| `height_m` | 0.08 + distance · tan(atan((발목 행 − c_y)/f) − 피치) | A4 (b). 서서 하는 종목만(바닥 종목은 null) |
+
+*기록하지 않는 것.* 노출·센서 실제 fps — CameraX 가 캡처 결과를 노출하지 않는다. 카메라 높이의 사용자 키 보정 — 프로필 키를 로그에 넣지 않았다(월드 척도 가정 그대로, 오프라인에서 곱한다).
+
+*검증.* `CameraPlacementTest`(핀홀 합성: 거리 2.0 m·높이 0.7 m·피치 0°/5° 되돌림, 바닥 종목 높이 생략, 렌즈·IMU 없을 때 부분 기록, 세트 끝 집어 듦이 `tilt_max_deg` 에 드러남) + `PostureSetLogTest.placementBlockCarriesImuMediansLensAndEstimates`. 이 세션의 환경은 Android Gradle 플러그인을 내려받지 못해 **Gradle 은 돌리지 않았다** — 추정기는 내장 Kotlin 컴파일러로 스텁과 함께 컴파일해 같은 검사를 통과시켰고, `PostureSetLog`·`PostureLive`·`CameraLens` 변경은 컴파일하지 못했다. 실기기 값(거리·높이)은 줄자로 잰 값과 대조한 적이 없다.
+
+*읽기.* `pull_logs.py` 요약이 세트마다 피치·롤·기울기 최대·거리·높이·Hz 를 한 줄로 찍는다.

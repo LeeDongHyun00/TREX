@@ -267,6 +267,23 @@ class PostureSetLogTest {
     }
 
     @Test
+    fun placementBlockCarriesImuMediansLensAndEstimates() {
+        // §91: 배치 지문 — IMU 프레임이 있으면 피치·롤 중앙값, 렌즈가 있으면 사양과 f_px. 거리·높이는 좌표가 있어야 나온다(여기선 null)
+        val samples = List(3) { sample(true, mapOf("knee_mean" to 170f)) }   // up = (0.1, 1, 0) → 롤 ≈ 5.7°, 피치 0
+        val lens = LensInfo(focalMm = 4.25f, sensorWMm = 6.4f, sensorHMm = 4.8f, activeW = 4000, activeH = 3000, zoom = 1f)
+        val json = SetLogJson.encode(SetLog.build("바벨 스쿼트", samples, emptyList(), "mp_v0", "full", "GPU", true, 300L,
+            sampleTimesMs = listOf(0L, 300L, 600L), now = Date(0L), lens = lens))
+        val block = json.substring(json.indexOf("\"placement\":{"), json.indexOf("\"frames\":["))
+        assertTrue(block, block.contains("\"frames\":3,\"pitch_deg\":0,\"roll_deg\":5.71,\"tilt_deg\":5.71,\"tilt_max_deg\":5.71,\"fps\":3.333,\"infer_ms_med\":60,"))
+        assertTrue(block, block.contains("\"lens\":{\"focal_mm\":4.25,\"sensor_w_mm\":6.4,\"sensor_h_mm\":4.8,\"active_w\":4000,\"active_h\":3000,\"zoom\":1},"))
+        assertTrue(block, block.contains("\"f_px\":425,\"distance_m\":null,\"height_m\":null}"))
+        // 렌즈가 없어도 블록은 남고(피치·주기), lens 는 null
+        val noLens = SetLogJson.encode(SetLog.build("바벨 스쿼트", samples, emptyList(), "mp_v0", "full", "GPU", true, 300L, now = Date(0L)))
+        assertTrue(noLens.contains("\"lens\":null,\"f_px\":null,"))
+        assertTrue(noLens.contains("\"placement\":{\"frames\":3,"))
+    }
+
+    @Test
     fun validationModeAddsCoordinatesAndProductLogsStayByteIdentical() {
         val samples = listOf(sample(true, mapOf("knee_mean" to 170f)), sample(false, emptyMap()))
         val plain = SetLogJson.encode(SetLog.build("바벨 스쿼트", samples, emptyList(), "mp_v0", "full", "GPU", true, 300L, now = Date(0L)))
