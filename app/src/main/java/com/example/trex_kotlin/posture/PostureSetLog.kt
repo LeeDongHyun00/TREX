@@ -34,7 +34,7 @@ import java.util.UUID
  * 반복 판별 게이트(spec §62) 추가 필드 — 판별 신호가 있는 종목만(없으면 키 부재): `reps.config.identity{feature,min_amp}`,
  * `reps.rejected[{t_ms,min,max,swing}]`(세지 않은 사이클), `reps.identity_swing[]`(센 사이클의 판별 스윙, `t_ms` 와 같은 순서, 미판정은 null).
  * 촬영 배치 지문(§91, 선택 — 부재 = 이전 로그): `placement{frames,pitch_deg,roll_deg,tilt_deg,tilt_max_deg,fps,infer_ms_med,
- * lens{focal_mm,sensor_w_mm,sensor_h_mm,active_w,active_h,zoom}|null,f_px,distance_m,height_m}` — 정의·가정은 `CameraPlacement`.
+ * lens{focal_mm,sensor_w_mm,sensor_h_mm,active_w,active_h,zoom}|null,f_px,distance_m,height_m,subject_height_cm,scale}` — 정의·가정은 `CameraPlacement`.
  * org.json 은 Android 유닛 테스트에서 스텁이라 직접 직렬화한다 (PostureCoreParityTest 와 같은 이유).
  */
 
@@ -323,6 +323,8 @@ data class SetLog(
             coordinates: Boolean = validation,
             /** 바인딩된 카메라의 렌즈 사양(§91). null 이면 배치 지문에 거리·높이가 빠진다(피치·롤·주기는 남는다). */
             lens: LensInfo? = null,
+            /** 프로필 키(cm, §91) — 거리·높이 추정의 월드 척도를 맞춘다. null 이면 월드 척도 그대로. */
+            subjectHeightCm: Float? = null,
         ): SetLog {
             val frames = samples.mapIndexed { i, s ->
                 val lm = coordinates && s.detected
@@ -343,7 +345,7 @@ data class SetLog(
             val view = ViewEstimator.estimate(frames.map { it.features })
             // 배치 지문(§91) — 바닥 종목은 발목 행으로 높이를 추정하지 않는다(누운 발목은 바닥 위 8 cm 가 아니다)
             val standing = ExerciseProfiles.forReference(exercise)?.floor != true
-            val placement = CameraPlacementEstimator.estimate(samples, sampleTimesMs ?: frames.map { it.tMs }, lens, standing)
+            val placement = CameraPlacementEstimator.estimate(samples, sampleTimesMs ?: frames.map { it.tMs }, lens, standing, subjectHeightCm)
             return SetLog(
                 setId = newSetId(now),
                 createdAtIso = nowIso(now),
@@ -466,6 +468,8 @@ object SetLogJson {
             sb.append(",\"f_px\":").append(num(p.fPx, 1))
             sb.append(",\"distance_m\":").append(num(p.distanceM, 3))
             sb.append(",\"height_m\":").append(num(p.heightM, 3))
+            sb.append(",\"subject_height_cm\":").append(num(p.subjectHeightCm, 1))
+            sb.append(",\"scale\":").append(num(p.scale, 4))
             sb.append("},")
         }
         // 열 상태 (spec §58) — 세트 첫 프레임 시점 값 + 세트 중 변화. 없으면 필드 부재 (이전 로그·API 29 미만)

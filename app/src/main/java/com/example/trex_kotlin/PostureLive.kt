@@ -298,7 +298,8 @@ fun PostureLiveSessionScreen(
     var ruleSet by remember { mutableStateOf<PostureRuleSet?>(null) }
     var floorExercises by remember { mutableStateOf<Set<String>>(emptySet()) }
     // 분석 스레드와 공유하는 ref 들을 한 객체로 — remember 44개를 하나로 줄여 이 Composable 메서드를 작게 한다(2026-10-02 ART VerifyError, PostureSupport.kt 주석)
-    val refs = remember { LiveSessionRefs() }
+    // 프로필 키는 배치 지문(§91)의 거리·높이 척도에 쓴다 — 홀더에 두어 이 Composable 의 지역 변수를 늘리지 않는다(dex 레지스터, CLAUDE.md)
+    val refs = remember { LiveSessionRefs().also { it.subjectHeightCm[0] = TrexStore(context).loadProfile()?.heightCm?.toFloat() ?: 0f } }
     LaunchedEffect(Unit) {
         refs.normalReferenceRef[0] = runCatching {
             context.assets.open(NormalPoseReference.ASSET).bufferedReader().use { NormalPoseReference.parse(it.lineSequence()) }
@@ -716,6 +717,7 @@ fun PostureLiveSessionScreen(
             coordinates = true,
             // 배치 지문(§91) — 피치·롤 중앙값·추론 주기에 렌즈 사양을 더해 거리·높이를 추정한다
             lens = refs.lensRef[0],
+            subjectHeightCm = refs.subjectHeightCm[0].takeIf { it > 0f },
             // 표시 단위(사용자 결정 2026-09-24) — 화면에 보인 수와 세트 끝에 남은 한쪽
             repUnit = unitUsed,
             repCompleted = unitCompleted,
@@ -1557,6 +1559,7 @@ private class LiveSessionRefs {
     val analysisRef = arrayOfNulls<ImageAnalysis>(1)
     val previewRef = arrayOfNulls<Preview>(1)
     val lensRef = arrayOfNulls<com.example.trex_kotlin.posture.LensInfo>(1)   // 바인딩된 카메라의 렌즈 사양(§91 배치 지문)
+    val subjectHeightCm = floatArrayOf(0f)   // 프로필 키(§91) — 0 = 없음
     val frontRef = booleanArrayOf(true)
     val pausedRef = booleanArrayOf(false)
     val coachRef = arrayOfNulls<LiveCoach>(1)

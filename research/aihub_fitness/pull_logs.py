@@ -114,7 +114,7 @@ def summarize() -> None:
             p = l["placement"]
             f = lambda k, d=2: "—" if p.get(k) is None else f"{p[k]:.{d}f}"
             print(f"  {l.get('created_at', '')[:19]} {l['exercise']:14s} 피치 {f('pitch_deg'):>6s} 롤 {f('roll_deg'):>6s} "
-                  f"기울기최대 {f('tilt_max_deg'):>6s} 거리 {f('distance_m'):>5s} 높이 {f('height_m'):>5s} {f('fps', 1):>4s}Hz"
+                  f"기울기최대 {f('tilt_max_deg'):>6s} 거리 {f('distance_m'):>5s} 높이 {f('height_m'):>5s} 배율 {f('scale', 3):>5s} {f('fps', 1):>4s}Hz"
                   + ("" if p.get("lens") else " (렌즈 정보 없음)"))
 
     # 측정 품질 경고 — 재보정에 쓸 수 있는 로그인지

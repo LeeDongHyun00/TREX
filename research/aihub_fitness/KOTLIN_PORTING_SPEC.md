@@ -2353,11 +2353,12 @@ PC Chromium 실제 자산 두 모드 색 반영/해제/회전 검사를 통과�
 | `fps`·`infer_ms_med` | 실효 추론 주기(Hz)·추론 시간 중앙값 | A4 "실효 3.0 Hz" 를 세트마다 |
 | `lens{focal_mm,sensor_w_mm,sensor_h_mm,active_w,active_h,zoom}` | Camera2 특성(`CameraLens.kt`, 바인딩 직후) | 없으면 null |
 | `f_px` | focal_mm / 센서 긴 변 mm × 이미지 긴 변 px × zoom | 4:3 분석 스트림이 센서 긴 변을 크롭 없이 쓴다고 가정. 16:9 센서를 자르는 기기는 과소 |
-| `distance_m` | f · 월드 어깨 폭(m) / 이미지 어깨 폭(px) 의 중앙값(양 어깨 vis ≥ 0.5) | A4 교차 확인 (c). MediaPipe 월드 척도는 평균 체형 가정 — 실제 키가 x % 크면 거리도 x % 크다 |
-| `height_m` | 0.08 + distance · tan(atan((발목 행 − c_y)/f) − 피치) | A4 (b). 서서 하는 종목만(바닥 종목은 null) |
+| `distance_m` | f · 월드 어깨 폭(m) · `scale` / 이미지 어깨 폭(px, 두 점 거리라 롤과 무관) 의 중앙값(양 어깨 vis ≥ 0.5) | A4 교차 확인 (c). MediaPipe 월드 척도는 평균 체형 가정 — 실제 키가 x % 크면 거리도 x % 크다 → 프로필 키로 맞춘다 |
+| `height_m` | 0.08 + distance · tan(atan((발목 행 − c_y)/f) − 피치). 발목 행은 그 프레임의 up 으로 **롤을 되돌린** 좌표에서 읽는다 | A4 (b). 서서 하는 종목만(바닥 종목은 null). 사용자 결정 2026-10-05 "기울기도 반영" |
+| `subject_height_cm` · `scale` | 프로필 키와 월드 척도 배율 = (0.818 × 키 − 0.08) / 서 있는 프레임(상위 10 %)의 월드 발목→어깨 up 성분 | 사용자 결정 2026-10-05 "사용자 정보의 키를 기준으로". 0.818 은 견봉 높이/키의 인체 측정 평균 비. 키가 없거나 바닥 종목이거나 발목·어깨가 보이는 프레임이 5개 미만이면 null(배율 1) |
 
-*기록하지 않는 것.* 노출·센서 실제 fps — CameraX 가 캡처 결과를 노출하지 않는다. 카메라 높이의 사용자 키 보정 — 프로필 키를 로그에 넣지 않았다(월드 척도 가정 그대로, 오프라인에서 곱한다).
+*기록하지 않는 것.* 노출·센서 실제 fps — CameraX 가 캡처 결과를 노출하지 않는다. 키는 `TrexStore.loadProfile().heightCm`(온보딩 입력, 기본 170) 을 세션 시작 때 `LiveSessionRefs` 에 담아 쓴다 — 거대 Composable 의 지역 변수를 늘리지 않는다.
 
-*검증.* `CameraPlacementTest`(핀홀 합성: 거리 2.0 m·높이 0.7 m·피치 0°/5° 되돌림, 바닥 종목 높이 생략, 렌즈·IMU 없을 때 부분 기록, 세트 끝 집어 듦이 `tilt_max_deg` 에 드러남) + `PostureSetLogTest.placementBlockCarriesImuMediansLensAndEstimates`. 이 세션의 환경은 Android Gradle 플러그인을 내려받지 못해 **Gradle 은 돌리지 않았다** — 추정기는 내장 Kotlin 컴파일러로 스텁과 함께 컴파일해 같은 검사를 통과시켰고, `PostureSetLog`·`PostureLive`·`CameraLens` 변경은 컴파일하지 못했다. 실기기 값(거리·높이)은 줄자로 잰 값과 대조한 적이 없다.
+*검증.* `CameraPlacementTest`(핀홀 합성: 거리 2.0 m·높이 0.7 m·피치 0°/5° 되돌림, 롤 15° 되돌림, 월드 척도 1.2 배를 키 170 cm 로 1/1.2 배율 복원, 바닥 종목 높이·배율 생략, 렌즈·IMU 없을 때 부분 기록, 세트 끝 집어 듦이 `tilt_max_deg` 에 드러남) + `PostureSetLogTest.placementBlockCarriesImuMediansLensAndEstimates`. `:app:testDebugUnitTest` 533개 통과·`assembleDebug` 성공(2026-10-05). 실기기 값(거리·높이)은 줄자로 잰 값과 대조한 적이 없고, 0.818 비·발목 8 cm 는 평균값이라 체형에 따라 수 % 오차가 남는다.
 
 *읽기.* `pull_logs.py` 요약이 세트마다 피치·롤·기울기 최대·거리·높이·Hz 를 한 줄로 찍는다.
