@@ -3,6 +3,7 @@
 import argparse
 import hashlib
 import json
+import subprocess
 from pathlib import Path
 
 
@@ -25,8 +26,12 @@ def main():
     manifest_matches = bundled_manifest.is_file() and bundled_manifest.read_bytes() == manifest_path.read_bytes()
     food_runtime = args.bundle / "Frameworks/TrexFoodRuntime.framework/TrexFoodRuntime"
     food_embedded = food_runtime.is_file() if args.bundle.name == "Trex.app" else None
-    passed = len(checks) == 4 and all(check["matches"] for check in checks) and manifest_matches and food_embedded is not False
-    print(json.dumps({"passed": passed, "manifestByteIdentical": manifest_matches, "foodRuntimeEmbedded": food_embedded, "files": checks}, ensure_ascii=False, indent=2))
+    exposed_native = []
+    if food_embedded:
+        symbols = subprocess.run(["xcrun", "nm", "-gU", str(food_runtime)], check=True, capture_output=True, text=True).stdout
+        exposed_native = [line.split()[-1] for line in symbols.splitlines() if line.split() and line.split()[-1].startswith(("_TfLite", "__Z"))]
+    passed = len(checks) == 4 and all(check["matches"] for check in checks) and manifest_matches and food_embedded is not False and not exposed_native
+    print(json.dumps({"passed": passed, "manifestByteIdentical": manifest_matches, "foodRuntimeEmbedded": food_embedded, "exposedFoodNativeSymbols": exposed_native, "files": checks}, ensure_ascii=False, indent=2))
     return 0 if passed else 1
 
 

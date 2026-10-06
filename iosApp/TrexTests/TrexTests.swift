@@ -8,6 +8,7 @@ final class TrexTests: XCTestCase {
         let poseURL = try XCTUnwrap(Bundle.main.url(forResource: "pose_landmarker_full", withExtension: "task"))
         let pose = try PoseRunner(modelPath: poseURL.path)
         for name in ["yolov8n_food", "food_region", "food_embed"] {
+            print("음식 런타임 추론 검사: \(name)")
             let url = try XCTUnwrap(Bundle.main.url(forResource: name, withExtension: "tflite"))
             let food = try FoodModel(modelPath: url.path, threadCount: 1)
             try food.allocateTensors()

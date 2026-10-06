@@ -66,13 +66,16 @@ targets:
   TrexFoodRuntime:
     type: framework
     platform: iOS
-    sources: [TrexFoodRuntime]
+    sources:
+      - path: TrexFoodRuntime
+        excludes: [exports.txt]
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.leedonghyun.trex.foodruntime
         GENERATE_INFOPLIST_FILE: YES
         DEFINES_MODULE: YES
         BUILD_LIBRARY_FOR_DISTRIBUTION: YES
+        EXPORTED_SYMBOLS_FILE: TrexFoodRuntime/exports.txt
         SKIP_INSTALL: YES
   TrexTests:
     type: bundle.unit-test
