@@ -86,6 +86,8 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.leedonghyun.trex.ios.tests
         GENERATE_INFOPLIST_FILE: YES
+        # 그래프는 호스팅 앱에 있다. Pod의 user_target_xcconfig force_load를 테스트에 상속하지 않는다.
+        OTHER_LDFLAGS: ''
 schemes:
   Trex:
     build:
