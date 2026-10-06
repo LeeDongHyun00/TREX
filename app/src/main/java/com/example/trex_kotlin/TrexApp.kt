@@ -363,6 +363,9 @@ fun TrexApp(app: AppViewModel = viewModel()) {
             if (sessionDone) exitSession() else if (sessionIndex >= 0) requestExit() else subScreen = "none"
         }
 
+        // 앱 내 업데이트 — 운동·하위 화면이 아닐 때만 확인하고 묻는다(AppUpdate.kt)
+        AppUpdatePrompt(enabled = sessionIndex < 0 && !sessionDone && subScreen == "none")
+
         CompositionLocalProvider(LocalTrexFold provides rememberTrexFold()) {
             Box(Modifier.fillMaxSize().background(c.bg).safeDrawingPadding()) {
                 TrexContentFrame(maxWidth = if (route in setOf(RootRoute.Auth, RootRoute.Find, RootRoute.Onboarding)) 600.dp else 840.dp,

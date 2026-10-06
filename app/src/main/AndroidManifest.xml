@@ -3,6 +3,9 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.CAMERA" />
+    <!-- 앱 내 업데이트(AppUpdate.kt): GitHub 릴리스 확인·APK 내려받기, 시스템 패키지 설치기 열기 -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <uses-feature
         android:name="android.hardware.camera"
         android:required="false" />
@@ -35,7 +38,7 @@
             </intent-filter>
         </activity>
 
-        <!-- 자세 세트 로그(JSONL) 공유 내보내기용 (posture/PostureSetLogExport.kt, res/xml/file_paths.xml) -->
+        <!-- 자세 세트 로그(JSONL) 공유 내보내기·업데이트 APK 설치용 (posture/PostureSetLogExport.kt, AppUpdate.kt, res/xml/file_paths.xml) -->
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
