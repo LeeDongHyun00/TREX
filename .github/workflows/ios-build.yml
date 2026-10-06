@@ -44,7 +44,7 @@ jobs:
         run: |
           brew install xcodegen cocoapods
           echo "TREX_POD_BINARY=$(brew --prefix)/bin/pod" >> "$GITHUB_ENV"
-          python3 -m pip install tree-sitter tree-sitter-swift pyyaml
+          python3 -m pip install tree-sitter tree-sitter-swift pyyaml flatbuffers==25.12.19 tflite==2.18.0
       - name: 정본과 공통 엔진 검증
         run: |
           python3 tools/verify_ios_project.py

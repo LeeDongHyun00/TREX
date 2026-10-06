@@ -1,15 +1,23 @@
 import XCTest
 import CoreVideo
+import CryptoKit
 import TrexFoodRuntime
 @testable import Trex
 
 final class TrexTests: XCTestCase {
+    private struct FoodBaseline: Decodable { let bundledName: String; let bundledSha256: String }
     func testFoodAndPoseRuntimesCanCoexist() throws {
         let poseURL = try XCTUnwrap(Bundle.main.url(forResource: "pose_landmarker_full", withExtension: "task"))
         let pose = try PoseRunner(modelPath: poseURL.path)
         for name in ["yolov8n_food", "food_region", "food_embed"] {
             print("음식 런타임 추론 검사: \(name)")
             let url = try XCTUnwrap(Bundle.main.url(forResource: name, withExtension: "tflite"))
+            if name == "yolov8n_food" {
+                let baseline = try Resources.decode("FOOD_MODEL_BASELINE.json", as: FoodBaseline.self)
+                XCTAssertEqual(baseline.bundledName, url.lastPathComponent)
+                let digest = SHA256.hash(data: try Data(contentsOf: url)).map { String(format: "%02x", $0) }.joined()
+                XCTAssertEqual(digest, baseline.bundledSha256)
+            }
             let food = try FoodModel(modelPath: url.path, threadCount: 1)
             try food.allocateTensors()
             let input = try food.input(at: 0)

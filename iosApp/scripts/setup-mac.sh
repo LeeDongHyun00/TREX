@@ -11,6 +11,7 @@ if ! command -v "$task_pod_binary" >/dev/null; then echo 'brew install cocoapods
 if ! java -version >/dev/null 2>&1; then echo 'JDK 17 이상을 설치해 주세요.' >&2; exit 1; fi
 python3 tools/sync_ios_core.py --check
 python3 tools/export_ios_resources.py --check
+python3 tools/prepare_ios_food_model.py --check
 cd iosApp
 xcodegen generate --spec project.yml
 # 진단 앱 Podfile은 보존한다. 새 앱은 별도 의존성 디렉터리를 쓴다.

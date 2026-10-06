@@ -34,7 +34,7 @@ targets:
       - path: ../app/src/main/assets/posture/rules_mp_v0.json
       - path: ../app/src/main/assets/posture/rules_floor_v0.json
       - path: ../app/src/main/assets/posture/normal_pose_reference.tsv
-      - path: ../app/src/main/assets/models/yolov8n_food.tflite
+      - path: TrexFoodModels/yolov8n_food.tflite
       - path: ../app/src/main/assets/models/food_region.tflite
       - path: ../app/src/main/assets/models/food_embed.tflite
       - path: ../app/src/main/assets/models/food_labels.txt
@@ -60,6 +60,7 @@ targets:
           cd "$SRCROOT/.."
           python3 tools/sync_ios_core.py --check
           python3 tools/export_ios_resources.py --check
+          python3 tools/prepare_ios_food_model.py --check
           if [ "${OVERRIDE_KOTLIN_BUILD_IDE_SUPPORTED:-NO}" != "YES" ]; then
             bash gradlew -PiosOnly=true :posture-core:embedAndSignAppleFrameworkForXcode
           fi

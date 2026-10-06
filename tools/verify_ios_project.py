@@ -24,7 +24,7 @@ def main():
     info=plistlib.loads((ROOT/'iosApp/Trex/Info.plist').read_bytes())
     for key in ['NSCameraUsageDescription','NSMotionUsageDescription','NSPhotoLibraryUsageDescription']: assert info[key]
     assert info['UISupportedInterfaceOrientations']==['UIInterfaceOrientationPortrait']
-    for command in ['sync_ios_core.py','export_ios_resources.py']:
+    for command in ['sync_ios_core.py','export_ios_resources.py','prepare_ios_food_model.py']:
         subprocess.run([sys.executable,str(ROOT/'tools'/command),'--check'],check=True)
     output=dict(swiftSyntaxFiles=len(swift),assetPaths=len(sources),plist=True,sourceSync=True,
         xcodeBuild='NOT_CHECKED_BY_THIS_SCRIPT',iphoneRun='NOT_CHECKED_BY_THIS_SCRIPT',ipa='NOT_CHECKED_BY_THIS_SCRIPT')
