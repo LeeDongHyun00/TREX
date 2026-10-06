@@ -1,0 +1,78 @@
+name: Trex
+options:
+  deploymentTarget:
+    iOS: '16.0'
+  developmentLanguage: ko
+settings:
+  base:
+    SWIFT_VERSION: '5.0'
+    ENABLE_USER_SCRIPT_SANDBOXING: NO
+    IPHONEOS_DEPLOYMENT_TARGET: '16.0'
+    CODE_SIGN_STYLE: Automatic
+    TARGETED_DEVICE_FAMILY: '1'
+    FRAMEWORK_SEARCH_PATHS: '$(inherited) $(SRCROOT)/../posture-core/build/xcode-frameworks/$(CONFIGURATION)/$(SDK_NAME)'
+    OTHER_LDFLAGS: '$(inherited) -framework TrexCore -ObjC -lc++'
+targets:
+  Trex:
+    type: application
+    platform: iOS
+    sources:
+      - path: Trex
+        excludes: [Resources, Info.plist]
+      - path: TrexPostureDiagnostics/CaptureController.swift
+      - path: TrexPostureDiagnostics/CaptureGate.swift
+      - path: TrexPostureInference/PoseRunner.swift
+      - path: TrexPostureInference/PoseOutput.swift
+      - path: TrexPostureInference/LatestOnlyScheduler.swift
+      - path: TrexPostureInference/OverlayProjection.swift
+      - path: TrexPostureInference/BundleAssets.swift
+      - path: Trex/Resources
+        buildPhase: resources
+      - path: ../app/src/main/assets/posture/pose_landmarker_full.task
+      - path: ../app/src/main/assets/posture/rules_mp_v0.json
+      - path: ../app/src/main/assets/posture/rules_floor_v0.json
+      - path: ../app/src/main/assets/posture/normal_pose_reference.tsv
+      - path: ../app/src/main/assets/models/yolov8n_food.tflite
+      - path: ../app/src/main/assets/models/food_region.tflite
+      - path: ../app/src/main/assets/models/food_embed.tflite
+      - path: ../app/src/main/assets/models/food_labels.txt
+      - path: ../app/src/main/assets/exercise_guides
+        type: folder
+      - path: ../app/src/main/assets/muscle_load
+        type: folder
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.leedonghyun.trex.ios
+        PRODUCT_NAME: Trex
+        GENERATE_INFOPLIST_FILE: NO
+        INFOPLIST_FILE: Trex/Info.plist
+        MARKETING_VERSION: '1.3.0'
+        CURRENT_PROJECT_VERSION: '1'
+    preBuildScripts:
+      - name: 공유 자세 엔진 빌드
+        basedOnDependencyAnalysis: false
+        script: |
+          set -e
+          cd "$SRCROOT/.."
+          python3 tools/sync_ios_core.py --check
+          python3 tools/export_ios_resources.py --check
+          if [ "${OVERRIDE_KOTLIN_BUILD_IDE_SUPPORTED:-NO}" != "YES" ]; then
+            bash gradlew -PiosOnly=true :posture-core:embedAndSignAppleFrameworkForXcode
+          fi
+  TrexTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources: [TrexTests]
+    dependencies:
+      - target: Trex
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.leedonghyun.trex.ios.tests
+        GENERATE_INFOPLIST_FILE: YES
+schemes:
+  Trex:
+    build:
+      targets:
+        Trex: all
+    test:
+      targets: [TrexTests]

@@ -1,0 +1,12 @@
+source 'https://cdn.cocoapods.org/'
+platform :ios, '16.0'
+project 'Trex.xcodeproj'
+workspace 'Trex.xcworkspace'
+target 'Trex' do
+  use_frameworks! :linkage => :static
+  pod 'MediaPipeTasksVision', '1.0.0'
+  pod 'TensorFlowLiteSwift', '2.17.0'
+  target 'TrexTests' do
+    inherit! :search_paths
+  end
+end

@@ -1,0 +1,184 @@
+[
+  {
+    "name": "기본 스쿼트",
+    "category": "하체",
+    "repetitions": 10,
+    "sets": 3,
+    "hold": false
+  },
+  {
+    "name": "런지",
+    "category": "하체",
+    "repetitions": 10,
+    "sets": 3,
+    "hold": false
+  },
+  {
+    "name": "바벨 런지",
+    "category": "하체",
+    "repetitions": 10,
+    "sets": 3,
+    "hold": false
+  },
+  {
+    "name": "사이드 런지",
+    "category": "하체",
+    "repetitions": 10,
+    "sets": 3,
+    "hold": false
+  },
+  {
+    "name": "크로스 런지",
+    "category": "하체",
+    "repetitions": 10,
+    "sets": 3,
+    "hold": false
+  },
+  {
+    "name": "바벨 데드리프트",
+    "category": "하체",
+    "repetitions": 10,
+    "sets": 3,
+    "hold": false
+  },
+  {
+    "name": "굿모닝",
+    "category": "하체",
+    "repetitions": 12,
+    "sets": 3,
+    "hold": false
+  },
+  {
+    "name": "힙 쓰러스트",
+    "category": "하체",
+    "repetitions": 12,
+    "sets": 3,
+    "hold": false
+  },
+  {
+    "name": "오버헤드 프레스",
+    "category": "상체",
+    "repetitions": 10,
+    "sets": 3,
+    "hold": false
+  },
+  {
+    "name": "랫풀 다운",
+    "category": "상체",
+    "repetitions": 12,
+    "sets": 3,
+    "hold": false
+  },
+  {
+    "name": "딥스",
+    "category": "상체",
+    "repetitions": 10,
+    "sets": 3,
+    "hold": false
+  },
+  {
+    "name": "덤벨 컬",
+    "category": "상체",
+    "repetitions": 12,
+    "sets": 3,
+    "hold": false
+  },
+  {
+    "name": "바벨 컬",
+    "category": "상체",
+    "repetitions": 12,
+    "sets": 3,
+    "hold": false
+  },
+  {
+    "name": "사이드 레터럴 레이즈",
+    "category": "상체",
+    "repetitions": 12,
+    "sets": 3,
+    "hold": false
+  },
+  {
+    "name": "프런트 레이즈",
+    "category": "상체",
+    "repetitions": 12,
+    "sets": 3,
+    "hold": false
+  },
+  {
+    "name": "업라이트로우",
+    "category": "상체",
+    "repetitions": 12,
+    "sets": 3,
+    "hold": false
+  },
+  {
+    "name": "푸쉬업",
+    "category": "상체",
+    "repetitions": 12,
+    "sets": 3,
+    "hold": false
+  },
+  {
+    "name": "니 푸쉬업",
+    "category": "상체",
+    "repetitions": 10,
+    "sets": 3,
+    "hold": false
+  },
+  {
+    "name": "Y 레이즈",
+    "category": "상체",
+    "repetitions": 12,
+    "sets": 3,
+    "hold": false
+  },
+  {
+    "name": "플랭크",
+    "category": "코어",
+    "repetitions": 45,
+    "sets": 3,
+    "hold": true
+  },
+  {
+    "name": "스탠딩 사이드 크런치",
+    "category": "복근",
+    "repetitions": 12,
+    "sets": 3,
+    "hold": false
+  },
+  {
+    "name": "스탠딩 니업",
+    "category": "복근",
+    "repetitions": 12,
+    "sets": 3,
+    "hold": false
+  },
+  {
+    "name": "행잉 레그 레이즈",
+    "category": "복근",
+    "repetitions": 10,
+    "sets": 3,
+    "hold": false
+  },
+  {
+    "name": "크런치",
+    "category": "복근",
+    "repetitions": 15,
+    "sets": 3,
+    "hold": false
+  },
+  {
+    "name": "레그 레이즈",
+    "category": "복근",
+    "repetitions": 12,
+    "sets": 3,
+    "hold": false
+  },
+  {
+    "name": "시저 크로스",
+    "category": "복근",
+    "repetitions": 20,
+    "sets": 3,
+    "hold": false
+  }
+]

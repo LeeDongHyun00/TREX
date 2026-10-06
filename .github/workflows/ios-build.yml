@@ -1,0 +1,35 @@
+name: iOS 검증과 미서명 IPA
+on:
+  workflow_dispatch:
+  push:
+    branches: [ios-redesign]
+jobs:
+  ios:
+    runs-on: macos-15
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: 도구 설치
+        run: |
+          brew install xcodegen cocoapods
+          python3 -m pip install tree-sitter tree-sitter-swift pyyaml
+      - name: 정본과 공통 엔진 검증
+        run: |
+          python3 tools/verify_ios_project.py
+          bash gradlew -PiosOnly=true :posture-core:jvmTest
+      - name: iPhone용 미서명 IPA 빌드
+        run: bash iosApp/scripts/build-unsigned-ipa.sh
+      - name: iOS 앱 번들과 캡처 단위 검사
+        run: bash iosApp/scripts/test-simulator.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TREX-unsigned-IPA
+          path: iosApp/build/sideload/TREX-unsigned.ipa
+          if-no-files-found: error

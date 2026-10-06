@@ -1,0 +1,20 @@
+{
+  "files": [
+    {
+      "path": "app/src/main/assets/posture/pose_landmarker_full.task",
+      "sha256": "4eaa5eb7a98365221087693fcc286334cf0858e2eb6e15b506aa4a7ecdcec4ad"
+    },
+    {
+      "path": "app/src/main/assets/posture/rules_mp_v0.json",
+      "sha256": "e6968a7fe958a106df6885cf9cfaf58b6031cbb2ec8035eadfee75cdef526ce4"
+    },
+    {
+      "path": "app/src/main/assets/posture/rules_floor_v0.json",
+      "sha256": "3a23275d8a9bbd5174ec1c9e175323354826e68d90634b1714ea1d4e4e6ed21b"
+    },
+    {
+      "path": "app/src/main/assets/posture/normal_pose_reference.tsv",
+      "sha256": "c7a4498fc522d78a793a0df94461236f97fa4e45a4ae8f722684083fd235c7ac"
+    }
+  ]
+}

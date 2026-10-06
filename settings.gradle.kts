@@ -20,5 +20,5 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "Trex_kotlin"
-include(":app")
- 
+if (!providers.gradleProperty("iosOnly").isPresent) include(":app")
+include(":posture-core")
