@@ -325,7 +325,7 @@ class RepFormTest {
             "knee_out_mean__mean", "knee_out_mean", "mean", "world", "<", 0.02388f, "C", "정면", .96f, .94f, 56, true, emptyList())
         val spine = knee.copy(id = "바벨 스쿼트|척추의 중립[flexion]", condition = "척추의 중립", subtype = "flexion", feature = "torso_incl__range", baseFeature = "torso_incl", stat = "range", op = ">", threshold = 30.85f)
         val merged = PostureRuleSet("mp_v0.1", "", listOf(knee, spine)).plusRepForm()
-        assertEquals("mp_v0.1+repform_v0.5", merged.version)
+        assertEquals("mp_v0.1+repform_v0.9", merged.version)
         assertEquals(RuleStatus.BETA, merged.rules.first { it.id == knee.id }.status)
         assertEquals(RuleStatus.SHIP, merged.rules.first { it.id == spine.id }.status)
         val added = merged.rules.filter { it.kind == "rep_form" }
@@ -391,7 +391,7 @@ class RepFormTest {
         assertNotNull(RepFormSpecs.evaluatorFor("바벨 스쿼트", squatCounter))
         // 바벨 런지는 계열 파일럿(§66)으로 등록됐다 — 걸음 검사기(쪽별), 사이드 런지는 아직 없다
         assertTrue(RepFormSpecs.evaluatorFor("바벨 런지", RepCounter.forSession("바벨 런지", floor = false)!!)!!.stepSides)
-        assertEquals(FourExercise.SIDE, RepFormSpecs.evaluatorFor("사이드 런지", RepCounter.forSession("사이드 런지", floor = false)!!)!!.fourExercise)
+        assertEquals(LegProfile.SIDE, RepFormSpecs.evaluatorFor("사이드 런지", RepCounter.forSession("사이드 런지", floor = false)!!)!!.legProfile)
         assertNotNull(RepFormSpecs.checkOf("repform|바벨 스쿼트|발끝 방향"))
         assertNull(RepFormSpecs.checkOf("바벨 스쿼트|발과 무릎의 방향 일치"))
     }

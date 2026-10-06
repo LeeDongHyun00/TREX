@@ -105,7 +105,8 @@ data class RepEngineLog(
     val romAuxFeature: String? = null,
     val romAuxRatio: Float? = null,
     val romAuxFloor: Float? = null,
-    val fourSeed: Map<String, Float>? = null,
+    /** 다리 사이클 추적기(§97)의 세트 첫 서 있는 기준 — 재생기가 같은 값을 심는다. JSON 키 `standing`. */
+    val standing: Map<String, Float>? = null,
 ) {
     companion object {
         const val ENGINE_RETURN = "return_v1"
@@ -119,7 +120,7 @@ data class RepEngineLog(
             val s = counter.signal
             val confirm = counter.confirmationConfig
             return RepEngineLog(
-                engine = if (counter.fourTracker != null) FourExerciseTracker.VERSION else if (counter.usesHysteresis) ENGINE_HYSTERESIS else ENGINE_RETURN,
+                engine = if (counter.legTracker != null) LegCycleTracker.VERSION else if (counter.usesHysteresis) ENGINE_HYSTERESIS else ENGINE_RETURN,
                 feature = s.feature,
                 minAmp = s.minAmp,
                 refractoryMs = counter.effectiveRefractoryMs,
@@ -137,7 +138,7 @@ data class RepEngineLog(
                 identityFeature = s.identityFeature,
                 identityMinAmp = s.identityFeature?.let { s.identityMinAmp },
                 seed = counter.standingSeed,
-                fourSeed = counter.fourTracker?.seed,
+                standing = counter.legTracker?.standing,
                 pairedFeatures = s.pairedFeatures,
                 rejectFeatures = s.rejectFeatures,
                 romRatio = s.romRatio, romAbsMin = s.romAbsMin, romRefMin = s.romRefMin,
@@ -534,8 +535,8 @@ object SetLogJson {
                 sb.append(",\"complete_on_return\":").append(e.completeOnReturn)
                 e.polarity?.let { sb.append(",\"polarity\":"); str(sb, it) }
                 e.seed?.let { sb.append(",\"seed\":").append(num(it)) }
-                e.fourSeed?.let { fs ->
-                    sb.append(",\"four_seed\":{")
+                e.standing?.let { fs ->
+                    sb.append(",\"standing\":{")
                     fs.entries.sortedBy { it.key }.forEachIndexed { i, (k, v) -> if (i > 0) sb.append(','); str(sb, k); sb.append(':').append(v) }
                     sb.append('}')
                 }

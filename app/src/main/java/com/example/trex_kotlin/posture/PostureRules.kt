@@ -213,15 +213,12 @@ class PostureRuleSet(
      */
     fun plusRepForm(): PostureRuleSet {
         val demoted = rules.map { r ->
-            if (FourExercise.of(r.exercise) != null)
-                r.copy(status = RuleStatus.EXCLUDE, reason = "§93: 기존 세트 대리 피처는 새 반복 검사에서 사용하지 않는다. " + r.reason,
-                    cautions = r.cautions + "현재는 직접 관절 피처의 반복별 beta 검사만 제공합니다.")
-            else if (r.id in RepFormSpecs.supersedes && r.status == RuleStatus.SHIP)
+            if (r.id in RepFormSpecs.supersedes && r.status == RuleStatus.SHIP)
                 r.copy(status = RuleStatus.BETA, cautions = r.cautions + ("반복 창 검사(${RepFormSpecs.supersedes.getValue(r.id)})가 판정을 대신한다 — " +
                     (RepFormSpecs.supersedeNotes[r.id] ?: "§62a: 세트 평균은 서 있는 프레임이 결정해 실기기 오탐")))
             else r
         }
-        return PostureRuleSet("$version+${RepFormSpecs.VERSION}", generated, demoted + RepFormSpecs.asRules() + fourExerciseExcludedRules())
+        return PostureRuleSet("$version+${RepFormSpecs.VERSION}", generated, demoted + RepFormSpecs.asRules() + legScopeRules())
     }
 
     companion object {

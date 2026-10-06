@@ -54,7 +54,8 @@ class RepCounter(
      */
     val startConfirmation: Boolean = true,
 ) {
-    val fourTracker: FourExerciseTracker? = signal.fourExercise?.let(::FourExerciseTracker)
+    /** 한 다리 계열(§97) — 다리 기하의 사이클로 세고 쪽을 낸다(`LegCycleTracker`). 이 경로는 레거시·새 코어·팔별 경로를 쓰지 않는다. */
+    val legTracker: LegCycleTracker? = signal.legProfile?.let(::LegCycleTracker)
     private val hysteresis = signal.polarity?.let { RepHysteresis(signal.minAmp, it) }
     private val confirmation = if (hysteresis != null && startConfirmation) RepStartConfirmation() else null
     private val returnTracker = if (completeOnReturn && hysteresis == null) ReturnRepTracker(signal.minAmp, refractoryMs) else null
@@ -69,7 +70,7 @@ class RepCounter(
      * 걸음(반복) 도중인가 — 세지 않는 조회(§63). 레거시는 준비 자세에서 최소 진폭 이상 벗어나 복귀를 기다리는 중, 새 코어는 진행·확정 대기 후보가 있을 때.
      * 놓친 얕은 걸음 알림(`RepFormEvaluator.missedDipEvent`)이 카운터가 곧 셀 걸음에 "덜 내려갔어요" 를 말하지 않게 한다.
      */
-    val midCycle: Boolean get() = fourTracker?.pending ?: returnTracker?.moving ?: (hysteresis?.candidate() != null || confirmation?.pending != null)
+    val midCycle: Boolean get() = legTracker?.pending ?: returnTracker?.moving ?: (hysteresis?.candidate() != null || confirmation?.pending != null)
 
     /**
      * 지금 움직이는 방향 — **화면 표시용**(호흡 표시, docs/LIVE_SCREEN_REDESIGN.md §5). 판정·카운트와 무관하고 로그에 남지 않는다.
@@ -81,9 +82,9 @@ class RepCounter(
      * 이 카운터가 **실제로 쓰는** 구성 — 세트 로그(`RepEngineLog`)가 이 값을 그대로 적는다(복사한 상수는 조용히 어긋난다).
      * 새 코어 경로는 생성자의 불응기·끊김 기준 대신 코어의 값을 쓰고, 복귀 완료는 코어의 성질이다.
      */
-    val effectiveRefractoryMs: Long get() = if (fourTracker != null) 0L else hysteresis?.refractoryMs ?: refractoryMs
-    val effectiveMaxGapMs: Long get() = if (fourTracker != null) FourExerciseTracker.MAX_GAP_MS else hysteresis?.maxGapMs ?: maxGapMs
-    val effectiveCompleteOnReturn: Boolean get() = fourTracker != null || hysteresis != null || completeOnReturn
+    val effectiveRefractoryMs: Long get() = if (legTracker != null) 0L else hysteresis?.refractoryMs ?: refractoryMs
+    val effectiveMaxGapMs: Long get() = if (legTracker != null) LegCycleTracker.MAX_GAP_MS else hysteresis?.maxGapMs ?: maxGapMs
+    val effectiveCompleteOnReturn: Boolean get() = legTracker != null || hysteresis != null || completeOnReturn
 
     /** 새 코어의 복귀 잔여 비율(f). 레거시 경로는 null. */
     val returnFraction: Float? get() = hysteresis?.returnFraction
@@ -115,7 +116,7 @@ class RepCounter(
      * 세트 종료 시점의 미완 상태 — **세지 않고** 로그에 '미완 후보' 로 남긴다(설계 §4.2·§4.7).
      * 절반만 올라온 동작이나 짝을 못 만난 한 번의 사이클을 한 회로 만들지 않는다. 레거시 경로에서는 둘 다 null.
      */
-    fun pendingAtSetEnd(): RepPendingState = RepPendingState(confirmation?.pending, fourTracker?.candidate() ?: hysteresis?.candidate())
+    fun pendingAtSetEnd(): RepPendingState = RepPendingState(confirmation?.pending, legTracker?.candidate() ?: hysteresis?.candidate())
 
     /** 방금 완료된 렙의 사이클 극값 (onFrame 이 true 를 돌려준 직후 유효). */
     var lastCycleMin: Float = Float.NaN
@@ -203,7 +204,7 @@ class RepCounter(
     private var dtMs: Float? = null          // 샘플 간격 지수평활 (평활 모드 판단)
 
     fun reset() {
-        fourTracker?.reset()
+        legTracker?.reset()
         returnTracker?.reset()
         hysteresis?.reset()
         confirmation?.reset()
@@ -242,7 +243,7 @@ class RepCounter(
      * 끊김(검출 공백 > maxGap)은 이 함수가 아니다 — 코어가 진행 중 사이클만 버리고 보류의 수명은 짝 창이 정한다(프로토타입·배터리와 같다).
      */
     fun resetCycle() {
-        fourTracker?.resetCycle()
+        legTracker?.resetCycle()
         // 준비에서 심은 기준도 함께 버린다 — 일시정지·재배치 뒤의 자세는 준비 때와 다를 수 있다(다시 스스로 잡는다)
         returnTracker?.resetCycle()
         hysteresis?.resetCycle()
@@ -281,7 +282,7 @@ class RepCounter(
      * 모두 0.22 × 진폭(기준을 잡는 띠와 같은 폭) 안에 모여 있으면 그 중앙값. 움직이고 있었으면 null(심지 않고 종전처럼 스스로 잡는다).
      */
     fun standingSeedFrom(frames: List<Pair<Long, Map<String, Float>>>, atMs: Long): Float? {
-        if (fourTracker != null) { fourTracker.prepare(frames, atMs); return null }
+        if (legTracker != null) { legTracker.prepare(frames, atMs); return null }   // 다리 사이클 경로: 준비 프레임에서 서 있는 기준(§97)
         if (returnTracker == null) return null
         val vs = frames.filter { atMs - it.first in 0..SEED_WINDOW_MS }.mapNotNull { it.second[signal.feature]?.takeIf(Float::isFinite) }
         if (vs.size < 3 || vs.max() - vs.min() > signal.minAmp * .22f) return null
@@ -290,7 +291,7 @@ class RepCounter(
     }
 
     fun onFrameFeatures(tMs: Long, features: Map<String, Float>): Boolean {
-        fourTracker?.let { tracker ->
+        legTracker?.let { tracker ->
             newlyPublished = tracker.onFrame(tMs, features)
             rejectedReps.clear(); rejectedReps.addAll(tracker.rejected)
             for (c in newlyPublished) {
@@ -703,8 +704,8 @@ class RepCounter(
 data class RepSignal(
     val feature: String,
     val minAmp: Float,
-    /** §93: 네 종목은 평균/짝수 묶음 대신 독립 다리와 확인된 쪽을 쓴다. */
-    val fourExercise: FourExercise? = null,
+    /** 한 다리 계열(§97) — 다리 사이클 추적기가 세고 쪽을 낸다. [feature] 는 사이클·반복 검사 창 신호의 틀(`{moving}`/`{support}`)이라 프레임에 그대로는 없다(크로스만 `leg_cross`). */
+    val legProfile: LegProfile? = null,
     val isometric: Boolean = false,
     val validated: Boolean = false,
     /**
@@ -900,7 +901,7 @@ object RepSignals {
     )
 
     val byExercise: Map<String, RepSignal> = base().mapValues { (ex, sig) ->
-        if (sig.fourExercise != null) sig else ROM[ex]?.let { sig.copy(romDirection = it.dir, romThreshold = it.thr, romValidated = it.validated, romCue = it.cue) } ?: sig
+        if (sig.legProfile != null) sig else ROM[ex]?.let { sig.copy(romDirection = it.dir, romThreshold = it.thr, romValidated = it.validated, romCue = it.cue) } ?: sig
     }
 
     private fun base(): Map<String, RepSignal> = buildMap {
@@ -982,9 +983,10 @@ object RepSignals {
         put("로잉머신", RepSignal("palm_fwd_knee", NORM))
         put("행잉 레그 레이즈", RepSignal("hip_below_knee", NORM_S))
         put("케이블 크런치", RepSignal("knee_elbow_dist", NORM))
-        // §93: 모든 새 폼/ROM은 beta. 과거 평균 신호의 ROM 임계를 승계하지 않는다.
-        for (ex in FourExercise.entries) put(ex.title, RepSignal(ex.signal, FourExerciseTracker.MIN_AMP, fourExercise = ex,
-            comparisonFeature = when (ex) { FourExercise.CROSS -> "knee_mean"; FourExercise.SIDE -> "knee_minside"; else -> "hip_mean" },
+        // 한 다리 계열(§97): 카운트는 다리 사이클(LegCycleTracker — 무릎·허벅지·발목 교차), feature 는 사이클·반복 검사 창의 신호 틀. 얕은 회·다리만 올림은 판별이 거른다.
+        // 비교 지표(TRACK)는 종전 신호를 유지한다 — 기록의 단위를 조용히 바꾸지 않는다
+        for (ex in LegProfile.entries) put(ex.title, RepSignal(ex.signal, ex.minAmp, legProfile = ex,
+            comparisonFeature = when (ex) { LegProfile.CROSS -> "knee_mean"; LegProfile.SIDE -> "knee_minside"; else -> "hip_mean" },
             comparisonMinAmp = ANGLE))
     }
 }

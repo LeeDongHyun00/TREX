@@ -169,7 +169,7 @@ class RepUnitAccumulator(val unit: RepUnit) {
                 records += record
                 added += record
                 val rep = if (acc != null) {
-                    if (counter.fourTracker?.exercise?.paired == true) acc.offerSide(tMs, valid, c.side) else acc.offer(tMs, valid)
+                    if (counter.legTracker != null) acc.offerSide(tMs, valid, c.side) else acc.offer(tMs, valid)
                 } else UnitRep(tMs, valid)
                 if (rep != null) { if (rep.valid == false) short++ else notShort++ }
             }

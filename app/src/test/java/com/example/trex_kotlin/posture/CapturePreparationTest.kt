@@ -26,13 +26,13 @@ class CapturePreparationTest {
         // 바벨 런지도 쪽별(§66) — 좌우 짝 안내는 사이드 런지로 본다
         assertTrue(ExerciseProfiles.forName("바벨 런지")!!.preparationInstruction.contains(SIDE_EACH_COUNT_RULE))
         val side = ExerciseProfiles.forName("사이드 런지")!!
-        assertTrue(side.preparationInstruction.contains(FOUR_PAIR_COUNT_RULE))
-        assertTrue(side.preparationInstruction.indexOf(FOUR_PAIR_COUNT_RULE) < side.preparationInstruction.indexOf("3초"))
+        assertTrue(side.preparationInstruction.contains(LEG_PAIR_COUNT_RULE))
+        assertTrue(side.preparationInstruction.indexOf(LEG_PAIR_COUNT_RULE) < side.preparationInstruction.indexOf("3초"))
         assertEquals(setOf("런지", "바벨 런지", "사이드 런지", "크로스 런지", "덤벨 컬", "스탠딩 니업", "스탠딩 사이드 크런치"),
             ExerciseProfiles.all.filter { it.alternating }.map { it.name }.toSet())
         assertEquals(emptySet<String>(),
             ExerciseProfiles.all.filter { it.repUnit == RepUnit.SIDE_PAIR }.map { it.name }.toSet())
-        assertEquals("쪽별 카운트 = 걸음 검사기가 있는 런지(§63·§66)", SIDE_EACH_LUNGES,
+        assertEquals("쪽별 카운트 = 걸음 검사기가 있는 런지(§63·§66)", SIDE_EACH_EXERCISES,
             ExerciseProfiles.all.filter { it.repUnit == RepUnit.SIDE_EACH }.map { it.name }.toSet())
         ExerciseProfiles.all.filter { it.repUnit == RepUnit.SIDE_PAIR }.forEach {
             assertTrue(it.name, it.preparationInstruction.contains(ALTERNATING_COUNT_RULE))
@@ -48,7 +48,7 @@ class CapturePreparationTest {
     @Test fun averagedTwoLimbSignalsDoNotPromiseTheSideRule() {
         // 덤벨 컬·스탠딩 니업은 교대 동작이지만 카운트 신호가 두 팔·두 엉덩이 평균이다 — 양쪽을 함께 하는 반복은 한 사이클 = 양쪽 = 1회로
         // 이미 같은 정의이고, 한쪽씩 번갈아 하는 반복은 쪽별 귀속이 없어 짝으로 셀 수 없다. 지키지 못하는 정의를 안내에 넣지 않는다(원칙 #1, 설계 §4.4).
-        for (name in listOf("덤벨 컬", "스탠딩 니업")) {
+        for (name in listOf("덤벨 컬")) {   // 스탠딩 니업은 §97(한 다리 계열)부터 쪽별(SIDE_EACH) — 사용자 결정 2026-10-06 저녁
             val p = ExerciseProfiles.forName(name)!!
             assertTrue(name, p.alternating)
             assertEquals(name, RepUnit.CYCLE, p.repUnit)

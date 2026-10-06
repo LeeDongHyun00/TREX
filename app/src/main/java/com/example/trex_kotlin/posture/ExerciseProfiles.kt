@@ -25,8 +25,8 @@ const val ALTERNATING_COUNT_RULE = "왼쪽과 오른쪽을 한 번씩 해야 1�
  * 반대쪽으로 안내한다. 목표 10회 = 왼 10 + 오른 10(쌍 기준은 그대로).
  */
 const val SIDE_EACH_COUNT_RULE = "왼발 앞과 오른발 앞을 따로 셉니다. 한쪽을 다 채우면 반대쪽을 알려 드려요. 앞무릎은 80도 가까이 굽혀 주세요."
-const val FOUR_PAIR_COUNT_RULE = "확인된 왼쪽과 오른쪽을 한 번씩 해야 1회로 셉니다. 좌우를 못 본 동작은 짝에 넣지 않습니다."
-const val FOUR_LIFT_COUNT_RULE = "한쪽 다리를 올렸다가 돌아오면 1회로 셉니다."
+/** 한 다리 계열(§97) — 쪽 = 움직인 다리. 네 종목 모두 쪽마다 목표, 왼쪽 한 번 + 오른쪽 한 번 = 1회(사용자 결정 2026-10-06 저녁). */
+const val LEG_PAIR_COUNT_RULE = "왼쪽과 오른쪽을 따로 세고, 한 번씩 해야 1회예요. 좌우를 못 본 동작은 짝에 넣지 않아요."
 
 /**
  * 본인 기준 반복 검사가 있는 종목의 시작 안내(§62c 후속 9) — 첫 반복들이 팔꿈치 위치의 기준이 된다. 처음부터 벌리면 그 벌림이 '정상' 이 되므로
@@ -37,8 +37,8 @@ val REFERENCE_HINTS: Map<String, String> = mapOf(
     "바벨 컬" to "처음 두세 번은 팔꿈치를 옆구리에 붙이고 정확하게 해 주세요. 그 자세를 기준으로 봐요.",
 )
 
-/** 쪽별로 세는 런지(앱 이름) — `RepFormSpecs.STEP_LUNGES` 의 앱 쪽 이름. */
-val SIDE_EACH_LUNGES = setOf("런지", "바벨 런지", "크로스 런지", "사이드 런지")
+/** 쪽별로 세는 종목(앱 이름) — 런지 둘은 `RepFormSpecs.STEP_LUNGES`(걸음 검사기), 나머지 넷은 한 다리 계열(`LegProfile`, §97). 왼 1 + 오른 1 = 1회. */
+val SIDE_EACH_EXERCISES = setOf("런지", "바벨 런지", "크로스 런지", "사이드 런지", "스탠딩 니업", "스탠딩 사이드 크런치")
 
 /**
  * @property alternating 좌우를 번갈아 하는 종목(런지류·덤벨 컬·스탠딩 니업) — 동작의 성질(메타데이터)이다. 횟수 단위는 [repUnit] 이 정한다.
@@ -64,9 +64,10 @@ data class ExerciseProfile(val name: String, val referenceExercise: String?, val
     }
     val preparationInstruction get() = "권장 촬영 방향은 ${preparationDirection}입니다. ${capture.voice}. " +
         (when (name) {
-            "크로스 런지" -> "$FOUR_PAIR_COUNT_RULE 앞에서 지지하는 다리를 기준으로 셉니다. 뒤로 교차한 발을 준비 위치로 되돌려 주세요. "
-            "사이드 런지" -> "$FOUR_PAIR_COUNT_RULE 옆으로 디딘 발을 준비 위치로 되돌려 주세요. "
-            "스탠딩 니업", "스탠딩 사이드 크런치" -> "$FOUR_LIFT_COUNT_RULE "
+            "크로스 런지" -> "$LEG_PAIR_COUNT_RULE 왼발을 뒤로 교차해 내려가면 왼쪽 1회예요. 발이 교차하고 무릎이 깊게 굽어야 세요. 허리를 숙이면 세지 않아요. "
+            "사이드 런지" -> "$LEG_PAIR_COUNT_RULE 왼 무릎을 굽히며 몸을 왼쪽으로 옮기면 왼쪽 1회예요. 무릎을 허벅지가 수평이 되게 깊게 굽혀야 세요. 허리를 숙이거나 무릎이 발끝을 넘으면 세지 않아요. "
+            "스탠딩 니업" -> "$LEG_PAIR_COUNT_RULE 무릎을 접은 채 골반 높이까지 올려야 세요. 다리를 뻗거나 허리를 숙이면 세지 않아요. "
+            "스탠딩 사이드 크런치" -> "$LEG_PAIR_COUNT_RULE 무릎을 굽힌 채 옆으로 올리며 옆구리를 접어 팔꿈치가 무릎에 닿아야 세요. 다리만 올리거나, 앞으로 올리거나, 앞으로 숙이면 세지 않아요. "
             else -> if (repUnit == RepUnit.SIDE_PAIR) "$ALTERNATING_COUNT_RULE " else if (repUnit == RepUnit.SIDE_EACH) "$SIDE_EACH_COUNT_RULE " else ""
         }) + (referenceHint?.let { "$it " } ?: "") + "몸이 화면에 잡히면 3초 뒤 시작해요."
     val cameraEnabled get() = kind != ObservationKind.GUIDE
@@ -102,13 +103,14 @@ object ExerciseProfiles {
             val alternating = name in lunges || name in setOf("덤벨 컬","스탠딩 니업","스탠딩 사이드 크런치")
             add(ExerciseProfile(name, ref, capture, floor, if (alternating) ObservationKind.WINDOW else kind, features, alternating,
                 // 런지·바벨 런지는 쪽별로 센다(§63·§66 — 앞뒤로 딛는 걸음의 앞다리 기하). 사이드·크로스 런지는 두 걸음 = 1회 그대로(딛는 방향이 달라 쪽 기하가 없다)
-                repUnit = if (name in SIDE_EACH_LUNGES) RepUnit.SIDE_EACH else if (name in lunges) RepUnit.SIDE_PAIR else RepUnit.CYCLE, referenceHint = REFERENCE_HINTS[name]))
+                repUnit = if (name in SIDE_EACH_EXERCISES) RepUnit.SIDE_EACH else if (name in lunges) RepUnit.SIDE_PAIR else RepUnit.CYCLE, referenceHint = REFERENCE_HINTS[name]))
         }
         val c=CapturePosition.FRONT; val b=CapturePosition.RIGHT_FRONT; val d=CapturePosition.LEFT_FRONT
         val low=CapturePosition.FLOOR_SIDE; val oblique=CapturePosition.FLOOR_FRONT
         p("기본 스쿼트","바벨 스쿼트",c,legs)   // 앱 이름 "기본 스쿼트"(사용자 결정 2026-09-25 저녁) — AIHub 참조·규칙·로그는 "바벨 스쿼트" 그대로
         p("런지","스텝 포워드 다이나믹 런지",b,legs); p("바벨 런지","바벨 런지",d,legs)
-        p("사이드 런지","사이드 런지",b,legs); p("크로스 런지","크로스 런지",c,legs)
+        // 한 다리 계열(§97): 사이드·크로스 런지는 정면(C) — 무릎 비대칭·골반 이동·발목 교차가 정면 2D 에서 보인다(2026-10-06 폰 세트로 확인)
+        p("사이드 런지","사이드 런지",c,legs); p("크로스 런지","크로스 런지",c,legs)
         p("바벨 데드리프트","바벨 데드리프트",c,legs); p("굿모닝","굿모닝",c,legs)
         p("딥스","딥스",b,arms); p("오버헤드 프레스","오버 헤드 프레스",c,raises)
         // 덤벨 컬 권장 = 왼어깨 쪽 45도 사선 D(사용자 결정 2026-09-26, 정면에서 되돌림) — 사선에서는 앞 이탈·몸에서 떨어짐·상체 숙임을 판정하고, 정면 전용인 뜸·옆 벌림은 유보된다

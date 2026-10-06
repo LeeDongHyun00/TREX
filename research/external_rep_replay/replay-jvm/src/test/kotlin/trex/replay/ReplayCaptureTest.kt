@@ -15,12 +15,17 @@ import org.junit.Test
  * 핵심 약속 두 가지: (1) U 줄이 없는 옛 캡처는 전과 똑같이 SCREEN_UP 으로 재생된다, (2) dump 는 재생 경로와 같은 함수의 결과다.
  */
 class ReplayCaptureTest {
+    /** 한 다리 계열(§97)의 롤 보정 2D 기하는 캡처가 기록한 화면 크기의 가로세로비로 등방화한다 — U 줄이 없으면 롤 0 이라 가로만 aspect 배. */
     @Test
-    fun `four exercise image features use logged width and height`() {
+    fun `leg geometry uses logged width and height`() {
         val cap=readCapture(temp("H\timageW=1920\timageH=1080\n"+fLine(0,standing(0f))+"\n"))
         val f=frameFeatures(cap.frames.single(),FrameStats())!!
         assertEquals(1920f/1080f,cap.frames.single().aspect,1e-6f)
-        assertEquals((.5f+.11f/2f)*1920f/1080f,f.getValue("four_img_x_L"),1e-6f)
+        val torso=f.getValue("leg_torso2d")
+        assertEquals(.24f,torso,1e-3f)
+        assertEquals("발목 x 차 0.11 × aspect ÷ 몸통(왼발이 사용자 왼쪽 = +)",.11f*1920f/1080f/torso,f.getValue("leg_cross"),1e-3f)
+        assertEquals(.4f+.85f/2f,f.getValue("leg_ankle_y_L"),1e-4f)
+        assertEquals(.5f,f.getValue("leg_hipshift"),1e-3f)
     }
 
     // 선 자세(MediaPipe 월드 좌표 원본 부호: y 아래, z 카메라 쪽이 음수). 무릎만 knee 로 굽힌다 — 값은 반복 모양이 아니라 형식 검사용.

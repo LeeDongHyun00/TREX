@@ -97,25 +97,30 @@ SCHEMA = "trex.posture.setlog/1"
 SIDE_PAIR_APP = ("런지", "바벨 런지", "사이드 런지", "크로스 런지")
 SIDE_PAIR_AIHUB = frozenset({"스텝 포워드 다이나믹 런지", "바벨 런지", "사이드 런지", "크로스 런지"})
 # 런지(앱 이름 "런지")는 쪽별 카운트(spec §63, 사용자 결정 2026-09-26) — 화면 수 = min(왼, 오른)(TRACK 풀). 사이클 두 개가 한 쌍인 것은 같다
-SIDE_EACH_AIHUB = frozenset({"스텝 포워드 다이나믹 런지", "바벨 런지"})     # §66: 바벨 런지도 쪽별
+# §97: 사이드·크로스 런지·니업·크런치도 쪽별(다리 사이클 엔진이 쪽 = 움직인 다리를 낸다, ExerciseProfiles.SIDE_EACH_EXERCISES)
+SIDE_EACH_AIHUB = frozenset({"스텝 포워드 다이나믹 런지", "바벨 런지", "사이드 런지", "크로스 런지", "스탠딩 니업", "스탠딩 사이드 크런치"})     # §66 바벨 런지, §97 니업·크런치도 쪽별
 UNIT_CYCLES = {"cycle": 1, "side_pair": 2, "side_each": 2}     # RepUnit.key → cyclesPerRep
 PAIR_UNITS = ("side_pair", "side_each")    # 두 걸음(왼 + 오른) = 1회로 보이는 단위
 PROFILES_KT = REPO / "app" / "src" / "main" / "java" / "com" / "example" / "trex_kotlin" / "posture" / "ExerciseProfiles.kt"
+# postureExerciseMap 은 PostureSupport.kt 에 있다(2026-10-02 VerifyError 수정 때 PostureLive.kt 에서 옮김 — CLAUDE.md 함정). 옛 위치는 폴백
+POSTURE_SUPPORT_KT = REPO / "app" / "src" / "main" / "java" / "com" / "example" / "trex_kotlin" / "PostureSupport.kt"
 POSTURE_LIVE_KT = REPO / "app" / "src" / "main" / "java" / "com" / "example" / "trex_kotlin" / "PostureLive.kt"
 
 
 def current_unit(exercise: str | None, floor: bool) -> str:
     """지금 앱이 이 종목(AIHub 이름)의 자동 횟수를 보이는 단위. 바닥 경로는 늘 사이클(PostureLive: isFloorExercise → CYCLE)."""
-    if floor or exercise not in SIDE_PAIR_AIHUB:
+    if floor:
         return "cycle"
-    return "side_each" if exercise in SIDE_EACH_AIHUB else "side_pair"
+    if exercise in SIDE_EACH_AIHUB:
+        return "side_each"
+    return "side_pair" if exercise in SIDE_PAIR_AIHUB else "cycle"
 
 
 def kotlin_side_pair_exercises() -> tuple[set[str] | None, set[str] | None]:
     """(ExerciseProfiles.kt 의 lunges 앱 이름, 그것을 postureExerciseMap 으로 옮긴 AIHub 이름). 파일이 없거나 못 읽으면 None."""
     try:
         prof = PROFILES_KT.read_text(encoding="utf-8")
-        live = POSTURE_LIVE_KT.read_text(encoding="utf-8")
+        live = (POSTURE_SUPPORT_KT if POSTURE_SUPPORT_KT.exists() else POSTURE_LIVE_KT).read_text(encoding="utf-8")
     except OSError:
         return None, None
     m = re.search(r"val lunges\s*=\s*setOf\(([^)]*)\)", prof)
@@ -313,8 +318,8 @@ def convert(log: dict, source: str, floor_exercises: set[str], rep_rules: dict) 
             meta["loggedEngine"] = str(reps["engine"])
         if config and config.get("seed") is not None:
             meta["loggedSeed"] = str(config["seed"])      # §89 후속 2: 준비 단계에서 심은 서 있는 기준 — 재생기가 첫 프레임에 심는다
-        if config and config.get("four_seed"):
-            meta["loggedFourSeed"] = ";".join(f"{k}={v}" for k, v in sorted(config["four_seed"].items()))
+        if config and config.get("standing"):   # 다리 사이클 추적기의 세트 첫 기준(§97) — 재생기가 같은 값을 심는다
+            meta["loggedStanding"] = ";".join(f"{k}={v}" for k, v in sorted(config["standing"].items()))
         pend = reps.get("pending") if isinstance(reps.get("pending"), dict) else None
         if pend is not None:
             unc = pend.get("unconfirmed")
@@ -905,10 +910,10 @@ def _side_pair_self_test(work: Path, check) -> None:
           apps == set(SIDE_PAIR_APP) and aihub == set(SIDE_PAIR_AIHUB), f"{apps} → {aihub}")
     check("짝: 바닥 경로·다른 종목은 사이클 단위", current_unit("바벨 런지", True) == "cycle" and current_unit("바벨 스쿼트", False) == "cycle"
           and current_unit("덤벨 컬", False) == "cycle")
-    check("짝: 런지(스텝 포워드)·바벨 런지는 쪽별 카운트(side_each), 사이드·크로스 런지는 좌우 짝",
-          current_unit("스텝 포워드 다이나믹 런지", False) == "side_each" and current_unit("바벨 런지", False) == "side_each"
-          and current_unit("사이드 런지", False) == "side_pair"
-          and "SIDE_EACH" in PROFILES_KT.read_text(encoding="utf-8"))
+    check("짝: 런지·바벨 런지·사이드 런지·크로스 런지·니업·사이드 크런치는 쪽별 카운트(side_each, §63·§66·§97) — ExerciseProfiles.SIDE_EACH_EXERCISES 와 같다",
+          all(current_unit(e, False) == "side_each" for e in SIDE_EACH_AIHUB)
+          and all(f'"{name}"' in re.search(r"val SIDE_EACH_EXERCISES\s*=\s*setOf\(([^)]*)\)", PROFILES_KT.read_text(encoding="utf-8")).group(1)
+                  for name in ("런지", "바벨 런지", "사이드 런지", "크로스 런지", "스탠딩 니업", "스탠딩 사이드 크런치")))
 
 
 def _validation_self_test(work: Path, golden: list[str], check) -> None:

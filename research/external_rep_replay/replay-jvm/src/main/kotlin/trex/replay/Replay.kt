@@ -12,7 +12,7 @@ import com.example.trex_kotlin.posture.Stance2d
 import com.example.trex_kotlin.posture.Arm2d
 import com.example.trex_kotlin.posture.Lunge2d
 import com.example.trex_kotlin.posture.SideStepCounter
-import com.example.trex_kotlin.posture.FourExerciseGeometry
+import com.example.trex_kotlin.posture.LegGeometry
 import com.example.trex_kotlin.posture.StepSide
 import com.example.trex_kotlin.posture.Vec3
 import com.example.trex_kotlin.posture.ViewEstimator
@@ -212,7 +212,9 @@ fun frameFeatures(frame: CaptureFrame, stats: FrameStats): Map<String, Float>? {
     // §63: 런지 걸음 기하도 앱과 같은 순서·같은 함수
     return pf.features() + viewF + Stance2d.features(xy, vis, MIN_VISIBILITY) +
         Arm2d.features(xy, vis, MIN_VISIBILITY, Stance2d.DEFAULT_ASPECT, Arm2d.yawOf(viewF)) +
-        Lunge2d.features(pf, xy, vis, MIN_VISIBILITY, Stance2d.DEFAULT_ASPECT, ViewEstimator.shoulderYawOf(viewF)) + FourExerciseGeometry.features(pf, xy, frame.aspect)
+        Lunge2d.features(pf, xy, vis, MIN_VISIBILITY, Stance2d.DEFAULT_ASPECT, ViewEstimator.shoulderYawOf(viewF)) +
+        // §97: 한 다리 계열의 기하 — 앱 PostureAnalyzer 와 같은 순서·같은 함수(롤은 캡처의 up 에서)
+        LegGeometry.features(pf, xy, vis, MIN_VISIBILITY, frame.aspect, LegGeometry.rollDeg(up))
 }
 
 /**
@@ -318,7 +320,7 @@ fun run(job: Job, meta: Map<String, String>, frames: List<InputFrame>, stats: Fr
     val rf = if (job.mode == "live" && job.feature == null) RepFormSpecs.evaluatorFor(job.exercise, rc) else null
     // 쪽별 카운트(spec §63, 런지) — 앱처럼 걸음마다 그 걸음의 앞다리 쪽·차단으로 두 풀에 넣는다. 목표는 세트 로그 reps.sides.target(없으면 상한 없이) —
     // 목표가 있어야 목표를 넘은 걸음(extra)·모르는 걸음 채우기가 앱과 같다
-    val sc = if (rf != null && (rf.stepSides || rf.fourExercise?.paired == true)) SideStepCounter(meta["loggedSidesTarget"]?.toIntOrNull(), strictUnknown = rc.fourTracker != null) else null
+    val sc = if (rf != null && (rf.stepSides || rf.legProfile != null)) SideStepCounter(meta["loggedSidesTarget"]?.toIntOrNull(), strictUnknown = rc.legTracker != null) else null
     val stepSides = StringBuilder()
     val dips = ArrayList<String>()
     var rejectedSeen = 0
@@ -339,12 +341,12 @@ fun run(job: Job, meta: Map<String, String>, frames: List<InputFrame>, stats: Fr
     // 각 리셋을 "t_ms 가 이 값 이상인 첫 프레임 앞" 의 문턱으로 바꾼다: after 가 있으면 after + 1(없음 = 첫 프레임 앞), 없으면 누른 시각.
     val resets = resetThresholds(meta).sorted()
     var pendingSeed: Float? = meta["loggedSeed"]?.toFloatOrNull()
-    var pendingFourSeed = meta["loggedFourSeed"]?.split(';')?.mapNotNull { item ->
+    var pendingStanding = meta["loggedStanding"]?.split(';')?.mapNotNull { item ->
         val kv = item.split('=', limit = 2); kv.getOrNull(1)?.toFloatOrNull()?.let { kv[0] to it }
     }?.toMap()
     var nextReset = 0
     for (frame in frames) {
-        while (nextReset < resets.size && resets[nextReset] <= frame.tMs) { rc.resetCycle(); rf?.takeIf { it.stepSides || it.fourExercise != null }?.discardWindow(); nextReset++ }
+        while (nextReset < resets.size && resets[nextReset] <= frame.tMs) { rc.resetCycle(); rf?.takeIf { it.stepSides || it.legProfile != null }?.discardWindow(); nextReset++ }
         stats.frames++
         prevT?.let { if (frame.tMs - it > SESSION_MAX_GAP_MS) gaps++ }
         prevT = frame.tMs
@@ -352,7 +354,7 @@ fun run(job: Job, meta: Map<String, String>, frames: List<InputFrame>, stats: Fr
         stats.detected++
         // 앱이 준비 단계에서 심은 서 있는 기준(§89 후속 2, 로그 reps.config.seed) — 앱처럼 카운터가 처음 보는 프레임에 심는다
         pendingSeed?.let { v -> rc.seedStanding(frame.tMs, v); pendingSeed = null }
-        pendingFourSeed?.let { rc.fourTracker?.restoreSeed(it); pendingFourSeed = null }
+        pendingStanding?.let { rc.legTracker?.restoreStanding(it); pendingStanding = null }
         val value = signalValue(features, rc.signal.feature)
         if (value != null) {
             stats.withValue++
@@ -362,9 +364,11 @@ fun run(job: Job, meta: Map<String, String>, frames: List<InputFrame>, stats: Fr
         series?.append(frame.tMs)?.append('\t')?.append(value ?: "")?.append('\t')
             ?.append(SERIES_FEATURES.joinToString("\t") { features[it]?.toString() ?: "" })?.append('\n')
         // 반복 판별 신호(spec §62)도 앱과 같은 프레임 값으로 준다 — 없는 종목은 null(종전과 같다). 파리티가 이 인자에 기댄다.
-        rf?.onFrame(frame.tMs, features)   // 앱과 같은 순서: 카운터보다 먼저
+        // 다리 사이클 경로(§97): 기준 대비 값(hip_drop)을 더한 프레임을 평가기·카운터가 함께 본다 — 앱 PostureLive 와 같은 순서
+        val judged = rc.legTracker?.annotate(features) ?: features
+        rf?.onFrame(frame.tMs, judged)   // 앱과 같은 순서: 카운터보다 먼저
         // 앱과 같은 입구(spec §62c): 팔별 경로는 두 팔 값·기각 피처를, 그 밖은 카운트 신호 값 + 판별 신호 값을 쓴다. 파리티가 이 호출에 기댄다.
-        val fired = rc.onFrameFeatures(frame.tMs, features)
+        val fired = rc.onFrameFeatures(frame.tMs, judged)
         if (rc.newlyRetracted) {
             // 잠정 첫 회를 거뒀다(spec §62c 후속 9) — 앱처럼 그 회로 센 수·기록·자세 기준을 지운다(파리티)
             valid = 0; invalid = 0; unjudged = 0; validSeq.clear(); repTimes.clear(); cycles.clear()
@@ -408,7 +412,7 @@ fun run(job: Job, meta: Map<String, String>, frames: List<InputFrame>, stats: Fr
         "id" to job.id, "capture" to job.capture, "exercise" to job.exercise, "mode" to job.mode,
         "feature" to rc.signal.feature, "minAmp" to rc.signal.minAmp,
         "romDirection" to rc.signal.romDirection, "romThreshold" to rc.signal.romThreshold,
-        "engine" to (if (rc.fourTracker != null) com.example.trex_kotlin.posture.FourExerciseTracker.VERSION else if (rc.usesHysteresis) "hysteresis_v1" else "return_v1"),
+        "engine" to (if (rc.legTracker != null) com.example.trex_kotlin.posture.LegCycleTracker.VERSION else if (rc.usesHysteresis) "hysteresis_v1" else "return_v1"),
         // 카운터가 실제로 쓰는 구성(RepEngineLog.of 와 같은 출처) — 합성 픽스처가 로그 reps.config 를 앱처럼 적을 수 있게
         "romValidated" to rc.signal.romValidated, "refractoryMs" to rc.effectiveRefractoryMs,
         "maxGapMs" to rc.effectiveMaxGapMs, "completeOnReturn" to rc.effectiveCompleteOnReturn,

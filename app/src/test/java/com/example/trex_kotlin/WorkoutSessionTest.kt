@@ -36,7 +36,7 @@ class WorkoutSessionTest {
         }
         // 교대 동작이어도 평균 신호로 한 사이클 = 1회인 종목과 다른 종목은 그대로
         assertEquals(3,WorkoutPacing.secondsPerRep("덤벨 컬","상체"))
-        assertEquals(3,WorkoutPacing.secondsPerRep("스탠딩 니업","코어"))
+        assertEquals(6,WorkoutPacing.secondsPerRep("스탠딩 니업","코어"))   // §97: 니업·사이드 크런치도 왼 + 오른 = 1회(두 번 들기)
         assertEquals(4,WorkoutPacing.secondsPerRep("기본 스쿼트","하체"))
         assertEquals(4,WorkoutPacing.secondsPerRep("불가리안 스플릿 스쿼트","하체"))   // 카탈로그 밖 이름(프로필 없음) = 사이클 단위
         // 사용자가 정한 1회 시간은 그대로 쓴다

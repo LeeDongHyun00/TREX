@@ -55,6 +55,8 @@ Android Kotlin/Jetpack Compose 운동·식단 앱. 핵심 기능은 **카메라 
 
 세션마다 세트 로그(원본 프레임 피처)가 `/sdcard/Android/data/com.example.trex_kotlin/files/posture_logs/sets-YYYYMMDD.jsonl` 에 쌓인다. 자가 라벨은 `labels/set_labels.jsonl` 과 `rep_truth.csv`. 회수는 `research/aihub_fitness/pull_logs.py`(단 adb 경로가 Windows 로 하드코딩돼 있다).
 
+**체험판 배포(§98 이후)**: `docs/ANDROID_PREVIEW_RELEASE_1_3_0_6.md` — `assembleRelease` 는 debug 키스토어로 서명되고(`signingConfigs.getByName("debug")`), 릴리스 자산 `BUILD_INFO.json`(versionCode·apkSHA256·certificateSHA256)이 **앱 내 업데이트(`AppUpdate.kt`)의 정본**이라 빠뜨리면 앱이 그 릴리스를 건너뛴다. 릴리스 생성은 GitHub API(`scripts/publish_release.sh` 절차는 그 문서).
+
 **설치 함정**: 기기에 다른 키로 서명된 빌드가 있으면 설치가 거부된다. 삭제 후 재설치해야 하는데 그러면 운동 기록·기준선이 지워진다. 지우기 전에 반드시 백업한다 — 로그는 `adb pull`, 내부 저장소는 디버그 빌드라 `adb shell "run-as com.example.trex_kotlin cat shared_prefs/…"` 로 꺼낼 수 있다(복원은 앱 전용 외부 폴더를 경유해야 한다. 앱 UID 는 `/sdcard` 루트를 못 읽는다).
 
 ## 알아야 할 함정
@@ -73,6 +75,8 @@ Android Kotlin/Jetpack Compose 운동·식단 앱. 핵심 기능은 **카메라 
 - **`PostureAnalyzer.close()` 는 추론과 같은 락을 잡는다(§63).** 메인 스레드의 close 가 분석 스레드의 `detectForVideo` 도중 네이티브 그래프를 해제하면 SIGSEGV 로 앱이 죽고 그 세트 로그가 사라진다(09-26 13:57 런지 지정 세트). 분석기 수명을 건드리면 이 락을 지킨다. 라이브 화면은 메인에서 `markClosed()` 만 부르고 `close()` 는 분석 executor 에 맡긴다(메인이 첫 프레임 모델 준비를 기다리지 않게, §63 후속 2). 세트 로그는 `SetLogStore.writer`(앱 수명 단일 스레드)로 쓴다.
 - **`PostureLive` 는 종목이 바뀌어도 재컴포지션되지 않는다**(같은 `AnimatedContent` 라우트). 그래서 세트 마감 람다는 종목·뷰를 **세트 시작 시점 값으로 인자 전달**받는다. 지금 값을 쓰면 종목이 어긋난다.
 - **`PostureLiveSessionScreen` 에 지역 변수를 더 늘리면 기기에서 `VerifyError` 로 앱이 죽는다(2026-10-02).** 이 Composable 은 지역 변수가 많아 dex 레지스터가 256개 근처다 — 넘으면 D8 이 값을 낮은 레지스터로 옮겨 쓰고 ART 검증기가 타입을 혼동해(`aput-boolean v1 … expected Boolean`) **클래스 전체**를 거부한다. 그러면 같은 파일의 아무 함수를 불러도 죽고(운동 탭이 `postureSupported()` 로 죽었다), 거부되지 않아도 첫 로드가 느리다. 그래서 분석 스레드와 공유하는 ref 는 `LiveSessionRefs` 홀더 하나에 두고(`refs.repRef[0]`), 다른 화면이 쓰는 심볼은 `PostureSupport.kt` 에 둔다. 새 상태는 홀더나 별도 클래스에 넣는다. 확인은 설치 뒤 `adb shell cmd package compile -m verify -f com.example.trex_kotlin` → `adb logcat -d | grep "failed to verify"`(수 초).
+- **추론 85 ms ≠ 판정 300 ms(§96).** `PostureLive` 는 화면(뼈대·프레이밍)을 위해 85 ms 마다 추론하지만, 준비 프레임·피처·규칙·카운터·반복 검사·세트 로그는 `SESSION_SAMPLE_INTERVAL_MS`(300) 칸마다 첫 프레임만 받는다. 모집단 캡처(`cadenceMs` 300)·§32 오탐률·프레임 수 상수(`liveHoldFrames`·`windowFrames`·`TOP_FRAMES`)가 전부 이 전제다 — 격자를 낮추려면 그 상수들을 ms 로 바꾸고 캡처를 재추출해 표를 다시 낸다. **유일한 예외(§98a)**: 크런치의 팔꿈치–무릎 접촉은 85 ms 프레임의 최솟값(`posture/ContactMinimum.kt`)을 판정 프레임에 `elbow_knee_min_L/R` 로 얹는다 — 순간 접촉을 300 ms 표본이 놓치기 때문. 재생기 `.cap` 경로에는 이 값이 없다.
+- **크로스·사이드 런지·스탠딩 니업·스탠딩 사이드 크런치는 한 엔진(`LegCycle.kt`, §97·§98)이다** — 횟수 = 다리 기하의 사이클(무릎각·허벅지각·발목 교차), 발 위치 앵커는 쓰지 않는다(v1 §96 이 그걸로 런지를 0회로 셌다). 얕은 회·다리만 올린 회·교차 없는 회·**허리 숙인 회·편 다리·앞으로 올린 무릎·크런치의 안 닿은 회·사이드 런지의 무릎 발끝 넘김**(v3, 사용자 결정 2026-10-06 밤, §98a·§98b)은 세지 않고 이유를 말한다 — `identity` 의 사유 순서가 곧 음성의 우선순위다. 네 종목 모두 왼 1 + 오른 1 = 1회. 띠는 사용자 1명 2세션의 잠정값(라벨 없음) — 함정은 `docs/exercises/single_leg.md`, 설계는 `docs/SINGLE_LEG_FAMILY_DESIGN.md`(§1a 가 v2 가 놓친 것).
 
 ## 현재 상태
 

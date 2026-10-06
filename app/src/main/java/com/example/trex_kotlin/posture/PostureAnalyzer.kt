@@ -249,7 +249,9 @@ class PostureAnalyzer(
         // §63: 런지 걸음 기하(앞다리·깊이·무릎 쏠림·어깨 높이) — 어깨선 요로. 재생기 frameFeatures 도 같은 순서·같은 함수
         val features = frame.features() + viewF + Stance2d.features(xy, vis, MIN_VISIBILITY, aspect) +
             Arm2d.features(xy, vis, MIN_VISIBILITY, aspect, Arm2d.yawOf(viewF)) +
-            Lunge2d.features(frame, xy, vis, MIN_VISIBILITY, aspect, ViewEstimator.shoulderYawOf(viewF)) + FourExerciseGeometry.features(frame, xy, aspect)
+            Lunge2d.features(frame, xy, vis, MIN_VISIBILITY, aspect, ViewEstimator.shoulderYawOf(viewF)) +
+            // §96: 한 발 떠남 계열의 기하(허벅지각·비틀림·롤 보정 2D 발목/무릎/골반·손–귀·팔꿈치–무릎) — 재생기 frameFeatures 도 같은 순서·같은 함수
+            LegGeometry.features(frame, xy, vis, MIN_VISIBILITY, aspect, LegGeometry.rollDeg(upUsed))
         val visibleCount = vis.count { it >= MIN_VISIBILITY }
         return PoseSample(
             detected = true,
