@@ -18,6 +18,10 @@ def portable(name, text):
         text = text.replace('SetLog.nowIso()', '""')
     if name == 'PostureCoach': text = text[:text.index('class SpeechCoach(')]
     if name == 'PostureMode': text = text[:text.index('class ModeStore(')]
+    if name == 'PostureCore':
+        # 피처 맵은 null이 없는 Float 값이다. JVM Map 기본 메서드를 공통 API로 치환한다.
+        text, count = re.subn(r'(?m)^(\s*)f\.putIfAbsent\((".*?"), (.+)\)$', r'\1f.getOrPut(\2) { \3 }', text)
+        assert count == 5, 'PostureCore의 플랫폼 전용 맵 호출 수를 확인하세요.'
     text = text.replace('String.format(java.util.Locale.US, ', 'PortableFormat.format(')
     text = text.replace('String.format(Locale.US, ', 'PortableFormat.format(')
     text = text.replace('String.format(', 'PortableFormat.format(')

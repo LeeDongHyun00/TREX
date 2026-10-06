@@ -403,14 +403,14 @@ class PoseFrame(val joints: Map<String, Vec3?>, up: Vec3 = Vec3(0f, 1f, 0f)) {
             val l = f["${base}_L"]
             val r = f["${base}_R"]
             if (l != null && r != null) {
-                f.putIfAbsent("${base}_mean", (l + r) / 2f)
-                f.putIfAbsent("${base}_minside", minOf(l, r))
-                f.putIfAbsent("${base}_maxside", maxOf(l, r))
+                f.getOrPut("${base}_mean") { (l + r) / 2f }
+                f.getOrPut("${base}_minside") { minOf(l, r) }
+                f.getOrPut("${base}_maxside") { maxOf(l, r) }
             } else {
                 val one = l ?: r
                 if (one != null) {
-                    f.putIfAbsent("${base}_minside", one)
-                    f.putIfAbsent("${base}_maxside", one)
+                    f.getOrPut("${base}_minside") { one }
+                    f.getOrPut("${base}_maxside") { one }
                 }
             }
         }
