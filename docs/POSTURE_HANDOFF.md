@@ -1,6 +1,6 @@
 # 자세 평가 — 인수인계 (2026-09-03)
 
-> **iPhone 포팅(2026-10-06, §99, `ios-redesign`)**: 최신 `redesign` `5213e3c4`를 기준으로 `posture-core` 공통 엔진 + SwiftUI `Trex` 앱을 구현했다. 자세·26종 운동·7종 가이드·350종 영양·사진 식단·기록·3D 부하·백업을 연결했고 Android 정본 38파일을 생성/검사한다. 준비/판정은 300ms 칸, 접촉은 85ms, 구형 기준선 자동 적용은 Android처럼 끈다. **공통 JVM 376/376 · Android 557/557 · APK 빌드 · Swift 30파일 구문/자산 검사 통과. 새 iOS 타깃의 Xcode 컴파일·서명·IPA·iPhone 실행은 미검증**(현재 Windows). Mac 스크립트·별도 브랜치 push/수동 Actions를 준비했으며 원격 푸시/실행은 하지 않았다. 절차와 범위는 [IOS_PORT](IOS_PORT.md). 과거 진단 앱 빌드 성공을 새 앱 성공으로 읽지 않는다.
+> **iPhone 포팅(2026-10-07, §99~§99e, `ios-redesign`)**: 최신 `redesign` `5213e3c4`를 기준으로 공통 엔진 + SwiftUI `Trex` 앱을 구현해 원격에 푸시했다. 자세·26종 운동·7종 가이드·350종 영양·사진 식단·기록·3D 부하·백업을 연결하고 Android 정본 38파일을 생성/검사한다. 준비/판정은 300ms 칸, 접촉은 85ms다. **Android 557/557·APK, 공통 JVM 376/376, Swift 31파일 정적 검사 통과. macOS Xcode 26.0.1에서도 iPhone arm64 Release 빌드·원본/호환 모델 번들 검사·미서명 IPA 생성과 시뮬레이터 XCTest 4/4 성공**(검증 코드 `e52b15be`). 음식 3모델과 자세 모델의 같은 프로세스 실제 추론까지 통과했다. 음식 런타임 격리, YOLO 외부 가중치 inline 호환과 보존 증빙을 포함한다. **서명·실제 iPhone 실행/운동 정확도는 미검증**이다. [IOS_PORT](IOS_PORT.md)에 IPA 링크·Mac 절차·남은 기기 검증을 기록했다.
 
 > **체험판 1.3.0-preview.6(2026-10-06 밤, 브랜치 `redesign`, 태그 `v1.3.0-preview.6`)**: 한 다리 계열 v3 + **앱 내 업데이트**(`AppUpdate.kt`·`AppUpdateLogic.kt`, 권한 INTERNET·REQUEST_INSTALL_PACKAGES, FileProvider `updates/`). 앱이 6시간마다 GitHub 사전 릴리스를 보고 `BUILD_INFO.json` 의 versionCode 가 크면 대화상자 → 내려받기(SHA-256 검증) → 패키지 설치기. 릴리스 절차·자산 규칙은 `docs/ANDROID_PREVIEW_RELEASE_1_3_0_6.md`.
 >
@@ -122,7 +122,7 @@
 
 ## 2. 브랜치·워킹트리 상태
 
-**iOS 별도 작업(2026-10-06)**: 현재 `ios-redesign`, 시작 `5213e3c4`(redesign preview.6). iOS/KMP 파일과 문서가 로컬 변경으로 남아 있다. 이전 운동 가이드 변경은 `preserve exercise guides before iOS redesign port` stash에 보존했다. 다음 세션에서 `git status`로 실제 상태를 확인한다. Mac 빌드·원격 푸시는 아직 안 했다.
+**iOS 별도 작업(2026-10-07)**: 현재 `ios-redesign`, 시작 `5213e3c4`(redesign preview.6). iOS/KMP 구현·CI 수정·음식 모델 호환 처리를 `origin/ios-redesign`에 푸시했다. 검증 코드 `e52b15be`의 macOS Actions와 IPA 업로드가 성공했고 상세 결과는 `docs/IOS_PORT.md`를 따른다. 이전 운동 가이드 변경은 `preserve exercise guides before iOS redesign port` stash에 보존했다. 다음 세션에서 `git status`로 실제 상태를 확인한다.
 
 | 브랜치 | 커밋 | 원격 |
 |---|---|---|
@@ -309,7 +309,7 @@ WorkoutHistoryItem.postureCorrection → 기록 화면
 
 ## 6. 다음에 할 일
 
-**iOS 포팅의 다음 단계**: `docs/IOS_PORT.md`의 Mac 준비 → framework/Swift 빌드·XCTest → `.app` 자산 검사/IPA → 사용자가 직접 하는 iPhone 전후면·중력·정지/복귀·네 종목 짝/기각/접촉·음식 방향·3D 검증. Windows 구문 검사로 이 단계를 완료 처리하지 않는다. GitHub 빌드 경로는 별도 브랜치 푸시/수동 워크플로 실행이 필요하다.
+**iOS 포팅의 다음 단계**: framework/Swift 빌드·XCTest·번들/IPA 검증은 macOS Actions에서 완료했다. 사용자가 자신의 Mac에서 서명하고 iPhone 전후면·중력·정지/복귀·네 종목 짝/기각/접촉·음식 방향·3D를 확인한다. 자동 실행 검사와 실제 운동/사진 정확도 검증을 구분한다. 절차와 검증 범위는 `docs/IOS_PORT.md`.
 
 0. **`gradlew` 실행비트를 커밋할지 결정** (안 하면 새 클론에서 빌드 실패)
 1. **§31a 후속 수정을 실기기로 재검증** — 새 캡처가 있어야 `anchor_t_ms` 로 앵커 시점을 확인할 수 있다. 손에 있는 로그로는 불가능하다.
