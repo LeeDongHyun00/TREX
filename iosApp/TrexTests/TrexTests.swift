@@ -1,7 +1,30 @@
 import XCTest
+import CoreVideo
+import TrexFoodRuntime
 @testable import Trex
 
 final class TrexTests: XCTestCase {
+    func testFoodAndPoseRuntimesCanCoexist() throws {
+        let poseURL = try XCTUnwrap(Bundle.main.url(forResource: "pose_landmarker_full", withExtension: "task"))
+        let pose = try PoseRunner(modelPath: poseURL.path)
+        for name in ["yolov8n_food", "food_region", "food_embed"] {
+            let url = try XCTUnwrap(Bundle.main.url(forResource: name, withExtension: "tflite"))
+            let food = try FoodModel(modelPath: url.path, threadCount: 1)
+            try food.allocateTensors()
+            let input = try food.input(at: 0)
+            XCTAssertEqual(input.dataType, .float32)
+            try food.copy(Data(repeating: 0, count: input.data.count), toInputAt: 0)
+            try food.invoke()
+            XCTAssertFalse(try food.output(at: 0).data.isEmpty)
+        }
+        var buffer: CVPixelBuffer?
+        XCTAssertEqual(CVPixelBufferCreate(kCFAllocatorDefault, 64, 64, kCVPixelFormatType_32BGRA, nil, &buffer), kCVReturnSuccess)
+        let image = try XCTUnwrap(buffer)
+        CVPixelBufferLockBaseAddress(image, [])
+        if let base = CVPixelBufferGetBaseAddress(image) { memset(base, 0, CVPixelBufferGetDataSize(image)) }
+        CVPixelBufferUnlockBaseAddress(image, [])
+        _ = try pose.detect(image, timeMs: 1)
+    }
     func testCatalogGuidesAndRuleAssetsMatch() throws {
         let exercises = try Resources.decode("catalog.json", as: [Exercise].self)
         let guides = try Resources.decode("guides.json", as: [Guide].self)

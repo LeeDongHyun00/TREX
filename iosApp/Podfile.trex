@@ -5,8 +5,13 @@ workspace 'Trex.xcworkspace'
 target 'Trex' do
   use_frameworks! :linkage => :static
   pod 'MediaPipeTasksVision', '1.0.0'
-  pod 'TensorFlowLiteSwift', '2.17.0'
   target 'TrexTests' do
     inherit! :search_paths
   end
+end
+
+# MediaPipe의 내장 TFLite와 음식 모델의 TFLite를 서로 다른 Mach-O에 연결한다.
+target 'TrexFoodRuntime' do
+  use_frameworks! :linkage => :static
+  pod 'TensorFlowLiteSwift', '2.17.0'
 end

@@ -16,6 +16,17 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: 빌드 의존성 캐시 복원
+        uses: actions/cache/restore@v4
+        id: deps
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            ~/.konan
+            ~/Library/Caches/CocoaPods
+            ~/.cocoapods
+          key: macos-ios-deps-v1-${{ hashFiles('build.gradle.kts', 'posture-core/build.gradle.kts', 'gradle/wrapper/gradle-wrapper.properties', 'iosApp/Podfile.trex') }}
       - name: 호환 Xcode 선택
         run: |
           task_xcode_app="$(python3 - <<'PY'
@@ -47,3 +58,14 @@ jobs:
           name: TREX-unsigned-IPA
           path: iosApp/build/sideload/TREX-unsigned.ipa
           if-no-files-found: error
+      - name: 빌드 의존성 캐시 저장
+        if: always() && steps.deps.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            ~/.konan
+            ~/Library/Caches/CocoaPods
+            ~/.cocoapods
+          key: ${{ steps.deps.outputs.cache-primary-key }}

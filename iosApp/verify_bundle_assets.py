@@ -23,8 +23,10 @@ def main():
         checks.append({"name": name, "sha256": actual, "matches": actual == entry["sha256"]})
     bundled_manifest = args.bundle / "ASSET_BASELINE.json"
     manifest_matches = bundled_manifest.is_file() and bundled_manifest.read_bytes() == manifest_path.read_bytes()
-    passed = len(checks) == 4 and all(check["matches"] for check in checks) and manifest_matches
-    print(json.dumps({"passed": passed, "manifestByteIdentical": manifest_matches, "files": checks}, ensure_ascii=False, indent=2))
+    food_runtime = args.bundle / "Frameworks/TrexFoodRuntime.framework/TrexFoodRuntime"
+    food_embedded = food_runtime.is_file() if args.bundle.name == "Trex.app" else None
+    passed = len(checks) == 4 and all(check["matches"] for check in checks) and manifest_matches and food_embedded is not False
+    print(json.dumps({"passed": passed, "manifestByteIdentical": manifest_matches, "foodRuntimeEmbedded": food_embedded, "files": checks}, ensure_ascii=False, indent=2))
     return 0 if passed else 1
 
 

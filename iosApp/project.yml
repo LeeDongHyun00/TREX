@@ -11,11 +11,13 @@ settings:
     CODE_SIGN_STYLE: Automatic
     TARGETED_DEVICE_FAMILY: '1'
     FRAMEWORK_SEARCH_PATHS: '$(inherited) $(SRCROOT)/../posture-core/build/xcode-frameworks/$(CONFIGURATION)/$(SDK_NAME)'
-    OTHER_LDFLAGS: '$(inherited) -framework TrexCore -ObjC -lc++'
 targets:
   Trex:
     type: application
     platform: iOS
+    dependencies:
+      - target: TrexFoodRuntime
+        embed: true
     sources:
       - path: Trex
         excludes: [Resources, Info.plist]
@@ -48,6 +50,8 @@ targets:
         INFOPLIST_FILE: Trex/Info.plist
         MARKETING_VERSION: '1.3.0'
         CURRENT_PROJECT_VERSION: '1'
+        TARGETED_DEVICE_FAMILY: '1'
+        OTHER_LDFLAGS: '$(inherited) -framework TrexCore -ObjC -lc++'
     preBuildScripts:
       - name: 공유 자세 엔진 빌드
         basedOnDependencyAnalysis: false
@@ -59,12 +63,25 @@ targets:
           if [ "${OVERRIDE_KOTLIN_BUILD_IDE_SUPPORTED:-NO}" != "YES" ]; then
             bash gradlew -PiosOnly=true :posture-core:embedAndSignAppleFrameworkForXcode
           fi
+  TrexFoodRuntime:
+    type: framework
+    platform: iOS
+    sources: [TrexFoodRuntime]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.leedonghyun.trex.foodruntime
+        GENERATE_INFOPLIST_FILE: YES
+        DEFINES_MODULE: YES
+        BUILD_LIBRARY_FOR_DISTRIBUTION: YES
+        SKIP_INSTALL: YES
   TrexTests:
     type: bundle.unit-test
     platform: iOS
     sources: [TrexTests]
     dependencies:
       - target: Trex
+      - target: TrexFoodRuntime
+        embed: false
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.leedonghyun.trex.ios.tests

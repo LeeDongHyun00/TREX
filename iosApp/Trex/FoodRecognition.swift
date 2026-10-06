@@ -1,5 +1,5 @@
 import UIKit
-import TensorFlowLite
+import TrexFoodRuntime
 import TrexCore
 import Combine
 
@@ -16,9 +16,9 @@ final class FoodRecognizer: ObservableObject {
     @Published private(set) var busy = false
     @Published private(set) var error: String?
     private let worker = DispatchQueue(label: "trex.food.inference", qos: .userInitiated)
-    private var classifier: Interpreter?
-    private var regionModel: Interpreter?
-    private var embedding: Interpreter?
+    private var classifier: FoodModel?
+    private var regionModel: FoodModel?
+    private var embedding: FoodModel?
     private var labels: [String] = []
     private var memory: [FoodMemoryItem] = []
     private let memoryURL = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("TREX/food-memory.json")
@@ -81,10 +81,9 @@ final class FoodRecognizer: ObservableObject {
             } catch { DispatchQueue.main.async { [weak self] in self?.error = "음식은 선택했지만 기억 저장에 실패했습니다." } }
         }
     }
-    private func model(_ name: String) throws -> Interpreter {
+    private func model(_ name: String) throws -> FoodModel {
         guard let url = Bundle.main.url(forResource: name, withExtension: "tflite") else { throw DiagnosticError("음식 모델 없음: \(name)") }
-        var options = Interpreter.Options(); options.threadCount = 4
-        let interpreter = try Interpreter(modelPath: url.path, options: options); try interpreter.allocateTensors(); return interpreter
+        let interpreter = try FoodModel(modelPath: url.path, threadCount: 4); try interpreter.allocateTensors(); return interpreter
     }
     private func scores(_ image: UIImage, box: CGRect?) throws -> [(String, Float)] {
         guard let classifier else { throw DiagnosticError("음식 모델이 준비되지 않았습니다.") }
@@ -126,7 +125,7 @@ final class FoodRecognizer: ObservableObject {
         }
         return best.sorted { $0.value > $1.value }.prefix(3).map { ($0.key, $0.value) }
     }
-    private func infer(_ model: Interpreter, image: UIImage, box: CGRect?, embed: Bool = false) throws -> [Float] {
+    private func infer(_ model: FoodModel, image: UIImage, box: CGRect?, embed: Bool = false) throws -> [Float] {
         let shape = try model.input(at: 0).shape.dimensions
         guard shape.count == 4 else { throw DiagnosticError("음식 모델 입력 형태가 다릅니다.") }
         let first = shape[1] == 3 && shape[3] != 3; let width = first ? shape[3] : shape[2]; let height = first ? shape[2] : shape[1]
