@@ -60,7 +60,8 @@ targets:
           cd "$SRCROOT/.."
           python3 tools/sync_ios_core.py --check
           python3 tools/export_ios_resources.py --check
-          python3 tools/prepare_ios_food_model.py --check
+          # Xcode는 별도 Python을 사용할 수 있다. 전체 변환 검사는 setup-mac/CI에서 한다.
+          python3 tools/prepare_ios_food_model.py --verify-hashes
           if [ "${OVERRIDE_KOTLIN_BUILD_IDE_SUPPORTED:-NO}" != "YES" ]; then
             bash gradlew -PiosOnly=true :posture-core:embedAndSignAppleFrameworkForXcode
           fi

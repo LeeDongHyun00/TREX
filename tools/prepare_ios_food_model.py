@@ -9,9 +9,6 @@ import json
 import struct
 from pathlib import Path
 
-import flatbuffers
-import tflite
-
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / 'app/src/main/assets/models/yolov8n_food.tflite'
 TARGET = ROOT / 'iosApp/TrexFoodModels/yolov8n_food.tflite'
@@ -32,6 +29,8 @@ def buffer_bytes(buffer, raw):
 
 
 def prepare(source):
+    import flatbuffers
+    import tflite
     assert source[4:8] == b'TFL3'
     model = tflite.Model.GetRootAs(source, 0)
     # 외부 custom options는 이 모델에 없다. 그런 모델은 별도 명세 없이 변환하지 않는다.
@@ -91,7 +90,15 @@ def prepare(source):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--check', action='store_true')
-    check = parser.parse_args().check
+    parser.add_argument('--verify-hashes', action='store_true', help='Xcode 내부의 기본 Python에서 정본/생성물 SHA만 검사한다.')
+    args = parser.parse_args()
+    if args.verify_hashes:
+        manifest = json.loads(MANIFEST.read_text(encoding='utf-8'))
+        assert manifest['sourceSha256'] == digest(SOURCE.read_bytes()), 'Android 정본 음식 모델이 변경됐습니다.'
+        assert manifest['bundledSha256'] == digest(TARGET.read_bytes()), 'iOS 음식 모델을 다시 생성하세요.'
+        print('Android 정본/iOS 음식 모델 SHA 검사 통과')
+        return
+    check = args.check
     output, manifest = prepare(SOURCE.read_bytes())
     manifest_text = json.dumps(manifest, ensure_ascii=False, indent=2) + '\n'
     if check:
