@@ -6,7 +6,8 @@ if ! command -v xcodebuild >/dev/null; then echo 'Xcode를 설치하고 첫 실�
 task_xcode_version="$(xcodebuild -version | awk '/^Xcode / { print $2 }')"
 if [ "${task_xcode_version%%.*}" -lt 26 ]; then echo 'Kotlin 2.3.21 공통 엔진에는 Xcode 26 계열을 사용해 주세요(공식 호환 기준 26.0).' >&2; exit 1; fi
 if ! command -v xcodegen >/dev/null; then echo 'brew install xcodegen 으로 XcodeGen을 설치해 주세요.' >&2; exit 1; fi
-if ! command -v pod >/dev/null; then echo 'brew install cocoapods 으로 CocoaPods를 설치해 주세요.' >&2; exit 1; fi
+task_pod_binary="${TREX_POD_BINARY:-pod}"
+if ! command -v "$task_pod_binary" >/dev/null; then echo 'brew install cocoapods 으로 CocoaPods를 설치해 주세요.' >&2; exit 1; fi
 if ! java -version >/dev/null 2>&1; then echo 'JDK 17 이상을 설치해 주세요.' >&2; exit 1; fi
 python3 tools/sync_ios_core.py --check
 python3 tools/export_ios_resources.py --check
@@ -21,6 +22,6 @@ p = Path('TrexPods/Podfile')
 p.write_text(p.read_text().replace("project 'Trex.xcodeproj'", "project '../Trex.xcodeproj'").replace("workspace 'Trex.xcworkspace'", "workspace '../Trex.xcworkspace'"))
 PY
 cd TrexPods
-pod install
+"$task_pod_binary" install
 printf '\n사용 Xcode: %s\n' "$task_xcode_version"
 printf '\n열 파일: %s/iosApp/Trex.xcworkspace\n' "$task_root"

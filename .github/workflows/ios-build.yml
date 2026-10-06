@@ -16,9 +16,23 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: 호환 Xcode 선택
+        run: |
+          task_xcode_app="$(python3 - <<'PY'
+          from pathlib import Path
+          paths=sorted(Path('/Applications').glob('Xcode_26*.app'))
+          preferred=Path('/Applications/Xcode_26.0.app')
+          if not paths: raise SystemExit('Xcode 26이 설치된 macOS runner가 필요합니다.')
+          print(preferred if preferred.exists() else paths[0])
+          PY
+          )"
+          sudo xcode-select -s "$task_xcode_app/Contents/Developer"
+          echo "DEVELOPER_DIR=$task_xcode_app/Contents/Developer" >> "$GITHUB_ENV"
+          xcodebuild -version
       - name: 도구 설치
         run: |
           brew install xcodegen cocoapods
+          echo "TREX_POD_BINARY=$(brew --prefix)/bin/pod" >> "$GITHUB_ENV"
           python3 -m pip install tree-sitter tree-sitter-swift pyyaml
       - name: 정본과 공통 엔진 검증
         run: |
