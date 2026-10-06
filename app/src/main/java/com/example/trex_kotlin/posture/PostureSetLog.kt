@@ -105,6 +105,7 @@ data class RepEngineLog(
     val romAuxFeature: String? = null,
     val romAuxRatio: Float? = null,
     val romAuxFloor: Float? = null,
+    val fourSeed: Map<String, Float>? = null,
 ) {
     companion object {
         const val ENGINE_RETURN = "return_v1"
@@ -118,7 +119,7 @@ data class RepEngineLog(
             val s = counter.signal
             val confirm = counter.confirmationConfig
             return RepEngineLog(
-                engine = if (counter.usesHysteresis) ENGINE_HYSTERESIS else ENGINE_RETURN,
+                engine = if (counter.fourTracker != null) FourExerciseTracker.VERSION else if (counter.usesHysteresis) ENGINE_HYSTERESIS else ENGINE_RETURN,
                 feature = s.feature,
                 minAmp = s.minAmp,
                 refractoryMs = counter.effectiveRefractoryMs,
@@ -136,6 +137,7 @@ data class RepEngineLog(
                 identityFeature = s.identityFeature,
                 identityMinAmp = s.identityFeature?.let { s.identityMinAmp },
                 seed = counter.standingSeed,
+                fourSeed = counter.fourTracker?.seed,
                 pairedFeatures = s.pairedFeatures,
                 rejectFeatures = s.rejectFeatures,
                 romRatio = s.romRatio, romAbsMin = s.romAbsMin, romRefMin = s.romRefMin,
@@ -532,6 +534,11 @@ object SetLogJson {
                 sb.append(",\"complete_on_return\":").append(e.completeOnReturn)
                 e.polarity?.let { sb.append(",\"polarity\":"); str(sb, it) }
                 e.seed?.let { sb.append(",\"seed\":").append(num(it)) }
+                e.fourSeed?.let { fs ->
+                    sb.append(",\"four_seed\":{")
+                    fs.entries.sortedBy { it.key }.forEachIndexed { i, (k, v) -> if (i > 0) sb.append(','); str(sb, k); sb.append(':').append(v) }
+                    sb.append('}')
+                }
                 e.returnFraction?.let { sb.append(",\"return_fraction\":").append(num(it)) }
                 e.firstPairWindowMs?.let {
                     // 시작 확정 구성(새 코어만) — 이후 반복의 시간 창은 null(진폭 비만)도 값이라 명시해 적는다

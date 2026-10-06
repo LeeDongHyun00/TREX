@@ -106,7 +106,7 @@ class RepCounterTest {
         assertEquals("hip_mean", dead!!.signal.feature)
         assertTrue(!dead.signal.validated)
         // 신뢰 신호가 없는 종목은 미등록 — 오카운트보다 미표시
-        assertNull(RepCounter.forExercise("스탠딩 사이드 크런치"))
+        assertNotNull(RepCounter.forExercise("스탠딩 사이드 크런치")!!.fourTracker)
     }
 @Test
     fun romValidityJudgesShallowRepsInvalid() {

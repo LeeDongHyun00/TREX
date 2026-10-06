@@ -313,6 +313,8 @@ def convert(log: dict, source: str, floor_exercises: set[str], rep_rules: dict) 
             meta["loggedEngine"] = str(reps["engine"])
         if config and config.get("seed") is not None:
             meta["loggedSeed"] = str(config["seed"])      # §89 후속 2: 준비 단계에서 심은 서 있는 기준 — 재생기가 첫 프레임에 심는다
+        if config and config.get("four_seed"):
+            meta["loggedFourSeed"] = ";".join(f"{k}={v}" for k, v in sorted(config["four_seed"].items()))
         pend = reps.get("pending") if isinstance(reps.get("pending"), dict) else None
         if pend is not None:
             unc = pend.get("unconfirmed")

@@ -1,5 +1,13 @@
 # 자세 평가 — 인수인계 (2026-09-03)
 
+> **네 종목 가이드 복구(2026-10-06, §95)**: 별도 `affd/trex` 작업 폴더의 미커밋 가이드가 §93·§94 APK에서 누락되어 기존 폰 기능을 대체했다. 원본 설명·테스트·GIF 4개·관련 문서 총 8개 파일을 해시 일치로 복구했다. 자세/횟수·촬영 배치 기록·85 ms 설정과 함께 JVM 557건·APK 빌드 통과, APK 내 GIF 4개 일치 확인 후 SM-N976N 업데이트 설치 성공. 실기기 화면 조작은 하지 않았다. 원본 작업 폴더는 보존한다. 다음 설치 전 다른 작업 폴더에서 같은 폰에 배포한 미커밋 기능을 확인할 것. 증빙 `outputs/guide-restoration-verification.json`, `outputs/guide-restoration-deployment.json`.
+
+> **실시간 추론 85 ms(2026-10-06, §94)**: 사용자 요청으로 준비·운동의 추론 간격과 로그 `sample_interval_ms`를 300에서 85로 변경했다. 일시정지·랩·기준선 주기와 발열 감속은 유지한다. 기존 JVM 557건 및 APK 빌드 통과, 연결된 SM-N976N에 `adb install -r` 업데이트 성공. 네 종목 개발판과 촬영 배치 기록도 포함한다. 실기기 앱 실행·운동 검증은 하지 않았다. 실제 주기는 `placement.fps`로 확인하며 85 ms의 판정 정확도는 미검증이다. 증빙 `outputs/inference-85ms-deployment.json`.
+
+> **네 종목 개발판 구현(2026-10-06, §93, redesign 기반 `99f7a39d`)**: `FourExercise.kt`의 관절/이미지 발 이동·준비/복귀 카운터, `FourExerciseForm.kt`의 반복별 **beta 22검사**를 앱과 PC 재생기에 연결했다. 크로스·사이드 런지는 확인된 좌/우의 `min`으로 1쌍, 니업·사이드 크런치는 한쪽 올림·복귀 1회다. 런지 미확인은 반대쪽에 추정 배분하지 않는다. 기존 네 종목 창 대리 규칙은 런타임에서 EXCLUDE(원본 JSON 보존), 새 폼은 음성/점수/횟수 차감 없음. `UNJUDGED`를 로그의 정확으로 기록하지 않는다. **JVM 557건·재생기 71건·Python 채점기 3건 통과, debug APK 빌드 완료.** MP 18,813프레임은 기하/관측률만 확인했고 반복 정확도 정답이 아니다. 폰 검증·설치는 하지 않았다. 상세/43항목 처리/제약/촬영·채점 절차는 [설계 문서 §9](FOUR_EXERCISE_POSTURE_PLAN.md#9-개발판-구현-결과-2026-10-06-93), 정본 수치는 `research/aihub_fitness/four_exercise_evidence.json`, 로컬 빌드 증빙은 `outputs/four-exercise-verification.json`. 다음은 독립 반복/쪽/오류 정답 수집 및 사람 분리 Gate A/B다.
+
+> **네 종목 개발 설계(2026-10-06, §92, redesign `99f7a39d`)**: 크로스 런지·사이드 런지·스탠딩 니업·스탠딩 사이드 크런치의 관절/피처·반복/좌우 상태·오류 43항목·비관측 범위·개발 순서·실검증을 [설계 문서](FOUR_EXERCISE_POSTURE_PLAN.md)에 정리했다. 지정 data 폴더의 2D/3D 라벨 4,537클립은 ZIP까지 대조해 모두 확인했고, MP 프레임 캐시는 18,813장이다. 해당 data/phone의 종목 세트 로그는 0건이다. 원본 JPEG 보유량과 캐시를 구분한다. **사용자 확정: 니업·사이드 크런치는 한쪽 올림·복귀 = 1회. 런지 두 종목은 좌우 한 번씩 = 1회 유지.** 새 런지 경로는 쪽 미확인을 반대쪽 확정 수로 채우지 않는다. 신규 폼은 beta부터, 새 사람의 고정 빌드 Gate B로 종목/규칙/뷰별 승격한다. 감사 재현 스크립트 `research/aihub_fitness/four_exercise_audit.py`, 결과 `outputs/four-exercise-design/local-audit.json`. **설계와 데이터 감사만 했으며 앱 구현·빌드·실휴대폰 조작·설치는 하지 않았다.**
+
 > **배포 1.3.0-preview.3(2026-09-28)**: 원격 main의 음식 인식 변경을 fast-forward 반영한 후 근육 피로도 기능 전체를 통합했다. versionCode 8. JVM 504건, 릴리스/Android 테스트 APK 빌드 통과. 기존 개발 인증서로 릴리스 변형을 서명한다. 설명 정본 `docs/ANDROID_PREVIEW_RELEASE_1_3_0_3.md`, 배포 증빙 `outputs/release-1.3.0-preview.3/`. 실휴대폰 UI와 Android 계측 재실행은 하지 않는다.
 
 > **범례 스펙트럼 바(2026-09-28, §88)**: 사용자 후속 요청으로 §87의 3개 칩을 기존 색상 네모 높이인 10dp의 연속 회색→라임→그린 바로 변경했다. 아래 양끝에 ‘낮음’/‘높음’만 두고 ‘중간’ 글자는 제거했다. 모델 색/계산/다른 화면은 유지한다. 설치 정본 `outputs/muscle-spectrum/deployment.json`. 실휴대폰 화면은 조작하지 않는다.

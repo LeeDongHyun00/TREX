@@ -21,7 +21,8 @@ enum class RepPolarity { DOWN, UP }
  * @property max 사이클 최고값(DOWN 이면 하강 직전의 휴식 기준, UP 이면 꼭대기).
  * @property byRedescent 복귀 지점에 닿기 전에 다시 내려가서 발화했다(불완전 복귀 폴백).
  */
-data class RepCycle(val tMs: Long, val startMs: Long, val min: Float, val max: Float, val byRedescent: Boolean = false) {
+data class RepCycle(val tMs: Long, val startMs: Long, val min: Float, val max: Float, val byRedescent: Boolean = false,
+                    val side: StepSide? = null) {
     /** 사이클 진폭(휴식 기준 − 바닥). 시작 확정의 진폭 비 비교에 쓴다. */
     val amplitude: Float get() = max - min
 }

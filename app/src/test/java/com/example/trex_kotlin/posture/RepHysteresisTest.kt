@@ -341,7 +341,7 @@ class RepHysteresisTest {
     @Test fun sessionFactoryReproducesPostureLiveConstruction() {
         // PostureLive.kt 의 세 갈래: 규칙 rep 설정 / 바닥(ROM 뗌) / 서서(등록부 그대로). 전부 maxGap 1.5 s · 복귀형.
         assertNull(RepCounter.forSession("플랭크", floor = true))
-        assertNull(RepCounter.forSession("스탠딩 사이드 크런치", floor = false))
+        assertNotNull(RepCounter.forSession("스탠딩 사이드 크런치", floor = false)!!.fourTracker)
         val rule = RepCounter.forSession("푸시업", ruleRomDirection = "min", ruleRomThreshold = 0.5f, floor = true)!!
         assertEquals("min", rule.signal.romDirection)
         assertEquals(0.5f, rule.signal.romThreshold!!, 0f)

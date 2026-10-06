@@ -70,6 +70,7 @@ class RepUnitAccumulator(val unit: RepUnit) {
     /** 아직 1회를 채우지 못한 사이클들의 ROM 판정 (SIDE_PAIR 에서 0 또는 1개). */
     private val half = ArrayList<Boolean?>()
     private var halfAt: Long? = null
+    private val sideQueues = arrayOf(ArrayDeque<UnitRep>(), ArrayDeque<UnitRep>())
 
     /** 완료한 표시 횟수. */
     val completed: Int get() = done.size
@@ -78,7 +79,7 @@ class RepUnitAccumulator(val unit: RepUnit) {
     val invalid: Int get() = done.count { it.valid == false }
 
     /** 첫 쪽을 마치고 반대쪽을 기다리는 중인가 — 화면의 '반대쪽 차례'. [CYCLE] 에서는 늘 false. */
-    val pendingHalf: Boolean get() = half.isNotEmpty()
+    val pendingHalf: Boolean get() = half.isNotEmpty() || sideQueues.any { it.isNotEmpty() }
 
     /** 기다리는 반쪽 사이클의 시각(없으면 null). */
     val pendingHalfAtMs: Long? get() = halfAt
@@ -104,6 +105,21 @@ class RepUnitAccumulator(val unit: RepUnit) {
         return rep
     }
 
+    /** §93: 쪽을 확인한 걸음만 쌍으로 묶는다. 같은 쪽 연속 수행은 반대쪽을 기다린다. */
+    fun offerSide(tMs: Long, valid: Boolean?, side: StepSide?): UnitRep? {
+        if (side == null) return null
+        sideQueues[if (side == StepSide.LEFT) 0 else 1].addLast(UnitRep(tMs, valid))
+        if (sideQueues.any { it.isEmpty() }) {
+            halfAt = sideQueues.flatMap { it.toList() }.minOfOrNull { it.tMs }
+            return null
+        }
+        val a = sideQueues[0].removeFirst(); val b = sideQueues[1].removeFirst()
+        val rep = UnitRep(tMs, combine(listOf(a.valid, b.valid)))
+        done += rep
+        halfAt = sideQueues.flatMap { it.toList() }.minOfOrNull { it.tMs }
+        return rep
+    }
+
     /**
      * 카운터의 진행 사이클 리셋(일시정지·카메라 전환 — `RepCounter.resetCycle`) 때 부른다. **기다리는 반쪽을 버리지 않는다.**
      * 반쪽은 카운터가 이미 발표한(완료한) 실제 한 걸음이다 — 사용자는 한쪽을 마치고 멈췄다가 반대쪽을 이어 할 수 있다.
@@ -114,6 +130,7 @@ class RepUnitAccumulator(val unit: RepUnit) {
 
     /** 새 세트 — 완료한 회와 기다리는 반쪽을 모두 비운다. */
     fun reset() {
+        sideQueues.forEach { it.clear() }
         done.clear()
         half.clear()
         halfAt = null
@@ -139,7 +156,7 @@ class RepUnitAccumulator(val unit: RepUnit) {
          * 스레드: 스스로 동기화하지 않는다. 호출자는 [records]·[acc] 를 지키는 락(세트 마감의 복사와 같은 락) 안에서 부른다.
          */
         fun onCounterFrame(counter: RepCounter, frameMs: Long, records: MutableList<RepRecord>, acc: RepUnitAccumulator?): RepFrameTally {
-            val cycles = counter.newlyPublished.map { RepRecord(it.tMs, it.min, it.max, null, it.startMs) }
+            val cycles = counter.newlyPublished.map { RepRecord(it.tMs, it.min, it.max, null, it.startMs, it.side) }
                 .ifEmpty { listOf(RepRecord(frameMs, counter.lastCycleMin, counter.lastCycleMax, null)) }
             val added = ArrayList<RepRecord>(cycles.size)
             var notShort = 0
@@ -151,7 +168,9 @@ class RepUnitAccumulator(val unit: RepUnit) {
                 val record = c.copy(valid = valid)
                 records += record
                 added += record
-                val rep = if (acc != null) acc.offer(tMs, valid) else UnitRep(tMs, valid)
+                val rep = if (acc != null) {
+                    if (counter.fourTracker?.exercise?.paired == true) acc.offerSide(tMs, valid, c.side) else acc.offer(tMs, valid)
+                } else UnitRep(tMs, valid)
                 if (rep != null) { if (rep.valid == false) short++ else notShort++ }
             }
             return RepFrameTally(added, notShort, short, acc?.pendingHalf == true,

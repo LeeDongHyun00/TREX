@@ -58,3 +58,17 @@ fun RepFormSpecs.asRules(): List<PostureRule> = byExercise.values.flatten().map 
     )
 }
 
+/** §93: 새 기하로도 직접 판단하지 않는 범위를 범위 카드에 보존한다. */
+fun fourExerciseExcludedRules(): List<PostureRule> = FourExercise.entries.flatMap { ex ->
+    mapOf(
+        "척추 분절 정렬·근육 활성" to "MediaPipe에는 척추 분절점·근전도 정보가 없습니다. 몸통 기울기는 이를 대신하지 않습니다.",
+        "지지발 접지·미끄러짐" to "골반 중심 월드 좌표는 지면 좌표가 아닙니다. 발 압력·실제 접촉·카메라 이동과 미끄러짐을 구별하지 않습니다.",
+        "무릎과 발의 국소 정렬" to "교차·측방·들기별 국소 발 축과 가림 검증 전이므로 스쿼트 무릎 임계를 적용하지 않습니다.",
+        "목 분절 정렬·목 당기는 힘" to "머리와 손의 점 위치만으로 목 분절이나 당기는 힘을 알 수 없습니다.",
+    ).map { (condition, reason) ->
+        PostureRule("four_scope|${ex.title}|$condition", ex.title, condition, null, RuleStatus.EXCLUDE, reason,
+            "unobservable", "unobservable", "none", "scope", ">", Float.NaN, "C", "미관측", Float.NaN, Float.NaN, 0, false,
+            listOf(reason), kind = "scope")
+    }
+}
+

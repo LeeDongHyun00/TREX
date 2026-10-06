@@ -15,6 +15,13 @@ import org.junit.Test
  * 핵심 약속 두 가지: (1) U 줄이 없는 옛 캡처는 전과 똑같이 SCREEN_UP 으로 재생된다, (2) dump 는 재생 경로와 같은 함수의 결과다.
  */
 class ReplayCaptureTest {
+    @Test
+    fun `four exercise image features use logged width and height`() {
+        val cap=readCapture(temp("H\timageW=1920\timageH=1080\n"+fLine(0,standing(0f))+"\n"))
+        val f=frameFeatures(cap.frames.single(),FrameStats())!!
+        assertEquals(1920f/1080f,cap.frames.single().aspect,1e-6f)
+        assertEquals((.5f+.11f/2f)*1920f/1080f,f.getValue("four_img_x_L"),1e-6f)
+    }
 
     // 선 자세(MediaPipe 월드 좌표 원본 부호: y 아래, z 카메라 쪽이 음수). 무릎만 knee 로 굽힌다 — 값은 반복 모양이 아니라 형식 검사용.
     private fun standing(kneeBendM: Float): List<FloatArray> {

@@ -25,6 +25,8 @@ const val ALTERNATING_COUNT_RULE = "왼쪽과 오른쪽을 한 번씩 해야 1�
  * 반대쪽으로 안내한다. 목표 10회 = 왼 10 + 오른 10(쌍 기준은 그대로).
  */
 const val SIDE_EACH_COUNT_RULE = "왼발 앞과 오른발 앞을 따로 셉니다. 한쪽을 다 채우면 반대쪽을 알려 드려요. 앞무릎은 80도 가까이 굽혀 주세요."
+const val FOUR_PAIR_COUNT_RULE = "확인된 왼쪽과 오른쪽을 한 번씩 해야 1회로 셉니다. 좌우를 못 본 동작은 짝에 넣지 않습니다."
+const val FOUR_LIFT_COUNT_RULE = "한쪽 다리를 올렸다가 돌아오면 1회로 셉니다."
 
 /**
  * 본인 기준 반복 검사가 있는 종목의 시작 안내(§62c 후속 9) — 첫 반복들이 팔꿈치 위치의 기준이 된다. 처음부터 벌리면 그 벌림이 '정상' 이 되므로
@@ -36,7 +38,7 @@ val REFERENCE_HINTS: Map<String, String> = mapOf(
 )
 
 /** 쪽별로 세는 런지(앱 이름) — `RepFormSpecs.STEP_LUNGES` 의 앱 쪽 이름. */
-val SIDE_EACH_LUNGES = setOf("런지", "바벨 런지")
+val SIDE_EACH_LUNGES = setOf("런지", "바벨 런지", "크로스 런지", "사이드 런지")
 
 /**
  * @property alternating 좌우를 번갈아 하는 종목(런지류·덤벨 컬·스탠딩 니업) — 동작의 성질(메타데이터)이다. 횟수 단위는 [repUnit] 이 정한다.
@@ -61,7 +63,12 @@ data class ExerciseProfile(val name: String, val referenceExercise: String?, val
         else -> capture.title
     }
     val preparationInstruction get() = "권장 촬영 방향은 ${preparationDirection}입니다. ${capture.voice}. " +
-        (if (repUnit == RepUnit.SIDE_PAIR) "$ALTERNATING_COUNT_RULE " else if (repUnit == RepUnit.SIDE_EACH) "$SIDE_EACH_COUNT_RULE " else "") + (referenceHint?.let { "$it " } ?: "") + "몸이 화면에 잡히면 3초 뒤 시작해요."
+        (when (name) {
+            "크로스 런지" -> "$FOUR_PAIR_COUNT_RULE 앞에서 지지하는 다리를 기준으로 셉니다. 뒤로 교차한 발을 준비 위치로 되돌려 주세요. "
+            "사이드 런지" -> "$FOUR_PAIR_COUNT_RULE 옆으로 디딘 발을 준비 위치로 되돌려 주세요. "
+            "스탠딩 니업", "스탠딩 사이드 크런치" -> "$FOUR_LIFT_COUNT_RULE "
+            else -> if (repUnit == RepUnit.SIDE_PAIR) "$ALTERNATING_COUNT_RULE " else if (repUnit == RepUnit.SIDE_EACH) "$SIDE_EACH_COUNT_RULE " else ""
+        }) + (referenceHint?.let { "$it " } ?: "") + "몸이 화면에 잡히면 3초 뒤 시작해요."
     val cameraEnabled get() = kind != ObservationKind.GUIDE
     /**
      * 준비 확인이 요구하는 몸 범위(§89) — 무릎·골반 피처를 쓰지 않는 서서 하는 팔 운동(컬·레이즈·프레스·랫풀·딥스)은 상체만.
@@ -92,7 +99,7 @@ object ExerciseProfiles {
         fun p(name: String, ref: String?, capture: CapturePosition, features: List<String>, floor: Boolean = false,
               kind: ObservationKind = if (ref == null) ObservationKind.WINDOW else ObservationKind.REPS) {
             val lunges = setOf("런지","바벨 런지","사이드 런지","크로스 런지")
-            val alternating = name in lunges || name in setOf("덤벨 컬","스탠딩 니업")
+            val alternating = name in lunges || name in setOf("덤벨 컬","스탠딩 니업","스탠딩 사이드 크런치")
             add(ExerciseProfile(name, ref, capture, floor, if (alternating) ObservationKind.WINDOW else kind, features, alternating,
                 // 런지·바벨 런지는 쪽별로 센다(§63·§66 — 앞뒤로 딛는 걸음의 앞다리 기하). 사이드·크로스 런지는 두 걸음 = 1회 그대로(딛는 방향이 달라 쪽 기하가 없다)
                 repUnit = if (name in SIDE_EACH_LUNGES) RepUnit.SIDE_EACH else if (name in lunges) RepUnit.SIDE_PAIR else RepUnit.CYCLE, referenceHint = REFERENCE_HINTS[name]))
@@ -109,7 +116,7 @@ object ExerciseProfiles {
         p("사이드 레터럴 레이즈","사이드 레터럴 레이즈",d,raises)
         p("프런트 레이즈","프런트 레이즈",b,raises); p("랫풀 다운","랫풀 다운",d,arms)
         p("업라이트로우","업라이트로우",c,raises)
-        p("스탠딩 사이드 크런치","스탠딩 사이드 크런치",c,listOf("knee_h_L","knee_h_R","torso_roll"),kind=ObservationKind.WINDOW)
+        p("스탠딩 사이드 크런치","스탠딩 사이드 크런치",c,listOf("knee_h_L","knee_h_R","torso_roll"))
         p("스탠딩 니업","스탠딩 니업",b,listOf("knee_h_L","knee_h_R","hip_L","hip_R","torso_pitch"))
         p("행잉 레그 레이즈","행잉 레그 레이즈",c,legs)
         p("푸쉬업","푸시업",low,floorArms,true); p("니 푸쉬업","니푸쉬업",low,listOf("elbow_ang_L","elbow_ang_R","hip_dev_knee_L","hip_dev_knee_R"),true)

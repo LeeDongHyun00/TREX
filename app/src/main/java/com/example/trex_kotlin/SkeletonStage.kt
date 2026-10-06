@@ -94,7 +94,7 @@ internal fun SkeletonStage(
             if (t >= MotionCue.PULSE_MS) break
         }
     }
-    // 화면용 좌표 보간(§2.4) — 추론은 300 ms 간격(3.3 fps)이라 그대로 그리면 뼈대가 끊겨 보인다. 새 샘플이 오면 직전 화면 좌표에서 새 좌표로
+    // 화면용 좌표 보간(§2.4) — 추론 샘플 사이의 뼈대 끊김을 줄인다. 새 샘플이 오면 직전 화면 좌표에서 새 좌표로
     // 샘플 간격(80~400 ms)에 걸쳐 프레임마다 옮긴다. **표시만** 부드럽다 — 판정·카운터·로그는 원래 샘플 그대로. 한 간격만큼 늦게 보인다
     val display = remember { FloatArray(MP_LANDMARK_COUNT * 2) }
     val from = remember { FloatArray(MP_LANDMARK_COUNT * 2) }

@@ -278,6 +278,7 @@ class RepFormEvaluator(
     private val dipCheckId: String? = null,
     /** 모집단 사전값 찾기(§90) — 테스트가 바꿔 끼운다. */
     private val priors: (String, String?) -> RepFormPrior? = RepFormPriors::of,
+    val fourExercise: FourExercise? = null,
 ) {
     private var buf = ArrayList<Pair<Long, Map<String, Float>>>()
     /** 모집단 정상 밖이라 기준 모음에 넣지 않은 원값(모음 키별, 같은 쪽으로 이어진 것만) — [LOCKOUT_REPS] 번 이어지면 그 사람의 자세로 받아들인다(§90). */
@@ -350,6 +351,7 @@ class RepFormEvaluator(
 
     /** 판별 게이트가 기각한 사이클 — 그 창의 프레임을 버린다(평가하지 않는다). */
     fun onRejected(endMs: Long) {
+        if (fourExercise != null) { rejectedCount++; return } // 반대 다리의 겹친 창은 보존한다.
         buf.removeAll { it.first <= endMs }
         carry = emptyList()   // 기각 창의 끝은 서 있던 프레임인지 모른다(극값을 받지 않는다) — 이월하지 않는다
         rejectedCount++
@@ -361,7 +363,15 @@ class RepFormEvaluator(
      * 14:46 세트 16회: 등 말림 3회 뒤 조각 하나(더 깊은 65°)가 창의 최소가 돼 사이클 구간이 조각 쪽에 잡혔고, 정상 회가 +23.6° '숙임' 으로 빠졌다(§62c 후속 10).
      * 첫 상단 창이 잡히면 시작 자세를 세우고 START 검사를 한 번 한다.
      */
-    fun onCycle(endMs: Long, cycleMin: Float, cycleMax: Float, startMs: Long? = null): RepFormRep {
+    fun onCycle(endMs: Long, cycleMin: Float, cycleMax: Float, startMs: Long? = null, cycleSide: StepSide? = null): RepFormRep {
+        if (fourExercise != null) {
+            // 양 다리의 창은 겹칠 수 있다. 한쪽 발표 때 반대쪽의 진행 프레임을 소비하지 않는다.
+            val frames = buf.filter { it.first <= endMs && (startMs == null || it.first >= startMs) }
+            val rep = FourExerciseForm.evaluate(repList.size + 1, endMs, frames, checks, signalFeature, cycleMin, cycleMax, cycleSide)
+            repList += rep
+            buf.removeAll { it.first < endMs - FourExerciseTracker.MAX_CYCLE_MS }
+            return rep
+        }
         val from = startMs?.let { it - WINDOW_LEAD_MS }
         val window = buf.filter { it.first <= endMs && (from == null || it.first >= from) }
         // 창 앞을 잘랐으면 직전 회에서 이월한 서 있던 프레임도 옛것이다(사이에 다른 동작이 있었다) — 이 창의 앞머리가 하강 직전 상단이 된다
@@ -951,7 +961,7 @@ data class RepFormSummary(
 ) {
     val hasShip: Boolean get() = checks.any { it.ship && it.gates && it.phase != RepPhase.START }
     /** 정확 수 — 걸음 종목은 판정한 걸음 중에서만(유보는 정상이 아니다). 스쿼트·컬은 종전대로(§62b: 유보는 게이트 통과). */
-    val correct: Int get() = if (steps) reps.count { it.judged && it.correct } else reps.count { it.correct }
+    val correct: Int get() = if (steps || checks.any { FourExercise.of(it.exercise) != null }) reps.count { it.judged && it.correct } else reps.count { it.correct }
     /** 시작 자세 기준 검사(발 너비·발끝)가 있다 — 없으면 그 한계 문장을 쓰지 않는다. */
     private val hasStartChecks: Boolean get() = checks.any { it.phase == RepPhase.START }
 
@@ -996,7 +1006,14 @@ data class RepFormSummary(
         baselineTMs = baselineAtMs?.let { it - t0 },
         baseline = baseline?.filterKeys { k -> checks.any { it.feature == k || it.absRefFeature == k } }.orEmpty(),
         start = start.map { RepFormLog.Check(it.check.id, it.verdict.name, it.value, it.raw, it.reference, it.direction?.name, it.gate, it.warmup) },
-        reps = reps.map { r -> RepFormLog.Rep(r.tMs - t0, r.correct, r.outcomes.map { RepFormLog.Check(it.check.id, it.verdict.name, it.value, it.raw, it.reference, it.direction?.name, it.gate, it.warmup) }, r.view, r.viewRaw, r.side?.key, r.standYawDeg, r.notStep) },
+        reps = reps.map { r ->
+            val four = checks.firstOrNull()?.exercise?.let(FourExercise::of)
+            RepFormLog.Rep(r.tMs - t0, if (four != null) r.judged && r.correct else r.correct,
+                r.outcomes.map { RepFormLog.Check(it.check.id, it.verdict.name, it.value, it.raw, it.reference, it.direction?.name, it.gate, it.warmup) },
+                r.view, r.viewRaw, r.side?.key, r.standYawDeg, r.notStep,
+                formState = if (four == null) null else if (!r.judged) "UNJUDGED" else if (r.correct) "PASS_IN_SCOPE" else "FAIL",
+                movingSide = if (four == FourExercise.CROSS) r.side?.other?.key else if (four != null) r.side?.key else null)
+        },
         rejected = rejected, noTop = noTop, baselineFromFirstBottom = baselineFromFirstBottom,
         live = live.map { it.copy(tMs = it.tMs - t0) },
     )
@@ -1022,7 +1039,8 @@ data class RepFormLog(
                      val warm: Boolean = false)
     /** [view] = 그 반복 창의 뷰 글자 — 있을 때만 키 `view`. */
     data class Rep(val tMs: Long, val correct: Boolean, val checks: List<Check>, val view: String? = null, val viewRaw: String? = null,
-                   val side: String? = null, val standYaw: Float? = null, val notStep: Boolean = false)
+                   val side: String? = null, val standYaw: Float? = null, val notStep: Boolean = false,
+                   val formState: String? = null, val movingSide: String? = null)
 
     /**
      * `rep_form` 블록의 JSON — 세트 로그(`SetLogJson`)와 재생기가 같은 문자열을 낸다(재생기는 org.json 도 SetLogJson 도 컴파일하지 않는다).
@@ -1053,6 +1071,8 @@ data class RepFormLog(
             r.view?.let { sb.append(",\"view\":").append(str(it)) }
             r.viewRaw?.takeIf { it != r.view }?.let { sb.append(",\"view_raw\":").append(str(it)) }
             r.side?.let { sb.append(",\"side\":").append(str(it)) }
+            r.formState?.let { sb.append(",\"form_state\":").append(str(it)); sb.append(",\"side_state\":").append(str(if (r.side == null) "UNKNOWN" else "KNOWN")) }
+            r.movingSide?.let { sb.append(",\"moving_side\":").append(str(it)) }
             r.standYaw?.let { sb.append(",\"stand_yaw\":").append(num(it)) }
             if (r.notStep) sb.append(",\"not_step\":true")
             sb.append(",\"checks\":[")
@@ -1101,7 +1121,7 @@ data class RepFormLog(
  * 폰 검출 5/6). ship 은 COACH 에서 그 회를 횟수에서 뺀다(사용자 결정 2026-09-25, `docs/SQUAT_FOOT_RULES_RESEARCH.md`).
  */
 object RepFormSpecs {
-    const val VERSION = "repform_v0.4"
+    const val VERSION = "repform_v0.5"
 
     /**
      * 이 검사가 대체하는 창 규칙 id — 세션 규칙셋에서 beta 로 낮춘다(음성·점수·헤드라인에서 빠지고 리포트엔 '참고'로 남는다).
@@ -1135,7 +1155,8 @@ object RepFormSpecs {
     val byExercise: Map<String, List<RepFormCheck>> = mapOf("바벨 스쿼트" to withLines("squat", squat()), "덤벨 컬" to withLines("curl", curl()),
         LUNGE to withLines("lunge", lunge()),
         // 계열 파일럿(§66, docs/EXERCISE_TIERS.md) — 같은 검사·같은 임계를 종목 이름만 바꿔 쓴다. 근거는 대리(덤벨 컬·런지 모집단) + AIHub 바벨 클립
-        "바벨 컬" to withLines("curl", curl("바벨 컬")), BARBELL_LUNGE to withLines("lunge", lunge(BARBELL_LUNGE)))
+        "바벨 컬" to withLines("curl", curl("바벨 컬")), BARBELL_LUNGE to withLines("lunge", lunge(BARBELL_LUNGE))) +
+        FourExercise.entries.associate { it.title to FourExerciseForm.checks(it) }
 
     /**
      * 대사 채우기(§90 대사 점검) — 검사 정의에 없는 **짧은 단서**(쿨다운 안에서 회를 뺄 때 문장 대신 말하는 말)와 **처음부터 틀린 출발 알림**
@@ -1176,6 +1197,7 @@ object RepFormSpecs {
 
     fun evaluatorFor(exercise: String, counter: RepCounter): RepFormEvaluator? {
         val checks = byExercise[exercise] ?: return null
+        FourExercise.of(exercise)?.let { return RepFormEvaluator(checks, counter.signal.feature, counter.signal.minAmp, fourExercise = it) }
         // 런지: 어깨선 뷰·걸음 쪽·세트 중 방향 안내(3걸음)·놓친 얕은 걸음(깊이)
         return if (exercise in STEP_LUNGES) RepFormEvaluator(checks, counter.signal.feature, counter.signal.minAmp,
             viewCosKey = ViewEstimator.FEAT_COS_SH, viewSinKey = ViewEstimator.FEAT_SIN_SH, stepSides = true,

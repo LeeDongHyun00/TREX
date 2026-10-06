@@ -6,7 +6,7 @@ import org.junit.Test
 
 class ExerciseGuidesTest {
     @Test fun differentEquipmentAndLungeVariantsNeverReuseTheSample() {
-        listOf("바벨 컬", "바벨 스쿼트", "바벨 런지", "사이드 런지", "크로스 런지", "플랭크").forEach {
+        listOf("바벨 컬", "바벨 스쿼트", "바벨 런지", "플랭크").forEach {
             assertNull(it, ExerciseGuides.forName(it))
         }
     }

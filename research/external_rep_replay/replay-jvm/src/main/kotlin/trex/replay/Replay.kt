@@ -12,6 +12,7 @@ import com.example.trex_kotlin.posture.Stance2d
 import com.example.trex_kotlin.posture.Arm2d
 import com.example.trex_kotlin.posture.Lunge2d
 import com.example.trex_kotlin.posture.SideStepCounter
+import com.example.trex_kotlin.posture.FourExerciseGeometry
 import com.example.trex_kotlin.posture.StepSide
 import com.example.trex_kotlin.posture.Vec3
 import com.example.trex_kotlin.posture.ViewEstimator
@@ -75,7 +76,8 @@ private const val MP_LANDMARK_COUNT = 33
 private val SCREEN_UP = Vec3(0f, 1f, 0f)
 
 /** 한 프레임의 추론 결과. poses = 0 이면 landmarks 는 비어 있다. up = null 이면 SCREEN_UP(U 줄 없음 — 영상 캡처). */
-class CaptureFrame(val tMs: Long, val poses: Int, val image: Array<FloatArray?>, val world: Array<Vec3?>, val up: Vec3? = null)
+class CaptureFrame(val tMs: Long, val poses: Int, val image: Array<FloatArray?>, val world: Array<Vec3?>, val up: Vec3? = null,
+                   val aspect: Float = Stance2d.DEFAULT_ASPECT)
 
 class Capture(val meta: Map<String, String>, val frames: List<CaptureFrame>)
 
@@ -116,7 +118,10 @@ fun readCapture(file: File): Capture {
                     u
                 }
                 pendingUp = null
-                frames += CaptureFrame(t, parts[2].toInt(), image, world, up)
+                val width = (meta["imageWidth"] ?: meta["imageW"])?.toFloatOrNull()
+                val height = (meta["imageHeight"] ?: meta["imageH"])?.toFloatOrNull()
+                val aspect = if (width != null && height != null && width > 0f && height > 0f) width/height else Stance2d.DEFAULT_ASPECT
+                frames += CaptureFrame(t, parts[2].toInt(), image, world, up, aspect)
             }
         }
     }
@@ -207,7 +212,7 @@ fun frameFeatures(frame: CaptureFrame, stats: FrameStats): Map<String, Float>? {
     // §63: 런지 걸음 기하도 앱과 같은 순서·같은 함수
     return pf.features() + viewF + Stance2d.features(xy, vis, MIN_VISIBILITY) +
         Arm2d.features(xy, vis, MIN_VISIBILITY, Stance2d.DEFAULT_ASPECT, Arm2d.yawOf(viewF)) +
-        Lunge2d.features(pf, xy, vis, MIN_VISIBILITY, Stance2d.DEFAULT_ASPECT, ViewEstimator.shoulderYawOf(viewF))
+        Lunge2d.features(pf, xy, vis, MIN_VISIBILITY, Stance2d.DEFAULT_ASPECT, ViewEstimator.shoulderYawOf(viewF)) + FourExerciseGeometry.features(pf, xy, frame.aspect)
 }
 
 /**
@@ -313,7 +318,7 @@ fun run(job: Job, meta: Map<String, String>, frames: List<InputFrame>, stats: Fr
     val rf = if (job.mode == "live" && job.feature == null) RepFormSpecs.evaluatorFor(job.exercise, rc) else null
     // 쪽별 카운트(spec §63, 런지) — 앱처럼 걸음마다 그 걸음의 앞다리 쪽·차단으로 두 풀에 넣는다. 목표는 세트 로그 reps.sides.target(없으면 상한 없이) —
     // 목표가 있어야 목표를 넘은 걸음(extra)·모르는 걸음 채우기가 앱과 같다
-    val sc = if (rf != null && rf.stepSides) SideStepCounter(meta["loggedSidesTarget"]?.toIntOrNull()) else null
+    val sc = if (rf != null && (rf.stepSides || rf.fourExercise?.paired == true)) SideStepCounter(meta["loggedSidesTarget"]?.toIntOrNull(), strictUnknown = rc.fourTracker != null) else null
     val stepSides = StringBuilder()
     val dips = ArrayList<String>()
     var rejectedSeen = 0
@@ -334,9 +339,12 @@ fun run(job: Job, meta: Map<String, String>, frames: List<InputFrame>, stats: Fr
     // 각 리셋을 "t_ms 가 이 값 이상인 첫 프레임 앞" 의 문턱으로 바꾼다: after 가 있으면 after + 1(없음 = 첫 프레임 앞), 없으면 누른 시각.
     val resets = resetThresholds(meta).sorted()
     var pendingSeed: Float? = meta["loggedSeed"]?.toFloatOrNull()
+    var pendingFourSeed = meta["loggedFourSeed"]?.split(';')?.mapNotNull { item ->
+        val kv = item.split('=', limit = 2); kv.getOrNull(1)?.toFloatOrNull()?.let { kv[0] to it }
+    }?.toMap()
     var nextReset = 0
     for (frame in frames) {
-        while (nextReset < resets.size && resets[nextReset] <= frame.tMs) { rc.resetCycle(); rf?.takeIf { it.stepSides }?.discardWindow(); nextReset++ }
+        while (nextReset < resets.size && resets[nextReset] <= frame.tMs) { rc.resetCycle(); rf?.takeIf { it.stepSides || it.fourExercise != null }?.discardWindow(); nextReset++ }
         stats.frames++
         prevT?.let { if (frame.tMs - it > SESSION_MAX_GAP_MS) gaps++ }
         prevT = frame.tMs
@@ -344,6 +352,7 @@ fun run(job: Job, meta: Map<String, String>, frames: List<InputFrame>, stats: Fr
         stats.detected++
         // 앱이 준비 단계에서 심은 서 있는 기준(§89 후속 2, 로그 reps.config.seed) — 앱처럼 카운터가 처음 보는 프레임에 심는다
         pendingSeed?.let { v -> rc.seedStanding(frame.tMs, v); pendingSeed = null }
+        pendingFourSeed?.let { rc.fourTracker?.restoreSeed(it); pendingFourSeed = null }
         val value = signalValue(features, rc.signal.feature)
         if (value != null) {
             stats.withValue++
@@ -376,7 +385,7 @@ fun run(job: Job, meta: Map<String, String>, frames: List<InputFrame>, stats: Fr
                 cycles += "[${num(rc.lastCycleMin)},${num(rc.lastCycleMax)},${ok ?: "null"}]"
                 rf?.onCycle(frame.tMs, rc.lastCycleMin, rc.lastCycleMax)?.let { r -> if (sc != null) { if (r.notStep) stepSides.append('x') else { sc.offer(r.tMs, r.side, blocked = !r.correct); stepSides.append(r.side?.key ?: "?") } } }
             } else for ((k, c) in published.withIndex()) {
-                rf?.onCycle(c.tMs, c.min, c.max, c.startMs)?.let { r -> if (sc != null) { if (r.notStep) stepSides.append('x') else { sc.offer(r.tMs, r.side, blocked = !r.correct); stepSides.append(r.side?.key ?: "?") } } }
+                rf?.onCycle(c.tMs, c.min, c.max, c.startMs, c.side)?.let { r -> if (sc != null) { if (r.notStep) stepSides.append('x') else { sc.offer(r.tMs, r.side, blocked = !r.correct); stepSides.append(r.side?.key ?: "?") } } }
                 // 팔별 경로(spec §62c)의 회 유효는 두 팔 사이클의 ROM(월드 각 비율 + 2D 손목 보조)으로 정해진다 — 앱 RepUnit.onCounterFrame 과 같은 출처(파리티)
                 val ok = if (rc.paired) rc.newlyPublishedValid.getOrNull(k) else rc.signal.isValidRep(c.min, c.max)
                 when (ok) { true -> valid++; false -> invalid++; null -> unjudged++ }
@@ -399,6 +408,7 @@ fun run(job: Job, meta: Map<String, String>, frames: List<InputFrame>, stats: Fr
         "id" to job.id, "capture" to job.capture, "exercise" to job.exercise, "mode" to job.mode,
         "feature" to rc.signal.feature, "minAmp" to rc.signal.minAmp,
         "romDirection" to rc.signal.romDirection, "romThreshold" to rc.signal.romThreshold,
+        "engine" to (if (rc.fourTracker != null) com.example.trex_kotlin.posture.FourExerciseTracker.VERSION else if (rc.usesHysteresis) "hysteresis_v1" else "return_v1"),
         // 카운터가 실제로 쓰는 구성(RepEngineLog.of 와 같은 출처) — 합성 픽스처가 로그 reps.config 를 앱처럼 적을 수 있게
         "romValidated" to rc.signal.romValidated, "refractoryMs" to rc.effectiveRefractoryMs,
         "maxGapMs" to rc.effectiveMaxGapMs, "completeOnReturn" to rc.effectiveCompleteOnReturn,

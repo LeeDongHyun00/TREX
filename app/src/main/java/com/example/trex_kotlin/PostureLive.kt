@@ -174,14 +174,14 @@ import kotlin.coroutines.suspendCoroutine
  * 실시간 자세 평가 세션 (실 엔진).
  *
  * PostureLabScreen(개발용)과 같은 파이프라인 — CameraX 640×480 분석 스트림 → 열/단계 인지
- * 스케줄러(300ms) → MediaPipe PoseLandmarker(GPU 폴백 CPU) → IMU 중력축 체간 좌표계 피처
+ * 스케줄러(85ms, 발열 시 감속) → MediaPipe PoseLandmarker(GPU 폴백 CPU) → IMU 중력축 체간 좌표계 피처
  * → rules_mp_v0 규칙 평가 → LiveCoach 가 '처음부터/점점 흐트러짐/교정됨' 을 판별해
  * 화면 카드와 음성으로 안내한다. 시뮬레이션이던 세션 자세 평가의 실제 구현이다.
  */
 
 
-/** 추론·샘플 간격 (랩과 동일 — 로그의 프레임 간격이 재보정 창 정의와 맞아야 한다) */
-private const val SESSION_SAMPLE_INTERVAL_MS = 300L
+/** 실시간 준비·운동의 목표 추론 간격(§94). 로그에도 같은 값을 기록하며 실제 주기는 placement.fps로 확인한다. */
+private const val SESSION_SAMPLE_INTERVAL_MS = 85L
 
 /** 이 프레임 수 미만이면 판정도 로그도 남기지 않는다 (랩의 MIN_FRAMES_FOR_VERDICT 과 동일) */
 private const val MIN_FRAMES_FOR_LOG = 8
@@ -627,7 +627,7 @@ fun PostureLiveSessionScreen(
             // 세트 로그 단계 0 (spec §58) — 전부 세트 상대시각(프레임 t_ms 와 같은 기준). 첫 프레임 전 사건은 음수로 남는다.
             resets = if (rc != null) repResets.map { e -> RepResetEvent(e.tMs - t0, e.reason, e.afterTMs?.let { it - t0 }) } else null
             // 세지 않은 후보·버린 사이클은 새 코어만 노출한다 — 레거시(지금 앱)는 null. 없는 정보를 빈 값으로 지어내지 않는다.
-            pending = rc?.takeIf { it.usesHysteresis }?.pendingAtSetEnd()?.let { p ->
+            pending = rc?.takeIf { it.usesHysteresis || it.fourTracker != null }?.pendingAtSetEnd()?.let { p ->
                 RepPendingState(
                     p.unconfirmed?.let { it.copy(tMs = it.tMs - t0, startMs = it.startMs - t0) },
                     p.inProgress?.let { it.copy(startMs = it.startMs - t0) },
@@ -635,7 +635,7 @@ fun PostureLiveSessionScreen(
             }
             dropped = rc?.takeIf { it.usesHysteresis }?.droppedReps?.map { it.copy(tMs = it.tMs - t0, startMs = it.startMs - t0) }
             // 반복 판별 게이트(spec §62) — 판별 신호가 있는 종목만 목록(비어 있어도). 없는 종목은 null = 키 없음
-            rejected = rc?.takeIf { it.signal.identityFeature != null || it.paired }?.rejectedReps?.map { it.copy(tMs = it.tMs - t0) }
+            rejected = rc?.takeIf { it.signal.identityFeature != null || it.paired || it.fourTracker != null }?.rejectedReps?.map { it.copy(tMs = it.tMs - t0) }
             retracted = rc?.takeIf { it.paired }?.retractedReps?.map { it - t0 }
             identitySwings = rc?.takeIf { it.signal.identityFeature != null }?.identitySwings?.toList()
             armCycles = rc?.takeIf { it.paired }?.armCycles?.map { it.copy(tMs = it.tMs - t0, startMs = it.startMs - t0) }
@@ -819,7 +819,8 @@ fun PostureLiveSessionScreen(
             refs.repUnitRef[0] = if (refs.repRef[0] != null) RepUnitAccumulator(unit) else null
             // 쪽별 카운트 — 걸음 쪽을 정하는 검사기가 있을 때만(런지). 목표는 세트 시작 시점 값(이 화면은 종목이 바뀌어도 재생성되지 않는다)
             refs.sideCounterRef[0] = if (unit == RepUnit.SIDE_EACH && refs.repFormRef[0] != null && refs.repRef[0] != null)
-                SideStepCounter((workout.resolvedTarget() as? WorkoutTarget.Repetitions)?.amount) else null
+                SideStepCounter((workout.resolvedTarget() as? WorkoutTarget.Repetitions)?.amount,
+                    strictUnknown = refs.repRef[0]?.fourTracker != null) else null
         }
         // 첫 걸음 전부터 쪽별 표기('왼 10 · 오 10', '좌우 각 10회') — 비우면 첫 걸음까지 '0회 / 목표 10회' 로 보여 합계 10걸음으로 읽혔다
         sideTallies = synchronized(repRecords) { refs.sideCounterRef[0]?.tallies() }
@@ -863,7 +864,7 @@ fun PostureLiveSessionScreen(
             synchronized(repRecords) {
                 refs.repRef[0]?.let {
                     it.resetCycle(); refs.repUnitRef[0]?.onCounterCycleReset()
-                    refs.repFormRef[0]?.takeIf { f -> f.stepSides }?.discardWindow()   // 멈추기 전 프레임이 재개 뒤 걸음 창에 섞이지 않게(§63, 걸음 종목만 — 스쿼트·컬 파리티 유지)
+                    refs.repFormRef[0]?.takeIf { f -> f.stepSides || f.fourExercise != null }?.discardWindow()   // 멈추기 전 프레임이 재개 뒤 걸음 창에 섞이지 않게(§63, 걸음 종목만 — 스쿼트·컬 파리티 유지)
                     repResets += RepResetEvent(System.currentTimeMillis(), "pause", refs.lastCounterFrameAt[0].takeIf { t -> t > 0L })
                 }
             }
@@ -1035,7 +1036,7 @@ fun PostureLiveSessionScreen(
                             if (refs.floorRef[0]) newFloorRep = tally.records.lastOrNull()
                             // 반복별 자세 검사(§62a) — 이 프레임에 센 사이클마다 창을 닫고 판정한다(사이클 = 1회인 종목만 등록돼 있다)
                             val formReps = if (rf == null) emptyList() else synchronized(repRecords) {
-                                tally.records.map { r -> rf.onCycle(r.tMs, r.cycleMin, r.cycleMax, r.cycleStartMs) }
+                                tally.records.map { r -> rf.onCycle(r.tMs, r.cycleMin, r.cycleMax, r.cycleStartMs, r.side) }
                             }
                             repCount += tally.repsNotShort
                             repInvalid += tally.repsShort
@@ -1112,8 +1113,8 @@ fun PostureLiveSessionScreen(
                             // 검증 모드는 쓰지 않는다 — 앱이 센 수를 드러낸다(§61). 쪽을 모르는 걸음에서 나온 안내는 추정이라 화면에만(원칙 #6)
                             if (sideEv != null && !refs.validationRef[0]) {
                                 val msg = when {
-                                    sideEv.switchTo != null -> "이제 ${sideEv.switchTo.label} 다리를 앞으로 내디뎌 주세요."
-                                    sideEv.extraOnDone && now - refs.sideCueAtRef[0] > SIDE_CUE_GAP_MS -> "${sideEv.side.label}은 다 했어요. ${sideEv.side.other.label} 다리를 앞으로 해 주세요."
+                                    sideEv.switchTo != null -> "이제 ${sideEv.switchTo.label} 동작을 해 주세요."
+                                    sideEv.extraOnDone && now - refs.sideCueAtRef[0] > SIDE_CUE_GAP_MS -> "${sideEv.side.label}은 다 했어요. ${sideEv.side.other.label} 동작을 해 주세요."
                                     else -> null
                                 }
                                 if (msg != null) {
@@ -1421,7 +1422,7 @@ fun PostureLiveSessionScreen(
                         synchronized(repRecords) {
                             refs.repRef[0]?.let {
                                 it.resetCycle(); refs.repUnitRef[0]?.onCounterCycleReset()   // 끝낸 한쪽은 유지 — 일시정지와 같다
-                                refs.repFormRef[0]?.takeIf { f -> f.stepSides }?.discardWindow()
+                                refs.repFormRef[0]?.takeIf { f -> f.stepSides || f.fourExercise != null }?.discardWindow()
                                 repResets += RepResetEvent(System.currentTimeMillis(), "camera_switch", refs.lastCounterFrameAt[0].takeIf { t -> t > 0L })
                             }
                         }
@@ -1454,9 +1455,13 @@ fun PostureLiveSessionScreen(
                         refs.repRef[0] != null && sideTallies != null && validation -> "왼·오 따로 셈"
                         refs.repRef[0] != null && sideTallies != null -> sideTallies!!.let { st ->
                             val coachNow = mode == CoachMode.COACH; val t = st.of(coachNow)
-                            listOfNotNull(st.next(coachNow)?.let { "${it.label} 차례" },
+                            listOfNotNull("횟수·자세 검증 중".takeIf { refs.repRef[0]?.fourTracker != null }, st.next(coachNow)?.let { "${it.label} 차례" },
                                 "좌우 미확인 ${t.unknown}".takeIf { t.unknown > 0 },
                                 "자세로 뺀 걸음 ${t.blocked}".takeIf { coachNow && t.blocked > 0 }).joinToString(" · ").ifEmpty { null }
+                        }
+                        refs.repRef[0]?.fourTracker != null && validation -> "한쪽 올림·복귀 = 1회"
+                        refs.repRef[0]?.fourTracker != null -> refs.repRef[0]!!.fourTracker!!.let {
+                            "한쪽 올림·복귀 = 1회 · 왼 ${it.left} / 오 ${it.right}" + (if (it.unknown > 0) " · 좌우 미확인 ${it.unknown}" else "") + " · 검증 중"
                         }
                         refs.repRef[0] != null && repUnit == RepUnit.SIDE_PAIR -> if (repHalfPending) SIDE_PAIR_NEXT_HINT else SIDE_PAIR_UNIT_HINT
                         // COACH: ship 자세 검사 위반 회는 횟수에서 뺀다(§62b) — 큰 숫자가 정확 수, 감지 수는 나란히. 부분 반복(§62c)도 같은 줄에

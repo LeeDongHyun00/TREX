@@ -26,11 +26,11 @@ class CapturePreparationTest {
         // 바벨 런지도 쪽별(§66) — 좌우 짝 안내는 사이드 런지로 본다
         assertTrue(ExerciseProfiles.forName("바벨 런지")!!.preparationInstruction.contains(SIDE_EACH_COUNT_RULE))
         val side = ExerciseProfiles.forName("사이드 런지")!!
-        assertTrue(side.preparationInstruction.contains(ALTERNATING_COUNT_RULE))
-        assertTrue(side.preparationInstruction.indexOf(ALTERNATING_COUNT_RULE) < side.preparationInstruction.indexOf("3초"))
-        assertEquals(setOf("런지", "바벨 런지", "사이드 런지", "크로스 런지", "덤벨 컬", "스탠딩 니업"),
+        assertTrue(side.preparationInstruction.contains(FOUR_PAIR_COUNT_RULE))
+        assertTrue(side.preparationInstruction.indexOf(FOUR_PAIR_COUNT_RULE) < side.preparationInstruction.indexOf("3초"))
+        assertEquals(setOf("런지", "바벨 런지", "사이드 런지", "크로스 런지", "덤벨 컬", "스탠딩 니업", "스탠딩 사이드 크런치"),
             ExerciseProfiles.all.filter { it.alternating }.map { it.name }.toSet())
-        assertEquals(setOf("사이드 런지", "크로스 런지"),
+        assertEquals(emptySet<String>(),
             ExerciseProfiles.all.filter { it.repUnit == RepUnit.SIDE_PAIR }.map { it.name }.toSet())
         assertEquals("쪽별 카운트 = 걸음 검사기가 있는 런지(§63·§66)", SIDE_EACH_LUNGES,
             ExerciseProfiles.all.filter { it.repUnit == RepUnit.SIDE_EACH }.map { it.name }.toSet())
