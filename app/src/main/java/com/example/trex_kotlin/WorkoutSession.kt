@@ -102,9 +102,21 @@ data class SessionProgress(
     val workMillis: Map<Int, Long> = emptyMap(),
 ) {
     val secondsLeft get() = ((remainingMs.coerceAtLeast(0) + 999) / 1000).toInt()
-    fun tick(deltaMs: Long, paused: Boolean, timed: Boolean = true, trackElapsed: Boolean = true, trackWork: Boolean = false): SessionProgress = if (paused || index < 0) this else {
-        val consumed = if (timed) deltaMs.coerceAtLeast(0).coerceAtMost(remainingMs.coerceAtLeast(0)) else deltaMs.coerceAtLeast(0)
-        copy(remainingMs = if (timed) remainingMs - consumed else remainingMs, elapsedMs = elapsedMs + if (trackElapsed) consumed else 0,
+
+    /**
+     * @param heldDeltaMs 플랭크 유지 시계(spec §99, 설계 §4.3)가 이번 틱에 새로 인정한 시간 — null 이 아니고 시간 목표면 남은 시간을 벽시계 대신 **이 증분**으로
+     *   줄인다(카메라가 확인한 플랭크 시간, 사용자 결정 Q2 2026-10-06 밤). 세션 경과는 그때도 벽시계([deltaMs])다. null 이면 종전과 같다.
+     *   음수 증분은 0 으로 자른다 — 남은 시간은 거꾸로 가지 않는다(시계도 단조 적립).
+     *   **세트 가동 시간**([workMillis] — 기록의 플랭크 초·근육 부하 초)은 시간 목표면 두 경로 모두 '목표가 인정한 시간'(남은 시간에서 뺀 양)이다. 인정 시간 경로에서
+     *   벽시계를 쌓으면 무릎을 대거나 화면 밖에 있던 시간까지 플랭크 시간으로 기록됐다(원칙 #1, 리뷰 2026-10-07). 종전 경로는 전과 같다(목표에서 자른 벽시계).
+     */
+    fun tick(deltaMs: Long, paused: Boolean, timed: Boolean = true, trackElapsed: Boolean = true, trackWork: Boolean = false,
+             heldDeltaMs: Long? = null): SessionProgress = if (paused || index < 0) this else {
+        val wall = deltaMs.coerceAtLeast(0)
+        val consumed = if (timed) (heldDeltaMs ?: deltaMs).coerceAtLeast(0).coerceAtMost(remainingMs.coerceAtLeast(0)) else wall
+        // 세션 경과 — 종전 경로는 남은 시간과 같은 양(목표에서 자른 벽시계), 인정 시간 경로는 벽시계 그대로
+        val clock = if (timed && heldDeltaMs == null) consumed else wall
+        copy(remainingMs = if (timed) remainingMs - consumed else remainingMs, elapsedMs = elapsedMs + if (trackElapsed) clock else 0,
             workMillis = if (trackWork) workMillis + (index to ((workMillis[index] ?: 0L) + consumed)) else workMillis)
     }
     fun setRepetitions(steps: List<SessionStep>, expectedToken: Int, value: Int): SessionProgress {
@@ -141,6 +153,75 @@ data class SessionProgress(
 /** 휴식/준비는 제외하고 세트별 실제 가동 시간을 전달한다. */
 fun SessionProgress.workDurations(steps: List<SessionStep>): Map<String, Int> = steps.filter { it.phase == SessionPhase.WORK }
     .associate { it.workout.id to ((workMillis[it.token] ?: 0L) / 1000).toInt() }
+
+/**
+ * 플랭크 유지 시계 → 세션 진행 다리(spec §99, `docs/FLOOR_FAMILY_DESIGN.md` §4.3 '브리지'). 분석 스레드가 [publish] 로 카메라가 확인한 시간을 쓰고,
+ * TrexApp 의 tick 루프(100 ms)가 [take] 로 이번 틱에 줄일 남은 시간을 받는다. 라이브 화면 파라미터는 이 홀더 하나만 더한다(`PostureLiveSessionScreen` 의
+ * 레지스터 — 기기 VerifyError, CLAUDE.md). 키는 세트의 운동 id(`…::set:N`) — 다른 세트·묶이지 않음이면 null(종전 벽시계).
+ *  - camera: 인정 시간의 증분만 넘긴다(단조 — 시계가 거꾸로 가지 않으므로 `SessionProgress.tick` 의 자르기와 맞다).
+ *  - clock: 시계가 폴백으로 넘어갔거나(WORK 20 s 동안 한 번도 확인 못 함 — `PlankHoldClock.FALLBACK_MS`) 분석 스레드 소식이 [PlankHoldClock.FALLBACK_MS] 넘게 없을 때
+ *    (카메라 끊김) — 벽시계. 그때까지 한 번도 확인하지 못했다면 카메라 모드로 흘려보낸 벽시계를 한 번 더 넘긴다: "이번 세트는 시계로 잴게요"(설계 §4.7)는
+ *    세트를 처음부터 시계로 잰 것과 같다(종전 동작). 한 번이라도 확인했으면 그 뒤만 벽시계로 잇는다(멈춘 시간을 소급해 채우지 않는다).
+ * [ENABLED] 가 false 면 TrexApp 이 묶지 않는다(설계 §8 '플래그 뒤에 둔다').
+ */
+class HoldBridge {
+    private var key: String? = null
+    private var held = 0L
+    private var camera = true
+    private var consumed = 0L
+    private var cameraWall = 0L
+    private var sincePublish = 0L
+    private var catchUp = 0L
+
+    /** 이 세트를 묶는다(WORK 시작) — 상태를 처음부터. */
+    @Synchronized fun bind(key: String) {
+        this.key = key; held = 0L; camera = true; consumed = 0L; cameraWall = 0L; sincePublish = 0L; catchUp = 0L
+    }
+
+    /** 세트를 떠남(화면 소멸·세션 시작). 다른 키면 그대로 둔다. null 이면 무조건 푼다. */
+    @Synchronized fun release(key: String? = null) { if (key == null || this.key == key) this.key = null }
+
+    /** 분석 스레드 — 시계의 인정 시간과 출처(`camera`면 true). 묶인 키가 아니면 버린다. */
+    @Synchronized fun publish(key: String, heldMs: Long, camera: Boolean) {
+        if (this.key != key) return
+        held = maxOf(held, heldMs); sincePublish = 0L
+        if (this.camera && !camera) toClock()
+    }
+
+    /**
+     * 이번 틱에 줄일 남은 시간 — null = 이 세트는 다리가 없다(벽시계). [wallDeltaMs] 는 이번 틱의 벽시계(일시정지 중에는 부르지 않는다).
+     * 분석 소식이 끊겨 벽시계로 넘어가는 틱은 그 틱의 벽시계를 카메라 몫에 넣기 **전에** 넘긴다 — 전에는 소급분(그때까지의 벽시계)에 이번 틱이 이미 들어 있는데
+     * 이번 틱을 또 더해 한 틱만큼 두 번 줄였다(리뷰 2026-10-07).
+     */
+    @Synchronized fun take(key: String?, wallDeltaMs: Long): Long? {
+        if (key == null || this.key != key) return null
+        val wall = wallDeltaMs.coerceAtLeast(0L)
+        if (camera) {
+            sincePublish += wall
+            if (sincePublish <= com.example.trex_kotlin.posture.PlankHoldClock.FALLBACK_MS) {
+                cameraWall += wall
+                val d = (held - consumed).coerceAtLeast(0L); consumed = maxOf(consumed, held)
+                return d
+            }
+            toClock()
+        }
+        val out = wall + catchUp; catchUp = 0L
+        return out
+    }
+
+    /** 지금 카메라 시간으로 재는가(묶여 있고 폴백 전). */
+    val usesCamera: Boolean @Synchronized get() = key != null && camera
+
+    /** 이 세트([key])를 묶었고 벽시계로 넘어갔는가(시계 폴백이든 분석 소식 끊김이든) — 화면·리포트가 '카메라 미확인' 을 밝힌다. */
+    @Synchronized fun clockFor(key: String?): Boolean = key != null && this.key == key && !camera
+
+    private fun toClock() {
+        camera = false
+        if (held == 0L) catchUp += (cameraWall - consumed).coerceAtLeast(0L)
+    }
+
+    companion object { const val ENABLED = true }
+}
 
 /**
  * 목표 도달 자동 진행의 발화 기다림(§63) — 최대 [MAX_MS], 최소 [GRACE_MS] 뒤 [QUIET_POLLS] 번 연달아 조용하면 넘어간다.

@@ -37,6 +37,16 @@ val REFERENCE_HINTS: Map<String, String> = mapOf(
     "바벨 컬" to "처음 두세 번은 팔꿈치를 옆구리에 붙이고 정확하게 해 주세요. 그 자세를 기준으로 봐요.",
 )
 
+/**
+ * 바닥 계열 세 종목(앱 이름)의 준비 문장(spec §99, 설계 §6) — '무엇이 있어야 세는가(재는가)' 를 먼저 말한다(한 다리 계열 §6 선례). 공유 `FLOOR_SIDE.voice`
+ * ("편하게 앉거나 무릎을 대고 준비해 주세요")는 누워서 시작해야 세는 종목에 '앉거나' 를 안내했다 — 다른 바닥 다섯 종목은 그 문장을 그대로 쓴다.
+ */
+val FLOOR_PREPARATION: Map<String, String> = mapOf(
+    "크런치" to "누워서 무릎을 세우면 세기 시작해요. 휴대폰은 몸 옆 바닥에 가로로 두고, 머리부터 발목까지 보이게 해 주세요.",
+    "레그 레이즈" to "누워서 다리를 바닥에 내리면 세기 시작해요. 다리를 들었을 때 발까지 보이도록 휴대폰을 2미터쯤 떨어뜨려 주세요.",
+    "플랭크" to "무릎을 대고 준비해도 괜찮아요. 다리를 펴고 골반을 들면 시간을 재기 시작해요.",
+)
+
 /** 쪽별로 세는 종목(앱 이름) — 런지 둘은 `RepFormSpecs.STEP_LUNGES`(걸음 검사기), 나머지 넷은 한 다리 계열(`LegProfile`, §97). 왼 1 + 오른 1 = 1회. */
 val SIDE_EACH_EXERCISES = setOf("런지", "바벨 런지", "크로스 런지", "사이드 런지", "스탠딩 니업", "스탠딩 사이드 크런치")
 
@@ -62,7 +72,7 @@ data class ExerciseProfile(val name: String, val referenceExercise: String?, val
         CapturePosition.FLOOR_FRONT -> "앞쪽 사선"
         else -> capture.title
     }
-    val preparationInstruction get() = "권장 촬영 방향은 ${preparationDirection}입니다. ${capture.voice}. " +
+    val preparationInstruction get() = "권장 촬영 방향은 ${preparationDirection}입니다. " + (FLOOR_PREPARATION[name]?.let { "$it " } ?: "${capture.voice}. ") +
         (when (name) {
             "크로스 런지" -> "$LEG_PAIR_COUNT_RULE 왼발을 뒤로 교차해 내려가면 왼쪽 1회예요. 발이 교차하고 무릎이 깊게 굽어야 세요. 허리를 숙이면 세지 않아요. "
             "사이드 런지" -> "$LEG_PAIR_COUNT_RULE 왼 무릎을 굽히며 몸을 왼쪽으로 옮기면 왼쪽 1회예요. 무릎을 허벅지가 수평이 되게 깊게 굽혀야 세요. 허리를 숙이거나 무릎이 발끝을 넘으면 세지 않아요. "

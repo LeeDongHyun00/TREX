@@ -1,7 +1,6 @@
 package com.example.trex_kotlin.posture
 
 import kotlin.math.abs
-import kotlin.math.acos
 import kotlin.math.hypot
 import kotlin.math.max
 
@@ -18,6 +17,10 @@ import kotlin.math.max
  * 연산은 전부 Double 로 하고(연구 float64 와 패리티, floor_port_fixture 로 검증) 결과만 Float.
  * 규칙은 assets/posture/rules_floor_v0.json — 전부 beta(임계값 미보정: AIHub 에 바닥 높이
  * 카메라가 없어 세트 로그 재보정 전까지 참고용).
+ *
+ * **중점 피처(좌우 관절 평균)는 플랭크·크런치·라잉 레그 레이즈의 카운트·시간에 쓰지 않는다**(spec §99) — 측면에서 먼 쪽이 가려지면 절반가량 빠지고(09-23 55~69 %),
+ * 화면 좌표 그대로라 폰 롤에 부호가 깨진다. 그 세 종목은 보이는 쪽 한 사슬(`FloorChain`, `fc_*`)로 세고 재며, 중점 피처는 로그·TRACK 비교(`head_ground`·`hip_ang`)·
+ * 레거시 규칙 호환용으로만 남긴다.
  */
 const val FLOOR_RULES_ASSET = "posture/rules_floor_v0.json"
 
@@ -28,6 +31,9 @@ const val FLOOR_RULES_ASSET = "posture/rules_floor_v0.json"
  * ABSTAIN 이 된다. 값은 휴리스틱(MP visibility 는 보정된 확률이 아님) — 세트 로그로 조정 대상.
  */
 private const val FEATURE_VIS_CUT = 0.35f
+
+/** MediaPipe 랜드마크 수 — `PostureAnalyzer.MP_LANDMARK_COUNT` 와 같다. 그 파일은 안드로이드 의존이라 이 파일이 참조하지 않는다(재생기가 이 파일을 컴파일한다, spec §99). */
+private const val FLOOR_LANDMARKS = 33
 
 private fun visOk(vis: FloatArray?, vararg ids: Int): Boolean =
     vis == null || ids.all { vis[it] >= FEATURE_VIS_CUT }   // null = 연구 픽스처 경로(게이트 없음)
@@ -46,10 +52,29 @@ private object M {
 
 class FloorFeatureExtractor {
 
-    /** 카메라와 이미지 재생이 같은 종목별 피처 경로를 사용한다. */
-    fun computeForExercise(exercise: String, xy: FloatArray, vis: FloatArray, width: Int, height: Int): Map<String, Float> =
-        compute(xy,vis,width,height) + sideFeatures(xy,vis,width,height) +
+    /** 바닥 계열 관측 층(spec §99) — 쪽 잠금 이력이 세트 단위 상태라 추출기가 들고 [reset] 과 함께 비운다. 종목마다 축이 달라 종목이 바뀌면 새로 만든다. */
+    private var chain: FloorChain? = null
+    private var chainFrames = 0L
+
+    /**
+     * 카메라와 이미지 재생이 같은 종목별 피처 경로를 사용한다. 플랭크·크런치·라잉 레그 레이즈는 `FloorChain` 피처(`fc_*`)를 더한다 — **보이는 쪽 몸통(어깨·골반)이
+     * 관측된 프레임만**(`fc_torso` 가 있을 때). 몸통이 안 보이면 관측 층은 쪽·up 여부·`fc_chain = 0` 만 내는데, 그것을 붙이면 관절 11개짜리 프레임도 피처 맵이 늘
+     * 비지 않아 앱의 '측정 가능'(`features.isNotEmpty()` — 앵커 폴백 시작·비교 추적기·바닥 피드백의 '관절이 안 보여요')이 '검출 = 측정 가능' 함정(§31a)으로 돌아갔다
+     * (리뷰 2026-10-07). 쪽 잠금 이력은 그 프레임도 본다(관측 층을 부르기는 한다).
+     * @param up 중력 up(`FloorChain.gravityUp` — 앱 `checkUpSanity` 의 뒤집힘을 되돌린 값). 모르면 null(절대 수평 피처 유보, 부호는 화면 위 기준).
+     * @param tMs 프레임 시각(쪽 잠금 이력). 없으면 판정 격자 300 ms 간격을 가정한다(연구 픽스처 경로).
+     */
+    fun computeForExercise(exercise: String, xy: FloatArray, vis: FloatArray, width: Int, height: Int,
+                           up: Vec3? = null, tMs: Long? = null): Map<String, Float> {
+        val legacy = compute(xy,vis,width,height) + sideFeatures(xy,vis,width,height) +
             if(exercise == "플랭크") PlankGeometry.features(xy,vis,width,height) else emptyMap()
+        val kind = FloorChain.Kind.of(exercise) ?: return legacy
+        val c = chain?.takeIf { it.kind == kind } ?: FloorChain(kind).also { chain = it }
+        val t = tMs ?: (chainFrames * CHAIN_FRAME_MS)
+        chainFrames++
+        val fc = c.features(t, xy, vis, width, height, up)
+        return if (fc.containsKey(FloorChain.TORSO)) legacy + fc else legacy
+    }
 
     /** 개인 비교용 측별 기하. 반대쪽이 가려져도 보이는 쪽의 기준 수집은 계속한다. */
     fun sideFeatures(xy: FloatArray, vis: FloatArray, width: Int, height: Int): Map<String, Float> = buildMap {
@@ -80,7 +105,11 @@ class FloorFeatureExtractor {
 
     val frameCount: Int get() = histHip.size
 
+    /** 이 세트에서 `FloorChain` 쪽 잠금이 바뀐 횟수(spec §99, 잠정 규칙의 검증 재료 — 세트 로그·재생기). 바닥 계열 세 종목이 아니면 0. */
+    val chainSwitches: Int get() = chain?.switches ?: 0
+
     fun reset() {
+        chain?.reset(); chainFrames = 0L
         histHip.clear(); histAnk.clear(); histWr.clear()
         moveHipAnkle = 0.0
         moveWristAnkle = 0.0
@@ -91,7 +120,7 @@ class FloorFeatureExtractor {
      * @param vis 33점 가시성. 핵심 관절(어깨·골반·발목)이 안 보이면 빈 맵(프레임 스킵, 접지선도 안 갱신).
      */
     fun compute(normalizedXy: FloatArray, vis: FloatArray?, imageWidth: Int, imageHeight: Int): Map<String, Float> {
-        if (normalizedXy.size < MP_LANDMARK_COUNT * 2 || imageWidth <= 0 || imageHeight <= 0) return emptyMap()
+        if (normalizedXy.size < FLOOR_LANDMARKS * 2 || imageWidth <= 0 || imageHeight <= 0) return emptyMap()
         // 코어 = 어깨·골반뿐. 이 둘은 몸통 길이(torso) 정규화와 신체 주축에 쓰여 **모든** 피처의 전제다.
         // 발목은 코어에서 뺐다(§25b): 실측에서 발목이 프레임 밖으로 잘려 푸시업 세트의 85% 프레임이
         // 버려졌는데, 그 세트의 규칙 3개는 발목을 쓰지도 않았다. 발목이 필요한 피처만 아래에서 개별 유보한다.
@@ -176,29 +205,14 @@ class FloorFeatureExtractor {
     }
 
     companion object {
-        /**
-         * 직선 a→b 대비 점 p 의 수직 이탈 / |a−b|. 법선을 화면 위쪽(이미지 −y)으로 고정 —
-         * n0 = (−u_y, u_x) 가 아래를 향하면 뒤집는다. 좌우 반전 불변.
-         */
-        fun devUp(p: DoubleArray, a: DoubleArray, b: DoubleArray): Double {
-            var ux = b[0] - a[0]
-            var uy = b[1] - a[1]
-            val len = max(hypot(ux, uy), 1e-6)
-            ux /= len; uy /= len
-            var nx = -uy
-            var ny = ux
-            if (ny > 0) { nx = -nx; ny = -ny }
-            return ((p[0] - a[0]) * nx + (p[1] - a[1]) * ny) / len
-        }
+        /** 연구 픽스처 경로(시각 없음)의 쪽 잠금 시계 — 판정 격자(`SESSION_SAMPLE_INTERVAL_MS`)와 같은 300 ms. */
+        private const val CHAIN_FRAME_MS = 300L
 
-        /** b 를 꼭짓점으로 하는 2D 각(도). */
-        fun ang(a: DoubleArray, b: DoubleArray, c: DoubleArray): Double {
-            val ux = a[0] - b[0]; val uy = a[1] - b[1]
-            val wx = c[0] - b[0]; val wy = c[1] - b[1]
-            val n = max(hypot(ux, uy) * hypot(wx, wy), 1e-6)
-            val cos = ((ux * wx + uy * wy) / n).coerceIn(-1.0, 1.0)
-            return Math.toDegrees(acos(cos))
-        }
+        /** `Floor2d.devUp` — 순수 기하는 재생기가 컴파일하도록 FloorChain.kt 로 옮겼다(같은 식). */
+        fun devUp(p: DoubleArray, a: DoubleArray, b: DoubleArray): Double = Floor2d.devUp(p, a, b)
+
+        /** `Floor2d.ang` — b 를 꼭짓점으로 하는 2D 각(도). */
+        fun ang(a: DoubleArray, b: DoubleArray, c: DoubleArray): Double = Floor2d.ang(a, b, c)
 
         /** 성분별 중앙값 (numpy median 과 동일: 짝수면 가운데 둘의 평균). */
         fun median2(pts: List<DoubleArray>): DoubleArray {
@@ -211,20 +225,3 @@ class FloorFeatureExtractor {
         }
     }
 }
-
-/** 바닥 종목용: 같은 샘플에 features 만 바닥 2D 피처로 바꾼 사본 (세트 로그·집계에 그대로 흘림). */
-fun PoseSample.withFeatures(newFeatures: Map<String, Float>): PoseSample = PoseSample(
-    detected = detected,
-    normalizedXy = normalizedXy,
-    visibility = visibility,
-    features = newFeatures,
-    visibleJointCount = visibleJointCount,
-    inferMs = inferMs,
-    imageWidth = imageWidth,
-    imageHeight = imageHeight,
-    up = up,
-    upFromGravity = upFromGravity,
-    upFlipped = upFlipped,
-    upVerified = upVerified,
-    world = world,
-)

@@ -2,7 +2,10 @@ package com.example.trex_kotlin.posture
 
 enum class FloorFeedbackPhase { PREPARING, MEASURING, ATTENTION, RECOVERED, UNAVAILABLE, PAUSED }
 
-/** 화면·골격·음성이 같은 순간의 관측을 사용한다. 빨강은 확인할 부위이며 정답 인증이 아니다. */
+/**
+ * 화면·골격·음성이 같은 순간의 관측을 사용한다. 강조 부위([landmarks])는 확인할 부위이며 정답 인증이 아니다 — 바닥 판정은 전부 beta 라
+ * 라이브 화면은 이 부위를 '참고'(호박색 provisional) 채널로 칠한다(spec §99, 설계 §6 강조 색 — 빨강은 ship 전용).
+ */
 data class FloorFeedback(
     val phase: FloorFeedbackPhase,
     val message: String,
@@ -20,7 +23,13 @@ data class FloorFeedback(
     }
 }
 
-/** §36: 바닥 참고 피드백 전용 정책. 규칙 등급·점수·서서 종목의 음성 정책은 바꾸지 않는다. */
+/**
+ * §36: 바닥 참고 피드백 전용 정책. 규칙 등급·점수·서서 종목의 음성 정책은 바꾸지 않는다.
+ *
+ * **beta 판정은 말하지 않는다**(spec §99, 사용자 결정 Q1 2026-10-06 밤 — REP_ENGINE_DESIGN #22 를 '침묵' 으로 닫음, 원칙 #2·#6): 확인 필요(ATTENTION)·범위 복귀(RECOVERED)·
+ * 플랭크 정렬 이탈·복귀는 화면 문장만 내고 [FloorFeedback.speech] 는 null 이다. 전에는 "참고 안내예요…" 로 말했다. 남은 음성은 관측 문장(필요한 관절이 안 보임)뿐이고,
+ * 플랭크 배치·멈춤 음성은 유지 시계(`PlankHoldClock`)가 맡는다.
+ */
 class FloorFeedbackController(private val exercise: String, rules: List<PostureRule>) {
     private val activeRules = rules.filter { it.exercise == exercise && it.status != RuleStatus.EXCLUDE }
     private val repRule = activeRules.firstOrNull { it.repConfig != null }
@@ -105,8 +114,8 @@ class FloorFeedbackController(private val exercise: String, rules: List<PostureR
         val chosen = candidates.firstOrNull { it.id == active?.id } ?: candidates.firstOrNull()
         if (chosen != null) {
             active = chosen; goodSince = null; recoveryUntil = 0
-            return FloorFeedback(FloorFeedbackPhase.ATTENTION, chosen.message, chosen.points,
-                voice(chosen.id, "참고 안내예요. ${chosen.message}", now, voiceEnabled, 20000), chosen.id)
+            // beta 는 화면에만(Q1) — 음성 없음
+            return FloorFeedback(FloorFeedbackPhase.ATTENTION, chosen.message, chosen.points, null, chosen.id)
         }
         val previous = active
         if (previous != null) {
@@ -129,11 +138,11 @@ class FloorFeedbackController(private val exercise: String, rules: List<PostureR
                 if (!stillObserved) active = null
             }
         }
-        if (now < recoveryUntil) return FloorFeedback(FloorFeedbackPhase.RECOVERED, recoveryMessage,
-            speech = voice("recovery", recoveryMessage, now, voiceEnabled, 20000))
+        if (now < recoveryUntil) return FloorFeedback(FloorFeedbackPhase.RECOVERED, recoveryMessage)   // beta 의 복귀도 화면에만(Q1)
         val limited = activeRules.isEmpty()
         val msg = when {
-            limited && exercise == "크런치" -> "머리 들림의 변화를 측정하고 있어요 · 참고"
+            limited && exercise == "크런치" -> "상체(어깨) 들림의 근사를 기록하고 있어요 · 참고"
+            limited && exercise == "라잉 레그 레이즈" -> "다리(허벅지) 들림을 기록하고 있어요 · 참고"
             limited -> "팔 들림의 변화를 측정하고 있어요 · 참고"
             mode == CoachMode.TRACK -> "움직임을 기록하고 있어요. 처음 자세와의 변화만 안내해요"
             else -> "움직임을 측정 중이에요. 참고 범위를 벗어나면 알려드려요"
@@ -146,16 +155,18 @@ class FloorFeedbackController(private val exercise: String, rules: List<PostureR
         badReps = 0; goodReps = 0; lastRep = null; measuredSince = null
     }
 
+    @Suppress("UNUSED_PARAMETER")
     private fun alignmentFeedback(now: Long, state: AlignmentSnapshot, enabled: Boolean): FloorFeedback {
+        // 정렬은 beta — 이탈·복귀 모두 화면에만(Q1). 배치·멈춤 음성은 유지 시계가 낸다(spec §99)
         val issue = state.issue
-        if (issue != null) return FloorFeedback(FloorFeedbackPhase.ATTENTION,issue.message,issue.points,
-            voice(issue.rule.id+":"+issue.side,"참고 안내예요. ${issue.message}",now,enabled,20000),issue.rule.id)
+        if (issue != null) return FloorFeedback(FloorFeedbackPhase.ATTENTION,issue.message,issue.points,null,issue.rule.id)
         val recovery = state.recovery
-        if (recovery != null) return FloorFeedback(FloorFeedbackPhase.RECOVERED,recovery.message,
-            speech=voice("alignment-recovery",recovery.message,now,enabled,20000))
-        if (!state.placementReady) return FloorFeedback(FloorFeedbackPhase.UNAVAILABLE,
-            "몸 옆에서 어깨부터 발목까지 길게 담아주세요. 다리를 펴고 플랭크 자세를 잡아주세요",
-            speech=voice("plank-placement","몸 옆에서 어깨부터 발목까지 보이게 해주세요",now,enabled,15000))
+        if (recovery != null) return FloorFeedback(FloorFeedbackPhase.RECOVERED,recovery.message)
+        // 유지 시계가 플랭크로 확인하지 않은 칸 — 정렬을 보지 않는다(무릎을 대면 골반이 오독된다). 무엇이 있어야 재는지는 HUD 상태 줄·시계 음성이 말한다
+        if (!state.held) return FloorFeedback(FloorFeedbackPhase.MEASURING, "플랭크가 확인되면 고개와 골반 정렬을 참고로 봐요")
+        // 시계는 플랭크로 재고 있는데 정렬 준비(투영 비·측면·화면 수평)가 안 됨 — 정렬만 유보다. 전에는 이 검사가 먼저라 시간은 가는데 큰 줄이 '다리를 펴고 플랭크
+        // 자세를 잡아주세요' 였다(설계 §2 #8: ratio 는 시간 게이트가 아니다, 리뷰 2026-10-07)
+        if (!state.placementReady) return FloorFeedback(FloorFeedbackPhase.MEASURING, "이 각도에서는 정렬을 참고로도 보지 않아요 · 시간은 계속 재요")
         val missing = state.items.firstOrNull { it.value == null }
         if (missing != null) return FloorFeedback(FloorFeedbackPhase.UNAVAILABLE,
             "${if(missing.head) "고개" else "골반"} 관절이 안 보여요. 보이는 항목만 계속 확인하고 있어요")

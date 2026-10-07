@@ -1,7 +1,12 @@
 package trex.replay
 
+import com.example.trex_kotlin.posture.FloorChain
+import com.example.trex_kotlin.posture.FloorCycleTracker
 import com.example.trex_kotlin.posture.FloorFeatureExtractor
+import com.example.trex_kotlin.posture.FloorProfile
 import com.example.trex_kotlin.posture.Joints
+import com.example.trex_kotlin.posture.PlankHoldClock
+import com.example.trex_kotlin.posture.PlankHoldEvent
 import com.example.trex_kotlin.posture.PoseFrame
 import com.example.trex_kotlin.posture.RepCounter
 import com.example.trex_kotlin.posture.RepCycle
@@ -69,7 +74,21 @@ import java.io.File
  *
  * 매니페스트 7~9열(선택): floor(1/0) · 규칙 rep 설정의 ROM 방향 · 임계값 — RepCounter.forSession 인자 그대로.
  * 10열(선택): hysteresis 구성의 극성 down/up — 새 코어로 센 로그의 reps.config.polarity.
+ * 11열(선택): 바닥 반복 계열의 켠 판별 사유(default | all | none | 쉼표 목록) — 진단 구성. 비우면 앱 기본값(FloorProfile.defaultEnabled).
  * 연구용 파생 신호 `<base>_minside_both` = 좌우가 둘 다 있을 때만 min(L, R) — 앱 피처가 아니다(설계 §4.4 컬 후보).
+ *
+ * 바닥 경로(spec §99, docs/FLOOR_FAMILY_DESIGN.md §7.1): floor = 1 인 랜드마크 캡처는 앱 PostureLive 바닥 분기와 같은 함수
+ * `FloorFeatureExtractor.computeForExercise(종목, xy, vis, 이미지 W/H, 중력 up, t)` 로 피처를 만든다(서서 하는 3D 피처를 쓰지 않는다 — 앱과 같다).
+ *  - 이미지 크기 = 메타 imageW/imageH(imageWidth/imageHeight). 없으면 세로 480×640 을 가정하고 결과에 floorImageAssumed 를 적는다.
+ *  - up = U 줄을 **중력 up** 으로 넘긴다(앱의 `FloorChain.gravityUp(s.up, fromGravity = true, s.upFlipped)`). U 줄이 없으면(영상 코퍼스) null = 중력 모름 →
+ *    롤 의존 피처(fc_axis_h·fc_torso_elev) 유보, 누운 영역 게이트 없이 진폭·최대 사이클·출구로만(설계 §4.2). 앱 배선(2026-10-07) 뒤의 세트 로그는 바닥 계열 프레임마다
+ *    `floor_up`(관측 층에 실제로 넘긴 중력 — 앱의 up 뒤집힘을 되돌린 값, 중력이 아니면 null)을 남기고 setlog_captures.py 가 그것을 U 줄로 쓴다(null 이면 U 줄 없음) —
+ *    그 전 로그의 U 줄은 뒤집은 **뒤**의 up 이라 앱이 뒤집은 프레임에서 부호 있는 들림각의 '위' 가 반대다(부호 없는 축각은 같다).
+ *  - 크런치·라잉 레그 레이즈 = RepCounter.forSession(floor = true) 의 FloorCycleTracker. 결과에 기각 사유·상세(floorRejected)·센 회 상세(floorReps)·
+ *    소리 없이 버린 후보(floorDiscarded)·판별 유보(identityAbstainMs)·누운 기준(floorLying)을 더한다. 메타 loggedLying(로그 reps.config.lying)이 있으면 심는다.
+ *  - 플랭크 = 카운터 없음(등척성) → PlankHoldClock 을 판정 프레임마다 돌린다(사람이 없으면 onFrame(t, null) — 앱 배선과 같은 약속). 결과 = 인정 시간·사유별 멈춤·
+ *    구간·사건·프레임별 멈춤 사유 분포(runHold).
+ *  - --floor-clips: AIHub 바닥 클립(키프레임 16장)을 클립마다 새 추출기·카운터·시계로 재생한다(floorClips).
  */
 
 private const val MIN_VISIBILITY = 0.5f
@@ -219,16 +238,50 @@ fun frameFeatures(frame: CaptureFrame, stats: FrameStats): Map<String, Float>? {
         LegGeometry.features(pf, xy, vis, MIN_VISIBILITY, frame.aspect, LegGeometry.rollDeg(up))
 }
 
+/** 바닥 경로의 이미지 크기(px) — 메타 imageW/imageH(또는 imageWidth/imageHeight). 없으면 세로 480×640 가정(stats.floorImageAssumed). */
+fun floorImageSize(meta: Map<String, String>, stats: FrameStats): Pair<Int, Int> {
+    val w = (meta["imageWidth"] ?: meta["imageW"])?.toFloatOrNull()?.toInt()
+    val h = (meta["imageHeight"] ?: meta["imageH"])?.toFloatOrNull()?.toInt()
+    if (w != null && h != null && w > 0 && h > 0) return w to h
+    stats.floorImageAssumed = true
+    return 480 to 640
+}
+
+/**
+ * 바닥 경로 한 프레임(spec §99) — 앱 PostureAnalyzer 의 vis = min(visibility, presence)(없으면 1)·정규화 xy 를 만들어 앱 PostureLive 바닥 분기와 **같은 함수**
+ * `FloorFeatureExtractor.computeForExercise` 에 넘긴다. up = U 줄(중력), 없으면 null. 사람 없음(poses 0·관절 누락)은 null — 앱은 그 프레임에서 카운터를 부르지 않는다.
+ */
+fun floorFrameFeatures(frame: CaptureFrame, exercise: String, extractor: FloorFeatureExtractor, width: Int, height: Int): Map<String, Float>? {
+    if (frame.poses < 1 || frame.image.any { it == null }) return null
+    val vis = FloatArray(MP_LANDMARK_COUNT) { i ->
+        val lm = frame.image[i]!!
+        minOf(if (lm[2].isNaN()) 1f else lm[2], if (lm[3].isNaN()) 1f else lm[3])
+    }
+    val xy = FloatArray(MP_LANDMARK_COUNT * 2) { k -> frame.image[k / 2]!![k % 2] }
+    return extractor.computeForExercise(exercise, xy, vis, width, height, frame.up, frame.tMs)
+}
+
+/** 한 세트(캡처·클립)의 바닥 경로 입력 — 추출기는 세트 단위 상태(접지선 이력·쪽 잠금)를 들고 있어 여기서 새로 만든다. */
+fun floorInputFrames(frames: List<CaptureFrame>, exercise: String, meta: Map<String, String>, stats: FrameStats): List<InputFrame> {
+    val (w, h) = floorImageSize(meta, stats)
+    val extractor = FloorFeatureExtractor()
+    val out = frames.map { f -> if (f.up != null) stats.withUp++; InputFrame(f.tMs, floorFrameFeatures(f, exercise, extractor, w, h)) }
+    stats.chainSwitches = extractor.chainSwitches
+    return out
+}
+
 /**
  * --dump-features: F 줄마다 재생 경로와 같은 frameFeatures 결과를 한 줄씩. 사람 없음(poses 0·관절 누락)은 detected=false, features={}.
  * 값은 Float.toString 그대로(반올림 없음), NaN·무한대는 null — 비교하는 쪽이 로그의 소수 5자리 반올림을 허용 오차로 다룬다.
+ * 메타 floor=1 이면 바닥 경로(floorInputFrames, 종목 = 메타 exercise) — 재생과 같은 함수.
  */
 fun dumpFeatures(capture: Capture, out: File): Int {
     val stats = FrameStats()
+    val floorExercise = capture.meta["exercise"]?.takeIf { capture.meta["floor"] == "1" }
+    val floorFeats = floorExercise?.let { ex -> floorInputFrames(capture.frames, ex, capture.meta, stats).map { it.features } }
     out.bufferedWriter().use { w ->
-        // 바닥 캡처(floor=1)면 바닥 경로 — 재생과 같은 입력 함수
-        for (frame in inputFrames(capture, stats)) {
-            val feats = frame.features
+        for ((k, frame) in capture.frames.withIndex()) {
+            val feats = if (floorFeats != null) floorFeats[k] else frameFeatures(frame, stats)
             w.write("{\"t\":${frame.tMs},\"detected\":${feats != null},\"features\":{")
             w.write(feats.orEmpty().entries.joinToString(",") { (k, v) -> "\"$k\":${num(v)}" })
             w.write("}}")
@@ -243,6 +296,10 @@ class FrameStats {
     var detected = 0
     var withValue = 0
     var upFlipped = 0
+    // 바닥 경로(spec §99)만: U 줄(중력 up)이 있던 프레임, 쪽 잠금 교체 수, 이미지 크기를 가정했는가
+    var withUp = 0
+    var chainSwitches = 0
+    var floorImageAssumed = false
 }
 
 /**
@@ -253,7 +310,21 @@ data class Job(
     val id: String, val capture: String, val exercise: String, val mode: String, val feature: String?, val minAmp: Float?,
     val floor: Boolean = false, val romDirection: String? = null, val romThreshold: Float? = null,
     val polarity: String? = null,
+    /** 바닥 반복 계열의 켠 판별 사유(진단) — null·"default" = 앱 기본값, "all", "none", 또는 쉼표 목록([floorEnabledSet]). */
+    val floorEnabled: String? = null,
 )
+
+/** 매니페스트 11열·--floor-clips 인자의 판별 사유 집합. null = 앱 기본값(RepCounter 가 FloorProfile.defaultEnabled 를 쓴다). */
+fun floorEnabledSet(spec: String?, profile: FloorProfile?): Set<String>? {
+    if (profile == null || spec.isNullOrBlank() || spec == "default") return null
+    return when (spec) {
+        "all" -> profile.reasons.toSet()
+        "none" -> emptySet()
+        else -> spec.split(',').map { it.trim() }.filter { it.isNotEmpty() }.onEach {
+            require(it in profile.reasons) { "unknown floor reason $it for ${profile.title} (${profile.reasons})" }
+        }.toSet()
+    }
+}
 
 /**
  * 연구 재생에서 새 코어를 돌릴 수 있는 종목과 극성 — 앱 등록부는 아직 어느 종목에도 극성을 켜지 않는다(설계 §4.2).
@@ -282,8 +353,12 @@ fun counterFor(job: Job): RepCounter? {
         // 신호 교체 진단: ROM 기준은 원래 신호의 단위라 떼어낸다(다른 피처에 붙이면 의미가 없다).
         RepSignal(job.feature, job.minAmp ?: session.signal.minAmp)
     } else session.signal
+    // 바닥 반복 계열의 판별 사유 진단(spec §99): forSession 과 같은 구성에 켠 사유만 바꾼다(사이클 분할은 같다)
+    val floorSet = floorEnabledSet(job.floorEnabled, session.signal.floorProfile)
     return when (job.mode) {
-        "live" -> if (job.feature == null) session else RepCounter(signal, maxGapMs = 1500L, completeOnReturn = true)
+        "live" -> if (job.feature != null) RepCounter(signal, maxGapMs = 1500L, completeOnReturn = true)
+            else if (floorSet != null) RepCounter(session.signal, maxGapMs = 1500L, completeOnReturn = true, floorEnabled = floorSet)
+            else session
         "reversal" -> RepCounter(signal)
         // 새 코어: 극성을 아는 종목만(hysteresisPolarity). 모르면 null → run() 이 오류로 적는다.
         "hysteresis" -> hysteresisPolarity(job)?.let { RepCounter(signal.copy(polarity = it), maxGapMs = 1500L, completeOnReturn = true) }
@@ -329,7 +404,9 @@ fun inputFrames(capture: FeatureCapture): List<InputFrame> = capture.frames.map 
 
 fun run(job: Job, capture: Capture, seriesDir: File?): String {
     val stats = FrameStats()
-    return run(job, capture.meta, inputFrames(capture, stats), stats, seriesDir)
+    // 바닥 종목은 앱처럼 바닥 경로의 피처만 쓴다(spec §99) — 서서 하는 3D 후처리를 거치지 않는다
+    val frames = if (job.floor) floorInputFrames(capture.frames, job.exercise, capture.meta, stats) else inputFrames(capture, stats)
+    return run(job, capture.meta, frames, stats, seriesDir)
 }
 
 fun run(job: Job, capture: FeatureCapture, seriesDir: File?): String =
@@ -339,6 +416,8 @@ fun run(job: Job, capture: FeatureCapture, seriesDir: File?): String =
 private const val SESSION_MAX_GAP_MS = 1_500L
 
 fun run(job: Job, meta: Map<String, String>, frames: List<InputFrame>, stats: FrameStats, seriesDir: File?): String {
+    // 플랭크(spec §99): 카운터가 없다(등척성) — 유지 시계를 돌린다
+    if (job.floor && FloorChain.Kind.of(job.exercise) == FloorChain.Kind.PLANK) return runHold(job, meta, frames, stats)
     if (job.mode == "hysteresis" && hysteresisPolarity(job) == null) {
         return json(mapOf("id" to job.id, "error" to "no polarity for ${job.exercise} (새 코어 극성 미정 — 재생하지 않음)"))
     }
@@ -371,6 +450,10 @@ fun run(job: Job, meta: Map<String, String>, frames: List<InputFrame>, stats: Fr
     var pendingStanding = meta["loggedStanding"]?.split(';')?.mapNotNull { item ->
         val kv = item.split('=', limit = 2); kv.getOrNull(1)?.toFloatOrNull()?.let { kv[0] to it }
     }?.toMap()
+    // 바닥 반복 계열의 세트 첫 누운 기준(로그 reps.config.lying, spec §99) — 앱이 준비 프레임에서 심었으면 재생기도 첫 프레임에 심는다
+    var pendingLying = meta["loggedLying"]?.split(';')?.mapNotNull { item ->
+        val kv = item.split('=', limit = 2); kv.getOrNull(1)?.toFloatOrNull()?.let { kv[0] to it }
+    }?.toMap()
     var nextReset = 0
     // 준비 구간 흉내(spec §99, 메타 prepUntilMs) — 앱처럼 그 앞 프레임(최근 12개)은 카운터에 넣지 않고, 운동 첫 프레임에서
     // RepCounter.standingSeedFrom 으로 쉬는 자세 기준을 심는다(§89 후속 2). 세트 로그의 loggedSeed 와는 따로다(로그가 아니라 흉내)
@@ -390,6 +473,7 @@ fun run(job: Job, meta: Map<String, String>, frames: List<InputFrame>, stats: Fr
         // 앱이 준비 단계에서 심은 서 있는 기준(§89 후속 2, 로그 reps.config.seed) — 앱처럼 카운터가 처음 보는 프레임에 심는다
         pendingSeed?.let { v -> rc.seedStanding(frame.tMs, v); pendingSeed = null }
         pendingStanding?.let { rc.legTracker?.restoreStanding(it); pendingStanding = null }
+        pendingLying?.let { rc.floorTracker?.restoreLying(it); pendingLying = null }
         val value = signalValue(features, rc.signal.feature)
         if (value != null) {
             stats.withValue++
@@ -400,7 +484,8 @@ fun run(job: Job, meta: Map<String, String>, frames: List<InputFrame>, stats: Fr
             ?.append(SERIES_FEATURES.joinToString("\t") { features[it]?.toString() ?: "" })?.append('\n')
         // 반복 판별 신호(spec §62)도 앱과 같은 프레임 값으로 준다 — 없는 종목은 null(종전과 같다). 파리티가 이 인자에 기댄다.
         // 다리 사이클 경로(§97): 기준 대비 값(hip_drop)을 더한 프레임을 평가기·카운터가 함께 본다 — 앱 PostureLive 와 같은 순서
-        val judged = rc.legTracker?.annotate(features) ?: features
+        // 바닥 반복 계열(§99)은 누운 기준 대비 상체 들림(fc_torso_tilt)을 더한다 — 로그 피처용이고 추적기는 자기 기준으로 다시 잰다(카운트 무관)
+        val judged = rc.legTracker?.annotate(features) ?: rc.floorTracker?.annotate(features) ?: features
         rf?.onFrame(frame.tMs, judged)   // 앱과 같은 순서: 카운터보다 먼저
         // 앱과 같은 입구(spec §62c): 팔별 경로는 두 팔 값·기각 피처를, 그 밖은 카운트 신호 값 + 판별 신호 값을 쓴다. 파리티가 이 호출에 기댄다.
         val fired = rc.onFrameFeatures(frame.tMs, judged)
@@ -447,7 +532,9 @@ fun run(job: Job, meta: Map<String, String>, frames: List<InputFrame>, stats: Fr
         "id" to job.id, "capture" to job.capture, "exercise" to job.exercise, "mode" to job.mode,
         "feature" to rc.signal.feature, "minAmp" to rc.signal.minAmp,
         "romDirection" to rc.signal.romDirection, "romThreshold" to rc.signal.romThreshold,
-        "engine" to (if (rc.legTracker != null) com.example.trex_kotlin.posture.LegCycleTracker.VERSION else if (rc.usesHysteresis) "hysteresis_v1" else "return_v1"),
+        "engine" to (if (rc.legTracker != null) com.example.trex_kotlin.posture.LegCycleTracker.VERSION
+            else if (rc.floorTracker != null) com.example.trex_kotlin.posture.FloorCycleTracker.VERSION
+            else if (rc.usesHysteresis) "hysteresis_v1" else "return_v1"),
         // 카운터가 실제로 쓰는 구성(RepEngineLog.of 와 같은 출처) — 합성 픽스처가 로그 reps.config 를 앱처럼 적을 수 있게
         "romValidated" to rc.signal.romValidated, "refractoryMs" to rc.effectiveRefractoryMs,
         "maxGapMs" to rc.effectiveMaxGapMs, "completeOnReturn" to rc.effectiveCompleteOnReturn,
@@ -492,8 +579,117 @@ fun run(job: Job, meta: Map<String, String>, frames: List<InputFrame>, stats: Fr
         "paritySides" to sc?.let { c -> meta["loggedSidesTrack"]?.let { it == listOf(c.track.left, c.track.right, c.track.unknown, c.track.extra, c.track.pairs).joinToString(",") } },
         "missedDips" to sc?.let { Raw(dips.joinToString(",", "[", "]")) },
     )
+    rc.floorTracker?.let { out.putAll(floorJson(it, stats)) }
     out.putAll(parity(meta, rc, validSeq))
     return json(out)
+}
+
+/**
+ * 바닥 반복 계열(spec §99)의 재생 결과 — 세트 로그 설계(§4.2)의 reps.config.lying·reps.rejected[] 상세·회별 상단 체류/하강·소리 없이 버린 후보·판별 유보와 같은 내용.
+ *  floorRejected = [t, 사유, trunkPeak, earPeak, amp, kneeTop, headMed] (FloorRejection, 없는 값 null)
+ *  floorReps     = [t, startMs, peakMs, min, peak, topMs, descentMs, 판별유보] (FloorRep — 거둔 첫 회는 빠진다)
+ */
+private fun floorJson(ft: FloorCycleTracker, stats: FrameStats): Map<String, Any?> = linkedMapOf(
+    "floorProfile" to ft.profile.name,
+    "floorEnabled" to Raw(ft.enabled.sorted().joinToString(",", "[", "]") { "\"$it\"" }),
+    "floorLying" to ft.lying?.let { m -> Raw(m.entries.joinToString(",", "{", "}") { (k, v) -> "\"$k\":${num(v)}" }) },
+    "floorBase" to ft.baseValue,
+    "floorRejected" to Raw(ft.rejectedDetail.joinToString(",", "[", "]") { r ->
+        "[${r.tMs},\"${r.reason}\",${num(r.trunkPeak)},${num(r.earPeak)},${num(r.amp)},${num(r.kneeTop)},${num(r.headMed)}]" }),
+    "floorReps" to Raw(ft.repDetail.joinToString(",", "[", "]") { r ->
+        "[${r.tMs},${r.startMs},${r.peakMs},${num(r.min)},${num(r.peak)},${r.topMs},${r.descentMs},${r.identityAbstain}]" }),
+    "floorDiscarded" to Raw(ft.discarded.joinToString(",", "[", "]") { "[${it.tMs},\"${it.reason}\"]" }),
+    "identityAbstainMs" to Raw(ft.identityAbstain.joinToString(",", "[", "]")),
+    "floorRetractedMs" to Raw(ft.retracted.joinToString(",", "[", "]")),
+    "chainSwitches" to stats.chainSwitches, "upFrames" to stats.withUp, "floorImageAssumed" to stats.floorImageAssumed,
+)
+
+/** 앱 판정 격자(`SESSION_SAMPLE_INTERVAL_MS`) — 세트 로그 재생에서 '사람 없음' 칸을 다시 만드는 간격. */
+private const val JUDGE_GRID_MS = 300L
+
+/**
+ * 플랭크 판정 칸의 시간축(spec §99) — 앱은 WORK 시작(`hold.start_t_ms`)부터 판정 칸마다 시계를 부르고 사람이 없으면 null 을 준다. 세트 로그에는 검출된 칸만 남으므로
+ * [start]·[end](`hold.end_t_ms`)·검출 칸 사이의 빈 칸을 300 ms 간격 null 칸으로 채운다(칸 사이가 450 ms 를 넘을 때만, 마지막 칸은 다음 검출 150 ms 앞까지).
+ * 일시정지 구간([pauses], 로그 `hold.segments` 의 `pause`)은 채우지 않는다. [start] 가 null 이면(옛 로그·영상 캡처) 그대로 — 첫 프레임이 시작이다.
+ */
+fun holdTimeline(frames: List<InputFrame>, start: Long?, end: Long?, pauses: List<LongArray>): List<InputFrame> {
+    if (start == null) return frames
+    fun paused(t: Long) = pauses.any { t > it[0] && t < it[1] }
+    val out = ArrayList<InputFrame>(frames.size * 2)
+    var prev: Long? = null
+    fun fillTo(limit: Long, inclusive: Boolean) {
+        var t = prev?.let { it + JUDGE_GRID_MS } ?: start
+        while (if (inclusive) t <= limit else t <= limit - JUDGE_GRID_MS / 2) {
+            if (!paused(t)) out += InputFrame(t, null)
+            t += JUDGE_GRID_MS
+        }
+    }
+    for (f in frames) {
+        if (f.tMs > start) fillTo(f.tMs, inclusive = false)
+        out += f; prev = f.tMs
+    }
+    if (end != null) fillTo(end, inclusive = true)
+    return out.sortedBy { it.tMs }
+}
+
+/**
+ * 플랭크 유지 시계 재생(spec §99, 설계 §4.3·§4.7) — 판정 칸마다 `PlankHoldClock.onFrame`(사람이 없으면 null = 화면 밖). 시계 시작 = 메타 loggedHoldStartMs
+ * (로그 `hold.start_t_ms` = 앱 WORK 시작), 없으면 첫 프레임. 메타가 있으면 앱처럼 '사람 없음' 칸을 다시 만들고([holdTimeline]) 일시정지 구간에서 시계를 멈춘다 —
+ * 전에는 첫 검출을 시작으로 잡아 WORK 시작~첫 검출의 화면 밖 시간이 사라졌고 폴백(설계 §7.2)이 재현되지 않았다(리뷰 2026-10-07).
+ * 결과: 인정 시간(heldMs)·벽시계(wallMs)·출처(source)·처음 확정/멈춤·사유별 멈춤·대기 시간·구간·사건, 프레임별 멈춤 사유 분포(frameReasons — "hold" = 통과)·
+ * 시간 게이트 통과 프레임(gateFrames = 사람이 있고 멈춤 사유가 없는 프레임)·다시 만든 null 칸 수(syntheticNullFrames), 로그가 있으면 파리티(parityHeld·paritySource).
+ */
+fun runHold(job: Job, meta: Map<String, String>, frames: List<InputFrame>, stats: FrameStats): String {
+    val clock = PlankHoldClock()
+    val start = meta["loggedHoldStartMs"]?.toLongOrNull()
+    val end = meta["loggedHoldEndMs"]?.toLongOrNull()
+    val pauses = meta["loggedHoldPauses"]?.split(';')?.mapNotNull { p ->
+        p.split('-', limit = 2).takeIf { it.size == 2 }?.let { (a, b) -> a.toLongOrNull()?.let { x -> b.toLongOrNull()?.let { y -> longArrayOf(x, y) } } }
+    }.orEmpty().sortedBy { it[0] }
+    val timeline = holdTimeline(frames, start, end, pauses)
+    (start ?: timeline.firstOrNull()?.tMs)?.let { clock.start(it) }
+    val events = ArrayList<PlankHoldEvent>()
+    val reasons = LinkedHashMap<String, Int>()
+    var nextPause = 0
+    var pausedNow = false
+    for (f in timeline) {
+        // 앱과 같은 자리 — 일시정지는 시계 밖(재개 뒤 첫 칸의 공백이 화면 밖이 되지 않게)
+        while (nextPause < pauses.size) {
+            val p = pauses[nextPause]
+            if (!pausedNow && f.tMs >= p[0]) { clock.pause(p[0]); pausedNow = true }
+            if (pausedNow && f.tMs >= p[1]) { clock.resume(p[1]); pausedNow = false; nextPause++ } else break
+        }
+        stats.frames++
+        val feats = f.features
+        if (feats != null) stats.detected++
+        val r = if (feats == null) PlankHoldClock.OUT_OF_VIEW else PlankHoldClock.stopReason(feats)
+        if (feats != null && r == null) stats.withValue++
+        val key = r ?: PlankHoldClock.HOLD_LABEL
+        reasons[key] = (reasons[key] ?: 0) + 1
+        events += clock.onFrame(f.tMs, feats)
+    }
+    val s = clock.snapshot()
+    val loggedHeld = meta["loggedHoldHeldMs"]?.toLongOrNull()
+    val loggedSource = meta["loggedHoldSource"]?.ifBlank { null }
+    return json(linkedMapOf(
+        "id" to job.id, "capture" to job.capture, "exercise" to job.exercise, "mode" to job.mode, "floor" to job.floor,
+        "engine" to PlankHoldClock.ENGINE,
+        "frames" to stats.frames, "detectedFrames" to stats.detected, "gateFrames" to stats.withValue,
+        "syntheticNullFrames" to (timeline.size - frames.size),
+        "firstMs" to frames.firstOrNull()?.tMs, "lastMs" to frames.lastOrNull()?.tMs, "holdStartMs" to s.startAt, "holdEndMs" to s.endAt,
+        "heldMs" to s.heldMs, "wallMs" to s.wallMs, "source" to s.source, "phase" to s.phase.name,
+        "firstHoldAt" to clock.firstHoldAt,
+        "firstStop" to s.firstStop?.let { Raw("[${it.tMs},\"${it.reason}\"]") },
+        "stopMs" to Raw(s.stopMs.entries.joinToString(",", "{", "}") { (k, v) -> "\"$k\":$v" }),
+        "waitMs" to Raw(s.waitMs.entries.joinToString(",", "{", "}") { (k, v) -> "\"$k\":$v" }),
+        "segments" to Raw(s.segments.joinToString(",", "[", "]") { "[${it.t0},${it.t1},\"${it.state}\"]" }),
+        "events" to Raw(events.joinToString(",", "[", "]") { e -> "[\"${e.kind.name}\",${e.tMs},${e.reason?.let { "\"$it\"" } ?: "null"}]" }),
+        "frameReasons" to Raw(reasons.entries.joinToString(",", "{", "}") { (k, v) -> "\"$k\":$v" }),
+        "chainSwitches" to stats.chainSwitches, "upFrames" to stats.withUp, "floorImageAssumed" to stats.floorImageAssumed,
+        // 세트 로그 재생 파리티 — 로그에 hold 가 있을 때만(없으면 null: 판정하지 않은 것을 일치로 적지 않는다)
+        "loggedHeldMs" to loggedHeld, "parityHeld" to loggedHeld?.let { it == s.heldMs },
+        "loggedSource" to loggedSource, "paritySource" to loggedSource?.let { it == s.source },
+    ))
 }
 
 /**
@@ -599,6 +795,39 @@ fun clipEval(capture: Capture, out: File): Int {
     return clips.size
 }
 
+/** 캡처 프레임을 [CLIP_GAP_MS] 넘는 틈에서 클립으로 나눈다(AIHub 캡처는 클립 사이에 5 s 틈을 둔다). */
+fun splitClips(frames: List<CaptureFrame>): List<List<CaptureFrame>> {
+    val clips = ArrayList<List<CaptureFrame>>()
+    var cur = ArrayList<CaptureFrame>()
+    for (f in frames) {
+        if (cur.isNotEmpty() && f.tMs - cur.last().tMs >= CLIP_GAP_MS) { clips += cur; cur = ArrayList() }
+        cur += f
+    }
+    if (cur.isNotEmpty()) clips += cur
+    return clips
+}
+
+/**
+ * --floor-clips <capture.cap> <out.jsonl> [판별 사유]: AIHub 바닥 클립(키프레임 16장, aihub_floor_captures.py)을 **클립마다 새** 추출기·카운터(또는 플랭크 시계)로
+ * 재생한다 — 사람 사이의 누운 기준·쪽 잠금·접지선 이력이 섞이지 않게(spec §99, 설계 §7.1 b·d). 종목 = 메타 exercise, 경로 = 바닥(floor = true).
+ * 한 줄 = 그 클립의 재생 결과(run·runHold 와 같은 JSON) + "i"(클립 순서 = clips.json 의 i). 판별 사유 = 매니페스트 11열과 같다(default·all·none·쉼표 목록).
+ */
+fun floorClips(capture: Capture, out: File, floorEnabled: String?): Int {
+    val exercise = capture.meta["exercise"] ?: error("capture meta exercise= 없음")
+    val clips = splitClips(capture.frames)
+    out.bufferedWriter().use { w ->
+        for ((k, clip) in clips.withIndex()) {
+            val stats = FrameStats()
+            val frames = floorInputFrames(clip, exercise, capture.meta, stats)
+            val job = Job("clip$k", out.name, exercise, "live", null, null, floor = true, floorEnabled = floorEnabled)
+            val line = run(job, capture.meta, frames, stats, null)
+            w.write(line.dropLast(1) + ",\"i\":$k}")
+            w.newLine()
+        }
+    }
+    return clips.size
+}
+
 /**
  * --checks <종목>: 그 종목의 반복 검사 명세(RepFormSpecs 가 정본) — 채점기가 방향(hi/lo)·상태·뷰를 코드에서 읽게. 한 줄 = 검사 하나.
  */
@@ -621,6 +850,7 @@ fun readManifest(file: File): List<Job> = file.readLines()
             romDirection = c.getOrNull(7)?.ifBlank { null },
             romThreshold = c.getOrNull(8)?.ifBlank { null }?.toFloat(),
             polarity = c.getOrNull(9)?.ifBlank { null },
+            floorEnabled = c.getOrNull(10)?.trim()?.ifBlank { null },
         )
     }
 
@@ -629,6 +859,7 @@ fun readManifest(file: File): List<Job> = file.readLines()
  * 캡처가 *.fcap 이면 피처 수준 캡처(세트 로그), 아니면 랜드마크 캡처로 읽는다.
  *        replay --dump-features <capture.cap> <out.jsonl> — 랜드마크 캡처의 프레임별 피처(재생과 같은 후처리)
  *        replay --clip-eval <capture.cap> <out.jsonl> — 클립마다 새 검사기로 한 반복 판정(AIHub 조건별 채점, [clipEval])
+ *        replay --floor-clips <capture.cap> <out.jsonl> [판별 사유] — 바닥 클립마다 새 카운터·시계로 재생([floorClips], spec §99)
  *        replay --checks <exercise> — 반복 검사 명세 JSON 줄([checkSpecs])
  */
 fun main(args: Array<String>) {
@@ -648,6 +879,12 @@ fun main(args: Array<String>) {
         require(args.size == 3) { "usage: replay --clip-eval <capture.cap> <out.jsonl>" }
         val n = clipEval(readCapture(File(args[1])), File(args[2]))
         System.err.println("evaluated $n clips")
+        return
+    }
+    if (args.firstOrNull() == "--floor-clips") {
+        require(args.size in 3..4) { "usage: replay --floor-clips <capture.cap> <out.jsonl> [default|all|none|사유,사유]" }
+        val n = floorClips(readCapture(File(args[1])), File(args[2]), args.getOrNull(3))
+        System.err.println("replayed $n floor clips")
         return
     }
     require(args.size >= 2) { "usage: replay <manifest.tsv> <results.jsonl> [series-dir]\n       replay --dump-features <capture.cap> <out.jsonl>\n       replay --clip-eval <capture.cap> <out.jsonl>" }

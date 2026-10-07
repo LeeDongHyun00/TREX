@@ -184,7 +184,10 @@ object LegGeometry {
  * - 두 다리가 함께 움직여도 각자 판별한다 — 스쿼트(두 무릎)는 사이드 런지의 비대칭 조건이, 점프(두 발)는 니업의 반대 다리 조건이 거른다.
  * - 판별 띠는 2026-10-06 폰 세트(사용자 1명, 설계 §3)에서 잡은 **잠정값**이다. 폰 세션으로 확정한다.
  */
-class LegCycleTracker(val profile: LegProfile) {
+class LegCycleTracker(val profile: LegProfile) : IdentityCueSource {
+    /** 기각 사유의 음성(§99 공통 경로 `IdentityCueSource`) — [cueFor]`(profile, reason)` 에 위임한다. 문장·동작은 그대로. */
+    override fun cueFor(reason: String): String? = Companion.cueFor(profile, reason)
+
     private class Leg(val side: StepSide?) {
         var base: Float? = null
         var moving = false

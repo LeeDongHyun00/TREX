@@ -214,6 +214,8 @@ fun TrexApp(app: AppViewModel = viewModel()) {
         val startTone = remember { runCatching { android.media.ToneGenerator(android.media.AudioManager.STREAM_MUSIC, 50) }.getOrNull() }
         androidx.compose.runtime.DisposableEffect(Unit) { onDispose { startTone?.release() } }
 
+        // 플랭크 유지 시계 → 남은 시간(spec §99, 설계 §4.3 브리지) — 라이브 화면이 WORK 에서 묶고 분석 스레드가 인정 시간을 쓴다. 세션 수명
+        val holdBridge = remember { HoldBridge() }
         // 목표에 처음 닿은 시각(단계 token 별) — 자동 진행의 발화 기다림이 반복마다 다시 늘어나지 않게(§63).
         // token 은 단계 번호라 세션마다 0 부터 다시 쓰인다 — 세션 시작·종료·넘김에서 지운다(안 지우면 두 번째 세션부터 옛 시각으로 기다림 없이 넘어가 마지막 말을 잘랐다)
         val advanceHoldFrom = remember { HashMap<Int, Long>() }
@@ -237,6 +239,7 @@ fun TrexApp(app: AppViewModel = viewModel()) {
             postureFallback.clear()
             exitAsk = false
             speech.stop()
+            holdBridge.release()
             progress = SessionProgress(first.token, first.seconds * 1000L,
                 elapsedMs = if (finished || sessionPlanKey != planKey) 0 else progress.elapsedMs, completed = completed,
                 recordedCounts = recordedCounts,
@@ -303,8 +306,10 @@ fun TrexApp(app: AppViewModel = viewModel()) {
             while (progress.index == token && token >= 0) {
                 delay(100)
                 val now = android.os.SystemClock.elapsedRealtime()
+                // 플랭크(카메라 시간)는 남은 시간을 인정 시간의 증분으로 줄인다 — 묶이지 않은 세트·폴백 전 다른 종목은 null(벽시계, 종전)
+                val held = if (pausedState.value || step?.phase != SessionPhase.WORK) null else holdBridge.take(step.workout.id, now - last)
                 progress = progress.tick(now - last, pausedState.value, timed = step?.timed == true,
-                    trackElapsed = step?.phase != SessionPhase.PREPARE, trackWork = step?.phase == SessionPhase.WORK)
+                    trackElapsed = step?.phase != SessionPhase.PREPARE, trackWork = step?.phase == SessionPhase.WORK, heldDeltaMs = held)
                 last = now
                 if (!pausedState.value && step?.timed == true && progress.targetReached(step)) advanceLatest.value(token, false)
             }
@@ -451,6 +456,7 @@ fun TrexApp(app: AppViewModel = viewModel()) {
                                     validation = repValidation,
                                     onPrepared = { nextSession(current.token, true) },
                                     onShowGuide = ExerciseGuides.forName(w.name)?.let { { showGuide(w.name) } },
+                                    holdBridge = holdBridge,
                                     )
                                 } }
 

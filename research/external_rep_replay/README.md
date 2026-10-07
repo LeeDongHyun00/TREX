@@ -33,6 +33,7 @@
 | `prototype_counter.py` · `stress_battery.py` · `parity_core.py` | 새 코어 프로토타입(§8) · 시작 확정 정책 배터리(설계 §12·§13) · Kotlin 새 코어 ↔ 프로토타입 세트별 파리티 |
 | §9 의 도구들 | 휴대폰 세트 로그 재생·채점·검증 프로토콜(휴대폰 연결 전 준비분) |
 | §12 의 도구들 | 폰 검증 Gate A 한 번에 돌리기 — `pull_phone.py`(adb 회수·검증 모드 스위치) · `gate_a.py`(보고서) · `make_phone_fixture.py`(폰 없는 드라이런 픽스처), 절차 `GATE_A_RUNBOOK.md` |
+| 바닥 계열(spec §99, 함정 `docs/exercises/floor.md`) | 재생기 바닥 경로 — `.cap` 메타 `floor=1` 이면 앱과 같은 `FloorFeatureExtractor.computeForExercise`(U 줄 = 중력, 없으면 게이트 없는 경로), 플랭크는 `PlankHoldClock`, `--floor-clips <cap> <out> [default\|all\|none\|사유,…]`(클립마다 새 엔진), 매니페스트 11열 = 켠 판별 사유. `aihub_floor_captures.py`(AIHub 바닥 C·E·MM-Fit 윗몸 → `.cap`, `data/floor_family/replay/`) · `floor_replay_tables.py`(판별별 정상 회 기각·MM-Fit 횟수·플랭크 시간 게이트 표) · `floor_diag.py`(세트 로그 또는 `--cap` 의 회별 극점·사유 표, `single_leg_diag.py` 형식). `setlog_captures.py` 는 프레임 `floor_up` 을 U 줄로, `hold` 를 메타 `loggedHold*` 로 넘긴다 |
 | `results/` | 요약 수치 (원본 캡처는 `data/` — git 제외) |
 
 ## 2. 앱과 맞춘 것, 다른 것

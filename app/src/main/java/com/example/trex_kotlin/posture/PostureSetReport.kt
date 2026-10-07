@@ -47,6 +47,40 @@ enum class RepRomTier {
     }
 }
 
+/**
+ * 플랭크 유지 시계의 세트 요약(spec §99, 설계 §6 리포트) — 리포트 문장의 재료. 시각은 시계 시작(WORK) 기준 ms.
+ * @property camera false = 카메라가 확인하지 못해 시계로 넘어간 세트(폴백) — '카메라 미확인 · 시계 기록'.
+ */
+data class HoldSummary(val heldMs: Long, val wallMs: Long, val stopMs: Map<String, Long>, val firstStopMs: Long?, val camera: Boolean,
+                       /** 처음 버티기 전(대기)의 사유별 시간 — 무릎 플랭크로 세트를 보냈으면 '확인 전: 무릎 …초'. */
+                       val waitMs: Map<String, Long> = emptyMap()) {
+    companion object {
+        /**
+         * 시계 스냅샷 → 요약. 처음 멈춤은 **시계 시작(WORK 시작, [PlankHoldSnapshot.startAt])** 기준 — 없으면(옛 사본) [fallbackStartMs]. 전에는 첫 검출 프레임을 넘겨
+         * WORK 초반에 몸이 안 잡힌 만큼 '처음 멈춤 N초' 가 앞당겨졌다(리뷰 2026-10-07).
+         */
+        fun of(snap: PlankHoldSnapshot, fallbackStartMs: Long): HoldSummary = HoldSummary(snap.heldMs, snap.wallMs, snap.stopMs,
+            snap.firstStop?.let { (it.tMs - (snap.startAt ?: fallbackStartMs)).coerceAtLeast(0L) }, snap.source == PlankHoldClock.SOURCE_CAMERA, snap.waitMs)
+    }
+}
+
+/**
+ * 바닥 반복 계열의 세트 요약(spec §99) — [counted] = 센 회(화면에 보인 수), [rejected] = 세지 않은 동작의 사유별 수(사유 순서 = 음성 우선순위),
+ * [abstained] = 측면이 아니라 판별을 유보하고 센 회.
+ */
+data class FloorRepSummary(val profile: FloorProfile, val counted: Int, val rejected: List<Pair<String, Int>>, val abstained: Int) {
+    val rejectedTotal: Int get() = rejected.sumOf { it.second }
+
+    companion object {
+        /** 추적기의 기각 목록 → 사유별 수(프로필 사유 순서, 0 은 뺀다). */
+        fun of(profile: FloorProfile, counted: Int, rejectedReasons: List<String?>, abstained: Int): FloorRepSummary {
+            val by = rejectedReasons.groupingBy { it ?: "" }.eachCount()
+            val ordered = (profile.reasons + by.keys.filter { it !in profile.reasons }).mapNotNull { r -> by[r]?.takeIf { it > 0 }?.let { r to it } }
+            return FloorRepSummary(profile, counted, ordered, abstained)
+        }
+    }
+}
+
 /** 사용자 자가 라벨 — 좋았음 / 의도적 변형(스타일) / 무너짐. 직렬화 값은 [key]. */
 enum class FormLabel(val key: String, val displayName: String) {
     GOOD("good", "좋았음"), INTENDED("intended", "의도적 변형"), BROKE("broke", "무너짐");
@@ -136,6 +170,12 @@ data class PostureSetReport(
     val repHalfPending: Boolean = false,
     /** 쪽별 카운트(런지 [RepUnit.SIDE_EACH], §63). */
     val repSides: SideTallies? = null,
+    /** 플랭크 유지 시계(spec §99). 플랭크가 아니거나 시계가 없던 세트면 null. */
+    val hold: HoldSummary? = null,
+    /** 바닥 반복 계열(spec §99 — 크런치·라잉 레그 레이즈). 아니면 null. */
+    val floorReps: FloorRepSummary? = null,
+    /** 이 종목에서 보지 못하는 것(`PostureScope.floorLine`, 원칙 #5) — 리포트 펼침에 그대로 보인다. 없으면 null. */
+    val scopeLine: String? = null,
 ) {
     /** 실제로 판정한 규칙 수(OK+VIOLATION). accuracy 의 분모 — 유보를 정상으로 세지 않는다. */
     val judged: Int = items.count { it.overall == Verdict.OK || it.overall == Verdict.VIOLATION }
@@ -228,8 +268,18 @@ data class PostureSetReport(
         (listOf(head) + unitTail).joinToString(" · ")
     }
 
+    /**
+     * 바닥 계열의 한 줄(spec §99) — 플랭크는 인정 시간·경과(폴백이면 '카메라 미확인 · 시계 기록'), 반복은 센 회·세지 않은 동작. 해당 없으면 null.
+     * 자세 판정이 아니라 시간·횟수의 기록이다(바닥 자세 검사는 전부 beta — 원칙 #2).
+     */
+    val floorSummary: String? = when {
+        hold != null -> if (hold.camera) "버틴 시간 ${secs(hold.heldMs)}초 · 경과 ${secs(hold.wallMs)}초" else "카메라 미확인 · 시계 기록 ${secs(hold.wallMs)}초"
+        floorReps != null -> "센 회 ${floorReps.counted} · 세지 않은 동작 ${floorReps.rejectedTotal}"
+        else -> null
+    }
+
     /** 기록 화면 한 줄. */
-    val summaryLine: String = if (exercise in FloorTemporal.exercises || judged == 0 && measurements.isNotEmpty()) "참고 측정 · 자세 확정 판정 없음" else when (mode) {
+    val summaryLine: String = if (floorSummary != null) floorSummary else if (exercise in FloorTemporal.exercises || judged == 0 && measurements.isNotEmpty()) "참고 측정 · 자세 확정 판정 없음" else when (mode) {
         CoachMode.COACH -> when (verdict) {
             SetVerdict.UNJUDGED -> "자세 판정 없음"
             SetVerdict.CLEAN -> if (betaOnly) "참고 기준 이상 없음" else "자세 깨끗"
@@ -250,7 +300,11 @@ data class PostureSetReport(
     }
 
     /** 세트 종료 발화 한두 문장. */
-    val voiceLine: String = if (exercise in FloorTemporal.exercises) "세트를 기록했어요. 참고 측정은 화면에서 확인해 주세요." else when (mode) {
+    val voiceLine: String = if (hold != null) {
+        if (hold.camera) "카메라로 확인한 플랭크 시간은 ${secs(hold.heldMs)}초예요." else "카메라가 플랭크를 확인하지 못해 시계로 ${secs(hold.wallMs)}초를 기록했어요."
+    } else if (floorReps != null) {
+        "${floorReps.counted}회를 셌어요." + if (floorReps.rejectedTotal > 0) " 세지 않은 동작은 ${floorReps.rejectedTotal}번이에요." else ""
+    } else if (exercise in FloorTemporal.exercises) "세트를 기록했어요. 참고 측정은 화면에서 확인해 주세요." else when (mode) {
         CoachMode.COACH -> when (verdict) {
             SetVerdict.UNJUDGED -> "이번 세트는 화면에 충분히 잡히지 않아 자세를 판정하지 못했어요."
             SetVerdict.CLEAN -> if (betaOnly) "이번 세트, 검증 중인 항목 기준으로는 이상 없었어요." else "이번 세트 깨끗했어요."
@@ -267,6 +321,36 @@ data class PostureSetReport(
     }
 
     companion object {
+        private fun secs(ms: Long): Long = (ms.coerceAtLeast(0L) + 500L) / 1000L
+
+        /**
+         * 바닥 계열의 리포트 줄(설계 §6) — 세트 로그 measurements 와 완료 화면 펼침이 같은 줄을 쓴다(`PostureLive` 세트 마감이 앞에 넣는다).
+         *  - 플랭크: "버틴 시간 32초(카메라 확인) · 경과 51초 · 멈춤: 무릎 6초 · 골반 4초 · 화면 밖 9초 · 처음 멈춤 21초 · (참고) 정렬 이탈 1건".
+         *    정렬 판정이 0건이면 '정렬 확인 못 함'(유보를 정상으로 말하지 않는다 — 원칙 #1). 폴백이면 '카메라 미확인 · 시계 기록'.
+         *  - 반복: "센 회 n · 세지 않은 동작 m(목만 당김 a · 끝까지 일어남 b)" + 판별 유보가 있으면 그 수.
+         * [alignment] = 플랭크 정렬 규칙(kind alignment)의 세트 결과.
+         */
+        fun floorLines(hold: HoldSummary?, reps: FloorRepSummary?, alignment: List<RuleResult>): List<String> = buildList {
+            if (hold != null) add(buildList {
+                if (hold.camera) add("버틴 시간 ${secs(hold.heldMs)}초(카메라 확인)")
+                else { add("카메라 미확인 · 시계 기록"); if (hold.heldMs >= 1000L) add("카메라 확인 ${secs(hold.heldMs)}초") }
+                add("경과 ${secs(hold.wallMs)}초")
+                val stops = PlankHoldClock.REASONS.mapNotNull { r -> hold.stopMs[r]?.takeIf { it >= 1000L }?.let { "${FloorReasons.holdLabel(r)} ${secs(it)}초" } }
+                if (stops.isNotEmpty()) add("멈춤: " + stops.joinToString(" · "))
+                // 처음 버티기 전(대기) — 무릎을 댄 채 보낸 시간이 어디에도 안 남던 것(리뷰 2026-10-07). 5초 이상만
+                val waits = PlankHoldClock.REASONS.mapNotNull { r -> hold.waitMs[r]?.takeIf { it >= 5000L }?.let { "${FloorReasons.holdLabel(r)} ${secs(it)}초" } }
+                if (waits.isNotEmpty()) add("확인 전: " + waits.joinToString(" · "))
+                hold.firstStopMs?.let { add("처음 멈춤 ${secs(it)}초") }
+                val judged = alignment.filter { it.verdict != Verdict.ABSTAIN }
+                add(if (judged.isEmpty()) "정렬 확인 못 함" else "(참고) 정렬 이탈 ${judged.count { it.verdict == Verdict.VIOLATION }}건")
+            }.joinToString(" · "))
+            if (reps != null) add(buildString {
+                append("센 회 ${reps.counted} · 세지 않은 동작 ${reps.rejectedTotal}")
+                if (reps.rejected.isNotEmpty()) append(reps.rejected.joinToString(" · ", "(", ")") { (r, n) -> "${FloorReasons.repLabel(reps.profile, r)} $n" })
+                if (reps.abstained > 0) append(" · 측면이 아니라 판별 유보 ${reps.abstained}회")
+            })
+        }
+
         /**
          * results 와 onset 을 rule.id 로 조인. onset 에 없는 규칙은 kind=null, results 에 없는 onset 은 무시
          * (판정의 정본은 세트 전체 집계 — 창 분류는 그 위에 얹는 부가 정보다).
@@ -288,6 +372,9 @@ data class PostureSetReport(
             repUnit: RepUnit? = null,
             repHalfPending: Boolean = false,
             repSides: SideTallies? = null,
+            hold: HoldSummary? = null,
+            floorReps: FloorRepSummary? = null,
+            scopeLine: String? = null,
         ): PostureSetReport {
             val onsetById = onset.associateBy { it.rule.id }
             val outcomes = results.map { rr ->
@@ -324,6 +411,7 @@ data class PostureSetReport(
                 setId = setId, exercise = exercise, workoutName = workoutName, mode = mode, frames = frames,
                 baselineActive = baselineActive, items = sorted, measurements = measurements, repsValid = repsValid, repsPartial = repsPartial, tempoMs = tempoMs,
                 repRom = repRom, repUnit = repUnit, repHalfPending = repHalfPending, repSides = repSides,
+                hold = hold, floorReps = floorReps, scopeLine = scopeLine,
             )
         }
 

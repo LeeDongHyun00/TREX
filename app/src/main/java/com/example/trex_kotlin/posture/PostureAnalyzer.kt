@@ -74,6 +74,23 @@ class PoseSample(
     }
 }
 
+/** 바닥 종목용: 같은 샘플에 features 만 바닥 2D 피처로 바꾼 사본 (세트 로그·집계에 그대로 흘림). PostureFloor.kt 에서 옮겼다 — 그 파일은 재생기가 컴파일한다(spec §99). */
+fun PoseSample.withFeatures(newFeatures: Map<String, Float>): PoseSample = PoseSample(
+    detected = detected,
+    normalizedXy = normalizedXy,
+    visibility = visibility,
+    features = newFeatures,
+    visibleJointCount = visibleJointCount,
+    inferMs = inferMs,
+    imageWidth = imageWidth,
+    imageHeight = imageHeight,
+    up = up,
+    upFromGravity = upFromGravity,
+    upFlipped = upFlipped,
+    upVerified = upVerified,
+    world = world,
+)
+
 /** 추론 통계 (UI 표시용 스냅샷). */
 data class AnalyzerStats(
     val delegate: String,

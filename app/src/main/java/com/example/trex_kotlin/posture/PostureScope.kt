@@ -35,10 +35,11 @@ data class PostureScope(
 
     private fun baseStartLine(): String? = when {
         LegProfile.of(exercise) != null -> "왼쪽과 오른쪽을 한 번씩 해야 1회이고, 얕거나 다리를 뻗어 올리거나 허리를 숙인 동작은 세지 않습니다. 횟수와 자세는 검증 중이고 척추 분절과 근육의 힘은 판정하지 않습니다."
-        exercise == "크런치" -> "횟수와 머리 들림 근사를 기록해요. 견갑골 상승과 허리 접지는 판정할 수 없어요."
+        // 바닥 계열 세 종목(spec §99) — 무엇을 세고 무엇을 못 보는가. '어깨까지 들린 회만 셉니다' 같은 과장은 쓰지 않는다(4.5° 게이트는 '고개만' 의 약 83 % 를 통과시킨다)
+        exercise in FLOOR_LINES -> FLOOR_LINES.getValue(exercise)
         exercise == "Y - Exercise" -> "횟수와 팔 들림 근사를 기록해요. 목 정렬·양팔 높이·엄지 방향은 판정할 수 없어요."
-        exercise == "플랭크" -> "몸 옆에서 고개와 골반 정렬을 각각 확인해요. 범위를 벗어나면 참고 음성과 부위 표시로 알려드려요."
-        exercise in FloorTemporal.exercises && provisional.isNotEmpty() -> "참고 범위를 계속 벗어나면 음성과 빨간 부위 표시로 알려드려요. 검증 중인 측정이라 자세를 확인하는 데 참고해 주세요."
+        // 바닥 beta 는 말하지 않는다(사용자 결정 Q1 2026-10-06 밤) — 화면 '참고'(호박색)로만
+        exercise in FloorTemporal.exercises && provisional.isNotEmpty() -> "참고 범위를 계속 벗어나면 화면에 참고로 표시해요. 검증 중인 측정이라 음성으로 지적하지 않아요."
         watched.isNotEmpty() -> buildString {
             val seen = watched.take(2).joinToString("·")
             append(seen).append(objectParticle(seen)).append(" 봐요.")
@@ -69,6 +70,19 @@ data class PostureScope(
     )
 
     companion object {
+        /**
+         * 바닥 계열 세 종목의 범위 문장(spec §99, `docs/FLOOR_FAMILY_DESIGN.md` §6) — 키는 AIHub 이름. 준비 화면·세트 리포트·세트 시작 음성(30분에 한 번)이 같은 문장을 쓴다.
+         * 자세 검사가 전부 beta 라 말하지 않는 것(Q1)을 '교정 없음' 퇴행으로 받아들이지 않게 미리 밝힌다(원칙 #5).
+         */
+        val FLOOR_LINES: Map<String, String> = mapOf(
+            "크런치" to "횟수와 상체(어깨) 들림 근사를 기록해요. 견갑골·허리 접지·손으로 당김·반동은 판정하지 않아요.",
+            "라잉 레그 레이즈" to "다리(허벅지)를 든 회를 셉니다. 허리가 바닥에 붙어 있는지와 내리는 속도는 볼 수 없어요. 허리가 뜨기 시작하면 그 위에서 멈춰 주세요.",
+            "플랭크" to "카메라가 확인한 플랭크 시간을 잽니다. 고개와 골반 정렬은 화면에 참고로만 보여요. 팔꿈치 폭·가슴 처짐·허리 곡선·호흡은 볼 수 없어요.",
+        )
+
+        /** [FLOOR_LINES] 조회 — 바닥 계열 세 종목이 아니면 null. */
+        fun floorLine(exercise: String?): String? = FLOOR_LINES[exercise]
+
         /**
          * 종목의 전 규칙(exclude 포함 — 로더가 필터하지 않는다)을 조건별로 묶어 등급을 매긴다.
          * 조건의 등급 = 그 조건 규칙들의 **최고** 상태(SHIP > BETA > EXCLUDE): 한 조건에 ship 이 하나라도 있으면

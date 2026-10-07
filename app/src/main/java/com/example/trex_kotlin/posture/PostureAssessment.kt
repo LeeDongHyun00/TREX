@@ -12,6 +12,11 @@ object PostureAssessment {
         repFormViewOk: Boolean = true,
         /** 세트의 추정 뷰 등급 글자(C·B·D…). 알면 반복 검사마다 자기 뷰(§62c)로 가른다 — UNKNOWN·미추정은 null. */
         repFormViewLetter: String? = null,
+        /**
+         * 플랭크 유지 시계의 구간(spec §99, `PlankHoldClock.segments` — 시각은 [times] 와 같은 기준). 있으면 정렬 검사는 **HOLD 구간 안이고 멈춤 사유가 없는 칸만** 본다
+         * (라이브 `PlankAlignmentTracker` 의 HOLD 칸과 같은 약속 — 다른 점은 HOLD 확정 전 1 s 소급분이 여기서는 들어간다는 것뿐). null 이면 종전처럼 전 프레임.
+         */
+        holdSegments: List<HoldSegment>? = null,
     ): List<RuleResult> {
         require(samples.size == times.size)
         val agg = FeatureAggregator()
@@ -19,7 +24,7 @@ object PostureAssessment {
         val t0 = times.firstOrNull() ?: 0L
         // 정렬 검사는 자체 준비 자세 게이트를 사용한다. 초기 앵커/기준이 만들어지기 전의 오류도 평가한다.
         val alignment = PlankAlignmentTracker(rules.rulesFor(exercise))
-        samples.forEachIndexed { i, s -> if (times[i] <= endAt) alignment.add(times[i]-t0,s.features) }
+        samples.forEachIndexed { i, s -> if (times[i] <= endAt) alignment.add(times[i]-t0,s.features, gate = holdGate(holdSegments, times[i], s.features)) }
         val alignmentResults = alignment.results().associateBy { it.rule.id }
         return rules.evaluate(exercise, agg, true, minFrames, baseline).map { result ->
             when (result.rule.kind) {
@@ -38,4 +43,8 @@ object PostureAssessment {
             }
         }
     }
+
+    /** 이 칸이 유지 시계의 HOLD 구간 안이고 멈춤 사유가 없는가(구간이 없으면 늘 true — 종전). */
+    fun holdGate(segments: List<HoldSegment>?, tMs: Long, features: Map<String, Float>): Boolean =
+        segments == null || (segments.any { it.state == PlankHoldClock.HOLD_LABEL && tMs >= it.t0 && tMs <= it.t1 } && PlankHoldClock.stopReason(features) == null)
 }

@@ -359,6 +359,8 @@ private fun PostureSetRow(
         if (expanded) {
             Column(Modifier.padding(start = 16.dp, end = 16.dp, bottom = 14.dp)) {
                 report.measurements.forEach { Text(it, color = c.text2, fontSize = 12.sp, modifier = Modifier.padding(bottom = 6.dp)) }
+                // 이 종목에서 못 보는 것(spec §99, 원칙 #5) — 바닥 계열 세 종목
+                report.scopeLine?.let { Text("범위 · $it", color = c.text3, fontSize = 11.sp, lineHeight = 16.sp, modifier = Modifier.padding(bottom = 6.dp)) }
                 when (report.mode) {
                     CoachMode.COACH -> CoachSetDetail(report)
                     CoachMode.TRACK -> TrackSetDetail(report)

@@ -35,6 +35,12 @@ import java.util.UUID
  * `reps.rejected[{t_ms,min,max,swing}]`(세지 않은 사이클), `reps.identity_swing[]`(센 사이클의 판별 스윙, `t_ms` 와 같은 순서, 미판정은 null).
  * 촬영 배치 지문(§91, 선택 — 부재 = 이전 로그): `placement{frames,pitch_deg,roll_deg,tilt_deg,tilt_max_deg,fps,infer_ms_med,
  * lens{focal_mm,sensor_w_mm,sensor_h_mm,active_w,active_h,zoom}|null,f_px,distance_m,height_m,subject_height_cm,scale}` — 정의·가정은 `CameraPlacement`.
+ * 바닥 계열(spec §99, 선택 — 부재 = 이전 로그·다른 종목): `reps.config.lying{신호:기준,…}`(세트 첫 누운 기준 — 재생기가 같은 값을 심는다),
+ * `reps.rejected[]` 에 `reason,trunk_peak,ear_peak,amp,knee_top,head_med,side_ok`, `reps.floor_reps[{t_ms,start_t_ms,peak_t_ms,min,peak,top_ms,descent_ms,abstain}]`,
+ * `reps.discarded[[t_ms,reason]]`(timeout·exit — 소리 없이 버림), `reps.identity_abstain[t_ms]`(측면이 아니라 판별 유보하고 센 회),
+ * `floor_chain{switches}`(쪽 잠금 교체 수), `hold{engine,source,held_ms,wall_ms,first_hold_t_ms,first_stop{t_ms,reason},stop_ms{사유:ms},wait_ms{사유:ms},
+ * start_t_ms,end_t_ms,segments[[t0,t1,상태]]}`(플랭크 유지 시계 — start/end = 시계 시작·마지막 판정 칸, 재생기가 '사람 없음' 칸을 다시 만든다),
+ * 프레임 `floor_up`(관측 층에 실제로 넘긴 중력 up — 앱의 up 뒤집힘을 되돌린 값, 중력이 아니면 null. 재생기 U 줄의 정본).
  * org.json 은 Android 유닛 테스트에서 스텁이라 직접 직렬화한다 (PostureCoreParityTest 와 같은 이유).
  */
 
@@ -51,6 +57,9 @@ data class SetLogFrame(
     val world: FloatArray? = null,
     /** 검증 모드에서만: 이 프레임 피처에 쓴 up 벡터 (x, y, z). */
     val up: FloatArray? = null,
+    /** 바닥 계열(spec §99): 관측 층(`FloorChain`)에 넘긴 중력 up — null 이면 중력 모름. [floorUpLogged] 가 false 면 키 없음. */
+    val floorUp: FloatArray? = null,
+    val floorUpLogged: Boolean = false,
 )
 
 data class SetLogResult(
@@ -107,6 +116,8 @@ data class RepEngineLog(
     val romAuxFloor: Float? = null,
     /** 다리 사이클 추적기(§97)의 세트 첫 서 있는 기준 — 재생기가 같은 값을 심는다. JSON 키 `standing`. */
     val standing: Map<String, Float>? = null,
+    /** 바닥 반복 계열(§99)의 세트 첫 누운 기준(`FloorCycleTracker.lying`) — 재생기가 같은 값을 심는다(`restoreLying`). JSON 키 `lying`. */
+    val lying: Map<String, Float>? = null,
 ) {
     companion object {
         const val ENGINE_RETURN = "return_v1"
@@ -120,7 +131,12 @@ data class RepEngineLog(
             val s = counter.signal
             val confirm = counter.confirmationConfig
             return RepEngineLog(
-                engine = if (counter.legTracker != null) LegCycleTracker.VERSION else if (counter.usesHysteresis) ENGINE_HYSTERESIS else ENGINE_RETURN,
+                engine = when {
+                    counter.legTracker != null -> LegCycleTracker.VERSION
+                    counter.floorTracker != null -> FloorCycleTracker.VERSION   // §99 — 누운 기준(lying)·기각 상세는 SetLog 의 바닥 필드
+                    counter.usesHysteresis -> ENGINE_HYSTERESIS
+                    else -> ENGINE_RETURN
+                },
                 feature = s.feature,
                 minAmp = s.minAmp,
                 refractoryMs = counter.effectiveRefractoryMs,
@@ -139,6 +155,7 @@ data class RepEngineLog(
                 identityMinAmp = s.identityFeature?.let { s.identityMinAmp },
                 seed = counter.standingSeed,
                 standing = counter.legTracker?.standing,
+                lying = counter.floorTracker?.lying,
                 pairedFeatures = s.pairedFeatures,
                 rejectFeatures = s.rejectFeatures,
                 romRatio = s.romRatio, romAbsMin = s.romAbsMin, romRefMin = s.romRefMin,
@@ -156,6 +173,29 @@ data class RepEngineLog(
  *   추론 중(~60 ms)에 누른 전환은 t_ms 가 누른 시각보다 이른 프레임보다도 먼저 적용된다([tMs] 로 자르면 한 프레임 어긋난다).
  */
 data class RepResetEvent(val tMs: Long, val reason: String, val afterTMs: Long? = null)
+
+/**
+ * 플랭크 유지 시계의 세트 기록(spec §99, 설계 §4.3) — 로그 `hold`. 시각은 전부 세트 상대 ms(프레임 t_ms 와 같은 기준).
+ * [segments] 의 상태는 `hold`·`wait`·`pause`·멈춤 사유. [source] 가 `clock` 이면 카메라가 확인하지 못해 시계로 잰 세트다.
+ */
+data class HoldLog(
+    val engine: String, val source: String, val heldMs: Long, val wallMs: Long, val firstHoldMs: Long?, val firstStop: HoldStop?,
+    val stopMs: Map<String, Long>, val segments: List<HoldSegment>,
+    /**
+     * 시계 시작(WORK 시작)과 마지막으로 본 판정 칸(세트 상대 ms — 첫 검출 프레임 앞이면 음수). 세트 로그에는 검출된 칸만 남으므로 재생기가 이 둘과 [segments] 의
+     * `pause` 로 앱의 '사람 없음' 칸(시계에 null 을 준 칸)을 다시 만든다(리뷰 2026-10-07 — 없으면 WORK 시작~첫 검출의 화면 밖 시간이 사라져 폴백이 재현되지 않았다).
+     */
+    val startMs: Long? = null, val endMs: Long? = null,
+    /** 처음 버티기 전(대기)의 사유별 시간. */
+    val waitMs: Map<String, Long> = emptyMap(),
+) {
+    companion object {
+        /** 시계 스냅샷 → 로그(절대 시각을 [t0] 기준으로). */
+        fun of(snap: PlankHoldSnapshot, t0: Long): HoldLog = HoldLog(PlankHoldClock.ENGINE, snap.source, snap.heldMs, snap.wallMs,
+            snap.firstHoldAt?.let { it - t0 }, snap.firstStop?.let { it.copy(tMs = it.tMs - t0) }, snap.stopMs,
+            snap.segments.map { it.copy(t0 = it.t0 - t0, t1 = it.t1 - t0) }, snap.startAt?.let { it - t0 }, snap.endAt?.let { it - t0 }, snap.waitMs)
+    }
+}
 
 /** 세트 중 열 상태 변화 (`PowerManager.THERMAL_STATUS_*`) — [tMs] 는 세트 상대 ms. 열 상태는 추론 간격을 바꾼다(InferencePolicy). */
 data class ThermalEvent(val tMs: Long, val status: Int)
@@ -261,6 +301,15 @@ data class SetLog(
      * null = 이 필드 이전 로그(키 없음). 헤더 `tilt_deg` 는 마지막 up 프레임 값이라 폰을 집어 든 각이 찍히므로(A4 §8 #5) 배치 비교는 이 블록의 중앙값을 쓴다.
      */
     val placement: CameraPlacement? = null,
+    /** 바닥 반복 계열(spec §99) — 기각 상세(`reps.rejected[]` 와 같은 순서·길이), 센 회 상세, 소리 없이 버린 후보, 판별 유보한 회. 다른 종목은 null(키 없음). */
+    val repFloorRejected: List<FloorRejection>? = null,
+    val repFloorReps: List<FloorRep>? = null,
+    val repDiscarded: List<FloorDiscard>? = null,
+    val repIdentityAbstain: List<Long>? = null,
+    /** 바닥 계열 관측 층의 쪽 잠금 교체 수 — `floor_chain{switches}`. 바닥 계열 세 종목이 아니면 null. */
+    val floorChainSwitches: Int? = null,
+    /** 플랭크 유지 시계 — `hold`. 플랭크가 아니면 null. */
+    val hold: HoldLog? = null,
 ) {
     companion object {
         const val SCHEMA = "trex.posture.setlog/1"
@@ -328,7 +377,15 @@ data class SetLog(
             lens: LensInfo? = null,
             /** 프로필 키(cm, §91) — 거리·높이 추정의 월드 척도를 맞춘다. null 이면 월드 척도 그대로. */
             subjectHeightCm: Float? = null,
+            repFloorRejected: List<FloorRejection>? = null,
+            repFloorReps: List<FloorRep>? = null,
+            repDiscarded: List<FloorDiscard>? = null,
+            repIdentityAbstain: List<Long>? = null,
+            floorChainSwitches: Int? = null,
+            hold: HoldLog? = null,
         ): SetLog {
+            // 바닥 계열(§99): 관측 층에 넘긴 중력 up 을 프레임마다 — 앱이 up 을 뒤집은 프레임도 재생기가 같은 값을 쓴다(세트 로그 up 은 뒤집은 뒤의 값이다)
+            val chainFloor = FloorChain.Kind.of(exercise) != null
             val frames = samples.mapIndexed { i, s ->
                 val lm = coordinates && s.detected
                 SetLogFrame(
@@ -340,6 +397,8 @@ data class SetLog(
                     xy = if (lm) s.normalizedXy else null,
                     world = if (lm) s.world else null,
                     up = if (lm) floatArrayOf(s.up.x, s.up.y, s.up.z) else null,
+                    floorUp = if (lm && chainFloor) FloorChain.gravityUp(s.up, s.upFromGravity, s.upFlipped)?.let { floatArrayOf(it.x, it.y, it.z) } else null,
+                    floorUpLogged = lm && chainFloor,
                 )
             }
             val firstImage = samples.firstOrNull { it.detected }
@@ -404,6 +463,12 @@ data class SetLog(
                 imageWidth = if (coordinates) firstImage?.imageWidth else null,
                 imageHeight = if (coordinates) firstImage?.imageHeight else null,
                 placement = placement,
+                repFloorRejected = repFloorRejected,
+                repFloorReps = repFloorReps,
+                repDiscarded = repDiscarded,
+                repIdentityAbstain = repIdentityAbstain,
+                floorChainSwitches = floorChainSwitches,
+                hold = hold,
             )
         }
     }
@@ -540,6 +605,11 @@ object SetLogJson {
                     fs.entries.sortedBy { it.key }.forEachIndexed { i, (k, v) -> if (i > 0) sb.append(','); str(sb, k); sb.append(':').append(v) }
                     sb.append('}')
                 }
+                e.lying?.let { fs ->
+                    sb.append(",\"lying\":{")
+                    fs.entries.sortedBy { it.key }.forEachIndexed { i, (k, v) -> if (i > 0) sb.append(','); str(sb, k); sb.append(':').append(num(v)) }
+                    sb.append('}')
+                }
                 e.returnFraction?.let { sb.append(",\"return_fraction\":").append(num(it)) }
                 e.firstPairWindowMs?.let {
                     // 시작 확정 구성(새 코어만) — 이후 반복의 시간 창은 null(진폭 비만)도 값이라 명시해 적는다
@@ -581,8 +651,36 @@ object SetLogJson {
                     sb.append("{\"t_ms\":").append(r.tMs).append(",\"min\":").append(num(r.min)).append(",\"max\":").append(num(r.max))
                     sb.append(",\"swing\":").append(num(r.identitySwing))
                     r.feature?.let { sb.append(",\"feature\":"); str(sb, it) }   // 팔별 경로의 기각 피처(spec §62c) — 판별 게이트는 키 없음
+                    // 바닥 반복 계열(§99)의 기각 상세 — 같은 순서·길이일 때만(추적기가 둘을 함께 쌓는다)
+                    log.repFloorRejected?.takeIf { it.size == v.size }?.get(i)?.let { d ->
+                        sb.append(",\"reason\":"); str(sb, d.reason)
+                        sb.append(",\"trunk_peak\":").append(num(d.trunkPeak)).append(",\"ear_peak\":").append(num(d.earPeak))
+                        sb.append(",\"amp\":").append(num(d.amp)).append(",\"knee_top\":").append(num(d.kneeTop)).append(",\"head_med\":").append(num(d.headMed))
+                        sb.append(",\"side_ok\":").append(d.sideOk)
+                    }
                     sb.append('}')
                 }
+                sb.append(']')
+            }
+            // 바닥 반복 계열(§99) — 센 회 상세·소리 없이 버린 후보·판별 유보. 없으면 키 부재
+            log.repFloorReps?.let { v ->
+                sb.append(",\"floor_reps\":[")
+                v.forEachIndexed { i, r ->
+                    if (i > 0) sb.append(',')
+                    sb.append("{\"t_ms\":").append(r.tMs).append(",\"start_t_ms\":").append(r.startMs).append(",\"peak_t_ms\":").append(r.peakMs)
+                    sb.append(",\"min\":").append(num(r.min)).append(",\"peak\":").append(num(r.peak))
+                    sb.append(",\"top_ms\":").append(r.topMs).append(",\"descent_ms\":").append(r.descentMs).append(",\"abstain\":").append(r.identityAbstain).append('}')
+                }
+                sb.append(']')
+            }
+            log.repDiscarded?.let { v ->
+                sb.append(",\"discarded\":[")
+                v.forEachIndexed { i, d -> if (i > 0) sb.append(','); sb.append('[').append(d.tMs).append(','); str(sb, d.reason); sb.append(']') }
+                sb.append(']')
+            }
+            log.repIdentityAbstain?.let { v ->
+                sb.append(",\"identity_abstain\":[")
+                v.forEachIndexed { i, t -> if (i > 0) sb.append(','); sb.append(t) }
                 sb.append(']')
             }
             // 팔별 경로(spec §62c): 각 팔이 낸 사이클 — 회로 묶이기 전 원자재. 없으면 키 부재
@@ -632,6 +730,25 @@ object SetLogJson {
             }
             sb.append("},")
         }
+        // 바닥 계열(spec §99) — 관측 층의 쪽 잠금 교체 수, 플랭크 유지 시계. 없으면 키 부재
+        log.floorChainSwitches?.let { sb.append("\"floor_chain\":{\"switches\":").append(it).append("},") }
+        log.hold?.let { h ->
+            sb.append("\"hold\":{\"engine\":"); str(sb, h.engine)
+            sb.append(",\"source\":"); str(sb, h.source)
+            sb.append(",\"held_ms\":").append(h.heldMs).append(",\"wall_ms\":").append(h.wallMs)
+            sb.append(",\"first_hold_t_ms\":").append(h.firstHoldMs?.toString() ?: "null")
+            sb.append(",\"first_stop\":")
+            val fs = h.firstStop
+            if (fs == null) sb.append("null") else { sb.append("{\"t_ms\":").append(fs.tMs).append(",\"reason\":"); str(sb, fs.reason); sb.append('}') }
+            sb.append(",\"stop_ms\":{")
+            h.stopMs.entries.forEachIndexed { i, (k, v) -> if (i > 0) sb.append(','); str(sb, k); sb.append(':').append(v) }
+            sb.append("},\"wait_ms\":{")
+            h.waitMs.entries.forEachIndexed { i, (k, v) -> if (i > 0) sb.append(','); str(sb, k); sb.append(':').append(v) }
+            sb.append("},\"start_t_ms\":").append(h.startMs?.toString() ?: "null").append(",\"end_t_ms\":").append(h.endMs?.toString() ?: "null")
+            sb.append(",\"segments\":[")
+            h.segments.forEachIndexed { i, g -> if (i > 0) sb.append(','); sb.append('[').append(g.t0).append(',').append(g.t1).append(','); str(sb, g.state); sb.append(']') }
+            sb.append("]},")
+        }
         // 반복별 자세 검사(spec §62a) — 평가기가 있는 종목만. reps 블록 뒤, frames 앞
         log.repForm?.let { sb.append("\"rep_form\":").append(repForm(it)).append(',') }
         sb.append("\"frames\":[")
@@ -652,6 +769,10 @@ object SetLogJson {
             floats(sb, "xy", f.xy)
             floats(sb, "w", f.world)
             floats(sb, "up", f.up)
+            if (f.floorUpLogged) {
+                val fu = f.floorUp
+                if (fu == null) sb.append("\"floor_up\":null,") else floats(sb, "floor_up", fu)
+            }
             sb.append("\"features\":{")
             var first = true
             for ((k, v) in f.features) {

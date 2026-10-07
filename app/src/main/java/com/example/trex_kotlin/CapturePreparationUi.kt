@@ -163,6 +163,10 @@ internal fun CapturePreparationPanel(
                     (state.trackingHold || state.phase == PreparationPhase.WAITING) && it !in GENERIC_PREPARATION_MESSAGES
                 }
                 if (reason != null) Text(reason, color = c.warn, fontSize = 14.sp, lineHeight = 20.sp, fontWeight = FontWeight.SemiBold)
+                // 바닥 계열 세 종목(spec §99) — 무엇을 세고 무엇을 못 보는가를 시작 전에 보인다(원칙 #5, PostureScope.FLOOR_LINES)
+                else com.example.trex_kotlin.posture.PostureScope.floorLine(profile.referenceExercise)?.let {
+                    Text(it, color = c.text3, fontSize = 12.sp, lineHeight = 17.sp)
+                }
             }
         }
         if (cameraError != null) {
