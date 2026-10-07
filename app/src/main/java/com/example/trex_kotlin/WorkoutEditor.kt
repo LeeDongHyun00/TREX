@@ -89,7 +89,8 @@ fun WorkoutEditorSheet(app: AppViewModel, initialId: String?, onClose: () -> Uni
                                 Text("자세 비교", color = c.text, fontSize = 16.sp)
                                 val profile = ExerciseProfiles.forName(selected.name)
                                 Text(when {
-                                    selected.postureSupported() -> profile?.capture?.title.orEmpty()
+                                    // 시험 단계 종목(PostureTrial)은 촬영 방향 앞에 밝힌다
+                                    selected.postureSupported() -> (if (selected.postureTrial()) "자세 교정 시험 단계 · " else "") + profile?.capture?.title.orEmpty()
                                     profile == null -> "이 종목은 아직 비교를 지원하지 않아요."
                                     else -> "여러 동작이 섞여 있어 비교를 지원하지 않아요."
                                 },

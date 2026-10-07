@@ -230,4 +230,36 @@ class FloorFeaturesTest {
             assertTrue(cue.habit.startsWith("처음부터"))
         }
     }
+
+    // ---------- §99 레그 레이즈 양다리 판별 신호 ----------
+
+    /** 누운 옆모습 — 골반 (400, 600), 어깨는 머리 쪽(왼쪽). 다리는 곧게, 바닥에서 [left]·[right] 도 들어 올림(넓적다리 150 px). */
+    private fun lyingLegs(left: Double, right: Double): Map<String, Pair<Double, Double>> {
+        fun leg(deg: Double, len: Double) = Math.toRadians(deg).let { (400.0 + len * kotlin.math.cos(it)) to (600.0 - len * kotlin.math.sin(it)) }
+        return mapOf(
+            "Nose" to (80.0 to 600.0), "LEar" to (95.0 to 598.0), "REar" to (97.0 to 596.0),
+            "LShoulder" to (150.0 to 600.0), "RShoulder" to (152.0 to 598.0),
+            "LElbow" to (220.0 to 620.0), "RElbow" to (222.0 to 618.0),
+            "LWrist" to (290.0 to 630.0), "RWrist" to (292.0 to 628.0),
+            "LHip" to (400.0 to 600.0), "RHip" to (402.0 to 598.0),
+            "LKnee" to leg(left, 150.0), "RKnee" to leg(right, 150.0),
+            "LAnkle" to leg(left, 300.0), "RAnkle" to leg(right, 300.0),
+        )
+    }
+
+    @Test
+    fun hipAngMaxsideStaysWithTheLegLeftOnTheFloor() {
+        val flat = FloorFeatureExtractor().compute(xyOf(lyingLegs(0.0, 0.0)), null, 1, 1)
+        val oneUp = FloorFeatureExtractor().compute(xyOf(lyingLegs(80.0, 0.0)), null, 1, 1)
+        val bothUp = FloorFeatureExtractor().compute(xyOf(lyingLegs(80.0, 80.0)), null, 1, 1)
+        // 한 다리만 들면 카운트 신호(양측 중점 hip_ang)는 25° 넘게 움직이지만 판별 신호(더 편 쪽)는 바닥의 다리를 따라 그대로다
+        assertTrue(flat.getValue("hip_ang") - oneUp.getValue("hip_ang") > 25f)
+        assertEquals(flat.getValue("hip_ang_maxside"), oneUp.getValue("hip_ang_maxside"), 1f)
+        // 두 다리를 함께 들면 판별 신호도 카운트 신호처럼 움직인다
+        assertEquals(bothUp.getValue("hip_ang"), bothUp.getValue("hip_ang_maxside"), 2f)
+        assertTrue(flat.getValue("hip_ang_maxside") - bothUp.getValue("hip_ang_maxside") > 60f)
+        // 무릎 가시성이 바닥 컷 미만이면 둘 다 유보 — 모르는 것을 판별하지 않는다(게이트는 표본 2개 미만이면 센다)
+        val vis = FloatArray(MP_LANDMARK_COUNT) { 0.9f }.also { it[26] = 0.1f }
+        assertFalse(FloorFeatureExtractor().compute(xyOf(lyingLegs(80.0, 0.0)), vis, 1, 1).containsKey("hip_ang_maxside"))
+    }
 }

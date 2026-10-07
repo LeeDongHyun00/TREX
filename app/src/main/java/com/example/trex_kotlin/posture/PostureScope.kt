@@ -25,8 +25,15 @@ data class PostureScope(
     /** 전부 검증 중(바닥 종목 8개) — 라이브 음성이 자세를 지적하지 않는다. */
     val provisionalOnly: Boolean get() = watched.isEmpty() && provisional.isNotEmpty()
 
-    /** 세트 시작 안내의 둘째 문장. 없으면 null. 짧게 — 항목은 각 최대 2개, 끝에 마침표. */
-    val startLine: String? = when {
+    /**
+     * 세트 시작 안내의 둘째 문장. 없으면 null. 짧게 — 항목은 각 최대 2개, 끝에 마침표.
+     * 시험 단계 종목([PostureTrial] — 크런치·라잉 레그 레이즈·플랭크)은 그 앞에 시험 단계 문장을 붙인다.
+     */
+    val startLine: String? = baseStartLine().let { base ->
+        if (PostureTrial.isTrialRule(exercise)) listOfNotNull(PostureTrial.START_LINE, base).joinToString(" ") else base
+    }
+
+    private fun baseStartLine(): String? = when {
         LegProfile.of(exercise) != null -> "왼쪽과 오른쪽을 한 번씩 해야 1회이고, 얕거나 다리를 뻗어 올리거나 허리를 숙인 동작은 세지 않습니다. 횟수와 자세는 검증 중이고 척추 분절과 근육의 힘은 판정하지 않습니다."
         exercise == "크런치" -> "횟수와 머리 들림 근사를 기록해요. 견갑골 상승과 허리 접지는 판정할 수 없어요."
         exercise == "Y - Exercise" -> "횟수와 팔 들림 근사를 기록해요. 목 정렬·양팔 높이·엄지 방향은 판정할 수 없어요."
@@ -48,6 +55,7 @@ data class PostureScope(
 
     /** 운동 카드 부제 한 줄. 예 "평가 4 · 검증 중 1 · 못 봄 3" */
     val cardLine: String = buildList {
+        if (PostureTrial.isTrialRule(exercise)) add(PostureTrial.LABEL)
         if (watched.isNotEmpty()) add("평가 ${watched.size}")
         if (provisional.isNotEmpty()) add("검증 중 ${provisional.size}")
         if (blind.isNotEmpty()) add("못 봄 ${blind.size}")

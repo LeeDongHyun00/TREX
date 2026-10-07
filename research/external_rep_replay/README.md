@@ -10,6 +10,7 @@
 | **본 실험 (MM-Fit)** — 영상 → MediaPipe(앱 모델) → 현재 카운터·새 코어 | **실행함(§10).** zenodo.org 가 이 컨테이너에서 막혀 사용자 PC 에서 추출했다(캡처: 브랜치 `data/mmfit-mp-captures`, CC BY 4.0). 설계 `docs/REP_ENGINE_DESIGN.md` §16 |
 | **본 실험 (REHAB24-6)** | 판정 기준 사전 등록(설계 §17, `score_rehab_prereg.py`) → 사용자 PC 실행 대기. CC BY-NC 라 파생 캡처는 공개 저장소에 올리지 않고 집계만 |
 | **보조 실험** — MM-Fit 데이터셋 자체 3D 포즈 → 현재 카운터 | 실행함(§4). MediaPipe 결과를 대신하지 않는다 |
+| **바닥 대리 실험 (FMS ASLR, 2026-10-07)** — 누워 한 다리 들기 JPEG 열 → MediaPipe → 앱 바닥 경로(`FloorFeatureExtractor`) → 라잉 레그 레이즈 카운터 | 실행함 — `results/fms_aslr/README.md`. CC0. 옆모습에서 검출 100%, 드는 쪽 신호로 뒤에 준비 자세가 이어지는 회 57/60(복귀형 v2 시험에서는 59/60 — v2 는 사용자 결정으로 되돌림, `results/return_v2.patch`), 헛카운트 0. 이 실험이 spec §99(바닥 준비 기준·양다리 판별)의 출발점 |
 | **폰 검증 Gate A** — 검증 모드 세션 → 회수 → 채점·프레이밍·무결성 보고서 | PC 파이프라인 준비 완료, 합성 드라이런 통과(§12). 폰 세션 대기 — 절차 `GATE_A_RUNBOOK.md` |
 
 `docs/mmfit-rep-counting.v1.md`·`docs/rehab-rep-f1.v1.md` 의 숫자는 **다른 계열 엔진**(`HeuristicFormCheckSession`,
@@ -25,6 +26,9 @@
 | `capture_format.py` | 캡처 형식, 앱 추론 주기 |
 | `run_replay.py` | 매니페스트 생성 → 재생 → 채점 (세트 반복 수, 반복 경계 F1). 윈도우에서는 재생기 `.bat` 을 부른다 |
 | `mmfit_align.py` | MM-Fit 영상 시간축 ↔ 라벨 정렬 — 세트별 지연(pose_3d 교차상관)으로 정답 창을 영상 시각으로 옮긴 index (§10) |
+| `fms_captures.py` · `score_fms_aslr.py` | FMS ASLR 프레임 열 → 바닥 캡처(메타 `floor=1`·이미지 크기, 85 ms 추론 / 300 ms 판정) · 재생·채점(검출·스윙·카운트·전문가 점수별). 재생기는 `PostureFloor.kt` 를 그 자리에서 컴파일하고 안드로이드 쪽 심볼만 `replay-jvm/src/main/kotlin/trex/shim/FloorShims.kt` 에 둔다 |
+| `tracker_ab.py` | 카운터 변경 A/B — 같은 캡처(MM-Fit·REHAB·폰 fcap·FMS)를 변경 전 재생기 사본(`--baseline`)과 지금 재생기로 돌려 세트별 카운트·정확 일치·헛카운트를 견준다. 앱 카운터(복귀형 추적기 등)를 고치기 전에 `replay-jvm/build/install/trex-rep-replay` 를 복사해 두면 그 사본이 '변경 전 앱' 이다(spec §99) |
+| `aihub_floor_mp.py` · `legraise_identity.py` · `fms_prep_variants.py` | spec §99 레그 레이즈 근거 — AIHub 바닥 종목 전 클립 × 5뷰 MediaPipe 추론(mp_infer 재사용) → 바닥 캡처, 양다리(AIHub)·한 다리(FMS) 판별 신호 스윙과 문턱별 기각률, 준비 구간 흉내(메타 `prepUntilMs`)로 바닥 준비 기준 심기의 효과 |
 | `score_rehab_prereg.py` | REHAB24-6 사전 등록 판정(설계 §17) — 발화 시각 경계 일치, 카메라별, 정자세/비정자세 재현율, P1~P4 |
 | `prototype_counter.py` · `stress_battery.py` · `parity_core.py` | 새 코어 프로토타입(§8) · 시작 확정 정책 배터리(설계 §12·§13) · Kotlin 새 코어 ↔ 프로토타입 세트별 파리티 |
 | §9 의 도구들 | 휴대폰 세트 로그 재생·채점·검증 프로토콜(휴대폰 연결 전 준비분) |

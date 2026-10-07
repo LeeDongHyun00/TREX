@@ -150,6 +150,9 @@ class FloorFeatureExtractor {
         val lk = pt(M.L_KNEE); val rk = pt(M.R_KNEE)
         val la = pt(M.L_ANK); val ra = pt(M.R_ANK)
         put("knee_gap2d", hypot(lk[0] - rk[0], lk[1] - rk[1]) / torso, vKnee)
+        // §99 양다리 판별 신호: 몸통축(어깨 중점–골반 중점)과 각 무릎이 이루는 고관절각 중 더 편 쪽. 두 다리를 함께 들면 hip_ang 처럼
+        // 움직이고, 한 다리만 들면 바닥에 남은 다리를 따라 거의 움직이지 않는다(라잉 레그 레이즈의 RepSignal.identityFeature)
+        put("hip_ang_maxside", max(ang(sh, hp, lk), ang(sh, hp, rk)), vKnee)
         put("ankle_gap2d", hypot(la[0] - ra[0], la[1] - ra[1]) / torso, vAnkle)
         val rs = pt(M.R_SH)
         put("shoulder_asym2d", devUp(ls, rs, hp))

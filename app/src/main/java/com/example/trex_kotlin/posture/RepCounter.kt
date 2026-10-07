@@ -278,12 +278,15 @@ class RepCounter(
     }
 
     /**
-     * 준비 프레임([frames] = 시각·피처)에서 서 있는 기준값 — [atMs] 앞 [SEED_WINDOW_MS] 안의 카운트 신호 값이 3개 이상이고
+     * 준비 프레임([frames] = 시각·피처)에서 쉬는 자세 기준값(서서 하는 종목은 선 자세, 바닥 종목은 누운·엎드린 시작 자세 — §99)
+     * — [atMs] 앞 [SEED_WINDOW_MS] 안의 카운트 신호 값이 3개 이상이고
      * 모두 0.22 × 진폭(기준을 잡는 띠와 같은 폭) 안에 모여 있으면 그 중앙값. 움직이고 있었으면 null(심지 않고 종전처럼 스스로 잡는다).
      */
     fun standingSeedFrom(frames: List<Pair<Long, Map<String, Float>>>, atMs: Long): Float? {
         if (legTracker != null) { legTracker.prepare(frames, atMs); return null }   // 다리 사이클 경로: 준비 프레임에서 서 있는 기준(§97)
         if (returnTracker == null) return null
+        // 바닥 종목(§99)의 접지선 신호(크런치 head_ground)는 심지 않는다 — 준비 전용 추출기와 세트 추출기의 접지선 추정이 달라 준비 값이 세트의 기준이 아니다
+        if (signal.feature.endsWith("_ground")) return null
         val vs = frames.filter { atMs - it.first in 0..SEED_WINDOW_MS }.mapNotNull { it.second[signal.feature]?.takeIf(Float::isFinite) }
         if (vs.size < 3 || vs.max() - vs.min() > signal.minAmp * .22f) return null
         val s = vs.sorted()
@@ -748,6 +751,11 @@ data class RepSignal(
     val identityFeature: String? = null,
     val identityMinAmp: Float? = null,
     /**
+     * 판별 게이트가 회를 세지 않았을 때 그 이유를 말하는 한 문장(spec §99) — 반복 검사기가 없는 종목(바닥)에서 두 모드 모두 말한다(횟수의 입장 조건이지
+     * 자세 코칭이 아니다 — 침묵하면 카운트가 죽은 줄 안다, 한 다리 계열 §97 과 같은 결정). null = 침묵(스쿼트의 제자리 무릎 들기는 스쿼트 시도가 아니다).
+     */
+    val identityCue: String? = null,
+    /**
      * 팔별(좌·우) 신호로 세는 종목(덤벨 컬, spec §62c·설계 §22): (왼쪽 피처, 오른쪽 피처). 자식 카운터 둘이 각자 사이클을 내고
      * **완료 = min(nL, nR) 증가** — 동시 컬은 사이클마다 1회, 교대 컬은 왼 + 오른 = 1회(런지 결정과 같은 단위)가 한 식으로 된다.
      * 두 팔 평균(`elbow_mean`)은 교대 컬에서 한 팔 스윙의 절반만 움직여 MM-Fit 교대 59세트 재현율 0.09 였다(B2).
@@ -909,7 +917,11 @@ object RepSignals {
         put("푸시업", RepSignal("wrist_shoulder_d", 0.30f, validated = true, plausibleMin = 0.10f))
         put("니푸쉬업", RepSignal("wrist_shoulder_d", 0.30f, validated = true, plausibleMin = 0.10f))
         put("크런치", RepSignal("head_ground", 0.15f))
-        put("라잉 레그 레이즈", RepSignal("hip_ang", 25f))
+        // §99 양다리 판별: 한 다리만 들어도 양측 중점 hip_ang 이 25° 넘게 움직인다(FMS 누워 한 다리 들기 90회 중 66 %). 더 편 쪽 고관절각
+        // (hip_ang_maxside, PostureFloor)도 20° 움직여야 레그 레이즈다 — 한 다리 회 기각 96 %(FMS 후면 90회), 양다리 회 기각 0~0.2 %
+        // (AIHub 416클립 × 측면·사선 뷰 A·B·D·E, 95 % 상한 ≤ 1.1 % — 원칙 #7 입장 조건 ≤ 2 %). 정면(머리·발 쪽) 뷰 C 는 4.1 % — 앱 안내 밖 구도
+        put("라잉 레그 레이즈", RepSignal("hip_ang", 25f, identityFeature = "hip_ang_maxside", identityMinAmp = 20f,
+            identityCue = "두 다리를 함께 들어 주세요"))
         put("힙쓰러스트", RepSignal("hip_dev_ankle", NORM_S))
         put("Y - Exercise", RepSignal("hand_shoulder_off", 0.20f))
         put("시저크로스", RepSignal("knee_gap2d", NORM))

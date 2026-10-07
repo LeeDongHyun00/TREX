@@ -1,0 +1,26 @@
+package com.example.trex_kotlin.posture
+
+/**
+ * 자세 교정 **시험 단계** 종목 — 크런치 · 라잉 레그 레이즈 · 플랭크 (사용자 결정 2026-10-08, `docs/exercises/floor_trial.md`).
+ *
+ * 2026-10-07 폰 보고(`docs/PHONE_REPORT_2026-10-07_DESIGN.md`)에서 이 세 종목은 틀린 회를 세고 교정을 말하지 않았다 — 한 다리 레그 레이즈·무릎 접기,
+ * 어깨만 든 크런치, 골반을 바닥에 댄 플랭크. 원인(회를 지우는 판별 사유가 꺼져 있음·입장 문턱 과소·beta 침묵·멈춤 문턱이 위반값 위)은 확인됐고 설계도
+ * 있지만 구현·폰 검증 전이다. 그동안 사용자가 횟수·시간·교정을 믿고 쓰지 않도록 **운동 목록·편집·세트 시작 안내에 시험 단계임을 밝힌다**(원칙 #2 —
+ * 검증된 것과 검증 중인 것을 같은 확신으로 말하지 않는다). 카메라는 켤 수 있다(끄면 데이터가 안 쌓인다 — 폰 블록 세트가 승격 조건이다).
+ *
+ * 해제 조건: 설계 문서 §5 의 폰 블록 세트(정상:N 오류:M)에서 검출 ≥ 80 %·정상 블록 오탐 없음, 그 뒤 이 집합에서 뺀다. 두 이름 집합을 함께 고친다.
+ */
+object PostureTrial {
+    /** 앱 운동 이름(카탈로그·운동 목록·편집). */
+    val appNames: Set<String> = setOf("크런치", "레그 레이즈", "플랭크")
+    /** AIHub 규칙 종목 이름(규칙셋·카운터·세트 로그·[PostureScope]). */
+    val ruleNames: Set<String> = setOf("크런치", "라잉 레그 레이즈", "플랭크")
+
+    /** 운동 목록의 스위치 아래 짧은 꼬리표(52 dp 안). */
+    const val LABEL = "시험 단계"
+    /** 세트 시작 안내·소개 3줄의 첫 문장 — 무엇이 믿을 수 없는지 말한다. */
+    const val START_LINE = "이 종목의 자세 교정은 시험 단계예요. 틀린 동작이 세지거나 교정이 빠질 수 있어요."
+
+    fun isTrialApp(appName: String): Boolean = appName in appNames
+    fun isTrialRule(exercise: String): Boolean = exercise in ruleNames
+}

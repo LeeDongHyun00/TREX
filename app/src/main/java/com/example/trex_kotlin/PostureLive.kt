@@ -947,12 +947,12 @@ fun PostureLiveSessionScreen(
                 if (judgeBin == refs.judgeBinRef[0]) return@setAnalyzer
                 refs.judgeBinRef[0] = judgeBin
                 // 전환 직전에 추론을 시작한 준비 프레임도 엔진/기준/로그로 들어가지 않는다.
-                // 다만 서서 하는 종목은 최근 준비 프레임을 남겨 운동 첫 프레임에서 카운터의 서 있는 기준으로 쓴다(§89 후속 2)
+                // 다만 최근 준비 프레임을 남겨 운동 첫 프레임에서 카운터의 쉬는 자세 기준으로 쓴다(§89 후속 2 — 바닥 종목도, §99)
                 if (wasPreparing || preparingRef.value) {
                     refs.contactRef[0].clear()
-                    if (!refs.floorRef[0] && s.features.isNotEmpty()) synchronized(prepFrames) {
-                        prepFrames.addLast(now to s.features); while (prepFrames.size > 12) prepFrames.removeFirst()
-                    }
+                    prepFeatures(refs, s, aihubExercise)?.let { synchronized(prepFrames) {
+                        prepFrames.addLast(now to it); while (prepFrames.size > 12) prepFrames.removeFirst()
+                    } }
                     return@setAnalyzer
                 }
                 if (s.detected) everDetected = true
@@ -1019,10 +1019,11 @@ fun PostureLiveSessionScreen(
                             // 다리 사이클 경로(§97): 기준 대비 값(hip_drop)을 더한 프레임을 평가기·카운터가 함께 본다 — 재생기와 같은 순서
                             val judged = rc.legTracker?.annotate(features) ?: features
                             rf?.onFrame(now, judged)   // 카운터보다 먼저 — 이 프레임이 사이클 창에 들어간 뒤 사이클이 끝나야 한다
-                            // 운동 첫 프레임: 준비 카운트다운 동안 가만히 서 있던 자세를 카운터의 기준으로 심는다(§89 후속 2) — 기준이 잡히기 전에
-                            // 내려간 첫 회가 버려지지 않게. 움직이고 있었거나 준비 프레임이 없으면 심지 않는다(종전처럼 스스로 잡는다)
-                            val seedFrames = synchronized(prepFrames) { if (prepFrames.isEmpty()) null else prepFrames.toList().also { prepFrames.clear() } }
-                            if (seedFrames != null && !refs.floorRef[0]) rc.standingSeedFrom(seedFrames, now)?.let { rc.seedStanding(now, it) }
+                            // 운동 첫 프레임: 준비 카운트다운 동안 가만히 있던 자세(서서 하는 종목은 선 자세, 바닥 종목은 누운·엎드린 시작 자세 — §99)를
+                            // 카운터의 기준으로 심는다(§89 후속 2) — 기준이 잡히기 전에 움직인 첫 회가 버려지지 않게. 움직이고 있었거나 준비 프레임이 없으면
+                            // 심지 않는다(종전처럼 스스로 잡는다). 준비 전용 바닥 추출기의 접지선도 여기서 비운다
+                            val seedFrames = synchronized(prepFrames) { if (prepFrames.isEmpty()) null else prepFrames.toList().also { prepFrames.clear(); refs.prepFloorRef[0].reset() } }
+                            if (seedFrames != null) rc.standingSeedFrom(seedFrames, now)?.let { rc.seedStanding(now, it) }
                             // 팔별 경로(덤벨 컬, §62c)는 두 팔 값·기각 피처를 쓴다 — 그 밖은 카운트 신호 + 판별 신호(종전과 같다)
                             val done = rc.onFrameFeatures(now, judged)
                             breathDir = rc.motionDirection   // 호흡 표시(§5) — 위상을 따라간다, 앞서지 않는다
@@ -1045,6 +1046,11 @@ fun PostureLiveSessionScreen(
                                         if (cue != null && now - refs.rejectCueAtRef[0] > REJECT_CUE_GAP_MS) { refs.rejectCueAtRef[0] = now; speech.speakLatest(cue) }
                                     }
                                 }
+                            }
+                            // §99 반복 검사기가 없는 종목(바닥 레그 레이즈 — 한 다리만 든 회)의 판별 기각: 낮은 틱과 이유 한 문장(RepSignal.identityCue), 두 모드
+                            if (rf == null && rc.rejectedReps.size > refs.rejectedSeenRef[0]) {
+                                refs.rejectedSeenRef[0] = rc.rejectedReps.size
+                                speakRejectCue(rc.signal.identityCue, now, refs, speech, repTone)
                             }
                             done
                         }
@@ -1526,6 +1532,24 @@ fun PostureLiveSessionScreen(
 }
 
 /** 틱(§7) — 센 회 ACK · 자세로 뺀 회 NACK · 마지막 3회 BEEP2. TTS 와 겹치지 않는 짧은 소리라 코칭 문장을 끊지 않는다. */
+/**
+ * 준비 프레임의 카운터 피처(§89 후속 2, 바닥 §99) — 서서 하는 종목은 프레임 피처 그대로, 바닥 종목은 세트와 같은 2D 바닥 피처를 준비 전용
+ * 추출기로 만든다(세트 추출기의 접지선을 준비 동작으로 오염시키지 않는다). 사람이 없거나 계산된 것이 없으면 null.
+ */
+private fun prepFeatures(refs: LiveSessionRefs, s: PoseSample, exercise: String): Map<String, Float>? {
+    if (!s.detected) return null
+    val f = if (refs.floorRef[0]) refs.prepFloorRef[0].computeForExercise(exercise, s.normalizedXy, s.visibility, s.imageWidth, s.imageHeight)
+        else s.features
+    return f.takeIf { it.isNotEmpty() }
+}
+
+/** 판별 기각의 이유(§99, [RepSignal.identityCue]) — 낮은 틱 + 6 s 에 한 번 그 문장. 문장 없음·음소거·검증 모드·일시정지면 침묵. */
+private fun speakRejectCue(cue: String?, now: Long, refs: LiveSessionRefs, speech: SpeechCoach, tone: ToneGenerator?) {
+    if (cue == null || speech.muted || refs.validationRef[0] || refs.pausedRef[0]) return
+    repTick(tone, ToneGenerator.TONE_PROP_NACK)
+    if (now - refs.rejectCueAtRef[0] > REJECT_CUE_GAP_MS) { refs.rejectCueAtRef[0] = now; speech.speakLatest(cue) }
+}
+
 private fun repTick(tone: ToneGenerator?, kind: Int) { runCatching { tone?.startTone(kind, 70) } }
 
 /** 렙 카운트 알림 — 음성이 되면 숫자로, 안 되면 짧은 톤으로. 코칭 문구를 끊지 않게 큐에 붙인다. */
@@ -1562,6 +1586,7 @@ private fun GlassIcon(
 private class LiveSessionRefs {
     val normalReferenceRef = arrayOf(NormalPoseReference(emptyList()))
     val floorRef = booleanArrayOf(false)
+    val prepFloorRef = arrayOf(FloorFeatureExtractor())   // §99 준비 프레임 전용 바닥 피처 — 세트 추출기의 접지선을 준비 동작으로 오염시키지 않는다
     val validationRef = booleanArrayOf(false)
     val holdRef = arrayOfNulls<HoldTracker>(1)
     val floorFeedbackRef = arrayOfNulls<FloorFeedbackController>(1)

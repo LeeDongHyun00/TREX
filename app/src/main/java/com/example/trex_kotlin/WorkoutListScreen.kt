@@ -243,11 +243,13 @@ private fun WorkoutSwipeRow(workout: Workout, shape: RoundedCornerShape, reset: 
                             colors = postureSwitchColors(), enabled = gesturesEnabled && workout.postureSupported(),
                             modifier = Modifier.semantics {
                                 contentDescription = "${workout.name} 자세 교정 사용"
-                                stateDescription = if (!workout.postureSupported()) "미지원" else if (workout.posture) "사용 중" else "꺼짐"
+                                stateDescription = (if (workout.postureTrial()) "시험 단계 · " else "") +
+                                    (if (!workout.postureSupported()) "미지원" else if (workout.posture) "사용 중" else "꺼짐")
                             })
 
                     }
-                    Text(if (workout.postureSupported()) "자세 교정" else "미지원", color = c.text2,
+                    // 시험 단계(크런치·레그 레이즈·플랭크, PostureTrial): 틀린 동작이 세지거나 교정이 빠질 수 있다 — 목록에서 먼저 밝힌다(원칙 #2)
+                    Text(when { !workout.postureSupported() -> "미지원"; workout.postureTrial() -> com.example.trex_kotlin.posture.PostureTrial.LABEL; else -> "자세 교정" }, color = c.text2,
                         fontSize = 10.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.width(52.dp))
                 }
             }

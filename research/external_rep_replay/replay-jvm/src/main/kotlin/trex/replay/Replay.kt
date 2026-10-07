@@ -1,5 +1,6 @@
 package trex.replay
 
+import com.example.trex_kotlin.posture.FloorFeatureExtractor
 import com.example.trex_kotlin.posture.Joints
 import com.example.trex_kotlin.posture.PoseFrame
 import com.example.trex_kotlin.posture.RepCounter
@@ -51,7 +52,8 @@ import java.io.File
  *   hysteresis = live 신호에 극성을 켠 새 코어(REP_ENGINE_DESIGN.md §4.2·§4.3) ← 앱에서는 아직 꺼져 있다
  *                극성은 매니페스트 10열(로그의 reps.config.polarity) → 등록부 → 연구 표(RESEARCH_POLARITY) 순서. 셋 다 없으면
  *                돌리지 않고 오류를 적는다 — 틀린 극성은 모든 세트의 마지막 반복을 잃어 '만들어진 틀린 숫자' 가 된다(설계 §4.2·§13)
- * 재생 코퍼스(MM-Fit·REHAB24-6)는 서서 하는 종목뿐이라 floor = false 이고 규칙 rep 설정도 없다.
+ * 재생 코퍼스(MM-Fit·REHAB24-6)는 서서 하는 종목뿐이라 floor = false 이고 규칙 rep 설정도 없다. 바닥 종목 캡처(FMS ASLR, fms_captures.py —
+ * 메타 floor=1·imageWidth·imageHeight)는 3D 후처리 대신 앱 바닥 경로(FloorFeatureExtractor, [floorInputFrames])로 피처를 만든다.
  * 앱은 사람이 검출된 프레임에서만 onFrame 을 부른다(검출 안 된 프레임은 카운터를 건너뛴다). 여기서도 같다.
  *
  * 피처 수준 캡처 (*.fcap — setlog_captures.py 가 휴대폰 세트 로그에서 만든다, 탭 구분):
@@ -224,8 +226,9 @@ fun frameFeatures(frame: CaptureFrame, stats: FrameStats): Map<String, Float>? {
 fun dumpFeatures(capture: Capture, out: File): Int {
     val stats = FrameStats()
     out.bufferedWriter().use { w ->
-        for (frame in capture.frames) {
-            val feats = frameFeatures(frame, stats)
+        // 바닥 캡처(floor=1)면 바닥 경로 — 재생과 같은 입력 함수
+        for (frame in inputFrames(capture, stats)) {
+            val feats = frame.features
             w.write("{\"t\":${frame.tMs},\"detected\":${feats != null},\"features\":{")
             w.write(feats.orEmpty().entries.joinToString(",") { (k, v) -> "\"$k\":${num(v)}" })
             w.write("}}")
@@ -293,9 +296,33 @@ private val SERIES_FEATURES = listOf("knee_mean", "knee_minside", "knee_out_mean
 /** 카운터 입력 한 프레임. features = null 이면 사람 없음 — 앱은 onFrame 을 부르지 않는다. */
 class InputFrame(val tMs: Long, val features: Map<String, Float>?)
 
-/** 랜드마크 캡처 → 앱 추론 후처리를 거친 입력. */
+/** 랜드마크 캡처 → 앱 추론 후처리를 거친 입력. 메타 floor=1 이면 바닥 경로([floorInputFrames]). */
 fun inputFrames(capture: Capture, stats: FrameStats): List<InputFrame> =
-    capture.frames.map { InputFrame(it.tMs, frameFeatures(it, stats)) }
+    if (capture.meta["floor"] == "1") floorInputFrames(capture)
+    else capture.frames.map { InputFrame(it.tMs, frameFeatures(it, stats)) }
+
+/**
+ * 바닥 종목 캡처(메타 floor=1·imageWidth·imageHeight) — PostureLive 바닥 경로와 같은 함수:
+ * FloorFeatureExtractor.computeForExercise(정규화 xy, min(visibility, presence), 분석 이미지 크기). 3D·중력 피처는 쓰지 않는다.
+ * 접지선 추정이 세트 단위 상태라 앱이 세트 시작에 reset() 하듯 캡처마다 새 추출기를 만든다.
+ * 사람이 검출됐는데 코어(어깨·골반)가 안 보이면 빈 맵 — 앱처럼 카운터는 그 프레임을 값 없이 본다(사람 없음과 다르다).
+ */
+fun floorInputFrames(capture: Capture): List<InputFrame> {
+    val w = capture.meta["imageWidth"]?.toIntOrNull() ?: error("바닥 캡처에 imageWidth 메타가 없다")
+    val h = capture.meta["imageHeight"]?.toIntOrNull() ?: error("바닥 캡처에 imageHeight 메타가 없다")
+    val exercise = capture.meta["exercise"].orEmpty()
+    val extractor = FloorFeatureExtractor()
+    return capture.frames.map { f ->
+        if (f.poses < 1 || f.image.any { it == null }) InputFrame(f.tMs, null) else {
+            val xy = FloatArray(MP_LANDMARK_COUNT * 2) { k -> f.image[k / 2]!![k % 2] }
+            val vis = FloatArray(MP_LANDMARK_COUNT) { i ->
+                val lm = f.image[i]!!
+                minOf(if (lm[2].isNaN()) 1f else lm[2], if (lm[3].isNaN()) 1f else lm[3])
+            }
+            InputFrame(f.tMs, extractor.computeForExercise(exercise, xy, vis, w, h))
+        }
+    }
+}
 
 /** 피처 캡처(세트 로그) → 그대로. 로그의 프레임은 앱이 카운터에 넣은 프레임이라 전부 '검출' 이다. */
 fun inputFrames(capture: FeatureCapture): List<InputFrame> = capture.frames.map { InputFrame(it.tMs, it.features) }
@@ -345,7 +372,15 @@ fun run(job: Job, meta: Map<String, String>, frames: List<InputFrame>, stats: Fr
         val kv = item.split('=', limit = 2); kv.getOrNull(1)?.toFloatOrNull()?.let { kv[0] to it }
     }?.toMap()
     var nextReset = 0
+    // 준비 구간 흉내(spec §99, 메타 prepUntilMs) — 앱처럼 그 앞 프레임(최근 12개)은 카운터에 넣지 않고, 운동 첫 프레임에서
+    // RepCounter.standingSeedFrom 으로 쉬는 자세 기준을 심는다(§89 후속 2). 세트 로그의 loggedSeed 와는 따로다(로그가 아니라 흉내)
+    val prepUntil = meta["prepUntilMs"]?.toLongOrNull()
+    var prepFrames: List<Pair<Long, Map<String, Float>>>? = prepUntil?.let { u ->
+        frames.filter { it.tMs < u && it.features != null && it.features.isNotEmpty() }.takeLast(12).map { it.tMs to it.features!! }
+    }
     for (frame in frames) {
+        if (prepUntil != null && frame.tMs < prepUntil) continue
+        prepFrames?.let { p -> rc.standingSeedFrom(p, frame.tMs)?.let { rc.seedStanding(frame.tMs, it) }; prepFrames = null }
         while (nextReset < resets.size && resets[nextReset] <= frame.tMs) { rc.resetCycle(); rf?.takeIf { it.stepSides || it.legProfile != null }?.discardWindow(); nextReset++ }
         stats.frames++
         prevT?.let { if (frame.tMs - it > SESSION_MAX_GAP_MS) gaps++ }
@@ -416,7 +451,7 @@ fun run(job: Job, meta: Map<String, String>, frames: List<InputFrame>, stats: Fr
         // 카운터가 실제로 쓰는 구성(RepEngineLog.of 와 같은 출처) — 합성 픽스처가 로그 reps.config 를 앱처럼 적을 수 있게
         "romValidated" to rc.signal.romValidated, "refractoryMs" to rc.effectiveRefractoryMs,
         "maxGapMs" to rc.effectiveMaxGapMs, "completeOnReturn" to rc.effectiveCompleteOnReturn,
-        "floor" to job.floor,
+        "floor" to job.floor, "prepUntilMs" to prepUntil, "standingSeed" to rc.standingSeed,
         "frames" to stats.frames, "detectedFrames" to stats.detected, "valueFrames" to stats.withValue,
         "upFlipped" to stats.upFlipped, "firstMs" to first, "lastMs" to last,
         "gapsOverMaxGap" to gaps, "resetsApplied" to nextReset,
