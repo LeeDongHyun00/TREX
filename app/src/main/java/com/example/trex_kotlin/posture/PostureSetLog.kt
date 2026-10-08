@@ -120,7 +120,8 @@ data class RepEngineLog(
     val lying: Map<String, Float>? = null,
 ) {
     companion object {
-        const val ENGINE_RETURN = "return_v1"
+        /** v2 = 방향 복귀 띠(spec §99). v1 로그는 옛 복귀 규칙으로 센 것이라 지금 재생과 파리티가 어긋날 수 있다. */
+        const val ENGINE_RETURN = "return_v2"
         const val ENGINE_HYSTERESIS = "hysteresis_v1"
 
         /**

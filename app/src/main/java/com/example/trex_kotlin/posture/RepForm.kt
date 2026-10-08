@@ -134,6 +134,12 @@ data class RepFormCheck(
      */
     val refFloor: Float? = null,
     val refExcludedBy: List<String> = emptyList(),
+    /**
+     * HIGH 방향의 기준 = 시작 자세와 **이후 반복 상단 창 중앙값 중 가장 작은 값**(2026-10-08, `docs/PHONE_REPORT_2026-10-07_DESIGN.md` §3.2) — 처음부터 벌린 채
+     * 시작하면 그 벌림이 '정상' 이 되고(10-08 09:22 세트: 시작 발끝 50°, 뒤의 55° 회가 +5 로 '정상'), 세트 중 한 번이라도 발끝을 앞으로 뒀던 자세가
+     * 그 사람의 기준이다. 안쪽(모임)도 같은 기준 — 벌린 시작을 앞으로 되돌린 회를 '모임' 으로 말하지 않는다. 유보된 반복·프레임 2개 미만의 창은 기준에 넣지 않는다.
+     */
+    val refLowest: Boolean = false,
     /** 짧은 음성 단서(§62c 후속 10) — 같은 검사의 쿨다운 안에서 다시 위반한 회에 문장 대신 쓴다("팔꿈치 벌어짐"). null 이면 "부위 꼬리표". */
     val cue: String? = null,
     /**
@@ -329,6 +335,8 @@ class RepFormEvaluator(
     /** 시작 자세 — 첫 상단 창의 피처별 중앙값. 잡히기 전엔 null(상대 기준 검사는 유보). */
     var baseline: Map<String, Float>? = null
         private set
+    /** [RepFormCheck.refLowest] 검사의 피처별 최솟값 — 지금까지 판정한 반복의 상단 창 중앙값 중 가장 작은 값(가장 앞을 향한 발끝). */
+    private val lowestTop = HashMap<String, Float>()
     var baselineAtMs: Long? = null
         private set
     /**
@@ -344,7 +352,7 @@ class RepFormEvaluator(
     fun reset() {
         buf.clear(); carry = emptyList(); repList.clear(); startList.clear(); lastSpokenAt.clear(); setMin.clear(); liveList.clear(); firstReps.clear(); setLow.clear(); noticed.clear(); notices.clear()
         refRejects.clear(); lastEndBySide.clear()
-        baseline = null; baselineAtMs = null; baselineFromFirstBottom = false; rejectedCount = 0; noTopCount = 0
+        baseline = null; baselineAtMs = null; baselineFromFirstBottom = false; rejectedCount = 0; noTopCount = 0; lowestTop.clear()
         viewYaws.clear(); lockedYaw = null; lockedView = null
         turnStreak = 0; frontStreak = 0; turnReminded.clear(); turnDue = null
     }
@@ -477,6 +485,10 @@ class RepFormEvaluator(
         // 본인 기준 모음(FIRST_REPS·SET_LOW)은 이 반복을 다 판정한 **뒤에** 넣는다 — 같은 반복에서 다른 축이 위반이면 넣지 않는다([RepFormCheck.refExcludedBy], 순서 무관)
         val flaggedIds = outcomes.filter { it.verdict == Verdict.VIOLATION }.map { it.check.id }.toSet()
         for (o in outcomes) commitReference(o, repView, flaggedIds, side)
+        // 가장 앞을 향했던 자세(refLowest) — '정상' 으로 판정된 반복의 상단 창(프레임 2개 이상) 중앙값만(위반 회는 넣지 않는다 — 모인 회가 기준을 끌어내리지 않게)
+        for (o in outcomes) if (o.check.refLowest && o.verdict == Verdict.OK && o.samples >= 2) o.raw?.let { v ->
+            lowestTop[o.check.feature] = lowestTop[o.check.feature]?.let { minOf(it, v) } ?: v
+        }
         val prev = repList.lastOrNull()
         val consecutive = outcomes.filter { o -> o.check.ship && o.verdict == Verdict.VIOLATION && prev?.flagged?.any { it.check.id == o.check.id } == true }
             .map { it.check.id }.toSet()
@@ -888,12 +900,21 @@ class RepFormEvaluator(
             }
             r
         }
+        // 가장 앞을 향했던 자세 대비(refLowest) — 시작·자른 기준과 지금까지 '정상' 이었던 반복의 상단 창 중앙값 중 최솟값. 안쪽(모임)도 같은 기준이다
+        val lowest = if (c.refLowest) lowestTop[c.feature] else null
+        val refUsed = if (c.refLowest && usedRef != null) lowest?.let { minOf(usedRef, it) } ?: usedRef else usedRef
         val value = when (c.ref) {
             RepFormRef.NONE -> raw
             RepFormRef.START_RATIO -> raw / usedRef!!
-            else -> raw - usedRef!!
+            else -> raw - refUsed!!
         }
-        return finish(c, value, raw, usedRef, values.size, absViolation, 0f, warmup = false)
+        val out = finish(c, value, raw, refUsed, values.size, absViolation, 0f, warmup = false)
+        // 기준이 시작 띠 밖(벌린 채 시작 — 10-08 09:22 세트 시작 50° > 40°)이면 안쪽(모임)은 묻지 않는다 — 벌린 시작을 앞으로 되돌린 회를 '모임' 이라
+        // 말하면 고친 사람을 틀렸다고 하는 것이다. 그 회가 정상으로 기록돼 다음 기준이 된다(그 뒤로는 띠 안의 기준이라 모임도 본다)
+        val startHi = checks.firstOrNull { it.phase == RepPhase.START && it.feature == c.feature }?.hi
+        if (c.refLowest && out.direction == FormDirection.LOW && startHi != null && refUsed != null && refUsed > startHi)
+            return out.copy(verdict = Verdict.OK, direction = null, gate = false)
+        return out
     }
 
     companion object {
@@ -1520,13 +1541,13 @@ object RepFormSpecs {
                 reason = "좁아짐은 스타일일 수 있어 참고만(횟수 게이트 아님). 바닥 발목 간격 ÷ 시작 < 0.7 — 모집단 정상 반복 오탐 0 %(A7b 1d)",
                 cautions = listOf(PROVISIONAL, "검출 근거 없음(일부러 좁힌 세트가 없다)")),
             RepFormCheck("repform|$ex|발끝 방향|시작", ex, "발끝 방향(시작)", "발끝", RuleStatus.BETA, Stance2d.TOE_MAXSIDE, RepPhase.START, RepFormStat.MEDIAN, RepFormRef.NONE,
-                lo = -5f, hi = 50f, lowText = "발끝이 안으로 모여 있어요", highText = "발끝이 바깥으로 많이 벌어져 있어요", lowLabel = "안쪽", highLabel = "바깥",
+                lo = -5f, hi = 40f, lowText = "발끝이 안으로 모여 있어요", highText = "발끝이 바깥으로 많이 벌어져 있어요", lowLabel = "안쪽", highLabel = "바깥",
                 fix = "발끝을 살짝만 바깥으로 두세요", unit = "°",
-                reason = "관용 발끝 각 5~30° 에 이미지 2D 측정 편향을 더한 띠 — 이 사용자 정상 22~34°(0.75 m 폰), 바닥 폰은 +21~24° 더 크게 읽는다(A1). 극단만",
+                reason = "관용 발끝 각 5~30° 에 이미지 2D 측정 편향을 더한 띠 — 이 사용자 정상 22~34°(0.75 m 폰), 바닥 폰은 +21~24° 더 크게 읽는다(A1). 극단만. 상한 50 → 40(2026-10-08): 10-07·10-08 세트의 벌린 발끝이 41~56° 로 읽혔고 35° 시작은 통과해야 한다",
                 cautions = listOf(PROVISIONAL, "발끝(31/32)·발목이 화면 안이어야 한다 — 잘리면 유보", "카메라 높이에 따라 영점이 움직여 세트 전 안내로만")),
             RepFormCheck("repform|$ex|발끝 방향", ex, "발끝 방향(반복)", "발끝", RuleStatus.SHIP, Stance2d.TOE_MAXSIDE, RepPhase.TOP, RepFormStat.MEDIAN, RepFormRef.START_DELTA,
                 lo = -15f, hi = 15f, lowText = "발끝이 시작보다 안으로 모였어요", highText = "발끝이 시작보다 바깥으로 벌어졌어요", lowLabel = "안쪽", highLabel = "바깥",
-                fix = "발끝을 시작 자세로 되돌리세요", unit = "°", windowFrames = 3,
+                fix = "발끝을 시작 자세로 되돌리세요", unit = "°", windowFrames = 3, refLowest = true,
                 motion = FormMotion(MotionAnchor.FEET, high = MotionKind.ROTATE_IN, low = MotionKind.ROTATE_OUT),
                 reason = "§21.12(A7a·A7b): 이미지 2D 발목→발끝 각(더 벌어진 쪽), 하강 직전 서 있는 ≤3프레임(0.6~0.9 s) 중앙값, 시작 대비 ±15°. 정면 정상 반복 오탐 REHAB 0 %·MM-Fit 4 %, 폰 검출 5/6(벌림 +18~+22°, 모음 −45°). 월드 3D 각(옛 피처)은 실제 회전을 2D 의 6할로 반영해(z 가 GHUM 추정치) 같은 회를 +11~+12° 로 읽어 놓쳤다. '한쪽만 넘어도' 는 검출을 못 늘리고 오탐만 두 배라 채택 안 함",
                 cautions = listOf("정면(C)에서만 — 사선에서는 기울기 0.26~0.75", "넓게 서면 발끝 그대로여도 모든 판독이 +14~+30°(A6·A7b, MediaPipe 편향 — 원근이 아님) → 발 너비 위반 반복은 유보", "놓친 1건(16:16 3회)은 랜드마크가 움직이지 않았다 — 원인 미확정(테이프 실험 대기)", "300 ms 에서 서 있는 프레임 2개 이상일 때만 — 쉬지 않고 이어 하면 유보"),

@@ -105,6 +105,28 @@ class RepFormTest {
     }
 
     @Test
+    fun toeReferenceFollowsTheMostForwardStanceSeenInTheSet() {
+        // 10-08 09:22 세트: 발끝을 50° 로 벌린 채 시작(시작 자세 50) → 뒤의 55° 회가 +5 로 '정상'. 세트 중 한 번이라도 앞을 향했던 자세(20°)가 기준이 된다(refLowest)
+        val ev = evaluator(); val f = Frames(ev)
+        val r1 = f.rep(toe = 50f, ev = ev)
+        assertEquals(FormDirection.HIGH, ev.startOutcomes.first { it.check.id.endsWith("발끝 방향|시작") }.direction)   // 시작 알림 띠 상한 40
+        assertTrue("첫 회는 자기 자신이 기준", r1.outcomes.first { it.check.id == "repform|바벨 스쿼트|발끝 방향" }.verdict == Verdict.OK)
+        val r2 = f.rep(toe = 55f, ev = ev)
+        assertEquals("가장 앞을 향한 자세가 아직 시작(50)뿐 — +5 는 띠 안", Verdict.OK, r2.outcomes.first { it.check.id == "repform|바벨 스쿼트|발끝 방향" }.verdict)
+        f.rep(toe = 20f, ev = ev)                                   // 발끝을 앞으로 둔 회 — 이제 20 이 기준
+        val r4 = f.rep(toe = 50f, ev = ev)
+        val toe = r4.outcomes.first { it.check.id == "repform|바벨 스쿼트|발끝 방향" }
+        assertEquals(Verdict.VIOLATION, toe.verdict); assertEquals(FormDirection.HIGH, toe.direction); assertEquals(30f, toe.value!!, 1e-3f); assertEquals(20f, toe.reference!!, 1e-3f)
+        assertFalse(r4.correct)
+        // 안쪽(모임)도 같은 기준 — 벌린 시작(50)을 앞으로 되돌린 20 은 모임이 아니다. 거기서 더 모은 3 은 −17 로 모임
+        val r5 = f.rep(toe = 20f, ev = ev)
+        assertEquals(Verdict.OK, r5.outcomes.first { it.check.id == "repform|바벨 스쿼트|발끝 방향" }.verdict)
+        val r6 = f.rep(toe = 3f, ev = ev)
+        val inward = r6.outcomes.first { it.check.id == "repform|바벨 스쿼트|발끝 방향" }
+        assertEquals(Verdict.VIOLATION, inward.verdict); assertEquals(FormDirection.LOW, inward.direction); assertEquals(-17f, inward.value!!, 1e-3f)
+    }
+
+    @Test
     fun feetReturningAfterAWideRepDoNotLeakIntoTheNextRep() {
         // 16:16 세트 6회: 5회(넓게) 뒤 발을 모으던 프레임이 옛 '서 있는 극값 + 이월' 창에 들어가 ×1.90 오탐 — 바닥 구간은 이월을 받지 않는다
         val ev = evaluator(); val f = Frames(ev)

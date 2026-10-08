@@ -719,7 +719,7 @@ def _golden_logs() -> list[dict]:
             "view": {"yaw_deg": 3.1, "r": 0.97, "class": "C", "frames": 4}, "app_version": "0.9.1-debug",
             "thermal": {"start": 0, "changes": [(600, 1)]}, "frames": frames,
             "reps": {"count": 1, "invalid": 0, "signal": "knee_mean", "t_ms": [900], "min": [92.25], "max": [170.0],
-                     "valid": [True], "engine": "return_v1", "config": _config("knee_mean", "return_v1"),
+                     "valid": [True], "engine": "return_v2", "config": _config("knee_mean", "return_v2"),
                      # 반복 판별 게이트(spec §62): 센 사이클의 판별 스윙, 세지 않은 사이클 하나(무릎 들기)
                      "rejected": [(1200, 118.0, 170.0, 12.5)], "identity_swing": [71.5],
                      "resets": [(-120, "camera_switch", None), (410, "pause", 300)]}}
@@ -736,7 +736,7 @@ def _golden_logs() -> list[dict]:
             "reps": {"count": 3, "invalid": 1, "signal": "knee_minside", "t_ms": [300, 600, 900], "min": [100.5, 118.75, 95.5],
                      "max": [170.0, 168.0, 169.5], "valid": [True, False, True],
                      "unit": "side_pair", "cycles_per_rep": 2, "completed": 1, "half_pending": True,
-                     "engine": "return_v1", "config": lunge_config, "resets": [(450, "pause", 300)]}}
+                     "engine": "return_v2", "config": lunge_config, "resets": [(450, "pause", 300)]}}
     # 렙 검증 모드(spec §61): validation·image, 검출 프레임마다 xy·w·up(이진 소수라 코틀린 float 과 반올림이 갈리지 않는다), 넷째 프레임 미검출
     lm = {"xy": [(k % 16) / 16 for k in range(66)], "w": [((k % 8) - 4) / 8 for k in range(99)], "up": [0.0, 1.0, 0.125]}
     valid_frames = [{**f, **lm} for f in frames[:3]] + [{"t_ms": 900, "infer_ms": 55, "visible": 0, "vis": None, "features": {}}]
@@ -1125,8 +1125,8 @@ def self_test(work: Path) -> int:
     check("B: 옛 신호(보폭 성분만)는 5회를 다 못 세고, 지금 신호는 5회", 0 < b_log.get("reps", 0) < 5 and b_now["reps"] == 5,
           f"old {b_log.get('reps')} now {b_now['reps']}")
     c_live, c_hys = res[f"{rk['cccc0003']}|live"], res[f"{rk['cccc0003']}|hysteresis"]
-    check("C(실기기 baseline1): 현재 카운터 0회, 새 코어 4회 (RepHysteresisTest 기록과 같다)",
-          c_live["reps"] == 0 and c_hys["reps"] == 4, f"live {c_live['reps']} hysteresis {c_hys['reps']}")
+    check("C(실기기 baseline1): 현재 카운터 4회(복귀형 v2, spec §99 — v1 은 0회), 새 코어 4회 (RepHysteresisTest 기록과 같다)",
+          c_live["reps"] == 4 and c_hys["reps"] == 4, f"live {c_live['reps']} hysteresis {c_hys['reps']}")
     check("C live: 카운트 파리티", c_live.get("parityCount") is True)
     check("C: forSession(floor, 규칙 ROM) — ROM 방향·임계값이 규칙 값", c_live["romDirection"] == "min" and abs(c_live["romThreshold"] - 0.7101) < 1e-6)
     check("D: 파리티 필드 없음", "parityCount" not in res[f"{rk['dddd0004']}|live"])
@@ -1164,7 +1164,7 @@ def self_test(work: Path) -> int:
     gl = [convert(parse_line(ln), f"golden:{i}", floor_ex, rep_rules) for i, ln in enumerate(golden, 1)]
     (g0_text, g0), (_, g1) = gl[:2]
     check("골든: 변환기가 코틀린 줄의 §58 필드를 읽는다 — 리셋(누른 시각·after)·열·버전",
-          g0["loggedEngine"] == "return_v1" and g0["loggedResets"] == [[-120, "camera_switch"], [410, "pause"]]
+          g0["loggedEngine"] == "return_v2" and g0["loggedResets"] == [[-120, "camera_switch"], [410, "pause"]]
           and g0["loggedResetsAfterMs"] == [None, 300] and "loggedResetsAfterMs=none,300" in g0_text
           and g0["thermalChanges"] == [[600, 1]] and g0["appVersion"] == "0.9.1-debug" and g0["loggedMinAmp"] == 35.0,
           f"{g0['loggedResets']} {g0['loggedResetsAfterMs']}")
