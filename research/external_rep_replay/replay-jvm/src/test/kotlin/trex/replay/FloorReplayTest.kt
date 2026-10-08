@@ -89,7 +89,7 @@ class FloorReplayTest {
         val line = run(Job("c", "x.cap", "크런치", "live", null, null, floor = true), capture, null)
         assertTrue(line, line.contains("\"engine\":\"floorcycle_v1_beta\""))
         assertTrue(line, line.contains("\"reps\":3,"))
-        assertTrue(line, line.contains("\"floorEnabled\":[\"neck_only\",\"sit_up\"]"))
+        assertTrue(line, line.contains("\"floorEnabled\":[\"neck_only\",\"shallow\",\"sit_up\"]"))   // 2026-10-08 부터 shallow 기본 켬
         assertTrue(line, line.contains("\"floorLying\":{"))
         assertTrue(line, Regex("\"floorReps\":\\[\\[").containsMatchIn(line))
         assertTrue(line, line.contains("\"upFrames\":${crunchSet.size}"))

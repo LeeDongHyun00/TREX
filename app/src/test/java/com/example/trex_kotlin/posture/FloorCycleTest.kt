@@ -13,10 +13,10 @@ class FloorCycleTest {
         put(FloorChain.TRUNK_LIFT, lift); put(FloorChain.EAR_LIFT, 10f + lift + neck); put(FloorChain.AXIS_H, axis); put(FloorChain.TORSO_ELEV, lift)
         put(FloorChain.CHAIN, 1f); yaw?.let { put(FloorChain.YAW, it) }
     }
-    private fun leg(thigh: Float, torso: Float = 0f, knee: Float = 175f, gap: Float? = null, yaw: Float? = 0.05f, legAngle: Float = thigh - 2f): Map<String, Float> = buildMap {
+    private fun leg(thigh: Float, torso: Float = 0f, knee: Float = 175f, gap: Float? = null, yaw: Float? = 0.05f, legAngle: Float = thigh - 2f, far: Float? = null): Map<String, Float> = buildMap {
         put(FloorChain.THIGH, thigh); put(FloorChain.LEG, legAngle); put(FloorChain.AXIS_H, kotlin.math.abs(torso)); put(FloorChain.TORSO_ELEV, torso)
         put(FloorChain.KNEE, knee); put(FloorChain.HEAD_LIFT, 22f); put(FloorChain.CHAIN, 1f)
-        yaw?.let { put(FloorChain.YAW, it) }; gap?.let { put(FloorChain.KNEE_GAP, it) }
+        yaw?.let { put(FloorChain.YAW, it) }; gap?.let { put(FloorChain.KNEE_GAP, it) }; far?.let { put(FloorChain.THIGH_FAR, it) }
     }
 
     /** [viaCounter] = 켠 사유를 세션 카운터 구성(`RepCounter.floorEnabled`, 재생기 진단과 같은 길)으로 넘긴다. 아니면 [enabled] 가 있을 때 추적기를 직접 돌린다. */
@@ -126,8 +126,9 @@ class FloorCycleTest {
     @Test fun neckOnlyIsOnByDefaultAndNeverDeletesARep() {
         // 사용자 결정 Q6(4.5° 로 시작) — 엔진 재생 4.5 %(13/286)는 '세지 않은 동작에 이유를 말한' 비율이다. 이 사유는 주 신호가 출발하지 않은 동작에만 나서 어떤 회도
         // 지우지 않으므로 회를 지우는 판별의 2 % 입장선 대상이 아니다(리뷰 2026-10-07 — 끄면 그 동작이 틱도 이유도 없이 사라진다)
-        assertEquals(setOf("sit_up", "neck_only"), FloorProfile.CRUNCH.defaultEnabled)
-        assertEquals(setOf("trunk_up", "shallow"), FloorProfile.LEG_RAISE.defaultEnabled)
+        // 2026-10-08: 폰 위반 표본이 생겨 shallow·knee_bent·one_leg 를 켰다(docs/PHONE_REPORT_2026-10-07_DESIGN.md §3.3·§3.4)
+        assertEquals(setOf("sit_up", "neck_only", "shallow"), FloorProfile.CRUNCH.defaultEnabled)
+        assertEquals(setOf("trunk_up", "knee_bent", "one_leg", "shallow"), FloorProfile.LEG_RAISE.defaultEnabled)
         val r = Run("크런치"); r.lie(); r.crunchRep()
         r.seq(crunch(0f, neck = 8f), crunch(1f, neck = 13f), crunch(1f, neck = 13f), crunch(0f, neck = 6f), crunch(0f), crunch(0f))
         assertEquals("목만 당긴 동작은 주 신호가 출발하지 않아 원래 세지 않는다", 1, r.reps)
@@ -147,8 +148,8 @@ class FloorCycleTest {
         assertEquals("neck_only", r.counter.rejectedReps.last().feature)
         assertTrue(r.tracker.cueFor("neck_only")!!.startsWith("목만 당기면 세지 않아요"))
         assertEquals(r.tracker.cueFor("neck_only"), r.counter.cueSource!!.cueFor("neck_only"))
-        // 측면이 아니면(정점 fc_yaw > 0.15) 판별을 유보 — 목만 당김도 말하지 않는다(세지도 않는다)
-        r.seq(crunch(0f, neck = 8f, yaw = 0.3f), crunch(1f, neck = 13f, yaw = 0.3f), crunch(1f, neck = 13f, yaw = 0.3f), crunch(0f, neck = 6f), crunch(0f), crunch(0f))
+        // 측면이 아니면(정점 fc_yaw > 0.30 — 상대 사유의 상한, 2026-10-08) 판별을 유보 — 목만 당김도 말하지 않는다(세지도 않는다)
+        r.seq(crunch(0f, neck = 8f, yaw = 0.4f), crunch(1f, neck = 13f, yaw = 0.4f), crunch(1f, neck = 13f, yaw = 0.4f), crunch(0f, neck = 6f), crunch(0f), crunch(0f))
         assertEquals(1, r.reasons.size); assertEquals(1, r.reps)
     }
 
@@ -163,11 +164,71 @@ class FloorCycleTest {
         assertEquals(2, r.reps)
     }
 
-    @Test fun shallowCrunchIsCountedByDefaultAndRejectedOnlyWhenEnabled() {
-        val off = Run("크런치"); off.lie(); off.crunchRep(peak = 6f)
-        assertEquals("shallow 은 기본 끔(Q7)", 1, off.reps)
-        val on = Run("크런치", enabled = setOf("sit_up", "neck_only", "shallow")); on.lie(); on.crunchRep(peak = 6f)
-        assertEquals(0, on.reps); assertEquals(listOf("shallow"), on.reasons)
+    @Test fun shallowCrunchIsRejectedByDefaultWithAnAbsoluteFloorAndOwnRatio() {
+        // 2026-10-08 켬(폰 보고 "어깨만 들어도 셈"): 절대 10° 미만, 또는 센 3회 뒤에는 본인 중앙값의 0.6배 미만
+        val r = Run("크런치"); r.lie(); r.crunchRep(peak = 8f)
+        assertEquals(0, r.reps); assertEquals(listOf("shallow"), r.reasons)
+        assertTrue(FloorCycleTracker.cueFor(FloorProfile.CRUNCH, "shallow")!!.startsWith("어깨를 바닥에서 더"))
+        repeat(3) { r.crunchRep(peak = 25f) }; assertEquals(3, r.reps)
+        r.crunchRep(peak = 12f)                                     // 12° 는 절대 하한 위지만 본인 25° 의 0.6배(15°) 아래
+        assertEquals(3, r.reps); assertEquals(listOf("shallow", "shallow"), r.reasons)
+        r.crunchRep(peak = 16f); assertEquals(4, r.reps)
+        val off = Run("크런치", enabled = setOf("sit_up", "neck_only")); off.lie(); off.crunchRep(peak = 8f)
+        assertEquals("끄면 종전처럼 센다", 1, off.reps)
+    }
+
+    @Test fun singleFrameSpikeIsDiscardedSilently() {
+        // 관절이 한 프레임 튀었다 돌아옴(10-08 폰 "가만히 있어도 횟수 증가") — 회도 기각도 아니다
+        val r = Run("라잉 레그 레이즈"); r.feed(leg(0f), 3)
+        r.seq(leg(90f), leg(0f), leg(0f), leg(0f), leg(0f))
+        assertEquals(0, r.reps); assertTrue(r.reasons.isEmpty())
+        assertEquals(listOf(FloorCycleTracker.DISCARD_SPIKE), r.tracker.discarded.map { it.reason })
+        r.legRep(); assertEquals("그 뒤 제대로 든 회는 센다", 1, r.reps)
+    }
+
+    @Test fun heldLegWithSwappingLabelsIsOneRejectedRepNotSeveral() {
+        // MediaPipe 가 든 다리의 좌우 이름을 프레임마다 바꾼다 — 사이클 신호는 더 올라간 허벅지라 든 채로는 사이클이 나지 않고, 내리면 한 다리 1회로 기각한다
+        val r = Run("라잉 레그 레이즈"); r.feed(leg(0f, far = -5f), 3)
+        r.seq(leg(30f, far = -6f), leg(70f, far = -7f), leg(90f, far = -8f))
+        repeat(4) { r.seq(leg(-7f, far = 92f), leg(91f, far = -8f)) }     // 든 채 8칸, 이름이 번갈아 바뀜
+        r.seq(leg(55f, far = -6f), leg(20f, far = -6f), leg(0f, far = -5f), leg(0f, far = -5f))
+        assertEquals(0, r.reps); assertEquals(listOf("one_leg"), r.reasons)
+        assertTrue(FloorCycleTracker.cueFor(FloorProfile.LEG_RAISE, "one_leg")!!.startsWith("두 다리를 함께"))
+    }
+
+    @Test fun oneLegIsRejectedWhicheverLegMovesAndBothLegsCount() {
+        val r = Run("라잉 레그 레이즈"); r.feed(leg(0f, far = -4f), 3)
+        // 먼 다리만 든 동작 — 종전에는 가까운 허벅지만 봐서 무음이었다
+        r.seq(leg(-4f, far = 30f), leg(-5f, far = 70f), leg(-5f, far = 92f), leg(-4f, far = 60f), leg(-4f, far = 25f), leg(-4f, far = -3f), leg(-4f, far = -4f))
+        assertEquals(0, r.reps); assertEquals(listOf("one_leg"), r.reasons)
+        // 두 다리 함께 — 차가 작다
+        r.seq(leg(30f, far = 28f), leg(70f, far = 66f), leg(92f, far = 88f), leg(60f, far = 58f), leg(25f, far = 24f), leg(0f, far = -2f), leg(0f, far = -2f))
+        assertEquals(1, r.reps); assertEquals(1, r.reasons.size)
+        // 먼 허벅지가 안 보이면 두 무릎 간격으로, 그것도 없으면 판정하지 않고 센다
+        r.legRep(gap = 0.6f); assertEquals(listOf("one_leg", "one_leg"), r.reasons)
+        r.legRep(); assertEquals(2, r.reps)
+    }
+
+    @Test fun kneeTuckAndHalfHeightAreRejected() {
+        val r = Run("라잉 레그 레이즈"); r.feed(leg(0f), 3)
+        repeat(3) { r.legRep(peak = 90f) }; assertEquals(3, r.reps)
+        r.legRep(peak = 90f, knee = 70f); assertEquals(listOf("knee_bent"), r.reasons)
+        assertTrue(FloorCycleTracker.cueFor(FloorProfile.LEG_RAISE, "knee_bent")!!.startsWith("무릎을 굽히면"))
+        r.legRep(peak = 52f); assertEquals("절반 높이 — 절대 30° 는 넘지만 본인 90° 의 0.7배(63°) 아래", listOf("knee_bent", "shallow"), r.reasons)
+        assertEquals(3, r.reps)
+    }
+
+    @Test fun sideIsJudgedAtTheStartFrameAndRelativeReasonsAllowAnObliqueView() {
+        // 정점에서는 몸이 접혀 비율이 무너진다 — 출발 프레임(누운)의 측면도로 판정. 상대 사유는 yaw 0.30 까지, 절대각 sit_up 은 0.15 까지
+        val r = Run("라잉 레그 레이즈"); r.feed(leg(0f, yaw = 0.22f), 3)
+        r.seq(leg(18f, yaw = 0.22f, far = -5f), leg(42f, yaw = 0.22f, far = -5f), leg(72f, yaw = 0.3f, far = -6f), leg(90f, yaw = 0.3f, far = -8f) + (FloorChain.RATIO to 6f),
+            leg(72f, yaw = 0.3f, far = -6f), leg(42f, yaw = 0.22f, far = -5f), leg(18f, yaw = 0.22f, far = -5f), leg(0f, yaw = 0.22f), leg(0f, yaw = 0.22f))
+        assertEquals(0, r.reps); assertEquals(listOf("one_leg"), r.reasons)
+        val c = Run("크런치"); c.lie()
+        c.seq(crunch(10f, yaw = 0.22f), crunch(30f, yaw = 0.22f), crunch(55f, yaw = 0.22f), crunch(85f, yaw = 0.22f), crunch(55f, yaw = 0.22f), crunch(30f, yaw = 0.22f), crunch(10f, yaw = 0.22f), crunch(0f), crunch(0f))
+        assertEquals("비스듬하면 절대각 사유는 유보", 1, c.reps); assertTrue(c.reasons.isEmpty()); assertTrue(c.tracker.identityAbstain.isEmpty())
+        c.seq(crunch(3f, yaw = 0.22f), crunch(6f, yaw = 0.22f), crunch(8f, yaw = 0.22f), crunch(6f, yaw = 0.22f), crunch(3f, yaw = 0.22f), crunch(0f), crunch(0f))
+        assertEquals("비스듬해도 진폭 사유는 판정", listOf("shallow"), c.reasons)
     }
 
     @Test fun disabledReasonsPass() {
@@ -179,23 +240,26 @@ class FloorCycleTest {
     }
 
     @Test fun notSideViewAbstainsIdentityAndCounts() {
+        // 측면도는 출발 프레임의 것(2026-10-08) — 사이클 내내 0.4 로 돌아선 촬영
         val r = Run("크런치"); r.lie()
-        r.seq(crunch(10f), crunch(30f), crunch(55f), crunch(85f, yaw = 0.3f), crunch(55f), crunch(30f), crunch(10f), crunch(0f), crunch(0f))
+        r.seq(crunch(10f, yaw = 0.4f), crunch(30f, yaw = 0.4f), crunch(55f, yaw = 0.4f), crunch(85f, yaw = 0.4f), crunch(55f, yaw = 0.4f), crunch(30f, yaw = 0.4f), crunch(10f, yaw = 0.4f), crunch(0f), crunch(0f))
         assertEquals("판별 유보 = 센다(원칙 #7 '유보는 통과')", 1, r.reps); assertTrue(r.reasons.isEmpty())
         assertEquals(1, r.tracker.identityAbstain.size); assertTrue(r.tracker.repDetail.single().identityAbstain)
         // 측면도가 아예 없어도(먼 쪽 가림) 유보
-        r.crunchRep(yaw = null); assertEquals(2, r.reps); assertEquals(2, r.tracker.identityAbstain.size)
+        r.seq(crunch(6f, yaw = null), crunch(12f, yaw = null), crunch(18f, yaw = null), crunch(12f, yaw = null), crunch(6f, yaw = null), crunch(0f), crunch(0f))
+        assertEquals(2, r.reps); assertEquals(2, r.tracker.identityAbstain.size)
     }
 
     @Test fun endOnViewWithCollapsedProjectionAbstainsEvenWhenYawLooksSide() {
         // 발 쪽에서 찍은 끝 방향 촬영(AIHub E): fc_yaw 는 측면처럼 작지만 어깨–발목 ÷ 어깨폭이 8 미만 — 투영이 무너져 현 들림이 85° 로 읽혀도 sit_up 으로 지우지 않는다
         val r = Run("크런치"); r.lie()
-        val endOn = crunch(85f) + (FloorChain.RATIO to 5f)
-        r.seq(crunch(10f), crunch(30f), crunch(55f), endOn, crunch(55f), crunch(30f), crunch(10f), crunch(0f), crunch(0f))
-        assertEquals(1, r.reps); assertTrue(r.reasons.isEmpty()); assertEquals(1, r.tracker.identityAbstain.size)
-        // 측면(ratio ≥ 8)이면 종전대로 sit_up
-        val side = crunch(85f) + (FloorChain.RATIO to 20f)
-        r.seq(crunch(10f), crunch(30f), crunch(55f), side, crunch(55f), crunch(30f), crunch(10f), crunch(0f), crunch(0f))
+        fun endOn(lift: Float) = crunch(lift) + (FloorChain.RATIO to 5f)
+        r.seq(endOn(10f), endOn(30f), endOn(55f), endOn(85f), endOn(55f), endOn(30f), endOn(10f), crunch(0f), crunch(0f))
+        // 2026-10-08: 비율 조건은 절대각 사유(sit_up)에만 — 진폭 같은 상대 사유는 판정하고(유보 아님) sit_up 만 묻지 않는다
+        assertEquals(1, r.reps); assertTrue(r.reasons.isEmpty()); assertTrue(r.tracker.identityAbstain.isEmpty())
+        // 측면(ratio ≥ 8)이면 종전대로 sit_up — 비율은 출발 프레임의 것(정점에서는 몸이 접혀 무너진다)
+        fun side(lift: Float) = crunch(lift) + (FloorChain.RATIO to 20f)
+        r.seq(side(10f), side(30f), side(55f), crunch(85f) + (FloorChain.RATIO to 5f), side(55f), side(30f), side(10f), crunch(0f), crunch(0f))
         assertEquals(1, r.reps); assertEquals(listOf("sit_up"), r.reasons)
     }
 
@@ -206,11 +270,14 @@ class FloorCycleTest {
         r.legRep(peak = 28f); assertEquals(listOf("shallow"), r.reasons)                       // 진폭 < 30°
         r.legRep(torso = 35f); assertEquals("trunk_up", r.reasons.last())                       // 상체를 듦
         r.legRep(peak = 28f, torso = 35f); assertEquals("상체 들기가 얕음보다 먼저", "trunk_up", r.reasons.last())
-        r.legRep(knee = 90f); assertEquals("knee_bent 는 기본 끔(Q10)", 3, r.reps)
-        r.legRep(gap = 0.6f); assertEquals("one_leg 는 기본 끔", 4, r.reps)
+        r.legRep(knee = 90f); assertEquals("knee_bent 는 2026-10-08 부터 켬", "knee_bent", r.reasons.last()); assertEquals(2, r.reps)
+        r.legRep(gap = 0.6f); assertEquals("one_leg 도 켬(먼 허벅지가 없으면 무릎 간격)", "one_leg", r.reasons.last()); assertEquals(2, r.reps)
+        r.legRep(); assertEquals(3, r.reps)
         assertTrue(FloorCycleTracker.cueFor(FloorProfile.LEG_RAISE, "trunk_up")!!.startsWith("상체를 들면"))
         val k = Run("라잉 레그 레이즈", enabled = setOf("trunk_up", "knee_bent", "shallow")); k.feed(leg(0f), 3)
         k.legRep(peak = 28f, knee = 90f); assertEquals("무릎 굽힘이 얕음보다 먼저", listOf("knee_bent"), k.reasons)
+        val one = Run("라잉 레그 레이즈", enabled = setOf("trunk_up", "shallow", "one_leg")); one.feed(leg(0f), 3)
+        one.legRep(peak = 28f, gap = 0.6f); assertEquals("한 다리가 얕음보다 먼저", listOf("one_leg"), one.reasons)
     }
 
     @Test fun legRaiseFeetTouchJudgesOnlyTheTroughBetweenReps() {
@@ -302,7 +369,8 @@ class FloorCycleTest {
     @Test fun prepareAndLoggedLyingGiveTheSameReps() {
         // 리뷰 2026-10-07: 재생기의 restoreLying 은 출발 최소점을 기준(중앙값)으로 잡아 준비 프레임 최솟값을 쓰는 앱과 첫 회 출발이 한 칸 어긋났다
         val prep = listOf(0.2f, 1.4f, 0.6f, 1.0f, 0.8f).mapIndexed { k, v -> 1000L + k * 300L to crunch(v) }
-        val slow = listOf(1f, 2f, 3f, 4f, 4.8f, 5.5f, 5.5f, 4f, 3f, 2f, 1f, 0.8f, 0.8f, 0.8f).map { crunch(it) }
+        // 진폭은 얕음 하한(10°) 위로 — 이 테스트는 준비 기준 심기의 파리티를 본다(2026-10-08 shallow 켬)
+        val slow = listOf(3f, 6f, 9f, 12f, 14.4f, 16.5f, 16.5f, 12f, 9f, 6f, 3f, 2.4f, 2.4f, 2.4f).map { crunch(it) }
         val app = Run("크런치"); app.counter.standingSeedFrom(prep, 2500L); assertTrue(app.tracker.hasBase)
         val lying = app.tracker.lying!!
         assertEquals(1f, lying.getValue(FloorCycleTracker.LYING_PREP), 0f); assertEquals(0.2f, lying.getValue(FloorCycleTracker.LYING_MIN), 1e-6f)

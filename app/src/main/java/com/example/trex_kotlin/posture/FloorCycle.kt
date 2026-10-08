@@ -13,6 +13,9 @@ package com.example.trex_kotlin.posture
  * @property rebaseUp 기준을 위로 옮기는 상한 — 복귀 체류 중앙값이 기준 + 이 값 안일 때만.
  * @property maxCycleMs 최대 사이클 — 크런치 5 s(MM-Fit 세트 안 회 1.5~3.5 s vs 세트 밖 앉음 5.4~7.2 s), 레그 레이즈 10 s(천천히 내리기 허용, 잠정).
  * @property defaultEnabled 기본으로 켠 판별 사유(설계 §8) — **회를 지우는** 판별은 정상 회 기각이 입장선(≤ 2 %)을 넘거나 모집단이 없으면 끈다(원칙 #7 — 오탐 하나가 한 회를 지운다).
+ *   **2026-10-08(폰 보고, `docs/PHONE_REPORT_2026-10-07_DESIGN.md` §3.3·§3.4)**: 꺼 두었던 사유의 위반 표본이 폰 세트에서 나왔다(한 다리 4회·무릎 접기 4회·어깨만 든 크런치) —
+ *   `one_leg`(정점 두 허벅지 차 > [FloorCycleTracker.ONE_LEG_DIFF], 먼 허벅지가 없으면 무릎 간격) · `knee_bent`(상단 무릎 < 100°) · 크런치 `shallow`(10° 또는 본인 0.6배) 를 켠다.
+ *   AIHub 전 클립 양다리 정점의 허벅지 차 > 35°: C 3/160 = 1.9 %·E 1.6 %, FMS 한 다리 90회 검출 100 %(`research/external_rep_replay/results/fms_aslr/`, 재생기 `--dump-features`).
  *   AIHub 엔진 재생(2026-10-07, `research/external_rep_replay/floor_replay_tables.py` — 실제 이 추적기가 나눈 회, 사유를 하나씩 켠 구성, 측면 C, 측면 판정 회 기준):
  *   크런치 `sit_up` 1/484 = 0.2 %(켬) · `shallow` 30/273 = 11.0 %(끔) / 레그 레이즈 `trunk_up` 0/306(켬) · `shallow` 3/306 = 1.0 %(켬, CI 상한 2.8 %) · `knee_bent` 3/198 = 1.5 % 이나
  *   진입·이탈 제외 2/76 = 2.6 %·CI 상한 4.4 %·수행자 최대 11~40 % 로 두 측정이 입장선을 사이에 둔다 → 끔 유지(Q10 사용자 결정) · `one_leg` 0/306 이나 위반 표본 0(끔) ·
@@ -22,11 +25,13 @@ package com.example.trex_kotlin.posture
  *   여기 쓰지 않는다. 끄면 그 동작이 틱도 이유도 없이 사라져 "카운터가 죽었나" 로 읽힌다(설계 §4.5). 4.5 % 는 '세지 않은 동작에 이유를 말한' 비율이고 폰 '목만' 블록 뒤 다시 정한다.
  */
 enum class FloorProfile(val title: String, val signal: String, val depart: Float, val departSlack: Float, val rebaseUp: Float,
-                        val maxCycleMs: Long, val reasons: List<String>, val defaultEnabled: Set<String>) {
+                        val maxCycleMs: Long, val reasons: List<String>, val defaultEnabled: Set<String>,
+                        /** `shallow` 의 절대 진폭 하한(°)과 본인 처음 [FloorCycleTracker.REF_REPS]회 중앙값 대비 비율 — 둘 중 큰 쪽이 문턱(2026-10-08, 설계 §3.3·§3.4). */
+                        val shallowDeg: Float, val shallowRatio: Float) {
     CRUNCH("크런치", FloorChain.TRUNK_LIFT, 4.5f, 8f, 3f, 5_000L,
-        listOf("sit_up", "neck_only", "shallow"), setOf("sit_up", "neck_only")),
+        listOf("sit_up", "neck_only", "shallow"), setOf("sit_up", "neck_only", "shallow"), shallowDeg = 10f, shallowRatio = 0.6f),
     LEG_RAISE("라잉 레그 레이즈", FloorChain.THIGH, 20f, 15f, 8f, 10_000L,
-        listOf("trunk_up", "knee_bent", "shallow", "one_leg", "feet_touch"), setOf("trunk_up", "shallow"));
+        listOf("trunk_up", "knee_bent", "one_leg", "shallow", "feet_touch"), setOf("trunk_up", "knee_bent", "one_leg", "shallow"), shallowDeg = 30f, shallowRatio = 0.7f);
 
     /**
      * 첫 회 잠정의 확인 창 — 둘째 회가 이 안에 닫혀야 첫 회를 확정한다. 최대 사이클보다 짧으면 정상 템포의 세트도 첫 회를 거둔다(레그 레이즈 최대 10 s 인데 8 s 창이었다 —
@@ -105,6 +110,11 @@ class FloorCycleTracker(val profile: FloorProfile, enabled: Set<String> = profil
     private var earPeak = Float.NEGATIVE_INFINITY
     private var torsoTiltMax = Float.NEGATIVE_INFINITY
     private var kneeGapPeak: Float? = null
+    private var peakDiff: Float? = null          // 정점 프레임의 두 허벅지 차(먼 허벅지가 보일 때) — one_leg
+    private var startYaw: Float? = null          // 출발 프레임(누운, 몸이 펴진)의 측면도·비율 — 정점에서는 몸이 접혀 fc_ratio 가 무너진다
+    private var startRatio: Float? = null
+    private var raisedFrames = 0                 // 출발선 위에 있던 판정 칸 수 — 한 칸짜리 튐은 회가 아니다
+    private val countedAmps = ArrayList<Float>() // 센 회의 진폭(처음 REF_REPS 회가 본인 기준)
     private val topKnees = ArrayList<Pair<Float, Float>>()      // (신호, 무릎각) — 레그 레이즈 상단 무릎
     private val heads = ArrayList<Float>()
     private val cycleFrames = ArrayList<Pair<Long, Float>>()
@@ -184,7 +194,7 @@ class FloorCycleTracker(val profile: FloorProfile, enabled: Set<String> = profil
 
     fun reset() {
         resetCycle(); lyingWin.clear(); base = null; torsoBase = null; earBase = null; legBase = null; lying = null
-        completed.clear(); rejected.clear(); rejectedDetail.clear(); repDetail.clear(); discarded.clear(); identityAbstain.clear(); retracted.clear()
+        completed.clear(); rejected.clear(); rejectedDetail.clear(); repDetail.clear(); discarded.clear(); identityAbstain.clear(); retracted.clear(); countedAmps.clear()
         newlyRetracted = false; tentativeAt = null; tentativeUsed = false; firstSeenAt = null; lastSignalAt = null; lastMissing = null
         noBaseCued = false; lostCuedAt = Long.MIN_VALUE / 2; baseLostAt = null; baseLostCued = false
         lastMainDepartAt = Long.MIN_VALUE / 2; lastMainEndAt = Long.MIN_VALUE / 2; fromRest = true; legMinIdle = Float.POSITIVE_INFINITY
@@ -197,7 +207,7 @@ class FloorCycleTracker(val profile: FloorProfile, enabled: Set<String> = profil
     fun prepare(frames: List<Pair<Long, Map<String, Float>>>, atMs: Long) {
         if (base != null) return
         val fs = frames.filter { atMs - it.first in 0..PREP_WINDOW_MS }
-            .mapNotNull { (t, m) -> m[profile.signal]?.takeIf { it.isFinite() }?.let { Triple(t, it, m) } }
+            .mapNotNull { (t, m) -> cycleSignal(m)?.let { Triple(t, it, m) } }
         if (fs.size < LYING_MIN_FRAMES) return
         if (fs.any { (_, x, m) -> m[FloorChain.AXIS_H]?.isFinite() != true || !lyingRegion(m, x) }) return
         establish(fs.map { it.second }, fs.mapNotNull { it.third[FloorChain.TORSO_ELEV] }, fs.mapNotNull { it.third[FloorChain.EAR_LIFT] },
@@ -227,12 +237,24 @@ class FloorCycleTracker(val profile: FloorProfile, enabled: Set<String> = profil
         return features + (FloorChain.TORSO_TILT to e - tb)
     }
 
+    /**
+     * 사이클 신호. 레그 레이즈는 두 허벅지 중 **더 올라간 쪽**(먼 허벅지가 보일 때, 2026-10-08) — MediaPipe 가 든 다리의 좌우 이름을 프레임마다 바꿔 붙여서
+     * 가까운 쪽 허벅지만 보면 다리를 든 채 가만히 있어도 신호가 90° ↔ −8° 를 오가며 사이클이 났다(10-08 폰 세트 12회 중 7회가 그 유령 회). 더 올라간 쪽은
+     * 이름이 바뀌어도 같은 값이다. 한 다리만 들면 이 신호가 그 다리를 따라가고 [identity] 의 `one_leg` 가 거른다(먼 다리만 든 동작도 무음이 아니라 그 사유로 말한다).
+     */
+    private fun cycleSignal(m: Map<String, Float>): Float? {
+        val x = m[profile.signal]?.takeIf { it.isFinite() } ?: return null
+        if (profile != FloorProfile.LEG_RAISE) return x
+        val far = m[FloorChain.THIGH_FAR]?.takeIf { it.isFinite() } ?: return x
+        return maxOf(x, far)
+    }
+
     fun onFrame(t: Long, input: Map<String, Float>): List<RepCycle> {
         newlyRetracted = false
         if (firstSeenAt == null) firstSeenAt = t
         tentativeAt?.let { t0 -> if (t - t0 > profile.firstRepConfirmMs) { if (completed.size == 1) retractFirst(); tentativeAt = null } }
         fun g(k: String): Float? = input[k]?.takeIf { it.isFinite() }
-        val x = g(profile.signal)
+        val x = cycleSignal(input)
         if (x == null) {
             // 무엇이 빠졌나(안내 문장) — 관측 층은 몸통(어깨·골반)이 안 보이면 fc_* 를 내지 않는다. 몸통이 있으면 크런치는 발목, 레그 레이즈는 무릎이 빠진 것
             lastMissing = when { input[FloorChain.TORSO] == null -> MISSING_TORSO; profile == FloorProfile.CRUNCH -> MISSING_ANKLE; else -> MISSING_KNEE }
@@ -272,12 +294,17 @@ class FloorCycleTracker(val profile: FloorProfile, enabled: Set<String> = profil
             if (x < floorMin) floorMin = x
             g(FloorChain.LEG)?.let { legMinIdle = minOf(legMinIdle, it) }
             if (!(x >= floorMin + profile.depart && floorMin <= b + profile.departSlack)) return emptyList()
-            // 출발
+            // 출발 — 측면도·비율은 몸이 펴진 이 프레임의 것(정점에서는 몸이 접혀 어깨–발목 ÷ 어깨폭이 8 아래로 무너진다: 10-08 폰 레그 레이즈 정점 7~9)
             clearCycle(); moving = true; startMs = t; startMin = floorMin; lastMainDepartAt = t
+            startYaw = g(FloorChain.YAW); startRatio = g(FloorChain.RATIO)
             legTrough = legMinIdle; legMinIdle = Float.POSITIVE_INFINITY
         }
         cycleFrames += t to x
-        if (x > peak) { peak = x; peakMs = t; peakYaw = g(FloorChain.YAW); peakRatio = g(FloorChain.RATIO); kneeGapPeak = g(FloorChain.KNEE_GAP) }
+        if (x >= startMin + profile.depart) raisedFrames++
+        if (x > peak) {
+            peak = x; peakMs = t; peakYaw = g(FloorChain.YAW); peakRatio = g(FloorChain.RATIO); kneeGapPeak = g(FloorChain.KNEE_GAP)
+            peakDiff = g(FloorChain.THIGH)?.let { n -> g(FloorChain.THIGH_FAR)?.let { f -> kotlin.math.abs(n - f) } }
+        }
         g(FloorChain.EAR_LIFT)?.let { earPeak = maxOf(earPeak, it) }
         tilt?.let { torsoTiltMax = maxOf(torsoTiltMax, it) }
         if (profile == FloorProfile.LEG_RAISE) { g(FloorChain.KNEE)?.let { topKnees += x to it }; g(FloorChain.HEAD_LIFT)?.let { heads += it } }
@@ -296,9 +323,15 @@ class FloorCycleTracker(val profile: FloorProfile, enabled: Set<String> = profil
     /** 복귀 확정 — 판별 → 발표/기각, 재기준. */
     private fun close(t: Long, b: Float): List<RepCycle> {
         val amp = peak - startMin
-        val sideOk = isSide(peakYaw, peakRatio)
-        val reason = if (sideOk) identity(amp) else null
         lastMainEndAt = t
+        // 한 칸짜리 튐(관절이 한 프레임 튀었다 돌아옴)은 회가 아니다 — 소리 없이 버린다(10-08 폰: 가만히 있어도 횟수가 늘었다)
+        if (raisedFrames < MIN_RAISED_FRAMES) {
+            discarded += FloorDiscard(t, DISCARD_SPIKE)
+            floorMin = dwell.min(); clearCycle()
+            return emptyList()
+        }
+        val sideOk = sideLoose()
+        val reason = if (sideOk) identity(amp, strict = sideStrict()) else null
         val out = ArrayList<RepCycle>(1)
         if (reason != null) {
             reject(t, reason, startMin, peak, FloorRejection(t, reason,
@@ -308,7 +341,7 @@ class FloorCycleTracker(val profile: FloorProfile, enabled: Set<String> = profil
         } else {
             if (!sideOk) identityAbstain += t
             val c = RepCycle(t, startMs, startMin, peak)
-            completed += c; out += c
+            completed += c; out += c; countedAmps += amp
             val band = peak - TOP_BAND_FRACTION * amp
             val top = cycleFrames.filter { it.second >= band }
             val topStart = top.firstOrNull()?.first ?: peakMs; val topEnd = top.lastOrNull()?.first ?: peakMs
@@ -324,26 +357,43 @@ class FloorCycleTracker(val profile: FloorProfile, enabled: Set<String> = profil
         return out
     }
 
-    /** 측면인가 — 정점의 `fc_yaw` ≤ [SIDE_YAW_MAX] 이고, `fc_ratio` 가 있으면 ≥ [SIDE_RATIO_MIN]. 아니면 판별 전체를 유보하고 센다. */
-    private fun isSide(yaw: Float?, ratio: Float?): Boolean = yaw != null && yaw <= SIDE_YAW_MAX && (ratio == null || ratio >= SIDE_RATIO_MIN)
+    /**
+     * 측면인가 — `fc_yaw` ≤ [maxYaw] 이고, `fc_ratio` 가 있으면 ≥ [SIDE_RATIO_MIN]. 아니면 판별 전체를 유보하고 센다.
+     * 측면도는 **출발 프레임**(누워 몸이 펴진)의 것([sideYaw]·[sideRatio]) — 정점에서는 몸이 접혀 비율이 무너진다(10-08 폰 레그 레이즈 12회 전부 유보).
+     * 절대각 사유(`sit_up`)는 [SIDE_YAW_MAX], 상대·비율 사유(진폭·두 허벅지 차·무릎)는 [SIDE_YAW_MAX_RELATIVE] — 이 폰 사용자의 자연스러운 배치가 yaw 0.16~0.23 이라
+     * 0.15 로는 판별이 한 번도 돌지 않았다(10-07 크런치 12/15 유보).
+     */
+    private fun isSide(yaw: Float?, ratio: Float?, maxYaw: Float): Boolean = yaw != null && yaw <= maxYaw && (ratio == null || ratio >= SIDE_RATIO_MIN)
+    private fun sideYaw(): Float? = startYaw ?: peakYaw
+    /** 출발 프레임에 측면도가 있었으면 비율도 그 프레임의 것(없으면 묻지 않음) — 정점 비율로 되돌아가면 접힌 몸이 유보를 만든다. */
+    private fun sideRatio(): Float? = if (startYaw != null) startRatio else peakRatio
+    /** 상대·비율 사유의 측면 — 측면도만 본다(비율 ≥ 8 은 절대각 사유의 투영 조건: 이 폰 사용자는 누운 출발 프레임에서도 비율 6.5~8.8 이라 10-07 크런치 2회가 유보됐다). */
+    private fun sideLoose(): Boolean = sideYaw()?.let { it <= SIDE_YAW_MAX_RELATIVE } == true
+    private fun sideStrict(): Boolean = isSide(sideYaw(), sideRatio(), SIDE_YAW_MAX)
+
+    /** 본인 기준 진폭 — 센 회가 [REF_REPS] 이상이면 처음 [REF_REPS] 회의 중앙값(컬 ROM §62c 와 같은 틀). 그 전엔 null(절대 하한만). */
+    private fun refAmp(): Float? = if (countedAmps.size >= REF_REPS) median(countedAmps.take(REF_REPS)) else null
 
     /**
      * 판별 — 기각 사유, null = 센다. 순서 = 사유의 우선순위(첫 사유만 말한다). 재료가 없는 조건·꺼진 사유는 통과한다(원칙 #7 '유보는 통과').
-     * 크런치의 `neck_only` 는 주 사이클이 아니라 귀 탐침이 낸다([probeStep]).
+     * 크런치의 `neck_only` 는 주 사이클이 아니라 귀 탐침이 낸다([probeStep]). [strict] = 절대각 사유를 판정할 만큼 측면인가(`sit_up`).
+     * `shallow` 의 문턱 = max(절대 하한, 본인 처음 3회 중앙값 × 비율) — 세트 중반에 덜 하는 회(10-07 크런치 "중반부에는 덜 했지만")를 거른다.
      */
-    private fun identity(amp: Float): String? {
+    private fun identity(amp: Float, strict: Boolean): String? {
         fun on(r: String) = r in enabled
+        val shallowThr = maxOf(profile.shallowDeg, (refAmp() ?: 0f) * profile.shallowRatio)
         return when (profile) {
             FloorProfile.CRUNCH -> when {
-                on("sit_up") && peak > SIT_UP_DEG -> "sit_up"
-                on("shallow") && amp < CRUNCH_SHALLOW_DEG -> "shallow"
+                on("sit_up") && strict && peak > SIT_UP_DEG -> "sit_up"
+                on("shallow") && amp < shallowThr -> "shallow"
                 else -> null
             }
             FloorProfile.LEG_RAISE -> when {
                 on("trunk_up") && torsoTiltMax.isFinite() && torsoTiltMax > LEG_TRUNK_UP_DEG -> "trunk_up"
                 on("knee_bent") && kneeTop().let { it.isFinite() && it < LEG_KNEE_BENT_DEG } -> "knee_bent"
-                on("shallow") && amp < LEG_SHALLOW_DEG -> "shallow"
-                on("one_leg") && kneeGapPeak?.let { it > ONE_LEG_GAP } == true -> "one_leg"
+                // 한 다리: 정점에서 두 허벅지 차(먼 허벅지가 보일 때), 아니면 두 무릎 간격. 둘 다 없으면(먼 다리 가림) 판정하지 않는다
+                on("one_leg") && (peakDiff?.let { it > ONE_LEG_DIFF } ?: (kneeGapPeak?.let { it > ONE_LEG_GAP } ?: false)) -> "one_leg"
+                on("shallow") && amp < shallowThr -> "shallow"
                 // 회 사이 바닥에서 발이 닿았는가 — 기준을 잡은 뒤 첫 사이클(휴식에서 출발)은 묻지 않는다
                 on("feet_touch") && !fromRest && legBase != null && legTrough.isFinite() && legTrough <= legBase!! + FEET_TOUCH_MARGIN -> "feet_touch"
                 else -> null
@@ -380,7 +430,7 @@ class FloorCycleTracker(val profile: FloorProfile, enabled: Set<String> = profil
         probeDwell += e
         if (t - probeReturnAt!! < DWELL_MS || probeDwell.size < DWELL_FRAMES || t - probeStart < MIN_CYCLE_MS) return
         val mainMoved = moving || lastMainDepartAt >= probeStart || lastMainEndAt >= probeStart
-        val sideOk = isSide(probePeakYaw, probePeakRatio)
+        val sideOk = probePeakYaw?.let { it <= SIDE_YAW_MAX_RELATIVE } == true   // 상대 사유 — 측면도만
         if (!mainMoved && sideOk && "neck_only" in enabled) {
             reject(t, "neck_only", probeStartMin, probePeak, FloorRejection(t, "neck_only", trunkPeak = probeMainMax, earPeak = probePeak, amp = probePeak - probeStartMin,
                 kneeTop = Float.NaN, headMed = Float.NaN, sideOk = true))
@@ -449,8 +499,8 @@ class FloorCycleTracker(val profile: FloorProfile, enabled: Set<String> = profil
         if (moving) {
             lastMainEndAt = t
             // 판별 사유가 있는 후보(느린 상단의 윗몸일으키기 — 정점 > 80°)는 보류한다. 곧 돌아오면 그 사유로 기각하고 말한다(onFrame)
-            val sideOk = isSide(peakYaw, peakRatio)
-            val reason = if (sideOk) identity(peak - startMin) else null
+            val sideOk = sideLoose()
+            val reason = if (sideOk && raisedFrames >= MIN_RAISED_FRAMES) identity(peak - startMin, strict = sideStrict()) else null
             if (reason != null) exitPending = ExitPending(t, reason, startMin, peak, peak - RETURN_FRACTION * (peak - startMin),
                 trunkPeak = if (profile == FloorProfile.CRUNCH) peak else finiteOr(torsoTiltMax),
                 earPeak = if (profile == FloorProfile.CRUNCH) finiteOr(earPeak) else Float.NaN,
@@ -471,7 +521,7 @@ class FloorCycleTracker(val profile: FloorProfile, enabled: Set<String> = profil
 
     private fun clearCycle() {
         moving = false; peak = Float.NEGATIVE_INFINITY; peakYaw = null; peakRatio = null; earPeak = Float.NEGATIVE_INFINITY; torsoTiltMax = Float.NEGATIVE_INFINITY
-        kneeGapPeak = null; topKnees.clear(); heads.clear(); cycleFrames.clear(); returnAt = null; dwell.clear()
+        kneeGapPeak = null; peakDiff = null; startYaw = null; startRatio = null; raisedFrames = 0; topKnees.clear(); heads.clear(); cycleFrames.clear(); returnAt = null; dwell.clear()
     }
 
     private fun dropProbe() { probeMoving = false; probePeak = Float.NEGATIVE_INFINITY; probePeakYaw = null; probePeakRatio = null; probeMainMax = Float.NEGATIVE_INFINITY; probeReturnAt = null; probeDwell.clear() }
@@ -556,7 +606,17 @@ class FloorCycleTracker(val profile: FloorProfile, enabled: Set<String> = profil
         /** 첫 회 확인 창의 여유 — 최대 사이클을 다 쓴 둘째 회도 창 안에 닫히게. */
         const val FIRST_REP_SLACK_MS = 2_000L
         const val PREP_WINDOW_MS = 1_600L
-        const val SIDE_YAW_MAX = 0.15f          // 판별 띠는 측면(C)에서만 쟀다
+        const val SIDE_YAW_MAX = 0.15f          // 절대각 사유(sit_up)의 측면 — 판별 띠는 측면(C)에서만 쟀다
+        /**
+         * 상대·비율 사유(shallow·one_leg·knee_bent·trunk_up·neck_only)의 측면 상한(2026-10-08). 이 폰 사용자의 자연스러운 배치가 yaw 0.16~0.23 이라 0.15 로는 판별이 한 번도
+         * 돌지 않았다(10-07 크런치 12/15 유보, 10-08 레그 레이즈 12/12 유보). 두 허벅지 차·진폭 비율·무릎각은 ±17° 돌아선 투영에 둔감하다. AIHub C 정상 클립 출발 yaw p90 0.10.
+         */
+        const val SIDE_YAW_MAX_RELATIVE = 0.30f
+        /** 한 칸짜리 튐은 회가 아니다 — 출발선 위 판정 칸이 이보다 적으면 소리 없이 버린다(`discarded` [DISCARD_SPIKE]). 실제 회는 300 ms 격자에서 3칸 이상. */
+        const val MIN_RAISED_FRAMES = 2
+        const val DISCARD_SPIKE = "spike"
+        /** 본인 기준 진폭을 만드는 처음 센 회 수(컬 §62c 와 같다). */
+        const val REF_REPS = 3
         /**
          * 측면의 두 번째 조건(2026-10-07): 어깨–발목 ÷ 투영 어깨폭(`fc_ratio`) ≥ 8 — 있을 때만 묻는다. `fc_yaw` 는 먼–가까운 어깨·골반의 몸통축 성분만 봐서
          * 발 쪽·머리 쪽에서 찍은 끝 방향 촬영(AIHub E)도 통과했다 — E 크런치에서 측면으로 판정된 42회 중 7회가 투영이 무너진 채(현 들림 107~155°, ratio 3.6~6.9) sit_up 으로 기각됐다.
@@ -566,15 +626,20 @@ class FloorCycleTracker(val profile: FloorProfile, enabled: Set<String> = profil
         const val TOP_BAND_FRACTION = 0.2f      // 로그의 상단 체류 띠
         // 크런치 판별(설계 §4.5)
         const val SIT_UP_DEG = 80f              // 정상 회 0.3 %, 완전 윗몸일으키기 57~93 % 거름(Q8)
-        const val CRUNCH_SHALLOW_DEG = 8f       // 꺼 둠 — 정상 8.7~9.4 %, MM-Fit w20 6/30 소실(Q7)
+        /** 크런치 얕음의 절대 하한 — [FloorProfile.CRUNCH] `shallowDeg`(10°, 2026-10-08 켬: 10-08 폰 팔만 움직인 회 4.8~8.3°·어깨만 든 회 5~13° vs 10-07 제대로 든 회 18~31°). AIHub 8° 가 9.2 % 였으나 16프레임 분할 의존이라 입장 측정은 MM-Fit 윗몸일으키기·폰 블록 세트. */
+        val CRUNCH_SHALLOW_DEG: Float get() = FloorProfile.CRUNCH.shallowDeg
         const val PROBE_DEPART = 6f             // 정상 회 귀 들림 p2 8.4°
         const val PROBE_SLACK = 8f
         // 레그 레이즈 판별(설계 §4.6)
         const val LEG_TRUNK_UP_DEG = 30f
-        const val LEG_KNEE_BENT_DEG = 110f      // 꺼 둠(Q10) — 측정법에 따라 정상 2.9~8.9 %
+        /** 상단 무릎각 하한 — 2026-10-08 켬(110 → 100 으로 내려 입장 여유: AIHub C 110° 에서 1.5 %). 10-07·10-08 폰 무릎 접기 48~85°, 정상 회 131~149°. */
+        const val LEG_KNEE_BENT_DEG = 100f
         const val TOP_KNEE_BAND = 15f
-        const val LEG_SHALLOW_DEG = 30f         // 473 회 0.9 %(CI 상한 4.9 %)
-        const val ONE_LEG_GAP = 0.45f           // 꺼 둠 — 정상 p99 0.255, 위반 표본 0
+        /** 레그 레이즈 얕음의 절대 하한 — [FloorProfile.LEG_RAISE] `shallowDeg`(30°, 473 회 0.9 %). 본인 0.7배가 더 크면 그쪽(10-07 절반 높이 52~55° vs 본인 92°). */
+        val LEG_SHALLOW_DEG: Float get() = FloorProfile.LEG_RAISE.shallowDeg
+        /** 한 다리 — 정점 두 허벅지 차(°). AIHub 전 클립 양다리 정점 C 3/160 = 1.9 %·E 1.6 %(p98 22°), FMS 한 다리 90/90, 10-08 폰 한 다리 회 80~118°. */
+        const val ONE_LEG_DIFF = 35f
+        const val ONE_LEG_GAP = 0.45f           // 먼 허벅지가 없을 때의 대안 — 두 무릎 간격(정상 p99 0.26~0.59, AIHub C 3.1 %)
         const val FEET_TOUCH_MARGIN = 3f        // 꺼 둠(Q11) — AIHub 정상도 바닥까지 내린다
         // 안내
         const val NO_BASE_CUE_MS = 5_000L
