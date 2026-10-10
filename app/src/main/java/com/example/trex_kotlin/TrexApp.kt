@@ -257,13 +257,17 @@ fun TrexApp(app: AppViewModel = viewModel()) {
                 steps.filter { it.token in ends }.associate { it.workout.id to ends.getValue(it.token) })
         }
 
-        fun nextSession(expectedToken: Int, skip: Boolean) {
+        /**
+         * 다음 단계로(spec §101 세트 끝). [handOff] = 목표 도달 자동 진행 — `speech.stop()` 대신 꼬리 넘김(마지막 판정·교정 문장을 끝까지, 상한 10 s, 다음 종목 안내는 그 뒤에).
+         * 준비 → 운동의 정상 시작(PREPARE, !skip 이 아닌 onPrepared 경로)도 끊지 않는다 — 계획 규칙상 넘치는 말은 ≤ 0.3 s. 수동 '세트 끝'·건너뛰기·나가기는 종전처럼 즉시 멈춘다.
+         */
+        fun nextSession(expectedToken: Int, skip: Boolean, handOff: Boolean = false) {
             val current = steps.getOrNull(progress.index) ?: return
             if (current.token != expectedToken) return
             // 다음 화면/기록 병합 전에 세트 리포트를 확정한다. 화면 소멸 콜백보다 먼저다.
             if (current.phase == SessionPhase.WORK) finalizers[current.workout.id]?.invoke()
             if (current.phase == SessionPhase.WORK) stampWork(current.token)
-            speech.stop()
+            if (handOff || current.phase == SessionPhase.PREPARE) speech.handOff() else speech.stop()
             advanceHoldFrom.remove(expectedToken)
             progress = progress.advance(steps, expectedToken, skip)
             progress.completedOriginalIds(steps).forEach { app.markWorkoutDone(it) }
@@ -299,7 +303,7 @@ fun TrexApp(app: AppViewModel = viewModel()) {
             if (recordableWorkouts().isNotEmpty()) exitAsk = true else exitSession()
         }
 
-        val advanceLatest = rememberUpdatedState<(Int, Boolean) -> Unit> { token, skip -> nextSession(token, skip) }
+        val advanceLatest = rememberUpdatedState<(Int, Boolean) -> Unit> { token, skip -> nextSession(token, skip, handOff = true) }
         LaunchedEffect(sessionIndex, sessionPaused, appPaused, exitAsk) {
             val token = sessionIndex
             var last = android.os.SystemClock.elapsedRealtime()
@@ -311,7 +315,11 @@ fun TrexApp(app: AppViewModel = viewModel()) {
                 progress = progress.tick(now - last, pausedState.value, timed = step?.timed == true,
                     trackElapsed = step?.phase != SessionPhase.PREPARE, trackWork = step?.phase == SessionPhase.WORK, heldDeltaMs = held)
                 last = now
-                if (!pausedState.value && step?.timed == true && progress.targetReached(step)) advanceLatest.value(token, false)
+                if (!pausedState.value && step?.timed == true && progress.targetReached(step)) {
+                    // 시간 목표의 끝 — 카운트는 남길 이유가 없다(§101), 넘기며 꼬리 넘김
+                    if (step.phase == SessionPhase.WORK) speech.beginSetEnd(android.os.SystemClock.elapsedRealtime(), dropCounts = true)
+                    advanceLatest.value(token, false)
+                }
             }
         }
         // 렙 검증 모드(spec §61): 앱 전용 폴더의 표시 파일로 켠다 — 단계가 바뀔 때마다 다시 읽어 세션 사이에 켜고 끌 수 있다
@@ -324,7 +332,7 @@ fun TrexApp(app: AppViewModel = viewModel()) {
             if (!repValidation && !pausedState.value && step?.phase == SessionPhase.WORK && !step.timed && progress.targetReached(step)) {
                 // 마지막 걸음·회의 판정·안내 발화가 끝날 때까지 최대 2 s 기다린다(§63) — 넘어가며 speech.stop() 이 마지막 말을 잘랐다("6" 뒤 0.7 s 에 넘어감).
                 // 이 효과는 반복 수가 바뀔 때마다 다시 시작하므로 기다림의 시작은 처음 목표에 닿은 시각으로 고정한다
-                val t0 = advanceHoldFrom.getOrPut(step.token) { android.os.SystemClock.elapsedRealtime() }
+                val t0 = advanceHoldFrom.getOrPut(step.token) { android.os.SystemClock.elapsedRealtime().also { speech.beginSetEnd(it, dropCounts = false) } }
                 var quiet = 0
                 while (true) {
                     quiet = if (speech.isSpeaking) 0 else quiet + 1
@@ -370,6 +378,9 @@ fun TrexApp(app: AppViewModel = viewModel()) {
 
         // 앱 내 업데이트 — 운동·하위 화면이 아닐 때만 확인하고 묻는다(AppUpdate.kt)
         AppUpdatePrompt(enabled = sessionIndex < 0 && !sessionDone && subScreen == "none")
+
+        // 운동 세션 동안은 폰을 둔 방향을 따른다 — 자동 회전이 꺼진 폰에서 바닥 종목을 가로로 두면 화면이 세로로 남았다(10-10 보고, AdaptiveLayout.kt)
+        SessionOrientation(follow = sessionIndex >= 0 && !sessionDone)
 
         CompositionLocalProvider(LocalTrexFold provides rememberTrexFold()) {
             Box(Modifier.fillMaxSize().background(c.bg).safeDrawingPadding()) {

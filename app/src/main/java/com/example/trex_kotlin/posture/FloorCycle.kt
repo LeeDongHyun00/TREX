@@ -29,7 +29,7 @@ enum class FloorProfile(val title: String, val signal: String, val depart: Float
                         /** `shallow` 의 절대 진폭 하한(°)과 본인 처음 [FloorCycleTracker.REF_REPS]회 중앙값 대비 비율 — 둘 중 큰 쪽이 문턱(2026-10-08, 설계 §3.3·§3.4). */
                         val shallowDeg: Float, val shallowRatio: Float) {
     CRUNCH("크런치", FloorChain.TRUNK_LIFT, 4.5f, 8f, 3f, 5_000L,
-        listOf("sit_up", "neck_only", "shallow"), setOf("sit_up", "neck_only", "shallow"), shallowDeg = 10f, shallowRatio = 0.6f),
+        listOf("sit_up", "arms_only", "neck_only", "shallow"), setOf("sit_up", "arms_only", "neck_only", "shallow"), shallowDeg = 10f, shallowRatio = 0.6f),
     LEG_RAISE("라잉 레그 레이즈", FloorChain.THIGH, 20f, 15f, 8f, 10_000L,
         listOf("trunk_up", "knee_bent", "one_leg", "shallow", "feet_touch"), setOf("trunk_up", "knee_bent", "one_leg", "shallow"), shallowDeg = 30f, shallowRatio = 0.7f);
 
@@ -50,14 +50,28 @@ enum class FloorProfile(val title: String, val signal: String, val depart: Float
  * @property sideOk 정점에서 측면(`fc_yaw` ≤ 0.15)이었는가 — 기각은 측면일 때만 나므로 늘 true(유보한 회는 [FloorCycleTracker.identityAbstain]).
  */
 data class FloorRejection(val tMs: Long, val reason: String, val trunkPeak: Float, val earPeak: Float, val amp: Float,
-                          val kneeTop: Float, val headMed: Float, val sideOk: Boolean)
+                          val kneeTop: Float, val headMed: Float, val sideOk: Boolean,
+                          /** 크런치 `arms_only`(§101) 재료 — 회 창의 손목 이동(최대 쌍거리, 몸통)과 귀 들림 진폭(°). 재료가 없으면 NaN. */
+                          val wristSweep: Float = Float.NaN, val earAmp: Float = Float.NaN)
 
 /**
  * 센 회의 상세 — 로그용. [topMs] 정점 띠(진폭 상위 20 %) 안에 머문 시간, [descentMs] 그 띠를 떠나 복귀 확정까지 — 나중의 반동·툭 떨어뜨리기 후보.
  * [identityAbstain] = 정점이 측면이 아니어서 판별을 유보하고 셌다.
  */
 data class FloorRep(val tMs: Long, val startMs: Long, val peakMs: Long, val min: Float, val peak: Float,
-                    val topMs: Long, val descentMs: Long, val identityAbstain: Boolean)
+                    val topMs: Long, val descentMs: Long, val identityAbstain: Boolean,
+                    /**
+                     * 크런치 시선 대리(spec §100) — 상단 띠(정점 − 진폭 20 %)의 얼굴 방향(`fc_face`, 코–귀–골반 각) 중앙값 − 누운 기준의 얼굴 방향. 음수 = 얼굴이 몸통과 함께
+                     * 무릎 쪽으로 돌았다(정상, AIHub C 416클립 중앙값 −34°), 0 근처·양수 = 머리가 뒤에 남아 천장을 본다(AIHub p95 −0.9·p98 +5.9°). 재료가 없으면 NaN.
+                     */
+                    val faceRel: Float = Float.NaN,
+                    /**
+                     * 화면(폰)을 본 정도(§101c, 사용자 정의 시선 — "화면을 보면 2회까지는 두고 그 뒤 교정 멘트, 횟수는 막지 않음"): 사이클 프레임의 `fc_face_cam`(두 귀 간격 ÷ 코–귀 거리) 중앙값.
+                     * 옆모습(천장·무릎을 봄) ≤ 0.3, 얼굴이 폰을 향하면 ≥ 1.0. 재료가 없으면 NaN. 크런치·레그 레이즈 공통([FloorGazeVoice]).
+                     */
+                    val faceCam: Float = Float.NaN,
+                    /** 시선 상태(§101d, `FloorGaze`): 사이클 프레임의 다수결 — 0 모름 · 1 정면 · 2 화면 쪽 · 3 반대쪽 · 4 화면 밖(미검출 = 카메라를 향하지 않음). 얼굴 모델 피처가 없는 로그(옛 빌드·.cap 재생)는 0. */
+                    val gaze: Int = FloorGaze.UNKNOWN)
 
 /** 소리 없이 버린 후보·기준 — `timeout`(최대 사이클 초과)·`exit`(일어나 앉음). 세트 끝 동작이라 틱도 이유도 내지 않는다. */
 data class FloorDiscard(val tMs: Long, val reason: String)
@@ -91,12 +105,17 @@ class FloorCycleTracker(val profile: FloorProfile, enabled: Set<String> = profil
     /** 켠 판별 사유. 여기 없는 사유는 조건을 만족해도 센다. */
     val enabled: Set<String> = enabled.toSet()
 
-    private class LyingFrame(val t: Long, val sig: Float, val torso: Float?, val ear: Float?, val leg: Float?)
+    private class LyingFrame(val t: Long, val sig: Float, val torso: Float?, val ear: Float?, val leg: Float?, val face: Float?)
     private val lyingWin = ArrayDeque<LyingFrame>()
     private var base: Float? = null
     private var torsoBase: Float? = null
     private var earBase: Float? = null
     private var legBase: Float? = null           // 세트 첫 누운 다리각(발 닿음 판별)
+    private var faceBase: Float? = null          // 누운 얼굴 방향(크런치 시선 대리 §100) — 기준과 함께 잡고 재기준에 따라간다
+    private val faces = ArrayList<Pair<Float, Float>>()   // (신호, 얼굴 방향) — 상단 띠 중앙값(크런치)
+    private val faceCams = ArrayList<Float>()             // 사이클의 `fc_face_cam`(화면을 본 정도, §101c) — 회의 중앙값
+    private val gazes = ArrayList<Int>()                   // 사이클 프레임의 시선 상태 — 회의 다수결
+    private var frameGaze = FloorGaze.UNKNOWN
 
     // ---- 주 사이클
     private var floorMin = Float.POSITIVE_INFINITY
@@ -129,6 +148,13 @@ class FloorCycleTracker(val profile: FloorProfile, enabled: Set<String> = profil
     private var lastMainDepartAt = Long.MIN_VALUE / 2
     private var lastMainEndAt = Long.MIN_VALUE / 2
 
+    // ---- 크런치 팔만 움직임(§101 `arms_only`) — 손목 몸통 좌표의 최근 버퍼(사이클과 무관하게 쌓고 시간으로 자른다), 출발 직전 귀 들림(진폭의 원점)
+    private val wrists = ArrayList<Triple<Long, Float, Float>>()
+    private var earIdleMin = Float.POSITIVE_INFINITY
+    private var earTrough = Float.POSITIVE_INFINITY
+    /** 팔 자세(§101 RC3): 팔꿈치각 < [ARM_FOLDED_DEG] 접음(손 머리 뒤), > [ARM_EXTENDED_DEG] 폄(손 뻗기). 자세가 바뀌면 골(`floorMin`)을 다시 잡는다 —
+     *  팔을 옮기는 프레임의 어깨점 이동이 골이 되어(10-08 48357 회 −8.2°) 진폭의 원점을 낮췄다. 모르면 직전 자세 유지. */
+    private var armPose = 0
     // ---- 크런치 귀 탐침(목만 당김)
     private var earMin = Float.POSITIVE_INFINITY
     private var probeMoving = false
@@ -182,6 +208,7 @@ class FloorCycleTracker(val profile: FloorProfile, enabled: Set<String> = profil
     fun candidate(): RepCandidate? = if (moving) RepCandidate(startMs, startMin, peak) else null
 
     override fun cueFor(reason: String): String? = Companion.cueFor(profile, reason)
+    override fun motionFor(reason: String): FormMotion? = Companion.motionFor(profile, reason)
 
     /**
      * 일시정지·카메라 전환 — 진행 후보(와 탐침·출구 보류)만 버린다. 기준·완료 원장은 지킨다. 잠정 첫 회는 **확정**한다 — 쉬는 동안(폰 위치를 고치는 동안) 거두지 않는다
@@ -189,11 +216,12 @@ class FloorCycleTracker(val profile: FloorProfile, enabled: Set<String> = profil
      */
     fun resetCycle() {
         clearCycle(); dropProbe(); floorMin = Float.POSITIVE_INFINITY; earMin = Float.POSITIVE_INFINITY; lastAt = null; exitSince = null; probeLastAt = null
+        wrists.clear(); earIdleMin = Float.POSITIVE_INFINITY; earTrough = Float.POSITIVE_INFINITY; armPose = 0
         tentativeAt = null; exitPending = null
     }
 
     fun reset() {
-        resetCycle(); lyingWin.clear(); base = null; torsoBase = null; earBase = null; legBase = null; lying = null
+        resetCycle(); lyingWin.clear(); base = null; torsoBase = null; earBase = null; legBase = null; faceBase = null; lying = null
         completed.clear(); rejected.clear(); rejectedDetail.clear(); repDetail.clear(); discarded.clear(); identityAbstain.clear(); retracted.clear(); countedAmps.clear()
         newlyRetracted = false; tentativeAt = null; tentativeUsed = false; firstSeenAt = null; lastSignalAt = null; lastMissing = null
         noBaseCued = false; lostCuedAt = Long.MIN_VALUE / 2; baseLostAt = null; baseLostCued = false
@@ -211,7 +239,7 @@ class FloorCycleTracker(val profile: FloorProfile, enabled: Set<String> = profil
         if (fs.size < LYING_MIN_FRAMES) return
         if (fs.any { (_, x, m) -> m[FloorChain.AXIS_H]?.isFinite() != true || !lyingRegion(m, x) }) return
         establish(fs.map { it.second }, fs.mapNotNull { it.third[FloorChain.TORSO_ELEV] }, fs.mapNotNull { it.third[FloorChain.EAR_LIFT] },
-            fs.mapNotNull { it.third[FloorChain.LEG] }, fromPrep = true)
+            fs.mapNotNull { it.third[FloorChain.LEG] }, fs.mapNotNull { it.third[FloorChain.FACE] }, fromPrep = true)
     }
 
     /**
@@ -226,6 +254,7 @@ class FloorCycleTracker(val profile: FloorProfile, enabled: Set<String> = profil
         fromRest = true; legMinIdle = Float.POSITIVE_INFINITY; baseLostAt = null
         torsoBase = m[FloorChain.TORSO_ELEV]?.takeIf { it.isFinite() }
         earBase = m[FloorChain.EAR_LIFT]?.takeIf { it.isFinite() }
+        faceBase = m[FloorChain.FACE]?.takeIf { it.isFinite() }
         if (legBase == null) legBase = m[FloorChain.LEG]?.takeIf { it.isFinite() }
         if (lying == null) lying = m.filterValues { it.isFinite() }
     }
@@ -254,6 +283,7 @@ class FloorCycleTracker(val profile: FloorProfile, enabled: Set<String> = profil
         if (firstSeenAt == null) firstSeenAt = t
         tentativeAt?.let { t0 -> if (t - t0 > profile.firstRepConfirmMs) { if (completed.size == 1) retractFirst(); tentativeAt = null } }
         fun g(k: String): Float? = input[k]?.takeIf { it.isFinite() }
+        frameGaze = FloorGaze.classify(input)              // 매 프레임의 시선 상태(§101d) — 사이클 프레임만 회의 다수결에 들어간다
         val x = cycleSignal(input)
         if (x == null) {
             // 무엇이 빠졌나(안내 문장) — 관측 층은 몸통(어깨·골반)이 안 보이면 fc_* 를 내지 않는다. 몸통이 있으면 크런치는 발목, 레그 레이즈는 무릎이 빠진 것
@@ -282,7 +312,16 @@ class FloorCycleTracker(val profile: FloorProfile, enabled: Set<String> = profil
             val s = exitSince ?: t.also { exitSince = it }
             if (t - s >= EXIT_MS) { exit(t); return emptyList() }
         } else exitSince = null
-        if (!moving && lyingRegion(input, x)) addLying(t, x, g(FloorChain.TORSO_ELEV), g(FloorChain.EAR_LIFT), g(FloorChain.LEG))
+        if (!moving && lyingRegion(input, x)) addLying(t, x, g(FloorChain.TORSO_ELEV), g(FloorChain.EAR_LIFT), g(FloorChain.LEG), g(FloorChain.FACE))
+        if (profile == FloorProfile.CRUNCH) {
+            val al = g(FloorChain.WRIST_AL); val up = g(FloorChain.WRIST_UP)
+            if (al != null && up != null) { wrists += Triple(t, al, up); wrists.removeAll { it.first < t - WRIST_KEEP_MS } }
+            // 팔 자세가 바뀌면(접음 ↔ 폄) 쉬는 동안의 골을 다시 잡는다 — 팔을 옮기던 프레임의 어깨점 이동은 크런치의 원점이 아니다(§101 RC3)
+            g(FloorChain.ELBOW)?.let { e ->
+                val pose = if (e < ARM_FOLDED_DEG) 1 else if (e > ARM_EXTENDED_DEG) 2 else armPose
+                if (pose != armPose) { if (!moving && armPose != 0) floorMin = Float.POSITIVE_INFINITY; armPose = pose }
+            }
+        }
         val b = base ?: return emptyList()
         val events = mainStep(t, x, b, tilt, ::g)
         if (profile == FloorProfile.CRUNCH) probeStep(t, x, ::g)
@@ -293,11 +332,13 @@ class FloorCycleTracker(val profile: FloorProfile, enabled: Set<String> = profil
         if (!moving) {
             if (x < floorMin) floorMin = x
             g(FloorChain.LEG)?.let { legMinIdle = minOf(legMinIdle, it) }
+            g(FloorChain.EAR_LIFT)?.let { earIdleMin = minOf(earIdleMin, it) }
             if (!(x >= floorMin + profile.depart && floorMin <= b + profile.departSlack)) return emptyList()
             // 출발 — 측면도·비율은 몸이 펴진 이 프레임의 것(정점에서는 몸이 접혀 어깨–발목 ÷ 어깨폭이 8 아래로 무너진다: 10-08 폰 레그 레이즈 정점 7~9)
             clearCycle(); moving = true; startMs = t; startMin = floorMin; lastMainDepartAt = t
             startYaw = g(FloorChain.YAW); startRatio = g(FloorChain.RATIO)
             legTrough = legMinIdle; legMinIdle = Float.POSITIVE_INFINITY
+            earTrough = earIdleMin; earIdleMin = Float.POSITIVE_INFINITY
         }
         cycleFrames += t to x
         if (x >= startMin + profile.depart) raisedFrames++
@@ -308,6 +349,9 @@ class FloorCycleTracker(val profile: FloorProfile, enabled: Set<String> = profil
         g(FloorChain.EAR_LIFT)?.let { earPeak = maxOf(earPeak, it) }
         tilt?.let { torsoTiltMax = maxOf(torsoTiltMax, it) }
         if (profile == FloorProfile.LEG_RAISE) { g(FloorChain.KNEE)?.let { topKnees += x to it }; g(FloorChain.HEAD_LIFT)?.let { heads += it } }
+        if (profile == FloorProfile.CRUNCH) g(FloorChain.FACE)?.let { faces += x to it }
+        g(FloorChain.FACE_CAM)?.let { faceCams += it }
+        gazes += frameGaze
         if (t - startMs > profile.maxCycleMs) {
             discarded += FloorDiscard(t, "timeout"); lastMainEndAt = t
             clearCycle(); floorMin = x; return emptyList()
@@ -337,7 +381,8 @@ class FloorCycleTracker(val profile: FloorProfile, enabled: Set<String> = profil
             reject(t, reason, startMin, peak, FloorRejection(t, reason,
                 trunkPeak = if (profile == FloorProfile.CRUNCH) peak else finiteOr(torsoTiltMax),
                 earPeak = if (profile == FloorProfile.CRUNCH) finiteOr(earPeak) else Float.NaN,
-                amp = amp, kneeTop = kneeTop(), headMed = if (heads.isEmpty()) Float.NaN else median(heads), sideOk = true))
+                amp = amp, kneeTop = kneeTop(), headMed = if (heads.isEmpty()) Float.NaN else median(heads), sideOk = true,
+                wristSweep = wristSweep(t), earAmp = earAmp()))
         } else {
             if (!sideOk) identityAbstain += t
             val c = RepCycle(t, startMs, startMin, peak)
@@ -345,7 +390,13 @@ class FloorCycleTracker(val profile: FloorProfile, enabled: Set<String> = profil
             val band = peak - TOP_BAND_FRACTION * amp
             val top = cycleFrames.filter { it.second >= band }
             val topStart = top.firstOrNull()?.first ?: peakMs; val topEnd = top.lastOrNull()?.first ?: peakMs
-            repDetail += FloorRep(t, startMs, peakMs, startMin, peak, topEnd - topStart, t - topEnd, identityAbstain = !sideOk)
+            // 크런치 시선 대리(§100): 상단 띠 얼굴 방향 중앙값 − 누운 기준. 재료(코·귀 가시성, 누운 얼굴)가 없으면 NaN(유보)
+            val faceTop = faces.filter { it.first >= band }.map { it.second }.takeIf { it.isNotEmpty() }?.let(::median)
+            val faceRel = if (faceTop != null && faceBase != null) faceTop - faceBase!! else Float.NaN
+            // 화면을 본 정도(§101c): 사이클 프레임 전체의 중앙값 — 회의 어느 순간이든 폰을 향한 얼굴이 절반 넘게 이어졌는가
+            val faceCam = faceCams.takeIf { it.isNotEmpty() }?.let(::median) ?: Float.NaN
+            repDetail += FloorRep(t, startMs, peakMs, startMin, peak, topEnd - topStart, t - topEnd, identityAbstain = !sideOk, faceRel = faceRel, faceCam = faceCam,
+                gaze = FloorGaze.majority(gazes))
             // 세트의 첫 회만 잠정 — 거둔 뒤의 회·둘째 회는 아니다(둘째 회가 오면 첫 회 확정)
             tentativeAt = if (!tentativeUsed) { tentativeUsed = true; t } else null
         }
@@ -385,6 +436,9 @@ class FloorCycleTracker(val profile: FloorProfile, enabled: Set<String> = profil
         return when (profile) {
             FloorProfile.CRUNCH -> when {
                 on("sit_up") && strict && peak > SIT_UP_DEG -> "sit_up"
+                // 팔만 움직임(§101): 회 창에서 손목이 크게 옮겨 다녔는데(≥ 0.8 몸통) 귀는 거의 들리지 않았다(< 10°) — 손을 머리 위로 넘기거나 바닥을 짚는 동작이 어깨점을 끌어 주 신호가 났다.
+                // 모집단 정상 회 0/291(AIHub C 0/213·MM-Fit 0/78, 상한 1.3 %), 폰 팔만 동작 5/5, 실제 회 0/49. 손목 재료가 2칸 미만이면 유보(통과)
+                on("arms_only") && wristSweep(lastAt ?: 0L).let { it.isFinite() && it > ARMS_ONLY_SWEEP } && earAmp().let { it.isFinite() && it < ARMS_ONLY_EAR_DEG } -> "arms_only"
                 on("shallow") && amp < shallowThr -> "shallow"
                 else -> null
             }
@@ -400,6 +454,22 @@ class FloorCycleTracker(val profile: FloorProfile, enabled: Set<String> = profil
             }
         }
     }
+
+    /** 회 창(출발 [ARMS_WINDOW_LEAD_MS] 전 ~ [now])의 손목 이동 — 몸통 좌표 점들의 최대 쌍거리(몸통 단위). 점이 2개 미만이면 NaN. */
+    private fun wristSweep(now: Long): Float {
+        val pts = wrists.filter { it.first >= startMs - ARMS_WINDOW_LEAD_MS && it.first <= now }
+        if (pts.size < 2) return Float.NaN
+        var best = 0f
+        for (i in pts.indices) for (j in i + 1 until pts.size) {
+            val dx = pts[i].second - pts[j].second; val dy = pts[i].third - pts[j].third
+            val d = kotlin.math.sqrt(dx * dx + dy * dy)
+            if (d > best) best = d
+        }
+        return best
+    }
+
+    /** 이 회의 귀 들림 진폭 — 정점 − 출발 직전 쉬던 최소. 재료가 없으면 NaN. */
+    private fun earAmp(): Float = if (earPeak.isFinite() && earTrough.isFinite()) earPeak - earTrough else Float.NaN
 
     /** 상단 프레임(신호 ≥ 정점 − [TOP_KNEE_BAND])의 무릎각 중앙값. 재료가 없으면 NaN. */
     private fun kneeTop(): Float {
@@ -468,27 +538,30 @@ class FloorCycleTracker(val profile: FloorProfile, enabled: Set<String> = profil
         return gate && (profile != FloorProfile.LEG_RAISE || x <= LEG_LYING_THIGH_MAX)
     }
 
-    private fun addLying(t: Long, x: Float, torso: Float?, ear: Float?, leg: Float?) {
-        lyingWin.addLast(LyingFrame(t, x, torso, ear, leg))
+    private fun addLying(t: Long, x: Float, torso: Float?, ear: Float?, leg: Float?, face: Float?) {
+        lyingWin.addLast(LyingFrame(t, x, torso, ear, leg, face))
         while (lyingWin.isNotEmpty() && lyingWin.first().t < t - LYING_WINDOW_MS) lyingWin.removeFirst()
         if (lyingWin.size < LYING_MIN_FRAMES) return
         val b = base
-        if (b == null) { establish(lyingWin.map { it.sig }, lyingWin.mapNotNull { it.torso }, lyingWin.mapNotNull { it.ear }, lyingWin.mapNotNull { it.leg }, fromPrep = false); return }
+        if (b == null) { establish(lyingWin.map { it.sig }, lyingWin.mapNotNull { it.torso }, lyingWin.mapNotNull { it.ear }, lyingWin.mapNotNull { it.leg }, lyingWin.mapNotNull { it.face }, fromPrep = false); return }
         val cand = median(lyingWin.map { it.sig })
         if (cand < b) base = cand
         lyingWin.mapNotNull { it.torso }.takeIf { it.size >= LYING_MIN_FRAMES }?.let { torsoBase = median(it) }
         lyingWin.mapNotNull { it.ear }.takeIf { it.size >= LYING_MIN_FRAMES }?.let { earBase = median(it) }
+        lyingWin.mapNotNull { it.face }.takeIf { it.size >= LYING_MIN_FRAMES }?.let { faceBase = median(it) }
     }
 
     /** [fromPrep] = 준비 프레임에서 심었다(로그 [LYING_PREP] — 재생기는 그때만 같은 값을 심는다, [restoreLying]). */
-    private fun establish(sigs: List<Float>, torsos: List<Float>, ears: List<Float>, legs: List<Float>, fromPrep: Boolean) {
+    private fun establish(sigs: List<Float>, torsos: List<Float>, ears: List<Float>, legs: List<Float>, faceVals: List<Float>, fromPrep: Boolean) {
         val b = median(sigs)
         base = b; floorMin = minOf(floorMin, sigs.min()); fromRest = true; legMinIdle = Float.POSITIVE_INFINITY; baseLostAt = null
         torsoBase = torsos.takeIf { it.isNotEmpty() }?.let(::median)
         earBase = ears.takeIf { it.isNotEmpty() }?.let(::median)
+        faceBase = faceVals.takeIf { it.isNotEmpty() }?.let(::median)
         if (legBase == null) legBase = legs.takeIf { it.isNotEmpty() }?.let(::median)
         if (lying == null) lying = buildMap {
             put(profile.signal, b); torsoBase?.let { put(FloorChain.TORSO_ELEV, it) }; earBase?.let { put(FloorChain.EAR_LIFT, it) }; legBase?.let { put(FloorChain.LEG, it) }
+            faceBase?.let { put(FloorChain.FACE, it) }
             put(LYING_PREP, if (fromPrep) 1f else 0f)
             if (fromPrep) put(LYING_MIN, sigs.min())
         }
@@ -508,7 +581,7 @@ class FloorCycleTracker(val profile: FloorProfile, enabled: Set<String> = profil
         }
         if (base != null) { baseLostAt = t; baseLostCued = false }
         clearCycle(); dropProbe(); lyingWin.clear()
-        base = null; torsoBase = null; earBase = null
+        base = null; torsoBase = null; earBase = null; faceBase = null
         floorMin = Float.POSITIVE_INFINITY; earMin = Float.POSITIVE_INFINITY; legMinIdle = Float.POSITIVE_INFINITY; fromRest = true
     }
 
@@ -521,7 +594,7 @@ class FloorCycleTracker(val profile: FloorProfile, enabled: Set<String> = profil
 
     private fun clearCycle() {
         moving = false; peak = Float.NEGATIVE_INFINITY; peakYaw = null; peakRatio = null; earPeak = Float.NEGATIVE_INFINITY; torsoTiltMax = Float.NEGATIVE_INFINITY
-        kneeGapPeak = null; peakDiff = null; startYaw = null; startRatio = null; raisedFrames = 0; topKnees.clear(); heads.clear(); cycleFrames.clear(); returnAt = null; dwell.clear()
+        kneeGapPeak = null; peakDiff = null; startYaw = null; startRatio = null; raisedFrames = 0; topKnees.clear(); heads.clear(); faces.clear(); faceCams.clear(); gazes.clear(); cycleFrames.clear(); returnAt = null; dwell.clear()
     }
 
     private fun dropProbe() { probeMoving = false; probePeak = Float.NEGATIVE_INFINITY; probePeakYaw = null; probePeakRatio = null; probeMainMax = Float.NEGATIVE_INFINITY; probeReturnAt = null; probeDwell.clear() }
@@ -540,6 +613,7 @@ class FloorCycleTracker(val profile: FloorProfile, enabled: Set<String> = profil
             FloorProfile.CRUNCH -> when (reason) {
                 "sit_up" -> "끝까지 일어나면 크런치로 세지 않아요. 어깨만 바닥에서 들었다 내려와 주세요."
                 "neck_only" -> "목만 당기면 세지 않아요. 어깨가 바닥에서 뜨도록 상체를 말아 올려 주세요."
+                "arms_only" -> "팔만 움직이면 세지 않아요. 팔은 고정하고 상체를 말아 올려 주세요."
                 "shallow" -> "어깨를 바닥에서 더 들어 올려야 세요."
                 else -> null
             }
@@ -549,6 +623,26 @@ class FloorCycleTracker(val profile: FloorProfile, enabled: Set<String> = profil
                 "shallow" -> "다리를 더 높이 올려야 세요."
                 "one_leg" -> "두 다리를 함께 올려야 세요."
                 "feet_touch" -> "발이 바닥에 닿으면 세지 않아요. 바닥 바로 위에서 멈췄다 올려 주세요."
+                else -> null
+            }
+        }
+
+        /**
+         * 기각 사유의 화살표(§101, 문장 표 [cueFor] 옆) — 전부 중력 위 기준([MotionFrame.GRAVITY], 폰을 눕히면 화면 위 ≠ 중력 위)·보이는 쪽 사슬([MotionPick.CHAIN]).
+         * sit_up·feet_touch·arms_only 는 '덜 하라' 는 지적이라 점 — 쉬는 자세에서 방향 화살표를 그리면 반대로 읽힌다. 10-08 크런치 센 회의 어깨 변위·중력 위 cos 중앙값 0.72.
+         */
+        fun motionFor(profile: FloorProfile, reason: String?): FormMotion? = when (profile) {
+            FloorProfile.CRUNCH -> when (reason) {
+                "shallow", "neck_only" -> FormMotion(MotionAnchor.SHOULDERS, high = MotionKind.UP, pick = MotionPick.CHAIN, frame = MotionFrame.GRAVITY)
+                "sit_up" -> FormMotion.mark(MotionAnchor.SHOULDERS, pick = MotionPick.CHAIN, frame = MotionFrame.GRAVITY)
+                "arms_only" -> FormMotion.mark(MotionAnchor.WRISTS, pick = MotionPick.CHAIN, frame = MotionFrame.GRAVITY)
+                else -> null
+            }
+            FloorProfile.LEG_RAISE -> when (reason) {
+                "shallow", "one_leg" -> FormMotion(MotionAnchor.ANKLES, high = MotionKind.UP, frame = MotionFrame.GRAVITY)
+                "trunk_up" -> FormMotion(MotionAnchor.SHOULDERS, high = MotionKind.DOWN, pick = MotionPick.CHAIN, frame = MotionFrame.GRAVITY)
+                "knee_bent" -> FormMotion.mark(MotionAnchor.KNEES, frame = MotionFrame.GRAVITY)
+                "feet_touch" -> FormMotion.mark(MotionAnchor.ANKLES, frame = MotionFrame.GRAVITY)
                 else -> null
             }
         }
@@ -629,6 +723,13 @@ class FloorCycleTracker(val profile: FloorProfile, enabled: Set<String> = profil
         /** 크런치 얕음의 절대 하한 — [FloorProfile.CRUNCH] `shallowDeg`(10°, 2026-10-08 켬: 10-08 폰 팔만 움직인 회 4.8~8.3°·어깨만 든 회 5~13° vs 10-07 제대로 든 회 18~31°). AIHub 8° 가 9.2 % 였으나 16프레임 분할 의존이라 입장 측정은 MM-Fit 윗몸일으키기·폰 블록 세트. */
         val CRUNCH_SHALLOW_DEG: Float get() = FloorProfile.CRUNCH.shallowDeg
         const val PROBE_DEPART = 6f             // 정상 회 귀 들림 p2 8.4°
+        /** 팔만 움직임(§101): 회 창(출발 650 ms 전부터)의 손목 이동 ≥ 0.8 몸통 ∧ 귀 들림 진폭 < 10°. 손목 버퍼 보관 시간, 팔 자세 경계(팔꿈치각). */
+        const val ARMS_ONLY_SWEEP = 0.8f
+        const val ARMS_ONLY_EAR_DEG = 10f
+        const val ARMS_WINDOW_LEAD_MS = 650L
+        const val WRIST_KEEP_MS = 8_000L
+        const val ARM_FOLDED_DEG = 90f
+        const val ARM_EXTENDED_DEG = 120f
         const val PROBE_SLACK = 8f
         // 레그 레이즈 판별(설계 §4.6)
         const val LEG_TRUNK_UP_DEG = 30f

@@ -656,6 +656,8 @@ object SetLogJson {
                         sb.append(",\"reason\":"); str(sb, d.reason)
                         sb.append(",\"trunk_peak\":").append(num(d.trunkPeak)).append(",\"ear_peak\":").append(num(d.earPeak))
                         sb.append(",\"amp\":").append(num(d.amp)).append(",\"knee_top\":").append(num(d.kneeTop)).append(",\"head_med\":").append(num(d.headMed))
+                        if (d.wristSweep.isFinite()) sb.append(",\"wrist_sweep\":").append(num(d.wristSweep))   // §101 arms_only 재료 — 있을 때만
+                        if (d.earAmp.isFinite()) sb.append(",\"ear_amp\":").append(num(d.earAmp))
                         sb.append(",\"side_ok\":").append(d.sideOk)
                     }
                     sb.append('}')
@@ -669,7 +671,9 @@ object SetLogJson {
                     if (i > 0) sb.append(',')
                     sb.append("{\"t_ms\":").append(r.tMs).append(",\"start_t_ms\":").append(r.startMs).append(",\"peak_t_ms\":").append(r.peakMs)
                     sb.append(",\"min\":").append(num(r.min)).append(",\"peak\":").append(num(r.peak))
-                    sb.append(",\"top_ms\":").append(r.topMs).append(",\"descent_ms\":").append(r.descentMs).append(",\"abstain\":").append(r.identityAbstain).append('}')
+                    sb.append(",\"top_ms\":").append(r.topMs).append(",\"descent_ms\":").append(r.descentMs).append(",\"abstain\":").append(r.identityAbstain)
+                    if (r.faceRel.isFinite()) sb.append(",\"face_rel\":").append(num(r.faceRel))   // 크런치 시선 대리(§100) — 재료 없으면 키 부재
+                    sb.append('}')
                 }
                 sb.append(']')
             }
@@ -694,6 +698,7 @@ object SetLogJson {
                     c.auxMin?.let { sb.append(",\"aux_min\":").append(num(it)) }
                     c.rejectFeature?.let { sb.append(",\"reject\":"); str(sb, it) }
                     if (c.orphan) sb.append(",\"orphan\":true")
+                    if (c.src != 'E') sb.append(",\"src\":\"").append(c.src.lowercaseChar()).append('"')   // §101: w = 손목 폴백, u = 못 본 짝(팔꿈치는 생략 — 옛 로그와 같다)
                     sb.append('}')
                 }
                 sb.append(']')

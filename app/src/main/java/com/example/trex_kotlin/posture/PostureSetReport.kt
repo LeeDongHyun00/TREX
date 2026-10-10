@@ -68,15 +68,19 @@ data class HoldSummary(val heldMs: Long, val wallMs: Long, val stopMs: Map<Strin
  * 바닥 반복 계열의 세트 요약(spec §99) — [counted] = 센 회(화면에 보인 수), [rejected] = 세지 않은 동작의 사유별 수(사유 순서 = 음성 우선순위),
  * [abstained] = 측면이 아니라 판별을 유보하고 센 회.
  */
-data class FloorRepSummary(val profile: FloorProfile, val counted: Int, val rejected: List<Pair<String, Int>>, val abstained: Int) {
+data class FloorRepSummary(val profile: FloorProfile, val counted: Int, val rejected: List<Pair<String, Int>>, val abstained: Int,
+                           /** 시선(§101d) — 센 회 중 화면 쪽·반대쪽을 본 회. 재료가 없으면 0. */
+                           val gazeCamera: Int = 0, val gazeAway: Int = 0) {
     val rejectedTotal: Int get() = rejected.sumOf { it.second }
+    /** "시선 벗어남 n회"(화면 쪽·반대쪽 합 — 사용자 결정 10-10 오후, 가르지 않는다) — 0 이면 null. */
+    val gazeLine: String? get() = (gazeCamera + gazeAway).takeIf { it > 0 }?.let { "시선 벗어남 ${it}회" }
 
     companion object {
-        /** 추적기의 기각 목록 → 사유별 수(프로필 사유 순서, 0 은 뺀다). */
-        fun of(profile: FloorProfile, counted: Int, rejectedReasons: List<String?>, abstained: Int): FloorRepSummary {
+        /** 추적기의 기각 목록 → 사유별 수(프로필 사유 순서, 0 은 뺀다). [reps] = 센 회의 상세(시선 집계). */
+        fun of(profile: FloorProfile, counted: Int, rejectedReasons: List<String?>, abstained: Int, reps: List<FloorRep> = emptyList()): FloorRepSummary {
             val by = rejectedReasons.groupingBy { it ?: "" }.eachCount()
             val ordered = (profile.reasons + by.keys.filter { it !in profile.reasons }).mapNotNull { r -> by[r]?.takeIf { it > 0 }?.let { r to it } }
-            return FloorRepSummary(profile, counted, ordered, abstained)
+            return FloorRepSummary(profile, counted, ordered, abstained, reps.count { it.gaze == FloorGaze.CAMERA }, reps.count { it.gaze == FloorGaze.AWAY })
         }
     }
 }
@@ -348,6 +352,7 @@ data class PostureSetReport(
                 append("센 회 ${reps.counted} · 세지 않은 동작 ${reps.rejectedTotal}")
                 if (reps.rejected.isNotEmpty()) append(reps.rejected.joinToString(" · ", "(", ")") { (r, n) -> "${FloorReasons.repLabel(reps.profile, r)} $n" })
                 if (reps.abstained > 0) append(" · 측면이 아니라 판별 유보 ${reps.abstained}회")
+                reps.gazeLine?.let { append(" · ").append(it) }
             })
         }
 

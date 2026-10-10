@@ -389,7 +389,7 @@ class RepHysteresisTest {
 
     @Test fun lungeCountsOnKneeMeanWithoutRomAndKeepsTheComparisonSignal() {
         val lunge = RepSignals.byExercise.getValue("스텝 포워드 다이나믹 런지")
-        assertEquals("knee_mean", lunge.feature)
+        assertEquals(Lunge2d.KNEE_SIG, lunge.feature)   // §101a: 보이는 무릎의 평균
         assertEquals(35f, lunge.minAmp, 0f)
         // ROM 은 knee_out_mean 단위였다 — 신호와 함께 뗐다. 판정하지 않은 ROM 을 '유효' 로 말하지 않도록 null.
         assertNull(lunge.romThreshold)

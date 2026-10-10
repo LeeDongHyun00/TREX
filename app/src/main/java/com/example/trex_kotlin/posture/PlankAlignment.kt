@@ -8,9 +8,10 @@ data class AlignmentItem(val rule: PostureRule, val value: Float?, val verdict: 
     val head get() = rule.baseFeature != PlankGeometry.HIP
     val points get() = if (head) setOf(0,7,8,11,12) else setOf(11,12,23,24,27,28)
     val message get() = when {
-        recovered -> if (head) "고개가 몸통 정렬 범위로 돌아왔어요" else "골반이 어깨와 발목 사이의 정렬 범위로 돌아왔어요"
-        head && side > 0 -> "고개가 들려 있어요. 시선을 바닥으로 두고 목을 몸통과 나란히 해주세요"
-        head -> "고개가 많이 숙여져 있어요. 목을 몸통과 나란히 해주세요"
+        recovered -> if (head) "시선이 양손 사이 바닥으로 돌아왔어요" else "골반이 어깨와 발목 사이의 정렬 범위로 돌아왔어요"
+        // 시선(§100) — 음성(`PlankGazeVoice.cueFor`)과 같은 말
+        head && side > 0 -> "고개가 들려 앞을 보고 있어요. 시선을 양손 사이 바닥에 두세요"
+        head -> "고개가 많이 숙여졌어요. 시선을 양손 사이 바닥이나 살짝 앞에 두세요"
         side > 0 -> "골반이 올라가 있어요. 어깨와 발목을 잇는 선에 맞춰 조금 내려주세요"
         else -> "골반이 처져 있어요. 어깨와 발목을 잇는 선에 맞춰 조금 올려주세요"
     }

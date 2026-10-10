@@ -1,0 +1,102 @@
+{
+ "problem_id": "curl_swing",
+ "summary": "덤벨 컬 반동 회가 세어진 핵심 원인은 RC2다. 권장 사선 D 에서 반동에 반응하는 ship 검사는 '팔꿈치 앞 이탈' 하나뿐인데, 이 검사는 정적 '내밀기'를 잡도록 만든 수축 위치 검사다. 기준은 첫 3회이고, 2단 구조(코칭 0.12, 차단 0.20, RepForm.kt:1476-1478·839)라서 반동 회 값 0.150~0.172 는 지적만 받고 세어졌다. 11회는 가까운 팔이 300 ms 한 칸에서만 앞으로 나가 OK 가 됐고, 이어서 §100 교정됨 경로가 칭찬을 냈다.\n\n해결: 반동을 '반복 안의 어깨 굴곡 이동'으로 정의한 반복 검사 `repform|덤벨 컬|팔 반동`을 추가한다.\n- 카메라 쪽 팔의 elbow_fwd2d_near 를 쓴다. 이 피처는 2D 상완각과 ρ 0.998 이라 새 피처가 필요 없다.\n- 수축 중앙값에서 그 회 이완 중앙값을 뺀 값이 0.22 이상(≈ 상완 31°)이고, 같은 팔 팔꿈치 높이가 0.10 이상 올라오면(AND) 위반이다.\n- 이 값은 그 회 자신과 비교하므로(REP_DELTA) 첫 3회 기준이 요·자세 변화에 끌려가는 문제와 무관하다.\n- 위상은 평가기 신호(elbow_minside) 대신 가까운 팔 자신의 팔꿈치각으로 나눈다(새 필드 phaseSignal=\"elbow_{near}\"). 그래야 교대 컬에서도 판정한다. 기존 신호로 나누면 MM-Fit 사선 183회 중 145회가 유보됐다.\n- 1단 검사다. COACH 에서는 위반 회를 횟수에서 빼고 \"반동 없이 팔꿈치를 옆구리에 고정하고 팔만 접으세요\"를 말한다.\n\n이 정의는 scratch 사본 재생기에 시험 구현해 앱 창 그대로 쟀다.\n- MM-Fit 정답 구간 사선 회: 판정 168/183(92 %), 위반 0회(0 %, 95 % 상한 1.8 %)\n- AIHub 단일 프레임 상한: 정상 1.2/1.2 %(D/B), '팔꿈치 고정' 충족 1.8/2.1 %\n- 폰 컬 32세트: 새 위반은 10-08 반동 4회(11·14·15·16)와 09-29 14:39 세트의 이미 차단된 앞 내밀기 4회뿐이다. 10-08 정상 회 최대값은 0.140 이었다.\n\n덧붙이는 수정은 셋이다.\n- 60° 넘는 대스윙 기각에 이유 음성을 붙인다. 컬 팔별 경로에 cueSource 를 만들고 RejectionCues 를 재사용한다(RC4).\n- 기각 뒤 '교정됐어요'는 깨끗하게 센 회에서만 낸다.\n- '앞 이탈'의 교정됨 문구를 축 단위로 좁힌다(§100 과대 문구).\n\n새 검사는 beta 로 넣고 폰 블록 1회로 검출률을 확인한 뒤 ship 한다.",
+ "definition": "[올바른 동작] 상완이 몸통 옆에 거의 수직으로 머물고, 팔꿈치 굴곡만으로 덤벨을 올린다. 수축 끝에서 생기는 어깨 굴곡은 자연스러운 범위다. 문헌은 정상 ≈10°로 본다(docs/CURL_RULES_RESEARCH.md:50). AIHub 정상 클립의 2D 상완 앞 기울기 변화는 p50 +2.2°, p95 +18.0°, p99 +25.7°(D)였다(work/curl_swing/design/aihub_swing.txt).\n\n[틀린 동작 — 팔 반동] 들어 올리는 국면에서 어깨 굴곡(상완을 앞·위로 휘두름)이 덤벨을 띄우는 동작이다. 상완–몸통 각 변화가 ≳30°이고(문헌: 의도적 변형 30°, 검출 코드 35~40°), 팔꿈치가 옆구리를 떠나 앞으로 나가면서 위로 올라온다. 흔히 직전에 뒤로 빼는 예비 스윙이 따른다. 10-08 반동 회의 가까운 팔 최소값은 −31~−35°였고, 같은 요대 정상은 −20~−27°였다. 정적으로 팔꿈치를 앞에 둔 채 하는 '내밀기'는 다른 오류이며 '앞 이탈'이 맡는다(10회 0.369 차단). 상완 60°를 넘는 대스윙은 자세 오류가 아니라 '컬 아님'으로, 판별 게이트가 이미 기각한다(RepCounter.kt:1011).\n\n[관측 가능성 — 권장 D(왼어깨 쪽 45°)]\n(1) 카메라 쪽 팔의 앞 성분 elbow_fwd2d_near 를 쓴다(Arm2d.kt:148-160). 2D 상완각과 프레임 단위 ρ 0.998(n 253)이고, 기울기는 ≈0.0072/°다. 그래서 반복 안 이동 0.22 는 2D 상완각 변화 ≈31°에 해당한다.\n(2) 팔꿈치 높이 상승 elbow_rise2d_{팔}은 화면 수직 성분이라 요와 무관하게 보인다.\n(3) 300 ms 격자에서 수축 프레임은 회당 1~3개다. 그래서 '그 팔의' 수축 중앙값과 이완 중앙값을 쓴다. 10-08 반동 4회 측정값은 이동 0.298/0.328/0.363/0.346, 상승 0.208/0.266/0.208/0.146 이고, 정상 13회의 이동은 −0.027~+0.140 이다.\n\n[못 보는 것 — 원칙 #5]\n(a) 정면 C: 앞 성분이 깊이 축이라 안 보인다. 정면에서는 '팔꿈치 뜸'(손목 ≥ 어깨 + 0.15)만 남는데, 이번 반동 4회 중 1회만 넘었다.\n(b) 사선에서 먼 팔만 휘두르는 반동: 먼 팔꿈치는 몸통 뒤에 가려 쓰지 않는다(curl.md:6).\n(c) 속도·모멘텀, 내릴 때 떨어뜨림: 300 ms 로는 판정할 수 없다.\n(d) 요 20° 안팎: 앞 성분이 sin 요 만큼 줄어 같은 반동이 약 40 % 작게 보인다. 이때는 놓치는 쪽(세는 쪽)으로 틀린다.\n(e) 교대 컬에서 가까운 팔이 쉬는 회: 유보한다.",
+ "changes": [
+  {
+   "file": "app/src/main/java/com/example/trex_kotlin/posture/RepForm.kt — data class RepFormCheck (:60-165)",
+   "change": "선택 필드 셋을 추가한다(기본값 null, 기존 검사는 영향 없음).\n- `phaseSignal: String?`: 창을 위상(상단·바닥·사이클)으로 나눌 신호. 템플릿 `{near}` 는 반복 뷰의 가까운 팔이다(B → R, D → L — Arm2d.nearSign 규약). feature·confirmFeature 의 `{near}` 도 같은 팔로 푼다.\n- `confirmFeature: String?`·`confirmMin: Float?`: HIGH 위반의 AND 조건. 같은 위상의 CYCLE 최대 − TOP 중앙값이 confirmMin 이상이어야 위반이다. 값이 없으면 유보한다.\nKDoc 은 한국어로 쓴다.",
+   "rationale": "반동은 '그 팔이 이 회에서 움직인 양'이다. 평가기 신호 elbow_minside 로 상단을 잡으면, 교대 컬에서는 한 팔이 늘 굽어 있어 상단이 비고 REP_DELTA 가 유보된다. 측정: MM-Fit 사선 183회 중 145회 유보(work/curl_swing/design/x_stats.txt), 가까운 팔 위상으로 바꾸면 판정 168/183. AND 상승 조건은 상단이 뒤로 빠진 자세로 오염돼 생긴 x축 이동(09-26 03:38 세트 26972 ms: 이동 0.210, back +0.148, 상승 −0.008)을 거른다."
+  },
+  {
+   "file": "app/src/main/java/com/example/trex_kotlin/posture/RepForm.kt — RepFormEvaluator.onCycle (:480) + 새 private evaluateNear",
+   "change": "`raw` 계산에서 phaseSignal 이 있는 검사는 새 private 함수 `evaluateNear(c, window, repView)`로 보낸다. 동작 순서:\n1. 반복 뷰가 B/D 가 아니면 ABSTAIN '가까운 팔 모름'.\n2. 창(:403의 window)에서 Arm2d.nearSign(Arm2d.yawOf(frame))가 그 팔인 프레임만 남긴다.\n3. 그 팔 팔꿈치각의 창 진폭이 minAmp(35°) 미만이면 ABSTAIN '가까운 팔 반복 없음'.\n4. 기존 segment(:697, signal 인자 재사용)를 prefix 없이, 서 있음 = 최대 − STANDING_BAND×minAmp 로 호출한다.\n5. 기존 evaluate(:843)로 판정한다.\n6. VIOLATION 이면 confirm 을 잰다. 값이 없으면 ABSTAIN '상승 값 없음', confirmMin 미만이면 OK.\nRepFormOutcome 에 `confirm: Float?`를 더하고, 로그 키 `conf` 를 PostureSetLog.kt(SetLogJson.repForm)에 추가한다.",
+   "rationale": "segment 는 이미 신호를 인자로 받으므로(:697-698) 새 위상 로직이 필요 없다. 같은 코드를 scratch 사본(work/curl_swing/design/patch_phase.py)으로 시험 구현했다. 10-08 세트의 기존 판정 차이는 0건이고 새 검사는 4/4 를 잡았다(eng_stats.txt). 엔진 파일 안의 변경이라 재생기 engineFiles 는 그대로다."
+  },
+  {
+   "file": "app/src/main/java/com/example/trex_kotlin/posture/RepForm.kt — RepFormSpecs.curl() (:1436-1515)",
+   "change": "'상체 숙임'(:1443) 바로 뒤, '팔꿈치 뜸' 앞에 새 검사를 넣는다.\nRepFormCheck(\"repform|$ex|팔 반동\", ex, \"팔 반동(반복)\", \"팔꿈치\", RuleStatus.BETA(폰 블록 통과 뒤 SHIP), Arm2d.ELBOW_FWD_NEAR, RepPhase.BOTTOM, RepFormStat.MEDIAN, RepFormRef.REP_DELTA, lo = null, hi = 0.22f, highText = \"팔을 앞으로 휘둘러 들었어요\", highLabel = \"반동\", fix = \"반동 없이 팔꿈치를 옆구리에 고정하고 팔만 접으세요\", views = setOf(\"B\",\"D\"), phaseSignal = \"elbow_{near}\", confirmFeature = \"elbow_rise2d_{near}\", confirmMin = 0.10f, cue = \"팔 반동\", motion = FormMotion(MotionAnchor.ELBOWS, high = MotionKind.TOWARD_TORSO)).\ngateHi 는 두지 않는다(1단: 위반 = 차단).\nreason·cautions 에 아래 수치를 남긴다: MM-Fit 0/168, AIHub 1.2/1.2 %·1.8/2.1 %, 폰 4/4, 먼 팔·정면·요 20° 한계.",
+   "rationale": "리스트 순서가 곧 사건 우선순위다(eventFor :513, ship 먼저 → 검사 순서). 그래서 앞 이탈의 코칭 단계 위반(14~16회)보다 차단 사유인 '반동'이 먼저 말해진다. fix 문장은 '팔꿈치 뜸'(:1454)과 같은 말이라 정면·사선 문장이 일관되고, 사용자가 놓쳤다고 한 '반동'이라는 말이 귀에 닿는다. 1단을 택한 이유: 이번 불만은 '지적했는데 셈'이었다(앞 이탈 2단, :1477-1478·839)."
+  },
+  {
+   "file": "app/src/main/java/com/example/trex_kotlin/posture/RepForm.kt — 앞 이탈(:1481)·몸에서 떨어짐(:1495) refExcludedBy, recoveredFill(:1276), VERSION(:1186)",
+   "change": "- 두 검사의 refExcludedBy 에 \"repform|$ex|팔 반동\"을 더한다.\n- recoveredFill 에 둘을 더한다: \"curl|팔 반동\" → \"좋아요, 반동 없이 들었어요.\", \"curl|팔꿈치 앞 이탈\" → \"좋아요, 팔꿈치가 옆구리로 돌아왔어요.\"\n- VERSION 을 repform_v0.9 에서 repform_v0.10 으로 올린다(CLAUDE.md 의 rules_version 표기도 함께 바꾼다).",
+   "rationale": "반동 회의 수축 위치는 '앞 이탈' 첫 3회 기준 모음과 '떨어짐' 가로 기준 모음에 새면 안 된다(§62c 후속 9와 같은 누설 방지). 교정됨 문구는 판정한 축만 말해야 한다. 11회처럼 앞 이탈 한 축만 OK 이고 뜸 0.154·높이 상승 0.303 이 뷰 유보였는데 '팔꿈치 자세' 전체가 교정됐다고 말하면 원칙 #1 위반이다."
+  },
+  {
+   "file": "app/src/main/java/com/example/trex_kotlin/posture/RepCounter.kt — cueSource(:70), 새 object CurlRejectCues : IdentityCueSource(:1057 인터페이스)",
+   "change": "cueSource 를 `legTracker ?: floorTracker ?: (if (arms != null) CurlRejectCues else null)` 로 바꾼다. CurlRejectCues.cueFor 문장은 다음과 같다.\n- \"upperarm_vert_L\"/\"upperarm_vert_R\" → \"팔을 휘두르면 세지 않아요. 팔꿈치를 옆구리에 붙이고 팔만 접어 주세요.\"\n- \"torso_tilt2d\" → \"몸통을 흔들면 세지 않아요. 상체를 세운 채 팔만 접어 주세요.\"\n- 모르는 사유 → null(틱만).\nRepCounter.kt 안에 두므로 엔진 파일 목록은 바뀌지 않는다.",
+   "rationale": "RC4 대응이다. 33~47 s 대스윙 2회(61.7°·65.4°)는 기각됐지만 cueSource 가 null 이라(:70, FloorLive.kt:240) 13 s 동안 틱도 음성도 없었다. 문체는 한 다리 계열 기각 문장(LegCycle.kt:463 \"허리를 숙이면 세지 않아요. …\")을 따른다. RejectCueGate 의 6 s 간격(FloorLive.kt:222)과 speakLatest 배선(PostureLive.kt:1091-1095)을 그대로 쓴다."
+  },
+  {
+   "file": "app/src/main/java/com/example/trex_kotlin/posture/FloorLive.kt — RejectCueGate.takeRecovery(:214) + PostureLive.kt:1203",
+   "change": "takeRecovery 에 인자를 둘 더한다: `countedClean: Boolean = true, alreadyPraised: Boolean = false`. countedClean 이 false 면 대기를 유지하고 null 을 돌려준다. alreadyPraised 면 대기만 지우고 null 을 돌려준다.\nPostureLive.kt:1203 은 엔진 쪽 헬퍼 한 번 호출로 바꾼다. 예: `RejectionCues.recovery(refs.floorLive.rejectGate, formReps, tally.repsShort, say.isNotEmpty())`. PostureLiveSessionScreen 에 지역 변수와 인라인 람다(all{} 등)를 더하지 않는다.",
+   "rationale": "지금 코드는 기각 뒤 처음 '센' 회에서 무조건 \"좋아요, 교정됐어요.\"를 붙인다. 컬에 cueSource 를 켜면 10-08 기준으로 44713 ms 대스윙 기각 직후의 10회(앞 이탈 차단·ROM 미달)나 11회(반동 차단)에 칭찬이 나간다. 같은 회에 rf.recoveryEvent 칭찬(:1199)과 겹치면 한 번만 말해야 한다. 헬퍼로 빼는 이유는 VerifyError 함정(CLAUDE.md, 레지스터 256 근처) 때문이다."
+  },
+  {
+   "file": "app/src/main/java/com/example/trex_kotlin/posture/PostureScope.kt — baseStartLine(:36-55)",
+   "change": "FLOOR_LINES(:77)처럼 컬 범위 문장을 둔다(덤벨 컬·바벨 컬): \"팔꿈치 위치·팔 반동·상체 숙임을 봐요. 비스듬히 서면 카메라 쪽 팔만 보여서, 반대쪽 팔만 휘두르는 반동과 내리는 속도는 판정하지 않아요.\" PostureScopeTest 를 갱신한다.",
+   "rationale": "원칙 #5다. 먼 팔만의 반동, 템포, 정면 촬영은 이 검사가 못 본다. 지금 자동 문장(\"팔꿈치·상체를 봐요\")은 반동까지 본다는 오해를 남긴다."
+  },
+  {
+   "file": "app/src/main/java/com/example/trex_kotlin/posture/RepForm.kt — '몸통 반동'(:1498, 선택·beta 유지)",
+   "change": "ref 를 START_DELTA 에서 REP_DELTA 로 바꾸고 phaseSignal = \"elbow_{near}\" 를 준다. 시작 자세에 torso_tilt2d 가 없어도 회마다 판정하게 된다. 상태는 BETA 그대로다.",
+   "rationale": "RC5다. 10-08 세트는 시작 상단 요가 −54.4·−55.3°라 baseline 에 torso_tilt2d 가 없었고, 그래서 17/17 유보였다. 이번 증상의 원인은 아니지만, 같은 '반동' 문제를 폰 블록에서 함께 기록하려면 판정이 돼야 한다. 음성·차단이 없어 횟수 위험은 없다."
+  },
+  {
+   "file": "docs/exercises/curl.md, research/aihub_fitness/KOTLIN_PORTING_SPEC.md(새 §101), docs/exercises/FAULT_LINES.md(fault_lines.py 재생성), RepFormPriorTable.kt(rep_priors.py --write 로 무변경 확인)",
+   "change": "§101 '덤벨 컬 팔 반동 — 가까운 팔 위상의 반복 안 이동'을 쓴다. 내용: 정의, 왜 위치(앞 이탈)가 아니라 이동인지, 왜 가까운 팔 위상인지, 운영점 표(work/curl_swing/design/grid.txt), 못 보는 것, 폰 블록 결과. curl.md 에 함정 한 줄을 더한다: \"반동 검사는 REP_DELTA·가까운 팔 위상 — 평가기 신호(elbow_minside)로 나누면 교대 컬에서 상단이 비어 유보된다.\" 대사 목록을 재생성한다.",
+   "rationale": "저장소 관례상 기능마다 spec 절과 근거를 남긴다. RepFormLinesTest 는 새 검사의 문장·고치는 말·단서를 요구한다(CLAUDE.md). REP_DELTA 는 사전값을 쓰지 않으므로 RepFormPriorTable 은 바뀌지 않아야 한다."
+  },
+  {
+   "file": "app/src/test/java/com/example/trex_kotlin/posture/RepFormTest.kt, FloorWiringTest.kt(또는 새 CurlRejectCueTest), PostureScopeTest.kt",
+   "change": "테스트를 더한다.\n- 합성 사선 D 동시 컬: 이동 0.30 & 상승 0.2 → VIOLATION·gate, correct = false.\n- 정상 이동 0.05 → OK.\n- 이동 0.30·상승 0.03 → OK.\n- 정면 C → ABSTAIN.\n- 가까운 팔이 쉬는 교대 회 → ABSTAIN '가까운 팔 반복 없음'.\n- 상승 피처 없음 → ABSTAIN.\n- 교대 컬(먼 팔이 먼저 굽는 창)에서 가까운 팔 위상으로 판정되는지.\n- 컬 cueSource 문장, 차단 회 다음에는 takeRecovery 가 null 이고 깨끗한 회에서만 문장이 나오는지.\n- 같은 회 칭찬 1회.\n- FormMotionTest·RepFormLinesTest 통과.",
+   "rationale": "유보가 정상으로 새지 않는지(원칙 #1)와 교정됨 오칭찬 경로(RC3·§100)를 잠근다."
+  }
+ ],
+ "behavior_after": "COACH(ship 뒤):\n- 반동 회(가까운 팔 이동 ≥ 0.22, 상승 ≥ 0.10): HUD 큰 숫자가 오르지 않는다. 낮은 틱과 함께 첫 회는 \"반동 없이 팔꿈치를 옆구리에 고정하고 팔만 접으세요.\"를, 12 s 쿨다운 안에서는 \"팔 반동.\"을 speakLatest 로 한 회 한 문장 말한다. 팔꿈치에 몸 쪽 화살표가 뜨고 countNote 에 사유가 남는다.\n- 반동을 멈춘 첫 판정 OK 회: \"좋아요, 반동 없이 들었어요.\" 유보 회에서는 말하지 않는다.\n- 상완 60° 넘는 대스윙: 기각되고, 낮은 틱과 함께 \"팔을 휘두르면 세지 않아요. 팔꿈치를 옆구리에 붙이고 팔만 접어 주세요.\"(6 s 간격). 그 뒤 깨끗하게 센 회에서만 \"좋아요, 교정됐어요.\"를 말한다.\n- 리포트: \"팔꿈치 · N회 중 반동 k회\", 정확 M/N.\n- 10-08 세트에 대입하면: HUD 12 → 8(11·14·15·16회 제외), 정확 14/17 → 10/17. 11회 오칭찬(13:47:46.598)은 사라지고, 14회는 '팔꿈치 고정' 대신 '반동 없이 …', 15·16회는 '팔 반동.'으로 바뀐다. 대스윙 34488·44713 ms 에는 이유 음성이 나간다(10 s 간격이라 둘 다).\n\nTRACK:\n- 같은 판정으로 전부 센다(대스윙 기각만 '컬 아님'으로 빠진다 — 판별이라 두 모드 공통).\n- 자세 음성과 빨간 강조는 없다. 리포트에 '반동 k회'가 기록된다. 대스윙 기각 이유는 두 모드 모두 말한다(한 다리·바닥 계열과 같은 정책, 결정 4).\n\nbeta 단계(폰 블록 전):\n- 화면에 '참고 · 팔 반동'만 표시하고, 음성·차단은 없다.\n- 반동 회의 \"교정됐어요\" 오칭찬은 이 단계부터 사라진다. beta 위반이 교정됨 분기보다 먼저 걸리기 때문이다(PostureLive.kt:1194-1199).\n- 앞 이탈 코칭 문장은 종전과 같다.",
+ "principles_check": "#1(판정 안 한 것을 판정했다고 말하지 않는다)\n- 정면, 가까운 팔 미확인, 가까운 팔 미굴곡, 상승값 없음은 모두 ABSTAIN 이다. 유보는 정확을 깎지도, '깨끗'을 만들지도 않는다(RepFormRep.correct :260 그대로).\n- 교정됨은 OK 판정에서만 나온다. '앞 이탈'의 교정됨 문구는 판정한 축으로 좁힌다.\n\n#2(검증과 검증 중을 같은 확신으로 말하지 않는다)\n- 새 검사는 BETA 로 넣는다(화면 '참고', 음성·분모·차단 없음).\n- 근거는 MM-Fit 0/168, AIHub ≤ 2.1 %, 폰 4/4(1명 1세트)다.\n- 폰 블록으로 검출률을 잰 뒤 SHIP 한다(메모리 '폰 블록으로 검출률 확인 뒤 올림'). AIHub 에 반동 조건이 없으므로 우리가 정의하고 폰 라벨 세트로 올리는 §62 경로다.\n\n#3(모드는 정책만 가른다)\n- 임계는 COACH·TRACK 동일이다. COACH 는 빼고 말하고, TRACK 은 기록만 한다.\n\n#4(모든 사용자 원칙)\n- 임계 0.22·0.10 은 모집단 표(MM-Fit 15명, AIHub 44명)에서 골랐다. 이 사용자 값에 맞추지 않았다. 사용자 반동(0.298~0.363)과 사용자 정상 최대(0.140)는 판정 근거가 아니라 검출 확인용이다.\n- 기준이 그 회 자신의 이완 자세(REP_DELTA)라 체형·카메라 편향을 상쇄한다.\n\n#5(못 보는 것을 밝힌다)\n- 먼 팔만의 반동, 정면, 템포·떨어뜨리기, 요 20° 안팎의 둔감을 PostureScope 문장과 cautions 에 쓴다.\n\n#6(오탐이 사용자를 잘못 교정시킨다)\n- 음성은 ship 일 때 COACH 에서만, 한 회 한 문장, speakLatest 로 낸다.\n- 쿨다운 안에서는 짧은 단서만 낸다.\n- 반동 사유가 앞 이탈 코칭 문장보다 먼저라, 서로 다른 지적 둘이 연달아 나오지 않는다.\n\n#7(횟수 게이트 입장 조건)\n- 모집단 정상 반복 오탐률(진짜 300 ms 캡처, 사선): MM-Fit 0/168(95 % 상한 1.8 %).\n- AIHub 단일 프레임 상한: 정상 1.2/1.2 %, 고정 충족 1.8/2.1 %(B 경계).\n- 유보는 통과다(판정 92 %).\n\nVerifyError\n- PostureLiveSessionScreen 에는 :1203 한 줄을 헬퍼 호출로 바꾸는 것뿐이다. 지역 변수와 인라인 람다를 더하지 않는다. 새 상태(교정 대기)는 기존 RejectCueGate(refs.floorLive 홀더) 안에 둔다.\n\n300 ms 격자\n- 검사는 SESSION_SAMPLE_INTERVAL_MS(300) 프레임의 위상 중앙값만 쓴다. 근거 측정도 cadence 300 캡처로 했다. 85 ms 예외를 새로 만들지 않는다.\n\nspeakLatest\n- 새 문장은 모두 기존 say 리스트와 speakLatest 경로로 나간다. flush 를 쓰지 않는다.\n\n재생기 engineFiles\n- 변경은 RepForm.kt·RepCounter.kt 안에만 있다(안드로이드 의존 없음). FloorLive.kt 헬퍼는 앱 전용이다.",
+ "risks": [
+  "검출 근거가 1명 1세트(반동 4회)뿐이다. 모집단 정상 쪽은 MM-Fit·AIHub 로 쟀지만, '일부러 한 반동'의 크기 분포는 이 사용자 하나다 → beta 로 넣고 폰 블록 전엔 차단하지 않는다.",
+  "요 의존: 앞 성분은 sin|요| 에 비례한다. 요 20° 근처에서는 같은 반동(요 35°에서 0.30)이 약 0.18 로 보여 놓친다(세는 쪽 오류). 50° 넘게 돌아서면 정상 회의 이동도 커지는데, MM-Fit 검증 범위는 요 −18~−42°, 폰은 −17~−55°다. 정규화(÷ sin 요)는 요 추정 흔들림(세트 안 −19~−45°, curl.md:7) 때문에 넣지 않았다.",
+  "먼 팔만 휘두르는 반동과, 교대 컬에서 먼 팔 차례의 반동은 못 본다(유보·OK). 10-08 11회처럼 먼 팔이 크게 휘두를 때 가까운 팔이 따라 움직이면 잡히지만(이동 0.298), 한 팔만 하면 놓친다.",
+  "AIHub '팔꿈치 고정' 충족 클립의 B 뷰 2.1 %(단일 프레임)는 입장 조건 2 % 경계다. 정상(고정·으쓱·척추 충족)은 1.2 %. 폰 블록에서 정상 회 위반이 1건이라도 나오면 0.25(고정 충족 1.2/1.3 %)로 올리고 다시 잰다.",
+  "REP_DELTA 기준은 그 회의 이완 자세다. 이완 때 상완을 뒤로 두는 사용자는 이동이 커진다(09-26 03:38 세트 26972 ms: 이동 0.210, back +0.148). 상승 AND 조건이 막았지만, 상승도 함께 큰 자세(으쓱)라면 오탐 소지가 있다.",
+  "몸통을 뒤로 젖히는 반동도 몸통선이 기울어 '팔 반동'으로 읽힐 수 있다. 둘 다 반동이라 문장('반동 없이 …')은 맞지만, 부위 화살표(팔꿈치)는 어긋날 수 있다.",
+  "기각 음성을 컬에 켜면, :1203 의 무조건 '교정됐어요'가 차단된 회(10·11회)에 나간다. 이 수정(countedClean)을 빼먹으면 이번 오칭찬과 같은 종류의 결함이 새로 생긴다.",
+  "PostureLive 수정은 VerifyError 위험이 있다. 헬퍼 호출로만 바꾸고 기기 verify 로 확인한다.",
+  "§100 교정됨 문구(앞 이탈 축 문구)는 시선 등 다른 설계와 같은 경로(recoveryEvent)를 만진다. 동시에 고치면 충돌한다.",
+  "curl_onearm 설계(팔별 경로에 손목 폴백·못 본 짝 기각)와 RepCounter.kt 를 같이 고친다. 새 기각 사유가 생기면 CurlRejectCues 표에 없어 틱만 나간다.",
+  "바벨 컬도 같은 검사를 받지만(RepFormSpecs.curl(\"바벨 컬\")) 팔별 경로가 없어 대스윙 기각 음성은 없다. 바벨 근거는 대리(덤벨 모집단)뿐이다."
+ ],
+ "offline_validation": [
+  "[구현 전 — 완료] scratch 사본 재생기(work/curl_swing/design/jvm, patch_phase.py — 저장소 밖 엔진 사본에 phaseSignal·confirm 시험 구현)로 MM-Fit 컬 59세트와 폰 컬 32세트(09-25~10-08, setlog_captures.py)를 재생했다. 결과: MM-Fit 정답 구간 사선 183회 판정 168(92 %)·위반 0(95 % 상한 1.8 %), 가까운 팔 이동 p99 0.074·최대 0.118(w17 상완 스윙 습관). 폰은 새 위반 8회 = 10-08 #11·14·15·16 + 09-29 14:39 #14·16·18·19(전부 기존 앞 이탈 차단 회)이고, 그 밖 정확 회의 새 위반은 0이다. 10-08 기존 검사 판정 차이 0(eng_stats.txt, x_stats.txt)",
+  "[구현 전 — 완료] AIHub B1 MP2D 단일 프레임(수축 − 이완), 이동 ≥ 0.22 & 상승 ≥ 0.10: 정상(173클립·44명) D 1.2 %·B 1.2 %, '팔꿈치 고정' 충족(683) 1.8 %·2.1 %, 내밀기 위반 35 %·31 %. 운영점 격자는 grid.txt(0.18~0.25 × 0.05~0.15), 분포는 aihub_swing.txt",
+  "[구현 후 1] 저장소 replay-jvm 을 새로 빌드하고 같은 91세트를 재생한다. 통과: '팔 반동' 판정이 시험 구현과 100 % 일치(위반 8회 동일, 값 차 < 1e-4). 앱 로그 대비 카운트·시각·valid 파리티 불변",
+  "[구현 후 2] MM-Fit 정답 구간 사선 회. 통과: 위반 ≤ 2 %(기대 0/168), 판정 비율 ≥ 85 %, 세트 정확 0.80·±1 0.98 불변(curl.md 기준값)",
+  "[구현 후 3] AIHub 스크립트 재실행(aihub_swing.py·grid.py, 앱 임계로). 통과: 정상 ≤ 1.5 %, '팔꿈치 고정' 충족 ≤ 2.5 %. 넘으면 hi 를 0.25 로 올리고 1·2를 다시 잰다",
+  "[구현 후 4] 폰 32세트에서 기존 검사의 판정 차이 0. refExcludedBy 추가로 기준 모음이 바뀐 회는 목록으로 내고, 그 회의 판정 변화를 하나씩 설명한다. 09-29 14:39 세트 정확 수는 불변(이미 앞 이탈 차단), 10-08 정확은 14 → 10",
+  "[구현 후 5] ./gradlew :app:testDebugUnitTest 전부 통과(RepFormTest 새 사례, RepFormLinesTest, FormMotionTest, 컬 기각 음성·takeRecovery 테스트, PostureScopeTest). replay-jvm 테스트 통과. rep_priors.py --write 결과 RepFormPriorTable.kt diff 0, fault_lines.py 재생성",
+  "[구현 후 6] 기기 설치 뒤 adb shell cmd package compile -m verify -f com.example.trex_kotlin → logcat 'failed to verify' 0건"
+ ],
+ "phone_protocol": "공통 조건: 권장 사선 D(사용자 왼어깨가 카메라 쪽, 약 45°), 덤벨, 검증 모드 끔(음성 확인), 세트마다 좌표 로그(xy)를 남긴다. 반동 = 팔을 뒤로 살짝 뺐다가 상완을 앞으로 휘둘러 덤벨을 띄우는 동작이다. 손이 어깨 높이까지 가되 어깨 위로 크게 넘기지는 않는다(상완 30~45°).\n\n세트 1 [COACH·동시 컬]: 정상:5 반동:3 정상:2 반동:3 정상:2\n세트 2 [COACH·교대 컬, 왼+오른 = 1회]: 정상:3 반동(양팔):3 반동(오른팔만 = 먼 팔):2 정상:2\n세트 3 [COACH·동시 컬]: 큰휘두르기(손이 어깨 위로 크게):2 정상:2\n세트 4 [TRACK·동시 컬]: 정상:3 반동:3\n(선택) 세트 5 [COACH·정면 C]: 정상:3 반동:3 — 범위 기록용. 새 검사는 유보돼야 하고 '팔꿈치 뜸'만 반응한다.\n\n합격 기준:\n(1) 가까운 팔이 들어간 반동 회 9회(세트 1의 6 + 세트 2의 3) 중 COACH 에서 빠진 회 ≥ 8(≥ 89 %). 빠진 회마다 낮은 틱이 나고, 첫 회 또는 12 s 뒤에는 \"반동 없이 팔꿈치를 옆구리에 고정하고 팔만 접으세요.\", 12 s 안에서는 \"팔 반동.\"이 나온다.\n(2) 정상 회 19회(세트 1~4)에서 '팔 반동' 위반 0. 1건이면 임계를 0.25 로 올려 재생 재채점 후 세트 1을 다시 한다.\n(3) 먼 팔만 한 반동 2회: 판정 안 돼도 실패가 아니다(범위 밖, 기록). 잡혔다면 값을 기록한다.\n(4) 세트 3: 큰휘두르기 2회가 0회로 세어지고, 낮은 틱 2회와 \"팔을 휘두르면 세지 않아요. …\" 문장 ≥ 1회가 나온다. 그다음 정상 회에서 \"좋아요, 교정됐어요.\"가 정확히 1회 나오고, 차단·미달 회에서는 나오지 않는다.\n(5) 반동 회(위반 회)에서 \"교정됐어요\" 류 문장이 한 번이라도 나오면 실패다. \"좋아요, 반동 없이 들었어요.\"는 반동을 말한 뒤 첫 OK 회에서만 나온다.\n(6) 세트 4(TRACK): 6회 전부 세어지고 자세 음성 0, 리포트에 '반동 3회'가 기록된다.\n(7) 블록 4세트를 재생하면 앱 카운트·판정과 차이 0이다.\n\n(1)·(2)·(4)·(5)를 모두 통과하면 '팔 반동'을 SHIP 으로 올리고 spec §101 에 결과를 적는다.",
+ "user_decisions_needed": [
+  "① 검사 단계 구조: (A·추천) 1단 — 위반(이동 ≥ 0.22 & 상승 ≥ 0.10)이면 COACH 에서 그 회를 빼고 말한다. (B) 2단 — 코칭 0.18 / 차단 0.25. B 는 중간 크기 반동(이동 0.18~0.25)을 지적만 하고 센다. 이번 불만('교정은 하는데 횟수 인정')과 같은 모양이라 추천하지 않는다.",
+  "② 승격 경로: (A·추천) beta 로 넣고 폰 블록 1회(약 10분) 통과 뒤 ship — 메모리 규칙 '폰 블록으로 검출률 확인 뒤 올림'과 원칙 #2. (B) 오프라인 근거(MM-Fit 0/168, AIHub ≤ 2.1 %, 폰 32세트 새 오탐 0)로 바로 ship(§63 앞무릎 깊이 같은 사용자 결정 예외). B 를 고르면 그 사이에도 반동 회가 빠지지만, 검출률은 1명 4회 근거뿐이다.",
+  "③ 먼 팔 반동: (A·추천) 못 봄으로 밝힌다(PostureScope 문장). (B) 먼 팔 가운데선 피처(elbow_fwd2d_R/L)로 '참고'(beta) 검사를 추가한다. MM-Fit 먼 팔 이동에서 0.345 튐이 1건(0.8 %) 있었고 가림 때문에 불안정하다.",
+  "④ 상완 60° 넘는 대스윙 기각 음성: (A·추천) 두 모드 모두 이유를 말한다(판별 = 횟수 입장 조건, 한 다리·바닥 계열과 같은 정책). (B) COACH 만.",
+  "⑤ '팔꿈치 앞 이탈'의 교정됨 문구를 \"좋아요, 팔꿈치가 옆구리로 돌아왔어요.\"처럼 축 단위로 바꿀지(추천: 예 — 한 축 OK 로 '팔꿈치 자세' 전체를 말하지 않게). §100 다른 종목 문구 정리와 함께 정할 수도 있다."
+ ],
+ "effort": "M",
+ "depends_on": [
+  "§100 교정됨 경로 — RepFormEvaluator.recoveryEvent(RepForm.kt:579-590)·RejectCueGate.takeRecovery(FloorLive.kt:214)·PostureLive.kt:1196-1203: 축별 문구와 '깨끗하게 센 회에서만 교정' 조건(시선 등 다른 설계와 공유)",
+  "기각 음성 배선 — RepCounter.cueSource(:70)·IdentityCueSource(:1057)·RejectionCues.handle(FloorLive.kt:235-242), 한 다리·바닥 계열과 공용",
+  "COACH 횟수 게이트 PostureLive.kt:1125-1130(RepFormRep.correct)과 한 회 한 문장 speakLatest 발화 순서(:1175-1201)",
+  "반복 검사 뷰 잠금 lockView(RepForm.kt:741-748)와 가까운 팔 규약 Arm2d.nearSign(B = 오른팔, D = 왼팔, Arm2d.kt:90-95)",
+  "교정 화살표 앵커 FormMotion(ELBOWS, TOWARD_TORSO) — 화살표 문제 설계(work/arrows)와 공유",
+  "덤벨 컬 팔별 경로 RepCounter.kt(curl_onearm 설계 — 손목 폴백·먼 팔 가림과 같은 파일)",
+  "LiveSessionRefs 홀더(PostureLive.kt:1653, refs.floorLive.rejectGate)·PostureLiveSessionScreen 지역 변수 금지(VerifyError)",
+  "재생기 engineFiles(replay-jvm/build.gradle.kts) — 새 파일 없이 RepForm.kt·RepCounter.kt 안에서만 바꾼다",
+  "spec §62c(컬 반복 검사·2단 앞 이탈·기각 게이트)와 RepFormPriorTable/fault_lines 생성 절차"
+ ]
+}

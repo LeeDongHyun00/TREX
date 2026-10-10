@@ -124,6 +124,8 @@ class PostureCoreParityTest {
                 val rotatedUp = rotate(Vec3(0f, 1f, 0f), axis, rad)
                 val rotated = PoseFrame(rotatedJoints, rotatedUp).features()
                 for ((feature, expected) in base) {
+                    // §101 골반축·무릎 수평 벡터 성분(hip_ax_*, knee_fx/fz)은 세계 수평면 좌표라 장면과 함께 돌면 바뀐다 — 불변인 것은 그 투영(kl_st, LegCycle)이다
+                    if (feature.startsWith("hip_ax_") || feature.startsWith("knee_fx_") || feature.startsWith("knee_fz_")) continue
                     val actual = rotated[feature]
                     if (actual == null) {
                         mismatches += "${case.name} [$label] $feature: 회전 후 누락"

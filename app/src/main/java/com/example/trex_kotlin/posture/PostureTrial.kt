@@ -11,10 +11,13 @@ package com.example.trex_kotlin.posture
  * 해제 조건: 설계 문서 §5 의 폰 블록 세트(정상:N 오류:M)에서 검출 ≥ 80 %·정상 블록 오탐 없음, 그 뒤 이 집합에서 뺀다. 두 이름 집합을 함께 고친다.
  */
 object PostureTrial {
-    /** 앱 운동 이름(카탈로그·운동 목록·편집). */
-    val appNames: Set<String> = setOf("크런치", "레그 레이즈", "플랭크")
-    /** AIHub 규칙 종목 이름(규칙셋·카운터·세트 로그·[PostureScope]). */
-    val ruleNames: Set<String> = setOf("크런치", "라잉 레그 레이즈", "플랭크")
+    /**
+     * 앱 운동 이름(카탈로그·운동 목록·편집). **2026-10-09 오후 사용자 결정으로 비었다**(§101c "초반에 다른 운동과 달리 시험 대사들이 추가되어 있는데 제거해") — 시험 단계 꼬리표·시작 문장이
+     * 더는 나오지 않는다. 판별·시선·멈춤 음성이 들어와(§99~§101c) 시험 단계 표시의 목적(틀린 회를 세고 교정이 없음을 알림)이 사라졌다. 기계는 남겨 둔다 — 다시 넣으려면 이름을 넣는다.
+     */
+    val appNames: Set<String> = emptySet()
+    /** AIHub 규칙 종목 이름(규칙셋·카운터·세트 로그·[PostureScope]) — 위와 같이 비었다. */
+    val ruleNames: Set<String> = emptySet()
 
     /** 운동 목록의 스위치 아래 짧은 꼬리표(52 dp 안). */
     const val LABEL = "시험 단계"

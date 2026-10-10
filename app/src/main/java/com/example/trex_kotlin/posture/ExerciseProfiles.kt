@@ -27,6 +27,11 @@ const val ALTERNATING_COUNT_RULE = "왼쪽과 오른쪽을 한 번씩 해야 1�
 const val SIDE_EACH_COUNT_RULE = "왼발 앞과 오른발 앞을 따로 셉니다. 한쪽을 다 채우면 반대쪽을 알려 드려요. 앞무릎은 80도 가까이 굽혀 주세요."
 /** 한 다리 계열(§97) — 쪽 = 움직인 다리. 네 종목 모두 쪽마다 목표, 왼쪽 한 번 + 오른쪽 한 번 = 1회(사용자 결정 2026-10-06 저녁). */
 const val LEG_PAIR_COUNT_RULE = "왼쪽과 오른쪽을 따로 세고, 한 번씩 해야 1회예요. 좌우를 못 본 동작은 짝에 넣지 않아요."
+/**
+ * 컬(팔별 카운터 §62c·§101) — 왼팔 사이클 + 오른팔 사이클 = 1회(동시든 교대든). 화면에 안 보이는 팔은 세지 않는다(못 본 짝, §101 — 종전 '가상 짝' 복사 폐기).
+ * 한 팔만 한 회를 이제 세지 않으므로 이 규칙을 들어야 버그로 느끼지 않는다. 짧게(세트 시작 한 문장 예산, 10-08 카운트다운 설계).
+ */
+const val ARM_PAIR_COUNT_RULE = "양팔을 한 번씩 올려야 1회예요. 화면에 안 보이는 팔은 세지 않아요."
 
 /**
  * 본인 기준 반복 검사가 있는 종목의 시작 안내(§62c 후속 9) — 첫 반복들이 팔꿈치 위치의 기준이 된다. 처음부터 벌리면 그 벌림이 '정상' 이 되므로
@@ -47,6 +52,42 @@ val FLOOR_PREPARATION: Map<String, String> = mapOf(
     "플랭크" to "무릎을 대고 준비해도 괜찮아요. 다리를 펴고 골반을 들면 시간을 재기 시작해요.",
 )
 
+/**
+ * 세는 핵심 조건 한 문장(§101 ESS, ≤ 24음절 ≈ 5.07 s) — 이미 준비된 사용자가 시작(최선 5.4 s) 전에 들을 수 있는 유일한 문장. 첫 회 전에 꼭 필요한 한 가지만:
+ * 컬은 첫 반복이 본인 기준, 바닥은 시작 자세가 있어야 센다, 한 다리는 기각 사유 1순위, 스쿼트는 처음 선 자세가 발 간격·발끝의 기준(§101 시작 자세 확인). 나머지는 세트 중 기각 대사가 그 회에 말한다.
+ */
+val ESSENTIAL_LINES: Map<String, String> = mapOf(
+    "덤벨 컬" to "처음 두세 번은 팔꿈치를 옆구리에 붙여 정확히 해 주세요.",
+    "바벨 컬" to "처음 두세 번은 팔꿈치를 옆구리에 붙여 정확히 해 주세요.",
+    "스탠딩 니업" to "무릎을 접은 채 골반 높이까지 올려야 세요.",
+    "스탠딩 사이드 크런치" to "팔꿈치가 옆으로 올린 무릎에 닿아야 세요.",
+    "런지" to "앞무릎을 80도 가까이 굽혀 주세요.",
+    "바벨 런지" to "앞무릎을 80도 가까이 굽혀 주세요.",
+    "사이드 런지" to "허벅지가 수평이 되게 깊게 앉아야 세요.",
+    "크로스 런지" to "발을 뒤로 교차해 깊게 내려가야 세요.",
+    "크런치" to "누워서 무릎을 세우면 세기 시작해요.",
+    "레그 레이즈" to "누워서 다리를 바닥에 내리면 세기 시작해요.",
+    "플랭크" to "다리를 펴고 골반을 들면 시간을 재기 시작해요.",
+    "기본 스쿼트" to "처음 선 발 너비와 발끝 방향이 기준이에요.",
+)
+/** 자리 문장(§101 PLACE, ≤ 21음절) — 공유 `capture.voice` 대신 쓸 종목만. 바닥 세 종목은 폰 위치. */
+val PLACE_LINES: Map<String, String> = mapOf(
+    "크런치" to "휴대폰은 몸 옆 바닥에 가로로 두고, 머리부터 발목까지 보이게 해 주세요.",
+    "레그 레이즈" to "다리를 들었을 때 발까지 보이도록 휴대폰을 2미터쯤 떨어뜨려 주세요.",
+)
+/** 세부 문장(§101 DET, 각 ≤ 17음절) — 가장 이른 시작 전에 끝날 수 있을 때만 말한다. 한 다리 계열의 짝 규칙·기각 사유, 컬의 짝 규칙. */
+val DETAIL_LINES: Map<String, List<String>> = mapOf(
+    "덤벨 컬" to listOf("양팔을 한 번씩 올려야 1회예요.", "화면에 안 보이는 팔은 세지 않아요."),
+    "바벨 컬" to listOf("양팔을 한 번씩 올려야 1회예요.", "화면에 안 보이는 팔은 세지 않아요."),
+    "스탠딩 니업" to listOf("왼쪽 한 번, 오른쪽 한 번이 1회예요.", "다리를 뻗거나 허리를 숙이면 세지 않아요."),
+    "스탠딩 사이드 크런치" to listOf("왼쪽 한 번, 오른쪽 한 번이 1회예요.", "다리만 올리거나 앞으로 올리면 세지 않아요."),
+    "런지" to listOf("왼발 앞과 오른발 앞을 따로 세요.", "한쪽을 다 채우면 반대쪽을 알려 드려요."),
+    "바벨 런지" to listOf("왼발 앞과 오른발 앞을 따로 세요.", "한쪽을 다 채우면 반대쪽을 알려 드려요."),
+    "사이드 런지" to listOf("왼쪽 한 번, 오른쪽 한 번이 1회예요.", "허리를 숙이거나 무릎이 발끝을 넘으면 세지 않아요."),
+    "크로스 런지" to listOf("왼쪽 한 번, 오른쪽 한 번이 1회예요.", "발이 교차하고 무릎이 깊게 굽어야 세요.", "허리를 숙이면 세지 않아요."),
+    "플랭크" to listOf("무릎을 대고 준비해도 괜찮아요."),
+)
+
 /** 쪽별로 세는 종목(앱 이름) — 런지 둘은 `RepFormSpecs.STEP_LUNGES`(걸음 검사기), 나머지 넷은 한 다리 계열(`LegProfile`, §97). 왼 1 + 오른 1 = 1회. */
 val SIDE_EACH_EXERCISES = setOf("런지", "바벨 런지", "크로스 런지", "사이드 런지", "스탠딩 니업", "스탠딩 사이드 크런치")
 
@@ -57,9 +98,8 @@ val SIDE_EACH_EXERCISES = setOf("런지", "바벨 런지", "크로스 런지", "
  *   런지류는 걸음마다 무릎이 굽어 무릎 신호(knee_mean·knee_minside)가 걸음마다 한 번 내려간다 — 카운터 사이클 하나가 한 걸음이므로
  *   사이클 둘을 1회로 묶는다(`RepUnitAccumulator`). 목표 도달 자동 진행(spec §42)은 유지하므로 세트는 두 쪽을 다 한 뒤에 넘어간다.
  *   이 정의는 시작 전에 밝힌다([ALTERNATING_COUNT_RULE], 설계 §4.8).
- *   덤벨 컬·스탠딩 니업은 [RepUnit.CYCLE] 이고 안내에 짝 규칙을 넣지 않는다. 카운트 신호가 두 팔·두 다리의 **평균**(elbow_mean·hip_mean)이라
- *   양쪽을 함께 하는 반복은 한 사이클 = 양쪽 = 1회로 이미 같은 정의다. 한쪽씩 번갈아 하는 반복은 평균 신호가 절반만 움직여 한쪽이 한 사이클로
- *   잡힌다는 보장이 없고(MM-Fit 교대 컬 영상 MediaPipe: 지금 카운터 재현율 0.09) 쪽별 귀속도 없다 — 지키지 못하는 정의를 말하지 않는다(원칙 #1).
+ *   덤벨 컬은 [RepUnit.CYCLE] 이지만 카운터가 팔별(§62c, `RepCounter` 팔별 경로)이라 왼팔 사이클 + 오른팔 사이클 = 1회다 — 안내는 [ARM_PAIR_COUNT_RULE](§101).
+ *   (옛 근거 '카운트 신호가 두 팔 평균이라 짝 규칙을 말하지 않는다' 는 팔별 카운터 도입 전의 것.)
  */
 data class ExerciseProfile(val name: String, val referenceExercise: String?, val capture: CapturePosition,
     val floor: Boolean, val kind: ObservationKind, val metricFeatures: List<String>, val alternating: Boolean = false,
@@ -78,8 +118,30 @@ data class ExerciseProfile(val name: String, val referenceExercise: String?, val
             "사이드 런지" -> "$LEG_PAIR_COUNT_RULE 왼 무릎을 굽히며 몸을 왼쪽으로 옮기면 왼쪽 1회예요. 무릎을 허벅지가 수평이 되게 깊게 굽혀야 세요. 허리를 숙이거나 무릎이 발끝을 넘으면 세지 않아요. "
             "스탠딩 니업" -> "$LEG_PAIR_COUNT_RULE 무릎을 접은 채 골반 높이까지 올려야 세요. 다리를 뻗거나 허리를 숙이면 세지 않아요. "
             "스탠딩 사이드 크런치" -> "$LEG_PAIR_COUNT_RULE 무릎을 굽힌 채 옆으로 올리며 옆구리를 접어 팔꿈치가 무릎에 닿아야 세요. 다리만 올리거나, 앞으로 올리거나, 앞으로 숙이면 세지 않아요. "
+            "덤벨 컬", "바벨 컬" -> "$ARM_PAIR_COUNT_RULE "
             else -> if (repUnit == RepUnit.SIDE_PAIR) "$ALTERNATING_COUNT_RULE " else if (repUnit == RepUnit.SIDE_EACH) "$SIDE_EACH_COUNT_RULE " else ""
         }) + (referenceHint?.let { "$it " } ?: "") + "몸이 화면에 잡히면 3초 뒤 시작해요."
+    /**
+     * 준비 안내 음성의 문장 계획(§101 `PreparationVoicePlan`) — ESS(세는 핵심 조건 한 문장, ≤ 24음절) → PLACE(자리·방향, 아직 안 맞을 때만) → DET(세부, 시작 전에 끝날 때만).
+     * 약속 문장 '몸이 화면에 잡히면 3초 뒤 시작해요' 는 음성에서 빼고 화면 고정 문구로 옮겼다. 낱말은 판별 기각 대사(`LegCycleTracker.cueFor`·`FloorCycleTracker.cueFor`)와 같다.
+     */
+    fun preparationLines(): List<PrepLine> {
+        val out = ArrayList<PrepLine>()
+        ESSENTIAL_LINES[name]?.let { out += PrepLine(PrepKind.ESS, it) }
+        out += PrepLine(PrepKind.PLACE, PLACE_LINES[name] ?: "${capture.voice}.")
+        DETAIL_LINES[name]?.forEach { out += PrepLine(PrepKind.DET, it) }
+        if (name !in DETAIL_LINES) when {
+            repUnit == RepUnit.SIDE_PAIR -> out += PrepLine(PrepKind.DET, ALTERNATING_COUNT_RULE)
+            repUnit == RepUnit.SIDE_EACH -> out += PrepLine(PrepKind.DET, "왼발 앞과 오른발 앞을 따로 세요.")
+        }
+        return out
+    }
+    /** 화면 '세는 조건' 전문(ESS + DET) — 음성에서 뺀 내용은 화면이 가진다(원칙 #5). 없으면 null. */
+    val countingConditions: String? get() = (listOfNotNull(ESSENTIAL_LINES[name]) + DETAIL_LINES[name].orEmpty()).takeIf { it.isNotEmpty() }?.joinToString(" ")
+    /** 사이드 런지(§101): 준비 확인의 옆 공간 검사 계수(선 자리 중심 ± k×다리 길이가 화면 안). 다른 종목은 null. */
+    val lateralReach: Float? get() = if (name == "사이드 런지") 0.9f else null
+    /** 사이드 런지(§101): 검은 무대를 가로 전체(배율 ≤ 1)로 — 스탠스가 이미지 폭의 3/4 이라 배율 1.46 이면 편 다리가 화면 밖(관절 67.5 % → 2.6 %). */
+    val stageFullWidth: Boolean get() = name == "사이드 런지"
     val cameraEnabled get() = kind != ObservationKind.GUIDE
     /**
      * 준비 확인이 요구하는 몸 범위(§89) — 무릎·골반 피처를 쓰지 않는 서서 하는 팔 운동(컬·레이즈·프레스·랫풀·딥스)은 상체만.

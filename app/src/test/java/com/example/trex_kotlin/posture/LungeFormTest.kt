@@ -62,7 +62,7 @@ class LungeFormTest {
         var t = 0L
         fun frame(knee: Float, minside: Float = knee, pitch: Float = 2f, fwd: Float? = null, shin: Float = 30f, sh: Float = 0f, yaw: Float = 40f, lift: Float = 0.2f) {
             val r = Math.toRadians(yaw.toDouble())
-            val m = hashMapOf("knee_mean" to knee, "knee_minside" to minside, "torso_pitch" to pitch, Lunge2d.SH_LEVEL_2D to sh, Lunge2d.FOOT_LIFT to lift,
+            val m = hashMapOf("knee_mean" to knee, "knee_minside" to minside, "torso_pitch" to pitch, Lunge2d.SH_TILT to sh, Lunge2d.FOOT_LIFT to lift,
                 ViewEstimator.FEAT_COS_SH to cos(r).toFloat(), ViewEstimator.FEAT_SIN_SH to sin(r).toFloat(),
                 ViewEstimator.FEAT_COS to cos(r).toFloat(), ViewEstimator.FEAT_SIN to sin(r).toFloat())
             if (fwd != null) { m[Lunge2d.FWD_D] = fwd; m[Lunge2d.FRONT_SHIN] = shin }
@@ -202,15 +202,20 @@ class LungeFormTest {
         assertNull("코칭 전용은 2걸음 연속일 때만 말한다", ev.eventFor(shift, 60_000L, gate = true))
         val again = f.step(side = 1, shin = 50f)
         assertEquals("repform|$ex|무릎 쏠림", ev.eventFor(again, 90_000L, gate = true)!!.check.id)
-        // 어깨: 같은 앞다리의 처음 2걸음이 기준 — 반대 다리는 따로 모은다
-        val tilt = f.step(side = 1, sh = 0.2f)
-        assertEquals(Verdict.VIOLATION, tilt.o("어깨 기울기").verdict); assertTrue(tilt.correct)
-        // beta — 화면 '참고' 사건만(음성 아님). 폰 검출률이 없다(사용자 세트가 옆이라 전부 유보)
-        val te = ev.eventFor(tilt, 120_000L, gate = true)!!
-        assertEquals("repform|$ex|어깨 기울기", te.check.id); assertFalse(te.ship)
-        assertEquals(Verdict.ABSTAIN, f.step(side = -1, sh = 0.2f).o("어깨 기울기").verdict)
-        assertEquals("옆에서는 어깨 기울기를 못 본다", Verdict.ABSTAIN, Frames(evaluator()).let { g -> repeat(2) { g.step(yaw = 70f) }; g.step(sh = 0.3f, yaw = 70f) }.o("어깨 기울기").verdict)
-        assertFalse("정면은 앞다리 쪽을 몰라 늘 유보 — 뷰에서 뺐다", "C" in RepFormSpecs.byExercise.getValue(ex).first { it.id.endsWith("어깨 기울기") }.views)
+        // 어깨(§101): 중력 기준 3D 기울기의 절대 띠 — 코칭 15°, 차단 20°(2단). 기준 모음이 없어 첫 걸음부터 판정한다
+        val tilt = f.step(side = 1, sh = 22f)
+        assertEquals(Verdict.VIOLATION, tilt.o("어깨 기울기").verdict); assertFalse("ship 차단 단계 — COACH 에서 횟수에서 뺀다(§101a)", tilt.correct)
+        assertTrue("22° 는 차단 단계(gateHi 20)", tilt.o("어깨 기울기").gate)
+        val mid = f.step(side = 1, sh = 17f)
+        assertEquals(Verdict.VIOLATION, mid.o("어깨 기울기").verdict); assertFalse("17° 는 코칭 단계", mid.o("어깨 기울기").gate)
+        assertEquals(Verdict.OK, f.step(side = 1, sh = 8f).o("어깨 기울기").verdict)
+        // ship(§101a) — 음성 사건, 차단 회
+        val tilt2 = f.step(side = 1, sh = 22f)
+        val te = ev.eventFor(tilt2, 120_000L, gate = true)!!
+        assertEquals("repform|$ex|어깨 기울기", te.check.id); assertTrue(te.ship); assertTrue(te.gated)
+        assertEquals("쪽을 모르는 걸음도 판정한다(절대 띠)", Verdict.VIOLATION, f.step(side = -1, sh = 22f).o("어깨 기울기").verdict)
+        assertEquals("옆에서도 3D 어깨 기울기는 판정한다(§101a — 10-09 옆 걸음 5개 27~42°)", Verdict.VIOLATION, Frames(evaluator()).let { g -> repeat(2) { g.step(yaw = 70f) }; g.step(sh = 30f, yaw = 70f) }.o("어깨 기울기").verdict)
+        assertFalse("정면은 앞뒤 뷰가 아니라 뺐다", "C" in RepFormSpecs.byExercise.getValue(ex).first { it.id.endsWith("어깨 기울기") }.views)
     }
 
     @Test
@@ -255,6 +260,23 @@ class LungeFormTest {
         f.frame(155f, 120f, fwd = -0.8f); f.frame(150f, 118f, fwd = -0.8f)
         f.frame(170f, fwd = -0.8f); f.frame(171f, fwd = -0.8f)
         assertEquals(StepSide.RIGHT, ev.missedDipEvent(f.t, counterMidCycle = false)!!.second)
+    }
+
+    @Test
+    fun missedDipIsRecoveredByTheNextDeepStep() {
+        // §100: 말한 얕은 걸음 뒤 깊이를 통과한 센 걸음에서 "좋아요, 앞무릎 깊이가 교정됐어요" — 반대쪽 걸음이어도 교정이다
+        val ev = evaluator(); val f = Frames(ev)
+        f.step(bottom = 75f)
+        repeat(3) { f.frame(171f) }; f.frame(155f, 120f, fwd = 0.6f); f.frame(150f, 118f, fwd = 0.6f); f.frame(170f); f.frame(171f)
+        assertNotNull(ev.missedDipEvent(f.t, counterMidCycle = false, speak = true))
+        assertEquals(setOf("repform|$ex|앞무릎 깊이"), ev.awaitingRecovery)
+        val deep = f.step(bottom = 75f, side = -1)
+        assertEquals("좋아요, 앞무릎 깊이가 교정됐어요.", ev.recoveryEvent(deep, f.t)!!.message)
+        assertTrue(ev.awaitingRecovery.isEmpty())
+        // 말하지 않은(TRACK) 얕은 걸음은 교정 대기에 들어가지 않는다
+        repeat(3) { f.frame(171f) }; f.frame(155f, 120f, fwd = 0.6f); f.frame(150f, 118f, fwd = 0.6f); f.frame(170f); f.frame(171f)
+        assertNotNull(ev.missedDipEvent(f.t, counterMidCycle = false, speak = false))
+        assertTrue(ev.awaitingRecovery.isEmpty())
     }
 
     @Test

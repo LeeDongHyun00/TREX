@@ -58,7 +58,7 @@ class FloorChainTest {
     }
 
     private val angleKeys = setOf(FloorChain.AXIS_H, FloorChain.KNEE, FloorChain.ELBOW, FloorChain.TRUNK_LIFT, FloorChain.EAR_LIFT, FloorChain.THIGH, FloorChain.LEG,
-        FloorChain.HEAD_LIFT, FloorChain.TORSO_ELEV, FloorChain.THIGH_FAR, FloorChain.HEAD_PITCH)
+        FloorChain.HEAD_LIFT, FloorChain.TORSO_ELEV, FloorChain.THIGH_FAR, FloorChain.HEAD_PITCH, FloorChain.FACE)
     private fun assertSame(msg: String, a: Map<String, Float>, b: Map<String, Float>) {
         assertEquals(msg, a.keys, b.keys)
         for ((k, v) in a) {
@@ -75,6 +75,12 @@ class FloorChainTest {
         assertEquals(0f, feats(FloorChain.Kind.CRUNCH, crunch(0.0), screenUp).getValue(FloorChain.TRUNK_LIFT), 0.2f)
         assertTrue(f.getValue(FloorChain.YAW) <= 0.15f)
         assertFalse("크런치에는 레그 레이즈·플랭크 피처가 없다", f.containsKey(FloorChain.THIGH) || f.containsKey(FloorChain.HIP_OFF))
+        // 얼굴 방향(§100): 보이는 쪽 귀 꼭짓점의 코–귀–골반 2D 각 — 크런치에만
+        val pts = crunch(20.0)
+        fun px(i: Int) = doubleArrayOf(pts.getValue(i).first * 1000.0, pts.getValue(i).second * 1000.0)
+        assertEquals(Floor2d.ang(px(0), px(7), px(23)).toFloat(), f.getValue(FloorChain.FACE), 0.5f)
+        assertFalse(feats(FloorChain.Kind.LEG_RAISE, legRaise(), screenUp).containsKey(FloorChain.FACE))
+        assertFalse(feats(FloorChain.Kind.PLANK, plank(), screenUp).containsKey(FloorChain.FACE))
     }
 
     @Test fun legRaiseThighAndLegAreElevationsFromTheTrunkExtension() {

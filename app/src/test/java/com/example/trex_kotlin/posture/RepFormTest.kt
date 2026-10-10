@@ -6,6 +6,7 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import kotlin.math.abs
 
 /**
  * 반복별 자세 검사(spec §62a·§62b, 설계 §21) — 2026-09-25 실기기 세트의 재현.
@@ -73,7 +74,7 @@ class RepFormTest {
         val r4 = f.rep(stance = 0.5f, ev = ev)
         assertEquals(listOf("repform|바벨 스쿼트|발 간격|좁음"), r4.flagged.map { it.check.id })
         assertTrue(r4.correct)
-        val r5 = f.rep(toe = 0f, ev = ev)
+        val r5 = f.rep(toe = -10f, ev = ev)   // §101c 절대 띠 [−5, 45]: 0°(정면)는 정상, −10° 가 '안쪽'
         assertEquals(FormDirection.LOW, r5.flagged.single().direction)
         assertTrue(r5.flagged.single().check.ship); assertFalse(r5.correct)
     }
@@ -81,11 +82,11 @@ class RepFormTest {
     @Test
     fun wideningNeedsBothTheRelativeAndTheShoulderScaledCondition() {
         val ev = evaluator(); val f = Frames(ev)
-        f.rep(ev = ev)                                  // 시작: 발목 0.2 = 어깨 0.2 (절대 1.0)
-        // 시작 대비 ×1.45 이지만 어깨 대비 1.45 < 1.5 — 스타일이 조금 바뀐 것이지 어깨 너비를 넘지 않았다 → 정상
-        val mild = f.rep(stance = 1.45f, ev = ev)
+        f.rep(stance = 0.8f, ev = ev)                   // 시작: 발목 0.16 < 어깨 0.2 (절대 0.8 — 발을 모은 채 시작)
+        // 시작 대비 ×1.5 이지만 어깨 대비 1.2 < 1.3(§101: 1.5 → 1.3, prior=false·첫 정면 반복 기준과 함께 모집단 0/194·0/54·폰 정상 0/45) — 어깨 너비를 넘지 않았다 → 정상
+        val mild = f.rep(stance = 1.2f, ev = ev)
         val o = mild.outcomes.first { it.check.id == "repform|바벨 스쿼트|발 간격" }
-        assertEquals(Verdict.OK, o.verdict); assertEquals(1.45f, o.value!!, 1e-3f)
+        assertEquals(Verdict.OK, o.verdict); assertEquals(1.5f, o.value!!, 1e-3f)
         assertTrue(mild.correct)
         // ×1.6(어깨 대비 1.6) 은 위반
         assertFalse(f.rep(stance = 1.6f, ev = ev).correct)
@@ -111,12 +112,12 @@ class RepFormTest {
         f.rep(ev = ev)
         f.rep(stance = 2.0f, ev = ev)                    // 넓게(끝 프레임까지 넓은 채)
         f.frame(163f, stance = 1.6f); f.frame(163f, stance = 1.2f)   // 발을 모으는 중
-        val back = f.rep(standFrames = 2, stance = 1.0f, toe = 40f, ev = ev)   // 되돌린 뒤 발끝을 벌린 반복
+        val back = f.rep(standFrames = 2, stance = 1.0f, toe = 50f, ev = ev)   // 되돌린 뒤 발끝을 벌린 반복(절대 띠 45° 밖)
         val st = back.outcomes.first { it.check.id == "repform|바벨 스쿼트|발 간격" }
         assertEquals(Verdict.OK, st.verdict); assertEquals(1.0f, st.value!!, 1e-3f)
         // 발 너비 오탐이 사라지니 발끝 위반이 유보되지 않고 잡힌다
         val toe = back.outcomes.first { it.check.id == "repform|바벨 스쿼트|발끝 방향" }
-        assertEquals(Verdict.VIOLATION, toe.verdict); assertEquals(20f, toe.value!!, 1e-3f)
+        assertEquals(Verdict.VIOLATION, toe.verdict); assertEquals(50f, toe.value!!, 1e-3f)
         assertFalse(back.correct)
     }
 
@@ -151,13 +152,87 @@ class RepFormTest {
         // 바닥이 정상(0.20)이면 서 있는 프레임이 −0.02 라도 무릎은 정상 — 세트 평균 규칙의 오탐이 여기서 사라진다
         val good = f.rep(bottomKneeOut = 0.20f, ev = ev)
         assertTrue(good.correct)
-        // 과도 벌림(0.50)은 beta — 화면·리포트만, 정확은 그대로
+        // §101a: knee_out 이 커도 '벌림' 은 아니다 — 벌림 검사는 무릎–발목 거리(knee_ankle_lat_mean)를 보고, 그 피처가 없으면 유보
         val wide = f.rep(bottomKneeOut = 0.50f, ev = ev)
-        assertEquals("repform|바벨 스쿼트|무릎 과도 벌림", wide.flagged.single().check.id)
+        assertTrue(wide.flagged.isEmpty()); assertEquals(Verdict.ABSTAIN, wide.outcomes.first { it.check.id == "repform|바벨 스쿼트|무릎 바깥 벌림" }.verdict)
         assertTrue(wide.correct)
         val s = ev.summary()
         assertEquals(3, s.correct)
         assertEquals(4, s.reps.size)
+    }
+
+    @Test
+    fun kneeSpreadIsJudgedAgainstTheSecondLowestBottomOnKneeToAnkleDistance() {
+        // §101a·§101b(10-09): 바닥에서 무릎이 발목보다 바깥인 거리 ÷ 골반 너비 — 지금까지 두 번째로 작은 바닥값 대비 코칭 +0.25·차단 +0.30. 절대값은 모집단이 넓어(세트 중앙값 p95 0.38) 본인 대비만
+        val ev = evaluator(); var t = 0L
+        fun rep(lat: Float): RepFormRep {
+            fun fr(knee: Float, kneeOut: Float, torso: Float, l: Float) {
+                ev.onFrame(t, mapOf("knee_mean" to knee, "knee_maxside" to knee + 3f, Stance2d.ANKLE_SEP to 0.2f, Stance2d.SHOULDER_SEP to 0.2f, Stance2d.FEATURE to 1f,
+                    Stance2d.TOE_MAXSIDE to 20f, "knee_out_mean" to kneeOut, "torso_incl" to torso, "knee_asym" to -5f, "torso_roll" to 2f, "head_pitch" to -15f, "knee_ankle_lat_mean" to l)); t += 300
+            }
+            repeat(5) { fr(163f, -0.02f, 5f, 0f) }
+            fr(140f, 0.05f, 12f, lat / 2f); fr(110f, 0.12f, 20f, lat); fr(92f, 0.15f, 25f, lat); fr(95f, 0.15f, 22f, lat); fr(100f, 0.15f, 18f, lat); fr(130f, 0.08f, 12f, lat / 2f); fr(158f, 0f, 6f, 0f); fr(163f, -0.02f, 5f, 0f)
+            return ev.onCycle(t - 300, 92f, 163f)
+        }
+        val id = "repform|바벨 스쿼트|무릎 바깥 벌림"
+        val first = listOf(rep(0.05f), rep(0.08f), rep(0.04f))
+        first.forEach { assertTrue(it.outcomes.first { o -> o.check.id == id }.verdict != Verdict.VIOLATION) }   // 처음 2회는 사전값으로 잠정, 3회째부터 두 번째로 작은 값(0.05) 대비
+        assertEquals(0.05f, first[2].outcomes.first { it.check.id == id }.reference!!, 1e-3f)
+        val spread = rep(0.55f)   // 10-09 오전 벌린 회 0.37~0.56 — +0.50 차단
+        val o = spread.outcomes.first { it.check.id == id }
+        assertEquals(Verdict.VIOLATION, o.verdict); assertTrue(o.gate); assertFalse(spread.correct); assertEquals(0.05f, o.reference!!, 1e-3f)
+        val mild = rep(0.38f)     // +0.33 — §101b 차단 +0.30(§101a 의 +0.45 는 14:50 벌린 회 +0.27~+0.31 을 말만 하고 셌다)
+        assertEquals(Verdict.VIOLATION, mild.outcomes.first { it.check.id == id }.verdict); assertTrue(mild.outcomes.first { it.check.id == id }.gate); assertFalse(mild.correct)
+        val coach = rep(0.32f)    // +0.27 — 코칭 단계: 말하되 횟수는 센다
+        val oc = coach.outcomes.first { it.check.id == id }
+        assertEquals(Verdict.VIOLATION, oc.verdict); assertFalse(oc.gate); assertTrue(coach.correct)
+        assertEquals(Verdict.OK, rep(0.16f).outcomes.first { it.check.id == id }.verdict)   // 정상 회 최대 +0.12
+        // 벌린 회는 기준 모음에 들어가도 '두 번째로 작은 값' 이라 기준을 끌어올리지 못한다
+        assertEquals(0.05f, rep(0.40f).outcomes.first { it.check.id == id }.reference!!, 1e-3f)
+    }
+
+    @Test
+    fun aWideFirstRepDoesNotBecomeTheKneeSpreadReference() {
+        // §101b(10-09 14:50 세트): 처음 3회 중앙값 기준은 1회 0.387 이 모음에 들어가 기준 0.18 이 됐고 벌린 회(0.35~0.39)가 Δ +0.17~+0.21 로 코칭 띠 아래였다.
+        // 두 번째로 작은 값 기준은 본인의 붙은 회(0.075·0.112)가 기준이 된다
+        val ev = evaluator(); var t = 0L
+        fun rep(lat: Float): RepFormRep {
+            fun fr(knee: Float, kneeOut: Float, torso: Float, l: Float) {
+                ev.onFrame(t, mapOf("knee_mean" to knee, "knee_maxside" to knee + 3f, Stance2d.ANKLE_SEP to 0.2f, Stance2d.SHOULDER_SEP to 0.2f, Stance2d.FEATURE to 1f,
+                    Stance2d.TOE_MAXSIDE to 20f, "knee_out_mean" to kneeOut, "torso_incl" to torso, "knee_asym" to -5f, "torso_roll" to 2f, "head_pitch" to -15f, "knee_ankle_lat_mean" to l)); t += 300
+            }
+            repeat(5) { fr(163f, -0.02f, 5f, 0f) }
+            fr(140f, 0.05f, 12f, lat / 2f); fr(110f, 0.12f, 20f, lat); fr(92f, 0.15f, 25f, lat); fr(95f, 0.15f, 22f, lat); fr(100f, 0.15f, 18f, lat); fr(130f, 0.08f, 12f, lat / 2f); fr(158f, 0f, 6f, 0f); fr(163f, -0.02f, 5f, 0f)
+            return ev.onCycle(t - 300, 92f, 163f)
+        }
+        val id = "repform|바벨 스쿼트|무릎 바깥 벌림"
+        rep(0.387f); rep(0.075f); rep(0.112f)
+        val wide = rep(0.39f)
+        val o = wide.outcomes.first { it.check.id == id }
+        assertEquals("기준 = 두 번째로 작은 값(0.112), 첫 회 0.387 이 아니다", 0.112f, o.reference!!, 1e-3f)
+        assertEquals(Verdict.VIOLATION, o.verdict); assertFalse("+0.278 은 코칭 단계", o.gate); assertTrue(wide.correct)
+        val wider = rep(0.42f)
+        assertTrue("+0.31 은 차단", wider.outcomes.first { it.check.id == id }.gate); assertFalse(wider.correct)
+    }
+
+    @Test
+    fun toeIsJudgedOnTheAbsoluteBandOnlyRegardlessOfTheStart() {
+        // §101c(사용자 결정 2026-10-09 오후 "처음 발끝 위치에 고정하지 말고 15~45° 혹은 정면 안에만 있다면 잡지 마"): 15:48 세트 — 46° 로 시작, 정면(11~15°) 4회가 옛 '시작 대비 −15°' 로 차단됐다
+        val toe = "repform|바벨 스쿼트|발끝 방향"
+        val ev = evaluator(); val f = Frames(ev)
+        val r1 = f.rep(toe = 46f, ev = ev)
+        val o1 = r1.outcomes.first { it.check.id == toe }
+        assertEquals("46° > 45 — 차단", Verdict.VIOLATION, o1.verdict); assertTrue(o1.gate); assertEquals(FormDirection.HIGH, o1.direction); assertNull(o1.reference); assertFalse(r1.correct)
+        val front = f.rep(toe = 12f, ev = ev)     // 정면 — 옛 기준(46)이면 −34 '안쪽', 절대 띠에서는 정상
+        assertEquals(Verdict.OK, front.outcomes.first { it.check.id == toe }.verdict); assertTrue(front.correct)
+        assertTrue("24° 도 정상", f.rep(toe = 24f, ev = ev).correct)
+        assertTrue("44° 는 띠 안", f.rep(toe = 44f, ev = ev).correct)
+        val inward = f.rep(toe = -8f, ev = ev)
+        assertEquals("−8° 는 안쪽", FormDirection.LOW, inward.outcomes.first { it.check.id == toe }.direction); assertFalse(inward.correct)
+        assertNull("기준이 없으니 '처음부터' 알림도 없다", ev.takeNotice(0L))
+        // 정상 시작(20°)에서 38° 로 벌린 회 — 옛 상대 검사는 +18 위반, 절대 띠에서는 정상(사용자 결정)
+        val ev2 = evaluator(); val g = Frames(ev2); g.rep(ev = ev2)
+        assertEquals(Verdict.OK, g.rep(toe = 38f, ev = ev2).outcomes.first { it.check.id == toe }.verdict)
     }
 
     @Test
@@ -237,7 +312,7 @@ class RepFormTest {
         val first = fg.rep(stance = 1.6f, ev = g)
         val evG = g.eventFor(first, 10_000L, gate = true)
         assertNotNull(evG); assertTrue(evG!!.ship)
-        assertEquals("발 너비가 시작보다 넓어졌어요. 발을 어깨 너비로 다시 두세요.", evG.message)
+        assertEquals("발 너비가 시작보다 넓어졌어요. 발을 처음 선 너비로 다시 두세요.", evG.message)
         // 쿨다운 안의 위반은 게이트에서 침묵이 아니라 짧은 단서(§62c 후속 10) — 문장은 12 s 에 한 번, 단서는 회마다. 게이트가 아니면(TRACK) 종전대로 없음
         val brief = g.eventFor(fg.rep(stance = 1.6f, ev = g), 15_000L, gate = true)!!
         assertTrue(brief.brief); assertTrue(brief.gated); assertEquals("짧은 단서(§90 대사 채우기)", "발 넓어짐", brief.message)
@@ -246,11 +321,192 @@ class RepFormTest {
     }
 
     @Test
+    fun recoveryIsSpokenOnceAfterASpokenViolationPassesAgain() {
+        // §100: 말한 위반의 검사가 다음 반복에서 OK 로 판정되면 "좋아요, … 교정됐어요" 한 번. 듣지 않은 판정(speak=false)·유보·위반이 이어지는 동안은 없다
+        val ev = evaluator(); val f = Frames(ev)
+        f.rep(ev = ev)
+        assertNull("말한 위반이 없으면 교정도 없다", ev.recoveryEvent(f.rep(ev = ev), 5_000L))
+        val wide = f.rep(stance = 1.6f, ev = ev)
+        assertNotNull(ev.eventFor(wide, 10_000L, gate = true))
+        assertEquals(setOf("repform|바벨 스쿼트|발 간격"), ev.awaitingRecovery)
+        assertNull("아직 위반인 회에는 교정이 없다", ev.recoveryEvent(f.rep(stance = 1.6f, ev = ev), 12_000L))
+        val back = f.rep(ev = ev)
+        val rec = ev.recoveryEvent(back, 15_000L)!!
+        assertTrue(rec.recovered); assertEquals("좋아요, 발 너비가 교정됐어요.", rec.message)
+        assertTrue(ev.awaitingRecovery.isEmpty())
+        assertNull("한 번만", ev.recoveryEvent(f.rep(ev = ev), 18_000L))
+        assertTrue("로그에 남는다", ev.summary().live.any { it.id == "repform|바벨 스쿼트|발 간격#교정" })
+        // 쿨다운 안의 짧은 단서도 '말한 위반' 이다
+        assertTrue(ev.eventFor(f.rep(stance = 1.6f, ev = ev), 19_000L, gate = true)!!.brief)
+        assertEquals("좋아요, 발 너비가 교정됐어요.", ev.recoveryEvent(f.rep(ev = ev), 21_000L)!!.message)
+        // 말하지 않는 호출(TRACK·추가 걸음)은 쿨다운도 교정 대기도 쓰지 않는다
+        val t = evaluator(); val g = Frames(t)
+        g.rep(ev = t)
+        assertNotNull(t.eventFor(g.rep(stance = 1.6f, ev = t), 60_000L, gate = true, speak = false))
+        assertTrue(t.awaitingRecovery.isEmpty())
+        assertFalse("쿨다운을 쓰지 않았으니 다음 위반은 문장 전체", t.eventFor(g.rep(stance = 1.6f, ev = t), 62_000L, gate = true)!!.brief)
+        // 기본 틀: 부위 + "자세가 교정됐어요"
+        assertEquals("좋아요, 무릎 자세가 교정됐어요.", squat.first { it.id == "repform|바벨 스쿼트|무릎 안쪽 모임" }.recoveredText)
+    }
+
+    /** 발끝을 위상별로 달리 주는 한 사이클(§101 테스트) — 서 있음 [standToe] ×5 → 하강·바닥 [standToe] → 복귀 [returnToe]. [returnFrames] = 복귀 뒤 서 있는 프레임 수(1 또는 2). */
+    private fun toeRep(f: Frames, ev: RepFormEvaluator, standToe: Float, returnToe: Float, returnFrames: Int = 2): RepFormRep {
+        repeat(5) { f.frame(163f, toe = standToe) }
+        f.frame(140f, toe = standToe); f.frame(110f, toe = standToe); f.frame(92f, toe = standToe); f.frame(95f, toe = standToe); f.frame(100f, toe = standToe); f.frame(130f, toe = standToe)
+        if (returnFrames >= 2) f.frame(158f, toe = returnToe)
+        f.frame(163f, toe = returnToe)
+        return ev.onCycle(f.t - 300, 92f, 163f)
+    }
+
+    @Test
+    fun startToeIsRebasedToTheStandingPoseAfterTheFirstRep() {
+        // §101(10-08 13:46 세트): 스냅샷 36° 는 발을 고치던 중의 값, 첫 반복 뒤 선 자세는 25° — 8° 넘게 다르면 직후 선 자세가 기준. 첫 반복은 스냅샷으로 판정한 채
+        val toe = "repform|바벨 스쿼트|발끝 방향"
+        val ev = evaluator(); val f = Frames(ev)
+        val first = toeRep(f, ev, standToe = 36f, returnToe = 25f)
+        assertEquals(Verdict.OK, first.outcomes.first { it.check.id == toe }.verdict)
+        assertEquals(25f, ev.baseline!!.getValue(Stance2d.TOE_MAXSIDE), 1e-4f)
+        assertEquals(setOf(Stance2d.TOE_MAXSIDE), ev.rebasedFeatures)
+        assertTrue(ev.summary().live.any { it.id == "$toe#기준확인" && abs(it.value - (-11f)) < 1e-3f })
+        // 2회: 46° 로 벌림 → 절대 띠 45° 밖 — 위반·차단(§101c: 값 = 원값, 시작 기준과 무관)
+        val second = toeRep(f, ev, standToe = 46f, returnToe = 46f)
+        val o = second.outcomes.first { it.check.id == toe }
+        assertEquals(Verdict.VIOLATION, o.verdict); assertTrue(o.gate); assertEquals(46f, o.value!!, 1e-3f)
+        assertTrue(ev.summary().lines().any { it.contains("발끝 기준은 첫 반복 뒤 선 자세") })
+        assertTrue(ev.summary().toLog(0L).toJson().contains("\"start_rebased\":[\"${Stance2d.TOE_MAXSIDE}\"]"))
+        // 허용차 안(36 → 30)이면 스냅샷 그대로
+        val ev2 = evaluator(); val g = Frames(ev2)
+        toeRep(g, ev2, standToe = 36f, returnToe = 30f)
+        assertEquals(36f, ev2.baseline!!.getValue(Stance2d.TOE_MAXSIDE), 1e-4f); assertTrue(ev2.rebasedFeatures.isEmpty())
+        // 직후 선 프레임이 하나뿐이면 확인하지 않는다
+        val ev3 = evaluator(); val h = Frames(ev3)
+        toeRep(h, ev3, standToe = 36f, returnToe = 25f, returnFrames = 1)
+        assertEquals(36f, ev3.baseline!!.getValue(Stance2d.TOE_MAXSIDE), 1e-4f)
+    }
+
+    @Test
+    fun footChecksHaveNoPopulationPriorAndToeIsAnAbsoluteBand() {
+        // §101: 발 간격 사전값(화면 폭 단위)은 폰에서 매 세트 거짓 '처음부터 넓어요' 를 냈다 → prior=false(알림·자르기 없음).
+        // §101c: 발끝은 절대 띠 [−5, 45]° 만(사용자 결정 — 시작 자세 기준 없음, REHAB PM_022_18 의 65° 선 자세는 거짓 위반 = 사용자 정의 게이트 예외) — 벌린 채 시작하면 그 회부터 차단
+        val ev = RepFormEvaluator(squat, "knee_mean", 35f)   // 실제 사전값 표 — 사전값은 반복 뷰가 검사 뷰(C) 안일 때만 쓰므로 정면 방향 피처를 준다
+        var t = 0L
+        fun fr(knee: Float) {
+            ev.onFrame(t, mapOf("knee_mean" to knee, "knee_maxside" to knee + 3f, Stance2d.ANKLE_SEP to 0.26f, Stance2d.SHOULDER_SEP to 0.2f, Stance2d.FEATURE to 1.3f,
+                Stance2d.TOE_MAXSIDE to 55f, "toe_out_maxside" to 55f, "knee_out_mean" to 0.1f, "torso_incl" to 5f, "knee_asym" to -5f, "torso_roll" to 2f,
+                ViewEstimator.FEAT_COS to 1f, ViewEstimator.FEAT_SIN to 0f)); t += 300
+        }
+        repeat(3) {   // 폰 시작 발목 0.26(> 옛 refHi 0.1629), 발끝 55°(> 옛 refHi 44.4, beta 시작 띠 50 밖)
+            repeat(5) { fr(163f) }
+            fr(140f); fr(110f); fr(92f); fr(95f); fr(100f); fr(130f); fr(158f); fr(163f)
+            ev.onCycle(t - 300, 92f, 163f)
+        }
+        val width = ev.reps.last().outcomes.first { it.check.id == "repform|바벨 스쿼트|발 간격" }
+        assertEquals(Verdict.OK, width.verdict); assertEquals("기준을 자르지 않는다", 0.26f, width.reference!!, 1e-4f)
+        val toe = ev.reps.last().outcomes.first { it.check.id == "repform|바벨 스쿼트|발끝 방향" }
+        assertNull("절대 띠 — 기준 없음", toe.reference); assertEquals(55f, toe.value!!, 1e-3f)
+        assertEquals("55° 는 절대 띠 45° 밖 — 차단", Verdict.VIOLATION, toe.verdict); assertTrue(toe.gate); assertEquals(FormDirection.HIGH, toe.direction)
+        assertFalse(ev.reps.last().correct)
+        assertNull("'처음부터' 알림 없음(기준이 없다)", ev.takeNotice(10_000L))
+        assertEquals("beta 시작 띠(화면)도 같은 띠", Verdict.VIOLATION, ev.startOutcomes.first { it.check.id == "repform|바벨 스쿼트|발끝 방향|시작" }.verdict)
+    }
+
+    @Test
+    fun footBaselineWaitsForTheFirstFrontRep() {
+        // §101(REHAB PM_022_18): 첫 반복이 사선(D) 준비 동작이면 발 기준은 세우지 않고 첫 정면 반복의 상단에서 세운다. 다른 키(서 있음 수준)는 첫 반복 그대로
+        val ev = evaluator(); var t = 0L
+        fun fr(knee: Float, ankle: Float, yaw: Float) {
+            val r = Math.toRadians(yaw.toDouble())
+            ev.onFrame(t, mapOf("knee_mean" to knee, "knee_maxside" to knee + 3f, Stance2d.ANKLE_SEP to ankle, Stance2d.SHOULDER_SEP to 0.2f, Stance2d.FEATURE to ankle / 0.2f,
+                Stance2d.TOE_MAXSIDE to 20f, "toe_out_maxside" to 20f, "knee_out_mean" to 0.1f, "torso_incl" to 5f, "knee_asym" to -5f, "torso_roll" to 2f,
+                ViewEstimator.FEAT_COS to kotlin.math.cos(r).toFloat(), ViewEstimator.FEAT_SIN to kotlin.math.sin(r).toFloat())); t += 300
+        }
+        fun rep(ankle: Float, yaw: Float): RepFormRep {
+            repeat(5) { fr(163f, ankle, yaw) }
+            fr(140f, ankle, yaw); fr(110f, ankle, yaw); fr(92f, ankle, yaw); fr(95f, ankle, yaw); fr(100f, ankle, yaw); fr(130f, ankle, yaw); fr(158f, ankle, yaw); fr(163f, ankle, yaw)
+            return ev.onCycle(t - 300, 92f, 163f)
+        }
+        val first = rep(0.10f, -40f)   // 사선 준비 동작, 발목 0.10
+        assertNotNull("서 있음 수준은 섰다", ev.baseline!!["knee_mean"])
+        assertNull("발 기준은 미룬다", ev.baseline!![Stance2d.ANKLE_SEP])
+        assertEquals("시작 자세 기준 없음", first.outcomes.first { it.check.id == "repform|바벨 스쿼트|발 간격" }.abstainReason)
+        val second = rep(0.26f, 0f)    // 첫 정면 반복 — 발목 0.26 이 기준(옛 코드면 ×2.6 위반)
+        val o = second.outcomes.first { it.check.id == "repform|바벨 스쿼트|발 간격" }
+        assertEquals(Verdict.OK, o.verdict); assertEquals(0.26f, o.reference!!, 1e-4f)
+        assertEquals(2, ev.footBaselineRep)
+        assertTrue(ev.summary().lines().any { it.contains("발 기준은 2회째") })
+        assertTrue(ev.summary().toLog(0L).toJson().contains("\"start_rep\":2"))
+        assertTrue("시작 검사도 그 반복에서", ev.startOutcomes.any { it.check.id == "repform|바벨 스쿼트|발 간격|시작" && it.verdict != Verdict.ABSTAIN })
+    }
+
+    @Test
+    fun firstExclusionIsFlaggedOncePerCheck() {
+        // §101 U2: 검사별 첫 차단 사건에만 firstExclusion — "이 회는 세지 않았어요" 를 한 번 붙인다. TRACK(speak=false)·쿨다운 뒤 재차단은 아니다
+        val ev = evaluator(); val f = Frames(ev)
+        f.rep(ev = ev)
+        val e1 = ev.eventFor(f.rep(stance = 1.6f, ev = ev), 10_000L, gate = true)!!
+        assertTrue(e1.firstExclusion)
+        assertFalse("쿨다운 안 짧은 단서", ev.eventFor(f.rep(stance = 1.6f, ev = ev), 12_000L, gate = true)!!.firstExclusion)
+        assertFalse("쿨다운 뒤 문장", ev.eventFor(f.rep(stance = 1.6f, ev = ev), 30_000L, gate = true)!!.firstExclusion)
+        val t = evaluator(); val g = Frames(t)
+        g.rep(ev = t)
+        assertFalse("말하지 않으면 소비하지 않는다", t.eventFor(g.rep(stance = 1.6f, ev = t), 10_000L, gate = true, speak = false)!!.firstExclusion)
+        assertTrue(t.eventFor(g.rep(stance = 1.6f, ev = t), 12_000L, gate = true)!!.firstExclusion)
+    }
+
+    @Test
+    fun recoveryWaitsForACleanRep() {
+        // U0(2026-10-08): 교정은 깨끗하게 센 회만 — 같은 부위의 다른 ship 검사가 위반이거나 **뷰 유보지만 값으로는 위반**이면 아직 아니다(10-08 컬 11회 반동 오칭찬)
+        val ev = evaluator(); val f = Frames(ev)
+        f.rep(ev = ev)
+        assertNotNull(ev.eventFor(f.rep(stance = 1.6f, ev = ev), 10_000L, gate = true))
+        val back = f.rep(ev = ev)
+        val width = squat.first { it.id == "repform|바벨 스쿼트|발 간격" }
+        val twin = width.copy(id = "repform|바벨 스쿼트|가짜 발 너비")
+        fun with(o: RepFormOutcome) = back.copy(outcomes = back.outcomes + o)
+        assertNull("같은 부위 ship 검사가 뷰 유보인데 값은 위반", ev.recoveryEvent(with(RepFormOutcome(twin, Verdict.ABSTAIN, 1.8f, 1.8f, 1f, null, 3, "촬영 방향 · D")), 15_000L))
+        assertNull("같은 부위 ship 검사가 위반", ev.recoveryEvent(with(RepFormOutcome(twin, Verdict.VIOLATION, 1.8f, 1.8f, 1f, FormDirection.HIGH, 3)), 15_000L))
+        assertNull("차단 위반이 있는 회", ev.recoveryEvent(with(RepFormOutcome(twin, Verdict.VIOLATION, 1.8f, 1.8f, 1f, FormDirection.HIGH, 3, gate = true)), 15_000L))
+        assertEquals(setOf("repform|바벨 스쿼트|발 간격"), ev.awaitingRecovery)
+        assertNotNull("값 없는 유보는 막지 않는다", ev.recoveryEvent(with(RepFormOutcome(twin, Verdict.ABSTAIN, null, null, null, null, 0, "시작 자세 기준 없음")), 16_000L))
+    }
+
+    @Test
+    fun gazeCheckIsCoachingOnlyWithAnAbsoluteBandOnTheCycleMedian() {
+        // §100: head_pitch 사이클 중앙값 [−45, +5] — 횟수를 빼지 않고(gates=false) 음성은 2회 연속. 중간(정면)은 판정 OK
+        val gaze = squat.first { it.id == "repform|바벨 스쿼트|시선" }
+        assertTrue(gaze.ship); assertFalse(gaze.gates); assertEquals(RepFormRef.NONE, gaze.ref); assertEquals(RepPhase.CYCLE, gaze.phase)
+        assertEquals(MotionAnchor.HEAD, gaze.motion!!.anchor)
+        assertEquals("좋아요, 시선이 교정됐어요.", gaze.recoveredText)
+        val ev = evaluator()
+        var t = 0L
+        fun rep(head: Float): RepFormRep {
+            fun fr(knee: Float, kneeOut: Float, torso: Float) {
+                ev.onFrame(t, mapOf("knee_mean" to knee, "knee_maxside" to knee + 3f, Stance2d.ANKLE_SEP to 0.2f, Stance2d.SHOULDER_SEP to 0.2f, Stance2d.FEATURE to 1f,
+                    Stance2d.TOE_MAXSIDE to 20f, "knee_out_mean" to kneeOut, "torso_incl" to torso, "knee_asym" to -5f, "torso_roll" to 2f, "head_pitch" to head)); t += 300
+            }
+            repeat(5) { fr(163f, -0.02f, 5f) }
+            fr(140f, 0.05f, 12f); fr(110f, 0.12f, 20f); fr(92f, 0.15f, 25f); fr(95f, 0.15f, 22f); fr(100f, 0.15f, 18f); fr(130f, 0.08f, 12f); fr(158f, 0f, 6f); fr(163f, -0.02f, 5f)
+            return ev.onCycle(t - 300, 92f, 163f)
+        }
+        fun verdict(r: RepFormRep) = r.outcomes.first { it.check.id == gaze.id }
+        assertEquals(Verdict.OK, verdict(rep(-18f)).verdict)                        // 폰 바닥에서 정면을 보는 사용자(−18~−21°)
+        assertEquals(Verdict.OK, verdict(rep(-30f)).verdict)                        // AIHub 연기자 중앙값 근처 — 옛 창 규칙이면 정상, 그대로 정상
+        val up = rep(20f)
+        assertEquals(FormDirection.HIGH, verdict(up).direction); assertTrue("코칭 전용 — 정확은 그대로", up.correct)
+        assertNull("한 회 위는 말하지 않는다", ev.eventFor(up, 10_000L, gate = true))
+        val up2 = rep(20f)
+        val e = ev.eventFor(up2, 12_000L, gate = true)!!
+        assertEquals("시선이 위를 향해 있어요. 정면의 한 점을 보세요.", e.message); assertFalse(e.gated)
+        assertEquals("좋아요, 시선이 교정됐어요.", ev.recoveryEvent(rep(-15f), 15_000L)!!.message)
+        assertEquals(FormDirection.LOW, verdict(rep(-60f)).direction)               // 발을 내려다봄
+    }
+
+    @Test
     fun setLevelRuleResultsFollowTheFloorRepConvention() {
         val ev = evaluator(); val f = Frames(ev)
         f.rep(ev = ev)
         repeat(4) { f.rep(stance = 1.6f, ev = ev) }   // 5회 중 4회 넓음
-        f.rep(toe = 38f, ev = ev)                      // 6회 중 1회 발끝
+        f.rep(toe = 50f, ev = ev)                      // 6회 중 1회 발끝(§101c 절대 띠 45° 밖)
         val s = ev.summary()
         val rules = RepFormSpecs.asRules().associateBy { it.id }
         val stance = s.ruleResult(rules.getValue("repform|바벨 스쿼트|발 간격"))!!
@@ -307,15 +563,15 @@ class RepFormTest {
         // 11:37 세트 7~8회: 발끝 −21°·발 너비 ×1.8 → 무릎이 따라 들어와 knee_out ≈ 0. 무릎만 말하면 사용자가 바꾼 것(발)을 못 짚는다
         val ev = evaluator(); val f = Frames(ev)
         f.rep(ev = ev)
-        f.rep(toe = 0f, bottomKneeOut = -0.04f, ev = ev)          // 12:19 세트 3·4회: 발끝 안쪽만(발 너비 그대로)
-        val two = f.rep(toe = 0f, bottomKneeOut = -0.04f, ev = ev)
+        f.rep(toe = -10f, bottomKneeOut = -0.04f, ev = ev)        // 12:19 세트 3·4회: 발끝 안쪽만(발 너비 그대로) — §101c 절대 띠라 −10°
+        val two = f.rep(toe = -10f, bottomKneeOut = -0.04f, ev = ev)
         assertFalse(two.correct)
         val e = ev.eventFor(two, 30_000L)!!
         assertTrue(e.ship)
         assertEquals("repform|바벨 스쿼트|무릎 안쪽 모임", e.check.id)
-        assertEquals("발끝이 시작보다 안으로 모였어요 — 무릎이 따라 움직였어요. 발끝을 시작 자세로 되돌리세요.", e.message)
+        assertEquals("발끝이 안으로 모였어요 — 무릎이 따라 움직였어요. 발끝을 살짝만 바깥으로 두세요.", e.message)
         // 방향이 섞인 검사는 방향별로 센다
-        f.rep(toe = 38f, ev = ev)
+        f.rep(toe = 50f, ev = ev)
         assertEquals("무릎 안쪽 2회 · 발끝 안쪽 2회 · 바깥 1회", ev.summary().flagLine())
     }
 
@@ -325,15 +581,16 @@ class RepFormTest {
             "knee_out_mean__mean", "knee_out_mean", "mean", "world", "<", 0.02388f, "C", "정면", .96f, .94f, 56, true, emptyList())
         val spine = knee.copy(id = "바벨 스쿼트|척추의 중립[flexion]", condition = "척추의 중립", subtype = "flexion", feature = "torso_incl__range", baseFeature = "torso_incl", stat = "range", op = ">", threshold = 30.85f)
         val merged = PostureRuleSet("mp_v0.1", "", listOf(knee, spine)).plusRepForm()
-        assertEquals("mp_v0.1+repform_v0.9", merged.version)
+        assertEquals("mp_v0.1+repform_v0.13", merged.version)
         assertEquals(RuleStatus.BETA, merged.rules.first { it.id == knee.id }.status)
         assertEquals(RuleStatus.SHIP, merged.rules.first { it.id == spine.id }.status)
         val added = merged.rules.filter { it.kind == "rep_form" }
         assertEquals(RepFormSpecs.byExercise.values.flatten().size, added.size)   // 등록부 전체(스쿼트 + 컬, §62c)
         assertTrue(added.filter { it.exercise == "바벨 스쿼트" }.all { it.viewsOk == setOf("C") })
         // 스쿼트 4(상체·무릎·발 간격·발끝) + 컬 5(상체 숙임·뜸·옆 벌림·앞 이탈·몸에서 떨어짐, §62c) + 런지 3(깊이·상체 숙임·무릎 쏠림, §63 — 무릎 쏠림은 코칭 전용).
-        // 런지 어깨 기울기는 beta(폰 검출률 없음). 계열 파일럿(§66): 바벨 컬(덤벨 컬과 같은 ship 5) + 바벨 런지(런지와 같은 ship 3)
-        assertEquals(20, added.count { it.status == RuleStatus.SHIP })
+        // 런지 어깨 기울기는 beta(폰 검출률 없음). 계열 파일럿(§66): 바벨 컬(덤벨 컬과 같은 ship 5) + 바벨 런지(런지와 같은 ship 3) + 스쿼트 시선(§100, 코칭 전용 ship) = 21
+        // §101a: + 스쿼트 무릎 바깥 벌림 1 + 니업 무릎 높이 1 + 런지·바벨 런지 어깨 기울기 2 = 25; §101c: + 크로스 런지 어깨 기울기 1 = 26
+        assertEquals(26, added.count { it.status == RuleStatus.SHIP })
         // 범위 문장: 무릎·발 너비·발끝·상체는 '봄'(반복 검사 ship), 엉덩이(hip rise)는 '검증 중'
         val scope = PostureScope.of(merged, "바벨 스쿼트")
         assertTrue(scope.watched.containsAll(listOf("등·허리", "무릎")))
@@ -356,11 +613,11 @@ class RepFormTest {
         val r = ev.onCycle(f.t - 300, 92f, 163f)
         val toeO = r.outcomes.first { it.check.id == "repform|바벨 스쿼트|발끝 방향" }
         assertEquals(Verdict.OK, toeO.verdict)                 // 이 반복의 하강 직전은 20 — 정상
-        assertEquals(0f, toeO.value!!, 1e-3f)
+        assertEquals("§101c 절대 띠 — 값 = 원값", 20f, toeO.value!!, 1e-3f)
         val next = f.rep(standFrames = 0, toe = 50f, ev = ev)  // 바로 이어서 — 상단 = 이월된 156·156·157(발끝 50)
         val toeN = next.outcomes.first { it.check.id == "repform|바벨 스쿼트|발끝 방향" }
         assertEquals(Verdict.VIOLATION, toeN.verdict)
-        assertEquals(30f, toeN.value!!, 1e-3f)
+        assertEquals(50f, toeN.value!!, 1e-3f)
         assertFalse(next.correct)
     }
 

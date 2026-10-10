@@ -109,6 +109,10 @@ class PlankHoldClock : IdentityCueSource {
     // HOLD 안의 끊김(보류) — 끊김이 시작된 뒤의 판정 칸 전부(위반·정상 섞임). 최근 [STOP_CONFIRM_MS] 의 위반 비율로 멈춤·회복을 정한다
     private class PendingFrame(val t: Long, val dt: Long, val credit: Long, val reason: String?)
     private var breakFrom: Long? = null
+    /** 멈춘 채 이어지는 사유(§101c 사유 교체 사건) — 확정 멈춤의 사유로 시작하고, 바뀐 사유가 [STOP_CONFIRM_MS] 이어지면 그 사유의 STOP 사건을 한 번 더 낸다. */
+    private var stopReason: String? = null
+    private var stopReasonSince = 0L
+    private var stopReasonTold = false
     private val pendingFrames = ArrayList<PendingFrame>()
     // WAIT·STOP 의 HOLD 후보 구간
     private var candSince: Long? = null
@@ -123,6 +127,7 @@ class PlankHoldClock : IdentityCueSource {
     private var labelBeforePause = WAIT_LABEL
 
     override fun cueFor(reason: String): String? = Companion.cueFor(reason)
+    override fun motionFor(reason: String): FormMotion? = Companion.motionFor(reason)
 
     /** WORK 단계 시작 — 폴백 20 s 의 기준. 부르지 않으면 첫 프레임 시각. */
     @Synchronized fun start(tMs: Long) { if (startAt == null) startAt = tMs }
@@ -130,7 +135,7 @@ class PlankHoldClock : IdentityCueSource {
     @Synchronized fun reset() {
         phase = Phase.WAIT; heldMs = 0L; wallMs = 0L; source = SOURCE_CAMERA; firstHoldAt = null; firstStop = null; reason = null
         stops.clear(); closed.clear(); segStart = null; segLabel = WAIT_LABEL; startAt = null; lastT = null
-        clearBreak(); candSince = null; candCredit = 0L; candWall = 0L
+        clearBreak(); candSince = null; candCredit = 0L; candWall = 0L; stopReason = null; stopReasonSince = 0L; stopReasonTold = false
         notProneSince = null; reminded = false; pausedAt = null; pausedTotal = 0L; labelBeforePause = WAIT_LABEL
         waits.clear(); waitTotal = 0L; waitReason = null; waitReasonSince = 0L; hinted.clear()
     }
@@ -230,6 +235,11 @@ class PlankHoldClock : IdentityCueSource {
                 if (candSince != null) { account(null, candWall); candSince = null; candCredit = 0L; candWall = 0L }
                 account(r, dt)
                 if (phase == Phase.STOP && r != segLabel) relabel(t - dt, r)
+                // 멈춘 채 사유가 바뀌어 [STOP_CONFIRM_MS] 이어지면 새 멈춤 사건(§101c — 10-09 플랭크: 골반 멈춤 중 엉덩이 솟음 2 s 가 사건 없이 지나가 말하지 않았다). 사유마다 한 번
+                if (phase == Phase.STOP) {
+                    if (r != stopReason) { stopReason = r; stopReasonSince = t - dt; stopReasonTold = false }
+                    else if (!stopReasonTold && t - stopReasonSince >= STOP_CONFIRM_MS) { stopReasonTold = true; events += PlankHoldEvent(PlankHoldEvent.Kind.STOP, stopReasonSince, r) }
+                }
             }
         }
     }
@@ -255,6 +265,7 @@ class PlankHoldClock : IdentityCueSource {
         if (first) firstHoldAt = from
         relabel(from, HOLD_LABEL)
         phase = Phase.HOLD; candSince = null; candCredit = 0L; candWall = 0L; reminded = false
+        stopReason = null; stopReasonTold = false
         events += PlankHoldEvent(if (first) PlankHoldEvent.Kind.START else PlankHoldEvent.Kind.RESUME, from)
     }
 
@@ -272,6 +283,7 @@ class PlankHoldClock : IdentityCueSource {
         phase = Phase.STOP
         relabel(from, r)
         if (firstStop == null) firstStop = HoldStop(from, r)
+        stopReason = r; stopReasonSince = from; stopReasonTold = true
         events += PlankHoldEvent(PlankHoldEvent.Kind.STOP, from, r)
     }
 
@@ -328,6 +340,10 @@ class PlankHoldClock : IdentityCueSource {
         const val START_CUE = "플랭크가 보여요. 시간을 재기 시작해요."
         const val FALLBACK_CUE = "카메라가 플랭크를 확인하지 못해 이번 세트는 시계로 잴게요."
         const val NOT_PRONE_REMIND_CUE = "플랭크 자세가 보이면 이어서 재요."
+        /** 이유를 말한 자세 멈춤(무릎·골반·솟음) 뒤의 재개(spec §100, `HoldVoice.resumeCue`) — 그 밖의 재개는 톤만. */
+        const val RESUME_CUE = "좋아요, 교정됐어요. 다시 재요."
+        /** 멈춤 문장을 못 들은 재개(§101 들림 장부) — 교정 없이 재개만. */
+        const val RESUME_CONTINUE = "다시 재요."
 
         /**
          * 이 프레임의 멈춤 사유 — 없으면 null(HOLD 조건). 순서 = 우선순위. 재료가 없는 조건은 묻지 않는다(골반 지지선은 팔꿈치가 보일 때만, 솟음은 측면일 때만).
@@ -354,6 +370,14 @@ class PlankHoldClock : IdentityCueSource {
             KNEES_DOWN -> "무릎이 바닥에 닿아 시간을 멈췄어요. 무릎을 펴면 다시 재요."
             HIPS_LOW -> "골반이 내려가 시간을 멈췄어요. 몸을 들면 다시 재요."
             PIKE -> "엉덩이가 높이 올라가 시간을 멈췄어요. 엉덩이를 내리면 다시 재요."
+            else -> null
+        }
+
+        /** 멈춤 사유의 화살표(§101, 문장 표 옆) — 중력 위 기준·보이는 쪽 사슬. 화면 밖·일어섬은 자세가 아니라 그림이 없다. */
+        fun motionFor(reason: String?): FormMotion? = when (reason) {
+            KNEES_DOWN -> FormMotion(MotionAnchor.KNEES, high = MotionKind.UP, pick = MotionPick.CHAIN, frame = MotionFrame.GRAVITY)
+            HIPS_LOW -> FormMotion(MotionAnchor.HIPS, high = MotionKind.UP, pick = MotionPick.CHAIN, frame = MotionFrame.GRAVITY)
+            PIKE -> FormMotion(MotionAnchor.HIPS, high = MotionKind.DOWN, pick = MotionPick.CHAIN, frame = MotionFrame.GRAVITY)
             else -> null
         }
 

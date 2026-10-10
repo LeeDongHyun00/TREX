@@ -156,7 +156,7 @@ class PostureSetLogTest {
             repCount = 0, repEngine = RepEngineLog.of(RepCounter.forSession("스텝 포워드 다이나믹 런지", floor = false)!!),
             repResets = listOf(RepResetEvent(-300L, "pause", afterTMs = null)), thermalStart = 1)
         val lj = SetLogJson.encode(lunge)
-        assertTrue(lj.contains("\"config\":{\"feature\":\"knee_mean\",\"min_amp\":35,\"refractory_ms\":1200,\"max_gap_ms\":1500,\"complete_on_return\":true,\"rom_tier\":\"none\"}"))
+        assertTrue(lj.contains("\"config\":{\"feature\":\"lunge_knee\",\"min_amp\":35,\"refractory_ms\":1200,\"max_gap_ms\":1500,\"complete_on_return\":true,\"rom_tier\":\"none\"}"))   // §101a 신호 폴백
         // 첫 프레임 전의 일시정지: 음수 t_ms, 카운터가 본 프레임이 없으니 after_t_ms = null(재생은 첫 프레임 앞에서 리셋)
         assertTrue(lj.contains("\"resets\":[{\"t_ms\":-300,\"after_t_ms\":null,\"reason\":\"pause\"}]"))
         val none = SetLogJson.encode(SetLog.build("바벨 스쿼트", samples, emptyList(), "mp_v0", "full", "GPU", true, 300L, now = Date(0L),

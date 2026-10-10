@@ -136,6 +136,13 @@ class FloorChain(val kind: Kind) {
         val K = if (kneeOk) p(knee) else null
         if (K != null && A != null) put(KNEE, Floor2d.ang(H, K, A))
         if (visible(el) && visible(wr)) put(ELBOW, Floor2d.ang(S, p(el), p(wr)))
+        // 얼굴이 카메라(화면) 쪽으로 돌아간 정도(§101c 시선 — 사용자 정의 "화면을 보는 것"): 두 귀의 화면 간격 ÷ 코–귀 거리(머리 크기). 옆모습(천장·무릎·바닥을 봄)은 두 귀가 겹쳐 0.1~0.3,
+        // 얼굴이 폰을 향하면 1.2~1.8(10-09 15:55~15:58 크런치·레그 레이즈·플랭크 세트). MediaPipe 가 가려진 귀도 늘 '보임' 으로 내므로 가시성이 아니라 간격으로 본다. 종목 공통
+        if (visible(0) && visible(7) && visible(8)) {
+            val N = p(0); val E1 = p(7); val E2 = p(8)
+            val head = (hypot(N[0] - E1[0], N[1] - E1[1]) + hypot(N[0] - E2[0], N[1] - E2[1])) / 2.0
+            if (head > 1e-6) put(FACE_CAM, hypot(E1[0] - E2[0], E1[1] - E2[1]) / head)
+        }
 
         when (kind) {
             Kind.PLANK -> {
@@ -158,6 +165,15 @@ class FloorChain(val kind: Kind) {
                     put(TRUNK_LIFT, elev(sub(S, H), ground, ux, uy))
                     if (visible(ear)) put(EAR_LIFT, elev(sub(p(ear), H), ground, ux, uy))
                 }
+                // 손목의 몸통 좌표(§101 `arms_only`): 어깨 원점, 골반→어깨 축 성분(`fc_wrist_al`)과 '위' 쪽 법선 성분(`fc_wrist_up`), 단위 = 몸통 길이. 팔꿈치·손목이 보일 때만(`fc_elbow` 와 같다)
+                if (visible(el) && visible(wr)) {
+                    val W = p(wr)
+                    put(WRIST_AL, (((W[0] - S[0]) * (S[0] - H[0]) + (W[1] - S[1]) * (S[1] - H[1])) / torso) / torso)
+                    put(WRIST_UP, devAlong(W, H, S, ux, uy))
+                }
+                // 얼굴 방향(시선 대리, spec §100): 귀 꼭짓점의 코–귀–골반 2D 각. 누우면 ≈ 90°(얼굴이 몸통에 수직), 턱을 당겨 무릎을 보면 작아진다.
+                // 절댓값은 카메라 높이에 따라 달라(AIHub 서 있는 카메라 누움 77° vs 폰 바닥 57~76°) 누운 기준 대비 변화로만 쓴다(`FloorCycleTracker`)
+                if (visible(ear) && visible(0)) put(FACE, Floor2d.ang(p(0), p(ear), H))
             }
             Kind.LEG_RAISE -> {
                 if (upOk) put(AXIS_H, axisDeg(sub(S, H), ux, uy))
@@ -239,6 +255,13 @@ class FloorChain(val kind: Kind) {
         const val HIP_OFF = "fc_hip_off"
         const val HIP_FLOOR = "fc_hip_floor"
         const val HEAD_PITCH = "fc_head_pitch"
+        /** 크런치 얼굴 방향(코–귀–골반 2D 각, °) — 시선 대리(spec §100). 누운 기준 대비 변화 `FloorRep.faceRel` 의 재료. */
+        const val FACE = "fc_face"
+        /** 얼굴이 카메라 쪽으로 돌아간 정도(두 귀 간격 ÷ 코–귀 거리, §101c) — 옆모습 ≤ 0.3, 폰을 보면 ≥ 1.0. 크런치·레그 레이즈 회의 `FloorRep.faceCam`·플랭크 시선의 재료. */
+        const val FACE_CAM = "fc_face_cam"
+        /** 크런치 손목의 몸통 좌표(§101 `arms_only`) — 어깨 원점, 골반→어깨 축 성분·'위' 법선 성분, 몸통 길이 단위. 회 창의 손목 이동(최대 쌍거리)이 팔만 움직인 동작의 재료. */
+        const val WRIST_AL = "fc_wrist_al"
+        const val WRIST_UP = "fc_wrist_up"
 
         const val CHAIN_VIS = 0.5f
         const val FAR_TORSO_VIS = 0.2f       // PlankGeometry 의 양 어깨 조건과 같다

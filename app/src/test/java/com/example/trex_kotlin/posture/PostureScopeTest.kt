@@ -110,9 +110,10 @@ class PostureScopeTest {
         assertFalse(s.hasAnyJudgement)
         assertTrue(s.provisionalOnly)
         assertEquals(listOf("엉덩이", "고개"), s.provisional)
-        assertTrue(s.startLine!!.contains("고개와 골반 정렬"))
+        assertTrue(s.startLine!!.contains("골반 정렬"))
+        assertTrue("시선은 말로 알린다(§100)", s.startLine!!.contains("시선"))
         assertTrue(s.startLine!!.contains("참고"))
-        assertEquals("시험 단계 · 검증 중 2", s.cardLine)   // 플랭크는 자세 교정 시험 단계(PostureTrial, 2026-10-08)
+        assertEquals("검증 중 2", s.cardLine)   // §101c: 시험 단계 꼬리표는 비었다(사용자 결정 2026-10-09)
     }
 
     @Test

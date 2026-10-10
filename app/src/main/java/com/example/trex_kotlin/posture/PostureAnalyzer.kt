@@ -10,6 +10,8 @@ import com.google.mediapipe.framework.image.BitmapImageBuilder
 import com.google.mediapipe.tasks.core.BaseOptions
 import com.google.mediapipe.tasks.core.Delegate
 import com.google.mediapipe.tasks.vision.core.RunningMode
+import com.google.mediapipe.tasks.vision.facelandmarker.FaceLandmarker
+import com.google.mediapipe.tasks.vision.facelandmarker.FaceLandmarkerResult
 import com.google.mediapipe.tasks.vision.poselandmarker.PoseLandmarker
 import com.google.mediapipe.tasks.vision.poselandmarker.PoseLandmarkerResult
 
@@ -26,6 +28,36 @@ import com.google.mediapipe.tasks.vision.poselandmarker.PoseLandmarkerResult
 const val MP_LANDMARK_COUNT = 33
 private const val MIN_VISIBILITY = 0.5f
 private const val TAG = "PostureAnalyzer"
+/** 얼굴 메시 모델(§101d) — float16, 3.8 MB. `noCompress += "task"`. */
+private const val FACE_MODEL_ASSET = "posture/face_landmarker.task"
+/** 얼굴 추론 간격 — 판정 격자(§96, 300 ms)와 같다. */
+private const val FACE_INTERVAL_MS = 300L
+/** 이 시간 안의 샘플에는 마지막 얼굴 결과를 얹는다(판정 칸의 첫 프레임이 얼굴을 돌린 프레임과 85 ms 어긋날 수 있다). */
+private const val FACE_STALE_MS = 450L
+/** 머리 크롭의 출력 한 변(px) — 검출기 입력 128 에서 얼굴이 40 px 넘게. */
+private const val FACE_CROP_PX = 256
+/** 크롭 한 변 = 머리 높이 × 이 배수(머리가 크롭의 1/3). */
+private const val FACE_CROP_SCALE = 3.0f
+/** 얼굴 검출·존재 신뢰도 하한 — 옆얼굴은 점수가 낮다(기본 0.5 → 0.3). */
+private const val FACE_MIN_CONFIDENCE = 0.3f
+
+/**
+ * 얼굴 자세 행렬(4×4, MediaPipe facial transformation matrix) → 얼굴 앞 방향과 화면 평면이 이루는 각(°, §101d `FloorGaze.YAW`).
+ * 정준 얼굴 모델의 +z 가 얼굴 앞(보는 쪽)이고 카메라 공간은 카메라가 −z 를 바라보므로, 카메라를 보는 얼굴의 앞 방향은 +z(카메라 쪽)다.
+ * 요 = asin(앞 방향의 z 성분): **0 = 옆얼굴(올바른 시선), +90 = 카메라를 봄, −90 = 뒤통수**. 행렬 배치(열 우선/행 우선)는 마지막 행·열의 0 으로 가른다 —
+ * 열 우선이면 m[3]·m[7]·m[11] 이 0(마지막 행), 행 우선이면 m[12..14] 가 평행이동. 폰 1차 확인 전 부호는 가정이다([FACE_YAW_SIGN] 으로 뒤집는다).
+ */
+internal fun faceYawDeg(m: FloatArray): Float {
+    if (m.size < 16) return Float.NaN
+    val colMajor = kotlin.math.abs(m[3]) < 1e-4f && kotlin.math.abs(m[7]) < 1e-4f && kotlin.math.abs(m[11]) < 1e-4f
+    val zx = if (colMajor) m[8] else m[2]
+    val zy = if (colMajor) m[9] else m[6]
+    val zz = m[10]
+    val n = kotlin.math.sqrt(zx * zx + zy * zy + zz * zz)
+    if (!(n > 1e-6f) || !n.isFinite()) return Float.NaN
+    return FACE_YAW_SIGN * Math.toDegrees(kotlin.math.asin((zz / n).coerceIn(-1f, 1f).toDouble())).toFloat()
+}
+private const val FACE_YAW_SIGN = 1f
 
 enum class PoseModel(val asset: String, val label: String) {
     FULL("posture/pose_landmarker_full.task", "full"),
@@ -109,6 +141,24 @@ class PostureAnalyzer(
 ) {
     private var landmarker: PoseLandmarker? = null
     /**
+     * 얼굴 메시 모델(spec §101d, 바닥 세 종목의 시선 — `FloorGaze`). [faceEnabled] 일 때 [FACE_INTERVAL_MS] 마다 한 번(판정 격자 300 ms 와 같다 — 85 ms 추론 루프마다 돌리지 않는다)
+     * 같은 업라이트 비트맵으로 추론하고, 결과(검출·요)를 [FACE_STALE_MS] 안의 샘플 피처에 얹는다. 생성·추론·닫기는 Pose 와 같은 락(this) 안이다(§63 SIGSEGV 함정).
+     */
+    private var faceLandmarker: FaceLandmarker? = null
+    private var faceInitError: String? = null
+    @Volatile var faceEnabled: Boolean = false
+    private var lastFaceMs = Long.MIN_VALUE / 2
+    /** 마지막 얼굴 결과 — [검출 1/0, 요 °(NaN = 없음), 추론 ms, 시각]. */
+    private var lastFace: FloatArray? = null
+    @Volatile private var faceInferCount = 0L
+    @Volatile private var faceEmaMs = 0f
+    private var lastFaceRotation = 0f
+    private var lastHeadPx = 0f
+    private var faceBitmap: Bitmap? = null
+    private val faceMatrix = Matrix()
+    private val faceCanvas = Canvas()
+    private val facePaint = android.graphics.Paint(android.graphics.Paint.FILTER_BITMAP_FLAG)
+    /**
      * 닫힌 뒤에는 모델을 다시 만들지 않고 빈 샘플만 돌려준다. 추론(analyze·analyzeBitmap)과 [close] 는 같은 락(this)을 잡는다 —
      * 화면이 사라질 때 메인 스레드의 close 가 분석 스레드에서 도는 detectForVideo 의 네이티브 그래프를 해제해
      * SIGSEGV(PacketCreator.nativeCreateProto, 폰 2026-09-25 20:06·09-26 13:57 — 자동 진행 직후)로 앱이 죽고 그 세트 로그가 사라졌다.
@@ -165,6 +215,122 @@ class PostureAnalyzer(
         }
         return false
     }
+
+    /** 얼굴 모델 준비(락 안에서) — Pose 와 같은 순서(GPU → CPU). 실패하면 이 세션에서는 다시 시도하지 않고 얼굴 피처 없이 간다(시선은 '측정 중'). */
+    private fun ensureFaceReady(): Boolean {
+        if (closed) return false
+        if (faceLandmarker != null) return true
+        if (faceInitError != null) return false
+        val order = if (preferGpu) listOf(Delegate.GPU, Delegate.CPU) else listOf(Delegate.CPU)
+        for (d in order) {
+            try {
+                val opts = FaceLandmarker.FaceLandmarkerOptions.builder()
+                    .setBaseOptions(BaseOptions.builder().setModelAssetPath(FACE_MODEL_ASSET).setDelegate(d).build())
+                    .setRunningMode(RunningMode.IMAGE)
+                    .setNumFaces(1)
+                    .setMinFaceDetectionConfidence(FACE_MIN_CONFIDENCE)
+                    .setMinFacePresenceConfidence(FACE_MIN_CONFIDENCE)
+                    .setMinTrackingConfidence(0.5f)
+                    .setOutputFaceBlendshapes(false)
+                    .setOutputFacialTransformationMatrixes(true)
+                    .build()
+                faceLandmarker = FaceLandmarker.createFromOptions(context, opts)
+                Log.i(TAG, "FaceLandmarker ready: delegate=${if (d == Delegate.GPU) "GPU" else "CPU"}")
+                return true
+            } catch (t: Throwable) {
+                Log.w(TAG, "face delegate $d 생성 실패: ${t.message}")
+                if (d == order.last()) faceInitError = "얼굴 모델 로드 실패: ${t.message}"
+            }
+        }
+        return false
+    }
+
+    /**
+     * 얼굴 피처(§101d) — [FACE_INTERVAL_MS] 마다 추론하고 그 결과를 [FACE_STALE_MS] 안의 샘플에 얹는다. 키는 [FloorGaze.FOUND]·[FloorGaze.YAW]·[FloorGaze.INFER_MS]·[FloorGaze.ROTATION]·[FloorGaze.SIZE].
+     * 얼굴이 없으면 요 키는 없다. 모델이 없으면(실패·미지원) 키를 넣지 않는다 — 시선은 '측정 중'.
+     *
+     * **머리 영역만 잘라 넣는다**(10-09 22:32 크런치): 분석 영상이 640×480 이고 폰이 1.6 m 거리라 얼굴이 60 px(검출기 입력 128 에서 16 px)여서 전체 영상으로는 누운 동안 검출 0/130 이었다
+     * (일어나 앉아 얼굴이 140 px 이 되자 검출). Pose 의 코·귀로 머리 중심과 크기를 잡고, 어깨 중점 → 귀 중점(목 방향)이 위를 향하게 돌린 뒤 [FACE_CROP_PX] 로 확대한 정사각형을
+     * 얼굴 모델(IMAGE 모드 — 잘라낸 영역이 프레임마다 달라 VIDEO 추적을 쓰지 않는다)에 준다. 요(얼굴 앞 방향의 카메라 축 성분)는 영상을 카메라 축 둘레로 돌려도 변하지 않고,
+     * 잘라낸 영역의 가상 카메라가 '렌즈를 향함' 을 재므로 사용자 정의(화면을 본다)와 맞는다.
+     */
+    private fun faceFeatures(upright: Bitmap, xy: FloatArray, vis: FloatArray, ts: Long, out: HashMap<String, Float>) {
+        if (!faceEnabled) return
+        if (ts - lastFaceMs >= FACE_INTERVAL_MS && ensureFaceReady()) {
+            val fl = faceLandmarker ?: return
+            val crop = faceCrop(upright, xy, vis)
+            if (crop != null) {
+                val started = System.nanoTime()
+                val r: FaceLandmarkerResult? = try {
+                    fl.detect(BitmapImageBuilder(crop).build())
+                } catch (t: Throwable) {
+                    Log.w(TAG, "face detect 실패: ${t.message}")
+                    null
+                }
+                val ms = (System.nanoTime() - started) / 1_000_000
+                lastFaceMs = ts
+                faceInferCount += 1
+                faceEmaMs = if (faceInferCount == 1L) ms.toFloat() else faceEmaMs * 0.8f + ms * 0.2f
+                if (faceInferCount % 50L == 0L) Log.d(TAG, "face infer #$faceInferCount ema=${"%.0f".format(faceEmaMs)}ms last=${ms}ms head=${"%.0f".format(lastHeadPx)}px rot=${"%.0f".format(lastFaceRotation)}")
+                val found = r != null && r.faceLandmarks().isNotEmpty()
+                val yaw = if (found) r!!.facialTransformationMatrixes().orElse(null)?.firstOrNull()?.let { faceYawDeg(it) } ?: Float.NaN else Float.NaN
+                lastFace = floatArrayOf(if (found) 1f else 0f, yaw, ms.toFloat(), ts.toFloat(), lastFaceRotation, lastHeadPx)
+            } else {
+                // 머리가 안 보이면 이번 칸은 건너뛴다 — 마지막 결과는 [FACE_STALE_MS] 뒤 사라진다(모름)
+                lastFaceMs = ts
+            }
+        }
+        val f = lastFace ?: return
+        if (ts - f[3] > FACE_STALE_MS) return
+        out[FloorGaze.FOUND] = f[0]
+        if (f[1].isFinite()) out[FloorGaze.YAW] = f[1]
+        out[FloorGaze.INFER_MS] = f[2]
+        out[FloorGaze.ROTATION] = f[4]
+        out[FloorGaze.SIZE] = f[5]
+    }
+
+    /**
+     * 머리 영역 크롭([FACE_CROP_PX] 정사각, 전용 버퍼). 중심 = 코·귀 중 보이는 점의 평균, 크기 = max(코–귀 거리 × 2.2, 어깨 중점 → 귀 중점 길이, 40 px) ≈ 머리 높이,
+     * 한 변 = 크기 × [FACE_CROP_SCALE]. 회전 = 어깨 중점 → 귀 중점(목 방향)이 위를 향하게 — 누워 턱을 당긴 크런치(머리가 몸통 축과 70° 꺾임)에서 몸통 축(골반→어깨)으로 돌리면 얼굴이 옆으로 눕는다.
+     * 코·귀가 둘 다 없거나 어깨가 없으면 null.
+     */
+    private fun faceCrop(src: Bitmap, xy: FloatArray, vis: FloatArray): Bitmap? {
+        val w = src.width.toFloat(); val h = src.height.toFloat()
+        fun ok(i: Int) = vis.getOrNull(i)?.let { it >= MIN_VISIBILITY } == true && xy[i * 2].isFinite() && xy[i * 2 + 1].isFinite()
+        fun px(i: Int) = xy[i * 2] * w
+        fun py(i: Int) = xy[i * 2 + 1] * h
+        val head = listOf(0, 7, 8).filter { ok(it) }
+        if (head.size < 2 || !(ok(11) || ok(12))) return null
+        val cx = head.map { px(it) }.average().toFloat(); val cy = head.map { py(it) }.average().toFloat()
+        val ears = listOf(7, 8).filter { ok(it) }
+        val noseEar = if (ok(0) && ears.isNotEmpty()) ears.maxOf { kotlin.math.hypot(px(0) - px(it), py(0) - py(it)) } else 0f
+        val shoulders = listOf(11, 12).filter { ok(it) }
+        val sx = shoulders.map { px(it) }.average().toFloat(); val sy = shoulders.map { py(it) }.average().toFloat()
+        val ex = if (ears.isNotEmpty()) ears.map { px(it) }.average().toFloat() else cx
+        val ey = if (ears.isNotEmpty()) ears.map { py(it) }.average().toFloat() else cy
+        val neck = kotlin.math.hypot(ex - sx, ey - sy)
+        val headPx = maxOf(noseEar * 2.2f, neck, 40f)
+        lastHeadPx = headPx
+        // 회전: 목 방향(어깨 중점 → 귀 중점)을 위(−y)로. Android Matrix 의 양의 각은 화면에서 시계 방향 — 벡터가 위에서 시계 방향으로 φ 만큼 돌아 있으면 −φ 돌린다
+        val vx = ex - sx; val vy = ey - sy
+        val phi = if (kotlin.math.hypot(vx, vy) > 1f) Math.toDegrees(kotlin.math.atan2(vx.toDouble(), (-vy).toDouble())).toFloat() else 0f
+        lastFaceRotation = -phi
+        val side = headPx * FACE_CROP_SCALE
+        val scale = FACE_CROP_PX / side
+        var dst = faceBitmap
+        if (dst == null || dst.isRecycled) { dst = Bitmap.createBitmap(FACE_CROP_PX, FACE_CROP_PX, Bitmap.Config.ARGB_8888); faceBitmap = dst }
+        faceMatrix.reset()
+        faceMatrix.postTranslate(-cx, -cy)
+        faceMatrix.postRotate(-phi)
+        faceMatrix.postScale(scale, scale)
+        faceMatrix.postTranslate(FACE_CROP_PX / 2f, FACE_CROP_PX / 2f)
+        faceCanvas.setBitmap(dst)
+        faceCanvas.drawColor(android.graphics.Color.BLACK)
+        faceCanvas.drawBitmap(src, faceMatrix, facePaint)
+        faceCanvas.setBitmap(null)
+        return dst
+    }
+
 
     /**
      * ImageProxy 를 소비하지 않는다 — 호출 측에서 close() 할 것.
@@ -266,15 +432,17 @@ class PostureAnalyzer(
         // §63: 런지 걸음 기하(앞다리·깊이·무릎 쏠림·어깨 높이) — 어깨선 요로. 재생기 frameFeatures 도 같은 순서·같은 함수
         val features = frame.features() + viewF + Stance2d.features(xy, vis, MIN_VISIBILITY, aspect) +
             Arm2d.features(xy, vis, MIN_VISIBILITY, aspect, Arm2d.yawOf(viewF)) +
-            Lunge2d.features(frame, xy, vis, MIN_VISIBILITY, aspect, ViewEstimator.shoulderYawOf(viewF)) +
+            Lunge2d.features(frame, xy, vis, MIN_VISIBILITY, aspect, ViewEstimator.shoulderYawOf(viewF), gravityUp = fromGravity) +
             // §96: 한 발 떠남 계열의 기하(허벅지각·비틀림·롤 보정 2D 발목/무릎/골반·손–귀·팔꿈치–무릎) — 재생기 frameFeatures 도 같은 순서·같은 함수
             LegGeometry.features(frame, xy, vis, MIN_VISIBILITY, aspect, LegGeometry.rollDeg(upUsed))
+        // §101d: 얼굴 메시 피처(바닥 세 종목의 시선) — 판정 격자마다 한 번, 같은 비트맵. 재생기 .cap 에는 없다(로그 전용)
+        val featuresOut = if (faceEnabled) HashMap(features).also { faceFeatures(upright, xy, vis, ts, it) } else features
         val visibleCount = vis.count { it >= MIN_VISIBILITY }
         return PoseSample(
             detected = true,
             normalizedXy = xy,
             visibility = vis,
-            features = features,
+            features = featuresOut,
             visibleJointCount = visibleCount,
             inferMs = inferMs,
             imageWidth = w,
@@ -336,6 +504,14 @@ class PostureAnalyzer(
         } catch (_: Throwable) {
         }
         landmarker = null
+        try {
+            faceLandmarker?.close()
+        } catch (_: Throwable) {
+        }
+        faceLandmarker = null
+        lastFace = null
+        faceBitmap?.recycle()
+        faceBitmap = null
         uprightBitmap?.recycle()
         uprightBitmap = null
     }

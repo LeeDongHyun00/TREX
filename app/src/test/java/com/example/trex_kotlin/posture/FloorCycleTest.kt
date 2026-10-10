@@ -61,6 +61,20 @@ class FloorCycleTest {
         assertNull(RepCounter.forSession("플랭크", floor = true))
     }
 
+    @Test fun crunchFaceRelIsTheTopFaceAngleAgainstTheLyingFace() {
+        // §100 시선 대리: 누운 얼굴 방향(fc_face, 코–귀–골반 각) 대비 상단 띠(정점 − 진폭 20 %)의 얼굴 방향 — 얼굴이 몸통과 함께 무릎 쪽으로 돌면 음수, 재료가 없으면 NaN
+        val r = Run("크런치")
+        fun c(lift: Float, face: Float?) = crunch(lift) + (face?.let { mapOf(FloorChain.FACE to it) } ?: emptyMap())
+        r.feed(c(0f, 80f), 4)
+        r.seq(c(6f, 70f), c(12f, 55f), c(18f, 45f), c(12f, 55f), c(6f, 70f), c(0f, 80f), c(0f, 80f))
+        r.seq(c(6f, 78f), c(12f, 80f), c(18f, 84f), c(12f, 80f), c(6f, 78f), c(0f, 80f), c(0f, 80f))
+        r.seq(c(6f, null), c(12f, null), c(18f, null), c(12f, null), c(6f, null), c(0f, null), c(0f, null))
+        val reps = r.tracker.repDetail
+        assertEquals(3, reps.size)
+        assertEquals(-35f, reps[0].faceRel, 3f); assertEquals(4f, reps[1].faceRel, 3f); assertTrue(reps[2].faceRel.isNaN())
+        assertEquals("누운 기준에 얼굴 방향이 남는다(로그·재생 파리티)", 80f, r.tracker.lying!!.getValue(FloorChain.FACE), 0.5f)
+    }
+
     @Test fun lyingStartCountsCrunchesWithoutStillness() {
         val r = Run("크런치")
         r.feed(crunch(0f)); assertFalse(r.tracker.hasBase)
@@ -127,7 +141,7 @@ class FloorCycleTest {
         // 사용자 결정 Q6(4.5° 로 시작) — 엔진 재생 4.5 %(13/286)는 '세지 않은 동작에 이유를 말한' 비율이다. 이 사유는 주 신호가 출발하지 않은 동작에만 나서 어떤 회도
         // 지우지 않으므로 회를 지우는 판별의 2 % 입장선 대상이 아니다(리뷰 2026-10-07 — 끄면 그 동작이 틱도 이유도 없이 사라진다)
         // 2026-10-08: 폰 위반 표본이 생겨 shallow·knee_bent·one_leg 를 켰다(docs/PHONE_REPORT_2026-10-07_DESIGN.md §3.3·§3.4)
-        assertEquals(setOf("sit_up", "neck_only", "shallow"), FloorProfile.CRUNCH.defaultEnabled)
+        assertEquals(setOf("sit_up", "arms_only", "neck_only", "shallow"), FloorProfile.CRUNCH.defaultEnabled)
         assertEquals(setOf("trunk_up", "knee_bent", "one_leg", "shallow"), FloorProfile.LEG_RAISE.defaultEnabled)
         val r = Run("크런치"); r.lie(); r.crunchRep()
         r.seq(crunch(0f, neck = 8f), crunch(1f, neck = 13f), crunch(1f, neck = 13f), crunch(0f, neck = 6f), crunch(0f), crunch(0f))
@@ -137,6 +151,42 @@ class FloorCycleTest {
         val off = Run("크런치", enabled = setOf("sit_up"), viaCounter = true); off.lie(); off.crunchRep()
         off.seq(crunch(0f, neck = 8f), crunch(1f, neck = 13f), crunch(1f, neck = 13f), crunch(0f, neck = 6f), crunch(0f), crunch(0f))
         assertEquals(r.reps, off.reps); assertTrue(off.counter.rejectedReps.isEmpty())
+    }
+
+    /** 크런치 프레임 + 손목 몸통 좌표·팔꿈치각(§101). [ear] = 귀 들림(기본은 crunch() 와 같이 lift 에 따라감). */
+    private fun crunchArms(lift: Float, wristAl: Float, wristUp: Float, elbow: Float = 40f, ear: Float = 10f + lift): Map<String, Float> =
+        crunch(lift) + mapOf(FloorChain.WRIST_AL to wristAl, FloorChain.WRIST_UP to wristUp, FloorChain.ELBOW to elbow, FloorChain.EAR_LIFT to ear)
+
+    @Test fun armsOnlyMotionIsRejectedWithItsReasonAndRealCrunchesWithStillHandsCount() {
+        // §101(10-08 줄 12): 손을 머리 위 바닥으로 넘기거나 바닥을 짚는 동작이 어깨점을 끌어 주 신호(현 들림)가 났다 — 회 창의 손목 이동 ≥ 0.8 몸통인데 귀 들림 < 10° 면 팔만 움직인 동작
+        val r = Run("크런치"); r.feed(crunchArms(0f, 0.3f, 0.1f), 4)
+        // 정상 회(손은 머리 뒤에 고정, 귀가 함께 들린다)
+        for (l in listOf(6f, 12f, 18f, 12f, 6f, 0f, 0f)) r.feed(crunchArms(l, 0.3f, 0.1f))
+        assertEquals(1, r.reps); assertTrue(r.reasons.isEmpty())
+        // 팔만: 손목이 어깨 앞 0.3 에서 머리 위 −1.0 으로 넘어가며 신호가 12° 났지만 귀는 2° 만 들렸다
+        val sweep = listOf(0.1f to 0.3f, -0.3f to 0.6f, -0.7f to 0.5f, -1.0f to 0.2f, -0.8f to 0.4f, -0.3f to 0.5f, 0.3f to 0.1f)
+        val lifts = listOf(4f, 8f, 12f, 10f, 6f, 0f, 0f)
+        for (i in lifts.indices) r.feed(crunchArms(lifts[i], sweep[i].first, sweep[i].second, ear = 10f + (if (i in 1..3) 2f else 0f)))
+        assertEquals(1, r.reps); assertEquals(listOf("arms_only"), r.reasons)
+        assertEquals("팔만 움직이면 세지 않아요. 팔은 고정하고 상체를 말아 올려 주세요.", r.tracker.cueFor("arms_only"))
+        assertTrue(r.tracker.rejectedDetail.last().wristSweep > 0.8f); assertTrue(r.tracker.rejectedDetail.last().earAmp < 10f)
+        // 손목 재료가 없으면(옛 캡처) 유보 — 종전처럼 센다
+        val o = Run("크런치"); o.lie(); o.crunchRep(peak = 12f, neck = 0f)
+        assertEquals(1, o.reps); assertTrue(o.reasons.isEmpty())
+    }
+
+    @Test fun troughIsReformedWhenTheArmPoseChanges() {
+        // §101 RC3: 손을 머리 뒤(접음)에서 뻗기(폄)로 옮기는 프레임의 어깨점 이동(−8°)이 골이 되어 작은 들림을 회로 셌다(10-08 48357) — 팔 자세가 바뀌면 쉬는 동안의 골을 다시 잡는다
+        val r = Run("크런치"); r.feed(crunchArms(0f, 0.3f, 0.1f, elbow = 40f), 4)
+        for (l in listOf(6f, 12f, 18f, 12f, 6f, 0f, 0f)) r.feed(crunchArms(l, 0.3f, 0.1f, elbow = 40f))
+        assertEquals(1, r.reps)
+        // 팔을 펴 옮기는 동안 신호가 −8 로 내려갔다가(옛 골) 0 으로 돌아옴 — 손목은 가만히(이동 < 0.8)
+        r.feed(crunchArms(-8f, 0.5f, 0.1f, elbow = 150f)); r.feed(crunchArms(-6f, 0.5f, 0.1f, elbow = 150f)); r.feed(crunchArms(0f, 0.5f, 0.1f, elbow = 150f), 3)
+        // 작은 들림 3°: 옛 골(−8) 기준이면 +11 로 출발해 회가 되고, 새 자세의 골(0) 기준이면 +3 < 4.5 라 출발하지 않는다
+        for (l in listOf(2f, 3f, 3f, 2f, 0f, 0f)) r.feed(crunchArms(l, 0.5f, 0.1f, elbow = 150f))
+        assertEquals("자세 전환의 골은 원점이 아니다", 1, r.reps)
+        for (l in listOf(6f, 12f, 18f, 12f, 6f, 0f, 0f)) r.feed(crunchArms(l, 0.5f, 0.1f, elbow = 150f))
+        assertEquals("새 자세에서 제대로 한 회는 센다", 2, r.reps)
     }
 
     @Test fun neckOnlyPullIsRejectedWithItsReasonWhenEnabled() {

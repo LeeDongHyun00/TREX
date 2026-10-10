@@ -41,7 +41,8 @@ class CapturePreparationTest {
         // 짝이 아닌 종목은 짝 규칙도, 폐기된 "한쪽 1회" 정의도 말하지 않는다
         ExerciseProfiles.all.filter { it.repUnit == RepUnit.CYCLE }.forEach {
             assertFalse(it.name, it.preparationInstruction.contains(ALTERNATING_COUNT_RULE))
-            assertFalse(it.name, it.preparationInstruction.contains("한 번씩"))
+            // 컬은 팔별 카운터의 짝 규칙(ARM_PAIR_COUNT_RULE, §101)을 말한다 — 그 밖의 사이클 단위 종목은 '한 번씩' 을 말하지 않는다
+            if (it.name !in setOf("덤벨 컬", "바벨 컬")) assertFalse(it.name, it.preparationInstruction.contains("한 번씩"))
         }
         ExerciseProfiles.all.forEach { assertFalse(it.name, it.preparationInstruction.contains("한쪽 1회")) }
     }
@@ -53,7 +54,11 @@ class CapturePreparationTest {
             assertTrue(name, p.alternating)
             assertEquals(name, RepUnit.CYCLE, p.repUnit)
             assertFalse(name, p.preparationInstruction.contains(ALTERNATING_COUNT_RULE))
+            // §101: 팔별 카운터의 짝 규칙(양팔 한 번씩 = 1회, 안 보이는 팔은 세지 않음)은 밝힌다 — 한 팔만 한 회를 이제 세지 않는다
+            assertTrue(name, p.preparationInstruction.contains(ARM_PAIR_COUNT_RULE))
+            assertTrue(p.preparationInstruction.indexOf(ARM_PAIR_COUNT_RULE) < p.preparationInstruction.indexOf("3초"))
         }
+        assertTrue(ExerciseProfiles.forName("바벨 컬")!!.preparationInstruction.contains(ARM_PAIR_COUNT_RULE))
     }
     @Test fun guidanceKeepsAnatomicalRightAndLeft() {
         val right=ExerciseProfiles.all.first { it.capture==CapturePosition.RIGHT_FRONT }
@@ -96,13 +101,21 @@ class CapturePreparationTest {
             c.observe(3400,ready);assertEquals(PreparationPhase.STARTED,c.tick(3400).phase)
         }
     }
-    @Test fun framingIsMeasuredDuringTheIntroAndCountsRightAfterIt() {
-        // §89: 안내 음성 중에도 범위·안정을 재되 카운트다운은 보류 — 풀리면 다음 프레임에서 바로 센다
-        val c=controller();c.holdStart(true)
-        for(t in 0L..6000L step 300L){c.observe(t,ready);c.tick(t)}
-        assertEquals(PreparationPhase.WAITING,c.state.phase)
-        c.holdStart(false);c.observe(6300,ready)
+    @Test fun countdownWaitsForDirectionEvidenceNotForTheIntro() {
+        // §101(10-08): 카운트다운은 말과 분리됐다 — 진입 조건은 범위·안정·방향 근거뿐. 방향 창이 아직 안 찼으면(directionSettled=false) 기다리고, 서면 다음 프레임에 바로 센다
+        val c=controller()
+        for(t in 0L..6000L step 300L){c.observe(t,ready.copy(directionSettled=false));c.tick(t)}
+        assertEquals(PreparationPhase.WAITING,c.state.phase);assertEquals(CapturePreparationController.READY_MESSAGE,c.state.message)
+        c.observe(6300,ready)
         assertEquals(PreparationPhase.COUNTDOWN,c.state.phase);assertEquals(3,c.state.seconds)
+    }
+    @Test fun directionWindowReportsUnsettledUntilEightFramesAndWhileMismatchIsPending() {
+        val w=CaptureDirectionWindow(CapturePosition.FRONT,floor=false)
+        val front=mapOf("view_cos" to 1f,"view_sin" to 0f)
+        for(i in 0 until 7) assertFalse("창 ${i+1}프레임", w.check(ready,front,i*85L).directionSettled)
+        assertTrue(w.check(ready,front,700L).directionSettled)
+        // 바닥·옆은 묻지 않는다(못 보면 막지 않는다)
+        assertTrue(CaptureDirectionWindow(CapturePosition.FLOOR_SIDE,floor=true).check(ready,front,0L).directionSettled)
     }
     @Test fun briefLossFreezesThenContinuesWithoutFiveSecondReset() {
         val c=controller();stabilize(c)

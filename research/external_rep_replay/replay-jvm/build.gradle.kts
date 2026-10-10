@@ -22,7 +22,7 @@ val postureTest = appRoot.resolve("test/java/com/example/trex_kotlin/posture")
 // PostureFloor.kt(앱 바닥 경로의 피처 함수 FloorFeatureExtractor.computeForExercise — PoseSample.withFeatures 를 PostureAnalyzer.kt 로 옮겨 안드로이드 의존을 뗐다).
 // PlankAlignment.kt(PostureRule)는 안드로이드 의존이라 넣지 않는다
 val engineFiles = listOf("PostureCore.kt", "RepCounter.kt", "ReturnRepTracker.kt", "RepHysteresis.kt", "PostureView.kt", "RepForm.kt", "RuleTypes.kt", "Stance2d.kt", "Arm2d.kt", "Lunge2d.kt", "LungeSides.kt", "RepFormPriorTable.kt", "FormMotion.kt", "LegCycle.kt",
-    "PlankGeometry.kt", "FloorChain.kt", "FloorCycle.kt", "PlankHold.kt", "PostureFloor.kt")
+    "PlankGeometry.kt", "FloorChain.kt", "FloorCycle.kt", "PlankHold.kt", "PostureFloor.kt", "StandingFraming.kt", "FloorGaze.kt")
 
 sourceSets {
     main {

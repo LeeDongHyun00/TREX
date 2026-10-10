@@ -1,0 +1,401 @@
+13:45:18.403 speech_requested  권장 촬영 방향은 정면입니다. 가슴이 휴대폰을 향하게 서 주세요. 몸이 화면에 잡히면 3초 뒤 시작해요.
+13:45:26.742 tts_done          
+13:45:33.950 speech_requested  3
+13:45:34.881 speech_requested  2
+13:45:34.987 tts_stop          interrupted=true
+13:45:35.887 tts_done          
+13:45:35.919 speech_requested  1
+13:45:36.804 tts_done          
+13:45:48.141 speech_requested  처음부터 발이 어깨보다 많이 넓어요. 발을 어깨 너비로 두고 시작해 주세요.
+13:45:52.038 speech_requested  발끝을 시작 자세로 되돌리세요.
+13:45:53.659 tts_done          
+13:45:56.316 speech_requested  발끝 방향.
+13:45:56.334 tts_done          
+13:45:57.843 tts_done          
+13:46:01.320 speech_requested  좋아요, 발끝 방향이 교정됐어요.
+13:46:04.577 tts_done          
+13:46:17.860 speech_requested  발끝을 시작 자세로 되돌리세요.
+13:46:20.467 tts_done          
+13:46:22.057 speech_requested  좋아요, 발끝 방향이 교정됐어요.
+13:46:25.326 tts_done          
+13:46:27.182 speech_requested  발을 어깨 너비로 다시 두세요.
+13:46:29.575 tts_done          
+13:46:36.482 speech_requested  좋아요, 발 너비가 교정됐어요.
+13:46:38.689 tts_stop          interrupted=true
+13:46:40.166 speech_requested  권장 촬영 방향은 왼쪽 앞입니다. 왼어깨가 휴대폰에 가까워지도록 45도쯤 비스듬히 서 주세요. 처음 두세 번은 팔꿈치를 옆구리에 붙이고 정확하게 해 주세요. 그 자세를 기준으로 봐요. 몸이 화면에 잡히면 3초 뒤 시작해요.
+13:46:52.185 tts_stop          interrupted=true
+13:46:52.281 speech_requested  3
+13:46:53.191 speech_requested  2
+13:46:53.280 tts_stop          interrupted=true
+13:46:54.161 tts_done          
+13:46:54.193 speech_requested  1
+13:46:55.106 tts_done          
+13:47:04.944 speech_requested  처음부터 팔꿈치가 앞으로 나가 있어요. 팔꿈치를 옆구리에 붙이고 해 주세요.
+13:47:10.585 tts_done          
+13:47:12.206 speech_requested  덜 올렸거나 덜 내렸어요. 팔꿈치를 끝까지 접었다 펴 주세요. 이 회는 세지 않았어요.
+13:47:13.055 speech_requested  덜 올렸거나 덜 내렸어요. 팔꿈치를 끝까지 접었다 펴 주세요. 이 회는 세지 않았어요.
+13:47:17.529 speech_requested  좋아요, 가동 범위가 교정됐어요.
+13:47:19.395 tts_done          
+13:47:22.666 tts_done          
+13:47:42.422 speech_requested  팔꿈치를 옆구리에 고정하세요.
+13:47:45.020 tts_done          
+13:47:46.598 speech_requested  좋아요, 팔꿈치 자세가 교정됐어요.
+13:47:48.193 speech_requested  팔꿈치를 옆구리에 붙이세요.
+13:47:50.069 tts_done          
+13:47:50.827 speech_requested  팔꿈치 떨어짐.
+13:47:52.452 tts_done          
+13:47:54.144 tts_done          
+13:47:58.668 speech_requested  팔꿈치를 옆구리에 고정하세요.
+13:48:01.251 tts_done          
+13:48:02.263 speech_requested  팔꿈치 앞으로.
+13:48:03.895 tts_done          
+13:48:05.583 speech_requested  팔꿈치 앞으로.
+13:48:07.214 tts_done          
+13:48:09.150 speech_requested  좋아요, 팔꿈치 자세가 교정됐어요.
+13:48:11.311 tts_stop          interrupted=true
+13:48:12.733 speech_requested  권장 촬영 방향은 오른쪽 앞입니다. 오른어깨가 휴대폰에 가까워지도록 45도쯤 비스듬히 서 주세요. 왼쪽과 오른쪽을 따로 세고, 한 번씩 해야 1회예요. 좌우를 못 본 동작은 짝에 넣지 않아요. 무릎을 접은 채 골반 높이까지 올려야 세요. 다리를 뻗거나 허리를 숙이면 세지 않아요. 몸이 화면에 잡히면 3초 뒤 시작해요.
+13:48:24.754 tts_stop          interrupted=true
+13:48:24.783 speech_requested  3
+13:48:25.681 speech_requested  2
+13:48:25.806 tts_stop          interrupted=true
+13:48:26.699 speech_requested  1
+13:48:26.716 tts_stop          interrupted=true
+13:48:27.601 tts_done          
+13:48:30.152 speech_requested  오른쪽 9개 남음
+13:48:31.601 speech_requested  왼쪽 9개 남음
+13:48:32.058 tts_done          
+13:48:33.857 tts_done          
+13:48:34.019 speech_requested  무릎을 골반 높이까지 올려야 세요.
+13:48:36.908 tts_done          
+13:48:39.143 speech_requested  오른쪽 8개 남음
+13:48:39.150 speech_requested  좋아요, 교정됐어요.
+13:48:41.116 tts_done          
+13:48:42.156 speech_requested  왼쪽 8개 남음
+13:48:43.497 tts_done          
+13:48:43.998 speech_requested  무릎을 골반 높이까지 올려야 세요.
+13:48:45.399 tts_done          
+13:48:48.282 tts_done          
+13:48:48.443 speech_requested  왼쪽 7개 남음
+13:48:48.453 speech_requested  좋아요, 교정됐어요.
+13:48:50.367 tts_done          
+13:48:50.572 speech_requested  오른쪽 7개 남음
+13:48:52.028 speech_requested  왼쪽 6개 남음
+13:48:52.756 tts_done          
+13:48:53.854 speech_requested  오른쪽 6개 남음
+13:48:54.741 tts_done          
+13:48:55.340 speech_requested  왼쪽 5개 남음
+13:48:56.651 tts_done          
+13:48:57.132 speech_requested  오른쪽 5개 남음
+13:48:58.346 speech_requested  왼쪽 4개 남음
+13:48:58.644 tts_done          
+13:49:00.478 speech_requested  무릎을 골반 높이까지 올려야 세요.
+13:49:00.586 tts_done          
+13:49:02.265 speech_requested  오른쪽 4개 남음
+13:49:02.270 speech_requested  좋아요, 교정됐어요.
+13:49:02.576 tts_done          
+13:49:03.164 speech_requested  왼쪽 3개 남음
+13:49:04.364 speech_requested  오른쪽 3개 남음
+13:49:04.376 tts_done          
+13:49:05.891 speech_requested  왼쪽 2개 남음
+13:49:06.219 tts_done          
+13:49:07.002 speech_requested  왼쪽 1개 남음
+13:49:07.995 speech_requested  다리를 뻗으면 세지 않아요. 무릎을 접은 채 올려 주세요.
+13:49:08.019 tts_done          
+13:49:09.125 speech_requested  왼쪽 끝
+13:49:09.128 speech_requested  좋아요, 교정됐어요. 이제 오른쪽 동작을 해 주세요.
+13:49:09.903 tts_done          
+13:49:10.027 speech_requested  오른쪽 2개 남음
+13:49:11.721 tts_done          
+13:49:11.821 speech_requested  오른쪽 1개 남음
+13:49:13.396 speech_requested  오른쪽 끝
+13:49:13.467 tts_done          
+13:49:14.804 tts_done          
+13:49:15.498 tts_stop          interrupted=false
+13:49:15.499 tts_stop          interrupted=false
+13:49:15.503 tts_stop          interrupted=true
+13:49:16.935 speech_requested  권장 촬영 방향은 정면입니다. 가슴이 휴대폰을 향하게 서 주세요. 왼쪽과 오른쪽을 따로 세고, 한 번씩 해야 1회예요. 좌우를 못 본 동작은 짝에 넣지 않아요. 무릎을 굽힌 채 옆으로 올리며 옆구리를 접어 팔꿈치가 무릎에 닿아야 세요. 다리만 올리거나, 앞으로 올리거나, 앞으로 숙이면 세지 않아요. 몸이 화면에 잡히면 3초 뒤 시작해요.
+13:49:28.977 tts_stop          interrupted=true
+13:49:29.010 speech_requested  3
+13:49:29.961 speech_requested  2
+13:49:30.025 tts_stop          interrupted=true
+13:49:30.907 tts_done          
+13:49:30.977 speech_requested  1
+13:49:31.884 tts_done          
+13:49:36.415 speech_requested  다리만 올리면 세지 않아요. 옆구리를 접어 팔꿈치가 무릎에 닿아야 세요.
+13:49:42.040 tts_done          
+13:49:48.156 speech_requested  오른쪽 9개 남음
+13:49:48.172 speech_requested  좋아요, 교정됐어요.
+13:49:49.923 speech_requested  왼쪽 9개 남음
+13:49:50.122 tts_done          
+13:49:50.212 speech_requested  시선이 점점 흔들려요. 정면을 보세요.
+13:49:50.218 tts_stop          interrupted=true
+13:49:53.933 tts_done          
+13:49:54.109 speech_requested  앞으로 올리면 세지 않아요. 무릎을 옆으로 올려 주세요.
+13:49:54.752 speech_requested  좋아요, 시선 자세가 교정됐어요.
+13:49:54.771 tts_stop          interrupted=true
+13:49:57.826 tts_done          
+13:50:00.758 speech_requested  앞으로 올리면 세지 않아요. 무릎을 옆으로 올려 주세요.
+13:50:04.929 speech_requested  오른쪽 8개 남음
+13:50:04.931 speech_requested  좋아요, 교정됐어요.
+13:50:05.089 tts_done          
+13:50:06.471 speech_requested  왼쪽 8개 남음
+13:50:07.019 tts_done          
+13:50:08.000 speech_requested  오른쪽 7개 남음
+13:50:08.911 tts_done          
+13:50:09.455 speech_requested  왼쪽 7개 남음
+13:50:10.606 speech_requested  오른쪽 6개 남음
+13:50:10.904 tts_done          
+13:50:12.137 speech_requested  왼쪽 6개 남음
+13:50:12.792 tts_done          
+13:50:13.682 speech_requested  오른쪽 5개 남음
+13:50:14.784 tts_done          
+13:50:14.824 speech_requested  왼쪽 5개 남음
+13:50:16.361 speech_requested  오른쪽 4개 남음
+13:50:16.703 tts_done          
+13:50:17.579 speech_requested  왼쪽 4개 남음
+13:50:18.680 tts_done          
+13:50:18.793 speech_requested  오른쪽 3개 남음
+13:50:19.951 speech_requested  왼쪽 3개 남음
+13:50:20.627 tts_done          
+13:50:21.177 speech_requested  오른쪽 2개 남음
+13:50:22.363 speech_requested  왼쪽 2개 남음
+13:50:22.479 tts_done          
+13:50:24.103 speech_requested  시선이 점점 흔들려요. 정면을 보세요.
+13:50:24.106 tts_stop          interrupted=true
+13:50:24.108 tts_stop          interrupted=false
+13:50:24.108 tts_stop          interrupted=false
+13:50:24.109 tts_stop          interrupted=false
+13:50:24.235 tts_stop          interrupted=true
+13:50:26.227 speech_requested  오른쪽 1개 남음
+13:50:27.745 speech_requested  왼쪽 1개 남음
+13:50:27.962 tts_done          
+13:50:28.649 speech_requested  좋아요, 시선 자세가 교정됐어요.
+13:50:28.651 tts_stop          interrupted=false
+13:50:28.660 tts_stop          interrupted=true
+13:50:31.094 speech_requested  앞으로 올리면 세지 않아요. 무릎을 옆으로 올려 주세요.
+13:50:31.709 tts_done          
+13:50:36.086 tts_done          
+13:50:37.364 speech_requested  앞으로 올리면 세지 않아요. 무릎을 옆으로 올려 주세요.
+13:50:40.688 speech_requested  오른쪽 끝
+13:50:40.691 speech_requested  좋아요, 교정됐어요. 이제 왼쪽 동작을 해 주세요.
+13:50:41.778 tts_done          
+13:50:41.823 speech_requested  왼쪽 끝
+13:50:43.123 tts_done          
+13:50:44.013 tts_stop          interrupted=true
+13:50:45.472 speech_requested  권장 촬영 방향은 오른쪽 앞입니다. 오른어깨가 휴대폰에 가까워지도록 45도쯤 비스듬히 서 주세요. 왼발 앞과 오른발 앞을 따로 셉니다. 한쪽을 다 채우면 반대쪽을 알려 드려요. 앞무릎은 80도 가까이 굽혀 주세요. 몸이 화면에 잡히면 3초 뒤 시작해요.
+13:50:57.513 tts_stop          interrupted=true
+13:50:57.871 speech_requested  3
+13:50:58.915 tts_done          
+13:50:59.335 speech_requested  몸의 방향이 바뀌었어요. 안내한 방향으로 서 주세요.
+13:51:01.180 speech_requested  몸의 방향이 바뀌었어요. 안내한 방향으로 서 주세요. 다시 자리 잡으면 3초를 셉니다.
+13:51:01.193 tts_stop          interrupted=true
+13:51:02.060 speech_requested  3
+13:51:02.069 tts_stop          interrupted=true
+13:51:03.019 speech_requested  2
+13:51:03.049 tts_stop          interrupted=true
+13:51:03.944 speech_requested  1
+13:51:03.953 tts_stop          interrupted=true
+13:51:04.848 tts_done          
+13:51:44.215 speech_requested  왼쪽 8개 남음
+13:51:46.168 tts_done          
+13:51:47.855 speech_requested  왼쪽 7개 남음
+13:51:49.770 tts_done          
+13:51:52.975 speech_requested  오른쪽 9개 남음
+13:51:54.870 tts_done          
+13:51:55.634 speech_requested  오른쪽 8개 남음
+13:51:55.643 speech_requested  옆으로 많이 돌아섰어요. 휴대폰 쪽으로 조금 돌아 45도쯤 비스듬히 서 주세요.
+13:51:57.582 tts_done          
+13:51:59.235 speech_requested  오른쪽 7개 남음
+13:52:03.764 tts_done          
+13:52:05.749 tts_done          
+13:52:28.340 speech_requested  왼쪽 6개 남음
+13:52:30.163 speech_requested  앞무릎이 80도 가까이 굽도록 뒷무릎을 바닥 가까이 내려 주세요.
+13:52:30.299 tts_done          
+13:52:35.004 tts_done          
+13:52:39.716 speech_requested  오른쪽 5개 남음
+13:52:39.726 speech_requested  좋아요, 앞무릎 깊이가 교정됐어요.
+13:52:41.782 tts_done          
+13:52:45.093 tts_done          
+13:52:50.990 speech_requested  권장 촬영 방향은 정면입니다. 가슴이 휴대폰을 향하게 서 주세요. 왼쪽과 오른쪽을 따로 세고, 한 번씩 해야 1회예요. 좌우를 못 본 동작은 짝에 넣지 않아요. 왼 무릎을 굽히며 몸을 왼쪽으로 옮기면 왼쪽 1회예요. 무릎을 허벅지가 수평이 되게 깊게 굽혀야 세요. 허리를 숙이거나 무릎이 발끝을 넘으면 세지 않아요. 몸이 화면에 잡히면 3초 뒤 시작해요.
+13:53:03.034 tts_stop          interrupted=true
+13:53:03.120 speech_requested  3
+13:53:04.029 speech_requested  2
+13:53:04.149 tts_stop          interrupted=true
+13:53:05.047 tts_done          
+13:53:05.048 speech_requested  1
+13:53:05.939 tts_done          
+13:53:08.240 speech_requested  더 깊게 앉아야 세요.
+13:53:10.258 tts_done          
+13:53:11.539 speech_requested  왼쪽 9개 남음
+13:53:11.545 speech_requested  좋아요, 교정됐어요.
+13:53:13.353 tts_done          
+13:53:14.271 speech_requested  오른쪽 9개 남음
+13:53:15.749 tts_done          
+13:53:17.301 speech_requested  왼쪽 8개 남음
+13:53:17.645 tts_done          
+13:53:19.548 tts_done          
+13:53:19.951 speech_requested  한쪽 무릎만 굽혀야 세요.
+13:53:22.303 tts_done          
+13:53:26.849 speech_requested  더 깊게 앉아야 세요.
+13:53:28.851 tts_done          
+13:53:34.032 speech_requested  오른쪽 8개 남음
+13:53:34.048 speech_requested  좋아요, 교정됐어요.
+13:53:35.981 tts_done          
+13:53:37.019 speech_requested  무릎이 발끝을 넘으면 세지 않아요. 엉덩이를 뒤로 보내 무릎을 발끝 뒤에 두세요.
+13:53:38.381 tts_done          
+13:53:44.405 tts_done          
+13:53:45.489 speech_requested  한쪽 무릎만 굽혀야 세요.
+13:53:47.847 tts_done          
+13:53:54.181 speech_requested  한쪽 무릎만 굽혀야 세요.
+13:53:56.523 tts_done          
+13:54:00.200 speech_requested  허리를 숙이면 세지 않아요. 가슴을 들고 상체를 세워 주세요.
+13:54:04.890 tts_done          
+13:54:06.732 speech_requested  더 깊게 앉아야 세요.
+13:54:08.253 speech_requested  왼쪽 7개 남음
+13:54:08.257 speech_requested  좋아요, 교정됐어요.
+13:54:08.763 tts_done          
+13:54:10.679 tts_done          
+13:54:13.091 tts_done          
+13:54:17.594 speech_requested  허리를 숙이면 세지 않아요. 가슴을 들고 상체를 세워 주세요.
+13:54:22.308 tts_done          
+13:54:29.566 speech_requested  권장 촬영 방향은 정면입니다. 가슴이 휴대폰을 향하게 서 주세요. 왼쪽과 오른쪽을 따로 세고, 한 번씩 해야 1회예요. 좌우를 못 본 동작은 짝에 넣지 않아요. 왼발을 뒤로 교차해 내려가면 왼쪽 1회예요. 발이 교차하고 무릎이 깊게 굽어야 세요. 허리를 숙이면 세지 않아요. 몸이 화면에 잡히면 3초 뒤 시작해요.
+13:54:41.602 tts_stop          interrupted=true
+13:54:42.014 speech_requested  3
+13:54:43.019 tts_done          
+13:54:43.313 speech_requested  몸이 많이 움직였어요. 제자리에 서 주세요.
+13:54:43.611 speech_requested  3
+13:54:43.624 tts_stop          interrupted=true
+13:54:43.891 speech_requested  2
+13:54:43.903 tts_stop          interrupted=true
+13:54:44.795 tts_done          
+13:54:44.894 speech_requested  1
+13:54:45.815 tts_done          
+13:54:50.598 speech_requested  교차한 뒤 무릎을 굽혀 내려가야 세요.
+13:54:53.565 tts_done          
+13:54:58.692 speech_requested  교차한 뒤 무릎을 굽혀 내려가야 세요.
+13:55:01.659 tts_done          
+13:55:12.729 speech_requested  더 깊게 내려가야 세요.
+13:55:14.861 tts_done          
+13:55:23.215 speech_requested  더 깊게 내려가야 세요.
+13:55:25.331 tts_done          
+13:55:32.869 speech_requested  권장 촬영 방향은 낮은 측면입니다. 누워서 무릎을 세우면 세기 시작해요. 휴대폰은 몸 옆 바닥에 가로로 두고, 머리부터 발목까지 보이게 해 주세요. 몸이 화면에 잡히면 3초 뒤 시작해요.
+13:55:44.922 tts_stop          interrupted=true
+13:55:45.799 speech_requested  3
+13:55:46.796 speech_requested  2
+13:55:46.812 tts_stop          interrupted=true
+13:55:47.696 tts_done          
+13:55:47.887 speech_requested  오른손이 안 보여요. 팔이 몸에 가려지지 않게 해 주세요.
+13:55:49.747 speech_requested  오른손이 안 보여요. 팔이 몸에 가려지지 않게 해 주세요. 다시 자리 잡으면 3초를 셉니다.
+13:55:49.760 tts_stop          interrupted=true
+13:55:51.546 speech_requested  3
+13:55:51.553 tts_stop          interrupted=true
+13:55:52.469 speech_requested  2
+13:55:52.551 tts_stop          interrupted=true
+13:55:53.452 tts_done          
+13:55:53.490 speech_requested  1
+13:55:54.385 tts_done          
+13:55:54.594 speech_requested  횟수와 상체(어깨) 들림 근사를 기록하고, 올라올 때 머리가 뒤에 남으면 시선을 알려 드려요. 견갑골·허리 접지·손으로 당김·반동·턱 당김 정도는 판정하지 않아요.
+13:55:57.192 speech_requested  1
+13:56:00.211 speech_requested  2
+13:56:02.909 speech_requested  3
+13:56:05.305 speech_requested  4
+13:56:07.966 tts_done          
+13:56:08.870 tts_done          
+13:56:09.771 tts_done          
+13:56:10.795 tts_done          
+13:56:11.533 speech_requested  5
+13:56:11.784 tts_done          
+13:56:12.663 tts_done          
+13:56:14.538 speech_requested  6
+13:56:15.396 tts_done          
+13:56:18.092 speech_requested  어깨를 바닥에서 더 들어 올려야 세요.
+13:56:21.043 tts_done          
+13:56:21.730 speech_requested  좋아요, 교정됐어요.
+13:56:21.784 speech_requested  7
+13:56:24.112 tts_done          
+13:56:24.430 speech_requested  어깨를 바닥에서 더 들어 올려야 세요.
+13:56:25.067 tts_done          
+13:56:27.988 tts_done          
+13:56:33.168 speech_requested  좋아요, 교정됐어요.
+13:56:33.215 speech_requested  8
+13:56:35.624 tts_done          
+13:56:36.622 tts_done          
+13:56:37.748 speech_requested  9
+13:56:38.708 tts_done          
+13:56:43.103 speech_requested  10
+13:56:44.049 tts_done          
+13:56:45.901 speech_requested  권장 촬영 방향은 낮은 측면입니다. 누워서 다리를 바닥에 내리면 세기 시작해요. 다리를 들었을 때 발까지 보이도록 휴대폰을 2미터쯤 떨어뜨려 주세요. 몸이 화면에 잡히면 3초 뒤 시작해요.
+13:56:57.929 tts_stop          interrupted=true
+13:56:57.987 speech_requested  3
+13:56:58.933 speech_requested  2
+13:56:59.006 tts_stop          interrupted=true
+13:56:59.887 tts_done          
+13:56:59.948 speech_requested  1
+13:57:00.871 tts_done          
+13:57:01.053 speech_requested  다리(허벅지)를 든 회를 셉니다. 허리가 바닥에 붙어 있는지와 내리는 속도는 볼 수 없어요. 허리가 뜨기 시작하면 그 위에서 멈춰 주세요.
+13:57:11.104 tts_done          
+13:57:15.736 speech_requested  1
+13:57:16.692 tts_done          
+13:57:19.130 speech_requested  2
+13:57:20.052 tts_done          
+13:57:22.112 speech_requested  3
+13:57:23.166 tts_done          
+13:57:26.825 speech_requested  두 다리를 함께 올려야 세요.
+13:57:29.115 tts_done          
+13:57:36.745 speech_requested  좋아요, 교정됐어요.
+13:57:36.796 speech_requested  4
+13:57:39.216 tts_done          
+13:57:40.207 tts_done          
+13:57:41.812 speech_requested  무릎을 굽히면 세지 않아요. 다리를 편 채 올려 주세요.
+13:57:44.238 speech_requested  두 다리를 함께 올려야 세요.
+13:57:46.159 tts_done          
+13:57:48.456 tts_done          
+13:57:55.043 speech_requested  무릎을 굽히면 세지 않아요. 다리를 편 채 올려 주세요.
+13:57:59.393 tts_done          
+13:58:00.107 speech_requested  좋아요, 교정됐어요.
+13:58:00.157 speech_requested  5
+13:58:02.509 tts_done          
+13:58:03.379 tts_done          
+13:58:07.290 speech_requested  어깨와 골반이 보이게 해 주세요. 지금은 세지 못해요.
+13:58:08.045 tts_stop          interrupted=true
+13:58:09.753 plank_ui_state    mode=COACH paused=false phase=null rule=null message=null
+13:58:09.755 speech_requested  권장 촬영 방향은 낮은 측면입니다. 무릎을 대고 준비해도 괜찮아요. 다리를 펴고 골반을 들면 시간을 재기 시작해요. 몸이 화면에 잡히면 3초 뒤 시작해요.
+13:58:21.830 tts_stop          interrupted=true
+13:58:24.091 speech_requested  3
+13:58:24.987 speech_requested  2
+13:58:25.107 tts_stop          interrupted=true
+13:58:25.686 speech_requested  몸이 많이 움직였어요. 제자리에 서 주세요.
+13:58:25.698 tts_stop          interrupted=true
+13:58:25.977 speech_requested  2
+13:58:25.988 tts_stop          interrupted=true
+13:58:26.883 tts_done          
+13:58:26.917 speech_requested  1
+13:58:27.823 tts_done          
+13:58:28.136 plank_ui_state    mode=COACH paused=false phase=MEASURING rule=null message=플랭크가 확인되면 고개와 골반 정렬을 참고로 봐요
+13:58:30.744 speech_requested  플랭크가 보여요. 시간을 재기 시작해요. 카메라가 확인한 플랭크 시간을 잽니다. 시선은 양손 사이 바닥에 두세요 — 고개를 들거나 떨구면 말로 알려 드려요. 골반 정렬은 화면에 참고로만 보이고, 팔꿈치 폭·가슴 처짐·허리 곡선·호흡은 볼 수 없어요.
+13:58:30.782 plank_ui_state    mode=COACH paused=false phase=MEASURING rule=null message=고개와 골반 정렬의 지속 여부를 확인하고 있어요
+13:58:31.075 plank_ui_state    mode=COACH paused=false phase=MEASURING rule=null message=플랭크가 확인되면 고개와 골반 정렬을 참고로 봐요
+13:58:31.940 speech_requested  무릎이 바닥에 닿아 시간을 멈췄어요. 무릎을 펴면 다시 재요.
+13:58:37.657 speech_requested  좋아요, 교정됐어요. 다시 재요.
+13:58:37.699 plank_ui_state    mode=COACH paused=false phase=MEASURING rule=null message=고개와 골반 정렬의 지속 여부를 확인하고 있어요
+13:58:38.837 plank_ui_state    mode=COACH paused=false phase=MEASURING rule=null message=관측한 고개와 골반이 정렬 범위 안에 있어요 · 참고
+13:58:45.127 plank_ui_state    mode=COACH paused=false phase=MEASURING rule=null message=플랭크가 확인되면 고개와 골반 정렬을 참고로 봐요
+13:58:46.055 speech_requested  골반이 내려가 시간을 멈췄어요. 몸을 들면 다시 재요.
+13:58:48.933 tts_done          
+13:58:53.491 tts_done          
+13:59:10.907 speech_requested  좋아요, 교정됐어요. 다시 재요.
+13:59:10.961 speech_requested  5
+13:59:11.001 plank_ui_state    mode=COACH paused=false phase=MEASURING rule=null message=고개와 골반 정렬의 지속 여부를 확인하고 있어요
+13:59:11.253 speech_requested  4
+13:59:12.169 plank_ui_state    mode=COACH paused=false phase=MEASURING rule=null message=관측한 고개와 골반이 정렬 범위 안에 있어요 · 참고
+13:59:12.466 speech_requested  3
+13:59:13.333 speech_requested  2
+13:59:14.200 speech_requested  1
+13:59:14.582 tts_done          
+13:59:15.441 tts_done          
+13:59:15.454 tts_stop          interrupted=false
+13:59:15.455 tts_stop          interrupted=false
+13:59:15.460 tts_stop          interrupted=false
+13:59:15.476 tts_stop          interrupted=true
+13:59:16.403 speech_requested  운동별 자세 기록을 저장했어요
+13:59:19.157 tts_done          

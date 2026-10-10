@@ -89,13 +89,13 @@ class FloorReplayTest {
         val line = run(Job("c", "x.cap", "크런치", "live", null, null, floor = true), capture, null)
         assertTrue(line, line.contains("\"engine\":\"floorcycle_v1_beta\""))
         assertTrue(line, line.contains("\"reps\":3,"))
-        assertTrue(line, line.contains("\"floorEnabled\":[\"neck_only\",\"shallow\",\"sit_up\"]"))   // 2026-10-08 부터 shallow 기본 켬
+        assertTrue(line, line.contains("\"floorEnabled\":[\"arms_only\",\"neck_only\",\"shallow\",\"sit_up\"]"))   // 2026-10-08 부터 shallow 기본 켬
         assertTrue(line, line.contains("\"floorLying\":{"))
         assertTrue(line, Regex("\"floorReps\":\\[\\[").containsMatchIn(line))
         assertTrue(line, line.contains("\"upFrames\":${crunchSet.size}"))
         // 진단 구성(11열) — 사유를 바꿔도 사이클 분할은 같다
         val all = run(Job("c", "x.cap", "크런치", "live", null, null, floor = true, floorEnabled = "all"), capture, null)
-        assertTrue(all, all.contains("\"floorEnabled\":[\"neck_only\",\"shallow\",\"sit_up\"]"))
+        assertTrue(all, all.contains("\"floorEnabled\":[\"arms_only\",\"neck_only\",\"shallow\",\"sit_up\"]"))
         assertTrue(all, all.contains("\"reps\":3,"))
     }
 

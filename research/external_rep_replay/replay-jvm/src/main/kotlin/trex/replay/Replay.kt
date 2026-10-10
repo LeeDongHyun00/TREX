@@ -562,7 +562,7 @@ fun run(job: Job, meta: Map<String, String>, frames: List<InputFrame>, stats: Fr
         "rejected" to Raw(rc.rejectedReps.joinToString(",", "[", "]") { r -> "[${r.tMs},${num(r.min)},${num(r.max)},${num(r.identitySwing)}" + (r.feature?.let { ",\"$it\"" } ?: "") + "]" }),
         "identitySwing" to Raw(rc.identitySwings.joinToString(",", "[", "]") { it?.let(::num) ?: "null" }),
         // 팔별 경로(spec §62c) — 각 팔의 사이클(진폭·ROM 판정)과 본인 기준 진폭
-        "arms" to Raw(rc.armCycles.joinToString(",", "[", "]") { "[\"${it.arm}\",${it.tMs},${it.startMs},${num(it.min)},${num(it.max)},${num(it.amp)},${it.valid?.toString() ?: "null"},${it.auxAmp?.let(::num) ?: "null"},${it.auxMin?.let(::num) ?: "null"},${it.orphan}]" }),
+        "arms" to Raw(rc.armCycles.joinToString(",", "[", "]") { "[\"${it.arm}\",${it.tMs},${it.startMs},${num(it.min)},${num(it.max)},${num(it.amp)},${it.valid?.toString() ?: "null"},${it.auxAmp?.let(::num) ?: "null"},${it.auxMin?.let(::num) ?: "null"},${it.orphan},\"${it.src.lowercaseChar()}\"]" }),
         "armOrphans" to rc.armOrphans,
         "armReference" to Raw("[${rc.armReference.first?.let(::num) ?: "null"},${rc.armReference.second?.let(::num) ?: "null"}]"),
         // 반복별 자세 검사(§62a) — 세트 로그 rep_form 블록과 같은 인코딩(SetLogJson.repForm), 시각은 캡처 상대 그대로
@@ -587,7 +587,7 @@ fun run(job: Job, meta: Map<String, String>, frames: List<InputFrame>, stats: Fr
 /**
  * 바닥 반복 계열(spec §99)의 재생 결과 — 세트 로그 설계(§4.2)의 reps.config.lying·reps.rejected[] 상세·회별 상단 체류/하강·소리 없이 버린 후보·판별 유보와 같은 내용.
  *  floorRejected = [t, 사유, trunkPeak, earPeak, amp, kneeTop, headMed] (FloorRejection, 없는 값 null)
- *  floorReps     = [t, startMs, peakMs, min, peak, topMs, descentMs, 판별유보] (FloorRep — 거둔 첫 회는 빠진다)
+ *  floorReps     = [t, startMs, peakMs, min, peak, topMs, descentMs, 판별유보, faceRel(크런치 시선 대리 §100, 없으면 null)] (FloorRep — 거둔 첫 회는 빠진다)
  */
 private fun floorJson(ft: FloorCycleTracker, stats: FrameStats): Map<String, Any?> = linkedMapOf(
     "floorProfile" to ft.profile.name,
@@ -597,7 +597,7 @@ private fun floorJson(ft: FloorCycleTracker, stats: FrameStats): Map<String, Any
     "floorRejected" to Raw(ft.rejectedDetail.joinToString(",", "[", "]") { r ->
         "[${r.tMs},\"${r.reason}\",${num(r.trunkPeak)},${num(r.earPeak)},${num(r.amp)},${num(r.kneeTop)},${num(r.headMed)}]" }),
     "floorReps" to Raw(ft.repDetail.joinToString(",", "[", "]") { r ->
-        "[${r.tMs},${r.startMs},${r.peakMs},${num(r.min)},${num(r.peak)},${r.topMs},${r.descentMs},${r.identityAbstain}]" }),
+        "[${r.tMs},${r.startMs},${r.peakMs},${num(r.min)},${num(r.peak)},${r.topMs},${r.descentMs},${r.identityAbstain},${num(r.faceRel)}]" }),
     "floorDiscarded" to Raw(ft.discarded.joinToString(",", "[", "]") { "[${it.tMs},\"${it.reason}\"]" }),
     "identityAbstainMs" to Raw(ft.identityAbstain.joinToString(",", "[", "]")),
     "floorRetractedMs" to Raw(ft.retracted.joinToString(",", "[", "]")),
@@ -837,7 +837,7 @@ fun checkSpecs(exercise: String): List<String> = RepFormSpecs.byExercise[exercis
         "lo" to c.lo, "hi" to c.hi, "gateHi" to c.gateHi, "views" to Raw(c.views.sorted().joinToString(",", "[", "]") { "\"$it\"" }),
         "bodyPart" to c.bodyPart, "highText" to c.highText, "lowText" to c.lowText, "fix" to c.fix, "cue" to c.cue,
         "liveText" to c.liveText, "noticeText" to c.noticeText, "absHi" to c.absHi, "refCap" to c.refCap, "refNotice" to c.refNotice,
-        "phaseName" to c.phase.name))
+        "phaseName" to c.phase.name, "prior" to c.prior))
 }
 
 fun readManifest(file: File): List<Job> = file.readLines()

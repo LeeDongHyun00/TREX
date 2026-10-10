@@ -67,7 +67,7 @@ class RepCounter(
      */
     val floorTracker: FloorCycleTracker? = signal.floorProfile?.let { FloorCycleTracker(it, floorEnabled ?: it.defaultEnabled) }
     /** 판별 기각·멈춤 사유의 음성 문장 원천(§4.4) — 다리·바닥 사이클 경로만. 나머지는 null. */
-    val cueSource: IdentityCueSource? get() = legTracker ?: floorTracker
+    val cueSource: IdentityCueSource? get() = legTracker ?: floorTracker ?: (if (paired) PairedArmCues else null)
     private val hysteresis = signal.polarity?.let { RepHysteresis(signal.minAmp, it) }
     private val confirmation = if (hysteresis != null && startConfirmation) RepStartConfirmation() else null
     private val returnTracker = if (completeOnReturn && hysteresis == null) ReturnRepTracker(signal.minAmp, refractoryMs) else null
@@ -166,6 +166,27 @@ class RepCounter(
                 refractoryMs, maxGapMs, completeOnReturn, startConfirmation = false)
         }.toTypedArray()
     }
+    /**
+     * 먼 팔 손목 높이 폴백 자식(§101 컬 '먼 팔 3상태', 2026-10-08) — 사선 촬영에서 먼 팔꿈치는 가시성 0.5 아래로 자주 빠지지만(사선 16세트 3637프레임: 팔꿈치 보임 78.9 %,
+     * 손목만 9.6 %, 둘 다 없음 11.5 %) 손목은 남는다. 그 구간의 먼 팔 사이클을 2D 손목 높이(`wrist_h2d_{side}`, 어깨 쪽이 높음 → UP)로 센다. 정면·옆 너머에서는 쓰지 않는다.
+     */
+    private val armsWrist: Array<RepCounter>? = if (signal.pairedFeatures != null && signal.romAuxFeature != null)
+        arrayOf("L", "R").map { sd ->
+            RepCounter(signal.copy(feature = signal.romAuxFeature.replace("{side}", sd), minAmp = WRIST_MIN_AMP, pairedFeatures = null, identityFeature = null, identityMinAmp = null,
+                rejectFeatures = emptyMap(), romDirection = null, romThreshold = null, romRatio = null, comparisonFeature = null, comparisonMinAmp = null,
+                romAuxFeature = null, polarity = RepPolarity.UP, plausibleMin = null, plausibleMax = null),
+                refractoryMs, maxGapMs, completeOnReturn, startConfirmation = false)
+        }.toTypedArray() else null
+    /** 팔별 프레임 기록 — 팔꿈치가 보였는가(창 관측률), 팔꿈치각(창 범위: 굽힌 채 다시 보인 팔꿈치·'한 팔만' 의 반대 팔 정지 판정). */
+    private val elbowSeen = arrayOf(ArrayList<Pair<Long, Boolean>>(), ArrayList<Pair<Long, Boolean>>())
+    private val elbowVals = arrayOf(ArrayList<Pair<Long, Float>>(), ArrayList<Pair<Long, Float>>())
+    /** 팔꿈치가 보이던 창의 손목 사이클 — [WRIST_DEFER_MS] 보류 뒤 그 창의 팔꿈치가 [WRIST_FLEX_MIN] 이상 움직였을 때만 인정(12.5 s 회처럼 굽힌 채 다시 보인 경우). */
+    private val wristPending = arrayOf(ArrayList<RepCycle>(), ArrayList<RepCycle>())
+    /** 최근 15프레임 어깨 요 — 먼 팔 판정([farArm]). */
+    private val yawHist = ArrayDeque<Float>()
+    /** '한 팔만' 연속 수(팔별) — 반대 팔이 보이면서 가만히 있는 창에서 이 팔만 사이클을 낸 회가 [ONE_ARM_STREAK] 이어지면 [takeOneArmNotice]. */
+    private val oneArmStreak = IntArray(2)
+    private var oneArmNotice: Char? = null
     /** 팔별 경로인가. */
     val paired: Boolean get() = arms != null
     /** 방금 완료된 회의 ROM 판정(팔별 경로 — 본인 기준 비율). 레거시·새 코어 경로는 null(`RepSignal.isValidRep` 가 판정). */
@@ -179,7 +200,7 @@ class RepCounter(
         private set
     /** 팔별 경로에서 각 팔이 낸 사이클 전부(회로 묶이기 전·기각 포함) — 세트 로그 `reps.arms`. [repTimesMs] 와 같은 락 안에서 복사한다. */
     val armCycles = ArrayList<ArmCycle>()
-    private val armVirtual = IntArray(2)                          // 안 보이는 팔 대신 센 회
+    /** 팔이 마지막으로 관측된 시각 — 팔꿈치 또는 (먼 팔이면) 손목. 이보다 [ARM_ABSENT_MS] 넘게 안 보인 팔은 '못 본 짝'(§101 — 종전 '가상 짝' 복사는 폐기). */
     private val armLastSeen = LongArray(2) { Long.MIN_VALUE / 2 }
     private val armAmps = arrayOf(ArrayList<Float>(), ArrayList<Float>())   // 기준 확보용 첫 사이클 진폭
     private val armRef = arrayOf<Float?>(null, null)              // A0 (NaN = 기준 미확보로 확정)
@@ -245,11 +266,13 @@ class RepCounter(
         arms?.forEach { it.reset() }
         lastCycleValid = null; newlyPublishedValid = emptyList(); newlyPublishedShort = emptyList()
         armCycles.clear()
-        armVirtual.fill(0); armLastSeen.fill(Long.MIN_VALUE / 2)
+        armLastSeen.fill(Long.MIN_VALUE / 2)
         armAmps.forEach { it.clear() }; armRef.fill(null); armQueue.forEach { it.clear() }
         rejectSamples.clear(); pairGateAt = Long.MIN_VALUE / 2; pairsSeen = 0
         auxSamples.forEach { it.clear() }; auxAmps.forEach { it.clear() }; auxRef.fill(null)
         armOrphans = 0
+        armsWrist?.forEach { it.reset() }; elbowSeen.forEach { it.clear() }; elbowVals.forEach { it.clear() }; wristPending.forEach { it.clear() }; yawHist.clear()
+        oneArmStreak.fill(0); oneArmNotice = null
         tentativeFirstAt = null; newlyRetracted = false; retractedReps.clear()
     }
 
@@ -355,14 +378,56 @@ class RepCounter(
         }
         val (fl, fr) = signal.pairedFeatures!!
         val fired = BooleanArray(2)
+        // 먼 팔 판정용 어깨 요(§101) — 방향 피처가 있는 프레임만
+        run {
+            val vc = features[ViewEstimator.FEAT_COS]; val vs = features[ViewEstimator.FEAT_SIN]
+            if (vc != null && vs != null && vc.isFinite() && vs.isFinite()) {
+                yawHist.addLast(Math.toDegrees(kotlin.math.atan2(vs.toDouble(), vc.toDouble())).toFloat())
+                if (yawHist.size > YAW_HIST) yawHist.removeFirst()
+            }
+        }
+        val far = farArm()
         for (i in 0..1) {
             val v = features[if (i == 0) fl else fr]
-            if (v != null && v.isFinite()) armLastSeen[i] = tMs
+            val vOk = v != null && v.isFinite()
+            val sideW = if (i == 0) 'L' else 'R'
+            val wv = signal.romAuxFeature?.let { features[it.replace("{side}", sideW.toString())] }
+            val wOk = wv != null && wv.isFinite()
+            elbowSeen[i] += tMs to vOk
+            if (vOk) { elbowVals[i] += tMs to v!!; if (elbowVals[i].size > IDENTITY_SAMPLE_CAP) elbowVals[i].subList(0, IDENTITY_SAMPLE_CAP / 2).clear() }
+            if (elbowSeen[i].size > IDENTITY_SAMPLE_CAP) elbowSeen[i].subList(0, IDENTITY_SAMPLE_CAP / 2).clear()
+            // 관측 = 팔꿈치가 보임, 또는 먼 팔의 손목이 보임(손목 폴백이 그 팔을 셀 수 있다)
+            if (vOk || (armsWrist != null && wOk && i == far)) armLastSeen[i] = tMs
+            // 손목 폴백(§101): 먼 팔만, 손이 어깨 가까이([WRIST_TOP_MIN]) 올라온 ≤ [WRIST_MAX_DUR_MS] 사이클만. 같은 팔 팔꿈치 사이클과 겹치면 중복이라 버린다.
+            // 팔꿈치가 그 창의 절반 넘게 보였으면 바로 믿지 않고 보류한다 — 팔꿈치 사이클이 뒤따라 나오면 그쪽이 정본
+            val aw = armsWrist
+            if (aw != null && aw[i].onFrame(tMs, if (wOk) wv else null)) {
+                for (c in aw[i].newlyPublished) {
+                    if (i != far) continue
+                    if (c.max < WRIST_TOP_MIN || c.tMs - c.startMs > WRIST_MAX_DUR_MS) continue
+                    if (armCycles.any { it.arm == sideW && it.src != 'W' && overlapRatio(it.startMs, it.tMs, c.startMs, c.tMs) >= PAIR_OVERLAP_MIN }) continue
+                    if (elbowCoverage(i, c.startMs, c.tMs) < WRIST_ELBOW_COVER) { admitWrist(i, c); fired[i] = true } else wristPending[i] += c
+                }
+            }
+            if (wristPending[i].isNotEmpty()) {
+                val it2 = wristPending[i].iterator()
+                while (it2.hasNext()) {
+                    val c = it2.next()
+                    if (armCycles.any { it.arm == sideW && it.src != 'W' && overlapRatio(it.startMs, it.tMs, c.startMs, c.tMs) >= PAIR_OVERLAP_MIN }) { it2.remove(); continue }
+                    if (tMs - c.tMs >= WRIST_DEFER_MS) {
+                        it2.remove()
+                        // 팔꿈치가 보이던 창: 보인 팔꿈치가 h 이상 움직였어야 컬(사이클이 안 난 이유는 굽힌 채 다시 보여서) — 아니면 손목 높이만 바뀐 것(숙임·내려놓기)
+                        if (elbowRange(i, c.startMs - WRIST_FLEX_PAD_MS, c.tMs + WRIST_FLEX_PAD_MS) >= WRIST_FLEX_MIN) { admitWrist(i, c); fired[i] = true }
+                    }
+                }
+            }
             if (!a[i].onFrame(tMs, v)) continue
             // 자식(새 코어)은 첫 두 사이클을 한 프레임에 함께 발표한다 — 발표된 사이클마다 하나씩
             for (c in a[i].newlyPublished) {
                 val amp = c.amplitude
                 val side = if (i == 0) 'L' else 'R'
+                // 손목 폴백이 이미 낸 사이클과 겹치면 같은 동작 — 팔꿈치 쪽을 버린다(손목 쪽이 먼저 큐에 들어가 짝을 이뤘을 수 있다)
+                if (armCycles.any { it.arm == side && it.src == 'W' && !it.orphan && overlapRatio(it.startMs, it.tMs, c.startMs, c.tMs) >= PAIR_OVERLAP_MIN }) continue
                 // 기각 게이트는 팔 사이클 단위(그 팔의 구간 [startMs, tMs], "{side}" 자리엔 그 팔) — 두 팔 구간을 합치면 교대 컬의 정상 반복이 걸린다(MM-Fit 재생: 세트 정확 0.66)
                 val reject = rejectFor(side, c.startMs, c.tMs)
                 // 보조 창은 팔 사이클 창 그대로 [startMs, tMs]. 새 코어 사이클은 복귀 75 % 지점에서 끝나 그 회의 완전 신전(손목 최저)은 창 뒤에 남지만, 창의 앞 끝(하강 직전)이
@@ -381,15 +446,15 @@ class RepCounter(
                 }
                 val ac = ArmCycle(side, c.tMs, c.startMs, c.min, c.max, amp, valid, reject?.first, reject?.second, aux?.first, aux?.second, romShort = short)
                 armCycles += ac; armQueue[i].addLast(ac); fired[i] = true
+                noteOneArm(i, ac)
             }
         }
-        // 먼 팔 가림(동시 컬): 한 팔이 ARM_ABSENT_MS 넘게 안 보이면 그 회는 보이는 팔로 센다 — 짝을 기다리는 보이는 팔 사이클 중 **반대 팔이 마지막으로 보인 뒤에
-        // 끝난 것**(그 팔은 그동안 안 보여 짝 사이클을 낼 수 없었다)마다 복사본을 반대 팔 자리에 둔다. 반대 팔이 이 세트에서 아직 사이클을 한 번도 내지 않았으면
-        // (처음부터 가려진 먼 팔) 기다리던 사이클 전부. 매 프레임 본다(§62c 후속 9) — 사이클이 난 프레임에만 붙이면, 반대 팔이 잠깐 보이던 때 끝난 사이클은
-        // 짝을 못 얻고 다음 사이클의 복사본에 밀려 조각으로 버려졌다(12:38 세트 첫 컬 100°, 12:36 세트 88~90 s 컬 101° — 팔별 시작 확정이 사이클을 늦게
-        // 함께 발표하던 때는 우연히 가려졌다). 반대 팔이 보이던 동안 끝난 사이클에는 붙이지 않는다 — 그 팔은 보였는데 굽히지 않았다(한 팔 조각), 그리고
-        // 기다리던 사이클 전부에 붙이면 잠깐 가려졌다 돌아온 팔의 늦은 사이클과 겹쳐 두 번 셌다(11:54 세트 21 → 25)
-        var addedVirtual = false
+        // 못 본 짝(§101, 종전 '가상 짝' 폐기): 반대 팔이 팔꿈치도 손목도 ARM_ABSENT_MS 넘게 안 보이면, 짝을 기다리는 이 팔의 사이클 중 **반대 팔이 마지막으로 보인 뒤에 끝난 것**은
+        // 회가 될 수 없다 — 그 팔이 움직였다는 근거가 없다(원칙 #1). 종전에는 이 사이클을 반대 팔 자리에 **복사**해 1회로 셌고, 10-08 폰에서 왼팔만 한 회가 화면 3·4 를 올렸다
+        // (먼 팔을 내내 가리면 '가까운 팔 사이클 수' 카운터가 됐다 — 반사실 재생 19회). 이제 세지 않고 `arm_unseen_{반대 팔}` 로 기각해 틱·이유 음성(`PairedArmCues`)을 낸다.
+        // 반대 팔이 이 세트에서 아직 사이클을 한 번도 내지 않았으면(처음부터 가려진 먼 팔) 기다리던 사이클 전부. 매 프레임 본다(§62c 후속 9).
+        // 대가: 과거 사선 세트에서 먼 팔이 손까지 안 보인 회 17/289(5.9 %)를 세지 않는다 — 사용자 결정 U1(존재를 못 본 반복은 세지 않고 촬영 안내)
+        var unseen = false
         for (i in 0..1) {
             val o = 1 - i
             if (tMs - armLastSeen[o] <= ARM_ABSENT_MS) continue
@@ -398,10 +463,14 @@ class RepCounter(
             val waiting = (armQueue[i].size - armQueue[o].size).coerceAtLeast(0)
             for (c in armQueue[i].toList().takeLast(waiting)) {
                 if (!neverCycled && c.tMs <= armLastSeen[o]) continue
-                armVirtual[o]++; armQueue[o].addLast(c.copy(arm = oSide)); addedVirtual = true
+                armQueue[i].removeAll { it === c }
+                val k = armCycles.indexOfLast { it === c }
+                if (k >= 0) armCycles[k] = c.copy(orphan = true, src = 'U')
+                rejectedReps += RepRejected(c.tMs, c.min, c.max, 0f, "arm_unseen_$oSide")
+                unseen = true
             }
         }
-        if (!fired[0] && !fired[1] && !addedVirtual) return false
+        if (!fired[0] && !fired[1] && !unseen) return false
         val published = ArrayList<RepCycle>(2); val valids = ArrayList<Boolean?>(2); val shorts = ArrayList<RomShort?>(2)
         var counted = false
         while (armQueue[0].isNotEmpty() && armQueue[1].isNotEmpty()) {
@@ -414,16 +483,16 @@ class RepCounter(
             if (overlapRatio(cl, cr) < PAIR_OVERLAP_MIN) {
                 val e = if (cl.tMs <= cr.tMs) 0 else 1                  // 먼저 끝난 쪽
                 val late = if (e == 0) cr else cl
-                val next = armQueue[e].elementAtOrNull(1)
-                if (next != null) {
-                    if (overlapRatio(next, late) >= PAIR_OVERLAP_MIN) {
-                        val orphan = armQueue[e].removeFirst()
-                        val k = armCycles.indexOfLast { it === orphan }
-                        if (k >= 0) armCycles[k] = orphan.copy(orphan = true)
-                        armOrphans++
-                        continue
-                    }
-                } else {
+                // 조각 탐색은 그 팔 큐 **전체**(§101) — 바로 다음 하나만 보면, 가상 짝이 사라진 뒤 한 팔만 한 반쪽들이 큐에 쌓였다가 뒤의 무관한 반대 팔 사이클과
+                // 순서대로 짝지어진다(반사실 재생: 기각 위치가 52.8·59.7 s 로 어긋남). 늦은 사이클과 겹치는 것이 뒤에 있으면 앞선 것들은 하나씩 조각
+                if (armQueue[e].drop(1).any { overlapRatio(it, late) >= PAIR_OVERLAP_MIN }) {
+                    val orphan = armQueue[e].removeFirst()
+                    val k = armCycles.indexOfLast { it === orphan }
+                    if (k >= 0) armCycles[k] = orphan.copy(orphan = true)
+                    armOrphans++
+                    continue
+                }
+                if (armQueue[e].size < 2) {
                     // 같은 팔의 다음 사이클이 반대 팔 사이클의 전반부에 시작해 아직 돌아오는 중이면(동시 컬에서 한 프레임 늦는 팔) 그 사이클이 끝날 때 다시 본다
                     val ps = a[e].pendingAtSetEnd()
                     val ipStart = ps.inProgress?.startMs ?: ps.unconfirmed?.startMs
@@ -444,9 +513,11 @@ class RepCounter(
             }
             reps++; repTimesMs.add(late.tMs); lastRepAt = late.tMs
             if (reps == 1) tentativeFirstAt = late.tMs else tentativeFirstAt = null     // 첫 회는 잠정, 둘째 회가 창 안에 오면 확정
-            lastCycleMin = late.min; lastCycleMax = late.max; lastCycleValid = valid
+            // 손목 출처 사이클은 팔꿈치 극값이 없다(NaN) — 반복 검사 창 분할(elbow_minside)은 반대 팔의 팔꿈치 사이클 극값으로
+            val ext = if (late.min.isFinite()) late else (if (late === cl) cr else cl)
+            lastCycleMin = ext.min; lastCycleMax = ext.max; lastCycleValid = valid
             // 회의 시작 = 먼저 시작한 팔의 사이클 시작(§62c 후속 10 — 반복 검사 창의 앞 경계). 극값·끝 시각은 늦은 팔
-            published += RepCycle(late.tMs, minOf(cl.startMs, cr.startMs), late.min, late.max); valids += valid
+            published += RepCycle(late.tMs, minOf(cl.startMs, cr.startMs), ext.min, ext.max); valids += valid
             // 두 팔 사유를 한 회로: 덜 폄 > 덜 올림 > 불명(덜 폄은 손목이 직접 보여 준 것이라 가장 확실하다)
             shorts += if (valid != false) null else listOfNotNull(cl.romShort, cr.romShort).let { r ->
                 when { RomShort.BOTTOM in r -> RomShort.BOTTOM; RomShort.TOP in r -> RomShort.TOP; else -> RomShort.RANGE }
@@ -489,11 +560,74 @@ class RepCounter(
     }
 
     /** 두 팔 사이클 창의 겹침 비 — 겹친 길이 ÷ 짧은 창 길이(0~1). 동시 컬의 짝 판정. */
-    private fun overlapRatio(x: ArmCycle, y: ArmCycle): Float {
-        val ov = (minOf(x.tMs, y.tMs) - maxOf(x.startMs, y.startMs)).coerceAtLeast(0L)
-        val shorter = minOf(x.tMs - x.startMs, y.tMs - y.startMs).coerceAtLeast(1L)
+    private fun overlapRatio(x: ArmCycle, y: ArmCycle): Float = overlapRatio(x.startMs, x.tMs, y.startMs, y.tMs)
+    private fun overlapRatio(aS: Long, aT: Long, bS: Long, bT: Long): Float {
+        val ov = (minOf(aT, bT) - maxOf(aS, bS)).coerceAtLeast(0L)
+        val shorter = minOf(aT - aS, bT - bS).coerceAtLeast(1L)
         return ov.toFloat() / shorter
     }
+
+    /** 최근 [YAW_HIST] 프레임 요 중앙값으로 정한 먼 팔(0 = 왼, 1 = 오른) — 정면·옆 너머·모름 = -1. B(오른어깨가 가까움) → 먼 팔 = 왼. */
+    private fun farArm(): Int {
+        if (yawHist.size < 3) return -1
+        val m = yawHist.sorted()[yawHist.size / 2]
+        val a = kotlin.math.abs(m)
+        if (a <= ViewEstimator.FRONT_MAX_DEG || a >= ViewEstimator.REAR_MIN_DEG) return -1
+        return if ((m > 0f) == (ViewEstimator.B_SIGN > 0f)) 0 else 1
+    }
+
+    private fun elbowCoverage(i: Int, st: Long, en: Long): Float {
+        var n = 0; var k = 0
+        for ((t, ok) in elbowSeen[i]) if (t in st..en) { n++; if (ok) k++ }
+        return if (n == 0) 0f else k.toFloat() / n
+    }
+
+    /** 창 안 팔꿈치각 범위(표본 2개 미만이면 0). */
+    private fun elbowRange(i: Int, st: Long, en: Long): Float {
+        var lo = Float.POSITIVE_INFINITY; var hi = Float.NEGATIVE_INFINITY; var n = 0
+        for ((t, v) in elbowVals[i]) if (t in st..en) { if (v < lo) lo = v; if (v > hi) hi = v; n++ }
+        return if (n >= 2) hi - lo else 0f
+    }
+
+    /** 손목 폴백 사이클을 그 팔 큐에 넣는다(§101) — 팔꿈치 극값은 없고(NaN) ROM 은 보조(손목) 판정만. 시각 순서를 지킨다(늦게 인정한 사이클이 뒤의 팔꿈치 사이클 뒤로 가지 않게). */
+    private fun admitWrist(i: Int, c: RepCycle) {
+        val side = if (i == 0) 'L' else 'R'
+        val aux = auxWindow(i, c.startMs, c.tMs)
+        val auxV = auxRomValid(i, aux)
+        val short = when {
+            auxV != false -> null
+            aux != null && signal.romAuxFloor != null && aux.second > signal.romAuxFloor -> RomShort.BOTTOM
+            else -> RomShort.TOP
+        }
+        val reject = rejectFor(side, c.startMs, c.tMs)
+        val ac = ArmCycle(side, c.tMs, c.startMs, Float.NaN, Float.NaN, Float.NaN, auxV, reject?.first, reject?.second, aux?.first, aux?.second, romShort = short, src = 'W')
+        armCycles += ac
+        val q = armQueue[i]; var k = q.size
+        while (k > 0 && q.elementAt(k - 1).tMs > ac.tMs) k--
+        q.add(k, ac)
+        noteOneArm(i, ac)
+    }
+
+    /**
+     * '한 팔만' 연속 감지(§101) — 이 팔의 사이클 창에서 반대 팔이 **관측됐고 가만히 있었으면**(보인 팔꿈치 범위 < [ONE_ARM_STILL_DEG], 팔꿈치가 없으면 손목 범위 < [ONE_ARM_STILL_WRIST])
+     * 연속 수를 올리고, 반대 팔이 사이클을 내면 0 으로. [ONE_ARM_STREAK] 이면 알림 한 번([takeOneArmNotice]). 횟수에는 손대지 않는다 — MM-Fit 교대 59세트(정상) 오발 1/59.
+     */
+    private fun noteOneArm(i: Int, c: ArmCycle) {
+        val o = 1 - i
+        oneArmStreak[o] = 0
+        val er = elbowRange(o, c.startMs, c.tMs)
+        val seenElbow = elbowCoverage(o, c.startMs, c.tMs) > 0f
+        val still = if (seenElbow) er < ONE_ARM_STILL_DEG else {
+            var lo = Float.POSITIVE_INFINITY; var hi = Float.NEGATIVE_INFINITY; var n = 0
+            for ((t, v) in auxSamples[o]) if (t >= c.startMs && t <= c.tMs) { if (v < lo) lo = v; if (v > hi) hi = v; n++ }
+            n >= 2 && hi - lo < ONE_ARM_STILL_WRIST
+        }
+        if (!still) { oneArmStreak[i] = 0; return }
+        if (++oneArmStreak[i] >= ONE_ARM_STREAK) { oneArmStreak[i] = 0; oneArmNotice = if (i == 0) 'L' else 'R' }
+    }
+
+    /** '한 팔만' 알림(§101) — 같은 팔만 [ONE_ARM_STREAK] 번 이어졌을 때 그 팔을 한 번 돌려준다(화면 안내). */
+    fun takeOneArmNotice(): Char? = oneArmNotice?.also { oneArmNotice = null }
 
     /** 팔 [arm] 의 보조 ROM 피처 창 (진폭, 최소) — 표본 2개 미만이면 null. */
     private fun auxWindow(arm: Int, startMs: Long, endMs: Long): Pair<Float, Float>? {
@@ -685,8 +819,22 @@ class RepCounter(
     companion object {
         /** 판별 샘플 상한(300 ms 샘플링 10분). 넘으면 앞 절반을 버린다 — 사이클이 한 번도 안 난 긴 세트에서 무한히 쌓이지 않게. */
         private const val IDENTITY_SAMPLE_CAP = 2_000
-        /** 팔별 경로에서 한 팔이 이보다 오래 안 보이면(피처 없음) 다른 팔의 사이클을 그 회로 센다 — 폰 1세트에서 오른팔이 8 s 미검출(B2). */
+        /** 팔별 경로에서 한 팔이 이보다 오래 안 보이면(팔꿈치·손목 모두 없음) 다른 팔의 사이클은 '못 본 짝' 으로 기각한다(§101, 종전에는 그 회로 셌다) — 폰 1세트에서 오른팔이 8 s 미검출(B2). */
         const val ARM_ABSENT_MS = 2_500L
+        /** 먼 팔 손목 폴백(§101): 손목 높이 사이클 최소 진폭(몸통 단위 — 정상 팔 사이클 p1: MM-Fit 0.57·폰 0.50, 잃는 정상 사이클 ≤ 0.4 %), 꼭대기 하한(어깨 근처 — p1 −0.31/−0.45),
+         *  사이클 길이 상한, 팔꿈치 관측률 이상이면 보류, 보류 시간, 보류 창의 팔꿈치 범위 하한(= 팔 사이클 h)·여유, 요 이력 길이. */
+        const val WRIST_MIN_AMP = 0.35f
+        const val WRIST_TOP_MIN = -0.45f
+        const val WRIST_MAX_DUR_MS = 6_000L
+        const val WRIST_ELBOW_COVER = 0.5f
+        const val WRIST_DEFER_MS = 1_500L
+        const val WRIST_FLEX_MIN = 35f
+        const val WRIST_FLEX_PAD_MS = 600L
+        const val YAW_HIST = 15
+        /** '한 팔만' 알림(§101): 연속 수, 반대 팔 정지 판정(팔꿈치 범위 °, 손목 범위 몸통) — 연속 2·15°/0.15 는 MM-Fit 정상 교대 오발 5/59, 3·10°/0.10 은 1/59. */
+        const val ONE_ARM_STREAK = 3
+        const val ONE_ARM_STILL_DEG = 10f
+        const val ONE_ARM_STILL_WRIST = 0.10f
         /** 기각 표본 보관 하한(ms) — 반대 팔 사이클이 늦게 발표돼도 자기 구간을 볼 수 있게 이만큼은 남긴다. */
         const val REJECT_KEEP_MS = 10_000L
         /** 팔별 경로 첫 회 잠정 창(ms) — 첫 회 뒤 이 안에 둘째 회가 없으면 첫 회를 거둔다. 새 코어 시작 확정의 첫 짝 창과 같은 값. */
@@ -984,7 +1132,8 @@ object RepSignals {
         //  - 같은 변경에서 ROM(knee_out_mean −0.0076)을 뗐다. 단위가 다른 신호의 기준이라 붙여 두면 거짓 판정이 된다.
         //    knee_mean 의 AIHub 후보(146.6°)는 "조금만 굽혀도 유효" 라 기준 구실을 못 해 쓰지 않는다 → ROM 없음(null).
         //  - TRACK 비교는 기존 기록의 단위(knee_out_mean · 0.10)를 유지한다 — comparisonFeature/comparisonMinAmp.
-        put("스텝 포워드 다이나믹 런지", RepSignal("knee_mean", ANGLE, comparisonFeature = "knee_out_mean", comparisonMinAmp = NORM_S))
+        // §101a: `knee_mean` 은 두 무릎이 다 보여야 있다 — 사선에서 먼 다리가 앞이면 뒷무릎이 빠져 신호가 비었다(10-09 오른발 앞 6걸음 0회). 보이는 무릎의 평균(`lunge_knee`)으로
+        put("스텝 포워드 다이나믹 런지", RepSignal(Lunge2d.KNEE_SIG, ANGLE, comparisonFeature = "knee_out_mean", comparisonMinAmp = NORM_S))
         put("스텝 백워드 다이나믹 런지", RepSignal("hip_mean", ANGLE))
         put("스탠딩 니업", RepSignal("hip_mean", ANGLE))
         // ---- 팔꿈치 각 계열 (풀업·랫풀·딥스·로우·컬·페이스풀)
@@ -1047,14 +1196,46 @@ data class RepPendingState(val unconfirmed: RepCycle?, val inProgress: RepCandid
  * @property tMs 사이클이 끝난(카운트 신호가 발화한) 프레임 시각. @property identitySwing 그 사이클 창의 판별 신호 스윙(게이트 미만) —
  *   팔별 경로의 기각 게이트(spec §62c)에서는 상한을 **넘은** 기각 피처의 스윙이고 [feature] 가 그 피처다(판별 게이트는 null).
  */
-data class RepRejected(val tMs: Long, val min: Float, val max: Float, val identitySwing: Float, val feature: String? = null)
+/** 판별 기각 한 건 — [feature] 가 사유. [side] 는 그 사이클의 움직인 다리(한 다리 계열, §101 화살표의 쪽) — 모르면 null. 로그 바이트는 바꾸지 않는다(재생 파리티). */
+data class RepRejected(val tMs: Long, val min: Float, val max: Float, val identitySwing: Float, val feature: String? = null, val side: StepSide? = null)
 
 /**
  * 판별 기각·멈춤 사유의 음성 문장을 내는 엔진(spec §99, 설계 §4.4) — 한 다리 계열(`LegCycleTracker`)·바닥 반복 계열(`FloorCycleTracker`)·플랭크 시계(`PlankHoldClock`).
  * 기각 음성 경로가 반복별 자세 검사(`RepFormSpecs`)나 다리 추적기에 묶여 있으면 바닥 종목의 판별이 무음이 된다 — 이 인터페이스로 뗀다.
  * @return [reason] 의 문장(두 모드 같음), 말하지 않는 사유면 null(낮은 틱만).
  */
-interface IdentityCueSource { fun cueFor(reason: String): String? }
+interface IdentityCueSource {
+    fun cueFor(reason: String): String?
+    /** 이 사유의 다음 센 회를 '교정' 으로 칠 수 있는가 — 촬영 문제(못 본 팔)는 교정이 아니다(§101). */
+    fun recovers(reason: String): Boolean = true
+    /** 무음 사유인가(관측이 무너진 사이클 — 틱도 이유도 교정도 없다, §101 사이드 런지 blip·edge). */
+    fun silent(reason: String): Boolean = false
+    /** 이 사유의 교정 문장을 그릴 화살표 어휘(§101 — 문장 표 바로 옆에 둔다). null = 문장만. 말하는 사유([cueFor] != null)는 전부 가져야 한다(`CueMotionCoverageTest`). */
+    fun motionFor(reason: String): FormMotion? = null
+}
+
+/**
+ * 팔별 경로(덤벨·바벨 컬)의 기각 사유 문장(§101, 2026-10-08) — 종전에는 팔별 경로에 원천이 없어 컬 기각이 틱도 말도 없었다(10-08 60° 넘는 대스윙 2건 약 20 s 침묵).
+ * 판별(= 횟수의 입장 조건)이라 두 모드에서 말한다. 같은 이유는 `RejectCueGate` 6 s 간격.
+ */
+object PairedArmCues : IdentityCueSource {
+    override fun cueFor(reason: String): String? = when {
+        reason == "arm_unseen_R" -> "오른팔이 화면에 안 보여 세지 않았어요. 휴대폰 쪽으로 조금 돌아서 주세요."
+        reason == "arm_unseen_L" -> "왼팔이 화면에 안 보여 세지 않았어요. 휴대폰 쪽으로 조금 돌아서 주세요."
+        reason.startsWith("upperarm_vert") -> "팔을 휘두르면 세지 않아요. 팔꿈치를 옆구리에 붙이고 팔만 접어 주세요."
+        reason == Arm2d.TORSO_TILT -> "몸통을 흔들면 세지 않아요. 상체를 세운 채 팔만 접어 주세요."
+        else -> null
+    }
+    override fun recovers(reason: String): Boolean = !reason.startsWith("arm_unseen")
+    /** 화살표(§101): 휘두름 = 카메라 쪽 팔꿈치를 옆구리로, 몸통 흔들림 = 어깨 점(흔들림은 방향이 없다). 못 본 팔은 촬영 안내라 그림이 없다. */
+    override fun motionFor(reason: String): FormMotion? = when {
+        reason.startsWith("upperarm_vert") -> FormMotion(MotionAnchor.ELBOWS, high = MotionKind.TOWARD_TORSO, pick = MotionPick.NEAR)
+        reason == Arm2d.TORSO_TILT -> FormMotion.mark(MotionAnchor.SHOULDERS)
+        else -> null
+    }
+    /** '한 팔만' 화면 안내 — [arm] 이 연속으로 혼자 움직였다(§101). */
+    fun oneArmNote(arm: Char): String = "${if (arm == 'L') "오른팔" else "왼팔"} 차례예요. 양팔을 한 번씩 해야 1회예요."
+}
 
 /**
  * 팔별 경로(spec §62c)에서 한 팔이 낸 사이클 — 세트 로그 `reps.arms`. 회로 묶이기 전 원자재라 기각된 회의 사이클도 있다.
@@ -1068,7 +1249,9 @@ data class ArmCycle(val arm: Char, val tMs: Long, val startMs: Long, val min: Fl
                     /** 짝 없이 버린 조각(같은 팔의 다음 사이클이 반대 팔 사이클과 겹쳤다) — 회가 되지 않았다. */
                     val orphan: Boolean = false,
                     /** ROM 미달 사유 — [valid] 가 false 일 때만. */
-                    val romShort: RomShort? = null)
+                    val romShort: RomShort? = null,
+                    /** 출처(§101): E = 팔꿈치각 자식, W = 먼 팔 손목 높이 폴백(극값 NaN), U = 반대 팔을 못 봐 기각(`arm_unseen`, orphan). 로그 `reps.arms[].src`(E 는 생략). */
+                    val src: Char = 'E')
 
 /** 팔별 경로의 ROM 미달 사유(spec §62c 후속 3) — 음성 사유를 고른다. TOP = 덜 올림, BOTTOM = 덜 폄(아래 끝 미도달), RANGE = 어느 끝인지 모름. */
 enum class RomShort { TOP, BOTTOM, RANGE }

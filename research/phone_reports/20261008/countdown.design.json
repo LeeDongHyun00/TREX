@@ -1,0 +1,115 @@
+{
+ "problem_id": "countdown",
+ "summary": "원인은 확정이다. 첫 안내 동안 CapturePreparationUi.kt:85-91 이 holdStart(true) 로 카운트다운 진입(CapturePreparation.kt:231 `!startHeld`)을 막는다. 그런데 안내 오디오가 12 s 를 넘어(13.56~26.52 s, 8/10) §48 의 'TTS 콜백 누락 대비 12 s 마감'(:87·:90)이 실제 시작 시각이 됐다. 설명은 문장 중간에 잘렸고, 5/10 세트는 29~96 ms 뒤 '3' 이 나왔다. 이력 43건(09-29~10-08)에서는 24건(56 %)이 안내 끝 150 ms 안에 '3' 이었다. 즉 이미 준비된 채 안내를 기다린 경우가 절반을 넘는다.\n\n설계는 여섯 가지다.\n(1) 카운트다운을 말과 떼어 놓는다. 진입 조건은 범위 통과, 몸통 안정 0.4 s, 방향 근거(8프레임·불일치 대기 아님)뿐이다. holdStart 와 12 s 대기 게이트는 지운다.\n(2) 긴 안내 한 덩어리를 우선순위 문장 계획으로 바꾼다.\n  - 그 종목의 '세는 핵심 조건' 한 문장(ESS, ≤24음절, 예측 ≤5.07 s)을 맨 먼저 늘 말한다. 가장 이른 시작은 5.42 s 다.\n  - 자리 문장(PLACE)은 아직 자리·권장 방향이 안 맞을 때만 말한다.\n  - 세부(DET)는 가장 이른 시작 전에 끝날 수 있을 때만 말한다.\n  - 전문은 준비 화면에 늘 띄운다.\n(3) 숫자 처리. 카운트 진입 때 안내가 말하는 중이면 그 카운트의 숫자는 끝까지 톤과 링으로만 낸다. 설명을 자르지 않기 위해서다. 회복 때 같은 숫자를 다시 말하던 것도 없앤다.\n(4) 시스템이 문장 중간을 자르지 않는다. 정상 시작(PREPARE→WORK) 때는 speech.stop() 2곳(CapturePreparationUi.kt:97, TrexApp.kt:266)을 건너뛰고 지금 문장만 마저 끝낸다.\n(5) 앱의 약속 문장 '몸이 화면에 잡히면 3초 뒤 시작해요'(ExerciseProfiles.kt:82)는 음성에서 빼고 화면 고정 문구로 옮긴다. 이제는 사실이 된다.\n(6) 준비 추적(prep_*)을 feedback 로그에 남긴다. 미지수였던 '안내 중 언제 준비됐나'를 폰에서 잴 수 있게 된다.\n\n시간축 재생 결과, 이미 준비된 사용자의 시작은 15.0 s → 5.4~5.7 s(첫 세트 7.4 s)로 줄고, 핵심 문장은 10종목 모두 시작 전에 끝난다. 횟수·규칙·임계·ship/beta 는 바꾸지 않는다. 바닥 시작 범위 문장이 크런치 첫 숫자 4개를 5.5~10.8 s 늦춘 같은 계열 문제도 함께 다룰지는 사용자가 결정한다.",
+ "definition": "이 문제의 '판정'은 자세가 아니라 '시작해도 된다(준비됨)'이다. 운동학적으로 다음 셋이 모두 성립하면 준비됨으로 본다.\n\n(a) 범위: 그 운동이 쓰는 관절이 화면 안에 보인다(CaptureFraming.inspect, CapturePreparation.kt:39-82).\n  - 머리 + 어깨·팔꿈치·손목·골반, 전신이면 무릎·발목까지. 가시도 ≥0.5.\n  - 가장자리 여유: 머리·손 4 %, 그 밖 2 %. 발목은 아래 끝까지 허용.\n  - 사선이면 가까운 사슬 전부 + 먼 쪽 어깨·골반(·발목). 바닥은 옆 사슬.\n  - 덤벨 컬은 framingRegion=UPPER 라 다리를 요구하지 않는다. '전신' 이 아니다.\n(b) 정지: 몸통(어깨·골반) 테두리가 ±0.05(정규화) 안에 400 ms 머문다(:229-231).\n(c) 방향 근거(신규): 서서 하는 FRONT/B/D 요청이면 85 ms 준비 프레임 8개로 뷰 추정이 있고, '분명히 틀린 방향' 불일치 대기 중이 아니다(CaptureDirectionWindow :115-124, 막는 기준은 그대로).\n  - 사선 요청: 반대 사선·55° 초과.\n  - 정면 요청: 30° 초과.\n  - 추정 불가(r<0.9·UNKNOWN), 바닥, 옆은 막지 않는다.\n\n옳은 동작과 틀린 동작은 다음과 같다.\n- 옳은 동작\n  - 사용자가 (a)~(c)를 만족한 뒤 '3'(또는 톤)이 0.8 s 안에 나온다. 0.4 s 정지 + 최대 0.28 s 방향 근거 + 85 ms 프레임이다.\n  - 그 시각이 말(안내)에 의존하지 않는다.\n  - 시스템이 안내 문장을 중간에서 자르지 않는다.\n  - 핵심 조건 문장은 시작 전에(늦어도 시작 뒤 1 s 안에) 끝까지 들린다.\n  - 화면·음성의 약속이 동작과 일치한다.\n- 틀린 동작(지금)\n  - 잡히고 정지했는데 안내 종료나 12 s 를 기다린다.\n  - 안내가 12 s 에 문장 중간에서 끊긴다.\n  - '잡히면 3초' 라고 말하고 지키지 않는다.\n\n관측 가능성\n- (a)~(c)는 모두 폰 카메라의 85 ms 준비 프레임으로 본다(PostureLive.kt:970-972 가 sample/sampleAt 을 갱신하고, 300 ms 격자 :979-982 보다 앞이다).\n- TTS 재생 위치는 발화 단위(onStart/onDone/onStop)로만 보인다. 그래서 문장 단위로 설계하고, 문장 안의 위치는 쓰지 않는다.\n\n못 보는 것(원칙 #5)\n- 사용자가 설명을 들었는지·이해했는지, 시작할 의도가 있는지는 못 본다.\n- 컬은 다리를 못 본다(UPPER).\n- 준비 단계 시간축은 지금 로그에 없다. 준비 프레임은 메모리에 12개만 두고(:985-992) 세트 로그는 STARTED 부터다. 그래서 '안내 중 언제 준비됐나' 는 이번 데이터로 알 수 없다. 하한은 마감 0.27~0.35 s 전이다. 이 설계는 prep_* 추적으로 그 값을 재게 만든다.\n- 정면 요청에서 16.4~30° 돌아선 사용자, 사선 요청에서 정면에 선 사용자는 '분명히 틀림' 이 아니라 막지 않는다(§89 결정 유지). 대신 PLACE 문장을 말할지 정하는 데만 '권장 방향 일치' 를 쓴다.",
+ "changes": [
+  {
+   "file": "app/src/main/java/com/example/trex_kotlin/posture/CapturePreparation.kt",
+   "change": "- 보류 장치(`startHeld`·`holdStart`, :163·:182·:231 의 `!startHeld`·:234 의 보류 메시지 분기)를 지운다.\n- COUNTDOWN 진입 조건은 `frame.ready && 몸통 안정 ≥400 ms && frame.directionSettled` 다.\n- 보류 중 '촬영 범위가 확인됐어요.' 로 메시지만 바꾸던 분기(:234)도 함께 없앤다.",
+   "rationale": "RC1. 첫 안내 동안 잡히고 정지해도 '3' 이 안내 끝 또는 12 s 에 묶였다. 재생(sim_out.txt)에서 준비 ≤11.5 s 면 '3'=12.0 s·시작=15.0 s 였고, 보류가 없으면 준비+0.4 s 다. 이력 43건 중 24건(56 %)이 안내 끝 150 ms 안의 '3' 이었다(design2/ready_dist.py). 사용자 요청('설명 중에도 카운트다운')을 직접 고친다."
+  },
+  {
+   "file": "app/src/main/java/com/example/trex_kotlin/posture/CapturePreparation.kt",
+   "change": "- `CaptureFrame`(:7)에 `directionSettled: Boolean = true` 를 더한다.\n- `CaptureDirectionWindow.check`(:115-124)는 막는 대상(서서 FRONT/RIGHT_FRONT/LEFT_FRONT, ready, view_cos/sin 있음)일 때만 판정한다.\n  - 창이 8프레임 미만이면 settled=false 다.\n  - 불일치 대기 중(mismatchSince≠null, 2 s 미만)이면 settled=false 다.\n  - 2 s 이상 불일치면 지금처럼 ready=false + capture.placement 다.\n  - r<0.9·UNKNOWN·바닥·옆은 settled=true 다(못 보면 막지 않는다, §89).",
+   "rationale": "보류를 지우면 생기는 회귀를 막는다. 지금 방향 확인이 실제로 작동하는 것은 첫 세트의 12 s 보류 동안뿐이다. 둘째 세트부터는 정지 0.4 s 가 8프레임(8×85 ms=0.68 s)보다 먼저라 방향 추정 전에 카운트에 들어가고, 카운트 중에는 방향을 보지 않는다(:102). 비용은 진입 +0.28 s 상한이다. 세트 첫 프레임 대용 재현(design/dir_start.py)에서는 서서 11세트(10-07·10-08) 모두 첫 8프레임 창이 일치(M)였다. 다만 85 ms 준비 프레임 자체는 로그에 없어 폰에서 확인한다."
+  },
+  {
+   "file": "app/src/main/java/com/example/trex_kotlin/posture/CapturePreparation.kt",
+   "change": "- `movedReason`(:196-204)의 shifted 문구를 바닥(생성자 `floor`, :153 — 지금은 쓰지 않음)이면 '몸이 많이 움직였어요. 자세를 잡고 잠시 멈춰 주세요.' 로 바꾼다.\n- 서서 하는 종목은 그대로 둔다.",
+   "rationale": "플랭크 13:58:25 에 바닥 종목인데 '제자리에 서 주세요' 가 나왔다. 보류를 지우면 카운트가 더 일찍 시작해, 무릎 준비 → 플랭크로 올리는 동작과 겹치는 일이 늘어난다."
+  },
+  {
+   "file": "app/src/main/java/com/example/trex_kotlin/posture/PreparationVoice.kt (신규, 순수 Kotlin)",
+   "change": "- `PrepLine(kind: ESS|PLACE|DET, text)` 를 둔다.\n- `PrepSpeech.syllables(text)`: 숫자는 한국어 읽기로 센다.\n- `PrepSpeech.predictMs = 410 + 194×음절` 이다. 실측 완료 발화 86개, |잔차| p95 0.84 s.\n- `PreparationVoicePlan.nextLine(lines, i, nowMs, settledRecommended, counting, started, earliestStartMs)` 의 규칙:\n  - ESS 는 맨 앞, 늘 말한다.\n  - PLACE 는 `!settledRecommended && !counting` 일 때만 말한다.\n  - DET 는 `!counting && 예측 끝 ≤ earliestStart` 일 때만 말한다.\n  - started 면 null 이다.\n- `CountdownVoice.mode(introPlayingAtEntry, ttsReady, muted)` 는 TONE/SPEAK/NONE 을 돌려준다.",
+   "rationale": "Composable 안의 결정 논리를 JVM 유닛 테스트할 수 있게 뺀다. 재생기 engineFiles(replay-jvm build.gradle.kts:24-25)에는 들어가지 않는다. 안드로이드 의존도 없다."
+  },
+  {
+   "file": "app/src/main/java/com/example/trex_kotlin/posture/ExerciseProfiles.kt",
+   "change": "- `preparationInstruction`(:75-82)의 한 덩어리를 `preparationLines(): List<PrepLine>` 로 나눈다.\n- 예산: ESS ≤24음절, PLACE ≤21음절, DET 각 ≤17음절. 약속 문장 '몸이 화면에 잡히면 3초 뒤 시작해요.' 는 음성에서 뺀다.\n- `preparationInstruction` 은 화면 전문(배치 + 세는 조건 전부)으로 남긴다.\n- LEG_PAIR_COUNT_RULE(:29)·SIDE_EACH_COUNT_RULE(:27)·REFERENCE_HINTS(:35-38)·FLOOR_PREPARATION(:44-48)을 짧은 문장으로 쪼갠다.\n- ESS 초안(음절·예측 길이):\n  - 컬: '처음 두세 번은 팔꿈치를 옆구리에 붙여 정확히 해 주세요.' 23·4.87 s\n  - 니업: '무릎을 접은 채 골반 높이까지 올려야 세요.' 17·3.71 s\n  - 사이드 크런치: '팔꿈치가 옆으로 올린 무릎에 닿아야 세요.' 17\n  - 런지·바벨 런지: '앞무릎을 80도 가까이 굽혀 주세요.' 15\n  - 사이드 런지: '허벅지가 수평이 되게 깊게 앉아야 세요.' 16\n  - 크로스 런지: '발을 뒤로 교차해 깊게 내려가야 세요.' 15\n  - 크런치: '누워서 무릎을 세우면 세기 시작해요.' 15\n  - 레그 레이즈: '누워서 다리를 바닥에 내리면 세기 시작해요.' 18\n  - 플랭크: '다리를 펴고 골반을 들면 시간을 재기 시작해요.' 19\n  - 스쿼트: 없음. 스쿼트 COACH 횟수 조건 설계가 정한다.\n- 문구는 판별 기각 대사(LegCycle.kt:457-483, FloorCycle.kt:556-573)와 같은 낱말을 쓴다.\n- PLACE 초안: 정면 '가슴이 휴대폰을 향하게 서 주세요.' 14, D '왼어깨를 휴대폰 쪽으로 45도 돌려 서 주세요.' 20.\n- DET 초안: '왼쪽 한 번, 오른쪽 한 번이 1회예요.' 14, '허리를 숙이면 세지 않아요.' 11 등.",
+   "rationale": "RC2·놓친 원인('잡히면 3초' 약속 위반). 이미 준비된 사용자가 시작(최선 5.42 s) 전에 들을 수 있는 말은 약 24음절뿐이다(0.41+0.194×음절). 지금 안내 8/10 이 12 s 를 넘었고, 잘린 부분에 세는 조건(니업·크로스·사이드 런지)과 약속 문장이 있었다. 앞에 둘 것은 첫 회 전에 꼭 필요한 한 가지다.\n- 컬: 첫 반복이 본인 기준이 된다.\n- 바닥: 시작 자세가 있어야 센다.\n- 한 다리: 기각 사유 1순위.\n나머지는 경기 중 기각 대사가 그 회에 이유를 말한다(RejectCueGate, FloorLive.kt:193-229). 화면에도 늘 있다."
+  },
+  {
+   "file": "app/src/main/java/com/example/trex_kotlin/CapturePreparationUi.kt",
+   "change": "안내 효과(:77-96)를 문장 계획 루프로 바꾼다.\n- 첫 문장만 speak(flush=true), 다음 문장은 앞 문장의 isSpeaking 이 false 가 된 뒤 speak(flush=false) 로 낸다.\n- 문장마다 감시 시한(예측×1.5+2 s)을 둔다. 넘으면 speech.stop() 한다. 콜백 누락 대비이고, 옛 12 s 를 대신한다.\n- 다음 문장은 PreparationVoicePlan 이 controller.state 와 방향 창(권장 방향 일치)을 보고 고른다.\n- 말하는 동안 `introPlaying` 을 둔다. remember 상태이며 이 Composable 안이다.\n- ESS 를 끝까지 들으면 PreparationIntro.mark 를 찍는다(30분 한 번 유지).\n- 계획이 끝나면 introductionGiven=true 다. :124 의 대기 안내 게이트는 그대로 둔다.",
+   "rationale": "보류 없이 겹치되 시스템이 문장 중간을 자르지 않게 한다. 재생(design2/plan_c.py)에서 이미 준비된 사용자는 ESS 만 듣고 시작한다(시작 15.0 s → 5.53 s, 첫 세트 7.36 s). 늦게 서는 사용자는 ESS+PLACE(+DET)를 듣는다. 핵심 문장은 10종목 모두 시작 전에 끝난다(최장 4.89 s < 5.53 s)."
+  },
+  {
+   "file": "app/src/main/java/com/example/trex_kotlin/CapturePreparationUi.kt",
+   "change": "숫자(:114-119)를 바꾼다.\n- COUNTDOWN 진입 때 `introPlaying` 이면 그 카운트는 끝까지 톤(기존 :117 경로)이다. 아니면 TTS 숫자다.\n- 효과 키에서 trackingHold 를 빼고 `lastSaidSecond` 를 둔다. 초가 바뀔 때만 말하고, WAITING·재시작에서 초기화한다.",
+   "rationale": "RC3. 숫자는 QUEUE_FLUSH(PostureCoach.kt:579·585)라 설명 중에 말하면 설명을 자를 수밖에 없다. 그래서 §48 보류가 생겼다(spec 1061줄). 톤은 다른 스트림이라 자르지 않는다. 한 카운트 안에서 톤과 숫자를 섞지 않는다. 회복 때 같은 숫자를 다시 말하던 문제도 함께 고친다: 크로스 런지 '3' 13:54:43.611 → '2' 280 ms 뒤 끊음."
+  },
+  {
+   "file": "app/src/main/java/com/example/trex_kotlin/CapturePreparationUi.kt",
+   "change": "멈춤·재시작 이유 음성(:130-142, flush=true)을 바꾼다.\n- `introPlaying` 이면 그 문장 끝(감시 시한 안)까지 기다린다.\n- 그 뒤 조건(trackingHold·WAITING)을 다시 확인하고 말한다.\n- 이유를 말하면 계획의 남은 문장은 내지 않는다.",
+   "rationale": "보류를 지우면 카운트가 설명과 겹친다. 10-08 에는 카운트 중 멈춤·재시작이 4/10 세트였다. 이유 음성이 ESS 를 문장 중간에서 자르지 않게 한다."
+  },
+  {
+   "file": "app/src/main/java/com/example/trex_kotlin/CapturePreparationUi.kt + app/src/main/java/com/example/trex_kotlin/TrexApp.kt",
+   "change": "- 패널 onDispose(:97): `delivered && !skipped`(정상 시작)면 speech.stop() 을 부르지 않는다. 컨트롤러 취소는 그대로다.\n- TrexApp.kt `nextSession`(:260-275)의 `speech.stop()`(:266): `current.phase == SessionPhase.PREPARE` 면 건너뛴다.\n  - 준비 건너뛰기는 패널 cancel() 이 이미 멈춘다(:199).\n  - 나가기·일시정지·카메라 전환은 종전처럼 멈춘다.",
+   "rationale": "onPrepared=nextSession(token,true)(TrexApp.kt:457)라 지금은 시작 순간 진행 중 문장이 잘린다. 계획 규칙상 예측 넘침은 0~0.3 s(TTS 잔차 p95 0.84 s)다. 이력에서 시작 → 첫 경기 중 음성은 중앙 5.4 s, 세트 끝 문구를 빼면 최소 1.7 s 라 마저 말해도 겹침이 드물다(design2/first_cue.py)."
+  },
+  {
+   "file": "app/src/main/java/com/example/trex_kotlin/CapturePreparationUi.kt",
+   "change": "화면(:153-170)을 바꾼다.\n- 배치 문구 아래에 고정 문구 '몸이 화면에 잡히고 멈추면 3초를 셉니다. 설명 중에도 시작해요.' 를 둔다.\n- '세는 조건' 블록(ESS+DET 전문, c.text2, 13 sp)을 바닥 범위 문장(floorLine) 위에 둔다.\n- WAITING 이면서 프레임이 준비된 동안은 '자리 확인됨 · 잠시 멈춰 주세요' 를 보인다. 일반 문구 필터 :45·:162-165 에 걸리지 않는 별도 줄이다.",
+   "rationale": "놓친 원인 2. 지금은 잡혀도 방향 시범 애니메이션만 돌아 '아직 맞추는 중' 으로 읽힌다. 세는 조건은 음성에만 있어, 잘리면 어디에도 남지 않았다. 음성에서 뺀 내용은 화면이 가진다(원칙 #5)."
+  },
+  {
+   "file": "app/src/main/java/com/example/trex_kotlin/CapturePreparationUi.kt",
+   "change": "준비 추적을 남긴다. `speech.traceFeedback(\"prep\", …)`(PostureCoach.kt:432 공개 함수)로 armed / ready(첫 준비 프레임) / settled(방향 근거) / countdown(mode=tone|speak) / started / hold:<이유> / restart:<이유> / line:<ESS|PLACE|DET>:<done|stopped> 를 feedback-*.jsonl 에 쓴다.",
+   "rationale": "조사의 미지수(안내 중 준비 시각, 스쿼트 7.2 s 무음 대기의 원인)를 폰 블록에서 잴 수 있게 한다. 합격 기준 '준비→3 ≤0.8 s' 를 이것 없이는 판정할 수 없다."
+  },
+  {
+   "file": "app/src/test/java/com/example/trex_kotlin/posture/CapturePreparationTest.kt (+FloorWiringTest.kt:215-219)",
+   "change": "- `framingIsMeasuredDuringTheIntroAndCountsRightAfterIt`(:99-106)를 '안내 중에도 준비+0.4 s 에 카운트' 와 '방향 근거 8프레임 전·반대 사선이면 진입하지 않음' 으로 바꾼다.\n- '3초' 문장 순서 단정(:24·:30·:72)은 ESS 맨 앞, 26 프로필 음절 예산, 음성 줄에 약속 문장 없음으로 바꾼다.\n- PreparationVoicePlan·CountdownVoice 표 테스트를 더한다.\n- 바닥 문구 단정(FloorWiringTest)은 ESS 문구를 그대로 써서 유지한다.",
+   "rationale": "설계 규칙(예산·순서·톤)을 테스트가 지키게 한다. 대사가 바뀌면 같이 깨지게 한다(RepFormLinesTest 선례)."
+  },
+  {
+   "file": "research/aihub_fitness/KOTLIN_PORTING_SPEC.md (+docs/POSTURE_HANDOFF.md)",
+   "change": "- §101 '준비 안내와 카운트다운 분리' 를 더한다. 근거 수치(안내 8/10 >12 s, 이력 24/43, 재생 15.0 → 5.5 s)를 적는다.\n- §48(:1061 '숫자가 설명을 끊지 않도록… 12초')·§89(:2212 holdStart)에 '§101 로 대체' 주석을 단다.",
+   "rationale": "저장소 관례상 기능을 바꾸면 근거(왜)를 남긴다."
+  },
+  {
+   "file": "app/src/main/java/com/example/trex_kotlin/PostureFloorLive.kt (선택, 사용자 결정)",
+   "change": "시작 때 범위 문장(FloorScopeVoice, :146-154·플랭크 :200)에 같은 예산을 건다.\n- 준비 화면 전문으로 옮긴다.\n- 음성은 DET 처럼 시작 전에 끝날 때만 낸다.",
+   "rationale": "같은 계열 결함이다. 10-08 13:55:54 크런치 범위 문장(13.4 s)이 시작 즉시 QUEUE_ADD 로 나가, 숫자 1~4 의 시작이 10.78/8.66/6.86/5.49 s 늦었다(feedback tts_submit→tts_start). 설명이 제때의 신호를 막는다는 점에서 사용자 보고와 같은 종류다."
+  }
+ ],
+ "behavior_after": "준비 단계는 모드와 무관해 COACH·TRACK 이 같게 동작한다. 모드 스위치는 준비 화면에 있다(CoachModeControl). 다른 점은 하나다. 스쿼트처럼 COACH 에서만 빼는 반복이 있는 종목은 그 조건을 ESS·화면에 COACH 일 때만 넣는다. TRACK 은 전부 세므로 넣지 않는다. 이것은 스쿼트 횟수 조건 설계가 문장을 정하면 적용하고, 지금 10종목의 ESS 는 모드 무관이다. 모드는 PostureLiveSessionScreen 인자를 늘리지 않고 패널 안에서 ModeStore(guideName)로 읽는다.\n\n듣는 것(예: 스탠딩 니업, 그 종목 첫 세트, 이미 자리에 선 사용자)\n- 지금: 0 s 부터 24 s 짜리 안내가 나오다 12.0 s 에 '좌우를 못 본 동작은…' 중간에서 끊긴다. 그 직후 '3·2·1', 시작 15.0 s.\n- 바뀐 뒤:\n  - 0 s '무릎을 접은 채 골반 높이까지 올려야 세요.'(약 3.7 s)\n  - 약 2.5 s 에 범위·정지·방향 근거가 차서 카운트에 들어간다. 안내 중이므로 이 카운트는 톤 '삐·삐·삐'(1 s 간격)와 화면 링이다.\n  - 약 5.5 s 시작, 시작 톤(TrexApp.kt:338).\n  - '오른쪽 앞' 배치 문장과 짝 규칙은 이미 자리를 잡았으므로 말하지 않고 화면에 있다.\n- 늦게 서는 사용자(준비 6 s): ESS → '오른어깨를 휴대폰 쪽으로 45도 돌려 서 주세요.' → 자리 잡은 0.7 s 뒤 카운트. 숫자는 그때 말하는 중이 아니면 '3·2·1' 음성이다. 시작은 9.7 s(지금 15.0 s).\n- 카운트 중 움직이면: 이유('몸이 많이 움직였어요…', 바닥은 '자세를 잡고 잠시 멈춰 주세요')는 진행 중 문장이 끝난 뒤 말한다. 회복 때 같은 숫자를 다시 말하지 않는다.\n- 시작 순간 문장이 남아 있으면 그 문장만 마저 말한다(예측 0~0.3 s). 경기 중 코칭(speakLatest 보류·숫자 QUEUE_ADD)은 그 뒤다.\n\n보는 것(준비 화면)\n- 배치 문구 + 고정 문구 '몸이 화면에 잡히고 멈추면 3초를 셉니다. 설명 중에도 시작해요.'\n- '세는 조건' 블록(전문). 예: 니업은 '무릎을 접은 채 골반 높이까지 올려야 세요 · 왼쪽 한 번, 오른쪽 한 번이 1회예요 · 다리를 뻗거나 허리를 숙이면 세지 않아요'.\n- 잡혔지만 아직 정지·방향 근거를 모으는 0.4~0.7 s 동안: '자리 확인됨 · 잠시 멈춰 주세요'.\n- 카운트 중: 링과 숫자(지금과 같다).\n\n두 번째 세트부터(30분 안)는 안내가 없다. 지금처럼 바로 센다. 차이는 방향 근거 +0.28 s 뿐이다.\n\n세는 것: 바뀌지 않는다. 횟수 게이트·규칙·임계·ship/beta 를 건드리지 않는다. 준비 프레임으로 기준을 심는 경로(PostureLive.kt:985-992, §89 후속 2)도 그대로다.",
+ "principles_check": "- #1(판정 안 한 것을 판정한 것처럼 말하지 않음): 판정 경로는 바뀌지 않는다. 오히려 '몸이 화면에 잡히면 3초 뒤 시작해요'(ExerciseProfiles.kt:82, PreparationState 기본 :144)라고 말하고 보류로 어기던 문구-동작 불일치를 없앤다. ESS·화면의 '세지 않아요' 문장은 실제로 켜진 판별 게이트만 말한다. 판별 사유 순서 1순위·기각 대사와 같은 낱말이고, 게이트가 바뀌면 테스트가 깨지게 한다.\n- #2(beta 는 음성 헤드라인이 아님): 새로 말하는 beta 규칙은 없다. ESS 는 이미 안내·기각 음성으로 나가던 횟수 입장 조건이다. 사용자 결정 §98a·b, 바닥 Q1 예외는 판별 기각 음성이다.\n- #3·#4(모드·모든 사용자): 모집단 파라미터와 임계를 건드리지 않는다. 모드는 문장 선택만 가른다(스쿼트 COACH 조건, 미래).\n- #5(못 보는 것 밝힘): 음성에서 뺀 세부와 바닥 범위 문장을 준비 화면 전문으로 옮긴다. 지금은 세는 조건이 음성에만 있어 잘리면 사라졌다.\n- #6(음성 보수적): 문장을 중간에서 자르지 않는다. 숫자는 설명 중이면 톤이다. 핵심 문장은 24음절로 묶는다.\n- #7(입장 조건 ≤2 %): 해당 없음. 새 횟수 게이트나 검사가 없다.\n  - 사용자 기준('일부러 틀린 회가 세지면 실패')과의 관계: 이 변경은 무엇을 세는지 바꾸지 않는다.\n  - 대신 '무엇을 세지 않는지' 를 첫 회 전에 반드시 들리는 자리(ESS)로 옮긴다. 지금은 니업·사이드 크런치·사이드 런지·크로스 런지에서 그 문장이 12 s 전에 시작조차 못 했다(d_heard.py).\n- 함정 점검:\n  - VerifyError: PostureLiveSessionScreen 본문에 지역 변수·인자를 더하지 않는다. 모드는 패널 안에서 ModeStore 로 읽는다. 변경은 별도 함수 CapturePreparationPanel·CapturePreparation.kt·TrexApp nextSession 조건 하나다. 설치 뒤 `cmd package compile -m verify -f` + 'failed to verify' 로 확인한다.\n  - 300 ms 격자: 준비 컨트롤러는 85 ms 프레임(PostureLive.kt:970-972)으로 돌고 격자(:979-982)·준비 프레임 보관(:985-992)은 바꾸지 않는다. 방향 근거 8프레임은 85 ms 기준(0.68 s)이다.\n  - speakLatest: 경기 중 코칭 경로는 그대로다. 준비 문장은 첫 문장만 flush, 나머지는 앞 문장 종료 뒤 QUEUE_ADD 라 서로 자르지 않는다.\n  - engineFiles: CapturePreparation.kt·ExerciseProfiles.kt·신규 PreparationVoice.kt 는 재생기 엔진 파일이 아니다(build.gradle.kts:24-25). 신규 파일은 안드로이드 의존 없이 순수 Kotlin 으로 둔다.",
+ "risks": [
+  "이미 준비된 사용자는 배치 문장(PLACE)과 세부(DET)를 음성으로 듣지 못한다(화면만). 새 사용자가 정면으로 서서 사선 종목(컬 D)을 하는 경우에 대비해, PLACE 생략 조건을 게이트보다 엄한 '권장 방향 일치' 로 둔다. 그래도 뷰 추정이 r≥0.9 로 맞다고 본 경우에만 생략한다. 추정 불가면 말한다.",
+  "TTS 길이 모델은 이 폰(삼성 TTS, setSpeechRate 1.05)에서 맞췄다: 0.41+0.194 s/음절, |잔차| p95 0.84 s, 최대 5.71 s(괄호·가운뎃점 많은 문장). 다른 엔진·속도에서는 예산이 어긋난다. 그래서 예산은 음절로 테스트하고, 문장마다 감시 시한을 둔다. 괄호·'·' 는 ESS 에 쓰지 않는다.",
+  "방향 근거 요구가 경계 흔들림(09-29 컬 요 −18~−23°, 정면 경계 16.4°)에서 진입을 늦출 수 있다. 막는 것은 아니다: 일치 창이 나오면 mismatchSince 가 지워지고 바로 진입한다. 85 ms 준비 프레임 로그가 없어 오프라인 비용은 상한(+0.28 s)만 안다.",
+  "카운트가 일찍 시작되면 바닥 사용자(무릎 준비 → 플랭크, 누우며 자리 잡기)의 '많이 움직였어요' 멈춤·재시작이 늘 수 있다. 10-08 에는 카운트 중 멈춤·재시작이 4/10 세트였고, 런지 +4.0 s, 크런치 +5.6 s 를 들였다. 문구 수정은 이 설계에 넣고, 바닥에서 이동을 멈춤 사유로 쓸지는 사용자 결정으로 둔다.",
+  "시작 때 남은 문장을 마저 말하면 시작 직후 flush 경기 중 음성과 겹칠 수 있다. 창 규칙 코칭은 flush=now>boundaryUntil 인데, boundaryUntil 은 아무도 쓰지 않아 늘 0 이다(PostureLive.kt:1684). 이력에서 시작 → 첫 경기 중 음성은 세트 끝 문구를 빼면 최소 1.7 s, 중앙 5.4 s 이고, 예측 넘침은 ≤0.3 s 라 드물다.",
+  "TrexApp.nextSession 의 stop 을 PREPARE 에서 건너뛰면, 준비 중 다른 경로로 PREPARE→WORK 가 넘어갈 때 준비 음성이 남을 수 있다. 준비 건너뛰기는 패널 cancel 이 먼저 멈추므로(:199) 남는 것은 정상 시작뿐이다. 테스트에 넣는다.",
+  "세트 리포트·횟수는 바뀌지 않지만, 첫 세트 시작이 최대 9.5 s 당겨진다. 사용자가 '설명 다 듣고 시작' 을 원하면 '5초 후 시작'(:179-183) 또는 가이드 버튼으로 옮겨 가야 한다.",
+  "CapturePreparationTest 의 '3초' 순서 단정(:24·:30·:72), 보류 테스트(:99-106), FloorWiringTest:215-219 문구 단정을 함께 바꿔야 한다."
+ ],
+ "offline_validation": [
+  "유닛(./gradlew :app:testDebugUnitTest, 구현 후)\n- 컨트롤러\n  - 보류 없이 ready 프레임이 85 ms 간격이면, 정지 0.4 s 와 방향 근거 8프레임(0.68 s) 뒤 COUNTDOWN 이다(≤0.77 s).\n  - 반대 사선 view 8프레임이면 COUNTDOWN 에 들어가지 않고, 2 s 뒤 ready=false + placement.\n  - r<0.9·바닥·옆은 근거 없이 0.4 s 에 진입.\n- PreparationVoicePlan\n  - settled 사용자는 ESS 만.\n  - 미준비면 ESS→PLACE→DET.\n  - DET 는 예측 끝 > earliestStart 면 생략.\n  - started 뒤 null.\n- CountdownVoice: 진입 때 말하는 중이면 3초 모두 TONE. 회복은 재발화 없음.\n- 26 프로필 전부\n  - ESS ≤24·PLACE ≤21·DET ≤17 음절.\n  - ESS 가 맨 앞.\n  - 음성 줄에 '3초 뒤 시작해요' 없음.\n  - 화면 전문에 세는 조건 전부 포함.\n- 통과 기준: 전부 녹색.",
+  "시간축 재생(work/countdown/sim 의 저장소 컨트롤러 원문 재생에 새 컨트롤러 + 계획 + 가짜 TTS[0.41+0.194×음절, 문장 사이 70 ms] 결합)\n- 조건: 10종목 × 준비 시각 R∈{M,3,4,6,8,10,12} × 모델 준비 M∈{1.74,1.97,3.68 s}.\n- 통과 기준:\n  - (a) 시작 ≤ max(R,M)+3.8 s, 전 조합.\n  - (b) ESS 가 시작 전에 끝남(예측) 100 %. 설계 초안 재생 plan_c.py: 최장 ESS 끝 4.89 s < 가장 이른 시작 5.53 s.\n  - (c) 준비 경로가 자른 문장 0.\n  - (d) 시작 뒤 예측 넘침 ≤0.3 s. PLACE 초안 21음절이면 최대 0.8 s 라, 넘으면 문구를 줄인다.\n  - (e) 이미 준비(R=M) 시작이 15.0 s → ≤5.7 s(첫 세트 ≤7.5 s).\n- 초안 재생 결과: 이미 준비 5.53 s(절약 9.5 s), 첫 세트 7.36 s(절약 7.6 s), R=6 s 9.68 s, R≥11.6 s 는 지금과 같거나 +0.28 s.",
+  "이력 대조(design2/ready_dist.py, 09-29~10-08 feedback 43건)\n- 지금 '안내 끝 150 ms 안에 3' = 24/43(56 %)이다. 이 24건은 새 설계에서 시작이 ≤ R+3.7 s 로 당겨진다(절약 상한 9.5 s).\n- 정확한 절약은 준비 시각이 로그에 없어 오프라인으로 못 잰다. prep_* 추적으로 폰에서 잰다. 이건 숨기지 않고 보고에 쓴다.",
+  "방향 근거 비용 상한\n- 대용 재현(design/dir_start.py, 세트 첫 프레임 300 ms 격자)에서 서서 11세트(10-07·10-08) 모두 첫 8프레임 창이 일치였다.\n- 통과 기준: 85 ms 준비 프레임 기준 진입 지연 ≤0.28 s. 폰 prep_settled−prep_ready 로 확인.",
+  "음성 예산 실측 재확인(design/latency.py, voice_budget.py)\n- 새 문장 초안의 예측 길이와 실측 완료 발화를 맞춘다.\n- 통과 기준: ESS 실측(폰) ≤5.2 s, 10종목 전부."
+ ],
+ "phone_protocol": "준비: 추적(prep_*)이 들어간 빌드를 설치한다. 첫 안내는 프로세스 메모리 30분 규칙(PreparationIntro)이라, 블록마다 앱을 강제 종료하고 다시 연다. 그래야 그 종목 첫 세트로 안내가 나온다.\n\n종목은 계열당 하나 이상으로 고른다: 덤벨 컬(D), 스탠딩 니업(B), 크로스 런지(정면), 크런치(바닥), 플랭크(바닥).\n\n블록 지시문(준비 단계만 보는 블록, 세트는 2~3회만 하고 ✓):\n`준비됨:6 늦게:3 반대방향:2 흔들:2`\n- 준비됨: 시작을 누르고 2 s 안에 권장 방향으로 자리 잡아 가만히 선다(바닥은 시작 자세로 눕거나 엎드린다).\n- 늦게: 시작을 누른 뒤 약 8 s 돌아다니다 자리 잡는다.\n- 반대방향: B/D 종목에서 반대 사선으로 5 s 섰다가 권장 방향으로 고친다.\n- 흔들: 카운트가 시작되면 한 걸음 옮겼다가 돌아온다.\n\n합격 기준(feedback-*.jsonl 의 prep_*·speech·tts 이벤트로 판정)\n1. 준비됨 6/6\n   - prep_ready → prep_countdown ≤ 0.8 s(방향 근거 포함).\n   - armed → started 중앙 ≤ 7 s(지금 15.0 s).\n   - ESS 가 tts_done(끊김 아님).\n   - 준비 경로의 tts_stop interrupted=true 0건.\n2. 늦게 3/3\n   - ESS+PLACE 를 끝까지 듣는다.\n   - ready → countdown ≤ 0.8 s.\n3. 반대방향 2/2\n   - 반대 사선 동안 카운트 진입 0회.\n   - 배치 안내 발화.\n   - 고친 뒤 ≤ 0.8 s 진입.\n4. 흔들 2/2\n   - 이유 음성이 진행 중 문장을 자르지 않는다(문장 tts_done 뒤 요청).\n   - 회복 때 숫자 재발화 0.\n5. 시작 뒤 1 s 안에 준비 문장이 남았을 때, 그 문장이 경기 중 음성에 잘리는 일 ≤ 1/13.\n6. 횟수 회귀 없음\n   - 같은 종목 지난 세트 대비 reps.config.seed 가 있다.\n   - 첫 회가 빠지지 않는다(§89 후속 2).\n7. VerifyError 0\n   - `adb shell cmd package compile -m verify -f com.example.trex_kotlin` → `logcat | grep \"failed to verify\"` 0줄.\n\n사용자 확인: '관절이 잡히면 설명 중에도 카운트가 시작되는가', '설명이 중간에서 끊겼다고 느낀 적이 있는가'.\n\n13 준비로 약 15분이다.",
+ "user_decisions_needed": [
+  "시작 순간 설명이 남아 있으면 어떻게 하나 — (a) 지금 문장만 마저 하고 다음 문장은 버린다(추천: 예측 넘침 ≤0.3 s, 중간 끊김 없음) / (b) 시작 순간 바로 끊는다(지금 12 s 끊김과 같은 느낌) / (c) 설명 전체를 세트 안까지 계속한다(비추천: 경기 중 코칭이 보류 4 s 시한으로 버려지고 숫자가 줄 선다 — 10-08 크런치에서 숫자가 최대 10.8 s 늦은 것과 같은 일).",
+  "무엇을 말로 하고 무엇을 화면에만 두나 — (a) 종목별 '세는 핵심 조건' 한 문장(≤24음절)을 먼저, 자리 문장은 아직 자리를 못 잡았을 때만, 세부는 시간이 될 때만, 전문은 화면(추천) / (b) 지금 안내 전문을 그대로 말하면서 카운트를 겹치고 시작 때 자른다(이미 준비된 사용자는 앞 약 5 s 만 듣는다 — 대부분 방향 문장) / (c) 지금처럼 다 듣고 시작하되 링만 먼저 보인다(요청과 반대).",
+  "설명 중 카운트 숫자 — (a) 그 카운트 3초 내내 톤 + 화면 링(추천, 설명을 안 자름) / (b) 화면 링만, 소리 없음 / (c) 숫자 음성이 설명을 자른다.",
+  "종목별 핵심 문장(ESS) 문구 승인 — 초안: 컬 '처음 두세 번은 팔꿈치를 옆구리에 붙여 정확히 해 주세요.', 니업 '무릎을 접은 채 골반 높이까지 올려야 세요.', 사이드 크런치 '팔꿈치가 옆으로 올린 무릎에 닿아야 세요.', 런지 '앞무릎을 80도 가까이 굽혀 주세요.', 사이드 런지 '허벅지가 수평이 되게 깊게 앉아야 세요.', 크로스 런지 '발을 뒤로 교차해 깊게 내려가야 세요.', 크런치·레그 레이즈·플랭크는 지금 문장 유지. 스쿼트 COACH 에서 '빼는 반복'(발 너비·발끝·무릎)을 ESS 로 말할지는 스쿼트 횟수 조건 설계와 함께 정한다.",
+  "카운트 진입에 방향 근거(8프레임·불일치 대기 아님)를 요구할까 — 예(추천: +0.28 s, 보류를 지우면 방향 확인이 모든 세트에서 사실상 무력해진다 — 둘째 세트부터는 이미 그렇다) / 아니오(지금 둘째 세트와 같게).",
+  "바닥 시작 범위 문장(FloorScopeVoice, 10~13 s)을 같은 예산으로 함께 고칠까 — 예(추천: 크런치 숫자 1~4 가 10.78/8.66/6.86/5.49 s 늦었다, 준비 화면 전문 + 시간 될 때만 음성) / 별도 문제로 나눈다.",
+  "바닥 종목 카운트 중 '많이 움직였어요' — 문구만 바꾼다(추천) / 바닥은 이동으로 멈추지 않고 범위 이탈로만 멈춘다(무릎 준비 → 플랭크 전환이 카운트를 끊지 않게)."
+ ],
+ "effort": "M",
+ "depends_on": [
+  "세트 경계 음성 예산 — 시작 순간 말하는 것(준비 문장 넘침, 바닥 FloorScopeVoice 범위 문장 PostureFloorLive.kt:146-154·:200, 시작 톤 TrexApp.kt:338)과 TrexApp.nextSession 의 speech.stop(:266)·AdvanceHold(§63) — 세트 끝 음성 대기 설계와 같은 기반",
+  "SpeechCoach 발화 의미론 — isSpeaking(PostureCoach.kt:527)·speak flush(:510-524, :575-589)·speakLatest 보류 4 s(:537-549) — 경기 중 코칭 '끊지 않기' 설계와 공유",
+  "종목별 '세는 조건' 문장의 출처 — LegCycle identity 사유 순서·기각 대사(LegCycle.kt:457-483), FloorCycle identity(FloorCycle.kt:556-573), RejectionCues/RejectCueGate(FloorLive.kt:193-243), 스쿼트 COACH 반복 검사 게이트(원칙 #7) — 각 종목 횟수 조건 설계가 문장을 바꾸면 ESS·화면 전문·테스트도 같이 바뀐다(FAULT_LINES 선례)",
+  "준비 방향 확인 CaptureDirectionWindow(CapturePreparation.kt:111-139)·ViewEstimator — 촬영 방향·뷰 관련 문제 설계와 공유",
+  "준비 단계 추적 로그(prep_* in feedback-*.jsonl) — 프레이밍·준비 지연 관련 다른 문제의 측정 기반",
+  "실측 TTS 길이 모델(0.41+0.194 s/음절, 이 폰 삼성 TTS) — 음성 문장 길이 예산을 쓰는 다른 설계와 공유"
+ ]
+}

@@ -20,14 +20,21 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
 import com.example.trex_kotlin.posture.CoachEvent
+import com.example.trex_kotlin.posture.FloorChain
 import com.example.trex_kotlin.posture.FormDirection
 import com.example.trex_kotlin.posture.FormMotion
 import com.example.trex_kotlin.posture.MP_LANDMARK_COUNT
+import com.example.trex_kotlin.posture.MotionFrame
 import com.example.trex_kotlin.posture.MotionKind
+import com.example.trex_kotlin.posture.MotionOrigin
+import com.example.trex_kotlin.posture.MotionPick
+import com.example.trex_kotlin.posture.MotionSpec
 import com.example.trex_kotlin.posture.OnsetKind
 import com.example.trex_kotlin.posture.POSE_CONNECTIONS
 import com.example.trex_kotlin.posture.PoseSample
 import com.example.trex_kotlin.posture.RepFormCheck
+import com.example.trex_kotlin.posture.StepSide
+import com.example.trex_kotlin.posture.WindowMotions
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.hypot
@@ -36,29 +43,47 @@ import kotlin.math.min
 import kotlin.math.sin
 
 /**
- * 화면에 켜진 교정 화살표 하나(docs/LIVE_SCREEN_REDESIGN.md §3.2) — 한 회에 하나, 음성 문장을 만든 사건이 만든다.
- * [anchors] = 화살표가 출발하는 관절(위반 부위 강조와 교집합 — 걸음 검사는 앞다리만). [startedAt] 부터 [PULSE_MS] 동안 맥동, 그 뒤 정지.
+ * 화면에 켜진 교정 단서 하나(docs/LIVE_SCREEN_REDESIGN.md §3.2, spec §101) — "COACH 에서 말한 교정 문장 하나의 그림". 한 회에 하나, 음성 문장을 만든 사건이 만든다(문턱 = 음성).
+ * [anchors] = 출발 관절(쪽·카메라 쪽 팔을 푼 뒤). [targets] = [MotionKind.TOWARD_TARGET] 의 목표 관절. [gravity] = 위아래를 중력 기준으로(바닥). [chain] = 보이는 쪽 사슬만(화면이 가시성으로 고른다).
+ * [soft] = 참고색(바닥 — 사용자 결정 U7 '바닥 색은 참고색'). [origin] 별로 지우는 규칙이 다르다: 통과한 회는 REPFORM 만 지운다(한 다리 계열의 센 회는 beta 검사뿐이라 늘 correct 라 다른 다리의 기각 화살표를 지웠다).
+ * [startedAt] 부터 [PULSE_MS] 동안 맥동, 그 뒤 정지. [ttlMs] 지나면 지운다.
  */
-internal data class MotionCue(val kind: MotionKind, val anchors: Set<Int>, val startedAt: Long) {
+internal data class MotionCue(val kind: MotionKind, val anchors: Set<Int>, val startedAt: Long,
+                              val origin: MotionOrigin = MotionOrigin.REPFORM, val targets: Set<Int> = emptySet(),
+                              val gravity: Boolean = false, val chain: Boolean = false, val soft: Boolean = false,
+                              val ttlMs: Long = MotionSpec.DEFAULT_TTL_MS) {
     companion object {
         const val PULSE_MS = 1800L
         const val PERIOD_MS = 600L
 
-        fun of(check: RepFormCheck, direction: FormDirection, highlight: Set<Int>, now: Long): MotionCue? {
+        /** 반복 검사 사건 — [side] = 그 회의 앞다리(런지 깊이는 뒷무릎 SUPPORT), [view] 로 카메라 쪽 팔(컬 NEAR)과 좌우 가능 여부를 푼다. */
+        fun of(check: RepFormCheck, direction: FormDirection, highlight: Set<Int>, now: Long, side: StepSide? = null, view: String? = null): MotionCue? {
             val m = check.motion ?: return null
-            val kind = m.kindFor(direction) ?: return null
-            val anchors = m.anchor.landmarks.intersect(highlight).ifEmpty { m.anchor.landmarks }
-            return MotionCue(kind, anchors, now)
+            val spec = MotionSpec(m, MotionOrigin.REPFORM, direction, side = side, near = FormMotion.nearSide(view), lateralOk = MotionSpec.lateralOk(view))
+            val kind = spec.kind ?: return null
+            val anchors = spec.anchors.let { a -> if (m.pick == MotionPick.ALL) a.intersect(highlight).ifEmpty { a } else a }
+            return MotionCue(kind, anchors, now, MotionOrigin.REPFORM, spec.targets)
         }
 
-        /** 세트 창 규칙 사건 — 교정됨(RECOVERED)은 화살표를 지운다. */
+        /** 엔진이 만든 그림 명세(판별 기각·플랭크 멈춤·시선·가동 범위·처음부터 알림) — [soft] 는 바닥(참고색). 어휘가 없으면 null(문장만). */
+        fun of(spec: MotionSpec, now: Long, soft: Boolean = false): MotionCue? {
+            val kind = spec.kind ?: return null
+            return MotionCue(kind, spec.anchors, now, spec.origin, spec.targets, gravity = spec.motion.frame == MotionFrame.GRAVITY,
+                chain = spec.motion.pick == MotionPick.CHAIN || spec.motion.targetPick == MotionPick.CHAIN, soft = soft, ttlMs = spec.ttlMs)
+        }
+
+        /** 세트 창 규칙 사건 — 규칙 id 별 표([WindowMotions], spec §101)로 고른다. 교정됨(RECOVERED)은 화살표를 지운다. */
         fun ofWindow(event: CoachEvent, now: Long): MotionCue? {
             if (event.kind == OnsetKind.RECOVERED) return null
-            val m = FormMotion.forWindowRule(event.rule.baseFeature) ?: return null
-            return MotionCue(m.high ?: return null, m.anchor.landmarks, now)
+            val m = WindowMotions.forRule(event.rule.id, event.direction) ?: return null
+            return MotionCue(m.kindFor(event.direction) ?: return null, m.anchor.landmarks, now, MotionOrigin.WINDOW)
         }
     }
 }
+
+/** 유령 다리의 관절(§101) — [0] 왼다리(무릎·발목·뒤꿈치·발끝), [1] 오른다리. */
+private val GHOST_LEG = arrayOf(intArrayOf(25, 27, 29, 31), intArrayOf(26, 28, 30, 32))
+private const val GHOST_MS = 2000L
 
 private val WARN = Color(0xFFFF5A5A)          // ship 위반 = 말하는 판정
 private val PROVISIONAL = Color(0xFFFFC24B)   // beta = 말하지 않는 판정, '참고'
@@ -81,6 +106,10 @@ internal fun SkeletonStage(
     visibilityCut: Float = 0.5f,
     plankSide: Int? = null,
     cue: MotionCue? = null,
+    /** 가로 전체(사이드 런지, §101) — 배율 ≤ 1·가로 이동 없음. 스탠스가 이미지 폭의 3/4 이라 배율 1.46 이면 편 다리가 화면 밖에 그려졌다(관절 67.5 % → 2.6 %). */
+    fullWidth: Boolean = false,
+    /** 가장자리 유령 다리(서서 하는 종목, §101) — 무릎·발목·뒤꿈치·발끝 x ∉ [0.04, 0.96] 인 샘플 뒤 2 s 동안 그 다리를 점선·빈 원으로, 보간 없이 그린다. 가장자리의 가시성은 믿을 수 없다(밖 77프레임 중 60이 ≥ 0.5). */
+    edgeGhost: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     // 맥동 시계 — 화살표가 켜진 뒤 PULSE_MS 동안만 프레임마다 돈다. 그 뒤엔 정지 화살표(재구성 없음)
@@ -99,20 +128,32 @@ internal fun SkeletonStage(
     val display = remember { FloatArray(MP_LANDMARK_COUNT * 2) }
     val from = remember { FloatArray(MP_LANDMARK_COUNT * 2) }
     val anim = remember { longArrayOf(0L, 0L, 0L) }   // t0 · 지속 · 직전 도착
+    // 관절 게이트(§101·§101c): 가시성 이력(≥ cut+0.10 실선, < cut−0.10 점선)에 더해 다리 관절은 더 높은 문턱, 믿을 수 없는 관절의 순간 이동은 한 샘플 보류 — 사선 런지의 먼 다리가 '깨지지' 않게
+    val gate = remember { JointGate(visibilityCut) }
+    // 가장자리 유령 다리(§101): [0] 왼다리 · [1] 오른다리의 유령 종료 시각
+    val ghostUntil = remember { longArrayOf(0L, 0L) }
     var frameTick by remember { mutableLongStateOf(0L) }
     LaunchedEffect(sample) {
         if (!sample.detected || sample.normalizedXy.size < display.size) return@LaunchedEffect
         val now = withFrameMillis { it }
+        gate.update(sample.normalizedXy, sample.visibility, if (sample.imageHeight > 0) sample.imageWidth.toFloat() / sample.imageHeight else 1f)
+        val target = gate.target
+        if (edgeGhost) for (s in 0..1) {
+            val out = GHOST_LEG[s].any { i -> val x = sample.normalizedXy[i * 2]; x.isFinite() && (x < 0.04f || x > 0.96f) }
+            if (out) ghostUntil[s] = now + GHOST_MS
+        }
         val gap = now - anim[2]
         anim[2] = now
         val fresh = anim[0] == 0L || gap > 900L   // 첫 샘플·오래 끊긴 뒤는 바로 놓는다
         anim[0] = now; anim[1] = gap.coerceIn(80L, 400L)
         System.arraycopy(display, 0, from, 0, from.size)
-        if (fresh) { System.arraycopy(sample.normalizedXy, 0, display, 0, display.size); frameTick = now; return@LaunchedEffect }
+        if (fresh) { System.arraycopy(target, 0, display, 0, display.size); frameTick = now; return@LaunchedEffect }
+        // 유령 다리는 보간하지 않는다 — 가설이 뒤집히는 발목을 선형으로 옮기면 '쓸고 지나가는 다리' 가 된다(10-08 사이드 런지)
+        for (s in 0..1) if (now < ghostUntil[s]) for (i in GHOST_LEG[s]) { from[i * 2] = target[i * 2]; from[i * 2 + 1] = target[i * 2 + 1] }
         while (true) {
             val t = withFrameMillis { it }
             val p = ((t - anim[0]).toFloat() / anim[1]).coerceIn(0f, 1f)
-            for (i in display.indices) display[i] = from[i] + (sample.normalizedXy[i] - from[i]) * p
+            for (i in display.indices) display[i] = from[i] + (target[i] - from[i]) * p
             frameTick = t
             if (p >= 1f) break
         }
@@ -139,6 +180,8 @@ internal fun SkeletonStage(
             zoom = min(0.70f * size.height / boxH, 0.82f * size.width / boxW).coerceIn(1f, 2.2f)
             bx = dx + lock.centerX * drawW; by = dy + lock.centerY * drawH
             tx = size.width / 2f; ty = size.height * 0.46f
+            // 가로 전체(§101 사이드 런지): 카메라 프레임 좌우 변이 화면 안에 오도록 배율을 누르고 가로 이동을 없앤다
+            if (fullWidth) { zoom = min(zoom, size.width / drawW); tx = bx }
         }
         fun map(p: Offset): Offset {
             val q = if (zoom == 1f && tx == bx && ty == by) p else Offset(tx + (p.x - bx) * zoom, ty + (p.y - by) * zoom)
@@ -151,7 +194,10 @@ internal fun SkeletonStage(
             return Offset(dx + x * drawW, dy + y * drawH)
         }
         fun point(i: Int): Offset? = raw(i)?.let(::map)
-        fun visible(i: Int) = sample.visibility[i] >= visibilityCut
+        fun ghost(i: Int) = edgeGhost && ((i in GHOST_LEG[0] && frameTick < ghostUntil[0]) || (i in GHOST_LEG[1] && frameTick < ghostUntil[1]))
+        fun visible(i: Int) = (if (anim[0] == 0L) sample.visibility[i] >= visibilityCut else gate.shown[i]) && !ghost(i)
+        // 이미지 안(0..1)에 있는 관절만 화살표 앵커가 된다 — 화면 밖으로 외삽된 관절에 붙이면 거짓 확신(§101)
+        fun inImage(i: Int): Boolean { val x = xy[i * 2]; val y = xy[i * 2 + 1]; return x.isFinite() && y.isFinite() && x in 0f..1f && y in 0f..1f }
         val body = 11 until MP_LANDMARK_COUNT
 
         // 카메라 프레임 테두리 — "폰이 보는 세상" 을 영상 없이 보여 준다(§2.1)
@@ -168,10 +214,12 @@ internal fun SkeletonStage(
             }
             if (mirror) { val s = l; l = r; r = s }
             val bar = 6.dp.toPx()
-            if (l) drawRect(FRAME_GLOW.copy(alpha = .85f), Offset(frame.left, frame.top), Size(bar, frame.height))
-            if (r) drawRect(FRAME_GLOW.copy(alpha = .85f), Offset(frame.right - bar, frame.top), Size(bar, frame.height))
-            if (t) drawRect(FRAME_GLOW.copy(alpha = .85f), Offset(frame.left, frame.top), Size(frame.width, bar))
-            if (btm) drawRect(FRAME_GLOW.copy(alpha = .85f), Offset(frame.left, frame.bottom - bar), Size(frame.width, bar))
+            // 발광 막대는 늘 화면 안에(§101) — 프레임이 화면 밖으로 나간 배율에서는 프레임과 화면의 교집합 변에 그린다
+            val vf = Rect(max(frame.left, 0f), max(frame.top, 0f), min(frame.right, size.width), min(frame.bottom, size.height))
+            if (l) drawRect(FRAME_GLOW.copy(alpha = .85f), Offset(vf.left, vf.top), Size(bar, vf.height))
+            if (r) drawRect(FRAME_GLOW.copy(alpha = .85f), Offset(vf.right - bar, vf.top), Size(bar, vf.height))
+            if (t) drawRect(FRAME_GLOW.copy(alpha = .85f), Offset(vf.left, vf.top), Size(vf.width, bar))
+            if (btm) drawRect(FRAME_GLOW.copy(alpha = .85f), Offset(vf.left, vf.bottom - bar), Size(vf.width, bar))
         }
 
         plankSide?.let { side ->
@@ -202,7 +250,9 @@ internal fun SkeletonStage(
         if (visible(0)) point(0)?.let { nose ->
             val e1 = point(7); val e2 = point(8)
             val rad = max(if (e1 != null && e2 != null && visible(7) && visible(8)) hypot(e1.x - e2.x, e1.y - e2.y) / 2f else 0f, 9.dp.toPx())
-            drawCircle(Color.White.copy(alpha = if (dark) 0.9f else 0.55f), rad, nose, style = Stroke(lineW))
+            // 시선 지적(§101d) 동안 머리 원은 붉은 테두리 — 말한 문장의 그림(화살표)과 함께 '교정 가시성'
+            val gazeHot = cue != null && cue.origin == MotionOrigin.GAZE
+            drawCircle(if (gazeHot) WARN.copy(alpha = 0.95f) else Color.White.copy(alpha = if (dark) 0.9f else 0.55f), rad, nose, style = Stroke(if (gazeHot) lineW * 1.6f else lineW))
             val s1 = point(11); val s2 = point(12)
             if (s1 != null && s2 != null && visible(11) && visible(12)) {
                 val mid = Offset((s1.x + s2.x) / 2f, (s1.y + s2.y) / 2f)
@@ -224,8 +274,9 @@ internal fun SkeletonStage(
                 (if (hot) 6.dp else if (soft) 5.dp else 3.5.dp).toPx(), p)
         }
 
-        // 교정 화살표(§3.3) — 위반 관절에서 고칠 방향으로. 앵커가 안 보이면 그리지 않는다(못 보는 관절에 화살표를 붙이면 거짓 확신)
-        if (cue != null && dark) {
+        // 교정 단서(§3.3·§101) — 위반 관절에서 고칠 방향으로. 앵커가 안 보이거나 이미지 밖이면 그리지 않는다(못 보는 관절에 화살표를 붙이면 거짓 확신).
+        // 영상 위에서도 같은 좌표계로 그린다(종전 `&& dark` 는 영상 토글을 켠 뒤 모든 종목에서 화살표를 없앴다 — 10-08 놓친 원인)
+        if (cue != null) {
             val hipL = point(23).takeIf { visible(23) }; val hipR = point(24).takeIf { visible(24) }
             val shL = point(11).takeIf { visible(11) }; val shR = point(12).takeIf { visible(12) }
             val torso = when {
@@ -234,30 +285,46 @@ internal fun SkeletonStage(
                 shL != null && shR != null -> Offset((shL.x + shR.x) / 2f, (shL.y + shR.y) / 2f)
                 else -> Offset(size.width / 2f, size.height / 2f)
             }
+            // 보이는 쪽 사슬(바닥 CHAIN) — 앵커 후보 중 가시성 합이 큰 쪽(홀수 = MediaPipe 왼쪽)
+            fun chainPick(set: Set<Int>): Set<Int> {
+                if (!cue.chain || set.none { it % 2 == 1 } || set.none { it % 2 == 0 }) return set
+                val l = set.filter { it % 2 == 1 }.sumOf { sample.visibility[it].toDouble() }
+                val r = set.filter { it % 2 == 0 }.sumOf { sample.visibility[it].toDouble() }
+                return set.filter { (it % 2 == 1) == (l >= r) }.toSet()
+            }
+            val anchors = chainPick(cue.anchors).filter { it in 0 until MP_LANDMARK_COUNT && visible(it) && inImage(it) }
+            val targetPts = chainPick(cue.targets).filter { it in 0 until MP_LANDMARK_COUNT && visible(it) && inImage(it) }.mapNotNull { point(it) }
+            val target = if (targetPts.isEmpty()) torso else Offset(targetPts.map { it.x }.average().toFloat(), targetPts.map { it.y }.average().toFloat())
+            // 위 방향 — 바닥은 중력 위의 화면 성분(폰을 눕히면 화면 위 ≠ 중력 위, §101), 서서는 화면 위. 미러면 x 가 뒤집힌다
+            val up = (if (cue.gravity) FloorChain.gravityUp(sample.up, sample.upFromGravity, sample.upFlipped) else null)
+                ?.let { g -> val n = hypot(g.x, g.y); if (n < 0.3f) null else Offset((if (mirror) -g.x else g.x) / n, -g.y / n) } ?: Offset(0f, -1f)
+            val color = if (cue.soft) PROVISIONAL else WARN
             val phase = if (pulseMs >= MotionCue.PULSE_MS) 0f else (pulseMs % MotionCue.PERIOD_MS).toFloat() / MotionCue.PERIOD_MS
             val alpha = 1f - 0.55f * phase
             val len = size.height * 0.09f
-            for (i in cue.anchors) {
-                if (i !in 0 until MP_LANDMARK_COUNT || !visible(i)) continue
+            for (i in anchors) {
                 val p = point(i) ?: continue
                 when (cue.kind) {
+                    // 점(MARK) — 방향을 화면에 그릴 수 없는 지적(앞뒤·굽힘·흔들림): 고리가 맥동만 한다. 방향을 지어내지 않는다(원칙 #5)
+                    MotionKind.MARK -> drawCircle(color.copy(alpha = alpha), 13.dp.toPx() + phase * 5.dp.toPx(), p, style = Stroke(4.dp.toPx()))
                     MotionKind.ROTATE_IN, MotionKind.ROTATE_OUT -> {
                         val leftOfMid = p.x < torso.x
                         val toward = (cue.kind == MotionKind.ROTATE_IN) == leftOfMid   // 안쪽 회전 = 정중선 쪽 끝에 화살촉
-                        drawRotateArrow(p, 22.dp.toPx(), headAtRight = toward, color = WARN.copy(alpha = alpha), width = 4.dp.toPx(), head = 9.dp.toPx())
+                        drawRotateArrow(p, 22.dp.toPx(), headAtRight = toward, color = color.copy(alpha = alpha), width = 4.dp.toPx(), head = 9.dp.toPx())
                     }
                     else -> {
                         val dir = when (cue.kind) {
                             MotionKind.TOWARD_MIDLINE -> Offset(if (torso.x >= p.x) 1f else -1f, 0f)
                             MotionKind.AWAY_MIDLINE -> Offset(if (torso.x >= p.x) -1f else 1f, 0f)
-                            MotionKind.UP -> Offset(0f, -1f)
-                            MotionKind.DOWN -> Offset(0f, 1f)
-                            else -> { val d = hypot(torso.x - p.x, torso.y - p.y); if (d < 1f) Offset(0f, -1f) else Offset((torso.x - p.x) / d, (torso.y - p.y) / d) }
+                            MotionKind.UP -> up
+                            MotionKind.DOWN -> Offset(-up.x, -up.y)
+                            MotionKind.TOWARD_TARGET -> { val d = hypot(target.x - p.x, target.y - p.y); if (d < 1f) up else Offset((target.x - p.x) / d, (target.y - p.y) / d) }
+                            else -> { val d = hypot(torso.x - p.x, torso.y - p.y); if (d < 1f) up else Offset((torso.x - p.x) / d, (torso.y - p.y) / d) }
                         }
                         val gap = 14.dp.toPx() + phase * len * 0.3f
                         val start = Offset(p.x + dir.x * gap, p.y + dir.y * gap)
                         val end = Offset(start.x + dir.x * len, start.y + dir.y * len)
-                        drawArrow(start, end, WARN.copy(alpha = alpha), 5.dp.toPx(), 11.dp.toPx())
+                        drawArrow(start, end, color.copy(alpha = alpha), 5.dp.toPx(), 11.dp.toPx())
                     }
                 }
             }

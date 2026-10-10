@@ -9,33 +9,24 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** 자세 교정 시험 단계 종목(크런치·레그 레이즈·플랭크, 사용자 결정 2026-10-08) — 목록 꼬리표·시작 안내가 같은 집합을 본다. */
+/** 자세 교정 시험 단계(2026-10-08) — §101c(사용자 결정 2026-10-09 오후)로 집합이 비었다: 꼬리표·시작 문장이 나오지 않고 기계만 남는다. */
 class PostureTrialTest {
     private fun workout(name: String) = Workout("t-$name", name, "10회 × 3세트", "7분", true, "복근")
 
-    @Test fun trialNamesAreCatalogExercisesAndMapToTheirRuleNames() {
-        assertEquals(setOf("크런치", "레그 레이즈", "플랭크"), PostureTrial.appNames)
-        for (app in PostureTrial.appNames) {
-            assertTrue("프로필 없음: $app", ExerciseProfiles.forName(app) != null)
-            assertTrue("규칙 이름 집합과 어긋남: $app", postureExerciseMap.getValue(app) in PostureTrial.ruleNames)
-        }
+    @Test fun trialSetsAreEmptyAndStayConsistent() {
+        assertTrue(PostureTrial.appNames.isEmpty()); assertTrue(PostureTrial.ruleNames.isEmpty())
         assertEquals(PostureTrial.appNames.size, PostureTrial.ruleNames.size)
     }
 
-    @Test fun listTagOnlyForTrialExercises() {
-        assertTrue(workout("플랭크").postureTrial())
-        assertTrue(workout("레그 레이즈").postureTrial())
-        assertTrue(workout("크런치").postureTrial())
-        assertFalse(workout("기본 스쿼트").postureTrial())
-        assertFalse(workout("푸쉬업").postureTrial())
-        assertTrue(workout("플랭크").postureSupported())   // 시험 단계여도 카메라는 켤 수 있다
+    @Test fun noListTagForAnyExercise() {
+        for (n in listOf("플랭크", "레그 레이즈", "크런치", "기본 스쿼트")) assertFalse(n, workout(n).postureTrial())
+        assertTrue(workout("플랭크").postureSupported())
     }
 
-    @Test fun startLineLeadsWithTheTrialSentence() {
+    @Test fun startLineHasNoTrialSentence() {
         val s = PostureScope.of(PostureRuleSet("t", "d", emptyList()), "라잉 레그 레이즈")
-        assertTrue(s.startLine!!.startsWith(PostureTrial.START_LINE))
-        assertTrue(s.cardLine.startsWith(PostureTrial.LABEL))
-        val squat = PostureScope.of(PostureRuleSet("t", "d", emptyList()), "바벨 스쿼트")
-        assertFalse(squat.cardLine.contains(PostureTrial.LABEL))
+        assertFalse(s.startLine!!.contains(PostureTrial.START_LINE))
+        assertFalse(s.cardLine.contains(PostureTrial.LABEL))
+        assertTrue("프로필은 그대로", ExerciseProfiles.forName("레그 레이즈") != null)
     }
 }

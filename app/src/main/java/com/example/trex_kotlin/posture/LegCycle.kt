@@ -67,6 +67,15 @@ object LegGeometry {
     fun latFlex(s: StepSide) = "lat_flex_${s.key}"
     fun kneeFwdFoot(s: StepSide) = "knee_fwd_foot_${s.key}"
     fun kneeLat(s: StepSide) = "knee_lat_${s.key}"
+    /** 무릎−골반 수평 벡터의 세계 수평면 성분(골반 너비 단위, 바깥 +, `PostureCore`) — [HIP_AX_X]/[HIP_AX_Z](선 자세 골반축)에 투영해 kl_st(§101). */
+    fun kneeFx(s: StepSide) = "knee_fx_${s.key}"
+    fun kneeFz(s: StepSide) = "knee_fz_${s.key}"
+    const val HIP_AX_X = "hip_ax_x"
+    const val HIP_AX_Z = "hip_ax_z"
+    /** 다리가 이미지 가장자리에 얼마나 가까운가(§101 사이드 런지) — 발목·뒤꿈치·발끝의 원시 x 에서 min(x, 1 − x) 의 최솟값. 음수 = 이미지 밖. 롤 보정·가시성 게이트 없이, 유한값만. */
+    fun edge(s: StepSide) = "leg_edge_${s.key}"
+    private const val L_HEEL = 29; private const val R_HEEL = 30
+    private const val L_FOOT_IDX = 31; private const val R_FOOT_IDX = 32
     fun kneeOut2d(s: StepSide) = "knee_out2d_${s.key}"
     const val TORSO_PITCH = "torso_pitch"
     const val HIP_HEIGHT = "hip_height_rel"
@@ -119,6 +128,13 @@ object LegGeometry {
         }
         // ---- 2D(롤 보정, 가로를 aspect 로 등방화)
         if (xy.size < 66 || vis.size < 33) return out
+        // 가장자리(§101): 10-08 사이드 런지에서 가장자리에 걸린 발목이 '편 다리'·'접힌 다리' 가설을 300 ms 마다 오갔다(골반 정지 중 발목 점프 31회 중 25회가 가장자리) — 판별이 그 유령을 받았다
+        for (s in StepSide.entries) {
+            val idx = if (s == StepSide.LEFT) intArrayOf(L_ANKLE, L_HEEL, L_FOOT_IDX) else intArrayOf(R_ANKLE, R_HEEL, R_FOOT_IDX)
+            var m = Float.POSITIVE_INFINITY
+            for (i in idx) { val px = xy[i * 2]; if (px.isFinite()) m = minOf(m, minOf(px, 1f - px)) }
+            if (m.isFinite()) out[edge(s)] = m
+        }
         fun ok(vararg idx: Int): Boolean {
             for (i in idx) if (!(vis[i] >= minVisibility) || !xy[i * 2].isFinite() || !xy[i * 2 + 1].isFinite()) return false
             return true
@@ -180,13 +196,15 @@ object LegGeometry {
  *
  * - **기준(서 있음)**: 준비 카운트다운([prepare]) 또는 세트 중 정지(0.4 s·3프레임, 각 신호 퍼짐 ≤ 8°)에서 중앙값. **복귀마다 재기준**(체류 프레임 중앙값, 종전과 25° 안일 때) —
  *   발을 옮기며 하는 사람의 선 자세는 매번 조금 다르다.
- * - 관절 누락 프레임은 건너뛴다. [MAX_GAP_MS] 넘게 끊기면 진행 후보만 버린다(기준 유지). [MAX_CYCLE_MS] 안 돌아오면 `timeout`.
+ * - 관절 누락 프레임: 사람(골반)이 보이면 사이클을 끊지 않고 있는 값으로 극값만 갱신한다(§101 — 뒤로 교차한 발목이 바닥에서 안 보여 정상 크로스 런지 9회가 버려졌다).
+ *   사람이 없는 프레임·[MAX_GAP_MS] 넘는 끊김은 진행 후보만 버린다(기준 유지). [MAX_CYCLE_MS] 안 돌아오면 `timeout`.
  * - 두 다리가 함께 움직여도 각자 판별한다 — 스쿼트(두 무릎)는 사이드 런지의 비대칭 조건이, 점프(두 발)는 니업의 반대 다리 조건이 거른다.
  * - 판별 띠는 2026-10-06 폰 세트(사용자 1명, 설계 §3)에서 잡은 **잠정값**이다. 폰 세션으로 확정한다.
  */
 class LegCycleTracker(val profile: LegProfile) : IdentityCueSource {
     /** 기각 사유의 음성(§99 공통 경로 `IdentityCueSource`) — [cueFor]`(profile, reason)` 에 위임한다. 문장·동작은 그대로. */
     override fun cueFor(reason: String): String? = Companion.cueFor(profile, reason)
+    override fun motionFor(reason: String): FormMotion? = Companion.motionFor(profile, reason)
 
     private class Leg(val side: StepSide?) {
         var base: Float? = null
@@ -204,13 +222,17 @@ class LegCycleTracker(val profile: LegProfile) : IdentityCueSource {
         var latFlexMax = Float.NEGATIVE_INFINITY  // 사이클 중 그 쪽 측굴 최대(크런치)
         var kneeMinCycle = Float.POSITIVE_INFINITY // 사이클 중 두 무릎 중 더 굽은 값의 최소(크로스) — 교차 극점 프레임의 무릎은 바닥보다 펴져 있을 수 있다
         val kneeFwd = ArrayList<Pair<Float, Float>>() // (신호, 그 무릎이 발 방향으로 나간 거리 ÷ 정강이) — 바닥 중앙값용(사이드 런지 §98b)
+        val klSt = ArrayList<Pair<Float, Float>>()    // (신호, 선 자세 골반축 기준 무릎 바깥 위치 kl_st) — 바닥 중앙값용(사이드 크런치 §101)
+        var departFrames = 0                          // 출발선 아래(x ≤ base − depart)에 있던 프레임 수 — 1프레임짜리 사이클(blip)은 유령(§101 사이드 런지)
+        val bottom = ArrayList<FloatArray>()          // 사이클 기록 [x, 반대 무릎, 골반 이동, 발 들림, 가장자리] — 극점 한 프레임 대신 바닥 띠 중앙값으로 판정(§101), NaN = 없음
         var returnAt: Long? = null
         val dwell = ArrayList<Float>()
         var named = true
         fun clear() {
             moving = false; sigMin = Float.POSITIVE_INFINITY; sigMax = Float.NEGATIVE_INFINITY; extreme = emptyMap()
             auxMin = Float.POSITIVE_INFINITY; hipDropMax = Float.NEGATIVE_INFINITY; torsoDep = null; torsoMax = Float.NEGATIVE_INFINITY
-            hipHeightMin = Float.POSITIVE_INFINITY; latFlexMax = Float.NEGATIVE_INFINITY; kneeMinCycle = Float.POSITIVE_INFINITY; kneeFwd.clear()
+            hipHeightMin = Float.POSITIVE_INFINITY; latFlexMax = Float.NEGATIVE_INFINITY; kneeMinCycle = Float.POSITIVE_INFINITY; kneeFwd.clear(); klSt.clear()
+            departFrames = 0; bottom.clear()
             returnAt = null; dwell.clear(); named = true
         }
     }
@@ -221,10 +243,16 @@ class LegCycleTracker(val profile: LegProfile) : IdentityCueSource {
     private var torsoBase: Float? = null
     private var torsoPitchBase: Float? = null     // 서 있을 때 몸통 전후 기울기(°) — 허리 숙임은 이 기준 대비로 본다(사람마다 서 있는 기울기가 다르다)
     private val latFlexBase = HashMap<StepSide, Float>()
+    /** 선 자세의 골반축(세계 수평면, §101 사이드 크런치 kl_st)과 어깨 요(°) — 정면(C)일 때만 무릎 방향을 판정한다. 기준에 없으면 null. */
+    private var hipAxisBase: Pair<Float, Float>? = null
+    private var standingYaw: Float? = null
     private var lastAt: Long? = null
 
     val completed = ArrayList<RepCycle>()
     val rejected = ArrayList<RepRejected>()
+    /** 말하는 기각 수 — 관측이 무너진 사이클([SILENT_REASONS])은 로그에만 남고 HUD '세지 않은 동작' 에도 틱·이유에도 들지 않는다(§101). */
+    val audibleRejected: Int get() = rejected.count { it.feature !in SILENT_REASONS }
+    override fun silent(reason: String): Boolean = reason in SILENT_REASONS
     var left = 0; private set
     var right = 0; private set
     var unknown = 0; private set
@@ -239,7 +267,7 @@ class LegCycleTracker(val profile: LegProfile) : IdentityCueSource {
 
     /** 일시정지·카메라 전환·끊김 — 진행 후보만 버린다. 기준·완료 원장은 지킨다. */
     fun resetCycle() { legs.forEach { it.clear() }; still.clear(); lastAt = null }
-    fun reset() { resetCycle(); legs.forEach { it.base = null }; hipBase = null; torsoBase = null; torsoPitchBase = null; latFlexBase.clear(); standing = null; completed.clear(); rejected.clear(); left = 0; right = 0; unknown = 0 }
+    fun reset() { resetCycle(); legs.forEach { it.base = null }; hipBase = null; torsoBase = null; torsoPitchBase = null; latFlexBase.clear(); hipAxisBase = null; standingYaw = null; standing = null; completed.clear(); rejected.clear(); left = 0; right = 0; unknown = 0 }
 
     /** 준비 카운트다운 프레임([atMs] 앞 [PREP_WINDOW_MS])에서 기준을 잡는다(`RepCounter.standingSeedFrom` 입구). 움직이고 있었으면 잡지 않는다. */
     fun prepare(frames: List<Pair<Long, Map<String, Float>>>, atMs: Long) {
@@ -263,7 +291,24 @@ class LegCycleTracker(val profile: LegProfile) : IdentityCueSource {
 
     fun onFrame(t: Long, input: Map<String, Float>): List<RepCycle> {
         val f = input.filterValues { it.isFinite() }
-        if (!complete(f)) return emptyList()
+        if (!complete(f)) {
+            // 부분 프레임(§101 크로스 런지 10-08): 사람은 보이는데(골반 y) 다리 관절이 빠졌다 — 뒤로 교차한 발목의 가시성이 바닥에서 0.26~0.47 로 떨어져 `knee_*`·`leg_cross` 가
+            // 2~7 판정프레임 비고, 종전에는 그 틈이 MAX_GAP_MS(750) 를 넘어 **바닥을 담은 사이클을 통째로 버렸다**(정상 9회 전부 → 일어서는 구간이 새 사이클 → no_descent/shallow).
+            // 사이클 중이면 '끊김' 이 아니라 '못 봄' 이다: 시각만 이어 주고 있는 값(골반 하강·몸통·무릎)으로 극값을 갱신한다. 신호·골반 높이(한 발목 값이 0.92~0.97 로 튄다)는 건드리지 않는다.
+            // 사람이 아예 없는 프레임(골반 y 없음)·카메라 멈춤은 종전처럼 끊긴다
+            val hy = f[LegGeometry.HIP_Y]; val hb = hipBase; val tb = torsoBase
+            if (hy != null && hb != null && tb != null && legs.any { it.moving }) {
+                lastAt = t
+                val hipDrop = (hy - hb) / tb
+                for (leg in legs) {
+                    if (!leg.moving) continue
+                    leg.hipDropMax = maxOf(leg.hipDropMax, hipDrop)
+                    f[LegGeometry.TORSO_PITCH]?.let { leg.torsoMax = maxOf(leg.torsoMax, it) }
+                    if (profile == LegProfile.CROSS) listOfNotNull(f["knee_L"], f["knee_R"]).minOrNull()?.let { leg.kneeMinCycle = minOf(leg.kneeMinCycle, it) }
+                }
+            }
+            return emptyList()
+        }
         val last = lastAt
         if (last != null && (t <= last || t - last > MAX_GAP_MS)) { legs.forEach { it.clear() }; still.clear() }
         lastAt = t
@@ -290,13 +335,23 @@ class LegCycleTracker(val profile: LegProfile) : IdentityCueSource {
             f[LegGeometry.TORSO_PITCH]?.let { leg.torsoMax = maxOf(leg.torsoMax, it) }
             f[LegGeometry.HIP_HEIGHT]?.let { leg.hipHeightMin = minOf(leg.hipHeightMin, it) }
             if (profile == LegProfile.CROSS) leg.kneeMinCycle = minOf(leg.kneeMinCycle, minOf(f.getValue("knee_L"), f.getValue("knee_R")))
-            if (profile == LegProfile.SIDE && leg.side != null) f[LegGeometry.kneeFwdFoot(leg.side)]?.let { leg.kneeFwd += x to it }
+            if (profile == LegProfile.SIDE && leg.side != null) {
+                f[LegGeometry.kneeFwdFoot(leg.side)]?.let { leg.kneeFwd += x to it }
+                if (x <= base - departFor(leg)) leg.departFrames++
+                val shift = f[LegGeometry.HIPSHIFT]
+                leg.bottom += floatArrayOf(x, f[LegGeometry.knee(leg.side.other)] ?: Float.NaN,
+                    (if (leg.side == StepSide.LEFT) shift else shift?.let { 1f - it }) ?: Float.NaN,
+                    f[LegGeometry.lift(leg.side)] ?: Float.NaN, f[LegGeometry.edge(leg.side)] ?: Float.NaN)
+            }
             if (profile == LegProfile.SIDE_CRUNCH && leg.side != null) {
                 // 닿음은 85 ms 최솟값(`elbow_knee_min`, 앱 ContactMinimum)이 있으면 그것 — 300 ms 표본은 순간 접촉을 놓친다(§98a). 재생기 .cap 경로는 300 ms 값으로 후퇴
                 (f[LegGeometry.elbowKneeMin(leg.side)] ?: f[LegGeometry.elbowKnee(leg.side)])?.let { leg.auxMin = minOf(leg.auxMin, it) }
                 f[LegGeometry.latFlex(leg.side)]?.let { leg.latFlexMax = maxOf(leg.latFlexMax, it) }
+                // 선 자세 골반축 기준 무릎 바깥 위치(§101) — `knee_fx/fz`(세계 수평면, 골반 너비 단위) 를 기준 축에 투영
+                val ax = hipAxisBase; val fx = f[LegGeometry.kneeFx(leg.side)]; val fz = f[LegGeometry.kneeFz(leg.side)]
+                if (ax != null && fx != null && fz != null) leg.klSt += x to (fx * ax.first + fz * ax.second)
             }
-            if (t - leg.startMs > MAX_CYCLE_MS) { rejected += RepRejected(t, leg.sigMin, leg.sigMax, Float.NaN, "timeout"); leg.clear(); continue }
+            if (t - leg.startMs > MAX_CYCLE_MS) { rejected += RepRejected(t, leg.sigMin, leg.sigMax, Float.NaN, "timeout", side = leg.side.takeIf { leg.named }); leg.clear(); continue }
             val back = if (profile == LegProfile.CROSS) x >= CROSS_RETURN && (f["knee_L"] ?: 0f) >= CROSS_RETURN_KNEE && (f["knee_R"] ?: 0f) >= CROSS_RETURN_KNEE
                 else x >= base - RETURN_BAND
             if (!back) { leg.returnAt = null; leg.dwell.clear(); continue }
@@ -305,7 +360,7 @@ class LegCycleTracker(val profile: LegProfile) : IdentityCueSource {
             if (t - leg.returnAt!! < DWELL_MS || leg.dwell.size < DWELL_FRAMES || t - leg.startMs < MIN_CYCLE_MS) continue
             // 복귀 확정 — 판별 → 발표/기각, 재기준
             val (side, reason) = identity(leg, f)
-            if (reason != null) rejected += RepRejected(t, leg.sigMin, leg.sigMax, Float.NaN, reason)
+            if (reason != null) rejected += RepRejected(t, leg.sigMin, leg.sigMax, Float.NaN, reason, side = side.takeIf { leg.named })   // 쪽 = 센 회와 같은 규칙(§101 화살표)
             else {
                 val c = RepCycle(t, leg.startMs, leg.sigMin, leg.sigMax, side = side.takeIf { leg.named })
                 completed += c; events += c
@@ -334,13 +389,22 @@ class LegCycleTracker(val profile: LegProfile) : IdentityCueSource {
         return when (profile) {
             LegProfile.SIDE -> {
                 val s = leg.side!!
-                val other = p[LegGeometry.knee(s.other)]
-                val shift = p[LegGeometry.HIPSHIFT]
-                val toward = if (s == StepSide.LEFT) shift else shift?.let { 1f - it }
+                // §101: 반대 무릎·골반 이동·발 들림은 극점 한 프레임이 아니라 바닥 띠(신호 최소 + 15°) 중앙값 — 가장자리에서 반대 발목이 한 프레임 뒤집히면 극점이 '두 무릎 굽힘' 으로 읽혔다
+                val band = leg.bottom.filter { it[0] <= leg.sigMin + BOTTOM_BAND }
+                fun med(k: Int): Float? = band.map { it[k] }.filter { it.isFinite() }.takeIf { it.isNotEmpty() }?.let(::median)
+                val other = med(1) ?: p[LegGeometry.knee(s.other)]
+                val toward = med(2) ?: p[LegGeometry.HIPSHIFT]?.let { if (s == StepSide.LEFT) it else 1f - it }
+                val lift = med(3) ?: p[LegGeometry.lift(s)] ?: 0f
+                // 가장자리: 바닥 띠와 그 앞뒤 한 프레임 중 하나라도 움직인 다리가 이미지 가장자리 0.05 안(또는 밖)이면 관측이 무너진 사이클 — 세지 않고 말하지 않는다(PHANTOM, 사용자 결정 U1)
+                val bi = leg.bottom.indices.filter { leg.bottom[it][0] <= leg.sigMin + BOTTOM_BAND }
+                val lo = (bi.minOrNull() ?: 0) - 1; val hi = (bi.maxOrNull() ?: -1) + 1
+                val edgeHit = leg.bottom.withIndex().any { (i, r) -> i in lo..hi && r[4].isFinite() && r[4] < SIDE_EDGE_MIN }
                 val reason = when {
+                    leg.departFrames < MIN_DEPART_FRAMES -> "blip"
+                    edgeHit -> "edge"
                     leg.sigMin > SIDE_KNEE_MAX || (leg.hipHeightMin.isFinite() && leg.hipHeightMin > SIDE_HIP_HEIGHT_MAX) -> "shallow"
                     other != null && other - leg.sigMin < SIDE_ASYM_MIN -> "squat_like"
-                    (p[LegGeometry.lift(s)] ?: 0f) > LUNGE_LIFT_MAX -> "foot_lifted"
+                    lift > LUNGE_LIFT_MAX -> "foot_lifted"
                     toward == null -> "no_direction"
                     toward < SIDE_SHIFT_MIN -> "no_shift"
                     bottomMedian(leg) > SIDE_KNEE_TOE_MAX -> "knee_over_toe"
@@ -354,11 +418,13 @@ class LegCycleTracker(val profile: LegProfile) : IdentityCueSource {
                 val yl = p[LegGeometry.ankleY(StepSide.LEFT)]; val yr = p[LegGeometry.ankleY(StepSide.RIGHT)]; val tb = torsoBase ?: 1f
                 // 뒷발(화면에서 더 위 = 더 멀다)이 움직인 다리
                 val side = if (yl != null && yr != null) { if (yl < yr - BACK_FOOT_MIN * tb) StepSide.LEFT else if (yr < yl - BACK_FOOT_MIN * tb) StepSide.RIGHT else null } else null
+                // 깊이는 무릎만(§101) — `hip_height_rel` 은 분모(골반–발목 현)가 깊을수록 같이 줄고 한 발목이 빠지면 앞다리 하나로 계산돼 정상 회를 '얕음' 으로 읽었다(10-08 3/9).
+                // 골반이 안 내려간 회는 `no_descent`(2D 골반 하강)가 거른다. 허리 띠는 크로스 전용(힙 힌지가 동작의 일부 — 10-08 정상 회 바닥 +36.8~+49.0°)
                 val reason = when {
                     leg.sigMin > CROSS_MIN -> "no_cross"
                     kneeMin > CROSS_NO_DESCENT_KNEE && leg.hipDropMax < CROSS_HIP_DROP -> "no_descent"
-                    kneeMin > CROSS_KNEE_MAX || (leg.hipHeightMin.isFinite() && leg.hipHeightMin > CROSS_HIP_HEIGHT_MAX) -> "shallow"
-                    torsoBent(leg, LUNGE_TORSO_DEP, LUNGE_TORSO_MAX, LUNGE_TORSO_ABS) -> "torso_bent"
+                    kneeMin > CROSS_KNEE_MAX -> "shallow"
+                    torsoBent(leg, CROSS_TORSO_MAX, CROSS_TORSO_MAX, CROSS_TORSO_ABS) -> "torso_bent"   // 출발 때 이미 숙인 것도 같은 띠(힙 힌지)
                     else -> null
                 }
                 side to reason
@@ -367,6 +433,8 @@ class LegCycleTracker(val profile: LegProfile) : IdentityCueSource {
                 val s = leg.side!!
                 // 편 다리를 앞으로 차는 회는 허벅지가 얕게 읽히기도 해서(폰 실측 136~143°) 높이보다 먼저 묻는다 — "골반 높이까지" 만 들으면 왜 안 세는지 모른다
                 val reason = when {
+                    // 얕고 무릎이 반쯤 펴진 들기(§101) — '다리를 뻗으면' 보다 '접은 채 골반 높이까지' 가 고칠 말이다(10-08 니업: 얕은 회에 "다리를 뻗으면…" 이 나갔다)
+                    (p[LegGeometry.knee(s)] ?: 0f) > KNEE_BENT_MAX && leg.sigMin > KNEE_UP_THIGH_MAX -> "shallow_straight"
                     (p[LegGeometry.knee(s)] ?: 0f) > KNEE_BENT_MAX -> "knee_straight"
                     leg.sigMin > KNEE_UP_THIGH_MAX -> "shallow"
                     (p[LegGeometry.lift(s)] ?: 0f) < KNEE_UP_LIFT_MIN -> "no_lift"
@@ -380,7 +448,17 @@ class LegCycleTracker(val profile: LegProfile) : IdentityCueSource {
                 val s = leg.side!!
                 // 순서: 다리의 정체(편 다리·앞으로 올림) → 옆구리 수축 → 높이 → 허리. 다리만 올린 회는 대개 얕기도 해서 높이를 먼저 물으면 "더 높이" 만 듣고 정작 안 접은 옆구리를 모른다(폰 1차 세트 8/12)
                 val kneeLat = p[LegGeometry.kneeLat(s)]; val kneeOut = p[LegGeometry.kneeOut2d(s)]
-                val forward = if (kneeLat != null) kneeLat < CRUNCH_ABDUCT_MIN else if (kneeOut != null) kneeOut < CRUNCH_ABDUCT2D_MIN else false
+                // 옆으로 올렸는가(§101): 회 직전 선 자세 골반축에 고정한 kl_st 의 바닥 띠 중앙값 ≥ CRUNCH_ABDUCT_ST_MIN — **정면(C)에서만** 판정(사선·옆은 유보 = 셈).
+                // 순간 골반축 knee_lat(0.35)은 폰 앞 들기+팔꿈치 회 2/6 을 셌고 모집단에서도 정상 3.9 % 기각·앞 검출 81.8 % 였다 — 재료가 없는 옛 캡처에서만 폴백
+                val klSt = bottomMedianOf(leg, leg.klSt)
+                val frontal = standingYaw?.let { kotlin.math.abs(it) <= ViewEstimator.FRONT_MAX_DEG } ?: true
+                val forward = when {
+                    !frontal -> false
+                    klSt.isFinite() -> klSt < CRUNCH_ABDUCT_ST_MIN
+                    kneeLat != null -> kneeLat < CRUNCH_ABDUCT_MIN
+                    kneeOut != null -> kneeOut < CRUNCH_ABDUCT2D_MIN
+                    else -> false
+                }
                 // 닿음이 정의다(사용자 결정 2026-10-06 밤 2) — 측굴은 판별에 넣지 않는다(닿았는데 측굴이 작다고 안 세면 정의와 어긋난다). 측굴은 beta 검사 '옆구리 접힘'
                 val reason = when {
                     (p[LegGeometry.knee(s)] ?: 0f) > KNEE_BENT_MAX -> "knee_straight"
@@ -402,6 +480,12 @@ class LegCycleTracker(val profile: LegProfile) : IdentityCueSource {
     private fun bottomMedian(leg: Leg): Float {
         val vs = leg.kneeFwd.filter { it.first <= leg.sigMin + BOTTOM_BAND }.map { it.second }
         return if (vs.isEmpty()) Float.NEGATIVE_INFINITY else median(vs)
+    }
+
+    /** 바닥(신호 최소 + [BOTTOM_BAND] 안) 프레임들의 (신호, 값) 목록 중앙값 — 재료가 없으면 NaN(판정하지 않음). */
+    private fun bottomMedianOf(leg: Leg, xs: List<Pair<Float, Float>>): Float {
+        val vs = xs.filter { it.first <= leg.sigMin + BOTTOM_BAND }.map { it.second }
+        return if (vs.isEmpty()) Float.NaN else median(vs)
     }
 
     /**
@@ -440,13 +524,17 @@ class LegCycleTracker(val profile: LegProfile) : IdentityCueSource {
         hipBase = m.getValue(LegGeometry.HIP_Y); torsoBase = m.getValue(LegGeometry.TORSO2D)
         torsoPitchBase = m[LegGeometry.TORSO_PITCH]
         for (sd in StepSide.entries) m[LegGeometry.latFlex(sd)]?.let { latFlexBase[sd] = it }
+        val ax = m[LegGeometry.HIP_AX_X]; val az = m[LegGeometry.HIP_AX_Z]
+        hipAxisBase = if (ax != null && az != null) ax to az else null
+        val vc = m[ViewEstimator.FEAT_COS]; val vs = m[ViewEstimator.FEAT_SIN]
+        standingYaw = if (vc != null && vs != null) Math.toDegrees(kotlin.math.atan2(vs.toDouble(), vc.toDouble())).toFloat() else null
         if (standing == null) standing = (REQUIRED + OPTIONAL.filter { m.containsKey(it) }).associateWith { m.getValue(it) }
     }
 
     private fun median(xs: List<Float>): Float { val s = xs.sorted(); return if (s.size % 2 == 1) s[s.size / 2] else (s[s.size / 2 - 1] + s[s.size / 2]) / 2f }
 
     companion object {
-        const val VERSION = "legcycle_v3_beta"
+        const val VERSION = "legcycle_v4_beta"   // §101: 부분 프레임 이음·크로스 깊이(무릎만)·크로스 허리 띠·사이드 크런치 kl_st
 
         /**
          * 판별 기각의 이유(음성) — 횟수의 입장 조건이라 두 모드 모두 말한다("세지 않았어요" 의 이유, 침묵하면 카운트가 죽은 줄 안다). null = 말하지 않는다(낮은 틱만).
@@ -464,6 +552,8 @@ class LegCycleTracker(val profile: LegProfile) : IdentityCueSource {
                 LegProfile.KNEE_UP -> "허리를 숙이면 세지 않아요. 가슴을 펴고 몸통을 세운 채 올려 주세요."
                 LegProfile.SIDE_CRUNCH -> "앞으로 숙이면 세지 않아요. 몸통을 세운 채 옆구리만 접어 주세요."
             }
+            "shallow_straight" -> "무릎을 접은 채 골반 높이까지 올려야 세요."
+            "blip", "edge" -> null   // 관측이 무너진 사이클(§101) — 틱도 말도 없다
             "knee_straight" -> when (profile) {
                 LegProfile.KNEE_UP -> "다리를 뻗으면 세지 않아요. 무릎을 접은 채 올려 주세요."
                 LegProfile.SIDE_CRUNCH -> "다리를 뻗으면 세지 않아요. 무릎을 굽힌 채 옆으로 올려 주세요."
@@ -483,10 +573,33 @@ class LegCycleTracker(val profile: LegProfile) : IdentityCueSource {
             "no_shift" -> "몸을 굽힌 다리 쪽으로 옮겨야 세요."
             else -> null
         }
+        /**
+         * 기각 사유의 화살표(§101, 문장 표 [cueFor] 바로 옆) — 말하는 사유는 전부 그림을 갖는다. 방향은 10-08 쌍 분석(지적받은 회 → 같은 쪽 다음 센 회의 앵커 변위)으로 골랐다:
+         * 니업 shallow '무릎 위' 8/8, 사이드 크런치 no_abduct '무릎 바깥' 8/8, no_crunch '팔꿈치→무릎' 2/2, 사이드 런지 shallow '골반 아래' 3/4, squat_like 는 '골반 아래' 2/5 로 틀리고
+         * '골반을 굽힌 발 쪽으로' 5/5. 앞뒤(무릎 발끝 넘김)·굽힘(편 다리)은 정면에서 그릴 수 없어 점. 쪽은 그 사이클의 움직인 다리(`RepRejected.side`, MOVING).
+         */
+        fun motionFor(profile: LegProfile, reason: String?): FormMotion? = when (reason) {
+            "shallow", "no_lift" -> when (profile) {
+                LegProfile.SIDE, LegProfile.CROSS -> FormMotion(MotionAnchor.HIPS, high = MotionKind.DOWN)
+                LegProfile.KNEE_UP, LegProfile.SIDE_CRUNCH -> FormMotion(MotionAnchor.KNEES, high = MotionKind.UP, pick = MotionPick.MOVING)
+            }
+            "shallow_straight" -> FormMotion(MotionAnchor.KNEES, high = MotionKind.UP, pick = MotionPick.MOVING)
+            "torso_bent" -> FormMotion(MotionAnchor.SHOULDERS, high = MotionKind.UP)
+            "knee_straight" -> FormMotion.mark(MotionAnchor.KNEES, pick = MotionPick.MOVING)
+            "no_abduct" -> FormMotion(MotionAnchor.KNEES, high = MotionKind.AWAY_MIDLINE, pick = MotionPick.MOVING)
+            "no_crunch", "no_elbow" -> FormMotion(MotionAnchor.ELBOWS, high = MotionKind.TOWARD_TARGET, pick = MotionPick.MOVING, target = MotionAnchor.KNEES, targetPick = MotionPick.MOVING)
+            "knee_over_toe" -> FormMotion.mark(MotionAnchor.KNEES, pick = MotionPick.MOVING)
+            "squat_like", "no_shift" -> FormMotion(MotionAnchor.HIPS, high = MotionKind.TOWARD_TARGET, target = MotionAnchor.ANKLES, targetPick = MotionPick.MOVING)
+            "no_cross" -> FormMotion(MotionAnchor.ANKLES, high = MotionKind.TOWARD_MIDLINE, pick = MotionPick.MOVING)
+            "no_descent" -> FormMotion(MotionAnchor.HIPS, high = MotionKind.DOWN)
+            "no_direction" -> FormMotion.mark(MotionAnchor.HIPS)
+            "both_legs" -> FormMotion.mark(MotionAnchor.KNEES)
+            else -> null
+        }
         /** 추적기가 프레임마다 요구하는 키 — 하나라도 없으면 그 프레임은 건너뛴다. 기준 맵(`reps.config.standing`)의 키이기도 하다. */
         val REQUIRED = listOf("knee_L", "knee_R", "thigh_L", "thigh_R", LegGeometry.CROSS, LegGeometry.HIP_Y, LegGeometry.TORSO2D)
         /** 기준에 함께 담는 선택 키 — 허리 숙임(몸통 전후 기울기)·측굴의 서 있는 값. 없으면 그 조건은 묻지 않는다. */
-        val OPTIONAL = listOf(LegGeometry.TORSO_PITCH, "lat_flex_L", "lat_flex_R")
+        val OPTIONAL = listOf(LegGeometry.TORSO_PITCH, "lat_flex_L", "lat_flex_R", LegGeometry.HIP_AX_X, LegGeometry.HIP_AX_Z, ViewEstimator.FEAT_COS, ViewEstimator.FEAT_SIN)
         const val KNEE_DEPART = 30f
         const val THIGH_DEPART = 25f
         const val RETURN_BAND = 15f
@@ -518,12 +631,20 @@ class LegCycleTracker(val profile: LegProfile) : IdentityCueSource {
          */
         const val SIDE_KNEE_TOE_MAX = 0.6f
         const val BOTTOM_BAND = 15f             // 바닥 프레임 = 신호 최소 + 15° 안(2차 세트 회당 2~4프레임)
+        /** 관측 붕괴 사이클(§101 사이드 런지 10-08): 출발선 아래 프레임 < 2 = 한 프레임짜리 유령(blip), 움직인 다리가 이미지 가장자리 0.05 안 = 가설 뒤집힘(edge). 둘 다 세지 않고 무음.
+         *  10-08 세트 재생: 센 5회 그대로, 말한 기각 24 → 18, 거짓 문장 5건 중 4건 제거. 10-06 깨끗한 세트 변화 0. */
+        const val MIN_DEPART_FRAMES = 2
+        const val SIDE_EDGE_MIN = 0.05f
+        val SILENT_REASONS = setOf("blip", "edge")
         const val SIDE_SHIFT_MIN = 0.58f        // 골반이 굽힌 발 쪽으로(실측 0.69~0.86)
         const val LUNGE_LIFT_MAX = 0.45f        // 런지의 발은 바닥에(니업은 1.0~1.8)
         const val CROSS_MIN = -0.2f             // 발목 교차(실측 바닥 −0.4~−0.7)
         const val CROSS_NO_DESCENT_KNEE = 135f  // 교차만 하고 안 내려감(두 무릎 모두 > 135 이고 골반 하강 < 0.25)
         const val CROSS_KNEE_MAX = 110f         // 더 굽은 무릎 ≤ 110° — 2차 세트: 깊은 회 89~100, 얕은 회 107~117(모두 오른발 뒤), 서성임 140~160
-        const val CROSS_HIP_HEIGHT_MAX = 0.80f  // 골반 높이 ÷ 다리 길이 ≤ 0.80 — 2차 세트 깊은 회 0.72~0.77, 얕은 회 0.80~0.82, 서성임 0.90~0.96
+        // (§101) CROSS_HIP_HEIGHT_MAX 0.80 은 뺐다 — 분모가 깊을수록 같이 줄고 한 발목이 빠지면 앞다리 하나로 계산돼 10-08 정상 회 3/9 를 '얕음' 으로 읽었다
+        /** 크로스 런지 허리 띠(§101, 잠정 — 사용자 결정 대기): 커시 런지의 힙 힌지는 동작의 일부라 10-08 정상 9회 바닥이 기준 대비 +36.8~+49.0°(절대 40.8~53.0). 옛 띠(+32/45, 사이드 런지 라벨)는 9/9 를 '숙임'. */
+        const val CROSS_TORSO_MAX = 55f
+        const val CROSS_TORSO_ABS = 60f
         const val CROSS_HIP_DROP = 0.25f        // 골반 하강 ÷ 몸통(실측 0.4~0.6)
         const val BACK_FOOT_MIN = 0.15f         // 뒷발 = 반대 발목보다 이만큼 위(실측 0.3~0.4)
         const val KNEE_UP_THIGH_MAX = 110f      // 허벅지 ≤ 110°(수평 90°; 실측 전체 45~99, 얕게 125~138) — 사용자 결정: 얕게는 세지 않는다
@@ -533,6 +654,8 @@ class LegCycleTracker(val profile: LegProfile) : IdentityCueSource {
         const val CRUNCH_THIGH_MAX = 115f       // 실측 수축 39~80, 다리만 106~129
         const val CRUNCH_LIFT_MIN = 0.5f
         const val CRUNCH_ABDUCT_MIN = 0.35f     // 무릎의 골반 대비 바깥쪽 위치(`knee_lat`, 골반 너비 단위) ≥ 0.35 = 옆으로 올림. 2차 세트: 옆 0.46~0.86, 앞으로 올림 −0.08~0.22, 편 다리 옆 킥 0.31
+        /** 선 자세 골반축 기준 무릎 바깥 위치 kl_st 바닥 중앙값 ≥ 0.70 = 옆(§101, 정면 C 만): 폰 정상 26회 0.79~1.19·앞 변형 26회 ≤ 0.61, AIHub MP C 정상 기각 0/265(47명, 상한 1.4 %)·앞 검출 85.3 %(1,179회), GT 2.0 %/91.6 %. 0.70 ≈ 정면 34° — 45° 대각은 센다(사용자 결정) */
+        const val CRUNCH_ABDUCT_ST_MIN = 0.70f
         const val CRUNCH_ABDUCT2D_MIN = 0.45f   // 3D 가 없을 때 2D 무릎 바깥 위치(`knee_out2d`, 몸통 단위): 옆 0.55~0.79, 앞 0.16~0.41
         /**
          * 닿음(§98a): 같은 쪽 팔꿈치–무릎 최솟값 ÷ 몸통 ≤ 0.30. 관절 중심끼리의 거리라 닿아도 0 이 아니다 — 팔꿈치·무릎 반지름 합 6~10 cm ≈ 0.12~0.2 몸통(몸통 45~50 cm),
@@ -540,8 +663,13 @@ class LegCycleTracker(val profile: LegProfile) : IdentityCueSource {
          */
         const val CRUNCH_TOUCH_MAX = 0.30f
         // 허리 숙임(몸통 전후 기울기 `torso_pitch`, 서 있는 기준 대비). 니업·크런치는 세운 채 하는 종목(2차 세트 정상 ≤ 8°/10°, 숙임 15~36), 런지는 힙 힌지가 있어 넓게(사이드 런지 정상 7~35, 숙임 40~58; 굽힌 다음 진행한 회는 출발에 이미 32)
-        const val UPRIGHT_TORSO_MAX = 10f
-        const val UPRIGHT_TORSO_ABS = 25f
+        /**
+         * 니업·사이드 크런치 허리 띠(§101a, 10-09 '허리 안 숙여도 숙였다고'): 선 자세 대비 20°, 절대 30°. 종전 10°/25° 는 무릎을 힘차게 들 때 몸통 피치가 자연히 +10~16° 오르는
+         * 동작 자체(지지 다리 골반 기준으로 재도 같다 — 랜드마크 튐이 아니다)를 숙임으로 읽어 10-09 니업 기각 18회 중 15회가 거짓 `torso_bent` 였다(깊게 든 66·72° 회 포함).
+         * 10-06 일부러 숙인 회는 +18~32°. 경계 18~20 은 폰 블록 `정상:5 숙임:3` 으로 확정.
+         */
+        const val UPRIGHT_TORSO_MAX = 20f
+        const val UPRIGHT_TORSO_ABS = 30f
         const val LUNGE_TORSO_DEP = 22f
         const val LUNGE_TORSO_MAX = 32f
         const val LUNGE_TORSO_ABS = 45f

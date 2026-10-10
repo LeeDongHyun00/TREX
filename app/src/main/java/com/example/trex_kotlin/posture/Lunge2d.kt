@@ -33,6 +33,18 @@ object Lunge2d {
     const val KNEE_H2D = "lunge_kh2d"
     const val NAMES_OK = "lunge_names_ok"
     const val SH_LEVEL_2D = "sh_level2d"
+    /**
+     * 어깨 기울기(°, §101 10-08 런지 '어깨 흐트러짐') — 중력 기준 3D: |asin((왼어깨 높이 − 오른어깨 높이) ÷ 어깨 폭)|. 2D 높이차 ÷ 몸통(`sh_level2d`)은 사선에서 원근 오프셋이
+     * 앞다리에 따라 뒤집혀 본인 기준(쪽별 첫 2걸음)이 필요했고 숙임에 흔들렸다. 3D 각은 뷰·앞다리와 무관한 절대 띠(코칭 15°·차단 20°)로 판정한다.
+     * [SH_TILT_S] 는 부호 있는 값(+ = 왼어깨가 높다, 로그·강조용). 중력 up 이 아닌 화면 세로 폴백 프레임에서는 내지 않는다(`gravityUp`).
+     */
+    const val SH_TILT = "lunge_sh_tilt"
+    const val SH_TILT_S = "lunge_sh_tilt_s"
+    /**
+     * 런지 카운트 신호(§101a, 10-09 '오른발 앞 걸음 연속 미인식') — 3D 무릎각이 둘이면 평균(= `knee_mean`), **하나만 보이면 그 무릎**. 사선에서 앞발이 먼 쪽이면 뒷무릎(먼 다리)
+     * 가시성이 0.4~0.5 로 떨어져 `knee_L` 이 빠지고 평균 신호가 통째로 비어 사이클이 생기지 않았다(10-09 런지: 오른발 앞 6걸음 0회, 왼발 앞은 전부 셈).
+     */
+    const val KNEE_SIG = "lunge_knee"
 
     /** 앞다리를 정하는 |fwd_d| 하한(잠정) — 폰 걸음 바닥 0.46~0.84, 스쿼트 0.00~0.21. */
     const val FRONT_MIN = 0.25f
@@ -40,6 +52,7 @@ object Lunge2d {
     const val KH2D_VETO = 0.10f
     private const val MIN_LEG_CM = 40f          // PoseFrame.legLen 과 같은 하한
     private const val MIN_SHIN_CM = 10f
+    private const val MIN_SHOULDER_CM = 15f     // PoseFrame.shW 와 같은 하한
     private const val MIN_TORSO = 0.08f         // Arm2d 와 같다
     private const val FACING_MIN_DEG = 30f
     private const val FACING_MAX_DEG = 150f
@@ -52,10 +65,27 @@ object Lunge2d {
     private const val RAD = 180.0 / Math.PI
 
     fun features(frame: PoseFrame, xy: FloatArray, vis: FloatArray, minVisibility: Float,
-                 aspect: Float = Stance2d.DEFAULT_ASPECT, yawShDeg: Float?): Map<String, Float> {
-        val out = HashMap<String, Float>(10)
+                 aspect: Float = Stance2d.DEFAULT_ASPECT, yawShDeg: Float?, gravityUp: Boolean = true): Map<String, Float> {
+        val out = HashMap<String, Float>(12)
         val j = frame.joints
         val lH = frame.lHip; val rH = frame.rHip
+        // ---- 어깨 기울기(§101) — 두 어깨가 보이고 폭 ≥ 15 cm, 중력 up 일 때만
+        val lS = frame.lSh; val rS = frame.rSh
+        if (gravityUp && lS != null && rS != null && vis[L_SH] >= minVisibility && vis[R_SH] >= minVisibility) {
+            val bl = frame.body(lS); val br = frame.body(rS); val w = (lS - rS).norm
+            if (bl != null && br != null && w >= MIN_SHOULDER_CM) {
+                val tilt = (Math.asin(((bl.y - br.y) / w).coerceIn(-1f, 1f).toDouble()) * RAD).toFloat()
+                out[SH_TILT] = abs(tilt); out[SH_TILT_S] = tilt
+            }
+        }
+        // ---- 카운트 신호 폴백(§101a): 보이는 무릎의 3D 각 평균 — PostureCore `knee_L/R` 와 같은 angle3
+        run {
+            val lK0 = j[Joints.L_KNEE]; val rK0 = j[Joints.R_KNEE]; val lA0 = j[Joints.L_ANKLE]; val rA0 = j[Joints.R_ANKLE]
+            val ks = ArrayList<Float>(2)
+            if (lH != null && lK0 != null && lA0 != null) angle3(lH, lK0, lA0)?.let { ks += it }
+            if (rH != null && rK0 != null && rA0 != null) angle3(rH, rK0, rA0)?.let { ks += it }
+            if (ks.isNotEmpty()) out[KNEE_SIG] = ks.sum() / ks.size
+        }
         val lK = j[Joints.L_KNEE]; val rK = j[Joints.R_KNEE]
         val lA = j[Joints.L_ANKLE]; val rA = j[Joints.R_ANKLE]
 

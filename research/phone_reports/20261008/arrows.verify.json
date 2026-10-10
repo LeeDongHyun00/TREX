@@ -1,0 +1,92 @@
+{
+ "verdicts": [
+  {
+   "id": "RC1",
+   "verdict": "confirmed",
+   "reasoning": "코드를 직접 읽었다. 앱에서 MotionCue 를 만드는 곳은 PostureLive.kt 네 줄뿐이다(1179 반복 검사 ship, 1258 놓친 얕은 걸음, 1267 유지 자세, 1319 창 규칙). grep 으로 `MotionCue.` 호출을 찾으면 PostureLive 와 SkeletonStage 밖에서는 하나도 없다. 기각 블록(1091-1097)은 repTick·speakLatest·floorLive.onRejected 만 부른다. RejectionCues.handle(FloorLive.kt:235-242)은 last.feature 를 돌려주지만 사유를 화살표로 바꾸는 표는 어디에도 없다. 한 다리 계열 검사 19개(SIDE 4·CROSS 3·KNEE_UP 5·SIDE_CRUNCH 7)는 check() 도우미가 RuleStatus.BETA 로 만들고 motion 인자 자체가 없다(RepForm.kt:1300-1303). 그래서 1177 의 `formEv.ship` 도 통과하지 못한다. 새 스크립트로 다시 센 오늘 기각 문장은 28건(니업 4·사이드 크런치 5·사이드 런지 9·크로스 런지 4·크런치 2·레그 레이즈 4)이고 화살표 경로는 0이다. 바로잡을 숫자가 셋 있다. ① LegCycle.cueFor(455-483)의 사유는 10개가 아니라 11개다. ② 로그 rejected 항목은 64개가 아니라 65개다. 스쿼트에도 판별 기각이 1개 있다(t=53421, feature=null). cueSource 가 null 이라 틱도 말도 없었다. ③ 사이드 런지 24개 중 3쌍은 같은 t_ms 에 두 사유가 찍혔다(16781·49131·76431). 서로 다른 기각 시점은 21개, 전체로는 62개다. RejectionCues.handle 은 프레임마다 마지막 하나만 말한다. 또 '쪽 정보가 없다'는 기록 단계에서 버려진 것이다. LegCycle.kt:308 에서 RepRejected 를 만들 때 leg.side 가 손에 있는데도 넣지 않는다(CROSS 는 Leg(null)).",
+   "extra_evidence": [
+    "work/arrows/skeptic2/s1_speech.txt: 기각 문장 28건의 시각·문장. 예: 13:53:37.019 '무릎이 발끝을 넘으면 세지 않아요…'",
+    "work/arrows/skeptic2/s2_reps.txt: rejected 65 = 스쿼트 None 1·컬 upperarm_vert_L 2·니업 shallow 9/knee_straight 2·사이드 크런치 no_abduct 8/no_crunch 2/knee_straight 1·사이드 런지 squat_like 10/shallow 8/torso_bent 5/knee_over_toe 1·크로스 shallow 4/no_descent 3·크런치 shallow 3·레그 레이즈 one_leg 4/knee_bent 2",
+    "LegCycle.kt:299·308 `rejected += RepRejected(t, leg.sigMin, leg.sigMax, Float.NaN, reason)`: leg.side 가 범위 안에 있지만 기록하지 않음",
+    "PostureLive.kt:1088-1090 주석: 기각 음성은 '횟수의 입장 조건이지 자세 코칭이 아니다'. 화살표 설계가 이 채널을 대상에서 뺀 근거가 된 분류다"
+   ]
+  },
+  {
+   "id": "RC2",
+   "verdict": "partially",
+   "reasoning": "코드 사실은 맞다. 1439 `cue = motionCue.takeIf { … && !isFloorExercise }` 와 1434 바닥 highlight=emptySet() 이 있다. 바닥 음성 원천(PostureFloorLive.kt 의 STOP 207-211, gazeFrame 249-254, gazeRep 257-264)은 모두 speakLatest 로만 나가고 MotionCue 를 만들지 않는다. 다만 1439 는 오늘 실제로 작동한 원인이 아니다. 바닥 세트에서 motionCue 를 쓸 수 있는 경로가 하나도 없다. 1177 은 gate(=COACH && !floor)가 필요하고, 1249·1262 는 `!refs.floorRef[0]` 조건이다. 1307 의 바닥 분기는 1319 창 규칙 화살표에 도달하지 못한다. 세트 시작(461)에서 motionCue 를 지우므로 이전 종목의 화살표도 넘어오지 않는다. 그래서 1439 를 지워도 바닥 화면은 그대로다. 바닥 화살표 부재는 원천이 없는 것(크런치·레그 레이즈는 RC1, 플랭크는 HoldVoice)만으로 전부 설명된다. 1439 는 잠재적인 두 번째 장벽이다. 시선 부분도 잠재 결함이다. 오늘 플랭크·크런치 시선 문장은 0건이었다(플랭크는 시작 범위 문장에 시선 안내만 있다). 오늘 화살표 없이 나간 바닥 교정은 8건이다(크런치 기각 2, 레그 레이즈 기각 4, 플랭크 멈춤 2). '음성과 같은 문턱이 깨졌다'는 해석이다. 코드 주석은 기각 음성을 자세 코칭이 아닌 횟수 안내로 분류했다. 바닥에도 시각 단서가 아예 없지는 않다(호박 강조 1435, 플랭크 정렬 점선 1437). 좌표계 배제는 맞다. 다시 계산하면 레그 레이즈 두 발목 평균 y − 두 골반 평균 y 의 p10 은 −0.446 이다(조사자 −0.448).",
+   "extra_evidence": [
+    "PostureLive.kt:1123 `val gate = … COACH && !refs.floorRef[0]`, 1249 `!refs.floorRef[0]`, 1262 `!refs.floorRef[0]`, 1307-1308 바닥 분기 공백. 바닥에서는 motionCue 대입 경로가 0",
+    "PostureLive.kt:461 WORK 시작 때 `motionCue = null`",
+    "work/arrows/skeptic2/s5_floor.txt: 크런치 tilt 8.88°, 레그 레이즈 헤더 tilt 131.2°·placement 8.95°, 발목y−골반y p10 −0.446, 플랭크 tilt 9.07°",
+    "s1_speech.txt: 13:58:31.940 '무릎이 바닥에 닿아 시간을 멈췄어요', 13:58:46.055 '골반이 내려가 시간을 멈췄어요'. 플랭크·크런치 시선 교정 문장 0건",
+    "rules_floor_v0.json: beta 12·exclude 4·ship 0(16규칙) 재확인"
+   ]
+  },
+  {
+   "id": "RC3",
+   "verdict": "confirmed",
+   "reasoning": "새 스크립트(s3_window.py)로 rules_mp_v0.json 을 다시 셌다. 서서 하는 18종목에서 supersedes 18개(§100 의 '바벨 스쿼트|고개 정면' 포함, 이 규칙은 원래 beta)를 빼면 ship 창 규칙은 24개다. forWindowRule 접두사(FormMotion.kt:38-42)에 걸리는 규칙은 5개다(스쿼트 척추 2·딥스 torso_incl·프런트 레이즈 torso_pitch·랫풀 torso_incl). 전체 상태 집계는 ship 51·beta 20·exclude 70 이다. MotionCue.ofWindow(SkeletonStage.kt:55-59)는 op 와 상관없이 m.high 를 쓴다. 딥스 '상체 살짝 숙임 유지'는 violation_if 가 torso_incl__mean < 20.77(너무 섬)이다. 음성은 PostureCoach.kt:95 '상체를 살짝 앞으로 숙이세요'인데 화살표는 어깨에서 위다. 둘이 반대 방향을 가리킨다는 지적은 맞다. 프런트 레이즈(torso_pitch__min < −7.13, 뒤로 젖힘)도 '어깨 위로'가 고치는 방향을 정확히 말하지 못한다. 오늘 이 원인에 걸린 문장은 사이드 크런치 창 시선 2건뿐이다(13:49:50.212·13:50:24.103). PostureCoach.kt:79 drift 문장이고 head_pitch 라 null 이다. 나머지(딥스 방향, OHP·굿모닝·데드리프트 등 19개)는 오늘 세트에 없던 잠재 결함이다. 오늘 증상 36건 중 기여는 2건(6 %)이다.",
+   "extra_evidence": [
+    "work/arrows/skeptic2/s3_window.txt: 24개 규칙의 base_feature·violation_if·views_ok 목록, ARROW 5개",
+    "PostureCoach.kt:79 '시선이 점점 흔들려요. 정면을 보세요.'와 rules '스탠딩 사이드 크런치|시선 정면 유지' head_pitch__mean > −7.138(위반 = 고개가 들림). 문장이 방향을 말하지 않는다",
+    "FormMotionTest.kt:23-27: torso_incl__mean(있음)·head_yaw__std(없음) 두 경우만 잠근다"
+   ]
+  },
+  {
+   "id": "RC4",
+   "verdict": "confirmed",
+   "reasoning": "RepFormEvaluator.takeNotice(RepForm.kt:598-605)는 check 와 direction(c.hi 가 있으면 HIGH)을 담은 RepFormEvent 를 돌려준다. 호출부 PostureLive.kt:1236 은 `say += ev.message` 만 한다. 스쿼트 '발 간격'(RepForm.kt:1580 ANKLES high=TOWARD_MIDLINE)과 컬 '팔꿈치 앞 이탈'(1479 ELBOWS high=TOWARD_TORSO)은 ship 이고 어휘도 있어서, 호출만 빠진 상태다. 가동 범위 분기(1185-1193)의 문장은 RepSignal.romCue(RepCounter.kt:1014-1016)에서 오고 FormMotion 이 없다. MotionKind(FormMotion.kt:15-27)에도 굽힘·폄 종류가 없다. 오늘 해당 문장은 4건이다. 스쿼트 13:45:48.141(live '발 간격#기준' t=10799), 컬 13:47:04.944('팔꿈치 앞 이탈#기준' t=9588), 컬 가동 범위 13:47:12.206·13:47:13.055 다. 보탤 점이 있다. 설계(LIVE_SCREEN_REDESIGN.md:94)는 '첫 반복 전 정지 화살표'라고 했다. 그런데 takeNotice 는 `if (completed)` 블록 안에서만 불려 반복이 끝난 뒤에 나온다. 오늘도 스쿼트는 3회째, 컬은 4회째 뒤였다. 그래서 '첫 반복 전'은 지금 구조로는 불가능하다. takeNotice 는 beta 검사도 돌려줄 수 있으므로(ship = c.ship) 화살표를 붙이려면 ship 으로 걸러야 한다.",
+   "extra_evidence": [
+    "s2_reps.txt: 스쿼트 live t=10799 '발 간격#기준' 0.2531(13:45:47.588 ≈ 음성 13:45:48.141), 컬 live t=9588 '팔꿈치 앞 이탈#기준' −0.0441(13:47:04.964 ≈ 음성 13:47:04.944)",
+    "PostureLive.kt:1100·1236: takeNotice 는 completed 프레임 안에서만 호출됨"
+   ]
+  }
+ ],
+ "missed_causes": [
+  {
+   "claim": "화살표가 어느 종목에 있는지 앱도 릴리스 노트도 밝히지 않는다(원칙 #5 '못 보는 것을 밝힌다'의 화면판 누락). 1.3.0-preview.5 릴리스 노트는 '자세가 틀린 회가 끝나면 틀린 관절에서 고칠 방향으로 붉은 화살표'라고 종목 구분 없이 약속했다. 앱 안의 범위 문장(PostureScope·PostureTrial·시작 안내)에는 화살표 언급이 없다. 그래서 사용자는 화살표를 앱 전체 기능으로 기대했고, 26종목 중 8종목에만 원천이 있는 상태를 '일부만 구현'으로 읽었다(추론).",
+   "evidence": [
+    "docs/ANDROID_PREVIEW_RELEASE_1_3_0_5.md:16-20 '## 교정 화살표 — 자세가 틀린 회가 끝나면 … 붉은 화살표', 종목 목록 없음. 같은 문서 :44 '검증 전 검사는 화살표가 없다'(어느 종목이 검증 전인지는 말하지 않음)",
+    "grep '화살표' app/src/main/java/com/example/trex_kotlin/posture: FormMotion.kt·RepForm.kt 주석뿐. PostureScope*.kt·PostureTrial.kt·ExerciseProfiles 시작 안내에 0건",
+    "1.3.0-preview.6 노트(:5)는 preview.5 의 '교정 화살표'를 그대로 이어받는다고 적고, 같은 릴리스에서 한 다리 4종목을 추가하면서 화살표가 없다는 말은 하지 않았다"
+   ]
+  },
+  {
+   "claim": "§100 미커밋 diff 는 화살표를 줄이지 않았다. 대신 화살표 없는 음성 채널을 다섯 개 늘렸다(기각 교정·플랭크 재개 교정·가동 범위 교정·플랭크 시선·크런치 시선). §100 이 넣은 유일한 새 화살표 원천인 스쿼트 '시선' HEAD 는 오늘 켜질 수 없었다. 결과적으로 '말은 있는데 화면은 그대로'인 종목의 대비가 커졌다.",
+   "evidence": [
+    "git diff PostureLive.kt: 화살표 관련 변경은 1199 `rf.recoveryEvent(…)?.also { …; motionCue = null }` 하나다. 이 분기는 위반 후보가 없는 회에서만 돈다. 화살표가 있는 종목에서는 1169 `lastRep?.correct == true → motionCue = null` 과 겹친다(한 다리 계열은 correct=False 회가 많지만 원래 화살표가 없다)",
+    "git diff RepForm.kt: supersedes 에 '바벨 스쿼트|고개 정면' 추가. 원래 beta 라 창 화살표 변화 없음(s3_window.txt 'superseded rule statuses')",
+    "스쿼트 시선 14/14 OK, −18.8~−12.6°(s6_gaze.txt). 띠 [−45, +5], gates=false 라 2회 연속이 필요(RepForm.kt:516). 오늘 0회 발동",
+    "오늘 교정됨 문장 25건 중 23건이 §100 경로다. 그중 화살표 없는 종목이 니업 4·사이드 크런치 3·사이드 런지 3·크런치 2·레그 레이즈 2·플랭크 2 = 16건(s1_speech.txt)",
+    "HEAD 앵커 {0,7,8}(FormMotion.kt:12): SkeletonStage 는 귀(7·8)를 점으로 그리지 않는다(body = 11 until 33, 얼굴은 코 원만, :155·186·202). 그래서 발동하면 코와 보이지 않는 두 귀에서 화살표 세 개가 나간다(잠재 결함)"
+   ]
+  },
+  {
+   "claim": "영상 토글(showCamera)은 세션 동안 종목이 바뀌어도 유지되고 로그에 남지 않는다. 사용자가 한 번 영상을 켜면 이후 모든 종목에서 화살표가 사라진다. 화살표는 dark 무대에서만 그려진다. 같은 증상(앞 종목에만 화살표)을 낼 수 있는 대안 경로인데, 데이터로 배제할 수 없다. 다만 오늘 뒤쪽 7세트는 원천 자체가 없어서 결론은 바뀌지 않는다.",
+   "evidence": [
+    "PostureLive.kt:445 `var showCamera by remember { mutableStateOf(false) }`: 키 없음. 같은 파일 447 speakNumbers 는 remember(workout.id) 로 종목마다 초기화하는 것과 대조된다",
+    "PostureLive.kt:1430 `stageDark = !showCamera && !personLost`, SkeletonStage.kt:228 `if (cue != null && dark)`",
+    "CLAUDE.md: PostureLive 는 종목이 바뀌어도 재컴포지션되지 않는다(같은 AnimatedContent 라우트)"
+   ]
+  },
+  {
+   "claim": "화살표가 있는 종목 안에서도 화살표가 음성·설계와 다른 곳을 가리키는 경우가 둘 있다. 런지 얕은 걸음은 설계상 '뒷무릎에서 아래로'인데 코드는 앞무릎에서 아래로 그린다. 컬 '앞 이탈·몸에서 떨어짐'은 가까운 팔만 재는데 화살표는 두 팔꿈치에 모두 붙는다. 같은 증상의 원인은 아니지만, '있는 곳'의 화살표 품질 문제다.",
+   "evidence": [
+    "RepForm.kt:1403-1404 highlight=\"knee_ang_{front}\", motion=KNEES high=DOWN. RuleHighlight.landmarksFor 가 _L/_R 로 거른 뒤 SkeletonStage.kt:50 에서 교집합 → 앞다리 무릎 하나. LIVE_SCREEN_REDESIGN.md:92 '뒷무릎에서 아래로', 음성 13:52:30.163 '…뒷무릎을 바닥 가까이 내려 주세요'",
+    "RuleHighlight.kt:74 \"elbow_fwd2d\" to ELBOWS + TORSO(접미사 _near 는 쪽 필터를 거치지 않음) → 앵커 {13,14}",
+    "s4_vis.txt: 컬 화살표 구간 52825-73782 에서 먼 팔꿈치 14 의 가시성이 0.5 이상인 프레임 62/71(최소 0.36, 중앙 0.69). 판정하지 않은 팔에도 대부분 그려진다"
+   ]
+  },
+  {
+   "claim": "화살표가 있는 3종목에서도 노출 시간이 짧다. 붉은 강조는 2.5 s 뒤 꺼지고, 화살표는 다음 정상 회에서 지워진다. 그래서 세트 시간의 15~37 % 만 보였다(무대가 어두웠다는 가정). '일부'라는 인상을 키웠을 수 있다(추론).",
+   "evidence": [
+    "PostureLive.kt:224 FORM_HIGHLIGHT_MS 2500, 226 MOTION_CUE_MS 12000, 1169 정상 회에서 지움",
+    "s2_reps.txt 반복 시각 기준: 스쿼트 14687→23979·40519→44714·49833→59134 = 22.8 s/61.2 s, 컬 47070→51251·52825→73782 = 25.1 s/75.6 s, 런지 84951→94503 = 9.6 s/101.7 s",
+    "s4_vis.txt: 해당 구간 앵커 가시성 — 스쿼트 발끝 31·32 최소 0.94, 발목 27·28 최소 0.91, 컬 가까운 팔꿈치 13 최소 0.98, 런지 무릎 25 38/40·26 40/40. 가시성 컷(0.5)으로 사라진 것은 아니다"
+   ]
+  }
+ ],
+ "user_action_check": "데이터와 맞는다. sets-20261008.jsonl 줄 5~14 의 10세트는 모두 mode=coach, front_camera=True 이고, 종목 순서와 끝 시각은 CONTEXT 와 같다. 새 스크립트(work/arrows/skeptic2/s1_speech.py)로 feedback-20261008.jsonl 의 speech_requested 를 세트별로 다시 뽑았다. 숫자 카운트·쪽 카운트·준비/촬영/범위 안내·방향 안내('옆으로 많이 돌아섰어요')·교정됨 문장·저장 안내를 빼면 교정 문장은 47건이다. 화살표를 만드는 경로를 탄 문장은 11건이다. 스쿼트 4(반복 14687·18954·40519·49833, 발끝 3·발 간격 1), 컬 6(47070·52825·55462·63310·66909·70218), 런지 1(놓친 얕은 걸음 84951)이다. 반복 시각을 KST 로 바꾸면 음성과 1 s 안에서 맞물린다(예: 14687 → 13:45:51.476 / 음성 13:45:52.038). 각 사건은 motion.kindFor(direction) 가 null 이 아님도 확인했다(발끝 HIGH/LOW·발 간격 HIGH·팔꿈치 HIGH·깊이 HIGH). 나머지 7세트는 0/36 이다. 컬 63310·66909·70218 은 correct=True(코칭 단계 위반)이지만 1169 에서 지운 직후 1179 가 다시 세우므로 화살표 경로가 맞다. 사용자가 이를 '일부 운동에만 화살표'로 받아들였다는 해석은 추론이지만 이 분포와 맞는다. 두 가지는 확인할 수 없다. 첫째, 11건이 실제로 그려졌는지는 모른다. 화살표·영상 토글·사람 잃음이 로그에 없다(LIVE_SCREEN_REDESIGN.md:183). 영상 토글은 세션 내내 유지된다(PostureLive.kt:445). 둘째, 사용자가 비교 기준으로 삼은 것이 릴리스 노트의 일반적인 약속인지, 앞 세트의 실제 화면인지도 모른다. 앵커 가시성은 충분했다(스쿼트 ≥0.91, 컬 가까운 팔 ≥0.98).",
+ "corrected_summary": "조사자의 원인 네 개는 코드와 다시 계산한 수치로 대부분 확인된다. 다만 RC2 는 '화면 단계 차단(1439)'이 오늘 실제로 작동한 원인이 아니라서 partially 로 낮춘다.\n\n**구조**\n화살표는 PostureLive.kt 네 줄(1179·1258·1267·1319)에서만 생긴다. 그래서 오늘 교정 문장 47건 중 11건(23 %)만 화살표 경로를 탔다(스쿼트 4/5, 컬 6/9, 런지 1/1). 나머지 7세트는 0/36 이다.\n\n**오늘 증상의 주원인 — RC1**\n한 다리 4종목과 크런치·레그 레이즈의 교정은 거의 전부 판별 기각 음성이다(오늘 28건). 이 경로(1091-1097)는 틱과 문장만 낸다. 기각 사유를 화살표로 바꾸는 표가 없고, 한 다리 계열 반복 검사 19개는 전부 beta 이고 motion 이 없다. 정정할 것:\n- 사유 수는 11개다.\n- 로그 기각 항목은 65개다(스쿼트 무음 1개 포함). 서로 다른 시점으로는 62개다(사이드 런지 3쌍이 같은 프레임).\n- 쪽 정보는 LegCycle.kt:308 에 있지만 RepRejected 에 넣지 않는다.\n\n**RC2 (partially)**\n바닥 종목은 원천 자체가 없다. 크런치·레그 레이즈는 RC1 과 같고, 플랭크 멈춤은 HoldVoice 라 MotionCue 를 만들지 않는다. 오늘 해당 문장은 8건이다. 1439 의 `!isFloorExercise` 는 잠재적인 두 번째 장벽일 뿐이다. 바닥에서는 motionCue 를 쓰는 경로가 하나도 없으므로(1123 gate·1249·1262·1307), 1439 만 고쳐서는 아무것도 바뀌지 않는다. 플랭크·크런치 시선은 오늘 한 번도 말하지 않았으므로 잠재 결함이다.\n\n**보조 원인**\n- RC3: 창 규칙 화살표는 몸통 접두사 화이트리스트라 ship 창 규칙 24개 중 5개에만 있다. 딥스는 음성과 반대 방향이다. 오늘 실제로 걸린 것은 사이드 크런치 시선 2건이다.\n- RC4: 처음부터 알림 2건과 컬 가동 범위 2건에 화살표 호출이 없다. 처음부터 알림은 반복이 끝난 뒤에만 나오는 구조라, 설계가 말한 '첫 반복 전 정지 화살표'는 지금 구조로는 불가능하다.\n\n**조사자가 놓친 것**\n- ① 화살표의 종목 범위를 아무 데서도 밝히지 않는다. 1.3.0-preview.5 릴리스 노트는 화살표를 종목 구분 없이 약속했고, 앱 안 범위 문장에는 화살표 언급이 없다. 원칙 #5 의 화면판 누락이고, 사용자가 '일부만 구현'으로 읽게 만든 직접 요인이다(추론).\n- ② §100 diff 는 화살표를 줄이지 않았다. 1199 의 지우기는 1169 와 겹친다. 대신 화살표 없는 음성 채널 다섯 개를 더했다(오늘 교정됨 23건 중 16건이 화살표 없는 종목). 유일한 새 원천인 스쿼트 시선 HEAD 는 14/14 OK(−18.8~−12.6°)에 2회 연속 조건까지 있어 켜질 수 없었다. HEAD 앵커에는 그려지지 않는 귀 두 점이 들어 있다.\n- ③ 영상 토글(showCamera)은 키 없이 세션 동안 유지되고 로그에 남지 않는다. 같은 증상을 내는 대안 경로인데 배제할 수 없다. 결론은 바뀌지 않는다.\n- ④ 있는 화살표도 위치가 어긋난다. 런지는 앞무릎에 그려지는데 설계와 음성은 뒷무릎이다. 컬은 판정하지 않은 먼 팔꿈치에도 그려진다(가시성 0.5 이상 62/71 프레임).\n- ⑤ 노출 시간이 짧다(스쿼트 22.8/61 s, 컬 25/76 s, 런지 9.6/102 s).\n\n**설계할 때 주의할 점**\n기각·바닥 음성에 화살표를 주려면 먼저 이 채널을 '자세 교정'으로 다시 분류할지 결정해야 한다. 지금 코드 주석(PostureLive.kt:1088)은 이 음성을 횟수 안내로 분류한다. 사용자 기준('오류 회를 세면 신뢰성 없음')에서는 이 사유들이 사실상 자세 게이트다. beta 검사에 화살표를 주는 것은 원칙 #2·#6 과 충돌하므로 사용자 결정 사항이다. 화살표 상태를 늘릴 때는 VerifyError 함정 때문에 LiveSessionRefs 같은 홀더에 둬야 한다."
+}

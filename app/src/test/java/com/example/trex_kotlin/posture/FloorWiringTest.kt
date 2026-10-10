@@ -219,8 +219,8 @@ class FloorWiringTest {
         assertTrue("다른 바닥 종목은 공유 문장 그대로", ExerciseProfiles.forName("푸쉬업")!!.preparationInstruction.contains(CapturePosition.FLOOR_SIDE.voice))
         for (ex in listOf("크런치", "라잉 레그 레이즈", "플랭크")) {
             val line = PostureScope.floorLine(ex)!!
-            // 세 종목은 자세 교정 시험 단계(PostureTrial, 2026-10-08) — 시험 단계 문장이 앞에 붙고 범위 문장이 뒤따른다
-            assertEquals(PostureTrial.START_LINE + " " + line, PostureScope.of(PostureRuleSet("t", "d", emptyList()), ex).startLine)
+            // §101c: 시험 단계 문장(PostureTrial)은 비었다(사용자 결정 2026-10-09) — 범위 문장만
+            assertEquals(line, PostureScope.of(PostureRuleSet("t", "d", emptyList()), ex).startLine)
             assertFalse("과장 금지", line.contains("어깨까지 들린 회만"))
         }
         assertNull(PostureScope.floorLine("푸시업"))
@@ -259,6 +259,98 @@ class FloorWiringTest {
         repeat(10) { events += c.onFrame(t, mapOf(FloorChain.CHAIN to 1f, FloorChain.KNEE to 175f, FloorChain.HIP_FLOOR to .4f, FloorChain.AXIS_H to 5f)); t += 300 }
         val start = events.single { it.kind == PlankHoldEvent.Kind.START }
         assertEquals(PlankHoldClock.SOURCE_CLOCK, c.source); assertFalse(HoldVoice.voiced(start.kind, c.source))
+    }
+
+    @Test fun spokenRejectionRecoveryIsOffUntilRecoveryContext() {
+        // §100 의 '말한 사유의 다음 센 회 = 교정됐어요' 는 쪽·사유·여유를 보지 않아 10-08 폰에서 틀린 칭찬을 했다 → 사용자 결정 U0 로 F1 RecoveryContext 전까지 끔.
+        // 말한 사유는 그대로 말하고(이유 음성·틱은 종전), 교정 대기에만 넣지 않는다
+        assertFalse(RejectCueGate.RECOVERY_ENABLED)
+        val src = object : IdentityCueSource { override fun cueFor(reason: String) = "이유 $reason" }
+        val g = RejectCueGate()
+        assertNull("말한 사유가 없으면 교정도 없다", g.takeRecovery())
+        assertEquals("이유 a", g.next(10_000, "a", src, silent = false, perReason = true).speech)
+        assertNull("말한 사유도 교정 대기에 넣지 않는다", g.awaitingRecovery); assertNull(g.takeRecovery())
+        assertNull("간격 안은 틱만", g.next(12_000, "a", src, silent = false, perReason = true).speech)
+        assertNull("음소거", g.next(30_000, "a", src, silent = true, perReason = true).speech)
+        g.next(40_000, "b", src, silent = false, perReason = true); g.reset(); assertNull("새 세트", g.takeRecovery())
+    }
+
+    @Test fun plankResumeSpeaksOnlyAfterASpokenPostureStop() {
+        // §100: 이유를 말한 자세 멈춤(무릎·골반·솟음)의 재개 = "좋아요, 교정됐어요. 다시 재요.", 화면 밖·일어섬·말하지 않은 멈춤은 종전처럼 톤만
+        assertEquals(PlankHoldClock.RESUME_CUE, HoldVoice.resumeCue(PlankHoldClock.HIPS_LOW))
+        assertEquals(PlankHoldClock.RESUME_CUE, HoldVoice.resumeCue(PlankHoldClock.KNEES_DOWN))
+        assertEquals(PlankHoldClock.RESUME_CUE, HoldVoice.resumeCue(PlankHoldClock.PIKE))
+        assertNull(HoldVoice.resumeCue(PlankHoldClock.OUT_OF_VIEW)); assertNull(HoldVoice.resumeCue(PlankHoldClock.NOT_PRONE)); assertNull(HoldVoice.resumeCue(null))
+    }
+
+    @Test fun plankGazeSpeaksAfterSustainedHeadViolationAndRecoversOnce() {
+        // §100: 정렬 고개 항목이 HOLD·측면 칸에서 위반으로 2 s 더 이어지면 말하고(15 s 에 한 번), OK 가 1 s 이어지면 교정 한 번. 유보·HOLD 아님은 지속을 끊는다
+        val g = PlankGazeVoice(); val head = plankHead()
+        fun snap(verdict: Verdict, side: Int, held: Boolean = true, ready: Boolean = true, value: Float? = 40f) =
+            AlignmentSnapshot(listOf(AlignmentItem(head, value, verdict, side)), placementReady = ready, held = held)
+        assertNull(g.frame(0, snap(Verdict.VIOLATION, 1))); assertNull(g.frame(1_500, snap(Verdict.VIOLATION, 1)))
+        assertEquals(PlankGazeVoice.cueFor(1), g.frame(2_100, snap(Verdict.VIOLATION, 1)))
+        assertTrue(PlankGazeVoice.cueFor(1).contains("양손 사이 바닥")); assertTrue(PlankGazeVoice.cueFor(-1).contains("살짝 앞"))
+        assertNull("쿨다운 안", g.frame(5_000, snap(Verdict.VIOLATION, 1)))
+        assertNull(g.frame(6_000, snap(Verdict.OK, 0)))
+        assertEquals(PlankGazeVoice.RECOVERED_CUE, g.frame(7_100, snap(Verdict.OK, 0)))
+        assertNull("한 번만", g.frame(8_000, snap(Verdict.OK, 0)))
+        assertNull(g.frame(20_000, snap(Verdict.VIOLATION, -1, held = false)))
+        assertNull(g.frame(21_000, snap(Verdict.VIOLATION, -1)))
+        assertNull(g.frame(22_000, snap(Verdict.ABSTAIN, -1, value = null)))
+        assertNull(g.frame(23_500, snap(Verdict.VIOLATION, -1)))
+        assertEquals("유보로 끊겨 다시 2 s", PlankGazeVoice.cueFor(-1), g.frame(25_600, snap(Verdict.VIOLATION, -1)))
+        assertNull("준비 안 된 칸은 보지 않는다", g.frame(26_000, snap(Verdict.OK, 0, ready = false)))
+        assertEquals(2, g.spoken.count { it.second != PlankGazeVoice.RECOVERED_CUE })
+    }
+
+    @Test fun floorGazeSpeaksAfterTwoWrongRepsAndNeverBlocks() {
+        // §101d(사용자 정의): 센 회의 gaze(얼굴 요 다수결)가 화면 쪽·반대쪽이면 틀린 시선 — 문장은 하나(벗어남 + 정상 시선 안내, 사용자 결정 10-10 오후). 연속 2회까지는 두고 3회째부터 말한다(12 s 에 한 번).
+        // 교정은 벗어나지 않은 아는 회(정면 또는 화면 밖 — 측면 폰은 옆얼굴을 못 찾아 정면이 거의 관측되지 않는다). 모름은 연속을 끊지 않되 세지도 않는다
+        val g = FloorGazeVoice()
+        fun rep(t: Long, gaze: Int) = FloorRep(t, t - 2000, t - 1000, 0f, 20f, 300, 700, false, gaze = gaze)
+        assertNull(g.rep(1_000, rep(1_000, FloorGaze.OFF_SCREEN), FloorProfile.CRUNCH))
+        assertNull("1회째 — 둔다", g.rep(3_000, rep(3_000, FloorGaze.CAMERA), FloorProfile.CRUNCH))
+        assertNull("2회째 — 둔다", g.rep(5_000, rep(5_000, FloorGaze.AWAY), FloorProfile.CRUNCH))
+        assertEquals("3회째 — 종목 문장", FloorGazeVoice.CRUNCH_CUE, g.rep(7_000, rep(7_000, FloorGaze.CAMERA), FloorProfile.CRUNCH))
+        assertEquals(FloorGaze.CAMERA, g.lastWrong)
+        assertNull("같은 회를 두 번 주면 무시", g.rep(7_000, rep(7_000, FloorGaze.CAMERA), FloorProfile.CRUNCH))
+        assertNull(g.rep(9_000, rep(9_000, FloorGaze.UNKNOWN), FloorProfile.CRUNCH))
+        assertEquals("지적 뒤 화면 밖 회 = 돌아왔다는 말", FloorGazeVoice.RECOVERED_CUE, g.rep(11_000, rep(11_000, FloorGaze.OFF_SCREEN), FloorProfile.CRUNCH))
+        assertEquals(FloorGaze.UNKNOWN, g.lastWrong)
+        assertNull(g.rep(13_000, rep(13_000, FloorGaze.OFF_SCREEN), FloorProfile.CRUNCH))
+        assertNull(g.rep(15_000, rep(15_000, FloorGaze.AWAY), FloorProfile.CRUNCH)); assertNull(g.rep(16_000, rep(16_000, FloorGaze.AWAY), FloorProfile.CRUNCH))
+        assertNull("쿨다운 12 s 안", g.rep(17_000, rep(17_000, FloorGaze.AWAY), FloorProfile.CRUNCH))
+        assertEquals("레그 레이즈 문장(반대쪽도 같은 문장)", FloorGazeVoice.LEG_RAISE_CUE, g.rep(24_000, rep(24_000, FloorGaze.AWAY), FloorProfile.LEG_RAISE))
+        assertEquals(FloorGaze.AWAY, g.lastWrong)
+        assertEquals("정면 회가 교정", FloorGazeVoice.RECOVERED_CUE, g.rep(28_000, rep(28_000, FloorGaze.FRONT), FloorProfile.LEG_RAISE))
+        assertTrue(FloorGazeVoice.isRecovery(FloorGazeVoice.RECOVERED_CUE)); assertFalse(FloorGazeVoice.isRecovery(FloorGazeVoice.CRUNCH_CUE))
+        assertTrue(FloorGazeVoice.CRUNCH_CUE.startsWith("시선이 벗어났어요")); assertTrue(FloorGazeVoice.LEG_RAISE_CUE.contains("천장"))
+        assertEquals("화살표는 가야 할 곳 — 크런치는 무릎", MotionAnchor.KNEES, FloorGazeVoice.motionFor(FloorProfile.CRUNCH).target)
+        assertEquals("레그 레이즈는 천장(중력 위)", MotionKind.UP, FloorGazeVoice.motionFor(FloorProfile.LEG_RAISE).high)
+    }
+
+    @Test fun plankGazeSpeaksWhenTheHeadTurnsForThreeSeconds() {
+        // §101d: 버티는 칸에서 틀린 시선(화면 쪽·반대쪽)이 3 s 이어지면 그 상태의 문장, 1 s 동안 정면이면 교정 한 번. 고개 위·아래 항목과 쿨다운을 나눠 쓴다
+        val g = PlankGazeVoice(); val head = plankHead()
+        fun snap(v: Verdict, side: Int, held: Boolean = true) = AlignmentSnapshot(listOf(AlignmentItem(head, 10f * side, v, side)), placementReady = true, held = held)
+        assertNull(g.frame(0, snap(Verdict.OK, 0), FloorGaze.CAMERA))
+        assertNull(g.frame(2_000, snap(Verdict.OK, 0), FloorGaze.CAMERA))
+        assertEquals(PlankGazeVoice.TURN_CUE, g.frame(3_100, snap(Verdict.OK, 0), FloorGaze.CAMERA))
+        assertEquals(0, g.lastSide); assertEquals(FloorGaze.CAMERA, g.lastWrong)
+        assertEquals("화살표는 코에서 양손 사이로", MotionAnchor.WRISTS, PlankGazeVoice.motionFor(0).target)
+        assertNull(g.frame(4_000, snap(Verdict.OK, 0), FloorGaze.FRONT))
+        assertEquals(PlankGazeVoice.RECOVERED_CUE, g.frame(5_100, snap(Verdict.OK, 0), FloorGaze.FRONT))
+        assertNull("멈춘 칸(held=false)은 보지 않는다", g.frame(6_000, snap(Verdict.OK, 0, held = false), FloorGaze.AWAY))
+        assertNull(g.frame(10_000, snap(Verdict.OK, 0, held = false), FloorGaze.AWAY))
+        // 쿨다운 15 s 뒤 반대쪽 3 s → 반대쪽 문장. 모름은 지속을 끊지 않는다
+        assertNull(g.frame(20_000, snap(Verdict.OK, 0), FloorGaze.AWAY)); assertNull(g.frame(21_500, snap(Verdict.OK, 0), FloorGaze.UNKNOWN))
+        assertEquals("반대쪽도 같은 문장(사용자 결정 10-10 오후)", PlankGazeVoice.TURN_CUE, g.frame(23_100, snap(Verdict.OK, 0), FloorGaze.AWAY))
+        assertEquals(FloorGaze.AWAY, g.lastWrong)
+        // 지적 뒤 화면 밖 1 s → 돌아왔다(측면 폰은 옆얼굴을 못 찾는다, 10-10)
+        assertNull(g.frame(24_000, snap(Verdict.OK, 0), FloorGaze.OFF_SCREEN))
+        assertEquals(PlankGazeVoice.RECOVERED_CUE, g.frame(25_100, snap(Verdict.OK, 0), FloorGaze.OFF_SCREEN))
+        assertTrue(PlankGazeVoice.isRecovery(PlankGazeVoice.RECOVERED_CUE)); assertEquals(FloorGaze.UNKNOWN, g.lastWrong)
     }
 
     @Test fun notProneStopHasNoTickWhileOtherStopsTickAndSpeak() {
@@ -312,5 +404,12 @@ class FloorWiringTest {
         val probe = RepCounter.forSession("크런치", floor = true)!!
         probe.rejectedReps.clear()
         assertEquals("바닥은 처리 수를 그대로 돌려준다", 3, RepUnitAccumulator.onCounterRetracted(probe, ArrayList(), RepUnitAccumulator(RepUnit.CYCLE), 3))
+    }
+
+    @Test fun silentLegReasonsGetNoTickOrSpeechButRealReasonsDo() {
+        // §101 사이드 런지 blip·edge: 관측이 무너진 사이클은 틱도 말도 없다 — 유령에 틱을 내면 '세지 않은 동작을 했다' 는 거짓 신호
+        val g = RejectCueGate(); val src = LegCycleTracker(LegProfile.SIDE)
+        assertNull(g.next(0, "blip", src, silent = false, perReason = false).speech); assertFalse(g.next(0, "blip", src, silent = false, perReason = false).tick)
+        assertNotNull(g.next(10_000, "shallow", src, silent = false, perReason = false).speech)
     }
 }

@@ -5,10 +5,16 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.example.trex_kotlin.posture.AlignmentSnapshot
+import com.example.trex_kotlin.posture.FloorGaze
+import com.example.trex_kotlin.posture.FloorGazeVoice
 import com.example.trex_kotlin.posture.FloorChain
 import com.example.trex_kotlin.posture.FloorCycleTracker
 import com.example.trex_kotlin.posture.FloorFeatureExtractor
 import com.example.trex_kotlin.posture.FloorProfile
+import com.example.trex_kotlin.posture.MotionSpec
+import com.example.trex_kotlin.posture.MotionOrigin
+import com.example.trex_kotlin.posture.PlankGazeVoice
 import com.example.trex_kotlin.posture.FloorReasons
 import com.example.trex_kotlin.posture.HoldAnnounce
 import com.example.trex_kotlin.posture.HoldVoice
@@ -79,7 +85,6 @@ internal class FloorLiveState {
     @Volatile private var targetMs = 0L
     @Volatile private var bridge: HoldBridge? = null
     @Volatile private var guideQuietUntil = 0L
-    @Volatile private var scopePending: String? = null
     private val prepExtractor = FloorFeatureExtractor()
     /** 세트 추출기(라이브 화면이 세트 구성 때 알린다) — 세트 마감이 쪽 잠금 교체 수를 읽는다. */
     @Volatile var workExtractor: FloorFeatureExtractor? = null
@@ -87,10 +92,24 @@ internal class FloorLiveState {
     @Volatile var speakNumbers = false
     /** 바닥 피드백의 관측 문장 음성을 쓸 것인가 — 바닥 계열 세 종목은 신호 결측 안내·유지 시계가 맡아 끈다(같은 말을 두 번 하지 않게). */
     val legacyVoice: Boolean get() = FloorChain.Kind.of(exercise) == null
-    /** 판별 기각의 틱·이유 간격(설계 §4.4) — `RejectionCues` 가 쓴다. */
+    /** 판별 기각의 틱·이유 간격(설계 §4.4) — `RejectionCues` 가 쓴다. 말한 사유의 다음 센 회는 "교정됐어요"(§100, [RejectCueGate.takeRecovery]). */
     val rejectGate = RejectCueGate()
-    private val holdGate = RejectCueGate()
+    private val holdGate = RejectCueGate(HoldVoice.STOP_GAP_MS)   // 멈춤마다 말한다(§101c) — 사유별 2 s
     private var announcedMs = 0L
+    /** 플랭크 멈춤의 이유를 **말했으면** 그 사유(§100) — 재개 때 `HoldVoice.resumeCue`. 말하지 않은 멈춤(6 s 간격 안)·폴백·새 세트는 null. */
+    @Volatile private var stopSpoken: String? = null
+    /** 시선 음성(§100·§101c) — 플랭크는 정렬 고개 항목 + 화면 봄, 크런치·레그 레이즈는 센 회의 화면 봄(`faceCam`). COACH 만. */
+    val plankGaze = PlankGazeVoice()
+    val floorGaze = FloorGazeVoice()
+    /** 플랭크 판정 칸의 시선 상태(§101d) — 옆얼굴 검출 이력을 세트마다 둔다. 반복 종목은 추적기 안에 있다. */
+    /** 화면 칩(§101d 교정 가시성): "시선 · 정면/화면 쪽/반대쪽/측정 중". 분석 스레드가 쓰고 화면이 읽는다. */
+    var gazeNote by mutableStateOf<String?>(null)
+        private set
+    /** 말한 문장의 그림(§101 화살표) — 분석 스레드가 [takeCue] 로 한 번 읽고 비운다. [cueClear] 는 재개·교정에서 지우라는 표시. 홀더 필드라 화면 지역 변수가 늘지 않는다. */
+    @Volatile private var cueOut: MotionSpec? = null
+    @Volatile private var cueClear = false
+    fun takeCue(): MotionSpec? = cueOut?.also { cueOut = null }
+    fun takeCueClear(): Boolean = cueClear.also { cueClear = false }
 
     var holdHud by mutableStateOf<HoldHud?>(null)
     /** HUD '세지 않은 동작 n · {사유}'(크런치·레그 레이즈 CYCLE 분기). */
@@ -112,11 +131,12 @@ internal class FloorLiveState {
     fun startSet(exercise: String, floor: Boolean, workoutKey: String, targetMs: Long) {
         this.exercise = exercise; this.workoutKey = workoutKey; this.targetMs = targetMs; speakNumbers = floor
         synchronized(prepExtractor) { prepExtractor.reset() }
-        rejectGate.reset(); synchronized(holdGate) { holdGate.reset(); announcedMs = 0L }
+        rejectGate.reset(); synchronized(holdGate) { holdGate.reset(); announcedMs = 0L; stopSpoken = null; plankGaze.reset(); floorGaze.reset() }
+        gazeNote = null
+        cueOut = null; cueClear = false
         clock = if (floor && FloorChain.Kind.of(exercise) == FloorChain.Kind.PLANK) PlankHoldClock() else null
         holdHud = clock?.let { hud(it) }
         rejectNote = null
-        scopePending = null
         finishedHold = null
     }
 
@@ -140,9 +160,7 @@ internal class FloorLiveState {
             val key = workoutKey
             if (HoldBridge.ENABLED && bridge != null && key != null) { this.bridge = bridge; bridge.bind(key) }
         }
-        if (silent) return
-        if (c != null) scopePending = FloorScopeVoice.peek(exercise, now)
-        else FloorScopeVoice.take(exercise, now)?.let { speech.speak(it, flush = false) }
+        // §101c(사용자 결정 2026-10-09 오후 "초반에 다른 운동과 달리 시험 대사들이 추가되어 있는데 제거해"): 범위 문장("…은 볼 수 없어요")은 더는 말하지 않는다 — 준비 화면의 세는 조건 카드에만 남는다(원칙 #5 의 화면판)
     }
 
     /**
@@ -187,18 +205,24 @@ internal class FloorLiveState {
             when (e.kind) {
                 PlankHoldEvent.Kind.START -> {
                     tone(tone, ToneGenerator.TONE_PROP_ACK)
-                    val scope = scopePending.also { scopePending = null }
-                    if (scope != null) FloorScopeVoice.mark(exercise, now)   // 범위 문장의 30분 간격은 실제로 말할 때 시작한다
-                    speech.speakLatest(listOfNotNull(PlankHoldClock.START_CUE, scope).joinToString(" "))
+                    speech.speakLatest(PlankHoldClock.START_CUE)   // 범위 문장은 붙이지 않는다(§101c)
                 }
-                PlankHoldEvent.Kind.RESUME -> tone(tone, ToneGenerator.TONE_PROP_ACK)
+                PlankHoldEvent.Kind.RESUME -> {
+                    tone(tone, ToneGenerator.TONE_PROP_ACK)
+                    // 이유를 말한 자세 멈춤(무릎·골반·솟음)의 재개 = 교정(§100). 그 밖의 재개는 종전처럼 톤만(재잘거림 방지). 교정은 들린 지적만(§101 장부). 화살표는 지운다
+                    synchronized(holdGate) { HoldVoice.resumeCue(stopSpoken) { speech.recoverable("hold:$it") }.also { stopSpoken = null } }?.let { speech.speakLatest(it, setScoped = it == PlankHoldClock.RESUME_CONTINUE) }
+                    cueClear = true
+                }
                 PlankHoldEvent.Kind.STOP -> {
                     // 말할 문장이 없는 멈춤(not_prone — 5 s 뒤 한 번 말한다)은 틱도 없다
-                    val cue = synchronized(holdGate) { HoldVoice.stopCue(holdGate, now, e.reason, c) }
+                    val cue = synchronized(holdGate) { HoldVoice.stopCue(holdGate, now, e.reason, c).also { stopSpoken = if (it.speech != null) e.reason else null } }
                     if (cue.tick) tone(tone, ToneGenerator.TONE_PROP_NACK)
-                    cue.speech?.let(speech::speakLatest)
+                    cue.speech?.let { speech.speakLatest(it, heardKey = "hold:${e.reason}") }
+                    // 말한 멈춤의 화살표(§101) — 재개까지, 상한 60 s
+                    if (cue.speech != null) PlankHoldClock.motionFor(e.reason)?.let { cueOut = MotionSpec(it, MotionOrigin.HOLD, ttlMs = MotionSpec.HOLD_TTL_MS) }
                 }
-                PlankHoldEvent.Kind.REMIND, PlankHoldEvent.Kind.FALLBACK, PlankHoldEvent.Kind.HINT -> PlankHoldClock.cueFor(e)?.let(speech::speakLatest)
+                PlankHoldEvent.Kind.FALLBACK -> { synchronized(holdGate) { stopSpoken = null }; PlankHoldClock.cueFor(e)?.let(speech::speakLatest) }
+                PlankHoldEvent.Kind.REMIND, PlankHoldEvent.Kind.HINT -> PlankHoldClock.cueFor(e)?.let(speech::speakLatest)
             }
         }
         val camera = c.source == PlankHoldClock.SOURCE_CAMERA
@@ -206,7 +230,7 @@ internal class FloorLiveState {
         val shown = if (camera) c.heldMs else c.wallMs
         val say = synchronized(holdGate) { HoldAnnounce.between(announcedMs, shown, targetMs).also { announcedMs = maxOf(announcedMs, shown) } }
         if (say != null && !silent) {
-            if (speakNumbers && speech.ready) speech.speak(say.text, flush = false)
+            if (speakNumbers && speech.ready) speech.speak(say.text, flush = false, key = "n")
             else tone(tone, if (say.countdown) ToneGenerator.TONE_PROP_BEEP2 else ToneGenerator.TONE_PROP_ACK)
         }
         holdHud = hud(c)
@@ -229,9 +253,61 @@ internal class FloorLiveState {
         rejectNote = "세지 않은 동작 $total · " + FloorReasons.repLabel(profile, reason)
     }
 
+    /**
+     * 플랭크 시선(§100) — 판정 칸마다 정렬 스냅샷의 고개 항목을 [PlankGazeVoice] 에 넘긴다(COACH 만, 음소거·검증·일시정지면 상태도 움직이지 않는다).
+     * 정렬 추적기가 HOLD 칸·측면에서만 판정하므로 멈춘 동안·무릎을 댄 동안은 조용하다. 말한 문장을 돌려준다(화면).
+     */
+    fun gazeFrame(now: Long, snapshot: AlignmentSnapshot, features: Map<String, Float>?, speech: SpeechCoach, silent: Boolean, coach: Boolean): String? {
+        if (clock == null) return null
+        val gaze = features?.let { FloorGaze.classify(it) } ?: FloorGaze.UNKNOWN
+        if (!coach || silent) { gazeNote = null; return null }
+        val cue = synchronized(plankGaze) { plankGaze.frame(now, snapshot, gaze) { speech.recoverable("gaze:plank") } }
+        gazeNote = gazeChip(gaze, plankGaze.lastWrong != FloorGaze.UNKNOWN, snapshot.held && plankGaze.wrongForMs(now) > 0L)
+        if (cue == null) return null
+        if (PlankGazeVoice.isRecovery(cue)) { speech.speakLatest(cue); cueClear = true }
+        else { speech.speakLatest(cue, heardKey = "gaze:plank"); cueOut = MotionSpec(PlankGazeVoice.motionFor(plankGaze.lastSide), MotionOrigin.GAZE) }
+        return cue
+    }
+
+    /** 크런치·레그 레이즈 시선(§101c) — 센 회가 나온 프레임에서 마지막 센 회의 시선(`FloorRep.gaze`)을 [FloorGazeVoice] 에 넘긴다(COACH 만, 횟수는 막지 않는다). 말한 문장을 돌려준다(화면). */
+    fun gazeRep(now: Long, rc: RepCounter?, speech: SpeechCoach, silent: Boolean, coach: Boolean): String? {
+        val ft = rc?.floorTracker ?: return null
+        if (!coach || silent) return null
+        val rep = ft.repDetail.lastOrNull() ?: return null
+        val cue = synchronized(floorGaze) { floorGaze.rep(now, rep, ft.profile) { speech.recoverable("gaze:floor") } }
+        gazeNote = gazeChip(rep.gaze, floorGaze.lastWrong != FloorGaze.UNKNOWN, floorGaze.wrongStreak > 0)
+        if (cue == null) return null
+        if (FloorGazeVoice.isRecovery(cue)) { speech.speakLatest(cue); cueClear = true }
+        else { speech.speakLatest(cue, heardKey = "gaze:floor"); cueOut = MotionSpec(FloorGazeVoice.motionFor(ft.profile), MotionOrigin.GAZE) }
+        return cue
+    }
+
+    /** 시선 칩 문구(§101d) — 상태 + 지적 중이면 '교정 중', 틀린 시선이 이어지는 중이면 '돌아옴 대기'. 모름은 '측정 중', '화면 밖' = 얼굴이 카메라를 향하지 않음(정면·반대쪽 구분 불가, 10-10). */
+    private fun gazeChip(state: Int, spoken: Boolean, wrongOngoing: Boolean): String =
+        "시선 · " + FloorGaze.label(state) + when { spoken -> " · 교정 중"; wrongOngoing && FloorGaze.wrong(state) -> " · 돌아옴 대기"; else -> "" }
+
+    /**
+     * 바닥 피처 맵에 얼굴 메시 피처(§101d `face_*`)를 얹는다 — 바닥 경로는 `FloorChain` 피처만 새로 만들어 분석기 샘플의 `face_found`·`face_yaw` 가 빠졌다(10-09 19:00 세트: 얼굴 모델은 돌았는데 로그·시선에 키 없음).
+     * `PostureLiveSessionScreen` 의 지역 변수를 늘리지 않으려고 여기 둔다.
+     */
+    fun withFace(floor: Map<String, Float>, sample: Map<String, Float>): Map<String, Float> {
+        val found = sample[FloorGaze.FOUND] ?: return floor
+        val out = HashMap<String, Float>(floor.size + 3)
+        out.putAll(floor)
+        out[FloorGaze.FOUND] = found
+        sample[FloorGaze.YAW]?.let { out[FloorGaze.YAW] = it }
+        sample[FloorGaze.INFER_MS]?.let { out[FloorGaze.INFER_MS] = it }
+        sample[FloorGaze.ROTATION]?.let { out[FloorGaze.ROTATION] = it }
+        sample[FloorGaze.SIZE]?.let { out[FloorGaze.SIZE] = it }
+        return out
+    }
+
+    /** 바닥 반복 종목의 횟수 줄(HUD countNote) — 세지 않은 동작 + 시선 칩. */
+    val floorNote: String? get() = listOfNotNull(rejectNote, gazeNote).joinToString(" · ").ifEmpty { null }
+
     private fun hud(c: PlankHoldClock): HoldHud {
         val camera = c.source == PlankHoldClock.SOURCE_CAMERA
-        val status = if (!camera) HoldHud.CLOCK_STATUS else FloorReasons.holdStatus(c.phase, c.reason)
+        val status = if (!camera) HoldHud.CLOCK_STATUS else listOfNotNull(FloorReasons.holdStatus(c.phase, c.reason), gazeNote).joinToString(" · ").ifEmpty { null }
         return HoldHud((c.heldMs / 1000L).toInt(), (c.wallMs / 1000L).toInt(), c.phase != PlankHoldClock.Phase.HOLD, status, camera)
     }
 

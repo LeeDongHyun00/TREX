@@ -224,9 +224,9 @@ class HoldBridge {
 }
 
 /**
- * 목표 도달 자동 진행의 발화 기다림(§63) — 최대 [MAX_MS], 최소 [GRACE_MS] 뒤 [QUIET_POLLS] 번 연달아 조용하면 넘어간다.
- * 넘어갈 때 `speech.stop()` 이 마지막 판정·안내를 잘랐다(런지 "6" 뒤 0.7 s). 두 번 조용해야 하는 이유: `SpeechCoach` 는 끝난 발화 뒤
- * 보류한 코칭 문장을 이어 말하기 직전 아주 잠깐 조용하다.
+ * 목표 도달 자동 진행의 **화면 넘김** 기다림(§63·§101) — 최대 [MAX_MS], 최소 [GRACE_MS] 뒤 [QUIET_POLLS] 번 연달아 조용하면 넘어간다.
+ * 이 값은 화면을 넘기는 시각만 정한다. 말은 `SpeechCoach.handOff` 꼬리가 맡는다(§101 — 종전엔 넘기며 `speech.stop()` 이 §100 교정 문장 2.4~3.6 s 를 매번 잘랐다. 10-08 스쿼트·컬).
+ * 두 번 조용해야 하는 이유: 끝난 발화 뒤 보류한 코칭 문장을 이어 말하기 직전 아주 잠깐 조용하다. [GRACE_MS] 는 `SpeechQueue.SEAL_AFTER_MS`(봉인 시작)와 같은 수.
  */
 object AdvanceHold {
     const val MAX_MS = 2_000L

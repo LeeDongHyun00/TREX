@@ -36,7 +36,7 @@ if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
 
 CRUNCH, LEG, PLANK = "크런치", "라잉 레그 레이즈", "플랭크"
-REASONS = {CRUNCH: ["sit_up", "neck_only", "shallow"], LEG: ["trunk_up", "knee_bent", "shallow", "one_leg", "feet_touch"]}
+REASONS = {CRUNCH: ["sit_up", "arms_only", "neck_only", "shallow"], LEG: ["trunk_up", "knee_bent", "shallow", "one_leg", "feet_touch"]}
 DEFAULT_ON: dict[str, set[str]] = {}   # FloorProfile.defaultEnabled — 기본 구성 재생 결과의 floorEnabled 에서 읽는다(표의 켬/끔 표시)
 SCAP = "견갑골이 지면으로부터 충분히 올라옴"
 KNEE = "허벅지와 종아리 각도 고정"

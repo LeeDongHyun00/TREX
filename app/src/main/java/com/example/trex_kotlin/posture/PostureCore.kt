@@ -293,12 +293,27 @@ class PoseFrame(val joints: Map<String, Vec3?>, up: Vec3 = Vec3(0f, 1f, 0f)) {
                     val shin = (knee - ankle).norm
                     if (shin >= 1e-3f) put("knee_fwd_$side", (kb.z - ab.z) / shin)
                     hipW?.let { put("knee_lat_$side", sign * (kb.x - hb.x) / it) }
+                    // §101a 스쿼트 '무릎 바깥 벌림': 무릎이 **발목**보다 바깥인 가로 거리 ÷ 골반 너비(몸 좌우축, 바깥 +). `knee_out`(골반–발목 선 대비 ÷ 다리 길이)은 깊이 앉을수록
+                    // 누구나 커져(MM-Fit 바닥 p95 0.35) 일부러 벌린 회(0.27~0.34)와 갈리지 않았다 — 발목 기준 거리는 본인 처음 3회 대비로 보면 모집단 반복 안 변동 p98 0.19 다
+                    hipW?.let { put("knee_ankle_lat_$side", sign * (kb.x - ab.x) / it) }
+                    // §101b 분석용(검사 아님): 무릎이 **발끝**보다 바깥인 가로 거리 ÷ 골반 너비 — 사용자 정의 "무릎은 발끝 방향을 따라야" 의 직접 측정. 발끝을 따라간 벌림(≈ 0)과
+                    // 발끝을 넘은 벌림(+)을 가른다(10-09 14:50 세트 −0.02~−0.09 vs 오전 세트 +0.10~+0.36). 모집단 띠 미측정이라 로그에만 남긴다
+                    hipW?.let { w -> foot?.let { ft -> body(ft)?.let { fb -> put("knee_toe_lat_$side", sign * (kb.x - fb.x) / w) } } }
+                    // §101 사이드 크런치: 무릎−골반 수평 벡터를 **세계** 수평면 성분으로도 낸다(골반 너비 단위, 부호 = 바깥쪽 +). `knee_lat` 은 매 프레임의 골반축 기준인데
+                    // MediaPipe 골반축이 든 무릎을 따라 16~33° 돌아 정상 회 값이 눌린다 — LegCycle 이 **회 직전 선 자세의 골반축**(`hip_ax_*`)에 투영해 kl_st 를 만든다
+                    hipW?.let { val kf = flat(knee - hip); put("knee_fx_$side", sign * kf.x / it); put("knee_fz_$side", sign * kf.z / it) }
                 }
                 legLen?.let { ll -> hipMid?.let { put("knee_h_$side", h(knee - it) / ll) } }
             }
         }
+        // 골반축(왼→오른, 세계 수평면 단위 벡터) — §101 사이드 크런치의 선 자세 축 고정용(`knee_fx/fz` 와 짝)
+        xb?.let { put("hip_ax_x", it.x); put("hip_ax_z", it.z) }
         val koL = f["knee_out_L"]; val koR = f["knee_out_R"]
         if (koL != null && koR != null) put("knee_out_mean", (koL + koR) / 2f)
+        val kaL = f["knee_ankle_lat_L"]; val kaR = f["knee_ankle_lat_R"]
+        if (kaL != null && kaR != null) put("knee_ankle_lat_mean", (kaL + kaR) / 2f)
+        val ktL = f["knee_toe_lat_L"]; val ktR = f["knee_toe_lat_R"]
+        if (ktL != null && ktR != null) put("knee_toe_lat_mean", (ktL + ktR) / 2f)
         // 발끝 방향(§62): 평균은 양쪽이 있을 때만, 더 벌어진 쪽(maxside)은 보이는 쪽만으로도 — 한 발만 벌어져도 잡는다
         val toL = f["toe_out_L"]; val toR = f["toe_out_R"]
         if (toL != null && toR != null) { put("toe_out_mean", (toL + toR) / 2f); put("toe_out_asym", toL - toR) }

@@ -56,8 +56,8 @@ def priors_for(exercise: str, work: Path) -> dict[str, dict[str, dict]]:
     sets = fs.population(exercise, work)
     out: dict[str, dict[str, dict]] = {}
     for c in sp:
-        if c["ref"] not in REL:
-            continue
+        if c["ref"] not in REL or not c.get("prior", True):
+            continue      # prior=false(§101 발 간격·좁음): 화면 폭 단위라 사전값이 폰에 전이되지 않는다 — 표에 넣지 않는다
         for view in c["views"]:
             p = stats(c, sets, {view})
             if p is None and view in MIRROR and MIRROR[view] in c["views"] and c["feature"] in MIRROR_SAFE:
@@ -65,7 +65,7 @@ def priors_for(exercise: str, work: Path) -> dict[str, dict[str, dict]]:
                 if p is not None:
                     p["pooled"] = f"{view}+{MIRROR[view]}"
             if p is not None:
-                out.setdefault(c["name"], {})[view] = p
+                out.setdefault(c["id"], {})[view] = p      # 키 = 검사 id(마지막 토막만 쓰면 '…|발 간격|좁음' 이 '좁음' 으로 붙었다, §101)
     return out
 
 
@@ -78,7 +78,7 @@ def stats(c: dict, sets: list[dict], views: set[str]) -> dict | None:
                 for rep in s["reps"]:
                     if rep.get("view") not in views:
                         continue
-                    o = fs.outcome_by_name(rep, c["name"])
+                    o = fs.outcome(rep, c["id"])
                     if o is None:
                         continue
                     if o.get("raw") is not None:
@@ -137,7 +137,8 @@ def main() -> int:
     table: dict[str, dict[str, dict]] = {}
     for ex in BASE:
         pri = priors_for(ex, a.out / ex.replace(" ", "_"))
-        for name, views in pri.items():
+        for cid, views in pri.items():
+            name = cid.split("|", 2)[2]
             for target in [ex] + VARIANTS.get(ex, []):
                 table[f"repform|{target}|{name}"] = views
             for v, p in sorted(views.items()):
