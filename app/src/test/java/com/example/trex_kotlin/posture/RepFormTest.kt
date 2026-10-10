@@ -183,9 +183,10 @@ class RepFormTest {
         assertEquals(Verdict.VIOLATION, o.verdict); assertTrue(o.gate); assertFalse(spread.correct); assertEquals(0.05f, o.reference!!, 1e-3f)
         val mild = rep(0.38f)     // +0.33 — §101b 차단 +0.30(§101a 의 +0.45 는 14:50 벌린 회 +0.27~+0.31 을 말만 하고 셌다)
         assertEquals(Verdict.VIOLATION, mild.outcomes.first { it.check.id == id }.verdict); assertTrue(mild.outcomes.first { it.check.id == id }.gate); assertFalse(mild.correct)
-        val coach = rep(0.32f)    // +0.27 — 코칭 단계: 말하되 횟수는 센다
+        val coach = rep(0.32f)    // +0.27 — §101f(10-10): 말한 회는 세지 않는다(차단 = 코칭 +0.25; 옛 2단은 1세트 6회째 Δ +0.29 를 말만 하고 셌다)
         val oc = coach.outcomes.first { it.check.id == id }
-        assertEquals(Verdict.VIOLATION, oc.verdict); assertFalse(oc.gate); assertTrue(coach.correct)
+        assertEquals(Verdict.VIOLATION, oc.verdict); assertTrue(oc.gate); assertFalse(coach.correct)
+        assertEquals("+0.20 은 정상(원값 0.25 < 절대 상한 0.36)", Verdict.OK, rep(0.25f).outcomes.first { it.check.id == id }.verdict)
         assertEquals(Verdict.OK, rep(0.16f).outcomes.first { it.check.id == id }.verdict)   // 정상 회 최대 +0.12
         // 벌린 회는 기준 모음에 들어가도 '두 번째로 작은 값' 이라 기준을 끌어올리지 못한다
         assertEquals(0.05f, rep(0.40f).outcomes.first { it.check.id == id }.reference!!, 1e-3f)
@@ -210,9 +211,30 @@ class RepFormTest {
         val wide = rep(0.39f)
         val o = wide.outcomes.first { it.check.id == id }
         assertEquals("기준 = 두 번째로 작은 값(0.112), 첫 회 0.387 이 아니다", 0.112f, o.reference!!, 1e-3f)
-        assertEquals(Verdict.VIOLATION, o.verdict); assertFalse("+0.278 은 코칭 단계", o.gate); assertTrue(wide.correct)
+        assertEquals(Verdict.VIOLATION, o.verdict); assertTrue("+0.278 — §101f 차단 = 코칭 +0.25", o.gate); assertFalse(wide.correct)
         val wider = rep(0.42f)
         assertTrue("+0.31 은 차단", wider.outcomes.first { it.check.id == id }.gate); assertFalse(wider.correct)
+    }
+
+    @Test
+    fun kneeSpreadAbsoluteCapBlocksAWideRepEvenInTheWarmupReps() {
+        // §101f(10-10 1세트): 2회째 원값 0.364 가 사전값 기준(0.13) 대비 +0.23 으로 통과해 세졌다 — 모집단 바닥 p95(0.36) 이상은 사전값 단계에서도 위반·차단
+        val ev = evaluator(); var t = 0L
+        fun rep(lat: Float): RepFormRep {
+            fun fr(knee: Float, kneeOut: Float, torso: Float, l: Float) {
+                ev.onFrame(t, mapOf("knee_mean" to knee, "knee_maxside" to knee + 3f, Stance2d.ANKLE_SEP to 0.2f, Stance2d.SHOULDER_SEP to 0.2f, Stance2d.FEATURE to 1f,
+                    Stance2d.TOE_MAXSIDE to 20f, "knee_out_mean" to kneeOut, "torso_incl" to torso, "knee_asym" to -5f, "torso_roll" to 2f, "head_pitch" to -15f, "knee_ankle_lat_mean" to l)); t += 300
+            }
+            repeat(5) { fr(163f, -0.02f, 5f, 0f) }
+            fr(140f, 0.05f, 12f, lat / 2f); fr(110f, 0.12f, 20f, lat); fr(92f, 0.15f, 25f, lat); fr(95f, 0.15f, 22f, lat); fr(100f, 0.15f, 18f, lat); fr(130f, 0.08f, 12f, lat / 2f); fr(158f, 0f, 6f, 0f); fr(163f, -0.02f, 5f, 0f)
+            return ev.onCycle(t - 300, 92f, 163f)
+        }
+        val id = "repform|바벨 스쿼트|무릎 바깥 벌림"
+        assertTrue(rep(0.154f).correct)                       // 1세트 1회째
+        val second = rep(0.364f)                              // 1세트 2회째 — 10-10 빌드는 OK(Δ +0.23)로 셌다
+        val o = second.outcomes.first { it.check.id == id }
+        assertEquals(Verdict.VIOLATION, o.verdict); assertTrue(o.gate); assertEquals(FormDirection.HIGH, o.direction); assertFalse(second.correct)
+        assertTrue("사전값 단계의 0.30 은 그대로 잠정 통과(절대 상한 아래)", rep(0.30f).correct)
     }
 
     @Test
@@ -581,7 +603,7 @@ class RepFormTest {
             "knee_out_mean__mean", "knee_out_mean", "mean", "world", "<", 0.02388f, "C", "정면", .96f, .94f, 56, true, emptyList())
         val spine = knee.copy(id = "바벨 스쿼트|척추의 중립[flexion]", condition = "척추의 중립", subtype = "flexion", feature = "torso_incl__range", baseFeature = "torso_incl", stat = "range", op = ">", threshold = 30.85f)
         val merged = PostureRuleSet("mp_v0.1", "", listOf(knee, spine)).plusRepForm()
-        assertEquals("mp_v0.1+repform_v0.13", merged.version)
+        assertEquals("mp_v0.1+repform_v0.14", merged.version)
         assertEquals(RuleStatus.BETA, merged.rules.first { it.id == knee.id }.status)
         assertEquals(RuleStatus.SHIP, merged.rules.first { it.id == spine.id }.status)
         val added = merged.rules.filter { it.kind == "rep_form" }
