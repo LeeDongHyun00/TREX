@@ -14,8 +14,8 @@ android {
         applicationId = "com.example.trex_kotlin"
         minSdk = 26
         targetSdk = 36
-        versionCode = 11
-        versionName = "1.3.0-preview.6"
+        versionCode = 12
+        versionName = "1.3.0-preview.7"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -27,7 +27,7 @@ android {
         }
         release {
             // 체험판은 기존 설치본과 같은 개발 인증서(debug 키스토어)로 서명한다 — 삭제 없이 업데이트되고 앱 내 업데이트(AppUpdate)가 서명을 대조한다.
-            // 운영 배포용 별도 서명키는 아직 없다(docs/ANDROID_PREVIEW_RELEASE_1_3_0_6.md).
+            // 운영 배포용 별도 서명키는 아직 없다(docs/ANDROID_PREVIEW_RELEASE_1_3_0_7.md).
             signingConfig = signingConfigs.getByName("debug")
             isMinifyEnabled = false
             proguardFiles(

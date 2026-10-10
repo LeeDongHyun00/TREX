@@ -2972,3 +2972,21 @@ Galaxy Note10+(SM-N976N)의 기존 APK·내부 저장 데이터·자세 로그�
 기존 플랭크 GIF가 포함되지 않는다. Android 테스트 APK 컴파일만 확인했으며 화면 테스트는 실행하지 않았다.
 이번 수정본은 폰에 재설치하지 않았다. 앞선 §104 폰 설치본은 2프레임 GIF 버전이다.
 상세: [설계·구현 문서](../../docs/CORE_EXERCISE_GUIDE_DESIGN.md) §11.
+
+## §106. Android 체험판 1.3.0-preview.7 릴리스 (2026-10-10)
+
+사용자 요청으로 `redesign`의 최신 자세·시선·세션 방향과 바닥 세 가이드를 체험판으로 묶는다.
+versionName `1.3.0-preview.7`, versionCode 12, 패키지 `com.example.trex_kotlin`이다.
+이유: 앱 내 업데이트는 이름 대신 `BUILD_INFO.json`의 versionCode가 설치본보다 클 때만 노출하므로
+preview.6의 11에서 12로 올린다. 기존 개발 인증서로 release 변형을 서명해 업데이트 경로를 유지한다.
+
+`:app:testDebugUnitTest :app:assembleRelease` 성공, 앱 JVM 704건·재생기 144건 통과(실패·오류·건너뜀 0),
+`setlog_captures.py --self-test` 54/54, release 필수 lint 성공.
+APK 서명 검증과 preview.6의 인증서 일치, 패키지·버전·가이드 GIF/PNG 포함·플랭크 GIF 제외를 확인한다.
+배포 자산은 `TREX-1.3.0-preview.7.apk`·`SHA256SUMS.txt`·`BUILD_INFO.json`이며
+빌드 커밋·APK/인증서 해시·검증 범위를 메타데이터로 제공한다. 초안 업로드 검증 후 사전 릴리스로 공개한다.
+
+사용자가 폰 재설치를 제외했으므로 설치·앱 실행·실기기 UI 검증은 수행하지 않는다.
+검증 중인 자세 기준과 관측 범위는 릴리스 노트에 남기고 앱 단위 테스트를 실기기 성능 주장으로 쓰지 않는다.
+문제 발생 시 릴리스를 초안으로 바꿔 업데이트 노출을 중단하고 같은 서명의 더 높은 버전 코드로 수정판을 배포한다.
+배포 안내: [Android 체험판 1.3.0-preview.7](../../docs/ANDROID_PREVIEW_RELEASE_1_3_0_7.md).

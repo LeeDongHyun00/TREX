@@ -1,5 +1,7 @@
 # 자세 평가 — 인수인계 (2026-10-08)
 
+> **체험판 1.3.0-preview.7(2026-10-10, spec §106, 배포 대상 `redesign`, 태그 `v1.3.0-preview.7`)**: 사용자 릴리스 요청으로 versionCode 12 / versionName 1.3.0-preview.7을 설정했다. preview.6 이후 바닥 엔진·시선·말하기 대기열·교정 표시·세션 방향과 세 가이드(플랭크 첫 프레임 PNG)를 포함한다. 앱 704건·재생기 144건·로그 self-test 54/54 통과, release APK·필수 lint 성공. preview.6과 같은 인증서를 확인했다. APK·SHA256SUMS.txt·BUILD_INFO.json을 사전 릴리스 자산으로 제공한다. 폰 재설치·실기기 UI 검증은 사용자 결정으로 하지 않는다. 배포 안내 [ANDROID_PREVIEW_RELEASE_1_3_0_7.md](ANDROID_PREVIEW_RELEASE_1_3_0_7.md).
+
 > **플랭크 가이드 첫 이미지(2026-10-10, spec §105)**: 사용자 요청으로 기존 GIF의 첫 프레임만 `forearm-plank.png`로 표시한다(640×640, 픽셀 일치 확인). 공통 시트는 PNG 정지 표시·GIF 재생을 지원한다. 크런치·레그 레이즈는 GIF다. 최신 `redesign` `ccf9f216` 위에 통합했으며 원격 자세 기능을 보존했다. JVM 704건 통과(실패·오류·건너뜀 0), 앱·Android 테스트 APK 빌드 성공, 패키지 자산 해시와 플랭크 GIF 제거 확인. 가이드 초기 이력은 원격 절 번호와 겹치지 않도록 §102~§104로 정리했다. 이번 정지 이미지 수정본은 폰에 재설치하지 않았고 UI 검증도 사용자 담당이다. 상세 [설계 문서](CORE_EXERCISE_GUIDE_DESIGN.md) §11.
 
 > **바닥 3종목 가이드 폰 적용(2026-10-10, spec §104)**: 후속 사용자 요청으로 빌드 보류를 해제하고 `:app:testDebugUnitTest :app:assembleDebug` 성공, 645건 통과(실패·오류·건너뜀 0)를 확인했다. APK에 새 GIF 3개의 원본 해시가 그대로 포함됐다. 연결된 Galaxy Note10+(SM-N976N)의 기존 앱과 같은 서명으로 백업 후 `adb install -r` 업데이트 설치했다(Success, 1.3.0-preview.6 / code 11). 설치 APK 해시 일치·기록과 설정을 포함한 내부 파일 16개·자세 로그 27개 해시 보존을 확인했다. 앱 실행·실휴대폰 UI 검증은 사용자 담당이다. 상세 [설계·구현 문서](CORE_EXERCISE_GUIDE_DESIGN.md) §10, 백업·결과 `outputs/core-exercise-guides/`.
