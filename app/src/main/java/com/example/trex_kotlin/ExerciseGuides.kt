@@ -9,7 +9,7 @@ internal data class ExerciseGuide(
 
 internal object ExerciseGuides {
     const val breathingSource = "https://sportsmedicine.mayoclinic.org/news/weight-training-dos-and-donts-of-proper-technique/"
-    // ACE·Mayo Clinic·Physitrack 원문 확인. 종목별 근거와 적용 범위는 docs/EXERCISE_GUIDE_UI.md에 기록한다.
+    // ACE·Mayo Clinic·Physitrack·NHS 원문 확인. 종목별 근거와 적용 범위는 docs/EXERCISE_GUIDE_UI.md에 기록한다.
     val all = listOf(
         ExerciseGuide("기본 스쿼트", "exercise_guides/squat.gif",
             "허벅지와 엉덩이를 사용하는 기본 하체 운동입니다. 깊이보다 발바닥과 몸통을 안정적으로 유지하는 데 집중하세요.",
@@ -137,6 +137,60 @@ internal object ExerciseGuides {
                 "지지하는 발을 바닥에 두고 반동을 줄이세요. 균형을 잃거나 통증이 생기면 중단하세요.",
             ), sourceName = "Physitrack · Side crunch in standing with knee lifts",
             sourceUrl = "https://na.physitrack.com/home-exercise-video/side-crunch-in-standing-with-knee-lifts"),
+        ExerciseGuide("크런치", "exercise_guides/crunch.gif",
+            "복부에 힘을 주어 상체를 작게 말아 올리는 운동입니다.",
+            setup = listOf(
+                "매트에 등을 대고 누워 무릎을 굽히고 두 발바닥을 바닥에 두세요.",
+                "손끝을 귀 옆에 가볍게 대고 팔꿈치를 열어 두세요. 목과 어깨의 힘을 빼세요.",
+            ),
+            steps = listOf(
+                "복부에 힘을 주며 갈비뼈를 골반 쪽으로 가까이 가져가듯 상체를 천천히 말아 올리세요.",
+                "상부 등이 매트에서 살짝 들리면 잠시 멈추세요. 발과 골반은 바닥에 두세요.",
+                "상체를 천천히 내려 시작 자세로 돌아오세요.",
+            ),
+            breathing = "상체를 올릴 때 내쉬고, 내려올 때 들이마시세요. 숨을 참지 마세요.",
+            cautions = listOf(
+                "손으로 머리나 목을 당기지 마세요.",
+                "윗몸일으키기처럼 상체를 끝까지 세우거나 반동을 쓰지 마세요.",
+                "발과 골반을 바닥에 두세요. 목이나 허리에 통증이 생기면 중단하세요.",
+            ), sourceName = "ACE · Crunch",
+            sourceUrl = "https://www.acefitness.org/resources/everyone/exercise-library/52/crunch/"),
+        ExerciseGuide("레그 레이즈", "exercise_guides/lying-leg-raise.gif",
+            "몸통을 안정시킨 채 두 다리를 함께 올리고 내리는 운동입니다.",
+            setup = listOf(
+                "매트에 등을 대고 누워 머리와 어깨를 편하게 내려놓으세요.",
+                "팔은 몸 옆에 두고 손바닥을 바닥에 대세요. 두 다리를 나란히 펴고 복부에 힘을 주세요.",
+            ),
+            steps = listOf(
+                "머리와 몸통을 바닥에 둔 채 두 다리를 함께 천천히 들어 올리세요.",
+                "골반을 안정적으로 유지할 수 있는 높이까지 올리세요.",
+                "허리가 과하게 뜨지 않는 범위까지 두 다리를 함께 천천히 내려 반복하세요.",
+            ),
+            breathing = "다리를 올릴 때 내쉬고, 내릴 때 들이마시세요. 숨을 참지 마세요.",
+            cautions = listOf(
+                "다리를 낮출 때 허리가 뜨거나 몸통이 흔들리면 내려가는 범위를 줄이세요.",
+                "다리를 번갈아 들거나 무릎을 가슴 쪽으로 접지 마세요. 두 다리를 함께 움직이세요.",
+                "반동으로 다리를 던지지 마세요. 허리나 고관절에 통증이 생기면 중단하세요.",
+            ), sourceName = "Norfolk and Suffolk NHS · Double leg raises",
+            sourceUrl = "https://www.nsft.nhs.uk/help-for-your-body-and-mind/"),
+        ExerciseGuide("플랭크", "exercise_guides/forearm-plank.png",
+            "전완과 발끝으로 몸을 지지하며 몸통을 안정적으로 유지하는 운동입니다.",
+            setup = listOf(
+                "매트에 엎드려 팔꿈치를 어깨 바로 아래에 놓고 전완을 바닥에 대세요.",
+                "발끝을 바닥에 대고 다리를 펴세요. 복부에 힘을 주고 시선은 바닥에 두세요.",
+            ),
+            steps = listOf(
+                "전완과 발끝으로 바닥을 밀며 몸통을 천천히 들어 올리세요.",
+                "머리부터 발뒤꿈치까지 길게 이어지는 자세를 유지하세요.",
+                "자세를 유지하기 어려워지면 몸을 천천히 내려 쉬세요.",
+            ),
+            breathing = "유지하는 동안 자연스럽게 들이마시고 내쉬세요. 숨을 참지 마세요.",
+            cautions = listOf(
+                "허리가 처지거나 엉덩이가 높이 올라가지 않도록 몸통을 안정시키세요.",
+                "어깨를 귀 쪽으로 움츠리지 말고 팔꿈치 위에서 지지하세요.",
+                "목표 시간을 채우려고 무너진 자세로 버티지 마세요. 통증이 생기면 중단하세요.",
+            ), sourceName = "ACE · Front Plank",
+            sourceUrl = "https://www.acefitness.org/resources/everyone/exercise-library/32/front-plank/"),
     )
 
     fun forName(name: String): ExerciseGuide? = all.firstOrNull { it.name == name }
