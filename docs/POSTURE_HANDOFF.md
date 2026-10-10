@@ -1,5 +1,7 @@
 # 자세 평가 — 인수인계 (2026-10-08)
 
+> **preview.7 배포 완료(2026-10-10)**: [GitHub 사전 릴리스](https://github.com/LeeDongHyun00/TREX/releases/tag/v1.3.0-preview.7) 공개 완료(`draft=false`, `prerelease=true`). 빌드 소스·태그 커밋 `7d2bb43e`, versionCode 12. APK·SHA256SUMS.txt·BUILD_INFO.json 세 자산의 원격 해시와 크기, 앱이 읽는 릴리스 목록의 최신 항목을 확인했다. APK SHA-256 `a888647fc35451e4e9f2b9ba93c581c6536f41d563e67fd24f36bda2f2b6d440`. 폰 설치·실기기 UI 검증은 하지 않았다. 로컬 배포 증빙 `outputs/android-preview/1.3.0-preview.7/`.
+
 > **체험판 1.3.0-preview.7(2026-10-10, spec §106, 배포 대상 `redesign`, 태그 `v1.3.0-preview.7`)**: 사용자 릴리스 요청으로 versionCode 12 / versionName 1.3.0-preview.7을 설정했다. preview.6 이후 바닥 엔진·시선·말하기 대기열·교정 표시·세션 방향과 세 가이드(플랭크 첫 프레임 PNG)를 포함한다. 앱 704건·재생기 144건·로그 self-test 54/54 통과, release APK·필수 lint 성공. preview.6과 같은 인증서를 확인했다. APK·SHA256SUMS.txt·BUILD_INFO.json을 사전 릴리스 자산으로 제공한다. 폰 재설치·실기기 UI 검증은 사용자 결정으로 하지 않는다. 배포 안내 [ANDROID_PREVIEW_RELEASE_1_3_0_7.md](ANDROID_PREVIEW_RELEASE_1_3_0_7.md).
 
 > **플랭크 가이드 첫 이미지(2026-10-10, spec §105)**: 사용자 요청으로 기존 GIF의 첫 프레임만 `forearm-plank.png`로 표시한다(640×640, 픽셀 일치 확인). 공통 시트는 PNG 정지 표시·GIF 재생을 지원한다. 크런치·레그 레이즈는 GIF다. 최신 `redesign` `ccf9f216` 위에 통합했으며 원격 자세 기능을 보존했다. JVM 704건 통과(실패·오류·건너뜀 0), 앱·Android 테스트 APK 빌드 성공, 패키지 자산 해시와 플랭크 GIF 제거 확인. 가이드 초기 이력은 원격 절 번호와 겹치지 않도록 §102~§104로 정리했다. 이번 정지 이미지 수정본은 폰에 재설치하지 않았고 UI 검증도 사용자 담당이다. 상세 [설계 문서](CORE_EXERCISE_GUIDE_DESIGN.md) §11.
