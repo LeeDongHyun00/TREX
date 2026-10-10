@@ -320,7 +320,8 @@ class RepHysteresisTest {
 
     @Test fun deviceFixtureBaseline1IsRecordedNotAsserted() {
         // 실기기 푸시업 baseline 1/3 — 정답은 3~4회(사람이 센 값의 폭). 여기서는 두 경로가 **센 값을 기록**한다:
-        // 새 코어 4회(정답 폭 안), 앱 세션의 현재 복귀형 0회(로드맵 결함 7 — 안정 준비 자세를 못 잡는다).
+        // 새 코어 4회(정답 폭 안), 앱 세션의 복귀형 4회(spec §99 v2 — v1 은 0회: 세트 전 자세 1.4 가 기준이 되고 세트 중 위 자세는
+        // 1.17~1.21 이라 띠 ±0.066 에 못 돌아왔다. v2 의 깊이 1/3 띠 안이다).
         // 정답을 단정하는 단언이 아니다 — 코어를 바꾸면 이 숫자가 바뀌는 것을 알아차리기 위한 회귀 기록이다.
         val lines = javaClass.classLoader!!.getResourceAsStream("rep_fixture_baseline1.txt")!!
             .bufferedReader().readLines().filter { !it.startsWith("#") && it.isNotBlank() }
@@ -335,7 +336,7 @@ class RepHysteresisTest {
         }
         assertEquals(4, core.reps)
         assertEquals(0, core.pendingReps)
-        assertEquals(0, live.reps)
+        assertEquals(4, live.reps)
     }
 
     @Test fun sessionFactoryReproducesPostureLiveConstruction() {

@@ -136,7 +136,7 @@ class PostureSetLogTest {
         val json = SetLogJson.encode(log)
         assertTrue(json.contains("\"app_version\":\"1.1.0-preview.2\""))
         assertTrue(json.contains("\"thermal\":{\"start\":0,\"changes\":[{\"t_ms\":6000,\"status\":2}]}"))
-        assertTrue(json.contains("\"engine\":\"return_v1\""))
+        assertTrue(json.contains("\"engine\":\"return_v2\""))
         // 지금 앱의 복귀형 구성(forSession: 불응기 1.2 s · 끊김 1.5 s · 복귀 완료) — polarity 가 없으면(레거시) 새 코어 키도 없다
         // 스쿼트는 판별 게이트(spec §62)가 있어 config 끝에 identity 블록이 붙는다
         assertTrue(json.contains("\"config\":{\"feature\":\"knee_mean\",\"min_amp\":35,\"refractory_ms\":1200,\"max_gap_ms\":1500," +
