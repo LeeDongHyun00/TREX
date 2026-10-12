@@ -53,7 +53,7 @@ public class SyncService {
             throw new InvalidRequestException("항목이 너무 큽니다(최대 " + SyncItem.MAX_PAYLOAD_CHARS + "자)");
         }
         User user = userRepository.getByLoginIdOrThrow(loginId);
-        var existing = syncItemRepository.findByUserIdAndItemKey(user.getId(), key);
+        var existing = syncItemRepository.findForUpdate(user.getId(), key);
         if (existing.isPresent()) {
             SyncItem item = existing.get();
             if (item.getClientUpdatedAt() > updatedAt) {

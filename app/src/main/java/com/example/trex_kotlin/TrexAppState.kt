@@ -91,6 +91,10 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     /** 처음 연결한 계정의 서버에도 이 기기에도 기록이 있다 — 어느 쪽을 남길지 묻는 중. */
     var askFirstSync by mutableStateOf(false)
         private set
+    /** 이 기기에 다른 계정으로 쓰던 기록이 있다 — 새 계정으로 옮길지 묻는 중(묻지 않고 올리면 남의 기록이 섞인다). */
+    var askSwitchAccount by mutableStateOf(false)
+        private set
+    private var refreshJob: kotlinx.coroutines.Job? = null
 
     val sync = SyncManager(
         application, store, authSession, api, viewModelScope,
@@ -148,21 +152,70 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     private suspend fun beginSync(signedIn: AuthAccount) {
         when (sync.beginAccount(signedIn.loginId, localHasData = store.loadProfile() != null)) {
             FirstSync.ASK -> askFirstSync = true
+            FirstSync.SWITCH_ACCOUNT -> askSwitchAccount = true
             else -> completeLogin()
         }
     }
 
-    /** 첫 연결 질문의 답. [keepLocal] 이면 이 기기 기록으로 서버를 덮는다. */
+    /** 첫 연결 질문(또는 계정 바꿈 질문)의 답. [keepLocal] 이면 이 기기 기록으로 서버를 덮는다. */
     fun resolveFirstSync(keepLocal: Boolean) {
         viewModelScope.launch {
             askFirstSync = false
+            askSwitchAccount = false
             sync.resolveFirst(keepLocal)
             completeLogin()
         }
     }
 
+    /** 다른 계정의 기록을 새 계정으로 옮기지 않기로 했다 — 새 계정 연결을 취소한다. 이 기기 기록은 그대로다. */
+    fun cancelAccountSwitch() {
+        askSwitchAccount = false
+        sync.cancelFirst()
+        authSession.clear()
+        account = null
+        authMessage = "다른 계정 연결을 취소했어요. 이 기기 기록은 그대로예요."
+    }
+
+    /**
+     * 계정이 있으면 서버와 맞춘다. 첫 연결을 못 마친 계정(로그인 직후 받기가 실패 등)이면 첫 연결부터 다시 한다 —
+     * 예전에는 화면에 "연결됨"으로 보이면서 동기화가 조용히 아무것도 안 했다(코드 리뷰 지적).
+     */
+    private fun refreshAccountSync() {
+        val signedIn = account ?: return
+        if (askFirstSync || askSwitchAccount || refreshJob?.isActive == true) return
+        refreshJob = viewModelScope.launch {
+            try {
+                if (sync.isOwner(signedIn.loginId)) sync.syncNow() else beginSync(signedIn)
+            } catch (e: ApiException) {
+                if (e.status == 401) {
+                    authSession.clear()
+                    account = null
+                    authMessage = "로그인이 만료됐어요. 다시 로그인하면 동기화가 이어져요."
+                } else {
+                    authMessage = e.message
+                }
+            } catch (_: java.io.IOException) {
+                authMessage = "서버에 연결하지 못했어요. 잠시 뒤 다시 시도해 주세요."
+            } catch (_: org.json.JSONException) {
+                authMessage = "서버 응답을 읽지 못했어요."
+            }
+        }
+    }
+
     fun syncNow() {
-        viewModelScope.launch { sync.syncNow() }
+        authMessage = null
+        refreshAccountSync()
+    }
+
+    /**
+     * 앱이 다시 앞으로 왔다 — 다른 기기에서 바뀐 기록을 편집하기 전에 받아 둔다. 오래 켜 둔 화면에서 고친 항목이
+     * 다른 기기의 변경을 통째로 덮는 일을 줄인다(항목 단위 "나중 수정 우선"의 한계, 코드 리뷰 지적).
+     * 운동 세션 중에는 받지 않는다 — 계획이 바뀌면 진행 중인 세션의 단계가 어긋난다.
+     */
+    fun onAppForeground(sessionActive: Boolean) {
+        if (sessionActive) return
+        if (System.currentTimeMillis() - sync.lastPullAt < 15_000) return
+        refreshAccountSync()
     }
 
     /** 회원 탈퇴 — 서버의 계정과 백업을 지운다. 이 기기의 기록은 남는다. */
@@ -559,19 +612,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     // 모든 상태 필드가 만들어진 뒤에 동기화를 켠다(서버 값이 오면 위 필드들을 다시 읽는다).
     init {
         sync.start()
-        account?.let { signedIn ->
-            viewModelScope.launch {
-                // 첫 연결 질문 중에 앱이 꺼졌으면 여기서 다시 묻는다
-                try {
-                    beginSync(signedIn)
-                } catch (e: ApiException) {
-                    if (e.status == 401) { authSession.clear(); account = null }
-                } catch (_: java.io.IOException) {
-                    // 오프라인 — 다음 시작이나 "지금 동기화" 때 다시 한다
-                } catch (_: org.json.JSONException) {
-                }
-            }
-        }
+        // 첫 연결 질문 중에 앱이 꺼졌으면 여기서 다시 묻는다. 오프라인이면 앱 복귀·"지금 동기화" 때 다시 한다.
+        refreshAccountSync()
     }
 
     companion object {

@@ -98,7 +98,12 @@ fun ProfileTabScreen(app: AppViewModel, onOpenRecord: () -> Unit, onLogout: () -
         confirmButton = { TextButton(onClick = { sheet = null }) { Text("확인") } })
     if (sheet == "withdraw") AlertDialog(onDismissRequest = { sheet = null }, containerColor = c.sheet,
         title = { Text("탈퇴할까요?") },
-        text = { Text("계정과 서버에 백업된 기록이 모두 지워지고 되돌릴 수 없어요. 이 기기의 기록은 남아요.") },
+        text = {
+            Column {
+                Text("계정과 서버에 백업된 기록이 모두 지워지고 되돌릴 수 없어요. 이 기기의 기록은 남아요.")
+                app.authMessage?.let { Text(it, color = c.err, fontSize = 13.sp, modifier = Modifier.padding(top = 10.dp)) }
+            }
+        },
         dismissButton = { TextButton(onClick = { sheet = null }) { Text("취소") } },
         confirmButton = { TextButton(onClick = { app.deleteAccount { sheet = null } }, enabled = !app.authBusy) { Text("탈퇴", color = c.err) } })
     if (sheet == "logout") AlertDialog(onDismissRequest = { sheet = null }, containerColor = c.sheet,
@@ -142,8 +147,33 @@ private fun AccountGroup(app: AppViewModel) {
                 }
                 TextButton(onClick = { app.syncNow() }, enabled = !app.sync.syncing) { Text("지금 동기화") }
             }
+            app.authMessage?.let { message ->
+                Text(message, color = c.err, fontSize = 13.sp, modifier = Modifier.padding(start = 54.dp, end = 18.dp, bottom = 16.dp))
+            }
         }
     }
+}
+
+/**
+ * 이 기기에 다른 계정으로 쓰던 기록이 있는데 새 계정으로 로그인했을 때. 묻지 않고 올리면 앞 사람의 건강·식단 기록이
+ * 새 계정 백업으로 들어간다. 옮기면 이 계정에 있던 백업은 이 기기 기록으로 덮인다.
+ */
+@Composable
+fun SwitchAccountDialog(onMove: () -> Unit, onCancel: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = {},
+        containerColor = Trex.c.sheet,
+        title = { Text("다른 계정의 기록이 있어요") },
+        text = {
+            Text(
+                "이 기기에는 다른 Google 계정으로 쓰던 기록이 있어요.\n\n" +
+                    "‘이 계정으로 옮기기’를 누르면 이 기기 기록이 이 계정의 백업이 돼요(이 계정에 있던 백업은 덮어써요).\n" +
+                    "‘취소’를 누르면 이 계정은 연결하지 않고, 이 기기 기록은 그대로예요.",
+            )
+        },
+        dismissButton = { TextButton(onClick = onCancel) { Text("취소") } },
+        confirmButton = { TextButton(onClick = onMove) { Text("이 계정으로 옮기기") } },
+    )
 }
 
 /** 처음 연결한 계정의 서버에도 이 기기에도 기록이 있을 때. 자동으로 섞지 않고 사용자가 고른다. */

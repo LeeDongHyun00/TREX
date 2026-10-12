@@ -21,6 +21,12 @@ enum class FirstSync {
 
     /** 양쪽에 다 있다 — 어느 쪽을 남길지 사용자에게 묻는다. 자동으로 섞지 않는다. */
     ASK,
+
+    /**
+     * 이 기기에 **다른 계정**으로 쓰던 기록이 있다(같은 서버에서 다른 계정이 로그아웃한 뒤 새 계정이 들어옴).
+     * 묻지 않고 올리면 앞 사람의 건강·식단 기록이 새 계정 백업으로 들어간다 — 옮길지 사용자에게 묻는다.
+     */
+    SWITCH_ACCOUNT,
 }
 
 object SyncRules {
@@ -31,7 +37,11 @@ object SyncRules {
      */
     val KEYS: List<String> = listOf("profile", "plan", "history", "diet", "water", "custom_foods", "goal_override")
 
-    fun firstSync(localHasData: Boolean, remote: List<RemoteItem>): FirstSync = when {
+    /**
+     * @param otherAccountOnDevice 이 서버에서 이 기기와 마지막으로 맞춘 계정이 지금 계정과 다르다.
+     */
+    fun firstSync(localHasData: Boolean, remote: List<RemoteItem>, otherAccountOnDevice: Boolean = false): FirstSync = when {
+        otherAccountOnDevice && localHasData -> FirstSync.SWITCH_ACCOUNT
         remote.none { it.key in KEYS && it.payload.isNotEmpty() } -> FirstSync.UPLOAD_LOCAL
         !localHasData -> FirstSync.DOWNLOAD_REMOTE
         else -> FirstSync.ASK
@@ -51,6 +61,14 @@ object SyncRules {
     /** 로컬에서 항목을 바꿨을 때의 새 버전. 시계가 뒤로 가도 버전은 줄지 않는다. */
     fun changed(previous: LocalVersion?, now: Long): LocalVersion =
         LocalVersion(maxOf(now, (previous?.updatedAt ?: 0L) + 1), dirty = true)
+
+    /**
+     * "이 기기 기록으로 올린다"고 정했을 때의 버전 — 이미 받아 본 서버 값([remoteUpdatedAt])보다 반드시 새것으로 찍는다.
+     * 이 기기 시계가 다른 기기보다 늦으면 지금 시각만으로는 서버 값보다 오래돼 409 로 서버 값(빈 항목일 수도 있다)을
+     * 받아 버린다 — 사용자가 고른 "이 기기 기록 유지"가 조용히 뒤집히고 로컬 기록이 지워진다(코드 리뷰 지적).
+     */
+    fun uploadVersion(previous: LocalVersion?, now: Long, remoteUpdatedAt: Long?): LocalVersion =
+        LocalVersion(maxOf(now, (previous?.updatedAt ?: 0L) + 1, (remoteUpdatedAt ?: -1L) + 1), dirty = true)
 
     /** 올리기가 반영됐을 때. 올리는 동안 또 바뀌었으면(버전이 다르면) 아직 올릴 게 남았다. */
     fun uploaded(current: LocalVersion?, sentVersion: Long): LocalVersion? =

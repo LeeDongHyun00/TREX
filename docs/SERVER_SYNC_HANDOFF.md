@@ -80,6 +80,15 @@ DELETE /api/auth/me                                           → 204 (회원과
   - 코드: `app/.../sync/` — `SyncRules`(판정 규칙, 단위 테스트 `SyncRulesTest` 7개), `SyncManager`(저장소 변경 감지 → 3초 모아 올리기, 시작·로그인·"지금 동기화" 때 받기), `TrexApi`(HttpURLConnection — 호출 4개라 Retrofit 안 씀), `AuthSession`(`trex_auth` prefs, 자동 백업 제외), `GoogleSignIn`(Credential Manager). `TrexStore.readRaw/writeRaw/setChangeListener`, `AppViewModel` 계정 절, `AuthScreen`(아이디·비밀번호 폼과 찾기 화면을 지우고 "Google로 계속하기"/"로그인 없이 사용"), 설정의 계정 칸·회원 탈퇴, `FirstSyncDialog`.
   - 첫 연결 규칙: 서버가 비면 올림 / 이 기기가 온보딩 전이면 받음 / 양쪽에 있으면 묻는다(자동 병합 안 함). 서버에 없는 항목은 어느 쪽을 골라도 이 기기 값을 남겨 올린다(고르지 않은 데이터를 지우지 않는다). 계정(`owner`)과 처음 맞추기 전에는 주고받지 않는다.
   - 기존 사용자(가짜 로그인으로 이미 `logged_in`)는 로그인 화면을 다시 안 본다 — **설정 → Google 계정 연결**로 연결한다.
+  - **PR 전 코드 리뷰 반영(2026-10-13)**:
+    - **다른 계정으로 바꿔 로그인**(같은 서버에서 앞 계정이 로그아웃한 뒤)하면 이 기기 기록을 옮길지 묻는다(`FirstSync.SWITCH_ACCOUNT`, 옮기기/취소) — 묻지 않고 올려 앞 사람의 건강·식단 기록이 새 계정 백업으로 들어가던 문제.
+    - "이 기기 기록으로 올린다"(첫 연결·질문 답)는 받아 본 서버 값보다 반드시 새 버전으로 찍는다(`SyncRules.uploadVersion`) — 이 기기 시계가 늦으면 409 로 서버의 빈 값을 받아 로컬 기록이 지워질 수 있었다. 서버가 빈 첫 연결은 이 기기에 있는 항목만 올린다.
+    - 이미 맞춘 계정인데 서버가 비어 있으면(탈퇴 뒤 같은 구글 계정으로 재가입, 서버 DB 초기화) 이 기기 항목을 다시 전부 올린다.
+    - 첫 연결을 못 마친 계정(로그인 직후 받기 실패)은 앱 시작·앱 복귀·"지금 동기화" 때 첫 연결부터 다시 한다 — 화면엔 연결됨인데 아무것도 안 하던 문제. 계정 오류 문구를 설정의 계정 칸·탈퇴 창에 보인다.
+    - **앱 복귀 때 먼저 받는다**(`AppViewModel.onAppForeground`, 15초 안에 받았으면 건너뜀, 운동 세션 중엔 안 받음 — 계획이 바뀌면 진행 중 세션 단계가 어긋난다).
+    - 서버 동기화 쓰기는 행을 잠그고 비교한다(`SyncItemRepository.findForUpdate`) — 동시 쓰기에서 오래된 쪽이 나중에 커밋되던 경쟁.
+    - 원격 값 적용은 `Dispatchers.Main.immediate` — 판정과 쓰기 사이에 사용자 편집이 끼어 덮이던 틈.
+    - **남은 한계(알고 둔 것)**: 동기화 단위가 항목 통째라, 두 기기에서 같은 항목(예: 식단)을 번갈아 고치면 **나중에 고친 쪽이 그 항목 전체를 덮는다**(D6). 앱 복귀 때 먼저 받아 창을 좁혔지만, 받기가 끝나기 전에 고치면 남는다. 근본 해결은 항목 안 병합(식단은 날짜별, 기록은 epochDay 별) 또는 서버의 조건부 쓰기(기준 버전이 다르면 409) — 이후 과제.
   - 설정값(D11): `gradle.properties`(커밋)의 `trex.googleWebClientId`·`trex.apiBaseUrl`(릴리스)·`trex.apiBaseUrl.debug`(디버그) — 둘 다 운영 `https://trex-api.duckdns.org`. `local.properties` 에 같은 키가 있으면 그쪽이 우선하고, 둘 다 없으면 디버그는 `http://127.0.0.1:8080`, 릴리스는 빈 값(구글 로그인 버튼이 안내 문구만 냄). 디버그만 http 허용(`usesCleartextTraffic` 자리표시자).
 - [x] **3단계 · AWS 배포** (2026-10-13) — `https://trex-api.duckdns.org` 가동, 실기기가 USB 없이 운영 서버와 동기화(RDS 에 회원 1명·7개 항목), AMI 백업 완료. 현황·절차는 8절
 - [ ] **4단계 · 카카오**

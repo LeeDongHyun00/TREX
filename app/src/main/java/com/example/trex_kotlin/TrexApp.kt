@@ -132,6 +132,7 @@ fun TrexApp(app: AppViewModel = viewModel()) {
 
         // 처음 연결한 계정의 서버에도 이 기기에도 기록이 있으면 어느 쪽을 남길지 묻는다(로그인 화면·설정 어디서 연결했든)
         if (app.askFirstSync) FirstSyncDialog(onKeepLocal = { app.resolveFirstSync(keepLocal = true) }, onUseServer = { app.resolveFirstSync(keepLocal = false) })
+        if (app.askSwitchAccount) SwitchAccountDialog(onMove = { app.resolveFirstSync(keepLocal = true) }, onCancel = { app.cancelAccountSwitch() })
 
         var selectedTab by rememberSaveable { mutableStateOf(TrexTab.Home) }
         var subScreen by rememberSaveable { mutableStateOf("none") } // none | guide | record | postureLab | baselineGuide
@@ -173,6 +174,10 @@ fun TrexApp(app: AppViewModel = viewModel()) {
         // ✕ 종료 확인 — 완료한 운동이 있으면 "여기까지 기록" 을 물어본다(결정 3: 묻지 않고 버리지 않는다).
         var exitAsk by remember { mutableStateOf(false) }
         val appPaused = rememberTrexLifecyclePaused()
+        // 앱 복귀 때 다른 기기에서 바뀐 기록을 먼저 받는다(운동 세션 중에는 받지 않는다 — AppViewModel.onAppForeground)
+        LaunchedEffect(appPaused) {
+            if (!appPaused) app.onAppForeground(sessionActive = sessionIndex >= 0)
+        }
         LaunchedEffect(appPaused, sessionIndex >= 0) {
             if (!appPaused) while (true) {
                 app.refreshCalendar(resetPlan = sessionIndex < 0)
