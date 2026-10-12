@@ -57,8 +57,14 @@ class SyncManager(
         }
     }
 
-    /** 이 계정과 처음 맞춘 적이 있는가. 없으면 [beginAccount] 부터. */
-    fun isOwner(loginId: String): Boolean = prefs.getString("owner", null) == loginId
+    /**
+     * 이 서버의 이 계정과 처음 맞춘 적이 있는가. 없으면 [beginAccount] 부터.
+     * 서버 주소까지 묶는다 — 로컬 서버와 맞춘 기기가 빈 운영 서버에 붙으면 "이미 맞췄다"고 착각해
+     * 첫 올리기를 건너뛰고, 버전상 올릴 게 없어 운영 서버가 계속 비어 있었다(2026-10-13 운영 전환 때 발견).
+     */
+    fun isOwner(loginId: String): Boolean = prefs.getString("owner", null) == ownerKey(loginId)
+
+    private fun ownerKey(loginId: String) = "${api.serverId}|$loginId"
 
     /**
      * 로그인 직후 한 번. 이미 맞춘 계정이면 평소 동기화만 하고 null.
@@ -170,7 +176,7 @@ class SyncManager(
     }
 
     private fun setOwner(loginId: String) {
-        prefs.edit().putString("owner", loginId).apply()
+        prefs.edit().putString("owner", ownerKey(loginId)).apply()
     }
 
     private fun version(key: String): LocalVersion? =

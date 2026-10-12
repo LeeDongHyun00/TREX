@@ -34,6 +34,9 @@ class TrexApi(private val baseUrl: String, private val token: () -> String?) {
 
     val configured: Boolean get() = baseUrl.isNotBlank()
 
+    /** 어느 서버인지. 같은 계정이라도 서버가 다르면 백업도 다르다(로컬 개발 서버 ↔ 운영 서버). */
+    val serverId: String get() = baseUrl.trimEnd('/')
+
     suspend fun googleLogin(idToken: String): AuthAccount {
         val (_, body) = call("POST", "/api/auth/oauth/google", JSONObject().put("idToken", idToken), auth = false)
         val o = JSONObject(body)

@@ -108,7 +108,9 @@ cd server && ./gradlew test        # JDK 17 이 없으면 Gradle 이 자동으�
 
 ## 8. 운영 배포 런북 (3단계, AWS — 첫 배포)
 
-**현황(2026-10-13)**: EC2 `trex-server`(i-0e4bb1e5ac45947f1, t4g.micro, Ubuntu 24.04 Arm) 실행 중, 탄력적 IP `54.252.112.191`, 도메인 `trex-api.duckdns.org` → 이 IP 확인. 다음: RDS.
+**현황(2026-10-13)**: **운영 서버 가동** — `https://trex-api.duckdns.org`(Let's Encrypt 인증서, `/api/sync` 무인증 401 확인). EC2 `trex-server`(i-0e4bb1e5ac45947f1, t4g.micro, 실제 OS **Ubuntu 26.04 LTS** Arm), 탄력적 IP `54.252.112.191`, RDS `trex-db.cr2em864u5ym.ap-southeast-2.rds.amazonaws.com`(db.t4g.micro, Free plan 이라 자동 백업 1일 — 중요한 시점엔 수동 스냅샷). 서버 파일 `~/trex`(app.jar·docker-compose.yml·Caddyfile·.env). `.env` 의 JWT_SECRET 은 서버에서 `openssl rand` 로 만들어 어디에도 출력하지 않았고, DB_PASSWORD 는 사용자가 직접 넣었다.
+- RDS 보안 그룹에 "EC2 컴퓨팅 리소스에 연결"이 안 걸려 5432 가 막혀 있었다 — RDS 보안 그룹 인바운드에 PostgreSQL 5432, 소스 = `trex-app` 보안 그룹을 직접 추가해 해결. PC 에서 5432 는 막혀 있음(정상).
+- 앱 동기화의 "이미 맞춘 계정" 표시는 **서버 주소까지** 묶는다(`SyncManager.ownerKey`) — 로컬 서버와 맞춘 폰이 빈 운영 서버에 붙으면 첫 올리기를 건너뛰던 문제.
 
 구성: **EC2(t4g.micro, Ubuntu 24.04 LTS arm64 — 사용자 선택 2026-10-13, 수업에서 쓴 OS) 1대**에 Docker 로 `app`(JRE + PC 에서 만든 jar)·`caddy`(HTTPS) 두 컨테이너 + **RDS PostgreSQL(db.t4g.micro, 20GB)** + **탄력적 IP** + **DuckDNS 무료 도메인**. 리전은 **시드니(ap-southeast-2)** — 가입한 새 AWS 경험(프로젝트)이 시드니에 고정돼 있어 그대로 씀(사용자 결정 2026-10-13). EC2·RDS 는 반드시 같은 리전. 파일은 `server/deploy/`.
 
