@@ -108,20 +108,18 @@ cd server && ./gradlew test        # JDK 17 이 없으면 Gradle 이 자동으�
 
 ## 8. 운영 배포 런북 (3단계, AWS — 첫 배포)
 
-구성: **EC2(t4g.micro, Amazon Linux 2023 arm64) 1대**에 Docker 로 `app`(JRE + PC 에서 만든 jar)·`caddy`(HTTPS) 두 컨테이너 + **RDS PostgreSQL(db.t4g.micro, 20GB)** + **탄력적 IP** + **DuckDNS 무료 도메인**. 리전은 서울(ap-northeast-2). 파일은 `server/deploy/`.
+구성: **EC2(t4g.micro, Ubuntu 24.04 LTS arm64 — 사용자 선택 2026-10-13, 수업에서 쓴 OS) 1대**에 Docker 로 `app`(JRE + PC 에서 만든 jar)·`caddy`(HTTPS) 두 컨테이너 + **RDS PostgreSQL(db.t4g.micro, 20GB)** + **탄력적 IP** + **DuckDNS 무료 도메인**. 리전은 서울(ap-northeast-2). 파일은 `server/deploy/`.
 
 비용(2026-10 기준): 신규 계정 크레딧 $100(+과제 $100), **Free plan 은 6개월 또는 크레딧 소진 시 계정이 닫힌다**(카드 과금 없음). 이 구성 월 약 $27~34 → 약 6개월. 사용자 결정 2026-10-13: T-REX 전용 계정, Free plan, RDS 사용(EC2+RDS 연동·AMI 실습).
 
 1. **계정**: 가입 → Free plan → 루트 MFA → 리전 서울.
 2. **예산 알림**: Billing → Budgets → 월 $10, 80%·100% 메일.
-3. **EC2**: AMI Amazon Linux 2023(arm64), t4g.micro, 키 페어(.pem 은 PC 에만, 커밋 금지), 저장 16GB gp3. 보안 그룹 `trex-app`: 22 = 내 IP 만, 80·443 = 전체.
+3. **EC2**: AMI Ubuntu Server 24.04 LTS(64비트 Arm), t4g.micro, 키 페어(.pem 은 PC 에만, 커밋 금지), 저장 16GB gp3. 보안 그룹 `trex-app`: 22 = 내 IP 만, 80·443 = 전체.
 4. **탄력적 IP** 할당 → EC2 에 연결. **DuckDNS**(duckdns.org) 하위 도메인을 이 IP 로.
 5. **RDS**: PostgreSQL, 템플릿 "프리 티어"/개발·테스트, 단일 AZ, db.t4g.micro, 20GB gp3, 마스터 사용자 `trex`, 비밀번호 직접 입력(→ `.env`), **퍼블릭 액세스 아니요**, "EC2 컴퓨팅 리소스에 연결"로 3의 EC2 선택(보안 그룹 자동 — RDS 5432 는 EC2 에서만), 추가 구성의 **초기 데이터베이스 이름 `trex`**, 자동 백업 7일.
 6. **EC2 준비**(SSH):
    ```bash
-   sudo dnf install -y docker && sudo systemctl enable --now docker && sudo usermod -aG docker ec2-user
-   sudo mkdir -p /usr/libexec/docker/cli-plugins && sudo curl -sSL -o /usr/libexec/docker/cli-plugins/docker-compose \
-     https://github.com/docker/compose/releases/latest/download/docker-compose-linux-aarch64 && sudo chmod +x /usr/libexec/docker/cli-plugins/docker-compose
+   sudo apt update && sudo apt install -y docker.io docker-compose-v2 && sudo systemctl enable --now docker && sudo usermod -aG docker ubuntu
    sudo dd if=/dev/zero of=/swapfile bs=1M count=1024 && sudo chmod 600 /swapfile && sudo mkswap /swapfile && sudo swapon /swapfile \
      && echo '/swapfile swap swap defaults 0 0' | sudo tee -a /etc/fstab        # 메모리 1GB 보강
    mkdir -p ~/trex                                                            # 다시 로그인해야 docker 그룹이 먹는다
@@ -129,8 +127,8 @@ cd server && ./gradlew test        # JDK 17 이 없으면 Gradle 이 자동으�
 7. **올리기**(PC, 저장소 루트):
    ```bash
    cd server && ./gradlew bootJar                       # 배포 jar 에는 application.yml 이 빠진다(build.gradle)
-   scp -i <키.pem> build/libs/server-0.0.1-SNAPSHOT.jar ec2-user@<IP>:~/trex/app.jar
-   scp -i <키.pem> deploy/docker-compose.yml deploy/Caddyfile deploy/.env.example ec2-user@<IP>:~/trex/
+   scp -i <키.pem> build/libs/server-0.0.1-SNAPSHOT.jar ubuntu@<IP>:~/trex/app.jar
+   scp -i <키.pem> deploy/docker-compose.yml deploy/Caddyfile deploy/.env.example ubuntu@<IP>:~/trex/
    ```
    EC2 에서: `cd ~/trex && sed -i 's/\r$//' docker-compose.yml Caddyfile .env.example && cp .env.example .env && nano .env`(값 채움, `chmod 600 .env`) → `docker compose up -d` → `docker compose logs -f app`.
 8. **확인**: `curl -i https://<도메인>/api/sync` → 401(인증서·프록시·앱 정상). 앱 `local.properties` 에 `trex.apiBaseUrl.debug=https://<도메인>`(디버그도 운영 서버로)·`trex.apiBaseUrl=https://<도메인>` → 설치 → 설정 → Google 계정 연결.
