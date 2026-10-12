@@ -1,0 +1,105 @@
+<mxfile host="drawio" type="device">
+  <diagram id="trex-aws" name="T-REX AWS 구성도">
+    <mxGraphModel dx="1420" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1420" pageHeight="920" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" value="&lt;b style='font-size:20px'&gt;T-REX 서버 구성도&lt;/b&gt;&lt;br&gt;&lt;span style='color:#5A6C86'&gt;AWS 운영 배포 · 2026-10-13 기준&lt;/span&gt;" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=left;verticalAlign=top;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="300" y="18" width="440" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="duckdns" value="&lt;b&gt;DuckDNS&lt;/b&gt; (무료 DNS)&lt;br&gt;trex-api.duckdns.org&lt;br&gt;→ 54.252.112.191" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fontSize=11;fillColor=#FFF8E1;strokeColor=#F9A825;fontColor=#3E2723;" vertex="1" parent="1">
+          <mxGeometry x="31" y="24" width="200" height="72" as="geometry" />
+        </mxCell>
+        <mxCell id="google" value="&lt;b&gt;Google&lt;/b&gt;&lt;br&gt;구글 로그인 · ID 토큰 발급&lt;br&gt;서명 공개키(JWKS) 제공" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fontSize=11;fillColor=#E8F0FE;strokeColor=#4285F4;fontColor=#174EA6;" vertex="1" parent="1">
+          <mxGeometry x="760" y="24" width="260" height="72" as="geometry" />
+        </mxCell>
+        <mxCell id="phone" value="&lt;b&gt;T-REX 앱&lt;/b&gt;&lt;br&gt;(Android 사용자 폰)&lt;br&gt;&lt;span style='color:#5A6C86'&gt;기록은 폰에도 저장&lt;/span&gt;" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;pointerEvents=1;fillColor=#232F3D;shape=mxgraph.aws4.mobile_client;" vertex="1" parent="1">
+          <mxGeometry x="110" y="481" width="41" height="78" as="geometry" />
+        </mxCell>
+        <mxCell id="devpc" value="&lt;b&gt;개발자 PC&lt;/b&gt;&lt;br&gt;빌드 · 배포 · 관리" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;pointerEvents=1;fillColor=#232F3D;shape=mxgraph.aws4.client;" vertex="1" parent="1">
+          <mxGeometry x="104" y="680" width="52" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="cloud" value="AWS 클라우드 (T-REX 전용 계정 · Free plan 크레딧)" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;container=1;pointerEvents=0;collapsible=0;recursiveResize=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_aws_cloud_alt;strokeColor=#232F3E;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#232F3E;dashed=0;" vertex="1" parent="1">
+          <mxGeometry x="300" y="150" width="1090" height="680" as="geometry" />
+        </mxCell>
+        <mxCell id="region" value="아시아 태평양(시드니) ap-southeast-2" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;container=1;pointerEvents=0;collapsible=0;recursiveResize=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_region;strokeColor=#00A4A6;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#147EBA;dashed=1;" vertex="1" parent="cloud">
+          <mxGeometry x="20" y="40" width="1050" height="620" as="geometry" />
+        </mxCell>
+        <mxCell id="vpc" value="기본 VPC (172.31.0.0/16)" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;container=1;pointerEvents=0;collapsible=0;recursiveResize=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_vpc2;strokeColor=#8C4FFF;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#8C4FFF;dashed=0;" vertex="1" parent="region">
+          <mxGeometry x="25" y="40" width="1000" height="560" as="geometry" />
+        </mxCell>
+        <mxCell id="igw" value="인터넷&lt;br&gt;게이트웨이" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;pointerEvents=1;fillColor=#8C4FFF;shape=mxgraph.aws4.internet_gateway;" vertex="1" parent="vpc">
+          <mxGeometry x="-24" y="266" width="48" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="sg_app" value="&lt;b&gt;보안 그룹 trex-app&lt;/b&gt; — 인바운드: SSH 22 (내 IP만) · HTTP 80 / HTTPS 443 (전체)" style="fillColor=none;strokeColor=#DD3522;verticalAlign=top;align=left;spacingLeft=10;spacingTop=2;fontStyle=0;fontColor=#DD3522;whiteSpace=wrap;html=1;fontSize=11;container=1;collapsible=0;recursiveResize=0;" vertex="1" parent="vpc">
+          <mxGeometry x="85" y="50" width="560" height="480" as="geometry" />
+        </mxCell>
+        <mxCell id="ec2" value="&lt;b&gt;EC2 trex-server&lt;/b&gt;&lt;br&gt;t4g.micro · Ubuntu 26.04 LTS (Arm) · 스왑 1GB" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;container=1;pointerEvents=0;collapsible=0;recursiveResize=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_ec2_instance_contents;strokeColor=#D86613;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#D86613;dashed=0;fontSize=11;" vertex="1" parent="sg_app">
+          <mxGeometry x="50" y="50" width="480" height="400" as="geometry" />
+        </mxCell>
+        <mxCell id="eip" value="탄력적 IP&lt;br&gt;54.252.112.191" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;pointerEvents=1;fillColor=#ED7100;fontSize=10;shape=mxgraph.aws4.elastic_ip_address;" vertex="1" parent="sg_app">
+          <mxGeometry x="26" y="230" width="48" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="docker" value="Docker Compose (~/trex)" style="rounded=1;arcSize=4;dashed=1;fillColor=#FAFAFA;strokeColor=#7D8998;verticalAlign=bottom;align=left;spacingLeft=8;spacingBottom=2;fontColor=#5A6C86;fontSize=10;whiteSpace=wrap;html=1;container=1;collapsible=0;recursiveResize=0;" vertex="1" parent="ec2">
+          <mxGeometry x="60" y="80" width="400" height="170" as="geometry" />
+        </mxCell>
+        <mxCell id="caddy" value="&lt;b&gt;Caddy&lt;/b&gt;&lt;br&gt;:80 · :443&lt;br&gt;HTTPS 인증서 자동&lt;br&gt;(Let's Encrypt)" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fontSize=11;fillColor=#FFFFFF;strokeColor=#ED7100;fontColor=#232F3E;" vertex="1" parent="docker">
+          <mxGeometry x="15" y="65" width="150" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="spring" value="&lt;b&gt;Spring Boot 서버&lt;/b&gt;&lt;br&gt;Java 17 · :8080&lt;br&gt;밖에서 직접 접근 불가" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fontSize=11;fillColor=#F1F8E9;strokeColor=#6DB33F;fontColor=#232F3E;" vertex="1" parent="docker">
+          <mxGeometry x="235" y="65" width="150" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="notes" value="· 배포: PC에서 jar 빌드 → scp → docker compose up -d&lt;br&gt;· 비밀값(.env: DB 비밀번호·JWT 서명 키)은 이 서버에만 — 저장소에 없음&lt;br&gt;· 백업: AMI 이미지(서버 통째)" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=left;verticalAlign=top;fontSize=10;fontColor=#5A6C86;" vertex="1" parent="ec2">
+          <mxGeometry x="60" y="270" width="410" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="sg_db" value="&lt;b&gt;보안 그룹 (RDS)&lt;/b&gt;&lt;br&gt;인바운드: PostgreSQL 5432&lt;br&gt;← trex-app 보안 그룹에서만" style="fillColor=none;strokeColor=#DD3522;verticalAlign=top;align=left;spacingLeft=10;spacingTop=2;fontStyle=0;fontColor=#DD3522;whiteSpace=wrap;html=1;fontSize=11;container=1;collapsible=0;recursiveResize=0;" vertex="1" parent="vpc">
+          <mxGeometry x="695" y="50" width="280" height="480" as="geometry" />
+        </mxCell>
+        <mxCell id="rds" value="&lt;b&gt;RDS PostgreSQL&lt;/b&gt;&lt;br&gt;trex-db · db.t4g.micro&lt;br&gt;저장 20GB gp3&lt;br&gt;퍼블릭 액세스 없음&lt;br&gt;자동 백업 1일" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;fillColor=#C925D1;resIcon=mxgraph.aws4.rds;" vertex="1" parent="sg_db">
+          <mxGeometry x="108" y="208" width="64" height="64" as="geometry" />
+        </mxCell>
+        <mxCell id="legend" value="&lt;b&gt;흐름&lt;/b&gt;  ① 앱이 도메인을 서버 IP로 바꾼다  ② 구글 로그인으로 ID 토큰을 받는다  ③ 그 토큰을 HTTPS로 보내 로그인(서버가 JWT 발급)하고, 이후 기록을 동기화한다&lt;br&gt;&lt;span style='visibility:hidden'&gt;&lt;b&gt;흐름&lt;/b&gt;&lt;/span&gt;  ④ 서버는 구글 공개키로 토큰이 진짜인지 확인한다  ⑤ 데이터는 RDS에 저장된다&lt;br&gt;&lt;span style='color:#5A6C86'&gt;앱 데이터는 폰에 그대로 남고 서버는 백업·기기 이전용이다. 내 음식 사진 기억은 서버로 보내지 않는다.&lt;/span&gt;" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=left;verticalAlign=top;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="300" y="840" width="1090" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="e_dns" value="① 주소 조회 (DNS)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#232F3E;strokeWidth=1.5;fontSize=11;fontColor=#232F3E;labelBackgroundColor=#ffffff;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="phone" target="duckdns">
+          <mxGeometry relative="1" as="geometry">
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_login" value="② 구글 로그인 → ID 토큰" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#232F3E;strokeWidth=1.5;fontSize=11;fontColor=#232F3E;labelBackgroundColor=#ffffff;exitX=1;exitY=0.1;exitDx=0;exitDy=0;entryX=0.115;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="phone" target="google">
+          <mxGeometry x="0.3" relative="1" as="geometry">
+            <Array as="points"><mxPoint x="270" y="489" /><mxPoint x="270" y="125" /><mxPoint x="790" y="125" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_https" value="③ HTTPS 443&lt;br&gt;로그인 · 동기화 API" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#232F3E;strokeWidth=1.5;fontSize=11;fontColor=#232F3E;labelBackgroundColor=#ffffff;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="phone" target="igw">
+          <mxGeometry relative="1" as="geometry">
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_igw" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#232F3E;strokeWidth=1.5;fontSize=11;fontColor=#232F3E;labelBackgroundColor=#ffffff;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="igw" target="eip">
+          <mxGeometry relative="1" as="geometry">
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_eip" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#232F3E;strokeWidth=1.5;fontSize=11;fontColor=#232F3E;labelBackgroundColor=#ffffff;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="eip" target="caddy">
+          <mxGeometry relative="1" as="geometry">
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_proxy" value="HTTP&lt;br&gt;8080" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#232F3E;strokeWidth=1.5;fontSize=11;fontColor=#232F3E;labelBackgroundColor=#ffffff;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;fontSize=10;" edge="1" parent="1" source="caddy" target="spring">
+          <mxGeometry relative="1" as="geometry">
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_db" value="⑤ PostgreSQL 5432 (SSL)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#232F3E;strokeWidth=1.5;fontSize=11;fontColor=#232F3E;labelBackgroundColor=#ffffff;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="spring" target="rds">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="0" y="-14" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_jwks" value="④ ID 토큰 서명 확인&lt;br&gt;(구글 공개키)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#232F3E;strokeWidth=1.5;fontSize=11;fontColor=#232F3E;labelBackgroundColor=#ffffff;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.346;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="spring" target="google">
+          <mxGeometry x="0.6" relative="1" as="geometry">
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_ssh" value="SSH 22 (키 페어) · 배포" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#232F3E;strokeWidth=1.5;fontSize=11;fontColor=#232F3E;labelBackgroundColor=#ffffff;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.9375;entryDx=0;entryDy=0;dashed=1;strokeColor=#5A6C86;fontColor=#5A6C86;" edge="1" parent="1" source="devpc" target="ec2">
+          <mxGeometry x="-0.55" relative="1" as="geometry">
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
