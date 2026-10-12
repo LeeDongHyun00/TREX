@@ -24,7 +24,11 @@ import java.time.Instant;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class SyncItem {
 
-    /** 항목 하나의 최대 크기(문자). 내 음식 기억 300장이 약 0.6MB 라 여유를 둔다. */
+    /**
+     * 항목 하나의 최대 크기(문자 수). 2026-10-13 운영 실측으로 가장 큰 항목(식단)이 약 1.2천 자다 —
+     * 운동 기록에 세트 로그가 쌓여도 넉넉하게 잡은 상한이다. 한글은 UTF-8 로 글자당 최대 3바이트라 바이트로는 약 6MB 까지다.
+     * (내 음식 기억은 동기화 대상이 아니다 — docs/SERVER_SYNC_HANDOFF.md Q3)
+     */
     public static final int MAX_PAYLOAD_CHARS = 2 * 1024 * 1024;
 
     @Id

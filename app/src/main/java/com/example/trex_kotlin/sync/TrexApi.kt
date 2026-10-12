@@ -20,7 +20,7 @@ data class AuthAccount(
 class ApiException(val status: Int, message: String) : IOException(message)
 
 /**
- * T-REX 서버 API(docs/SERVER_SYNC_HANDOFF.md 4절). 라이브러리 없이 HttpURLConnection 으로 부른다 — 호출이 다섯 개뿐이다.
+ * T-REX 서버 API(docs/SERVER_SYNC_HANDOFF.md 4절). 라이브러리 없이 HttpURLConnection 으로 부른다 — 호출이 네 개뿐이다.
  * 모든 함수는 IO 스레드에서 돈다.
  */
 class TrexApi(private val baseUrl: String, private val token: () -> String?) {
