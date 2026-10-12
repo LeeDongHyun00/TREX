@@ -108,11 +108,13 @@ cd server && ./gradlew test        # JDK 17 이 없으면 Gradle 이 자동으�
 
 ## 8. 운영 배포 런북 (3단계, AWS — 첫 배포)
 
-구성: **EC2(t4g.micro, Ubuntu 24.04 LTS arm64 — 사용자 선택 2026-10-13, 수업에서 쓴 OS) 1대**에 Docker 로 `app`(JRE + PC 에서 만든 jar)·`caddy`(HTTPS) 두 컨테이너 + **RDS PostgreSQL(db.t4g.micro, 20GB)** + **탄력적 IP** + **DuckDNS 무료 도메인**. 리전은 서울(ap-northeast-2). 파일은 `server/deploy/`.
+**현황(2026-10-13)**: EC2 `trex-server`(i-0e4bb1e5ac45947f1, t4g.micro, Ubuntu 24.04 Arm) 실행 중, 탄력적 IP `54.252.112.191`, 도메인 `trex-api.duckdns.org` → 이 IP 확인. 다음: RDS.
+
+구성: **EC2(t4g.micro, Ubuntu 24.04 LTS arm64 — 사용자 선택 2026-10-13, 수업에서 쓴 OS) 1대**에 Docker 로 `app`(JRE + PC 에서 만든 jar)·`caddy`(HTTPS) 두 컨테이너 + **RDS PostgreSQL(db.t4g.micro, 20GB)** + **탄력적 IP** + **DuckDNS 무료 도메인**. 리전은 **시드니(ap-southeast-2)** — 가입한 새 AWS 경험(프로젝트)이 시드니에 고정돼 있어 그대로 씀(사용자 결정 2026-10-13). EC2·RDS 는 반드시 같은 리전. 파일은 `server/deploy/`.
 
 비용(2026-10 기준): 신규 계정 크레딧 $100(+과제 $100), **Free plan 은 6개월 또는 크레딧 소진 시 계정이 닫힌다**(카드 과금 없음). 이 구성 월 약 $27~34 → 약 6개월. 사용자 결정 2026-10-13: T-REX 전용 계정, Free plan, RDS 사용(EC2+RDS 연동·AMI 실습).
 
-1. **계정**: 가입 → Free plan → 루트 MFA → 리전 서울.
+1. **계정**: 가입 → Free plan → 루트 MFA.
 2. **예산 알림**: Billing → Budgets → 월 $10, 80%·100% 메일.
 3. **EC2**: AMI Ubuntu Server 24.04 LTS(64비트 Arm), t4g.micro, 키 페어(.pem 은 PC 에만, 커밋 금지), 저장 16GB gp3. 보안 그룹 `trex-app`: 22 = 내 IP 만, 80·443 = 전체.
 4. **탄력적 IP** 할당 → EC2 에 연결. **DuckDNS**(duckdns.org) 하위 도메인을 이 IP 로.
