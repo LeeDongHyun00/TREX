@@ -72,7 +72,9 @@ DELETE /api/auth/me                                           → 204 (회원과
   - 동작 메모: `google_`·`kakao_` 로 시작하는 아이디로는 일반 가입이 안 된다(409, 소셜 내부 아이디 선점 방지). 소셜 회원은 비밀번호가 없어 `/login` 으로는 못 들어온다. 탈퇴한 회원의 기존 JWT 는 401. 탈퇴는 동기화·식단(하위 식사 포함)·운동·프로필·회원 순으로 지운다.
   - 함정: `GoogleJwksTokenVerifier` 는 테스트용 생성자가 있어 공개 생성자에 `@Autowired` 가 꼭 필요하다(없으면 컨텍스트가 안 뜬다). `client-ids` 가 비면 구글 로그인은 항상 401 이고 서버 로그에 error 가 남는다.
   - 아직 실제 구글 토큰으로는 확인하지 않았다 — 구글 클라우드 콘솔에서 OAuth 클라이언트(웹 1개 + 안드로이드 1개, 안드로이드는 패키지명·SHA-1)를 만든 뒤 2단계에서 확인한다.
-- [ ] **2단계 · 앱** — 코드 완료, **실제 구글 로그인 확인 남음**(웹 클라이언트 ID 대기)
+- [ ] **2단계 · 앱** — 코드 완료. **2026-10-13 실기기(폴드6) 구글 로그인 성공**: 설정 → Google 계정 연결 → 서버에 회원 1명 생성, 7개 항목 업로드(로컬 서버 로그로 확인). 남은 확인: 앱 데이터가 빈 기기에서 같은 계정으로 받기, 양쪽에 기록이 있을 때 질문 화면.
+  - **함정(실제로 겪음)**: 앱·서버에 넣는 값은 **웹 애플리케이션** 클라이언트 ID 다. Android 클라이언트 ID 를 넣으면 `28444 Developer console is not set up correctly` 가 난다. Android 클라이언트(패키지명·SHA-1)는 콘솔에 있기만 하면 된다. 실패 원인은 화면 문구와 logcat 태그 `TrexAuth` 에 남는다.
+  - 이 프로젝트의 웹 클라이언트 ID: `12194757714-foefivjlqn4n3g5iqdsgqlqst12ejbpi.apps.googleusercontent.com`(비밀값 아님). Android 클라이언트는 사용자 PC 디버그 키 SHA-1 `DB:12:B7:…:36:47` 로 등록됨 — 다른 PC 에서 빌드하면 그 PC 의 SHA-1 로 Android 클라이언트를 하나 더 만든다.
   - 코드: `app/.../sync/` — `SyncRules`(판정 규칙, 단위 테스트 `SyncRulesTest` 7개), `SyncManager`(저장소 변경 감지 → 3초 모아 올리기, 시작·로그인·"지금 동기화" 때 받기), `TrexApi`(HttpURLConnection — 호출 5개라 Retrofit 안 씀), `AuthSession`(`trex_auth` prefs, 자동 백업 제외), `GoogleSignIn`(Credential Manager). `TrexStore.readRaw/writeRaw/setChangeListener`, `AppViewModel` 계정 절, `AuthScreen`(아이디·비밀번호 폼과 찾기 화면을 지우고 "Google로 계속하기"/"로그인 없이 사용"), 설정의 계정 칸·회원 탈퇴, `FirstSyncDialog`.
   - 첫 연결 규칙: 서버가 비면 올림 / 이 기기가 온보딩 전이면 받음 / 양쪽에 있으면 묻는다(자동 병합 안 함). 서버에 없는 항목은 어느 쪽을 골라도 이 기기 값을 남겨 올린다(고르지 않은 데이터를 지우지 않는다). 계정(`owner`)과 처음 맞추기 전에는 주고받지 않는다.
   - 기존 사용자(가짜 로그인으로 이미 `logged_in`)는 로그인 화면을 다시 안 본다 — **설정 → Google 계정 연결**로 연결한다.

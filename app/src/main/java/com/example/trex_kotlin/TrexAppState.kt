@@ -127,7 +127,9 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             } catch (_: NoCredentialException) {
                 authMessage = "이 기기에 구글 계정이 없어요. 휴대폰 설정에서 계정을 추가해 주세요."
             } catch (e: GetCredentialException) {
-                authMessage = "구글 로그인에 실패했어요. (${e.type})"
+                // 콘솔 설정 오류(SHA-1·패키지명·테스트 사용자)는 여기로 온다 — 원인을 화면과 로그에 남긴다
+                android.util.Log.w("TrexAuth", "구글 로그인 실패 type=${e.type}", e)
+                authMessage = "구글 로그인에 실패했어요. ${e.errorMessage ?: e.type}"
             } catch (e: ApiException) {
                 authMessage = e.message
             } catch (_: java.io.IOException) {
