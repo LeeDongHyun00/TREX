@@ -151,6 +151,11 @@ class SocialSyncApiTest {
     }
 
     @Test
+    void 콘솔이_꺼진_h2_console_주소는_404() throws Exception {
+        mvc.perform(get("/h2-console")).andExpect(status().isNotFound());
+    }
+
+    @Test
     void 동기화는_올린_항목을_돌려주고_오래된_쓰기는_409로_서버_값을_준다() throws Exception {
         String auth = bearer(uniq());
 

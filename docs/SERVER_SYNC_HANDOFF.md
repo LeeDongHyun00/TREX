@@ -80,7 +80,7 @@ DELETE /api/auth/me                                           → 204 (회원과
   - 첫 연결 규칙: 서버가 비면 올림 / 이 기기가 온보딩 전이면 받음 / 양쪽에 있으면 묻는다(자동 병합 안 함). 서버에 없는 항목은 어느 쪽을 골라도 이 기기 값을 남겨 올린다(고르지 않은 데이터를 지우지 않는다). 계정(`owner`)과 처음 맞추기 전에는 주고받지 않는다.
   - 기존 사용자(가짜 로그인으로 이미 `logged_in`)는 로그인 화면을 다시 안 본다 — **설정 → Google 계정 연결**로 연결한다.
   - 설정값: `local.properties`(커밋 안 됨)의 `trex.googleWebClientId`, `trex.apiBaseUrl.debug`(기본 `http://127.0.0.1:8080`), `trex.apiBaseUrl`(릴리스, 3단계 HTTPS 주소). 디버그만 http 허용(`usesCleartextTraffic` 자리표시자).
-- [ ] **3단계 · AWS 배포**: 예산 알림 → RDS → EC2 + Docker → 도메인·Caddy HTTPS → 환경 변수
+- [ ] **3단계 · AWS 배포** — 배포 파일 준비 완료(`server/deploy/`, prod jar 로컬 기동 확인), 계정 생성 대기. 절차는 8절 런북
 - [ ] **4단계 · 카카오**
 - [ ] **5단계 · 개인정보 처리방침·동의·탈퇴 버튼**
 
@@ -105,3 +105,40 @@ cd server && ./gradlew test        # JDK 17 이 없으면 Gradle 이 자동으�
    ```
    확인 항목: 설정 → Google 계정 연결 → "마지막 동기화" 표시, 기록 하나 추가 후 3초 뒤 `GET /api/sync` 에 반영, 앱 데이터가 빈 에뮬레이터/다른 기기에서 같은 계정 로그인 → 온보딩 없이 기록이 들어옴.
 3. 3단계 AWS 배포. 이 문서 5절의 체크를 갱신하며 진행한다.
+
+## 8. 운영 배포 런북 (3단계, AWS — 첫 배포)
+
+구성: **EC2(t4g.micro, Amazon Linux 2023 arm64) 1대**에 Docker 로 `app`(JRE + PC 에서 만든 jar)·`caddy`(HTTPS) 두 컨테이너 + **RDS PostgreSQL(db.t4g.micro, 20GB)** + **탄력적 IP** + **DuckDNS 무료 도메인**. 리전은 서울(ap-northeast-2). 파일은 `server/deploy/`.
+
+비용(2026-10 기준): 신규 계정 크레딧 $100(+과제 $100), **Free plan 은 6개월 또는 크레딧 소진 시 계정이 닫힌다**(카드 과금 없음). 이 구성 월 약 $27~34 → 약 6개월. 사용자 결정 2026-10-13: T-REX 전용 계정, Free plan, RDS 사용(EC2+RDS 연동·AMI 실습).
+
+1. **계정**: 가입 → Free plan → 루트 MFA → 리전 서울.
+2. **예산 알림**: Billing → Budgets → 월 $10, 80%·100% 메일.
+3. **EC2**: AMI Amazon Linux 2023(arm64), t4g.micro, 키 페어(.pem 은 PC 에만, 커밋 금지), 저장 16GB gp3. 보안 그룹 `trex-app`: 22 = 내 IP 만, 80·443 = 전체.
+4. **탄력적 IP** 할당 → EC2 에 연결. **DuckDNS**(duckdns.org) 하위 도메인을 이 IP 로.
+5. **RDS**: PostgreSQL, 템플릿 "프리 티어"/개발·테스트, 단일 AZ, db.t4g.micro, 20GB gp3, 마스터 사용자 `trex`, 비밀번호 직접 입력(→ `.env`), **퍼블릭 액세스 아니요**, "EC2 컴퓨팅 리소스에 연결"로 3의 EC2 선택(보안 그룹 자동 — RDS 5432 는 EC2 에서만), 추가 구성의 **초기 데이터베이스 이름 `trex`**, 자동 백업 7일.
+6. **EC2 준비**(SSH):
+   ```bash
+   sudo dnf install -y docker && sudo systemctl enable --now docker && sudo usermod -aG docker ec2-user
+   sudo mkdir -p /usr/libexec/docker/cli-plugins && sudo curl -sSL -o /usr/libexec/docker/cli-plugins/docker-compose \
+     https://github.com/docker/compose/releases/latest/download/docker-compose-linux-aarch64 && sudo chmod +x /usr/libexec/docker/cli-plugins/docker-compose
+   sudo dd if=/dev/zero of=/swapfile bs=1M count=1024 && sudo chmod 600 /swapfile && sudo mkswap /swapfile && sudo swapon /swapfile \
+     && echo '/swapfile swap swap defaults 0 0' | sudo tee -a /etc/fstab        # 메모리 1GB 보강
+   mkdir -p ~/trex                                                            # 다시 로그인해야 docker 그룹이 먹는다
+   ```
+7. **올리기**(PC, 저장소 루트):
+   ```bash
+   cd server && ./gradlew bootJar                       # 배포 jar 에는 application.yml 이 빠진다(build.gradle)
+   scp -i <키.pem> build/libs/server-0.0.1-SNAPSHOT.jar ec2-user@<IP>:~/trex/app.jar
+   scp -i <키.pem> deploy/docker-compose.yml deploy/Caddyfile deploy/.env.example ec2-user@<IP>:~/trex/
+   ```
+   EC2 에서: `cd ~/trex && sed -i 's/\r$//' docker-compose.yml Caddyfile .env.example && cp .env.example .env && nano .env`(값 채움, `chmod 600 .env`) → `docker compose up -d` → `docker compose logs -f app`.
+8. **확인**: `curl -i https://<도메인>/api/sync` → 401(인증서·프록시·앱 정상). 앱 `local.properties` 에 `trex.apiBaseUrl.debug=https://<도메인>`(디버그도 운영 서버로)·`trex.apiBaseUrl=https://<도메인>` → 설치 → 설정 → Google 계정 연결.
+9. **AMI**: 다 되면 EC2 → 작업 → 이미지 생성(`trex-app-YYYYMMDD`). 서버가 망가지면 이 AMI 로 새 EC2 를 띄우고 탄력적 IP 를 옮긴다. 데이터는 RDS 에 있어 AMI 와 무관하다.
+10. **업데이트**: 7의 jar 만 다시 올리고 `docker compose restart app`.
+
+함정:
+- 운영 `ddl-auto: update` — 컬럼 추가는 따라가지만 이름 변경·삭제는 못 한다. 엔티티를 크게 바꾸면 Flyway 를 먼저 들인다.
+- `.env` 를 Windows 에서 만들어 올리면 줄끝 `\r` 이 비밀번호에 붙는다 — EC2 에서 만들거나 `sed -i 's/\r$//'`.
+- Caddy 인증서는 `caddy_data` 볼륨에 있다. 볼륨을 지우면 재발급(Let's Encrypt 주간 발급 제한).
+- 6개월 뒤 Free plan 계정이 닫히기 전에 유료 전환 여부를 정한다(RDS 스냅샷을 다른 계정으로 공유해 옮길 수 있다).
