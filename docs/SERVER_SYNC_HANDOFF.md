@@ -47,7 +47,7 @@
 **아직 정할 것**
 - Q1 팀 공용 앱 서명 키(구글·카카오 콘솔에 SHA-1 등록용). 지금은 PC 마다 디버그 키가 달라 빌드한 PC 에 따라 로그인이 될 수도 안 될 수도 있다.
 - Q2 운영 도메인(DuckDNS 무료 하위 도메인 / Route 53 구매).
-- Q3 동기화 대상에 근육 피로 SQLite·자세 기준선을 넣을지(1차는 `trex_store` 키들 + 내 음식 기억).
+- ~~Q3~~ 결정(2026-10-13): 동기화 대상은 `trex_store` 의 7개 항목(`SyncRules.KEYS`: profile·plan·history·diet·water·custom_foods·goal_override)만. **내 음식 기억(food_memory.tsv)은 넣지 않는다** — 폰 밖으로 내보내지 않는다는 기존 결정(FOOD_EVAL §9, backup_rules). 근육 피로 SQLite 는 기록(history)에서 다시 계산된다. 자세 기준선·자세 로그는 넣지 않는다.
 
 ## 4. API 계약 (서버 ↔ 앱)
 
@@ -72,7 +72,11 @@ DELETE /api/auth/me                                           → 204 (회원과
   - 동작 메모: `google_`·`kakao_` 로 시작하는 아이디로는 일반 가입이 안 된다(409, 소셜 내부 아이디 선점 방지). 소셜 회원은 비밀번호가 없어 `/login` 으로는 못 들어온다. 탈퇴한 회원의 기존 JWT 는 401. 탈퇴는 동기화·식단(하위 식사 포함)·운동·프로필·회원 순으로 지운다.
   - 함정: `GoogleJwksTokenVerifier` 는 테스트용 생성자가 있어 공개 생성자에 `@Autowired` 가 꼭 필요하다(없으면 컨텍스트가 안 뜬다). `client-ids` 가 비면 구글 로그인은 항상 401 이고 서버 로그에 error 가 남는다.
   - 아직 실제 구글 토큰으로는 확인하지 않았다 — 구글 클라우드 콘솔에서 OAuth 클라이언트(웹 1개 + 안드로이드 1개, 안드로이드는 패키지명·SHA-1)를 만든 뒤 2단계에서 확인한다.
-- [ ] **2단계 · 앱**: Retrofit/OkHttp, Credential Manager 구글 로그인, JWT 보관, 로그인 화면("Google로 계속하기"/"로그인 없이 사용"), `TrexStore` 쓰기 시 업로드(모아서·오프라인 대기)·시작 시 받기·첫 로그인 병합 질문
+- [ ] **2단계 · 앱** — 코드 완료, **실제 구글 로그인 확인 남음**(웹 클라이언트 ID 대기)
+  - 코드: `app/.../sync/` — `SyncRules`(판정 규칙, 단위 테스트 `SyncRulesTest` 7개), `SyncManager`(저장소 변경 감지 → 3초 모아 올리기, 시작·로그인·"지금 동기화" 때 받기), `TrexApi`(HttpURLConnection — 호출 5개라 Retrofit 안 씀), `AuthSession`(`trex_auth` prefs, 자동 백업 제외), `GoogleSignIn`(Credential Manager). `TrexStore.readRaw/writeRaw/setChangeListener`, `AppViewModel` 계정 절, `AuthScreen`(아이디·비밀번호 폼과 찾기 화면을 지우고 "Google로 계속하기"/"로그인 없이 사용"), 설정의 계정 칸·회원 탈퇴, `FirstSyncDialog`.
+  - 첫 연결 규칙: 서버가 비면 올림 / 이 기기가 온보딩 전이면 받음 / 양쪽에 있으면 묻는다(자동 병합 안 함). 서버에 없는 항목은 어느 쪽을 골라도 이 기기 값을 남겨 올린다(고르지 않은 데이터를 지우지 않는다). 계정(`owner`)과 처음 맞추기 전에는 주고받지 않는다.
+  - 기존 사용자(가짜 로그인으로 이미 `logged_in`)는 로그인 화면을 다시 안 본다 — **설정 → Google 계정 연결**로 연결한다.
+  - 설정값: `local.properties`(커밋 안 됨)의 `trex.googleWebClientId`, `trex.apiBaseUrl.debug`(기본 `http://127.0.0.1:8080`), `trex.apiBaseUrl`(릴리스, 3단계 HTTPS 주소). 디버그만 http 허용(`usesCleartextTraffic` 자리표시자).
 - [ ] **3단계 · AWS 배포**: 예산 알림 → RDS → EC2 + Docker → 도메인·Caddy HTTPS → 환경 변수
 - [ ] **4단계 · 카카오**
 - [ ] **5단계 · 개인정보 처리방침·동의·탈퇴 버튼**
@@ -87,6 +91,14 @@ cd server && ./gradlew test        # JDK 17 이 없으면 Gradle 이 자동으�
 
 ## 7. 다음 할 일
 
-1. 구글 클라우드 콘솔: 프로젝트 → OAuth 동의 화면 → 클라이언트 ID(웹·안드로이드). 웹 클라이언트 ID 가 앱의 `serverClientId` 이자 서버 `GOOGLE_CLIENT_IDS` 다(비밀값 아님, 클라이언트 시크릿은 쓰지 않는다).
-2. 2단계(앱) 또는 3단계(AWS) — 앱을 먼저 하면 로컬 서버(에뮬레이터 `10.0.2.2:8080`, 실기기는 같은 와이파이의 PC IP + 개발용 cleartext 허용)로 확인한다.
-3. 이 문서 5절의 체크를 갱신하며 진행한다.
+1. (사용자 진행 중) 구글 클라우드 콘솔: 프로젝트 → 동의 화면(외부, 테스트 사용자 등록) → 클라이언트 2개(Android: 패키지 `com.example.trex_kotlin` + 빌드 PC 디버그 키 SHA-1 / 웹 애플리케이션). 웹 클라이언트 ID 가 앱의 `trex.googleWebClientId` 이자 서버 `GOOGLE_CLIENT_IDS` 다(비밀값 아님, 클라이언트 시크릿은 쓰지 않는다).
+2. 실기기 로컬 확인 절차:
+   ```bash
+   # local.properties 에 한 줄: trex.googleWebClientId=<웹 클라이언트 ID>
+   cd server && cp src/main/resources/application-example.yml src/main/resources/application.yml   # 없을 때만(git 제외 파일)
+   GOOGLE_CLIENT_IDS=<웹 클라이언트 ID> ./gradlew bootRun        # H2 메모리 — 서버를 끄면 데이터가 사라진다
+   adb reverse tcp:8080 tcp:8080                                  # 폰의 127.0.0.1:8080 → PC 서버
+   ./gradlew :app:installDebug                                    # 앱 삭제 금지(기록 손실)
+   ```
+   확인 항목: 설정 → Google 계정 연결 → "마지막 동기화" 표시, 기록 하나 추가 후 3초 뒤 `GET /api/sync` 에 반영, 앱 데이터가 빈 에뮬레이터/다른 기기에서 같은 계정 로그인 → 온보딩 없이 기록이 들어옴.
+3. 3단계 AWS 배포. 이 문서 5절의 체크를 갱신하며 진행한다.

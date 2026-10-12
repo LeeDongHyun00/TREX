@@ -85,7 +85,7 @@ import kotlinx.coroutines.delay
  * 화면 순서(guide→auth→find→onboarding→main→record→session→complete)상 앞으로 가면 오른쪽에서,
  * 뒤로 가면 왼쪽에서 들어온다.
  */
-private enum class RootRoute { Guide, Auth, Find, Onboarding, Main, Record, DietRecord, MuscleLoad, TransitionSession, PostureSession, TimerSession, Complete, PostureLab, BaselineGuide }
+private enum class RootRoute { Guide, Auth, Onboarding, Main, Record, DietRecord, MuscleLoad, TransitionSession, PostureSession, TimerSession, Complete, PostureLab, BaselineGuide }
 
 /** 메인 하단 시트. */
 sealed class MainSheet {
@@ -130,8 +130,11 @@ fun TrexApp(app: AppViewModel = viewModel()) {
             }
         }
 
+        // 처음 연결한 계정의 서버에도 이 기기에도 기록이 있으면 어느 쪽을 남길지 묻는다(로그인 화면·설정 어디서 연결했든)
+        if (app.askFirstSync) FirstSyncDialog(onKeepLocal = { app.resolveFirstSync(keepLocal = true) }, onUseServer = { app.resolveFirstSync(keepLocal = false) })
+
         var selectedTab by rememberSaveable { mutableStateOf(TrexTab.Home) }
-        var subScreen by rememberSaveable { mutableStateOf("none") } // none | find | guide | record | postureLab | baselineGuide
+        var subScreen by rememberSaveable { mutableStateOf("none") } // none | guide | record | postureLab | baselineGuide
         var progress by rememberSaveable(stateSaver = listSaver<SessionProgress, Any>(
             save = { listOf(it.index, it.remainingMs, it.elapsedMs, it.completed.joinToString(","), it.skipped.joinToString(","),
                 it.repetitions, it.recordedCounts.entries.joinToString(",") { entry -> "${entry.key}:${entry.value}" },
@@ -343,7 +346,6 @@ fun TrexApp(app: AppViewModel = viewModel()) {
             subScreen == "baselineGuide" -> RootRoute.BaselineGuide
             !app.loggedIn && !app.guideDone -> RootRoute.Guide
             !app.loggedIn && subScreen == "guide" -> RootRoute.Guide
-            !app.loggedIn && subScreen == "find" -> RootRoute.Find
             !app.loggedIn -> RootRoute.Auth
             !app.onboarded -> RootRoute.Onboarding
             sessionDone -> RootRoute.Complete
@@ -365,7 +367,7 @@ fun TrexApp(app: AppViewModel = viewModel()) {
 
         CompositionLocalProvider(LocalTrexFold provides rememberTrexFold()) {
             Box(Modifier.fillMaxSize().background(c.bg).safeDrawingPadding()) {
-                TrexContentFrame(maxWidth = if (route in setOf(RootRoute.Auth, RootRoute.Find, RootRoute.Onboarding)) 600.dp else 840.dp,
+                TrexContentFrame(maxWidth = if (route in setOf(RootRoute.Auth, RootRoute.Onboarding)) 600.dp else 840.dp,
                 useWholeWindow = route == RootRoute.PostureSession) {
                     AnimatedContent(
                     targetState = route to sessionIndex,
@@ -399,11 +401,11 @@ fun TrexApp(app: AppViewModel = viewModel()) {
                             )
 
                             RootRoute.Auth -> AuthScreen(
-                            onLogin = { app.completeLogin() },
-                            onOpenFind = { subScreen = "find" },
+                            busy = app.authBusy,
+                            message = app.authMessage,
+                            onGoogle = { app.continueWithGoogle(context.findTrexActivity() ?: context) },
+                            onWithoutAccount = { app.continueWithoutAccount() },
                             )
-
-                            RootRoute.Find -> FindAccountScreen(onBack = { subScreen = "none" })
 
                             RootRoute.Onboarding -> OnboardingScreen(onDone = { profile -> app.completeOnboarding(profile) })
 
