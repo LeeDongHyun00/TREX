@@ -1,0 +1,43 @@
+# T-REX 서버 운영 배포(AWS EC2) — docs/SERVER_SYNC_HANDOFF.md 3단계.
+# EC2 의 ~/trex 에 이 폴더(docker-compose.yml·Caddyfile)와 app.jar, .env 를 둔다.
+#   app   : PC 에서 만든 실행 파일(app.jar)을 JRE 컨테이너로 돌린다 — 작은 EC2(메모리 1GB)에서 빌드하지 않는다.
+#   caddy : 80·443 을 받아 HTTPS 인증서를 자동으로 받고 app 으로 넘긴다. app 포트(8080)는 밖으로 열지 않는다.
+# 비밀값(DB 비밀번호·JWT 키)은 .env 에만 둔다. .env 는 커밋하지 않는다(.env.example 참고).
+
+services:
+  app:
+    image: eclipse-temurin:17-jre
+    restart: unless-stopped
+    working_dir: /app
+    volumes:
+      - ./app.jar:/app/app.jar:ro
+    command: ["java", "-Xms128m", "-Xmx384m", "-jar", "app.jar"]
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DB_URL: ${DB_URL}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      GOOGLE_CLIENT_IDS: ${GOOGLE_CLIENT_IDS}
+      TZ: Asia/Seoul
+    expose:
+      - "8080"
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      TREX_DOMAIN: ${TREX_DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data        # 발급받은 인증서 — 지우면 재발급(발급 횟수 제한 주의)
+      - caddy_config:/config
+    depends_on:
+      - app
+
+volumes:
+  caddy_data:
+  caddy_config:

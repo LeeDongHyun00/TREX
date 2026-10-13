@@ -9,6 +9,7 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -46,6 +47,12 @@ public class GlobalExceptionHandler {
                 .body(ErrorResponse.of(e.getMessage()));
     }
 
+    @ExceptionHandler(InvalidRequestException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidRequest(InvalidRequestException e) {
+        return ResponseEntity.badRequest()
+                .body(ErrorResponse.of(e.getMessage()));
+    }
+
     @ExceptionHandler(InvalidCredentialsException.class)
     public ResponseEntity<ErrorResponse> handleInvalidCredentials(InvalidCredentialsException e) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
@@ -58,6 +65,14 @@ public class GlobalExceptionHandler {
         log.warn("데이터 무결성 위반: {}", e.getMostSpecificCause().getMessage());
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(ErrorResponse.of("이미 사용 중인 값이 포함되어 있습니다"));
+    }
+
+    // 없는 주소. 운영 서버는 공개돼 있어 봇이 아무 경로나 두드린다 — 500·ERROR 로그로 남기지 않는다.
+    // (보안 필터를 건너뛰는 /h2-console 은 운영에서 콘솔이 꺼져 있으면 여기로 온다.)
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ErrorResponse> handleNoResource(NoResourceFoundException e) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ErrorResponse.of("없는 주소입니다"));
     }
 
     @ExceptionHandler(Exception.class)

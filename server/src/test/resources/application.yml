@@ -1,0 +1,19 @@
+# 테스트 전용 설정 — 비밀값이 없으므로 커밋한다. 실제 로컬·운영 설정은 src/main/resources/application.yml(git 제외)·application-prod.yml.
+spring:
+  datasource:
+    url: jdbc:h2:mem:trex_test;MODE=PostgreSQL;DB_CLOSE_DELAY=-1
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+
+jwt:
+  secret: test_only_secret_key_at_least_32_bytes_long_0123456789
+  expiration_time: 3600000
+
+trex:
+  oauth:
+    google:
+      client-ids: test-web-client-id.apps.googleusercontent.com

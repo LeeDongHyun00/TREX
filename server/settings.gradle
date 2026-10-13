@@ -1,1 +1,6 @@
+plugins {
+	// 툴체인(Java 17)이 없는 PC 에서 Gradle 이 JDK 를 자동으로 받는다 — 이 저장소를 여는 사람·에이전트마다 JDK 를 맞출 필요가 없게.
+	id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
+}
+
 rootProject.name = 'server'

@@ -43,7 +43,7 @@ public class SecurityConfig {
                 )
                 .authorizeHttpRequests(auth -> auth
                         // 토큰 없이 접근하는 인증 진입점만 개방한다.
-                        .requestMatchers("/api/auth/signup", "/api/auth/login").permitAll()
+                        .requestMatchers("/api/auth/signup", "/api/auth/login", "/api/auth/oauth/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 // 인증 실패 시 로그인 폼으로 리다이렉트하지 않고 401을 그대로 내려준다.

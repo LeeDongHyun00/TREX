@@ -3,6 +3,8 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.CAMERA" />
+    <!-- 계정 백업·동기화(docs/SERVER_SYNC_HANDOFF.md) -->
+    <uses-permission android:name="android.permission.INTERNET" />
     <uses-feature
         android:name="android.hardware.camera"
         android:required="false" />
@@ -15,7 +17,8 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.Trex_kotlin">
+        android:theme="@style/Theme.Trex_kotlin"
+        android:usesCleartextTraffic="${usesCleartextTraffic}">
         <!--
             configChanges: 회전 시 Activity 재생성을 막는다. 자세 세션은 카메라·코치·접지선 추정이
             모두 화면 상태에 살아 있어, 재생성되면 진행 중이던 세트가 끊기고 접지선이 리셋된다.

@@ -1,5 +1,6 @@
 package com.trex.server.repository;
 
+import com.trex.server.entity.AuthProvider;
 import com.trex.server.entity.User;
 import com.trex.server.exception.InvalidCredentialsException;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -15,6 +16,8 @@ public interface UserRepository extends JpaRepository<User, Integer> {
         return findByLoginId(loginId)
                 .orElseThrow(() -> new InvalidCredentialsException("존재하지 않는 사용자입니다"));
     }
+
+    Optional<User> findByProviderAndProviderId(AuthProvider provider, String providerId);
 
     boolean existsByLoginId(String loginId);
 
