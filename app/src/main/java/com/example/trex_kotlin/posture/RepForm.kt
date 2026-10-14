@@ -48,6 +48,8 @@ enum class RepPhase { START, TOP, BOTTOM, CYCLE,
 enum class RepFormRef { NONE, START_RATIO, START_DELTA, REP_DELTA, SET_MIN_DELTA, FIRST_REPS_DELTA, SET_LOW_DELTA, RECENT_PASS_DELTA }
 
 enum class RepFormStat { MEDIAN, MEAN, MAX, MIN,
+    /** 반복 안 표준편차와 p90-p10 범위. 네 운동의 흔들림 검사에 사용한다. */
+    STD, ROBUST_RANGE,
     /** 시작 기준에서 **가장 멀리 벗어난** 프레임 값(비율은 1, 차는 0 에서) — 상대 기준 검사 전용. 앞뒤 어느 쪽에서 벗어났든 잡는다. */
     EXTREME,
     /** 구간 최대 − 구간 첫 값. ASCENT 에 쓰면 "바닥에서 올라오며 얼마나 더 커졌나"(상체가 바닥보다 더 숙여지면 엉덩이가 먼저 올라온 것). */
@@ -180,8 +182,22 @@ data class RepFormCheck(
     val confirmMin: Float? = null,
     /** 교정됨 여유(§101 니업 '무릎 높이'): 통과 판정이어도 값이 hi − margin 을 넘으면 "교정됐어요" 를 미룬다(경계에서 오가는 회를 칭찬하지 않게). null = 종전. */
     val recoveryMargin: Float? = null,
+    /** 새 검사만 명시적으로 요구하는 관측 품질. 기존 검사 기본 동작은 유지한다(§91). */
+    val minSamples: Int = 1,
+    val minCoverage: Float = 0f,
+    val minReferenceSamples: Int = 1,
+    /** 잠금 뷰만 믿지 않고 이번 반복의 방향·프레임별 방향이 허용 범위인지 확인한다. */
+    val requireObservedView: Boolean = false,
+    /** 유효 관절값 사이의 최대 간격. 긴 가림 앞뒤를 연속 움직임으로 잇지 않는다(§91). */
+    val maxObservationGapMs: Long? = null,
+    /** 신호 누락 프레임도 관측 비율에 포함하고 검사 구간·기준 구간을 따로 확인한다(§92). */
+    val strictObservationWindow: Boolean = false,
 ) {
-    init { require(lo != null || hi != null) { "$id: 허용 띠가 없다" } }
+    init {
+        require(lo != null || hi != null) { "$id: 허용 띠가 없다" }
+        require(minSamples >= 1 && minReferenceSamples >= 1 && minCoverage in 0f..1f)
+        require(maxObservationGapMs == null || maxObservationGapMs > 0)
+    }
 
     fun cueFor(direction: FormDirection): String = cue ?: "$bodyPart ${label(direction)}"
 
@@ -317,6 +333,7 @@ class RepFormEvaluator(
     /** 한 다리 계열(§97) — 검사·창 신호의 `{moving}`/`{support}` 를 사이클마다 그 다리로 푼다([onCycle]). 뷰·시작 기준·사전값·2단은 종전 그대로. */
     val legProfile: LegProfile? = null,
 ) {
+    val tracksObservationGaps: Boolean = checks.any { it.strictObservationWindow }
     private var buf = ArrayList<Pair<Long, Map<String, Float>>>()
     /** 다리 사이클 경로(§97): 다리마다 직전 사이클의 끝 — 같은 다리의 직전 사이클이 이 창에 들어오지 않게. */
     private val lastEndBySide = HashMap<StepSide, Long>()
@@ -399,7 +416,7 @@ class RepFormEvaluator(
 
     /** 검출된 프레임마다(카운터 onFrame **앞에서**). 피처 없는 프레임은 창에 들어가지 않는다. */
     fun onFrame(tMs: Long, features: Map<String, Float>) {
-        if (features.isEmpty()) return
+        if (features.isEmpty() && !tracksObservationGaps) return
         buf += tMs to features
         if (buf.size > CAP) buf.subList(0, CAP / 2).clear()
     }
@@ -519,7 +536,27 @@ class RepFormEvaluator(
             repList += rep
             return rep
         }
-        val raw = cks.filter { it.phase != RepPhase.START }.map { evaluate(it, phases, repView, side) }
+        val raw = cks.filter { it.phase != RepPhase.START }.map { c ->
+            // 예전 반복의 잠금 뷰로 가림·방향 누락을 정상 판정하지 않는다. 가까운 방향 프레임이 충분할 때만 새 검사를 평가한다.
+            val observed = if (c.requireObservedView) viewFrames.count { f ->
+                ViewEstimator.estimate(listOf(f), 1, viewCosKey, viewSinKey)
+                    ?.takeIf { it.cls != ViewEstimator.ViewClass.UNKNOWN }
+                    ?.let { classFor(it.yawDeg) in c.views } == true
+            } else 0
+            if (c.requireObservedView && !c.strictObservationWindow && (rawView == null || repView !in c.views ||
+                    observed < c.minSamples || observed.toFloat() / viewFrames.size.coerceAtLeast(1) < c.minCoverage))
+                RepFormOutcome(c, Verdict.ABSTAIN, null, null, null, null, 0, "촬영 방향 확인 부족")
+            else {
+                val result=evaluate(c, phases, repView, side)
+                if (!RequestedFormCoaching.isTarget(c.exercise)) result else {
+                    val top=if(phases.top.isEmpty()) emptyList() else phases.observations.filter {
+                        it.first in phases.top.first().first..phases.top.last().first }
+                    val cycle=observationWindow(c.copy(phase=RepPhase.CYCLE,windowFrames=null),phases,phases.cycle)
+                    val bottom=observationWindow(c.copy(phase=RepPhase.BOTTOM,windowFrames=null),phases,phases.bottom)
+                    RequestedFormEvidence.review(result,top,cycle,bottom,::observed)
+                }
+            }
+        }
         // 측정을 무효로 만드는 검사가 같은 반복에서 위반이면 유보 — 틀린 방향의 말보다 침묵이 낫다(원칙 #6)
         // 무효화는 **차단 단계** 위반만 — 2단 검사의 코칭 단계(컬 상체 숙임 +15~20°)는 측정을 깨뜨릴 만큼 크지 않다. 1단 검사는 위반 = 차단이라 종전과 같다
         val violated = raw.filter { it.verdict == Verdict.VIOLATION && it.gate }.map { it.check.id }.toSet()
@@ -528,7 +565,8 @@ class RepFormEvaluator(
             if (by == null || o.verdict == Verdict.ABSTAIN) o
             else o.copy(verdict = Verdict.ABSTAIN, direction = null, abstainReason = "${cks.first { it.id == by }.bodyPart} 위반으로 측정 무효")
         }.map { o ->
-            if (repView == null || repView in o.check.views || o.verdict == Verdict.ABSTAIN) o
+            if ((RequestedFormCoaching.isTarget(o.check.exercise) && o.check.requireObservedView && o.check.strictObservationWindow) ||
+                repView == null || repView in o.check.views || o.verdict == Verdict.ABSTAIN) o
             else o.copy(verdict = Verdict.ABSTAIN, direction = null, gate = false, abstainReason = "촬영 방향 · $repView")
         }
         // 본인 기준 모음(FIRST_REPS·SET_LOW)은 이 반복을 다 판정한 **뒤에** 넣는다 — 같은 반복에서 다른 축이 위반이면 넣지 않는다([RepFormCheck.refExcludedBy], 순서 무관)
@@ -750,6 +788,8 @@ class RepFormEvaluator(
         val trailingStanding: List<Pair<Long, Map<String, Float>>>,
         /** 바닥부터 끝까지(올라오는 구간). */
         val ascent: List<Pair<Long, Map<String, Float>>>,
+        val observations: List<Pair<Long, Map<String, Float>>>,
+        val endMs: Long?,
     )
 
     /**
@@ -759,9 +799,12 @@ class RepFormEvaluator(
      */
     private fun segment(prefix: List<Pair<Long, Map<String, Float>>>, window: List<Pair<Long, Map<String, Float>>>, cycleMin: Float, cycleMax: Float, standing: Float,
                         signal: String = signalFeature): Phases {
-        val pre = prefix.filter { it.second.containsKey(signal) }
-        val own = window.filter { it.second.containsKey(signal) }
-        if (own.isEmpty()) return Phases(emptyList(), emptyList(), window, emptyList(), emptyList())
+        fun hasSignal(f: Pair<Long, Map<String, Float>>) =
+            if (tracksObservationGaps) f.second[signal]?.isFinite() == true else f.second.containsKey(signal)
+        val pre = prefix.filter(::hasSignal)
+        val own = window.filter(::hasSignal)
+        val observations = (prefix + window).distinctBy { it.first }.sortedBy { it.first }
+        if (own.isEmpty()) return Phases(emptyList(), emptyList(), window, emptyList(), emptyList(), observations, window.lastOrNull()?.first)
         val sig = pre + own
         val v = sig.map { it.second.getValue(signal) }
         val n0 = pre.size
@@ -778,7 +821,9 @@ class RepFormEvaluator(
         val cycle = sig.subList(maxOf(topEnd + 1, n0), sig.size)
         var tailStart = v.size
         while (tailStart > n0 && v[tailStart - 1] >= standing && v.size - tailStart < TOP_FRAMES) tailStart--
-        return Phases(top, bottom, cycle, sig.subList(tailStart, v.size), sig.subList(idxMin, sig.size))
+        val tail = sig.subList(tailStart, v.size)
+        val carried = if (tracksObservationGaps && tail.isNotEmpty()) observations.filter { it.first >= tail.first().first } else tail
+        return Phases(top, bottom, cycle, carried, sig.subList(idxMin, sig.size), observations, window.lastOrNull()?.first)
     }
 
     /**
@@ -946,6 +991,53 @@ class RepFormEvaluator(
         return RepFormOutcome(c, if (d == null) Verdict.OK else Verdict.VIOLATION, value, raw, usedRef, d, samples, gate = gate, warmup = warmup)
     }
 
+    /** 판정 통계는 해당 위상의 값만 쓰고, 관측 비율은 그 사이의 누락 프레임까지 센다. */
+    private fun observationWindow(c: RepFormCheck, p: Phases, selected: List<Pair<Long, Map<String, Float>>>): List<Pair<Long, Map<String, Float>>> {
+        if (!c.strictObservationWindow || selected.isEmpty()) return selected
+        if (c.phase == RepPhase.BOTTOM) {
+            // 바로 앞뒤의 신호 누락은 위상을 알 수 없으므로 바닥 관측 분모에 포함한다.
+            val first = selected.first().first
+            val last = selected.last().first
+            val before = p.observations.lastOrNull {
+                it.first < first && it.second[signalFeature]?.isFinite() == true
+            }?.first
+            val after = p.observations.firstOrNull {
+                it.first > last && it.second[signalFeature]?.isFinite() == true
+            }?.first
+            return p.observations.filter {
+                (before == null || it.first > before) && (after == null || it.first < after)
+            }
+        }
+        val from = selected.first().first
+        val to = if (c.phase == RepPhase.CYCLE) p.endMs ?: selected.last().first else selected.last().first
+        return p.observations.filter {
+            val afterStart = if (c.phase == RepPhase.CYCLE && c.windowFrames == null && p.top.isNotEmpty())
+                it.first > p.top.last().first else it.first >= from
+            afterStart && it.first <= to
+        }
+    }
+
+    private fun observed(c: RepFormCheck, f: Pair<Long, Map<String, Float>>): Boolean {
+        if (f.second[c.feature]?.isFinite() != true) return false
+        if (!c.strictObservationWindow) return true
+        if (f.second[signalFeature]?.isFinite() != true) return false
+        if (!c.requireObservedView) return true
+        return ViewEstimator.estimate(listOf(f.second), 1, viewCosKey, viewSinKey)
+            ?.takeIf { it.cls != ViewEstimator.ViewClass.UNKNOWN }
+            ?.let { classFor(it.yawDeg) in c.views } == true
+    }
+
+    /** 시작·끝의 가림과 기준 자세에서 수행 구간까지의 단절도 검사한다. */
+    private fun interrupted(c: RepFormCheck, frames: List<Pair<Long, Map<String, Float>>>): Boolean {
+        val limit = c.maxObservationGapMs ?: return false
+        if (frames.isEmpty()) return true
+        val valid = frames.filter { observed(c, it) }
+        if (valid.isEmpty()) return true
+        return valid.first().first - frames.first().first > limit ||
+            frames.last().first - valid.last().first > limit ||
+            valid.zipWithNext().any { (a, b) -> b.first - a.first > limit }
+    }
+
     private fun evaluate(c: RepFormCheck, p: Phases, repView: String?, side: StepSide? = null): RepFormOutcome {
         val all = when (c.phase) {
             RepPhase.TOP -> p.top; RepPhase.BOTTOM -> p.bottom; RepPhase.CYCLE -> p.cycle; RepPhase.START -> emptyList()
@@ -953,15 +1045,38 @@ class RepFormEvaluator(
             RepPhase.ASCENT -> p.ascent
         }
         val frames = c.windowFrames?.let { n -> if (all.size > n) all.subList(all.size - n, all.size) else all } ?: all
-        val values = frames.mapNotNull { it.second[c.feature] }
+        val qualityFrames = observationWindow(c, p, frames)
+        val observedFrames = if (tracksObservationGaps) frames.filter { observed(c, it) } else frames.filter { it.second.containsKey(c.feature) }
+        val values = observedFrames.map { it.second.getValue(c.feature) }
         // 값 하나여도 판정한다(§62c 후속 10) — 300 ms 샘플링에서 수축 창은 1~3프레임이고 가까운 팔 피처는 그중 일부에만 있어, 둘을 요구하면
         // 사선 검사가 반복의 3분의 1에서 유보됐다(오늘 앞 이탈 59/178회 "값 부족"). 값 하나의 중앙값은 그 값이다
-        val need = 1
-        if (values.size < need) return RepFormOutcome(c, Verdict.ABSTAIN, null, null, null, null, values.size,
+        val need = c.minSamples
+        if (values.size < need || values.size.toFloat() / qualityFrames.size.coerceAtLeast(1) < c.minCoverage) return RepFormOutcome(c, Verdict.ABSTAIN, null, null, null, null, values.size,
             if ((c.phase == RepPhase.TOP || c.phase == RepPhase.STANDING) && frames.isEmpty()) "서 있는 프레임 없음" else "창에 ${c.feature} 부족")
+        if (c.maxObservationGapMs != null && observedFrames.zipWithNext().any { (a, b) -> b.first - a.first > c.maxObservationGapMs })
+            return RepFormOutcome(c, Verdict.ABSTAIN, null, null, null, null, values.size, "관절 관측이 오래 끊김")
+        // 첫 수행 프레임 앞의 타임스탬프 공백도 확인한다. 상단은 통계와 관측 비율에는 넣지 않는다.
+        val continuityFrames = if (c.phase == RepPhase.CYCLE && p.top.isNotEmpty())
+            listOf(p.top.last()) + qualityFrames else qualityFrames
+        if (c.strictObservationWindow && interrupted(c, continuityFrames))
+            return RepFormOutcome(c, Verdict.ABSTAIN, null, null, null, null, values.size, "관절 관측이 오래 끊김")
+        val topFrames = if (c.strictObservationWindow && p.top.isNotEmpty())
+            p.observations.filter { it.first in p.top.first().first..p.top.last().first } else p.top
+        val topValues = if (tracksObservationGaps) p.top.filter { observed(c, it) }.map { it.second.getValue(c.feature) }
+            else p.top.mapNotNull { it.second[c.feature] }
+        if (c.strictObservationWindow && c.ref == RepFormRef.REP_DELTA) {
+            if (topValues.size < c.minReferenceSamples ||
+                topValues.size.toFloat() / topFrames.size.coerceAtLeast(1) < c.minCoverage)
+                return RepFormOutcome(c, Verdict.ABSTAIN, null, null, null, null, values.size, "이 반복의 시작 자세 관측 부족")
+            val bridge = p.observations.filter { it.first in topFrames.first().first..qualityFrames.last().first }
+            if (interrupted(c, bridge))
+                return RepFormOutcome(c, Verdict.ABSTAIN, null, null, null, null, values.size, "관절 관측이 오래 끊김")
+        }
         val ref = when (c.ref) {
             RepFormRef.NONE -> null
-            RepFormRef.REP_DELTA -> p.top.mapNotNull { it.second[c.feature] }.takeIf { it.isNotEmpty() }?.let { stat(it, RepFormStat.MEDIAN) }
+            RepFormRef.REP_DELTA -> topValues
+                .takeIf { it.size >= c.minReferenceSamples && it.size.toFloat() / topFrames.size.coerceAtLeast(1) >= c.minCoverage }
+                ?.let { stat(it, RepFormStat.MEDIAN) }
             RepFormRef.SET_MIN_DELTA -> setMin[c.id]
             RepFormRef.FIRST_REPS_DELTA -> firstReps[firstKey(c, repView, side)]?.takeIf { it.size >= (c.refN ?: FIRST_REPS_N) }?.let { stat(it, RepFormStat.MEDIAN) }
             RepFormRef.SET_LOW_DELTA -> null       // 이 반복의 원값을 넣은 뒤 정한다(아래)
@@ -1132,11 +1247,20 @@ class RepFormEvaluator(
 
         fun stat(values: List<Float>, stat: RepFormStat): Float = when (stat) {
             RepFormStat.MEAN -> values.average().toFloat()
+            RepFormStat.STD -> values.average().let { mean -> sqrt(values.sumOf { v -> (v - mean) * (v - mean) } / values.size).toFloat() }
             RepFormStat.MAX -> values.max()
             RepFormStat.MIN -> values.min()
             RepFormStat.MEDIAN -> values.sorted().let { s -> if (s.size % 2 == 1) s[s.size / 2] else (s[s.size / 2 - 1] + s[s.size / 2]) / 2f }
             RepFormStat.EXTREME -> error("EXTREME 은 상대 기준 검사에서 evaluate 가 직접 고른다")
             RepFormStat.RISE -> values.max() - values.first()
+            RepFormStat.ROBUST_RANGE -> values.sorted().let { s ->
+                fun q(p: Float): Float {
+                    val at = p * (s.size - 1)
+                    val lo = at.toInt()
+                    return s[lo] + (s[minOf(lo + 1, s.lastIndex)] - s[lo]) * (at - lo)
+                }
+                q(0.9f) - q(0.1f)
+            }
         }
     }
 }
@@ -1216,7 +1340,8 @@ data class RepFormSummary(
                 r.outcomes.map { RepFormLog.Check(it.check.id, it.verdict.name, it.value, it.raw, it.reference, it.direction?.name, it.gate, it.warmup) },
                 r.view, r.viewRaw, r.side?.key, r.standYawDeg, r.notStep,
                 formState = if (leg == null) null else if (!r.judged) "UNJUDGED" else if (r.correct) "PASS_IN_SCOPE" else "FAIL",
-                movingSide = if (leg != null) r.side?.key else null)   // 쪽 = 움직인 다리(§97)
+                movingSide = if (leg != null) r.side?.key else null,
+                requestedCoachExcluded = if (r.outcomes.any { RequestedFormCoaching.isTarget(it.check.exercise) }) RequestedFormCoaching.excluded(r) else null)   // 쪽 = 움직인 다리(§97)
         },
         rejected = rejected, noTop = noTop, baselineFromFirstBottom = baselineFromFirstBottom,
         live = live.map { it.copy(tMs = it.tMs - t0) },
@@ -1249,7 +1374,8 @@ data class RepFormLog(
     /** [view] = 그 반복 창의 뷰 글자 — 있을 때만 키 `view`. */
     data class Rep(val tMs: Long, val correct: Boolean, val checks: List<Check>, val view: String? = null, val viewRaw: String? = null,
                    val side: String? = null, val standYaw: Float? = null, val notStep: Boolean = false,
-                   val formState: String? = null, val movingSide: String? = null)
+                   val formState: String? = null, val movingSide: String? = null,
+                   val requestedCoachExcluded: Boolean? = null)
 
     /**
      * `rep_form` 블록의 JSON — 세트 로그(`SetLogJson`)와 재생기가 같은 문자열을 낸다(재생기는 org.json 도 SetLogJson 도 컴파일하지 않는다).
@@ -1284,6 +1410,7 @@ data class RepFormLog(
             r.movingSide?.let { sb.append(",\"moving_side\":").append(str(it)) }
             r.standYaw?.let { sb.append(",\"stand_yaw\":").append(num(it)) }
             if (r.notStep) sb.append(",\"not_step\":true")
+            r.requestedCoachExcluded?.let { sb.append(",\"requested_coach_excluded\":").append(it) }
             sb.append(",\"checks\":[")
             r.checks.forEachIndexed { j, c -> if (j > 0) sb.append(','); check(c) }
             sb.append("]}")
@@ -1337,7 +1464,7 @@ object RepFormSpecs {
     /** v0.12(§101b, 2026-10-09 오후): 스쿼트 '발끝 방향' 절대 상한 40°·시작 기준 상한 35°·"처음부터" 알림(시작 띠 50 → 40), '무릎 바깥 벌림' 기준 두 번째로 작은 바닥값(SET_LOW_DELTA)·차단 +0.30. */
     /** v0.13(§101c, 2026-10-09 오후): 스쿼트 '발끝 방향' 절대 띠 [−5, 45]° 만(시작 대비 폐기, 사용자 결정)·크로스 런지 '어깨 기울기' ship(런지와 같은 검사, 정면 포함). */
     /** v0.14(§101f, 2026-10-10): 스쿼트 '무릎 바깥 벌림' 차단 = 코칭 +0.25(말한 회는 세지 않는다)·절대 상한 0.36(사전값 단계의 처음 2회도 차단). */
-    const val VERSION = "repform_v0.14"
+    const val VERSION = "repform_v0.14+requested_v5"
 
     /**
      * 이 검사가 대체하는 창 규칙 id — 세션 규칙셋에서 beta 로 낮춘다(음성·점수·헤드라인에서 빠지고 리포트엔 '참고'로 남는다).
@@ -1345,6 +1472,14 @@ object RepFormSpecs {
      * "처음부터 등이 말려" 를 반복한다(2026-09-26 실기기 4회) — 반복 검사(팔꿈치 뜸·옆 벌림·앞 이탈)가 그 자리를 맡는다.
      */
     val supersedes: Map<String, String> = mapOf(
+        "굿모닝|무릎 구부린채 고정" to "repform|굿모닝|무릎 펴짐",
+        "굿모닝|척추의 중립[all]" to "repform|굿모닝|어깨 높이 흔들림",
+        "굿모닝|척추의 중립[lateral]" to "repform|굿모닝|어깨 높이 흔들림",
+        "사이드 레터럴 레이즈|무릎 반동 없음" to "repform|사이드 레터럴 레이즈|왼무릎 굽힘 변화",
+        "프런트 레이즈|팔꿈치 살짝 구부린채 고정" to "repform|프런트 레이즈|왼팔 굽힘 변화",
+        "프런트 레이즈|상체 뒤로 숙이지 않기" to "repform|프런트 레이즈|상체 뒤로 기울기 변화",
+        "사이드 레터럴 레이즈|상관과 전완의 각도 고정" to "repform|사이드 레터럴 레이즈|왼팔 굽힘 변화",
+        "사이드 레터럴 레이즈|상체 반동 없음" to "repform|사이드 레터럴 레이즈|몸통 앞뒤 흔들림",
         "바벨 스쿼트|발과 무릎의 방향 일치" to "repform|바벨 스쿼트|무릎 안쪽 모임",
         // 시선(§100): 옛 창 규칙은 AIHub 연기자 중앙값에 맞춰져 정면을 보는 사용자가 위반이 됐다 — 사이클 중앙값의 절대 띠 '시선' 이 극단만 본다
         "바벨 스쿼트|고개 정면" to "repform|바벨 스쿼트|시선",
@@ -1372,6 +1507,14 @@ object RepFormSpecs {
 
     /** 대체 사유(리포트 '참고' 주석) — 없으면 스쿼트 문장(세트 평균이 서 있는 프레임에 끌림). */
     val supersedeNotes: Map<String, String> = mapOf(
+        "굿모닝|무릎 구부린채 고정" to "서 있는 구간을 제외하고 반복 하단의 무릎각을 참고 검사한다. 기존 임계값의 반복 창 적용은 재검증 중이다",
+        "굿모닝|척추의 중립[all]" to "척추 중립 대신 실제 측정한 어깨 높이 차이의 반복 내 흔들림으로 표시한다. 등 말림과 고정 기울기는 평가하지 않는다",
+        "굿모닝|척추의 중립[lateral]" to "척추 중립 대신 실제 측정한 어깨 높이 차이의 반복 내 흔들림으로 표시한다. 등 말림과 고정 기울기는 평가하지 않는다",
+        "사이드 레터럴 레이즈|무릎 반동 없음" to "준비 동작을 제외하고 좌우 무릎의 굽힘 변화를 각각 참고 검사한다. 양쪽 평균으로 변화가 상쇄되지 않게 했다",
+        "프런트 레이즈|팔꿈치 살짝 구부린채 고정" to "세트 평균 굽힘각 대신 반복 중 양팔 각각의 굽힘 변화를 참고 검사한다. 처음부터 유지한 각도의 적절성은 판정하지 않는다",
+        "프런트 레이즈|상체 뒤로 숙이지 않기" to "세트 극값 대신 팔을 올린 구간을 그 반복 직전 자세와 비교한다. 실기기 검증 전 참고 검사다",
+        "사이드 레터럴 레이즈|상관과 전완의 각도 고정" to "전완의 수직각은 정상 팔 올림에도 변한다. 팔꿈치 자체의 굽힘 변화를 양팔 각각 참고 검사한다",
+        "사이드 레터럴 레이즈|상체 반동 없음" to "준비 동작을 뺀 반복 안에서 앞뒤 기울기의 p90-p10을 참고 검사한다. 속도나 반동의 원인은 판정하지 않는다",
         "바벨 스쿼트|고개 정면" to "head_pitch 세트 평균이 AIHub 연기자 중앙값(−27.7°)에 맞춰져 정면을 보는 사용자(−12.7~−19.3°)가 위반이 됐다(실기기 3세트 전부, 핸드오프 §4) — 반복마다 사이클 중앙값의 절대 띠로 위·아래 극단만 보는 '시선' 이 맡는다(§100)",
         "$LUNGE|상체의 과조한 숙임/젖힘 여부" to "세트 창의 최소 기울기라 뒤로 젖힘만 보고 앞 숙임은 못 봤다(MediaPipe 정상 오탐 16 %). 걸음마다 바닥에서 재는 '상체 숙임' 이 맡는다",
         "$LUNGE|척추의 중립[lateral]" to "어깨 높이차의 흔들림(표준편차)이라 기울인 채 유지하면 조용하고 숙이는 동작에 걸렸다(MediaPipe 정상 오탐 16 %). 걸음마다 재는 '어깨 기울기' 가 맡는다",
@@ -1393,7 +1536,82 @@ object RepFormSpecs {
         // 계열 파일럿(§66, docs/EXERCISE_TIERS.md) — 같은 검사·같은 임계를 종목 이름만 바꿔 쓴다. 근거는 대리(덤벨 컬·런지 모집단) + AIHub 바벨 클립
         "바벨 컬" to withLines("curl", curl("바벨 컬")), BARBELL_LUNGE to withLines("lunge", lunge(BARBELL_LUNGE))) +
         // 한 다리 계열(§97) — 네 종목, 전부 beta(docs/SINGLE_LEG_FAMILY_DESIGN.md §4)
-        LegProfile.entries.associate { it.title to withLines("leg", legCycle(it)) }
+        LegProfile.entries.associate { it.title to withLines("leg", legCycle(it)) } + mapOf(
+            "굿모닝" to GoodMorningFormSpecs.checks(), "푸시업" to PushupFormSpecs.checks(),
+            "프런트 레이즈" to raises("프런트 레이즈", true), "사이드 레터럴 레이즈" to raises("사이드 레터럴 레이즈", false))
+
+    /** 요청한 네 종목의 참고 판정만 실시간 안내에 쓴다. */
+    val referenceExercises: Set<String> = setOf("굿모닝", "프런트 레이즈", "사이드 레터럴 레이즈", "푸시업")
+
+    /** 측면 전용 피처는 보이는 한쪽으로 판정한다. 기존 양쪽 관절 커버리지와 분리한다. */
+    fun referenceObservable(exercise: String, features: Map<String, Float>, signalFeature: String?, coverageOk: Boolean): Boolean =
+        exercise in referenceExercises && (exercise == "푸시업" || coverageOk) &&
+            signalFeature?.let { features[it]?.isFinite() == true } == true &&
+            byExercise[exercise].orEmpty().any { features[it.feature]?.isFinite() == true }
+
+    fun referenceMessage(exercise: String, rep: RepFormRep?): String? {
+        if (exercise !in referenceExercises || rep == null) return null
+        val outcome = rep.outcomes.firstOrNull {
+            it.check.exercise == exercise && it.check.status == RuleStatus.BETA &&
+                it.verdict == Verdict.VIOLATION && it.direction != null
+        } ?: return null
+        val observation = outcome.check.text(outcome.direction!!).trim().trimEnd('.')
+        val fix = outcome.check.fix.trim().trimEnd('.')
+        return "참고 · $observation. $fix"
+    }
+
+
+    /**
+     * 레이즈 1차 확장(§91). 카운트 신호 upperarm_vert_mean은 팔을 들 때 작아지므로 기존 하강형 위상 분할과 일치한다.
+     * 팔꿈치 굽힘 고정과 전완의 수직각 고정은 다르다. 기존 월드 관절각을 양팔 별로 측정해 평균 상쇄를 피한다.
+     * 띠(30°/15°/20°)는 검증용 초기값이며 AIHub에 최적화한 값이나 운동 처방 기준이 아니다. 모두 beta이며 요청한 종목의 코치 정책에서만 사용한다.
+     */
+    private fun raises(ex: String, front: Boolean): List<RepFormCheck> {
+        val caution = listOf("사용자 요청으로 코치 모드에 적용한 검증 중 교정 기준이다", "MediaPipe 월드 관절각의 추정 오차가 있다. 연속 영상과 실기기에서 재검증해야 한다")
+        val elbows = listOf("L" to "왼팔", "R" to "오른팔").map { (side, label) ->
+            RepFormCheck("repform|$ex|$label 굽힘 변화", ex, "$label 굽힘 변화(반복)", "팔꿈치", RuleStatus.BETA,
+                "elbow_$side", RepPhase.CYCLE, RepFormStat.ROBUST_RANGE, RepFormRef.NONE,
+                lo = null, hi = 50f, lowText = null, highText = "$label 굽힘이 반복 중 달라졌어요", lowLabel = null, highLabel = "굽힘 변화",
+                fix = "팔을 올리고 내릴 때 팔꿈치의 굽힘을 일정하게 유지해 주세요", unit = "°", cue = "팔꿈치 굽힘",
+                reason = "§91: 각 팔의 어깨-팔꿈치-손목 각도 p90-p10. 양팔 평균으로 반대 방향 변화가 상쇄되지 않게 한다. 여유 띠 50°, 폰 검증 전 beta",
+                cautions = caution + "처음부터 일정하게 유지한 굽힘각이 적절한지는 평가하지 않는다",
+                views = setOf("B", "C", "D", "SIDE_B", "SIDE_D"), gates = false, highlight = "elbow_ang_$side",
+                minSamples = 5, minCoverage = 0.75f, requireObservedView = true, maxObservationGapMs = 750L, strictObservationWindow = true)
+        }
+        val name = if (front) "상체 뒤로 기울기 변화" else "몸통 앞뒤 흔들림"
+        val body = RepFormCheck("repform|$ex|$name", ex, "$name(반복)", "상체", RuleStatus.BETA,
+            "torso_pitch", if (front) RepPhase.BOTTOM else RepPhase.CYCLE,
+            if (front) RepFormStat.MEDIAN else RepFormStat.ROBUST_RANGE,
+            if (front) RepFormRef.REP_DELTA else RepFormRef.NONE,
+            lo = if (front) -25f else null, hi = if (front) null else 35f,
+            lowText = if (front) "팔을 들면서 상체가 뒤로 기울었어요" else null,
+            highText = if (front) null else "반복 중 몸통이 앞뒤로 흔들렸어요",
+            lowLabel = if (front) "뒤로 기울기" else null, highLabel = if (front) null else "흔들림",
+            fix = "몸통의 기울기를 유지하며 팔을 움직여 주세요", unit = "°", cue = "몸통 기울기",
+            reason = if (front) "§91: 팔을 든 구간의 몸통 앞뒤 각도 중앙값 - 그 반복 직전 중앙값. -25°는 검증 전 여유 띠이며 안내만 한다"
+                else "§91: 준비 구간을 뺀 반복 안 몸통 앞뒤 각도 p90-p10. 35°는 검증 전 여유 띠이며 안내만 한다",
+            cautions = caution + "척추 곡률·근육 긴장은 보지 못하며 처음부터 유지한 몸통 기울기는 평가하지 않는다",
+            views = setOf("B", "D"), gates = false, highlight = "torso_pitch",
+            minSamples = if (front) 2 else 5, minCoverage = 0.75f, minReferenceSamples = 2, requireObservedView = true, maxObservationGapMs = 750L, strictObservationWindow = true)
+
+        val knees = if (front) emptyList() else listOf("L" to "왼무릎", "R" to "오른무릎").map { (side, label) ->
+            RepFormCheck("repform|$ex|$label 굽힘 변화", ex, "$label 굽힘 변화(반복)", "무릎", RuleStatus.BETA,
+                "knee_$side", RepPhase.CYCLE, RepFormStat.STD, RepFormRef.NONE,
+                lo = null, hi = 10f, lowText = null, highText = "팔을 움직이는 동안 $label 굽힘이 달라졌어요",
+                lowLabel = null, highLabel = "굽힘 변화", fix = "무릎 굽힘을 일정하게 유지하며 팔을 움직여 주세요",
+                reason = "기존 knee_mean__std 임계 4.798841°를 반복 안 좌우 무릎에 각각 적용했다. 양쪽 변화 상쇄를 막으며 새 통계 단위는 재검증이 필요하다",
+                unit = "°", cautions = caution + "무릎 움직임의 원인이나 반동의 힘은 평가하지 않는다",
+                views = setOf("D", "E"), gates = false, cue = "무릎 굽힘", highlight = "knee_$side",
+                minSamples = 5, minCoverage = 0.75f, requireObservedView = true,
+                maxObservationGapMs = 750L, strictObservationWindow = true)
+        }
+        return RaiseFormExtras.checks(ex) + elbows + body + knees
+    }
+
+    /** 굿모닝: 기존 임계값을 반복 구간에 적용한다. 반복 창 성능은 실기기 재검증이 필요하다. */
+    private fun goodMorning(): List<RepFormCheck> = GoodMorningFormSpecs.checks()
+
+    private fun pushup(): List<RepFormCheck> = PushupFormSpecs.checks()
 
     /**
      * 대사 채우기(§90 대사 점검) — 검사 정의에 없는 **짧은 단서**(쿨다운 안에서 회를 뺄 때 문장 대신 말하는 말)와 **처음부터 틀린 출발 알림**

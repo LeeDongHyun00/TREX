@@ -67,7 +67,11 @@ class FloorFeatureExtractor {
     fun computeForExercise(exercise: String, xy: FloatArray, vis: FloatArray, width: Int, height: Int,
                            up: Vec3? = null, tMs: Long? = null): Map<String, Float> {
         val legacy = compute(xy,vis,width,height) + sideFeatures(xy,vis,width,height) +
-            if(exercise == "플랭크") PlankGeometry.features(xy,vis,width,height) else emptyMap()
+            when (exercise) {
+                "플랭크" -> PlankGeometry.features(xy,vis,width,height)
+                "푸시업" -> PushupFormSpecs.withSupport(PushupGeometry.features(xy,vis,width,height))
+                else -> emptyMap()
+            }
         val kind = FloorChain.Kind.of(exercise) ?: return legacy
         val c = chain?.takeIf { it.kind == kind } ?: FloorChain(kind).also { chain = it }
         val t = tMs ?: (chainFrames * CHAIN_FRAME_MS)

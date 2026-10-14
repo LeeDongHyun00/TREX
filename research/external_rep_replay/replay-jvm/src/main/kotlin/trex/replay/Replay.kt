@@ -199,7 +199,7 @@ fun signalValue(features: Map<String, Float>, name: String): Float? {
 }
 
 /** PostureAnalyzer.analyzeBitmap 의 추론 후처리. 사람이 없으면 null (앱의 detected=false). */
-fun frameFeatures(frame: CaptureFrame, stats: FrameStats): Map<String, Float>? {
+fun frameFeatures(frame: CaptureFrame, stats: FrameStats, exercise: String = "", width: Int = 480, height: Int = 640): Map<String, Float>? {
     if (frame.poses < 1) return null
     if (frame.image.any { it == null } || frame.world.any { it == null }) return null
     val vis = FloatArray(MP_LANDMARK_COUNT) { i ->
@@ -231,11 +231,14 @@ fun frameFeatures(frame: CaptureFrame, stats: FrameStats): Map<String, Float>? {
     val viewF = ViewEstimator.frameFeatures(joints)
     val pf = PoseFrame(joints, up)
     // §63: 런지 걸음 기하도 앱과 같은 순서·같은 함수
-    return pf.features() + viewF + Stance2d.features(xy, vis, MIN_VISIBILITY) +
+    val features = pf.features() + viewF + Stance2d.features(xy, vis, MIN_VISIBILITY) +
         Arm2d.features(xy, vis, MIN_VISIBILITY, Stance2d.DEFAULT_ASPECT, Arm2d.yawOf(viewF)) +
         Lunge2d.features(pf, xy, vis, MIN_VISIBILITY, Stance2d.DEFAULT_ASPECT, ViewEstimator.shoulderYawOf(viewF)) +
         // §97: 한 다리 계열의 기하 — 앱 PostureAnalyzer 와 같은 순서·같은 함수(롤은 캡처의 up 에서)
         LegGeometry.features(pf, xy, vis, MIN_VISIBILITY, frame.aspect, LegGeometry.rollDeg(up))
+    if (exercise != "굿모닝" && exercise != "프런트 레이즈" && exercise != "사이드 레터럴 레이즈") return features
+    val raw = FloatArray(99) { k -> frame.world[k / 3]!!.let { p -> when (k % 3) { 0 -> p.x; 1 -> p.y; else -> p.z } } }
+    return com.example.trex_kotlin.posture.RequestedFormFeatures.augment(exercise, features, xy, vis, width, height, raw, up)
 }
 
 /** 바닥 경로의 이미지 크기(px) — 메타 imageW/imageH(또는 imageWidth/imageHeight). 없으면 세로 480×640 가정(stats.floorImageAssumed). */
@@ -281,7 +284,9 @@ fun dumpFeatures(capture: Capture, out: File): Int {
     val floorFeats = floorExercise?.let { ex -> floorInputFrames(capture.frames, ex, capture.meta, stats).map { it.features } }
     out.bufferedWriter().use { w ->
         for ((k, frame) in capture.frames.withIndex()) {
-            val feats = if (floorFeats != null) floorFeats[k] else frameFeatures(frame, stats)
+            val feats = if (floorFeats != null) floorFeats[k] else frameFeatures(frame, stats, capture.meta["exercise"].orEmpty(),
+                (capture.meta["imageWidth"] ?: capture.meta["imageW"])?.toIntOrNull() ?: 480,
+                (capture.meta["imageHeight"] ?: capture.meta["imageH"])?.toIntOrNull() ?: 640)
             w.write("{\"t\":${frame.tMs},\"detected\":${feats != null},\"features\":{")
             w.write(feats.orEmpty().entries.joinToString(",") { (k, v) -> "\"$k\":${num(v)}" })
             w.write("}}")
@@ -374,7 +379,9 @@ class InputFrame(val tMs: Long, val features: Map<String, Float>?)
 /** 랜드마크 캡처 → 앱 추론 후처리를 거친 입력. 메타 floor=1 이면 바닥 경로([floorInputFrames]). */
 fun inputFrames(capture: Capture, stats: FrameStats): List<InputFrame> =
     if (capture.meta["floor"] == "1") floorInputFrames(capture)
-    else capture.frames.map { InputFrame(it.tMs, frameFeatures(it, stats)) }
+    else capture.frames.map { InputFrame(it.tMs, frameFeatures(it, stats, capture.meta["exercise"].orEmpty(),
+        (capture.meta["imageWidth"] ?: capture.meta["imageW"])?.toIntOrNull() ?: 480,
+        (capture.meta["imageHeight"] ?: capture.meta["imageH"])?.toIntOrNull() ?: 640)) }
 
 /**
  * 바닥 종목 캡처(메타 floor=1·imageWidth·imageHeight) — PostureLive 바닥 경로와 같은 함수:
@@ -468,7 +475,11 @@ fun run(job: Job, meta: Map<String, String>, frames: List<InputFrame>, stats: Fr
         stats.frames++
         prevT?.let { if (frame.tMs - it > SESSION_MAX_GAP_MS) gaps++ }
         prevT = frame.tMs
-        val features = frame.features ?: continue
+        val features = frame.features
+        if (features == null) {
+            rf?.takeIf { it.tracksObservationGaps }?.onFrame(frame.tMs, emptyMap())
+            continue
+        }
         stats.detected++
         // 앱이 준비 단계에서 심은 서 있는 기준(§89 후속 2, 로그 reps.config.seed) — 앱처럼 카운터가 처음 보는 프레임에 심는다
         pendingSeed?.let { v -> rc.seedStanding(frame.tMs, v); pendingSeed = null }
@@ -579,6 +590,7 @@ fun run(job: Job, meta: Map<String, String>, frames: List<InputFrame>, stats: Fr
         "paritySides" to sc?.let { c -> meta["loggedSidesTrack"]?.let { it == listOf(c.track.left, c.track.right, c.track.unknown, c.track.extra, c.track.pairs).joinToString(",") } },
         "missedDips" to sc?.let { Raw(dips.joinToString(",", "[", "]")) },
     )
+    if (rc.effectiveCompleteOnReturn && !rc.usesHysteresis) rc.signal.returnTolerance?.let { out["returnTolerance"] = it }
     rc.floorTracker?.let { out.putAll(floorJson(it, stats)) }
     out.putAll(parity(meta, rc, validSeq))
     return json(out)

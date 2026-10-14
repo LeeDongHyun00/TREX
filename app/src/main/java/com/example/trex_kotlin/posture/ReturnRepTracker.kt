@@ -19,7 +19,7 @@ import kotlin.math.abs
  * 넓힐수록 MM-Fit(세트 앞뒤 휴식 포함) 정확 일치가 오르고 과다 세트는 0 이었지만, 1/2 은 반만 올라온 반동을 1회로 만든다.
  * 실기기 푸시업 기록(정답 3~4회, `rep_fixture_baseline1.txt`)은 1/4 에서 1회, 1/3 에서 4회 — 1/3 을 고른 이유.
  */
-class ReturnRepTracker(private val minAmp: Float, private val refractoryMs: Long = 1200L) {
+class ReturnRepTracker(private val minAmp: Float, private val refractoryMs: Long = 1200L, private val returnTolerance: Float? = null) {
     data class Cycle(val min: Float, val max: Float)
     private var anchor: Float? = null
     private var stableAt: Long? = null
@@ -76,7 +76,11 @@ class ReturnRepTracker(private val minAmp: Float, private val refractoryMs: Long
         val d = (value - origin) * dir
         if (d > depth) depth = d
         // §99 복귀: 깊이의 2/3 이상 되돌아왔거나 기준을 진폭 미만으로 지나쳤다(위 KDoc)
-        if (d > maxOf(band, depth * RETURN_DEPTH_FRACTION) || d <= -minAmp) {
+        // 두 레이즈만 지정 복귀폭을 사용한다. 기존 종목은 main의 방향·깊이 복귀식을 유지한다.
+        val outside = returnTolerance?.takeIf { it.isFinite() }?.let {
+            abs(value - origin) > it.coerceIn(band, minAmp * .75f)
+        } ?: (d > maxOf(band, depth * RETURN_DEPTH_FRACTION) || d <= -minAmp)
+        if (outside) {
             returnAt = null; returnCount = 0
             return null
         }

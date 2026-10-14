@@ -70,7 +70,7 @@ class RepCounter(
     val cueSource: IdentityCueSource? get() = legTracker ?: floorTracker ?: (if (paired) PairedArmCues else null)
     private val hysteresis = signal.polarity?.let { RepHysteresis(signal.minAmp, it) }
     private val confirmation = if (hysteresis != null && startConfirmation) RepStartConfirmation() else null
-    private val returnTracker = if (completeOnReturn && hysteresis == null) ReturnRepTracker(signal.minAmp, refractoryMs) else null
+    private val returnTracker = if (completeOnReturn && hysteresis == null) ReturnRepTracker(signal.minAmp, refractoryMs, signal.returnTolerance) else null
     var reps: Int = 0
         private set
     val repTimesMs = ArrayList<Long>()
@@ -161,7 +161,7 @@ class RepCounter(
             // 자식은 새 코어(복귀 히스테리시스, DOWN = 휴식이 신호의 높은 쪽 = 팔을 편 각) — 설계 §18.3 의 팔별 카운터가 이 코어였다(MediaPipe 교대 컬
             // 세트 정확 0.90). 레거시 복귀형을 팔별로 돌리면 MM-Fit 59세트에서 거의 세지 못했다(재생 2026-09-26: 세트 정확 0.05).
             RepCounter(signal.copy(feature = f, pairedFeatures = null, identityFeature = null, identityMinAmp = null, rejectFeatures = emptyMap(),
-                romDirection = null, romThreshold = null, romRatio = null, comparisonFeature = null, comparisonMinAmp = null,
+                romDirection = null, romThreshold = null, romRatio = null, comparisonFeature = null, comparisonMinAmp = null, returnTolerance = null,
                 polarity = RepPolarity.DOWN),
                 refractoryMs, maxGapMs, completeOnReturn, startConfirmation = false)
         }.toTypedArray()
@@ -173,7 +173,7 @@ class RepCounter(
     private val armsWrist: Array<RepCounter>? = if (signal.pairedFeatures != null && signal.romAuxFeature != null)
         arrayOf("L", "R").map { sd ->
             RepCounter(signal.copy(feature = signal.romAuxFeature.replace("{side}", sd), minAmp = WRIST_MIN_AMP, pairedFeatures = null, identityFeature = null, identityMinAmp = null,
-                rejectFeatures = emptyMap(), romDirection = null, romThreshold = null, romRatio = null, comparisonFeature = null, comparisonMinAmp = null,
+                rejectFeatures = emptyMap(), romDirection = null, romThreshold = null, romRatio = null, comparisonFeature = null, comparisonMinAmp = null, returnTolerance = null,
                 romAuxFeature = null, polarity = RepPolarity.UP, plausibleMin = null, plausibleMax = null),
                 refractoryMs, maxGapMs, completeOnReturn, startConfirmation = false)
         }.toTypedArray() else null
@@ -969,6 +969,8 @@ data class RepSignal(
     val romAuxFeature: String? = null,
     val romAuxRatio: Float? = null,
     val romAuxFloor: Float? = null,
+    /** 두 레이즈의 복귀 여유. null은 기존 기본값. */
+    val returnTolerance: Float? = null,
 ) {
     /** 팔별 경로인가. */
     val paired: Boolean get() = pairedFeatures != null
@@ -1074,8 +1076,8 @@ object RepSignals {
         // 덤벨 컬: 절대 ROM(81.3°, GT 척도)을 뗐다 — 팔별 본인 기준 비율 ROM 으로(base() 의 신호 정의, spec §62c)
         "페이스 풀" to Rom("min", 84.0116f, false, null),
         "랫풀 다운" to Rom("max", 19.2011f, false, null),
-        "사이드 레터럴 레이즈" to Rom("min", 107.4791f, false, null),
-        "프런트 레이즈" to Rom("min", 96.5170f, false, null),
+        "사이드 레터럴 레이즈" to Rom("min", 125f, false, null),
+        "프런트 레이즈" to Rom("min", 125f, false, null),
         "업라이트로우" to Rom("min", 116.1889f, false, null),
         "덤벨 체스트 플라이" to Rom("max", 31.6000f, false, null),
         "덤벨 인클라인 체스트 플라이" to Rom("max", 29.0803f, false, null),
@@ -1165,9 +1167,13 @@ object RepSignals {
             romCueBottom = "팔을 끝까지 펴지 않았어요. 내릴 때 팔꿈치를 다 펴 주세요"))
         put("랫풀 다운", RepSignal("forearm_vert_mean", ANGLE))
         // ---- 전완 수직도 계열 (들어올림)
-        for (ex in listOf("사이드 레터럴 레이즈", "프런트 레이즈", "업라이트로우", "덤벨 체스트 플라이", "덤벨 인클라인 체스트 플라이")) {
+        for (ex in listOf("업라이트로우", "덤벨 체스트 플라이", "덤벨 인클라인 체스트 플라이")) {
             put(ex, RepSignal("forearm_vert_mean", ANGLE))
         }
+        // 두 레이즈: 팔꿈치 굽힘에 따라 전완 신호가 작아지는 누락을 줄이도록 위팔 올림으로 센다.
+        // 비교 기록의 의미는 기존 전완 신호로 유지한다. 90도 한 점을 요구하지 않으며 ROM은 미검증 참고다.
+        for (ex in listOf("사이드 레터럴 레이즈", "프런트 레이즈"))
+            put(ex, RepSignal("upperarm_vert_mean", ANGLE, comparisonFeature="forearm_vert_mean", comparisonMinAmp=ANGLE, returnTolerance=18f))
         // ---- 손 높이/거리 계열
         put("오버 헤드 프레스", RepSignal("palm_h_sh", NORM))
         put("케이블 푸시 다운", RepSignal("palm_h_sh", NORM))

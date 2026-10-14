@@ -91,6 +91,7 @@ data class RepEngineLog(
     val refractoryMs: Long,
     val maxGapMs: Long,
     val completeOnReturn: Boolean,
+    val returnTolerance: Float? = null,
     val polarity: String? = null,
     val returnFraction: Float? = null,
     val firstPairWindowMs: Long? = null,
@@ -143,6 +144,7 @@ data class RepEngineLog(
                 refractoryMs = counter.effectiveRefractoryMs,
                 maxGapMs = counter.effectiveMaxGapMs,
                 completeOnReturn = counter.effectiveCompleteOnReturn,
+                returnTolerance = if (counter.effectiveCompleteOnReturn && !counter.usesHysteresis) s.returnTolerance else null,
                 polarity = s.polarity?.name?.lowercase(),
                 returnFraction = counter.returnFraction,
                 firstPairWindowMs = confirm?.firstPairWindowMs,
@@ -599,6 +601,7 @@ object SetLogJson {
                 sb.append(",\"refractory_ms\":").append(e.refractoryMs)
                 sb.append(",\"max_gap_ms\":").append(e.maxGapMs)
                 sb.append(",\"complete_on_return\":").append(e.completeOnReturn)
+                e.returnTolerance?.let { sb.append(",\"return_tolerance\":").append(num(it)) }
                 e.polarity?.let { sb.append(",\"polarity\":"); str(sb, it) }
                 e.seed?.let { sb.append(",\"seed\":").append(num(it)) }
                 e.standing?.let { fs ->

@@ -109,4 +109,37 @@ class ReplayCaptureTest {
         assertTrue(line, line.contains("\"refractoryMs\":1200") && line.contains("\"maxGapMs\":1500") && line.contains("\"completeOnReturn\":true"))
         assertFalse(line.contains("\"error\""))
     }
+    @Test
+    fun `raise landmark replay uses exactly the app augmentation with capture dimensions`() {
+        val world=standing(0f).map { it.copyOf() }.toMutableList()
+        world[13]=floatArrayOf(.46f,-.48f,-.15f);world[14]=floatArrayOf(-.46f,-.48f,-.15f)
+        world[15]=floatArrayOf(.64f,-.46f,-.24f);world[16]=floatArrayOf(-.64f,-.46f,-.24f)
+        val cap=readCapture(temp("H\texercise=사이드 레터럴 레이즈\timageW=1280\timageH=720\n"+fLine(0,world)+"\n"))
+        val frame=cap.frames.single()
+        val base=frameFeatures(frame,FrameStats())!!
+        val xy=FloatArray(66){k->frame.image[k/2]!![k%2]}
+        val raw=FloatArray(99){k->world[k/3][k%3]}
+        val expected=com.example.trex_kotlin.posture.RequestedFormFeatures.augment("사이드 레터럴 레이즈",base,xy,FloatArray(33){.9f},1280,720,raw)
+        val replay=inputFrames(cap,FrameStats()).single().features!!
+        assertTrue(replay.containsKey("raise_lateral_plane_L"))
+        assertEquals(expected,replay)
+    }
+
+    @Test
+    fun `completed exercise replay does not receive raise features`() {
+        val cap=readCapture(temp("H\texercise=덤벨 컬\n"+fLine(0,standing(0f))+"\n"))
+        assertEquals(frameFeatures(cap.frames.single(),FrameStats()),inputFrames(cap,FrameStats()).single().features)
+    }
+
+    @Test
+    fun `raise capture dump contains the same augmented features as replay`() {
+        val world=standing(0f).map { it.copyOf() }.also { it[0][1]=-.64f } // 고개를 숙이지 않은 합성 얼굴
+        val cap=readCapture(temp("H\texercise=프런트 레이즈\timageW=720\timageH=1280\n"+fLine(0,world)+"\n"))
+        val out=File.createTempFile("raise-dump", ".jsonl").apply { deleteOnExit() }
+        dumpFeatures(cap,out)
+        val line=out.readText()
+        val features=inputFrames(cap,FrameStats()).single().features!!
+        assertTrue(features.containsKey("raise_shoulder_lift_L"))
+        for((k,v) in features)assertTrue(k,line.contains("\"$k\":${num(v)}"))
+    }
 }

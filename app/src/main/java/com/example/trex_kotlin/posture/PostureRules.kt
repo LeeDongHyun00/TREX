@@ -213,7 +213,10 @@ class PostureRuleSet(
      */
     fun plusRepForm(): PostureRuleSet {
         val demoted = rules.map { r ->
-            if (r.id in RepFormSpecs.supersedes && r.status == RuleStatus.SHIP)
+            if (r.id == "floor|푸시업|고개 젖힘/숙임 여부")
+                r.copy(status = RuleStatus.EXCLUDE,
+                    reason = "고개 방향과 목 정렬의 반복 검사로 변경. 기존 각도 하나로 숙임·젖힘을 구분하지 못해 중복 판정 제외")
+            else if (r.id in RepFormSpecs.supersedes && r.status == RuleStatus.SHIP)
                 r.copy(status = RuleStatus.BETA, cautions = r.cautions + ("반복 창 검사(${RepFormSpecs.supersedes.getValue(r.id)})가 판정을 대신한다 — " +
                     (RepFormSpecs.supersedeNotes[r.id] ?: "§62a: 세트 평균은 서 있는 프레임이 결정해 실기기 오탐")))
             else r

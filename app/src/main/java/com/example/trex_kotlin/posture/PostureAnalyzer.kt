@@ -140,6 +140,8 @@ class PostureAnalyzer(
     private val preferGpu: Boolean = true,
 ) {
     private var landmarker: PoseLandmarker? = null
+    @Volatile var pushupFaceEnabled: Boolean = false
+    private var pushupFace: PushupFaceAnalyzer? = null
     /**
      * 얼굴 메시 모델(spec §101d, 바닥 세 종목의 시선 — `FloorGaze`). [faceEnabled] 일 때 [FACE_INTERVAL_MS] 마다 한 번(판정 격자 300 ms 와 같다 — 85 ms 추론 루프마다 돌리지 않는다)
      * 같은 업라이트 비트맵으로 추론하고, 결과(검출·요)를 [FACE_STALE_MS] 안의 샘플 피처에 얹는다. 생성·추론·닫기는 Pose 와 같은 락(this) 안이다(§63 SIGSEGV 함정).
@@ -437,12 +439,16 @@ class PostureAnalyzer(
             LegGeometry.features(frame, xy, vis, MIN_VISIBILITY, aspect, LegGeometry.rollDeg(upUsed))
         // §101d: 얼굴 메시 피처(바닥 세 종목의 시선) — 판정 격자마다 한 번, 같은 비트맵. 재생기 .cap 에는 없다(로그 전용)
         val featuresOut = if (faceEnabled) HashMap(features).also { faceFeatures(upright, xy, vis, ts, it) } else features
+        val requestedFeatures = if (pushupFaceEnabled && !closed) {
+            val helper = pushupFace ?: PushupFaceAnalyzer(context, preferGpu).also { pushupFace = it }
+            featuresOut + helper.features(upright, xy, vis)
+        } else featuresOut
         val visibleCount = vis.count { it >= MIN_VISIBILITY }
         return PoseSample(
             detected = true,
             normalizedXy = xy,
             visibility = vis,
-            features = featuresOut,
+            features = requestedFeatures,
             visibleJointCount = visibleCount,
             inferMs = inferMs,
             imageWidth = w,
@@ -504,6 +510,7 @@ class PostureAnalyzer(
         } catch (_: Throwable) {
         }
         landmarker = null
+        pushupFace?.close(); pushupFace = null; pushupFaceEnabled = false
         try {
             faceLandmarker?.close()
         } catch (_: Throwable) {
