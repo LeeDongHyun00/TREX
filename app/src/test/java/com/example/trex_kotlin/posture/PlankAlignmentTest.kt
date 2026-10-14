@@ -106,8 +106,9 @@ class PlankAlignmentTest {
         val feedback=FloorFeedbackController("플랭크",rules)
         val muted=feedback.update(2000,x,null,emptyList(),anchored=false,voiceEnabled=false,alignment=a)
         assertEquals(FloorFeedbackPhase.ATTENTION,muted.phase);assertNull(muted.speech)
+        // spec §99 사용자 결정 Q1(2026-10-06 밤): beta 정렬 이탈은 음성 없이 화면 문장·부위만(전에는 "참고 안내예요…" 로 말했다)
         val voiced=feedback.update(2250,x,null,emptyList(),anchored=false,alignment=a)
-        assertTrue(voiced.speech!!.contains("고개"));assertTrue(voiced.landmarks.contains(0))
+        assertNull(voiced.speech);assertTrue(voiced.message.contains("고개"));assertTrue(voiced.landmarks.contains(0))
     }
     @Test fun invalidInitialPostureIsObservedWithoutBecomingCorrect() {
         val t=PostureComparisonTracker("플랭크",ComparisonMetrics.forExercise("플랭크",rules))

@@ -216,11 +216,14 @@ class RepUnitTest {
     @Test
     fun sessionUnitComesFromTheProfileAndTheFloorPathIsAlwaysCycles() {
         for (name in listOf("런지", "바벨 런지", "사이드 런지", "크로스 런지")) {
-            // 런지·바벨 런지는 쪽별(§63·§66) — 사이드·크로스 런지는 두 걸음 = 1회
-            assertEquals(name, if (name in SIDE_EACH_LUNGES) RepUnit.SIDE_EACH else RepUnit.SIDE_PAIR, RepUnit.forSession(ExerciseProfiles.forName(name), floor = false))
+            // 런지·바벨 런지(§63·§66)·사이드·크로스 런지(§97)는 모두 쪽별 — 왼 1 + 오른 1 = 1회
+            assertEquals(name, if (name in SIDE_EACH_EXERCISES) RepUnit.SIDE_EACH else RepUnit.SIDE_PAIR, RepUnit.forSession(ExerciseProfiles.forName(name), floor = false))
             assertEquals(name, RepUnit.CYCLE, RepUnit.forSession(ExerciseProfiles.forName(name), floor = true))
         }
-        for (name in listOf("덤벨 컬", "스탠딩 니업", "바벨 스쿼트")) {
+        for (name in listOf("스탠딩 니업", "스탠딩 사이드 크런치")) {   // 한 다리 계열(§97): 들기 둘도 쪽별
+            assertEquals(name, RepUnit.SIDE_EACH, RepUnit.forSession(ExerciseProfiles.forName(name), floor = false))
+        }
+        for (name in listOf("덤벨 컬", "바벨 스쿼트")) {
             assertEquals(name, RepUnit.CYCLE, RepUnit.forSession(ExerciseProfiles.forName(name), floor = false))
         }
         assertEquals(RepUnit.CYCLE, RepUnit.forSession(null, floor = false))

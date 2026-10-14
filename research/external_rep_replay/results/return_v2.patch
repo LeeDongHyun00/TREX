@@ -1,0 +1,198 @@
+diff --git a/app/src/main/java/com/example/trex_kotlin/posture/PostureSetLog.kt b/app/src/main/java/com/example/trex_kotlin/posture/PostureSetLog.kt
+index dad9d604..30624d74 100644
+--- a/app/src/main/java/com/example/trex_kotlin/posture/PostureSetLog.kt
++++ b/app/src/main/java/com/example/trex_kotlin/posture/PostureSetLog.kt
+@@ -109,7 +109,8 @@ data class RepEngineLog(
+     val standing: Map<String, Float>? = null,
+ ) {
+     companion object {
+-        const val ENGINE_RETURN = "return_v1"
++        /** v2 = 방향 복귀 띠(spec §99). v1 로그는 옛 복귀 규칙으로 센 것이라 지금 재생과 파리티가 어긋날 수 있다. */
++        const val ENGINE_RETURN = "return_v2"
+         const val ENGINE_HYSTERESIS = "hysteresis_v1"
+ 
+         /**
+diff --git a/app/src/main/java/com/example/trex_kotlin/posture/ReturnRepTracker.kt b/app/src/main/java/com/example/trex_kotlin/posture/ReturnRepTracker.kt
+index bd2acf99..2381f7a6 100644
+--- a/app/src/main/java/com/example/trex_kotlin/posture/ReturnRepTracker.kt
++++ b/app/src/main/java/com/example/trex_kotlin/posture/ReturnRepTracker.kt
+@@ -6,6 +6,18 @@ import kotlin.math.abs
+  * 준비 위치에서 출발해 같은 위치로 돌아온 사이클을 확정한다.
+  * 다음 반복의 반전을 기다리지 않으며, 정지·가림·불완전 복귀를 완료로 만들지 않는다.
+  * 최소 움직임과 복귀는 검출 조건일 뿐 올바른 자세 판정이 아니다. 자동 카운트는 계속 참고다.
++ *
++ * 복귀(v2, spec §99) — 기준은 처음 3샘플 가만히 있던 자세로 고정되는데, 사람의 쉬는 자세는 그 기준과 몇 도씩 다르다.
++ * v1 은 기준 ±0.22 × 진폭 안에 다시 들어와야만 복귀로 봐서, 휴식 자세가 그 띠를 벗어나면 세트 끝까지 0회였다:
++ *  - 지나친 복귀: 세트 전 느슨하게 선 자세(무릎 154°)가 기준이 되고 세트 중 선 자세는 165° — MM-Fit 스쿼트 w18 set02
++ *    (세트 앞 15 s 휴식을 붙인 재생에서 10회 중 1회), FMS 레그 레이즈 s03(시작 171°, 내린 다리 177° — 세 회 모두 0).
++ *  - 덜 돌아온 복귀: 세트 중 매번 끝까지 펴지 않는다(띠 7.7° 를 넘게 남는다) — MM-Fit 런지.
++ * 그래서 복귀를 방향으로 본다. 이번 회가 기준에서 벗어난 쪽(dir)으로의 이탈 d 가
++ *  - 회 깊이의 3분의 2 이상 되돌아왔거나(띠 = max(0.22 × 진폭, [RETURN_DEPTH_FRACTION] × 깊이)),
++ *  - 기준을 지나쳤으면(반대쪽으로 진폭 미만) 복귀다. 진폭 이상 지나치면 반대쪽의 새 움직임이지 복귀가 아니다.
++ * 띠의 근거는 spec §99 의 재생 A/B(같은 캡처를 v1·v2 로, `research/external_rep_replay/tracker_ab.py`)다. 깊이 비 1/4 → 1/3 → 1/2 로
++ * 넓힐수록 MM-Fit(세트 앞뒤 휴식 포함) 정확 일치가 오르고 과다 세트는 0 이었지만, 1/2 은 반만 올라온 반동을 1회로 만든다.
++ * 실기기 푸시업 기록(정답 3~4회, `rep_fixture_baseline1.txt`)은 1/4 에서 1회, 1/3 에서 4회 — 1/3 을 고른 이유.
+  */
+ class ReturnRepTracker(private val minAmp: Float, private val refractoryMs: Long = 1200L) {
+     data class Cycle(val min: Float, val max: Float)
+@@ -16,6 +28,9 @@ class ReturnRepTracker(private val minAmp: Float, private val refractoryMs: Long
+     /** 준비 자세에서 최소 진폭 이상 벗어나 복귀를 기다리는 중 — 세지 않는 조회용(§63 놓친 얕은 걸음은 이때 알리지 않는다). */
+     var moving = false
+         private set
++    /** 이번 회가 기준에서 벗어난 방향(+1 = 커짐, −1 = 작아짐)과 그 방향으로의 최대 이탈(깊이) — 복귀 띠(§99)의 입력. */
++    private var dir = 0
++    private var depth = 0f
+     private var startAt = 0L
+     private var low = 0f
+     private var high = 0f
+@@ -55,10 +70,13 @@ class ReturnRepTracker(private val minAmp: Float, private val refractoryMs: Long
+         }
+         low = minOf(low, value); high = maxOf(high, value)
+         if (!moving) {
+-            if (abs(value - origin) >= minAmp) moving = true
++            if (abs(value - origin) >= minAmp) { moving = true; dir = if (value > origin) 1 else -1; depth = 0f }
+             else return null
+         }
+-        if (abs(value - origin) > band) {
++        val d = (value - origin) * dir
++        if (d > depth) depth = d
++        // §99 복귀: 깊이의 2/3 이상 되돌아왔거나 기준을 진폭 미만으로 지나쳤다(위 KDoc)
++        if (d > maxOf(band, depth * RETURN_DEPTH_FRACTION) || d <= -minAmp) {
+             returnAt = null; returnCount = 0
+             return null
+         }
+@@ -71,4 +89,9 @@ class ReturnRepTracker(private val minAmp: Float, private val refractoryMs: Long
+         low = origin; high = origin
+         return cycle
+     }
++
++    companion object {
++        /** 복귀 띠의 회 깊이 비(§99) — 기준 쪽으로 깊이의 1 − 이 값(= 3분의 2) 이상 되돌아오면 복귀. 0.22 × 진폭보다 좁아지지 않는다. */
++        const val RETURN_DEPTH_FRACTION = 1f / 3f
++    }
+ }
+diff --git a/app/src/test/java/com/example/trex_kotlin/posture/PostureSetLogTest.kt b/app/src/test/java/com/example/trex_kotlin/posture/PostureSetLogTest.kt
+index 44a6f368..e2631003 100644
+--- a/app/src/test/java/com/example/trex_kotlin/posture/PostureSetLogTest.kt
++++ b/app/src/test/java/com/example/trex_kotlin/posture/PostureSetLogTest.kt
+@@ -136,7 +136,7 @@ class PostureSetLogTest {
+         val json = SetLogJson.encode(log)
+         assertTrue(json.contains("\"app_version\":\"1.1.0-preview.2\""))
+         assertTrue(json.contains("\"thermal\":{\"start\":0,\"changes\":[{\"t_ms\":6000,\"status\":2}]}"))
+-        assertTrue(json.contains("\"engine\":\"return_v1\""))
++        assertTrue(json.contains("\"engine\":\"return_v2\""))
+         // 지금 앱의 복귀형 구성(forSession: 불응기 1.2 s · 끊김 1.5 s · 복귀 완료) — polarity 가 없으면(레거시) 새 코어 키도 없다
+         // 스쿼트는 판별 게이트(spec §62)가 있어 config 끝에 identity 블록이 붙는다
+         assertTrue(json.contains("\"config\":{\"feature\":\"knee_mean\",\"min_amp\":35,\"refractory_ms\":1200,\"max_gap_ms\":1500," +
+diff --git a/app/src/test/java/com/example/trex_kotlin/posture/RepHysteresisTest.kt b/app/src/test/java/com/example/trex_kotlin/posture/RepHysteresisTest.kt
+index 5e23ea78..d78338f7 100644
+--- a/app/src/test/java/com/example/trex_kotlin/posture/RepHysteresisTest.kt
++++ b/app/src/test/java/com/example/trex_kotlin/posture/RepHysteresisTest.kt
+@@ -320,7 +320,8 @@ class RepHysteresisTest {
+ 
+     @Test fun deviceFixtureBaseline1IsRecordedNotAsserted() {
+         // 실기기 푸시업 baseline 1/3 — 정답은 3~4회(사람이 센 값의 폭). 여기서는 두 경로가 **센 값을 기록**한다:
+-        // 새 코어 4회(정답 폭 안), 앱 세션의 현재 복귀형 0회(로드맵 결함 7 — 안정 준비 자세를 못 잡는다).
++        // 새 코어 4회(정답 폭 안), 앱 세션의 복귀형 4회(spec §99 v2 — v1 은 0회: 세트 전 자세 1.4 가 기준이 되고 세트 중 위 자세는
++        // 1.17~1.21 이라 띠 ±0.066 에 못 돌아왔다. v2 의 깊이 1/3 띠 안이다).
+         // 정답을 단정하는 단언이 아니다 — 코어를 바꾸면 이 숫자가 바뀌는 것을 알아차리기 위한 회귀 기록이다.
+         val lines = javaClass.classLoader!!.getResourceAsStream("rep_fixture_baseline1.txt")!!
+             .bufferedReader().readLines().filter { !it.startsWith("#") && it.isNotBlank() }
+@@ -335,7 +336,7 @@ class RepHysteresisTest {
+         }
+         assertEquals(4, core.reps)
+         assertEquals(0, core.pendingReps)
+-        assertEquals(0, live.reps)
++        assertEquals(4, live.reps)
+     }
+ 
+     @Test fun sessionFactoryReproducesPostureLiveConstruction() {
+diff --git a/app/src/test/java/com/example/trex_kotlin/posture/ReturnRepTrackerTest.kt b/app/src/test/java/com/example/trex_kotlin/posture/ReturnRepTrackerTest.kt
+index c4331eb4..a43f5e38 100644
+--- a/app/src/test/java/com/example/trex_kotlin/posture/ReturnRepTrackerTest.kt
++++ b/app/src/test/java/com/example/trex_kotlin/posture/ReturnRepTrackerTest.kt
+@@ -48,6 +48,27 @@ class ReturnRepTrackerTest {
+         assertEquals(1,m.counter.reps)
+         m.cycle();assertEquals(2,m.counter.reps)
+     }
++    // §99 — 기준은 처음 가만히 있던 자세인데, 세트 중 쉬는 자세가 그보다 더 펴져 있다(MM-Fit 스쿼트 w18: 세트 전 154°, 세트 중 165°).
++    // v1 은 띠(±0.066) 밖이라 0회였다. 기준을 진폭 미만으로 지나친 복귀는 복귀다
++    @Test fun returnPastTheAnchorCounts() {
++        val m=Motion();m.stable(1.2f);repeat(4){m.cycle(from=1.4f,to=.4f)}
++        assertEquals(4,m.counter.reps)
++    }
++    // 매번 끝까지 펴지 않는 세트 — 깊이 1.0 중 0.2 를 남기고 돌아온다(깊이의 1/3 이하). v1 은 0회
++    @Test fun returnShortOfTheAnchorWithinAThirdOfTheDepthCounts() {
++        val m=Motion();m.stable(1.4f);repeat(4){m.cycle(from=1.2f,to=.4f)}
++        assertEquals(4,m.counter.reps)
++    }
++    // 깊이의 1/3 을 넘게 남기면(0.4/1.0) 여전히 복귀가 아니다 — 반만 올라온 반동은 1회가 아니다
++    @Test fun halfwayBounceIsNotAReturn() {
++        val m=Motion();m.stable(1.4f);m.cycle(to=.4f,returnTo=1.0f);m.cycle(from=1.0f,to=.4f,returnTo=1.0f)
++        assertEquals(0,m.counter.reps)
++    }
++    // 기준을 진폭 이상 지나치면 반대쪽의 새 움직임이지 복귀가 아니다
++    @Test fun overshootByAFullAmplitudeIsNotAReturn() {
++        val m=Motion();m.stable(1.0f);repeat(6){m.sample(.6f)};repeat(10){m.sample(1.5f)}
++        assertEquals(0,m.counter.reps)
++    }
+     @Test fun fullResetAllowsANewSessionClock() {
+         val m=Motion();m.stable();m.cycle();m.counter.reset();m.time=0;m.stable();m.cycle()
+         assertEquals(1,m.counter.reps)
+diff --git a/app/src/test/resources/setlog_s58_fixture.txt b/app/src/test/resources/setlog_s58_fixture.txt
+index 25818a75..843a267d 100644
+--- a/app/src/test/resources/setlog_s58_fixture.txt
++++ b/app/src/test/resources/setlog_s58_fixture.txt
+@@ -4,7 +4,7 @@
+ # 셋째 줄: 표시 단위 좌우 짝(사용자 결정 2026-09-24) — reps.unit·cycles_per_rep·completed·half_pending. count·t_ms·min/max/valid·invalid 는 사이클 그대로.
+ # 넷째 줄: 렙 검증 모드(spec §61) — validation·image, 검출 프레임마다 xy(33×2)·w(33×3, MediaPipe 월드 원값)·up. 미검출 프레임은 좌표 키가 없다. 끄면(앞 세 줄) 바이트 그대로.
+ # 2026-09-25 (spec §62): 판별 신호가 있는 종목(바벨 스쿼트)의 줄에 reps.config.identity{feature,min_amp}·reps.rejected[]·reps.identity_swing[] 이 붙었다(첫·둘째·넷째 줄). 런지(셋째 줄)는 키가 없다. 이 판의 줄은 파이썬 encode_setlog 가 썼고 PostureSetLogTest 가 같은 줄을 요구한다.
+-{"schema":"trex.posture.setlog/1","set_id":"20260924T020000-gold0001","created_at":"2026-09-24T02:00:30Z","subject_id":"s-test0001","exercise":"바벨 스쿼트","rules_version":"mp_v0.1","model":"full","delegate":"GPU","front_camera":false,"up_from_gravity":true,"tilt_deg":2.4,"sample_interval_ms":300,"up_flipped_frames":0,"up_verified_frames":4,"note":"session:기본 스쿼트 assessment_end_ms=900 ","mode":"coach","app_version":"0.9.1-debug","measurements":["참고 · 골든"],"assessment_end_t_ms":900,"anchor_t_ms":900,"view":{"yaw_deg":3.1,"r":0.97,"class":"C","frames":4},"thermal":{"start":0,"changes":[{"t_ms":600,"status":1}]},"reps":{"count":1,"invalid":0,"signal":"knee_mean","t_ms":[900],"min":[92.25],"max":[170],"valid":[true],"engine":"return_v1","config":{"feature":"knee_mean","min_amp":35,"refractory_ms":1200,"max_gap_ms":1500,"complete_on_return":true,"rom_direction":"min","rom_threshold":97.8905,"rom_tier":"reference","identity":{"feature":"knee_maxside","min_amp":35}},"rejected":[{"t_ms":1200,"min":118,"max":170,"swing":12.5}],"identity_swing":[71.5],"resets":[{"t_ms":-120,"after_t_ms":null,"reason":"camera_switch"},{"t_ms":410,"after_t_ms":300,"reason":"pause"}]},"frames":[{"t_ms":0,"infer_ms":55,"visible":33,"vis":null,"features":{"knee_L":171.2,"knee_R":168.8,"knee_mean":170,"knee_minside":168.8}},{"t_ms":300,"infer_ms":55,"visible":33,"vis":null,"features":{"knee_L":132.7,"knee_R":130.3,"knee_mean":131.5,"knee_minside":130.3}},{"t_ms":600,"infer_ms":55,"visible":33,"vis":null,"features":{"knee_L":93.45,"knee_R":91.05,"knee_mean":92.25,"knee_minside":91.05}},{"t_ms":900,"infer_ms":55,"visible":33,"vis":null,"features":{"knee_L":169.2,"knee_R":166.8,"knee_mean":168,"knee_minside":166.8}}],"results":[{"rule_id":"x|y","verdict":"ABSTAIN","value":null,"n":0,"baseline_applied":false,"value_rel":null}]}
++{"schema":"trex.posture.setlog/1","set_id":"20260924T020000-gold0001","created_at":"2026-09-24T02:00:30Z","subject_id":"s-test0001","exercise":"바벨 스쿼트","rules_version":"mp_v0.1","model":"full","delegate":"GPU","front_camera":false,"up_from_gravity":true,"tilt_deg":2.4,"sample_interval_ms":300,"up_flipped_frames":0,"up_verified_frames":4,"note":"session:기본 스쿼트 assessment_end_ms=900 ","mode":"coach","app_version":"0.9.1-debug","measurements":["참고 · 골든"],"assessment_end_t_ms":900,"anchor_t_ms":900,"view":{"yaw_deg":3.1,"r":0.97,"class":"C","frames":4},"thermal":{"start":0,"changes":[{"t_ms":600,"status":1}]},"reps":{"count":1,"invalid":0,"signal":"knee_mean","t_ms":[900],"min":[92.25],"max":[170],"valid":[true],"engine":"return_v2","config":{"feature":"knee_mean","min_amp":35,"refractory_ms":1200,"max_gap_ms":1500,"complete_on_return":true,"rom_direction":"min","rom_threshold":97.8905,"rom_tier":"reference","identity":{"feature":"knee_maxside","min_amp":35}},"rejected":[{"t_ms":1200,"min":118,"max":170,"swing":12.5}],"identity_swing":[71.5],"resets":[{"t_ms":-120,"after_t_ms":null,"reason":"camera_switch"},{"t_ms":410,"after_t_ms":300,"reason":"pause"}]},"frames":[{"t_ms":0,"infer_ms":55,"visible":33,"vis":null,"features":{"knee_L":171.2,"knee_R":168.8,"knee_mean":170,"knee_minside":168.8}},{"t_ms":300,"infer_ms":55,"visible":33,"vis":null,"features":{"knee_L":132.7,"knee_R":130.3,"knee_mean":131.5,"knee_minside":130.3}},{"t_ms":600,"infer_ms":55,"visible":33,"vis":null,"features":{"knee_L":93.45,"knee_R":91.05,"knee_mean":92.25,"knee_minside":91.05}},{"t_ms":900,"infer_ms":55,"visible":33,"vis":null,"features":{"knee_L":169.2,"knee_R":166.8,"knee_mean":168,"knee_minside":166.8}}],"results":[{"rule_id":"x|y","verdict":"ABSTAIN","value":null,"n":0,"baseline_applied":false,"value_rel":null}]}
+ {"schema":"trex.posture.setlog/1","set_id":"20260924T020500-gold0002","created_at":"2026-09-24T02:05:30Z","subject_id":"s-test0001","exercise":"바벨 스쿼트","rules_version":"mp_v0.1","model":"full","delegate":"GPU","front_camera":false,"up_from_gravity":true,"tilt_deg":2.4,"sample_interval_ms":300,"up_flipped_frames":0,"up_verified_frames":4,"note":"session:기본 스쿼트 assessment_end_ms=900 ","mode":"track","app_version":"0.9.1-debug","measurements":["참고 · 골든"],"assessment_end_t_ms":900,"anchor_t_ms":900,"view":{"yaw_deg":3.1,"r":0.97,"class":"C","frames":4},"thermal":{"start":0,"changes":[{"t_ms":600,"status":1}]},"reps":{"count":0,"invalid":0,"signal":"knee_mean","t_ms":[],"min":[],"max":[],"valid":[],"engine":"hysteresis_v1","config":{"feature":"knee_mean","min_amp":35,"refractory_ms":800,"max_gap_ms":1500,"complete_on_return":true,"polarity":"down","return_fraction":0.25,"first_pair_window_ms":8000,"later_window_ms":null,"min_ratio":0.5,"max_ratio":2,"rom_direction":"min","rom_threshold":97.8905,"rom_tier":"reference","identity":{"feature":"knee_maxside","min_amp":35}},"rejected":[],"identity_swing":[],"resets":[],"pending":{"unconfirmed":{"t_ms":900,"start_t_ms":300,"min":92.25,"max":170,"by_redescent":false},"in_progress":{"start_t_ms":600,"min":90,"max":168.5},"dropped":[{"t_ms":250,"start_t_ms":0,"min":120,"max":170,"by_redescent":true}]}},"frames":[{"t_ms":0,"infer_ms":55,"visible":33,"vis":null,"features":{"knee_L":171.2,"knee_R":168.8,"knee_mean":170,"knee_minside":168.8}},{"t_ms":300,"infer_ms":55,"visible":33,"vis":null,"features":{"knee_L":132.7,"knee_R":130.3,"knee_mean":131.5,"knee_minside":130.3}},{"t_ms":600,"infer_ms":55,"visible":33,"vis":null,"features":{"knee_L":93.45,"knee_R":91.05,"knee_mean":92.25,"knee_minside":91.05}},{"t_ms":900,"infer_ms":55,"visible":33,"vis":null,"features":{"knee_L":169.2,"knee_R":166.8,"knee_mean":168,"knee_minside":166.8}}],"results":[{"rule_id":"x|y","verdict":"ABSTAIN","value":null,"n":0,"baseline_applied":false,"value_rel":null}]}
+-{"schema":"trex.posture.setlog/1","set_id":"20260924T021000-gold0003","created_at":"2026-09-24T02:10:30Z","subject_id":"s-test0001","exercise":"바벨 런지","rules_version":"mp_v0.1","model":"full","delegate":"GPU","front_camera":false,"up_from_gravity":true,"tilt_deg":2.4,"sample_interval_ms":300,"up_flipped_frames":0,"up_verified_frames":4,"note":"session:기본 스쿼트 assessment_end_ms=900 ","mode":"coach","app_version":"0.9.1-debug","measurements":["참고 · 골든"],"assessment_end_t_ms":900,"anchor_t_ms":900,"view":{"yaw_deg":3.1,"r":0.97,"class":"C","frames":4},"thermal":{"start":0,"changes":[{"t_ms":600,"status":1}]},"reps":{"count":3,"invalid":1,"signal":"knee_minside","t_ms":[300,600,900],"min":[100.5,118.75,95.5],"max":[170,168,169.5],"valid":[true,false,true],"unit":"side_pair","cycles_per_rep":2,"completed":1,"half_pending":true,"engine":"return_v1","config":{"feature":"knee_minside","min_amp":35,"refractory_ms":1200,"max_gap_ms":1500,"complete_on_return":true,"rom_direction":"min","rom_threshold":112.0852,"rom_tier":"validated"},"resets":[{"t_ms":450,"after_t_ms":300,"reason":"pause"}]},"frames":[{"t_ms":0,"infer_ms":55,"visible":33,"vis":null,"features":{"knee_L":171.2,"knee_R":168.8,"knee_mean":170,"knee_minside":168.8}},{"t_ms":300,"infer_ms":55,"visible":33,"vis":null,"features":{"knee_L":132.7,"knee_R":130.3,"knee_mean":131.5,"knee_minside":130.3}},{"t_ms":600,"infer_ms":55,"visible":33,"vis":null,"features":{"knee_L":93.45,"knee_R":91.05,"knee_mean":92.25,"knee_minside":91.05}},{"t_ms":900,"infer_ms":55,"visible":33,"vis":null,"features":{"knee_L":169.2,"knee_R":166.8,"knee_mean":168,"knee_minside":166.8}}],"results":[{"rule_id":"x|y","verdict":"ABSTAIN","value":null,"n":0,"baseline_applied":false,"value_rel":null}]}
+-{"schema":"trex.posture.setlog/1","set_id":"20260924T021500-gold0004","created_at":"2026-09-24T02:15:30Z","subject_id":"s-test0001","exercise":"바벨 스쿼트","rules_version":"mp_v0.1","model":"full","delegate":"GPU","front_camera":false,"up_from_gravity":true,"tilt_deg":2.4,"sample_interval_ms":300,"up_flipped_frames":0,"up_verified_frames":4,"note":"session:기본 스쿼트 assessment_end_ms=900 ","mode":"coach","app_version":"0.9.1-debug","validation":true,"image":{"w":360,"h":640},"measurements":["참고 · 골든"],"assessment_end_t_ms":900,"anchor_t_ms":900,"view":{"yaw_deg":3.1,"r":0.97,"class":"C","frames":4},"thermal":{"start":0,"changes":[{"t_ms":600,"status":1}]},"reps":{"count":1,"invalid":0,"signal":"knee_mean","t_ms":[900],"min":[92.25],"max":[170],"valid":[true],"engine":"return_v1","config":{"feature":"knee_mean","min_amp":35,"refractory_ms":1200,"max_gap_ms":1500,"complete_on_return":true,"rom_direction":"min","rom_threshold":97.8905,"rom_tier":"reference","identity":{"feature":"knee_maxside","min_amp":35}},"rejected":[{"t_ms":1200,"min":118,"max":170,"swing":12.5}],"identity_swing":[71.5],"resets":[{"t_ms":-120,"after_t_ms":null,"reason":"camera_switch"},{"t_ms":410,"after_t_ms":300,"reason":"pause"}]},"frames":[{"t_ms":0,"infer_ms":55,"visible":33,"vis":null,"xy":[0,0.0625,0.125,0.1875,0.25,0.3125,0.375,0.4375,0.5,0.5625,0.625,0.6875,0.75,0.8125,0.875,0.9375,0,0.0625,0.125,0.1875,0.25,0.3125,0.375,0.4375,0.5,0.5625,0.625,0.6875,0.75,0.8125,0.875,0.9375,0,0.0625,0.125,0.1875,0.25,0.3125,0.375,0.4375,0.5,0.5625,0.625,0.6875,0.75,0.8125,0.875,0.9375,0,0.0625,0.125,0.1875,0.25,0.3125,0.375,0.4375,0.5,0.5625,0.625,0.6875,0.75,0.8125,0.875,0.9375,0,0.0625],"w":[-0.5,-0.375,-0.25,-0.125,0,0.125,0.25,0.375,-0.5,-0.375,-0.25,-0.125,0,0.125,0.25,0.375,-0.5,-0.375,-0.25,-0.125,0,0.125,0.25,0.375,-0.5,-0.375,-0.25,-0.125,0,0.125,0.25,0.375,-0.5,-0.375,-0.25,-0.125,0,0.125,0.25,0.375,-0.5,-0.375,-0.25,-0.125,0,0.125,0.25,0.375,-0.5,-0.375,-0.25,-0.125,0,0.125,0.25,0.375,-0.5,-0.375,-0.25,-0.125,0,0.125,0.25,0.375,-0.5,-0.375,-0.25,-0.125,0,0.125,0.25,0.375,-0.5,-0.375,-0.25,-0.125,0,0.125,0.25,0.375,-0.5,-0.375,-0.25,-0.125,0,0.125,0.25,0.375,-0.5,-0.375,-0.25,-0.125,0,0.125,0.25,0.375,-0.5,-0.375,-0.25],"up":[0,1,0.125],"features":{"knee_L":171.2,"knee_R":168.8,"knee_mean":170,"knee_minside":168.8}},{"t_ms":300,"infer_ms":55,"visible":33,"vis":null,"xy":[0,0.0625,0.125,0.1875,0.25,0.3125,0.375,0.4375,0.5,0.5625,0.625,0.6875,0.75,0.8125,0.875,0.9375,0,0.0625,0.125,0.1875,0.25,0.3125,0.375,0.4375,0.5,0.5625,0.625,0.6875,0.75,0.8125,0.875,0.9375,0,0.0625,0.125,0.1875,0.25,0.3125,0.375,0.4375,0.5,0.5625,0.625,0.6875,0.75,0.8125,0.875,0.9375,0,0.0625,0.125,0.1875,0.25,0.3125,0.375,0.4375,0.5,0.5625,0.625,0.6875,0.75,0.8125,0.875,0.9375,0,0.0625],"w":[-0.5,-0.375,-0.25,-0.125,0,0.125,0.25,0.375,-0.5,-0.375,-0.25,-0.125,0,0.125,0.25,0.375,-0.5,-0.375,-0.25,-0.125,0,0.125,0.25,0.375,-0.5,-0.375,-0.25,-0.125,0,0.125,0.25,0.375,-0.5,-0.375,-0.25,-0.125,0,0.125,0.25,0.375,-0.5,-0.375,-0.25,-0.125,0,0.125,0.25,0.375,-0.5,-0.375,-0.25,-0.125,0,0.125,0.25,0.375,-0.5,-0.375,-0.25,-0.125,0,0.125,0.25,0.375,-0.5,-0.375,-0.25,-0.125,0,0.125,0.25,0.375,-0.5,-0.375,-0.25,-0.125,0,0.125,0.25,0.375,-0.5,-0.375,-0.25,-0.125,0,0.125,0.25,0.375,-0.5,-0.375,-0.25,-0.125,0,0.125,0.25,0.375,-0.5,-0.375,-0.25],"up":[0,1,0.125],"features":{"knee_L":132.7,"knee_R":130.3,"knee_mean":131.5,"knee_minside":130.3}},{"t_ms":600,"infer_ms":55,"visible":33,"vis":null,"xy":[0,0.0625,0.125,0.1875,0.25,0.3125,0.375,0.4375,0.5,0.5625,0.625,0.6875,0.75,0.8125,0.875,0.9375,0,0.0625,0.125,0.1875,0.25,0.3125,0.375,0.4375,0.5,0.5625,0.625,0.6875,0.75,0.8125,0.875,0.9375,0,0.0625,0.125,0.1875,0.25,0.3125,0.375,0.4375,0.5,0.5625,0.625,0.6875,0.75,0.8125,0.875,0.9375,0,0.0625,0.125,0.1875,0.25,0.3125,0.375,0.4375,0.5,0.5625,0.625,0.6875,0.75,0.8125,0.875,0.9375,0,0.0625],"w":[-0.5,-0.375,-0.25,-0.125,0,0.125,0.25,0.375,-0.5,-0.375,-0.25,-0.125,0,0.125,0.25,0.375,-0.5,-0.375,-0.25,-0.125,0,0.125,0.25,0.375,-0.5,-0.375,-0.25,-0.125,0,0.125,0.25,0.375,-0.5,-0.375,-0.25,-0.125,0,0.125,0.25,0.375,-0.5,-0.375,-0.25,-0.125,0,0.125,0.25,0.375,-0.5,-0.375,-0.25,-0.125,0,0.125,0.25,0.375,-0.5,-0.375,-0.25,-0.125,0,0.125,0.25,0.375,-0.5,-0.375,-0.25,-0.125,0,0.125,0.25,0.375,-0.5,-0.375,-0.25,-0.125,0,0.125,0.25,0.375,-0.5,-0.375,-0.25,-0.125,0,0.125,0.25,0.375,-0.5,-0.375,-0.25,-0.125,0,0.125,0.25,0.375,-0.5,-0.375,-0.25],"up":[0,1,0.125],"features":{"knee_L":93.45,"knee_R":91.05,"knee_mean":92.25,"knee_minside":91.05}},{"t_ms":900,"infer_ms":55,"visible":0,"vis":null,"features":{}}],"results":[{"rule_id":"x|y","verdict":"ABSTAIN","value":null,"n":0,"baseline_applied":false,"value_rel":null}]}
++{"schema":"trex.posture.setlog/1","set_id":"20260924T021000-gold0003","created_at":"2026-09-24T02:10:30Z","subject_id":"s-test0001","exercise":"바벨 런지","rules_version":"mp_v0.1","model":"full","delegate":"GPU","front_camera":false,"up_from_gravity":true,"tilt_deg":2.4,"sample_interval_ms":300,"up_flipped_frames":0,"up_verified_frames":4,"note":"session:기본 스쿼트 assessment_end_ms=900 ","mode":"coach","app_version":"0.9.1-debug","measurements":["참고 · 골든"],"assessment_end_t_ms":900,"anchor_t_ms":900,"view":{"yaw_deg":3.1,"r":0.97,"class":"C","frames":4},"thermal":{"start":0,"changes":[{"t_ms":600,"status":1}]},"reps":{"count":3,"invalid":1,"signal":"knee_minside","t_ms":[300,600,900],"min":[100.5,118.75,95.5],"max":[170,168,169.5],"valid":[true,false,true],"unit":"side_pair","cycles_per_rep":2,"completed":1,"half_pending":true,"engine":"return_v2","config":{"feature":"knee_minside","min_amp":35,"refractory_ms":1200,"max_gap_ms":1500,"complete_on_return":true,"rom_direction":"min","rom_threshold":112.0852,"rom_tier":"validated"},"resets":[{"t_ms":450,"after_t_ms":300,"reason":"pause"}]},"frames":[{"t_ms":0,"infer_ms":55,"visible":33,"vis":null,"features":{"knee_L":171.2,"knee_R":168.8,"knee_mean":170,"knee_minside":168.8}},{"t_ms":300,"infer_ms":55,"visible":33,"vis":null,"features":{"knee_L":132.7,"knee_R":130.3,"knee_mean":131.5,"knee_minside":130.3}},{"t_ms":600,"infer_ms":55,"visible":33,"vis":null,"features":{"knee_L":93.45,"knee_R":91.05,"knee_mean":92.25,"knee_minside":91.05}},{"t_ms":900,"infer_ms":55,"visible":33,"vis":null,"features":{"knee_L":169.2,"knee_R":166.8,"knee_mean":168,"knee_minside":166.8}}],"results":[{"rule_id":"x|y","verdict":"ABSTAIN","value":null,"n":0,"baseline_applied":false,"value_rel":null}]}
++{"schema":"trex.posture.setlog/1","set_id":"20260924T021500-gold0004","created_at":"2026-09-24T02:15:30Z","subject_id":"s-test0001","exercise":"바벨 스쿼트","rules_version":"mp_v0.1","model":"full","delegate":"GPU","front_camera":false,"up_from_gravity":true,"tilt_deg":2.4,"sample_interval_ms":300,"up_flipped_frames":0,"up_verified_frames":4,"note":"session:기본 스쿼트 assessment_end_ms=900 ","mode":"coach","app_version":"0.9.1-debug","validation":true,"image":{"w":360,"h":640},"measurements":["참고 · 골든"],"assessment_end_t_ms":900,"anchor_t_ms":900,"view":{"yaw_deg":3.1,"r":0.97,"class":"C","frames":4},"thermal":{"start":0,"changes":[{"t_ms":600,"status":1}]},"reps":{"count":1,"invalid":0,"signal":"knee_mean","t_ms":[900],"min":[92.25],"max":[170],"valid":[true],"engine":"return_v2","config":{"feature":"knee_mean","min_amp":35,"refractory_ms":1200,"max_gap_ms":1500,"complete_on_return":true,"rom_direction":"min","rom_threshold":97.8905,"rom_tier":"reference","identity":{"feature":"knee_maxside","min_amp":35}},"rejected":[{"t_ms":1200,"min":118,"max":170,"swing":12.5}],"identity_swing":[71.5],"resets":[{"t_ms":-120,"after_t_ms":null,"reason":"camera_switch"},{"t_ms":410,"after_t_ms":300,"reason":"pause"}]},"frames":[{"t_ms":0,"infer_ms":55,"visible":33,"vis":null,"xy":[0,0.0625,0.125,0.1875,0.25,0.3125,0.375,0.4375,0.5,0.5625,0.625,0.6875,0.75,0.8125,0.875,0.9375,0,0.0625,0.125,0.1875,0.25,0.3125,0.375,0.4375,0.5,0.5625,0.625,0.6875,0.75,0.8125,0.875,0.9375,0,0.0625,0.125,0.1875,0.25,0.3125,0.375,0.4375,0.5,0.5625,0.625,0.6875,0.75,0.8125,0.875,0.9375,0,0.0625,0.125,0.1875,0.25,0.3125,0.375,0.4375,0.5,0.5625,0.625,0.6875,0.75,0.8125,0.875,0.9375,0,0.0625],"w":[-0.5,-0.375,-0.25,-0.125,0,0.125,0.25,0.375,-0.5,-0.375,-0.25,-0.125,0,0.125,0.25,0.375,-0.5,-0.375,-0.25,-0.125,0,0.125,0.25,0.375,-0.5,-0.375,-0.25,-0.125,0,0.125,0.25,0.375,-0.5,-0.375,-0.25,-0.125,0,0.125,0.25,0.375,-0.5,-0.375,-0.25,-0.125,0,0.125,0.25,0.375,-0.5,-0.375,-0.25,-0.125,0,0.125,0.25,0.375,-0.5,-0.375,-0.25,-0.125,0,0.125,0.25,0.375,-0.5,-0.375,-0.25,-0.125,0,0.125,0.25,0.375,-0.5,-0.375,-0.25,-0.125,0,0.125,0.25,0.375,-0.5,-0.375,-0.25,-0.125,0,0.125,0.25,0.375,-0.5,-0.375,-0.25,-0.125,0,0.125,0.25,0.375,-0.5,-0.375,-0.25],"up":[0,1,0.125],"features":{"knee_L":171.2,"knee_R":168.8,"knee_mean":170,"knee_minside":168.8}},{"t_ms":300,"infer_ms":55,"visible":33,"vis":null,"xy":[0,0.0625,0.125,0.1875,0.25,0.3125,0.375,0.4375,0.5,0.5625,0.625,0.6875,0.75,0.8125,0.875,0.9375,0,0.0625,0.125,0.1875,0.25,0.3125,0.375,0.4375,0.5,0.5625,0.625,0.6875,0.75,0.8125,0.875,0.9375,0,0.0625,0.125,0.1875,0.25,0.3125,0.375,0.4375,0.5,0.5625,0.625,0.6875,0.75,0.8125,0.875,0.9375,0,0.0625,0.125,0.1875,0.25,0.3125,0.375,0.4375,0.5,0.5625,0.625,0.6875,0.75,0.8125,0.875,0.9375,0,0.0625],"w":[-0.5,-0.375,-0.25,-0.125,0,0.125,0.25,0.375,-0.5,-0.375,-0.25,-0.125,0,0.125,0.25,0.375,-0.5,-0.375,-0.25,-0.125,0,0.125,0.25,0.375,-0.5,-0.375,-0.25,-0.125,0,0.125,0.25,0.375,-0.5,-0.375,-0.25,-0.125,0,0.125,0.25,0.375,-0.5,-0.375,-0.25,-0.125,0,0.125,0.25,0.375,-0.5,-0.375,-0.25,-0.125,0,0.125,0.25,0.375,-0.5,-0.375,-0.25,-0.125,0,0.125,0.25,0.375,-0.5,-0.375,-0.25,-0.125,0,0.125,0.25,0.375,-0.5,-0.375,-0.25,-0.125,0,0.125,0.25,0.375,-0.5,-0.375,-0.25,-0.125,0,0.125,0.25,0.375,-0.5,-0.375,-0.25,-0.125,0,0.125,0.25,0.375,-0.5,-0.375,-0.25],"up":[0,1,0.125],"features":{"knee_L":132.7,"knee_R":130.3,"knee_mean":131.5,"knee_minside":130.3}},{"t_ms":600,"infer_ms":55,"visible":33,"vis":null,"xy":[0,0.0625,0.125,0.1875,0.25,0.3125,0.375,0.4375,0.5,0.5625,0.625,0.6875,0.75,0.8125,0.875,0.9375,0,0.0625,0.125,0.1875,0.25,0.3125,0.375,0.4375,0.5,0.5625,0.625,0.6875,0.75,0.8125,0.875,0.9375,0,0.0625,0.125,0.1875,0.25,0.3125,0.375,0.4375,0.5,0.5625,0.625,0.6875,0.75,0.8125,0.875,0.9375,0,0.0625,0.125,0.1875,0.25,0.3125,0.375,0.4375,0.5,0.5625,0.625,0.6875,0.75,0.8125,0.875,0.9375,0,0.0625],"w":[-0.5,-0.375,-0.25,-0.125,0,0.125,0.25,0.375,-0.5,-0.375,-0.25,-0.125,0,0.125,0.25,0.375,-0.5,-0.375,-0.25,-0.125,0,0.125,0.25,0.375,-0.5,-0.375,-0.25,-0.125,0,0.125,0.25,0.375,-0.5,-0.375,-0.25,-0.125,0,0.125,0.25,0.375,-0.5,-0.375,-0.25,-0.125,0,0.125,0.25,0.375,-0.5,-0.375,-0.25,-0.125,0,0.125,0.25,0.375,-0.5,-0.375,-0.25,-0.125,0,0.125,0.25,0.375,-0.5,-0.375,-0.25,-0.125,0,0.125,0.25,0.375,-0.5,-0.375,-0.25,-0.125,0,0.125,0.25,0.375,-0.5,-0.375,-0.25,-0.125,0,0.125,0.25,0.375,-0.5,-0.375,-0.25,-0.125,0,0.125,0.25,0.375,-0.5,-0.375,-0.25],"up":[0,1,0.125],"features":{"knee_L":93.45,"knee_R":91.05,"knee_mean":92.25,"knee_minside":91.05}},{"t_ms":900,"infer_ms":55,"visible":0,"vis":null,"features":{}}],"results":[{"rule_id":"x|y","verdict":"ABSTAIN","value":null,"n":0,"baseline_applied":false,"value_rel":null}]}
+diff --git a/research/external_rep_replay/setlog_captures.py b/research/external_rep_replay/setlog_captures.py
+index 376bb22b..7c689ec1 100644
+--- a/research/external_rep_replay/setlog_captures.py
++++ b/research/external_rep_replay/setlog_captures.py
+@@ -687,7 +687,7 @@ def _golden_logs() -> list[dict]:
+             "view": {"yaw_deg": 3.1, "r": 0.97, "class": "C", "frames": 4}, "app_version": "0.9.1-debug",
+             "thermal": {"start": 0, "changes": [(600, 1)]}, "frames": frames,
+             "reps": {"count": 1, "invalid": 0, "signal": "knee_mean", "t_ms": [900], "min": [92.25], "max": [170.0],
+-                     "valid": [True], "engine": "return_v1", "config": _config("knee_mean", "return_v1"),
++                     "valid": [True], "engine": "return_v2", "config": _config("knee_mean", "return_v2"),
+                      # 반복 판별 게이트(spec §62): 센 사이클의 판별 스윙, 세지 않은 사이클 하나(무릎 들기)
+                      "rejected": [(1200, 118.0, 170.0, 12.5)], "identity_swing": [71.5],
+                      "resets": [(-120, "camera_switch", None), (410, "pause", 300)]}}
+@@ -704,7 +704,7 @@ def _golden_logs() -> list[dict]:
+             "reps": {"count": 3, "invalid": 1, "signal": "knee_minside", "t_ms": [300, 600, 900], "min": [100.5, 118.75, 95.5],
+                      "max": [170.0, 168.0, 169.5], "valid": [True, False, True],
+                      "unit": "side_pair", "cycles_per_rep": 2, "completed": 1, "half_pending": True,
+-                     "engine": "return_v1", "config": lunge_config, "resets": [(450, "pause", 300)]}}
++                     "engine": "return_v2", "config": lunge_config, "resets": [(450, "pause", 300)]}}
+     # 렙 검증 모드(spec §61): validation·image, 검출 프레임마다 xy·w·up(이진 소수라 코틀린 float 과 반올림이 갈리지 않는다), 넷째 프레임 미검출
+     lm = {"xy": [(k % 16) / 16 for k in range(66)], "w": [((k % 8) - 4) / 8 for k in range(99)], "up": [0.0, 1.0, 0.125]}
+     valid_frames = [{**f, **lm} for f in frames[:3]] + [{"t_ms": 900, "infer_ms": 55, "visible": 0, "vis": None, "features": {}}]
+@@ -1061,8 +1061,8 @@ def self_test(work: Path) -> int:
+     check("B: 옛 신호(보폭 성분만)는 5회를 다 못 세고, 지금 신호는 5회", 0 < b_log.get("reps", 0) < 5 and b_now["reps"] == 5,
+           f"old {b_log.get('reps')} now {b_now['reps']}")
+     c_live, c_hys = res[f"{rk['cccc0003']}|live"], res[f"{rk['cccc0003']}|hysteresis"]
+-    check("C(실기기 baseline1): 현재 카운터 0회, 새 코어 4회 (RepHysteresisTest 기록과 같다)",
+-          c_live["reps"] == 0 and c_hys["reps"] == 4, f"live {c_live['reps']} hysteresis {c_hys['reps']}")
++    check("C(실기기 baseline1): 현재 카운터 4회(복귀형 v2, spec §99 — v1 은 0회), 새 코어 4회 (RepHysteresisTest 기록과 같다)",
++          c_live["reps"] == 4 and c_hys["reps"] == 4, f"live {c_live['reps']} hysteresis {c_hys['reps']}")
+     check("C live: 카운트 파리티", c_live.get("parityCount") is True)
+     check("C: forSession(floor, 규칙 ROM) — ROM 방향·임계값이 규칙 값", c_live["romDirection"] == "min" and abs(c_live["romThreshold"] - 0.7101) < 1e-6)
+     check("D: 파리티 필드 없음", "parityCount" not in res[f"{rk['dddd0004']}|live"])
+@@ -1100,7 +1100,7 @@ def self_test(work: Path) -> int:
+     gl = [convert(parse_line(ln), f"golden:{i}", floor_ex, rep_rules) for i, ln in enumerate(golden, 1)]
+     (g0_text, g0), (_, g1) = gl[:2]
+     check("골든: 변환기가 코틀린 줄의 §58 필드를 읽는다 — 리셋(누른 시각·after)·열·버전",
+-          g0["loggedEngine"] == "return_v1" and g0["loggedResets"] == [[-120, "camera_switch"], [410, "pause"]]
++          g0["loggedEngine"] == "return_v2" and g0["loggedResets"] == [[-120, "camera_switch"], [410, "pause"]]
+           and g0["loggedResetsAfterMs"] == [None, 300] and "loggedResetsAfterMs=none,300" in g0_text
+           and g0["thermalChanges"] == [[600, 1]] and g0["appVersion"] == "0.9.1-debug" and g0["loggedMinAmp"] == 35.0,
+           f"{g0['loggedResets']} {g0['loggedResetsAfterMs']}")

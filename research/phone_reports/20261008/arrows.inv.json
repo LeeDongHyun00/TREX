@@ -1,0 +1,93 @@
+{
+ "problem_id": "arrows",
+ "what_user_did": "2026-10-08 13:45~13:59 KST에 새 빌드(이 트리)로 10세트를 했다. 순서는 기본 스쿼트 → 덤벨 컬 → 스탠딩 니업 → 스탠딩 사이드 크런치 → 런지 → 사이드 런지 → 크로스 런지 → 크런치 → 레그 레이즈 → 플랭크이고, 10세트 모두 로그가 mode=coach, front_camera=true 다(sets-20261008.jsonl 줄 5~14). 음성 타임라인에서 카운트·준비 안내·쪽 안내를 빼면 교정 문장이 47건 남는다. 화면 화살표는 로그에 남지 않는다(LIVE_SCREEN_REDESIGN.md:183). 그래서 사용자가 실제로 본 화살표는 문장을 낸 코드 경로로 추론했다. 화살표를 만들 수 있는 경로에서 나온 문장은 11건뿐이다: 스쿼트 4/5(발끝 3·발 너비 1), 컬 6/9(팔꿈치), 런지 1/1(놓친 얕은 걸음 '앞무릎 80도'). 나머지 7세트(니업·사이드 크런치·사이드 런지·크로스 런지·크런치·레그 레이즈·플랭크)에서는 교정 문장 36건을 들었지만, 화살표를 만드는 경로는 하나도 없었다. 사용자가 이를 '일부 운동에서만 화살표가 나온다'로 받아들였다고 추론한다(추론). 같은 세트 안에서도 스쿼트 '처음부터 발이 어깨보다 많이 넓어요'(13:45:48), 컬 '처음부터 팔꿈치가…'(13:47:04), 컬 '덜 올렸거나 덜 내렸어요'×2(13:47:12·13)에는 화살표 경로가 없었다.",
+ "symptom_reproduced": true,
+ "root_causes": [
+  {
+   "id": "RC1",
+   "claim": "판별 기각(RejectionCues)이 한 다리 4종목과 크런치·레그 레이즈의 주 교정 채널인데, 이 경로는 틱과 음성만 내고 화살표·강조를 만들지 않는다.",
+   "mechanism": "화살표는 PostureLive 에서 세 군데서만 만들어진다. ① 반복 검사 ship 사건(PostureLive.kt:1177-1179 MotionCue.of), ② 놓친 얕은 걸음·유지 숙임(1258·1267), ③ 몸통 계열 창 규칙(1319 MotionCue.ofWindow). 기각 블록(PostureLive.kt:1091-1097)은 repTick 과 speech.speakLatest 만 부르고 motionCue·formHighlight 를 건드리지 않는다. RejectionCues.handle 은 기각 사유(last.feature)를 이미 돌려주지만(FloorLive.kt:235-242), 사유를 FormMotion 으로 바꾸는 표는 어디에도 없다. LegCycle.cueFor(LegCycle.kt:455-482)의 10개 사유와 FloorCycle.cueFor(FloorCycle.kt:554-568)의 크런치 3개·레그 레이즈 5개 사유가 모두 문장만 있다. 한 다리 계열의 반복 검사 19개는 전부 RuleStatus.BETA 이고 motion 이 없다(RepForm.kt:1298-1362, 1303). 그래서 '반복 검사 ship → 화살표' 경로도 막혀 있다. 이 종목들에서 사용자가 듣는 교정은 사실상 전부 기각 문장이다.",
+   "evidence": [
+    "오늘 판별 기각 문장 28건이 모두 화살표 없음: 니업 4, 사이드 크런치 5, 사이드 런지 9, 크로스 런지 4, 크런치 2, 레그 레이즈 4(work/arrows/speech_classify.txt)",
+    "오늘 기각 사이클 64개, 화살표 0: 니업 11(shallow 9·knee_straight 2), 사이드 크런치 11(no_abduct 8·no_crunch 2·knee_straight 1), 사이드 런지 24(squat_like 10·shallow 8·torso_bent 5·knee_over_toe 1), 크로스 런지 7, 크런치 3, 레그 레이즈 6(one_leg 4·knee_bent 2), 컬 2(upperarm_vert_L, 무음)",
+    "PostureLive.kt:1091-1097: r.cue?.tick → repTick, r.cue?.speech → speakLatest. motionCue 대입 없음",
+    "RepRejected(tMs, min, max, identitySwing, feature)에는 쪽(side) 필드가 없다(RepCounter.kt:1050). 기각 회의 움직인 다리를 화살표 앵커로 쓸 정보가 로그·이벤트에 없다",
+    "docs/SINGLE_LEG_FAMILY_DESIGN.md·FLOOR_FAMILY_DESIGN.md 에 '화살표' 언급 0건(grep)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "id": "RC2",
+   "claim": "바닥 종목은 화면 단계에서 화살표가 막혀 있고(PostureLive.kt:1439 `!isFloorExercise`), 바닥 음성 원천도 MotionCue 를 만들지 않는다. 그래서 플랭크 멈춤, 플랭크·크런치 시선, 크런치·레그 레이즈 기각이 모두 화살표 없이 나간다.",
+   "mechanism": "SkeletonStage 호출의 `cue = motionCue.takeIf { !preparing && mode == COACH && !paused && !isFloorExercise }`(PostureLive.kt:1439)가 바닥이면 null 을 넘긴다. 붉은 강조도 바닥이면 비운다(1434, '바닥은 전부 beta'). 근거는 화살표 정책 'COACH·ship 만, 음성과 같은 문턱'(LIVE_SCREEN_REDESIGN.md:24·99, FormMotion.kt:5)과 바닥 규칙 전부 beta(rules_floor_v0.json beta 12·exclude 4·ship 0)다. 그런데 §99·§100 이 바닥의 기각 음성(두 모드)과 플랭크·크런치 시선 음성을 Q1 사용자 결정의 예외로 켰다. 음성 쪽 문턱은 내려갔지만 화살표 정책과 1439 차단은 그대로라 '음성과 같은 문턱'이 깨졌다. 바닥 음성은 모두 FloorLiveState 에서 speakLatest 로만 나간다: HoldVoice.stopCue(PostureFloorLive.kt:207-212), gazeFrame(249-254), gazeRep(257-264, 호출 PostureLive.kt:1205). 이들은 MotionCue 를 반환하지도 대입하지도 않는다.",
+   "evidence": [
+    "PostureLive.kt:1439 `!isFloorExercise` 조건, 1434 바닥 highlight=emptySet()",
+    "오늘 플랭크 '무릎이 바닥에 닿아 시간을 멈췄어요'(13:58:31)·'골반이 내려가 시간을 멈췄어요'(13:58:46), 크런치 '어깨를 바닥에서 더 들어 올려야 세요'×2, 레그 레이즈 기각 4건: 모두 화살표 경로 0",
+    "§100 표(KOTLIN_PORTING_SPEC.md:2682 부근): 스쿼트 시선은 '화살표 HEAD' 로 명시. 플랭크(PlankGazeVoice)·크런치(CrunchGazeVoice) 행에는 화살표 항목이 없다",
+    "바닥 세트의 화면 좌표는 중력과 같은 방향이었다: 레그 레이즈 발목y−골반y p10 −0.448(다리를 들면 화면 위), 크런치·플랭크 placement tilt 8.9~9.1°. 오늘 화살표가 없던 이유는 좌표계가 아니라 차단·원천 부재다"
+   ],
+   "confidence": "high"
+  },
+  {
+   "id": "RC3",
+   "claim": "세트 창 규칙의 화살표 매핑이 몸통 접두사 4개짜리 화이트리스트(FormMotion.forWindowRule)뿐이다. 서서 하는 종목의 ship 창 규칙 24개 중 5개만 화살표가 있고, 그 5개도 규칙 방향을 무시한다.",
+   "mechanism": "forWindowRule(FormMotion.kt:38-42)은 baseFeature 가 torso_incl·torso_pitch·spine·sh_over_hip_fwd 로 시작할 때만 FormMotion(SHOULDERS, high=UP, low=UP)을 주고, 나머지는 null(문장만)이다. head_pitch(시선), elbow_mean, knee_*, grip_w, stance_w, palm_*, shoulder_asym, hand_h_asym, hip_below_knee 는 매핑이 없다. §100 이 MotionAnchor.HEAD 를 추가했지만(이번 미커밋 diff) 반복 검사 '스쿼트 시선'에만 연결됐다. 창 규칙 head_pitch(사이드 크런치 '시선 정면 유지', 오버헤드 프레스 '척추의 중립'×2)는 연결되지 않았다. 또 MotionCue.ofWindow 는 `m.high` 를 고정으로 쓰고(SkeletonStage.kt:55-59) 규칙의 op(<, >)와 위반 방향을 보지 않는다. 그래서 딥스 '상체 살짝 숙임 유지'(위반 = torso_incl 평균 < 20.77, 너무 섬)에서는 음성이 '상체를 살짝 앞으로 숙이세요'(PostureCoach.kt:95)인데 화살표는 어깨에서 위로 그려진다. 두 채널이 서로 반대 방향을 가리켜 설계 §3.2 '두 채널이 다른 것을 가리키면 안 된다'(LIVE_SCREEN_REDESIGN.md:100)를 어긴다.",
+   "evidence": [
+    "window_rules.txt: 앱 종목 ship 창 규칙 24개 중 화살표 5개 = 바벨 스쿼트 척추 2·딥스 torso_incl·랫풀 torso_incl·프런트 레이즈 torso_pitch. 19개 없음",
+    "창 ship 규칙만 있는 6종목은 화살표 0: 바벨 데드리프트 2(palm_lat·knee_out_mean), 굿모닝 3(shoulder_asym×2·knee_minside), 오버헤드 프레스 4(knee_maxside·grip_w·head_pitch×2), 사이드 레터럴 1(knee_mean), 업라이트로우 1(hand_h_asym), 행잉 레그 레이즈 2(grip_w·stance_w)",
+    "오늘 사이드 크런치 '시선이 점점 흔들려요. 정면을 보세요.'(13:49:50·13:50:24) = 창 ship '시선 정면 유지'(head_pitch__mean > −7.14) → forWindowRule null, 화살표 없음",
+    "딥스 규칙 violation_if 'torso_incl__mean < 20.77' 와 PostureCoach.kt:95 문장 '상체를 살짝 앞으로 숙이세요' 대 FormMotion.kt:40 SHOULDERS UP",
+    "FormMotionTest.kt:23-27 은 torso_incl(있음)·head_yaw(없음) 두 경우만 잠근다"
+   ],
+   "confidence": "high"
+  },
+  {
+   "id": "RC4",
+   "claim": "화살표가 있는 종목 안에서도 '처음부터 틀린 출발' 알림과 가동 범위 미달 문장에는 화살표가 없다. 설계표가 약속한 정지 화살표가 구현되지 않았다.",
+   "mechanism": "rf.takeNotice 가 돌려주는 RepFormEvent 에는 check(motion 있음)와 direction 이 있다. 그런데 호출부(PostureLive.kt:1236)는 `say += ev.message` 만 하고 MotionCue.of 를 부르지 않는다. 설계 LIVE_SCREEN_REDESIGN.md:94 는 '처음부터 알림(§90) — 같은 어휘, 첫 반복 전 정지 화살표'로 정했다. 덤벨 컬의 ROM 미달 문장(PostureLive.kt:1185-1193)은 RepSignal(romCue·romCueTop·romCueBottom, RepCounter.kt:1012-1016)에서 나오는데, 이 경로에는 FormMotion 이 없다. MotionKind 에 굽힘·폄(가동 범위) 종류도 없다(FormMotion.kt:15-27).",
+   "evidence": [
+    "오늘 스쿼트 '처음부터 발이 어깨보다 많이 넓어요'(13:45:48, rep_form.live 발 간격#기준 t=10799). 발 간격 검사에는 ANKLES TOWARD_MIDLINE 이 있지만(RepForm.kt:1580) 화살표 경로 없음",
+    "오늘 컬 '처음부터 팔꿈치가 앞으로 나가 있어요'(13:47:04, 앞 이탈#기준 t=9588). ELBOWS TOWARD_TORSO 가 있지만(RepForm.kt:1479) 화살표 경로 없음",
+    "오늘 컬 ROM 문장 2건(13:47:12·13:47:13) 화살표 없음",
+    "스쿼트 교정 5건 중 4건, 컬 9건 중 6건만 화살표 경로"
+   ],
+   "confidence": "high"
+  }
+ ],
+ "contributing": [
+  "화살표 완전성 불변식이 '말하는 문장' 단위가 아니라 '반복 검사' 단위로 걸려 있다. FormMotionTest.kt:13-21 은 RepFormSpecs.byExercise 의 ship 검사마다 motion 이 있는지만 확인하고, beta 검사에는 motion 이 없어야 한다고 본다. 판별 기각·바닥 음성·창 규칙(몸통 외) 문장은 테스트 범위 밖이라 7종목의 음성 채널이 화살표 없이 추가돼도 테스트가 통과했다. FAULT_LINES.md 에도 화살표 열이 없다(LIVE_SCREEN_REDESIGN.md:12)",
+  "확장이 따라오지 않은 이력: FormMotion.kt 를 바꾼 커밋은 962c73fa(2026-10-02, 스쿼트·컬·런지 표, LIVE_SCREEN_REDESIGN.md:84-94)와 이번 미커밋 HEAD 앵커뿐이다. 그 뒤 한 다리 계열 v3(4720a925, 10-06)와 바닥 계열(2cce7055~60262d02, 10-08)이 기각 음성 채널을 더했지만, 두 설계 문서 어디에도 화살표 항목이 없다",
+  "음성 간소화가 '어디는 화살표가 가리키니 말은 어떻게만'을 전제로 한다(PostureLive.kt:1182, 설계 §7 표 LIVE_SCREEN_REDESIGN.md:162). 반복 검사 ship 경로만 이 전제를 만족한다. 기각·바닥 경로는 화살표도 붉은 강조도 없어서 부위 정보가 문장에만 있다",
+  "한 다리 계열 반복 검사 19개는 전부 beta 이고(RepForm.kt:1299·1303), 원칙 #2 에 따라 음성·화살표가 없고 화면 '참고'(호박 점)만 있다. 오늘 사이드 크런치 '골반 고정'×3·'머리 당김'×6, 사이드 런지 '반대 다리 굽힘'×2 위반이 호박 강조로만 남았다. 사용자의 #3·#4·#5(자세 교정 없음) 불만과 같은 뿌리다",
+  "덤벨 컬 팔 기각(upperarm_vert_L 2회, 반동 성격)에는 음성 원천이 없다. cueSource = legTracker ?: floorTracker 이고(RepCounter.kt:70), 컬은 둘 다 null 이라 RejectionCues 가 틱도 문장도 내지 않는다(FloorLive.kt:240). 그래서 화살표 이전에 말도 없다(문제 #2 와 연결)",
+  "MotionCue.ofWindow 가 항상 SHOULDERS 두 점에 UP 화살표를 그린다. 설계표는 '어깨 중점 위로 + 가슴 열림'이었다(LIVE_SCREEN_REDESIGN.md:93)",
+  "설계 단계 제약(원인 아님): 화살표 상태를 늘리면 PostureLiveSessionScreen 레지스터 한계(VerifyError, CLAUDE.md 함정)를 지켜야 하므로 LiveSessionRefs 같은 홀더에 둬야 한다. 화살표는 로그에 남지 않아(LIVE_SCREEN_REDESIGN.md:183) 실기기에서 '그려졌는지'를 재생으로 검증할 길이 없다. 방향은 화면 좌표로 정의된다(SkeletonStage.kt:250-255: UP=(0,−1), MIDLINE=엉덩이 중점 x). 그래서 바닥 측면 뷰에서는 TOWARD/AWAY_MIDLINE 이 의미가 없고, 중력 롤 보정(FloorChain fc_*)도 그리기에 반영되지 않는다"
+ ],
+ "ruled_out": [
+  "미러(전면 카메라): SkeletonStage 는 미러를 적용한 뒤의 화면 좌표(map, SkeletonStage.kt:143-146)에서 방향을 계산한다(245-255). 오늘 10세트 모두 front_camera=true 였고, 화살표 경로 유무는 종목 경로로 갈렸지 미러와 관계없다",
+  "앵커 가시성 컷(0.5, SkeletonStage.kt:241): 화살표 경로가 있던 반복에서 앵커 가시성은 충분했다. 스쿼트 발끝 31/32 0.95~0.98, 발목 27/28 0.99, 컬 팔꿈치 13 0.98~1.0·14 0.65~0.84. 화살표가 없던 7세트는 MotionCue 가 처음부터 null 이라 가시성 단계까지 가지 않는다",
+  "TRACK 모드 억제(1439 mode==COACH): 10세트 로그 mode 가 전부 coach",
+  "준비 단계 억제(!preparing): 교정 문장은 모두 카운트다운 '1' 뒤였다",
+  "화살표 수명(MOTION_CUE_MS 12 s, 다음 정상 회에 지움 — PostureLive.kt:226·452-456·1169): 수명으로는 한 종목 세트 전체에서 화살표가 0인 것을 설명할 수 없다",
+  "바닥 화면 좌표 뒤집힘: 레그 레이즈 헤더 tilt_deg 131° 와 up y −0.988 이 있지만, 발목y−골반y p10 −0.448(다리를 들면 화면 위)이라 영상은 중력과 같은 방향이다. 원인은 1439 차단과 원천 부재다",
+  "분석 스레드에서 Compose 상태 쓰기: motionCue 는 formHighlight 와 같은 방식으로 쓰이고, 스쿼트·컬·런지 경로는 같은 구조로 동작한다. 종목별 부재를 설명하지 못한다",
+  "반복 검사 ship 의 어휘 누락: 스쿼트 5·컬 5·런지 3 ship 검사가 모두 motion 을 가진다(RepForm.kt:1404~1604, FormMotionTest 통과). 바벨 컬·바벨 런지는 같은 정의를 쓴다(RepForm.kt:1240)"
+ ],
+ "unknowns": [
+  "스쿼트·컬·런지 교정 순간에 무대가 dark 였는지 알 수 없다. 화살표는 dark 일 때만 그려지는데(SkeletonStage.kt:228, stageDark = !showCamera && !personLost — PostureLive.kt:1430) 영상 토글·사람 잃음이 로그에 없다. 화살표 경로 11건이 실제로 화면에 그려졌는지는 미확정",
+  "사용자가 기대하는 화살표 범위가 정해지지 않았다. beta 참고 검사(런지 어깨 기울기, 사이드 크런치 머리 당김 등)에도 원하는지, 판별 기각과 바닥까지인지. 설계 §3.2 'ship 만'·원칙 #2·#6 과 충돌할 수 있어 사용자 결정이 필요하다",
+  "한 다리 계열 기각 회의 움직인 다리(쪽)를 모른다. RepRejected 에 side 가 없고, 로그 rejected[] 에도 t_ms·min·max·swing·feature 만 있다. 앵커를 어느 무릎·발목에 둘지 정하려면 추적기 내부 값이 필요하다",
+  "바닥 측면·사선 뷰에서 화면 기준 방향(UP·TOWARD_TORSO)이 사용자에게 읽히는지, 2.5 m 가독성 실기기 검증(LIVE_SCREEN_REDESIGN.md §3.4)을 했는지 확인되지 않았다",
+  "창 규칙 19개(머리·팔꿈치·무릎 반동·그립·발 너비·바벨 궤적)의 '고칠 방향'은 규칙 op 만으로 정해지지 않는 것이 있다(std·range 통계 — 예: OHP '무릎 반동 없음' knee_maxside__std). 방향 정의가 가능한 규칙의 수는 아직 세지 않았다"
+ ],
+ "key_numbers": [
+  "앱 26종목 중 화살표 원천이 하나라도 있는 종목은 8개다(반복 검사 ship: 기본 스쿼트·런지·바벨 런지·덤벨 컬·바벨 컬 5 + 몸통 창 규칙만: 딥스·프런트 레이즈·랫풀 다운 3). 교정 음성은 있는데 화살표가 0인 종목이 13개(한 다리 4, 바닥 계열 3, 창 규칙만 있는 서서 6), 교정 음성 자체가 없는 바닥 종목이 5개다",
+  "오늘 새 빌드 10세트의 교정 문장 47건 중 화살표 경로는 11건(23%)이다: 스쿼트 4/5, 컬 6/9, 런지 1/1. 나머지 7세트는 0/36",
+  "화살표 없는 교정 36건의 내역: 판별 기각 28, 플랭크 멈춤 2, 창 규칙 시선(head_pitch) 2, 처음부터 알림 2, 컬 가동 범위 2",
+  "기각 사이클 64개(니업 11·사이드 크런치 11·사이드 런지 24·크로스 런지 7·크런치 3·레그 레이즈 6·컬 2)에 화살표·붉은 강조는 0이다",
+  "서서 하는 앱 종목의 ship 창 규칙 24개 중 화살표 매핑은 5개(FormMotion.kt:38-42 접두사 4개)이고, 그중 딥스 1개는 음성(앞으로 숙이세요)과 반대 방향(위)이다",
+  "반복 검사 ship 13종(스쿼트 5·컬 5·런지 3)은 전부 motion 이 있다. 한 다리 계열 반복 검사 19개는 전부 beta 이고 motion 이 없다",
+  "FormMotion.kt 를 바꾼 커밋은 2026-10-02(962c73fa) 하나뿐이다. 그 뒤 기각 음성 채널을 더한 10-06(한 다리 v3)·10-08(바닥 계열) 변경은 화살표를 확장하지 않았다",
+  "정리 자료: work/arrows/matrix.tsv(26종목 행렬), speech_classify.txt, rep_arrows.txt, window_rules.txt"
+ ]
+}

@@ -4,7 +4,12 @@ import kotlin.math.abs
 import kotlin.math.ceil
 
 /** 촬영 범위만 확인한다. 방향의 정답·자세의 옳고 그름·개인 기준을 판정하지 않는다. [anchors] = 몸통(어깨·골반) 테두리 — 움직임·안정 판단용. */
-data class CaptureFrame(val ready: Boolean, val message: String, val anchors: List<Float> = emptyList(), val facing: List<Float> = emptyList())
+/**
+ * 준비 프레임 판정. [directionSettled] = 방향 근거가 섰는가(§101 카운트다운 — 서서 정면·사선 요청에서 8프레임 창이 차고 불일치 대기 중이 아닐 때. 못 보는 경우(바닥·옆·UNKNOWN·r<0.9)는 true).
+ * 카운트다운 진입은 범위·안정·방향 근거뿐이다 — 안내 음성 보류(옛 `holdStart`)는 없다.
+ */
+data class CaptureFrame(val ready: Boolean, val message: String, val anchors: List<Float> = emptyList(), val facing: List<Float> = emptyList(),
+                        val directionSettled: Boolean = true)
 
 /**
  * 준비 확인이 요구하는 몸 범위(§89). 팔 운동(컬·레이즈·프레스·랫풀·딥스)은 상체만 — 다리를 요구하면 가까이 찍은 사용자가 영원히 통과하지 못했다
@@ -36,7 +41,11 @@ object CaptureFraming {
     private fun farRequired(chain: List<Int>, region: FramingRegion) =
         if (region == FramingRegion.UPPER) listOf(chain[0], chain[3]) else listOf(chain[0], chain[3], chain[5])
 
-    fun inspect(sample: PoseSample, capture: CapturePosition, floor: Boolean, region: FramingRegion = FramingRegion.FULL): CaptureFrame {
+    /**
+     * @param lateralReach 사이드 런지(§101 10-08 뼈대): 선 자리 중심 ± lateralReach×다리 길이가 화면 안이어야 통과 — 스탠스가 이미지 폭의 3/4 을 쓰는데 준비는 선 자세만 2 % 여백으로 봐서
+     *   발 편위 0.06~1.03 을 예측하지 못했다. k = 0.9 는 4세트 편위 p90/다리 0.65~0.83, p98 0.73~0.97 사이(10-06 깨끗한 세트 통과, 10-08 시작 자리 1.008 → '옮기세요').
+     */
+    fun inspect(sample: PoseSample, capture: CapturePosition, floor: Boolean, region: FramingRegion = FramingRegion.FULL, lateralReach: Float? = null): CaptureFrame {
         if (sample.features.isEmpty() || sample.normalizedXy.size < 66 || sample.visibility.size < 33)
             return CaptureFrame(false, "몸이 화면에 보이게 자리 잡아 주세요.")
         val xy = sample.normalizedXy
@@ -65,6 +74,17 @@ object CaptureFraming {
             if (y > bottom) return CaptureFrame(false, if (i in LEGS) FEET_CUT else "몸이 화면 아래에 걸려요. 휴대폰을 조금 뒤로 두세요.")
             if (y < m) return CaptureFrame(false, if (i == head) "머리가 화면 위에 걸려요. 한 걸음 뒤로 가 주세요." else "몸이 화면 위에 걸려요. 한 걸음 뒤로 가 주세요.")
             if (x < m || x > 1f - m) return CaptureFrame(false, if (i in HANDS) "손이 화면 가장자리에 걸려요. 한 걸음 뒤로 가 주세요." else "몸이 화면 가장자리에 걸려요. 가운데로 조금 옮겨 주세요.")
+        }
+        if (lateralReach != null && sample.imageWidth > 0 && sample.imageHeight > 0 && listOf(23, 24, 27, 28).all(::seen)) {
+            // 옆으로 디딜 공간 — 골반 중심 x 와 선 자세 2D 다리 길이(골반→발목, dy 를 이미지 폭 단위로 환산)의 평균
+            val aspect = sample.imageHeight.toFloat() / sample.imageWidth
+            fun legLen(h: Int, a: Int) = kotlin.math.hypot(xy[h * 2] - xy[a * 2], (xy[h * 2 + 1] - xy[a * 2 + 1]) * aspect)
+            val reach = lateralReach * (legLen(23, 27) + legLen(24, 28)) / 2f
+            val cx = (xy[23 * 2] + xy[24 * 2]) / 2f
+            if (2f * reach > 0.96f) return CaptureFrame(false, "옆으로 넓게 디디면 발이 화면 밖으로 나가요. 한 걸음 뒤로 가 주세요.")
+            val facingCamera = xy[11 * 2] >= xy[12 * 2]   // 왼어깨가 화면 오른쪽 = 카메라를 본다 → 이미지 왼쪽이 사용자 오른쪽
+            if (cx - reach < .02f) return CaptureFrame(false, "옆으로 디딜 자리가 한쪽에 모자라요. ${if (facingCamera) "왼" else "오른"}쪽으로 반걸음 옮겨 서 주세요.")
+            if (cx + reach > .98f) return CaptureFrame(false, "옆으로 디딜 자리가 한쪽에 모자라요. ${if (facingCamera) "오른" else "왼"}쪽으로 반걸음 옮겨 서 주세요.")
         }
         val pts = listOf(head) + need
         val xs = pts.map { xy[it * 2] }; val ys = pts.map { xy[it * 2 + 1] }
@@ -116,11 +136,13 @@ class CaptureDirectionWindow(private val capture: CapturePosition, private val f
         if (floor || capture !in listOf(CapturePosition.FRONT, CapturePosition.RIGHT_FRONT, CapturePosition.LEFT_FRONT)) return frame
         if (!frame.ready || !features.containsKey("view_cos") || !features.containsKey("view_sin")) return frame
         frames.addLast(features);while(frames.size>8)frames.removeFirst()
+        // §101: 방향 근거가 서야 카운트다운에 든다(창 8프레임, 불일치 대기 아님) — 옛 12 s 음성 보류가 사라지면 정지 0.4 s 가 8프레임(0.68 s)보다 먼저라 방향 추정 전에 카운트에 들었다
+        if (frames.size < 8) return frame.copy(directionSettled = false)
         val estimate=ViewEstimator.estimate(frames.toList()) ?: return frame
         if(estimate.r<.9f || estimate.cls==ViewEstimator.ViewClass.UNKNOWN) { mismatchSince=null;return frame }
         if (matches(estimate.yawDeg)) { mismatchSince=null;return frame }
         val since = mismatchSince ?: now.also { mismatchSince = it }
-        return if (now - since >= MISMATCH_HOLD_MS) frame.copy(ready=false,message=capture.placement) else frame
+        return if (now - since >= MISMATCH_HOLD_MS) frame.copy(ready=false,message=capture.placement) else frame.copy(directionSettled = false)
     }
     private fun matches(yaw: Float): Boolean {
         val a = abs(yaw); val bSide = yaw * ViewEstimator.B_SIGN > 0f
@@ -148,9 +170,10 @@ data class PreparationState(
 /**
  * 잠깐 가려지면 남은 시간을 보존한다. 계속 가려지면([RESTART_AFTER_MS]) 안내로 돌아가며 카운트를 새로 준다.
  * §89: 자동 카운트다운 3초(안내를 이미 들었다), 끊김 허용 2.5초(1.2초면 몸을 조금만 돌려도 처음으로 돌아갔다).
- * [holdStart] 동안은 범위·안정을 재기만 하고 카운트다운에 들어가지 않는다 — 안내 음성과 판정을 겹치고, 음성이 끝났을 때 이미 준비돼 있으면 바로 센다.
+ * §101(10-08 '설명이 끝나야 카운트다운'): 카운트다운은 말과 분리됐다 — 진입 조건은 범위 통과·몸통 안정 0.4 s·방향 근거([CaptureFrame.directionSettled])뿐. 옛 보류(`holdStart`)와 12 s 마감은 없다.
+ * 이력 43건 중 24건(56 %)이 안내 끝 150 ms 안의 '3' 이었다 — 이미 준비된 채 기다린 경우. 이제 준비된 사용자의 시작은 15.0 s → 5.4~5.7 s.
  */
-class CapturePreparationController(@Suppress("UNUSED_PARAMETER") floor: Boolean = false) {
+class CapturePreparationController(private val floor: Boolean = false) {
     var state = PreparationState(); private set
     private var armedAt = 0L
     private var stableAt: Long? = null
@@ -160,7 +183,6 @@ class CapturePreparationController(@Suppress("UNUSED_PARAMETER") floor: Boolean 
     private var invalidAt: Long? = null
     private var recoveryAt: Long? = null
     private var automatic = true
-    private var startHeld = false
     private var remainingMs = COUNTDOWN_MS
     private var durationMs = COUNTDOWN_MS
     private var lastTickAt = 0L
@@ -169,19 +191,17 @@ class CapturePreparationController(@Suppress("UNUSED_PARAMETER") floor: Boolean 
     private var holdReason: String? = null
     /** 자동 판정 중인가(직접 시작 카운트가 아닌가). */
     val isAutomatic: Boolean get() = automatic
-    fun cancel() { state=PreparationState();startHeld=false;resetObservation() }
+    fun cancel() { state=PreparationState();resetObservation() }
     private fun resetObservation() {
         stableAt=null;anchor=emptyList();facing=emptyList();lastFrameAt=Long.MIN_VALUE
         invalidAt=null;recoveryAt=null;frameAccepted=false;holdReason=null
     }
     fun arm(now: Long) {
-        resetObservation();armedAt=now;lastTickAt=now;automatic=true;startHeld=false
+        resetObservation();armedAt=now;lastTickAt=now;automatic=true
         state=PreparationState(PreparationPhase.WAITING)
     }
-    /** 안내 음성 중에는 카운트다운에 들어가지 않는다(범위·안정은 계속 잰다). 풀리면 다음 프레임에서 바로 들어간다. */
-    fun holdStart(hold: Boolean) { startHeld = hold }
     fun manual(now: Long, seconds: Int) {
-        resetObservation();automatic=false;startHeld=false;lastTickAt=now
+        resetObservation();automatic=false;lastTickAt=now
         durationMs=seconds.coerceIn(5,30)*1000L;remainingMs=durationMs
         state=PreparationState(PreparationPhase.COUNTDOWN,(remainingMs/1000).toInt(),message="카운트가 끝나면 운동을 시작해 주세요.")
     }
@@ -198,7 +218,8 @@ class CapturePreparationController(@Suppress("UNUSED_PARAMETER") floor: Boolean 
         val turned=facing.size==2 && frame.facing.size==2 && facing.zip(frame.facing).sumOf { (a,b)->(a*b).toDouble() } < .906
         return when {
             turned -> "몸의 방향이 바뀌었어요. 안내한 방향으로 서 주세요."
-            shifted -> "몸이 많이 움직였어요. 제자리에 서 주세요."
+            // 바닥 종목은 '서 주세요' 가 틀린 말(10-08 플랭크 13:58:25) — 카운트가 일찍 시작되면 무릎 준비 → 플랭크 전환과 겹치는 일이 는다
+            shifted -> if (floor) "몸이 많이 움직였어요. 자세를 잡고 잠시 멈춰 주세요." else "몸이 많이 움직였어요. 제자리에 서 주세요."
             else -> null
         }
     }
@@ -228,10 +249,10 @@ class CapturePreparationController(@Suppress("UNUSED_PARAMETER") floor: Boolean 
         }
         val stable=anchor.size==frame.anchors.size && anchor.isNotEmpty() && anchor.indices.all { abs(anchor[it]-frame.anchors[it])<=.05f }
         if(!stable) { anchor=frame.anchors;facing=frame.facing;stableAt=now }
-        if(!startHeld && now-(stableAt ?: now)>=400) {
+        if(now-(stableAt ?: now)>=400 && frame.directionSettled) {
             remainingMs=COUNTDOWN_MS;durationMs=COUNTDOWN_MS;lastTickAt=now
             state=state.copy(phase=PreparationPhase.COUNTDOWN,seconds=(COUNTDOWN_MS/1000).toInt(),progress=0f,message="곧 시작해요.")
-        } else if (startHeld) state=state.copy(message=frame.message)
+        } else if (frame.ready) state=state.copy(message=READY_MESSAGE)
     }
     fun tick(now: Long): PreparationState {
         val delta=(now-lastTickAt).coerceAtLeast(0)
@@ -255,6 +276,8 @@ class CapturePreparationController(@Suppress("UNUSED_PARAMETER") floor: Boolean 
     companion object {
         /** 자동 카운트다운(§89) — 안내를 이미 들었고 범위·안정이 확인된 뒤라 3초. 직접 시작은 [manual] 의 5~30초 그대로. */
         const val COUNTDOWN_MS = 3_000L
+        /** 범위는 됐고 안정·방향 근거를 기다리는 동안의 화면 문구(§101 — 종전엔 방향 시범만 돌아 '아직 맞추는 중' 으로 읽혔다). */
+        const val READY_MESSAGE = "자리 확인됨 · 잠시 멈춰 주세요"
         /** 카운트다운 중 판정이 이만큼 끊기면 안내로 돌아간다(§89, 종전 1.2 s). 그 사이는 멈췄다가 이어서 센다. */
         const val RESTART_AFTER_MS = 2_500L
     }

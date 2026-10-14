@@ -1,0 +1,213 @@
+{
+  "scope": "개발 캐시의 관절 관측률. 반복 정답·폰 검증·규칙 정확도 아님",
+  "geometry_source_sha256": {
+    "app\\src\\main\\java\\com\\example\\trex_kotlin\\posture\\FourExercise.kt": "6dadfbadf6d2a5b8a392f3d1c96175d0f1b11b9826338d9a6e091a4c7f36d9b8",
+    "app\\src\\main\\java\\com\\example\\trex_kotlin\\posture\\FourExerciseForm.kt": "a601e882dc99fbba006c620ec2af0a108372bebc3dc88ea498d237aa519c13cc"
+  },
+  "coverage": {
+    "purpose": "cached MP geometric coverage; NOT repetition or phone validation",
+    "frames": 18813,
+    "exercises": {
+      "크로스 런지": {
+        "frames": 4800,
+        "clips": 60,
+        "people": 29,
+        "core_observed": 4595,
+        "core_coverage": 0.9572916666666667,
+        "normal_clips": 9,
+        "features": {
+          "four_thigh_L": {
+            "n": 4595,
+            "normal_frame_quantiles": {
+              "0.05": 115.5623572,
+              "0.5": 171.113055,
+              "0.95": 178.0261635
+            }
+          },
+          "four_thigh_R": {
+            "n": 4595,
+            "normal_frame_quantiles": {
+              "0.05": 123.2504375,
+              "0.5": 169.55549000000002,
+              "0.95": 176.9312425
+            }
+          },
+          "four_elbow_knee_L": {
+            "n": 3989,
+            "normal_frame_quantiles": {
+              "0.05": 1.1456514599999998,
+              "0.5": 1.4753116,
+              "0.95": 1.7085144200000002
+            }
+          },
+          "four_hand_head_L": {
+            "n": 3153,
+            "normal_frame_quantiles": {
+              "0.05": 0.57159008,
+              "0.5": 0.9482319,
+              "0.95": 1.2908998799999998
+            }
+          },
+          "four_twist": {
+            "n": 4595,
+            "normal_frame_quantiles": {
+              "0.05": 0.692489602,
+              "0.5": 7.95629885,
+              "0.95": 31.778530699999997
+            }
+          }
+        }
+      },
+      "사이드 런지": {
+        "frames": 4768,
+        "clips": 60,
+        "people": 30,
+        "core_observed": 4679,
+        "core_coverage": 0.9813338926174496,
+        "normal_clips": 1,
+        "features": {
+          "four_thigh_L": {
+            "n": 4679,
+            "normal_frame_quantiles": {
+              "0.05": 130.283199,
+              "0.5": 153.00133499999998,
+              "0.95": 173.949145
+            }
+          },
+          "four_thigh_R": {
+            "n": 4679,
+            "normal_frame_quantiles": {
+              "0.05": 119.9286819,
+              "0.5": 153.16923,
+              "0.95": 175.64671149999998
+            }
+          },
+          "four_elbow_knee_L": {
+            "n": 4125,
+            "normal_frame_quantiles": {
+              "0.05": 0.9706810255,
+              "0.5": 1.3059253499999999,
+              "0.95": 1.428473115
+            }
+          },
+          "four_hand_head_L": {
+            "n": 3257,
+            "normal_frame_quantiles": {
+              "0.05": 1.121236265,
+              "0.5": 1.1797618,
+              "0.95": 1.3040058549999995
+            }
+          },
+          "four_twist": {
+            "n": 4679,
+            "normal_frame_quantiles": {
+              "0.05": 0.348162833,
+              "0.5": 3.5727844500000003,
+              "0.95": 19.05939895
+            }
+          }
+        }
+      },
+      "스탠딩 니업": {
+        "frames": 4667,
+        "clips": 60,
+        "people": 40,
+        "core_observed": 4371,
+        "core_coverage": 0.9365759588600814,
+        "normal_clips": 5,
+        "features": {
+          "four_thigh_L": {
+            "n": 4371,
+            "normal_frame_quantiles": {
+              "0.05": 81.8429785,
+              "0.5": 170.895805,
+              "0.95": 177.066259
+            }
+          },
+          "four_thigh_R": {
+            "n": 4371,
+            "normal_frame_quantiles": {
+              "0.05": 90.67269275,
+              "0.5": 169.528355,
+              "0.95": 176.45300799999998
+            }
+          },
+          "four_elbow_knee_L": {
+            "n": 4004,
+            "normal_frame_quantiles": {
+              "0.05": 0.78879843,
+              "0.5": 1.4162965,
+              "0.95": 1.56314448
+            }
+          },
+          "four_hand_head_L": {
+            "n": 3311,
+            "normal_frame_quantiles": {
+              "0.05": 1.091159,
+              "0.5": 1.2427754,
+              "0.95": 1.49272598
+            }
+          },
+          "four_twist": {
+            "n": 4371,
+            "normal_frame_quantiles": {
+              "0.05": 0.42644043150000005,
+              "0.5": 5.8077393,
+              "0.95": 23.87236599999999
+            }
+          }
+        }
+      },
+      "스탠딩 사이드 크런치": {
+        "frames": 4578,
+        "clips": 60,
+        "people": 36,
+        "core_observed": 4228,
+        "core_coverage": 0.9235474006116208,
+        "normal_clips": 0,
+        "features": {
+          "four_thigh_L": {
+            "n": 4228,
+            "normal_frame_quantiles": {
+              "0.05": NaN,
+              "0.5": NaN,
+              "0.95": NaN
+            }
+          },
+          "four_thigh_R": {
+            "n": 4227,
+            "normal_frame_quantiles": {
+              "0.05": NaN,
+              "0.5": NaN,
+              "0.95": NaN
+            }
+          },
+          "four_elbow_knee_L": {
+            "n": 3694,
+            "normal_frame_quantiles": {
+              "0.05": NaN,
+              "0.5": NaN,
+              "0.95": NaN
+            }
+          },
+          "four_hand_head_L": {
+            "n": 3011,
+            "normal_frame_quantiles": {
+              "0.05": NaN,
+              "0.5": NaN,
+              "0.95": NaN
+            }
+          },
+          "four_twist": {
+            "n": 4228,
+            "normal_frame_quantiles": {
+              "0.05": NaN,
+              "0.5": NaN,
+              "0.95": NaN
+            }
+          }
+        }
+      }
+    }
+  }
+}

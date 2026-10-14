@@ -25,12 +25,21 @@ data class PostureScope(
     /** 전부 검증 중(바닥 종목 8개) — 라이브 음성이 자세를 지적하지 않는다. */
     val provisionalOnly: Boolean get() = watched.isEmpty() && provisional.isNotEmpty()
 
-    /** 세트 시작 안내의 둘째 문장. 없으면 null. 짧게 — 항목은 각 최대 2개, 끝에 마침표. */
-    val startLine: String? = when {
-        exercise == "크런치" -> "횟수와 머리 들림 근사를 기록해요. 견갑골 상승과 허리 접지는 판정할 수 없어요."
+    /**
+     * 세트 시작 안내의 둘째 문장. 없으면 null. 짧게 — 항목은 각 최대 2개, 끝에 마침표.
+     * 시험 단계 종목([PostureTrial] — 크런치·라잉 레그 레이즈·플랭크)은 그 앞에 시험 단계 문장을 붙인다.
+     */
+    val startLine: String? = baseStartLine().let { base ->
+        if (PostureTrial.isTrialRule(exercise)) listOfNotNull(PostureTrial.START_LINE, base).joinToString(" ") else base
+    }
+
+    private fun baseStartLine(): String? = when {
+        LegProfile.of(exercise) != null -> "왼쪽과 오른쪽을 한 번씩 해야 1회이고, 얕거나 다리를 뻗어 올리거나 허리를 숙인 동작은 세지 않습니다. 횟수와 자세는 검증 중이고 척추 분절과 근육의 힘은 판정하지 않습니다."
+        // 바닥 계열 세 종목(spec §99) — 무엇을 세고 무엇을 못 보는가. '어깨까지 들린 회만 셉니다' 같은 과장은 쓰지 않는다(4.5° 게이트는 '고개만' 의 약 83 % 를 통과시킨다)
+        exercise in FLOOR_LINES -> FLOOR_LINES.getValue(exercise)
         exercise == "Y - Exercise" -> "횟수와 팔 들림 근사를 기록해요. 목 정렬·양팔 높이·엄지 방향은 판정할 수 없어요."
-        exercise == "플랭크" -> "몸 옆에서 고개와 골반 정렬을 각각 확인해요. 범위를 벗어나면 참고 음성과 부위 표시로 알려드려요."
-        exercise in FloorTemporal.exercises && provisional.isNotEmpty() -> "참고 범위를 계속 벗어나면 음성과 빨간 부위 표시로 알려드려요. 검증 중인 측정이라 자세를 확인하는 데 참고해 주세요."
+        // 바닥 beta 는 말하지 않는다(사용자 결정 Q1 2026-10-06 밤) — 화면 '참고'(호박색)로만
+        exercise in FloorTemporal.exercises && provisional.isNotEmpty() -> "참고 범위를 계속 벗어나면 화면에 참고로 표시해요. 검증 중인 측정이라 음성으로 지적하지 않아요."
         watched.isNotEmpty() -> buildString {
             val seen = watched.take(2).joinToString("·")
             append(seen).append(objectParticle(seen)).append(" 봐요.")
@@ -38,6 +47,8 @@ data class PostureScope(
                 val miss = blind.first()
                 append(" ").append(miss).append(topicParticle(miss)).append(" 못 봐요.")
             }
+            // 스쿼트 발 검사의 사각(§101, 원칙 #5) — 처음부터 벌린 발끝(시작 기준에 흡수), 한 발만 돌림(쪽별 판정은 모집단 오탐 6 %), 랜드마크가 안 움직인 회전
+            if (exercise == SQUAT) append(" ").append(SQUAT_FOOT_SCOPE)
         }
         provisional.isNotEmpty() -> "이 종목은 아직 검증 중이라 자세 지적 없이 횟수와 촬영 상태만 알려드려요."
         // 규칙이 전부 exclude — 말할 판정이 없다는 사실 자체를 말해야 한다
@@ -47,6 +58,7 @@ data class PostureScope(
 
     /** 운동 카드 부제 한 줄. 예 "평가 4 · 검증 중 1 · 못 봄 3" */
     val cardLine: String = buildList {
+        if (PostureTrial.isTrialRule(exercise)) add(PostureTrial.LABEL)
         if (watched.isNotEmpty()) add("평가 ${watched.size}")
         if (provisional.isNotEmpty()) add("검증 중 ${provisional.size}")
         if (blind.isNotEmpty()) add("못 봄 ${blind.size}")
@@ -60,6 +72,25 @@ data class PostureScope(
     )
 
     companion object {
+        const val SQUAT = "바벨 스쿼트"
+        const val SQUAT_FOOT_SCOPE = "발끝과 발 너비는 첫 반복 때 선 자세와 비교해요. 처음부터 벌리고 선 발끝과 한 발만 돌린 것은 못 볼 수 있어요."
+
+        /**
+         * 바닥 계열 세 종목의 범위 문장(spec §99, `docs/FLOOR_FAMILY_DESIGN.md` §6) — 키는 AIHub 이름. 준비 화면·세트 리포트·세트 시작 음성(30분에 한 번)이 같은 문장을 쓴다.
+         * 자세 검사가 전부 beta 라 말하지 않는 것(Q1)을 '교정 없음' 퇴행으로 받아들이지 않게 미리 밝힌다(원칙 #5).
+         */
+        val FLOOR_LINES: Map<String, String> = mapOf(
+            // 시선(§100): 크런치는 올라올 때 머리가 뒤에 남는 회, 플랭크는 고개를 들어 앞을 보거나 떨구는 자세를 말로 알린다 — 턱을 가슴에 박는 쪽·눈동자는 못 본다
+            // 길이 주의(10-08 폰, U0): 이 문장이 세트 시작 음성이라 플랭크 시작 안내가 18.2 s(목표 15 s 보다 김)·크런치 숫자 1~4 가 최대 10.8 s 밀렸다 — 짧게.
+            // 음성에서 화면·리포트로 옮기는 것은 P2(`SpeechQueue`·카운트다운 분리)에서
+            "크런치" to "횟수와 어깨 들림 근사를 기록하고, 올라올 때 머리가 뒤에 남으면 시선을 알려 드려요. 견갑골·허리 접지·반동은 판정하지 않아요.",
+            "라잉 레그 레이즈" to "다리(허벅지)를 든 회를 셉니다. 허리가 바닥에 붙어 있는지와 내리는 속도는 볼 수 없어요.",
+            "플랭크" to "시선은 양손 사이 바닥에 두세요. 골반 정렬은 참고로만 보이고, 팔꿈치 폭·가슴 처짐·허리 곡선은 볼 수 없어요.",
+        )
+
+        /** [FLOOR_LINES] 조회 — 바닥 계열 세 종목이 아니면 null. */
+        fun floorLine(exercise: String?): String? = FLOOR_LINES[exercise]
+
         /**
          * 종목의 전 규칙(exclude 포함 — 로더가 필터하지 않는다)을 조건별로 묶어 등급을 매긴다.
          * 조건의 등급 = 그 조건 규칙들의 **최고** 상태(SHIP > BETA > EXCLUDE): 한 조건에 ship 이 하나라도 있으면
