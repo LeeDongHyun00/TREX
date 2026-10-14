@@ -79,6 +79,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.trex_kotlin.posture.rememberPostureScope
+import com.example.trex_kotlin.weather.WeatherRecommendationCard
 import java.time.LocalDate
 import java.time.format.TextStyle
 import java.util.Locale
@@ -139,6 +140,14 @@ fun HomeScreen(app: AppViewModel, onGoWorkout: () -> Unit, onGoDiet: () -> Unit,
         }
         item { HomeNutrition(total, goal, onGoDiet) }
         item { HomeActionCards(overview, onGoWorkout, onRecordMeal) }
+        item {
+            WeatherRecommendationCard(
+                onExerciseClick = { exercise ->
+                    app.addMuscleRecommendation(exercise.catalogName)
+                    onGoWorkout()
+                }
+            )
+        }
         item { MuscleLoadHomeCard(app, onOpenMuscleLoad) }
         item { HomeActivityCards(app) }
     }
@@ -251,3 +260,4 @@ fun profileGoalLabel(goal: String): String = when (goal) {
     "maintain" -> "유지"
     else -> "일반"
 }
+
