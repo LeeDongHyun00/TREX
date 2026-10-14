@@ -97,25 +97,30 @@ SCHEMA = "trex.posture.setlog/1"
 SIDE_PAIR_APP = ("런지", "바벨 런지", "사이드 런지", "크로스 런지")
 SIDE_PAIR_AIHUB = frozenset({"스텝 포워드 다이나믹 런지", "바벨 런지", "사이드 런지", "크로스 런지"})
 # 런지(앱 이름 "런지")는 쪽별 카운트(spec §63, 사용자 결정 2026-09-26) — 화면 수 = min(왼, 오른)(TRACK 풀). 사이클 두 개가 한 쌍인 것은 같다
-SIDE_EACH_AIHUB = frozenset({"스텝 포워드 다이나믹 런지", "바벨 런지"})     # §66: 바벨 런지도 쪽별
+# §97: 사이드·크로스 런지·니업·크런치도 쪽별(다리 사이클 엔진이 쪽 = 움직인 다리를 낸다, ExerciseProfiles.SIDE_EACH_EXERCISES)
+SIDE_EACH_AIHUB = frozenset({"스텝 포워드 다이나믹 런지", "바벨 런지", "사이드 런지", "크로스 런지", "스탠딩 니업", "스탠딩 사이드 크런치"})     # §66 바벨 런지, §97 니업·크런치도 쪽별
 UNIT_CYCLES = {"cycle": 1, "side_pair": 2, "side_each": 2}     # RepUnit.key → cyclesPerRep
 PAIR_UNITS = ("side_pair", "side_each")    # 두 걸음(왼 + 오른) = 1회로 보이는 단위
 PROFILES_KT = REPO / "app" / "src" / "main" / "java" / "com" / "example" / "trex_kotlin" / "posture" / "ExerciseProfiles.kt"
+# postureExerciseMap 은 PostureSupport.kt 에 있다(2026-10-02 VerifyError 수정 때 PostureLive.kt 에서 옮김 — CLAUDE.md 함정). 옛 위치는 폴백
+POSTURE_SUPPORT_KT = REPO / "app" / "src" / "main" / "java" / "com" / "example" / "trex_kotlin" / "PostureSupport.kt"
 POSTURE_LIVE_KT = REPO / "app" / "src" / "main" / "java" / "com" / "example" / "trex_kotlin" / "PostureLive.kt"
 
 
 def current_unit(exercise: str | None, floor: bool) -> str:
     """지금 앱이 이 종목(AIHub 이름)의 자동 횟수를 보이는 단위. 바닥 경로는 늘 사이클(PostureLive: isFloorExercise → CYCLE)."""
-    if floor or exercise not in SIDE_PAIR_AIHUB:
+    if floor:
         return "cycle"
-    return "side_each" if exercise in SIDE_EACH_AIHUB else "side_pair"
+    if exercise in SIDE_EACH_AIHUB:
+        return "side_each"
+    return "side_pair" if exercise in SIDE_PAIR_AIHUB else "cycle"
 
 
 def kotlin_side_pair_exercises() -> tuple[set[str] | None, set[str] | None]:
     """(ExerciseProfiles.kt 의 lunges 앱 이름, 그것을 postureExerciseMap 으로 옮긴 AIHub 이름). 파일이 없거나 못 읽으면 None."""
     try:
         prof = PROFILES_KT.read_text(encoding="utf-8")
-        live = POSTURE_LIVE_KT.read_text(encoding="utf-8")
+        live = (POSTURE_SUPPORT_KT if POSTURE_SUPPORT_KT.exists() else POSTURE_LIVE_KT).read_text(encoding="utf-8")
     except OSError:
         return None, None
     m = re.search(r"val lunges\s*=\s*setOf\(([^)]*)\)", prof)
@@ -247,6 +252,30 @@ def is_floor(log: dict, floor_exercises: set[str]) -> tuple[bool, str]:
     return log.get("exercise") in floor_exercises, "rules"
 
 
+def hold_meta(log: dict) -> dict:
+    """플랭크 유지 시계(spec §99) — 로그 hold 의 시계 시작·마지막 판정 칸·일시정지 구간·결과를 재생기 메타로.
+
+    앱은 WORK 시작부터 판정 칸마다 시계를 부르고 사람이 없으면 null 을 주는데, 세트 로그에는 검출된 칸만 남는다. 재생기(runHold)가 이 값으로
+    '사람 없음' 칸을 다시 만든다 — 없으면 WORK 시작~첫 검출의 화면 밖 시간이 사라져 폴백이 재현되지 않는다(리뷰 2026-10-07). 옛 로그(키 없음)는 빈 dict.
+    """
+    hold = log.get("hold") if isinstance(log.get("hold"), dict) else None
+    if hold is None:
+        return {}
+    meta = {}
+    if hold.get("start_t_ms") is not None:
+        meta["loggedHoldStartMs"] = str(int(hold["start_t_ms"]))
+    if hold.get("end_t_ms") is not None:
+        meta["loggedHoldEndMs"] = str(int(hold["end_t_ms"]))
+    pauses = [f"{int(s[0])}-{int(s[1])}" for s in hold.get("segments") or [] if isinstance(s, list) and len(s) >= 3 and s[2] == "pause"]
+    if pauses:
+        meta["loggedHoldPauses"] = ";".join(pauses)
+    if hold.get("held_ms") is not None:
+        meta["loggedHoldHeldMs"] = str(int(hold["held_ms"]))
+    if hold.get("source"):
+        meta["loggedHoldSource"] = str(hold["source"])
+    return meta
+
+
 def convert(log: dict, source: str, floor_exercises: set[str], rep_rules: dict) -> tuple[str, dict]:
     set_id = str(log.get("set_id") or f"noid-{abs(hash(source)) % 10**8}")
     exercise = log.get("exercise") or ""
@@ -256,6 +285,7 @@ def convert(log: dict, source: str, floor_exercises: set[str], rep_rules: dict) 
     frame_times = [int(f.get("t_ms", 0)) for f in frames]
 
     meta = {"source": "phone_setlog", "setId": set_id, "exercise": exercise, "floor": "1" if floor else "0"}
+    meta.update(hold_meta(log))
     entry = {
         "capture": f"{set_id}.fcap", "setId": set_id, "exercise": exercise, "createdAt": log.get("created_at"),
         "subject": log.get("subject_id"), "mode": log.get("mode"),
@@ -313,6 +343,10 @@ def convert(log: dict, source: str, floor_exercises: set[str], rep_rules: dict) 
             meta["loggedEngine"] = str(reps["engine"])
         if config and config.get("seed") is not None:
             meta["loggedSeed"] = str(config["seed"])      # §89 후속 2: 준비 단계에서 심은 서 있는 기준 — 재생기가 첫 프레임에 심는다
+        if config and config.get("standing"):   # 다리 사이클 추적기의 세트 첫 기준(§97) — 재생기가 같은 값을 심는다
+            meta["loggedStanding"] = ";".join(f"{k}={v}" for k, v in sorted(config["standing"].items()))
+        if config and config.get("lying"):      # 바닥 반복 계열의 세트 첫 누운 기준(§99) — 재생기가 같은 값을 심는다(FloorCycleTracker.restoreLying)
+            meta["loggedLying"] = ";".join(f"{k}={v}" for k, v in sorted(config["lying"].items()))
         pend = reps.get("pending") if isinstance(reps.get("pending"), dict) else None
         if pend is not None:
             unc = pend.get("unconfirmed")
@@ -375,9 +409,11 @@ def landmark_capture(log: dict, entry: dict) -> str | None:
     frames = log.get("frames") or []
     if not any(f.get("xy") is not None and f.get("w") is not None for f in frames):
         return None
+    # floor = 바닥 경로(§99) — 재생기 --dump-features 가 앱처럼 바닥 피처 함수(FloorFeatureExtractor.computeForExercise)로 다시 계산한다
     meta = {"source": "phone-setlog", "setId": entry["setId"], "exercise": entry["exercise"],
             "imageW": "" if entry["imageW"] is None else entry["imageW"], "imageH": "" if entry["imageH"] is None else entry["imageH"],
-            "validation": "1" if entry["validation"] else "0"}
+            "validation": "1" if entry["validation"] else "0", "floor": "1" if entry.get("floor") else "0"}
+    meta.update(hold_meta(log))   # 플랭크 유지 시계의 시작·끝·일시정지(§99) — 재생기가 '사람 없음' 칸을 다시 만든다
     lines = [f"# setlog_captures.py — {entry['setId']} 랜드마크 ({entry['logFile']})",
              "H\t" + "\t".join(f"{k}={str(v).replace(chr(9), ' ')}" for k, v in meta.items())]
     for f in frames:
@@ -386,8 +422,11 @@ def landmark_capture(log: dict, entry: dict) -> str | None:
         if xy is None or w is None or len(xy) != 2 * capture_format.LANDMARKS or len(w) != 3 * capture_format.LANDMARKS:
             lines.append(capture_format.frame_line(t, None))
             continue
-        if f.get("up") is not None:
-            lines.append(capture_format.up_line(t, [_num_text(v) or "nan" for v in f["up"]]))
+        # 바닥 계열(spec §99): 앱이 관측 층에 넘긴 중력 up(floor_up — 앱의 up 뒤집힘을 되돌린 값, 중력이 아니면 null)이 그 프레임의 U 줄이다.
+        # null 이면 U 줄을 쓰지 않는다 = 재생기도 중력 모름(앱과 같은 게이트 없는 경로). 키가 없는 옛 로그·다른 종목은 종전처럼 up
+        up = f["floor_up"] if "floor_up" in f else f.get("up")
+        if up is not None:
+            lines.append(capture_format.up_line(t, [_num_text(v) or "nan" for v in up]))
         vis = f.get("vis")
         lms = []
         for i in range(capture_format.LANDMARKS):
@@ -622,7 +661,7 @@ def _squat_frames(rng: random.Random, reps: int, period_s: float, still_s: float
         v = (rest + bottom) / 2 + (rest - bottom) / 2 * math.cos(2 * math.pi * w / period_s) if moving else rest
         v += rng.gauss(0, 0.4)
         out = 0.06 + stride * math.sin(math.pi * w / period_s) if (stride and moving and k < 2) else 0.06 + 0.01 * math.sin(s)
-        feats = {"knee_L": v + 1.2, "knee_R": v - 1.2, "knee_mean": v, "knee_minside": v - 1.2, "knee_maxside": v + 1.2,
+        feats = {"knee_L": v + 1.2, "knee_R": v - 1.2, "knee_mean": v, "lunge_knee": v, "knee_minside": v - 1.2, "knee_maxside": v + 1.2,
                  "knee_asym": 2.4, "elbow_L": 165.0 + rng.gauss(0, 1), "elbow_R": 163.0 + rng.gauss(0, 1),
                  "torso_incl": 8.0 + (rest - v) * 0.3, "knee_out_mean": out, "view_cos": 0.99, "view_sin": 0.05}
         feats["elbow_mean"] = (feats["elbow_L"] + feats["elbow_R"]) / 2
@@ -652,7 +691,7 @@ def _signal_frames(rng: random.Random, total_s: float, value) -> list[dict]:
             break
         v = value(t / 1000.0) + rng.gauss(0, 0.4)
         frames.append({"t_ms": t, "infer_ms": rng.randint(40, 90), "visible": 33, "vis": None,
-                       "features": {"knee_L": v + 1.2, "knee_R": v - 1.2, "knee_mean": v, "knee_minside": v - 1.2}})
+                       "features": {"knee_L": v + 1.2, "knee_R": v - 1.2, "knee_mean": v, "lunge_knee": v, "knee_minside": v - 1.2}})
     return frames
 
 
@@ -680,7 +719,7 @@ def _golden_logs() -> list[dict]:
             "view": {"yaw_deg": 3.1, "r": 0.97, "class": "C", "frames": 4}, "app_version": "0.9.1-debug",
             "thermal": {"start": 0, "changes": [(600, 1)]}, "frames": frames,
             "reps": {"count": 1, "invalid": 0, "signal": "knee_mean", "t_ms": [900], "min": [92.25], "max": [170.0],
-                     "valid": [True], "engine": "return_v1", "config": _config("knee_mean", "return_v1"),
+                     "valid": [True], "engine": "return_v2", "config": _config("knee_mean", "return_v2"),
                      # 반복 판별 게이트(spec §62): 센 사이클의 판별 스윙, 세지 않은 사이클 하나(무릎 들기)
                      "rejected": [(1200, 118.0, 170.0, 12.5)], "identity_swing": [71.5],
                      "resets": [(-120, "camera_switch", None), (410, "pause", 300)]}}
@@ -697,7 +736,7 @@ def _golden_logs() -> list[dict]:
             "reps": {"count": 3, "invalid": 1, "signal": "knee_minside", "t_ms": [300, 600, 900], "min": [100.5, 118.75, 95.5],
                      "max": [170.0, 168.0, 169.5], "valid": [True, False, True],
                      "unit": "side_pair", "cycles_per_rep": 2, "completed": 1, "half_pending": True,
-                     "engine": "return_v1", "config": lunge_config, "resets": [(450, "pause", 300)]}}
+                     "engine": "return_v2", "config": lunge_config, "resets": [(450, "pause", 300)]}}
     # 렙 검증 모드(spec §61): validation·image, 검출 프레임마다 xy·w·up(이진 소수라 코틀린 float 과 반올림이 갈리지 않는다), 넷째 프레임 미검출
     lm = {"xy": [(k % 16) / 16 for k in range(66)], "w": [((k % 8) - 4) / 8 for k in range(99)], "up": [0.0, 1.0, 0.125]}
     valid_frames = [{**f, **lm} for f in frames[:3]] + [{"t_ms": 900, "infer_ms": 55, "visible": 0, "vis": None, "features": {}}]
@@ -903,10 +942,42 @@ def _side_pair_self_test(work: Path, check) -> None:
           apps == set(SIDE_PAIR_APP) and aihub == set(SIDE_PAIR_AIHUB), f"{apps} → {aihub}")
     check("짝: 바닥 경로·다른 종목은 사이클 단위", current_unit("바벨 런지", True) == "cycle" and current_unit("바벨 스쿼트", False) == "cycle"
           and current_unit("덤벨 컬", False) == "cycle")
-    check("짝: 런지(스텝 포워드)·바벨 런지는 쪽별 카운트(side_each), 사이드·크로스 런지는 좌우 짝",
-          current_unit("스텝 포워드 다이나믹 런지", False) == "side_each" and current_unit("바벨 런지", False) == "side_each"
-          and current_unit("사이드 런지", False) == "side_pair"
-          and "SIDE_EACH" in PROFILES_KT.read_text(encoding="utf-8"))
+    check("짝: 런지·바벨 런지·사이드 런지·크로스 런지·니업·사이드 크런치는 쪽별 카운트(side_each, §63·§66·§97) — ExerciseProfiles.SIDE_EACH_EXERCISES 와 같다",
+          all(current_unit(e, False) == "side_each" for e in SIDE_EACH_AIHUB)
+          and all(f'"{name}"' in re.search(r"val SIDE_EACH_EXERCISES\s*=\s*setOf\(([^)]*)\)", PROFILES_KT.read_text(encoding="utf-8")).group(1)
+                  for name in ("런지", "바벨 런지", "사이드 런지", "크로스 런지", "스탠딩 니업", "스탠딩 사이드 크런치")))
+
+
+def _floor_up_self_test(check) -> None:
+    """바닥 계열(spec §99): 로그 프레임의 floor_up 이 U 줄의 정본 — 값이면 그 값, null 이면 U 줄 없음(중력 모름), 키가 없으면 종전 up."""
+    xy = [0.5] * (2 * capture_format.LANDMARKS)
+    w = [0.0] * (3 * capture_format.LANDMARKS)
+    log = {"frames": [
+        {"t_ms": 0, "xy": xy, "w": w, "up": [0, -1, 0], "floor_up": [0, 1, 0]},   # 앱이 뒤집은 프레임 — 되돌린 중력
+        {"t_ms": 300, "xy": xy, "w": w, "up": [0, 1, 0], "floor_up": None},            # 중력 아님
+        {"t_ms": 600, "xy": xy, "w": w, "up": [0.1, 0.9, 0]},                               # 옛 로그
+    ]}
+    entry = {"setId": "floorup", "exercise": "크런치", "imageW": 480, "imageH": 640, "validation": False, "floor": True, "logFile": "-"}
+    text = landmark_capture(log, entry) or ""
+    ups = [ln.split("\t") for ln in text.splitlines() if ln.startswith("U\t")]
+    check("바닥 floor_up: 값이면 U 줄 = 되돌린 중력, null 이면 U 줄 없음, 키 없으면 종전 up",
+          [(u[1], u[2]) for u in ups] == [("0", "0,1,0"), ("600", "0.1,0.9,0")] and "floor=1" in text, str(ups))
+
+
+def _hold_meta_self_test(check) -> None:
+    """플랭크 유지 시계(spec §99): 로그 hold 의 start_t_ms·end_t_ms·pause 구간·결과가 두 캡처(.fcap·.cap)의 메타로 간다. 옛 로그는 키 없음."""
+    hold = {"engine": "plankhold_v1_beta", "source": "clock", "held_ms": 1200, "wall_ms": 30000, "start_t_ms": -21000, "end_t_ms": 9000,
+            "segments": [[-21000, 2000, "wait"], [2000, 5000, "pause"], [5000, 9000, "hold"]]}
+    meta = hold_meta({"hold": hold})
+    check("바닥 hold: 시작·끝·일시정지·결과 → 메타",
+          meta == {"loggedHoldStartMs": "-21000", "loggedHoldEndMs": "9000", "loggedHoldPauses": "2000-5000",
+                   "loggedHoldHeldMs": "1200", "loggedHoldSource": "clock"}, str(meta))
+    check("바닥 hold: 옛 로그(hold 없음·start 없음)", hold_meta({}) == {} and "loggedHoldStartMs" not in hold_meta({"hold": {"held_ms": 0}}))
+    xy = [0.5] * (2 * capture_format.LANDMARKS)
+    w = [0.0] * (3 * capture_format.LANDMARKS)
+    entry = {"setId": "holdmeta", "exercise": "플랭크", "imageW": 480, "imageH": 640, "validation": False, "floor": True, "logFile": "-"}
+    text = landmark_capture({"hold": hold, "frames": [{"t_ms": 0, "xy": xy, "w": w}]}, entry) or ""
+    check("바닥 hold: 랜드마크 캡처 H 줄에도", "loggedHoldStartMs=-21000" in text and "loggedHoldPauses=2000-5000" in text)
 
 
 def _validation_self_test(work: Path, golden: list[str], check) -> None:
@@ -1048,14 +1119,14 @@ def self_test(work: Path) -> int:
           and a_live.get("parityValid") is True, f"{a_live.get('parityCount')} {a_live.get('parityTimes')} {a_live.get('parityValid')}")
     b_now = res[f"{rk['bbbb0002']}|live"]
     b_log = res.get(f"{rk['bbbb0002']}|live@log", {})
-    check("B live: 로그 신호(knee_out_mean) ≠ 지금 신호(knee_mean)", b_now.get("signalMatchesLog") is False and b_now["feature"] == "knee_mean")
+    check("B live: 로그 신호(knee_out_mean) ≠ 지금 신호(lunge_knee, §101a)", b_now.get("signalMatchesLog") is False and b_now["feature"] == "lunge_knee")
     check("B live@log: 옛 신호로 카운트 파리티, 절대 epoch 시각은 비교 안 함(null)", b_log.get("parityCount") is True
           and b_log.get("parityTimes") is None, f"{b_log.get('reps')} vs {b_log.get('loggedReps')}, times {b_log.get('parityTimes')}")
     check("B: 옛 신호(보폭 성분만)는 5회를 다 못 세고, 지금 신호는 5회", 0 < b_log.get("reps", 0) < 5 and b_now["reps"] == 5,
           f"old {b_log.get('reps')} now {b_now['reps']}")
     c_live, c_hys = res[f"{rk['cccc0003']}|live"], res[f"{rk['cccc0003']}|hysteresis"]
-    check("C(실기기 baseline1): 현재 카운터 0회, 새 코어 4회 (RepHysteresisTest 기록과 같다)",
-          c_live["reps"] == 0 and c_hys["reps"] == 4, f"live {c_live['reps']} hysteresis {c_hys['reps']}")
+    check("C(실기기 baseline1): 현재 카운터 4회(복귀형 v2, spec §99 — v1 은 0회), 새 코어 4회 (RepHysteresisTest 기록과 같다)",
+          c_live["reps"] == 4 and c_hys["reps"] == 4, f"live {c_live['reps']} hysteresis {c_hys['reps']}")
     check("C live: 카운트 파리티", c_live.get("parityCount") is True)
     check("C: forSession(floor, 규칙 ROM) — ROM 방향·임계값이 규칙 값", c_live["romDirection"] == "min" and abs(c_live["romThreshold"] - 0.7101) < 1e-6)
     check("D: 파리티 필드 없음", "parityCount" not in res[f"{rk['dddd0004']}|live"])
@@ -1093,7 +1164,7 @@ def self_test(work: Path) -> int:
     gl = [convert(parse_line(ln), f"golden:{i}", floor_ex, rep_rules) for i, ln in enumerate(golden, 1)]
     (g0_text, g0), (_, g1) = gl[:2]
     check("골든: 변환기가 코틀린 줄의 §58 필드를 읽는다 — 리셋(누른 시각·after)·열·버전",
-          g0["loggedEngine"] == "return_v1" and g0["loggedResets"] == [[-120, "camera_switch"], [410, "pause"]]
+          g0["loggedEngine"] == "return_v2" and g0["loggedResets"] == [[-120, "camera_switch"], [410, "pause"]]
           and g0["loggedResetsAfterMs"] == [None, 300] and "loggedResetsAfterMs=none,300" in g0_text
           and g0["thermalChanges"] == [[600, 1]] and g0["appVersion"] == "0.9.1-debug" and g0["loggedMinAmp"] == 35.0,
           f"{g0['loggedResets']} {g0['loggedResetsAfterMs']}")
@@ -1113,6 +1184,8 @@ def self_test(work: Path) -> int:
                                                                               "loggedHalfPending", "loggedUnitConsistent")}))
     _validation_self_test(work, golden, check)
     _side_pair_self_test(work, check)
+    _floor_up_self_test(check)
+    _hold_meta_self_test(check)
 
     summary = run_replay.summarize(idx, res, names, 10, None, 200, 1)
     live = summary["configs"]["live"]

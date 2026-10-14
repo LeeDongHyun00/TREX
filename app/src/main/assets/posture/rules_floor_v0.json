@@ -1,7 +1,7 @@
 {
- "version": "floor_v0.4",
- "generated": "2026-09-11",
- "source": "export_floor_rules.py (AIHub 2D, 종목당 단일 뷰, 스트리밍 접지선, 위쪽=양수 정준화, MP 충실도 게이트 ρ≥0.35 — floor_mp_gap.py 실측) | v0.3 floor_rules_v03.py: §34 처분표 적용(hold/rep 종류, 힙쓰러스트 상단 고장 수정, 판정 중단 2) | §39 plank_rules_v04.py: 플랭크 고개/골반 직접 정렬",
+ "version": "floor_v0.5",
+ "generated": "2026-10-07",
+ "source": "export_floor_rules.py (AIHub 2D, 종목당 단일 뷰, 스트리밍 접지선, 위쪽=양수 정준화, MP 충실도 게이트 ρ≥0.35 — floor_mp_gap.py 실측) | v0.3 floor_rules_v03.py: §34 처분표 적용(hold/rep 종류, 힙쓰러스트 상단 고장 수정, 판정 중단 2) | §39 plank_rules_v04.py: 플랭크 고개/골반 직접 정렬 | v0.5 docs/FLOOR_FAMILY_DESIGN.md §5(spec §99): 플랭크 골반 띠 [−0.08, +0.16](AIHub MP C 정상 2연속 클립 2.0 %·553 4.0 %, 위반 61 %), 목 기울기 exclude(MP 충실도 ρ 0.25), 레그 레이즈 고개 window 규칙 exclude(MP 측면 정상 오탐 17.3 %, 방향 정의 Q11 미결 — 대체 검사 fc_head_lift > 40° 는 설계 §10 8단계)",
  "rules": [
   {
    "id": "floor|Y - Exercise|경추 중립 또는 후인(retraction) 유지",
@@ -150,8 +150,8 @@
    "exercise": "라잉 레그 레이즈",
    "condition": "고개 숙임 여부",
    "subtype": null,
-   "status": "beta",
-   "reason": "바닥 2D 경로 — AIHub 는 바닥 높이 카메라가 없어 임계값 미보정(세트 로그로 재보정 필요)",
+   "status": "exclude",
+   "reason": "§99(floor_v0.5) 판정 중단: AIHub GT·뷰 E 에 맞춘 임계라 MP 측면(C) 정상 오탐 17.3 %(중점 정의)·8.2 %(가까운 귀) — 음성이 없어도(Q1) '참고' 칩과 목 강조가 정상 회 다섯 중 하나꼴로 뜬다. 머리 방향 정의(AIHub 위반 = 머리를 바닥에서 듦 vs 할로우 코칭)도 미결(Q11). 대체 검사(보이는 쪽 귀–어깨 들림 회 중앙값 > 40°, 측면 정상 1.0~1.3 %)는 설계 §5·§10 8단계.",
    "feature": "head_trunk_ang__mean",
    "base_feature": "head_trunk_ang",
    "stat": "mean",
@@ -470,13 +470,13 @@
    "condition": "몸통과 엉덩이의 정렬 유지",
    "subtype": null,
    "status": "beta",
-   "reason": "§39: 초기 자세를 빼지 않는 직접 정렬 검사. 기하학적 0을 포함하는 탐색 허용폭과 관측 조건을 통과한 Android 정상 표본 p2~p98에 여유폭을 더한 범위의 합집합. 고개 독립 정답 라벨은 없으며 2클립 정상 표본 재사용 설정이다. 독립 성능이 아니다.",
+   "reason": "§99(floor_v0.5): 초기 자세를 빼지 않는 직접 정렬 검사 — 유지 시계가 확인한 플랭크 칸(HOLD)·측면(fc_yaw ≤ 0.15)에서만. 띠 [−0.08, +0.16] 은 AIHub 바닥 C 를 앱 모델로 재추출한 정자세 2연속 클립 2.0 %·전조건정상(553) 4.0 % 밖, 위반 검출 61 %(SP/designer/plank.py). 위반 표본이 거의 솟음이라(처짐 1.1 %) 하한은 기하 가정뿐 — 폰 처짐 블록 전까지 beta.",
    "feature": "plank_hip_offset",
    "base_feature": "plank_hip_offset",
    "stat": "alignment",
    "family": "floor2d",
    "op": "band",
-   "threshold": 0.124,
+   "threshold": 0.16,
    "view_best_front": "C",
    "view_best_front_desc": "몸 옆에서, 전신이 길게 보이게",
    "cv_auc": null,
@@ -485,9 +485,9 @@
    "mp_fidelity": null,
    "mirror_safe": true,
    "cautions": [
-    "측면 관측 조건을 통과한 한쪽 관절만 사용",
+    "측면 관측 조건을 통과한 한쪽 관절만 사용, 유지 시계 HOLD 칸만",
     "1초 지속·경계 80% 복귀·가림 유보",
-    "고개 정답 라벨 없음. 정상 라벨 표본에서도 투영/정의 불일치 가능. 출시 검증 전 참고 안내"
+    "처짐 하한은 AIHub 처짐 표본이 없어 기하 가정 — 폰 처짐 블록으로 확정 전 beta. 09-10 broke(+0.131)는 이 띠 안(본인 변화 비교가 잡는다)"
    ],
    "mode": "floor2d",
    "normal_median": null,
@@ -496,10 +496,10 @@
    "kind": "alignment",
    "hold": null,
    "exploratory_clip_auc": null,
-   "validation_scope": "기하 합성 관절·실제 Android 좌표 재생. 실제 사용자 자세 정답 정확도 미검증.",
+   "validation_scope": "AIHub 바닥 C MP 재추출(2연속 클립)·실제 Android 좌표 재생. 폰 처짐 블록·실사용자 정확도 미검증.",
    "alignment": {
-    "lower": -0.06,
-    "upper": 0.124,
+    "lower": -0.08,
+    "upper": 0.16,
     "sustain_ms": 1000
    },
    "reference": {
@@ -563,8 +563,8 @@
    "exercise": "플랭크",
    "condition": "목과 몸통의 정렬 유지",
    "subtype": null,
-   "status": "beta",
-   "reason": "§39: 초기 자세를 빼지 않는 직접 정렬 검사. 기하학적 0을 포함하는 탐색 허용폭과 관측 조건을 통과한 Android 정상 표본 p2~p98에 여유폭을 더한 범위의 합집합. 고개 독립 정답 라벨은 없으며 2클립 정상 표본 재사용 설정이다. 독립 성능이 아니다.",
+   "status": "exclude",
+   "reason": "§99(floor_v0.5) 판정 중단: MP 측면 목 기울기의 충실도가 낮다(ρ 0.25, 고개 ρ 0.75 와 대비) — C 띠 밖 0.8 %·E 11.1 % 는 라벨 없는 값. 고개 방향(plank_head_pitch)만 beta 로 남긴다.",
    "feature": "plank_neck_pitch",
    "base_feature": "plank_neck_pitch",
    "stat": "alignment",
@@ -612,7 +612,7 @@
   "rep": "렙별 사이클 극값 vs 임계값 — 미달 렙이 max(min_reps, 렙×max_invalid_frac) 이상이면 위반"
  },
  "counts": {
-  "exclude": 2,
-  "beta": 14
+  "beta": 12,
+  "exclude": 4
  }
 }

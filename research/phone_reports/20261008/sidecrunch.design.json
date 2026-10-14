@@ -1,0 +1,104 @@
+{
+ "problem_id": "sidecrunch",
+ "summary": "사용자는 무릎을 앞으로 올리고 팔꿈치를 앞으로 내려 닿게 했는데, 이 회가 셌다. '옆으로 올렸는가'를 묻는 판별은 극점 한 프레임의 knee_lat ≥ 0.35 하나다(LegCycle.kt:382-383, 띠는 :535). 그런데 knee_lat 는 매 프레임의 순간 골반축으로 잰다(PostureCore.kt:125-137, :295). MediaPipe 골반축은 무릎을 따라 돈다. AIHub 정상 회에서 순간축/고정축 중앙값은 GT 1.19/1.38, MP 0.74/1.10 이다. 그래서 정상 회의 값이 눌려 앞 회와 겹친다.\n\n해결: 무릎 방향을 '회 직전 선 자세 골반축'에 고정해 잰다(kl_st). 값은 바닥 띠(허벅지 최소 +15°) 중앙값으로 읽고, 띠 0.70 이상이면 옆으로 올린 것으로 본다. 판정은 선 자세 뷰가 C(정면)일 때만 하고, 그 밖의 뷰는 유보한다(유보는 셈).\n\n근거 수치:\n- 폰 4세트: 센 정상 26회는 kl_st 0.79~1.19, 앞 변형 26회는 ≤ 0.61 이다.\n- 오늘 줄 8: 새던 54020 R(0.57)·55532 L(0.55)가 no_abduct 로 바뀐다. 20 → 18회(왼 9/오른 9).\n- AIHub MP C 뷰: 정상(옆·닿음) 기각 0/31, 앞 검출 26/31. 옛 판별은 정상 4/31(12.9%)을 지웠다.\n- AIHub GT 깨끗한 정상: 기각 2.0%(11/552), 앞 검출 91.6%.\n\n함께 넣는 것:\n- '교정됐어요'는 kl_st ≥ 0.80 인 회에만 낸다(배선은 PostureLive 밖).\n- 접촉 V 외삽은 관측값을 따로 로그해 측정한 뒤 결정한다.\n- 정면 밖에서는 무릎 방향을 판정하지 않는다는 범위 문장을 추가한다.\n\n설계만 했고 저장소 파일은 고치지 않았다.",
+ "definition": "**옳은 동작(셈).**\n- 출발: 손을 머리 뒤에 두고 선다.\n- 무릎: 고관절의 외전+굴곡으로 무릎을 굽힌 채(극점 무릎 ≤ 110°) 높이 든다(허벅지 ≤ 115°). 무릎은 몸의 정면이 아니라 **옆**으로 나간다. 이 '옆'은 그 회 직전 선 자세의 골반 좌우축 기준이고, 회 중 따라 도는 순간 골반축이 아니다.\n- 팔꿈치: 옆구리를 접어 같은 쪽 팔꿈치가 무릎에 닿는다(2D ≤ 0.30 몸통, 기존 §98a 그대로).\n\n**틀린 동작(세지 않음).** 무릎이 앞으로 간 회다. 순수 고관절 굴곡이거나 정면에서 약 34° 이내의 대각이다. 팔꿈치를 앞·아래로 내려(몸통 굴곡·비틀기) 닿게 했는지와 상관없이 세지 않는다. 오늘 후반 변형이 여기 해당한다.\n\n**측정량.** kl_st = sign·(무릎−같은 쪽 골반의 수평 변위 · 선 자세 골반축) ÷ 골반 너비. 바닥 띠(허벅지 ≤ 최소+15°, BOTTOM_BAND LegCycle.kt:520 재사용) 프레임들의 중앙값을 쓴다. 문턱은 0.70 이다.\n- 이 사용자의 들기 높이(수평 변위 ≈ 1.24 골반 너비)에서 0.70 은 선 자세 정면 기준 ≈ 34° 다.\n- AIHub GT 정상 방향 중앙값은 57°, 5% 분위는 31.5° 다(work/sidecrunch/design/aihub_gt_dir.csv).\n\n**관측 가능성.**\n- (1) 정면 C 에서는 kl_st 의 성분인 가로 변위가 화면 평면에 있어 잘 보인다. 앞뒤 성분은 깊이라 MediaPipe 가 약하다. 그래서 각도(atan2)가 아니라 가로 투영을 쓴다. AIHub MP 정면에서 각도 25° 문턱은 정상 3.6% 기각, kl_st 0.65 는 1.8% 기각이다.\n- (2) 선 자세 골반 요는 MP world+IMU up 으로 잰다. 프레임 표준편차는 3.4°(10-08)·3.9°(10-06)다. 기준 프레임을 창 중앙값·출발 직전 2프레임·세트 중앙값 중 무엇으로 잡아도 kl_st 차이는 ≤ 0.08 이다(design/yaw_noise.py).\n- (3) 사선 B/D 에서는 kl_st 0.65 의 정상 기각이 5.6%(3/54)다. 후방 사선에서는 42.6% 로 쓸 수 없다. 그래서 **판정은 선 자세 뷰 C(ViewEstimator |yaw| ≤ 16.4°)에서만** 하고, 그 밖은 유보(셈)다.\n\n**못 보는 것(원칙 #5).**\n- 정면 밖에서 찍은 앞 들기는 센다.\n- 힘이 옆구리에서 나오는지 반동인지는 판정하지 않는다.\n- 2D 닿음은 투영 겹침이라, 앞 들기에서도 '닿음'이 된다(58873 R: 2D 0.12, 3D ≥ 41.6 cm). 방향 판별이 이것을 막는다.\n- 측굴량은 판별에 넣지 않는다. 사용자 결정 2026-10-06 밤 2 의 '닿음이 정의'(LegCycle.kt:384 주석)를 그대로 따르고, beta '옆구리 접힘'으로만 보여 준다.",
+ "changes": [
+  {
+   "file": "app/src/main/java/com/example/trex_kotlin/posture/LegCycle.kt (object LegGeometry.features)",
+   "change": "무상태 프레임 피처를 추가한다.\n- `pelvis_yaw_cam`(°): 카메라 수평축 기준 골반선(L_HIP−R_HIP) 요. 카메라축은 c = unit(flat(world +z, up)), x = unit(up × c).\n- `knee_cx_L/R`·`knee_cz_L/R`: 무릎 − 같은 쪽 골반의 수평 변위를 카메라 수평축으로 나눈 성분 ÷ `frame.hipW`(PostureCore.kt:160).\n- 선택: beta 참고용 `elbow_up_L/R` = 같은 쪽 팔꿈치의 골반 중점 위 높이(up 투영) ÷ 3D 몸통 길이.",
+   "rationale": "선 자세 축은 상태라 추적기가 갖는다. 피처는 앱 `PostureAnalyzer`(:271)와 재생기 `frameFeatures`(Replay.kt:238)가 같은 함수로 부르는 무상태 값이어야 한다. 카메라 수평 성분을 내면 추적기가 어떤 기준 요에도 투영할 수 있다. PoseFrame·Vec3 만 쓰므로 engineFiles 로 안드로이드 없이 컴파일된다(build.gradle.kts:24 에 LegCycle.kt 포함)."
+  },
+  {
+   "file": "app/src/main/java/com/example/trex_kotlin/posture/LegCycle.kt (LegCycleTracker: Leg·onFrame·baseFrom/setBase·OPTIONAL)",
+   "change": "선 자세 기준과 회별 방향 표본을 관리한다.\n- `OPTIONAL`(:489)에 `pelvis_yaw_cam` 을 더한다. 그러면 기준·`reps.config.standing`·`restoreStanding`(:251)이 그 값을 담는다.\n- 추적기 필드 `stanceYaw`·`stanceViewYaw` 를 둔다. 뷰 요는 선 자세 프레임 `view_cos/view_sin` 의 원형 평균이다.\n- Leg 필드 `dwellYaw`·`dwellView`·`abduct: ArrayList<(신호, cx, cz)>`·`stanceYawAtStart`·`frontAtStart` 를 둔다.\n- 출발(:283)에서 기준을 스냅샷한다. 회 중에는 다른 다리의 재기준이 바꾸지 못한다.\n- SIDE_CRUNCH 사이클 중(:294-298 옆)에 (x, cx, cz)를 모은다.\n- 복귀 확정의 재기준(:314)에서 `stanceYaw = median(dwellYaw)` 로, 뷰도 같이 갱신한다.\n- `clear()`(:210-214)에서 새 목록을 비운다.",
+   "rationale": "RC1: 순간 골반축(PostureCore.kt:125-137)은 정상 회에서 무릎을 따라 16~33° 돈다. 고정축으로 재면 겹침이 풀린다.\n- 10-08 정상 0.89~1.18 vs 앞 ≤ 0.56\n- 10-06 정상 0.83~1.17 vs 앞 ≤ 0.34\n\n기준을 회 직전 dwell 로 잡는 것은 사이드 런지·니업과 같은 재기준 틀이다(:314). 사용자가 회 사이에 몸을 돌려도 따라간다."
+  },
+  {
+   "file": "app/src/main/java/com/example/trex_kotlin/posture/LegCycle.kt (identity SIDE_CRUNCH :379-396, 상수 :535-536)",
+   "change": "`forward` 를 다시 정의한다.\n- (a) `frontAtStart` 이고 abduct 표본이 있으면: 바닥 띠(sig ≤ sigMin + BOTTOM_BAND) 표본의 sign·(cx·cosψ + cz·sinψ) 중앙값 < `CRUNCH_ABDUCT_ST_MIN`(0.70) → no_abduct.\n- (b) 선 자세 뷰가 C 가 아니면 방향은 유보한다(forward=false, 셈).\n- (c) 3D 가 없으면 기존 2D `knee_out2d` < 0.45 폴백을 그대로 쓴다(드묾).\n- 순간축 `CRUNCH_ABDUCT_MIN` 0.35 는 판별에서 뺀다. KDoc 에 폰·AIHub 수치를 남긴다.\n- 사유 순서(:385-395)와 문장(:472)은 바꾸지 않는다.\n- 마지막으로 센 회의 kl_st 를 `lastAbduct` 로 보관한다.",
+   "rationale": "RC1 의 직접 수리다. RC2(극점 한 프레임, :287·:333)는 SIDE 의 `bottomMedian`(:402)과 같은 바닥 중앙값으로 줄인다. 근거 수치는 이렇다.\n- 폰: 센 정상 26회 0.79~1.19, 앞 변형 ≤ 0.61\n- AIHub MP C: 정상 0/31 기각, 앞 26/31 검출\n- AIHub GT 깨끗한 정상: 2.0%\n- 옛 띠(순간축 0.35)는 MP 정면 정상 14.5%(8/55)를 지웠고, 오늘 앞 회 2개를 셌다\n\n사선 B/D 는 5.6% 라 원칙 #7 입장 조건(≤ 2 %)을 넘는다. 그래서 유보한다(유보는 통과)."
+  },
+  {
+   "file": "app/src/main/java/com/example/trex_kotlin/posture/RepCounter.kt (interface IdentityCueSource :1057)",
+   "change": "기본 구현이 있는 `fun recoveryConfirmed(reason: String): Boolean = true` 를 추가한다. LegCycleTracker 는 이를 재정의한다. 사유가 \"no_abduct\" 이면 `lastAbduct ≥ CRUNCH_ABDUCT_CLEAR(0.80)` 일 때만 true 다. 다른 사유와 바닥·플랭크 엔진은 기본값이라 동작이 바뀌지 않는다.",
+   "rationale": "검증이 놓친 원인을 막는다. §100 의 `takeRecovery`(FloorLive.kt:214)는 '센 회 = 교정'이다. 그래서 판별이 경계에서 새면 틀린 회를 칭찬한다. 폰 정상 26회는 모두 ≥ 0.79(대부분 ≥ 0.82)라 정상 교정 문장은 거의 그대로 나온다. 경계 회(0.70~0.80)에서는 말하지 않는다. 침묵은 틀린 칭찬보다 낫다(원칙 #6)."
+  },
+  {
+   "file": "app/src/main/java/com/example/trex_kotlin/posture/FloorLive.kt (RejectCueGate :190-224)",
+   "change": "`next()`(:201)에서 말한 사유와 함께 `source` 도 보관한다(`pendingSource`). `takeRecovery()`(:214)는 `pendingSource?.recoveryConfirmed(reason) != false` 일 때만 RECOVERED_CUE 를 돌려준다. 확인이 안 되면 pending 을 유지한다. 그러면 다음의 분명한 옆 회가 교정 문장을 받는다. `reset()` 에서 지운다.",
+   "rationale": "PostureLive.kt:1203 의 호출부 `takeRecovery()` 는 그대로 둔다. PostureLiveSessionScreen 에 지역 변수가 하나도 늘지 않는다(VerifyError 함정). 문장은 기존 `speakLatest` 경로로, 한 회 한 문장으로 그대로 나간다."
+  },
+  {
+   "file": "app/src/main/java/com/example/trex_kotlin/posture/ContactMinimum.kt",
+   "change": "관측 전용 출력 키를 추가한다. `elbow_knee_obs_L/R` = V 꼭짓점 외삽(:34) 없이 85 ms 표본 그대로의 칸 최솟값이다. `elbowKnee()`(:56)가 두 키를 낸다. 판별은 지금처럼 `elbow_knee_min` 을 쓴다. 외삽 상한·대칭 검사는 데이터를 본 뒤 정한다.",
+   "rationale": "54020 R 의 닿음은 300 ms 최소가 0.49 였는데, 외삽이 0 으로 잘린 값 하나로만 통과했다. 이 세트의 정확히 0 인 판정 프레임은 7개다. 그런데 85 ms 원표본이 로그에 없어 외삽 정책을 오프라인으로 잴 수 없다(ContactMinimum 은 앱 전용).\n\n사용자는 2026-10-06 밤에 순간 접촉도 잡으라고 요구했다. 그래서 바로 바꾸지 않고 관측부터 남긴다. 키는 세트 로그 frames.features 로 저절로 남는다(PostureLive 지역 변수 증가 없음, contactRef 홀더 :1688 그대로)."
+  },
+  {
+   "file": "app/src/main/java/com/example/trex_kotlin/posture/RepFormRules.kt (legScopeRules :62)",
+   "change": "SIDE_CRUNCH 전용 범위 항목(EXCLUDE, kind scope)을 하나 더한다. 조건은 '정면 밖에서의 무릎 방향', 문장은 \"무릎을 옆으로 올렸는지는 정면에서 찍었을 때만 판정합니다. 사선·옆에서 찍으면 앞으로 올린 동작도 셉니다.\"",
+   "rationale": "원칙 #5·#1 이다. 유보를 셈으로 처리하는 대신 무엇을 못 보는지 밝힌다. PostureScope 가 rules 의 EXCLUDE 위에 서 있어 그대로 표시된다(CLAUDE.md 함정). PostureScopeTest 의 개수 기대값을 갱신해야 한다."
+  },
+  {
+   "file": "app/src/main/java/com/example/trex_kotlin/posture/RepForm.kt (supersedes 근거 :1232, legCycle SIDE_CRUNCH :1350-1360)",
+   "change": "(1) '무릎이 몸통 측면에서 올라오는지 여부' 강등 근거 문장을 고친다. \"옆으로 접은 수축은 판별이 거른다\" 를 \"무릎 방향은 판별이 선 자세 골반축(정면)으로 거른다\" 로 바꾼다.\n(2) 선택(사용자 결정 4): beta 참고 검사 '팔꿈치 앞 내림'을 더한다. `elbow_up_{moving}` MIN, lo 0.35, frontOnly, gates=false, 문구 \"팔꿈치를 앞으로 내려 닿게 했어요\". beta 라 음성·점수·횟수와 무관하다.",
+   "rationale": "(1) 검증에서 RepForm.kt:1232 의 전제가 반증됐다. 2D 닿음은 앞 들기에서도 성립한다.\n(2) 보고된 '팔꿈치를 앞으로 내림'을 화면 '참고'로 보이게 한다. 근거:\n- 폰 변형 3회의 팔꿈치 높이 6.1·9.4·16.1 cm, 정상 31~46 cm\n- AIHub GT 정상(척추·손·옆·닿음 정상) 비율 최소 0.43, 2% 분위 0.58\n\n단일 사용자 변형이라 beta 다. 대사가 늘면 fault_lines.py 로 FAULT_LINES.md 를 다시 만들어야 RepFormLinesTest 가 통과한다."
+  },
+  {
+   "file": "research/external_rep_replay/single_leg_diag.py",
+   "change": "회별 표에 열을 더한다: kl_st(바닥 중앙값), 선 자세 골반 요, 선 자세 뷰, elbow_knee_obs 최소. setlog_captures.py → .cap 경로로 옛 로그도 다시 계산된다.",
+   "rationale": "폰 블록 뒤 띠 확정과 회귀 확인에 쓰는 도구다. 옛 로그의 .fcap 에는 새 피처가 없어 .cap(랜드마크) 경로로 재생해야 한다(docs/exercises/single_leg.md 와 같은 관례)."
+  },
+  {
+   "file": "app/src/test/java/com/example/trex_kotlin/posture/LegCycleTest.kt, FloorLive/RejectCueGate 테스트, ContactMinimum 테스트, PostureScopeTest",
+   "change": "합성 골격 픽스처를 만든다.\n- (a) 골반이 든 다리 쪽으로 25° 돌고 무릎이 선 자세 정면 27° 방향: 순간 knee_lat ≥ 0.35(옛 버그 재현)인데 kl_st < 0.70 이라 no_abduct.\n- (b) 골반 25° 회전, 무릎 50°: 셈.\n- (c) 선 자세 요 30°(B/D): 방향을 유보하고 셈.\n- (d) 회 중 다른 다리의 재기준이 스냅샷을 바꾸지 않음.\n- (e) restoreStanding 의 pelvis_yaw_cam 패리티.\n\nRejectCueGate 테스트: recoveryConfirmed=false 면 null 을 내고 pending 을 유지한다. ContactMinimumTest: obs 키는 외삽이 없다. PostureScopeTest 개수도 갱신한다.",
+   "rationale": "엔진 계약을 고정한다. 재생기도 LegCycle.kt 를 컴파일하므로 앱·재생기 동일성이 테스트로 지켜진다."
+  },
+  {
+   "file": "research/aihub_fitness/KOTLIN_PORTING_SPEC.md(새 절 §98c), docs/exercises/single_leg.md, docs/SINGLE_LEG_FAMILY_DESIGN.md §3 표(:60), docs/POSTURE_HANDOFF.md",
+   "change": "정의, 수치 근거, 뷰 유보, 교정 문장 여유, 관측 전용 접촉 키를 기록한다. 수치 근거는 폰 4세트, AIHub GT·MP, 작업 스크립트 경로다. 띠 표의 '바깥 위치 ≥ 0.35' 를 '선 자세축 바닥 중앙값 ≥ 0.70(정면)'으로 바꾼다.",
+   "rationale": "저장소 관례가 기능마다 spec 절과 근거를 남기는 것이다. single_leg.md 는 그 종목을 만지기 전에 읽는 함정 문서라 순간축 함정을 남긴다."
+  }
+ ],
+ "behavior_after": "**COACH(정면 C)**\n- 무릎을 앞으로 올린 회(팔꿈치를 앞으로 내려 닿게 한 회 포함)는 세지 않는다. 오늘 줄 8 기준으로 54020 R·55532 L 이 no_abduct 가 되어 20 → 18회(왼 9/오른 9)다.\n- 기각마다 낮은 틱이 나고 HUD '세지 않은 동작 n' 이 오른다.\n- 이유 음성은 기존 문장 그대로다: \\\"앞으로 올리면 세지 않아요. 무릎을 옆으로 올려 주세요.\\\" 6 s 간격 게이트(FloorLive.kt:222)와 speakLatest 를 거친다.\n- 그 뒤 분명한 옆 회(kl_st ≥ 0.80)가 세지면 \\\"좋아요, 교정됐어요.\\\" 를 말한다. 0.70~0.80 경계 회는 세되 교정 문장은 없고, 다음의 분명한 회까지 기다린다.\n- 정상 옆 크런치는 그대로 센다(폰 정상 26회 모두 ≥ 0.79).\n- 선택 4 를 채택하면, 팔꿈치를 앞으로 내린 회에 화면 '참고 · 팔꿈치를 앞으로 내려 닿게 했어요'가 뜬다(beta, 무음, 점수·횟수 무관).\n\n**TRACK**\n- 판별은 '이 종목의 반복인가'라 COACH 와 같게 센다(v3 사용자 결정 '두 모드'). 틱·이유 음성·교정 문장도 같다(횟수의 입장 조건이라 두 모드에서 말한다, FloorLive.kt:190-193).\n- 점수는 없다(기존 정책).\n\n**정면이 아닐 때(B/D·옆·뒤, 선 자세 뷰 판정)**\n- 무릎 방향을 판정하지 않고 센다(유보 = 통과).\n- 범위 카드에 \\\"무릎을 옆으로 올렸는지는 정면에서 찍었을 때만 판정합니다. 사선·옆에서 찍으면 앞으로 올린 동작도 셉니다.\\\" 가 나온다.\n- 나머지 판별(편 다리·닿음·높이·들림·반대 다리·허리)은 지금과 같다.",
+ "principles_check": "**#1 판정하지 않은 것을 판정한 것처럼 말하지 않음.**\n- 정면이 아니거나 선 자세 기준·3D 가 없으면 방향을 유보한다. 그 회는 세되 '옆으로 올렸다'고 말하지 않고, 범위 카드로 못 본다고 밝힌다.\n- 교정 문장은 분명한 통과(≥ 0.80)에만 낸다.\n\n**#2 근거 출처.**\n- 이 변경은 규칙 상태가 아니라 판별 띠다. 판별은 기존 v3 사용자 정의 횟수 게이트다.\n- 근거는 세 층이다: AIHub GT(48명, 정의), AIHub MP(13~14명, 측정), 폰 4세트(1명, 여유).\n- 새 자세 검사 '팔꿈치 앞 내림'은 beta 로만 둔다. 화면 참고이고, 음성·헤드라인·분모에는 넣지 않는다.\n\n**#3·#4 모드와 모집단.** 띠 0.70 은 모든 사용자에게 같다. 이 사용자의 세트는 띠를 정하는 데 쓰지 않았고 여유만 확인했다. 모드는 발화·표시만 가른다.\n- 판별은 두 모드가 같다.\n- 단, 대각 들기를 '스타일'로 볼지 '오류'로 볼지는 정의 문제라 사용자 결정 3 으로 남겼다.\n\n**#5 못 보는 것을 밝힘.** 정면 밖의 무릎 방향, 힘의 출처, 실제 3D 접촉을 범위 문장에 남긴다.\n\n**#6 오탐이 사용자를 잘못 교정시킴.** 정상 회를 지우면 \\\"앞으로 올리면…\\\"이 틀린 교정이 된다. 그래서 문턱을 모집단 오탐(GT 2.0%, MP C 0/31)으로 고르고, 폰 블록에서 정상 회의 no_abduct 를 0~1회로 묶는다.\n\n**#7 횟수와 자세.** 판별은 카운터 자신의 질문이다. 입장 조건(정상 오탐 ≤ 2 %, 유보는 통과)은 다음과 같다.\n- GT 깨끗한 정상 2.0%, MP C 0/31(95% 상한 약 10% — 표본이 작아 확장 측정이 필요)\n- 사선은 5.6% 라 유보\n\n**사용자 메모리 '오류 회를 세면 신뢰성 없음'.** 오늘 앞 변형 11회(21~28 s 5 + 53~65 s 6)가 모두 < 0.61 이라 0회로 센다.\n\n**구현 함정.**\n- PostureLiveSessionScreen 지역 변수는 0개 늘린다. takeRecovery() 호출부 그대로이고 ContactMinimum 은 contactRef 홀더 그대로다.\n- 300 ms 격자를 바꾸지 않는다(유일한 예외 ContactMinimum 은 관측 키만 추가).\n- 문장은 speakLatest 경로 그대로다.\n- engineFiles 는 PoseFrame·Vec3 만 쓴다.",
+ "risks": [
+  "띠 0.70 의 폰 여유는 양쪽 0.09 로 좁다. 정상 최소 0.79(36539 R, 출발 직전 2프레임 기준), 앞 최대 0.61(55532 L, 세트 중앙 기준)이다. 선 자세 요 잡음(프레임 표준편차 3.4~3.9°)이 kl_st 를 ≤ 0.08 흔든다(design/yaw_noise.py). 더 대각으로 든 앞 들기(약 35°+)는 셀 수 있다. 정의 경계라 사용자 결정 3 이다.",
+  "kl_st 는 수평 도달 ÷ 골반 너비에 비례한다. 허벅지가 짧거나 골반이 넓은 사람은 같은 각도에서 값이 작아 정상 회가 지워질 수 있다. GT 48명 깨끗한 정상에서 0.70 은 2.0%(11/552)로 입장 조건 경계다. 정상 프레임이 지워진 수행자는 7/48(0.65 기준)이다.",
+  "MP 측정 모집단이 작다(C 뷰 정상 31프레임·13명). 0/31 의 95% 상한은 약 10% 라, ≤ 2% 는 GT 로만 보였다. AIHub C 뷰 JPEG 재추론으로 표본을 늘려야 한다(오프라인 4번).",
+  "AIHub 라벨은 클립 단위이고 16장 성긴 표본이다. 고른 '든 프레임'이 진짜 극점이 아닐 수 있다. 정상 라벨에도 다른 오류(숙임·무릎 낮게·손 내림)가 섞인 클립에서 낮은 방향값이 몰린다(GT 25° 미만 정상 49프레임 중 다수).",
+  "뷰 정책이 바뀐다. 지금은 모든 뷰에서 순간축으로 거르지만, 사선 B/D 에서는 앞 들기를 세게 된다. 단 옛 순간축은 B/D 정상의 20.4% 를 지웠다. 범위 문장으로 밝히지만, 사선에서 찍는 사용자에게는 체감상 느슨해진다.",
+  "63371 R 처럼 앞 들기가 정면 깊이 단축으로 무릎 130.9° 로 읽히면 knee_straight 가 먼저 걸린다. 그러면 \"다리를 뻗으면…\"이라는 틀린 이유를 말할 수 있다. 사유 순서(LegCycle.kt:385-395)는 바꾸지 않았고, 폰 블록에서 사유 정확도를 본다.",
+  "54020 R 처럼 닿음이 V 외삽 0 에만 기댄 회는 방향 판별로 막힌다. 다만 옆으로 들기만 하고 덜 접은 회가 외삽으로 닿음을 통과하는 경로는 남는다. 관측 키로 측정한 뒤 결정한다(바닥 크런치와 공유).",
+  "교정 문장 여유 0.80 때문에 실제로 고쳤지만 경계(0.70~0.80)인 회에는 칭찬이 늦게 나온다. 다음 분명한 회까지 기다린다.",
+  "옛 로그의 .fcap 에는 새 피처가 없다. 재생 비교는 반드시 setlog_captures → .cap 경로로 해야 한다. 그러지 않으면 2D 폴백으로 재생돼 앱과 어긋난다.",
+  "앞 회 직후 옛 LiveCoach 의 '좋아요, 시선 자세가 교정됐어요.'(PostureCoach.kt:32, AIHub ship '시선 정면 유지')는 이 설계로 사라지지 않는다. 시선 문제(#8)에서 다룬다."
+ ],
+ "offline_validation": [
+  "1) (구현 전, 완료) 폰 프로토타입 — 스크립트 design/stance_bottom.py·raw_cycles.py·yaw_noise.py, 출력 bottom8.csv·bottom1006.csv.\n- 센 정상(닿음) 26회: 10-08 줄 8 18회 + 10-06 session3 줄 11 8회의 kl_st 0.79~1.19(기준 3종 중 최소)\n- 앞 변형: 10-08 11회 ≤ 0.61, 10-06 15회(앞 들기 10·편 다리 앞차기 5) ≤ 0.37\n- 10-06 session2 줄 3·7(옛 엔진)의 닿음 근처 회(2D ≤ 0.53): 3355 R 0.50 을 빼면 ≥ 0.87(3355 R 은 2D 0.34 라 어차피 안 닿음)\n- 통과 기준: 센 정상 전부 ≥ 문턱+0.05, 앞 변형 전부 ≤ 문턱−0.05 → 0.70 에서 충족(0.79/0.61)",
+  "2) (완료) AIHub GT 3D — design/aihub_gt_dir.py → aihub_gt_dir.csv, 1,611클립·48명.\n- 깨끗한 정상(옆·닿음·척추 정상, 552프레임): kl_st < 0.70 기각 2.0%, < 0.65 1.6%\n- 앞(옆 오류, 957): 검출 91.6%(0.70)·90.4%(0.65)\n- 전 조건 정상 클립(99프레임): 0%\n- 옛 순간축 0.35: 1.3%/74.6%\n- 통과 기준: 정상 ≤ 2.0%, 검출 ≥ 85%",
+  "3) (완료) AIHub MP 캐시 — design/aihub_mp_dir.py → aihub_mp_dir.csv, 60클립×5뷰. 실제 뷰는 선 자세 골반 요로 다시 분류했다.\n- C(≤16.4°): 정상(옆·닿음) 0/31 기각, 앞 26/31(83.9%) 검출. 옛 순간축은 4/31 기각\n- B/D: 3/54(5.6%) — 유보 근거\n- 후방 사선 A/E: 42.6% — 사용 불가",
+  "4) (구현 전, 해야 함) AIHub 사이드 크런치 MP 모집단 확장.\n- 대상: ZIP 에 있는 Training 색인 일치 JPEG 19,975장(FOUR_EXERCISE_POSTURE_PLAN.md:51) 중 C 뷰. research/aihub_fitness/four_exercise_probe.py 경로로 MediaPipe 를 재추론한다.\n- 측정: 같은 aihub_mp_dir.py 를 다시 돌린다.\n- 통과 기준: 실제 C 뷰 정상(옆·닿음) ≥ 150프레임·≥ 30명에서 0.70 기각 ≤ 2%(95% 상한 ≤ 5%), 앞 검출 ≥ 80%.\n- 실패 시: 0.65 로 다시 잰다. 그것도 실패하면 띠를 보류하고 사용자에게 보고한다.",
+  "5) (구현 후) JVM 재생(.cap 경로: setlog_captures.py → trex-rep-replay.bat) 기대 결과:\n- 10-08 줄 8: 18회(왼 9/오른 9), 기각 13. 바뀌는 것은 54020 R·55532 L → no_abduct 뿐(차이 2회)\n- 10-06 session3 줄 11: 8회, 사유 전부 동일(차이 0)\n- 같은 날 니업 줄 7·사이드 런지 줄 10·크로스 런지 줄 11과 10-06 한 다리 세트: 수·사유 차이 0(SIDE_CRUNCH 분기만 바뀜)\n- family_scorecard.py 한 다리 계열 표 변화 0\n- 통과 기준: 위 차이가 정확히 예상과 같음",
+  "6) (구현 후) 유닛 테스트: LegCycleTest 픽스처 (a)~(e), RejectCueGate 교정 확인, ContactMinimum 관측 키, PostureScopeTest, RepFormLinesTest(선택 4 채택 시 FAULT_LINES 재생성). ./gradlew :app:testDebugUnitTest 전부 통과와 재생기 빌드 통과가 기준이다.",
+  "7) (구현 후, 기기) adb shell cmd package compile -m verify -f com.example.trex_kotlin 실행 뒤 logcat 에 'failed to verify' 0건이어야 한다. PostureLive 지역 변수를 늘리지 않았음을 확인하는 단계다."
+ ],
+ "phone_protocol": "**촬영 조건.** 정면 C, 권장 거리, 손은 머리 뒤. 블록 단위 = 한쪽 올림이고, 블록 안에서 왼·오른을 번갈아 한다. 세트 사이에 라벨 CSV 를 기록한다(SINGLE_LEG_FAMILY_DESIGN §7 형식).\n\n**세트 지시문.**\n- `스탠딩 사이드 크런치,1,정상:6 앞팔꿈치:4 정상:4 앞으로:4 정상:2` (COACH)\n- `스탠딩 사이드 크런치,2,정상:4 대각:4 앞팔꿈치:4 정상:4` (TRACK)\n- `스탠딩 사이드 크런치,3,정상:4 앞팔꿈치:4` (선택, 사선 B. 유보 확인용)\n\n**블록 뜻.**\n- 앞팔꿈치 = 무릎을 정면으로 들고 팔꿈치를 앞으로 내려 닿게(오늘 보고 동작)\n- 앞으로 = 무릎만 정면으로\n- 대각 = 정면에서 약 45° 비스듬히 들고 옆구리를 접어 닿게\n\n**합격 기준.**\n- (1) 세트 1·2 의 앞팔꿈치·앞으로 16회 중 셈 0회. 1회라도 세면 실패다(사용자 기준).\n- (2) 세트 1·2 의 정상 20회 중 셈 ≥ 19회, 정상 회의 no_abduct 기각 0회. 1회면 kl_st 를 조사하고, 2회 이상이면 실패다.\n- (3) 앞 회 기각의 사유가 no_abduct 인 비율 ≥ 14/16. knee_straight 오독을 확인하는 항목이다.\n- (4) \\\"좋아요, 교정됐어요.\\\" 가 앞 회 직후에 0번이고, 정상 블록 첫 회 뒤에는 나온다(6 s 간격으로 말한 경우).\n- (5) 대각 블록은 합불 없이 kl_st 분포를 기록한다. 사용자 결정 3(대각을 셀지)을 이 값으로 확정한다.\n- (6) 세트 3(사선)은 앞팔꿈치도 센다(유보). 범위 카드 문장이 표시되는지 확인한다.\n- (7) 세 세트 모두 JVM .cap 재생이 앱의 수·사유와 회 단위로 일치한다.\n- (8) 로그 elbow_knee_obs 로 '외삽에만 기댄 닿음' 회를 센다. 정상·변형 각각 몇 회인지가 접촉 정책 결정 자료다.",
+ "user_decisions_needed": [
+  "방향 띠: (a) 0.70 — 추천. 폰 여유는 양쪽 0.09, GT 깨끗한 정상 2.0%, MP C 0/31, 이 사용자 기준 정면에서 약 34°다. (b) 0.65 — GT 1.6% 로 정상 회를 덜 지우지만, 앞 변형 쪽 여유가 0.04~0.08 뿐이다. 오프라인 4번(MP 확장)에서 0.70 이 2% 를 넘으면 (b)로 내린다.",
+  "판정 뷰: (a) 정면 C 만, 사선·옆은 유보(셈)하고 범위 문장으로 밝힘 — 추천. 권장 촬영 방향이 C 이고(ExerciseProfiles.kt:131), B/D 정상 기각은 5.6% 다. (b) C+B/D — 사선에서도 앞 들기를 거르지만 정상 회 약 6% 를 지운다.",
+  "대각 들기의 정의: 0.70 이면 정면에서 약 34° 미만은 세지 않고 45° 대각은 센다. 이 경계를 그대로 둘지는 폰 세트 2 '대각' 블록 값을 본 뒤 정한다. 추천은 유지다. AIHub 정상 방향 5% 분위가 31.5° 라 더 엄격하면 다른 사람의 정상 회를 지운다.",
+  "'팔꿈치 앞 내림' beta 참고 검사(화면만, 무음·점수·횟수 무관) 추가 여부: 추천은 추가다. 보고 동작을 화면에 보여 주는 대가가 낮다. 대사가 늘어 FAULT_LINES 를 다시 만들어야 한다.",
+  "접촉 V 외삽(ContactMinimum): (a) 지금은 관측 키만 로그하고 다음 폰 블록 뒤 결정 — 추천. 바닥 크런치와 공유하고, 사용자가 2026-10-06 에 순간 접촉 포착을 요구했다. (b) 지금 외삽 보정량 상한(예: 0.15 몸통)이나 4표본 대칭 검사를 건다.",
+  "교정 문장 여유: '앞으로 올리면…' 을 말한 뒤 kl_st ≥ 0.80 인 회에만 '좋아요, 교정됐어요.' — 추천. 아니면 지금처럼 센 회면 무조건 낸다.",
+  "(유지 추천) 사유 순서 knee_straight → no_abduct 를 그대로 둘지. 정면에서 앞 들기가 무릎 펴짐으로 오독되면 틀린 이유를 말할 수 있다. 폰 합격 기준 (3)으로 먼저 잰 뒤 정한다."
+ ],
+ "effort": "M",
+ "depends_on": [
+  "§100 교정 문장 경로 RejectCueGate.takeRecovery(FloorLive.kt:214)와 IdentityCueSource(RepCounter.kt:1057) — 한 다리·바닥 계열 모든 기각 사유 설계와 공유한다. recoveryConfirmed 기본값 true 로 다른 엔진 동작은 그대로다.",
+  "ContactMinimum 85 ms 접촉 최솟값(§98a)과 V 외삽 — 바닥 크런치의 팔꿈치–무릎 접촉 문제와 같은 클래스·같은 키다. 관측 키 elbow_knee_obs 는 함께 설계한다.",
+  "LegCycle 선 자세 기준·복귀 재기준(dwell, LegCycle.kt:314) — 스탠딩 니업(줄 7)·사이드/크로스 런지 설계와 공유한다. 선 자세 골반축 피처(pelvis_yaw_cam·knee_cx/cz)는 니업의 '무릎이 앞으로' 판별에도 재사용할 수 있다.",
+  "AIHub MP 재추론 파이프라인(research/aihub_fitness/four_exercise_probe.py, outputs/mp) — 한 다리 계열 다른 종목의 모집단 측정과 공유한다.",
+  "폰 블록 세트 지시문·라벨 CSV(docs/SINGLE_LEG_FAMILY_DESIGN.md §7)와 JVM .cap 재생 경로(setlog_captures.py, single_leg_diag.py)",
+  "시선 문제(#8): 앞 회 직후 옛 LiveCoach 의 '좋아요, 시선 자세가 교정됐어요.'(PostureCoach.kt:32) — 이 설계 밖이다."
+ ]
+}

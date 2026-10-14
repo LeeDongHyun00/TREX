@@ -320,7 +320,8 @@ class RepHysteresisTest {
 
     @Test fun deviceFixtureBaseline1IsRecordedNotAsserted() {
         // 실기기 푸시업 baseline 1/3 — 정답은 3~4회(사람이 센 값의 폭). 여기서는 두 경로가 **센 값을 기록**한다:
-        // 새 코어 4회(정답 폭 안), 앱 세션의 현재 복귀형 0회(로드맵 결함 7 — 안정 준비 자세를 못 잡는다).
+        // 새 코어 4회(정답 폭 안), 앱 세션의 복귀형 4회(spec §99 v2 — v1 은 0회: 세트 전 자세 1.4 가 기준이 되고 세트 중 위 자세는
+        // 1.17~1.21 이라 띠 ±0.066 에 못 돌아왔다. v2 의 깊이 1/3 띠 안이다).
         // 정답을 단정하는 단언이 아니다 — 코어를 바꾸면 이 숫자가 바뀌는 것을 알아차리기 위한 회귀 기록이다.
         val lines = javaClass.classLoader!!.getResourceAsStream("rep_fixture_baseline1.txt")!!
             .bufferedReader().readLines().filter { !it.startsWith("#") && it.isNotBlank() }
@@ -335,13 +336,13 @@ class RepHysteresisTest {
         }
         assertEquals(4, core.reps)
         assertEquals(0, core.pendingReps)
-        assertEquals(0, live.reps)
+        assertEquals(4, live.reps)
     }
 
     @Test fun sessionFactoryReproducesPostureLiveConstruction() {
         // PostureLive.kt 의 세 갈래: 규칙 rep 설정 / 바닥(ROM 뗌) / 서서(등록부 그대로). 전부 maxGap 1.5 s · 복귀형.
         assertNull(RepCounter.forSession("플랭크", floor = true))
-        assertNull(RepCounter.forSession("스탠딩 사이드 크런치", floor = false))
+        assertNotNull(RepCounter.forSession("스탠딩 사이드 크런치", floor = false)!!.legTracker)
         val rule = RepCounter.forSession("푸시업", ruleRomDirection = "min", ruleRomThreshold = 0.5f, floor = true)!!
         assertEquals("min", rule.signal.romDirection)
         assertEquals(0.5f, rule.signal.romThreshold!!, 0f)
@@ -389,7 +390,7 @@ class RepHysteresisTest {
 
     @Test fun lungeCountsOnKneeMeanWithoutRomAndKeepsTheComparisonSignal() {
         val lunge = RepSignals.byExercise.getValue("스텝 포워드 다이나믹 런지")
-        assertEquals("knee_mean", lunge.feature)
+        assertEquals(Lunge2d.KNEE_SIG, lunge.feature)   // §101a: 보이는 무릎의 평균
         assertEquals(35f, lunge.minAmp, 0f)
         // ROM 은 knee_out_mean 단위였다 — 신호와 함께 뗐다. 판정하지 않은 ROM 을 '유효' 로 말하지 않도록 null.
         assertNull(lunge.romThreshold)

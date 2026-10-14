@@ -104,8 +104,8 @@ cd server && ./gradlew test        # JDK 17 이 없으면 Gradle 이 자동으�
 
 ## 7. 다음 할 일
 
-1. **5단계 개인정보 처리방침·동의 화면** — 다음 공개 릴리스 전에 필수(5절).
-2. **릴리스 서명 키 SHA-1 등록**(Q1) — 구글 콘솔 → 클라이언트 → Android 클라이언트를 하나 더(패키지 `com.example.trex_kotlin` + 릴리스 키 SHA-1, `keytool -list -v -keystore <키스토어>`). 안 하면 릴리스 APK 의 구글 로그인이 `28444` 로 실패한다.
+1. **5단계 개인정보 처리방침·동의 화면** — 다음 공개 릴리스 전에 필수(5절). **`redesign` 병합(2026-10-14) 뒤로는 다음 체험판(1.3.0-preview.8 이후)부터 로그인·동기화가 들어간다** — 그 APK 는 GitHub 사전 릴리스로 공개되고, 앱 내 업데이트(`AppUpdate.kt`)가 preview.6·7 설치자에게 업데이트를 안내한다. 그 체험판 전에 이 단계가 필요한지 사용자가 정한다.
+2. **릴리스 서명 키 SHA-1 등록**(Q1) — 구글 콘솔 → 클라이언트 → Android 클라이언트를 하나 더(패키지 `com.example.trex_kotlin` + 릴리스 키 SHA-1, `keytool -list -v -keystore <키스토어>`). 안 하면 릴리스 APK 의 구글 로그인이 `28444` 로 실패한다. `redesign` 병합 뒤 release 변형은 **빌드한 PC 의 debug 키스토어**로 서명된다(`signingConfig = signingConfigs.getByName("debug")` — 체험판을 삭제 없이 업데이트하려고 고정한 인증서, `docs/ANDROID_PREVIEW_RELEASE_1_3_0_7.md`). 등록할 것은 체험판을 빌드하는 PC 의 그 키 SHA-1 이다.
 3. 2단계 남은 확인: 양쪽에 기록이 있을 때 질문(ASK) 화면.
 4. 4단계 카카오(서버 `/api/auth/oauth/kakao` + 앱 SDK + 카카오 콘솔 키 해시).
 

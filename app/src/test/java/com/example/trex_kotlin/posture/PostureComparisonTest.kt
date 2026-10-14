@@ -178,7 +178,7 @@ class PostureComparisonTest {
     @Test fun lungeComparisonKeepsItsRecordedUnitAfterCountingSignalSwap() {
         // spec §58: 런지 카운트 신호는 knee_mean 으로 바꿨지만 TRACK 비교는 기존 기록의 단위(knee_out_mean · 0.10)를 유지한다
         val lunge = "스텝 포워드 다이나믹 런지"
-        assertEquals("knee_mean", RepSignals.byExercise.getValue(lunge).feature)
+        assertEquals("§101a: 보이는 무릎의 평균(먼 무릎이 빠져도 센다)", Lunge2d.KNEE_SIG, RepSignals.byExercise.getValue(lunge).feature)
         val primary = ComparisonMetrics.forExercise(lunge, emptyList()).first()
         assertEquals("knee_out_mean", primary.feature)
         assertEquals("정규화 비율", primary.unit)

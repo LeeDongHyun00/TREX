@@ -24,8 +24,8 @@ android {
         applicationId = "com.example.trex_kotlin"
         minSdk = 26
         targetSdk = 36
-        versionCode = 9
-        versionName = "1.3.0-preview.4"
+        versionCode = 12
+        versionName = "1.3.0-preview.7"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -44,6 +44,10 @@ android {
         release {
             buildConfigField("String", "TREX_API_BASE_URL", "\"${trexConfig("trex.apiBaseUrl", "")}\"")
             manifestPlaceholders["usesCleartextTraffic"] = "false"
+            // 체험판은 기존 설치본과 같은 개발 인증서(debug 키스토어)로 서명한다 — 삭제 없이 업데이트되고 앱 내 업데이트(AppUpdate)가 서명을 대조한다.
+            // 운영 배포용 별도 서명키는 아직 없다(docs/ANDROID_PREVIEW_RELEASE_1_3_0_7.md).
+            // 이 인증서의 SHA-1 이 구글 콘솔 Android 클라이언트에 없으면 릴리스 APK 의 구글 로그인이 실패한다(docs/SERVER_SYNC_HANDOFF.md Q1).
+            signingConfig = signingConfigs.getByName("debug")
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),

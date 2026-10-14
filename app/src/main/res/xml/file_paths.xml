@@ -3,4 +3,7 @@
 <paths>
     <external-files-path name="posture_logs" path="posture_logs/" />
     <files-path name="posture_logs_internal" path="posture_logs/" />
+    <!-- 앱 내 업데이트(AppUpdate.kt)가 내려받은 APK — 패키지 설치기에 content:// 로 넘긴다 -->
+    <external-files-path name="updates" path="updates/" />
+    <files-path name="updates_internal" path="updates/" />
 </paths>

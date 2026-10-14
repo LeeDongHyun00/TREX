@@ -58,3 +58,16 @@ fun RepFormSpecs.asRules(): List<PostureRule> = byExercise.values.flatten().map 
     )
 }
 
+/** 한 다리 계열(§97): 새 기하로도 직접 판단하지 않는 범위를 범위 카드(`PostureScope`)에 남긴다 — 못 보는 것을 밝힌다(원칙 #5). */
+fun legScopeRules(): List<PostureRule> = LegProfile.entries.flatMap { ex ->
+    mapOf(
+        "척추 분절·허리 말림·아랫배와 옆구리의 힘" to "MediaPipe 에는 척추 분절점·근전도 정보가 없습니다. 몸통 기울기와 팔꿈치–무릎 거리는 그 대리일 뿐, 힘의 출처(아랫배·옆구리·반동)는 판정하지 않습니다.",
+        "발 접지·압력·미끄러짐" to "무릎·허벅지·발목 교차의 기하만 봅니다. 발 압력·실제 접촉·뒤꿈치 들림은 판정하지 않습니다.",
+        "무릎 축 회전·발끝 방향" to "교차·측방·들기별 발 축과 가림 검증 전이라 발끝 방향·무릎 회전은 판정하지 않습니다(무릎 안쪽 변위만 봅니다).",
+        "목 분절·당기는 힘·시선" to "머리와 손의 점 위치만으로 목 분절이나 손이 당기는 힘, 눈동자 시선을 알 수 없습니다.",
+    ).map { (condition, reason) ->
+        PostureRule("leg_scope|${ex.title}|$condition", ex.title, condition, null, RuleStatus.EXCLUDE, reason,
+            "unobservable", "unobservable", "none", "scope", ">", Float.NaN, "C", "미관측", Float.NaN, Float.NaN, 0, false,
+            listOf(reason), kind = "scope")
+    }
+}
