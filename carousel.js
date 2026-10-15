@@ -14,8 +14,12 @@
  * A card can also hold the ring. With data-hold, the ring rests at that card
  * for that many stage widths of drag before it turns on, and the card's beat
  * (see beat()) runs from 0 to 1 over the rest, so a scene can play out on the
- * card under the finger and run backwards when the drag does. With loop off,
- * the ring runs from the first card to the last and stops at both.
+ * card under the finger and run backwards when the drag does. With data-play
+ * instead, the beat plays by itself over that many seconds once the ring
+ * comes to rest at the card, and the drag only turns the ring. With snap on,
+ * a drag or a turn of the wheel that ends between two cards eases on to one
+ * of them. With loop off, the ring runs from the first card to the last and
+ * stops at both.
  *
  * Markup (see carousel.css):
  *   <div class="carousel" tabindex="0" aria-label="…">
@@ -30,6 +34,9 @@
  * Events dispatched on the root element (detail: { angle, index, travel }):
  *   carousel:move    every rendered frame
  *   carousel:settle  when a drag ends or a step to a card finishes
+ *   carousel:played  when the card the ring rests at has played its beat (at
+ *                    once for a card with nothing to play), and again each
+ *                    time the ring comes back to rest there
  */
 (function (global) {
   'use strict';
@@ -57,6 +64,10 @@
     axis: 'x',
     // Degrees between neighbouring cards. 0 shares the ring evenly.
     step: 0,
+    // true: a drag or a turn of the wheel that ends between two cards eases on
+    // to one of them: the next one the way it went if it went far or fast
+    // enough, else the nearer one.
+    snap: false,
     // false: the ring runs from the first card to the last and stops at both
     // instead of coming round again. Cards are then laid one step apart without
     // wrapping, so more cards than fit once round can follow each other; only
@@ -68,9 +79,10 @@
   // A press must travel this far (px) before it counts as a drag, so taps on a
   // card can still bring it to the front.
   const DRAG_THRESHOLD = 4;
-  // Time constant (ms) of the eased step for arrow keys and taps on a card.
-  const STEP_TIME_CONSTANT = 160;
-  const REDUCED_TIME_CONSTANT = 40;
+  // How long (ms) an eased step takes: for arrow keys, taps on a card and a
+  // snap. It slows to a stop, and stops outright, so a card that plays can
+  // start as soon as the ring is there. With reduced motion a step is a jump.
+  const STEP_DURATION = 420;
   // Flat strips a caption is bent into along the far wall.
   const CAPTION_STRIPS = 16;
   // Latitude (rad) the wall's borders are traced to, and how finely.
@@ -78,6 +90,15 @@
   const WALL_SAMPLES = 24;
   // Stops closer than this (stage widths) count as the same place.
   const STOP_EPSILON = 1e-6;
+  // With snap, a drag that has gone this share of the way to the next card, or
+  // flicks the ring this many cards a second, goes on to it. A turn of the
+  // wheel goes on however small it was (a notch can be a few pixels, or half
+  // that on a page zoomed in), but never past the next card.
+  const SNAP_PUSH = 0.18;
+  const SNAP_FLICK = 1.5;
+  // A card turned away while it plays goes to the end of its beat (on) or the
+  // start (back) over this share of a turn.
+  const PLAY_BLEND = 0.15;
 
   const reducedMotion = global.matchMedia('(prefers-reduced-motion: reduce)');
 
@@ -96,7 +117,17 @@
       this.vertical = this.options.axis === 'y';
       this.count = this.cards.length;
       this.step = this.options.step || 360 / this.count;
-      this.holds = this.cards.map((card) => Math.max(0, parseFloat(card.dataset.hold) || 0));
+      // Seconds each card plays its beat for (data-play), 0 for none; a card
+      // that plays does not also hold the ring.
+      this.plays = this.cards.map((card) => Math.max(0, parseFloat(card.dataset.play) || 0));
+      this.holds = this.cards.map((card, i) => (this.plays[i] ? 0 : Math.max(0, parseFloat(card.dataset.hold) || 0)));
+      // How far each card has played, the card the ring last came to rest at,
+      // and whether its end has been announced (carousel:played).
+      this.played = this.cards.map(() => 0);
+      this.current = -1;
+      this.announced = true;
+      this.clock = null;
+      this.shown = NaN;
 
       // Where the ring is along its track, in stage widths of drag from the
       // first card's rest (see layTrack). The angle follows from it.
@@ -201,9 +232,30 @@
       return { start: rest.start + shift, end: rest.end + shift };
     }
 
+    // The rest of the k-th card along the track (laps and all on a ring that
+    // loops; one that does not stops at its first and last card).
+    restAt(k) {
+      if (!this.options.loop) return this.rests[clamp(k, 0, this.count - 1)];
+      const rest = this.rests[mod(k, this.count)];
+      const shift = this.lap * Math.floor(k / this.count);
+      return { start: rest.start + shift, end: rest.end + shift };
+    }
+
     // How far card i's beat has run: 0 until the ring reaches the card, then
     // rising to 1 over its rest, and 1 once the ring has turned on past it.
+    // A card that plays (data-play) shows how far it has played while the
+    // ring rests at it, and goes to the end of its beat as the ring turns on
+    // from it, or to the start as it turns back.
     beat(i) {
+      if (this.plays[i]) {
+        let d = this.positionAt(this.travel) - i;
+        if (this.options.loop) d -= this.count * Math.round(d / this.count);
+        if (i !== this.current) return d > 0 ? 1 : 0;
+        const p = this.played[i];
+        if (Math.abs(d) < STOP_EPSILON) return p;
+        const w = clamp(Math.abs(d) / PLAY_BLEND, 0, 1);
+        return p + ((d > 0 ? 1 : 0) - p) * w * w * (3 - 2 * w);
+      }
       const { start, end } = this.restOf(i);
       const t = this.options.loop ? this.travel : clamp(this.travel, 0, this.end);
       if (end > start) return clamp((t - start) / (end - start), 0, 1);
@@ -311,7 +363,41 @@
         this.index = index;
       }
       this.paintWall();
+      this.shown = this.travel;
+      // At rest at a card the ring has come to that card. Away from it, the
+      // card it last came to is announced again once the ring rests there.
+      const rest = this.restingAt();
+      if (rest >= 0) this.arrive(rest);
+      else this.announced = false;
       this.emit('carousel:move');
+    }
+
+    // The card the ring rests at, or -1 while a drag or a step moves it or it
+    // stands between two cards.
+    restingAt() {
+      if (this.motion || (this.drag && this.drag.active)) return -1;
+      const at = this.positionAt(this.travel);
+      const card = Math.round(at);
+      return Math.abs(at - card) < STOP_EPSILON ? mod(card, this.count) : -1;
+    }
+
+    // The ring has come to rest at card i. Coming on to it, the card plays
+    // from the start; coming back to it, it shows its end, as it was left; at
+    // the card it was already at, it goes on where it was.
+    arrive(i) {
+      if (i === this.current) return;
+      const ahead = this.current < 0 || shortest((i - this.current) * this.step) > 0;
+      this.current = i;
+      this.played[i] = ahead && this.plays[i] ? 0 : 1;
+      this.announced = false;
+      this.clock = null;
+      this.schedule();
+    }
+
+    // Whether the card the ring rests at is playing its beat now.
+    playing() {
+      const i = this.current;
+      return i >= 0 && this.played[i] < 1 && this.restingAt() === i;
     }
 
     // The far wall is the inside of a sphere around the ring's centre. Its
@@ -358,28 +444,62 @@
     tick() {
       this.frame = 0;
       let settled = false;
+      const now = performance.now();
       if (this.motion) {
-        const { from, target, tau, start } = this.motion;
-        const elapsed = Math.max(0, performance.now() - start);
-        const remaining = (from - target) * Math.exp(-elapsed / tau);
-        if (Math.abs(remaining) < 0.0002) {
+        const { from, target, duration, start } = this.motion;
+        const u = duration > 0 ? clamp((now - start) / duration, 0, 1) : 1;
+        this.travel = from + (target - from) * (1 - (1 - u) ** 3);
+        if (u >= 1) {
           this.travel = target;
           this.motion = null;
           settled = true;
-        } else {
-          this.travel = target + remaining;
         }
       }
-      this.render();
-      if (this.motion) this.schedule();
+      // The card at rest plays on by the time since the last frame (a long
+      // gap, as when the page was hidden, counts for a quarter second). Each
+      // frame it plays is one of the ring's, from the first (when its clock
+      // starts), so a layer drawn on carousel:move and on frames of its own
+      // in between still draws once a frame as the play starts.
+      const playing = this.playing();
+      if (playing) {
+        const i = this.current;
+        if (this.clock !== null) {
+          const share = this.plays[i] ? Math.min(250, now - this.clock) / 1000 / this.plays[i] : 1;
+          this.played[i] = Math.min(1, this.played[i] + share);
+        }
+        this.clock = now;
+      } else {
+        this.clock = null;
+      }
+      if (this.travel !== this.shown || settled) this.render();
+      else if (playing) this.emit('carousel:move');
+      if (this.motion || this.playing()) this.schedule();
       if (settled) this.emit('carousel:settle');
+      if (!this.announced && this.played[this.current] >= 1 && this.restingAt() === this.current) {
+        this.announced = true;
+        this.emit('carousel:played');
+      }
     }
 
-    // Eases along the track to a point on it.
-    animateTo(target, tau) {
-      if (reducedMotion.matches) tau = REDUCED_TIME_CONSTANT;
+    // Eases on from where a drag or the wheel started (at, cards along the
+    // track) to a card: the next one the way the ring went if it went far
+    // enough or was flicked (velocity, cards a second), else the nearer one.
+    snapFrom(from, velocity = 0, push = SNAP_PUSH) {
+      const at = this.positionAt(this.travel);
+      const moved = at - from;
+      let card = Math.round(at);
+      const way = Math.abs(moved) >= push ? Math.sign(moved) : Math.abs(velocity) >= SNAP_FLICK && Math.sign(velocity) === Math.sign(moved) ? Math.sign(moved) : 0;
+      if (way > 0) card = Math.max(card, Math.floor(from + STOP_EPSILON) + 1);
+      if (way < 0) card = Math.min(card, Math.ceil(from - STOP_EPSILON) - 1);
+      this.goTo(card);
+    }
+
+    // Eases along the track to a point on it (at once if it is already
+    // there, so a card that plays is not held up by a step that goes nowhere).
+    animateTo(target) {
       if (!this.options.loop) target = clamp(target, 0, this.end);
-      this.motion = { from: this.travel, target, tau, start: performance.now() };
+      const duration = reducedMotion.matches || Math.abs(target - this.travel) < STOP_EPSILON ? 0 : STEP_DURATION;
+      this.motion = { from: this.travel, target, duration, start: performance.now() };
       this.schedule();
     }
 
@@ -388,7 +508,7 @@
     goTo(index) {
       const i = this.options.loop ? mod(index, this.count) : clamp(index, 0, this.count - 1);
       const { start, end } = this.restOf(i);
-      this.animateTo(clamp(this.travel, start, end), STEP_TIME_CONSTANT);
+      this.animateTo(clamp(this.travel, start, end));
     }
 
     // The places a step can stop at: both ends of every rest, in track order.
@@ -420,7 +540,7 @@
         if (next === undefined) break;
         target = next;
       }
-      this.animateTo(target, STEP_TIME_CONSTANT);
+      this.animateTo(target);
     }
 
     // Moves along the track by a number of stage widths.
@@ -437,7 +557,9 @@
     onPointerDown(event) {
       if (this.drag || (event.pointerType === 'mouse' && event.button !== 0)) return;
       const wasMoving = Boolean(this.motion);
-      // Grabbing the ring mid-step stops it where it is.
+      // Grabbing the ring mid-step stops it where it is (see onPointerUp for
+      // where it goes with snap on).
+      const heading = this.motion ? this.motion.target : this.travel;
       this.motion = null;
       this.suppressClick = false;
       this.drag = {
@@ -446,7 +568,11 @@
         last: this.along(event),
         active: false,
         wasMoving,
+        heading,
         card: event.target.closest('.carousel__card'),
+        // Where the ring was along its track, in cards, and lately (for a flick).
+        from: this.positionAt(this.travel),
+        trail: [],
       };
     }
 
@@ -465,7 +591,18 @@
       // back as soon as the finger does. Left, or up, goes on.
       this.moveBy((-(at - drag.last) / this.width) * this.options.direction);
       drag.last = at;
+      drag.trail.push([performance.now(), this.positionAt(this.travel)]);
+      if (drag.trail.length > 6) drag.trail.shift();
       this.schedule();
+    }
+
+    // How fast a drag was turning the ring as it ended, in cards a second.
+    flick(drag) {
+      const now = performance.now();
+      const recent = drag.trail.filter(([t]) => now - t < 120);
+      if (recent.length < 2) return 0;
+      const [t0, p0] = recent[0], [t1, p1] = recent[recent.length - 1];
+      return t1 > t0 ? ((p1 - p0) * 1000) / (t1 - t0) : 0;
     }
 
     // An upright ring follows the wheel and trackpad as a page scrolls, and
@@ -477,11 +614,22 @@
       const ended = !this.options.loop && ((widths < 0 && this.travel <= 0) || (widths > 0 && this.travel >= this.end));
       if (!widths || ended) return;
       event.preventDefault();
+      if (!this.wheelEnd) this.wheelFrom = this.positionAt(this.travel);
       this.motion = null;
       this.moveBy(widths);
+      if (this.options.snap) {
+        // One turn of the wheel reaches the next card at most, so a long
+        // trackpad flick stops there rather than flying past a card.
+        const from = this.wheelFrom;
+        this.travel = clamp(this.travel, this.restAt(Math.ceil(from - STOP_EPSILON) - 1).start, this.restAt(Math.floor(from + STOP_EPSILON) + 1).end);
+      }
       this.schedule();
       clearTimeout(this.wheelEnd);
-      this.wheelEnd = setTimeout(() => this.emit('carousel:settle'), 150);
+      this.wheelEnd = setTimeout(() => {
+        this.wheelEnd = 0;
+        if (this.options.snap) this.snapFrom(this.wheelFrom, 0, STOP_EPSILON);
+        else this.emit('carousel:settle');
+      }, 150);
     }
 
     onPointerUp(event) {
@@ -491,12 +639,21 @@
       if (drag.active) {
         this.root.classList.remove('is-dragging');
         this.suppressClick = true;
-        this.emit('carousel:settle');
+        if (this.options.snap) this.snapFrom(drag.from, this.flick(drag));
+        else this.emit('carousel:settle');
       } else if (drag.card && !drag.wasMoving) {
         this.goTo(this.cards.indexOf(drag.card));
       } else if (drag.wasMoving) {
-        this.emit('carousel:settle');
+        this.release(drag);
       }
+    }
+
+    // A press that caught the ring mid-step and let it go without a drag
+    // leaves it where it is, or with snap on, where it would otherwise rest
+    // between two cards, lets the step go on to where it was going.
+    release(drag) {
+      if (this.options.snap) this.animateTo(drag.heading);
+      else this.emit('carousel:settle');
     }
 
     onPointerCancel(event) {
@@ -504,7 +661,9 @@
       if (!drag || event.pointerId !== drag.id) return;
       this.drag = null;
       this.root.classList.remove('is-dragging');
-      this.emit('carousel:settle');
+      if (this.options.snap && drag.active) this.snapFrom(drag.from);
+      else if (drag.wasMoving) this.release(drag);
+      else this.emit('carousel:settle');
     }
 
     // A press that wanders off before it becomes a drag is not captured, so
@@ -513,7 +672,7 @@
       const drag = this.drag;
       if (!drag || drag.active || event.pointerId !== drag.id) return;
       this.drag = null;
-      if (drag.wasMoving) this.emit('carousel:settle');
+      if (drag.wasMoving) this.release(drag);
     }
 
     // A drag that ends over a link or button must not also activate it.

@@ -1,9 +1,9 @@
 /*
  * The TREX day told on the carousel. A WebGL layer over the ring draws the
  * story's 3D models in step with it: each model rides on its card's face or
- * on the card's band of the far wall, and each card's beat plays out while
- * the ring rests at the card (see data-hold and beat() in carousel.js), so the
- * drag drives the whole story, backwards too.
+ * on the card's band of the far wall, and each card's beat plays out by
+ * itself once the ring comes to rest at the card (see data-play and beat() in
+ * carousel.js), while the drag turns the ring from one card to the next.
  *
  *   opening  a dumbbell, a barbell and a water bottle float on the white
  *            screen, and the coach says the line
@@ -495,9 +495,9 @@ export async function play(carousel, { models = null } = {}) {
       });
     }
   }
-  // The opening keeps clear of its text, of the coach who says it and of
-  // the hint at the bottom of the page (index.html).
-  props(scenes.opening, [{ x0: 0.06, x1: 0.94, y0: 0.4, y1: 0.6 }, { x0: 0.56, x1: 1, y0: 0.62, y1: 0.91 }, { x0: 0.12, x1: 0.88, y0: 0.84, y1: 1 }], [
+  // The opening keeps clear of its text and the hint under it (.hint in
+  // index.html), and of the coach who says it.
+  props(scenes.opening, [{ x0: 0.06, x1: 0.94, y0: 0.4, y1: 0.65 }, { x0: 0.56, x1: 1, y0: 0.65, y1: 0.93 }], [
     { kind: 'dumbbell', x: 300, y: 0.16 }, { kind: 'bottle', x: 70, y: 0.22 }, { kind: 'barbell', x: 105, y: 0.74 },
   ]);
   // The ending keeps clear of its text and of the button and the way it rises.
@@ -509,7 +509,8 @@ export async function play(carousel, { models = null } = {}) {
   const coachIn = load('dino');
 
   // The coach says the opening line: it stands at the lower right of the text
-  // on the white wall, turned a little toward it, and sways as it talks.
+  // on the white wall, below the hint, turned a little toward the text, and
+  // sways as it talks.
   {
     const c = scenes.opening;
     job(coachIn, (model) => {
@@ -519,7 +520,7 @@ export async function play(carousel, { models = null } = {}) {
         height: 220,
         talk: true,
         spot: () => {
-          const at = onWall(300 * view.s, 0.765 * view.height);
+          const at = onWall(300 * view.s, 0.79 * view.height);
           return { ...at, z: at.z - view.r };
         },
       });
