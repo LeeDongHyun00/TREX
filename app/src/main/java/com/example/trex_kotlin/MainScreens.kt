@@ -143,7 +143,10 @@ fun HomeScreen(app: AppViewModel, onGoWorkout: () -> Unit, onGoDiet: () -> Unit,
         item {
             WeatherRecommendationCard(
                 onExerciseClick = { exercise ->
-                    app.addMuscleRecommendation(exercise.catalogName)
+                    val alreadyInPlan = app.workoutPlan.any { it.name == exercise.catalogName }
+                    if (!alreadyInPlan) {
+                        app.addMuscleRecommendation(exercise.catalogName)
+                    }
                     onGoWorkout()
                 }
             )
@@ -260,4 +263,5 @@ fun profileGoalLabel(goal: String): String = when (goal) {
     "maintain" -> "유지"
     else -> "일반"
 }
+
 

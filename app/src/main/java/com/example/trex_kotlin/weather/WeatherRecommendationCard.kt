@@ -1,6 +1,7 @@
 package com.example.trex_kotlin.weather
 
 import android.Manifest
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
@@ -61,6 +62,8 @@ fun WeatherRecommendationCard(
     ) { granted ->
         if (granted) {
             preferenceManager.enableGpsMode()
+        } else {
+            Toast.makeText(context, "위치 권한이 거부되어 선택된 지역 날씨를 표시해룡.", Toast.LENGTH_SHORT).show()
         }
         loadWeather(forceRefresh = true)
     }
@@ -136,18 +139,29 @@ fun WeatherRecommendationCard(
                     }
 
                     Spacer(modifier = Modifier.height(6.dp))
-                    Text(
-                        text = rec.weatherSummary,
-                        color = c.text,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Text(
-                        text = rec.updateAgeText,
-                        color = c.text2,
-                        fontSize = 11.sp,
-                        modifier = Modifier.padding(top = 2.dp)
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text(
+                                text = rec.weatherSummary,
+                                color = c.text,
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Text(
+                                text = rec.updateAgeText,
+                                color = c.text2,
+                                fontSize = 11.sp,
+                                modifier = Modifier.padding(top = 2.dp)
+                            )
+                        }
+                        TextButton(onClick = { loadWeather(forceRefresh = true) }) {
+                            Text("↻ 새로고침", color = c.text2, fontSize = 11.sp)
+                        }
+                    }
 
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
