@@ -431,8 +431,8 @@ export async function play(carousel, { models = null } = {}) {
   // button) and keeps them floating there.
   const PROPS = { dumbbell: 100, barbell: 158, bottle: 52 };
   // Spots in design px across and stage fractions down; keepOut is a list of
-  // boxes in stage fractions.
-  function scatter(keepOut) {
+  // boxes in stage fractions, and fallback the spots to use if none fits.
+  function scatter(keepOut, fallback) {
     const kinds = Object.keys(PROPS);
     const hits = (a, b, pad) => a.x0 < b.x1 + pad && a.x1 > b.x0 - pad && a.y0 < b.y1 + pad && a.y1 > b.y0 - pad;
     for (let attempt = 0; attempt < 40; attempt++) {
@@ -455,11 +455,11 @@ export async function play(carousel, { models = null } = {}) {
       const columns = new Set(placed.map((q) => q.x < DESIGN_WIDTH / 2));
       if (placed.length === kinds.length && rows.size === 2 && columns.size === 2) return placed;
     }
-    return [{ kind: 'dumbbell', x: 300, y: 0.16 }, { kind: 'bottle', x: 70, y: 0.22 }, { kind: 'barbell', x: 230, y: 0.9 }];
+    return fallback;
   }
-  function props(c, keepOut) {
+  function props(c, keepOut, fallback) {
     c.idle = true;
-    for (const spot of scatter(keepOut)) {
+    for (const spot of scatter(keepOut, fallback)) {
       job(load(spot.kind), (model) => {
         const wrapper = fit(model.clone(), {
           yaw: (Math.random() - 0.5) * 1.6, pitch: (Math.random() - 0.5) * 0.8, roll: (Math.random() - 0.5) * 1.2,
@@ -485,10 +485,15 @@ export async function play(carousel, { models = null } = {}) {
       });
     }
   }
-  // The opening keeps clear of its text and of the coach who says it.
-  props(scenes.opening, [{ x0: 0.06, x1: 0.94, y0: 0.4, y1: 0.6 }, { x0: 0.56, x1: 1, y0: 0.62, y1: 0.91 }]);
+  // The opening keeps clear of its text, of the coach who says it and of
+  // the hint at the bottom of the page (index.html).
+  props(scenes.opening, [{ x0: 0.06, x1: 0.94, y0: 0.4, y1: 0.6 }, { x0: 0.56, x1: 1, y0: 0.62, y1: 0.91 }, { x0: 0.12, x1: 0.88, y0: 0.84, y1: 1 }], [
+    { kind: 'dumbbell', x: 300, y: 0.16 }, { kind: 'bottle', x: 70, y: 0.22 }, { kind: 'barbell', x: 105, y: 0.74 },
+  ]);
   // The ending keeps clear of its text and of the button and the way it rises.
-  props(scenes.ending, [{ x0: 0.08, x1: 0.92, y0: 0.33, y1: 0.55 }, { x0: 0.14, x1: 0.86, y0: 0.62, y1: 0.82 }]);
+  props(scenes.ending, [{ x0: 0.08, x1: 0.92, y0: 0.33, y1: 0.55 }, { x0: 0.14, x1: 0.86, y0: 0.62, y1: 0.82 }], [
+    { kind: 'dumbbell', x: 300, y: 0.16 }, { kind: 'bottle', x: 70, y: 0.22 }, { kind: 'barbell', x: 230, y: 0.9 },
+  ]);
 
   // The coach, with its squat and its walk (see dino.js).
   const coachIn = load('dino');
