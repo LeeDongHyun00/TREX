@@ -1,0 +1,109 @@
+/*
+ * Carousel3D structure. On .carousel, size the front cards with
+ * --carousel-card-width/height and place their top edge with
+ * --carousel-card-top. Captions on the far wall appear --carousel-caption-width
+ * wide with their middle at --carousel-caption-top (percentages of the stage).
+ * carousel.js derives the ring and the camera from these.
+ *
+ * .carousel                 stage and camera (perspective is set by carousel.js)
+ *   .carousel__wall         canvas with the far wall, added by carousel.js
+ *   .carousel__ring         rotates as a whole
+ *     .carousel__card       one card's share of the ring
+ *       .carousel__face     the card itself, on the near side
+ *       .carousel__strip    a flat strip of the bent caption on the far wall,
+ *         .carousel__caption  added by carousel.js; it clips a slice of a copy
+ */
+.carousel {
+  --carousel-card-width: 80%;
+  --carousel-card-height: 120%;
+  --carousel-card-top: 44%;
+  --carousel-caption-top: 25%;
+  --carousel-caption-width: 86%;
+  position: relative;
+  overflow: hidden;
+  /* Vertical pans stay with the page so the carousel never traps scrolling. */
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: grab;
+}
+
+.carousel.is-dragging {
+  cursor: grabbing;
+}
+
+.carousel__wall {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* The ring and each card span the whole stage so they turn about its middle.
+   Their own boxes are empty and must not take taps meant for what they hold. */
+.carousel__ring,
+.carousel__card {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  pointer-events: none;
+  transform-style: preserve-3d;
+}
+
+.carousel__ring {
+  will-change: transform;
+}
+
+.carousel__card {
+  transform: rotateY(calc(var(--carousel-i) * var(--carousel-step)));
+}
+
+.carousel__face {
+  position: absolute;
+  top: var(--carousel-card-top);
+  left: calc(50% - var(--carousel-card-width) / 2);
+  width: var(--carousel-card-width);
+  height: var(--carousel-card-height);
+  pointer-events: auto;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transform: translateZ(var(--carousel-radius)) rotateY(var(--carousel-turn, 0deg));
+}
+
+/* Captions face into the ring from the side opposite their card. Strip 0 sits
+   furthest round, which is leftmost once it reaches the back, and each strip
+   is a pixel wider than its slot on both sides so neighbours overlap instead of
+   leaving hairline seams. */
+.carousel__strip {
+  --carousel-slot: calc(var(--carousel-j) - (var(--carousel-strips) - 1) / 2);
+  position: absolute;
+  top: var(--carousel-caption-y);
+  left: calc(50% - var(--carousel-strip) / 2 - 1px);
+  width: calc(var(--carousel-strip) + 2px);
+  height: var(--carousel-caption-h);
+  overflow: hidden;
+  pointer-events: auto;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transform: rotateY(calc(180deg - var(--carousel-slot) * var(--carousel-strip-angle)))
+    translateZ(var(--carousel-radius)) rotateY(180deg);
+}
+
+/* Laid out at the size it should appear, then grown to make up for the
+   distance to the far wall. */
+.carousel__strip > .carousel__caption {
+  position: absolute;
+  top: 0;
+  left: calc(1px - var(--carousel-j) * var(--carousel-strip));
+  width: var(--carousel-caption-w);
+  transform: scale(var(--carousel-caption-grow));
+  transform-origin: 0 0;
+}
+
+.carousel__card.is-away > .carousel__face,
+.carousel__card.is-away > .carousel__strip {
+  visibility: hidden;
+}

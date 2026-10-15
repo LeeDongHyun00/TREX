@@ -1,0 +1,690 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>TREX의 하루</title>
+<!-- Everything the story needs starts coming in at once, side by side: its
+     code (the import map comes first, as the preloads resolve through it)
+     and its models, which StoryModels fetches before the code is in. -->
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+  }
+}
+</script>
+<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js">
+<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/loaders/GLTFLoader.js">
+<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/utils/BufferGeometryUtils.js">
+<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/libs/meshopt_decoder.module.js">
+<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/geometries/RoundedBoxGeometry.js">
+<link rel="modulepreload" href="story/story.js">
+<link rel="modulepreload" href="story/coach.js">
+<link rel="modulepreload" href="story/phone.js">
+<link rel="modulepreload" href="models/src/stage.js">
+<link rel="modulepreload" href="models/src/nutrition.js">
+<link rel="modulepreload" href="models/src/cards.js">
+<link rel="modulepreload" href="models/src/button.js">
+<link rel="modulepreload" href="models/src/dino.js">
+<link rel="modulepreload" href="models/src/sdf.js">
+<link rel="modulepreload" href="models/src/look.js">
+<script src="prefetch.js"></script>
+<script>
+  window.storyModels = window.StoryModels ? StoryModels.fetch('models/glb/') : null;
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;800&display=swap">
+<link rel="stylesheet" href="carousel.css">
+<style>
+  /* Layout: phone first. The stage is the whole screen, framed like a phone
+     on larger displays. A single light daylight theme: the night card brings
+     its own dark band. Sizes inside the stage are in cqw (stage widths), so
+     the scene keeps the storyboard's proportions on any phone. */
+  :root {
+    --page: #e6e9ed;
+    --ink: #262b30;
+    --ink-soft: #66707a;
+    --frame: #1f2429;
+    --screen: #f5f7f1;
+    --app-ink: #1f2618;
+    --app-soft: #5e6754;
+    --app-line: #e9eee5;
+    --app-tint: #e7eeda;
+    --app-dark-green: #3f5a24;
+    --trex: #759848;
+    --font: "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+    color-scheme: light;
+  }
+
+  :root {
+    box-sizing: border-box;
+    height: 100%;
+    padding-block: env(safe-area-inset-top, 0px) env(safe-area-inset-bottom, 0px);
+  }
+  *, *::before, *::after { box-sizing: inherit; }
+
+  body {
+    display: grid;
+    place-items: center;
+    height: 100%;
+    margin: 0;
+    /* Up and down drags turn the story, so the page itself never bounces. */
+    overscroll-behavior: none;
+    background: var(--page);
+    color: var(--ink);
+    font: 400 15px/1.45 var(--font);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* The stage, and the loading screen over it until the story is in: both
+     take the same place in the page. */
+  .carousel,
+  .loading {
+    grid-area: 1 / 1;
+    container-type: size;
+    width: 100%;
+    max-width: 430px;
+    height: 100%;
+    background: #ffffff;
+  }
+  .carousel {
+    --carousel-card-width: 91cqw;
+    --carousel-card-height: 182cqw;
+    --carousel-card-top: 44%;
+    --carousel-caption-top: 26.5%;
+    --carousel-caption-width: 92%;
+  }
+  .carousel:focus-visible {
+    outline: 2px solid var(--ink-soft);
+    outline-offset: -4px;
+  }
+  /* On a desktop the demo keeps phone proportions inside a screen outline. */
+  @media (min-width: 640px) and (min-height: 760px) {
+    .carousel,
+    .loading {
+      height: min(100% - 48px, 900px);
+      border-radius: 36px;
+    }
+    .carousel {
+      box-shadow: 0 0 0 1px rgb(31 36 41 / 0.12), 0 30px 60px -30px rgb(31 36 41 / 0.35);
+    }
+  }
+
+  /* The loading screen (loading.js): the pixel coach walking its bar, and a
+     line under it. It fades out once the story is ready. */
+  .loading {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    place-content: center;
+    justify-items: center;
+    overflow: hidden;
+    padding-bottom: 6cqh;
+    transition: opacity 0.45s ease;
+  }
+  .loading.is-done {
+    opacity: 0;
+    pointer-events: none;
+  }
+  .loading__scene {
+    display: block;
+    width: 84cqw;
+    image-rendering: crisp-edges;
+    image-rendering: pixelated;
+  }
+  .loading__line {
+    margin: 5cqw 0 0;
+    color: var(--ink);
+    font-size: min(4.6cqw, 2.13cqh);
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+
+  /* The 3D layer drawn by story.js, over the ring. */
+  .story__layer {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+  }
+
+  /* Sizes that are not on a phone's screen also shrink on a stage shorter
+     than the storyboard's 390 x 844 for its width: min(a cqw, b cqh) with
+     b = a x 390 / 844. story.js squeezes the 3D scene to match. */
+  .carousel__caption {
+    margin: 0;
+    color: var(--ink);
+    font-size: min(6.9cqw, 3.19cqh);
+    font-weight: 700;
+    line-height: 1.38;
+    letter-spacing: -0.01em;
+    text-align: center;
+    text-wrap: balance;
+  }
+  [data-scene="lunch"] { --carousel-caption-top: 24.3%; }
+  [data-scene="night"] .carousel__caption { color: #f3f5ff; }
+  /* The white screens before and after the day carry one big line each. */
+  [data-scene="opening"] { --carousel-caption-top: 50%; }
+  [data-scene="ending"] { --carousel-caption-top: 44%; }
+  [data-scene="opening"] .carousel__caption { font-size: min(10.3cqw, 4.76cqh); line-height: 1.36; }
+  [data-scene="ending"] .carousel__caption { font-size: min(9.2cqw, 4.25cqh); line-height: 1.36; }
+  /* The app's name in its own green. */
+  .carousel__caption .brand { color: var(--trex); }
+
+  /* Front cards with a phone: the screen is the TREX app. */
+  .phone {
+    padding: 2.4cqw;
+    border-radius: 12cqw;
+    background: var(--frame);
+    box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.08);
+  }
+  .phone__screen {
+    position: relative;
+    height: 100%;
+    padding: 11.8cqw 4.6cqw 0;
+    overflow: hidden;
+    border-radius: 9.8cqw;
+    background: var(--screen);
+    color: var(--app-ink);
+  }
+  /* The camera island, over whatever the screen shows. */
+  .phone__screen::before {
+    content: "";
+    position: absolute;
+    z-index: 1;
+    top: 3.1cqw;
+    left: 50%;
+    width: 23.6cqw;
+    height: 6.2cqw;
+    margin-left: -11.8cqw;
+    border-radius: 99px;
+    background: var(--frame);
+  }
+  .phone__status {
+    position: absolute;
+    top: 3.9cqw;
+    left: 7.7cqw;
+    font-size: 3.35cqw;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .phone__title {
+    margin: 0;
+    font-size: 4.1cqw;
+    font-weight: 700;
+    line-height: 1.5;
+  }
+
+  .app-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 2cqw;
+  }
+  .app-card {
+    margin-top: 3.1cqw;
+    padding: 4.1cqw;
+    border-radius: 5.6cqw;
+    background: #ffffff;
+    box-shadow: 0 0.26cqw 0 #e4e8dc;
+  }
+  .app-card h3 {
+    margin: 0;
+    font-size: 3.85cqw;
+    font-weight: 700;
+  }
+  .app-link {
+    color: var(--trex);
+    font-size: 3.1cqw;
+    font-weight: 700;
+  }
+  .app-chip {
+    padding: 0.8cqw 2.6cqw;
+    border-radius: 99px;
+    background: var(--app-tint);
+    color: var(--app-dark-green);
+    font-size: 2.8cqw;
+    font-weight: 700;
+  }
+
+  /* Morning: the sun stands in for today's weather above the intake card. */
+  .phone__sun {
+    display: block;
+    width: 15.9cqw;
+    height: 15.9cqw;
+    margin: 0 auto;
+  }
+  .intake { margin-top: 1.5cqw; }
+  .intake__body {
+    gap: 3.6cqw;
+    margin-top: 3.1cqw;
+  }
+  /* The calorie gauge: the number and its goal sit tight together. */
+  .gauge {
+    position: relative;
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: 26.7cqw;
+    height: 26.7cqw;
+    border-radius: 50%;
+    background: conic-gradient(var(--c) calc(var(--v) * 1%), var(--app-line) 0);
+    text-align: center;
+  }
+  .gauge::after {
+    content: "";
+    position: absolute;
+    inset: 2.3cqw;
+    border-radius: 50%;
+    background: #ffffff;
+  }
+  .gauge > span { position: relative; z-index: 1; }
+  .gauge b {
+    display: block;
+    font-size: 6.7cqw;
+    font-weight: 800;
+    line-height: 1;
+  }
+  .gauge small {
+    display: block;
+    margin-top: 0.8cqw;
+    color: var(--app-soft);
+    font-size: 2.8cqw;
+    font-weight: 600;
+    line-height: 1.1;
+    letter-spacing: -0.01em;
+  }
+  .bars {
+    display: grid;
+    flex: 1;
+    gap: 2.3cqw;
+  }
+  .bar { font-size: 2.95cqw; }
+  .bar__track {
+    height: 1.8cqw;
+    margin-top: 1cqw;
+    overflow: hidden;
+    border-radius: 1.8cqw;
+    background: var(--app-line);
+  }
+  .bar__fill {
+    width: calc(var(--v) * 1%);
+    height: 100%;
+    border-radius: 1.8cqw;
+    background: var(--c);
+  }
+  .app-pill {
+    margin: 3.1cqw 0 0;
+    padding: 1.8cqw 3.1cqw;
+    border-radius: 99px;
+    background: var(--app-tint);
+    color: var(--app-dark-green);
+    font-size: 3.1cqw;
+    font-weight: 700;
+    text-align: center;
+  }
+
+  /* Lunch: the photo with what the app recognised in it. story.js draws the
+     dish into the photo and sets --scan and --press as the beat plays. */
+  .photo {
+    position: relative;
+    height: 43.6cqw;
+    margin-top: 2.6cqw;
+    overflow: hidden;
+    border-radius: 4.6cqw;
+    background: #d9dfd2;
+  }
+  .photo__shot {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+  .photo__box,
+  .photo__tag {
+    position: absolute;
+    opacity: var(--scan, 1);
+    transform: scale(calc(1.08 - 0.08 * var(--scan, 1)));
+  }
+  .photo__box {
+    left: 14.6cqw;
+    top: 7.4cqw;
+    width: 48cqw;
+    height: 30.5cqw;
+    border: 0.64cqw solid var(--trex);
+    border-radius: 3.1cqw;
+  }
+  .photo__tag {
+    left: 14.6cqw;
+    top: 1.8cqw;
+    padding: 0.8cqw 2.1cqw;
+    border-radius: 2.1cqw;
+    background: var(--trex);
+    color: #ffffff;
+    font-size: 2.8cqw;
+    font-weight: 700;
+  }
+  .meal-tabs {
+    display: flex;
+    gap: 1.5cqw;
+    margin-top: 2.6cqw;
+  }
+  .meal-tabs span {
+    flex: 1;
+    padding: 1.5cqw 0;
+    border-radius: 99px;
+    background: #eef1e8;
+    color: var(--app-soft);
+    font-size: 3.1cqw;
+    font-weight: 600;
+    text-align: center;
+  }
+  .meal-tabs .is-on {
+    background: var(--trex);
+    color: #ffffff;
+  }
+  .food { margin-top: 2.6cqw; }
+  .food b { font-size: 3.85cqw; }
+  .food p {
+    margin: 1cqw 0 0;
+    color: var(--app-soft);
+    font-size: 3.2cqw;
+  }
+  /* Before the result, the camera: the dish in the viewfinder, the shutter
+     pressed (--click), a flash (--flash), and the camera giving way to the
+     result as --shot goes from 0 to 1. With no 3D layer the result shows. */
+  .camera {
+    position: absolute;
+    inset: 0;
+    background: #0e1011;
+    opacity: calc(1 - var(--shot, 1));
+  }
+  .camera__view {
+    position: absolute;
+    top: 14cqw;
+    left: 4.6cqw;
+    width: calc(100% - 9.2cqw);
+    height: 72cqw;
+    border-radius: 4.6cqw;
+    background: #d9dfd2;
+  }
+  .camera__shutter {
+    position: absolute;
+    top: 92cqw;
+    left: 50%;
+    width: 15cqw;
+    height: 15cqw;
+    margin-left: -7.5cqw;
+    border-radius: 50%;
+    background: #ffffff;
+    box-shadow: 0 0 0 1.2cqw #0e1011, 0 0 0 2cqw #ffffff;
+    transform: scale(calc(1 - 0.14 * var(--click, 0)));
+  }
+  .camera__flash {
+    position: absolute;
+    inset: 0;
+    background: #ffffff;
+    opacity: var(--flash, 0);
+  }
+  /* Between the camera and the result, a white page of its own while the
+     app looks at the photo (--think): the photo tinted down to a scan line
+     and a bar, both going as far as --analyze. The result then rises into
+     place (--reveal). */
+  .analyzing {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-content: start center;
+    justify-items: center;
+    /* Centred in the part of the screen above the stage's bottom edge: the
+       screen starts 44cqh + 2.4cqw down and its content is about 63cqw tall. */
+    padding-top: max(10cqw, 28cqh - 32.7cqw);
+    background: #ffffff;
+    opacity: var(--think, 0);
+  }
+  .analyzing__photo {
+    position: relative;
+    width: 52cqw;
+    height: 39cqw;
+    overflow: hidden;
+    border-radius: 4.6cqw;
+    background: #d9dfd2;
+  }
+  .analyzing__shot {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+  .analyzing__photo::after {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto;
+    height: calc(var(--analyze, 0) * 100%);
+    border-bottom: 0.7cqw solid var(--trex);
+    background: linear-gradient(rgb(117 152 72 / 0.04), rgb(117 152 72 / 0.3));
+  }
+  .analyzing__title {
+    margin: 5.6cqw 0 0;
+    font-size: 4.1cqw;
+    font-weight: 700;
+  }
+  .analyzing__note {
+    margin: 1.2cqw 0 0;
+    color: var(--app-soft);
+    font-size: 3.1cqw;
+  }
+  .analyzing__bar {
+    width: 44cqw;
+    height: 1.8cqw;
+    margin-top: 4.6cqw;
+    overflow: hidden;
+    border-radius: 1.8cqw;
+    background: var(--app-line);
+  }
+  .analyzing__bar > i {
+    display: block;
+    width: calc(var(--analyze, 0) * 100%);
+    height: 100%;
+    border-radius: inherit;
+    background: var(--trex);
+  }
+  .result {
+    transform: translateY(calc((1 - var(--reveal, 1)) * 9cqw));
+  }
+  .app-cta {
+    margin-top: 3.1cqw;
+    padding: 3.1cqw;
+    border-radius: 4.1cqw;
+    background: var(--trex);
+    color: #ffffff;
+    font-size: 3.6cqw;
+    font-weight: 700;
+    text-align: center;
+    transform: scale(calc(1 - 0.04 * var(--press, 0)));
+    filter: brightness(calc(1 - 0.12 * var(--press, 0)));
+  }
+
+  /* The closing link sits where the 3D download button is drawn, so the
+     button can be tapped and the link can be reached by keyboard: centred
+     45.5cqw into the face, 56.4cqw wide, with its top 46cqw down. */
+  .story__download {
+    position: absolute;
+    left: calc(45.5cqw - min(28.2cqw, 13.03cqh));
+    top: min(46cqw, 21.26cqh);
+    width: min(56.4cqw, 26.06cqh);
+    height: min(20cqw, 9.24cqh);
+    border-radius: 99px;
+  }
+  .story__download:focus-visible {
+    outline: 3px solid var(--trex);
+    outline-offset: 4px;
+  }
+  /* Without the 3D layer the link draws its own button. */
+  .is-flat .story__download {
+    display: grid;
+    place-items: center;
+    background: var(--trex);
+    color: #ffffff;
+    font-size: 6cqw;
+    font-weight: 700;
+    text-decoration: none;
+  }
+  .is-flat .story__download > span {
+    position: static;
+    width: auto;
+    height: auto;
+    clip-path: none;
+  }
+
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+</style>
+</head>
+<body>
+<main class="carousel" id="carousel" tabindex="0" aria-label="공룡의 하루. 위로 밀거나 아래 방향키로 넘겨 보세요.">
+  <ol class="carousel__ring">
+    <li class="carousel__card" data-scene="opening" data-band="#ffffff">
+      <div class="carousel__face"></div>
+      <p class="carousel__caption">내 하루에<br>초대할게룡!</p>
+    </li>
+
+    <li class="carousel__card" data-scene="morning" data-band="#dff1ff" data-hold="2">
+      <div class="carousel__face phone">
+        <div class="phone__screen">
+          <span class="phone__status">8:10</span>
+          <img class="phone__sun" src="models/2d/sun.svg" alt="맑음">
+          <section class="app-card intake">
+            <div class="app-row"><h3>오늘의 섭취</h3><span class="app-link">식단 보기</span></div>
+            <div class="app-row intake__body">
+              <div class="gauge" style="--v: 0; --c: var(--trex)"><span><b>0</b><small>/ 2,110 kcal</small></span></div>
+              <div class="bars">
+                <div class="bar"><div class="app-row"><span>탄수화물</span><span>0 / 278 g</span></div><div class="bar__track"><div class="bar__fill" style="--v: 0; --c: var(--trex)"></div></div></div>
+                <div class="bar"><div class="app-row"><span>단백질</span><span>0 / 117 g</span></div><div class="bar__track"><div class="bar__fill" style="--v: 0; --c: #c7e26b"></div></div></div>
+                <div class="bar"><div class="app-row"><span>지방</span><span>0 / 59 g</span></div><div class="bar__track"><div class="bar__fill" style="--v: 0; --c: #d78b28"></div></div></div>
+              </div>
+            </div>
+            <p class="app-pill">목표까지 2,110 kcal 남았어룡</p>
+          </section>
+        </div>
+      </div>
+      <p class="carousel__caption">날씨와<br>영양 목표 확인으로<br>하루를 시작한다룡!</p>
+    </li>
+
+    <li class="carousel__card" data-scene="lunch" data-band="#a6d8fa" data-hold="3.2">
+      <div class="carousel__face phone">
+        <div class="phone__screen">
+          <span class="phone__status">12:31</span>
+          <div class="result">
+            <p class="phone__title">인식한 음식을 확인해 주세룡</p>
+            <div class="photo">
+              <canvas class="photo__shot" aria-hidden="true"></canvas>
+              <span class="photo__box"></span>
+              <span class="photo__tag">햄버거</span>
+            </div>
+            <div class="meal-tabs"><span>아침</span><span class="is-on">점심</span><span>간식</span><span>저녁</span></div>
+            <div class="app-card food">
+              <div class="app-row"><b>햄버거</b><span class="app-chip">확신 92%</span></div>
+              <p>618 kcal · 탄 48 · 단 30 · 지 34</p>
+            </div>
+            <div class="app-cta">1개 기록하기</div>
+          </div>
+          <div class="analyzing" aria-hidden="true">
+            <div class="analyzing__photo"><canvas class="analyzing__shot"></canvas></div>
+            <p class="analyzing__title">사진을 살펴보고 있어룡</p>
+            <p class="analyzing__note">어떤 음식인지 알아보는 중</p>
+            <span class="analyzing__bar"><i></i></span>
+          </div>
+          <div class="camera" aria-hidden="true">
+            <canvas class="camera__view"></canvas>
+            <span class="camera__shutter"></span>
+            <span class="camera__flash"></span>
+          </div>
+        </div>
+      </div>
+      <p class="carousel__caption">점심엔 사진 한 장으로<br>식단 기록 끝내구룡</p>
+    </li>
+
+    <li class="carousel__card" data-scene="evening" data-band="#ffcf9f" data-hold="3.2">
+      <div class="carousel__face"></div>
+      <p class="carousel__caption">저녁엔 자세 교정과<br>횟수를 세어주는 트레이너와<br>함께 운동한다룡!</p>
+    </li>
+
+    <li class="carousel__card" data-scene="night" data-band="#26305c" data-hold="2.6">
+      <div class="carousel__face"></div>
+      <p class="carousel__caption">자기 전엔 침대에 누워서<br>근육 피로도를 보고<br>내일 루틴을 정한다룡!</p>
+    </li>
+
+    <li class="carousel__card" data-scene="ending" data-band="#ffffff" data-hold="1">
+      <div class="carousel__face">
+        <a class="story__download" href="https://github.com/LeeDongHyun00/TREX" target="_blank" rel="noopener" aria-label="TREX 다운로드 (GitHub)"><span class="visually-hidden">다운로드</span></a>
+      </div>
+      <p class="carousel__caption"><span class="brand">TREX</span>와 함께<br>운동과 식단을<br>관리해보자룡</p>
+    </li>
+  </ol>
+  <p class="visually-hidden" id="status" aria-live="polite"></p>
+</main>
+
+<div class="loading" id="loading" role="progressbar" aria-label="공룡의 하루를 불러오는 중" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+  <canvas class="loading__scene" aria-hidden="true"></canvas>
+  <p class="loading__line" aria-hidden="true">공룡의 하루를 준비하고 있어룡</p>
+</div>
+
+<script src="carousel.js"></script>
+<script src="loading.js"></script>
+<script>
+  (function () {
+    const root = document.getElementById('carousel');
+    const status = document.getElementById('status');
+    // The loading screen stays over the stage until the story is in. Without
+    // its script it gets out of the way.
+    const screen = document.getElementById('loading');
+    const loading = window.PixelLoading ? new PixelLoading(screen, { covers: root }) : (screen.remove(), null);
+    const models = window.storyModels;
+    models?.progress((share) => loading?.progress(share));
+    root.addEventListener('story:ready', () => loading?.done());
+    // Bending the captions into strips takes the carousel a good while to
+    // lay out, so it starts once the loading screen is on the screen (the
+    // models are coming in already, see the head). A page opened in the
+    // background has no frames to wait for.
+    let started = false;
+    const start = () => {
+      if (started) return;
+      started = true;
+      // Six places one card apart: the white opening, the four times of day
+      // and the white ending. The ring stops at both ends instead of coming
+      // round, and is pushed up and down like a scroll, a short push per card.
+      const carousel = new Carousel3D(root, { loop: false, step: 90, swipe: 1.2, axis: 'y' });
+      // Read the front card's caption out, its lines as words.
+      root.addEventListener('carousel:settle', ({ detail }) => {
+        const caption = carousel.cards[detail.index].querySelector('.carousel__caption');
+        status.textContent = caption ? Array.from(caption.childNodes, (node) => (node.nodeName === 'BR' ? ' ' : node.textContent)).join('').replace(/\s+/g, ' ').trim() : '';
+      });
+      // Captions are laid out by their height, which changes once the web
+      // font is in.
+      document.fonts.ready.then(() => carousel.measure());
+      // The 3D models come in on top; without them the cards still turn.
+      import('./story/story.js')
+        .then((story) => story.play(carousel, { models }))
+        .catch((error) => {
+          root.classList.add('is-flat');
+          loading?.done();
+          console.error(error);
+        });
+    };
+    requestAnimationFrame(() => setTimeout(start));
+    setTimeout(start, 1000);
+  })();
+</script>
+</body>
+</html>

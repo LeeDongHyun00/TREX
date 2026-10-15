@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" width="160" height="160" role="img" aria-label="햇빛">
+  <!-- The 2D sun for the phone screen: the same golden core, orange rim and
+       alternating long and short rays as the 3D sun, drawn flat. -->
+  <defs>
+    <radialGradient id="core" cx="0.4" cy="0.36" r="0.72">
+      <stop offset="0" stop-color="#ffe372"/>
+      <stop offset="0.55" stop-color="#ffc21f"/>
+      <stop offset="1" stop-color="#ff8a00"/>
+    </radialGradient>
+    <linearGradient id="ray" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffd24a"/>
+      <stop offset="1" stop-color="#ffa412"/>
+    </linearGradient>
+    <radialGradient id="shine" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.75"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <g fill="url(#ray)">
+    <rect x="72" y="4" width="16" height="30" rx="8"/>
+    <rect x="72" y="4" width="16" height="30" rx="8" transform="rotate(90 80 80)"/>
+    <rect x="72" y="4" width="16" height="30" rx="8" transform="rotate(180 80 80)"/>
+    <rect x="72" y="4" width="16" height="30" rx="8" transform="rotate(270 80 80)"/>
+    <rect x="73" y="13" width="14" height="22" rx="7" transform="rotate(45 80 80)"/>
+    <rect x="73" y="13" width="14" height="22" rx="7" transform="rotate(135 80 80)"/>
+    <rect x="73" y="13" width="14" height="22" rx="7" transform="rotate(225 80 80)"/>
+    <rect x="73" y="13" width="14" height="22" rx="7" transform="rotate(315 80 80)"/>
+  </g>
+  <circle cx="80" cy="80" r="40" fill="url(#core)"/>
+  <ellipse cx="66" cy="63" rx="17" ry="11" fill="url(#shine)" transform="rotate(-32 66 63)"/>
+</svg>
