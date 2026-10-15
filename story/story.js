@@ -319,7 +319,7 @@ export async function play(carousel, { models = null } = {}) {
     const { turn, shift } = wrapper.userData;
     const step = stepper(model);
     // gait: how it is walking, shared with a coach it hands over to.
-    const self = { c, wrapper, yaw, height, rest: null, next: null, prev: null, moving: false, gait: { face: yaw, amount: 0, walked: 0, from: null } };
+    const self = { c, wrapper, model, yaw, height, rest: null, next: null, prev: null, moving: false, gait: { face: yaw, amount: 0, walked: 0, from: null } };
     let way = -1, last = null, time = 0, movedAt = -Infinity, reach = 0;
     const between = new THREE.Vector3();
     later(() => {
@@ -414,6 +414,16 @@ export async function play(carousel, { models = null } = {}) {
       turn.rotation.y = g.face + Math.sin(w * 0.8) * 0.08 * still;
       turn.rotation.z = rock + Math.sin(w) * 0.025 * still;
       self.moving = g.amount > 0 || Math.abs(d - turned) > 1e-3;
+    };
+    // The model's world matrix as it stands at its place in its scene, facing
+    // the way its scene needs it, into out.
+    self.restMatrix = (out) => {
+      const { feet, scale } = self.rest;
+      out.makeScale(scale, scale, scale).setPosition(feet.clone().addScaledVector(shift.position, -scale));
+      out.multiply(new THREE.Matrix4().makeTranslation(shift.position));
+      out.multiply(new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(turn.rotation.x, yaw, 0)));
+      model.updateMatrix();
+      return out.multiply(model.matrix).premultiply(stage.matrixWorld);
     };
     walkers.push(self);
     return self;
@@ -749,7 +759,9 @@ export async function play(carousel, { models = null } = {}) {
       // The phone's camera sees the coach from the front: a twin in a scene
       // of its own, drawn into a texture shown on the phone's screen. It
       // looks up a little from below, so the chest shows under the jaw even
-      // when a slouch drops the head in front of it.
+      // when a slouch drops the head in front of it. The camera stays where
+      // it sees the coach at its evening place; the twin moves as the coach
+      // does about that place (see film()).
       const live = new THREE.Scene();
       lightStage(renderer, live, { shadows: false });
       live.background = new THREE.Color('#14181c');
@@ -764,16 +776,23 @@ export async function play(carousel, { models = null } = {}) {
       const liveCamera = frameOn(live, twin, LIVE.w / LIVE.h, { pitch: -0.3, fill: 0.96 });
       // As many pixels as the picture covers on the screen (sized below).
       const target = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: 4 });
+      // The phone shows the coach as in a mirror, the way a front camera
+      // shows whoever faces it, so the coach crosses the picture the same
+      // way it crosses the stage.
+      target.texture.repeat.x = -1;
+      target.texture.offset.x = 1;
       // The fault shows at the chest, dropped at the bottom of a slouched
-      // squat. The picture keeps the chest left of the middle, so the arrow
-      // that swings out to its right and up stays in the picture.
+      // squat. The mirrored picture keeps the chest left of the middle, so
+      // the arrow that swings out to its right and up stays in the picture.
       twinPose(0, 1);
       const chest = chestOf(twin, liveCamera);
       twinPose(0, 0);
       const across = Math.tan(rad(14)) * liveCamera.aspect * (liveCamera.position.z - chest.z);
-      liveCamera.position.x = chest.x + 0.22 * across;
+      liveCamera.position.x = chest.x - 0.22 * across;
       liveCamera.updateMatrixWorld();
       chest.project(liveCamera);
+      const twinRest = twin.matrix.clone();
+      twin.matrixAutoUpdate = false;
 
       // Two repetitions: a good one, counted as the coach comes back up, then
       // a slouched one that the phone corrects and does not count. The cue
@@ -788,7 +807,7 @@ export async function play(carousel, { models = null } = {}) {
       chip.redraw();
       phone.add(flat(chip.texture, { transparent: true, depthWrite: false }), LIVE.x, LIVE.y, LIVE.w, LIVE.h, 10);
       const arrow = canvasTexture(LIVE.w, LIVE.h, correction);
-      arrow.redraw([((chest.x + 1) / 2) * LIVE.w, ((1 - chest.y) / 2) * LIVE.h]);
+      arrow.redraw([((1 - chest.x) / 2) * LIVE.w, ((1 - chest.y) / 2) * LIVE.h]);
       const arrowMaterial = flat(arrow.texture, { transparent: true, depthWrite: false, opacity: 0 });
       phone.add(arrowMaterial, LIVE.x, LIVE.y, LIVE.w, LIVE.h, 10);
       const warn = canvasTexture(WARN.w, WARN.h, warnPanel);
@@ -801,20 +820,64 @@ export async function play(carousel, { models = null } = {}) {
       c.wall.add(standing);
       later(() => place(standing, onWall(...onStage(296, 503)), PHONE.width));
 
-      // The camera's picture is drawn again only when the pose has changed.
-      const posed = [0, 0], filmed = [NaN, NaN];
       const film = () => {
-        filmed[0] = posed[0];
-        filmed[1] = posed[1];
         renderer.setRenderTarget(target);
         renderer.render(live, liveCamera);
         renderer.setRenderTarget(null);
       };
+      // The camera films whichever coach is on the stage, the evening's or
+      // the night's walking on from it, as it stands to the evening place:
+      // the twin takes that coach's place, turn, steps and pose about its
+      // own, so the coach walks into the picture, works out and walks off,
+      // and the picture is empty while no coach is there. It is drawn again
+      // only when that changes.
+      const restInverse = new THREE.Matrix4(), rel = new THREE.Matrix4(), filmed = new THREE.Matrix4();
+      const at = new THREE.Vector3(), turned = new THREE.Quaternion(), size = new THREE.Vector3(), unit = new THREE.Vector3(1, 1, 1);
+      const posed = (body) => {
+        const meshes = [];
+        body.traverse((o) => o.morphTargetInfluences && meshes.push(o));
+        return meshes;
+      };
+      const twinMeshes = posed(twin), coachMeshes = new Map();
+      let filmedCoach, filmedPose = [], stale = true;
+      later(() => {
+        eveningCoach.restMatrix(restInverse).invert();
+        stale = true;
+      });
+      function follow() {
+        const seen = [eveningCoach, eveningCoach.next].find((w) => w && w.wrapper.visible) || null;
+        if (seen) {
+          seen.model.updateWorldMatrix(true, false);
+          // Its place and turn about the evening place; its size is the
+          // same dino's, however big the stage draws it there.
+          rel.multiplyMatrices(restInverse, seen.model.matrixWorld).decompose(at, turned, size);
+          rel.compose(at, turned, unit);
+          if (!coachMeshes.has(seen)) coachMeshes.set(seen, posed(seen.model));
+        }
+        const meshes = seen ? coachMeshes.get(seen) : [];
+        const influences = meshes.length ? meshes[0].morphTargetInfluences : [];
+        const same = !stale && seen === filmedCoach && (!seen || (rel.equals(filmed) && influences.every((v, k) => v === filmedPose[k])));
+        if (same) return false;
+        stale = false;
+        filmedCoach = seen;
+        filmed.copy(rel);
+        filmedPose = [...influences];
+        twin.visible = Boolean(seen);
+        if (seen) {
+          twin.matrix.multiplyMatrices(twinRest, rel);
+          twin.matrixWorldNeedsUpdate = true;
+          twinMeshes.forEach((m, k) => {
+            const from = meshes[k].morphTargetInfluences, into = m.morphTargetInfluences;
+            for (let n = 0; n < into.length; n++) into[n] = from[n];
+          });
+        }
+        return true;
+      }
       // A design px of the phone is view.s * view.squeeze px of the stage.
       later(() => {
         const px = view.s * view.squeeze * renderer.getPixelRatio();
         target.setSize(Math.ceil(LIVE.w * px), Math.ceil(LIVE.h * px));
-        filmed[0] = NaN;
+        stale = true;
       });
       let counted = 0;
       c.beats.push((t, _, now) => {
@@ -830,9 +893,6 @@ export async function play(carousel, { models = null } = {}) {
         const [a, b] = REPS[1];
         const fault = span(t, a + 0.3 * (b - a), a + 0.45 * (b - a)) * (1 - span(t, 0.9, 0.98));
         pose(squat, slouch);
-        twinPose(squat, slouch);
-        posed[0] = squat;
-        posed[1] = slouch;
         if (done !== counted) {
           phone.glass.map = huds[done];
           counted = done;
@@ -842,12 +902,16 @@ export async function play(carousel, { models = null } = {}) {
         show(standing, 1, now);
       });
       before.push(() => {
-        if (c.card.visible && (posed[0] !== filmed[0] || posed[1] !== filmed[1])) film();
+        if (c.card.visible && follow()) film();
       });
-      // The picture as the scene starts, and the screens of every count, on
-      // the GPU before the evening comes round.
+      // The coach in the picture, and the screens of every count, on the GPU
+      // before the evening comes round.
       warmups.push(() => {
+        twin.visible = true;
+        twin.matrix.copy(twinRest);
+        twin.matrixWorldNeedsUpdate = true;
         film();
+        stale = true;
         for (const hud of huds) renderer.initTexture(hud);
       });
       arrive(c, wrapper, standing);
