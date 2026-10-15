@@ -63,6 +63,9 @@
     box-sizing: border-box;
     height: 100%;
     padding-block: env(safe-area-inset-top, 0px) env(safe-area-inset-bottom, 0px);
+    /* Drags turn the story, so the page itself never bounces, stretches,
+       reloads or goes back. Browsers read this on the root, not the body. */
+    overscroll-behavior: none;
   }
   *, *::before, *::after { box-sizing: inherit; }
 
@@ -71,8 +74,6 @@
     place-items: center;
     height: 100%;
     margin: 0;
-    /* Up and down drags turn the story, so the page itself never bounces. */
-    overscroll-behavior: none;
     background: var(--page);
     color: var(--ink);
     font: 400 15px/1.45 var(--font);
@@ -715,6 +716,12 @@
     const models = window.storyModels;
     models?.progress((share) => loading?.progress(share));
     root.addEventListener('story:ready', () => loading?.done());
+    // Nothing on the page scrolls, so one finger moving on it moves only the
+    // story; this keeps browsers that do not honour touch-action (older iOS)
+    // from dragging the whole page. Two fingers still zoom where they may.
+    document.addEventListener('touchmove', (event) => {
+      if (event.touches.length === 1 && event.cancelable) event.preventDefault();
+    }, { passive: false });
     // How to go on, shown once the stage is let in (the loading screen keeps
     // it inert till then) and gone for good once the ring moves on.
     const hint = document.getElementById('hint');
@@ -743,6 +750,10 @@
       // and the white ending. The ring stops at both ends instead of coming
       // round, and is pushed up and down like a scroll, a short push per card.
       const carousel = new Carousel3D(root, { loop: false, step: 90, swipe: 1.2, axis: 'y' });
+      // The stage fills the screen, so every drag on it is the story's: left
+      // to the browser, a swipe that sets off a little sideways is taken for
+      // a page pan, and the ring stops mid-drag while the page moves.
+      root.style.touchAction = 'none';
       // Read the front card's caption out, its lines as words.
       root.addEventListener('carousel:settle', ({ detail }) => {
         const caption = carousel.cards[detail.index].querySelector('.carousel__caption');
