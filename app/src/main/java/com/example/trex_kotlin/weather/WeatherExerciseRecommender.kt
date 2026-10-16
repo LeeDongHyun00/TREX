@@ -1,40 +1,52 @@
 package com.example.trex_kotlin.weather
 
+import kotlin.math.roundToInt
+
 object WeatherExerciseRecommender {
 
-    fun recommend(weather: WeatherInfo, locationLabel: String): WeatherWorkoutRecommendation {
+    fun recommend(
+        weather: WeatherInfo,
+        locationLabel: String,
+        nowMillis: Long = System.currentTimeMillis()
+    ): WeatherWorkoutRecommendation {
+        val isSnow = weather.weatherCode in 71..77 || weather.weatherCode in 85..86
         val isRaining = weather.weatherCode in 51..67 ||
             weather.weatherCode in 80..82 ||
-            weather.weatherCode in 95..99 ||
-            (weather.precipitation > 0.0 && weather.temperature >= 0.0)
-        val isSnowOrCold = weather.weatherCode in 71..77 ||
-            weather.weatherCode in 85..86 ||
-            weather.temperature < 0.0
+            weather.weatherCode in 95..99
+        val isCold = weather.temperature < 0.0
         val isHeatwave = weather.temperature > 32.0
         val isFogOrWind = weather.weatherCode in 45..48 || weather.windSpeed >= 35.0
+        val isCloudy = weather.weatherCode in 2..3
 
         val theme = when {
+            isSnow -> WeatherThemeMode.SNOWY_COLD
             isRaining -> WeatherThemeMode.RAINY
-            isSnowOrCold -> WeatherThemeMode.SNOWY_COLD
+            isCold -> WeatherThemeMode.SNOWY_COLD
             isHeatwave -> WeatherThemeMode.HEATWAVE
-            isFogOrWind -> WeatherThemeMode.CLOUDY
+            isFogOrWind || isCloudy -> WeatherThemeMode.CLOUDY
             else -> WeatherThemeMode.SUNNY
         }
 
-        val isBadWeather = isRaining || isSnowOrCold || isHeatwave || isFogOrWind
+        val isBadWeather = isSnow || isRaining || isCold || isHeatwave || isFogOrWind
         val environment = if (isBadWeather) WorkoutEnvironment.INDOOR else WorkoutEnvironment.OUTDOOR
         val weatherText = getWeatherDescription(weather.weatherCode)
-        val summary = locationLabel + " · " + weatherText + " · " + weather.temperature.toInt() + "°C"
+        val roundedTemp = weather.temperature.roundToInt()
+        val summary = locationLabel + " · " + weatherText + " · " + roundedTemp + "°C"
 
-        val minutesAgo = ((System.currentTimeMillis() - weather.fetchedAtMillis) / 60000L).coerceAtLeast(0L)
-        val updateAgeText = if (minutesAgo == 0L) "방금 업데이트" else minutesAgo.toString() + "분 전 업데이트"
+        val minutesAgo = ((nowMillis - weather.fetchedAtMillis) / 60000L).coerceAtLeast(0L)
+        val updateAgeText = when {
+            minutesAgo == 0L -> "방금 업데이트"
+            minutesAgo < 60L -> minutesAgo.toString() + "분 전 업데이트"
+            else -> (minutesAgo / 60L).toString() + "시간 전 업데이트"
+        }
 
-        val message = when (theme) {
-            WeatherThemeMode.RAINY -> "비 소식이 있어룡! 실내에서 안전하게 전신 근력 운동을 진행해 보세룡."
-            WeatherThemeMode.SNOWY_COLD -> "기온이 낮거나 눈 소식이 있어룡. 실내에서 체온을 높이는 웜업 운동을 권장해룡."
-            WeatherThemeMode.HEATWAVE -> "무더운 날씨예룡. 시원한 실내에서 수분을 보충하며 부위별 운동을 해보세룡."
-            WeatherThemeMode.CLOUDY -> "바람이나 안개가 있으니 컨디션에 맞춰 안전하게 운동해 보세룡."
-            WeatherThemeMode.SUNNY -> "운동하기 좋은 쾌청한 날씨예룡! 활기차게 몸을 움직여 볼까룡?"
+        val message = when {
+            isSnow || isCold -> "기온이 낮거나 눈 소식이 있어룡. 실내에서 체온을 높이는 웜업 운동을 권장해룡."
+            isRaining -> "비 소식이 있어룡! 실내에서 안전하게 전신 근력 운동을 진행해 보세룡."
+            isHeatwave -> "무더운 날씨예룡. 시원한 실내에서 수분을 보충하며 부위별 운동을 해보세룡."
+            isFogOrWind -> "바람이나 안개가 있으니 실내 위주로 안전하게 운동해 보세룡."
+            isCloudy -> "구름이 있어 햇볕 부담 없이 운동하기 좋은 날예룡! 컨디션에 맞춰 운동해 보세룡."
+            else -> "야외 활동하기 좋은 맑은 날씨예룡! 활기차게 몸을 움직여 볼까룡?"
         }
 
         val exercises = when (theme) {
@@ -76,14 +88,16 @@ object WeatherExerciseRecommender {
         )
     }
 
-    private fun getWeatherDescription(code: Int): String = when (code) {
+    internal fun getWeatherDescription(code: Int): String = when (code) {
         0 -> "맑음"
-        1, 2 -> "구름 조금"
+        1 -> "대체로 맑음"
+        2 -> "구름 조금"
         3 -> "흐림"
         in 45..48 -> "안개"
         in 51..67 -> "비"
         in 71..77 -> "눈"
         in 80..82 -> "소나기"
+        in 85..86 -> "눈보라"
         in 95..99 -> "뇌우"
         else -> "흐림"
     }

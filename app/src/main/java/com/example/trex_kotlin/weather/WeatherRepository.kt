@@ -13,12 +13,27 @@ class WeatherRepository(context: Context? = null) {
 
     private val prefs = context?.applicationContext?.getSharedPreferences(CACHE_PREFS, Context.MODE_PRIVATE)
 
+    fun peekCachedWeather(latitude: Double, longitude: Double): WeatherInfo? {
+        val cacheKey = formatCacheKey(latitude, longitude)
+        val now = System.currentTimeMillis()
+        memoryCache[cacheKey]?.let { cached ->
+            if (now - cached.fetchedAtMillis <= MAX_STALE_CACHE_MILLIS) return cached
+        }
+        readPrefsCache(cacheKey)?.let { cached ->
+            if (now - cached.fetchedAtMillis <= MAX_STALE_CACHE_MILLIS) {
+                memoryCache[cacheKey] = cached
+                return cached
+            }
+        }
+        return null
+    }
+
     suspend fun fetchCurrentWeather(
         latitude: Double,
         longitude: Double,
         forceRefresh: Boolean = false
     ): Result<WeatherInfo> = withContext(Dispatchers.IO) {
-        val cacheKey = String.format(Locale.US, "%.2f_%.2f", latitude, longitude)
+        val cacheKey = formatCacheKey(latitude, longitude)
         val now = System.currentTimeMillis()
 
         if (!forceRefresh) {
@@ -48,8 +63,18 @@ class WeatherRepository(context: Context? = null) {
             if (attempt == 0) delay(400L)
         }
 
-        memoryCache[cacheKey]?.let { return@withContext Result.success(it) }
-        readPrefsCache(cacheKey)?.let { return@withContext Result.success(it) }
+        val fallbackNow = System.currentTimeMillis()
+        memoryCache[cacheKey]?.let { cached ->
+            if (fallbackNow - cached.fetchedAtMillis <= MAX_STALE_CACHE_MILLIS) {
+                return@withContext Result.success(cached)
+            }
+        }
+        readPrefsCache(cacheKey)?.let { cached ->
+            if (fallbackNow - cached.fetchedAtMillis <= MAX_STALE_CACHE_MILLIS) {
+                memoryCache[cacheKey] = cached
+                return@withContext Result.success(cached)
+            }
+        }
 
         Result.failure(lastError ?: IllegalStateException("날씨 정보를 불러오지 못했습니다."))
     }
@@ -72,19 +97,48 @@ class WeatherRepository(context: Context? = null) {
                 throw IllegalStateException("HTTP " + connection.responseCode)
             }
             val responseText = connection.inputStream.bufferedReader().use { it.readText() }
-            val currentJson = JSONObject(responseText).getJSONObject("current")
-
-            WeatherInfo(
-                temperature = currentJson.optDouble("temperature_2m", 20.0),
-                precipitation = currentJson.optDouble("precipitation", 0.0),
-                weatherCode = currentJson.optInt("weather_code", 0),
-                windSpeed = currentJson.optDouble("wind_speed_10m", 0.0),
-                fetchedAtMillis = System.currentTimeMillis()
-            )
+            parseCurrentWeatherJson(responseText)
         } finally {
             connection.disconnect()
         }
     }
+
+    internal fun parseCurrentWeatherJson(
+        responseText: String,
+        fetchedAtMillis: Long = System.currentTimeMillis()
+    ): WeatherInfo {
+        val root = JSONObject(responseText)
+        if (!root.has("current") || root.isNull("current")) {
+            throw IllegalStateException("current 필드가 없습니다.")
+        }
+        val currentJson = root.getJSONObject("current")
+        val requiredKeys = listOf("temperature_2m", "precipitation", "weather_code", "wind_speed_10m")
+        for (key in requiredKeys) {
+            if (!currentJson.has(key) || currentJson.isNull(key)) {
+                throw IllegalStateException("필수 날씨 필드가 누락되었습니다: " + key)
+            }
+        }
+
+        val temperature = currentJson.getDouble("temperature_2m")
+        val precipitation = currentJson.getDouble("precipitation")
+        val weatherCode = currentJson.getInt("weather_code")
+        val windSpeed = currentJson.getDouble("wind_speed_10m")
+
+        if (temperature.isNaN() || precipitation.isNaN() || windSpeed.isNaN()) {
+            throw IllegalStateException("유효하지 않은 날씨 수치입니다.")
+        }
+
+        return WeatherInfo(
+            temperature = temperature,
+            precipitation = precipitation,
+            weatherCode = weatherCode,
+            windSpeed = windSpeed,
+            fetchedAtMillis = fetchedAtMillis
+        )
+    }
+
+    private fun formatCacheKey(latitude: Double, longitude: Double): String =
+        String.format(Locale.US, "%.2f_%.2f", latitude, longitude)
 
     private fun readPrefsCache(key: String): WeatherInfo? {
         val raw = prefs?.getString(key, null) ?: return null
@@ -115,7 +169,8 @@ class WeatherRepository(context: Context? = null) {
 
     companion object {
         private const val CACHE_PREFS = "trex_weather_cache_prefs"
-        private const val CACHE_TTL_MILLIS = 60 * 60 * 1000L
+        internal const val CACHE_TTL_MILLIS = 60 * 60 * 1000L
+        internal const val MAX_STALE_CACHE_MILLIS = 3 * 60 * 60 * 1000L
         private val memoryCache = mutableMapOf<String, WeatherInfo>()
     }
 }

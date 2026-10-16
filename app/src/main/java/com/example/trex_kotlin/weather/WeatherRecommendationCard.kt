@@ -17,49 +17,80 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import com.example.trex_kotlin.Trex
 import com.example.trex_kotlin.TrexText as Text
 import kotlinx.coroutines.launch
 
+private object WeatherUiStateCache {
+    var lastRecommendation by mutableStateOf<WeatherWorkoutRecommendation?>(null)
+    var lastError by mutableStateOf<String?>(null)
+}
+
 @Composable
 fun WeatherRecommendationCard(
+    plannedExerciseNames: Set<String> = emptySet(),
     onExerciseClick: (RecommendedExercise) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val c = Trex.c
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
     val preferenceManager = remember { LocationPreferenceManager(context) }
     val repository = remember { WeatherRepository(context) }
     val coroutineScope = rememberCoroutineScope()
 
-    var recommendation by remember { mutableStateOf<WeatherWorkoutRecommendation?>(null) }
-    var isLoading by remember { mutableStateOf(true) }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
+    var recommendation by remember {
+        mutableStateOf(
+            WeatherUiStateCache.lastRecommendation ?: run {
+                val region = preferenceManager.getSavedRegion()
+                repository.peekCachedWeather(region.latitude, region.longitude)?.let { cached ->
+                    WeatherExerciseRecommender.recommend(cached, region.displayName)
+                }
+            }
+        )
+    }
+    var isLoading by remember { mutableStateOf(recommendation == null && WeatherUiStateCache.lastError == null) }
+    var errorMessage by remember { mutableStateOf(WeatherUiStateCache.lastError) }
     var showRegionDialog by remember { mutableStateOf(false) }
 
     fun loadWeather(forceRefresh: Boolean = false) {
         coroutineScope.launch {
-            isLoading = true
+            if (recommendation == null) {
+                isLoading = true
+            }
             errorMessage = null
             val coords = preferenceManager.resolveCoordinates()
             repository.fetchCurrentWeather(coords.first, coords.second, forceRefresh = forceRefresh)
                 .onSuccess { weather ->
-                    recommendation = WeatherExerciseRecommender.recommend(weather, coords.third)
+                    val next = WeatherExerciseRecommender.recommend(weather, coords.third)
+                    recommendation = next
+                    WeatherUiStateCache.lastRecommendation = next
+                    WeatherUiStateCache.lastError = null
                     isLoading = false
                 }
                 .onFailure {
-                    errorMessage = "날씨 정보를 불러오지 못했어룡."
+                    if (recommendation == null || forceRefresh) {
+                        val msg = "날씨 정보를 불러오지 못했어룡."
+                        errorMessage = msg
+                        WeatherUiStateCache.lastError = msg
+                    }
                     isLoading = false
                 }
         }
     }
 
     val permissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { granted ->
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val granted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
+            permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
         if (granted) {
             preferenceManager.enableGpsMode()
         } else {
@@ -68,8 +99,16 @@ fun WeatherRecommendationCard(
         loadWeather(forceRefresh = true)
     }
 
-    LaunchedEffect(Unit) {
-        loadWeather()
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                loadWeather(forceRefresh = false)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
     }
 
     Surface(
@@ -80,7 +119,7 @@ fun WeatherRecommendationCard(
         border = BorderStroke(1.dp, c.line)
     ) {
         Column(modifier = Modifier.padding(18.dp)) {
-            if (isLoading) {
+            if (isLoading && recommendation == null) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -92,7 +131,7 @@ fun WeatherRecommendationCard(
                         color = c.primary
                     )
                 }
-            } else if (errorMessage != null) {
+            } else if (errorMessage != null && recommendation == null) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -101,10 +140,20 @@ fun WeatherRecommendationCard(
                     Text(
                         text = errorMessage ?: "",
                         color = c.text2,
-                        fontSize = 13.sp
+                        fontSize = 13.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
                     )
                     TextButton(onClick = { loadWeather(forceRefresh = true) }) {
-                        Text("다시 시도", color = c.primaryText, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                        Text(
+                            text = "다시 시도",
+                            color = c.primaryText,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
                     }
                 }
             } else {
@@ -115,25 +164,39 @@ fun WeatherRecommendationCard(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(999.dp))
-                                .background(c.primaryWash)
-                                .padding(horizontal = 10.dp, vertical = 5.dp)
+                            modifier = Modifier.weight(1f),
+                            contentAlignment = Alignment.CenterStart
                         ) {
-                            Text(
-                                text = rec.theme.emoji + " " + rec.theme.titleKorean + " · " + rec.environment.labelKorean,
-                                color = c.primaryText,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.SemiBold
-                            )
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(999.dp))
+                                    .background(c.primaryWash)
+                                    .padding(horizontal = 10.dp, vertical = 5.dp)
+                            ) {
+                                Text(
+                                    text = rec.theme.emoji + " " + rec.theme.titleKorean + " · " + rec.environment.labelKorean,
+                                    color = c.primaryText,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
                         }
 
-                        TextButton(onClick = { showRegionDialog = true }) {
+                        Spacer(modifier = Modifier.width(8.dp))
+
+                        TextButton(
+                            onClick = { showRegionDialog = true },
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
                             Text(
                                 text = "📍 " + rec.locationLabel + " ▾",
                                 color = c.text2,
                                 fontSize = 12.sp,
-                                fontWeight = FontWeight.SemiBold
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                         }
                     }
@@ -144,22 +207,38 @@ fun WeatherRecommendationCard(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column {
+                        Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = rec.weatherSummary,
                                 color = c.text,
                                 fontSize = 18.sp,
-                                fontWeight = FontWeight.SemiBold
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                             Text(
                                 text = rec.updateAgeText,
                                 color = c.text2,
                                 fontSize = 11.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
                                 modifier = Modifier.padding(top = 2.dp)
                             )
                         }
-                        TextButton(onClick = { loadWeather(forceRefresh = true) }) {
-                            Text("↻ 새로고침", color = c.text2, fontSize = 11.sp)
+
+                        Spacer(modifier = Modifier.width(8.dp))
+
+                        TextButton(
+                            onClick = { loadWeather(forceRefresh = true) },
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = "↻ 새로고침",
+                                color = c.text2,
+                                fontSize = 11.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
                         }
                     }
 
@@ -174,11 +253,12 @@ fun WeatherRecommendationCard(
                     Spacer(modifier = Modifier.height(12.dp))
 
                     rec.exercises.forEach { exercise ->
+                        val isAdded = exercise.catalogName in plannedExerciseNames
                         Surface(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(vertical = 4.dp)
-                                .clickable { onExerciseClick(exercise) },
+                                .clickable(enabled = !isAdded) { onExerciseClick(exercise) },
                             shape = RoundedCornerShape(16.dp),
                             color = c.surface2,
                             border = BorderStroke(1.dp, c.line)
@@ -195,7 +275,9 @@ fun WeatherRecommendationCard(
                                         text = exercise.title,
                                         color = c.text,
                                         fontSize = 14.sp,
-                                        fontWeight = FontWeight.SemiBold
+                                        fontWeight = FontWeight.SemiBold,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
                                     )
                                     Spacer(modifier = Modifier.height(3.dp))
                                     Text(
@@ -205,15 +287,26 @@ fun WeatherRecommendationCard(
                                     )
                                 }
                                 Text(
-                                    text = "추가/시작 ▶",
-                                    color = c.primaryText,
+                                    text = if (isAdded) "목록에 있음" else "운동 목록에 추가",
+                                    color = if (isAdded) c.text2 else c.primaryText,
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.SemiBold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
                                     modifier = Modifier.padding(start = 8.dp)
                                 )
                             }
                         }
                     }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "날씨 정보: Open-Meteo.com",
+                        color = c.text2,
+                        fontSize = 10.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
             }
         }
@@ -231,11 +324,16 @@ fun WeatherRecommendationCard(
                     TextButton(
                         onClick = {
                             showRegionDialog = false
-                            if (preferenceManager.hasCoarseLocationPermission()) {
+                            if (preferenceManager.hasLocationPermission()) {
                                 preferenceManager.enableGpsMode()
                                 loadWeather(forceRefresh = true)
                             } else {
-                                permissionLauncher.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
+                                permissionLauncher.launch(
+                                    arrayOf(
+                                        Manifest.permission.ACCESS_FINE_LOCATION,
+                                        Manifest.permission.ACCESS_COARSE_LOCATION
+                                    )
+                                )
                             }
                         },
                         modifier = Modifier.fillMaxWidth()
