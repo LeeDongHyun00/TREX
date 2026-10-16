@@ -76,6 +76,32 @@ class WeatherExerciseRecommenderTest {
     }
 
     @Test
+    fun displayedTemperatureAtThreshold_isNotClassifiedAsColdOrHeatwave() {
+        val now = 1_700_000_000_000L
+        // -0.4°C 는 "0°C" 로 표시되므로 추운 날로 판정하면 안 된다.
+        val nearZero = WeatherInfo(
+            temperature = -0.4,
+            precipitation = 0.0,
+            weatherCode = 0,
+            windSpeed = 3.0,
+            fetchedAtMillis = now
+        )
+        // 32.4°C 는 "32°C" 로 표시되므로 폭염(32°C 초과)으로 판정하면 안 된다.
+        val near32 = nearZero.copy(temperature = 32.4)
+
+        val zeroResult = WeatherExerciseRecommender.recommend(nearZero, "서울", nowMillis = now)
+        val near32Result = WeatherExerciseRecommender.recommend(near32, "서울", nowMillis = now)
+
+        assertEquals("서울 · 맑음 · 0°C", zeroResult.weatherSummary)
+        assertEquals(WeatherThemeMode.SUNNY, zeroResult.theme)
+        assertEquals(WorkoutEnvironment.OUTDOOR, zeroResult.environment)
+
+        assertEquals("서울 · 맑음 · 32°C", near32Result.weatherSummary)
+        assertEquals(WeatherThemeMode.SUNNY, near32Result.theme)
+        assertEquals(WorkoutEnvironment.OUTDOOR, near32Result.environment)
+    }
+
+    @Test
     fun updateAgeText_formatsMinutesAndHours() {
         val base = 1_700_000_000_000L
         val weather = WeatherInfo(

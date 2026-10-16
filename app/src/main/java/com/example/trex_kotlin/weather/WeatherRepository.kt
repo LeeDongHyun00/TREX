@@ -8,6 +8,7 @@ import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
 import java.util.Locale
+import java.util.concurrent.ConcurrentHashMap
 
 class WeatherRepository(context: Context? = null) {
 
@@ -171,6 +172,8 @@ class WeatherRepository(context: Context? = null) {
         private const val CACHE_PREFS = "trex_weather_cache_prefs"
         internal const val CACHE_TTL_MILLIS = 60 * 60 * 1000L
         internal const val MAX_STALE_CACHE_MILLIS = 3 * 60 * 60 * 1000L
-        private val memoryCache = mutableMapOf<String, WeatherInfo>()
+
+        // 메인 스레드(peekCachedWeather)와 IO 스레드(fetchCurrentWeather)에서 동시에 읽고 쓰므로 스레드 안전한 맵을 쓴다.
+        private val memoryCache = ConcurrentHashMap<String, WeatherInfo>()
     }
 }

@@ -26,12 +26,15 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.example.trex_kotlin.Trex
 import com.example.trex_kotlin.TrexText as Text
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 private object WeatherUiStateCache {
     var lastRecommendation by mutableStateOf<WeatherWorkoutRecommendation?>(null)
     var lastError by mutableStateOf<String?>(null)
 }
+
+private const val WEATHER_LOAD_ERROR_MESSAGE = "날씨 정보를 불러오지 못했어룡."
 
 @Composable
 fun WeatherRecommendationCard(
@@ -49,9 +52,14 @@ fun WeatherRecommendationCard(
     var recommendation by remember {
         mutableStateOf(
             WeatherUiStateCache.lastRecommendation ?: run {
-                val region = preferenceManager.getSavedRegion()
-                repository.peekCachedWeather(region.latitude, region.longitude)?.let { cached ->
-                    WeatherExerciseRecommender.recommend(cached, region.displayName)
+                // GPS 모드에서는 저장 지역 캐시를 "현재 위치"처럼 보여주면 안 된다.
+                if (preferenceManager.isGpsModeEnabled()) {
+                    null
+                } else {
+                    val region = preferenceManager.getSavedRegion()
+                    repository.peekCachedWeather(region.latitude, region.longitude)?.let { cached ->
+                        WeatherExerciseRecommender.recommend(cached, region.displayName)
+                    }
                 }
             }
         )
@@ -59,9 +67,20 @@ fun WeatherRecommendationCard(
     var isLoading by remember { mutableStateOf(recommendation == null && WeatherUiStateCache.lastError == null) }
     var errorMessage by remember { mutableStateOf(WeatherUiStateCache.lastError) }
     var showRegionDialog by remember { mutableStateOf(false) }
+    var loadJob by remember { mutableStateOf<Job?>(null) }
 
-    fun loadWeather(forceRefresh: Boolean = false) {
-        coroutineScope.launch {
+    /**
+     * @param forceRefresh 캐시를 건너뛰고 새로 받아온다.
+     * @param locationChanged 사용자가 지역/GPS 를 바꾼 직후. 이전 지역 결과를 비워 잘못된 날씨가 남지 않게 한다.
+     */
+    fun loadWeather(forceRefresh: Boolean = false, locationChanged: Boolean = false) {
+        // 이전 요청이 늦게 끝나 새 결과(다른 지역)를 덮어쓰지 않도록 먼저 취소한다.
+        loadJob?.cancel()
+        if (locationChanged) {
+            recommendation = null
+            WeatherUiStateCache.lastRecommendation = null
+        }
+        loadJob = coroutineScope.launch {
             if (recommendation == null) {
                 isLoading = true
             }
@@ -76,10 +95,16 @@ fun WeatherRecommendationCard(
                     isLoading = false
                 }
                 .onFailure {
-                    if (recommendation == null || forceRefresh) {
-                        val msg = "날씨 정보를 불러오지 못했어룡."
-                        errorMessage = msg
-                        WeatherUiStateCache.lastError = msg
+                    if (recommendation == null) {
+                        errorMessage = WEATHER_LOAD_ERROR_MESSAGE
+                        WeatherUiStateCache.lastError = WEATHER_LOAD_ERROR_MESSAGE
+                    } else if (forceRefresh) {
+                        // 기존 추천이 있으면 화면은 유지하되, 새로고침이 실패했다는 사실은 알려준다.
+                        Toast.makeText(
+                            context,
+                            WEATHER_LOAD_ERROR_MESSAGE + " 이전 정보를 보여드려룡.",
+                            Toast.LENGTH_SHORT
+                        ).show()
                     }
                     isLoading = false
                 }
@@ -93,15 +118,17 @@ fun WeatherRecommendationCard(
             permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
         if (granted) {
             preferenceManager.enableGpsMode()
+            loadWeather(forceRefresh = true, locationChanged = true)
         } else {
             Toast.makeText(context, "위치 권한이 거부되어 선택된 지역 날씨를 표시해룡.", Toast.LENGTH_SHORT).show()
+            loadWeather(forceRefresh = true)
         }
-        loadWeather(forceRefresh = true)
     }
 
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) {
+            // 화면 복귀 시 자동 갱신은 진행 중인 사용자 요청(지역 변경·권한 허용 직후)을 취소하지 않는다.
+            if (event == Lifecycle.Event.ON_RESUME && loadJob?.isActive != true) {
                 loadWeather(forceRefresh = false)
             }
         }
@@ -326,7 +353,7 @@ fun WeatherRecommendationCard(
                             showRegionDialog = false
                             if (preferenceManager.hasLocationPermission()) {
                                 preferenceManager.enableGpsMode()
-                                loadWeather(forceRefresh = true)
+                                loadWeather(forceRefresh = true, locationChanged = true)
                             } else {
                                 permissionLauncher.launch(
                                     arrayOf(
@@ -352,7 +379,7 @@ fun WeatherRecommendationCard(
                             onClick = {
                                 preferenceManager.saveSelectedRegion(region)
                                 showRegionDialog = false
-                                loadWeather(forceRefresh = true)
+                                loadWeather(forceRefresh = true, locationChanged = true)
                             },
                             modifier = Modifier.fillMaxWidth()
                         ) {

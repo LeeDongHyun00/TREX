@@ -4,17 +4,24 @@ import kotlin.math.roundToInt
 
 object WeatherExerciseRecommender {
 
+    internal const val COLD_THRESHOLD_CELSIUS = 0
+    internal const val HEATWAVE_THRESHOLD_CELSIUS = 32
+
     fun recommend(
         weather: WeatherInfo,
         locationLabel: String,
         nowMillis: Long = System.currentTimeMillis()
     ): WeatherWorkoutRecommendation {
+        // 화면에 보이는 온도(반올림값)와 판정 기준을 일치시킨다.
+        // 예: -0.4°C 는 "0°C" 로 표시되므로 추운 날로 판정하지 않는다.
+        val roundedTemp = weather.temperature.roundToInt()
+
         val isSnow = weather.weatherCode in 71..77 || weather.weatherCode in 85..86
         val isRaining = weather.weatherCode in 51..67 ||
             weather.weatherCode in 80..82 ||
             weather.weatherCode in 95..99
-        val isCold = weather.temperature < 0.0
-        val isHeatwave = weather.temperature > 32.0
+        val isCold = roundedTemp < COLD_THRESHOLD_CELSIUS
+        val isHeatwave = roundedTemp > HEATWAVE_THRESHOLD_CELSIUS
         val isFogOrWind = weather.weatherCode in 45..48 || weather.windSpeed >= 35.0
         val isCloudy = weather.weatherCode in 2..3
 
@@ -30,7 +37,6 @@ object WeatherExerciseRecommender {
         val isBadWeather = isSnow || isRaining || isCold || isHeatwave || isFogOrWind
         val environment = if (isBadWeather) WorkoutEnvironment.INDOOR else WorkoutEnvironment.OUTDOOR
         val weatherText = getWeatherDescription(weather.weatherCode)
-        val roundedTemp = weather.temperature.roundToInt()
         val summary = locationLabel + " · " + weatherText + " · " + roundedTemp + "°C"
 
         val minutesAgo = ((nowMillis - weather.fetchedAtMillis) / 60000L).coerceAtLeast(0L)
