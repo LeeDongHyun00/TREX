@@ -4,7 +4,7 @@
 
 `ios-redesign` 은 `origin/main`(`ca7f1fa`, 2026-10-14 — §99~§106 바닥 계열·시선·말하기 대기열·교정 화살표·서버 동기화·앱 아이콘)을 병합한 위에 서 있다. 이전 iOS 작업(§107, 2026-10-07)은 `redesign` `5213e3c4`(preview.6) 기준이라 그 사이 Android 가 얻은 바닥 엔진(플랭크 유지 시계·크런치/레그 레이즈 판별)·Face Landmarker 시선·`SpeechQueue` 발화 정책·`StandingFraming`·관절 게이트가 iOS 에 없었다. 이번 작업(§107f)이 그 전부를 **Android 정본을 그대로 생성해** iOS 에 올린다.
 
-검증한 것: 공통 엔진 JVM **504/504**(정본 테스트 + iOS 경계 18건, Linux), 정본 동기화 `--check`·자산 추출 `--check`·YOLO 호환 모델 `--check`, Swift 31파일 tree-sitter 구문 검사, XcodeGen 자산 경로·plist. **Xcode 컴파일·시뮬레이터 XCTest·IPA 는 이 세션에서 돌리지 못했다**(Linux). `ios-redesign` 푸시가 macOS Actions(`iOS 검증과 미서명 IPA`)를 띄우므로 그 결과가 Swift 타입 검사·SDK 링크·번들 검사의 정본이다. **서명·실제 iPhone 실행·운동 정확도는 미검증**이다.
+검증한 것: 공통 엔진 JVM **504/504**(정본 테스트 + iOS 경계 18건, Linux), 정본 동기화 `--check`·자산 추출 `--check`·YOLO 호환 모델 `--check`, Swift 31파일 tree-sitter 구문 검사, XcodeGen 자산 경로·plist. 그리고 코드 `a4a4e5ed` 의 [macOS Actions 12차 실행](https://github.com/LeeDongHyun00/TREX/actions/runs/39558756012)이 **성공** — Xcode 26 에서 Kotlin/Native 프레임워크·Swift 컴파일, iPhone arm64 Release 빌드, 원본 자세 자산 5개(얼굴 모델 포함)·음식 모델 SHA·내부 공개 심볼 0개 검사, 미서명 IPA 생성, arm64 시뮬레이터 XCTest(자산·백업·85 ms 게이트·세 음식 모델 + 자세 모델 + **얼굴 모델** 동시 추론·엔진 발화 대기열) 통과. [IPA artifact](https://github.com/LeeDongHyun00/TREX/actions/runs/39558756012/artifacts/12326857568)(보관 2027-01-19 까지). 앞선 9~11차는 Swift 오류 4건(`SetReport` Encodable, 메인 액터 정적 속성, `TransformMatrix` 인덱스 `UInt`)과 관절 게이트 좌표의 `null` 디코딩으로 실패했고 그 수정이 이 실행이다. **서명·실제 iPhone 실행·운동 정확도는 미검증**이다 — 시뮬레이터 추론 검사는 빈 영상의 실행 검사다.
 
 ## iOS 포팅 기준 (이 작업에서 세운 것 — 지켜야 한다)
 
@@ -58,7 +58,7 @@ python3 tools/verify_ios_project.py       # Swift 구문·XcodeGen·plist·세 -
 
 ## 다음 검증 (사용자)
 
-1. macOS Actions 성공 여부 — Swift 타입·SDK 링크(`FaceLandmarker`·`TransformMatrix.value(atRow:column:)`·`MPImage(uiImage:)`)는 여기서만 확인된다.
+1. ~~macOS Actions 성공 여부~~ — 12차 실행 성공(위). `TransformMatrix.value(atRow:column:)` 는 `UInt` 인덱스다.
 2. iPhone 에서 플랭크: "시간을 재기 시작해요" → 무릎을 대면 낮은 틱 + 이유 → 다시 들면 "교정됐어요. 다시 재요", HUD 숫자가 카메라 시간인지, 폰을 보면 3 s 뒤 "시선이 벗어났어요".
 3. 크런치·레그 레이즈: 팔만·어깨만·한 다리 회가 세지지 않고 이유가 들리는지, 시선 칩.
 4. 스쿼트·런지·컬: 빠진 회의 "이 회는 세지 않았어요", 화살표 방향이 미러와 맞는지(전면 카메라), 세트 끝 교정 문장이 잘리지 않는지, 가로 잘림 안내.

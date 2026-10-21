@@ -2,7 +2,7 @@
 
 `Trex` 는 SwiftUI 앱이고, `posture-core` 의 Kotlin 공통 엔진을 `TrexCore.framework` 로 연결한다. 엔진은 Android 정본 48파일을 `tools/sync_ios_core.py` 가 생성한 것이라 임계값·횟수·반복 검사·플랭크 시계·시선·발화 정책이 Android 와 같다. Swift 는 카메라(AVFoundation)·중력(Core Motion)·자세/얼굴 모델(MediaPipe Tasks Vision)·TTS 엔진(AVSpeechSynthesizer)·화면만 든다 — 포팅 기준과 범위는 [IOS_PORT](../docs/IOS_PORT.md).
 
-2026-10-21 기준 `main`(§99~§106)을 병합한 상태다. 공통 엔진 JVM 테스트·정본 동기화·자산 추출·Swift 구문 검사를 통과했고, **Xcode 컴파일·시뮬레이터 XCTest·IPA 는 `ios-redesign` 푸시가 띄우는 [macOS Actions](https://github.com/LeeDongHyun00/TREX/actions)에서 확인한다.** 서명·실제 iPhone 실행은 미검증이다.
+2026-10-21 기준 `main`(§99~§106)을 병합한 상태다. 공통 엔진 JVM 테스트·정본 동기화·자산 추출·Swift 구문 검사를 통과했고, 코드 `a4a4e5ed` 의 [macOS Actions](https://github.com/LeeDongHyun00/TREX/actions/runs/39558756012)에서 Xcode 26 빌드·번들 검사·시뮬레이터 XCTest·[미서명 IPA](https://github.com/LeeDongHyun00/TREX/actions/runs/39558756012/artifacts/12326857568) 생성이 성공했다. **서명·실제 iPhone 실행은 미검증**이다.
 
 Mac 절차(JDK 21, Xcode 26 계열, Python 3, XcodeGen, CocoaPods):
 
