@@ -66,7 +66,7 @@ struct Scope: Codable {
 }
 struct RuleState: Codable { let label: String; let state: String }
 /// 엔진 대기열이 고른 발화 하나(spec §107f) — Swift 는 한 번에 하나만 TTS 에 낸다. `flush` 면 재생 중인 말을 끊는다.
-struct SpeechSubmit: Decodable, Equatable { let text: String; let flush: Bool }
+struct SpeechSubmit: Codable, Equatable { let text: String; let flush: Bool }
 /// 화면에 켜진 교정 단서 하나(Android `MotionCue`) — `kind` 는 `MotionKind` 이름, 관절 번호는 MediaPipe 33.
 struct MotionCue: Decodable, Equatable {
     let kind: String; let anchors: [Int]; let targets: [Int]; let gravity: Bool; let chain: Bool; let soft: Bool; let origin: String; let startedAt: Int64

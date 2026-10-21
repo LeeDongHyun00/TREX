@@ -135,7 +135,9 @@ import Combine
             pipeline.finish(handOff: handOff) { [weak self] result in
                 guard let self, token == self.setID else { return }
                 switch result {
-                case .success(let (report, frames)): self.report = report; self.saveSet(report, frames: frames)
+                case .success(let (report, frames)):
+                    var stored = report; stored.speech = nil   // 마감 발화는 재생 뒤 버린다 — 기록에 남기지 않는다
+                    self.report = stored; self.saveSet(stored, frames: frames)
                 case .failure(let error): self.error = error.localizedDescription; self.phase = "saveFailed"
                 }
             }
