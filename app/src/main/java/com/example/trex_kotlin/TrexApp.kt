@@ -85,7 +85,7 @@ import kotlinx.coroutines.delay
  * 화면 순서(guide→auth→find→onboarding→main→record→session→complete)상 앞으로 가면 오른쪽에서,
  * 뒤로 가면 왼쪽에서 들어온다.
  */
-private enum class RootRoute { Guide, Auth, Find, Onboarding, Main, Record, DietRecord, MuscleLoad, TransitionSession, PostureSession, TimerSession, Complete, PostureLab, BaselineGuide }
+private enum class RootRoute { Guide, Auth, Onboarding, Main, Record, DietRecord, MuscleLoad, TransitionSession, PostureSession, TimerSession, Complete, PostureLab, BaselineGuide }
 
 /** 메인 하단 시트. */
 sealed class MainSheet {
@@ -130,8 +130,12 @@ fun TrexApp(app: AppViewModel = viewModel()) {
             }
         }
 
+        // 처음 연결한 계정의 서버에도 이 기기에도 기록이 있으면 어느 쪽을 남길지 묻는다(로그인 화면·설정 어디서 연결했든)
+        if (app.askFirstSync) FirstSyncDialog(onKeepLocal = { app.resolveFirstSync(keepLocal = true) }, onUseServer = { app.resolveFirstSync(keepLocal = false) })
+        if (app.askSwitchAccount) SwitchAccountDialog(onMove = { app.resolveFirstSync(keepLocal = true) }, onCancel = { app.cancelAccountSwitch() })
+
         var selectedTab by rememberSaveable { mutableStateOf(TrexTab.Home) }
-        var subScreen by rememberSaveable { mutableStateOf("none") } // none | find | guide | record | postureLab | baselineGuide
+        var subScreen by rememberSaveable { mutableStateOf("none") } // none | guide | record | postureLab | baselineGuide
         var progress by rememberSaveable(stateSaver = listSaver<SessionProgress, Any>(
             save = { listOf(it.index, it.remainingMs, it.elapsedMs, it.completed.joinToString(","), it.skipped.joinToString(","),
                 it.repetitions, it.recordedCounts.entries.joinToString(",") { entry -> "${entry.key}:${entry.value}" },
@@ -170,6 +174,10 @@ fun TrexApp(app: AppViewModel = viewModel()) {
         // ✕ 종료 확인 — 완료한 운동이 있으면 "여기까지 기록" 을 물어본다(결정 3: 묻지 않고 버리지 않는다).
         var exitAsk by remember { mutableStateOf(false) }
         val appPaused = rememberTrexLifecyclePaused()
+        // 앱 복귀 때 다른 기기에서 바뀐 기록을 먼저 받는다(운동 세션 중에는 받지 않는다 — AppViewModel.onAppForeground)
+        LaunchedEffect(appPaused) {
+            if (!appPaused) app.onAppForeground(sessionActive = sessionIndex >= 0)
+        }
         LaunchedEffect(appPaused, sessionIndex >= 0) {
             if (!appPaused) while (true) {
                 app.refreshCalendar(resetPlan = sessionIndex < 0)
@@ -214,6 +222,8 @@ fun TrexApp(app: AppViewModel = viewModel()) {
         val startTone = remember { runCatching { android.media.ToneGenerator(android.media.AudioManager.STREAM_MUSIC, 50) }.getOrNull() }
         androidx.compose.runtime.DisposableEffect(Unit) { onDispose { startTone?.release() } }
 
+        // 플랭크 유지 시계 → 남은 시간(spec §99, 설계 §4.3 브리지) — 라이브 화면이 WORK 에서 묶고 분석 스레드가 인정 시간을 쓴다. 세션 수명
+        val holdBridge = remember { HoldBridge() }
         // 목표에 처음 닿은 시각(단계 token 별) — 자동 진행의 발화 기다림이 반복마다 다시 늘어나지 않게(§63).
         // token 은 단계 번호라 세션마다 0 부터 다시 쓰인다 — 세션 시작·종료·넘김에서 지운다(안 지우면 두 번째 세션부터 옛 시각으로 기다림 없이 넘어가 마지막 말을 잘랐다)
         val advanceHoldFrom = remember { HashMap<Int, Long>() }
@@ -237,6 +247,7 @@ fun TrexApp(app: AppViewModel = viewModel()) {
             postureFallback.clear()
             exitAsk = false
             speech.stop()
+            holdBridge.release()
             progress = SessionProgress(first.token, first.seconds * 1000L,
                 elapsedMs = if (finished || sessionPlanKey != planKey) 0 else progress.elapsedMs, completed = completed,
                 recordedCounts = recordedCounts,
@@ -254,13 +265,17 @@ fun TrexApp(app: AppViewModel = viewModel()) {
                 steps.filter { it.token in ends }.associate { it.workout.id to ends.getValue(it.token) })
         }
 
-        fun nextSession(expectedToken: Int, skip: Boolean) {
+        /**
+         * 다음 단계로(spec §101 세트 끝). [handOff] = 목표 도달 자동 진행 — `speech.stop()` 대신 꼬리 넘김(마지막 판정·교정 문장을 끝까지, 상한 10 s, 다음 종목 안내는 그 뒤에).
+         * 준비 → 운동의 정상 시작(PREPARE, !skip 이 아닌 onPrepared 경로)도 끊지 않는다 — 계획 규칙상 넘치는 말은 ≤ 0.3 s. 수동 '세트 끝'·건너뛰기·나가기는 종전처럼 즉시 멈춘다.
+         */
+        fun nextSession(expectedToken: Int, skip: Boolean, handOff: Boolean = false) {
             val current = steps.getOrNull(progress.index) ?: return
             if (current.token != expectedToken) return
             // 다음 화면/기록 병합 전에 세트 리포트를 확정한다. 화면 소멸 콜백보다 먼저다.
             if (current.phase == SessionPhase.WORK) finalizers[current.workout.id]?.invoke()
             if (current.phase == SessionPhase.WORK) stampWork(current.token)
-            speech.stop()
+            if (handOff || current.phase == SessionPhase.PREPARE) speech.handOff() else speech.stop()
             advanceHoldFrom.remove(expectedToken)
             progress = progress.advance(steps, expectedToken, skip)
             progress.completedOriginalIds(steps).forEach { app.markWorkoutDone(it) }
@@ -296,17 +311,23 @@ fun TrexApp(app: AppViewModel = viewModel()) {
             if (recordableWorkouts().isNotEmpty()) exitAsk = true else exitSession()
         }
 
-        val advanceLatest = rememberUpdatedState<(Int, Boolean) -> Unit> { token, skip -> nextSession(token, skip) }
+        val advanceLatest = rememberUpdatedState<(Int, Boolean) -> Unit> { token, skip -> nextSession(token, skip, handOff = true) }
         LaunchedEffect(sessionIndex, sessionPaused, appPaused, exitAsk) {
             val token = sessionIndex
             var last = android.os.SystemClock.elapsedRealtime()
             while (progress.index == token && token >= 0) {
                 delay(100)
                 val now = android.os.SystemClock.elapsedRealtime()
+                // 플랭크(카메라 시간)는 남은 시간을 인정 시간의 증분으로 줄인다 — 묶이지 않은 세트·폴백 전 다른 종목은 null(벽시계, 종전)
+                val held = if (pausedState.value || step?.phase != SessionPhase.WORK) null else holdBridge.take(step.workout.id, now - last)
                 progress = progress.tick(now - last, pausedState.value, timed = step?.timed == true,
-                    trackElapsed = step?.phase != SessionPhase.PREPARE, trackWork = step?.phase == SessionPhase.WORK)
+                    trackElapsed = step?.phase != SessionPhase.PREPARE, trackWork = step?.phase == SessionPhase.WORK, heldDeltaMs = held)
                 last = now
-                if (!pausedState.value && step?.timed == true && progress.targetReached(step)) advanceLatest.value(token, false)
+                if (!pausedState.value && step?.timed == true && progress.targetReached(step)) {
+                    // 시간 목표의 끝 — 카운트는 남길 이유가 없다(§101), 넘기며 꼬리 넘김
+                    if (step.phase == SessionPhase.WORK) speech.beginSetEnd(android.os.SystemClock.elapsedRealtime(), dropCounts = true)
+                    advanceLatest.value(token, false)
+                }
             }
         }
         // 렙 검증 모드(spec §61): 앱 전용 폴더의 표시 파일로 켠다 — 단계가 바뀔 때마다 다시 읽어 세션 사이에 켜고 끌 수 있다
@@ -319,7 +340,7 @@ fun TrexApp(app: AppViewModel = viewModel()) {
             if (!repValidation && !pausedState.value && step?.phase == SessionPhase.WORK && !step.timed && progress.targetReached(step)) {
                 // 마지막 걸음·회의 판정·안내 발화가 끝날 때까지 최대 2 s 기다린다(§63) — 넘어가며 speech.stop() 이 마지막 말을 잘랐다("6" 뒤 0.7 s 에 넘어감).
                 // 이 효과는 반복 수가 바뀔 때마다 다시 시작하므로 기다림의 시작은 처음 목표에 닿은 시각으로 고정한다
-                val t0 = advanceHoldFrom.getOrPut(step.token) { android.os.SystemClock.elapsedRealtime() }
+                val t0 = advanceHoldFrom.getOrPut(step.token) { android.os.SystemClock.elapsedRealtime().also { speech.beginSetEnd(it, dropCounts = false) } }
                 var quiet = 0
                 while (true) {
                     quiet = if (speech.isSpeaking) 0 else quiet + 1
@@ -343,7 +364,6 @@ fun TrexApp(app: AppViewModel = viewModel()) {
             subScreen == "baselineGuide" -> RootRoute.BaselineGuide
             !app.loggedIn && !app.guideDone -> RootRoute.Guide
             !app.loggedIn && subScreen == "guide" -> RootRoute.Guide
-            !app.loggedIn && subScreen == "find" -> RootRoute.Find
             !app.loggedIn -> RootRoute.Auth
             !app.onboarded -> RootRoute.Onboarding
             sessionDone -> RootRoute.Complete
@@ -366,9 +386,12 @@ fun TrexApp(app: AppViewModel = viewModel()) {
         // 앱 내 업데이트 — 운동·하위 화면이 아닐 때만 확인하고 묻는다(AppUpdate.kt)
         AppUpdatePrompt(enabled = sessionIndex < 0 && !sessionDone && subScreen == "none")
 
+        // 운동 세션 동안은 폰을 둔 방향을 따른다 — 자동 회전이 꺼진 폰에서 바닥 종목을 가로로 두면 화면이 세로로 남았다(10-10 보고, AdaptiveLayout.kt)
+        SessionOrientation(follow = sessionIndex >= 0 && !sessionDone)
+
         CompositionLocalProvider(LocalTrexFold provides rememberTrexFold()) {
             Box(Modifier.fillMaxSize().background(c.bg).safeDrawingPadding()) {
-                TrexContentFrame(maxWidth = if (route in setOf(RootRoute.Auth, RootRoute.Find, RootRoute.Onboarding)) 600.dp else 840.dp,
+                TrexContentFrame(maxWidth = if (route in setOf(RootRoute.Auth, RootRoute.Onboarding)) 600.dp else 840.dp,
                 useWholeWindow = route == RootRoute.PostureSession) {
                     AnimatedContent(
                     targetState = route to sessionIndex,
@@ -402,11 +425,11 @@ fun TrexApp(app: AppViewModel = viewModel()) {
                             )
 
                             RootRoute.Auth -> AuthScreen(
-                            onLogin = { app.completeLogin() },
-                            onOpenFind = { subScreen = "find" },
+                            busy = app.authBusy,
+                            message = app.authMessage,
+                            onGoogle = { app.continueWithGoogle(context.findTrexActivity() ?: context) },
+                            onWithoutAccount = { app.continueWithoutAccount() },
                             )
-
-                            RootRoute.Find -> FindAccountScreen(onBack = { subScreen = "none" })
 
                             RootRoute.Onboarding -> OnboardingScreen(onDone = { profile -> app.completeOnboarding(profile) })
 
@@ -451,6 +474,7 @@ fun TrexApp(app: AppViewModel = viewModel()) {
                                     validation = repValidation,
                                     onPrepared = { nextSession(current.token, true) },
                                     onShowGuide = ExerciseGuides.forName(w.name)?.let { { showGuide(w.name) } },
+                                    holdBridge = holdBridge,
                                     )
                                 } }
 

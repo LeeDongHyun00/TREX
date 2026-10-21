@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 앱 아이콘 배경(시안 C, 2026-10-13) — 로그인 화면 로고를 앱 다크 색(TrexDark) 위에 올린다 -->
+    <color name="ic_launcher_background">#1F2618</color>
+</resources>

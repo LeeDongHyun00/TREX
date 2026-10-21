@@ -40,12 +40,14 @@ import com.example.trex_kotlin.TrexText as Text
  * @param sideCount 쪽별로 세는 종목(런지, §63)의 큰 글자 — 쪽마다 남은 수("왼 7 · 오 8"). null 이면 남은 수.
  * @param elapsedSec 세트 경과(보조 정보 — 반복 운동의 시간은 끝내는 조건이 아니다, THUMB_FIRST §1).
  * @param referenceNote beta 검사의 '참고' 칩 — 말하지 않는 판정은 작게, 호박색(원칙 #2).
+ * @param hold 플랭크 유지 시계(spec §99, 설계 §6) — 카메라 시간이면 큰 숫자 = 카메라가 확인한 시간 / 목표(멈춘 동안 회색), 아래 상태 줄('멈춤 · 무릎이 바닥에 닿음')과
+ *   작게 경과. 시계 폴백이면 종전 남은 시간에 상태 줄만. null 이면 종전.
  */
 @Composable
 internal fun LiveWorkoutHud(workout: Workout, repetitions: Int, timeLeft: Int, totalSeconds: Int,
     setLabel: String, paused: Boolean, compact: Boolean, message: String?,
     countNote: String? = null, countNoteActive: Boolean = false, hideCount: Boolean = false, sideCount: String? = null,
-    elapsedSec: Int? = null, referenceNote: String? = null, modeLabel: String? = null, breath: String? = null) {
+    elapsedSec: Int? = null, referenceNote: String? = null, modeLabel: String? = null, breath: String? = null, hold: HoldHud? = null) {
     val duration = workout.resolvedTarget() is WorkoutTarget.Duration
     val target = workout.resolvedTarget().amount
     val lime = Color(0xFFB8DD83)
@@ -71,15 +73,19 @@ internal fun LiveWorkoutHud(workout: Workout, repetitions: Int, timeLeft: Int, t
         Row(Modifier.padding(top = if (compact) 2.dp else 4.dp), verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             when {
                 duration -> {
+                    // 플랭크 카메라 시간(§99): 인정 시간이 목표를 채워 간다 — 멈춘 동안 숫자는 회색
+                    val held = hold?.takeIf { it.camera }
+                    val done = held?.heldSec?.toFloat()?.div(totalSeconds.coerceAtLeast(1)) ?: (1f - timeLeft.toFloat() / totalSeconds.coerceAtLeast(1))
                     Canvas(Modifier.size(if (compact) 22.dp else 30.dp).padding(bottom = 0.dp).align(Alignment.CenterVertically)) {
                         val stroke = 3.dp.toPx()
                         val arcSize = Size(size.width - stroke, size.height - stroke)
                         val origin = Offset(stroke / 2, stroke / 2)
                         drawArc(Color.White.copy(alpha = .2f), -90f, 360f, false, origin, arcSize, style = Stroke(stroke))
-                        drawArc(lime, -90f, 360f * (1f - timeLeft.toFloat() / totalSeconds.coerceAtLeast(1)).coerceIn(0f, 1f),
+                        drawArc(if (held?.stopped == true) Color.White.copy(alpha = .45f) else lime, -90f, 360f * done.coerceIn(0f, 1f),
                             false, origin, arcSize, style = Stroke(stroke, cap = StrokeCap.Round))
                     }
-                    Text(timeLeft.asClock(), color = Color.White, fontSize = big, lineHeight = bigLine, fontWeight = FontWeight.Bold, maxLines = 1)
+                    Text((held?.heldSec ?: timeLeft).asClock(), color = if (held?.stopped == true) Color.White.copy(alpha = .45f) else Color.White,
+                        fontSize = big, lineHeight = bigLine, fontWeight = FontWeight.Bold, maxLines = 1)
                     Text("/ ${totalSeconds.asClock()}", color = dim, fontSize = 14.sp, modifier = Modifier.padding(bottom = if (compact) 8.dp else 14.dp))
                 }
                 // 렙 검증 모드(spec §61) — 집계자가 앱 숫자에 끌려가지 않게 숫자 대신 '검증 중'
@@ -103,6 +109,11 @@ internal fun LiveWorkoutHud(workout: Workout, repetitions: Int, timeLeft: Int, t
                 Box(Modifier.size(14.dp).scale(scale).border(2.dp, lime, CircleShape))
                 Text(breath, color = Color.White.copy(alpha = .8f), fontSize = 14.sp, maxLines = 1)
             }
+        }
+        // 플랭크 상태 줄과 작은 경과(§99) — '멈춤 · 무릎이 바닥에 닿음'. 카메라 시간일 때만 경과를 따로 보인다(큰 숫자가 인정 시간이라)
+        if (duration && hold != null) {
+            val line = listOfNotNull(hold.status, if (hold.camera) "경과 ${hold.wallSec.asClock()}" else null).joinToString(" · ")
+            if (line.isNotEmpty()) Text(line, color = if (hold.stopped || !hold.camera) amber else dim, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         if (!duration && countNote != null) Text(countNote, color = if (countNoteActive) lime else amber, fontSize = 13.sp,
             fontWeight = if (countNoteActive) FontWeight.SemiBold else FontWeight.Normal, maxLines = 1, overflow = TextOverflow.Ellipsis)

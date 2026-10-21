@@ -119,11 +119,17 @@ class RepCounterTest {
         // 깊은 렙(하단 0.45) = 유효, 얕은 렙(하단 0.85) = 무효
         assertEquals(true, sig.isValidRep(0.45f, 1.4f))
         assertEquals(false, sig.isValidRep(0.85f, 1.4f))
-        // max 방향 종목 (크런치: 상단 극값이 임계 이상이어야 유효)
-        val cr = RepSignals.byExercise.getValue("크런치")
+        // max 방향 종목 (바이시클 크런치: 상단 극값이 임계 이상이어야 유효)
+        val cr = RepSignals.byExercise.getValue("바이시클 크런치")
         assertEquals("max", cr.romDirection)
         assertEquals(true, cr.isValidRep(0f, cr.romThreshold!! + 0.1f))
         assertEquals(false, cr.isValidRep(0f, cr.romThreshold!! - 0.1f))
+        // 크런치·라잉 레그 레이즈는 바닥 반복 계열(§99) — 옛 신호(head_ground·hip_ang)의 ROM 을 새 사이클 신호에 붙이지 않는다(설계 §2 #13)
+        for (ex in listOf("크런치", "라잉 레그 레이즈")) {
+            val f = RepSignals.byExercise.getValue(ex)
+            assertNotNull(ex, f.floorProfile); assertNull(ex, f.romDirection); assertNull(ex, f.romThreshold)
+            assertNull(ex, f.isValidRep(0f, 100f))
+        }
     }
 
     @Test

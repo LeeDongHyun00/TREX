@@ -1,6 +1,17 @@
 package com.example.trex_kotlin
 
 import android.app.Application
+import android.content.Context
+import androidx.credentials.exceptions.GetCredentialCancellationException
+import androidx.credentials.exceptions.GetCredentialException
+import androidx.credentials.exceptions.NoCredentialException
+import com.example.trex_kotlin.sync.ApiException
+import com.example.trex_kotlin.sync.AuthAccount
+import com.example.trex_kotlin.sync.AuthSession
+import com.example.trex_kotlin.sync.FirstSync
+import com.example.trex_kotlin.sync.SyncManager
+import com.example.trex_kotlin.sync.TrexApi
+import com.example.trex_kotlin.sync.requestGoogleIdToken
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
@@ -57,9 +68,190 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         store.onboarded = true
     }
 
+    /** 앱에서 나간다. 서버 계정도 이 기기에서 로그아웃한다. 이 기기의 기록은 그대로 둔다. */
     fun logout() {
         loggedIn = false
         store.loggedIn = false
+        authSession.clear()
+        account = null
+    }
+
+    // ---- 계정·동기화 (docs/SERVER_SYNC_HANDOFF.md 2단계)
+
+    private val authSession = AuthSession(application)
+    private val api = TrexApi(BuildConfig.TREX_API_BASE_URL) { authSession.token }
+
+    /** 서버 계정. null 이면 "로그인 없이 사용" — 기록은 이 기기에만 있다. */
+    var account by mutableStateOf(authSession.current())
+        private set
+    var authBusy by mutableStateOf(false)
+        private set
+    var authMessage by mutableStateOf<String?>(null)
+        private set
+    /** 처음 연결한 계정의 서버에도 이 기기에도 기록이 있다 — 어느 쪽을 남길지 묻는 중. */
+    var askFirstSync by mutableStateOf(false)
+        private set
+    /** 이 기기에 다른 계정으로 쓰던 기록이 있다 — 새 계정으로 옮길지 묻는 중(묻지 않고 올리면 남의 기록이 섞인다). */
+    var askSwitchAccount by mutableStateOf(false)
+        private set
+    private var refreshJob: kotlinx.coroutines.Job? = null
+
+    val sync = SyncManager(
+        application, store, authSession, api, viewModelScope,
+        onRemoteApplied = { reloadFromStore() },
+        onSessionExpired = {
+            account = null
+            authMessage = "로그인이 만료됐어요. 다시 로그인하면 동기화가 이어져요."
+        },
+    )
+
+    fun clearAuthMessage() { authMessage = null }
+
+    /** "로그인 없이 사용". 나중에 설정에서 계정을 연결할 수 있다. */
+    fun continueWithoutAccount() = completeLogin()
+
+    /** "Google로 계속하기" — 로그인 화면과 설정의 계정 연결이 같이 쓴다. [activity] 는 계정 선택 화면을 띄울 액티비티. */
+    fun continueWithGoogle(activity: Context) {
+        if (authBusy) return
+        if (BuildConfig.GOOGLE_WEB_CLIENT_ID.isBlank() || !api.configured) {
+            authMessage = "구글 로그인이 아직 준비되지 않았어요. ‘로그인 없이 사용’으로 시작해 주세요."
+            return
+        }
+        viewModelScope.launch {
+            authBusy = true
+            authMessage = null
+            try {
+                val idToken = requestGoogleIdToken(activity, BuildConfig.GOOGLE_WEB_CLIENT_ID)
+                val signedIn = api.googleLogin(idToken)
+                authSession.save(signedIn)
+                account = signedIn
+                beginSync(signedIn)
+            } catch (_: GetCredentialCancellationException) {
+                // 사용자가 계정 선택을 닫았다 — 안내하지 않는다
+            } catch (_: NoCredentialException) {
+                authMessage = "이 기기에 구글 계정이 없어요. 휴대폰 설정에서 계정을 추가해 주세요."
+            } catch (e: GetCredentialException) {
+                // 콘솔 설정 오류(SHA-1·패키지명·테스트 사용자)는 여기로 온다 — 원인을 화면과 로그에 남긴다
+                android.util.Log.w("TrexAuth", "구글 로그인 실패 type=${e.type}", e)
+                authMessage = "구글 로그인에 실패했어요. ${e.errorMessage ?: e.type}"
+            } catch (e: ApiException) {
+                authMessage = e.message
+            } catch (_: java.io.IOException) {
+                authMessage = "서버에 연결하지 못했어요. 잠시 뒤 다시 시도해 주세요."
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                authMessage = e.message ?: "로그인하지 못했어요."
+            } finally {
+                authBusy = false
+            }
+        }
+    }
+
+    /** 로그인(또는 앱 시작) 직후. 이 계정과 처음이면 올릴지·받을지 정하고, 양쪽에 다 있으면 묻는다. */
+    private suspend fun beginSync(signedIn: AuthAccount) {
+        when (sync.beginAccount(signedIn.loginId, localHasData = store.loadProfile() != null)) {
+            FirstSync.ASK -> askFirstSync = true
+            FirstSync.SWITCH_ACCOUNT -> askSwitchAccount = true
+            else -> completeLogin()
+        }
+    }
+
+    /** 첫 연결 질문(또는 계정 바꿈 질문)의 답. [keepLocal] 이면 이 기기 기록으로 서버를 덮는다. */
+    fun resolveFirstSync(keepLocal: Boolean) {
+        viewModelScope.launch {
+            askFirstSync = false
+            askSwitchAccount = false
+            sync.resolveFirst(keepLocal)
+            completeLogin()
+        }
+    }
+
+    /** 다른 계정의 기록을 새 계정으로 옮기지 않기로 했다 — 새 계정 연결을 취소한다. 이 기기 기록은 그대로다. */
+    fun cancelAccountSwitch() {
+        askSwitchAccount = false
+        sync.cancelFirst()
+        authSession.clear()
+        account = null
+        authMessage = "다른 계정 연결을 취소했어요. 이 기기 기록은 그대로예요."
+    }
+
+    /**
+     * 계정이 있으면 서버와 맞춘다. 첫 연결을 못 마친 계정(로그인 직후 받기가 실패 등)이면 첫 연결부터 다시 한다 —
+     * 예전에는 화면에 "연결됨"으로 보이면서 동기화가 조용히 아무것도 안 했다(코드 리뷰 지적).
+     */
+    private fun refreshAccountSync() {
+        val signedIn = account ?: return
+        if (askFirstSync || askSwitchAccount || refreshJob?.isActive == true) return
+        refreshJob = viewModelScope.launch {
+            try {
+                if (sync.isOwner(signedIn.loginId)) sync.syncNow() else beginSync(signedIn)
+            } catch (e: ApiException) {
+                if (e.status == 401) {
+                    authSession.clear()
+                    account = null
+                    authMessage = "로그인이 만료됐어요. 다시 로그인하면 동기화가 이어져요."
+                } else {
+                    authMessage = e.message
+                }
+            } catch (_: java.io.IOException) {
+                authMessage = "서버에 연결하지 못했어요. 잠시 뒤 다시 시도해 주세요."
+            } catch (_: org.json.JSONException) {
+                authMessage = "서버 응답을 읽지 못했어요."
+            }
+        }
+    }
+
+    fun syncNow() {
+        authMessage = null
+        refreshAccountSync()
+    }
+
+    /**
+     * 앱이 다시 앞으로 왔다 — 다른 기기에서 바뀐 기록을 편집하기 전에 받아 둔다. 오래 켜 둔 화면에서 고친 항목이
+     * 다른 기기의 변경을 통째로 덮는 일을 줄인다(항목 단위 "나중 수정 우선"의 한계, 코드 리뷰 지적).
+     * 운동 세션 중에는 받지 않는다 — 계획이 바뀌면 진행 중인 세션의 단계가 어긋난다.
+     */
+    fun onAppForeground(sessionActive: Boolean) {
+        if (sessionActive) return
+        if (System.currentTimeMillis() - sync.lastPullAt < 15_000) return
+        refreshAccountSync()
+    }
+
+    /** 회원 탈퇴 — 서버의 계정과 백업을 지운다. 이 기기의 기록은 남는다. */
+    fun deleteAccount(onDone: () -> Unit) {
+        viewModelScope.launch {
+            authBusy = true
+            try {
+                api.deleteAccount()
+                authSession.clear()
+                sync.forgetAccount()
+                account = null
+                onDone()
+            } catch (e: ApiException) {
+                authMessage = e.message
+            } catch (_: java.io.IOException) {
+                authMessage = "서버에 연결하지 못해 탈퇴하지 못했어요."
+            } finally {
+                authBusy = false
+            }
+        }
+    }
+
+    /** 서버에서 받은 항목으로 저장소가 바뀌었다 — 화면 상태를 다시 읽는다. */
+    private fun reloadFromStore() {
+        store.loadProfile()?.let { loaded ->
+            profile = loaded
+            if (!onboarded) { onboarded = true; store.onboarded = true }
+        }
+        goalOverride = store.loadGoalOverride()
+        workoutPlan = store.loadPlan() ?: todayPlan
+        workoutHistory = store.loadHistory() ?: emptyList()
+        dietByDay = store.loadDiet() ?: emptyMap()
+        waterByDay = store.loadWater() ?: emptyMap()
+        customFoods = store.loadCustomFoods() ?: emptyMap()
+        refreshCalendar(resetPlan = false)
+        syncMuscleLoad()
     }
 
     // ---- 화면 모드 (라이트/다크/시스템)
@@ -311,7 +503,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     /**
      * 사용자가 직접 등록한 음식. 모델 클래스와 기본 DB(350종)에 없는 집밥·간편식·브랜드 제품을 담는다.
-     * 기기 안에만 저장한다 — 서버로 올리지 않는다.
+     * 기기에 저장하고, 계정을 연결하면 서버에도 백업한다(`sync/SyncRules.KEYS`).
      */
     var customFoods by mutableStateOf(store.loadCustomFoods() ?: emptyMap())
         private set
@@ -415,6 +607,13 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             .sortedByDescending { it.key }
             .firstNotNullOfOrNull { (_, slots) -> slots[mealId]?.takeIf { it.isNotEmpty() } }
             .orEmpty()
+    }
+
+    // 모든 상태 필드가 만들어진 뒤에 동기화를 켠다(서버 값이 오면 위 필드들을 다시 읽는다).
+    init {
+        sync.start()
+        // 첫 연결 질문 중에 앱이 꺼졌으면 여기서 다시 묻는다. 오프라인이면 앱 복귀·"지금 동기화" 때 다시 한다.
+        refreshAccountSync()
     }
 
     companion object {

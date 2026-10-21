@@ -90,23 +90,20 @@ private val loginAnimationFrames = intArrayOf(
     R.drawable.login_animation_frame_15, R.drawable.login_animation_frame_16,
 )
 
-// ============================================================= AUTH (로그인/회원가입 통합)
+// ============================================================= AUTH (구글 로그인 / 로그인 없이 사용)
 
+/**
+ * 시작 화면. 계정은 기록 백업·기기 이전용이다 — 계정 없이도 모든 기능을 쓴다(docs/SERVER_SYNC_HANDOFF.md 2단계).
+ * 아이디·비밀번호 가입은 두지 않는다. 비밀번호 찾기·이메일 인증까지 만들어야 해서, 소셜 로그인으로 대신한다.
+ */
 @Composable
 fun AuthScreen(
-    onLogin: () -> Unit,
-    onOpenFind: () -> Unit,
+    busy: Boolean,
+    message: String?,
+    onGoogle: () -> Unit,
+    onWithoutAccount: () -> Unit,
 ) {
     val c = Trex.c
-    var signupMode by rememberSaveable { mutableStateOf(false) }
-    var id by rememberSaveable { mutableStateOf("") }
-    var password by rememberSaveable { mutableStateOf("") }
-    var suName by rememberSaveable { mutableStateOf("") }
-    var suId by rememberSaveable { mutableStateOf("") }
-    var suPw by rememberSaveable { mutableStateOf("") }
-    var suPw2 by rememberSaveable { mutableStateOf("") }
-    var suEmail by rememberSaveable { mutableStateOf("") }
-    var agree by rememberSaveable { mutableStateOf(false) }
     var frame by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(Unit) {
@@ -120,11 +117,11 @@ fun AuthScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(c.bg)
-            .imePadding()
             .padding(horizontal = 26.dp)
-            .verticalScroll(rememberScrollState()).padding(vertical = 20.dp),
+            .padding(vertical = 20.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
+        Spacer(Modifier.weight(1f))
         // 로고 카드 + 워드마크
         Surface(
             modifier = Modifier.size(84.dp),
@@ -141,165 +138,28 @@ fun AuthScreen(
             modifier = Modifier.padding(top = 12.dp),
         )
         Text("움직임을 보고 함께 운동해룡", color = c.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 3.dp))
+        Spacer(Modifier.weight(1f))
 
-        SegmentedTabs(
-            options = listOf("로그인", "회원가입"),
-            selected = if (signupMode) 1 else 0,
-            onSelect = { signupMode = it == 1 },
-            modifier = Modifier.padding(top = 24.dp),
-        )
-
-        Column(
-            Modifier
-                .fillMaxWidth()
-                .padding(top = 18.dp),
-        ) {
-            AnimatedContent(
-                targetState = signupMode,
-                transitionSpec = {
-                    if (targetState) {
-                        (slideInHorizontally(tween(300)) { it / 3 } + fadeIn()) togetherWith
-                            (slideOutHorizontally(tween(300)) { -it / 4 } + fadeOut())
-                    } else {
-                        (slideInHorizontally(tween(300)) { -it / 3 } + fadeIn()) togetherWith
-                            (slideOutHorizontally(tween(300)) { it / 4 } + fadeOut())
-                    }
-                },
-                label = "auth-mode",
-            ) { signup ->
-                if (!signup) {
-                    Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
-                        DField(id, { id = it }, "아이디")
-                        DField(password, { password = it }, "비밀번호", password = true)
-                        Spacer(Modifier.height(6.dp))
-                        Cta("로그인", onClick = onLogin, icon = Icons.AutoMirrored.Rounded.Login, modifier = Modifier.fillMaxWidth())
-                    }
-                } else {
-                    val valid = suName.isNotBlank() && suId.length >= 4 && suPw.length >= 8 && suPw == suPw2 && suEmail.contains("@") && agree
-                    Column(verticalArrangement = Arrangement.spacedBy(11.dp)) {
-                        DField(suName, { suName = it }, "지민", label = "이름", hint = "실명이 아니어도 괜찮아룡")
-                        DField(suId, { suId = it }, "trex_user", label = "아이디", hint = "4자 이상 영문/숫자")
-                        DField(suPw, { suPw = it }, "••••••••", label = "비밀번호", hint = "8자 이상, 영문·숫자 조합", password = true)
-                        DField(
-                            suPw2, { suPw2 = it }, "••••••••", label = "비밀번호 확인",
-                            hint = if (suPw.isNotBlank() && suPw2.isNotBlank() && suPw != suPw2) "비밀번호가 일치하지 않아룡" else "한 번 더 입력해주세요",
-                            password = true,
-                        )
-                        DField(suEmail, { suEmail = it }, "jimin@trex.app", label = "이메일", hint = "아이디·비밀번호 찾기에 사용돼요", keyboardType = KeyboardType.Email)
-                        Surface(
-                            onClick = { agree = !agree },
-                            shape = RoundedCornerShape(16.dp),
-                            color = c.surface,
-                            border = BorderStroke(1.dp, c.line),
-                        ) {
-                            Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 13.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Box(
-                                    Modifier
-                                        .size(20.dp)
-                                        .clip(RoundedCornerShape(7.dp))
-                                        .background(if (agree) c.primary else Color.Transparent)
-                                        .border(1.dp, if (agree) c.primary else c.fieldLine, RoundedCornerShape(7.dp)),
-                                    contentAlignment = Alignment.Center,
-                                ) {
-                                    if (agree) Icon(Icons.Rounded.Check, contentDescription = null, tint = Color.White, modifier = Modifier.size(13.dp))
-                                }
-                                Text(
-                                    "서비스 약관 및 개인정보 처리방침에 동의합니다",
-                                    color = c.text, fontSize = 12.5.sp, lineHeight = 17.sp,
-                                    modifier = Modifier.padding(start = 11.dp).weight(1f),
-                                )
-                            }
-                        }
-                        Cta("가입 완료", onClick = onLogin, enabled = valid, modifier = Modifier.fillMaxWidth())
-                    }
-                }
-            }
-
-            Row(
-                Modifier.fillMaxWidth().padding(top = 16.dp),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text("아이디/비밀번호 찾기", color = c.text2, fontSize = 12.sp, fontWeight = FontWeight.Medium, modifier = Modifier.clickable(onClick = onOpenFind))
-            }
-        }
-    }
-}
-
-// ============================================================= FIND
-
-@Composable
-fun FindAccountScreen(onBack: () -> Unit) {
-    val c = Trex.c
-    var findPw by rememberSaveable { mutableStateOf(false) }
-    var id by rememberSaveable { mutableStateOf("") }
-    var email by rememberSaveable { mutableStateOf("") }
-    var sent by rememberSaveable { mutableStateOf(false) }
-
-    BackHandler(onBack = onBack)
-
-    Column(Modifier.fillMaxSize().background(c.bg).imePadding()) {
-        Column(Modifier.padding(start = 24.dp, end = 24.dp, top = 52.dp)) {
-            Kicker("RECOVER", color = c.primaryText)
-            TitleBig("아이디 / 비밀번호 찾기")
-        }
-        Box(Modifier.padding(horizontal = 24.dp).padding(top = 18.dp)) {
-            SegmentedTabs(
-                options = listOf("아이디 찾기", "비밀번호 찾기"),
-                selected = if (findPw) 1 else 0,
-                onSelect = { findPw = it == 1; sent = false },
-                height = 40.dp,
-                filled = true,
+        Column(Modifier.fillMaxWidth().padding(top = 32.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Cta(
+                if (busy) "로그인 중…" else "Google로 계속하기",
+                onClick = onGoogle,
+                enabled = !busy,
+                icon = Icons.AutoMirrored.Rounded.Login,
+                modifier = Modifier.fillMaxWidth(),
             )
-        }
-        Column(
-            Modifier
-                .weight(1f)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp)
-                .padding(top = 20.dp),
-        ) {
-            if (sent) {
-                Column(
-                    Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(24.dp))
-                        .background(c.primaryWash)
-                        .border(1.dp, c.primarySoftLine, RoundedCornerShape(24.dp))
-                        .padding(20.dp),
-                ) {
-                    Box(Modifier.size(38.dp).clip(CircleShape).background(c.primary), contentAlignment = Alignment.Center) {
-                        Icon(Icons.Rounded.Mail, contentDescription = null, tint = Color.White, modifier = Modifier.size(17.dp))
-                    }
-                    Text(
-                        if (findPw) "재설정 링크를 이메일로 보내드렸어룡" else "아이디를 이메일로 보내드렸어룡",
-                        color = c.text, fontSize = 14.5.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 14.dp),
-                    )
-                    Text("$email 로 전송됨", color = c.text2, fontSize = 12.sp, modifier = Modifier.padding(top = 5.dp))
-                    Cta("로그인으로 돌아가기", onClick = onBack, height = 46.dp, modifier = Modifier.padding(top = 16.dp).fillMaxWidth())
-                }
-            } else {
-                Column(verticalArrangement = Arrangement.spacedBy(13.dp)) {
-                    if (findPw) {
-                        DField(id, { id = it }, "가입 시 사용한 아이디", label = "아이디")
-                    }
-                    DField(email, { email = it }, "가입 시 등록한 이메일", label = "이메일", keyboardType = KeyboardType.Email)
-                    Text(
-                        if (findPw) "입력한 정보가 일치하면 비밀번호 재설정 링크를 보내드려룡." else "입력한 이메일로 가입된 아이디를 안내해드려룡.",
-                        color = c.text2, fontSize = 12.sp, lineHeight = 19.sp,
-                    )
-                }
-            }
-        }
-        if (!sent) {
-            Row(Modifier.padding(horizontal = 24.dp).padding(bottom = 24.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Cta(
-                    text = if (findPw) "재설정 링크 받기" else "아이디 받기",
-                    onClick = { if (email.contains("@") && (!findPw || id.isNotBlank())) sent = true },
-                    enabled = email.contains("@") && (!findPw || id.isNotBlank()),
-                    modifier = Modifier.weight(1f),
-                )
-                RoundIcon(Icons.AutoMirrored.Rounded.ArrowBack, onClick = onBack, size = 54.dp, contentDescription = "뒤로")
+            Text(
+                "기록이 계정에 백업돼 기기를 바꿔도 이어서 쓸 수 있어요",
+                color = c.text2, fontSize = 12.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth(),
+            )
+            Spacer(Modifier.height(8.dp))
+            GhostButton("로그인 없이 사용", onClick = { if (!busy) onWithoutAccount() }, modifier = Modifier.fillMaxWidth())
+            Text(
+                "기록은 이 기기에만 저장돼요. 나중에 설정에서 계정을 연결할 수 있어요",
+                color = c.text3, fontSize = 12.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth(),
+            )
+            if (message != null) {
+                Text(message, color = c.err, fontSize = 13.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(top = 6.dp))
             }
         }
     }

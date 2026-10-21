@@ -128,6 +128,9 @@ class RepUnitAccumulator(val unit: RepUnit) {
      */
     fun onCounterCycleReset() {}
 
+    /** 카운터가 잠정 첫 회를 거뒀다 — 표시 단위 원장에서도 첫 회를 뺀다(사이클 = 1회인 바닥 반복 계열, [onCounterRetracted]). 비었으면 아무것도 안 한다. */
+    fun retractFirst() { if (done.isNotEmpty()) done.removeAt(0) }
+
     /** 새 세트 — 완료한 회와 기다리는 반쪽을 모두 비운다. */
     fun reset() {
         sideQueues.forEach { it.clear() }
@@ -175,6 +178,21 @@ class RepUnitAccumulator(val unit: RepUnit) {
             }
             return RepFrameTally(added, notShort, short, acc?.pendingHalf == true,
                 RepMetrics.medianPeriodMs(acc?.repTimesMs ?: counter.repTimesMs))
+        }
+
+        /**
+         * 카운터가 이 프레임에 잠정 첫 회를 거뒀을 때([RepCounter.newlyRetracted]) — `PostureLive` 분석 루프가 부른다. 그 회로 쌓은 사이클 기록([records])을 지우고,
+         * 바닥 반복 계열(spec §99)은 표시 단위 원장([acc])에서도 첫 회를 뺀다 — 안 빼면 세트 마감의 `acc.completed`(리포트 '센 회'·로그 `reps.completed`)가 거둔 회까지 셌다
+         * (리뷰 2026-10-07). 팔별 경로(덤벨 컬)는 종전 그대로 둔다(서서 하는 종목의 동작을 바꾸지 않는다 — 같은 결함이 있다, 인계 문서).
+         * @param seen 처리한 기각 수. @return 새 처리 수 — 바닥 계열은 그대로(추적기가 같은 프레임에 첫 회를 거두고 새 기각을 낼 수 있다 — 그 기각의 틱·이유가 빠지지 않게),
+         *   팔별 경로는 종전처럼 지금까지의 기각 전부(반복 검사 창을 소비하지 않는다).
+         * 스레드: 호출자가 [records]·[acc] 를 지키는 락 안에서 부른다.
+         */
+        fun onCounterRetracted(counter: RepCounter, records: MutableList<RepRecord>, acc: RepUnitAccumulator?, seen: Int): Int {
+            records.clear()
+            if (counter.floorTracker == null) return counter.rejectedReps.size
+            acc?.retractFirst()
+            return seen
         }
     }
 }

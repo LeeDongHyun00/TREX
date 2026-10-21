@@ -1,10 +1,13 @@
 package com.example.trex_kotlin
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Movie
 import android.os.SystemClock
 import android.view.View
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -19,6 +22,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -62,9 +67,17 @@ internal fun ExerciseGuideSheet(guide: ExerciseGuide, onClose: () -> Unit,
     val lifecyclePaused = rememberTrexLifecyclePaused()
     var section by rememberSaveable(guide.name) { mutableIntStateOf(0) }
     var failed by remember(guide.asset) { mutableStateOf(false) }
-    val movie by produceState<Movie?>(null, guide.asset) {
+    val visual by produceState<GuideVisual?>(null, guide.asset) {
         val decoded = withContext(Dispatchers.IO) {
-            runCatching { context.assets.open(guide.asset).use(Movie::decodeStream) }.getOrNull()
+            runCatching {
+                context.assets.open(guide.asset).use { stream ->
+                    if (guide.asset.endsWith(".gif", ignoreCase = true)) {
+                        Movie.decodeStream(stream)?.let { GuideVisual.Animation(it) }
+                    } else {
+                        BitmapFactory.decodeStream(stream)?.let { GuideVisual.Still(it) }
+                    }
+                }
+            }.getOrNull()
         }
         failed = decoded == null
         value = decoded
@@ -77,12 +90,20 @@ internal fun ExerciseGuideSheet(guide: ExerciseGuide, onClose: () -> Unit,
             Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
                 Box(Modifier.padding(top = 16.dp).fillMaxWidth().height(260.dp)
                     .clip(RoundedCornerShape(20.dp)).background(Color.White), contentAlignment = Alignment.Center) {
-                    val decoded = movie
-                    if (decoded != null) AndroidView(
-                        factory = { ExerciseGifView(it, decoded).apply { contentDescription = "${guide.name} 동작 예시" } },
-                        update = { it.playing = !lifecyclePaused },
-                        modifier = Modifier.fillMaxSize(),
-                    ) else Text(if (failed) "시범을 불러오지 못했어요." else "시범을 준비하고 있어요.", color = TrexTextSecondary)
+                    when (val decoded = visual) {
+                        is GuideVisual.Animation -> AndroidView(
+                            factory = { ExerciseGifView(it, decoded.movie).apply { contentDescription = "${guide.name} 동작 예시" } },
+                            update = { it.playing = !lifecyclePaused },
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                        is GuideVisual.Still -> Image(
+                            bitmap = decoded.bitmap.asImageBitmap(),
+                            contentDescription = "${guide.name} 동작 예시",
+                            contentScale = ContentScale.Fit,
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                        null -> Text(if (failed) "시범을 불러오지 못했어요." else "시범을 준비하고 있어요.", color = TrexTextSecondary)
+                    }
                 }
                 Spacer(Modifier.height(16.dp))
                 SegmentedTabs(listOf("운동 가이드", "주의사항"), section,
@@ -104,6 +125,12 @@ internal fun ExerciseGuideSheet(guide: ExerciseGuide, onClose: () -> Unit,
             Cta(confirmLabel, onConfirm, modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
         }
     }
+}
+
+/** 움직이는 시범은 GIF로, 유지 자세는 정지 이미지로 같은 영역에 표시한다. */
+private sealed interface GuideVisual {
+    data class Animation(val movie: Movie) : GuideVisual
+    data class Still(val bitmap: Bitmap) : GuideVisual
 }
 
 @Composable

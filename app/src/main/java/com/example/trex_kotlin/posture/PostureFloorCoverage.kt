@@ -46,6 +46,7 @@ val FLOOR_FEATURE_PARTS: Map<String, Set<BodyPart>> = mapOf(
     "elbow_ang" to setOf(BodyPart.SHOULDER, BodyPart.ELBOW, BodyPart.WRIST),
     "knee_ang" to setOf(BodyPart.HIP, BodyPart.KNEE, BodyPart.ANKLE),
     "hip_ang" to setOf(BodyPart.SHOULDER, BodyPart.HIP, BodyPart.KNEE),
+    "hip_ang_maxside" to setOf(BodyPart.SHOULDER, BodyPart.HIP, BodyPart.KNEE),   // §99 양다리 판별(더 편 쪽 고관절각)
     "trunk_ankle_ang" to setOf(BodyPart.SHOULDER, BodyPart.HIP, BodyPart.ANKLE),
     "head_trunk_ang" to setOf(BodyPart.HEAD, BodyPart.HIP),
     "shoulder_arm_ang" to setOf(BodyPart.HIP, BodyPart.SHOULDER, BodyPart.ELBOW),

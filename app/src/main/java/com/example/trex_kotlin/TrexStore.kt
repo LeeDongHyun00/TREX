@@ -431,6 +431,27 @@ class TrexStore(context: Context, preferenceName: String = "trex_store") {
         }
     }
 
+    // ---- 계정 동기화(sync/SyncManager)용 원본 접근 — 항목 JSON 을 해석하지 않고 그대로 주고받는다
+
+    fun readRaw(key: String): String? = prefs.getString(key, null)
+
+    /** 서버에서 받은 항목을 그대로 쓴다. 빈 문자열은 "없음"(목표 직접 설정 해제 등)이다. 바로 디스크에 쓴다. */
+    fun writeRaw(values: Map<String, String>) {
+        val edit = prefs.edit()
+        values.forEach { (key, value) -> if (value.isEmpty()) edit.remove(key) else edit.putString(key, value) }
+        edit.commit()
+    }
+
+    // SharedPreferences 는 리스너를 약하게 잡는다 — 필드로 붙들어 둔다.
+    private var changeListener: SharedPreferences.OnSharedPreferenceChangeListener? = null
+
+    /** 항목이 바뀔 때마다 그 키로 [onChange] 를 부른다(메인 스레드). */
+    fun setChangeListener(onChange: (String) -> Unit) {
+        changeListener?.let(prefs::unregisterOnSharedPreferenceChangeListener)
+        changeListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key -> key?.let(onChange) }
+            .also(prefs::registerOnSharedPreferenceChangeListener)
+    }
+
     private companion object {
         const val KEY_THEME = "theme_mode"
         const val KEY_PLAN_DONE_DAY = "plan_done_day"

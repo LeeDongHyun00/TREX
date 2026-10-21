@@ -26,8 +26,10 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-jackson'
 	compileOnly 'org.projectlombok:lombok'
 	runtimeOnly 'com.h2database:h2'
-	// PostgreSQL 완성 되면 주석 해제 후 추가하기
-	// runtimeOnly 'org.postgresql:postgresql'
+	// 운영(prod 프로필) DB — AWS RDS PostgreSQL. 로컬·테스트는 H2.
+	runtimeOnly 'org.postgresql:postgresql'
+	// 구글 ID 토큰 검증(구글 공개키 JWKS, docs/SERVER_SYNC_HANDOFF.md D8)
+	implementation 'org.springframework.security:spring-security-oauth2-jose'
 	annotationProcessor 'org.projectlombok:lombok'
 	testImplementation 'org.springframework.boot:spring-boot-starter-data-jpa-test'
 	testImplementation 'org.springframework.boot:spring-boot-starter-security-test'
@@ -40,6 +42,12 @@ dependencies {
 	implementation 'io.jsonwebtoken:jjwt-api:0.11.5'
 	runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.11.5'
 	runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.11.5'
+}
+
+// 배포 jar 에는 로컬 개발 설정(application.yml — git 제외, 사람마다 다르고 비밀값이 있을 수 있다)과 템플릿을 넣지 않는다.
+// 운영은 application-prod.yml + 환경 변수만 쓴다(docs/SERVER_SYNC_HANDOFF.md D9).
+tasks.named('bootJar') {
+	exclude '**/application.yml', '**/application-example.yml'
 }
 
 tasks.named('test') {

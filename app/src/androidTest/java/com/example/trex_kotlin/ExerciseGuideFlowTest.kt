@@ -2,6 +2,7 @@ package com.example.trex_kotlin
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Movie
 import android.graphics.Rect
 import android.os.SystemClock
@@ -114,9 +115,16 @@ class ExerciseGuideFlowTest {
 
     @Test fun firstGuideAndReopenedGuideHoldPreparationAndWorkout() = isolated(false) {
         ExerciseGuides.all.forEach { guide ->
-            @Suppress("DEPRECATION") val movie = context.assets.open(guide.asset).use(Movie::decodeStream)
-            assertNotNull(guide.name, movie)
-            assertTrue(movie!!.duration() > 0)
+            if (guide.asset.endsWith(".gif")) {
+                @Suppress("DEPRECATION") val movie = context.assets.open(guide.asset).use(Movie::decodeStream)
+                assertNotNull(guide.name, movie)
+                assertTrue(movie!!.duration() > 0)
+            } else {
+                val bitmap = context.assets.open(guide.asset).use { BitmapFactory.decodeStream(it) }
+                assertNotNull(guide.name, bitmap)
+                assertTrue(bitmap!!.width > 0 && bitmap.height > 0)
+                bitmap.recycle()
+            }
         }
         click("운동")
         await("덤벨 컬 운동 방법")

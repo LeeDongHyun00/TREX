@@ -98,8 +98,8 @@ class ReplayCaptureTest {
         val expected = frameFeatures(readCapture(file).frames[0], FrameStats())!!
         for ((k, v) in expected) assertTrue("$k missing", lines[0].contains("\"$k\":${num(v)}"))
         assertEquals("{\"t\":310,\"detected\":false,\"features\":{}}", lines[1])
-        // 가시성 < 0.5 인 관절은 앱처럼 버려진다 → 사람은 있지만 피처 없음
-        assertEquals("{\"t\":620,\"detected\":true,\"features\":{}}", lines[2])
+        // 가시성 < 0.5 인 관절은 앱처럼 버려진다 → 사람은 있지만 피처 없음. 가장자리 피처 `leg_edge_*`(§101)만 가시성 게이트 없이 원시 x 로 남는다(가장자리의 가시성은 믿을 수 없다)
+        assertEquals("{\"t\":620,\"detected\":true,\"features\":{\"leg_edge_L\":0.44,\"leg_edge_R\":0.44}}", lines[2])
     }
 
     @Test

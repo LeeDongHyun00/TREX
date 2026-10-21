@@ -7,4 +7,6 @@
 <full-backup-content>
     <exclude domain="file" path="food_memory.tsv" />
     <exclude domain="file" path="food_memory.tsv.tmp" />
+    <!-- 서버 로그인 토큰 — 새 기기에서는 다시 로그인한다(sync/AuthSession) -->
+    <exclude domain="sharedpref" path="trex_auth.xml" />
 </full-backup-content>

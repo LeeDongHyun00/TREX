@@ -17,11 +17,12 @@ class LegCycleIntegrationTest {
         assertEquals(RuleStatus.BETA, rs.rules.first { it.id == kneeUp.id }.status)
         assertTrue(rs.rules.first { it.id == hands.id }.cautions.any { "왼손·오른손 머리 위치" in it })
         assertEquals("대신할 검사가 없는 규칙은 그대로", RuleStatus.SHIP, rs.rules.first { it.id == gaze.id }.status)
-        assertTrue(rs.rules.filter { it.exercise == "스탠딩 니업" && it.kind == "rep_form" }.all { it.status == RuleStatus.BETA })
+        // §101a: 니업 '무릎 높이' 만 ship(사용자 정의 게이트 예외 U11), 나머지는 beta
+        assertEquals(listOf("repform|스탠딩 니업|무릎 높이"), rs.rules.filter { it.exercise == "스탠딩 니업" && it.kind == "rep_form" && it.status == RuleStatus.SHIP }.map { it.id })
         assertEquals(4, rs.rules.count { it.exercise == "스탠딩 니업" && it.kind == "scope" && it.status == RuleStatus.EXCLUDE })
         val scope = PostureScope.of(rs, "스탠딩 니업")
-        assertFalse(scope.hasAnyJudgement); assertTrue(scope.provisionalOnly)
-        assertTrue(scope.startLine!!.contains("검증 중")); assertTrue(scope.startLine!!.contains("한 번씩"))
+        assertTrue(scope.hasAnyJudgement); assertFalse(scope.provisionalOnly)
+        assertTrue(scope.startLine!!.contains("한 번씩"))
     }
 
     @Test fun pairedUnitAccumulatorNeedsBothSidesAndSkipsUnknown() {

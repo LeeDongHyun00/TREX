@@ -93,11 +93,13 @@ class LegCycleTest {
         assertEquals("허리를 숙이면 세지 않아요. 가슴을 들고 상체를 세워 주세요.", LegCycleTracker.cueFor(LegProfile.SIDE, "torso_bent"))
         assertEquals("무릎이 발끝을 넘으면 세지 않아요. 엉덩이를 뒤로 보내 무릎을 발끝 뒤에 두세요.", LegCycleTracker.cueFor(LegProfile.SIDE, "knee_over_toe"))
         val c = Run(LegProfile.CROSS); c.ready()
-        c.cycle(frame(kneeL = 140f, kneeR = 105f, cross = -0.45f, hipY = 0.64f, ankleYR = 0.80f, ankleYL = 0.92f, hipHeight = 0.85f), back = frame(cross = 0.2f))   // 골반이 안 내려감
+        // §101: 크로스 깊이는 무릎만 — hip_height_rel 0.85 는 분모(골반–발목 현) 탓일 수 있어 묻지 않는다(10-08 정상 3/9 오기각). 골반 하강(hipY 0.64 = 0.5 몸통)이 있으니 센다
+        c.cycle(frame(kneeL = 140f, kneeR = 105f, cross = -0.45f, hipY = 0.64f, ankleYR = 0.80f, ankleYL = 0.92f, hipHeight = 0.85f), back = frame(cross = 0.2f))
         c.cycle(frame(kneeL = 140f, kneeR = 115f, cross = -0.45f, hipY = 0.64f, ankleYR = 0.80f, ankleYL = 0.92f), back = frame(cross = 0.2f))                      // 더 굽은 무릎 115°
-        c.cycle(frame(kneeL = 140f, kneeR = 105f, cross = -0.45f, hipY = 0.64f, ankleYR = 0.80f, ankleYL = 0.92f, pitch = 42f), back = frame(cross = 0.2f))         // 숙임(+34)
+        c.cycle(frame(kneeL = 140f, kneeR = 105f, cross = -0.45f, hipY = 0.64f, ankleYR = 0.80f, ankleYL = 0.92f, pitch = 42f), back = frame(cross = 0.2f))         // 힙 힌지 +34 — 크로스는 센다(§101 띠 +55/60)
+        c.cycle(frame(kneeL = 140f, kneeR = 105f, cross = -0.45f, hipY = 0.64f, ankleYR = 0.80f, ankleYL = 0.92f, pitch = 70f), back = frame(cross = 0.2f))         // 숙임(+62, 절대 70)
         c.cycle(crossLungeR, back = frame(cross = 0.2f))
-        assertEquals(1, c.counter.reps); assertEquals(listOf("shallow", "shallow", "torso_bent"), reasons(c))
+        assertEquals(3, c.counter.reps); assertEquals(listOf("shallow", "torso_bent"), reasons(c))
         assertEquals("더 깊게 내려가야 세요.", LegCycleTracker.cueFor(LegProfile.CROSS, "shallow"))
     }
 
@@ -109,7 +111,7 @@ class LegCycleTest {
         a.cycle(frame(thighL = 95f, thighR = 95f, kneeL = 90f, kneeR = 90f, liftL = 0f))         // 양다리(점프) — 서로에 대한 발 높이가 0 이라 들림이 아니다
         a.cycle(frame(thighL = 70f, kneeL = 60f, liftL = 1.2f, liftR = -1.2f, thighR = 120f))     // 반대 다리도 올라옴
         assertEquals(3, a.counter.reps); assertEquals(listOf("L", "R", "L"), a.events.map { it.side!!.key })
-        assertEquals(listOf("shallow", "no_lift", "no_lift", "no_lift", "both_legs", "knee_straight"), reasons(a))   // 마지막: 반대(오른) 다리는 편 채 올라왔다
+        assertEquals(listOf("shallow", "no_lift", "no_lift", "no_lift", "both_legs", "shallow_straight"), reasons(a))   // 마지막: 반대(오른) 다리는 편 채 얕게 올라왔다(§101)
         assertEquals("발이 바닥에서 더 떠야 세요. 무릎을 골반 높이까지 올려 주세요.", LegCycleTracker.cueFor(LegProfile.KNEE_UP, "no_lift"))
     }
 
@@ -117,11 +119,76 @@ class LegCycleTest {
         val a = Run(LegProfile.KNEE_UP); a.ready()
         a.cycle(frame(thighL = 70f, kneeL = 140f, liftL = 1.7f, liftR = -1.7f))                  // 편 다리를 앞으로 참(2차 세트 무릎 125~170)
         a.cycle(frame(thighL = 136f, kneeL = 128f, liftL = 0.7f, liftR = -0.7f))                 // 낮게 참 — 높이보다 편 다리를 먼저 말한다
-        a.cycle(frame(thighL = 60f, kneeL = 50f, liftL = 1.3f, liftR = -1.3f, pitch = 24f))      // 허리 숙임(기준 8 → 24, 2차 세트 21~36)
+        a.cycle(frame(thighL = 60f, kneeL = 50f, liftL = 1.3f, liftR = -1.3f, pitch = 24f))      // +16 — 힘차게 드는 정상 회의 피치 상승(10-09 최대 +16.3)은 숙임이 아니다(§101a 띠 20)
+        a.cycle(frame(thighL = 60f, kneeL = 50f, liftL = 1.3f, liftR = -1.3f, pitch = 32f))      // 허리 숙임(기준 8 → 32, 10-06 일부러 숙인 회 +18~32)
         a.cycle(kneeUpL)
-        assertEquals(1, a.counter.reps); assertEquals(listOf("knee_straight", "knee_straight", "torso_bent"), reasons(a))
+        assertEquals(2, a.counter.reps); assertEquals(listOf("knee_straight", "shallow_straight", "torso_bent"), reasons(a))   // 낮게 찬 편 다리 = 접은 채 골반 높이까지(§101)
         assertEquals("다리를 뻗으면 세지 않아요. 무릎을 접은 채 올려 주세요.", LegCycleTracker.cueFor(LegProfile.KNEE_UP, "knee_straight"))
         assertEquals("허리를 숙이면 세지 않아요. 가슴을 펴고 몸통을 세운 채 올려 주세요.", LegCycleTracker.cueFor(LegProfile.KNEE_UP, "torso_bent"))
+    }
+
+    @Test fun crossLungePartialFramesDoNotBreakTheCycle() {
+        // §101(10-08 줄 11): 뒤로 교차한 발목이 바닥에서 가시성 0.5 아래로 떨어져 knee_*·leg_cross 가 2~7 프레임 빈다 — 사람(골반)이 보이면 사이클을 끊지 않고 있는 값으로 극값만 갱신
+        val c = Run(LegProfile.CROSS); c.ready()
+        c.feed(crossLungeL, 2)
+        val partial = mapOf(LegGeometry.HIP_Y to 0.68f, LegGeometry.TORSO2D to 0.24f, "knee_R" to 90f, "thigh_R" to 120f, "torso_pitch" to 30f)   // 왼 다리 관절·교차 없음, 0.9 s
+        c.feed(partial, 3)
+        c.feed(frame(cross = 0.2f), 3)
+        assertEquals("부분 프레임 뒤 복귀 — 바닥을 담은 사이클이 닫힌다", 1, c.counter.reps); assertEquals(StepSide.LEFT, c.events.last().side)
+        assertTrue(reasons(c).isEmpty())
+        // 같은 입력에서 부분 프레임 대신 1 s 공백이면 종전처럼 끊긴다(사람이 없는 프레임은 못 봄이 아니라 끊김)
+        val d = Run(LegProfile.CROSS); d.ready()
+        d.feed(crossLungeL, 2); d.t += 1_000; d.feed(frame(cross = 0.2f), 3)
+        assertEquals(0, d.counter.reps)
+    }
+
+    @Test fun sideCrunchJudgesKneeDirectionOnTheStandingPelvisAxisInFrontalViewOnly() {
+        // §101(10-08 줄 8): 무릎 방향은 회 직전 선 자세 골반축에 고정한 kl_st(바닥 띠 중앙값 ≥ 0.70) — 순간 골반축 knee_lat(0.35) 은 무릎을 따라 도는 골반 때문에 앞 들기+팔꿈치 회를 셌다
+        val ax = mapOf(LegGeometry.HIP_AX_X to 1f, LegGeometry.HIP_AX_Z to 0f)
+        fun side(kl: Float, kneeLat: Float = 0.6f) = crunchL + ax + mapOf(LegGeometry.kneeFx(StepSide.LEFT) to kl, LegGeometry.kneeFz(StepSide.LEFT) to 0.5f, "knee_lat_L" to kneeLat)
+        val a = Run(LegProfile.SIDE_CRUNCH); a.feed(frame() + ax, 4)
+        a.cycle(side(1.0f)); a.cycle(side(0.75f))
+        a.cycle(side(0.55f, kneeLat = 0.66f))    // 앞 들기+팔꿈치 회(10-08 54020 R: 순간축 0.66 통과, 고정축 0.57)
+        a.cycle(side(0.30f))
+        assertEquals(2, a.counter.reps); assertEquals(listOf("no_abduct", "no_abduct"), reasons(a))
+        // 재료가 없으면(옛 캡처) 순간축 knee_lat 로 폴백
+        val b = Run(LegProfile.SIDE_CRUNCH); b.ready()
+        b.cycle(crunchL); b.cycle(frame(thighL = 60f, kneeL = 55f, liftL = 1.6f, liftR = -1.6f, ekL = 0.2f, kneeLatL = 0.1f, latFlexL = 20f))
+        assertEquals(1, b.counter.reps); assertEquals(listOf("no_abduct"), reasons(b))
+        // 선 자세가 정면이 아니면(사선 40°) 무릎 방향은 판정하지 않는다 — 유보는 셈
+        val rad = Math.toRadians(40.0); val oblique = mapOf(ViewEstimator.FEAT_COS to kotlin.math.cos(rad).toFloat(), ViewEstimator.FEAT_SIN to kotlin.math.sin(rad).toFloat())
+        val o = Run(LegProfile.SIDE_CRUNCH); o.feed(frame() + ax + oblique, 4)
+        o.cycle(side(0.30f) + oblique)
+        assertEquals(1, o.counter.reps); assertTrue(reasons(o).isEmpty())
+    }
+
+    @Test fun sideLungeBlipAndEdgeCyclesAreSilentPhantomsAndBottomBandMediansReplaceTheExtremeFrame() {
+        // §101(10-08 사이드 런지): 가장자리에서 발목 가설이 뒤집혀 유령 사이클·거짓 사유가 났다 — 1프레임짜리 사이클(blip)과 가장자리(edge) 사이클은 세지 않고 말하지 않는다(사용자 결정 U1)
+        val a = Run(LegProfile.SIDE); a.ready()
+        a.feed(sideLungeL, 1); a.feed(frame(), 3)                                     // 출발선 아래 1프레임 — blip
+        assertEquals(0, a.counter.reps); assertEquals(listOf("blip"), reasons(a)); assertEquals(0, a.tracker.audibleRejected)
+        assertNull(LegCycleTracker.cueFor(LegProfile.SIDE, "blip")); assertTrue(a.tracker.silent("edge")); assertFalse(a.tracker.silent("shallow"))
+        a.cycle(sideLungeL + mapOf(LegGeometry.edge(StepSide.LEFT) to 0.02f))         // 왼발이 이미지 가장자리 0.02 — edge
+        assertEquals(0, a.counter.reps); assertEquals(listOf("blip", "edge"), reasons(a)); assertEquals(0, a.tracker.audibleRejected)
+        a.cycle(sideLungeL + mapOf(LegGeometry.edge(StepSide.LEFT) to 0.3f))          // 화면 안 — 센다
+        assertEquals(1, a.counter.reps)
+        // 반대 무릎이 바닥 띠의 한 프레임만 뒤집혀 굽어 보여도(150 → 95) 띠 중앙값(150)으로 판정해 squat_like 가 아니다
+        a.feed(sideLungeL, 1); a.feed(sideLungeL + mapOf("knee_R" to 95f), 1); a.feed(sideLungeL, 1); a.feed(frame(), 3)
+        assertEquals(2, a.counter.reps)
+        // 진짜 두 무릎 굽힘(바닥 띠 내내)은 여전히 squat_like — 두 다리가 각각 출발하므로 다리마다 하나씩(위 sideLungeIdentity… 와 같다), 말하는 기각은 그 둘뿐(blip·edge 는 빠진다)
+        a.cycle(sideLungeL + mapOf("knee_R" to 95f))
+        assertEquals(2, a.counter.reps); assertEquals(listOf("squat_like", "squat_like"), reasons(a).takeLast(2)); assertEquals(2, a.tracker.audibleRejected)
+        // 무음 사유의 틱·음성 결정(RejectCueGate)은 앱 쪽 FloorWiringTest 가 본다 — 이 파일은 재생기 테스트에도 들어간다
+    }
+
+    @Test fun kneeUpShallowHalfStraightLiftSaysBendAndLift() {
+        // §101: 얕고 무릎이 반쯤 펴진 들기는 "다리를 뻗으면" 이 아니라 "무릎을 접은 채 골반 높이까지" — 10-08 니업 얕은 회에 엉뚱한 사유가 나갔다
+        val a = Run(LegProfile.KNEE_UP); a.ready()
+        a.cycle(frame(thighL = 125f, kneeL = 125f, liftL = 1.0f, liftR = -1.0f))
+        assertEquals(listOf("shallow_straight"), reasons(a))
+        assertEquals("무릎을 접은 채 골반 높이까지 올려야 세요.", LegCycleTracker.cueFor(LegProfile.KNEE_UP, "shallow_straight"))
+        a.cycle(frame(thighL = 70f, kneeL = 125f, liftL = 1.3f, liftR = -1.3f))       // 높이는 됐는데 편 다리 → knee_straight 그대로
+        assertEquals("knee_straight", reasons(a).last())
     }
 
     @Test fun sideCrunchNeedsTheTrunkFoldNotJustTheLeg() {
@@ -133,7 +200,7 @@ class LegCycleTest {
         a.cycle(frame(thighL = 60f, kneeL = 55f, liftL = 1.6f, liftR = -1.6f, ekL = 0.8f, kneeLatL = 0.1f, latFlexL = 20f))   // 앞으로 올림(2차 세트 knee_lat −0.08~0.22)
         a.cycle(frame(thighL = 80f, kneeL = 150f, liftL = 1.7f, liftR = -1.7f, ekL = 0.9f, kneeLatL = 1.3f, latFlexL = 40f))  // 편 다리를 옆으로 뻗음(옆으로 기울여도)
         a.cycle(frame(thighL = 60f, kneeL = 55f, liftL = 1.6f, liftR = -1.6f, ekL = 0.9f))                                    // 3D 무릎 위치가 없으면 2D 바깥 위치(0.1 < 0.45)로 앞으로 올림
-        a.cycle(frame(thighL = 55f, kneeL = 50f, liftL = 1.5f, liftR = -1.5f, ekL = 0.2f, kneeLatL = 0.6f, latFlexL = 45f, pitch = 22f))   // 앞으로 숙임(+14)
+        a.cycle(frame(thighL = 55f, kneeL = 50f, liftL = 1.5f, liftR = -1.5f, ekL = 0.2f, kneeLatL = 0.6f, latFlexL = 45f, pitch = 32f))   // 앞으로 숙임(+24, §101a 띠 20)
         a.cycle(frame(thighL = 55f, kneeL = 50f, liftL = 1.5f, liftR = -1.5f, ekL = 0.4f, kneeLatL = 0.6f, latFlexL = 45f))   // 가까이 갔지만 안 닿음(0.4 > 0.30)
         a.cycle(frame(thighL = 55f, kneeL = 50f, liftL = 1.5f, liftR = -1.5f, ekL = 0.5f, kneeLatL = 0.6f, latFlexL = 45f, extra = mapOf("elbow_knee_min_L" to 0.25f)))   // 판정 프레임은 0.5 지만 85 ms 최솟값이 닿음(§98a)
         assertEquals(4, a.counter.reps); assertEquals(listOf(StepSide.LEFT, StepSide.RIGHT, StepSide.LEFT, StepSide.LEFT), a.events.map { it.side })
@@ -222,11 +289,13 @@ class LegCycleTest {
         val lock = rep.outcomes.first { it.check.id == "repform|스탠딩 니업|지지 무릎 잠김" }
         assertEquals("knee_R", lock.check.feature); assertEquals(Verdict.VIOLATION, lock.verdict)
         assertEquals("숙임 +4° 는 정상(±15) — 더 숙인 회는 v3 판별이 세지 않는다", Verdict.OK, rep.outcomes.first { it.check.id == "repform|스탠딩 니업|가슴 펴기" }.verdict)
-        assertFalse("ship 검사가 없으니 판정한 회가 아니다(원칙 #1)", rep.judged); assertTrue("beta 위반은 정확을 깎지 못한다(원칙 #2)", rep.correct)
+        // §101a: ship '무릎 높이' 가 판정(첫 회는 95° 대비 −35 → OK)하므로 판정한 회, beta 위반은 정확을 깎지 못한다(원칙 #2)
+        assertEquals(Verdict.OK, rep.outcomes.first { it.check.id == "repform|스탠딩 니업|무릎 높이" }.verdict)
+        assertTrue(rep.judged); assertTrue("beta 위반은 정확을 깎지 못한다(원칙 #2)", rep.correct)
         val summary = live.rf.summary()
-        assertEquals(0, summary.correct)
+        assertEquals(1, summary.correct)
         val logged = summary.toLog(0).reps.single()
-        assertFalse(logged.correct); assertEquals("UNJUDGED", logged.formState); assertEquals("L", logged.movingSide)
+        assertTrue(logged.correct); assertEquals("PASS_IN_SCOPE", logged.formState); assertEquals("L", logged.movingSide)
         assertTrue(live.rf.onCycle(live.t, 60f, 175f, live.t - 1800, null).outcomes.all { it.verdict == Verdict.ABSTAIN && it.abstainReason == "좌우 미확인" })
     }
 
@@ -241,7 +310,8 @@ class LegCycleTest {
         for (ex in LegProfile.entries) {
             val checks = RepFormSpecs.byExercise.getValue(ex.title)
             assertTrue(checks.isNotEmpty())
-            assertTrue(checks.all { it.status == RuleStatus.BETA && !it.ship && !it.cue.isNullOrBlank() && it.fix.isNotBlank() })
+            // §101a: 니업 '무릎 높이'(U11)·§101c: 크로스 런지 '어깨 기울기'(런지와 같은 검사) 만 ship — 나머지는 beta. 전부 단서·교정문을 갖는다
+            assertTrue(checks.all { (it.status == RuleStatus.BETA || it.id == "repform|스탠딩 니업|무릎 높이" || it.id == "repform|크로스 런지|어깨 기울기") && !it.cue.isNullOrBlank() && it.fix.isNotBlank() })
             assertFalse(RepSignals.byExercise.getValue(ex.title).validated)
         }
         assertEquals("knee_R", LegProfile.SIDE.resolve("knee_{support}", StepSide.LEFT))
