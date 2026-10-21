@@ -35,7 +35,7 @@ struct SessionView: View {
             }.navigationTitle(controller.item.name).navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .navigationBarLeading) { Button("닫기") { closing = true } }
-                    ToolbarItem(placement: .navigationBarTrailing) { Button { controller.muted.toggle(); controller.speech.muted = controller.muted; if controller.muted { controller.speech.stop(); controller.pipeline?.holdInstruction(false) } } label: { Image(systemName: controller.muted ? "speaker.slash" : "speaker.wave.2") } }
+                    ToolbarItem(placement: .navigationBarTrailing) { Button { controller.setMuted(!controller.muted) } label: { Image(systemName: controller.muted ? "speaker.slash" : "speaker.wave.2") } }
                 }
                 .confirmationDialog("운동을 종료할까요?", isPresented: $closing, titleVisibility: .visible) {
                     Button("현재 세트 기록 후 종료") {
@@ -54,7 +54,8 @@ struct SessionView: View {
     }
     @ViewBuilder var live: some View {
         if let pipe = controller.pipeline {
-            SkeletonView(output: pipe.output, highlight: Set(pipe.status.highlight)).frame(height: 360).clipShape(RoundedRectangle(cornerRadius: 24))
+            SkeletonView(output: pipe.output, highlight: Set(pipe.status.highlight), provisional: Set(pipe.status.provisional),
+                         shown: pipe.status.shown, target: pipe.status.target2d, motion: pipe.status.motion).frame(height: 360).clipShape(RoundedRectangle(cornerRadius: 24))
             Text(controller.capture?.snapshot.status.label ?? "카메라 준비 중").font(.caption).foregroundStyle(.secondary)
             if let error = pipe.output.error {
                 Text(error).foregroundStyle(.red)
@@ -70,13 +71,32 @@ struct SessionView: View {
                 Text(pipe.status.message).font(.headline)
                 if pipe.status.seconds > 0 { Text("\(pipe.status.seconds)").font(.system(size: 64, weight: .bold)).monospacedDigit() }
                 Text(pipe.instruction).font(.callout)
+                // 세는 조건 카드(원칙 #5 의 화면판) — 시험 대사 대신 무엇을 세는지 밝힌다
+                if let conditions = pipe.config.conditions { Text(conditions).font(.caption).foregroundStyle(.secondary) }
                 Button("5초 뒤 직접 시작") { pipe.manualStart() }.buttonStyle(.bordered)
+            } else if let hold = pipe.status.hold {
+                // 플랭크 HUD(spec §99) — 큰 숫자 = 카메라가 확인한 시간 / 목표, 멈춘 동안 회색, 아래 상태 줄과 작게 경과
+                Text("\(hold.camera ? hold.heldSec : hold.wallSec) / \(controller.item.repetitions)초").font(.system(size: 38, weight: .bold, design: .rounded))
+                    .foregroundStyle(hold.stopped && hold.camera ? .secondary : .primary)
+                if let status = hold.status { Text(status).font(.callout).foregroundStyle(hold.stopped ? .orange : .secondary) }
+                Text("경과 \(hold.wallSec)초 · \(hold.camera ? "카메라 확인 시간" : "시계")").font(.caption).foregroundStyle(.secondary)
+                if let note = pipe.status.guideNote { Text(note).font(.headline).foregroundStyle(.tint) }
+                if let measurement = pipe.status.floorMeasurement { Text(measurement).font(.caption) }
+                if let provisional = pipe.status.provisionalNote { Text("참고 · " + provisional).font(.caption).foregroundStyle(.orange) }
             } else {
                 Text(pipe.status.sideLine ?? "\(pipe.status.reps) / \(controller.item.repetitions)회").font(.system(size: 38, weight: .bold, design: .rounded))
                 Text("자동 횟수 · 참고").font(.caption).foregroundStyle(.secondary)
+                if let note = pipe.status.note { Text(note).font(.caption).foregroundStyle(.orange) }
                 if let breathing = pipe.status.breathing { Text(breathing).font(.caption).foregroundStyle(.secondary) }
                 Text(pipe.status.message)
                 if let cue = pipe.status.cue { Text(cue).font(.headline).foregroundStyle(.tint) }
+                if let guide = pipe.status.guideNote, guide != pipe.status.cue { Text(guide).font(.callout).foregroundStyle(.tint) }
+                if let coverage = pipe.status.coverage { Text(coverage.message + " · " + coverage.fix).font(.callout).foregroundStyle(.orange) }
+                // beta 는 화면 '참고' 로만 — 침묵이 "이상 없음" 으로 읽히면 안 된다(원칙 #2)
+                if let provisional = pipe.status.provisionalNote { Text("참고 · " + provisional).font(.caption).foregroundStyle(.orange) }
+                if let measurement = pipe.status.floorMeasurement { Text(measurement).font(.caption) }
+                if let score = pipe.status.score, store.data.mode == "coach" { Text("확인한 항목 \(score.ok) / \(score.judged)").font(.caption).foregroundStyle(.secondary) }
+                if pipe.status.fast { Text("동작이 빨라 일부 회를 놓칠 수 있어요").font(.caption2).foregroundStyle(.secondary) }
                 Text("\(controller.seconds)초 경과").monospacedDigit()
             }
             scope(pipe.status.scope)
@@ -160,34 +180,93 @@ struct ReportView: View {
         }
     }
 }
+/// 영상 위 뼈대. 관절을 그릴지와 좌표는 엔진의 관절 게이트(`JointGate`, §101c — 믿을 수 없는 관절은 그리지 않고 마지막으로 믿은 자리에 둔다)가 정한다.
+/// 붉은색 = ship 위반(말하는 판정), 노란색 = beta '참고'(말하지 않는 판정 — 같은 붉은색이면 확신처럼 보인다). 화살표는 COACH 에서 말한 교정 문장 하나의 그림(§101).
 struct SkeletonView: View {
     let output: PoseOutput
     var highlight = Set<Int>()
+    var provisional = Set<Int>()
+    var shown: [Bool] = []
+    var target: [Float] = []
+    var motion: MotionCue?
     private let edges = [[11,12],[11,13],[13,15],[12,14],[14,16],[11,23],[12,24],[23,24],[23,25],[25,27],[24,26],[26,28],[27,31],[28,32],[0,7],[0,8]]
     var body: some View {
         ZStack {
             Color.black
             if let image = output.image {
                 Image(decorative: image, scale: 1).resizable().aspectRatio(contentMode: .fit).scaleEffect(x: output.mirrored ? -1 : 1, y: 1)
-                Canvas { context, size in
-                    func position(_ index: Int) -> CGPoint? {
-                        guard output.normalized.indices.contains(index) else { return nil }
-                        let point = output.normalized[index]
-                        guard min(point.visibility ?? 1, point.presence ?? 1) >= 0.5,
-                              let p = OverlayProjection.point(x: Double(point.x), y: Double(point.y), imageWidth: Double(output.width), imageHeight: Double(output.height), viewWidth: size.width, viewHeight: size.height, mirrored: output.mirrored) else { return nil }
-                        return CGPoint(x: p.x, y: p.y)
-                    }
-                    for edge in edges {
-                        guard let a = position(edge[0]), let b = position(edge[1]) else { continue }
-                        var path = Path(); path.move(to: a); path.addLine(to: b)
-                        context.stroke(path, with: .color(edge.contains(where: highlight.contains) ? .red : .green), lineWidth: 3)
-                    }
-                    for i in output.normalized.indices {
-                        guard let p = position(i) else { continue }
-                        context.fill(Path(ellipseIn: CGRect(x: p.x-4, y: p.y-4, width: 8, height: 8)), with: .color(highlight.contains(i) ? .red : .white))
+                TimelineView(.animation(minimumInterval: 0.1)) { timeline in
+                    Canvas { context, size in
+                        func project(_ x: Double, _ y: Double) -> CGPoint? {
+                            guard let p = OverlayProjection.point(x: x, y: y, imageWidth: Double(output.width), imageHeight: Double(output.height), viewWidth: size.width, viewHeight: size.height, mirrored: output.mirrored) else { return nil }
+                            return CGPoint(x: p.x, y: p.y)
+                        }
+                        func visible(_ index: Int) -> Bool {
+                            if shown.count == 33 { return shown[index] }
+                            guard output.normalized.indices.contains(index) else { return false }
+                            return min(output.normalized[index].visibility ?? 1, output.normalized[index].presence ?? 1) >= 0.5
+                        }
+                        func position(_ index: Int) -> CGPoint? {
+                            if target.count == 66, target[index*2].isFinite, target[index*2+1].isFinite { return project(Double(target[index*2]), Double(target[index*2+1])) }
+                            guard output.normalized.indices.contains(index) else { return nil }
+                            return project(Double(output.normalized[index].x), Double(output.normalized[index].y))
+                        }
+                        func color(_ i: Int) -> Color { highlight.contains(i) ? .red : provisional.contains(i) ? .yellow : .green }
+                        for edge in edges {
+                            guard let a = position(edge[0]), let b = position(edge[1]) else { continue }
+                            var path = Path(); path.move(to: a); path.addLine(to: b)
+                            let reliable = visible(edge[0]) && visible(edge[1])
+                            let c: Color = edge.contains(where: highlight.contains) ? .red : edge.contains(where: provisional.contains) ? .yellow : .green
+                            context.stroke(path, with: .color(reliable ? c : c.opacity(0.35)), style: StrokeStyle(lineWidth: 3, dash: reliable ? [] : [6, 6]))
+                        }
+                        for i in 0..<33 where visible(i) {
+                            guard let p = position(i) else { continue }
+                            context.fill(Path(ellipseIn: CGRect(x: p.x-4, y: p.y-4, width: 8, height: 8)), with: .color(highlight.contains(i) ? .red : provisional.contains(i) ? .yellow : .white))
+                        }
+                        if let m = motion { drawMotion(m, in: &context, size: size, now: timeline.date, position: position) }
                     }
                 }
             } else { Text(output.state == .error ? "카메라를 확인해 주세요." : "카메라 준비 중").foregroundStyle(.white) }
+        }
+    }
+    /// 화살표 — 말한 교정의 방향. 위아래는 화면 기준(세로 고정 iPhone 은 중력 위 ≈ 화면 위), 안쪽·바깥쪽은 몸 중심선 기준, 목표가 있으면 출발 관절에서 목표 관절로. MARK 는 고리.
+    /// 바닥(soft)은 참고색. 처음 1.8 s 맥동(Android `MotionCue.PULSE_MS`).
+    private func drawMotion(_ m: MotionCue, in context: inout GraphicsContext, size: CGSize, now: Date, position: (Int) -> CGPoint?) {
+        let anchors = m.anchors.compactMap(position)
+        guard !anchors.isEmpty else { return }
+        let targets = m.targets.compactMap(position)
+        let elapsed = max(0, Resources.nowMs() - m.startedAt)
+        let pulse = elapsed < 1800 ? 0.75 + 0.25 * sin(Double(elapsed) / 600 * 2 * .pi) : 1
+        let color: Color = m.soft ? .yellow : .red
+        let len = 36.0 * pulse
+        let midX = (output.normalized.indices.contains(23) && output.normalized.indices.contains(24)) ? position(23).map { ($0.x + (position(24)?.x ?? $0.x)) / 2 } : nil
+        for a in anchors {
+            var dir: CGVector? = nil
+            switch m.kind {
+            case "UP": dir = CGVector(dx: 0, dy: -1)
+            case "DOWN": dir = CGVector(dx: 0, dy: 1)
+            case "TOWARD_MIDLINE": if let midX { dir = CGVector(dx: midX > a.x ? 1 : -1, dy: 0) }
+            case "AWAY_MIDLINE": if let midX { dir = CGVector(dx: midX > a.x ? -1 : 1, dy: 0) }
+            case "TOWARD_TORSO": if let midX { dir = CGVector(dx: midX > a.x ? 1 : -1, dy: 0) }
+            case "TOWARD_TARGET":
+                if let t = targets.min(by: { hypot($0.x - a.x, $0.y - a.y) < hypot($1.x - a.x, $1.y - a.y) }) {
+                    let d = hypot(t.x - a.x, t.y - a.y); if d > 1 { dir = CGVector(dx: (t.x - a.x) / d, dy: (t.y - a.y) / d) }
+                }
+            default: dir = nil
+            }
+            if let d = dir {
+                let end = CGPoint(x: a.x + d.dx * len, y: a.y + d.dy * len)
+                var shaft = Path(); shaft.move(to: a); shaft.addLine(to: end)
+                context.stroke(shaft, with: .color(color), style: StrokeStyle(lineWidth: 4, lineCap: .round))
+                let back = CGPoint(x: end.x - d.dx * 10, y: end.y - d.dy * 10)
+                var head = Path(); head.move(to: end)
+                head.addLine(to: CGPoint(x: back.x - d.dy * 7, y: back.y + d.dx * 7)); head.addLine(to: CGPoint(x: back.x + d.dy * 7, y: back.y - d.dx * 7)); head.closeSubpath()
+                context.fill(head, with: .color(color))
+            } else {
+                // MARK·회전(ROTATE_IN/OUT)·어휘 없음: 자리 고리 — 어디를 보라는지만
+                let r = 14.0 * pulse
+                context.stroke(Path(ellipseIn: CGRect(x: a.x - r, y: a.y - r, width: 2 * r, height: 2 * r)), with: .color(color), lineWidth: 3)
+            }
         }
     }
 }

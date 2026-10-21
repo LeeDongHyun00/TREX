@@ -2,6 +2,7 @@ import XCTest
 import CoreVideo
 import CryptoKit
 import TrexFoodRuntime
+import TrexCore
 @testable import Trex
 
 final class TrexTests: XCTestCase {
@@ -33,13 +34,30 @@ final class TrexTests: XCTestCase {
         if let base = CVPixelBufferGetBaseAddress(image) { memset(base, 0, CVPixelBufferGetDataSize(image)) }
         CVPixelBufferUnlockBaseAddress(image, [])
         _ = try pose.detect(image, timeMs: 1)
+        // §101d 얼굴 모델 — 같은 프로세스에서 초기화·크롭·추론. 빈 영상이라 얼굴은 없어야 한다(정확도 검사가 아니라 SDK 경계 검사)
+        let faceURL = try XCTUnwrap(Bundle.main.url(forResource: "face_landmarker", withExtension: "task"))
+        let face = try FaceRunner(modelPath: faceURL.path)
+        let reading = try face.detect(image, spec: ["cx": 32.0, "cy": 32.0, "rotateDeg": 0.0, "side": 60.0, "scale": 256.0 / 60.0, "headPx": 20.0, "outPx": 256])
+        XCTAssertFalse(reading.found); XCTAssertTrue(reading.matrix.isEmpty)
+    }
+    func testEngineSpeechQueueDrivesOneSubmitAtATime() throws {
+        PreparationIntro.shared.forget(name: "기본 스쿼트")
+        let engine = try IosEngine(standingRules: Resources.text("rules_mp_v0.json"), floorRules: Resources.text("rules_floor_v0.json"))
+        _ = try engine.configure(config: Resources.json(["name": "기본 스쿼트", "voiceReady": true, "muted": false]))
+        engine.arm(nowMs: 1000)
+        let first = try Resources.parse(engine.tick(nowMs: 1100), as: EngineStatus.self)
+        XCTAssertEqual(first.speech.count, 1)
+        XCTAssertTrue(try Resources.parse(engine.tick(nowMs: 1300), as: EngineStatus.self).speech.isEmpty, "재생 중에는 다음 문장을 내지 않는다")
+        engine.speechStarted(nowMs: 1300)
+        let next = try Resources.parse(engine.speechFinished(nowMs: 2500), as: [SpeechSubmit].self)
+        XCTAssertLessThanOrEqual(next.count, 1)
     }
     func testCatalogGuidesAndRuleAssetsMatch() throws {
         let exercises = try Resources.decode("catalog.json", as: [Exercise].self)
         let guides = try Resources.decode("guides.json", as: [Guide].self)
         let foods = try Resources.decode("nutrition.json", as: [Food].self)
-        XCTAssertEqual(exercises.count, 26); XCTAssertEqual(guides.count, 7); XCTAssertEqual(foods.count, 350)
-        XCTAssertEqual(try BundleAssets.verify().count, 4)
+        XCTAssertEqual(exercises.count, 26); XCTAssertEqual(guides.count, 10); XCTAssertEqual(foods.count, 350)
+        XCTAssertEqual(try BundleAssets.verify().count, 5)
         for guide in guides { XCTAssertNotNil(Bundle.main.url(forResource: guide.asset, withExtension: nil)) }
     }
     func testBackupPreservesUnknownJudgementAndUserLabel() throws {

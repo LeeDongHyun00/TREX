@@ -206,6 +206,10 @@ APK 무결성은 `SHA256SUMS.txt`, 버전·서명·빌드 커밋은 `BUILD_INFO.
 - [자세 엔진 정본 스펙](research/aihub_fitness/KOTLIN_PORTING_SPEC.md)
 - [서버·로그인·동기화 인수인계](docs/SERVER_SYNC_HANDOFF.md)
 
+## iPhone
+
+`ios-redesign` 브랜치에 SwiftUI iPhone 앱(`iosApp/`)이 있습니다. 자세 엔진은 Android Kotlin 정본을 `tools/sync_ios_core.py` 로 생성한 KMP 모듈(`posture-core/`)이라 임계값·횟수·발화 정책이 Android 와 같습니다. Mac 에서 Xcode 로 빌드하거나 미서명 IPA 를 Sideloadly 로 설치합니다 — 절차는 [iPhone 실행 안내](docs/IOS_INSTALL.md), 구현 범위·포팅 기준·미검증 항목은 [iOS 포팅](docs/IOS_PORT.md).
+
 ## Git에 포함하지 않는 파일
 
 다음 파일은 개인 환경 또는 빌드 산출물이므로 커밋하지 않습니다.

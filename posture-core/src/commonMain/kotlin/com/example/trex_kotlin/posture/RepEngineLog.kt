@@ -32,9 +32,12 @@ data class RepEngineLog(
     val romAuxFloor: Float? = null,
     /** 다리 사이클 추적기(§97)의 세트 첫 서 있는 기준 — 재생기가 같은 값을 심는다. JSON 키 `standing`. */
     val standing: Map<String, Float>? = null,
+    /** 바닥 반복 계열(§99)의 세트 첫 누운 기준(`FloorCycleTracker.lying`) — 재생기가 같은 값을 심는다(`restoreLying`). JSON 키 `lying`. */
+    val lying: Map<String, Float>? = null,
 ) {
     companion object {
-        const val ENGINE_RETURN = "return_v1"
+        /** v2 = 방향 복귀 띠(spec §99). v1 로그는 옛 복귀 규칙으로 센 것이라 지금 재생과 파리티가 어긋날 수 있다. */
+        const val ENGINE_RETURN = "return_v2"
         const val ENGINE_HYSTERESIS = "hysteresis_v1"
 
         /**
@@ -45,7 +48,12 @@ data class RepEngineLog(
             val s = counter.signal
             val confirm = counter.confirmationConfig
             return RepEngineLog(
-                engine = if (counter.legTracker != null) LegCycleTracker.VERSION else if (counter.usesHysteresis) ENGINE_HYSTERESIS else ENGINE_RETURN,
+                engine = when {
+                    counter.legTracker != null -> LegCycleTracker.VERSION
+                    counter.floorTracker != null -> FloorCycleTracker.VERSION   // §99 — 누운 기준(lying)·기각 상세는 SetLog 의 바닥 필드
+                    counter.usesHysteresis -> ENGINE_HYSTERESIS
+                    else -> ENGINE_RETURN
+                },
                 feature = s.feature,
                 minAmp = s.minAmp,
                 refractoryMs = counter.effectiveRefractoryMs,
@@ -64,6 +72,7 @@ data class RepEngineLog(
                 identityMinAmp = s.identityFeature?.let { s.identityMinAmp },
                 seed = counter.standingSeed,
                 standing = counter.legTracker?.standing,
+                lying = counter.floorTracker?.lying,
                 pairedFeatures = s.pairedFeatures,
                 rejectFeatures = s.rejectFeatures,
                 romRatio = s.romRatio, romAbsMin = s.romAbsMin, romRefMin = s.romRefMin,

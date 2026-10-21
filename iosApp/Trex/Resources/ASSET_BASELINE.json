@@ -5,12 +5,16 @@
       "sha256": "4eaa5eb7a98365221087693fcc286334cf0858e2eb6e15b506aa4a7ecdcec4ad"
     },
     {
+      "path": "app/src/main/assets/posture/face_landmarker.task",
+      "sha256": "64184e229b263107bc2b804c6625db1341ff2bb731874b0bcc2fe6544e0bc9ff"
+    },
+    {
       "path": "app/src/main/assets/posture/rules_mp_v0.json",
       "sha256": "e6968a7fe958a106df6885cf9cfaf58b6031cbb2ec8035eadfee75cdef526ce4"
     },
     {
       "path": "app/src/main/assets/posture/rules_floor_v0.json",
-      "sha256": "3a23275d8a9bbd5174ec1c9e175323354826e68d90634b1714ea1d4e4e6ed21b"
+      "sha256": "0550c4dae0d91a2d4e06a20fefa28d447cb8563c7cbb1d2725fc54fc67dabcdd"
     },
     {
       "path": "app/src/main/assets/posture/normal_pose_reference.tsv",

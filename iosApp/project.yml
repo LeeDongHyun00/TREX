@@ -31,6 +31,7 @@ targets:
       - path: Trex/Resources
         buildPhase: resources
       - path: ../app/src/main/assets/posture/pose_landmarker_full.task
+      - path: ../app/src/main/assets/posture/face_landmarker.task
       - path: ../app/src/main/assets/posture/rules_mp_v0.json
       - path: ../app/src/main/assets/posture/rules_floor_v0.json
       - path: ../app/src/main/assets/posture/normal_pose_reference.tsv

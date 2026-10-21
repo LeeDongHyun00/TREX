@@ -5,7 +5,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / 'app/src/main/java/com/example/trex_kotlin/posture'
 TARGET = ROOT / 'posture-core/src/commonMain/kotlin/com/example/trex_kotlin/posture'
-NAMES = '''Arm2d Breathing CameraPlacement CapturePreparation ContactMinimum DinoCopy ExerciseProfiles FloorFeedback FloorTemporal FormMotion LegCycle Lunge2d LungeSides NormalPoseReference PlankAlignment PostureAssessment PostureComparison PostureCore PostureFloor PostureFloorCoverage PostureScope PostureSetReport PostureView PostureViewGuide RepCounter RepForm RepFormPriorTable RepFormRules RepHysteresis RepUnit ReturnRepTracker RuleHighlight RuleTypes Stance2d PostureRules PostureBaseline PostureCoach PostureMode'''.split()
+NAMES = '''Arm2d Breathing CameraPlacement CapturePreparation ContactMinimum DinoCopy ExerciseProfiles FloorFeedback FloorTemporal FormMotion LegCycle Lunge2d LungeSides NormalPoseReference PlankAlignment PostureAssessment PostureComparison PostureCore PostureFloor PostureFloorCoverage PostureScope PostureSetReport PostureView PostureViewGuide RepCounter RepForm RepFormPriorTable RepFormRules RepHysteresis RepUnit ReturnRepTracker RuleHighlight RuleTypes Stance2d PostureRules PostureBaseline PostureCoach PostureMode FloorChain FloorCycle FloorGaze FloorLive PlankGeometry PlankHold PostureTrial PreparationVoice SpeechQueue StandingFraming'''.split()
 
 def portable(name, text):
     text = re.sub(r'^import (android\..*|java\..*|org.json.JSONObject)\n', '', text, flags=re.M)
@@ -47,17 +47,23 @@ def main():
     orientation = re.sub(r'^import android\..*\n', '', orientation, flags=re.M)
     orientation = orientation[:orientation.index('class GravityTracker(')].replace('Surface.', 'SurfaceRotations.')
     orientation += '\ninternal object SurfaceRotations { const val ROTATION_0=0; const val ROTATION_90=1; const val ROTATION_180=2; const val ROTATION_270=3 }\n'
+    analyzer = (SOURCE/'PostureAnalyzer.kt').read_text(encoding='utf-8')
+    face = analyzer[analyzer.index('/**\n * 얼굴 자세 행렬(4×4'):analyzer.index('private const val FACE_YAW_SIGN = 1f') + len('private const val FACE_YAW_SIGN = 1f')]
+    # Math.toDegrees 는 공통 PortableRuntime 의 Math 객체가 같은 이름으로 제공한다
+    assert face.count('kotlin.math.asin') == 1 and 'android' not in face, 'PostureAnalyzer.faceYawDeg 의 수식 형태를 확인하세요.'
+    face = 'package com.example.trex_kotlin.posture\n\n// PostureAnalyzer.faceYawDeg 정본 슬라이스(§101d) — Swift 가 넘긴 얼굴 자세 행렬의 요 계산을 Android 와 같은 식으로 한다.\n' + face + '\n'
     log = (SOURCE/'PostureSetLog.kt').read_text(encoding='utf-8')
     log = log[log.index('data class RepEngineLog('):log.index('/**\n * 세트 중 카운터의 진행 사이클')]
-    for name, output in [('PortableOrientation.kt', orientation), ('RepEngineLog.kt', 'package com.example.trex_kotlin.posture\n\n' + log.rstrip() + '\n')]:
+    for name, output in [('PortableOrientation.kt', orientation), ('RepEngineLog.kt', 'package com.example.trex_kotlin.posture\n\n' + log.rstrip() + '\n'), ('FaceYaw.kt', face)]:
         target = TARGET/name
         if args.check:
             if not target.exists() or target.read_text(encoding='utf-8') != output: mismatches.append(name)
         else: target.write_text(output,encoding='utf-8',newline='\n')
-    for package, name in [('trainingload', 'MuscleLoad'), ('food', 'FoodRegions'), ('food', 'FoodMemory')]:
+    for package, name in [('trainingload', 'MuscleLoad'), ('food', 'FoodRegions'), ('food', 'FoodMemory'), ('', 'SkeletonGate')]:
         src = ROOT / 'app/src/main/java/com/example/trex_kotlin' / package / (name + '.kt')
         target = TARGET.parent / package / src.name
         output = '// Android 정본 동기화 — tools/sync_ios_core.py\n' + src.read_text(encoding='utf-8')
+        if name == 'SkeletonGate': output = output.replace('internal class JointGate', 'class JointGate')   # Swift 가 쓴다
         if name == 'FoodMemory':
             output = re.sub(r'^import java\..*\n', '', output, flags=re.M)
             output = output.replace('class FoodMemory(', '@OptIn(kotlin.io.encoding.ExperimentalEncodingApi::class)\nclass FoodMemory(')
@@ -72,12 +78,14 @@ def main():
             target.parent.mkdir(parents=True, exist_ok=True); target.write_text(output, encoding='utf-8', newline='\n')
     tests = ROOT / 'app/src/test/java/com/example/trex_kotlin/posture'
     target_tests = ROOT / 'posture-core/src/jvmTest/kotlin/com/example/trex_kotlin/posture'
-    excluded = {'SetLabelStoreTest', 'PostureSetLogTest', 'InferencePolicyTest', 'PostureOrientationTest', 'PersonalizationTest', 'PostureBaselineTest'}
-    for src in tests.glob('*Test.kt'):
+    excluded = {'SetLabelStoreTest', 'PostureSetLogTest', 'InferencePolicyTest', 'PostureOrientationTest', 'PersonalizationTest', 'PostureBaselineTest', 'FloorWiringTest'}   # FloorWiringTest 는 Android SetLog 직렬화에 묶여 있다
+    # 앱 패키지의 순수 테스트도 같이 돈다(관절 게이트 §101c)
+    extra_tests = [ROOT / 'app/src/test/java/com/example/trex_kotlin/SkeletonGateTest.kt']
+    for src in list(tests.glob('*Test.kt')) + extra_tests:
         if src.stem in excluded: continue
         output = '// Android 정본 테스트 — tools/sync_ios_core.py\n' + src.read_text(encoding='utf-8')
         output = output.replace('android.view.Surface.', 'SurfaceRotations.')
-        target = target_tests / src.name
+        target = (target_tests if src.parent == tests else target_tests.parent) / src.name
         if args.check:
             if not target.exists() or target.read_text(encoding='utf-8') != output: mismatches.append(src.stem)
         else:

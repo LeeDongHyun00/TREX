@@ -65,12 +65,30 @@ struct Scope: Codable {
     var watched: [String] = []; var provisional: [String] = []; var blind: [String] = []; var startLine: String?
 }
 struct RuleState: Codable { let label: String; let state: String }
+/// 엔진 대기열이 고른 발화 하나(spec §107f) — Swift 는 한 번에 하나만 TTS 에 낸다. `flush` 면 재생 중인 말을 끊는다.
+struct SpeechSubmit: Decodable, Equatable { let text: String; let flush: Bool }
+/// 화면에 켜진 교정 단서 하나(Android `MotionCue`) — `kind` 는 `MotionKind` 이름, 관절 번호는 MediaPipe 33.
+struct MotionCue: Decodable, Equatable {
+    let kind: String; let anchors: [Int]; let targets: [Int]; let gravity: Bool; let chain: Bool; let soft: Bool; let origin: String; let startedAt: Int64
+}
+/// 플랭크 HUD(spec §99) — 큰 숫자 = 카메라가 확인한 시간, 멈춘 동안 회색. `camera` 가 false 면 시계 폴백.
+struct HoldHud: Decodable, Equatable { let heldSec: Int; let wallSec: Int; let stopped: Bool; let status: String?; let camera: Bool; let heldMs: Int64 }
+struct CoverageLine: Decodable, Equatable { let message: String; let fix: String }
+struct ScoreLine: Decodable, Equatable { let ok: Int; let judged: Int }
 struct EngineStatus: Decodable {
     var stage = "preparing"; var name = ""; var reps = 0; var cycles = 0; var target = 10
     var done = false; var seconds = 0; var message = "카메라를 준비합니다."
     var sideLine: String?; var cue: String?; var highlight: [Int] = []; var scope = Scope()
     var comparison: [String] = []; var ship: [RuleState] = []; var beta: [RuleState] = []
     var breathing: String?; var normal: [String] = []
+    var provisionalNote: String?; var guideNote: String?; var note: String?; var floorMeasurement: String?
+    var coverage: CoverageLine?; var provisional: [Int] = []
+    var shown: [Bool] = []; var target2d: [Float] = []
+    var motion: MotionCue?; var hold: HoldHud?; var score: ScoreLine?
+    var speech: [SpeechSubmit] = []; var tones: [String] = []; var fast = false
+}
+struct EngineConfig: Decodable {
+    var instruction = "몸 전체가 보이게 자리 잡아 주세요."; var conditions: String?; var scope = Scope(); var floor = false; var hold = false; var startHint: String?
 }
 struct ResultItem: Codable, Identifiable {
     var id: String; let condition: String; let state: String; let verdict: String; let beta: Bool
@@ -83,6 +101,9 @@ struct SetReport: Codable {
     let baselineValues: [String: Float]; let baselineSets: Int; let items: [ResultItem]; let frames: Int; let duration: Int
     var left: Int?; var right: Int?
     var physicalReps: Int?; var halfPending: Bool?
+    var heldSec: Int?; var holdSource: String?
+    /// 마감 때 엔진 대기열이 낸 제출(결과 음성 — 꼬리 뒤). 기록에는 저장하지 않는다.
+    var speech: [SpeechSubmit]? = nil
 }
 struct SetRecord: Codable, Identifiable {
     var id = UUID(); var date = Date(); var name: String; var setNumber: Int; var repetitions: Int

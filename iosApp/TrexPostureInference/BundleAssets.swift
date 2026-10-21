@@ -2,7 +2,7 @@ import CryptoKit
 import Foundation
 
 enum BundleAssets {
-    static let names = ["pose_landmarker_full.task", "rules_mp_v0.json", "rules_floor_v0.json", "normal_pose_reference.tsv"]
+    static let names = ["pose_landmarker_full.task", "face_landmarker.task", "rules_mp_v0.json", "rules_floor_v0.json", "normal_pose_reference.tsv"]
     private struct Manifest: Decodable {
         struct Entry: Decodable { let path: String; let sha256: String }
         let files: [Entry]

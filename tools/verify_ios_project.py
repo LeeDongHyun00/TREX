@@ -17,7 +17,7 @@ def main():
     target=spec['targets']['Trex']; sources=target['sources']
     for entry in sources:
         path=ROOT/'iosApp'/entry['path']; assert path.exists(), str(path)
-    assert len([x for x in sources if x['path'].endswith('.task')])==1
+    assert len([x for x in sources if x['path'].endswith('.task')])==2, '자세·얼굴 모델 둘 다(§101d)'
     assert len([x for x in sources if x['path'].endswith('.tflite')])==3
     assert sum(x['path'].endswith('CaptureController.swift') for x in sources)==1
     assert 'resources' not in target, 'XcodeGen은 sources의 buildPhase를 쓴다'

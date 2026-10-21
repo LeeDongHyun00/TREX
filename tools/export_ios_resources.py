@@ -23,14 +23,14 @@ def main():
         for field in ['breathing', 'sourceName', 'sourceUrl']:
             guide[field] = strings(re.search(field+r' = ("(?:[^"\\]|\\.)*")', chunk).group(1))[0]
         guides.append(guide)
-    assert len(guides) == 7
+    assert len(guides) == 10, len(guides)
     files['guides.json'] = guides
     nutrition = []
     for name,kcal,carbs,protein,fat in re.findall(r'"([^"]+)" to Nutrition\((\d+), ([\d.]+), ([\d.]+), ([\d.]+)\)', (JAVA/'TrexData.kt').read_text(encoding='utf-8')):
         nutrition.append(dict(name=name,kcal=int(kcal),carbs=float(carbs),protein=float(protein),fat=float(fat)))
     assert len(nutrition) > 300
     files['nutrition.json'] = nutrition
-    assets = ['pose_landmarker_full.task','rules_mp_v0.json','rules_floor_v0.json','normal_pose_reference.tsv']
+    assets = ['pose_landmarker_full.task','face_landmarker.task','rules_mp_v0.json','rules_floor_v0.json','normal_pose_reference.tsv']
     def asset_hash(name):
         raw=(ROOT/'app/src/main/assets/posture'/name).read_bytes()
         # 모델은 원시 바이트, 텍스트는 Git 정본 LF. Mac 번들은 이 LF 바이트를 그대로 복사한다.

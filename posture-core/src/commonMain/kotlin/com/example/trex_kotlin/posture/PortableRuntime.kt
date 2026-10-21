@@ -10,6 +10,15 @@ internal object Math {
     fun round(v: Float): Int = floor(v + .5f).toInt()
     fun cos(v: Double): Double = kotlin.math.cos(v)
     fun sin(v: Double): Double = kotlin.math.sin(v)
+    // Android 정본이 java.lang.Math 로 부르는 함수들 — 같은 이름으로 공통 수학에 넘긴다(Lunge2d.asin 등)
+    fun asin(v: Double): Double = kotlin.math.asin(v)
+    fun acos(v: Double): Double = kotlin.math.acos(v)
+    fun atan2(y: Double, x: Double): Double = kotlin.math.atan2(y, x)
+    fun sqrt(v: Double): Double = kotlin.math.sqrt(v)
+    fun abs(v: Double): Double = kotlin.math.abs(v)
+    fun abs(v: Float): Float = kotlin.math.abs(v)
+    fun hypot(x: Double, y: Double): Double = kotlin.math.hypot(x, y)
+    fun round(v: Double): Long = floor(v + .5).toLong()
 }
 
 internal object PortableFormat {
@@ -64,6 +73,7 @@ internal class JSONArray(private val data: List<Any?>) {
     fun length() = data.size
     @Suppress("UNCHECKED_CAST") fun getJSONObject(i: Int) = JSONObject(data[i] as Map<String, Any?>)
     fun getString(i: Int) = data[i] as String
+    fun values(): List<Any?> = data
 }
 
 internal object Json {
@@ -130,3 +140,7 @@ class PoseSample(
             PoseSample(false, FloatArray(66), FloatArray(33), emptyMap(), 0, inferMs, w, h, up, fromGravity)
     }
 }
+
+/** 바닥 종목용: 같은 샘플에 features 만 바꾼 사본 — Android `PostureAnalyzer.withFeatures` 와 같은 뜻(세트 로그·집계에 그대로 흘림). */
+fun PoseSample.withFeatures(newFeatures: Map<String, Float>): PoseSample = PoseSample(
+    detected, normalizedXy, visibility, newFeatures, visibleJointCount, inferMs, imageWidth, imageHeight, up, upFromGravity, upFlipped, upVerified, world)

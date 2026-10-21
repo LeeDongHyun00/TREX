@@ -1,79 +1,73 @@
-# iPhone 포팅 — 2026-10-07
+# iPhone 포팅 — 2026-10-21 (`ios-redesign`, main `ca7f1fa` 병합)
 
-## 상태와 기준
+## 상태
 
-`ios-redesign`에서 `origin/redesign`의 `5213e3c4`(1.3.0-preview.6)를 기준으로 구현했다. 이전 `codex/ios-kmp-mac`의 카메라·MediaPipe 진단 코드를 재사용하지만 **그 진단 앱의 과거 Mac 빌드 성공을 새 앱의 빌드 성공으로 해석하지 않는다.**
+`ios-redesign` 은 `origin/main`(`ca7f1fa`, 2026-10-14 — §99~§106 바닥 계열·시선·말하기 대기열·교정 화살표·서버 동기화·앱 아이콘)을 병합한 위에 서 있다. 이전 iOS 작업(§107, 2026-10-07)은 `redesign` `5213e3c4`(preview.6) 기준이라 그 사이 Android 가 얻은 바닥 엔진(플랭크 유지 시계·크런치/레그 레이즈 판별)·Face Landmarker 시선·`SpeechQueue` 발화 정책·`StandingFraming`·관절 게이트가 iOS 에 없었다. 이번 작업(§107f)이 그 전부를 **Android 정본을 그대로 생성해** iOS 에 올린다.
 
-`ios-redesign`을 원격에 푸시했고 [macOS Actions](https://github.com/LeeDongHyun00/TREX/actions/runs/37495731624)가 **성공**했다. 검증한 코드 커밋은 `e52b15be`이며 Xcode 26.0.1에서 공통 JVM 376건, 새 `Trex` 타깃의 Kotlin/Native·Swift 컴파일·iPhone arm64 Release 빌드·번들 검사·미서명 IPA 생성, arm64 시뮬레이터 XCTest **4/4**를 통과했다. 음식 모델 3개와 MediaPipe 자세 모델을 같은 앱에서 초기화하고 실제 추론하는 검사도 통과했다. 음식 런타임의 동적 프레임워크/공개 심볼 격리와 YOLO 외부 가중치 호환 처리를 적용했다. **서명과 실제 iPhone 실행은 미검증**이며 사용자의 Mac·기기에서 확인해야 한다.
+검증한 것: 공통 엔진 JVM **504/504**(정본 테스트 + iOS 경계 18건, Linux), 정본 동기화 `--check`·자산 추출 `--check`·YOLO 호환 모델 `--check`, Swift 31파일 tree-sitter 구문 검사, XcodeGen 자산 경로·plist. **Xcode 컴파일·시뮬레이터 XCTest·IPA 는 이 세션에서 돌리지 못했다**(Linux). `ios-redesign` 푸시가 macOS Actions(`iOS 검증과 미서명 IPA`)를 띄우므로 그 결과가 Swift 타입 검사·SDK 링크·번들 검사의 정본이다. **서명·실제 iPhone 실행·운동 정확도는 미검증**이다.
 
-## 구현 범위
+## iOS 포팅 기준 (이 작업에서 세운 것 — 지켜야 한다)
 
-| 기능 | iOS 구현 |
+Android 에서 iOS 로 옮길 때 무엇을 옮기고 무엇을 옮기지 않는지의 선이다. CLAUDE.md 의 판단 원칙은 플랫폼과 무관하게 그대로다.
+
+1. **판정은 한 곳에만 있다.** 임계값·뷰 게이팅·카운터·반복 검사·판별 기각·플랭크 시계·시선 분류·발화 선택 정책은 Android Kotlin 정본(`app/src/main/java/.../posture/`)이고, `tools/sync_ios_core.py` 가 플랫폼 I/O(Android import·`@Synchronized`·`String.format`·`org.json`)만 바꿔 `posture-core` 공통 소스를 **생성**한다. 생성 소스(`// tools/sync_ios_core.py 생성본` 머리말)는 손으로 고치지 않는다. 바꿀 것은 정본을 바꾸고 다시 동기화한다(`--check` 가 CI·Xcode pre-build 에서 어긋남을 잡는다). 같은 수식이 두 플랫폼에 두 벌 있으면 안 된다 — 얼굴 요(`faceYawDeg`)조차 `PostureAnalyzer.kt` 에서 잘라 낸 슬라이스(`FaceYaw.kt`)다.
+2. **Swift 는 센서·카메라·TTS 엔진·화면이다.** `IosEngine` 은 Android `PostureLive` 분석 루프·`PostureFloorLive`·`CapturePreparationUi`·`SpeechCoach` 의 **배선을 같은 순서로 옮긴 것**이다(준비 프레임 → 접촉 → 판정 칸 → 바닥 시계/시선 → 카운터 → 판별 기각 → 반복 검사 → 발화 → 창 규칙 → 비교). 화면 문구·간격 상수도 Android 와 같은 값이다. Swift 가 "이 회를 셀까", "이 말을 할까" 를 정하지 않는다.
+3. **발화는 엔진 대기열이 고른다(§101).** Swift `SpeechService` 는 AVSpeechSynthesizer 만 들고, 엔진 `IosSpeech`(공통 `SpeechQueue`)가 고른 제출을 **한 번에 하나만** 재생하며 시작·종결을 엔진에 돌려준다. 들림 장부(지적이 재생을 시작한 뒤에만 "교정됐어요"), 세트 끝 꼬리(마지막 교정 문장을 자르지 않고 ≤ 10 s), 같은 쪽 카운트의 최신만, 번갈아 내기가 그래서 Android 와 같다. 음소거·한국어 음성 없음(→ 톤)도 엔진이 안다.
+4. **격자는 같다(§96).** 85 ms 추론은 뼈대 게이트·순간 접촉(§98a)에만, 준비·판정·카운터·로그는 300 ms 칸의 첫 프레임이다. 얼굴 모델도 300 ms 에 한 번, 결과는 450 ms 안의 프레임에 얹는다(Android `FACE_INTERVAL_MS`·`FACE_STALE_MS`). 열 상태가 나쁘면 추론 간격을 300 ms 로 줄이므로 순간 접촉을 놓칠 수 있다.
+5. **못 하는 것은 못 한다고 밝힌다.** 사람이 안 잡힌 프레임은 로그·집계에 넣지 않는다(Android 와 같다 — 종전 iOS 는 빈 프레임을 로그에 넣었다). 얼굴 모델이 실패하면 시선은 '측정 중' 이지 '정면' 이 아니다. 시간 목표(플랭크)는 카메라가 확인한 시간이 있을 때만 그것을 쓰고 아니면 시계이며 HUD 가 어느 쪽인지 보인다. 점수·"깨끗" 은 판정이 0건이면 없다.
+6. **세트 로그는 iOS 형식(schema 2)이고 Android `SetLogJson` 재생 형식이 아니다.** 반복 시각·기각 사유·플랭크 구간·바닥 회의 시선·말한 시선 문장을 머리줄에, 프레임마다 피처·xy·world·가시성·중력을 남긴다. 연구 도구에 그대로 넣지 않는다 — 폰 로그를 확보한 뒤 변환기를 따로 둔다.
+7. **자산은 Android 정본 바이트다.** 규칙 JSON·정상 표본 TSV·자세 모델·얼굴 모델은 `app/src/main/assets/posture/` 를 번들에 그대로 복사하고 `ASSET_BASELINE.json`(5개) 의 SHA 로 앱 시작·CI 에서 대조한다. 카탈로그 26·가이드 10·영양 350 은 `tools/export_ios_resources.py` 가 Kotlin 정본에서 뽑는다. 음식 YOLO 만 TFLite C API 호환을 위해 inline 가중치 사본(§107c~e)이다.
+8. **Android 는 손대지 않는다.** 이 브랜치의 Android 코드·자산은 main 과 같다(병합 외 변경 0). iOS 를 위해 모집단 파라미터·규칙 JSON 을 바꾸지 않는다(원칙 #4).
+
+## 구현 범위 (§107f 에서 더해진 것)
+
+| 영역 | iOS 구현 |
 |---|---|
-| 자세 엔진 | Android 정본 38파일, 중력 변환·규칙 로딩·DTO 경계, 동일한 규칙 JSON·정상 표본 |
-| 카메라 | AVFoundation 전후면, Core Motion 중력, MediaPipe Full VIDEO/CPU, 원본 관절과 화면 미러 분리 |
-| 운동 세션 | 준비·프레이밍·방향·5초 수동 시작, 횟수·좌우 짝·반복 검사, 부위 강조·한국어 음성, 휴식·다음 종목, 정지·복귀 |
-| 최신 네 종목 | 크로스/사이드 런지·스탠딩 니업·스탠딩 사이드 크런치의 legcycle_v3_beta, 접촉 최솟값과 무릎 발끝 게이트 |
-| 평가 정책 | COACH/TRACK, 유보·ship/beta/exclude, 못 보는 범위, 세트 리포트와 내 실제 수행/자세 라벨 |
-| 운동 계획·가이드 | 26종 선택·횟수/세트/휴식 편집·순서 변경·타이머 진행, 7종 원본 GIF/준비/수행/호흡/주의/출처 |
-| 홈·프로필 | 운동/식단 요약, 신체 정보·목표·요일·장소·장비·다크 모드·음성 설정 |
-| 식단 | 350종 DB, 직접 영양 입력·끼니/분량·날짜별 기록, 권장/직접 열량·탄단지 목표 |
-| 사진 식단 | 원본 가중치의 TFLite 3모델(YOLO 저장 형식 보정), 최대 5장·영역 탐지·분류·임베딩 기억, 낮은 확신 후보 확인 후 저장 |
-| 운동 기록·근육 보기 | 로컬 세트 리포트·자가 라벨·삭제, Android 정본 부하 계산과 장비별 추천, 원본 3D WebView·현재 세션 사용 부위 |
-| 저장·백업 | Application Support에 JSON과 기기 파일 보호, JSON 백업 공유/복원, 사진 없는 자세 로그 |
+| 공통 엔진 | 정본 **48파일**(§107 의 38 + `FloorChain`·`FloorCycle`·`FloorGaze`·`FloorLive`·`PlankGeometry`·`PlankHold`·`PostureTrial`·`PreparationVoice`·`SpeechQueue`·`StandingFraming`) + 슬라이스 `FaceYaw`·`RepEngineLog`·`PortableOrientation` + 앱 패키지의 관절 게이트 `SkeletonGate`. 정본 테스트 46파일이 JVM 에서 같이 돈다(`FloorWiringTest` 는 Android `SetLog` 직렬화에 묶여 제외) |
+| 바닥 계열 | 플랭크 유지 시계(시작·멈춤·재개·폴백·10 s 읽기·5 s 카운트)·멈춤 사유 음성과 화살표·정렬 검사의 HOLD 칸 게이트, 크런치·레그 레이즈의 판별 기각 사유·신호 결측 안내·누운 기준 시드(준비 전용 추출기), 범위 문장(화면) |
+| 시선(§101d) | Swift `FaceRunner`(MediaPipe Face Landmarker, IMAGE, 자세 행렬)가 엔진 `IosFace.cropSpec`(Android `faceCrop` 기하: 코·귀 중심, 목 방향 회전, 머리 ×3 정사각 256 px)대로 Core Image 로 잘라 돌리고, 엔진이 `face_found`·`face_yaw`(정본 `faceYawDeg`)로 바닥 피처에 얹는다. 플랭크 시선·크런치/레그 레이즈 시선 음성·'시선' 칩·교정됨 문장이 Android 와 같다. 서서 하는 종목은 얼굴 모델을 돌리지 않는다 |
+| 발화 | `IosSpeech` + Swift `SpeechService`(엔진 구동)·`ToneService`(ack/nack/beep/beep2 사인파). 준비 안내는 `PreparationVoicePlan`(핵심 조건 → 자리 → 세부, 카운트는 설명 중이면 톤). 목표 도달 → `beginSetEnd` → `AdvanceHoldPolicy`(조용 300 ms, 상한 2 s) → 꼬리 넘김 → 결과 음성은 꼬리 뒤 |
+| 서서 하는 종목 | `StandingFraming`(세트 중 가로 잘림 안내 15 s·3회), 판별 기각 `RejectionCues`·`RejectCueGate`, 가동 범위 미달 사유·교정됨, 쪽별 카운트 음성(같은 쪽 최신만), 돌아섬 안내, 처음부터 알림, 유지 자세·얕은 걸음 사건 |
+| 화면 | 관절 게이트(믿을 수 없는 다리 관절은 점선·마지막 자리), ship 붉은색·beta 노란색, 교정 화살표(위/아래/안쪽/바깥쪽/목표/고리, 1.8 s 맥동, 바닥은 참고색), 플랭크 HUD(카메라 시간/목표, 멈춤 상태 줄, 시계 폴백 표시), 세지 않은 동작·시선 칩, 참고 줄, 촬영 커버리지 줄, 세는 조건 카드 |
+| 로그 | `posture_logs/<record UUID>.jsonl` schema 2 |
 
-SwiftUI 화면을 새로 구성했다. Android Compose 화면과 픽셀 단위로 같은 UI는 아니다. Android 전용 APK 업데이트 설치 흐름은 이식하지 않았으며, iOS 업데이트는 새 빌드의 서명/재설치를 따른다. 개발용 Android PostureLab 전체 화면·AIHub 연구 CLI·기존 Android 저장소의 자동 마이그레이션·계정 서버 동기화는 포함하지 않는다. 현재 앱 데이터는 iPhone 로컬 데이터다.
+iOS 에 **없는 것**: Android 의 세션 중 센서 방향 추종(§101e — iPhone 앱은 세로 고정; 바닥 종목을 가로로 두고 싶으면 폰을 눕혀 세로 화면 그대로 쓴다), 남은 시간 다리 `HoldBridge`(iOS 는 엔진 HUD 의 `camera` 플래그로 같은 뜻을 전한다), 무대 배율 잠금(`StageFit`), 유령 다리 표시, 검증 모드(`RepValidation`), 구글 로그인·서버 동기화(§SERVER_SYNC_HANDOFF — iPhone 데이터는 로컬), APK 업데이트, 개발용 `PostureLab`·AIHub 연구 CLI.
 
-## 엔진 유지 원칙
+## 엔진 유지 절차
 
-`tools/sync_ios_core.py`는 Android Kotlin 정본에서 플랫폼 I/O와 JVM 전용 부분만 바꿔 공통 소스를 생성한다. 임계값·뷰·렙·규칙 정책은 Swift로 재작성하지 않는다. 생성 소스를 손으로 고치지 않고 정본을 수정한 뒤 동기화한다. 원본 38파일의 SHA와 생성 결과 검사에 추가로 중력·부하·음식 기하/기억 및 정본 단위 테스트도 포함한다. 코드/텍스트 자산의 SHA는 Git LF 기준이고 모델은 원시 바이트다. `.gitattributes`가 Mac과 Windows의 자세 텍스트 자산 LF를 고정한다. Android 앱은 현재 기존 엔진을 계속 사용하며 KMP 생성본은 iOS에서 사용한다.
+```bash
+python3 tools/sync_ios_core.py            # 정본 → posture-core 생성 (--check 는 검사만)
+python3 tools/export_ios_resources.py     # 카탈로그·가이드·영양·자산 SHA
+bash gradlew -PiosOnly=true :posture-core:jvmTest
+python3 tools/verify_ios_project.py       # Swift 구문·XcodeGen·plist·세 --check (tree-sitter, pyyaml, flatbuffers, tflite 필요)
+```
 
-`IosEngine`은 Swift 직렬 큐에서만 호출하는 JSON 경계다. 부팅 후 단조 증가 ms와 미러 전 33개 관절을 받는다. m→cm, 월드 y/z 반전, visibility/presence 최소값, 중력 신선도 250ms와 up 자가검증을 적용한다. **85ms는 화면과 순간 닿음에만**, 준비·판정·카운터·로그는 `now/300` 칸의 첫 프레임으로 유지한다. 열 상태가 나쁘면 추론 간격을 300ms로 줄이므로 순간 접촉을 놓칠 수 있다.
+정본에 파일이 늘면 `sync_ios_core.py` 의 `NAMES` 에 넣는다(플랫폼 import 가 있으면 `portable()` 에 치환을 더한다 — Android 파일에서 **잘라 내는** 쪽을 택하고 손으로 옮기지 않는다). Android 테스트가 `SetLog`·`Context` 에 묶이면 `excluded` 에 넣는다.
 
-유보는 정상으로 세지 않고 판정 0건에는 점수를 만들지 않는다. TRACK은 점수가 없고 beta는 화면의 참고다. iOS 바닥 beta 피드백도 음성 교정으로 승격하지 않는다. 최신 네 종목의 '세지 않은 이유'는 Android와 동일한 사용자 정의 횟수 입장 조건이며 beta 자세 검사의 승격이 아니다. 자동 횟수와 3D 부하 지수의 기존 검증 한계는 유지한다.
+## 플랫폼 경계 (`IosEngine`, Swift 직렬 큐 전용)
 
-현재 Android `PostureLive`처럼 촬영 메타데이터 없는 개발용 기준선을 실시간 보정에 자동 적용하지 않는다. 수집/백업은 개발 자료로 남기며 세트 하나를 반복 눌러 여러 세트로 만들지 않는다. 세트 중앙값은 공통 `BaselineCollector`가 계산한다. 실시간 개인화는 현재 세트의 시작 관측값이다.
-
-음식 YOLO의 73개 외부 가중치 버퍼는 iOS용 파일에서 inline `Buffer.data`로 보관한다. TensorFlowLiteSwift 2.17의 [C API](https://github.com/tensorflow/tensorflow/blob/v2.17.0/tensorflow/lite/core/c/c_api.cc#L438)가 InterpreterBuilder에 allocation을 전달하지 않아 원본 외부 버퍼를 읽지 못하는 호환 문제를 해결한다. `tools/prepare_ios_food_model.py`는 원본 뒤에 새 버퍼 배열을 붙여 `Model.buffers` 포인터 4바이트만 바꾼다. 모든 버퍼의 가중치가 동일하고, 연산·텐서·양자화·메타데이터를 포함한 원본 바이트가 이 포인터 외에는 바뀌지 않는지 검사한다. 기준표는 `FOOD_MODEL_BASELINE.json`이다. 보존을 위해 원본 영역도 남겨 파일이 3,773,677 → 7,236,576바이트로 늘어난다. Android YOLO와 나머지 두 음식 모델은 수정하지 않는다.
+- `configure(json)`: `name`(앱 이름)·`mode`·`target`·`timed`(시간 목표)·`front`·`muted`·`voiceReady`·`baseline`(개발용, 기본 없음) → 준비 안내·세는 조건·범위·바닥/플랭크 여부.
+- `arm`·`manualStart`·`pause(paused, now)`·`tick(now)`(200 ms, 발화 감시 포함)·`frame(json)`: `timeMs`·`width`·`height`·`xy`(66)·`world`(99, m)·`visibility`(33)·`up`(중력 반대, 월드)·`gravityFresh`·`inferMs`·`face{found, matrix[16] 행 우선, inferMs, rotation, headPx}`.
+- 상태 JSON: `stage`·`reps`·`done`·`message`·`cue`(이 회의 교정 문장)·`guideNote`·`provisionalNote`·`note`(세지 않은 동작·시선 칩)·`coverage`·`highlight`/`provisional`(관절)·`shown`/`target2d`(관절 게이트)·`motion`(화살표)·`hold`(플랭크 HUD)·`score`·`speech[{text, flush}]`·`tones[]`·`fast`.
+- `speechStarted(now)`·`speechFinished(now) → speech[]`·`stopSpeech()`·`beginSetEnd(now)`·`advanceDue(now)`·`finish(now, handOff) → 리포트 + speech[]`·`exportFrames()`.
+- `IosFace.cropSpec(json)`: 얼굴 크롭 명세(`cx`·`cy`·`rotateDeg`·`side`·`scale`·`outPx`) 또는 `null`.
 
 ## Mac 준비와 빌드
 
-필수: JDK 21, Python 3, Xcode 26 계열의 초기 설정, XcodeGen, CocoaPods. [Kotlin 공식 호환표](https://kotlinlang.org/docs/multiplatform/multiplatform-compatibility-guide.html)의 2.3.20–2.3.21 행은 Xcode 26.0을 제시한다. 이전 진단 앱의 Xcode 16.2 환경을 새 공통 엔진에 그대로 사용하지 않는다. 더 최신 Xcode에서의 지원 여부는 실제 빌드로 확인한다.
+변경 없음 — [`docs/IOS_INSTALL.md`](IOS_INSTALL.md)(Xcode 26·JDK 21·XcodeGen·CocoaPods, `bash iosApp/scripts/setup-mac.sh`, `build-unsigned-ipa.sh`, `test-simulator.sh`). 번들 자산은 **5개**(얼굴 모델 `face_landmarker.task` 3.8 MB 추가)이고 `verify_bundle_assets.py` 와 `TrexTests` 가 그 수를 본다. XCTest 는 §107 의 4건에 얼굴 모델 초기화·크롭·추론(빈 영상 → 얼굴 없음)과 엔진 발화 대기열(한 번에 하나) 2건을 더했다.
 
-저장소 루트에서 다음을 실행한다. Gradle 실행 비트에 의존하지 않도록 `bash gradlew`를 쓴다.
+## 다음 검증 (사용자)
 
-```bash
-python3 -m pip install flatbuffers==25.12.19 tflite==2.18.0
-bash iosApp/scripts/setup-mac.sh
-open iosApp/Trex.xcworkspace
-```
-
-XcodeGen 정본은 `iosApp/project.yml`이다. 생성된 `.xcodeproj/.xcworkspace`와 `TrexPods`는 Git에서 제외한다. 새 앱의 Podfile 정본은 `Podfile.trex`이며 기존 진단 앱 의존성과 분리한다. MediaPipeTasksVision 1.0.0 / TensorFlowLiteSwift 2.17.0을 지정했다. 음식 TFLite는 동적 `TrexFoodRuntime.framework` 안에 정적으로 연결한다. 공개 심볼 목록으로 TFLite C/C++ 구현을 프레임워크 내부에 두고, 앱과의 Swift 경계에는 TensorFlowLite 타입을 공개하지 않는다. IPA 검사도 이 프레임워크의 포함과 네이티브 공개 심볼 0개를 확인한다. 검증한 기기용 아키텍처는 arm64, 시뮬레이터도 arm64다.
-
-Xcode의 `Trex` scheme → 연결한 iPhone → Signing & Capabilities에서 `Trex`와 `TrexFoodRuntime`의 본인 Team → Run 순서로 실행한다. 서명 오류 때문에 앱을 삭제하면 로컬 기록이 사라지므로 앱의 백업 기능으로 먼저 내보낸다. Team·인증서·계정·프로비저닝 파일은 Git에 올리지 않는다.
-
-공통 프레임워크는 Xcode pre-build에서 [Kotlin 직접 통합](https://kotlinlang.org/docs/multiplatform/multiplatform-direct-integration.html)의 `embedAndSignAppleFrameworkForXcode`로 빌드한다. `-PiosOnly=true`는 Android 앱을 구성하지 않아 Mac에 Android SDK가 없어도 iOS 경로를 실행할 수 있게 한다. Swift MediaPipe 설치는 CocoaPods를 사용하지만 Kotlin 모듈의 CocoaPods 플러그인은 사용하지 않는다.
-
-```bash
-bash gradlew -PiosOnly=true :posture-core:jvmTest
-bash iosApp/scripts/test-simulator.sh
-bash iosApp/scripts/build-unsigned-ipa.sh
-```
-
-마지막 명령은 generic iPhone Release 빌드 → `.app`의 원본 자세 자산·iOS 음식 모델 SHA/기준표 검사 → `Payload/Trex.app` 패키징 순서다. 모두 성공하면 `iosApp/build/sideload/TREX-unsigned.ipa`가 나온다. 이는 Sideloadly 입력 파일이며 다운로드만으로 실행되는 서명된 배포 파일이 아니다. 각 테스터의 서명·기기 신뢰·개발자 모드와 계정별 제한은 별도 설치 과정이다.
-
-GitHub Actions에는 `iOS 검증과 미서명 IPA`를 추가했다. `ios-redesign`을 원격에 푸시하면 처음부터 실행되도록 push 트리거를 두었다(새 workflow가 기본 브랜치에 아직 없으면 수동 dispatch만으로 첫 실행을 할 수 없기 때문). 공통 테스트·기기용 빌드·시뮬레이터 XCTest가 성공한 경우 IPA를 artifact로 받는다. workflow가 기본 브랜치에 등록되면 수동 실행도 가능하다. 자동 배포·TestFlight 업로드·인증서 저장은 하지 않는다. 이 작업에서 `ios-redesign` 푸시로 원격 macOS 실행을 시작했다.
-
-[검증한 IPA 다운로드](https://github.com/LeeDongHyun00/TREX/actions/runs/37495731624/artifacts/11427878651)에서 `TREX-unsigned-IPA` ZIP을 받은 뒤 `TREX-unsigned.ipa`를 꺼낸다. 코드 기준은 `e52b15be`이며 artifact 보관 기한은 2027-01-04다. 이후에는 위 Mac 스크립트 또는 새 Actions 실행으로 다시 생성한다. 문서만 갱신한 최종 커밋은 중복 빌드를 건너뛴다.
-
-## 확인한 결과와 다음 검증
-
-Windows에서 Android `testDebugUnitTest` **557/557**, `assembleDebug`, 공통 엔진 JVM **376/376**(정본 366건 + iOS 경계 10건), Swift 31파일의 tree-sitter 구문 검사, XcodeGen 자산 경로·plist·정본 동기화 검사를 통과했다. tree-sitter 검사는 **Swift 타입 검사와 SDK 링크를 보장하지 않는다.** 공통 회귀는 실제 연구 피처 픽스처를 JSON 관절 입력으로 바꿔 월드 축과 정본이 반전으로 판단하는 up 표본도 확인한다.
-
-macOS Actions에서 기기용 framework/Swift 컴파일·Release 링크·원본 자세 자산과 호환 음식 모델 SHA·내부 공개 심볼 0개·IPA 생성, 시뮬레이터 XCTest 4건(자산/가이드·백업의 유보/자가 라벨·85ms/오래된 프레임 차단·세 음식 모델과 자세 모델의 실제 동시 추론)을 통과했다. SDK 추론 검사는 빈 입력 이미지의 실행 검사이며 자세 판정 정확도나 실제 음식 사진 정확도를 검증한 것은 아니다. 남은 검증은 사용자가 직접 하는 iPhone 서명·실행이다. 기기에서 전후면 좌우·기울어진 폰·관절 누락·카메라 거부·정지/복귀·온도 상승을 확인하고, 네 종목의 실제 짝/기각/순간 접촉과 사진의 방향/영역·한국어 음성·3D 표시를 대조한다. Android와 SDK 버전·CPU 경로가 다르므로 자동 검사 통과를 실기기 자세 정확도 검증으로 읽지 않는다.
+1. macOS Actions 성공 여부 — Swift 타입·SDK 링크(`FaceLandmarker`·`TransformMatrix.value(atRow:column:)`·`MPImage(uiImage:)`)는 여기서만 확인된다.
+2. iPhone 에서 플랭크: "시간을 재기 시작해요" → 무릎을 대면 낮은 틱 + 이유 → 다시 들면 "교정됐어요. 다시 재요", HUD 숫자가 카메라 시간인지, 폰을 보면 3 s 뒤 "시선이 벗어났어요".
+3. 크런치·레그 레이즈: 팔만·어깨만·한 다리 회가 세지지 않고 이유가 들리는지, 시선 칩.
+4. 스쿼트·런지·컬: 빠진 회의 "이 회는 세지 않았어요", 화살표 방향이 미러와 맞는지(전면 카메라), 세트 끝 교정 문장이 잘리지 않는지, 가로 잘림 안내.
+5. 로그 `posture_logs/*.jsonl` 회수 → 변환기 작성(Android 재생기 입력으로).
 
 ## 저장 형식
 
-앱 데이터는 `Application Support/TREX/data.json`의 schema 1이며 iOS 백업만 복원한다. 음식 기억은 같은 폴더의 `food-memory.json`에 보관하고 사진 원본은 저장하지 않는다.
+앱 데이터는 `Application Support/TREX/data.json` schema 1(변경 없음). 자세 로그 `posture_logs/<record UUID>.jsonl` 은 schema **2**: 첫 줄 `kind=ios_session` 에 종목·모드·목표·전면 여부·규칙 버전·판정 간격·시작/앵커 시각·반복 시각·기각(시각·사유·쪽)·플랭크 시계(인정/경과/출처/멈춤/구간)·바닥 회 시선·말한 시선 문장, 이후 `kind=ios_frame` 은 상대 시각·판정 피처(얼굴 피처 포함)·xy/world/가시성·크기·중력(신선도·뒤집힘). 카메라 영상은 없다.
 
-자세 로그는 `posture_logs/<record UUID>.jsonl`이다. 첫 줄 `kind=ios_session, schema=1`은 종목·모드·시작 시각·판정 간격·앵커 시각이고 이후 `kind=ios_frame`은 상대 시각·판정 피처·원본 xy/world/visibility·크기·중력이다. 카메라 영상은 없다. **Android `SetLogJson`의 완전한 재생 형식은 아니며 기존 연구 로그 도구에 그대로 넣지 않는다.** 현재 로그에는 준비 원시 프레임·카운터 전체 상태가 없어 처음부터의 동일 횟수 재생을 보장하지 않는다. 연구 도구 통합은 iPhone 첫 로그를 확보한 다음 별도로 한다.
+---
+
+이전 상태(2026-10-07, §107~§107e — `redesign` `5213e3c4` 기준 첫 포팅, Mac 빌드·IPA 검증 기록)는 Git 이력의 이 파일 이전 판과 스펙 §107 을 본다.
