@@ -10,7 +10,8 @@ settings:
     IPHONEOS_DEPLOYMENT_TARGET: '16.0'
     CODE_SIGN_STYLE: Automatic
     TARGETED_DEVICE_FAMILY: '1'
-    FRAMEWORK_SEARCH_PATHS: '$(inherited) $(SRCROOT)/../posture-core/build/xcode-frameworks/$(CONFIGURATION)/$(SDK_NAME)'
+    # TrexCore = 자세 엔진(posture-core) + Android 정본 Compose 화면(ios-ui) 한 프레임워크(§108).
+    FRAMEWORK_SEARCH_PATHS: '$(inherited) $(SRCROOT)/../ios-ui/build/xcode-frameworks/$(CONFIGURATION)/$(SDK_NAME)'
 targets:
   Trex:
     type: application
@@ -53,8 +54,12 @@ targets:
         CURRENT_PROJECT_VERSION: '1'
         TARGETED_DEVICE_FAMILY: '1'
         OTHER_LDFLAGS: '$(inherited) -framework TrexCore -ObjC -lc++'
+        # Xcode 16(iOS 18 SDK) 로컬 빌드 전용(§108): Compose Multiplatform 1.11 은 iOS 26 SDK 로 빌드돼
+        # UIKit 의 UIViewLayoutRegion 을 참조한다. 18 SDK 에는 없으니 링크 때 비워 두고 iOS 26+ 기기의 UIKit 이 채운다.
+        # 그래서 이 조건으로 만든 빌드는 iOS 26 이상 기기 전용이다. Xcode 26(CI)에서는 이 줄이 적용되지 않는다.
+        'OTHER_LDFLAGS[sdk=iphoneos18*]': '$(inherited) -Wl,-U,_OBJC_CLASS_$_UIViewLayoutRegion'
     preBuildScripts:
-      - name: 공유 자세 엔진 빌드
+      - name: 공유 자세 엔진·화면 빌드
         basedOnDependencyAnalysis: false
         script: |
           set -e
@@ -64,7 +69,7 @@ targets:
           # Xcode는 별도 Python을 사용할 수 있다. 전체 변환 검사는 setup-mac/CI에서 한다.
           python3 tools/prepare_ios_food_model.py --verify-hashes
           if [ "${OVERRIDE_KOTLIN_BUILD_IDE_SUPPORTED:-NO}" != "YES" ]; then
-            bash gradlew -PiosOnly=true :posture-core:embedAndSignAppleFrameworkForXcode
+            bash gradlew -PiosOnly=true :ios-ui:embedAndSignAppleFrameworkForXcode
           fi
   TrexFoodRuntime:
     type: framework

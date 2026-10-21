@@ -11,13 +11,14 @@
 Android 에서 iOS 로 옮길 때 무엇을 옮기고 무엇을 옮기지 않는지의 선이다. CLAUDE.md 의 판단 원칙은 플랫폼과 무관하게 그대로다.
 
 1. **판정은 한 곳에만 있다.** 임계값·뷰 게이팅·카운터·반복 검사·판별 기각·플랭크 시계·시선 분류·발화 선택 정책은 Android Kotlin 정본(`app/src/main/java/.../posture/`)이고, `tools/sync_ios_core.py` 가 플랫폼 I/O(Android import·`@Synchronized`·`String.format`·`org.json`)만 바꿔 `posture-core` 공통 소스를 **생성**한다. 생성 소스(`// tools/sync_ios_core.py 생성본` 머리말)는 손으로 고치지 않는다. 바꿀 것은 정본을 바꾸고 다시 동기화한다(`--check` 가 CI·Xcode pre-build 에서 어긋남을 잡는다). 같은 수식이 두 플랫폼에 두 벌 있으면 안 된다 — 얼굴 요(`faceYawDeg`)조차 `PostureAnalyzer.kt` 에서 잘라 낸 슬라이스(`FaceYaw.kt`)다.
-2. **Swift 는 센서·카메라·TTS 엔진·화면이다.** `IosEngine` 은 Android `PostureLive` 분석 루프·`PostureFloorLive`·`CapturePreparationUi`·`SpeechCoach` 의 **배선을 같은 순서로 옮긴 것**이다(준비 프레임 → 접촉 → 판정 칸 → 바닥 시계/시선 → 카운터 → 판별 기각 → 반복 검사 → 발화 → 창 규칙 → 비교). 화면 문구·간격 상수도 Android 와 같은 값이다. Swift 가 "이 회를 셀까", "이 말을 할까" 를 정하지 않는다.
+2. **Swift 는 센서·카메라·TTS 엔진이다. 화면은 Android Compose 정본으로 옮기는 중이다(§108, 원칙 #9).** SwiftUI 화면은 그 이행이 끝날 때까지만 남는다. 지금의 `IosEngine` 은 Android `PostureLive` 분석 루프·`PostureFloorLive`·`CapturePreparationUi`·`SpeechCoach` 의 **배선을 같은 순서로 옮긴 것**이다(준비 프레임 → 접촉 → 판정 칸 → 바닥 시계/시선 → 카운터 → 판별 기각 → 반복 검사 → 발화 → 창 규칙 → 비교). 화면 문구·간격 상수도 Android 와 같은 값이다. Swift 가 "이 회를 셀까", "이 말을 할까" 를 정하지 않는다.
 3. **발화는 엔진 대기열이 고른다(§101).** Swift `SpeechService` 는 AVSpeechSynthesizer 만 들고, 엔진 `IosSpeech`(공통 `SpeechQueue`)가 고른 제출을 **한 번에 하나만** 재생하며 시작·종결을 엔진에 돌려준다. 들림 장부(지적이 재생을 시작한 뒤에만 "교정됐어요"), 세트 끝 꼬리(마지막 교정 문장을 자르지 않고 ≤ 10 s), 같은 쪽 카운트의 최신만, 번갈아 내기가 그래서 Android 와 같다. 음소거·한국어 음성 없음(→ 톤)도 엔진이 안다.
 4. **격자는 같다(§96).** 85 ms 추론은 뼈대 게이트·순간 접촉(§98a)에만, 준비·판정·카운터·로그는 300 ms 칸의 첫 프레임이다. 얼굴 모델도 300 ms 에 한 번, 결과는 450 ms 안의 프레임에 얹는다(Android `FACE_INTERVAL_MS`·`FACE_STALE_MS`). 열 상태가 나쁘면 추론 간격을 300 ms 로 줄이므로 순간 접촉을 놓칠 수 있다.
 5. **못 하는 것은 못 한다고 밝힌다.** 사람이 안 잡힌 프레임은 로그·집계에 넣지 않는다(Android 와 같다 — 종전 iOS 는 빈 프레임을 로그에 넣었다). 얼굴 모델이 실패하면 시선은 '측정 중' 이지 '정면' 이 아니다. 시간 목표(플랭크)는 카메라가 확인한 시간이 있을 때만 그것을 쓰고 아니면 시계이며 HUD 가 어느 쪽인지 보인다. 점수·"깨끗" 은 판정이 0건이면 없다.
 6. **세트 로그는 iOS 형식(schema 2)이고 Android `SetLogJson` 재생 형식이 아니다.** 반복 시각·기각 사유·플랭크 구간·바닥 회의 시선·말한 시선 문장을 머리줄에, 프레임마다 피처·xy·world·가시성·중력을 남긴다. 연구 도구에 그대로 넣지 않는다 — 폰 로그를 확보한 뒤 변환기를 따로 둔다.
 7. **자산은 Android 정본 바이트다.** 규칙 JSON·정상 표본 TSV·자세 모델·얼굴 모델은 `app/src/main/assets/posture/` 를 번들에 그대로 복사하고 `ASSET_BASELINE.json`(5개) 의 SHA 로 앱 시작·CI 에서 대조한다. 카탈로그 26·가이드 10·영양 350 은 `tools/export_ios_resources.py` 가 Kotlin 정본에서 뽑는다. 음식 YOLO 만 TFLite C API 호환을 위해 inline 가중치 사본(§107c~e)이다.
-8. **Android 는 손대지 않는다.** 이 브랜치의 Android 코드·자산은 main 과 같다(병합 외 변경 0). iOS 를 위해 모집단 파라미터·규칙 JSON 을 바꾸지 않는다(원칙 #4).
+8. **Android 의 동작은 바꾸지 않는다(§108 에서 '손대지 않는다'를 풀었다, 2026-10-22 사용자 승인).** 화면을 iOS 와 공유하려고 Android API 호출을 작은 플랫폼 파일로 옮기는 리팩터는 한다. 동작·문구·간격은 그대로이고 Android 테스트와 실기기 확인을 거친다. iOS 를 위해 모집단 파라미터·규칙 JSON 을 바꾸지 않는다(원칙 #4).
+9. **화면도 한 곳에만 있다(§108).** iPhone 화면은 `ios-ui` 가 Android 정본 Compose 파일을 Compose Multiplatform 으로 **그대로** 컴파일한 것이다. 공유 목록은 `ios-ui/android-sources.txt` 한 곳이고 사본을 커밋하지 않는다(빌드 때마다 `app/` 에서 가져온다). 목록에 오른 파일은 commonMain 에서 컴파일되므로 Compose·Kotlin 표준·`posture-core` 만 쓸 수 있다 — Android API 를 쓰면 iOS 빌드가 깨지고, 그것이 경계 검사다. 엔진과 화면은 정적 `TrexCore` 프레임워크 하나다.
 
 ## 구현 범위 (§107f 에서 더해진 것)
 
@@ -54,7 +55,7 @@ python3 tools/verify_ios_project.py       # Swift 구문·XcodeGen·plist·세 -
 
 ## Mac 준비와 빌드
 
-변경 없음 — [`docs/IOS_INSTALL.md`](IOS_INSTALL.md)(Xcode 26·JDK 21·XcodeGen·CocoaPods, `bash iosApp/scripts/setup-mac.sh`, `build-unsigned-ipa.sh`, `test-simulator.sh`). 번들 자산은 **5개**(얼굴 모델 `face_landmarker.task` 3.8 MB 추가)이고 `verify_bundle_assets.py` 와 `TrexTests` 가 그 수를 본다. XCTest 는 §107 의 4건에 얼굴 모델 초기화·크롭·추론(빈 영상 → 얼굴 없음)과 엔진 발화 대기열(한 번에 하나) 2건을 더했다.
+[`docs/IOS_INSTALL.md`](IOS_INSTALL.md)(Xcode 26·JDK 21·XcodeGen·CocoaPods, `bash iosApp/scripts/setup-mac.sh`, `build-unsigned-ipa.sh`, `test-simulator.sh`). 프레임워크는 `bash gradlew -PiosOnly=true :ios-ui:embedAndSignAppleFrameworkForXcode` 가 만든다(Xcode pre-build). Xcode 16(인텔 Mac)에서도 기기 빌드는 되지만 두 가지가 다르다(§108): iOS 18 SDK 빌드에는 `UIViewLayoutRegion` 링크 조건이 걸려 **iOS 26 이상 기기 전용**이 되고, Compose Multiplatform 1.11 에 `iosX64` 가 없어 시뮬레이터를 못 쓴다 — 실기기에서 `--compose-probe` 로 화면을 PNG 로 떠 확인한다. 번들 자산은 **5개**(얼굴 모델 `face_landmarker.task` 3.8 MB 추가)이고 `verify_bundle_assets.py` 와 `TrexTests` 가 그 수를 본다. XCTest 는 §107 의 4건에 얼굴 모델 초기화·크롭·추론(빈 영상 → 얼굴 없음)과 엔진 발화 대기열(한 번에 하나) 2건을 더했다.
 
 ## 다음 검증 (사용자)
 

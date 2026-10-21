@@ -4,8 +4,12 @@ import SwiftUI
     @StateObject private var store = TrexStore()
     var body: some Scene {
         WindowGroup {
-            RootView().environmentObject(store).tint(Color(red: 0.65, green: 0.82, blue: 0.37))
-                .preferredColorScheme(store.data.dark ? .dark : .light)
+            if ProcessInfo.processInfo.arguments.contains("--compose-probe") {
+                ComposeProbeView(capture: true).ignoresSafeArea()
+            } else {
+                RootView().environmentObject(store).tint(Color(red: 0.65, green: 0.82, blue: 0.37))
+                    .preferredColorScheme(store.data.dark ? .dark : .light)
+            }
         }
     }
 }
@@ -17,6 +21,7 @@ struct RootView: View {
             NavigationStack { WorkoutView() }.tabItem { Label("운동", systemImage: "figure.strengthtraining.traditional") }
             NavigationStack { DietView() }.tabItem { Label("식단", systemImage: "fork.knife") }
             NavigationStack { ProfileView() }.tabItem { Label("내 정보", systemImage: "person.fill") }
+            ComposeProbeView().ignoresSafeArea(edges: .top).tabItem { Label("Compose", systemImage: "square.on.square") }
         }
         .sheet(isPresented: Binding(get: { !store.data.profile.onboarded }, set: { _ in })) { OnboardingView().interactiveDismissDisabled() }
         .alert("확인이 필요합니다", isPresented: Binding(get: { store.error != nil }, set: { if !$0 { store.error = nil } })) { Button("확인") { store.error = nil } } message: { Text(store.error ?? "") }

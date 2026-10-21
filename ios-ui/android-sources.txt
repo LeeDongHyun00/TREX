@@ -1,0 +1,9 @@
+# iPhone 이 그대로 컴파일하는 Android 정본 파일(app/src/main/java 기준). 사본을 두지 않는다(§108).
+# 여기 오른 파일은 Compose·Kotlin 표준·posture-core 만 써야 한다 — Android API 를 쓰면 iOS 빌드가 깨진다.
+# Phase 0 스파이크: 디자인 시스템과 순수 Compose 부품.
+com/example/trex_kotlin/TrexDesign.kt
+com/example/trex_kotlin/TrexText.kt
+com/example/trex_kotlin/WorkoutNumberWheel.kt
+com/example/trex_kotlin/ReorderableList.kt
+com/example/trex_kotlin/CoachModeControl.kt
+com/example/trex_kotlin/AdaptivePolicy.kt

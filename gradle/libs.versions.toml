@@ -16,6 +16,11 @@ litert = "1.2.0"
 exifinterface = "1.3.7"
 credentials = "1.6.0"
 googleid = "1.2.1"
+# iPhone 화면(ios-ui) — Android composeBom 의 ui/foundation 1.11.0 과 맞춘다(§108).
+# material3 1.9.0 은 androidx material3 1.4.0(Android 와 같은 판)의 멀티플랫폼 판이다.
+composeMultiplatform = "1.11.1"
+composeMultiplatformMaterial3 = "1.9.0"
+composeMultiplatformIcons = "1.7.3"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -47,8 +52,14 @@ androidx-exifinterface = { group = "androidx.exifinterface", name = "exifinterfa
 androidx-credentials = { group = "androidx.credentials", name = "credentials", version.ref = "credentials" }
 androidx-credentials-play-services = { group = "androidx.credentials", name = "credentials-play-services-auth", version.ref = "credentials" }
 googleid = { group = "com.google.android.libraries.identity.googleid", name = "googleid", version.ref = "googleid" }
+cmp-runtime = { group = "org.jetbrains.compose.runtime", name = "runtime", version.ref = "composeMultiplatform" }
+cmp-foundation = { group = "org.jetbrains.compose.foundation", name = "foundation", version.ref = "composeMultiplatform" }
+cmp-ui = { group = "org.jetbrains.compose.ui", name = "ui", version.ref = "composeMultiplatform" }
+cmp-material3 = { group = "org.jetbrains.compose.material3", name = "material3", version.ref = "composeMultiplatformMaterial3" }
+cmp-material-icons-extended = { group = "org.jetbrains.compose.material", name = "material-icons-extended", version.ref = "composeMultiplatformIcons" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+compose-multiplatform = { id = "org.jetbrains.compose", version.ref = "composeMultiplatform" }
