@@ -14,7 +14,7 @@ import Combine
     private var engineDriven = false
     override init() { super.init(); synthesizer.delegate = self }
     /// 한국어 음성이 있는가 — 없으면 엔진이 숫자·문장 대신 톤을 낸다(Android `SpeechCoach.ready` 와 같은 뜻).
-    static var koreanVoiceAvailable: Bool { AVSpeechSynthesisVoice(language: "ko-KR") != nil }
+    nonisolated static var koreanVoiceAvailable: Bool { AVSpeechSynthesisVoice(language: "ko-KR") != nil }
     /// 엔진 대기열의 제출 하나. `flush` 면 재생 중인 말을 끊는다(끊긴 발화의 종결 콜백은 엔진 사건으로 보지 않는다).
     func play(_ submit: SpeechSubmit) {
         guard !muted, !submit.text.isEmpty else { onFinished?(); return }

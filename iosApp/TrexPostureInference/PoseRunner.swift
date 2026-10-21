@@ -96,7 +96,7 @@ final class FaceRunner {
         }
         var values: [Float] = []
         values.reserveCapacity(16)
-        for r in 0..<4 { for c in 0..<4 { values.append(m.value(atRow: r, column: c)) } }
+        for r in 0..<4 { for c in 0..<4 { values.append(m.value(atRow: UInt(r), column: UInt(c))) } }
         return FaceReading(found: true, matrix: values, inferMs: inferMs, rotationDeg: Float(rotate), headPx: Float((spec["headPx"] as? Double) ?? 0))
     }
 }
