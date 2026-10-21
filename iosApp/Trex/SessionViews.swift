@@ -187,7 +187,7 @@ struct SkeletonView: View {
     var highlight = Set<Int>()
     var provisional = Set<Int>()
     var shown: [Bool] = []
-    var target: [Float] = []
+    var target: [Float?] = []
     var motion: MotionCue?
     private let edges = [[11,12],[11,13],[13,15],[12,14],[14,16],[11,23],[12,24],[23,24],[23,25],[25,27],[24,26],[26,28],[27,31],[28,32],[0,7],[0,8]]
     var body: some View {
@@ -207,7 +207,7 @@ struct SkeletonView: View {
                             return min(output.normalized[index].visibility ?? 1, output.normalized[index].presence ?? 1) >= 0.5
                         }
                         func position(_ index: Int) -> CGPoint? {
-                            if target.count == 66, target[index*2].isFinite, target[index*2+1].isFinite { return project(Double(target[index*2]), Double(target[index*2+1])) }
+                            if target.count == 66, let x = target[index*2], let y = target[index*2+1], x.isFinite, y.isFinite { return project(Double(x), Double(y)) }
                             guard output.normalized.indices.contains(index) else { return nil }
                             return project(Double(output.normalized[index].x), Double(output.normalized[index].y))
                         }

@@ -83,7 +83,8 @@ struct EngineStatus: Decodable {
     var breathing: String?; var normal: [String] = []
     var provisionalNote: String?; var guideNote: String?; var note: String?; var floorMeasurement: String?
     var coverage: CoverageLine?; var provisional: [Int] = []
-    var shown: [Bool] = []; var target2d: [Float] = []
+    /// 관절 게이트의 목표 좌표(66) — 마지막으로 믿은 자리가 없는 관절은 null(엔진은 NaN 을 null 로 낸다).
+    var shown: [Bool] = []; var target2d: [Float?] = []
     var motion: MotionCue?; var hold: HoldHud?; var score: ScoreLine?
     var speech: [SpeechSubmit] = []; var tones: [String] = []; var fast = false
 }
