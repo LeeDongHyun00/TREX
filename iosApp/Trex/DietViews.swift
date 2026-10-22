@@ -29,8 +29,8 @@ struct DietView: View {
                 }
             }
         }.navigationTitle("식단 기록")
-            .sheet(isPresented: $adding) { FoodEntryView(date: date) }
-            .sheet(isPresented: $photos) { PhotoFoodView(date: date) }
+            .sheet(isPresented: $adding) { FoodEntryView(date: date).trexSheet() }
+            .sheet(isPresented: $photos) { PhotoFoodView(date: date).trexSheet() }
     }
 }
 struct FoodEntryView: View {
@@ -124,7 +124,7 @@ struct PhotoFoodView: View {
                         guard !saved.contains(suggestion.id) else { return }
                         store.data.meals.append(MealEntry(date: date, meal: meal, food: food, servings: servings)); store.save(); saved.insert(suggestion.id)
                         recognizer.remember(name: food.name, suggestion: suggestion, image: images.indices.contains(suggestion.photoIndex) ? images[suggestion.photoIndex] : nil)
-                    })
+                    }).trexSheet()
                 }
                 .sheet(isPresented: $camera) { FoodCamera { image in images = [image]; camera = false } }
                 .onChange(of: items) { selected in
