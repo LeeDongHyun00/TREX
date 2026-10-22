@@ -34,6 +34,9 @@ kotlin {
                 implementation(libs.cmp.ui)
                 implementation(libs.cmp.material3)
                 implementation(libs.cmp.material.icons.extended)
+                implementation(libs.kotlinx.datetime)
+                implementation(libs.kotlinx.atomicfu)
+                implementation(libs.androidx.lifecycle.viewmodel)
             }
         }
     }

@@ -1,0 +1,96 @@
+package com.example.trex_kotlin
+
+import android.app.Application
+import android.content.Context
+import android.content.SharedPreferences
+import com.example.trex_kotlin.posture.SetLabelStore
+import com.example.trex_kotlin.posture.SetSelfLabel
+import com.example.trex_kotlin.sync.HttpResponse
+import com.example.trex_kotlin.sync.HttpTransport
+import com.example.trex_kotlin.sync.NetworkException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.io.IOException
+import java.net.HttpURLConnection
+import java.net.URL
+
+/*
+ * 공유 앱 상태가 쓰는 플랫폼 기능의 Android 구현(§108). Android API 는 이 파일에 모으고, 공유 파일(ios-ui/android-sources.txt)은
+ * 경계 인터페이스([AppPlatform]·[KeyValueStore]·[HttpTransport])만 본다. 동작은 경계를 만들기 전과 같다.
+ * 이 파일은 iPhone 이 컴파일하지 않는다.
+ */
+
+class AndroidAppPlatform(private val app: Application) : AppPlatform {
+    override fun preferences(name: String): KeyValueStore = SharedPreferencesStore(app, name)
+    override val http: HttpTransport = HttpUrlConnectionTransport
+    override val apiBaseUrl: String get() = BuildConfig.TREX_API_BASE_URL
+    override val googleWebClientId: String get() = BuildConfig.GOOGLE_WEB_CLIENT_ID
+    override fun muscleLoadDatabase(): MuscleLoadDatabase = MuscleLoadStore(app)
+
+    override fun appendSetLabel(label: SetSelfLabel) {
+        val labelStore = SetLabelStore(app)
+        // 파일 IO 는 메인 스레드 밖에서 — SetLogStore 저장과 같은 이유
+        Thread { runCatching { labelStore.append(label) } }.start()
+    }
+}
+
+/** 기존 호출(`TrexStore(context)`)을 그대로 둔다 — SharedPreferences `trex_store`(테스트는 다른 이름). */
+fun TrexStore(context: Context, preferenceName: String = "trex_store"): TrexStore =
+    TrexStore(SharedPreferencesStore(context, preferenceName))
+
+/** SharedPreferences 를 그대로 감싼다. [KeyValueStore] 가 이름·의미를 SharedPreferences 에 맞춰 두었다. */
+class SharedPreferencesStore(context: Context, name: String) : KeyValueStore {
+    private val prefs: SharedPreferences = context.applicationContext.getSharedPreferences(name, Context.MODE_PRIVATE)
+
+    // SharedPreferences 는 리스너를 약하게 잡는다 — 필드로 붙들어 둔다.
+    private var changeListener: SharedPreferences.OnSharedPreferenceChangeListener? = null
+
+    override fun getString(key: String, defValue: String?): String? = prefs.getString(key, defValue)
+    override fun getBoolean(key: String, defValue: Boolean): Boolean = prefs.getBoolean(key, defValue)
+    override fun getLong(key: String, defValue: Long): Long = prefs.getLong(key, defValue)
+    override fun contains(key: String): Boolean = prefs.contains(key)
+    override fun edit(): KeyValueStore.Editor = Editor(prefs.edit())
+
+    override fun setChangeListener(onChange: (String) -> Unit) {
+        changeListener?.let(prefs::unregisterOnSharedPreferenceChangeListener)
+        changeListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key -> key?.let(onChange) }
+            .also(prefs::registerOnSharedPreferenceChangeListener)
+    }
+
+    private class Editor(private val edit: SharedPreferences.Editor) : KeyValueStore.Editor {
+        override fun putString(key: String, value: String?): KeyValueStore.Editor { edit.putString(key, value); return this }
+        override fun putBoolean(key: String, value: Boolean): KeyValueStore.Editor { edit.putBoolean(key, value); return this }
+        override fun putLong(key: String, value: Long): KeyValueStore.Editor { edit.putLong(key, value); return this }
+        override fun remove(key: String): KeyValueStore.Editor { edit.remove(key); return this }
+        override fun clear(): KeyValueStore.Editor { edit.clear(); return this }
+        override fun apply() = edit.apply()
+        override fun commit(): Boolean = edit.commit()
+    }
+}
+
+/** HttpURLConnection 한 번 주고받기 — 경계를 만들기 전 TrexApi.call 의 연결 부분 그대로. IOException 은 [NetworkException] 으로 바꾼다. */
+object HttpUrlConnectionTransport : HttpTransport {
+    override suspend fun send(method: String, url: String, headers: Map<String, String>, body: String?): HttpResponse =
+        withContext(Dispatchers.IO) {
+            try {
+                val conn = URL(url).openConnection() as HttpURLConnection
+                try {
+                    conn.requestMethod = method
+                    conn.connectTimeout = 10_000
+                    conn.readTimeout = 20_000
+                    headers.forEach { (name, value) -> conn.setRequestProperty(name, value) }
+                    if (body != null) {
+                        conn.doOutput = true
+                        conn.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
+                    }
+                    val status = conn.responseCode
+                    val stream = if (status < 400) conn.inputStream else conn.errorStream
+                    HttpResponse(status, stream?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }.orEmpty())
+                } finally {
+                    conn.disconnect()
+                }
+            } catch (e: IOException) {
+                throw NetworkException(e.message, e)
+            }
+        }
+}

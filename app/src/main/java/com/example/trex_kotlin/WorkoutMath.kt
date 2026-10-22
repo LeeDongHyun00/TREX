@@ -1,6 +1,5 @@
 package com.example.trex_kotlin
 
-import java.util.Calendar
 import kotlin.math.roundToInt
 
 /**
@@ -79,7 +78,7 @@ fun Workout.loadLabel(): String = when (category) {
 // ---- 끼니 시간대
 
 /** 현재 시각이 속하는 끼니 슬롯 id ("breakfast"/"lunch"/"snack"/"dinner"). */
-fun currentMealId(hour: Int = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)): String = when {
+fun currentMealId(hour: Int = currentHour()): String = when {
     hour < 10 -> "breakfast"
     hour < 14 -> "lunch"
     hour < 18 -> "snack"
@@ -92,7 +91,7 @@ data class MealTimeInfo(
     val timeHint: String,
 )
 
-fun currentMealInfo(hour: Int = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)): MealTimeInfo = when {
+fun currentMealInfo(hour: Int = currentHour()): MealTimeInfo = when {
     hour < 10 -> MealTimeInfo("breakfast", "아침 식사", "08:00 ~ 10:00")
     hour < 14 -> MealTimeInfo("lunch", "점심 식사", "12:00 ~ 14:00")
     hour < 18 -> MealTimeInfo("snack", "오후 간식", "15:00 ~ 17:00")

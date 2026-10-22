@@ -5,8 +5,6 @@ import com.example.trex_kotlin.posture.CoachMode
 import com.example.trex_kotlin.posture.OnsetKind
 import com.example.trex_kotlin.posture.PostureSetReport
 import com.example.trex_kotlin.posture.SetVerdict
-import java.time.LocalDate
-import java.util.Calendar
 
 enum class TrexTab(val label: String) {
     Home("홈"),
@@ -705,7 +703,7 @@ fun createWorkoutHistoryDay(
     reports: Map<String, PostureSetReport> = emptyMap(),
     elapsedByWorkout: Map<String, Int> = emptyMap(),
 ): WorkoutHistoryDay {
-    val calendar = Calendar.getInstance()
+    val today = localToday()
     val items = plan.map { workout ->
         val report = reports[workout.id]
         val seconds = elapsedByWorkout[workout.id]?.coerceAtLeast(0) ?: 0
@@ -722,9 +720,9 @@ fun createWorkoutHistoryDay(
     }
 
     return WorkoutHistoryDay(
-        epochDay = LocalDate.now().toEpochDay(),
-        dayLabel = calendar.koreanDayOfWeek(),
-        dateLabel = "${calendar.get(Calendar.MONTH) + 1}/${calendar.get(Calendar.DAY_OF_MONTH)}",
+        epochDay = today.toEpochDays(),
+        dayLabel = koreanDayOfWeek(today.dayOfWeek),
+        dateLabel = monthDayLabel(today),
         items = items,
         averageMinutes = 0,
         averageCalories = 0,
@@ -762,14 +760,4 @@ fun WorkoutHistoryDay.summaryText(): String = dayWorkoutAssessment(this)
 fun WorkoutHistoryDay.durationLabel(): String {
     val seconds = items.sumOf { it.durationSeconds ?: it.durationMinutes * 60 }
     return if (seconds < 60) "${seconds}초" else "${seconds / 60}분"
-}
-
-fun Calendar.koreanDayOfWeek(): String = when (get(Calendar.DAY_OF_WEEK)) {
-    Calendar.MONDAY -> "월"
-    Calendar.TUESDAY -> "화"
-    Calendar.WEDNESDAY -> "수"
-    Calendar.THURSDAY -> "목"
-    Calendar.FRIDAY -> "금"
-    Calendar.SATURDAY -> "토"
-    else -> "일"
 }

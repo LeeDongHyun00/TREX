@@ -7,3 +7,26 @@ com/example/trex_kotlin/WorkoutNumberWheel.kt
 com/example/trex_kotlin/ReorderableList.kt
 com/example/trex_kotlin/CoachModeControl.kt
 com/example/trex_kotlin/AdaptivePolicy.kt
+# Phase 1: 앱 상태·저장·동기화(동작 불변 리팩터). 플랫폼 기능은 AppPlatform·KeyValueStore·HttpTransport 경계,
+# Android 구현은 AndroidPlatform.kt(목록 밖). 날짜는 kotlinx-datetime, org.json 은 posture-core 의 공통 판.
+com/example/trex_kotlin/AppPlatform.kt
+com/example/trex_kotlin/KeyValueStore.kt
+com/example/trex_kotlin/TrexTime.kt
+com/example/trex_kotlin/NameUuid.kt
+com/example/trex_kotlin/TrexAppState.kt
+com/example/trex_kotlin/TrexStore.kt
+com/example/trex_kotlin/TrexData.kt
+com/example/trex_kotlin/WorkoutMath.kt
+com/example/trex_kotlin/WorkoutCatalog.kt
+com/example/trex_kotlin/WorkoutSession.kt
+com/example/trex_kotlin/LoadSetJson.kt
+com/example/trex_kotlin/LegacyDemoData.kt
+com/example/trex_kotlin/RecordRetention.kt
+com/example/trex_kotlin/RecordOverview.kt
+com/example/trex_kotlin/RoutineOverview.kt
+com/example/trex_kotlin/PostureSupport.kt
+com/example/trex_kotlin/MuscleLoadAdapter.kt
+com/example/trex_kotlin/sync/AuthSession.kt
+com/example/trex_kotlin/sync/SyncManager.kt
+com/example/trex_kotlin/sync/SyncRules.kt
+com/example/trex_kotlin/sync/TrexApi.kt

@@ -1,6 +1,8 @@
 package com.example.trex_kotlin
 
 import com.example.trex_kotlin.posture.ExerciseProfiles
+import kotlinx.atomicfu.locks.SynchronizedObject
+import kotlinx.atomicfu.locks.synchronized
 import kotlin.math.ceil
 
 /** 자세 관측 방식과 독립된 운동 목표. 반복 운동의 예상 시간은 종료 조건이 아니다. */
@@ -165,6 +167,9 @@ fun SessionProgress.workDurations(steps: List<SessionStep>): Map<String, Int> = 
  * [ENABLED] 가 false 면 TrexApp 이 묶지 않는다(설계 §8 '플래그 뒤에 둔다').
  */
 class HoldBridge {
+    // 분석 스레드와 tick 루프가 같이 만진다. @Synchronized 는 iPhone(Kotlin/Native)에서 아무 일도 안 하므로 두 플랫폼에서 실제로 잠그는
+    // atomicfu 잠금을 쓴다(§108). Android(JVM)에서는 같은 모니터 잠금이다 — 이 객체 대신 잠금 객체를 잡을 뿐, 상태는 아래 메서드로만 바뀐다.
+    private val lock = SynchronizedObject()
     private var key: String? = null
     private var held = 0L
     private var camera = true
@@ -174,18 +179,20 @@ class HoldBridge {
     private var catchUp = 0L
 
     /** 이 세트를 묶는다(WORK 시작) — 상태를 처음부터. */
-    @Synchronized fun bind(key: String) {
+    fun bind(key: String) = synchronized(lock) {
         this.key = key; held = 0L; camera = true; consumed = 0L; cameraWall = 0L; sincePublish = 0L; catchUp = 0L
     }
 
     /** 세트를 떠남(화면 소멸·세션 시작). 다른 키면 그대로 둔다. null 이면 무조건 푼다. */
-    @Synchronized fun release(key: String? = null) { if (key == null || this.key == key) this.key = null }
+    fun release(key: String? = null) = synchronized(lock) { if (key == null || this.key == key) this.key = null }
 
     /** 분석 스레드 — 시계의 인정 시간과 출처(`camera`면 true). 묶인 키가 아니면 버린다. */
-    @Synchronized fun publish(key: String, heldMs: Long, camera: Boolean) {
-        if (this.key != key) return
-        held = maxOf(held, heldMs); sincePublish = 0L
-        if (this.camera && !camera) toClock()
+    fun publish(key: String, heldMs: Long, camera: Boolean) {
+        synchronized(lock) {
+            if (this.key != key) return
+            held = maxOf(held, heldMs); sincePublish = 0L
+            if (this.camera && !camera) toClock()
+        }
     }
 
     /**
@@ -193,27 +200,29 @@ class HoldBridge {
      * 분석 소식이 끊겨 벽시계로 넘어가는 틱은 그 틱의 벽시계를 카메라 몫에 넣기 **전에** 넘긴다 — 전에는 소급분(그때까지의 벽시계)에 이번 틱이 이미 들어 있는데
      * 이번 틱을 또 더해 한 틱만큼 두 번 줄였다(리뷰 2026-10-07).
      */
-    @Synchronized fun take(key: String?, wallDeltaMs: Long): Long? {
-        if (key == null || this.key != key) return null
-        val wall = wallDeltaMs.coerceAtLeast(0L)
-        if (camera) {
-            sincePublish += wall
-            if (sincePublish <= com.example.trex_kotlin.posture.PlankHoldClock.FALLBACK_MS) {
-                cameraWall += wall
-                val d = (held - consumed).coerceAtLeast(0L); consumed = maxOf(consumed, held)
-                return d
+    fun take(key: String?, wallDeltaMs: Long): Long? {
+        synchronized(lock) {
+            if (key == null || this.key != key) return null
+            val wall = wallDeltaMs.coerceAtLeast(0L)
+            if (camera) {
+                sincePublish += wall
+                if (sincePublish <= com.example.trex_kotlin.posture.PlankHoldClock.FALLBACK_MS) {
+                    cameraWall += wall
+                    val d = (held - consumed).coerceAtLeast(0L); consumed = maxOf(consumed, held)
+                    return d
+                }
+                toClock()
             }
-            toClock()
+            val out = wall + catchUp; catchUp = 0L
+            return out
         }
-        val out = wall + catchUp; catchUp = 0L
-        return out
     }
 
     /** 지금 카메라 시간으로 재는가(묶여 있고 폴백 전). */
-    val usesCamera: Boolean @Synchronized get() = key != null && camera
+    val usesCamera: Boolean get() = synchronized(lock) { key != null && camera }
 
     /** 이 세트([key])를 묶었고 벽시계로 넘어갔는가(시계 폴백이든 분석 소식 끊김이든) — 화면·리포트가 '카메라 미확인' 을 밝힌다. */
-    @Synchronized fun clockFor(key: String?): Boolean = key != null && this.key == key && !camera
+    fun clockFor(key: String?): Boolean = synchronized(lock) { key != null && this.key == key && !camera }
 
     private fun toClock() {
         camera = false

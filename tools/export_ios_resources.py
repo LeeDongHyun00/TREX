@@ -10,7 +10,7 @@ def main():
     p = argparse.ArgumentParser(); p.add_argument('--check', action='store_true'); check = p.parse_args().check
     files = {}
     catalog = []
-    for name, reps, duration, category in re.findall(r'WorkoutTemplate\("([^"]+)", "([^"]+)", "([^"]+)", "([^"]+)", true\)', (JAVA/'Sheets.kt').read_text(encoding='utf-8')):
+    for name, reps, duration, category in re.findall(r'WorkoutTemplate\("([^"]+)", "([^"]+)", "([^"]+)", "([^"]+)", true\)', (JAVA/'WorkoutCatalog.kt').read_text(encoding='utf-8')):
         numbers = [int(x) for x in re.findall(r'\d+', reps)]
         catalog.append(dict(name=name, category=category, repetitions=numbers[0], sets=numbers[-1], hold='초' in reps))
     assert len(catalog) == 26

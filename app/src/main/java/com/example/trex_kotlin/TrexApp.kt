@@ -74,7 +74,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
+import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.trex_kotlin.sync.requestGoogleIdToken
 import com.example.trex_kotlin.posture.BaselineGuideScreen
 import com.example.trex_kotlin.posture.PostureLabScreen
 import com.example.trex_kotlin.posture.SpeechCoach
@@ -114,7 +116,7 @@ fun Workout.setDraft(): SetDraft {
 }
 
 @Composable
-fun TrexApp(app: AppViewModel = viewModel()) {
+fun TrexApp(app: AppViewModel = viewModel { AppViewModel(AndroidAppPlatform(checkNotNull(this[APPLICATION_KEY]))) }) {
     TrexAppTheme(mode = app.themeMode) {
         val c = Trex.c
         val context = LocalContext.current
@@ -427,7 +429,7 @@ fun TrexApp(app: AppViewModel = viewModel()) {
                             RootRoute.Auth -> AuthScreen(
                             busy = app.authBusy,
                             message = app.authMessage,
-                            onGoogle = { app.continueWithGoogle(context.findTrexActivity() ?: context) },
+                            onGoogle = { app.continueWithGoogle { clientId -> requestGoogleIdToken(context.findTrexActivity() ?: context, clientId) } },
                             onWithoutAccount = { app.continueWithoutAccount() },
                             )
 

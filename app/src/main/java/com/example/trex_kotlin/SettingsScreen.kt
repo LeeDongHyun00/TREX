@@ -1,5 +1,6 @@
 package com.example.trex_kotlin
 
+import com.example.trex_kotlin.sync.requestGoogleIdToken
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
@@ -124,7 +125,7 @@ private fun AccountGroup(app: AppViewModel) {
     SettingsGroup {
         if (account == null) {
             SettingsRow("Google 계정 연결", Icons.Rounded.CloudUpload, if (app.authBusy) "연결 중…" else null, onClick = {
-                app.continueWithGoogle(context.findTrexActivity() ?: context)
+                app.continueWithGoogle { clientId -> requestGoogleIdToken(context.findTrexActivity() ?: context, clientId) }
             })
             Text(
                 app.authMessage ?: "기록을 계정에 백업하고 다른 기기에서 이어서 써요",

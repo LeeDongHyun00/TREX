@@ -2,9 +2,45 @@ name: iOS 검증과 미서명 IPA
 on:
   workflow_dispatch:
   push:
-    branches: [ios-redesign]
+    branches: [ios-redesign, ios-compose-ui]
+  # §108: iPhone 이 Android 정본 파일을 그대로 컴파일하므로, main 의 Android 변경이 공유 파일(ios-ui/android-sources.txt)을
+  # 깨면 PR 에서 바로 보이게 한다. 가벼운 shared 작업만 돈다(IPA 는 push 때).
+  pull_request:
+    branches: [main]
+    paths: ['app/src/main/java/**', 'app/src/test/java/**', 'ios-ui/**', 'posture-core/**', 'tools/**', 'gradle/**', '*.gradle.kts']
 jobs:
+  shared:
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: 빌드 의존성 캐시 복원
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            ~/.konan
+          key: macos-ios-deps-v1-${{ hashFiles('build.gradle.kts', 'gradle/libs.versions.toml', 'posture-core/build.gradle.kts', 'ios-ui/build.gradle.kts', 'gradle/wrapper/gradle-wrapper.properties', 'iosApp/Podfile.trex') }}
+      - name: 호환 Xcode 선택
+        run: |
+          task_xcode_app="$(ls -d /Applications/Xcode_26*.app | sort | head -1)"
+          if [ -z "$task_xcode_app" ]; then echo 'Xcode 26이 설치된 macOS runner가 필요합니다.' >&2; exit 1; fi
+          sudo xcode-select -s "$task_xcode_app/Contents/Developer"
+          xcodebuild -version
+      - name: 공유 엔진·화면 컴파일(Android 정본 파일이 iPhone 에서도 컴파일되는가)
+        run: |
+          python3 tools/sync_ios_core.py --check
+          bash gradlew -PiosOnly=true :posture-core:jvmTest :ios-ui:compileKotlinIosSimulatorArm64
   ios:
+    if: github.event_name != 'pull_request'
     runs-on: macos-15
     timeout-minutes: 60
     steps:

@@ -54,7 +54,12 @@ def main():
     face = 'package com.example.trex_kotlin.posture\n\n// PostureAnalyzer.faceYawDeg 정본 슬라이스(§101d) — Swift 가 넘긴 얼굴 자세 행렬의 요 계산을 Android 와 같은 식으로 한다.\n' + face + '\n'
     log = (SOURCE/'PostureSetLog.kt').read_text(encoding='utf-8')
     log = log[log.index('data class RepEngineLog('):log.index('/**\n * 세트 중 카운터의 진행 사이클')]
-    for name, output in [('PortableOrientation.kt', orientation), ('RepEngineLog.kt', 'package com.example.trex_kotlin.posture\n\n' + log.rstrip() + '\n'), ('FaceYaw.kt', face)]:
+    # 자가 라벨 값(§108) — 앱 상태(AppViewModel)가 만들고 파일 저장(SetLabelStore)은 플랫폼이 한다. 값만 잘라 온다.
+    label = (SOURCE/'PostureSetLabel.kt').read_text(encoding='utf-8')
+    label = label[label.index('data class SetSelfLabel('):label.index('class SetLabelStore(')]
+    assert 'android' not in label and 'File' not in label, 'PostureSetLabel.SetSelfLabel 의 형태를 확인하세요.'
+    label = 'package com.example.trex_kotlin.posture\n\n// PostureSetLabel.SetSelfLabel 정본 슬라이스(§108).\n' + label.rstrip() + '\n'
+    for name, output in [('PortableOrientation.kt', orientation), ('RepEngineLog.kt', 'package com.example.trex_kotlin.posture\n\n' + log.rstrip() + '\n'), ('FaceYaw.kt', face), ('SetSelfLabel.kt', label)]:
         target = TARGET/name
         if args.check:
             if not target.exists() or target.read_text(encoding='utf-8') != output: mismatches.append(name)

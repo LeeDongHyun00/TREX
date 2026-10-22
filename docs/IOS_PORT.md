@@ -18,7 +18,7 @@ Android 에서 iOS 로 옮길 때 무엇을 옮기고 무엇을 옮기지 않는
 6. **세트 로그는 iOS 형식(schema 2)이고 Android `SetLogJson` 재생 형식이 아니다.** 반복 시각·기각 사유·플랭크 구간·바닥 회의 시선·말한 시선 문장을 머리줄에, 프레임마다 피처·xy·world·가시성·중력을 남긴다. 연구 도구에 그대로 넣지 않는다 — 폰 로그를 확보한 뒤 변환기를 따로 둔다.
 7. **자산은 Android 정본 바이트다.** 규칙 JSON·정상 표본 TSV·자세 모델·얼굴 모델은 `app/src/main/assets/posture/` 를 번들에 그대로 복사하고 `ASSET_BASELINE.json`(5개) 의 SHA 로 앱 시작·CI 에서 대조한다. 카탈로그 26·가이드 10·영양 350 은 `tools/export_ios_resources.py` 가 Kotlin 정본에서 뽑는다. 음식 YOLO 만 TFLite C API 호환을 위해 inline 가중치 사본(§107c~e)이다.
 8. **Android 의 동작은 바꾸지 않는다(§108 에서 '손대지 않는다'를 풀었다, 2026-10-22 사용자 승인).** 화면을 iOS 와 공유하려고 Android API 호출을 작은 플랫폼 파일로 옮기는 리팩터는 한다. 동작·문구·간격은 그대로이고 Android 테스트와 실기기 확인을 거친다. iOS 를 위해 모집단 파라미터·규칙 JSON 을 바꾸지 않는다(원칙 #4).
-9. **화면도 한 곳에만 있다(§108).** iPhone 화면은 `ios-ui` 가 Android 정본 Compose 파일을 Compose Multiplatform 으로 **그대로** 컴파일한 것이다. 공유 목록은 `ios-ui/android-sources.txt` 한 곳이고 사본을 커밋하지 않는다(빌드 때마다 `app/` 에서 가져온다). 목록에 오른 파일은 commonMain 에서 컴파일되므로 Compose·Kotlin 표준·`posture-core` 만 쓸 수 있다 — Android API 를 쓰면 iOS 빌드가 깨지고, 그것이 경계 검사다. 엔진과 화면은 정적 `TrexCore` 프레임워크 하나다.
+9. **화면도 한 곳에만 있다(§108).** iPhone 화면은 `ios-ui` 가 Android 정본 Compose 파일을 Compose Multiplatform 으로 **그대로** 컴파일한 것이다. 공유 목록은 `ios-ui/android-sources.txt` 한 곳이고 사본을 커밋하지 않는다(빌드 때마다 `app/` 에서 가져온다). 목록에 오른 파일은 commonMain 에서 컴파일되므로 Compose·Kotlin 표준·`posture-core` 만 쓸 수 있다 — Android API 를 쓰면 iOS 빌드가 깨지고, 그것이 경계 검사다. 엔진과 화면은 정적 `TrexCore` 프레임워크 하나다. 앱 상태(`AppViewModel`)·저장·동기화도 같은 목록에 있고 플랫폼 기능(키-값 저장소·HTTP·근육 장부·라벨 파일)은 `AppPlatform` 경계로 받는다 — Android 구현은 `AndroidPlatform.kt`(§108a).
 
 ## 구현 범위 (§107f 에서 더해진 것)
 

@@ -6,7 +6,7 @@ import org.junit.Test
 
 class PersonalizationTest {
     @Test fun everyCatalogExerciseHasOneExplicitProfile() {
-        val source=File("src/main/java/com/example/trex_kotlin/Sheets.kt").readText()
+        val source=File("src/main/java/com/example/trex_kotlin/WorkoutCatalog.kt").readText()   // §108 에서 Sheets.kt 에서 옮겼다
         val names=Regex("WorkoutTemplate\\(\"([^\"]+)\"").findAll(source).map { it.groupValues[1] }.toSet()
         assertEquals(26,names.size)
         assertEquals(names,ExerciseProfiles.all.map { it.name }.toSet())
