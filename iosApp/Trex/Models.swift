@@ -30,6 +30,8 @@ struct Guide: Codable, Identifiable {
 struct Food: Codable, Identifiable {
     var id: String { name }
     var name: String; var kcal: Int; var carbs: Double; var protein: Double; var fat: Double
+    /// 1인분 실측이 아닌 추정값(일반 식품 8종) — 기록할 때 고지한다. 옛 기록에는 키가 없다.
+    var approximate: Bool? = nil
 }
 struct MealEntry: Codable, Identifiable {
     var id = UUID(); var date = Date(); var meal = "점심"

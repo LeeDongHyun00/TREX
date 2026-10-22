@@ -58,3 +58,8 @@ MainSheet.Photo → PhotoFoodSheet
 ## 모델 교체 절차
 
 `training/train_food_yolov8_colab.ipynb` 실행 → `yolov8n_food.tflite` + `food_labels.txt` 를 `assets/models/` 에 덮어쓰기 → `foodDatabase` 에 새 라벨의 영양값 추가(라벨명 = DB 키) → 빌드. `FoodDetector` 는 입력 float32·출력 `[1, 4+클래스수, 박스수]` 를 로드 시 검사하므로 형식이 어긋나면 로그에 이유가 남는다.
+
+## iPhone (2026-10-22, `ios-redesign`)
+
+같은 모델 3개(YOLO 는 TFLite C API 호환 inline 가중치 사본)와 같은 흐름을 `iosApp/Trex/DietViews.swift`(`PhotoFoodView`)·`FoodRecognition.swift` 가 든다. 이름 문턱·후보·합치기·전체 1회 폴백·기억 정책은 Swift 에 두지 않고 공통 `posture-core` 의 `IosFood`·`IosFoodMemory`(이 문서의 `FoodRegions`·`FoodMemory` 그대로)가 정한다 — `docs/IOS_PORT.md` 기준 1. 기억 파일은 Android 와 같은 텍스트 형식이다. 실기기 정확도는 미검증.
+
