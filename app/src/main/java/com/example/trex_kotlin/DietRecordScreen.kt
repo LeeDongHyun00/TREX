@@ -25,9 +25,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import java.time.LocalDate
-import java.time.format.TextStyle
-import java.util.Locale
+import kotlinx.datetime.LocalDate
 
 @Composable
 internal fun DietRecordLink(onClick: () -> Unit) {
@@ -48,7 +46,7 @@ fun DietRecordScreen(app: AppViewModel, onBack: () -> Unit) {
     val today = app.calendarDay
     var selected by rememberSaveable { mutableLongStateOf(today) }
     LaunchedEffect(today) { selected = selected.coerceIn(today - 6, today) }
-    val days = (6 downTo 0).map { LocalDate.ofEpochDay(today - it) }
+    val days = (6 downTo 0).map { LocalDate.fromEpochDays(today - it) }
     Column(Modifier.fillMaxSize().background(c.bg).statusBarsPadding().navigationBarsPadding()) {
         Text("식단 기록", color = c.text, fontSize = 30.sp, fontWeight = FontWeight.SemiBold,
             modifier = Modifier.padding(start = 24.dp, top = 22.dp))
@@ -59,11 +57,11 @@ fun DietRecordScreen(app: AppViewModel, onBack: () -> Unit) {
                 val recorded = app.dietByDay[day.toEpochDay()]?.values?.any { it.isNotEmpty() } == true
                 Column(Modifier.weight(1f).clip(RoundedCornerShape(20.dp)).background(if (active) c.primaryWash else c.bg)
                     .selectable(active, role = Role.Tab, onClick = { selected = day.toEpochDay() })
-                    .semantics { contentDescription = "${day.monthValue}월 ${day.dayOfMonth}일 식단${if (recorded) ", 기록 있음" else ", 기록 없음"}" }
+                    .semantics { contentDescription = "${day.monthValue}월 ${day.day}일 식단${if (recorded) ", 기록 있음" else ", 기록 없음"}" }
                     .padding(vertical = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(if (day.toEpochDay() == today) "오늘" else day.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.KOREAN),
+                    Text(if (day.toEpochDay() == today) "오늘" else koreanDayOfWeek(day.dayOfWeek),
                         color = if (active) c.primaryText else c.text2, fontSize = 11.sp)
-                    Text("${day.dayOfMonth}", color = if (active) c.primaryText else c.text, fontSize = 19.sp,
+                    Text("${day.day}", color = if (active) c.primaryText else c.text, fontSize = 19.sp,
                         fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 7.dp, bottom = 8.dp))
                     Box(Modifier.size(4.dp).background(if (recorded) c.primaryText else c.line, RoundedCornerShape(2.dp)))
                 }
@@ -72,13 +70,13 @@ fun DietRecordScreen(app: AppViewModel, onBack: () -> Unit) {
         AnimatedContent(selected, modifier = Modifier.weight(1f), transitionSpec = {
             (fadeIn(tween(180)) + slideInHorizontally(tween(220)) { if (targetState > initialState) 24 else -24 }) togetherWith fadeOut(tween(120))
         }, label = "diet-record-date") { day ->
-            val date = LocalDate.ofEpochDay(day)
+            val date = LocalDate.fromEpochDays(day)
             val slots = app.dietByDay[day].orEmpty()
             val entries = slots.values.flatten()
             val total = entries.totalNutrition()
             LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(horizontal = 24.dp, vertical = 26.dp)) {
                 item {
-                    Text("${date.monthValue}월 ${date.dayOfMonth}일", color = c.text2, fontSize = 14.sp)
+                    Text("${date.monthValue}월 ${date.day}일", color = c.text2, fontSize = 14.sp)
                     if (entries.isEmpty()) {
                         Text("기록된 식사가 없어요.", color = c.text, fontSize = 21.sp, fontWeight = FontWeight.Medium,
                             modifier = Modifier.padding(top = 30.dp, bottom = 20.dp))

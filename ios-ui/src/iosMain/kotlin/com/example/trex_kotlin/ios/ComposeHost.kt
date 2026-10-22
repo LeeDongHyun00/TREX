@@ -12,8 +12,11 @@ import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.asSkiaBitmap
 import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
+import androidx.compose.ui.uikit.OnFocusBehavior
 import androidx.compose.ui.window.ComposeUIViewController
+import com.example.trex_kotlin.AppViewModel
 import com.example.trex_kotlin.ThemeMode
+import com.example.trex_kotlin.TrexApp
 import kotlinx.cinterop.BetaInteropApi
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.addressOf
@@ -30,7 +33,16 @@ import platform.Foundation.writeToFile
 import platform.UIKit.UIViewController
 import kotlin.time.TimeSource
 
-/** Swift 가 띄우는 입구. 화면은 Android 정본 Compose 부품이 그린다(§108). */
+/**
+ * iPhone 앱 화면(§108 Phase 2) — Android 와 같은 [TrexApp]. 앱 상태는 iPhone 플랫폼 구현([IosAppPlatform]) 위에서 앱 수명 동안 하나다.
+ * 키보드는 Compose 의 imePadding 이 맞춘다 — UIKit 이 화면을 한 번 더 올리면 두 번 밀린다(이전 CMP 시도에서 확인).
+ */
+fun TrexAppViewController(): UIViewController = ComposeUIViewController(configure = { onFocusBehavior = OnFocusBehavior.DoNothing }) {
+    val app = remember { AppViewModel(IosAppPlatform()) }
+    TrexApp(app)
+}
+
+/** 개발용 디자인 부품 화면(Phase 0 스파이크). */
 fun MainViewController(): UIViewController = ComposeUIViewController {
     var mode by remember { mutableStateOf(ThemeMode.System) }
     ComposeProbe(mode) { mode = it }

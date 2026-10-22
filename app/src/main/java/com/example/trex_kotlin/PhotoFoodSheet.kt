@@ -456,7 +456,7 @@ internal fun PhotoFoodSheet(app: AppViewModel, onClose: () -> Unit) {
         val spotPreview = remember(shownSpot?.id, photos) { shownSpot?.let { cropSpot(photos.getOrNull(it.photoIndex), it) } }
         FoodPicker(
             app = app,
-            spotPreview = spotPreview,
+            spotPreview = spotPreview?.asImageBitmap(),
             title = when {
                 splitting -> "이 자리의 ${replacing.name} 을(를) 바꾸기"
                 replacing != null -> "${replacing.name} 을(를) 바꾸기"

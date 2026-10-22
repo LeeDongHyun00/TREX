@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.foundation.layout.heightIn
@@ -650,7 +649,7 @@ internal fun FoodPicker(
      * 사진에서 누른 자리를 잘라낸 그림. 겹친 "?" 여럿 중 무엇을 눌렀는지 사진만으로는 헷갈려서(실기기 사용 소감, 2026-09-27),
      * 고르는 창 맨 위에 그 자리를 보여준다.
      */
-    spotPreview: android.graphics.Bitmap? = null,
+    spotPreview: androidx.compose.ui.graphics.ImageBitmap? = null,
     /** 내 음식 기억이 이 자리와 비슷하다고 한 음식 이름. 사용자가 전에 이 사진 자리들에 직접 붙인 이름이다. */
     rememberedCandidates: List<String> = emptyList(),
     onPick: (String, Nutrition) -> Unit,
@@ -670,7 +669,7 @@ internal fun FoodPicker(
         onDismissRequest = onDismiss,
         // 화면의 유일한 입력칸이 이 안에 있다. 인셋을 창이 알아서 맞추게 두면 키보드가 올라올 때
         // 목록 아래쪽과 "등록하고 담기" 버튼이 가린다. SheetHost 와 같은 조합으로 직접 맞춘다.
-        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
+        properties = fullScreenDialogProperties(),
     ) {
         Box(Modifier.fillMaxSize().imePadding().navigationBarsPadding(), contentAlignment = Alignment.Center) {
             Column(
@@ -692,7 +691,7 @@ internal fun FoodPicker(
                 }
                 if (spotPreview != null) {
                     androidx.compose.foundation.Image(
-                        bitmap = spotPreview.asImageBitmap(),
+                        bitmap = spotPreview,
                         contentDescription = "누른 자리",
                         contentScale = ContentScale.Fit,
                         modifier = Modifier
@@ -977,7 +976,7 @@ private fun AddWorkoutSheet(app: AppViewModel, onClose: () -> Unit) {
                         onClick = {
                             app.updatePlan(
                                 app.workoutPlan + Workout(
-                                    id = "custom-${System.currentTimeMillis()}-${t.name.hashCode()}",
+                                    id = "custom-${nowMillis()}-${t.name.hashCode()}",
                                     name = t.name, reps = t.reps, duration = t.duration,
                                     posture = t.posture, category = t.category,
                                 ),

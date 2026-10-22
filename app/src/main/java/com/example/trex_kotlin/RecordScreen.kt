@@ -27,15 +27,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.trex_kotlin.posture.FormLabel
-import java.time.LocalDate
-import java.time.format.TextStyle
-import java.util.Locale
+import kotlinx.datetime.LocalDate
 
 /** 날짜는 접힌 목록으로 시작한다. 숫자 요약과 실제 저장 내용을 분리한다. */
 @Composable
 fun RecordScreen(app: AppViewModel, onBack: () -> Unit) {
     val c = Trex.c
-    val today = LocalDate.ofEpochDay(app.calendarDay)
+    val today = LocalDate.fromEpochDays(app.calendarDay)
     val days = (0..6).map { today.minusDays(it.toLong()) }.map { date ->
         date to app.workoutHistory.firstOrNull { it.epochDay == date.toEpochDay() }
     }
@@ -53,7 +51,7 @@ fun RecordScreen(app: AppViewModel, onBack: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(10.dp)) {
             item(key = "summary") {
                 Text("최근 7일", color = c.text, fontSize = 30.sp, fontWeight = FontWeight.SemiBold)
-                Text("${days.last().first.monthValue}.${days.last().first.dayOfMonth} – ${today.monthValue}.${today.dayOfMonth}",
+                Text("${days.last().first.monthValue}.${days.last().first.day} – ${today.monthValue}.${today.day}",
                     color = c.text2, fontSize = 14.sp, modifier = Modifier.padding(top = 6.dp))
                 Row(Modifier.fillMaxWidth().padding(top = 28.dp, bottom = 26.dp), horizontalArrangement = Arrangement.spacedBy(44.dp)) {
                     RecordMetric("${activeDays}일", "운동한 날")
@@ -71,13 +69,13 @@ fun RecordScreen(app: AppViewModel, onBack: () -> Unit) {
                 Surface(shape = RoundedCornerShape(20.dp), color = c.surface, modifier = Modifier.fillMaxWidth()) {
                     Column {
                         Row(Modifier.fillMaxWidth().clickable { expanded = if (open) null else date.toEpochDay() }
-                            .semantics { contentDescription = "${date.monthValue}월 ${date.dayOfMonth}일 기록"; stateDescription = if (open) "펼침" else "접힘" }
+                            .semantics { contentDescription = "${date.monthValue}월 ${date.day}일 기록"; stateDescription = if (open) "펼침" else "접힘" }
                             .padding(horizontal = 20.dp, vertical = 20.dp), verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) {
                                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                    Text(date.dayOfWeek.getDisplayName(TextStyle.FULL, Locale.KOREAN), color = c.text,
+                                    Text(koreanDayOfWeekFull(date.dayOfWeek), color = c.text,
                                         fontSize = 17.sp, fontWeight = FontWeight.Medium)
-                                    Text("${date.monthValue}.${date.dayOfMonth}", color = c.text2, fontSize = 14.sp)
+                                    Text("${date.monthValue}.${date.day}", color = c.text2, fontSize = 14.sp)
                                     if (date == today) Text("오늘", color = c.primaryText, fontSize = 12.sp)
                                 }
                                 Text(if (record?.items?.isNotEmpty() == true) "${record.items.size}세트 · ${record.durationLabel()}" else "기록 없음",
@@ -136,15 +134,15 @@ private fun RecordWeekChart(days: List<Pair<LocalDate, WorkoutHistoryDay?>>, sel
             val count = record?.items?.size ?: 0
             val fraction by animateFloatAsState(count.toFloat() / maximum, tween(280), label = "record-bar")
             Column(Modifier.weight(1f).fillMaxHeight().clickable { onSelect(date.toEpochDay()) }
-                .semantics { contentDescription = "${date.monthValue}월 ${date.dayOfMonth}일 그래프 · ${count}세트" },
+                .semantics { contentDescription = "${date.monthValue}월 ${date.day}일 그래프 · ${count}세트" },
                 horizontalAlignment = Alignment.CenterHorizontally) {
                 Text("$count", color = c.text2, fontSize = 11.sp)
                 Box(Modifier.weight(1f).fillMaxWidth().padding(top = 6.dp, bottom = 8.dp), contentAlignment = Alignment.BottomCenter) {
                     Box(Modifier.widthIn(max = 28.dp).fillMaxWidth().height((88f * fraction).coerceAtLeast(2f).dp)
                         .clip(RoundedCornerShape(5.dp)).background(if (count == 0) c.track else if (selected == date.toEpochDay()) c.primaryText else c.primary))
                 }
-                Text(date.dayOfWeek.getDisplayName(TextStyle.NARROW, Locale.KOREAN), color = c.text2, fontSize = 12.sp)
-                Text("${date.dayOfMonth}", color = c.text3, fontSize = 10.sp)
+                Text(koreanDayOfWeek(date.dayOfWeek), color = c.text2, fontSize = 12.sp)
+                Text("${date.day}", color = c.text3, fontSize = 10.sp)
             }
         }
     }

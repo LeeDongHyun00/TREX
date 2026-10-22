@@ -103,6 +103,14 @@ class OrgJsonTest {
         assertEquals(45, w.optInt("restSeconds", 45))
     }
 
+    @Test
+    fun quoteAndCollectionLikeAndroid() {
+        assertEquals("\"a\\/b\\\"c\"", JSONObject.quote("a/b\"c"))
+        assertEquals("\"\"", JSONObject.quote(null))
+        assertEquals("[\"CHEST\",\"QUADS\"]", JSONArray(listOf("CHEST", "QUADS")).toString())
+        assertEquals("[]", JSONArray(emptySet<String>()).toString())
+    }
+
     private fun assertThrows(block: () -> Unit) {
         try {
             block()

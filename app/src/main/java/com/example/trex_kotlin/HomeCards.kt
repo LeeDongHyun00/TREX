@@ -1,7 +1,5 @@
 package com.example.trex_kotlin
 
-import android.graphics.BitmapFactory
-import android.util.LruCache
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -15,25 +13,24 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.withContext
 
-private val decorativeImages = LruCache<String, ImageBitmap>(6)
+private val decorativeImages = AssetImageCache(6)
 
 /** 장식 이미지는 화면 밖에서 디코딩한다. 사용자 식사 사진이나 자세 정답으로 표시하지 않는다. */
 @Composable
 internal fun AssetArtwork(path: String, modifier: Modifier = Modifier, scale: ContentScale = ContentScale.Fit) {
-    val assets = LocalContext.current.applicationContext.assets
+    val decoder = rememberAssetImageDecoder()
     val bitmap by produceState(decorativeImages.get(path), path) {
         value = withContext(Dispatchers.IO) {
-            decorativeImages.get(path) ?: assets.open(path).use {
-                BitmapFactory.decodeStream(it, null, BitmapFactory.Options().apply { inSampleSize = if (path.startsWith("routine/")) 2 else 4 })!!.asImageBitmap()
-            }.also { decorativeImages.put(path, it) }
+            decorativeImages.get(path) ?: decoder.decode(path, if (path.startsWith("routine/")) 2 else 4)
+                .also { decorativeImages.put(path, it) }
         }
     }
     bitmap?.let { Image(it, null, modifier, contentScale = scale) }

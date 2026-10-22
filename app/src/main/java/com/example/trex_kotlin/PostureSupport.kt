@@ -38,7 +38,8 @@ val postureExerciseMap: Map<String, String> = mapOf(
     "Y 레이즈" to "Y - Exercise",
 )
 
-fun Workout.postureSupported(): Boolean = com.example.trex_kotlin.posture.ExerciseProfiles.forName(name)?.cameraEnabled == true
+/** 카메라 자세 평가를 켤 수 있는 종목인가. [PLATFORM_POSTURE_CAMERA] 는 이 플랫폼에 자세 화면이 있는가다(§108 — iPhone 은 Phase 3 까지 없다). */
+fun Workout.postureSupported(): Boolean = PLATFORM_POSTURE_CAMERA && com.example.trex_kotlin.posture.ExerciseProfiles.forName(name)?.cameraEnabled == true
 
 /** 자세 교정이 **시험 단계**인 종목(크런치·레그 레이즈·플랭크, `PostureTrial`) — 목록·편집이 꼬리표를 붙인다. 카메라는 켤 수 있다. */
 fun Workout.postureTrial(): Boolean = postureSupported() && com.example.trex_kotlin.posture.PostureTrial.isTrialApp(name)

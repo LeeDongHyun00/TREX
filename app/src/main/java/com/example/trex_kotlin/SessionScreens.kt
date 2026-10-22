@@ -2,14 +2,6 @@ package com.example.trex_kotlin
 
 import com.example.trex_kotlin.posture.FloorTemporal
 
-import android.Manifest
-import android.content.pm.PackageManager
-import android.media.AudioManager
-import android.media.ToneGenerator
-import android.speech.tts.TextToSpeech
-import android.view.WindowManager
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
@@ -63,13 +55,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -82,7 +72,6 @@ import com.example.trex_kotlin.posture.RuleOutcome
 import com.example.trex_kotlin.posture.SIDE_PAIR_UNIT_HINT
 import com.example.trex_kotlin.posture.SetVerdict
 import kotlinx.coroutines.delay
-import java.util.Locale
 
 /**
  * 세션 화면 (리디자인) — 일반 운동은 링 타이머, 완료 화면.
@@ -463,7 +452,7 @@ private fun TrackSetDetail(r: PostureSetReport) {
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         val parts = buildList {
             r.repDetailLine?.let { add(it) }
-            r.tempoMs?.let { add("템포 " + String.format(Locale.US, "%.1f초", it / 1000f)) }
+            r.tempoMs?.let { add("템포 " + formatOneDecimal(it / 1000f) + "초") }
         }
         if (parts.isNotEmpty()) Text(parts.joinToString(" · "), color = c.text, fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold)
         // 세트 내 변화는 본인 초반 창 대비라 기록 모드에도 보여 준다
@@ -578,22 +567,6 @@ private fun SelfLabelSlot(
 // ============================================================= 공용 유틸 (기존 유지)
 
 @Composable
-fun KeepScreenOn(enabled: Boolean = true) {
-    val context = LocalContext.current
-    DisposableEffect(enabled, context) {
-        val window = context.findTrexActivity()?.window
-        if (enabled) {
-            window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        }
-        onDispose {
-            if (enabled) {
-                window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-            }
-        }
-    }
-}
-
-@Composable
 fun rememberTrexLifecyclePaused(): Boolean {
     val lifecycleOwner = LocalLifecycleOwner.current
     var paused by remember { mutableStateOf(false) }
@@ -609,47 +582,4 @@ fun rememberTrexLifecyclePaused(): Boolean {
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
     return paused
-}
-
-data class WorkoutFeedback(
-    val beep: () -> Unit,
-    val speak: (String) -> Unit,
-)
-
-@Composable
-fun rememberWorkoutFeedback(muted: Boolean): WorkoutFeedback {
-    val context = LocalContext.current
-    val mutedState = rememberUpdatedState(muted)
-    val ttsState = remember { mutableStateOf<TextToSpeech?>(null) }
-    val toneGenerator = remember { ToneGenerator(AudioManager.STREAM_MUSIC, 62) }
-
-    DisposableEffect(context) {
-        var engine: TextToSpeech? = null
-        engine = TextToSpeech(context) { status ->
-            if (status == TextToSpeech.SUCCESS) {
-                engine?.language = Locale.KOREAN
-            }
-        }
-        ttsState.value = engine
-        onDispose {
-            ttsState.value = null
-            engine.shutdown()
-            toneGenerator.release()
-        }
-    }
-
-    return remember {
-        WorkoutFeedback(
-            beep = {
-                if (!mutedState.value) {
-                    runCatching { toneGenerator.startTone(ToneGenerator.TONE_PROP_BEEP, 120) }
-                }
-            },
-            speak = { text ->
-                if (!mutedState.value) {
-                    ttsState.value?.speak(text, TextToSpeech.QUEUE_FLUSH, null, "trex-${System.nanoTime()}")
-                }
-            },
-        )
-    }
 }

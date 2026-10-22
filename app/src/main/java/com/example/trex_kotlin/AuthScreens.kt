@@ -1,6 +1,5 @@
 package com.example.trex_kotlin
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateDpAsState
@@ -68,10 +67,8 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.imageResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -79,16 +76,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 
-private val loginAnimationFrames = intArrayOf(
-    R.drawable.login_animation_frame_01, R.drawable.login_animation_frame_02,
-    R.drawable.login_animation_frame_03, R.drawable.login_animation_frame_04,
-    R.drawable.login_animation_frame_05, R.drawable.login_animation_frame_06,
-    R.drawable.login_animation_frame_07, R.drawable.login_animation_frame_08,
-    R.drawable.login_animation_frame_09, R.drawable.login_animation_frame_10,
-    R.drawable.login_animation_frame_11, R.drawable.login_animation_frame_12,
-    R.drawable.login_animation_frame_13, R.drawable.login_animation_frame_14,
-    R.drawable.login_animation_frame_15, R.drawable.login_animation_frame_16,
-)
+/** 로그인 로고 애니메이션의 프레임 수 — 그림은 플랫폼이 준다([loginAnimationFrame], Android 는 res/drawable-nodpi). */
+private const val LOGIN_ANIMATION_FRAMES = 16
 
 // ============================================================= AUTH (구글 로그인 / 로그인 없이 사용)
 
@@ -107,7 +96,7 @@ fun AuthScreen(
     var frame by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(Unit) {
-        for (next in 1 until loginAnimationFrames.size) {
+        for (next in 1 until LOGIN_ANIMATION_FRAMES) {
             delay(95)
             frame = next
         }
@@ -258,7 +247,7 @@ fun OnboardingScreen(onDone: (UserProfile) -> Unit) {
         }
     }
 
-    BackHandler(enabled = step > 0 || bodyStep > 0) { goBack() }
+    PlatformBackHandler(enabled = step > 0 || bodyStep > 0) { goBack() }
 
     Column(Modifier.fillMaxSize().background(c.bg).imePadding()) {
         Column(Modifier.padding(start = 22.dp, end = 22.dp, top = 48.dp)) {
@@ -338,7 +327,7 @@ fun OnboardingScreen(onDone: (UserProfile) -> Unit) {
                                 }
                             }
                         }
-                        val count = Integer.bitCount(dayMask)
+                        val count = dayMask.countOneBits()
                         Surface(
                             modifier = Modifier.padding(top = 24.dp).fillMaxWidth(),
                             shape = RoundedCornerShape(20.dp),
@@ -678,7 +667,7 @@ fun hasThreeConsecutiveDays(dayMask: Int): Boolean {
 /** 원본은 720×1280 투명 캔버스다. 애니메이션 전체에 같은 로고 영역을 사용해 중앙이 흔들리지 않게 한다. */
 @Composable
 internal fun LoginLogo(frame: Int, modifier: Modifier = Modifier) {
-    val bitmap = androidx.compose.ui.graphics.ImageBitmap.imageResource(loginAnimationFrames[frame])
+    val bitmap = loginAnimationFrame(frame)
     androidx.compose.foundation.Canvas(modifier.semantics { contentDescription = "TREX 로고" }) {
         val side = size.minDimension.toInt()
         drawImage(

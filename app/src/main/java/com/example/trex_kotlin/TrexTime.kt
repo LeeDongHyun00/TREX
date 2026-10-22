@@ -39,7 +39,25 @@ fun startOfDayMillis(epochDay: Long, zone: TimeZone = TimeZone.currentSystemDefa
 /** 세트 로그·라벨의 시각 문자열 — UTC, 초 단위. `SetLog.nowIso()` 의 "yyyy-MM-dd'T'HH:mm:ss'Z'" 와 같다. */
 fun isoUtcSeconds(millis: Long = nowMillis()): String = Instant.fromEpochSeconds(millis.floorDiv(1000L)).toString()
 
-/** 요일 한 글자("월"…"일"). */
+/** "M월 d일 HH:mm"(기기 시간대) — DateTimeFormatter.ofPattern("M월 d일 HH:mm") 과 같다. */
+fun monthDayTimeLabel(millis: Long, zone: TimeZone = TimeZone.currentSystemDefault()): String {
+    val t = Instant.fromEpochMilliseconds(millis).toLocalDateTime(zone)
+    return "${t.month.number}월 ${t.day}일 ${t.hour.toString().padStart(2, '0')}:${t.minute.toString().padStart(2, '0')}"
+}
+
+/** "M/d"(기기 시간대) — DateTimeFormatter.ofPattern("M/d") 과 같다. */
+fun monthDaySlashLabel(millis: Long, zone: TimeZone = TimeZone.currentSystemDefault()): String =
+    monthDayLabel(Instant.fromEpochMilliseconds(millis).toLocalDateTime(zone).date)
+
+// java.time 과 같은 이름의 도우미 — 화면 코드가 이름을 거의 그대로 두고 kotlinx-datetime 위에서 돈다.
+val LocalDate.monthValue: Int get() = month.number
+fun LocalDate.toEpochDay(): Long = toEpochDays()
+fun LocalDate.minusDays(days: Long): LocalDate = LocalDate.fromEpochDays(toEpochDays() - days)
+
+/** 요일 이름 — java `getDisplayName(TextStyle.FULL, Locale.KOREAN)` = "월요일"(TrexTimeTest 가 대조한다). */
+fun koreanDayOfWeekFull(day: DayOfWeek): String = koreanDayOfWeek(day) + "요일"
+
+/** 요일 한 글자("월"…"일") — java `TextStyle.SHORT`·`NARROW` 의 한국어와 같다. */
 fun koreanDayOfWeek(day: DayOfWeek): String = when (day) {
     DayOfWeek.MONDAY -> "월"
     DayOfWeek.TUESDAY -> "화"

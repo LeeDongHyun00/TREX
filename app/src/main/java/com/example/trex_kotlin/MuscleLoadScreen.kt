@@ -1,11 +1,5 @@
 package com.example.trex_kotlin
 
-import android.view.MotionEvent
-import android.annotation.SuppressLint
-import android.webkit.WebResourceRequest
-import android.webkit.WebResourceResponse
-import android.webkit.WebView
-import android.webkit.WebViewClient
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -27,15 +21,11 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.viewinterop.AndroidView
 import com.example.trex_kotlin.trainingload.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 import kotlin.math.roundToInt
 import com.example.trex_kotlin.TrexText as Text
 
@@ -224,15 +214,16 @@ internal fun SessionMuscleMap(app: AppViewModel, sessionId: String) {
     }
 }
 
-private fun loadDate(ms: Long) = Instant.ofEpochMilli(ms).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("M/d"))
+private fun loadDate(ms: Long) = monthDaySlashLabel(ms)
 private fun loadAmount(s: LoadSet): String = when(s.unit) {
     LoadUnit.SECONDS -> "${s.seconds.roundToInt()}초"
-    LoadUnit.PAIR -> if(s.left!=null && s.right!=null && s.actualReps==null) "왼쪽 ${s.left.roundToInt()} · 오른쪽 ${s.right.roundToInt()}회" + (if(s.unknownSideSteps>0 || s.extraSteps>0) " · 일부 좌우 추정" else "") else "좌우 ${(s.actualReps?:s.reps).roundToInt()}회씩 · 배분 추정"
+    // 좌우 값은 지역 값으로 읽는다 — iPhone 에서는 LoadSet 이 다른 모듈(posture-core)이라 속성 스마트 캐스트가 안 된다(§108)
+    LoadUnit.PAIR -> { val left = s.left; val right = s.right
+        if(left!=null && right!=null && s.actualReps==null) "왼쪽 ${left.roundToInt()} · 오른쪽 ${right.roundToInt()}회" + (if(s.unknownSideSteps>0 || s.extraSteps>0) " · 일부 좌우 추정" else "") else "좌우 ${(s.actualReps?:s.reps).roundToInt()}회씩 · 배분 추정" }
     LoadUnit.EACH -> "${(s.actualReps?:s.reps).roundToInt()}사이클 · 좌우 배분 추정"
     else -> "${(s.actualReps?:s.reps).roundToInt()}회"
 }
 
-@SuppressLint("SetJavaScriptEnabled")
 @Composable
 private fun MuscleAtlas(snapshot: LoadSnapshot, selected: String, modifier: Modifier) {
     val colors=JSONObject().apply { snapshot.muscles.filter { it.known }.forEach {
@@ -242,34 +233,3 @@ private fun MuscleAtlas(snapshot: LoadSnapshot, selected: String, modifier: Modi
         "운동 기록 기반 근육 부하 3D. 드래그로 회전, 상세 값은 아래 부위 선택 카드에서 확인", modifier)
 }
 
-@SuppressLint("SetJavaScriptEnabled", "ClickableViewAccessibility")
-@Composable
-private fun MuscleAtlasWebView(command: String, sessionMode: Boolean, description: String, modifier: Modifier) {
-    val script by rememberUpdatedState(command)
-    AndroidView(modifier=modifier,factory={context -> WebView(context).apply {
-        setBackgroundColor(android.graphics.Color.rgb(34,37,39))
-        contentDescription=description
-        setOnTouchListener { view, event ->
-            // 근육도 안에서 시작한 드래그는 회전에 사용하고, 바깥 영역은 페이지 스크롤로 남긴다.
-            when (event.actionMasked) {
-                MotionEvent.ACTION_DOWN -> view.parent?.requestDisallowInterceptTouchEvent(true)
-                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> view.parent?.requestDisallowInterceptTouchEvent(false)
-            }
-            false
-        }
-        settings.javaScriptEnabled=true;settings.allowFileAccess=false;settings.allowContentAccess=false
-        settings.blockNetworkLoads=true;settings.domStorageEnabled=false
-        webViewClient=object:WebViewClient() {
-            override fun shouldOverrideUrlLoading(view:WebView,request:WebResourceRequest)=true
-            override fun shouldInterceptRequest(view:WebView,request:WebResourceRequest):WebResourceResponse {
-                val path=request.url.path.orEmpty().removePrefix("/muscle_load/")
-                if(request.url.host!="appassets.androidplatform.net" || path !in setOf("index.html","viewer.js","atlas.js","three.min.js"))
-                    return WebResourceResponse("text/plain","UTF-8",403,"Blocked",emptyMap(),null)
-                val mime=if(path.endsWith(".html"))"text/html" else "application/javascript"
-                return WebResourceResponse(mime,"UTF-8",context.assets.open("muscle_load/$path"))
-            }
-            override fun onPageFinished(view:WebView,url:String) { view.evaluateJavascript(script,null) }
-        }
-        loadUrl("https://appassets.androidplatform.net/muscle_load/index.html" + if (sessionMode) "?mode=session" else "")
-    }},update={it.evaluateJavascript(script,null)},onRelease={it.stopLoading();it.destroy()})
-}

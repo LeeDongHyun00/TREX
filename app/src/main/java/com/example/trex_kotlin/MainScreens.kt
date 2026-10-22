@@ -78,10 +78,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.trex_kotlin.posture.rememberPostureScope
-import java.time.LocalDate
-import java.time.format.TextStyle
-import java.util.Locale
 
 /** 종목 카테고리별 코칭 팁 (운동 카드 펼침 영역). */
 val categoryTips = mapOf(
@@ -101,7 +97,7 @@ internal val tabContentPadding: PaddingValues
 @Composable
 fun HomeScreen(app: AppViewModel, onGoWorkout: () -> Unit, onGoDiet: () -> Unit, onRecordMeal: () -> Unit, onOpenMuscleLoad: () -> Unit = {}) {
     val c = Trex.c
-    val today = LocalDate.now()
+    val today = localToday()
     val activeDays = app.workoutHistory.filter { it.items.isNotEmpty() }.map { it.epochDay }.toSet()
     val total = app.dietFor(0).values.flatten().totalNutrition()
     val goal = app.targetGoal
@@ -110,7 +106,7 @@ fun HomeScreen(app: AppViewModel, onGoWorkout: () -> Unit, onGoDiet: () -> Unit,
         contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 18.dp, bottom = LocalTrexNavSpace.current),
         verticalArrangement = Arrangement.spacedBy(18.dp)) {
         item {
-            Text("${today.monthValue}월 ${today.dayOfMonth}일 ${today.dayOfWeek.getDisplayName(TextStyle.FULL, Locale.KOREAN)}",
+            Text("${today.monthValue}월 ${today.day}일 ${koreanDayOfWeekFull(today.dayOfWeek)}",
                 color = c.text2, fontSize = 14.sp)
             Text("운동한 날", color = c.text2, fontSize = 12.sp,
                 modifier = Modifier.padding(top = 6.dp, bottom = 12.dp))
@@ -121,14 +117,14 @@ fun HomeScreen(app: AppViewModel, onGoWorkout: () -> Unit, onGoDiet: () -> Unit,
                     val isToday = date == today
                     Column(horizontalAlignment = Alignment.CenterHorizontally,
                         modifier = Modifier.semantics(mergeDescendants = true) {
-                            contentDescription = "${date.monthValue}월 ${date.dayOfMonth}일, ${if(attended) "운동 기록 있음" else "운동 기록 없음"}${if(isToday) ", 오늘" else ""}"
+                            contentDescription = "${date.monthValue}월 ${date.day}일, ${if(attended) "운동 기록 있음" else "운동 기록 없음"}${if(isToday) ", 오늘" else ""}"
                         }) {
-                        Text(date.dayOfWeek.getDisplayName(TextStyle.NARROW, Locale.KOREAN), color = c.text2, fontSize = 11.sp)
+                        Text(koreanDayOfWeek(date.dayOfWeek), color = c.text2, fontSize = 11.sp)
                         Box(Modifier.padding(top = 8.dp).size(36.dp).clip(CircleShape)
                             .background(if (attended) c.primary else c.surface)
                             .border(if(isToday) 2.dp else 0.dp, if(isToday)c.primaryText else Color.Transparent, CircleShape),
                             contentAlignment = Alignment.Center) {
-                            Text("${date.dayOfMonth}", color = if(attended) Color.White else c.text,
+                            Text("${date.day}", color = if(attended) Color.White else c.text,
                                 fontWeight = FontWeight.Medium, fontSize = 13.sp)
                         }
                         Text(if(isToday) "오늘" else if(attended) "✓" else "", color = c.primaryText, fontSize = 10.sp,

@@ -85,6 +85,9 @@ class JSONObject() {
             override fun toString(): String = "null"
         }
 
+        /** JSON 문자열 리터럴(따옴표 포함) — null 은 `""`. Android `JSONObject.quote` 와 같다. */
+        fun quote(data: String?): String = if (data == null) "\"\"" else StringBuilder().also { writeString(it, data) }.toString()
+
         /** 정수인 실수는 정수로 쓴다(65.0 → "65"), -0.0 은 "-0". Android `JSONObject.numberToString` 과 같다. */
         fun numberToString(number: Number): String {
             val asDouble = checkDouble(number.toDouble())
@@ -103,6 +106,11 @@ class JSONArray() {
         val parsed = JsonReader(json).readValue()
         if (parsed !is JSONArray) throw typeMismatch(parsed, "JSONArray")
         values.addAll(parsed.values)
+    }
+
+    /** 컬렉션의 값들로 만든다(Android `JSONArray(Collection)`). */
+    constructor(copyFrom: Collection<*>) : this() {
+        copyFrom.forEach { put(it) }
     }
 
     fun length(): Int = values.size

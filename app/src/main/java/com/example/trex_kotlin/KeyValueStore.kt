@@ -8,6 +8,7 @@ interface KeyValueStore {
     fun getString(key: String, defValue: String?): String?
     fun getBoolean(key: String, defValue: Boolean): Boolean
     fun getLong(key: String, defValue: Long): Long
+    fun getStringSet(key: String, defValues: Set<String>?): Set<String>?
     fun contains(key: String): Boolean
     fun edit(): Editor
 
@@ -22,6 +23,8 @@ interface KeyValueStore {
         fun putString(key: String, value: String?): Editor
         fun putBoolean(key: String, value: Boolean): Editor
         fun putLong(key: String, value: Long): Editor
+        /** [values] 가 null 이면 지운다(SharedPreferences 와 같다). */
+        fun putStringSet(key: String, values: Set<String>?): Editor
         fun remove(key: String): Editor
         fun clear(): Editor
         /** 메모리에 바로 반영하고 디스크에는 나중에 쓴다. */

@@ -48,6 +48,7 @@ class SharedPreferencesStore(context: Context, name: String) : KeyValueStore {
     override fun getString(key: String, defValue: String?): String? = prefs.getString(key, defValue)
     override fun getBoolean(key: String, defValue: Boolean): Boolean = prefs.getBoolean(key, defValue)
     override fun getLong(key: String, defValue: Long): Long = prefs.getLong(key, defValue)
+    override fun getStringSet(key: String, defValues: Set<String>?): Set<String>? = prefs.getStringSet(key, defValues)
     override fun contains(key: String): Boolean = prefs.contains(key)
     override fun edit(): KeyValueStore.Editor = Editor(prefs.edit())
 
@@ -61,6 +62,7 @@ class SharedPreferencesStore(context: Context, name: String) : KeyValueStore {
         override fun putString(key: String, value: String?): KeyValueStore.Editor { edit.putString(key, value); return this }
         override fun putBoolean(key: String, value: Boolean): KeyValueStore.Editor { edit.putBoolean(key, value); return this }
         override fun putLong(key: String, value: Long): KeyValueStore.Editor { edit.putLong(key, value); return this }
+        override fun putStringSet(key: String, values: Set<String>?): KeyValueStore.Editor { edit.putStringSet(key, values); return this }
         override fun remove(key: String): KeyValueStore.Editor { edit.remove(key); return this }
         override fun clear(): KeyValueStore.Editor { edit.clear(); return this }
         override fun apply() = edit.apply()

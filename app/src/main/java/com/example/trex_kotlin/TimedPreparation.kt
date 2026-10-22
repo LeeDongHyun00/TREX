@@ -1,6 +1,5 @@
 package com.example.trex_kotlin
 
-import android.os.SystemClock
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -27,9 +26,9 @@ internal fun TimedPreparationScreen(step: SessionStep, paused: Boolean, onToggle
     val next by rememberUpdatedState(onNext)
     fun finish() { if(!delivered) { delivered=true;next() } }
     LaunchedEffect(step.token,paused) {
-        var last=SystemClock.elapsedRealtime()
+        var last=elapsedRealtimeMs()
         while(!delivered) {
-            delay(100);val now=SystemClock.elapsedRealtime()
+            delay(100);val now=elapsedRealtimeMs()
             if(!isPaused)remaining=(remaining-(now-last)).coerceAtLeast(0)
             last=now
             if(remaining==0L)finish()

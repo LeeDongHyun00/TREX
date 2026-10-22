@@ -261,6 +261,17 @@ class AppViewModel(private val platform: AppPlatform) : ViewModel() {
         store.themeMode = mode
     }
 
+    // ---- 운동 안내를 본 종목 — 세션 첫 준비에서 한 번만 자동으로 띄운다(§108 에서 TrexApp 에서 옮김, 같은 저장소·키)
+
+    private val guidePrefs = platform.preferences("exercise_guides")
+    var seenGuides by mutableStateOf(guidePrefs.getStringSet("seen_v1", emptySet()).orEmpty().toSet())
+        private set
+
+    fun markGuideSeen(name: String) {
+        seenGuides = seenGuides + name
+        guidePrefs.edit().putStringSet("seen_v1", seenGuides).apply()
+    }
+
     // ---- 사용자 프로필 → 권장 영양 목표
 
     var profile by mutableStateOf(store.loadProfile() ?: UserProfile())

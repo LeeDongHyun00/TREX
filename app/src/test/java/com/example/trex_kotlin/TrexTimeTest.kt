@@ -80,6 +80,41 @@ class TrexTimeTest {
     }
 
     @Test
+    fun koreanDayNamesMatchJavaDisplayNames() {
+        for (day in java.time.DayOfWeek.entries) {
+            val ours = kotlinx.datetime.DayOfWeek.entries[day.ordinal]
+            assertEquals("$day FULL", day.getDisplayName(java.time.format.TextStyle.FULL, java.util.Locale.KOREAN), koreanDayOfWeekFull(ours))
+            assertEquals("$day SHORT", day.getDisplayName(java.time.format.TextStyle.SHORT, java.util.Locale.KOREAN), koreanDayOfWeek(ours))
+            assertEquals("$day NARROW", day.getDisplayName(java.time.format.TextStyle.NARROW, java.util.Locale.KOREAN), koreanDayOfWeek(ours))
+        }
+    }
+
+    @Test
+    fun labelsMatchDateTimeFormatter() {
+        val zone = ZoneId.of("Asia/Seoul")
+        val full = java.time.format.DateTimeFormatter.ofPattern("M월 d일 HH:mm")
+        val slash = java.time.format.DateTimeFormatter.ofPattern("M/d")
+        for (millis in listOf(0L, 1_761_100_000_123L, 1_767_225_599_000L, 1_767_225_600_000L, 1_798_761_599_999L)) {
+            val at = java.time.Instant.ofEpochMilli(millis).atZone(zone)
+            assertEquals("$millis", at.format(full), monthDayTimeLabel(millis, TimeZone.of("Asia/Seoul")))
+            assertEquals("$millis", at.format(slash), monthDaySlashLabel(millis, TimeZone.of("Asia/Seoul")))
+        }
+    }
+
+    @Test
+    fun javaNamedHelpersMatchJavaTime() {
+        val first = LocalDate.of(2025, 12, 25).toEpochDay()
+        for (day in first..first + 70) {
+            val java = LocalDate.ofEpochDay(day)
+            val ours = kotlinx.datetime.LocalDate.fromEpochDays(day)
+            assertEquals(java.monthValue, ours.monthValue)
+            assertEquals(java.dayOfMonth, ours.day)
+            assertEquals(java.toEpochDay(), ours.toEpochDay())
+            assertEquals(java.minusDays(6).toEpochDay(), ours.minusDays(6).toEpochDay())
+        }
+    }
+
+    @Test
     fun newUuidIsRandomVersion4LikeJava() {
         val seen = HashSet<String>()
         repeat(200) {

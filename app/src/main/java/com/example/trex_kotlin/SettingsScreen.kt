@@ -1,9 +1,5 @@
 package com.example.trex_kotlin
 
-import com.example.trex_kotlin.sync.requestGoogleIdToken
-import android.content.Intent
-import android.net.Uri
-import android.provider.Settings
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -17,7 +13,6 @@ import com.example.trex_kotlin.TrexText as Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -28,7 +23,7 @@ import androidx.compose.ui.unit.sp
 @Composable
 fun ProfileTabScreen(app: AppViewModel, onOpenRecord: () -> Unit, onLogout: () -> Unit) {
     val c = Trex.c
-    val context = LocalContext.current
+    val settingsLinks = rememberSystemSettingsLinks()
     var sheet by remember { mutableStateOf<String?>(null) }
     val p = app.profile
     LazyColumn(Modifier.fillMaxSize(), contentPadding = tabContentPadding, verticalArrangement = Arrangement.spacedBy(22.dp)) {
@@ -58,11 +53,11 @@ fun ProfileTabScreen(app: AppViewModel, onOpenRecord: () -> Unit, onLogout: () -
                 when(app.themeMode) { ThemeMode.Light -> "라이트"; ThemeMode.Dark -> "다크"; ThemeMode.System -> "시스템" }, { sheet = "theme" })
             SettingsDivider()
             SettingsRow("알림", Icons.Rounded.NotificationsNone, onClick = {
-                context.startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName))
+                settingsLinks.openNotifications()
             })
             SettingsDivider()
             SettingsRow("카메라 및 권한", Icons.Rounded.PrivacyTip, onClick = {
-                context.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${context.packageName}")))
+                settingsLinks.openAppDetails()
             })
         } }
         item { SettingsGroup {
@@ -120,12 +115,12 @@ fun ProfileTabScreen(app: AppViewModel, onOpenRecord: () -> Unit, onLogout: () -
 @Composable
 private fun AccountGroup(app: AppViewModel) {
     val c = Trex.c
-    val context = LocalContext.current
+    val requestGoogleIdToken = rememberGoogleIdTokenRequest()
     val account = app.account
     SettingsGroup {
         if (account == null) {
             SettingsRow("Google 계정 연결", Icons.Rounded.CloudUpload, if (app.authBusy) "연결 중…" else null, onClick = {
-                app.continueWithGoogle { clientId -> requestGoogleIdToken(context.findTrexActivity() ?: context, clientId) }
+                app.continueWithGoogle(requestGoogleIdToken)
             })
             Text(
                 app.authMessage ?: "기록을 계정에 백업하고 다른 기기에서 이어서 써요",
@@ -136,8 +131,7 @@ private fun AccountGroup(app: AppViewModel) {
             val status = when {
                 app.sync.syncing -> "동기화 중…"
                 app.sync.lastError != null -> app.sync.lastError
-                app.sync.lastSyncedAt > 0L -> "마지막 동기화 " + java.time.Instant.ofEpochMilli(app.sync.lastSyncedAt)
-                    .atZone(java.time.ZoneId.systemDefault()).format(java.time.format.DateTimeFormatter.ofPattern("M월 d일 HH:mm"))
+                app.sync.lastSyncedAt > 0L -> "마지막 동기화 " + monthDayTimeLabel(app.sync.lastSyncedAt)
                 else -> "아직 동기화하지 않았어요"
             }
             Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 16.dp), verticalAlignment = Alignment.CenterVertically) {

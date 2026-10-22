@@ -44,6 +44,13 @@ targets:
         type: folder
       - path: ../app/src/main/assets/muscle_load
         type: folder
+      # §108 Phase 2: 공유 화면이 쓰는 Android 자산 — 루틴 그림·가이드북 SVG·로그인 로고 프레임(Android res/drawable-nodpi)
+      - path: ../app/src/main/assets/routine
+        type: folder
+      - path: ../app/src/main/assets/guid_img
+        type: folder
+      - path: ../app/src/main/res/drawable-nodpi
+        type: folder
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.leedonghyun.trex.ios

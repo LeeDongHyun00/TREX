@@ -26,7 +26,6 @@ kotlin {
     }
     sourceSets {
         commonMain {
-            kotlin.srcDir(syncAndroidSources)
             dependencies {
                 api(project(":posture-core"))
                 implementation(libs.cmp.runtime)
@@ -37,7 +36,13 @@ kotlin {
                 implementation(libs.kotlinx.datetime)
                 implementation(libs.kotlinx.atomicfu)
                 implementation(libs.androidx.lifecycle.viewmodel)
+                implementation(libs.androidx.lifecycle.runtime.compose)
             }
+        }
+        // 공유 Android 파일은 iosMain 에서 컴파일한다 — 같은 이름의 iPhone 경계 구현(PlatformUi.kt 등, UIKit 을 쓴다)이 이 소스 집합에
+        // 있어야 공유 파일이 그것을 본다. Android API 를 쓰면 여기서도 깨지므로 경계 검사는 그대로다.
+        iosMain {
+            kotlin.srcDir(syncAndroidSources)
         }
     }
 }

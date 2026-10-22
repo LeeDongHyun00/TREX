@@ -30,3 +30,31 @@ com/example/trex_kotlin/sync/AuthSession.kt
 com/example/trex_kotlin/sync/SyncManager.kt
 com/example/trex_kotlin/sync/SyncRules.kt
 com/example/trex_kotlin/sync/TrexApi.kt
+# Phase 2: 카메라 없는 화면 전부. 플랫폼 기능은 같은 이름의 짝 — Android PlatformUi.kt(목록 밖) ↔ ios-ui iosMain PlatformUi.kt.
+# 경계 타입은 PlatformApi.kt. 카메라 자세 화면(PostureLive)·사진 식단(PhotoFoodSheet)·앱 내 업데이트(AppUpdate)는 아직 목록 밖이다.
+com/example/trex_kotlin/PlatformApi.kt
+com/example/trex_kotlin/TrexApp.kt
+com/example/trex_kotlin/TrexTheme.kt
+com/example/trex_kotlin/AdaptiveLayout.kt
+com/example/trex_kotlin/MainScreens.kt
+com/example/trex_kotlin/HomeCards.kt
+com/example/trex_kotlin/MealSymbol.kt
+com/example/trex_kotlin/RoutineHero.kt
+com/example/trex_kotlin/WorkoutListScreen.kt
+com/example/trex_kotlin/WorkoutControls.kt
+com/example/trex_kotlin/CameraActions.kt
+com/example/trex_kotlin/WorkoutCatalogUi.kt
+com/example/trex_kotlin/WorkoutEditor.kt
+com/example/trex_kotlin/ExerciseGuides.kt
+com/example/trex_kotlin/ExerciseGuideUi.kt
+com/example/trex_kotlin/Sheets.kt
+com/example/trex_kotlin/RecordScreen.kt
+com/example/trex_kotlin/DietRecordScreen.kt
+com/example/trex_kotlin/SettingsScreen.kt
+com/example/trex_kotlin/AuthScreens.kt
+com/example/trex_kotlin/GuideBookScreen.kt
+com/example/trex_kotlin/MuscleLoadScreen.kt
+com/example/trex_kotlin/SessionScreens.kt
+com/example/trex_kotlin/TimedPreparation.kt
+com/example/trex_kotlin/trainingload/SessionLoadChange.kt
+com/example/trex_kotlin/trainingload/SessionMuscles.kt
