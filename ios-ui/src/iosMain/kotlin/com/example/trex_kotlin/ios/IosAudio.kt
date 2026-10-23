@@ -3,7 +3,10 @@
 package com.example.trex_kotlin.ios
 
 import com.example.trex_kotlin.RepTone
+import com.example.trex_kotlin.VoiceAdvisor
+import com.example.trex_kotlin.VoiceStatus
 import com.example.trex_kotlin.dayStamp
+import com.example.trex_kotlin.nowMillis
 import com.example.trex_kotlin.posture.SerialWriter
 import com.example.trex_kotlin.posture.SpeechEngine
 import com.example.trex_kotlin.posture.feedbackTraceLine
@@ -24,10 +27,15 @@ import platform.AVFAudio.AVAudioSessionModeSpokenAudio
 import platform.AVFAudio.AVAudioSessionSetActiveOptionNotifyOthersOnDeactivation
 import platform.AVFAudio.AVSpeechBoundary
 import platform.AVFAudio.AVSpeechSynthesisVoice
+import platform.AVFAudio.AVSpeechSynthesisVoiceQualityDefault
+import platform.AVFAudio.AVSpeechSynthesisVoiceQualityEnhanced
+import platform.AVFAudio.AVSpeechSynthesisVoiceQualityPremium
 import platform.AVFAudio.AVSpeechSynthesizer
 import platform.AVFAudio.AVSpeechSynthesizerDelegateProtocol
 import platform.AVFAudio.AVSpeechUtterance
+import platform.AVFAudio.AVSpeechUtteranceDefaultSpeechRate
 import platform.AVFAudio.setActive
+import platform.Foundation.NSProcessInfo
 import platform.Foundation.NSThread
 import platform.darwin.NSObject
 import platform.darwin.dispatch_async
@@ -86,13 +94,46 @@ internal object IosAudioSession {
     }
 }
 
+/** 이 기기의 한국어 음성들(설치된 것만). */
+internal fun koreanVoices(): List<AVSpeechSynthesisVoice> =
+    AVSpeechSynthesisVoice.speechVoices().filterIsInstance<AVSpeechSynthesisVoice>().filter { it.language == "ko-KR" }
+
 /**
- * 세션 스피커의 iPhone 엔진 — 한국어 음성(ko-KR, 기존 iPhone 설정과 같은 빠르기 0.48). 신시사이저 호출과 사건은 메인 스레드다.
+ * 가장 자연스러운 한국어 음성 — 품질이 높은 것부터(프리미엄 > 향상됨 > 기본), 같은 품질이면 시스템의 한국어 기본 음성.
+ * 예전에는 시스템 기본(대개 기본 품질 '유나' 압축 음성)을 그대로 써서 Android 구글 음성보다 기계음이 강했다(10-23 사용자 보고 "TTS 가 어색하다").
+ * 향상·프리미엄 음성은 앱이 받을 수 없고 사용자가 설정 › 손쉬운 사용 › 콘텐츠 말하기 › 음성 › 한국어에서 내려받는다 — 받아 두면 다음 세션부터 저절로 쓴다.
+ */
+/** 음성 품질 이름 — 발화 기록·개발용 확인. */
+internal fun voiceQualityLabel(voice: AVSpeechSynthesisVoice): String = when (voice.quality) {
+    AVSpeechSynthesisVoiceQualityPremium -> "premium"
+    AVSpeechSynthesisVoiceQualityEnhanced -> "enhanced"
+    else -> "default"
+}
+
+internal fun bestKoreanVoice(): AVSpeechSynthesisVoice? {
+    val systemDefault = AVSpeechSynthesisVoice.voiceWithLanguage("ko-KR")
+    return koreanVoices().maxWithOrNull(compareBy<AVSpeechSynthesisVoice>({ it.quality }, { it.identifier == systemDefault?.identifier })) ?: systemDefault
+}
+
+/**
+ * Android `setSpeechRate(1.05f)` 자리 — iPhone 보통 빠르기 값(0.5)에 같은 배율. iPhone 빠르기 값은 체감 속도와 정비례하지 않아 '정확히 5 %' 는 아니고
+ * 보통보다 조금 빠른 쪽이라는 뜻만 같다(예전 0.48 은 보통보다 느려 처졌다).
+ */
+internal val SPEECH_RATE: Float = AVSpeechUtteranceDefaultSpeechRate * 1.05f
+
+/** 설치된 음성을 다시 보는 간격(s) — 세션 중에 받은 향상·프리미엄 음성을 앱을 다시 켜지 않고 쓴다(엔진은 앱 수명 하나다). */
+private const val VOICE_RECHECK_S = 30.0
+
+/**
+ * 세션 스피커의 iPhone 엔진 — 가장 자연스러운 한국어 음성([bestKoreanVoice]), Android 와 같은 빠르기([SPEECH_RATE]). 신시사이저 호출과 사건은 메인 스레드다.
  * 끊긴 발화는 didCancel 이 오고(공유 정책은 Android onStop 과 같게 '끊김' 으로 받는다).
  */
 class IosSpeechEngine : SpeechEngine {
     private val synthesizer = AVSpeechSynthesizer()
-    private val voice: AVSpeechSynthesisVoice? = AVSpeechSynthesisVoice.voiceWithLanguage("ko-KR")
+    private var voice: AVSpeechSynthesisVoice? = bestKoreanVoice()
+    private var voiceCheckedAt = NSProcessInfo.processInfo.systemUptime
+    /** 개발용 확인(--food-probe) — 소리 없이(볼륨 0) 사건만 보고, 발화 기록 파일에 쓰지 않는다. */
+    internal var silent = false
     /** 낸 문장 → 발화 id(사건이 이 값으로 돌아간다). 메인 스레드에서만. */
     private val ids = ArrayList<Pair<AVSpeechUtterance, String>>()
     private var events: SpeechEngine.Events? = null
@@ -102,29 +143,52 @@ class IosSpeechEngine : SpeechEngine {
     private val delegate = object : NSObject(), AVSpeechSynthesizerDelegateProtocol {
         @ObjCSignatureOverride
         override fun speechSynthesizer(synthesizer: AVSpeechSynthesizer, didStartSpeechUtterance: AVSpeechUtterance) {
-            events?.onStart(idOf(didStartSpeechUtterance, remove = false))
+            onMain { events?.onStart(idOf(didStartSpeechUtterance, remove = false)) }
         }
         @ObjCSignatureOverride
         override fun speechSynthesizer(synthesizer: AVSpeechSynthesizer, didFinishSpeechUtterance: AVSpeechUtterance) {
-            events?.onFinished(idOf(didFinishSpeechUtterance, remove = true), "tts_done", "")
+            onMain { events?.onFinished(idOf(didFinishSpeechUtterance, remove = true), "tts_done", "") }
         }
         @ObjCSignatureOverride
         override fun speechSynthesizer(synthesizer: AVSpeechSynthesizer, didCancelSpeechUtterance: AVSpeechUtterance) {
-            events?.onFinished(idOf(didCancelSpeechUtterance, remove = true), "tts_stop", "interrupted=true")
+            onMain { events?.onFinished(idOf(didCancelSpeechUtterance, remove = true), "tts_stop", "interrupted=true") }
         }
     }
 
+    /**
+     * 사건의 발화 → 낸 id. 같은 객체(isEqual)로 먼저, 없으면 같은 글의 가장 오래된 것으로 찾는다 — Kotlin 참조 비교(===)로만 찾던 때는 iPhone 에서
+     * 사건마다 못 찾아(10-23 실기기 기록: tts_start·tts_done 에 id 가 없음) 공유 대기열이 '아직 말하는 중' 으로 남았고, 세트 내내 교정 문장이
+     * 전부 보류됐다(speech_held — 끊고 들어오는 카운트·경계 안내만 들렸다).
+     */
     private fun idOf(u: AVSpeechUtterance, remove: Boolean): String? {
-        val i = ids.indexOfFirst { it.first === u }
+        var i = ids.indexOfFirst { it.first == u }
+        if (i < 0) i = ids.indexOfFirst { it.first.speechString == u.speechString }
         if (i < 0) return null
         return if (remove) ids.removeAt(i).second else ids[i].second
     }
 
+    /** 지금 쓸 음성 — [VOICE_RECHECK_S] 마다 설치된 음성을 다시 본다. 바뀌면 발화 기록에 남긴다. 메인 스레드에서. */
+    private fun currentVoice(): AVSpeechSynthesisVoice? {
+        val now = NSProcessInfo.processInfo.systemUptime
+        if (now - voiceCheckedAt >= VOICE_RECHECK_S) {
+            voiceCheckedAt = now
+            val best = bestKoreanVoice()
+            if (best != null && best.identifier != voice?.identifier) {
+                voice = best
+                traceVoice()
+            }
+        }
+        return voice
+    }
+
+    private fun traceVoice() = voice?.let { trace(nowMillis(), "tts_voice", "${it.name}/${voiceQualityLabel(it)}", null, muted = false, ready = true) }
+
     override fun start(events: SpeechEngine.Events) {
         this.events = events
         synthesizer.delegate = delegate
+        traceVoice()
         if (voice != null) events.onInit(true, null, null)
-        else events.onInit(false, "한국어 음성 없음 (설정 › 손쉬운 사용 › 읽기 및 말하기에서 한국어 음성 설치)",
+        else events.onInit(false, "한국어 음성 없음 (설정 › 손쉬운 사용 › 콘텐츠 말하기에서 한국어 음성 설치)",
             "음성 안내를 쓸 수 없어요 — 설정에서 한국어 음성을 설치하세요")
     }
 
@@ -133,8 +197,9 @@ class IosSpeechEngine : SpeechEngine {
             IosAudioSession.speaking()
             if (flush && synthesizer.speaking) synthesizer.stopSpeakingAtBoundary(AVSpeechBoundary.AVSpeechBoundaryImmediate)
             val utterance = AVSpeechUtterance(string = text)
-            utterance.voice = voice
-            utterance.rate = 0.48f
+            utterance.voice = currentVoice()
+            utterance.rate = SPEECH_RATE
+            if (silent) utterance.volume = 0f
             ids += utterance to id
             synthesizer.speakUtterance(utterance)
         }
@@ -152,6 +217,7 @@ class IosSpeechEngine : SpeechEngine {
     override fun nextUtteranceId(): String = "coach-${(platform.Foundation.NSProcessInfo.processInfo.systemUptime * 1e9).toLong()}-${counter++}"
 
     override fun trace(atMs: Long, kind: String, text: String, utteranceId: String?, muted: Boolean, ready: Boolean) {
+        if (silent) return
         val record = feedbackTraceLine(atMs, kind, text, utteranceId, muted, ready)
         traceWriter.execute {
             runCatching { appendTextFile(documentsPath() + "/posture_logs/feedback-${dayStamp(atMs)}.jsonl", record + "\n") }
@@ -224,4 +290,38 @@ internal class IosRepTone(private val volume: Int) : RepTone {
         return true
     }
     override fun release() {}
+}
+
+/** 음성 품질의 화면 이름. */
+internal fun voiceQualityKorean(voice: AVSpeechSynthesisVoice): String = when (voice.quality) {
+    AVSpeechSynthesisVoiceQualityPremium -> "프리미엄"
+    AVSpeechSynthesisVoiceQualityEnhanced -> "향상된 음질"
+    else -> "기본 음질"
+}
+
+/**
+ * 설정 화면의 음성 안내 목소리(§108d 후속) — 세션 스피커와 같은 고르기([bestKoreanVoice])·빠르기([SPEECH_RATE])로 미리 들려준다.
+ * 말이 끝나면 오디오 세션을 놓아 다른 앱 소리를 되돌린다. 메인 스레드에서.
+ */
+internal class IosVoiceAdvisor : VoiceAdvisor {
+    private val synthesizer = AVSpeechSynthesizer()
+    private val delegate = object : NSObject(), AVSpeechSynthesizerDelegateProtocol {
+        @ObjCSignatureOverride
+        override fun speechSynthesizer(synthesizer: AVSpeechSynthesizer, didFinishSpeechUtterance: AVSpeechUtterance) = onMain { IosAudioSession.release() }
+        @ObjCSignatureOverride
+        override fun speechSynthesizer(synthesizer: AVSpeechSynthesizer, didCancelSpeechUtterance: AVSpeechUtterance) = onMain { IosAudioSession.release() }
+    }
+
+    init { synthesizer.delegate = delegate }
+
+    override fun status(): VoiceStatus? = bestKoreanVoice()?.let { VoiceStatus("${it.name} · ${voiceQualityKorean(it)}", natural = it.quality != AVSpeechSynthesisVoiceQualityDefault) }
+
+    override fun preview() = onMain {
+        IosAudioSession.speaking()
+        if (synthesizer.speaking) synthesizer.stopSpeakingAtBoundary(AVSpeechBoundary.AVSpeechBoundaryImmediate)
+        val utterance = AVSpeechUtterance(string = "좋아요. 무릎이 발끝 방향을 따라가게 천천히 앉아 보세요.")
+        utterance.voice = bestKoreanVoice()
+        utterance.rate = SPEECH_RATE
+        synthesizer.speakUtterance(utterance)
+    }
 }

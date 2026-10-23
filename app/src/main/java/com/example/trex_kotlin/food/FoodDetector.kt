@@ -11,6 +11,8 @@ import android.graphics.Rect
 import android.graphics.RectF
 import android.net.Uri
 import android.util.Log
+import com.example.trex_kotlin.AndroidFoodPhoto
+import com.example.trex_kotlin.FoodPhoto
 import androidx.exifinterface.media.ExifInterface
 import org.tensorflow.lite.DataType
 import org.tensorflow.lite.Interpreter
@@ -20,39 +22,6 @@ import java.io.FileNotFoundException
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.channels.FileChannel
-
-/**
- * 온디바이스 음식 인식 결과. 사진 원본은 어떤 경우에도 기기 밖으로 전송하지 않는다.
- */
-sealed interface FoodDetectionResult {
-    /**
-     * [foods] 는 임계값을 넘어 결과로 보여줄 음식.
-     *
-     * [candidates] 는 **임계값에 못 미쳐 결과에서 뺀 것**이다. 기록에 자동으로 들어가지 않고,
-     * 사용자가 "빠진 음식 추가"를 눌렀을 때 고를 거리로만 쓴다 — 모델이 판정하지 못한 것을
-     * 판정한 것처럼 내놓지 않으면서, 이미 계산해 둔 신호를 버리지 않기 위한 절충이다.
-     *
-     * 이 모델은 "음식 없음"을 배운 적이 없어(학습 이미지 전부가 음식 1개짜리다) 무엇을 넣든
-     * 늘 무언가를 뱉는다. 그래서 낮은 점수는 확률이 아니라 **순서**로만 의미가 있다.
-     *
-     * [regions] 는 2단계 인식(그릇 찾기 → 잘라서 이름)이 돌았을 때만 찬다. 비어 있으면 위치 모델이 없거나 실패했거나
-     * 그릇을 하나도 못 찾아 **전체 사진 1회** 경로로 돌아간 결과다 — 화면은 예전처럼 목록만 보여준다.
-     * 차 있으면 [foods] 는 이름이 붙은 자리를 이름별로 합친 것이고, 이름이 없는("?") 자리는 [regions] 에만 있다.
-     */
-    data class Success(
-        val foods: List<DetectedFood>,
-        val candidates: List<DetectedFood> = emptyList(),
-        val regions: List<FoodRegion> = emptyList(),
-    ) : FoodDetectionResult
-
-    /** assets에 yolov8n_food.tflite 가 없다(빌드에서 빠졌을 때). 파일을 넣으면 그대로 실추론으로 전환된다. */
-    data object ModelMissing : FoodDetectionResult
-
-    data object Error : FoodDetectionResult
-}
-
-/** [photoIndex] 는 여러 장 중 이 음식의 최고 점수가 나온 사진의 인덱스 — 결과 화면에서 어느 사진에서 잡혔는지 보여준다. */
-data class DetectedFood(val name: String, val confidence: Float, val photoIndex: Int)
 
 /**
  * YOLOv8 TFLite 모델을 앱 수명 동안 1회만 로드해 재사용하는 음식 인식기.
@@ -66,40 +35,56 @@ data class DetectedFood(val name: String, val confidence: Float, val photoIndex:
  *   근거·측정은 docs/FOOD_EVAL_RESULTS.md §8·§8.1·§8.2.
  *
  * detect()·warmUp()은 블로킹 호출이므로 반드시 백그라운드 디스패처에서 부른다.
+ *
+ * 판정 흐름(2단계·내 음식 기억·이름 없는 사진의 전체 1회·결과 목록)은 공유 [FoodPipeline] 이다(§108d — iPhone 이 같은 코드를 돈다).
+ * 여기서는 TFLite 인터프리터와 Bitmap 입력만 다룬다([AndroidFoodModels]).
  */
 object FoodDetector {
+    @Volatile private var pipeline: FoodPipeline? = null
 
-    private const val TAG = "FoodDetector"
-    private const val MODEL_PATH = "models/yolov8n_food.tflite"
-    private const val REGION_MODEL_PATH = "models/food_region.tflite"
+    private fun pipeline(context: Context): FoodPipeline = pipeline ?: synchronized(this) {
+        pipeline ?: context.applicationContext.let { app ->
+            FoodPipeline(AndroidFoodModels(app), memory = { FoodMemoryStore.load(app) }, log = AndroidFoodLog).also { pipeline = it }
+        }
+    }
 
-    /**
-     * 내 음식 기억의 특징값 모델: DINOv2-small(ViT-S/14, 224, 8비트 동적 양자화 22.7MB). 입력 [1,224,224,3] ImageNet 정규화, 출력 [1,384].
-     * 기억이 하나도 없으면 불러오지도 돌리지도 않는다 — 쓰지 않는 사람에게는 비용이 없다.
-     */
-    private const val EMBED_MODEL_PATH = "models/food_embed.tflite"
-    private const val EMBED_SIZE = 224
-    private val EMBED_MEAN = floatArrayOf(0.485f, 0.456f, 0.406f)
-    private val EMBED_STD = floatArrayOf(0.229f, 0.224f, 0.225f)
+    /** 시트를 열 때 미리 불러, 첫 분석이 모델 로딩 지연까지 떠안지 않게 한다. */
+    fun warmUp(context: Context) = pipeline(context).warmUp()
 
-    /** 특징값을 뽑을 때 자리 둘레에 더하는 여유(자리 크기 대비). 실험(memory_eval.py best_spot)과 같다. */
-    private const val EMBED_PAD = 0.10f
-    private const val LABELS_PATH = "models/food_labels.txt"
-    private const val CONFIDENCE_THRESHOLD = FoodRegions.NAME_THRESHOLD
-    private const val MAX_FOODS_PER_ANALYSIS = 5
+    fun detect(context: Context, photos: List<FoodPhoto>): FoodDetectionResult = pipeline(context).detect(photos)
 
     /**
-     * 후보로도 내놓지 않는 바닥값. 이 아래는 순서에도 의미가 없는 잡음으로 본다.
-     * 임계값(0.40)과 달리 근거가 약한 값이다 — 실사용 사진으로 재보고 조정할 것.
+     * [photo] 의 [box](사진 대비 0~1) 자리 특징값. 내 음식 기억을 저장할 때 쓴다. 모델이 없거나 실패하면 null.
+     * 블로킹 호출이다 — 백그라운드에서 부른다.
      */
-    private const val CANDIDATE_FLOOR = 0.10f
+    fun embed(context: Context, photo: Bitmap, box: PixelBox): FloatArray? = pipeline(context).embed(AndroidFoodPhoto(photo), box)
+}
 
-    /** 후보 목록의 최대 개수. 훑어보는 목록이라 길면 오히려 고르기 어렵다. */
-    private const val MAX_CANDIDATES = 8
-    private const val NUM_THREADS = 4
-    private const val LETTERBOX_GRAY = 114
+private const val TAG = "FoodDetector"
 
-    private val lock = Any()
+private object AndroidFoodLog : FoodLog {
+    override fun d(message: String) { Log.d(TAG, message) }
+    override fun w(message: String, error: Throwable?) { if (error == null) Log.w(TAG, message) else Log.w(TAG, message, error) }
+    override fun e(message: String, error: Throwable?) { if (error == null) Log.e(TAG, message) else Log.e(TAG, message, error) }
+}
+
+private const val MODEL_PATH = "models/yolov8n_food.tflite"
+private const val REGION_MODEL_PATH = "models/food_region.tflite"
+
+/**
+ * 내 음식 기억의 특징값 모델: DINOv2-small(ViT-S/14, 224, 8비트 동적 양자화 22.7MB). 입력 [1,224,224,3] ImageNet 정규화, 출력 [1,384].
+ * 기억이 하나도 없으면 불러오지도 돌리지도 않는다 — 쓰지 않는 사람에게는 비용이 없다. 입력 배치(둘레 여유·224 가운데)는 공유 [FoodInputs.embed].
+ */
+private const val EMBED_MODEL_PATH = "models/food_embed.tflite"
+private val EMBED_MEAN = floatArrayOf(0.485f, 0.456f, 0.406f)
+private val EMBED_STD = floatArrayOf(0.229f, 0.224f, 0.225f)
+private const val LABELS_PATH = "models/food_labels.txt"
+
+private const val NUM_THREADS = 4
+private const val LETTERBOX_GRAY = 114
+
+/** TFLite 인터프리터 셋(342종·위치·특징값)과 Bitmap → 입력 버퍼. [FoodPipeline] 의 잠금 안에서만 불린다. */
+private class AndroidFoodModels(private val context: Context) : FoodModels {
     private var interpreter: Interpreter? = null
     private var labels: List<String> = emptyList()
     private var modelMissing = false
@@ -110,88 +95,44 @@ object FoodDetector {
     private var embedInterpreter: Interpreter? = null
     private var embedUnavailable = false
 
-    /** 시트를 열 때 미리 불러, 첫 분석이 모델 로딩 지연까지 떠안지 않게 한다. */
-    fun warmUp(context: Context) {
-        synchronized(lock) {
-            try {
-                loadInterpreter(context.applicationContext)
-            } catch (e: Exception) {
-                Log.w(TAG, "모델 예열 실패", e)
-            }
-            loadRegionInterpreter(context.applicationContext)
+    override fun classifier(): List<String>? = loadInterpreter()?.let { labels }
+
+    override fun regionModel(): Boolean = loadRegionInterpreter() != null
+
+    override fun embedModel(): Boolean = loadEmbedInterpreter() != null
+
+    /** 위치 모델 한 번 — [1, 4+클래스, 앵커] 가 기본이다. 반대 배치면 앵커가 더 많은 쪽으로 가린다(앵커 8400 ≫ 채널 13). */
+    override fun regionOutput(photo: FoodPhoto): RegionOutput {
+        val regionEngine = checkNotNull(regionInterpreter) { "위치 모델이 없다" }
+        val bitmap = (photo as AndroidFoodPhoto).bitmap
+        val input = inputGeometry(regionEngine)
+        val outputShape = regionEngine.getOutputTensor(0).shape()
+        val channelFirst = outputShape[1] < outputShape[2]
+        val channels = if (channelFirst) outputShape[1] else outputShape[2]
+        val anchors = if (channelFirst) outputShape[2] else outputShape[1]
+        val raw = Array(1) { Array(outputShape[1]) { FloatArray(outputShape[2]) } }
+        regionEngine.run(letterboxInput(bitmap, input), raw)
+        val flat = FloatArray(channels * anchors)
+        for (c in 0 until channels) for (a in 0 until anchors) {
+            flat[c * anchors + a] = if (channelFirst) raw[0][c][a] else raw[0][a][c]
         }
+        return RegionOutput(flat, channels, anchors, input.width)
     }
 
-    fun detect(context: Context, bitmaps: List<Bitmap>): FoodDetectionResult {
-        if (bitmaps.isEmpty()) return FoodDetectionResult.Error
-        synchronized(lock) {
-            val engine = try {
-                loadInterpreter(context.applicationContext) ?: return FoodDetectionResult.ModelMissing
-            } catch (e: Exception) {
-                Log.e(TAG, "모델 로딩 실패", e)
-                return FoodDetectionResult.Error
-            }
-            loadRegionInterpreter(context.applicationContext)?.let { regionEngine ->
-                // 2단계가 실패해도 사용자는 인식 결과를 받아야 한다 — 전체 사진 1회로 내려간다.
-                var regions = try {
-                    detectRegions(regionEngine, engine, bitmaps)
-                } catch (e: Exception) {
-                    Log.e(TAG, "2단계 인식 실패 — 전체 사진 1회로 대신한다", e)
-                    emptyList()
-                } catch (e: OutOfMemoryError) {
-                    // 자리 수만큼 자르기를 돌리는 경로라 저사양 기기에서 메모리가 모자랄 수 있다. 앱을 죽이지 않고 1회 경로로 간다.
-                    Log.e(TAG, "2단계 인식 중 메모리 부족 — 전체 사진 1회로 대신한다", e)
-                    emptyList()
-                }
-                if (regions.isNotEmpty()) {
-                    regions = withMemory(context.applicationContext, regions, bitmaps)
-                    // 이름이 하나도 안 붙은 사진은 전체 사진 1회로도 본다 — 그 사진의 음식이 통째로 빠지지 않게.
-                    // 여기서 나온 음식은 자리가 없어 사진 위 박스 없이 목록에만 들어간다.
-                    val fallback = try {
-                        regions.photosWithoutNames(bitmaps.size).flatMap { index ->
-                            runInference(engine, bitmaps[index]).map { (name, confidence) -> DetectedFood(name, confidence, index) }
-                        }
-                    } catch (e: Exception) {
-                        Log.e(TAG, "자리 없는 사진의 전체 1회 인식 실패", e)
-                        emptyList()
-                    }
-                    val (foods, candidates) = regions.toResultLists(fallback, MAX_CANDIDATES)
-                    return FoodDetectionResult.Success(foods, candidates, regions)
-                }
-            }
-            return try {
-                // 사진 여러 장이면 인식된 음식을 라벨 기준으로 합치고, 같은 음식은 최고 confidence(와 그 사진)만 남긴다.
-                val merged = LinkedHashMap<String, DetectedFood>()
-                bitmaps.forEachIndexed { index, bitmap ->
-                    runInference(engine, bitmap).forEach { (name, confidence) ->
-                        val previous = merged[name]
-                        if (previous == null || confidence > previous.confidence) {
-                            merged[name] = DetectedFood(name, confidence, index)
-                        }
-                    }
-                }
-                val ranked = merged.values.sortedByDescending { it.confidence }
-                val foods = ranked
-                    .filter { it.confidence >= CONFIDENCE_THRESHOLD }
-                    .take(MAX_FOODS_PER_ANALYSIS)
-                // 결과에 이미 든 것은 후보에서 뺀다 — 같은 이름을 두 곳에 보여줄 이유가 없다.
-                val shown = foods.mapTo(HashSet()) { it.name }
-                val candidates = ranked
-                    .filter { it.confidence < CONFIDENCE_THRESHOLD && it.name !in shown }
-                    .take(MAX_CANDIDATES)
-                FoodDetectionResult.Success(foods, candidates)
-            } catch (e: Exception) {
-                Log.e(TAG, "추론 실패", e)
-                FoodDetectionResult.Error
-            }
-        }
+    override fun classScores(photo: FoodPhoto, crop: PixelBox?): FloatArray {
+        val engine = checkNotNull(interpreter) { "분류 모델이 없다" }
+        val bitmap = (photo as AndroidFoodPhoto).bitmap
+        return classScores(engine, if (crop == null) letterboxInput(bitmap, inputGeometry(engine)) else cropInput(bitmap, crop, inputGeometry(engine)))
     }
 
-    private fun loadInterpreter(context: Context): Interpreter? {
+    override fun embed(photo: FoodPhoto, box: PixelBox): FloatArray =
+        embedWith(checkNotNull(embedInterpreter) { "특징값 모델이 없다" }, (photo as AndroidFoodPhoto).bitmap, box)
+
+    private fun loadInterpreter(): Interpreter? {
         interpreter?.let { return it }
         if (modelMissing) return null
         val model = try {
-            openModel(context, MODEL_PATH)
+            openModel(MODEL_PATH)
         } catch (e: FileNotFoundException) {
             modelMissing = true
             Log.w(TAG, "$MODEL_PATH 가 assets에 없어 모델 없이 동작한다")
@@ -220,11 +161,11 @@ object FoodDetector {
      * 위치 모델을 불러온다. 없거나 못 불러오면 null — 호출부는 전체 사진 1회로 간다.
      * 실패를 예외로 올리지 않는 이유: 위치 모델은 인식을 **돕는** 것이지 없으면 안 되는 것이 아니다.
      */
-    private fun loadRegionInterpreter(context: Context): Interpreter? {
+    private fun loadRegionInterpreter(): Interpreter? {
         regionInterpreter?.let { return it }
         if (regionUnavailable != null) return null
         return try {
-            val model = openModel(context, REGION_MODEL_PATH)
+            val model = openModel(REGION_MODEL_PATH)
             val engine = Interpreter(model, Interpreter.Options().apply { setNumThreads(NUM_THREADS) })
             val input = engine.getInputTensor(0)
             val output = engine.getOutputTensor(0)
@@ -245,126 +186,13 @@ object FoodDetector {
         }
     }
 
-    /**
-     * 2단계 인식. 사진마다 그릇 자리를 찾아([FoodRegions.decode]·[FoodRegions.tidy]) 자리마다 잘라 342종 모델에 넣고
-     * 상위 [FoodRegions.TOP_PER_REGION] 개를 남긴다. 자리 좌표는 사진 대비 0~1 로 바꿔 둔다(화면 사진은 크기가 다르다).
-     */
-    private fun detectRegions(regionEngine: Interpreter, foodEngine: Interpreter, bitmaps: List<Bitmap>): List<FoodRegion> {
-        val startedAt = System.nanoTime()
-        val input = inputGeometry(regionEngine)
-        val outputShape = regionEngine.getOutputTensor(0).shape()
-        // [1, 4+클래스, 앵커] 가 기본이다. 반대 배치면 앵커가 더 많은 쪽으로 가린다(앵커 8400 ≫ 채널 13).
-        val channelFirst = outputShape[1] < outputShape[2]
-        val channels = if (channelFirst) outputShape[1] else outputShape[2]
-        val anchors = if (channelFirst) outputShape[2] else outputShape[1]
-        val regions = ArrayList<FoodRegion>()
-        var crops = 0
-        bitmaps.forEachIndexed { photoIndex, bitmap ->
-            val letterbox = Letterbox.of(bitmap.width, bitmap.height, input.width)
-            val raw = Array(1) { Array(outputShape[1]) { FloatArray(outputShape[2]) } }
-            regionEngine.run(letterboxInput(bitmap, input), raw)
-            val flat = FloatArray(channels * anchors)
-            for (c in 0 until channels) for (a in 0 until anchors) {
-                flat[c * anchors + a] = if (channelFirst) raw[0][c][a] else raw[0][a][c]
-            }
-            val hits = FoodRegions.tidy(
-                FoodRegions.decode(flat, channels, anchors, letterbox, bitmap.width, bitmap.height),
-                bitmap.width, bitmap.height,
-            )
-            for (hit in hits) {
-                val scores = classScores(foodEngine, cropInput(bitmap, hit.box, inputGeometry(foodEngine)))
-                val top = labels.indices
-                    .filter { !labels[it].startsWith("#") }
-                    .sortedByDescending { scores[it] }
-                    .take(FoodRegions.TOP_PER_REGION)
-                    .map { labels[it] to scores[it] }
-                val box = hit.box
-                regions += FoodRegion(
-                    id = regions.size,
-                    photoIndex = photoIndex,
-                    box = PixelBox(box.left / bitmap.width, box.top / bitmap.height, box.right / bitmap.width, box.bottom / bitmap.height),
-                    regionScore = hit.score,
-                    top = top,
-                )
-                crops++
-            }
-        }
-        val elapsedMs = (System.nanoTime() - startedAt) / 1_000_000
-        // 실기기에서 "그릇은 찾았는데 이름이 틀렸나 / 그릇을 못 찾았나" 를 가리려고 자리마다 상위 후보를 남긴다.
-        Log.d(
-            TAG,
-            "2단계 ${bitmaps.size}장 · 자리 ${regions.size}곳 · 이름 ${regions.count { it.name != null }}곳 · ${elapsedMs}ms · " +
-                regions.joinToString(" | ") { r -> "#${r.photoIndex}:" + r.top.joinToString { "${it.first} ${"%.2f".format(it.second)}" } },
-        )
-        return regions
-    }
-
-    /**
-     * 이름이 없고 비어 보이지 않는 자리마다 특징값을 뽑아 내 음식 기억과 견준다. 기억이 비었거나 특징값 모델이 없으면 그대로 돌려준다.
-     * 실패해도 인식 결과는 그대로 내야 하므로 예외를 삼킨다.
-     */
-    private fun withMemory(context: Context, regions: List<FoodRegion>, bitmaps: List<Bitmap>): List<FoodRegion> {
-        val memory = FoodMemoryStore.load(context)
-        if (memory.isEmpty) return regions
-        val engine = loadEmbedInterpreter(context) ?: return regions
-        val startedAt = System.nanoTime()
-        return try {
-            regions.map { r ->
-                val modelName = r.name
-                when {
-                    modelName == null && r.looksEmpty -> r
-                    modelName == null -> {
-                        val v = embedWith(engine, bitmaps[r.photoIndex], r.box)
-                        r.copy(remembered = memory.match(v).filter { it.second >= FoodMemory.SUGGEST_AT })
-                    }
-                    // 모델 이름이 붙은 자리는 그 이름을 사용자가 고친 적이 있을 때만 본다.
-                    memory.hasCorrectionOf(modelName) -> {
-                        val v = embedWith(engine, bitmaps[r.photoIndex], r.box)
-                        r.copy(remembered = memory.match(v, correctedFrom = modelName).filter { it.second >= FoodMemory.SUGGEST_AT })
-                    }
-                    else -> r
-                }
-            }.also { out ->
-                Log.d(
-                    TAG,
-                    "기억 비교 ${out.count { (it.name == null && !it.looksEmpty) || (it.name != null && memory.hasCorrectionOf(it.name!!)) }}곳 · 기억 ${memory.entries.size}장 · " +
-                        "${(System.nanoTime() - startedAt) / 1_000_000}ms · " +
-                        out.filter { it.remembered.isNotEmpty() }.joinToString { r -> r.remembered.joinToString("/") { "${it.first} ${"%.2f".format(it.second)}" } },
-                )
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "기억 비교 실패 — 기억 없이 보여준다", e)
-            regions
-        } catch (e: OutOfMemoryError) {
-            Log.e(TAG, "기억 비교 중 메모리 부족 — 기억 없이 보여준다", e)
-            regions
-        }
-    }
-
-    /**
-     * [photo] 의 [box](사진 대비 0~1) 자리 특징값. 내 음식 기억을 저장할 때 쓴다. 모델이 없거나 실패하면 null.
-     * 블로킹 호출이다 — 백그라운드에서 부른다.
-     */
-    fun embed(context: Context, photo: Bitmap, box: PixelBox): FloatArray? = synchronized(lock) {
-        val engine = loadEmbedInterpreter(context.applicationContext) ?: return null
-        try {
-            embedWith(engine, photo, box)
-        } catch (e: Exception) {
-            Log.e(TAG, "특징값 계산 실패", e)
-            null
-        } catch (e: OutOfMemoryError) {
-            Log.e(TAG, "특징값 계산 중 메모리 부족", e)
-            null
-        }
-    }
-
-    private fun loadEmbedInterpreter(context: Context): Interpreter? {
+    private fun loadEmbedInterpreter(): Interpreter? {
         embedInterpreter?.let { return it }
         if (embedUnavailable) return null
         return try {
-            val engine = Interpreter(openModel(context, EMBED_MODEL_PATH), Interpreter.Options().apply { setNumThreads(NUM_THREADS) })
+            val engine = Interpreter(openModel(EMBED_MODEL_PATH), Interpreter.Options().apply { setNumThreads(NUM_THREADS) })
             val shape = engine.getInputTensor(0).shape()
-            if (!shape.contentEquals(intArrayOf(1, EMBED_SIZE, EMBED_SIZE, 3)) || engine.getInputTensor(0).dataType() != DataType.FLOAT32) {
+            if (!shape.contentEquals(intArrayOf(1, FoodInputs.EMBED_SIZE, FoodInputs.EMBED_SIZE, 3)) || engine.getInputTensor(0).dataType() != DataType.FLOAT32) {
                 engine.close()
                 throw IllegalStateException("특징값 모델 입력이 맞지 않는다: ${shape.contentToString()}")
             }
@@ -387,30 +215,13 @@ object FoodDetector {
     }
 
     /**
-     * 자리를 둘레 [EMBED_PAD] 만큼 넓혀 자르고, 짧은 변을 224 로 맞춘 뒤 가운데 224×224 를 쓴다(학습 전처리 timm: resize + center crop).
+     * 자리를 둘레 10% 넓혀 자르고, 짧은 변을 224 로 맞춘 뒤 가운데 224×224 를 쓴다(배치는 공유 [FoodInputs.embed]).
      * ImageNet 평균·표준편차로 정규화한다.
      */
     private fun embedWith(engine: Interpreter, photo: Bitmap, box: PixelBox): FloatArray {
-        val w = photo.width.toFloat()
-        val h = photo.height.toFloat()
-        val padX = box.width * EMBED_PAD
-        val padY = box.height * EMBED_PAD
-        val left = ((box.left - padX) * w).coerceIn(0f, w - 1)
-        val top = ((box.top - padY) * h).coerceIn(0f, h - 1)
-        val right = ((box.right + padX) * w).coerceIn(left + 1, w)
-        val bottom = ((box.bottom + padY) * h).coerceIn(top + 1, h)
-        val scale = EMBED_SIZE / minOf(right - left, bottom - top)
-        val dw = (right - left) * scale
-        val dh = (bottom - top) * scale
-        val dx = (EMBED_SIZE - dw) / 2
-        val dy = (EMBED_SIZE - dh) / 2
-        val input = toInputBuffer(InputGeometry(EMBED_SIZE, EMBED_SIZE, channelsFirst = false), EMBED_MEAN, EMBED_STD) { canvas ->
-            canvas.drawBitmap(
-                photo,
-                Rect(left.toInt(), top.toInt(), right.toInt(), bottom.toInt()),
-                RectF(dx, dy, dx + dw, dy + dh),
-                Paint(Paint.FILTER_BITMAP_FLAG),
-            )
+        val placed = FoodInputs.embed(box, photo.width, photo.height)
+        val input = toInputBuffer(InputGeometry(FoodInputs.EMBED_SIZE, FoodInputs.EMBED_SIZE, channelsFirst = false), EMBED_MEAN, EMBED_STD) { canvas ->
+            canvas.drawBitmap(photo, placed.src.toRect(), placed.dst.toRectF(), Paint(Paint.FILTER_BITMAP_FLAG))
         }
         val out = Array(1) { FloatArray(engine.getOutputTensor(0).shape()[1]) }
         engine.run(input, out)
@@ -421,7 +232,7 @@ object FoodDetector {
      * .tflite 는 AGP 기본 noCompress 목록에 있어 보통 mmap 으로 열린다(힙 복사 없음).
      * 압축돼 들어간 빌드면 openFd 가 실패하므로 힙으로 읽는 경로로 내려간다. 파일 자체가 없으면 FileNotFoundException.
      */
-    private fun openModel(context: Context, path: String): ByteBuffer {
+    private fun openModel(path: String): ByteBuffer {
         try {
             context.assets.openFd(path).use { fd ->
                 FileInputStream(fd.fileDescriptor).channel.use { channel ->
@@ -448,27 +259,6 @@ object FoodDetector {
             height = if (channelsFirst) shape[2] else shape[1],
             channelsFirst = channelsFirst,
         )
-    }
-
-    private fun runInference(engine: Interpreter, bitmap: Bitmap): Map<String, Float> {
-        val best = classScores(engine, letterboxInput(bitmap, inputGeometry(engine)))
-        // 임계값과 무관하게 상위 5개를 남긴다 — "왜 못 잡았나"(근소 미달 vs 엉뚱한 클래스)를 실기기 로그로 가리기 위해서다.
-        val ranked = labels.indices
-            .filter { !labels[it].startsWith("#") }
-            .sortedByDescending { best[it] }
-            .take(5)
-            .joinToString { "${labels[it]} ${"%.2f".format(best[it])}" }
-        Log.d(TAG, "전체 사진 1회 · 상위 점수: $ranked (임계 $CONFIDENCE_THRESHOLD)")
-
-        // 임계값이 아니라 바닥값으로 자른다. 임계 미만은 결과에 넣지 않지만 후보로는 쓰므로,
-        // 여기서 버리면 detect() 가 나눌 수 없다.
-        val scored = LinkedHashMap<String, Float>()
-        for (c in labels.indices) {
-            val name = labels[c]
-            if (name.startsWith("#")) continue
-            if (best[c] >= CANDIDATE_FLOOR) scored[name] = best[c]
-        }
-        return scored
     }
 
     /** 342종 모델을 한 번 돌려 클래스별 최고 점수를 낸다. */
@@ -498,40 +288,25 @@ object FoodDetector {
         return best
     }
 
-    /**
-     * Ultralytics 학습·평가와 같은 letterbox: 비율을 유지해 맞추고 남는 영역은 회색(114)으로 채운다.
-     * 정사각형으로 늘리면(stretch) 학습 분포와 달라져 confidence 가 떨어진다.
-     */
+    /** letterbox(공유 [FoodInputs.letterbox]) — 비율을 유지해 맞추고 남는 영역은 회색(114)으로 채운다. */
     private fun letterboxInput(bitmap: Bitmap, input: InputGeometry): ByteBuffer {
-        val scale = minOf(input.width.toFloat() / bitmap.width, input.height.toFloat() / bitmap.height)
-        val scaledW = (bitmap.width * scale).toInt().coerceAtLeast(1)
-        val scaledH = (bitmap.height * scale).toInt().coerceAtLeast(1)
+        val dst = FoodInputs.letterbox(bitmap.width, bitmap.height, input.width, input.height).dst
         return toInputBuffer(input) { canvas ->
-            canvas.drawBitmap(
-                Bitmap.createScaledBitmap(bitmap, scaledW, scaledH, true),
-                ((input.width - scaledW) / 2).toFloat(),
-                ((input.height - scaledH) / 2).toFloat(),
-                null,
-            )
+            canvas.drawBitmap(Bitmap.createScaledBitmap(bitmap, dst.width.toInt(), dst.height.toInt(), true), dst.left, dst.top, null)
         }
     }
 
-    /** 2단계 입력: [box] 자리만 잘라 회색 캔버스 가운데에 [FoodRegions.cropPlacement] 크기로 그린다. */
+    /** 2단계 입력: [box] 자리만 잘라 회색 캔버스 가운데에 [FoodRegions.cropPlacement] 크기로 그린다(공유 [FoodInputs.crop]). */
     private fun cropInput(bitmap: Bitmap, box: PixelBox, input: InputGeometry): ByteBuffer {
-        val size = minOf(input.width, input.height)
-        val dest = FoodRegions.cropPlacement(box, size)
-        val offsetX = (input.width - size) / 2f
-        val offsetY = (input.height - size) / 2f
+        val placed = FoodInputs.crop(box, input.width, input.height)
         return toInputBuffer(input) { canvas ->
-            // 원본 좌표는 버림한다 — 실험 코드(crop_gray 의 int())와 같다. 1픽셀 미만 차이다.
-            canvas.drawBitmap(
-                bitmap,
-                Rect(box.left.toInt(), box.top.toInt(), box.right.toInt().coerceAtLeast(box.left.toInt() + 1), box.bottom.toInt().coerceAtLeast(box.top.toInt() + 1)),
-                RectF(dest.left + offsetX, dest.top + offsetY, dest.right + offsetX, dest.bottom + offsetY),
-                Paint(Paint.FILTER_BITMAP_FLAG),
-            )
+            canvas.drawBitmap(bitmap, placed.src.toRect(), placed.dst.toRectF(), Paint(Paint.FILTER_BITMAP_FLAG))
         }
     }
+
+    private fun PixelBox.toRect() = Rect(left.toInt(), top.toInt(), right.toInt(), bottom.toInt())
+
+    private fun PixelBox.toRectF() = RectF(left, top, right, bottom)
 
     // 입력 캔버스·픽셀·버퍼를 크기별로 한 벌만 두고 돌려 쓴다. 2단계는 자리마다(사진 5장 × 최대 20곳) 입력을 만드는데,
     // 매번 새로 만들면 1회에 약 6.5MB 씩 할당돼 저사양 기기에서 GC·메모리 부족을 부른다. [lock] 안에서만 쓰고,

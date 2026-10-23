@@ -69,6 +69,9 @@ import java.util.Locale
 /** 이 플랫폼에 카메라 자세 화면이 있는가 — [postureSupported] 가 본다. */
 const val PLATFORM_POSTURE_CAMERA = true
 
+/** 시트를 아래로 끌어 닫는가([SheetHost]) — Android 는 시스템 뒤로·스크림 탭이 닫는다(종전 그대로). iPhone 은 끌어 내리기가 시트 관례다(§108d). */
+const val PLATFORM_SHEET_DRAG_DISMISS = false
+
 /** 앱 진입 — 앱 상태는 Application 으로 만든다(공유 [TrexApp] 은 상태를 인자로 받는다). */
 @Composable
 fun TrexApp() = TrexApp(viewModel { AppViewModel(AndroidAppPlatform(checkNotNull(this[APPLICATION_KEY]))) })
@@ -144,6 +147,10 @@ fun rememberGoogleIdTokenRequest(): suspend (String) -> String {
     val context = LocalContext.current
     return remember(context) { { clientId -> requestGoogleIdToken(context.findTrexActivity() ?: context, clientId) } }
 }
+
+/** 음성 안내 목소리 안내 — Android 는 기기 TTS(구글 음성)를 그대로 써서 없다(iPhone 만, §108d 후속). */
+@Composable
+fun rememberVoiceAdvisor(): VoiceAdvisor? = null
 
 @Composable
 fun rememberSystemSettingsLinks(): SystemSettingsLinks {

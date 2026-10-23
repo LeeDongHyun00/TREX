@@ -18,6 +18,9 @@ import com.example.trex_kotlin.posture.FormLabel
 import com.example.trex_kotlin.posture.PostureSetReport
 import com.example.trex_kotlin.posture.SetSelfLabel
 import androidx.lifecycle.viewModelScope
+import com.example.trex_kotlin.weather.WeatherLocationPrefs
+import com.example.trex_kotlin.weather.WeatherRepository
+import com.example.trex_kotlin.weather.WeatherServices
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.launch
@@ -347,6 +350,14 @@ class AppViewModel(private val platform: AppPlatform) : ViewModel() {
                 } finally { muscleLoadLoading = false }
             }
         }
+    }
+
+    /** 홈 날씨 카드의 저장소·위치 설정(§108e) — 플랫폼 전송·키-값 저장소 위. 저장소 이름은 weather 브랜치와 같다. */
+    val weather: WeatherServices by lazy {
+        WeatherServices(
+            WeatherRepository(platform.http, platform.preferences("trex_weather_cache_prefs")),
+            WeatherLocationPrefs(platform.preferences("trex_weather_location_prefs")),
+        )
     }
 
     fun addMuscleRecommendation(name: String) {

@@ -3,9 +3,6 @@
 package com.example.trex_kotlin
 
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.SideEffect
@@ -19,8 +16,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.UIKitInteropInteractionMode
 import androidx.compose.ui.viewinterop.UIKitInteropProperties
 import androidx.compose.ui.viewinterop.UIKitView
@@ -56,16 +51,18 @@ import platform.WebKit.WKNavigationDelegateProtocol
 import platform.WebKit.WKWebView
 import platform.WebKit.WKWebViewConfiguration
 import platform.darwin.NSObject
-import com.example.trex_kotlin.TrexText as Text
 
 /*
  * 공유 화면이 쓰는 플랫폼 기능의 iPhone 구현(§108 Phase 2) — Android `app/.../PlatformUi.kt` 와 같은 이름·같은 시그니처의 짝이다.
  * 자세 화면의 카메라·추론·권한·확인음·자원은 PostureCameraIos.kt(§108c Phase 3), 소리는 ios/IosAudio.kt.
- * 아직 없는 기능은 없다고 밝힌다: 사진 식단(Phase 4)·구글 로그인·앱 내 업데이트(App Store 몫).
+ * 사진 식단의 TFLite·보관함·카메라는 PhotoFoodIos.kt(§108d). 아직 없는 기능은 없다고 밝힌다: 구글 로그인·앱 내 업데이트(App Store 몫).
  */
 
 /** iPhone 도 카메라 자세 화면을 돈다(§108c) — 공유 PostureLive + Swift 카메라·MediaPipe 다리(PoseCameraBridge.swift). */
 const val PLATFORM_POSTURE_CAMERA = true
+
+/** iPhone 시트 관례 — 아래로 끌어 내리면 닫힌다(§108d, SwiftUI 판 `trexSheet` 와 같은 동작). 왼쪽 가장자리 스와이프 뒤로도 시트를 닫는다([PlatformBackHandler]). */
+const val PLATFORM_SHEET_DRAG_DISMISS = true
 
 /** 상태 막대 글자색을 화면 테마에 맞춘다(창의 라이트·다크). */
 @Composable
@@ -80,6 +77,10 @@ fun TrexSystemBars(c: TrexColors) {
 /** 세션 스피커 — 공유 정책(SpeechCoach) 위에 AVSpeechSynthesizer 엔진(§108c). */
 @Composable
 fun rememberSpeechCoach(): SpeechCoach = remember { SpeechCoach(IosSpeechEngine()) }
+
+/** 음성 안내 목소리 안내 — 지금 목소리·받는 길·미리 듣기(§108d 후속, iPhone 만). */
+@Composable
+fun rememberVoiceAdvisor(): VoiceAdvisor? = remember { com.example.trex_kotlin.ios.IosVoiceAdvisor() }
 
 /** 운동 시작 톤 — 시스템 짧은 확인음. */
 @Composable
@@ -105,9 +106,15 @@ fun rememberTrexDisplayRotation(): Int = 0
 @Composable
 fun rememberRepValidation(key: Any?): Boolean = false
 
-/** iPhone 에는 시스템 뒤로 버튼이 없다 — 화면마다 있는 뒤로·닫기 버튼을 쓴다. */
+/**
+ * 뒤로 — iPhone 은 화면 왼쪽(오른쪽) 가장자리에서 밀어 넣는 스와이프가 Android 시스템 뒤로 자리다(§108d). Compose 공통 BackHandler 에
+ * 등록하면 Compose 가 UIKit 가장자리 팬 제스처를 같은 처리기로 보낸다 — 화면·시트·온보딩 단계가 Android 뒤로와 같은 일을 한다.
+ * CMP 1.11 에서 deprecated 지만 NavigationEventHandler 와 같은 디스패처에 붙는 얇은 감싸개라 동작은 같다.
+ */
+@Suppress("DEPRECATION")
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
-fun PlatformBackHandler(enabled: Boolean = true, onBack: () -> Unit) {}
+fun PlatformBackHandler(enabled: Boolean = true, onBack: () -> Unit) = androidx.compose.ui.backhandler.BackHandler(enabled, onBack)
 
 /** iPhone 구글 로그인은 아직 없다 — 웹 클라이언트 ID 가 비어 있어 앱 상태가 이 함수를 부르기 전에 안내한다. */
 @Composable
@@ -122,7 +129,8 @@ fun rememberSystemSettingsLinks(): SystemSettingsLinks = remember {
     }
 }
 
-private fun openAppSettings() {
+/** 이 앱의 설정 화면 — iPhone 은 한 번 거절한 권한을 앱이 다시 물을 수 없어 여기로 보낸다. */
+internal fun openAppSettings() {
     val url = NSURL.URLWithString(UIApplicationOpenSettingsURLString) ?: return
     UIApplication.sharedApplication.openURL(url, options = emptyMap<Any?, Any?>(), completionHandler = null)
 }
@@ -252,25 +260,6 @@ fun SessionOrientation(follow: Boolean) {}
 /** 앱 내 업데이트는 Android 체험판 전용이다 — iPhone 은 App Store·TestFlight 가 맡는다. */
 @Composable
 fun AppUpdatePrompt(enabled: Boolean) {}
-
-/** 사진 식단(TFLite)은 Phase 4 에서 옮긴다 — 그때까지는 그렇게 밝히고 직접 입력으로 잇는다. */
-@Composable
-internal fun PhotoFoodSheet(app: AppViewModel, onClose: () -> Unit) {
-    var manual by remember { mutableStateOf(false) }
-    if (manual) {
-        ManualSheet(app, currentMealId(), onClose)
-        return
-    }
-    SheetHost(onDismiss = onClose) {
-        Column(Modifier.fillMaxWidth().padding(horizontal = 22.dp, vertical = 20.dp)) {
-            Kicker("사진 기록")
-            TitleBig("iPhone 사진 인식은 아직 옮기는 중이에요")
-            Text("음식 사진 인식은 다음 단계에서 Android 와 같은 모델로 옮겨요. 지금은 직접 입력으로 기록해 주세요.",
-                color = Trex.c.text2, fontSize = 14.sp, modifier = Modifier.padding(top = 10.dp, bottom = 18.dp))
-            Cta("직접 입력으로 기록", onClick = { manual = true }, modifier = Modifier.fillMaxWidth())
-        }
-    }
-}
 
 // ---- 번들 자산
 

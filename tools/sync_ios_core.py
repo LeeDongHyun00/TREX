@@ -61,7 +61,8 @@ def main():
         if args.check:
             if not target.exists() or target.read_text(encoding='utf-8') != output: mismatches.append(name)
         else: target.write_text(output,encoding='utf-8',newline='\n')
-    for package, name in [('trainingload', 'MuscleLoad'), ('food', 'FoodRegions'), ('food', 'FoodMemory'), ('', 'SkeletonGate')]:
+    # FoodResults = 인식 결과 타입(DetectedFood·FoodDetectionResult) — 예전 손 사본 FoodDto.kt 를 대신한다(§108d)
+    for package, name in [('trainingload', 'MuscleLoad'), ('food', 'FoodRegions'), ('food', 'FoodMemory'), ('food', 'FoodResults'), ('', 'SkeletonGate')]:
         src = ROOT / 'app/src/main/java/com/example/trex_kotlin' / package / (name + '.kt')
         target = TARGET.parent / package / src.name
         output = '// Android 정본 동기화 — tools/sync_ios_core.py\n' + src.read_text(encoding='utf-8')

@@ -53,13 +53,17 @@ MainSheet.Photo → PhotoFoodSheet
 - 모델의 mAP 는 학습 노트북 출력에만 있고 저장소에 기록되지 않았다.
 - 학습 데이터가 클래스 폴더 기준(사진 1장 = 음식 1종)이면 한 접시에 여러 반찬이 있는 사진의 다중 인식은 약할 수 있다. AI Hub 74번(박스 어노테이션 포함)으로 재학습하면 나아진다 — 노트북 4번 셀 재작성 필요.
 - 임계값 0.40 은 초기값이지만 **조정 근거는 없다** — 밥 8종 held-out 에서 Top-1 과 검출률이 거의 같아(73%/73%) 낮춰도 오검출만 는다(`FOOD_EVAL_RESULTS.md` 1절).
-- CAMERA 권한 요청 블록이 `PostureLive`·`BaselineGuideScreen`·`PostureLabScreen` 과 중복된다. 공용 `rememberCameraPermission()` 으로 묶는 것이 맞지만 자세 화면을 건드리는 작업이라 이 파트에서 하지 않았다.
+- CAMERA 권한 요청 블록이 `PostureLive`·`BaselineGuideScreen`·`PostureLabScreen` 과 중복된다. 공용 `rememberCameraPermission()` 으로 묶는 것이 맞지만 자세 화면을 건드리는 작업이라 이 파트에서 하지 않았다. → §108d(2026-10-23)에서 사진 시트는 공용 `rememberCameraPermission()`(`PostureLiveApi.kt` 의 `CameraPermission` — "권한 다시 요청" 은 `request`)을 쓴다.
 
 ## 모델 교체 절차
 
 `training/train_food_yolov8_colab.ipynb` 실행 → `yolov8n_food.tflite` + `food_labels.txt` 를 `assets/models/` 에 덮어쓰기 → `foodDatabase` 에 새 라벨의 영양값 추가(라벨명 = DB 키) → 빌드. `FoodDetector` 는 입력 float32·출력 `[1, 4+클래스수, 박스수]` 를 로드 시 검사하므로 형식이 어긋나면 로그에 이유가 남는다.
 
-## iPhone (2026-10-22, `ios-redesign`)
+## iPhone (2026-10-23, `ios-compose-ui`, 스펙 §108d)
+
+iPhone 앱은 **Android `PhotoFoodSheet` 를 그대로 컴파일한다**(Compose Multiplatform, `ios-ui/android-sources.txt`). 판정 흐름(2단계·내 음식 기억·이름 없는 사진의 전체 1회·결과 목록)은 `FoodDetector` 에서 떼어 낸 공유 `food/FoodPipeline.kt`(`FoodPipelineTest`)이고, Android 는 `FoodDetector` 가 TFLite 인터프리터로 `FoodModels` 를 채운다. 입력 배치(letterbox 정수 자리·`cropPlacement`·특징값 둘레 10 %·224 가운데)도 공유 `FoodInputs`(`FoodInputsTest`)라 두 플랫폼이 같은 식을 부르고, iPhone 은 `ios-ui/.../PhotoFoodIos.kt` 가 그 배치를 넘기면 Swift `iosApp/Trex/FoodBridge.swift` 가 회색(114) sRGB 캔버스에 그려 TrexFoodRuntime(TFLite)을 돌린다 — 로드 때 float32·형태 확인(위치 출력 3차원, 특징값 입력 [1,224,224,3])도 Android 와 같다. 같은 모델 3개, 같은 라벨 줄 처리, 같은 기억 파일 형식(`Application Support/TREX/food-memory.tsv` — 아래 SwiftUI 판의 파일을 이어 읽는다). 실기기 정확도는 미검증(합성 그림 확인만 — §108d).
+
+### 이전: SwiftUI 판 (2026-10-22, `ios-redesign`) — 지금 앱은 쓰지 않는다
 
 같은 모델 3개(YOLO 는 TFLite C API 호환 inline 가중치 사본)와 같은 흐름을 `iosApp/Trex/DietViews.swift`(`PhotoFoodView`)·`FoodRecognition.swift` 가 든다. 이름 문턱·후보·합치기·전체 1회 폴백·기억 정책은 Swift 에 두지 않고 공통 `posture-core` 의 `IosFood`·`IosFoodMemory`(이 문서의 `FoodRegions`·`FoodMemory` 그대로)가 정한다 — `docs/IOS_PORT.md` 기준 1. 기억 파일은 Android 와 같은 텍스트 형식이다. 실기기 정확도는 미검증.
 

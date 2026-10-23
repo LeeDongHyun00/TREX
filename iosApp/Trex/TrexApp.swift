@@ -5,6 +5,9 @@ import TrexCore
     init() {
         // §108c: 공유 자세 화면(Kotlin)이 쓰는 카메라·MediaPipe 다리 — 앱 수명 하나
         IosCameraBridgeRegistry.shared.bridge = PoseCameraBridge()
+        // §108d: 공유 사진 식단(Kotlin)이 쓰는 TFLite·보관함·카메라 다리
+        IosFoodBridgeRegistry.shared.models = FoodModelBridge()
+        IosFoodBridgeRegistry.shared.photos = FoodPhotoBridge()
     }
     var body: some Scene {
         WindowGroup {
@@ -16,9 +19,11 @@ import TrexCore
                 ScreenTourView().ignoresSafeArea()
             } else if ProcessInfo.processInfo.arguments.contains("--posture-probe") {
                 PostureProbeView().ignoresSafeArea()
+            } else if ProcessInfo.processInfo.arguments.contains("--food-probe") {
+                FoodProbeView().ignoresSafeArea()
             } else {
                 // §108 Phase 2: 앱 화면은 Android 정본 Compose(TrexApp)다. 아래 예전 SwiftUI 화면(RootView 등)은
-                // 카메라 자세·사진 식단 경로를 옮기는 동안(Phase 3·4)만 남긴다 — 지금은 쓰지 않는다.
+                // 쓰지 않는다 — 자세(§108c)·사진 식단(§108d)까지 공유 화면으로 옮겼고, 정리는 따로 한다.
                 ComposeAppView().ignoresSafeArea()
             }
         }

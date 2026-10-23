@@ -86,10 +86,14 @@ interface PostureHost {
     fun appVersion(): String?
 }
 
-/** 카메라 권한 — [granted] 면 화면이 카메라를 연다. [asked] 는 한 번 물었는가(거절 화면을 그때만 보인다). */
+/**
+ * 카메라 권한 — [granted] 면 화면이 카메라를 연다. [asked] 는 한 번 물었는가(거절 화면을 그때만 보인다).
+ * [request] 는 거절 화면의 "권한 다시 요청" — Android 는 다시 묻고, iPhone 은 한 번 거절하면 앱이 다시 물을 수 없어 설정 화면을 연다.
+ */
 class CameraPermission(granted: Boolean) {
     var granted by mutableStateOf(granted)
     var asked by mutableStateOf(granted)
+    var request: () -> Unit = {}
 }
 
 /**

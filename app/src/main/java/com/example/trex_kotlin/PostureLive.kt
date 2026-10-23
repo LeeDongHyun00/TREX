@@ -1383,6 +1383,9 @@ fun PostureLiveSessionScreen(
                 modifier = Modifier.fillMaxSize(),
             )
             if (preparing) PreparationFramingOverlay(sample, Modifier.fillMaxSize())   // 무대 위에 — 검은 배경이 덮지 않게
+            // 무대 보기 전환(§2.1, 사용자 요청 10-23) — 오른쪽 위. ⋯ 패널의 토글과 같은 상태다(패널이 열리면 패널 쪽을 쓴다)
+            if (preparing || !panelVisible) StageViewToggle(showCamera, { showCamera = it },
+                Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(12.dp))
             if (preparing) Column(Modifier.fillMaxWidth().background(Brush.verticalGradient(
                 listOf(Color(0xBB10140E), Color.Transparent))).padding(20.dp)) {
                 val goal = workout.resolvedTarget()

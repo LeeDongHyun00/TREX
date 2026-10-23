@@ -270,6 +270,14 @@ fun rememberPoseCamera(): PoseCamera = remember { IosPoseCamera() }
 @Composable
 fun rememberCameraPermission(): CameraPermission {
     val permission = remember { CameraPermission(AVCaptureDevice.authorizationStatusForMediaType(AVMediaTypeVideo) == AVAuthorizationStatusAuthorized) }
+    // "권한 다시 요청" — 아직 묻지 않았으면 묻고, 한 번 거절했으면 iPhone 은 앱이 다시 물을 수 없어 설정 화면을 연다
+    permission.request = {
+        if (AVCaptureDevice.authorizationStatusForMediaType(AVMediaTypeVideo) == AVAuthorizationStatusNotDetermined) {
+            AVCaptureDevice.requestAccessForMediaType(AVMediaTypeVideo) { ok -> onMain { permission.granted = ok; permission.asked = true } }
+        } else {
+            openAppSettings()
+        }
+    }
     LaunchedEffect(Unit) {
         if (permission.granted) return@LaunchedEffect
         if (AVCaptureDevice.authorizationStatusForMediaType(AVMediaTypeVideo) == AVAuthorizationStatusNotDetermined) {

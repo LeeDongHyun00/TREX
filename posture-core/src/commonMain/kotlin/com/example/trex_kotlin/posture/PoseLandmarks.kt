@@ -216,12 +216,15 @@ class FaceCrop(val cx: Float, val cy: Float, val headPx: Float, val rotationDeg:
  * 키는 [FloorGaze.FOUND]·[FloorGaze.YAW]·[FloorGaze.INFER_MS]·[FloorGaze.ROTATION]·[FloorGaze.SIZE]. 얼굴이 없으면 요 키는 없다. 모델이 없으면(실패·미지원) 키를 넣지 않는다 — 시선은 '측정 중'.
  * 추론 스레드 하나에서만 부른다(플랫폼 분석기의 락 안).
  *
- * 결과 시각은 Android 원본 그대로 Float 칸에 둔다 — 그래서 epoch ms 에서는 [FACE_STALE_MS] 비교가 Float 정밀도(약 131 s 단위)로 돈다(§108c 에 적은 기존 동작).
+ * 결과 시각은 Long 으로 둔다(§108c 후속) — 전에는 다른 값과 같은 Float 칸에 있어서 epoch ms(약 1.76e12)에서는 131 s 단위로만 갈렸고,
+ * 머리가 안 보이게 된 뒤에도 마지막 시선 값이 [FACE_STALE_MS] 가 아니라 1~2분 동안 얹혀 시선 판정·음성이 묵은 얼굴을 봤다.
  */
 class FaceTrack {
     private var lastFaceMs = Long.MIN_VALUE / 2
-    /** 마지막 얼굴 결과 — [검출 1/0, 요 °(NaN = 없음), 추론 ms, 시각, 회전, 머리 px]. */
+    /** 마지막 얼굴 결과 — [검출 1/0, 요 °(NaN = 없음), 추론 ms, 회전, 머리 px]. 시각은 [lastFaceAt]. */
     private var lastFace: FloatArray? = null
+    /** [lastFace] 를 추론한 시각(ms, 분석기 시각 그대로 — epoch ms). Float 칸에 두면 450 ms 가 갈리지 않는다. */
+    private var lastFaceAt = 0L
 
     /** 이 시각에 얼굴 추론을 돌릴 차례인가. */
     fun due(ts: Long): Boolean = ts - lastFaceMs >= FACE_INTERVAL_MS
@@ -229,7 +232,8 @@ class FaceTrack {
     /** 추론했다 — 검출 여부·요(없으면 NaN)·추론 ms 와 그 크롭의 회전·머리 크기를 남긴다. */
     fun record(ts: Long, found: Boolean, yaw: Float, inferMs: Long, crop: FaceCrop) {
         lastFaceMs = ts
-        lastFace = floatArrayOf(if (found) 1f else 0f, yaw, inferMs.toFloat(), ts.toFloat(), crop.rotationDeg, crop.headPx)
+        lastFace = floatArrayOf(if (found) 1f else 0f, yaw, inferMs.toFloat(), crop.rotationDeg, crop.headPx)
+        lastFaceAt = ts
     }
 
     /** 머리가 안 보여 이번 칸은 건너뛴다 — 마지막 결과는 [FACE_STALE_MS] 뒤 사라진다(모름). */
@@ -240,12 +244,12 @@ class FaceTrack {
     /** 마지막 결과를 [out] 에 얹는다(오래됐으면 아무것도 넣지 않는다). */
     fun apply(ts: Long, out: MutableMap<String, Float>) {
         val f = lastFace ?: return
-        if (ts - f[3] > FACE_STALE_MS) return
+        if (ts - lastFaceAt > FACE_STALE_MS) return
         out[FloorGaze.FOUND] = f[0]
         if (f[1].isFinite()) out[FloorGaze.YAW] = f[1]
         out[FloorGaze.INFER_MS] = f[2]
-        out[FloorGaze.ROTATION] = f[4]
-        out[FloorGaze.SIZE] = f[5]
+        out[FloorGaze.ROTATION] = f[3]
+        out[FloorGaze.SIZE] = f[4]
     }
 }
 

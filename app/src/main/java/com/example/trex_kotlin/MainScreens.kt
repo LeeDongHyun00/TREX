@@ -78,6 +78,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.trex_kotlin.weather.WeatherSummaryRow
 
 /** 종목 카테고리별 코칭 팁 (운동 카드 펼침 영역). */
 val categoryTips = mapOf(
@@ -102,14 +103,17 @@ fun HomeScreen(app: AppViewModel, onGoWorkout: () -> Unit, onGoDiet: () -> Unit,
     val total = app.dietFor(0).values.flatten().totalNutrition()
     val goal = app.targetGoal
     val overview = remember(app.workoutPlan) { routineOverview(app.workoutPlan) }
+    // 한 화면(내비 포함)에 오늘 운동·식사 기록까지 보이게 — 날짜·날씨 한 줄·운동한 날·섭취 요약·오늘 할 일(§108f)
     LazyColumn(Modifier.fillMaxSize().background(c.bg),
-        contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 18.dp, bottom = LocalTrexNavSpace.current),
-        verticalArrangement = Arrangement.spacedBy(18.dp)) {
+        contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 14.dp, bottom = LocalTrexNavSpace.current),
+        verticalArrangement = Arrangement.spacedBy(14.dp)) {
         item {
             Text("${today.monthValue}월 ${today.day}일 ${koreanDayOfWeekFull(today.dayOfWeek)}",
                 color = c.text2, fontSize = 14.sp)
+            // 날씨 — 기온·날씨·강수량만(누르면 지역 바꾸기)
+            WeatherSummaryRow(app.weather, Modifier.padding(top = 6.dp))
             Text("운동한 날", color = c.text2, fontSize = 12.sp,
-                modifier = Modifier.padding(top = 6.dp, bottom = 12.dp))
+                modifier = Modifier.padding(top = 10.dp, bottom = 8.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 (6 downTo 0).forEach { offset ->
                     val date = today.minusDays(offset.toLong())
@@ -120,7 +124,7 @@ fun HomeScreen(app: AppViewModel, onGoWorkout: () -> Unit, onGoDiet: () -> Unit,
                             contentDescription = "${date.monthValue}월 ${date.day}일, ${if(attended) "운동 기록 있음" else "운동 기록 없음"}${if(isToday) ", 오늘" else ""}"
                         }) {
                         Text(koreanDayOfWeek(date.dayOfWeek), color = c.text2, fontSize = 11.sp)
-                        Box(Modifier.padding(top = 8.dp).size(36.dp).clip(CircleShape)
+                        Box(Modifier.padding(top = 6.dp).size(34.dp).clip(CircleShape)
                             .background(if (attended) c.primary else c.surface)
                             .border(if(isToday) 2.dp else 0.dp, if(isToday)c.primaryText else Color.Transparent, CircleShape),
                             contentAlignment = Alignment.Center) {
@@ -128,7 +132,7 @@ fun HomeScreen(app: AppViewModel, onGoWorkout: () -> Unit, onGoDiet: () -> Unit,
                                 fontWeight = FontWeight.Medium, fontSize = 13.sp)
                         }
                         Text(if(isToday) "오늘" else if(attended) "✓" else "", color = c.primaryText, fontSize = 10.sp,
-                            modifier = Modifier.height(18.dp))
+                            modifier = Modifier.height(15.dp))
                     }
                 }
             }

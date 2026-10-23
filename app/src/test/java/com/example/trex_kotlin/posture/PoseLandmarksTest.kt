@@ -119,6 +119,37 @@ class PoseLandmarksTest {
         assertTrue(cleared.isEmpty())
     }
 
+    /**
+     * 실제 시각(epoch ms)에서도 450 ms 는 450 ms 다(§108c 후속). 전에는 결과 시각을 Float 칸에 둬서 이 크기에서는 131 s 단위로만 갈렸다 —
+     * [t0] 는 Float 로 정확히 표현되는 칸의 시작(2025-10-22)이라, 옛 구현에서는 451 ms 뒤에도 차이가 0 으로 계산돼 묵은 얼굴 값이 그대로 얹혔다(65.5 s 까지).
+     */
+    @Test
+    fun faceReadingExpiresAfterStaleWindowAtEpochMillis() {
+        val t0 = 13_436_432L * 131_072L
+        assertEquals("Float 칸에서 정확한 시각이어야 옛 구현과 갈린다", t0.toFloat().toLong(), t0)
+        val track = FaceTrack()
+        track.record(t0, found = true, yaw = 5f, inferMs = 20L, crop = FaceCrop(1f, 1f, 50f, -12f))
+        val fresh = HashMap<String, Float>()
+        track.apply(t0 + FACE_STALE_MS, fresh)
+        assertEquals(1f, fresh[FloorGaze.FOUND])
+        assertEquals(5f, fresh[FloorGaze.YAW])
+        assertEquals(20f, fresh[FloorGaze.INFER_MS])
+        assertEquals(-12f, fresh[FloorGaze.ROTATION])
+        assertEquals(50f, fresh[FloorGaze.SIZE])
+        val stale = HashMap<String, Float>()
+        track.apply(t0 + FACE_STALE_MS + 1, stale)
+        assertTrue("머리가 안 보인 뒤 450 ms 가 지나면 마지막 얼굴 값을 얹지 않는다(모름)", stale.isEmpty())
+        val minuteLater = HashMap<String, Float>()
+        track.apply(t0 + 60_000L, minuteLater)
+        assertTrue("옛 구현은 이 칸(1분 뒤)에도 얹었다", minuteLater.isEmpty())
+        // 새 결과가 오면 그 시각부터 다시 450 ms
+        track.record(t0 + 61_000L, found = false, yaw = Float.NaN, inferMs = 18L, crop = FaceCrop(1f, 1f, 50f, 0f))
+        val renewed = HashMap<String, Float>()
+        track.apply(t0 + 61_400L, renewed)
+        assertEquals(0f, renewed[FloorGaze.FOUND])
+        assertNull(renewed[FloorGaze.YAW])
+    }
+
     @Test
     fun faceCropFollowsTheNeckDirection() {
         val (xy, vis, _) = standing()

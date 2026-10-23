@@ -47,7 +47,7 @@
   "PreparationVoice": "3e06ee4982caa087eccc155c940c87138a23d66ad6c79eff1c0633728b521e25",
   "SpeechQueue": "80c2b7a6f739d5e8490795cf85a4704826536029ed044ee0710d2867afb8ca2e",
   "StandingFraming": "1f43574af18fc7c7f664f494cda91ac5bcc45708a1ffed7680502b9d5e4312fa",
-  "PoseLandmarks": "a6d6ec1fc2ed4d602324ec0c575c7cf4c878a6ef7965c86eff31d1750bf4a5ab",
+  "PoseLandmarks": "ace51bb6fa88b9a38b427c3a9137dab46c679f7cc211f48b859745e08b6a03ac",
   "RepEngineLog": "c4ccb2c94a8eab7002d3ec1ddb15745bd93a9750b50a6c4f6f387dc94899838f",
   "InferencePolicy": "0dcf86a83be0f2a76512e914050cd3319bc29b12618a9ce58c44d5f7eac4d18e"
 }

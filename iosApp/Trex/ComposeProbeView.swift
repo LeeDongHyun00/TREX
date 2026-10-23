@@ -34,3 +34,30 @@ struct PostureProbeView: UIViewControllerRepresentable {
     func makeUIViewController(context: Context) -> UIViewController { PostureProbeKt.PostureProbeViewController() }
     func updateUIViewController(_ controller: UIViewController, context: Context) {}
 }
+
+/// 실행 인자 --food-probe(§108d): 공유 사진 식단이 iPhone TFLite·사진 다리로 도는지 확인한다(Documents/food-probe/).
+struct FoodProbeView: UIViewControllerRepresentable {
+    func makeUIViewController(context: Context) -> UIViewController { FoodProbeKt.FoodProbeViewController(image: Self.plate()) }
+    func updateUIViewController(_ controller: UIViewController, context: Context) {}
+
+    /// 합성 접시(1600×1200 PNG → 사진 경로와 같은 축소 디코딩) — 나무색 바탕에 흰 접시와 밥·김치·나물 색 덩어리.
+    /// 왼쪽 위 빨강·오른쪽 아래 파랑 표지로 채널 순서와 위아래를 본다. 음식 사진이 아니라 인식 이름은 의미가 없다.
+    static func plate() -> IosFoodImage? {
+        let size = CGSize(width: 1600, height: 1200)
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        format.opaque = true
+        format.preferredRange = .standard
+        let image = UIGraphicsImageRenderer(size: size, format: format).image { context in
+            let cg = context.cgContext
+            UIColor(red: 0.55, green: 0.38, blue: 0.22, alpha: 1).setFill(); cg.fill(CGRect(origin: .zero, size: size))
+            UIColor(white: 0.97, alpha: 1).setFill(); cg.fillEllipse(in: CGRect(x: 300, y: 150, width: 1000, height: 900))
+            UIColor(red: 0.98, green: 0.97, blue: 0.92, alpha: 1).setFill(); cg.fillEllipse(in: CGRect(x: 450, y: 330, width: 360, height: 300))
+            UIColor(red: 0.80, green: 0.20, blue: 0.12, alpha: 1).setFill(); cg.fillEllipse(in: CGRect(x: 860, y: 380, width: 300, height: 230))
+            UIColor(red: 0.36, green: 0.55, blue: 0.20, alpha: 1).setFill(); cg.fillEllipse(in: CGRect(x: 640, y: 700, width: 330, height: 210))
+            UIColor.red.setFill(); cg.fill(CGRect(x: 0, y: 0, width: 60, height: 60))
+            UIColor.blue.setFill(); cg.fill(CGRect(x: size.width - 60, y: size.height - 60, width: 60, height: 60))
+        }
+        return image.pngData().flatMap { decodeFoodImage($0) }
+    }
+}

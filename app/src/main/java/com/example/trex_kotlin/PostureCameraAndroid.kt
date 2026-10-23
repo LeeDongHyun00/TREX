@@ -75,6 +75,7 @@ fun rememberCameraPermission(): CameraPermission {
         permission.granted = it
         permission.asked = true
     }
+    permission.request = { launcher.launch(Manifest.permission.CAMERA) }
     LaunchedEffect(Unit) { if (!permission.granted) launcher.launch(Manifest.permission.CAMERA) }
     return permission
 }

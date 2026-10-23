@@ -31,6 +31,8 @@ kotlin {
                 implementation(libs.cmp.runtime)
                 implementation(libs.cmp.foundation)
                 implementation(libs.cmp.ui)
+                // iPhone 가장자리 스와이프 = 뒤로(공통 BackHandler — Android 시스템 뒤로와 같은 처리기를 부른다)
+                implementation(libs.cmp.ui.backhandler)
                 implementation(libs.cmp.material3)
                 implementation(libs.cmp.material.icons.extended)
                 implementation(libs.kotlinx.datetime)
