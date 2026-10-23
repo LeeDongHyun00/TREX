@@ -3,6 +3,7 @@
 package com.example.trex_kotlin
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -43,6 +44,7 @@ import platform.Foundation.NSProcessInfo
 import platform.Foundation.NSProcessInfoThermalState
 import platform.Foundation.NSProcessInfoThermalStateDidChangeNotification
 import platform.Foundation.thermalState
+import platform.UIKit.UIApplicationDidBecomeActiveNotification
 import platform.UIKit.UIView
 import platform.darwin.NSObjectProtocol
 import kotlin.concurrent.Volatile
@@ -285,6 +287,15 @@ fun rememberCameraPermission(): CameraPermission {
         } else {
             permission.asked = true
         }
+    }
+    // 설정 화면에서 권한을 켜고 돌아오면 다시 읽는다 — 안 그러면 화면을 나갔다 들어오기 전까지 거절 화면이 남는다
+    DisposableEffect(Unit) {
+        val observer = NSNotificationCenter.defaultCenter.addObserverForName(UIApplicationDidBecomeActiveNotification, null, NSOperationQueue.mainQueue) { _ ->
+            val status = AVCaptureDevice.authorizationStatusForMediaType(AVMediaTypeVideo)
+            permission.granted = status == AVAuthorizationStatusAuthorized
+            if (status != AVAuthorizationStatusNotDetermined) permission.asked = true
+        }
+        onDispose { NSNotificationCenter.defaultCenter.removeObserver(observer) }
     }
     return permission
 }

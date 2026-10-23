@@ -34,12 +34,17 @@ import platform.UIKit.UIViewController
 import kotlin.time.TimeSource
 
 /**
- * iPhone 앱 화면(§108 Phase 2) — Android 와 같은 [TrexApp]. 앱 상태는 iPhone 플랫폼 구현([IosAppPlatform]) 위에서 앱 수명 동안 하나다.
+ * 앱 상태 — 앱 수명 동안 하나(Android Activity 의 ViewModelStore 자리). SwiftUI 가 화면 컨트롤러를 다시 만들어도(장면 재연결 등) 같은 것을 쓴다.
+ * 컨트롤러마다 새로 만들면 앞 것이 치워지지 않고 저장소 변경 리스너(앱 전역 `UserDefaultsStore` Hub)에 붙들려 살아남아 동기화 일을 겹쳐 돌린다.
+ */
+private val appViewModel: AppViewModel by lazy { AppViewModel(IosAppPlatform()) }
+
+/**
+ * iPhone 앱 화면(§108 Phase 2) — Android 와 같은 [TrexApp]. 앱 상태는 iPhone 플랫폼 구현([IosAppPlatform]) 위에서 앱 수명 동안 하나다([appViewModel]).
  * 키보드는 Compose 의 imePadding 이 맞춘다 — UIKit 이 화면을 한 번 더 올리면 두 번 밀린다(이전 CMP 시도에서 확인).
  */
 fun TrexAppViewController(): UIViewController = ComposeUIViewController(configure = { onFocusBehavior = OnFocusBehavior.DoNothing }) {
-    val app = remember { AppViewModel(IosAppPlatform()) }
-    TrexApp(app)
+    TrexApp(appViewModel)
 }
 
 /** 개발용 디자인 부품 화면(Phase 0 스파이크). */

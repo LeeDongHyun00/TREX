@@ -58,8 +58,11 @@ internal fun onMain(block: () -> Unit) {
 internal object IosAudioSession {
     private var ducking = false
     private var active = false
+    /** 말이 끝나 세션을 놓으려 했는데 확인음이 울리던 중이라 미뤘다 — 마지막 확인음이 끝나면 놓는다([tonesFinished]). */
+    private var releasePending = false
 
     fun speaking() {
+        releasePending = false
         val session = AVAudioSession.sharedInstance()
         // 확인음 때문에 섞기로만 켜져 있었으면 한 번 놓았다가 낮춤으로 다시 켠다 — 켜진 채 범주만 바꾸면 낮춤이 걸리지 않을 수 있다
         if (active && !ducking && !IosTones.playing) {
@@ -85,12 +88,25 @@ internal object IosAudioSession {
         active = true
     }
 
-    /** 말이 끝났다 — 확인음이 울리는 중이 아니면 세션을 놓아 다른 앱 소리를 되돌린다. */
+    /** 말이 끝났다 — 세션을 놓아 다른 앱 소리를 되돌린다. 확인음이 울리는 중이면 마지막 확인음이 끝날 때까지 미룬다. */
     fun release() {
-        if (!active || IosTones.playing) return
+        if (!active) return
+        if (IosTones.playing) {
+            releasePending = true
+            return
+        }
         AVAudioSession.sharedInstance().setActive(false, withOptions = AVAudioSessionSetActiveOptionNotifyOthersOnDeactivation, error = null)
         active = false
         ducking = false
+        releasePending = false
+    }
+
+    /**
+     * 마지막 확인음이 끝났다 — 말이 놓으려다 미룬 세션, 또는 확인음만 켰던 세션(섞기)을 놓는다. 말하는 중(낮춤, 미룬 것 없음)이면 그대로 둔다.
+     * 예전에는 여기서 놓지 않아, 말 끝과 확인음이 겹치면 낮춤 세션이 켜진 채 남아 다른 앱 소리가 계속 작았다.
+     */
+    fun tonesFinished() {
+        if (releasePending || !ducking) release()
     }
 }
 
@@ -276,7 +292,11 @@ internal object IosTones {
         player.scheduleBuffer(buffer) {
             onMain {
                 scheduled--
-                if (scheduled == 0) { player.stop(); engine.stop() }
+                if (scheduled == 0) {
+                    player.stop()
+                    engine.stop()
+                    IosAudioSession.tonesFinished()
+                }
             }
         }
         if (!player.playing) player.play()
