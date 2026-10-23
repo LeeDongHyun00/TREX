@@ -110,8 +110,7 @@ fun HomeScreen(app: AppViewModel, onGoWorkout: () -> Unit, onGoDiet: () -> Unit,
         item {
             Text("${today.monthValue}월 ${today.day}일 ${koreanDayOfWeekFull(today.dayOfWeek)}",
                 color = c.text2, fontSize = 14.sp)
-            // 날씨 — 기온·날씨·강수량만(누르면 지역 바꾸기)
-            // 누르면 날씨 시트 — 추천 운동은 근육 부하 추천과 같은 규칙으로 운동 목록에 넣는다
+            // 날씨 — 기온·날씨·강수량만. 누르면 날씨 시트(추천 운동·출처·지역) — 추천 운동은 근육 부하 추천과 같은 규칙으로 운동 목록에 넣는다
             WeatherSummaryRow(app.weather, Modifier.padding(top = 6.dp),
                 isInPlan = { name -> app.workoutPlan.any { it.name == name && !it.done } },
                 onAddExercise = app::addMuscleRecommendation)

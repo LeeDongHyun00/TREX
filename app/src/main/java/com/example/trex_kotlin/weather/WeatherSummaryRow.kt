@@ -50,7 +50,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -59,6 +62,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.example.trex_kotlin.Trex
+import com.example.trex_kotlin.nowMillis
 import com.example.trex_kotlin.TrexText as Text
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -112,7 +116,7 @@ fun WeatherSummaryRow(
     var errorMessage by remember { mutableStateOf(WeatherUiStateCache.lastError) }
     // 잠깐 보이는 안내(브랜치의 Toast 자리 — 두 플랫폼이 같은 화면으로)
     var notice by remember { mutableStateOf<String?>(null) }
-    var showRegionSheet by remember { mutableStateOf(false) }
+    var showWeatherSheet by remember { mutableStateOf(false) }
     var loadJob by remember { mutableStateOf<Job?>(null) }
 
     /**
@@ -125,6 +129,8 @@ fun WeatherSummaryRow(
         if (locationChanged) {
             recommendation = null
             WeatherUiStateCache.lastRecommendation = null
+            // 시트는 추천이 있을 때만 그린다 — 열린 표시를 남겨 두면 다음 날씨가 오는 순간 저절로 다시 열린다
+            showWeatherSheet = false
         }
         loadJob = coroutineScope.launch {
             errorMessage = null
@@ -182,7 +188,7 @@ fun WeatherSummaryRow(
             Modifier.heightIn(min = 34.dp).clip(RoundedCornerShape(12.dp))
                 .clickable(enabled = rec != null || errorMessage != null, role = Role.Button,
                     onClickLabel = if (rec != null) "날씨 운동 추천과 기준 지역 보기" else "다시 시도") {
-                    if (rec != null) showRegionSheet = true else loadWeather(forceRefresh = true)
+                    if (rec != null) showWeatherSheet = true else loadWeather(forceRefresh = true)
                 }
                 .padding(vertical = 4.dp, horizontal = 2.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -196,12 +202,13 @@ fun WeatherSummaryRow(
                     ) { Icon(weatherIcon(w.weatherCode, w.isDay), contentDescription = null, tint = Color.White, modifier = Modifier.size(15.dp)) }
                     Text("${w.temperature.roundToInt()}°", color = c.text, fontSize = 17.sp, fontWeight = FontWeight.SemiBold,
                         modifier = Modifier.padding(start = 9.dp))
+                    // 좁은 화면·큰 글씨에서는 날씨 이름이 먼저 줄어든다(weight) — 강수량과 › 가 밀려나지 않게
                     Text(WeatherExerciseRecommender.getWeatherDescription(w.weatherCode), color = c.text2, fontSize = 14.sp,
-                        maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 7.dp))
+                        maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false).padding(start = 7.dp))
                     Text("·", color = c.text3, fontSize = 14.sp, modifier = Modifier.padding(horizontal = 7.dp))
                     Icon(Icons.Rounded.WaterDrop, contentDescription = null, tint = RAIN_BLUE, modifier = Modifier.size(13.dp))
                     Text("강수량 ${oneDecimal(w.precipitation)}mm", color = c.text2, fontSize = 14.sp, maxLines = 1,
-                        modifier = Modifier.padding(start = 3.dp))
+                        overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 3.dp))
                     // 누르면 추천이 열린다는 표시 — 줄 모양(한 줄)은 그대로
                     Icon(Icons.Rounded.ChevronRight, contentDescription = null, tint = c.text3,
                         modifier = Modifier.padding(start = 2.dp).size(18.dp))
@@ -220,25 +227,26 @@ fun WeatherSummaryRow(
         notice?.let { Text(it, color = c.text2, fontSize = 12.sp, modifier = Modifier.padding(start = 2.dp, top = 2.dp)) }
     }
 
-    if (showRegionSheet && rec != null) WeatherSheet(
+    if (showWeatherSheet && rec != null) WeatherSheet(
         recommendation = rec,
         gps = prefs.isGpsModeEnabled(),
         selected = prefs.getSavedRegion(),
         isInPlan = isInPlan,
         onAddExercise = onAddExercise,
-        onCurrentLocation = { showRegionSheet = false; useCurrentLocation() },
+        onCurrentLocation = { showWeatherSheet = false; useCurrentLocation() },
         onRegion = { region ->
             prefs.saveSelectedRegion(region)
-            showRegionSheet = false
+            showWeatherSheet = false
             loadWeather(forceRefresh = true, locationChanged = true)
         },
-        onDismiss = { showRegionSheet = false },
+        onDismiss = { showWeatherSheet = false },
     )
 }
 
 /**
  * 날씨 시트 — 위에서부터 오늘의 날씨 운동 추천(판정 [WeatherExerciseRecommender], weather 브랜치 카드의 내용),
- * 날씨 기준 지역(현재 위치 또는 13개 지역, 고른 것에 체크), 출처(Open-Meteo, CC BY 4.0 — 날씨를 보이는 곳에 출처를 단다).
+ * 출처(Open-Meteo, CC BY 4.0 — 홈 한 줄에는 자리가 없어 시트를 열면 바로 보이는 추천 아래에 단다, 누르면 Open-Meteo 사이트)와 받은 지 얼마나 됐는지,
+ * 날씨 기준 지역(현재 위치 또는 13개 지역, 고른 것에 체크).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -253,6 +261,9 @@ private fun WeatherSheet(
     onDismiss: () -> Unit,
 ) {
     val c = Trex.c
+    val uri = LocalUriHandler.current
+    // 추천을 만든 순간의 글이 아니라 지금 기준 — 새로 받기에 실패해 남은 묵은 날씨를 '방금' 이라 하지 않는다
+    val age = WeatherExerciseRecommender.updateAgeText(recommendation.weather.fetchedAtMillis, nowMillis())
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = c.sheet, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         LazyColumn(Modifier.fillMaxWidth().padding(bottom = 16.dp)) {
             item { RecommendationHeader(recommendation) }
@@ -260,7 +271,11 @@ private fun WeatherSheet(
                 RecommendedExerciseRow(exercise, inPlan = isInPlan(exercise.catalogName), onAdd = onAddExercise)
             }
             item {
-                HorizontalDivider(color = c.line, modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 12.dp))
+                Text("날씨 정보: Open-Meteo.com (CC BY 4.0) · $age", color = c.text3, fontSize = 12.sp,
+                    modifier = Modifier.fillMaxWidth()
+                        .clickable(role = Role.Button, onClickLabel = "Open-Meteo 사이트 열기") { uri.openUri("https://open-meteo.com/") }
+                        .padding(horizontal = 24.dp, vertical = 8.dp))
+                HorizontalDivider(color = c.line, modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 4.dp))
                 Text("날씨 기준 지역", color = c.text, fontSize = 18.sp, fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 18.dp, bottom = 4.dp))
                 RegionRow("현재 위치", "GPS로 지금 있는 곳의 날씨", Icons.Rounded.NearMe, checked = gps, onClick = onCurrentLocation)
@@ -268,10 +283,6 @@ private fun WeatherSheet(
             }
             items(KoreanRegion.entries) { region ->
                 RegionRow(region.displayName, null, Icons.Rounded.LocationOn, checked = !gps && region == selected) { onRegion(region) }
-            }
-            item {
-                Text("날씨 정보: Open-Meteo.com · ${recommendation.updateAgeText}", color = c.text3, fontSize = 12.sp,
-                    modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 12.dp))
             }
         }
     }
@@ -312,7 +323,9 @@ private fun RecommendedExerciseRow(exercise: RecommendedExercise, inPlan: Boolea
                 onClick = { onAdd(exercise.catalogName) },
                 enabled = !inPlan,
                 contentPadding = PaddingValues(horizontal = 12.dp),
-                modifier = Modifier.padding(start = 12.dp).heightIn(min = 36.dp),
+                // 화면 낭독기가 세 버튼을 가를 수 있게 운동 이름을 붙인다
+                modifier = Modifier.padding(start = 12.dp).heightIn(min = 36.dp)
+                    .semantics { contentDescription = exercise.title + if (inPlan) " 운동 목록에 있음" else " 운동 목록에 추가" },
             ) {
                 Text(if (inPlan) "목록에 있음" else "목록에 추가", color = if (inPlan) c.text2 else c.primaryText, fontSize = 13.sp, maxLines = 1)
             }
