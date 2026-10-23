@@ -18,6 +18,18 @@ class FoodPortionTest {
         assertNull(FoodPortion.step(0.3, up = false))
         assertEquals(0.8, FoodPortion.step(0.3, up = true)!!, 0.0)
         assertEquals("위로는 20 에서 멈춘다", 20.0, FoodPortion.step(20.0, up = true)!!, 0.0)
+        assertEquals(20.0, FoodPortion.step(19.8, up = true)!!, 0.0)
+        // 예전 앱은 상한이 없었다 — 25 에서 + 를 눌러도 줄어들지 않고, - 는 한 칸 내려간다
+        assertEquals(25.0, FoodPortion.step(25.0, up = true)!!, 0.0)
+        assertEquals(24.5, FoodPortion.step(25.0, up = false)!!, 0.0)
+    }
+
+    @Test
+    fun merging_capsAtMax_butNeverShrinksOldRecords() {
+        assertEquals(1.5, FoodPortion.add(1.0, 0.5), 0.0)
+        assertEquals(20.0, FoodPortion.add(15.0, 10.0), 0.0)
+        assertEquals(25.0, FoodPortion.add(25.0, 1.0), 0.0)
+        assertEquals(0.3, FoodPortion.add(0.1, 0.2), 0.0)
     }
 
     @Test
@@ -41,14 +53,23 @@ class FoodPortionTest {
     fun typedInput_acceptsOneDecimalInRange() {
         assertEquals(0.3, FoodPortion.parseTyped("0.3")!!, 0.0)
         assertEquals(1.5, FoodPortion.parseTyped(" 1,5 ")!!, 0.0)          // 쉼표도 소수점
-        assertEquals(0.3, FoodPortion.parseTyped("0.25")!!, 0.0)          // 소수 한 자리로 맞춘다
         assertEquals(20.0, FoodPortion.parseTyped("20")!!, 0.0)
+        assertEquals(1.0, FoodPortion.parseTyped("1.")!!, 0.0)           // 소수점까지만 친 중간 상태
+        assertEquals(0.5, FoodPortion.parseTyped(".5")!!, 0.0)
+        assertNull("소수 둘째 자리는 몰래 반올림하지 않는다", FoodPortion.parseTyped("1.55"))
+        assertNull(FoodPortion.parseTyped("0.25"))
         assertNull("0 은 받지 않는다(지우는 길은 스테퍼뿐)", FoodPortion.parseTyped("0"))
-        assertNull(FoodPortion.parseTyped("0.04"))                       // 0.0 으로 맞춰져 범위 밖
         assertNull(FoodPortion.parseTyped(""))
         assertNull(FoodPortion.parseTyped("."))
         assertNull(FoodPortion.parseTyped("20.1"))
         assertNull(FoodPortion.parseTyped("abc"))
+        assertNull(FoodPortion.parseTyped("100"))
+    }
+
+    @Test
+    fun inputField_acceptsOnlyOneDecimalShapes() {
+        listOf("", "1", "12", "1.", "1.5", "12.5", ".5", "0,3").forEach { assertTrue(it, FoodPortion.isTypable(it)) }
+        listOf("123", "1.55", "1..", "a", "-1", "1.5.").forEach { assertFalse(it, FoodPortion.isTypable(it)) }
     }
 
     @Test
@@ -66,11 +87,11 @@ class FoodPortionTest {
     }
 
     @Test
-    fun storage_readsExactPortion_unlessOldAppChangedQty() {
+    fun storage_readsExactPortion_andTrustsQtyOnMismatch() {
         assertEquals("예전 기록", 2.0, FoodPortion.fromStored(2, null), 0.0)
         assertEquals(0.5, FoodPortion.fromStored(1, 0.5), 0.0)
         assertEquals(1.5, FoodPortion.fromStored(2, 1.5), 0.0)
-        // 예전 앱이 그 줄을 0.5(근사 1)에서 3 으로 올렸다 — portion 이 남아 있어도 qty 를 믿는다
+        // portion 의 근사와 qty 가 어긋난 손상된 줄 — qty 를 믿는다(예전 앱은 portion 을 통째로 버려 정상 경로로는 생기지 않는다)
         assertEquals(3.0, FoodPortion.fromStored(3, 0.5), 0.0)
         assertEquals(1.0, FoodPortion.fromStored(1, Double.NaN), 0.0)
     }

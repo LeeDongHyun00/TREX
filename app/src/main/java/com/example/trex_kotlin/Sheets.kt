@@ -421,8 +421,9 @@ internal fun ManualSheet(app: AppViewModel, initialSlot: String, onClose: () -> 
     var query by remember { mutableStateOf("") }
     // "새 음식으로 등록" 을 누른 검색어. 검색어가 바뀌면 자연히 닫힌다(값이 달라지므로).
     var registering by remember { mutableStateOf<String?>(null) }
-    // 인분 숫자를 눌러 직접 넣는 중인 줄(끼니 안 순서)
-    var editingPortion by remember { mutableStateOf<Int?>(null) }
+    // 인분 숫자를 눌러 직접 넣는 중인 음식 — 순서가 아니라 이름으로 잡는다(끼니 안에서 이름은 하나, appendFoods 가 합친다).
+    // 순서로 잡으면 앱 복귀 때 서버에서 받은 기록·자정 갱신으로 목록이 바뀌면 다른 음식을 고친다.
+    var editingPortion by remember { mutableStateOf<String?>(null) }
     val slotFoods = app.dietFor(0)[slot].orEmpty()
     val total = slotFoods.totalNutrition()
     val goal = app.targetGoal
@@ -514,16 +515,21 @@ internal fun ManualSheet(app: AppViewModel, initialSlot: String, onClose: () -> 
                                         decIcon = if (FoodPortion.removesOnStepDown(f.qty)) Icons.Rounded.Delete else Icons.Rounded.Remove,
                                         valueMinWidth = 38.dp,
                                         label = "${f.name} 인분",
-                                        onValueClick = { editingPortion = i },
+                                        onValueClick = { editingPortion = f.name },
+                                        decLabel = if (FoodPortion.removesOnStepDown(f.qty)) "${f.name} 삭제" else null,
                                     )
                                 }
                             }
                         }
                     }
-                    editingPortion?.let { i ->
-                        slotFoods.getOrNull(i)?.let { f ->
+                    editingPortion?.let { name ->
+                        val i = slotFoods.indexOfFirst { it.name == name }
+                        if (i < 0) {
+                            // 그 음식이 목록에서 사라졌다 — 열림 표시를 남기면 같은 이름이 다시 담길 때 저절로 열린다
+                            LaunchedEffect(name) { editingPortion = null }
+                        } else {
                             PortionInputDialog(
-                                foodName = f.name, current = f.qty,
+                                foodName = name, current = slotFoods[i].qty,
                                 onConfirm = { q -> app.setFoodQty(0, slot, i, q); editingPortion = null },
                                 onDismiss = { editingPortion = null },
                             )

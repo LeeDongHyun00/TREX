@@ -175,7 +175,7 @@ private fun List<RecognizedItem>.mergedByName(): List<RecognizedItem> =
         } else {
             acc.mapIndexed { i, kept ->
                 if (i == at) {
-                    kept.copy(qty = FoodPortion.normalize(kept.qty + item.qty).coerceAtMost(FoodPortion.MAX), nutrition = kept.nutrition ?: item.nutrition, regionIds = kept.regionIds + item.regionIds)
+                    kept.copy(qty = FoodPortion.add(kept.qty, item.qty), nutrition = kept.nutrition ?: item.nutrition, regionIds = kept.regionIds + item.regionIds)
                 } else {
                     kept
                 }
@@ -623,12 +623,15 @@ private fun ResultStep(
     val slotIndex = mealMetas.indexOfFirst { it.id == slot }.coerceAtLeast(0)
     val entries = items.toEntries()
     val total = entries.totalNutrition()
-    // 인분 숫자를 눌러 직접 넣는 중인 줄
-    var editingPortion by remember { mutableStateOf<Int?>(null) }
-    editingPortion?.let { i ->
-        items.getOrNull(i)?.let { item ->
+    // 인분 숫자를 눌러 직접 넣는 중인 음식 — 이름으로 잡는다(mergedByName 으로 이름은 하나). 줄을 지우거나 바꿔도 다른 줄을 고치지 않게.
+    var editingPortion by remember { mutableStateOf<String?>(null) }
+    editingPortion?.let { name ->
+        val i = items.indexOfFirst { it.name == name }
+        if (i < 0) {
+            LaunchedEffect(name) { editingPortion = null }
+        } else {
             PortionInputDialog(
-                foodName = item.name, current = item.qty,
+                foodName = name, current = items[i].qty,
                 onConfirm = { q -> onQtySet(i, q); editingPortion = null },
                 onDismiss = { editingPortion = null },
             )
@@ -750,7 +753,8 @@ private fun ResultStep(
                                 decIcon = if (FoodPortion.removesOnStepDown(item.qty)) Icons.Rounded.Delete else Icons.Rounded.Remove,
                                 valueMinWidth = 38.dp,
                                 label = "${item.name} 인분",
-                                onValueClick = { editingPortion = i },
+                                onValueClick = { editingPortion = item.name },
+                                decLabel = if (FoodPortion.removesOnStepDown(item.qty)) "${item.name} 삭제" else null,
                             )
                         }
                     }
@@ -784,7 +788,7 @@ private fun ResultStep(
             } else {
                 WashBanner("영양값은 1인분 기준이에요. 실제로 드신 양이 다르면 인분으로 조절해 주세요. 반 그릇은 0.5예요.", Icons.Rounded.Info)
             }
-            Text("음식 이름을 누르면 다른 음식으로 바꿀 수 있어요. 인분 숫자를 누르면 0.3 처럼 직접 넣을 수 있어요. 잘못 인식된 건 인분을 줄여 빼 주세요.", color = c.text3, fontSize = 11.5.sp, lineHeight = 17.sp)
+            Text("음식 이름을 누르면 다른 음식으로 바꿀 수 있어요. 인분 숫자를 누르면 0.3처럼 직접 넣을 수 있어요. 잘못 인식된 건 인분을 줄여 빼 주세요.", color = c.text3, fontSize = 11.5.sp, lineHeight = 17.sp)
         }
         Box(Modifier.fillMaxWidth().height(1.dp).background(c.line))
         Row(

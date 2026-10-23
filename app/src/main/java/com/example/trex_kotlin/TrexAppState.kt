@@ -573,7 +573,7 @@ class AppViewModel(private val platform: AppPlatform) : ViewModel() {
                 list = if (at == -1) {
                     list + food
                 } else {
-                    list.toMutableList().also { it[at] = it[at].copy(qty = FoodPortion.normalize(it[at].qty + food.qty).coerceAtMost(FoodPortion.MAX)) }
+                    list.toMutableList().also { it[at] = it[at].copy(qty = FoodPortion.add(it[at].qty, food.qty)) }
                 }
             }
             slots + (slot to list)
