@@ -23,7 +23,7 @@ struct HomeView: View {
                 TrexCard { Text("가이드북").font(.headline); ForEach(store.guides) { guide in NavigationLink(guide.name) { GuideView(guide: guide) } } }
             }.padding()
         }.navigationTitle("TREX")
-            .fullScreenCover(item: $session) { SessionView(controller: $0) }
+            .sheet(item: $session) { SessionView(controller: $0).trexSheet() }
     }
     func metric(_ label: String, _ value: String) -> some View { VStack(alignment: .leading, spacing: 5) { Text(label).font(.caption).foregroundStyle(.secondary); Text(value).font(.headline) } }
 }

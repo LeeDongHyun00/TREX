@@ -31,8 +31,8 @@ struct WorkoutView: View {
         }
         .navigationTitle("오늘의 운동")
         .toolbar { EditButton() }
-        .sheet(isPresented: $adding) { CatalogView() }
-        .fullScreenCover(item: $session) { session in SessionView(controller: session) }
+        .sheet(isPresented: $adding) { CatalogView().trexSheet() }
+        .sheet(item: $session) { session in SessionView(controller: session).trexSheet() }
         .onChange(of: store.data.mode) { _ in store.save() }
     }
 }
@@ -79,7 +79,7 @@ struct PlanEditor: View {
                 } else { Text("세트 완료 화면에서 개발용 기준선을 수집할 수 있습니다.").font(.caption) }
             }
         }.navigationTitle(item.name).onDisappear { store.save() }
-            .fullScreenCover(item: $session) { SessionView(controller: $0) }
+            .sheet(item: $session) { SessionView(controller: $0).trexSheet() }
     }
 }
 struct GuideView: View {

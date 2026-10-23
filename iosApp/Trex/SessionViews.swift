@@ -45,8 +45,10 @@ struct SessionView: View {
                     Button("완료한 세트만 남기고 종료", role: .destructive) { dismiss() }
                     Button("계속하기", role: .cancel) {}
                 } message: { Text("완료한 세트는 이미 저장되어 있습니다.") }
-                .sheet(item: $guide) { guide in NavigationStack { GuideView(guide: guide).toolbar { Button("닫기") { self.guide = nil } } } }
+                .sheet(item: $guide) { guide in NavigationStack { GuideView(guide: guide).toolbar { Button("닫기") { self.guide = nil } } }.trexSheet() }
         }
+        // 세트가 도는 동안(준비·운동·저장)은 끌어 내려도 닫히지 않는다 — 진행 중 세트를 잃지 않게 '닫기' 의 확인 대화로만. 결과·휴식·완료 화면은 끌어 내려 닫을 수 있다(완료한 세트는 이미 저장됐다)
+        .interactiveDismissDisabled(controller.phase == "active" || controller.phase == "preparing" || controller.phase == "saving")
         .onAppear { controller.start() }
         .onDisappear { controller.stop() }
         .onChange(of: scenePhase) { controller.sceneActive($0 == .active) }

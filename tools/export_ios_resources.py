@@ -26,8 +26,12 @@ def main():
     assert len(guides) == 10, len(guides)
     files['guides.json'] = guides
     nutrition = []
-    for name,kcal,carbs,protein,fat in re.findall(r'"([^"]+)" to Nutrition\((\d+), ([\d.]+), ([\d.]+), ([\d.]+)\)', (JAVA/'TrexData.kt').read_text(encoding='utf-8')):
-        nutrition.append(dict(name=name,kcal=int(kcal),carbs=float(carbs),protein=float(protein),fat=float(fat)))
+    data_text = (JAVA/'TrexData.kt').read_text(encoding='utf-8')
+    # 추정값 음식(1인분 실측이 아닌 일반 식품) — Android 와 같이 화면에 고지한다(FOOD_RECOGNITION.md)
+    approximate = set(strings(re.search(r'val approximateNutritionNames: Set<String> = setOf\((.*?)\)', data_text, re.S).group(1)))
+    for name,kcal,carbs,protein,fat in re.findall(r'"([^"]+)" to Nutrition\((\d+), ([\d.]+), ([\d.]+), ([\d.]+)\)', data_text):
+        nutrition.append(dict(name=name,kcal=int(kcal),carbs=float(carbs),protein=float(protein),fat=float(fat),approximate=name in approximate))
+    assert 0 < len(approximate) < 20 and all(any(n['name']==a for n in nutrition) for a in approximate), '추정값 이름이 DB 에 없다'
     assert len(nutrition) > 300
     files['nutrition.json'] = nutrition
     assets = ['pose_landmarker_full.task','face_landmarker.task','rules_mp_v0.json','rules_floor_v0.json','normal_pose_reference.tsv']
