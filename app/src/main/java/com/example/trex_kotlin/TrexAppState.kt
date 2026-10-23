@@ -573,20 +573,30 @@ class AppViewModel(private val platform: AppPlatform) : ViewModel() {
                 list = if (at == -1) {
                     list + food
                 } else {
-                    list.toMutableList().also { it[at] = it[at].copy(qty = it[at].qty + food.qty) }
+                    list.toMutableList().also { it[at] = it[at].copy(qty = FoodPortion.normalize(it[at].qty + food.qty).coerceAtMost(FoodPortion.MAX)) }
                 }
             }
             slots + (slot to list)
         }
     }
 
-    /** 슬롯 내 음식 수량 증감 — 0이 되면 제거 (직접 기록 시트 스테퍼). */
-    fun changeFoodQty(offset: Int, slot: String, index: Int, delta: Int) {
+    /** 슬롯 내 음식 인분 한 칸(0.5) 올리기·내리기 — 0 이 되면 제거 (직접 기록 시트 스테퍼, [FoodPortion.step]). */
+    fun stepFoodQty(offset: Int, slot: String, index: Int, up: Boolean) {
         mutateSlots(offset) { slots ->
             val list = slots[slot].orEmpty().toMutableList()
             val cur = list.getOrNull(index) ?: return@mutateSlots slots
-            val q = cur.qty + delta
-            if (q <= 0) list.removeAt(index) else list[index] = cur.copy(qty = q)
+            val q = FoodPortion.step(cur.qty, up)
+            if (q == null) list.removeAt(index) else list[index] = cur.copy(qty = q)
+            slots + (slot to list)
+        }
+    }
+
+    /** 숫자를 눌러 직접 넣은 인분. [qty] 는 [FoodPortion.parseTyped] 를 거친 값(0.1~20) — 지우는 길은 스테퍼뿐이다. */
+    fun setFoodQty(offset: Int, slot: String, index: Int, qty: Double) {
+        mutateSlots(offset) { slots ->
+            val list = slots[slot].orEmpty().toMutableList()
+            val cur = list.getOrNull(index) ?: return@mutateSlots slots
+            list[index] = cur.copy(qty = FoodPortion.normalize(qty).coerceIn(FoodPortion.MIN_TYPED, FoodPortion.MAX))
             slots + (slot to list)
         }
     }

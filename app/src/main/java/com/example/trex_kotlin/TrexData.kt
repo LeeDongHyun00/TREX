@@ -5,6 +5,7 @@ import com.example.trex_kotlin.posture.CoachMode
 import com.example.trex_kotlin.posture.OnsetKind
 import com.example.trex_kotlin.posture.PostureSetReport
 import com.example.trex_kotlin.posture.SetVerdict
+import kotlin.math.roundToInt
 
 enum class TrexTab(val label: String) {
     Home("홈"),
@@ -195,9 +196,69 @@ data class Nutrition(
 data class FoodEntry(
     val name: String,
     val nutrition: Nutrition,
-    /** 수량 — 리디자인의 직접 기록 시트 스테퍼. 합산 시 곱해진다. */
-    val qty: Int = 1,
+    /** 인분 — 스테퍼는 0.5 씩, 숫자를 눌러 직접 넣으면 소수 한 자리([FoodPortion]). 합산 시 곱해진다. */
+    val qty: Double = 1.0,
 )
+
+/**
+ * 인분 규칙. 영양값이 "1인분" 기준이라 반 공기·한 그릇 반을 기록할 수 있어야 칼로리가 맞는다.
+ * 스테퍼는 0.5 씩만 움직인다 — 더 잘게 나눈 버튼은 헷갈리고, 먹은 양은 눈대중("반 공기")이라 0.1 단위 버튼은 정밀해 보이기만 한다.
+ * 숫자를 눌러 직접 넣을 때만 소수 한 자리(0.1~20)를 받는다 — 사용자가 뜻한 숫자를 쓰는 것이라 헷갈리지 않는다.
+ */
+object FoodPortion {
+    const val STEP = 0.5
+    const val MIN_TYPED = 0.1
+    const val MAX = 20.0
+
+    /** 소수 한 자리로 맞춘다 — 0.1 + 0.2 같은 부동소수 찌꺼기가 저장·표시에 남지 않게. */
+    fun normalize(value: Double): Double = (value * 10).roundToInt() / 10.0
+
+    /** 스테퍼 한 칸. 0 이하면 null(그 음식을 뺀다), 위로는 [MAX] 에서 멈춘다. */
+    fun step(value: Double, up: Boolean): Double? {
+        val next = normalize(value + if (up) STEP else -STEP)
+        return if (next <= 0.0) null else next.coerceAtMost(MAX)
+    }
+
+    /** 한 칸 내리면 빠지는가 — 스테퍼 왼쪽 아이콘을 휴지통으로 바꾼다. */
+    fun removesOnStepDown(value: Double): Boolean = step(value, up = false) == null
+
+    /** "1", "0.5", "2.3" — 정수면 소수점을 붙이지 않는다. */
+    fun label(value: Double): String {
+        val tenths = (value * 10).roundToInt()
+        return if (tenths % 10 == 0) (tenths / 10).toString() else "${tenths / 10}.${tenths % 10}"
+    }
+
+    /** 직접 입력 — 쉼표도 소수점으로 받고 소수 한 자리로 맞춘다. 범위 밖·숫자 아님·0 은 null(이전 값을 그대로 둔다). */
+    fun parseTyped(text: String): Double? {
+        val value = text.trim().replace(',', '.').toDoubleOrNull() ?: return null
+        if (value.isNaN() || value.isInfinite()) return null
+        return normalize(value).takeIf { it >= MIN_TYPED && it <= MAX }
+    }
+
+    /**
+     * 예전 앱이 읽는 정수 수량 — 예전 앱은 `qty` 를 정수로 읽어 0.5 를 0 으로 버린다(0 kcal).
+     * 그래서 `qty` 에는 0 이 되지 않는 반올림 값(0.5 → 1, 1.5 → 2)을 두고 정확한 인분은 `portion` 에 따로 쓴다(TrexStore).
+     */
+    fun legacyCount(value: Double): Int = (value + 0.5).toInt().coerceAtLeast(1)
+
+    fun isWhole(value: Double): Boolean = (value * 10).roundToInt() % 10 == 0
+
+    /** 저장할 정확한 인분 — 정수면 null(예전과 똑같은 JSON 이라 동기화할 것도 생기지 않는다). */
+    fun storedPortion(value: Double): Double? = if (isWhole(value)) null else normalize(value)
+
+    /**
+     * 저장된 한 줄 → 인분. [portion] 이 있고 그 정수 근사가 [count] 와 같으면 [portion] 이다.
+     * 다르면 예전 앱이 그 줄의 qty 만 고친 것이라 [count] 를 믿는다. [portion] 이 없으면(정수 인분·예전 기록) [count].
+     */
+    fun fromStored(count: Int, portion: Double?): Double {
+        if (portion == null || portion.isNaN()) return count.toDouble()
+        val exact = normalize(portion)
+        return if (exact > 0.0 && legacyCount(exact) == count) exact else count.toDouble()
+    }
+}
+
+/** 1인분 영양값 × 인분 — 화면 표시용 kcal(반올림). */
+fun FoodEntry.totalKcal(): Int = (nutrition.kcal * qty).roundToInt()
 
 @Immutable
 data class MealMeta(
@@ -689,7 +750,7 @@ fun Nutrition.plus(other: Nutrition): Nutrition = Nutrition(
 fun Iterable<FoodEntry>.totalNutrition(): Nutrition =
     fold(Nutrition(0, 0.0, 0.0, 0.0)) { acc, entry ->
         Nutrition(
-            kcal = acc.kcal + entry.nutrition.kcal * entry.qty,
+            kcal = acc.kcal + (entry.nutrition.kcal * entry.qty).roundToInt(),
             carb = acc.carb + entry.nutrition.carb * entry.qty,
             protein = acc.protein + entry.nutrition.protein * entry.qty,
             fat = acc.fat + entry.nutrition.fat * entry.qty,

@@ -98,9 +98,9 @@ fun DietRecordScreen(app: AppViewModel, onBack: () -> Unit) {
                         Text(meal.label, color = c.text, fontSize = 19.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 16.dp, bottom = 10.dp))
                         foods.forEach { food ->
                             Row(Modifier.fillMaxWidth().padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Text(food.name + if (food.qty > 1) " ×${food.qty}" else "", color = c.text,
+                                Text(food.name + if (food.qty != 1.0) " ×${FoodPortion.label(food.qty)}" else "", color = c.text,
                                     fontSize = 15.sp, modifier = Modifier.weight(1f).padding(end = 16.dp))
-                                Text("${food.nutrition.kcal * food.qty} kcal", color = c.text2, fontSize = 13.sp)
+                                Text("${food.totalKcal()} kcal", color = c.text2, fontSize = 13.sp)
                             }
                         }
                         HorizontalDivider(color = c.line, modifier = Modifier.padding(top = 8.dp, bottom = 10.dp))
