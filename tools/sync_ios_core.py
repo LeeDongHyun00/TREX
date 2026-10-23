@@ -5,19 +5,20 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / 'app/src/main/java/com/example/trex_kotlin/posture'
 TARGET = ROOT / 'posture-core/src/commonMain/kotlin/com/example/trex_kotlin/posture'
-NAMES = '''Arm2d Breathing CameraPlacement CapturePreparation ContactMinimum DinoCopy ExerciseProfiles FloorFeedback FloorTemporal FormMotion LegCycle Lunge2d LungeSides NormalPoseReference PlankAlignment PostureAssessment PostureComparison PostureCore PostureFloor PostureFloorCoverage PostureScope PostureSetReport PostureView PostureViewGuide RepCounter RepForm RepFormPriorTable RepFormRules RepHysteresis RepUnit ReturnRepTracker RuleHighlight RuleTypes Stance2d PostureRules PostureBaseline PostureCoach PostureMode FloorChain FloorCycle FloorGaze FloorLive PlankGeometry PlankHold PostureTrial PreparationVoice SpeechQueue StandingFraming'''.split()
+NAMES = '''Arm2d Breathing CameraPlacement CapturePreparation ContactMinimum DinoCopy ExerciseProfiles FloorFeedback FloorTemporal FormMotion LegCycle Lunge2d LungeSides NormalPoseReference PlankAlignment PostureAssessment PostureComparison PostureCore PostureFloor PostureFloorCoverage PostureScope PostureSetReport PostureView PostureViewGuide RepCounter RepForm RepFormPriorTable RepFormRules RepHysteresis RepUnit ReturnRepTracker RuleHighlight RuleTypes Stance2d PostureRules PostureBaseline PostureCoach PostureMode FloorChain FloorCycle FloorGaze FloorLive PlankGeometry PlankHold PostureTrial PreparationVoice SpeechQueue StandingFraming PoseLandmarks RepEngineLog InferencePolicy'''.split()
 
 def portable(name, text):
     text = re.sub(r'^import (android\..*|java\..*|org.json.JSONObject)\n', '', text, flags=re.M)
     if name == 'PostureRules':
-        old = 'fun load(context: Context, assetPath: String = ASSET_PATH): PostureRuleSet {\n            val text = context.assets.open(assetPath).bufferedReader().use { it.readText() }'
+        # Android 의 load(context) 한 줄은 자산을 읽어 loadText 에 넘길 뿐이다 — 공통 모듈에는 loadText 만 남긴다
+        old = 'fun load(context: Context, assetPath: String = ASSET_PATH): PostureRuleSet =\n            loadText(context.assets.open(assetPath).bufferedReader().use { it.readText() })\n\n        '
         assert old in text
-        text = text.replace(old, 'fun loadText(text: String): PostureRuleSet {')
+        text = text.replace(old, '')
     if name == 'PostureBaseline':
         text = text[:text.index('class BaselineStore(')]
         text = text.replace('SetLog.nowIso()', '""')
-    if name == 'PostureCoach': text = text[:text.index('class SpeechCoach(')]
-    if name == 'PostureMode': text = text[:text.index('class ModeStore(')]
+    if name == 'PostureMode':   # 저장소는 공유 ModeStore.kt(ios-ui) — Android 팩토리와 그 import 를 뗀다
+        text = text[:text.index('/** 종목별 모드 저장 — Android SharedPreferences')].replace('import com.example.trex_kotlin.SharedPreferencesStore\n', '')
     if name == 'PostureCore':
         # 피처 맵은 null이 없는 Float 값이다. JVM Map 기본 메서드를 공통 API로 치환한다.
         text, count = re.subn(r'(?m)^(\s*)f\.putIfAbsent\((".*?"), (.+)\)$', r'\1f.getOrPut(\2) { \3 }', text)
@@ -47,20 +48,15 @@ def main():
     orientation = re.sub(r'^import android\..*\n', '', orientation, flags=re.M)
     orientation = orientation[:orientation.index('class GravityTracker(')].replace('Surface.', 'SurfaceRotations.')
     orientation += '\ninternal object SurfaceRotations { const val ROTATION_0=0; const val ROTATION_90=1; const val ROTATION_180=2; const val ROTATION_270=3 }\n'
-    analyzer = (SOURCE/'PostureAnalyzer.kt').read_text(encoding='utf-8')
-    face = analyzer[analyzer.index('/**\n * 얼굴 자세 행렬(4×4'):analyzer.index('private const val FACE_YAW_SIGN = 1f') + len('private const val FACE_YAW_SIGN = 1f')]
-    # Math.toDegrees 는 공통 PortableRuntime 의 Math 객체가 같은 이름으로 제공한다
-    assert face.count('kotlin.math.asin') == 1 and 'android' not in face, 'PostureAnalyzer.faceYawDeg 의 수식 형태를 확인하세요.'
-    face = 'package com.example.trex_kotlin.posture\n\n// PostureAnalyzer.faceYawDeg 정본 슬라이스(§101d) — Swift 가 넘긴 얼굴 자세 행렬의 요 계산을 Android 와 같은 식으로 한다.\n' + face + '\n'
-    log = (SOURCE/'PostureSetLog.kt').read_text(encoding='utf-8')
-    log = log[log.index('data class RepEngineLog('):log.index('/**\n * 세트 중 카운터의 진행 사이클')]
     # 자가 라벨 값과 줄 형식(§108) — 앱 상태(AppViewModel)가 라벨을 만들고, 두 플랫폼이 같은 SetLabelFormat 으로 줄을 쓴다.
     # 파일 쓰기(SetLabelStore)는 플랫폼마다 따로다. 값·형식만 잘라 온다.
     label = (SOURCE/'PostureSetLabel.kt').read_text(encoding='utf-8')
     label = label[label.index('data class SetSelfLabel('):label.index('class SetLabelStore(')]
     assert 'android' not in label and 'File' not in label and 'object SetLabelFormat' in label, 'PostureSetLabel 의 SetSelfLabel·SetLabelFormat 형태를 확인하세요.'
     label = 'package com.example.trex_kotlin.posture\n\n// PostureSetLabel 의 SetSelfLabel·SetLabelFormat 정본 슬라이스(§108).\n' + label.rstrip() + '\n'
-    for name, output in [('PortableOrientation.kt', orientation), ('RepEngineLog.kt', 'package com.example.trex_kotlin.posture\n\n' + log.rstrip() + '\n'), ('FaceYaw.kt', face), ('SetSelfLabel.kt', label)]:
+    # 추론 이후 처리(PoseSample·피처·얼굴 기하)는 PoseLandmarks.kt 통째로 NAMES 에 있다(§108c) — 예전 FaceYaw 슬라이스는 없앴다.
+    # RepEngineLog 는 이제 자기 파일(posture/RepEngineLog.kt)이라 NAMES 로 통째로 옮긴다(§108c — PostureSetLog.kt 는 형식만 남아 ios-ui 가 컴파일한다).
+    for name, output in [('PortableOrientation.kt', orientation), ('SetSelfLabel.kt', label)]:
         target = TARGET/name
         if args.check:
             if not target.exists() or target.read_text(encoding='utf-8') != output: mismatches.append(name)
@@ -84,7 +80,7 @@ def main():
             target.parent.mkdir(parents=True, exist_ok=True); target.write_text(output, encoding='utf-8', newline='\n')
     tests = ROOT / 'app/src/test/java/com/example/trex_kotlin/posture'
     target_tests = ROOT / 'posture-core/src/jvmTest/kotlin/com/example/trex_kotlin/posture'
-    excluded = {'SetLabelStoreTest', 'PostureSetLogTest', 'InferencePolicyTest', 'PostureOrientationTest', 'PersonalizationTest', 'PostureBaselineTest', 'FloorWiringTest'}   # FloorWiringTest 는 Android SetLog 직렬화에 묶여 있다
+    excluded = {'SetLabelStoreTest', 'PostureSetLogTest', 'SpeechCoachTest', 'PostureOrientationTest', 'PersonalizationTest', 'PostureBaselineTest', 'FloorWiringTest'}   # FloorWiringTest 는 Android SetLog 직렬화에 묶여 있다
     # 앱 패키지의 순수 테스트도 같이 돈다(관절 게이트 §101c)
     extra_tests = [ROOT / 'app/src/test/java/com/example/trex_kotlin/SkeletonGateTest.kt']
     for src in list(tests.glob('*Test.kt')) + extra_tests:

@@ -39,6 +39,21 @@ fun startOfDayMillis(epochDay: Long, zone: TimeZone = TimeZone.currentSystemDefa
 /** 세트 로그·라벨의 시각 문자열 — UTC, 초 단위. `SetLog.nowIso()` 의 "yyyy-MM-dd'T'HH:mm:ss'Z'" 와 같다. */
 fun isoUtcSeconds(millis: Long = nowMillis()): String = Instant.fromEpochSeconds(millis.floorDiv(1000L)).toString()
 
+/** "yyyyMMdd'T'HHmmss"(UTC) — 세트 ID 앞부분(`SetLog.newSetId`). SimpleDateFormat 과 같다(TrexTimeTest). */
+fun utcCompactStamp(millis: Long): String {
+    val t = Instant.fromEpochMilliseconds(millis).toLocalDateTime(TimeZone.UTC)
+    return utcDayStamp(millis) + "T" + t.hour.toString().padStart(2, '0') + t.minute.toString().padStart(2, '0') + t.second.toString().padStart(2, '0')
+}
+
+/** "yyyyMMdd"(UTC) — 세트 로그 파일 이름(`SetLogStore`, sets-yyyyMMdd.jsonl). SimpleDateFormat 과 같다(TrexTimeTest). */
+fun utcDayStamp(millis: Long): String = dayStamp(millis, TimeZone.UTC)
+
+/** "yyyyMMdd"([zone]) — 피드백 기록 파일 이름(`SpeechCoach.traceFeedback`, 기기 시간대). */
+fun dayStamp(millis: Long, zone: TimeZone = TimeZone.currentSystemDefault()): String {
+    val d = Instant.fromEpochMilliseconds(millis).toLocalDateTime(zone).date
+    return d.year.toString().padStart(4, '0') + d.month.number.toString().padStart(2, '0') + d.day.toString().padStart(2, '0')
+}
+
 /** "M월 d일 HH:mm"(기기 시간대) — DateTimeFormatter.ofPattern("M월 d일 HH:mm") 과 같다. */
 fun monthDayTimeLabel(millis: Long, zone: TimeZone = TimeZone.currentSystemDefault()): String {
     val t = Instant.fromEpochMilliseconds(millis).toLocalDateTime(zone)

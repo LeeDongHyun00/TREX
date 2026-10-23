@@ -126,21 +126,4 @@ internal object Json {
     }
 }
 
-const val MP_LANDMARK_COUNT = 33
-/** Android와 동일한 분석 입력. 영상/이미지 자체는 저장하지 않는다. */
-class PoseSample(
-    val detected: Boolean, val normalizedXy: FloatArray, val visibility: FloatArray,
-    val features: Map<String, Float>, val visibleJointCount: Int, val inferMs: Long,
-    val imageWidth: Int, val imageHeight: Int,
-    val up: Vec3 = SCREEN_UP, val upFromGravity: Boolean = false,
-    val upFlipped: Boolean = false, val upVerified: Boolean = false, val world: FloatArray? = null,
-) {
-    companion object {
-        fun empty(inferMs: Long = 0, w: Int = 0, h: Int = 0, up: Vec3 = SCREEN_UP, fromGravity: Boolean = false) =
-            PoseSample(false, FloatArray(66), FloatArray(33), emptyMap(), 0, inferMs, w, h, up, fromGravity)
-    }
-}
-
-/** 바닥 종목용: 같은 샘플에 features 만 바꾼 사본 — Android `PostureAnalyzer.withFeatures` 와 같은 뜻(세트 로그·집계에 그대로 흘림). */
-fun PoseSample.withFeatures(newFeatures: Map<String, Float>): PoseSample = PoseSample(
-    detected, normalizedXy, visibility, newFeatures, visibleJointCount, inferMs, imageWidth, imageHeight, up, upFromGravity, upFlipped, upVerified, world)
+// PoseSample·withFeatures·MP_LANDMARK_COUNT 는 Android 정본 PoseLandmarks.kt 동기화본에 있다(§108c).

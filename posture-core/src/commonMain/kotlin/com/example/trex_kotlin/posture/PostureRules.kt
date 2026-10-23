@@ -223,6 +223,7 @@ class PostureRuleSet(
     companion object {
         const val ASSET_PATH = "posture/rules_mp_v0.json"
 
+        /** 규칙 JSON 문자열 → 규칙셋. 두 플랫폼이 같은 해석을 쓴다(§108c — iPhone 은 번들에서 읽은 문자열을 넘긴다). */
         fun loadText(text: String): PostureRuleSet {
             val root = JSONObject(text)
             val arr = root.getJSONArray("rules")

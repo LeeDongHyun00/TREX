@@ -18,24 +18,6 @@ import com.example.trex_kotlin.posture.PostureComparisonTracker
 import com.example.trex_kotlin.posture.NormalPoseReference
 import com.example.trex_kotlin.posture.NormalPoseMatch
 
-import android.Manifest
-import android.content.Context
-import android.content.pm.PackageManager
-import android.media.AudioManager
-import android.media.ToneGenerator
-import android.content.res.Configuration
-import android.util.Size
-import android.view.WindowManager
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.camera.core.CameraSelector
-import androidx.camera.core.ImageAnalysis
-import androidx.camera.core.Preview
-import androidx.camera.core.resolutionselector.AspectRatioStrategy
-import androidx.camera.core.resolutionselector.ResolutionSelector
-import androidx.camera.core.resolutionselector.ResolutionStrategy
-import androidx.camera.lifecycle.ProcessCameraProvider
-import androidx.camera.view.PreviewView
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -96,23 +78,16 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.viewinterop.AndroidView
-import androidx.core.content.ContextCompat
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.example.trex_kotlin.posture.AnalyzerStats
-import com.example.trex_kotlin.posture.BaselineStore
 import com.example.trex_kotlin.posture.CoachCues
 import com.example.trex_kotlin.posture.Direction
 import com.example.trex_kotlin.posture.CoachEvent
 import com.example.trex_kotlin.posture.CoachMode
 import com.example.trex_kotlin.posture.FeatureAggregator
-import com.example.trex_kotlin.posture.GravityTracker
 import com.example.trex_kotlin.posture.CoverageReport
 import com.example.trex_kotlin.posture.PartStatus
 import com.example.trex_kotlin.posture.BodyPart
@@ -129,11 +104,9 @@ import com.example.trex_kotlin.posture.RejectionCues
 import com.example.trex_kotlin.posture.InferencePhase
 import com.example.trex_kotlin.posture.InferencePolicy
 import com.example.trex_kotlin.posture.LiveCoach
-import com.example.trex_kotlin.posture.ModeStore
 import com.example.trex_kotlin.posture.OnsetKind
 import com.example.trex_kotlin.posture.PoseModel
 import com.example.trex_kotlin.posture.PoseSample
-import com.example.trex_kotlin.posture.PostureAnalyzer
 import com.example.trex_kotlin.posture.PostureRule
 import com.example.trex_kotlin.posture.RepCounter
 import com.example.trex_kotlin.posture.RepCycle
@@ -170,20 +143,15 @@ import com.example.trex_kotlin.posture.RuleResult
 import com.example.trex_kotlin.posture.PostureRuleSet
 import com.example.trex_kotlin.posture.PostureScope
 import com.example.trex_kotlin.posture.PostureSetReport
-import com.example.trex_kotlin.posture.SCREEN_UP
 import com.example.trex_kotlin.posture.SetLog
 import com.example.trex_kotlin.posture.SetLogStore
 import com.example.trex_kotlin.posture.SpeechCoach
-import com.example.trex_kotlin.posture.SubjectId
 import com.example.trex_kotlin.posture.ThermalEvent
-import com.example.trex_kotlin.posture.ThermalMonitor
 import com.example.trex_kotlin.posture.ViewEstimator
 import com.example.trex_kotlin.posture.Verdict
-import com.example.trex_kotlin.posture.gravityUpInWorld
 import com.example.trex_kotlin.posture.withFeatures
-import java.util.concurrent.Executors
-import kotlin.coroutines.resume
-import kotlin.coroutines.suspendCoroutine
+import kotlinx.atomicfu.locks.SynchronizedObject
+import kotlin.concurrent.Volatile
 
 /**
  * 실시간 자세 평가 세션 (실 엔진).
@@ -275,28 +243,19 @@ fun PostureLiveSessionScreen(
 ) {
     val c = Trex.c
     KeepScreenOn()
-    val context = LocalContext.current
-    val lifecycleOwner = LocalLifecycleOwner.current
+    // 플랫폼 자원(§108c `PostureHost` — Android Context 자리: 자산·프로필·모드·세트 로그·수행자 ID). 카메라·추론기는 아래 camera
+    val host = rememberPostureHost()
     val aihubExercise = postureExerciseMap[workout.name] ?: workout.name
     val profile = com.example.trex_kotlin.posture.ExerciseProfiles.forName(workout.name)
     val preparingRef = rememberUpdatedState(preparing)
     var sampleAt by remember { mutableStateOf(0L) }
     var cameraError by remember { mutableStateOf<String?>(null) }
 
-    var granted by remember {
-        mutableStateOf(
-            ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED,
-        )
-    }
-    var asked by remember { mutableStateOf(granted) }
-    val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
-        granted = it
-        asked = true
-    }
-    LaunchedEffect(Unit) { if (!granted) permissionLauncher.launch(Manifest.permission.CAMERA) }
+    // 카메라 권한 — 없으면 처음 한 번 묻는다(플랫폼 짝)
+    val permission = rememberCameraPermission()
 
-    if (!granted) {
-        if (asked) {
+    if (!permission.granted) {
+        if (permission.asked) {
             Column(Modifier.fillMaxSize().background(c.bg).statusBarsPadding().navigationBarsPadding().padding(24.dp)) {
                 Column(Modifier.weight(1f).fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center) {
@@ -321,15 +280,15 @@ fun PostureLiveSessionScreen(
     var floorExercises by remember { mutableStateOf<Set<String>>(emptySet()) }
     // 분석 스레드와 공유하는 ref 들을 한 객체로 — remember 44개를 하나로 줄여 이 Composable 메서드를 작게 한다(2026-10-02 ART VerifyError, PostureSupport.kt 주석)
     // 프로필 키는 배치 지문(§91)의 거리·높이 척도에 쓴다 — 홀더에 두어 이 Composable 의 지역 변수를 늘리지 않는다(dex 레지스터, CLAUDE.md)
-    val refs = remember { LiveSessionRefs().also { it.subjectHeightCm[0] = TrexStore(context).loadProfile()?.heightCm?.toFloat() ?: 0f } }
+    val refs = remember { LiveSessionRefs().also { it.subjectHeightCm[0] = host.profileHeightCm() ?: 0f } }
     LaunchedEffect(Unit) {
         refs.normalReferenceRef[0] = runCatching {
-            context.assets.open(NormalPoseReference.ASSET).bufferedReader().use { NormalPoseReference.parse(it.lineSequence()) }
+            NormalPoseReference.parse(host.readAsset(NormalPoseReference.ASSET).lineSequence())
         }.getOrDefault(NormalPoseReference(emptyList()))
         runCatching {
-            val standing = PostureRuleSet.load(context)
+            val standing = PostureRuleSet.loadText(host.readAsset(PostureRuleSet.ASSET_PATH))
             try {
-                val floor = PostureRuleSet.load(context, FLOOR_RULES_ASSET)
+                val floor = PostureRuleSet.loadText(host.readAsset(FLOOR_RULES_ASSET))
                 floorExercises = floor.rules.map { it.exercise }.toSet()
                 PostureRuleSet("${standing.version}+${floor.version}", standing.generated, standing.rules + floor.rules)
             } catch (_: Throwable) {
@@ -355,7 +314,6 @@ fun PostureLiveSessionScreen(
     //      바닥 규칙 임계값은 AIHub 채택 뷰 투영에 묶여 있어(뷰 간 플래그율 33%p 요동) 사용자의 실제 폰
     //      시점으로 '위치'를 옮겨야 한다. 재투영 실측: 거치가 정확하면 중립, 방위가 어긋나면 +0.11 복구(보험).
     //      수집만 하고 세션에서 안 쓰면 죽은 기능 — 여기서 소비한다.
-    val baselineStore = remember { BaselineStore(context) }
     var baselineActive by remember { mutableStateOf(false) }
 
     // ---- 자동 렙 카운터 (spec §27): 종목별 렙 신호의 히스테리시스 사이클. 분석 스레드에서 갱신.
@@ -395,7 +353,7 @@ fun PostureLiveSessionScreen(
     /** 쪽별 카운트: 일시정지 중에 오른 쌍이 있다 — 풀리면 절대값으로 맞춘다. */
     // ---- 세션 모드 (spec §29): 코치(초보 기본) / 기록(숙련). 종목별 저장. 정책 레이어만 바꾼다 —
     //      판정·임계값·로그는 두 모드에서 동일하게 계산된다 (모든 사용자 원칙).
-    val modeStore = remember { ModeStore(context) }
+    val modeStore = remember { host.modeStore() }
     var mode by remember(workout.name) { mutableStateOf(modeStore.get(workout.name)) }
     refs.modeRef[0] = mode
     // 부분 제외도 COACH 만 — TRACK 은 세지 않는 기능 없이 전부 센다(사용자 결정 2026-09-25)
@@ -470,7 +428,7 @@ fun PostureLiveSessionScreen(
         if (preparing) return@LaunchedEffect
         stageFit.reset(); stageLock = null; personLost = false; motionCue = null
         // WORK 시작 — 플랭크 시계 시작(폴백 20 s 의 기준)·남은 시간 다리 묶기, 바닥 세 종목 범위 문장(30분에 한 번)
-        refs.floorLive.startWork(System.currentTimeMillis(), holdBridge, speech, speech.muted || validation)
+        refs.floorLive.startWork(nowMillis(), holdBridge, speech, speech.muted || validation)
     }
     // 세트 경과(보조 정보 — 반복 운동의 시간은 끝내는 조건이 아니다). 일시정지 중엔 멈춘다
     var setElapsedSec by remember { mutableIntStateOf(0) }
@@ -502,8 +460,7 @@ fun PostureLiveSessionScreen(
     // 한 프레임 튀는 것으로 문구가 깜빡이지 않도록, 연속으로 막힐 때만 표시한다
     // 음소거는 스피커(세션 스코프)에 남아 다음 운동·완료 화면까지 이어진다
     // TTS 를 못 쓰는 기기에서는 렙 숫자가 통째로 사라진다 — 짧은 톤으로라도 센 것을 알린다
-    val repTone = remember { runCatching { ToneGenerator(AudioManager.STREAM_MUSIC, 70) }.getOrNull() }
-    DisposableEffect(repTone) { onDispose { runCatching { repTone?.release() } } }
+    val repTone = rememberRepTone(70)
     var muted by remember { mutableStateOf(speech.muted) }
     LaunchedEffect(repetitions) {
         // 쪽별 카운트 종목은 걸음마다 쪽과 남은 수를 말한다(아래 분석 루프) — 쌍 숫자는 말하지 않는다
@@ -512,7 +469,7 @@ fun PostureLiveSessionScreen(
             else {
                 // 틱 하나 = 센 회. 숫자는 화면 큰 글자가 맡는다(§7). 마지막 3회는 이중 틱
                 val remaining = (workout.resolvedTarget() as? WorkoutTarget.Repetitions)?.let { it.amount - repetitions } ?: Int.MAX_VALUE
-                repTick(repTone, if (remaining in 1..3) ToneGenerator.TONE_PROP_BEEP2 else ToneGenerator.TONE_PROP_ACK)
+                repTick(repTone, if (remaining in 1..3) RepTone.TONE_PROP_BEEP2 else RepTone.TONE_PROP_ACK)
             }
         }
     }
@@ -533,40 +490,26 @@ fun PostureLiveSessionScreen(
     }
     // 세트 경계 발화(요약 + 다음 종목 시작 안내)가 끝날 때까지 코치·커버리지 발화는 큐에 붙인다(flush 금지) — 요약이 통째로 사라지지 않게
 
-    val analyzer = remember { PostureAnalyzer(context, PoseModel.FULL, preferGpu = true) }
-    val executor = remember { Executors.newSingleThreadExecutor() }
+    // 카메라·추론기·중력·열 센서(§108c 플랫폼 경계 — Android CameraX·MediaPipe, iPhone AVFoundation·MediaPipe iOS). 추론 이후 처리는 공유 PoseLandmarks
+    val camera = rememberPoseCamera()
     val policy = remember { InferencePolicy(sampleIntervalMs = SESSION_INFER_INTERVAL_MS) }
-    val thermal = remember { ThermalMonitor(context) }
-    // 열 상태 변화 이력 (절대 ms, 상태) — 세트 로그 단계 0 (spec §58). 열 상태는 추론 간격을 바꿔 렙당 샘플 수를 바꾼다.
-    // 메인 스레드(리스너·마감)에서만 만지지만 락으로 감싼다. API 29 미만이면 비어 있다.
-    val thermalHistory = remember { ArrayList<Pair<Long, Int>>() }
-    val gravity = remember { GravityTracker(context) }
+    // 열 상태 변화 이력(refs.thermalHistory — 절대 ms, 상태)은 세트 로그 단계 0 (spec §58). 열 상태는 추론 간격을 바꿔 렙당 샘플 수를 바꾼다.
+    // 메인 스레드(리스너·마감)에서만 만지지만 락으로 감싼다. 열 상태를 못 받는 기기(Android API 29 미만)면 비어 있다.
     DisposableEffect(Unit) {
-        gravity.start()
-        thermal.start(ContextCompat.getMainExecutor(context)) { s ->
+        camera.start { s ->
             refs.thermalRef[0] = s
-            synchronized(thermalHistory) { if (thermalHistory.lastOrNull()?.second != s) thermalHistory += System.currentTimeMillis() to s }
+            locked(refs.thermalLock) { if (refs.thermalHistory.lastOrNull()?.second != s) refs.thermalHistory += nowMillis() to s }
         }
-        onDispose {
-            gravity.stop()
-            thermal.stop()
-            // 분석기 닫기는 분석 스레드에서 — 진행 중 추론 뒤로 줄 세운다. 메인에서 닫으면 첫 프레임의 모델 준비(GPU, 수 초)를 기다리며 화면이 멈췄다(검토 2026-09-26)
-            analyzer.markClosed()
-            runCatching { executor.execute { analyzer.close() } }.onFailure { analyzer.close() }
-            executor.shutdown()
-        }
+        // 분석기 닫기는 분석 스레드에서 — 진행 중 추론 뒤로 줄 세운다(camera.stop)
+        onDispose { camera.stop() }
     }
     // 회전해도 Activity 가 유지되므로(configChanges), 화면 회전값은 configuration 변화마다 다시 읽는다.
     // 분석 스레드가 매 프레임 읽으므로 ref 로도 전달한다.
-    val configuration = LocalConfiguration.current
+    val screenHeightDp = currentScreenHeightDp()
     val displayRotation = rememberTrexDisplayRotation()
     refs.rotationRef[0] = displayRotation
-    // ImageAnalysis 는 바인딩 시점의 회전값을 갖고 있어, 회전 후에는 직접 갱신해야 이미지가 바로 선다.
-    LaunchedEffect(displayRotation) {
-        refs.analysisRef[0]?.targetRotation = displayRotation
-        refs.previewRef[0]?.targetRotation = displayRotation
-    }
-    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+    // 카메라는 바인딩 시점의 회전값을 갖고 있어, 회전 후에는 직접 갱신해야 이미지가 바로 선다.
+    LaunchedEffect(displayRotation) { camera.setDisplayRotation(displayRotation) }
 
     var useFrontCamera by remember { mutableStateOf(true) }
     refs.frontRef[0] = useFrontCamera
@@ -585,11 +528,10 @@ fun PostureLiveSessionScreen(
     val recordedSamples = remember { ArrayList<PoseSample>() }
     val recordedTimesMs = remember { ArrayList<Long>() }
     val aggregator = remember { FeatureAggregator() }
-    val logStore = remember { SetLogStore(context) }
-    val subjectId = remember { SubjectId.get(context) }
+    val logStore = remember { host.setLogStore() }
+    val subjectId = remember { host.subjectId() }
     // 어떤 빌드가 센 세트인지 — 폰 검증 전후 빌드를 로그만으로 가른다 (spec §58 단계 0)
-    @Suppress("DEPRECATION")
-    val appVersion = remember { runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull() }
+    val appVersion = remember { host.appVersion() }
     var savedSets by remember { mutableIntStateOf(0) }
     var recordedFrames by remember { mutableIntStateOf(0) }
     LaunchedEffect(Unit) { savedSets = runCatching { logStore.totalSets() }.getOrDefault(0) }
@@ -600,9 +542,8 @@ fun PostureLiveSessionScreen(
     // 자가 라벨이 로그를 가리켜야 하므로 리포트의 setId 는 SetLog 가 발급한 값을 그대로 쓴다.
     // 반환: 샘플이 MIN_FRAMES_FOR_LOG 이상이면 리포트(규칙 평가가 실패해도 results 를 비워 UNJUDGED 로), 미만이면 null(로그도 없음).
     // 멱등 — 샘플을 비우므로 같은 세트의 두 번째 호출(onDispose 안전망)은 null 이고 아무것도 남기지 않는다.
-    val finalized = remember { java.util.concurrent.atomic.AtomicBoolean(false) }
     refs.finalizeRef[0] = fin@{ ex: String, label: String, floor: Boolean ->
-        if (!finalized.compareAndSet(false, true)) return@fin null
+        if (!refs.tryFinalize()) return@fin null
         // 플랭크 유지 시계(§99) — 사본을 굳히고 남은 시간 다리를 푼다(종료 확인을 취소해도 이 세트는 벽시계로 이어진다 — 분석 루프는 마감 뒤라 시계를 더 부르지 않는다)
         refs.floorLive.finishSet()
         val rs = ruleSet ?: return@fin null
@@ -610,7 +551,7 @@ fun PostureLiveSessionScreen(
         val times: List<Long>
         val results: List<RuleResult>
         // 분석 스레드의 aggregator.add 와 같은 락 — 평가 도중 프레임이 끼어들면 CME 로 결과가 비어 멀쩡한 세트가 UNJUDGED 가 된다
-        synchronized(recordedSamples) {
+        locked(refs.sampleLock) {
             samples = ArrayList(recordedSamples)
             times = ArrayList(recordedTimesMs)
             recordedSamples.clear()
@@ -641,7 +582,7 @@ fun PostureLiveSessionScreen(
         val unitTimes: List<Long>?
         val halfPending: Boolean
         val sides: SideTallies?
-        synchronized(repRecords) {
+        locked(refs.repLock) {
             reps = if (rc != null) ArrayList(repRecords) else null
             // 누적기는 카운터와 함께 만든다. 없으면(생기지 않는 조합 — 방어) 사이클 = 1회로 되돌린다.
             val acc = refs.repUnitRef[0]
@@ -686,11 +627,11 @@ fun PostureLiveSessionScreen(
         val tLast = times.lastOrNull() ?: t0
         val thermalStart: Int?
         val thermalChanges: List<ThermalEvent>?
-        synchronized(thermalHistory) {
-            thermalStart = if (!thermal.supported) null
-                else thermalHistory.lastOrNull { it.first <= t0 }?.second ?: InferencePolicy.THERMAL_NONE
-            thermalChanges = if (!thermal.supported) null
-                else thermalHistory.filter { it.first > t0 && it.first <= tLast }.map { ThermalEvent(it.first - t0, it.second) }
+        locked(refs.thermalLock) {
+            thermalStart = if (!camera.thermalSupported) null
+                else refs.thermalHistory.lastOrNull { it.first <= t0 }?.second ?: InferencePolicy.THERMAL_NONE
+            thermalChanges = if (!camera.thermalSupported) null
+                else refs.thermalHistory.filter { it.first > t0 && it.first <= tLast }.map { ThermalEvent(it.first - t0, it.second) }
         }
         val endAt = AssessmentWindow.end(times.lastOrNull() ?: t0, repTimes.orEmpty())
         val startAt = refs.anchorAtRef[0].takeIf { it > 0L } ?: Long.MAX_VALUE
@@ -758,7 +699,7 @@ fun PostureLiveSessionScreen(
             // 좌표는 항상 남긴다(§62a 후속 5) — 검증 모드가 아니라도 측정 결함(발 회전에 흔들리는 3D 발목 등)을 좌표로 가릴 수 있어야 한다
             coordinates = true,
             // 배치 지문(§91) — 피치·롤 중앙값·추론 주기에 렌즈 사양을 더해 거리·높이를 추정한다
-            lens = refs.lensRef[0],
+            lens = camera.lens,
             subjectHeightCm = refs.subjectHeightCm[0].takeIf { it > 0f },
             // 표시 단위(사용자 결정 2026-09-24) — 화면에 보인 수와 세트 끝에 남은 한쪽
             repUnit = unitUsed,
@@ -776,7 +717,7 @@ fun PostureLiveSessionScreen(
             runCatching {
                 logStore.append(log)
                 savedSets = logStore.totalSets()
-            }.onFailure { speech.traceFeedback("set_log_failed", "${log.setId} ${it.javaClass.simpleName}: ${it.message}") }
+            }.onFailure { speech.traceFeedback("set_log_failed", "${log.setId} ${it::class.simpleName}: ${it.message}") }
         }
         PostureSetReport.build(
             setId = log.setId,
@@ -808,7 +749,7 @@ fun PostureLiveSessionScreen(
     DisposableEffect(workout.id, preparing) {
         if (preparing) return@DisposableEffect onDispose { }
         // 새 세트 — 직전 세트의 마감(멱등 표시)을 푼다. 풀지 않으면 같은 화면에서 이어지는 세트의 프레임이 기록되지 않는다(:916)
-        finalized.set(false)
+        refs.finalized = false
         val ex = aihubExercise
         val label = workout.name
         val floor = isFloorExercise
@@ -865,7 +806,7 @@ fun PostureLiveSessionScreen(
         breathDir = 0
         repFast = false
         repTempoMs = null
-        synchronized(repRecords) {
+        locked(refs.repLock) {
             repRecords.clear(); repResets.clear(); refs.lastCounterFrameAt[0] = 0L
             refs.repUnitRef[0] = if (refs.repRef[0] != null) RepUnitAccumulator(unit) else null
             // 쪽별 카운트 — 걸음 쪽을 정하는 검사기가 있을 때만(런지). 목표는 세트 시작 시점 값(이 화면은 종목이 바뀌어도 재생성되지 않는다)
@@ -874,7 +815,7 @@ fun PostureLiveSessionScreen(
                     strictUnknown = refs.repRef[0]?.legTracker != null) else null
         }
         // 첫 걸음 전부터 쪽별 표기('왼 10 · 오 10', '좌우 각 10회') — 비우면 첫 걸음까지 '0회 / 목표 10회' 로 보여 합계 10걸음으로 읽혔다
-        sideTallies = synchronized(repRecords) { refs.sideCounterRef[0]?.tallies() }
+        sideTallies = locked(refs.repLock) { refs.sideCounterRef[0]?.tallies() }
         refs.sideCueAtRef[0] = 0L
         refs.sideSyncPending[0] = false
         guideNote = null
@@ -914,20 +855,20 @@ fun PostureLiveSessionScreen(
         if (paused) {
             // 일시정지 전후를 한 반복으로 잇지 않는다 — 리셋 사건은 세트 로그에 남긴다 (spec §58)
             // 이미 끝낸 한쪽(반쪽)은 버리지 않는다 — 한쪽을 마치고 쉬었다가 반대쪽을 이어 할 수 있다(RepUnitAccumulator.onCounterCycleReset)
-            synchronized(repRecords) {
+            locked(refs.repLock) {
                 refs.repRef[0]?.let {
                     it.resetCycle(); refs.repUnitRef[0]?.onCounterCycleReset()
                     refs.repFormRef[0]?.takeIf { f -> f.stepSides || f.legProfile != null }?.discardWindow()   // 멈추기 전 프레임이 재개 뒤 걸음 창에 섞이지 않게(§63, 걸음 종목만 — 스쿼트·컬 파리티 유지)
-                    repResets += RepResetEvent(System.currentTimeMillis(), "pause", refs.lastCounterFrameAt[0].takeIf { t -> t > 0L })
+                    repResets += RepResetEvent(nowMillis(), "pause", refs.lastCounterFrameAt[0].takeIf { t -> t > 0L })
                 }
             }
-            alignment = refs.alignmentRef[0]?.add(System.currentTimeMillis(),emptyMap()) ?: AlignmentSnapshot()
+            alignment = refs.alignmentRef[0]?.add(nowMillis(),emptyMap()) ?: AlignmentSnapshot()
             refs.comparisonRef[0]?.unavailable("일시정지 · 처음 기준은 유지하고 진행 중 반복은 다시 측정해요")
             comparison = refs.comparisonRef[0]?.snapshot ?: ComparisonSnapshot()
             comparisonSpeech.clear()
             normalMatches = emptyList()
-            refs.floorLive.pause(System.currentTimeMillis())   // 플랭크 시계 — 멈춘 동안은 적립·멈춤·경과 밖(§99)
-        } else refs.floorLive.resume(System.currentTimeMillis())
+            refs.floorLive.pause(nowMillis())   // 플랭크 시계 — 멈춘 동안은 적립·멈춤·경과 밖(§99)
+        } else refs.floorLive.resume(nowMillis())
     }
 
     LaunchedEffect(aihubExercise,mode,floorFeedback?.phase,floorFeedback?.ruleId,floorFeedback?.message,muted,paused) {
@@ -935,54 +876,26 @@ fun PostureLiveSessionScreen(
             "mode=$mode paused=$paused phase=${floorFeedback?.phase} rule=${floorFeedback?.ruleId} message=${floorFeedback?.message}")
     }
 
-    // FIT_CENTER: 카메라가 보는 **전체**를 보여준다. FILL_CENTER 는 4:3 영상을 긴 화면에 채우느라
-    // 좌우(세로 모드) 또는 상하(가로 모드)를 잘라내, 사용자가 실제 분석 범위보다 좁게 보고 프레이밍을 그르쳤다.
-    val previewView = remember {
-        PreviewView(context).apply {
-            scaleType = PreviewView.ScaleType.FIT_CENTER
-            implementationMode = PreviewView.ImplementationMode.COMPATIBLE
-        }
-    }
-
     LaunchedEffect(useFrontCamera) {
-        val provider = context.awaitCameraProviderLive()
         cameraError = null
-        val previewSelector = ResolutionSelector.Builder()
-            .setAspectRatioStrategy(AspectRatioStrategy.RATIO_4_3_FALLBACK_AUTO_STRATEGY)
-            .setResolutionStrategy(ResolutionStrategy(Size(1280, 960), ResolutionStrategy.FALLBACK_RULE_CLOSEST_LOWER_THEN_HIGHER))
-            .build()
-        val analysisSelector = ResolutionSelector.Builder()
-            .setAspectRatioStrategy(AspectRatioStrategy.RATIO_4_3_FALLBACK_AUTO_STRATEGY)
-            .setResolutionStrategy(ResolutionStrategy(Size(640, 480), ResolutionStrategy.FALLBACK_RULE_CLOSEST_HIGHER_THEN_LOWER))
-            .build()
-        val preview = Preview.Builder().setResolutionSelector(previewSelector).setTargetRotation(displayRotation).build()
-        refs.previewRef[0] = preview
-            .also { it.surfaceProvider = previewView.surfaceProvider }
-        val analysis = ImageAnalysis.Builder()
-            .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-            .setResolutionSelector(analysisSelector)
-            .setTargetRotation(refs.rotationRef[0])
-            .build()
-        refs.analysisRef[0] = analysis   // 회전 시 targetRotation 갱신용
-        analysis.setAnalyzer(executor) { image ->
-            val now = System.currentTimeMillis()
+        // 카메라를 묶고 취소될 때까지 프레임을 받는다(분석 스레드, 최신만). 아래 본문이 분석 루프다 — 두 플랫폼이 같은 코드를 돈다(§108c)
+        try { camera.stream(useFrontCamera, workout.id) { frame ->
+            val now = nowMillis()
             val phase = if (refs.pausedRef[0]) InferencePhase.IDLE else InferencePhase.RECORDING
             if (!policy.shouldInfer(now, refs.lastInferAt[0], phase, refs.thermalRef[0])) {
-                image.close()
-                return@setAnalyzer
+                frame.close()
+                return@stream
             }
             refs.lastInferAt[0] = now
             try {
                 val wasPreparing = preparingRef.value
-                val capturedAt = android.os.SystemClock.elapsedRealtime()
-                val up = gravity.gravityDevice
-                    ?.let { gravityUpInWorld(it, refs.rotationRef[0], refs.frontRef[0]) }
-                    ?: SCREEN_UP
-                analyzer.faceEnabled = refs.floorRef[0]   // §101d: 바닥 세 종목만 얼굴 메시(시선)
-                val s = analyzer.analyze(image, now, up)
+                val capturedAt = elapsedRealtimeMs()
+                val up = camera.gravityUp(refs.rotationRef[0], refs.frontRef[0])
+                camera.faceEnabled = refs.floorRef[0]   // §101d: 바닥 세 종목만 얼굴 메시(시선)
+                val s = camera.analyze(frame, now, up)
                 sample = s
                 sampleAt = capturedAt
-                stats = analyzer.stats()
+                stats = camera.stats()
                 // §98a 접촉 최솟값 — 판정 격자(아래)의 유일한 예외: 크런치의 팔꿈치–무릎은 85 ms 프레임마다 모아 판정 프레임에 `elbow_knee_min` 으로 얹는다(순간 접촉)
                 refs.contactRef[0].offer(now, s.features)
                 // 무대 배율 잠금·영상 복귀(§2) — 준비 단계부터. "사람이 있다" 는 detected 가 아니라 피처가 계산됐는지로(CLAUDE.md 함정). 바닥 종목은 가시성 cut 이 낮다
@@ -990,7 +903,7 @@ fun PostureLiveSessionScreen(
                 personLost = stageFit.lost
                 // §96 판정 격자 — 85 ms 추론은 화면(뼈대·프레이밍·무대)용이고, 아래(준비 프레임·피처·규칙·카운터·로그)는 300 ms 칸마다 첫 프레임만 받는다
                 val judgeBin = now / SESSION_SAMPLE_INTERVAL_MS
-                if (judgeBin == refs.judgeBinRef[0]) return@setAnalyzer
+                if (judgeBin == refs.judgeBinRef[0]) return@stream
                 refs.judgeBinRef[0] = judgeBin
                 // 전환 직전에 추론을 시작한 준비 프레임도 엔진/기준/로그로 들어가지 않는다.
                 // 다만 최근 준비 프레임을 남겨 운동 첫 프레임에서 카운터의 쉬는 자세 기준으로 쓴다(§89 후속 2 — 바닥 종목도, §99)
@@ -999,13 +912,13 @@ fun PostureLiveSessionScreen(
                     // 바닥 계열 세 종목(§99)은 관측 층 피처를 남겨 운동 첫 프레임에 누운 기준으로 심는다(앉아 있으면 심지 않는다). 다른 바닥 종목은 준비 전용
                     // 추출기의 레거시 피처로 심는다(§99a — 접지선 신호는 standingSeedFrom 이 거른다)
                     (if (!refs.floorRef[0]) s.features.takeIf { it.isNotEmpty() } else refs.floorLive.prepFeatures(s, now) ?: prepFeatures(refs, s, aihubExercise))?.let { pf ->
-                        synchronized(prepFrames) { prepFrames.addLast(now to pf); while (prepFrames.size > 12) prepFrames.removeFirst() }
+                        locked(refs.prepLock) { prepFrames.addLast(now to pf); while (prepFrames.size > 12) prepFrames.removeFirst() }
                     }
-                    return@setAnalyzer
+                    return@stream
                 }
                 // 바닥 계열(§99) — 판정 칸마다(사람이 없어도): 크런치·레그 레이즈의 신호 결측·누운 기준 없음 안내, 플랭크 시계의 '사람 없음' 칸
-                if (refs.floorRef[0] && !refs.pausedRef[0] && !finalized.get()) {
-                    refs.floorLive.repGuide(now, refs.repRef[0], repRecords, speech, speech.muted || refs.validationRef[0])?.let { guideNote = it; guideStamp = now }
+                if (refs.floorRef[0] && !refs.pausedRef[0] && !refs.finalized) {
+                    refs.floorLive.repGuide(now, refs.repRef[0], refs.repLock, speech, speech.muted || refs.validationRef[0])?.let { guideNote = it; guideStamp = now }
                     if (!s.detected) refs.floorLive.holdFrame(now, null, speech, repTone, speech.muted || refs.validationRef[0])
                 }
                 if (s.detected) everDetected = true
@@ -1024,7 +937,7 @@ fun PostureLiveSessionScreen(
                         if (refs.modeRef[0] != CoachMode.TRACK) floorFeedback?.speech?.let { speech.speakLatest(it) }
                     }
                 }
-                if (s.detected && !refs.pausedRef[0] && !finalized.get()) {
+                if (s.detected && !refs.pausedRef[0] && !refs.finalized) {
                     // 바닥 종목: 중력 기반 3D 피처 대신 2D 평면 피처 (가림 시 피처 단위 유보 포함)
                     val features = if (refs.floorRef[0]) {
                         // §99: 바닥 계열 관측 층(FloorChain)은 원래 중력 up(앱의 up 뒤집힘 보정을 되돌린 값)과 프레임 시각(쪽 잠금 이력)을 받는다 — 지역 변수를 늘리지 않는다(VerifyError)
@@ -1067,7 +980,7 @@ fun PostureLiveSessionScreen(
                             ?: FloorTemporal.observation(aihubExercise, features).ifEmpty { "동작을 측정하고 있어요" }
                     }
                     // aggregator 도 같은 락 안에서 — 세트 마감의 evaluate/reset 과 겹치면 CME 로 결과가 비어 UNJUDGED 오판정이 난다
-                    synchronized(recordedSamples) {
+                    locked(refs.sampleLock) {
                         aggregator.add(features)
                         recordedSamples.add(if (features === s.features) s else s.withFeatures(features))
                         recordedTimesMs.add(now)
@@ -1079,7 +992,7 @@ fun PostureLiveSessionScreen(
                         // repTimesMs 갱신은 세트 마감의 복사와 같은 락 안에서
                         // 판별 신호(spec §62 — 스쿼트 knee_maxside)는 카운트 신호와 같은 프레임 값으로 준다. 없는 종목은 null 이라 종전과 같다.
                         val rf = refs.repFormRef[0]
-                        val completed = synchronized(repRecords) {
+                        val completed = locked(refs.repLock) {
                             refs.lastCounterFrameAt[0] = now
                             // 다리 사이클 경로(§97): 기준 대비 값(hip_drop)을 더한 프레임을 평가기·카운터가 함께 본다 — 재생기와 같은 순서
                             val judged = rc.legTracker?.annotate(features) ?: rc.floorTracker?.annotate(features) ?: features   // 바닥: 누운 기준 대비 상체 들림(§99, 재생기와 같다)
@@ -1087,7 +1000,7 @@ fun PostureLiveSessionScreen(
                             // 운동 첫 프레임: 준비 카운트다운 동안 가만히 있던 자세(서서 하는 종목은 선 자세, 바닥 종목은 누운·엎드린 시작 자세 — §99·§99a)를
                             // 카운터의 기준으로 심는다(§89 후속 2) — 기준이 잡히기 전에 움직인 첫 회가 버려지지 않게. 움직이고 있었거나 준비 프레임이 없으면
                             // 심지 않는다(종전처럼 스스로 잡는다). 바닥 반복 계열은 같은 입구가 누운 기준을 심는다(준비 프레임이 누운 영역일 때만). 준비 전용 바닥 추출기의 접지선도 여기서 비운다
-                            val seedFrames = synchronized(prepFrames) { if (prepFrames.isEmpty()) null else prepFrames.toList().also { prepFrames.clear(); refs.prepFloorRef[0].reset() } }
+                            val seedFrames = locked(refs.prepLock) { if (prepFrames.isEmpty()) null else prepFrames.toList().also { prepFrames.clear(); refs.prepFloorRef[0].reset() } }
                             if (seedFrames != null) rc.standingSeedFrom(seedFrames, now)?.let { rc.seedStanding(now, it) }
                             // 팔별 경로(덤벨 컬, §62c)는 두 팔 값·기각 피처를 쓴다 — 그 밖은 카운트 신호 + 판별 신호(종전과 같다)
                             val done = rc.onFrameFeatures(now, judged)
@@ -1106,12 +1019,12 @@ fun PostureLiveSessionScreen(
                             RejectionCues.handle(rc, rf, refs.rejectedSeenRef[0], now, refs.floorLive.rejectGate,
                                 silent = speech.muted || refs.validationRef[0] || refs.pausedRef[0]).let { r ->
                                 refs.rejectedSeenRef[0] = r.seen
-                                if (r.cue?.tick == true) repTick(repTone, ToneGenerator.TONE_PROP_NACK)
+                                if (r.cue?.tick == true) repTick(repTone, RepTone.TONE_PROP_NACK)
                                 r.cue?.speech?.let { speech.speakLatest(it, heardKey = r.last?.feature?.let { f -> "rj:$f" }) }
                                 // 말한 기각 사유의 화살표(§101) — 쪽은 그 사이클의 움직인 다리, 컬은 잠긴 뷰의 카메라 쪽 팔, 바닥은 참고색
-                                if (r.motion != null && refs.modeRef[0] == CoachMode.COACH) motionCue = MotionCue.of(MotionSpec(r.motion, MotionOrigin.REASON, side = r.last?.side,
-                                    near = FormMotion.nearSide(rf?.lockedView), lateralOk = MotionSpec.lateralOk(rf?.lockedView)), now, soft = refs.floorRef[0])
-                                if (r.last != null && rc.floorTracker != null) refs.floorLive.onRejected(rc.floorTracker.profile, rc.rejectedReps.size, r.last.feature)
+                                if (refs.modeRef[0] == CoachMode.COACH) r.motion?.let { m -> motionCue = MotionCue.of(MotionSpec(m, MotionOrigin.REASON, side = r.last?.side,
+                                    near = FormMotion.nearSide(rf?.lockedView), lateralOk = MotionSpec.lateralOk(rf?.lockedView)), now, soft = refs.floorRef[0]) }
+                                r.last?.let { last -> rc.floorTracker?.let { ft -> refs.floorLive.onRejected(ft.profile, rc.rejectedReps.size, last.feature) } }
                             }
                             // 컬 '한 팔만'(§101) — 같은 팔만 3번 이어졌으면 화면 안내(beta, 음성 승격은 폰 블록 뒤). 지역 변수 없이 기존 상태만
                             if (rc.paired) rc.takeOneArmNotice()?.let { guideNote = PairedArmCues.oneArmNote(it); guideStamp = now }
@@ -1123,7 +1036,7 @@ fun PostureLiveSessionScreen(
                             if (refs.coachRef[0]?.anchor() == true) {
                                 anchored = true; refs.anchoredRef[0] = true; refs.anchorAtRef[0] = now
                                 // 세트 점수·판정의 집계기도 같이 비운다 — 준비 동작이 range/min/max 통계를 통째로 뒤집는다
-                                synchronized(recordedSamples) { aggregator.reset() }
+                                locked(refs.sampleLock) { aggregator.reset() }
                             }
                             // 발표된 사이클 → 렙 기록(사이클 단위 그대로 — 로그·재생 파리티) + 표시 단위의 완료 회(RepUnitAccumulator.onCounterFrame,
                             // 테스트: RepUnitTest·WorkoutSessionTest). 좌우 짝이면 두 쪽을 다 해야 1회가 오른다(사용자 결정 2026-09-24) —
@@ -1131,10 +1044,10 @@ fun PostureLiveSessionScreen(
                             // 한 프레임에 함께 발표하고, 레거시 경로(지금 앱)는 이 프레임의 한 사이클이다.
                             // ROM 판정값(null = 기준 없음 — 미달이 아니라 수를 줄이지 않지만 '유효' 도 아니다)을 어떤 말로 보일지는 세트 리포트의
                             // RepRomTier 가 정한다(spec §58). 템포는 표시 단위(1회 완료 간격), '반대쪽 차례' 는 화면에만(원칙 #6).
-                            val tally = synchronized(repRecords) { RepUnitAccumulator.onCounterFrame(rc, now, repRecords, refs.repUnitRef[0]) }
+                            val tally = locked(refs.repLock) { RepUnitAccumulator.onCounterFrame(rc, now, repRecords, refs.repUnitRef[0]) }
                             if (refs.floorRef[0]) newFloorRep = tally.records.lastOrNull()
                             // 반복별 자세 검사(§62a) — 이 프레임에 센 사이클마다 창을 닫고 판정한다(사이클 = 1회인 종목만 등록돼 있다)
-                            val formReps = if (rf == null) emptyList() else synchronized(repRecords) {
+                            val formReps = if (rf == null) emptyList() else locked(refs.repLock) {
                                 tally.records.map { r -> rf.onCycle(r.tMs, r.cycleMin, r.cycleMax, r.cycleStartMs, r.side) }
                             }
                             repCount += tally.repsNotShort
@@ -1146,25 +1059,25 @@ fun PostureLiveSessionScreen(
                                 val excluded = formReps.indices.count { i -> !formReps[i].correct && !(rc.signal.romExcludesShort && tally.records.getOrNull(i)?.valid == false) }
                                 repIncorrect += excluded
                                 // 자세로 뺀 회 = 낮은 틱(§7) — "이 회는 세지 않았어요" 문장을 대신한다. 화면은 큰 숫자가 멈추고 countNote 가 밝힌다
-                                if (excluded > 0 && !speech.muted && !refs.validationRef[0] && !refs.pausedRef[0]) repTick(repTone, ToneGenerator.TONE_PROP_NACK)
+                                if (excluded > 0 && !speech.muted && !refs.validationRef[0] && !refs.pausedRef[0]) repTick(repTone, RepTone.TONE_PROP_NACK)
                             }
                             // 쪽별 카운트(§63) — 걸음마다 그 걸음의 앞다리 쪽과 차단 여부로 두 풀에 넣는다(모드와 무관하게 둘 다 — 세트 중 모드를 바꿔도 맞게)
                             val sc = refs.sideCounterRef[0]
                             val coachNow = refs.modeRef[0] == CoachMode.COACH
-                            val sideEvs = if (sc == null) emptyList() else synchronized(repRecords) { formReps.filter { !it.notStep }.map { r -> sc.offer(r.tMs, r.side, blocked = !r.correct) } }
+                            val sideEvs = if (sc == null) emptyList() else locked(refs.repLock) { formReps.filter { !it.notStep }.map { r -> sc.offer(r.tMs, r.side, blocked = !r.correct) } }
                             if (sc != null) {
-                                sideTallies = synchronized(repRecords) { sc.tallies() }
+                                sideTallies = locked(refs.repLock) { sc.tallies() }
                                 // 센 걸음마다 쪽과 남은 수를 말한다 — 숫자 발화와 같은 대기열(끊지 않음). 쪽을 모르는 걸음은 짧은 톤. 자세로 뺀 걸음은 번호 없음(사유를 말한다)
                                 val speakCounts = !speech.muted && !refs.validationRef[0] && !refs.pausedRef[0]
                                 for (se in sideEvs) {
                                     val e = se.of(coachNow)
                                     if (!e.counted || !speakCounts) {
                                         // 쪽을 몰라 짝에 넣지 않은 걸음(§96 strictUnknown) — 침묵하면 카운트가 죽은 줄 안다. 번호 없이 짧은 톤만
-                                        if (speakCounts && !e.known && !e.counted && !e.blocked && !e.extraOnDone) runCatching { repTone?.startTone(ToneGenerator.TONE_PROP_ACK, 60) }
+                                        if (speakCounts && !e.known && !e.counted && !e.blocked && !e.extraOnDone) runCatching { repTone?.startTone(RepTone.TONE_PROP_ACK, 60) }
                                         continue
                                     }
-                                    if (!e.known || !speech.ready) { runCatching { repTone?.startTone(ToneGenerator.TONE_PROP_BEEP, 90) }; continue }
-                                    val n = synchronized(repRecords) { sc.pool(coachNow).count(e.side) }
+                                    if (!e.known || !speech.ready) { runCatching { repTone?.startTone(RepTone.TONE_PROP_BEEP, 90) }; continue }
+                                    val n = locked(refs.repLock) { sc.pool(coachNow).count(e.side) }
                                     speech.speak(when (e.remaining) {
                                         null -> "${e.side.label} $n"
                                         0 -> "${e.side.label} 끝"
@@ -1243,7 +1156,7 @@ fun PostureLiveSessionScreen(
                             // 검증 모드는 쓰지 않는다 — 앱이 센 수를 드러낸다(§61). 쪽을 모르는 걸음에서 나온 안내는 추정이라 화면에만(원칙 #6)
                             if (sideEv != null && !refs.validationRef[0]) {
                                 val msg = when {
-                                    sideEv.switchTo != null -> "이제 ${sideEv.switchTo.label} 동작을 해 주세요."
+                                    sideEv.switchTo != null -> "이제 ${sideEv.switchTo?.label} 동작을 해 주세요."
                                     sideEv.extraOnDone && now - refs.sideCueAtRef[0] > SIDE_CUE_GAP_MS -> "${sideEv.side.label}은 다 했어요. ${sideEv.side.other.label} 동작을 해 주세요."
                                     else -> null
                                 }
@@ -1254,7 +1167,7 @@ fun PostureLiveSessionScreen(
                                 }
                             }
                             // 세트 중 방향 안내(§63, 런지) — 옆으로 돌아서거나 정면으로 선 걸음이 3번 이어지면 종류마다 세트에서 한 번. 두 모드 모두(촬영 안내)
-                            if (rf?.turnReminderSteps != null) synchronized(repRecords) { rf.takeTurnReminder() }?.let { kind ->
+                            if (rf?.turnReminderSteps != null) locked(refs.repLock) { rf.takeTurnReminder() }?.let { kind ->
                                 val msg = when (kind) {
                                     TurnReminder.SIDE -> "옆으로 많이 돌아섰어요. 휴대폰 쪽으로 조금 돌아 45도쯤 비스듬히 서 주세요."
                                     TurnReminder.FRONT -> "정면으로 서면 깊이와 좌우를 볼 수 없어요. 휴대폰에서 45도쯤 비스듬히 서 주세요."
@@ -1268,7 +1181,7 @@ fun PostureLiveSessionScreen(
                                 say += "옆으로 너무 돌아서 이 회는 자세를 못 봤어요. 조금 덜 돌아 주세요."
                             }
                             // 처음부터 틀린 출발(§62c 후속 9) — 본인 기준이 모집단에 거의 없는 값이면 세트에서 한 번 말한다. COACH·서서만, 방금 말한 반복 사건 뒤에 붙인다
-                            if (gate && rf != null) synchronized(repRecords) { rf.takeNotice(now) }?.let { ev ->
+                            if (gate && rf != null) locked(refs.repLock) { rf.takeNotice(now) }?.let { ev ->
                                 say += ev.message
                                 // 처음부터 알림의 화살표(§101) — 같은 칸에 반복 화살표가 없을 때만
                                 if (ev.ship && motionCue?.startedAt != now) MotionCue.of(ev.check, ev.direction, RuleHighlight.landmarksFor(ev.check.feature), now, lastRep?.side, lastRep?.view)?.let { motionCue = it.copy(origin = MotionOrigin.NOTICE) }
@@ -1287,10 +1200,10 @@ fun PostureLiveSessionScreen(
                         // 카운터가 세지 못한 얕은 걸음(§63, 사용자 결정 "80도 부근까지 굽혀지지 않으면 교정 멘트와 시각 표시") — 창을 바꾸므로 모드와 무관하게 부르고,
                         // 말·강조는 COACH 만. 쿨다운(12 s) 안이면 짧은 단서
                         if (!completed && rf != null && !refs.floorRef[0]) {
-                            synchronized(repRecords) { rf.missedDipEvent(now, rc.midCycle, speak = refs.modeRef[0] == CoachMode.COACH) }?.let { (ev, side) ->
+                            locked(refs.repLock) { rf.missedDipEvent(now, rc.midCycle, speak = refs.modeRef[0] == CoachMode.COACH) }?.let { (ev, side) ->
                                 if (refs.modeRef[0] == CoachMode.COACH) {
                                     val msg = if (ev.brief) "${ev.message}." else "${ev.check.fix}."
-                                    if (!speech.muted && !refs.validationRef[0]) repTick(repTone, ToneGenerator.TONE_PROP_NACK)   // 세지 않은 걸음 = 낮은 틱(§7)
+                                    if (!speech.muted && !refs.validationRef[0]) repTick(repTone, RepTone.TONE_PROP_NACK)   // 세지 않은 걸음 = 낮은 틱(§7)
                                     formNote = msg
                                     speech.speakLatest(msg)
                                     formHighlight = RuleHighlight.landmarksFor(ev.check.highlight?.let { h -> side?.let { h.replace("{front}", it.key) } ?: h.replace("_{front}", "") } ?: ev.check.feature)
@@ -1300,7 +1213,7 @@ fun PostureLiveSessionScreen(
                             }
                         }
                         if (!completed && rf != null && refs.modeRef[0] == CoachMode.COACH && !refs.floorRef[0]) {
-                            synchronized(repRecords) { rf.liveEvent(now) }?.let { ev ->
+                            locked(refs.repLock) { rf.liveEvent(now) }?.let { ev ->
                                 formNote = ev.message
                                 speech.speakLatest(ev.message)
                                 formHighlight = RuleHighlight.landmarksFor(ev.check.feature); formProvHighlight = emptySet(); formHighlightStamp = now
@@ -1320,7 +1233,7 @@ fun PostureLiveSessionScreen(
                             val wait = if (refs.repRef[0] == null) ANCHOR_FALLBACK_NO_COUNTER_MS else ANCHOR_FALLBACK_WITH_COUNTER_MS
                             if (now - refs.detectStartRef[0] >= wait && coach.anchor()) {
                                 anchored = true; refs.anchoredRef[0] = true; refs.anchorAtRef[0] = now
-                                synchronized(recordedSamples) { aggregator.reset() }
+                                locked(refs.sampleLock) { aggregator.reset() }
                             }
                         }
                         coach.onFrame(features)
@@ -1388,22 +1301,12 @@ fun PostureLiveSessionScreen(
                 }
             } catch (_: Throwable) {
             } finally {
-                image.close()
+                frame.close()
             }
-        }
-        val selector = if (useFrontCamera) CameraSelector.DEFAULT_FRONT_CAMERA else CameraSelector.DEFAULT_BACK_CAMERA
-        try {
-            // 렌즈 사양은 세트 로그의 배치 지문(§91)에 들어간다 — 카메라를 바꾸면 다시 읽는다
-            refs.lensRef[0] = readLensInfo(provider.bindToLifecycle(lifecycleOwner, selector, preview, analysis))
-            android.util.Log.d("TrexCamera", "bind ${workout.id}")
-            kotlinx.coroutines.awaitCancellation()
-        } catch (cancel: kotlinx.coroutines.CancellationException) {
+        } } catch (cancel: kotlinx.coroutines.CancellationException) {
             throw cancel
         } catch (_: Exception) {
             cameraError = "카메라를 열 수 없어요. 다른 카메라로 전환하거나 직접 기록할 수 있어요."
-        } finally {
-            analysis.clearAnalyzer()
-            provider.unbind(preview, analysis)
         }
     }
 
@@ -1417,10 +1320,10 @@ fun PostureLiveSessionScreen(
     val keepPanelOpen by rememberUpdatedState(preparing || paused || cameraError != null)
     LaunchedEffect(panelController, preparing) {
         if (preparing) { panelVisible = true; return@LaunchedEffect }
-        panelController.beginSession(android.os.SystemClock.elapsedRealtime(), preparationSkipped)
+        panelController.beginSession(elapsedRealtimeMs(), preparationSkipped)
         panelVisible = panelController.visible
         while (true) {
-            val now = android.os.SystemClock.elapsedRealtime()
+            val now = elapsedRealtimeMs()
             val scale = if (now - currentPanelSampleAt in 0..900) currentPanelSample.panelBodyScale() else null
             val fullBody = scale != null && profile?.let {
                 com.example.trex_kotlin.posture.CaptureFraming.inspect(currentPanelSample, it.capture, it.floor, it.framingRegion, it.lateralReach).ready
@@ -1436,8 +1339,8 @@ fun PostureLiveSessionScreen(
         else panelAnimation.animateTo(if (panelVisible) 1f else 0f, tween(280))
     }
     val panelProgress = if (!preparing && countdownEntry) 0f else panelAnimation.value
-    fun openPanel() { panelController.reveal(android.os.SystemClock.elapsedRealtime()); panelVisible = true }
-    fun closePanel() { if (!paused) { panelController.collapse(android.os.SystemClock.elapsedRealtime()); panelVisible = false } }
+    fun openPanel() { panelController.reveal(elapsedRealtimeMs()); panelVisible = true }
+    fun closePanel() { if (!paused) { panelController.collapse(elapsedRealtimeMs()); panelVisible = false } }
 
     val onCam = Color.White
 
@@ -1460,7 +1363,8 @@ fun PostureLiveSessionScreen(
 
     val cameraArea: @Composable (Modifier) -> Unit = { mod ->
         Box(mod.background(Color.Black)) {
-            AndroidView(factory = { previewView }, modifier = Modifier.fillMaxSize())
+            // FIT_CENTER — 카메라가 보는 전체(분석 범위와 같다). 채우느라 잘라내면 사용자가 실제 범위보다 좁게 보고 프레이밍을 그르쳤다
+            camera.Preview(Modifier.fillMaxSize())
             // 검은 무대(§2) — 준비 단계는 영상(자리 잡기는 영상이 빠르다), 세트 중엔 뼈대만. 사람을 잃으면·사용자가 켜면 영상이 돌아온다.
             // 영상 유스케이스는 끊지 않는다(일부 기기에서 ImageAnalysis 단독 바인딩이 프레임률을 바꾼다, §8) — 검은 캔버스로 덮기만 한다
             // 준비 단계도 검은 무대다(사용자 결정 2026-10-02) — 자리 잡기는 프레임 테두리·점선 관절·잘린 변 발광이 안내하고, 몸이 없으면 영상이 돌아온다.
@@ -1558,11 +1462,11 @@ fun PostureLiveSessionScreen(
                     SessionTool("카메라", "카메라 전환", Icons.Rounded.Cameraswitch, {
                         useFrontCamera = !useFrontCamera
                         refs.comparisonRef[0]?.reset(); comparison = ComparisonSnapshot(); comparisonSpeech.clear()
-                        synchronized(repRecords) {
+                        locked(refs.repLock) {
                             refs.repRef[0]?.let {
                                 it.resetCycle(); refs.repUnitRef[0]?.onCounterCycleReset()   // 끝낸 한쪽은 유지 — 일시정지와 같다
                                 refs.repFormRef[0]?.takeIf { f -> f.stepSides || f.legProfile != null }?.discardWindow()
-                                repResets += RepResetEvent(System.currentTimeMillis(), "camera_switch", refs.lastCounterFrameAt[0].takeIf { t -> t > 0L })
+                                repResets += RepResetEvent(nowMillis(), "camera_switch", refs.lastCounterFrameAt[0].takeIf { t -> t > 0L })
                             }
                         }
                     }, Modifier.weight(1f))
@@ -1581,7 +1485,7 @@ fun PostureLiveSessionScreen(
             preparing = preparing, immersive = !preparing, panelProgress = panelProgress,
             header = {
                 if (!preparing) LiveWorkoutHud(workout, repetitions, timeLeft, totalSeconds, setLabel, paused,
-                    compact = configuration.screenHeightDp < 500,
+                    compact = screenHeightDp < 500,
                     // 검증 모드는 배너가 먼저 — 켜져 있음을 늘 보인다
                     message = if (validation) RepValidation.BANNER else liveMessage.takeIf { !panelVisible },
                     // 검증 모드는 자동 횟수 숫자를 숨긴다 — 집계자가 앱 숫자에 끌려가지 않게(세는 것·로그는 그대로)
@@ -1656,18 +1560,18 @@ private fun prepFeatures(refs: LiveSessionRefs, s: PoseSample, exercise: String)
     return f.takeIf { it.isNotEmpty() }
 }
 
-private fun repTick(tone: ToneGenerator?, kind: Int) { runCatching { tone?.startTone(kind, 70) } }
+private fun repTick(tone: RepTone?, kind: Int) { runCatching { tone?.startTone(kind, 70) } }
 
 /** 서서 하는 종목의 가로 잘림 감시 결과(§101) → 화면 커버리지(바닥 `FloorCoverage` 와 같은 자리). */
 private fun com.example.trex_kotlin.posture.StandingFraming.Report.toCoverage(): CoverageReport =
     if (ok) CoverageReport.OK else CoverageReport(false, listOf(PartStatus(BodyPart.ANKLE, false, if (outRight == true) OutDirection.RIGHT else OutDirection.LEFT)), emptyMap(), message, fix)
 
 /** 렙 카운트 알림 — 음성이 되면 숫자로, 안 되면 짧은 톤으로. 코칭 문구를 끊지 않게 큐에 붙인다. */
-private fun speakRep(speech: SpeechCoach, tone: ToneGenerator?, n: Int) {
+private fun speakRep(speech: SpeechCoach, tone: RepTone?, n: Int) {
     if (speech.ready) {
         speech.speak(n.toString(), flush = false, key = "n")   // 최신 숫자만(§101 U4)
     } else {
-        runCatching { tone?.startTone(ToneGenerator.TONE_PROP_BEEP, 90) }
+        runCatching { tone?.startTone(RepTone.TONE_PROP_BEEP, 90) }
     }
 }
 
@@ -1733,18 +1637,22 @@ private class LiveSessionRefs {
     val floorLive = FloorLiveState()   // §99 바닥 계열의 라이브 상태(종목·플랭크 시계·HUD·기각 이유 간격) — 지역 변수를 늘리지 않는다
     val contactRef = arrayOf(com.example.trex_kotlin.posture.ContactMinimum.elbowKnee())   // §98a 85 ms 접촉 최솟값(판정 격자의 예외)
     val thermalRef = intArrayOf(InferencePolicy.THERMAL_NONE)
-    val rotationRef = intArrayOf(android.view.Surface.ROTATION_0)   // 매 컴포지션에 displayRotation 으로 덮어쓴다
-    val analysisRef = arrayOfNulls<ImageAnalysis>(1)
-    val previewRef = arrayOfNulls<Preview>(1)
-    val lensRef = arrayOfNulls<com.example.trex_kotlin.posture.LensInfo>(1)   // 바인딩된 카메라의 렌즈 사양(§91 배치 지문)
+    val rotationRef = intArrayOf(0)   // Surface.ROTATION_0 — 매 컴포지션에 displayRotation 으로 덮어쓴다
     val subjectHeightCm = floatArrayOf(0f)   // 프로필 키(§91) — 0 = 없음
     val frontRef = booleanArrayOf(true)
     val pausedRef = booleanArrayOf(false)
     val coachRef = arrayOfNulls<LiveCoach>(1)
     val finalizeRef = arrayOfNulls<(String, String, Boolean) -> PostureSetReport?>(1)
-}
-
-private suspend fun Context.awaitCameraProviderLive(): ProcessCameraProvider = suspendCoroutine { cont ->
-    val future = ProcessCameraProvider.getInstance(this)
-    future.addListener({ cont.resume(future.get()) }, ContextCompat.getMainExecutor(this))
+    // 분석 스레드와 메인이 같이 만지는 칸의 락(§108c — 두 플랫폼 공통. JVM 에서는 종전처럼 객체 모니터다)
+    val repLock = SynchronizedObject()      // repRecords·repResets·카운터·누적기·쪽별 카운트·반복 검사
+    val sampleLock = SynchronizedObject()   // recordedSamples·recordedTimesMs·aggregator
+    val prepLock = SynchronizedObject()     // prepFrames
+    val thermalLock = SynchronizedObject()  // thermalHistory
+    /** 열 상태 변화 이력(절대 ms, 상태) — 세트 로그 단계 0 (spec §58). [thermalLock] 안에서. */
+    val thermalHistory = ArrayList<Pair<Long, Int>>()
+    /** 이 세트를 마감했는가 — 마감은 멱등(✓/✕ 뒤 onDispose 안전망은 아무것도 남기지 않는다). 새 세트가 false 로 되돌린다. */
+    @Volatile var finalized = false
+    private val finalizeLock = SynchronizedObject()
+    /** 아직 마감하지 않았으면 마감 표시하고 true. */
+    fun tryFinalize(): Boolean = locked(finalizeLock) { if (finalized) false else { finalized = true; true } }
 }

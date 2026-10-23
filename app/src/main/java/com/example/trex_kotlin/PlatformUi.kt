@@ -53,6 +53,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.window.layout.FoldingFeature
 import androidx.window.layout.WindowInfoTracker
 import com.example.trex_kotlin.posture.RepValidation
+import com.example.trex_kotlin.posture.isOn
 import com.example.trex_kotlin.posture.SpeechCoach
 import com.example.trex_kotlin.sync.requestGoogleIdToken
 import kotlinx.coroutines.Dispatchers
@@ -115,6 +116,13 @@ fun rememberStartTone(): () -> Unit {
 
 /** 단조 시계(ms) — SpeechCoach 의 세트 끝 꼬리와 같은 시계여야 한다. */
 fun elapsedRealtimeMs(): Long = SystemClock.elapsedRealtime()
+
+/** 화면 높이(dp) — 라이브 HUD 의 좁은 높이 배치(§108c 전 `LocalConfiguration.current.screenHeightDp` 그대로). */
+@Composable
+fun currentScreenHeightDp(): Int = androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp
+
+/** 시스템 애니메이션이 켜져 있는가 — 꺼져 있으면(개발자 옵션·접근성) 준비 화면의 회전 표시를 멈춘다. */
+fun animatorsEnabled(): Boolean = android.animation.ValueAnimator.areAnimatorsEnabled()
 
 /** 렙 검증 모드(spec §61) — 앱 전용 폴더의 표시 파일로 켠다. [key] 가 바뀔 때마다 다시 읽는다. */
 @Composable

@@ -1,7 +1,5 @@
 package com.example.trex_kotlin
 
-import android.animation.ValueAnimator
-import android.os.SystemClock
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
@@ -66,8 +64,7 @@ internal fun CapturePreparationPanel(
     onTogglePause: () -> Unit = {},
 ) {
     val c = Trex.c
-    val tone = remember { runCatching { android.media.ToneGenerator(android.media.AudioManager.STREAM_MUSIC, 60) }.getOrNull() }
-    DisposableEffect(tone) { onDispose { runCatching { tone?.release() } } }
+    val tone = rememberRepTone(60)
     val controller = remember(profile.name) { CapturePreparationController(profile.floor) }
     var state by remember { mutableStateOf(controller.state) }
     var userPaused by rememberSaveable { mutableStateOf(false) }
@@ -89,8 +86,8 @@ internal fun CapturePreparationPanel(
         if (!paused && !userPaused) {
             // §101(10-08): 카운트다운은 말과 분리됐다 — 범위·안정·방향 근거가 서면 설명 중에도 3초를 센다(숫자 대신 톤). 안내는 우선순위 문장 계획(ESS → PLACE → DET)으로,
             // 문장 하나가 끝난 뒤 다음을 고른다. 시스템이 문장 중간을 자르지 않는다(감시 시한만). 종전엔 한 덩어리 안내(13.6~26.5 s)가 12 s 마감에 잘리고 그때야 '3' 이 났다
-            controller.arm(SystemClock.elapsedRealtime()); state = controller.state
-            val now = SystemClock.elapsedRealtime()
+            controller.arm(elapsedRealtimeMs()); state = controller.state
+            val now = elapsedRealtimeMs()
             speech.traceFeedback("prep", "armed ${profile.name}")
             if (!introductionGiven && !speech.muted && PreparationIntro.due(profile.name, now)) {
                 val lines = profile.preparationLines()
@@ -98,7 +95,7 @@ internal fun CapturePreparationPanel(
                 while (!speech.muted && controller.isAutomatic && !reasonSpoken) {
                     val st = controller.state
                     val counting = st.phase == PreparationPhase.COUNTDOWN
-                    val t = SystemClock.elapsedRealtime()
+                    val t = elapsedRealtimeMs()
                     // 가장 이른 시작: 카운트 중이면 남은 초, 아니면 안정 0.4 s + 방향 0.68 s + 3 s
                     val earliest = t + (if (counting) st.seconds * 1000L else 400L + 680L + CapturePreparationController.COUNTDOWN_MS)
                     val idx = PreparationVoicePlan.nextLine(lines, i, t, settledRecommended = counting || frameReady, counting = counting,
@@ -106,11 +103,11 @@ internal fun CapturePreparationPanel(
                     val line = lines[idx]; i = idx + 1
                     introPlaying = true
                     speech.speak(line.text, flush = first); first = false
-                    val deadline = SystemClock.elapsedRealtime() + PrepSpeech.watchdogMs(line.text) + speech.tailRemainingMs
-                    while (!speech.muted && controller.isAutomatic && speech.isSpeaking && SystemClock.elapsedRealtime() < deadline) delay(50)
+                    val deadline = elapsedRealtimeMs() + PrepSpeech.watchdogMs(line.text) + speech.tailRemainingMs
+                    while (!speech.muted && controller.isAutomatic && speech.isSpeaking && elapsedRealtimeMs() < deadline) delay(50)
                     // TTS 콜백 누락에도 준비가 무한히 멈추지 않는다(감시 시한 = 예측 1.5배 + 2 s). 직접 시작을 누른 경우 그 카운트는 건드리지 않는다
-                    if (controller.isAutomatic && speech.isSpeaking && SystemClock.elapsedRealtime() >= deadline) speech.stop()
-                    if (line.kind == PrepKind.ESS) PreparationIntro.mark(profile.name, SystemClock.elapsedRealtime())
+                    if (controller.isAutomatic && speech.isSpeaking && elapsedRealtimeMs() >= deadline) speech.stop()
+                    if (line.kind == PrepKind.ESS) PreparationIntro.mark(profile.name, elapsedRealtimeMs())
                 }
                 introPlaying = false
             }
@@ -132,7 +129,7 @@ internal fun CapturePreparationPanel(
         while (true) {
             delay(100)
             if (latestPaused || userPaused) { controller.cancel(); state = controller.state; continue }
-            state = controller.tick(SystemClock.elapsedRealtime())
+            state = controller.tick(elapsedRealtimeMs())
             if (state.phase == PreparationPhase.STARTED && !delivered) { delivered = true; startedNormally = true; speech.traceFeedback("prep", "started"); start(false) }
         }
     }
@@ -148,7 +145,7 @@ internal fun CapturePreparationPanel(
             lastSaidSecond = state.seconds
             when (countMode) {
                 CountdownVoice.Mode.SPEAK -> speech.speak(state.seconds.toString(), flush = true)
-                CountdownVoice.Mode.TONE -> runCatching { tone?.startTone(android.media.ToneGenerator.TONE_PROP_BEEP, 100) }
+                CountdownVoice.Mode.TONE -> runCatching { tone?.startTone(RepTone.TONE_PROP_BEEP, 100) }
                 CountdownVoice.Mode.NONE -> {}
             }
         }
@@ -219,7 +216,7 @@ internal fun CapturePreparationPanel(
         modeControl()
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             TextButton(onClick = {
-                if (!paused) { userPaused=false; speech.stop(); controller.manual(SystemClock.elapsedRealtime(),5);state=controller.state }
+                if (!paused) { userPaused=false; speech.stop(); controller.manual(elapsedRealtimeMs(),5);state=controller.state }
             }, enabled = !paused && !userPaused && (!counting || state.trackingHold), modifier = Modifier.weight(1f)) {
                 Text("5초 후 시작", color = c.text2, fontSize = 13.sp)
             }
@@ -277,13 +274,13 @@ internal fun CaptureDirectionDemo(capture: CapturePosition, mirror: Boolean, mod
     val turn = remember(capture) { Animatable(target) }
     LaunchedEffect(capture) {
         // 시스템의 동작 줄이기를 따른다. 정지 그림도 항상 목표 방향을 보여 준다.
-        while (ValueAnimator.areAnimatorsEnabled()) {
+        while (animatorsEnabled()) {
             delay(1400); turn.animateTo(if (target == 0f) 35f else 0f, tween(650)); delay(300)
             turn.animateTo(target, tween(1800)); delay(1200)
         }
         turn.snapTo(target)
     }
-    val theta = Math.toRadians(turn.value.toDouble())
+    val theta = turn.value.toDouble() / 180.0 * kotlin.math.PI
     val floor = capture == CapturePosition.FLOOR_SIDE || capture == CapturePosition.FLOOR_FRONT
     Column(modifier.semantics { contentDescription = "${capture.title} 방향 시범 · 휴대폰은 고정하고 몸을 돌려 주세요" },
         horizontalAlignment = Alignment.CenterHorizontally) {

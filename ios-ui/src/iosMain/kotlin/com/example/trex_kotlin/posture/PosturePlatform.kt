@@ -3,52 +3,78 @@
 package com.example.trex_kotlin.posture
 
 import androidx.compose.runtime.Composable
+import com.example.trex_kotlin.ios.appendTextFile
+import com.example.trex_kotlin.ios.readTextFile
+import com.example.trex_kotlin.nowMillis
+import com.example.trex_kotlin.utcDayStamp
 import kotlinx.cinterop.ExperimentalForeignApi
-import platform.AVFAudio.AVAudioSession
-import platform.AVFAudio.AVAudioSessionCategoryOptionDuckOthers
-import platform.AVFAudio.AVAudioSessionCategoryOptionMixWithOthers
-import platform.AVFAudio.AVAudioSessionCategoryPlayback
-import platform.AVFAudio.AVAudioSessionModeSpokenAudio
-import platform.AVFAudio.AVSpeechBoundary
-import platform.AVFAudio.AVSpeechSynthesisVoice
-import platform.AVFAudio.AVSpeechSynthesizer
-import platform.AVFAudio.AVSpeechUtterance
-import platform.AVFAudio.setActive
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+import platform.Foundation.NSFileManager
+
+/*
+ * 자세 패키지의 iPhone 쪽 짝(§108c) — Android `posture/SetLogStore.kt` 와 같은 이름·같은 시그니처.
+ * 세트 로그 형식(SetLog·SetLogJson)은 공유 PostureSetLog.kt 그대로이고, 여기는 파일 자리와 숫자 고정 소수만 맡는다.
+ */
 
 /**
- * 세션 스피커의 iPhone 판(§108 Phase 2) — Android SpeechCoach 와 같은 이름·같은 공개 API 중 공유 화면이 쓰는 것만 둔다.
- * 지금 말하는 것은 쉬는 시간·완료 화면 문장뿐이라 AVSpeechSynthesizer 를 그대로 쓴다(ko-KR·0.48·다른 소리 낮춤 — 기존 Swift
- * SpeechService 와 같은 설정). 발화 대기열(SpeechQueue — 세트 끝 꼬리·들림 장부)은 자세 화면(Phase 3)과 함께 Android 와 같게 옮긴다.
- * 그때까지 [beginSetEnd]·[handOff] 는 지금 말을 끊지 않는 것만 같다.
+ * 세트 로그 숫자의 고정 소수 — Android `String.format(Locale.US, "%.Nf", v)` 와 같은 규칙: 값(float 를 double 로 넓힌 것)의
+ * 가장 짧은 십진 표현에서 소수 [decimals] 자리 반올림(HALF_UP). 지역화·과학적 표기 없음. NaN·무한은 호출부가 먼저 거른다.
  */
-class SpeechCoach {
-    var muted: Boolean = false
-    private val synthesizer = AVSpeechSynthesizer()
+internal fun formatFixed(v: Float, decimals: Int): String {
+    val d = v.toDouble()
+    if (d.isNaN() || d.isInfinite()) return d.toString()
+    val negative = d < 0.0 || (d == 0.0 && 1.0 / d < 0.0)
+    val text = kotlin.math.abs(d).toString()
+    val mantissa = text.substringBefore('E')
+    val exponent = if ('E' in text) text.substringAfter('E').toInt() else 0
+    var digits = mantissa.substringBefore('.') + mantissa.substringAfter('.', "")
+    var point = mantissa.substringBefore('.').length + exponent
+    if (point < 0) { digits = "0".repeat(-point) + digits; point = 0 }
+    if (point > digits.length) digits += "0".repeat(point - digits.length)
+    val keep = point + decimals
+    val kept = StringBuilder(if (keep <= digits.length) digits.substring(0, keep) else digits + "0".repeat(keep - digits.length))
+    if (keep < digits.length && digits[keep] >= '5') {
+        var i = kept.length - 1
+        while (i >= 0 && kept[i] == '9') { kept[i] = '0'; i-- }
+        if (i >= 0) kept[i] = kept[i] + 1 else { kept.insert(0, '1'); point++ }
+    }
+    val whole = kept.substring(0, point).trimStart('0').ifEmpty { "0" }
+    val fraction = kept.substring(point)
+    return (if (negative) "-" else "") + whole + (if (decimals > 0) ".$fraction" else "")
+}
 
-    fun speak(text: String, flush: Boolean = true, key: String? = null) {
-        if (muted) return
-        val session = AVAudioSession.sharedInstance()
-        session.setCategory(AVAudioSessionCategoryPlayback, mode = AVAudioSessionModeSpokenAudio,
-            options = AVAudioSessionCategoryOptionDuckOthers or AVAudioSessionCategoryOptionMixWithOthers, error = null)
-        session.setActive(true, error = null)
-        if (flush) synthesizer.stopSpeakingAtBoundary(AVSpeechBoundary.AVSpeechBoundaryImmediate)
-        val utterance = AVSpeechUtterance(string = text)
-        utterance.voice = AVSpeechSynthesisVoice.voiceWithLanguage("ko-KR")
-        utterance.rate = 0.48f
-        synthesizer.speakUtterance(utterance)
+/**
+ * 세트 로그 저장소 — `Documents/posture_logs/sets-yyyyMMdd.jsonl`(UTC 날짜)에 한 줄씩. Android 의 앱 외부 폴더 자리이고,
+ * Mac 이 `xcrun devicectl device copy from` 으로 가져간다(Android `adb pull` 과 같은 파일 이름).
+ */
+class SetLogStore(private val dir: String) {
+    fun append(log: SetLog, now: Long = nowMillis()): String {
+        val file = "$dir/sets-${utcDayStamp(now)}.jsonl"
+        appendTextFile(file, SetLogJson.encode(log) + "\n")
+        return file
     }
 
-    val isSpeaking: Boolean get() = synthesizer.speaking
+    fun files(): List<String> =
+        NSFileManager.defaultManager.contentsOfDirectoryAtPath(dir, error = null).orEmpty()
+            .map { it as String }.filter { it.endsWith(".jsonl") }.sorted().map { "$dir/$it" }
 
-    fun beginSetEnd(t0: Long, dropCounts: Boolean) {}
+    fun totalSets(): Int = files().sumOf { f -> readTextFile(f)?.lineSequence()?.count { it.isNotBlank() } ?: 0 }
 
-    fun handOff() {}
-
-    fun stop() {
-        synthesizer.stopSpeakingAtBoundary(AVSpeechBoundary.AVSpeechBoundaryImmediate)
+    companion object {
+        /** 세트 로그 쓰기 전용 직렬 실행(앱 수명) — Android 의 단일 기록 스레드처럼 화면 수명과 무관하게 순서대로 쓴다. */
+        val writer = SerialWriter()
     }
+}
 
-    fun shutdown() = stop()
+/** 순서대로 하나씩 도는 백그라운드 실행기 — Android `ExecutorService.execute` 자리. */
+class SerialWriter {
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO.limitedParallelism(1))
+    fun execute(block: () -> Unit) { scope.launch { block() } }
 }
 
 /** 개발용 자세 실험실은 Android 연구 도구다(도달하지 않는 경로). */

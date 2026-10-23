@@ -50,10 +50,33 @@ class TrexTimeTest {
         }
     }
 
+    /** 세트 로그 시각 문자열(§108c 전 `SetLog` 의 SimpleDateFormat 판)과 같은가 — 이제 SetLog 가 이 함수들을 부른다. */
+    private fun utc(pattern: String, millis: Long): String =
+        java.text.SimpleDateFormat(pattern, java.util.Locale.US).apply { timeZone = java.util.TimeZone.getTimeZone("UTC") }.format(Date(millis))
+
+    private val stampSamples = listOf(-1L, 0L, 999L, 1_000L, 59_999L, 1_761_100_000_123L, 1_761_100_000_999L, 1_798_761_599_999L, 4_102_444_799_999L)
+
     @Test
     fun isoUtcSecondsMatchesSetLogNowIso() {
-        val samples = listOf(0L, 999L, 1_000L, 59_999L, 1_761_100_000_123L, 1_761_100_000_999L, 1_798_761_599_999L, 4_102_444_799_999L)
-        for (millis in samples) assertEquals("$millis", SetLog.nowIso(Date(millis)), isoUtcSeconds(millis))
+        for (millis in stampSamples) {
+            assertEquals("$millis", utc("yyyy-MM-dd'T'HH:mm:ss'Z'", millis), isoUtcSeconds(millis))
+            assertEquals("$millis", isoUtcSeconds(millis), SetLog.nowIso(millis))
+        }
+    }
+
+    @Test
+    fun compactStampsMatchSimpleDateFormat() {
+        for (millis in stampSamples) {
+            assertEquals("$millis", utc("yyyyMMdd'T'HHmmss", millis), utcCompactStamp(millis))
+            assertEquals("$millis", utc("yyyyMMdd", millis), utcDayStamp(millis))
+        }
+        // 세트 ID = 스탬프 + "-" + UUID 앞 8자리(소문자 16진)
+        val id = SetLog.newSetId(1_761_100_000_123L)
+        assertTrue(id, Regex("""20251022T022640-[0-9a-f]{8}""").matches(id))
+        // 기기 시간대 날짜 — 피드백 기록 파일 이름(SimpleDateFormat 기본 시간대와 같다)
+        val seoul = TimeZone.of("Asia/Seoul")
+        val java = java.text.SimpleDateFormat("yyyyMMdd", java.util.Locale.US).apply { timeZone = java.util.TimeZone.getTimeZone("Asia/Seoul") }
+        for (millis in stampSamples) assertEquals("$millis", java.format(Date(millis)), dayStamp(millis, seoul))
     }
 
     @Test

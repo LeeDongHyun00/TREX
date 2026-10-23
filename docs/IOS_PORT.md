@@ -11,7 +11,7 @@
 Android 에서 iOS 로 옮길 때 무엇을 옮기고 무엇을 옮기지 않는지의 선이다. CLAUDE.md 의 판단 원칙은 플랫폼과 무관하게 그대로다.
 
 1. **판정은 한 곳에만 있다.** 임계값·뷰 게이팅·카운터·반복 검사·판별 기각·플랭크 시계·시선 분류·발화 선택 정책은 Android Kotlin 정본(`app/src/main/java/.../posture/`)이고, `tools/sync_ios_core.py` 가 플랫폼 I/O(Android import·`@Synchronized`·`String.format`·`org.json`)만 바꿔 `posture-core` 공통 소스를 **생성**한다. 생성 소스(`// tools/sync_ios_core.py 생성본` 머리말)는 손으로 고치지 않는다. 바꿀 것은 정본을 바꾸고 다시 동기화한다(`--check` 가 CI·Xcode pre-build 에서 어긋남을 잡는다). 같은 수식이 두 플랫폼에 두 벌 있으면 안 된다 — 얼굴 요(`faceYawDeg`)조차 `PostureAnalyzer.kt` 에서 잘라 낸 슬라이스(`FaceYaw.kt`)다.
-2. **Swift 는 센서·카메라·TTS 엔진이다. 화면은 Android Compose 정본으로 옮기는 중이다(§108, 원칙 #9).** SwiftUI 화면은 그 이행이 끝날 때까지만 남는다. 지금의 `IosEngine` 은 Android `PostureLive` 분석 루프·`PostureFloorLive`·`CapturePreparationUi`·`SpeechCoach` 의 **배선을 같은 순서로 옮긴 것**이다(준비 프레임 → 접촉 → 판정 칸 → 바닥 시계/시선 → 카운터 → 판별 기각 → 반복 검사 → 발화 → 창 규칙 → 비교). 화면 문구·간격 상수도 Android 와 같은 값이다. Swift 가 "이 회를 셀까", "이 말을 할까" 를 정하지 않는다.
+2. **Swift 는 카메라·MediaPipe 다리다. 화면·분석 루프는 Android 정본이다(§108, 원칙 #9).** 자세 화면은 Android `PostureLiveSessionScreen` 자체다(§108c) — 분석 루프(준비 프레임 → 접촉 → 판정 칸 → 바닥 시계/시선 → 카운터 → 판별 기각 → 반복 검사 → 발화 → 창 규칙 → 비교)·세트 마감·세트 로그를 iPhone 이 **같은 소스로** 컴파일한다. Swift(`iosApp/Trex/PoseCameraBridge.swift`)는 카메라 세션·미리보기·MediaPipe 추론만 하고, 추론 이후 처리(`PoseLandmarks` — 관절·up 자가검증·피처·얼굴 크롭 기하)부터 공유다. 세션 스피커도 공유 `SpeechCoach`(대기열·들림 장부·꼬리) 위에 AVSpeechSynthesizer 엔진이다. Swift 가 "이 회를 셀까", "이 말을 할까" 를 정하지 않는다. 예전 손 배선 `IosEngine` 은 쓰지 않는 예전 SwiftUI 세션 화면과 함께 남아 있다(정리 예정).
 3. **발화는 엔진 대기열이 고른다(§101).** Swift `SpeechService` 는 AVSpeechSynthesizer 만 들고, 엔진 `IosSpeech`(공통 `SpeechQueue`)가 고른 제출을 **한 번에 하나만** 재생하며 시작·종결을 엔진에 돌려준다. 들림 장부(지적이 재생을 시작한 뒤에만 "교정됐어요"), 세트 끝 꼬리(마지막 교정 문장을 자르지 않고 ≤ 10 s), 같은 쪽 카운트의 최신만, 번갈아 내기가 그래서 Android 와 같다. 음소거·한국어 음성 없음(→ 톤)도 엔진이 안다.
 4. **격자는 같다(§96).** 85 ms 추론은 뼈대 게이트·순간 접촉(§98a)에만, 준비·판정·카운터·로그는 300 ms 칸의 첫 프레임이다. 얼굴 모델도 300 ms 에 한 번, 결과는 450 ms 안의 프레임에 얹는다(Android `FACE_INTERVAL_MS`·`FACE_STALE_MS`). 열 상태가 나쁘면 추론 간격을 300 ms 로 줄이므로 순간 접촉을 놓칠 수 있다.
 5. **못 하는 것은 못 한다고 밝힌다.** 사람이 안 잡힌 프레임은 로그·집계에 넣지 않는다(Android 와 같다 — 종전 iOS 는 빈 프레임을 로그에 넣었다). 얼굴 모델이 실패하면 시선은 '측정 중' 이지 '정면' 이 아니다. 시간 목표(플랭크)는 카메라가 확인한 시간이 있을 때만 그것을 쓰고 아니면 시계이며 HUD 가 어느 쪽인지 보인다. 점수·"깨끗" 은 판정이 0건이면 없다.
@@ -45,13 +45,15 @@ python3 tools/verify_ios_project.py       # Swift 구문·XcodeGen·plist·세 -
 
 정본에 파일이 늘면 `sync_ios_core.py` 의 `NAMES` 에 넣는다(플랫폼 import 가 있으면 `portable()` 에 치환을 더한다 — Android 파일에서 **잘라 내는** 쪽을 택하고 손으로 옮기지 않는다). Android 테스트가 `SetLog`·`Context` 에 묶이면 `excluded` 에 넣는다.
 
-## 플랫폼 경계 (`IosEngine`, Swift 직렬 큐 전용)
+## 자세 화면의 플랫폼 경계 (§108c)
 
-- `configure(json)`: `name`(앱 이름)·`mode`·`target`·`timed`(시간 목표)·`front`·`muted`·`voiceReady`·`baseline`(개발용, 기본 없음) → 준비 안내·세는 조건·범위·바닥/플랭크 여부.
-- `arm`·`manualStart`·`pause(paused, now)`·`tick(now)`(200 ms, 발화 감시 포함)·`frame(json)`: `timeMs`·`width`·`height`·`xy`(66)·`world`(99, m)·`visibility`(33)·`up`(중력 반대, 월드)·`gravityFresh`·`inferMs`·`face{found, matrix[16] 행 우선, inferMs, rotation, headPx}`.
-- 상태 JSON: `stage`·`reps`·`done`·`message`·`cue`(이 회의 교정 문장)·`guideNote`·`provisionalNote`·`note`(세지 않은 동작·시선 칩)·`coverage`·`highlight`/`provisional`(관절)·`shown`/`target2d`(관절 게이트)·`motion`(화살표)·`hold`(플랭크 HUD)·`score`·`speech[{text, flush}]`·`tones[]`·`fast`.
-- `speechStarted(now)`·`speechFinished(now) → speech[]`·`stopSpeech()`·`beginSetEnd(now)`·`advanceDue(now)`·`finish(now, handOff) → 리포트 + speech[]`·`exportFrames()`.
-- `IosFace.cropSpec(json)`: 얼굴 크롭 명세(`cx`·`cy`·`rotateDeg`·`side`·`scale`·`outPx`) 또는 `null`.
+공유 `PostureLiveApi.kt` 의 경계를 플랫폼마다 같은 이름 함수로 채운다 — Android `PostureCameraAndroid.kt` ↔ iPhone `ios-ui/.../PostureCameraIos.kt`.
+
+- `PoseCamera`(`rememberPoseCamera()`): `stream(front, label, onFrame)` — 카메라를 묶고 분석 스레드에서 프레임마다 공유 루프를 부른다(처리 중 프레임은 버림 = KEEP_ONLY_LATEST), `analyze(frame, now, up)` → `PoseSample`, `gravityUp(rotation, front)`, `faceEnabled`, `stats()`, `lens`, `thermalSupported`·`start(onThermal)`·`stop()`, `Preview(modifier)`(FIT_CENTER).
+- `PostureHost`(`rememberPostureHost()`): 자산 텍스트·프로필 키·`ModeStore`·`SetLogStore`·수행자 ID·빌드 이름 — Android `Context` 자리.
+- `RepTone`(`rememberRepTone(volume)`): Android ToneGenerator / iPhone 합성음(TONE_PROP_* 모양, 재생 범주라 무음 스위치와 무관). `CameraPermission`(`rememberCameraPermission()`).
+- `SpeechEngine`: Android TextToSpeech / iPhone AVSpeechSynthesizer — 정책은 공유 `SpeechCoach`.
+- iPhone 의 Swift 다리 `IosCameraBridge`(앱 시작 때 `IosCameraBridgeRegistry.shared.bridge`): `start(front:sink:)`·`stop()`·`previewView()`·`detectPose(frame:timestampMs:)`(VIDEO 모드, 33점 xy·min(visibility, presence)·world)·`detectFace(frame:cx:cy:rotationDeg:scale:outPx:)`(크롭 기하는 공유 `FaceCrop`)·`modelError`. 영상은 세로 640×480 계열 BGRA·미러 없음(전면 미러는 미리보기만), 중력은 Kotlin 이 Core Motion 에서 직접 읽는다.
 
 ## Mac 준비와 빌드
 
@@ -59,15 +61,15 @@ python3 tools/verify_ios_project.py       # Swift 구문·XcodeGen·plist·세 -
 
 ## 다음 검증 (사용자)
 
-1. ~~macOS Actions 성공 여부~~ — 12차 실행 성공(위). `TransformMatrix.value(atRow:column:)` 는 `UInt` 인덱스다.
-2. iPhone 에서 플랭크: "시간을 재기 시작해요" → 무릎을 대면 낮은 틱 + 이유 → 다시 들면 "교정됐어요. 다시 재요", HUD 숫자가 카메라 시간인지, 폰을 보면 3 s 뒤 "시선이 벗어났어요".
-3. 크런치·레그 레이즈: 팔만·어깨만·한 다리 회가 세지지 않고 이유가 들리는지, 시선 칩.
-4. 스쿼트·런지·컬: 빠진 회의 "이 회는 세지 않았어요", 화살표 방향이 미러와 맞는지(전면 카메라), 세트 끝 교정 문장이 잘리지 않는지, 가로 잘림 안내.
-5. 로그 `posture_logs/*.jsonl` 회수 → 변환기 작성(Android 재생기 입력으로).
+1. 실기기 `--posture-probe`(§108c): 번들 그림 두 장의 MediaPipe 검출·피처 수, 공유 자세 화면 준비·운동 단계의 프레임·추론·검출 수, 화면 PNG(`Documents/posture-probe/`).
+2. iPhone 에서 스쿼트·런지·컬: 횟수·빠진 회의 "이 회는 세지 않았어요"·틱, 화살표 방향이 미러와 맞는지(전면 카메라), 세트 끝 교정 문장이 잘리지 않는지, 가로 잘림 안내.
+3. 플랭크: "시간을 재기 시작해요" → 무릎을 대면 낮은 틱 + 이유 → 다시 들면 "교정됐어요. 다시 재요", HUD 숫자가 카메라 시간인지, 폰을 보면 3 s 뒤 "시선이 벗어났어요".
+4. 크런치·레그 레이즈: 팔만·어깨만·한 다리 회가 세지지 않고 이유가 들리는지, 시선 칩.
+5. 세트 로그 `Documents/posture_logs/sets-*.jsonl` 회수(`xcrun devicectl device copy from`) → Android 재생기·분석 스크립트에 그대로(같은 스키마).
 
 ## 저장 형식
 
-앱 데이터는 `Application Support/TREX/data.json` schema 1(변경 없음). 자세 로그 `posture_logs/<record UUID>.jsonl` 은 schema **2**: 첫 줄 `kind=ios_session` 에 종목·모드·목표·전면 여부·규칙 버전·판정 간격·시작/앵커 시각·반복 시각·기각(시각·사유·쪽)·플랭크 시계(인정/경과/출처/멈춤/구간)·바닥 회 시선·말한 시선 문장, 이후 `kind=ios_frame` 은 상대 시각·판정 피처(얼굴 피처 포함)·xy/world/가시성·크기·중력(신선도·뒤집힘). 카메라 영상은 없다.
+앱 데이터는 Android 와 같은 키-값 저장소(§108b, NSUserDefaults `trex.<이름>`). 자세 세트 로그는 §108c 부터 **Android 와 같은 형식·같은 파일 이름**이다: `Documents/posture_logs/sets-yyyyMMdd.jsonl`(스키마 `trex.posture.setlog/1`, 공유 `PostureSetLog.kt` — 숫자 고정 소수만 플랫폼 함수), 발화 기록 `feedback-yyyyMMdd.jsonl`, 자가 라벨 `labels/set_labels.jsonl`·`rep_truth.csv`. 카메라 영상은 없다. 렌즈 물리 사양(초점거리 mm·센서 크기)은 iPhone 이 주지 않아 배치 지문의 거리·높이는 비어 있다(피치·롤·주기는 남는다). 예전 SwiftUI 경로의 `posture_logs/<record UUID>.jsonl`(schema 2)은 더 쓰지 않는다.
 
 ---
 

@@ -1,12 +1,9 @@
 package com.example.trex_kotlin.posture
 
-import android.content.Context
-import java.io.File
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
-import java.util.TimeZone
-import java.util.UUID
+import com.example.trex_kotlin.isoUtcSeconds
+import com.example.trex_kotlin.newUuid
+import com.example.trex_kotlin.nowMillis
+import com.example.trex_kotlin.utcCompactStamp
 
 /**
  * 재보정 데이터 수집용 세트 로그 (spec §9 / §14).
@@ -73,98 +70,6 @@ data class SetLogResult(
     /** 재배치 적용 시의 상대값(value − 기준선중앙값). 미적용이면 null. */
     val valueRel: Float? = null,
 )
-
-/**
- * 세트 로그의 렙 카운터 구성 (spec §58 단계 0) — 같은 프레임을 오프라인에서 **같은 카운터로** 다시 돌릴 수 있게 남긴다.
- * 폰 검증(Gate A)에서 "그 세트를 어떤 카운터가 셌는가" 를 로그만으로 가를 수 있어야 새 코어를 켜고 끈 전후를 비교할 수 있다.
- *
- * @property engine [ENGINE_RETURN](복귀형 `ReturnRepTracker` — 지금 앱) | [ENGINE_HYSTERESIS](`RepHysteresis` + 시작 확정, 폰 검증 전 비활성).
- * @property polarity "down"|"up". null = 레거시 경로(방향 개념 없음).
- * @property returnFraction·firstPairWindowMs·laterWindowMs·minRatio·maxRatio 새 코어 전용(레거시는 null — 키도 없다).
- *   laterWindowMs 는 새 코어에서도 null 일 수 있다(= 이후 반복은 진폭 비만 본다, 설계 §4.3) — 그때는 JSON null 로 적는다.
- * @property romTier [RepRomTier.key] — 화면·음성이 ROM 을 어떤 확신으로 말했는가.
- */
-data class RepEngineLog(
-    val engine: String,
-    val feature: String,
-    val minAmp: Float,
-    val refractoryMs: Long,
-    val maxGapMs: Long,
-    val completeOnReturn: Boolean,
-    val polarity: String? = null,
-    val returnFraction: Float? = null,
-    val firstPairWindowMs: Long? = null,
-    val laterWindowMs: Long? = null,
-    val minRatio: Float? = null,
-    val maxRatio: Float? = null,
-    val romDirection: String? = null,
-    val romThreshold: Float? = null,
-    val romTier: String? = null,
-    /** 반복 판별 게이트(spec §62) — `config.identity{feature,min_amp}`. 판별 신호가 없는 종목은 null 이고 키가 없다. */
-    val identityFeature: String? = null,
-    val identityMinAmp: Float? = null,
-    /** 준비 단계에서 심은 서 있는 기준값(§89 후속 2) — `config.seed`. 없으면 키 없음. */
-    val seed: Float? = null,
-    /** 팔별 경로(spec §62c) — `config.paired{left,right}`·`config.reject{feature:max_swing}`·`config.rom_ratio/rom_abs_min/rom_ref_min`. 아니면 키 없음. */
-    val pairedFeatures: Pair<String, String>? = null,
-    val rejectFeatures: Map<String, Float> = emptyMap(),
-    val romRatio: Float? = null,
-    val romAbsMin: Float? = null,
-    val romRefMin: Float? = null,
-    val romAuxFeature: String? = null,
-    val romAuxRatio: Float? = null,
-    val romAuxFloor: Float? = null,
-    /** 다리 사이클 추적기(§97)의 세트 첫 서 있는 기준 — 재생기가 같은 값을 심는다. JSON 키 `standing`. */
-    val standing: Map<String, Float>? = null,
-    /** 바닥 반복 계열(§99)의 세트 첫 누운 기준(`FloorCycleTracker.lying`) — 재생기가 같은 값을 심는다(`restoreLying`). JSON 키 `lying`. */
-    val lying: Map<String, Float>? = null,
-) {
-    companion object {
-        /** v2 = 방향 복귀 띠(spec §99). v1 로그는 옛 복귀 규칙으로 센 것이라 지금 재생과 파리티가 어긋날 수 있다. */
-        const val ENGINE_RETURN = "return_v2"
-        const val ENGINE_HYSTERESIS = "hysteresis_v1"
-
-        /**
-         * 카운터가 **실제로 쓰는** 구성을 읽어 적는다(`RepCounter.effective*`·코어·시작 확정의 값) — 복사한 상수가 아니라서
-         * `forSession` 의 구성이나 코어 기본값이 바뀌어도 로그가 거짓이 되지 않는다. Gate A 재생 파리티가 이 블록에 기댄다.
-         */
-        fun of(counter: RepCounter): RepEngineLog {
-            val s = counter.signal
-            val confirm = counter.confirmationConfig
-            return RepEngineLog(
-                engine = when {
-                    counter.legTracker != null -> LegCycleTracker.VERSION
-                    counter.floorTracker != null -> FloorCycleTracker.VERSION   // §99 — 누운 기준(lying)·기각 상세는 SetLog 의 바닥 필드
-                    counter.usesHysteresis -> ENGINE_HYSTERESIS
-                    else -> ENGINE_RETURN
-                },
-                feature = s.feature,
-                minAmp = s.minAmp,
-                refractoryMs = counter.effectiveRefractoryMs,
-                maxGapMs = counter.effectiveMaxGapMs,
-                completeOnReturn = counter.effectiveCompleteOnReturn,
-                polarity = s.polarity?.name?.lowercase(),
-                returnFraction = counter.returnFraction,
-                firstPairWindowMs = confirm?.firstPairWindowMs,
-                laterWindowMs = confirm?.laterWindowMs,
-                minRatio = confirm?.minRatio,
-                maxRatio = confirm?.maxRatio,
-                romDirection = s.romDirection,
-                romThreshold = s.romThreshold,
-                romTier = RepRomTier.of(s).key,
-                identityFeature = s.identityFeature,
-                identityMinAmp = s.identityFeature?.let { s.identityMinAmp },
-                seed = counter.standingSeed,
-                standing = counter.legTracker?.standing,
-                lying = counter.floorTracker?.lying,
-                pairedFeatures = s.pairedFeatures,
-                rejectFeatures = s.rejectFeatures,
-                romRatio = s.romRatio, romAbsMin = s.romAbsMin, romRefMin = s.romRefMin,
-                romAuxFeature = s.romAuxFeature, romAuxRatio = s.romAuxRatio, romAuxFloor = s.romAuxFloor,
-            )
-        }
-    }
-}
 
 /**
  * 세트 중 카운터의 진행 사이클을 버린 사건 (spec §58). 시각은 전부 세트 상대 ms(프레임 t_ms 와 같은 기준). reason: "pause" | "camera_switch".
@@ -315,13 +220,11 @@ data class SetLog(
     companion object {
         const val SCHEMA = "trex.posture.setlog/1"
 
-        fun newSetId(now: Date = Date()): String {
-            val stamp = SimpleDateFormat("yyyyMMdd'T'HHmmss", Locale.US).apply { timeZone = TimeZone.getTimeZone("UTC") }.format(now)
-            return stamp + "-" + UUID.randomUUID().toString().substring(0, 8)
-        }
+        /** "yyyyMMdd'T'HHmmss"(UTC) + "-" + UUID 앞 8자리. [now] = epoch ms. */
+        fun newSetId(now: Long = nowMillis()): String = utcCompactStamp(now) + "-" + newUuid().substring(0, 8)
 
-        fun nowIso(now: Date = Date()): String =
-            SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US).apply { timeZone = TimeZone.getTimeZone("UTC") }.format(now)
+        /** "yyyy-MM-dd'T'HH:mm:ss'Z'"(UTC). [now] = epoch ms. */
+        fun nowIso(now: Long = nowMillis()): String = isoUtcSeconds(now)
 
         /**
          * 랩 화면의 기록 결과로부터 세트 로그를 만든다.
@@ -341,7 +244,7 @@ data class SetLog(
             subjectId: String? = null,
             note: String? = null,
             includeVisibility: Boolean = true,
-            now: Date = Date(),
+            now: Long = nowMillis(),
             repCount: Int? = null,
             repTimesMs: List<Long>? = null,
             repSignal: String? = null,
@@ -832,7 +735,7 @@ object SetLogJson {
     internal fun num(v: Float?, decimals: Int = 5): String {
         if (v == null || v.isNaN() || v.isInfinite()) return "null"
         // 고정 소수: 과학적 표기/지역화(콤마) 방지
-        val s = String.format(Locale.US, "%.${decimals}f", v)
+        val s = formatFixed(v, decimals)
         return s.trimEnd('0').trimEnd('.').ifEmpty { "0" }.let { if (it == "-0") "0" else it }
     }
 
@@ -845,66 +748,9 @@ object SetLogJson {
                 '\n' -> sb.append("\\n")
                 '\r' -> sb.append("\\r")
                 '\t' -> sb.append("\\t")
-                else -> if (ch < ' ') sb.append(String.format(Locale.US, "\\u%04x", ch.code)) else sb.append(ch)
+                else -> if (ch < ' ') sb.append("\\u").append(ch.code.toString(16).padStart(4, '0')) else sb.append(ch)
             }
         }
         sb.append('"')
-    }
-}
-
-/**
- * 설치 단위 익명 수행자 ID — 재보정에서 **GroupKFold 그룹**으로 쓴다.
- * 같은 사람의 세트가 학습/검증에 갈라져 들어가면 성능이 부풀려지므로, 사람 구분자가 반드시 필요하다.
- * 기기·계정과 무관한 난수라 개인 식별 정보가 아니다.
- */
-object SubjectId {
-    private const val PREFS = "trex_posture"
-    private const val KEY = "subject_id"
-
-    fun get(context: Context): String {
-        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-        prefs.getString(KEY, null)?.let { return it }
-        val id = "s-" + UUID.randomUUID().toString().substring(0, 8)
-        prefs.edit().putString(KEY, id).apply()
-        return id
-    }
-}
-
-/**
- * 세트 로그 저장소: `<externalFilesDir>/posture_logs/sets-yyyyMMdd.jsonl` 에 한 줄씩 추가.
- * 외부 앱 전용 저장소라 권한이 필요 없고, `adb pull` 또는 공유 시트로 꺼내 재보정 도구에 넣는다.
- */
-class SetLogStore(private val dir: File) {
-
-    constructor(context: Context) : this(File(context.getExternalFilesDir(null) ?: context.filesDir, "posture_logs"))
-
-    val directory: File get() = dir
-
-    fun append(log: SetLog, now: Date = Date()): File {
-        dir.mkdirs()
-        val day = SimpleDateFormat("yyyyMMdd", Locale.US).apply { timeZone = TimeZone.getTimeZone("UTC") }.format(now)
-        val file = File(dir, "sets-$day.jsonl")
-        file.appendText(SetLogJson.encode(log) + "\n", Charsets.UTF_8)
-        return file
-    }
-
-    fun files(): List<File> = dir.listFiles { f -> f.isFile && f.name.endsWith(".jsonl") }?.sortedBy { it.name } ?: emptyList()
-
-    fun totalSets(): Int = files().sumOf { f -> f.useLines(Charsets.UTF_8) { lines -> lines.count { it.isNotBlank() } } }
-
-    fun totalBytes(): Long = files().sumOf { it.length() }
-
-    fun clear() {
-        files().forEach { it.delete() }
-    }
-
-    companion object {
-        /**
-         * 세트 로그 쓰기 전용 스레드(앱 수명) — 화면 수명과 무관하게 순서대로 쓴다. 세트마다 새 `Thread` 를 띄우면 화면이 사라지는 순간의
-         * 기록이 다른 정리 작업과 경합했고(2026-09-26 13:57 — 그때는 분석기 크래시가 프로세스를 죽였다), 실패는 조용히 삼켜졌다.
-         */
-        val writer: java.util.concurrent.ExecutorService = java.util.concurrent.Executors.newSingleThreadExecutor { r ->
-            Thread(r, "set-log-writer").apply { isDaemon = false }
-        }
     }
 }

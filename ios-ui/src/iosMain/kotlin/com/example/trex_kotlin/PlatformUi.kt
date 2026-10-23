@@ -25,9 +25,9 @@ import androidx.compose.ui.viewinterop.UIKitInteropInteractionMode
 import androidx.compose.ui.viewinterop.UIKitInteropProperties
 import androidx.compose.ui.viewinterop.UIKitView
 import androidx.compose.ui.window.DialogProperties
+import com.example.trex_kotlin.ios.IosSpeechEngine
 import com.example.trex_kotlin.ios.readTextFile
 import com.example.trex_kotlin.ios.toByteArray
-import com.example.trex_kotlin.posture.PostureSetReport
 import com.example.trex_kotlin.posture.SpeechCoach
 import com.example.trex_kotlin.sync.SignInException
 import kotlinx.atomicfu.locks.SynchronizedObject
@@ -60,11 +60,12 @@ import com.example.trex_kotlin.TrexText as Text
 
 /*
  * 공유 화면이 쓰는 플랫폼 기능의 iPhone 구현(§108 Phase 2) — Android `app/.../PlatformUi.kt` 와 같은 이름·같은 시그니처의 짝이다.
- * 아직 없는 기능은 없다고 밝힌다: 카메라 자세 화면(Phase 3)·사진 식단(Phase 4)·구글 로그인·앱 내 업데이트(App Store 몫).
+ * 자세 화면의 카메라·추론·권한·확인음·자원은 PostureCameraIos.kt(§108c Phase 3), 소리는 ios/IosAudio.kt.
+ * 아직 없는 기능은 없다고 밝힌다: 사진 식단(Phase 4)·구글 로그인·앱 내 업데이트(App Store 몫).
  */
 
-/** iPhone 자세 화면은 Phase 3 에서 옮긴다 — 그때까지 자세 종목도 타이머로 돈다([postureSupported] 가 거짓). */
-const val PLATFORM_POSTURE_CAMERA = false
+/** iPhone 도 카메라 자세 화면을 돈다(§108c) — 공유 PostureLive + Swift 카메라·MediaPipe 다리(PoseCameraBridge.swift). */
+const val PLATFORM_POSTURE_CAMERA = true
 
 /** 상태 막대 글자색을 화면 테마에 맞춘다(창의 라이트·다크). */
 @Composable
@@ -76,8 +77,9 @@ fun TrexSystemBars(c: TrexColors) {
     }
 }
 
+/** 세션 스피커 — 공유 정책(SpeechCoach) 위에 AVSpeechSynthesizer 엔진(§108c). */
 @Composable
-fun rememberSpeechCoach(): SpeechCoach = remember { SpeechCoach() }
+fun rememberSpeechCoach(): SpeechCoach = remember { SpeechCoach(IosSpeechEngine()) }
 
 /** 운동 시작 톤 — 시스템 짧은 확인음. */
 @Composable
@@ -85,6 +87,19 @@ fun rememberStartTone(): () -> Unit = remember { { AudioServicesPlaySystemSound(
 
 /** 단조 시계(ms, 부팅 뒤 흐른 시간) — iPhone SpeechCoach 와 같은 시계. */
 fun elapsedRealtimeMs(): Long = (NSProcessInfo.processInfo.systemUptime * 1000).toLong()
+
+/** 화면 높이(dp) — 라이브 HUD 의 좁은 높이 배치. Android `screenHeightDp` 자리(창 높이). */
+@Composable
+fun currentScreenHeightDp(): Int = with(androidx.compose.ui.platform.LocalDensity.current) {
+    androidx.compose.ui.platform.LocalWindowInfo.current.containerSize.height.toDp().value.toInt()
+}
+
+/** 시스템 애니메이션이 켜져 있는가 — '동작 줄이기' 가 켜져 있으면 준비 화면의 회전 표시를 멈춘다(Android 애니메이터 꺼짐과 같은 자리). */
+fun animatorsEnabled(): Boolean = !platform.UIKit.UIAccessibilityIsReduceMotionEnabled()
+
+/** 화면 회전(Surface.ROTATION_* 값) — iPhone 앱은 세로 고정(Info.plist)이라 늘 0. */
+@Composable
+fun rememberTrexDisplayRotation(): Int = 0
 
 /** 렙 검증 모드(spec §61)는 Android 연구 도구다 — iPhone 에는 없다. */
 @Composable
@@ -255,37 +270,6 @@ internal fun PhotoFoodSheet(app: AppViewModel, onClose: () -> Unit) {
             Cta("직접 입력으로 기록", onClick = { manual = true }, modifier = Modifier.fillMaxWidth())
         }
     }
-}
-
-/** 카메라 자세 화면은 Phase 3 에서 옮긴다. [PLATFORM_POSTURE_CAMERA] 가 거짓이라 이 화면으로 오지 않지만, 오면 타이머로 넘긴다. */
-@Composable
-fun PostureLiveSessionScreen(
-    workout: Workout,
-    index: Int,
-    total: Int,
-    timeLeft: Int,
-    totalSeconds: Int,
-    paused: Boolean,
-    onTogglePause: () -> Unit,
-    onNext: () -> Unit,
-    onExit: () -> Unit,
-    onSetReport: (PostureSetReport) -> Unit = {},
-    onFallbackToTimer: () -> Unit = {},
-    speech: SpeechCoach,
-    setLabel: String = "1 / 1 세트",
-    onSkip: () -> Unit = onNext,
-    registerFinalizer: ((() -> Unit)?) -> Unit = {},
-    repetitions: Int = 0,
-    onRepetitions: (Int) -> Unit = {},
-    onRepDetected: () -> Unit = {},
-    onPartial: () -> Unit = onSkip,
-    preparing: Boolean = false,
-    validation: Boolean = false,
-    onPrepared: () -> Unit = {},
-    onShowGuide: (() -> Unit)? = null,
-    holdBridge: HoldBridge? = null,
-) {
-    SideEffect { onFallbackToTimer() }
 }
 
 // ---- 번들 자산

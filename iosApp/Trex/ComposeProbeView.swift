@@ -28,3 +28,9 @@ struct AppProbeView: UIViewControllerRepresentable {
     func makeUIViewController(context: Context) -> UIViewController { AppProbeKt.AppProbeViewController() }
     func updateUIViewController(_ controller: UIViewController, context: Context) {}
 }
+
+/// 실행 인자 --posture-probe(§108c): 공유 자세 화면이 iPhone 카메라·MediaPipe 로 도는지 확인한다(Documents/posture-probe/).
+struct PostureProbeView: UIViewControllerRepresentable {
+    func makeUIViewController(context: Context) -> UIViewController { PostureProbeKt.PostureProbeViewController() }
+    func updateUIViewController(_ controller: UIViewController, context: Context) {}
+}

@@ -1,6 +1,11 @@
 import SwiftUI
+import TrexCore
 
 @main struct TrexApp: App {
+    init() {
+        // §108c: 공유 자세 화면(Kotlin)이 쓰는 카메라·MediaPipe 다리 — 앱 수명 하나
+        IosCameraBridgeRegistry.shared.bridge = PoseCameraBridge()
+    }
     var body: some Scene {
         WindowGroup {
             if ProcessInfo.processInfo.arguments.contains("--compose-probe") {
@@ -9,6 +14,8 @@ import SwiftUI
                 AppProbeView().ignoresSafeArea()
             } else if ProcessInfo.processInfo.arguments.contains("--screen-tour") {
                 ScreenTourView().ignoresSafeArea()
+            } else if ProcessInfo.processInfo.arguments.contains("--posture-probe") {
+                PostureProbeView().ignoresSafeArea()
             } else {
                 // §108 Phase 2: 앱 화면은 Android 정본 Compose(TrexApp)다. 아래 예전 SwiftUI 화면(RootView 등)은
                 // 카메라 자세·사진 식단 경로를 옮기는 동안(Phase 3·4)만 남긴다 — 지금은 쓰지 않는다.

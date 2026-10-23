@@ -33,10 +33,10 @@
   "RuleHighlight": "71ea11d0d899468aa91c49bd7a6c06d6f15ffac63bc50ae4bb0e374a655e5b12",
   "RuleTypes": "068362e2b4f3a8417a325bbb52426770dc9f9b167891488bb42ddb9e1bba78ad",
   "Stance2d": "fcf9b08e4308643ca7c6a28440fb0a7b088a27d2b5783188919cd8fb6fe223a0",
-  "PostureRules": "e16f49050a3dbdb0ce6e4cf8ce4d60674d7a2bcdaed365cd499f781d9fde3c47",
+  "PostureRules": "436e7aa91209a965dda30c8571da173de2773c53e7d27cbd7a23d94f7b69aa18",
   "PostureBaseline": "d6d5a73fb88831be6c2511351238a71b0ac81f0f94f45d0e389b4b99b2f0f67f",
-  "PostureCoach": "4fefbaa2dbd6e3b42592cfd222cd8123aa7bbc160c8591d1c5034c67dcdcf0c1",
-  "PostureMode": "01e7d303f4f15ca4660f231567a5a36765e63d6ad731ec5f0bf0de88204b0890",
+  "PostureCoach": "d8177af02bf548f7473690e5af0ce598a0bc5d06ac2047bdc2589aba3f8b29b2",
+  "PostureMode": "e386b8f82f78afc0ba55b0676d78a62d75faa8bcfafd33b3acb96ae380e12c89",
   "FloorChain": "537ae019f114ecd735cde2a749744bc2aafe094e574390de08e7f9181dede31f",
   "FloorCycle": "5f8d5714bda3816e20d46bab0d6c0919f11cce6d588bcc8cd0f756d58fd6c40f",
   "FloorGaze": "6fa65b78c964bdd9fe1724655f961f55d1af98d463d20624d7ae4f97a15e5ea0",
@@ -46,5 +46,8 @@
   "PostureTrial": "543229c8b988e144a326bb35c8b5ddeea81c1f4d187dd6b8f7056c38c5a765a4",
   "PreparationVoice": "3e06ee4982caa087eccc155c940c87138a23d66ad6c79eff1c0633728b521e25",
   "SpeechQueue": "80c2b7a6f739d5e8490795cf85a4704826536029ed044ee0710d2867afb8ca2e",
-  "StandingFraming": "1f43574af18fc7c7f664f494cda91ac5bcc45708a1ffed7680502b9d5e4312fa"
+  "StandingFraming": "1f43574af18fc7c7f664f494cda91ac5bcc45708a1ffed7680502b9d5e4312fa",
+  "PoseLandmarks": "a6d6ec1fc2ed4d602324ec0c575c7cf4c878a6ef7965c86eff31d1750bf4a5ab",
+  "RepEngineLog": "c4ccb2c94a8eab7002d3ec1ddb15745bd93a9750b50a6c4f6f387dc94899838f",
+  "InferencePolicy": "0dcf86a83be0f2a76512e914050cd3319bc29b12618a9ce58c44d5f7eac4d18e"
 }

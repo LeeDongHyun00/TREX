@@ -1,5 +1,16 @@
+// tools/sync_ios_core.py 생성본 — Android 정본에서 수정한 뒤 동기화하세요.
 package com.example.trex_kotlin.posture
 
+/**
+ * 세트 로그의 렙 카운터 구성 (spec §58 단계 0) — 같은 프레임을 오프라인에서 **같은 카운터로** 다시 돌릴 수 있게 남긴다.
+ * 폰 검증(Gate A)에서 "그 세트를 어떤 카운터가 셌는가" 를 로그만으로 가를 수 있어야 새 코어를 켜고 끈 전후를 비교할 수 있다.
+ *
+ * @property engine [ENGINE_RETURN](복귀형 `ReturnRepTracker` — 지금 앱) | [ENGINE_HYSTERESIS](`RepHysteresis` + 시작 확정, 폰 검증 전 비활성).
+ * @property polarity "down"|"up". null = 레거시 경로(방향 개념 없음).
+ * @property returnFraction·firstPairWindowMs·laterWindowMs·minRatio·maxRatio 새 코어 전용(레거시는 null — 키도 없다).
+ *   laterWindowMs 는 새 코어에서도 null 일 수 있다(= 이후 반복은 진폭 비만 본다, 설계 §4.3) — 그때는 JSON null 로 적는다.
+ * @property romTier [RepRomTier.key] — 화면·음성이 ROM 을 어떤 확신으로 말했는가.
+ */
 data class RepEngineLog(
     val engine: String,
     val feature: String,

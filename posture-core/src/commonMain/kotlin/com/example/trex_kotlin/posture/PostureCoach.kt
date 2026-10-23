@@ -1,7 +1,6 @@
 // tools/sync_ios_core.py 생성본 — Android 정본에서 수정한 뒤 동기화하세요.
 package com.example.trex_kotlin.posture
 
-
 /**
  * 실시간 코칭 — "어디가, 처음부터인지 점점인지" 를 말로 알려 준다 (연구: ERROR_ONSET.md).
  *
@@ -393,13 +392,4 @@ class LiveCoach(
     }
 }
 
-/**
- * Android TTS 래퍼 — 한국어 음성, 초기화 비동기.
- *
- * 세 가지를 함께 다룬다(§31 라이브 신뢰성):
- *  - **준비 전 큐**: 초기화가 비동기라 세트 시작 안내가 통째로 버려졌다. ready 전 요청은 최대 [MAX_PENDING] 건
- *    담아 두고, 초기화 직후 **[PENDING_TTL_MS] 이내 요청만** 순서대로 말한다 — 더 오래된 안내는 이미 지난 상황이라
- *    지금 말하면 오히려 방해다.
- *  - **오디오 포커스**: 헬스장 음악 위로 들려야 한다. 발화 동안만 DUCK 포커스를 잡고 마지막 발화가 끝나면 놓는다.
- *  - **상태 노출**: 한국어 음성이 없으면 영원히 무음인데 화면이 이유를 말하지 못했다 → [unavailableReason].
- */
+// 세션 스피커(SpeechCoach)는 SpeechCoach.kt(두 플랫폼 공통 정책) + AndroidSpeech.kt(TextToSpeech 엔진)로 옮겼다(§108c).

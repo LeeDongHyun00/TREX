@@ -58,3 +58,16 @@ com/example/trex_kotlin/SessionScreens.kt
 com/example/trex_kotlin/TimedPreparation.kt
 com/example/trex_kotlin/trainingload/SessionLoadChange.kt
 com/example/trex_kotlin/trainingload/SessionMuscles.kt
+# Phase 3(§108c) — 자세 화면: 분석 루프(PostureLive)·바닥 계열 상태·준비 패널·무대·HUD·제어판, 플랫폼 경계, 세트 로그 형식·모드 저장·검증 표시·세션 스피커
+com/example/trex_kotlin/PostureLiveApi.kt
+com/example/trex_kotlin/PostureLive.kt
+com/example/trex_kotlin/PostureFloorLive.kt
+com/example/trex_kotlin/CapturePreparationUi.kt
+com/example/trex_kotlin/SkeletonStage.kt
+com/example/trex_kotlin/LiveWorkoutHud.kt
+com/example/trex_kotlin/StageFit.kt
+com/example/trex_kotlin/LivePanelController.kt
+com/example/trex_kotlin/posture/ModeStore.kt
+com/example/trex_kotlin/posture/PostureSetLog.kt
+com/example/trex_kotlin/posture/RepValidation.kt
+com/example/trex_kotlin/posture/SpeechCoach.kt
