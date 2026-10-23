@@ -2,6 +2,7 @@ package com.example.trex_kotlin.posture
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -28,9 +29,12 @@ class RepPairedTest {
         val fired = ArrayList<Long>()
         /** 마지막으로 회가 완료된 프레임의 ROM 판정 — `lastCycleValid` 는 프레임마다 비워지므로 발화 순간에 잡는다. */
         var lastValid: Boolean? = null
-        fun frame(l: Float?, r: Float?, torso: Float = 0.02f, upperarm: Float = 175f, extra: Map<String, Float> = emptyMap(), wrist: Float? = null) {
+        /** [wl]/[wr] = 팔별 손목 높이(없으면 [wrist] 를 양팔에), [yaw] = 어깨 요(°, 방향 피처 — 먼 팔 판정 §101; null 이면 방향 피처 없음). */
+        fun frame(l: Float?, r: Float?, torso: Float = 0.02f, upperarm: Float = 175f, extra: Map<String, Float> = emptyMap(), wrist: Float? = null,
+                  wl: Float? = wrist, wr: Float? = wrist, yaw: Float? = null) {
             val f = HashMap<String, Float>(extra)
-            wrist?.let { f[Arm2d.WRIST_H_L] = it; f[Arm2d.WRIST_H_R] = it }
+            wl?.let { f[Arm2d.WRIST_H_L] = it }; wr?.let { f[Arm2d.WRIST_H_R] = it }
+            yaw?.let { val rad = Math.toRadians(it.toDouble()); f[ViewEstimator.FEAT_COS] = kotlin.math.cos(rad).toFloat(); f[ViewEstimator.FEAT_SIN] = kotlin.math.sin(rad).toFloat() }
             l?.let { f["elbow_L"] = it }; r?.let { f["elbow_R"] = it }
             val ms = listOfNotNull(l, r); if (ms.isNotEmpty()) f["elbow_minside"] = ms.min()
             f[Arm2d.TORSO_TILT] = torso; f["upperarm_vert_L"] = upperarm; f["upperarm_vert_R"] = upperarm
@@ -129,15 +133,66 @@ class RepPairedTest {
     }
 
     @Test
-    fun anArmHiddenLongerThanTheAbsenceWindowIsCountedByTheVisibleArm() {
+    fun anArmUnseenLongerThanTheAbsenceWindowRejectsTheOtherArmsCycleAsUnseenPair() {
+        // §101(10-08): 종전에는 2.5 s 넘게 안 보인 팔 자리에 보이는 팔 사이클을 **복사**해 1회로 셌다 — 그 팔이 움직였다는 근거 없이(왼팔만 한 회가 화면 3·4 를 올림).
+        // 이제 그 사이클은 '못 본 짝' 으로 기각한다(arm_unseen_R) — 세지 않고 이유를 말한다(PairedArmCues). 사용자 결정 U1
         val rc = counter(); val f = Feed(rc)
-        cycle(80f).forEach { f.frame(it, it) }             // 양팔 첫 사이클 = 1회
-        // 오른팔이 사라진 채(피처 없음) 왼팔만 두 사이클 — 오른팔이 2.5 s 넘게 안 보이므로 왼팔 사이클을 회로 센다
+        repeat(2) { cycle(80f).forEach { f.frame(it, it) } }   // 양팔 두 사이클 = 2회(첫 회 확정)
+        cycle(80f).forEach { f.frame(it, null) }           // 오른팔이 팔꿈치도 손목도 안 보임
         cycle(80f).forEach { f.frame(it, null) }
-        cycle(80f).forEach { f.frame(it, null) }
-        assertEquals("왼팔 발표 3사이클 = 3회(오른팔 자리는 왼팔 것으로)", 3, rc.reps)
-        assertEquals("오른팔은 첫 사이클만 냈다(그 뒤로는 안 보임)", 1, rc.armCycles.count { it.arm == 'R' })
-        assertEquals(3, rc.armCycles.count { it.arm == 'L' })
+        assertEquals("보이는 팔만으로는 회가 되지 않는다", 2, rc.reps)
+        assertEquals(2, rc.armCycles.count { it.arm == 'R' })
+        assertEquals(4, rc.armCycles.count { it.arm == 'L' })
+        val unseen = rc.rejectedReps.filter { it.feature == "arm_unseen_R" }
+        assertEquals(2, unseen.size)
+        assertEquals(2, rc.armCycles.count { it.arm == 'L' && it.orphan && it.src == 'U' })
+        assertEquals("촬영 안내 문장이 있다", "오른팔이 화면에 안 보여 세지 않았어요. 휴대폰 쪽으로 조금 돌아서 주세요.", rc.cueSource!!.cueFor("arm_unseen_R"))
+        assertFalse("못 본 팔은 '교정' 대상이 아니다", rc.cueSource!!.recovers("arm_unseen_R"))
+        assertNotNull("대스윙 기각에도 이제 문장이 있다", rc.cueSource!!.cueFor("upperarm_vert_L"))
+    }
+
+    /** 사선 D(먼 팔 = 오른팔) 손목 높이 한 사이클 — 어깨 쪽이 높다(−0.1), 내리면 −0.9. [cycle] 과 같은 길이. */
+    private fun wristOf(v: Float, bottom: Float = 80f, wTop: Float = -0.10f, wBottom: Float = -0.90f) = wBottom + (165f - v) / (165f - bottom) * (wTop - wBottom)
+
+    @Test
+    fun farArmWithHiddenElbowIsCountedFromItsWristInObliqueView() {
+        // §101 먼 팔 3상태 — 사선에서 먼 팔꿈치가 가시성 0.5 아래로 빠져도 손목은 남는다: 손목 높이 사이클(진폭 ≥ 0.35, 꼭대기 ≥ −0.45)로 그 팔을 센다
+        val rc = counter(); val f = Feed(rc)
+        // D 사선(요 −40°): 왼팔이 카메라 쪽, 오른팔이 먼 팔. 오른 팔꿈치는 내내 없고 오른 손목만 움직인다
+        repeat(3) { cycle(80f).forEach { v -> f.frame(v, null, wl = wristOf(v), wr = wristOf(v), yaw = -40f) } }
+        assertEquals("동시 컬 3회 — 오른팔은 손목으로", 3, rc.reps)
+        assertEquals(3, rc.armCycles.count { it.arm == 'R' && it.src == 'W' })
+        assertTrue("손목 사이클은 팔꿈치 극값이 없다", rc.armCycles.filter { it.src == 'W' }.all { it.min.isNaN() })
+        assertTrue(rc.rejectedReps.none { it.feature?.startsWith("arm_unseen") == true })
+        // 교대: 왼팔 사이클 뒤 오른 손목 사이클 → 1회
+        cycle(80f).forEach { v -> f.frame(v, null, wl = wristOf(v), wr = -0.90f, yaw = -40f) }
+        cycle(80f).forEach { v -> f.frame(165f, null, wl = -0.90f, wr = wristOf(v), yaw = -40f) }
+        assertEquals(4, rc.reps)
+    }
+
+    @Test
+    fun aStillFarArmDoesNotMakeTheNearArmsCyclesReps() {
+        // §101: 먼 팔꿈치는 안 보이지만 손은 보이고 **가만히** 있다(10-08 구간 A 의 왼팔만 회) — 회가 되지 않고, 같은 팔만 3번 이어지면 '한 팔만' 화면 안내
+        val rc = counter(); val f = Feed(rc)
+        repeat(3) { cycle(80f).forEach { v -> f.frame(v, null, wl = wristOf(v), wr = -0.90f, yaw = -40f) } }
+        assertEquals("오른손이 가만히 있다 — 왼팔 사이클만으로는 0회", 0, rc.reps)
+        assertTrue("오른손이 보이니 '못 본 짝' 도 아니다", rc.rejectedReps.isEmpty())
+        assertEquals('L', rc.takeOneArmNotice()); assertNull("한 번만", rc.takeOneArmNotice())
+        assertEquals("오른팔 차례예요. 양팔을 한 번씩 해야 1회예요.", PairedArmCues.oneArmNote('L'))
+        // 그 뒤 동시 회가 오면 쌓인 왼팔 반쪽은 조각으로 버리고 그 회만 센다(큐 전체 조각 탐색)
+        cycle(80f).forEach { v -> f.frame(v, null, wl = wristOf(v), wr = wristOf(v), yaw = -40f) }
+        assertEquals(1, rc.reps)
+        assertEquals(3, rc.armOrphans)
+    }
+
+    @Test
+    fun wristFallbackIsOffInFrontalView() {
+        // §101: 정면(C)에는 '먼 팔' 이 없다 — 팔꿈치가 안 보이면 손목이 보여도 그 팔은 못 본 것(못 본 짝)
+        val rc = counter(); val f = Feed(rc)
+        repeat(2) { cycle(80f).forEach { v -> f.frame(v, null, wl = wristOf(v), wr = wristOf(v), yaw = 0f) } }
+        assertEquals(0, rc.reps)
+        assertTrue(rc.armCycles.none { it.src == 'W' })
+        assertTrue(rc.rejectedReps.any { it.feature == "arm_unseen_R" })
     }
 
     @Test

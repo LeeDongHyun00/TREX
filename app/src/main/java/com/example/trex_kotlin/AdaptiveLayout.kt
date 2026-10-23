@@ -1,5 +1,6 @@
 package com.example.trex_kotlin
 
+import android.content.pm.ActivityInfo
 import android.hardware.display.DisplayManager
 import android.os.Handler
 import android.os.Looper
@@ -133,4 +134,19 @@ fun rememberTrexDisplayRotation(): Int {
         onDispose { manager.unregisterDisplayListener(listener) }
     }
     return rotation
+}
+
+/**
+ * 운동 세션 동안 화면 방향을 폰을 둔 방향(센서)에 맞춘다(2026-10-10 보고 "바닥 운동할 때 폰을 가로로 돌리는데 화면이 세로 기준이라 보기 힘들다").
+ * 원인은 앱이 아니라 폰의 **자동 회전 꺼짐**(`adb shell settings get system accelerometer_rotation` = 0) — 이 앱은 configChanges 로 회전을 받고 가로 배치(`sessionRegions`: 영상 왼쪽·조작부 오른쪽)도 있지만
+ * 시스템이 돌리지 않으면 아무것도 안 바뀐다. `SCREEN_ORIENTATION_FULL_SENSOR` 는 사용자의 회전 잠금과 무관하게 센서를 따른다(카메라 앱과 같은 동작). 세션이 끝나면 사용자 설정(UNSPECIFIED)으로 돌아간다.
+ * 회전해도 Activity 는 유지되고 `PostureLive` 가 회전값을 다시 읽어 프리뷰·분석 회전을 맞춘다([rememberTrexDisplayRotation]). 세션 밖(목록·기록·완료)은 손대지 않는다.
+ */
+@Composable
+fun SessionOrientation(follow: Boolean) {
+    val activity = LocalContext.current.findTrexActivity()
+    DisposableEffect(activity, follow) {
+        if (follow) activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_FULL_SENSOR
+        onDispose { if (follow) activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED }
+    }
 }

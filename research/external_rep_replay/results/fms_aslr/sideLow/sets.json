@@ -1,0 +1,512 @@
+[
+ {
+  "capture": "s01_m09/s01_m09_set",
+  "truth": 3,
+  "live": 0,
+  "side": 0,
+  "retracted": [],
+  "liveByEpisode": [
+   0,
+   0,
+   0
+  ],
+  "sideByEpisode": [
+   0,
+   0,
+   0
+  ]
+ },
+ {
+  "capture": "s01_m10/s01_m10_set",
+  "truth": 3,
+  "live": 0,
+  "side": 0,
+  "retracted": [],
+  "liveByEpisode": [
+   0,
+   0,
+   0
+  ],
+  "sideByEpisode": [
+   0,
+   0,
+   0
+  ]
+ },
+ {
+  "capture": "s02_m09/s02_m09_set",
+  "truth": 3,
+  "live": 0,
+  "side": 0,
+  "retracted": [],
+  "liveByEpisode": [
+   0,
+   0,
+   0
+  ],
+  "sideByEpisode": [
+   0,
+   0,
+   0
+  ]
+ },
+ {
+  "capture": "s02_m10/s02_m10_set",
+  "truth": 3,
+  "live": 1,
+  "side": 0,
+  "retracted": [],
+  "liveByEpisode": [
+   1,
+   0,
+   0
+  ],
+  "sideByEpisode": [
+   0,
+   0,
+   0
+  ]
+ },
+ {
+  "capture": "s03_m09/s03_m09_set",
+  "truth": 3,
+  "live": 0,
+  "side": 0,
+  "retracted": [],
+  "liveByEpisode": [
+   0,
+   0,
+   0
+  ],
+  "sideByEpisode": [
+   0,
+   0,
+   0
+  ]
+ },
+ {
+  "capture": "s03_m10/s03_m10_set",
+  "truth": 3,
+  "live": 1,
+  "side": 0,
+  "retracted": [],
+  "liveByEpisode": [
+   0,
+   1,
+   0
+  ],
+  "sideByEpisode": [
+   0,
+   0,
+   0
+  ]
+ },
+ {
+  "capture": "s05_m09/s05_m09_set",
+  "truth": 3,
+  "live": 0,
+  "side": 0,
+  "retracted": [],
+  "liveByEpisode": [
+   0,
+   0,
+   0
+  ],
+  "sideByEpisode": [
+   0,
+   0,
+   0
+  ]
+ },
+ {
+  "capture": "s05_m10/s05_m10_set",
+  "truth": 3,
+  "live": 0,
+  "side": 0,
+  "retracted": [],
+  "liveByEpisode": [
+   0,
+   0,
+   0
+  ],
+  "sideByEpisode": [
+   0,
+   0,
+   0
+  ]
+ },
+ {
+  "capture": "s08_m09/s08_m09_set",
+  "truth": 3,
+  "live": 1,
+  "side": 1,
+  "retracted": [],
+  "liveByEpisode": [
+   0,
+   1,
+   0
+  ],
+  "sideByEpisode": [
+   0,
+   1,
+   0
+  ]
+ },
+ {
+  "capture": "s08_m10/s08_m10_set",
+  "truth": 3,
+  "live": 0,
+  "side": 0,
+  "retracted": [],
+  "liveByEpisode": [
+   0,
+   0,
+   0
+  ],
+  "sideByEpisode": [
+   0,
+   0,
+   0
+  ]
+ },
+ {
+  "capture": "s09_m09/s09_m09_set",
+  "truth": 3,
+  "live": 2,
+  "side": 0,
+  "retracted": [],
+  "liveByEpisode": [
+   1,
+   0,
+   1
+  ],
+  "sideByEpisode": [
+   0,
+   0,
+   0
+  ]
+ },
+ {
+  "capture": "s09_m10/s09_m10_set",
+  "truth": 3,
+  "live": 0,
+  "side": 0,
+  "retracted": [],
+  "liveByEpisode": [
+   0,
+   0,
+   0
+  ],
+  "sideByEpisode": [
+   0,
+   0,
+   0
+  ]
+ },
+ {
+  "capture": "s10_m09/s10_m09_set",
+  "truth": 3,
+  "live": 0,
+  "side": 0,
+  "retracted": [],
+  "liveByEpisode": [
+   0,
+   0,
+   0
+  ],
+  "sideByEpisode": [
+   0,
+   0,
+   0
+  ]
+ },
+ {
+  "capture": "s10_m10/s10_m10_set",
+  "truth": 3,
+  "live": 0,
+  "side": 0,
+  "retracted": [],
+  "liveByEpisode": [
+   0,
+   0,
+   0
+  ],
+  "sideByEpisode": [
+   0,
+   0,
+   0
+  ]
+ },
+ {
+  "capture": "s11_m09/s11_m09_set",
+  "truth": 3,
+  "live": 0,
+  "side": 0,
+  "retracted": [],
+  "liveByEpisode": [
+   0,
+   0,
+   0
+  ],
+  "sideByEpisode": [
+   0,
+   0,
+   0
+  ]
+ },
+ {
+  "capture": "s11_m10/s11_m10_set",
+  "truth": 3,
+  "live": 1,
+  "side": 0,
+  "retracted": [],
+  "liveByEpisode": [
+   0,
+   1,
+   0
+  ],
+  "sideByEpisode": [
+   0,
+   0,
+   0
+  ]
+ },
+ {
+  "capture": "s12_m09/s12_m09_set",
+  "truth": 3,
+  "live": 0,
+  "side": 0,
+  "retracted": [],
+  "liveByEpisode": [
+   0,
+   0,
+   0
+  ],
+  "sideByEpisode": [
+   0,
+   0,
+   0
+  ]
+ },
+ {
+  "capture": "s12_m10/s12_m10_set",
+  "truth": 3,
+  "live": 0,
+  "side": 0,
+  "retracted": [],
+  "liveByEpisode": [
+   0,
+   0,
+   0
+  ],
+  "sideByEpisode": [
+   0,
+   0,
+   0
+  ]
+ },
+ {
+  "capture": "s13_m09/s13_m09_set",
+  "truth": 3,
+  "live": 2,
+  "side": 1,
+  "retracted": [],
+  "liveByEpisode": [
+   0,
+   2,
+   0
+  ],
+  "sideByEpisode": [
+   0,
+   0,
+   1
+  ]
+ },
+ {
+  "capture": "s13_m10/s13_m10_set",
+  "truth": 3,
+  "live": 1,
+  "side": 1,
+  "retracted": [],
+  "liveByEpisode": [
+   0,
+   1,
+   0
+  ],
+  "sideByEpisode": [
+   0,
+   0,
+   1
+  ]
+ },
+ {
+  "capture": "s14_m09/s14_m09_set",
+  "truth": 3,
+  "live": 0,
+  "side": 0,
+  "retracted": [],
+  "liveByEpisode": [
+   0,
+   0,
+   0
+  ],
+  "sideByEpisode": [
+   0,
+   0,
+   0
+  ]
+ },
+ {
+  "capture": "s14_m10/s14_m10_set",
+  "truth": 3,
+  "live": 0,
+  "side": 0,
+  "retracted": [],
+  "liveByEpisode": [
+   0,
+   0,
+   0
+  ],
+  "sideByEpisode": [
+   0,
+   0,
+   0
+  ]
+ },
+ {
+  "capture": "s15_m09/s15_m09_set",
+  "truth": 3,
+  "live": 1,
+  "side": 1,
+  "retracted": [],
+  "liveByEpisode": [
+   0,
+   0,
+   1
+  ],
+  "sideByEpisode": [
+   0,
+   1,
+   0
+  ]
+ },
+ {
+  "capture": "s15_m10/s15_m10_set",
+  "truth": 3,
+  "live": 2,
+  "side": 0,
+  "retracted": [],
+  "liveByEpisode": [
+   1,
+   1,
+   0
+  ],
+  "sideByEpisode": [
+   0,
+   0,
+   0
+  ]
+ },
+ {
+  "capture": "s16_m09/s16_m09_set",
+  "truth": 3,
+  "live": 0,
+  "side": 0,
+  "retracted": [],
+  "liveByEpisode": [
+   0,
+   0,
+   0
+  ],
+  "sideByEpisode": [
+   0,
+   0,
+   0
+  ]
+ },
+ {
+  "capture": "s16_m10/s16_m10_set",
+  "truth": 3,
+  "live": 0,
+  "side": 0,
+  "retracted": [],
+  "liveByEpisode": [
+   0,
+   0,
+   0
+  ],
+  "sideByEpisode": [
+   0,
+   0,
+   0
+  ]
+ },
+ {
+  "capture": "s20_m09/s20_m09_set",
+  "truth": 3,
+  "live": 1,
+  "side": 0,
+  "retracted": [],
+  "liveByEpisode": [
+   0,
+   1,
+   0
+  ],
+  "sideByEpisode": [
+   0,
+   0,
+   0
+  ]
+ },
+ {
+  "capture": "s20_m10/s20_m10_set",
+  "truth": 3,
+  "live": 0,
+  "side": 1,
+  "retracted": [],
+  "liveByEpisode": [
+   0,
+   0,
+   0
+  ],
+  "sideByEpisode": [
+   0,
+   1,
+   0
+  ]
+ },
+ {
+  "capture": "s21_m09/s21_m09_set",
+  "truth": 3,
+  "live": 0,
+  "side": 0,
+  "retracted": [],
+  "liveByEpisode": [
+   0,
+   0,
+   0
+  ],
+  "sideByEpisode": [
+   0,
+   0,
+   0
+  ]
+ },
+ {
+  "capture": "s21_m10/s21_m10_set",
+  "truth": 3,
+  "live": 0,
+  "side": 0,
+  "retracted": [],
+  "liveByEpisode": [
+   0,
+   0,
+   0
+  ],
+  "sideByEpisode": [
+   0,
+   0,
+   0
+  ]
+ }
+]

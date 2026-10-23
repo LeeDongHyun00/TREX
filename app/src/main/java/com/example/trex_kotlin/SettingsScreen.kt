@@ -48,6 +48,7 @@ fun ProfileTabScreen(app: AppViewModel, onOpenRecord: () -> Unit, onLogout: () -
                 }
             }
         }
+        item { AccountGroup(app) }
         item { SettingsGroup {
             SettingsRow("운동 기록", Icons.Rounded.History, onClick = onOpenRecord)
         } }
@@ -73,6 +74,9 @@ fun ProfileTabScreen(app: AppViewModel, onOpenRecord: () -> Unit, onLogout: () -
         item { Surface(onClick = { sheet = "logout" }, color = c.surface, shape = RoundedCornerShape(20.dp)) {
             Text("로그아웃", color = c.err, fontSize = 16.sp, modifier = Modifier.fillMaxWidth().padding(20.dp))
         } }
+        if (app.account != null) item {
+            Text("회원 탈퇴", color = c.text3, fontSize = 13.sp, modifier = Modifier.clickable { sheet = "withdraw" }.padding(horizontal = 20.dp, vertical = 4.dp))
+        }
     }
     if (sheet == "profile") ProfileEditSheet(app, { sheet = null })
     if (sheet == "theme") ModalBottomSheet(onDismissRequest = { sheet = null }, containerColor = c.sheet,
@@ -92,10 +96,103 @@ fun ProfileTabScreen(app: AppViewModel, onOpenRecord: () -> Unit, onLogout: () -
         title = { Text("자세 비교 사용하기") },
         text = { Text("운동 이름 옆 스위치로 자세 비교를 켜세요. 시작 전에 안내하는 촬영 방향으로 전신을 담아 주세요.\n\n횟수가 다르게 측정되면 운동 화면의 ‘횟수 수정’에서 조정할 수 있어요.") },
         confirmButton = { TextButton(onClick = { sheet = null }) { Text("확인") } })
+    if (sheet == "withdraw") AlertDialog(onDismissRequest = { sheet = null }, containerColor = c.sheet,
+        title = { Text("탈퇴할까요?") },
+        text = {
+            Column {
+                Text("계정과 서버에 백업된 기록이 모두 지워지고 되돌릴 수 없어요. 이 기기의 기록은 남아요.")
+                app.authMessage?.let { Text(it, color = c.err, fontSize = 13.sp, modifier = Modifier.padding(top = 10.dp)) }
+            }
+        },
+        dismissButton = { TextButton(onClick = { sheet = null }) { Text("취소") } },
+        confirmButton = { TextButton(onClick = { app.deleteAccount { sheet = null } }, enabled = !app.authBusy) { Text("탈퇴", color = c.err) } })
     if (sheet == "logout") AlertDialog(onDismissRequest = { sheet = null }, containerColor = c.sheet,
-        title = { Text("로그아웃할까요?") }, text = { Text("이 기기의 운동 기록은 유지돼요.") },
+        title = { Text("로그아웃할까요?") }, text = { Text(if (app.account != null) "이 기기의 운동 기록은 유지돼요. 다시 로그인하면 계정 백업과 이어져요." else "이 기기의 운동 기록은 유지돼요.") },
         dismissButton = { TextButton(onClick = { sheet = null }) { Text("취소") } },
         confirmButton = { TextButton(onClick = { sheet = null; onLogout() }) { Text("로그아웃", color = c.err) } })
+}
+
+/**
+ * 설정의 계정 칸. 계정이 없으면 연결 버튼, 있으면 동기화 상태와 "지금 동기화".
+ * 계정은 기록 백업·기기 이전용이다(docs/SERVER_SYNC_HANDOFF.md).
+ */
+@Composable
+private fun AccountGroup(app: AppViewModel) {
+    val c = Trex.c
+    val context = LocalContext.current
+    val account = app.account
+    SettingsGroup {
+        if (account == null) {
+            SettingsRow("Google 계정 연결", Icons.Rounded.CloudUpload, if (app.authBusy) "연결 중…" else null, onClick = {
+                app.continueWithGoogle(context.findTrexActivity() ?: context)
+            })
+            Text(
+                app.authMessage ?: "기록을 계정에 백업하고 다른 기기에서 이어서 써요",
+                color = if (app.authMessage != null) c.err else c.text2, fontSize = 13.sp,
+                modifier = Modifier.padding(start = 54.dp, end = 18.dp, bottom = 16.dp),
+            )
+        } else {
+            val status = when {
+                app.sync.syncing -> "동기화 중…"
+                app.sync.lastError != null -> app.sync.lastError
+                app.sync.lastSyncedAt > 0L -> "마지막 동기화 " + java.time.Instant.ofEpochMilli(app.sync.lastSyncedAt)
+                    .atZone(java.time.ZoneId.systemDefault()).format(java.time.format.DateTimeFormatter.ofPattern("M월 d일 HH:mm"))
+                else -> "아직 동기화하지 않았어요"
+            }
+            Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Rounded.CloudDone, null, tint = c.primaryText, modifier = Modifier.size(22.dp))
+                Column(Modifier.weight(1f).padding(start = 14.dp)) {
+                    Text(account.email ?: account.name.ifBlank { "Google 계정" }, color = c.text, fontSize = 16.sp)
+                    Text(status.orEmpty(), color = if (app.sync.lastError != null) c.err else c.text2, fontSize = 13.sp, modifier = Modifier.padding(top = 3.dp))
+                }
+                TextButton(onClick = { app.syncNow() }, enabled = !app.sync.syncing) { Text("지금 동기화") }
+            }
+            app.authMessage?.let { message ->
+                Text(message, color = c.err, fontSize = 13.sp, modifier = Modifier.padding(start = 54.dp, end = 18.dp, bottom = 16.dp))
+            }
+        }
+    }
+}
+
+/**
+ * 이 기기에 다른 계정으로 쓰던 기록이 있는데 새 계정으로 로그인했을 때. 묻지 않고 올리면 앞 사람의 건강·식단 기록이
+ * 새 계정 백업으로 들어간다. 옮기면 이 계정에 있던 백업은 이 기기 기록으로 덮인다.
+ */
+@Composable
+fun SwitchAccountDialog(onMove: () -> Unit, onCancel: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = {},
+        containerColor = Trex.c.sheet,
+        title = { Text("다른 계정의 기록이 있어요") },
+        text = {
+            Text(
+                "이 기기에는 다른 Google 계정으로 쓰던 기록이 있어요.\n\n" +
+                    "‘이 계정으로 옮기기’를 누르면 이 기기 기록이 이 계정의 백업이 돼요(이 계정에 있던 백업은 덮어써요).\n" +
+                    "‘취소’를 누르면 이 계정은 연결하지 않고, 이 기기 기록은 그대로예요.",
+            )
+        },
+        dismissButton = { TextButton(onClick = onCancel) { Text("취소") } },
+        confirmButton = { TextButton(onClick = onMove) { Text("이 계정으로 옮기기") } },
+    )
+}
+
+/** 처음 연결한 계정의 서버에도 이 기기에도 기록이 있을 때. 자동으로 섞지 않고 사용자가 고른다. */
+@Composable
+fun FirstSyncDialog(onKeepLocal: () -> Unit, onUseServer: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = {},
+        containerColor = Trex.c.sheet,
+        title = { Text("어느 기록을 쓸까요?") },
+        text = {
+            Text(
+                "이 계정에 이미 백업된 기록이 있어요.\n\n" +
+                    "‘계정 기록 불러오기’는 백업된 기록으로 이 기기를 바꿔요(새 기기라면 이쪽).\n" +
+                    "‘이 기기 기록 유지’는 이 기기 기록으로 계정 백업을 덮어써요.",
+            )
+        },
+        dismissButton = { TextButton(onClick = onKeepLocal) { Text("이 기기 기록 유지") } },
+        confirmButton = { TextButton(onClick = onUseServer) { Text("계정 기록 불러오기") } },
+    )
 }
 
 @Composable

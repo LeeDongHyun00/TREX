@@ -26,3 +26,9 @@ jwt:
   # 운영 환경에서는 반드시 JWT_SECRET 환경변수로 주입한다. HS256 기준 최소 32바이트 이상.
   secret: ${JWT_SECRET:CHANGE_ME_local_dev_secret_at_least_32_bytes_long}
   expiration_time: 86400000
+
+trex:
+  oauth:
+    google:
+      # 구글 로그인 검증용 클라이언트 ID(쉼표로 여러 개). 비우면 /api/auth/oauth/google 이 401 을 낸다.
+      client-ids: ${GOOGLE_CLIENT_IDS:}

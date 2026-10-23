@@ -93,3 +93,97 @@ Gym Visual의 실제 자산은 사용하지 않았다. 기존 로컬 ImageGen GI
   유실 가능성을 코드에서 제거하고 런지 95초/125초/0초의 저장 결과와 휴식 단계 반영을 JVM으로 확인했다.
 - 유닛 450건 통과, 일반 APK 빌드 및 기존 Android 테스트 소스 컴파일 성공. Android 테스트 실행·실기기 검증은 하지 않았다.
 §66 일반 TREX 앱 업데이트 설치는 Success로 완료했다. APK 해시와 결과는 `outputs/exercise-guide-ui/verification-66.json`. 설치 후 실행·조작은 하지 않았다.
+
+## §91 — 맨몸 운동 가이드 4종목 추가 (2026-10-06)
+
+사용자 요청으로 `redesign`을 기준으로 크로스 런지·사이드 런지·스탠딩 니업·스탠딩 사이드 크런치의
+안내를 추가했다. 기존 스쿼트·런지·덤벨 컬과 같은 로컬 GIF, 운동 가이드/주의사항 두 탭,
+시작 자세·운동 동작·호흡법 양식을 쓴다. `ExerciseGuides` 등록을 통해 기존 목록·종목 선택·준비·운동·휴식의
+버튼과 종목별 첫 준비 안내에 연결한다. 처음 보는 안내의 준비 보류와 닫은 뒤 직접 재개 정책은 유지한다.
+
+### 문구 근거와 적용 범위
+
+2026-10-06에 다음 원문을 확인하고 한국어로 요약·재작성했다. 외부 사진·영상은 내려받거나 포함하지 않았다.
+
+- 크로스 런지: [Physitrack Curtsy Lunge](https://www.physitrack.com/exercise-library/how-to-perform-the-curtsy-lunge-exercise).
+  원문의 시범은 스트랩 보조 동작이다. 뒤로 교차하기·양 무릎 굽힘·다리로 복귀의 움직임을 맨몸 안내로 적용하고,
+  스트랩·바닥 직전 깊이는 요구하지 않는다. 교차 폭과 깊이는 균형을 유지하는 범위로 안내한다.
+- 사이드 런지: [ACE Side Lunge](https://www.acefitness.org/resources/everyone/exercise-library/50/side-lunge/).
+  옆으로 디디기·고관절을 뒤로 보내기·반대 다리 펴기·뒤꿈치 접지·무릎 방향·과한 보폭 줄이기·복귀와 호흡.
+- 스탠딩 니업: [Physitrack Standing marching](https://ca.physitrack.com/home-exercise-video/standing-marching).
+  몸통을 세운 채 무릎을 앞쪽으로 번갈아 들기. 벽 지지는 균형이 어려울 때의 선택 사항으로 적용했다.
+  높이나 속도를 달성 조건으로 요구하지 않는다.
+- 스탠딩 사이드 크런치: [Physitrack Side crunch in standing with knee lifts](https://na.physitrack.com/home-exercise-video/side-crunch-in-standing-with-knee-lifts).
+  무릎을 옆으로 들어 같은 쪽 팔꿈치와 가까이 모으고 몸통을 옆으로 접기·복귀·교대.
+  손을 머리 뒤에서 귀 옆으로 옮겨 목을 당기지 않도록 안내하며, 팔꿈치와 무릎의 접촉을 필수로 요구하지 않는다.
+- 크로스 런지·니업·사이드 크런치 호흡은 기존 [Mayo Clinic 근력운동 원칙](https://sportsmedicine.mayoclinic.org/news/weight-training-dos-and-donts-of-proper-technique/)의
+  힘을 쓰는 구간에 날숨·돌아오는 구간에 들숨을 적용한 안내다. 원문의 종목별 호흡 처방으로 주장하지 않는다.
+
+### 자산과 확인 범위
+
+내장 ImageGen으로 종목마다 두 자세를 생성하고 기존과 동일한 640×640·2프레임 GIF를 패키징했다.
+생성 조건은 `app/src/main/assets/exercise_guides/README.md`, 로컬 파일 검사와 검토 이미지는 `outputs/exercise-guides-expansion/`에 기록한다.
+붉은 근육 표시는 정성적 그림이며 근활성 측정값이 아니다. 연속 동작·전문가 검수 자료로 주장하지 않는다.
+교육용 설명과 자세 판정 임계값·촬영 방향·횟수 단위는 분리해 유지한다. 실휴대폰 화면 검증은 사용자 담당이다.
+
+최종 검증: `:app:testDebugUnitTest` 524건 통과(실패·오류 0), `:app:assembleDebug` 성공.
+네 GIF의 파일 디코드·크기·2프레임·900ms·무한 반복을 확인하고 패키지 포함 여부를 점검했다.
+실휴대폰 앱 실행·화면 조작은 수행하지 않았다.
+
+사용자 후속 요청으로 인증된 Galaxy Note10+에 일반 APK를 `adb install -r`로 업데이트 설치했다(Success).
+앱 삭제·데이터 초기화 없이 설치했으며 APK SHA-256은 `8dc6b4cdd259315c18d4493be5b56abd027dd59101cda08069ab161560b01a3c`다.
+
+## §102 — 바닥 3종목 운동 가이드 설계 (2026-10-09, 미구현)
+
+`redesign`의 기존 7종목과 같은 시트를 크런치·레그 레이즈·플랭크에 확장하는
+[설계 문서](CORE_EXERCISE_GUIDE_DESIGN.md)를 작성했다. 정확한 이름 등록, 전용 GIF,
+시작 자세·운동 동작·호흡법·주의사항 문구, 첫 준비와 수동 다시 보기 정책, 검수 기준을 정의한다.
+레그 레이즈는 누워 두 다리를 함께 드는 동작이며 플랭크는 전완 지지 유지 동작이다.
+플랭크 시범은 유지↔유지로 계획한다. 시험 단계 표시와 카메라의 관측 범위는 그대로다.
+이번 변경은 설계만이며 앱 데이터·GIF 생성·빌드·실휴대폰 검증은 수행하지 않았다.
+
+## §103 — 바닥 3종목 운동 가이드 구현 (2026-10-09, 당시 빌드 보류)
+
+§102 설계대로 크런치·레그 레이즈·플랭크를 `ExerciseGuides`에 등록하고 전용 로컬 GIF를 추가했다.
+기존 시트의 시작 자세·운동 동작·호흡법·주의사항 두 탭과 자동 재생을 재사용한다.
+세 종목은 기존 정확한 이름 조회를 통해 목록·종목 선택·준비·운동·휴식 진입과 첫 준비 안내에 연결된다.
+시트·세션 정책·자세 교정 시험 상태는 수정하지 않았다.
+
+내장 ImageGen으로 기존 가이드 첫 프레임의 스타일을 참고해 종목별 두 패널을 생성했다.
+640×640·2프레임·각 900ms·무한 반복 GIF이며 플랭크는 두 프레임 모두 유지 자세다.
+문구 근거와 한계는 [설계 문서](CORE_EXERCISE_GUIDE_DESIGN.md) §4, 구현·검증 범위는 §9,
+생성 조건은 `app/src/main/assets/exercise_guides/README.md`에 기록했다.
+
+GIF 파일 디코드·메타데이터·종목/카탈로그/파일 연결과 프레임 이미지를 확인했다.
+기존 JVM 테스트 소스에 새 종목·오연결·확인 기록·중복 검사를 반영했지만 실행하지 않았다.
+사용자 요청으로 빌드·Gradle 테스트·Android 화면 검증·실휴대폰 설치/조작은 하지 않았다.
+증빙은 `outputs/core-exercise-guides/verification.json`; APK 포함·Android 재생·시계 보류는 이후 검증한다.
+
+## §104 — 바닥 3종목 가이드 연결 폰 적용 (2026-10-10)
+
+현재 연결된 폰에 가이드를 적용하라는 후속 요청으로 빌드·업데이트 설치를 수행했다.
+`:app:testDebugUnitTest :app:assembleDebug` 성공, JVM 테스트 645건 통과(실패·오류·건너뜀 0).
+새 GIF 3개가 APK에 포함되고 패키지 안의 파일 해시가 원본 자산과 일치한다.
+
+기존 APK·저장 데이터·자세 로그를 백업하고 같은 서명을 확인한 뒤
+Galaxy Note10+(SM-N976N)에 `adb install -r`로 설치했다(Success).
+설치된 APK 해시가 빌드 파일과 일치하며 기록·설정을 포함한 내부 파일 16개와
+자세 로그 27개는 설치 전후 파일별 해시가 모두 같다.
+버전은 `1.3.0-preview.6` / versionCode 11이다.
+APK SHA-256: `fc56edf9b3e48b66ff36a708c322d14b02bea6bd028c0617f7e6ec198519975e`.
+
+실휴대폰 앱 실행·화면 조작·Android GIF 재생·플랭크 시계 보류의 UI 검증은 사용자 담당으로 남는다.
+설치 결과·백업·파일 대조 증빙은 Git 제외 경로 `outputs/core-exercise-guides/`에 보관한다.
+상세: [설계·구현 문서](CORE_EXERCISE_GUIDE_DESIGN.md) §10.
+
+## §105 — 플랭크 첫 프레임 정지 이미지 (2026-10-10)
+
+사용자 요청으로 플랭크는 기존 GIF 첫 프레임만 사용하는 `forearm-plank.png`로 바꿨다.
+GIF 첫 프레임과 PNG 디코드 픽셀의 완전 일치·640×640·1프레임을 확인했다.
+공통 시트는 GIF를 기존 방식으로 재생하고 PNG는 비율을 유지하는 정지 이미지로 표시한다.
+두 탭과 기존 가이드 진입·세션 보류 흐름을 공유하며 크런치·레그 레이즈는 GIF를 유지한다.
+
+최신 `redesign` `ccf9f216`에 통합한 상태에서 JVM 테스트 704건 통과(실패·오류·건너뜀 0),
+`assembleDebug`·`assembleDebugAndroidTest` 성공. 새 APK 안의 시범 파일 해시가 원본과 같고
+플랭크 GIF가 패키지에 없음을 확인했다. 실휴대폰 재설치·화면 검증은 수행하지 않았다.
+상세: [설계·구현 문서](CORE_EXERCISE_GUIDE_DESIGN.md) §11, 정본 스펙 §105.

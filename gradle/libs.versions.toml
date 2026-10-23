@@ -14,6 +14,8 @@ camerax = "1.4.2"
 mediapipeTasksVision = "0.10.14"
 litert = "1.2.0"
 exifinterface = "1.3.7"
+credentials = "1.6.0"
+googleid = "1.2.1"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -41,6 +43,10 @@ mediapipe-tasks-vision = { group = "com.google.mediapipe", name = "tasks-vision"
 # TFLite 후속 LiteRT — 자바 패키지(org.tensorflow.lite)는 그대로이며 16KB 페이지 기기를 지원한다.
 litert = { group = "com.google.ai.edge.litert", name = "litert", version.ref = "litert" }
 androidx-exifinterface = { group = "androidx.exifinterface", name = "exifinterface", version.ref = "exifinterface" }
+# 구글 로그인(Credential Manager) — docs/SERVER_SYNC_HANDOFF.md 2단계
+androidx-credentials = { group = "androidx.credentials", name = "credentials", version.ref = "credentials" }
+androidx-credentials-play-services = { group = "androidx.credentials", name = "credentials-play-services-auth", version.ref = "credentials" }
+googleid = { group = "com.google.android.libraries.identity.googleid", name = "googleid", version.ref = "googleid" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

@@ -1,0 +1,5 @@
+# 도메인(예: trex-api.duckdns.org)은 .env 의 TREX_DOMAIN. Caddy 가 Let's Encrypt 인증서를 자동으로 받고 갱신한다.
+{$TREX_DOMAIN} {
+	encode gzip
+	reverse_proxy app:8080
+}

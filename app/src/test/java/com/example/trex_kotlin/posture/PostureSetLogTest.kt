@@ -136,7 +136,7 @@ class PostureSetLogTest {
         val json = SetLogJson.encode(log)
         assertTrue(json.contains("\"app_version\":\"1.1.0-preview.2\""))
         assertTrue(json.contains("\"thermal\":{\"start\":0,\"changes\":[{\"t_ms\":6000,\"status\":2}]}"))
-        assertTrue(json.contains("\"engine\":\"return_v1\""))
+        assertTrue(json.contains("\"engine\":\"return_v2\""))
         // 지금 앱의 복귀형 구성(forSession: 불응기 1.2 s · 끊김 1.5 s · 복귀 완료) — polarity 가 없으면(레거시) 새 코어 키도 없다
         // 스쿼트는 판별 게이트(spec §62)가 있어 config 끝에 identity 블록이 붙는다
         assertTrue(json.contains("\"config\":{\"feature\":\"knee_mean\",\"min_amp\":35,\"refractory_ms\":1200,\"max_gap_ms\":1500," +
@@ -156,7 +156,7 @@ class PostureSetLogTest {
             repCount = 0, repEngine = RepEngineLog.of(RepCounter.forSession("스텝 포워드 다이나믹 런지", floor = false)!!),
             repResets = listOf(RepResetEvent(-300L, "pause", afterTMs = null)), thermalStart = 1)
         val lj = SetLogJson.encode(lunge)
-        assertTrue(lj.contains("\"config\":{\"feature\":\"knee_mean\",\"min_amp\":35,\"refractory_ms\":1200,\"max_gap_ms\":1500,\"complete_on_return\":true,\"rom_tier\":\"none\"}"))
+        assertTrue(lj.contains("\"config\":{\"feature\":\"lunge_knee\",\"min_amp\":35,\"refractory_ms\":1200,\"max_gap_ms\":1500,\"complete_on_return\":true,\"rom_tier\":\"none\"}"))   // §101a 신호 폴백
         // 첫 프레임 전의 일시정지: 음수 t_ms, 카운터가 본 프레임이 없으니 after_t_ms = null(재생은 첫 프레임 앞에서 리셋)
         assertTrue(lj.contains("\"resets\":[{\"t_ms\":-300,\"after_t_ms\":null,\"reason\":\"pause\"}]"))
         val none = SetLogJson.encode(SetLog.build("바벨 스쿼트", samples, emptyList(), "mp_v0", "full", "GPU", true, 300L, now = Date(0L),
@@ -264,6 +264,23 @@ class PostureSetLogTest {
             validation = true, imageWidth = 360, imageHeight = 640,
         )
         return listOf(base, newCore, sidePair, validation)
+    }
+
+    @Test
+    fun placementBlockCarriesImuMediansLensAndEstimates() {
+        // §91: 배치 지문 — IMU 프레임이 있으면 피치·롤 중앙값, 렌즈가 있으면 사양과 f_px. 거리·높이는 좌표가 있어야 나온다(여기선 null)
+        val samples = List(3) { sample(true, mapOf("knee_mean" to 170f)) }   // up = (0.1, 1, 0) → 롤 ≈ 5.7°, 피치 0
+        val lens = LensInfo(focalMm = 4.25f, sensorWMm = 6.4f, sensorHMm = 4.8f, activeW = 4000, activeH = 3000, zoom = 1f)
+        val json = SetLogJson.encode(SetLog.build("바벨 스쿼트", samples, emptyList(), "mp_v0", "full", "GPU", true, 300L,
+            sampleTimesMs = listOf(0L, 300L, 600L), now = Date(0L), lens = lens, subjectHeightCm = 172f))
+        val block = json.substring(json.indexOf("\"placement\":{"), json.indexOf("\"frames\":["))
+        assertTrue(block, block.contains("\"frames\":3,\"pitch_deg\":0,\"roll_deg\":5.71,\"tilt_deg\":5.71,\"tilt_max_deg\":5.71,\"fps\":3.333,\"infer_ms_med\":60,"))
+        assertTrue(block, block.contains("\"lens\":{\"focal_mm\":4.25,\"sensor_w_mm\":6.4,\"sensor_h_mm\":4.8,\"active_w\":4000,\"active_h\":3000,\"zoom\":1},"))
+        assertTrue(block, block.contains("\"f_px\":425,\"distance_m\":null,\"height_m\":null,\"subject_height_cm\":172,\"scale\":null}"))
+        // 렌즈가 없어도 블록은 남고(피치·주기), lens 는 null
+        val noLens = SetLogJson.encode(SetLog.build("바벨 스쿼트", samples, emptyList(), "mp_v0", "full", "GPU", true, 300L, now = Date(0L)))
+        assertTrue(noLens.contains("\"lens\":null,\"f_px\":null,"))
+        assertTrue(noLens.contains("\"placement\":{\"frames\":3,"))
     }
 
     @Test

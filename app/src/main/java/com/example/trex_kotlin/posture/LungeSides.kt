@@ -23,7 +23,7 @@ enum class StepSide(val key: String, val label: String) {
  *   판정·임계는 두 모드에서 같고(원칙 #3·#4) 어느 풀을 보일지만 모드가 정한다.
  * [target] 이 null(목표 없음)이면 상한·안내 없이 센다.
  */
-class SideStepCounter(val target: Int?) {
+class SideStepCounter(val target: Int?, val strictUnknown: Boolean = false) {
 
     class Pool {
         var left = 0; internal set
@@ -80,6 +80,12 @@ class SideStepCounter(val target: Int?) {
     }
 
     private fun apply(p: Pool, tMs: Long, side: StepSide?, guess: StepSide?, blocked: Boolean): SideStepEvent {
+        if (strictUnknown && side == null) {
+            p.unknown++
+            // 사건의 side는 구형 비-null API 자리값이다. known/count=false이므로 표시·발화·쌍에 쓰지 않는다.
+            return SideStepEvent(tMs, StepSide.LEFT, known = false, counted = false, blocked = false, extraOnDone = false,
+                remaining = null, switchTo = null, pairs = p.pairs, pairAdded = false)
+        }
         val flow = side ?: guess ?: when {
             p.left < p.right -> StepSide.LEFT
             p.right < p.left -> StepSide.RIGHT

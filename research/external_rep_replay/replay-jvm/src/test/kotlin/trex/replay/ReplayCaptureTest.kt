@@ -15,6 +15,18 @@ import org.junit.Test
  * 핵심 약속 두 가지: (1) U 줄이 없는 옛 캡처는 전과 똑같이 SCREEN_UP 으로 재생된다, (2) dump 는 재생 경로와 같은 함수의 결과다.
  */
 class ReplayCaptureTest {
+    /** 한 다리 계열(§97)의 롤 보정 2D 기하는 캡처가 기록한 화면 크기의 가로세로비로 등방화한다 — U 줄이 없으면 롤 0 이라 가로만 aspect 배. */
+    @Test
+    fun `leg geometry uses logged width and height`() {
+        val cap=readCapture(temp("H\timageW=1920\timageH=1080\n"+fLine(0,standing(0f))+"\n"))
+        val f=frameFeatures(cap.frames.single(),FrameStats())!!
+        assertEquals(1920f/1080f,cap.frames.single().aspect,1e-6f)
+        val torso=f.getValue("leg_torso2d")
+        assertEquals(.24f,torso,1e-3f)
+        assertEquals("발목 x 차 0.11 × aspect ÷ 몸통(왼발이 사용자 왼쪽 = +)",.11f*1920f/1080f/torso,f.getValue("leg_cross"),1e-3f)
+        assertEquals(.4f+.85f/2f,f.getValue("leg_ankle_y_L"),1e-4f)
+        assertEquals(.5f,f.getValue("leg_hipshift"),1e-3f)
+    }
 
     // 선 자세(MediaPipe 월드 좌표 원본 부호: y 아래, z 카메라 쪽이 음수). 무릎만 knee 로 굽힌다 — 값은 반복 모양이 아니라 형식 검사용.
     private fun standing(kneeBendM: Float): List<FloatArray> {
@@ -86,8 +98,8 @@ class ReplayCaptureTest {
         val expected = frameFeatures(readCapture(file).frames[0], FrameStats())!!
         for ((k, v) in expected) assertTrue("$k missing", lines[0].contains("\"$k\":${num(v)}"))
         assertEquals("{\"t\":310,\"detected\":false,\"features\":{}}", lines[1])
-        // 가시성 < 0.5 인 관절은 앱처럼 버려진다 → 사람은 있지만 피처 없음
-        assertEquals("{\"t\":620,\"detected\":true,\"features\":{}}", lines[2])
+        // 가시성 < 0.5 인 관절은 앱처럼 버려진다 → 사람은 있지만 피처 없음. 가장자리 피처 `leg_edge_*`(§101)만 가시성 게이트 없이 원시 x 로 남는다(가장자리의 가시성은 믿을 수 없다)
+        assertEquals("{\"t\":620,\"detected\":true,\"features\":{\"leg_edge_L\":0.44,\"leg_edge_R\":0.44}}", lines[2])
     }
 
     @Test

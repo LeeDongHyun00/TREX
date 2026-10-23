@@ -1,0 +1,33 @@
+# 운영(AWS) 설정 — SPRING_PROFILES_ACTIVE=prod 로 켠다. docs/SERVER_SYNC_HANDOFF.md D9·D10.
+# 시크릿은 이 파일에 쓰지 않는다(공개 저장소). 전부 환경변수로 주입하고, 빠지면 서버가 뜨지 않게 기본값을 두지 않는다.
+
+spring:
+  datasource:
+    url: ${DB_URL}            # 예: jdbc:postgresql://<RDS 엔드포인트>:5432/trex
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      # create 는 재시작마다 데이터를 지운다. 마이그레이션 도구(Flyway) 도입 전까지는 update 로 컬럼 추가만 따라간다.
+      ddl-auto: update
+    show-sql: false
+
+  h2:
+    console:
+      enabled: false
+
+server:
+  # Caddy(HTTPS 종료) 뒤에서 X-Forwarded-* 를 믿는다. 앱 포트는 외부에 열지 않는다.
+  forward-headers-strategy: framework
+
+jwt:
+  secret: ${JWT_SECRET}
+  expiration_time: 2592000000 # 30일 — 앱은 만료되면 다시 소셜 로그인한다
+
+trex:
+  oauth:
+    google:
+      # 쉼표로 여러 개. 안드로이드 Credential Manager 는 "웹 애플리케이션" 클라이언트 ID 를 aud 로 쓴다.
+      client-ids: ${GOOGLE_CLIENT_IDS}
