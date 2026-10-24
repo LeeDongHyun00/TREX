@@ -31,7 +31,7 @@ class SessionMuscleRenderTest {
         val workout = Workout("render-test", "기본 스쿼트", "12회 × 1세트", "1분", false, "하체", done = true)
         lateinit var app: AppViewModel
         instrumentation.runOnMainSync {
-            app = AppViewModel(context.applicationContext as Application)
+            app = AppViewModel(AndroidAppPlatform(context.applicationContext as Application))
             app.recordCompletedSession(30, listOf(workout), mapOf(workout.id to 30), "render-session")
         }
         compose.setContent {
