@@ -56,7 +56,7 @@ final class TrexTests: XCTestCase {
         let exercises = try Resources.decode("catalog.json", as: [Exercise].self)
         let guides = try Resources.decode("guides.json", as: [Guide].self)
         let foods = try Resources.decode("nutrition.json", as: [Food].self)
-        XCTAssertEqual(exercises.count, 26); XCTAssertEqual(guides.count, 10); XCTAssertEqual(foods.count, 350)
+        XCTAssertEqual(exercises.count, 26); XCTAssertEqual(guides.count, 10); XCTAssertEqual(foods.count, 414)
         XCTAssertEqual(try BundleAssets.verify().count, 5)
         for guide in guides { XCTAssertNotNil(Bundle.main.url(forResource: guide.asset, withExtension: nil)) }
     }
