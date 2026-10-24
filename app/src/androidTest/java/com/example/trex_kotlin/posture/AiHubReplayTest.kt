@@ -22,7 +22,8 @@ class AiHubReplayTest {
         check(context.packageName.endsWith(".replay")) { "평가 전용 패키지에서 실행하세요" }
         val dir = File(context.getExternalFilesDir(null), "aihub_replay").apply { mkdirs() }
         val bundle = File(dir, "replay.zip")
-        check(bundle.isFile) { "replay.zip을 먼저 단말에 복사하세요" }
+        // 데이터셋을 복사한 평가 실행에서만 돈다 — 없으면 실패가 아니라 건너뜀(전체 계측 테스트를 돌릴 때)
+        org.junit.Assume.assumeTrue("replay.zip을 먼저 단말에 복사하세요", bundle.isFile)
         val standing = PostureRuleSet.load(context)
         val floor = PostureRuleSet.load(context, FLOOR_RULES_ASSET)
         val rules = PostureRuleSet(standing.version + "+" + floor.version, standing.generated, standing.rules + floor.rules)

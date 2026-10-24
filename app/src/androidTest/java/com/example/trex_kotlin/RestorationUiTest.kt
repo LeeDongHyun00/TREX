@@ -127,11 +127,11 @@ class RestorationUiTest {
             }
         }
         compose.onNodeWithText("01:04").assertIsDisplayed()
-        compose.onNodeWithText("목표 01:30").assertIsDisplayed()
+        compose.onNodeWithText("/ 01:30").assertIsDisplayed()
         snapshot("pip-centered-goal")
         compose.runOnIdle { fontScale=2f }
         compose.onNodeWithText("01:04").assertIsDisplayed()
-        compose.onNodeWithText("목표 01:30").assertIsDisplayed()
+        compose.onNodeWithText("/ 01:30").assertIsDisplayed()
         compose.onNodeWithContentDescription("제어판 접기").assertHeightIsAtLeast(48.dp)
         snapshot("pip-goal-large")
     }

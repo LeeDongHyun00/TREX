@@ -25,6 +25,22 @@ class SessionMuscleRenderTest {
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
 
     @Test fun completedSessionDisplaysColoredBodyInsideScrollablePage() {
+        // 완료 기록을 재생 앱의 실제 저장소에 쓴다 — 다른 테스트가 오늘 기록 수를 보므로 끝나면 되돌린다
+        val prefs = InstrumentationRegistry.getInstrumentation().targetContext
+            .getSharedPreferences("trex_store", android.content.Context.MODE_PRIVATE)
+        val before = prefs.all.toMap()
+        try { renderCompletedSession() } finally {
+            val edit = prefs.edit().clear()
+            before.forEach { (key, value) -> when (value) {
+                is String -> edit.putString(key, value); is Boolean -> edit.putBoolean(key, value)
+                is Int -> edit.putInt(key, value); is Long -> edit.putLong(key, value); is Float -> edit.putFloat(key, value)
+                is Set<*> -> { @Suppress("UNCHECKED_CAST") edit.putStringSet(key, value as Set<String>) }
+            } }
+            edit.commit()
+        }
+    }
+
+    private fun renderCompletedSession() {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         val context = instrumentation.targetContext
         check(context.packageName.endsWith(".replay") && (Build.MODEL.contains("sdk") || Build.FINGERPRINT.contains("generic")))

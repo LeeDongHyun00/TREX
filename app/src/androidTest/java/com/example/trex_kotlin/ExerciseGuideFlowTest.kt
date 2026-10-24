@@ -86,6 +86,8 @@ class ExerciseGuideFlowTest {
     }
     private fun isolated(posture: Boolean, block: () -> Unit) {
         check(context.packageName.endsWith(".replay"))
+        // 새로 설치한 재생 앱은 카메라 권한 창이 먼저 떠 준비 화면을 가린다 — 권한을 주고 시작한다
+        instrumentation.uiAutomation.grantRuntimePermission(context.packageName, android.Manifest.permission.CAMERA)
         val stores = listOf("trex_store", "exercise_guides").map { context.getSharedPreferences(it, Context.MODE_PRIVATE) }
         val backups = stores.map { it.all.toMap() }
         try {
@@ -177,7 +179,9 @@ class ExerciseGuideFlowTest {
         assertTrue(manualStart.isEnabled)
         assertTrue(tap(Rect().also(manualStart::getBoundsInScreen)))
         // 작은 화면에서는 카운트다운이 설명 스크롤 아래로 가려질 수 있다. 실제 운동 진입을 확인한다.
-        await("덤벨 컬 · 1 / 2 세트")
+        // 운동 화면 머리줄은 세트와 종목을 따로 쓴다(LiveWorkoutHud)
+        await("1 / 2 세트")
+        assertNotNull(find("덤벨 컬"))
         assertNull(find("준비 건너뛰기"))
         capture("05-camera-workout")
     }
