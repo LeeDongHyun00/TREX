@@ -72,9 +72,8 @@ fun WorkoutEditorSheet(app: AppViewModel, initialId: String?, onClose: () -> Uni
                             Icon(Icons.Rounded.ChevronRight, null, tint = c.primaryText)
                         }
                         Spacer(Modifier.height(18.dp))
-                        // 버티는 운동(플랭크)은 횟수를 고를 수 없다 — 시간만(spec §108g)
-                        if (selected.timeOnly()) Text("버티는 운동이라 시간으로만 정해요.", color = c.text2, fontSize = 13.sp)
-                        else SegmentedTabs(listOf("횟수", "시간"), if (timed) 1 else 0, onSelect = { index ->
+                        // 버티는 운동(플랭크)은 횟수를 고를 수 없다 — 탭 없이 시간 바퀴만(spec §108g)
+                        if (!selected.timeOnly()) SegmentedTabs(listOf("횟수", "시간"), if (timed) 1 else 0, onSelect = { index ->
                             if ((index == 1) != timed) {
                                 val target = if (index == 1) WorkoutTarget.Duration(30) else WorkoutTarget.Repetitions(12)
                                 update { it.withEditorValues(timed, setWheel.value, goalWheel.value, restWheel.value)
