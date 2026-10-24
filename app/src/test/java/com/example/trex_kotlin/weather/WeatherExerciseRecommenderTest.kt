@@ -119,5 +119,30 @@ class WeatherExerciseRecommenderTest {
         assertEquals("방금 업데이트", justNow.updateAgeText)
         assertEquals("15분 전 업데이트", minsAgo.updateAgeText)
         assertEquals("2시간 전 업데이트", hoursAgo.updateAgeText)
+        // 날씨 시트는 그릴 때 같은 함수로 다시 센다 — 추천에 굳힌 글과 같은 결과여야 한다
+        assertEquals(hoursAgo.updateAgeText, WeatherExerciseRecommender.updateAgeText(base, base + 125 * 60_000L))
+    }
+
+    /** 날씨 시트의 '목록에 추가' 는 카탈로그 이름으로 운동을 찾는다 — 없는 이름이면 눌러도 아무것도 안 된다. */
+    @Test
+    fun everyRecommendedExercise_existsInWorkoutCatalog() {
+        val catalog = com.example.trex_kotlin.workoutCatalog.values.flatten().map { it.name }.toSet()
+        val now = 1_700_000_000_000L
+        val samples = listOf(
+            WeatherInfo(1.0, 1.0, 71, 5.0, now),    // 눈
+            WeatherInfo(12.0, 3.0, 61, 5.0, now),   // 비
+            WeatherInfo(35.0, 0.0, 0, 5.0, now),    // 폭염
+            WeatherInfo(18.0, 0.0, 3, 5.0, now),    // 흐림
+            WeatherInfo(18.0, 0.0, 0, 5.0, now),    // 맑음
+        )
+        val themes = mutableSetOf<WeatherThemeMode>()
+        for (weather in samples) {
+            val rec = WeatherExerciseRecommender.recommend(weather, "서울", nowMillis = now)
+            themes += rec.theme
+            for (exercise in rec.exercises) {
+                assertTrue("${rec.theme} 의 ${exercise.catalogName} 이(가) 카탈로그에 없다", exercise.catalogName in catalog)
+            }
+        }
+        assertEquals("모든 테마를 거쳤는지", WeatherThemeMode.entries.toSet(), themes)
     }
 }

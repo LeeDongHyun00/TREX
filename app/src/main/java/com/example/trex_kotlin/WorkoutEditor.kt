@@ -30,7 +30,7 @@ fun WorkoutEditorSheet(app: AppViewModel, initialId: String?, onClose: () -> Uni
     val original = remember(initialId) { app.workoutPlan.firstOrNull { it.id == initialId } }
     var selected by remember(initialId) { mutableStateOf(original) }
     var picking by remember(initialId, initialMode) { mutableStateOf(initialMode != "edit" || original == null) }
-    val timed = selected?.resolvedTarget() is WorkoutTarget.Duration
+    val timed = selected?.timeOnly() == true || selected?.resolvedTarget() is WorkoutTarget.Duration
     val wheelKey = Triple(selected?.id, selected?.name, timed)
     val setWheel = remember(wheelKey) { WorkoutNumberWheelState(selected?.repsSpec()?.sets ?: 1, 1..20) }
     val goalWheel = remember(wheelKey) { WorkoutNumberWheelState(selected?.resolvedTarget()?.amount ?: 12, if (timed) 1..3600 else 1..999) }
@@ -72,7 +72,9 @@ fun WorkoutEditorSheet(app: AppViewModel, initialId: String?, onClose: () -> Uni
                             Icon(Icons.Rounded.ChevronRight, null, tint = c.primaryText)
                         }
                         Spacer(Modifier.height(18.dp))
-                        SegmentedTabs(listOf("횟수", "시간"), if (timed) 1 else 0, onSelect = { index ->
+                        // 버티는 운동(플랭크)은 횟수를 고를 수 없다 — 시간만(spec §108g)
+                        if (selected.timeOnly()) Text("버티는 운동이라 시간으로만 정해요.", color = c.text2, fontSize = 13.sp)
+                        else SegmentedTabs(listOf("횟수", "시간"), if (timed) 1 else 0, onSelect = { index ->
                             if ((index == 1) != timed) {
                                 val target = if (index == 1) WorkoutTarget.Duration(30) else WorkoutTarget.Repetitions(12)
                                 update { it.withEditorValues(timed, setWheel.value, goalWheel.value, restWheel.value)
