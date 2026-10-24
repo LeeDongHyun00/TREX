@@ -140,7 +140,7 @@ class TrexStore(private val prefs: KeyValueStore) {
                         "repetitions" -> WorkoutTarget.Repetitions(o.optInt("targetAmount", 12).coerceIn(1, 999))
                         else -> null
                     },
-                )
+                ).timeOnlyNormalized()   // 시간 전용 종목(플랭크)에 남은 횟수 목표는 시간으로(spec §108g)
             }
         }.getOrNull()
     }

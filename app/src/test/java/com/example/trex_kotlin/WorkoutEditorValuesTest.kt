@@ -21,4 +21,17 @@ class WorkoutEditorValuesTest {
         assertTrue(buildSessionSteps(listOf(noRest)).none { it.phase == SessionPhase.REST })
         assertEquals(60, lunge.restSeconds) // 취소 전 원본은 바뀌지 않는다.
     }
+
+    @Test fun plankKeepsOnlyTimeGoals() {
+        val legacy = Workout("plank", "플랭크", "12회 × 4세트", "6분", true, "코어", restSeconds = 30)
+        val fixed = legacy.timeOnlyNormalized()
+        assertEquals(WorkoutTarget.Duration(45), fixed.resolvedTarget()) // 12회를 12초로 읽지 않는다
+        assertEquals("45초 × 4세트", fixed.reps)
+        assertEquals(30, fixed.restSeconds)
+        assertEquals(WorkoutTarget.Duration(45),
+            legacy.copy(target = WorkoutTarget.Repetitions(20)).timeOnlyNormalized().resolvedTarget())
+        val timed = legacy.withEditorValues(true, 3, 60, 30)
+        assertSame(timed, timed.timeOnlyNormalized())
+        assertSame(lunge, lunge.timeOnlyNormalized()) // 다른 종목의 횟수 목표는 그대로
+    }
 }

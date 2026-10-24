@@ -393,8 +393,10 @@ class AppViewModel(private val platform: AppPlatform) : ViewModel() {
     }
 
     fun updatePlan(plan: List<Workout>) {
-        workoutPlan = plan
-        store.savePlan(plan)
+        // 시간 전용 종목(플랭크)은 횟수 목표를 갖지 않는다(spec §108g)
+        val normalized = plan.map { it.timeOnlyNormalized() }
+        workoutPlan = normalized
+        store.savePlan(normalized)
     }
 
     fun markWorkoutDone(id: String) {
