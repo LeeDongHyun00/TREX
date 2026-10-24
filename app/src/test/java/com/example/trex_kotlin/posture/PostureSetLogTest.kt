@@ -46,7 +46,7 @@ class PostureSetLogTest {
         val log = SetLog.build(
             exercise = "바벨 스쿼트", samples = samples, results = results, rulesVersion = "mp_v0",
             model = "full", delegate = "GPU", frontCamera = true, sampleIntervalMs = 300L,
-            subjectId = "user-1", note = "say \"hi\"\n", now = Date(0L),
+            subjectId = "user-1", note = "say \"hi\"\n", now = 0L,
         )
         val json = SetLogJson.encode(log)
 
@@ -89,7 +89,7 @@ class PostureSetLogTest {
         // §29: 렙별 극값·ROM 판정 배열 + 세션 모드 — 후반 드리프트(피로) 오프라인 분석의 원자재
         val samples = List(3) { sample(true, mapOf("knee_L" to 90f)) }
         val log = SetLog.build(
-            "푸시업", samples, emptyList(), "floor_v0", "full", "GPU", true, 300L, now = Date(0L),
+            "푸시업", samples, emptyList(), "floor_v0", "full", "GPU", true, 300L, now = 0L,
             repCount = 3, repTimesMs = listOf(1000L, 4000L, 7300L), repSignal = "wrist_shoulder_d", repInvalid = 1,
             repRecords = listOf(
                 RepRecord(1000L, 0.45f, 1.40f, true),
@@ -107,7 +107,7 @@ class PostureSetLogTest {
         assertTrue(json.contains("\"max\":[1.4,1.38,1.41]"))
         assertTrue(json.contains("\"valid\":[true,false,null]"))
         // 구버전 호환: repRecords/mode 를 안 주면 필드 자체가 없다 (부재 = 미적용)
-        val old = SetLog.build("푸시업", samples, emptyList(), "floor_v0", "full", "GPU", true, 300L, now = Date(0L), repCount = 2)
+        val old = SetLog.build("푸시업", samples, emptyList(), "floor_v0", "full", "GPU", true, 300L, now = 0L, repCount = 2)
         val oj = SetLogJson.encode(old)
         assertFalse(oj.contains("\"min\":"))
         assertFalse(oj.contains("\"mode\":"))
@@ -126,7 +126,7 @@ class PostureSetLogTest {
         assertEquals(counter.effectiveMaxGapMs, engine.maxGapMs)
         assertEquals(counter.effectiveCompleteOnReturn, engine.completeOnReturn)
         val log = SetLog.build(
-            "바벨 스쿼트", samples, emptyList(), "mp_v0", "full", "GPU", true, 300L, now = Date(0L),
+            "바벨 스쿼트", samples, emptyList(), "mp_v0", "full", "GPU", true, 300L, now = 0L,
             repCount = 2, repTimesMs = listOf(3000L, 6000L), repSignal = "knee_mean", repInvalid = 0,
             repEngine = engine,
             repResets = listOf(RepResetEvent(4200L, "pause", afterTMs = 4050L), RepResetEvent(9100L, "camera_switch", afterTMs = 9120L)),
@@ -152,14 +152,14 @@ class PostureSetLogTest {
         assertTrue(json.endsWith("]}"))
 
         // 런지: 신호 교체와 함께 ROM 을 뗐다 → rom_direction/threshold 없음, 단계 none. 리셋이 없던 세트는 빈 목록.
-        val lunge = SetLog.build("스텝 포워드 다이나믹 런지", samples, emptyList(), "mp_v0", "full", "GPU", true, 300L, now = Date(0L),
+        val lunge = SetLog.build("스텝 포워드 다이나믹 런지", samples, emptyList(), "mp_v0", "full", "GPU", true, 300L, now = 0L,
             repCount = 0, repEngine = RepEngineLog.of(RepCounter.forSession("스텝 포워드 다이나믹 런지", floor = false)!!),
             repResets = listOf(RepResetEvent(-300L, "pause", afterTMs = null)), thermalStart = 1)
         val lj = SetLogJson.encode(lunge)
         assertTrue(lj.contains("\"config\":{\"feature\":\"lunge_knee\",\"min_amp\":35,\"refractory_ms\":1200,\"max_gap_ms\":1500,\"complete_on_return\":true,\"rom_tier\":\"none\"}"))   // §101a 신호 폴백
         // 첫 프레임 전의 일시정지: 음수 t_ms, 카운터가 본 프레임이 없으니 after_t_ms = null(재생은 첫 프레임 앞에서 리셋)
         assertTrue(lj.contains("\"resets\":[{\"t_ms\":-300,\"after_t_ms\":null,\"reason\":\"pause\"}]"))
-        val none = SetLogJson.encode(SetLog.build("바벨 스쿼트", samples, emptyList(), "mp_v0", "full", "GPU", true, 300L, now = Date(0L),
+        val none = SetLogJson.encode(SetLog.build("바벨 스쿼트", samples, emptyList(), "mp_v0", "full", "GPU", true, 300L, now = 0L,
             repCount = 0, repEngine = engine, repResets = emptyList()))
         assertTrue(none.contains("\"resets\":[]"))
         assertTrue(lj.contains("\"thermal\":{\"start\":1,\"changes\":[]}"))
@@ -176,7 +176,7 @@ class PostureSetLogTest {
         assertEquals(RepHysteresis.DEFAULT_REFRACTORY_MS, engine.refractoryMs)
         assertEquals(core.effectiveRefractoryMs, engine.refractoryMs)
         val log = SetLog.build(
-            "바벨 스쿼트", samples, emptyList(), "mp_v0", "full", "GPU", true, 300L, now = Date(0L),
+            "바벨 스쿼트", samples, emptyList(), "mp_v0", "full", "GPU", true, 300L, now = 0L,
             repCount = 0, repEngine = engine,
             repPending = RepPendingState(RepCycle(5000L, 3000L, 80f, 170f), RepCandidate(9000L, 90f, 168f)),
             repDropped = listOf(RepCycle(1000L, 200L, 100f, 170f, byRedescent = true)),
@@ -190,7 +190,7 @@ class PostureSetLogTest {
             "\"in_progress\":{\"start_t_ms\":9000,\"min\":90,\"max\":168}," +
             "\"dropped\":[{\"t_ms\":1000,\"start_t_ms\":200,\"min\":100,\"max\":170,\"by_redescent\":true}]}"))
         // 새 코어였는데 남은 후보가 없으면 객체는 남고 안쪽이 null — "후보 없음" 과 "정보 없음(레거시)" 을 가른다
-        val empty = SetLogJson.encode(SetLog.build("바벨 스쿼트", samples, emptyList(), "mp_v0", "full", "GPU", true, 300L, now = Date(0L),
+        val empty = SetLogJson.encode(SetLog.build("바벨 스쿼트", samples, emptyList(), "mp_v0", "full", "GPU", true, 300L, now = 0L,
             repCount = 0, repEngine = engine, repPending = RepPendingState(null, null)))
         assertTrue(empty.contains("\"pending\":{\"unconfirmed\":null,\"in_progress\":null,\"dropped\":[]}"))
     }
@@ -272,13 +272,13 @@ class PostureSetLogTest {
         val samples = List(3) { sample(true, mapOf("knee_mean" to 170f)) }   // up = (0.1, 1, 0) → 롤 ≈ 5.7°, 피치 0
         val lens = LensInfo(focalMm = 4.25f, sensorWMm = 6.4f, sensorHMm = 4.8f, activeW = 4000, activeH = 3000, zoom = 1f)
         val json = SetLogJson.encode(SetLog.build("바벨 스쿼트", samples, emptyList(), "mp_v0", "full", "GPU", true, 300L,
-            sampleTimesMs = listOf(0L, 300L, 600L), now = Date(0L), lens = lens, subjectHeightCm = 172f))
+            sampleTimesMs = listOf(0L, 300L, 600L), now = 0L, lens = lens, subjectHeightCm = 172f))
         val block = json.substring(json.indexOf("\"placement\":{"), json.indexOf("\"frames\":["))
         assertTrue(block, block.contains("\"frames\":3,\"pitch_deg\":0,\"roll_deg\":5.71,\"tilt_deg\":5.71,\"tilt_max_deg\":5.71,\"fps\":3.333,\"infer_ms_med\":60,"))
         assertTrue(block, block.contains("\"lens\":{\"focal_mm\":4.25,\"sensor_w_mm\":6.4,\"sensor_h_mm\":4.8,\"active_w\":4000,\"active_h\":3000,\"zoom\":1},"))
         assertTrue(block, block.contains("\"f_px\":425,\"distance_m\":null,\"height_m\":null,\"subject_height_cm\":172,\"scale\":null}"))
         // 렌즈가 없어도 블록은 남고(피치·주기), lens 는 null
-        val noLens = SetLogJson.encode(SetLog.build("바벨 스쿼트", samples, emptyList(), "mp_v0", "full", "GPU", true, 300L, now = Date(0L)))
+        val noLens = SetLogJson.encode(SetLog.build("바벨 스쿼트", samples, emptyList(), "mp_v0", "full", "GPU", true, 300L, now = 0L))
         assertTrue(noLens.contains("\"lens\":null,\"f_px\":null,"))
         assertTrue(noLens.contains("\"placement\":{\"frames\":3,"))
     }
@@ -286,11 +286,11 @@ class PostureSetLogTest {
     @Test
     fun validationModeAddsCoordinatesAndProductLogsStayByteIdentical() {
         val samples = listOf(sample(true, mapOf("knee_mean" to 170f)), sample(false, emptyMap()))
-        val plain = SetLogJson.encode(SetLog.build("바벨 스쿼트", samples, emptyList(), "mp_v0", "full", "GPU", true, 300L, now = Date(0L)))
+        val plain = SetLogJson.encode(SetLog.build("바벨 스쿼트", samples, emptyList(), "mp_v0", "full", "GPU", true, 300L, now = 0L))
         for (key in listOf("validation", "image", "xy", "w", "up")) assertFalse(key, plain.contains("\"$key\":"))
         val withWorld = samples.map { if (it.detected) PoseSample(true, FloatArray(66) { 0.5f }, it.visibility, it.features, 30, 60L, 360, 640,
             up = Vec3(0f, 1f, 0f), world = FloatArray(99) { 0.25f }) else it }
-        val v = SetLogJson.encode(SetLog.build("바벨 스쿼트", withWorld, emptyList(), "mp_v0", "full", "GPU", true, 300L, now = Date(0L), validation = true))
+        val v = SetLogJson.encode(SetLog.build("바벨 스쿼트", withWorld, emptyList(), "mp_v0", "full", "GPU", true, 300L, now = 0L, validation = true))
         assertTrue(v.contains("\"validation\":true,\"image\":{\"w\":360,\"h\":640},"))
         assertTrue(v.contains("\"xy\":[0.5,"))
         assertTrue(v.contains("\"w\":[0.25,"))
@@ -303,13 +303,13 @@ class PostureSetLogTest {
     fun identityGateFieldsAppearOnlyForSignalsThatHaveOne() {
         // spec §62: 스쿼트(판별 신호 knee_maxside)는 config.identity·rejected·identity_swing 을 쓰고, 런지(판별 없음)는 키가 없다
         val samples = List(3) { sample(true, mapOf("knee_mean" to 170f)) }
-        val squat = SetLogJson.encode(SetLog.build("바벨 스쿼트", samples, emptyList(), "mp_v0", "full", "GPU", true, 300L, now = Date(0L),
+        val squat = SetLogJson.encode(SetLog.build("바벨 스쿼트", samples, emptyList(), "mp_v0", "full", "GPU", true, 300L, now = 0L,
             repCount = 2, repTimesMs = listOf(1000L, 2500L), repSignal = "knee_mean", repInvalid = 0,
             repEngine = RepEngineLog.of(RepCounter.forSession("바벨 스쿼트", floor = false)!!), repResets = emptyList(),
             repRejected = listOf(RepRejected(1800L, 118f, 170f, 12.5f)), repIdentitySwings = listOf(71.5f, null)))
         assertTrue(squat.contains("\"rom_tier\":\"reference\",\"identity\":{\"feature\":\"knee_maxside\",\"min_amp\":35}}"))
         assertTrue(squat.contains("\"rejected\":[{\"t_ms\":1800,\"min\":118,\"max\":170,\"swing\":12.5}],\"identity_swing\":[71.5,null],\"resets\":[]"))
-        val lunge = SetLogJson.encode(SetLog.build("바벨 런지", samples, emptyList(), "mp_v0", "full", "GPU", true, 300L, now = Date(0L),
+        val lunge = SetLogJson.encode(SetLog.build("바벨 런지", samples, emptyList(), "mp_v0", "full", "GPU", true, 300L, now = 0L,
             repCount = 1, repTimesMs = listOf(1000L), repSignal = "knee_minside", repInvalid = 0,
             repEngine = RepEngineLog.of(RepCounter.forSession("바벨 런지", floor = false)!!), repResets = emptyList()))
         for (key in listOf("identity", "rejected", "identity_swing")) assertFalse(key, lunge.contains("\"$key\":"))
@@ -325,14 +325,14 @@ class PostureSetLogTest {
             reps = listOf(RepFormLog.Rep(3600L, true, listOf(RepFormLog.Check("repform|바벨 스쿼트|발 간격", "VIOLATION", 1.49f, 1.59f, 1.07f, "HIGH", gate = true)))),
             rejected = 1, noTop = 0,
         )
-        val json = SetLogJson.encode(SetLog.build("바벨 스쿼트", samples, emptyList(), "mp_v0", "full", "GPU", true, 300L, now = Date(0L),
+        val json = SetLogJson.encode(SetLog.build("바벨 스쿼트", samples, emptyList(), "mp_v0", "full", "GPU", true, 300L, now = 0L,
             repCount = 1, repTimesMs = listOf(3600L), repSignal = "knee_mean", repInvalid = 0,
             repEngine = RepEngineLog.of(RepCounter.forSession("바벨 스쿼트", floor = false)!!), repResets = emptyList(), repForm = log))
         assertTrue(json.contains("\"resets\":[]},\"rep_form\":{\"version\":\"repform_v0.1\",\"baseline_t_ms\":1200,\"baseline\":{\"stance_sh\":1.07,\"toe_out_maxside\":22}," +
             "\"start\":[{\"id\":\"repform|바벨 스쿼트|발 간격|시작\",\"v\":\"OK\",\"value\":1.07,\"raw\":1.07,\"ref\":null,\"dir\":null}]," +
             "\"reps\":[{\"t_ms\":3600,\"correct\":true,\"checks\":[{\"id\":\"repform|바벨 스쿼트|발 간격\",\"v\":\"VIOLATION\",\"value\":1.49,\"raw\":1.59,\"ref\":1.07,\"dir\":\"HIGH\",\"gate\":true}]}]," +
             "\"rejected\":1,\"no_top\":0,\"baseline_from_first_bottom\":false},\"frames\":["))
-        val none = SetLogJson.encode(SetLog.build("바벨 스쿼트", samples, emptyList(), "mp_v0", "full", "GPU", true, 300L, now = Date(0L), repCount = 1))
+        val none = SetLogJson.encode(SetLog.build("바벨 스쿼트", samples, emptyList(), "mp_v0", "full", "GPU", true, 300L, now = 0L, repCount = 1))
         assertFalse(none.contains("\"rep_form\":"))
     }
 
@@ -354,28 +354,28 @@ class PostureSetLogTest {
         // 화면에 보인 수는 completed, 단위는 unit·cycles_per_rep, 세트 끝에 짝 없이 남은 한쪽은 half_pending(true 일 때만).
         val samples = List(3) { sample(true, mapOf("knee_minside" to 170f)) }
         val records = listOf(RepRecord(1000L, 100f, 170f, true), RepRecord(2500L, 118f, 169f, false), RepRecord(4000L, 99f, 170f, true))
-        val pair = SetLogJson.encode(SetLog.build("바벨 런지", samples, emptyList(), "mp_v0", "full", "GPU", true, 300L, now = Date(0L),
+        val pair = SetLogJson.encode(SetLog.build("바벨 런지", samples, emptyList(), "mp_v0", "full", "GPU", true, 300L, now = 0L,
             repCount = 3, repTimesMs = records.map { it.tMs }, repSignal = "knee_minside", repInvalid = 1, repRecords = records,
             repUnit = RepUnit.SIDE_PAIR, repCompleted = 1, repHalfPending = true))
         assertTrue(pair.contains("\"count\":3,\"invalid\":1,"))
         assertTrue(pair.contains("\"valid\":[true,false,true],\"unit\":\"side_pair\",\"cycles_per_rep\":2,\"completed\":1,\"half_pending\":true}"))
         // 짝을 다 채운 세트는 half_pending 키가 없다
-        val even = SetLogJson.encode(SetLog.build("바벨 런지", samples, emptyList(), "mp_v0", "full", "GPU", true, 300L, now = Date(0L),
+        val even = SetLogJson.encode(SetLog.build("바벨 런지", samples, emptyList(), "mp_v0", "full", "GPU", true, 300L, now = 0L,
             repCount = 2, repTimesMs = listOf(1000L, 2500L), repSignal = "knee_minside", repInvalid = 0,
             repUnit = RepUnit.SIDE_PAIR, repCompleted = 1))
         assertTrue(even.contains("\"unit\":\"side_pair\",\"cycles_per_rep\":2,\"completed\":1}"))
         assertFalse(even.contains("half_pending"))
         // 사이클 단위: completed = count
-        val cycle = SetLogJson.encode(SetLog.build("바벨 스쿼트", samples, emptyList(), "mp_v0", "full", "GPU", true, 300L, now = Date(0L),
+        val cycle = SetLogJson.encode(SetLog.build("바벨 스쿼트", samples, emptyList(), "mp_v0", "full", "GPU", true, 300L, now = 0L,
             repCount = 2, repTimesMs = listOf(1000L, 2500L), repSignal = "knee_mean", repInvalid = 0,
             repUnit = RepUnit.CYCLE, repCompleted = 2))
         assertTrue(cycle.contains("\"unit\":\"cycle\",\"cycles_per_rep\":1,\"completed\":2}"))
         assertFalse(cycle.contains("half_pending"))
         // 단위를 주지 않으면(이전 로그) 키 자체가 없다 — 부재 = "그때는 늘 사이클 = 1회"
-        val old = SetLogJson.encode(SetLog.build("바벨 스쿼트", samples, emptyList(), "mp_v0", "full", "GPU", true, 300L, now = Date(0L), repCount = 2))
+        val old = SetLogJson.encode(SetLog.build("바벨 스쿼트", samples, emptyList(), "mp_v0", "full", "GPU", true, 300L, now = 0L, repCount = 2))
         for (key in listOf("unit", "cycles_per_rep", "completed", "half_pending")) assertFalse(key, old.contains("\"$key\":"))
         // 카운터가 없는 세트(reps 블록 없음)에는 단위도 없다
-        val noCounter = SetLogJson.encode(SetLog.build("플랭크", samples, emptyList(), "mp_v0", "full", "GPU", true, 300L, now = Date(0L),
+        val noCounter = SetLogJson.encode(SetLog.build("플랭크", samples, emptyList(), "mp_v0", "full", "GPU", true, 300L, now = 0L,
             repUnit = RepUnit.CYCLE, repCompleted = 0))
         assertFalse(noCounter.contains("\"reps\":"))
         assertFalse(noCounter.contains("\"unit\":"))
@@ -398,8 +398,8 @@ class PostureSetLogTest {
     fun storeAppendsJsonLinesAndCounts() {
         val store = SetLogStore(tmp.newFolder("posture_logs"))
         val samples = listOf(sample(true, mapOf("knee_L" to 90f)))
-        val log1 = SetLog.build("바벨 스쿼트", samples, emptyList(), "mp_v0", "full", "GPU", false, 300L, now = Date(0L))
-        val log2 = SetLog.build("오버 헤드 프레스", samples, emptyList(), "mp_v0", "lite", "CPU", true, 300L, now = Date(0L))
+        val log1 = SetLog.build("바벨 스쿼트", samples, emptyList(), "mp_v0", "full", "GPU", false, 300L, now = 0L)
+        val log2 = SetLog.build("오버 헤드 프레스", samples, emptyList(), "mp_v0", "lite", "CPU", true, 300L, now = 0L)
         val f1 = store.append(log1, Date(0L))
         val f2 = store.append(log2, Date(0L))
         assertEquals(f1, f2)

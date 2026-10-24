@@ -29,6 +29,17 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.clickable
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.AccessibilityNew
+import androidx.compose.material.icons.rounded.Videocam
+import androidx.compose.material3.Icon
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import com.example.trex_kotlin.TrexText as Text
 
 /**
@@ -119,5 +130,43 @@ internal fun LiveWorkoutHud(workout: Workout, repetitions: Int, timeLeft: Int, t
             fontWeight = if (countNoteActive) FontWeight.SemiBold else FontWeight.Normal, maxLines = 1, overflow = TextOverflow.Ellipsis)
         if (referenceNote != null) Text("참고 · $referenceNote", color = amber, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
             modifier = Modifier.padding(top = 4.dp).border(1.dp, amber.copy(alpha = .6f), RoundedCornerShape(99.dp)).padding(horizontal = 10.dp, vertical = 3.dp))
+    }
+}
+
+/**
+ * 무대 보기 전환(§2.1 수동 토글, 사용자 요청 10-23 — 운동 화면 오른쪽 위) — 뼈대만(검은 무대) ↔ 카메라 영상.
+ * ⋯ 패널의 같은 토글과 같은 상태라 어느 쪽에서 바꿔도 세션 동안 유지된다. 고른 쪽이 밝게 보이는 두 칸 짜리 분할 버튼.
+ */
+@Composable
+internal fun StageViewToggle(showCamera: Boolean, onChange: (Boolean) -> Unit, modifier: Modifier = Modifier) {
+    Row(
+        modifier
+            .clip(RoundedCornerShape(999.dp))
+            .background(Color.Black.copy(alpha = 0.45f))
+            .border(1.dp, Color.White.copy(alpha = 0.16f), RoundedCornerShape(999.dp))
+            .padding(3.dp),
+        horizontalArrangement = Arrangement.spacedBy(2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        StageViewSegment("뼈대", "뼈대만 보기", Icons.Rounded.AccessibilityNew, selected = !showCamera) { onChange(false) }
+        StageViewSegment("영상", "카메라 영상 보기", Icons.Rounded.Videocam, selected = showCamera) { onChange(true) }
+    }
+}
+
+@Composable
+private fun StageViewSegment(label: String, description: String, icon: ImageVector, selected: Boolean, onClick: () -> Unit) {
+    Row(
+        Modifier
+            .clip(RoundedCornerShape(999.dp))
+            .background(if (selected) Color.White.copy(alpha = 0.92f) else Color.Transparent)
+            .semantics { contentDescription = description; this.selected = selected }
+            .clickable(role = Role.Tab, onClick = onClick)
+            .heightIn(min = 34.dp)
+            .padding(horizontal = 11.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        val tint = if (selected) Color(0xFF151A12) else Color.White.copy(alpha = 0.85f)
+        Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(15.dp))
+        Text(label, color = tint, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 4.dp))
     }
 }

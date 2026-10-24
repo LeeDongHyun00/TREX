@@ -1,0 +1,3 @@
+_$s15TrexFoodRuntime*
+_OBJC_CLASS_$__TtC15TrexFoodRuntime*
+_OBJC_METACLASS_$__TtC15TrexFoodRuntime*

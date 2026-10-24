@@ -1,8 +1,5 @@
 package com.example.trex_kotlin
 
-import android.content.Intent
-import android.net.Uri
-import android.provider.Settings
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -10,13 +7,13 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import com.example.trex_kotlin.TrexText as Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -27,8 +24,12 @@ import androidx.compose.ui.unit.sp
 @Composable
 fun ProfileTabScreen(app: AppViewModel, onOpenRecord: () -> Unit, onLogout: () -> Unit) {
     val c = Trex.c
-    val context = LocalContext.current
+    val settingsLinks = rememberSystemSettingsLinks()
     var sheet by remember { mutableStateOf<String?>(null) }
+    // 음성 안내 목소리(iPhone 만) — iPhone 설정에서 음성을 받고 돌아오면 다시 읽는다
+    val voice = rememberVoiceAdvisor()
+    val appPaused = rememberTrexLifecyclePaused()
+    val voiceStatus = remember(voice, appPaused, sheet) { voice?.status() }
     val p = app.profile
     LazyColumn(Modifier.fillMaxSize(), contentPadding = tabContentPadding, verticalArrangement = Arrangement.spacedBy(22.dp)) {
         item { Text("설정", color = c.text, fontSize = 30.sp, fontWeight = FontWeight.SemiBold) }
@@ -57,12 +58,16 @@ fun ProfileTabScreen(app: AppViewModel, onOpenRecord: () -> Unit, onLogout: () -
                 when(app.themeMode) { ThemeMode.Light -> "라이트"; ThemeMode.Dark -> "다크"; ThemeMode.System -> "시스템" }, { sheet = "theme" })
             SettingsDivider()
             SettingsRow("알림", Icons.Rounded.NotificationsNone, onClick = {
-                context.startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName))
+                settingsLinks.openNotifications()
             })
             SettingsDivider()
             SettingsRow("카메라 및 권한", Icons.Rounded.PrivacyTip, onClick = {
-                context.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${context.packageName}")))
+                settingsLinks.openAppDetails()
             })
+            if (voice != null) {
+                SettingsDivider()
+                SettingsRow("음성 안내 목소리", Icons.Rounded.RecordVoiceOver, voiceStatus?.name ?: "한국어 음성 없음", { sheet = "voice" })
+            }
         } }
         item { SettingsGroup {
             SettingsRow("도움말", Icons.Rounded.HelpOutline, onClick = { sheet = "help" })
@@ -92,6 +97,10 @@ fun ProfileTabScreen(app: AppViewModel, onOpenRecord: () -> Unit, onLogout: () -
             Cta("완료", { sheet = null }, modifier = Modifier.fillMaxWidth())
         }
     }
+    if (sheet == "voice" && voice != null) ModalBottomSheet(onDismissRequest = { sheet = null }, containerColor = c.sheet,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        VoiceSheet(voiceStatus, onPreview = { voice.preview() }, onClose = { sheet = null })
+    }
     if (sheet == "help") AlertDialog(onDismissRequest = { sheet = null }, containerColor = c.sheet,
         title = { Text("자세 비교 사용하기") },
         text = { Text("운동 이름 옆 스위치로 자세 비교를 켜세요. 시작 전에 안내하는 촬영 방향으로 전신을 담아 주세요.\n\n횟수가 다르게 측정되면 운동 화면의 ‘횟수 수정’에서 조정할 수 있어요.") },
@@ -119,12 +128,12 @@ fun ProfileTabScreen(app: AppViewModel, onOpenRecord: () -> Unit, onLogout: () -
 @Composable
 private fun AccountGroup(app: AppViewModel) {
     val c = Trex.c
-    val context = LocalContext.current
+    val requestGoogleIdToken = rememberGoogleIdTokenRequest()
     val account = app.account
     SettingsGroup {
         if (account == null) {
             SettingsRow("Google 계정 연결", Icons.Rounded.CloudUpload, if (app.authBusy) "연결 중…" else null, onClick = {
-                app.continueWithGoogle(context.findTrexActivity() ?: context)
+                app.continueWithGoogle(requestGoogleIdToken)
             })
             Text(
                 app.authMessage ?: "기록을 계정에 백업하고 다른 기기에서 이어서 써요",
@@ -135,8 +144,7 @@ private fun AccountGroup(app: AppViewModel) {
             val status = when {
                 app.sync.syncing -> "동기화 중…"
                 app.sync.lastError != null -> app.sync.lastError
-                app.sync.lastSyncedAt > 0L -> "마지막 동기화 " + java.time.Instant.ofEpochMilli(app.sync.lastSyncedAt)
-                    .atZone(java.time.ZoneId.systemDefault()).format(java.time.format.DateTimeFormatter.ofPattern("M월 d일 HH:mm"))
+                app.sync.lastSyncedAt > 0L -> "마지막 동기화 " + monthDayTimeLabel(app.sync.lastSyncedAt)
                 else -> "아직 동기화하지 않았어요"
             }
             Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 16.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -193,6 +201,31 @@ fun FirstSyncDialog(onKeepLocal: () -> Unit, onUseServer: () -> Unit) {
         dismissButton = { TextButton(onClick = onKeepLocal) { Text("이 기기 기록 유지") } },
         confirmButton = { TextButton(onClick = onUseServer) { Text("계정 기록 불러오기") } },
     )
+}
+
+/**
+ * 음성 안내 목소리(iPhone 만, §108d 후속) — 지금 목소리와, 기본 음질이면 iPhone 설정에서 고품질 한국어 음성을 받는 길.
+ * 받은 음성은 세션 스피커가 저절로 고른다(앱을 다시 켜지 않아도 30초 안에).
+ */
+@Composable
+private fun VoiceSheet(status: VoiceStatus?, onPreview: () -> Unit, onClose: () -> Unit) {
+    val c = Trex.c
+    Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(bottom = 24.dp)) {
+        Text("음성 안내 목소리", color = c.text, fontSize = 23.sp, fontWeight = FontWeight.SemiBold)
+        Text("지금 목소리 · ${status?.name ?: "한국어 음성 없음"}", color = c.text2, fontSize = 14.sp, modifier = Modifier.padding(top = 8.dp))
+        Text(
+            if (status?.natural == true) "고품질 음성으로 운동 안내를 하고 있어요."
+            else "기본 음질 목소리는 기계음처럼 들려요. iPhone 설정에서 고품질 한국어 음성을 한 번 받아 두면 운동 안내가 그 목소리로 바뀌어요. 앱을 다시 켜지 않아도 돼요.",
+            color = c.text, fontSize = 15.sp, lineHeight = 22.sp, modifier = Modifier.padding(top = 16.dp),
+        )
+        if (status?.natural != true) Box(Modifier.padding(top = 14.dp)) {
+            WashBanner("설정 › 손쉬운 사용 › 콘텐츠 말하기 › 음성 › 한국어 › 유나에서 ‘향상된 음질’이나 ‘프리미엄’을 받아 주세요. Wi-Fi 에서 받는 것이 좋아요.", Icons.Rounded.Info)
+        }
+        Row(Modifier.padding(top = 20.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            GhostButton("미리 듣기", onPreview, Modifier.weight(1f), icon = Icons.AutoMirrored.Rounded.VolumeUp)
+            Cta("확인", onClose, modifier = Modifier.weight(1f))
+        }
+    }
 }
 
 @Composable

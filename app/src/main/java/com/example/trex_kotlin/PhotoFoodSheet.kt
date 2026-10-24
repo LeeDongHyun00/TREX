@@ -1,20 +1,5 @@
 package com.example.trex_kotlin
 
-import android.Manifest
-import android.content.pm.PackageManager
-import android.graphics.Bitmap
-import android.net.Uri
-import android.util.Log
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.PickVisualMediaRequest
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.camera.core.CameraSelector
-import androidx.camera.core.ImageCapture
-import androidx.camera.core.ImageCaptureException
-import androidx.camera.core.ImageProxy
-import androidx.camera.core.Preview
-import androidx.camera.lifecycle.ProcessCameraProvider
-import androidx.camera.view.PreviewView
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -76,30 +61,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import androidx.core.content.ContextCompat
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.example.trex_kotlin.TrexText as Text
 import com.example.trex_kotlin.food.FoodDetectionResult
-import com.example.trex_kotlin.food.FoodDetector
-import com.example.trex_kotlin.food.FoodMemoryStore
 import com.example.trex_kotlin.food.FoodRegion
-import com.example.trex_kotlin.food.decodeScaledBitmap
-import com.example.trex_kotlin.food.rotated
-import com.example.trex_kotlin.food.scaledToMax
-import java.util.concurrent.Executors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
@@ -224,10 +198,12 @@ internal fun PhotoFoodSheet(app: AppViewModel, onClose: () -> Unit) {
         return
     }
     val c = Trex.c
-    val context = LocalContext.current
+    // 인식기(모델·기억은 앱 수명) — Android TFLite / iPhone TrexFoodRuntime, 판정 흐름은 공유 FoodPipeline(§108d)
+    val recognizer = rememberFoodRecognizer()
     var step by remember { mutableStateOf(PhotoStep.Pick) }
-    var photos by remember { mutableStateOf<List<Bitmap>>(emptyList()) }
-    var pickedUris by remember { mutableStateOf<List<Uri>>(emptyList()) }
+    var photos by remember { mutableStateOf<List<FoodPhoto>>(emptyList()) }
+    // 갤러리에서 고른 사진 — 분석 스레드에서 디코딩한다
+    var pickedUris by remember { mutableStateOf<List<FoodPhotoLoader>>(emptyList()) }
     var fromGallery by remember { mutableStateOf(false) }
     var analysisRequest by remember { mutableIntStateOf(0) }
     var progress by remember { mutableFloatStateOf(0f) }
@@ -240,14 +216,14 @@ internal fun PhotoFoodSheet(app: AppViewModel, onClose: () -> Unit) {
     var regions by remember { mutableStateOf<List<FoodRegion>>(emptyList()) }
     // 비어 보이는 자리(빈 그릇·컵, FoodRegion.looksEmpty)를 사진에 그릴지. 기본은 숨기고 개수만 알린다.
     var showEmpty by remember { mutableStateOf(false) }
-    var zoomed by remember { mutableStateOf<Bitmap?>(null) }
+    var zoomed by remember { mutableStateOf<FoodPhoto?>(null) }
     // 음식 고르기 창의 대상. null 이면 닫힘.
     var pickTarget by remember { mutableStateOf<PickTarget?>(null) }
 
     // 모델(12MB)·인터프리터 초기화를 첫 분석이 아니라 시트를 여는 시점에 미리 해 둔다.
-    LaunchedEffect(Unit) { withContext(Dispatchers.Default) { FoodDetector.warmUp(context) } }
+    LaunchedEffect(Unit) { withContext(Dispatchers.Default) { recognizer.warmUp() } }
 
-    fun analyze(bitmaps: List<Bitmap>, uris: List<Uri>) {
+    fun analyze(bitmaps: List<FoodPhoto>, uris: List<FoodPhotoLoader>) {
         photos = bitmaps
         pickedUris = uris
         fromGallery = uris.isNotEmpty()
@@ -255,10 +231,7 @@ internal fun PhotoFoodSheet(app: AppViewModel, onClose: () -> Unit) {
         analysisRequest++
         step = PhotoStep.Analyzing
     }
-    val galleryLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.PickMultipleVisualMedia(maxItems = 5),
-    ) { uris -> if (uris.isNotEmpty()) analyze(emptyList(), uris) }
-    fun openGallery() = galleryLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+    val openGallery = rememberFoodGallery(maxItems = 5) { uris -> if (uris.isNotEmpty()) analyze(emptyList(), uris) }
     fun retry() {
         photos = emptyList()
         if (fromGallery) openGallery() else step = PhotoStep.Camera
@@ -273,8 +246,8 @@ internal fun PhotoFoodSheet(app: AppViewModel, onClose: () -> Unit) {
         if (sources.isEmpty() && uris.isEmpty()) return@LaunchedEffect
         // 추론은 백그라운드에서, 메인에서는 진행률 연출만 갱신한다.
         val job = async(Dispatchers.Default) {
-            val bitmaps = sources.ifEmpty { uris.mapNotNull { decodeScaledBitmap(context, it) } }
-            FoodDetector.detect(context, bitmaps) to bitmaps
+            val bitmaps = sources.ifEmpty { uris.mapNotNull { it.load() } }
+            recognizer.detect(bitmaps) to bitmaps
         }
         while (!job.isCompleted) {
             delay(200)
@@ -403,7 +376,7 @@ internal fun PhotoFoodSheet(app: AppViewModel, onClose: () -> Unit) {
                         onRetry = { retry() },
                         onSave = {
                             app.appendFoods(0, slot, items.toEntries())
-                            rememberUserNamed(context, photos, regions, items)
+                            rememberUserNamed(recognizer, photos, regions, items)
                             onClose()
                         },
                         onSaveAndManual = {
@@ -411,7 +384,7 @@ internal fun PhotoFoodSheet(app: AppViewModel, onClose: () -> Unit) {
                             // 직접 기록 시트가 같은 끼니를 열어 방금 담은 항목을 스테퍼로 바로 고칠 수 있다.
                             val entries = items.toEntries()
                             if (entries.isNotEmpty()) app.appendFoods(0, slot, entries)
-                            rememberUserNamed(context, photos, regions, items)
+                            rememberUserNamed(recognizer, photos, regions, items)
                             manual = true
                         },
                     )
@@ -456,7 +429,7 @@ internal fun PhotoFoodSheet(app: AppViewModel, onClose: () -> Unit) {
         val spotPreview = remember(shownSpot?.id, photos) { shownSpot?.let { cropSpot(photos.getOrNull(it.photoIndex), it) } }
         FoodPicker(
             app = app,
-            spotPreview = spotPreview,
+            spotPreview = spotPreview?.image,
             title = when {
                 splitting -> "이 자리의 ${replacing.name} 을(를) 바꾸기"
                 replacing != null -> "${replacing.name} 을(를) 바꾸기"
@@ -533,70 +506,21 @@ private fun OptionCard(title: String, subtitle: String, icon: ImageVector, prima
 }
 
 @Composable
-private fun CameraStep(onCapture: (Bitmap) -> Unit, onBack: () -> Unit, onManual: () -> Unit) {
-    val context = LocalContext.current
-    val lifecycleOwner = LocalLifecycleOwner.current
-    var hasPermission by remember {
-        mutableStateOf(ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED)
-    }
-    var permissionAsked by remember { mutableStateOf(hasPermission) }
-    val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        hasPermission = granted
-        permissionAsked = true
-    }
-    LaunchedEffect(Unit) { if (!hasPermission) permissionLauncher.launch(Manifest.permission.CAMERA) }
-
-    val imageCapture = remember { ImageCapture.Builder().setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY).build() }
-    // 촬영 결과(수천만 화소 JPEG)의 디코딩·축소·회전은 메인 스레드에서 하지 않는다.
-    val captureExecutor = remember { Executors.newSingleThreadExecutor() }
-    var cameraProvider by remember { mutableStateOf<ProcessCameraProvider?>(null) }
-    var cameraReleased by remember { mutableStateOf(false) }
+private fun CameraStep(onCapture: (FoodPhoto) -> Unit, onBack: () -> Unit, onManual: () -> Unit) {
+    // 권한·카메라는 플랫폼 경계(§108d) — Android CameraX / iPhone AVFoundation
+    val permission = rememberCameraPermission()
+    val camera = rememberFoodCamera()
     var capturing by remember { mutableStateOf(false) }
-    var cameraError by remember { mutableStateOf<String?>(null) } // 카메라를 열지 못함 — 촬영 불가
     var captureError by remember { mutableStateOf<String?>(null) } // 한 번의 촬영 실패 — 재시도 가능
-    DisposableEffect(Unit) {
-        onDispose {
-            cameraReleased = true
-            cameraProvider?.unbindAll()
-            captureExecutor.shutdown()
-        }
-    }
 
     Column(Modifier.fillMaxSize().padding(horizontal = 20.dp).padding(bottom = 20.dp)) {
         Box(
             Modifier.weight(1f).fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(Color.Black),
             contentAlignment = Alignment.Center,
         ) {
-            if (hasPermission) {
-                AndroidView(
-                    modifier = Modifier.fillMaxSize(),
-                    factory = { ctx ->
-                        val view = PreviewView(ctx).apply {
-                            scaleType = PreviewView.ScaleType.FILL_CENTER
-                            implementationMode = PreviewView.ImplementationMode.COMPATIBLE
-                        }
-                        val providerFuture = ProcessCameraProvider.getInstance(ctx)
-                        providerFuture.addListener({
-                            // 시트가 먼저 닫힌 뒤 리스너가 실행되면 바인딩하지 않는다(카메라 점유 누수 방지).
-                            if (cameraReleased) return@addListener
-                            try {
-                                val provider = providerFuture.get()
-                                cameraProvider = provider
-                                val preview = Preview.Builder().build()
-                                preview.setSurfaceProvider(view.surfaceProvider)
-                                provider.unbindAll()
-                                provider.bindToLifecycle(lifecycleOwner, CameraSelector.DEFAULT_BACK_CAMERA, preview, imageCapture)
-                                cameraError = null
-                            } catch (e: Exception) {
-                                // 후면 카메라가 없거나 다른 앱이 점유 중인 경우 — 앱을 죽이지 않고 갤러리/직접 입력으로 안내한다.
-                                Log.w("PhotoFoodSheet", "카메라 열기 실패", e)
-                                cameraError = "카메라를 열 수 없어요. 다른 앱이 카메라를 쓰고 있지 않은지 확인하거나 갤러리에서 선택해 주세요."
-                            }
-                        }, ContextCompat.getMainExecutor(ctx))
-                        view
-                    },
-                )
-            } else if (permissionAsked) {
+            if (permission.granted) {
+                camera.Preview(Modifier.fillMaxSize())
+            } else if (permission.asked) {
                 Column(Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("카메라 권한이 필요해요", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                     Text(
@@ -604,12 +528,12 @@ private fun CameraStep(onCapture: (Bitmap) -> Unit, onBack: () -> Unit, onManual
                         color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp, lineHeight = 18.sp, textAlign = TextAlign.Center,
                         modifier = Modifier.padding(top = 6.dp),
                     )
-                    GhostButton("권한 다시 요청", { permissionLauncher.launch(Manifest.permission.CAMERA) }, Modifier.padding(top = 16.dp).fillMaxWidth())
+                    GhostButton("권한 다시 요청", { permission.request() }, Modifier.padding(top = 16.dp).fillMaxWidth())
                     GhostButton("직접 입력하기", onManual, Modifier.padding(top = 8.dp).fillMaxWidth(), icon = Icons.Rounded.Edit)
                 }
             }
         }
-        (cameraError ?: captureError)?.let { message ->
+        (camera.error ?: captureError)?.let { message ->
             Box(Modifier.padding(top = 10.dp)) { WashBanner(message, Icons.Rounded.Info, warnTone = true) }
         }
         Row(Modifier.padding(top = 14.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -619,33 +543,19 @@ private fun CameraStep(onCapture: (Bitmap) -> Unit, onBack: () -> Unit, onManual
                 icon = Icons.Rounded.PhotoCamera,
                 height = 52.dp,
                 modifier = Modifier.weight(2f),
-                enabled = hasPermission && !capturing && cameraError == null,
+                enabled = permission.granted && !capturing && camera.error == null,
                 onClick = {
                     if (!capturing) {
                         capturing = true
                         captureError = null
-                        val mainExecutor = ContextCompat.getMainExecutor(context)
-                        imageCapture.takePicture(
-                            captureExecutor,
-                            object : ImageCapture.OnImageCapturedCallback() {
-                                override fun onCaptureSuccess(image: ImageProxy) {
-                                    // 축소를 먼저 하고 회전한다 — 원본 크기 복사본을 하나 더 만들지 않기 위해서다(저사양 기기 OOM 방지).
-                                    val bitmap = image.use { proxy ->
-                                        proxy.toBitmap().scaledToMax(1280).rotated(proxy.imageInfo.rotationDegrees)
-                                    }
-                                    mainExecutor.execute {
-                                        capturing = false
-                                        onCapture(bitmap)
-                                    }
-                                }
-
-                                override fun onError(exception: ImageCaptureException) {
-                                    Log.w("PhotoFoodSheet", "촬영 실패", exception)
-                                    mainExecutor.execute {
-                                        capturing = false
-                                        captureError = "촬영에 실패했어요. 다시 시도해 주세요."
-                                    }
-                                }
+                        camera.capture(
+                            onPhoto = { photo ->
+                                capturing = false
+                                onCapture(photo)
+                            },
+                            onError = {
+                                capturing = false
+                                captureError = "촬영에 실패했어요. 다시 시도해 주세요."
                             },
                         )
                     }
@@ -656,7 +566,7 @@ private fun CameraStep(onCapture: (Bitmap) -> Unit, onBack: () -> Unit, onManual
 }
 
 @Composable
-private fun AnalyzingStep(photos: List<Bitmap>, progress: Float, onZoom: (Bitmap) -> Unit) {
+private fun AnalyzingStep(photos: List<FoodPhoto>, progress: Float, onZoom: (FoodPhoto) -> Unit) {
     val c = Trex.c
     // 분석은 전부 온디바이스라 '업로드' 문구를 쓰지 않는다.
     val status = when {
@@ -679,7 +589,7 @@ private fun AnalyzingStep(photos: List<Bitmap>, progress: Float, onZoom: (Bitmap
 
 @Composable
 private fun ResultStep(
-    photos: List<Bitmap>,
+    photos: List<FoodPhoto>,
     /** 2단계 인식이 찾은 자리. 비어 있으면 예전처럼 사진 줄만 보여준다(전체 사진 1회 경로). */
     regions: List<FoodRegion>,
     showEmpty: Boolean,
@@ -687,7 +597,7 @@ private fun ResultStep(
     /** 자리의 이름표 — 그 자리와 이어진 줄의 이름. null 이면 "?" 다. */
     labelOf: (FoodRegion) -> RegionLabel?,
     onRegion: (FoodRegion) -> Unit,
-    onZoom: (Bitmap) -> Unit,
+    onZoom: (FoodPhoto) -> Unit,
     slot: String,
     items: List<RecognizedItem>,
     retryLabel: String,
@@ -883,7 +793,7 @@ private fun ResultStep(
 }
 
 @Composable
-private fun FailedStep(photos: List<Bitmap>, message: String, retryLabel: String, onZoom: (Bitmap) -> Unit, onRetry: () -> Unit, onManual: () -> Unit) {
+private fun FailedStep(photos: List<FoodPhoto>, message: String, retryLabel: String, onZoom: (FoodPhoto) -> Unit, onRetry: () -> Unit, onManual: () -> Unit) {
     val c = Trex.c
     Column(Modifier.fillMaxSize().padding(horizontal = 20.dp).padding(bottom = 20.dp)) {
         PhotoStrip(photos, Modifier.fillMaxWidth().height(220.dp), dim = true, onZoom = onZoom)
@@ -899,7 +809,7 @@ private fun FailedStep(photos: List<Bitmap>, message: String, retryLabel: String
 
 /** 사진이 한 장이면 크게, 여러 장이면 가로로 넘겨 보는 썸네일 줄. 갤러리 5장을 골랐는데 첫 장만 보이던 문제를 없앤다. */
 @Composable
-private fun PhotoStrip(photos: List<Bitmap>, modifier: Modifier, dim: Boolean = false, onZoom: (Bitmap) -> Unit = {}) {
+private fun PhotoStrip(photos: List<FoodPhoto>, modifier: Modifier, dim: Boolean = false, onZoom: (FoodPhoto) -> Unit = {}) {
     if (photos.size <= 1) {
         PhotoPreview(photos.firstOrNull(), modifier, dim, onZoom)
         return
@@ -923,11 +833,11 @@ private fun PhotoStrip(photos: List<Bitmap>, modifier: Modifier, dim: Boolean = 
  */
 @Composable
 private fun RegionPhotos(
-    photos: List<Bitmap>,
+    photos: List<FoodPhoto>,
     regions: List<FoodRegion>,
     labelOf: (FoodRegion) -> RegionLabel?,
     onRegion: (FoodRegion) -> Unit,
-    onZoom: (Bitmap) -> Unit,
+    onZoom: (FoodPhoto) -> Unit,
 ) {
     if (photos.size <= 1) {
         val photo = photos.firstOrNull() ?: return
@@ -954,11 +864,11 @@ private fun RegionPhotos(
 
 @Composable
 private fun RegionPhoto(
-    photo: Bitmap,
+    photo: FoodPhoto,
     regions: List<FoodRegion>,
     labelOf: (FoodRegion) -> RegionLabel?,
     onRegion: (FoodRegion) -> Unit,
-    onZoom: (Bitmap) -> Unit,
+    onZoom: (FoodPhoto) -> Unit,
     modifier: Modifier,
 ) {
     val c = Trex.c
@@ -981,7 +891,7 @@ private fun RegionPhoto(
             },
     ) {
         androidx.compose.foundation.Image(
-            bitmap = photo.asImageBitmap(),
+            bitmap = photo.image,
             contentDescription = "인식한 사진",
             contentScale = ContentScale.FillBounds,
             modifier = Modifier.fillMaxSize(),
@@ -1053,7 +963,7 @@ private fun RegionPhoto(
  * 틀린 자동 이름이 다시 기억이 되면 같은 틀림이 스스로 굳는다. 기록하지 않고 닫으면 아무것도 남지 않는다.
  * 기록된 줄(영양값이 있는 줄)의 자리만 남긴다.
  */
-private fun rememberUserNamed(context: android.content.Context, photos: List<Bitmap>, regions: List<FoodRegion>, items: List<RecognizedItem>) {
+private fun rememberUserNamed(recognizer: FoodRecognizer, photos: List<FoodPhoto>, regions: List<FoodRegion>, items: List<RecognizedItem>) {
     val spots = regions.mapNotNull { region ->
         val row = items.firstOrNull { region.id in it.regionIds && it.nutrition != null } ?: return@mapNotNull null
         if (row.name == region.name) return@mapNotNull null
@@ -1061,13 +971,13 @@ private fun rememberUserNamed(context: android.content.Context, photos: List<Bit
         // 비어 보이는 자리는 다음 분석에서 기억과 견주지 않는다(FoodDetector.withMemory) — 남겨도 다시 찾아지지 않고 자리만 차지한다.
         if (region.looksEmpty) return@mapNotNull null
         val photo = photos.getOrNull(region.photoIndex) ?: return@mapNotNull null
-        FoodMemoryStore.Spot(row.name, photo, region.box, correctedFrom = region.name)
+        FoodMemorySpot(row.name, photo, region.box, correctedFrom = region.name)
     }
-    FoodMemoryStore.rememberAsync(context, spots)
+    recognizer.remember(spots)
 }
 
 /** 사진에서 [region] 자리를 둘레 10% 여유를 두고 잘라낸다. 고르는 창 맨 위 "누른 자리" 그림에 쓴다. */
-private fun cropSpot(photo: Bitmap?, region: FoodRegion): Bitmap? {
+private fun cropSpot(photo: FoodPhoto?, region: FoodRegion): FoodPhoto? {
     if (photo == null) return null
     val box = region.box
     val padX = box.width * 0.1f
@@ -1076,12 +986,12 @@ private fun cropSpot(photo: Bitmap?, region: FoodRegion): Bitmap? {
     val top = ((box.top - padY) * photo.height).toInt().coerceIn(0, photo.height - 1)
     val right = ((box.right + padX) * photo.width).toInt().coerceIn(left + 1, photo.width)
     val bottom = ((box.bottom + padY) * photo.height).toInt().coerceIn(top + 1, photo.height)
-    return Bitmap.createBitmap(photo, left, top, right - left, bottom - top)
+    return photo.crop(left, top, right - left, bottom - top)
 }
 
 /** 결과 행 옆에 붙는 작은 사진 — 어느 사진에서 인식됐는지 번호와 함께 보여준다. */
 @Composable
-private fun PhotoThumb(photo: Bitmap?, number: Int, size: androidx.compose.ui.unit.Dp) {
+private fun PhotoThumb(photo: FoodPhoto?, number: Int, size: androidx.compose.ui.unit.Dp) {
     Box(Modifier.size(size)) {
         PhotoPreview(photo, Modifier.fillMaxSize())
         NumberBadge(number, Modifier.padding(3.dp), small = true)
@@ -1102,7 +1012,7 @@ private fun NumberBadge(number: Int, modifier: Modifier = Modifier, small: Boole
 }
 
 @Composable
-private fun PhotoPreview(photo: Bitmap?, modifier: Modifier, dim: Boolean = false, onZoom: (Bitmap) -> Unit = {}) {
+private fun PhotoPreview(photo: FoodPhoto?, modifier: Modifier, dim: Boolean = false, onZoom: (FoodPhoto) -> Unit = {}) {
     val c = Trex.c
     Box(
         modifier
@@ -1113,7 +1023,7 @@ private fun PhotoPreview(photo: Bitmap?, modifier: Modifier, dim: Boolean = fals
     ) {
         if (photo != null) {
             androidx.compose.foundation.Image(
-                bitmap = photo.asImageBitmap(),
+                bitmap = photo.image,
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize(),
@@ -1130,7 +1040,7 @@ private fun PhotoPreview(photo: Bitmap?, modifier: Modifier, dim: Boolean = fals
  * 아무 데나 누르거나 뒤로가기로 닫는다.
  */
 @Composable
-private fun PhotoLightbox(photo: Bitmap, onDismiss: () -> Unit) {
+private fun PhotoLightbox(photo: FoodPhoto, onDismiss: () -> Unit) {
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Box(
             Modifier
@@ -1140,7 +1050,7 @@ private fun PhotoLightbox(photo: Bitmap, onDismiss: () -> Unit) {
             contentAlignment = Alignment.Center,
         ) {
             androidx.compose.foundation.Image(
-                bitmap = photo.asImageBitmap(),
+                bitmap = photo.image,
                 contentDescription = "사진 크게 보기",
                 contentScale = ContentScale.Fit,
                 modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 48.dp),

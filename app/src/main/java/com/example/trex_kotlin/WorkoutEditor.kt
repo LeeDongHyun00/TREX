@@ -41,7 +41,7 @@ fun WorkoutEditorSheet(app: AppViewModel, initialId: String?, onClose: () -> Uni
         focus.clearFocus()
         keyboard?.hide()
         val before = editedWorkout()
-        val next = Workout(original?.id ?: before?.id ?: java.util.UUID.randomUUID().toString(), template.name,
+        val next = Workout(original?.id ?: before?.id ?: newUuid(), template.name,
             template.reps, template.duration,
             (before?.posture ?: template.posture) && ExerciseProfiles.forName(template.name)?.cameraEnabled == true, template.category,
             restSeconds = before?.restSeconds)

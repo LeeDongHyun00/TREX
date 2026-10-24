@@ -1,0 +1,83 @@
+# iPhone 이 그대로 컴파일하는 Android 정본 파일(app/src/main/java 기준). 사본을 두지 않는다(§108).
+# 여기 오른 파일은 Compose·Kotlin 표준·posture-core 만 써야 한다 — Android API 를 쓰면 iOS 빌드가 깨진다.
+# Phase 0 스파이크: 디자인 시스템과 순수 Compose 부품.
+com/example/trex_kotlin/TrexDesign.kt
+com/example/trex_kotlin/TrexText.kt
+com/example/trex_kotlin/WorkoutNumberWheel.kt
+com/example/trex_kotlin/ReorderableList.kt
+com/example/trex_kotlin/CoachModeControl.kt
+com/example/trex_kotlin/AdaptivePolicy.kt
+# Phase 1: 앱 상태·저장·동기화(동작 불변 리팩터). 플랫폼 기능은 AppPlatform·KeyValueStore·HttpTransport 경계,
+# Android 구현은 AndroidPlatform.kt(목록 밖). 날짜는 kotlinx-datetime, org.json 은 posture-core 의 공통 판.
+com/example/trex_kotlin/AppPlatform.kt
+com/example/trex_kotlin/KeyValueStore.kt
+com/example/trex_kotlin/TrexTime.kt
+com/example/trex_kotlin/NameUuid.kt
+com/example/trex_kotlin/TrexAppState.kt
+com/example/trex_kotlin/TrexStore.kt
+com/example/trex_kotlin/TrexData.kt
+com/example/trex_kotlin/WorkoutMath.kt
+com/example/trex_kotlin/WorkoutCatalog.kt
+com/example/trex_kotlin/WorkoutSession.kt
+com/example/trex_kotlin/LoadSetJson.kt
+com/example/trex_kotlin/LegacyDemoData.kt
+com/example/trex_kotlin/RecordRetention.kt
+com/example/trex_kotlin/RecordOverview.kt
+com/example/trex_kotlin/RoutineOverview.kt
+com/example/trex_kotlin/PostureSupport.kt
+com/example/trex_kotlin/MuscleLoadAdapter.kt
+com/example/trex_kotlin/sync/AuthSession.kt
+com/example/trex_kotlin/sync/SyncManager.kt
+com/example/trex_kotlin/sync/SyncRules.kt
+com/example/trex_kotlin/sync/TrexApi.kt
+# Phase 2: 카메라 없는 화면 전부. 플랫폼 기능은 같은 이름의 짝 — Android PlatformUi.kt(목록 밖) ↔ ios-ui iosMain PlatformUi.kt.
+# 경계 타입은 PlatformApi.kt. 앱 내 업데이트(AppUpdate)는 Android 체험판 전용이라 목록 밖이다.
+com/example/trex_kotlin/PlatformApi.kt
+com/example/trex_kotlin/TrexApp.kt
+com/example/trex_kotlin/TrexTheme.kt
+com/example/trex_kotlin/AdaptiveLayout.kt
+com/example/trex_kotlin/MainScreens.kt
+com/example/trex_kotlin/HomeCards.kt
+com/example/trex_kotlin/MealSymbol.kt
+com/example/trex_kotlin/RoutineHero.kt
+com/example/trex_kotlin/WorkoutListScreen.kt
+com/example/trex_kotlin/WorkoutControls.kt
+com/example/trex_kotlin/CameraActions.kt
+com/example/trex_kotlin/WorkoutCatalogUi.kt
+com/example/trex_kotlin/WorkoutEditor.kt
+com/example/trex_kotlin/ExerciseGuides.kt
+com/example/trex_kotlin/ExerciseGuideUi.kt
+com/example/trex_kotlin/Sheets.kt
+com/example/trex_kotlin/RecordScreen.kt
+com/example/trex_kotlin/DietRecordScreen.kt
+com/example/trex_kotlin/SettingsScreen.kt
+com/example/trex_kotlin/AuthScreens.kt
+com/example/trex_kotlin/GuideBookScreen.kt
+com/example/trex_kotlin/MuscleLoadScreen.kt
+com/example/trex_kotlin/SessionScreens.kt
+com/example/trex_kotlin/TimedPreparation.kt
+com/example/trex_kotlin/trainingload/SessionLoadChange.kt
+com/example/trex_kotlin/trainingload/SessionMuscles.kt
+# Phase 3(§108c) — 자세 화면: 분석 루프(PostureLive)·바닥 계열 상태·준비 패널·무대·HUD·제어판, 플랫폼 경계, 세트 로그 형식·모드 저장·검증 표시·세션 스피커
+com/example/trex_kotlin/PostureLiveApi.kt
+com/example/trex_kotlin/PostureLive.kt
+com/example/trex_kotlin/PostureFloorLive.kt
+com/example/trex_kotlin/CapturePreparationUi.kt
+com/example/trex_kotlin/SkeletonStage.kt
+com/example/trex_kotlin/LiveWorkoutHud.kt
+com/example/trex_kotlin/StageFit.kt
+com/example/trex_kotlin/LivePanelController.kt
+com/example/trex_kotlin/posture/ModeStore.kt
+com/example/trex_kotlin/posture/PostureSetLog.kt
+com/example/trex_kotlin/posture/RepValidation.kt
+com/example/trex_kotlin/posture/SpeechCoach.kt
+# §108d — 사진 식단: 시트·판정 흐름(FoodPipeline)·경계. 플랫폼 짝은 Android PhotoFoodAndroid.kt(목록 밖) ↔ ios-ui iosMain PhotoFoodIos.kt
+com/example/trex_kotlin/PhotoFoodApi.kt
+com/example/trex_kotlin/PhotoFoodSheet.kt
+com/example/trex_kotlin/food/FoodPipeline.kt
+# §108e — 홈 날씨 운동 추천(weather 브랜치를 공유로): 모델·판정·저장소·위치 설정·홈의 날씨 한 줄(§108f). 플랫폼 짝은 Android weather/WeatherLocatorAndroid.kt(목록 밖) ↔ ios-ui iosMain weather/WeatherLocatorIos.kt
+com/example/trex_kotlin/weather/WeatherModels.kt
+com/example/trex_kotlin/weather/WeatherExerciseRecommender.kt
+com/example/trex_kotlin/weather/WeatherRepository.kt
+com/example/trex_kotlin/weather/WeatherLocation.kt
+com/example/trex_kotlin/weather/WeatherSummaryRow.kt

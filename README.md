@@ -206,6 +206,10 @@ APK 무결성은 `SHA256SUMS.txt`, 버전·서명·빌드 커밋은 `BUILD_INFO.
 - [자세 엔진 정본 스펙](research/aihub_fitness/KOTLIN_PORTING_SPEC.md)
 - [서버·로그인·동기화 인수인계](docs/SERVER_SYNC_HANDOFF.md)
 
+## iPhone
+
+iPhone 앱(`iosApp/`)은 Android Compose 화면을 Compose Multiplatform 으로 그대로 컴파일합니다(공유 목록 `ios-ui/android-sources.txt`) — 화면·앱 상태·자세 엔진이 한 소스입니다. 자세 엔진은 Android Kotlin 정본을 `tools/sync_ios_core.py` 로 생성한 KMP 모듈(`posture-core/`)이라 임계값·횟수·발화 정책이 Android 와 같고, 카메라·MediaPipe·음식 TFLite 는 Swift 다리(`iosApp/Trex/*Bridge.swift`)입니다. Android 를 바꿀 때 iPhone 에 따로 할 일은 [iOS 포팅](docs/IOS_PORT.md)의 'Android 를 바꿀 때 iPhone 도 같이' 체크리스트, Mac 빌드·설치 절차는 [iPhone 실행 안내](docs/IOS_INSTALL.md)를 봅니다.
+
 ## Git에 포함하지 않는 파일
 
 다음 파일은 개인 환경 또는 빌드 산출물이므로 커밋하지 않습니다.

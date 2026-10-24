@@ -1,31 +1,28 @@
 package com.example.trex_kotlin
 
-import android.app.Application
-import android.content.Context
-import androidx.credentials.exceptions.GetCredentialCancellationException
-import androidx.credentials.exceptions.GetCredentialException
-import androidx.credentials.exceptions.NoCredentialException
 import com.example.trex_kotlin.sync.ApiException
 import com.example.trex_kotlin.sync.AuthAccount
 import com.example.trex_kotlin.sync.AuthSession
 import com.example.trex_kotlin.sync.FirstSync
+import com.example.trex_kotlin.sync.NetworkException
+import com.example.trex_kotlin.sync.SignInException
 import com.example.trex_kotlin.sync.SyncManager
 import com.example.trex_kotlin.sync.TrexApi
-import com.example.trex_kotlin.sync.requestGoogleIdToken
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateMap
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import com.example.trex_kotlin.posture.FormLabel
 import com.example.trex_kotlin.posture.PostureSetReport
-import com.example.trex_kotlin.posture.SetLabelStore
-import com.example.trex_kotlin.posture.SetLog
 import com.example.trex_kotlin.posture.SetSelfLabel
-import java.time.LocalDate
 import androidx.lifecycle.viewModelScope
+import com.example.trex_kotlin.weather.WeatherLocationPrefs
+import com.example.trex_kotlin.weather.WeatherRepository
+import com.example.trex_kotlin.weather.WeatherServices
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.sync.Mutex
@@ -37,10 +34,11 @@ import com.example.trex_kotlin.trainingload.*
  *
  * 화면(컴포저블)은 상태를 소유하지 않고 여기서 읽고 액션 메서드로만 바꾼다.
  * 모든 변경은 [TrexStore] 로 즉시 영속화된다 — 탭 전환/회전/재시작에도 기록이 유지된다.
+ * 플랫폼 기능(저장소·HTTP·근육 장부·라벨 파일)은 [AppPlatform] 으로 받는다(§108) — 같은 소스가 iPhone 에서도 돈다.
  */
-class AppViewModel(application: Application) : AndroidViewModel(application) {
+class AppViewModel(private val platform: AppPlatform) : ViewModel() {
 
-    private val store = TrexStore(application)
+    private val store = TrexStore(platform.preferences("trex_store"))
 
     // ---- 진행 플래그
 
@@ -78,8 +76,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     // ---- 계정·동기화 (docs/SERVER_SYNC_HANDOFF.md 2단계)
 
-    private val authSession = AuthSession(application)
-    private val api = TrexApi(BuildConfig.TREX_API_BASE_URL) { authSession.token }
+    private val authSession = AuthSession(platform.preferences("trex_auth"))
+    private val api = TrexApi(platform.apiBaseUrl, platform.http) { authSession.token }
 
     /** 서버 계정. null 이면 "로그인 없이 사용" — 기록은 이 기기에만 있다. */
     var account by mutableStateOf(authSession.current())
@@ -97,7 +95,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     private var refreshJob: kotlinx.coroutines.Job? = null
 
     val sync = SyncManager(
-        application, store, authSession, api, viewModelScope,
+        platform.preferences("trex_sync"), store, authSession, api, viewModelScope,
         onRemoteApplied = { reloadFromStore() },
         onSessionExpired = {
             account = null
@@ -110,10 +108,13 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     /** "로그인 없이 사용". 나중에 설정에서 계정을 연결할 수 있다. */
     fun continueWithoutAccount() = completeLogin()
 
-    /** "Google로 계속하기" — 로그인 화면과 설정의 계정 연결이 같이 쓴다. [activity] 는 계정 선택 화면을 띄울 액티비티. */
-    fun continueWithGoogle(activity: Context) {
+    /**
+     * "Google로 계속하기" — 로그인 화면과 설정의 계정 연결이 같이 쓴다. [requestIdToken] 은 플랫폼의 계정 선택 화면이다
+     * (웹 클라이언트 ID → 구글 ID 토큰, 실패는 [SignInException]). Android 는 Credential Manager(GoogleSignIn.kt).
+     */
+    fun continueWithGoogle(requestIdToken: suspend (webClientId: String) -> String) {
         if (authBusy) return
-        if (BuildConfig.GOOGLE_WEB_CLIENT_ID.isBlank() || !api.configured) {
+        if (platform.googleWebClientId.isBlank() || !api.configured) {
             authMessage = "구글 로그인이 아직 준비되지 않았어요. ‘로그인 없이 사용’으로 시작해 주세요."
             return
         }
@@ -121,22 +122,21 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             authBusy = true
             authMessage = null
             try {
-                val idToken = requestGoogleIdToken(activity, BuildConfig.GOOGLE_WEB_CLIENT_ID)
+                val idToken = requestIdToken(platform.googleWebClientId)
                 val signedIn = api.googleLogin(idToken)
                 authSession.save(signedIn)
                 account = signedIn
                 beginSync(signedIn)
-            } catch (_: GetCredentialCancellationException) {
+            } catch (_: SignInException.Cancelled) {
                 // 사용자가 계정 선택을 닫았다 — 안내하지 않는다
-            } catch (_: NoCredentialException) {
+            } catch (_: SignInException.NoAccount) {
                 authMessage = "이 기기에 구글 계정이 없어요. 휴대폰 설정에서 계정을 추가해 주세요."
-            } catch (e: GetCredentialException) {
-                // 콘솔 설정 오류(SHA-1·패키지명·테스트 사용자)는 여기로 온다 — 원인을 화면과 로그에 남긴다
-                android.util.Log.w("TrexAuth", "구글 로그인 실패 type=${e.type}", e)
-                authMessage = "구글 로그인에 실패했어요. ${e.errorMessage ?: e.type}"
+            } catch (e: SignInException.Failed) {
+                // 콘솔 설정 오류(SHA-1·패키지명·테스트 사용자)는 여기로 온다 — 로그는 플랫폼 쪽(GoogleSignIn.kt)이 남긴다
+                authMessage = "구글 로그인에 실패했어요. ${e.reason}"
             } catch (e: ApiException) {
                 authMessage = e.message
-            } catch (_: java.io.IOException) {
+            } catch (_: NetworkException) {
                 authMessage = "서버에 연결하지 못했어요. 잠시 뒤 다시 시도해 주세요."
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
@@ -194,7 +194,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 } else {
                     authMessage = e.message
                 }
-            } catch (_: java.io.IOException) {
+            } catch (_: NetworkException) {
                 authMessage = "서버에 연결하지 못했어요. 잠시 뒤 다시 시도해 주세요."
             } catch (_: org.json.JSONException) {
                 authMessage = "서버 응답을 읽지 못했어요."
@@ -214,7 +214,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
      */
     fun onAppForeground(sessionActive: Boolean) {
         if (sessionActive) return
-        if (System.currentTimeMillis() - sync.lastPullAt < 15_000) return
+        if (nowMillis() - sync.lastPullAt < 15_000) return
         refreshAccountSync()
     }
 
@@ -230,7 +230,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 onDone()
             } catch (e: ApiException) {
                 authMessage = e.message
-            } catch (_: java.io.IOException) {
+            } catch (_: NetworkException) {
                 authMessage = "서버에 연결하지 못해 탈퇴하지 못했어요."
             } finally {
                 authBusy = false
@@ -264,6 +264,17 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         store.themeMode = mode
     }
 
+    // ---- 운동 안내를 본 종목 — 세션 첫 준비에서 한 번만 자동으로 띄운다(§108 에서 TrexApp 에서 옮김, 같은 저장소·키)
+
+    private val guidePrefs = platform.preferences("exercise_guides")
+    var seenGuides by mutableStateOf(guidePrefs.getStringSet("seen_v1", emptySet()).orEmpty().toSet())
+        private set
+
+    fun markGuideSeen(name: String) {
+        seenGuides = seenGuides + name
+        guidePrefs.edit().putStringSet("seen_v1", seenGuides).apply()
+    }
+
     // ---- 사용자 프로필 → 권장 영양 목표
 
     var profile by mutableStateOf(store.loadProfile() ?: UserProfile())
@@ -295,7 +306,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     var workoutHistory by mutableStateOf(store.loadHistory() ?: emptyList())
         private set
 
-    private val muscleStore = MuscleLoadStore(application)
+    private val muscleStore = platform.muscleLoadDatabase()
     private val muscleLock = Mutex()
     private val initialLegacyHistory = workoutHistory.toList()
     var muscleLoad by mutableStateOf(LoadSnapshot())
@@ -310,14 +321,14 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     fun refreshMuscleLoad() {
         val ledger=loadLedger
         viewModelScope.launch {
-            val next=withContext(Dispatchers.Default) { MuscleLoadEngine.snapshot(ledger.sets,System.currentTimeMillis(),ledger.doses) }
+            val next=withContext(Dispatchers.Default) { MuscleLoadEngine.snapshot(ledger.sets,nowMillis(),ledger.doses) }
             if(ledger === loadLedger) muscleLoad=next
         }
     }
 
     fun syncMuscleLoad() {
         val current = workoutHistory.flatMap { it.items }.mapNotNull { it.loadSet }
-        val legacy = legacyLoadSets(initialLegacyHistory, profile, System.currentTimeMillis())
+        val legacy = legacyLoadSets(initialLegacyHistory, profile, nowMillis())
         val corrections = workoutHistory.flatMap { it.items }.mapNotNull { item ->
             item.postureCorrection?.let { pc -> pc.setId?.let { it to pc.actualReps?.toDouble() } }
         }.toMap() + loadCorrections
@@ -325,11 +336,11 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             muscleLock.withLock {
                 muscleLoadLoading = true
                 try {
-                    loadLedger = withContext(Dispatchers.IO) { muscleStore.sync(current, legacy, System.currentTimeMillis(), corrections) }
+                    loadLedger = withContext(Dispatchers.IO) { muscleStore.sync(current, legacy, nowMillis(), corrections) }
                     // 저장과 계산이 모두 끝나야 완료 화면의 로딩을 해제한다.
                     val ledger = loadLedger
                     muscleLoad = withContext(Dispatchers.Default) {
-                        MuscleLoadEngine.snapshot(ledger.sets, System.currentTimeMillis(), ledger.doses)
+                        MuscleLoadEngine.snapshot(ledger.sets, nowMillis(), ledger.doses)
                     }
                     muscleLoadError = null
                 } catch (cancelled: kotlinx.coroutines.CancellationException) {
@@ -341,17 +352,25 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    /** 홈 날씨 카드의 저장소·위치 설정(§108e) — 플랫폼 전송·키-값 저장소 위. 저장소 이름은 weather 브랜치와 같다. */
+    val weather: WeatherServices by lazy {
+        WeatherServices(
+            WeatherRepository(platform.http, platform.preferences("trex_weather_cache_prefs")),
+            WeatherLocationPrefs(platform.preferences("trex_weather_location_prefs")),
+        )
+    }
+
     fun addMuscleRecommendation(name: String) {
         val t = workoutCatalog.values.flatten().firstOrNull { it.name == name } ?: return
-        val w = Workout(java.util.UUID.randomUUID().toString(), t.name, t.reps, t.duration, t.posture, t.category)
+        val w = Workout(newUuid(), t.name, t.reps, t.duration, t.posture, t.category)
         updatePlan(workoutPlan + w)
     }
 
-    var calendarDay by mutableStateOf(LocalDate.now().toEpochDay())
+    var calendarDay by mutableStateOf(todayEpochDay())
         private set
 
     /** 앱 복귀와 날짜 경계에서도 화면의 조회 기간과 저장 기간을 맞춘다. */
-    fun refreshCalendar(today: Long = LocalDate.now().toEpochDay(), resetPlan: Boolean = true) {
+    fun refreshCalendar(today: Long = todayEpochDay(), resetPlan: Boolean = true) {
         calendarDay = today
         val retained = workoutHistory.retainVisibleWorkoutHistory(today)
         if (retained != workoutHistory) { workoutHistory = retained; store.pruneExpiredHistory(today) }
@@ -363,7 +382,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     init {
         // 어제 완료한 계획은 오늘 다시 처음부터 — done 플래그는 하루 단위다
-        val today = LocalDate.now().toEpochDay()
+        val today = todayEpochDay()
         if (store.planDoneEpochDay != today && workoutPlan.any { it.done }) {
             workoutPlan = workoutPlan.map { it.copy(done = false) }
             store.savePlan(workoutPlan)
@@ -392,13 +411,13 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun recordCompletedSession(elapsedSeconds: Int, completedPlan: List<Workout> = workoutPlan.filter { it.done }, elapsedByWorkout: Map<String, Int> = emptyMap(),
-        sessionId: String = java.util.UUID.randomUUID().toString(), endedAt: Map<String, Long> = emptyMap()) {
+        sessionId: String = newUuid(), endedAt: Map<String, Long> = emptyMap()) {
         if (completedPlan.isEmpty()) return
         // 리포트 맵은 여기서 비우지 않는다 — 완료 화면이 같은 맵을 읽고, 다음 startSession 이 비운다
         val record = createWorkoutHistoryDay(completedPlan, elapsedSeconds, sessionPostureReports.toMap(), elapsedByWorkout)
         val items = record.items.mapIndexed { i, item ->
             val w = completedPlan[i]
-            item.copy(loadSet = workoutLoadSet(sessionId, w, endedAt[w.id] ?: System.currentTimeMillis(),
+            item.copy(loadSet = workoutLoadSet(sessionId, w, endedAt[w.id] ?: nowMillis(),
                 elapsedByWorkout[w.id] ?: 0, profile, sessionPostureReports[w.id]))
         }
         workoutHistory = workoutHistory.mergeSession(record.copy(items=items))
@@ -407,7 +426,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     val todayRecord: WorkoutHistoryDay?
-        get() = workoutHistory.firstOrNull { it.epochDay == LocalDate.now().toEpochDay() }
+        get() = workoutHistory.firstOrNull { it.epochDay == todayEpochDay() }
 
     // ---- 이번 세션의 자세 리포트 (spec §30) — workoutId → 세트 리포트
 
@@ -459,17 +478,16 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             ?: ""
         // 라벨의 단위 = 그 세트 화면의 횟수 단위(런지류는 좌우 한 쌍, spec §59). 리포트가 이미 비워졌으면 모름(null — 세트 로그의 reps.unit 이 정본)
         val label = SetSelfLabel(setId = setId, exercise = exercise, actualReps = actualReps, repsSource = repsSource, form = form,
-            createdAtIso = SetLog.nowIso(), repUnit = report?.repUnit?.key)
-        val labelStore = SetLabelStore(getApplication<Application>())
-        // 파일 IO 는 메인 스레드 밖에서 — SetLogStore 저장과 같은 이유
-        Thread { runCatching { labelStore.append(label) } }.start()
+            createdAtIso = isoUtcSeconds(), repUnit = report?.repUnit?.key)
+        // 파일 IO 는 플랫폼이 메인 스레드 밖에서 한다 — SetLogStore 저장과 같은 이유
+        platform.appendSetLabel(label)
     }
 
     /** 오늘 포함 최근 연속 운동일. */
     fun attendanceStreak(): Int {
         val days = workoutHistory.filter { it.items.isNotEmpty() }.map { it.epochDay }.toSet()
         var streak = 0
-        var cursor = LocalDate.now().toEpochDay()
+        var cursor = todayEpochDay()
         if (cursor !in days) cursor -= 1 // 오늘 아직 안 했으면 어제부터 센다
         while (cursor in days) {
             streak += 1
@@ -488,7 +506,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     var waterByDay by mutableStateOf(store.loadWater() ?: emptyMap())
         private set
 
-    private fun epochDayFor(offset: Int): Long = LocalDate.now().toEpochDay() + offset
+    private fun epochDayFor(offset: Int): Long = todayEpochDay() + offset
 
     fun dietFor(offset: Int): Map<String, List<FoodEntry>> =
         dietByDay[calendarDay + offset] ?: emptyDietSlots()
@@ -594,7 +612,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     ) {
         val key = epochDayFor(offset)
         val current = dietByDay[key] ?: emptyDietSlots()
-        val keepFrom = LocalDate.now().toEpochDay() + DIET_MIN_OFFSET
+        val keepFrom = todayEpochDay() + DIET_MIN_OFFSET
         dietByDay = (dietByDay + (key to transform(current)))
             .filterKeys { it >= keepFrom }
         store.saveDiet(dietByDay)

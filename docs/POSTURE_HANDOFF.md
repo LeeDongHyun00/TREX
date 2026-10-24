@@ -1,5 +1,9 @@
 # 자세 평가 — 인수인계 (2026-10-08)
 
+> **iPhone 포팅 2차 — main 병합 + 바닥·시선·발화 정책 이식(2026-10-21, spec §107f, `ios-redesign`)**: `origin/main` `ca7f1fa` 를 병합하고(충돌은 문서 3개) 동기화 목록을 48파일로 늘려 §99~§106 의 바닥 엔진·Face Landmarker 시선·`SpeechQueue`·`StandingFraming`·관절 게이트를 iOS 에 올렸다. `IosEngine` 은 `PostureLive`/`PostureFloorLive`/`CapturePreparationUi`/`SpeechCoach` 배선을 같은 순서로 옮긴 것이고 Swift 는 카메라·중력·TTS·얼굴 크롭·화면만 든다. 포팅 기준 8항은 [IOS_PORT](IOS_PORT.md). 공통 JVM **504/504**(Linux), 세 `--check`, Swift 구문 검사 통과, 코드 `a4a4e5ed` 의 [macOS Actions 12차](https://github.com/LeeDongHyun00/TREX/actions/runs/39558756012) 성공(Xcode 26 빌드·번들 검사·시뮬레이터 XCTest 6건·미서명 IPA). **서명·실기기 실행은 미검증.**
+
+> **iPhone 포팅(2026-10-07, §99~§99e, `ios-redesign`)**: 최신 `redesign` `5213e3c4`를 기준으로 공통 엔진 + SwiftUI `Trex` 앱을 구현해 원격에 푸시했다. 자세·26종 운동·7종 가이드·350종 영양·사진 식단·기록·3D 부하·백업을 연결하고 Android 정본 38파일을 생성/검사한다. 준비/판정은 300ms 칸, 접촉은 85ms다. **Android 557/557·APK, 공통 JVM 376/376, Swift 31파일 정적 검사 통과. macOS Xcode 26.0.1에서도 iPhone arm64 Release 빌드·원본/호환 모델 번들 검사·미서명 IPA 생성과 시뮬레이터 XCTest 4/4 성공**(검증 코드 `e52b15be`). 음식 3모델과 자세 모델의 같은 프로세스 실제 추론까지 통과했다. 음식 런타임 격리, YOLO 외부 가중치 inline 호환과 보존 증빙을 포함한다. **서명·실제 iPhone 실행/운동 정확도는 미검증**이다. [IOS_PORT](IOS_PORT.md)에 IPA 링크·Mac 절차·남은 기기 검증을 기록했다.
+
 > **`main`(서버 동기화·구글 로그인·앱 아이콘) + `redesign` 통합 병합(2026-10-14, 브랜치 `claude/zen-wright-1xj9a4`)**: 분기점 `83075fb`(09-30) 이후 redesign 24커밋·main 17커밋. 규칙은 **양쪽을 모두 살리고 충돌만 영역별로** — 자세·운동 세션·가이드는 redesign, 로그인·동기화·서버·아이콘은 main, 배포(버전 코드 12·release 의 debug 키스토어 서명·앱 내 업데이트)는 redesign 유지. 양쪽이 다 건드린 파일은 5개이고 충돌은 3개였다: `app/build.gradle.kts`(release 블록에 main 의 `buildConfigField`·`manifestPlaceholders` 와 redesign 의 `signingConfig` 를 둘 다), `AndroidManifest.xml`(`INTERNET` 하나 + `REQUEST_INSTALL_PACKAGES`), `README.md`(덩어리별 수동 병합). `TrexApp.kt`·`CLAUDE.md` 는 자동 병합 — `TrexApp.kt` 에 main 의 첫 동기화 대화상자·`onAppForeground` 와 redesign 의 `HoldBridge`·`AppUpdatePrompt`·`SessionOrientation` 이 함께 있다. **병합 뒤 남는 일**: ① release 서명 키 SHA-1 을 구글 콘솔에 등록하지 않으면 체험판 APK 의 구글 로그인이 `28444` 로 실패한다 ② 다음 체험판부터 로그인·동기화가 들어가 앱 내 업데이트로 기존 체험자에게 안내된다 — 개인정보 처리방침·동의(서버 5단계)를 그 전에 할지 결정 필요. 두 항목 모두 `docs/SERVER_SYNC_HANDOFF.md` §7. 자세 엔진 코드는 바뀌지 않았다(main 이 `posture/` 를 건드리지 않음).
 
 > **preview.7 배포 완료(2026-10-10)**: [GitHub 사전 릴리스](https://github.com/LeeDongHyun00/TREX/releases/tag/v1.3.0-preview.7) 공개 완료(`draft=false`, `prerelease=true`). 빌드 소스·태그 커밋 `7d2bb43e`, versionCode 12. APK·SHA256SUMS.txt·BUILD_INFO.json 세 자산의 원격 해시와 크기, 앱이 읽는 릴리스 목록의 최신 항목을 확인했다. APK SHA-256 `a888647fc35451e4e9f2b9ba93c581c6536f41d563e67fd24f36bda2f2b6d440`. 폰 설치·실기기 UI 검증은 하지 않았다. 로컬 배포 증빙 `outputs/android-preview/1.3.0-preview.7/`.
@@ -164,6 +168,8 @@
 엔진은 판정을 잘 하는데 그 판정이 사용자에게 닿는 경로가 사용자를 잘못 이끌고 있었다. 이번 작업은 그 경로를 고쳤다 — 판정을 남기고(§30), 말하는 방식을 정직하게 만들고(§31), 점수가 준비 동작에 오염되던 실기기 오탐을 잡았다(§31a).
 
 ## 2. 브랜치·워킹트리 상태
+
+**iOS 별도 작업(2026-10-07)**: 현재 `ios-redesign`, 시작 `5213e3c4`(redesign preview.6). iOS/KMP 구현·CI 수정·음식 모델 호환 처리를 `origin/ios-redesign`에 푸시했다. 검증 코드 `e52b15be`의 macOS Actions와 IPA 업로드가 성공했고 상세 결과는 `docs/IOS_PORT.md`를 따른다. 이전 운동 가이드 변경은 `preserve exercise guides before iOS redesign port` stash에 보존했다. 다음 세션에서 `git status`로 실제 상태를 확인한다.
 
 | 브랜치 | 커밋 | 원격 |
 |---|---|---|
@@ -349,6 +355,8 @@ WorkoutHistoryItem.postureCorrection → 기록 화면
 ---
 
 ## 6. 다음에 할 일
+
+**iOS 포팅의 다음 단계**: framework/Swift 빌드·XCTest·번들/IPA 검증은 macOS Actions에서 완료했다. 사용자가 자신의 Mac에서 서명하고 iPhone 전후면·중력·정지/복귀·네 종목 짝/기각/접촉·음식 방향·3D를 확인한다. 자동 실행 검사와 실제 운동/사진 정확도 검증을 구분한다. 절차와 검증 범위는 `docs/IOS_PORT.md`.
 
 0. **`gradlew` 실행비트를 커밋할지 결정** (안 하면 새 클론에서 빌드 실패)
 1. **§31a 후속 수정을 실기기로 재검증** — 새 캡처가 있어야 `anchor_t_ms` 로 앵커 시점을 확인할 수 있다. 손에 있는 로그로는 불가능하다.

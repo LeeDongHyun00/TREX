@@ -146,8 +146,8 @@ internal fun SkeletonStage(
         anim[2] = now
         val fresh = anim[0] == 0L || gap > 900L   // 첫 샘플·오래 끊긴 뒤는 바로 놓는다
         anim[0] = now; anim[1] = gap.coerceIn(80L, 400L)
-        System.arraycopy(display, 0, from, 0, from.size)
-        if (fresh) { System.arraycopy(target, 0, display, 0, display.size); frameTick = now; return@LaunchedEffect }
+        display.copyInto(from, 0, 0, from.size)
+        if (fresh) { target.copyInto(display, 0, 0, display.size); frameTick = now; return@LaunchedEffect }
         // 유령 다리는 보간하지 않는다 — 가설이 뒤집히는 발목을 선형으로 옮기면 '쓸고 지나가는 다리' 가 된다(10-08 사이드 런지)
         for (s in 0..1) if (now < ghostUntil[s]) for (i in GHOST_LEG[s]) { from[i * 2] = target[i * 2]; from[i * 2 + 1] = target[i * 2 + 1] }
         while (true) {
@@ -346,12 +346,12 @@ private fun DrawScope.drawRotateArrow(center: Offset, r: Float, headAtRight: Boo
     drawArc(color, 200f, 140f, useCenter = false, topLeft = Offset(center.x - r, center.y - r), size = Size(2 * r, 2 * r),
         style = Stroke(width, cap = StrokeCap.Round))
     val endDeg = if (headAtRight) 340f else 200f
-    val rad = Math.toRadians(endDeg.toDouble()).toFloat()
+    val rad = (endDeg.toDouble() / 180.0 * kotlin.math.PI).toFloat()
     val tip = Offset(center.x + cos(rad) * r, center.y + sin(rad) * r)
     // 접선 방향(호를 따라 진행하는 쪽)
-    val tangent = if (headAtRight) rad + (Math.PI / 2).toFloat() else rad - (Math.PI / 2).toFloat()
+    val tangent = if (headAtRight) rad + (kotlin.math.PI / 2).toFloat() else rad - (kotlin.math.PI / 2).toFloat()
     for (s in floatArrayOf(-1f, 1f)) {
-        val a = tangent + Math.PI.toFloat() + s * 0.6f
+        val a = tangent + kotlin.math.PI.toFloat() + s * 0.6f
         drawLine(color, tip, Offset(tip.x + cos(a) * head, tip.y + sin(a) * head), width, StrokeCap.Round)
     }
 }

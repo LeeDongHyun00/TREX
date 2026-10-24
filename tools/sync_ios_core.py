@@ -1,0 +1,102 @@
+"""Android 정본의 플랫폼 독립 로직을 iOS 공통 모듈로 동기화한다. --check는 변경 누락을 검사한다."""
+import argparse, hashlib, json, re
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+SOURCE = ROOT / 'app/src/main/java/com/example/trex_kotlin/posture'
+TARGET = ROOT / 'posture-core/src/commonMain/kotlin/com/example/trex_kotlin/posture'
+NAMES = '''Arm2d Breathing CameraPlacement CapturePreparation ContactMinimum DinoCopy ExerciseProfiles FloorFeedback FloorTemporal FormMotion LegCycle Lunge2d LungeSides NormalPoseReference PlankAlignment PostureAssessment PostureComparison PostureCore PostureFloor PostureFloorCoverage PostureScope PostureSetReport PostureView PostureViewGuide RepCounter RepForm RepFormPriorTable RepFormRules RepHysteresis RepUnit ReturnRepTracker RuleHighlight RuleTypes Stance2d PostureRules PostureBaseline PostureCoach PostureMode FloorChain FloorCycle FloorGaze FloorLive PlankGeometry PlankHold PostureTrial PreparationVoice SpeechQueue StandingFraming PoseLandmarks RepEngineLog InferencePolicy'''.split()
+
+def portable(name, text):
+    text = re.sub(r'^import (android\..*|java\..*|org.json.JSONObject)\n', '', text, flags=re.M)
+    if name == 'PostureRules':
+        # Android 의 load(context) 한 줄은 자산을 읽어 loadText 에 넘길 뿐이다 — 공통 모듈에는 loadText 만 남긴다
+        old = 'fun load(context: Context, assetPath: String = ASSET_PATH): PostureRuleSet =\n            loadText(context.assets.open(assetPath).bufferedReader().use { it.readText() })\n\n        '
+        assert old in text
+        text = text.replace(old, '')
+    if name == 'PostureBaseline':
+        text = text[:text.index('class BaselineStore(')]
+        text = text.replace('SetLog.nowIso()', '""')
+    if name == 'PostureMode':   # 저장소는 공유 ModeStore.kt(ios-ui) — Android 팩토리와 그 import 를 뗀다
+        text = text[:text.index('/** 종목별 모드 저장 — Android SharedPreferences')].replace('import com.example.trex_kotlin.SharedPreferencesStore\n', '')
+    if name == 'PostureCore':
+        # 피처 맵은 null이 없는 Float 값이다. JVM Map 기본 메서드를 공통 API로 치환한다.
+        text, count = re.subn(r'(?m)^(\s*)f\.putIfAbsent\((".*?"), (.+)\)$', r'\1f.getOrPut(\2) { \3 }', text)
+        assert count == 5, 'PostureCore의 플랫폼 전용 맵 호출 수를 확인하세요.'
+    text = text.replace('String.format(java.util.Locale.US, ', 'PortableFormat.format(')
+    text = text.replace('String.format(Locale.US, ', 'PortableFormat.format(')
+    text = text.replace('String.format(', 'PortableFormat.format(')
+    # iOS 호출자는 직렬 큐 한 곳에서만 접근한다. JVM 모니터를 공통 코드로 옮기지 않는다.
+    text = re.sub(r'@(?:Synchronized|Volatile)\s*', '', text)
+    assert not re.search(r'^import (android|java|org.json)|System\.|@Synchronized|@Volatile', text, re.M), name
+    return '// tools/sync_ios_core.py 생성본 — Android 정본에서 수정한 뒤 동기화하세요.\n' + text.rstrip() + '\n'
+
+def main():
+    check = argparse.ArgumentParser(); check.add_argument('--check', action='store_true'); args = check.parse_args()
+    manifest = {}; mismatches = []
+    TARGET.mkdir(parents=True, exist_ok=True)
+    for name in NAMES:
+        src = SOURCE / (name + '.kt'); original = src.read_text(encoding='utf-8'); output = portable(name, original)
+        target = TARGET / src.name
+        if args.check:
+            if not target.exists() or target.read_text(encoding='utf-8') != output: mismatches.append(name)
+        else: target.write_text(output, encoding='utf-8', newline='\n')
+        # Git 정본의 LF 기준. Windows autocrlf로 체크아웃한 바이트를 Mac과 혼동하지 않는다.
+        manifest[name] = hashlib.sha256(original.encode('utf-8')).hexdigest()
+    mp = ROOT / 'posture-core/source-manifest.json'; expected = json.dumps(manifest, indent=2) + '\n'
+    orientation = (SOURCE/'PostureOrientation.kt').read_text(encoding='utf-8')
+    orientation = re.sub(r'^import android\..*\n', '', orientation, flags=re.M)
+    orientation = orientation[:orientation.index('class GravityTracker(')].replace('Surface.', 'SurfaceRotations.')
+    orientation += '\ninternal object SurfaceRotations { const val ROTATION_0=0; const val ROTATION_90=1; const val ROTATION_180=2; const val ROTATION_270=3 }\n'
+    # 자가 라벨 값과 줄 형식(§108) — 앱 상태(AppViewModel)가 라벨을 만들고, 두 플랫폼이 같은 SetLabelFormat 으로 줄을 쓴다.
+    # 파일 쓰기(SetLabelStore)는 플랫폼마다 따로다. 값·형식만 잘라 온다.
+    label = (SOURCE/'PostureSetLabel.kt').read_text(encoding='utf-8')
+    label = label[label.index('data class SetSelfLabel('):label.index('class SetLabelStore(')]
+    assert 'android' not in label and 'File' not in label and 'object SetLabelFormat' in label, 'PostureSetLabel 의 SetSelfLabel·SetLabelFormat 형태를 확인하세요.'
+    label = 'package com.example.trex_kotlin.posture\n\n// PostureSetLabel 의 SetSelfLabel·SetLabelFormat 정본 슬라이스(§108).\n' + label.rstrip() + '\n'
+    # 추론 이후 처리(PoseSample·피처·얼굴 기하)는 PoseLandmarks.kt 통째로 NAMES 에 있다(§108c) — 예전 FaceYaw 슬라이스는 없앴다.
+    # RepEngineLog 는 이제 자기 파일(posture/RepEngineLog.kt)이라 NAMES 로 통째로 옮긴다(§108c — PostureSetLog.kt 는 형식만 남아 ios-ui 가 컴파일한다).
+    for name, output in [('PortableOrientation.kt', orientation), ('SetSelfLabel.kt', label)]:
+        target = TARGET/name
+        if args.check:
+            if not target.exists() or target.read_text(encoding='utf-8') != output: mismatches.append(name)
+        else: target.write_text(output,encoding='utf-8',newline='\n')
+    # FoodResults = 인식 결과 타입(DetectedFood·FoodDetectionResult) — 예전 손 사본 FoodDto.kt 를 대신한다(§108d)
+    for package, name in [('trainingload', 'MuscleLoad'), ('food', 'FoodRegions'), ('food', 'FoodMemory'), ('food', 'FoodResults'), ('', 'SkeletonGate')]:
+        src = ROOT / 'app/src/main/java/com/example/trex_kotlin' / package / (name + '.kt')
+        target = TARGET.parent / package / src.name
+        output = '// Android 정본 동기화 — tools/sync_ios_core.py\n' + src.read_text(encoding='utf-8')
+        if name == 'SkeletonGate': output = output.replace('internal class JointGate', 'class JointGate')   # Swift 가 쓴다
+        if name == 'FoodMemory':
+            output = re.sub(r'^import java\..*\n', '', output, flags=re.M)
+            output = output.replace('class FoodMemory(', '@OptIn(kotlin.io.encoding.ExperimentalEncodingApi::class)\nclass FoodMemory(')
+            output = output.replace('val buf = ByteBuffer.allocate(e.vector.size * 4).order(ByteOrder.LITTLE_ENDIAN)\n        e.vector.forEach { buf.putFloat(it) }', 'val bytes = ByteArray(e.vector.size * 4)\n        e.vector.forEachIndexed { i, f -> val bits = f.toBits(); for (b in 0..3) bytes[i*4+b] = (bits ushr (8*b)).toByte() }')
+            output = output.replace('Base64.getEncoder().encodeToString(buf.array())', 'kotlin.io.encoding.Base64.encode(bytes)')
+            output = output.replace('Base64.getDecoder().decode(parts[2])', 'kotlin.io.encoding.Base64.decode(parts[2])')
+            output = output.replace('val buf = ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN)\n                val v = FloatArray(bytes.size / 4) { buf.getFloat() }', 'val v = FloatArray(bytes.size / 4) { i -> Float.fromBits((0..3).fold(0) { bits, b -> bits or ((bytes[i*4+b].toInt() and 255) shl (8*b)) }) }')
+            assert 'ByteBuffer' not in output and 'java.' not in output
+        if args.check:
+            if not target.exists() or target.read_text(encoding='utf-8') != output: mismatches.append(name)
+        else:
+            target.parent.mkdir(parents=True, exist_ok=True); target.write_text(output, encoding='utf-8', newline='\n')
+    tests = ROOT / 'app/src/test/java/com/example/trex_kotlin/posture'
+    target_tests = ROOT / 'posture-core/src/jvmTest/kotlin/com/example/trex_kotlin/posture'
+    excluded = {'SetLabelStoreTest', 'PostureSetLogTest', 'SpeechCoachTest', 'PostureOrientationTest', 'PersonalizationTest', 'PostureBaselineTest', 'FloorWiringTest'}   # FloorWiringTest 는 Android SetLog 직렬화에 묶여 있다
+    # 앱 패키지의 순수 테스트도 같이 돈다(관절 게이트 §101c)
+    extra_tests = [ROOT / 'app/src/test/java/com/example/trex_kotlin/SkeletonGateTest.kt']
+    for src in list(tests.glob('*Test.kt')) + extra_tests:
+        if src.stem in excluded: continue
+        output = '// Android 정본 테스트 — tools/sync_ios_core.py\n' + src.read_text(encoding='utf-8')
+        output = output.replace('android.view.Surface.', 'SurfaceRotations.')
+        target = (target_tests if src.parent == tests else target_tests.parent) / src.name
+        if args.check:
+            if not target.exists() or target.read_text(encoding='utf-8') != output: mismatches.append(src.stem)
+        else:
+            target_tests.mkdir(parents=True, exist_ok=True); target.write_text(output, encoding='utf-8', newline='\n')
+    if args.check:
+        if not mp.exists() or mp.read_text() != expected: mismatches.append('source-manifest')
+        if mismatches: raise SystemExit('동기화 필요: ' + ', '.join(mismatches))
+    else: mp.write_text(expected)
+    print(f'{len(NAMES)}개 엔진 정본 동기화 ' + ('검사 통과' if args.check else '완료'))
+
+if __name__ == '__main__': main()

@@ -32,6 +32,64 @@ data class SetSelfLabel(
     val repUnit: String? = null,
 )
 
+/**
+ * 라벨 두 줄의 형식(§108) — Android([SetLabelStore])와 iPhone 이 같은 줄을 쓰도록 형식만 따로 둔다(엔진 동기화가 이 부분을 잘라 간다).
+ * JSON 문자열 이스케이프는 세트 로그(SetLogJson.str)와 같은 규칙이다 — org.json 과 달리 '/' 를 이스케이프하지 않는다.
+ */
+object SetLabelFormat {
+    const val LABELS_DIR = "labels"
+    const val LABELS_FILE = "set_labels.jsonl"
+    const val TRUTH_FILE = "rep_truth.csv"
+    const val TRUTH_HEADER = "set_id,reps_min,reps_max,exercise,form,source,created_at"
+
+    fun encodeJson(label: SetSelfLabel): String {
+        val sb = StringBuilder(192)
+        sb.append('{')
+        sb.append("\"set_id\":"); str(sb, label.setId); sb.append(',')
+        sb.append("\"exercise\":"); str(sb, label.exercise); sb.append(',')
+        sb.append("\"actual_reps\":").append(label.actualReps?.toString() ?: "null").append(',')
+        sb.append("\"reps_source\":")
+        if (label.repsSource == null) sb.append("null") else str(sb, label.repsSource)
+        sb.append(',')
+        sb.append("\"form\":")
+        if (label.form == null) sb.append("null") else str(sb, label.form.key)
+        sb.append(',')
+        sb.append("\"created_at\":"); str(sb, label.createdAtIso)
+        // 표시 단위는 알 때만 — 없으면 키 부재(이전 형식 그대로)
+        if (label.repUnit != null) { sb.append(",\"rep_unit\":"); str(sb, label.repUnit) }
+        sb.append('}')
+        return sb.toString()
+    }
+
+    /** rep_truth.csv 의 한 줄. 렙이 없으면 null — research/aihub_fitness/rep_replay.py 가 int() 로 읽으므로 그 행은 넣지 않는다. */
+    fun truthRow(label: SetSelfLabel): String? {
+        val reps = label.actualReps ?: return null
+        return listOf(
+            label.setId, reps.toString(), reps.toString(), label.exercise,
+            label.form?.key ?: "", label.repsSource ?: "", label.createdAtIso,
+        ).joinToString(",") { csv(it) }
+    }
+
+    /** RFC 4180: 콤마·따옴표·줄바꿈이 있으면 따옴표로 감싸고 내부 따옴표는 두 번. */
+    fun csv(v: String): String =
+        if (v.any { it == ',' || it == '"' || it == '\n' || it == '\r' }) "\"" + v.replace("\"", "\"\"") + "\"" else v
+
+    private fun str(sb: StringBuilder, s: String) {
+        sb.append('"')
+        for (ch in s) {
+            when (ch) {
+                '"' -> sb.append("\\\"")
+                '\\' -> sb.append("\\\\")
+                '\n' -> sb.append("\\n")
+                '\r' -> sb.append("\\r")
+                '\t' -> sb.append("\\t")
+                else -> if (ch < ' ') sb.append("\\u").append(ch.code.toString(16).padStart(4, '0')) else sb.append(ch)
+            }
+        }
+        sb.append('"')
+    }
+}
+
 class SetLabelStore(private val dir: File) {
 
     constructor(context: Context) : this(File(context.getExternalFilesDir(null) ?: context.filesDir, "posture_logs"))
@@ -44,16 +102,12 @@ class SetLabelStore(private val dir: File) {
     fun append(label: SetSelfLabel) {
         synchronized(LOCK) {
             labelsFile.parentFile?.mkdirs()
-            labelsFile.appendText(encodeJson(label) + "\n", Charsets.UTF_8)
-            val reps = label.actualReps ?: return
+            labelsFile.appendText(SetLabelFormat.encodeJson(label) + "\n", Charsets.UTF_8)
+            val row = SetLabelFormat.truthRow(label) ?: return
             val truth = truthFile
             // 헤더는 파일이 없거나 비어 있을 때만 — 중간에 헤더가 또 들어가면 csv.DictReader 가 데이터 행으로 읽는다
             if (!truth.exists() || truth.length() == 0L) truth.appendText(TRUTH_HEADER + "\n", Charsets.UTF_8)
-            val row = listOf(
-                label.setId, reps.toString(), reps.toString(), label.exercise,
-                label.form?.key ?: "", label.repsSource ?: "", label.createdAtIso,
-            )
-            truth.appendText(row.joinToString(",") { csv(it) } + "\n", Charsets.UTF_8)
+            truth.appendText(row + "\n", Charsets.UTF_8)
         }
     }
 
@@ -65,33 +119,13 @@ class SetLabelStore(private val dir: File) {
     }
 
     companion object {
-        const val LABELS_DIR = "labels"
-        const val LABELS_FILE = "set_labels.jsonl"
-        const val TRUTH_FILE = "rep_truth.csv"
-        const val TRUTH_HEADER = "set_id,reps_min,reps_max,exercise,form,source,created_at"
+        const val LABELS_DIR = SetLabelFormat.LABELS_DIR
+        const val LABELS_FILE = SetLabelFormat.LABELS_FILE
+        const val TRUTH_FILE = SetLabelFormat.TRUTH_FILE
+        const val TRUTH_HEADER = SetLabelFormat.TRUTH_HEADER
         private val LOCK = Any()
 
-        internal fun encodeJson(label: SetSelfLabel): String {
-            val sb = StringBuilder(192)
-            sb.append('{')
-            sb.append("\"set_id\":"); SetLogJson.str(sb, label.setId); sb.append(',')
-            sb.append("\"exercise\":"); SetLogJson.str(sb, label.exercise); sb.append(',')
-            sb.append("\"actual_reps\":").append(label.actualReps?.toString() ?: "null").append(',')
-            sb.append("\"reps_source\":")
-            if (label.repsSource == null) sb.append("null") else SetLogJson.str(sb, label.repsSource)
-            sb.append(',')
-            sb.append("\"form\":")
-            if (label.form == null) sb.append("null") else SetLogJson.str(sb, label.form.key)
-            sb.append(',')
-            sb.append("\"created_at\":"); SetLogJson.str(sb, label.createdAtIso)
-            // 표시 단위는 알 때만 — 없으면 키 부재(이전 형식 그대로)
-            if (label.repUnit != null) { sb.append(",\"rep_unit\":"); SetLogJson.str(sb, label.repUnit) }
-            sb.append('}')
-            return sb.toString()
-        }
-
-        /** RFC 4180: 콤마·따옴표·줄바꿈이 있으면 따옴표로 감싸고 내부 따옴표는 두 번. */
-        internal fun csv(v: String): String =
-            if (v.any { it == ',' || it == '"' || it == '\n' || it == '\r' }) "\"" + v.replace("\"", "\"\"") + "\"" else v
+        internal fun encodeJson(label: SetSelfLabel): String = SetLabelFormat.encodeJson(label)
+        internal fun csv(v: String): String = SetLabelFormat.csv(v)
     }
 }

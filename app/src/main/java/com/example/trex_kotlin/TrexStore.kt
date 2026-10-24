@@ -1,7 +1,5 @@
 package com.example.trex_kotlin
 
-import android.content.Context
-import android.content.SharedPreferences
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -11,11 +9,11 @@ import org.json.JSONObject
  * 기존에는 모든 서비스 데이터가 컴포저블 `remember` 에만 있어서 탭 전환/화면 회전/앱 재시작에
  * 기록이 통째로 사라졌다. SharedPreferences + JSON 으로 단순하게 저장하고, 서버가 붙으면
  * 이 클래스만 원격 동기화 구현으로 교체한다.
+ *
+ * 저장소는 [KeyValueStore] 경계로 받는다(§108) — Android 는 SharedPreferences `trex_store` 그대로이고
+ * (`TrexStore(context)` 는 AndroidPlatform.kt 의 생성 함수), iPhone 은 같은 키·같은 JSON 을 NSUserDefaults 에 쓴다.
  */
-class TrexStore(context: Context, preferenceName: String = "trex_store") {
-
-    private val prefs: SharedPreferences =
-        context.applicationContext.getSharedPreferences(preferenceName, Context.MODE_PRIVATE)
+class TrexStore(private val prefs: KeyValueStore) {
 
     init { removeLegacyDemoData() }
 
@@ -442,15 +440,8 @@ class TrexStore(context: Context, preferenceName: String = "trex_store") {
         edit.commit()
     }
 
-    // SharedPreferences 는 리스너를 약하게 잡는다 — 필드로 붙들어 둔다.
-    private var changeListener: SharedPreferences.OnSharedPreferenceChangeListener? = null
-
     /** 항목이 바뀔 때마다 그 키로 [onChange] 를 부른다(메인 스레드). */
-    fun setChangeListener(onChange: (String) -> Unit) {
-        changeListener?.let(prefs::unregisterOnSharedPreferenceChangeListener)
-        changeListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key -> key?.let(onChange) }
-            .also(prefs::registerOnSharedPreferenceChangeListener)
-    }
+    fun setChangeListener(onChange: (String) -> Unit) = prefs.setChangeListener(onChange)
 
     private companion object {
         const val KEY_THEME = "theme_mode"
