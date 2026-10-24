@@ -19,6 +19,7 @@ class ExampleInstrumentedTest {
     fun useAppContext() {
         // Context of the app under test.
         val appContext = InstrumentationRegistry.getInstrumentation().targetContext
-        assertEquals("com.example.trex_kotlin", appContext.packageName)
+        // 계측 테스트는 -PpostureReplay 의 분리된 앱(.replay)에서 돈다 — 접미사를 떼고 본다
+        assertEquals("com.example.trex_kotlin", appContext.packageName.removeSuffix(".replay"))
     }
 }
