@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -16,6 +17,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AcUnit
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.Cloud
 import androidx.compose.material.icons.rounded.CloudOff
 import androidx.compose.material.icons.rounded.Dehaze
@@ -32,6 +34,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -47,7 +50,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -56,6 +62,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.example.trex_kotlin.Trex
+import com.example.trex_kotlin.nowMillis
 import com.example.trex_kotlin.TrexText as Text
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -72,12 +79,20 @@ private object WeatherUiStateCache {
 private const val WEATHER_LOAD_ERROR_MESSAGE = "날씨를 불러오지 못했어룡"
 
 /**
- * 홈 날짜 아래의 날씨 한 줄(§108f, 사용자 요청 "기온, 날씨, 강수량만") — 하늘색 아이콘·기온·날씨·강수량. 누르면 날씨 기준 지역(또는 현재 위치)을 고른다.
+ * 홈 날짜 아래의 날씨 한 줄(§108f, 사용자 요청 "기온, 날씨, 강수량만") — 하늘색 아이콘·기온·날씨·강수량. 누르면 날씨 시트가 열린다.
  * 불러오기·캐시·화면 복귀 시 갱신·지역 바꾸기 규칙은 weather 브랜치 카드와 같다([WeatherRepository]·[resolveWeatherPlace]).
- * 판정([WeatherExerciseRecommender])은 아이콘 바탕의 하늘색(날씨·낮밤)을 고르는 데만 쓴다 — 추천 운동 목록은 홈에서 뺐다.
+ * 판정([WeatherExerciseRecommender])은 아이콘 바탕의 하늘색(날씨·낮밤)을 고른다. 추천 운동 목록은 홈 한 화면을 지키려고 줄에서 빼고
+ * **시트 위쪽**에 둔다(날씨 시트 — 추천·지역·출처, 스펙 '날씨 기반 운동 추천 판정 기준'의 화면 절).
+ * [isInPlan]·[onAddExercise] 는 추천 운동을 운동 목록에 넣는 길이다 — 근육 부하 화면 추천과 같은 규칙(오늘 안 한 같은 이름이 있으면 '목록에 있음').
+ * [onAddExercise] 가 null 이면 추천은 보이기만 한다.
  */
 @Composable
-fun WeatherSummaryRow(services: WeatherServices, modifier: Modifier = Modifier) {
+fun WeatherSummaryRow(
+    services: WeatherServices,
+    modifier: Modifier = Modifier,
+    isInPlan: (String) -> Boolean = { false },
+    onAddExercise: ((String) -> Unit)? = null,
+) {
     val c = Trex.c
     val prefs = services.locationPrefs
     val repository = services.repository
@@ -101,7 +116,7 @@ fun WeatherSummaryRow(services: WeatherServices, modifier: Modifier = Modifier) 
     var errorMessage by remember { mutableStateOf(WeatherUiStateCache.lastError) }
     // 잠깐 보이는 안내(브랜치의 Toast 자리 — 두 플랫폼이 같은 화면으로)
     var notice by remember { mutableStateOf<String?>(null) }
-    var showRegionSheet by remember { mutableStateOf(false) }
+    var showWeatherSheet by remember { mutableStateOf(false) }
     var loadJob by remember { mutableStateOf<Job?>(null) }
 
     /**
@@ -114,6 +129,8 @@ fun WeatherSummaryRow(services: WeatherServices, modifier: Modifier = Modifier) 
         if (locationChanged) {
             recommendation = null
             WeatherUiStateCache.lastRecommendation = null
+            // 시트는 추천이 있을 때만 그린다 — 열린 표시를 남겨 두면 다음 날씨가 오는 순간 저절로 다시 열린다
+            showWeatherSheet = false
         }
         loadJob = coroutineScope.launch {
             errorMessage = null
@@ -170,8 +187,8 @@ fun WeatherSummaryRow(services: WeatherServices, modifier: Modifier = Modifier) 
         Row(
             Modifier.heightIn(min = 34.dp).clip(RoundedCornerShape(12.dp))
                 .clickable(enabled = rec != null || errorMessage != null, role = Role.Button,
-                    onClickLabel = if (rec != null) "날씨 기준 지역 바꾸기" else "다시 시도") {
-                    if (rec != null) showRegionSheet = true else loadWeather(forceRefresh = true)
+                    onClickLabel = if (rec != null) "날씨 운동 추천과 기준 지역 보기" else "다시 시도") {
+                    if (rec != null) showWeatherSheet = true else loadWeather(forceRefresh = true)
                 }
                 .padding(vertical = 4.dp, horizontal = 2.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -185,12 +202,16 @@ fun WeatherSummaryRow(services: WeatherServices, modifier: Modifier = Modifier) 
                     ) { Icon(weatherIcon(w.weatherCode, w.isDay), contentDescription = null, tint = Color.White, modifier = Modifier.size(15.dp)) }
                     Text("${w.temperature.roundToInt()}°", color = c.text, fontSize = 17.sp, fontWeight = FontWeight.SemiBold,
                         modifier = Modifier.padding(start = 9.dp))
+                    // 좁은 화면·큰 글씨에서는 날씨 이름이 먼저 줄어든다(weight) — 강수량과 › 가 밀려나지 않게
                     Text(WeatherExerciseRecommender.getWeatherDescription(w.weatherCode), color = c.text2, fontSize = 14.sp,
-                        maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 7.dp))
+                        maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false).padding(start = 7.dp))
                     Text("·", color = c.text3, fontSize = 14.sp, modifier = Modifier.padding(horizontal = 7.dp))
                     Icon(Icons.Rounded.WaterDrop, contentDescription = null, tint = RAIN_BLUE, modifier = Modifier.size(13.dp))
                     Text("강수량 ${oneDecimal(w.precipitation)}mm", color = c.text2, fontSize = 14.sp, maxLines = 1,
-                        modifier = Modifier.padding(start = 3.dp))
+                        overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 3.dp))
+                    // 누르면 추천이 열린다는 표시 — 줄 모양(한 줄)은 그대로
+                    Icon(Icons.Rounded.ChevronRight, contentDescription = null, tint = c.text3,
+                        modifier = Modifier.padding(start = 2.dp).size(18.dp))
                 }
                 errorMessage != null -> {
                     Icon(Icons.Rounded.CloudOff, contentDescription = null, tint = c.text3, modifier = Modifier.size(16.dp))
@@ -206,33 +227,107 @@ fun WeatherSummaryRow(services: WeatherServices, modifier: Modifier = Modifier) 
         notice?.let { Text(it, color = c.text2, fontSize = 12.sp, modifier = Modifier.padding(start = 2.dp, top = 2.dp)) }
     }
 
-    if (showRegionSheet) RegionSheet(
+    if (showWeatherSheet && rec != null) WeatherSheet(
+        recommendation = rec,
         gps = prefs.isGpsModeEnabled(),
         selected = prefs.getSavedRegion(),
-        onCurrentLocation = { showRegionSheet = false; useCurrentLocation() },
+        isInPlan = isInPlan,
+        onAddExercise = onAddExercise,
+        onCurrentLocation = { showWeatherSheet = false; useCurrentLocation() },
         onRegion = { region ->
             prefs.saveSelectedRegion(region)
-            showRegionSheet = false
+            showWeatherSheet = false
             loadWeather(forceRefresh = true, locationChanged = true)
         },
-        onDismiss = { showRegionSheet = false },
+        onDismiss = { showWeatherSheet = false },
     )
 }
 
-/** 지역 고르기 — 현재 위치(GPS) 또는 13개 지역, 고른 것에 체크. */
+/**
+ * 날씨 시트 — 위에서부터 오늘의 날씨 운동 추천(판정 [WeatherExerciseRecommender], weather 브랜치 카드의 내용),
+ * 출처(Open-Meteo, CC BY 4.0 — 홈 한 줄에는 자리가 없어 시트를 열면 바로 보이는 추천 아래에 단다, 누르면 Open-Meteo 사이트)와 받은 지 얼마나 됐는지,
+ * 날씨 기준 지역(현재 위치 또는 13개 지역, 고른 것에 체크).
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun RegionSheet(gps: Boolean, selected: KoreanRegion, onCurrentLocation: () -> Unit, onRegion: (KoreanRegion) -> Unit, onDismiss: () -> Unit) {
+private fun WeatherSheet(
+    recommendation: WeatherWorkoutRecommendation,
+    gps: Boolean,
+    selected: KoreanRegion,
+    isInPlan: (String) -> Boolean,
+    onAddExercise: ((String) -> Unit)?,
+    onCurrentLocation: () -> Unit,
+    onRegion: (KoreanRegion) -> Unit,
+    onDismiss: () -> Unit,
+) {
     val c = Trex.c
+    val uri = LocalUriHandler.current
+    // 추천을 만든 순간의 글이 아니라 지금 기준 — 새로 받기에 실패해 남은 묵은 날씨를 '방금' 이라 하지 않는다
+    val age = WeatherExerciseRecommender.updateAgeText(recommendation.weather.fetchedAtMillis, nowMillis())
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = c.sheet, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
-        Text("날씨 기준 지역", color = c.text, fontSize = 22.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(horizontal = 24.dp))
-        LazyColumn(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 16.dp)) {
+        LazyColumn(Modifier.fillMaxWidth().padding(bottom = 16.dp)) {
+            item { RecommendationHeader(recommendation) }
+            items(recommendation.exercises) { exercise ->
+                RecommendedExerciseRow(exercise, inPlan = isInPlan(exercise.catalogName), onAdd = onAddExercise)
+            }
             item {
+                Text("날씨 정보: Open-Meteo.com (CC BY 4.0) · $age", color = c.text3, fontSize = 12.sp,
+                    modifier = Modifier.fillMaxWidth()
+                        .clickable(role = Role.Button, onClickLabel = "Open-Meteo 사이트 열기") { uri.openUri("https://open-meteo.com/") }
+                        .padding(horizontal = 24.dp, vertical = 8.dp))
+                HorizontalDivider(color = c.line, modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 4.dp))
+                Text("날씨 기준 지역", color = c.text, fontSize = 18.sp, fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 18.dp, bottom = 4.dp))
                 RegionRow("현재 위치", "GPS로 지금 있는 곳의 날씨", Icons.Rounded.NearMe, checked = gps, onClick = onCurrentLocation)
                 HorizontalDivider(color = c.line, modifier = Modifier.padding(horizontal = 24.dp))
             }
             items(KoreanRegion.entries) { region ->
                 RegionRow(region.displayName, null, Icons.Rounded.LocationOn, checked = !gps && region == selected) { onRegion(region) }
+            }
+        }
+    }
+}
+
+/** 시트 맨 위 — 하늘색 아이콘·추천 제목(날씨 테마·실내/실외)·지역과 기온·추천 문장. */
+@Composable
+private fun RecommendationHeader(rec: WeatherWorkoutRecommendation) {
+    val c = Trex.c
+    Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                Modifier.size(40.dp).clip(CircleShape).background(Brush.linearGradient(skyColors(rec.theme, rec.weather.isDay))),
+                contentAlignment = Alignment.Center,
+            ) { Icon(weatherIcon(rec.weather.weatherCode, rec.weather.isDay), contentDescription = null, tint = Color.White, modifier = Modifier.size(22.dp)) }
+            Column(Modifier.weight(1f).padding(start = 14.dp)) {
+                Text(rec.theme.titleKorean, color = c.text, fontSize = 20.sp, fontWeight = FontWeight.SemiBold,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text("${rec.weatherSummary} · ${rec.environment.labelKorean}", color = c.text2, fontSize = 13.sp,
+                    maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 2.dp))
+            }
+        }
+        Text(rec.message, color = c.text2, fontSize = 14.sp, lineHeight = 20.sp, modifier = Modifier.padding(top = 12.dp, bottom = 6.dp))
+    }
+}
+
+/** 추천 운동 한 줄 — 이름·이유, 오른쪽에 '목록에 추가'(이미 있으면 '목록에 있음', 누를 수 없음). */
+@Composable
+private fun RecommendedExerciseRow(exercise: RecommendedExercise, inPlan: Boolean, onAdd: ((String) -> Unit)?) {
+    val c = Trex.c
+    Row(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            Text(exercise.title, color = c.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+            Text(exercise.description, color = c.text2, fontSize = 12.sp, lineHeight = 16.sp, modifier = Modifier.padding(top = 2.dp))
+        }
+        if (onAdd != null) {
+            OutlinedButton(
+                onClick = { onAdd(exercise.catalogName) },
+                enabled = !inPlan,
+                contentPadding = PaddingValues(horizontal = 12.dp),
+                // 화면 낭독기가 세 버튼을 가를 수 있게 운동 이름을 붙인다
+                modifier = Modifier.padding(start = 12.dp).heightIn(min = 36.dp)
+                    .semantics { contentDescription = exercise.title + if (inPlan) " 운동 목록에 있음" else " 운동 목록에 추가" },
+            ) {
+                Text(if (inPlan) "목록에 있음" else "목록에 추가", color = if (inPlan) c.text2 else c.primaryText, fontSize = 13.sp, maxLines = 1)
             }
         }
     }

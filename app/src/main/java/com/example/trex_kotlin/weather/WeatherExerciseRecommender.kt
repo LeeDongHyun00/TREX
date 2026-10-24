@@ -42,12 +42,7 @@ object WeatherExerciseRecommender {
         val weatherText = getWeatherDescription(weather.weatherCode)
         val summary = locationLabel + " · " + weatherText + " · " + roundedTemp + "°C"
 
-        val minutesAgo = ((nowMillis - weather.fetchedAtMillis) / 60000L).coerceAtLeast(0L)
-        val updateAgeText = when {
-            minutesAgo == 0L -> "방금 업데이트"
-            minutesAgo < 60L -> minutesAgo.toString() + "분 전 업데이트"
-            else -> (minutesAgo / 60L).toString() + "시간 전 업데이트"
-        }
+        val updateAgeText = updateAgeText(weather.fetchedAtMillis, nowMillis)
 
         val message = when {
             isSnow || isCold -> "기온이 낮거나 눈 소식이 있어룡. 실내에서 체온을 높이는 웜업 운동을 권장해룡."
@@ -96,6 +91,16 @@ object WeatherExerciseRecommender {
             exercises = exercises,
             weather = weather,
         )
+    }
+
+    /** 받은 지 얼마나 됐는지 — 화면이 그릴 때 다시 부른다(추천을 만든 순간에 굳힌 글은 새로 받기에 실패하면 묵은 날씨를 '방금' 이라 한다). */
+    fun updateAgeText(fetchedAtMillis: Long, nowMillis: Long): String {
+        val minutesAgo = ((nowMillis - fetchedAtMillis) / 60000L).coerceAtLeast(0L)
+        return when {
+            minutesAgo == 0L -> "방금 업데이트"
+            minutesAgo < 60L -> minutesAgo.toString() + "분 전 업데이트"
+            else -> (minutesAgo / 60L).toString() + "시간 전 업데이트"
+        }
     }
 
     internal fun getWeatherDescription(code: Int): String = when (code) {
