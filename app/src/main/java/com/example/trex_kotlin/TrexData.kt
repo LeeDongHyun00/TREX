@@ -5,6 +5,7 @@ import com.example.trex_kotlin.posture.CoachMode
 import com.example.trex_kotlin.posture.OnsetKind
 import com.example.trex_kotlin.posture.PostureSetReport
 import com.example.trex_kotlin.posture.SetVerdict
+import kotlin.math.roundToInt
 
 enum class TrexTab(val label: String) {
     Home("홈"),
@@ -195,9 +196,86 @@ data class Nutrition(
 data class FoodEntry(
     val name: String,
     val nutrition: Nutrition,
-    /** 수량 — 리디자인의 직접 기록 시트 스테퍼. 합산 시 곱해진다. */
-    val qty: Int = 1,
+    /** 인분 — 스테퍼는 0.5 씩, 숫자를 눌러 직접 넣으면 소수 한 자리([FoodPortion]). 합산 시 곱해진다. */
+    val qty: Double = 1.0,
 )
+
+/**
+ * 인분 규칙. 영양값이 "1인분" 기준이라 반 공기·한 그릇 반을 기록할 수 있어야 칼로리가 맞는다.
+ * 스테퍼는 0.5 씩만 움직인다 — 더 잘게 나눈 버튼은 헷갈리고, 먹은 양은 눈대중("반 공기")이라 0.1 단위 버튼은 정밀해 보이기만 한다.
+ * 숫자를 눌러 직접 넣을 때만 소수 한 자리(0.1~20)를 받는다 — 사용자가 뜻한 숫자를 쓰는 것이라 헷갈리지 않는다.
+ */
+object FoodPortion {
+    const val STEP = 0.5
+    const val MIN_TYPED = 0.1
+    const val MAX = 20.0
+
+    /** 소수 한 자리로 맞춘다 — 0.1 + 0.2 같은 부동소수 찌꺼기가 저장·표시에 남지 않게. */
+    fun normalize(value: Double): Double = (value * 10).roundToInt() / 10.0
+
+    /**
+     * 스테퍼 한 칸. 0 이하면 null(그 음식을 뺀다), 위로는 [MAX] 에서 멈춘다.
+     * 예전 앱은 상한이 없어 [MAX] 를 넘는 기록이 있을 수 있다 — 그때 + 는 값을 줄이지 않고 그대로 둔다.
+     */
+    fun step(value: Double, up: Boolean): Double? {
+        if (up && value >= MAX) return value
+        val next = normalize(value + if (up) STEP else -STEP)
+        return if (next <= 0.0) null else if (up) next.coerceAtMost(MAX) else next
+    }
+
+    /** 같은 음식을 한 줄로 합친 인분 — [MAX] 에서 멈추되, 이미 그보다 큰 예전 기록을 줄이지는 않는다. */
+    fun add(a: Double, b: Double): Double = normalize(a + b).coerceAtMost(maxOf(MAX, a, b))
+
+    /** 한 칸 내리면 빠지는가 — 스테퍼 왼쪽 아이콘을 휴지통으로 바꾼다. */
+    fun removesOnStepDown(value: Double): Boolean = step(value, up = false) == null
+
+    /** "1", "0.5", "2.3" — 정수면 소수점을 붙이지 않는다. */
+    fun label(value: Double): String {
+        val tenths = (value * 10).roundToInt()
+        return if (tenths % 10 == 0) (tenths / 10).toString() else "${tenths / 10}.${tenths % 10}"
+    }
+
+    /** 직접 입력으로 칠 수 있는 모양 — 정수 두 자리, 소수점(쉼표도) 뒤 한 자리까지. 입력 칸이 이 모양이 아닌 글자는 받지 않는다. */
+    fun isTypable(text: String): Boolean = TYPABLE.matches(text)
+
+    /**
+     * 직접 입력 — 쉼표도 소수점으로 받는다. 소수 둘째 자리("1.55")는 반올림하지 않고 null 이다(보이는 숫자와 저장값이 같게).
+     * 범위 밖·숫자 아님·0 도 null — 이전 값을 그대로 둔다. "1." 과 ".5" 는 플랫폼 숫자 해석에 맡기지 않고 직접 고쳐 읽는다.
+     */
+    fun parseTyped(text: String): Double? {
+        val t = text.trim().replace(',', '.')
+        if (!isTypable(t) || t.none { it.isDigit() }) return null
+        val value = (if (t.startsWith(".")) "0$t" else t).removeSuffix(".").toDoubleOrNull() ?: return null
+        return normalize(value).takeIf { it >= MIN_TYPED && it <= MAX }
+    }
+
+    private val TYPABLE = Regex("^[0-9]{0,2}([.,][0-9]?)?$")
+
+    /**
+     * 예전 앱이 읽는 정수 수량 — 예전 앱은 `qty` 를 정수로 읽어 0.5 를 0 으로 버린다(0 kcal).
+     * 그래서 `qty` 에는 0 이 되지 않는 반올림 값(0.5 → 1, 1.5 → 2)을 두고 정확한 인분은 `portion` 에 따로 쓴다(TrexStore).
+     */
+    fun legacyCount(value: Double): Int = (value + 0.5).toInt().coerceAtLeast(1)
+
+    fun isWhole(value: Double): Boolean = (value * 10).roundToInt() % 10 == 0
+
+    /** 저장할 정확한 인분 — 정수면 null(예전과 똑같은 JSON 이라 동기화할 것도 생기지 않는다). */
+    fun storedPortion(value: Double): Double? = if (isWhole(value)) null else normalize(value)
+
+    /**
+     * 저장된 한 줄 → 인분. [portion] 이 있고 그 정수 근사가 [count] 와 같으면 [portion] 이다. [portion] 이 없으면(정수 인분·예전 기록) [count].
+     * 예전 앱은 식단을 다시 쓸 때 [portion] 을 통째로 버리므로(그 계정의 모든 반 인분이 정수 근사로 바뀐다 — FOOD_RECOGNITION.md),
+     * 둘이 어긋난 줄은 정상 경로로는 생기지 않는다. 어긋나면 손상된 기록으로 보고 [count] 를 믿는다.
+     */
+    fun fromStored(count: Int, portion: Double?): Double {
+        if (portion == null || portion.isNaN()) return count.toDouble()
+        val exact = normalize(portion)
+        return if (exact > 0.0 && legacyCount(exact) == count) exact else count.toDouble()
+    }
+}
+
+/** 1인분 영양값 × 인분 — 화면 표시용 kcal(반올림). */
+fun FoodEntry.totalKcal(): Int = (nutrition.kcal * qty).roundToInt()
 
 @Immutable
 data class MealMeta(
@@ -824,7 +902,7 @@ fun Nutrition.plus(other: Nutrition): Nutrition = Nutrition(
 fun Iterable<FoodEntry>.totalNutrition(): Nutrition =
     fold(Nutrition(0, 0.0, 0.0, 0.0)) { acc, entry ->
         Nutrition(
-            kcal = acc.kcal + entry.nutrition.kcal * entry.qty,
+            kcal = acc.kcal + (entry.nutrition.kcal * entry.qty).roundToInt(),
             carb = acc.carb + entry.nutrition.carb * entry.qty,
             protein = acc.protein + entry.nutrition.protein * entry.qty,
             fat = acc.fat + entry.nutrition.fat * entry.qty,

@@ -400,7 +400,7 @@ class SessionFlowTest {
         fun record(day:Long)=WorkoutHistoryDay(day,"","",listOf(WorkoutHistoryItem("보존 운동","1회 × 1세트",1,2)),1,2)
         store.saveHistory(listOf(today-30,today-7,today-6,today-1,today).map(::record))
         store.saveDiet(mapOf(today to mapOf("breakfast" to listOf(FoodEntry("오늘 식사",Nutrition(123,10.0,20.0,3.0)))),
-            today-6 to mapOf("dinner" to listOf(FoodEntry("지난 식사",Nutrition(222,20.0,30.0,5.0),2)))))
+            today-6 to mapOf("dinner" to listOf(FoodEntry("지난 식사",Nutrition(222,20.0,30.0,5.0),2.0)))))
         val prefs=context.getSharedPreferences("trex_store",Context.MODE_PRIVATE)
         val raw=org.json.JSONArray(prefs.getString("history",null))
         raw.getJSONObject(raw.length()-1).put("futureMetadata","보존")

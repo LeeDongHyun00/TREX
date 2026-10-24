@@ -95,7 +95,7 @@ class FrequentFoodTest {
         val once = real[0]
         val twice = real[1]
         val diet = mapOf(
-            0L to mapOf("slot0" to listOf(FoodEntry(once, foodDatabase.getValue(once), qty = 3))),
+            0L to mapOf("slot0" to listOf(FoodEntry(once, foodDatabase.getValue(once), qty = 3.0))),
             1L to mapOf("slot0" to listOf(FoodEntry(twice, foodDatabase.getValue(twice)))),
             2L to mapOf("slot0" to listOf(FoodEntry(twice, foodDatabase.getValue(twice)))),
         )

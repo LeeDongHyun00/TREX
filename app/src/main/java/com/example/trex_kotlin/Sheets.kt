@@ -421,6 +421,9 @@ internal fun ManualSheet(app: AppViewModel, initialSlot: String, onClose: () -> 
     var query by remember { mutableStateOf("") }
     // "새 음식으로 등록" 을 누른 검색어. 검색어가 바뀌면 자연히 닫힌다(값이 달라지므로).
     var registering by remember { mutableStateOf<String?>(null) }
+    // 인분 숫자를 눌러 직접 넣는 중인 음식 — 순서가 아니라 이름으로 잡는다(끼니 안에서 이름은 하나, appendFoods 가 합친다).
+    // 순서로 잡으면 앱 복귀 때 서버에서 받은 기록·자정 갱신으로 목록이 바뀌면 다른 음식을 고친다.
+    var editingPortion by remember { mutableStateOf<String?>(null) }
     val slotFoods = app.dietFor(0)[slot].orEmpty()
     val total = slotFoods.totalNutrition()
     val goal = app.targetGoal
@@ -465,7 +468,7 @@ internal fun ManualSheet(app: AppViewModel, initialSlot: String, onClose: () -> 
                                     Text(" kcal", color = c.text3, fontSize = 13.sp, modifier = Modifier.padding(bottom = 3.dp))
                                 }
                             }
-                            Text("음식 ${slotFoods.sumOf { it.qty }}개", color = c.text3, fontSize = 11.5.sp)
+                            Text("음식 ${slotFoods.size}개", color = c.text3, fontSize = 11.5.sp)
                         }
                         Column(Modifier.padding(top = 15.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                             MacroBar("탄수", total.carb.toInt(), goal.carb.toInt(), c.primary)
@@ -500,19 +503,36 @@ internal fun ManualSheet(app: AppViewModel, initialSlot: String, onClose: () -> 
                                     Column(Modifier.weight(1f)) {
                                         Text(f.name, fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold)
                                         Text(
-                                            "${f.nutrition.kcal * f.qty} kcal · 탄 ${(f.nutrition.carb * f.qty).toInt()} · 단 ${(f.nutrition.protein * f.qty).toInt()} · 지 ${(f.nutrition.fat * f.qty).toInt()}",
+                                            "${f.totalKcal()} kcal · 탄 ${(f.nutrition.carb * f.qty).toInt()} · 단 ${(f.nutrition.protein * f.qty).toInt()} · 지 ${(f.nutrition.fat * f.qty).toInt()}",
                                             color = c.text3, fontSize = 11.sp, modifier = Modifier.padding(top = 3.dp),
                                         )
                                     }
+                                    // 0.5 씩 — 숫자를 누르면 소수 한 자리로 직접 넣는다(FoodPortion)
                                     StepperControl(
-                                        valueLabel = "${f.qty}",
-                                        onDec = { app.changeFoodQty(0, slot, i, -1) },
-                                        onInc = { app.changeFoodQty(0, slot, i, +1) },
-                                        decIcon = if (f.qty > 1) Icons.Rounded.Remove else Icons.Rounded.Delete,
-                                        valueMinWidth = 24.dp,
+                                        valueLabel = FoodPortion.label(f.qty),
+                                        onDec = { app.stepFoodQty(0, slot, i, up = false) },
+                                        onInc = { app.stepFoodQty(0, slot, i, up = true) },
+                                        decIcon = if (FoodPortion.removesOnStepDown(f.qty)) Icons.Rounded.Delete else Icons.Rounded.Remove,
+                                        valueMinWidth = 38.dp,
+                                        label = "${f.name} 인분",
+                                        onValueClick = { editingPortion = f.name },
+                                        decLabel = if (FoodPortion.removesOnStepDown(f.qty)) "${f.name} 삭제" else null,
                                     )
                                 }
                             }
+                        }
+                    }
+                    editingPortion?.let { name ->
+                        val i = slotFoods.indexOfFirst { it.name == name }
+                        if (i < 0) {
+                            // 그 음식이 목록에서 사라졌다 — 열림 표시를 남기면 같은 이름이 다시 담길 때 저절로 열린다
+                            LaunchedEffect(name) { editingPortion = null }
+                        } else {
+                            PortionInputDialog(
+                                foodName = name, current = slotFoods[i].qty,
+                                onConfirm = { q -> app.setFoodQty(0, slot, i, q); editingPortion = null },
+                                onDismiss = { editingPortion = null },
+                            )
                         }
                     }
                 }

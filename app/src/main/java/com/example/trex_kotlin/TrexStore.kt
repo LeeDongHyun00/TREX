@@ -319,7 +319,7 @@ class TrexStore(private val prefs: KeyValueStore) {
                                                 protein = f.getDouble("protein"),
                                                 fat = f.getDouble("fat"),
                                             ),
-                                            qty = f.optInt("qty", 1),
+                                            qty = readPortion(f),
                                         )
                                     },
                                 )
@@ -331,6 +331,10 @@ class TrexStore(private val prefs: KeyValueStore) {
         }.getOrNull()
     }
 
+    /** 음식 한 줄의 인분 — 정수 `qty`(예전 앱도 읽는 근사)와 정수가 아닐 때만 있는 `portion`(정확한 값). 규칙은 [FoodPortion.fromStored]. */
+    private fun readPortion(f: JSONObject): Double =
+        FoodPortion.fromStored(f.optInt("qty", 1), if (f.has("portion")) f.optDouble("portion", Double.NaN) else null)
+
     fun saveDiet(diet: Map<Long, Map<String, List<FoodEntry>>>) {
         val root = JSONObject()
         diet.forEach { (epochDay, slots) ->
@@ -338,15 +342,16 @@ class TrexStore(private val prefs: KeyValueStore) {
             slots.forEach { (slotId, foods) ->
                 val arr = JSONArray()
                 foods.forEach { food ->
-                    arr.put(
-                        JSONObject()
-                            .put("name", food.name)
-                            .put("kcal", food.nutrition.kcal)
-                            .put("carb", food.nutrition.carb)
-                            .put("protein", food.nutrition.protein)
-                            .put("fat", food.nutrition.fat)
-                            .put("qty", food.qty),
-                    )
+                    val obj = JSONObject()
+                        .put("name", food.name)
+                        .put("kcal", food.nutrition.kcal)
+                        .put("carb", food.nutrition.carb)
+                        .put("protein", food.nutrition.protein)
+                        .put("fat", food.nutrition.fat)
+                        // 예전 앱은 qty 를 정수로 읽는다 — 0 이 되지 않는 근사를 두고, 정수가 아닐 때만 정확한 인분을 따로 쓴다
+                        .put("qty", FoodPortion.legacyCount(food.qty))
+                    FoodPortion.storedPortion(food.qty)?.let { obj.put("portion", it) }
+                    arr.put(obj)
                 }
                 slotsObj.put(slotId, arr)
             }

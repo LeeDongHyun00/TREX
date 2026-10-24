@@ -190,7 +190,7 @@ fun DietTabScreen(app: AppViewModel, onOpenGoals: () -> Unit, onOpenPhoto: () ->
                     Text(meal.label, color = c.text, fontSize = 20.sp, fontWeight = FontWeight.Medium)
                     Text(if (entries.isEmpty()) "기록 전" else "${entries.totalNutrition().kcal} kcal", color = c.text2, fontSize = 13.sp)
                 }
-                if (entries.isNotEmpty()) Text(entries.joinToString(" · ") { if (it.qty > 1) "${it.name} ×${it.qty}" else it.name },
+                if (entries.isNotEmpty()) Text(entries.joinToString(" · ") { if (it.qty != 1.0) "${it.name} ×${FoodPortion.label(it.qty)}" else it.name },
                     color = c.text2, fontSize = 14.sp, lineHeight = 22.sp, modifier = Modifier.padding(top = 9.dp))
             }
             }

@@ -67,6 +67,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.AlertDialog
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.spring
@@ -513,6 +520,10 @@ fun StepperControl(
     decIcon: ImageVector = Icons.Rounded.Remove,
     valueMinWidth: Dp = 48.dp,
     label: String = "",
+    /** 있으면 가운데 숫자를 눌러 직접 입력한다(밑줄로 누를 수 있음을 보인다) — 음식 인분([PortionInputDialog]). */
+    onValueClick: (() -> Unit)? = null,
+    /** 왼쪽 버튼의 낭독 설명을 바꾼다 — 휴지통일 때 "감소" 가 아니라 "삭제" 라고 읽히게. */
+    decLabel: String? = null,
 ) {
     val c = Trex.c
     Row(
@@ -525,16 +536,29 @@ fun StepperControl(
         horizontalArrangement = Arrangement.spacedBy(3.dp),
     ) {
         Surface(onClick = onDec, modifier = Modifier.size(44.dp), shape = CircleShape, color = Color.Transparent, contentColor = c.text2) {
-            Box(contentAlignment = Alignment.Center) { Icon(decIcon, contentDescription = "$label 감소".trim(), modifier = Modifier.size(17.dp)) }
+            Box(contentAlignment = Alignment.Center) { Icon(decIcon, contentDescription = decLabel ?: "$label 감소".trim(), modifier = Modifier.size(17.dp)) }
         }
-        Text(
-            valueLabel,
-            color = c.text,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.SemiBold,
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-            modifier = Modifier.width(valueMinWidth),
-        )
+        if (onValueClick == null) {
+            Text(
+                valueLabel,
+                color = c.text,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                modifier = Modifier.width(valueMinWidth),
+            )
+        } else {
+            // 누르는 칸 — 옆 버튼과 같은 44dp 높이, 큰 글씨에서도 한 줄("12.5")이 들어가게 폭은 최소값만 둔다
+            Box(
+                Modifier.widthIn(min = valueMinWidth).heightIn(min = 44.dp).clip(RoundedCornerShape(10.dp))
+                    .clickable(role = Role.Button, onClickLabel = "$label 직접 입력".trim(), onClick = onValueClick)
+                    .padding(horizontal = 4.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(valueLabel, color = c.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1,
+                    textDecoration = TextDecoration.Underline)
+            }
+        }
         Surface(
             onClick = onInc, modifier = Modifier.size(44.dp), shape = CircleShape,
             color = c.surface, contentColor = c.primaryText, shadowElevation = 1.dp,
@@ -542,6 +566,48 @@ fun StepperControl(
             Box(contentAlignment = Alignment.Center) { Icon(Icons.Rounded.Add, contentDescription = "$label 증가".trim(), modifier = Modifier.size(17.dp)) }
         }
     }
+}
+
+/**
+ * 음식 인분 직접 입력 — 스테퍼 가운데 숫자를 누르면 연다. 소수 한 자리(0.1~20)만 칠 수 있고([FoodPortion.isTypable]·[FoodPortion.parseTyped]),
+ * 빈칸·0·범위 밖이면 '확인' 을 누를 수 없다 — 잘못 눌러 기록이 사라지지 않게, 지우는 길은 스테퍼의 휴지통뿐이다.
+ * 입력 칸은 **비운 채로** 연다(지금 값은 안내 글로) — 지금 값을 채워 두면 커서가 맨 앞이라 "2" 앞에 "1" 을 쳐 "12" 가 조용히 저장됐다.
+ */
+@Composable
+fun PortionInputDialog(foodName: String, current: Double, onConfirm: (Double) -> Unit, onDismiss: () -> Unit) {
+    val c = Trex.c
+    var text by androidx.compose.runtime.remember { mutableStateOf("") }
+    val parsed = FoodPortion.parseTyped(text)
+    val focus = androidx.compose.runtime.remember { FocusRequester() }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        shape = RoundedCornerShape(26.dp),
+        containerColor = c.sheet,
+        titleContentColor = c.text,
+        textContentColor = c.text2,
+        title = { Text("$foodName 몇 인분을 드셨나요?", fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis) },
+        text = {
+            TrexTextField(
+                value = text,
+                // 소수 한 자리까지만 칠 수 있다 — 둘째 자리를 몰래 반올림하지 않도록 아예 받지 않는다
+                onValueChange = { typed -> if (FoodPortion.isTypable(typed)) text = typed },
+                placeholder = "지금 ${FoodPortion.label(current)}인분",
+                keyboardType = KeyboardType.Decimal,
+                focusRequester = focus,
+                hint = if (text.isNotBlank() && parsed == null) "0.1 ~ 20 사이, 소수 한 자리까지 넣어 주세요" else "소수 한 자리까지 — 예: 0.3, 1.5",
+                textColor = c.text, containerColor = c.surface2, borderColor = c.line,
+                placeholderColor = c.text3, iconColor = c.text2, hintColor = c.text2,
+            )
+            // 입력 칸이 붙은 뒤에 포커스를 준다(대화 상자 안에서 — 칸보다 먼저 돌면 붙지 않은 요청이 된다)
+            LaunchedEffect(Unit) { focus.requestFocus() }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("취소", color = c.text2) } },
+        confirmButton = {
+            TextButton(onClick = { parsed?.let(onConfirm) }, enabled = parsed != null) {
+                Text("확인", color = if (parsed != null) c.primaryText else c.text3, fontWeight = FontWeight.SemiBold)
+            }
+        },
+    )
 }
 
 /** 바텀 시트 호스트 (스크림 + 하단 고정, 닫기는 스크림 탭). [PLATFORM_SHEET_DRAG_DISMISS] 면 아래로 끌어 내려도 닫힌다(iPhone, §108d). */

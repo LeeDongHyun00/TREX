@@ -57,6 +57,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import kotlin.math.roundToInt
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -140,7 +141,7 @@ private data class RegionLabel(val name: String, val kind: LabelKind)
 private enum class LabelKind { MODEL, MEMORY, USER }
 
 /**
- * 결과 한 줄. 수량은 직접 기록 시트와 같은 qty 스테퍼로 조절한다. nutrition 이 없으면 기록에서 제외한다.
+ * 결과 한 줄. 인분은 직접 기록 시트와 같은 스테퍼(0.5 씩, 숫자를 누르면 직접 입력 — [FoodPortion])로 조절한다. nutrition 이 없으면 기록에서 제외한다.
  *
  * [regionIds] 는 이 줄이 사진의 어느 자리([FoodRegion.id])에서 왔는지 — 사진 위 이름표가 이것으로 정해진다.
  * 자리의 이름표를 따로 들고 있지 않는 이유: 줄을 바꾸거나 지웠을 때 사진과 목록이 어긋나지 않게, 줄 하나만 정본으로 둔다.
@@ -150,7 +151,7 @@ private data class RecognizedItem(
     val name: String,
     val nutrition: Nutrition?,
     val source: FoodSource,
-    val qty: Int = 1,
+    val qty: Double = 1.0,
     val regionIds: Set<Int> = emptySet(),
 )
 
@@ -174,7 +175,7 @@ private fun List<RecognizedItem>.mergedByName(): List<RecognizedItem> =
         } else {
             acc.mapIndexed { i, kept ->
                 if (i == at) {
-                    kept.copy(qty = kept.qty + item.qty, nutrition = kept.nutrition ?: item.nutrition, regionIds = kept.regionIds + item.regionIds)
+                    kept.copy(qty = FoodPortion.add(kept.qty, item.qty), nutrition = kept.nutrition ?: item.nutrition, regionIds = kept.regionIds + item.regionIds)
                 } else {
                     kept
                 }
@@ -284,7 +285,7 @@ internal fun PhotoFoodSheet(app: AppViewModel, onClose: () -> Unit) {
                     )
                 }
                 // 같은 이름이면 한 줄로 합친다. 기억으로 합쳐진 한 그릇이 수량을 늘리지 않게 수량은 1 로 둔다(모델 결과와 같은 규칙).
-                items = (detected + remembered).mergedByName().map { it.copy(qty = 1) }
+                items = (detected + remembered).mergedByName().map { it.copy(qty = 1.0) }
                 // 영양값을 못 찾는 이름은 골라도 기록에 못 들어가므로 후보에서 뺀다.
                 candidates = result.candidates
                     .filter { app.findFood(it.name) != null }
@@ -364,10 +365,13 @@ internal fun PhotoFoodSheet(app: AppViewModel, onClose: () -> Unit) {
                         items = items,
                         retryLabel = if (fromGallery) "다시 선택" else "다시 촬영",
                         onSlot = { slot = it },
-                        onQty = { index, delta ->
+                        onQtyStep = { index, up ->
                             items = items.mapIndexedNotNull { i, item ->
-                                if (i != index) item else (item.qty + delta).let { q -> if (q <= 0) null else item.copy(qty = q) }
+                                if (i != index) item else FoodPortion.step(item.qty, up)?.let { q -> item.copy(qty = q) }
                             }
+                        },
+                        onQtySet = { index, qty ->
+                            items = items.mapIndexed { i, item -> if (i == index) item.copy(qty = qty) else item }
                         },
                         hasApproximateNutrition = items.any { it.name in approximateNutritionNames || it.name in app.customFoods },
                         candidateCount = candidates.count { (name, _) -> items.none { it.name == name } },
@@ -605,7 +609,10 @@ private fun ResultStep(
     /** 임계 미만이라 결과에서 뺀 후보의 개수. 0 이면 알리지 않는다. */
     candidateCount: Int,
     onSlot: (String) -> Unit,
-    onQty: (index: Int, delta: Int) -> Unit,
+    /** 인분 한 칸(0.5) 올리기·내리기 — 0 이 되면 그 줄을 뺀다. */
+    onQtyStep: (index: Int, up: Boolean) -> Unit,
+    /** 숫자를 눌러 직접 넣은 인분(0.1~20). */
+    onQtySet: (index: Int, qty: Double) -> Unit,
     onAdd: () -> Unit,
     onReplace: (index: Int) -> Unit,
     onRetry: () -> Unit,
@@ -616,6 +623,20 @@ private fun ResultStep(
     val slotIndex = mealMetas.indexOfFirst { it.id == slot }.coerceAtLeast(0)
     val entries = items.toEntries()
     val total = entries.totalNutrition()
+    // 인분 숫자를 눌러 직접 넣는 중인 음식 — 이름으로 잡는다(mergedByName 으로 이름은 하나). 줄을 지우거나 바꿔도 다른 줄을 고치지 않게.
+    var editingPortion by remember { mutableStateOf<String?>(null) }
+    editingPortion?.let { name ->
+        val i = items.indexOfFirst { it.name == name }
+        if (i < 0) {
+            LaunchedEffect(name) { editingPortion = null }
+        } else {
+            PortionInputDialog(
+                foodName = name, current = items[i].qty,
+                onConfirm = { q -> onQtySet(i, q); editingPortion = null },
+                onDismiss = { editingPortion = null },
+            )
+        }
+    }
     Column(Modifier.fillMaxSize()) {
         Column(
             Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 16.dp),
@@ -720,17 +741,20 @@ private fun ResultStep(
                                     if (n == null) {
                                         "영양 정보가 없어 기록에서 제외돼요 · 이름을 눌러 다른 음식으로 바꿔 주세요"
                                     } else {
-                                        "${n.kcal * item.qty} kcal · 탄 ${(n.carb * item.qty).toInt()} · 단 ${(n.protein * item.qty).toInt()} · 지 ${(n.fat * item.qty).toInt()}"
+                                        "${(n.kcal * item.qty).roundToInt()} kcal · 탄 ${(n.carb * item.qty).toInt()} · 단 ${(n.protein * item.qty).toInt()} · 지 ${(n.fat * item.qty).toInt()}"
                                     },
                                     color = if (n == null) c.warn else c.text3, fontSize = 11.sp, modifier = Modifier.padding(top = 3.dp),
                                 )
                             }
                             StepperControl(
-                                valueLabel = "${item.qty}",
-                                onDec = { onQty(i, -1) },
-                                onInc = { onQty(i, +1) },
-                                decIcon = if (item.qty > 1) Icons.Rounded.Remove else Icons.Rounded.Delete,
-                                valueMinWidth = 24.dp,
+                                valueLabel = FoodPortion.label(item.qty),
+                                onDec = { onQtyStep(i, false) },
+                                onInc = { onQtyStep(i, true) },
+                                decIcon = if (FoodPortion.removesOnStepDown(item.qty)) Icons.Rounded.Delete else Icons.Rounded.Remove,
+                                valueMinWidth = 38.dp,
+                                label = "${item.name} 인분",
+                                onValueClick = { editingPortion = item.name },
+                                decLabel = if (FoodPortion.removesOnStepDown(item.qty)) "${item.name} 삭제" else null,
                             )
                         }
                     }
@@ -762,9 +786,9 @@ private fun ResultStep(
             if (hasApproximateNutrition) {
                 WashBanner("일부 항목은 아직 실측 영양값이 없어 추정치로 보여드려요. 참고용으로 봐 주세요.", Icons.Rounded.Info)
             } else {
-                WashBanner("영양값은 1인분 기준이에요. 실제로 드신 양이 다르면 수량으로 조절해 주세요.", Icons.Rounded.Info)
+                WashBanner("영양값은 1인분 기준이에요. 실제로 드신 양이 다르면 인분으로 조절해 주세요. 반 그릇은 0.5예요.", Icons.Rounded.Info)
             }
-            Text("음식 이름을 누르면 다른 음식으로 바꿀 수 있어요. 잘못 인식된 건 수량을 줄여 빼 주세요.", color = c.text3, fontSize = 11.5.sp, lineHeight = 17.sp)
+            Text("음식 이름을 누르면 다른 음식으로 바꿀 수 있어요. 인분 숫자를 누르면 0.3처럼 직접 넣을 수 있어요. 잘못 인식된 건 인분을 줄여 빼 주세요.", color = c.text3, fontSize = 11.5.sp, lineHeight = 17.sp)
         }
         Box(Modifier.fillMaxWidth().height(1.dp).background(c.line))
         Row(
@@ -781,7 +805,7 @@ private fun ResultStep(
                 modifier = Modifier.clip(RoundedCornerShape(10.dp)).clickable(onClick = onSaveAndManual).padding(horizontal = 6.dp, vertical = 8.dp),
             )
             Cta(
-                text = "${entries.sumOf { it.qty }}개 기록하기",
+                text = "${entries.size}개 기록하기",
                 icon = Icons.Rounded.Check,
                 onClick = onSave,
                 enabled = entries.isNotEmpty(),
