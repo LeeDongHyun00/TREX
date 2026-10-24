@@ -18,6 +18,23 @@ fun Workout.resolvedTarget(): WorkoutTarget = target ?: when {
     else -> WorkoutTarget.Repetitions(repsSpec().count.coerceIn(1, 999))
 }
 
+/**
+ * 시간으로만 목표를 잡는 종목 — 버티는 운동이라 횟수 목표가 없다(사용자 결정 2026-10-24 "플랭크는 횟수 선택불가, 시간만", spec §108g).
+ * 횟수 목표면 플랭크 유지 시계의 목표 시간이 0 이 되어(PostureLive `ensureSet`) 세트가 시간으로 끝나지 않는다.
+ */
+internal val TIME_ONLY_EXERCISES = setOf("플랭크")
+
+/** 시간 전용 종목에 남은 횟수 목표를 대신하는 시간 — 카탈로그 기본값(WorkoutCatalog "45초 × 3세트")과 같다. */
+private const val TIME_ONLY_FALLBACK_SECONDS = 45
+
+fun Workout.timeOnly(): Boolean = name in TIME_ONLY_EXERCISES
+
+/** 이전 편집·동기화로 남은 시간 전용 종목의 횟수 목표를 기본 시간으로 바꾼다 — 12회를 12초로 읽지 않는다. 세트·휴식은 그대로. */
+fun Workout.timeOnlyNormalized(): Workout =
+    if (timeOnly() && resolvedTarget() is WorkoutTarget.Repetitions)
+        withGoal(WorkoutTarget.Duration(TIME_ONLY_FALLBACK_SECONDS), repsSpec().sets)
+    else this
+
 /** 반복 시간은 예상 소요 시간에만 사용한다. */
 data class WorkoutTiming(val repetitions: Int, val sets: Int, val secondsPerRep: Int, val workSeconds: Int, val restSeconds: Int) {
     val totalSeconds: Int get() = workSeconds * sets + restSeconds * (sets - 1).coerceAtLeast(0)
