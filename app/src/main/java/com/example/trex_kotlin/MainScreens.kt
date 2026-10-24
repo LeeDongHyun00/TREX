@@ -132,7 +132,7 @@ fun HomeScreen(app: AppViewModel, onGoWorkout: () -> Unit, onGoDiet: () -> Unit,
                                 fontWeight = FontWeight.Medium, fontSize = 13.sp)
                         }
                         Text(if(isToday) "오늘" else if(attended) "✓" else "", color = c.primaryText, fontSize = 10.sp,
-                            modifier = Modifier.height(15.dp))
+                            modifier = Modifier.height(18.dp))
                     }
                 }
             }
