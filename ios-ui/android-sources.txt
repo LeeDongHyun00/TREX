@@ -74,7 +74,9 @@ com/example/trex_kotlin/posture/SpeechCoach.kt
 # §108d — 사진 식단: 시트·판정 흐름(FoodPipeline)·경계. 플랫폼 짝은 Android PhotoFoodAndroid.kt(목록 밖) ↔ ios-ui iosMain PhotoFoodIos.kt
 com/example/trex_kotlin/PhotoFoodApi.kt
 com/example/trex_kotlin/PhotoFoodSheet.kt
+com/example/trex_kotlin/PhotoFoodRows.kt
 com/example/trex_kotlin/food/FoodPipeline.kt
+com/example/trex_kotlin/food/FoodMemoryPolicy.kt
 # §108e — 홈 날씨 운동 추천(weather 브랜치를 공유로): 모델·판정·저장소·위치 설정·홈의 날씨 한 줄(§108f). 플랫폼 짝은 Android weather/WeatherLocatorAndroid.kt(목록 밖) ↔ ios-ui iosMain weather/WeatherLocatorIos.kt
 com/example/trex_kotlin/weather/WeatherModels.kt
 com/example/trex_kotlin/weather/WeatherExerciseRecommender.kt

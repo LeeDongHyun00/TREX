@@ -29,8 +29,11 @@ fun interface FoodPhotoLoader {
     fun load(): FoodPhoto?
 }
 
-/** 기억할 자리 하나(내 음식 기억) — 이름·사진·사진 대비 0~1 자리·모델이 붙였던 이름(사용자가 고쳤을 때). */
-class FoodMemorySpot(val name: String, val photo: FoodPhoto, val box: PixelBox, val correctedFrom: String?)
+/**
+ * 기억할 자리 하나(내 음식 기억) — 이름·사진·사진 대비 0~1 자리·모델이 붙였던 이름(사용자가 고쳤을 때).
+ * [suggestOnly] 는 빈 그릇처럼 보인 자리에서 배운 기억이라 다음에 후보로만 쓴다([com.example.trex_kotlin.food.MemoryEntry.suggestOnly]).
+ */
+class FoodMemorySpot(val name: String, val photo: FoodPhoto, val box: PixelBox, val correctedFrom: String?, val suggestOnly: Boolean = false)
 
 /** 음식 인식기 — 모델·기억은 앱 수명이다. [warmUp]·[detect] 는 블로킹이라 백그라운드에서 부른다. */
 interface FoodRecognizer {

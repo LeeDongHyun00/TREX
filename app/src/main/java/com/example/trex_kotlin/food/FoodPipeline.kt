@@ -242,8 +242,10 @@ class FoodPipeline(
     }
 
     /**
-     * 이름이 없고 비어 보이지 않는 자리마다 특징값을 뽑아 내 음식 기억과 견준다. 기억이 비었거나 특징값 모델이 없으면 그대로 돌려준다.
-     * 실패해도 인식 결과는 그대로 내야 하므로 예외를 삼킨다.
+     * 이름이 없는 자리마다 특징값을 뽑아 내 음식 기억과 견준다. 비어 보이는 자리와, 1위 이름이 후보 전용 기억([MemoryEntry.suggestOnly])
+     * 덕분에만 자동 이름 기준을 넘는 자리는 후보로만 쓴다([FoodRegion.memorySuggestionOnly]).
+     * 기억이 비었거나 특징값 모델이 없으면 그대로 돌려준다. 실패해도 인식 결과는 그대로 내야 하므로 예외를 삼킨다 — 자리 하나의 예외는
+     * 그 자리만 기억 없이 두고(다른 자리의 기억까지 버리지 않게), 메모리 부족은 전부 기억 없이 물러선다.
      */
     private fun withMemory(regions: List<FoodRegion>, photos: List<FoodPhoto>): List<FoodRegion> {
         val memory = memory()
@@ -253,22 +255,29 @@ class FoodPipeline(
         return try {
             regions.map { r ->
                 val modelName = r.name
-                when {
-                    modelName == null && r.looksEmpty -> r
-                    modelName == null -> {
-                        val v = models.embed(photos[r.photoIndex], r.box)
-                        r.copy(remembered = memory.match(v).filter { it.second >= FoodMemory.SUGGEST_AT })
+                try {
+                    when {
+                        modelName == null -> {
+                            val v = models.embed(photos[r.photoIndex], r.box)
+                            val remembered = memory.match(v).filter { it.second >= FoodMemory.SUGGEST_AT }
+                            val trusted = remembered.firstOrNull()?.let { memory.trustedSimilarity(v, it.first) } ?: Float.NEGATIVE_INFINITY
+                            r.copy(remembered = remembered, memorySuggestionOnly = r.looksEmpty || trusted < FoodMemory.AUTO_NAME_AT)
+                        }
+                        // 모델 이름이 붙은 자리는 그 이름을 사용자가 고친 적이 있을 때만 본다.
+                        memory.hasCorrectionOf(modelName) -> {
+                            val v = models.embed(photos[r.photoIndex], r.box)
+                            r.copy(remembered = memory.match(v, correctedFrom = modelName).filter { it.second >= FoodMemory.SUGGEST_AT })
+                        }
+                        else -> r
                     }
-                    // 모델 이름이 붙은 자리는 그 이름을 사용자가 고친 적이 있을 때만 본다.
-                    memory.hasCorrectionOf(modelName) -> {
-                        val v = models.embed(photos[r.photoIndex], r.box)
-                        r.copy(remembered = memory.match(v, correctedFrom = modelName).filter { it.second >= FoodMemory.SUGGEST_AT })
-                    }
-                    else -> r
+                } catch (e: Exception) {
+                    log.e("자리 기억 비교 실패 — 그 자리만 기억 없이 보여준다", e)
+                    r
                 }
             }.also { out ->
                 log.d(
-                    "기억 비교 ${out.count { (it.name == null && !it.looksEmpty) || (it.name != null && memory.hasCorrectionOf(it.name!!)) }}곳 · 기억 ${memory.entries.size}장 · " +
+                    "기억 비교 ${out.count { it.name == null || memory.hasCorrectionOf(it.name!!) }}곳(빈 자리 ${out.count { it.name == null && it.looksEmpty }}) · " +
+                        "자동 이름 ${out.count { it.rememberedName != null }}곳 · 기억 ${memory.entries.size}장 · " +
                         "${clock() - startedAt}ms · " +
                         out.filter { it.remembered.isNotEmpty() }.joinToString { r -> r.remembered.joinToString("/") { "${it.first} ${twoDecimals(it.second)}" } },
                 )
