@@ -145,6 +145,11 @@ public class PostService {
         boolean admin = profiles.isAdmin(loginId);
         Post post = visiblePost(postId, me, admin);
         if (!isMine(post, me) && !admin) throw new ForbiddenException("내 글만 지울 수 있어요");
+        remove(post);
+    }
+
+    /** 글과 그 좋아요·댓글을 지우고, 사진은 커밋 뒤 저장소에서 지운다(관리자 처리도 이 길). */
+    void remove(Post post) {
         List<String> keys = post.getImages().stream().map(PostImage::getStorageKey).toList();
         likes.deleteByPostId(post.getId());
         comments.deleteByPostId(post.getId());

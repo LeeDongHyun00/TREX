@@ -36,5 +36,9 @@ public interface PostRepository extends JpaRepository<Post, Long> {
 
     long countByAuthorIdAndCreatedAtAfter(Long authorId, Instant after);
 
+    /** 관리자 — 숨긴 글(최근 숨긴 순). */
+    @Query("select p from Post p join fetch p.author where p.hiddenAt is not null order by p.hiddenAt desc")
+    List<Post> hidden();
+
     long countByAuthorIdAndHiddenAtIsNull(Long authorId);
 }
