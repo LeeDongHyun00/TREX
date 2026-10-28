@@ -12,7 +12,7 @@ import java.util.List;
 public interface PostRepository extends JpaRepository<Post, Long> {
 
     /**
-     * 피드 — {@code before} 보다 오래된(작은 id) 글을 최신순으로. 숨긴 글과 정지된 작성자의 글은 내 글일 때만.
+     * 피드 — {@code before} 보다 오래된(작은 id) 글을 최신순으로. 숨긴 글과 정지된 작성자의 글은 내 글일 때만, 내가 차단한 사람의 글은 빼고.
      * 커서가 id 라 넘기는 사이 글이 지워지거나 숨겨져도 중복·누락이 없다. {@code before} 가 없으면 {@link Long#MAX_VALUE}.
      */
     @Query("""
@@ -20,6 +20,7 @@ public interface PostRepository extends JpaRepository<Post, Long> {
             where p.id < :before
               and (p.hiddenAt is null or a.id = :me)
               and (a.suspendedAt is null or a.id = :me)
+              and not exists (select 1 from Block b where b.blocker.id = :me and b.blocked.id = a.id)
             order by p.id desc
             """)
     List<Post> feed(@Param("me") Long me, @Param("before") long before, Pageable page);

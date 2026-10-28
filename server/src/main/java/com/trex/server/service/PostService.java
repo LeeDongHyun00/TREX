@@ -13,6 +13,7 @@ import com.trex.server.exception.ForbiddenException;
 import com.trex.server.exception.InvalidRequestException;
 import com.trex.server.exception.ResourceNotFoundException;
 import com.trex.server.exception.TooManyRequestsException;
+import com.trex.server.repository.BlockRepository;
 import com.trex.server.repository.CommentRepository;
 import com.trex.server.repository.CommunityProfileRepository;
 import com.trex.server.repository.PostLikeRepository;
@@ -55,6 +56,7 @@ public class PostService {
     private final PostRepository posts;
     private final PostLikeRepository likes;
     private final CommentRepository comments;
+    private final BlockRepository blocks;
     private final CommunityProfileRepository profileRepository;
     private final CommunityProfileService profiles;
     private final BannedWords bannedWords;
@@ -62,12 +64,13 @@ public class PostService {
     private final StorageCleanup cleanup;
     private final Clock clock;
 
-    public PostService(PostRepository posts, PostLikeRepository likes, CommentRepository comments,
+    public PostService(PostRepository posts, PostLikeRepository likes, CommentRepository comments, BlockRepository blocks,
                        CommunityProfileRepository profileRepository, CommunityProfileService profiles,
                        BannedWords bannedWords, ImageStorage storage, StorageCleanup cleanup, Clock clock) {
         this.posts = posts;
         this.likes = likes;
         this.comments = comments;
+        this.blocks = blocks;
         this.profileRepository = profileRepository;
         this.profiles = profiles;
         this.bannedWords = bannedWords;
@@ -173,7 +176,7 @@ public class PostService {
         CommunityProfile target = findProfile(publicId);
         boolean hiddenAuthor = target.isSuspended() && !target.getId().equals(me.getId()) && !profiles.isAdmin(loginId);
         long count = hiddenAuthor ? 0 : posts.countByAuthorIdAndHiddenAtIsNull(target.getId());
-        return new UserProfileDto(profiles.toDto(target), count, false);
+        return new UserProfileDto(profiles.toDto(target), count, blocks.existsByBlockerIdAndBlockedId(me.getId(), target.getId()));
     }
 
     @Transactional(readOnly = true)
@@ -182,15 +185,18 @@ public class PostService {
         boolean admin = profiles.isAdmin(loginId);
         CommunityProfile target = findProfile(publicId);
         if (target.isSuspended() && !target.getId().equals(me.getId()) && !admin) return new PostPage(List.of(), null);
+        if (blocks.existsByBlockerIdAndBlockedId(me.getId(), target.getId())) return new PostPage(List.of(), null);
         List<Post> found = posts.byAuthor(me.getId(), target.getId(), cursor(before), PageRequest.of(0, PAGE_SIZE + 1));
         return page(found, PAGE_SIZE, me, admin);
     }
 
-    /** 보는 사람에게 보이는 글 — 아니면 없는 것처럼 404. */
+    /** 보는 사람에게 보이는 글 — 숨김·정지된 작성자·내가 차단한 작성자의 글은 작성자 본인과 관리자 말고는 없는 것처럼 404. */
     Post visiblePost(long postId, CommunityProfile viewer, boolean admin) {
         Post post = posts.findById(postId).orElseThrow(() -> new ResourceNotFoundException("글을 찾을 수 없어요"));
-        boolean hiddenFromOthers = post.isHidden() || post.getAuthor().isSuspended();
-        if (hiddenFromOthers && !isMine(post, viewer) && !admin) throw new ResourceNotFoundException("글을 찾을 수 없어요");
+        if (isMine(post, viewer) || admin) return post;
+        boolean hiddenFromOthers = post.isHidden() || post.getAuthor().isSuspended()
+                || blocks.existsByBlockerIdAndBlockedId(viewer.getId(), post.getAuthor().getId());
+        if (hiddenFromOthers) throw new ResourceNotFoundException("글을 찾을 수 없어요");
         return post;
     }
 

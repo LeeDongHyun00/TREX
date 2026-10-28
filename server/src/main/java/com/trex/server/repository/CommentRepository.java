@@ -15,13 +15,14 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
 
     /**
      * 한 글의 댓글 — {@code before} 보다 오래된 것을 최신순으로(서비스가 오래된 순으로 뒤집어 보인다).
-     * 숨긴 댓글·정지된 작성자의 댓글은 내 것일 때와 관리자일 때만.
+     * 숨긴 댓글·정지된 작성자의 댓글은 내 것일 때와 관리자일 때만, 내가 차단한 사람의 댓글은 관리자가 아니면 뺀다.
      */
     @Query("""
             select c from Comment c join fetch c.author a
             where c.post.id = :post and c.id < :before
               and (:admin = true or c.hiddenAt is null or a.id = :me)
               and (:admin = true or a.suspendedAt is null or a.id = :me)
+              and (:admin = true or not exists (select 1 from Block b where b.blocker.id = :me and b.blocked.id = a.id))
             order by c.id desc
             """)
     List<Comment> page(@Param("post") Long post, @Param("me") Long me, @Param("admin") boolean admin,
