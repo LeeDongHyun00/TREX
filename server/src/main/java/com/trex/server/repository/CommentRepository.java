@@ -28,13 +28,14 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
     List<Comment> page(@Param("post") Long post, @Param("me") Long me, @Param("admin") boolean admin,
                        @Param("before") long before, Pageable page);
 
-    /** 글 id 묶음의 보이는 댓글 수 — [글 id, 수]. */
+    /** 글 id 묶음의 보이는 댓글 수 — [글 id, 수]. 보는 사람이 차단한 사람의 댓글은 목록처럼 뺀다(수와 목록이 어긋나지 않게). */
     @Query("""
             select c.post.id, count(c) from Comment c
             where c.post.id in :ids and c.hiddenAt is null and c.author.suspendedAt is null
+              and not exists (select 1 from Block b where b.blocker.id = :me and b.blocked.id = c.author.id)
             group by c.post.id
             """)
-    List<Object[]> countVisibleByPostIds(@Param("ids") Collection<Long> ids);
+    List<Object[]> countVisibleByPostIds(@Param("ids") Collection<Long> ids, @Param("me") Long me);
 
     long countByAuthorIdAndCreatedAtAfter(Long authorId, Instant after);
 

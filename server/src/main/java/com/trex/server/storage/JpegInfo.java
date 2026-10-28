@@ -15,6 +15,9 @@ import java.util.Iterator;
  */
 public record JpegInfo(int width, int height) {
 
+    /** 한 변 상한 — 앱은 1080 으로 보낸다. 헤더만 크게 선언한 작은 파일이 다른 사람 앱의 피드 디코딩을 터뜨리지 않게(리뷰 2026-10-29). */
+    public static final int MAX_SIDE = 4096;
+
     public static JpegInfo read(byte[] bytes) {
         if (bytes == null || bytes.length < 3
                 || (bytes[0] & 0xFF) != 0xFF || (bytes[1] & 0xFF) != 0xD8 || (bytes[2] & 0xFF) != 0xFF) {
@@ -25,7 +28,13 @@ public record JpegInfo(int width, int height) {
         ImageReader reader = readers.next();
         try (ImageInputStream in = ImageIO.createImageInputStream(new ByteArrayInputStream(bytes))) {
             reader.setInput(in, true, true);
-            return new JpegInfo(reader.getWidth(0), reader.getHeight(0));
+            JpegInfo info = new JpegInfo(reader.getWidth(0), reader.getHeight(0));
+            if (info.width() > MAX_SIDE || info.height() > MAX_SIDE) {
+                throw new InvalidRequestException("사진이 너무 커요(한 변 4096px 까지)");
+            }
+            return info;
+        } catch (InvalidRequestException e) {
+            throw e;
         } catch (IOException | RuntimeException e) {
             throw notJpeg();
         } finally {

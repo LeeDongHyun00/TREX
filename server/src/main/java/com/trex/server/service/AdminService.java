@@ -18,6 +18,7 @@ import com.trex.server.repository.CommentRepository;
 import com.trex.server.repository.CommunityProfileRepository;
 import com.trex.server.repository.PostRepository;
 import com.trex.server.repository.ReportRepository;
+import com.trex.server.storage.StorageCleanup;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -45,17 +46,19 @@ public class AdminService {
     private final CommunityProfileRepository profileRepository;
     private final PostService postService;
     private final CommunityProfileService profiles;
+    private final StorageCleanup cleanup;
     private final Clock clock;
 
     public AdminService(ReportRepository reports, PostRepository posts, CommentRepository comments,
                         CommunityProfileRepository profileRepository, PostService postService,
-                        CommunityProfileService profiles, Clock clock) {
+                        CommunityProfileService profiles, StorageCleanup cleanup, Clock clock) {
         this.reports = reports;
         this.posts = posts;
         this.comments = comments;
         this.profileRepository = profileRepository;
         this.postService = postService;
         this.profiles = profiles;
+        this.cleanup = cleanup;
         this.clock = clock;
     }
 
@@ -143,6 +146,16 @@ public class AdminService {
     public void unsuspend(String loginId, String publicId) {
         requireAdmin(loginId);
         profile(publicId).unsuspend();
+    }
+
+    /** 프로필 사진 지우기 — 모든 글·댓글 옆에 뜨는데 신고 대상(글·댓글·사용자)으로 직접 다룰 수 없는 유일한 사진(리뷰 2026-10-29). */
+    @Transactional
+    public void clearAvatar(String loginId, String publicId) {
+        requireAdmin(loginId);
+        CommunityProfile profile = profile(publicId);
+        String old = profile.getAvatarKey();
+        profile.changeAvatar(null);
+        if (old != null) cleanup.deleteAfterCommit(List.of(old));
     }
 
     @Transactional(readOnly = true)

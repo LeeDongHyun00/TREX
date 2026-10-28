@@ -29,6 +29,8 @@ public interface ReportRepository extends JpaRepository<Report, Long> {
 
     List<Report> findByReporterId(Long reporterId);
 
+    long countByReporterIdAndCreatedAtAfter(Long reporterId, java.time.Instant after);
+
     /** 탈퇴 — 그 사람이 한 신고. */
     @Modifying
     @Query("delete from Report r where r.reporter.id = :reporter")

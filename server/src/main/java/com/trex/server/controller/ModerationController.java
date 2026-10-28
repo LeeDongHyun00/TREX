@@ -4,6 +4,7 @@ import com.trex.server.dto.community.MyReportDto;
 import com.trex.server.dto.community.ProfileDto;
 import com.trex.server.dto.community.ReportRequest;
 import com.trex.server.service.ModerationService;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -31,7 +32,11 @@ public class ModerationController {
 
     @PutMapping("/blocks/{publicId}")
     public ResponseEntity<Void> block(@AuthenticationPrincipal String loginId, @PathVariable String publicId) {
-        moderation.block(loginId, publicId);
+        try {
+            moderation.block(loginId, publicId);
+        } catch (DataIntegrityViolationException e) {
+            // 같은 사람이 동시에 두 번 눌러 유니크에 걸렸다 — 이미 차단 상태다(멱등).
+        }
         return ResponseEntity.noContent().build();
     }
 

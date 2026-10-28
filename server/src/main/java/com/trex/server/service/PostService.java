@@ -4,6 +4,7 @@ import com.trex.server.community.BannedWords;
 import com.trex.server.dto.community.ImageDto;
 import com.trex.server.dto.community.PostDto;
 import com.trex.server.dto.community.PostPage;
+import com.trex.server.dto.community.ProfileDto;
 import com.trex.server.dto.community.UserProfileDto;
 import com.trex.server.entity.CommunityProfile;
 import com.trex.server.entity.Post;
@@ -162,7 +163,7 @@ public class PostService {
     public void like(String loginId, long postId) {
         CommunityProfile me = profiles.requireWriter(loginId);
         Post post = visiblePost(postId, me, profiles.isAdmin(loginId));
-        if (post.isHidden()) throw new ResourceNotFoundException("글을 찾을 수 없어요");
+        if (post.isHidden() || blockedBy(post.getAuthor(), me)) throw new ResourceNotFoundException("글을 찾을 수 없어요");
         if (likes.findByPostIdAndProfileId(postId, me.getId()).isEmpty()) {
             likes.save(new PostLike(post, me, clock.instant()));
         }
@@ -172,7 +173,7 @@ public class PostService {
     @Transactional
     public void unlike(String loginId, long postId) {
         CommunityProfile me = profiles.requireWriter(loginId);
-        likes.findByPostIdAndProfileId(postId, me.getId()).ifPresent(likes::delete);
+        likes.deleteByPostAndProfile(postId, me.getId());
     }
 
     @Transactional(readOnly = true)
@@ -181,7 +182,10 @@ public class PostService {
         CommunityProfile target = findProfile(publicId);
         boolean hiddenAuthor = target.isSuspended() && !target.getId().equals(me.getId()) && !profiles.isAdmin(loginId);
         long count = hiddenAuthor ? 0 : posts.countByAuthorIdAndHiddenAtIsNull(target.getId());
-        return new UserProfileDto(profiles.toDto(target), count, blocks.existsByBlockerIdAndBlockedId(me.getId(), target.getId()));
+        ProfileDto shown = profiles.toDto(target);
+        // 정지된 사람의 프로필 사진은 남에게 보이지 않는다(관리자가 손대기 전에도 부적절한 사진이 계속 뜨지 않게, 리뷰 2026-10-29).
+        if (hiddenAuthor) shown = new ProfileDto(shown.publicId(), shown.nickname(), null);
+        return new UserProfileDto(shown, count, blocks.existsByBlockerIdAndBlockedId(me.getId(), target.getId()));
     }
 
     @Transactional(readOnly = true)
@@ -221,7 +225,7 @@ public class PostService {
         if (list.isEmpty()) return List.of();
         List<Long> ids = list.stream().map(Post::getId).toList();
         Map<Long, Long> likeCounts = counts(likes.countByPostIds(ids));
-        Map<Long, Long> commentCounts = counts(comments.countVisibleByPostIds(ids));
+        Map<Long, Long> commentCounts = counts(comments.countVisibleByPostIds(ids, viewer.getId()));
         Set<Long> liked = new HashSet<>(likes.likedAmong(ids, viewer.getId()));
         return list.stream().map(post -> {
             boolean mine = isMine(post, viewer);
@@ -240,6 +244,11 @@ public class PostService {
         Map<Long, Long> map = new HashMap<>();
         for (Object[] row : rows) map.put(((Number) row[0]).longValue(), ((Number) row[1]).longValue());
         return map;
+    }
+
+    /** [author] 가 [viewer] 를 차단했는가 — 차단당한 사람은 그 사람 글에 댓글·좋아요를 남기지 못한다(리뷰 2026-10-29: 괴롭힘 경로). */
+    boolean blockedBy(CommunityProfile author, CommunityProfile viewer) {
+        return blocks.existsByBlockerIdAndBlockedId(author.getId(), viewer.getId());
     }
 
     private CommunityProfile findProfile(String publicId) {

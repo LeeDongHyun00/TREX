@@ -18,6 +18,11 @@ public interface BlockRepository extends JpaRepository<Block, Long> {
     @Query("select b from Block b join fetch b.blocked where b.blocker.id = :blocker order by b.createdAt desc")
     List<Block> listByBlocker(@Param("blocker") Long blocker);
 
+    /** 차단 해제 — 없어도 0행으로 성공(동시에 두 번 와도 멱등). */
+    @Modifying
+    @Query("delete from Block b where b.blocker.id = :blocker and b.blocked.id = :blocked")
+    int deletePair(@Param("blocker") Long blocker, @Param("blocked") Long blocked);
+
     /** 탈퇴 — 그 사람이 들어간 차단을 양쪽 모두 지운다. */
     @Modifying
     @Query("delete from Block b where b.blocker.id = :profile or b.blocked.id = :profile")

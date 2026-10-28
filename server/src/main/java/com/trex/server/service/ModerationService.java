@@ -12,6 +12,7 @@ import com.trex.server.entity.ReportTargetType;
 import com.trex.server.exception.DuplicateResourceException;
 import com.trex.server.exception.InvalidRequestException;
 import com.trex.server.exception.ResourceNotFoundException;
+import com.trex.server.exception.TooManyRequestsException;
 import com.trex.server.repository.BlockRepository;
 import com.trex.server.repository.CommentRepository;
 import com.trex.server.repository.CommunityProfileRepository;
@@ -22,6 +23,7 @@ import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 
@@ -34,6 +36,8 @@ public class ModerationService {
 
     public static final int AUTO_HIDE_AT = 3;
     public static final String AUTO_HIDE_REASON = "신고 누적";
+    /** 1분에 신고 몇 건까지 — 웹후크 도배로 진짜 신고 알림(24시간 처리 신호)이 묻히지 않게(리뷰 2026-10-29). */
+    private static final int REPORTS_PER_MINUTE = 10;
 
     private final BlockRepository blocks;
     private final ReportRepository reports;
@@ -71,7 +75,7 @@ public class ModerationService {
     public void unblock(String loginId, String publicId) {
         CommunityProfile me = profiles.requireReader(loginId);
         CommunityProfile target = findProfile(publicId);
-        blocks.findByBlockerIdAndBlockedId(me.getId(), target.getId()).ifPresent(blocks::delete);
+        blocks.deletePair(me.getId(), target.getId());
     }
 
     @Transactional(readOnly = true)
@@ -87,27 +91,35 @@ public class ModerationService {
             throw new InvalidRequestException("신고 대상과 사유를 골라 주세요");
         }
         boolean admin = profiles.isAdmin(loginId);
-        String targetId = request.targetId().trim();
+        String raw = request.targetId().trim();
+        Instant now = clock.instant();
+        if (reports.countByReporterIdAndCreatedAtAfter(me.getId(), now.minus(Duration.ofMinutes(1))) >= REPORTS_PER_MINUTE) {
+            throw new TooManyRequestsException("잠시 뒤에 다시 신고해 주세요");
+        }
         Post post = null;
         Comment comment = null;
+        // 저장·중복 판정은 대상의 정본 id 로 — "12"·"012"·"+12" 가 서로 다른 신고가 되지 않게(리뷰 2026-10-29).
+        String targetId;
         switch (request.targetType()) {
             case POST -> {
-                post = posts.visiblePost(parseId(targetId), me, admin);
+                post = posts.visiblePost(parseId(raw), me, admin);
                 if (post.getAuthor().getId().equals(me.getId())) throw new InvalidRequestException("내 글은 신고할 수 없어요");
+                targetId = String.valueOf(post.getId());
             }
             case COMMENT -> {
-                comment = comments.findById(parseId(targetId)).orElseThrow(() -> new ResourceNotFoundException("댓글을 찾을 수 없어요"));
+                comment = comments.findById(parseId(raw)).orElseThrow(() -> new ResourceNotFoundException("댓글을 찾을 수 없어요"));
                 if (comment.getAuthor().getId().equals(me.getId())) throw new InvalidRequestException("내 댓글은 신고할 수 없어요");
+                targetId = String.valueOf(comment.getId());
             }
-            case USER -> {
-                CommunityProfile target = findProfile(targetId);
+            default -> {
+                CommunityProfile target = findProfile(raw);
                 if (target.getId().equals(me.getId())) throw new InvalidRequestException("자기 자신은 신고할 수 없어요");
+                targetId = target.getPublicId();
             }
         }
         if (reports.existsByReporterIdAndTargetTypeAndTargetId(me.getId(), request.targetType(), targetId)) {
             throw new DuplicateResourceException("이미 신고했어요");
         }
-        Instant now = clock.instant();
         reports.save(new Report(me, request.targetType(), targetId, request.reason(), now));
         long pending = reports.countByTargetTypeAndTargetIdAndResolvedAtIsNull(request.targetType(), targetId);
         boolean autoHidden = false;

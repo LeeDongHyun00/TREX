@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
+import java.text.Normalizer;
 import java.time.Clock;
 import java.util.List;
 import java.util.Locale;
@@ -70,8 +71,9 @@ public class CommunityProfileService {
     @Transactional
     public ProfileDto setNickname(String loginId, String nickname) {
         String clean = cleanNickname(nickname);
-        String key = clean.toLowerCase(Locale.ROOT);
+        String key = nicknameKey(clean);
         Optional<CommunityProfile> mine = find(loginId);
+        if (mine.map(CommunityProfile::isSuspended).orElse(false)) throw new ForbiddenException("이용이 정지된 계정이에요");
         profiles.findByNicknameKey(key)
                 .filter(other -> mine.map(m -> !m.getId().equals(other.getId())).orElse(true))
                 .ifPresent(other -> {
@@ -97,6 +99,7 @@ public class CommunityProfileService {
     @Transactional
     public ProfileDto setAvatar(String loginId, byte[] jpeg) {
         CommunityProfile profile = requireProfile(loginId);
+        if (profile.isSuspended()) throw new ForbiddenException("이용이 정지된 계정이에요");
         JpegInfo.read(jpeg);
         String key = "avatars/" + profile.getPublicId() + "-" + UUID.randomUUID() + ".jpg";
         storage.put(key, jpeg);
@@ -145,18 +148,31 @@ public class CommunityProfileService {
         return users.findByLoginId(loginId).flatMap(user -> profiles.findByUserId(user.getId()));
     }
 
-    /** 앞뒤 공백 제거 → 보이지 않는 글자 금지 → 2~12자(코드포인트) → 금칙어. */
+    /**
+     * 앞뒤 공백 제거 → 보이지 않는 글자 금지 → 2~12자(코드포인트) → 금칙어. 보이지 않는 글자: 제어·서식 문자, 보통 공백(U+0020)이 아닌 공백
+     * (NBSP 등), 한글 채움 문자(U+115F·U+1160·U+3164·U+FFA0), 점자 빈칸(U+2800) — 화면에서 빈 닉네임이 된다(리뷰 2026-10-29).
+     */
     private String cleanNickname(String nickname) {
         String clean = nickname == null ? "" : nickname.strip();
-        boolean invisible = clean.codePoints().anyMatch(cp -> {
-            int type = Character.getType(cp);
-            return type == Character.CONTROL || type == Character.FORMAT;
-        });
+        boolean invisible = clean.codePoints().anyMatch(CommunityProfileService::invisible);
         if (invisible) throw new InvalidRequestException("닉네임에 쓸 수 없는 글자가 있어요");
         int length = clean.codePointCount(0, clean.length());
         if (length < 2 || length > 12) throw new InvalidRequestException("닉네임은 2~12자로 정해 주세요");
         if (bannedWords.contains(clean)) throw new InvalidRequestException("쓸 수 없는 표현이 있어요");
         return clean;
+    }
+
+    private static boolean invisible(int cp) {
+        int type = Character.getType(cp);
+        boolean oddSpace = (type == Character.SPACE_SEPARATOR || type == Character.LINE_SEPARATOR
+                || type == Character.PARAGRAPH_SEPARATOR) && cp != 0x20;
+        boolean filler = cp == 0x115F || cp == 0x1160 || cp == 0x3164 || cp == 0xFFA0 || cp == 0x2800;
+        return type == Character.CONTROL || type == Character.FORMAT || oddSpace || filler;
+    }
+
+    /** 중복 판정 키 — NFKC(전각 문자도 반각으로)·소문자. 다른 사람인 척하는 닉네임을 같은 이름으로 본다. */
+    static String nicknameKey(String nickname) {
+        return Normalizer.normalize(nickname, Normalizer.Form.NFKC).toLowerCase(Locale.ROOT);
     }
 
     private String newPublicId() {

@@ -186,17 +186,21 @@ adb reverse tcp:8080 tcp:8080                                  # 폰의 127.0.0.
 7. 관리자 loginId: 앱으로 로그인한 토큰으로 `GET https://trex-api.duckdns.org/api/auth/me` → `loginId`(`google_<숫자>`).
 
 ### 9.2 배포 (PC Git Bash — 8절과 같은 길)
+순서가 중요하다: **`.env` 를 먼저** 고친다. jar 를 먼저 바꾼 채 컨테이너가 재시작되면 버킷 없이 새 jar 로 떠서 재시작을 반복한다.
 ```bash
 cd server && JAVA_HOME=~/.jdks/jbr-21.0.11 ./gradlew.bat bootJar
 KEY=C:/Workspace/TREX/trex-key.pem; HOST=ubuntu@54.252.112.191
-ssh -i $KEY $HOST "cd ~/trex && cp app.jar app.jar.prev && cp docker-compose.yml docker-compose.yml.prev"
-scp -i $KEY build/libs/server-0.0.1-SNAPSHOT.jar $HOST:~/trex/app.jar
-scp -i $KEY deploy/docker-compose.yml $HOST:~/trex/docker-compose.yml
-ssh -i $KEY $HOST "cd ~/trex && sed -i 's/\r$//' docker-compose.yml && nano .env"   # 아래 세 줄 추가
+# 1) .env 에 세 줄 추가 — nano 는 터미널이 필요해 -t
+ssh -t -i $KEY $HOST "cd ~/trex && cp .env .env.before-community && nano .env"
 #   COMMUNITY_S3_BUCKET=<버킷 이름>
 #   COMMUNITY_ADMIN_LOGIN_IDS=google_<숫자>
 #   COMMUNITY_REPORT_WEBHOOK_URL=<디스코드 웹후크>
-ssh -i $KEY $HOST "cd ~/trex && docker compose up -d && docker compose logs --since 2m app | grep -E 'Started|ERROR'"
+# 2) 되돌릴 사본을 남기고 새 jar·compose 올리기
+ssh -i $KEY $HOST "cd ~/trex && cp app.jar app.jar.prev && cp docker-compose.yml docker-compose.yml.prev"
+scp -i $KEY build/libs/server-0.0.1-SNAPSHOT.jar $HOST:~/trex/app.jar
+scp -i $KEY deploy/docker-compose.yml $HOST:~/trex/docker-compose.yml
+# 3) 다시 띄우고 기동 확인
+ssh -i $KEY $HOST "cd ~/trex && sed -i 's/\r$//' docker-compose.yml && docker compose up -d && sleep 20 && docker compose logs --since 2m app | grep -E 'Started|ERROR|COMMUNITY'"
 ```
 
 ### 9.3 확인
@@ -207,7 +211,9 @@ ssh -i $KEY $HOST "cd ~/trex && docker compose up -d && docker compose logs --si
 - 관리자: `GET /api/community/me` 의 `admin` 이 true. 다른 계정으로 신고하면 디스코드에 `[T-REX 신고]` 가 온다.
 
 ### 9.4 되돌리기
-`ssh -i $KEY $HOST "cd ~/trex && cp app.jar.prev app.jar && cp docker-compose.yml.prev docker-compose.yml && docker compose up -d"` — 커뮤니티 테이블은 남지만 옛 jar 는 쓰지 않으니 해가 없다(`ddl-auto: update` 는 지우지 않는다).
+`ssh -i $KEY $HOST "cd ~/trex && cp app.jar.prev app.jar && cp docker-compose.yml.prev docker-compose.yml && docker compose up -d"`
+- 커뮤니티 테이블은 남는다(`ddl-auto: update` 는 지우지 않는다). 다시 새 jar 를 올리면 그대로 이어진다.
+- **주의: 되돌린 동안에는 커뮤니티 프로필이 있는 사람의 회원 탈퇴가 실패한다**(옛 jar 의 탈퇴는 커뮤니티 테이블을 몰라 외래 키에 걸린다 — 409). 되돌림은 짧게 두고, 그 사이 탈퇴 요청은 새 jar 로 다시 올린 뒤 처리한다.
 
 ### 9.5 운영 메모
 - 신고는 **24시간 안에** 앱 안 신고함(관리자에게만 보임)에서 처리한다 — App Store 1.2. 디스코드 알림이 그 신호다.

@@ -7,6 +7,7 @@ import com.trex.server.dto.community.ResolveRequest;
 import com.trex.server.service.AdminService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -78,6 +79,12 @@ public class AdminController {
     @PostMapping("/users/{publicId}/unsuspend")
     public ResponseEntity<Void> unsuspend(@AuthenticationPrincipal String loginId, @PathVariable String publicId) {
         admin.unsuspend(loginId, publicId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/users/{publicId}/avatar")
+    public ResponseEntity<Void> clearAvatar(@AuthenticationPrincipal String loginId, @PathVariable String publicId) {
+        admin.clearAvatar(loginId, publicId);
         return ResponseEntity.noContent().build();
     }
 

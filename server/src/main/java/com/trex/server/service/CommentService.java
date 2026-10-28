@@ -68,7 +68,7 @@ public class CommentService {
         CommunityProfile me = profiles.requireWriter(loginId);
         boolean admin = profiles.isAdmin(loginId);
         Post post = posts.visiblePost(postId, me, admin);
-        if (post.isHidden()) throw new ResourceNotFoundException("글을 찾을 수 없어요");
+        if (post.isHidden() || posts.blockedBy(post.getAuthor(), me)) throw new ResourceNotFoundException("글을 찾을 수 없어요");
         String text = body == null ? "" : body.strip();
         if (text.isEmpty()) throw new InvalidRequestException("댓글을 입력해 주세요");
         if (text.codePointCount(0, text.length()) > MAX_BODY) throw new InvalidRequestException("댓글은 500자까지 쓸 수 있어요");
