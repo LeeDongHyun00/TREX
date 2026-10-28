@@ -24,4 +24,9 @@ public interface PostLikeRepository extends JpaRepository<PostLike, Long> {
     @Modifying
     @Query("delete from PostLike l where l.post.id = :postId")
     void deleteByPostId(@Param("postId") Long postId);
+
+    /** 탈퇴 — 그 사람이 누른 좋아요. */
+    @Modifying
+    @Query("delete from PostLike l where l.profile.id = :profile")
+    void deleteByProfile(@Param("profile") Long profile);
 }

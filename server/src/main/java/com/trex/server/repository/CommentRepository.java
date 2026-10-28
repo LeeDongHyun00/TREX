@@ -41,4 +41,16 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
     @Modifying
     @Query("delete from Comment c where c.post.id = :postId")
     void deleteByPostId(@Param("postId") Long postId);
+
+    /** 탈퇴 — 그 사람이 쓴 댓글 id(신고 기록을 같이 지우려고). */
+    @Query("select c.id from Comment c where c.author.id = :author")
+    List<Long> idsByAuthor(@Param("author") Long author);
+
+    /** 탈퇴 — 그 사람 글에 달린 댓글 id. */
+    @Query("select c.id from Comment c where c.post.id in :posts")
+    List<Long> idsOnPosts(@Param("posts") Collection<Long> posts);
+
+    @Modifying
+    @Query("delete from Comment c where c.author.id = :author")
+    void deleteByAuthor(@Param("author") Long author);
 }

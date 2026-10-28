@@ -41,4 +41,7 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     List<Post> hidden();
 
     long countByAuthorIdAndHiddenAtIsNull(Long authorId);
+
+    /** 탈퇴 — 그 사람의 글 전부(숨긴 글 포함). */
+    List<Post> findByAuthorId(Long authorId);
 }

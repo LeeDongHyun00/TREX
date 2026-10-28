@@ -3,7 +3,11 @@ package com.trex.server.repository;
 import com.trex.server.entity.Report;
 import com.trex.server.entity.ReportTargetType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
 import java.util.List;
 
 public interface ReportRepository extends JpaRepository<Report, Long> {
@@ -24,4 +28,14 @@ public interface ReportRepository extends JpaRepository<Report, Long> {
     List<Report> findByTargetTypeAndTargetId(ReportTargetType targetType, String targetId);
 
     List<Report> findByReporterId(Long reporterId);
+
+    /** 탈퇴 — 그 사람이 한 신고. */
+    @Modifying
+    @Query("delete from Report r where r.reporter.id = :reporter")
+    void deleteByReporter(@Param("reporter") Long reporter);
+
+    /** 탈퇴 — 지워지는 글·댓글·사용자를 대상으로 한 신고. */
+    @Modifying
+    @Query("delete from Report r where r.targetType = :type and r.targetId in :ids")
+    void deleteTargets(@Param("type") ReportTargetType type, @Param("ids") Collection<String> ids);
 }
