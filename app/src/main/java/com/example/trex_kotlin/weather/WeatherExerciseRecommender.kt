@@ -1,43 +1,72 @@
 package com.example.trex_kotlin.weather
 
+import java.util.Locale
 import kotlin.math.roundToInt
 
 object WeatherExerciseRecommender {
 
     internal const val COLD_THRESHOLD_CELSIUS = 0
+    internal const val COOL_THRESHOLD_CELSIUS = 10
+    internal const val COMFORTABLE_MAX_CELSIUS = 25
     internal const val HEATWAVE_THRESHOLD_CELSIUS = 32
+
+    private enum class TemperatureStatus(val label: String) {
+        COLD("추움"),
+        COOL("쌀쌀함"),
+        COMFORTABLE("맑음"),
+        WARM("더움"),
+        HEATWAVE("폭염")
+    }
+
+    private fun classifyTemperature(temperature: Int): TemperatureStatus = when {
+        temperature < COLD_THRESHOLD_CELSIUS -> TemperatureStatus.COLD
+        temperature < COOL_THRESHOLD_CELSIUS -> TemperatureStatus.COOL
+        temperature <= COMFORTABLE_MAX_CELSIUS -> TemperatureStatus.COMFORTABLE
+        temperature <= HEATWAVE_THRESHOLD_CELSIUS -> TemperatureStatus.WARM
+        else -> TemperatureStatus.HEATWAVE
+    }
 
     fun recommend(
         weather: WeatherInfo,
         locationLabel: String,
         nowMillis: Long = System.currentTimeMillis()
     ): WeatherWorkoutRecommendation {
-        // 화면에 보이는 온도(반올림값)와 판정 기준을 일치시킨다.
-        // 예: -0.4°C 는 "0°C" 로 표시되므로 추운 날로 판정하지 않는다.
+        // 표시 온도와 상태 판정의 기준을 일치시킨다.
         val roundedTemp = weather.temperature.roundToInt()
+        val temperatureStatus = classifyTemperature(roundedTemp)
 
         val isSnow = weather.weatherCode in 71..77 || weather.weatherCode in 85..86
         val isRaining = weather.weatherCode in 51..67 ||
             weather.weatherCode in 80..82 ||
             weather.weatherCode in 95..99
-        val isCold = roundedTemp < COLD_THRESHOLD_CELSIUS
-        val isHeatwave = roundedTemp > HEATWAVE_THRESHOLD_CELSIUS
         val isFogOrWind = weather.weatherCode in 45..48 || weather.windSpeed >= 35.0
         val isCloudy = weather.weatherCode in 2..3
+        val isCold = temperatureStatus == TemperatureStatus.COLD
+        val isHeatwave = temperatureStatus == TemperatureStatus.HEATWAVE
 
         val theme = when {
             isSnow -> WeatherThemeMode.SNOWY_COLD
             isRaining -> WeatherThemeMode.RAINY
             isCold -> WeatherThemeMode.SNOWY_COLD
             isHeatwave -> WeatherThemeMode.HEATWAVE
-            isFogOrWind || isCloudy -> WeatherThemeMode.CLOUDY
+            isFogOrWind || isCloudy || temperatureStatus == TemperatureStatus.COOL ||
+                temperatureStatus == TemperatureStatus.WARM -> WeatherThemeMode.CLOUDY
             else -> WeatherThemeMode.SUNNY
         }
 
         val isBadWeather = isSnow || isRaining || isCold || isHeatwave || isFogOrWind
         val environment = if (isBadWeather) WorkoutEnvironment.INDOOR else WorkoutEnvironment.OUTDOOR
-        val weatherText = getWeatherDescription(weather.weatherCode)
-        val summary = locationLabel + " · " + weatherText + " · " + roundedTemp + "°C"
+
+        val weatherText = when {
+            isSnow -> getWeatherDescription(weather.weatherCode)
+            isRaining -> getWeatherDescription(weather.weatherCode)
+            isFogOrWind -> getWeatherDescription(weather.weatherCode)
+            isCloudy -> getWeatherDescription(weather.weatherCode)
+            else -> temperatureStatus.label
+        }
+        val precipitationText = String.format(Locale.US, "%.1f", weather.precipitation)
+        val summary = "$locationLabel · $weatherText · ${roundedTemp}°C"
+        val precipitationSummary = "최근 1시간 강수량 ${precipitationText}mm"
 
         val minutesAgo = ((nowMillis - weather.fetchedAtMillis) / 60000L).coerceAtLeast(0L)
         val updateAgeText = when {
@@ -47,10 +76,13 @@ object WeatherExerciseRecommender {
         }
 
         val message = when {
-            isSnow || isCold -> "기온이 낮거나 눈 소식이 있어룡. 실내에서 체온을 높이는 웜업 운동을 권장해룡."
+            isSnow -> "눈 소식이 있어룡. 실내에서 체온을 높이는 웜업 운동을 권장해룡."
             isRaining -> "비 소식이 있어룡! 실내에서 안전하게 전신 근력 운동을 진행해 보세룡."
+            isCold -> "기온이 낮아룡. 실내에서 체온을 높이는 웜업 운동을 권장해룡."
             isHeatwave -> "무더운 날씨예룡. 시원한 실내에서 수분을 보충하며 부위별 운동을 해보세룡."
             isFogOrWind -> "바람이나 안개가 있으니 실내 위주로 안전하게 운동해 보세룡."
+            temperatureStatus == TemperatureStatus.COOL -> "쌀쌀한 날씨예룡. 준비운동을 충분히 하고 운동해 보세룡."
+            temperatureStatus == TemperatureStatus.WARM -> "따뜻한 날씨예룡. 무리하지 않는 강도로 운동해 보세룡."
             isCloudy -> "구름이 있어 햇볕 부담 없이 운동하기 좋은 날예룡! 컨디션에 맞춰 운동해 보세룡."
             else -> "야외 활동하기 좋은 맑은 날씨예룡! 활기차게 몸을 움직여 볼까룡?"
         }
@@ -88,6 +120,7 @@ object WeatherExerciseRecommender {
             theme = theme,
             locationLabel = locationLabel,
             weatherSummary = summary,
+            precipitationSummary = precipitationSummary,
             updateAgeText = updateAgeText,
             message = message,
             exercises = exercises
@@ -105,6 +138,6 @@ object WeatherExerciseRecommender {
         in 80..82 -> "소나기"
         in 85..86 -> "눈보라"
         in 95..99 -> "뇌우"
-        else -> "흐림"
+        else -> "날씨 정보 없음"
     }
 }
