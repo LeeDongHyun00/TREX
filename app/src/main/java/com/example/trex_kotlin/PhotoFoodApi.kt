@@ -22,6 +22,11 @@ interface FoodPhoto {
     fun scaledToMax(maxDimension: Int): FoodPhoto
     /** 픽셀 영역을 잘라낸 사본. */
     fun crop(left: Int, top: Int, width: Int, height: Int): FoodPhoto
+    /**
+     * 커뮤니티에 올릴 JPEG — 긴 변 [maxDimension] 으로 줄여([com.example.trex_kotlin.community.UploadSizing]) 픽셀에서 새로 만든다.
+     * 원본 파일을 보내지 않으니 촬영 위치 같은 EXIF 가 따라가지 않는다. 사용자가 글에 직접 고른 사진에만 쓴다.
+     */
+    fun jpeg(maxDimension: Int = 1080, quality: Int = 85): ByteArray
 }
 
 /** 갤러리에서 고른 사진 한 장 — 분석 스레드에서 [load] 로 디코딩한다(추론용 최대 변 1280, 방향 반영). 실패하면 null. */
