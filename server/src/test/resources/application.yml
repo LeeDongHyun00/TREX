@@ -8,6 +8,11 @@ spring:
   jpa:
     hibernate:
       ddl-auto: create-drop
+  servlet:
+    multipart:
+      # 커뮤니티 사진: 장당 2MB, 글 하나(사진 5장 + 본문) 11MB 까지. 넘으면 413.
+      max-file-size: 2MB
+      max-request-size: 11MB
 
 jwt:
   secret: test_only_secret_key_at_least_32_bytes_long_0123456789
@@ -17,3 +22,5 @@ trex:
   oauth:
     google:
       client-ids: test-web-client-id.apps.googleusercontent.com
+  community:
+    admin-login-ids: google_admin-sub
