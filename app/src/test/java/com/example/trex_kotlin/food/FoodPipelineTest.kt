@@ -163,8 +163,43 @@ class FoodPipelineTest {
         assertTrue(spot.memorySuggestionOnly)
         assertEquals(listOf("단무지"), spot.remembered.map { it.first })
         assertEquals("유사도가 1.0 이어도 자동 이름이 아니다", null, spot.rememberedName)
-        assertTrue("기억 후보만으로는 결과 줄이 생기지 않는다", r.foods.isEmpty())
         assertEquals("이름 붙은 자리가 없는 사진이라 전체 1회도 본다", listOf(p0), models.wholeCalls)
+    }
+
+    @Test
+    fun memoryLearnedFromAnEmptyLookingSpotOnlySuggestsElsewhere() {
+        val p0 = FakePhoto()
+        val dish = PixelBox(100f, 100f, 200f, 200f)
+        val models = FakeModels(
+            labels,
+            regions = mapOf(p0 to listOf(dish to 0.9f)),
+            crops = { _, _ -> scores("김치" to 0.03f) },
+            whole = { scores("밥" to 0.2f) },
+            embedding = { _, _ -> floatArrayOf(1f, 0f, 0f) },
+        )
+        val memory = FoodMemory(listOf(MemoryEntry("단무지", floatArrayOf(1f, 0f, 0f), 1L, suggestOnly = true)))
+        val spot = pipeline(models, memory).detect(listOf(p0)).success().regions.single()
+        assertTrue("0.02 이상이라 숨기지 않는 자리", !spot.looksEmpty)
+        assertEquals(listOf("단무지"), spot.remembered.map { it.first })
+        assertEquals("빈 그릇처럼 보인 자리에서 배운 기억은 다른 날에도 자동 이름이 아니다", null, spot.rememberedName)
+    }
+
+    @Test
+    fun oneFailedMemoryComparisonKeepsTheOthers() {
+        val p0 = FakePhoto()
+        val dish = PixelBox(100f, 100f, 200f, 200f)
+        val cup = PixelBox(400f, 400f, 450f, 450f)
+        val models = FakeModels(
+            labels,
+            regions = mapOf(p0 to listOf(dish to 0.9f, cup to 0.8f)),
+            crops = { _, b -> if (b == dish) scores("밥" to 0.3f) else scores("밥" to 0.01f) },
+            // 자리는 사진 대비 0~1 로 넘어온다 — 컵(왼쪽 0.625)만 실패한다.
+            embedding = { _, b -> if (b.left > 0.5f) error("특징값 실패") else floatArrayOf(1f, 0f, 0f) },
+        )
+        val memory = FoodMemory(listOf(MemoryEntry("현미밥", floatArrayOf(1f, 0f, 0f), 1L)))
+        val r = pipeline(models, memory).detect(listOf(p0)).success()
+        assertEquals("컵의 실패가 밥 자리의 기억까지 지우지 않는다", "현미밥", r.regions.single { !it.looksEmpty }.rememberedName)
+        assertTrue(r.regions.single { it.looksEmpty }.remembered.isEmpty())
     }
 
     @Test

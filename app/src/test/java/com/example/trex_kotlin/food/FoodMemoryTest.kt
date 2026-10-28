@@ -51,6 +51,33 @@ class FoodMemoryTest {
     }
 
     @Test
+    fun `후보 전용 기억은 파일에 표시가 남고 다른 기억의 형식은 그대로다`() {
+        val memory = FoodMemory(
+            listOf(
+                MemoryEntry("단무지", v(1f, 0f), 21, suggestOnly = true),
+                MemoryEntry("생강", v(0f, 1f), 22, correctedFrom = "김치"),
+                MemoryEntry("깍두기", v(1f, 1f), 23),
+            ),
+        )
+        val text = memory.encode()
+        assertEquals(memory.entries, FoodMemory.decode(text).entries)
+        assertEquals("옛 앱도 읽는 칸 수(3·4칸)는 그대로", listOf(5, 4, 3), text.lines().map { it.split('\t').size })
+    }
+
+    @Test
+    fun `자동 이름 유사도는 후보 전용 기억을 빼고 잰다`() {
+        val memory = FoodMemory(
+            listOf(
+                MemoryEntry("단무지", v(1f, 0f, 0f), 1, suggestOnly = true),
+                MemoryEntry("단무지", v(0.6f, 0.8f, 0f), 2),
+            ),
+        )
+        assertEquals(1f, memory.match(v(1f, 0f, 0f)).single().second, 1e-5f)
+        assertEquals(0.6f, memory.trustedSimilarity(v(1f, 0f, 0f), "단무지"), 1e-5f)
+        assertEquals(Float.NEGATIVE_INFINITY, memory.trustedSimilarity(v(1f, 0f, 0f), "라멘"), 0f)
+    }
+
+    @Test
     fun `깨진 줄은 건너뛴다`() {
         val good = FoodMemory(listOf(MemoryEntry("라멘", v(1f, 0f), 5))).encode()
         val decoded = FoodMemory.decode("망가진 줄\n$good\n이름\t1\t!!!base64아님")

@@ -56,7 +56,7 @@ private class AndroidFoodRecognizer(private val context: Context) : FoodRecogniz
     override fun warmUp() = FoodDetector.warmUp(context)
     override fun detect(photos: List<FoodPhoto>): FoodDetectionResult = FoodDetector.detect(context, photos)
     override fun remember(spots: List<FoodMemorySpot>) =
-        FoodMemoryStore.rememberAsync(context, spots.map { FoodMemoryStore.Spot(it.name, (it.photo as AndroidFoodPhoto).bitmap, it.box, it.correctedFrom) })
+        FoodMemoryStore.rememberAsync(context, spots.map { FoodMemoryStore.Spot(it.name, (it.photo as AndroidFoodPhoto).bitmap, it.box, it.correctedFrom, it.suggestOnly) })
 }
 
 @Composable

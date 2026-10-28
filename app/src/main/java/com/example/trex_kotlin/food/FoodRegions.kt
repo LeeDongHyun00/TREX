@@ -189,7 +189,8 @@ data class FoodRegion(
      */
     val remembered: List<Pair<String, Float>> = emptyList(),
     /**
-     * [remembered] 를 고르는 창의 후보로만 쓰고 자동 이름([rememberedName])은 붙이지 않는 자리 — 비어 보이는 자리([looksEmpty])다.
+     * [remembered] 를 고르는 창의 후보로만 쓰고 자동 이름([rememberedName])은 붙이지 않는 자리 — 비어 보이는 자리([looksEmpty]),
+     * 또는 1위 이름이 후보 전용 기억([MemoryEntry.suggestOnly], 비어 보인 자리에서 배운 것) 덕분에만 자동 이름 기준을 넘는 자리다.
      * 사용자가 이름을 붙인 작은 곁들이를 다음에 후보로 찾게 하되, 빈 그릇·컵이 기억 이름으로 기록되지 않게 한다
      * (FOOD_IMPROVEMENT_PLAN 4단계 — 빈 그릇 오명명과 비용을 재기 전에는 자동 이름·숨김 해제로 넓히지 않는다).
      */

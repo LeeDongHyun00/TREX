@@ -267,7 +267,7 @@ private object IosFoodMemoryStore {
                 var memory = loadLocked()
                 val now = nowMillis()
                 vectors.forEachIndexed { i, (spot, v) ->
-                    memory = memory.plus(MemoryEntry(FoodMemory.clean(spot.name), v, now + i, spot.correctedFrom?.let(FoodMemory::clean)))
+                    memory = memory.plus(MemoryEntry(FoodMemory.clean(spot.name), v, now + i, spot.correctedFrom?.let(FoodMemory::clean), spot.suggestOnly))
                 }
                 try {
                     writeTextFile(path, memory.encode())
@@ -276,7 +276,11 @@ private object IosFoodMemoryStore {
                 }
                 cached = memory
             }
-            IosFoodLog.d("기억 ${vectors.size}개 추가: ${vectors.joinToString { (spot, _) -> spot.name + (spot.correctedFrom?.let { " (모델: $it)" } ?: "") }}")
+            IosFoodLog.d(
+                "기억 ${vectors.size}개 추가: " + vectors.joinToString { (spot, _) ->
+                    spot.name + (spot.correctedFrom?.let { " (모델: $it)" } ?: "") + (if (spot.suggestOnly) " (후보 전용)" else "")
+                },
+            )
         }
     }
 }
