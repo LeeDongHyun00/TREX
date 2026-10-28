@@ -129,16 +129,28 @@ fun rememberGoogleIdTokenRequest(): suspend (String) -> String =
 fun rememberBytesImageDecoder(): BytesImageDecoder = remember {
     BytesImageDecoder { bytes, maxDimension ->
         runCatching {
-            Image.makeFromEncoded(bytes).use { source ->
+            // Skia 객체는 AutoCloseable 이 아니라 try/finally 로 닫는다. toComposeImageBitmap 은 픽셀을 복사하니 닫아도 된다.
+            val source = Image.makeFromEncoded(bytes)
+            try {
                 val (w, h) = com.example.trex_kotlin.community.UploadSizing.fit(source.width, source.height, maxDimension)
                 if (w == source.width && h == source.height) {
                     source.toComposeImageBitmap()
                 } else {
-                    Surface.makeRasterN32Premul(w, h).use { surface ->
+                    val surface = Surface.makeRasterN32Premul(w, h)
+                    try {
                         surface.canvas.drawImageRect(source, Rect.makeWH(w.toFloat(), h.toFloat()))
-                        surface.makeImageSnapshot().use { it.toComposeImageBitmap() }
+                        val snapshot = surface.makeImageSnapshot()
+                        try {
+                            snapshot.toComposeImageBitmap()
+                        } finally {
+                            snapshot.close()
+                        }
+                    } finally {
+                        surface.close()
                     }
                 }
+            } finally {
+                source.close()
             }
         }.getOrNull()
     }
