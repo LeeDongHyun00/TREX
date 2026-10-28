@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>T-REX 개인정보처리방침</title>
+<meta name="description" content="T-REX(Trusted Real-time Exercise eXpert) 앱의 개인정보처리방침">
+<style>
+  :root {
+    --bg: #ffffff;
+    --text: #1d1f23;
+    --muted: #5d636e;
+    --line: #e3e6ea;
+    --panel: #f5f7f9;
+    --accent: #2f7d4f;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #121417;
+      --text: #e8eaed;
+      --muted: #a2a8b3;
+      --line: #2b3036;
+      --panel: #1b1f24;
+      --accent: #6fcf97;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
+    line-height: 1.7;
+    font-size: 16px;
+  }
+  main { max-width: 760px; margin: 0 auto; padding: 40px 16px 64px; }
+  h1 { font-size: 1.6rem; margin: 0 0 4px; }
+  .meta { color: var(--muted); font-size: 0.9rem; margin: 0 0 28px; }
+  h2 { font-size: 1.15rem; margin: 36px 0 10px; padding-top: 16px; border-top: 1px solid var(--line); }
+  p, li { margin: 6px 0; }
+  ul { padding-left: 1.2em; }
+  table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 0.95rem; }
+  th, td { border: 1px solid var(--line); padding: 8px 10px; text-align: left; vertical-align: top; }
+  th { background: var(--panel); font-weight: 600; }
+  .note { background: var(--panel); border-radius: 10px; padding: 12px 14px; margin: 14px 0; }
+  a { color: var(--accent); }
+  .table-wrap { overflow-x: auto; }
+</style>
+</head>
+<body>
+<main>
+  <h1>T-REX 개인정보처리방침</h1>
+  <p class="meta">시행일: 2026년 10월 28일 · 버전 1.0</p>
+
+  <p>T-REX 팀(팀 트리케라톱스, 이하 "팀")은 운동·식단 앱 T-REX(Trusted Real-time Exercise eXpert, 이하 "앱")를 만드는 대학 캡스톤 팀입니다. 이 방침은 앱이 어떤 개인정보를 어디서 처리하는지와 이용자가 행사할 수 있는 권리를 설명합니다.</p>
+
+  <div class="note">
+    <strong>요약</strong>
+    <ul>
+      <li>카메라 영상과 음식 사진은 <strong>기기 안에서만</strong> 분석하며 서버로 보내거나 저장하지 않습니다.</li>
+      <li>계정 연결(구글 로그인)은 선택 사항입니다. 로그인하지 않으면 모든 기록이 기기에만 남습니다.</li>
+      <li>로그인하면 기록을 백업하기 위해 구글 계정 정보와 앱 기록을 서버(AWS 호주 시드니)에 보관합니다.</li>
+      <li>앱의 <strong>내 정보 탭 → 회원 탈퇴</strong>로 서버에 보관된 정보를 언제든 지울 수 있습니다.</li>
+    </ul>
+  </div>
+
+  <h2>1. 기기 안에서만 처리하는 정보</h2>
+  <p>다음 정보는 이용자의 기기 안에서만 처리되며 팀의 서버로 전송되지 않습니다.</p>
+  <ul>
+    <li><strong>카메라 영상(자세 분석):</strong> 운동 중 카메라 영상은 기기에서 실시간으로 분석하고 영상 자체는 저장하지 않습니다. 분석 결과인 관절 위치·자세 판정 기록은 앱 전용 저장 공간에 남으며, 이용자가 직접 내보내기 전에는 기기 밖으로 나가지 않습니다.</li>
+    <li><strong>음식 사진(식단 인식):</strong> 촬영하거나 고른 사진은 기기에서 분석하고 저장하지 않습니다. "내 음식 기억" 기능은 사진이 아니라 사진 일부에서 계산한 숫자(특징값)와 음식 이름만 기기에 보관합니다.</li>
+    <li><strong>운동·식단 기록과 신체 정보:</strong> 로그인하지 않으면 기기에만 저장됩니다.</li>
+  </ul>
+
+  <h2>2. 서버에 보관하는 개인정보 (로그인한 경우)</h2>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>항목</th><th>목적</th><th>보유 기간</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>구글 계정 고유 식별자, 이름, 이메일 주소</td>
+        <td>본인 확인, 계정 구분, 로그인 유지</td>
+        <td rowspan="2">회원 탈퇴 시까지 (탈퇴 즉시 삭제)</td>
+      </tr>
+      <tr>
+        <td>앱 기록 백업: 운동 목표·운동 요일·장소·보유 기구, 성별·키·몸무게·나이·활동량, 운동 계획과 운동 기록(자세 교정 횟수·정확도 포함), 식단·물 섭취 기록, 직접 등록한 음식</td>
+        <td>기록 백업, 기기 변경 시 복원, 여러 기기 간 동기화</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+  <p>수집 방법: 이용자가 앱에서 구글 로그인을 하면 구글이 발급한 인증 정보로 위 계정 정보를 받으며, 이후 앱이 기록을 자동으로 백업합니다. 카메라 영상, 음식 사진, 관절 위치 기록, 위치 정보는 서버에 보내지 않습니다.</p>
+
+  <h2>3. 개인정보의 국외 이전</h2>
+  <p>서버와 데이터베이스는 Amazon Web Services(AWS)의 호주 시드니 리전에 있습니다. 「개인정보 보호법」 제28조의8 제1항 제3호에 따라, 서비스 제공(계약 이행)에 필요한 보관으로서 다음과 같이 공개합니다.</p>
+  <div class="table-wrap">
+  <table>
+    <tbody>
+      <tr><th>이전받는 자</th><td>Amazon Web Services, Inc. (클라우드 서버 보관)</td></tr>
+      <tr><th>이전 국가</th><td>호주 (AWS 아시아 태평양 시드니 리전)</td></tr>
+      <tr><th>이전 항목</th><td>2항의 계정 정보와 앱 기록 백업</td></tr>
+      <tr><th>이전 시기·방법</th><td>로그인과 백업 시 암호화된 네트워크(HTTPS)로 전송</td></tr>
+      <tr><th>보유·이용 기간</th><td>회원 탈퇴 시까지</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>국외 이전을 원하지 않으면 로그인하지 않고 앱을 이용할 수 있습니다. 이 경우 기록은 기기에만 남고 백업·복원은 되지 않습니다.</p>
+
+  <h2>4. 외부 서비스에 전달되는 정보</h2>
+  <ul>
+    <li><strong>Google (로그인):</strong> 구글 로그인 과정은 구글이 처리하며, 구글의 개인정보처리방침이 적용됩니다.</li>
+    <li><strong>Open-Meteo (날씨):</strong> 홈 화면의 날씨를 보여 주기 위해 기기의 현재 위치 좌표를 날씨 서비스 Open-Meteo에 보냅니다. 팀의 서버는 위치를 받거나 저장하지 않습니다. 위치 권한을 허용하지 않으면 이용자가 고른 지역의 좌표를 대신 씁니다.</li>
+    <li><strong>GitHub (앱 업데이트 확인):</strong> 새 버전이 있는지 확인할 때 GitHub에 접속합니다. 이 과정에서 개인정보를 보내지 않습니다.</li>
+  </ul>
+  <p>팀은 이용자의 개인정보를 판매하거나 위 목적 외의 제3자에게 제공하지 않습니다.</p>
+
+  <h2>5. 개인정보의 파기</h2>
+  <ul>
+    <li>앱의 <strong>내 정보 탭 → 회원 탈퇴</strong>를 하면 서버의 계정 정보와 백업 기록을 즉시 삭제합니다.</li>
+    <li>서버의 자동 백업에는 삭제 후 최대 1일 동안 남을 수 있으며, 그 뒤 자동으로 지워집니다. 운영자가 점검을 위해 만든 수동 백업에 남은 정보는 이용자의 요청이 있으면 삭제합니다.</li>
+    <li>기기에 남은 정보는 앱을 삭제하면 함께 지워집니다.</li>
+  </ul>
+
+  <h2>6. 이용자의 권리</h2>
+  <p>이용자는 언제든 자신의 개인정보 열람·정정·삭제·처리정지를 요구할 수 있습니다. 앱에서 로그아웃과 회원 탈퇴를 직접 할 수 있고, 그 밖의 요청은 아래 문의처로 보내 주시면 지체 없이 처리합니다.</p>
+
+  <h2>7. 만 14세 미만 아동</h2>
+  <p>앱의 계정 기능은 만 14세 미만 아동을 대상으로 하지 않습니다. 만 14세 미만 아동의 정보가 법정대리인 동의 없이 수집된 것을 알게 되면 지체 없이 삭제합니다.</p>
+
+  <h2>8. 안전성 확보 조치</h2>
+  <ul>
+    <li>앱과 서버 사이의 모든 통신은 HTTPS로 암호화합니다.</li>
+    <li>데이터베이스는 인터넷에 직접 공개하지 않고 서버에서만 접근할 수 있게 했습니다.</li>
+    <li>서버 접근 권한을 운영자로 제한하고, 로그인은 구글 인증과 서버 발급 토큰으로 확인합니다.</li>
+  </ul>
+
+  <h2>9. 개인정보 보호 문의처</h2>
+  <ul>
+    <li>운영: T-REX 팀 (팀 트리케라톱스)</li>
+    <li>문의: <a href="https://github.com/LeeDongHyun00/TREX/issues">GitHub 문의 게시판</a></li>
+  </ul>
+  <p>개인정보 침해에 대한 상담은 개인정보침해신고센터(privacy.kisa.or.kr, 국번 없이 118)에도 할 수 있습니다.</p>
+
+  <h2>10. 방침의 변경</h2>
+  <p>이 방침을 바꾸면 이 페이지에 변경 내용과 시행일을 알립니다. 새로운 정보를 수집하는 기능(예: 커뮤니티)을 추가할 때는 시행 전에 이 방침을 고칩니다.</p>
+</main>
+</body>
+</html>
