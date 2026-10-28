@@ -11,9 +11,11 @@ import java.util.List;
  * @param s3Region         버킷 리전(기본 시드니)
  * @param adminLoginIds    관리자 loginId 목록(쉼표) — 앱 안 신고함과 숨김·삭제·정지 권한
  * @param reportWebhookUrl 새 신고를 알릴 디스코드 웹후크. 비면 알리지 않는다
+ * @param requireS3        운영 — 버킷이 비면 서버를 띄우지 않는다(메모리 저장소로 조용히 돌면 재시작마다 사진이 사라진다)
  */
 @ConfigurationProperties("trex.community")
-public record CommunityProperties(String s3Bucket, String s3Region, List<String> adminLoginIds, String reportWebhookUrl) {
+public record CommunityProperties(String s3Bucket, String s3Region, List<String> adminLoginIds, String reportWebhookUrl,
+                                  boolean requireS3) {
 
     public CommunityProperties {
         s3Bucket = s3Bucket == null ? "" : s3Bucket.trim();

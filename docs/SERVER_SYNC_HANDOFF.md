@@ -161,3 +161,56 @@ adb reverse tcp:8080 tcp:8080                                  # 폰의 127.0.0.
 - `.env` 를 Windows 에서 만들어 올리면 줄끝 `\r` 이 비밀번호에 붙는다 — EC2 에서 만들거나 `sed -i 's/\r$//'`.
 - Caddy 인증서는 `caddy_data` 볼륨에 있다. 볼륨을 지우면 재발급(Let's Encrypt 주간 발급 제한).
 - 6개월 뒤 Free plan 계정이 닫히기 전에 유료 전환 여부를 정한다(RDS 스냅샷을 다른 계정으로 공유해 옮길 수 있다).
+
+## 9. 커뮤니티 운영 (2026-10-29 — 배포 전 초안)
+
+커뮤니티 API(`/api/community/**`, 설계 `docs/superpowers/specs/2026-10-28-community-design.md`, 계획 `docs/superpowers/plans/2026-10-28-community-server.md`)는 사진을 **비공개 S3 버킷**에 두고, 앱에는 수명 1시간짜리 서명 주소를 내준다. 운영 프로필은 버킷이 비면 **서버가 뜨지 않는다**(`require-s3`) — 아래 AWS 준비를 끝내기 전에 이 jar 를 배포하면 로그인·동기화까지 멈춘다.
+
+### 9.1 AWS 준비 (콘솔, 시드니 ap-southeast-2 — 한 번만)
+1. **S3 버킷** 만들기: 이름 `trex-community-<임의 6자>`(전 세계 유일), 리전 시드니, **퍼블릭 액세스 차단 4개 모두 켠 채로**, 버전 관리 끔, 기본 암호화 SSE-S3.
+2. **IAM 정책** `trex-community-s3`(JSON):
+   ```json
+   {
+     "Version": "2012-10-17",
+     "Statement": [{
+       "Effect": "Allow",
+       "Action": ["s3:PutObject", "s3:GetObject", "s3:DeleteObject"],
+       "Resource": "arn:aws:s3:::<버킷 이름>/*"
+     }]
+   }
+   ```
+3. **IAM 역할** `trex-app-s3`: 신뢰 대상 "AWS 서비스 → EC2", 위 정책 연결.
+4. EC2 `trex-server` → 작업 → 보안 → **IAM 역할 수정** → `trex-app-s3`.
+5. EC2 → 작업 → 인스턴스 설정 → **인스턴스 메타데이터 옵션 수정** → IMDSv2 필수 그대로, **응답 홉 제한 2**. (도커 컨테이너는 한 홉을 더 거쳐 역할 자격 증명을 받는다 — 1 이면 S3 호출이 자격 증명 없음으로 실패한다.)
+6. 디스코드: 신고 알림 받을 채널 → 채널 편집 → 연동 → 웹후크 → 새 웹후크 → URL 복사(비밀값).
+7. 관리자 loginId: 앱으로 로그인한 토큰으로 `GET https://trex-api.duckdns.org/api/auth/me` → `loginId`(`google_<숫자>`).
+
+### 9.2 배포 (PC Git Bash — 8절과 같은 길)
+```bash
+cd server && JAVA_HOME=~/.jdks/jbr-21.0.11 ./gradlew.bat bootJar
+KEY=C:/Workspace/TREX/trex-key.pem; HOST=ubuntu@54.252.112.191
+ssh -i $KEY $HOST "cd ~/trex && cp app.jar app.jar.prev && cp docker-compose.yml docker-compose.yml.prev"
+scp -i $KEY build/libs/server-0.0.1-SNAPSHOT.jar $HOST:~/trex/app.jar
+scp -i $KEY deploy/docker-compose.yml $HOST:~/trex/docker-compose.yml
+ssh -i $KEY $HOST "cd ~/trex && sed -i 's/\r$//' docker-compose.yml && nano .env"   # 아래 세 줄 추가
+#   COMMUNITY_S3_BUCKET=<버킷 이름>
+#   COMMUNITY_ADMIN_LOGIN_IDS=google_<숫자>
+#   COMMUNITY_REPORT_WEBHOOK_URL=<디스코드 웹후크>
+ssh -i $KEY $HOST "cd ~/trex && docker compose up -d && docker compose logs --since 2m app | grep -E 'Started|ERROR'"
+```
+
+### 9.3 확인
+- 기동 로그 `Started ServerApplication`, `curl -s -o /dev/null -w '%{http_code}' https://trex-api.duckdns.org/api/sync` 가 401 그대로.
+- 로그인 토큰(`T`)으로: `curl -H "Authorization: Bearer $T" https://trex-api.duckdns.org/api/community/me` → 200(`profile` null).
+- 닉네임·이용규칙: `PUT /api/community/me/profile {"nickname":"..."}`, `POST /api/community/me/terms {"version":"2026-10-28"}`.
+- 사진 글: `curl -H "Authorization: Bearer $T" -F body=시험 -F images=@test.jpg https://trex-api.duckdns.org/api/community/posts` → 201, 응답의 `images[0].url` 을 브라우저로 열면 사진이 보인다. 그 글을 `DELETE` 하면 같은 주소가 곧 403/404.
+- 관리자: `GET /api/community/me` 의 `admin` 이 true. 다른 계정으로 신고하면 디스코드에 `[T-REX 신고]` 가 온다.
+
+### 9.4 되돌리기
+`ssh -i $KEY $HOST "cd ~/trex && cp app.jar.prev app.jar && cp docker-compose.yml.prev docker-compose.yml && docker compose up -d"` — 커뮤니티 테이블은 남지만 옛 jar 는 쓰지 않으니 해가 없다(`ddl-auto: update` 는 지우지 않는다).
+
+### 9.5 운영 메모
+- 신고는 **24시간 안에** 앱 안 신고함(관리자에게만 보임)에서 처리한다 — App Store 1.2. 디스코드 알림이 그 신호다.
+- 자동 숨김은 서로 다른 세 사람의 미처리 신고. 관리자가 "그대로 둠(KEPT)" 하면 숨김이 풀리고 그 신고들은 처리 끝으로 남는다.
+- 탈퇴는 커뮤니티 글·사진·댓글·좋아요·신고·차단을 함께 지운다(사진은 커밋 뒤, 실패는 로그만 — 고아 사진은 S3 콘솔에서 `posts/<글 id>/` 로 찾을 수 있다).
+- 비용(추정): 사진 1천 장·조회 30만 회에 월 1달러 미만. AWS Free plan 만료일(가입 6개월)을 데모데이 전에 확인한다.
