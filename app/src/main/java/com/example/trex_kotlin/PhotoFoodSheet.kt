@@ -74,6 +74,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.trex_kotlin.TrexText as Text
 import com.example.trex_kotlin.food.FoodDetectionResult
+import com.example.trex_kotlin.food.FoodMemoryPolicy
 import com.example.trex_kotlin.food.FoodRegion
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -146,6 +147,9 @@ private enum class LabelKind { MODEL, MEMORY, USER }
  * [regionIds] 는 이 줄이 사진의 어느 자리([FoodRegion.id])에서 왔는지 — 사진 위 이름표가 이것으로 정해진다.
  * 자리의 이름표를 따로 들고 있지 않는 이유: 줄을 바꾸거나 지웠을 때 사진과 목록이 어긋나지 않게, 줄 하나만 정본으로 둔다.
  * 줄이 지워지면 그 자리는 다시 "?" 가 되어 이름을 새로 붙일 수 있다.
+ *
+ * [userRegionIds] 는 [regionIds] 중 사용자가 이 줄 이름을 **직접 고른** 자리 — 내 음식 기억은 이 자리만 남긴다([FoodMemoryPolicy]).
+ * 줄의 [source] 는 합쳐질 때 앞 줄 것을 따르므로, 그것으로 짐작하면 같은 이름으로 합쳐진 다른 자리까지 사용자 선택이 된다.
  */
 private data class RecognizedItem(
     val name: String,
@@ -153,6 +157,7 @@ private data class RecognizedItem(
     val source: FoodSource,
     val qty: Double = 1.0,
     val regionIds: Set<Int> = emptySet(),
+    val userRegionIds: Set<Int> = emptySet(),
 )
 
 /**
@@ -175,7 +180,10 @@ private fun List<RecognizedItem>.mergedByName(): List<RecognizedItem> =
         } else {
             acc.mapIndexed { i, kept ->
                 if (i == at) {
-                    kept.copy(qty = FoodPortion.add(kept.qty, item.qty), nutrition = kept.nutrition ?: item.nutrition, regionIds = kept.regionIds + item.regionIds)
+                    kept.copy(
+                        qty = FoodPortion.add(kept.qty, item.qty), nutrition = kept.nutrition ?: item.nutrition,
+                        regionIds = kept.regionIds + item.regionIds, userRegionIds = kept.userRegionIds + item.userRegionIds,
+                    )
                 } else {
                     kept
                 }
@@ -346,11 +354,11 @@ internal fun PhotoFoodSheet(app: AppViewModel, onClose: () -> Unit) {
                             items.firstOrNull { region.id in it.regionIds }?.let { row ->
                                 RegionLabel(
                                     row.name,
-                                    // 사용자가 고른 줄(Picked)은 이름이 기억과 같아도 사용자 선택이다 — 기억이 붙인 줄을 지운 뒤
-                                    // "?" 에 같은 이름을 직접 고른 경우가 그렇다.
+                                    // 사용자가 이 자리에 직접 고른 이름은 기억과 같아도 사용자 선택이다 — 기억이 붙인 줄을 지운 뒤
+                                    // "?" 에 같은 이름을 직접 고른 경우가 그렇다. 같은 이름 줄에 합쳐진 다른 자리는 기억 이름 그대로다.
                                     when {
                                         row.name == region.name -> LabelKind.MODEL
-                                        row.name == region.rememberedName && row.source != FoodSource.Picked -> LabelKind.MEMORY
+                                        row.name == region.rememberedName && region.id !in row.userRegionIds -> LabelKind.MEMORY
                                         else -> LabelKind.USER
                                     },
                                 )
@@ -447,16 +455,20 @@ internal fun PhotoFoodSheet(app: AppViewModel, onClose: () -> Unit) {
             // 누른 자리와 비슷하다고 기억이 말한 음식. 모델 후보보다 위에 둔다 — 그 사람이 실제로 먹은 음식이다.
             rememberedCandidates = spotRemembered,
             onPick = { name, nutrition ->
-                val picked = RecognizedItem(name, nutrition, FoodSource.Picked, regionIds = naming?.let { setOf(it.id) }.orEmpty())
+                val namedIds = naming?.let { setOf(it.id) }.orEmpty()
+                val picked = RecognizedItem(name, nutrition, FoodSource.Picked, regionIds = namedIds, userRegionIds = namedIds)
                 items = if (replacing == null) {
                     (items + picked).mergedByName()
                 } else if (splitting) {
                     val id = tapped.id
-                    (items.map { if (it === replacing) it.copy(regionIds = it.regionIds - id) else it } + picked.copy(regionIds = setOf(id)))
+                    (
+                        items.map { if (it === replacing) it.copy(regionIds = it.regionIds - id, userRegionIds = it.userRegionIds - id) else it } +
+                            picked.copy(regionIds = setOf(id), userRegionIds = setOf(id))
+                        )
                         .mergedByName()
                 } else {
-                    // 바꿔 넣은 이름은 모델이 판정한 게 아니다. 판정 흔적을 떼어 낸다. 자리는 그대로 따라간다.
-                    items.map { if (it === replacing) picked.copy(qty = it.qty, regionIds = it.regionIds) else it }.mergedByName()
+                    // 바꿔 넣은 이름은 모델이 판정한 게 아니다. 판정 흔적을 떼어 낸다. 자리는 그대로 따라가고, 줄 전체를 사용자가 고른 것이다.
+                    items.map { if (it === replacing) picked.copy(qty = it.qty, regionIds = it.regionIds, userRegionIds = it.regionIds) else it }.mergedByName()
                 }
                 pickTarget = null
             },
@@ -980,22 +992,16 @@ private fun RegionPhoto(
 }
 
 /**
- * 기록할 때, 사용자가 사진의 자리에 **직접 붙이거나 바꾼** 이름을 내 음식 기억에 남긴다.
+ * 기록할 때, 사용자가 사진의 자리에 **직접 붙이거나 바꾼** 이름을 내 음식 기억에 남긴다. 고르는 규칙은 [FoodMemoryPolicy].
  *
  * 사용자가 모델 이름을 고친 자리는 모델이 붙였던 이름도 함께 남긴다(고침 기억) — 다음에 모델이 비슷한 자리에 같은 이름을 또 붙이면 고친 이름으로 바꾼다.
- * 모델이 붙인 이름과 기억이 자동으로 붙인 이름은 남기지 않는다 — 사용자가 확인했다고 볼 근거가 약하고,
- * 틀린 자동 이름이 다시 기억이 되면 같은 틀림이 스스로 굳는다. 기록하지 않고 닫으면 아무것도 남지 않는다.
- * 기록된 줄(영양값이 있는 줄)의 자리만 남긴다.
+ * 기록하지 않고 닫으면 아무것도 남지 않는다.
  */
 private fun rememberUserNamed(recognizer: FoodRecognizer, photos: List<FoodPhoto>, regions: List<FoodRegion>, items: List<RecognizedItem>) {
-    val spots = regions.mapNotNull { region ->
-        val row = items.firstOrNull { region.id in it.regionIds && it.nutrition != null } ?: return@mapNotNull null
-        if (row.name == region.name) return@mapNotNull null
-        if (row.name == region.rememberedName && row.source != FoodSource.Picked) return@mapNotNull null
-        // 비어 보이는 자리는 다음 분석에서 기억과 견주지 않는다(FoodDetector.withMemory) — 남겨도 다시 찾아지지 않고 자리만 차지한다.
-        if (region.looksEmpty) return@mapNotNull null
-        val photo = photos.getOrNull(region.photoIndex) ?: return@mapNotNull null
-        FoodMemorySpot(row.name, photo, region.box, correctedFrom = region.name)
+    val rows = items.map { FoodMemoryPolicy.Row(it.name, recordable = it.nutrition != null, userRegionIds = it.userRegionIds) }
+    val spots = FoodMemoryPolicy.spotsToRemember(regions, rows).mapNotNull { spot ->
+        val photo = photos.getOrNull(spot.region.photoIndex) ?: return@mapNotNull null
+        FoodMemorySpot(spot.name, photo, spot.region.box, spot.correctedFrom)
     }
     recognizer.remember(spots)
 }

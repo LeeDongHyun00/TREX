@@ -242,8 +242,8 @@ class FoodPipeline(
     }
 
     /**
-     * 이름이 없고 비어 보이지 않는 자리마다 특징값을 뽑아 내 음식 기억과 견준다. 기억이 비었거나 특징값 모델이 없으면 그대로 돌려준다.
-     * 실패해도 인식 결과는 그대로 내야 하므로 예외를 삼킨다.
+     * 이름이 없는 자리마다 특징값을 뽑아 내 음식 기억과 견준다 — 비어 보이는 자리는 후보로만([FoodRegion.memorySuggestionOnly]).
+     * 기억이 비었거나 특징값 모델이 없으면 그대로 돌려준다. 실패해도 인식 결과는 그대로 내야 하므로 예외를 삼킨다.
      */
     private fun withMemory(regions: List<FoodRegion>, photos: List<FoodPhoto>): List<FoodRegion> {
         val memory = memory()
@@ -254,10 +254,9 @@ class FoodPipeline(
             regions.map { r ->
                 val modelName = r.name
                 when {
-                    modelName == null && r.looksEmpty -> r
                     modelName == null -> {
                         val v = models.embed(photos[r.photoIndex], r.box)
-                        r.copy(remembered = memory.match(v).filter { it.second >= FoodMemory.SUGGEST_AT })
+                        r.copy(remembered = memory.match(v).filter { it.second >= FoodMemory.SUGGEST_AT }, memorySuggestionOnly = r.looksEmpty)
                     }
                     // 모델 이름이 붙은 자리는 그 이름을 사용자가 고친 적이 있을 때만 본다.
                     memory.hasCorrectionOf(modelName) -> {
@@ -268,7 +267,7 @@ class FoodPipeline(
                 }
             }.also { out ->
                 log.d(
-                    "기억 비교 ${out.count { (it.name == null && !it.looksEmpty) || (it.name != null && memory.hasCorrectionOf(it.name!!)) }}곳 · 기억 ${memory.entries.size}장 · " +
+                    "기억 비교 ${out.count { it.name == null || memory.hasCorrectionOf(it.name!!) }}곳(후보로만 ${out.count { it.memorySuggestionOnly }}) · 기억 ${memory.entries.size}장 · " +
                         "${clock() - startedAt}ms · " +
                         out.filter { it.remembered.isNotEmpty() }.joinToString { r -> r.remembered.joinToString("/") { "${it.first} ${twoDecimals(it.second)}" } },
                 )

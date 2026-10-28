@@ -137,8 +137,34 @@ class FoodPipelineTest {
         val named = r.regions.first { it.top.first().first == "밥" && it.confidence == 0.3f }
         assertEquals("현미밥", named.rememberedName)
         assertTrue(named.remembered.first().second >= FoodMemory.AUTO_NAME_AT)
-        assertEquals("비어 보이는 자리(1위 < 0.02)는 기억과 견주지 않는다", 1, models.embedCalls.size)
+        // 비어 보이는 자리(1위 < 0.02)도 기억과 견주지만 후보로만 — 사용자가 이름을 붙인 작은 곁들이를 다음에 찾게(FOOD_IMPROVEMENT_PLAN 4단계).
+        val cupSpot = r.regions.single { it.looksEmpty }
+        assertEquals(2, models.embedCalls.size)
+        assertEquals("현미밥", cupSpot.remembered.first().first)
+        assertEquals("비어 보이는 자리에는 기억이 이름을 붙이지 않는다", null, cupSpot.rememberedName)
         assertTrue("기억이 이름을 붙인 사진은 전체 1회를 다시 돌리지 않는다", models.wholeCalls.isEmpty())
+    }
+
+    @Test
+    fun memoryOnlySuggestsForAnEmptyLookingSpot() {
+        val p0 = FakePhoto()
+        val side = PixelBox(100f, 100f, 160f, 160f)
+        val models = FakeModels(
+            labels,
+            regions = mapOf(p0 to listOf(side to 0.7f)),
+            crops = { _, _ -> scores("김치" to 0.01f) },
+            whole = { scores("밥" to 0.2f) },
+            embedding = { _, _ -> floatArrayOf(1f, 0f, 0f) },
+        )
+        val memory = FoodMemory(listOf(MemoryEntry("단무지", floatArrayOf(1f, 0f, 0f), 1L)))
+        val r = pipeline(models, memory).detect(listOf(p0)).success()
+        val spot = r.regions.single()
+        assertTrue(spot.looksEmpty)
+        assertTrue(spot.memorySuggestionOnly)
+        assertEquals(listOf("단무지"), spot.remembered.map { it.first })
+        assertEquals("유사도가 1.0 이어도 자동 이름이 아니다", null, spot.rememberedName)
+        assertTrue("기억 후보만으로는 결과 줄이 생기지 않는다", r.foods.isEmpty())
+        assertEquals("이름 붙은 자리가 없는 사진이라 전체 1회도 본다", listOf(p0), models.wholeCalls)
     }
 
     @Test
