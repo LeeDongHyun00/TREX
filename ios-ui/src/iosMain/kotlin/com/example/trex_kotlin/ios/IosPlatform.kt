@@ -5,6 +5,7 @@ import com.example.trex_kotlin.KeyValueStore
 import com.example.trex_kotlin.MuscleLoadDatabase
 import com.example.trex_kotlin.posture.SetLabelFormat
 import com.example.trex_kotlin.posture.SetSelfLabel
+import com.example.trex_kotlin.sync.BinaryTransport
 import com.example.trex_kotlin.sync.HttpTransport
 import kotlinx.atomicfu.locks.SynchronizedObject
 import kotlinx.atomicfu.locks.synchronized
@@ -44,6 +45,7 @@ import platform.posix.memcpy
 open class IosAppPlatform : AppPlatform {
     override fun preferences(name: String): KeyValueStore = UserDefaultsStore(name)
     override val http: HttpTransport = UrlSessionTransport
+    override val binary: BinaryTransport = UrlSessionBinaryTransport
     /** Android gradle.properties `trex.apiBaseUrl` 과 같은 서버. */
     override val apiBaseUrl: String = "https://trex-api.duckdns.org"
     /**
