@@ -22,9 +22,9 @@ import androidx.compose.ui.viewinterop.UIKitView
 import androidx.compose.ui.window.DialogProperties
 import com.example.trex_kotlin.ios.IosSpeechEngine
 import com.example.trex_kotlin.ios.readTextFile
+import com.example.trex_kotlin.ios.requestIosGoogleIdToken
 import com.example.trex_kotlin.ios.toByteArray
 import com.example.trex_kotlin.posture.SpeechCoach
-import com.example.trex_kotlin.sync.SignInException
 import kotlinx.atomicfu.locks.SynchronizedObject
 import kotlinx.atomicfu.locks.synchronized
 import kotlinx.cinterop.ExperimentalForeignApi
@@ -116,10 +116,10 @@ fun rememberRepValidation(key: Any?): Boolean = false
 @Composable
 fun PlatformBackHandler(enabled: Boolean = true, onBack: () -> Unit) = androidx.compose.ui.backhandler.BackHandler(enabled, onBack)
 
-/** iPhone 구글 로그인은 아직 없다 — 웹 클라이언트 ID 가 비어 있어 앱 상태가 이 함수를 부르기 전에 안내한다. */
+/** 구글 ID 토큰 — Swift 다리(GoogleSignIn, `ios/IosGoogleSignIn.kt`)가 로그인 창을 띄운다. Android 는 Credential Manager. */
 @Composable
 fun rememberGoogleIdTokenRequest(): suspend (String) -> String =
-    remember { { _: String -> throw SignInException.Failed("iPhone 에서는 아직 구글 로그인을 쓸 수 없어요") } }
+    remember { { serverClientId: String -> requestIosGoogleIdToken(serverClientId) } }
 
 @Composable
 fun rememberSystemSettingsLinks(): SystemSettingsLinks = remember {
