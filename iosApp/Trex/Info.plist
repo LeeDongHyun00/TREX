@@ -10,7 +10,6 @@
 <key>CFBundleName</key><string>$(PRODUCT_NAME)</string>
 <key>CFBundlePackageType</key><string>APPL</string>
 <key>CFBundleShortVersionString</key><string>$(MARKETING_VERSION)</string>
-<key>CFBundleURLTypes</key><array><dict><key>CFBundleURLSchemes</key><array><string>com.googleusercontent.apps.12194757714-bd99b55i5jk94gpft5a6ec6s983fm9mn</string></array></dict></array>
 <key>CFBundleVersion</key><string>$(CURRENT_PROJECT_VERSION)</string>
 <key>GIDClientID</key><string>12194757714-bd99b55i5jk94gpft5a6ec6s983fm9mn.apps.googleusercontent.com</string>
 <key>GIDServerClientID</key><string>12194757714-foefivjlqn4n3g5iqdsgqlqst12ejbpi.apps.googleusercontent.com</string>

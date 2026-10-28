@@ -116,7 +116,7 @@ fun rememberRepValidation(key: Any?): Boolean = false
 @Composable
 fun PlatformBackHandler(enabled: Boolean = true, onBack: () -> Unit) = androidx.compose.ui.backhandler.BackHandler(enabled, onBack)
 
-/** 구글 ID 토큰 — Swift 다리(GoogleSignIn, `ios/IosGoogleSignIn.kt`)가 로그인 창을 띄운다. Android 는 Credential Manager. */
+/** 구글 ID 토큰 — Swift 다리(`ios/IosGoogleSignIn.kt`, ASWebAuthenticationSession)가 로그인 창을 띄운다. Android 는 Credential Manager. */
 @Composable
 fun rememberGoogleIdTokenRequest(): suspend (String) -> String =
     remember { { serverClientId: String -> requestIosGoogleIdToken(serverClientId) } }
