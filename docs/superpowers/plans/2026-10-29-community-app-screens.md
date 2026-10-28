@@ -14,7 +14,8 @@
 
 - 공유 화면 규칙(CLAUDE.md §108): `android.*`·`java.*` 금지, 플랫폼 기능은 짝, 테마는 `Trex.c`·기존 `AdaptiveLayout`(최대 폭 840dp, 폴더블 힌지), 글자 1.3배에서도 깨지지 않게.
 - 문구: 한국어 존댓말 평서체. 글쓰기 화면에 **"서버에 저장되고 모든 사용자에게 공개돼요"**, 동의 화면에 **만 14세 이상 확인** 과 이용규칙 전문 링크(`CommunityApi.TERMS_URL`, `LocalUriHandler`).
-- 사진 캐시 키: 글 `post:<글 id>:<순서>`, 프로필 `avatar:<publicId>:<avatarUrl 경로 부분>`(사진을 바꾸면 키가 바뀐다).
+- 사진: `RemoteImage(url, …, maxDimension)` — 키는 계획 2 의 `remoteImageKey`(서명 뺀 경로 + 크기)라 호출하는 쪽이 키를 만들지 않는다. 로더는 앱에 하나 — 루트를 `ProvideRemoteImages(binary)` 로 감싼다(Task 2). `maxDimension` 은 자리 크기에 맞춘다(피드 1080, 프로필 사진 160, 격자 360).
+- 오류 잡는 순서: `ApiException`(서버 문구) → `NetworkException`("네트워크에 연결하지 못했어요") — ApiException 이 하위 클래스라 순서가 바뀌면 서버 문구가 사라진다. 사진 `jpeg()` 는 IO 스레드에서.
 - 서버 오류는 `ApiException.message` 를 그대로 보인다. 글쓰기 실패 때 입력(본문·사진)을 지우지 않는다.
 - 오운완 카드: 날짜·운동 이름·완료 세트·총 시간·예상 kcal **숫자만**(자세 판정·점수·헤드라인 없음 — 설계 §3).
 - 화면 순서·탭: 홈 · 운동 · 식단 · **커뮤니티** · 내 정보. 커뮤니티 탭은 다시 눌러도 리모컨으로 바뀌지 않는다(홈처럼).
@@ -35,7 +36,7 @@
 - [ ] 테스트 `게이트는_계정과_설정으로_정해진다`(6가지 조합) → 실패 확인 → 구현 → 통과 → 커밋
 
 ### Task 2: 커뮤니티 탭
-**Files:** Modify `TrexData.kt`(`TrexTab.Community("커뮤니티")` 를 Diet 와 Profile 사이), `TrexApp.kt`(아이콘 `Icons.Rounded.Forum`, `MainTabs` 분기, 다시 눌러도 펼치지 않음) · Create `community/CommunityTabScreen.kt`(게이트별 화면: 로그인 안내(내 정보의 계정 연결로)·"이 기기에서는 아직 커뮤니티를 쓸 수 없어요"·닉네임·동의·피드) · Test `TrexTabTest.탭_순서`
+**Files:** Modify `TrexData.kt`(`TrexTab.Community("커뮤니티")` 를 Diet 와 Profile 사이), `TrexApp.kt`(아이콘 `Icons.Rounded.Forum`, `MainTabs` 분기, 다시 눌러도 펼치지 않음, 루트를 `ProvideRemoteImages` 로 감싸기) · Create `community/CommunityTabScreen.kt`(게이트별 화면: 로그인 안내(내 정보의 계정 연결로)·"이 기기에서는 아직 커뮤니티를 쓸 수 없어요"·닉네임·동의·피드) · Test `TrexTabTest.탭_순서`
 - [ ] 테스트 → 구현 → 통과 → 실기기(폰 360dp·폴드 펼침·글자 1.3배) → 커밋
 
 ### Task 3: 피드 상태와 카드
