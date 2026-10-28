@@ -4,6 +4,7 @@ import com.trex.server.dto.community.PostDto;
 import com.trex.server.dto.community.PostPage;
 import com.trex.server.dto.community.UserProfileDto;
 import com.trex.server.service.PostService;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -52,6 +54,22 @@ public class PostController {
     @DeleteMapping("/posts/{id}")
     public ResponseEntity<Void> delete(@AuthenticationPrincipal String loginId, @PathVariable long id) {
         postService.delete(loginId, id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PutMapping("/posts/{id}/like")
+    public ResponseEntity<Void> like(@AuthenticationPrincipal String loginId, @PathVariable long id) {
+        try {
+            postService.like(loginId, id);
+        } catch (DataIntegrityViolationException e) {
+            // 같은 사람이 동시에 두 번 눌러 유니크에 걸렸다 — 이미 좋아요 상태다(멱등).
+        }
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/posts/{id}/like")
+    public ResponseEntity<Void> unlike(@AuthenticationPrincipal String loginId, @PathVariable long id) {
+        postService.unlike(loginId, id);
         return ResponseEntity.noContent().build();
     }
 

@@ -8,11 +8,14 @@ import com.trex.server.dto.community.UserProfileDto;
 import com.trex.server.entity.CommunityProfile;
 import com.trex.server.entity.Post;
 import com.trex.server.entity.PostImage;
+import com.trex.server.entity.PostLike;
 import com.trex.server.exception.ForbiddenException;
 import com.trex.server.exception.InvalidRequestException;
 import com.trex.server.exception.ResourceNotFoundException;
 import com.trex.server.exception.TooManyRequestsException;
+import com.trex.server.repository.CommentRepository;
 import com.trex.server.repository.CommunityProfileRepository;
+import com.trex.server.repository.PostLikeRepository;
 import com.trex.server.repository.PostRepository;
 import com.trex.server.storage.ImageStorage;
 import com.trex.server.storage.JpegInfo;
@@ -29,7 +32,11 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.Clock;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -46,6 +53,8 @@ public class PostService {
     private static final int MAX_PER_DAY = 30;
 
     private final PostRepository posts;
+    private final PostLikeRepository likes;
+    private final CommentRepository comments;
     private final CommunityProfileRepository profileRepository;
     private final CommunityProfileService profiles;
     private final BannedWords bannedWords;
@@ -53,9 +62,12 @@ public class PostService {
     private final StorageCleanup cleanup;
     private final Clock clock;
 
-    public PostService(PostRepository posts, CommunityProfileRepository profileRepository, CommunityProfileService profiles,
+    public PostService(PostRepository posts, PostLikeRepository likes, CommentRepository comments,
+                       CommunityProfileRepository profileRepository, CommunityProfileService profiles,
                        BannedWords bannedWords, ImageStorage storage, StorageCleanup cleanup, Clock clock) {
         this.posts = posts;
+        this.likes = likes;
+        this.comments = comments;
         this.profileRepository = profileRepository;
         this.profiles = profiles;
         this.bannedWords = bannedWords;
@@ -131,8 +143,28 @@ public class PostService {
         Post post = visiblePost(postId, me, admin);
         if (!isMine(post, me) && !admin) throw new ForbiddenException("내 글만 지울 수 있어요");
         List<String> keys = post.getImages().stream().map(PostImage::getStorageKey).toList();
+        likes.deleteByPostId(post.getId());
+        comments.deleteByPostId(post.getId());
         posts.delete(post);
         cleanup.deleteAfterCommit(keys);
+    }
+
+    /** 좋아요 — 이미 눌렀으면 그대로(두 번 눌러도 하나). 동시에 두 번 와서 유니크에 걸리는 경우는 컨트롤러가 성공으로 삼킨다. */
+    @Transactional
+    public void like(String loginId, long postId) {
+        CommunityProfile me = profiles.requireWriter(loginId);
+        Post post = visiblePost(postId, me, profiles.isAdmin(loginId));
+        if (post.isHidden()) throw new ResourceNotFoundException("글을 찾을 수 없어요");
+        if (likes.findByPostIdAndProfileId(postId, me.getId()).isEmpty()) {
+            likes.save(new PostLike(post, me, clock.instant()));
+        }
+    }
+
+    /** 좋아요 취소 — 안 눌렀어도 그대로. */
+    @Transactional
+    public void unlike(String loginId, long postId) {
+        CommunityProfile me = profiles.requireWriter(loginId);
+        likes.findByPostIdAndProfileId(postId, me.getId()).ifPresent(likes::delete);
     }
 
     @Transactional(readOnly = true)
@@ -166,17 +198,37 @@ public class PostService {
         boolean more = found.size() > size;
         List<Post> items = more ? found.subList(0, size) : found;
         Long next = more ? items.get(items.size() - 1).getId() : null;
-        return new PostPage(items.stream().map(p -> toDto(p, viewer, admin)).toList(), next);
+        return new PostPage(toDtos(items, viewer, admin), next);
     }
 
     PostDto toDto(Post post, CommunityProfile viewer, boolean admin) {
-        boolean mine = isMine(post, viewer);
-        List<ImageDto> images = post.getImages().stream()
-                .map(i -> new ImageDto(storage.url(i.getStorageKey()), i.getWidth(), i.getHeight()))
-                .toList();
-        String reason = post.isHidden() && (mine || admin) ? post.getHiddenReason() : null;
-        return new PostDto(post.getId(), profiles.toDto(post.getAuthor()), post.getBody(), images, 0, false, 0,
-                post.getCreatedAt().toEpochMilli(), post.isHidden(), reason, mine);
+        return toDtos(List.of(post), viewer, admin).get(0);
+    }
+
+    /** 글 묶음 → 응답. 좋아요·댓글 수와 내 좋아요는 묶음째 한 번씩 센다(피드 한 쪽에 쿼리 세 번). */
+    List<PostDto> toDtos(List<Post> list, CommunityProfile viewer, boolean admin) {
+        if (list.isEmpty()) return List.of();
+        List<Long> ids = list.stream().map(Post::getId).toList();
+        Map<Long, Long> likeCounts = counts(likes.countByPostIds(ids));
+        Map<Long, Long> commentCounts = counts(comments.countVisibleByPostIds(ids));
+        Set<Long> liked = new HashSet<>(likes.likedAmong(ids, viewer.getId()));
+        return list.stream().map(post -> {
+            boolean mine = isMine(post, viewer);
+            List<ImageDto> images = post.getImages().stream()
+                    .map(i -> new ImageDto(storage.url(i.getStorageKey()), i.getWidth(), i.getHeight()))
+                    .toList();
+            String reason = post.isHidden() && (mine || admin) ? post.getHiddenReason() : null;
+            return new PostDto(post.getId(), profiles.toDto(post.getAuthor()), post.getBody(), images,
+                    likeCounts.getOrDefault(post.getId(), 0L), liked.contains(post.getId()),
+                    commentCounts.getOrDefault(post.getId(), 0L),
+                    post.getCreatedAt().toEpochMilli(), post.isHidden(), reason, mine);
+        }).toList();
+    }
+
+    private static Map<Long, Long> counts(List<Object[]> rows) {
+        Map<Long, Long> map = new HashMap<>();
+        for (Object[] row : rows) map.put(((Number) row[0]).longValue(), ((Number) row[1]).longValue());
+        return map;
     }
 
     private CommunityProfile findProfile(String publicId) {
