@@ -131,8 +131,17 @@ class IosFoodPhoto(val native: IosFoodImage) : FoodPhoto {
         val source = if (maxOf(width, height) <= maxDimension) native else native.scaled(maxDimension)
         val info = ImageInfo(source.width, source.height, ColorType.RGBA_8888, ColorAlphaType.PREMUL)
         val raster = org.jetbrains.skia.Image.makeRaster(info, source.rgba().toByteArray(), source.width * 4)
-        return raster.encodeToData(org.jetbrains.skia.EncodedImageFormat.JPEG, quality)?.bytes
-            ?: throw IllegalStateException("JPEG 로 만들지 못했어요")
+        try {
+            val data = raster.encodeToData(org.jetbrains.skia.EncodedImageFormat.JPEG, quality)
+                ?: throw IllegalStateException("JPEG 로 만들지 못했어요")
+            try {
+                return data.bytes
+            } finally {
+                data.close()
+            }
+        } finally {
+            raster.close()
+        }
     }
 }
 

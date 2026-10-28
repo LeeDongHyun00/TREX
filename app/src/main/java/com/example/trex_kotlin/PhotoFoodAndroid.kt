@@ -52,9 +52,13 @@ class AndroidFoodPhoto(val bitmap: Bitmap) : FoodPhoto {
     override fun jpeg(maxDimension: Int, quality: Int): ByteArray {
         val (w, h) = UploadSizing.fit(bitmap.width, bitmap.height, maxDimension)
         val scaled = if (w == bitmap.width && h == bitmap.height) bitmap else Bitmap.createScaledBitmap(bitmap, w, h, true)
-        return ByteArrayOutputStream().use { out ->
-            scaled.compress(Bitmap.CompressFormat.JPEG, quality, out)
-            out.toByteArray()
+        try {
+            return ByteArrayOutputStream().use { out ->
+                check(scaled.compress(Bitmap.CompressFormat.JPEG, quality, out)) { "JPEG 로 만들지 못했어요" }
+                out.toByteArray()
+            }
+        } finally {
+            if (scaled !== bitmap) scaled.recycle()
         }
     }
 }
