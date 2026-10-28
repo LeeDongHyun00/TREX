@@ -148,6 +148,19 @@ fun rememberGoogleIdTokenRequest(): suspend (String) -> String {
     return remember(context) { { clientId -> requestGoogleIdToken(context.findTrexActivity() ?: context, clientId) } }
 }
 
+/** 받은 사진 디코더 — 먼저 크기만 읽고 긴 변이 [maxDimension] 의 두 배 아래가 될 때까지 2배씩 줄여 읽는다(메모리). */
+@Composable
+fun rememberBytesImageDecoder(): BytesImageDecoder = remember {
+    BytesImageDecoder { bytes, maxDimension ->
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return@BytesImageDecoder null
+        var sample = 1
+        while (maxOf(bounds.outWidth, bounds.outHeight) / (sample * 2) >= maxDimension) sample *= 2
+        BitmapFactory.decodeByteArray(bytes, 0, bytes.size, BitmapFactory.Options().apply { inSampleSize = sample })?.asImageBitmap()
+    }
+}
+
 /** 음성 안내 목소리 안내 — Android 는 기기 TTS(구글 음성)를 그대로 써서 없다(iPhone 만, §108d 후속). */
 @Composable
 fun rememberVoiceAdvisor(): VoiceAdvisor? = null

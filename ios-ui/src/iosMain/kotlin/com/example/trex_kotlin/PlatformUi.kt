@@ -121,6 +121,12 @@ fun PlatformBackHandler(enabled: Boolean = true, onBack: () -> Unit) = androidx.
 fun rememberGoogleIdTokenRequest(): suspend (String) -> String =
     remember { { serverClientId: String -> requestIosGoogleIdToken(serverClientId) } }
 
+/** 받은 사진 디코더(Skia) — 앱이 올리는 사진은 긴 변 1080 이라 줄이지 않고 읽는다. 깨졌으면 null. */
+@Composable
+fun rememberBytesImageDecoder(): BytesImageDecoder = remember {
+    BytesImageDecoder { bytes, _ -> runCatching { Image.makeFromEncoded(bytes).toComposeImageBitmap() }.getOrNull() }
+}
+
 @Composable
 fun rememberSystemSettingsLinks(): SystemSettingsLinks = remember {
     object : SystemSettingsLinks {
