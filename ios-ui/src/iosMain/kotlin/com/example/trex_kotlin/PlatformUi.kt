@@ -121,10 +121,27 @@ fun PlatformBackHandler(enabled: Boolean = true, onBack: () -> Unit) = androidx.
 fun rememberGoogleIdTokenRequest(): suspend (String) -> String =
     remember { { serverClientId: String -> requestIosGoogleIdToken(serverClientId) } }
 
-/** 받은 사진 디코더(Skia) — 앱이 올리는 사진은 긴 변 1080 이라 줄이지 않고 읽는다. 깨졌으면 null. */
+/**
+ * 받은 사진 디코더(Skia) — 긴 변을 [maxDimension] 으로 줄여 그린다(Android 와 같은 크기). 서버는 한 변 4096 까지 받으니
+ * 원본 크기로 펼치면 피드가 메모리를 넘긴다(리뷰 2026-10-29). 깨졌으면 null. 원본 Skia 그림은 바로 닫는다.
+ */
 @Composable
 fun rememberBytesImageDecoder(): BytesImageDecoder = remember {
-    BytesImageDecoder { bytes, _ -> runCatching { Image.makeFromEncoded(bytes).toComposeImageBitmap() }.getOrNull() }
+    BytesImageDecoder { bytes, maxDimension ->
+        runCatching {
+            Image.makeFromEncoded(bytes).use { source ->
+                val (w, h) = com.example.trex_kotlin.community.UploadSizing.fit(source.width, source.height, maxDimension)
+                if (w == source.width && h == source.height) {
+                    source.toComposeImageBitmap()
+                } else {
+                    Surface.makeRasterN32Premul(w, h).use { surface ->
+                        surface.canvas.drawImageRect(source, Rect.makeWH(w.toFloat(), h.toFloat()))
+                        surface.makeImageSnapshot().use { it.toComposeImageBitmap() }
+                    }
+                }
+            }
+        }.getOrNull()
+    }
 }
 
 @Composable

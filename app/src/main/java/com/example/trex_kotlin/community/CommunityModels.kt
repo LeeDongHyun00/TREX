@@ -56,6 +56,12 @@ enum class ReportReason(val label: String) {
     PRIVACY("개인정보 노출"),
     RIGHTS("권리 침해"),
     OTHER("기타"),
+    ;
+
+    companion object {
+        /** 서버가 사유를 늘려도 옛 앱이 죽지 않게 모르는 값은 기타로. */
+        fun from(name: String): ReportReason = entries.firstOrNull { it.name == name } ?: OTHER
+    }
 }
 
 /** 내가 한 신고 — 처리 결과([resolution] "KEPT"·"REMOVED")를 앱 안에서 보인다. */

@@ -11,7 +11,7 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 import java.util.concurrent.atomic.AtomicInteger
 
-/** 원격 사진 — 안정 키로 캐시(서명 주소는 바뀐다), 같은 키는 한 번만 받기, 만료 주소 403 은 실패(계획 2 Review Focus 1·5). */
+/** 원격 사진 — 서명을 뺀 경로로 캐시(서명 주소는 바뀐다), 같은 키는 한 번만 받기, 만료 주소 403 은 실패(계획 2 Review Focus 1·5). */
 class RemoteImageLoaderTest {
 
     /** 주소별 응답을 돌려주고 받은 횟수를 센다. [gate] 가 있으면 그것이 풀릴 때까지 기다린다. */
@@ -31,8 +31,8 @@ class RemoteImageLoaderTest {
     fun 캐시에_있으면_다시_받지_않는다() = runBlocking {
         val binary = FakeBinary({ 200 })
         val loader = RemoteImageLoader(binary, decode)
-        assertEquals("https://s3/a?sig=1", loader.load("post:1:0", "https://s3/a?sig=1", 1080))
-        assertEquals("https://s3/a?sig=1", loader.load("post:1:0", "https://s3/a?sig=2", 1080))
+        assertEquals("https://s3/a?sig=1", loader.load("https://s3/a?sig=1", 1080))
+        assertEquals("https://s3/a?sig=1", loader.load("https://s3/a?sig=2", 1080))
         assertEquals(1, binary.calls.get())
     }
 
@@ -41,8 +41,8 @@ class RemoteImageLoaderTest {
         val gate = CompletableDeferred<Unit>()
         val binary = FakeBinary({ 200 }, gate)
         val loader = RemoteImageLoader(binary, decode)
-        val first = async { loader.load("post:2:0", "https://s3/b", 1080) }
-        val second = async { loader.load("post:2:0", "https://s3/b", 1080) }
+        val first = async { loader.load("https://s3/b", 1080) }
+        val second = async { loader.load("https://s3/b", 1080) }
         while (binary.calls.get() == 0) kotlinx.coroutines.yield()
         gate.complete(Unit)
         assertEquals("https://s3/b", first.await())
@@ -54,9 +54,9 @@ class RemoteImageLoaderTest {
     fun 만료된_주소의_403은_실패로_끝난다() = runBlocking {
         val binary = FakeBinary({ url -> if (url.endsWith("old")) 403 else 200 })
         val loader = RemoteImageLoader(binary, decode)
-        assertNull(loader.load("post:3:0", "https://s3/c?old", 1080))
-        assertNull(loader.cached("post:3:0"))
-        assertEquals("https://s3/c?new", loader.load("post:3:0", "https://s3/c?new", 1080))
+        assertNull(loader.load("https://s3/c?old", 1080))
+        assertNull(loader.cached("https://s3/c?new", 1080))
+        assertEquals("https://s3/c?new", loader.load("https://s3/c?new", 1080))
         assertEquals(2, binary.calls.get())
     }
 

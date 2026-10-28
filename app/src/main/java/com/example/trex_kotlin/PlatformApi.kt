@@ -19,17 +19,27 @@ fun interface BytesImageDecoder {
     fun decode(bytes: ByteArray, maxDimension: Int): ImageBitmap?
 }
 
-/** 작은 LRU(개수 기준) — android.util.LruCache 와 같은 의미(꺼내면 최근으로, 넘치면 가장 오래 안 쓴 것부터 버린다). */
-class LruCache<K : Any, V : Any>(private val maxSize: Int) {
+/**
+ * 작은 LRU — android.util.LruCache 와 같은 의미(꺼내면 최근으로, 넘치면 가장 오래 안 쓴 것부터 버린다).
+ * 크기는 [sizeOf] 의 합으로 잰다(기본은 개수). 받은 사진 캐시는 바이트로 재서 개수가 적어도 큰 그림이 메모리를 넘기지 않게 한다.
+ */
+class LruCache<K : Any, V : Any>(private val maxSize: Int, private val sizeOf: (V) -> Int = { 1 }) {
     private val lock = SynchronizedObject()
     private val entries = LinkedHashMap<K, V>()
+    private var size = 0
 
     fun get(key: K): V? = synchronized(lock) { entries.remove(key)?.also { entries[key] = it } }
 
     fun put(key: K, value: V) = synchronized(lock) {
-        entries.remove(key)
+        entries.remove(key)?.let { size -= sizeOf(it) }
+        // 예산보다 큰 하나는 담지 않는다 — 그것 하나 때문에 캐시 전체가 비지 않게
+        if (sizeOf(value) > maxSize) return@synchronized
         entries[key] = value
-        while (entries.size > maxSize) entries.remove(entries.keys.first())
+        size += sizeOf(value)
+        while (size > maxSize && entries.isNotEmpty()) {
+            val eldest = entries.keys.first()
+            entries.remove(eldest)?.let { size -= sizeOf(it) }
+        }
     }
 }
 

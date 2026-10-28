@@ -20,27 +20,27 @@ class CommunityApi(
     private val token: () -> String?,
 ) {
 
-    suspend fun me(): CommunityMe = JSONObject(get("/me")).let { o ->
+    suspend fun me(): CommunityMe = parsed { JSONObject(get("/me")).let { o ->
         CommunityMe(o.optJSONObject("profile")?.let(::profile), o.getBoolean("termsAccepted"), o.getBoolean("admin"), o.getBoolean("suspended"))
-    }
+    } }
 
     suspend fun setNickname(nickname: String): CommunityProfile =
-        profile(JSONObject(json("PUT", "/me/profile", JSONObject().put("nickname", nickname))))
+        parsed { profile(JSONObject(json("PUT", "/me/profile", JSONObject().put("nickname", nickname)))) }
 
     suspend fun acceptTerms(version: String = TERMS_VERSION) {
         json("POST", "/me/terms", JSONObject().put("version", version))
     }
 
     suspend fun setAvatar(jpeg: ByteArray): CommunityProfile =
-        profile(JSONObject(multipart("PUT", "/me/avatar", listOf(Multipart.Part.File("image", "avatar.jpg", "image/jpeg", jpeg)))))
+        parsed { profile(JSONObject(multipart("PUT", "/me/avatar", listOf(Multipart.Part.File("image", "avatar.jpg", "image/jpeg", jpeg))))) }
 
     suspend fun clearAvatar() {
         json("DELETE", "/me/avatar")
     }
 
-    suspend fun feed(before: Long?): PostPage = postPage(get("/posts" + cursor(before)))
+    suspend fun feed(before: Long?): PostPage = parsed { postPage(get("/posts" + cursor(before))) }
 
-    suspend fun post(id: Long): Post = post(JSONObject(get("/posts/$id")))
+    suspend fun post(id: Long): Post = parsed { post(JSONObject(get("/posts/$id"))) }
 
     /** 글쓰기 — 본문(없어도 된다)과 JPEG 0~5장(긴 변 1080 으로 다시 만든 것). */
     suspend fun createPost(body: String?, images: List<ByteArray>): Post {
@@ -48,7 +48,7 @@ class CommunityApi(
             if (body != null) add(Multipart.Part.Text("body", body))
             images.forEachIndexed { i, jpeg -> add(Multipart.Part.File("images", "photo$i.jpg", "image/jpeg", jpeg)) }
         }
-        return post(JSONObject(multipart("POST", "/posts", parts)))
+        return parsed { post(JSONObject(multipart("POST", "/posts", parts))) }
     }
 
     suspend fun deletePost(id: Long) {
@@ -63,22 +63,22 @@ class CommunityApi(
         json("DELETE", "/posts/$postId/like")
     }
 
-    suspend fun comments(postId: Long, before: Long?): CommentPage = JSONObject(get("/posts/$postId/comments" + cursor(before))).let { o ->
+    suspend fun comments(postId: Long, before: Long?): CommentPage = parsed { JSONObject(get("/posts/$postId/comments" + cursor(before))).let { o ->
         CommentPage(o.getJSONArray("items").objects().map(::comment), o.optLongOrNull("nextBefore"))
-    }
+    } }
 
     suspend fun addComment(postId: Long, body: String): Comment =
-        comment(JSONObject(json("POST", "/posts/$postId/comments", JSONObject().put("body", body))))
+        parsed { comment(JSONObject(json("POST", "/posts/$postId/comments", JSONObject().put("body", body)))) }
 
     suspend fun deleteComment(id: Long) {
         json("DELETE", "/comments/$id")
     }
 
-    suspend fun user(publicId: String): UserProfile = JSONObject(get("/users/$publicId")).let { o ->
+    suspend fun user(publicId: String): UserProfile = parsed { JSONObject(get("/users/$publicId")).let { o ->
         UserProfile(profile(o.getJSONObject("profile")), o.getLong("postCount"), o.getBoolean("blockedByMe"))
-    }
+    } }
 
-    suspend fun userPosts(publicId: String, before: Long?): PostPage = postPage(get("/users/$publicId/posts" + cursor(before)))
+    suspend fun userPosts(publicId: String, before: Long?): PostPage = parsed { postPage(get("/users/$publicId/posts" + cursor(before))) }
 
     suspend fun block(publicId: String) {
         json("PUT", "/blocks/$publicId")
@@ -88,30 +88,30 @@ class CommunityApi(
         json("DELETE", "/blocks/$publicId")
     }
 
-    suspend fun blocks(): List<CommunityProfile> = JSONArray(get("/me/blocks")).objects().map(::profile)
+    suspend fun blocks(): List<CommunityProfile> = parsed { JSONArray(get("/me/blocks")).objects().map(::profile) }
 
     suspend fun report(target: ReportTarget, targetId: String, reason: ReportReason) {
         json("POST", "/reports", JSONObject().put("targetType", target.name).put("targetId", targetId).put("reason", reason.name))
     }
 
-    suspend fun myReports(): List<MyReport> = JSONArray(get("/me/reports")).objects().map { o ->
+    suspend fun myReports(): List<MyReport> = parsed { JSONArray(get("/me/reports")).objects().map { o ->
         MyReport(
             o.getLong("id"), ReportTarget.valueOf(o.getString("targetType")), o.getString("targetId"),
-            ReportReason.valueOf(o.getString("reason")), o.getLong("createdAt"),
+            ReportReason.from(o.getString("reason")), o.getLong("createdAt"),
             o.getString("status") == "RESOLVED", o.optStringOrNull("resolution"),
         )
-    }
+    } }
 
     // ---- 관리자(관리자가 아니면 서버가 403)
 
-    suspend fun adminReports(): List<AdminReport> = JSONArray(get("/admin/reports")).objects().map { o ->
+    suspend fun adminReports(): List<AdminReport> = parsed { JSONArray(get("/admin/reports")).objects().map { o ->
         val reasons = o.getJSONArray("reasons")
         AdminReport(
             ReportTarget.valueOf(o.getString("targetType")), o.getString("targetId"), o.getString("preview"),
-            o.getLong("reportCount"), List(reasons.length()) { ReportReason.valueOf(reasons.getString(it)) },
+            o.getLong("reportCount"), List(reasons.length()) { ReportReason.from(reasons.getString(it)) },
             o.getBoolean("hidden"), o.getLong("firstReportedAt"),
         )
-    }
+    } }
 
     /** 신고 처리 — [kept] 면 그대로 두고 숨김을 푼다, 아니면 지운다(사용자면 정지). */
     suspend fun resolve(target: ReportTarget, targetId: String, kept: Boolean) {
@@ -135,11 +135,25 @@ class CommunityApi(
         json("POST", "/admin/users/$publicId/unsuspend", JSONObject())
     }
 
-    suspend fun suspended(): List<CommunityProfile> = JSONArray(get("/admin/suspended")).objects().map(::profile)
+    suspend fun suspended(): List<CommunityProfile> = parsed { JSONArray(get("/admin/suspended")).objects().map(::profile) }
 
-    suspend fun hiddenPosts(): List<Post> = JSONArray(get("/admin/hidden")).objects().map(::post)
+    suspend fun hiddenPosts(): List<Post> = parsed { JSONArray(get("/admin/hidden")).objects().map(::post) }
 
     // ---- 전송
+
+    /**
+     * 응답 읽기 — 서버 오류([ApiException])·연결 실패([NetworkException])는 그대로, 그 밖에 읽다 난 예외(공용 와이파이의 200 HTML,
+     * 모르는 값)는 [NetworkException] 으로 바꾼다. 화면이 약속된 두 예외만 잡으면 되게(리뷰 2026-10-29).
+     */
+    private inline fun <T> parsed(block: () -> T): T = try {
+        block()
+    } catch (e: NetworkException) {
+        throw e
+    } catch (e: kotlinx.coroutines.CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        throw NetworkException("서버 응답을 읽지 못했습니다", e)
+    }
 
     private suspend fun get(path: String): String = json("GET", path)
 
