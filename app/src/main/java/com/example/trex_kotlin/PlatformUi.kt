@@ -18,7 +18,6 @@ import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import android.provider.Settings
-import android.view.MotionEvent
 import android.view.Surface
 import android.view.View
 import android.view.WindowManager
@@ -349,21 +348,15 @@ internal fun MuscleAtlasWebView(command: String, sessionMode: Boolean, descripti
     AndroidView(modifier=modifier,factory={context -> WebView(context).apply {
         setBackgroundColor(android.graphics.Color.rgb(34,37,39))
         contentDescription=description
-        setOnTouchListener { view, event ->
-            // 근육도 안에서 시작한 드래그는 회전에 사용하고, 바깥 영역은 페이지 스크롤로 남긴다.
-            when (event.actionMasked) {
-                MotionEvent.ACTION_DOWN -> view.parent?.requestDisallowInterceptTouchEvent(true)
-                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> view.parent?.requestDisallowInterceptTouchEvent(false)
-            }
-            false
-        }
+        // 정적인 2D 그림 위에서도 부모 LazyColumn의 스크롤을 시작할 수 있다.
+        setOnTouchListener { _, _ -> true }
         settings.javaScriptEnabled=true;settings.allowFileAccess=false;settings.allowContentAccess=false
         settings.blockNetworkLoads=true;settings.domStorageEnabled=false
         webViewClient=object:WebViewClient() {
             override fun shouldOverrideUrlLoading(view:WebView,request:WebResourceRequest)=true
             override fun shouldInterceptRequest(view:WebView,request:WebResourceRequest):WebResourceResponse {
                 val path=request.url.path.orEmpty().removePrefix("/muscle_load/")
-                if(request.url.host!="appassets.androidplatform.net" || path !in setOf("index.html","viewer.js","atlas.js","three.min.js"))
+                if(request.url.host!="appassets.androidplatform.net" || path !in setOf("index.html","viewer.js","atlas-2d.js"))
                     return WebResourceResponse("text/plain","UTF-8",403,"Blocked",emptyMap(),null)
                 val mime=if(path.endsWith(".html"))"text/html" else "application/javascript"
                 return WebResourceResponse(mime,"UTF-8",context.assets.open("muscle_load/$path"))

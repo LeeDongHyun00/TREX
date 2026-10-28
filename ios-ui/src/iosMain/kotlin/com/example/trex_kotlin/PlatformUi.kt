@@ -7,16 +7,18 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.viewinterop.UIKitInteropInteractionMode
 import androidx.compose.ui.viewinterop.UIKitInteropProperties
 import androidx.compose.ui.viewinterop.UIKitView
 import androidx.compose.ui.window.DialogProperties
@@ -166,6 +168,7 @@ internal fun GuideVisualView(asset: String, description: String, playing: Boolea
             html = "<img src=\"${asset.substringAfterLast('/')}\" alt=\"$description\" " +
                 "style=\"width:100%;height:100%;object-fit:contain;display:block\">",
             baseDirectory = asset.substringBeforeLast('/'), description = description, modifier = modifier,
+            background = Trex.c.sheet,
         )
         return
     }
@@ -186,7 +189,7 @@ internal fun GuideSvgImage(assetName: String, modifier: Modifier = Modifier) {
     )
 }
 
-/** 근육 부하 3D(three.js) — 번들의 muscle_load 를 그대로 띄우고 페이지가 뜬 뒤·바뀔 때 [command] 를 실행한다. 회전 끌기는 WebView 가 모두 가진다. */
+/** 공통 2D 근육도 — 번들의 SVG 도형을 표시하고 피로도·사용 근육을 갱신한다. */
 @Composable
 internal fun MuscleAtlasWebView(command: String, sessionMode: Boolean, description: String, modifier: Modifier) {
     val delegate = remember { ScriptOnLoad(command) }
@@ -197,6 +200,7 @@ internal fun MuscleAtlasWebView(command: String, sessionMode: Boolean, descripti
                 setOpaque(false)
                 backgroundColor = UIColor(red = 34 / 255.0, green = 37 / 255.0, blue = 39 / 255.0, alpha = 1.0)
                 scrollView.scrollEnabled = false
+                userInteractionEnabled = false
                 accessibilityLabel = description
                 navigationDelegate = delegate
                 val dir = bundlePath("muscle_load")
@@ -207,7 +211,7 @@ internal fun MuscleAtlasWebView(command: String, sessionMode: Boolean, descripti
         update = { it.evaluateJavaScript(command, completionHandler = null) },
         onRelease = { it.stopLoading() },
         modifier = modifier,
-        properties = UIKitInteropProperties(interactionMode = UIKitInteropInteractionMode.NonCooperative, isNativeAccessibilityEnabled = true),
+        properties = UIKitInteropProperties(interactionMode = null, isNativeAccessibilityEnabled = true),
     )
 }
 
@@ -217,27 +221,36 @@ private class ScriptOnLoad(var script: String) : NSObject(), WKNavigationDelegat
     }
 }
 
-/** 투명 바탕 WebView 에 번들 폴더 기준 HTML 한 조각을 그린다(스크롤·터치 없음). */
+/** 번들 HTML을 그린다. 운동 가이드는 시트 색으로 막고, 온보딩 SVG는 투명을 유지한다. */
 @Composable
-private fun BundleHtmlView(html: String, baseDirectory: String, description: String?, modifier: Modifier) {
+private fun BundleHtmlView(html: String, baseDirectory: String, description: String?, modifier: Modifier,
+    background: Color = Color.Transparent) {
+    val argb = background.toArgb()
+    val cssBackground = "rgba(${(argb ushr 16) and 255},${(argb ushr 8) and 255},${argb and 255},${background.alpha})"
+    val nativeBackground = UIColor(red = background.red.toDouble(), green = background.green.toDouble(),
+        blue = background.blue.toDouble(), alpha = background.alpha.toDouble())
     val page = "<!doctype html><html><head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">" +
-        "<style>html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:transparent}" +
+        "<style>html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:$cssBackground}" +
         "body{display:flex;align-items:center;justify-content:center}</style></head><body>$html</body></html>"
-    UIKitView(
-        factory = {
-            WKWebView(frame = CGRectMake(0.0, 0.0, 1.0, 1.0), configuration = WKWebViewConfiguration()).apply {
-                setOpaque(false)
-                backgroundColor = UIColor.clearColor
-                scrollView.backgroundColor = UIColor.clearColor
-                scrollView.scrollEnabled = false
-                userInteractionEnabled = false
-                description?.let { accessibilityLabel = it }
-                loadHTMLString(page, baseURL = NSURL.fileURLWithPath(bundlePath(baseDirectory) + "/", isDirectory = true))
-            }
-        },
-        modifier = modifier,
-        properties = UIKitInteropProperties(isNativeAccessibilityEnabled = description != null),
-    )
+    // 테마/시범이 바뀌면 HTML과 네이티브 배경을 함께 갱신한다.
+    key(page, baseDirectory) {
+        UIKitView(
+            factory = {
+                WKWebView(frame = CGRectMake(0.0, 0.0, 1.0, 1.0), configuration = WKWebViewConfiguration()).apply {
+                    // Compose 배경만 칠하면 투명한 UIKit 영역에서 팝업 뒤 화면이 비칠 수 있다.
+                    setOpaque(background.alpha == 1f)
+                    backgroundColor = nativeBackground
+                    scrollView.backgroundColor = nativeBackground
+                    scrollView.scrollEnabled = false
+                    userInteractionEnabled = false
+                    description?.let { accessibilityLabel = it }
+                    loadHTMLString(page, baseURL = NSURL.fileURLWithPath(bundlePath(baseDirectory) + "/", isDirectory = true))
+                }
+            },
+            modifier = modifier,
+            properties = UIKitInteropProperties(isNativeAccessibilityEnabled = description != null),
+        )
+    }
 }
 
 /** 화면이 켜진 동안 자동 잠금을 막는다. */

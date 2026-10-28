@@ -577,6 +577,7 @@ private fun MainTabs(
         CompositionLocalProvider(LocalTrexNavSpace provides navSpace) {
         AnimatedContent(
             targetState = selectedTab,
+            modifier = Modifier.fillMaxSize().mainTabSwipe(selectedTab, sheet == null, onTabSelected),
             transitionSpec = {
                 val forward = targetState.ordinal >= initialState.ordinal
                 if (forward) {

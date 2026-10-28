@@ -34,6 +34,7 @@ com/example/trex_kotlin/sync/TrexApi.kt
 # 경계 타입은 PlatformApi.kt. 앱 내 업데이트(AppUpdate)는 Android 체험판 전용이라 목록 밖이다.
 com/example/trex_kotlin/PlatformApi.kt
 com/example/trex_kotlin/TrexApp.kt
+com/example/trex_kotlin/MainTabSwipe.kt
 com/example/trex_kotlin/TrexTheme.kt
 com/example/trex_kotlin/AdaptiveLayout.kt
 com/example/trex_kotlin/MainScreens.kt

@@ -14,7 +14,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -62,7 +61,7 @@ internal fun ExerciseGuideSheet(guide: ExerciseGuide, onClose: () -> Unit,
             Text("운동 방법", color = c.text2, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp))
             Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
                 Box(Modifier.padding(top = 16.dp).fillMaxWidth().height(260.dp)
-                    .clip(RoundedCornerShape(20.dp)).background(Color.White), contentAlignment = Alignment.Center) {
+                    .clip(RoundedCornerShape(20.dp)).background(c.sheet), contentAlignment = Alignment.Center) {
                     GuideVisualView(guide.asset, "${guide.name} 동작 예시", playing = !lifecyclePaused, Modifier.fillMaxSize()) { failed ->
                         Text(if (failed) "시범을 불러오지 못했어요." else "시범을 준비하고 있어요.", color = TrexTextSecondary)
                     }
