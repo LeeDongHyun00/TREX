@@ -1,5 +1,9 @@
 package com.example.trex_kotlin
 
+import com.example.trex_kotlin.community.CommunityApi
+import com.example.trex_kotlin.community.CommunityGate
+import com.example.trex_kotlin.community.CommunityMe
+import com.example.trex_kotlin.community.communityGate
 import com.example.trex_kotlin.sync.ApiException
 import com.example.trex_kotlin.sync.AuthAccount
 import com.example.trex_kotlin.sync.AuthSession
@@ -217,6 +221,43 @@ class AppViewModel(private val platform: AppPlatform) : ViewModel() {
         if (nowMillis() - sync.lastPullAt < 15_000) return
         refreshAccountSync()
     }
+
+    // ---- 커뮤니티 (docs/superpowers/specs/2026-10-28-community-design.md — 서버 계정이 있을 때만)
+
+    /** 커뮤니티 서버 API — 계정 토큰을 같이 쓴다. 글·댓글 목록은 화면 상태라 여기 두지 않고 화면이 바로 부른다. */
+    val community = CommunityApi(platform.apiBaseUrl, platform.http, platform.binary) { authSession.token }
+
+    /** 서버의 내 커뮤니티 상태와 그것을 받은 계정 — 로그아웃·계정 전환 뒤 남의 상태로 들어가지 않게 계정을 같이 둔다. */
+    private var communityMeState by mutableStateOf<Pair<String, CommunityMe>?>(null)
+    var communityMessage by mutableStateOf<String?>(null)
+        private set
+
+    val communityMe: CommunityMe?
+        get() = communityMeState?.takeIf { it.first == account?.loginId }?.second
+
+    val communityGate: CommunityGate
+        get() = communityGate(platform.googleWebClientId.isNotBlank(), account != null, communityMe)
+
+    /** 커뮤니티 탭에 들어올 때·닉네임 정하기·동의 뒤에 부른다. 실패하면 [communityMessage] 에 문구를 둔다. */
+    suspend fun refreshCommunityMe() {
+        val signedIn = account ?: return
+        try {
+            communityMeState = signedIn.loginId to community.me()
+            communityMessage = null
+        } catch (e: ApiException) {
+            if (e.status == 401) {
+                authSession.clear()
+                account = null
+                authMessage = "로그인이 만료됐어요. 다시 로그인하면 동기화가 이어져요."
+            } else {
+                communityMessage = e.message
+            }
+        } catch (_: NetworkException) {
+            communityMessage = "네트워크에 연결하지 못했어요"
+        }
+    }
+
+    fun clearCommunityMessage() { communityMessage = null }
 
     /** 회원 탈퇴 — 서버의 계정과 백업을 지운다. 이 기기의 기록은 남는다. */
     fun deleteAccount(onDone: () -> Unit) {
