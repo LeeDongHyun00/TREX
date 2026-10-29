@@ -1,8 +1,15 @@
 package com.example.trex_kotlin
 
+import com.example.trex_kotlin.community.CommunityApi
+import com.example.trex_kotlin.community.CommunityGate
+import com.example.trex_kotlin.community.CommunityMe
+import com.example.trex_kotlin.community.FeedController
+import com.example.trex_kotlin.community.WorkoutCardData
+import com.example.trex_kotlin.community.communityGate
 import com.example.trex_kotlin.sync.ApiException
 import com.example.trex_kotlin.sync.AuthAccount
 import com.example.trex_kotlin.sync.AuthSession
+import com.example.trex_kotlin.sync.BinaryTransport
 import com.example.trex_kotlin.sync.FirstSync
 import com.example.trex_kotlin.sync.NetworkException
 import com.example.trex_kotlin.sync.SignInException
@@ -216,6 +223,68 @@ class AppViewModel(private val platform: AppPlatform) : ViewModel() {
         if (sessionActive) return
         if (nowMillis() - sync.lastPullAt < 15_000) return
         refreshAccountSync()
+    }
+
+    // ---- 커뮤니티 (docs/superpowers/specs/2026-10-28-community-design.md — 서버 계정이 있을 때만)
+
+    /** 커뮤니티 서버 API — 계정 토큰을 같이 쓴다. 글·댓글 목록은 화면 상태라 여기 두지 않고 화면이 바로 부른다. */
+    val community = CommunityApi(platform.apiBaseUrl, platform.http, platform.binary) { authSession.token }
+
+    /** 커뮤니티 사진을 받는 전송 — 앱 루트의 원격 사진 로더가 쓴다(서명 주소라 인증 헤더 없음). */
+    val imageTransport: BinaryTransport get() = platform.binary
+
+    /** 서버의 내 커뮤니티 상태와 그것을 받은 계정 — 로그아웃·계정 전환 뒤 남의 상태로 들어가지 않게 계정을 같이 둔다. */
+    private var communityMeState by mutableStateOf<Pair<String, CommunityMe>?>(null)
+    var communityMessage by mutableStateOf<String?>(null)
+        private set
+
+    val communityMe: CommunityMe?
+        get() = communityMeState?.takeIf { it.first == account?.loginId }?.second
+
+    val communityGate: CommunityGate
+        get() = communityGate(platform.googleWebClientId.isNotBlank(), account != null, communityMe)
+
+    /** 커뮤니티 탭에 들어올 때·닉네임 정하기·동의 뒤에 부른다. 실패하면 [communityMessage] 에 문구를 둔다. */
+    suspend fun refreshCommunityMe() {
+        val signedIn = account ?: return
+        try {
+            communityMeState = signedIn.loginId to community.me()
+            communityMessage = null
+        } catch (e: ApiException) {
+            if (e.status == 401) {
+                authSession.clear()
+                account = null
+                authMessage = "로그인이 만료됐어요. 다시 로그인하면 동기화가 이어져요."
+            } else {
+                communityMessage = e.message
+            }
+        } catch (_: NetworkException) {
+            communityMessage = "네트워크에 연결하지 못했어요"
+        }
+    }
+
+    fun clearCommunityMessage() { communityMessage = null }
+
+    /** 전체 피드 — 탭을 오가도 남는다. 계정이 바뀌면 비운다(좋아요 표시가 앞 사람 것이 되지 않게). */
+    val communityFeed = FeedController(
+        load = { before -> community.feed(before) },
+        setLike = { id, liked -> if (liked) community.like(id) else community.unlike(id) },
+        scope = viewModelScope,
+        now = ::nowMillis,
+    )
+    private var communityFeedOwner: String? = null
+
+    /** 운동 완료 화면에서 "오운완 올리기"를 눌렀다 — 커뮤니티 탭이 이 카드를 넣은 글쓰기를 열고 비운다. */
+    var pendingWorkoutCard by mutableStateOf<WorkoutCardData?>(null)
+
+    /** 피드를 보이기 전 — 계정이 바뀌었으면 비우고, 받은 적이 없거나 사진 주소가 곧 만료되면 새로 받는다. */
+    suspend fun refreshFeedIfNeeded() {
+        val loginId = account?.loginId ?: return
+        if (communityFeedOwner != loginId) {
+            communityFeed.reset()
+            communityFeedOwner = loginId
+        }
+        if (communityFeed.state.isStale(nowMillis())) communityFeed.refresh()
     }
 
     /** 회원 탈퇴 — 서버의 계정과 백업을 지운다. 이 기기의 기록은 남는다. */
