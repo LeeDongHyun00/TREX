@@ -37,6 +37,13 @@ trex:
     google:
       # 쉼표로 여러 개. 안드로이드 Credential Manager 는 "웹 애플리케이션" 클라이언트 ID 를 aud 로 쓴다.
       client-ids: ${GOOGLE_CLIENT_IDS}
+    apple:
+      # Apple 로그인(docs/superpowers/specs/2026-10-29-apple-sign-in-design.md) — 번들 ID 가 비면 /api/auth/oauth/apple 은 401.
+      # 팀·키·.p8 이 비면 로그인만 되고, 탈퇴 때 Apple 연결 끊기를 건너뛴다(로그).
+      client-ids: ${APPLE_CLIENT_IDS:}
+      team-id: ${APPLE_TEAM_ID:}
+      key-id: ${APPLE_KEY_ID:}
+      private-key: ${APPLE_PRIVATE_KEY:}
   community:
     # 사진 버킷(비공개, 시드니). 자격 증명은 EC2 인스턴스 역할 — 키를 .env 에 넣지 않는다
     s3-bucket: ${COMMUNITY_S3_BUCKET:}

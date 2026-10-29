@@ -44,6 +44,7 @@
 | D9 | 운영 DB 는 **PostgreSQL(AWS RDS)**, 운영 설정은 `application-prod.yml`(환경 변수만 참조, 커밋) | 비밀값은 코드에 두지 않는다 |
 | D10 | 배포는 **AWS EC2(Docker) + RDS + Caddy(HTTPS 자동)** | 사용자가 AWS 를 학습했다. 안드로이드는 기본적으로 HTTPS 만 허용한다 |
 | D11 | 앱의 서버 주소·구글 웹 클라이언트 ID 는 **`gradle.properties` 에 팀 기본값으로 커밋**하고, **디버그도 운영 서버**를 가리킨다. `local.properties` 의 같은 키가 우선 | 팀원이 설정 없이 빌드해 폰에 까는 것이 디버그 APK 다 — 그 APK 로도 계정 연결이 되게 한다(서명 SHA-1 등록은 별도, Q1). 두 값 모두 비밀값이 아니다. **로컬 서버로 확인할 때는 `local.properties` 에 `trex.apiBaseUrl.debug=http://127.0.0.1:8080` 을 넣어야 한다 — 안 넣으면 운영 서버로 간다** |
+| D12 | **iPhone 에 Apple 로그인**(구글과 나란히, 사용자가 고른다). 서버가 Apple 공개키로 identity token 을 직접 검증(발급자 `https://appleid.apple.com`, 대상 = 번들 ID, nonce), 내부 아이디 `apple_<sub>`. 구글 계정과 합치지 않는다. 탈퇴 때 Apple 연결을 끊는다(revoke) | App Store 지침 4.8(소셜 로그인이 있으면 이메일을 숨길 수 있는 다른 로그인이 같이 있어야 한다)과 탈퇴 규칙. 사용자 결정 2026-10-29 — 설계 `docs/superpowers/specs/2026-10-29-apple-sign-in-design.md` |
 
 **아직 정할 것**
 - Q1 팀 공용 앱 서명 키(구글·카카오 콘솔에 SHA-1 등록용). 지금은 PC 마다 디버그 키가 달라 빌드한 PC 에 따라 로그인이 될 수도 안 될 수도 있다. 2026-10-13 현재 등록된 것은 사용자 PC 디버그 키뿐이고, **릴리스 APK(조원 개발 인증서) SHA-1 은 미등록** — 릴리스 전에 Android 클라이언트를 하나 더 만든다.
@@ -283,3 +284,34 @@ ssh -i $KEY $HOST "cd ~/trex && sed -i 's/\r$//' docker-compose.yml && docker co
 - 자동 숨김은 서로 다른 세 사람의 미처리 신고. 관리자가 "그대로 둠(KEPT)" 하면 숨김이 풀리고 그 신고들은 처리 끝으로 남는다.
 - 탈퇴는 커뮤니티 글·사진·댓글·좋아요·신고·차단을 함께 지운다(사진은 커밋 뒤, 실패는 로그만 — 고아 사진은 S3 콘솔에서 `posts/<글 id>/` 로 찾을 수 있다).
 - 비용(추정): 사진 1천 장·조회 30만 회에 월 1달러 미만. AWS Free plan 만료일(가입 6개월)을 데모데이 전에 확인한다.
+
+## 10. Apple 로그인 운영 (2026-10-29)
+
+iPhone 의 "Apple로 계속하기"(설계 `docs/superpowers/specs/2026-10-29-apple-sign-in-design.md`). 서버는 `POST /api/auth/oauth/apple` 에서 identity token 을 Apple 공개키로 검증해 `apple_<sub>` 회원을 만들고, 키가 있으면 로그인 때 받은 authorization code 를 refresh token 으로 바꿔 두었다가 **탈퇴 때 Apple 연결을 끊는다**(App Store 탈퇴 규칙). Android 에는 Apple 버튼이 없다.
+
+### 10.1 `.env` 네 값
+> `<…>` 는 자리 표시다 — **꺾쇠까지 지우고 값만** 넣는다(커뮤니티 첫 배포에서 세 번 겪었다).
+
+| 변수 | 값 | 비밀값 |
+|---|---|---|
+| `APPLE_CLIENT_IDS` | `com.leedonghyun.trex.ios` — 이것만 있으면 로그인이 된다 | 아니요 |
+| `APPLE_TEAM_ID` | 동현님 Apple 개발자 계정 Membership 화면의 Team ID | 예 |
+| `APPLE_KEY_ID` | Keys 에서 만든 Sign in with Apple 키의 Key ID | 예 |
+| `APPLE_PRIVATE_KEY` | 그 키의 `.p8` 파일 내용 전체(BEGIN/END 줄 포함)를 **한 줄로** — 줄바꿈은 `\n` 두 글자로 적는다 | **예** |
+
+- 키 셋은 동현님께 부탁해 받는다(설계 §6 메시지). `.p8` 은 한 번만 내려받을 수 있다 — 저장소·PR·채팅에 올리지 않고 서버 `.env` 에만 넣는다.
+- **키 없이 먼저 배포해도 된다.** `APPLE_CLIENT_IDS` 만 있으면 로그인은 되고, 탈퇴 때 연결 끊기만 건너뛴다(로그 `Apple 연결 끊기` 없음). 키를 넣은 뒤 로그인하는 사람부터 refresh token 이 저장된다 — 그 전에 가입한 사람은 다음 로그인 때 저장된다.
+- `APPLE_CLIENT_IDS` 를 비우면 Apple 로그인만 401 이고 구글 로그인은 그대로다(서버 로그 error `trex.oauth.apple.client-ids 가 비어 있어…`).
+
+### 10.2 넣는 법(8·9절과 같은 길)
+```bash
+KEY=C:/Workspace/TREX/trex-key.pem; HOST=ubuntu@54.252.112.191
+ssh -t -i $KEY $HOST "cd ~/trex && cp .env .env.before-apple && nano .env"   # 네 줄 추가(꺾쇠 없이)
+ssh -i $KEY $HOST "cd ~/trex && docker compose up -d && sleep 25 && docker compose logs --since 1m app | grep -E 'Started|ERROR'"
+```
+`.env` 만 바꿨으면 `docker compose up -d` 가 컨테이너를 다시 만든다(jar 를 바꿀 때는 9.2 순서).
+
+### 10.3 확인
+- 키 없이: `curl -s -o /dev/null -w '%{http_code}' -X POST -H 'Content-Type: application/json' -d '{"identityToken":"x","nonce":"n"}' https://trex-api.duckdns.org/api/auth/oauth/apple` → 401(설정이 있으면 토큰이 틀려서, 없으면 설정이 없어서), nonce 를 빼면 400.
+- 동현님 준비 뒤(실기기): iPhone 에서 "Apple로 계속하기" → 설정의 계정 줄이 이메일(가린 전달 주소일 수 있다)이나 "Apple 계정". 설정 → 회원 탈퇴 → 서버 로그에 `Apple 연결 끊기 완료`. iPhone 설정 → Apple ID → "Apple로 로그인" 목록에서 T-REX 가 빠진다.
+- 커뮤니티 관리자로 Apple 계정을 쓰려면 `COMMUNITY_ADMIN_LOGIN_IDS` 에 `apple_<sub>` 를 쉼표로 더한다(loginId 는 9.1 ⑦ 과 같은 방법).

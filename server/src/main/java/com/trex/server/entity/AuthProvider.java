@@ -6,5 +6,6 @@ package com.trex.server.entity;
 public enum AuthProvider {
     LOCAL,
     GOOGLE,
-    KAKAO
+    KAKAO,
+    APPLE
 }
