@@ -32,10 +32,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class AppleJwksTokenVerifierTest {
 
     private static final String BUNDLE_ID = "com.leedonghyun.trex.ios";
+    private static final String WEB_ID = "com.leedonghyun.trex.signin";
     private static final String RAW_NONCE = "raw-1";
     private static RSAPrivateKey privateKey;
     private static RSAPrivateKey otherKey;
     private static AppleJwksTokenVerifier verifier;
+    private static AppleJwksTokenVerifier withWeb;
 
     @BeforeAll
     static void keys() throws Exception {
@@ -46,6 +48,7 @@ class AppleJwksTokenVerifierTest {
         otherKey = (RSAPrivateKey) gen.generateKeyPair().getPrivate();
         RSAPublicKey publicKey = (RSAPublicKey) pair.getPublic();
         verifier = new AppleJwksTokenVerifier(List.of(BUNDLE_ID), () -> NimbusJwtDecoder.withPublicKey(publicKey).build());
+        withWeb = new AppleJwksTokenVerifier(List.of(BUNDLE_ID, WEB_ID), () -> NimbusJwtDecoder.withPublicKey(publicKey).build());
     }
 
     private static String token(RSAPrivateKey key, Consumer<JWTClaimsSet.Builder> edit) throws Exception {
@@ -73,6 +76,17 @@ class AppleJwksTokenVerifierTest {
         assertEquals("dino@icloud.com", id.email());
         assertTrue(id.emailVerified());
         assertNull(id.name()); // 이름은 토큰에 없다
+        assertEquals(BUNDLE_ID, id.clientId());
+    }
+
+    @Test
+    void Android_웹_로그인_토큰은_Services_ID_대상으로_받고_그_대상을_알려_준다() throws Exception {
+        // 웹 로그인의 identity token 은 aud 가 Services ID 다 — code 교환·연결 끊기를 그 client 로 해야 한다
+        String web = token(privateKey, c -> c.audience(WEB_ID));
+        assertEquals(WEB_ID, withWeb.verify(web, RAW_NONCE).clientId());
+        assertEquals(BUNDLE_ID, withWeb.verify(token(privateKey, c -> { }), RAW_NONCE).clientId());
+        // Services ID 를 설정하지 않은 서버는 웹 토큰을 받지 않는다
+        assertThrows(InvalidCredentialsException.class, () -> verifier.verify(web, RAW_NONCE));
     }
 
     @Test

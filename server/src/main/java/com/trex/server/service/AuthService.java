@@ -119,14 +119,15 @@ public class AuthService {
     /**
      * Apple 로그인(설계 docs/superpowers/specs/2026-10-29-apple-sign-in-design.md §4) — 구글과 같은 길로 회원을 찾거나 만들고,
      * 서버에 Apple 키가 있으면 authorization code 를 refresh token 으로 바꿔 기억한다(탈퇴 때 연결 끊기용).
-     * 교환이 실패해도(만료·재사용) 로그인은 성공한다.
+     * 교환은 토큰이 발급된 client(iPhone 번들 ID·Android Services ID)로 한다. 교환이 실패해도(만료·재사용) 로그인은 성공한다.
      */
     @Transactional
     public TokenResponse appleLogin(SocialIdentity identity, String authorizationCode) {
         User user = findOrCreate(identity);
         if (appleTokenClient.configured() && authorizationCode != null && !authorizationCode.isBlank()) {
             try {
-                appleTokenClient.exchangeCode(authorizationCode).ifPresent(user::rememberAppleRefreshToken);
+                appleTokenClient.exchangeCode(authorizationCode, identity.clientId())
+                        .ifPresent(refreshToken -> user.rememberAppleRefreshToken(refreshToken, identity.clientId()));
             } catch (RuntimeException e) {
                 log.warn("Apple code 교환 중 예외(로그인은 그대로): {}", e.getClass().getSimpleName());
             }
@@ -167,7 +168,7 @@ public class AuthService {
         if (user.getProvider() == AuthProvider.APPLE && user.getAppleRefreshToken() != null) {
             // Apple 연결 끊기(App Store 탈퇴 규칙). 실패해도 탈퇴는 진행한다 — 탈퇴를 못 하는 쪽이 더 나쁘다
             try {
-                appleTokenClient.revoke(user.getAppleRefreshToken());
+                appleTokenClient.revoke(user.getAppleRefreshToken(), user.getAppleClientId());
             } catch (RuntimeException e) {
                 log.warn("Apple 연결 끊기 중 예외(탈퇴는 그대로): {}", e.getClass().getSimpleName());
             }
