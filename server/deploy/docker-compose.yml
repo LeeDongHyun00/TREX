@@ -19,6 +19,11 @@ services:
       DB_PASSWORD: ${DB_PASSWORD}
       JWT_SECRET: ${JWT_SECRET}
       GOOGLE_CLIENT_IDS: ${GOOGLE_CLIENT_IDS}
+      # Apple 로그인(docs/SERVER_SYNC_HANDOFF.md 10절) — 번들 ID 는 비밀값 아님, 팀·키·.p8 은 비밀값
+      APPLE_CLIENT_IDS: ${APPLE_CLIENT_IDS:-}
+      APPLE_TEAM_ID: ${APPLE_TEAM_ID:-}
+      APPLE_KEY_ID: ${APPLE_KEY_ID:-}
+      APPLE_PRIVATE_KEY: ${APPLE_PRIVATE_KEY:-}
       # 커뮤니티(docs/SERVER_SYNC_HANDOFF.md 9절) — 사진 버킷은 필수, 관리자·신고 웹후크는 선택
       COMMUNITY_S3_BUCKET: ${COMMUNITY_S3_BUCKET:-}
       COMMUNITY_ADMIN_LOGIN_IDS: ${COMMUNITY_ADMIN_LOGIN_IDS:-}
