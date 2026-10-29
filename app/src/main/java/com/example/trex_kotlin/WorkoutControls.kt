@@ -66,16 +66,22 @@ fun WorkoutGoalDisplay(workout: Workout, count: Int, timeLeft: Int, totalSeconds
     }
 }
 
-/** 오른쪽은 주요 동작, 왼쪽은 횟수 수정. 메뉴를 열면 측정과 시계를 함께 멈춘다. */
+/**
+ * 세션 조작 — 물결 위 원형 버튼 줄(종료 · 도구 · 주요 동작 · 건너뛰기)과 작은 칩 줄(스펙 §115 제어판 디자인).
+ * 메뉴(횟수·건너뛰기)를 열면 측정과 시계를 함께 멈춘다. [livePanel] 은 카메라 세션의 제어판 — 주요 동작이 늘 일시정지/재개이고
+ * 횟수 수정은 칩으로 간다. 타이머 세션은 직접 횟수 기록이 주요 동작이다. [tools] 는 원형 줄의 주요 동작 양옆에, [moreTools] 는 칩 줄에 놓인다.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WorkoutSessionActions(
     workout: Workout, count: Int, automatic: Boolean, paused: Boolean,
     onTogglePause: () -> Unit, onRepetitions: (Int) -> Unit, onPartial: () -> Unit,
     onSkip: () -> Unit, onExit: () -> Unit,
-    directTools: (@Composable RowScope.() -> Unit)? = null,
-    onExpandCamera: (() -> Unit)? = null,
+    tools: List<SessionToolSpec> = emptyList(),
+    moreTools: List<SessionToolSpec> = emptyList(),
+    livePanel: Boolean = false,
     onShowGuide: (() -> Unit)? = null,
+    belowActions: @Composable () -> Unit = {},
 ) {
     val c = Trex.c
     val repetitions = workout.resolvedTarget() is WorkoutTarget.Repetitions
@@ -92,37 +98,29 @@ fun WorkoutSessionActions(
         overlay = null
         if (resume && resumeAfter && paused) onTogglePause()
     }
-    Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-        SessionTool("종료", "운동 종료", Icons.Rounded.Close, onExit, Modifier.weight(1f), destructive = true)
-        directTools?.invoke(this)
-        SessionTool("건너뛰기", "이 세트 건너뛰기", Icons.Rounded.SkipNext, { open("skip") }, Modifier.weight(1f))
+    val pauseLabel = if (paused) "재개" else "일시정지"
+    val pauseIcon = if (paused) Icons.Rounded.PlayArrow else Icons.Rounded.Pause
+    // 타이머 세션의 직접 횟수 기록은 기록이 주요 동작이고 일시정지가 옆으로 간다(예전 '횟수 기록' 버튼 자리)
+    val countIsPrimary = !livePanel && repetitions && !automatic
+    val countLabel = if (automatic) "횟수 수정" else "횟수 기록"
+    SessionActionRow(Modifier.padding(top = 4.dp)) {
+        SessionCircleButton("종료", "운동 종료", Icons.Rounded.Close, onExit, Modifier.weight(1f), destructive = true)
+        tools.take(1).forEach { SessionCircleButton(it.label, it.description, it.icon, it.onClick, Modifier.weight(1f)) }
+        if (!livePanel && repetitions) {
+            if (countIsPrimary) SessionCircleButton(pauseLabel, pauseLabel, pauseIcon, onTogglePause, Modifier.weight(1f))
+            else SessionCircleButton(countLabel, countLabel, Icons.Rounded.Edit, { open("count") }, Modifier.weight(1f))
+        }
+        if (countIsPrimary) SessionCircleButton(countLabel, countLabel, Icons.Rounded.Edit, { open("count") }, Modifier.weight(1f), highlighted = true)
+        else SessionCircleButton(pauseLabel, pauseLabel, pauseIcon, onTogglePause, Modifier.weight(1f), highlighted = true)
+        tools.drop(1).forEach { SessionCircleButton(it.label, it.description, it.icon, it.onClick, Modifier.weight(1f)) }
+        SessionCircleButton("건너뛰기", "이 세트 건너뛰기", Icons.Rounded.SkipNext, { open("skip") }, Modifier.weight(1f))
     }
-    if (onExpandCamera != null) {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween) {
-        if (repetitions) TextButton(onClick = { open("count") }) {
-            Icon(Icons.Rounded.Edit, null, modifier = Modifier.size(18.dp))
-            Text(if (automatic) "횟수 수정" else "횟수 기록", modifier = Modifier.padding(start = 8.dp), color = c.text)
-        }
-        if (onShowGuide != null) ExerciseGuideButton(workout.name, onShowGuide)
-        }
-        Row(Modifier.fillMaxWidth().padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            CameraExpandAction(onExpandCamera, !paused, Modifier.weight(1f))
-            Cta(if (paused) "운동 계속" else "일시정지", onTogglePause,
-                icon = if (paused) Icons.Rounded.PlayArrow else Icons.Rounded.Pause,
-                modifier = Modifier.weight(1.25f).semantics { contentDescription = if (paused) "재개" else "일시정지" }, height = 56.dp)
-        }
-    } else {
-    if (onShowGuide != null) ExerciseGuideButton(workout.name, onShowGuide)
-    Row(Modifier.fillMaxWidth().padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        if (repetitions) GhostButton(if (automatic) "횟수 수정" else if (paused) "재개" else "일시정지",
-            onClick = { if (repetitions && automatic) open("count") else onTogglePause() }, modifier = Modifier.width(100.dp))
-        Cta(if (repetitions && !automatic) "횟수 기록" else if (paused) "재개" else "일시정지",
-            onClick = { if (repetitions && !automatic) open("count") else onTogglePause() },
-            icon = if (repetitions && !automatic) Icons.Rounded.Edit else if (paused) Icons.Rounded.PlayArrow else Icons.Rounded.Pause,
-            modifier = Modifier.weight(1f), height = 56.dp)
-    }
+    belowActions()
+    val guide = onShowGuide?.takeIf { ExerciseGuides.forName(workout.name) != null }
+    if ((livePanel && repetitions) || moreTools.isNotEmpty() || guide != null) SessionChipRow(Modifier.padding(top = 4.dp, bottom = 4.dp)) {
+        if (livePanel && repetitions) SessionChip(countLabel, countLabel, Icons.Rounded.Edit, { open("count") })
+        moreTools.forEach { SessionChip(it.label, it.description, it.icon, it.onClick) }
+        if (guide != null) SessionChip("운동 방법", "${workout.name} 운동 방법", Icons.Rounded.PlayArrow, guide)
     }
     if (overlay == "skip") {
         AlertDialog(
@@ -171,20 +169,6 @@ fun WorkoutSessionActions(
                     } else Cta("돌아가기", onClick = { close() }, modifier = Modifier.weight(1.5f))
                 }
             }
-        }
-    }
-}
-
-/** 자주 쓰는 카메라 조작은 손이 닿는 하단에서 아이콘과 짧은 이름을 함께 보여 준다. */
-@Composable
-internal fun SessionTool(label: String, description: String, icon: androidx.compose.ui.graphics.vector.ImageVector,
-    onClick: () -> Unit, modifier: Modifier = Modifier, destructive: Boolean = false) {
-    val tint = if (destructive) Trex.c.err else Trex.c.text2
-    TextButton(onClick = onClick, modifier = modifier.heightIn(min = 58.dp).semantics { contentDescription = description },
-        contentPadding = PaddingValues(horizontal = 2.dp, vertical = 6.dp)) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Icon(icon, null, tint = tint, modifier = Modifier.size(21.dp))
-            Text(label, color = tint, fontSize = 11.sp, maxLines = 1)
         }
     }
 }

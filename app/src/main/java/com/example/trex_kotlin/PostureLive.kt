@@ -74,6 +74,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -1415,26 +1416,36 @@ fun PostureLiveSessionScreen(
             guideName = workout.name,
             onTogglePause = onTogglePause,
             cameraError = cameraError ?: stats?.error?.let { "몸을 인식할 수 없어요. 직접 기록으로 계속할 수 있어요." }, onFallback = onFallbackToTimer,
-        ) else Column(mod) {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(18.dp)) {
-                Column(Modifier.weight(1f)) {
-                    AnimatedContent(targetState = liveMessage,
-                        transitionSpec = { fadeIn(tween(180)) togetherWith fadeOut(tween(120)) }, label = "coach-cue") { msg ->
-                        Text(msg ?: "", color = c.text, fontSize = 15.sp, lineHeight = 22.sp)
-                    }
-                    if (workout.resolvedTarget() is WorkoutTarget.Repetitions) {
-                        // 좌우 짝 단위는 단위와, 한쪽을 마친 동안 '반대쪽 차례' 를 붙인다 — 화면 전용(쪽을 모르므로 말하지 않는다, 원칙 #6)
-                        val autoLabel = listOfNotNull("자동 횟수 · 참고",
-                            SIDE_PAIR_UNIT_HINT.takeIf { repUnit == RepUnit.SIDE_PAIR },
-                            "왼·오 따로 셈".takeIf { sideTallies != null },
-                            SIDE_PAIR_NEXT_HINT.takeIf { repUnit == RepUnit.SIDE_PAIR && repHalfPending }).joinToString(" · ")
-                        Text(if (refs.repRef[0] == null) "직접 횟수 기록" else if (validation) RepValidation.BANNER else autoLabel, color = c.text2,
-                            fontSize = 11.sp, modifier = Modifier.padding(top = 6.dp))
-                    }
+            goalLabel = workout.resolvedTarget().let { if (it is WorkoutTarget.Duration) it.amount.asClock() else "${it.amount}회" },
+            setLabel = setLabel,
+        ) else Column(mod, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            // 제어판 디자인(스펙 §115) — 손잡이(접기) · 세 칸 수치(세트 경과 · 남은 시간/센 횟수 · 세트) · 안내 · 원형 버튼 줄 · 방식 · 칩
+            SessionPanelHandle(onCollapse = { closePanel() }, enabled = !paused)
+            val goal = workout.resolvedTarget()
+            SessionStatsRow("경과", setElapsedSec.asClock(), "세트", setFraction(setLabel)) {
+                when {
+                    goal is WorkoutTarget.Duration -> SessionBigValue(timeLeft.asClock(), caption = "남은 시간")
+                    // 검증 모드는 자동 횟수 숫자를 숨긴다 — 집계자가 앱 숫자에 끌려가지 않게(HUD 와 같은 규칙, §61)
+                    validation && refs.repRef[0] != null -> SessionBigValue("—", "/ ${goal.amount}회")
+                    else -> SessionBigValue("$repetitions", "/ ${goal.amount}회")
                 }
             }
-            modeControl()
+            Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                AnimatedContent(targetState = liveMessage,
+                    transitionSpec = { fadeIn(tween(180)) togetherWith fadeOut(tween(120)) }, label = "coach-cue") { msg ->
+                    Text(msg ?: "", color = c.text, fontSize = 15.sp, lineHeight = 21.sp, textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth())
+                }
+                if (goal is WorkoutTarget.Repetitions) {
+                    // 좌우 짝 단위는 단위와, 한쪽을 마친 동안 '반대쪽 차례' 를 붙인다 — 화면 전용(쪽을 모르므로 말하지 않는다, 원칙 #6)
+                    val autoLabel = listOfNotNull("자동 횟수 · 참고",
+                        SIDE_PAIR_UNIT_HINT.takeIf { repUnit == RepUnit.SIDE_PAIR },
+                        "왼·오 따로 셈".takeIf { sideTallies != null },
+                        SIDE_PAIR_NEXT_HINT.takeIf { repUnit == RepUnit.SIDE_PAIR && repHalfPending }).joinToString(" · ")
+                    Text(if (refs.repRef[0] == null) "직접 횟수 기록" else if (validation) RepValidation.BANNER else autoLabel, color = c.text2,
+                        fontSize = 11.sp, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 2.dp))
+                }
+            }
             WorkoutSessionActions(workout, repetitions, refs.repRef[0] != null, paused,
                 onTogglePause, onRepetitions, onPartial, onSkip,
                 onShowGuide = onShowGuide,
@@ -1442,12 +1453,11 @@ fun PostureLiveSessionScreen(
                     refs.finalizeRef[0]?.invoke(aihubExercise, workout.name, isFloorExercise)?.let(onSetReport)
                     onExit()
                 },
-                onExpandCamera = { closePanel() },
-                directTools = {
-                    SessionTool(if (muted) "음성 꺼짐" else "음성 켜짐", if (muted) "음성 안내 켜기" else "음성 안내 끄기",
-                        if (muted) Icons.AutoMirrored.Rounded.VolumeOff else Icons.AutoMirrored.Rounded.VolumeUp,
-                        { muted = !muted }, Modifier.weight(1f))
-                    SessionTool("카메라", "카메라 전환", Icons.Rounded.Cameraswitch, {
+                livePanel = true,
+                tools = listOf(
+                    SessionToolSpec("음성", if (muted) "음성 안내 켜기" else "음성 안내 끄기",
+                        if (muted) Icons.AutoMirrored.Rounded.VolumeOff else Icons.AutoMirrored.Rounded.VolumeUp) { muted = !muted },
+                    SessionToolSpec("카메라", "카메라 전환", Icons.Rounded.Cameraswitch) {
                         useFrontCamera = !useFrontCamera
                         refs.comparisonRef[0]?.reset(); comparison = ComparisonSnapshot(); comparisonSpeech.clear()
                         locked(refs.repLock) {
@@ -1457,11 +1467,12 @@ fun PostureLiveSessionScreen(
                                 repResets += RepResetEvent(nowMillis(), "camera_switch", refs.lastCounterFrameAt[0].takeIf { t -> t > 0L })
                             }
                         }
-                    }, Modifier.weight(1f))
-                    // 숫자 읽기 토글(§7) — 기본은 틱. 바닥 종목은 화면을 못 보므로 기본 켬
-                    SessionTool(if (speakNumbers) "숫자 읽기" else "틱 소리", if (speakNumbers) "횟수를 틱 소리로" else "횟수를 숫자로 읽기",
-                        Icons.AutoMirrored.Rounded.VolumeUp, { speakNumbers = !speakNumbers; refs.floorLive.speakNumbers = speakNumbers }, Modifier.weight(1f))
-                })
+                    },
+                ),
+                // 숫자 읽기 토글(§7) — 기본은 틱. 바닥 종목은 화면을 못 보므로 기본 켬
+                moreTools = listOf(SessionToolSpec(if (speakNumbers) "숫자 읽기" else "틱 소리", if (speakNumbers) "횟수를 틱 소리로" else "횟수를 숫자로 읽기",
+                    Icons.AutoMirrored.Rounded.VolumeUp) { speakNumbers = !speakNumbers; refs.floorLive.speakNumbers = speakNumbers }),
+                belowActions = modeControl)
         }
     }
 
@@ -1515,9 +1526,11 @@ fun PostureLiveSessionScreen(
             },
             camera = { cameraArea(Modifier.fillMaxSize()) },
             controls = {
-                panel(Modifier.fillMaxSize().clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)).background(c.bg)
+                // 흰 둥근 판(스펙 §115) — 영상 쪽 가장자리에 옅은 그림자를 둔다
+                panel(Modifier.fillMaxSize().shadow(10.dp, RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
+                    .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)).background(c.surface)
                     .then(if (preparing) Modifier else Modifier.verticalScroll(rememberScrollState()))
-                    .padding(horizontal = 12.dp, vertical = 10.dp))
+                    .padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 10.dp))
             },
         )
         // Keep the toggle above the adaptive camera/panel layout so it never moves into the PiP.

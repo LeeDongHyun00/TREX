@@ -66,6 +66,7 @@ com/example/trex_kotlin/MealSymbol.kt
 com/example/trex_kotlin/RoutineHero.kt
 com/example/trex_kotlin/WorkoutListScreen.kt
 com/example/trex_kotlin/WorkoutControls.kt
+com/example/trex_kotlin/SessionControlPanel.kt
 com/example/trex_kotlin/CameraActions.kt
 com/example/trex_kotlin/WorkoutCatalogUi.kt
 com/example/trex_kotlin/WorkoutEditor.kt

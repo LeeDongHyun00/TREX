@@ -100,8 +100,13 @@ fun TimerSessionScreen(
             Text(if (paused) "일시정지" else if (workout.resolvedTarget() is WorkoutTarget.Repetitions) "직접 횟수 기록" else "시간 측정",
                 color = c.text2, fontSize = 14.sp, modifier = Modifier.padding(top = 28.dp))
         }
-        WorkoutSessionActions(workout, repetitions, false, paused, onTogglePause, onRepetitions, onPartial, onSkip, onExit,
-            onShowGuide = onShowGuide)
+        // 제어판 디자인(스펙 §115) — 흰 둥근 판 위 원형 버튼 줄
+        Surface(Modifier.fillMaxWidth(), shape = RoundedCornerShape(28.dp), color = c.surface, shadowElevation = 2.dp) {
+            Column(Modifier.padding(horizontal = 12.dp, vertical = 10.dp)) {
+                WorkoutSessionActions(workout, repetitions, false, paused, onTogglePause, onRepetitions, onPartial, onSkip, onExit,
+                    onShowGuide = onShowGuide)
+            }
+        }
     }
 }
 
