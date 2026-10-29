@@ -42,6 +42,7 @@ public class AuthService {
     private final SyncItemRepository syncItemRepository;
     private final CommunityAccountCleaner communityAccountCleaner;
     private final AppleTokenClient appleTokenClient;
+    private final LoginAttemptGuard loginAttemptGuard;
 
     public AuthService(
             UserRepository userRepository,
@@ -52,7 +53,8 @@ public class AuthService {
             ExerciseLogRepository exerciseLogRepository,
             SyncItemRepository syncItemRepository,
             CommunityAccountCleaner communityAccountCleaner,
-            AppleTokenClient appleTokenClient
+            AppleTokenClient appleTokenClient,
+            LoginAttemptGuard loginAttemptGuard
     ) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
@@ -63,6 +65,7 @@ public class AuthService {
         this.syncItemRepository = syncItemRepository;
         this.communityAccountCleaner = communityAccountCleaner;
         this.appleTokenClient = appleTokenClient;
+        this.loginAttemptGuard = loginAttemptGuard;
     }
 
     @Transactional
@@ -94,14 +97,17 @@ public class AuthService {
     }
 
     public TokenResponse login(LoginRequest request) {
-        User user = userRepository.findByLoginId(request.loginId())
-                .orElseThrow(() -> new InvalidCredentialsException("아이디 또는 비밀번호가 올바르지 않습니다"));
+        // 5번 연속 틀린 아이디는 10분 동안 비밀번호를 확인하지 않는다(D13)
+        loginAttemptGuard.checkAllowed(request.loginId());
+        User user = userRepository.findByLoginId(request.loginId()).orElse(null);
 
         // 소셜 회원은 비밀번호가 없다 — 내부 loginId("google_…")를 알아도 비밀번호 로그인은 받지 않는다.
-        if (user.getPasswordHash() == null || !passwordEncoder.matches(request.password(), user.getPasswordHash())) {
+        if (user == null || user.getPasswordHash() == null || !passwordEncoder.matches(request.password(), user.getPasswordHash())) {
+            loginAttemptGuard.recordFailure(request.loginId());
             throw new InvalidCredentialsException("아이디 또는 비밀번호가 올바르지 않습니다");
         }
 
+        loginAttemptGuard.recordSuccess(request.loginId());
         return issueToken(user);
     }
 
