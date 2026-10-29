@@ -10,7 +10,8 @@ import kotlin.coroutines.resumeWithException
 
 /*
  * iPhone 구글 로그인 — Android `requestGoogleIdToken`(Credential Manager)의 짝.
- * 구글 로그인 창(GoogleSignIn)은 Swift(`iosApp/Trex/GoogleSignInBridge.swift`)가 맡고, 앱 시작 때 [IosGoogleSignInRegistry] 에 넣는다.
+ * 구글 로그인 창은 Swift(`iosApp/Trex/GoogleSignInBridge.swift` — iOS 기본 ASWebAuthenticationSession 으로 OAuth 인가 코드 + PKCE)가 맡고,
+ * 앱 시작 때 [IosGoogleSignInRegistry] 에 넣는다. GoogleSignIn SDK 는 MediaPipe 와 링크 때 부딪혀 쓰지 않는다.
  * 서버가 확인하는 ID 토큰을 받아 오는 데까지가 이 다리의 일이고, 서버 로그인·동기화는 Android 와 같은 공유 앱 상태(`TrexAppState`)가 한다.
  */
 
