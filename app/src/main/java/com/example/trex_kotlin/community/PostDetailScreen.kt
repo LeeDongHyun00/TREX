@@ -195,7 +195,11 @@ fun PostDetailScreen(
             action = null
             message = done
             when (pending) {
-                is CommunityAction.DeletePost -> { owner.removed(pending.post.id); onBack() }
+                is CommunityAction.DeletePost -> {
+                    owner.removed(pending.post.id)
+                    app.communityFeed.removed(pending.post.id) // 프로필에서 연 글이어도 전체 피드에서 빠지게
+                    onBack()
+                }
                 is CommunityAction.DeleteComment -> {
                     comments = comments.removed(pending.comment.id)
                     owner.commentsChanged(post.id, -1)

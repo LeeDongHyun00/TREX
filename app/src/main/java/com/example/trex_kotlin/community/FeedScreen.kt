@@ -67,7 +67,8 @@ fun FeedScreen(
 
     LaunchedEffect(Unit) { app.refreshFeedIfNeeded() }
     val nearEnd by remember { derivedStateOf { list.layoutInfo.visibleItemsInfo.lastOrNull()?.let { it.index >= list.layoutInfo.totalItemsCount - 3 } == true } }
-    LaunchedEffect(nearEnd) { if (nearEnd) feed.loadMore() }
+    // 글 수도 키로 — 첫 쪽이 화면에 다 들어가면 nearEnd 가 계속 참이라 다음 쪽을 부르지 않는다
+    LaunchedEffect(nearEnd, feed.state.posts.size) { if (nearEnd) feed.loadMore() }
     LaunchedEffect(notice) { if (notice != null) { delay(3000); notice = null } }
 
     PullToRefreshBox(isRefreshing = feed.refreshing, onRefresh = { scope.launch { feed.refresh() } }, modifier = Modifier.fillMaxSize()) {

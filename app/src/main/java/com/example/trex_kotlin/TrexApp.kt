@@ -27,6 +27,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import com.example.trex_kotlin.community.CommunityTabScreen
 import com.example.trex_kotlin.community.ProvideRemoteImages
+import com.example.trex_kotlin.community.CommunityGate
 import com.example.trex_kotlin.community.workoutCardData
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
@@ -427,7 +428,8 @@ private fun TrexAppContent(app: AppViewModel) {
                             fatigueContent = {
                                 SessionMuscleMap(app, loadSessionId)
                             },
-                            onShare = if (app.communityGate.canWrite) {
+                            // 계정이 있으면 보인다 — 커뮤니티 상태를 아직 안 받았거나 닉네임·동의 전이어도, 탭이 그 단계를 마친 뒤 카드 글쓰기를 연다
+                            onShare = if (app.communityGate.let { it !is CommunityGate.Suspended && it != CommunityGate.NoLogin && it != CommunityGate.NotSignedIn }) {
                                 {
                                     val plan = recordableWorkouts()
                                     val elapsed = progress.workDurations(steps)

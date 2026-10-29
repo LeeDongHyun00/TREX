@@ -99,7 +99,7 @@ fun ProfileScreen(
     }
     LaunchedEffect(initial.publicId) { reload() }
     val nearEnd by remember { derivedStateOf { grid.layoutInfo.visibleItemsInfo.lastOrNull()?.let { it.index >= grid.layoutInfo.totalItemsCount - 6 } == true } }
-    LaunchedEffect(nearEnd) { if (nearEnd) posts.loadMore() }
+    LaunchedEffect(nearEnd, posts.state.posts.size) { if (nearEnd) posts.loadMore() }
 
     val pickAvatar = rememberFoodGallery(maxItems = 1) { loaders ->
         val loader = loaders.firstOrNull() ?: return@rememberFoodGallery

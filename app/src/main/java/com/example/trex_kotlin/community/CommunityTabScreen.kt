@@ -95,6 +95,7 @@ private fun CommunityNavigation(app: AppViewModel, gate: CommunityGate) {
     val pendingCard = app.pendingWorkoutCard
     LaunchedEffect(pendingCard) {
         if (pendingCard != null) {
+            // 닉네임·동의 단계에서는 이 화면이 아직 없어 카드가 기다린다. 정지된 계정이면 버린다(올릴 수 없다).
             if (gate.canWrite) push(CommunityRoute.Compose(pendingCard))
             app.pendingWorkoutCard = null
         }
