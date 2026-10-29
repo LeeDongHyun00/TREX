@@ -26,6 +26,9 @@ interface AppPlatform {
     /** 구글 로그인의 웹 클라이언트 ID. 비어 있으면 구글 로그인을 쓰지 않는다. */
     val googleWebClientId: String
 
+    /** Apple 로그인을 쓸 수 있는가 — iPhone 만 참. Android 는 Apple 버튼을 그리지 않는다(설계 §2 비목표). */
+    val appleSignInAvailable: Boolean
+
     fun muscleLoadDatabase(): MuscleLoadDatabase
 
     /** 자가 라벨을 연구용 라벨 파일에 덧붙인다. 파일 IO 는 구현이 메인 스레드 밖에서 한다. */

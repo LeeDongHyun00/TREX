@@ -53,6 +53,8 @@ open class IosAppPlatform : AppPlatform {
      * 비어 있으면 앱 상태가 "구글 로그인이 아직 준비되지 않았어요" 로 밝힌다. iPhone 클라이언트 ID 는 Swift 다리가 `GIDClientID` 로 읽는다.
      */
     override val googleWebClientId: String = (NSBundle.mainBundle.objectForInfoDictionaryKey("GIDServerClientID") as? String).orEmpty()
+    /** Apple 로그인(설계 docs/superpowers/specs/2026-10-29-apple-sign-in-design.md) — iPhone 은 늘 쓸 수 있다(Swift 다리 `AppleSignInBridge`). */
+    override val appleSignInAvailable: Boolean get() = true
     override fun muscleLoadDatabase(): MuscleLoadDatabase = FileMuscleLoadDatabase(appSupportPath("TREX") + "/muscle_load.json")
     override fun appendSetLabel(label: SetSelfLabel) = SetLabelFiles(documentsPath() + "/posture_logs").append(label)
 }

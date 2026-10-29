@@ -47,8 +47,17 @@ class TrexApi(private val baseUrl: String, private val transport: HttpTransport,
     /** 어느 서버인지. 같은 계정이라도 서버가 다르면 백업도 다르다(로컬 개발 서버 ↔ 운영 서버). */
     val serverId: String get() = baseUrl.trimEnd('/')
 
-    suspend fun googleLogin(idToken: String): AuthAccount {
-        val (_, body) = call("POST", "/api/auth/oauth/google", JSONObject().put("idToken", idToken), auth = false)
+    suspend fun googleLogin(idToken: String): AuthAccount =
+        account(call("POST", "/api/auth/oauth/google", JSONObject().put("idToken", idToken), auth = false).second)
+
+    /** iPhone Apple 로그인(설계 docs/superpowers/specs/2026-10-29-apple-sign-in-design.md) — 응답은 구글과 같은 모양. */
+    suspend fun appleLogin(credential: AppleCredential): AuthAccount {
+        val body = JSONObject().put("identityToken", credential.identityToken).put("nonce", credential.nonce)
+        credential.authorizationCode?.let { body.put("authorizationCode", it) }
+        return account(call("POST", "/api/auth/oauth/apple", body, auth = false).second)
+    }
+
+    private fun account(body: String): AuthAccount {
         val o = JSONObject(body)
         val user = o.getJSONObject("user")
         return AuthAccount(

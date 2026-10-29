@@ -13,6 +13,7 @@ import androidx.compose.material3.*
 import com.example.trex_kotlin.TrexText as Text
 import androidx.compose.runtime.*
 import com.example.trex_kotlin.community.AdminInbox
+import com.example.trex_kotlin.sync.accountLabel
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -161,7 +162,7 @@ private fun AccountGroup(app: AppViewModel) {
             Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 16.dp), verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Rounded.CloudDone, null, tint = c.primaryText, modifier = Modifier.size(22.dp))
                 Column(Modifier.weight(1f).padding(start = 14.dp)) {
-                    Text(account.email ?: account.name.ifBlank { "Google 계정" }, color = c.text, fontSize = 16.sp)
+                    Text(accountLabel(account), color = c.text, fontSize = 16.sp)
                     Text(status.orEmpty(), color = if (app.sync.lastError != null) c.err else c.text2, fontSize = 13.sp, modifier = Modifier.padding(top = 3.dp))
                 }
                 TextButton(onClick = { app.syncNow() }, enabled = !app.sync.syncing) { Text("지금 동기화") }
