@@ -28,6 +28,8 @@ services:
       COMMUNITY_S3_BUCKET: ${COMMUNITY_S3_BUCKET:-}
       COMMUNITY_ADMIN_LOGIN_IDS: ${COMMUNITY_ADMIN_LOGIN_IDS:-}
       COMMUNITY_REPORT_WEBHOOK_URL: ${COMMUNITY_REPORT_WEBHOOK_URL:-}
+      # 공유 링크 웹 페이지의 iPhone "앱 설치하기"(App Store 주소, 출시 전 비움 — 비밀값 아님)
+      SHARE_IOS_INSTALL_URL: ${SHARE_IOS_INSTALL_URL:-}
       AWS_REGION: ap-southeast-2
       TZ: Asia/Seoul
     expose:
