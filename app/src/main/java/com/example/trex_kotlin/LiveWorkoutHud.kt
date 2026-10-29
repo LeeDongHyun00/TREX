@@ -15,7 +15,6 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -35,6 +34,7 @@ import androidx.compose.material.icons.rounded.AccessibilityNew
 import androidx.compose.material.icons.rounded.Videocam
 import androidx.compose.material3.Icon
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -115,9 +115,10 @@ internal fun LiveWorkoutHud(workout: Workout, repetitions: Int, timeLeft: Int, t
         // 호흡(§5) — 느리게 숨 쉬는 링 + 단어. 위상을 따라가는 표시라 소리가 없다
         if (breath != null) {
             val pulse = rememberInfiniteTransition(label = "breath")
-            val scale by pulse.animateFloat(0.75f, 1.2f, infiniteRepeatable(tween(2000, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "breath-scale")
+            // 크기는 그리기 단계에서만 읽는다 — 운동 내내 HUD 를 매 프레임 다시 구성하지 않는다(스펙 §115)
+            val scale = pulse.animateFloat(0.75f, 1.2f, infiniteRepeatable(tween(2000, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "breath-scale")
             Row(Modifier.padding(top = 2.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Box(Modifier.size(14.dp).scale(scale).border(2.dp, lime, CircleShape))
+                Box(Modifier.size(14.dp).graphicsLayer { scaleX = scale.value; scaleY = scale.value }.border(2.dp, lime, CircleShape))
                 Text(breath, color = Color.White.copy(alpha = .8f), fontSize = 14.sp, maxLines = 1)
             }
         }

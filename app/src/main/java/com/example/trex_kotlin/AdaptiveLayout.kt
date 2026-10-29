@@ -3,6 +3,7 @@ package com.example.trex_kotlin
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -23,7 +24,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import kotlin.math.roundToInt
 
-val LocalTrexNavSpace = staticCompositionLocalOf { 110.dp }
+// 내비 높이를 재면(첫 배치·회전·글자 크기) 값이 바뀐다 — static 이면 탭 화면 전체가 다시 구성되므로 읽는 곳만 다시 그리게 둔다(스펙 §115)
+val LocalTrexNavSpace = compositionLocalOf { 110.dp }
 
 val LocalTrexFold = staticCompositionLocalOf<ContentRect?> { null }
 

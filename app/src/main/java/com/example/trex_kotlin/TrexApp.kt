@@ -50,6 +50,7 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
@@ -64,8 +65,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -148,7 +149,10 @@ private fun TrexAppContent(app: AppViewModel) {
                     if (key != null && value != null) key to value else null
                 }.toMap()) },
         )) { mutableStateOf(SessionProgress(-1, 0)) }
-        val sessionIndex = progress.index
+        // 세션 시계는 0.1초마다 progress 를 새로 쓴다 — 여기서 progress 를 바로 읽으면 앱 최상단이 0.1초마다 통째로 다시 구성된다.
+        // 화면이 쓰는 값(단계·남은 초·경과 초·횟수)은 바뀔 때만 알리는 파생 상태로 읽는다. 값과 시간 계산은 그대로다(스펙 §115).
+        val sessionIndexState = remember { derivedStateOf { progress.index } }
+        val sessionIndex = sessionIndexState.value
         var sessionDone by rememberSaveable { mutableStateOf(false) }
         var sessionPlanKey by rememberSaveable { mutableStateOf("") }
         var loadSessionId by rememberSaveable { mutableStateOf("") }
@@ -160,8 +164,9 @@ private fun TrexAppContent(app: AppViewModel) {
         fun stampWork(token: Int) {
             loadEnds = (endTimes() + (token to nowMillis())).entries.joinToString(",") { "${it.key}:${it.value}" }
         }
-        val sessionTimeLeft = progress.secondsLeft
-        val sessionElapsed = (progress.elapsedMs / 1000).toInt()
+        val sessionTimeLeft by remember { derivedStateOf { progress.secondsLeft } }
+        val sessionElapsed by remember { derivedStateOf { (progress.elapsedMs / 1000).toInt() } }
+        val sessionRepetitions by remember { derivedStateOf { progress.repetitions } }
         var sessionPaused by rememberSaveable { mutableStateOf(false) }
         // 카메라 권한을 거부한 운동 — 자세 평가 대신 **같은 운동을** 타이머로 돌린다(건너뛰지 않는다).
         // 세션 단위 상태라 다음 세션에서는 다시 권한을 물어본다.
@@ -322,7 +327,7 @@ private fun TrexAppContent(app: AppViewModel) {
         }
         // 렙 검증 모드(spec §61): 앱 전용 폴더의 표시 파일로 켠다 — 단계가 바뀔 때마다 다시 읽어 세션 사이에 켜고 끌 수 있다
         val repValidation = rememberRepValidation(sessionIndex)
-        LaunchedEffect(sessionIndex, progress.repetitions, sessionPaused, appPaused, exitAsk, repValidation) {
+        LaunchedEffect(sessionIndex, sessionRepetitions, sessionPaused, appPaused, exitAsk, repValidation) {
             // 검증 모드는 목표에 닿아도 넘기지 않는다 — 세트는 ✓ 로만 끝난다(세트 뒤 헛카운트·마지막 반복까지 잰다)
             if (!repValidation && !pausedState.value && step?.phase == SessionPhase.WORK && !step.timed && progress.targetReached(step)) {
                 // 마지막 걸음·회의 판정·안내 발화가 끝날 때까지 최대 2 s 기다린다(§63) — 넘어가며 speech.stop() 이 마지막 말을 잘랐다("6" 뒤 0.7 s 에 넘어감).
@@ -463,7 +468,7 @@ private fun TrexAppContent(app: AppViewModel) {
                                     onTogglePause = { sessionPaused = !sessionPaused },
                                     onNext = { nextSession(current.token, false) },
                                     onSkip = { nextSession(current.token, true) }, onExit = { requestExit() },
-                                    repetitions = progress.repetitions,
+                                    repetitions = sessionRepetitions,
                                     onRepetitions = { count -> progress = progress.setRepetitions(steps, current.token, count) },
                                     onRepDetected = { if (!pausedState.value) progress = progress.setRepetitions(steps, current.token, progress.repetitions + 1) },
                                     onPartial = { nextSession(current.token, true) },
@@ -487,7 +492,7 @@ private fun TrexAppContent(app: AppViewModel) {
                                     onTogglePause = { sessionPaused = !sessionPaused },
                                     onNext = { nextSession(current.token, false) },
                                     onSkip = { nextSession(current.token, true) }, onExit = { requestExit() },
-                                    repetitions = progress.repetitions,
+                                    repetitions = sessionRepetitions,
                                     onRepetitions = { count -> progress = progress.setRepetitions(steps, current.token, count) },
                                     onPartial = { nextSession(current.token, true) },
                                     onShowGuide = ExerciseGuides.forName(current.workout.name)?.let { { showGuide(current.workout.name) } },
@@ -786,7 +791,8 @@ private fun MorphNav(
     Row(modifier = modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         slots.forEachIndexed { i, slot ->
             val weight = slot.weight
-            val alpha by animateFloatAsState(slot.alpha, tween(260), label = "nav-a$i")
+            // 투명도는 그리기 단계에서만 읽는다 — 260ms 동안 내비 전체를 매 프레임 다시 구성하지 않는다(스펙 §115)
+            val alpha = animateFloatAsState(slot.alpha, tween(260), label = "nav-a$i")
             val h = 56.dp
             Surface(
                 onClick = slot.onClick,
@@ -794,7 +800,7 @@ private fun MorphNav(
                 modifier = Modifier
                     .weight(weight.coerceAtLeast(0.0001f))
                     .heightIn(min = h)
-                    .alpha(alpha),
+                    .graphicsLayer { this.alpha = alpha.value },
                 shape = RoundedCornerShape(999.dp),
                 color = slot.bg,
                 contentColor = slot.fg,
