@@ -72,6 +72,9 @@ import java.util.Locale
 /** 이 플랫폼에 카메라 자세 화면이 있는가 — [postureSupported] 가 본다. */
 const val PLATFORM_POSTURE_CAMERA = true
 
+/** 실검증 도구(세트 로그·음성 기록·자가 라벨·횟수 검증 모드)가 있는 빌드인가 — 배포 빌드(`-Ptrex.distribution=true`)만 false(스펙 §116). */
+const val PLATFORM_DEV_TOOLS = BuildConfig.DEV_TOOLS
+
 /** 앱 진입 — 앱 상태는 Application 으로 만든다(공유 [TrexApp] 은 상태를 인자로 받는다). */
 @Composable
 fun TrexApp() = TrexApp(viewModel { AppViewModel(AndroidAppPlatform(checkNotNull(this[APPLICATION_KEY]))) })
@@ -130,6 +133,7 @@ fun animatorsEnabled(): Boolean = android.animation.ValueAnimator.areAnimatorsEn
 /** 렙 검증 모드(spec §61) — 앱 전용 폴더의 표시 파일로 켠다. [key] 가 바뀔 때마다 다시 읽는다. */
 @Composable
 fun rememberRepValidation(key: Any?): Boolean {
+    if (!PLATFORM_DEV_TOOLS) return false   // 배포 빌드는 표시 파일이 있어도 켜지 않는다(스펙 §116)
     val context = LocalContext.current
     var on by remember { mutableStateOf(false) }
     LaunchedEffect(key) {

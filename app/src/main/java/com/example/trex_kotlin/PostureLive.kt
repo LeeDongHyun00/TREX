@@ -702,8 +702,9 @@ fun PostureLiveSessionScreen(
             floorChainSwitches = if (floor && com.example.trex_kotlin.posture.FloorChain.Kind.of(ex) != null) refs.floorLive.chainSwitches() else null,
             hold = holdSnap?.let { HoldLog.of(it, t0) },
         )
-        // 분석 executor 는 화면 종료 시 shutdown 되므로 앱 수명의 기록 스레드에서 쓴다. 실패는 삼키지 않고 feedback 로그에 남긴다
-        SetLogStore.writer.execute {
+        // 분석 executor 는 화면 종료 시 shutdown 되므로 앱 수명의 기록 스레드에서 쓴다. 실패는 삼키지 않고 feedback 로그에 남긴다.
+        // 배포 빌드는 파일로 남기지 않는다(스펙 §116) — 리포트·기록은 아래에서 그대로 만든다
+        if (PLATFORM_DEV_TOOLS) SetLogStore.writer.execute {
             runCatching {
                 logStore.append(log)
             }.onFailure { speech.traceFeedback("set_log_failed", "${log.setId} ${it::class.simpleName}: ${it.message}") }

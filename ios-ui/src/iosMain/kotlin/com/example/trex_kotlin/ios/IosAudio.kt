@@ -233,7 +233,7 @@ class IosSpeechEngine : SpeechEngine {
     override fun nextUtteranceId(): String = "coach-${(platform.Foundation.NSProcessInfo.processInfo.systemUptime * 1e9).toLong()}-${counter++}"
 
     override fun trace(atMs: Long, kind: String, text: String, utteranceId: String?, muted: Boolean, ready: Boolean) {
-        if (silent) return
+        if (silent || !com.example.trex_kotlin.PLATFORM_DEV_TOOLS) return   // 배포 빌드는 개발 기록을 남기지 않는다(스펙 §116)
         val record = feedbackTraceLine(atMs, kind, text, utteranceId, muted, ready)
         traceWriter.execute {
             runCatching { appendTextFile(documentsPath() + "/posture_logs/feedback-${dayStamp(atMs)}.jsonl", record + "\n") }

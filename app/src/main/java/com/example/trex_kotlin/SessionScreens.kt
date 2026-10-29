@@ -363,7 +363,8 @@ private fun PostureSetRow(
                     CoachMode.COACH -> CoachSetDetail(report)
                     CoachMode.TRACK -> TrackSetDetail(report)
                 }
-                SelfLabelSlot(report = report, draft = draft, onDraft = onDraft, onLabel = onLabel)
+                // 자가 라벨(실제 횟수·자세 자평)은 실검증 도구 — 배포 빌드에는 없다(스펙 §116)
+                if (PLATFORM_DEV_TOOLS) SelfLabelSlot(report = report, draft = draft, onDraft = onDraft, onLabel = onLabel)
             }
         }
     }

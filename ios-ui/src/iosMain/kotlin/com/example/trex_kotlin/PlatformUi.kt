@@ -63,6 +63,12 @@ import platform.darwin.NSObject
 /** iPhone 도 카메라 자세 화면을 돈다(§108c) — 공유 PostureLive + Swift 카메라·MediaPipe 다리(PoseCameraBridge.swift). */
 const val PLATFORM_POSTURE_CAMERA = true
 
+/**
+ * 실검증 도구가 있는 빌드인가(스펙 §116) — Info.plist `TrexDevTools`(= 빌드 설정 `TREX_DEV_TOOLS`)가 "NO" 일 때만 false.
+ * 배포 빌드만 `xcodebuild … TREX_DEV_TOOLS=NO` 로 끈다. 값이 없거나 비어 있으면(저장소 코드로 빌드) 켜져 있다.
+ */
+val PLATFORM_DEV_TOOLS: Boolean by lazy { (NSBundle.mainBundle.objectForInfoDictionaryKey("TrexDevTools") as? String) != "NO" }
+
 /** 상태 막대 글자색을 화면 테마에 맞춘다(창의 라이트·다크). */
 @Composable
 fun TrexSystemBars(c: TrexColors) {

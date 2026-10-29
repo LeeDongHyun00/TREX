@@ -3221,3 +3221,18 @@ Validation: Android 778 unit tests and 525 common JVM tests pass; debug and inst
   - `cameraPreparationCancelsOnBackgroundAndStartsAtCountdownEnd` — 5초 카운트다운 안에 스크린샷 저장까지 끝나야 하는 시간 의존 테스트. 변경 전 코드(HEAD)도 같은 에뮬레이터에서 같은 줄(430)에서 두 번 다 실패했다.
   - `configuredSetsRestPauseSkipAndAutoAdvanceUseRealApp` — 제어판에 시계(세트 경과, 올라간다)가 늘어 '첫 시계' 대신 '남은 시간' 시계를 읽게 고쳤다. 그래도 느린 에뮬레이터에서는 사람 없는 플랭크의 20 s 시계 폴백 따라잡기(`HoldBridge`, 설계된 동작)가 측정 구간에 걸려(00:58 → 00:39) 실패해, 측정 전에 타이머가 움직이기 시작하기를 기다리게 보강했다. 보강한 판은 에뮬레이터 검증을 멈춰(동현님 2026-10-30 "에뮬레이터는 안돌려도됨 내가 실검증할거야") 돌리지 않았다.
 - **아직 못 한 것:** 실기기 체감(Note 10·iPhone 16 Plus)과 제어판 실사용 — 동현님이 직접 검증한다. Note 10 은 설치된 앱의 서명이 이 Mac 의 디버그 키와 달라 덮어 설치가 안 된다(지우면 기록·기준선이 지워지므로 백업 뒤에만 — CLAUDE.md '설치 함정').
+
+## §116. 실검증 도구는 저장소 빌드에만 — 배포 빌드에서 끈다 (2026-10-30, `feature/shared-ui-muscle-navigation`)
+
+*요청(동현님 2026-10-30).* "실제 사용자들은 해당 기능이 필요없어 실검증하는 개발자들이 필요하지" → "배포하는 앱들은 해당 기능 없게 할거고 지금 git 에다가 올리고 해당 코드를 통해 빌드하면 기능이 있게".
+
+*무엇이 실검증 도구인가.* 세트 로그(`posture_logs/sets-*.jsonl` — 원본 프레임 피처·관절 좌표, §14), 음성 기록(`posture_logs/feedback-*.jsonl`, §101), 완료 화면의 자가 라벨(실제 횟수·자세 자평 → `labels/set_labels.jsonl`·`rep_truth.csv`), 횟수 검증 모드(`rep_validation.on`, §61). 그 전에는 모든 사용자의 모든 세트에 좌표가 기간 제한 없이 쌓였고 자가 라벨 입력이 모두에게 보였다.
+
+*어떻게 가르나 — 빌드 플래그, 기본은 켜짐.* 저장소 코드로 빌드하면 켜져 있고, 사용자에게 나가는 배포 빌드만 끈다. 앱 안 스위치(개발자 모드)가 아니라 빌드로 가른 것은 동현님 결정이다 — 배포 앱에는 기능 자체가 없다.
+- Android: `-Ptrex.distribution=true`(또는 `local.properties`) → `BuildConfig.DEV_TOOLS = false`. 켜진 빌드는 `versionNameSuffix = "-dev"` — 세트 로그의 `app_version` 에도 남아 어떤 빌드가 센 세트인지 갈린다. `scripts/publish_release.sh` 는 APK 버전 이름(aapt2)이 `-dev` 로 끝나면 올리지 않는다.
+- iPhone: Info.plist `TrexDevTools` = 빌드 설정 `TREX_DEV_TOOLS`(project.yml 기본 YES). `"NO"` 일 때만 꺼지고 값이 없거나 비면 켜진다(XcodeGen 을 다시 돌리지 않은 프로젝트도 켜진 쪽). 배포는 `xcodebuild … TREX_DEV_TOOLS=NO`. CI 의 서명 없는 IPA(`build-unsigned-ipa.sh`)는 배포가 아니라 그대로 켜져 있다.
+- 공유 코드는 짝 상수 `PLATFORM_DEV_TOOLS`(Android `PlatformUi.kt` ↔ iPhone `PlatformUi.kt`)만 본다.
+
+*끄는 자리.* 세트 로그 쓰기(`PostureLive` — 리포트·기록·완료 화면은 그대로 만든다, 지역 변수는 늘리지 않았다), 음성 기록 파일(Android `AndroidSpeech.trace`·iPhone `IosAudio.trace` — `SpeechCoach.traceFeedback` 은 그대로라 엔진 테스트의 기록 확인은 바뀌지 않는다), 자가 라벨 칸(`SessionScreens` `SelfLabelSlot`), 검증 모드(Android `rememberRepValidation` — 표시 파일이 있어도 끈다. iPhone 은 원래 꺼짐). 자세 판정·횟수·음성 코칭은 두 빌드가 같다.
+
+*포기한 것.* §14 의 "실제 세션 로그가 재보정 데이터" 는 이제 개발자 빌드에서만 생긴다. 라벨 없는 사용자 로그는 쓰임이 적고 몸 좌표라 동의 없이 남기지 않는다. 실사용 데이터가 필요해지면 동의·보관 기간을 갖춘 별도 기능으로 한다.

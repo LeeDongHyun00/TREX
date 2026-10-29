@@ -9,6 +9,12 @@ OWNER="LeeDongHyun00"; REPO="TREX"
 TOK=$(printf "protocol=https\nhost=github.com\n\n" | git credential fill | sed -n 's/^password=//p')
 [ -n "$TOK" ] || { echo "github.com 자격증명이 없다(git credential)"; exit 1; }
 for f in "TREX-$VER.apk" SHA256SUMS.txt BUILD_INFO.json; do [ -f "$DIR/$f" ] || { echo "자산 없음: $DIR/$f"; exit 1; }; done
+# 실검증 도구(세트 로그·자가 라벨 등, 스펙 §116)가 켜진 빌드는 배포하지 않는다 — 그 빌드는 버전 이름이 "-dev" 로 끝난다.
+# 배포 APK 는 `gradlew :app:assembleRelease -Ptrex.distribution=true` 로 만든다.
+AAPT2=$(ls "${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$HOME/Library/Android/sdk}}"/build-tools/*/aapt2* "${LOCALAPPDATA:-/nonexistent}"/Android/Sdk/build-tools/*/aapt2* 2>/dev/null | tail -1 || true)
+[ -n "$AAPT2" ] || { echo "aapt2 를 못 찾았다 — ANDROID_HOME 을 정해 APK 의 버전 이름을 확인하게 해 주세요"; exit 1; }
+APK_VERSION=$("$AAPT2" dump badging "$DIR/TREX-$VER.apk" | sed -n "s/.*versionName='\([^']*\)'.*/\1/p" | head -1)
+case "$APK_VERSION" in *-dev|"") echo "배포 금지: APK 버전 이름 '$APK_VERSION' — 실검증 도구가 켜진 빌드다(-Ptrex.distribution=true 로 다시 빌드)"; exit 1;; esac
 H=(-H "Authorization: Bearer $TOK" -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28")
 # 1) 릴리스(사전 릴리스, 초안 아님). 같은 태그가 있으면 그것을 쓴다
 python - "$TAG" "$TARGET" "$VER" "$BODY" > /tmp/release_payload.json <<'EOF'

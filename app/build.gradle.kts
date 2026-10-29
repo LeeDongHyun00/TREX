@@ -34,6 +34,11 @@ android {
         // Android 의 Apple 로그인(웹 흐름) — Services ID·Return URL 도 비밀값이 아니다. 둘 중 하나라도 비면 Apple 버튼을 그리지 않는다.
         buildConfigField("String", "APPLE_SERVICES_ID", "\"${trexConfig("trex.appleServicesId", "")}\"")
         buildConfigField("String", "APPLE_REDIRECT_URI", "\"${trexConfig("trex.appleRedirectUri", "")}\"")
+        // 실검증 도구(세트 로그·음성 기록·자가 라벨·횟수 검증 모드, 스펙 §116) — 저장소 코드로 빌드하면 켜져 있고, 사용자에게 나가는
+        // 배포 빌드만 `-Ptrex.distribution=true` 로 끈다. 켜진 빌드는 버전 이름 끝에 "-dev" 가 붙어 세트 로그·배포 검사에서 갈린다.
+        val distribution = trexConfig("trex.distribution", "false").toBoolean()
+        buildConfigField("boolean", "DEV_TOOLS", (!distribution).toString())
+        if (!distribution) versionNameSuffix = "-dev"
     }
 
     buildTypes {
