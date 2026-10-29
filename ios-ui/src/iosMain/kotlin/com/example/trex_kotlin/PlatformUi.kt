@@ -48,6 +48,7 @@ import platform.Foundation.NSProcessInfo
 import platform.Foundation.NSURL
 import platform.Foundation.dataWithContentsOfFile
 import platform.UIKit.UIActivityViewController
+import platform.UIKit.popoverPresentationController
 import platform.UIKit.UIApplication
 import platform.UIKit.UIApplicationOpenSettingsURLString
 import platform.UIKit.UIColor
