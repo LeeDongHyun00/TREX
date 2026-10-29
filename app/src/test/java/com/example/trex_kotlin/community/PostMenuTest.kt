@@ -11,24 +11,24 @@ class PostMenuTest {
 
     @Test
     fun 내_글은_지우기만() {
-        assertEquals(listOf("지우기"), labels(post(mine = true), CommunityGate.Ready(admin = true)))
+        assertEquals(listOf("공유하기", "지우기"), labels(post(mine = true), CommunityGate.Ready(admin = true)))
     }
 
     @Test
     fun 남의_글은_신고와_차단_정지된_계정은_차단만() {
-        assertEquals(listOf("신고", "티렉스님 차단"), labels(post(mine = false), CommunityGate.Ready(admin = false)))
-        assertEquals(listOf("티렉스님 차단"), labels(post(mine = false), CommunityGate.Suspended(admin = false)))
+        assertEquals(listOf("공유하기", "신고", "티렉스님 차단"), labels(post(mine = false), CommunityGate.Ready(admin = false)))
+        assertEquals(listOf("공유하기", "티렉스님 차단"), labels(post(mine = false), CommunityGate.Suspended(admin = false)))
     }
 
     @Test
     fun 관리자는_숨기기_지우기_작성자_정지가_더_있다() {
         assertEquals(
-            listOf("신고", "티렉스님 차단", "관리자: 숨기기", "관리자: 지우기", "관리자: 작성자 정지"),
+            listOf("공유하기", "신고", "티렉스님 차단", "관리자: 숨기기", "관리자: 지우기", "관리자: 작성자 정지"),
             labels(post(mine = false), CommunityGate.Ready(admin = true)),
         )
         // 이미 숨긴 글은 숨기기가 없다(복구는 신고함)
         assertEquals(
-            listOf("신고", "티렉스님 차단", "관리자: 지우기", "관리자: 작성자 정지"),
+            listOf("공유하기", "신고", "티렉스님 차단", "관리자: 지우기", "관리자: 작성자 정지"),
             labels(post(mine = false, hidden = true), CommunityGate.Ready(admin = true)),
         )
     }

@@ -47,6 +47,7 @@ import platform.Foundation.NSData
 import platform.Foundation.NSProcessInfo
 import platform.Foundation.NSURL
 import platform.Foundation.dataWithContentsOfFile
+import platform.UIKit.UIActivityViewController
 import platform.UIKit.UIApplication
 import platform.UIKit.UIApplicationOpenSettingsURLString
 import platform.UIKit.UIColor
@@ -336,4 +337,16 @@ fun AppleSignInButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
         modifier = modifier.fillMaxWidth().height(50.dp),
         properties = UIKitInteropProperties(interactionMode = UIKitInteropInteractionMode.NonCooperative, isNativeAccessibilityEnabled = true),
     )
+}
+
+/** 폰 공유 창에 글을 넘긴다(UIActivityViewController) — 가장 위에 떠 있는 화면에 띄운다. iPad 에서는 팝오버 기준을 그 화면으로. */
+@Composable
+fun rememberTextSharer(): (String) -> Unit = remember {
+    { text ->
+        var top = UIApplication.sharedApplication.keyWindow?.rootViewController
+        while (top?.presentedViewController != null) top = top.presentedViewController
+        val sheet = UIActivityViewController(activityItems = listOf(text), applicationActivities = null)
+        sheet.popoverPresentationController?.sourceView = top?.view
+        top?.presentViewController(sheet, animated = true, completion = null)
+    }
 }

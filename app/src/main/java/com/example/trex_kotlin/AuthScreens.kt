@@ -871,3 +871,24 @@ internal fun LoginLogo(frame: Int, modifier: Modifier = Modifier) {
         )
     }
 }
+
+/**
+ * 계정 연결 버튼 — 아이디 로그인·가입 창(D13) → Apple(iPhone) → Google, 시작 화면과 같은 순서.
+ * 커뮤니티 계정 안내와 루틴 공유 창(로그인 전)이 같이 쓴다. 실패 문구([AppViewModel.authMessage])는 부르는 쪽이 보인다.
+ */
+@Composable
+fun AccountSignInButtons(app: AppViewModel) {
+    val requestGoogleIdToken = rememberGoogleIdTokenRequest()
+    val requestAppleCredential = rememberAppleCredentialRequest()
+    var showPasswordLogin by remember { mutableStateOf(false) }
+    if (showPasswordLogin) PasswordAuthDialog(app, onDismiss = { showPasswordLogin = false })
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Cta(text = "아이디로 로그인·가입", onClick = { showPasswordLogin = true }, enabled = !app.authBusy, modifier = Modifier.fillMaxWidth())
+        if (app.appleSignInAvailable) AppleSignInButton(onClick = { if (!app.authBusy) app.continueWithApple(requestAppleCredential) })
+        GhostButton(
+            text = if (app.authBusy) "연결 중…" else "Google 계정 연결",
+            onClick = { if (!app.authBusy) app.continueWithGoogle(requestGoogleIdToken) },
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
+}

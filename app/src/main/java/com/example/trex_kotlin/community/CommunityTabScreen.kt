@@ -41,6 +41,7 @@ import com.example.trex_kotlin.nowMillis
 import com.example.trex_kotlin.Trex
 import com.example.trex_kotlin.Cta
 import com.example.trex_kotlin.GhostButton
+import com.example.trex_kotlin.AccountSignInButtons
 import com.example.trex_kotlin.PasswordAuthDialog
 import com.example.trex_kotlin.DField
 import com.example.trex_kotlin.AppleSignInButton
@@ -124,6 +125,25 @@ private fun CommunityNavigation(app: AppViewModel, gate: CommunityGate) {
             app.pendingWorkoutCard = null
         }
     }
+    // 메신저로 받은 게시글 링크(trex://p/{id}) — 이용 준비가 끝난 이 화면에서 상세를 연다. 숨김·삭제된 글이면 알린다.
+    val pendingPostId = app.pendingPostId
+    var linkError by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(pendingPostId) {
+        if (pendingPostId != null) {
+            runCatching { app.community.post(pendingPostId) }
+                .onSuccess { push(CommunityRoute.Detail(it, app.communityFeed)) }
+                .onFailure { if (it is kotlinx.coroutines.CancellationException) throw it else linkError = "볼 수 없는 글이에요" }
+            app.pendingPostId = null
+        }
+    }
+    linkError?.let { message ->
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { linkError = null },
+            containerColor = Trex.c.sheet,
+            text = { Text(message) },
+            confirmButton = { androidx.compose.material3.TextButton(onClick = { linkError = null }) { Text("확인") } },
+        )
+    }
     when (val top = stack.lastOrNull()) {
         null -> FeedScreen(
             app = app,
@@ -189,10 +209,6 @@ private fun CommunityNotice(title: String, body: String) {
 @Composable
 private fun SignInNotice(app: AppViewModel) {
     val c = Trex.c
-    val requestIdToken = rememberGoogleIdTokenRequest()
-    val requestAppleCredential = rememberAppleCredentialRequest()
-    var showPasswordLogin by remember { mutableStateOf(false) }
-    if (showPasswordLogin) PasswordAuthDialog(app, onDismiss = { showPasswordLogin = false })
     NoticeColumn {
         NoticeCard {
             Icon(Icons.Rounded.Forum, null, tint = c.primaryText, modifier = Modifier.size(28.dp))
@@ -201,19 +217,7 @@ private fun SignInNotice(app: AppViewModel) {
                 "오운완·루틴·대회 소식을 나눠요. 계정을 연결하면 운동·식단 기록도 계정에 백업돼요. 다른 기능은 계정 없이도 그대로예요.",
                 color = c.text2, fontSize = 14.sp, lineHeight = 21.sp,
             )
-            // 아이디·비밀번호(D13) → Apple(iPhone) → Google — 시작 화면과 같은 순서
-            Cta(
-                text = "아이디로 로그인·가입",
-                onClick = { showPasswordLogin = true },
-                enabled = !app.authBusy,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            if (app.appleSignInAvailable) AppleSignInButton(onClick = { if (!app.authBusy) app.continueWithApple(requestAppleCredential) })
-            GhostButton(
-                text = if (app.authBusy) "연결 중…" else "Google 계정 연결",
-                onClick = { if (!app.authBusy) app.continueWithGoogle(requestIdToken) },
-                modifier = Modifier.fillMaxWidth(),
-            )
+            AccountSignInButtons(app)
             app.authMessage?.let { Text(it, color = c.err, fontSize = 13.sp) }
         }
     }
