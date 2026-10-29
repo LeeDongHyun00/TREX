@@ -9,6 +9,7 @@
 <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
 <key>CFBundleName</key><string>$(PRODUCT_NAME)</string>
 <key>CFBundlePackageType</key><string>APPL</string>
+<key>CFBundleURLTypes</key><array><dict><key>CFBundleURLName</key><string>com.leedonghyun.trex.ios.link</string><key>CFBundleURLSchemes</key><array><string>trex</string></array></dict></array>
 <key>CFBundleShortVersionString</key><string>$(MARKETING_VERSION)</string>
 <key>CFBundleVersion</key><string>$(CURRENT_PROJECT_VERSION)</string>
 <key>GIDClientID</key><string>12194757714-bd99b55i5jk94gpft5a6ec6s983fm9mn.apps.googleusercontent.com</string>

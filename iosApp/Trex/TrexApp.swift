@@ -29,6 +29,8 @@ import TrexCore
                 // §108 Phase 2: 앱 화면은 Android 정본 Compose(TrexApp)다. 아래 예전 SwiftUI 화면(RootView 등)은
                 // 쓰지 않는다 — 자세(§108c)·사진 식단(§108d)까지 공유 화면으로 옮겼고, 정리는 따로 한다.
                 ComposeAppView().ignoresSafeArea()
+                    // 공유 링크의 "앱에서 열기"(trex://r/…, trex://p/…) — 공유 화면(Kotlin)이 꺼내 연다
+                    .onOpenURL { url in AppLinkInbox.shared.deliver(url: url.absoluteString) }
             }
         }
     }
