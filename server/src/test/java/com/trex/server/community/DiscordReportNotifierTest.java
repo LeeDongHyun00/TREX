@@ -14,6 +14,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -48,5 +49,15 @@ class DiscordReportNotifierTest {
             assertTrue(twoConnections.await(5, TimeUnit.SECONDS), "첫 알림이 멈추면 두 번째 알림이 연결조차 하지 않는다");
             for (Socket socket : held) socket.close();
         }
+    }
+
+    @Test
+    void 웹후크_주소가_http로_시작하지_않으면_보내지_않는다() {
+        // 꺾쇠를 남긴 주소(<https://…>)는 보낼 때마다 실패 로그만 쌓였다 — 기동 때 한 번 알리고 끈다
+        DiscordReportNotifier notifier = new DiscordReportNotifier(
+                new CommunityProperties("", "", List.of(), "<https://discord.com/api/webhooks/1/x>", false), Duration.ofMillis(300));
+        assertFalse(notifier.enabled());
+        assertTrue(new DiscordReportNotifier(new CommunityProperties("", "", List.of(), "https://discord.com/api/webhooks/1/x", false),
+                Duration.ofMillis(300)).enabled());
     }
 }

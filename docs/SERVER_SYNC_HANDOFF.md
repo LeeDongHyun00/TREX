@@ -186,6 +186,8 @@ adb reverse tcp:8080 tcp:8080                                  # 폰의 127.0.0.
 
 모두 AWS 콘솔 오른쪽 위 리전이 **아시아 태평양(시드니) ap-southeast-2** 인지 먼저 본다. 화면 문구는 콘솔 개편에 따라 조금 다를 수 있다. 각 단계 끝의 *메모* 칸 값은 9.2 에서 `.env` 에 넣는다.
 
+> **`<…>` 는 바꿔 넣을 자리 표시다 — 꺾쇠 `<` `>` 까지 지우고 값만 넣는다.** 2026-10-29 첫 배포에서 버킷 이름·IAM 정책·웹후크 세 곳에 꺾쇠가 남아 사진 올리기와 신고 알림이 실패했다. 예: `arn:aws:s3:::<버킷 이름>/*` → `arn:aws:s3:::trex-community-k7m2qp/*`
+
 **① S3 버킷 만들기** — 콘솔 위 검색창에 `S3` → **버킷 만들기**
 1. 버킷 유형: **범용**
 2. 버킷 이름: `trex-community-` 뒤에 아무 소문자·숫자 6자(예: `trex-community-k7m2qp`). 전 세계에서 하나뿐이어야 해서 이미 있으면 바꾼다. 소문자·숫자·하이픈만.
@@ -198,7 +200,7 @@ adb reverse tcp:8080 tcp:8080                                  # 폰의 127.0.0.
 *메모*: 버킷 이름 → `COMMUNITY_S3_BUCKET`
 
 **② IAM 정책 만들기**(무엇을 허락할지) — 검색창에 `IAM` → 왼쪽 **정책** → **정책 생성**
-1. 정책 편집기에서 **JSON** 을 누르고 내용을 모두 지운 뒤 아래를 붙여 넣는다. `<버킷 이름>` 은 ①의 이름으로 바꾼다.
+1. 정책 편집기에서 **JSON** 을 누르고 내용을 모두 지운 뒤 아래를 붙여 넣는다. `<버킷 이름>` 은 ①의 이름으로 바꾼다 — **꺾쇠까지 지운다**(틀리면 사진 올릴 때 `AccessDenied … no identity-based policy allows the s3:PutObject action`).
    ```json
    {
      "Version": "2012-10-17",
@@ -252,9 +254,10 @@ cd server && JAVA_HOME=~/.jdks/jbr-21.0.11 ./gradlew.bat bootJar
 KEY=C:/Workspace/TREX/trex-key.pem; HOST=ubuntu@54.252.112.191
 # 1) .env 에 세 줄 추가 — nano 는 터미널이 필요해 -t
 ssh -t -i $KEY $HOST "cd ~/trex && cp .env .env.before-community && nano .env"
-#   COMMUNITY_S3_BUCKET=<버킷 이름>
+#   COMMUNITY_S3_BUCKET=<버킷 이름>                 ← 꺾쇠 없이: COMMUNITY_S3_BUCKET=trex-community-k7m2qp
 #   COMMUNITY_ADMIN_LOGIN_IDS=google_<숫자>
-#   COMMUNITY_REPORT_WEBHOOK_URL=<디스코드 웹후크>
+#   COMMUNITY_REPORT_WEBHOOK_URL=<디스코드 웹후크>  ← 꺾쇠 없이 https://discord.com/api/webhooks/… 그대로
+#   (버킷 이름이 형식에 안 맞으면 서버가 기동 때 까닭을 찍고 멈춘다, 웹후크가 http(s):// 로 시작하지 않으면 알림을 끄고 로그에 남긴다)
 # 2) 되돌릴 사본을 남기고 새 jar·compose 올리기
 ssh -i $KEY $HOST "cd ~/trex && cp app.jar app.jar.prev && cp docker-compose.yml docker-compose.yml.prev"
 scp -i $KEY build/libs/server-0.0.1-SNAPSHOT.jar $HOST:~/trex/app.jar
