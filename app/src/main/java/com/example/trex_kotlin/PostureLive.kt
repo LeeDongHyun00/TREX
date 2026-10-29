@@ -92,7 +92,6 @@ import com.example.trex_kotlin.posture.CoverageReport
 import com.example.trex_kotlin.posture.PartStatus
 import com.example.trex_kotlin.posture.BodyPart
 import com.example.trex_kotlin.posture.OutDirection
-import com.example.trex_kotlin.posture.FLOOR_RULES_ASSET
 import com.example.trex_kotlin.posture.FloorChain
 import com.example.trex_kotlin.posture.FloorCoverage
 import com.example.trex_kotlin.posture.FloorFeatureExtractor
@@ -281,20 +280,12 @@ fun PostureLiveSessionScreen(
     // 분석 스레드와 공유하는 ref 들을 한 객체로 — remember 44개를 하나로 줄여 이 Composable 메서드를 작게 한다(2026-10-02 ART VerifyError, PostureSupport.kt 주석)
     // 프로필 키는 배치 지문(§91)의 거리·높이 척도에 쓴다 — 홀더에 두어 이 Composable 의 지역 변수를 늘리지 않는다(dex 레지스터, CLAUDE.md)
     val refs = remember { LiveSessionRefs().also { it.subjectHeightCm[0] = host.profileHeightCm() ?: 0f } }
+    // 규칙·정상 자세 참조는 백그라운드에서 한 번만 읽어 앱 수명 동안 같이 쓴다(PostureLiveAssets, 스펙 §115)
     LaunchedEffect(Unit) {
-        refs.normalReferenceRef[0] = runCatching {
-            NormalPoseReference.parse(host.readAsset(NormalPoseReference.ASSET).lineSequence())
-        }.getOrDefault(NormalPoseReference(emptyList()))
-        runCatching {
-            val standing = PostureRuleSet.loadText(host.readAsset(PostureRuleSet.ASSET_PATH))
-            try {
-                val floor = PostureRuleSet.loadText(host.readAsset(FLOOR_RULES_ASSET))
-                floorExercises = floor.rules.map { it.exercise }.toSet()
-                PostureRuleSet("${standing.version}+${floor.version}", standing.generated, standing.rules + floor.rules)
-            } catch (_: Throwable) {
-                standing
-            }.plusRepForm()   // spec §62a 반복별 검사(발 너비·발끝·무릎 바닥) — AIHub 밖 항목
-        }.onSuccess { ruleSet = it }
+        val assets = PostureLiveAssets.load(host)
+        refs.normalReferenceRef[0] = assets.normalReference
+        floorExercises = assets.floorExercises
+        assets.ruleSet?.let { ruleSet = it }
     }
     // 바닥 종목은 중력/3D 피처 대신 2D 평면 피처를 쓴다 (spec §25). 분석 스레드에서 매 프레임 읽으므로 ref 로 전달.
     val isFloorExercise = profile?.floor == true || aihubExercise in floorExercises
@@ -532,9 +523,7 @@ fun PostureLiveSessionScreen(
     val subjectId = remember { host.subjectId() }
     // 어떤 빌드가 센 세트인지 — 폰 검증 전후 빌드를 로그만으로 가른다 (spec §58 단계 0)
     val appVersion = remember { host.appVersion() }
-    var savedSets by remember { mutableIntStateOf(0) }
     var recordedFrames by remember { mutableIntStateOf(0) }
-    LaunchedEffect(Unit) { savedSets = runCatching { logStore.totalSets() }.getOrDefault(0) }
 
     // 세트 마감 — 세트 경계에서 호출된다. 종목/뷰는 **세트 시작 시점 값**을 인자로 받는다 —
     // 이 화면은 다음 운동으로 넘어가도 재생성되지 않아(AnimatedContent 의 같은 route), 지금 값을 쓰면 종목이 어긋난다.
@@ -716,7 +705,6 @@ fun PostureLiveSessionScreen(
         SetLogStore.writer.execute {
             runCatching {
                 logStore.append(log)
-                savedSets = logStore.totalSets()
             }.onFailure { speech.traceFeedback("set_log_failed", "${log.setId} ${it::class.simpleName}: ${it.message}") }
         }
         PostureSetReport.build(
