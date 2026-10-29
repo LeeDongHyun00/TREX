@@ -119,20 +119,29 @@ fun FeedScreen(
             notice = done
             when (pending) {
                 is CommunityAction.DeletePost -> feed.removed(pending.post.id)
-                is CommunityAction.Block -> scope.launch { feed.refresh() } // 차단한 사람의 글이 빠진 목록으로
+                is CommunityAction.Block, is CommunityAction.AdminHidePost, is CommunityAction.AdminSuspend ->
+                    scope.launch { feed.refresh() } // 차단·숨김·정지가 반영된 목록으로
                 else -> Unit
             }
         }
     }
 }
 
-/** 카드 ⋯ 메뉴 — 내 글은 지우기, 남의 글은 신고·차단(정지된 계정은 신고 못 함, 서버 requireWriter). */
+/**
+ * 카드 ⋯ 메뉴 — 내 글은 지우기, 남의 글은 신고·차단(정지된 계정은 신고 못 함, 서버 requireWriter).
+ * 관리자는 남의 글에 숨기기·지우기·작성자 정지가 더 있다(숨긴 글 복구는 신고함).
+ */
 internal fun postMenu(post: Post, gate: CommunityGate, open: (CommunityAction) -> Unit): List<PostMenuItem> = buildList {
     if (post.mine) {
         add(PostMenuItem("지우기", destructive = true) { open(CommunityAction.DeletePost(post)) })
-    } else {
-        if (gate.canWrite) add(PostMenuItem("신고") { open(CommunityAction.Report(ReportTarget.POST, post.id.toString())) })
-        add(PostMenuItem("${post.author.nickname}님 차단", destructive = true) { open(CommunityAction.Block(post.author)) })
+        return@buildList
+    }
+    if (gate.canWrite) add(PostMenuItem("신고") { open(CommunityAction.Report(ReportTarget.POST, post.id.toString())) })
+    add(PostMenuItem("${post.author.nickname}님 차단", destructive = true) { open(CommunityAction.Block(post.author)) })
+    if (gate.isAdmin) {
+        if (!post.hidden) add(PostMenuItem("관리자: 숨기기", destructive = true) { open(CommunityAction.AdminHidePost(post)) })
+        add(PostMenuItem("관리자: 지우기", destructive = true) { open(CommunityAction.DeletePost(post)) })
+        add(PostMenuItem("관리자: 작성자 정지", destructive = true) { open(CommunityAction.AdminSuspend(post.author)) })
     }
 }
 

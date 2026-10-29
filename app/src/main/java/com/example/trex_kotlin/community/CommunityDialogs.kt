@@ -32,6 +32,11 @@ sealed interface CommunityAction {
     data class DeleteComment(val comment: Comment) : CommunityAction
     data class Report(val target: ReportTarget, val targetId: String) : CommunityAction
     data class Block(val profile: CommunityProfile) : CommunityAction
+    // 관리자(설계 §3 관리자 — 카드 ⋯ 와 신고함)
+    data class AdminHidePost(val post: Post) : CommunityAction
+    data class AdminSuspend(val profile: CommunityProfile) : CommunityAction
+    /** 신고 처리 — [kept] 면 그대로 두고 숨김을 푼다, 아니면 지운다(사용자면 정지). */
+    data class AdminResolve(val report: AdminReport, val kept: Boolean) : CommunityAction
 }
 
 /**
@@ -86,6 +91,25 @@ fun CommunityActionDialog(app: AppViewModel, action: CommunityAction, onDismiss:
             body = { Text("이 사람의 글과 댓글이 더 이상 보이지 않아요. 상대에게는 알리지 않아요. 차단 목록은 내 프로필에서 풀 수 있어요.") }
             onConfirm = { run { app.community.block(action.profile.publicId); "차단했어요" } }
         }
+        is CommunityAction.AdminHidePost -> {
+            title = "이 글을 숨길까요?"
+            confirm = "숨기기"
+            body = { Text("작성자와 관리자에게만 \"숨김 처리됨\"으로 보여요. 숨긴 글은 신고함의 숨긴 글에서 복구할 수 있어요.") }
+            onConfirm = { run { app.community.hidePost(action.post.id); "글을 숨겼어요" } }
+        }
+        is CommunityAction.AdminSuspend -> {
+            title = "${action.profile.nickname}님의 이용을 정지할까요?"
+            confirm = "정지"
+            body = { Text("글과 프로필이 다른 사용자에게 보이지 않고, 글·댓글·좋아요·신고를 할 수 없어요. 신고함의 정지 계정에서 풀 수 있어요.") }
+            onConfirm = { run { app.community.suspend(action.profile.publicId); "이용을 정지했어요" } }
+        }
+        is CommunityAction.AdminResolve -> {
+            val what = reportTargetLabel(action.report.target)
+            title = if (action.kept) "그대로 둘까요?" else if (action.report.target == ReportTarget.USER) "이 사용자를 정지할까요?" else "이 $what 을(를) 지울까요?"
+            confirm = if (action.kept) "그대로 두기" else if (action.report.target == ReportTarget.USER) "정지" else "지우기"
+            body = { Text(if (action.kept) "규칙 위반이 아니라고 처리하고 숨김을 풀어요. 신고한 사람에게 결과가 보여요." else "되돌릴 수 없어요. 신고한 사람에게 결과가 보여요.") }
+            onConfirm = { run { app.community.resolve(action.report.target, action.report.targetId, action.kept); "처리했어요" } }
+        }
         is CommunityAction.Report -> {
             title = when (action.target) {
                 ReportTarget.POST -> "글 신고"
@@ -130,7 +154,8 @@ fun CommunityActionDialog(app: AppViewModel, action: CommunityAction, onDismiss:
         dismissButton = { TextButton(onClick = onDismiss, enabled = !busy) { Text("취소") } },
         confirmButton = {
             TextButton(onClick = onConfirm, enabled = confirmEnabled) {
-                Text(if (busy) "보내는 중…" else confirm, color = if (action is CommunityAction.Report) c.primaryText else c.err)
+                val calm = action is CommunityAction.Report || (action is CommunityAction.AdminResolve && action.kept)
+                Text(if (busy) "보내는 중…" else confirm, color = if (calm) c.primaryText else c.err)
             }
         },
     )

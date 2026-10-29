@@ -12,6 +12,7 @@ import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import com.example.trex_kotlin.TrexText as Text
 import androidx.compose.runtime.*
+import com.example.trex_kotlin.community.AdminInbox
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -31,6 +32,8 @@ fun ProfileTabScreen(app: AppViewModel, onOpenRecord: () -> Unit, onLogout: () -
     val appPaused = rememberTrexLifecyclePaused()
     val voiceStatus = remember(voice, appPaused, sheet) { voice?.status() }
     val p = app.profile
+    val loginId = app.account?.loginId
+    LaunchedEffect(loginId) { if (loginId != null && app.communityMe == null) app.refreshCommunityMe() }
     LazyColumn(Modifier.fillMaxSize(), contentPadding = tabContentPadding, verticalArrangement = Arrangement.spacedBy(22.dp)) {
         item { Text("설정", color = c.text, fontSize = 30.sp, fontWeight = FontWeight.SemiBold) }
         item {
@@ -50,6 +53,10 @@ fun ProfileTabScreen(app: AppViewModel, onOpenRecord: () -> Unit, onLogout: () -
             }
         }
         item { AccountGroup(app) }
+        // 관리자에게만 — 커뮤니티 신고함(설계 §3 관리자). 내 상태는 커뮤니티 탭에 들어가지 않았어도 한 번 받아 둔다.
+        if (app.communityMe?.admin == true) item { SettingsGroup {
+            SettingsRow("커뮤니티 신고함", Icons.Rounded.Flag, onClick = { sheet = "admin" })
+        } }
         item { SettingsGroup {
             SettingsRow("운동 기록", Icons.Rounded.History, onClick = onOpenRecord)
         } }
@@ -84,6 +91,10 @@ fun ProfileTabScreen(app: AppViewModel, onOpenRecord: () -> Unit, onLogout: () -
         }
     }
     if (sheet == "profile") ProfileEditSheet(app, { sheet = null })
+    if (sheet == "admin") ModalBottomSheet(onDismissRequest = { sheet = null }, containerColor = c.sheet,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        AdminInbox(app, onClose = { sheet = null })
+    }
     if (sheet == "theme") ModalBottomSheet(onDismissRequest = { sheet = null }, containerColor = c.sheet,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(bottom = 24.dp)) {

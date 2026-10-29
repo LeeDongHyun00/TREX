@@ -18,6 +18,8 @@ sealed interface CommunityGate {
     data class Suspended(val admin: Boolean) : CommunityGate
 
     val canWrite: Boolean get() = this is Ready
+
+    val isAdmin: Boolean get() = (this as? Ready)?.admin == true || (this as? Suspended)?.admin == true
 }
 
 /**

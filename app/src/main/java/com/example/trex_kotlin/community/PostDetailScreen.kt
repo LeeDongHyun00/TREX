@@ -201,8 +201,9 @@ fun PostDetailScreen(
                     owner.commentsChanged(post.id, -1)
                     fetched = fetched.copy(commentCount = (fetched.commentCount - 1).coerceAtLeast(0))
                 }
-                is CommunityAction.Block -> { scope.launch { owner.refresh() }; onBack() }
-                is CommunityAction.Report -> Unit
+                is CommunityAction.Block, is CommunityAction.AdminSuspend -> { scope.launch { owner.refresh() }; onBack() }
+                is CommunityAction.AdminHidePost -> scope.launch { owner.refresh() }
+                else -> Unit
             }
         }
     }
