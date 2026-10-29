@@ -127,6 +127,19 @@ class CommunityApi(
         json("POST", "/admin/posts/$id/restore", JSONObject())
     }
 
+    suspend fun hideComment(id: Long) {
+        json("POST", "/admin/comments/$id/hide", JSONObject())
+    }
+
+    suspend fun restoreComment(id: Long) {
+        json("POST", "/admin/comments/$id/restore", JSONObject())
+    }
+
+    /** 남의 프로필 사진을 지운다(부적절한 사진 신고 처리). */
+    suspend fun adminClearAvatar(publicId: String) {
+        json("DELETE", "/admin/users/$publicId/avatar")
+    }
+
     suspend fun suspend(publicId: String) {
         json("POST", "/admin/users/$publicId/suspend", JSONObject())
     }

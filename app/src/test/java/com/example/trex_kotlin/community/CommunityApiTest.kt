@@ -152,4 +152,22 @@ class CommunityApiTest {
         assertEquals(listOf("PUT", "DELETE"), http.calls.map { it.method })
         assertEquals("https://api.example/api/community/posts/7/like", http.calls[0].url)
     }
+
+    @Test
+    fun 관리자_댓글_숨김과_복구_프로필_사진_지우기() = runBlocking {
+        http.status = 204
+        http.reply = ""
+        api.hideComment(9)
+        api.restoreComment(9)
+        api.adminClearAvatar("P1")
+        assertEquals(listOf("POST", "POST", "DELETE"), http.calls.map { it.method })
+        assertEquals(
+            listOf(
+                "https://api.example/api/community/admin/comments/9/hide",
+                "https://api.example/api/community/admin/comments/9/restore",
+                "https://api.example/api/community/admin/users/P1/avatar",
+            ),
+            http.calls.map { it.url },
+        )
+    }
 }

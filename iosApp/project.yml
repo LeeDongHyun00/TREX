@@ -49,6 +49,9 @@ targets:
         type: folder
       - path: ../app/src/main/assets/guid_img
         type: folder
+      # 커뮤니티 기본 프로필 그림(Chromium 공룡, BSD-3 — 같은 폴더 NOTICE.txt)
+      - path: ../app/src/main/assets/community
+        type: folder
       - path: ../app/src/main/res/drawable-nodpi
         type: folder
     settings:
