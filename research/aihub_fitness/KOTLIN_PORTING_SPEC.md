@@ -3163,3 +3163,61 @@ Validation: Android 778 unit tests and 525 common JVM tests pass; debug and inst
 - 실제 앱(에뮬레이터): Android 로그인 화면에 Apple 버튼이 보인다. 누르면 Chrome 이 열리지만, 새 에뮬레이터의 Chrome 첫 실행 화면(약관 동의) 때문에 Apple 화면까지는 가지 않았다. 창을 닫으면 오류 없이 버튼이 다시 켜진다. state 가 다른 위조 딥링크는 무시되고 Custom Tab 이 닫힌 채 앱으로 돌아온다.
 - 서버: 테스트 115개 통과. 새 테스트는 콜백 4개, 웹 code 교환·client 별 연결 끊기, 웹 대상 검증이다.
 - **아직 못 한 것**: Services ID·서버 배포 뒤의 실제 Apple 로그인(Android 실기기), 실제 손가락으로 해 보는 스와이프 감(에뮬레이터 주입 입력만 했다), iPhone 의 스와이프·배지 모양(설치만 했다).
+
+## §115. 버벅임 최적화 · 운동 준비/진행 제어판 새 디자인 (2026-10-30, `feature/shared-ui-muscle-navigation`)
+
+*요청(동현님 2026-10-30).* "안드로이드 노트 10에서는 버벅거리기도하고 아이폰 16에서도 버벅거리는게 보여" → 조사 뒤 "최적화 구현까지 순서대로 전부 실시해서 깃에 푸쉬하고 연결된 아이폰 안드로이드에 빌드해". 그 사이 추가 요청 "운동 준비와 시작시에 제어 화면을 이런 디자인과 레이아웃으로 변경해봐"(흰 둥근 판 · 손잡이 · 경과 | 큰 시간 | 세트 · 물결 위 원형 아이콘 버튼, 하나만 채운 원).
+
+*먼저 지킨 것 — 자세 판정·횟수는 그대로.* 판정 규칙·임계값·판정 격자(300ms)·추론 간격(85ms)·카운터는 건드리지 않았다. 고친 것은 화면이 다시 구성되는 횟수, 메인 스레드에서 하던 파일 읽기·파싱, 빌드 설정이다. 판정·카운트는 원래 메인 스레드가 아니라 카메라 분석 스레드에서 실제 시간 기준으로 돈다.
+
+### 1. 빌드 — 느린 빌드로 보고 있었다
+- **Android release:** R8 을 켰다(`isMinifyEnabled = true`). Compose 는 R8 이 디버깅용 `sourceInformation` 호출을 지우고 람다·상태 코드를 인라인해야 제 속도가 난다. 이름은 바꾸지 않는다(`-dontobfuscate` — 로그·크래시 스택을 그대로 읽는다). MediaPipe·protobuf·LiteRT 는 리플렉션·JNI 로 불리므로 통째로 둔다. MediaPipe 가 딸려 오는 AutoValue 주석 처리기의 `javax.lang.model` 참조는 실행 중에 닿지 않아 `-dontwarn`.
+- **Baseline Profile:** `app/src/main/baseline-prof.txt` 에 앱 패키지 전체(`HSPLcom/example/trex_kotlin/**;->**(**)**`)를 넣었다. Compose 라이브러리 프로필과 합쳐져 R8 뒤 15,295줄(앱 4,811줄)이 APK `assets/dexopt/baseline.prof` 로 들어간다. 디버그 빌드에는 적용되지 않는다(디버그는 미리 컴파일되지 않는다).
+- **iPhone:** 설치를 Debug 구성(`linkDebugFrameworkIosArm64`, Swift `-Onone`)에서 Release 구성으로 바꿨다(같은 개발 서명).
+
+### 2. 공룡 말투 변환 — 글자마다 정규식 컴파일
+`toDinoCopy()` 가 글자(`TrexText`)를 처음 그릴 때마다 정규식 둘을 새로 만들고 23개 표를 새로 만들었다(탭을 바꿀 때 수십 번, iPhone 의 Kotlin/Native 정규식은 특히 느리다). 표·정규식을 파일 수준 값으로 한 번만 만들고, 바꿀 어미('니다'·'시오'·'요')도 마침표도 없는 글자(숫자·시간·이름 — 대부분)는 바로 돌려준다. 세 단계가 모두 그 글자들이 있어야만 무엇이든 바꾸므로 결과가 같다.
+- `DinoCopyEquivalenceTest`: 최적화 전 구현을 기준으로 앱 소스의 문자열 리터럴 전부와 어미·명사·문장부호를 섞은 무작위 문장 2만 개가 한 글자도 다르지 않다. `sync_ios_core.py` 로 posture-core 에도 옮겨 iOS 공통 사본도 같은 테스트를 돈다.
+
+### 3. 탭 전환
+- `LocalTrexNavSpace`(하단 바 높이)가 `staticCompositionLocalOf` 라 값이 바뀌면(첫 배치·회전·글자 크기) 탭 화면 전체가 다시 구성됐다 — 앱을 켜자마자 홈이 두 번 구성됐다. `compositionLocalOf` 로 바꿔 읽는 곳만 다시 그린다.
+- 하단 바(`MorphNav`)의 투명도 애니메이션을 구성 단계에서 읽어 260ms 동안 바 전체를 매 프레임 다시 구성했다. `graphicsLayer { alpha }` 로 그리기 단계에서만 읽는다.
+
+### 4. 자세 세트 시작 — 메인 스레드 파일 읽기·파싱
+- `PostureLiveAssets`: 세트 화면을 열 때마다 메인 스레드에서 규칙 JSON(`rules_mp_v0.json` 283KB + 바닥 규칙)과 정상 자세 참조를 읽고 파싱했다. 백그라운드(`Dispatchers.Default`)에서 앱 수명에 한 번만 한다. 규칙셋·참조는 불변 객체라 세션끼리 같이 써도 판정이 같다. 실패 처리도 예전 그대로다(참조 실패 → 빈 참조, 서서 규칙 실패 → 규칙 없음이고 저장하지 않아 다음 화면에서 다시 시도, 바닥 규칙만 실패 → 서서 규칙만). 규칙이 오기 전에는 판정하지 않는 구조(`ruleSet ?: return`)도 그대로이고, 규칙은 준비 카운트다운 중에 이미 다 읽힌다.
+- `savedSets`: 저장된 세트 로그 전체를 읽어 세트 수를 세는 일을 세트 화면을 열 때(메인 스레드)와 세트를 마칠 때마다 했는데, 그 값을 읽는 곳이 없었다. 지웠다(로그 쓰기는 그대로).
+
+### 5. 운동 중
+- **세션 시계:** 0.1초마다 `progress` 를 새로 쓰는데 앱 최상단(`TrexApp`)이 그것을 바로 읽어 0.1초마다 앱 전체가 다시 구성됐다. 화면이 쓰는 값(단계·남은 초·경과 초·횟수)을 `derivedStateOf` 로 읽어 값이 바뀔 때만 다시 구성한다(남은 시간은 1초에 한 번, 단계 번호는 단계가 바뀔 때만). 시간 계산(실제 경과 차이 `elapsedRealtimeMs`)·플랭크의 카메라 확인 시간은 그대로다.
+- **숨쉬기 표시:** 무한 애니메이션의 크기를 구성 단계에서 읽어 운동 내내 HUD 를 매 프레임 다시 구성했다. `graphicsLayer { scaleX/scaleY }` 로 옮겼다.
+
+### 6. 하지 않은 것과 이유
+- **카메라 프레임 비트맵 재사용(Android):** 분석 입력이 YUV 라 프레임마다 `ImageProxy.toBitmap()` 으로 새 비트맵을 만든다. 재사용하려면 RGBA 출력으로 바꾸거나 변환을 직접 해야 하는데, 변환 경로가 바뀌면 모델에 들어가는 픽셀이 달라질 수 있다(관절 좌표·판정이 조용히 바뀔 위험, 원칙 1). 재생 데이터로 전후 관절·판정·횟수를 비교하는 장치를 갖춘 뒤에 한다. 지금도 회전·얼굴용 비트맵은 재사용하고, 원본은 매 프레임 바로 `recycle()` 한다.
+- **iPhone 카메라·웹뷰 UIKit 겹침 모드:** 매 프레임 Compose 와 맞추는 비용이 있지만, 겹침 모드(`placedAsOverlay`)는 카메라를 Compose 위로 올려 뼈대·안내가 가려진다. 하지 않았다.
+
+### 7. 화면별(식단 검색 · 근육 피로도 웹뷰 · 운동 방법 GIF · 커뮤니티)
+- **식단 직접 기록 시트(`Sheets.kt`):** 한 글자(자모) 칠 때마다 결과 전부("밥" 만 쳐도 53줄)를 목록 최적화 없이 다시 그렸다. 검색 결과·합계·담은 음식을 `LazyColumn` 하나에 두어 보이는 줄만 그린다. 자리(안쪽 여백 20/16, 검색 묶음 위 10·줄 사이 7, 묶음 뒤 16)는 항목 위 여백으로 예전 스크롤 Column 과 같게 맞췄다. 항목 키는 순서(기본) — 이름 키면 백스페이스로 결과가 늘 때 화면이 보던 음식을 따라가 새 결과가 위에 가려진다. 적다 만 등록 폼은 따로 키를 주고 붙잡아 둔다(`KeepComposedInLazyList`, `TrexDesign.kt` — `LocalPinnableContainer.pin()`). 인분 입력 창은 같은 조건으로 목록 밖에 둬 항목이 폐기돼도 닫히지 않는다. 사진 기록의 음식 고르기 창도 같은 방식이다.
+- **근육 피로도(`MuscleLoadScreen.kt`):** 30초 새로고침이 계산 시각만 바뀐 스냅샷을 새로 만들어 순위·추천·색 JSON 을 다시 계산했다 → 쓰는 값(`snapshot.muscles`·`sets`)을 키로. WebView 에 마지막으로 보낸 명령과 같으면 JS 를 다시 돌리지 않는다(Android `tag`, iPhone 내비게이션 대리자 — 페이지가 다 읽히면 최신 명령을 보내는 길은 그대로). 근육도 항목을 붙잡아 스크롤로 나갔다 와도 WebView·페이지를 다시 만들지 않는다. 최근 기록이 있으면 피로도가 시간에 따라 줄어 30초마다 값이 실제로 바뀌므로 그때는 JS 가 돈다(값을 반올림하면 화면이 달라져 하지 않았다).
+- **운동 방법 GIF(Android):** 2프레임(0.9·1.1 초) 시범을 매 화면(60~120 Hz) 다시 그렸다. 프레임이 바뀌는 때에만 그린다 — `gifFrameEnds` 가 Android `Movie`(GIFMovie)와 같은 규칙(그림 앞 첫 그래픽 제어 확장의 지연 × 10, `time ≤ 끝` 인 첫 프레임)으로 프레임 끝 시각을 읽고, 합이 `movie.duration()` 과 다르면 쓰지 않고 예전처럼 매 화면 그린다. 재생 시각 계산은 예전 그대로다(한 번에 더하는 상한만 '예약 간격 + 100 ms'). 한 바퀴 110~130번 그리던 것이 2번. iPhone 은 WKWebView `<img>` 라 WebKit 이 이미 프레임이 바뀔 때만 그린다.
+- **커뮤니티:** Android 사진 디코딩(백그라운드)에서 `prepareToDraw()` — 사진이 처음 보이는 프레임이 GPU 올리기를 떠안지 않는다. 좋아요 한 번에 보이는 카드가 전부 다시 그려졌다 — 카드마다 메뉴 목록(`List`, 불안정 타입)을 새로 만들어 `PostCard` 가 한 번도 건너뛰지 못했다 → `remember(post, gate)`(댓글 메뉴는 `remember(comment, post.mine, gate)`).
+
+### 8. 운동 준비·진행 제어판 새 디자인(`SessionControlPanel.kt`)
+- **공통 부품:** 손잡이(`SessionPanelHandle`) · 세 칸 수치(`SessionStatsRow` — 왼쪽·오른쪽은 이름과 값, 가운데는 큰 값) · 물결 무늬 위 원형 버튼 줄(`SessionActionRow` + `SessionCircleButton`, 주요 동작 하나만 크게 주색으로 채운다) · 작은 칩 줄(`SessionChip`). 물결은 버튼 줄 뒤 장식 그림(Canvas, 읽히지 않는다)이다.
+- **카메라 준비:** 손잡이 · "운동 준비" + 5초 후 시작 + 운동 방법 · 목표 | 카운트다운 링(또는 방향 시범) | 세트 · 배치 안내·약속 문장·이유·세는 조건(남는 높이 안에서 스크롤 — 버튼 줄은 늘 판 아래) · 방식 선택 · [나가기 · 음성 · **준비 건너뛰기** · 카메라 · 준비 멈춤].
+- **카메라 운동 중:** 손잡이(누르거나 아래로 끌면 제어판 접기 — 예전 '화면 넓게' 버튼 자리) · 경과(세트 경과) | 남은 시간 또는 센 횟수 "8 / 12회" | 세트 · 코칭 문장과 '자동 횟수 · 참고' 줄 · [종료 · 음성 · **일시정지/재개** · 카메라 · 건너뛰기] · 방식 선택 · 칩[횟수 수정 · 숫자 읽기 · 운동 방법]. 검증 모드(§61)는 HUD 와 같이 자동 횟수 숫자를 "—" 로 숨긴다. 횟수는 여전히 beta 라 '참고' 줄을 바로 아래 둔다(원칙 2).
+- **타이머 세션 · 타이머 준비:** 같은 흰 판과 원형 버튼 줄. 직접 횟수 기록 세트는 **횟수 기록**이, 시간 세트는 **일시정지/재개**가, 준비는 **바로 시작**이 주요 동작이다.
+- **바뀌지 않은 것:** 모든 동작·확인창·횟수 시트 흐름, 접근성 이름("운동 종료", "이 세트 건너뛰기", "일시정지"/"재개", "제어판 접기", "음성 안내 끄기/켜기", "카메라 전환", "준비 건너뛰기", "5초 후 시작", "횟수 기록/수정", "<운동> 운동 방법"). 원형 버튼은 원과 이름을 합친 칸 전체가 누르는 자리다.
+- 세트 칸 값은 세션 단계의 표기("1 / 2 세트")를 "1/2" 로 줄인다(`setFraction`, 모르는 형식은 그대로).
+
+### 9. iPhone 앱 아이콘 — 로그인 화면 공룡 로고(2026-10-30 추가 요청)
+"아이폰 아이콘 TREX 로그인 페이지 공룡 로고처럼 만들어서 적용". iPhone 앱에는 아이콘(에셋 카탈로그)이 아예 없어 기본 빈 아이콘이었다. 로그인 배지(`TrexDinoBadge`)를 그대로 옮긴 1024×1024 한 장을 `iosApp/Trex/Assets.xcassets/AppIcon.appiconset` 에 두었다 — 로그인 화면 바탕(#EFF1EA) 위 검정 원(아이콘 폭의 84%), 그 안에 원 지름의 86% 공룡 얼굴(`DINO_IN_BADGE` 와 같다). iOS 가 모서리를 깎으므로 정사각·불투명이다. 다시 만들 때는 `python3 tools/icon/make_ios_app_icon.py`. Xcode 프로젝트는 `project.yml` 로 생성(`xcodegen generate` 뒤 `TrexPods` 에서 `pod install`, `iosApp/scripts/setup-mac.sh`)하며 `Trex/` 아래 카탈로그를 자원으로 넣고 `ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon` 은 XcodeGen 기본값이다. Android 실행 아이콘(`tools/icon/make_launcher_icon.py`, 어두운 배경 + 예전 로고)은 이번에 바꾸지 않았다.
+
+### 검증
+- **단위 테스트:** 앱 861개·공통 엔진(posture-core — iPhone 이 쓰는 사본) 527개 모두 통과. 새로 넣은 것은 `DinoCopyEquivalenceTest`(앱·posture-core 양쪽), `SessionControlPanelTest`, `ExerciseGuidesTest` 의 GIF 3개(실제 자산 파싱 · 다시 그리는 시점 = 프레임이 바뀌는 시점 전수 · 깨진 파일은 예전 방식)다. 자세 엔진(규칙·임계값·카운터·분석 루프) 코드는 바뀌지 않았고 엔진 테스트가 그대로 통과한다.
+- **빌드:** Android release(R8) 빌드 성공, APK 에 `assets/dexopt/baseline.prof`. Credential Manager 구현 클래스는 라이브러리의 소비자 규칙이 남긴다(구글 로그인 경로). iPhone 은 Release 구성으로 빌드·설치했다.
+- **계측 테스트(임시 에뮬레이터 API 36, RAM 4GB — 2GB 는 스왑으로 너무 느렸다):** 44개 중 40개 통과(`SessionFlowTest` 14/17, `ExerciseGuideFlowTest` 2, `RestorationUiTest` 7, `MainTabSwipeUiTest` 8, `SignInScreensUiTest` 3, `BottomSheetGestureTest` 5, `SessionCompletionLayoutTest` 1). 실패 4개:
+  - `perExerciseEditorPersistsIndependentTargetsAndPosture` — 48a5cda 에서 화면 문구가 "추천 대체 운동" 에서 "근육 피로도/날씨 기반 추천 운동" 으로 바뀌었는데 테스트가 옛 문구를 찾는다(이번 변경 전부터 낡음).
+  - `SessionMuscleRenderTest` — c4ae041(2D 근육도)부터 근육도는 돌지 않는 그림이라 터치를 받지 않는데 테스트는 3D 회전을 기대한다(이번 변경 전부터 낡음).
+  - `cameraPreparationCancelsOnBackgroundAndStartsAtCountdownEnd` — 5초 카운트다운 안에 스크린샷 저장까지 끝나야 하는 시간 의존 테스트. 변경 전 코드(HEAD)도 같은 에뮬레이터에서 같은 줄(430)에서 두 번 다 실패했다.
+  - `configuredSetsRestPauseSkipAndAutoAdvanceUseRealApp` — 제어판에 시계(세트 경과, 올라간다)가 늘어 '첫 시계' 대신 '남은 시간' 시계를 읽게 고쳤다. 그래도 느린 에뮬레이터에서는 사람 없는 플랭크의 20 s 시계 폴백 따라잡기(`HoldBridge`, 설계된 동작)가 측정 구간에 걸려(00:58 → 00:39) 실패해, 측정 전에 타이머가 움직이기 시작하기를 기다리게 보강했다. 보강한 판은 에뮬레이터 검증을 멈춰(동현님 2026-10-30 "에뮬레이터는 안돌려도됨 내가 실검증할거야") 돌리지 않았다.
+- **아직 못 한 것:** 실기기 체감(Note 10·iPhone 16 Plus)과 제어판 실사용 — 동현님이 직접 검증한다. Note 10 은 설치된 앱의 서명이 이 Mac 의 디버그 키와 달라 덮어 설치가 안 된다(지우면 기록·기준선이 지워지므로 백업 뒤에만 — CLAUDE.md '설치 함정').
