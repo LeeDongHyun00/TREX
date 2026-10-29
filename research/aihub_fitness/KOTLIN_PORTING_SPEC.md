@@ -3120,7 +3120,7 @@ Validation: Android 778 unit tests and 525 common JVM tests pass; debug and inst
 - 공유 `SignInUi.kt`(ios-ui 목록에 올림): `SocialSignInButton(Apple|Google)`·`WithoutAccountButton` 이 높이 54dp·알약 모양·16sp Medium·로고 20dp+간격 10dp 를 같이 쓰고, 색·로고만 각 회사 지침을 따른다 — Apple: 밝은 배경 검정 / 어두운 배경 흰색. Google: Light #FFFFFF·테두리 #747775·글자 #1F1F1F / Dark #131314·#8E918F·#E3E3E3. 문구는 "Apple로 계속하기"·"Google로 계속하기"이고 공룡 말투(TrexText)를 거치지 않는다. "로그인 없이 사용"은 같은 틀에 바탕 없이 테두리만 — 채우면 어두운 화면에서 Google 버튼(#131314)보다 눈에 띄었다.
 - iPhone 의 Apple 버튼은 시스템 기본 버튼(`ASAuthorizationAppleIDButton` 을 UIKitView 로 끼움)을 버리고 같은 Compose 버튼으로 그린다. Swift 다리의 `makeButton` 을 지웠다. 다리가 없으면(프로브) `IosPlatform.appleSignInAvailable` 이 거짓이라 버튼이 없다(예전엔 버튼 함수가 스스로 안 그렸다).
 - 공룡: `res/drawable-nodpi/trex_dino_head.png`(690², 정사각 가운데) — 종이를 찢고 나온 로고의 마지막 프레임에서 공룡만 오렸다(`tools/icon/make_dino_head.py`, 같은 PNG 를 다시 만든다). 로그인 화면은 그림(폭 68% — 60% 는 화면 확인에서 여전히 작았다, 버튼 위 남은 자리 가운데) + 버튼 줄만이다. 16프레임 애니메이션(`LoginLogo`·플랫폼 짝 `loginAnimationFrame`)은 지웠고, 프레임 PNG 는 앱 아이콘 생성기(`tools/icon/make_launcher_icon.py`)가 10번을 쓰므로 남겼다.
-- 로그인 로딩 화면 `SignInLoadingScreen`(공룡이 고개를 까딱이고 점 셋이 차례로 밝아진다, "로그인하는 중이에룡") — `AppViewModel.authVerifying` 동안 TrexApp 맨 위를 덮는다. 로그인 화면·내 정보·커뮤니티 어디서 연결해도 같다.
+- 로그인 로딩 화면 `SignInLoadingScreen`(처음엔 공룡이 고개를 까딱이고 점 셋이 차례로 밝아졌다 — *2026-10-30 동현님 요청으로 가운데 로딩바 하나만, §114*) — `AppViewModel.authVerifying` 동안 TrexApp 맨 위를 덮는다. 로그인 화면·내 정보·커뮤니티 어디서 연결해도 같다.
 - 내 정보 계정 칸: "Google 계정 연결" 줄 → "계정 연결" 머리(설명 한 줄, 실패하면 그 자리에 실패 문구) + 두 버튼. 커뮤니티 계정 안내: 녹색 "Google 계정 연결" → 두 버튼.
 
 *근거.*
@@ -3139,6 +3139,8 @@ Validation: Android 778 unit tests and 525 common JVM tests pass; debug and inst
 ## §114. 공룡 검정 원 · 메인 탭 스와이프 개선 · Android Apple 로그인 (2026-10-30, `feature/shared-ui-muscle-navigation`)
 
 *요청(동현님 2026-10-29 밤).* "로그인 페이지에서 공룡 누끼가 티나서 주변에 검정색 원으로 감싸", "좌우 화면 드래그로 네비게이션 이동하는거 잘안되는데 확인하고 개선", "안드로이드에도 apple로그인 넣어", 그리고 푸시.
+
+*로그인 로딩 화면 — 로딩바 하나(2026-10-30 추가 요청 "공룡 로고 애니메이션 제거하고 그냥 로딩바로").* 가운데에 앱의 다른 로딩바(사진 식단 분석)와 같은 모양(8dp·둥근 끝·primary 위 track)의 indeterminate `LinearProgressIndicator` 하나. 글자는 없고 화면 읽기에는 "로그인하는 중". 무한 애니메이션 둘(공룡·점)이 빠져 로딩 중 그리는 일도 줄었다.
 
 *공룡 — 검정 원 배지(`TrexDinoBadge`).* 밝은 바탕에서는 오린 외곽선·잘린 목이 드러났다. 원래 그림이 검은 구멍 속 공룡이라 검정 원 위에 두면 외곽선이 바탕에 묻힌다. 머리 끝이 그림 반폭의 1.025배까지 가서 그림을 원 지름의 86% 로 두면 원 반지름 88% 안에 든다. 로그인 화면·로그인 로딩 화면 둘 다 같은 배지다.
 

@@ -1,19 +1,10 @@
 package com.example.trex_kotlin
 
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -24,19 +15,16 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.addPathNodes
 import androidx.compose.ui.input.pointer.pointerInput
@@ -192,69 +180,25 @@ fun TrexDinoBadge(modifier: Modifier = Modifier) {
 
 /**
  * 로그인 로딩 화면 — 계정 선택을 마친 뒤 서버 로그인·첫 동기화를 기다리는 동안 앱 전체를 덮는다([AppViewModel.authVerifying]).
- * 뒤 화면의 버튼이 눌리지 않게 터치를 여기서 받는다. 공룡이 고개를 까딱이고 그림자가 따라 줄었다 커진다.
+ * 가운데 로딩바 하나만 둔다(동현님 요청 2026-10-30 — 처음엔 공룡이 고개를 까딱이고 점 셋이 깜빡였다). 뒤 화면의 버튼이 눌리지 않게
+ * 터치를 여기서 받는다. 글자는 없고 화면 읽기에는 "로그인하는 중"으로 읽힌다.
  */
 @Composable
 fun SignInLoadingScreen(modifier: Modifier = Modifier) {
     val c = Trex.c
-    val motion = rememberInfiniteTransition(label = "sign-in-loading")
-    val lift by motion.animateFloat(
-        initialValue = 0f, targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(650, easing = FastOutSlowInEasing), RepeatMode.Reverse),
-        label = "lift",
-    )
     Box(
         modifier
             .fillMaxSize()
             .background(c.bg)
             .pointerInput(Unit) { awaitPointerEventScope { while (true) awaitPointerEvent().changes.forEach { it.consume() } } }
-            .semantics { contentDescription = "로그인하는 중" },
+            .semantics(mergeDescendants = true) { contentDescription = "로그인하는 중" },
         contentAlignment = Alignment.Center,
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            TrexDinoBadge(
-                Modifier.size(156.dp).graphicsLayer {
-                    translationY = -14.dp.toPx() * lift
-                    rotationZ = -5f * lift
-                },
-            )
-            Canvas(Modifier.padding(top = 4.dp).size(width = 96.dp, height = 12.dp)) {
-                val k = 1f - 0.35f * lift
-                drawOval(
-                    color = c.text.copy(alpha = 0.10f + 0.04f * (1f - lift)),
-                    topLeft = Offset(size.width * (1f - k) / 2f, 0f),
-                    size = Size(size.width * k, size.height),
-                )
-            }
-            LoadingDots(Modifier.padding(top = 28.dp))
-            TrexText("로그인하는 중이에요", color = c.text2, fontSize = 15.sp, modifier = Modifier.padding(top = 14.dp))
-        }
-    }
-}
-
-/** 차례로 밝아지는 점 세 개. */
-@Composable
-private fun LoadingDots(modifier: Modifier = Modifier) {
-    val c = Trex.c
-    val motion = rememberInfiniteTransition(label = "sign-in-dots")
-    val phase by motion.animateFloat(
-        initialValue = 0f, targetValue = 3f,
-        animationSpec = infiniteRepeatable(tween(1200, easing = LinearEasing)),
-        label = "phase",
-    )
-    Row(modifier, horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-        repeat(3) { i ->
-            val gap = (phase - i + 3f) % 3f
-            val on = (1f - minOf(gap, 3f - gap)).coerceIn(0f, 1f)
-            Box(
-                Modifier
-                    .size(9.dp)
-                    .graphicsLayer {
-                        scaleX = 0.75f + 0.35f * on
-                        scaleY = 0.75f + 0.35f * on
-                    }
-                    .background(c.primary.copy(alpha = 0.28f + 0.72f * on), CircleShape),
-            )
-        }
+        // 앱의 다른 로딩바(사진 식단 분석)와 같은 모양 — 8dp, 둥근 끝, primary 위 track
+        LinearProgressIndicator(
+            modifier = Modifier.width(200.dp).height(8.dp).clip(CircleShape),
+            color = c.primary,
+            trackColor = c.track,
+        )
     }
 }

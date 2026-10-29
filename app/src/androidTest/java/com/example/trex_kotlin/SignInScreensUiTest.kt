@@ -10,10 +10,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.test.assertHeightIsEqualTo
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.captureToImage
+import androidx.compose.ui.test.hasProgressBarRangeInfo
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -26,7 +28,7 @@ import org.junit.Rule
 import org.junit.Test
 import java.io.File
 
-/** 로그인 화면·로그인 로딩 화면(SignInUi.kt, 스펙 §113) — 그림 하나와 같은 높이의 버튼 셋, 로딩 화면은 뒤 버튼을 막는다. */
+/** 로그인 화면·로그인 로딩 화면(SignInUi.kt, 스펙 §113) — 그림 하나와 같은 높이의 버튼 셋, 로딩 화면은 로딩바 하나로 뒤 버튼을 막는다. */
 class SignInScreensUiTest {
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
 
@@ -75,7 +77,9 @@ class SignInScreensUiTest {
                 }
             }
         }
-        compose.onNodeWithText("로그인하는 중이에룡").assertIsDisplayed()
+        // 공룡 애니메이션 없이 로딩바 하나(2026-10-30) — 화면 읽기에는 "로그인하는 중"
+        compose.onNode(hasProgressBarRangeInfo(ProgressBarRangeInfo.Indeterminate)).assertIsDisplayed()
+        compose.onNodeWithContentDescription("로그인하는 중").assertIsDisplayed()
         compose.onNodeWithText("로그인 없이 사용").performClick()
         compose.runOnIdle { assertEquals(0, taps) }
         snapshot("sign-in-loading")
