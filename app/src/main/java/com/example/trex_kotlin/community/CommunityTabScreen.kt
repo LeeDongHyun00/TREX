@@ -2,6 +2,8 @@ package com.example.trex_kotlin.community
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -56,6 +58,24 @@ fun CommunityTabScreen(app: AppViewModel) {
     LaunchedEffect(loginId) {
         if (loginId != null && app.communityMe == null) app.refreshCommunityMe()
     }
+    CommunityWidth { CommunityGateContent(app, gate) }
+}
+
+/**
+ * 커뮤니티 화면 폭 — 펼친 폴드·태블릿에서 사진이 화면 폭을 다 채우면 너무 커서(실기기 2026-10-29) 인스타처럼 600dp 로 줄여
+ * 가운데에 둔다. 접은 폰은 그대로 꽉 찬다.
+ */
+@Composable
+private fun CommunityWidth(content: @Composable () -> Unit) {
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+        Box(Modifier.widthIn(max = COMMUNITY_MAX_WIDTH).fillMaxSize()) { content() }
+    }
+}
+
+internal val COMMUNITY_MAX_WIDTH = 600.dp
+
+@Composable
+private fun CommunityGateContent(app: AppViewModel, gate: CommunityGate) {
     when (gate) {
         CommunityGate.NoLogin -> CommunityNotice(
             title = "이 기기에서는 아직 커뮤니티를 쓸 수 없어요",
