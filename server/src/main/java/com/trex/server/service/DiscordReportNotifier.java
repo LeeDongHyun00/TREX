@@ -6,10 +6,13 @@ import com.trex.server.entity.ReportTargetType;
 import jakarta.annotation.PreDestroy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
+import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -24,15 +27,28 @@ public class DiscordReportNotifier implements ReportNotifier {
     private static final Logger log = LoggerFactory.getLogger(DiscordReportNotifier.class);
 
     private final String webhookUrl;
-    private final RestClient client = RestClient.create();
+    private final RestClient client;
     private final ExecutorService sender = Executors.newSingleThreadExecutor(r -> {
         Thread t = new Thread(r, "report-webhook");
         t.setDaemon(true);
         return t;
     });
 
+    @Autowired
     public DiscordReportNotifier(CommunityProperties properties) {
+        this(properties, Duration.ofSeconds(10));
+    }
+
+    /**
+     * [timeout] 은 연결·읽기 시간 제한 — 알림은 스레드 하나로 차례로 보내서, 제한이 없으면 디스코드가 한 번 멈출 때
+     * 뒤의 알림이 전부 가지 않는다. 테스트는 짧게 준다.
+     */
+    public DiscordReportNotifier(CommunityProperties properties, Duration timeout) {
         this.webhookUrl = properties.reportWebhookUrl();
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(timeout);
+        factory.setReadTimeout(timeout);
+        this.client = RestClient.builder().requestFactory(factory).build();
     }
 
     @Override
