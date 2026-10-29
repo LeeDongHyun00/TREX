@@ -26,7 +26,8 @@ import androidx.compose.material.icons.rounded.Collections
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.Text
+import com.example.trex_kotlin.TrexText as Text
+import androidx.compose.material3.Text as UserText
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -119,7 +120,7 @@ fun ProfileScreen(
     Column(Modifier.fillMaxSize().background(c.bg)) {
         Row(Modifier.fillMaxWidth().padding(start = 4.dp, end = 4.dp, top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "뒤로", tint = c.text) }
-            Text(profile.nickname, color = c.text, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+            UserText(profile.nickname, color = c.text, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
             if (!mine) MenuButton(buildList {
                 if (gate.canWrite) add(PostMenuItem("신고") { action = CommunityAction.Report(ReportTarget.USER, profile.publicId) })
                 if (blocked) add(PostMenuItem("차단 해제") {
@@ -142,7 +143,7 @@ fun ProfileScreen(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Avatar(profile, 76)
                         Column(Modifier.padding(start = 18.dp)) {
-                            Text(profile.nickname, color = c.text, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+                            UserText(profile.nickname, color = c.text, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
                             user?.let { Text("게시물 ${it.postCount}", color = c.text2, fontSize = 14.sp, modifier = Modifier.padding(top = 4.dp)) }
                         }
                     }
@@ -204,7 +205,7 @@ private fun GridTile(post: Post, onClick: () -> Unit) {
                 modifier = Modifier.align(Alignment.TopEnd).padding(6.dp).size(18.dp),
             )
         } else {
-            Text(
+            UserText(
                 post.body.orEmpty(), color = c.text, fontSize = 12.sp, lineHeight = 16.sp, maxLines = 5, overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.padding(10.dp),
             )
@@ -279,7 +280,7 @@ private fun BlocksDialog(app: AppViewModel, onDismiss: () -> Unit, onChanged: ()
                     items(items, key = { it.publicId }) { p ->
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Avatar(p, 32)
-                            Text(p.nickname, color = c.text, fontSize = 15.sp, modifier = Modifier.weight(1f).padding(start = 10.dp))
+                            UserText(p.nickname, color = c.text, fontSize = 15.sp, modifier = Modifier.weight(1f).padding(start = 10.dp))
                             TextButton(onClick = {
                                 scope.launch {
                                     try {

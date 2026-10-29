@@ -28,7 +28,8 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
+import com.example.trex_kotlin.TrexText as Text
+import androidx.compose.material3.Text as UserText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -54,7 +55,7 @@ class PostMenuItem(val label: String, val destructive: Boolean = false, val onCl
 
 /**
  * 피드 카드(설계 §2 피드, 인스타그램 벤치마킹) — 작성자 줄, 사진(좌우로 넘기고 점, 두 번 탭하면 좋아요), 하트·댓글, 좋아요 수,
- * 본문(길면 접기), 댓글 수, 시각. 사용자 글은 그대로 보인다(공룡 말투 변환 [com.example.trex_kotlin.TrexText] 를 쓰지 않는다).
+ * 본문(길면 접기), 댓글 수, 시각. 앱 문구는 공룡 말투([com.example.trex_kotlin.TrexText]), 사용자 글·닉네임은 원문([UserText]).
  * [post] 는 좋아요 낙관적 갱신이 합쳐진 값([FeedState.shown]).
  */
 @Composable
@@ -75,7 +76,7 @@ fun PostCard(
                 Row(Modifier.weight(1f).clickable(onClick = onAuthor), verticalAlignment = Alignment.CenterVertically) {
                     Avatar(post.author, 34)
                     Column(Modifier.padding(start = 10.dp)) {
-                        Text(post.author.nickname, color = c.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        UserText(post.author.nickname, color = c.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         Text(timeAgo(post.createdAt, now), color = c.text3, fontSize = 12.sp)
                     }
                 }
@@ -118,7 +119,7 @@ internal fun Avatar(profile: CommunityProfile, sizeDp: Int) {
     } else {
         // 기본 그림 — 공유 코드에 공룡 아바타 자산이 아직 없어 닉네임 첫 글자(설계 §3 은 공룡 그림)
         Box(modifier.background(c.primaryWash), contentAlignment = Alignment.Center) {
-            Text(profile.nickname.take(1), color = c.primaryText, fontSize = (sizeDp * 0.42f).sp, fontWeight = FontWeight.SemiBold)
+            UserText(profile.nickname.take(1), color = c.primaryText, fontSize = (sizeDp * 0.42f).sp, fontWeight = FontWeight.SemiBold)
         }
     }
 }
@@ -143,7 +144,7 @@ internal fun MenuButton(items: List<PostMenuItem>) {
         DropdownMenu(expanded = open, onDismissRequest = { open = false }, containerColor = c.sheet) {
             items.forEach { item ->
                 DropdownMenuItem(
-                    text = { Text(item.label, color = if (item.destructive) c.err else c.text) },
+                    text = { UserText(item.label, color = if (item.destructive) c.err else c.text) },
                     onClick = { open = false; item.onClick() },
                 )
             }
@@ -202,7 +203,7 @@ private fun PostBody(body: String, expandedAlways: Boolean) {
     val c = Trex.c
     var expanded by remember(body) { mutableStateOf(expandedAlways) }
     var overflows by remember(body) { mutableStateOf(false) }
-    Text(
+    UserText(
         body, color = c.text, fontSize = 14.sp, lineHeight = 20.sp,
         maxLines = if (expanded) Int.MAX_VALUE else 3, overflow = TextOverflow.Ellipsis,
         onTextLayout = { if (!expanded) overflows = it.hasVisualOverflow },

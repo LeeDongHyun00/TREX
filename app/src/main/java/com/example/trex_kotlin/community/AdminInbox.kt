@@ -10,7 +10,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
+import com.example.trex_kotlin.TrexText as Text
+import androidx.compose.material3.Text as UserText
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -95,7 +96,7 @@ fun AdminInbox(app: AppViewModel, onClose: () -> Unit) {
                                 "${reportTargetLabel(r.target)} · 신고 ${r.reportCount}건" + if (r.hidden) " · " + (if (r.target == ReportTarget.USER) "정지됨" else "숨김됨") else "",
                                 color = c.text2, fontSize = 12.5.sp,
                             )
-                            Text(r.preview, color = c.text, fontSize = 14.sp, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                            UserText(r.preview, color = c.text, fontSize = 14.sp, maxLines = 3, overflow = TextOverflow.Ellipsis)
                             Text(r.reasons.distinct().joinToString(" · ") { it.label } + " · " + timeAgo(r.firstReportedAt, now), color = c.text3, fontSize = 12.sp)
                             Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
                                 TextButton(onClick = { action = CommunityAction.AdminResolve(r, kept = true) }) { Text("그대로 두기") }
@@ -111,8 +112,8 @@ fun AdminInbox(app: AppViewModel, onClose: () -> Unit) {
                     if (list != null && list.isEmpty()) item { Empty("숨긴 글이 없어요") }
                     items(list.orEmpty(), key = { it.id }) { p ->
                         AdminCard {
-                            Text("${p.author.nickname} · ${timeAgo(p.createdAt, now)}" + (p.hiddenReason?.let { " · $it" } ?: ""), color = c.text2, fontSize = 12.5.sp)
-                            Text(p.body ?: "(사진 ${p.images.size}장)", color = c.text, fontSize = 14.sp, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                            UserText("${p.author.nickname} · ${timeAgo(p.createdAt, now)}" + (p.hiddenReason?.let { " · $it" } ?: ""), color = c.text2, fontSize = 12.5.sp)
+                            UserText(p.body ?: "(사진 ${p.images.size}장)", color = c.text, fontSize = 14.sp, maxLines = 3, overflow = TextOverflow.Ellipsis)
                             Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
                                 TextButton(onClick = { direct("글을 복구했어요") { app.community.restorePost(p.id) } }) { Text("복구") }
                                 TextButton(onClick = { action = CommunityAction.DeletePost(p) }) { Text("지우기", color = c.err) }
@@ -127,7 +128,7 @@ fun AdminInbox(app: AppViewModel, onClose: () -> Unit) {
                         AdminCard {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Avatar(p, 32)
-                                Text(p.nickname, color = c.text, fontSize = 15.sp, modifier = Modifier.weight(1f).padding(start = 10.dp))
+                                UserText(p.nickname, color = c.text, fontSize = 15.sp, modifier = Modifier.weight(1f).padding(start = 10.dp))
                             }
                             Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
                                 if (p.avatarUrl != null) TextButton(onClick = { direct("프로필 사진을 지웠어요") { app.community.adminClearAvatar(p.publicId) } }) {

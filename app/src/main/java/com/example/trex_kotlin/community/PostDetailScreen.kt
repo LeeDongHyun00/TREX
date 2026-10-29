@@ -20,7 +20,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.Text
+import com.example.trex_kotlin.TrexText as Text
+import androidx.compose.material3.Text as UserText
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -220,11 +221,11 @@ private fun CommentRow(comment: Comment, now: Long, onAuthor: () -> Unit, menu: 
         Box(Modifier.clickable(onClick = onAuthor).padding(top = 2.dp)) { Avatar(comment.author, 30) }
         Column(Modifier.weight(1f).padding(start = 10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(comment.author.nickname, color = c.text, fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.clickable(onClick = onAuthor))
+                UserText(comment.author.nickname, color = c.text, fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.clickable(onClick = onAuthor))
                 Text("  " + timeAgo(comment.createdAt, now), color = c.text3, fontSize = 12.sp)
             }
             if (comment.hidden) HiddenBadge(comment.hiddenReason, Modifier.padding(vertical = 4.dp))
-            Text(comment.body, color = c.text, fontSize = 14.sp, lineHeight = 20.sp, modifier = Modifier.padding(top = 2.dp))
+            UserText(comment.body, color = c.text, fontSize = 14.sp, lineHeight = 20.sp, modifier = Modifier.padding(top = 2.dp))
         }
         if (menu.isNotEmpty()) MenuButton(menu)
     }
