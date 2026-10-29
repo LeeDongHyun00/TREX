@@ -79,6 +79,7 @@ private sealed interface CommunityRoute {
 private fun CommunityNavigation(app: AppViewModel, gate: CommunityGate) {
     var stack by remember { mutableStateOf(listOf<CommunityRoute>()) }
     val feedList = rememberLazyListState()
+    val scope = rememberCoroutineScope()
     fun push(route: CommunityRoute) { stack = stack + route }
     fun pop() { stack = stack.dropLast(1) }
     PlatformBackHandler(enabled = stack.isNotEmpty()) { pop() }
@@ -99,7 +100,11 @@ private fun CommunityNavigation(app: AppViewModel, gate: CommunityGate) {
             onBack = ::pop,
             onOpenProfile = { push(CommunityRoute.Profile(it)) },
         )
-        CommunityRoute.Compose -> CommunityNotice("글쓰기", "계획 3 Task 5") // Task 5 에서 ComposeScreen
+        CommunityRoute.Compose -> ComposeScreen(
+            app = app,
+            onClose = ::pop,
+            onPosted = { pop(); scope.launch { feedList.scrollToItem(0) } },
+        )
         is CommunityRoute.Profile -> CommunityNotice(top.profile.nickname, "계획 3 Task 6") // Task 6 에서 ProfileScreen
     }
 }

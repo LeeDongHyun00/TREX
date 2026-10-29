@@ -60,6 +60,9 @@ data class FeedState(
     /** 보낼 것이 없으면(바라는 값 = 서버 값) 정리한다 — 보내는 쪽이 멈추기 전에 부른다. */
     fun settleLike(id: Long): FeedState = if (likeToSend(id) == null) copy(pendingLikes = pendingLikes - id) else this
 
+    /** 방금 올린 글 — 새로고침 없이 맨 위에. */
+    fun posted(post: Post): FeedState = copy(posts = listOf(post) + posts.filterNot { it.id == post.id })
+
     fun removed(id: Long): FeedState = copy(posts = posts.filterNot { it.id == id }, pendingLikes = pendingLikes - id)
 
     /** 서버에서 새로 받은 글로 갈아 끼운다 — 화면 값([shown])을 넣지 않는다(확인 안 된 좋아요가 확인된 것처럼 굳는다). */

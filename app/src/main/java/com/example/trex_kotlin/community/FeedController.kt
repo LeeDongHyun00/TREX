@@ -81,6 +81,8 @@ class FeedController(
         }
     }
 
+    fun posted(post: Post) { state = state.posted(post) }
+
     fun removed(postId: Long) { state = state.removed(postId) }
 
     fun replaced(post: Post) { state = state.replaced(post) }

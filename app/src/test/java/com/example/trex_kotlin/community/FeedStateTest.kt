@@ -102,6 +102,13 @@ class FeedStateTest {
     }
 
     @Test
+    fun 내가_올린_글은_맨_위에_한_번() {
+        val feed = FeedState().withFirstPage(PostPage(listOf(post(2), post(1)), null), now = 0)
+        assertEquals(listOf(3L, 2L, 1L), ids(feed.posted(post(3))))
+        assertEquals(listOf(3L, 2L, 1L), ids(feed.posted(post(3)).posted(post(3))))
+    }
+
+    @Test
     fun 오십분이_지나면_사진_주소가_곧_만료되니_새로_받는다() {
         val feed = FeedState().withFirstPage(PostPage(listOf(post(1)), null), now = 0)
         assertFalse(feed.isStale(now = 49 * 60_000L))
