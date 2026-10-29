@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.lazy.rememberLazyListState
 import com.example.trex_kotlin.AppViewModel
 import com.example.trex_kotlin.PlatformBackHandler
+import com.example.trex_kotlin.nowMillis
 import com.example.trex_kotlin.Trex
 import com.example.trex_kotlin.Cta
 import com.example.trex_kotlin.DField
@@ -72,7 +73,7 @@ fun CommunityTabScreen(app: AppViewModel) {
 private sealed interface CommunityRoute {
     data class Detail(val post: Post, val owner: FeedController) : CommunityRoute
     data object Compose : CommunityRoute
-    data class Profile(val profile: CommunityProfile) : CommunityRoute
+    data class Profile(val profile: CommunityProfile, val posts: FeedController) : CommunityRoute
 }
 
 @Composable
@@ -81,6 +82,13 @@ private fun CommunityNavigation(app: AppViewModel, gate: CommunityGate) {
     val feedList = rememberLazyListState()
     val scope = rememberCoroutineScope()
     fun push(route: CommunityRoute) { stack = stack + route }
+    // 프로필의 글 목록은 화면이 아니라 쌓기가 든다 — 상세에 다녀오면 프로필 화면은 다시 그려지지만 목록·좋아요 보내기는 이어진다
+    fun openProfile(profile: CommunityProfile) = push(CommunityRoute.Profile(profile, FeedController(
+        load = { before -> app.community.userPosts(profile.publicId, before) },
+        setLike = { id, liked -> if (liked) app.community.like(id) else app.community.unlike(id) },
+        scope = scope,
+        now = ::nowMillis,
+    )))
     fun pop() { stack = stack.dropLast(1) }
     PlatformBackHandler(enabled = stack.isNotEmpty()) { pop() }
     when (val top = stack.lastOrNull()) {
@@ -90,7 +98,7 @@ private fun CommunityNavigation(app: AppViewModel, gate: CommunityGate) {
             listState = feedList,
             onCompose = { push(CommunityRoute.Compose) },
             onOpenPost = { push(CommunityRoute.Detail(it, app.communityFeed)) },
-            onOpenProfile = { push(CommunityRoute.Profile(it)) },
+            onOpenProfile = ::openProfile,
         )
         is CommunityRoute.Detail -> PostDetailScreen(
             app = app,
@@ -98,14 +106,21 @@ private fun CommunityNavigation(app: AppViewModel, gate: CommunityGate) {
             owner = top.owner,
             gate = gate,
             onBack = ::pop,
-            onOpenProfile = { push(CommunityRoute.Profile(it)) },
+            onOpenProfile = ::openProfile,
         )
         CommunityRoute.Compose -> ComposeScreen(
             app = app,
             onClose = ::pop,
             onPosted = { pop(); scope.launch { feedList.scrollToItem(0) } },
         )
-        is CommunityRoute.Profile -> CommunityNotice(top.profile.nickname, "계획 3 Task 6") // Task 6 에서 ProfileScreen
+        is CommunityRoute.Profile -> ProfileScreen(
+            app = app,
+            initial = top.profile,
+            posts = top.posts,
+            gate = gate,
+            onBack = ::pop,
+            onOpenPost = { post, owner -> push(CommunityRoute.Detail(post, owner)) },
+        )
     }
 }
 
