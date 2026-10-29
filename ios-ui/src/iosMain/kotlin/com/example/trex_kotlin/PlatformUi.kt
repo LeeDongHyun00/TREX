@@ -3,6 +3,8 @@
 package com.example.trex_kotlin
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.SideEffect
@@ -16,13 +18,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.UIKitInteropInteractionMode
 import androidx.compose.ui.viewinterop.UIKitInteropProperties
 import androidx.compose.ui.viewinterop.UIKitView
 import androidx.compose.ui.window.DialogProperties
 import com.example.trex_kotlin.ios.IosSpeechEngine
 import com.example.trex_kotlin.ios.readTextFile
+import com.example.trex_kotlin.ios.IosAppleSignInRegistry
+import com.example.trex_kotlin.ios.requestIosAppleCredential
 import com.example.trex_kotlin.ios.requestIosGoogleIdToken
+import com.example.trex_kotlin.sync.AppleCredential
 import com.example.trex_kotlin.ios.toByteArray
 import com.example.trex_kotlin.posture.SpeechCoach
 import kotlinx.atomicfu.locks.SynchronizedObject
@@ -311,4 +317,23 @@ internal fun decodeBundleImage(relative: String, sampleSize: Int): ImageBitmap {
     val surface = Surface.makeRasterN32Premul(width, height)
     surface.canvas.drawImageRect(image, Rect.makeWH(width.toFloat(), height.toFloat()))
     return surface.makeImageSnapshot().toComposeImageBitmap()
+}
+
+/** Apple 로그인 한 번(Swift `AppleSignInBridge`) — Android 판은 늘 실패한다(버튼이 없다). */
+@Composable
+fun rememberAppleCredentialRequest(): suspend () -> AppleCredential = remember { { requestIosAppleCredential() } }
+
+/**
+ * Apple 지침의 기본 버튼("Apple로 계속하기", 검정) — Swift 가 만든 `ASAuthorizationAppleIDButton` 을 끼운다. 다리가 없으면(프로브 등)
+ * 그리지 않는다. 높이 50dp, 폭은 부모를 채운다.
+ */
+@Composable
+fun AppleSignInButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val bridge = IosAppleSignInRegistry.bridge ?: return
+    val latest by androidx.compose.runtime.rememberUpdatedState(onClick)
+    UIKitView(
+        factory = { bridge.makeButton { latest() } },
+        modifier = modifier.fillMaxWidth().height(50.dp),
+        properties = UIKitInteropProperties(interactionMode = UIKitInteropInteractionMode.NonCooperative, isNativeAccessibilityEnabled = true),
+    )
 }

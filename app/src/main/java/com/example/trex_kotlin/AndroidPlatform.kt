@@ -28,6 +28,7 @@ class AndroidAppPlatform(private val app: Application) : AppPlatform {
     override val binary: BinaryTransport = HttpUrlConnectionBinaryTransport
     override val apiBaseUrl: String get() = BuildConfig.TREX_API_BASE_URL
     override val googleWebClientId: String get() = BuildConfig.GOOGLE_WEB_CLIENT_ID
+    override val appleSignInAvailable: Boolean get() = false
     override fun muscleLoadDatabase(): MuscleLoadDatabase = MuscleLoadStore(app)
 
     override fun appendSetLabel(label: SetSelfLabel) {

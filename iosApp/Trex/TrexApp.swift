@@ -10,6 +10,8 @@ import TrexCore
         IosFoodBridgeRegistry.shared.photos = FoodPhotoBridge()
         // 공유 앱 상태(Kotlin)의 구글 로그인 — Android Credential Manager 자리
         IosGoogleSignInRegistry.shared.bridge = GoogleSignInBridge()
+        // 공유 앱 상태(Kotlin)의 Apple 로그인 — iPhone 만(App Store 지침 4.8)
+        IosAppleSignInRegistry.shared.bridge = AppleSignInBridge()
     }
     var body: some Scene {
         WindowGroup {

@@ -7,6 +7,7 @@ import com.example.trex_kotlin.community.FeedController
 import com.example.trex_kotlin.community.WorkoutCardData
 import com.example.trex_kotlin.community.communityGate
 import com.example.trex_kotlin.sync.ApiException
+import com.example.trex_kotlin.sync.AppleCredential
 import com.example.trex_kotlin.sync.AuthAccount
 import com.example.trex_kotlin.sync.AuthSession
 import com.example.trex_kotlin.sync.BinaryTransport
@@ -125,12 +126,32 @@ class AppViewModel(private val platform: AppPlatform) : ViewModel() {
             authMessage = "구글 로그인이 아직 준비되지 않았어요. ‘로그인 없이 사용’으로 시작해 주세요."
             return
         }
+        signIn("구글") { api.googleLogin(requestIdToken(platform.googleWebClientId)) }
+    }
+
+    /** iPhone 의 Apple 로그인을 쓸 수 있는가 — 버튼을 그릴지(Android 는 늘 거짓). */
+    val appleSignInAvailable: Boolean get() = platform.appleSignInAvailable && api.configured
+
+    /**
+     * "Apple로 계속하기"(iPhone, 설계 docs/superpowers/specs/2026-10-29-apple-sign-in-design.md) — 구글과 같은 길로 서버 로그인·
+     * 첫 동기화를 한다. [requestCredential] 은 플랫폼의 Apple 로그인 창이다(취소는 [SignInException.Cancelled]).
+     */
+    fun continueWithApple(requestCredential: suspend () -> AppleCredential) {
+        if (authBusy) return
+        if (!appleSignInAvailable) {
+            authMessage = "Apple 로그인이 아직 준비되지 않았어요."
+            return
+        }
+        signIn("Apple") { api.appleLogin(requestCredential()) }
+    }
+
+    /** 소셜 로그인 공통 — [obtain] 으로 서버 계정을 받아 저장하고 첫 동기화를 시작한다. [label] 은 실패 문구의 이름("구글"·"Apple"). */
+    private fun signIn(label: String, obtain: suspend () -> AuthAccount) {
         viewModelScope.launch {
             authBusy = true
             authMessage = null
             try {
-                val idToken = requestIdToken(platform.googleWebClientId)
-                val signedIn = api.googleLogin(idToken)
+                val signedIn = obtain()
                 authSession.save(signedIn)
                 account = signedIn
                 beginSync(signedIn)
@@ -139,8 +160,8 @@ class AppViewModel(private val platform: AppPlatform) : ViewModel() {
             } catch (_: SignInException.NoAccount) {
                 authMessage = "이 기기에 구글 계정이 없어요. 휴대폰 설정에서 계정을 추가해 주세요."
             } catch (e: SignInException.Failed) {
-                // 콘솔 설정 오류(SHA-1·패키지명·테스트 사용자)는 여기로 온다 — 로그는 플랫폼 쪽(GoogleSignIn.kt)이 남긴다
-                authMessage = "구글 로그인에 실패했어요. ${e.reason}"
+                // 콘솔 설정 오류(SHA-1·패키지명·테스트 사용자, Apple 기능 미설정)는 여기로 온다 — 로그는 플랫폼 쪽이 남긴다
+                authMessage = "$label 로그인에 실패했어요. ${e.reason}"
             } catch (e: ApiException) {
                 authMessage = e.message
             } catch (_: NetworkException) {

@@ -13,6 +13,7 @@ import androidx.compose.material3.*
 import com.example.trex_kotlin.TrexText as Text
 import androidx.compose.runtime.*
 import com.example.trex_kotlin.community.AdminInbox
+import com.example.trex_kotlin.sync.accountLabel
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -140,9 +141,14 @@ fun ProfileTabScreen(app: AppViewModel, onOpenRecord: () -> Unit, onLogout: () -
 private fun AccountGroup(app: AppViewModel) {
     val c = Trex.c
     val requestGoogleIdToken = rememberGoogleIdTokenRequest()
+    val requestAppleCredential = rememberAppleCredentialRequest()
     val account = app.account
     SettingsGroup {
         if (account == null) {
+            if (app.appleSignInAvailable) AppleSignInButton(
+                onClick = { if (!app.authBusy) app.continueWithApple(requestAppleCredential) },
+                modifier = Modifier.padding(start = 18.dp, end = 18.dp, top = 16.dp),
+            )
             SettingsRow("Google 계정 연결", Icons.Rounded.CloudUpload, if (app.authBusy) "연결 중…" else null, onClick = {
                 app.continueWithGoogle(requestGoogleIdToken)
             })
@@ -161,7 +167,7 @@ private fun AccountGroup(app: AppViewModel) {
             Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 16.dp), verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Rounded.CloudDone, null, tint = c.primaryText, modifier = Modifier.size(22.dp))
                 Column(Modifier.weight(1f).padding(start = 14.dp)) {
-                    Text(account.email ?: account.name.ifBlank { "Google 계정" }, color = c.text, fontSize = 16.sp)
+                    Text(accountLabel(account), color = c.text, fontSize = 16.sp)
                     Text(status.orEmpty(), color = if (app.sync.lastError != null) c.err else c.text2, fontSize = 13.sp, modifier = Modifier.padding(top = 3.dp))
                 }
                 TextButton(onClick = { app.syncNow() }, enabled = !app.sync.syncing) { Text("지금 동기화") }

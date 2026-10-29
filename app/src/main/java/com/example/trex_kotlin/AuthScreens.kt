@@ -92,6 +92,9 @@ fun AuthScreen(
     message: String?,
     onGoogle: () -> Unit,
     onWithoutAccount: () -> Unit,
+    /** iPhone 만 참 — Apple 버튼을 Google 위에(App Store 지침 4.8, 설계 docs/superpowers/specs/2026-10-29-apple-sign-in-design.md). */
+    appleAvailable: Boolean = false,
+    onApple: () -> Unit = {},
 ) {
     val c = Trex.c
     var frame by remember { mutableIntStateOf(0) }
@@ -131,6 +134,7 @@ fun AuthScreen(
         Spacer(Modifier.weight(1f))
 
         Column(Modifier.fillMaxWidth().padding(top = 32.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            if (appleAvailable) AppleSignInButton(onClick = { if (!busy) onApple() })
             Cta(
                 if (busy) "로그인 중…" else "Google로 계속하기",
                 onClick = onGoogle,
