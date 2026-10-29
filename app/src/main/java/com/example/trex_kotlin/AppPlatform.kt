@@ -26,7 +26,10 @@ interface AppPlatform {
     /** 구글 로그인의 웹 클라이언트 ID. 비어 있으면 구글 로그인을 쓰지 않는다. */
     val googleWebClientId: String
 
-    /** Apple 로그인을 쓸 수 있는가 — iPhone 만 참. Android 는 Apple 버튼을 그리지 않는다(설계 §2 비목표). */
+    /**
+     * Apple 로그인을 쓸 수 있는가 — iPhone 은 기본 로그인 창(Swift 다리), Android 는 Apple 웹 로그인(설계 §9, Services ID 가 설정된 빌드).
+     * 거짓이면 Apple 버튼을 그리지 않는다.
+     */
     val appleSignInAvailable: Boolean
 
     fun muscleLoadDatabase(): MuscleLoadDatabase

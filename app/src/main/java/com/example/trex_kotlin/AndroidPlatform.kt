@@ -28,7 +28,8 @@ class AndroidAppPlatform(private val app: Application) : AppPlatform {
     override val binary: BinaryTransport = HttpUrlConnectionBinaryTransport
     override val apiBaseUrl: String get() = BuildConfig.TREX_API_BASE_URL
     override val googleWebClientId: String get() = BuildConfig.GOOGLE_WEB_CLIENT_ID
-    override val appleSignInAvailable: Boolean get() = false
+    /** Apple 웹 로그인(설계 §9) — Services ID·Return URL 이 설정된 빌드만. 비어 있으면 눌러도 안 되는 버튼을 그리지 않는다. */
+    override val appleSignInAvailable: Boolean get() = BuildConfig.APPLE_SERVICES_ID.isNotBlank() && BuildConfig.APPLE_REDIRECT_URI.isNotBlank()
     override fun muscleLoadDatabase(): MuscleLoadDatabase = MuscleLoadStore(app)
 
     override fun appendSetLabel(label: SetSelfLabel) {

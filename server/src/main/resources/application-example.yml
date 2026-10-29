@@ -45,6 +45,12 @@ trex:
       team-id: ${APPLE_TEAM_ID:}
       key-id: ${APPLE_KEY_ID:}
       private-key: ${APPLE_PRIVATE_KEY:}
+      # Android Apple 로그인(웹 흐름, 설계 §9) — Services ID 와 그 Return URL(= 이 서버의 /api/auth/oauth/apple/callback).
+      # Return URL 은 앱 gradle.properties trex.appleRedirectUri 와 글자까지 같아야 한다. 비면 Android 로그인 토큰을 받지 않는다.
+      web-client-id: ${APPLE_WEB_CLIENT_ID:}
+      web-redirect-uri: ${APPLE_WEB_REDIRECT_URI:}
+      # 콜백이 되돌려 보낼 Android 앱 패키지
+      android-package: ${APPLE_ANDROID_PACKAGE:com.example.trex_kotlin}
   community:
     # 비우면 사진은 메모리에만(재시작하면 사라진다). 관리자·웹후크도 선택
     s3-bucket: ${COMMUNITY_S3_BUCKET:}

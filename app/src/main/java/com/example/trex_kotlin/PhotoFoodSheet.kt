@@ -314,9 +314,8 @@ internal fun PhotoFoodSheet(app: AppViewModel, onClose: () -> Unit) {
         PhotoStep.Failed -> failureTitle
     }
 
-    SheetHost(onDismiss = onClose) {
+    SheetHost(onDismiss = onClose, startPartiallyExpanded = true, expandContent = step != PhotoStep.Pick) {
         Column(Modifier.fillMaxHeight(0.92f)) {
-            SheetHandle()
             Row(Modifier.padding(start = 20.dp, end = 20.dp, top = 10.dp, bottom = 14.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Kicker("사진 식단 기록")

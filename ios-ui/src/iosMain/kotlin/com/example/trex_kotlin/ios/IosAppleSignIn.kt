@@ -6,14 +6,14 @@ import kotlin.concurrent.Volatile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
-import platform.UIKit.UIView
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
 /*
  * iPhone Apple 로그인(설계 docs/superpowers/specs/2026-10-29-apple-sign-in-design.md) — 구글 다리(IosGoogleSignIn.kt)와 같은 모양.
- * 로그인 창과 Apple 기본 버튼은 Swift(`iosApp/Trex/AppleSignInBridge.swift` — AuthenticationServices)가 맡고, 앱 시작 때
+ * 로그인 창은 Swift(`iosApp/Trex/AppleSignInBridge.swift` — AuthenticationServices)가 맡고, 앱 시작 때
  * [IosAppleSignInRegistry] 에 넣는다. 서버가 확인할 identity token·authorization code·nonce 원문을 받아 오는 데까지가 이 다리의 일이다.
+ * 버튼은 구글 버튼과 같은 Compose 버튼(공유 `SignInUi.kt`)이라 다리가 만들지 않는다.
  */
 
 /** Swift 가 구현하는 Apple 로그인 다리. */
@@ -23,9 +23,6 @@ interface IosAppleSignInBridge {
      * 사용자가 닫았으면 (null, null, null, [IosAppleSignInRegistry.CANCELLED]), 그 밖은 (null, null, null, 이유).
      */
     fun signIn(done: (identityToken: String?, authorizationCode: String?, rawNonce: String?, error: String?) -> Unit)
-
-    /** Apple 지침의 기본 버튼("Apple로 계속하기", 검정) — 누르면 [onTap]. */
-    fun makeButton(onTap: () -> Unit): UIView
 }
 
 object IosAppleSignInRegistry {

@@ -94,6 +94,12 @@ class AppViewModel(private val platform: AppPlatform) : ViewModel() {
         private set
     var authBusy by mutableStateOf(false)
         private set
+    /**
+     * 계정 선택을 마치고 서버 로그인·첫 동기화를 기다리는 중 — 앱 전체에 로그인 로딩 화면([SignInLoadingScreen])을 덮는다.
+     * 계정 선택 창(구글·Apple)이 떠 있는 동안은 거짓이다 — 창을 닫았을 때 로딩 화면이 깜빡이지 않게. 탈퇴처럼 [authBusy] 만 켜는 일에는 덮지 않는다.
+     */
+    var authVerifying by mutableStateOf(false)
+        private set
     var authMessage by mutableStateOf<String?>(null)
         private set
     /** 처음 연결한 계정의 서버에도 이 기기에도 기록이 있다 — 어느 쪽을 남길지 묻는 중. */
@@ -134,15 +140,15 @@ class AppViewModel(private val platform: AppPlatform) : ViewModel() {
             authMessage = "구글 로그인이 아직 준비되지 않았어요. ‘로그인 없이 사용’으로 시작해 주세요."
             return
         }
-        signIn("구글") { api.googleLogin(requestIdToken(platform.googleWebClientId)) }
+        signIn("구글", credential = { requestIdToken(platform.googleWebClientId) }) { api.googleLogin(it) }
     }
 
-    /** iPhone 의 Apple 로그인을 쓸 수 있는가 — 버튼을 그릴지(Android 는 늘 거짓). */
+    /** Apple 로그인을 쓸 수 있는가 — 버튼을 그릴지(iPhone 은 기본 로그인 창, Android 는 웹 로그인이 설정된 빌드). */
     val appleSignInAvailable: Boolean get() = platform.appleSignInAvailable && api.configured
 
     /**
-     * "Apple로 계속하기"(iPhone, 설계 docs/superpowers/specs/2026-10-29-apple-sign-in-design.md) — 구글과 같은 길로 서버 로그인·
-     * 첫 동기화를 한다. [requestCredential] 은 플랫폼의 Apple 로그인 창이다(취소는 [SignInException.Cancelled]).
+     * "Apple로 계속하기"(iPhone·Android, 설계 docs/superpowers/specs/2026-10-29-apple-sign-in-design.md) — 구글과 같은 길로 서버 로그인·
+     * 첫 동기화를 한다. [requestCredential] 은 플랫폼의 Apple 로그인 창이다(iPhone 기본 창, Android 웹 로그인 — 취소는 [SignInException.Cancelled]).
      */
     fun continueWithApple(requestCredential: suspend () -> AppleCredential) {
         if (authBusy) return
@@ -150,11 +156,12 @@ class AppViewModel(private val platform: AppPlatform) : ViewModel() {
             authMessage = "Apple 로그인이 아직 준비되지 않았어요."
             return
         }
-        signIn("Apple") { api.appleLogin(requestCredential()) }
+        signIn("Apple", credential = requestCredential) { api.appleLogin(it) }
     }
 
     /**
      * 아이디·비밀번호 로그인(docs/SERVER_SYNC_HANDOFF.md D13) — 소셜 로그인과 같은 길로 계정을 저장하고 첫 동기화를 한다.
+     * 플랫폼 창이 없어 바로 서버 확인으로 들어가고, 그동안 로그인 로딩 화면이 덮인다([authVerifying]).
      * 틀린 비밀번호·5번 연속 실패 잠금은 서버 문구를 그대로 보인다.
      */
     fun loginWithPassword(loginId: String, password: String) {
@@ -163,7 +170,7 @@ class AppViewModel(private val platform: AppPlatform) : ViewModel() {
             authMessage = "서버가 아직 준비되지 않았어요. ‘로그인 없이 사용’으로 시작해 주세요."
             return
         }
-        signIn("아이디") { api.passwordLogin(loginId, password) }
+        signIn("아이디", credential = {}) { api.passwordLogin(loginId, password) }
     }
 
     /** 아이디·비밀번호 가입(D13) — 가입하면 바로 로그인된다. 칸 확인은 화면이 [signupProblem] 으로 먼저 하고, 서버도 같은 규칙으로 본다. */
@@ -174,16 +181,21 @@ class AppViewModel(private val platform: AppPlatform) : ViewModel() {
             return
         }
         signupProblem(form)?.let { authMessage = it; return }
-        signIn("아이디") { api.signup(form) }
+        signIn("아이디", credential = {}) { api.signup(form) }
     }
 
-    /** 로그인 공통 — [obtain] 으로 서버 계정을 받아 저장하고 첫 동기화를 시작한다. [label] 은 실패 문구의 이름("구글"·"Apple"). */
-    private fun signIn(label: String, obtain: suspend () -> AuthAccount) {
+    /**
+     * 로그인 공통 — [credential](플랫폼의 계정 선택 창 — 아이디·비밀번호는 창이 없다)로 받은 증명을 [exchange] 로 서버 계정으로 바꿔 저장하고
+     * 첫 동기화를 시작한다. 증명을 받은 뒤부터 끝날 때까지 [authVerifying]. [label] 은 실패 문구의 이름("구글"·"Apple"·"아이디").
+     */
+    private fun <T> signIn(label: String, credential: suspend () -> T, exchange: suspend (T) -> AuthAccount) {
         viewModelScope.launch {
             authBusy = true
             authMessage = null
             try {
-                val signedIn = obtain()
+                val proof = credential()
+                authVerifying = true
+                val signedIn = exchange(proof)
                 authSession.save(signedIn)
                 account = signedIn
                 beginSync(signedIn)
@@ -204,6 +216,7 @@ class AppViewModel(private val platform: AppPlatform) : ViewModel() {
                 authMessage = e.message ?: "로그인하지 못했어요."
             } finally {
                 authBusy = false
+                authVerifying = false
             }
         }
     }
@@ -442,9 +455,13 @@ class AppViewModel(private val platform: AppPlatform) : ViewModel() {
     private val loadCorrections = mutableMapOf<String, Double?>()
 
     fun refreshMuscleLoad() {
+        val now = nowMillis()
+        if (loadLedger.sets.any { it.endedAt < workoutRetentionStart(now) }) {
+            syncMuscleLoad()
+        }
         val ledger=loadLedger
         viewModelScope.launch {
-            val next=withContext(Dispatchers.Default) { MuscleLoadEngine.snapshot(ledger.sets,nowMillis(),ledger.doses) }
+            val next=withContext(Dispatchers.Default) { MuscleLoadEngine.snapshot(ledger.sets,now,ledger.doses,workoutRetentionStart(now)) }
             if(ledger === loadLedger) muscleLoad=next
         }
     }
@@ -463,7 +480,8 @@ class AppViewModel(private val platform: AppPlatform) : ViewModel() {
                     // 저장과 계산이 모두 끝나야 완료 화면의 로딩을 해제한다.
                     val ledger = loadLedger
                     muscleLoad = withContext(Dispatchers.Default) {
-                        MuscleLoadEngine.snapshot(ledger.sets, nowMillis(), ledger.doses)
+                        val now = nowMillis()
+                        MuscleLoadEngine.snapshot(ledger.sets, now, ledger.doses, workoutRetentionStart(now))
                     }
                     muscleLoadError = null
                 } catch (cancelled: kotlinx.coroutines.CancellationException) {

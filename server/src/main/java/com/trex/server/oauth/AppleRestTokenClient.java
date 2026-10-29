@@ -32,7 +32,8 @@ import java.util.Optional;
 
 /**
  * Sign in with Apple REST API 호출. client_secret 은 부를 때마다 .p8 키로 서명한 ES256 JWT(수명 5분) —
- * iss = Team ID, sub = 번들 ID, aud = {@value #AUDIENCE}, 헤더 kid = Key ID. refresh token·client_secret 은 로그에 남기지 않는다.
+ * iss = Team ID, sub = client_id(번들 ID 또는 Android 웹 로그인 Services ID), aud = {@value #AUDIENCE}, 헤더 kid = Key ID.
+ * 웹 로그인 code 는 처음 요청의 redirect_uri 를 같이 보내야 교환된다. refresh token·client_secret 은 로그에 남기지 않는다.
  */
 @Component
 public class AppleRestTokenClient implements AppleTokenClient {
@@ -72,12 +73,15 @@ public class AppleRestTokenClient implements AppleTokenClient {
     }
 
     @Override
-    public Optional<String> exchangeCode(String authorizationCode) {
+    public Optional<String> exchangeCode(String authorizationCode, String clientId) {
         if (!configured() || authorizationCode == null || authorizationCode.isBlank()) return Optional.empty();
         try {
-            MultiValueMap<String, String> form = form();
+            String issuedTo = client(clientId);
+            MultiValueMap<String, String> form = form(issuedTo);
             form.add("code", authorizationCode);
             form.add("grant_type", "authorization_code");
+            // 웹 로그인(Android)의 code 는 authorize 요청에 넣은 redirect_uri 를 같이 보낸다(Apple REST API: Token validation)
+            if (issuedTo.equals(properties.webClientId())) form.add("redirect_uri", properties.webRedirectUri());
             Map<?, ?> body = client.post().uri(TOKEN_URI).contentType(MediaType.APPLICATION_FORM_URLENCODED)
                     .body(form).retrieve().body(Map.class);
             Object refresh = body == null ? null : body.get("refresh_token");
@@ -89,10 +93,10 @@ public class AppleRestTokenClient implements AppleTokenClient {
     }
 
     @Override
-    public void revoke(String refreshToken) {
+    public void revoke(String refreshToken, String clientId) {
         if (!configured() || refreshToken == null || refreshToken.isBlank()) return;
         try {
-            MultiValueMap<String, String> form = form();
+            MultiValueMap<String, String> form = form(client(clientId));
             form.add("token", refreshToken);
             form.add("token_type_hint", "refresh_token");
             client.post().uri(REVOKE_URI).contentType(MediaType.APPLICATION_FORM_URLENCODED).body(form).retrieve().toBodilessEntity();
@@ -102,19 +106,29 @@ public class AppleRestTokenClient implements AppleTokenClient {
         }
     }
 
-    private MultiValueMap<String, String> form() {
+    /** 토큰을 받은 client — 설정에 있는 값만 쓰고, 모르면(예전 회원) 기본 번들 ID. */
+    private String client(String clientId) {
+        return clientId != null && properties.audiences().contains(clientId) ? clientId : properties.clientId();
+    }
+
+    private MultiValueMap<String, String> form(String clientId) {
         MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
-        form.add("client_id", properties.clientId());
-        form.add("client_secret", clientSecret());
+        form.add("client_id", clientId);
+        form.add("client_secret", clientSecret(clientId));
         return form;
     }
 
-    /** .p8 키로 서명한 client_secret(ES256, 수명 5분). */
+    /** 기본 client(첫 번들 ID)의 client_secret. */
     String clientSecret() {
+        return clientSecret(properties.clientId());
+    }
+
+    /** .p8 키로 서명한 client_secret(ES256, 수명 5분) — sub 는 부르는 client_id 와 같아야 한다. */
+    String clientSecret(String clientId) {
         Instant now = clock.instant();
         JWTClaimsSet claims = new JWTClaimsSet.Builder()
                 .issuer(properties.teamId())
-                .subject(properties.clientId())
+                .subject(clientId)
                 .audience(AUDIENCE)
                 .issueTime(Date.from(now))
                 .expirationTime(Date.from(now.plusSeconds(300)))

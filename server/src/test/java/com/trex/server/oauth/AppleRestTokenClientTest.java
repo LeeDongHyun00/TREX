@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.mock.http.client.MockClientHttpRequest;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 
@@ -20,10 +21,14 @@ import java.security.spec.ECGenParameterSpec;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -41,6 +46,8 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 class AppleRestTokenClientTest {
 
     private static final String BUNDLE_ID = "com.leedonghyun.trex.ios";
+    private static final String WEB_ID = "com.leedonghyun.trex.signin";
+    private static final String REDIRECT = "https://trex-api.example/api/auth/oauth/apple/callback";
     private static final Instant NOW = Instant.parse("2026-10-29T05:00:00Z");
     private static KeyPair pair;
     private static String pem;
@@ -55,7 +62,7 @@ class AppleRestTokenClientTest {
     }
 
     private static AppleProperties props(String privateKey) {
-        return new AppleProperties(List.of(BUNDLE_ID), "TEAM123456", "KEY1234567", privateKey);
+        return new AppleProperties(List.of(BUNDLE_ID), "TEAM123456", "KEY1234567", privateKey, WEB_ID, REDIRECT, "");
     }
 
     private record Fixture(AppleRestTokenClient client, MockRestServiceServer server) { }
@@ -89,8 +96,72 @@ class AppleRestTokenClientTest {
                 .andExpect(content().formDataContains(Map.of("client_id", BUNDLE_ID, "code", "code-1", "grant_type", "authorization_code")))
                 .andRespond(withSuccess("{\"access_token\":\"a\",\"token_type\":\"Bearer\",\"expires_in\":3600,\"refresh_token\":\"rt-1\",\"id_token\":\"x\"}",
                         MediaType.APPLICATION_JSON));
-        assertEquals(Optional.of("rt-1"), f.client().exchangeCode("code-1"));
+        assertEquals(Optional.of("rt-1"), f.client().exchangeCode("code-1", BUNDLE_ID));
         f.server().verify();
+    }
+
+    /** 보낸 폼 — 가짜 Apple 서버가 받은 본문을 읽는다. */
+    private static Map<String, String> sentForm(org.springframework.http.client.ClientHttpRequest request) {
+        String body = ((MockClientHttpRequest) request).getBodyAsString();
+        return Arrays.stream(body.split("&")).map(kv -> kv.split("=", 2))
+                .collect(Collectors.toMap(kv -> kv[0], kv -> URLDecoder.decode(kv.length > 1 ? kv[1] : "", StandardCharsets.UTF_8)));
+    }
+
+    @Test
+    void iPhone_code_는_redirect_uri_없이_번들_ID_로_교환한다() {
+        Fixture f = fixture(props(pem));
+        f.server().expect(requestTo("https://appleid.apple.com/auth/token"))
+                .andExpect(request -> {
+                    Map<String, String> form = sentForm(request);
+                    assertEquals(BUNDLE_ID, form.get("client_id"));
+                    assertFalse(form.containsKey("redirect_uri"));
+                    assertEquals(BUNDLE_ID, subjectOf(form.get("client_secret")));
+                })
+                .andRespond(withSuccess("{\"refresh_token\":\"rt-1\"}", MediaType.APPLICATION_JSON));
+        assertEquals(Optional.of("rt-1"), f.client().exchangeCode("code-1", null)); // 모르면 기본 번들 ID
+        f.server().verify();
+    }
+
+    @Test
+    void Android_웹_로그인_code_는_Services_ID_와_redirect_uri_로_교환한다() {
+        // Apple: 처음 authorize 요청에 redirect_uri 를 넣었으면 교환에도 같은 값을 넣는다. client_secret 의 sub 도 같은 client_id
+        Fixture f = fixture(props(pem));
+        f.server().expect(requestTo("https://appleid.apple.com/auth/token"))
+                .andExpect(request -> {
+                    Map<String, String> form = sentForm(request);
+                    assertEquals(WEB_ID, form.get("client_id"));
+                    assertEquals(REDIRECT, form.get("redirect_uri"));
+                    assertEquals(WEB_ID, subjectOf(form.get("client_secret")));
+                })
+                .andRespond(withSuccess("{\"refresh_token\":\"rt-web\"}", MediaType.APPLICATION_JSON));
+        assertEquals(Optional.of("rt-web"), f.client().exchangeCode("code-web", WEB_ID));
+        f.server().verify();
+    }
+
+    @Test
+    void 연결_끊기는_토큰을_받은_client_로_한다() {
+        Fixture f = fixture(props(pem));
+        f.server().expect(requestTo("https://appleid.apple.com/auth/revoke"))
+                .andExpect(content().formDataContains(Map.of("client_id", WEB_ID, "token", "rt-web")))
+                .andRespond(withSuccess());
+        f.client().revoke("rt-web", WEB_ID);
+        f.server().verify();
+
+        // 설정에 없는 client 는 믿지 않고 기본 번들 ID 로
+        Fixture other = fixture(props(pem));
+        other.server().expect(requestTo("https://appleid.apple.com/auth/revoke"))
+                .andExpect(content().formDataContains(Map.of("client_id", BUNDLE_ID)))
+                .andRespond(withSuccess());
+        other.client().revoke("rt-1", "com.other.app");
+        other.server().verify();
+    }
+
+    private static String subjectOf(String clientSecret) {
+        try {
+            return SignedJWT.parse(clientSecret).getJWTClaimsSet().getSubject();
+        } catch (java.text.ParseException e) {
+            throw new AssertionError(e);
+        }
     }
 
     @Test
@@ -99,7 +170,7 @@ class AppleRestTokenClientTest {
         Fixture f = fixture(props(pem));
         f.server().expect(requestTo("https://appleid.apple.com/auth/token"))
                 .andRespond(withStatus(HttpStatus.BAD_REQUEST).contentType(MediaType.APPLICATION_JSON).body("{\"error\":\"invalid_grant\"}"));
-        assertEquals(Optional.empty(), f.client().exchangeCode("old-code"));
+        assertEquals(Optional.empty(), f.client().exchangeCode("old-code", BUNDLE_ID));
     }
 
     @Test
@@ -109,20 +180,20 @@ class AppleRestTokenClientTest {
                 .andExpect(method(HttpMethod.POST))
                 .andExpect(content().formDataContains(Map.of("client_id", BUNDLE_ID, "token", "rt-1", "token_type_hint", "refresh_token")))
                 .andRespond(withSuccess());
-        f.client().revoke("rt-1");
+        f.client().revoke("rt-1", BUNDLE_ID);
         f.server().verify();
 
         Fixture failing = fixture(props(pem));
         failing.server().expect(requestTo("https://appleid.apple.com/auth/revoke")).andRespond(withStatus(HttpStatus.INTERNAL_SERVER_ERROR));
-        failing.client().revoke("rt-1"); // 예외 없이 로그만 — 탈퇴는 이어진다
+        failing.client().revoke("rt-1", BUNDLE_ID); // 예외 없이 로그만 — 탈퇴는 이어진다
     }
 
     @Test
     void 키가_없으면_부르지_않는다() {
-        Fixture f = fixture(new AppleProperties(List.of(BUNDLE_ID), "", "", ""));
+        Fixture f = fixture(new AppleProperties(List.of(BUNDLE_ID), "", "", "", WEB_ID, REDIRECT, ""));
         assertFalse(f.client().configured());
-        assertEquals(Optional.empty(), f.client().exchangeCode("code-1"));
-        f.client().revoke("rt-1");
+        assertEquals(Optional.empty(), f.client().exchangeCode("code-1", BUNDLE_ID));
+        f.client().revoke("rt-1", BUNDLE_ID);
         f.server().verify(); // 기대한 요청이 없다 = 한 번도 부르지 않았다
     }
 

@@ -6,6 +6,13 @@ import org.junit.Test
 import java.time.LocalDate
 
 class MuscleLoadTest {
+    @Test fun recordsOlderThanSevenDaysDisappearFromScoresAndRelatedHistory() {
+        val snapshot = MuscleLoadEngine.snapshot(listOf(set("expired").copy(endedAt = now - 8L * 86_400_000)), now)
+        assertTrue(snapshot.sets.isEmpty())
+        assertNull(snapshot.peak)
+        assertTrue(MuscleLoadEngine.recommendations(snapshot, Equipment.entries.toSet()).isEmpty())
+    }
+
     private val now=1_790_000_000_000L
     private fun set(id:String="a",exercise:String="squat",reps:Double=12.0)=LoadSet(id,"session",exercise,now,reps=reps)
     private fun dose(s:LoadSet,m:Muscle=Muscle.QUADS,side:String="L")=MuscleLoadEngine.doses(s).first { it.muscle==m && it.side==side }.dose

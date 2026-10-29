@@ -4,8 +4,8 @@ import com.trex.server.entity.AuthProvider;
 import com.trex.server.exception.InvalidCredentialsException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import com.trex.server.config.AppleProperties;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
 import org.springframework.security.oauth2.core.OAuth2TokenValidator;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -27,11 +27,11 @@ import java.util.function.Supplier;
 /**
  * Apple identity token 을 Apple 공개키(JWKS)로 직접 검증한다 — {@link GoogleJwksTokenVerifier} 와 같은 방식.
  *
- * <p>확인하는 것: 서명(Apple 공개키), 만료·발급 시각, 발급자({@value #ISSUER}), 대상(aud)이 우리 앱 번들 ID 인지,
- * 그리고 nonce — 앱이 만든 원문의 SHA-256(소문자 16진)이 토큰의 {@code nonce} 와 같아야 한다. 다른 데서 받은 토큰을
- * 다시 쓰는 것을 막는다.
+ * <p>확인하는 것: 서명(Apple 공개키), 만료·발급 시각, 발급자({@value #ISSUER}), 대상(aud)이 우리 앱 번들 ID(iPhone) 또는
+ * Android 웹 로그인의 Services ID 인지, 그리고 nonce — 앱이 만든 원문의 SHA-256(소문자 16진)이 토큰의 {@code nonce} 와 같아야 한다.
+ * 다른 데서 받은 토큰을 다시 쓰는 것을 막는다. 맞은 대상은 {@link SocialIdentity#clientId()} 로 넘긴다(code 교환·연결 끊기의 client_id).
  *
- * <p>번들 ID 는 설정 {@code trex.oauth.apple.client-ids}(쉼표로 여러 개). 공개키는 첫 로그인 때 받아 온다.
+ * <p>대상은 설정 {@code trex.oauth.apple.client-ids}(쉼표로 여러 개)와 {@code web-client-id}. 공개키는 첫 로그인 때 받아 온다.
  */
 @Component
 public class AppleJwksTokenVerifier implements AppleTokenVerifier {
@@ -45,8 +45,8 @@ public class AppleJwksTokenVerifier implements AppleTokenVerifier {
     private volatile JwtDecoder decoder;
 
     @Autowired
-    public AppleJwksTokenVerifier(@Value("${trex.oauth.apple.client-ids:}") List<String> clientIds) {
-        this(clientIds, () -> NimbusJwtDecoder.withJwkSetUri(JWKS_URI).build());
+    public AppleJwksTokenVerifier(AppleProperties properties) {
+        this(properties.audiences(), () -> NimbusJwtDecoder.withJwkSetUri(JWKS_URI).build());
     }
 
     /** 테스트에서 공개키를 직접 넣은 디코더로 같은 검증 규칙을 돌리기 위한 생성자. */
@@ -108,12 +108,14 @@ public class AppleJwksTokenVerifier implements AppleTokenVerifier {
             throw new InvalidCredentialsException("Apple 로그인 정보를 확인하지 못했습니다");
         }
         Object verified = jwt.getClaims().get("email_verified");
+        String clientId = jwt.getAudience().stream().filter(clientIds::contains).findFirst().orElse(null);
         return new SocialIdentity(
                 AuthProvider.APPLE,
                 jwt.getSubject(),
                 jwt.getClaimAsString("email"),
                 Boolean.TRUE.equals(verified) || "true".equals(String.valueOf(verified)),
-                null   // Apple 은 이름을 토큰에 넣지 않는다(첫 로그인 때 앱에만 준다) — 커뮤니티는 닉네임을 쓴다
+                null,  // Apple 은 이름을 토큰에 넣지 않는다(첫 로그인 때 앱에만 준다) — 커뮤니티는 닉네임을 쓴다
+                clientId
         );
     }
 }

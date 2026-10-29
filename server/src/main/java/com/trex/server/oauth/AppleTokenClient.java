@@ -5,6 +5,9 @@ import java.util.Optional;
 /**
  * Sign in with Apple REST API — authorization code 를 refresh token 으로 바꾸고, 탈퇴 때 연결을 끊는다(App Store 탈퇴 규칙).
  * 실제 구현은 {@link AppleRestTokenClient}, 테스트는 가짜로 바꿔 끼운다. 어느 쪽도 예외를 던지지 않는다 — 실패는 로그.
+ *
+ * <p>{@code clientId} 는 토큰이 발급된 대상이다 — iPhone 은 번들 ID, Android 웹 로그인은 Services ID. Apple 은 code 를 받은 client 로만
+ * 교환·연결 끊기를 받는다. null 이면 기본(첫 번들 ID).
  */
 public interface AppleTokenClient {
 
@@ -12,8 +15,8 @@ public interface AppleTokenClient {
     boolean configured();
 
     /** code(5분 안에 한 번)를 refresh token 으로. 설정 없음·실패면 비어 있다. */
-    Optional<String> exchangeCode(String authorizationCode);
+    Optional<String> exchangeCode(String authorizationCode, String clientId);
 
     /** refresh token 을 무효로 — Apple 쪽 연결 끊기. 실패는 로그만 남긴다. */
-    void revoke(String refreshToken);
+    void revoke(String refreshToken, String clientId);
 }

@@ -113,7 +113,8 @@ fun PostDetailScreen(
                     onLike = { if (gate.canWrite) owner.toggleLike(post.id) else message = "이용이 정지된 계정이에요" },
                     onOpen = {},
                     onAuthor = { onOpenProfile(post.author) },
-                    menu = postMenu(post, gate) { action = it },
+                    // 글·게이트가 같으면 같은 메뉴 목록 — 댓글 목록이 바뀌어도 글 카드(사진)를 다시 그리지 않는다(스펙 §115)
+                    menu = remember(post, gate) { postMenu(post, gate) { action = it } },
                     expandedBody = true,
                 )
             }
@@ -137,9 +138,12 @@ fun PostDetailScreen(
                     comment = comment,
                     now = now,
                     onAuthor = { onOpenProfile(comment.author) },
-                    menu = buildList {
-                        if (comment.mine || post.mine) add(PostMenuItem("지우기", destructive = true) { action = CommunityAction.DeleteComment(comment) })
-                        if (!comment.mine && gate.canWrite) add(PostMenuItem("신고") { action = CommunityAction.Report(ReportTarget.COMMENT, comment.id.toString()) })
+                    // 메뉴가 기대는 값(댓글·내 글인가·게이트)이 같으면 같은 목록 — 좋아요 한 번에 보이는 댓글 줄이 전부 다시 그려지지 않게(스펙 §115)
+                    menu = remember(comment, post.mine, gate) {
+                        buildList {
+                            if (comment.mine || post.mine) add(PostMenuItem("지우기", destructive = true) { action = CommunityAction.DeleteComment(comment) })
+                            if (!comment.mine && gate.canWrite) add(PostMenuItem("신고") { action = CommunityAction.Report(ReportTarget.COMMENT, comment.id.toString()) })
+                        }
                     },
                 )
             }
