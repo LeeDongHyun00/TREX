@@ -135,12 +135,12 @@ class AppViewModel(private val platform: AppPlatform) : ViewModel() {
         signIn("구글", credential = { requestIdToken(platform.googleWebClientId) }) { api.googleLogin(it) }
     }
 
-    /** iPhone 의 Apple 로그인을 쓸 수 있는가 — 버튼을 그릴지(Android 는 늘 거짓). */
+    /** Apple 로그인을 쓸 수 있는가 — 버튼을 그릴지(iPhone 은 기본 로그인 창, Android 는 웹 로그인이 설정된 빌드). */
     val appleSignInAvailable: Boolean get() = platform.appleSignInAvailable && api.configured
 
     /**
-     * "Apple로 계속하기"(iPhone, 설계 docs/superpowers/specs/2026-10-29-apple-sign-in-design.md) — 구글과 같은 길로 서버 로그인·
-     * 첫 동기화를 한다. [requestCredential] 은 플랫폼의 Apple 로그인 창이다(취소는 [SignInException.Cancelled]).
+     * "Apple로 계속하기"(iPhone·Android, 설계 docs/superpowers/specs/2026-10-29-apple-sign-in-design.md) — 구글과 같은 길로 서버 로그인·
+     * 첫 동기화를 한다. [requestCredential] 은 플랫폼의 Apple 로그인 창이다(iPhone 기본 창, Android 웹 로그인 — 취소는 [SignInException.Cancelled]).
      */
     fun continueWithApple(requestCredential: suspend () -> AppleCredential) {
         if (authBusy) return

@@ -3127,7 +3127,7 @@ Validation: Android 778 unit tests and 525 common JVM tests pass; debug and inst
 - **Apple 버튼을 직접 그려도 되는가.** Apple HIG 는 시스템 버튼을 권하지만 Apple 로고·허용 문구(로그인/계속하기/가입)·검정/흰 모양을 지킨 직접 그린 버튼을 허용하고, 모서리는 앱의 다른 버튼에 맞춰도 된다. 알약 모양은 Google 지침의 두 모양(사각·알약) 중 하나라 두 회사 지침을 같이 지킨다. Apple 버튼을 다른 로그인보다 작거나 덜 보이게 두지 말라는 조건은 같은 크기·Google 위 순서로 지킨다.
 - **로딩 화면은 계정 선택 창이 닫힌 뒤부터.** 버튼을 누르자마자 덮으면 계정 선택 창을 닫았을 때 로딩 화면이 잠깐 나타났다 사라진다. 그래서 `signIn` 을 증명 받기(`credential` — 구글 ID 토큰·Apple 자격)와 서버 교환(`exchange`)으로 나누고 그 사이에 `authVerifying` 을 켠다. 첫 동기화 질문(`askFirstSync`)이 뜨면 로딩 화면은 걷히고 대화상자가 남는다. 탈퇴(`deleteAccount`)도 `authBusy` 를 켜지만 로딩 화면은 덮지 않는다.
 - **실패 안내는 남긴다.** 뺀 것은 늘 보이던 설명이다. 로그인 실패 문구(`authMessage`)는 실패했을 때만 버튼 아래에 보인다 — 지우면 왜 안 되는지 알 길이 없다.
-- **Android 에 Apple 버튼은 여전히 없다**(Apple 로그인 설계 §2 비목표, 반목표 "Android 에 눌러도 안 되는 Apple 버튼"). Android 의 Apple 로그인은 웹 로그인 흐름·Services ID·서버 콜백 주소가 더 필요하다. Android 는 Google·로그인 없이 사용 두 버튼이 같은 틀이다.
+- **Android 에 Apple 버튼은 여전히 없다** — *다음 날 동현님 요청으로 바뀌었다: Android 도 Apple 웹 로그인(§114).* (Apple 로그인 설계 §2 비목표, 반목표 "Android 에 눌러도 안 되는 Apple 버튼"). Android 의 Apple 로그인은 웹 로그인 흐름·Services ID·서버 콜백 주소가 더 필요하다. Android 는 Google·로그인 없이 사용 두 버튼이 같은 틀이다.
 - **공룡 오리기.** 종이·공룡이 둘 다 초록이라 밝기로는 못 가르고 색상으로 갈린다(종이 ~70°, 공룡 ~86°). 이마의 노란 하이라이트도 종이 색상대라 '바깥(투명)과 이어진 종이색'만 종이로 본다. 원본 외곽선은 검은 구멍 배경과 같은 색이라 남길 수 없어 오린 모양 둘레에 같은 색 선을 다시 그렸고, 종이에 가려 들쭉날쭉한 뒷머리·목은 손으로 정한 곡선으로 잘랐다. 원본 얼굴 폭이 ~215px 라 3배로 키웠다(모양은 흐린 뒤 키워 계단을 없애고, 선은 3배 해상도에서 그린다).
 
 *main 머지에 따른 고침.* main 의 커뮤니티 탭이 식단과 내 정보 사이에 들어와, 이 브랜치의 `PresentationPolicyTest.swipeFollowsNavigationOrderWithoutWrapping` 탭 목록을 하단 바 순서(5개)로 고치고 `TrexTab.entries` 와 같은지도 본다. 로그인 문구를 찾던 계측 테스트(`SessionFlowTest`)는 워드마크가 없음을 확인하도록 바꿨다.
@@ -3135,3 +3135,29 @@ Validation: Android 778 unit tests and 525 common JVM tests pass; debug and inst
 *검증.* Android 단위 테스트 848개 통과(새 `SignInUiTest` 3개 — 회사별 색·문구·공룡 말투 불변). 에뮬레이터(Medium Phone API 36)에서 계측 테스트 5개 통과 — 새 `SignInScreensUiTest` 3개(그림 하나·세 버튼 같은 높이·워드마크 없음, 로그인 중 버튼 비활성, 로딩 화면이 뒤 버튼을 막음), `RestorationUiTest.logoAndSignInChoicesSurviveNarrowToWideResize`, 재생 앱(`-PpostureReplay`)의 `SessionFlowTest.guideAndLoginKeepArtworkAndActionsVisible`(가이드 → 로그인 → 로그인 없이 사용 → 온보딩). 밝은·어두운 로그인 화면과 로딩 화면 캡처를 눈으로 확인했다. iPhone: Xcode 16.2 로 `ios-ui` Kotlin/Native(iosArm64) 컴파일·기기 빌드·서명(팀 프로비저닝 프로필) 후 iPhone 16 Plus(iOS 27.0.1)에 설치·실행했다(실행 직후 프로세스 살아 있음).
 
 *남은 것.* 실제 Apple·Google 계정으로 로그인해 로딩 화면 → 첫 동기화 질문/홈으로 넘어가는지(실기기, 계정 필요). iPhone 화면 캡처는 이 Mac 의 Xcode 16.2 로 뜨지 않아 iPhone 의 모양은 동현님 눈으로 확인. Android 실기기 설치(연결된 기기 없음 — `app-debug.apk` 만 만들었다).
+
+## §114. 공룡 검정 원 · 메인 탭 스와이프 개선 · Android Apple 로그인 (2026-10-30, `feature/shared-ui-muscle-navigation`)
+
+*요청(동현님 2026-10-29 밤).* "로그인 페이지에서 공룡 누끼가 티나서 주변에 검정색 원으로 감싸", "좌우 화면 드래그로 네비게이션 이동하는거 잘안되는데 확인하고 개선", "안드로이드에도 apple로그인 넣어", 그리고 푸시.
+
+*공룡 — 검정 원 배지(`TrexDinoBadge`).* 밝은 바탕에서는 오린 외곽선·잘린 목이 드러났다. 원래 그림이 검은 구멍 속 공룡이라 검정 원 위에 두면 외곽선이 바탕에 묻힌다. 머리 끝이 그림 반폭의 1.025배까지 가서 그림을 원 지름의 86% 로 두면 원 반지름 88% 안에 든다. 로그인 화면·로그인 로딩 화면 둘 다 같은 배지다.
+
+*탭 스와이프 — 원인(고치기 전 실측).* 실제 앱(에뮬레이터)에서 홈 → 빠르게 튕기기 40dp/60ms·53dp/120ms 는 넘어가지 않고 160dp 를 천천히 끌어야 넘어갔다. 운동 탭에서는 운동 행 위를 오른쪽으로 밀어도 그대로였다. 새 계측 테스트 `MainTabSwipeUiTest` 8개를 고치기 전 코드로 돌리면 `quickShortFlickMovesTab` 만 실패했다. 원인은 셋이다.
+- 손을 뗄 때 거리(64dp)만 보고 속도를 안 봤다 — 사람은 짧게 튕긴다.
+- 미는 동안 화면이 움직이지 않아 제스처가 먹혔는지 알 수 없었다.
+- 운동 행의 삭제 스와이프(`detectHorizontalDragGestures`)가 양방향을 다 잡았다 — 행은 왼쪽으로만 열리는데 오른쪽 밀기도 삼켰다.
+
+*고침.*
+- `swipedTab` 이 속도도 본다: 56dp 이상, 또는 400dp/s 이상으로 같은 방향으로 16dp 이상 튕기면 넘긴다(`TabSwipeThresholds`). 처음 움직임이 세로에 가까우면(|dx| < |dy|) 잡지 않고 목록 스크롤에 남긴다. 미는 동안 화면이 손가락의 35%(최대 40dp, 넘길 탭이 없는 끝에서는 12%)를 따라오고 손을 떼면 돌아온다. 손가락 좌표는 그 이동 전 좌표로 읽는다(`pointerInput` 이 `graphicsLayer` 바깥). 가장자리 예외는 24dp → 16dp.
+- 운동 행은 왼쪽 밀기(또는 이미 열린 행)만 잡는다 — 닫힌 행을 오른쪽으로 밀면 메인 탭 스와이프가 받아 이전 탭으로 간다. 이동량은 소비하기 전에 읽는다(소비한 변화의 `positionChange()` 는 0 — 처음 고친 판이 이것 때문에 행이 10px 만 움직였고, 원래 코드와 같은 실험으로 찾았다).
+
+*Android Apple 로그인(설계 `docs/superpowers/specs/2026-10-29-apple-sign-in-design.md` §9).* Android 는 Apple 웹 로그인을 Custom Tab(`androidx.browser` 1.8.0)으로 연다. Apple 은 결과를 서버 콜백(`POST /api/auth/oauth/apple/callback`)에 form_post 하고, 서버가 `intent://callback?…;scheme=trexapple;package=…` 로 앱에 되돌려 보낸다. `AppleSignInCallbackActivity` 가 state 가 맞을 때만 넘기고 MainActivity 로 돌아간다. 그 뒤는 iPhone 과 같은 `/api/auth/oauth/apple`(nonce 원문). 서버는 대상(aud)이 번들 ID 또는 Services ID 인지 보고, code 교환·연결 끊기를 토큰을 받은 client 로 한다 — `users.apple_client_id`, 웹 code 는 `redirect_uri` 를 같이 보낸다. 창을 닫고 결과 없이 돌아오면 0.7초 뒤 조용히 취소한다. 버튼은 `trex.appleServicesId`·`trex.appleRedirectUri`(gradle.properties)가 둘 다 있을 때만 그린다.
+
+*동작하려면(코드 밖).* 동현님 개발자 계정에 Services ID `com.leedonghyun.trex.signin`(Sign in with Apple, Return URL 위) → 서버 새 jar + `.env` 의 `APPLE_WEB_CLIENT_ID`·`APPLE_WEB_REDIRECT_URI`(`docs/SERVER_SYNC_HANDOFF.md` 10.4). 그 전에는 버튼은 보이지만 Apple 화면(Services ID 없음)이나 서버(대상 불일치 401)에서 실패한다.
+
+*검증.*
+- Android: 단위 테스트 854개 통과. 새 테스트는 `AppleWebAuthTest` 5개(주소·nonce 해시·state·취소·인코딩)와 `PresentationPolicyTest` 의 튕기기 규칙이다.
+- 계측 테스트(데이터 공간을 늘린 임시 에뮬레이터, API 36): `MainTabSwipeUiTest` 8개, `SignInScreensUiTest` 3개, 재생 앱 `SessionFlowTest` 4개 통과. 그중 새 `workoutRowRightSwipeGoesHomeAndLeftSwipeStillDeletes` 는 행 위 오른쪽 밀기 → 홈, 왼쪽 밀기 → 삭제 확인을 본다.
+- 실제 앱(에뮬레이터): Android 로그인 화면에 Apple 버튼이 보인다. 누르면 Chrome 이 열리지만, 새 에뮬레이터의 Chrome 첫 실행 화면(약관 동의) 때문에 Apple 화면까지는 가지 않았다. 창을 닫으면 오류 없이 버튼이 다시 켜진다. state 가 다른 위조 딥링크는 무시되고 Custom Tab 이 닫힌 채 앱으로 돌아온다.
+- 서버: 테스트 115개 통과. 새 테스트는 콜백 4개, 웹 code 교환·client 별 연결 끊기, 웹 대상 검증이다.
+- **아직 못 한 것**: Services ID·서버 배포 뒤의 실제 Apple 로그인(Android 실기기), 실제 손가락으로 해 보는 스와이프 감(에뮬레이터 주입 입력만 했다), iPhone 의 스와이프·배지 모양(설치만 했다).

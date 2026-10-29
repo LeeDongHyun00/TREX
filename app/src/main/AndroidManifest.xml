@@ -42,6 +42,25 @@
             </intent-filter>
         </activity>
 
+        <!--
+            Apple 웹 로그인(Android, 설계 docs/superpowers/specs/2026-10-29-apple-sign-in-design.md §9)이 돌아오는 문.
+            서버 콜백이 intent://callback?…#Intent;scheme=trexapple;package=…;end 로 연다. 화면 없이 결과만 넘기고 닫힌다.
+            아무 웹 페이지나 이 주소를 열 수 있지만, 앱은 자기가 보낸 state 일 때만 받는다(sync/AppleWebSignIn.kt).
+        -->
+        <activity
+            android:name=".AppleSignInCallbackActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="trexapple" android:host="callback" />
+            </intent-filter>
+        </activity>
+
         <!-- 자세 세트 로그(JSONL) 공유 내보내기·업데이트 APK 설치용 (posture/PostureSetLogExport.kt, AppUpdate.kt, res/xml/file_paths.xml) -->
         <provider
             android:name="androidx.core.content.FileProvider"

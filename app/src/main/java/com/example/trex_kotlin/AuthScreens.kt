@@ -87,7 +87,7 @@ fun AuthScreen(
     message: String?,
     onGoogle: () -> Unit,
     onWithoutAccount: () -> Unit,
-    /** iPhone 만 참 — Apple 버튼을 Google 위에(App Store 지침 4.8, 설계 docs/superpowers/specs/2026-10-29-apple-sign-in-design.md). */
+    /** Apple 로그인을 쓸 수 있으면 참(iPhone, 웹 로그인이 설정된 Android) — Apple 버튼을 Google 위에(App Store 지침 4.8, 설계 docs/superpowers/specs/2026-10-29-apple-sign-in-design.md). */
     appleAvailable: Boolean = false,
     onApple: () -> Unit = {},
 ) {

@@ -56,6 +56,7 @@ import com.example.trex_kotlin.posture.RepValidation
 import com.example.trex_kotlin.posture.isOn
 import com.example.trex_kotlin.posture.SpeechCoach
 import com.example.trex_kotlin.sync.AppleCredential
+import com.example.trex_kotlin.sync.AppleWebSignIn
 import com.example.trex_kotlin.sync.SignInException
 import com.example.trex_kotlin.sync.requestGoogleIdToken
 import kotlinx.coroutines.Dispatchers
@@ -412,7 +413,18 @@ private class ExerciseGifView(context: Context, private val movie: Movie) : View
     }
 }
 
-/** Apple 로그인 — Android 에는 없다(설계 docs/superpowers/specs/2026-10-29-apple-sign-in-design.md §2). 버튼을 그리지 않으니 부를 일이 없다. */
+/**
+ * Apple 로그인(Android, 웹 흐름 — 설계 docs/superpowers/specs/2026-10-29-apple-sign-in-design.md §9) — Apple 웹 로그인 창(Custom Tab)을 열고
+ * 서버 콜백이 돌려준 결과를 받는다. Services ID·Return URL 이 없는 빌드는 버튼을 그리지 않아 부를 일이 없다.
+ */
 @Composable
-fun rememberAppleCredentialRequest(): suspend () -> AppleCredential =
-    remember { { throw SignInException.Failed("이 기기에서는 Apple 로그인을 쓸 수 없어요") } }
+fun rememberAppleCredentialRequest(): suspend () -> AppleCredential {
+    val context = LocalContext.current
+    return remember(context) {
+        {
+            val activity = context.findTrexActivity() as? androidx.activity.ComponentActivity
+                ?: throw SignInException.Failed("Apple 로그인을 준비하지 못했어요")
+            AppleWebSignIn.request(activity, BuildConfig.APPLE_SERVICES_ID, BuildConfig.APPLE_REDIRECT_URI)
+        }
+    }
+}

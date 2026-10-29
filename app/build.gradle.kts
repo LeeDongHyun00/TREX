@@ -31,6 +31,9 @@ android {
 
         // 웹 클라이언트 ID 는 비밀값이 아니다(앱에 그대로 들어간다). 비어 있으면 구글 로그인 버튼이 안내 문구만 낸다.
         buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"${trexConfig("trex.googleWebClientId", "")}\"")
+        // Android 의 Apple 로그인(웹 흐름) — Services ID·Return URL 도 비밀값이 아니다. 둘 중 하나라도 비면 Apple 버튼을 그리지 않는다.
+        buildConfigField("String", "APPLE_SERVICES_ID", "\"${trexConfig("trex.appleServicesId", "")}\"")
+        buildConfigField("String", "APPLE_REDIRECT_URI", "\"${trexConfig("trex.appleRedirectUri", "")}\"")
     }
 
     buildTypes {
@@ -99,6 +102,7 @@ dependencies {
     implementation(libs.androidx.credentials)
     implementation(libs.androidx.credentials.play.services)
     implementation(libs.googleid)
+    implementation(libs.androidx.browser)
     testImplementation(libs.junit)
     testImplementation(libs.org.json)
     androidTestImplementation(libs.androidx.junit)

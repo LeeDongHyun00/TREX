@@ -287,7 +287,7 @@ ssh -i $KEY $HOST "cd ~/trex && sed -i 's/\r$//' docker-compose.yml && docker co
 
 ## 10. Apple 로그인 운영 (2026-10-29)
 
-iPhone 의 "Apple로 계속하기"(설계 `docs/superpowers/specs/2026-10-29-apple-sign-in-design.md`). 서버는 `POST /api/auth/oauth/apple` 에서 identity token 을 Apple 공개키로 검증해 `apple_<sub>` 회원을 만들고, 키가 있으면 로그인 때 받은 authorization code 를 refresh token 으로 바꿔 두었다가 **탈퇴 때 Apple 연결을 끊는다**(App Store 탈퇴 규칙). Android 에는 Apple 버튼이 없다.
+iPhone 의 "Apple로 계속하기"(설계 `docs/superpowers/specs/2026-10-29-apple-sign-in-design.md`). 서버는 `POST /api/auth/oauth/apple` 에서 identity token 을 Apple 공개키로 검증해 `apple_<sub>` 회원을 만들고, 키가 있으면 로그인 때 받은 authorization code 를 refresh token 으로 바꿔 두었다가 **탈퇴 때 Apple 연결을 끊는다**(App Store 탈퇴 규칙). Android 는 Apple 웹 로그인으로 같은 API 를 쓴다(10.4, 2026-10-30).
 
 ### 10.1 `.env` 네 값
 > `<…>` 는 자리 표시다 — **꺾쇠까지 지우고 값만** 넣는다(커뮤니티 첫 배포에서 세 번 겪었다).
@@ -315,3 +315,16 @@ ssh -i $KEY $HOST "cd ~/trex && docker compose up -d && sleep 25 && docker compo
 - 키 없이: `curl -s -o /dev/null -w '%{http_code}' -X POST -H 'Content-Type: application/json' -d '{"identityToken":"x","nonce":"n"}' https://trex-api.duckdns.org/api/auth/oauth/apple` → 401(설정이 있으면 토큰이 틀려서, 없으면 설정이 없어서), nonce 를 빼면 400.
 - 동현님 준비 뒤(실기기): iPhone 에서 "Apple로 계속하기" → 설정의 계정 줄이 이메일(가린 전달 주소일 수 있다)이나 "Apple 계정". 설정 → 회원 탈퇴 → 서버 로그에 `Apple 연결 끊기 완료`. iPhone 설정 → Apple ID → "Apple로 로그인" 목록에서 T-REX 가 빠진다.
 - 커뮤니티 관리자로 Apple 계정을 쓰려면 `COMMUNITY_ADMIN_LOGIN_IDS` 에 `apple_<sub>` 를 쉼표로 더한다(loginId 는 9.1 ⑦ 과 같은 방법).
+
+### 10.4 Android Apple 로그인 — 웹 흐름 (2026-10-30)
+설계 `docs/superpowers/specs/2026-10-29-apple-sign-in-design.md` §9. 앱이 Apple 웹 로그인(Custom Tab)을 열면 Apple 이 결과를 **`POST /api/auth/oauth/apple/callback`** 으로 form_post 하고, 서버는 `303 intent://callback?…#Intent;scheme=trexapple;package=…;end` 로 앱에 돌려보낸다. 앱은 iPhone 과 같은 `/api/auth/oauth/apple` 로 로그인한다. 서버 코드가 바뀌었으니 **새 jar 배포가 필요하다**(9.2 순서) — `users.apple_client_id` 열은 ddl-auto 가 더한다.
+
+| 변수 | 값 | 비밀값 |
+|---|---|---|
+| `APPLE_WEB_CLIENT_ID` | 동현님이 만든 Services ID — `com.leedonghyun.trex.signin`(설계 §9) | 아니요 |
+| `APPLE_WEB_REDIRECT_URI` | `https://trex-api.duckdns.org/api/auth/oauth/apple/callback` — 앱 `trex.appleRedirectUri` 와 글자까지 같게 | 아니요 |
+| `APPLE_ANDROID_PACKAGE` | 비우면 `com.example.trex_kotlin` | 아니요 |
+
+- 키 셋(10.1)은 그대로 쓴다. Services ID 가 같은 Primary App ID(`com.leedonghyun.trex.ios`) 아래라 같은 키로 client_secret 을 만든다 — sub 만 Services ID 다.
+- `APPLE_WEB_CLIENT_ID` 가 비면 Android 토큰은 대상 불일치로 401(iPhone 은 그대로).
+- 확인: `curl -s -o /dev/null -w '%{redirect_url}\n' -X POST -d 'state=t&error=user_cancelled_authorize' https://trex-api.duckdns.org/api/auth/oauth/apple/callback` → `intent://callback?state=t&error=user_cancelled_authorize#Intent;scheme=trexapple;package=com.example.trex_kotlin;end`. 실기기: Android 로그인 화면 → "Apple로 계속하기" → Apple 화면 → 앱으로 돌아와 로딩 화면 → 홈. 탈퇴하면 서버 로그 `Apple 연결 끊기 완료`.

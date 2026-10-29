@@ -17,6 +17,8 @@ litert = "1.2.0"
 exifinterface = "1.3.7"
 credentials = "1.6.0"
 googleid = "1.2.1"
+# Android 의 Apple 로그인(웹 흐름) — Apple 웹 로그인 창을 앱 안의 Custom Tab 으로 연다
+browser = "1.8.0"
 # iPhone 화면(ios-ui) — Android composeBom 의 ui/foundation 1.11.0 과 맞춘다(§108).
 # material3 1.9.0 은 androidx material3 1.4.0(Android 와 같은 판)의 멀티플랫폼 판이다.
 composeMultiplatform = "1.11.1"
@@ -59,6 +61,7 @@ androidx-exifinterface = { group = "androidx.exifinterface", name = "exifinterfa
 androidx-credentials = { group = "androidx.credentials", name = "credentials", version.ref = "credentials" }
 androidx-credentials-play-services = { group = "androidx.credentials", name = "credentials-play-services-auth", version.ref = "credentials" }
 googleid = { group = "com.google.android.libraries.identity.googleid", name = "googleid", version.ref = "googleid" }
+androidx-browser = { group = "androidx.browser", name = "browser", version.ref = "browser" }
 kotlinx-datetime = { group = "org.jetbrains.kotlinx", name = "kotlinx-datetime", version.ref = "kotlinxDatetime" }
 kotlinx-atomicfu = { group = "org.jetbrains.kotlinx", name = "atomicfu", version.ref = "atomicfu" }
 androidx-lifecycle-viewmodel = { group = "androidx.lifecycle", name = "lifecycle-viewmodel", version.ref = "lifecycle" }
