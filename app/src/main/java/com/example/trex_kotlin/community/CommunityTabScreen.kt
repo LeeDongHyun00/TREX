@@ -62,20 +62,13 @@ fun CommunityTabScreen(app: AppViewModel) {
         CommunityGate.Loading -> LoadingNotice(app)
         CommunityGate.NeedNickname -> NicknameSetup(app)
         CommunityGate.NeedTerms -> TermsConsent(app)
-        is CommunityGate.Ready, is CommunityGate.Suspended -> CommunityHome(app, gate)
-    }
-}
-
-/** 피드 자리 — 계획 3 Task 3 에서 FeedScreen 으로 바꾼다. */
-@Composable
-private fun CommunityHome(app: AppViewModel, gate: CommunityGate) {
-    val c = Trex.c
-    LazyColumn(Modifier.fillMaxSize(), contentPadding = tabContentPadding, verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        item { Text("커뮤니티", color = c.text, fontSize = 30.sp, fontWeight = FontWeight.SemiBold) }
-        item { Text(app.communityMe?.profile?.nickname.orEmpty(), color = c.text2, fontSize = 14.sp) }
-        if (gate is CommunityGate.Suspended) item {
-            Text("이용이 정지된 계정이에요. 글은 볼 수 있지만 쓸 수 없어요.", color = c.err, fontSize = 14.sp)
-        }
+        is CommunityGate.Ready, is CommunityGate.Suspended -> FeedScreen(
+            app = app,
+            gate = gate,
+            onCompose = {}, // Task 5 글쓰기
+            onOpenPost = {}, // Task 4 글 상세
+            onOpenProfile = {}, // Task 6 프로필
+        )
     }
 }
 

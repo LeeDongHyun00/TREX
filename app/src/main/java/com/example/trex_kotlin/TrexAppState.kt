@@ -3,6 +3,7 @@ package com.example.trex_kotlin
 import com.example.trex_kotlin.community.CommunityApi
 import com.example.trex_kotlin.community.CommunityGate
 import com.example.trex_kotlin.community.CommunityMe
+import com.example.trex_kotlin.community.FeedController
 import com.example.trex_kotlin.community.communityGate
 import com.example.trex_kotlin.sync.ApiException
 import com.example.trex_kotlin.sync.AuthAccount
@@ -262,6 +263,25 @@ class AppViewModel(private val platform: AppPlatform) : ViewModel() {
     }
 
     fun clearCommunityMessage() { communityMessage = null }
+
+    /** 전체 피드 — 탭을 오가도 남는다. 계정이 바뀌면 비운다(좋아요 표시가 앞 사람 것이 되지 않게). */
+    val communityFeed = FeedController(
+        load = { before -> community.feed(before) },
+        setLike = { id, liked -> if (liked) community.like(id) else community.unlike(id) },
+        scope = viewModelScope,
+        now = ::nowMillis,
+    )
+    private var communityFeedOwner: String? = null
+
+    /** 피드를 보이기 전 — 계정이 바뀌었으면 비우고, 받은 적이 없거나 사진 주소가 곧 만료되면 새로 받는다. */
+    suspend fun refreshFeedIfNeeded() {
+        val loginId = account?.loginId ?: return
+        if (communityFeedOwner != loginId) {
+            communityFeed.reset()
+            communityFeedOwner = loginId
+        }
+        if (communityFeed.state.isStale(nowMillis())) communityFeed.refresh()
+    }
 
     /** 회원 탈퇴 — 서버의 계정과 백업을 지운다. 이 기기의 기록은 남는다. */
     fun deleteAccount(onDone: () -> Unit) {
