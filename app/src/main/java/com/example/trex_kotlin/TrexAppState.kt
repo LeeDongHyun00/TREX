@@ -115,8 +115,14 @@ class AppViewModel(private val platform: AppPlatform) : ViewModel() {
 
     fun clearAuthMessage() { authMessage = null }
 
-    /** "로그인 없이 사용". 나중에 설정에서 계정을 연결할 수 있다. */
-    fun continueWithoutAccount() = completeLogin()
+    /**
+     * "로그인 없이 사용". 나중에 설정에서 계정을 연결할 수 있다. 시작 화면의 로그인 안내("다른 계정 연결을 취소했어요" 등)는
+     * 여기서 지운다 — 남겨 두면 설정·커뮤니티의 계정 칸에 그대로 보였다(10-29 실기기).
+     */
+    fun continueWithoutAccount() {
+        authMessage = null
+        completeLogin()
+    }
 
     /**
      * "Google로 계속하기" — 로그인 화면과 설정의 계정 연결이 같이 쓴다. [requestIdToken] 은 플랫폼의 계정 선택 화면이다
