@@ -128,10 +128,13 @@ class PostApiTest extends CommunityApiTestSupport {
     }
 
     @Test
-    void 일분_안에_두_번째_글은_429_24시간_31번째도_429() throws Exception {
+    void 일분_안에_네_번째_글은_429_24시간_31번째도_429() throws Exception {
+        // 1분 3개(사용자 결정 2026-10-29 — 사진 글 뒤 바로 오운완을 올리면 1분 1개에 막혔다)
         String auth = ready(uniq());
         createPost(auth, "첫 글").andExpect(status().isCreated());
-        rawPost(auth, "바로 또").andExpect(status().isTooManyRequests());
+        rawPost(auth, "바로 둘째").andExpect(status().isCreated());
+        rawPost(auth, "바로 셋째").andExpect(status().isCreated());
+        rawPost(auth, "바로 넷째").andExpect(status().isTooManyRequests());
 
         String busy = ready(uniq());
         for (int i = 0; i < 30; i++) createPost(busy, "글 " + i).andExpect(status().isCreated());

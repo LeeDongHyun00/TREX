@@ -53,6 +53,8 @@ public class PostService {
     public static final long MAX_IMAGE_BYTES = 2L * 1024 * 1024;
     public static final int PAGE_SIZE = 20;
     private static final int MAX_PER_DAY = 30;
+    /** 1분에 3개 — 사진 글 뒤 바로 오운완을 올려도 막히지 않게(사용자 결정 2026-10-29, 처음엔 1개). */
+    private static final int MAX_PER_MINUTE = 3;
 
     private final PostRepository posts;
     private final PostLikeRepository likes;
@@ -101,7 +103,7 @@ public class PostService {
         }
         if (text != null && bannedWords.contains(text)) throw new InvalidRequestException("쓸 수 없는 표현이 있어요");
         Instant now = clock.instant();
-        if (posts.countByAuthorIdAndCreatedAtAfter(me.getId(), now.minus(Duration.ofMinutes(1))) >= 1) {
+        if (posts.countByAuthorIdAndCreatedAtAfter(me.getId(), now.minus(Duration.ofMinutes(1))) >= MAX_PER_MINUTE) {
             throw new TooManyRequestsException("잠시 뒤에 다시 올려 주세요");
         }
         if (posts.countByAuthorIdAndCreatedAtAfter(me.getId(), now.minus(Duration.ofHours(24))) >= MAX_PER_DAY) {

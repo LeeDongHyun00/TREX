@@ -98,7 +98,7 @@ public abstract class CommunityApiTestSupport {
         return mvc.perform(req.header("Authorization", auth));
     }
 
-    /** 글 쓰기 — 본문이 null 이면 보내지 않는다. 같은 사람이 이어 쓰도록 시계를 2분 넘긴다(1분 1개 제한). */
+    /** 글 쓰기 — 본문이 null 이면 보내지 않는다. 같은 사람이 이어 쓰도록 시계를 2분 넘긴다(1분 3개 제한). */
     protected ResultActions createPost(String auth, String body, byte[]... images) throws Exception {
         clock.advance(Duration.ofMinutes(2));
         MockMultipartHttpServletRequestBuilder req = multipart("/api/community/posts");
