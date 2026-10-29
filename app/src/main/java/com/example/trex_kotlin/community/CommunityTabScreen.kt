@@ -41,6 +41,8 @@ import com.example.trex_kotlin.nowMillis
 import com.example.trex_kotlin.Trex
 import com.example.trex_kotlin.Cta
 import com.example.trex_kotlin.DField
+import com.example.trex_kotlin.AppleSignInButton
+import com.example.trex_kotlin.rememberAppleCredentialRequest
 import com.example.trex_kotlin.rememberGoogleIdTokenRequest
 import com.example.trex_kotlin.sync.ApiException
 import com.example.trex_kotlin.sync.NetworkException
@@ -186,6 +188,7 @@ private fun CommunityNotice(title: String, body: String) {
 private fun SignInNotice(app: AppViewModel) {
     val c = Trex.c
     val requestIdToken = rememberGoogleIdTokenRequest()
+    val requestAppleCredential = rememberAppleCredentialRequest()
     NoticeColumn {
         NoticeCard {
             Icon(Icons.Rounded.Forum, null, tint = c.primaryText, modifier = Modifier.size(28.dp))
@@ -194,6 +197,7 @@ private fun SignInNotice(app: AppViewModel) {
                 "오운완·루틴·대회 소식을 나눠요. 계정을 연결하면 운동·식단 기록도 계정에 백업돼요. 다른 기능은 계정 없이도 그대로예요.",
                 color = c.text2, fontSize = 14.sp, lineHeight = 21.sp,
             )
+            if (app.appleSignInAvailable) AppleSignInButton(onClick = { if (!app.authBusy) app.continueWithApple(requestAppleCredential) })
             Cta(
                 text = if (app.authBusy) "연결 중…" else "Google 계정 연결",
                 onClick = { app.continueWithGoogle(requestIdToken) },

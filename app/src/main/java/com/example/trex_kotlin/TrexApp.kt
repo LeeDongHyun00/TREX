@@ -122,6 +122,7 @@ private fun TrexAppContent(app: AppViewModel) {
         val c = Trex.c
         TrexSystemBars(c)
         val requestGoogleIdToken = rememberGoogleIdTokenRequest()
+        val requestAppleCredential = rememberAppleCredentialRequest()
 
         // 처음 연결한 계정의 서버에도 이 기기에도 기록이 있으면 어느 쪽을 남길지 묻는다(로그인 화면·설정 어디서 연결했든)
         if (app.askFirstSync) FirstSyncDialog(onKeepLocal = { app.resolveFirstSync(keepLocal = true) }, onUseServer = { app.resolveFirstSync(keepLocal = false) })
@@ -414,6 +415,8 @@ private fun TrexAppContent(app: AppViewModel) {
                             message = app.authMessage,
                             onGoogle = { app.continueWithGoogle(requestGoogleIdToken) },
                             onWithoutAccount = { app.continueWithoutAccount() },
+                            appleAvailable = app.appleSignInAvailable,
+                            onApple = { app.continueWithApple(requestAppleCredential) },
                             )
 
                             RootRoute.Onboarding -> OnboardingScreen(onDone = { profile -> app.completeOnboarding(profile) })

@@ -141,9 +141,14 @@ fun ProfileTabScreen(app: AppViewModel, onOpenRecord: () -> Unit, onLogout: () -
 private fun AccountGroup(app: AppViewModel) {
     val c = Trex.c
     val requestGoogleIdToken = rememberGoogleIdTokenRequest()
+    val requestAppleCredential = rememberAppleCredentialRequest()
     val account = app.account
     SettingsGroup {
         if (account == null) {
+            if (app.appleSignInAvailable) AppleSignInButton(
+                onClick = { if (!app.authBusy) app.continueWithApple(requestAppleCredential) },
+                modifier = Modifier.padding(start = 18.dp, end = 18.dp, top = 16.dp),
+            )
             SettingsRow("Google 계정 연결", Icons.Rounded.CloudUpload, if (app.authBusy) "연결 중…" else null, onClick = {
                 app.continueWithGoogle(requestGoogleIdToken)
             })
