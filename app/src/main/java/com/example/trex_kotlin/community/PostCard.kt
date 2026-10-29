@@ -2,6 +2,7 @@ package com.example.trex_kotlin.community
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -35,6 +36,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -43,12 +45,19 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.FilterQuality
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.trex_kotlin.AssetImageCache
+import com.example.trex_kotlin.rememberAssetImageDecoder
 import com.example.trex_kotlin.Trex
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
+import kotlinx.coroutines.withContext
 
 /** 카드 ⋯ 메뉴 한 줄 — [destructive] 면 빨간 글자(삭제·차단). */
 class PostMenuItem(val label: String, val destructive: Boolean = false, val onClick: () -> Unit)
@@ -106,6 +115,23 @@ fun PostCard(
     }
 }
 
+/** 기본 프로필 그림 — 출처·라이선스는 같은 폴더의 NOTICE.txt·CHROMIUM-LICENSE.txt. */
+internal const val DEFAULT_AVATAR = "community/trex_avatar.png"
+
+private val defaultAvatarCache = AssetImageCache(1)
+
+/** 기본 공룡 — 88px 픽셀 그림이라 줄이지 않고 읽어 픽셀 그대로 키운다(흐리게 번지지 않게). */
+@Composable
+private fun DefaultAvatar(modifier: Modifier) {
+    val decoder = rememberAssetImageDecoder()
+    val bitmap by produceState(defaultAvatarCache.get(DEFAULT_AVATAR)) {
+        if (value == null) value = withContext(Dispatchers.IO) {
+            decoder.decode(DEFAULT_AVATAR, 1).also { defaultAvatarCache.put(DEFAULT_AVATAR, it) }
+        }
+    }
+    bitmap?.let { Image(it, contentDescription = null, modifier = modifier, contentScale = ContentScale.Fit, filterQuality = FilterQuality.None) }
+}
+
 /** 하트 빨강 — 테마의 오류 색([com.example.trex_kotlin.TrexColors.err])은 경고 뜻이라 따로 둔다. */
 private val HeartRed = Color(0xFFED4956)
 
@@ -117,9 +143,9 @@ internal fun Avatar(profile: CommunityProfile, sizeDp: Int) {
     if (url != null) {
         RemoteImage(url, contentDescription = null, modifier = modifier, maxDimension = 160)
     } else {
-        // 기본 그림 — 공유 코드에 공룡 아바타 자산이 아직 없어 닉네임 첫 글자(설계 §3 은 공룡 그림)
+        // 기본 그림 — Chromium 오프라인 공룡(BSD-3, assets/community/NOTICE.txt). 회색 공룡이 어두운 테마에서도 보이게 밝은 바탕.
         Box(modifier.background(c.primaryWash), contentAlignment = Alignment.Center) {
-            UserText(profile.nickname.take(1), color = c.primaryText, fontSize = (sizeDp * 0.42f).sp, fontWeight = FontWeight.SemiBold)
+            DefaultAvatar(Modifier.padding((sizeDp * 0.18f).dp).fillMaxSize())
         }
     }
 }

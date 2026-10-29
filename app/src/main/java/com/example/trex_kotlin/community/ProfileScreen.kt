@@ -40,6 +40,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -80,6 +81,7 @@ fun ProfileScreen(
     var action by remember { mutableStateOf<CommunityAction?>(null) }
     var sheet by remember { mutableStateOf<String?>(null) } // nickname | blocks | reports
     val grid = rememberLazyGridState()
+    val uri = LocalUriHandler.current
     val profile = if (mine) app.communityMe?.profile ?: initial else user?.profile ?: initial
 
     fun fail(e: Exception) {
@@ -165,6 +167,10 @@ fun ProfileScreen(
                             },
                         )
                     }
+                    if (mine && profile.avatarUrl == null) Text(
+                        "기본 프로필 그림: Chromium 공룡 · BSD 라이선스", color = c.text3, fontSize = 11.sp,
+                        modifier = Modifier.clickable { uri.openUri(CHROMIUM_LICENSE_URL) },
+                    )
                     message?.let { Banner(it, c.surface2, c.text, onClose = { message = null }) }
                     if (blocked) Text("차단한 사용자예요. ⋯ 에서 차단을 풀면 글이 다시 보여요.", color = c.text2, fontSize = 14.sp)
                     else if (posts.state.posts.isEmpty() && posts.state.loadedAt != null) Text("아직 올린 글이 없어요", color = c.text2, fontSize = 14.sp, modifier = Modifier.padding(top = 24.dp))
@@ -331,6 +337,9 @@ private fun MyReportsDialog(app: AppViewModel, onDismiss: () -> Unit) {
         confirmButton = { TextButton(onClick = onDismiss) { Text("닫기") } },
     )
 }
+
+/** 기본 프로필 그림의 라이선스(BSD-3) — 재배포 조건이라 앱 안에서 볼 수 있게 둔다. */
+internal const val CHROMIUM_LICENSE_URL = "https://chromium.googlesource.com/chromium/src/+/main/LICENSE"
 
 internal fun reportTargetLabel(target: ReportTarget): String = when (target) {
     ReportTarget.POST -> "글"
