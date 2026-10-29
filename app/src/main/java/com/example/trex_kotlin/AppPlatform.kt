@@ -1,6 +1,7 @@
 package com.example.trex_kotlin
 
 import com.example.trex_kotlin.posture.SetSelfLabel
+import com.example.trex_kotlin.sync.BinaryTransport
 import com.example.trex_kotlin.sync.HttpTransport
 import com.example.trex_kotlin.trainingload.LoadLedger
 import com.example.trex_kotlin.trainingload.LoadSet
@@ -16,11 +17,17 @@ interface AppPlatform {
     /** 서버 API 의 HTTP 전송. */
     val http: HttpTransport
 
+    /** 바이트 그대로의 HTTP 전송 — 커뮤니티 사진 올리기·받기. */
+    val binary: BinaryTransport
+
     /** 서버 주소. 비어 있으면 계정 기능을 쓰지 않는다. */
     val apiBaseUrl: String
 
     /** 구글 로그인의 웹 클라이언트 ID. 비어 있으면 구글 로그인을 쓰지 않는다. */
     val googleWebClientId: String
+
+    /** Apple 로그인을 쓸 수 있는가 — iPhone 만 참. Android 는 Apple 버튼을 그리지 않는다(설계 §2 비목표). */
+    val appleSignInAvailable: Boolean
 
     fun muscleLoadDatabase(): MuscleLoadDatabase
 

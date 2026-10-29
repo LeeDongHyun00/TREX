@@ -18,6 +18,7 @@ class FoodPipelineTest {
         override val image: ImageBitmap get() = error("판정 흐름은 화면 그림을 쓰지 않는다")
         override fun scaledToMax(maxDimension: Int): FoodPhoto = this
         override fun crop(left: Int, top: Int, width: Int, height: Int): FoodPhoto = this
+        override fun jpeg(maxDimension: Int, quality: Int): ByteArray = ByteArray(0)
     }
 
     private val labels = listOf("#배경", "김치", "밥", "된장국", "콩나물", "현미밥", "깍두기")

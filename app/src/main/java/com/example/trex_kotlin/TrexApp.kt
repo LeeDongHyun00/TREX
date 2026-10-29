@@ -25,11 +25,16 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import com.example.trex_kotlin.community.CommunityTabScreen
+import com.example.trex_kotlin.community.ProvideRemoteImages
+import com.example.trex_kotlin.community.CommunityGate
+import com.example.trex_kotlin.community.workoutCardData
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.rounded.BarChart
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.FitnessCenter
+import androidx.compose.material.icons.rounded.Forum
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.MoreHoriz
 import androidx.compose.material.icons.rounded.Person
@@ -107,10 +112,17 @@ fun Workout.setDraft(): SetDraft {
 /** 앱 상태는 플랫폼이 만들어 넘긴다(§108) — Android 는 인자 없는 `TrexApp()`(PlatformUi.kt), iPhone 은 ios-ui. */
 @Composable
 fun TrexApp(app: AppViewModel) {
+    // 커뮤니티 원격 사진 로더는 앱에 하나 — 화면마다 두면 캐시가 곱해지고 만료된 주소로 다시 받다 실패한다(계획 2 리뷰)
+    ProvideRemoteImages(app.imageTransport) { TrexAppContent(app) }
+}
+
+@Composable
+private fun TrexAppContent(app: AppViewModel) {
     TrexAppTheme(mode = app.themeMode) {
         val c = Trex.c
         TrexSystemBars(c)
         val requestGoogleIdToken = rememberGoogleIdTokenRequest()
+        val requestAppleCredential = rememberAppleCredentialRequest()
 
         // 처음 연결한 계정의 서버에도 이 기기에도 기록이 있으면 어느 쪽을 남길지 묻는다(로그인 화면·설정 어디서 연결했든)
         if (app.askFirstSync) FirstSyncDialog(onKeepLocal = { app.resolveFirstSync(keepLocal = true) }, onUseServer = { app.resolveFirstSync(keepLocal = false) })
@@ -403,6 +415,8 @@ fun TrexApp(app: AppViewModel) {
                             message = app.authMessage,
                             onGoogle = { app.continueWithGoogle(requestGoogleIdToken) },
                             onWithoutAccount = { app.continueWithoutAccount() },
+                            appleAvailable = app.appleSignInAvailable,
+                            onApple = { app.continueWithApple(requestAppleCredential) },
                             )
 
                             RootRoute.Onboarding -> OnboardingScreen(onDone = { profile -> app.completeOnboarding(profile) })
@@ -417,6 +431,18 @@ fun TrexApp(app: AppViewModel) {
                             fatigueContent = {
                                 SessionMuscleMap(app, loadSessionId)
                             },
+                            // 계정이 있으면 보인다 — 커뮤니티 상태를 아직 안 받았거나 닉네임·동의 전이어도, 탭이 그 단계를 마친 뒤 카드 글쓰기를 연다
+                            onShare = if (app.communityGate.let { it !is CommunityGate.Suspended && it != CommunityGate.NoLogin && it != CommunityGate.NotSignedIn }) {
+                                {
+                                    val plan = recordableWorkouts()
+                                    val elapsed = progress.workDurations(steps)
+                                    // 완료 화면과 같은 kcal 식(SessionCompleteScreen)
+                                    val kcal = plan.sumOf { it.estimatedCalories(elapsed[it.id] ?: 0) }
+                                    app.pendingWorkoutCard = workoutCardData(plan, sessionElapsed, kcal, localToday())
+                                    exitSession()
+                                    selectedTab = TrexTab.Community
+                                }
+                            } else null,
                             onDone = { exitSession() },
                             )
 
@@ -614,6 +640,8 @@ private fun MainTabs(
                     onOpenManual = { slot -> sheet = MainSheet.Manual(slot) },
                 )
 
+                TrexTab.Community -> CommunityTabScreen(app = app)
+
                 TrexTab.Profile -> ProfileTabScreen(
                     app = app,
                     onOpenRecord = onOpenRecord,
@@ -628,7 +656,8 @@ private fun MainTabs(
             selectedTab = selectedTab,
             expanded = navExpanded,
             onTab = { tab ->
-                if (tab == selectedTab && tab != TrexTab.Home) {
+                // 홈·커뮤니티는 다시 눌러도 리모컨으로 바뀌지 않는다(리모컨 동작이 없다)
+                if (tab == selectedTab && tab != TrexTab.Home && tab != TrexTab.Community) {
                     navExpanded = !navExpanded
                 } else {
                     onTabSelected(tab)
@@ -704,6 +733,7 @@ private fun MorphNav(
             TrexTab.Home -> Icons.Rounded.Home
             TrexTab.Workout -> Icons.Rounded.FitnessCenter
             TrexTab.Diet -> Icons.Rounded.Restaurant
+            TrexTab.Community -> Icons.Rounded.Forum
             TrexTab.Profile -> Icons.Rounded.Person
         }
         if (!remoteOn) {

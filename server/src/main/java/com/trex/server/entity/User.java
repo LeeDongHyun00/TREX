@@ -43,6 +43,11 @@ public class User {
     @Column(name = "provider_id")
     private String providerId;
 
+    // Apple 회원의 refresh token — 탈퇴 때 Apple 연결을 끊는 데 쓴다(App Store 탈퇴 규칙). 비밀값이라 응답·로그에 내보내지 않는다.
+    // 서버에 Apple 키가 없을 때 가입했으면 비어 있고, 그때는 연결 끊기를 건너뛴다.
+    @Column(name = "apple_refresh_token", length = 1024)
+    private String appleRefreshToken;
+
     @Builder
     public User(String loginId, String passwordHash, String name, String email, AuthProvider provider, String providerId) {
         this.loginId = loginId;
@@ -51,5 +56,10 @@ public class User {
         this.email = email;
         this.provider = provider == null ? AuthProvider.LOCAL : provider;
         this.providerId = providerId;
+    }
+
+    /** Apple 로그인 때 code 를 바꿔 받은 refresh token 을 기억한다(다시 로그인하면 새 것으로). */
+    public void rememberAppleRefreshToken(String refreshToken) {
+        this.appleRefreshToken = refreshToken;
     }
 }

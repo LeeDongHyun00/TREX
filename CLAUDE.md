@@ -48,7 +48,7 @@ Android Kotlin/Jetpack Compose 운동·식단 앱. 핵심 기능은 **카메라 
 
 - ⚠️ **새로 클론했다면 먼저** `chmod +x gradlew` — git 에 등록된 모드가 100644 라 `./gradlew` 가 Permission denied 로 실패한다(실행비트 변경이 아직 미커밋).
 - macOS 에 `timeout` 명령이 없다. gradle 은 수 분 걸릴 수 있다.
-- 유닛 테스트에서 **`org.json` 은 스텁**이다 — 직렬화 코드는 직접 문자열로 만든다(`SetLogJson`, `SetLabelStore` 가 그렇게 돼 있다).
+- 유닛 테스트의 `org.json` 은 **실제 구현**이다(2026-10-29, `testImplementation(libs.org.json)` — 커뮤니티 API 파싱 검증). 그 전에는 Android 스텁이라 직렬화 코드를 직접 문자열로 만들었다(`SetLogJson`, `SetLabelStore` 가 그 흔적이고 그대로 둔다).
 - 주석·KDoc·사용자 문구는 **한국어**. 판정·코칭 문장은 존댓말 평서체, 공룡 말투("~해룡")는 완료 화면 제목류에만.
 - `posture` 패키지는 앱 최상위 패키지에 의존하지 않는다 — 단 **엔진 파일에 한한다**. 개발용 화면 `BaselineGuideScreen`·`PostureLabScreen` 은 테마 상수 때문에 이미 예외다.
 

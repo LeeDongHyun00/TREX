@@ -139,7 +139,7 @@ private class AndroidFoodModels(private val context: Context) : FoodModels {
             return null
         }
         labels = context.assets.open(LABELS_PATH).bufferedReader().readLines()
-            .map { it.trim().removePrefix("﻿") } // 첫 줄 UTF-8 BOM 제거
+            .map { it.trim().removePrefix("\uFEFF") } // 첫 줄 UTF-8 BOM 제거
             .filter { it.isNotEmpty() }
         val engine = Interpreter(model, Interpreter.Options().apply { setNumThreads(NUM_THREADS) })
         // preprocess가 float32 입력을 전제한다. Ultralytics의 INT8 export도 입출력은 float32로

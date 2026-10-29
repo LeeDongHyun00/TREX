@@ -1473,6 +1473,8 @@ JVM 244건 통과: 모든 카메라 종목에서 방향 문구가 5초 안내보
 
 *재생(폰 8세트·MM-Fit 59세트).* 11:54 D 세트: '몸에서 떨어짐' 코칭 8/10(13·14·15·16·17·19·20·21회), 차단 4(14·15·16·19회), 초반 4·5회(+0.14·+0.18)는 기준이 서는 중이라 놓침; 정상 10~12·18회 −0.02~0.00; '앞 이탈' 오탐 0(벌림이 앞 축에서는 −로 읽힌다); 정면으로 돌아선 6·7회 '옆 벌림' 검출(앞쪽 반구 기준). MM-Fit 사선 반복: '몸에서 떨어짐' 85회·'앞 이탈' 50회 위반 0. 정면 '옆 벌림': 09:59 5·6·10회, 15:33 5·12·13회, 9/25 11:06 7·8회가 새로 걸린다(원값 0.33~0.60 — 같은 세트 다른 반복 0.21~0.26, 모집단 정상 p95 0.29) — 첫 상단 오염이 사라진 결과. MM-Fit 정면 판정 88회 코칭 5·차단 2(차단 2는 종전과 같고, 코칭 2건은 종전에 기준이 없어 판정 못 하던 반복). 15:34 13회 정답 세트 판정 불변. 유닛 411건.
 
+- **기본 프로필 그림은 Chromium 오프라인 공룡**(사용자 결정 2026-10-29). 2배 스프라이트에서 서 있는 프레임(88×94)만 잘라 `assets/community/` 에 BSD-3 전문·NOTICE 와 함께 둔다. 재배포 조건이라 내 프로필(사진이 없을 때)에 출처 링크를 보인다. 픽셀 그림이라 원본 크기로 읽고 `FilterQuality.None` 으로 키운다.
+
 *남은 것.* 폰 지정 오류 세트 — D·B 각각 정상·벌림·팔꿈치 앞·팔꿈치 뒤 10회(회 번호 기록), 옆 뷰 앞뒤 beta 확정. AIHub 수치를 앱 창 통계(수축 구간 중앙값·같은 기준)로 재측정. 세트 내내 벌리고 하면 '몸에서 떨어짐' 기준이 벌린 자세다(본인 기준의 한계).
 
 **§62c 후속 8 — 사선 촬영 안내에 각도 · '0회 → 2회' 원인 · '처음부터 벌림' 방지 설계 (2026-09-26 12:49, 사용자 요청)**
@@ -3065,13 +3067,31 @@ APK 서명 검증과 preview.6의 인증서 일치, 패키지·버전·가이드
 
 *§108g — 플랭크 목표는 시간만(2026-10-24).* 사용자 결정 "플랭크는 횟수 선택불가하게 하고 시간만 선택가능하도록". *왜:* 플랭크는 버티는 운동이라 엔진이 시간만 적립한다(`PlankHold`, '플랭크 시간 = 카메라가 확인한 시간'). 횟수 목표면 유지 시계의 목표 시간이 0 으로 들어가(PostureLive `ensureSet`) 세트가 시간으로 끝나지 않는다. *무엇:* 시간 전용 종목 `TIME_ONLY_EXERCISES = {플랭크}`(`WorkoutSession.kt`) — 카탈로그에서 버티는 운동은 플랭크 하나다. 운동 편집 시트는 이 종목에서 '횟수 | 시간' 탭을 보이지 않고 목표 바퀴는 시간(초)이다 — 처음 넣었던 안내 한 줄("버티는 운동이라 시간으로만 정해요.")은 같은 날 사용자 요청으로 뺐다. 이전 편집·동기화로 남은 횟수 목표는 계획을 불러올 때(`TrexStore.loadPlan`)와 바꿀 때(`updatePlan`) 카탈로그 기본 45초로 바꾼다 — 12회를 12초로 읽지 않는다. 세트·휴식은 그대로. 편집 시트·앱 상태가 공유 목록에 있어 iPhone 도 같다. *검증:* `WorkoutEditorValuesTest.plankKeepsOnlyTimeGoals`(남은 횟수 → 45초·표시 문자열·휴식 보존, 시간 목표·다른 종목은 그대로).
 
-## §109. Android·iOS 공용 근육 목록·2D 근육도·메인 탭 스와이프 (2026-10-28)
+## §109. 커뮤니티 탭 화면 (2026-10-29, `feature/community-app-screens`, 설계 `docs/superpowers/specs/2026-10-28-community-design.md`)
+
+*요청·결정.* 팀이 인스타그램형 커뮤니티를 별도 탭으로 두기로 했다(2026-10-28). 글 종류는 나누지 않고, 글만 올리기도 되며, 사진은 서버에 저장한다(사용자 결정). 피드 순서(전체 최신순), 글당 사진 5장, 탭 위치(홈 · 운동 · 식단 · **커뮤니티** · 내 정보), 보기·쓰기 모두 서버 계정 필요는 설계 §3 의 판단이다. 서버는 계획 1(PR #28), 전송·API·사진 로더는 계획 2(PR #29), 화면은 계획 3 이다.
+
+*구조.* 화면 파일은 `community/` 에 두고 전부 `ios-ui/android-sources.txt` 에 올린다(§108). 계산·상태 변화는 순수 값으로 떼어 JVM 테스트로 잠근다 — `CommunityGate`(진입: 로그인 설정 없음 → 계정 없음 → 로딩 → 닉네임 → 이용규칙 동의 → 정지/정상), `FeedState`(쪽 붙이기·중복 제거·좋아요·만료), `CommentsState`, `ComposeState`, `workoutCardData`, `postMenu`. 서버 호출 순서는 `FeedController`(전체 피드는 `AppViewModel.communityFeed`, 프로필 글 목록은 탭 안 화면 쌓기가 든다). 탭 안의 상세·글쓰기·프로필은 단순 스택이고 뒤로 가면 하나씩 닫는다.
+
+*근거.*
+- **좋아요는 바라는 값과 서버 값을 따로 둔다.** 누르면 화면이 바로 바뀌고, 글마다 한 번에 하나만 보내며, 돌아오면 아직 다른지 다시 본다. 빠르게 여러 번 눌러도 요청은 최대 두 번이고 마지막 값으로 맞는다. 실패하면 서버 값으로 돌아가고 서버 문구를 보인다. 상세 화면에서 댓글 수를 바꿀 때 화면 값(`shown`)을 목록에 되써 넣으면 확인 안 된 좋아요가 확인된 것처럼 굳는다 — 그래서 `commentsChanged` 로 댓글 수만 바꾼다.
+- **피드는 받은 지 50분이 지나면 탭에 들어올 때 새로 받는다.** 사진 주소는 S3 서명 주소(수명 1시간)라 오래 켜 둔 피드의 사진이 403 으로 실패한다(계획 2 리뷰가 남긴 항목).
+- **본문·댓글 글자 수는 서버처럼 코드 포인트로 센다**(본문 2,000자, 댓글 500자, 닉네임 2~12자). Kotlin `length` 는 이모지를 두 칸으로 세서 서버보다 먼저 막는다.
+- **정지된 계정은 읽기·차단·내 글 지우기만 된다**(서버 `requireReader`/`requireWriter` 와 같게). 이용규칙 동의는 정지보다 먼저 묻는다 — 서버가 읽기에도 동의를 요구한다.
+- **앱 문구는 공룡 말투(`TrexText`), 사용자 글·닉네임·신고 미리보기는 원문**(사용자 결정 2026-10-29 "통일을 위해 룡으로"). 닉네임이 들어간 대화상자 제목은 고정 부분만 바꾼다(`withName`) — 닉네임 안의 "…요 " 가 "…룡" 으로 바뀌지 않게.
+- **오운완 카드는 숫자만**(날짜·운동 이름·완료 세트·총 시간·예상 kcal). 자세 판정(헤드라인·점수·자세 블록)은 넣지 않는다 — 공개 이미지에서 판정 정직성 원칙을 다시 지켜야 하고 자세 문구는 자세 담당 영역이다. 카드는 글쓰기 미리보기를 그래픽 레이어로 떠서 `encodeJpeg`(Android: HARDWARE 비트맵의 소프트웨어 사본, iPhone: Skia)로 만든다. 완료 화면에는 선택 콜백 `onShare` 와 버튼 한 줄만 더했다.
+- **올리는 사진은 긴 변 1080 JPEG 를 IO 스레드에서 다시 만든다**(EXIF 가 따라가지 않는다). 글쓰기 화면에 "서버에 저장되고 모든 사용자에게 공개돼요"를 둔다 — 사진 식단의 "기기 안에서만" 과 헷갈리지 않게(설계 §2 반목표).
+- **안전 장치를 피드와 함께 연다.** 글·댓글·사용자 신고(사유 6개), 차단(상대에게 알리지 않음, 내 프로필에서 해제), 내 글·댓글 지우기, 관리자 신고함(내 정보 탭, 관리자에게만)과 카드 ⋯ 의 관리자 숨기기·지우기·작성자 정지. 신고한 사람은 내 프로필의 "내 신고"에서 처리 상태를 본다(설계 §3 처리 결과 알림).
+
+*남은 것.* 실기기 확인(폰 360dp·폴드 펼침·글자 1.3배, 세로·큰·EXIF 회전 사진, 관리자·일반 계정 둘 다), 이용규칙·처리방침 PR #26 머지, App Store 용 Apple 로그인(설계 §4).
+
+## §110. Android·iOS 공용 근육 목록·2D 근육도·메인 탭 스와이프 (2026-10-28)
 
 사용자 요청으로 근육 상태의 부위 카테고리를 없애고 양수 피로도만 내림차순 목록으로 표시한다. 계산 스냅샷은 그대로 보존하고 화면에서만 필터해 추천 알고리즘의 입력을 바꾸지 않는다. 1점 미만은 0점으로 보이지 않게 표기한다. 기존 해부 모델을 가림 처리한 앞·뒷면 2D SVG로 추출해 왼쪽 뒷면/오른쪽 앞면을 동시에 표시하며, 근육 ID·신체 좌우·저작자 표시를 유지한다. 피로도 화면과 완료 화면이 같은 도형을 쓰되 누적 점수와 세션 사용 부위를 혼합하지 않는다.
 
 공통 MainTabs에 좌우 스와이프를 연결한다. 순서는 홈/운동/식단/내 정보이며 끝에서는 멈춘다. 자식 삭제·정렬 제스처와 시스템 가장자리 뒤로를 우선한다. 운동 가이드 이미지 컨테이너는 불투명한 시트 배경색으로 채운다. 사용자 재설명에 따라 iOS GIF의 HTML·WKWebView·scrollView도 같은 색으로 막아 팝업 뒤 화면이 비치는 현상을 방지한다. 온보딩 SVG의 투명 배경은 유지한다. 공통 Compose 파일은 iOS 정본 목록으로 공유하고, 근육도 플랫폼 뷰는 양쪽에서 스크롤을 가로채지 않게 변경한다. 설계·검증·기기 검토 항목은 `docs/UI_REVIEW_2026-10-28.md`. 사용자 후속 요청으로 로컬 커밋을 승인받았다. 푸시·배포는 하지 않는다.
 
-## §110. Muscle viewer sizing, seven-day records, and persistent stage toggle (2026-10-28)
+## §111. Muscle viewer sizing, seven-day records, and persistent stage toggle (2026-10-28)
 
 The device WebView reported a 366px viewport while HTML/body/SVG heights were zero, even though atlas data, viewer initialization, and all 64 paths were present. The shared viewer now assigns viewport pixel heights to the roots and stage on initialization, resize, pageshow, visual viewport changes, and the first animation frame. Both fatigue and session modes use this sizing; session highlighting still uses only the session's used muscles.
 
@@ -3082,7 +3102,7 @@ User workout history and fatigue now share seven calendar dates including today 
 Validation: Android debug APK and 776 unit tests pass, plus 525 common-engine JVM tests. New tests cover eight-day expiry, calendar cutoff boundaries, and DST. Headless Chrome verifies both viewer modes, recovery from zero root heights, three viewport sizes, muscle colors, and session input isolation. Android home-to-fatigue rendering was visually confirmed on SM-N976N. iOS engine/resource sync checks pass. Native iOS compilation/device rendering and the full workout-completion/camera-toggle UI flow were not executed. The optional Swift/project static checker is blocked by missing Python yaml. No production deployment, commit, or push.
 
 
-## §111. Shared expandable sheets and source-labelled replacement recommendations (2026-10-29)
+## §112. Shared expandable sheets and source-labelled replacement recommendations (2026-10-29)
 
 All active app-owned bottom sheets now use `SheetHost`, backed by one Material3 `SheetState`. Complex content starts expanded and can be dismissed downward. Only the photo entry menu starts partially expanded and can be dragged upward; advancing to camera/analysis/results expands the same SheetState. Short content fits above the bottom edge. Nine direct Material call sites (exercise guide/editor, settings theme/voice/profile, nutrition goals, quick settings/count adjustment, weather) were migrated; manual/photo food already called the host. Legacy alternate/set/add helpers also inherit it; the unused `SheetSurface` has no call sites. Central confirmation dialogs and OS pickers are not bottom sheets.
 

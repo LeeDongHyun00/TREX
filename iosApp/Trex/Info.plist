@@ -11,6 +11,8 @@
 <key>CFBundlePackageType</key><string>APPL</string>
 <key>CFBundleShortVersionString</key><string>$(MARKETING_VERSION)</string>
 <key>CFBundleVersion</key><string>$(CURRENT_PROJECT_VERSION)</string>
+<key>GIDClientID</key><string>12194757714-bd99b55i5jk94gpft5a6ec6s983fm9mn.apps.googleusercontent.com</string>
+<key>GIDServerClientID</key><string>12194757714-foefivjlqn4n3g5iqdsgqlqst12ejbpi.apps.googleusercontent.com</string>
 <key>LSRequiresIPhoneOS</key><true/>
 <key>NSCameraUsageDescription</key><string>운동 자세의 관절 위치를 분석하거나 식단 사진을 촬영합니다. 영상은 저장하거나 전송하지 않습니다.</string>
 <key>NSLocationWhenInUseUsageDescription</key><string>현재 위치의 날씨로 운동을 추천해 드려요. 날씨를 받을 때 대략적인 좌표만 날씨 서비스(Open-Meteo)에 보내고, 위치를 저장하지 않아요.</string>

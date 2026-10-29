@@ -30,6 +30,11 @@ dependencies {
 	runtimeOnly 'org.postgresql:postgresql'
 	// 구글 ID 토큰 검증(구글 공개키 JWKS, docs/SERVER_SYNC_HANDOFF.md D8)
 	implementation 'org.springframework.security:spring-security-oauth2-jose'
+	// 커뮤니티 사진 저장소 — 비공개 S3 버킷(시드니)과 서명 주소. 동기 클라이언트(Apache HTTP)만 쓴다.
+	implementation platform('software.amazon.awssdk:bom:2.46.7')
+	implementation('software.amazon.awssdk:s3') {
+		exclude group: 'software.amazon.awssdk', module: 'netty-nio-client'
+	}
 	annotationProcessor 'org.projectlombok:lombok'
 	testImplementation 'org.springframework.boot:spring-boot-starter-data-jpa-test'
 	testImplementation 'org.springframework.boot:spring-boot-starter-security-test'

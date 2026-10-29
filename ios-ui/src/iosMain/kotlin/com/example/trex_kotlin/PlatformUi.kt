@@ -3,6 +3,8 @@
 package com.example.trex_kotlin
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.SideEffect
@@ -19,14 +21,19 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.UIKitInteropInteractionMode
 import androidx.compose.ui.viewinterop.UIKitInteropProperties
 import androidx.compose.ui.viewinterop.UIKitView
 import androidx.compose.ui.window.DialogProperties
 import com.example.trex_kotlin.ios.IosSpeechEngine
 import com.example.trex_kotlin.ios.readTextFile
+import com.example.trex_kotlin.ios.IosAppleSignInRegistry
+import com.example.trex_kotlin.ios.requestIosAppleCredential
+import com.example.trex_kotlin.ios.requestIosGoogleIdToken
+import com.example.trex_kotlin.sync.AppleCredential
 import com.example.trex_kotlin.ios.toByteArray
 import com.example.trex_kotlin.posture.SpeechCoach
-import com.example.trex_kotlin.sync.SignInException
 import kotlinx.atomicfu.locks.SynchronizedObject
 import kotlinx.atomicfu.locks.synchronized
 import kotlinx.cinterop.ExperimentalForeignApi
@@ -115,10 +122,45 @@ fun rememberRepValidation(key: Any?): Boolean = false
 @Composable
 fun PlatformBackHandler(enabled: Boolean = true, onBack: () -> Unit) = androidx.compose.ui.backhandler.BackHandler(enabled, onBack)
 
-/** iPhone 구글 로그인은 아직 없다 — 웹 클라이언트 ID 가 비어 있어 앱 상태가 이 함수를 부르기 전에 안내한다. */
+/** 구글 ID 토큰 — Swift 다리(`ios/IosGoogleSignIn.kt`, ASWebAuthenticationSession)가 로그인 창을 띄운다. Android 는 Credential Manager. */
 @Composable
 fun rememberGoogleIdTokenRequest(): suspend (String) -> String =
-    remember { { _: String -> throw SignInException.Failed("iPhone 에서는 아직 구글 로그인을 쓸 수 없어요") } }
+    remember { { serverClientId: String -> requestIosGoogleIdToken(serverClientId) } }
+
+/**
+ * 받은 사진 디코더(Skia) — 긴 변을 [maxDimension] 으로 줄여 그린다(Android 와 같은 크기). 서버는 한 변 4096 까지 받으니
+ * 원본 크기로 펼치면 피드가 메모리를 넘긴다(리뷰 2026-10-29). 깨졌으면 null. 원본 Skia 그림은 바로 닫는다.
+ */
+@Composable
+fun rememberBytesImageDecoder(): BytesImageDecoder = remember {
+    BytesImageDecoder { bytes, maxDimension ->
+        runCatching {
+            // Skia 객체는 AutoCloseable 이 아니라 try/finally 로 닫는다. toComposeImageBitmap 은 픽셀을 복사하니 닫아도 된다.
+            val source = Image.makeFromEncoded(bytes)
+            try {
+                val (w, h) = com.example.trex_kotlin.community.UploadSizing.fit(source.width, source.height, maxDimension)
+                if (w == source.width && h == source.height) {
+                    source.toComposeImageBitmap()
+                } else {
+                    val surface = Surface.makeRasterN32Premul(w, h)
+                    try {
+                        surface.canvas.drawImageRect(source, Rect.makeWH(w.toFloat(), h.toFloat()))
+                        val snapshot = surface.makeImageSnapshot()
+                        try {
+                            snapshot.toComposeImageBitmap()
+                        } finally {
+                            snapshot.close()
+                        }
+                    } finally {
+                        surface.close()
+                    }
+                }
+            } finally {
+                source.close()
+            }
+        }.getOrNull()
+    }
+}
 
 @Composable
 fun rememberSystemSettingsLinks(): SystemSettingsLinks = remember {
@@ -286,4 +328,23 @@ internal fun decodeBundleImage(relative: String, sampleSize: Int): ImageBitmap {
     val surface = Surface.makeRasterN32Premul(width, height)
     surface.canvas.drawImageRect(image, Rect.makeWH(width.toFloat(), height.toFloat()))
     return surface.makeImageSnapshot().toComposeImageBitmap()
+}
+
+/** Apple 로그인 한 번(Swift `AppleSignInBridge`) — Android 판은 늘 실패한다(버튼이 없다). */
+@Composable
+fun rememberAppleCredentialRequest(): suspend () -> AppleCredential = remember { { requestIosAppleCredential() } }
+
+/**
+ * Apple 지침의 기본 버튼("Apple로 계속하기", 검정) — Swift 가 만든 `ASAuthorizationAppleIDButton` 을 끼운다. 다리가 없으면(프로브 등)
+ * 그리지 않는다. 높이 50dp, 폭은 부모를 채운다.
+ */
+@Composable
+fun AppleSignInButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val bridge = IosAppleSignInRegistry.bridge ?: return
+    val latest by androidx.compose.runtime.rememberUpdatedState(onClick)
+    UIKitView(
+        factory = { bridge.makeButton { latest() } },
+        modifier = modifier.fillMaxWidth().height(50.dp),
+        properties = UIKitInteropProperties(interactionMode = UIKitInteropInteractionMode.NonCooperative, isNativeAccessibilityEnabled = true),
+    )
 }

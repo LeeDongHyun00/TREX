@@ -30,6 +30,29 @@ com/example/trex_kotlin/sync/AuthSession.kt
 com/example/trex_kotlin/sync/SyncManager.kt
 com/example/trex_kotlin/sync/SyncRules.kt
 com/example/trex_kotlin/sync/TrexApi.kt
+com/example/trex_kotlin/sync/AppleCredential.kt
+com/example/trex_kotlin/sync/BinaryTransport.kt
+com/example/trex_kotlin/sync/Multipart.kt
+# 커뮤니티(설계 docs/superpowers/specs/2026-10-28-community-design.md) — API 클라이언트·모델
+com/example/trex_kotlin/community/CommunityModels.kt
+com/example/trex_kotlin/community/CommunityApi.kt
+com/example/trex_kotlin/community/UploadSizing.kt
+com/example/trex_kotlin/community/RemoteImages.kt
+com/example/trex_kotlin/community/CommunityGate.kt
+com/example/trex_kotlin/community/FeedState.kt
+com/example/trex_kotlin/community/TimeAgo.kt
+com/example/trex_kotlin/community/ComposeState.kt
+com/example/trex_kotlin/community/CommentsState.kt
+com/example/trex_kotlin/community/CommunityTabScreen.kt
+com/example/trex_kotlin/community/FeedController.kt
+com/example/trex_kotlin/community/PostCard.kt
+com/example/trex_kotlin/community/CommunityDialogs.kt
+com/example/trex_kotlin/community/FeedScreen.kt
+com/example/trex_kotlin/community/PostDetailScreen.kt
+com/example/trex_kotlin/community/ComposeScreen.kt
+com/example/trex_kotlin/community/ProfileScreen.kt
+com/example/trex_kotlin/community/AdminInbox.kt
+com/example/trex_kotlin/community/WorkoutCard.kt
 # Phase 2: 카메라 없는 화면 전부. 플랫폼 기능은 같은 이름의 짝 — Android PlatformUi.kt(목록 밖) ↔ ios-ui iosMain PlatformUi.kt.
 # 경계 타입은 PlatformApi.kt. 앱 내 업데이트(AppUpdate)는 Android 체험판 전용이라 목록 밖이다.
 com/example/trex_kotlin/PlatformApi.kt

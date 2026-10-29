@@ -12,6 +12,8 @@ import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import com.example.trex_kotlin.TrexText as Text
 import androidx.compose.runtime.*
+import com.example.trex_kotlin.community.AdminInbox
+import com.example.trex_kotlin.sync.accountLabel
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
@@ -33,6 +35,8 @@ fun ProfileTabScreen(app: AppViewModel, onOpenRecord: () -> Unit, onLogout: () -
     val appPaused = rememberTrexLifecyclePaused()
     val voiceStatus = remember(voice, appPaused, sheet) { voice?.status() }
     val p = app.profile
+    val loginId = app.account?.loginId
+    LaunchedEffect(loginId) { if (loginId != null && app.communityMe == null) app.refreshCommunityMe() }
     LazyColumn(Modifier.fillMaxSize(), contentPadding = tabContentPadding, verticalArrangement = Arrangement.spacedBy(22.dp)) {
         item { Text("설정", color = c.text, fontSize = 30.sp, fontWeight = FontWeight.SemiBold) }
         item {
@@ -52,6 +56,10 @@ fun ProfileTabScreen(app: AppViewModel, onOpenRecord: () -> Unit, onLogout: () -
             }
         }
         item { AccountGroup(app) }
+        // 관리자에게만 — 커뮤니티 신고함(설계 §3 관리자). 내 상태는 커뮤니티 탭에 들어가지 않았어도 한 번 받아 둔다.
+        if (app.communityMe?.admin == true) item { SettingsGroup {
+            SettingsRow("커뮤니티 신고함", Icons.Rounded.Flag, onClick = { sheet = "admin" })
+        } }
         item { SettingsGroup {
             SettingsRow("운동 기록", Icons.Rounded.History, onClick = onOpenRecord)
         } }
@@ -88,6 +96,9 @@ fun ProfileTabScreen(app: AppViewModel, onOpenRecord: () -> Unit, onLogout: () -
         }
     }
     if (sheet == "profile") ProfileEditSheet(app, { sheet = null })
+    if (sheet == "admin") SheetHost(onDismiss = { sheet = null }) {
+        AdminInbox(app, onClose = { sheet = null })
+    }
     if (sheet == "theme") SheetHost(onDismiss = { sheet = null }) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(bottom = 24.dp)) {
             Text("화면 모드", color = c.text, fontSize = 23.sp, fontWeight = FontWeight.SemiBold)
@@ -136,9 +147,14 @@ fun ProfileTabScreen(app: AppViewModel, onOpenRecord: () -> Unit, onLogout: () -
 private fun AccountGroup(app: AppViewModel) {
     val c = Trex.c
     val requestGoogleIdToken = rememberGoogleIdTokenRequest()
+    val requestAppleCredential = rememberAppleCredentialRequest()
     val account = app.account
     SettingsGroup {
         if (account == null) {
+            if (app.appleSignInAvailable) AppleSignInButton(
+                onClick = { if (!app.authBusy) app.continueWithApple(requestAppleCredential) },
+                modifier = Modifier.padding(start = 18.dp, end = 18.dp, top = 16.dp),
+            )
             SettingsRow("Google 계정 연결", Icons.Rounded.CloudUpload, if (app.authBusy) "연결 중…" else null, onClick = {
                 app.continueWithGoogle(requestGoogleIdToken)
             })
@@ -157,7 +173,7 @@ private fun AccountGroup(app: AppViewModel) {
             Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 16.dp), verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Rounded.CloudDone, null, tint = c.primaryText, modifier = Modifier.size(22.dp))
                 Column(Modifier.weight(1f).padding(start = 14.dp)) {
-                    Text(account.email ?: account.name.ifBlank { "Google 계정" }, color = c.text, fontSize = 16.sp)
+                    Text(accountLabel(account), color = c.text, fontSize = 16.sp)
                     Text(status.orEmpty(), color = if (app.sync.lastError != null) c.err else c.text2, fontSize = 13.sp, modifier = Modifier.padding(top = 3.dp))
                 }
                 TextButton(onClick = { app.syncNow() }, enabled = !app.sync.syncing) { Text("지금 동기화") }

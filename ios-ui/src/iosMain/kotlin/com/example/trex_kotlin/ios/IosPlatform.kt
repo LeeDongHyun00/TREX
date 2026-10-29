@@ -5,6 +5,7 @@ import com.example.trex_kotlin.KeyValueStore
 import com.example.trex_kotlin.MuscleLoadDatabase
 import com.example.trex_kotlin.posture.SetLabelFormat
 import com.example.trex_kotlin.posture.SetSelfLabel
+import com.example.trex_kotlin.sync.BinaryTransport
 import com.example.trex_kotlin.sync.HttpTransport
 import kotlinx.atomicfu.locks.SynchronizedObject
 import kotlinx.atomicfu.locks.synchronized
@@ -18,6 +19,7 @@ import kotlinx.coroutines.IO
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import platform.Foundation.NSApplicationSupportDirectory
+import platform.Foundation.NSBundle
 import platform.Foundation.NSData
 import platform.Foundation.NSDocumentDirectory
 import platform.Foundation.NSFileHandle
@@ -43,10 +45,16 @@ import platform.posix.memcpy
 open class IosAppPlatform : AppPlatform {
     override fun preferences(name: String): KeyValueStore = UserDefaultsStore(name)
     override val http: HttpTransport = UrlSessionTransport
+    override val binary: BinaryTransport = UrlSessionBinaryTransport
     /** Android gradle.properties `trex.apiBaseUrl` 과 같은 서버. */
     override val apiBaseUrl: String = "https://trex-api.duckdns.org"
-    /** iPhone 구글 로그인은 아직 없다 — 비어 있으면 앱 상태가 "구글 로그인이 아직 준비되지 않았어요" 로 밝힌다. */
-    override val googleWebClientId: String = ""
+    /**
+     * 서버가 확인하는 구글 웹 클라이언트 ID — Info.plist `GIDServerClientID`(Android gradle.properties `trex.googleWebClientId` 와 같은 값).
+     * 비어 있으면 앱 상태가 "구글 로그인이 아직 준비되지 않았어요" 로 밝힌다. iPhone 클라이언트 ID 는 Swift 다리가 `GIDClientID` 로 읽는다.
+     */
+    override val googleWebClientId: String = (NSBundle.mainBundle.objectForInfoDictionaryKey("GIDServerClientID") as? String).orEmpty()
+    /** Apple 로그인(설계 docs/superpowers/specs/2026-10-29-apple-sign-in-design.md) — iPhone 은 늘 쓸 수 있다(Swift 다리 `AppleSignInBridge`). */
+    override val appleSignInAvailable: Boolean get() = true
     override fun muscleLoadDatabase(): MuscleLoadDatabase = FileMuscleLoadDatabase(appSupportPath("TREX") + "/muscle_load.json")
     override fun appendSetLabel(label: SetSelfLabel) = SetLabelFiles(documentsPath() + "/posture_logs").append(label)
 }

@@ -11,6 +11,7 @@ enum class TrexTab(val label: String) {
     Home("홈"),
     Workout("운동"),
     Diet("식단"),
+    Community("커뮤니티"),
     Profile("내 정보"),
 }
 

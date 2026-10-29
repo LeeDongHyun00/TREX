@@ -44,6 +44,7 @@
 | D9 | 운영 DB 는 **PostgreSQL(AWS RDS)**, 운영 설정은 `application-prod.yml`(환경 변수만 참조, 커밋) | 비밀값은 코드에 두지 않는다 |
 | D10 | 배포는 **AWS EC2(Docker) + RDS + Caddy(HTTPS 자동)** | 사용자가 AWS 를 학습했다. 안드로이드는 기본적으로 HTTPS 만 허용한다 |
 | D11 | 앱의 서버 주소·구글 웹 클라이언트 ID 는 **`gradle.properties` 에 팀 기본값으로 커밋**하고, **디버그도 운영 서버**를 가리킨다. `local.properties` 의 같은 키가 우선 | 팀원이 설정 없이 빌드해 폰에 까는 것이 디버그 APK 다 — 그 APK 로도 계정 연결이 되게 한다(서명 SHA-1 등록은 별도, Q1). 두 값 모두 비밀값이 아니다. **로컬 서버로 확인할 때는 `local.properties` 에 `trex.apiBaseUrl.debug=http://127.0.0.1:8080` 을 넣어야 한다 — 안 넣으면 운영 서버로 간다** |
+| D12 | **iPhone 에 Apple 로그인**(구글과 나란히, 사용자가 고른다). 서버가 Apple 공개키로 identity token 을 직접 검증(발급자 `https://appleid.apple.com`, 대상 = 번들 ID, nonce), 내부 아이디 `apple_<sub>`. 구글 계정과 합치지 않는다. 탈퇴 때 Apple 연결을 끊는다(revoke) | App Store 지침 4.8(소셜 로그인이 있으면 이메일을 숨길 수 있는 다른 로그인이 같이 있어야 한다)과 탈퇴 규칙. 사용자 결정 2026-10-29 — 설계 `docs/superpowers/specs/2026-10-29-apple-sign-in-design.md` |
 
 **아직 정할 것**
 - Q1 팀 공용 앱 서명 키(구글·카카오 콘솔에 SHA-1 등록용). 지금은 PC 마다 디버그 키가 달라 빌드한 PC 에 따라 로그인이 될 수도 안 될 수도 있다. 2026-10-13 현재 등록된 것은 사용자 PC 디버그 키뿐이고, **릴리스 APK(조원 개발 인증서) SHA-1 은 미등록** — 릴리스 전에 Android 클라이언트를 하나 더 만든다.
@@ -77,6 +78,7 @@ DELETE /api/auth/me                                           → 204 (회원과
   - 에뮬레이터 함정: Windows 에서 `sdkmanager.bat`·`avdmanager.bat` 은 패키지 이름의 `;` 를 인자 구분자로 잘라 먹는다 — sdkmanager 는 `system-images/android-36/google_apis_playstore/x86_64` 처럼 `/` 로 쓰고, AVD 는 `~/.android/avd/trex_test.ini`·`config.ini` 를 직접 썼다.
   - **함정(실제로 겪음)**: 앱·서버에 넣는 값은 **웹 애플리케이션** 클라이언트 ID 다. Android 클라이언트 ID 를 넣으면 `28444 Developer console is not set up correctly` 가 난다. Android 클라이언트(패키지명·SHA-1)는 콘솔에 있기만 하면 된다. 실패 원인은 화면 문구와 logcat 태그 `TrexAuth` 에 남는다.
   - 이 프로젝트의 웹 클라이언트 ID: `12194757714-foefivjlqn4n3g5iqdsgqlqst12ejbpi.apps.googleusercontent.com`(비밀값 아님). Android 클라이언트는 사용자 PC 디버그 키 SHA-1 `DB:12:B7:…:36:47` 로 등록됨 — 다른 PC 에서 빌드하면 그 PC 의 SHA-1 로 Android 클라이언트를 하나 더 만든다.
+  - **iPhone(2026-10-28)**: iOS 클라이언트 ID `12194757714-bd99b55i5jk94gpft5a6ec6s983fm9mn.apps.googleusercontent.com`(비밀값 아님, 번들 `com.leedonghyun.trex.ios`). 앱은 Info.plist `GIDClientID`(iOS)·`GIDServerClientID`(웹 — 로그인 버튼을 켤지만 가른다)를 쓰고, iOS 기본 `ASWebAuthenticationSession` 으로 OAuth 인가 코드 + PKCE 를 직접 해 ID 토큰을 받는다(`iosApp/Trex/GoogleSignInBridge.swift`). GoogleSignIn pod 는 GTMSessionFetcher 가 MediaPipe 정적 라이브러리 안의 같은 코드와 링크 때 부딪혀(중복 기호 196개, CI) 뺐다. iPhone 토큰의 aud 는 **iOS 클라이언트 ID** 라 서버 `GOOGLE_CLIENT_IDS` 에 웹·iOS 두 ID 를 쉼표로 넣었다. 같은 날 구글 동의 화면을 프로덕션으로 게시했다(브랜딩: 홈페이지 `https://leedonghyun00.github.io/TREX/`, 처리방침 `…/TREX/privacy.html`, 승인된 도메인 `leedonghyun00.github.io`, 로고 없음).
   - 코드: `app/.../sync/` — `SyncRules`(판정 규칙, 단위 테스트 `SyncRulesTest` 7개), `SyncManager`(저장소 변경 감지 → 3초 모아 올리기, 시작·로그인·"지금 동기화" 때 받기), `TrexApi`(HttpURLConnection — 호출 4개라 Retrofit 안 씀), `AuthSession`(`trex_auth` prefs, 자동 백업 제외), `GoogleSignIn`(Credential Manager). `TrexStore.readRaw/writeRaw/setChangeListener`, `AppViewModel` 계정 절, `AuthScreen`(아이디·비밀번호 폼과 찾기 화면을 지우고 "Google로 계속하기"/"로그인 없이 사용"), 설정의 계정 칸·회원 탈퇴, `FirstSyncDialog`.
   - 첫 연결 규칙: 서버가 비면 올림 / 이 기기가 온보딩 전이면 받음 / 양쪽에 있으면 묻는다(자동 병합 안 함). 서버에 없는 항목은 어느 쪽을 골라도 이 기기 값을 남겨 올린다(고르지 않은 데이터를 지우지 않는다). 계정(`owner`)과 처음 맞추기 전에는 주고받지 않는다.
   - 기존 사용자(가짜 로그인으로 이미 `logged_in`)는 로그인 화면을 다시 안 본다 — **설정 → Google 계정 연결**로 연결한다.
@@ -160,3 +162,156 @@ adb reverse tcp:8080 tcp:8080                                  # 폰의 127.0.0.
 - `.env` 를 Windows 에서 만들어 올리면 줄끝 `\r` 이 비밀번호에 붙는다 — EC2 에서 만들거나 `sed -i 's/\r$//'`.
 - Caddy 인증서는 `caddy_data` 볼륨에 있다. 볼륨을 지우면 재발급(Let's Encrypt 주간 발급 제한).
 - 6개월 뒤 Free plan 계정이 닫히기 전에 유료 전환 여부를 정한다(RDS 스냅샷을 다른 계정으로 공유해 옮길 수 있다).
+
+## 9. 커뮤니티 운영 (2026-10-29 — 배포 전 초안)
+
+커뮤니티 API(`/api/community/**`, 설계 `docs/superpowers/specs/2026-10-28-community-design.md`, 계획 `docs/superpowers/plans/2026-10-28-community-server.md`)는 사진을 **비공개 S3 버킷**에 두고, 앱에는 수명 1시간짜리 서명 주소를 내준다. 운영 프로필은 버킷이 비면 **서버가 뜨지 않는다**(`require-s3`) — 아래 AWS 준비를 끝내기 전에 이 jar 를 배포하면 로그인·동기화까지 멈춘다.
+
+**왜 S3 인가 — 커뮤니티 사진 때문이다.** 지금까지 서버에는 파일이 없었다(동기화는 JSON 글자를 RDS 에 둔다). 사진을 다른 곳에 두면 이렇게 된다.
+- EC2 디스크(16GB): 금방 찬다. AMI 로 서버를 새로 띄우면 그 뒤에 올라온 사진이 사라진다.
+- RDS(20GB): 사진이 DB 를 키워 백업·복원이 느려지고, 용량을 늘리면 돈이 든다.
+- S3: 사진 1천 장·조회 30만 회에 월 1달러 미만이고, AWS 가 여러 곳에 복제해 잃어버리지 않는다.
+
+**실습 때와 다른 점.** 실습에서는 보통 버킷을 공개로 열거나(정적 웹사이트) 액세스 키를 PC 에 넣고 올렸을 것이다. 여기서는 반대로 한다.
+- 버킷은 **공개를 전부 막는다** — 주소를 알아도 아무나 못 본다.
+- 액세스 키를 만들지 않는다. EC2 에 **IAM 역할**을 붙이면 서버가 그 역할로 S3 에 들어간다(비밀값이 파일에 남지 않는다).
+- 앱은 S3 에 직접 접근하지 않는다. 서버가 사진을 받아 넣고, 볼 때는 서버가 1시간짜리 **서명 주소**(그 사진 하나만 잠깐 열리는 링크)를 내준다.
+
+```
+앱 ──사진 올리기──▶ 서버(EC2, IAM 역할) ──넣기──▶ S3 비공개 버킷
+앱 ◀──서명 주소(1시간)── 서버                     ▲
+앱 ──────────────── 서명 주소로 사진 받기 ─────────┘
+```
+
+### 9.1 AWS 준비 (콘솔, 처음 한 번 — 20분쯤)
+
+모두 AWS 콘솔 오른쪽 위 리전이 **아시아 태평양(시드니) ap-southeast-2** 인지 먼저 본다. 화면 문구는 콘솔 개편에 따라 조금 다를 수 있다. 각 단계 끝의 *메모* 칸 값은 9.2 에서 `.env` 에 넣는다.
+
+> **`<…>` 는 바꿔 넣을 자리 표시다 — 꺾쇠 `<` `>` 까지 지우고 값만 넣는다.** 2026-10-29 첫 배포에서 버킷 이름·IAM 정책·웹후크 세 곳에 꺾쇠가 남아 사진 올리기와 신고 알림이 실패했다. 예: `arn:aws:s3:::<버킷 이름>/*` → `arn:aws:s3:::trex-community-k7m2qp/*`
+
+**① S3 버킷 만들기** — 콘솔 위 검색창에 `S3` → **버킷 만들기**
+1. 버킷 유형: **범용**
+2. 버킷 이름: `trex-community-` 뒤에 아무 소문자·숫자 6자(예: `trex-community-k7m2qp`). 전 세계에서 하나뿐이어야 해서 이미 있으면 바꾼다. 소문자·숫자·하이픈만.
+3. 객체 소유권: **ACL 비활성화됨(권장)** 그대로
+4. 이 버킷의 퍼블릭 액세스 차단 설정: **모든 퍼블릭 액세스 차단** 체크 그대로(네 칸 모두 켜짐) — 끄면 안 된다
+5. 버킷 버전 관리: **비활성화** 그대로
+6. 기본 암호화: **Amazon S3 관리형 키를 사용한 서버 측 암호화(SSE-S3)** 그대로
+7. 맨 아래 **버킷 만들기**
+
+*메모*: 버킷 이름 → `COMMUNITY_S3_BUCKET`
+
+**② IAM 정책 만들기**(무엇을 허락할지) — 검색창에 `IAM` → 왼쪽 **정책** → **정책 생성**
+1. 정책 편집기에서 **JSON** 을 누르고 내용을 모두 지운 뒤 아래를 붙여 넣는다. `<버킷 이름>` 은 ①의 이름으로 바꾼다 — **꺾쇠까지 지운다**(틀리면 사진 올릴 때 `AccessDenied … no identity-based policy allows the s3:PutObject action`).
+   ```json
+   {
+     "Version": "2012-10-17",
+     "Statement": [{
+       "Effect": "Allow",
+       "Action": ["s3:PutObject", "s3:GetObject", "s3:DeleteObject"],
+       "Resource": "arn:aws:s3:::<버킷 이름>/*"
+     }]
+   }
+   ```
+2. **다음** → 정책 이름 `trex-community-s3` → **정책 생성**
+
+이 정책은 그 버킷 하나에 사진 넣기·읽기·지우기만 허락한다. 다른 버킷이나 버킷 설정은 못 건드린다.
+
+**③ IAM 역할 만들기**(누가 그 허락을 쓸지) — IAM 왼쪽 **역할** → **역할 생성**
+1. 신뢰할 수 있는 엔터티 유형: **AWS 서비스**, 사용 사례: **EC2** → **다음**
+2. 권한 정책 검색창에 `trex-community-s3` → 체크 → **다음**
+3. 역할 이름 `trex-app-s3` → **역할 생성**
+
+**④ EC2 에 역할 붙이기** — 검색창에 `EC2` → 왼쪽 **인스턴스** → `trex-server` 체크
+1. 위 **작업** → **보안** → **IAM 역할 수정**
+2. IAM 역할에서 `trex-app-s3` 선택 → **IAM 역할 업데이트**
+
+서버를 다시 켤 필요는 없다. 이 순간부터 EC2 안에서 S3 를 쓸 수 있다.
+
+**⑤ 메타데이터 홉 제한 2** — 같은 화면에서 `trex-server` 체크
+1. **작업** → **인스턴스 설정** → **인스턴스 메타데이터 옵션 수정**
+2. 인스턴스 메타데이터 서비스: **활성화** 그대로, IMDSv2: **필수** 그대로
+3. **메타데이터 응답 홉 제한**: `1` → **`2`** → **저장**
+
+왜: 서버 프로그램은 EC2 안의 도커 컨테이너에서 돈다. 컨테이너에서 역할 자격 증명을 받으려면 한 단계를 더 거쳐야 해서, 1 이면 서버가 "자격 증명 없음"으로 사진을 못 올린다.
+
+**⑥ 디스코드 웹후크**(새 신고 알림) — 디스코드 앱
+1. 알림 받을 채널 이름 옆 톱니(**채널 편집**) → **연동** → **웹후크** → **새 웹후크**
+2. 이름을 `T-REX 신고` 정도로 바꾸고 **웹후크 URL 복사** → **변경 사항 저장**
+
+*메모*: 복사한 URL → `COMMUNITY_REPORT_WEBHOOK_URL`. **비밀값이다** — 이 URL 만 있으면 누구나 그 채널에 글을 쓸 수 있다. 저장소·PR·채팅에 붙이지 말고 서버 `.env` 에만 넣는다.
+
+**⑦ 관리자 loginId**(앱 안 신고함을 볼 계정) — 관리자로 쓸 계정으로 앱에서 Google 계정을 연결해 둔 폰을 PC 에 꽂고(디버그 빌드):
+```bash
+adb shell run-as com.example.trex_kotlin cat shared_prefs/trex_auth.xml | grep login_id
+```
+`google_` 로 시작하는 숫자 값이 loginId 다. 토큰 줄은 출력하지 않는다(위처럼 `login_id` 줄만). 폰이 없으면 로그인 토큰으로 `GET https://trex-api.duckdns.org/api/auth/me` 의 `loginId`. 관리자가 여럿이면 쉼표로 잇는다.
+
+*메모*: → `COMMUNITY_ADMIN_LOGIN_IDS`
+
+### 9.2 배포 (PC Git Bash — 8절과 같은 길)
+순서가 중요하다: **`.env` 를 먼저** 고친다. jar 를 먼저 바꾼 채 컨테이너가 재시작되면 버킷 없이 새 jar 로 떠서 재시작을 반복한다.
+```bash
+cd server && JAVA_HOME=~/.jdks/jbr-21.0.11 ./gradlew.bat bootJar
+KEY=C:/Workspace/TREX/trex-key.pem; HOST=ubuntu@54.252.112.191
+# 1) .env 에 세 줄 추가 — nano 는 터미널이 필요해 -t
+ssh -t -i $KEY $HOST "cd ~/trex && cp .env .env.before-community && nano .env"
+#   COMMUNITY_S3_BUCKET=<버킷 이름>                 ← 꺾쇠 없이: COMMUNITY_S3_BUCKET=trex-community-k7m2qp
+#   COMMUNITY_ADMIN_LOGIN_IDS=google_<숫자>
+#   COMMUNITY_REPORT_WEBHOOK_URL=<디스코드 웹후크>  ← 꺾쇠 없이 https://discord.com/api/webhooks/… 그대로
+#   (버킷 이름이 형식에 안 맞으면 서버가 기동 때 까닭을 찍고 멈춘다, 웹후크가 http(s):// 로 시작하지 않으면 알림을 끄고 로그에 남긴다)
+# 2) 되돌릴 사본을 남기고 새 jar·compose 올리기
+ssh -i $KEY $HOST "cd ~/trex && cp app.jar app.jar.prev && cp docker-compose.yml docker-compose.yml.prev"
+scp -i $KEY build/libs/server-0.0.1-SNAPSHOT.jar $HOST:~/trex/app.jar
+scp -i $KEY deploy/docker-compose.yml $HOST:~/trex/docker-compose.yml
+# 3) 다시 띄우고 기동 확인
+ssh -i $KEY $HOST "cd ~/trex && sed -i 's/\r$//' docker-compose.yml && docker compose up -d && sleep 20 && docker compose logs --since 2m app | grep -E 'Started|ERROR|COMMUNITY'"
+```
+
+### 9.3 확인
+- 기동 로그 `Started ServerApplication`, `curl -s -o /dev/null -w '%{http_code}' https://trex-api.duckdns.org/api/sync` 가 401 그대로.
+- 로그인 토큰(`T`)으로: `curl -H "Authorization: Bearer $T" https://trex-api.duckdns.org/api/community/me` → 200(`profile` null).
+- 닉네임·이용규칙: `PUT /api/community/me/profile {"nickname":"..."}`, `POST /api/community/me/terms {"version":"2026-10-28"}`.
+- 사진 글: `curl -H "Authorization: Bearer $T" -F body=시험 -F images=@test.jpg https://trex-api.duckdns.org/api/community/posts` → 201, 응답의 `images[0].url` 을 브라우저로 열면 사진이 보인다. 그 글을 `DELETE` 하면 같은 주소가 곧 403/404.
+- 관리자: `GET /api/community/me` 의 `admin` 이 true. 다른 계정으로 신고하면 디스코드에 `[T-REX 신고]` 가 온다.
+
+### 9.4 되돌리기
+`ssh -i $KEY $HOST "cd ~/trex && cp app.jar.prev app.jar && cp docker-compose.yml.prev docker-compose.yml && docker compose up -d"`
+- 커뮤니티 테이블은 남는다(`ddl-auto: update` 는 지우지 않는다). 다시 새 jar 를 올리면 그대로 이어진다.
+- **주의: 되돌린 동안에는 커뮤니티 프로필이 있는 사람의 회원 탈퇴가 실패한다**(옛 jar 의 탈퇴는 커뮤니티 테이블을 몰라 외래 키에 걸린다 — 409). 되돌림은 짧게 두고, 그 사이 탈퇴 요청은 새 jar 로 다시 올린 뒤 처리한다.
+
+### 9.5 운영 메모
+- 신고는 **24시간 안에** 앱 안 신고함(관리자에게만 보임)에서 처리한다 — App Store 1.2. 디스코드 알림이 그 신호다.
+- 자동 숨김은 서로 다른 세 사람의 미처리 신고. 관리자가 "그대로 둠(KEPT)" 하면 숨김이 풀리고 그 신고들은 처리 끝으로 남는다.
+- 탈퇴는 커뮤니티 글·사진·댓글·좋아요·신고·차단을 함께 지운다(사진은 커밋 뒤, 실패는 로그만 — 고아 사진은 S3 콘솔에서 `posts/<글 id>/` 로 찾을 수 있다).
+- 비용(추정): 사진 1천 장·조회 30만 회에 월 1달러 미만. AWS Free plan 만료일(가입 6개월)을 데모데이 전에 확인한다.
+
+## 10. Apple 로그인 운영 (2026-10-29)
+
+iPhone 의 "Apple로 계속하기"(설계 `docs/superpowers/specs/2026-10-29-apple-sign-in-design.md`). 서버는 `POST /api/auth/oauth/apple` 에서 identity token 을 Apple 공개키로 검증해 `apple_<sub>` 회원을 만들고, 키가 있으면 로그인 때 받은 authorization code 를 refresh token 으로 바꿔 두었다가 **탈퇴 때 Apple 연결을 끊는다**(App Store 탈퇴 규칙). Android 에는 Apple 버튼이 없다.
+
+### 10.1 `.env` 네 값
+> `<…>` 는 자리 표시다 — **꺾쇠까지 지우고 값만** 넣는다(커뮤니티 첫 배포에서 세 번 겪었다).
+
+| 변수 | 값 | 비밀값 |
+|---|---|---|
+| `APPLE_CLIENT_IDS` | `com.leedonghyun.trex.ios` — 이것만 있으면 로그인이 된다 | 아니요 |
+| `APPLE_TEAM_ID` | 동현님 Apple 개발자 계정 Membership 화면의 Team ID | 예 |
+| `APPLE_KEY_ID` | Keys 에서 만든 Sign in with Apple 키의 Key ID | 예 |
+| `APPLE_PRIVATE_KEY` | 그 키의 `.p8` 파일 내용 전체(BEGIN/END 줄 포함)를 **한 줄로** — 줄바꿈은 `\n` 두 글자로 적는다 | **예** |
+
+- 키 셋은 동현님께 부탁해 받는다(설계 §6 메시지). `.p8` 은 한 번만 내려받을 수 있다 — 저장소·PR·채팅에 올리지 않고 서버 `.env` 에만 넣는다.
+- **키 없이 먼저 배포해도 된다.** `APPLE_CLIENT_IDS` 만 있으면 로그인은 되고, 탈퇴 때 연결 끊기만 건너뛴다(로그 `Apple 연결 끊기` 없음). 키를 넣은 뒤 로그인하는 사람부터 refresh token 이 저장된다 — 그 전에 가입한 사람은 다음 로그인 때 저장된다.
+- `APPLE_CLIENT_IDS` 를 비우면 Apple 로그인만 401 이고 구글 로그인은 그대로다(서버 로그 error `trex.oauth.apple.client-ids 가 비어 있어…`).
+
+### 10.2 넣는 법(8·9절과 같은 길)
+```bash
+KEY=C:/Workspace/TREX/trex-key.pem; HOST=ubuntu@54.252.112.191
+ssh -t -i $KEY $HOST "cd ~/trex && cp .env .env.before-apple && nano .env"   # 네 줄 추가(꺾쇠 없이)
+ssh -i $KEY $HOST "cd ~/trex && docker compose up -d && sleep 25 && docker compose logs --since 1m app | grep -E 'Started|ERROR'"
+```
+`.env` 만 바꿨으면 `docker compose up -d` 가 컨테이너를 다시 만든다(jar 를 바꿀 때는 9.2 순서).
+
+### 10.3 확인
+- 키 없이: `curl -s -o /dev/null -w '%{http_code}' -X POST -H 'Content-Type: application/json' -d '{"identityToken":"x","nonce":"n"}' https://trex-api.duckdns.org/api/auth/oauth/apple` → 401(설정이 있으면 토큰이 틀려서, 없으면 설정이 없어서), nonce 를 빼면 400.
+- 동현님 준비 뒤(실기기): iPhone 에서 "Apple로 계속하기" → 설정의 계정 줄이 이메일(가린 전달 주소일 수 있다)이나 "Apple 계정". 설정 → 회원 탈퇴 → 서버 로그에 `Apple 연결 끊기 완료`. iPhone 설정 → Apple ID → "Apple로 로그인" 목록에서 T-REX 가 빠진다.
+- 커뮤니티 관리자로 Apple 계정을 쓰려면 `COMMUNITY_ADMIN_LOGIN_IDS` 에 `apple_<sub>` 를 쉼표로 더한다(loginId 는 9.1 ⑦ 과 같은 방법).
