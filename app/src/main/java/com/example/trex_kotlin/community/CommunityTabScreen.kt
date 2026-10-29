@@ -32,7 +32,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.lazy.rememberLazyListState
 import com.example.trex_kotlin.AppViewModel
+import com.example.trex_kotlin.PlatformBackHandler
 import com.example.trex_kotlin.Trex
 import com.example.trex_kotlin.Cta
 import com.example.trex_kotlin.DField
@@ -62,13 +64,43 @@ fun CommunityTabScreen(app: AppViewModel) {
         CommunityGate.Loading -> LoadingNotice(app)
         CommunityGate.NeedNickname -> NicknameSetup(app)
         CommunityGate.NeedTerms -> TermsConsent(app)
-        is CommunityGate.Ready, is CommunityGate.Suspended -> FeedScreen(
+        is CommunityGate.Ready, is CommunityGate.Suspended -> CommunityNavigation(app, gate)
+    }
+}
+
+/** 커뮤니티 탭 안의 화면 — 피드 위에 상세·글쓰기·프로필을 쌓는다. 뒤로 가면 하나씩 닫는다. */
+private sealed interface CommunityRoute {
+    data class Detail(val post: Post, val owner: FeedController) : CommunityRoute
+    data object Compose : CommunityRoute
+    data class Profile(val profile: CommunityProfile) : CommunityRoute
+}
+
+@Composable
+private fun CommunityNavigation(app: AppViewModel, gate: CommunityGate) {
+    var stack by remember { mutableStateOf(listOf<CommunityRoute>()) }
+    val feedList = rememberLazyListState()
+    fun push(route: CommunityRoute) { stack = stack + route }
+    fun pop() { stack = stack.dropLast(1) }
+    PlatformBackHandler(enabled = stack.isNotEmpty()) { pop() }
+    when (val top = stack.lastOrNull()) {
+        null -> FeedScreen(
             app = app,
             gate = gate,
-            onCompose = {}, // Task 5 글쓰기
-            onOpenPost = {}, // Task 4 글 상세
-            onOpenProfile = {}, // Task 6 프로필
+            listState = feedList,
+            onCompose = { push(CommunityRoute.Compose) },
+            onOpenPost = { push(CommunityRoute.Detail(it, app.communityFeed)) },
+            onOpenProfile = { push(CommunityRoute.Profile(it)) },
         )
+        is CommunityRoute.Detail -> PostDetailScreen(
+            app = app,
+            initial = top.post,
+            owner = top.owner,
+            gate = gate,
+            onBack = ::pop,
+            onOpenProfile = { push(CommunityRoute.Profile(it)) },
+        )
+        CommunityRoute.Compose -> CommunityNotice("글쓰기", "계획 3 Task 5") // Task 5 에서 ComposeScreen
+        is CommunityRoute.Profile -> CommunityNotice(top.profile.nickname, "계획 3 Task 6") // Task 6 에서 ProfileScreen
     }
 }
 

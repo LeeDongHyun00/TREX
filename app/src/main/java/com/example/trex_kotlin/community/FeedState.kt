@@ -62,8 +62,12 @@ data class FeedState(
 
     fun removed(id: Long): FeedState = copy(posts = posts.filterNot { it.id == id }, pendingLikes = pendingLikes - id)
 
-    /** 상세 화면에서 바뀐 글(댓글 수 등)로 갈아 끼운다. */
+    /** 서버에서 새로 받은 글로 갈아 끼운다 — 화면 값([shown])을 넣지 않는다(확인 안 된 좋아요가 확인된 것처럼 굳는다). */
     fun replaced(post: Post): FeedState = copy(posts = posts.map { if (it.id == post.id) post else it })
+
+    /** 상세 화면에서 댓글을 달거나 지웠다 — 댓글 수만 바꾼다. */
+    fun commentsChanged(id: Long, delta: Int): FeedState =
+        copy(posts = posts.map { if (it.id == id) it.copy(commentCount = (it.commentCount + delta).coerceAtLeast(0)) else it })
 
     /** 사진 서명 주소가 곧 만료된다(1시간) — 탭에 돌아오면 새로 받는다. */
     fun isStale(now: Long): Boolean = loadedAt == null || now - loadedAt >= STALE_AFTER_MS

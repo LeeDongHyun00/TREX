@@ -85,6 +85,8 @@ class FeedController(
 
     fun replaced(post: Post) { state = state.replaced(post) }
 
+    fun commentsChanged(postId: Long, delta: Int) { state = state.commentsChanged(postId, delta) }
+
     fun clearMessage() { message = null }
 
     /** 계정이 바뀌었다 — 앞 계정의 목록·좋아요 표시를 버린다. 보내는 중인 좋아요는 돌아와도 빈 목록이라 아무것도 바꾸지 않는다. */

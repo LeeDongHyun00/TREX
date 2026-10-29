@@ -47,6 +47,7 @@ com/example/trex_kotlin/community/FeedController.kt
 com/example/trex_kotlin/community/PostCard.kt
 com/example/trex_kotlin/community/CommunityDialogs.kt
 com/example/trex_kotlin/community/FeedScreen.kt
+com/example/trex_kotlin/community/PostDetailScreen.kt
 # Phase 2: 카메라 없는 화면 전부. 플랫폼 기능은 같은 이름의 짝 — Android PlatformUi.kt(목록 밖) ↔ ios-ui iosMain PlatformUi.kt.
 # 경계 타입은 PlatformApi.kt. 앱 내 업데이트(AppUpdate)는 Android 체험판 전용이라 목록 밖이다.
 com/example/trex_kotlin/PlatformApi.kt

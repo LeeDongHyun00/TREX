@@ -10,7 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
@@ -52,6 +52,7 @@ import kotlinx.coroutines.launch
 fun FeedScreen(
     app: AppViewModel,
     gate: CommunityGate,
+    listState: LazyListState,
     onCompose: () -> Unit,
     onOpenPost: (Post) -> Unit,
     onOpenProfile: (CommunityProfile) -> Unit,
@@ -59,7 +60,7 @@ fun FeedScreen(
     val c = Trex.c
     val feed = app.communityFeed
     val scope = rememberCoroutineScope()
-    val list = rememberLazyListState()
+    val list = listState
     var action by remember { mutableStateOf<CommunityAction?>(null) }
     var notice by remember { mutableStateOf<String?>(null) }
     val now = remember(feed.state.loadedAt) { nowMillis() }

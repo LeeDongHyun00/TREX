@@ -91,6 +91,17 @@ class FeedStateTest {
     }
 
     @Test
+    fun 댓글_수만_바꾸고_보내는_중인_좋아요는_그대로() {
+        // 화면 값(shown)을 되써 넣으면 아직 확인 안 된 좋아요가 확인된 것처럼 굳는다(상세 화면에서 댓글을 달 때)
+        val feed = FeedState().withFirstPage(PostPage(listOf(post(1, likes = 3)), null), now = 0).tapLike(1)
+        val commented = feed.commentsChanged(1, +1)
+        assertEquals(1L, commented.shown(1)?.commentCount)
+        assertEquals(true, commented.likeToSend(1))
+        assertEquals(3L, commented.likeFailed(1).shown(1)?.likeCount)
+        assertEquals(0L, commented.commentsChanged(1, -5).shown(1)?.commentCount)
+    }
+
+    @Test
     fun 오십분이_지나면_사진_주소가_곧_만료되니_새로_받는다() {
         val feed = FeedState().withFirstPage(PostPage(listOf(post(1)), null), now = 0)
         assertFalse(feed.isStale(now = 49 * 60_000L))
