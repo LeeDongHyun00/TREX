@@ -200,8 +200,11 @@ fun WeatherSummaryRow(
                         Modifier.size(26.dp).clip(CircleShape).background(Brush.linearGradient(skyColors(rec.theme, w.isDay))),
                         contentAlignment = Alignment.Center,
                     ) { Icon(weatherIcon(w.weatherCode, w.isDay), contentDescription = null, tint = Color.White, modifier = Modifier.size(15.dp)) }
-                    Text("${w.temperature.roundToInt()}°", color = c.text, fontSize = 17.sp, fontWeight = FontWeight.SemiBold,
+                    // 어느 곳 날씨인지 — 다른 지역으로 둔 줄 모르고 날씨가 틀리다고 보지 않게(10-29 실기기: 제주로 두고 "맑음")
+                    Text(shortPlaceLabel(rec.locationLabel), color = c.text2, fontSize = 14.sp, maxLines = 1,
                         modifier = Modifier.padding(start = 9.dp))
+                    Text("${w.temperature.roundToInt()}°", color = c.text, fontSize = 17.sp, fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.padding(start = 7.dp))
                     // 좁은 화면·큰 글씨에서는 날씨 이름이 먼저 줄어든다(weight) — 강수량과 › 가 밀려나지 않게
                     Text(WeatherExerciseRecommender.getWeatherDescription(w.weatherCode), color = c.text2, fontSize = 14.sp,
                         maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false).padding(start = 7.dp))
