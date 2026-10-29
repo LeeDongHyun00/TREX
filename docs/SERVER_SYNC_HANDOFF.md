@@ -159,9 +159,17 @@ adb reverse tcp:8080 tcp:8080                                  # 폰의 127.0.0.
 
 함정:
 - 운영 `ddl-auto: update` — 컬럼 추가는 따라가지만 이름 변경·삭제는 못 한다. 엔티티를 크게 바꾸면 Flyway 를 먼저 들인다.
+- 운영 `ddl-auto: update` 는 **enum 검사 규칙(check 제약)도 고치지 않는다.** Hibernate 는 테이블을 처음 만들 때 `@Enumerated(STRING)` 칸에 "이 값들만" 규칙을 같이 만든다. 나중에 enum 에 값을 더하면(예: `AuthProvider.APPLE`) 운영에서 그 값을 저장할 때 `violates check constraint` 로 막히고, 앱에는 "이미 사용 중인 값"으로 보인다. 테스트는 매번 테이블을 새로 만들어서 못 잡는다. enum 값을 더하는 PR 은 배포 때 아래 "운영 DB 보기"로 그 규칙을 바꾼다(실제 예는 10.4).
 - `.env` 를 Windows 에서 만들어 올리면 줄끝 `\r` 이 비밀번호에 붙는다 — EC2 에서 만들거나 `sed -i 's/\r$//'`.
 - Caddy 인증서는 `caddy_data` 볼륨에 있다. 볼륨을 지우면 재발급(Let's Encrypt 주간 발급 제한).
 - 6개월 뒤 Free plan 계정이 닫히기 전에 유료 전환 여부를 정한다(RDS 스냅샷을 다른 계정으로 공유해 옮길 수 있다).
+
+운영 DB 보기 — RDS 는 EC2 에서만 열린다. EC2 에 psql 이 없으니 psql 컨테이너를 잠깐 띄웠다가 지운다(`--rm`). 접속값은 `.env` 에서 읽고 화면에 내보내지 않는다. 끝의 `SELECT 1;` 자리에 볼 SQL 을 넣는다.
+```bash
+KEY=C:/Workspace/TREX/trex-key.pem; HOST=ubuntu@54.252.112.191
+ssh -i $KEY $HOST "cd ~/trex && U=\$(grep '^DB_URL=' .env | cut -d= -f2-); docker run --rm -e PGUSER=\"\$(grep '^DB_USERNAME=' .env | cut -d= -f2-)\" -e PGPASSWORD=\"\$(grep '^DB_PASSWORD=' .env | cut -d= -f2-)\" postgres:17-alpine psql \"\${U#jdbc:}\" -v ON_ERROR_STOP=1 -c \"SELECT 1;\""
+```
+검사 규칙 목록: `SELECT conrelid::regclass, conname, pg_get_constraintdef(oid) FROM pg_constraint WHERE contype = 'c' AND connamespace = 'public'::regnamespace;`
 
 ## 9. 커뮤니티 운영 (2026-10-29 — 배포 전 초안)
 
@@ -315,3 +323,12 @@ ssh -i $KEY $HOST "cd ~/trex && docker compose up -d && sleep 25 && docker compo
 - 키 없이: `curl -s -o /dev/null -w '%{http_code}' -X POST -H 'Content-Type: application/json' -d '{"identityToken":"x","nonce":"n"}' https://trex-api.duckdns.org/api/auth/oauth/apple` → 401(설정이 있으면 토큰이 틀려서, 없으면 설정이 없어서), nonce 를 빼면 400.
 - 동현님 준비 뒤(실기기): iPhone 에서 "Apple로 계속하기" → 설정의 계정 줄이 이메일(가린 전달 주소일 수 있다)이나 "Apple 계정". 설정 → 회원 탈퇴 → 서버 로그에 `Apple 연결 끊기 완료`. iPhone 설정 → Apple ID → "Apple로 로그인" 목록에서 T-REX 가 빠진다.
 - 커뮤니티 관리자로 Apple 계정을 쓰려면 `COMMUNITY_ADMIN_LOGIN_IDS` 에 `apple_<sub>` 를 쉼표로 더한다(loginId 는 9.1 ⑦ 과 같은 방법).
+
+### 10.4 첫 실기기 시도에서 겪은 것 (2026-10-29)
+- Apple 로그인이 "이미 사용 중인 값이 포함되어 있어요"로 실패했다. 서버 로그는 `데이터 무결성 위반: ... violates check constraint "users_provider_check"`. 운영 회원 표의 가입 경로 규칙에 `APPLE` 이 없었다(8절 함정 — 표를 만든 10-13 에는 `LOCAL`·`GOOGLE`·`KAKAO` 뿐이었다). Apple 토큰 검증은 통과한 상태였다.
+- "운영 DB 보기"(8절)로 아래 SQL 을 실행해 고쳤다. 서버 재시작·앱 재빌드는 필요 없었다.
+  ```sql
+  BEGIN; ALTER TABLE users DROP CONSTRAINT users_provider_check;
+  ALTER TABLE users ADD CONSTRAINT users_provider_check CHECK (provider IN ('LOCAL','GOOGLE','KAKAO','APPLE')); COMMIT;
+  ```
+- 같이 확인한 다른 검사 규칙(`meals_meal_type_check`, `reports_reason_check`·`reports_resolution_check`·`reports_target_type_check`)은 코드의 enum 과 같았다.
