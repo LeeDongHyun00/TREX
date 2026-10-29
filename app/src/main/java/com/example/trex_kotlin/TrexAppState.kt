@@ -4,6 +4,7 @@ import com.example.trex_kotlin.community.CommunityApi
 import com.example.trex_kotlin.community.CommunityGate
 import com.example.trex_kotlin.community.CommunityMe
 import com.example.trex_kotlin.community.FeedController
+import com.example.trex_kotlin.community.WorkoutCardData
 import com.example.trex_kotlin.community.communityGate
 import com.example.trex_kotlin.sync.ApiException
 import com.example.trex_kotlin.sync.AuthAccount
@@ -272,6 +273,9 @@ class AppViewModel(private val platform: AppPlatform) : ViewModel() {
         now = ::nowMillis,
     )
     private var communityFeedOwner: String? = null
+
+    /** 운동 완료 화면에서 "오운완 올리기"를 눌렀다 — 커뮤니티 탭이 이 카드를 넣은 글쓰기를 열고 비운다. */
+    var pendingWorkoutCard by mutableStateOf<WorkoutCardData?>(null)
 
     /** 피드를 보이기 전 — 계정이 바뀌었으면 비우고, 받은 적이 없거나 사진 주소가 곧 만료되면 새로 받는다. */
     suspend fun refreshFeedIfNeeded() {

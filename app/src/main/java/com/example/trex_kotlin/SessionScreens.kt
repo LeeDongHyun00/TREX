@@ -30,6 +30,7 @@ import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.FitnessCenter
+import androidx.compose.material.icons.rounded.Forum
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PhotoCamera
@@ -154,6 +155,8 @@ fun SessionCompleteScreen(
     /** 세션 스코프 스피커 — 라이브 화면의 음소거 상태를 그대로 따른다. */
     speak: (String) -> Unit = {},
     fatigueContent: @Composable () -> Unit = {},
+    /** 커뮤니티에 오운완 카드 올리기(커뮤니티를 쓸 수 있을 때만, 없으면 버튼이 없다). */
+    onShare: (() -> Unit)? = null,
     onDone: () -> Unit,
 ) {
     val c = Trex.c
@@ -214,6 +217,7 @@ fun SessionCompleteScreen(
             PostureSessionBlock(reports = ordered, headline = headline, onLabel = onLabel, modifier = Modifier.padding(top = 20.dp))
         }
         }
+        if (onShare != null) GhostButton("오운완 올리기", onShare, Modifier.padding(top = 12.dp).fillMaxWidth(), icon = Icons.Rounded.Forum)
         Cta("홈으로", icon = Icons.Rounded.Home, onClick = onDone, modifier = Modifier.padding(top = 12.dp).fillMaxWidth())
     }
 }

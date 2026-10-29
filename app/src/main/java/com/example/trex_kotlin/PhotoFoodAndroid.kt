@@ -21,6 +21,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
@@ -60,6 +61,23 @@ class AndroidFoodPhoto(val bitmap: Bitmap) : FoodPhoto {
         } finally {
             if (scaled !== bitmap) scaled.recycle()
         }
+    }
+}
+
+/**
+ * 화면에서 뜬 그림(오운완 카드, 커뮤니티 글쓰기)을 JPEG 로 — iPhone 은 ios-ui 의 같은 이름 함수. 그래픽 레이어 그림은 HARDWARE
+ * 비트맵이라 압축할 수 없어 소프트웨어 사본을 만든다. IO 스레드에서 부른다.
+ */
+fun encodeJpeg(image: ImageBitmap, quality: Int = 90): ByteArray {
+    val source = image.asAndroidBitmap()
+    val soft = if (source.config == Bitmap.Config.HARDWARE) source.copy(Bitmap.Config.ARGB_8888, false) else source
+    try {
+        return ByteArrayOutputStream().use { out ->
+            check(soft.compress(Bitmap.CompressFormat.JPEG, quality, out)) { "JPEG 로 만들지 못했어요" }
+            out.toByteArray()
+        }
+    } finally {
+        if (soft !== source) soft.recycle()
     }
 }
 

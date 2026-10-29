@@ -72,7 +72,7 @@ fun CommunityTabScreen(app: AppViewModel) {
 /** 커뮤니티 탭 안의 화면 — 피드 위에 상세·글쓰기·프로필을 쌓는다. 뒤로 가면 하나씩 닫는다. */
 private sealed interface CommunityRoute {
     data class Detail(val post: Post, val owner: FeedController) : CommunityRoute
-    data object Compose : CommunityRoute
+    data class Compose(val card: WorkoutCardData? = null) : CommunityRoute
     data class Profile(val profile: CommunityProfile, val posts: FeedController) : CommunityRoute
 }
 
@@ -91,12 +91,20 @@ private fun CommunityNavigation(app: AppViewModel, gate: CommunityGate) {
     )))
     fun pop() { stack = stack.dropLast(1) }
     PlatformBackHandler(enabled = stack.isNotEmpty()) { pop() }
+    // 운동 완료 화면의 "오운완 올리기" — 카드를 넣은 글쓰기를 연다
+    val pendingCard = app.pendingWorkoutCard
+    LaunchedEffect(pendingCard) {
+        if (pendingCard != null) {
+            if (gate.canWrite) push(CommunityRoute.Compose(pendingCard))
+            app.pendingWorkoutCard = null
+        }
+    }
     when (val top = stack.lastOrNull()) {
         null -> FeedScreen(
             app = app,
             gate = gate,
             listState = feedList,
-            onCompose = { push(CommunityRoute.Compose) },
+            onCompose = { push(CommunityRoute.Compose()) },
             onOpenPost = { push(CommunityRoute.Detail(it, app.communityFeed)) },
             onOpenProfile = ::openProfile,
         )
@@ -108,8 +116,9 @@ private fun CommunityNavigation(app: AppViewModel, gate: CommunityGate) {
             onBack = ::pop,
             onOpenProfile = ::openProfile,
         )
-        CommunityRoute.Compose -> ComposeScreen(
+        is CommunityRoute.Compose -> ComposeScreen(
             app = app,
+            card = top.card,
             onClose = ::pop,
             onPosted = { pop(); scope.launch { feedList.scrollToItem(0) } },
         )

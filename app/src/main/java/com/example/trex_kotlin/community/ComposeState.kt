@@ -9,17 +9,21 @@ data class ComposeState<P>(
     val photos: List<P> = emptyList(),
     val posting: Boolean = false,
     val error: String? = null,
+    /** 오운완 카드를 첫 사진으로 올린다(사진 한 칸을 쓴다, 계획 3 Task 8). */
+    val card: Boolean = false,
 ) {
-    val photosLeft: Int get() = MAX_PHOTOS - photos.size
+    val photosLeft: Int get() = MAX_PHOTOS - photos.size - (if (card) 1 else 0)
 
     val bodyToSend: String? get() = body.trim().ifEmpty { null }
 
-    val canPost: Boolean get() = !posting && (bodyToSend != null || photos.isNotEmpty())
+    val canPost: Boolean get() = !posting && (bodyToSend != null || photos.isNotEmpty() || card)
 
     /** 본문은 서버처럼 글자(코드 포인트) 수로 자른다 — 이모지를 반으로 가르지 않는다. 고치기 시작하면 실패 문구를 내린다. */
     fun withBody(text: String): ComposeState<P> = copy(body = takeCodePoints(text, MAX_BODY), error = null)
 
     fun addPhotos(more: List<P>): ComposeState<P> = copy(photos = photos + more.take(photosLeft), error = null)
+
+    fun withoutCard(): ComposeState<P> = copy(card = false)
 
     fun removePhoto(index: Int): ComposeState<P> = copy(photos = photos.filterIndexed { i, _ -> i != index })
 

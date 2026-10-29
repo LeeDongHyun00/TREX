@@ -27,6 +27,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import com.example.trex_kotlin.community.CommunityTabScreen
 import com.example.trex_kotlin.community.ProvideRemoteImages
+import com.example.trex_kotlin.community.workoutCardData
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.rounded.BarChart
@@ -426,6 +427,17 @@ private fun TrexAppContent(app: AppViewModel) {
                             fatigueContent = {
                                 SessionMuscleMap(app, loadSessionId)
                             },
+                            onShare = if (app.communityGate.canWrite) {
+                                {
+                                    val plan = recordableWorkouts()
+                                    val elapsed = progress.workDurations(steps)
+                                    // 완료 화면과 같은 kcal 식(SessionCompleteScreen)
+                                    val kcal = plan.sumOf { it.estimatedCalories(elapsed[it.id] ?: 0) }
+                                    app.pendingWorkoutCard = workoutCardData(plan, sessionElapsed, kcal, localToday())
+                                    exitSession()
+                                    selectedTab = TrexTab.Community
+                                }
+                            } else null,
                             onDone = { exitSession() },
                             )
 

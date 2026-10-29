@@ -38,6 +38,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.layer.drawLayer
+import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
@@ -53,6 +56,7 @@ import com.example.trex_kotlin.LocalTrexNavSpace
 import com.example.trex_kotlin.PlatformBackHandler
 import com.example.trex_kotlin.Trex
 import com.example.trex_kotlin.WashBanner
+import com.example.trex_kotlin.encodeJpeg
 import com.example.trex_kotlin.isOutOfMemory
 import com.example.trex_kotlin.rememberCameraPermission
 import com.example.trex_kotlin.rememberFoodCamera
@@ -67,13 +71,14 @@ import kotlinx.coroutines.withContext
 /**
  * 글쓰기(설계 §2 목표 2·§5) — 글만·사진만·둘 다. 사진은 갤러리(최대 5장)나 카메라, 올릴 때 긴 변 1080 JPEG 로 다시 만든다
  * (EXIF 가 따라가지 않는다). 올리기가 실패하면(네트워크·429) 입력을 그대로 두고 서버 문구를 보인다(Review Focus 4).
- * [initialPhotos] 는 오운완 카드처럼 미리 넣어 둘 사진(계획 3 Task 8).
+ * [card] 는 운동 완료 화면의 "오운완 올리기" — 미리보기로 그린 카드를 떠서 첫 사진으로 올린다(계획 3 Task 8).
  */
 @Composable
-fun ComposeScreen(app: AppViewModel, onClose: () -> Unit, onPosted: (Post) -> Unit, initialPhotos: List<FoodPhoto> = emptyList()) {
+fun ComposeScreen(app: AppViewModel, onClose: () -> Unit, onPosted: (Post) -> Unit, card: WorkoutCardData? = null) {
     val c = Trex.c
     val scope = rememberCoroutineScope()
-    var state by remember { mutableStateOf(ComposeState<FoodPhoto>().addPhotos(initialPhotos)) }
+    var state by remember { mutableStateOf(ComposeState<FoodPhoto>(card = card != null)) }
+    val cardLayer = rememberGraphicsLayer()
     var loadingPhotos by remember { mutableStateOf(false) }
     var cameraOpen by remember { mutableStateOf(false) }
 
@@ -105,7 +110,8 @@ fun ComposeScreen(app: AppViewModel, onClose: () -> Unit, onPosted: (Post) -> Un
         state = state.started()
         scope.launch {
             try {
-                val jpegs = withContext(Dispatchers.IO) { snapshot.photos.map { it.jpeg() } }
+                val cardImage = if (snapshot.card) cardLayer.toImageBitmap() else null
+                val jpegs = withContext(Dispatchers.IO) { listOfNotNull(cardImage?.let { encodeJpeg(it) }) + snapshot.photos.map { it.jpeg() } }
                 val post = app.community.createPost(snapshot.bodyToSend, jpegs)
                 app.communityFeed.posted(post)
                 onPosted(post)
@@ -159,7 +165,22 @@ fun ComposeScreen(app: AppViewModel, onClose: () -> Unit, onPosted: (Post) -> Un
                 "${codePointLength(state.body)} / ${ComposeState.MAX_BODY}", color = c.text3, fontSize = 12.sp,
                 modifier = Modifier.align(Alignment.End),
             )
-            Text("사진 ${state.photos.size}/${ComposeState.MAX_PHOTOS}", color = c.text2, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+            if (card != null && state.card) Box {
+                // 이 미리보기를 그대로 떠서 올린다 — 숫자만(자세 판정 없음, 설계 §3)
+                WorkoutCard(
+                    card,
+                    Modifier.clip(RoundedCornerShape(18.dp)).drawWithContent {
+                        cardLayer.record { this@drawWithContent.drawContent() }
+                        drawLayer(cardLayer)
+                    },
+                )
+                if (!state.posting) Surface(
+                    onClick = { state = state.withoutCard() },
+                    shape = CircleShape, color = Color.Black.copy(alpha = 0.6f),
+                    modifier = Modifier.align(Alignment.TopEnd).padding(8.dp).size(28.dp),
+                ) { Icon(Icons.Rounded.Close, "카드 빼기", tint = Color.White, modifier = Modifier.padding(5.dp)) }
+            }
+            Text("사진 ${state.photos.size + (if (state.card) 1 else 0)}/${ComposeState.MAX_PHOTOS}", color = c.text2, fontSize = 13.sp, fontWeight = FontWeight.Medium)
             LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 itemsIndexed(state.photos) { index, photo ->
                     Box(Modifier.size(96.dp)) {

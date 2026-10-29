@@ -58,4 +58,15 @@ class ComposeStateTest {
         assertEquals("오운완", ComposeState<String>().withBody("  오운완\n").bodyToSend)
         assertNull(ComposeState<String>().withBody(" \n ").bodyToSend)
     }
+
+    @Test
+    fun 오운완_카드는_사진_한_칸을_쓰고_글_없이도_올린다() {
+        val withCard = ComposeState<String>(card = true)
+        assertTrue(withCard.canPost)
+        assertEquals(4, withCard.photosLeft)
+        assertEquals(listOf("a", "b", "c", "d"), withCard.addPhotos(listOf("a", "b", "c", "d", "e")).photos)
+        val removed = withCard.withoutCard()
+        assertFalse(removed.canPost)
+        assertEquals(5, removed.photosLeft)
+    }
 }

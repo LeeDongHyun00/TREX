@@ -12,6 +12,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asComposeImageBitmap
+import androidx.compose.ui.graphics.asSkiaBitmap
 import androidx.compose.ui.viewinterop.UIKitInteropProperties
 import androidx.compose.ui.viewinterop.UIKitView
 import com.example.trex_kotlin.food.FoodDetectionResult
@@ -142,6 +143,22 @@ class IosFoodPhoto(val native: IosFoodImage) : FoodPhoto {
         } finally {
             raster.close()
         }
+    }
+}
+
+/** 화면에서 뜬 그림(오운완 카드)을 JPEG 로 — Android `PhotoFoodAndroid.kt` 의 같은 이름 함수와 같은 결과. */
+fun encodeJpeg(image: ImageBitmap, quality: Int = 90): ByteArray {
+    val skia = org.jetbrains.skia.Image.makeFromBitmap(image.asSkiaBitmap())
+    try {
+        val data = skia.encodeToData(org.jetbrains.skia.EncodedImageFormat.JPEG, quality)
+            ?: throw IllegalStateException("JPEG 로 만들지 못했어요")
+        try {
+            return data.bytes
+        } finally {
+            data.close()
+        }
+    } finally {
+        skia.close()
     }
 }
 
