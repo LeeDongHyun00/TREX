@@ -51,7 +51,9 @@ android {
             // 운영 배포용 별도 서명키는 아직 없다(docs/ANDROID_PREVIEW_RELEASE_1_3_0_7.md).
             // 이 인증서의 SHA-1 이 구글 콘솔 Android 클라이언트에 없으면 릴리스 APK 의 구글 로그인이 실패한다(docs/SERVER_SYNC_HANDOFF.md Q1).
             signingConfig = signingConfigs.getByName("debug")
-            isMinifyEnabled = false
+            // R8 로 줄이고 최적화한다(스펙 §115) — Compose 는 R8 이 sourceInformation 호출을 지우고 람다·상태 코드를 인라인해야 제 속도가 난다.
+            // 이름은 바꾸지 않는다(proguard-rules.pro 의 -dontobfuscate). 네이티브 라이브러리(MediaPipe·LiteRT)는 통째로 둔다.
+            isMinifyEnabled = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
