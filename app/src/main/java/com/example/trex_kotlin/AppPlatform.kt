@@ -1,6 +1,7 @@
 package com.example.trex_kotlin
 
 import com.example.trex_kotlin.posture.SetSelfLabel
+import com.example.trex_kotlin.sync.BinaryTransport
 import com.example.trex_kotlin.sync.HttpTransport
 import com.example.trex_kotlin.trainingload.LoadLedger
 import com.example.trex_kotlin.trainingload.LoadSet
@@ -15,6 +16,9 @@ interface AppPlatform {
 
     /** 서버 API 의 HTTP 전송. */
     val http: HttpTransport
+
+    /** 바이트 그대로의 HTTP 전송 — 커뮤니티 사진 올리기·받기. */
+    val binary: BinaryTransport
 
     /** 서버 주소. 비어 있으면 계정 기능을 쓰지 않는다. */
     val apiBaseUrl: String

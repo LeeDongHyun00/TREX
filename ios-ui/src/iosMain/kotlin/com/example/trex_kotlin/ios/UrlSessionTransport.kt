@@ -1,6 +1,8 @@
 package com.example.trex_kotlin.ios
 
 import com.example.trex_kotlin.sync.HttpResponse
+import com.example.trex_kotlin.sync.BinaryResponse
+import com.example.trex_kotlin.sync.BinaryTransport
 import com.example.trex_kotlin.sync.HttpTransport
 import com.example.trex_kotlin.sync.NetworkException
 import kotlinx.cinterop.ExperimentalForeignApi
@@ -47,6 +49,39 @@ object UrlSessionTransport : HttpTransport {
                 } else {
                     val status = (response as? NSHTTPURLResponse)?.statusCode?.toInt() ?: 0
                     cont.resume(HttpResponse(status, data?.toByteArray()?.decodeToString().orEmpty()))
+                }
+            }
+            cont.invokeOnCancellation { task.cancel() }
+            task.resume()
+        }
+}
+
+/** [BinaryTransport] 의 iPhone 구현 — [UrlSessionTransport] 와 같은 임시 세션, 바이트 그대로(커뮤니티 사진 올리기·받기). */
+object UrlSessionBinaryTransport : BinaryTransport {
+    private val session: NSURLSession by lazy {
+        val config = NSURLSessionConfiguration.ephemeralSessionConfiguration
+        config.timeoutIntervalForRequest = 30.0
+        NSURLSession.sessionWithConfiguration(config)
+    }
+
+    @OptIn(ExperimentalForeignApi::class)
+    override suspend fun exchange(method: String, url: String, headers: Map<String, String>, body: ByteArray?): BinaryResponse =
+        suspendCancellableCoroutine { cont ->
+            val address = NSURL.URLWithString(url)
+            if (address == null) {
+                cont.resumeWithException(NetworkException("주소가 잘못됐습니다: $url"))
+                return@suspendCancellableCoroutine
+            }
+            val request = NSMutableURLRequest.requestWithURL(address)
+            request.setHTTPMethod(method)
+            headers.forEach { (name, value) -> request.setValue(value, forHTTPHeaderField = name) }
+            if (body != null) request.setHTTPBody(body.toNSData())
+            val task = session.dataTaskWithRequest(request) { data, response, error ->
+                if (error != null) {
+                    cont.resumeWithException(NetworkException(error.localizedDescription))
+                } else {
+                    val status = (response as? NSHTTPURLResponse)?.statusCode?.toInt() ?: 0
+                    cont.resume(BinaryResponse(status, data?.toByteArray() ?: ByteArray(0)))
                 }
             }
             cont.invokeOnCancellation { task.cancel() }

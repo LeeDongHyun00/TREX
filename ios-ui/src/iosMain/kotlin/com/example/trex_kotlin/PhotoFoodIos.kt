@@ -126,6 +126,23 @@ class IosFoodPhoto(val native: IosFoodImage) : FoodPhoto {
     }
     override fun scaledToMax(maxDimension: Int): FoodPhoto = if (maxOf(width, height) <= maxDimension) this else IosFoodPhoto(native.scaled(maxDimension))
     override fun crop(left: Int, top: Int, width: Int, height: Int): FoodPhoto = IosFoodPhoto(native.cropped(left, top, width, height))
+    override fun jpeg(maxDimension: Int, quality: Int): ByteArray {
+        // Swift 가 줄인 픽셀(RGBA)로 Skia 래스터를 만들어 JPEG 로 — 원본 파일이 아니니 EXIF 가 없다(Android 와 같은 결과)
+        val source = if (maxOf(width, height) <= maxDimension) native else native.scaled(maxDimension)
+        val info = ImageInfo(source.width, source.height, ColorType.RGBA_8888, ColorAlphaType.PREMUL)
+        val raster = org.jetbrains.skia.Image.makeRaster(info, source.rgba().toByteArray(), source.width * 4)
+        try {
+            val data = raster.encodeToData(org.jetbrains.skia.EncodedImageFormat.JPEG, quality)
+                ?: throw IllegalStateException("JPEG 로 만들지 못했어요")
+            try {
+                return data.bytes
+            } finally {
+                data.close()
+            }
+        } finally {
+            raster.close()
+        }
+    }
 }
 
 /** 메모리 부족 — Kotlin/Native 의 OutOfMemoryError(2단계 인식·기억 비교가 앱을 죽이지 않고 물러서는 조건). */

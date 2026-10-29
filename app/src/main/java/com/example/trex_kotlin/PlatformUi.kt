@@ -8,6 +8,7 @@ import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import com.example.trex_kotlin.community.UploadSizing
 import android.graphics.Canvas
 import android.graphics.Movie
 import android.hardware.display.DisplayManager
@@ -146,6 +147,27 @@ fun PlatformBackHandler(enabled: Boolean = true, onBack: () -> Unit) = androidx.
 fun rememberGoogleIdTokenRequest(): suspend (String) -> String {
     val context = LocalContext.current
     return remember(context) { { clientId -> requestGoogleIdToken(context.findTrexActivity() ?: context, clientId) } }
+}
+
+/**
+ * 받은 사진 디코더 — 먼저 크기만 읽고 2배씩 줄여 읽은 뒤(inSampleSize) 긴 변을 [maxDimension] 으로 맞춘다.
+ * 서버는 한 변 4096 까지 받으니 앱이 직접 줄여야 피드가 메모리를 넘기지 않는다(리뷰 2026-10-29).
+ */
+@Composable
+fun rememberBytesImageDecoder(): BytesImageDecoder = remember {
+    BytesImageDecoder { bytes, maxDimension ->
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return@BytesImageDecoder null
+        var sample = 1
+        while (maxOf(bounds.outWidth, bounds.outHeight) / (sample * 2) >= maxDimension) sample *= 2
+        val decoded = BitmapFactory.decodeByteArray(bytes, 0, bytes.size, BitmapFactory.Options().apply { inSampleSize = sample })
+            ?: return@BytesImageDecoder null
+        val (w, h) = UploadSizing.fit(decoded.width, decoded.height, maxDimension)
+        val fitted = if (w == decoded.width && h == decoded.height) decoded
+        else Bitmap.createScaledBitmap(decoded, w, h, true).also { if (it !== decoded) decoded.recycle() }
+        fitted.asImageBitmap()
+    }
 }
 
 /** 음성 안내 목소리 안내 — Android 는 기기 TTS(구글 음성)를 그대로 써서 없다(iPhone 만, §108d 후속). */

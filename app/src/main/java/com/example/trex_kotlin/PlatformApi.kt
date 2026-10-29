@@ -14,19 +14,37 @@ fun interface AssetImageDecoder {
     fun decode(path: String, sampleSize: Int): ImageBitmap
 }
 
-/** 장식 그림의 작은 LRU(개수 기준) — android.util.LruCache 와 같은 의미(꺼내면 최근으로, 넘치면 가장 오래 안 쓴 것부터 버린다). */
-internal class AssetImageCache(private val maxSize: Int) {
+/** 받은 사진 바이트를 디코딩한다 — 긴 변이 [maxDimension] 근처가 되게 줄여 읽고(Android inSampleSize), 깨졌으면 null. 화면 밖에서 부른다. */
+fun interface BytesImageDecoder {
+    fun decode(bytes: ByteArray, maxDimension: Int): ImageBitmap?
+}
+
+/**
+ * 작은 LRU — android.util.LruCache 와 같은 의미(꺼내면 최근으로, 넘치면 가장 오래 안 쓴 것부터 버린다).
+ * 크기는 [sizeOf] 의 합으로 잰다(기본은 개수). 받은 사진 캐시는 바이트로 재서 개수가 적어도 큰 그림이 메모리를 넘기지 않게 한다.
+ */
+class LruCache<K : Any, V : Any>(private val maxSize: Int, private val sizeOf: (V) -> Int = { 1 }) {
     private val lock = SynchronizedObject()
-    private val entries = LinkedHashMap<String, ImageBitmap>()
+    private val entries = LinkedHashMap<K, V>()
+    private var size = 0
 
-    fun get(key: String): ImageBitmap? = synchronized(lock) { entries.remove(key)?.also { entries[key] = it } }
+    fun get(key: K): V? = synchronized(lock) { entries.remove(key)?.also { entries[key] = it } }
 
-    fun put(key: String, value: ImageBitmap) = synchronized(lock) {
-        entries.remove(key)
+    fun put(key: K, value: V) = synchronized(lock) {
+        entries.remove(key)?.let { size -= sizeOf(it) }
+        // 예산보다 큰 하나는 담지 않는다 — 그것 하나 때문에 캐시 전체가 비지 않게
+        if (sizeOf(value) > maxSize) return@synchronized
         entries[key] = value
-        while (entries.size > maxSize) entries.remove(entries.keys.first())
+        size += sizeOf(value)
+        while (size > maxSize && entries.isNotEmpty()) {
+            val eldest = entries.keys.first()
+            entries.remove(eldest)?.let { size -= sizeOf(it) }
+        }
     }
 }
+
+/** 장식 그림의 작은 LRU. */
+internal typealias AssetImageCache = LruCache<String, ImageBitmap>
 
 /** 시스템 설정 화면 열기 — Android 는 알림·앱 정보 화면, iPhone 은 둘 다 이 앱의 설정 화면이다. */
 interface SystemSettingsLinks {

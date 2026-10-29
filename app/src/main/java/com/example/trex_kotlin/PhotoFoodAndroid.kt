@@ -27,12 +27,14 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.example.trex_kotlin.community.UploadSizing
 import com.example.trex_kotlin.food.FoodDetectionResult
 import com.example.trex_kotlin.food.FoodDetector
 import com.example.trex_kotlin.food.FoodMemoryStore
 import com.example.trex_kotlin.food.decodeScaledBitmap
 import com.example.trex_kotlin.food.rotated
 import com.example.trex_kotlin.food.scaledToMax
+import java.io.ByteArrayOutputStream
 import java.util.concurrent.Executors
 
 /*
@@ -47,6 +49,18 @@ class AndroidFoodPhoto(val bitmap: Bitmap) : FoodPhoto {
     override val image: ImageBitmap by lazy { bitmap.asImageBitmap() }
     override fun scaledToMax(maxDimension: Int): FoodPhoto = bitmap.scaledToMax(maxDimension).let { if (it === bitmap) this else AndroidFoodPhoto(it) }
     override fun crop(left: Int, top: Int, width: Int, height: Int): FoodPhoto = AndroidFoodPhoto(Bitmap.createBitmap(bitmap, left, top, width, height))
+    override fun jpeg(maxDimension: Int, quality: Int): ByteArray {
+        val (w, h) = UploadSizing.fit(bitmap.width, bitmap.height, maxDimension)
+        val scaled = if (w == bitmap.width && h == bitmap.height) bitmap else Bitmap.createScaledBitmap(bitmap, w, h, true)
+        try {
+            return ByteArrayOutputStream().use { out ->
+                check(scaled.compress(Bitmap.CompressFormat.JPEG, quality, out)) { "JPEG 로 만들지 못했어요" }
+                out.toByteArray()
+            }
+        } finally {
+            if (scaled !== bitmap) scaled.recycle()
+        }
+    }
 }
 
 /** 메모리 부족 — 2단계 인식·기억 비교가 앱을 죽이지 않고 물러서는 조건(`FoodPipeline`). */

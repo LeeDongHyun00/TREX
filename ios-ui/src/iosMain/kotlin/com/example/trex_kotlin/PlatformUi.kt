@@ -121,6 +121,41 @@ fun PlatformBackHandler(enabled: Boolean = true, onBack: () -> Unit) = androidx.
 fun rememberGoogleIdTokenRequest(): suspend (String) -> String =
     remember { { serverClientId: String -> requestIosGoogleIdToken(serverClientId) } }
 
+/**
+ * 받은 사진 디코더(Skia) — 긴 변을 [maxDimension] 으로 줄여 그린다(Android 와 같은 크기). 서버는 한 변 4096 까지 받으니
+ * 원본 크기로 펼치면 피드가 메모리를 넘긴다(리뷰 2026-10-29). 깨졌으면 null. 원본 Skia 그림은 바로 닫는다.
+ */
+@Composable
+fun rememberBytesImageDecoder(): BytesImageDecoder = remember {
+    BytesImageDecoder { bytes, maxDimension ->
+        runCatching {
+            // Skia 객체는 AutoCloseable 이 아니라 try/finally 로 닫는다. toComposeImageBitmap 은 픽셀을 복사하니 닫아도 된다.
+            val source = Image.makeFromEncoded(bytes)
+            try {
+                val (w, h) = com.example.trex_kotlin.community.UploadSizing.fit(source.width, source.height, maxDimension)
+                if (w == source.width && h == source.height) {
+                    source.toComposeImageBitmap()
+                } else {
+                    val surface = Surface.makeRasterN32Premul(w, h)
+                    try {
+                        surface.canvas.drawImageRect(source, Rect.makeWH(w.toFloat(), h.toFloat()))
+                        val snapshot = surface.makeImageSnapshot()
+                        try {
+                            snapshot.toComposeImageBitmap()
+                        } finally {
+                            snapshot.close()
+                        }
+                    } finally {
+                        surface.close()
+                    }
+                }
+            } finally {
+                source.close()
+            }
+        }.getOrNull()
+    }
+}
+
 @Composable
 fun rememberSystemSettingsLinks(): SystemSettingsLinks = remember {
     object : SystemSettingsLinks {

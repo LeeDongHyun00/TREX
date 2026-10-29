@@ -12,7 +12,10 @@ import com.example.trex_kotlin.food.PixelBox
  * Android 구현은 `PhotoFoodAndroid.kt`, iPhone 구현은 ios-ui 의 같은 이름 함수다.
  */
 
-/** 사진 한 장 — Android Bitmap / iPhone UIImage. 사진은 기기 밖으로 나가지 않고 디스크에도 쓰지 않는다. */
+/**
+ * 사진 한 장 — Android Bitmap / iPhone UIImage. 음식 인식에 쓴 사진은 기기 밖으로 나가지 않고 디스크에도 쓰지 않는다.
+ * 밖으로 나가는 것은 사용자가 커뮤니티 글쓰기에서 고른 사진의 [jpeg] 결과뿐이다.
+ */
 interface FoodPhoto {
     val width: Int
     val height: Int
@@ -22,6 +25,12 @@ interface FoodPhoto {
     fun scaledToMax(maxDimension: Int): FoodPhoto
     /** 픽셀 영역을 잘라낸 사본. */
     fun crop(left: Int, top: Int, width: Int, height: Int): FoodPhoto
+    /**
+     * 커뮤니티에 올릴 JPEG — 긴 변 [maxDimension] 으로 줄여([com.example.trex_kotlin.community.UploadSizing]) 픽셀에서 새로 만든다.
+     * 원본 파일을 보내지 않으니 촬영 위치 같은 EXIF 가 따라가지 않는다. 사용자가 글에 직접 고른 사진에만 쓴다.
+     * 줄이기·압축이 무거우니 IO 스레드(`Dispatchers.IO`)에서 부른다.
+     */
+    fun jpeg(maxDimension: Int = 1080, quality: Int = 85): ByteArray
 }
 
 /** 갤러리에서 고른 사진 한 장 — 분석 스레드에서 [load] 로 디코딩한다(추론용 최대 변 1280, 방향 반영). 실패하면 null. */
