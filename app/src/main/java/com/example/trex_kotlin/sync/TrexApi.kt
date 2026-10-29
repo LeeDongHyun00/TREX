@@ -57,6 +57,22 @@ class TrexApi(private val baseUrl: String, private val transport: HttpTransport,
         return account(call("POST", "/api/auth/oauth/apple", body, auth = false).second)
     }
 
+    /** 아이디·비밀번호 가입(D13) — 가입하면 바로 로그인된 계정을 준다. 아이디·이름·이메일은 앞뒤 공백을 지워 보낸다. */
+    suspend fun signup(form: SignupForm): AuthAccount {
+        val body = JSONObject()
+            .put("loginId", form.loginId.trim())
+            .put("password", form.password)
+            .put("name", form.name.trim())
+            .put("email", form.email.trim())
+        return account(call("POST", "/api/auth/signup", body, auth = false).second)
+    }
+
+    /** 아이디·비밀번호 로그인(D13). 비밀번호는 적은 그대로 보낸다. */
+    suspend fun passwordLogin(loginId: String, password: String): AuthAccount {
+        val body = JSONObject().put("loginId", loginId.trim()).put("password", password)
+        return account(call("POST", "/api/auth/login", body, auth = false).second)
+    }
+
     private fun account(body: String): AuthAccount {
         val o = JSONObject(body)
         val user = o.getJSONObject("user")
@@ -91,6 +107,14 @@ class TrexApi(private val baseUrl: String, private val transport: HttpTransport,
 
     private fun item(o: JSONObject) = RemoteItem(o.getString("key"), o.getString("payload"), o.getLong("updatedAt"))
 
+    /** 서버 오류의 문구 — 칸별 오류(가입 규칙 등)가 있으면 그중 하나, 없으면 "message". */
+    private fun errorMessage(text: String): String? = runCatching {
+        val o = JSONObject(text)
+        val fields = o.optJSONObject("fieldErrors")
+        val field = fields?.keys()?.asSequence()?.map { fields.optString(it) }?.firstOrNull { it.isNotBlank() }
+        field ?: o.optString("message").takeIf { it.isNotBlank() }
+    }.getOrNull()
+
     private suspend fun call(
         method: String,
         path: String,
@@ -108,8 +132,7 @@ class TrexApi(private val baseUrl: String, private val transport: HttpTransport,
         val status = response.status
         val text = response.body
         if (status >= 400 && !(accept409 && status == 409)) {
-            val message = runCatching { JSONObject(text).optString("message") }.getOrNull()
-            throw ApiException(status, message?.takeIf { it.isNotBlank() } ?: "서버 오류($status)")
+            throw ApiException(status, errorMessage(text) ?: "서버 오류($status)")
         }
         return status to text
     }

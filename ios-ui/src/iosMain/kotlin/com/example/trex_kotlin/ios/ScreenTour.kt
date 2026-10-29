@@ -64,7 +64,7 @@ fun ScreenTourViewController(): UIViewController = ComposeUIViewController(confi
             Triple("06-diet-record", true) { DietRecordScreen(app, onBack = {}) },
             Triple("07-muscle-load", true) { MuscleLoadScreen(app, onBack = {}) },
             Triple("08-guidebook", true) { GuideBookScreen(onDone = {}) },
-            Triple("09-auth", true) { AuthScreen(busy = false, message = null, onGoogle = {}, onWithoutAccount = {}) },
+            Triple("09-auth", true) { AuthScreen(busy = false, message = null, onPasswordLogin = { _, _ -> }, onSignup = {}, onGoogle = {}, onWithoutAccount = {}) },
             Triple("10-onboarding", true) { OnboardingScreen(onDone = {}) },
             Triple("11-home-dark", false) { TrexApp(app) },
         )

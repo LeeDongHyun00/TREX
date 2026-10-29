@@ -135,16 +135,18 @@ class RestorationUiTest {
         compose.onNodeWithContentDescription("제어판 접기").assertHeightIsAtLeast(48.dp)
         snapshot("pip-goal-large")
     }
-    // 로그인 화면은 입력칸 대신 Google 로그인·로그인 없이 사용 두 선택지다(AuthScreens) — 폭이 바뀌어도 로고와 둘이 남는지
+    // 로그인 화면은 아이디 로그인/회원가입 탭 아래 Google·로그인 없이 사용(AuthScreens, D13) — 폭이 바뀌어도 로고·탭·선택지가 남는지(아래는 스크롤)
     @Test fun logoAndSignInChoicesSurviveNarrowToWideResize() {
         var width by mutableStateOf(320.dp)
-        compose.setContent { TrexAppTheme(ThemeMode.Light) { Box(Modifier.requiredSize(width,640.dp)) { AuthScreen(false,null,{},{}) } } }
+        compose.setContent { TrexAppTheme(ThemeMode.Light) { Box(Modifier.requiredSize(width,640.dp)) { AuthScreen(false,null,{ _, _ -> },{},{},{}) } } }
         compose.onNodeWithContentDescription("TREX 로고").assertIsDisplayed()
-        compose.onNodeWithText("Google로 계속하기").assertIsDisplayed()
+        compose.onNodeWithText("회원가입").assertIsDisplayed()
+        compose.onNodeWithText("Google로 계속하기").performScrollTo().assertIsDisplayed()
         compose.runOnIdle { width=600.dp }
+        compose.onNodeWithText("회원가입").performScrollTo().assertIsDisplayed()
         compose.onNodeWithContentDescription("TREX 로고").assertIsDisplayed()
-        compose.onNodeWithText("Google로 계속하기").assertIsDisplayed()
-        compose.onNodeWithText("로그인 없이 사용").assertIsDisplayed()
+        compose.onNodeWithText("Google로 계속하기").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("로그인 없이 사용").performScrollTo().assertIsDisplayed()
         snapshot("login-wide")
     }
     @Test fun nutritionAndGuideRemainReachableAtLargeText() {

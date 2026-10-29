@@ -40,6 +40,8 @@ import com.example.trex_kotlin.PlatformBackHandler
 import com.example.trex_kotlin.nowMillis
 import com.example.trex_kotlin.Trex
 import com.example.trex_kotlin.Cta
+import com.example.trex_kotlin.GhostButton
+import com.example.trex_kotlin.PasswordAuthDialog
 import com.example.trex_kotlin.DField
 import com.example.trex_kotlin.AppleSignInButton
 import com.example.trex_kotlin.rememberAppleCredentialRequest
@@ -189,6 +191,8 @@ private fun SignInNotice(app: AppViewModel) {
     val c = Trex.c
     val requestIdToken = rememberGoogleIdTokenRequest()
     val requestAppleCredential = rememberAppleCredentialRequest()
+    var showPasswordLogin by remember { mutableStateOf(false) }
+    if (showPasswordLogin) PasswordAuthDialog(app, onDismiss = { showPasswordLogin = false })
     NoticeColumn {
         NoticeCard {
             Icon(Icons.Rounded.Forum, null, tint = c.primaryText, modifier = Modifier.size(28.dp))
@@ -197,11 +201,17 @@ private fun SignInNotice(app: AppViewModel) {
                 "오운완·루틴·대회 소식을 나눠요. 계정을 연결하면 운동·식단 기록도 계정에 백업돼요. 다른 기능은 계정 없이도 그대로예요.",
                 color = c.text2, fontSize = 14.sp, lineHeight = 21.sp,
             )
-            if (app.appleSignInAvailable) AppleSignInButton(onClick = { if (!app.authBusy) app.continueWithApple(requestAppleCredential) })
+            // 아이디·비밀번호(D13) → Apple(iPhone) → Google — 시작 화면과 같은 순서
             Cta(
-                text = if (app.authBusy) "연결 중…" else "Google 계정 연결",
-                onClick = { app.continueWithGoogle(requestIdToken) },
+                text = "아이디로 로그인·가입",
+                onClick = { showPasswordLogin = true },
                 enabled = !app.authBusy,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            if (app.appleSignInAvailable) AppleSignInButton(onClick = { if (!app.authBusy) app.continueWithApple(requestAppleCredential) })
+            GhostButton(
+                text = if (app.authBusy) "연결 중…" else "Google 계정 연결",
+                onClick = { if (!app.authBusy) app.continueWithGoogle(requestIdToken) },
                 modifier = Modifier.fillMaxWidth(),
             )
             app.authMessage?.let { Text(it, color = c.err, fontSize = 13.sp) }

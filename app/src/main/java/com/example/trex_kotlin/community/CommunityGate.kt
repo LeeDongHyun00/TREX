@@ -5,7 +5,7 @@ package com.example.trex_kotlin.community
  * 정지된 사용자는 읽기만 되고([canWrite] 거짓) 쓰기 버튼은 "이용이 정지된 계정이에요"를 보인다.
  */
 sealed interface CommunityGate {
-    /** 이 빌드에 구글 로그인 설정이 없다(iPhone 의 빈 웹 클라이언트 ID) — "이 기기에서는 아직 커뮤니티를 쓸 수 없어요". */
+    /** 이 빌드에 서버 주소가 없다 — "이 기기에서는 아직 커뮤니티를 쓸 수 없어요". */
     data object NoLogin : CommunityGate
     /** 계정을 연결하지 않았다 — 내 정보의 계정 연결로 안내한다. */
     data object NotSignedIn : CommunityGate
@@ -23,7 +23,7 @@ sealed interface CommunityGate {
 }
 
 /**
- * [loginAvailable] = 구글 웹 클라이언트 ID 가 있는지, [signedIn] = 서버 계정이 있는지, [me] = 서버의 내 상태(null 이면 아직 모름).
+ * [loginAvailable] = 서버 주소가 있는지(아이디로 가입할 수 있다, D13), [signedIn] = 서버 계정이 있는지, [me] = 서버의 내 상태(null 이면 아직 모름).
  * 동의는 정지보다 먼저 — 서버가 읽기에도 동의를 요구한다.
  */
 fun communityGate(loginAvailable: Boolean, signedIn: Boolean, me: CommunityMe?): CommunityGate = when {
