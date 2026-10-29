@@ -2,6 +2,7 @@ package com.example.trex_kotlin.ios
 
 import com.example.trex_kotlin.sync.AppleCredential
 import com.example.trex_kotlin.sync.SignInException
+import kotlin.concurrent.Volatile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
