@@ -67,6 +67,7 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.font.FontWeight
@@ -74,22 +75,31 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import com.example.trex_kotlin.sync.SignupForm
+import com.example.trex_kotlin.sync.loginIdProblem
+import com.example.trex_kotlin.sync.passwordProblem
+import com.example.trex_kotlin.sync.signupProblem
 import kotlinx.coroutines.delay
 
 /** 로그인 로고 애니메이션의 프레임 수 — 그림은 플랫폼이 준다([loginAnimationFrame], Android 는 res/drawable-nodpi). */
 private const val LOGIN_ANIMATION_FRAMES = 16
 
-// ============================================================= AUTH (구글 로그인 / 로그인 없이 사용)
+// ============================================================= AUTH (아이디·비밀번호 / Apple / Google / 로그인 없이 사용)
+
+private const val PRIVACY_URL = "https://leedonghyun00.github.io/TREX/privacy.html"
 
 /**
  * 시작 화면. 계정은 기록 백업·기기 이전과 커뮤니티용이다 — 계정 없이도 커뮤니티를 뺀 모든 기능을 쓴다
  * (docs/SERVER_SYNC_HANDOFF.md 2단계, 커뮤니티 설계 docs/superpowers/specs/2026-10-28-community-design.md §3 계정).
- * 아이디·비밀번호 가입은 두지 않는다. 비밀번호 찾기·이메일 인증까지 만들어야 해서, 소셜 로그인으로 대신한다.
+ * 위는 아이디·비밀번호 로그인/회원가입 탭(D13 — 처음 계획대로), 아래는 Apple(iPhone)·Google·로그인 없이 사용. 계정은 서로 따로다.
  */
 @Composable
 fun AuthScreen(
     busy: Boolean,
     message: String?,
+    onPasswordLogin: (loginId: String, password: String) -> Unit,
+    onSignup: (SignupForm) -> Unit,
     onGoogle: () -> Unit,
     onWithoutAccount: () -> Unit,
     /** iPhone 만 참 — Apple 버튼을 Google 위에(App Store 지침 4.8, 설계 docs/superpowers/specs/2026-10-29-apple-sign-in-design.md). */
@@ -110,11 +120,13 @@ fun AuthScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(c.bg)
+            .imePadding()
+            .verticalScroll(rememberScrollState())
             .padding(horizontal = 26.dp)
             .padding(vertical = 20.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Spacer(Modifier.weight(1f))
+        Spacer(Modifier.height(12.dp))
         // 로고 카드 + 워드마크
         Surface(
             modifier = Modifier.size(84.dp),
@@ -131,30 +143,205 @@ fun AuthScreen(
             modifier = Modifier.padding(top = 12.dp),
         )
         Text("움직임을 보고 함께 운동해룡", color = c.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 3.dp))
-        Spacer(Modifier.weight(1f))
 
-        Column(Modifier.fillMaxWidth().padding(top = 32.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        PasswordAuthForm(busy, message, onPasswordLogin, onSignup, Modifier.padding(top = 24.dp))
+
+        OrDivider(Modifier.padding(vertical = 18.dp))
+        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             if (appleAvailable) AppleSignInButton(onClick = { if (!busy) onApple() })
-            Cta(
-                if (busy) "로그인 중…" else "Google로 계속하기",
-                onClick = onGoogle,
-                enabled = !busy,
+            GhostButton(
+                "Google로 계속하기",
+                onClick = { if (!busy) onGoogle() },
                 icon = Icons.AutoMirrored.Rounded.Login,
                 modifier = Modifier.fillMaxWidth(),
             )
             Text(
-                "기록이 계정에 백업돼 기기를 바꿔도 이어서 쓸 수 있어요",
+                "어느 계정이든 기록이 백업돼 기기를 바꿔도 이어서 쓸 수 있어요",
                 color = c.text2, fontSize = 12.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth(),
             )
-            Spacer(Modifier.height(8.dp))
-            GhostButton("로그인 없이 사용", onClick = { if (!busy) onWithoutAccount() }, modifier = Modifier.fillMaxWidth())
+            Text(
+                "로그인 없이 사용",
+                color = c.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp).clickable { if (!busy) onWithoutAccount() }.padding(vertical = 10.dp),
+            )
             Text(
                 "기록은 이 기기에만 저장돼요. 나중에 설정에서 계정을 연결할 수 있어요",
                 color = c.text3, fontSize = 12.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth(),
             )
-            if (message != null) {
-                Text(message, color = c.err, fontSize = 13.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(top = 6.dp))
+        }
+    }
+}
+
+/**
+ * 아이디·비밀번호 로그인/회원가입 탭(D13) — 10-13 에 지웠던 동현님 화면을 서버에 연결해 되살렸다. 시작 화면과 [PasswordAuthDialog] 가 같이 쓴다.
+ * 회원가입은 [signupProblem] 이 없을 때만 누를 수 있고, 아이디·비밀번호 칸은 적기 시작하면 안내 자리에 그 칸의 문제를 보인다.
+ * 비밀번호 찾기는 아직 없어서 가입 버튼 위에서 알린다. [message] 는 로그인 실패 문구(구글·Apple 실패도 여기 보인다).
+ */
+@Composable
+fun PasswordAuthForm(
+    busy: Boolean,
+    message: String?,
+    onLogin: (loginId: String, password: String) -> Unit,
+    onSignup: (SignupForm) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val c = Trex.c
+    val uri = LocalUriHandler.current
+    var signupMode by rememberSaveable { mutableStateOf(false) }
+    var id by rememberSaveable { mutableStateOf("") }
+    var password by rememberSaveable { mutableStateOf("") }
+    var suName by rememberSaveable { mutableStateOf("") }
+    var suId by rememberSaveable { mutableStateOf("") }
+    var suPw by rememberSaveable { mutableStateOf("") }
+    var suPw2 by rememberSaveable { mutableStateOf("") }
+    var suEmail by rememberSaveable { mutableStateOf("") }
+    var agree by rememberSaveable { mutableStateOf(false) }
+
+    Column(modifier.fillMaxWidth()) {
+        SegmentedTabs(
+            options = listOf("로그인", "회원가입"),
+            selected = if (signupMode) 1 else 0,
+            onSelect = { signupMode = it == 1 },
+        )
+        AnimatedContent(
+            targetState = signupMode,
+            transitionSpec = {
+                if (targetState) {
+                    (slideInHorizontally(tween(300)) { it / 3 } + fadeIn()) togetherWith
+                        (slideOutHorizontally(tween(300)) { -it / 4 } + fadeOut())
+                } else {
+                    (slideInHorizontally(tween(300)) { -it / 3 } + fadeIn()) togetherWith
+                        (slideOutHorizontally(tween(300)) { it / 4 } + fadeOut())
+                }
+            },
+            label = "auth-mode",
+            modifier = Modifier.padding(top = 18.dp),
+        ) { signup ->
+            if (!signup) {
+                Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                    DField(id, { id = it }, "아이디")
+                    DField(password, { password = it }, "비밀번호", password = true, keyboardType = KeyboardType.Password)
+                    Spacer(Modifier.height(6.dp))
+                    Cta(
+                        if (busy) "로그인 중…" else "로그인",
+                        onClick = { onLogin(id, password) },
+                        enabled = !busy && id.isNotBlank() && password.isNotEmpty(),
+                        icon = Icons.AutoMirrored.Rounded.Login,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+            } else {
+                val form = SignupForm(suName, suId, suPw, suPw2, suEmail, agree)
+                Column(verticalArrangement = Arrangement.spacedBy(11.dp)) {
+                    DField(suName, { suName = it }, "지민", label = "이름", hint = "실명이 아니어도 괜찮아요")
+                    DField(
+                        suId, { suId = it }, "trex_user", label = "아이디",
+                        hint = loginIdProblem(suId).takeIf { suId.isNotEmpty() } ?: "영문·숫자·밑줄 4~20자",
+                    )
+                    DField(
+                        suPw, { suPw = it }, "••••••••", label = "비밀번호",
+                        hint = passwordProblem(suPw).takeIf { suPw.isNotEmpty() } ?: "8자 이상, 영문·숫자 조합",
+                        password = true, keyboardType = KeyboardType.Password,
+                    )
+                    DField(
+                        suPw2, { suPw2 = it }, "••••••••", label = "비밀번호 확인",
+                        hint = if (suPw2.isNotEmpty() && suPw != suPw2) "비밀번호가 일치하지 않아요" else "한 번 더 입력해 주세요",
+                        password = true, keyboardType = KeyboardType.Password,
+                    )
+                    DField(
+                        suEmail, { suEmail = it }, "jimin@trex.app", label = "이메일",
+                        hint = "나중에 비밀번호 찾기를 만들면 이 주소를 써요", keyboardType = KeyboardType.Email,
+                    )
+                    Surface(
+                        onClick = { agree = !agree },
+                        shape = RoundedCornerShape(16.dp),
+                        color = c.surface,
+                        border = BorderStroke(1.dp, c.line),
+                    ) {
+                        Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 13.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                Modifier
+                                    .size(20.dp)
+                                    .clip(RoundedCornerShape(7.dp))
+                                    .background(if (agree) c.primary else Color.Transparent)
+                                    .border(1.dp, if (agree) c.primary else c.fieldLine, RoundedCornerShape(7.dp)),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                if (agree) Icon(Icons.Rounded.Check, contentDescription = null, tint = Color.White, modifier = Modifier.size(13.dp))
+                            }
+                            Text(
+                                "개인정보 처리방침에 동의합니다",
+                                color = c.text, fontSize = 12.5.sp, lineHeight = 17.sp,
+                                modifier = Modifier.padding(start = 11.dp).weight(1f),
+                            )
+                            Text(
+                                "보기",
+                                color = c.primaryText, fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier.clickable { uri.openUri(PRIVACY_URL) }.padding(start = 8.dp, top = 4.dp, bottom = 4.dp),
+                            )
+                        }
+                    }
+                    Text(
+                        "아직 비밀번호 찾기가 없어요. 비밀번호를 잊으면 이 계정을 되찾을 수 없으니 꼭 기억해 주세요.",
+                        color = c.text2, fontSize = 12.sp, lineHeight = 17.sp,
+                    )
+                    Cta(
+                        if (busy) "가입 중…" else "가입 완료",
+                        onClick = { onSignup(form) },
+                        enabled = !busy && signupProblem(form) == null,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
             }
+        }
+        if (message != null) {
+            Text(message, color = c.err, fontSize = 13.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(top = 10.dp))
+        }
+    }
+}
+
+/** 시작 화면의 아이디 칸과 소셜 버튼 사이 "또는". */
+@Composable
+private fun OrDivider(modifier: Modifier = Modifier) {
+    val c = Trex.c
+    Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.weight(1f).height(1.dp).background(c.line))
+        Text("또는", color = c.text3, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 12.dp))
+        Box(Modifier.weight(1f).height(1.dp).background(c.line))
+    }
+}
+
+/**
+ * 설정의 계정 칸·커뮤니티 안내의 "아이디로 로그인" — 시작 화면과 같은 칸을 전체 화면 창으로 띄운다(D13).
+ * 열 때 지난 로그인 실패 문구를 지우고, 로그인·가입이 되면 저절로 닫힌다.
+ */
+@Composable
+fun PasswordAuthDialog(app: AppViewModel, onDismiss: () -> Unit) {
+    val c = Trex.c
+    LaunchedEffect(Unit) { app.clearAuthMessage() }
+    LaunchedEffect(app.account) { if (app.account != null) onDismiss() }
+    Dialog(onDismissRequest = onDismiss, properties = fullScreenDialogProperties()) {
+        Column(
+            Modifier
+                .fillMaxSize()
+                .background(c.bg)
+                .statusBarsPadding()
+                .navigationBarsPadding()
+                .imePadding()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 26.dp, vertical = 16.dp),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                RoundIcon(Icons.AutoMirrored.Rounded.ArrowBack, onClick = onDismiss, contentDescription = "뒤로")
+                Text("아이디로 로그인", color = c.text, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 12.dp))
+            }
+            PasswordAuthForm(
+                busy = app.authBusy,
+                message = app.authMessage,
+                onLogin = { id, pw -> app.loginWithPassword(id, pw) },
+                onSignup = { app.signUpWithPassword(it) },
+                modifier = Modifier.padding(top = 24.dp),
+            )
         }
     }
 }

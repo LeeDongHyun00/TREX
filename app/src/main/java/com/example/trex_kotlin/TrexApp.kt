@@ -413,6 +413,8 @@ private fun TrexAppContent(app: AppViewModel) {
                             RootRoute.Auth -> AuthScreen(
                             busy = app.authBusy,
                             message = app.authMessage,
+                            onPasswordLogin = { id, pw -> app.loginWithPassword(id, pw) },
+                            onSignup = { app.signUpWithPassword(it) },
                             onGoogle = { app.continueWithGoogle(requestGoogleIdToken) },
                             onWithoutAccount = { app.continueWithoutAccount() },
                             appleAvailable = app.appleSignInAvailable,

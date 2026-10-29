@@ -143,8 +143,12 @@ private fun AccountGroup(app: AppViewModel) {
     val requestGoogleIdToken = rememberGoogleIdTokenRequest()
     val requestAppleCredential = rememberAppleCredentialRequest()
     val account = app.account
+    var showPasswordLogin by remember { mutableStateOf(false) }
+    if (showPasswordLogin) PasswordAuthDialog(app, onDismiss = { showPasswordLogin = false })
     SettingsGroup {
         if (account == null) {
+            // 아이디·비밀번호(D13) → Apple(iPhone) → Google — 시작 화면과 같은 순서
+            SettingsRow("아이디로 로그인·가입", Icons.Rounded.Person, null, onClick = { if (!app.authBusy) showPasswordLogin = true })
             if (app.appleSignInAvailable) AppleSignInButton(
                 onClick = { if (!app.authBusy) app.continueWithApple(requestAppleCredential) },
                 modifier = Modifier.padding(start = 18.dp, end = 18.dp, top = 16.dp),
@@ -191,7 +195,7 @@ fun SwitchAccountDialog(onMove: () -> Unit, onCancel: () -> Unit) {
         title = { Text("다른 계정의 기록이 있어요") },
         text = {
             Text(
-                "이 기기에는 다른 Google 계정으로 쓰던 기록이 있어요.\n\n" +
+                "이 기기에는 다른 계정으로 쓰던 기록이 있어요.\n\n" +
                     "‘이 계정으로 옮기기’를 누르면 이 기기 기록이 이 계정의 백업이 돼요(이 계정에 있던 백업은 덮어써요).\n" +
                     "‘취소’를 누르면 이 계정은 연결하지 않고, 이 기기 기록은 그대로예요.",
             )

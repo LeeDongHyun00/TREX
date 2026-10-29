@@ -14,8 +14,10 @@ import com.example.trex_kotlin.sync.BinaryTransport
 import com.example.trex_kotlin.sync.FirstSync
 import com.example.trex_kotlin.sync.NetworkException
 import com.example.trex_kotlin.sync.SignInException
+import com.example.trex_kotlin.sync.SignupForm
 import com.example.trex_kotlin.sync.SyncManager
 import com.example.trex_kotlin.sync.TrexApi
+import com.example.trex_kotlin.sync.signupProblem
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
@@ -145,7 +147,31 @@ class AppViewModel(private val platform: AppPlatform) : ViewModel() {
         signIn("Apple") { api.appleLogin(requestCredential()) }
     }
 
-    /** 소셜 로그인 공통 — [obtain] 으로 서버 계정을 받아 저장하고 첫 동기화를 시작한다. [label] 은 실패 문구의 이름("구글"·"Apple"). */
+    /**
+     * 아이디·비밀번호 로그인(docs/SERVER_SYNC_HANDOFF.md D13) — 소셜 로그인과 같은 길로 계정을 저장하고 첫 동기화를 한다.
+     * 틀린 비밀번호·5번 연속 실패 잠금은 서버 문구를 그대로 보인다.
+     */
+    fun loginWithPassword(loginId: String, password: String) {
+        if (authBusy) return
+        if (!api.configured) {
+            authMessage = "서버가 아직 준비되지 않았어요. ‘로그인 없이 사용’으로 시작해 주세요."
+            return
+        }
+        signIn("아이디") { api.passwordLogin(loginId, password) }
+    }
+
+    /** 아이디·비밀번호 가입(D13) — 가입하면 바로 로그인된다. 칸 확인은 화면이 [signupProblem] 으로 먼저 하고, 서버도 같은 규칙으로 본다. */
+    fun signUpWithPassword(form: SignupForm) {
+        if (authBusy) return
+        if (!api.configured) {
+            authMessage = "서버가 아직 준비되지 않았어요. ‘로그인 없이 사용’으로 시작해 주세요."
+            return
+        }
+        signupProblem(form)?.let { authMessage = it; return }
+        signIn("아이디") { api.signup(form) }
+    }
+
+    /** 로그인 공통 — [obtain] 으로 서버 계정을 받아 저장하고 첫 동기화를 시작한다. [label] 은 실패 문구의 이름("구글"·"Apple"). */
     private fun signIn(label: String, obtain: suspend () -> AuthAccount) {
         viewModelScope.launch {
             authBusy = true
@@ -263,7 +289,8 @@ class AppViewModel(private val platform: AppPlatform) : ViewModel() {
         get() = communityMeState?.takeIf { it.first == account?.loginId }?.second
 
     val communityGate: CommunityGate
-        get() = communityGate(platform.googleWebClientId.isNotBlank(), account != null, communityMe)
+        // 서버만 있으면 아이디로 가입할 수 있다(D13) — 구글 설정이 빠진 iPhone 빌드에서도 Apple·아이디 회원이 들어온다
+        get() = communityGate(api.configured, account != null, communityMe)
 
     /** 커뮤니티 탭에 들어올 때·닉네임 정하기·동의 뒤에 부른다. 실패하면 [communityMessage] 에 문구를 둔다. */
     suspend fun refreshCommunityMe() {
