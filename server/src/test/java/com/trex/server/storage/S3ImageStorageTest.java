@@ -40,4 +40,14 @@ class S3ImageStorageTest {
         assertThrows(IllegalStateException.class,
                 () -> new ImageStorageConfig().imageStorage(new CommunityProperties("", null, null, null, true)));
     }
+
+    @Test
+    void 버킷_이름_형식이_아니면_뜨지_않고_까닭을_말한다() {
+        // 2026-10-29 운영: 안내 문구의 꺾쇠를 남긴 채 넣어 사진 올릴 때에야 "서버 오류"로 드러났다
+        for (String bad : new String[] {"<trex-community-k7m2qp>", "s3://trex-community-k7m2qp", "arn:aws:s3:::trex-community-k7m2qp", "Trex-Community"}) {
+            IllegalStateException e = assertThrows(IllegalStateException.class,
+                    () -> new ImageStorageConfig().imageStorage(new CommunityProperties(bad, null, null, null, true)), bad);
+            org.junit.jupiter.api.Assertions.assertTrue(e.getMessage().contains("COMMUNITY_S3_BUCKET"), e.getMessage());
+        }
+    }
 }

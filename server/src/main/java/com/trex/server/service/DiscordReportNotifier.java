@@ -44,16 +44,27 @@ public class DiscordReportNotifier implements ReportNotifier {
      * 뒤의 알림이 전부 가지 않는다. 테스트는 짧게 준다.
      */
     public DiscordReportNotifier(CommunityProperties properties, Duration timeout) {
-        this.webhookUrl = properties.reportWebhookUrl();
+        String url = properties.reportWebhookUrl();
+        if (!url.isEmpty() && !url.startsWith("https://") && !url.startsWith("http://")) {
+            // 꺾쇠(<https://…>) 같은 잘못된 값은 보낼 때마다 실패 로그만 쌓인다 — 기동 때 한 번 알리고 끈다(2026-10-29 운영)
+            log.error("COMMUNITY_REPORT_WEBHOOK_URL 이 http(s):// 로 시작하지 않아 신고 알림을 끈다 — 꺾쇠 없이 주소만 넣는다");
+            url = "";
+        }
+        this.webhookUrl = url;
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(timeout);
         factory.setReadTimeout(timeout);
         this.client = RestClient.builder().requestFactory(factory).build();
     }
 
+    /** 신고 알림을 보내는지 — 주소가 비었거나 잘못됐으면 거짓. */
+    public boolean enabled() {
+        return !webhookUrl.isEmpty();
+    }
+
     @Override
     public void reportFiled(ReportTargetType type, String targetId, ReportReason reason, long reportCount, boolean autoHidden) {
-        if (webhookUrl.isEmpty()) return;
+        if (!enabled()) return;
         String content = message(type, targetId, reason, reportCount, autoHidden);
         sender.execute(() -> {
             try {
