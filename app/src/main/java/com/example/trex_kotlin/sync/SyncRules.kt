@@ -35,7 +35,8 @@ object SyncRules {
      * 서버와 맞춰 둘 항목들. 테마·안내 완료·오늘 계획 날짜 같은 기기 설정은 넣지 않는다.
      * 내 음식 기억(food_memory.tsv)·자세 기준선·자세 로그는 `trex_store` 밖이라 대상이 아니다 — 음식 기억은 폰 밖으로 내보내지 않는다(FOOD_EVAL §9).
      */
-    val KEYS: List<String> = listOf("profile", "plan", "history", "diet", "water", "custom_foods", "goal_override")
+    // routines = 내 루틴 보관함(루틴 공유, docs/superpowers/specs/2026-10-29-routine-share-design.md) — 옛 앱은 모르는 항목을 무시한다
+    val KEYS: List<String> = listOf("profile", "plan", "history", "diet", "water", "custom_foods", "goal_override", "routines")
 
     /**
      * @param otherAccountOnDevice 이 서버에서 이 기기와 마지막으로 맞춘 계정이 지금 계정과 다르다.

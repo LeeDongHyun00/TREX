@@ -1,5 +1,10 @@
 package com.example.trex_kotlin
 
+import com.example.trex_kotlin.routines.SavedRoutine
+import com.example.trex_kotlin.routines.decodeRoutineExercises
+import com.example.trex_kotlin.routines.encodeRoutineExercises
+import com.example.trex_kotlin.routines.workoutFromJson
+import com.example.trex_kotlin.routines.workoutJson
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -117,55 +122,54 @@ class TrexStore(private val prefs: KeyValueStore) {
 
     // ---- 운동 계획
 
+    // 운동 한 개의 JSON 은 공유·보관함과 같다(routines/RoutineCodec.kt) — 개명된 종목은 로드 시 새 이름으로
     fun loadPlan(): List<Workout>? = prefs.getString(KEY_PLAN, null)?.let { raw ->
         runCatching {
             val arr = JSONArray(raw)
             List(arr.length()) { i ->
                 val o = arr.getJSONObject(i)
-                Workout(
-                    id = o.getString("id"),
-                    name = WorkoutNames.canonical(o.getString("name")),   // 개명된 종목("바벨 스쿼트" → "기본 스쿼트")은 로드 시 바꾼다
-                    reps = o.getString("reps"),
-                    duration = o.getString("duration"),
-                    posture = o.getBoolean("posture"),
-                    category = o.getString("category"),
-                    alt = o.optJSONObject("alt")?.let { a ->
-                        WorkoutAlt(a.getString("name"), a.getString("reps"))
-                    },
-                    done = o.optBoolean("done", false),
-                    secondsPerRep = if (o.has("secondsPerRep")) o.optInt("secondsPerRep", 3).coerceIn(1, 15) else null,
-                    restSeconds = if (o.has("restSeconds")) o.optInt("restSeconds", 45).coerceIn(0, 600) else null,
-                    target = when (o.optString("targetKind")) {
-                        "duration" -> WorkoutTarget.Duration(o.optInt("targetAmount", 30).coerceIn(1, 3600))
-                        "repetitions" -> WorkoutTarget.Repetitions(o.optInt("targetAmount", 12).coerceIn(1, 999))
-                        else -> null
-                    },
-                ).timeOnlyNormalized()   // 시간 전용 종목(플랭크)에 남은 횟수 목표는 시간으로(spec §108g)
+                workoutFromJson(o, o.getString("id"), done = o.optBoolean("done", false), posture = o.getBoolean("posture"))
             }
         }.getOrNull()
     }
 
     fun savePlan(plan: List<Workout>) {
         val arr = JSONArray()
-        plan.forEach { w ->
-            val o = JSONObject()
-                .put("id", w.id)
-                .put("name", w.name)
-                .put("reps", w.reps)
-                .put("duration", w.duration)
-                .put("posture", w.posture)
-                .put("category", w.category)
-                .put("done", w.done)
-            w.alt?.let { o.put("alt", JSONObject().put("name", it.name).put("reps", it.reps)) }
-            w.secondsPerRep?.let { o.put("secondsPerRep", it) }
-            w.restSeconds?.let { o.put("restSeconds", it) }
-            w.resolvedTarget().let { goal ->
-                o.put("targetKind", if (goal is WorkoutTarget.Duration) "duration" else "repetitions")
-                o.put("targetAmount", goal.amount)
-            }
-            arr.put(o)
-        }
+        plan.forEach { arr.put(workoutJson(it, withDeviceFields = true)) }
         prefs.edit().putString(KEY_PLAN, arr.toString()).apply()
+    }
+
+    // ---- 내 루틴 보관함(docs/superpowers/specs/2026-10-29-routine-share-design.md) — 계정 백업 항목 `routines`
+
+    fun loadRoutines(): List<SavedRoutine> = prefs.getString(KEY_ROUTINES, null)?.let { raw ->
+        runCatching {
+            val arr = JSONArray(raw)
+            (0 until arr.length()).mapNotNull { i ->
+                runCatching {
+                    val o = arr.getJSONObject(i)
+                    val id = o.getString("id")
+                    SavedRoutine(
+                        id = id,
+                        name = o.getString("name"),
+                        // 저장할 때 이미 이 앱이 아는 종목만 자세 교정을 켜 두었다
+                        workouts = decodeRoutineExercises(o.getJSONArray("exercises"), id) { true },
+                        from = if (o.isNull("from")) null else o.optString("from").takeIf { it.isNotBlank() },
+                        savedAtMillis = o.optLong("savedAt", 0L),
+                    )
+                }.getOrNull()
+            }
+        }.getOrNull()
+    } ?: emptyList()
+
+    fun saveRoutines(list: List<SavedRoutine>) {
+        val arr = JSONArray()
+        list.forEach { r ->
+            arr.put(
+                JSONObject().put("id", r.id).put("name", r.name).put("from", r.from ?: JSONObject.NULL)
+                    .put("savedAt", r.savedAtMillis).put("exercises", encodeRoutineExercises(r.workouts)),
+            )
+        }
+        prefs.edit().putString(KEY_ROUTINES, arr.toString()).apply()
     }
 
     // ---- 운동 기록
@@ -456,6 +460,7 @@ class TrexStore(private val prefs: KeyValueStore) {
         const val KEY_ONBOARDED = "onboarded"
         const val KEY_PROFILE = "profile"
         const val KEY_PLAN = "plan"
+        const val KEY_ROUTINES = "routines"
         const val KEY_HISTORY = "history"
         const val KEY_DIET = "diet"
         const val KEY_WATER = "water"
