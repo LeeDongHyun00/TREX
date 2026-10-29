@@ -1,5 +1,6 @@
 package com.trex.server.service;
 
+import com.trex.server.community.CommunityAccountCleaner;
 import com.trex.server.dto.LoginRequest;
 import com.trex.server.dto.SignupRequest;
 import com.trex.server.dto.TokenResponse;
@@ -35,6 +36,7 @@ public class AuthService {
     private final DietLogRepository dietLogRepository;
     private final ExerciseLogRepository exerciseLogRepository;
     private final SyncItemRepository syncItemRepository;
+    private final CommunityAccountCleaner communityAccountCleaner;
 
     public AuthService(
             UserRepository userRepository,
@@ -43,7 +45,8 @@ public class AuthService {
             UserProfileRepository profileRepository,
             DietLogRepository dietLogRepository,
             ExerciseLogRepository exerciseLogRepository,
-            SyncItemRepository syncItemRepository
+            SyncItemRepository syncItemRepository,
+            CommunityAccountCleaner communityAccountCleaner
     ) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
@@ -52,6 +55,7 @@ public class AuthService {
         this.dietLogRepository = dietLogRepository;
         this.exerciseLogRepository = exerciseLogRepository;
         this.syncItemRepository = syncItemRepository;
+        this.communityAccountCleaner = communityAccountCleaner;
     }
 
     @Transactional
@@ -126,7 +130,7 @@ public class AuthService {
     }
 
     /**
-     * 회원 탈퇴 — 회원과 그 회원의 모든 데이터(프로필·식단·운동 기록·동기화 백업)를 지운다.
+     * 회원 탈퇴 — 회원과 그 회원의 모든 데이터(프로필·식단·운동 기록·동기화 백업·커뮤니티 글·사진·댓글·좋아요·신고·차단)를 지운다.
      * 건강·식단 정보를 보관하므로 사용자가 언제든 지울 수 있어야 한다.
      */
     @Transactional
@@ -137,6 +141,7 @@ public class AuthService {
         dietLogRepository.deleteByUserId(id);
         exerciseLogRepository.deleteByUserId(id);
         profileRepository.deleteByUserId(id);
+        communityAccountCleaner.deleteAllFor(user);
         userRepository.delete(user);
     }
 

@@ -18,6 +18,12 @@ spring:
     console:
       enabled: false
 
+  servlet:
+    multipart:
+      # 커뮤니티 사진: 장당 2MB, 글 하나(사진 5장 + 본문) 11MB 까지. 넘으면 413.
+      max-file-size: 2MB
+      max-request-size: 11MB
+
 server:
   # Caddy(HTTPS 종료) 뒤에서 X-Forwarded-* 를 믿는다. 앱 포트는 외부에 열지 않는다.
   forward-headers-strategy: framework
@@ -31,3 +37,11 @@ trex:
     google:
       # 쉼표로 여러 개. 안드로이드 Credential Manager 는 "웹 애플리케이션" 클라이언트 ID 를 aud 로 쓴다.
       client-ids: ${GOOGLE_CLIENT_IDS}
+  community:
+    # 사진 버킷(비공개, 시드니). 자격 증명은 EC2 인스턴스 역할 — 키를 .env 에 넣지 않는다
+    s3-bucket: ${COMMUNITY_S3_BUCKET:}
+    require-s3: true
+    # 관리자 loginId(쉼표, google_<sub>) — 앱 안 신고함·숨김·삭제·정지
+    admin-login-ids: ${COMMUNITY_ADMIN_LOGIN_IDS:}
+    # 새 신고를 알릴 디스코드 웹후크(비밀값). 비면 알리지 않는다
+    report-webhook-url: ${COMMUNITY_REPORT_WEBHOOK_URL:}

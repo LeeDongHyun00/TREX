@@ -18,6 +18,12 @@ spring:
         format_sql: true
     show-sql: true
 
+  servlet:
+    multipart:
+      # 커뮤니티 사진: 장당 2MB, 글 하나(사진 5장 + 본문) 11MB 까지. 넘으면 413.
+      max-file-size: 2MB
+      max-request-size: 11MB
+
   h2:
     console:
       enabled: true # 웹 브라우저에서 눈으로 DB 테이블을 확인할 수 있게 해줌
@@ -32,3 +38,8 @@ trex:
     google:
       # 구글 로그인 검증용 클라이언트 ID(쉼표로 여러 개). 비우면 /api/auth/oauth/google 이 401 을 낸다.
       client-ids: ${GOOGLE_CLIENT_IDS:}
+  community:
+    # 비우면 사진은 메모리에만(재시작하면 사라진다). 관리자·웹후크도 선택
+    s3-bucket: ${COMMUNITY_S3_BUCKET:}
+    admin-login-ids: ${COMMUNITY_ADMIN_LOGIN_IDS:}
+    report-webhook-url: ${COMMUNITY_REPORT_WEBHOOK_URL:}

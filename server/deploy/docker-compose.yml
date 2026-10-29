@@ -19,6 +19,11 @@ services:
       DB_PASSWORD: ${DB_PASSWORD}
       JWT_SECRET: ${JWT_SECRET}
       GOOGLE_CLIENT_IDS: ${GOOGLE_CLIENT_IDS}
+      # 커뮤니티(docs/SERVER_SYNC_HANDOFF.md 9절) — 사진 버킷은 필수, 관리자·신고 웹후크는 선택
+      COMMUNITY_S3_BUCKET: ${COMMUNITY_S3_BUCKET:-}
+      COMMUNITY_ADMIN_LOGIN_IDS: ${COMMUNITY_ADMIN_LOGIN_IDS:-}
+      COMMUNITY_REPORT_WEBHOOK_URL: ${COMMUNITY_REPORT_WEBHOOK_URL:-}
+      AWS_REGION: ap-southeast-2
       TZ: Asia/Seoul
     expose:
       - "8080"
