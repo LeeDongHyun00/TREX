@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Apple 로그인(설계 docs/superpowers/specs/2026-10-29-apple-sign-in-design.md) — 개발자 계정에서 이 앱(com.leedonghyun.trex.ios)의
+	     Sign in with Apple 기능도 켜져 있어야 서명된 빌드가 실기기에서 로그인한다 -->
+	<key>com.apple.developer.applesignin</key>
+	<array>
+		<string>Default</string>
+	</array>
+</dict>
+</plist>

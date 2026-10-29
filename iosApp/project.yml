@@ -9,6 +9,8 @@ settings:
     ENABLE_USER_SCRIPT_SANDBOXING: NO
     IPHONEOS_DEPLOYMENT_TARGET: '16.0'
     CODE_SIGN_STYLE: Automatic
+    # Apple 로그인(Sign in with Apple) 엔타이틀먼트 — 개발자 계정에서 앱의 같은 기능도 켜야 서명된 빌드가 로그인한다
+    CODE_SIGN_ENTITLEMENTS: Trex/Trex.entitlements
     TARGETED_DEVICE_FAMILY: '1'
     # TrexCore = 자세 엔진(posture-core) + Android 정본 Compose 화면(ios-ui) 한 프레임워크(§108).
     FRAMEWORK_SEARCH_PATHS: '$(inherited) $(SRCROOT)/../ios-ui/build/xcode-frameworks/$(CONFIGURATION)/$(SDK_NAME)'
@@ -21,7 +23,7 @@ targets:
         embed: true
     sources:
       - path: Trex
-        excludes: [Resources, Info.plist]
+        excludes: [Resources, Info.plist, Trex.entitlements]
       - path: TrexPostureDiagnostics/CaptureController.swift
       - path: TrexPostureDiagnostics/CaptureGate.swift
       - path: TrexPostureInference/PoseRunner.swift

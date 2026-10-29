@@ -56,6 +56,8 @@ import androidx.window.layout.WindowInfoTracker
 import com.example.trex_kotlin.posture.RepValidation
 import com.example.trex_kotlin.posture.isOn
 import com.example.trex_kotlin.posture.SpeechCoach
+import com.example.trex_kotlin.sync.AppleCredential
+import com.example.trex_kotlin.sync.SignInException
 import com.example.trex_kotlin.sync.requestGoogleIdToken
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -430,3 +432,12 @@ private class ExerciseGifView(context: Context, private val movie: Movie) : View
         if (playing && isShown) postInvalidateOnAnimation()
     }
 }
+
+/** Apple 로그인 — Android 에는 없다(설계 docs/superpowers/specs/2026-10-29-apple-sign-in-design.md §2). 버튼을 그리지 않으니 부를 일이 없다. */
+@Composable
+fun rememberAppleCredentialRequest(): suspend () -> AppleCredential =
+    remember { { throw SignInException.Failed("이 기기에서는 Apple 로그인을 쓸 수 없어요") } }
+
+/** Apple 기본 버튼 — Android 는 그리지 않는다(iPhone 은 ios-ui 의 같은 이름 함수가 Apple 지침의 기본 버튼을 끼운다). */
+@Composable
+fun AppleSignInButton(onClick: () -> Unit, modifier: Modifier = Modifier) = Unit
