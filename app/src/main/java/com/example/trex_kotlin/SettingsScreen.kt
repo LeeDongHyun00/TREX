@@ -14,6 +14,7 @@ import com.example.trex_kotlin.TrexText as Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -25,6 +26,7 @@ import androidx.compose.ui.unit.sp
 fun ProfileTabScreen(app: AppViewModel, onOpenRecord: () -> Unit, onLogout: () -> Unit) {
     val c = Trex.c
     val settingsLinks = rememberSystemSettingsLinks()
+    val uri = LocalUriHandler.current
     var sheet by remember { mutableStateOf<String?>(null) }
     // 음성 안내 목소리(iPhone 만) — iPhone 설정에서 음성을 받고 돌아오면 다시 읽는다
     val voice = rememberVoiceAdvisor()
@@ -72,6 +74,8 @@ fun ProfileTabScreen(app: AppViewModel, onOpenRecord: () -> Unit, onLogout: () -
         item { SettingsGroup {
             SettingsRow("도움말", Icons.Rounded.HelpOutline, onClick = { sheet = "help" })
             SettingsDivider()
+            SettingsRow("저작권 및 라이선스", Icons.Rounded.Info, onClick = { sheet = "licenses" })
+            SettingsDivider()
             Row(Modifier.fillMaxWidth().padding(18.dp), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text("버전", color = c.text, fontSize = 16.sp); Text("1.0", color = c.text2, fontSize = 15.sp)
             }
@@ -84,8 +88,7 @@ fun ProfileTabScreen(app: AppViewModel, onOpenRecord: () -> Unit, onLogout: () -
         }
     }
     if (sheet == "profile") ProfileEditSheet(app, { sheet = null })
-    if (sheet == "theme") ModalBottomSheet(onDismissRequest = { sheet = null }, containerColor = c.sheet,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    if (sheet == "theme") SheetHost(onDismiss = { sheet = null }) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(bottom = 24.dp)) {
             Text("화면 모드", color = c.text, fontSize = 23.sp, fontWeight = FontWeight.SemiBold)
             listOf(ThemeMode.Light to "라이트", ThemeMode.Dark to "다크", ThemeMode.System to "시스템").forEach { (mode, label) ->
@@ -97,10 +100,14 @@ fun ProfileTabScreen(app: AppViewModel, onOpenRecord: () -> Unit, onLogout: () -
             Cta("완료", { sheet = null }, modifier = Modifier.fillMaxWidth())
         }
     }
-    if (sheet == "voice" && voice != null) ModalBottomSheet(onDismissRequest = { sheet = null }, containerColor = c.sheet,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    if (sheet == "voice" && voice != null) SheetHost(onDismiss = { sheet = null }) {
         VoiceSheet(voiceStatus, onPreview = { voice.preview() }, onClose = { sheet = null })
     }
+    if (sheet == "licenses") AlertDialog(onDismissRequest = { sheet = null }, containerColor = c.sheet,
+        title = { Text("저작권 및 라이선스") },
+        text = { Text("근육도: Z-Anatomy / BodyParts3D\n원본 해부 모델에서 앞·뒷면 2D 도형을 추출했습니다.\nCC BY-SA 4.0") },
+        dismissButton = { TextButton(onClick = { uri.openUri("https://creativecommons.org/licenses/by-sa/4.0/") }) { Text("라이선스 보기") } },
+        confirmButton = { TextButton(onClick = { sheet = null }) { Text("확인") } })
     if (sheet == "help") AlertDialog(onDismissRequest = { sheet = null }, containerColor = c.sheet,
         title = { Text("자세 비교 사용하기") },
         text = { Text("운동 이름 옆 스위치로 자세 비교를 켜세요. 시작 전에 안내하는 촬영 방향으로 전신을 담아 주세요.\n\n횟수가 다르게 측정되면 운동 화면의 ‘횟수 수정’에서 조정할 수 있어요.") },
@@ -256,8 +263,8 @@ private fun ProfileEditSheet(app: AppViewModel, onClose: () -> Unit) {
     var goal by remember { mutableStateOf(original.goal) }
     val valid = height.toDoubleOrNull()?.let { it in 80.0..250.0 } == true &&
         weight.toDoubleOrNull()?.let { it in 20.0..350.0 } == true && age.toIntOrNull()?.let { it in 10..110 } == true
-    ModalBottomSheet(onDismissRequest = onClose, containerColor = c.sheet, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
-        Column(Modifier.fillMaxWidth().heightIn(max = 570.dp).imePadding().padding(horizontal = 24.dp).padding(bottom = 22.dp)) {
+    SheetHost(onDismiss = onClose) {
+        Column(Modifier.fillMaxWidth().heightIn(max = 570.dp).padding(horizontal = 24.dp).padding(bottom = 22.dp)) {
             Text("프로필 편집", color = c.text, fontSize = 23.sp, fontWeight = FontWeight.SemiBold)
             Column(Modifier.weight(1f, false).verticalScroll(rememberScrollState()).padding(vertical = 20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 DField(height, { height = it.decimalOnly() }, "키", label = "키 · cm", keyboardType = KeyboardType.Decimal)

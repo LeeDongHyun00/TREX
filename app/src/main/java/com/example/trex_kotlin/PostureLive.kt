@@ -1383,9 +1383,6 @@ fun PostureLiveSessionScreen(
                 modifier = Modifier.fillMaxSize(),
             )
             if (preparing) PreparationFramingOverlay(sample, Modifier.fillMaxSize())   // 무대 위에 — 검은 배경이 덮지 않게
-            // 무대 보기 전환(§2.1, 사용자 요청 10-23) — 오른쪽 위. ⋯ 패널의 토글과 같은 상태다(패널이 열리면 패널 쪽을 쓴다)
-            if (preparing || !panelVisible) StageViewToggle(showCamera, { showCamera = it },
-                Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(12.dp))
             if (preparing) Column(Modifier.fillMaxWidth().background(Brush.verticalGradient(
                 listOf(Color(0xBB10140E), Color.Transparent))).padding(20.dp)) {
                 val goal = workout.resolvedTarget()
@@ -1473,9 +1470,6 @@ fun PostureLiveSessionScreen(
                             }
                         }
                     }, Modifier.weight(1f))
-                    // 무대 토글(§2.1) — 영상을 보고 싶을 때. 세션 동안 유지
-                    SessionTool(if (showCamera) "영상" else "뼈대만", if (showCamera) "뼈대만 보기" else "카메라 영상 보기",
-                        Icons.Rounded.PhotoCamera, { showCamera = !showCamera }, Modifier.weight(1f))
                     // 숫자 읽기 토글(§7) — 기본은 틱. 바닥 종목은 화면을 못 보므로 기본 켬
                     SessionTool(if (speakNumbers) "숫자 읽기" else "틱 소리", if (speakNumbers) "횟수를 틱 소리로" else "횟수를 숫자로 읽기",
                         Icons.AutoMirrored.Rounded.VolumeUp, { speakNumbers = !speakNumbers; refs.floorLive.speakNumbers = speakNumbers }, Modifier.weight(1f))
@@ -1538,6 +1532,9 @@ fun PostureLiveSessionScreen(
                     .padding(horizontal = 12.dp, vertical = 10.dp))
             },
         )
+        // Keep the toggle above the adaptive camera/panel layout so it never moves into the PiP.
+        StageViewToggle(showCamera, { showCamera = it },
+            Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(12.dp))
     }
 }
 

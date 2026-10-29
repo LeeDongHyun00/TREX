@@ -43,18 +43,33 @@ internal fun recommendedReplacements(workout: Workout): List<WorkoutTemplate> {
         .sortedByDescending { it.name == workout.alt?.name }.take(3)
 }
 
+internal data class WorkoutRecommendationGroup(val title: String, val workouts: List<WorkoutTemplate>)
+
+/** Keep each source's order and allow overlap between sources. Unknown/current entries cannot be selected. */
+internal fun replacementRecommendationGroups(
+    currentName: String?, weatherNames: List<String>, fatigueNames: List<String>,
+): List<WorkoutRecommendationGroup> {
+    val catalog = workoutCatalog.values.flatten().associateBy { it.name }
+    return listOf("날씨 기반 추천 운동" to weatherNames, "근육 피로도 기반 추천 운동" to fatigueNames)
+        .mapNotNull { (title, names) ->
+            val workouts = names.distinct().filter { it != currentName }.mapNotNull(catalog::get)
+            workouts.takeIf { it.isNotEmpty() }?.let { WorkoutRecommendationGroup(title, it) }
+        }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun WorkoutCatalogBrowser(current: Workout?, onPick: (WorkoutTemplate) -> Unit, modifier: Modifier = Modifier) {
+internal fun WorkoutCatalogBrowser(current: Workout?, onPick: (WorkoutTemplate) -> Unit, modifier: Modifier = Modifier,
+    recommendationGroups: List<WorkoutRecommendationGroup> = emptyList()) {
     val c = Trex.c
     var query by remember { mutableStateOf("") }
     val tabs = listOf(if (current == null) "전체" else "추천") + workoutCatalog.keys
     var selected by remember { mutableIntStateOf(0) }
     val state = androidx.compose.foundation.lazy.rememberLazyListState()
-    val recommendations = remember(current?.name) { current?.let(::recommendedReplacements).orEmpty() }
+    val showRecommendations = query.isBlank() && tabs[selected] == "추천"
     val results = when {
         query.isNotBlank() -> workoutCatalog.values.flatten().filter { it.name.contains(query.trim(), true) }
-        tabs[selected] == "추천" -> recommendations
+        showRecommendations -> emptyList()
         tabs[selected] == "전체" -> workoutCatalog.values.flatten()
         else -> workoutCatalog[tabs[selected]].orEmpty()
     }.filter { it.name != current?.name }
@@ -71,10 +86,17 @@ internal fun WorkoutCatalogBrowser(current: Workout?, onPick: (WorkoutTemplate) 
             }
         }
         LazyColumn(Modifier.weight(1f), state = state) {
-            if (query.isBlank() && tabs[selected] == "추천") item {
-                Text("추천 대체 운동", color = c.text2, fontSize = 12.sp, modifier = Modifier.padding(top = 18.dp, bottom = 4.dp))
+            if (showRecommendations) recommendationGroups.forEach { group ->
+                item(key = group.title) {
+                    Text(group.title, color = c.text2, fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.padding(top = 18.dp, bottom = 4.dp))
+                }
+                items(group.workouts.size, key = { "${group.title}:${group.workouts[it].name}" }) { i ->
+                    CatalogRow(group.workouts[i], onPick, showGuide = false)
+                    if (i < group.workouts.lastIndex) HorizontalDivider(color = c.line)
+                }
             }
-            if (results.isEmpty()) item {
+            if (!showRecommendations && results.isEmpty()) item {
                 Text(if (query.isNotBlank()) "검색 결과가 없어요." else "다른 카테고리에서 운동을 선택해 주세요.",
                     color = c.text2, modifier = Modifier.padding(vertical = 28.dp))
             }
@@ -86,12 +108,12 @@ internal fun WorkoutCatalogBrowser(current: Workout?, onPick: (WorkoutTemplate) 
     }
 }
 @Composable
-private fun CatalogRow(template: WorkoutTemplate, onPick: (WorkoutTemplate) -> Unit) {
+private fun CatalogRow(template: WorkoutTemplate, onPick: (WorkoutTemplate) -> Unit, showGuide: Boolean = true) {
     Row(Modifier.fillMaxWidth().clickable { onPick(template) }.semantics { contentDescription = "${template.name} 선택" }
         .padding(vertical = 22.dp), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
             Text(template.name, color = Trex.c.text, fontSize = 16.sp)
-            ExerciseGuidePreview(template.name)
+            if (showGuide) ExerciseGuidePreview(template.name)
         }
         Icon(Icons.Rounded.ChevronRight, null, tint = Trex.c.text3, modifier = Modifier.size(18.dp))
     }

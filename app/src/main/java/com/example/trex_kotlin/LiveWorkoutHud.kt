@@ -135,7 +135,7 @@ internal fun LiveWorkoutHud(workout: Workout, repetitions: Int, timeLeft: Int, t
 
 /**
  * 무대 보기 전환(§2.1 수동 토글, 사용자 요청 10-23 — 운동 화면 오른쪽 위) — 뼈대만(검은 무대) ↔ 카메라 영상.
- * ⋯ 패널의 같은 토글과 같은 상태라 어느 쪽에서 바꿔도 세션 동안 유지된다. 고른 쪽이 밝게 보이는 두 칸 짜리 분할 버튼.
+ * The same top-right control remains visible during preparation and exercise; selection lasts for the session.
  */
 @Composable
 internal fun StageViewToggle(showCamera: Boolean, onChange: (Boolean) -> Unit, modifier: Modifier = Modifier) {

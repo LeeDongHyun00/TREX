@@ -54,8 +54,7 @@ internal fun ExerciseGuideSheet(guide: ExerciseGuide, onClose: () -> Unit,
     val c = Trex.c
     val lifecyclePaused = rememberTrexLifecyclePaused()
     var section by rememberSaveable(guide.name) { mutableIntStateOf(0) }
-    ModalBottomSheet(onDismissRequest = onClose, containerColor = c.sheet, sheetGesturesEnabled = false, dragHandle = null,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    SheetHost(onDismiss = onClose) {
         Column(Modifier.fillMaxWidth().height(660.dp).padding(horizontal = 24.dp).padding(top = 24.dp, bottom = 20.dp)) {
             Text(guide.name, color = c.text, fontSize = 24.sp, fontWeight = FontWeight.SemiBold)
             Text("운동 방법", color = c.text2, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp))

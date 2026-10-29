@@ -36,8 +36,10 @@ def main():
         assert page.locator('[data-muscle="LATS_L"]').first.get_attribute('stroke-width') == '.65'
         for width, height in [(320, 366), (390, 400), (768, 400)]:
             page.set_viewport_size({'width': width, 'height': height})
+            page.wait_for_function('Math.abs(document.getElementById("stage").getBoundingClientRect().height - innerHeight) < 1')
             for box in page.locator('svg').all():
                 bounds = box.bounding_box()
+                assert bounds['height'] > 100 and bounds['width'] > 100, bounds
                 assert 0 <= bounds['x'] and bounds['x'] + bounds['width'] <= width
                 assert 0 <= bounds['y'] and bounds['y'] + bounds['height'] <= height
         if args.screenshots:
@@ -48,6 +50,7 @@ def main():
         assert fill('QUADS_L') == neutral
         page.goto(URL + '?mode=session')
         page.wait_for_selector('body[data-ready="true"]')
+        assert page.locator('svg').first.bounding_box()['height'] > 100
         page.evaluate("window.setUsedMuscles(['BICEPS_L'])")
         assert fill('BICEPS_L') != neutral and fill('BICEPS_R') == neutral
         page.evaluate("window.setFatigue({BICEPS_R:100},'BICEPS')")

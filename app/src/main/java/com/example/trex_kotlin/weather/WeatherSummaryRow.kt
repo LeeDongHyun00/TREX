@@ -1,5 +1,7 @@
 package com.example.trex_kotlin.weather
 
+import com.example.trex_kotlin.SheetHost
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -33,9 +35,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -264,7 +264,7 @@ private fun WeatherSheet(
     val uri = LocalUriHandler.current
     // 추천을 만든 순간의 글이 아니라 지금 기준 — 새로 받기에 실패해 남은 묵은 날씨를 '방금' 이라 하지 않는다
     val age = WeatherExerciseRecommender.updateAgeText(recommendation.weather.fetchedAtMillis, nowMillis())
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = c.sheet, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    SheetHost(onDismiss = onDismiss) {
         LazyColumn(Modifier.fillMaxWidth().padding(bottom = 16.dp)) {
             item { RecommendationHeader(recommendation) }
             items(recommendation.exercises) { exercise ->

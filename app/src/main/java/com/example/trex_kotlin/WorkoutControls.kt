@@ -26,7 +26,7 @@ import androidx.compose.ui.unit.sp
 @Composable
 fun ProfileSettingsSheet(app: AppViewModel, onClose: () -> Unit) {
     val c = Trex.c
-    ModalBottomSheet(onDismissRequest = onClose, containerColor = c.sheet) {
+    SheetHost(onDismiss = onClose) {
         Column(Modifier.padding(horizontal = 24.dp).padding(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
             Text("설정", color = c.text, fontSize = 24.sp, fontWeight = FontWeight.SemiBold)
             Text("화면 모드", color = c.text2)
@@ -142,8 +142,7 @@ fun WorkoutSessionActions(
         )
     }
     if (overlay != null && overlay != "skip") {
-        ModalBottomSheet(onDismissRequest = { close() }, containerColor = c.sheet,
-            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        SheetHost(onDismiss = { close() }) {
             Column(Modifier.fillMaxWidth().heightIn(max = 510.dp).padding(horizontal = 24.dp).padding(bottom = 22.dp)) {
                 Text(if (overlay == "count") "실제 수행 횟수" else workout.name, color = c.text,
                     fontSize = 22.sp, fontWeight = FontWeight.SemiBold)

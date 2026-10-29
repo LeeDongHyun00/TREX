@@ -298,7 +298,6 @@ private fun SetsSheet(app: AppViewModel, initial: SetDraft, onClose: () -> Unit)
 
     SheetHost(onDismiss = onClose) {
         Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 20.dp)) {
-            SheetHandle()
             Row(Modifier.padding(top = 12.dp, bottom = 16.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Kicker("운동 설정")
@@ -382,8 +381,7 @@ private fun SetsSheet(app: AppViewModel, initial: SetDraft, onClose: () -> Unit)
 private fun GoalsSheet(app: AppViewModel, onClose: () -> Unit) {
     val c = Trex.c
     var goal by remember { mutableStateOf(app.targetGoal) }
-    androidx.compose.material3.ModalBottomSheet(onDismissRequest = onClose, containerColor = c.sheet,
-        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    SheetHost(onDismiss = onClose) {
         Column(Modifier.fillMaxWidth().heightIn(max = 600.dp).padding(horizontal = 24.dp).padding(bottom = 24.dp)) {
             Text("영양 목표 수정", color = c.text, fontSize = 24.sp, fontWeight = FontWeight.SemiBold)
             Spacer(Modifier.height(18.dp))
@@ -434,7 +432,6 @@ internal fun ManualSheet(app: AppViewModel, initialSlot: String, onClose: () -> 
 
     SheetHost(onDismiss = onClose) {
         Column(Modifier.fillMaxHeight(0.92f)) {
-            SheetHandle()
             Row(Modifier.padding(start = 20.dp, end = 20.dp, top = 10.dp, bottom = 14.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Kicker("직접 기록")
@@ -452,6 +449,10 @@ internal fun ManualSheet(app: AppViewModel, initialSlot: String, onClose: () -> 
                 )
             }
 
+            Box(Modifier.padding(horizontal = 20.dp).padding(top = 12.dp)) {
+                FoodSearchField(query) { query = it }
+            }
+
             Column(
                 Modifier
                     .weight(1f)
@@ -459,6 +460,55 @@ internal fun ManualSheet(app: AppViewModel, initialSlot: String, onClose: () -> 
                     .padding(horizontal = 20.dp)
                     .padding(top = 16.dp, bottom = 16.dp),
             ) {
+                // 검색 + 음식 DB
+                Column(Modifier.padding(top = 10.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                    // 검색어가 비면 자주 먹는 음식을 보여 준다. 늘 먹는 밥·국을 매번 치게 하지 않으려는 것이고,
+                    // 사진 기록의 고르기 창과 같은 규칙이다 — 여기가 직접 기록의 주 경로다.
+                    val listed = if (query.isBlank()) {
+                        frequent.map { (name, n) -> Triple(name, n, name in app.customFoods) }
+                    } else {
+                        matches
+                    }
+                    when {
+                        query.isBlank() && listed.isEmpty() ->
+                            Text(
+                                "음식 이름을 검색해 보세룡", color = c.text3, fontSize = 12.sp,
+                                modifier = Modifier.fillMaxWidth().padding(top = 6.dp), textAlign = TextAlign.Center,
+                            )
+                        query.isBlank() ->
+                            Text("자주 먹는 음식", color = c.text3, fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold)
+                        listed.isEmpty() ->
+                            // 기본 DB 에도 내 음식에도 없으면 직접 등록한다 — 등록해 두면 다음부터 검색으로 바로 담을 수 있다.
+                            CustomFoodForm(name = query.trim()) { nutrition ->
+                                app.addCustomFood(query.trim(), nutrition)
+                                app.appendFoods(0, slot, listOf(FoodEntry(query.trim(), nutrition)))
+                                query = ""
+                            }
+                    }
+                    listed.forEach { (name, n, isCustom) ->
+                        val added = slotFoods.any { it.name == name }
+                        FoodRow(
+                            name, n, isCustom,
+                            badgeIcon = if (added) Icons.Rounded.Check else Icons.Rounded.Add,
+                            badgeFilled = added,
+                            badgeDescription = "담기",
+                        ) { app.appendFoods(0, slot, listOf(FoodEntry(name, n))) }
+                    }
+                    // 비슷한 이름만 나오고 딱 맞는 음식이 없으면 새로 등록할 길을 남긴다("라멘" 을 치면 "라면" 만 나와 고를 수밖에 없었다).
+                    val typed = query.trim()
+                    if (typed.isNotEmpty() && listed.isNotEmpty() && listed.none { it.first == typed }) {
+                        if (registering == typed) {
+                            CustomFoodForm(name = typed) { nutrition ->
+                                app.addCustomFood(typed, nutrition)
+                                app.appendFoods(0, slot, listOf(FoodEntry(typed, nutrition)))
+                                query = ""
+                            }
+                        } else {
+                            RegisterNewFoodRow(typed) { registering = typed }
+                        }
+                    }
+                }
+                Spacer(Modifier.height(16.dp))
                 DCard(radius = 24.dp) {
                     Column(Modifier.padding(18.dp)) {
                         Row(verticalAlignment = Alignment.Bottom) {
@@ -537,55 +587,7 @@ internal fun ManualSheet(app: AppViewModel, initialSlot: String, onClose: () -> 
                     }
                 }
 
-                // 검색 + 음식 DB
-                Box(Modifier.padding(top = 18.dp)) { FoodSearchField(query) { query = it } }
-                Column(Modifier.padding(top = 10.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
-                    // 검색어가 비면 자주 먹는 음식을 보여 준다. 늘 먹는 밥·국을 매번 치게 하지 않으려는 것이고,
-                    // 사진 기록의 고르기 창과 같은 규칙이다 — 여기가 직접 기록의 주 경로다.
-                    val listed = if (query.isBlank()) {
-                        frequent.map { (name, n) -> Triple(name, n, name in app.customFoods) }
-                    } else {
-                        matches
-                    }
-                    when {
-                        query.isBlank() && listed.isEmpty() ->
-                            Text(
-                                "음식 이름을 검색해 보세룡", color = c.text3, fontSize = 12.sp,
-                                modifier = Modifier.fillMaxWidth().padding(top = 6.dp), textAlign = TextAlign.Center,
-                            )
-                        query.isBlank() ->
-                            Text("자주 먹는 음식", color = c.text3, fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold)
-                        listed.isEmpty() ->
-                            // 기본 DB 에도 내 음식에도 없으면 직접 등록한다 — 등록해 두면 다음부터 검색으로 바로 담을 수 있다.
-                            CustomFoodForm(name = query.trim()) { nutrition ->
-                                app.addCustomFood(query.trim(), nutrition)
-                                app.appendFoods(0, slot, listOf(FoodEntry(query.trim(), nutrition)))
-                                query = ""
-                            }
-                    }
-                    listed.forEach { (name, n, isCustom) ->
-                        val added = slotFoods.any { it.name == name }
-                        FoodRow(
-                            name, n, isCustom,
-                            badgeIcon = if (added) Icons.Rounded.Check else Icons.Rounded.Add,
-                            badgeFilled = added,
-                            badgeDescription = "담기",
-                        ) { app.appendFoods(0, slot, listOf(FoodEntry(name, n))) }
-                    }
-                    // 비슷한 이름만 나오고 딱 맞는 음식이 없으면 새로 등록할 길을 남긴다("라멘" 을 치면 "라면" 만 나와 고를 수밖에 없었다).
-                    val typed = query.trim()
-                    if (typed.isNotEmpty() && listed.isNotEmpty() && listed.none { it.first == typed }) {
-                        if (registering == typed) {
-                            CustomFoodForm(name = typed) { nutrition ->
-                                app.addCustomFood(typed, nutrition)
-                                app.appendFoods(0, slot, listOf(FoodEntry(typed, nutrition)))
-                                query = ""
-                            }
-                        } else {
-                            RegisterNewFoodRow(typed) { registering = typed }
-                        }
-                    }
-                }
+
             }
 
             // 고정 하단 저장 바

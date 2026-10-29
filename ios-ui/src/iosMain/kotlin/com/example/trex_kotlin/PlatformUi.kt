@@ -63,9 +63,6 @@ import platform.darwin.NSObject
 /** iPhone 도 카메라 자세 화면을 돈다(§108c) — 공유 PostureLive + Swift 카메라·MediaPipe 다리(PoseCameraBridge.swift). */
 const val PLATFORM_POSTURE_CAMERA = true
 
-/** iPhone 시트 관례 — 아래로 끌어 내리면 닫힌다(§108d, SwiftUI 판 `trexSheet` 와 같은 동작). 왼쪽 가장자리 스와이프 뒤로도 시트를 닫는다([PlatformBackHandler]). */
-const val PLATFORM_SHEET_DRAG_DISMISS = true
-
 /** 상태 막대 글자색을 화면 테마에 맞춘다(창의 라이트·다크). */
 @Composable
 fun TrexSystemBars(c: TrexColors) {

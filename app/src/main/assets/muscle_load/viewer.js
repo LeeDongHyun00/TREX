@@ -1,6 +1,19 @@
 /* Android·iOS 공용 2D 근육도. 왼쪽 뒷면 / 오른쪽 앞면, 회전·WebGL 없음. */
 (() => {
   const stage = document.getElementById('stage');
+  // Embedded WebViews can resolve percentage root heights to zero on first layout.
+  function sizeStage() {
+    const height = window.innerHeight || document.documentElement.clientHeight;
+    if (height > 0) {
+      document.documentElement.style.height = `${height}px`;
+      document.body.style.height = `${height}px`;
+      stage.style.height = `${height}px`;
+    }
+  }
+  sizeStage();
+  window.addEventListener('resize', sizeStage);
+  window.addEventListener('pageshow', sizeStage);
+  window.visualViewport?.addEventListener('resize', sizeStage);
   const sessionMode = new URLSearchParams(location.search).get('mode') === 'session';
   const ns = 'http://www.w3.org/2000/svg';
   const regions = [];
@@ -56,6 +69,7 @@
       figure.append(caption, svg); stage.appendChild(figure);
     }
     paint(); document.body.dataset.ready = 'true';
+    requestAnimationFrame(sizeStage);
   } catch (error) {
     stage.textContent = '근육도를 불러오지 못했습니다.';
     document.body.dataset.error = String(error);

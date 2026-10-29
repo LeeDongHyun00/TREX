@@ -1,19 +1,20 @@
 package com.example.trex_kotlin
 
+import com.example.trex_kotlin.TrexText as Text
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.runtime.getValue
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,7 +25,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -40,7 +40,6 @@ import androidx.compose.material.icons.rounded.Remove
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import com.example.trex_kotlin.TrexText as Text
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
@@ -74,29 +73,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.AlertDialog
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextDecoration
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animate
-import androidx.compose.animation.core.spring
-import androidx.compose.foundation.gestures.DraggableState
-import androidx.compose.foundation.gestures.Orientation
-import androidx.compose.foundation.gestures.draggable
-import androidx.compose.foundation.layout.offset
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
-import androidx.compose.ui.input.nestedscroll.NestedScrollSource
-import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.unit.Velocity
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.launch
-import kotlin.math.roundToInt
 
 /**
  * TREX 리디자인 디자인 시스템 (claude.ai 디자인 캔버스 "TREX Redesign.dc.html" 구현).
@@ -610,112 +586,34 @@ fun PortionInputDialog(foodName: String, current: Double, onConfirm: (Double) ->
     )
 }
 
-/** 바텀 시트 호스트 (스크림 + 하단 고정, 닫기는 스크림 탭). [PLATFORM_SHEET_DRAG_DISMISS] 면 아래로 끌어 내려도 닫힌다(iPhone, §108d). */
+/** Child controls can temporarily own a gesture without disabling the sheet's handle permanently. */
+internal val LocalSheetGestureLock = staticCompositionLocalOf<(Any, Boolean) -> Unit> { { _, _ -> } }
+
+/** Complex sheets open expanded. Only compact entry menus opt into a partial starting anchor. */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
-fun SheetHost(onDismiss: () -> Unit, content: @Composable () -> Unit) {
-    val c = Trex.c
-    val drag = if (PLATFORM_SHEET_DRAG_DISMISS) rememberSheetDrag(onDismiss) else null
-    Box(
-        modifier = Modifier
-            .fillMaxSize().imePadding()
-            .then(if (drag == null) Modifier.background(SheetScrim) else Modifier.drawBehind { drawRect(SheetScrim, alpha = drag.visibleFraction) })
-            .clickable(interactionSource = remember2(), indication = null, onClick = onDismiss),
-        contentAlignment = Alignment.BottomCenter,
+fun SheetHost(onDismiss: () -> Unit, startPartiallyExpanded: Boolean = false,
+    expandContent: Boolean = false, content: @Composable () -> Unit) {
+    val sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = !startPartiallyExpanded)
+    // Advancing from a compact menu expands the same state, without recreating or re-showing the dialog.
+    LaunchedEffect(expandContent) { if (expandContent) sheetState.expand() }
+    val gestureLocks = androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateMapOf<Any, Unit>() }
+    val lockGesture = androidx.compose.runtime.remember { { owner: Any, locked: Boolean ->
+        if (locked) gestureLocks[owner] = Unit else gestureLocks.remove(owner)
+        Unit
+    } }
+    androidx.compose.material3.ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        sheetGesturesEnabled = gestureLocks.isEmpty(),
+        sheetMaxWidth = 600.dp,
+        containerColor = Trex.c.sheet,
+        contentColor = Trex.c.text,
+        scrimColor = Color(0xB01A2010),
     ) {
-        Surface(
-            modifier = Modifier
-                .widthIn(max = 600.dp).fillMaxWidth()
-                .then(drag?.modifier ?: Modifier)
-                .clickable(interactionSource = remember2(), indication = null, onClick = {}),
-            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
-            color = c.sheet,
-            contentColor = c.text,
-        ) {
-            Box(Modifier.navigationBarsPadding()) { content() }
+        CompositionLocalProvider(LocalSheetGestureLock provides lockGesture) {
+            Box(Modifier.fillMaxWidth()) { content() }
         }
-    }
-}
-
-@Composable
-private fun remember2(): MutableInteractionSource =
-    androidx.compose.runtime.remember { MutableInteractionSource() }
-
-private val SheetScrim = Color(0xB01A2010)
-
-/** 이만큼(시트 높이 대비) 내렸거나 이 속도보다 빠르게 아래로 밀고 놓으면 닫는다. */
-private const val SHEET_DISMISS_FRACTION = 0.25f
-private val SheetDismissVelocity = 900.dp
-
-@Composable
-private fun rememberSheetDrag(onDismiss: () -> Unit): SheetDrag {
-    val scope = rememberCoroutineScope()
-    val dismiss = rememberUpdatedState(onDismiss)
-    val velocity = with(LocalDensity.current) { SheetDismissVelocity.toPx() }
-    return androidx.compose.runtime.remember { SheetDrag(scope, { dismiss.value() }, velocity) }
-}
-
-/**
- * 시트를 아래로 끌어 닫기(iPhone 시트 관례 — SwiftUI 판 `trexSheet` 와 같은 동작, §108d). 시트 어디를 끌어도 되고, 안의 목록이 맨 위일 때
- * 더 끌어 내리는 손가락도 시트가 받는다 — 손으로 끄는 동안만이고 목록의 관성 스크롤은 시트를 움직이지 않는다(Material ModalBottomSheet 와 같은 규칙).
- * 닫기를 받지 않는 시트(호출부가 무시)면 제자리로 돌아온다.
- */
-private class SheetDrag(private val scope: CoroutineScope, private val dismiss: () -> Unit, private val dismissVelocity: Float) : NestedScrollConnection {
-    var offset by mutableFloatStateOf(0f)
-        private set
-    private var height = 0
-    private var settling: Job? = null
-
-    /** 스크림 진하기 — 시트가 내려간 만큼 옅어진다. */
-    val visibleFraction: Float get() = if (height <= 0) 1f else 1f - (offset / height).coerceIn(0f, 1f)
-
-    val modifier: Modifier = Modifier
-        .onSizeChanged { height = it.height }
-        .offset { IntOffset(0, offset.roundToInt()) }
-        .nestedScroll(this)
-        .draggable(DraggableState { dragBy(it) }, Orientation.Vertical, onDragStopped = { release(it) })
-
-    /** [delta] 만큼 내린다(올리기는 제자리까지) — 쓴 양. */
-    private fun dragBy(delta: Float): Float {
-        settling?.cancel()
-        val next = (offset + delta).coerceAtLeast(0f)
-        val used = next - offset
-        offset = next
-        return used
-    }
-
-    private fun release(velocity: Float) {
-        if (offset <= 0f) return
-        val close = offset > height * SHEET_DISMISS_FRACTION || velocity > dismissVelocity
-        settling = scope.launch {
-            if (close) {
-                animate(offset, maxOf(offset, height.toFloat()), velocity.coerceAtLeast(0f), tween(180)) { v, _ -> offset = v }
-                dismiss()
-            }
-            animate(offset, 0f, if (close) 0f else velocity, spring(stiffness = Spring.StiffnessMediumLow)) { v, _ -> offset = v }
-        }
-    }
-
-    // 시트가 내려가 있으면 위로 미는 손가락은 시트부터 올린다
-    override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset =
-        if (source == NestedScrollSource.UserInput && available.y < 0f && offset > 0f) Offset(0f, dragBy(available.y)) else Offset.Zero
-
-    // 안의 목록이 맨 위라 남은 아래 끌기 — 시트를 내린다
-    override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset =
-        if (source == NestedScrollSource.UserInput && available.y > 0f) Offset(0f, dragBy(available.y)) else Offset.Zero
-
-    // 시트를 끌다 놓았으면 그 속도는 시트 몫이다(목록이 이어서 굴러가지 않는다)
-    override suspend fun onPreFling(available: Velocity): Velocity {
-        if (offset <= 0f) return Velocity.Zero
-        release(available.y)
-        return available
-    }
-}
-
-/** 시트 상단 그랩 핸들. */
-@Composable
-fun SheetHandle() {
-    Box(Modifier.fillMaxWidth().padding(top = 9.dp), contentAlignment = Alignment.Center) {
-        Box(Modifier.width(38.dp).height(4.dp).clip(RoundedCornerShape(999.dp)).background(Trex.c.track))
     }
 }
 

@@ -17,7 +17,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -63,7 +62,6 @@ internal fun MuscleLoadScreen(app: AppViewModel, onBack: () -> Unit) {
     var tab by rememberSaveable { mutableIntStateOf(0) }
     val ranked = remember(snapshot) { rankedMuscles(snapshot) }
     val selected = ranked.firstOrNull { it.muscle.name == selectedName }?.muscle ?: ranked.firstOrNull()?.muscle
-    val uri = LocalUriHandler.current
     LaunchedEffect(Unit) { app.refreshMuscleLoad() }
     val recommendations = remember(snapshot, app.profile) { MuscleLoadEngine.recommendations(snapshot, app.profile.loadEquipment()) }
     Column(Modifier.fillMaxSize().background(c.bg)) {
@@ -149,13 +147,6 @@ internal fun MuscleLoadScreen(app: AppViewModel, onBack: () -> Unit) {
                     }
                 }
             }
-            item {
-                // 연구 설명과 별개로 재배포 모델의 저작자/라이선스 표시는 유지한다.
-                Text("2D: Z-Anatomy / BodyParts3D · 모델에서 추출한 도형", color = c.text3, fontSize = 10.sp)
-                TextButton(onClick = { uri.openUri("https://creativecommons.org/licenses/by-sa/4.0/") }) {
-                    Text("CC BY-SA 4.0", color = c.text3, fontSize = 10.sp)
-                }
-            }
         }
     }
 }
@@ -180,7 +171,6 @@ private fun MuscleDetailCard(status: MuscleStatus, snapshot: LoadSnapshot) {
                     Text("${loadDate(set.endedAt)} · ${MuscleLoadCatalog.find(set.exerciseId)?.name} · ${loadAmount(set)}", color = c.text, fontSize = 13.sp)
                 }
             } else Text("이 부위에 반영할 수행 기록이 아직 없어요", color = c.text2, fontSize = 13.sp)
-            if (status.muscle == Muscle.HIP_FLEXORS) Text("깊은 근육은 근육도에서 일부 보이지 않습니다", color = c.text3, fontSize = 11.sp)
         }
     }
 }

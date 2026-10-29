@@ -319,9 +319,13 @@ class AppViewModel(private val platform: AppPlatform) : ViewModel() {
     private val loadCorrections = mutableMapOf<String, Double?>()
 
     fun refreshMuscleLoad() {
+        val now = nowMillis()
+        if (loadLedger.sets.any { it.endedAt < workoutRetentionStart(now) }) {
+            syncMuscleLoad()
+        }
         val ledger=loadLedger
         viewModelScope.launch {
-            val next=withContext(Dispatchers.Default) { MuscleLoadEngine.snapshot(ledger.sets,nowMillis(),ledger.doses) }
+            val next=withContext(Dispatchers.Default) { MuscleLoadEngine.snapshot(ledger.sets,now,ledger.doses,workoutRetentionStart(now)) }
             if(ledger === loadLedger) muscleLoad=next
         }
     }
@@ -340,7 +344,8 @@ class AppViewModel(private val platform: AppPlatform) : ViewModel() {
                     // 저장과 계산이 모두 끝나야 완료 화면의 로딩을 해제한다.
                     val ledger = loadLedger
                     muscleLoad = withContext(Dispatchers.Default) {
-                        MuscleLoadEngine.snapshot(ledger.sets, nowMillis(), ledger.doses)
+                        val now = nowMillis()
+                        MuscleLoadEngine.snapshot(ledger.sets, now, ledger.doses, workoutRetentionStart(now))
                     }
                     muscleLoadError = null
                 } catch (cancelled: kotlinx.coroutines.CancellationException) {
