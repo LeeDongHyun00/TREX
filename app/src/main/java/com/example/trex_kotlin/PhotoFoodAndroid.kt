@@ -97,14 +97,23 @@ fun rememberFoodRecognizer(): FoodRecognizer {
     return remember { AndroidFoodRecognizer(context) }
 }
 
-/** 갤러리(사진 선택기, 최대 [maxItems]장) — 돌려준 함수를 부르면 연다. 고른 사진은 분석 스레드에서 디코딩한다. */
+/**
+ * 갤러리(사진 선택기, 최대 [maxItems]장) — 돌려준 함수를 부르면 연다. 고른 사진은 분석 스레드에서 디코딩한다.
+ * 한 장이면 단일 선택기 — `PickMultipleVisualMedia` 는 최대 1장을 받지 않고 생성자에서 앱을 멈춘다(커뮤니티 프로필 사진, 2026-10-29 실기기).
+ */
 @Composable
 fun rememberFoodGallery(maxItems: Int, onPicked: (List<FoodPhotoLoader>) -> Unit): () -> Unit {
     val context = LocalContext.current
+    fun loaders(uris: List<android.net.Uri>) = uris.map { uri -> FoodPhotoLoader { decodeScaledBitmap(context, uri)?.let { AndroidFoodPhoto(it) } } }
+    val request = PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+    if (maxItems <= 1) {
+        val single = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri -> onPicked(loaders(listOfNotNull(uri))) }
+        return { single.launch(request) }
+    }
     val launcher = rememberLauncherForActivityResult(
         ActivityResultContracts.PickMultipleVisualMedia(maxItems = maxItems),
-    ) { uris -> onPicked(uris.map { uri -> FoodPhotoLoader { decodeScaledBitmap(context, uri)?.let { AndroidFoodPhoto(it) } } }) }
-    return { launcher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }
+    ) { uris -> onPicked(loaders(uris)) }
+    return { launcher.launch(request) }
 }
 
 @Composable

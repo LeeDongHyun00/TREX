@@ -1,5 +1,6 @@
 package com.example.trex_kotlin.community
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -76,6 +77,10 @@ fun FeedScreen(
             item(key = "header") {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Text("커뮤니티", color = c.text, fontSize = 30.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                    // 내 프로필(사진·닉네임 바꾸기, 차단 목록, 내 신고) — 카드의 내 이름 말고도 닿게
+                    app.communityMe?.profile?.let { me ->
+                        Box(Modifier.padding(end = 10.dp).clickable { onOpenProfile(me) }) { Avatar(me, 36) }
+                    }
                     if (gate.canWrite) Surface(onClick = onCompose, shape = RoundedCornerShape(999.dp), color = c.primary) {
                         Row(Modifier.padding(horizontal = 14.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Rounded.Add, null, tint = Color.White, modifier = Modifier.size(18.dp))

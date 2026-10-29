@@ -50,6 +50,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.trex_kotlin.AppViewModel
 import com.example.trex_kotlin.Cta
+import com.example.trex_kotlin.DField
 import com.example.trex_kotlin.FoodPhoto
 import com.example.trex_kotlin.GhostButton
 import com.example.trex_kotlin.LocalTrexNavSpace
@@ -78,6 +79,8 @@ fun ComposeScreen(app: AppViewModel, onClose: () -> Unit, onPosted: (Post) -> Un
     val c = Trex.c
     val scope = rememberCoroutineScope()
     var state by remember { mutableStateOf(ComposeState<FoodPhoto>(card = card != null)) }
+    var cardTitle by remember { mutableStateOf(card?.title.orEmpty()) }
+    val shownCard = card?.withTitle(cardTitle)
     val cardLayer = rememberGraphicsLayer()
     var loadingPhotos by remember { mutableStateOf(false) }
     var cameraOpen by remember { mutableStateOf(false) }
@@ -129,13 +132,21 @@ fun ComposeScreen(app: AppViewModel, onClose: () -> Unit, onPosted: (Post) -> Un
     Column(Modifier.fillMaxSize().background(c.bg).imePadding()) {
         Row(Modifier.fillMaxWidth().padding(start = 4.dp, end = 12.dp, top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onClose, enabled = !state.posting) { Icon(Icons.Rounded.Close, "닫기", tint = c.text) }
-            Text("새 게시물", color = c.text, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-            Cta(
-                text = if (state.posting) "올리는 중…" else "올리기",
+            Text("새 게시물", color = c.text, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, modifier = Modifier.weight(1f))
+            // Cta 는 안쪽이 fillMaxWidth 라 남은 폭을 다 가져가 제목이 세로로 깨진다(실기기 2026-10-29) — 내용 폭만 쓰는 알약
+            val canSubmit = state.canPost && !loadingPhotos
+            Surface(
                 onClick = ::submit,
-                enabled = state.canPost && !loadingPhotos,
-                height = 40.dp,
-            )
+                enabled = canSubmit,
+                shape = RoundedCornerShape(999.dp),
+                color = if (canSubmit) c.primary else c.track,
+            ) {
+                Text(
+                    if (state.posting) "올리는 중…" else "올리기",
+                    color = if (canSubmit) Color.White else c.text3, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 9.dp),
+                )
+            }
         }
         Column(
             Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp)
@@ -165,10 +176,16 @@ fun ComposeScreen(app: AppViewModel, onClose: () -> Unit, onPosted: (Post) -> Un
                 "${codePointLength(state.body)} / ${ComposeState.MAX_BODY}", color = c.text3, fontSize = 12.sp,
                 modifier = Modifier.align(Alignment.End),
             )
-            if (card != null && state.card) Box {
+            if (shownCard != null && state.card) DField(
+                value = cardTitle,
+                onValueChange = { cardTitle = takeCodePoints(it, WorkoutCardData.MAX_TITLE) },
+                placeholder = WorkoutCardData.DEFAULT_TITLE,
+                label = "카드 제목",
+            )
+            if (shownCard != null && state.card) Box {
                 // 이 미리보기를 그대로 떠서 올린다 — 숫자만(자세 판정 없음, 설계 §3)
                 WorkoutCard(
-                    card,
+                    shownCard,
                     Modifier.clip(RoundedCornerShape(18.dp)).drawWithContent {
                         cardLayer.record { this@drawWithContent.drawContent() }
                         drawLayer(cardLayer)

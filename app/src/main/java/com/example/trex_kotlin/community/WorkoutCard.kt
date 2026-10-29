@@ -38,12 +38,22 @@ import kotlinx.datetime.number
  * 자세 블록)은 넣지 않는다 — 공개 이미지에서 판정 정직성 원칙을 다시 지켜야 하고 자세 문구는 동현님 영역이다.
  */
 data class WorkoutCardData(
+    /** 카드 맨 위 제목 — 글쓰기에서 바꿀 수 있다(사용자 요청 2026-10-29). */
+    val title: String = DEFAULT_TITLE,
     val dateLabel: String,
     val workouts: List<String>,
     val doneSets: Int,
     val duration: String,
     val kcal: Int,
-)
+) {
+    /** 사용자가 고친 제목 — 앞뒤 공백을 빼고 20자까지, 비우면 기본 제목. */
+    fun withTitle(text: String): WorkoutCardData = copy(title = takeCodePoints(text.trim(), MAX_TITLE).ifEmpty { DEFAULT_TITLE })
+
+    companion object {
+        const val DEFAULT_TITLE = "오늘도 운동 완룡!"
+        const val MAX_TITLE = 20
+    }
+}
 
 /** 완료 화면과 같은 숫자 — 완료 세트는 `done` 수, 시간은 세션 경과, [kcal] 은 완료 화면이 보인 값을 그대로 받는다. */
 fun workoutCardData(plan: List<Workout>, elapsedSeconds: Int, kcal: Int, date: LocalDate): WorkoutCardData = WorkoutCardData(
@@ -67,7 +77,7 @@ fun WorkoutCard(data: WorkoutCardData, modifier: Modifier = Modifier) {
                     Box(contentAlignment = Alignment.Center) { Icon(Icons.Rounded.Check, null, tint = TrexDark, modifier = Modifier.size(20.dp)) }
                 }
                 Column(Modifier.padding(start = 12.dp)) {
-                    Text("오운완", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                    Text(data.title, color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Text(data.dateLabel, color = Color.White.copy(alpha = 0.7f), fontSize = 13.sp)
                 }
             }

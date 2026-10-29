@@ -25,4 +25,13 @@ class WorkoutCardTest {
         val plan = listOf(workout("a", "스쿼트", true), workout("b", "스쿼트", true))
         assertEquals(listOf("스쿼트"), workoutCardData(plan, 60, 10, LocalDate(2026, 1, 1)).workouts)
     }
+
+    @Test
+    fun 카드_제목은_기본값이_있고_바꿀_수_있다() {
+        val card = workoutCardData(emptyList(), 60, 10, LocalDate(2026, 1, 1))
+        assertEquals("오늘도 운동 완룡!", card.title)
+        assertEquals("하체 끝", card.withTitle("  하체 끝 ").title)
+        assertEquals("오늘도 운동 완룡!", card.withTitle("   ").title) // 비우면 기본 제목
+        assertEquals(20, codePointLength(card.withTitle("가".repeat(30)).title))
+    }
 }
