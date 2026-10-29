@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -39,7 +40,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
-import androidx.compose.material.icons.automirrored.rounded.Login
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.FitnessCenter
 import androidx.compose.material.icons.rounded.Home
@@ -53,11 +53,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import com.example.trex_kotlin.TrexText as Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -67,24 +65,21 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kotlinx.coroutines.delay
 
-/** 로그인 로고 애니메이션의 프레임 수 — 그림은 플랫폼이 준다([loginAnimationFrame], Android 는 res/drawable-nodpi). */
-private const val LOGIN_ANIMATION_FRAMES = 16
-
-// ============================================================= AUTH (구글 로그인 / 로그인 없이 사용)
+// ============================================================= AUTH (Apple·구글 로그인 / 로그인 없이 사용)
 
 /**
  * 시작 화면. 계정은 기록 백업·기기 이전과 커뮤니티용이다 — 계정 없이도 커뮤니티를 뺀 모든 기능을 쓴다
  * (docs/SERVER_SYNC_HANDOFF.md 2단계, 커뮤니티 설계 docs/superpowers/specs/2026-10-28-community-design.md §3 계정).
  * 아이디·비밀번호 가입은 두지 않는다. 비밀번호 찾기·이메일 인증까지 만들어야 해서, 소셜 로그인으로 대신한다.
+ *
+ * 화면에는 공룡 그림 하나와 버튼 줄만 둔다(사용자 요청 2026-10-29 — 워드마크·소개 문구·버튼 아래 설명을 뺐다). 실패 안내만 그때 보인다.
+ * 로그인 중에는 앱 전체를 덮는 [SignInLoadingScreen] 이 보인다(TrexApp).
  */
 @Composable
 fun AuthScreen(
@@ -97,64 +92,25 @@ fun AuthScreen(
     onApple: () -> Unit = {},
 ) {
     val c = Trex.c
-    var frame by remember { mutableIntStateOf(0) }
-
-    LaunchedEffect(Unit) {
-        for (next in 1 until LOGIN_ANIMATION_FRAMES) {
-            delay(95)
-            frame = next
-        }
-    }
-
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(c.bg)
             .padding(horizontal = 26.dp)
-            .padding(vertical = 20.dp),
+            .padding(top = 20.dp, bottom = 28.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Spacer(Modifier.weight(1f))
-        // 로고 카드 + 워드마크
-        Surface(
-            modifier = Modifier.size(84.dp),
-            shape = RoundedCornerShape(28.dp),
-            color = c.surface,
-            border = BorderStroke(1.dp, c.line),
-            shadowElevation = 2.dp,
-        ) {
-            LoginLogo(frame, Modifier.fillMaxSize().padding(5.dp))
+        // 버튼 위 남은 자리의 가운데 — 검정 원 배지가 폭의 68%(폰 ~230~260dp, 이 화면 폭 상한 600dp 에서 ~370dp), 낮은 화면에서는 높이에 맞춘다
+        Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+            TrexDinoBadge(Modifier.fillMaxWidth(0.68f).aspectRatio(1f))
         }
-        Text(
-            "TREX",
-            color = c.primaryText, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 5.sp,
-            modifier = Modifier.padding(top = 12.dp),
-        )
-        Text("움직임을 보고 함께 운동해룡", color = c.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 3.dp))
-        Spacer(Modifier.weight(1f))
-
-        Column(Modifier.fillMaxWidth().padding(top = 32.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            if (appleAvailable) AppleSignInButton(onClick = { if (!busy) onApple() })
-            Cta(
-                if (busy) "로그인 중…" else "Google로 계속하기",
-                onClick = onGoogle,
-                enabled = !busy,
-                icon = Icons.AutoMirrored.Rounded.Login,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Text(
-                "기록이 계정에 백업돼 기기를 바꿔도 이어서 쓸 수 있어요",
-                color = c.text2, fontSize = 12.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth(),
-            )
-            Spacer(Modifier.height(8.dp))
-            GhostButton("로그인 없이 사용", onClick = { if (!busy) onWithoutAccount() }, modifier = Modifier.fillMaxWidth())
-            Text(
-                "기록은 이 기기에만 저장돼요. 나중에 설정에서 계정을 연결할 수 있어요",
-                color = c.text3, fontSize = 12.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth(),
-            )
-            if (message != null) {
-                Text(message, color = c.err, fontSize = 13.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(top = 6.dp))
-            }
+        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            if (appleAvailable) SocialSignInButton(SignInBrand.Apple, onClick = onApple, enabled = !busy)
+            SocialSignInButton(SignInBrand.Google, onClick = onGoogle, enabled = !busy)
+            WithoutAccountButton(onClick = onWithoutAccount, enabled = !busy)
+        }
+        if (message != null) {
+            Text(message, color = c.err, fontSize = 13.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(top = 14.dp))
         }
     }
 }
@@ -667,20 +623,4 @@ fun hasThreeConsecutiveDays(dayMask: Int): Boolean {
         if (first && second && third) return true
     }
     return false
-}
-
-/** 원본은 720×1280 투명 캔버스다. 애니메이션 전체에 같은 로고 영역을 사용해 중앙이 흔들리지 않게 한다. */
-@Composable
-internal fun LoginLogo(frame: Int, modifier: Modifier = Modifier) {
-    val bitmap = loginAnimationFrame(frame)
-    androidx.compose.foundation.Canvas(modifier.semantics { contentDescription = "TREX 로고" }) {
-        val side = size.minDimension.toInt()
-        drawImage(
-            image = bitmap,
-            srcOffset = androidx.compose.ui.unit.IntOffset(180, 180),
-            srcSize = androidx.compose.ui.unit.IntSize(360, 360),
-            dstOffset = androidx.compose.ui.unit.IntOffset((size.width.toInt() - side) / 2, (size.height.toInt() - side) / 2),
-            dstSize = androidx.compose.ui.unit.IntSize(side, side),
-        )
-    }
 }

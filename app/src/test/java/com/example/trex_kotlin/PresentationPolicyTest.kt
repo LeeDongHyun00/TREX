@@ -29,7 +29,9 @@ class PresentationPolicyTest {
     }
 
     @Test fun swipeFollowsNavigationOrderWithoutWrapping() {
-        val tabs = listOf(TrexTab.Home, TrexTab.Workout, TrexTab.Diet, TrexTab.Profile)
+        // 하단 바 순서 그대로 — 커뮤니티 탭(main §109)이 식단과 내 정보 사이에 있다
+        val tabs = listOf(TrexTab.Home, TrexTab.Workout, TrexTab.Diet, TrexTab.Community, TrexTab.Profile)
+        assertEquals(tabs, TrexTab.entries.toList())
         tabs.forEachIndexed { i, tab ->
             assertEquals(tabs.getOrNull(i + 1), swipedTab(tab, -100f, 64f))
             assertEquals(tabs.getOrNull(i - 1), swipedTab(tab, 100f, 64f))

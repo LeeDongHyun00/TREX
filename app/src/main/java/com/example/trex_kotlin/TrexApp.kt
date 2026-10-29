@@ -1,6 +1,7 @@
 package com.example.trex_kotlin
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -529,6 +530,10 @@ private fun TrexAppContent(app: AppViewModel) {
                             )
                         }
                     }
+                }
+                // 로그인 로딩 화면 — 계정 선택을 마친 뒤 서버 로그인·첫 동기화 동안 맨 위를 덮는다(로그인 화면·내 정보·커뮤니티 어디서 연결했든)
+                AnimatedVisibility(visible = app.authVerifying, enter = fadeIn(tween(180)), exit = fadeOut(tween(260))) {
+                    SignInLoadingScreen()
                 }
             }
         }

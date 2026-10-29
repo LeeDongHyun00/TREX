@@ -195,20 +195,9 @@ fun rememberAssetImageDecoder(): AssetImageDecoder {
     }
 }
 
-private val loginAnimationFrames = intArrayOf(
-    R.drawable.login_animation_frame_01, R.drawable.login_animation_frame_02,
-    R.drawable.login_animation_frame_03, R.drawable.login_animation_frame_04,
-    R.drawable.login_animation_frame_05, R.drawable.login_animation_frame_06,
-    R.drawable.login_animation_frame_07, R.drawable.login_animation_frame_08,
-    R.drawable.login_animation_frame_09, R.drawable.login_animation_frame_10,
-    R.drawable.login_animation_frame_11, R.drawable.login_animation_frame_12,
-    R.drawable.login_animation_frame_13, R.drawable.login_animation_frame_14,
-    R.drawable.login_animation_frame_15, R.drawable.login_animation_frame_16,
-)
-
-/** 로그인 로고 애니메이션의 [index] 번째 프레임(720×1280 투명 캔버스). */
+/** 공룡 얼굴 그림(res/drawable-nodpi/trex_dino_head.png) — 로그인·로그인 로딩 화면의 [TrexDinoHead]. */
 @Composable
-fun loginAnimationFrame(index: Int): ImageBitmap = ImageBitmap.imageResource(loginAnimationFrames[index])
+fun trexDinoHeadImage(): ImageBitmap = ImageBitmap.imageResource(R.drawable.trex_dino_head)
 
 /** 입력칸이 있는 전체 화면 대화상자 — 인셋은 내용이 직접 맞춘다(Sheets.FoodPicker). */
 fun fullScreenDialogProperties(): DialogProperties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
@@ -427,7 +416,3 @@ private class ExerciseGifView(context: Context, private val movie: Movie) : View
 @Composable
 fun rememberAppleCredentialRequest(): suspend () -> AppleCredential =
     remember { { throw SignInException.Failed("이 기기에서는 Apple 로그인을 쓸 수 없어요") } }
-
-/** Apple 기본 버튼 — Android 는 그리지 않는다(iPhone 은 ios-ui 의 같은 이름 함수가 Apple 지침의 기본 버튼을 끼운다). */
-@Composable
-fun AppleSignInButton(onClick: () -> Unit, modifier: Modifier = Modifier) = Unit

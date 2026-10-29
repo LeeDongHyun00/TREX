@@ -3111,3 +3111,27 @@ The removed iOS-only `SheetDrag` exposed two release paths (`draggable.onDragSto
 The replacement tab groups actual `WeatherExerciseRecommender` and `MuscleLoadEngine.recommendations` results under `날씨 기반 추천 운동` and `근육 피로도 기반 추천 운동`. It maps names to selectable catalog entries, removes the current exercise/unknown names/duplicates within a source, preserves source order, and permits the same exercise under both sources. Empty or failed sources are omitted, without explanatory text or guide previews. Weather uses the existing region/GPS resolver and cache without requesting new permissions; request lifetime follows picker visibility and foreground state. Fatigue uses the existing seven-day snapshot and available equipment. Selection edits the draft and still requires Save. Manual food puts search below the meal tabs and results before totals while the manual form opens expanded.
 
 Validation: Android 778 unit tests and 525 common JVM tests pass; debug and instrumentation APK builds pass. Five connected SM-N976N tests pass, covering compact and expanded starts, automatic detail expansion, dismissal, numeric wheel direction/boundary/cancellation interactions, and recommendation headings/selection. Source/resource sync checks pass. `lintDebug` remains blocked by the pre-existing `ByteOrderMark` at `food/FoodDetector.kt:142`. Native iOS compilation and real iPhone gesture/keyboard verification are NOT RUN (Windows; no Xcode/iPhone). Detailed evidence and any final device follow-up are recorded in `docs/superpowers/plans/2026-10-29-sheets-recommendations.md`. No commit or push.
+
+## §113. 로그인 화면 정리 · Apple/Google 버튼 통일 · 로그인 로딩 화면 (2026-10-29, `feature/shared-ui-muscle-navigation`)
+
+*요청(동현님 2026-10-29).* 로그인 화면의 Apple·Google 버튼 디자인을 서로 맞추고, Google 도 Google 본래 디자인으로, 문구도 같은 꼴로. 종이를 찢고 얼굴을 내민 공룡 대신 공룡 하나만 크게 가운데. 워드마크 "TREX"·"움직임을 보고 함께 운동해룡"·버튼 아래 작은 설명은 전부 빼고, "로그인 없이 사용"도 같은 크기·간격으로. 커뮤니티·내 정보의 계정 연결에도 같은 버튼, 로그인할 때 로딩 화면. iPhone·Android 둘 다.
+
+*무엇.*
+- 공유 `SignInUi.kt`(ios-ui 목록에 올림): `SocialSignInButton(Apple|Google)`·`WithoutAccountButton` 이 높이 54dp·알약 모양·16sp Medium·로고 20dp+간격 10dp 를 같이 쓰고, 색·로고만 각 회사 지침을 따른다 — Apple: 밝은 배경 검정 / 어두운 배경 흰색. Google: Light #FFFFFF·테두리 #747775·글자 #1F1F1F / Dark #131314·#8E918F·#E3E3E3. 문구는 "Apple로 계속하기"·"Google로 계속하기"이고 공룡 말투(TrexText)를 거치지 않는다. "로그인 없이 사용"은 같은 틀에 바탕 없이 테두리만 — 채우면 어두운 화면에서 Google 버튼(#131314)보다 눈에 띄었다.
+- iPhone 의 Apple 버튼은 시스템 기본 버튼(`ASAuthorizationAppleIDButton` 을 UIKitView 로 끼움)을 버리고 같은 Compose 버튼으로 그린다. Swift 다리의 `makeButton` 을 지웠다. 다리가 없으면(프로브) `IosPlatform.appleSignInAvailable` 이 거짓이라 버튼이 없다(예전엔 버튼 함수가 스스로 안 그렸다).
+- 공룡: `res/drawable-nodpi/trex_dino_head.png`(690², 정사각 가운데) — 종이를 찢고 나온 로고의 마지막 프레임에서 공룡만 오렸다(`tools/icon/make_dino_head.py`, 같은 PNG 를 다시 만든다). 로그인 화면은 그림(폭 68% — 60% 는 화면 확인에서 여전히 작았다, 버튼 위 남은 자리 가운데) + 버튼 줄만이다. 16프레임 애니메이션(`LoginLogo`·플랫폼 짝 `loginAnimationFrame`)은 지웠고, 프레임 PNG 는 앱 아이콘 생성기(`tools/icon/make_launcher_icon.py`)가 10번을 쓰므로 남겼다.
+- 로그인 로딩 화면 `SignInLoadingScreen`(공룡이 고개를 까딱이고 점 셋이 차례로 밝아진다, "로그인하는 중이에룡") — `AppViewModel.authVerifying` 동안 TrexApp 맨 위를 덮는다. 로그인 화면·내 정보·커뮤니티 어디서 연결해도 같다.
+- 내 정보 계정 칸: "Google 계정 연결" 줄 → "계정 연결" 머리(설명 한 줄, 실패하면 그 자리에 실패 문구) + 두 버튼. 커뮤니티 계정 안내: 녹색 "Google 계정 연결" → 두 버튼.
+
+*근거.*
+- **Apple 버튼을 직접 그려도 되는가.** Apple HIG 는 시스템 버튼을 권하지만 Apple 로고·허용 문구(로그인/계속하기/가입)·검정/흰 모양을 지킨 직접 그린 버튼을 허용하고, 모서리는 앱의 다른 버튼에 맞춰도 된다. 알약 모양은 Google 지침의 두 모양(사각·알약) 중 하나라 두 회사 지침을 같이 지킨다. Apple 버튼을 다른 로그인보다 작거나 덜 보이게 두지 말라는 조건은 같은 크기·Google 위 순서로 지킨다.
+- **로딩 화면은 계정 선택 창이 닫힌 뒤부터.** 버튼을 누르자마자 덮으면 계정 선택 창을 닫았을 때 로딩 화면이 잠깐 나타났다 사라진다. 그래서 `signIn` 을 증명 받기(`credential` — 구글 ID 토큰·Apple 자격)와 서버 교환(`exchange`)으로 나누고 그 사이에 `authVerifying` 을 켠다. 첫 동기화 질문(`askFirstSync`)이 뜨면 로딩 화면은 걷히고 대화상자가 남는다. 탈퇴(`deleteAccount`)도 `authBusy` 를 켜지만 로딩 화면은 덮지 않는다.
+- **실패 안내는 남긴다.** 뺀 것은 늘 보이던 설명이다. 로그인 실패 문구(`authMessage`)는 실패했을 때만 버튼 아래에 보인다 — 지우면 왜 안 되는지 알 길이 없다.
+- **Android 에 Apple 버튼은 여전히 없다**(Apple 로그인 설계 §2 비목표, 반목표 "Android 에 눌러도 안 되는 Apple 버튼"). Android 의 Apple 로그인은 웹 로그인 흐름·Services ID·서버 콜백 주소가 더 필요하다. Android 는 Google·로그인 없이 사용 두 버튼이 같은 틀이다.
+- **공룡 오리기.** 종이·공룡이 둘 다 초록이라 밝기로는 못 가르고 색상으로 갈린다(종이 ~70°, 공룡 ~86°). 이마의 노란 하이라이트도 종이 색상대라 '바깥(투명)과 이어진 종이색'만 종이로 본다. 원본 외곽선은 검은 구멍 배경과 같은 색이라 남길 수 없어 오린 모양 둘레에 같은 색 선을 다시 그렸고, 종이에 가려 들쭉날쭉한 뒷머리·목은 손으로 정한 곡선으로 잘랐다. 원본 얼굴 폭이 ~215px 라 3배로 키웠다(모양은 흐린 뒤 키워 계단을 없애고, 선은 3배 해상도에서 그린다).
+
+*main 머지에 따른 고침.* main 의 커뮤니티 탭이 식단과 내 정보 사이에 들어와, 이 브랜치의 `PresentationPolicyTest.swipeFollowsNavigationOrderWithoutWrapping` 탭 목록을 하단 바 순서(5개)로 고치고 `TrexTab.entries` 와 같은지도 본다. 로그인 문구를 찾던 계측 테스트(`SessionFlowTest`)는 워드마크가 없음을 확인하도록 바꿨다.
+
+*검증.* Android 단위 테스트 848개 통과(새 `SignInUiTest` 3개 — 회사별 색·문구·공룡 말투 불변). 에뮬레이터(Medium Phone API 36)에서 계측 테스트 5개 통과 — 새 `SignInScreensUiTest` 3개(그림 하나·세 버튼 같은 높이·워드마크 없음, 로그인 중 버튼 비활성, 로딩 화면이 뒤 버튼을 막음), `RestorationUiTest.logoAndSignInChoicesSurviveNarrowToWideResize`, 재생 앱(`-PpostureReplay`)의 `SessionFlowTest.guideAndLoginKeepArtworkAndActionsVisible`(가이드 → 로그인 → 로그인 없이 사용 → 온보딩). 밝은·어두운 로그인 화면과 로딩 화면 캡처를 눈으로 확인했다. iPhone: Xcode 16.2 로 `ios-ui` Kotlin/Native(iosArm64) 컴파일·기기 빌드·서명(팀 프로비저닝 프로필) 후 iPhone 16 Plus(iOS 27.0.1)에 설치·실행했다(실행 직후 프로세스 살아 있음).
+
+*남은 것.* 실제 Apple·Google 계정으로 로그인해 로딩 화면 → 첫 동기화 질문/홈으로 넘어가는지(실기기, 계정 필요). iPhone 화면 캡처는 이 Mac 의 Xcode 16.2 로 뜨지 않아 iPhone 의 모양은 동현님 눈으로 확인. Android 실기기 설치(연결된 기기 없음 — `app-debug.apk` 만 만들었다).

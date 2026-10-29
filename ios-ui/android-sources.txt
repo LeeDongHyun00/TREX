@@ -76,6 +76,7 @@ com/example/trex_kotlin/RecordScreen.kt
 com/example/trex_kotlin/DietRecordScreen.kt
 com/example/trex_kotlin/SettingsScreen.kt
 com/example/trex_kotlin/AuthScreens.kt
+com/example/trex_kotlin/SignInUi.kt
 com/example/trex_kotlin/GuideBookScreen.kt
 com/example/trex_kotlin/MuscleLoadScreen.kt
 com/example/trex_kotlin/SessionScreens.kt

@@ -87,6 +87,7 @@
 
 ## 7. 빌더에게 맡기는 것
 - Apple 버튼을 그리는 방법: iPhone 기본 버튼(`ASAuthorizationAppleIDButton`)을 플랫폼 짝으로 끼울지, Compose 로 지침에 맞게 그릴지. 조건은 Apple 로고가 들어가고 지침의 모양(검정/흰 바탕, 모서리, 최소 크기)을 따르는 것.
+  - *갱신 2026-10-29:* 처음엔 기본 버튼을 끼웠다가, Google 버튼과 모양·문구를 맞추라는 동현님 요청으로 Compose 로 그린다(공유 `SignInUi.kt`, 정본 스펙 §113).
 - nonce 를 어디서 만들고 해시할지(Swift CryptoKit 또는 공유 코드). 서버는 원문을 받아 해시를 비교한다.
 - client_secret JWT 를 만드는 라이브러리(서버에 이미 있는 JWT 라이브러리로 ES256 이 되면 그것). 수명은 몇 분이면 된다(호출할 때마다 만든다).
 - 테스트 구성: 서버는 구글과 같은 방식(테스트 키로 서명한 토큰으로 검증기 시험 + MockMvc 에 가짜 검증기·가짜 Apple 토큰 클라이언트 — 로그인·재로그인·refresh token 저장·탈퇴 때 revoke·revoke 실패해도 탈퇴·키 없을 때 건너뜀·`apple_` 가입 차단). 앱은 API 요청 본문과 상태 규칙 JVM 테스트, iPhone 은 CI 컴파일. **실제 iPhone 확인은 동현님**(§6 준비 뒤).

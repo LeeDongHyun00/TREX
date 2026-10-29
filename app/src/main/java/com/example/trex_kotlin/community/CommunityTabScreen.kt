@@ -41,7 +41,8 @@ import com.example.trex_kotlin.nowMillis
 import com.example.trex_kotlin.Trex
 import com.example.trex_kotlin.Cta
 import com.example.trex_kotlin.DField
-import com.example.trex_kotlin.AppleSignInButton
+import com.example.trex_kotlin.SignInBrand
+import com.example.trex_kotlin.SocialSignInButton
 import com.example.trex_kotlin.rememberAppleCredentialRequest
 import com.example.trex_kotlin.rememberGoogleIdTokenRequest
 import com.example.trex_kotlin.sync.ApiException
@@ -197,13 +198,11 @@ private fun SignInNotice(app: AppViewModel) {
                 "오운완·루틴·대회 소식을 나눠요. 계정을 연결하면 운동·식단 기록도 계정에 백업돼요. 다른 기능은 계정 없이도 그대로예요.",
                 color = c.text2, fontSize = 14.sp, lineHeight = 21.sp,
             )
-            if (app.appleSignInAvailable) AppleSignInButton(onClick = { if (!app.authBusy) app.continueWithApple(requestAppleCredential) })
-            Cta(
-                text = if (app.authBusy) "연결 중…" else "Google 계정 연결",
-                onClick = { app.continueWithGoogle(requestIdToken) },
-                enabled = !app.authBusy,
-                modifier = Modifier.fillMaxWidth(),
+            // 로그인 화면과 같은 Apple·Google 버튼(SignInUi.kt) — 연결 중에는 앱 전체에 로그인 로딩 화면이 덮인다
+            if (app.appleSignInAvailable) SocialSignInButton(
+                SignInBrand.Apple, onClick = { app.continueWithApple(requestAppleCredential) }, enabled = !app.authBusy,
             )
+            SocialSignInButton(SignInBrand.Google, onClick = { app.continueWithGoogle(requestIdToken) }, enabled = !app.authBusy)
             app.authMessage?.let { Text(it, color = c.err, fontSize = 13.sp) }
         }
     }

@@ -81,7 +81,7 @@ DELETE /api/auth/me                                           → 204 (회원과
   - **iPhone(2026-10-28)**: iOS 클라이언트 ID `12194757714-bd99b55i5jk94gpft5a6ec6s983fm9mn.apps.googleusercontent.com`(비밀값 아님, 번들 `com.leedonghyun.trex.ios`). 앱은 Info.plist `GIDClientID`(iOS)·`GIDServerClientID`(웹 — 로그인 버튼을 켤지만 가른다)를 쓰고, iOS 기본 `ASWebAuthenticationSession` 으로 OAuth 인가 코드 + PKCE 를 직접 해 ID 토큰을 받는다(`iosApp/Trex/GoogleSignInBridge.swift`). GoogleSignIn pod 는 GTMSessionFetcher 가 MediaPipe 정적 라이브러리 안의 같은 코드와 링크 때 부딪혀(중복 기호 196개, CI) 뺐다. iPhone 토큰의 aud 는 **iOS 클라이언트 ID** 라 서버 `GOOGLE_CLIENT_IDS` 에 웹·iOS 두 ID 를 쉼표로 넣었다. 같은 날 구글 동의 화면을 프로덕션으로 게시했다(브랜딩: 홈페이지 `https://leedonghyun00.github.io/TREX/`, 처리방침 `…/TREX/privacy.html`, 승인된 도메인 `leedonghyun00.github.io`, 로고 없음).
   - 코드: `app/.../sync/` — `SyncRules`(판정 규칙, 단위 테스트 `SyncRulesTest` 7개), `SyncManager`(저장소 변경 감지 → 3초 모아 올리기, 시작·로그인·"지금 동기화" 때 받기), `TrexApi`(HttpURLConnection — 호출 4개라 Retrofit 안 씀), `AuthSession`(`trex_auth` prefs, 자동 백업 제외), `GoogleSignIn`(Credential Manager). `TrexStore.readRaw/writeRaw/setChangeListener`, `AppViewModel` 계정 절, `AuthScreen`(아이디·비밀번호 폼과 찾기 화면을 지우고 "Google로 계속하기"/"로그인 없이 사용"), 설정의 계정 칸·회원 탈퇴, `FirstSyncDialog`.
   - 첫 연결 규칙: 서버가 비면 올림 / 이 기기가 온보딩 전이면 받음 / 양쪽에 있으면 묻는다(자동 병합 안 함). 서버에 없는 항목은 어느 쪽을 골라도 이 기기 값을 남겨 올린다(고르지 않은 데이터를 지우지 않는다). 계정(`owner`)과 처음 맞추기 전에는 주고받지 않는다.
-  - 기존 사용자(가짜 로그인으로 이미 `logged_in`)는 로그인 화면을 다시 안 본다 — **설정 → Google 계정 연결**로 연결한다.
+  - 기존 사용자(가짜 로그인으로 이미 `logged_in`)는 로그인 화면을 다시 안 본다 — **내 정보 → 계정 연결 → Google로 계속하기**로 연결한다(2026-10-29 전 이름은 "설정 → Google 계정 연결").
   - **PR 전 코드 리뷰 반영(2026-10-13)**:
     - **다른 계정으로 바꿔 로그인**(같은 서버에서 앞 계정이 로그아웃한 뒤)하면 이 기기 기록을 옮길지 묻는다(`FirstSync.SWITCH_ACCOUNT`, 옮기기/취소) — 묻지 않고 올려 앞 사람의 건강·식단 기록이 새 계정 백업으로 들어가던 문제.
     - "이 기기 기록으로 올린다"(첫 연결·질문 답)는 받아 본 서버 값보다 반드시 새 버전으로 찍는다(`SyncRules.uploadVersion`) — 이 기기 시계가 늦으면 409 로 서버의 빈 값을 받아 로컬 기록이 지워질 수 있었다. 서버가 빈 첫 연결은 이 기기에 있는 항목만 올린다.
@@ -121,7 +121,7 @@ GOOGLE_CLIENT_IDS=<웹 클라이언트 ID> ./gradlew bootRun        # H2 메모�
 adb reverse tcp:8080 tcp:8080                                  # 폰의 127.0.0.1:8080 → PC 서버
 ./gradlew :app:installDebug                                    # 앱 삭제 금지(기록 손실)
 ```
-확인 항목: 설정 → Google 계정 연결 → "마지막 동기화" 표시, 기록 하나 추가 후 3초 뒤 `GET /api/sync` 에 반영, 앱 데이터가 빈 에뮬레이터/다른 기기에서 같은 계정 로그인 → 온보딩 없이 기록이 들어옴. 끝나면 `local.properties` 의 그 줄을 지운다.
+확인 항목: 내 정보 → 계정 연결 → Google로 계속하기 → "마지막 동기화" 표시, 기록 하나 추가 후 3초 뒤 `GET /api/sync` 에 반영, 앱 데이터가 빈 에뮬레이터/다른 기기에서 같은 계정 로그인 → 온보딩 없이 기록이 들어옴. 끝나면 `local.properties` 의 그 줄을 지운다.
 
 ## 8. 운영 배포 런북 (3단계, AWS — 첫 배포)
 

@@ -3,8 +3,6 @@
 package com.example.trex_kotlin
 
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.SideEffect
@@ -21,21 +19,16 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.UIKitInteropInteractionMode
 import androidx.compose.ui.viewinterop.UIKitInteropProperties
 import androidx.compose.ui.viewinterop.UIKitView
 import androidx.compose.ui.window.DialogProperties
 import com.example.trex_kotlin.ios.IosSpeechEngine
 import com.example.trex_kotlin.ios.readTextFile
-import com.example.trex_kotlin.ios.IosAppleSignInRegistry
 import com.example.trex_kotlin.ios.requestIosAppleCredential
 import com.example.trex_kotlin.ios.requestIosGoogleIdToken
 import com.example.trex_kotlin.sync.AppleCredential
 import com.example.trex_kotlin.ios.toByteArray
 import com.example.trex_kotlin.posture.SpeechCoach
-import kotlinx.atomicfu.locks.SynchronizedObject
-import kotlinx.atomicfu.locks.synchronized
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
@@ -179,14 +172,11 @@ internal fun openAppSettings() {
 @Composable
 fun rememberAssetImageDecoder(): AssetImageDecoder = remember { AssetImageDecoder { path, sampleSize -> decodeBundleImage(path, sampleSize) } }
 
-private val loginFrameLock = SynchronizedObject()
-private val loginFrames = mutableMapOf<Int, ImageBitmap>()
+private val dinoHead: ImageBitmap by lazy { decodeBundleImage("drawable-nodpi/trex_dino_head.png", 1) }
 
-/** 로그인 로고 애니메이션의 [index] 번째 프레임 — Android res/drawable-nodpi 의 같은 PNG 를 번들에서 읽는다. */
+/** 공룡 얼굴 그림 — Android res/drawable-nodpi 의 같은 PNG 를 번들에서 한 번만 읽는다([TrexDinoHead]). */
 @Composable
-fun loginAnimationFrame(index: Int): ImageBitmap = synchronized(loginFrameLock) {
-    loginFrames.getOrPut(index) { decodeBundleImage("drawable-nodpi/login_animation_frame_${(index + 1).toString().padStart(2, '0')}.png", 1) }
-}
+fun trexDinoHeadImage(): ImageBitmap = dinoHead
 
 /** 입력칸이 있는 전체 화면 대화상자 — 인셋은 내용이 직접 맞춘다(Sheets.FoodPicker 의 imePadding). */
 fun fullScreenDialogProperties(): DialogProperties = DialogProperties(usePlatformDefaultWidth = false, usePlatformInsets = false)
@@ -330,21 +320,9 @@ internal fun decodeBundleImage(relative: String, sampleSize: Int): ImageBitmap {
     return surface.makeImageSnapshot().toComposeImageBitmap()
 }
 
-/** Apple 로그인 한 번(Swift `AppleSignInBridge`) — Android 판은 늘 실패한다(버튼이 없다). */
-@Composable
-fun rememberAppleCredentialRequest(): suspend () -> AppleCredential = remember { { requestIosAppleCredential() } }
-
 /**
- * Apple 지침의 기본 버튼("Apple로 계속하기", 검정) — Swift 가 만든 `ASAuthorizationAppleIDButton` 을 끼운다. 다리가 없으면(프로브 등)
- * 그리지 않는다. 높이 50dp, 폭은 부모를 채운다.
+ * Apple 로그인 한 번(Swift `AppleSignInBridge`) — Android 판은 늘 실패한다(버튼이 없다). 버튼은 구글과 같은 Compose 버튼
+ * (공유 `SignInUi.kt` 의 `SocialSignInButton`)이고, 다리가 없으면(프로브 등) [IosPlatform.appleSignInAvailable] 이 거짓이라 그리지 않는다.
  */
 @Composable
-fun AppleSignInButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
-    val bridge = IosAppleSignInRegistry.bridge ?: return
-    val latest by androidx.compose.runtime.rememberUpdatedState(onClick)
-    UIKitView(
-        factory = { bridge.makeButton { latest() } },
-        modifier = modifier.fillMaxWidth().height(50.dp),
-        properties = UIKitInteropProperties(interactionMode = UIKitInteropInteractionMode.NonCooperative, isNativeAccessibilityEnabled = true),
-    )
-}
+fun rememberAppleCredentialRequest(): suspend () -> AppleCredential = remember { { requestIosAppleCredential() } }

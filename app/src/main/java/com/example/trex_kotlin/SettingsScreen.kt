@@ -151,18 +151,24 @@ private fun AccountGroup(app: AppViewModel) {
     val account = app.account
     SettingsGroup {
         if (account == null) {
-            if (app.appleSignInAvailable) AppleSignInButton(
-                onClick = { if (!app.authBusy) app.continueWithApple(requestAppleCredential) },
-                modifier = Modifier.padding(start = 18.dp, end = 18.dp, top = 16.dp),
-            )
-            SettingsRow("Google 계정 연결", Icons.Rounded.CloudUpload, if (app.authBusy) "연결 중…" else null, onClick = {
-                app.continueWithGoogle(requestGoogleIdToken)
-            })
-            Text(
-                app.authMessage ?: "기록을 계정에 백업하고 다른 기기에서 이어서 써요",
-                color = if (app.authMessage != null) c.err else c.text2, fontSize = 13.sp,
-                modifier = Modifier.padding(start = 54.dp, end = 18.dp, bottom = 16.dp),
-            )
+            // 로그인 화면과 같은 Apple·Google 버튼(SignInUi.kt) — 연결 중에는 앱 전체에 로그인 로딩 화면이 덮인다
+            Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Rounded.CloudUpload, null, tint = c.primaryText, modifier = Modifier.size(22.dp))
+                    Column(Modifier.weight(1f).padding(start = 14.dp)) {
+                        Text("계정 연결", color = c.text, fontSize = 16.sp)
+                        Text(
+                            app.authMessage ?: "기록을 계정에 백업하고 다른 기기에서 이어서 써요",
+                            color = if (app.authMessage != null) c.err else c.text2, fontSize = 13.sp,
+                            modifier = Modifier.padding(top = 3.dp),
+                        )
+                    }
+                }
+                if (app.appleSignInAvailable) SocialSignInButton(
+                    SignInBrand.Apple, onClick = { app.continueWithApple(requestAppleCredential) }, enabled = !app.authBusy,
+                )
+                SocialSignInButton(SignInBrand.Google, onClick = { app.continueWithGoogle(requestGoogleIdToken) }, enabled = !app.authBusy)
+            }
         } else {
             val status = when {
                 app.sync.syncing -> "동기화 중…"

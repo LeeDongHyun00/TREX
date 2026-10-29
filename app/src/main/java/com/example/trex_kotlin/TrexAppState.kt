@@ -92,6 +92,12 @@ class AppViewModel(private val platform: AppPlatform) : ViewModel() {
         private set
     var authBusy by mutableStateOf(false)
         private set
+    /**
+     * 계정 선택을 마치고 서버 로그인·첫 동기화를 기다리는 중 — 앱 전체에 로그인 로딩 화면([SignInLoadingScreen])을 덮는다.
+     * 계정 선택 창(구글·Apple)이 떠 있는 동안은 거짓이다 — 창을 닫았을 때 로딩 화면이 깜빡이지 않게. 탈퇴처럼 [authBusy] 만 켜는 일에는 덮지 않는다.
+     */
+    var authVerifying by mutableStateOf(false)
+        private set
     var authMessage by mutableStateOf<String?>(null)
         private set
     /** 처음 연결한 계정의 서버에도 이 기기에도 기록이 있다 — 어느 쪽을 남길지 묻는 중. */
@@ -126,7 +132,7 @@ class AppViewModel(private val platform: AppPlatform) : ViewModel() {
             authMessage = "구글 로그인이 아직 준비되지 않았어요. ‘로그인 없이 사용’으로 시작해 주세요."
             return
         }
-        signIn("구글") { api.googleLogin(requestIdToken(platform.googleWebClientId)) }
+        signIn("구글", credential = { requestIdToken(platform.googleWebClientId) }) { api.googleLogin(it) }
     }
 
     /** iPhone 의 Apple 로그인을 쓸 수 있는가 — 버튼을 그릴지(Android 는 늘 거짓). */
@@ -142,16 +148,21 @@ class AppViewModel(private val platform: AppPlatform) : ViewModel() {
             authMessage = "Apple 로그인이 아직 준비되지 않았어요."
             return
         }
-        signIn("Apple") { api.appleLogin(requestCredential()) }
+        signIn("Apple", credential = requestCredential) { api.appleLogin(it) }
     }
 
-    /** 소셜 로그인 공통 — [obtain] 으로 서버 계정을 받아 저장하고 첫 동기화를 시작한다. [label] 은 실패 문구의 이름("구글"·"Apple"). */
-    private fun signIn(label: String, obtain: suspend () -> AuthAccount) {
+    /**
+     * 소셜 로그인 공통 — [credential](플랫폼의 계정 선택 창)로 받은 증명을 [exchange] 로 서버 계정으로 바꿔 저장하고 첫 동기화를 시작한다.
+     * 증명을 받은 뒤부터 끝날 때까지 [authVerifying]. [label] 은 실패 문구의 이름("구글"·"Apple").
+     */
+    private fun <T> signIn(label: String, credential: suspend () -> T, exchange: suspend (T) -> AuthAccount) {
         viewModelScope.launch {
             authBusy = true
             authMessage = null
             try {
-                val signedIn = obtain()
+                val proof = credential()
+                authVerifying = true
+                val signedIn = exchange(proof)
                 authSession.save(signedIn)
                 account = signedIn
                 beginSync(signedIn)
@@ -172,6 +183,7 @@ class AppViewModel(private val platform: AppPlatform) : ViewModel() {
                 authMessage = e.message ?: "로그인하지 못했어요."
             } finally {
                 authBusy = false
+                authVerifying = false
             }
         }
     }

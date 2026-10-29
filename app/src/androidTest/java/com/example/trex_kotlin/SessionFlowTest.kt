@@ -159,9 +159,9 @@ class SessionFlowTest {
         ActivityScenario.launch(MainActivity::class.java).use {
             await("다음");Thread.sleep(1200);capture("guide-full-image")
             repeat(3){click("다음");Thread.sleep(250)}
-            // 로그인은 아이디·비밀번호 대신 Google 로그인·로그인 없이 사용 두 선택지다(AuthScreens)
+            // 로그인은 아이디·비밀번호 대신 Google 로그인·로그인 없이 사용 두 선택지다(AuthScreens) — 공룡 그림 하나와 버튼만(워드마크·소개 문구 없음)
             click("시작하기");await("Google로 계속하기");Thread.sleep(1500);capture("login-restored")
-            assertNotNull(find("TREX"));assertNotNull(find("TREX 로고"))
+            assertNull(find("TREX"));assertNotNull(find("TREX 로고"))
             assertNull(find("자세 교정 실험실"))
             assertNull(find("자세 기준선 설정"));assertNull(find("가이드북"));assertNull(find("계정 도움"))
             click("로그인 없이 사용");await("1/4")
