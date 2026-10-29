@@ -48,5 +48,8 @@ suspend fun resolveWeatherPlace(prefs: WeatherLocationPrefs, locator: WeatherLoc
     return WeatherPlace(region.latitude, region.longitude, region.displayName)
 }
 
+/** 홈 날씨 줄 맨 앞의 곳 이름 — 지역 이름이나 "현재 위치". "(위치 확인 불가)" 같은 덧붙임은 시트에서만 보인다. */
+fun shortPlaceLabel(label: String): String = label.substringBefore(" (")
+
 /** 날씨 카드가 쓰는 앱 수명 객체 — [com.example.trex_kotlin.AppViewModel.weather]. */
 class WeatherServices(val repository: WeatherRepository, val locationPrefs: WeatherLocationPrefs)
