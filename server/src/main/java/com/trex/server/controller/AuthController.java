@@ -5,6 +5,8 @@ import com.trex.server.dto.LoginRequest;
 import com.trex.server.dto.SignupRequest;
 import com.trex.server.dto.TokenResponse;
 import com.trex.server.dto.UserResponse;
+import com.trex.server.dto.AppleLoginRequest;
+import com.trex.server.oauth.AppleTokenVerifier;
 import com.trex.server.oauth.GoogleTokenVerifier;
 import com.trex.server.service.AuthService;
 import jakarta.validation.Valid;
@@ -24,10 +26,12 @@ public class AuthController {
 
     private final AuthService authService;
     private final GoogleTokenVerifier googleTokenVerifier;
+    private final AppleTokenVerifier appleTokenVerifier;
 
-    public AuthController(AuthService authService, GoogleTokenVerifier googleTokenVerifier) {
+    public AuthController(AuthService authService, GoogleTokenVerifier googleTokenVerifier, AppleTokenVerifier appleTokenVerifier) {
         this.authService = authService;
         this.googleTokenVerifier = googleTokenVerifier;
+        this.appleTokenVerifier = appleTokenVerifier;
     }
 
     @PostMapping("/signup")
@@ -45,6 +49,13 @@ public class AuthController {
     @PostMapping("/oauth/google")
     public ResponseEntity<TokenResponse> google(@Valid @RequestBody GoogleLoginRequest request) {
         return ResponseEntity.ok(authService.socialLogin(googleTokenVerifier.verify(request.idToken())));
+    }
+
+    /** iPhone 이 Apple 로그인으로 받은 identity token 을 검증하고 우리 JWT 를 발급한다. 처음이면 회원을 만든다. */
+    @PostMapping("/oauth/apple")
+    public ResponseEntity<TokenResponse> apple(@Valid @RequestBody AppleLoginRequest request) {
+        return ResponseEntity.ok(authService.appleLogin(
+                appleTokenVerifier.verify(request.identityToken(), request.nonce()), request.authorizationCode()));
     }
 
     @GetMapping("/me")
