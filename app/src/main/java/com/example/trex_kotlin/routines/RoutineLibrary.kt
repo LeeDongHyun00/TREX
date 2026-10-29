@@ -14,6 +14,9 @@ data class SavedRoutine(
     val savedAtMillis: Long,
 )
 
+/** 링크로 받은 루틴(서버 `GET /api/routines/shared/{code}`) — 보낸 사람은 커뮤니티 닉네임. */
+data class SharedRoutine(val name: String, val senderNickname: String, val totalSeconds: Int, val workouts: List<Workout>)
+
 const val ROUTINE_LIBRARY_MAX = 50
 
 /** 맨 앞(최근)에 넣는다. 이미 [ROUTINE_LIBRARY_MAX]개면 null — "보관함이 가득 찼어요". */
