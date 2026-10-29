@@ -82,7 +82,8 @@ private const val LOGIN_ANIMATION_FRAMES = 16
 // ============================================================= AUTH (구글 로그인 / 로그인 없이 사용)
 
 /**
- * 시작 화면. 계정은 기록 백업·기기 이전용이다 — 계정 없이도 모든 기능을 쓴다(docs/SERVER_SYNC_HANDOFF.md 2단계).
+ * 시작 화면. 계정은 기록 백업·기기 이전과 커뮤니티용이다 — 계정 없이도 커뮤니티를 뺀 모든 기능을 쓴다
+ * (docs/SERVER_SYNC_HANDOFF.md 2단계, 커뮤니티 설계 docs/superpowers/specs/2026-10-28-community-design.md §3 계정).
  * 아이디·비밀번호 가입은 두지 않는다. 비밀번호 찾기·이메일 인증까지 만들어야 해서, 소셜 로그인으로 대신한다.
  */
 @Composable
