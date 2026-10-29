@@ -1,0 +1,260 @@
+package com.example.trex_kotlin.community
+
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Forum
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.example.trex_kotlin.AppViewModel
+import com.example.trex_kotlin.Trex
+import com.example.trex_kotlin.Cta
+import com.example.trex_kotlin.DField
+import com.example.trex_kotlin.rememberGoogleIdTokenRequest
+import com.example.trex_kotlin.sync.ApiException
+import com.example.trex_kotlin.sync.NetworkException
+import com.example.trex_kotlin.tabContentPadding
+import kotlinx.coroutines.launch
+
+/**
+ * 커뮤니티 탭(설계 §2·§5 진입) — 게이트([CommunityGate])에 따라 안내·닉네임·이용규칙 동의·피드를 보인다.
+ * 커뮤니티만 서버 계정이 필요하고, 다른 탭은 계정 없이도 그대로다(설계 §2 반목표).
+ */
+@Composable
+fun CommunityTabScreen(app: AppViewModel) {
+    val gate = app.communityGate
+    val loginId = app.account?.loginId
+    LaunchedEffect(loginId) {
+        if (loginId != null && app.communityMe == null) app.refreshCommunityMe()
+    }
+    when (gate) {
+        CommunityGate.NoLogin -> CommunityNotice(
+            title = "이 기기에서는 아직 커뮤니티를 쓸 수 없어요",
+            body = "운동·식단·자세 기능은 그대로 쓸 수 있어요.",
+        )
+        CommunityGate.NotSignedIn -> SignInNotice(app)
+        CommunityGate.Loading -> LoadingNotice(app)
+        CommunityGate.NeedNickname -> NicknameSetup(app)
+        CommunityGate.NeedTerms -> TermsConsent(app)
+        is CommunityGate.Ready, is CommunityGate.Suspended -> CommunityHome(app, gate)
+    }
+}
+
+/** 피드 자리 — 계획 3 Task 3 에서 FeedScreen 으로 바꾼다. */
+@Composable
+private fun CommunityHome(app: AppViewModel, gate: CommunityGate) {
+    val c = Trex.c
+    LazyColumn(Modifier.fillMaxSize(), contentPadding = tabContentPadding, verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        item { Text("커뮤니티", color = c.text, fontSize = 30.sp, fontWeight = FontWeight.SemiBold) }
+        item { Text(app.communityMe?.profile?.nickname.orEmpty(), color = c.text2, fontSize = 14.sp) }
+        if (gate is CommunityGate.Suspended) item {
+            Text("이용이 정지된 계정이에요. 글은 볼 수 있지만 쓸 수 없어요.", color = c.err, fontSize = 14.sp)
+        }
+    }
+}
+
+@Composable
+private fun NoticeColumn(content: @Composable () -> Unit) {
+    LazyColumn(Modifier.fillMaxSize(), contentPadding = tabContentPadding, verticalArrangement = Arrangement.spacedBy(18.dp)) {
+        item { Text("커뮤니티", color = Trex.c.text, fontSize = 30.sp, fontWeight = FontWeight.SemiBold) }
+        item { content() }
+    }
+}
+
+@Composable
+private fun NoticeCard(content: @Composable () -> Unit) {
+    Surface(shape = RoundedCornerShape(22.dp), color = Trex.c.surface) {
+        Column(Modifier.fillMaxWidth().padding(22.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) { content() }
+    }
+}
+
+@Composable
+private fun CommunityNotice(title: String, body: String) {
+    val c = Trex.c
+    NoticeColumn {
+        NoticeCard {
+            Icon(Icons.Rounded.Forum, null, tint = c.primaryText, modifier = Modifier.size(28.dp))
+            Text(title, color = c.text, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+            Text(body, color = c.text2, fontSize = 14.sp, lineHeight = 21.sp)
+        }
+    }
+}
+
+/** 계정이 없다 — 설정의 계정 연결과 같은 흐름(로그인하면 기록 백업도 켜진다, 설계 §3 로그인 시 백업). */
+@Composable
+private fun SignInNotice(app: AppViewModel) {
+    val c = Trex.c
+    val requestIdToken = rememberGoogleIdTokenRequest()
+    NoticeColumn {
+        NoticeCard {
+            Icon(Icons.Rounded.Forum, null, tint = c.primaryText, modifier = Modifier.size(28.dp))
+            Text("커뮤니티는 계정을 연결하면 쓸 수 있어요", color = c.text, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+            Text(
+                "오운완·루틴·대회 소식을 나눠요. 계정을 연결하면 운동·식단 기록도 계정에 백업돼요. 다른 기능은 계정 없이도 그대로예요.",
+                color = c.text2, fontSize = 14.sp, lineHeight = 21.sp,
+            )
+            Cta(
+                text = if (app.authBusy) "연결 중…" else "Google 계정 연결",
+                onClick = { app.continueWithGoogle(requestIdToken) },
+                enabled = !app.authBusy,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            app.authMessage?.let { Text(it, color = c.err, fontSize = 13.sp) }
+        }
+    }
+}
+
+@Composable
+private fun LoadingNotice(app: AppViewModel) {
+    val c = Trex.c
+    val scope = rememberCoroutineScope()
+    NoticeColumn {
+        val message = app.communityMessage
+        if (message == null) {
+            Row(Modifier.fillMaxWidth().padding(top = 40.dp), horizontalArrangement = Arrangement.Center) {
+                CircularProgressIndicator(color = c.primaryText)
+            }
+        } else {
+            NoticeCard {
+                Text(message, color = c.text, fontSize = 16.sp)
+                Cta(
+                    text = "다시 시도", onClick = { scope.launch { app.refreshCommunityMe() } },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        }
+    }
+}
+
+/** 처음 들어올 때 공개 이름을 정한다(설계 §3 공개 이름) — 구글 이름·이메일은 다른 사용자에게 보이지 않는다. */
+@Composable
+private fun NicknameSetup(app: AppViewModel) {
+    val c = Trex.c
+    val scope = rememberCoroutineScope()
+    var nickname by remember { mutableStateOf("") }
+    var busy by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+    val length = codePointLength(nickname.trim())
+    NoticeColumn {
+        NoticeCard {
+            Text("커뮤니티에서 쓸 닉네임을 정해 주세요", color = c.text, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+            Text("다른 사용자에게는 닉네임과 프로필 사진만 보여요. 구글 이름·이메일은 보이지 않아요.", color = c.text2, fontSize = 14.sp, lineHeight = 21.sp)
+            DField(
+                value = nickname,
+                onValueChange = { nickname = takeCodePoints(it, 12); error = null },
+                placeholder = "닉네임",
+                hint = "2~12자 · 나중에 프로필에서 바꿀 수 있어요",
+            )
+            error?.let { Text(it, color = c.err, fontSize = 13.sp) }
+            Cta(
+                text = if (busy) "저장 중…" else "다음",
+                enabled = !busy && length in 2..12,
+                onClick = {
+                    scope.launch {
+                        busy = true
+                        try {
+                            app.community.setNickname(nickname.trim())
+                            app.refreshCommunityMe()
+                        } catch (e: ApiException) {
+                            error = e.message // 이미 쓰는 닉네임·금칙어 — 서버 문구 그대로
+                        } catch (_: NetworkException) {
+                            error = "네트워크에 연결하지 못했어요"
+                        } finally {
+                            busy = false
+                        }
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+    }
+}
+
+/** 이용규칙 동의(설계 §4) — 만 14세 이상 확인과 이용규칙 전문 링크. 규칙이 바뀌면(버전) 다시 묻는다. */
+@Composable
+private fun TermsConsent(app: AppViewModel) {
+    val c = Trex.c
+    val scope = rememberCoroutineScope()
+    val uri = LocalUriHandler.current
+    var over14 by remember { mutableStateOf(false) }
+    var busy by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+    NoticeColumn {
+        NoticeCard {
+            Text("커뮤니티 이용규칙", color = c.text, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+            listOf(
+                "올린 글과 사진은 서버에 저장되고 모든 사용자에게 공개돼요.",
+                "욕설·혐오, 음란·폭력, 스팸·광고, 남의 개인정보나 권리를 침해하는 글은 올릴 수 없어요.",
+                "신고된 글은 운영자가 24시간 안에 확인하고, 규칙을 어기면 지우거나 이용을 정지해요.",
+                "싫은 사람은 차단할 수 있어요. 차단한 사람의 글은 보이지 않아요.",
+            ).forEach { line ->
+                Row {
+                    Text("·", color = c.text2, fontSize = 14.sp, modifier = Modifier.padding(end = 8.dp))
+                    Text(line, color = c.text2, fontSize = 14.sp, lineHeight = 21.sp)
+                }
+            }
+            Text(
+                "이용규칙 전문 보기",
+                color = c.primaryText, fontSize = 14.sp, textDecoration = TextDecoration.Underline,
+                modifier = Modifier.clickable { uri.openUri(CommunityApi.TERMS_URL) }.padding(vertical = 4.dp),
+            )
+            Row(
+                Modifier.fillMaxWidth().clickable { over14 = !over14 },
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Checkbox(
+                    checked = over14, onCheckedChange = { over14 = it },
+                    colors = CheckboxDefaults.colors(checkedColor = c.primary, uncheckedColor = c.text3),
+                )
+                Text("만 14세 이상이에요", color = c.text, fontSize = 15.sp)
+            }
+            error?.let { Text(it, color = c.err, fontSize = 13.sp) }
+            Cta(
+                text = if (busy) "저장 중…" else "동의하고 시작하기",
+                enabled = over14 && !busy,
+                onClick = {
+                    scope.launch {
+                        busy = true
+                        try {
+                            app.community.acceptTerms()
+                            app.refreshCommunityMe()
+                        } catch (e: ApiException) {
+                            error = e.message
+                        } catch (_: NetworkException) {
+                            error = "네트워크에 연결하지 못했어요"
+                        } finally {
+                            busy = false
+                        }
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+    }
+}

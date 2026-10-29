@@ -7,6 +7,7 @@ import com.example.trex_kotlin.community.communityGate
 import com.example.trex_kotlin.sync.ApiException
 import com.example.trex_kotlin.sync.AuthAccount
 import com.example.trex_kotlin.sync.AuthSession
+import com.example.trex_kotlin.sync.BinaryTransport
 import com.example.trex_kotlin.sync.FirstSync
 import com.example.trex_kotlin.sync.NetworkException
 import com.example.trex_kotlin.sync.SignInException
@@ -226,6 +227,9 @@ class AppViewModel(private val platform: AppPlatform) : ViewModel() {
 
     /** 커뮤니티 서버 API — 계정 토큰을 같이 쓴다. 글·댓글 목록은 화면 상태라 여기 두지 않고 화면이 바로 부른다. */
     val community = CommunityApi(platform.apiBaseUrl, platform.http, platform.binary) { authSession.token }
+
+    /** 커뮤니티 사진을 받는 전송 — 앱 루트의 원격 사진 로더가 쓴다(서명 주소라 인증 헤더 없음). */
+    val imageTransport: BinaryTransport get() = platform.binary
 
     /** 서버의 내 커뮤니티 상태와 그것을 받은 계정 — 로그아웃·계정 전환 뒤 남의 상태로 들어가지 않게 계정을 같이 둔다. */
     private var communityMeState by mutableStateOf<Pair<String, CommunityMe>?>(null)

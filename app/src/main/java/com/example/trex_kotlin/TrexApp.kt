@@ -25,11 +25,14 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import com.example.trex_kotlin.community.CommunityTabScreen
+import com.example.trex_kotlin.community.ProvideRemoteImages
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.rounded.BarChart
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.FitnessCenter
+import androidx.compose.material.icons.rounded.Forum
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.MoreHoriz
 import androidx.compose.material.icons.rounded.Person
@@ -107,6 +110,12 @@ fun Workout.setDraft(): SetDraft {
 /** 앱 상태는 플랫폼이 만들어 넘긴다(§108) — Android 는 인자 없는 `TrexApp()`(PlatformUi.kt), iPhone 은 ios-ui. */
 @Composable
 fun TrexApp(app: AppViewModel) {
+    // 커뮤니티 원격 사진 로더는 앱에 하나 — 화면마다 두면 캐시가 곱해지고 만료된 주소로 다시 받다 실패한다(계획 2 리뷰)
+    ProvideRemoteImages(app.imageTransport) { TrexAppContent(app) }
+}
+
+@Composable
+private fun TrexAppContent(app: AppViewModel) {
     TrexAppTheme(mode = app.themeMode) {
         val c = Trex.c
         TrexSystemBars(c)
@@ -613,6 +622,8 @@ private fun MainTabs(
                     onOpenManual = { slot -> sheet = MainSheet.Manual(slot) },
                 )
 
+                TrexTab.Community -> CommunityTabScreen(app = app)
+
                 TrexTab.Profile -> ProfileTabScreen(
                     app = app,
                     onOpenRecord = onOpenRecord,
@@ -627,7 +638,8 @@ private fun MainTabs(
             selectedTab = selectedTab,
             expanded = navExpanded,
             onTab = { tab ->
-                if (tab == selectedTab && tab != TrexTab.Home) {
+                // 홈·커뮤니티는 다시 눌러도 리모컨으로 바뀌지 않는다(리모컨 동작이 없다)
+                if (tab == selectedTab && tab != TrexTab.Home && tab != TrexTab.Community) {
                     navExpanded = !navExpanded
                 } else {
                     onTabSelected(tab)
@@ -703,6 +715,7 @@ private fun MorphNav(
             TrexTab.Home -> Icons.Rounded.Home
             TrexTab.Workout -> Icons.Rounded.FitnessCenter
             TrexTab.Diet -> Icons.Rounded.Restaurant
+            TrexTab.Community -> Icons.Rounded.Forum
             TrexTab.Profile -> Icons.Rounded.Person
         }
         if (!remoteOn) {
