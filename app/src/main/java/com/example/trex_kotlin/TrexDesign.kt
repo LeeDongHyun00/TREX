@@ -586,6 +586,20 @@ fun PortionInputDialog(foodName: String, current: Double, onConfirm: (Double) ->
     )
 }
 
+/**
+ * LazyColumn 항목 안에서 부르면 그 항목이 화면 밖으로 스크롤돼도 폐기되지 않고 남는다(스펙 §115) — 항목 안의 `remember` 상태
+ * (적다 만 등록 폼)·플랫폼 뷰(근육도 WebView)가 예전 스크롤 Column 에서처럼 살아 있게. 항목이 목록에서 빠지거나 이 호출이
+ * 합성에서 사라지면 놓는다. 지연 목록 밖에서는 아무 일도 하지 않는다.
+ */
+@Composable
+fun KeepComposedInLazyList() {
+    val container = androidx.compose.ui.layout.LocalPinnableContainer.current
+    androidx.compose.runtime.DisposableEffect(container) {
+        val handle = container?.pin()
+        onDispose { handle?.release() }
+    }
+}
+
 /** Child controls can temporarily own a gesture without disabling the sheet's handle permanently. */
 internal val LocalSheetGestureLock = staticCompositionLocalOf<(Any, Boolean) -> Unit> { { _, _ -> } }
 

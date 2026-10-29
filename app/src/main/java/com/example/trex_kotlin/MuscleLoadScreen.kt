@@ -60,10 +60,11 @@ internal fun MuscleLoadScreen(app: AppViewModel, onBack: () -> Unit) {
     val snapshot = app.muscleLoad
     var selectedName by rememberSaveable { mutableStateOf("") }
     var tab by rememberSaveable { mutableIntStateOf(0) }
-    val ranked = remember(snapshot) { rankedMuscles(snapshot) }
+    // 30초 새로고침(TrexApp)은 계산 시각(calculatedAt)만 바뀐 스냅샷도 새로 만든다 — 쓰는 값(근육 목록)이 같으면 다시 계산하지 않는다(스펙 §115).
+    val ranked = remember(snapshot.muscles) { rankedMuscles(snapshot) }
     val selected = ranked.firstOrNull { it.muscle.name == selectedName }?.muscle ?: ranked.firstOrNull()?.muscle
     LaunchedEffect(Unit) { app.refreshMuscleLoad() }
-    val recommendations = remember(snapshot, app.profile) { MuscleLoadEngine.recommendations(snapshot, app.profile.loadEquipment()) }
+    val recommendations = remember(snapshot.muscles, app.profile) { MuscleLoadEngine.recommendations(snapshot, app.profile.loadEquipment()) }
     Column(Modifier.fillMaxSize().background(c.bg)) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "뒤로", tint = c.text) }
@@ -80,6 +81,9 @@ internal fun MuscleLoadScreen(app: AppViewModel, onBack: () -> Unit) {
                 TextButton(onClick = app::syncMuscleLoad) { Text("다시 불러오기", color = c.primaryText) }
             }
             item {
+                // 근육도 WebView 는 화면 밖으로 스크롤돼도 폐기하지 않는다 — 돌아올 때마다 WebView 를 새로 만들고 페이지·SVG 를
+                // 다시 읽던 비용(과 "불러오는 중" 깜빡임)을 없앤다(스펙 §115). 항목 키는 예전 그대로(순서)다.
+                KeepComposedInLazyList()
                 Surface(shape = RoundedCornerShape(24.dp), color = Color(0xFF222527)) {
                     Column {
                         MuscleAtlas(snapshot, if (tab == 0) selected?.name.orEmpty() else "", Modifier.fillMaxWidth().height(366.dp))
@@ -154,7 +158,7 @@ internal fun MuscleLoadScreen(app: AppViewModel, onBack: () -> Unit) {
 @Composable
 private fun MuscleDetailCard(status: MuscleStatus, snapshot: LoadSnapshot) {
     val c = Trex.c
-    val related = remember(snapshot, status.muscle) {
+    val related = remember(snapshot.sets, status.muscle) {
         snapshot.sets.filter { set -> MuscleLoadEngine.doses(set).any { it.muscle == status.muscle && it.dose > 0 } }
             .sortedByDescending { it.endedAt }.take(3)
     }
@@ -219,9 +223,10 @@ private fun loadAmount(s: LoadSet): String = when(s.unit) {
 
 @Composable
 private fun MuscleAtlas(snapshot: LoadSnapshot, selected: String, modifier: Modifier) {
-    val colors=JSONObject().apply { snapshot.muscles.filter { it.known }.forEach {
+    // 근육 값이 같으면 다시 만들지 않는다 — 명령이 같으면 MuscleAtlasWebView 도 JS 를 다시 돌리지 않는다(스펙 §115)
+    val colors=remember(snapshot.muscles) { JSONObject().apply { snapshot.muscles.filter { it.known }.forEach {
         put(it.muscle.name+"_L",it.left);put(it.muscle.name+"_R",it.right)
-    } }.toString()
+    } }.toString() }
     MuscleAtlasWebView("window.setFatigue && window.setFatigue($colors,${JSONObject.quote(selected)});", false,
         "운동 기록 기반 근육 피로도. 왼쪽 뒷면, 오른쪽 앞면. 상세 값은 아래 목록에서 확인", modifier)
 }

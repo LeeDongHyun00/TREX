@@ -237,7 +237,8 @@ internal fun MuscleAtlasWebView(command: String, sessionMode: Boolean, descripti
                     baseURL = NSURL.URLWithString("file://$dir/index.html" + if (sessionMode) "?mode=session" else ""))
             }
         },
-        update = { it.evaluateJavaScript(command, completionHandler = null) },
+        // 이 WebView 에 마지막으로 보낸 명령과 같으면 다시 돌리지 않는다(스펙 §115) — Android 와 같다. 페이지가 다 읽히면 [ScriptOnLoad] 가 최신 명령을 보낸다.
+        update = { if (delegate.sent != command) { delegate.sent = command; it.evaluateJavaScript(command, completionHandler = null) } },
         onRelease = { it.stopLoading() },
         modifier = modifier,
         properties = UIKitInteropProperties(interactionMode = null, isNativeAccessibilityEnabled = true),
@@ -245,6 +246,9 @@ internal fun MuscleAtlasWebView(command: String, sessionMode: Boolean, descripti
 }
 
 private class ScriptOnLoad(var script: String) : NSObject(), WKNavigationDelegateProtocol {
+    /** update 가 이 WebView 에 마지막으로 보낸 명령. */
+    var sent: String? = null
+
     override fun webView(webView: WKWebView, didFinishNavigation: WKNavigation?) {
         webView.evaluateJavaScript(script, completionHandler = null)
     }

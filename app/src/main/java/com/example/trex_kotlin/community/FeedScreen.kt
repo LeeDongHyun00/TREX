@@ -104,7 +104,9 @@ fun FeedScreen(
                     onLike = { if (gate.canWrite) feed.toggleLike(post.id) else notice = "이용이 정지된 계정이에요" },
                     onOpen = { onOpenPost(post) },
                     onAuthor = { onOpenProfile(post.author) },
-                    menu = postMenu(post, gate) { action = it },
+                    // 메뉴 목록을 글·게이트가 같으면 다시 만들지 않는다 — 새 목록이면 좋아요 한 번에 보이는 카드가 전부 다시 그려졌다(스펙 §115).
+                    // 람다는 컴파일러가 붙잡는 값(글 등)이 같으면 그대로 쓰므로, 글이 바뀐 카드만 다시 그린다.
+                    menu = remember(post, gate) { postMenu(post, gate) { action = it } },
                 )
             }
             if (feed.state.posts.isEmpty() && !feed.refreshing && feed.state.loadedAt != null) item(key = "empty") {
