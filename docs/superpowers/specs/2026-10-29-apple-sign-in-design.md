@@ -126,4 +126,4 @@ Android 에는 Apple 로그인 창(AuthenticationServices)이 없다. Apple 이 
 2. 만든 Services ID → **Sign in with Apple** 체크 → Configure → Primary App ID `com.leedonghyun.trex.ios` → Domains `trex-api.duckdns.org`, Return URLs `https://trex-api.duckdns.org/api/auth/oauth/apple/callback` → Save → Continue → Save. (도메인 인증 파일을 요구하면 그 파일을 주세요 — 지금 포털은 요구하지 않는다는 보고가 많지만 Apple 문서에는 아직 인증이 적혀 있다.)
 3. §6 의 Sign in with Apple 키는 같은 Primary App ID 에 묶여 있어 그대로 쓴다.
 
-**배포**: 서버 코드가 바뀌었다(콜백·client 별 교환) — 새 jar 를 올리고 `.env` 에 `APPLE_WEB_CLIENT_ID`·`APPLE_WEB_REDIRECT_URI` 를 더한다(`docs/SERVER_SYNC_HANDOFF.md` 10.4). 그 전에는 Android 의 Apple 로그인이 Apple 화면(Services ID 없음) 또는 서버(대상 불일치 401)에서 실패한다.
+**배포**: 서버 코드가 바뀌었다(콜백·client 별 교환) — 새 jar 를 올리고 `.env` 에 `APPLE_WEB_CLIENT_ID`·`APPLE_WEB_REDIRECT_URI` 를 더한다(`docs/SERVER_SYNC_HANDOFF.md` 10.5). 그 전에는 Android 의 Apple 로그인이 Apple 화면(Services ID 없음) 또는 서버(대상 불일치 401)에서 실패한다.

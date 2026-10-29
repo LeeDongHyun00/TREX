@@ -45,6 +45,7 @@
 | D10 | 배포는 **AWS EC2(Docker) + RDS + Caddy(HTTPS 자동)** | 사용자가 AWS 를 학습했다. 안드로이드는 기본적으로 HTTPS 만 허용한다 |
 | D11 | 앱의 서버 주소·구글 웹 클라이언트 ID 는 **`gradle.properties` 에 팀 기본값으로 커밋**하고, **디버그도 운영 서버**를 가리킨다. `local.properties` 의 같은 키가 우선 | 팀원이 설정 없이 빌드해 폰에 까는 것이 디버그 APK 다 — 그 APK 로도 계정 연결이 되게 한다(서명 SHA-1 등록은 별도, Q1). 두 값 모두 비밀값이 아니다. **로컬 서버로 확인할 때는 `local.properties` 에 `trex.apiBaseUrl.debug=http://127.0.0.1:8080` 을 넣어야 한다 — 안 넣으면 운영 서버로 간다** |
 | D12 | **iPhone 에 Apple 로그인**(구글과 나란히, 사용자가 고른다). 서버가 Apple 공개키로 identity token 을 직접 검증(발급자 `https://appleid.apple.com`, 대상 = 번들 ID, nonce), 내부 아이디 `apple_<sub>`. 구글 계정과 합치지 않는다. 탈퇴 때 Apple 연결을 끊는다(revoke) | App Store 지침 4.8(소셜 로그인이 있으면 이메일을 숨길 수 있는 다른 로그인이 같이 있어야 한다)과 탈퇴 규칙. 사용자 결정 2026-10-29 — 설계 `docs/superpowers/specs/2026-10-29-apple-sign-in-design.md` |
+| D13 | **앱에 아이디·비밀번호 가입·로그인**(구글·Apple 과 나란히, 계정은 서로 따로). 아이디 영문·숫자·밑줄 4~20자, 비밀번호 영문과 숫자를 섞은 8~64자(앱·서버 같은 규칙). 같은 아이디로 5번 연속 틀리면 10분 동안 맞는 비밀번호도 받지 않는다(서버 메모리 — 재시작하면 풀린다). **비밀번호 찾기는 아직 없다** — 가입 화면에서 "잊으면 찾을 수 없다"고 알린다. 이메일은 받아 두고 찾기를 만들 때 쓴다 | 사용자 결정 2026-10-29 — 처음 계획이 아이디·비밀번호 로그인이었다. 2026-10-13 동기화 2단계에서 앱의 (서버에 연결되지 않은) 아이디·비밀번호 화면을 사용자 확인 없이 지우고 구글로 대신했던 것을 되돌린다. 마감(11-11) 때문에 찾기는 뒤로 미룬다 |
 
 **아직 정할 것**
 - Q1 팀 공용 앱 서명 키(구글·카카오 콘솔에 SHA-1 등록용). 지금은 PC 마다 디버그 키가 달라 빌드한 PC 에 따라 로그인이 될 수도 안 될 수도 있다. 2026-10-13 현재 등록된 것은 사용자 PC 디버그 키뿐이고, **릴리스 APK(조원 개발 인증서) SHA-1 은 미등록** — 릴리스 전에 Android 클라이언트를 하나 더 만든다.
@@ -92,6 +93,7 @@ DELETE /api/auth/me                                           → 204 (회원과
     - 원격 값 적용은 `Dispatchers.Main.immediate` — 판정과 쓰기 사이에 사용자 편집이 끼어 덮이던 틈.
     - **남은 한계(알고 둔 것)**: 동기화 단위가 항목 통째라, 두 기기에서 같은 항목(예: 식단)을 번갈아 고치면 **나중에 고친 쪽이 그 항목 전체를 덮는다**(D6). 앱 복귀 때 먼저 받아 창을 좁혔지만, 받기가 끝나기 전에 고치면 남는다. 근본 해결은 항목 안 병합(식단은 날짜별, 기록은 epochDay 별) 또는 서버의 조건부 쓰기(기준 버전이 다르면 409) — 이후 과제.
   - 설정값(D11): `gradle.properties`(커밋)의 `trex.googleWebClientId`·`trex.apiBaseUrl`(릴리스)·`trex.apiBaseUrl.debug`(디버그) — 둘 다 운영 `https://trex-api.duckdns.org`. `local.properties` 에 같은 키가 있으면 그쪽이 우선하고, 둘 다 없으면 디버그는 `http://127.0.0.1:8080`, 릴리스는 빈 값(구글 로그인 버튼이 안내 문구만 냄). 디버그만 http 허용(`usesCleartextTraffic` 자리표시자).
+  - **아이디·비밀번호 로그인 화면(D13, 2026-10-30 — 스펙 §117, `feature/shared-ui-muscle-navigation`)**: 시작 화면은 공룡 + 같은 크기의 버튼 셋(아이디로 로그인 → Apple → Google) + 작은 "로그인 없이 사용". "아이디로 로그인"을 누르면 그 위에 아이디·비밀번호 칸이 펼쳐지고(스크롤 없음 — 늘어난 만큼 공룡이 작아진다) 가입은 "회원가입"이 main 의 가입 칸을 전체 화면 창으로 연다. 설정·커뮤니티는 같은 알약 버튼 "아이디로 로그인·가입". 로그인 흐름·서버 규칙은 main 그대로. **실기기 확인 전**(키보드·애니메이션).
 - [x] **3단계 · AWS 배포** (2026-10-13) — `https://trex-api.duckdns.org` 가동, 실기기가 USB 없이 운영 서버와 동기화(RDS 에 회원 1명·7개 항목), AMI 백업 완료. 현황·절차는 8절
 - [ ] **4단계 · 카카오**
 - [ ] **5단계 · 개인정보 처리방침·동의** — **다음 공개 릴리스 전에 필수**. 건강·식단 데이터를 서버에 보관하는데, 옛 가짜 가입 폼의 동의 체크박스는 폼과 함께 지워졌고 처리방침 문서가 없다. 구글 동의 화면을 "프로덕션"으로 게시할 때도 처리방침 URL 이 필요하다. (탈퇴 버튼은 2단계에서 이미 만들었다 — 설정 → 회원 탈퇴)
@@ -159,9 +161,17 @@ adb reverse tcp:8080 tcp:8080                                  # 폰의 127.0.0.
 
 함정:
 - 운영 `ddl-auto: update` — 컬럼 추가는 따라가지만 이름 변경·삭제는 못 한다. 엔티티를 크게 바꾸면 Flyway 를 먼저 들인다.
+- 운영 `ddl-auto: update` 는 **enum 검사 규칙(check 제약)도 고치지 않는다.** Hibernate 는 테이블을 처음 만들 때 `@Enumerated(STRING)` 칸에 "이 값들만" 규칙을 같이 만든다. 나중에 enum 에 값을 더하면(예: `AuthProvider.APPLE`) 운영에서 그 값을 저장할 때 `violates check constraint` 로 막히고, 앱에는 "이미 사용 중인 값"으로 보인다. 테스트는 매번 테이블을 새로 만들어서 못 잡는다. enum 값을 더하는 PR 은 배포 때 아래 "운영 DB 보기"로 그 규칙을 바꾼다(실제 예는 10.4).
 - `.env` 를 Windows 에서 만들어 올리면 줄끝 `\r` 이 비밀번호에 붙는다 — EC2 에서 만들거나 `sed -i 's/\r$//'`.
 - Caddy 인증서는 `caddy_data` 볼륨에 있다. 볼륨을 지우면 재발급(Let's Encrypt 주간 발급 제한).
 - 6개월 뒤 Free plan 계정이 닫히기 전에 유료 전환 여부를 정한다(RDS 스냅샷을 다른 계정으로 공유해 옮길 수 있다).
+
+운영 DB 보기 — RDS 는 EC2 에서만 열린다. EC2 에 psql 이 없으니 psql 컨테이너를 잠깐 띄웠다가 지운다(`--rm`). 접속값은 `.env` 에서 읽고 화면에 내보내지 않는다. 끝의 `SELECT 1;` 자리에 볼 SQL 을 넣는다.
+```bash
+KEY=C:/Workspace/TREX/trex-key.pem; HOST=ubuntu@54.252.112.191
+ssh -i $KEY $HOST "cd ~/trex && U=\$(grep '^DB_URL=' .env | cut -d= -f2-); docker run --rm -e PGUSER=\"\$(grep '^DB_USERNAME=' .env | cut -d= -f2-)\" -e PGPASSWORD=\"\$(grep '^DB_PASSWORD=' .env | cut -d= -f2-)\" postgres:17-alpine psql \"\${U#jdbc:}\" -v ON_ERROR_STOP=1 -c \"SELECT 1;\""
+```
+검사 규칙 목록: `SELECT conrelid::regclass, conname, pg_get_constraintdef(oid) FROM pg_constraint WHERE contype = 'c' AND connamespace = 'public'::regnamespace;`
 
 ## 9. 커뮤니티 운영 (2026-10-29 — 배포 전 초안)
 
@@ -316,7 +326,16 @@ ssh -i $KEY $HOST "cd ~/trex && docker compose up -d && sleep 25 && docker compo
 - 동현님 준비 뒤(실기기): iPhone 에서 "Apple로 계속하기" → 설정의 계정 줄이 이메일(가린 전달 주소일 수 있다)이나 "Apple 계정". 설정 → 회원 탈퇴 → 서버 로그에 `Apple 연결 끊기 완료`. iPhone 설정 → Apple ID → "Apple로 로그인" 목록에서 T-REX 가 빠진다.
 - 커뮤니티 관리자로 Apple 계정을 쓰려면 `COMMUNITY_ADMIN_LOGIN_IDS` 에 `apple_<sub>` 를 쉼표로 더한다(loginId 는 9.1 ⑦ 과 같은 방법).
 
-### 10.4 Android Apple 로그인 — 웹 흐름 (2026-10-30)
+### 10.4 첫 실기기 시도에서 겪은 것 (2026-10-29)
+- Apple 로그인이 "이미 사용 중인 값이 포함되어 있어요"로 실패했다. 서버 로그는 `데이터 무결성 위반: ... violates check constraint "users_provider_check"`. 운영 회원 표의 가입 경로 규칙에 `APPLE` 이 없었다(8절 함정 — 표를 만든 10-13 에는 `LOCAL`·`GOOGLE`·`KAKAO` 뿐이었다). Apple 토큰 검증은 통과한 상태였다.
+- "운영 DB 보기"(8절)로 아래 SQL 을 실행해 고쳤다. 서버 재시작·앱 재빌드는 필요 없었다.
+  ```sql
+  BEGIN; ALTER TABLE users DROP CONSTRAINT users_provider_check;
+  ALTER TABLE users ADD CONSTRAINT users_provider_check CHECK (provider IN ('LOCAL','GOOGLE','KAKAO','APPLE')); COMMIT;
+  ```
+- 같이 확인한 다른 검사 규칙(`meals_meal_type_check`, `reports_reason_check`·`reports_resolution_check`·`reports_target_type_check`)은 코드의 enum 과 같았다.
+
+### 10.5 Android Apple 로그인 — 웹 흐름 (2026-10-30)
 설계 `docs/superpowers/specs/2026-10-29-apple-sign-in-design.md` §9. 앱이 Apple 웹 로그인(Custom Tab)을 열면 Apple 이 결과를 **`POST /api/auth/oauth/apple/callback`** 으로 form_post 하고, 서버는 `303 intent://callback?…#Intent;scheme=trexapple;package=…;end` 로 앱에 돌려보낸다. 앱은 iPhone 과 같은 `/api/auth/oauth/apple` 로 로그인한다. 서버 코드가 바뀌었으니 **새 jar 배포가 필요하다**(9.2 순서) — `users.apple_client_id` 열은 ddl-auto 가 더한다.
 
 | 변수 | 값 | 비밀값 |

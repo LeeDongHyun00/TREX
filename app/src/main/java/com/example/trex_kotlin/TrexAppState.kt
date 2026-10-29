@@ -14,8 +14,10 @@ import com.example.trex_kotlin.sync.BinaryTransport
 import com.example.trex_kotlin.sync.FirstSync
 import com.example.trex_kotlin.sync.NetworkException
 import com.example.trex_kotlin.sync.SignInException
+import com.example.trex_kotlin.sync.SignupForm
 import com.example.trex_kotlin.sync.SyncManager
 import com.example.trex_kotlin.sync.TrexApi
+import com.example.trex_kotlin.sync.signupProblem
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
@@ -119,8 +121,14 @@ class AppViewModel(private val platform: AppPlatform) : ViewModel() {
 
     fun clearAuthMessage() { authMessage = null }
 
-    /** "로그인 없이 사용". 나중에 설정에서 계정을 연결할 수 있다. */
-    fun continueWithoutAccount() = completeLogin()
+    /**
+     * "로그인 없이 사용". 나중에 설정에서 계정을 연결할 수 있다. 시작 화면의 로그인 안내("다른 계정 연결을 취소했어요" 등)는
+     * 여기서 지운다 — 남겨 두면 설정·커뮤니티의 계정 칸에 그대로 보였다(10-29 실기기).
+     */
+    fun continueWithoutAccount() {
+        authMessage = null
+        completeLogin()
+    }
 
     /**
      * "Google로 계속하기" — 로그인 화면과 설정의 계정 연결이 같이 쓴다. [requestIdToken] 은 플랫폼의 계정 선택 화면이다
@@ -152,8 +160,33 @@ class AppViewModel(private val platform: AppPlatform) : ViewModel() {
     }
 
     /**
-     * 소셜 로그인 공통 — [credential](플랫폼의 계정 선택 창)로 받은 증명을 [exchange] 로 서버 계정으로 바꿔 저장하고 첫 동기화를 시작한다.
-     * 증명을 받은 뒤부터 끝날 때까지 [authVerifying]. [label] 은 실패 문구의 이름("구글"·"Apple").
+     * 아이디·비밀번호 로그인(docs/SERVER_SYNC_HANDOFF.md D13) — 소셜 로그인과 같은 길로 계정을 저장하고 첫 동기화를 한다.
+     * 플랫폼 창이 없어 바로 서버 확인으로 들어가고, 그동안 로그인 로딩 화면이 덮인다([authVerifying]).
+     * 틀린 비밀번호·5번 연속 실패 잠금은 서버 문구를 그대로 보인다.
+     */
+    fun loginWithPassword(loginId: String, password: String) {
+        if (authBusy) return
+        if (!api.configured) {
+            authMessage = "서버가 아직 준비되지 않았어요. ‘로그인 없이 사용’으로 시작해 주세요."
+            return
+        }
+        signIn("아이디", credential = {}) { api.passwordLogin(loginId, password) }
+    }
+
+    /** 아이디·비밀번호 가입(D13) — 가입하면 바로 로그인된다. 칸 확인은 화면이 [signupProblem] 으로 먼저 하고, 서버도 같은 규칙으로 본다. */
+    fun signUpWithPassword(form: SignupForm) {
+        if (authBusy) return
+        if (!api.configured) {
+            authMessage = "서버가 아직 준비되지 않았어요. ‘로그인 없이 사용’으로 시작해 주세요."
+            return
+        }
+        signupProblem(form)?.let { authMessage = it; return }
+        signIn("아이디", credential = {}) { api.signup(form) }
+    }
+
+    /**
+     * 로그인 공통 — [credential](플랫폼의 계정 선택 창 — 아이디·비밀번호는 창이 없다)로 받은 증명을 [exchange] 로 서버 계정으로 바꿔 저장하고
+     * 첫 동기화를 시작한다. 증명을 받은 뒤부터 끝날 때까지 [authVerifying]. [label] 은 실패 문구의 이름("구글"·"Apple"·"아이디").
      */
     private fun <T> signIn(label: String, credential: suspend () -> T, exchange: suspend (T) -> AuthAccount) {
         viewModelScope.launch {
@@ -275,7 +308,8 @@ class AppViewModel(private val platform: AppPlatform) : ViewModel() {
         get() = communityMeState?.takeIf { it.first == account?.loginId }?.second
 
     val communityGate: CommunityGate
-        get() = communityGate(platform.googleWebClientId.isNotBlank(), account != null, communityMe)
+        // 서버만 있으면 아이디로 가입할 수 있다(D13) — 구글 설정이 빠진 iPhone 빌드에서도 Apple·아이디 회원이 들어온다
+        get() = communityGate(api.configured, account != null, communityMe)
 
     /** 커뮤니티 탭에 들어올 때·닉네임 정하기·동의 뒤에 부른다. 실패하면 [communityMessage] 에 문구를 둔다. */
     suspend fun refreshCommunityMe() {

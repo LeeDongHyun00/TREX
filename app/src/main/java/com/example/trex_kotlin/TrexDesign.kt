@@ -33,6 +33,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Close
@@ -381,6 +383,11 @@ fun DField(
     height: Dp = 50.dp,
     centered: Boolean = false,
     textSize: Int = 14,
+    /** 입력 칸 자체(BasicTextField)에 붙는 수정자 — 포커스 요청·포커스 변화를 받을 때 쓴다([modifier] 는 이름·안내까지 감싼 바깥). */
+    fieldModifier: Modifier = Modifier,
+    /** 키보드의 실행 키(다음·완료). [onImeAction] 이 있으면 그 키를 누를 때 부른다. */
+    imeAction: ImeAction = ImeAction.Default,
+    onImeAction: (() -> Unit)? = null,
 ) {
     val c = Trex.c
     Column(modifier) {
@@ -392,7 +399,8 @@ fun DField(
             value = value,
             onValueChange = onValueChange,
             singleLine = true,
-            keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
+            keyboardOptions = KeyboardOptions(keyboardType = keyboardType, imeAction = imeAction),
+            keyboardActions = if (onImeAction != null) KeyboardActions(onAny = { onImeAction() }) else KeyboardActions.Default,
             visualTransformation = if (password) PasswordVisualTransformation() else VisualTransformation.None,
             textStyle = TextStyle(
                 color = c.text, fontSize = textSize.sp, fontWeight = if (centered) FontWeight.SemiBold else FontWeight.Normal,
@@ -416,7 +424,7 @@ fun DField(
                     inner()
                 }
             },
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().then(fieldModifier),
         )
         if (hint != null) {
             Spacer(Modifier.height(4.dp))

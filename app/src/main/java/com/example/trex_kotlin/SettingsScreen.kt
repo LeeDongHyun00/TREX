@@ -149,9 +149,11 @@ private fun AccountGroup(app: AppViewModel) {
     val requestGoogleIdToken = rememberGoogleIdTokenRequest()
     val requestAppleCredential = rememberAppleCredentialRequest()
     val account = app.account
+    var showPasswordLogin by remember { mutableStateOf(false) }
+    if (showPasswordLogin) PasswordAuthDialog(app, onDismiss = { showPasswordLogin = false })
     SettingsGroup {
         if (account == null) {
-            // 로그인 화면과 같은 Apple·Google 버튼(SignInUi.kt) — 연결 중에는 앱 전체에 로그인 로딩 화면이 덮인다
+            // 로그인 화면과 같은 순서·같은 버튼(SignInUi.kt): 아이디(D13 창) → Apple → Google — 연결 중에는 앱 전체에 로그인 로딩 화면이 덮인다
             Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Rounded.CloudUpload, null, tint = c.primaryText, modifier = Modifier.size(22.dp))
@@ -164,6 +166,7 @@ private fun AccountGroup(app: AppViewModel) {
                         )
                     }
                 }
+                IdSignInButton("아이디로 로그인·가입", onClick = { showPasswordLogin = true }, enabled = !app.authBusy)
                 if (app.appleSignInAvailable) SocialSignInButton(
                     SignInBrand.Apple, onClick = { app.continueWithApple(requestAppleCredential) }, enabled = !app.authBusy,
                 )
@@ -203,7 +206,7 @@ fun SwitchAccountDialog(onMove: () -> Unit, onCancel: () -> Unit) {
         title = { Text("다른 계정의 기록이 있어요") },
         text = {
             Text(
-                "이 기기에는 다른 Google 계정으로 쓰던 기록이 있어요.\n\n" +
+                "이 기기에는 다른 계정으로 쓰던 기록이 있어요.\n\n" +
                     "‘이 계정으로 옮기기’를 누르면 이 기기 기록이 이 계정의 백업이 돼요(이 계정에 있던 백업은 덮어써요).\n" +
                     "‘취소’를 누르면 이 계정은 연결하지 않고, 이 기기 기록은 그대로예요.",
             )

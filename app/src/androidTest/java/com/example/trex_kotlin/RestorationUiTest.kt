@@ -135,13 +135,16 @@ class RestorationUiTest {
         compose.onNodeWithContentDescription("제어판 접기").assertHeightIsAtLeast(48.dp)
         snapshot("pip-goal-large")
     }
-    // 로그인 화면은 입력칸 대신 Google 로그인·로그인 없이 사용 두 선택지다(AuthScreens) — 폭이 바뀌어도 로고와 둘이 남는지
+    // 로그인 화면은 공룡과 같은 크기의 버튼 셋(아이디·Google — Apple 은 쓸 수 있을 때) 아래 작은 "로그인 없이 사용"(AuthScreens, 스펙 §117) —
+    // 폭이 바뀌어도 스크롤 없이 로고·선택지가 한 화면에 남는지
     @Test fun logoAndSignInChoicesSurviveNarrowToWideResize() {
         var width by mutableStateOf(320.dp)
-        compose.setContent { TrexAppTheme(ThemeMode.Light) { Box(Modifier.requiredSize(width,640.dp)) { AuthScreen(false,null,{},{}) } } }
+        compose.setContent { TrexAppTheme(ThemeMode.Light) { Box(Modifier.requiredSize(width,640.dp)) { AuthScreen(false,null,{ _, _ -> },{},{},{}) } } }
         compose.onNodeWithContentDescription("TREX 로고").assertIsDisplayed()
+        compose.onNodeWithText("아이디로 로그인").assertIsDisplayed()
         compose.onNodeWithText("Google로 계속하기").assertIsDisplayed()
         compose.runOnIdle { width=600.dp }
+        compose.onNodeWithText("아이디로 로그인").assertIsDisplayed()
         compose.onNodeWithContentDescription("TREX 로고").assertIsDisplayed()
         compose.onNodeWithText("Google로 계속하기").assertIsDisplayed()
         compose.onNodeWithText("로그인 없이 사용").assertIsDisplayed()

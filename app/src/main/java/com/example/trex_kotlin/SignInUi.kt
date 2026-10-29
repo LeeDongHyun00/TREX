@@ -18,6 +18,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.material3.TextButton
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Person
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -68,7 +72,7 @@ internal fun signInButtonTitle(brand: SignInBrand): String = when (brand) {
     SignInBrand.Google -> "Google로 계속하기"
 }
 
-/** 버튼 줄의 공통 높이 — "로그인 없이 사용"도 같다. */
+/** 버튼 줄(아이디·Apple·Google)의 공통 높이. */
 internal val SignInButtonHeight = 54.dp
 
 /** Apple 로고 — Sign in with Apple 버튼에 쓰도록 Apple 이 허락한 단색 로고(글자색을 따른다). */
@@ -149,13 +153,27 @@ fun SocialSignInButton(brand: SignInBrand, onClick: () -> Unit, modifier: Modifi
 }
 
 /**
- * "로그인 없이 사용" — 두 로그인 버튼과 같은 틀·간격. 바탕 없이 테두리만 둔다 — 채우면 어두운 화면에서 Google 버튼(#131314)보다
- * 눈에 띄었다(2026-10-29 화면 확인).
+ * "아이디로 로그인" — 앱 계정(아이디·비밀번호, docs/SERVER_SYNC_HANDOFF.md D13). Apple·Google 과 같은 틀(높이·알약·글자)이고
+ * 색은 앱의 주색이다(회사 지침이 없는 우리 버튼). 로그인 화면에서는 맨 위 버튼이고, 칸이 펼쳐지면 [label] 이 "로그인" 이 된다(사용자 요청 2026-10-30).
+ */
+@Composable
+fun IdSignInButton(label: String, onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true) {
+    val colors = SignInButtonColors(Trex.c.primary, Color.White, null)
+    SignInButtonFrame(label, onClick, colors, enabled, modifier) {
+        Icon(Icons.Rounded.Person, contentDescription = null, tint = colors.content, modifier = Modifier.size(20.dp))
+    }
+}
+
+/**
+ * "로그인 없이 사용" — 버튼 줄 아래의 작은 글자 버튼(사용자 요청 2026-10-30 — 그 자리에 "아이디로 로그인"이 들어갔다).
+ * 누르는 자리는 48dp 높이를 지킨다.
  */
 @Composable
 fun WithoutAccountButton(onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true) {
     val c = Trex.c
-    SignInButtonFrame("로그인 없이 사용", onClick, SignInButtonColors(Color.Transparent, c.text, c.fieldLine), enabled, modifier, logo = null)
+    TextButton(onClick = onClick, enabled = enabled, modifier = modifier.heightIn(min = 48.dp)) {
+        Text("로그인 없이 사용", color = if (enabled) c.text2 else c.text3, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+    }
 }
 
 /** 앱의 공룡 얼굴 — 종이를 찢고 나온 로그인 로고에서 공룡만 오린 그림(tools/icon/make_dino_head.py, 정사각 캔버스 가운데). */

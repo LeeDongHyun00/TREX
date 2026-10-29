@@ -3155,7 +3155,7 @@ Validation: Android 778 unit tests and 525 common JVM tests pass; debug and inst
 
 *Android Apple 로그인(설계 `docs/superpowers/specs/2026-10-29-apple-sign-in-design.md` §9).* Android 는 Apple 웹 로그인을 Custom Tab(`androidx.browser` 1.8.0)으로 연다. Apple 은 결과를 서버 콜백(`POST /api/auth/oauth/apple/callback`)에 form_post 하고, 서버가 `intent://callback?…;scheme=trexapple;package=…` 로 앱에 되돌려 보낸다. `AppleSignInCallbackActivity` 가 state 가 맞을 때만 넘기고 MainActivity 로 돌아간다. 그 뒤는 iPhone 과 같은 `/api/auth/oauth/apple`(nonce 원문). 서버는 대상(aud)이 번들 ID 또는 Services ID 인지 보고, code 교환·연결 끊기를 토큰을 받은 client 로 한다 — `users.apple_client_id`, 웹 code 는 `redirect_uri` 를 같이 보낸다. 창을 닫고 결과 없이 돌아오면 0.7초 뒤 조용히 취소한다. 버튼은 `trex.appleServicesId`·`trex.appleRedirectUri`(gradle.properties)가 둘 다 있을 때만 그린다.
 
-*동작하려면(코드 밖).* 동현님 개발자 계정에 Services ID `com.leedonghyun.trex.signin`(Sign in with Apple, Return URL 위) → 서버 새 jar + `.env` 의 `APPLE_WEB_CLIENT_ID`·`APPLE_WEB_REDIRECT_URI`(`docs/SERVER_SYNC_HANDOFF.md` 10.4). 그 전에는 버튼은 보이지만 Apple 화면(Services ID 없음)이나 서버(대상 불일치 401)에서 실패한다.
+*동작하려면(코드 밖).* 동현님 개발자 계정에 Services ID `com.leedonghyun.trex.signin`(Sign in with Apple, Return URL 위) → 서버 새 jar + `.env` 의 `APPLE_WEB_CLIENT_ID`·`APPLE_WEB_REDIRECT_URI`(`docs/SERVER_SYNC_HANDOFF.md` 10.5). 그 전에는 버튼은 보이지만 Apple 화면(Services ID 없음)이나 서버(대상 불일치 401)에서 실패한다.
 
 *검증.*
 - Android: 단위 테스트 854개 통과. 새 테스트는 `AppleWebAuthTest` 5개(주소·nonce 해시·state·취소·인코딩)와 `PresentationPolicyTest` 의 튕기기 규칙이다.
@@ -3236,3 +3236,26 @@ Validation: Android 778 unit tests and 525 common JVM tests pass; debug and inst
 *끄는 자리.* 세트 로그 쓰기(`PostureLive` — 리포트·기록·완료 화면은 그대로 만든다, 지역 변수는 늘리지 않았다), 음성 기록 파일(Android `AndroidSpeech.trace`·iPhone `IosAudio.trace` — `SpeechCoach.traceFeedback` 은 그대로라 엔진 테스트의 기록 확인은 바뀌지 않는다), 자가 라벨 칸(`SessionScreens` `SelfLabelSlot`), 검증 모드(Android `rememberRepValidation` — 표시 파일이 있어도 끈다. iPhone 은 원래 꺼짐). 자세 판정·횟수·음성 코칭은 두 빌드가 같다.
 
 *포기한 것.* §14 의 "실제 세션 로그가 재보정 데이터" 는 이제 개발자 빌드에서만 생긴다. 라벨 없는 사용자 로그는 쓰임이 적고 몸 좌표라 동의 없이 남기지 않는다. 실사용 데이터가 필요해지면 동의·보관 기간을 갖춘 별도 기능으로 한다.
+
+## §117. 로그인 화면에 아이디로 로그인 — main 의 D13 과 합치기 (2026-10-30, `feature/shared-ui-muscle-navigation`)
+
+*배경.* main 에 아이디·비밀번호 로그인/가입(docs/SERVER_SYNC_HANDOFF.md D13, #36·#37)이 들어오면서, 공룡과 버튼 셋만 남긴 이 브랜치의 로그인 화면(§113)과 충돌했다 — main 판은 화면 위에 로그인/회원가입 탭과 칸을 늘 펼쳐 두고 아래를 스크롤했다.
+
+*요청(동현님 2026-10-30).* "로그인 없이 사용을 작은 버튼으로 만들고 그자리에 apple과 google과 같은 크기로 아이디로 로그인 버튼… apple로 계속하기 위에 처음 버튼으로", "누르면 입력칸이 열리면서 레이아웃 높이가 늘어나는데 이만큼 공룡 로고를 줄일거야 — 로그인 페이지에 스크롤이 되지 않도록", "애니메이션으로 자연스럽게", "누르면 자동으로 id에 focus되고 키패드에 현재 입력하는게 가려지지 않게".
+
+*화면.*
+- 버튼 줄: **아이디로 로그인**(`IdSignInButton` — Apple·Google 과 같은 틀·54dp, 앱 주색) → Apple → Google, 그 아래 작은 글자 버튼 "로그인 없이 사용"(48dp 누르는 자리).
+- "아이디로 로그인"을 누르면 그 **위에** 아이디·비밀번호 칸이 펼쳐지고(320ms, 아래에서 위로) 버튼은 "로그인"이 된다(두 칸을 채워야 누를 수 있다). 버튼 아래 "회원가입"·"접기". 뒤로 가기도 접는다.
+- 아이디 칸에 바로 커서가 가고 키보드가 열린다(펼친 다음 프레임에 `requestFocus`). 아이디는 영문 키보드(ASCII), 다음 키 → 비밀번호, 완료 키 → 로그인.
+- 가입은 "회원가입"이 main 의 가입 칸(이름·아이디·비밀번호·확인·이메일·동의, 비밀번호 찾기 없음 안내)을 전체 화면 창으로 연다 — 칸이 길어 그 창은 스크롤한다. 설정·커뮤니티의 "아이디로 로그인·가입"(같은 알약 버튼)도 같은 창이다.
+
+*스크롤 없는 배치(`AuthLayout`).* 위에서부터 공룡 · 펼친 칸 · 버튼 줄 · Apple·Google·로그인 없이 사용을 한 번의 배치 계산으로 놓는다.
+- 공룡 크기 = (접었을 때 크기 − 펼쳐 늘어난 높이), 최소 72dp. 공룡 위아래 빈자리는 그대로라 화면 전체 높이가 변하지 않고, 펼치는 애니메이션의 매 프레임을 공룡이 그대로 따라 작아진다(따로 애니메이션을 두지 않는다).
+- 키보드가 올라와 보이는 높이가 줄면, 적는 칸이 있는 동안 기억한 키보드 전 높이로 계산해 아래 버튼 줄(Apple·Google·로그인 없이 사용)이 먼저 키보드 밑으로 들어가고, 그래도 모자라면 공룡이 더 작아진다 — 적는 칸·로그인 버튼·회원가입 줄은 늘 보이는 높이 안이다. 키보드 밑으로 간 줄은 잘라 그리지 않는다.
+- 보이는 높이가 주는 길은 플랫폼마다 다르지만 이 화면에는 같다: Android 12 이하는 창이 줄고(`windowSoftInputMode=adjustResize` 를 매니페스트에 명시했다 — 그 전에는 지정이 없어 기기마다 밀기·줄이기가 갈렸다), Android 15 이상·iPhone(`OnFocusBehavior.DoNothing`)은 앱 루트의 `safeDrawing` 과 화면의 `imePadding` 이 키보드만큼 준다.
+
+*로그인 흐름.* 아이디 로그인·가입도 소셜과 같은 `signIn` 을 지난다(증명 단계가 없어 바로 서버 확인) — 확인 동안 로그인 로딩 화면(§113)이 덮이고, 실패 문구는 버튼 줄 아래에 보인다. 서버 규칙(5번 실패 10분 잠금 등)·가입 칸 검사(`signupProblem`)는 main 그대로다.
+
+*병합에서 고친 것.* `docs/SERVER_SYNC_HANDOFF.md` 는 두 쪽이 같은 10.4 를 써서 main 의 "첫 실기기 시도" 를 10.4, 이 브랜치의 Android Apple 웹 흐름을 10.5 로 두었다(§114·설계 문서의 참조도 10.5). `DField` 에 칸 자체의 수정자·키보드 실행 키를 받는 선택 인자를 더했다(기본값은 예전과 같다).
+
+*검증.* 단위 테스트 869개(main 의 `PasswordAccountTest` 포함), iPhone 공유 코드 컴파일, 계측 테스트 컴파일. `SignInScreensUiTest` 에 버튼 순서·크기와 "펼치면 아이디 칸에 커서·공룡이 작아짐·844dp 안에 전부·입력 후 로그인·접으면 원래 크기" 를 넣었고 `RestorationUiTest` 의 폭 바꾸기는 스크롤 없이 보는 것으로 바꿨다 — **계측 테스트는 실행하지 않았다**(에뮬레이터 대신 동현님 실기기 검증). 키보드가 칸을 가리지 않는지·애니메이션 느낌은 실기기에서 확인해야 한다.

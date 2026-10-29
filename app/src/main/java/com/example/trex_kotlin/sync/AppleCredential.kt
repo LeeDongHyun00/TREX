@@ -10,12 +10,16 @@ package com.example.trex_kotlin.sync
 data class AppleCredential(val identityToken: String, val authorizationCode: String?, val nonce: String)
 
 /**
- * 설정의 계정 줄 이름 — 이메일(Apple 은 가린 전달 주소일 수 있다), 없으면 Apple 회원은 "Apple 계정",
- * 구글 회원은 이름이나 "Google 계정". 예전에는 이름이 비면 늘 "Google 계정"이라 Apple 사용자가 헷갈렸다.
+ * 설정의 계정 줄 이름 — 아이디 회원은 아이디(D13), 소셜 회원은 이메일(Apple 은 가린 전달 주소일 수 있다), 없으면 Apple 회원은
+ * "Apple 계정", 구글 회원은 이름이나 "Google 계정". 예전에는 이름이 비면 늘 "Google 계정"이라 Apple 사용자가 헷갈렸다.
+ * 서버는 `google_`·`apple_`·`kakao_` 로 시작하는 아이디로 가입하지 못하게 막으므로 접두어로 가른다.
  */
 fun accountLabel(account: AuthAccount): String = when {
+    SOCIAL_PREFIXES.none { account.loginId.startsWith(it) } -> account.loginId
     account.email != null -> account.email
     account.loginId.startsWith("apple_") -> "Apple 계정"
     account.name.isNotBlank() -> account.name
     else -> "Google 계정"
 }
+
+private val SOCIAL_PREFIXES = listOf("google_", "apple_", "kakao_")

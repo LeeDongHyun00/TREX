@@ -29,11 +29,14 @@
             (세션 진행도는 rememberSaveable 이라 살아남지만 세트 내부 상태는 아니다.)
             Compose 는 LocalConfiguration 으로 방향 변화를 받으므로 UI 는 정상 갱신되고,
             카메라 회전값·중력축은 PostureLive/PostureLabScreen 에서 configuration 을 키로 다시 계산한다.
+            windowSoftInputMode=adjustResize: 키보드가 올라오면 앱 화면 높이가 준다(스펙 §117) — Android 12 이하(가장자리까지 그리지 않는 창)는
+            창이 줄고, 15 이상은 키보드 여백이 앱 루트의 safeDrawing 으로 온다. 어느 쪽이든 적는 칸이 키보드에 가리지 않는다.
         -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden"
+            android:windowSoftInputMode="adjustResize"
             android:theme="@style/Theme.Trex_kotlin">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
