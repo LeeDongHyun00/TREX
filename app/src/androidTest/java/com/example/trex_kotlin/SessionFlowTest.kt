@@ -205,6 +205,43 @@ class SessionFlowTest {
         }
     }
 
+    /** 실제 손가락처럼 [ms] 동안 고르게 민다(이벤트 시각도 실제 시각 — 탭 스와이프가 속도를 본다). */
+    private fun swipe(x1: Int, y1: Int, x2: Int, y2: Int, ms: Long) {
+        val downTime = android.os.SystemClock.uptimeMillis()
+        fun send(action: Int, x: Float, y: Float) {
+            val event = android.view.MotionEvent.obtain(downTime, android.os.SystemClock.uptimeMillis(), action, x, y, 0)
+            event.source = android.view.InputDevice.SOURCE_TOUCHSCREEN
+            instrumentation.uiAutomation.injectInputEvent(event, true)
+            event.recycle()
+        }
+        val steps = (ms / 12).toInt().coerceAtLeast(3)
+        send(android.view.MotionEvent.ACTION_DOWN, x1.toFloat(), y1.toFloat())
+        for (i in 1..steps) {
+            Thread.sleep(ms / steps)
+            send(android.view.MotionEvent.ACTION_MOVE, x1 + (x2 - x1) * i / steps.toFloat(), y1 + (y2 - y1) * i / steps.toFloat())
+        }
+        send(android.view.MotionEvent.ACTION_UP, x2.toFloat(), y2.toFloat())
+        instrumentation.waitForIdleSync()
+        Thread.sleep(600)
+    }
+
+    /** 운동 행은 왼쪽으로만 열린다 — 행 위를 오른쪽으로 밀면 이전 탭(홈)으로 가고, 왼쪽으로 밀면 예전처럼 삭제를 묻는다(스펙 §114). */
+    @Test fun workoutRowRightSwipeGoesHomeAndLeftSwipeStillDeletes() = isolated { store ->
+        store.guideDone=true;store.loggedIn=true;store.onboarded=true
+        store.savePlan(listOf(Workout("swipe-a","기본 스쿼트","2회 × 2세트","99분",false,"하체")))
+        ActivityScenario.launch(MainActivity::class.java).use {
+            click("운동");await("기본 스쿼트 수정")
+            val row=android.graphics.Rect().also { find("기본 스쿼트 수정")!!.getBoundsInScreen(it) }
+            swipe(row.left+row.width()/4,row.centerY(),row.right-row.width()/8,row.centerY(),350)
+            await("운동한 날");capture("row-right-swipe-home")
+            click("운동");await("기본 스쿼트 수정")
+            // 오른쪽 끝은 자세 교정 스위치 자리라 가운데서 시작한다
+            swipe(row.left+row.width()*3/5,row.centerY(),row.left+row.width()/20,row.centerY(),450)
+            await("삭제");capture("row-left-swipe-delete");click("취소")
+            assertEquals(1,TrexStore(context).loadPlan()!!.size)
+        }
+    }
+
     @Test fun homeCardsNavigateWithoutStartingWorkout() = isolated { store ->
         store.guideDone=true;store.loggedIn=true;store.onboarded=true
         ActivityScenario.launch(MainActivity::class.java).use {

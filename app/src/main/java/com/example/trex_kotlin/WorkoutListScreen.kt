@@ -7,7 +7,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.awaitHorizontalTouchSlopOrCancellation
+import androidx.compose.foundation.gestures.horizontalDrag
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -220,11 +221,25 @@ private fun WorkoutSwipeRow(workout: Workout, shape: RoundedCornerShape, reset: 
             .clickable(enabled = gesturesEnabled, onClickLabel = "운동 수정") { if (!swiping && offset == 0f) onEdit() }
             .semantics { contentDescription = "${workout.name} 수정" }
             .pointerInput(workout.id, gesturesEnabled) {
-                if (gesturesEnabled) detectHorizontalDragGestures(
-                    onDragStart = { swiping = true },
-                    onHorizontalDrag = { change, amount -> change.consume(); offset = (offset + amount).coerceIn(-reveal * 1.6f, 0f) },
-                    onDragEnd = { swiping = false; if (offset < -reveal * .65f) { offset = -reveal; onDelete() } else offset = 0f },
-                    onDragCancel = { swiping = false; offset = 0f })
+                if (!gesturesEnabled) return@pointerInput
+                // 행은 왼쪽으로만 열린다 — 닫힌 행을 오른쪽으로 미는 건 잡지 않고 메인 탭 스와이프(이전 탭)에 넘긴다(§114)
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false)
+                    val drag = awaitHorizontalTouchSlopOrCancellation(down.id) { change, over ->
+                        if (over < 0f || offset < 0f) {
+                            change.consume()
+                            swiping = true
+                            offset = (offset + over).coerceIn(-reveal * 1.6f, 0f)
+                        }
+                    } ?: return@awaitEachGesture
+                    val completed = horizontalDrag(drag.id) { change ->
+                        // 이동량은 소비하기 전에 읽는다 — 소비한 변화의 positionChange() 는 0 이다
+                        offset = (offset + change.positionChange().x).coerceIn(-reveal * 1.6f, 0f)
+                        change.consume()
+                    }
+                    swiping = false
+                    if (completed && offset < -reveal * .65f) { offset = -reveal; onDelete() } else offset = 0f
+                }
             }) {
             Row(Modifier.fillMaxWidth().heightIn(min = 104.dp).padding(start = 18.dp, end = 8.dp, top = 12.dp, bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
