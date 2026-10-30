@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
 # 체험판 GitHub 사전 릴리스 만들기 — gh CLI 없이 REST API 로(토큰은 git credential 저장소의 github.com 비밀번호 = PAT, repo 범위).
-#   scripts/publish_release.sh <버전> <태그> <브랜치/커밋> <본문 .md> <자산 폴더>
-#   예: scripts/publish_release.sh 1.3.0-preview.6 v1.3.0-preview.6 redesign docs/ANDROID_PREVIEW_RELEASE_1_3_0_6.md dist/1.3.0-preview.6
+#   scripts/publish_release.sh <버전> <태그> <브랜치/커밋> <본문 .md> <자산 폴더> [릴리스 제목 뒷부분]
+#   예: scripts/publish_release.sh 1.3.0-preview.8 v1.3.0-preview.8 <커밋> docs/ANDROID_PREVIEW_RELEASE_1_3_0_8.md dist/1.3.0-preview.8 "커뮤니티·루틴 공유·계정 백업"
+#   제목은 "TREX <버전> · <뒷부분>"(뒷부분이 없으면 "TREX <버전>"). 본문 .md 의 앞 여섯 줄(제목·링크·표 줄 제외)이 앱 내 업데이트 대화상자에 보인다(AppUpdateLogic.summary).
 # 자산 폴더에는 TREX-<버전>.apk · SHA256SUMS.txt · BUILD_INFO.json 이 있어야 한다 — BUILD_INFO.json 은 앱 내 업데이트(AppUpdate.kt)의 정본이라 빠뜨리면 앱이 이 릴리스를 건너뛴다.
 set -euo pipefail
-VER="$1"; TAG="$2"; TARGET="$3"; BODY="$4"; DIR="$5"
+export PYTHONUTF8=1   # Windows(cp949)에서도 API 응답의 한글 본문을 UTF-8 로 읽는다
+VER="$1"; TAG="$2"; TARGET="$3"; BODY="$4"; DIR="$5"; TITLE="${6:-}"
 OWNER="LeeDongHyun00"; REPO="TREX"
 TOK=$(printf "protocol=https\nhost=github.com\n\n" | git credential fill | sed -n 's/^password=//p')
 [ -n "$TOK" ] || { echo "github.com 자격증명이 없다(git credential)"; exit 1; }
@@ -17,11 +19,12 @@ APK_VERSION=$("$AAPT2" dump badging "$DIR/TREX-$VER.apk" | sed -n "s/.*versionNa
 case "$APK_VERSION" in *-dev|"") echo "배포 금지: APK 버전 이름 '$APK_VERSION' — 실검증 도구가 켜진 빌드다(-Ptrex.distribution=true 로 다시 빌드)"; exit 1;; esac
 H=(-H "Authorization: Bearer $TOK" -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28")
 # 1) 릴리스(사전 릴리스, 초안 아님). 같은 태그가 있으면 그것을 쓴다
-python - "$TAG" "$TARGET" "$VER" "$BODY" > /tmp/release_payload.json <<'EOF'
+python - "$TAG" "$TARGET" "$VER" "$BODY" "$TITLE" > /tmp/release_payload.json <<'EOF'
 import json, sys
-tag, target, ver, body = sys.argv[1:5]
+tag, target, ver, body, title = sys.argv[1:6]
 text = open(body, encoding="utf-8").read()
-print(json.dumps({"tag_name": tag, "target_commitish": target, "name": f"TREX {ver} · 한 다리 계열 v3와 앱 내 업데이트", "body": text, "draft": False, "prerelease": True}))
+name = f"TREX {ver} · {title}" if title else f"TREX {ver}"
+print(json.dumps({"tag_name": tag, "target_commitish": target, "name": name, "body": text, "draft": False, "prerelease": True}))
 EOF
 EXIST=$(curl -s "${H[@]}" "https://api.github.com/repos/$OWNER/$REPO/releases/tags/$TAG" | python -c "import sys,json; d=json.load(sys.stdin); print(d.get('id',''))")
 if [ -n "$EXIST" ]; then RID="$EXIST"; echo "기존 릴리스 id $RID"; else

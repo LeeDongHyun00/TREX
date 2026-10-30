@@ -3297,3 +3297,20 @@ Validation: Android 778 unit tests and 525 common JVM tests pass; debug and inst
 *포기한 것.* TestFlight 로 받은 빌드에서도 실검증 도구가 꺼진다 — 개발자 검증은 Xcode·Sideloadly 빌드로 한다. 앱 안 스위치는 여전히 없다(§116 결정).
 
 *검증.* Windows 에서는 iPhone 코드를 컴파일할 수 없어 PR CI 의 공유 컴파일(`shared`)로 확인한다. App Store·TestFlight 설치본에서 완료 화면의 자가 라벨 칸이 없고 `Documents/posture_logs` 가 생기지 않는지는 첫 TestFlight 빌드에서 실기기로 확인해야 한다.
+
+## §121. Android 체험판 1.3.0-preview.8 — 첫 배포 빌드, R8 이 MediaPipe 초기화를 깨던 것 (2026-10-30)
+
+*요청.* 공개된 `v1.3.0-preview.7`(§106)은 §116 이전 빌드라 모든 설치본에 세트 로그·음성 기록·자가 라벨이 켜져 있다(§120). 최신 `main` 을 배포 빌드(`-Ptrex.distribution=true`)로 묶어 다음 체험판으로 낸다. versionCode 12 → **13**, versionName `1.3.0-preview.8` — 앱 내 업데이트는 `BUILD_INFO.json` 의 versionCode 가 설치본보다 클 때만 안내한다(§106).
+
+*R8 이 MediaPipe 를 깨던 것(배포 전 에뮬레이터 확인에서 발견).* §115 가 release 에 R8 을 켠 뒤 그 APK 를 실행해 본 기기가 없었다. 에뮬레이터에서 운동 준비 화면을 열자 `PoseLandmarker` 를 만들지 못했다 — `com.google.mediapipe.framework.Graph` 정적 초기화가 `IllegalStateException: no caller found on the stack for: com.google.common.flogger.FluentLogger` 로 실패하고, 이어지는 CPU 시도는 "previously-failed class" 로 거부된다. MediaPipe 의 로거 Flogger 는 `FluentLogger.forEnclosingClass()` 에서 스택을 거슬러 **자기 프레임 바로 다음 프레임**을 호출 클래스로 삼는데, R8 이 그 메서드를 `Graph.<clinit>` 안으로 인라인해 자기 프레임이 사라졌다. §115 의 `-keep class com.google.mediapipe.** { *; }` 는 부르는 쪽을 남길 뿐 불리는 쪽(flogger)의 인라인은 막지 않는다. 그대로 냈다면 카메라 자세 분석 전체(서서 종목의 PoseLandmarker·바닥 종목의 FaceLandmarker — 같은 `Graph` 를 지난다)가 시작하지 않았다. 디버그 빌드·단위 테스트에서는 드러나지 않는다(R8 은 release 만).
+- 고친 것: `app/proguard-rules.pro` 에 `-keep class com.google.common.flogger.** { *; }` — keep 은 최적화도 막아 인라인되지 않는다.
+- 확인: 고친 APK 에서 `PoseLandmarker ready: model=full delegate=GPU`. 에뮬레이터는 그 뒤 GPU 추론이 `GL_INVALID_ENUM … glGetBufferParameteri64v` 로 실패해(에뮬레이터 GL 한계 — swiftshader 모드에서는 에뮬레이터 자체가 죽었다) 관절 추정 결과까지는 보지 못했다. 같은 에뮬레이터에서 사진 식단(LiteRT CPU)은 영역 검출·분류까지 돈다.
+- 에뮬레이터로 보는 법: MediaPipe 0.10.14 AAR 에는 x86_64 라이브러리가 없어 x86_64 에뮬레이터는 `libmediapipe_tasks_vision_jni.so` 를 못 찾는다. 이미지가 arm64 번역을 지원하면(`ro.product.cpu.abilist` 에 arm64-v8a) `adb install --abi arm64-v8a` 로 폰과 같은 라이브러리를 쓴다.
+
+*배포 빌드 확인.* aapt2: 패키지 `com.example.trex_kotlin`, versionCode 13, versionName `1.3.0-preview.8`(`-dev` 없음). `BuildConfig.DEV_TOOLS = false`. 덱스에 `SelfLabelSlot`·`rep_validation.on`·`feedback-`·`RepValidation` 이 없다(상수 false 로 접힌 분기를 R8 이 지웠다). 세트 로그 저장소 클래스는 개발 화면(`PostureLabScreen`·`BaselineGuideScreen`)이 참조해 남지만 그 화면으로 가는 `subScreen` 값("postureLab"·"baselineGuide")을 정하는 코드가 없다. v2 서명, 인증서 SHA-256 `3027771596e2…dc751ef` = preview.7. `PostureLiveSessionScreen` 레지스터 144(R8 뒤, 한계 256).
+
+*검증.* 앱 JVM 882건·재생기 144건·`setlog_captures.py --self-test` 54/54(실패·오류·건너뜀 0), release 필수 lint. 에뮬레이터(Android 16, arm64 번역) 새 설치로 시작 화면·온보딩·홈 날씨·커뮤니티 진입 안내·설정 버전 줄(`1.3.0-preview.8 (13)`)·운동 준비 화면·사진 식단 분석, 패키지 검증(`compile -m verify`, 고치기 전 빌드)에 거부 없음. **하지 않은 것**: 휴대폰 설치, preview.7 위 업데이트 설치, 운동 세션의 관절 추정·횟수, 로그인·동기화·커뮤니티의 실제 동작. Google 로그인은 이 인증서의 SHA-1 `A6:95:E7:F3:0E:40:C8:62:C3:8C:2B:0B:41:A2:57:32:EA:A4:0D:C9` 이 구글 콘솔 Android 클라이언트에 있어야 한다(`docs/SERVER_SYNC_HANDOFF.md` Q1) — 등록 여부는 확인하지 않았다.
+
+*포기한 것.* preview.7 까지 기기에 쌓인 `posture_logs/` 는 업데이트로 지우지 않는다 — 앱 전용 폴더라 서버로 가지 않았고 앱을 지우면 함께 지워진다. 지울지는 따로 정한다.
+
+배포 안내: [Android 체험판 1.3.0-preview.8](../../docs/ANDROID_PREVIEW_RELEASE_1_3_0_8.md).
