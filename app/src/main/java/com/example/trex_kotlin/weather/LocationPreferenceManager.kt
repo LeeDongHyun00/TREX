@@ -5,127 +5,163 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.PackageManager
 import android.location.Location
+import android.location.LocationListener
 import android.location.LocationManager
+import android.os.Bundle
+import android.os.Looper
 import androidx.core.content.ContextCompat
-import androidx.core.location.LocationManagerCompat
-import androidx.core.os.CancellationSignal
-import androidx.core.util.Consumer
 import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlinx.coroutines.withTimeoutOrNull
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.coroutines.resume
+import kotlin.math.abs
 
-class LocationPreferenceManager(private val context: Context) {
+class LocationPreferenceManager(context: Context) {
 
-    private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    private val appContext = context.applicationContext
+    private val prefs = appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    private val locationManager = appContext.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+    private val memoryCache = ConcurrentHashMap<String, String>()
 
-    fun saveSelectedRegion(region: KoreanRegion) {
-        prefs.edit()
-            .putString(KEY_SELECTED_REGION, region.displayName)
-            .putBoolean(KEY_USE_GPS, false)
-            .apply()
-    }
+    val useGpsMode: Boolean
+        get() = prefs.getBoolean(KEY_USE_GPS, false)
 
     fun enableGpsMode() {
         prefs.edit().putBoolean(KEY_USE_GPS, true).apply()
     }
 
-    fun isGpsModeEnabled(): Boolean = prefs.getBoolean(KEY_USE_GPS, false)
+    fun saveSelectedRegion(region: KoreanRegion) {
+        prefs.edit()
+            .putString(KEY_SELECTED_REGION_ID, region.id)
+            .remove(KEY_SELECTED_REGION_NAME)
+            .putBoolean(KEY_USE_GPS, false)
+            .apply()
+    }
 
     fun getSavedRegion(): KoreanRegion {
-        val name = prefs.getString(KEY_SELECTED_REGION, KoreanRegion.SEOUL.displayName)
-        return KoreanRegion.fromName(name)
+        val savedId = prefs.getString(KEY_SELECTED_REGION_ID, null)
+        if (savedId != null) return KoreanRegions.fromId(savedId)
+
+        val oldName = prefs.getString(KEY_SELECTED_REGION_NAME, null)
+        val migrated = KoreanRegions.fromName(oldName)
+        prefs.edit()
+            .putString(KEY_SELECTED_REGION_ID, migrated.id)
+            .remove(KEY_SELECTED_REGION_NAME)
+            .apply()
+        return migrated
     }
 
-    fun hasLocationPermission(): Boolean {
-        val coarse = ContextCompat.checkSelfPermission(
-            context,
+    suspend fun resolveCoordinates(): Triple<Double, Double, String> {
+        val saved = getSavedRegion()
+        if (!useGpsMode) return Triple(saved.latitude, saved.longitude, saved.displayName)
+
+        val hasPermission = ContextCompat.checkSelfPermission(
+            appContext,
+            Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED || ContextCompat.checkSelfPermission(
+            appContext,
             Manifest.permission.ACCESS_COARSE_LOCATION
         ) == PackageManager.PERMISSION_GRANTED
-        val fine = ContextCompat.checkSelfPermission(
-            context,
-            Manifest.permission.ACCESS_FINE_LOCATION
-        ) == PackageManager.PERMISSION_GRANTED
-        return coarse || fine
+
+        if (!hasPermission) return Triple(saved.latitude, saved.longitude, "위치 권한 없음 · ${saved.displayName}")
+
+        val recent = getMostRecentLocation()
+        if (recent != null) return Triple(recent.latitude, recent.longitude, "현재 위치")
+
+        val current = requestCurrentLocationOrNull()
+        return if (current != null) {
+            Triple(current.latitude, current.longitude, "현재 위치")
+        } else {
+            Triple(saved.latitude, saved.longitude, "현재 위치 확인 불가 · ${saved.displayName}")
+        }
     }
 
-    fun hasCoarseLocationPermission(): Boolean = hasLocationPermission()
+    @SuppressLint("MissingPermission")
+    private fun getMostRecentLocation(): Location? {
+        return try {
+            val providers = locationManager.getProviders(true)
+            var best: Location? = null
+            for (provider in providers) {
+                val location = locationManager.getLastKnownLocation(provider) ?: continue
+                if (System.currentTimeMillis() - location.time > LOCATION_MAX_AGE_MILLIS) continue
+                if (best == null || location.accuracy < best.accuracy) best = location
+            }
+            best
+        } catch (_: SecurityException) {
+            null
+        }
+    }
 
     @SuppressLint("MissingPermission")
-    suspend fun resolveCoordinates(): Triple<Double, Double, String> {
-        if (isGpsModeEnabled() && hasLocationPermission()) {
-            val lm = context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager
-            if (lm != null) {
-                val now = System.currentTimeMillis()
-                val providers = listOf(
-                    "fused",
-                    LocationManager.GPS_PROVIDER,
-                    LocationManager.NETWORK_PROVIDER,
-                    LocationManager.PASSIVE_PROVIDER
-                )
-
-                val recentCached = providers.mapNotNull { provider ->
-                    runCatching { lm.getLastKnownLocation(provider) }.getOrNull()
-                }.filter { loc ->
-                    loc.time > 0L && (now - loc.time) in 0L..MAX_LAST_KNOWN_AGE_MILLIS
-                }.maxByOrNull { it.time }
-
-                if (recentCached != null) {
-                    return Triple(recentCached.latitude, recentCached.longitude, "현재 위치")
+    private suspend fun requestCurrentLocationOrNull(): Location? =
+        suspendCancellableCoroutine { continuation ->
+            val listener = object : LocationListener {
+                override fun onLocationChanged(location: Location) {
+                    if (continuation.isActive) continuation.resume(location)
+                    try { locationManager.removeUpdates(this) } catch (_: Exception) { }
                 }
 
-                val activeProviders = listOf(
-                    "fused",
-                    LocationManager.GPS_PROVIDER,
-                    LocationManager.NETWORK_PROVIDER
+                @Deprecated("Deprecated by Android")
+                override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) = Unit
+
+                override fun onProviderEnabled(provider: String) = Unit
+                override fun onProviderDisabled(provider: String) = Unit
+            }
+
+            val providers = try {
+                locationManager.getProviders(true)
+            } catch (_: SecurityException) {
+                emptyList()
+            }
+
+            if (providers.isEmpty()) {
+                continuation.resume(null)
+                return@suspendCancellableCoroutine
+            }
+
+            val bestProvider = providers.minByOrNull { provider ->
+                when (provider) {
+                    LocationManager.GPS_PROVIDER -> 0
+                    LocationManager.NETWORK_PROVIDER -> 1
+                    else -> 2
+                }
+            } ?: run {
+                continuation.resume(null)
+                return@suspendCancellableCoroutine
+            }
+
+            try {
+                locationManager.requestLocationUpdates(
+                    bestProvider,
+                    0L,
+                    0f,
+                    listener,
+                    Looper.getMainLooper()
                 )
-                for (provider in activeProviders) {
-                    val enabled = runCatching { lm.isProviderEnabled(provider) }.getOrDefault(false)
-                    if (enabled) {
-                        val fresh = requestCurrentLocationCompat(lm, provider)
-                        if (fresh != null) {
-                            return Triple(fresh.latitude, fresh.longitude, "현재 위치")
+                continuation.invokeOnCancellation {
+                    try { locationManager.removeUpdates(listener) } catch (_: Exception) { }
+                }
+                continuation.context[kotlinx.coroutines.Job]?.let { job ->
+                    kotlinx.coroutines.GlobalScope.launch(job) {
+                        kotlinx.coroutines.delay(LOCATION_TIMEOUT_MILLIS)
+                        if (continuation.isActive) {
+                            try { locationManager.removeUpdates(listener) } catch (_: Exception) { }
+                            continuation.resume(null)
                         }
                     }
                 }
-            }
-
-            val fallback = getSavedRegion()
-            return Triple(fallback.latitude, fallback.longitude, fallback.displayName + " (위치 확인 불가)")
-        }
-
-        val region = getSavedRegion()
-        return Triple(region.latitude, region.longitude, region.displayName)
-    }
-
-    @SuppressLint("MissingPermission")
-    private suspend fun requestCurrentLocationCompat(
-        lm: LocationManager,
-        provider: String
-    ): Location? = withTimeoutOrNull(2500L) {
-        suspendCancellableCoroutine { cont ->
-            val signal = CancellationSignal()
-            cont.invokeOnCancellation { signal.cancel() }
-
-            runCatching {
-                LocationManagerCompat.getCurrentLocation(
-                    lm,
-                    provider,
-                    signal,
-                    ContextCompat.getMainExecutor(context),
-                    Consumer { location ->
-                        if (cont.isActive) cont.resume(location)
-                    }
-                )
-            }.onFailure {
-                if (cont.isActive) cont.resume(null)
+            } catch (_: SecurityException) {
+                continuation.resume(null)
+            } catch (_: Exception) {
+                continuation.resume(null)
             }
         }
-    }
 
     companion object {
-        private const val PREFS_NAME = "trex_weather_location_prefs"
-        private const val KEY_SELECTED_REGION = "selected_region"
-        private const val KEY_USE_GPS = "use_gps"
-        private const val MAX_LAST_KNOWN_AGE_MILLIS = 30 * 60 * 1000L
+        private const val PREFS_NAME = "weather_preferences"
+        private const val KEY_USE_GPS = "use_gps_mode"
+        private const val KEY_SELECTED_REGION_ID = "selected_region_id"
+        private const val KEY_SELECTED_REGION_NAME = "selected_region"
+        private const val LOCATION_MAX_AGE_MILLIS = 30 * 60 * 1000L
+        private const val LOCATION_TIMEOUT_MILLIS = 7_500L
     }
 }
