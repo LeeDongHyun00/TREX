@@ -11,7 +11,7 @@ import java.util.List;
 
 /**
  * 공유 링크 웹 페이지(docs/superpowers/specs/2026-10-29-routine-share-design.md §4) — 템플릿 엔진 없이 문자열로 만든다.
- * {@code <head>} 의 og 메타는 카카오톡 미리보기 카드가 읽는다. 사용자가 적은 글자(루틴·운동 이름, 닉네임)는 모두 이스케이프한다.
+ * {@code <head>} 의 og 메타는 카카오톡 미리보기 카드가 읽는다(대표 그림 = 앱 아이콘 {@code /share/trex-icon.png}). 사용자가 적은 글자(루틴·운동 이름, 닉네임)는 모두 이스케이프한다.
  * "앱에서 열기"는 Android 면 카카오톡 안 브라우저에서도 동작하는 intent 주소(앱이 없으면 설치 주소로), 그 밖은 {@code trex://}.
  * 게시글 페이지에는 닉네임만 — 본문·사진은 앱 안에서만 본다.
  */
@@ -83,7 +83,7 @@ public final class SharePages {
                 + "<meta property=\"og:type\" content=\"website\">"
                 + "<meta property=\"og:title\" content=\"" + esc(title) + "\">"
                 + "<meta property=\"og:description\" content=\"" + esc(description) + "\">"
-                + "<meta property=\"og:image\" content=\"" + esc(p.baseUrl() + "/share/og.png") + "\">"
+                + "<meta property=\"og:image\" content=\"" + esc(p.baseUrl() + "/share/trex-icon.png") + "\">"
                 + "<meta property=\"og:url\" content=\"" + esc(url) + "\">"
                 + "<style>" + STYLE + "</style></head><body><main>" + body + "</main></body></html>";
     }

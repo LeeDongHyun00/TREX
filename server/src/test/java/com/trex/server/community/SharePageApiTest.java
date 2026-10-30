@@ -65,7 +65,7 @@ class SharePageApiTest extends CommunityApiTestSupport {
 
     @Test
     void ogImageIsPublic() throws Exception {
-        mvc.perform(get("/share/og.png"))
+        mvc.perform(get("/share/trex-icon.png"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.IMAGE_PNG));
     }
