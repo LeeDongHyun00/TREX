@@ -29,6 +29,7 @@ import com.example.trex_kotlin.posture.faceYawDeg
 import kotlinx.atomicfu.locks.SynchronizedObject
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.useContents
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.awaitCancellation
 import platform.AVFoundation.AVAuthorizationStatusAuthorized
 import platform.AVFoundation.AVAuthorizationStatusNotDetermined
@@ -66,6 +67,8 @@ interface IosCameraFrame {
 /** Swift 가 분석 큐에서 프레임마다 부른다 — 이 호출이 끝날 때까지 다음 프레임은 버려진다(최신만, Android KEEP_ONLY_LATEST). */
 interface IosCameraFrameSink {
     fun onFrame(frame: IosCameraFrame)
+    /** 세션 구성·시작이 끝났다(메인) — 실패면 이유 문구, 성공이면 null. 프레임은 이 호출 전에도 올 수 있다. */
+    fun onStarted(failure: String?)
 }
 
 /** 자세 추론 결과 — 정규화 xy 33×2, 가시성 = min(visibility, presence)(없으면 1) 33, 월드 좌표(m) 33×3. */
@@ -75,11 +78,20 @@ class IosPoseDetection(val xy: FloatArray, val visibility: FloatArray, val world
 class IosFaceDetection(val found: Boolean, val matrix: FloatArray?)
 
 interface IosCameraBridge {
-    /** 미리보기 뷰(AVCaptureVideoPreviewLayer, 비율 유지 — FIT_CENTER). 한 번 만들어 계속 쓴다. */
-    fun previewView(): UIView
-    /** [front] 카메라로 세션을 시작한다(메인에서 부른다). 실패하면 이유 문구, 성공이면 null. 프레임은 [sink] 로 온다. */
-    fun start(front: Boolean, sink: IosCameraFrameSink): String?
-    fun stop()
+    /**
+     * 미리보기 컨테이너(안에 AVCaptureVideoPreviewLayer, 비율 유지 — FIT_CENTER)를 **새로** 만든다. 부를 때마다 다른 UIView 다 — 하나를 돌려쓰면 종목 전환의 한 프레임 겹침에서
+     * 두 UIKitView 가 같은 UIView 를 쥐고, Compose Multiplatform 인터롭 장부(UIView 가 키)에서 뒤 화면의 등록이 지워져 그 래퍼가 화면에 남는다(10-30 보고 3번).
+     * 레이어 자체는 하나를 옮겨 담는다(세션에 붙이고 떼는 재구성이 없다). 놓을 때 [releasePreviewView].
+     */
+    fun makePreviewView(): UIView
+    fun releasePreviewView(view: UIView)
+    /**
+     * [front] 카메라로 세션을 시작한다(메인에서 부른다) — 구성·시작은 카메라 큐에서 하고 결과를 [IosCameraFrameSink.onStarted] 로 돌려준다(메인을 막지 않는다).
+     * 프레임은 [sink] 로 온다. [generation] 은 이 화면의 세대([IosCameraBridgeRegistry.nextGeneration]) — [stop] 은 같은 세대일 때만 끈다.
+     */
+    fun start(front: Boolean, generation: Long, sink: IosCameraFrameSink)
+    /** [generation] 이 마지막 [start] 의 세대일 때만 세션을 끈다 — 뒤에 시작한 화면의 세션은 건드리지 않는다(10-30 보고 2번). */
+    fun stop(generation: Long)
     /** 분석 큐 — 자세 추론(VIDEO 모드, [timestampMs] 는 단조 증가). 사람이 없으면 null. 추론이 실패하면 null 이고 [modelError] 가 채워진다. */
     fun detectPose(frame: IosCameraFrame, timestampMs: Long): IosPoseDetection?
     /** 분석 큐 — 얼굴 메시(IMAGE 모드)를 머리 크롭에(기하 = 공유 FaceCrop). 모델이 없으면 null. */
@@ -90,6 +102,12 @@ interface IosCameraBridge {
 
 object IosCameraBridgeRegistry {
     @Volatile var bridge: IosCameraBridge? = null
+    private var generation = 0L
+    /**
+     * 카메라 세션 세대 — `stream` 마다 하나(메인 스레드에서만). 종목이 바뀔 때 `AnimatedContent` 가 옛 자세 화면을 한 프레임 더 두어 새 화면의 start 뒤에
+     * 옛 화면의 stop 이 왔고, 다리가 앱에 하나라 세션이 꺼진 채 미리보기가 멈추고 사람 인식·카운트다운이 없었다. Android 는 화면마다 CameraX 유스케이스가 따로라 겪지 않는다.
+     */
+    fun nextGeneration(): Long = ++generation
 }
 
 /** 개발용 확인(실행 인자 --posture-probe) — 번들 그림 한 장을 분석 큐에서 추론한다(Swift 다리가 함께 구현한다). */
@@ -151,19 +169,23 @@ private class IosPoseCamera : PoseCamera {
 
     override suspend fun stream(front: Boolean, label: String, onFrame: (PoseFrame) -> Unit) {
         val b = bridge ?: error("카메라 연결이 없습니다")
-        val failure = b.start(front, object : IosCameraFrameSink {
+        val generation = IosCameraBridgeRegistry.nextGeneration()
+        // 구성·시작의 결과는 비동기로(메인에서 queue.sync 로 기다리면 돌아가는 세션의 재구성 동안 화면이 멈췄다 — 10-30 종목 전환 9 s)
+        val started = CompletableDeferred<String?>()
+        b.start(front, generation, object : IosCameraFrameSink {
             override fun onFrame(frame: IosCameraFrame) {
                 val t0 = uptimeUs()
                 IosCameraCounters.frames++
                 onFrame(IosFrame(frame))
                 IosCameraCounters.loopUs += uptimeUs() - t0
             }
+            override fun onStarted(failure: String?) { started.complete(failure) }
         })
-        if (failure != null) error(failure)
         try {
+            started.await()?.let { error(it) }
             awaitCancellation()
         } finally {
-            b.stop()
+            b.stop(generation)   // 뒤에 시작한 화면이 있으면 아무것도 안 한다
         }
     }
 
@@ -250,7 +272,8 @@ private class IosPoseCamera : PoseCamera {
     @Composable
     override fun Preview(modifier: Modifier) {
         val b = bridge
-        if (b != null) UIKitView(factory = { b.previewView() }, modifier = modifier,
+        // 뷰는 factory 마다 새로(같은 UIView 를 두 UIKitView 가 쥐면 CMP 인터롭 장부가 어긋난다 — IosCameraBridge.makePreviewView)
+        if (b != null) UIKitView(factory = { b.makePreviewView() }, onRelease = { b.releasePreviewView(it) }, modifier = modifier,
             properties = UIKitInteropProperties(interactionMode = null, isNativeAccessibilityEnabled = false))
     }
 }

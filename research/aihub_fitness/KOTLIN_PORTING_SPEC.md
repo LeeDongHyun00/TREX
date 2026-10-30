@@ -3327,3 +3327,18 @@ Validation: Android 778 unit tests and 525 common JVM tests pass; debug and inst
 ### §121b. 첫 업로드 실패 — 앱에 넣은 프레임워크의 버전 키 (2026-10-30, `fix/ios-framework-version`)
 
 첫 실행(run 41020468870)은 서명·아카이브·번들 검사를 통과했고 App Store Connect 분석에서 거부됐다: `Payload/Trex.app/Frameworks/TrexFoodRuntime.framework` 의 Info.plist 에 `CFBundleShortVersionString` 이 없음. 이 프레임워크는 `GENERATE_INFOPLIST_FILE` 인데 `MARKETING_VERSION` 이 앱 타깃에만 있었다. `MARKETING_VERSION`·`CURRENT_PROJECT_VERSION` 을 project.yml 프로젝트 설정으로 올려 두 타깃이 같은 값을 쓰게 하고, 워크플로의 아카이브 검사가 앱과 모든 내장 프레임워크의 버전 키를 출력(없으면 실패)하게 했다. 개인정보 매니페스트(§121)는 이 분석에서 지적되지 않았다.
+
+## §122. iPhone 종목 전환의 한 프레임 겹침 — 카메라 다리 세대·미리보기 뷰 개별화, 끊고 바로 말하기 지연 (2026-10-30, `feature/shared-ui-muscle-navigation`)
+
+10-30 iPhone 보고 3건(Android 는 정상). 2·3번은 뿌리가 하나다.
+
+**겹침.** `TrexApp` 의 `AnimatedContent` 는 `contentKey = 화면 to workout.id` 라 자세 종목 A → B 로 넘어가면 B 의 `PostureLiveSessionScreen` 이 먼저 올라오고 A 는 `fadeOut(tween(0))` 이어도 다음 프레임에야 내려간다. Android 는 화면마다 CameraX 유스케이스·`PreviewView` 가 따로라 A 의 정리가 B 에 닿지 않지만, iPhone 의 카메라 다리(`PoseCameraBridge`)와 미리보기 UIView 는 앱에 하나였다.
+
+- **2번(다음 종목 준비 화면이 멈추고 인식·카운트다운이 없음).** B 의 `stream` 이 `bridge.start()` 를 지난 뒤 A 의 stream 취소가 `bridge.stop()` 을 불러 sink 를 비우고 세션을 끄는데, B 를 다시 켜 주는 코드가 없다. → `start(front, generation, sink)`/`stop(generation)`: `IosCameraBridgeRegistry.nextGeneration()`(stream 마다, 메인)을 넘기고 다리는 **마지막 start 의 세대일 때만** 끈다.
+- **3번(근육 피로도 화면에 카메라 잔상).** 겹친 프레임에 두 `UIKitView` 가 같은 미리보기 UIView 를 쥔다. Compose Multiplatform 의 인터롭 장부(`IosInteropContainer.interopViews`)는 **UIView 객체가 키**라 B 의 등록이 A 를 덮고, A 의 `unplace` 가 그 키를 지우며, B 의 `unplace` 는 `if (!container.contains(this)) return` 으로 아무것도 안 해 B 의 래퍼(멈춘 미리보기)가 UIKit 계층에 남는다. 뒤에 오는 인터롭 뷰는 장부 기준 인덱스 0 에 들어가 그 아래 깔리므로, 근육도 WebView 가 Compose 층에 뚫은 구멍에서만 잔상이 비친다(1.10·jb-main 소스 확인). → `makePreviewView()` 가 부를 때마다 새 `CameraPreviewView`(한 세션에 미리보기 레이어 여럿 가능), `onRelease` 에서 `releasePreviewView` 가 세션을 뗀다. 사진 식단 카메라(`FoodPhotoBridge.makeCameraView`)도 같은 패턴이라 같이 바꿨다.
+- **1번(준비 화면 첫 설명이 가끔 안 나옴) — 미확정.** 설치된 1.3.0 (2) 는 배포 빌드라 발화 기록이 없다. 코드에서 본 것: ESS 문장은 들렸는지와 무관하게 `PreparationIntro.mark` 로 30분 동안 다시 안 나온다(설계). iOS 전용 후보 ① `IosSpeechEngine.speak(flush)` 가 `stopSpeaking(Immediate)` 직후 같은 틱에 `speakUtterance` — AVSpeechSynthesizer 는 stop 이 비동기라 새 문장이 함께 취소되거나 시작 사건 없이 사라지는 일이 있다(Android QUEUE_FLUSH 는 원자적). → 끊은 발화 수만큼 종결 사건(didCancel)을 기다렸다가 내고, 상한 400 ms(`STOP_SETTLE_MS`) 안에 안 오면 그냥 낸다(기록 `tts_deferred`). ② 공유 코드: 다음 종목 준비 화면은 직전 세트 꼬리 뒤에 설명을 줄 세우는데 꼬리가 상한 10 s 를 넘기면 `finished()` 의 `queue.stop()` 이 그 설명까지 지웠다(느린 iPhone 기본 음성일수록). → `SpeechQueue.expireTail()` 이 꼬리의 카운트·보류분만 버리고 경계 안내는 남겨 `onDone` 으로 잇는다(`SpeechQueueTest.expiredTailDropsItsCountsButKeepsTheNextSetsBoundaryGuidance`). 확정은 개발 빌드의 `feedback-*.jsonl` 에서 `prep armed` 뒤 `tts_submit → tts_start/tts_stop/tts_deferred` 로 본다.
+
+지키는 것: Android 동작 불변(§108 기준 8항 — 바꾼 공유 코드는 꼬리 만료 한 줄이고, 그 의도("꼬리 상한을 넘겼는데 아직 남아 있다")는 같다). 플랫폼 경계(`IosCameraBridge`·`IosFoodPhotoSource`)만 시그니처가 바뀌었다.
+
+**후속(같은 날 저녁) — 종목 전환 9 s 멈춤.** 개발 빌드의 발화 기록(`feedback-20261030.jsonl`): `speech_handoff` 23:00:26.0 → 다음 종목 `prep armed` 23:00:35.2. 세트 마감(`set_end` → handoff 0.34 s)은 빠르고, 멈춤은 다음 화면의 효과가 돌기 전이다. 그 사이 메인 스레드가 한 일은 카메라 다리의 `queue.sync { configure }`(돌아가는 세션의 입력 제거·추가 → `commitConfiguration`)와, 위 3번 수정이 더한 미리보기 레이어의 세션 붙이기·떼기(이것도 돌아가는 세션의 재구성)다. → (a) `start` 는 구성·시작을 카메라 큐에서 하고 결과를 `IosCameraFrameSink.onStarted(failure)` 로 메인에 돌려준다(Kotlin `stream` 은 `CompletableDeferred` 로 기다린다 — 메인은 막히지 않는다). (b) 같은 렌즈가 이미 구성돼 있으면 재구성하지 않는다. (c) 미리보기 레이어는 하나를 세션에 한 번만 붙이고, Compose 에는 호출마다 **새 컨테이너 UIView** 를 주어 레이어를 그 안으로 옮긴다(`releasePreviewView` 는 아직 그 컨테이너 안에 있을 때만 뺀다) — 3번의 "뷰 개별화" 는 컨테이너 단위로 지키면서 세션 재구성은 없앤다. 사진 식단 카메라도 같은 구조.
+

@@ -88,6 +88,19 @@ class SpeechQueueTest {
         q.stop(); assertFalse(q.busy)
     }
 
+    /** 꼬리가 상한을 넘겨도 꼬리 뒤에 줄 세운 다음 세트의 경계 안내(준비 첫 설명)는 남는다 — 종전 stop() 은 그것까지 지웠다(10-30 iPhone 보고 1번). */
+    @Test fun expiredTailDropsItsCountsButKeepsTheNextSetsBoundaryGuidance() {
+        val q = SpeechQueue()
+        q.request(coach("긴 문장.", null, 0), 0); q.onStart(5)
+        q.request(count("3", "n", 100), 100)
+        q.handOff(1000)
+        assertNull(q.request(boundary("다음 준비 안내.", 2000), 2000))   // 꼬리 뒤에 줄 선다
+        assertTrue(q.tailExpired(11_000))
+        q.expireTail()
+        assertTrue(q.pendingCounts.isEmpty())
+        assertEquals("다음 준비 안내.", q.onDone(11_000)!!.item.text)
+    }
+
     @Test fun recoverableOnlyAfterTheRemarkStartedPlayingAndWithdrawsUnstartedOnes() {
         val q = SpeechQueue()
         q.request(count("3", "n", 0), 0); q.onStart(5)

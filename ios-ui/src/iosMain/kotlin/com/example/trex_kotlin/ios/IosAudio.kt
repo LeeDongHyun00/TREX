@@ -38,8 +38,11 @@ import platform.AVFAudio.setActive
 import platform.Foundation.NSProcessInfo
 import platform.Foundation.NSThread
 import platform.darwin.NSObject
+import platform.darwin.DISPATCH_TIME_NOW
+import platform.darwin.dispatch_after
 import platform.darwin.dispatch_async
 import platform.darwin.dispatch_get_main_queue
+import platform.darwin.dispatch_time
 import kotlin.math.PI
 import kotlin.math.sin
 
@@ -140,6 +143,9 @@ internal val SPEECH_RATE: Float = AVSpeechUtteranceDefaultSpeechRate * 1.05f
 /** 설치된 음성을 다시 보는 간격(s) — 세션 중에 받은 향상·프리미엄 음성을 앱을 다시 켜지 않고 쓴다(엔진은 앱 수명 하나다). */
 private const val VOICE_RECHECK_S = 30.0
 
+/** 끊은 발화의 종결 사건을 기다리는 상한(ms) — 그 안에 안 오면 미룬 문장을 그냥 낸다(사건 누락에 말이 묻히지 않게). */
+private const val STOP_SETTLE_MS = 400L
+
 /**
  * 세션 스피커의 iPhone 엔진 — 가장 자연스러운 한국어 음성([bestKoreanVoice]), Android 와 같은 빠르기([SPEECH_RATE]). 신시사이저 호출과 사건은 메인 스레드다.
  * 끊긴 발화는 didCancel 이 오고(공유 정책은 Android onStop 과 같게 '끊김' 으로 받는다).
@@ -155,6 +161,15 @@ class IosSpeechEngine : SpeechEngine {
     private var events: SpeechEngine.Events? = null
     private var counter = 0L
     private val traceWriter = SerialWriter()
+    /**
+     * 끊기(stopSpeaking) 뒤 아직 종결 사건(didCancel)이 안 온 발화 수와 그동안 미뤄 둔 문장(§108c 후속, 10-30 iPhone 보고 1번).
+     * AVSpeechSynthesizer 는 stopSpeaking 이 비동기라, 같은 틱에 바로 speakUtterance 를 부르면 새 문장이 옛 것과 함께 취소되거나 시작 사건 없이 사라지는 일이 있다
+     * (Android TextToSpeech 의 QUEUE_FLUSH 는 원자적이라 겪지 않는다). 준비 화면의 첫 설명(끊고 바로 내는 경계 문장)이 가끔 안 들린 원인 후보 — 종결 사건을 받은 뒤(상한 [STOP_SETTLE_MS]) 낸다.
+     * 메인 스레드에서만.
+     */
+    private var awaitingStop = 0
+    private val deferred = ArrayList<() -> Unit>()
+    private var settleSerial = 0L
 
     private val delegate = object : NSObject(), AVSpeechSynthesizerDelegateProtocol {
         @ObjCSignatureOverride
@@ -163,11 +178,43 @@ class IosSpeechEngine : SpeechEngine {
         }
         @ObjCSignatureOverride
         override fun speechSynthesizer(synthesizer: AVSpeechSynthesizer, didFinishSpeechUtterance: AVSpeechUtterance) {
-            onMain { events?.onFinished(idOf(didFinishSpeechUtterance, remove = true), "tts_done", "") }
+            onMain { events?.onFinished(idOf(didFinishSpeechUtterance, remove = true), "tts_done", ""); stopSettled() }
         }
         @ObjCSignatureOverride
         override fun speechSynthesizer(synthesizer: AVSpeechSynthesizer, didCancelSpeechUtterance: AVSpeechUtterance) {
-            onMain { events?.onFinished(idOf(didCancelSpeechUtterance, remove = true), "tts_stop", "interrupted=true") }
+            onMain { events?.onFinished(idOf(didCancelSpeechUtterance, remove = true), "tts_stop", "interrupted=true"); stopSettled() }
+        }
+    }
+
+    /** 끊은 발화 하나의 종결이 왔다 — 전부 오면 미룬 문장을 낸다. 메인. */
+    private fun stopSettled() {
+        if (awaitingStop <= 0) return
+        awaitingStop--
+        if (awaitingStop == 0) flushDeferred()
+    }
+
+    private fun flushDeferred() {
+        awaitingStop = 0
+        settleSerial++
+        val run = ArrayList(deferred)
+        deferred.clear()
+        run.forEach { it() }
+    }
+
+    /** 재생 중인 말을 지금 끊는다(메인) — 종결 사건이 올 발화 수를 적어 두고, 그동안의 speak 는 [deferred] 로 미룬다. */
+    private fun stopNow() {
+        if (!synthesizer.speaking) return
+        awaitingStop = maxOf(1, ids.size)
+        synthesizer.stopSpeakingAtBoundary(AVSpeechBoundary.AVSpeechBoundaryImmediate)
+    }
+
+    /** 끊기 뒤의 문장을 미룬다 — 종결 사건이 [STOP_SETTLE_MS] 안에 안 오면 그냥 낸다. 메인. */
+    private fun defer(say: () -> Unit) {
+        deferred += say
+        val serial = ++settleSerial
+        trace(nowMillis(), "tts_deferred", "awaiting=$awaitingStop", null, muted = false, ready = true)
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, STOP_SETTLE_MS * 1_000_000L), dispatch_get_main_queue()) {
+            if (serial == settleSerial && deferred.isNotEmpty()) flushDeferred()
         }
     }
 
@@ -211,18 +258,21 @@ class IosSpeechEngine : SpeechEngine {
     override fun speak(text: String, flush: Boolean, id: String): Int? {
         onMain {
             IosAudioSession.speaking()
-            if (flush && synthesizer.speaking) synthesizer.stopSpeakingAtBoundary(AVSpeechBoundary.AVSpeechBoundaryImmediate)
-            val utterance = AVSpeechUtterance(string = text)
-            utterance.voice = currentVoice()
-            utterance.rate = SPEECH_RATE
-            if (silent) utterance.volume = 0f
-            ids += utterance to id
-            synthesizer.speakUtterance(utterance)
+            if (flush) { deferred.clear(); stopNow() }   // "지금 이것만" — 미뤄 둔 옛 문장도 버린다
+            val say = {
+                val utterance = AVSpeechUtterance(string = text)
+                utterance.voice = currentVoice()
+                utterance.rate = SPEECH_RATE
+                if (silent) utterance.volume = 0f
+                ids += utterance to id
+                synthesizer.speakUtterance(utterance)
+            }
+            if (awaitingStop > 0) defer(say) else say()
         }
         return SpeechEngine.SUCCESS
     }
 
-    override fun stop() = onMain { synthesizer.stopSpeakingAtBoundary(AVSpeechBoundary.AVSpeechBoundaryImmediate) }
+    override fun stop() = onMain { deferred.clear(); stopNow() }
 
     override fun shutdown() = stop()
 
