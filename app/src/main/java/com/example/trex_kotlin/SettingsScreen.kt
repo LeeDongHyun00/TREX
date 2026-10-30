@@ -85,7 +85,7 @@ fun ProfileTabScreen(app: AppViewModel, onOpenRecord: () -> Unit, onLogout: () -
             SettingsRow("저작권 및 라이선스", Icons.Rounded.Info, onClick = { sheet = "licenses" })
             SettingsDivider()
             Row(Modifier.fillMaxWidth().padding(18.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("버전", color = c.text, fontSize = 16.sp); Text("1.0", color = c.text2, fontSize = 15.sp)
+                Text("버전", color = c.text, fontSize = 16.sp); Text(app.versionLabel, color = c.text2, fontSize = 15.sp)
             }
         } }
         item { Surface(onClick = { sheet = "logout" }, color = c.surface, shape = RoundedCornerShape(20.dp)) {

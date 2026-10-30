@@ -3259,3 +3259,15 @@ Validation: Android 778 unit tests and 525 common JVM tests pass; debug and inst
 *병합에서 고친 것.* `docs/SERVER_SYNC_HANDOFF.md` 는 두 쪽이 같은 10.4 를 써서 main 의 "첫 실기기 시도" 를 10.4, 이 브랜치의 Android Apple 웹 흐름을 10.5 로 두었다(§114·설계 문서의 참조도 10.5). `DField` 에 칸 자체의 수정자·키보드 실행 키를 받는 선택 인자를 더했다(기본값은 예전과 같다).
 
 *검증.* 단위 테스트 869개(main 의 `PasswordAccountTest` 포함), iPhone 공유 코드 컴파일, 계측 테스트 컴파일. `SignInScreensUiTest` 에 버튼 순서·크기와 "펼치면 아이디 칸에 커서·공룡이 작아짐·844dp 안에 전부·입력 후 로그인·접으면 원래 크기" 를 넣었고 `RestorationUiTest` 의 폭 바꾸기는 스크롤 없이 보는 것으로 바꿨다 — **계측 테스트는 실행하지 않았다**(에뮬레이터 대신 동현님 실기기 검증). 키보드가 칸을 가리지 않는지·애니메이션 느낌은 실기기에서 확인해야 한다.
+
+## §119. 설정 화면의 버전 = 설치된 앱의 버전 (2026-10-30, `fix/settings-app-version`)
+
+*배경.* iPhone 1.3.0 을 App Store Connect 에 올리다가(§118) 설정 화면의 '버전' 줄이 `"1.0"` 문자열로 박혀 있는 것을 봤다. 스토어가 말하는 버전은 1.3.0(project.yml `MARKETING_VERSION`)이고 Android 는 `versionName`(1.3.0-preview.7, 저장소 빌드는 끝에 `-dev`, §116)이라, 사용자가 설정에서 읽는 버전이 스토어·업데이트 창("새 버전 …")과 어긋났다. 문의할 때 사용자가 읽어 주는 값으로는 어느 빌드인지 가를 수 없었다.
+
+*무엇.* `AppPlatform` 에 `appVersion`(버전 이름)·`appBuild`(빌드 번호)를 더했다 — Android `BuildConfig.VERSION_NAME`·`VERSION_CODE`, iPhone Info.plist `CFBundleShortVersionString`·`CFBundleVersion`(= `MARKETING_VERSION`·`CURRENT_PROJECT_VERSION`). 표기는 공유 함수 `appVersionLabel` 하나가 정한다 — "1.3.0 (1)", 빌드 번호를 모르면 버전 이름만. 설정 화면은 `AppViewModel.versionLabel` 을 읽는다.
+
+*왜 빌드 번호까지.* 심사에서 거절되면 같은 1.3.0 으로 빌드 번호만 올려 다시 낸다 — TestFlight·심사 빌드를 가르는 값은 그것뿐이다. Android `versionCode` 는 앱 내 업데이트가 설치본과 비교하는 값이다(§106).
+
+*왜 이 경계.* `SettingsScreen.kt` 는 iPhone 도 그대로 컴파일하는 공유 파일(§108)이라 `BuildConfig`·Android API 를 쓸 수 없다. 자세 화면의 `PostureHost.appVersion()`(세트 로그 `app_version`, §108c)은 자세 화면의 경계라 그대로 두었다.
+
+*검증.* 단위 테스트 882개 전부 통과(새 `AppVersionLabelTest`), `assembleDebug`. iPhone 공유 코드 컴파일은 Windows 에서 돌릴 수 없어 PR CI 의 `shared` 작업(`:ios-ui:compileKotlinIosSimulatorArm64`)에 맡겼다. 두 기기 설정 화면의 실제 표시는 확인하지 않았다 — 실기기에서 봐야 한다.
