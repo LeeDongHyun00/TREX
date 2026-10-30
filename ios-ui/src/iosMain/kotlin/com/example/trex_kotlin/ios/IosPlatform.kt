@@ -58,6 +58,10 @@ open class IosAppPlatform : AppPlatform {
      * 다리 없이 띄운 화면(프로브 등)에서는 거짓 — 눌러도 안 되는 버튼을 그리지 않는다.
      */
     override val appleSignInAvailable: Boolean get() = IosAppleSignInRegistry.bridge != null
+    /** project.yml `MARKETING_VERSION` — App Store 에 보이는 버전. */
+    override val appVersion: String = (NSBundle.mainBundle.objectForInfoDictionaryKey("CFBundleShortVersionString") as? String).orEmpty()
+    /** project.yml `CURRENT_PROJECT_VERSION` — 같은 버전을 다시 올리면 이것만 오른다. */
+    override val appBuild: String = (NSBundle.mainBundle.objectForInfoDictionaryKey("CFBundleVersion") as? String).orEmpty()
     override fun muscleLoadDatabase(): MuscleLoadDatabase = FileMuscleLoadDatabase(appSupportPath("TREX") + "/muscle_load.json")
     override fun appendSetLabel(label: SetSelfLabel) = SetLabelFiles(documentsPath() + "/posture_logs").append(label)
 }

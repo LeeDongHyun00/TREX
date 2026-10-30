@@ -30,6 +30,9 @@ class AndroidAppPlatform(private val app: Application) : AppPlatform {
     override val googleWebClientId: String get() = BuildConfig.GOOGLE_WEB_CLIENT_ID
     /** Apple 웹 로그인(설계 §9) — Services ID·Return URL 이 설정된 빌드만. 비어 있으면 눌러도 안 되는 버튼을 그리지 않는다. */
     override val appleSignInAvailable: Boolean get() = BuildConfig.APPLE_SERVICES_ID.isNotBlank() && BuildConfig.APPLE_REDIRECT_URI.isNotBlank()
+    /** 저장소 빌드는 끝에 "-dev" 가 붙는다(§116) — 배포 빌드와 설정 화면에서도 갈린다. */
+    override val appVersion: String get() = BuildConfig.VERSION_NAME
+    override val appBuild: String get() = BuildConfig.VERSION_CODE.toString()
     override fun muscleLoadDatabase(): MuscleLoadDatabase = MuscleLoadStore(app)
 
     override fun appendSetLabel(label: SetSelfLabel) {

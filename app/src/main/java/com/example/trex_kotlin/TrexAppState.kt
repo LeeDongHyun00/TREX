@@ -446,6 +446,9 @@ class AppViewModel(private val platform: AppPlatform) : ViewModel() {
         store.themeMode = mode
     }
 
+    /** 설정 화면의 '버전' — 설치된 앱 그대로(§119). 예전에는 "1.0" 이 박혀 있어 스토어 버전과 달랐다. */
+    val versionLabel: String get() = appVersionLabel(platform.appVersion, platform.appBuild)
+
     // ---- 운동 안내를 본 종목 — 세션 첫 준비에서 한 번만 자동으로 띄운다(§108 에서 TrexApp 에서 옮김, 같은 저장소·키)
 
     private val guidePrefs = platform.preferences("exercise_guides")

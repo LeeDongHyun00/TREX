@@ -3269,3 +3269,15 @@ Validation: Android 778 unit tests and 525 common JVM tests pass; debug and inst
 *암호화 선언.* `ITSAppUsesNonExemptEncryption = NO` — 이 앱의 암호화는 OS 의 HTTPS(서버·Open-Meteo·OAuth)와 로그인용 SHA-256 해시(Apple nonce·Google PKCE, `CryptoKit`)뿐이라 수출 규정 면제 대상이다. 키가 없으면 빌드를 올릴 때마다 App Store Connect 가 수출 규정 질문을 다시 묻는다.
 
 *검증.* `plistlib` 로 읽어 새 키와 `verify_ios_project.py` 가 보는 키·화면 방향을 확인했다. Xcode 빌드와 실기기 권한 창 문구는 Mac 에서 확인해야 한다 — 이 변경에서는 하지 않았다.
+
+## §119. 설정 화면의 버전 = 설치된 앱의 버전 (2026-10-30, `fix/settings-app-version`)
+
+*배경.* iPhone 1.3.0 을 App Store Connect 에 올리다가(§118) 설정 화면의 '버전' 줄이 `"1.0"` 문자열로 박혀 있는 것을 봤다. 스토어가 말하는 버전은 1.3.0(project.yml `MARKETING_VERSION`)이고 Android 는 `versionName`(1.3.0-preview.7, 저장소 빌드는 끝에 `-dev`, §116)이라, 사용자가 설정에서 읽는 버전이 스토어·업데이트 창("새 버전 …")과 어긋났다. 문의할 때 사용자가 읽어 주는 값으로는 어느 빌드인지 가를 수 없었다.
+
+*무엇.* `AppPlatform` 에 `appVersion`(버전 이름)·`appBuild`(빌드 번호)를 더했다 — Android `BuildConfig.VERSION_NAME`·`VERSION_CODE`, iPhone Info.plist `CFBundleShortVersionString`·`CFBundleVersion`(= `MARKETING_VERSION`·`CURRENT_PROJECT_VERSION`). 표기는 공유 함수 `appVersionLabel` 하나가 정한다 — "1.3.0 (1)", 빌드 번호를 모르면 버전 이름만. 설정 화면은 `AppViewModel.versionLabel` 을 읽는다.
+
+*왜 빌드 번호까지.* 심사에서 거절되면 같은 1.3.0 으로 빌드 번호만 올려 다시 낸다 — TestFlight·심사 빌드를 가르는 값은 그것뿐이다. Android `versionCode` 는 앱 내 업데이트가 설치본과 비교하는 값이다(§106).
+
+*왜 이 경계.* `SettingsScreen.kt` 는 iPhone 도 그대로 컴파일하는 공유 파일(§108)이라 `BuildConfig`·Android API 를 쓸 수 없다. 자세 화면의 `PostureHost.appVersion()`(세트 로그 `app_version`, §108c)은 자세 화면의 경계라 그대로 두었다.
+
+*검증.* 단위 테스트 882개 전부 통과(새 `AppVersionLabelTest`), `assembleDebug`. iPhone 공유 코드 컴파일은 Windows 에서 돌릴 수 없어 PR CI 의 `shared` 작업(`:ios-ui:compileKotlinIosSimulatorArm64`)에 맡겼다. 두 기기 설정 화면의 실제 표시는 확인하지 않았다 — 실기기에서 봐야 한다.

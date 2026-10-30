@@ -32,11 +32,20 @@ interface AppPlatform {
      */
     val appleSignInAvailable: Boolean
 
+    /** 설치된 앱의 버전 이름 — 스토어·업데이트 창이 말하는 그 버전(Android `versionName`, iPhone `CFBundleShortVersionString`). */
+    val appVersion: String
+
+    /** 빌드 번호(Android `versionCode`, iPhone `CFBundleVersion`) — 같은 버전 이름으로 다시 올린 빌드를 가른다. */
+    val appBuild: String
+
     fun muscleLoadDatabase(): MuscleLoadDatabase
 
     /** 자가 라벨을 연구용 라벨 파일에 덧붙인다. 파일 IO 는 구현이 메인 스레드 밖에서 한다. */
     fun appendSetLabel(label: SetSelfLabel)
 }
+
+/** 설정 화면의 '버전' 표기 — "1.3.0 (1)"(버전 이름과 빌드 번호, §119). 빌드 번호를 모르면 버전 이름만. */
+fun appVersionLabel(version: String, build: String): String = if (build.isBlank()) version else "$version ($build)"
 
 /** 근육 부하 장부 저장소 — 세트 원본과 파생 부하를 한 번에 맞추고 남은 장부를 돌려준다. Android 는 SQLite([MuscleLoadStore]). */
 interface MuscleLoadDatabase {
