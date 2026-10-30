@@ -1,0 +1,5 @@
+# 배포 워크플로·서명 설정은 저장소 주인 리뷰가 있어야 main 에 들어간다(스펙 §121a).
+# main 규칙(trex-main)의 '코드 소유자 리뷰 필수' 와 짝 — 이 파일 자체도 .github/ 아래라 같이 보호된다.
+/.github/ @LeeDongHyun00
+/iosApp/ExportOptions-AppStore.plist @LeeDongHyun00
+/iosApp/project.yml @LeeDongHyun00

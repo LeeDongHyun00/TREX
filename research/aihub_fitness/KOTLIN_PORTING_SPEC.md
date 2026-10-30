@@ -3310,3 +3310,16 @@ Validation: Android 778 unit tests and 525 common JVM tests pass; debug and inst
 - **개인정보 매니페스트** — 앱에 `PrivacyInfo.xcprivacy` 가 없었다. App Store 는 '사유 필요 API' 를 쓰는 바이너리에 선언이 없으면 업로드를 받지 않는다(ITMS-91053). 10-30 로컬 Release 빌드의 `nm -u`·`strings` 로 실제 쓰는 것만 적었다: `NSUserDefaults`(`KeyValueStore`) → `CA92.1`, `stat`/`fstat`(Kotlin/Native 런타임·앱 컨테이너 파일) → `C617.1`, `NSProcessInfo.systemUptime`(`PlatformUi.elapsedRealtimeMs`·`PostureCameraIos.uptimeUs`) → `35F9.1`. 앱 것은 `iosApp/Trex/Resources/`(기존 resources 단계), 음식 런타임 프레임워크(`stat`/`fstat`, 링크된 TFLite)는 `iosApp/TrexFoodRuntime/` + project.yml 에 resources 단계로 명시. 추적 = false. 수집 데이터 항목은 App Store Connect 라벨이 정본이라 비워 둔다.
 
 *포기·미검증.* 워크플로는 아직 한 번도 돌지 않았다 — 시크릿이 들어간 뒤 첫 실행이 검증이다. `workflow_dispatch` 라 main 에 들어가야 Actions 목록에 나온다. 매니페스트의 범주는 Xcode 16.2 빌드에서 뽑았으니 Xcode 26 링크 결과에 새 API 가 생기면 Apple 메일(ITMS-91053)로 알 수 있다.
+
+### §121a. 배포 시크릿은 보호 환경에만 — 팀원 브랜치가 읽지 못하게 (2026-10-30, `chore/app-store-secrets-guard`)
+
+*요청(동현님 2026-10-30).* "다른 팀원이 이거 악용 가능하니?" → 적용.
+
+*위험.* 저장소는 공개, 쓰기 권한 팀원 2명, main 보호 없음. 저장소 시크릿이면 쓰기 권한자 누구나 자기 브랜치에 시크릿을 출력·전송하는 워크플로를 올려 꺼낼 수 있다(로그 가림은 base64 로 우회된다). App Store Connect API 키(Admin)는 앱 메타데이터·빌드 업로드·심사 제출·출시·인증서 폐기까지 된다.
+
+*한 것.*
+- 환경 `app-store`: 필수 승인자 = 저장소 주인, 배포 브랜치 = `main` 만, `prevent_self_review` 끔(주인이 자기 실행을 승인해야 하므로). 시크릿 다섯 개는 **이 환경의 시크릿**으로만 넣는다 — 다른 브랜치·PR 이벤트의 작업은 받지 못한다. `ios-release.yml` 의 작업에 `environment: app-store`.
+- `.github/CODEOWNERS`: `/.github/`·`ExportOptions-AppStore.plist`·`iosApp/project.yml` = 저장소 주인.
+- main 규칙셋 `trex-main`: PR 로만 병합, 코드 소유자 리뷰 필수, 강제 push·삭제 금지. 저장소 관리자는 우회(주인의 직접 push 유지).
+
+*남은 위험.* 승인된 실행은 main 의 코드(gradle 빌드 스크립트·`tools/*.py`·`setup-mac.sh`)를 API 키 파일이 있는 러너에서 돌린다. CODEOWNERS 밖의 빌드 스크립트가 PR 로 바뀌면(팀원끼리 리뷰 없이 병합 가능) 다음 승인 실행에서 키를 읽을 수 있다 — 승인 전 직전 실행 이후 main 에 들어온 변경을 본다. 키는 App Store Connect 에서 즉시 폐기할 수 있다.
