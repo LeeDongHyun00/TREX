@@ -128,7 +128,10 @@ jobs:
           python3 iosApp/verify_bundle_assets.py "$app"
           test -f "$app/PrivacyInfo.xcprivacy"
           test -f "$app/Frameworks/TrexFoodRuntime.framework/PrivacyInfo.xcprivacy"
-          /usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' -c 'Print :CFBundleVersion' "$app/Info.plist"
+          # 앱과 앱에 넣은 프레임워크 모두 버전 키가 있어야 App Store 검증을 통과한다(§121b)
+          for plist in "$app/Info.plist" "$app"/Frameworks/*.framework/Info.plist; do
+            echo "$plist: $(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$plist") ($(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$plist"))"
+          done
           sdk="$(/usr/libexec/PlistBuddy -c 'Print :DTSDKName' "$app/Info.plist")"
           echo "SDK: $sdk"
           case "$sdk" in iphoneos2[6-9]*) ;; *) echo "App Store 는 iOS 26 SDK 이상만 받는다: $sdk" >&2; exit 1;; esac

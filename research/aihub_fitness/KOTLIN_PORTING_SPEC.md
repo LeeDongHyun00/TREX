@@ -3323,3 +3323,7 @@ Validation: Android 778 unit tests and 525 common JVM tests pass; debug and inst
 - main 규칙셋 `trex-main`: PR 로만 병합, 코드 소유자 리뷰 필수, 강제 push·삭제 금지. 저장소 관리자는 우회(주인의 직접 push 유지).
 
 *남은 위험.* 승인된 실행은 main 의 코드(gradle 빌드 스크립트·`tools/*.py`·`setup-mac.sh`)를 API 키 파일이 있는 러너에서 돌린다. CODEOWNERS 밖의 빌드 스크립트가 PR 로 바뀌면(팀원끼리 리뷰 없이 병합 가능) 다음 승인 실행에서 키를 읽을 수 있다 — 승인 전 직전 실행 이후 main 에 들어온 변경을 본다. 키는 App Store Connect 에서 즉시 폐기할 수 있다.
+
+### §121b. 첫 업로드 실패 — 앱에 넣은 프레임워크의 버전 키 (2026-10-30, `fix/ios-framework-version`)
+
+첫 실행(run 41020468870)은 서명·아카이브·번들 검사를 통과했고 App Store Connect 분석에서 거부됐다: `Payload/Trex.app/Frameworks/TrexFoodRuntime.framework` 의 Info.plist 에 `CFBundleShortVersionString` 이 없음. 이 프레임워크는 `GENERATE_INFOPLIST_FILE` 인데 `MARKETING_VERSION` 이 앱 타깃에만 있었다. `MARKETING_VERSION`·`CURRENT_PROJECT_VERSION` 을 project.yml 프로젝트 설정으로 올려 두 타깃이 같은 값을 쓰게 하고, 워크플로의 아카이브 검사가 앱과 모든 내장 프레임워크의 버전 키를 출력(없으면 실패)하게 했다. 개인정보 매니페스트(§121)는 이 분석에서 지적되지 않았다.
