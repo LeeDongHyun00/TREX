@@ -11,6 +11,7 @@ import com.trex.server.repository.CommunityProfileRepository;
 import com.trex.server.repository.PostLikeRepository;
 import com.trex.server.repository.PostRepository;
 import com.trex.server.repository.ReportRepository;
+import com.trex.server.repository.SharedRoutineRepository;
 import com.trex.server.storage.StorageCleanup;
 import org.springframework.stereotype.Component;
 
@@ -23,7 +24,7 @@ import java.util.Set;
 /**
  * 회원 탈퇴 때 커뮤니티 흔적을 모두 지운다 — App Store 5.1.1(v)는 남에게 보인 글·사진까지 지우라고 한다(설계 §5 탈퇴).
  * 그 사람이 누른 좋아요, 쓴 댓글, 한 신고와 그 사람의 글·댓글·계정을 대상으로 한 신고, 들어간 차단(양쪽),
- * 그 사람 글(과 거기 달린 좋아요·댓글), 프로필. 사진·프로필 사진은 커밋 뒤 저장소에서 지우고 실패는 로그만.
+ * 그 사람 글(과 거기 달린 좋아요·댓글), 메신저로 보낸 공유 루틴, 프로필. 사진·프로필 사진은 커밋 뒤 저장소에서 지우고 실패는 로그만.
  * {@code AuthService.deleteAccount} 가 회원을 지우기 직전에 같은 트랜잭션에서 부른다.
  */
 @Component
@@ -35,10 +36,12 @@ public class CommunityAccountCleaner {
     private final CommentRepository comments;
     private final ReportRepository reports;
     private final BlockRepository blocks;
+    private final SharedRoutineRepository sharedRoutines;
     private final StorageCleanup cleanup;
 
     public CommunityAccountCleaner(CommunityProfileRepository profiles, PostRepository posts, PostLikeRepository likes,
                                    CommentRepository comments, ReportRepository reports, BlockRepository blocks,
+                                   SharedRoutineRepository sharedRoutines,
                                    StorageCleanup cleanup) {
         this.profiles = profiles;
         this.posts = posts;
@@ -46,6 +49,7 @@ public class CommunityAccountCleaner {
         this.comments = comments;
         this.reports = reports;
         this.blocks = blocks;
+        this.sharedRoutines = sharedRoutines;
         this.cleanup = cleanup;
     }
 
@@ -76,6 +80,7 @@ public class CommunityAccountCleaner {
             comments.deleteByPostId(postId);
         }
         blocks.deleteInvolving(id);
+        sharedRoutines.deleteByOwnerId(id);
         posts.deleteAll(myPosts);
         profiles.delete(profile);
         cleanup.deleteAfterCommit(keys);

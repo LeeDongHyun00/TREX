@@ -40,10 +40,13 @@ import platform.AudioToolbox.AudioServicesPlaySystemSound
 import platform.CoreGraphics.CGRectMake
 import platform.Foundation.NSBundle
 import platform.Foundation.NSData
+import platform.Foundation.NSFileManager
 import platform.Foundation.NSProcessInfo
 import platform.Foundation.NSURL
 import platform.Foundation.dataWithContentsOfFile
+import platform.UIKit.UIActivityViewController
 import platform.UIKit.UIApplication
+import platform.UIKit.popoverPresentationController
 import platform.UIKit.UIApplicationOpenSettingsURLString
 import platform.UIKit.UIColor
 import platform.UIKit.UIUserInterfaceStyle
@@ -64,10 +67,18 @@ import platform.darwin.NSObject
 const val PLATFORM_POSTURE_CAMERA = true
 
 /**
- * 실검증 도구가 있는 빌드인가(스펙 §116) — Info.plist `TrexDevTools`(= 빌드 설정 `TREX_DEV_TOOLS`)가 "NO" 일 때만 false.
- * 배포 빌드만 `xcodebuild … TREX_DEV_TOOLS=NO` 로 끈다. 값이 없거나 비어 있으면(저장소 코드로 빌드) 켜져 있다.
+ * 실검증 도구가 있는 빌드인가(스펙 §116·§120) — 둘 다 맞아야 true.
+ * - Info.plist `TrexDevTools`(= 빌드 설정 `TREX_DEV_TOOLS`)가 "NO" 가 아니다. 값이 없거나 비어 있으면(저장소 코드로 빌드) 켜진 쪽.
+ * - App Store·TestFlight 설치본이 아니다. 그 설치본에는 Apple 이 `embedded.mobileprovision` 을 넣지 않으므로, Xcode 의
+ *   Product → Archive 처럼 `TREX_DEV_TOOLS=NO` 를 빠뜨리고 올려도 사용자 기기에서는 꺼진다. Xcode 실행·Sideloadly 설치는
+ *   개발 프로파일이 들어 있어 켜지고, 시뮬레이터는 프로파일이 없어 따로 켠다.
  */
-val PLATFORM_DEV_TOOLS: Boolean by lazy { (NSBundle.mainBundle.objectForInfoDictionaryKey("TrexDevTools") as? String) != "NO" }
+val PLATFORM_DEV_TOOLS: Boolean by lazy {
+    val flagOn = (NSBundle.mainBundle.objectForInfoDictionaryKey("TrexDevTools") as? String) != "NO"
+    val provisioned = NSFileManager.defaultManager.fileExistsAtPath(bundlePath("embedded.mobileprovision"))
+    val simulator = NSProcessInfo.processInfo.environment["SIMULATOR_DEVICE_NAME"] != null
+    flagOn && (provisioned || simulator)
+}
 
 /** 상태 막대 글자색을 화면 테마에 맞춘다(창의 라이트·다크). */
 @Composable
@@ -336,3 +347,15 @@ internal fun decodeBundleImage(relative: String, sampleSize: Int): ImageBitmap {
  */
 @Composable
 fun rememberAppleCredentialRequest(): suspend () -> AppleCredential = remember { { requestIosAppleCredential() } }
+
+/** 폰 공유 창에 글을 넘긴다(UIActivityViewController) — 가장 위에 떠 있는 화면에 띄운다. iPad 에서는 팝오버 기준을 그 화면으로. */
+@Composable
+fun rememberTextSharer(): (String) -> Unit = remember {
+    { text ->
+        var top = UIApplication.sharedApplication.keyWindow?.rootViewController
+        while (top?.presentedViewController != null) top = top.presentedViewController
+        val sheet = UIActivityViewController(activityItems = listOf(text), applicationActivities = null)
+        sheet.popoverPresentationController?.sourceView = top?.view
+        top?.presentViewController(sheet, animated = true, completion = null)
+    }
+}

@@ -533,3 +533,15 @@ fun rememberAppleCredentialRequest(): suspend () -> AppleCredential {
         }
     }
 }
+
+/** 폰 공유 창(카카오톡·문자…)에 글을 넘긴다 — 루틴·게시글 링크 공유(설계 docs/superpowers/specs/2026-10-29-routine-share-design.md). iPhone 은 ios-ui 의 같은 이름. */
+@Composable
+fun rememberTextSharer(): (String) -> Unit {
+    val context = LocalContext.current
+    return remember(context) {
+        { text ->
+            val send = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, text)
+            context.startActivity(Intent.createChooser(send, null).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        }
+    }
+}

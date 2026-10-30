@@ -26,9 +26,10 @@ iPhone은 앱의 `Documents/posture_logs`에 같은 형식으로 남습니다(Xc
 | | 개발자 빌드(기본) | 배포 빌드 |
 |---|---|---|
 | Android | `./gradlew :app:assembleRelease` | `./gradlew :app:assembleRelease -Ptrex.distribution=true` |
-| iPhone | `xcodebuild …` (설정 없음) | `xcodebuild … TREX_DEV_TOOLS=NO` |
-| 버전 이름 | `1.3.0-preview.7-dev` 처럼 `-dev`가 붙음 | 붙지 않음 |
+| iPhone | Xcode 실행·`xcodebuild …`(설정 없음)·Sideloadly 설치 | App Store·TestFlight 설치본(자동) 또는 `xcodebuild … TREX_DEV_TOOLS=NO` |
+| 버전 이름(Android) | `1.3.0-preview.7-dev` 처럼 `-dev`가 붙음 | 붙지 않음 |
 
+- iPhone은 App Store·TestFlight로 설치된 앱이면 빌드 설정과 상관없이 꺼집니다(그 설치본에는 프로비저닝 파일이 없음). Xcode의 Product → Archive로 올려도 사용자에게는 실검증 도구가 없습니다(스펙 §120).
 - 개발자 빌드의 버전 이름은 세트 로그의 `app_version`에도 남아 어떤 빌드로 센 세트인지 구분됩니다.
 - `scripts/publish_release.sh`는 버전 이름이 `-dev`로 끝나는 APK를 올리지 않습니다(aapt2로 확인 — `ANDROID_HOME` 필요).
 - `trex.distribution=true`를 `local.properties`에 넣으면 그 PC의 빌드는 모두 배포 빌드가 됩니다.

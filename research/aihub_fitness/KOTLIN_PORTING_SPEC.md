@@ -3259,3 +3259,71 @@ Validation: Android 778 unit tests and 525 common JVM tests pass; debug and inst
 *병합에서 고친 것.* `docs/SERVER_SYNC_HANDOFF.md` 는 두 쪽이 같은 10.4 를 써서 main 의 "첫 실기기 시도" 를 10.4, 이 브랜치의 Android Apple 웹 흐름을 10.5 로 두었다(§114·설계 문서의 참조도 10.5). `DField` 에 칸 자체의 수정자·키보드 실행 키를 받는 선택 인자를 더했다(기본값은 예전과 같다).
 
 *검증.* 단위 테스트 869개(main 의 `PasswordAccountTest` 포함), iPhone 공유 코드 컴파일, 계측 테스트 컴파일. `SignInScreensUiTest` 에 버튼 순서·크기와 "펼치면 아이디 칸에 커서·공룡이 작아짐·844dp 안에 전부·입력 후 로그인·접으면 원래 크기" 를 넣었고 `RestorationUiTest` 의 폭 바꾸기는 스크롤 없이 보는 것으로 바꿨다 — **계측 테스트는 실행하지 않았다**(에뮬레이터 대신 동현님 실기기 검증). 키보드가 칸을 가리지 않는지·애니메이션 느낌은 실기기에서 확인해야 한다.
+
+## §118. App Store 첫 제출 준비 — 카메라 권한 문구·암호화 선언 (2026-10-30, `fix/ios-app-store-review-plist`)
+
+*배경.* iPhone 1.3.0 을 App Store Connect 에 처음 올리면서(번들 `com.leedonghyun.trex.ios`, 대한민국, 무료) 심사에 걸릴 만한 `iosApp/Trex/Info.plist` 두 곳을 고쳤다. 스토어 문구(부제·설명·키워드)는 App Store Connect 에만 있다.
+
+*카메라 권한 문구(심사 지침 5.1.1(ii)).* 예전 문구 "…식단 사진을 촬영합니다. 영상은 저장하거나 전송하지 않습니다." 는 커뮤니티 글쓰기(§109)가 같은 카메라(`FoodPhotoBridge` 의 AVFoundation)로 찍은 사진을 서버에 올리는 용도를 빠뜨렸고, '전송하지 않는다' 가 그 사진까지 덮는 것처럼 읽혔다. 권한 창은 처음 한 번만 뜨므로 문구 하나가 세 용도(자세 분석·식단·게시글)를 다 말해야 한다 — 그래서 "운동 중 카메라 영상은 저장·전송하지 않고, 게시글 사진은 직접 올릴 때만 서버로 전송" 으로 범위를 나눴다. 사진 보관함은 PHPicker(권한 없이 고른 사진만 받는다)라 `NSPhotoLibraryUsageDescription` 창은 뜨지 않고, 동작(`CMMotionManager`)도 권한 창이 없다 — 두 키는 `tools/verify_ios_project.py` 가 요구해 그대로 둔다.
+
+*암호화 선언.* `ITSAppUsesNonExemptEncryption = NO` — 이 앱의 암호화는 OS 의 HTTPS(서버·Open-Meteo·OAuth)와 로그인용 SHA-256 해시(Apple nonce·Google PKCE, `CryptoKit`)뿐이라 수출 규정 면제 대상이다. 키가 없으면 빌드를 올릴 때마다 App Store Connect 가 수출 규정 질문을 다시 묻는다.
+
+*검증.* `plistlib` 로 읽어 새 키와 `verify_ios_project.py` 가 보는 키·화면 방향을 확인했다. Xcode 빌드와 실기기 권한 창 문구는 Mac 에서 확인해야 한다 — 이 변경에서는 하지 않았다.
+
+## §119. 설정 화면의 버전 = 설치된 앱의 버전 (2026-10-30, `fix/settings-app-version`)
+
+*배경.* iPhone 1.3.0 을 App Store Connect 에 올리다가(§118) 설정 화면의 '버전' 줄이 `"1.0"` 문자열로 박혀 있는 것을 봤다. 스토어가 말하는 버전은 1.3.0(project.yml `MARKETING_VERSION`)이고 Android 는 `versionName`(1.3.0-preview.7, 저장소 빌드는 끝에 `-dev`, §116)이라, 사용자가 설정에서 읽는 버전이 스토어·업데이트 창("새 버전 …")과 어긋났다. 문의할 때 사용자가 읽어 주는 값으로는 어느 빌드인지 가를 수 없었다.
+
+*무엇.* `AppPlatform` 에 `appVersion`(버전 이름)·`appBuild`(빌드 번호)를 더했다 — Android `BuildConfig.VERSION_NAME`·`VERSION_CODE`, iPhone Info.plist `CFBundleShortVersionString`·`CFBundleVersion`(= `MARKETING_VERSION`·`CURRENT_PROJECT_VERSION`). 표기는 공유 함수 `appVersionLabel` 하나가 정한다 — "1.3.0 (1)", 빌드 번호를 모르면 버전 이름만. 설정 화면은 `AppViewModel.versionLabel` 을 읽는다.
+
+*왜 빌드 번호까지.* 심사에서 거절되면 같은 1.3.0 으로 빌드 번호만 올려 다시 낸다 — TestFlight·심사 빌드를 가르는 값은 그것뿐이다. Android `versionCode` 는 앱 내 업데이트가 설치본과 비교하는 값이다(§106).
+
+*왜 이 경계.* `SettingsScreen.kt` 는 iPhone 도 그대로 컴파일하는 공유 파일(§108)이라 `BuildConfig`·Android API 를 쓸 수 없다. 자세 화면의 `PostureHost.appVersion()`(세트 로그 `app_version`, §108c)은 자세 화면의 경계라 그대로 두었다.
+
+*검증.* 단위 테스트 882개 전부 통과(새 `AppVersionLabelTest`), `assembleDebug`. iPhone 공유 코드 컴파일은 Windows 에서 돌릴 수 없어 PR CI 의 `shared` 작업(`:ios-ui:compileKotlinIosSimulatorArm64`)에 맡겼다. 두 기기 설정 화면의 실제 표시는 확인하지 않았다 — 실기기에서 봐야 한다.
+
+## §120. App Store·TestFlight 설치본은 실검증 도구를 늘 끈다 (2026-10-30, `fix/ios-store-build-no-dev-tools`)
+
+*요청(동현님 2026-10-30).* "배포하는 앱이 운동 기능 검증을 위한 로그가 남는 버전인지 확인하고 배포할 때는 이게 남으면 안 됨 … 깃허브에 있는 코드로 빌드했을 때는 개발자 모드 앱이라 있어야 하고 배포할 땐 없어야 해".
+
+*확인한 것.*
+- Android: `-Ptrex.distribution=true` 로 만든 `BuildConfig` 는 `DEV_TOOLS = false`·버전 이름 `1.3.0-preview.7`, 플래그 없이 만들면 `true`·`1.3.0-preview.7-dev` 다. `scripts/publish_release.sh` 는 `-dev` APK 를 올리지 않는다.
+- 로그를 쓰는 자리 — 세트 로그(`PostureLive`), 음성 기록(`AndroidSpeech`·`IosAudio`), 자가 라벨 칸(`SessionScreens`), 검증 모드(`rememberRepValidation`) — 는 모두 `PLATFORM_DEV_TOOLS` 를 지난다. 예전 SwiftUI 화면의 프레임 기록(`iosApp/Trex/TrexStore.swift` `record(frames:)`)은 앱 루트가 Compose 로 바뀐 뒤(§108b) 아무 데서도 만들지 않는 코드다. 실행 인자 점검 모드(`--app-probe` 등)는 사용자가 켤 수 없다.
+- **이미 배포된 Android `v1.3.0-preview.7`(2026-10-10)은 §116 이전 빌드라 세트 로그·음성 기록·자가 라벨이 조건 없이 켜져 있다.** 다음 체험판을 배포 빌드로 내야 사라진다.
+- iPhone 은 `TREX_DEV_TOOLS` 가 project.yml 의 모든 구성에서 YES 라 명령줄 `xcodebuild … TREX_DEV_TOOLS=NO` 로만 끌 수 있었다. App Store 에 올리는 흔한 길인 Xcode 의 Product → Archive 는 이 값을 넘기지 않으므로 **실검증 도구가 켜진 채 App Store 로 나갈 수 있었다**.
+
+*고친 것.* iPhone `PLATFORM_DEV_TOOLS`(`ios-ui` `PlatformUi.kt`)에 설치 경로 조건을 더했다 — 플래그가 "NO" 가 아니고, **그리고** 앱 묶음에 `embedded.mobileprovision` 이 있거나 시뮬레이터(`SIMULATOR_DEVICE_NAME`)일 때만 켠다. App Store·TestFlight 설치본에는 Apple 이 프로비저닝 파일을 넣지 않으므로 빌드 설정과 상관없이 꺼진다. Xcode 실행과, CI 의 서명 없는 IPA 를 Sideloadly 로 설치한 것(개발 프로파일로 다시 서명)은 그대로 켜진다 — "저장소 코드로 빌드 = 개발자 앱" 은 바뀌지 않는다. `xcodebuild … TREX_DEV_TOOLS=NO` 도 그대로 쓸 수 있다.
+
+*포기한 것.* TestFlight 로 받은 빌드에서도 실검증 도구가 꺼진다 — 개발자 검증은 Xcode·Sideloadly 빌드로 한다. 앱 안 스위치는 여전히 없다(§116 결정).
+
+*검증.* Windows 에서는 iPhone 코드를 컴파일할 수 없어 PR CI 의 공유 컴파일(`shared`)로 확인한다. App Store·TestFlight 설치본에서 완료 화면의 자가 라벨 칸이 없고 `Documents/posture_logs` 가 생기지 않는지는 첫 TestFlight 빌드에서 실기기로 확인해야 한다.
+
+## §121. iPhone App Store 업로드는 GitHub Actions(Xcode 26)에서 — 개인정보 매니페스트 (2026-10-30, `feature/ios-app-store-upload`)
+
+*요청(동현님 2026-10-30).* App Store Connect 등록 내용 작성을 마치고 "github main 최신으로 xcode 를 통해 빌드" — 빌드 경로는 검토 후 "GitHub Actions 로".
+
+*막힌 것.* App Store Connect 는 2026-04-28 부터 Xcode 26(iOS 26 SDK) 빌드만 받는다. 저장소 주인의 Mac 은 2017 MacBook Pro(`MacBookPro14,3`)라 macOS 14 가 상한이고 Xcode 26(macOS 15.6 이상 필요)을 설치할 수 없다. 로컬 Xcode 16.2 빌드(§108 의 `sdk=iphoneos18*` 약한 링크)는 실기기 설치용일 뿐 업로드하면 거부된다.
+
+*한 것.*
+- `.github/workflows/ios-release.yml` — 수동 실행(`workflow_dispatch`), `ios-build.yml` 의 `ios` 작업과 같은 준비(Xcode 26 선택·도구·`verify_ios_project.py`·`setup-mac.sh`) 뒤 Release 아카이브(`TREX_DEV_TOOLS=NO`, `CURRENT_PROJECT_VERSION` = 입력 또는 실행 번호) → 번들 검사(자세 자산 바이트·매니페스트 두 개·`DTSDKName` ≥ iphoneos26) → `-exportArchive`(`iosApp/ExportOptions-AppStore.plist`, `app-store-connect` + `destination=upload`).
+- 서명: 아카이브는 **개발 인증서 .p12 시크릿 + 자동 서명**, 배포 서명·프로파일·업로드는 **App Store Connect API 키(Admin)** 의 클라우드 관리 배포 인증서. API 키만 주면 새 러너에 개인 키가 없어 실행마다 개발 인증서를 새로 만들거나 기존 것을 폐기하려 한다(Apple 개발자 포럼에 같은 보고가 여럿) — 그래서 저장소 주인 Mac 의 `Apple Development` 인증서를 임시 키체인에 넣고 실행 끝에 지운다. 시크릿 다섯 개와 절차는 `docs/IOS_APP_STORE_RELEASE.md`.
+- **개인정보 매니페스트** — 앱에 `PrivacyInfo.xcprivacy` 가 없었다. App Store 는 '사유 필요 API' 를 쓰는 바이너리에 선언이 없으면 업로드를 받지 않는다(ITMS-91053). 10-30 로컬 Release 빌드의 `nm -u`·`strings` 로 실제 쓰는 것만 적었다: `NSUserDefaults`(`KeyValueStore`) → `CA92.1`, `stat`/`fstat`(Kotlin/Native 런타임·앱 컨테이너 파일) → `C617.1`, `NSProcessInfo.systemUptime`(`PlatformUi.elapsedRealtimeMs`·`PostureCameraIos.uptimeUs`) → `35F9.1`. 앱 것은 `iosApp/Trex/Resources/`(기존 resources 단계), 음식 런타임 프레임워크(`stat`/`fstat`, 링크된 TFLite)는 `iosApp/TrexFoodRuntime/` + project.yml 에 resources 단계로 명시. 추적 = false. 수집 데이터 항목은 App Store Connect 라벨이 정본이라 비워 둔다.
+
+*포기·미검증.* 워크플로는 아직 한 번도 돌지 않았다 — 시크릿이 들어간 뒤 첫 실행이 검증이다. `workflow_dispatch` 라 main 에 들어가야 Actions 목록에 나온다. 매니페스트의 범주는 Xcode 16.2 빌드에서 뽑았으니 Xcode 26 링크 결과에 새 API 가 생기면 Apple 메일(ITMS-91053)로 알 수 있다.
+
+### §121a. 배포 시크릿은 보호 환경에만 — 팀원 브랜치가 읽지 못하게 (2026-10-30, `chore/app-store-secrets-guard`)
+
+*요청(동현님 2026-10-30).* "다른 팀원이 이거 악용 가능하니?" → 적용.
+
+*위험.* 저장소는 공개, 쓰기 권한 팀원 2명, main 보호 없음. 저장소 시크릿이면 쓰기 권한자 누구나 자기 브랜치에 시크릿을 출력·전송하는 워크플로를 올려 꺼낼 수 있다(로그 가림은 base64 로 우회된다). App Store Connect API 키(Admin)는 앱 메타데이터·빌드 업로드·심사 제출·출시·인증서 폐기까지 된다.
+
+*한 것.*
+- 환경 `app-store`: 필수 승인자 = 저장소 주인, 배포 브랜치 = `main` 만, `prevent_self_review` 끔(주인이 자기 실행을 승인해야 하므로). 시크릿 다섯 개는 **이 환경의 시크릿**으로만 넣는다 — 다른 브랜치·PR 이벤트의 작업은 받지 못한다. `ios-release.yml` 의 작업에 `environment: app-store`.
+- `.github/CODEOWNERS`: `/.github/`·`ExportOptions-AppStore.plist`·`iosApp/project.yml` = 저장소 주인.
+- main 규칙셋 `trex-main`: PR 로만 병합, 코드 소유자 리뷰 필수, 강제 push·삭제 금지. 저장소 관리자는 우회(주인의 직접 push 유지).
+
+*남은 위험.* 승인된 실행은 main 의 코드(gradle 빌드 스크립트·`tools/*.py`·`setup-mac.sh`)를 API 키 파일이 있는 러너에서 돌린다. CODEOWNERS 밖의 빌드 스크립트가 PR 로 바뀌면(팀원끼리 리뷰 없이 병합 가능) 다음 승인 실행에서 키를 읽을 수 있다 — 승인 전 직전 실행 이후 main 에 들어온 변경을 본다. 키는 App Store Connect 에서 즉시 폐기할 수 있다.
+
+### §121b. 첫 업로드 실패 — 앱에 넣은 프레임워크의 버전 키 (2026-10-30, `fix/ios-framework-version`)
+
+첫 실행(run 41020468870)은 서명·아카이브·번들 검사를 통과했고 App Store Connect 분석에서 거부됐다: `Payload/Trex.app/Frameworks/TrexFoodRuntime.framework` 의 Info.plist 에 `CFBundleShortVersionString` 이 없음. 이 프레임워크는 `GENERATE_INFOPLIST_FILE` 인데 `MARKETING_VERSION` 이 앱 타깃에만 있었다. `MARKETING_VERSION`·`CURRENT_PROJECT_VERSION` 을 project.yml 프로젝트 설정으로 올려 두 타깃이 같은 값을 쓰게 하고, 워크플로의 아카이브 검사가 앱과 모든 내장 프레임워크의 버전 키를 출력(없으면 실패)하게 했다. 개인정보 매니페스트(§121)는 이 분석에서 지적되지 않았다.

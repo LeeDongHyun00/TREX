@@ -151,10 +151,11 @@ Windows는 `.\gradlew.bat`을 씁니다. 자세 엔진을 수정할 때는 [작�
 | | 개발자 빌드(기본) | 배포 빌드 |
 |---|---|---|
 | Android | `./gradlew :app:assembleRelease` | `./gradlew :app:assembleRelease -Ptrex.distribution=true` |
-| iPhone | `xcodebuild …` (설정 없음) | `xcodebuild … TREX_DEV_TOOLS=NO` |
-| 버전 이름 | `1.3.0-preview.7-dev` 처럼 `-dev`가 붙음 | 붙지 않음 |
+| iPhone | Xcode 실행·`xcodebuild …`(설정 없음)·Sideloadly 설치 | App Store·TestFlight 설치본(자동) 또는 `xcodebuild … TREX_DEV_TOOLS=NO` |
+| 버전 이름(Android) | `1.3.0-preview.7-dev` 처럼 `-dev`가 붙음 | 붙지 않음 |
 
 release 변형도 기존 체험판과 동일한 개발 인증서로 서명하고, `scripts/publish_release.sh`는 `-dev` APK를 올리지 않습니다.
+iPhone은 App Store·TestFlight로 설치된 앱이면 빌드 설정과 상관없이 기록 도구가 꺼집니다(스펙 §120).
 기록 도구의 저장 위치·켜고 끄기·로그 회수는 [실검증 도구](docs/DEV_TOOLS.md)에 있습니다.
 
 ## 구조

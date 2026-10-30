@@ -43,9 +43,11 @@ class AppleLoginTest {
     @Test
     fun 계정_줄_이름() {
         fun account(loginId: String, name: String, email: String?) = AuthAccount("t", 0, loginId, name, email)
-        assertEquals("dino@icloud.com", accountLabel(account("apple_x", "", "dino@icloud.com")))
+        // 로그인 방법을 앞에 — 구글 계정을 Apple 계정으로 알고 Apple 만 탈퇴한 일(10-29)
+        assertEquals("Apple · dino@icloud.com", accountLabel(account("apple_x", "", "dino@icloud.com")))
         assertEquals("Apple 계정", accountLabel(account("apple_x", "T-REX 사용자", null)))
-        assertEquals("윤성", accountLabel(account("google_x", "윤성", null)))
+        assertEquals("Google · 윤성", accountLabel(account("google_x", "윤성", null)))
         assertEquals("Google 계정", accountLabel(account("google_x", "", null)))
+        assertEquals("카카오 · k@kakao.com", accountLabel(account("kakao_1", "", "k@kakao.com")))
     }
 }

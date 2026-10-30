@@ -1,6 +1,10 @@
 package com.example.trex_kotlin.sync
 
 import com.example.trex_kotlin.nowMillis
+import com.example.trex_kotlin.Workout
+import com.example.trex_kotlin.routines.SharedRoutine
+import com.example.trex_kotlin.routines.decodeRoutineExercises
+import com.example.trex_kotlin.routines.encodeRoutineExercises
 import org.json.JSONObject
 
 /** 서버가 준 로그인 결과. [expiresAtMillis] 가 지나면 다시 로그인한다. */
@@ -72,6 +76,26 @@ class TrexApi(private val baseUrl: String, private val transport: HttpTransport,
         val body = JSONObject().put("loginId", loginId.trim()).put("password", password)
         return account(call("POST", "/api/auth/login", body, auth = false).second)
     }
+
+    /** 루틴 공유(docs/superpowers/specs/2026-10-29-routine-share-design.md) — 메신저에 붙일 링크를 돌려준다. 커뮤니티 준비가 된 회원만. */
+    suspend fun shareRoutine(name: String, totalSeconds: Int, workouts: List<Workout>): String {
+        val body = JSONObject().put("name", name.trim()).put("totalSeconds", totalSeconds).put("exercises", encodeRoutineExercises(workouts))
+        return JSONObject(call("POST", "/api/routines/share", body).second).getString("url")
+    }
+
+    /** 링크로 받은 루틴 — 로그인 없이. 운동 id 는 `recv-순번`. */
+    suspend fun sharedRoutine(code: String): SharedRoutine {
+        val o = JSONObject(call("GET", "/api/routines/shared/$code", auth = false).second)
+        return SharedRoutine(
+            name = o.getString("name"),
+            senderNickname = o.optString("senderNickname"),
+            totalSeconds = o.optInt("totalSeconds", 0),
+            workouts = decodeRoutineExercises(o.getJSONArray("exercises"), "recv"),
+        )
+    }
+
+    /** 게시글 공유 링크 — 서버를 부르지 않는다(웹 페이지에는 닉네임만 보인다). */
+    fun postShareUrl(postId: Long): String = "$serverId/p/$postId"
 
     private fun account(body: String): AuthAccount {
         val o = JSONObject(body)

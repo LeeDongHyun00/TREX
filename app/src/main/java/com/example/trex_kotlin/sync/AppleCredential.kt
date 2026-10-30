@@ -10,16 +10,16 @@ package com.example.trex_kotlin.sync
 data class AppleCredential(val identityToken: String, val authorizationCode: String?, val nonce: String)
 
 /**
- * 설정의 계정 줄 이름 — 아이디 회원은 아이디(D13), 소셜 회원은 이메일(Apple 은 가린 전달 주소일 수 있다), 없으면 Apple 회원은
- * "Apple 계정", 구글 회원은 이름이나 "Google 계정". 예전에는 이름이 비면 늘 "Google 계정"이라 Apple 사용자가 헷갈렸다.
+ * 설정의 계정 줄 이름 — 로그인 방법을 앞에 붙인다("아이디 · trex_user", "Google · 이메일", "Apple · 이메일"). 소셜 회원은 이메일
+ * (Apple 은 가린 전달 주소일 수 있다), 없으면 이름, 둘 다 없으면 "Apple 계정"·"Google 계정". 구글 계정을 Apple 계정으로 알고
+ * Apple 만 탈퇴해 구글 쪽 댓글이 남은 일(10-29)이 있어 방법을 늘 보인다.
  * 서버는 `google_`·`apple_`·`kakao_` 로 시작하는 아이디로 가입하지 못하게 막으므로 접두어로 가른다.
  */
-fun accountLabel(account: AuthAccount): String = when {
-    SOCIAL_PREFIXES.none { account.loginId.startsWith(it) } -> account.loginId
-    account.email != null -> account.email
-    account.loginId.startsWith("apple_") -> "Apple 계정"
-    account.name.isNotBlank() -> account.name
-    else -> "Google 계정"
+fun accountLabel(account: AuthAccount): String {
+    val method = SOCIAL_METHODS.entries.firstOrNull { account.loginId.startsWith(it.key) }?.value
+        ?: return "아이디 · ${account.loginId}"
+    val detail = account.email ?: account.name.takeIf { it.isNotBlank() && method != "Apple" }
+    return if (detail != null) "$method · $detail" else "$method 계정"
 }
 
-private val SOCIAL_PREFIXES = listOf("google_", "apple_", "kakao_")
+private val SOCIAL_METHODS = linkedMapOf("google_" to "Google", "apple_" to "Apple", "kakao_" to "카카오")

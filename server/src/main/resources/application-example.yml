@@ -56,3 +56,6 @@ trex:
     s3-bucket: ${COMMUNITY_S3_BUCKET:}
     admin-login-ids: ${COMMUNITY_ADMIN_LOGIN_IDS:}
     report-webhook-url: ${COMMUNITY_REPORT_WEBHOOK_URL:}
+  # 공유 링크(docs/superpowers/specs/2026-10-29-routine-share-design.md) — 웹 페이지의 "앱 설치하기"(iPhone). 출시 전에는 비운다
+  share:
+    ios-install-url: ${SHARE_IOS_INSTALL_URL:}

@@ -1,0 +1,154 @@
+name: iOS App Store 업로드
+# 스펙 §121: App Store Connect 는 2026-04-28 부터 Xcode 26(iOS 26 SDK) 빌드만 받는다. 저장소 주인의 Mac 은 Xcode 26 을
+# 설치할 수 없어(2017 MacBook Pro, macOS 14 상한) 배포 빌드는 이 작업이 만든다 — 수동 실행만, 고른 브랜치(기본 main)를 올린다.
+# 서명: 아카이브는 개발 인증서(.p12 시크릿) + 자동 서명, 배포 서명·프로파일·업로드는 App Store Connect API 키(Admin, 클라우드 관리 배포 인증서).
+# 시크릿 다섯 개는 저장소가 아니라 보호 환경 app-store 에만 있다 — main 에서만, 저장소 주인 승인 뒤에만 이 작업이 받는다(§121a).
+# 만드는 법은 docs/IOS_APP_STORE_RELEASE.md.
+on:
+  workflow_dispatch:
+    inputs:
+      build_number:
+        description: 'CFBundleVersion — 비우면 이 워크플로의 실행 번호. 같은 버전(1.3.0) 안에서 이전 업로드보다 커야 한다'
+        required: false
+        default: ''
+concurrency:
+  group: ios-app-store-upload
+  cancel-in-progress: false
+jobs:
+  upload:
+    runs-on: macos-15
+    timeout-minutes: 90
+    environment: app-store
+    env:
+      TEAM_ID: BT6XQAVMKW
+      BUILD_NUMBER: ${{ inputs.build_number || github.run_number }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: 시크릿 확인
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+          BUILD_CERT_P12: ${{ secrets.BUILD_CERT_P12 }}
+          BUILD_CERT_PASSWORD: ${{ secrets.BUILD_CERT_PASSWORD }}
+        run: |
+          missing=""
+          [ -n "$ASC_KEY_ID" ] || missing="$missing ASC_KEY_ID"
+          [ -n "$ASC_ISSUER_ID" ] || missing="$missing ASC_ISSUER_ID"
+          [ -n "$ASC_KEY_P8" ] || missing="$missing ASC_KEY_P8"
+          [ -n "$BUILD_CERT_P12" ] || missing="$missing BUILD_CERT_P12"
+          [ -n "$BUILD_CERT_PASSWORD" ] || missing="$missing BUILD_CERT_PASSWORD"
+          if [ -n "$missing" ]; then echo "app-store 환경 시크릿이 없습니다:$missing (docs/IOS_APP_STORE_RELEASE.md)" >&2; exit 1; fi
+          echo "올릴 코드: ${GITHUB_REF_NAME} @ ${GITHUB_SHA::7} · 빌드 번호 ${BUILD_NUMBER}"
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: 빌드 의존성 캐시 복원
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            ~/.konan
+            ~/Library/Caches/CocoaPods
+            ~/.cocoapods
+          key: macos-ios-deps-v1-${{ hashFiles('build.gradle.kts', 'gradle/libs.versions.toml', 'posture-core/build.gradle.kts', 'ios-ui/build.gradle.kts', 'gradle/wrapper/gradle-wrapper.properties', 'iosApp/Podfile.trex') }}
+      - name: 호환 Xcode 선택
+        run: |
+          task_xcode_app="$(python3 - <<'PY'
+          from pathlib import Path
+          paths=sorted(Path('/Applications').glob('Xcode_26*.app'))
+          preferred=Path('/Applications/Xcode_26.0.app')
+          if not paths: raise SystemExit('Xcode 26이 설치된 macOS runner가 필요합니다.')
+          print(preferred if preferred.exists() else paths[0])
+          PY
+          )"
+          sudo xcode-select -s "$task_xcode_app/Contents/Developer"
+          echo "DEVELOPER_DIR=$task_xcode_app/Contents/Developer" >> "$GITHUB_ENV"
+          xcodebuild -version
+      - name: 도구 설치
+        run: |
+          brew install xcodegen cocoapods
+          echo "TREX_POD_BINARY=$(brew --prefix)/bin/pod" >> "$GITHUB_ENV"
+          python3 -m pip install tree-sitter tree-sitter-swift pyyaml flatbuffers==25.12.19 tflite==2.18.0
+      - name: 정본과 공통 엔진 검증
+        run: |
+          python3 tools/verify_ios_project.py
+          bash gradlew -PiosOnly=true :posture-core:jvmTest
+      - name: API 키 파일
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+        run: |
+          key_path="$RUNNER_TEMP/AuthKey_${ASC_KEY_ID}.p8"
+          printf '%s\n' "$ASC_KEY_P8" > "$key_path"
+          chmod 600 "$key_path"
+          echo "ASC_KEY_PATH=$key_path" >> "$GITHUB_ENV"
+      # 자동 서명의 아카이브는 Apple Development 인증서로 서명한다. 새 러너에는 개인 키가 없어 API 키만 주면 실행마다
+      # 개발 인증서를 새로 만들거나 기존 것을 폐기하려 한다 — 저장소 주인 Mac 의 개발 인증서(.p12)를 임시 키체인에 넣는다.
+      # 배포 서명(내보내기)은 API 키의 클라우드 관리 배포 인증서가 한다.
+      - name: 개발 인증서 임시 키체인
+        env:
+          BUILD_CERT_P12: ${{ secrets.BUILD_CERT_P12 }}
+          BUILD_CERT_PASSWORD: ${{ secrets.BUILD_CERT_PASSWORD }}
+        run: |
+          keychain="$RUNNER_TEMP/trex-signing.keychain-db"
+          keychain_password="$(uuidgen)"
+          printf '%s' "$BUILD_CERT_P12" | base64 --decode > "$RUNNER_TEMP/build_cert.p12"
+          security create-keychain -p "$keychain_password" "$keychain"
+          security set-keychain-settings -lut 21600 "$keychain"
+          security unlock-keychain -p "$keychain_password" "$keychain"
+          security import "$RUNNER_TEMP/build_cert.p12" -P "$BUILD_CERT_PASSWORD" -A -t cert -f pkcs12 -k "$keychain"
+          security set-key-partition-list -S apple-tool:,apple: -k "$keychain_password" "$keychain" >/dev/null
+          security list-keychains -d user -s "$keychain" $(security list-keychains -d user | tr -d '"')
+          rm -f "$RUNNER_TEMP/build_cert.p12"
+          echo "TREX_KEYCHAIN=$keychain" >> "$GITHUB_ENV"
+          security find-identity -v -p codesigning "$keychain" | sed -E 's/[0-9A-F]{40}/<hash>/'
+      - name: Xcode 프로젝트·Pod 준비
+        run: bash iosApp/scripts/setup-mac.sh
+      - name: 아카이브(Release, 실검증 도구 끔)
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          xcodebuild -workspace iosApp/Trex.xcworkspace -scheme Trex -configuration Release \
+            -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/Trex.xcarchive" \
+            -derivedDataPath "$RUNNER_TEMP/DerivedData" \
+            -allowProvisioningUpdates -authenticationKeyPath "$ASC_KEY_PATH" \
+            -authenticationKeyID "$ASC_KEY_ID" -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
+            DEVELOPMENT_TEAM="$TEAM_ID" CURRENT_PROJECT_VERSION="$BUILD_NUMBER" TREX_DEV_TOOLS=NO \
+            archive
+      - name: 아카이브 검사
+        run: |
+          app="$RUNNER_TEMP/Trex.xcarchive/Products/Applications/Trex.app"
+          python3 iosApp/verify_bundle_assets.py "$app"
+          test -f "$app/PrivacyInfo.xcprivacy"
+          test -f "$app/Frameworks/TrexFoodRuntime.framework/PrivacyInfo.xcprivacy"
+          # 앱과 앱에 넣은 프레임워크 모두 버전 키가 있어야 App Store 검증을 통과한다(§121b)
+          for plist in "$app/Info.plist" "$app"/Frameworks/*.framework/Info.plist; do
+            short="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$plist")"
+            build="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$plist")"
+            echo "$plist: $short ($build)"
+          done
+          sdk="$(/usr/libexec/PlistBuddy -c 'Print :DTSDKName' "$app/Info.plist")"
+          echo "SDK: $sdk"
+          case "$sdk" in iphoneos2[6-9]*) ;; *) echo "App Store 는 iOS 26 SDK 이상만 받는다: $sdk" >&2; exit 1;; esac
+      - name: App Store Connect 업로드
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/Trex.xcarchive" \
+            -exportOptionsPlist iosApp/ExportOptions-AppStore.plist -exportPath "$RUNNER_TEMP/export" \
+            -allowProvisioningUpdates -authenticationKeyPath "$ASC_KEY_PATH" \
+            -authenticationKeyID "$ASC_KEY_ID" -authenticationKeyIssuerID "$ASC_ISSUER_ID"
+          echo "업로드 완료 — App Store Connect TestFlight 탭에서 처리(수 분~수십 분)가 끝나면 1.3.0 버전의 빌드로 고른다."
+      - name: API 키·임시 키체인 지우기
+        if: always()
+        run: |
+          rm -f "$RUNNER_TEMP"/AuthKey_*.p8 "$RUNNER_TEMP/build_cert.p12"
+          if [ -n "${TREX_KEYCHAIN:-}" ]; then security delete-keychain "$TREX_KEYCHAIN" || true; fi

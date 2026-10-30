@@ -968,3 +968,22 @@ fun hasThreeConsecutiveDays(dayMask: Int): Boolean {
     }
     return false
 }
+
+/**
+ * 계정 연결 버튼 — 로그인 화면과 같은 순서·같은 버튼(SignInUi.kt): 아이디(D13 창) → Apple → Google.
+ * 커뮤니티 계정 안내와 루틴 공유 창(로그인 전)이 같이 쓴다. 실패 문구([AppViewModel.authMessage])는 부르는 쪽이 보인다.
+ */
+@Composable
+fun AccountSignInButtons(app: AppViewModel) {
+    val requestGoogleIdToken = rememberGoogleIdTokenRequest()
+    val requestAppleCredential = rememberAppleCredentialRequest()
+    var showPasswordLogin by remember { mutableStateOf(false) }
+    if (showPasswordLogin) PasswordAuthDialog(app, onDismiss = { showPasswordLogin = false })
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        IdSignInButton("아이디로 로그인·가입", onClick = { showPasswordLogin = true }, enabled = !app.authBusy)
+        if (app.appleSignInAvailable) SocialSignInButton(
+            SignInBrand.Apple, onClick = { app.continueWithApple(requestAppleCredential) }, enabled = !app.authBusy,
+        )
+        SocialSignInButton(SignInBrand.Google, onClick = { app.continueWithGoogle(requestGoogleIdToken) }, enabled = !app.authBusy)
+    }
+}
