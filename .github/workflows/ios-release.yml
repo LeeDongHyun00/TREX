@@ -2,7 +2,8 @@ name: iOS App Store 업로드
 # 스펙 §121: App Store Connect 는 2026-04-28 부터 Xcode 26(iOS 26 SDK) 빌드만 받는다. 저장소 주인의 Mac 은 Xcode 26 을
 # 설치할 수 없어(2017 MacBook Pro, macOS 14 상한) 배포 빌드는 이 작업이 만든다 — 수동 실행만, 고른 브랜치(기본 main)를 올린다.
 # 서명: 아카이브는 개발 인증서(.p12 시크릿) + 자동 서명, 배포 서명·프로파일·업로드는 App Store Connect API 키(Admin, 클라우드 관리 배포 인증서).
-# 시크릿 다섯 개와 만드는 법은 docs/IOS_APP_STORE_RELEASE.md.
+# 시크릿 다섯 개는 저장소가 아니라 보호 환경 app-store 에만 있다 — main 에서만, 저장소 주인 승인 뒤에만 이 작업이 받는다(§121a).
+# 만드는 법은 docs/IOS_APP_STORE_RELEASE.md.
 on:
   workflow_dispatch:
     inputs:
@@ -17,6 +18,7 @@ jobs:
   upload:
     runs-on: macos-15
     timeout-minutes: 90
+    environment: app-store
     env:
       TEAM_ID: BT6XQAVMKW
       BUILD_NUMBER: ${{ inputs.build_number || github.run_number }}
@@ -36,7 +38,7 @@ jobs:
           [ -n "$ASC_KEY_P8" ] || missing="$missing ASC_KEY_P8"
           [ -n "$BUILD_CERT_P12" ] || missing="$missing BUILD_CERT_P12"
           [ -n "$BUILD_CERT_PASSWORD" ] || missing="$missing BUILD_CERT_PASSWORD"
-          if [ -n "$missing" ]; then echo "저장소 시크릿이 없습니다:$missing (docs/IOS_APP_STORE_RELEASE.md)" >&2; exit 1; fi
+          if [ -n "$missing" ]; then echo "app-store 환경 시크릿이 없습니다:$missing (docs/IOS_APP_STORE_RELEASE.md)" >&2; exit 1; fi
           echo "올릴 코드: ${GITHUB_REF_NAME} @ ${GITHUB_SHA::7} · 빌드 번호 ${BUILD_NUMBER}"
       - uses: actions/setup-java@v4
         with:
