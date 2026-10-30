@@ -100,8 +100,8 @@ class PasswordAccountTest {
 
     @Test
     fun 아이디_회원의_계정_줄은_아이디다() {
-        assertEquals("trex_user", accountLabel(AuthAccount("t", 0, "trex_user", "지민", "jimin@trex.app")))
-        assertEquals("dino@icloud.com", accountLabel(AuthAccount("t", 0, "apple_x", "", "dino@icloud.com")))
+        assertEquals("아이디 · trex_user", accountLabel(AuthAccount("t", 0, "trex_user", "지민", "jimin@trex.app")))
+        assertEquals("Apple · dino@icloud.com", accountLabel(AuthAccount("t", 0, "apple_x", "", "dino@icloud.com")))
         assertEquals("Google 계정", accountLabel(AuthAccount("t", 0, "google_x", "", null)))
     }
 }
