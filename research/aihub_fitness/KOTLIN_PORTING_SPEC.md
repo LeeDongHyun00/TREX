@@ -3281,3 +3281,19 @@ Validation: Android 778 unit tests and 525 common JVM tests pass; debug and inst
 *왜 이 경계.* `SettingsScreen.kt` 는 iPhone 도 그대로 컴파일하는 공유 파일(§108)이라 `BuildConfig`·Android API 를 쓸 수 없다. 자세 화면의 `PostureHost.appVersion()`(세트 로그 `app_version`, §108c)은 자세 화면의 경계라 그대로 두었다.
 
 *검증.* 단위 테스트 882개 전부 통과(새 `AppVersionLabelTest`), `assembleDebug`. iPhone 공유 코드 컴파일은 Windows 에서 돌릴 수 없어 PR CI 의 `shared` 작업(`:ios-ui:compileKotlinIosSimulatorArm64`)에 맡겼다. 두 기기 설정 화면의 실제 표시는 확인하지 않았다 — 실기기에서 봐야 한다.
+
+## §120. App Store·TestFlight 설치본은 실검증 도구를 늘 끈다 (2026-10-30, `fix/ios-store-build-no-dev-tools`)
+
+*요청(동현님 2026-10-30).* "배포하는 앱이 운동 기능 검증을 위한 로그가 남는 버전인지 확인하고 배포할 때는 이게 남으면 안 됨 … 깃허브에 있는 코드로 빌드했을 때는 개발자 모드 앱이라 있어야 하고 배포할 땐 없어야 해".
+
+*확인한 것.*
+- Android: `-Ptrex.distribution=true` 로 만든 `BuildConfig` 는 `DEV_TOOLS = false`·버전 이름 `1.3.0-preview.7`, 플래그 없이 만들면 `true`·`1.3.0-preview.7-dev` 다. `scripts/publish_release.sh` 는 `-dev` APK 를 올리지 않는다.
+- 로그를 쓰는 자리 — 세트 로그(`PostureLive`), 음성 기록(`AndroidSpeech`·`IosAudio`), 자가 라벨 칸(`SessionScreens`), 검증 모드(`rememberRepValidation`) — 는 모두 `PLATFORM_DEV_TOOLS` 를 지난다. 예전 SwiftUI 화면의 프레임 기록(`iosApp/Trex/TrexStore.swift` `record(frames:)`)은 앱 루트가 Compose 로 바뀐 뒤(§108b) 아무 데서도 만들지 않는 코드다. 실행 인자 점검 모드(`--app-probe` 등)는 사용자가 켤 수 없다.
+- **이미 배포된 Android `v1.3.0-preview.7`(2026-10-10)은 §116 이전 빌드라 세트 로그·음성 기록·자가 라벨이 조건 없이 켜져 있다.** 다음 체험판을 배포 빌드로 내야 사라진다.
+- iPhone 은 `TREX_DEV_TOOLS` 가 project.yml 의 모든 구성에서 YES 라 명령줄 `xcodebuild … TREX_DEV_TOOLS=NO` 로만 끌 수 있었다. App Store 에 올리는 흔한 길인 Xcode 의 Product → Archive 는 이 값을 넘기지 않으므로 **실검증 도구가 켜진 채 App Store 로 나갈 수 있었다**.
+
+*고친 것.* iPhone `PLATFORM_DEV_TOOLS`(`ios-ui` `PlatformUi.kt`)에 설치 경로 조건을 더했다 — 플래그가 "NO" 가 아니고, **그리고** 앱 묶음에 `embedded.mobileprovision` 이 있거나 시뮬레이터(`SIMULATOR_DEVICE_NAME`)일 때만 켠다. App Store·TestFlight 설치본에는 Apple 이 프로비저닝 파일을 넣지 않으므로 빌드 설정과 상관없이 꺼진다. Xcode 실행과, CI 의 서명 없는 IPA 를 Sideloadly 로 설치한 것(개발 프로파일로 다시 서명)은 그대로 켜진다 — "저장소 코드로 빌드 = 개발자 앱" 은 바뀌지 않는다. `xcodebuild … TREX_DEV_TOOLS=NO` 도 그대로 쓸 수 있다.
+
+*포기한 것.* TestFlight 로 받은 빌드에서도 실검증 도구가 꺼진다 — 개발자 검증은 Xcode·Sideloadly 빌드로 한다. 앱 안 스위치는 여전히 없다(§116 결정).
+
+*검증.* Windows 에서는 iPhone 코드를 컴파일할 수 없어 PR CI 의 공유 컴파일(`shared`)로 확인한다. App Store·TestFlight 설치본에서 완료 화면의 자가 라벨 칸이 없고 `Documents/posture_logs` 가 생기지 않는지는 첫 TestFlight 빌드에서 실기기로 확인해야 한다.
