@@ -97,7 +97,7 @@ import kotlin.math.roundToInt
 
 // ============================================================= AUTH (아이디 · Apple · Google 로그인 / 로그인 없이 사용)
 
-private const val PRIVACY_URL = "https://leedonghyun00.github.io/TREX/privacy.html"
+private const val PRIVACY_URL = "https://leedonghyun00.github.io/TREX/privarcy/"
 
 /** 공룡 배지가 화면 폭에서 차지하는 비율(펼치기 전) — 폰 ~230~260dp, 이 화면 폭 상한 600dp 에서 ~370dp. 낮은 화면에서는 높이에 맞춘다. */
 private const val DINO_WIDTH = 0.68f
