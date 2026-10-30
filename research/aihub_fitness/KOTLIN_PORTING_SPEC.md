@@ -3259,3 +3259,13 @@ Validation: Android 778 unit tests and 525 common JVM tests pass; debug and inst
 *병합에서 고친 것.* `docs/SERVER_SYNC_HANDOFF.md` 는 두 쪽이 같은 10.4 를 써서 main 의 "첫 실기기 시도" 를 10.4, 이 브랜치의 Android Apple 웹 흐름을 10.5 로 두었다(§114·설계 문서의 참조도 10.5). `DField` 에 칸 자체의 수정자·키보드 실행 키를 받는 선택 인자를 더했다(기본값은 예전과 같다).
 
 *검증.* 단위 테스트 869개(main 의 `PasswordAccountTest` 포함), iPhone 공유 코드 컴파일, 계측 테스트 컴파일. `SignInScreensUiTest` 에 버튼 순서·크기와 "펼치면 아이디 칸에 커서·공룡이 작아짐·844dp 안에 전부·입력 후 로그인·접으면 원래 크기" 를 넣었고 `RestorationUiTest` 의 폭 바꾸기는 스크롤 없이 보는 것으로 바꿨다 — **계측 테스트는 실행하지 않았다**(에뮬레이터 대신 동현님 실기기 검증). 키보드가 칸을 가리지 않는지·애니메이션 느낌은 실기기에서 확인해야 한다.
+
+## §118. App Store 첫 제출 준비 — 카메라 권한 문구·암호화 선언 (2026-10-30, `fix/ios-app-store-review-plist`)
+
+*배경.* iPhone 1.3.0 을 App Store Connect 에 처음 올리면서(번들 `com.leedonghyun.trex.ios`, 대한민국, 무료) 심사에 걸릴 만한 `iosApp/Trex/Info.plist` 두 곳을 고쳤다. 스토어 문구(부제·설명·키워드)는 App Store Connect 에만 있다.
+
+*카메라 권한 문구(심사 지침 5.1.1(ii)).* 예전 문구 "…식단 사진을 촬영합니다. 영상은 저장하거나 전송하지 않습니다." 는 커뮤니티 글쓰기(§109)가 같은 카메라(`FoodPhotoBridge` 의 AVFoundation)로 찍은 사진을 서버에 올리는 용도를 빠뜨렸고, '전송하지 않는다' 가 그 사진까지 덮는 것처럼 읽혔다. 권한 창은 처음 한 번만 뜨므로 문구 하나가 세 용도(자세 분석·식단·게시글)를 다 말해야 한다 — 그래서 "운동 중 카메라 영상은 저장·전송하지 않고, 게시글 사진은 직접 올릴 때만 서버로 전송" 으로 범위를 나눴다. 사진 보관함은 PHPicker(권한 없이 고른 사진만 받는다)라 `NSPhotoLibraryUsageDescription` 창은 뜨지 않고, 동작(`CMMotionManager`)도 권한 창이 없다 — 두 키는 `tools/verify_ios_project.py` 가 요구해 그대로 둔다.
+
+*암호화 선언.* `ITSAppUsesNonExemptEncryption = NO` — 이 앱의 암호화는 OS 의 HTTPS(서버·Open-Meteo·OAuth)와 로그인용 SHA-256 해시(Apple nonce·Google PKCE, `CryptoKit`)뿐이라 수출 규정 면제 대상이다. 키가 없으면 빌드를 올릴 때마다 App Store Connect 가 수출 규정 질문을 다시 묻는다.
+
+*검증.* `plistlib` 로 읽어 새 키와 `verify_ios_project.py` 가 보는 키·화면 방향을 확인했다. Xcode 빌드와 실기기 권한 창 문구는 Mac 에서 확인해야 한다 — 이 변경에서는 하지 않았다.
