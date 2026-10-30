@@ -130,7 +130,9 @@ jobs:
           test -f "$app/Frameworks/TrexFoodRuntime.framework/PrivacyInfo.xcprivacy"
           # 앱과 앱에 넣은 프레임워크 모두 버전 키가 있어야 App Store 검증을 통과한다(§121b)
           for plist in "$app/Info.plist" "$app"/Frameworks/*.framework/Info.plist; do
-            echo "$plist: $(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$plist") ($(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$plist"))"
+            short="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$plist")"
+            build="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$plist")"
+            echo "$plist: $short ($build)"
           done
           sdk="$(/usr/libexec/PlistBuddy -c 'Print :DTSDKName' "$app/Info.plist")"
           echo "SDK: $sdk"
