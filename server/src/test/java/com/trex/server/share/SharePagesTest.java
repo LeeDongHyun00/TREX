@@ -36,7 +36,7 @@ class SharePagesTest {
         String html = SharePages.routine(routine("하체 불태우기", 5, 1500, "윤성"), "Ab3dE6gH", "android", props());
         assertTrue(html.contains("<meta property=\"og:title\" content=\"하체 불태우기\""), html);
         assertTrue(html.contains("운동 5개 · 약 25분 · 윤성님의 루틴"));
-        assertTrue(html.contains("og:image\" content=\"https://trex-api.duckdns.org/share/og.png\""));
+        assertTrue(html.contains("og:image\" content=\"https://trex-api.duckdns.org/share/trex-icon.png\""));
         assertTrue(html.contains("og:url\" content=\"https://trex-api.duckdns.org/r/Ab3dE6gH\""));
         assertTrue(html.contains("…2개 더"));
         assertTrue(html.contains("intent://r/Ab3dE6gH#Intent;scheme=trex;package=com.example.trex_kotlin;S.browser_fallback_url="));
