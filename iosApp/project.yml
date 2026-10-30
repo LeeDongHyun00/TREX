@@ -90,7 +90,10 @@ targets:
     platform: iOS
     sources:
       - path: TrexFoodRuntime
-        excludes: [exports.txt]
+        excludes: [exports.txt, PrivacyInfo.xcprivacy]
+      # 개인정보 매니페스트(§121) — 링크된 TensorFlow Lite 의 stat/fstat 사유. 앱 쪽 매니페스트는 Trex/Resources 에 있다
+      - path: TrexFoodRuntime/PrivacyInfo.xcprivacy
+        buildPhase: resources
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.leedonghyun.trex.foodruntime
