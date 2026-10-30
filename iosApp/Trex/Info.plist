@@ -16,8 +16,10 @@
 <key>CFBundleVersion</key><string>$(CURRENT_PROJECT_VERSION)</string>
 <key>GIDClientID</key><string>12194757714-bd99b55i5jk94gpft5a6ec6s983fm9mn.apps.googleusercontent.com</string>
 <key>GIDServerClientID</key><string>12194757714-foefivjlqn4n3g5iqdsgqlqst12ejbpi.apps.googleusercontent.com</string>
+<!-- 표준 HTTPS·인증용 해시만 쓴다 — 수출 규정 면제 암호화(스펙 §118) -->
+<key>ITSAppUsesNonExemptEncryption</key><false/>
 <key>LSRequiresIPhoneOS</key><true/>
-<key>NSCameraUsageDescription</key><string>운동 자세의 관절 위치를 분석하거나 식단 사진을 촬영합니다. 영상은 저장하거나 전송하지 않습니다.</string>
+<key>NSCameraUsageDescription</key><string>운동 자세의 관절 위치를 분석하고, 식단 기록이나 커뮤니티 게시글에 쓸 사진을 촬영합니다. 운동 중 카메라 영상은 저장하거나 전송하지 않으며, 게시글 사진은 직접 올릴 때만 서버로 전송됩니다.</string>
 <key>NSLocationWhenInUseUsageDescription</key><string>현재 위치의 날씨로 운동을 추천해 드려요. 날씨를 받을 때 대략적인 좌표만 날씨 서비스(Open-Meteo)에 보내고, 위치를 저장하지 않아요.</string>
 <key>NSMotionUsageDescription</key><string>휴대폰 기울기를 보정해 운동 자세를 계산합니다.</string>
 <key>NSPhotoLibraryUsageDescription</key><string>선택한 음식 사진을 기기 안에서 분석해 식단 기록을 돕습니다.</string>
