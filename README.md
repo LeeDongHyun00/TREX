@@ -3,27 +3,27 @@
 TREX는 Kotlin과 Jetpack Compose로 만든 Android 운동·식단 관리 앱입니다.
 휴대폰 카메라로 관절을 추정해 자세 변화·반복·유지 시간을 안내하고 루틴과 수행 기록을 기기에 저장합니다.
 Google 계정을 연결하면 기록을 서버에 백업하고 기기 간에 이어 쓸 수 있습니다(Spring Boot 서버, AWS 운영 — 아래 [시스템 구성](#시스템-구성-계정-백업동기화)).
-아래 체험판 안내는 **Android 체험판 1.3.0-preview.7** 기준입니다. preview.7에는 계정 백업·동기화가 들어 있지 않습니다.
+아래 체험판 안내는 **Android 체험판 1.3.0-preview.8** 기준입니다.
 
 ## 체험판 다운로드
 
-**[TREX 1.3.0-preview.7 APK 다운로드](https://github.com/LeeDongHyun00/TREX/releases/download/v1.3.0-preview.7/TREX-1.3.0-preview.7.apk)**
+**[TREX 1.3.0-preview.8 APK 다운로드](https://github.com/LeeDongHyun00/TREX/releases/download/v1.3.0-preview.8/TREX-1.3.0-preview.8.apk)**
 
-[릴리스 설명·파일·체크섬](https://github.com/LeeDongHyun00/TREX/releases/tag/v1.3.0-preview.7) ·
-[상세 배포 문서](docs/ANDROID_PREVIEW_RELEASE_1_3_0_7.md)
+[릴리스 설명·파일·체크섬](https://github.com/LeeDongHyun00/TREX/releases/tag/v1.3.0-preview.8) ·
+[상세 배포 문서](docs/ANDROID_PREVIEW_RELEASE_1_3_0_8.md)
 
 | 항목 | 현재 배포본 |
 |---|---|
-| 버전 | `1.3.0-preview.7` |
-| 버전 코드 | `12` |
+| 버전 | `1.3.0-preview.8` |
+| 버전 코드 | `13` |
 | Android | 8.0 이상(API 26) |
 | 패키지 | `com.example.trex_kotlin` |
 | 서명 | 기존 체험판과 동일한 개발 인증서 |
 | 릴리스 자산 | APK · `SHA256SUMS.txt` · `BUILD_INFO.json` |
 
-### preview.6에서 업데이트하기
+### preview.7에서 업데이트하기
 
-**preview.6(versionCode 11)은 preview.7(versionCode 12)의 앱 내 업데이트 안내 대상입니다.**
+**preview.7(versionCode 12)은 preview.8(versionCode 13)의 앱 내 업데이트 안내 대상입니다.**
 앱은 공개된 GitHub 릴리스와 `BUILD_INFO.json`을 읽고 설치본보다 버전 코드가 크면 업데이트 대화상자를 표시합니다.
 
 - 마지막 확인 이후 **6시간 이상** 지난 상태에서 앱을 새로 실행하면 확인합니다. 네트워크 연결이 필요합니다.
@@ -42,15 +42,15 @@ Google 계정을 연결하면 기록을 서버에 백업하고 기기 간에 이
 3. 앱에서 운동을 선택합니다. 카메라 자세 교정을 사용하면 카메라 권한을 허용하고 촬영 안내에 맞춰 준비합니다.
 4. 카메라를 끄면 수동 횟수·시간으로 루틴을 진행할 수 있습니다.
 
-## preview.7의 변경
+## preview.8의 변경
 
-- **크런치·레그 레이즈·플랭크 가이드**: 시작 자세·동작·호흡·주의사항을 추가했습니다. 크런치·레그 레이즈는 GIF, 플랭크는 첫 프레임 정지 이미지입니다.
-- **바닥 운동**: 크런치·레그 레이즈의 반복 추적과 플랭크 유지 시간 처리를 개선했습니다.
-- **자세와 횟수**: 스쿼트 복귀·발끝·무릎 벌림과 덤벨 컬·런지·한 다리 운동의 판별·교정 안내를 보완했습니다.
-- **음성과 시선**: 말하기 대기열·준비 설명을 정리하고 바닥 세 종목에 시선 벗어남·복귀 안내를 추가했습니다.
-- **촬영 화면**: 세션 중 폰 방향을 따라 가로·세로 배치를 전환하고 뼈대·교정 화살표를 보완했습니다.
+- **커뮤니티 탭**: 사진 글·좋아요·댓글·프로필·신고·차단, 운동 완료 화면의 오운완 카드(숫자만, 자세 판정 없음). 로그인과 닉네임·이용규칙 동의가 필요합니다.
+- **루틴 공유**: 루틴 링크를 메신저로 보내고 받은 루틴을 앱에서 엽니다. 내 루틴 보관함에 저장합니다.
+- **로그인과 기록 백업**: 아이디·Apple·Google 로그인, 운동·식단 기록의 서버 백업과 기기 이전. 로그인하지 않아도 커뮤니티·공유를 뺀 기능은 모두 씁니다.
+- **화면**: 홈 날씨와 추천 운동, 근육 피로도 목록·2D 근육도, 메인 탭 좌우 넘기기, 운동 제어판 새 디자인, 식단 0.5인분 단위, 공룡 앱 아이콘.
+- **배포 빌드**: 세트 로그·음성 기록·자가 라벨 같은 실검증 도구를 넣지 않았습니다. release 빌드를 R8로 최적화했습니다.
 
-전체 변경과 알려진 한계는 [preview.7 릴리스 문서](docs/ANDROID_PREVIEW_RELEASE_1_3_0_7.md)에 있습니다.
+전체 변경·검증 범위·알려진 한계는 [preview.8 릴리스 문서](docs/ANDROID_PREVIEW_RELEASE_1_3_0_8.md)에 있습니다.
 
 ## 주요 기능
 
@@ -60,7 +60,8 @@ Google 계정을 연결하면 기록을 서버에 백업하고 기기 간에 이
 - 카메라 자세 교정·기록 모드, 운동별 촬영 방향·준비 안내
 - 화면·음성 교정과 자동 반복·플랭크 유지 시간 표시
 - 세트 결과와 날짜별 운동 기록, 최근 7일 기록 조회
-- 기록 기반 근육별 부하 추정과 3D 사용 근육 표시
+- 기록 기반 근육별 부하 추정(피로도 순 목록·앞뒤 2D 근육도)과 사용 근육 표시
+- 루틴 링크 공유와 내 루틴 보관함, 홈 날씨와 날씨별 추천 운동
 - 창 크기·접힘 경계와 운동 중 가로·세로 방향을 고려한 배치
 
 **운동 방법** 가이드는 총 10종목입니다.
@@ -84,16 +85,22 @@ Google 계정을 연결하면 기록을 서버에 백업하고 기기 간에 이
 
 ### 계정 백업·동기화
 
-- 시작 화면의 **Google로 계속하기 / 로그인 없이 사용**, 설정의 계정 연결·지금 동기화·회원 탈퇴
-- 계정 없이도 모든 기능을 쓸 수 있고, 운동·식단 기록은 기기에 저장됩니다.
+- 시작 화면의 **아이디로 로그인 / Apple로 계속하기 / Google로 계속하기 / 로그인 없이 사용**, 설정의 계정 연결·지금 동기화·회원 탈퇴
+- 계정 없이도 커뮤니티·공유를 뺀 모든 기능을 쓸 수 있고, 운동·식단 기록은 기기에 저장됩니다.
 
-preview.7 APK의 로그인·온보딩 화면은 체험용이며 서버 계정 인증에 연결되어 있지 않습니다 — 아래 [시스템 구성](#시스템-구성-계정-백업동기화) 참고.
+### 커뮤니티
+
+- 사진 글·좋아요·댓글·프로필·신고·차단, 운동 완료 화면의 오운완 카드(횟수·시간 같은 숫자만)
+- 로그인과 닉네임·이용규칙 동의가 필요하고, 올린 글과 사진은 서버에 저장됩니다.
+
+preview.8 APK부터 로그인·백업·커뮤니티·공유가 운영 서버(`trex-api.duckdns.org`)에 연결됩니다 — 아래 [시스템 구성](#시스템-구성-계정-백업동기화) 참고.
+개인정보 처리방침: <https://leedonghyun00.github.io/TREX/privacy.html>
 
 ## 체험판의 검증 범위
 
-preview.7은 앱 단위 테스트 **704건**, 재생기 테스트 **144건**, 로그 검증 **54/54**가 통과했습니다.
-release APK 빌드·필수 lint·서명 검증과 업로드 자산의 해시 일치를 확인했습니다.
-**이번 릴리스의 실제 휴대폰 화면·운동 세션 검증은 수행하지 않았습니다.**
+preview.8은 앱 단위 테스트 **882건**, 재생기 테스트 **144건**, 로그 검증 **54/54**가 통과했습니다.
+배포 빌드(`-Ptrex.distribution=true`)·필수 lint·서명 검증을 확인했고, 에뮬레이터에 새로 설치해 주요 화면·운동 준비 화면·사진 식단 분석을 확인했습니다.
+**이번 릴리스의 실제 휴대폰 화면·운동 세션·로그인 검증은 수행하지 않았습니다.**
 
 가림·촬영 방향·관절 추정 때문에 자세 판정과 반복·유지 시간이 실제 수행과 다를 수 있습니다.
 판정하지 못한 항목과 참고 단계의 결과는 확정 판정과 구분해 읽어야 합니다.
@@ -169,7 +176,7 @@ iPhone은 앱의 `Documents/posture_logs`에 같은 형식으로 남습니다(Xc
 |---|---|---|
 | Android | `./gradlew :app:assembleRelease` | `./gradlew :app:assembleRelease -Ptrex.distribution=true` |
 | iPhone | Xcode 실행·`xcodebuild …`(설정 없음)·Sideloadly 설치 | App Store·TestFlight 설치본(자동) 또는 `xcodebuild … TREX_DEV_TOOLS=NO` |
-| 버전 이름(Android) | `1.3.0-preview.7-dev` 처럼 `-dev`가 붙음 | 붙지 않음 |
+| 버전 이름(Android) | `1.3.0-preview.8-dev` 처럼 `-dev`가 붙음 | 붙지 않음 |
 
 - iPhone은 App Store·TestFlight로 설치된 앱이면 빌드 설정과 상관없이 꺼집니다(그 설치본에는 프로비저닝 파일이 없음). Xcode의 Product → Archive로 올려도 사용자에게는 실검증 도구가 없습니다(스펙 §120).
 - 개발자 빌드의 버전 이름은 세트 로그의 `app_version`에도 남아 어떤 빌드로 센 세트인지 구분됩니다.
@@ -201,12 +208,12 @@ iPhone은 앱의 `Documents/posture_logs`에 같은 형식으로 남습니다(Xc
 
 ![T-REX 시스템 구성도](docs/architecture/trex-aws.png)
 
-앱은 **계정 없이도 모든 기능을 쓸 수 있고**, 기록은 기기에 저장됩니다. Google 계정을 연결하면 기록을 서버에 백업해
+앱은 **계정 없이도 커뮤니티·공유를 뺀 모든 기능을 쓸 수 있고**, 기록은 기기에 저장됩니다. 계정(아이디·Apple·Google)을 연결하면 기록을 서버에 백업해
 앱을 다시 설치하거나 기기를 바꿔도 이어서 쓸 수 있습니다.
 
 | 구성 요소 | 역할 |
 |---|---|
-| Android 앱 | 시작 화면의 **Google로 계속하기 / 로그인 없이 사용**, 설정의 계정 연결·지금 동기화·회원 탈퇴. 기록이 바뀌면 3초 모아 서버에 올리고, 앱 시작·로그인 때 더 최신 기록을 받습니다 |
+| Android 앱 | 시작 화면의 **아이디로 로그인 / Apple로 계속하기 / Google로 계속하기 / 로그인 없이 사용**, 설정의 계정 연결·지금 동기화·회원 탈퇴. 기록이 바뀌면 3초 모아 서버에 올리고, 앱 시작·로그인 때 더 최신 기록을 받습니다 |
 | Google | 앱이 Credential Manager 로 받은 ID 토큰을 서버가 구글 공개키(JWKS)로 검증합니다 — 앱이 보낸 사용자 정보를 그대로 믿지 않습니다 |
 | DuckDNS | 무료 도메인 `trex-api.duckdns.org`. HTTPS 인증서는 IP 가 아니라 도메인에만 발급되기 때문에 씁니다 |
 | EC2 (Ubuntu · Docker Compose) | Caddy(HTTPS 인증서 자동 발급·갱신) → Spring Boot 서버. 서버 포트(8080)는 밖으로 열지 않습니다 |
@@ -219,7 +226,7 @@ iPhone은 앱의 `Documents/posture_logs`에 같은 형식으로 남습니다(Xc
 - 내 음식 사진 기억(사진 특징값)과 자세 기준선·자세 로그는 서버로 보내지 않습니다.
 - 회원 탈퇴는 서버의 계정과 백업을 모두 지우고, 기기의 기록은 남깁니다.
 
-이 기능은 v1.3.0-preview.7 APK 까지는 들어 있지 않습니다. 공개 릴리스에는 개인정보 처리방침·동의 화면을 붙인 뒤 포함할 예정입니다.
+이 기능은 v1.3.0-preview.8 APK부터 들어 있습니다. 개인정보 처리방침은 <https://leedonghyun00.github.io/TREX/privacy.html>이고, 아이디 가입은 처리방침 동의를 받습니다.
 
 ### 개발자용
 
@@ -235,7 +242,7 @@ iPhone은 앱의 `Documents/posture_logs`에 같은 형식으로 남습니다(Xc
 체험판 바이너리는 [GitHub Releases](https://github.com/LeeDongHyun00/TREX/releases)에서 제공합니다.
 APK 무결성은 `SHA256SUMS.txt`, 버전·서명·빌드 커밋은 `BUILD_INFO.json`으로 확인합니다.
 
-- [preview.7 릴리스](docs/ANDROID_PREVIEW_RELEASE_1_3_0_7.md)
+- [preview.8 릴리스](docs/ANDROID_PREVIEW_RELEASE_1_3_0_8.md) · [preview.7 릴리스](docs/ANDROID_PREVIEW_RELEASE_1_3_0_7.md)
 - [바닥 3종목 가이드 설계](docs/CORE_EXERCISE_GUIDE_DESIGN.md)
 - [운동 가이드 UI](docs/EXERCISE_GUIDE_UI.md)
 - [자세 평가 인수인계](docs/POSTURE_HANDOFF.md)
