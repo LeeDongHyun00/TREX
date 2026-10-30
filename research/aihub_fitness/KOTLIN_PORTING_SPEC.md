@@ -3297,3 +3297,16 @@ Validation: Android 778 unit tests and 525 common JVM tests pass; debug and inst
 *포기한 것.* TestFlight 로 받은 빌드에서도 실검증 도구가 꺼진다 — 개발자 검증은 Xcode·Sideloadly 빌드로 한다. 앱 안 스위치는 여전히 없다(§116 결정).
 
 *검증.* Windows 에서는 iPhone 코드를 컴파일할 수 없어 PR CI 의 공유 컴파일(`shared`)로 확인한다. App Store·TestFlight 설치본에서 완료 화면의 자가 라벨 칸이 없고 `Documents/posture_logs` 가 생기지 않는지는 첫 TestFlight 빌드에서 실기기로 확인해야 한다.
+
+## §121. iPhone App Store 업로드는 GitHub Actions(Xcode 26)에서 — 개인정보 매니페스트 (2026-10-30, `feature/ios-app-store-upload`)
+
+*요청(동현님 2026-10-30).* App Store Connect 등록 내용 작성을 마치고 "github main 최신으로 xcode 를 통해 빌드" — 빌드 경로는 검토 후 "GitHub Actions 로".
+
+*막힌 것.* App Store Connect 는 2026-04-28 부터 Xcode 26(iOS 26 SDK) 빌드만 받는다. 저장소 주인의 Mac 은 2017 MacBook Pro(`MacBookPro14,3`)라 macOS 14 가 상한이고 Xcode 26(macOS 15.6 이상 필요)을 설치할 수 없다. 로컬 Xcode 16.2 빌드(§108 의 `sdk=iphoneos18*` 약한 링크)는 실기기 설치용일 뿐 업로드하면 거부된다.
+
+*한 것.*
+- `.github/workflows/ios-release.yml` — 수동 실행(`workflow_dispatch`), `ios-build.yml` 의 `ios` 작업과 같은 준비(Xcode 26 선택·도구·`verify_ios_project.py`·`setup-mac.sh`) 뒤 Release 아카이브(`TREX_DEV_TOOLS=NO`, `CURRENT_PROJECT_VERSION` = 입력 또는 실행 번호) → 번들 검사(자세 자산 바이트·매니페스트 두 개·`DTSDKName` ≥ iphoneos26) → `-exportArchive`(`iosApp/ExportOptions-AppStore.plist`, `app-store-connect` + `destination=upload`).
+- 서명: 아카이브는 **개발 인증서 .p12 시크릿 + 자동 서명**, 배포 서명·프로파일·업로드는 **App Store Connect API 키(Admin)** 의 클라우드 관리 배포 인증서. API 키만 주면 새 러너에 개인 키가 없어 실행마다 개발 인증서를 새로 만들거나 기존 것을 폐기하려 한다(Apple 개발자 포럼에 같은 보고가 여럿) — 그래서 저장소 주인 Mac 의 `Apple Development` 인증서를 임시 키체인에 넣고 실행 끝에 지운다. 시크릿 다섯 개와 절차는 `docs/IOS_APP_STORE_RELEASE.md`.
+- **개인정보 매니페스트** — 앱에 `PrivacyInfo.xcprivacy` 가 없었다. App Store 는 '사유 필요 API' 를 쓰는 바이너리에 선언이 없으면 업로드를 받지 않는다(ITMS-91053). 10-30 로컬 Release 빌드의 `nm -u`·`strings` 로 실제 쓰는 것만 적었다: `NSUserDefaults`(`KeyValueStore`) → `CA92.1`, `stat`/`fstat`(Kotlin/Native 런타임·앱 컨테이너 파일) → `C617.1`, `NSProcessInfo.systemUptime`(`PlatformUi.elapsedRealtimeMs`·`PostureCameraIos.uptimeUs`) → `35F9.1`. 앱 것은 `iosApp/Trex/Resources/`(기존 resources 단계), 음식 런타임 프레임워크(`stat`/`fstat`, 링크된 TFLite)는 `iosApp/TrexFoodRuntime/` + project.yml 에 resources 단계로 명시. 추적 = false. 수집 데이터 항목은 App Store Connect 라벨이 정본이라 비워 둔다.
+
+*포기·미검증.* 워크플로는 아직 한 번도 돌지 않았다 — 시크릿이 들어간 뒤 첫 실행이 검증이다. `workflow_dispatch` 라 main 에 들어가야 Actions 목록에 나온다. 매니페스트의 범주는 Xcode 16.2 빌드에서 뽑았으니 Xcode 26 링크 결과에 새 API 가 생기면 Apple 메일(ITMS-91053)로 알 수 있다.
