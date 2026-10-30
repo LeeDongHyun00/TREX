@@ -145,88 +145,6 @@
     letter-spacing: -0.01em;
   }
 
-  /* Each time the story waits for a push (at the opening, once the loading
-     screen has gone, and once each scene has played) a pill shows how to go
-     on: a finger mark sliding up a short track, and a line. It sits under the
-     scene's line, in the gap each time of day leaves between its line and
-     its phone or coach, so it covers nothing a scene ends on (the bottom of
-     the page has the lunch phone's button and the coach's feet); the
-     opening's line is in the middle of the page. It takes the stage's place,
-     over it, and goes as soon as the ring moves. */
-  .hint {
-    position: relative;
-    grid-area: 1 / 1;
-    z-index: 1;
-    width: 100%;
-    max-width: 430px;
-    height: 100%;
-    container-type: size;
-    pointer-events: none;
-    opacity: 0;
-    transform: translateY(2cqw);
-    transition: opacity 0.4s ease, transform 0.4s ease;
-  }
-  .hint.is-shown {
-    opacity: 1;
-    transform: none;
-  }
-  /* Dark and a little see-through, with a faint rim for the night. It is
-     sized like the phone's text (u: a hundredth of the width, or less on a
-     stage wider than a phone's), so it fits the gap on any screen. */
-  .hint__pill {
-    --u: min(1cqw, 0.462cqh);
-    position: absolute;
-    top: 37.5%;
-    left: 50%;
-    display: flex;
-    align-items: center;
-    gap: calc(2.8 * var(--u));
-    padding: calc(2.4 * var(--u)) calc(4.6 * var(--u)) calc(2.4 * var(--u)) calc(3.4 * var(--u));
-    border-radius: 999px;
-    background: rgb(31 36 41 / 0.78);
-    box-shadow: 0 0 0 1px rgb(255 255 255 / 0.08), 0 6px 18px -8px rgb(31 36 41 / 0.5);
-    translate: -50% -50%;
-  }
-  .hint.is-opening .hint__pill { top: 61.5%; }
-  .hint__track {
-    position: relative;
-    flex: none;
-    width: calc(4.6 * var(--u));
-    height: calc(8.4 * var(--u));
-    border: calc(0.45 * var(--u)) solid rgb(255 255 255 / 0.55);
-    border-radius: calc(2.3 * var(--u));
-  }
-  .hint__finger {
-    position: absolute;
-    left: 50%;
-    bottom: calc(0.8 * var(--u));
-    width: calc(2.2 * var(--u));
-    height: calc(2.2 * var(--u));
-    margin-left: calc(-1.1 * var(--u));
-    border-radius: 50%;
-    background: #c7e26b;
-    animation: hint-swipe 1.6s ease-in-out infinite;
-  }
-  @keyframes hint-swipe {
-    0% { transform: translateY(0); opacity: 0; }
-    15% { opacity: 1; }
-    70% { transform: translateY(calc(-4 * var(--u))); opacity: 1; }
-    100% { transform: translateY(calc(-4 * var(--u))); opacity: 0; }
-  }
-  .hint__line {
-    margin: 0;
-    color: #ffffff;
-    font-size: calc(3.6 * var(--u));
-    font-weight: 700;
-    letter-spacing: -0.01em;
-    white-space: nowrap;
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .hint,
-    .hint.is-shown { transform: none; }
-    .hint__finger { animation: none; transform: translateY(calc(-2 * var(--u))); }
-  }
-
   /* The 3D layer drawn by story.js, over the ring. */
   .story__layer {
     position: absolute;
@@ -719,13 +637,6 @@
   <p class="visually-hidden" id="status" aria-live="polite"></p>
 </main>
 
-<div class="hint is-opening" id="hint" aria-hidden="true">
-  <div class="hint__pill">
-    <span class="hint__track"><span class="hint__finger"></span></span>
-    <p class="hint__line">위로 밀어서 TREX의 하루를 따라가 보세요</p>
-  </div>
-</div>
-
 <div class="loading" id="loading" role="progressbar" aria-label="TREX의 하루를 불러오는 중" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
   <canvas class="loading__scene" aria-hidden="true"></canvas>
   <p class="loading__line" aria-hidden="true">TREX의 하루를 준비하고 있어룡...</p>
@@ -750,13 +661,6 @@
     document.addEventListener('touchmove', (event) => {
       if (event.touches.length === 1 && event.cancelable) event.preventDefault();
     }, { passive: false });
-    // How to go on, shown while the story waits for a push (see .hint), but
-    // not while the loading screen still keeps the stage inert.
-    const hint = document.getElementById('hint');
-    const hintLine = hint.querySelector('.hint__line');
-    let waiting = null; // where on the track the story waits
-    const showHint = () => hint.classList.toggle('is-shown', waiting !== null && !root.inert);
-    new MutationObserver(showHint).observe(root, { attributes: true, attributeFilter: ['inert'] });
     // Bending the captions into strips takes the carousel a good while to
     // lay out, so it starts once the loading screen is on the screen (the
     // models are coming in already, see the head). A page opened in the
@@ -771,19 +675,6 @@
       // card. A push that ends between two places eases on to one of them,
       // where the scene plays by itself (data-play).
       const carousel = new Carousel3D(root, { loop: false, step: 90, swipe: 1.2, axis: 'y', snap: true });
-      root.addEventListener('carousel:played', ({ detail }) => {
-        if (detail.index >= carousel.count - 1) return;
-        waiting = detail.travel;
-        hint.classList.toggle('is-opening', detail.index === 0);
-        hintLine.textContent = detail.index === 0 ? '위로 밀어서 TREX의 하루를 따라가 보세요' : '위로 밀어서 다음으로';
-        showHint();
-      });
-      root.addEventListener('carousel:move', ({ detail }) => {
-        if (waiting !== null && Math.abs(detail.travel - waiting) > 1e-3) {
-          waiting = null;
-          showHint();
-        }
-      });
       // The stage fills the screen, so every drag on it is the story's: left
       // to the browser, a swipe that sets off a little sideways is taken for
       // a page pan, and the ring stops mid-drag while the page moves.
