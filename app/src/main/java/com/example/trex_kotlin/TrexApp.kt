@@ -1,5 +1,9 @@
 package com.example.trex_kotlin
 
+import com.example.trex_kotlin.routines.AppLink
+import com.example.trex_kotlin.routines.AppLinkInbox
+import com.example.trex_kotlin.routines.ReceivedRoutineDialog
+import com.example.trex_kotlin.routines.parseAppLink
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateDpAsState
@@ -378,6 +382,27 @@ private fun TrexAppContent(app: AppViewModel) {
         // 앱 내 업데이트 — 운동·하위 화면이 아닐 때만 확인하고 묻는다(AppUpdate.kt)
         AppUpdatePrompt(enabled = sessionIndex < 0 && !sessionDone && subScreen == "none")
 
+        // 메신저 링크(docs/superpowers/specs/2026-10-29-routine-share-design.md) — 플랫폼이 넣은 앱 주소를 꺼내 두고, 앱 화면(Main)에 닿으면 연다.
+        // 시작 화면·온보딩·운동 세션 중에는 기다린다(받은 루틴이 운동 중에 오늘 루틴을 덮지 않게).
+        val incomingLink = AppLinkInbox.latest
+        LaunchedEffect(incomingLink) {
+            if (incomingLink != null) {
+                parseAppLink(incomingLink)?.let { app.pendingLink = it }
+                AppLinkInbox.latest = null
+            }
+        }
+        val link = app.pendingLink
+        if (route == RootRoute.Main && link != null) {
+            when (link) {
+                is AppLink.Routine -> ReceivedRoutineDialog(app, link.code, onDismiss = { app.pendingLink = null })
+                is AppLink.Post -> LaunchedEffect(link) {
+                    app.pendingPostId = link.id
+                    selectedTab = TrexTab.Community
+                    app.pendingLink = null
+                }
+            }
+        }
+
         // 운동 세션 동안은 폰을 둔 방향을 따른다 — 자동 회전이 꺼진 폰에서 바닥 종목을 가로로 두면 화면이 세로로 남았다(10-10 보고, AdaptiveLayout.kt)
         SessionOrientation(follow = sessionIndex >= 0 && !sessionDone)
 
@@ -642,6 +667,7 @@ private fun MainTabs(
                     onOpenAlt = { sheet = MainSheet.Alt(it) },
                     onOpenSets = { sheet = MainSheet.Sets(it.setDraft()) },
                     onAddWorkout = { sheet = MainSheet.AddWorkout },
+                    onOpenCommunity = { onTabSelected(TrexTab.Community) },
                 )
 
                 TrexTab.Diet -> DietTabScreen(

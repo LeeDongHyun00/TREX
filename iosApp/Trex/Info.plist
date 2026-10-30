@@ -9,6 +9,7 @@
 <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
 <key>CFBundleName</key><string>$(PRODUCT_NAME)</string>
 <key>CFBundlePackageType</key><string>APPL</string>
+<key>CFBundleURLTypes</key><array><dict><key>CFBundleURLName</key><string>com.leedonghyun.trex.ios.link</string><key>CFBundleURLSchemes</key><array><string>trex</string></array></dict></array>
 <key>CFBundleShortVersionString</key><string>$(MARKETING_VERSION)</string>
 <!-- 실검증 도구(스펙 §116) — 배포 빌드만 xcodebuild … TREX_DEV_TOOLS=NO -->
 <key>TrexDevTools</key><string>$(TREX_DEV_TOOLS)</string>

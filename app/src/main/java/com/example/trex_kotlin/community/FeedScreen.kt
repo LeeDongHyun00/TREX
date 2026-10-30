@@ -140,6 +140,7 @@ fun FeedScreen(
  * 관리자는 남의 글에 숨기기·지우기·작성자 정지가 더 있다(숨긴 글 복구는 신고함).
  */
 internal fun postMenu(post: Post, gate: CommunityGate, open: (CommunityAction) -> Unit): List<PostMenuItem> = buildList {
+    add(PostMenuItem("공유하기") { open(CommunityAction.SharePost(post)) })
     if (post.mine) {
         add(PostMenuItem("지우기", destructive = true) { open(CommunityAction.DeletePost(post)) })
         return@buildList

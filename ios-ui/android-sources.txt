@@ -32,6 +32,10 @@ com/example/trex_kotlin/sync/SyncRules.kt
 com/example/trex_kotlin/sync/TrexApi.kt
 com/example/trex_kotlin/sync/AppleCredential.kt
 com/example/trex_kotlin/sync/PasswordAccount.kt
+com/example/trex_kotlin/routines/RoutineCodec.kt
+com/example/trex_kotlin/routines/RoutineLibrary.kt
+com/example/trex_kotlin/routines/AppLink.kt
+com/example/trex_kotlin/routines/RoutineShareUi.kt
 com/example/trex_kotlin/sync/BinaryTransport.kt
 com/example/trex_kotlin/sync/Multipart.kt
 # 커뮤니티(설계 docs/superpowers/specs/2026-10-28-community-design.md) — API 클라이언트·모델

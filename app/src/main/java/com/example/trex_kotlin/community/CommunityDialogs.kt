@@ -13,6 +13,7 @@ import androidx.compose.material3.Text as UserText
 import com.example.trex_kotlin.posture.toDinoCopy
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -30,6 +31,8 @@ import kotlinx.coroutines.launch
 
 /** 글·댓글·사람에 대한 확인이 필요한 동작(설계 §2 목표 7 안전 장치) — 피드·상세·프로필이 같이 쓴다. */
 sealed interface CommunityAction {
+    /** 메신저로 공유 — 확인 없이 폰 공유 창을 연다(링크 페이지에는 닉네임만, 설계 docs/superpowers/specs/2026-10-29-routine-share-design.md). */
+    data class SharePost(val post: Post) : CommunityAction
     data class DeletePost(val post: Post) : CommunityAction
     data class DeleteComment(val comment: Comment) : CommunityAction
     data class Report(val target: ReportTarget, val targetId: String) : CommunityAction
@@ -47,6 +50,14 @@ sealed interface CommunityAction {
  */
 @Composable
 fun CommunityActionDialog(app: AppViewModel, action: CommunityAction, onDismiss: () -> Unit, onDone: (String) -> Unit) {
+    if (action is CommunityAction.SharePost) {
+        val share = com.example.trex_kotlin.rememberTextSharer()
+        LaunchedEffect(action) {
+            share("T-REX 커뮤니티 글\n${app.postShareUrl(action.post.id)}")
+            onDismiss()
+        }
+        return
+    }
     val c = Trex.c
     val scope = rememberCoroutineScope()
     var busy by remember { mutableStateOf(false) }
@@ -75,6 +86,7 @@ fun CommunityActionDialog(app: AppViewModel, action: CommunityAction, onDismiss:
     val onConfirm: () -> Unit
     var confirmEnabled = !busy
     when (action) {
+        is CommunityAction.SharePost -> return   // 위에서 공유 창으로 끝냈다
         is CommunityAction.DeletePost -> {
             title = "글을 지울까요?".toDinoCopy()
             confirm = "지우기"

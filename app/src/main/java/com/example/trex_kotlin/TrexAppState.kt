@@ -6,6 +6,12 @@ import com.example.trex_kotlin.community.CommunityMe
 import com.example.trex_kotlin.community.FeedController
 import com.example.trex_kotlin.community.WorkoutCardData
 import com.example.trex_kotlin.community.communityGate
+import com.example.trex_kotlin.routines.AppLink
+import com.example.trex_kotlin.routines.SavedRoutine
+import com.example.trex_kotlin.routines.SharedRoutine
+import com.example.trex_kotlin.routines.toTodayPlan
+import com.example.trex_kotlin.routines.withAdded
+import com.example.trex_kotlin.routines.without
 import com.example.trex_kotlin.sync.ApiException
 import com.example.trex_kotlin.sync.AppleCredential
 import com.example.trex_kotlin.sync.AuthAccount
@@ -344,6 +350,45 @@ class AppViewModel(private val platform: AppPlatform) : ViewModel() {
     /** 운동 완료 화면에서 "오운완 올리기"를 눌렀다 — 커뮤니티 탭이 이 카드를 넣은 글쓰기를 열고 비운다. */
     var pendingWorkoutCard by mutableStateOf<WorkoutCardData?>(null)
 
+    // ---- 루틴 공유·내 루틴 보관함(docs/superpowers/specs/2026-10-29-routine-share-design.md)
+
+    /** 링크로 들어온 곳 — 앱 화면(RootRoute.Main)에 닿으면 [TrexApp] 이 받은 루틴 창이나 게시글로 연다(시작 화면·온보딩·운동 중엔 기다린다). */
+    var pendingLink by mutableStateOf<AppLink?>(null)
+
+    /** 링크로 받은 게시글 — 커뮤니티 탭이 이용 준비를 마친 뒤 상세를 열고 비운다. */
+    var pendingPostId by mutableStateOf<Long?>(null)
+
+    var savedRoutines by mutableStateOf(store.loadRoutines())
+        private set
+
+    /** 보관함에 넣는다 — 성공이면 null, 가득 찼으면 그 문구. [from] 은 받은 루틴의 보낸 사람 닉네임. */
+    fun saveRoutine(name: String, workouts: List<Workout>, from: String?): String? {
+        val now = nowMillis()
+        val next = savedRoutines.withAdded(SavedRoutine("routine-$now", name.trim(), workouts, from, now))
+            ?: return "보관함이 가득 찼어요. 안 쓰는 루틴을 지워 주세요"
+        savedRoutines = next
+        store.saveRoutines(next)
+        return null
+    }
+
+    fun deleteRoutine(id: String) {
+        savedRoutines = savedRoutines.without(id)
+        store.saveRoutines(savedRoutines)
+    }
+
+    /** 오늘 루틴을 [workouts] 로 바꾼다(확인은 화면이 먼저 받는다) — 새 id, 완료 표시 없이. */
+    fun applyRoutine(name: String, workouts: List<Workout>) {
+        updatePlan(SavedRoutine("apply", name, workouts, null, 0L).toTodayPlan(nowMillis()))
+    }
+
+    /** 서버에 올리고 메신저에 붙일 링크를 받는다. 예상 시간은 [routineOverview] 로 계산해 같이 보낸다. */
+    suspend fun shareRoutine(name: String, workouts: List<Workout>): String =
+        api.shareRoutine(name, routineOverview(workouts).totalSeconds, workouts)
+
+    suspend fun loadSharedRoutine(code: String): SharedRoutine = api.sharedRoutine(code)
+
+    fun postShareUrl(postId: Long): String = api.postShareUrl(postId)
+
     /** 피드를 보이기 전 — 계정이 바뀌었으면 비우고, 받은 적이 없거나 사진 주소가 곧 만료되면 새로 받는다. */
     suspend fun refreshFeedIfNeeded() {
         val loginId = account?.loginId ?: return
@@ -382,6 +427,7 @@ class AppViewModel(private val platform: AppPlatform) : ViewModel() {
         }
         goalOverride = store.loadGoalOverride()
         workoutPlan = store.loadPlan() ?: todayPlan
+        savedRoutines = store.loadRoutines()
         workoutHistory = store.loadHistory() ?: emptyList()
         dietByDay = store.loadDiet() ?: emptyMap()
         waterByDay = store.loadWater() ?: emptyMap()
