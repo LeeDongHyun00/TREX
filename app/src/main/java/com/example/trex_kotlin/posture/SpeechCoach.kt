@@ -227,7 +227,9 @@ class SpeechCoach(private val engine: SpeechEngine) {
             speaking.remove(id)
             if (id != currentId) return@locked null   // 끊긴(대체된) 발화의 뒤늦은 콜백
             currentId = null
-            if (queue.tailExpired(now)) { traceFeedback("tail_expired", ""); queue.stop(); null } else queue.onDone(now)
+            // 꼬리가 상한을 넘겼으면 꼬리의 카운트·보류분만 버린다 — 꼬리 뒤에 줄 세운 다음 세트의 안내(준비 첫 설명)는 이어서 낸다(종전 queue.stop() 은 그것까지 지웠다)
+            if (queue.tailExpired(now)) { traceFeedback("tail_expired", ""); queue.expireTail() }
+            queue.onDone(now)
         }
         // 대기열의 다음 문장이 있으면 이어서(엔진 콜백 스레드에서 제출해도 된다), 없으면 포커스를 놓는다
         if (next != null) submit(next) else if (locked(lock) { currentId == null }) engine.abandonFocus()

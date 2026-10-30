@@ -92,8 +92,9 @@ interface IosFoodModelBridge {
 interface IosFoodPhotoSource {
     /** 사진 보관함(PHPicker, 최대 [maxItems]장, 고른 순서) — 고른 사진의 로더를 [done](메인)에. 취소하면 빈 목록. */
     fun pickPhotos(maxItems: Int, done: (List<IosFoodImageLoader>) -> Unit)
-    /** 시트 안 카메라 미리보기(화면 채움 — Android FILL_CENTER). */
-    fun cameraView(): UIView
+    /** 시트 안 카메라 미리보기(화면 채움 — Android FILL_CENTER) — 부를 때마다 새 뷰(자세 화면 `IosCameraBridge.makePreviewView` 와 같은 이유). 놓을 때 [releaseCameraView]. */
+    fun makeCameraView(): UIView
+    fun releaseCameraView(view: UIView)
     /** 후면 카메라 시작(메인에서) — 실패하면 이유, 성공이면 null. */
     fun startCamera(): String?
     fun stopCamera()
@@ -375,7 +376,7 @@ private class IosFoodCamera : FoodCamera {
             }
             onDispose { release() }
         }
-        if (source != null) UIKitView(factory = { source.cameraView() }, modifier = modifier,
+        if (source != null) UIKitView(factory = { source.makeCameraView() }, onRelease = { source.releaseCameraView(it) }, modifier = modifier,
             properties = UIKitInteropProperties(interactionMode = null, isNativeAccessibilityEnabled = false))
     }
 

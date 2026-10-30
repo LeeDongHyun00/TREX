@@ -164,6 +164,15 @@ class SpeechQueue {
     fun stopKeepingCurrent() { counts.clear(); held = null; boundaries.clear() }
 
     /**
+     * 꼬리 상한을 넘겼다 — 꼬리에 남은 카운트·보류 교정은 버리고(그 세트는 지났다) **다음 세트의 경계 안내([boundaries])는 남긴다**. 호출자가 이어서 [onDone].
+     * 종전엔 [stop] 으로 전부 비워, 꼬리 뒤에 줄 세운 준비 화면의 첫 설명(ESS)이 통째로 사라졌다(10-30 iPhone 보고 1번 — 느린 음성일수록 꼬리가 10 s 를 넘기기 쉽다).
+     */
+    fun expireTail() {
+        counts.clear(); held?.heardKeys?.forEach { ledger[it] = Status.DROPPED }; held = null
+        tailUntil = null; sealFrom = null; sealUntil = null
+    }
+
+    /**
      * 이 지적의 교정 문장을 내도 되는가 — 재생을 시작했거나 끝났으면 true. 아직 시작도 못 했으면(REQUESTED) 그 줄을 대기·보류에서 빼고 false(사용자가 이미 고쳤다 — 지적도 교정도 거둔다).
      * 버려졌거나 모르는 키는 false.
      */

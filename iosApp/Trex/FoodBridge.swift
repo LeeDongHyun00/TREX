@@ -235,14 +235,13 @@ final class FoodPhotoBridge: NSObject, IosFoodPhotoSource, PHPickerViewControlle
     private let queue = DispatchQueue(label: "trex.food.camera", qos: .userInitiated)
     /// 진행 중인 촬영의 대리자 — 사진 출력은 대리자를 붙들지 않는다(촬영 큐에서만 만진다)
     private var captures: [Int64: PhotoCapture] = [:]
+    /// 미리보기 레이어는 하나를 세션에 한 번만 붙이고, Compose 에는 호출마다 새 컨테이너를 준다(자세 화면 `PoseCameraBridge.makePreviewView` 와 같은 이유 — 레이어 붙이고 떼기는 세션 재구성).
     private lazy var preview: CameraPreviewView = {
         let view = CameraPreviewView()
         view.backgroundColor = .black
         view.previewLayer.videoGravity = .resizeAspectFill   // Android FILL_CENTER
         view.previewLayer.session = session
-        // 시트의 미리보기 칸은 22 dp 둥근 모서리다(PhotoFoodSheet `CameraStep`) — UIKit 층은 Compose clip 과 따로라 여기서도 깎는다
-        view.layer.cornerRadius = 22
-        view.layer.masksToBounds = true
+        view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         return view
     }()
 
@@ -265,7 +264,20 @@ final class FoodPhotoBridge: NSObject, IosFoodPhotoSource, PHPickerViewControlle
         done?(results.map { PickedFoodPhoto(provider: $0.itemProvider) })
     }
 
-    func cameraView() -> UIView { preview }
+    func makeCameraView() -> UIView {
+        let container = UIView()
+        container.backgroundColor = .black
+        // 시트의 미리보기 칸은 22 dp 둥근 모서리다(PhotoFoodSheet `CameraStep`) — UIKit 층은 Compose clip 과 따로라 여기서도 깎는다
+        container.layer.cornerRadius = 22
+        container.layer.masksToBounds = true
+        preview.frame = container.bounds
+        container.addSubview(preview)
+        return container
+    }
+
+    func releaseCameraView(view: UIView) {
+        if preview.superview === view { preview.removeFromSuperview() }
+    }
 
     func startCamera() -> String? {
         var failure: String?
