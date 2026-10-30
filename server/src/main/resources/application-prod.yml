@@ -44,6 +44,12 @@ trex:
       team-id: ${APPLE_TEAM_ID:}
       key-id: ${APPLE_KEY_ID:}
       private-key: ${APPLE_PRIVATE_KEY:}
+      # Android Apple 로그인(웹 흐름, 설계 §9) — Services ID 와 그 Return URL(= 이 서버의 /api/auth/oauth/apple/callback).
+      # Return URL 은 앱 gradle.properties trex.appleRedirectUri 와 글자까지 같아야 한다. 비면 Android 로그인 토큰을 받지 않는다.
+      web-client-id: ${APPLE_WEB_CLIENT_ID:}
+      web-redirect-uri: ${APPLE_WEB_REDIRECT_URI:}
+      # 콜백이 되돌려 보낼 Android 앱 패키지
+      android-package: ${APPLE_ANDROID_PACKAGE:com.example.trex_kotlin}
   community:
     # 사진 버킷(비공개, 시드니). 자격 증명은 EC2 인스턴스 역할 — 키를 .env 에 넣지 않는다
     s3-bucket: ${COMMUNITY_S3_BUCKET:}
@@ -52,3 +58,6 @@ trex:
     admin-login-ids: ${COMMUNITY_ADMIN_LOGIN_IDS:}
     # 새 신고를 알릴 디스코드 웹후크(비밀값). 비면 알리지 않는다
     report-webhook-url: ${COMMUNITY_REPORT_WEBHOOK_URL:}
+  # 공유 링크(docs/superpowers/specs/2026-10-29-routine-share-design.md) — 웹 페이지의 "앱 설치하기"(iPhone). 출시 전에는 비운다
+  share:
+    ios-install-url: ${SHARE_IOS_INSTALL_URL:}

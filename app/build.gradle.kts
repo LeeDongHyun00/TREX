@@ -31,6 +31,14 @@ android {
 
         // 웹 클라이언트 ID 는 비밀값이 아니다(앱에 그대로 들어간다). 비어 있으면 구글 로그인 버튼이 안내 문구만 낸다.
         buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"${trexConfig("trex.googleWebClientId", "")}\"")
+        // Android 의 Apple 로그인(웹 흐름) — Services ID·Return URL 도 비밀값이 아니다. 둘 중 하나라도 비면 Apple 버튼을 그리지 않는다.
+        buildConfigField("String", "APPLE_SERVICES_ID", "\"${trexConfig("trex.appleServicesId", "")}\"")
+        buildConfigField("String", "APPLE_REDIRECT_URI", "\"${trexConfig("trex.appleRedirectUri", "")}\"")
+        // 실검증 도구(세트 로그·음성 기록·자가 라벨·횟수 검증 모드, 스펙 §116) — 저장소 코드로 빌드하면 켜져 있고, 사용자에게 나가는
+        // 배포 빌드만 `-Ptrex.distribution=true` 로 끈다. 켜진 빌드는 버전 이름 끝에 "-dev" 가 붙어 세트 로그·배포 검사에서 갈린다.
+        val distribution = trexConfig("trex.distribution", "false").toBoolean()
+        buildConfigField("boolean", "DEV_TOOLS", (!distribution).toString())
+        if (!distribution) versionNameSuffix = "-dev"
     }
 
     buildTypes {
@@ -48,7 +56,9 @@ android {
             // 운영 배포용 별도 서명키는 아직 없다(docs/ANDROID_PREVIEW_RELEASE_1_3_0_7.md).
             // 이 인증서의 SHA-1 이 구글 콘솔 Android 클라이언트에 없으면 릴리스 APK 의 구글 로그인이 실패한다(docs/SERVER_SYNC_HANDOFF.md Q1).
             signingConfig = signingConfigs.getByName("debug")
-            isMinifyEnabled = false
+            // R8 로 줄이고 최적화한다(스펙 §115) — Compose 는 R8 이 sourceInformation 호출을 지우고 람다·상태 코드를 인라인해야 제 속도가 난다.
+            // 이름은 바꾸지 않는다(proguard-rules.pro 의 -dontobfuscate). 네이티브 라이브러리(MediaPipe·LiteRT)는 통째로 둔다.
+            isMinifyEnabled = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -99,6 +109,7 @@ dependencies {
     implementation(libs.androidx.credentials)
     implementation(libs.androidx.credentials.play.services)
     implementation(libs.googleid)
+    implementation(libs.androidx.browser)
     testImplementation(libs.junit)
     testImplementation(libs.org.json)
     androidTestImplementation(libs.androidx.junit)

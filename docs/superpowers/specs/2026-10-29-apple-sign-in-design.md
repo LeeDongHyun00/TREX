@@ -17,14 +17,14 @@
 4. 동현님 쪽 준비(§6)가 늦어도 **우리 코드와 서버 배포는 먼저 끝낼 수 있다**. 키가 없으면 로그인은 되고 탈퇴 때 연결 끊기만 건너뛴다(로그로 남긴다).
 
 **비목표(이번에 하지 않는다)**
-- Android 의 Apple 로그인. Android 는 지금처럼 구글만 둔다(내 판단 — 4.8 은 iPhone 앱의 규칙이다. Android 에서 하려면 웹 로그인 화면을 거치는 별도 흐름·서버 콜백 주소·Services ID 가 더 필요하다. 필요해지면 나중에 더한다).
+- ~~Android 의 Apple 로그인~~ — *2026-10-30 동현님 요청 "안드로이드에도 apple로그인 넣어"로 더했다(§9, 웹 로그인·서버 콜백·Services ID).* 처음 판단은 "4.8 은 iPhone 앱의 규칙이라 Android 는 구글만"이었다.
 - 구글 계정과 Apple 계정 합치기. **같은 사람이어도 다른 계정**이다. 사용자 결정: "원래 소셜 로그인도 여러 개로 계정을 나눠서 만드니까 상관없다". 서버의 기존 규칙(D4: 이메일이 같아도 자동으로 합치지 않는다)과 같다.
 - Apple 이 주는 이름 쓰기. 커뮤니티는 닉네임만 보이고, 설정의 계정 줄은 이메일(가린 전달 주소일 수 있다)이나 "Apple 계정"으로 보인다.
 - App Store 제출·심사 대응(동현님 몫).
 
 **반목표(돌아가도 이러면 실패)**
 - Apple 로그인을 넣다가 **지금의 구글 로그인·동기화가 깨진다**(Android·iPhone 둘 다).
-- Android 에 눌러도 안 되는 Apple 버튼이 보인다.
+- Android 에 눌러도 안 되는 Apple 버튼이 보인다 — Services ID·Return URL 이 빈 빌드는 버튼을 그리지 않는다. 설정한 빌드라도 동현님 개발자 계정의 Services ID 와 서버 배포(§9 준비)가 끝나기 전에는 Apple 화면에서 실패한다.
 - 탈퇴했는데 Apple 연결이 남는다 — 키가 있는데도 revoke 를 안 부른다.
 - `.p8` 키·팀 ID 같은 비밀값이 공개 저장소·PR·채팅에 올라간다.
 - Apple 사용자의 "이메일 가리기" 전달 주소가 다른 사용자에게 보인다.
@@ -37,7 +37,7 @@
 | 계정 | 사용자 | 구글 계정과 Apple 계정은 따로. 합치지 않는다 |
 | 역할 | 사용자 | 우리는 로그인 기능, 제출은 동현님(동현님 계정) |
 | 개발자 계정 작업 | 사용자 | 동현님께 부탁(§6 의 메시지 초안) |
-| Android | **내 판단** | Apple 버튼 없음(§2 비목표) |
+| Android | 사용자(2026-10-30) | Apple 웹 로그인(§9) — 처음엔 "버튼 없음"(내 판단)이었다 |
 | 버튼 순서 | **내 판단** | iPhone 에서 Apple 을 위, 구글을 아래 — Apple 지침은 Apple 버튼을 다른 로그인보다 덜 눈에 띄게 두지 말라고 한다 |
 | 서버 검증 | **내 판단** | 구글과 같은 방식 — 서버가 Apple 공개키(JWKS, `https://appleid.apple.com/auth/keys`)로 identity token 을 직접 검증. 발급자 `https://appleid.apple.com`, 대상 = 앱 번들 ID `com.leedonghyun.trex.ios`, 만료, nonce |
 | 연결 끊기 | **내 판단** | 로그인 때 앱이 받은 authorization code 를 서버가 `auth/token` 에서 refresh token 으로 바꿔 저장해 두고, 탈퇴 때 `auth/revoke` 로 끊는다. client_secret 은 `.p8` 키로 서명한 JWT(ES256) |
@@ -87,6 +87,7 @@
 
 ## 7. 빌더에게 맡기는 것
 - Apple 버튼을 그리는 방법: iPhone 기본 버튼(`ASAuthorizationAppleIDButton`)을 플랫폼 짝으로 끼울지, Compose 로 지침에 맞게 그릴지. 조건은 Apple 로고가 들어가고 지침의 모양(검정/흰 바탕, 모서리, 최소 크기)을 따르는 것.
+  - *갱신 2026-10-29:* 처음엔 기본 버튼을 끼웠다가, Google 버튼과 모양·문구를 맞추라는 동현님 요청으로 Compose 로 그린다(공유 `SignInUi.kt`, 정본 스펙 §113).
 - nonce 를 어디서 만들고 해시할지(Swift CryptoKit 또는 공유 코드). 서버는 원문을 받아 해시를 비교한다.
 - client_secret JWT 를 만드는 라이브러리(서버에 이미 있는 JWT 라이브러리로 ES256 이 되면 그것). 수명은 몇 분이면 된다(호출할 때마다 만든다).
 - 테스트 구성: 서버는 구글과 같은 방식(테스트 키로 서명한 토큰으로 검증기 시험 + MockMvc 에 가짜 검증기·가짜 Apple 토큰 클라이언트 — 로그인·재로그인·refresh token 저장·탈퇴 때 revoke·revoke 실패해도 탈퇴·키 없을 때 건너뜀·`apple_` 가입 차단). 앱은 API 요청 본문과 상태 규칙 JVM 테스트, iPhone 은 CI 컴파일. **실제 iPhone 확인은 동현님**(§6 준비 뒤).
@@ -96,3 +97,33 @@
 1. 서버: Apple 검증·로그인·code 교환·revoke·설정·테스트 → PR → 머지 → 배포(키 없이도 됨).
 2. 앱: 플랫폼 짝·버튼 세 곳·`continueWithApple`·Swift 다리·엔타이틀먼트 → PR(CI `shared`·`ios`) → 머지.
 3. 동현님: §6 두 가지 → 키를 받으면 서버 `.env` 에 넣고 다시 띄움 → iPhone 실기기 확인 → 제출.
+
+## 9. Android Apple 로그인 — 웹 흐름 (2026-10-30 추가, 동현님 요청)
+
+Android 에는 Apple 로그인 창(AuthenticationServices)이 없다. Apple 이 다른 플랫폼에 내는 길은 REST `auth/authorize` 웹 로그인이고, Android 처럼 커스텀 스킴을 쓰는 앱은 **결과를 서버의 Return URL 로 받아 앱 스킴으로 되돌려 보내야** 한다(Apple 문서 "Request an authorization to the Sign in with Apple server" — Return control to the app).
+
+**흐름**
+1. 앱(`sync/AppleWebSignIn.kt`)이 nonce 원문(32바이트)·state(16바이트)를 만들고 Custom Tab 으로 연다:
+   `https://appleid.apple.com/auth/authorize?client_id=<Services ID>&redirect_uri=<Return URL>&response_type=code id_token&scope=name email&response_mode=form_post&state=…&nonce=SHA256(원문)`.
+   이름·이메일 범위를 달라면 `form_post` 여야 한다.
+2. Apple 이 결과(code·id_token·state, 취소면 `error=user_cancelled_authorize`)를 서버 `POST /api/auth/oauth/apple/callback` 으로 form_post.
+3. 서버(`AppleWebCallbackController`)는 검증 없이 정한 넷(code·id_token·state·error)만 길이 안에서 인코딩해 `303 → intent://callback?…#Intent;scheme=trexapple;package=com.example.trex_kotlin;end` 로 보낸다. Apple 이 첫 로그인 때 같이 주는 `user`(이름·이메일 JSON)는 넘기지 않는다.
+4. 앱의 `AppleSignInCallbackActivity` 가 딥링크를 받아 **기다리던 state 일 때만** 넘기고, `CLEAR_TOP` 으로 MainActivity 로 돌아간다(Custom Tab 이 닫힌다).
+5. 앱은 iPhone 과 같은 `POST /api/auth/oauth/apple {identityToken, authorizationCode, nonce(원문)}` 를 보낸다. 서버는 대상(aud)이 **번들 ID 또는 Services ID** 인지, nonce 원문의 SHA-256 이 토큰의 nonce 인지 본다.
+
+**정한 것**
+| 항목 | 내용 |
+|---|---|
+| Services ID | `com.leedonghyun.trex.signin`(제안 — 다른 이름으로 만들면 앱 `trex.appleServicesId`·서버 `APPLE_WEB_CLIENT_ID` 를 같이 바꾼다) |
+| Return URL | `https://trex-api.duckdns.org/api/auth/oauth/apple/callback` — 앱 `trex.appleRedirectUri`·서버 `APPLE_WEB_REDIRECT_URI` 와 글자까지 같아야 한다 |
+| 딥링크 보안 | 딥링크는 아무 앱·페이지나 열 수 있다. 그래서 (1) state 가 다르면 버린다(CSRF) (2) 가로챈 id_token 은 nonce 원문이 없어 서버에서 쓸 수 없다 — 원문은 요청한 앱 메모리에만 있다 |
+| code 교환·연결 끊기 | Apple 은 code 를 받은 client 로만 받는다. 서버가 토큰의 대상을 회원에 같이 기억하고(`users.apple_client_id`, ddl-auto 가 더한다) 그 client 로 교환·revoke 한다. 웹 로그인 code 는 교환 때 `redirect_uri` 도 보낸다. 열이 생기기 전 회원은 기본 번들 ID 로 끊는다 |
+| 취소 | 창을 닫고 앱이 결과 없이 다시 보이면(0.7초 기다린 뒤) 조용히 취소 — 결과가 있으면 앱이 다시 보이기 전에 도착한다 |
+| 버튼 | 설정된 빌드는 iPhone 과 같은 자리(Google 위)·같은 모양(공유 `SignInUi.kt`) |
+
+**동현님께 부탁할 것(개발자 계정)**
+1. Certificates, Identifiers & Profiles → Identifiers → **+** → **Services IDs** → 설명 "TREX Android", Identifier `com.leedonghyun.trex.signin` → Register.
+2. 만든 Services ID → **Sign in with Apple** 체크 → Configure → Primary App ID `com.leedonghyun.trex.ios` → Domains `trex-api.duckdns.org`, Return URLs `https://trex-api.duckdns.org/api/auth/oauth/apple/callback` → Save → Continue → Save. (도메인 인증 파일을 요구하면 그 파일을 주세요 — 지금 포털은 요구하지 않는다는 보고가 많지만 Apple 문서에는 아직 인증이 적혀 있다.)
+3. §6 의 Sign in with Apple 키는 같은 Primary App ID 에 묶여 있어 그대로 쓴다.
+
+**배포**: 서버 코드가 바뀌었다(콜백·client 별 교환) — 새 jar 를 올리고 `.env` 에 `APPLE_WEB_CLIENT_ID`·`APPLE_WEB_REDIRECT_URI` 를 더한다(`docs/SERVER_SYNC_HANDOFF.md` 10.5). 그 전에는 Android 의 Apple 로그인이 Apple 화면(Services ID 없음) 또는 서버(대상 불일치 401)에서 실패한다.

@@ -45,17 +45,21 @@ class AppleLoginApiTest {
         boolean exchangeThrows = false;
         boolean revokeThrows = false;
         final List<String> revoked = new ArrayList<>();
+        final List<String> exchangeClients = new ArrayList<>();
+        final List<String> revokeClients = new ArrayList<>();
 
         @Override public boolean configured() { return configured; }
 
-        @Override public Optional<String> exchangeCode(String code) {
+        @Override public Optional<String> exchangeCode(String code, String clientId) {
             if (!configured) return Optional.empty();
+            exchangeClients.add(clientId);
             if (exchangeThrows) throw new IllegalStateException("Apple 서버 오류");
             return Optional.ofNullable(exchangeResult);
         }
 
-        @Override public void revoke(String refreshToken) {
+        @Override public void revoke(String refreshToken, String clientId) {
             revoked.add(refreshToken);
+            revokeClients.add(clientId);
             if (revokeThrows) throw new IllegalStateException("Apple 서버 오류");
         }
     }
@@ -65,13 +69,14 @@ class AppleLoginApiTest {
         @Bean
         @Primary
         AppleTokenVerifier fakeAppleTokenVerifier() {
-            // 토큰 "ok|sub|email|verified", nonce 원문 "n" 만 통과
+            // 토큰 "ok|sub|email|verified[|대상]", nonce 원문 "n" 만 통과. 대상이 없으면 iPhone 번들 ID
             return (identityToken, rawNonce) -> {
                 String[] p = identityToken.split("\\|", -1);
-                if (p.length != 4 || !p[0].equals("ok") || !"n".equals(rawNonce)) {
+                if ((p.length != 4 && p.length != 5) || !p[0].equals("ok") || !"n".equals(rawNonce)) {
                     throw new InvalidCredentialsException("Apple 로그인 정보를 확인하지 못했습니다");
                 }
-                return new SocialIdentity(AuthProvider.APPLE, p[1], p[2].isEmpty() ? null : p[2], Boolean.parseBoolean(p[3]), null);
+                return new SocialIdentity(AuthProvider.APPLE, p[1], p[2].isEmpty() ? null : p[2], Boolean.parseBoolean(p[3]), null,
+                        p.length == 5 ? p[4] : BUNDLE_ID);
             };
         }
 
@@ -92,7 +97,12 @@ class AppleLoginApiTest {
         apple.exchangeThrows = false;
         apple.revokeThrows = false;
         apple.revoked.clear();
+        apple.exchangeClients.clear();
+        apple.revokeClients.clear();
     }
+
+    static final String BUNDLE_ID = "com.leedonghyun.trex.ios";
+    static final String WEB_ID = "com.leedonghyun.trex.signin";
 
     private static String uniq() {
         return UUID.randomUUID().toString().replace("-", "").substring(0, 12);
@@ -127,6 +137,28 @@ class AppleLoginApiTest {
         String auth = bearer(apple(uniq(), "code-1").andExpect(status().isOk()));
         mvc.perform(delete("/api/auth/me").header("Authorization", auth)).andExpect(status().isNoContent());
         assertEquals(List.of("rt-1"), apple.revoked);
+    }
+
+    @Test
+    void Android_웹_로그인_회원은_Services_ID_로_교환하고_끊는다() throws Exception {
+        // Apple 은 code 를 받은 client 로만 교환·연결 끊기를 받는다 — 토큰 대상(Services ID)을 회원에 같이 기억한다
+        String sub = uniq();
+        ResultActions login = mvc.perform(post("/api/auth/oauth/apple").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"identityToken\":\"ok|" + sub + "|" + sub + "@privaterelay.appleid.com|true|" + WEB_ID
+                        + "\",\"nonce\":\"n\",\"authorizationCode\":\"code-web\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.user.loginId").value("apple_" + sub));
+        assertEquals(List.of(WEB_ID), apple.exchangeClients);
+        mvc.perform(delete("/api/auth/me").header("Authorization", bearer(login))).andExpect(status().isNoContent());
+        assertEquals(List.of(WEB_ID), apple.revokeClients);
+    }
+
+    @Test
+    void iPhone_회원은_번들_ID_로_끊는다() throws Exception {
+        String auth = bearer(apple(uniq(), "code-1").andExpect(status().isOk()));
+        mvc.perform(delete("/api/auth/me").header("Authorization", auth)).andExpect(status().isNoContent());
+        assertEquals(List.of(BUNDLE_ID), apple.exchangeClients);
+        assertEquals(List.of(BUNDLE_ID), apple.revokeClients);
     }
 
     @Test

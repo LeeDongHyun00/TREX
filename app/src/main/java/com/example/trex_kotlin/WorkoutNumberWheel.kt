@@ -3,6 +3,8 @@ package com.example.trex_kotlin
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
@@ -12,6 +14,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -40,6 +44,14 @@ internal fun WorkoutNumberWheel(label: String, wheel: WorkoutNumberWheelState, u
     val range = wheel.range
     val value = wheel.value
     val scope = rememberCoroutineScope()
+    val gestureLock = LocalSheetGestureLock.current
+    val owner = remember { Any() }
+    var pressed by remember { mutableStateOf(false) }
+    // A wheel owns its entire gesture, including boundary overscroll and snap/fling settling.
+    LaunchedEffect(pressed, state.isScrollInProgress) {
+        gestureLock(owner, pressed || state.isScrollInProgress)
+    }
+    DisposableEffect(gestureLock, owner) { onDispose { gestureLock(owner, false) } }
     fun select(next: Int) {
         scope.launch { state.animateScrollToItem(next.coerceIn(range) - range.first) }
     }
@@ -52,7 +64,19 @@ internal fun WorkoutNumberWheel(label: String, wheel: WorkoutNumberWheelState, u
                 flingBehavior = rememberSnapFlingBehavior(state),
                 contentPadding = PaddingValues(vertical = 44.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.fillMaxSize().semantics {
+                modifier = Modifier.fillMaxSize().pointerInput(gestureLock, owner) {
+                    try {
+                        awaitEachGesture {
+                            awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                            pressed = true
+                            gestureLock(owner, true)
+                            do {
+                                val event = awaitPointerEvent(PointerEventPass.Final)
+                            } while (event.changes.any { it.pressed })
+                            pressed = false
+                        }
+                    } finally { pressed = false }
+                }.semantics {
                     contentDescription = label
                     stateDescription = "$value$unit"
                     customActions = listOf(

@@ -44,7 +44,9 @@ import com.example.trex_kotlin.GhostButton
 import com.example.trex_kotlin.AccountSignInButtons
 import com.example.trex_kotlin.PasswordAuthDialog
 import com.example.trex_kotlin.DField
-import com.example.trex_kotlin.AppleSignInButton
+import com.example.trex_kotlin.IdSignInButton
+import com.example.trex_kotlin.SignInBrand
+import com.example.trex_kotlin.SocialSignInButton
 import com.example.trex_kotlin.rememberAppleCredentialRequest
 import com.example.trex_kotlin.rememberGoogleIdTokenRequest
 import com.example.trex_kotlin.sync.ApiException

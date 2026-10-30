@@ -11,6 +11,8 @@
 <key>CFBundlePackageType</key><string>APPL</string>
 <key>CFBundleURLTypes</key><array><dict><key>CFBundleURLName</key><string>com.leedonghyun.trex.ios.link</string><key>CFBundleURLSchemes</key><array><string>trex</string></array></dict></array>
 <key>CFBundleShortVersionString</key><string>$(MARKETING_VERSION)</string>
+<!-- 실검증 도구(스펙 §116) — 배포 빌드만 xcodebuild … TREX_DEV_TOOLS=NO -->
+<key>TrexDevTools</key><string>$(TREX_DEV_TOOLS)</string>
 <key>CFBundleVersion</key><string>$(CURRENT_PROJECT_VERSION)</string>
 <key>GIDClientID</key><string>12194757714-bd99b55i5jk94gpft5a6ec6s983fm9mn.apps.googleusercontent.com</string>
 <key>GIDServerClientID</key><string>12194757714-foefivjlqn4n3g5iqdsgqlqst12ejbpi.apps.googleusercontent.com</string>

@@ -31,13 +31,6 @@ final class AppleSignInBridge: NSObject, IosAppleSignInBridge, ASAuthorizationCo
         controller.performRequests()
     }
 
-    func makeButton(onTap: @escaping () -> Void) -> UIView {
-        let button = TapAppleIDButton(authorizationButtonType: .continue, authorizationButtonStyle: .black)
-        button.cornerRadius = 12
-        button.onTap = onTap
-        return button
-    }
-
     func authorizationController(controller: ASAuthorizationController, didCompleteWithAuthorization authorization: ASAuthorization) {
         defer { finish() }
         guard let credential = authorization.credential as? ASAuthorizationAppleIDCredential,
@@ -78,13 +71,4 @@ final class AppleSignInBridge: NSObject, IosAppleSignInBridge, ASAuthorizationCo
     private static func sha256Hex(_ value: String) -> String {
         SHA256.hash(data: Data(value.utf8)).map { String(format: "%02x", $0) }.joined()
     }
-}
-
-/// 누른 동작을 버튼이 직접 든다 — 화면이 버튼을 버리면 동작도 같이 사라진다.
-private final class TapAppleIDButton: ASAuthorizationAppleIDButton {
-    var onTap: (() -> Void)? {
-        didSet { addTarget(self, action: #selector(tapped), for: .touchUpInside) }
-    }
-
-    @objc private func tapped() { onTap?() }
 }

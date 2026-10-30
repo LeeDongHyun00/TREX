@@ -16,6 +16,7 @@ import com.example.trex_kotlin.community.AdminInbox
 import com.example.trex_kotlin.sync.accountLabel
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -27,6 +28,7 @@ import androidx.compose.ui.unit.sp
 fun ProfileTabScreen(app: AppViewModel, onOpenRecord: () -> Unit, onLogout: () -> Unit) {
     val c = Trex.c
     val settingsLinks = rememberSystemSettingsLinks()
+    val uri = LocalUriHandler.current
     var sheet by remember { mutableStateOf<String?>(null) }
     // 음성 안내 목소리(iPhone 만) — iPhone 설정에서 음성을 받고 돌아오면 다시 읽는다
     val voice = rememberVoiceAdvisor()
@@ -80,6 +82,8 @@ fun ProfileTabScreen(app: AppViewModel, onOpenRecord: () -> Unit, onLogout: () -
         item { SettingsGroup {
             SettingsRow("도움말", Icons.Rounded.HelpOutline, onClick = { sheet = "help" })
             SettingsDivider()
+            SettingsRow("저작권 및 라이선스", Icons.Rounded.Info, onClick = { sheet = "licenses" })
+            SettingsDivider()
             Row(Modifier.fillMaxWidth().padding(18.dp), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text("버전", color = c.text, fontSize = 16.sp); Text("1.0", color = c.text2, fontSize = 15.sp)
             }
@@ -92,12 +96,10 @@ fun ProfileTabScreen(app: AppViewModel, onOpenRecord: () -> Unit, onLogout: () -
         }
     }
     if (sheet == "profile") ProfileEditSheet(app, { sheet = null })
-    if (sheet == "admin") ModalBottomSheet(onDismissRequest = { sheet = null }, containerColor = c.sheet,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    if (sheet == "admin") SheetHost(onDismiss = { sheet = null }) {
         AdminInbox(app, onClose = { sheet = null })
     }
-    if (sheet == "theme") ModalBottomSheet(onDismissRequest = { sheet = null }, containerColor = c.sheet,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    if (sheet == "theme") SheetHost(onDismiss = { sheet = null }) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(bottom = 24.dp)) {
             Text("화면 모드", color = c.text, fontSize = 23.sp, fontWeight = FontWeight.SemiBold)
             listOf(ThemeMode.Light to "라이트", ThemeMode.Dark to "다크", ThemeMode.System to "시스템").forEach { (mode, label) ->
@@ -109,10 +111,14 @@ fun ProfileTabScreen(app: AppViewModel, onOpenRecord: () -> Unit, onLogout: () -
             Cta("완료", { sheet = null }, modifier = Modifier.fillMaxWidth())
         }
     }
-    if (sheet == "voice" && voice != null) ModalBottomSheet(onDismissRequest = { sheet = null }, containerColor = c.sheet,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    if (sheet == "voice" && voice != null) SheetHost(onDismiss = { sheet = null }) {
         VoiceSheet(voiceStatus, onPreview = { voice.preview() }, onClose = { sheet = null })
     }
+    if (sheet == "licenses") AlertDialog(onDismissRequest = { sheet = null }, containerColor = c.sheet,
+        title = { Text("저작권 및 라이선스") },
+        text = { Text("근육도: Z-Anatomy / BodyParts3D\n원본 해부 모델에서 앞·뒷면 2D 도형을 추출했습니다.\nCC BY-SA 4.0") },
+        dismissButton = { TextButton(onClick = { uri.openUri("https://creativecommons.org/licenses/by-sa/4.0/") }) { Text("라이선스 보기") } },
+        confirmButton = { TextButton(onClick = { sheet = null }) { Text("확인") } })
     if (sheet == "help") AlertDialog(onDismissRequest = { sheet = null }, containerColor = c.sheet,
         title = { Text("자세 비교 사용하기") },
         text = { Text("운동 이름 옆 스위치로 자세 비교를 켜세요. 시작 전에 안내하는 촬영 방향으로 전신을 담아 주세요.\n\n횟수가 다르게 측정되면 운동 화면의 ‘횟수 수정’에서 조정할 수 있어요.") },
@@ -147,20 +153,25 @@ private fun AccountGroup(app: AppViewModel) {
     if (showPasswordLogin) PasswordAuthDialog(app, onDismiss = { showPasswordLogin = false })
     SettingsGroup {
         if (account == null) {
-            // 아이디·비밀번호(D13) → Apple(iPhone) → Google — 시작 화면과 같은 순서
-            SettingsRow("아이디로 로그인·가입", Icons.Rounded.Person, null, onClick = { if (!app.authBusy) showPasswordLogin = true })
-            if (app.appleSignInAvailable) AppleSignInButton(
-                onClick = { if (!app.authBusy) app.continueWithApple(requestAppleCredential) },
-                modifier = Modifier.padding(start = 18.dp, end = 18.dp, top = 16.dp),
-            )
-            SettingsRow("Google 계정 연결", Icons.Rounded.CloudUpload, if (app.authBusy) "연결 중…" else null, onClick = {
-                app.continueWithGoogle(requestGoogleIdToken)
-            })
-            Text(
-                app.authMessage ?: "기록을 계정에 백업하고 다른 기기에서 이어서 써요",
-                color = if (app.authMessage != null) c.err else c.text2, fontSize = 13.sp,
-                modifier = Modifier.padding(start = 54.dp, end = 18.dp, bottom = 16.dp),
-            )
+            // 로그인 화면과 같은 순서·같은 버튼(SignInUi.kt): 아이디(D13 창) → Apple → Google — 연결 중에는 앱 전체에 로그인 로딩 화면이 덮인다
+            Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Rounded.CloudUpload, null, tint = c.primaryText, modifier = Modifier.size(22.dp))
+                    Column(Modifier.weight(1f).padding(start = 14.dp)) {
+                        Text("계정 연결", color = c.text, fontSize = 16.sp)
+                        Text(
+                            app.authMessage ?: "기록을 계정에 백업하고 다른 기기에서 이어서 써요",
+                            color = if (app.authMessage != null) c.err else c.text2, fontSize = 13.sp,
+                            modifier = Modifier.padding(top = 3.dp),
+                        )
+                    }
+                }
+                IdSignInButton("아이디로 로그인·가입", onClick = { showPasswordLogin = true }, enabled = !app.authBusy)
+                if (app.appleSignInAvailable) SocialSignInButton(
+                    SignInBrand.Apple, onClick = { app.continueWithApple(requestAppleCredential) }, enabled = !app.authBusy,
+                )
+                SocialSignInButton(SignInBrand.Google, onClick = { app.continueWithGoogle(requestGoogleIdToken) }, enabled = !app.authBusy)
+            }
         } else {
             val status = when {
                 app.sync.syncing -> "동기화 중…"
@@ -277,8 +288,8 @@ private fun ProfileEditSheet(app: AppViewModel, onClose: () -> Unit) {
     var goal by remember { mutableStateOf(original.goal) }
     val valid = height.toDoubleOrNull()?.let { it in 80.0..250.0 } == true &&
         weight.toDoubleOrNull()?.let { it in 20.0..350.0 } == true && age.toIntOrNull()?.let { it in 10..110 } == true
-    ModalBottomSheet(onDismissRequest = onClose, containerColor = c.sheet, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
-        Column(Modifier.fillMaxWidth().heightIn(max = 570.dp).imePadding().padding(horizontal = 24.dp).padding(bottom = 22.dp)) {
+    SheetHost(onDismiss = onClose) {
+        Column(Modifier.fillMaxWidth().heightIn(max = 570.dp).padding(horizontal = 24.dp).padding(bottom = 22.dp)) {
             Text("프로필 편집", color = c.text, fontSize = 23.sp, fontWeight = FontWeight.SemiBold)
             Column(Modifier.weight(1f, false).verticalScroll(rememberScrollState()).padding(vertical = 20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 DField(height, { height = it.decimalOnly() }, "키", label = "키 · cm", keyboardType = KeyboardType.Decimal)

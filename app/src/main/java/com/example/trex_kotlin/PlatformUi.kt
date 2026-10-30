@@ -19,7 +19,6 @@ import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import android.provider.Settings
-import android.view.MotionEvent
 import android.view.Surface
 import android.view.View
 import android.view.WindowManager
@@ -57,6 +56,7 @@ import com.example.trex_kotlin.posture.RepValidation
 import com.example.trex_kotlin.posture.isOn
 import com.example.trex_kotlin.posture.SpeechCoach
 import com.example.trex_kotlin.sync.AppleCredential
+import com.example.trex_kotlin.sync.AppleWebSignIn
 import com.example.trex_kotlin.sync.SignInException
 import com.example.trex_kotlin.sync.requestGoogleIdToken
 import kotlinx.coroutines.Dispatchers
@@ -72,8 +72,8 @@ import java.util.Locale
 /** 이 플랫폼에 카메라 자세 화면이 있는가 — [postureSupported] 가 본다. */
 const val PLATFORM_POSTURE_CAMERA = true
 
-/** 시트를 아래로 끌어 닫는가([SheetHost]) — Android 는 시스템 뒤로·스크림 탭이 닫는다(종전 그대로). iPhone 은 끌어 내리기가 시트 관례다(§108d). */
-const val PLATFORM_SHEET_DRAG_DISMISS = false
+/** 실검증 도구(세트 로그·음성 기록·자가 라벨·횟수 검증 모드)가 있는 빌드인가 — 배포 빌드(`-Ptrex.distribution=true`)만 false(스펙 §116). */
+const val PLATFORM_DEV_TOOLS = BuildConfig.DEV_TOOLS
 
 /** 앱 진입 — 앱 상태는 Application 으로 만든다(공유 [TrexApp] 은 상태를 인자로 받는다). */
 @Composable
@@ -133,6 +133,7 @@ fun animatorsEnabled(): Boolean = android.animation.ValueAnimator.areAnimatorsEn
 /** 렙 검증 모드(spec §61) — 앱 전용 폴더의 표시 파일로 켠다. [key] 가 바뀔 때마다 다시 읽는다. */
 @Composable
 fun rememberRepValidation(key: Any?): Boolean {
+    if (!PLATFORM_DEV_TOOLS) return false   // 배포 빌드는 표시 파일이 있어도 켜지 않는다(스펙 §116)
     val context = LocalContext.current
     var on by remember { mutableStateOf(false) }
     LaunchedEffect(key) {
@@ -168,6 +169,9 @@ fun rememberBytesImageDecoder(): BytesImageDecoder = remember {
         val (w, h) = UploadSizing.fit(decoded.width, decoded.height, maxDimension)
         val fitted = if (w == decoded.width && h == decoded.height) decoded
         else Bitmap.createScaledBitmap(decoded, w, h, true).also { if (it !== decoded) decoded.recycle() }
+        // 디코딩한 이 스레드(화면 밖)에서 GPU 올리기를 미리 시작한다 — 사진이 처음 보이는 프레임이 올리기(수 ms)를 떠안지 않게(스펙 §115).
+        // 그림 자체는 그대로라 보이는 것은 같다(N 이상은 RenderThread 가 비동기로 올리고, 이미 올렸으면 아무 일도 없다).
+        fitted.prepareToDraw()
         fitted.asImageBitmap()
     }
 }
@@ -199,20 +203,9 @@ fun rememberAssetImageDecoder(): AssetImageDecoder {
     }
 }
 
-private val loginAnimationFrames = intArrayOf(
-    R.drawable.login_animation_frame_01, R.drawable.login_animation_frame_02,
-    R.drawable.login_animation_frame_03, R.drawable.login_animation_frame_04,
-    R.drawable.login_animation_frame_05, R.drawable.login_animation_frame_06,
-    R.drawable.login_animation_frame_07, R.drawable.login_animation_frame_08,
-    R.drawable.login_animation_frame_09, R.drawable.login_animation_frame_10,
-    R.drawable.login_animation_frame_11, R.drawable.login_animation_frame_12,
-    R.drawable.login_animation_frame_13, R.drawable.login_animation_frame_14,
-    R.drawable.login_animation_frame_15, R.drawable.login_animation_frame_16,
-)
-
-/** 로그인 로고 애니메이션의 [index] 번째 프레임(720×1280 투명 캔버스). */
+/** 공룡 얼굴 그림(res/drawable-nodpi/trex_dino_head.png) — 로그인·로그인 로딩 화면의 [TrexDinoHead]. */
 @Composable
-fun loginAnimationFrame(index: Int): ImageBitmap = ImageBitmap.imageResource(loginAnimationFrames[index])
+fun trexDinoHeadImage(): ImageBitmap = ImageBitmap.imageResource(R.drawable.trex_dino_head)
 
 /** 입력칸이 있는 전체 화면 대화상자 — 인셋은 내용이 직접 맞춘다(Sheets.FoodPicker). */
 fun fullScreenDialogProperties(): DialogProperties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
@@ -231,7 +224,12 @@ internal fun GuideVisualView(asset: String, description: String, playing: Boolea
             runCatching {
                 context.assets.open(asset).use { stream ->
                     if (asset.endsWith(".gif", ignoreCase = true)) {
-                        Movie.decodeStream(stream)?.let { GuideVisual.Animation(it) }
+                        // 같은 바이트에서 프레임 끝 시각도 읽는다 — 프레임이 바뀔 때만 다시 그리려고(스펙 §115). Movie 의 길이와
+                        // 어긋나면(읽는 규칙이 다르면) 쓰지 않고 예전처럼 매 화면 그린다.
+                        val bytes = stream.readBytes()
+                        Movie.decodeByteArray(bytes, 0, bytes.size)?.let { movie ->
+                            GuideVisual.Animation(movie, gifFrameEnds(bytes)?.takeIf { it.last() == movie.duration() })
+                        }
                     } else {
                         BitmapFactory.decodeStream(stream)?.let { GuideVisual.Still(it) }
                     }
@@ -243,7 +241,7 @@ internal fun GuideVisualView(asset: String, description: String, playing: Boolea
     }
     when (val decoded = visual) {
         is GuideVisual.Animation -> AndroidView(
-            factory = { ExerciseGifView(it, decoded.movie).apply { contentDescription = description } },
+            factory = { ExerciseGifView(it, decoded.movie, decoded.frameEnds).apply { contentDescription = description } },
             update = { it.playing = playing },
             modifier = modifier,
         )
@@ -373,21 +371,15 @@ internal fun MuscleAtlasWebView(command: String, sessionMode: Boolean, descripti
     AndroidView(modifier=modifier,factory={context -> WebView(context).apply {
         setBackgroundColor(android.graphics.Color.rgb(34,37,39))
         contentDescription=description
-        setOnTouchListener { view, event ->
-            // 근육도 안에서 시작한 드래그는 회전에 사용하고, 바깥 영역은 페이지 스크롤로 남긴다.
-            when (event.actionMasked) {
-                MotionEvent.ACTION_DOWN -> view.parent?.requestDisallowInterceptTouchEvent(true)
-                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> view.parent?.requestDisallowInterceptTouchEvent(false)
-            }
-            false
-        }
+        // 정적인 2D 그림 위에서도 부모 LazyColumn의 스크롤을 시작할 수 있다.
+        setOnTouchListener { _, _ -> true }
         settings.javaScriptEnabled=true;settings.allowFileAccess=false;settings.allowContentAccess=false
         settings.blockNetworkLoads=true;settings.domStorageEnabled=false
         webViewClient=object:WebViewClient() {
             override fun shouldOverrideUrlLoading(view:WebView,request:WebResourceRequest)=true
             override fun shouldInterceptRequest(view:WebView,request:WebResourceRequest):WebResourceResponse {
                 val path=request.url.path.orEmpty().removePrefix("/muscle_load/")
-                if(request.url.host!="appassets.androidplatform.net" || path !in setOf("index.html","viewer.js","atlas.js","three.min.js"))
+                if(request.url.host!="appassets.androidplatform.net" || path !in setOf("index.html","viewer.js","atlas-2d.js"))
                     return WebResourceResponse("text/plain","UTF-8",403,"Blocked",emptyMap(),null)
                 val mime=if(path.endsWith(".html"))"text/html" else "application/javascript"
                 return WebResourceResponse(mime,"UTF-8",context.assets.open("muscle_load/$path"))
@@ -395,52 +387,152 @@ internal fun MuscleAtlasWebView(command: String, sessionMode: Boolean, descripti
             override fun onPageFinished(view:WebView,url:String) { view.evaluateJavascript(script,null) }
         }
         loadUrl("https://appassets.androidplatform.net/muscle_load/index.html" + if (sessionMode) "?mode=session" else "")
-    }},update={it.evaluateJavascript(script,null)},onRelease={it.stopLoading();it.destroy()})
+    }},
+    // 이 WebView 에 마지막으로 보낸 명령(tag)과 같으면 다시 돌리지 않는다(스펙 §115). 페이지가 다 읽히면 onPageFinished 가 최신 명령을 보낸다.
+    update={ if (it.tag != script) { it.tag = script; it.evaluateJavascript(script,null) } },onRelease={it.stopLoading();it.destroy()})
 }
 
-/** 움직이는 시범은 GIF로, 유지 자세는 정지 이미지로 같은 영역에 표시한다. */
+/** 움직이는 시범은 GIF로, 유지 자세는 정지 이미지로 같은 영역에 표시한다. [frameEnds] 는 [gifFrameEnds](못 읽었으면 null). */
 private sealed interface GuideVisual {
-    data class Animation(val movie: Movie) : GuideVisual
+    data class Animation(val movie: Movie, val frameEnds: IntArray?) : GuideVisual
     data class Still(val bitmap: Bitmap) : GuideVisual
 }
 
-/** API 26에서도 외부 플레이어 없이 로컬 GIF를 재생한다. 백그라운드에서는 진행하지 않는다. */
+/**
+ * API 26에서도 외부 플레이어 없이 로컬 GIF를 재생한다. 백그라운드에서는 진행하지 않는다.
+ *
+ * 프레임이 바뀌는 때에만 다시 그린다(스펙 §115) — 예전에는 2프레임(0.9·1.1 초) 시범을 매 화면(60~120 Hz) 다시 그렸다.
+ * 재생 시각은 예전과 같다: 그릴 때마다 흐른 시간을 더하되 한 번에 '예약한 간격 + 100 ms' 까지만 더하고(매 화면 그리던 때의
+ * 100 ms 상한 — 멈췄다 돌아와도 건너뛰지 않는다), 멈추거나 가려지는 순간까지는 센다. [frameEnds] 가 없으면 예전처럼 매 화면 그린다.
+ */
 @Suppress("DEPRECATION")
-private class ExerciseGifView(context: Context, private val movie: Movie) : View(context) {
+private class ExerciseGifView(context: Context, private val movie: Movie, private val frameEnds: IntArray?) : View(context) {
     private var elapsed = 0L
     private var lastFrame = SystemClock.uptimeMillis()
+    /** 지난 그리기에서 예약한 다음 그리기까지의 간격(ms). 예약이 없으면 0 — 상한이 예전 그대로 100 ms 다. */
+    private var waitMs = 0L
+    private val nextFrame = Runnable { invalidate() }
     var playing = true
         set(value) {
             if (field == value) return
+            advance(SystemClock.uptimeMillis())
             field = value
-            lastFrame = SystemClock.uptimeMillis()
             invalidate()
         }
 
+    /** 지난 그리기 뒤로 흐른 시간을 재생 시각에 더한다(재생 중일 때만). */
+    private fun advance(now: Long) {
+        if (playing) elapsed += (now - lastFrame).coerceAtMost(waitMs + 100L)
+        lastFrame = now
+    }
+
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
-        val now = SystemClock.uptimeMillis()
-        if (playing) elapsed += (now - lastFrame).coerceAtMost(100L)
-        lastFrame = now
-        movie.setTime((elapsed % movie.duration().coerceAtLeast(1)).toInt())
+        advance(SystemClock.uptimeMillis())
+        val time = (elapsed % movie.duration().coerceAtLeast(1)).toInt()
+        movie.setTime(time)
         val scale = minOf(width.toFloat() / movie.width().coerceAtLeast(1), height.toFloat() / movie.height().coerceAtLeast(1))
         canvas.save()
         canvas.translate((width - movie.width() * scale) / 2f, (height - movie.height() * scale) / 2f)
         canvas.scale(scale, scale)
         movie.draw(canvas, 0f, 0f)
         canvas.restore()
-        if (playing && isShown) postInvalidateOnAnimation()
+        removeCallbacks(nextFrame)
+        waitMs = 0L
+        if (playing && isShown) {
+            if (frameEnds == null) postInvalidateOnAnimation()
+            else gifMillisUntilNextFrame(frameEnds, time)?.let { wait ->
+                waitMs = wait.toLong()
+                postOnAnimationDelayed(nextFrame, waitMs)
+            }
+        }
+    }
+
+    override fun onVisibilityAggregated(isVisible: Boolean) {
+        super.onVisibilityAggregated(isVisible)
+        // 가려지면 그 순간까지만 센다 — 매 화면 그리던 때도 가려진 뒤로는 그리지 않아 시간이 멈췄다. 예약도 거둔다.
+        if (!isVisible) {
+            advance(SystemClock.uptimeMillis())
+            waitMs = 0L
+            removeCallbacks(nextFrame)
+        }
     }
 }
 
-/** Apple 로그인 — Android 에는 없다(설계 docs/superpowers/specs/2026-10-29-apple-sign-in-design.md §2). 버튼을 그리지 않으니 부를 일이 없다. */
-@Composable
-fun rememberAppleCredentialRequest(): suspend () -> AppleCredential =
-    remember { { throw SignInException.Failed("이 기기에서는 Apple 로그인을 쓸 수 없어요") } }
+/**
+ * GIF 각 프레임이 끝나는 시각(ms, 처음부터 누적) — Android [Movie](GIFMovie)와 같은 규칙으로 읽는다: 그림 앞 첫 그래픽 제어
+ * 확장의 지연(1/100 초) × 10, 없으면 0. 블록을 끝까지 못 읽으면 null(그때는 예전처럼 매 화면 그린다). 스펙 §115.
+ */
+internal fun gifFrameEnds(bytes: ByteArray): IntArray? {
+    fun u8(i: Int) = bytes[i].toInt() and 0xFF
+    if (bytes.size < 13 || String(bytes, 0, 3, Charsets.US_ASCII) != "GIF") return null
+    // 하위 블록(길이 바이트 + 내용)을 길이 0 까지 건너뛴 위치. 넘치면 -1.
+    fun skipSubBlocks(from: Int): Int {
+        var q = from
+        while (q < bytes.size) {
+            val n = u8(q)
+            q += 1 + n
+            if (n == 0) return q
+        }
+        return -1
+    }
+    var p = 13
+    if (u8(10) and 0x80 != 0) p += 3 * (1 shl ((u8(10) and 7) + 1)) // 전역 색표
+    val ends = ArrayList<Int>()
+    var total = 0
+    var delay = -1 // 다음 그림 앞의 첫 그래픽 제어 확장 지연(ms), 없으면 -1
+    while (p < bytes.size) {
+        when (u8(p++)) {
+            0x21 -> { // 확장 = 라벨 + 하위 블록
+                if (p >= bytes.size) return null
+                val label = u8(p++)
+                if (label == 0xF9 && delay < 0 && p + 3 < bytes.size && u8(p) >= 4) delay = (u8(p + 2) or (u8(p + 3) shl 8)) * 10
+                p = skipSubBlocks(p).takeIf { it >= 0 } ?: return null
+            }
+            0x2C -> { // 그림 = 설명 9바이트 + 지역 색표 + LZW 최소 코드 크기 + 하위 블록
+                if (p + 9 > bytes.size) return null
+                val flags = u8(p + 8)
+                p += 9
+                if (flags and 0x80 != 0) p += 3 * (1 shl ((flags and 7) + 1))
+                p = skipSubBlocks(p + 1).takeIf { it >= 0 } ?: return null
+                total += maxOf(delay, 0)
+                ends += total
+                delay = -1
+            }
+            0x3B -> break // 끝
+            else -> return null
+        }
+    }
+    return ends.toIntArray().takeIf { it.isNotEmpty() }
+}
 
-/** Apple 기본 버튼 — Android 는 그리지 않는다(iPhone 은 ios-ui 의 같은 이름 함수가 Apple 지침의 기본 버튼을 끼운다). */
+/**
+ * [time](0 ≤ time < 길이, ms)에 보이는 프레임이 바뀌기까지 남은 ms. Movie 는 time ≤ 끝[i] 인 첫 프레임 i 를 그리고,
+ * 마지막 프레임 다음에는 처음(time 0)으로 돈다. 바뀔 일이 없으면(한 프레임·길이 0) null. 스펙 §115.
+ */
+internal fun gifMillisUntilNextFrame(frameEnds: IntArray, time: Int): Int? {
+    if (frameEnds.size < 2) return null
+    val duration = frameEnds.last()
+    if (duration <= 0) return null
+    val end = frameEnds.firstOrNull { it >= time } ?: return null
+    return if (end >= duration) duration - time else end + 1 - time
+}
+
+/**
+ * Apple 로그인(Android, 웹 흐름 — 설계 docs/superpowers/specs/2026-10-29-apple-sign-in-design.md §9) — Apple 웹 로그인 창(Custom Tab)을 열고
+ * 서버 콜백이 돌려준 결과를 받는다. Services ID·Return URL 이 없는 빌드는 버튼을 그리지 않아 부를 일이 없다.
+ */
 @Composable
-fun AppleSignInButton(onClick: () -> Unit, modifier: Modifier = Modifier) = Unit
+fun rememberAppleCredentialRequest(): suspend () -> AppleCredential {
+    val context = LocalContext.current
+    return remember(context) {
+        {
+            val activity = context.findTrexActivity() as? androidx.activity.ComponentActivity
+                ?: throw SignInException.Failed("Apple 로그인을 준비하지 못했어요")
+            AppleWebSignIn.request(activity, BuildConfig.APPLE_SERVICES_ID, BuildConfig.APPLE_REDIRECT_URI)
+        }
+    }
+}
 
 /** 폰 공유 창(카카오톡·문자…)에 글을 넘긴다 — 루틴·게시글 링크 공유(설계 docs/superpowers/specs/2026-10-29-routine-share-design.md). iPhone 은 ios-ui 의 같은 이름. */
 @Composable

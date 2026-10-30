@@ -46,6 +46,7 @@
 | D11 | 앱의 서버 주소·구글 웹 클라이언트 ID 는 **`gradle.properties` 에 팀 기본값으로 커밋**하고, **디버그도 운영 서버**를 가리킨다. `local.properties` 의 같은 키가 우선 | 팀원이 설정 없이 빌드해 폰에 까는 것이 디버그 APK 다 — 그 APK 로도 계정 연결이 되게 한다(서명 SHA-1 등록은 별도, Q1). 두 값 모두 비밀값이 아니다. **로컬 서버로 확인할 때는 `local.properties` 에 `trex.apiBaseUrl.debug=http://127.0.0.1:8080` 을 넣어야 한다 — 안 넣으면 운영 서버로 간다** |
 | D12 | **iPhone 에 Apple 로그인**(구글과 나란히, 사용자가 고른다). 서버가 Apple 공개키로 identity token 을 직접 검증(발급자 `https://appleid.apple.com`, 대상 = 번들 ID, nonce), 내부 아이디 `apple_<sub>`. 구글 계정과 합치지 않는다. 탈퇴 때 Apple 연결을 끊는다(revoke) | App Store 지침 4.8(소셜 로그인이 있으면 이메일을 숨길 수 있는 다른 로그인이 같이 있어야 한다)과 탈퇴 규칙. 사용자 결정 2026-10-29 — 설계 `docs/superpowers/specs/2026-10-29-apple-sign-in-design.md` |
 | D13 | **앱에 아이디·비밀번호 가입·로그인**(구글·Apple 과 나란히, 계정은 서로 따로). 아이디 영문·숫자·밑줄 4~20자, 비밀번호 영문과 숫자를 섞은 8~64자(앱·서버 같은 규칙). 같은 아이디로 5번 연속 틀리면 10분 동안 맞는 비밀번호도 받지 않는다(서버 메모리 — 재시작하면 풀린다). **비밀번호 찾기는 아직 없다** — 가입 화면에서 "잊으면 찾을 수 없다"고 알린다. 이메일은 받아 두고 찾기를 만들 때 쓴다 | 사용자 결정 2026-10-29 — 처음 계획이 아이디·비밀번호 로그인이었다. 2026-10-13 동기화 2단계에서 앱의 (서버에 연결되지 않은) 아이디·비밀번호 화면을 사용자 확인 없이 지우고 구글로 대신했던 것을 되돌린다. 마감(11-11) 때문에 찾기는 뒤로 미룬다 |
+| D14 | **루틴·게시글 공유 링크**: 루틴은 `POST /api/routines/share`(커뮤니티 글쓰기 가능 회원, 이름 1~30자·금칙어, 운동 1~30개, 10분 10개)로 `shared_routines` 에 저장하고 `{baseUrl}/r/{8자 코드}` 를 메신저로 보낸다. 링크는 서버가 만든 HTML(카카오톡 카드 og 메타, 운동 앞 3개, "앱에서 열기"·"앱 설치하기")이고 받은 루틴 조회는 로그인 없이. 게시글 `{baseUrl}/p/{id}` 페이지에는 **닉네임만**(본문·사진은 앱 안에서). 탈퇴하면 공유 루틴도 지운다. 링크를 누르자마자 앱이 열리는 App Links·Universal Links 는 비목표 | 사용자 결정 2026-10-29 — 설계 `docs/superpowers/specs/2026-10-29-routine-share-design.md`. 게시글 내용 웹 공개는 지금 약속("회원에게 공개")과 어긋나 B안 |
 
 **아직 정할 것**
 - Q1 팀 공용 앱 서명 키(구글·카카오 콘솔에 SHA-1 등록용). 지금은 PC 마다 디버그 키가 달라 빌드한 PC 에 따라 로그인이 될 수도 안 될 수도 있다. 2026-10-13 현재 등록된 것은 사용자 PC 디버그 키뿐이고, **릴리스 APK(조원 개발 인증서) SHA-1 은 미등록** — 릴리스 전에 Android 클라이언트를 하나 더 만든다.
@@ -82,7 +83,7 @@ DELETE /api/auth/me                                           → 204 (회원과
   - **iPhone(2026-10-28)**: iOS 클라이언트 ID `12194757714-bd99b55i5jk94gpft5a6ec6s983fm9mn.apps.googleusercontent.com`(비밀값 아님, 번들 `com.leedonghyun.trex.ios`). 앱은 Info.plist `GIDClientID`(iOS)·`GIDServerClientID`(웹 — 로그인 버튼을 켤지만 가른다)를 쓰고, iOS 기본 `ASWebAuthenticationSession` 으로 OAuth 인가 코드 + PKCE 를 직접 해 ID 토큰을 받는다(`iosApp/Trex/GoogleSignInBridge.swift`). GoogleSignIn pod 는 GTMSessionFetcher 가 MediaPipe 정적 라이브러리 안의 같은 코드와 링크 때 부딪혀(중복 기호 196개, CI) 뺐다. iPhone 토큰의 aud 는 **iOS 클라이언트 ID** 라 서버 `GOOGLE_CLIENT_IDS` 에 웹·iOS 두 ID 를 쉼표로 넣었다. 같은 날 구글 동의 화면을 프로덕션으로 게시했다(브랜딩: 홈페이지 `https://leedonghyun00.github.io/TREX/`, 처리방침 `…/TREX/privacy.html`, 승인된 도메인 `leedonghyun00.github.io`, 로고 없음).
   - 코드: `app/.../sync/` — `SyncRules`(판정 규칙, 단위 테스트 `SyncRulesTest` 7개), `SyncManager`(저장소 변경 감지 → 3초 모아 올리기, 시작·로그인·"지금 동기화" 때 받기), `TrexApi`(HttpURLConnection — 호출 4개라 Retrofit 안 씀), `AuthSession`(`trex_auth` prefs, 자동 백업 제외), `GoogleSignIn`(Credential Manager). `TrexStore.readRaw/writeRaw/setChangeListener`, `AppViewModel` 계정 절, `AuthScreen`(아이디·비밀번호 폼과 찾기 화면을 지우고 "Google로 계속하기"/"로그인 없이 사용"), 설정의 계정 칸·회원 탈퇴, `FirstSyncDialog`.
   - 첫 연결 규칙: 서버가 비면 올림 / 이 기기가 온보딩 전이면 받음 / 양쪽에 있으면 묻는다(자동 병합 안 함). 서버에 없는 항목은 어느 쪽을 골라도 이 기기 값을 남겨 올린다(고르지 않은 데이터를 지우지 않는다). 계정(`owner`)과 처음 맞추기 전에는 주고받지 않는다.
-  - 기존 사용자(가짜 로그인으로 이미 `logged_in`)는 로그인 화면을 다시 안 본다 — **설정 → Google 계정 연결**로 연결한다.
+  - 기존 사용자(가짜 로그인으로 이미 `logged_in`)는 로그인 화면을 다시 안 본다 — **내 정보 → 계정 연결 → Google로 계속하기**로 연결한다(2026-10-29 전 이름은 "설정 → Google 계정 연결").
   - **PR 전 코드 리뷰 반영(2026-10-13)**:
     - **다른 계정으로 바꿔 로그인**(같은 서버에서 앞 계정이 로그아웃한 뒤)하면 이 기기 기록을 옮길지 묻는다(`FirstSync.SWITCH_ACCOUNT`, 옮기기/취소) — 묻지 않고 올려 앞 사람의 건강·식단 기록이 새 계정 백업으로 들어가던 문제.
     - "이 기기 기록으로 올린다"(첫 연결·질문 답)는 받아 본 서버 값보다 반드시 새 버전으로 찍는다(`SyncRules.uploadVersion`) — 이 기기 시계가 늦으면 409 로 서버의 빈 값을 받아 로컬 기록이 지워질 수 있었다. 서버가 빈 첫 연결은 이 기기에 있는 항목만 올린다.
@@ -93,6 +94,7 @@ DELETE /api/auth/me                                           → 204 (회원과
     - 원격 값 적용은 `Dispatchers.Main.immediate` — 판정과 쓰기 사이에 사용자 편집이 끼어 덮이던 틈.
     - **남은 한계(알고 둔 것)**: 동기화 단위가 항목 통째라, 두 기기에서 같은 항목(예: 식단)을 번갈아 고치면 **나중에 고친 쪽이 그 항목 전체를 덮는다**(D6). 앱 복귀 때 먼저 받아 창을 좁혔지만, 받기가 끝나기 전에 고치면 남는다. 근본 해결은 항목 안 병합(식단은 날짜별, 기록은 epochDay 별) 또는 서버의 조건부 쓰기(기준 버전이 다르면 409) — 이후 과제.
   - 설정값(D11): `gradle.properties`(커밋)의 `trex.googleWebClientId`·`trex.apiBaseUrl`(릴리스)·`trex.apiBaseUrl.debug`(디버그) — 둘 다 운영 `https://trex-api.duckdns.org`. `local.properties` 에 같은 키가 있으면 그쪽이 우선하고, 둘 다 없으면 디버그는 `http://127.0.0.1:8080`, 릴리스는 빈 값(구글 로그인 버튼이 안내 문구만 냄). 디버그만 http 허용(`usesCleartextTraffic` 자리표시자).
+  - **아이디·비밀번호 로그인 화면(D13, 2026-10-30 — 스펙 §117, `feature/shared-ui-muscle-navigation`)**: 시작 화면은 공룡 + 같은 크기의 버튼 셋(아이디로 로그인 → Apple → Google) + 작은 "로그인 없이 사용". "아이디로 로그인"을 누르면 그 위에 아이디·비밀번호 칸이 펼쳐지고(스크롤 없음 — 늘어난 만큼 공룡이 작아진다) 가입은 "회원가입"이 main 의 가입 칸을 전체 화면 창으로 연다. 설정·커뮤니티는 같은 알약 버튼 "아이디로 로그인·가입". 로그인 흐름·서버 규칙은 main 그대로. **실기기 확인 전**(키보드·애니메이션).
 - [x] **3단계 · AWS 배포** (2026-10-13) — `https://trex-api.duckdns.org` 가동, 실기기가 USB 없이 운영 서버와 동기화(RDS 에 회원 1명·7개 항목), AMI 백업 완료. 현황·절차는 8절
 - [ ] **4단계 · 카카오**
 - [ ] **5단계 · 개인정보 처리방침·동의** — **다음 공개 릴리스 전에 필수**. 건강·식단 데이터를 서버에 보관하는데, 옛 가짜 가입 폼의 동의 체크박스는 폼과 함께 지워졌고 처리방침 문서가 없다. 구글 동의 화면을 "프로덕션"으로 게시할 때도 처리방침 URL 이 필요하다. (탈퇴 버튼은 2단계에서 이미 만들었다 — 설정 → 회원 탈퇴)
@@ -122,7 +124,7 @@ GOOGLE_CLIENT_IDS=<웹 클라이언트 ID> ./gradlew bootRun        # H2 메모�
 adb reverse tcp:8080 tcp:8080                                  # 폰의 127.0.0.1:8080 → PC 서버
 ./gradlew :app:installDebug                                    # 앱 삭제 금지(기록 손실)
 ```
-확인 항목: 설정 → Google 계정 연결 → "마지막 동기화" 표시, 기록 하나 추가 후 3초 뒤 `GET /api/sync` 에 반영, 앱 데이터가 빈 에뮬레이터/다른 기기에서 같은 계정 로그인 → 온보딩 없이 기록이 들어옴. 끝나면 `local.properties` 의 그 줄을 지운다.
+확인 항목: 내 정보 → 계정 연결 → Google로 계속하기 → "마지막 동기화" 표시, 기록 하나 추가 후 3초 뒤 `GET /api/sync` 에 반영, 앱 데이터가 빈 에뮬레이터/다른 기기에서 같은 계정 로그인 → 온보딩 없이 기록이 들어옴. 끝나면 `local.properties` 의 그 줄을 지운다.
 
 ## 8. 운영 배포 런북 (3단계, AWS — 첫 배포)
 
@@ -296,7 +298,7 @@ ssh -i $KEY $HOST "cd ~/trex && sed -i 's/\r$//' docker-compose.yml && docker co
 
 ## 10. Apple 로그인 운영 (2026-10-29)
 
-iPhone 의 "Apple로 계속하기"(설계 `docs/superpowers/specs/2026-10-29-apple-sign-in-design.md`). 서버는 `POST /api/auth/oauth/apple` 에서 identity token 을 Apple 공개키로 검증해 `apple_<sub>` 회원을 만들고, 키가 있으면 로그인 때 받은 authorization code 를 refresh token 으로 바꿔 두었다가 **탈퇴 때 Apple 연결을 끊는다**(App Store 탈퇴 규칙). Android 에는 Apple 버튼이 없다.
+iPhone 의 "Apple로 계속하기"(설계 `docs/superpowers/specs/2026-10-29-apple-sign-in-design.md`). 서버는 `POST /api/auth/oauth/apple` 에서 identity token 을 Apple 공개키로 검증해 `apple_<sub>` 회원을 만들고, 키가 있으면 로그인 때 받은 authorization code 를 refresh token 으로 바꿔 두었다가 **탈퇴 때 Apple 연결을 끊는다**(App Store 탈퇴 규칙). Android 는 Apple 웹 로그인으로 같은 API 를 쓴다(10.4, 2026-10-30).
 
 ### 10.1 `.env` 네 값
 > `<…>` 는 자리 표시다 — **꺾쇠까지 지우고 값만** 넣는다(커뮤니티 첫 배포에서 세 번 겪었다).
@@ -333,3 +335,16 @@ ssh -i $KEY $HOST "cd ~/trex && docker compose up -d && sleep 25 && docker compo
   ALTER TABLE users ADD CONSTRAINT users_provider_check CHECK (provider IN ('LOCAL','GOOGLE','KAKAO','APPLE')); COMMIT;
   ```
 - 같이 확인한 다른 검사 규칙(`meals_meal_type_check`, `reports_reason_check`·`reports_resolution_check`·`reports_target_type_check`)은 코드의 enum 과 같았다.
+
+### 10.5 Android Apple 로그인 — 웹 흐름 (2026-10-30)
+설계 `docs/superpowers/specs/2026-10-29-apple-sign-in-design.md` §9. 앱이 Apple 웹 로그인(Custom Tab)을 열면 Apple 이 결과를 **`POST /api/auth/oauth/apple/callback`** 으로 form_post 하고, 서버는 `303 intent://callback?…#Intent;scheme=trexapple;package=…;end` 로 앱에 돌려보낸다. 앱은 iPhone 과 같은 `/api/auth/oauth/apple` 로 로그인한다. 서버 코드가 바뀌었으니 **새 jar 배포가 필요하다**(9.2 순서) — `users.apple_client_id` 열은 ddl-auto 가 더한다.
+
+| 변수 | 값 | 비밀값 |
+|---|---|---|
+| `APPLE_WEB_CLIENT_ID` | 동현님이 만든 Services ID — `com.leedonghyun.trex.signin`(설계 §9) | 아니요 |
+| `APPLE_WEB_REDIRECT_URI` | `https://trex-api.duckdns.org/api/auth/oauth/apple/callback` — 앱 `trex.appleRedirectUri` 와 글자까지 같게 | 아니요 |
+| `APPLE_ANDROID_PACKAGE` | 비우면 `com.example.trex_kotlin` | 아니요 |
+
+- 키 셋(10.1)은 그대로 쓴다. Services ID 가 같은 Primary App ID(`com.leedonghyun.trex.ios`) 아래라 같은 키로 client_secret 을 만든다 — sub 만 Services ID 다.
+- `APPLE_WEB_CLIENT_ID` 가 비면 Android 토큰은 대상 불일치로 401(iPhone 은 그대로).
+- 확인: `curl -s -o /dev/null -w '%{redirect_url}\n' -X POST -d 'state=t&error=user_cancelled_authorize' https://trex-api.duckdns.org/api/auth/oauth/apple/callback` → `intent://callback?state=t&error=user_cancelled_authorize#Intent;scheme=trexapple;package=com.example.trex_kotlin;end`. 실기기: Android 로그인 화면 → "Apple로 계속하기" → Apple 화면 → 앱으로 돌아와 로딩 화면 → 홈. 탈퇴하면 서버 로그 `Apple 연결 끊기 완료`.

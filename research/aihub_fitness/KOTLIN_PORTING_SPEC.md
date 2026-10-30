@@ -3084,3 +3084,178 @@ APK 서명 검증과 preview.6의 인증서 일치, 패키지·버전·가이드
 - **안전 장치를 피드와 함께 연다.** 글·댓글·사용자 신고(사유 6개), 차단(상대에게 알리지 않음, 내 프로필에서 해제), 내 글·댓글 지우기, 관리자 신고함(내 정보 탭, 관리자에게만)과 카드 ⋯ 의 관리자 숨기기·지우기·작성자 정지. 신고한 사람은 내 프로필의 "내 신고"에서 처리 상태를 본다(설계 §3 처리 결과 알림).
 
 *남은 것.* 실기기 확인(폰 360dp·폴드 펼침·글자 1.3배, 세로·큰·EXIF 회전 사진, 관리자·일반 계정 둘 다), 이용규칙·처리방침 PR #26 머지, App Store 용 Apple 로그인(설계 §4).
+
+## §110. Android·iOS 공용 근육 목록·2D 근육도·메인 탭 스와이프 (2026-10-28)
+
+사용자 요청으로 근육 상태의 부위 카테고리를 없애고 양수 피로도만 내림차순 목록으로 표시한다. 계산 스냅샷은 그대로 보존하고 화면에서만 필터해 추천 알고리즘의 입력을 바꾸지 않는다. 1점 미만은 0점으로 보이지 않게 표기한다. 기존 해부 모델을 가림 처리한 앞·뒷면 2D SVG로 추출해 왼쪽 뒷면/오른쪽 앞면을 동시에 표시하며, 근육 ID·신체 좌우·저작자 표시를 유지한다. 피로도 화면과 완료 화면이 같은 도형을 쓰되 누적 점수와 세션 사용 부위를 혼합하지 않는다.
+
+공통 MainTabs에 좌우 스와이프를 연결한다. 순서는 홈/운동/식단/내 정보이며 끝에서는 멈춘다. 자식 삭제·정렬 제스처와 시스템 가장자리 뒤로를 우선한다. 운동 가이드 이미지 컨테이너는 불투명한 시트 배경색으로 채운다. 사용자 재설명에 따라 iOS GIF의 HTML·WKWebView·scrollView도 같은 색으로 막아 팝업 뒤 화면이 비치는 현상을 방지한다. 온보딩 SVG의 투명 배경은 유지한다. 공통 Compose 파일은 iOS 정본 목록으로 공유하고, 근육도 플랫폼 뷰는 양쪽에서 스크롤을 가로채지 않게 변경한다. 설계·검증·기기 검토 항목은 `docs/UI_REVIEW_2026-10-28.md`. 사용자 후속 요청으로 로컬 커밋을 승인받았다. 푸시·배포는 하지 않는다.
+
+## §111. Muscle viewer sizing, seven-day records, and persistent stage toggle (2026-10-28)
+
+The device WebView reported a 366px viewport while HTML/body/SVG heights were zero, even though atlas data, viewer initialization, and all 64 paths were present. The shared viewer now assigns viewport pixel heights to the roots and stage on initialization, resize, pageshow, visual viewport changes, and the first animation frame. Both fatigue and session modes use this sizing; session highlighting still uses only the session's used muscles.
+
+User workout history and fatigue now share seven calendar dates including today in the device timezone. `workoutRetentionStart(now, zone)` computes the first retained midnight (including DST transitions); both Android SQLite and iOS JSON stores remove earlier sets and their doses. Snapshots receive the same cutoff, exclude future events from scoring, and refresh every existing foreground timer cycle. Expired display data is filtered even if persistence cleanup fails. The app performs cleanup when running/returning, not through a background alarm while terminated. The user explicitly retained diagnostic posture logs and self-labels; routine/profile/baseline settings are outside this deletion policy. No server schema or retention scheduler was changed.
+
+`StageViewToggle` is rendered above the adaptive camera/panel layout at the screen's top right in preparation and exercise, so panel visibility and PiP shrinking cannot hide or move it. The panel duplicate was removed. The muscle-page footer and anatomical caveat were removed; model attribution remains accessible from Settings → copyright/licenses.
+
+Validation: Android debug APK and 776 unit tests pass, plus 525 common-engine JVM tests. New tests cover eight-day expiry, calendar cutoff boundaries, and DST. Headless Chrome verifies both viewer modes, recovery from zero root heights, three viewport sizes, muscle colors, and session input isolation. Android home-to-fatigue rendering was visually confirmed on SM-N976N. iOS engine/resource sync checks pass. Native iOS compilation/device rendering and the full workout-completion/camera-toggle UI flow were not executed. The optional Swift/project static checker is blocked by missing Python yaml. No production deployment, commit, or push.
+
+
+## §112. Shared expandable sheets and source-labelled replacement recommendations (2026-10-29)
+
+All active app-owned bottom sheets now use `SheetHost`, backed by one Material3 `SheetState`. Complex content starts expanded and can be dismissed downward. Only the photo entry menu starts partially expanded and can be dragged upward; advancing to camera/analysis/results expands the same SheetState. Short content fits above the bottom edge. Nine direct Material call sites (exercise guide/editor, settings theme/voice/profile, nutrition goals, quick settings/count adjustment, weather) were migrated; manual/photo food already called the host. Legacy alternate/set/add helpers also inherit it; the unused `SheetSurface` has no call sites. Central confirmation dialogs and OS pickers are not bottom sheets.
+
+The removed iOS-only `SheetDrag` exposed two release paths (`draggable.onDragStopped` and nested `onPreFling`) that launched settling animations without cancelling an existing settle, and started a return spring after dismissal. These competing offset writes are a code-supported oscillation path; the reported iPhone motion was not directly reproduced on this Windows host. The replacement has one gesture/animation owner on both platforms and removes duplicate caller IME padding. Numeric wheels temporarily lock parent-sheet gestures through touch and snap/fling completion, including range boundaries, without disabling the handle after release. Locks are owned per control and removed on disposal. A device test reproduced the parent consuming a wheel swipe before this guard.
+
+The replacement tab groups actual `WeatherExerciseRecommender` and `MuscleLoadEngine.recommendations` results under `날씨 기반 추천 운동` and `근육 피로도 기반 추천 운동`. It maps names to selectable catalog entries, removes the current exercise/unknown names/duplicates within a source, preserves source order, and permits the same exercise under both sources. Empty or failed sources are omitted, without explanatory text or guide previews. Weather uses the existing region/GPS resolver and cache without requesting new permissions; request lifetime follows picker visibility and foreground state. Fatigue uses the existing seven-day snapshot and available equipment. Selection edits the draft and still requires Save. Manual food puts search below the meal tabs and results before totals while the manual form opens expanded.
+
+Validation: Android 778 unit tests and 525 common JVM tests pass; debug and instrumentation APK builds pass. Five connected SM-N976N tests pass, covering compact and expanded starts, automatic detail expansion, dismissal, numeric wheel direction/boundary/cancellation interactions, and recommendation headings/selection. Source/resource sync checks pass. `lintDebug` remains blocked by the pre-existing `ByteOrderMark` at `food/FoodDetector.kt:142`. Native iOS compilation and real iPhone gesture/keyboard verification are NOT RUN (Windows; no Xcode/iPhone). Detailed evidence and any final device follow-up are recorded in `docs/superpowers/plans/2026-10-29-sheets-recommendations.md`. No commit or push.
+
+## §113. 로그인 화면 정리 · Apple/Google 버튼 통일 · 로그인 로딩 화면 (2026-10-29, `feature/shared-ui-muscle-navigation`)
+
+*요청(동현님 2026-10-29).* 로그인 화면의 Apple·Google 버튼 디자인을 서로 맞추고, Google 도 Google 본래 디자인으로, 문구도 같은 꼴로. 종이를 찢고 얼굴을 내민 공룡 대신 공룡 하나만 크게 가운데. 워드마크 "TREX"·"움직임을 보고 함께 운동해룡"·버튼 아래 작은 설명은 전부 빼고, "로그인 없이 사용"도 같은 크기·간격으로. 커뮤니티·내 정보의 계정 연결에도 같은 버튼, 로그인할 때 로딩 화면. iPhone·Android 둘 다.
+
+*무엇.*
+- 공유 `SignInUi.kt`(ios-ui 목록에 올림): `SocialSignInButton(Apple|Google)`·`WithoutAccountButton` 이 높이 54dp·알약 모양·16sp Medium·로고 20dp+간격 10dp 를 같이 쓰고, 색·로고만 각 회사 지침을 따른다 — Apple: 밝은 배경 검정 / 어두운 배경 흰색. Google: Light #FFFFFF·테두리 #747775·글자 #1F1F1F / Dark #131314·#8E918F·#E3E3E3. 문구는 "Apple로 계속하기"·"Google로 계속하기"이고 공룡 말투(TrexText)를 거치지 않는다. "로그인 없이 사용"은 같은 틀에 바탕 없이 테두리만 — 채우면 어두운 화면에서 Google 버튼(#131314)보다 눈에 띄었다.
+- iPhone 의 Apple 버튼은 시스템 기본 버튼(`ASAuthorizationAppleIDButton` 을 UIKitView 로 끼움)을 버리고 같은 Compose 버튼으로 그린다. Swift 다리의 `makeButton` 을 지웠다. 다리가 없으면(프로브) `IosPlatform.appleSignInAvailable` 이 거짓이라 버튼이 없다(예전엔 버튼 함수가 스스로 안 그렸다).
+- 공룡: `res/drawable-nodpi/trex_dino_head.png`(690², 정사각 가운데) — 종이를 찢고 나온 로고의 마지막 프레임에서 공룡만 오렸다(`tools/icon/make_dino_head.py`, 같은 PNG 를 다시 만든다). 로그인 화면은 그림(폭 68% — 60% 는 화면 확인에서 여전히 작았다, 버튼 위 남은 자리 가운데) + 버튼 줄만이다. 16프레임 애니메이션(`LoginLogo`·플랫폼 짝 `loginAnimationFrame`)은 지웠고, 프레임 PNG 는 앱 아이콘 생성기(`tools/icon/make_launcher_icon.py`)가 10번을 쓰므로 남겼다.
+- 로그인 로딩 화면 `SignInLoadingScreen`(처음엔 공룡이 고개를 까딱이고 점 셋이 차례로 밝아졌다 — *2026-10-30 동현님 요청으로 가운데 로딩바 하나만, §114*) — `AppViewModel.authVerifying` 동안 TrexApp 맨 위를 덮는다. 로그인 화면·내 정보·커뮤니티 어디서 연결해도 같다.
+- 내 정보 계정 칸: "Google 계정 연결" 줄 → "계정 연결" 머리(설명 한 줄, 실패하면 그 자리에 실패 문구) + 두 버튼. 커뮤니티 계정 안내: 녹색 "Google 계정 연결" → 두 버튼.
+
+*근거.*
+- **Apple 버튼을 직접 그려도 되는가.** Apple HIG 는 시스템 버튼을 권하지만 Apple 로고·허용 문구(로그인/계속하기/가입)·검정/흰 모양을 지킨 직접 그린 버튼을 허용하고, 모서리는 앱의 다른 버튼에 맞춰도 된다. 알약 모양은 Google 지침의 두 모양(사각·알약) 중 하나라 두 회사 지침을 같이 지킨다. Apple 버튼을 다른 로그인보다 작거나 덜 보이게 두지 말라는 조건은 같은 크기·Google 위 순서로 지킨다.
+- **로딩 화면은 계정 선택 창이 닫힌 뒤부터.** 버튼을 누르자마자 덮으면 계정 선택 창을 닫았을 때 로딩 화면이 잠깐 나타났다 사라진다. 그래서 `signIn` 을 증명 받기(`credential` — 구글 ID 토큰·Apple 자격)와 서버 교환(`exchange`)으로 나누고 그 사이에 `authVerifying` 을 켠다. 첫 동기화 질문(`askFirstSync`)이 뜨면 로딩 화면은 걷히고 대화상자가 남는다. 탈퇴(`deleteAccount`)도 `authBusy` 를 켜지만 로딩 화면은 덮지 않는다.
+- **실패 안내는 남긴다.** 뺀 것은 늘 보이던 설명이다. 로그인 실패 문구(`authMessage`)는 실패했을 때만 버튼 아래에 보인다 — 지우면 왜 안 되는지 알 길이 없다.
+- **Android 에 Apple 버튼은 여전히 없다** — *다음 날 동현님 요청으로 바뀌었다: Android 도 Apple 웹 로그인(§114).* (Apple 로그인 설계 §2 비목표, 반목표 "Android 에 눌러도 안 되는 Apple 버튼"). Android 의 Apple 로그인은 웹 로그인 흐름·Services ID·서버 콜백 주소가 더 필요하다. Android 는 Google·로그인 없이 사용 두 버튼이 같은 틀이다.
+- **공룡 오리기.** 종이·공룡이 둘 다 초록이라 밝기로는 못 가르고 색상으로 갈린다(종이 ~70°, 공룡 ~86°). 이마의 노란 하이라이트도 종이 색상대라 '바깥(투명)과 이어진 종이색'만 종이로 본다. 원본 외곽선은 검은 구멍 배경과 같은 색이라 남길 수 없어 오린 모양 둘레에 같은 색 선을 다시 그렸고, 종이에 가려 들쭉날쭉한 뒷머리·목은 손으로 정한 곡선으로 잘랐다. 원본 얼굴 폭이 ~215px 라 3배로 키웠다(모양은 흐린 뒤 키워 계단을 없애고, 선은 3배 해상도에서 그린다).
+
+*main 머지에 따른 고침.* main 의 커뮤니티 탭이 식단과 내 정보 사이에 들어와, 이 브랜치의 `PresentationPolicyTest.swipeFollowsNavigationOrderWithoutWrapping` 탭 목록을 하단 바 순서(5개)로 고치고 `TrexTab.entries` 와 같은지도 본다. 로그인 문구를 찾던 계측 테스트(`SessionFlowTest`)는 워드마크가 없음을 확인하도록 바꿨다.
+
+*검증.* Android 단위 테스트 848개 통과(새 `SignInUiTest` 3개 — 회사별 색·문구·공룡 말투 불변). 에뮬레이터(Medium Phone API 36)에서 계측 테스트 5개 통과 — 새 `SignInScreensUiTest` 3개(그림 하나·세 버튼 같은 높이·워드마크 없음, 로그인 중 버튼 비활성, 로딩 화면이 뒤 버튼을 막음), `RestorationUiTest.logoAndSignInChoicesSurviveNarrowToWideResize`, 재생 앱(`-PpostureReplay`)의 `SessionFlowTest.guideAndLoginKeepArtworkAndActionsVisible`(가이드 → 로그인 → 로그인 없이 사용 → 온보딩). 밝은·어두운 로그인 화면과 로딩 화면 캡처를 눈으로 확인했다. iPhone: Xcode 16.2 로 `ios-ui` Kotlin/Native(iosArm64) 컴파일·기기 빌드·서명(팀 프로비저닝 프로필) 후 iPhone 16 Plus(iOS 27.0.1)에 설치·실행했다(실행 직후 프로세스 살아 있음).
+
+*남은 것.* 실제 Apple·Google 계정으로 로그인해 로딩 화면 → 첫 동기화 질문/홈으로 넘어가는지(실기기, 계정 필요). iPhone 화면 캡처는 이 Mac 의 Xcode 16.2 로 뜨지 않아 iPhone 의 모양은 동현님 눈으로 확인. Android 실기기 설치(연결된 기기 없음 — `app-debug.apk` 만 만들었다).
+
+## §114. 공룡 검정 원 · 메인 탭 스와이프 개선 · Android Apple 로그인 (2026-10-30, `feature/shared-ui-muscle-navigation`)
+
+*요청(동현님 2026-10-29 밤).* "로그인 페이지에서 공룡 누끼가 티나서 주변에 검정색 원으로 감싸", "좌우 화면 드래그로 네비게이션 이동하는거 잘안되는데 확인하고 개선", "안드로이드에도 apple로그인 넣어", 그리고 푸시.
+
+*로그인 로딩 화면 — 로딩바 하나(2026-10-30 추가 요청 "공룡 로고 애니메이션 제거하고 그냥 로딩바로").* 가운데에 앱의 다른 로딩바(사진 식단 분석)와 같은 모양(8dp·둥근 끝·primary 위 track)의 indeterminate `LinearProgressIndicator` 하나. 글자는 없고 화면 읽기에는 "로그인하는 중". 무한 애니메이션 둘(공룡·점)이 빠져 로딩 중 그리는 일도 줄었다.
+
+*공룡 — 검정 원 배지(`TrexDinoBadge`).* 밝은 바탕에서는 오린 외곽선·잘린 목이 드러났다. 원래 그림이 검은 구멍 속 공룡이라 검정 원 위에 두면 외곽선이 바탕에 묻힌다. 머리 끝이 그림 반폭의 1.025배까지 가서 그림을 원 지름의 86% 로 두면 원 반지름 88% 안에 든다. 로그인 화면·로그인 로딩 화면 둘 다 같은 배지다.
+
+*탭 스와이프 — 원인(고치기 전 실측).* 실제 앱(에뮬레이터)에서 홈 → 빠르게 튕기기 40dp/60ms·53dp/120ms 는 넘어가지 않고 160dp 를 천천히 끌어야 넘어갔다. 운동 탭에서는 운동 행 위를 오른쪽으로 밀어도 그대로였다. 새 계측 테스트 `MainTabSwipeUiTest` 8개를 고치기 전 코드로 돌리면 `quickShortFlickMovesTab` 만 실패했다. 원인은 셋이다.
+- 손을 뗄 때 거리(64dp)만 보고 속도를 안 봤다 — 사람은 짧게 튕긴다.
+- 미는 동안 화면이 움직이지 않아 제스처가 먹혔는지 알 수 없었다.
+- 운동 행의 삭제 스와이프(`detectHorizontalDragGestures`)가 양방향을 다 잡았다 — 행은 왼쪽으로만 열리는데 오른쪽 밀기도 삼켰다.
+
+*고침.*
+- `swipedTab` 이 속도도 본다: 56dp 이상, 또는 400dp/s 이상으로 같은 방향으로 16dp 이상 튕기면 넘긴다(`TabSwipeThresholds`). 처음 움직임이 세로에 가까우면(|dx| < |dy|) 잡지 않고 목록 스크롤에 남긴다. 미는 동안 화면이 손가락의 35%(최대 40dp, 넘길 탭이 없는 끝에서는 12%)를 따라오고 손을 떼면 돌아온다. 손가락 좌표는 그 이동 전 좌표로 읽는다(`pointerInput` 이 `graphicsLayer` 바깥). 가장자리 예외는 24dp → 16dp.
+- 운동 행은 왼쪽 밀기(또는 이미 열린 행)만 잡는다 — 닫힌 행을 오른쪽으로 밀면 메인 탭 스와이프가 받아 이전 탭으로 간다. 이동량은 소비하기 전에 읽는다(소비한 변화의 `positionChange()` 는 0 — 처음 고친 판이 이것 때문에 행이 10px 만 움직였고, 원래 코드와 같은 실험으로 찾았다).
+
+*Android Apple 로그인(설계 `docs/superpowers/specs/2026-10-29-apple-sign-in-design.md` §9).* Android 는 Apple 웹 로그인을 Custom Tab(`androidx.browser` 1.8.0)으로 연다. Apple 은 결과를 서버 콜백(`POST /api/auth/oauth/apple/callback`)에 form_post 하고, 서버가 `intent://callback?…;scheme=trexapple;package=…` 로 앱에 되돌려 보낸다. `AppleSignInCallbackActivity` 가 state 가 맞을 때만 넘기고 MainActivity 로 돌아간다. 그 뒤는 iPhone 과 같은 `/api/auth/oauth/apple`(nonce 원문). 서버는 대상(aud)이 번들 ID 또는 Services ID 인지 보고, code 교환·연결 끊기를 토큰을 받은 client 로 한다 — `users.apple_client_id`, 웹 code 는 `redirect_uri` 를 같이 보낸다. 창을 닫고 결과 없이 돌아오면 0.7초 뒤 조용히 취소한다. 버튼은 `trex.appleServicesId`·`trex.appleRedirectUri`(gradle.properties)가 둘 다 있을 때만 그린다.
+
+*동작하려면(코드 밖).* 동현님 개발자 계정에 Services ID `com.leedonghyun.trex.signin`(Sign in with Apple, Return URL 위) → 서버 새 jar + `.env` 의 `APPLE_WEB_CLIENT_ID`·`APPLE_WEB_REDIRECT_URI`(`docs/SERVER_SYNC_HANDOFF.md` 10.5). 그 전에는 버튼은 보이지만 Apple 화면(Services ID 없음)이나 서버(대상 불일치 401)에서 실패한다.
+
+*검증.*
+- Android: 단위 테스트 854개 통과. 새 테스트는 `AppleWebAuthTest` 5개(주소·nonce 해시·state·취소·인코딩)와 `PresentationPolicyTest` 의 튕기기 규칙이다.
+- 계측 테스트(데이터 공간을 늘린 임시 에뮬레이터, API 36): `MainTabSwipeUiTest` 8개, `SignInScreensUiTest` 3개, 재생 앱 `SessionFlowTest` 4개 통과. 그중 새 `workoutRowRightSwipeGoesHomeAndLeftSwipeStillDeletes` 는 행 위 오른쪽 밀기 → 홈, 왼쪽 밀기 → 삭제 확인을 본다.
+- 실제 앱(에뮬레이터): Android 로그인 화면에 Apple 버튼이 보인다. 누르면 Chrome 이 열리지만, 새 에뮬레이터의 Chrome 첫 실행 화면(약관 동의) 때문에 Apple 화면까지는 가지 않았다. 창을 닫으면 오류 없이 버튼이 다시 켜진다. state 가 다른 위조 딥링크는 무시되고 Custom Tab 이 닫힌 채 앱으로 돌아온다.
+- 서버: 테스트 115개 통과. 새 테스트는 콜백 4개, 웹 code 교환·client 별 연결 끊기, 웹 대상 검증이다.
+- **아직 못 한 것**: Services ID·서버 배포 뒤의 실제 Apple 로그인(Android 실기기), 실제 손가락으로 해 보는 스와이프 감(에뮬레이터 주입 입력만 했다), iPhone 의 스와이프·배지 모양(설치만 했다).
+
+## §115. 버벅임 최적화 · 운동 준비/진행 제어판 새 디자인 (2026-10-30, `feature/shared-ui-muscle-navigation`)
+
+*요청(동현님 2026-10-30).* "안드로이드 노트 10에서는 버벅거리기도하고 아이폰 16에서도 버벅거리는게 보여" → 조사 뒤 "최적화 구현까지 순서대로 전부 실시해서 깃에 푸쉬하고 연결된 아이폰 안드로이드에 빌드해". 그 사이 추가 요청 "운동 준비와 시작시에 제어 화면을 이런 디자인과 레이아웃으로 변경해봐"(흰 둥근 판 · 손잡이 · 경과 | 큰 시간 | 세트 · 물결 위 원형 아이콘 버튼, 하나만 채운 원).
+
+*먼저 지킨 것 — 자세 판정·횟수는 그대로.* 판정 규칙·임계값·판정 격자(300ms)·추론 간격(85ms)·카운터는 건드리지 않았다. 고친 것은 화면이 다시 구성되는 횟수, 메인 스레드에서 하던 파일 읽기·파싱, 빌드 설정이다. 판정·카운트는 원래 메인 스레드가 아니라 카메라 분석 스레드에서 실제 시간 기준으로 돈다.
+
+### 1. 빌드 — 느린 빌드로 보고 있었다
+- **Android release:** R8 을 켰다(`isMinifyEnabled = true`). Compose 는 R8 이 디버깅용 `sourceInformation` 호출을 지우고 람다·상태 코드를 인라인해야 제 속도가 난다. 이름은 바꾸지 않는다(`-dontobfuscate` — 로그·크래시 스택을 그대로 읽는다). MediaPipe·protobuf·LiteRT 는 리플렉션·JNI 로 불리므로 통째로 둔다. MediaPipe 가 딸려 오는 AutoValue 주석 처리기의 `javax.lang.model` 참조는 실행 중에 닿지 않아 `-dontwarn`.
+- **Baseline Profile:** `app/src/main/baseline-prof.txt` 에 앱 패키지 전체(`HSPLcom/example/trex_kotlin/**;->**(**)**`)를 넣었다. Compose 라이브러리 프로필과 합쳐져 R8 뒤 15,295줄(앱 4,811줄)이 APK `assets/dexopt/baseline.prof` 로 들어간다. 디버그 빌드에는 적용되지 않는다(디버그는 미리 컴파일되지 않는다).
+- **iPhone:** 설치를 Debug 구성(`linkDebugFrameworkIosArm64`, Swift `-Onone`)에서 Release 구성으로 바꿨다(같은 개발 서명).
+
+### 2. 공룡 말투 변환 — 글자마다 정규식 컴파일
+`toDinoCopy()` 가 글자(`TrexText`)를 처음 그릴 때마다 정규식 둘을 새로 만들고 23개 표를 새로 만들었다(탭을 바꿀 때 수십 번, iPhone 의 Kotlin/Native 정규식은 특히 느리다). 표·정규식을 파일 수준 값으로 한 번만 만들고, 바꿀 어미('니다'·'시오'·'요')도 마침표도 없는 글자(숫자·시간·이름 — 대부분)는 바로 돌려준다. 세 단계가 모두 그 글자들이 있어야만 무엇이든 바꾸므로 결과가 같다.
+- `DinoCopyEquivalenceTest`: 최적화 전 구현을 기준으로 앱 소스의 문자열 리터럴 전부와 어미·명사·문장부호를 섞은 무작위 문장 2만 개가 한 글자도 다르지 않다. `sync_ios_core.py` 로 posture-core 에도 옮겨 iOS 공통 사본도 같은 테스트를 돈다.
+
+### 3. 탭 전환
+- `LocalTrexNavSpace`(하단 바 높이)가 `staticCompositionLocalOf` 라 값이 바뀌면(첫 배치·회전·글자 크기) 탭 화면 전체가 다시 구성됐다 — 앱을 켜자마자 홈이 두 번 구성됐다. `compositionLocalOf` 로 바꿔 읽는 곳만 다시 그린다.
+- 하단 바(`MorphNav`)의 투명도 애니메이션을 구성 단계에서 읽어 260ms 동안 바 전체를 매 프레임 다시 구성했다. `graphicsLayer { alpha }` 로 그리기 단계에서만 읽는다.
+
+### 4. 자세 세트 시작 — 메인 스레드 파일 읽기·파싱
+- `PostureLiveAssets`: 세트 화면을 열 때마다 메인 스레드에서 규칙 JSON(`rules_mp_v0.json` 283KB + 바닥 규칙)과 정상 자세 참조를 읽고 파싱했다. 백그라운드(`Dispatchers.Default`)에서 앱 수명에 한 번만 한다. 규칙셋·참조는 불변 객체라 세션끼리 같이 써도 판정이 같다. 실패 처리도 예전 그대로다(참조 실패 → 빈 참조, 서서 규칙 실패 → 규칙 없음이고 저장하지 않아 다음 화면에서 다시 시도, 바닥 규칙만 실패 → 서서 규칙만). 규칙이 오기 전에는 판정하지 않는 구조(`ruleSet ?: return`)도 그대로이고, 규칙은 준비 카운트다운 중에 이미 다 읽힌다.
+- `savedSets`: 저장된 세트 로그 전체를 읽어 세트 수를 세는 일을 세트 화면을 열 때(메인 스레드)와 세트를 마칠 때마다 했는데, 그 값을 읽는 곳이 없었다. 지웠다(로그 쓰기는 그대로).
+
+### 5. 운동 중
+- **세션 시계:** 0.1초마다 `progress` 를 새로 쓰는데 앱 최상단(`TrexApp`)이 그것을 바로 읽어 0.1초마다 앱 전체가 다시 구성됐다. 화면이 쓰는 값(단계·남은 초·경과 초·횟수)을 `derivedStateOf` 로 읽어 값이 바뀔 때만 다시 구성한다(남은 시간은 1초에 한 번, 단계 번호는 단계가 바뀔 때만). 시간 계산(실제 경과 차이 `elapsedRealtimeMs`)·플랭크의 카메라 확인 시간은 그대로다.
+- **숨쉬기 표시:** 무한 애니메이션의 크기를 구성 단계에서 읽어 운동 내내 HUD 를 매 프레임 다시 구성했다. `graphicsLayer { scaleX/scaleY }` 로 옮겼다.
+
+### 6. 하지 않은 것과 이유
+- **카메라 프레임 비트맵 재사용(Android):** 분석 입력이 YUV 라 프레임마다 `ImageProxy.toBitmap()` 으로 새 비트맵을 만든다. 재사용하려면 RGBA 출력으로 바꾸거나 변환을 직접 해야 하는데, 변환 경로가 바뀌면 모델에 들어가는 픽셀이 달라질 수 있다(관절 좌표·판정이 조용히 바뀔 위험, 원칙 1). 재생 데이터로 전후 관절·판정·횟수를 비교하는 장치를 갖춘 뒤에 한다. 지금도 회전·얼굴용 비트맵은 재사용하고, 원본은 매 프레임 바로 `recycle()` 한다.
+- **iPhone 카메라·웹뷰 UIKit 겹침 모드:** 매 프레임 Compose 와 맞추는 비용이 있지만, 겹침 모드(`placedAsOverlay`)는 카메라를 Compose 위로 올려 뼈대·안내가 가려진다. 하지 않았다.
+
+### 7. 화면별(식단 검색 · 근육 피로도 웹뷰 · 운동 방법 GIF · 커뮤니티)
+- **식단 직접 기록 시트(`Sheets.kt`):** 한 글자(자모) 칠 때마다 결과 전부("밥" 만 쳐도 53줄)를 목록 최적화 없이 다시 그렸다. 검색 결과·합계·담은 음식을 `LazyColumn` 하나에 두어 보이는 줄만 그린다. 자리(안쪽 여백 20/16, 검색 묶음 위 10·줄 사이 7, 묶음 뒤 16)는 항목 위 여백으로 예전 스크롤 Column 과 같게 맞췄다. 항목 키는 순서(기본) — 이름 키면 백스페이스로 결과가 늘 때 화면이 보던 음식을 따라가 새 결과가 위에 가려진다. 적다 만 등록 폼은 따로 키를 주고 붙잡아 둔다(`KeepComposedInLazyList`, `TrexDesign.kt` — `LocalPinnableContainer.pin()`). 인분 입력 창은 같은 조건으로 목록 밖에 둬 항목이 폐기돼도 닫히지 않는다. 사진 기록의 음식 고르기 창도 같은 방식이다.
+- **근육 피로도(`MuscleLoadScreen.kt`):** 30초 새로고침이 계산 시각만 바뀐 스냅샷을 새로 만들어 순위·추천·색 JSON 을 다시 계산했다 → 쓰는 값(`snapshot.muscles`·`sets`)을 키로. WebView 에 마지막으로 보낸 명령과 같으면 JS 를 다시 돌리지 않는다(Android `tag`, iPhone 내비게이션 대리자 — 페이지가 다 읽히면 최신 명령을 보내는 길은 그대로). 근육도 항목을 붙잡아 스크롤로 나갔다 와도 WebView·페이지를 다시 만들지 않는다. 최근 기록이 있으면 피로도가 시간에 따라 줄어 30초마다 값이 실제로 바뀌므로 그때는 JS 가 돈다(값을 반올림하면 화면이 달라져 하지 않았다).
+- **운동 방법 GIF(Android):** 2프레임(0.9·1.1 초) 시범을 매 화면(60~120 Hz) 다시 그렸다. 프레임이 바뀌는 때에만 그린다 — `gifFrameEnds` 가 Android `Movie`(GIFMovie)와 같은 규칙(그림 앞 첫 그래픽 제어 확장의 지연 × 10, `time ≤ 끝` 인 첫 프레임)으로 프레임 끝 시각을 읽고, 합이 `movie.duration()` 과 다르면 쓰지 않고 예전처럼 매 화면 그린다. 재생 시각 계산은 예전 그대로다(한 번에 더하는 상한만 '예약 간격 + 100 ms'). 한 바퀴 110~130번 그리던 것이 2번. iPhone 은 WKWebView `<img>` 라 WebKit 이 이미 프레임이 바뀔 때만 그린다.
+- **커뮤니티:** Android 사진 디코딩(백그라운드)에서 `prepareToDraw()` — 사진이 처음 보이는 프레임이 GPU 올리기를 떠안지 않는다. 좋아요 한 번에 보이는 카드가 전부 다시 그려졌다 — 카드마다 메뉴 목록(`List`, 불안정 타입)을 새로 만들어 `PostCard` 가 한 번도 건너뛰지 못했다 → `remember(post, gate)`(댓글 메뉴는 `remember(comment, post.mine, gate)`).
+
+### 8. 운동 준비·진행 제어판 새 디자인(`SessionControlPanel.kt`)
+- **공통 부품:** 손잡이(`SessionPanelHandle`) · 세 칸 수치(`SessionStatsRow` — 왼쪽·오른쪽은 이름과 값, 가운데는 큰 값) · 물결 무늬 위 원형 버튼 줄(`SessionActionRow` + `SessionCircleButton`, 주요 동작 하나만 크게 주색으로 채운다) · 작은 칩 줄(`SessionChip`). 물결은 버튼 줄 뒤 장식 그림(Canvas, 읽히지 않는다)이다.
+- **카메라 준비:** 손잡이 · "운동 준비" + 5초 후 시작 + 운동 방법 · 목표 | 카운트다운 링(또는 방향 시범) | 세트 · 배치 안내·약속 문장·이유·세는 조건(남는 높이 안에서 스크롤 — 버튼 줄은 늘 판 아래) · 방식 선택 · [나가기 · 음성 · **준비 건너뛰기** · 카메라 · 준비 멈춤].
+- **카메라 운동 중:** 손잡이(누르거나 아래로 끌면 제어판 접기 — 예전 '화면 넓게' 버튼 자리) · 경과(세트 경과) | 남은 시간 또는 센 횟수 "8 / 12회" | 세트 · 코칭 문장과 '자동 횟수 · 참고' 줄 · [종료 · 음성 · **일시정지/재개** · 카메라 · 건너뛰기] · 방식 선택 · 칩[횟수 수정 · 숫자 읽기 · 운동 방법]. 검증 모드(§61)는 HUD 와 같이 자동 횟수 숫자를 "—" 로 숨긴다. 횟수는 여전히 beta 라 '참고' 줄을 바로 아래 둔다(원칙 2).
+- **타이머 세션 · 타이머 준비:** 같은 흰 판과 원형 버튼 줄. 직접 횟수 기록 세트는 **횟수 기록**이, 시간 세트는 **일시정지/재개**가, 준비는 **바로 시작**이 주요 동작이다.
+- **바뀌지 않은 것:** 모든 동작·확인창·횟수 시트 흐름, 접근성 이름("운동 종료", "이 세트 건너뛰기", "일시정지"/"재개", "제어판 접기", "음성 안내 끄기/켜기", "카메라 전환", "준비 건너뛰기", "5초 후 시작", "횟수 기록/수정", "<운동> 운동 방법"). 원형 버튼은 원과 이름을 합친 칸 전체가 누르는 자리다.
+- 세트 칸 값은 세션 단계의 표기("1 / 2 세트")를 "1/2" 로 줄인다(`setFraction`, 모르는 형식은 그대로).
+
+### 9. iPhone 앱 아이콘 — 로그인 화면 공룡 로고(2026-10-30 추가 요청)
+"아이폰 아이콘 TREX 로그인 페이지 공룡 로고처럼 만들어서 적용". iPhone 앱에는 아이콘(에셋 카탈로그)이 아예 없어 기본 빈 아이콘이었다. 로그인 배지(`TrexDinoBadge`)를 그대로 옮긴 1024×1024 한 장을 `iosApp/Trex/Assets.xcassets/AppIcon.appiconset` 에 두었다 — 로그인 화면 바탕(#EFF1EA) 위 검정 원(아이콘 폭의 84%), 그 안에 원 지름의 86% 공룡 얼굴(`DINO_IN_BADGE` 와 같다). iOS 가 모서리를 깎으므로 정사각·불투명이다. 다시 만들 때는 `python3 tools/icon/make_ios_app_icon.py`. Xcode 프로젝트는 `project.yml` 로 생성(`xcodegen generate` 뒤 `TrexPods` 에서 `pod install`, `iosApp/scripts/setup-mac.sh`)하며 `Trex/` 아래 카탈로그를 자원으로 넣고 `ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon` 은 XcodeGen 기본값이다. Android 실행 아이콘(`tools/icon/make_launcher_icon.py`, 어두운 배경 + 예전 로고)은 이번에 바꾸지 않았다.
+
+### 검증
+- **단위 테스트:** 앱 861개·공통 엔진(posture-core — iPhone 이 쓰는 사본) 527개 모두 통과. 새로 넣은 것은 `DinoCopyEquivalenceTest`(앱·posture-core 양쪽), `SessionControlPanelTest`, `ExerciseGuidesTest` 의 GIF 3개(실제 자산 파싱 · 다시 그리는 시점 = 프레임이 바뀌는 시점 전수 · 깨진 파일은 예전 방식)다. 자세 엔진(규칙·임계값·카운터·분석 루프) 코드는 바뀌지 않았고 엔진 테스트가 그대로 통과한다.
+- **빌드:** Android release(R8) 빌드 성공, APK 에 `assets/dexopt/baseline.prof`. Credential Manager 구현 클래스는 라이브러리의 소비자 규칙이 남긴다(구글 로그인 경로). iPhone 은 Release 구성으로 빌드·설치했다.
+- **계측 테스트(임시 에뮬레이터 API 36, RAM 4GB — 2GB 는 스왑으로 너무 느렸다):** 44개 중 40개 통과(`SessionFlowTest` 14/17, `ExerciseGuideFlowTest` 2, `RestorationUiTest` 7, `MainTabSwipeUiTest` 8, `SignInScreensUiTest` 3, `BottomSheetGestureTest` 5, `SessionCompletionLayoutTest` 1). 실패 4개:
+  - `perExerciseEditorPersistsIndependentTargetsAndPosture` — 48a5cda 에서 화면 문구가 "추천 대체 운동" 에서 "근육 피로도/날씨 기반 추천 운동" 으로 바뀌었는데 테스트가 옛 문구를 찾는다(이번 변경 전부터 낡음).
+  - `SessionMuscleRenderTest` — c4ae041(2D 근육도)부터 근육도는 돌지 않는 그림이라 터치를 받지 않는데 테스트는 3D 회전을 기대한다(이번 변경 전부터 낡음).
+  - `cameraPreparationCancelsOnBackgroundAndStartsAtCountdownEnd` — 5초 카운트다운 안에 스크린샷 저장까지 끝나야 하는 시간 의존 테스트. 변경 전 코드(HEAD)도 같은 에뮬레이터에서 같은 줄(430)에서 두 번 다 실패했다.
+  - `configuredSetsRestPauseSkipAndAutoAdvanceUseRealApp` — 제어판에 시계(세트 경과, 올라간다)가 늘어 '첫 시계' 대신 '남은 시간' 시계를 읽게 고쳤다. 그래도 느린 에뮬레이터에서는 사람 없는 플랭크의 20 s 시계 폴백 따라잡기(`HoldBridge`, 설계된 동작)가 측정 구간에 걸려(00:58 → 00:39) 실패해, 측정 전에 타이머가 움직이기 시작하기를 기다리게 보강했다. 보강한 판은 에뮬레이터 검증을 멈춰(동현님 2026-10-30 "에뮬레이터는 안돌려도됨 내가 실검증할거야") 돌리지 않았다.
+- **아직 못 한 것:** 실기기 체감(Note 10·iPhone 16 Plus)과 제어판 실사용 — 동현님이 직접 검증한다. Note 10 은 설치된 앱의 서명이 이 Mac 의 디버그 키와 달라 덮어 설치가 안 된다(지우면 기록·기준선이 지워지므로 백업 뒤에만 — CLAUDE.md '설치 함정').
+
+## §116. 실검증 도구는 저장소 빌드에만 — 배포 빌드에서 끈다 (2026-10-30, `feature/shared-ui-muscle-navigation`)
+
+*요청(동현님 2026-10-30).* "실제 사용자들은 해당 기능이 필요없어 실검증하는 개발자들이 필요하지" → "배포하는 앱들은 해당 기능 없게 할거고 지금 git 에다가 올리고 해당 코드를 통해 빌드하면 기능이 있게".
+
+*무엇이 실검증 도구인가.* 세트 로그(`posture_logs/sets-*.jsonl` — 원본 프레임 피처·관절 좌표, §14), 음성 기록(`posture_logs/feedback-*.jsonl`, §101), 완료 화면의 자가 라벨(실제 횟수·자세 자평 → `labels/set_labels.jsonl`·`rep_truth.csv`), 횟수 검증 모드(`rep_validation.on`, §61). 그 전에는 모든 사용자의 모든 세트에 좌표가 기간 제한 없이 쌓였고 자가 라벨 입력이 모두에게 보였다.
+
+*어떻게 가르나 — 빌드 플래그, 기본은 켜짐.* 저장소 코드로 빌드하면 켜져 있고, 사용자에게 나가는 배포 빌드만 끈다. 앱 안 스위치(개발자 모드)가 아니라 빌드로 가른 것은 동현님 결정이다 — 배포 앱에는 기능 자체가 없다.
+- Android: `-Ptrex.distribution=true`(또는 `local.properties`) → `BuildConfig.DEV_TOOLS = false`. 켜진 빌드는 `versionNameSuffix = "-dev"` — 세트 로그의 `app_version` 에도 남아 어떤 빌드가 센 세트인지 갈린다. `scripts/publish_release.sh` 는 APK 버전 이름(aapt2)이 `-dev` 로 끝나면 올리지 않는다.
+- iPhone: Info.plist `TrexDevTools` = 빌드 설정 `TREX_DEV_TOOLS`(project.yml 기본 YES). `"NO"` 일 때만 꺼지고 값이 없거나 비면 켜진다(XcodeGen 을 다시 돌리지 않은 프로젝트도 켜진 쪽). 배포는 `xcodebuild … TREX_DEV_TOOLS=NO`. CI 의 서명 없는 IPA(`build-unsigned-ipa.sh`)는 배포가 아니라 그대로 켜져 있다.
+- 공유 코드는 짝 상수 `PLATFORM_DEV_TOOLS`(Android `PlatformUi.kt` ↔ iPhone `PlatformUi.kt`)만 본다.
+
+*끄는 자리.* 세트 로그 쓰기(`PostureLive` — 리포트·기록·완료 화면은 그대로 만든다, 지역 변수는 늘리지 않았다), 음성 기록 파일(Android `AndroidSpeech.trace`·iPhone `IosAudio.trace` — `SpeechCoach.traceFeedback` 은 그대로라 엔진 테스트의 기록 확인은 바뀌지 않는다), 자가 라벨 칸(`SessionScreens` `SelfLabelSlot`), 검증 모드(Android `rememberRepValidation` — 표시 파일이 있어도 끈다. iPhone 은 원래 꺼짐). 자세 판정·횟수·음성 코칭은 두 빌드가 같다.
+
+*포기한 것.* §14 의 "실제 세션 로그가 재보정 데이터" 는 이제 개발자 빌드에서만 생긴다. 라벨 없는 사용자 로그는 쓰임이 적고 몸 좌표라 동의 없이 남기지 않는다. 실사용 데이터가 필요해지면 동의·보관 기간을 갖춘 별도 기능으로 한다.
+
+## §117. 로그인 화면에 아이디로 로그인 — main 의 D13 과 합치기 (2026-10-30, `feature/shared-ui-muscle-navigation`)
+
+*배경.* main 에 아이디·비밀번호 로그인/가입(docs/SERVER_SYNC_HANDOFF.md D13, #36·#37)이 들어오면서, 공룡과 버튼 셋만 남긴 이 브랜치의 로그인 화면(§113)과 충돌했다 — main 판은 화면 위에 로그인/회원가입 탭과 칸을 늘 펼쳐 두고 아래를 스크롤했다.
+
+*요청(동현님 2026-10-30).* "로그인 없이 사용을 작은 버튼으로 만들고 그자리에 apple과 google과 같은 크기로 아이디로 로그인 버튼… apple로 계속하기 위에 처음 버튼으로", "누르면 입력칸이 열리면서 레이아웃 높이가 늘어나는데 이만큼 공룡 로고를 줄일거야 — 로그인 페이지에 스크롤이 되지 않도록", "애니메이션으로 자연스럽게", "누르면 자동으로 id에 focus되고 키패드에 현재 입력하는게 가려지지 않게".
+
+*화면.*
+- 버튼 줄: **아이디로 로그인**(`IdSignInButton` — Apple·Google 과 같은 틀·54dp, 앱 주색) → Apple → Google, 그 아래 작은 글자 버튼 "로그인 없이 사용"(48dp 누르는 자리).
+- "아이디로 로그인"을 누르면 그 **위에** 아이디·비밀번호 칸이 펼쳐지고(320ms, 아래에서 위로) 버튼은 "로그인"이 된다(두 칸을 채워야 누를 수 있다). 버튼 아래 "회원가입"·"접기". 뒤로 가기도 접는다.
+- 아이디 칸에 바로 커서가 가고 키보드가 열린다(펼친 다음 프레임에 `requestFocus`). 아이디는 영문 키보드(ASCII), 다음 키 → 비밀번호, 완료 키 → 로그인.
+- 가입은 "회원가입"이 main 의 가입 칸(이름·아이디·비밀번호·확인·이메일·동의, 비밀번호 찾기 없음 안내)을 전체 화면 창으로 연다 — 칸이 길어 그 창은 스크롤한다. 설정·커뮤니티의 "아이디로 로그인·가입"(같은 알약 버튼)도 같은 창이다.
+
+*스크롤 없는 배치(`AuthLayout`).* 위에서부터 공룡 · 펼친 칸 · 버튼 줄 · Apple·Google·로그인 없이 사용을 한 번의 배치 계산으로 놓는다.
+- 공룡 크기 = (접었을 때 크기 − 펼쳐 늘어난 높이), 최소 72dp. 공룡 위아래 빈자리는 그대로라 화면 전체 높이가 변하지 않고, 펼치는 애니메이션의 매 프레임을 공룡이 그대로 따라 작아진다(따로 애니메이션을 두지 않는다).
+- 키보드가 올라와 보이는 높이가 줄면, 적는 칸이 있는 동안 기억한 키보드 전 높이로 계산해 아래 버튼 줄(Apple·Google·로그인 없이 사용)이 먼저 키보드 밑으로 들어가고, 그래도 모자라면 공룡이 더 작아진다 — 적는 칸·로그인 버튼·회원가입 줄은 늘 보이는 높이 안이다. 키보드 밑으로 간 줄은 잘라 그리지 않는다.
+- 보이는 높이가 주는 길은 플랫폼마다 다르지만 이 화면에는 같다: Android 12 이하는 창이 줄고(`windowSoftInputMode=adjustResize` 를 매니페스트에 명시했다 — 그 전에는 지정이 없어 기기마다 밀기·줄이기가 갈렸다), Android 15 이상·iPhone(`OnFocusBehavior.DoNothing`)은 앱 루트의 `safeDrawing` 과 화면의 `imePadding` 이 키보드만큼 준다.
+
+*로그인 흐름.* 아이디 로그인·가입도 소셜과 같은 `signIn` 을 지난다(증명 단계가 없어 바로 서버 확인) — 확인 동안 로그인 로딩 화면(§113)이 덮이고, 실패 문구는 버튼 줄 아래에 보인다. 서버 규칙(5번 실패 10분 잠금 등)·가입 칸 검사(`signupProblem`)는 main 그대로다.
+
+*병합에서 고친 것.* `docs/SERVER_SYNC_HANDOFF.md` 는 두 쪽이 같은 10.4 를 써서 main 의 "첫 실기기 시도" 를 10.4, 이 브랜치의 Android Apple 웹 흐름을 10.5 로 두었다(§114·설계 문서의 참조도 10.5). `DField` 에 칸 자체의 수정자·키보드 실행 키를 받는 선택 인자를 더했다(기본값은 예전과 같다).
+
+*검증.* 단위 테스트 869개(main 의 `PasswordAccountTest` 포함), iPhone 공유 코드 컴파일, 계측 테스트 컴파일. `SignInScreensUiTest` 에 버튼 순서·크기와 "펼치면 아이디 칸에 커서·공룡이 작아짐·844dp 안에 전부·입력 후 로그인·접으면 원래 크기" 를 넣었고 `RestorationUiTest` 의 폭 바꾸기는 스크롤 없이 보는 것으로 바꿨다 — **계측 테스트는 실행하지 않았다**(에뮬레이터 대신 동현님 실기기 검증). 키보드가 칸을 가리지 않는지·애니메이션 느낌은 실기기에서 확인해야 한다.

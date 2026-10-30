@@ -62,6 +62,7 @@ com/example/trex_kotlin/community/WorkoutCard.kt
 # 경계 타입은 PlatformApi.kt. 앱 내 업데이트(AppUpdate)는 Android 체험판 전용이라 목록 밖이다.
 com/example/trex_kotlin/PlatformApi.kt
 com/example/trex_kotlin/TrexApp.kt
+com/example/trex_kotlin/MainTabSwipe.kt
 com/example/trex_kotlin/TrexTheme.kt
 com/example/trex_kotlin/AdaptiveLayout.kt
 com/example/trex_kotlin/MainScreens.kt
@@ -70,6 +71,7 @@ com/example/trex_kotlin/MealSymbol.kt
 com/example/trex_kotlin/RoutineHero.kt
 com/example/trex_kotlin/WorkoutListScreen.kt
 com/example/trex_kotlin/WorkoutControls.kt
+com/example/trex_kotlin/SessionControlPanel.kt
 com/example/trex_kotlin/CameraActions.kt
 com/example/trex_kotlin/WorkoutCatalogUi.kt
 com/example/trex_kotlin/WorkoutEditor.kt
@@ -80,6 +82,7 @@ com/example/trex_kotlin/RecordScreen.kt
 com/example/trex_kotlin/DietRecordScreen.kt
 com/example/trex_kotlin/SettingsScreen.kt
 com/example/trex_kotlin/AuthScreens.kt
+com/example/trex_kotlin/SignInUi.kt
 com/example/trex_kotlin/GuideBookScreen.kt
 com/example/trex_kotlin/MuscleLoadScreen.kt
 com/example/trex_kotlin/SessionScreens.kt
@@ -89,6 +92,7 @@ com/example/trex_kotlin/trainingload/SessionMuscles.kt
 # Phase 3(§108c) — 자세 화면: 분석 루프(PostureLive)·바닥 계열 상태·준비 패널·무대·HUD·제어판, 플랫폼 경계, 세트 로그 형식·모드 저장·검증 표시·세션 스피커
 com/example/trex_kotlin/PostureLiveApi.kt
 com/example/trex_kotlin/PostureLive.kt
+com/example/trex_kotlin/PostureLiveAssets.kt
 com/example/trex_kotlin/PostureFloorLive.kt
 com/example/trex_kotlin/CapturePreparationUi.kt
 com/example/trex_kotlin/SkeletonStage.kt

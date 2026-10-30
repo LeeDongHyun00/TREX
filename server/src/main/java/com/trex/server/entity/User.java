@@ -48,6 +48,11 @@ public class User {
     @Column(name = "apple_refresh_token", length = 1024)
     private String appleRefreshToken;
 
+    // 그 refresh token 을 받은 client_id(iPhone 번들 ID 또는 Android 웹 로그인 Services ID) — 연결 끊기도 같은 client 로 불러야 Apple 이 받는다.
+    // 이 열이 생기기 전 회원은 비어 있고, 그때는 기본 번들 ID 로 끊는다.
+    @Column(name = "apple_client_id")
+    private String appleClientId;
+
     @Builder
     public User(String loginId, String passwordHash, String name, String email, AuthProvider provider, String providerId) {
         this.loginId = loginId;
@@ -58,8 +63,9 @@ public class User {
         this.providerId = providerId;
     }
 
-    /** Apple 로그인 때 code 를 바꿔 받은 refresh token 을 기억한다(다시 로그인하면 새 것으로). */
-    public void rememberAppleRefreshToken(String refreshToken) {
+    /** Apple 로그인 때 code 를 바꿔 받은 refresh token 과 그 client 를 기억한다(다시 로그인하면 새 것으로). */
+    public void rememberAppleRefreshToken(String refreshToken, String clientId) {
         this.appleRefreshToken = refreshToken;
+        this.appleClientId = clientId;
     }
 }

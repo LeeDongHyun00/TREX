@@ -159,9 +159,9 @@ class SessionFlowTest {
         ActivityScenario.launch(MainActivity::class.java).use {
             await("다음");Thread.sleep(1200);capture("guide-full-image")
             repeat(3){click("다음");Thread.sleep(250)}
-            // 로그인은 아이디·비밀번호 대신 Google 로그인·로그인 없이 사용 두 선택지다(AuthScreens)
+            // 로그인은 아이디·비밀번호 대신 Google 로그인·로그인 없이 사용 두 선택지다(AuthScreens) — 공룡 그림 하나와 버튼만(워드마크·소개 문구 없음)
             click("시작하기");await("Google로 계속하기");Thread.sleep(1500);capture("login-restored")
-            assertNotNull(find("TREX"));assertNotNull(find("TREX 로고"))
+            assertNull(find("TREX"));assertNotNull(find("TREX 로고"))
             assertNull(find("자세 교정 실험실"))
             assertNull(find("자세 기준선 설정"));assertNull(find("가이드북"));assertNull(find("계정 도움"))
             click("로그인 없이 사용");await("1/4")
@@ -202,6 +202,43 @@ class SessionFlowTest {
             await("기록 확인 스쿼트");capture("record-expanded")
             click(label);Thread.sleep(400);assertNull(find("기록 확인 스쿼트"))
             click("기록 뒤로가기");await("프로필 편집")
+        }
+    }
+
+    /** 실제 손가락처럼 [ms] 동안 고르게 민다(이벤트 시각도 실제 시각 — 탭 스와이프가 속도를 본다). */
+    private fun swipe(x1: Int, y1: Int, x2: Int, y2: Int, ms: Long) {
+        val downTime = android.os.SystemClock.uptimeMillis()
+        fun send(action: Int, x: Float, y: Float) {
+            val event = android.view.MotionEvent.obtain(downTime, android.os.SystemClock.uptimeMillis(), action, x, y, 0)
+            event.source = android.view.InputDevice.SOURCE_TOUCHSCREEN
+            instrumentation.uiAutomation.injectInputEvent(event, true)
+            event.recycle()
+        }
+        val steps = (ms / 12).toInt().coerceAtLeast(3)
+        send(android.view.MotionEvent.ACTION_DOWN, x1.toFloat(), y1.toFloat())
+        for (i in 1..steps) {
+            Thread.sleep(ms / steps)
+            send(android.view.MotionEvent.ACTION_MOVE, x1 + (x2 - x1) * i / steps.toFloat(), y1 + (y2 - y1) * i / steps.toFloat())
+        }
+        send(android.view.MotionEvent.ACTION_UP, x2.toFloat(), y2.toFloat())
+        instrumentation.waitForIdleSync()
+        Thread.sleep(600)
+    }
+
+    /** 운동 행은 왼쪽으로만 열린다 — 행 위를 오른쪽으로 밀면 이전 탭(홈)으로 가고, 왼쪽으로 밀면 예전처럼 삭제를 묻는다(스펙 §114). */
+    @Test fun workoutRowRightSwipeGoesHomeAndLeftSwipeStillDeletes() = isolated { store ->
+        store.guideDone=true;store.loggedIn=true;store.onboarded=true
+        store.savePlan(listOf(Workout("swipe-a","기본 스쿼트","2회 × 2세트","99분",false,"하체")))
+        ActivityScenario.launch(MainActivity::class.java).use {
+            click("운동");await("기본 스쿼트 수정")
+            val row=android.graphics.Rect().also { find("기본 스쿼트 수정")!!.getBoundsInScreen(it) }
+            swipe(row.left+row.width()/4,row.centerY(),row.right-row.width()/8,row.centerY(),350)
+            await("운동한 날");capture("row-right-swipe-home")
+            click("운동");await("기본 스쿼트 수정")
+            // 오른쪽 끝은 자세 교정 스위치 자리라 가운데서 시작한다
+            swipe(row.left+row.width()*3/5,row.centerY(),row.left+row.width()/20,row.centerY(),450)
+            await("삭제");capture("row-left-swipe-delete");click("취소")
+            assertEquals(1,TrexStore(context).loadPlan()!!.size)
         }
     }
 
@@ -530,14 +567,20 @@ class SessionFlowTest {
             instrumentation.sendKeyDownUpSync(android.view.KeyEvent.KEYCODE_BACK)
             await("재개");assertNotNull(find(holdClock))
             // 진행 중에 확인창을 열면 타이머가 멈추고 취소하면 다시 진행한다.
+            // 세션 타이머는 제어판 세 칸 수치의 가운데('남은 시간' 바로 위) 시계다 — 첫 시계인 왼쪽 '경과' 는 세트 경과라 올라간다(스펙 §115)
+            fun sessionClock() = nodes().mapNotNull { it.text?.toString() }.let { t -> t[t.indexOf("남은 시간") - 1] }
             click("재개")
-            val beforeAsk=nodes().mapNotNull { it.text?.toString() }.first { Regex("\\d+:\\d{2}").matches(it) }
+            // 사람이 없는 에뮬레이터의 플랭크는 WORK 20 s(일시정지 제외) 뒤 시계로 넘어가며 그때까지의 시간을 한 번에 줄인다(HoldBridge 따라잡기) —
+            // 그 한 번의 점프가 아래 측정 구간에 걸리지 않게, 타이머가 움직이기 시작한 뒤에 잰다
+            val notMoving=sessionClock();val moveBy=System.currentTimeMillis()+30_000
+            while(sessionClock()==notMoving && System.currentTimeMillis()<moveBy) Thread.sleep(200)
+            val beforeAsk=sessionClock()
             click("이 세트 건너뛰기");await("이 세트를 건너뛸까요?")
             Thread.sleep(3500);click("취소");await("일시정지")
-            val resumedClock=nodes().mapNotNull { it.text?.toString() }.first { Regex("\\d+:\\d{2}").matches(it) }
+            val resumedClock=sessionClock()
             fun seconds(value: String) = value.split(":").let { it[0].toInt()*60+it[1].toInt() }
-            assertTrue("확인창 대기 중 타이머 정지", seconds(beforeAsk)-seconds(resumedClock) in 0..2)
-            Thread.sleep(1500);assertNull(find(resumedClock))
+            assertTrue("확인창 대기 중 타이머 정지: $beforeAsk → $resumedClock", seconds(beforeAsk)-seconds(resumedClock) in 0..2)
+            Thread.sleep(1500);assertNotEquals(resumedClock, sessionClock())
             click("이 세트 건너뛰기");await("이 세트를 건너뛸까요?");click("건너뛰기")
             await("완료 세트")
             // 시간 운동은 1 s 이상 움직였으면 건너뛰어도 그 시간을 기록한다(completedWorkouts — 근육 피로도의 실제 가동 시간)

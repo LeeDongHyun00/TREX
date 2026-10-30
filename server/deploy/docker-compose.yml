@@ -24,10 +24,16 @@ services:
       APPLE_TEAM_ID: ${APPLE_TEAM_ID:-}
       APPLE_KEY_ID: ${APPLE_KEY_ID:-}
       APPLE_PRIVATE_KEY: ${APPLE_PRIVATE_KEY:-}
+      # Android Apple 로그인(웹 흐름, docs/SERVER_SYNC_HANDOFF.md 10절) — Services ID·Return URL 은 비밀값 아님
+      APPLE_WEB_CLIENT_ID: ${APPLE_WEB_CLIENT_ID:-}
+      APPLE_WEB_REDIRECT_URI: ${APPLE_WEB_REDIRECT_URI:-}
+      APPLE_ANDROID_PACKAGE: ${APPLE_ANDROID_PACKAGE:-com.example.trex_kotlin}
       # 커뮤니티(docs/SERVER_SYNC_HANDOFF.md 9절) — 사진 버킷은 필수, 관리자·신고 웹후크는 선택
       COMMUNITY_S3_BUCKET: ${COMMUNITY_S3_BUCKET:-}
       COMMUNITY_ADMIN_LOGIN_IDS: ${COMMUNITY_ADMIN_LOGIN_IDS:-}
       COMMUNITY_REPORT_WEBHOOK_URL: ${COMMUNITY_REPORT_WEBHOOK_URL:-}
+      # 공유 링크 웹 페이지의 iPhone "앱 설치하기"(App Store 주소, 출시 전 비움 — 비밀값 아님)
+      SHARE_IOS_INSTALL_URL: ${SHARE_IOS_INSTALL_URL:-}
       AWS_REGION: ap-southeast-2
       TZ: Asia/Seoul
     expose:

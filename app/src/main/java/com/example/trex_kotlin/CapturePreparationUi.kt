@@ -4,6 +4,10 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material.icons.rounded.SkipNext
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.VolumeOff
 import androidx.compose.material.icons.automirrored.rounded.VolumeUp
@@ -62,6 +66,8 @@ internal fun CapturePreparationPanel(
     onShowGuide: (() -> Unit)? = null,
     guideName: String = profile.name,
     onTogglePause: () -> Unit = {},
+    goalLabel: String = "",
+    setLabel: String = "",
 ) {
     val c = Trex.c
     val tone = rememberRepTone(60)
@@ -177,68 +183,65 @@ internal fun CapturePreparationPanel(
         }
     }
     val counting = state.phase == PreparationPhase.COUNTDOWN
-    Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Column(Modifier.weight(1f, fill = false), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    val prepPaused = userPaused || paused
+    // 제어판 디자인(스펙 §115) — 손잡이 · 세 칸 수치(목표 · 카운트다운/방향 시범 · 세트) · 안내 글 · 방식 선택 · 물결 위 원형 버튼 줄
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        SessionPanelHandle()
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text("운동 준비", color = c.text, fontSize = 19.sp, fontWeight = FontWeight.SemiBold,
+            Text("운동 준비", color = c.text, fontSize = 17.sp, fontWeight = FontWeight.SemiBold,
                 modifier = Modifier.weight(1f))
+            TextButton(onClick = {
+                if (!paused) { userPaused=false; speech.stop(); controller.manual(elapsedRealtimeMs(),5);state=controller.state }
+            }, enabled = !paused && !userPaused && (!counting || state.trackingHold)) {
+                Text("5초 후 시작", color = c.primaryText, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+            }
             if (onShowGuide != null) ExerciseGuideButton(guideName, { cancel(); onShowGuide() })
         }
-        Row(Modifier.fillMaxWidth().heightIn(min = 114.dp), verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            if (counting) RingGauge(state.progress, 110.dp, 5.dp) {
+        SessionStatsRow("목표", goalLabel, "세트", setFraction(setLabel), Modifier.heightIn(min = 104.dp)) {
+            if (counting) RingGauge(state.progress, 100.dp, 5.dp) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("${state.seconds}", color = c.text, fontSize = 36.sp, fontWeight = FontWeight.SemiBold)
                     Text(if(state.trackingHold) "잠시 확인 중" else "시작까지", color = c.text2, fontSize = 11.sp)
                 }
-            } else CaptureDirectionDemo(profile.capture, frontCamera, Modifier.size(114.dp))
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(profile.capture.placement, color = c.text, fontSize = 15.sp, lineHeight = 21.sp)
-                // 약속 문장은 화면 고정 문구(§101 — 음성에서 뺐다. 종전 안내 맨 끝에 있어 8/10 세트에서 들리지 않았다)
-                Text(START_PROMISE, color = c.text3, fontSize = 12.sp, lineHeight = 17.sp)
-                // 멈춘·처음으로 돌아간·아직 못 잡은 이유를 화면에도 — 배치 안내만 떠 있으면 무엇이 문제인지 모른다(§89 후속)
-                val reason = state.message.takeIf {
-                    (state.trackingHold || state.phase == PreparationPhase.WAITING) && it !in GENERIC_PREPARATION_MESSAGES
-                }
-                if (reason != null) Text(reason, color = if (reason == CapturePreparationController.READY_MESSAGE) c.text else c.warn, fontSize = 14.sp, lineHeight = 20.sp, fontWeight = FontWeight.SemiBold)
-                // 세는 조건 전문(ESS + DET, §101) — 음성이 못 다 말한 내용은 화면이 가진다(원칙 #5). 그 아래 바닥 범위 문장(spec §99, PostureScope.FLOOR_LINES)
-                profile.countingConditions?.let { Text(it, color = c.text2, fontSize = 13.sp, lineHeight = 18.sp) }
-                com.example.trex_kotlin.posture.PostureScope.floorLine(profile.referenceExercise)?.let {
-                    Text(it, color = c.text3, fontSize = 12.sp, lineHeight = 17.sp)
-                }
+            } else CaptureDirectionDemo(profile.capture, frontCamera, Modifier.size(104.dp))
+        }
+        // 안내 글은 남는 높이 안에서 스크롤한다 — 버튼 줄은 늘 판 아래에 있다
+        Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(profile.capture.placement, color = c.text, fontSize = 15.sp, lineHeight = 21.sp)
+            // 약속 문장은 화면 고정 문구(§101 — 음성에서 뺐다. 종전 안내 맨 끝에 있어 8/10 세트에서 들리지 않았다)
+            Text(START_PROMISE, color = c.text3, fontSize = 12.sp, lineHeight = 17.sp)
+            // 멈춘·처음으로 돌아간·아직 못 잡은 이유를 화면에도 — 배치 안내만 떠 있으면 무엇이 문제인지 모른다(§89 후속)
+            val reason = state.message.takeIf {
+                (state.trackingHold || state.phase == PreparationPhase.WAITING) && it !in GENERIC_PREPARATION_MESSAGES
             }
-        }
-        if (cameraError != null) {
-            Text(cameraError, color = c.text2, fontSize = 13.sp)
-            TextButton(onClick = { cancel(); onFallback() }) { Text("자세 비교 없이 계속", color = c.text) }
-        }
+            if (reason != null) Text(reason, color = if (reason == CapturePreparationController.READY_MESSAGE) c.text else c.warn, fontSize = 14.sp, lineHeight = 20.sp, fontWeight = FontWeight.SemiBold)
+            // 세는 조건 전문(ESS + DET, §101) — 음성이 못 다 말한 내용은 화면이 가진다(원칙 #5). 그 아래 바닥 범위 문장(spec §99, PostureScope.FLOOR_LINES)
+            profile.countingConditions?.let { Text(it, color = c.text2, fontSize = 13.sp, lineHeight = 18.sp) }
+            com.example.trex_kotlin.posture.PostureScope.floorLine(profile.referenceExercise)?.let {
+                Text(it, color = c.text3, fontSize = 12.sp, lineHeight = 17.sp)
+            }
+            if (cameraError != null) {
+                Text(cameraError, color = c.text2, fontSize = 13.sp)
+                TextButton(onClick = { cancel(); onFallback() }) { Text("자세 비교 없이 계속", color = c.text) }
+            }
         }
         modeControl()
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            TextButton(onClick = {
-                if (!paused) { userPaused=false; speech.stop(); controller.manual(elapsedRealtimeMs(),5);state=controller.state }
-            }, enabled = !paused && !userPaused && (!counting || state.trackingHold), modifier = Modifier.weight(1f)) {
-                Text("5초 후 시작", color = c.text2, fontSize = 13.sp)
-            }
-            SessionTool("음성", if (muted) "음성 안내 켜기" else "음성 안내 끄기",
-                if (muted) Icons.AutoMirrored.Rounded.VolumeOff else Icons.AutoMirrored.Rounded.VolumeUp,
-                onMute, Modifier.width(48.dp))
-            SessionTool("카메라", "카메라 전환", Icons.Rounded.Cameraswitch, { cancel(); onCamera() }, Modifier.width(48.dp))
-            PreparationPauseAction(userPaused || paused, !delivered,
-                {
-                    if (paused) { userPaused = false; onTogglePause() }
-                    else { userPaused = !userPaused; if (userPaused) cancel() }
-                }, Modifier.width(104.dp))
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            GhostButton("나가기", { cancel(); onExit() }, Modifier.weight(1f))
-            Cta("준비 건너뛰기", {
+        SessionActionRow {
+            SessionCircleButton("나가기", "나가기", Icons.Rounded.Close, { cancel(); onExit() }, Modifier.weight(1f), destructive = true)
+            SessionCircleButton("음성", if (muted) "음성 안내 켜기" else "음성 안내 끄기",
+                if (muted) Icons.AutoMirrored.Rounded.VolumeOff else Icons.AutoMirrored.Rounded.VolumeUp, onMute, Modifier.weight(1f))
+            SessionCircleButton("준비 건너뛰기", "준비 건너뛰기", Icons.Rounded.SkipNext, {
                 // 준비만 종료한다. 운동 완료/세트 건너뛰기 콜백을 호출하지 않는다.
                 if (!paused && !delivered) {
                     delivered=true; cancel(); start(true)
                 }
-            }, Modifier.weight(1.8f), enabled = !paused && !delivered)
-
+            }, Modifier.weight(1f), highlighted = true, enabled = !paused && !delivered)
+            SessionCircleButton("카메라", "카메라 전환", Icons.Rounded.Cameraswitch, { cancel(); onCamera() }, Modifier.weight(1f))
+            SessionCircleButton(if (prepPaused) "준비 계속" else "준비 멈춤", if (prepPaused) "재개" else "일시정지",
+                if (prepPaused) Icons.Rounded.PlayArrow else Icons.Rounded.Pause, {
+                    if (paused) { userPaused = false; onTogglePause() }
+                    else { userPaused = !userPaused; if (userPaused) cancel() }
+                }, Modifier.weight(1f), enabled = !delivered)
         }
     }
 }

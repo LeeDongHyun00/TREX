@@ -3,36 +3,32 @@
 package com.example.trex_kotlin
 
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.UIKitInteropInteractionMode
 import androidx.compose.ui.viewinterop.UIKitInteropProperties
 import androidx.compose.ui.viewinterop.UIKitView
 import androidx.compose.ui.window.DialogProperties
 import com.example.trex_kotlin.ios.IosSpeechEngine
 import com.example.trex_kotlin.ios.readTextFile
-import com.example.trex_kotlin.ios.IosAppleSignInRegistry
 import com.example.trex_kotlin.ios.requestIosAppleCredential
 import com.example.trex_kotlin.ios.requestIosGoogleIdToken
 import com.example.trex_kotlin.sync.AppleCredential
 import com.example.trex_kotlin.ios.toByteArray
 import com.example.trex_kotlin.posture.SpeechCoach
-import kotlinx.atomicfu.locks.SynchronizedObject
-import kotlinx.atomicfu.locks.synchronized
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
@@ -48,8 +44,8 @@ import platform.Foundation.NSProcessInfo
 import platform.Foundation.NSURL
 import platform.Foundation.dataWithContentsOfFile
 import platform.UIKit.UIActivityViewController
-import platform.UIKit.popoverPresentationController
 import platform.UIKit.UIApplication
+import platform.UIKit.popoverPresentationController
 import platform.UIKit.UIApplicationOpenSettingsURLString
 import platform.UIKit.UIColor
 import platform.UIKit.UIUserInterfaceStyle
@@ -69,8 +65,11 @@ import platform.darwin.NSObject
 /** iPhone 도 카메라 자세 화면을 돈다(§108c) — 공유 PostureLive + Swift 카메라·MediaPipe 다리(PoseCameraBridge.swift). */
 const val PLATFORM_POSTURE_CAMERA = true
 
-/** iPhone 시트 관례 — 아래로 끌어 내리면 닫힌다(§108d, SwiftUI 판 `trexSheet` 와 같은 동작). 왼쪽 가장자리 스와이프 뒤로도 시트를 닫는다([PlatformBackHandler]). */
-const val PLATFORM_SHEET_DRAG_DISMISS = true
+/**
+ * 실검증 도구가 있는 빌드인가(스펙 §116) — Info.plist `TrexDevTools`(= 빌드 설정 `TREX_DEV_TOOLS`)가 "NO" 일 때만 false.
+ * 배포 빌드만 `xcodebuild … TREX_DEV_TOOLS=NO` 로 끈다. 값이 없거나 비어 있으면(저장소 코드로 빌드) 켜져 있다.
+ */
+val PLATFORM_DEV_TOOLS: Boolean by lazy { (NSBundle.mainBundle.objectForInfoDictionaryKey("TrexDevTools") as? String) != "NO" }
 
 /** 상태 막대 글자색을 화면 테마에 맞춘다(창의 라이트·다크). */
 @Composable
@@ -181,14 +180,11 @@ internal fun openAppSettings() {
 @Composable
 fun rememberAssetImageDecoder(): AssetImageDecoder = remember { AssetImageDecoder { path, sampleSize -> decodeBundleImage(path, sampleSize) } }
 
-private val loginFrameLock = SynchronizedObject()
-private val loginFrames = mutableMapOf<Int, ImageBitmap>()
+private val dinoHead: ImageBitmap by lazy { decodeBundleImage("drawable-nodpi/trex_dino_head.png", 1) }
 
-/** 로그인 로고 애니메이션의 [index] 번째 프레임 — Android res/drawable-nodpi 의 같은 PNG 를 번들에서 읽는다. */
+/** 공룡 얼굴 그림 — Android res/drawable-nodpi 의 같은 PNG 를 번들에서 한 번만 읽는다([TrexDinoHead]). */
 @Composable
-fun loginAnimationFrame(index: Int): ImageBitmap = synchronized(loginFrameLock) {
-    loginFrames.getOrPut(index) { decodeBundleImage("drawable-nodpi/login_animation_frame_${(index + 1).toString().padStart(2, '0')}.png", 1) }
-}
+fun trexDinoHeadImage(): ImageBitmap = dinoHead
 
 /** 입력칸이 있는 전체 화면 대화상자 — 인셋은 내용이 직접 맞춘다(Sheets.FoodPicker 의 imePadding). */
 fun fullScreenDialogProperties(): DialogProperties = DialogProperties(usePlatformDefaultWidth = false, usePlatformInsets = false)
@@ -209,6 +205,7 @@ internal fun GuideVisualView(asset: String, description: String, playing: Boolea
             html = "<img src=\"${asset.substringAfterLast('/')}\" alt=\"$description\" " +
                 "style=\"width:100%;height:100%;object-fit:contain;display:block\">",
             baseDirectory = asset.substringBeforeLast('/'), description = description, modifier = modifier,
+            background = Trex.c.sheet,
         )
         return
     }
@@ -229,7 +226,7 @@ internal fun GuideSvgImage(assetName: String, modifier: Modifier = Modifier) {
     )
 }
 
-/** 근육 부하 3D(three.js) — 번들의 muscle_load 를 그대로 띄우고 페이지가 뜬 뒤·바뀔 때 [command] 를 실행한다. 회전 끌기는 WebView 가 모두 가진다. */
+/** 공통 2D 근육도 — 번들의 SVG 도형을 표시하고 피로도·사용 근육을 갱신한다. */
 @Composable
 internal fun MuscleAtlasWebView(command: String, sessionMode: Boolean, description: String, modifier: Modifier) {
     val delegate = remember { ScriptOnLoad(command) }
@@ -240,6 +237,7 @@ internal fun MuscleAtlasWebView(command: String, sessionMode: Boolean, descripti
                 setOpaque(false)
                 backgroundColor = UIColor(red = 34 / 255.0, green = 37 / 255.0, blue = 39 / 255.0, alpha = 1.0)
                 scrollView.scrollEnabled = false
+                userInteractionEnabled = false
                 accessibilityLabel = description
                 navigationDelegate = delegate
                 val dir = bundlePath("muscle_load")
@@ -247,40 +245,53 @@ internal fun MuscleAtlasWebView(command: String, sessionMode: Boolean, descripti
                     baseURL = NSURL.URLWithString("file://$dir/index.html" + if (sessionMode) "?mode=session" else ""))
             }
         },
-        update = { it.evaluateJavaScript(command, completionHandler = null) },
+        // 이 WebView 에 마지막으로 보낸 명령과 같으면 다시 돌리지 않는다(스펙 §115) — Android 와 같다. 페이지가 다 읽히면 [ScriptOnLoad] 가 최신 명령을 보낸다.
+        update = { if (delegate.sent != command) { delegate.sent = command; it.evaluateJavaScript(command, completionHandler = null) } },
         onRelease = { it.stopLoading() },
         modifier = modifier,
-        properties = UIKitInteropProperties(interactionMode = UIKitInteropInteractionMode.NonCooperative, isNativeAccessibilityEnabled = true),
+        properties = UIKitInteropProperties(interactionMode = null, isNativeAccessibilityEnabled = true),
     )
 }
 
 private class ScriptOnLoad(var script: String) : NSObject(), WKNavigationDelegateProtocol {
+    /** update 가 이 WebView 에 마지막으로 보낸 명령. */
+    var sent: String? = null
+
     override fun webView(webView: WKWebView, didFinishNavigation: WKNavigation?) {
         webView.evaluateJavaScript(script, completionHandler = null)
     }
 }
 
-/** 투명 바탕 WebView 에 번들 폴더 기준 HTML 한 조각을 그린다(스크롤·터치 없음). */
+/** 번들 HTML을 그린다. 운동 가이드는 시트 색으로 막고, 온보딩 SVG는 투명을 유지한다. */
 @Composable
-private fun BundleHtmlView(html: String, baseDirectory: String, description: String?, modifier: Modifier) {
+private fun BundleHtmlView(html: String, baseDirectory: String, description: String?, modifier: Modifier,
+    background: Color = Color.Transparent) {
+    val argb = background.toArgb()
+    val cssBackground = "rgba(${(argb ushr 16) and 255},${(argb ushr 8) and 255},${argb and 255},${background.alpha})"
+    val nativeBackground = UIColor(red = background.red.toDouble(), green = background.green.toDouble(),
+        blue = background.blue.toDouble(), alpha = background.alpha.toDouble())
     val page = "<!doctype html><html><head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">" +
-        "<style>html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:transparent}" +
+        "<style>html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:$cssBackground}" +
         "body{display:flex;align-items:center;justify-content:center}</style></head><body>$html</body></html>"
-    UIKitView(
-        factory = {
-            WKWebView(frame = CGRectMake(0.0, 0.0, 1.0, 1.0), configuration = WKWebViewConfiguration()).apply {
-                setOpaque(false)
-                backgroundColor = UIColor.clearColor
-                scrollView.backgroundColor = UIColor.clearColor
-                scrollView.scrollEnabled = false
-                userInteractionEnabled = false
-                description?.let { accessibilityLabel = it }
-                loadHTMLString(page, baseURL = NSURL.fileURLWithPath(bundlePath(baseDirectory) + "/", isDirectory = true))
-            }
-        },
-        modifier = modifier,
-        properties = UIKitInteropProperties(isNativeAccessibilityEnabled = description != null),
-    )
+    // 테마/시범이 바뀌면 HTML과 네이티브 배경을 함께 갱신한다.
+    key(page, baseDirectory) {
+        UIKitView(
+            factory = {
+                WKWebView(frame = CGRectMake(0.0, 0.0, 1.0, 1.0), configuration = WKWebViewConfiguration()).apply {
+                    // Compose 배경만 칠하면 투명한 UIKit 영역에서 팝업 뒤 화면이 비칠 수 있다.
+                    setOpaque(background.alpha == 1f)
+                    backgroundColor = nativeBackground
+                    scrollView.backgroundColor = nativeBackground
+                    scrollView.scrollEnabled = false
+                    userInteractionEnabled = false
+                    description?.let { accessibilityLabel = it }
+                    loadHTMLString(page, baseURL = NSURL.fileURLWithPath(bundlePath(baseDirectory) + "/", isDirectory = true))
+                }
+            },
+            modifier = modifier,
+            properties = UIKitInteropProperties(isNativeAccessibilityEnabled = description != null),
+        )
+    }
 }
 
 /** 화면이 켜진 동안 자동 잠금을 막는다. */
@@ -321,24 +332,12 @@ internal fun decodeBundleImage(relative: String, sampleSize: Int): ImageBitmap {
     return surface.makeImageSnapshot().toComposeImageBitmap()
 }
 
-/** Apple 로그인 한 번(Swift `AppleSignInBridge`) — Android 판은 늘 실패한다(버튼이 없다). */
-@Composable
-fun rememberAppleCredentialRequest(): suspend () -> AppleCredential = remember { { requestIosAppleCredential() } }
-
 /**
- * Apple 지침의 기본 버튼("Apple로 계속하기", 검정) — Swift 가 만든 `ASAuthorizationAppleIDButton` 을 끼운다. 다리가 없으면(프로브 등)
- * 그리지 않는다. 높이 50dp, 폭은 부모를 채운다.
+ * Apple 로그인 한 번(Swift `AppleSignInBridge`) — Android 판은 늘 실패한다(버튼이 없다). 버튼은 구글과 같은 Compose 버튼
+ * (공유 `SignInUi.kt` 의 `SocialSignInButton`)이고, 다리가 없으면(프로브 등) [IosPlatform.appleSignInAvailable] 이 거짓이라 그리지 않는다.
  */
 @Composable
-fun AppleSignInButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
-    val bridge = IosAppleSignInRegistry.bridge ?: return
-    val latest by androidx.compose.runtime.rememberUpdatedState(onClick)
-    UIKitView(
-        factory = { bridge.makeButton { latest() } },
-        modifier = modifier.fillMaxWidth().height(50.dp),
-        properties = UIKitInteropProperties(interactionMode = UIKitInteropInteractionMode.NonCooperative, isNativeAccessibilityEnabled = true),
-    )
-}
+fun rememberAppleCredentialRequest(): suspend () -> AppleCredential = remember { { requestIosAppleCredential() } }
 
 /** 폰 공유 창에 글을 넘긴다(UIActivityViewController) — 가장 위에 떠 있는 화면에 띄운다. iPad 에서는 팝오버 기준을 그 화면으로. */
 @Composable
