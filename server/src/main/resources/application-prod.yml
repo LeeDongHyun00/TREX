@@ -58,3 +58,6 @@ trex:
     admin-login-ids: ${COMMUNITY_ADMIN_LOGIN_IDS:}
     # 새 신고를 알릴 디스코드 웹후크(비밀값). 비면 알리지 않는다
     report-webhook-url: ${COMMUNITY_REPORT_WEBHOOK_URL:}
+  # 공유 링크(docs/superpowers/specs/2026-10-29-routine-share-design.md) — 웹 페이지의 "앱 설치하기"(iPhone). 출시 전에는 비운다
+  share:
+    ios-install-url: ${SHARE_IOS_INSTALL_URL:}
