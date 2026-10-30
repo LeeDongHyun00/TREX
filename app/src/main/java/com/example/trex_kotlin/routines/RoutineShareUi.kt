@@ -58,6 +58,19 @@ import com.example.trex_kotlin.TrexText as Text
  * 사용자가 적은 루틴 이름·닉네임은 공룡 말투로 바꾸지 않는다(UserText).
  */
 
+/** 공유 창이 보일 단계 — 공유하려면 운동이 있고, 로그인했고, 커뮤니티 준비(닉네임·이용규칙, 정지 아님)가 끝나야 한다. */
+enum class ShareStep { NoWorkouts, NeedLogin, Loading, Suspended, NeedCommunitySetup, Ready }
+
+/** 커뮤니티 상태를 아직 받는 중([CommunityGate.Loading])이면 "준비를 마치면…" 대신 기다린다 — 준비된 사람에게 잠깐 잘못된 안내가 보였다. */
+fun shareStep(hasWorkouts: Boolean, signedIn: Boolean, gate: CommunityGate): ShareStep = when {
+    !hasWorkouts -> ShareStep.NoWorkouts
+    !signedIn -> ShareStep.NeedLogin
+    gate == CommunityGate.Loading -> ShareStep.Loading
+    gate is CommunityGate.Suspended -> ShareStep.Suspended
+    gate !is CommunityGate.Ready -> ShareStep.NeedCommunitySetup
+    else -> ShareStep.Ready
+}
+
 /** "운동 N개 · 약 M분". */
 internal fun routineMeta(workouts: List<Workout>): String = routineOverview(workouts).let { "운동 ${it.count}개 · 약 ${it.minutes}분" }
 
@@ -123,20 +136,20 @@ fun ShareRoutineSheet(app: AppViewModel, workouts: List<Workout>, initialName: S
     val account = app.account
     LaunchedEffect(account) { if (account != null) runCatching { app.refreshCommunityMe() } }
     FullScreen("루틴 공유", onDismiss) {
-        val gate = app.communityGate
-        when {
-            workouts.isEmpty() -> Text("공유할 운동이 없어요", color = c.text2, fontSize = 15.sp)
-            account == null -> {
+        when (shareStep(workouts.isNotEmpty(), account != null, app.communityGate)) {
+            ShareStep.NoWorkouts -> Text("공유할 운동이 없어요", color = c.text2, fontSize = 15.sp)
+            ShareStep.NeedLogin -> {
                 Text("공유하려면 로그인이 필요해요", color = c.text, fontSize = 16.sp)
                 AccountSignInButtons(app)
                 app.authMessage?.let { Text(it, color = c.err, fontSize = 13.sp) }
             }
-            gate is CommunityGate.Suspended -> Text("이용이 정지된 계정이라 공유할 수 없어요", color = c.text, fontSize = 16.sp)
-            gate !is CommunityGate.Ready -> {
+            ShareStep.Loading -> CircularProgressIndicator(color = c.primaryText)
+            ShareStep.Suspended -> Text("이용이 정지된 계정이라 공유할 수 없어요", color = c.text, fontSize = 16.sp)
+            ShareStep.NeedCommunitySetup -> {
                 Text("커뮤니티 닉네임과 이용규칙 동의를 마치면 공유할 수 있어요", color = c.text, fontSize = 16.sp)
                 Cta("커뮤니티로 가기", onClick = { onOpenCommunity(); onDismiss() }, modifier = Modifier.fillMaxWidth())
             }
-            else -> {
+            ShareStep.Ready -> {
                 val trimmed = name.trim()
                 DField(name, { name = it.take(30) }, "하체 불태우기", label = "루틴 이름", hint = "받는 사람에게 보일 이름이에요 (30자까지)")
                 UserText(routineMeta(workouts), color = c.text2, fontSize = 13.sp)
