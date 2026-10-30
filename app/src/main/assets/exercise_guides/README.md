@@ -72,3 +72,26 @@
 문구 근거·적용 범위는 `docs/CORE_EXERCISE_GUIDE_DESIGN.md` §4, 구현 기록은 §9와 정본 스펙 §103를 참조한다.
 파일 디코드·메타데이터·종목 연결과 후속 JVM 테스트·APK 빌드·폰 업데이트 설치를 확인했다(설계 문서 §10).
 첫 프레임 PNG 전환 기록은 설계 문서 §11에 남긴다. 실휴대폰 화면 검증은 사용자 담당이다.
+
+## Highlight corrections (2026-10-30)
+
+The built-in `image_gen` edited the contracted frame of two existing guides:
+
+- `standing-knee-up.gif`: keep the anatomical left knee raised (viewer right),
+  remove the red overlay from the planted right thigh, restore the right shorts
+  leg to match the neutral frame, and highlight the raised left thigh instead.
+  Preserve the existing abdominal highlight, pose, framing, and illustration style.
+- `standing-side-crunch.gif`: restore the anatomical right oblique highlight
+  (viewer left) during contraction. Preserve the opposite oblique highlight and
+  pose so the highlighted sides remain consistent with the neutral frame.
+
+The neutral frames are reused. Both assets retain 640×640 resolution, two frames,
+900 ms per frame, and infinite looping. The edited frames are resized and encoded
+with their neutral frames using a shared 256-color palette. Filenames and guide
+registration are unchanged; Android and iOS reference this same asset directory.
+These overlays remain qualitative illustrations, not measured muscle activation.
+
+Verification: inspected all four decoded frames at 640 px and a 260 px preview;
+confirmed GIF decoding, frame duration, infinite looping, and byte equality with
+the copies packaged in `app-debug.apk`. `ExerciseGuidesTest` passed all 6 tests
+and `:app:assembleDebug` succeeded. Device playback and native iOS were not run.
