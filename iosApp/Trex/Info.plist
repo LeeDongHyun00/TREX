@@ -16,7 +16,7 @@
 <key>CFBundleVersion</key><string>$(CURRENT_PROJECT_VERSION)</string>
 <key>GIDClientID</key><string>12194757714-bd99b55i5jk94gpft5a6ec6s983fm9mn.apps.googleusercontent.com</string>
 <key>GIDServerClientID</key><string>12194757714-foefivjlqn4n3g5iqdsgqlqst12ejbpi.apps.googleusercontent.com</string>
-<!-- 표준 HTTPS·인증용 해시만 쓴다 — 수출 규정 면제 암호화(스펙 §118) -->
+<!-- Apple OS 제공 HTTPS·CryptoKit AES-GCM·Keychain을 사용한다(§125). 출시 담당자는 실제 제출 빌드의 수출 규정 답변을 확인한다. -->
 <key>ITSAppUsesNonExemptEncryption</key><false/>
 <key>LSRequiresIPhoneOS</key><true/>
 <key>NSCameraUsageDescription</key><string>운동 자세의 관절 위치를 분석하고, 식단 기록이나 커뮤니티 게시글에 쓸 사진을 촬영합니다. 운동 중 카메라 영상은 저장하거나 전송하지 않으며, 게시글 사진은 직접 올릴 때만 서버로 전송됩니다.</string>

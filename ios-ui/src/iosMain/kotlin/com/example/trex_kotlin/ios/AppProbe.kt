@@ -112,8 +112,8 @@ private suspend fun runAppProbe(): List<String> {
 
     vm.labelPostureSet("probe-set", actualReps = 10, repsSource = "edited", form = null)
     delay(1_500)
-    val labels = readTextFile("$root/posture_logs/labels/set_labels.jsonl").orEmpty()
-    val truth = readTextFile("$root/posture_logs/rep_truth.csv").orEmpty()
+    val labels = readSecureTextFile("$root/posture_logs/labels/set_labels.jsonl").orEmpty()
+    val truth = readSecureTextFile("$root/posture_logs/rep_truth.csv").orEmpty()
     check("자가 라벨 두 파일(SetLabelFormat)", labels.contains("\"set_id\":\"probe-set\"") && truth.startsWith(SetLabelFormat.TRUTH_HEADER + "\n") && truth.contains("probe-set,10,10,"),
         labels.trim())
 

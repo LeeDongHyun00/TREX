@@ -26,9 +26,9 @@ import com.example.trex_kotlin.food.MemoryEntry
 import com.example.trex_kotlin.food.PixelBox
 import com.example.trex_kotlin.food.RegionOutput
 import com.example.trex_kotlin.ios.appSupportPath
-import com.example.trex_kotlin.ios.readTextFile
+import com.example.trex_kotlin.ios.readSecureTextFile
 import com.example.trex_kotlin.ios.toByteArray
-import com.example.trex_kotlin.ios.writeTextFile
+import com.example.trex_kotlin.ios.writeSecureTextFile
 import kotlinx.atomicfu.locks.SynchronizedObject
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.addressOf
@@ -283,12 +283,8 @@ private object IosFoodMemoryStore {
     fun load(): FoodMemory = locked(lock) { loadLocked() }
 
     private fun loadLocked(): FoodMemory = cached ?: run {
-        val memory = try {
-            readTextFile(path)?.let { FoodMemory.decode(it) } ?: FoodMemory()
-        } catch (e: Exception) {
-            IosFoodLog.w("기억 파일을 읽지 못해 빈 기억으로 시작한다", e)
-            FoodMemory()
-        }
+        // 인증/읽기 실패는 빈 기억으로 바꾸지 않는다. 준비 단계와 저장소 오류 화면이 원본을 보호한다.
+        val memory = readSecureTextFile(path)?.let { FoodMemory.decode(it) } ?: FoodMemory()
         memory.also { cached = it }
     }
 
@@ -305,11 +301,11 @@ private object IosFoodMemoryStore {
                     memory = memory.plus(MemoryEntry(FoodMemory.clean(spot.name), v, now + i, spot.correctedFrom?.let(FoodMemory::clean)))
                 }
                 try {
-                    writeTextFile(path, memory.encode())
+                    writeSecureTextFile(path, memory.encode())
+                    cached = memory
                 } catch (e: Exception) {
                     IosFoodLog.e("기억 저장 실패", e)
                 }
-                cached = memory
             }
             IosFoodLog.d("기억 ${vectors.size}개 추가: ${vectors.joinToString { (spot, _) -> spot.name + (spot.correctedFrom?.let { " (모델: $it)" } ?: "") }}")
         }
