@@ -4,12 +4,12 @@ import com.example.trex_kotlin.KeyValueStore
 import kotlinx.atomicfu.locks.SynchronizedObject
 import kotlinx.atomicfu.locks.synchronized
 import platform.Foundation.NSThread
-import platform.Foundation.NSUserDefaults
 import platform.darwin.dispatch_async
 import platform.darwin.dispatch_get_main_queue
 
 /**
- * [KeyValueStore] 의 iPhone 구현(§108 Phase 2) — NSUserDefaults 스위트 하나가 SharedPreferences 파일 하나다(`trex.<이름>`).
+ * [KeyValueStore] 의 iPhone 구현(§125). 이름/API는 유지하며 저장은 CryptoKit AES-256-GCM 파일이다.
+ * 옛 NSUserDefaults `trex.<이름>`은 Swift 준비 단계에서 검증 후 이관한다. 쓰기 성공 뒤에만 메모리와 리스너에 반영한다.
  * Android SharedPreferences 와 같게 맞춘 점:
  *  - 같은 이름은 같은 저장소다. 핸들은 여럿이어도 리스너는 이름별로 모여서, 다른 핸들의 쓰기도 듣는다.
  *  - 값이 실제로 바뀐 키만 알린다(SharedPreferencesImpl) — 동기화가 안 바뀐 쓰기를 '이 기기에서 바꿈' 으로 세지 않는다.
@@ -21,18 +21,19 @@ class UserDefaultsStore(name: String) : KeyValueStore {
     private var listener: ((String) -> Unit)? = null
 
     override fun getString(key: String, defValue: String?): String? =
-        if (hub.defaults.objectForKey(key) == null) defValue else hub.defaults.stringForKey(key)
+        hub.read(key)?.let { it as String } ?: defValue
 
     override fun getBoolean(key: String, defValue: Boolean): Boolean =
-        if (hub.defaults.objectForKey(key) == null) defValue else hub.defaults.boolForKey(key)
+        hub.read(key)?.let { it as Boolean } ?: defValue
 
     override fun getLong(key: String, defValue: Long): Long =
-        if (hub.defaults.objectForKey(key) == null) defValue else hub.defaults.integerForKey(key)
+        hub.read(key)?.let { it as Long } ?: defValue
 
+    @Suppress("UNCHECKED_CAST")
     override fun getStringSet(key: String, defValues: Set<String>?): Set<String>? =
-        hub.defaults.stringArrayForKey(key)?.mapNotNull { it as? String }?.toSet() ?: defValues
+        (hub.read(key) as? Set<String>)?.toSet() ?: defValues
 
-    override fun contains(key: String): Boolean = hub.defaults.objectForKey(key) != null
+    override fun contains(key: String): Boolean = hub.read(key) != null
 
     override fun edit(): KeyValueStore.Editor = Editor(hub)
 
@@ -64,37 +65,39 @@ class UserDefaultsStore(name: String) : KeyValueStore {
         override fun remove(key: String): KeyValueStore.Editor { changes[key] = Change.Remove(key); return this }
         override fun clear(): KeyValueStore.Editor { clear = true; return this }
 
-        override fun apply() = hub.write(clear, changes.values.toList(), persistNow = false)
-        override fun commit(): Boolean { hub.write(clear, changes.values.toList(), persistNow = true); return true }
+        // 보안 저장은 apply도 디스크 기록을 확정한다. 실패를 성공 알림으로 바꾸지 않는다.
+        override fun apply() = hub.write(clear, changes.values.toList())
+        override fun commit(): Boolean { hub.write(clear, changes.values.toList()); return true }
     }
 
     /** 이름 하나의 저장소와 그 리스너들. */
-    private class Hub(private val suite: String) {
-        val defaults = NSUserDefaults(suiteName = suite)
+    private class Hub(private val name: String) {
+        private var values = SecurePreferenceValues.decode(checkNotNull(secureStorage("preferences-read", name)))
         private val lock = SynchronizedObject()
         private val listeners = mutableListOf<(String) -> Unit>()
+
+        fun read(key: String): Any? = synchronized(lock) { values[key] }
 
         fun addListener(listener: (String) -> Unit) = synchronized(lock) { listeners += listener }
         fun removeListener(listener: (String) -> Unit) = synchronized(lock) { listeners -= listener }
 
-        fun write(clear: Boolean, changes: List<Change>, persistNow: Boolean) {
+        fun write(clear: Boolean, changes: List<Change>) {
             val modified = synchronized(lock) {
-                if (clear) defaults.removePersistentDomainForName(suite)
+                val next = if (clear) linkedMapOf() else values.toMutableMap()
                 val keys = mutableListOf<String>()
                 for (change in changes) {
-                    val before = defaults.objectForKey(change.key)
+                    val before = next[change.key]
                     when (change) {
-                        is Change.Remove -> if (before != null) { defaults.removeObjectForKey(change.key); keys += change.key }
-                        is Change.Put -> when (val value = change.value) {
-                            is String -> if (before == null || defaults.stringForKey(change.key) != value) { defaults.setObject(value, change.key); keys += change.key }
-                            is Boolean -> if (before == null || defaults.boolForKey(change.key) != value) { defaults.setBool(value, change.key); keys += change.key }
-                            is Long -> if (before == null || defaults.integerForKey(change.key) != value) { defaults.setInteger(value, change.key); keys += change.key }
-                            is Set<*> -> if (before == null || defaults.stringArrayForKey(change.key)?.toSet() != value) { defaults.setObject(value.toList(), change.key); keys += change.key }
-                            else -> error("지원하지 않는 값: $value")
+                        is Change.Remove -> if (before != null) { next.remove(change.key); keys += change.key }
+                        is Change.Put -> if (before != change.value) {
+                            next[change.key] = change.value; keys += change.key
                         }
                     }
                 }
-                if (persistNow) defaults.synchronize()
+                if (next != values) {
+                    secureStorage("preferences-write", name, SecurePreferenceValues.encode(next))
+                    values = next
+                }
                 keys.reversed() to listeners.toList()
             }
             val (keys, targets) = modified
@@ -106,7 +109,7 @@ class UserDefaultsStore(name: String) : KeyValueStore {
         companion object {
             private val lock = SynchronizedObject()
             private val hubs = mutableMapOf<String, Hub>()
-            fun of(name: String): Hub = synchronized(lock) { hubs.getOrPut(name) { Hub("trex.$name") } }
+            fun of(name: String): Hub = synchronized(lock) { hubs.getOrPut(name) { Hub(name) } }
         }
     }
 }

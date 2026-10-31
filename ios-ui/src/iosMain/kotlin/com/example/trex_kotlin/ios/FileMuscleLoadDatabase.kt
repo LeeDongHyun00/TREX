@@ -24,7 +24,7 @@ class FileMuscleLoadDatabase(private val path: String) : MuscleLoadDatabase {
     private class Row(val raw: String, val set: LoadSet, val doses: List<MuscleDose>)
 
     override fun sync(current: List<LoadSet>, legacy: List<LoadSet>, now: Long, corrections: Map<String, Double?>): LoadLedger {
-        val file = readTextFile(path)?.let(::JSONObject)
+        val file = readSecureTextFile(path)?.let(::JSONObject)
         var legacyImported = file?.optBoolean("legacy_v1", false) ?: false
         val rows = LinkedHashMap<String, Row>()
         file?.optJSONArray("rows")?.let { arr ->
@@ -61,7 +61,7 @@ class FileMuscleLoadDatabase(private val path: String) : MuscleLoadDatabase {
                 arr.put(JSONObject().put("raw", row.raw).put("doses", doses))
             }
         })
-        writeTextFile(path, out.toString())
+        writeSecureTextFile(path, out.toString())
 
         val sorted = rows.values.sortedBy { it.set.endedAt }
         return LoadLedger(sorted.map { it.set }, sorted.filter { it.doses.isNotEmpty() }.associate { it.set.id to it.doses })
