@@ -1,12 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!--
-   Android 11 이하의 자동 백업 규칙(12 이상은 data_extraction_rules.xml).
-   내 음식 기억(food_memory.tsv, 음식 자리 그림의 특징값)은 클라우드 백업에서 뺀다 — 폰 밖으로 내보내지 않는다(FOOD_EVAL §9).
-   이 파일에 exclude 만 있으면 나머지는 그대로 백업된다.
--->
+<!-- 기기 Keystore 키는 이전되지 않는다. 키 없는 암호문 복원으로 기록이 덮이는 것을 막는다.
+     서버 동기화 범위는 유지하며 로컬 전용 기록은 앱 삭제/기기 변경 전에 별도 내보내기가 필요하다. -->
 <full-backup-content>
+    <exclude domain="sharedpref" path="." />
+    <exclude domain="database" path="." />
     <exclude domain="file" path="food_memory.tsv" />
     <exclude domain="file" path="food_memory.tsv.tmp" />
-    <!-- 서버 로그인 토큰 — 새 기기에서는 다시 로그인한다(sync/AuthSession) -->
-    <exclude domain="sharedpref" path="trex_auth.xml" />
+    <exclude domain="file" path="food_memory.tsv.aes" />
+    <exclude domain="file" path="food_memory.tsv.aes.writing" />
+    <exclude domain="file" path="food_memory.tsv.tmp.aes" />
+    <exclude domain="file" path="food_memory.tsv.tmp.aes.writing" />
+    <exclude domain="file" path="posture_baseline.tsv" />
+    <exclude domain="file" path="posture_baseline.tsv.aes" />
+    <exclude domain="file" path="posture_baseline.tsv.aes.writing" />
+    <exclude domain="file" path="posture_logs/" />
+    <exclude domain="external" path="posture_logs/" />
 </full-backup-content>

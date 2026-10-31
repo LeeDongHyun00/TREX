@@ -35,6 +35,7 @@ data class PostureScope(
     }
 
     private fun baseStartLine(): String? = when {
+        exercise in FourExerciseForm.scopeLines -> FourExerciseForm.scopeLines.getValue(exercise)
         LegProfile.of(exercise) != null -> "왼쪽과 오른쪽을 한 번씩 해야 1회이고, 얕거나 다리를 뻗어 올리거나 허리를 숙인 동작은 세지 않습니다. 횟수와 자세는 검증 중이고 척추 분절과 근육의 힘은 판정하지 않습니다."
         // 바닥 계열 세 종목(spec §99) — 무엇을 세고 무엇을 못 보는가. '어깨까지 들린 회만 셉니다' 같은 과장은 쓰지 않는다(4.5° 게이트는 '고개만' 의 약 83 % 를 통과시킨다)
         exercise in FLOOR_LINES -> FLOOR_LINES.getValue(exercise)

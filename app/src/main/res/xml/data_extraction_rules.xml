@@ -1,15 +1,35 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!--
-   Android 12 이상의 백업·기기 이전 규칙.
-   내 음식 기억(food_memory.tsv)은 클라우드 백업에서 뺀다 — 폰 밖(서버)으로 내보내지 않는다(FOOD_EVAL §9).
-   새 폰으로 직접 옮기는 기기 이전(device-transfer)은 사용자가 가진 기기 사이라 그대로 둔다.
-   exclude 만 있으면 나머지는 그대로 백업된다.
--->
+<!-- 기기 Keystore 키는 이전되지 않는다. 키 없는 암호문 복원으로 기록이 덮이는 것을 막는다.
+     서버 동기화 범위는 유지하며 로컬 전용 기록은 앱 삭제/기기 변경 전에 별도 내보내기가 필요하다. -->
 <data-extraction-rules>
     <cloud-backup>
+        <exclude domain="sharedpref" path="." />
+        <exclude domain="database" path="." />
         <exclude domain="file" path="food_memory.tsv" />
         <exclude domain="file" path="food_memory.tsv.tmp" />
-        <!-- 서버 로그인 토큰 — 새 기기에서는 다시 로그인한다(sync/AuthSession) -->
-        <exclude domain="sharedpref" path="trex_auth.xml" />
+        <exclude domain="file" path="food_memory.tsv.aes" />
+        <exclude domain="file" path="food_memory.tsv.aes.writing" />
+        <exclude domain="file" path="food_memory.tsv.tmp.aes" />
+        <exclude domain="file" path="food_memory.tsv.tmp.aes.writing" />
+        <exclude domain="file" path="posture_baseline.tsv" />
+        <exclude domain="file" path="posture_baseline.tsv.aes" />
+        <exclude domain="file" path="posture_baseline.tsv.aes.writing" />
+        <exclude domain="file" path="posture_logs/" />
+        <exclude domain="external" path="posture_logs/" />
     </cloud-backup>
+    <device-transfer>
+        <exclude domain="sharedpref" path="." />
+        <exclude domain="database" path="." />
+        <exclude domain="file" path="food_memory.tsv" />
+        <exclude domain="file" path="food_memory.tsv.tmp" />
+        <exclude domain="file" path="food_memory.tsv.aes" />
+        <exclude domain="file" path="food_memory.tsv.aes.writing" />
+        <exclude domain="file" path="food_memory.tsv.tmp.aes" />
+        <exclude domain="file" path="food_memory.tsv.tmp.aes.writing" />
+        <exclude domain="file" path="posture_baseline.tsv" />
+        <exclude domain="file" path="posture_baseline.tsv.aes" />
+        <exclude domain="file" path="posture_baseline.tsv.aes.writing" />
+        <exclude domain="file" path="posture_logs/" />
+        <exclude domain="external" path="posture_logs/" />
+    </device-transfer>
 </data-extraction-rules>

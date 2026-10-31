@@ -113,16 +113,17 @@ class BaselineCollector(
  * 기준선 저장소 — `filesDir/posture_baseline.tsv`, org.json 비의존.
  * 한 줄 = 종목 1개: `exercise<TAB>nSets<TAB>createdAt<TAB>feature=median:v1,v2,v3;feature2=...`
  */
-class BaselineStore(private val file: File) {
+class BaselineStore private constructor(private val file: File, private val storage: com.example.trex_kotlin.security.TextFileStorage) {
+    internal constructor(file: File) : this(file, com.example.trex_kotlin.security.PlainTextFiles)
 
-    constructor(context: Context) : this(File(context.filesDir, "posture_baseline.tsv"))
+    constructor(context: Context) : this(File(context.filesDir, "posture_baseline.tsv"), com.example.trex_kotlin.security.AndroidKeyCipher.files)
 
     val path: File get() = file
 
     fun load(): BaselineProfile {
         val p = BaselineProfile()
-        if (!file.exists()) return p
-        file.useLines(Charsets.UTF_8) { lines ->
+        if (!storage.exists(file)) return p
+        storage.readText(file).lineSequence().let { lines ->
             for (raw in lines) {
                 val line = raw.trim()
                 if (line.isEmpty() || line.startsWith("#")) continue
@@ -166,7 +167,7 @@ class BaselineStore(private val file: File) {
             }
             sb.append('\n')
         }
-        file.writeText(sb.toString(), Charsets.UTF_8)
+        storage.writeText(file, sb.toString())
     }
 
     fun put(b: ExerciseBaseline): BaselineProfile {
@@ -184,7 +185,7 @@ class BaselineStore(private val file: File) {
     }
 
     fun clear() {
-        if (file.exists()) file.delete()
+        storage.delete(file)
     }
 
     private fun fmt(v: Float): String = String.format(Locale.US, "%.6g", v)

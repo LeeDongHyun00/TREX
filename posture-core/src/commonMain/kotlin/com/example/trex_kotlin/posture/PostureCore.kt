@@ -229,6 +229,8 @@ class PoseFrame(val joints: Map<String, Vec3?>, up: Vec3 = Vec3(0f, 1f, 0f)) {
         val nb = neck?.let { body(it) }
         if (nb != null) {
             put("torso_pitch", (atan2(nb.z, nb.y) * RAD).toFloat())
+            // 굿모닝(§123): 고관절각은 허벅지/무릎만 움직여도 바뀐다. 실제 몸통의 전후 회전을 신호로 쓴다.
+            put(FourExerciseForm.GOOD_MORNING_SIGNAL, 180f - (atan2(nb.z, nb.y) * RAD).toFloat())
             put("torso_roll", (atan2(nb.x, nb.y) * RAD).toFloat())
             torsoLen?.let { put("sh_over_hip_fwd", nb.z / it) }
             if (ankleMid != null && legLen != null) {
@@ -384,6 +386,13 @@ class PoseFrame(val joints: Map<String, Vec3?>, up: Vec3 = Vec3(0f, 1f, 0f)) {
             val hip = if (side == 'L') lHip else rHip
             if (el != null && wr != null) put("forearm_vert_$side", angleVec(wr - el, up))
             if (sh != null && el != null) put("upperarm_vert_$side", angleVec(el - sh, up))
+            if (sh != null && el != null && xb != null && zb != null) {
+                val arm = el - sh
+                val elevation = angleVec(arm, up)
+                // 내린 팔은 수평 투영이 작아 방향이 튄다. 든 구간에서만 몸 앞쪽을 +로 잰다(§123).
+                if (elevation != null && elevation in 45f..120f && flat(arm).norm >= arm.norm * .5f)
+                    put("${FourExerciseForm.ARM_PLANE}_$side", (atan2(arm dot zb, abs(arm dot xb)) * RAD).toFloat())
+            }
             if (sh != null && el != null && hip != null) {
                 perpFromLine(el, hip, sh)?.let { (perp, len) -> put("elbow_torso_$side", perp.norm / len) }
             }

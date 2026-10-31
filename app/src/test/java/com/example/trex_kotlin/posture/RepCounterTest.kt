@@ -96,11 +96,11 @@ class RepCounterTest {
     fun registryMapsExercisesHonestly() {
         // 등척성은 카운터 미적용 (HoldTimer 대상)
         assertNull(RepCounter.forExercise("플랭크"))
-        // 기기 검증 종목
+        // §123: 한쪽 사슬·엎드림 전제로 바뀐 푸시업은 옛 평균 거리의 검증 표지를 이어받지 않는다.
         val push = RepCounter.forExercise("푸시업")
         assertNotNull(push)
-        assertEquals("wrist_shoulder_d", push!!.signal.feature)
-        assertTrue(push.signal.validated)
+        assertEquals(FourExerciseForm.PUSHUP_SIGNAL, push!!.signal.feature)
+        assertTrue(!push.signal.validated)
         // 서서 종목: 힙 힌지 → hip_mean (앱 가용 매핑), beta
         val dead = RepCounter.forExercise("바벨 데드리프트")
         assertEquals("hip_mean", dead!!.signal.feature)
@@ -110,8 +110,8 @@ class RepCounterTest {
     }
 @Test
     fun romValidityJudgesShallowRepsInvalid() {
-        // 푸시업 ROM: min 방향, 임계 0.710 (AIHub 전조건 정상 렙 90% 통과 분위수)
-        val sig = RepSignals.byExercise.getValue("푸시업")
+        // 옛 푸시업 ROM 알고리즘 회귀. 새 한쪽 사슬 신호에는 이 보정을 적용하지 않는다(§123).
+        val sig = legacyPushupSignal()
         assertEquals("min", sig.romDirection)
         assertEquals(0.710f, sig.romThreshold!!, 0.01f)
         assertTrue(sig.romValidated)
@@ -146,7 +146,7 @@ class RepCounterTest {
     fun mixedDepthSetSeparatesValidAndInvalid() {
         // 라벨 세트 실측 시나리오: 깊(0.45)·얕(0.85) 혼합 — 반전 카운터는 둘 다 사이클로 잡고
         // ROM(0.71)이 유효/무효를 가른다. v3 밴드는 얕은 렙을 사이클로도 못 잡았다(실측 5/12 원인).
-        val sig = RepSignals.byExercise.getValue("푸시업")
+        val sig = legacyPushupSignal()
         val c = RepCounter(sig)
         var t = 0L
         var valid = 0
@@ -180,6 +180,10 @@ class RepCounterTest {
         assertTrue(c.reps >= 1)
         assertTrue("cycleMin=${c.lastCycleMin} — 잡값이 하단이 되면 안 됨", c.lastCycleMin >= 0.5f)
     }
+
+    /** 옛 라벨 세트가 기록한 양쪽 평균 거리의 고정 설정 — 새 신호 검증과 섞지 않는다. */
+    private fun legacyPushupSignal() = RepSignal("wrist_shoulder_d", .30f, validated = true, plausibleMin = .10f,
+        romDirection = "min", romThreshold = .7101f, romValidated = true, romCue = "얕았어요. 가슴을 더 내려 주세요")
 
     @Test
     fun unvalidatedExercisesUseNeutralCue() {
