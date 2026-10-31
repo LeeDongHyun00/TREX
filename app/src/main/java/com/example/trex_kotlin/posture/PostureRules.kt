@@ -218,7 +218,7 @@ class PostureRuleSet(
                     (RepFormSpecs.supersedeNotes[r.id] ?: "§62a: 세트 평균은 서 있는 프레임이 결정해 실기기 오탐")))
             else r
         }
-        return PostureRuleSet("$version+${RepFormSpecs.VERSION}", generated, demoted + RepFormSpecs.asRules() + legScopeRules())
+        return PostureRuleSet("$version+${RepFormSpecs.VERSION}", generated, demoted + RepFormSpecs.asRules() + legScopeRules() + fourExerciseScopeRules())
     }
 
     companion object {

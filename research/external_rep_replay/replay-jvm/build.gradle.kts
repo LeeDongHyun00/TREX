@@ -22,7 +22,7 @@ val postureTest = appRoot.resolve("test/java/com/example/trex_kotlin/posture")
 // PostureFloor.kt(앱 바닥 경로의 피처 함수 FloorFeatureExtractor.computeForExercise — PoseSample.withFeatures 를 PostureAnalyzer.kt 로 옮겨 안드로이드 의존을 뗐다).
 // PlankAlignment.kt(PostureRule)는 안드로이드 의존이라 넣지 않는다
 val engineFiles = listOf("PostureCore.kt", "RepCounter.kt", "ReturnRepTracker.kt", "RepHysteresis.kt", "PostureView.kt", "RepForm.kt", "RuleTypes.kt", "Stance2d.kt", "Arm2d.kt", "Lunge2d.kt", "LungeSides.kt", "RepFormPriorTable.kt", "FormMotion.kt", "LegCycle.kt",
-    "PlankGeometry.kt", "FloorChain.kt", "FloorCycle.kt", "PlankHold.kt", "PostureFloor.kt", "StandingFraming.kt", "FloorGaze.kt")
+    "PlankGeometry.kt", "FloorChain.kt", "FloorCycle.kt", "PlankHold.kt", "PostureFloor.kt", "StandingFraming.kt", "FloorGaze.kt", "FourExerciseForm.kt")
 
 sourceSets {
     main {
@@ -34,7 +34,7 @@ sourceSets {
         kotlin.srcDir(postureTest)
         // trex/** = 재생기 자체 테스트(src/test/kotlin — U 줄·--dump-features, spec §61)
         kotlin.include("RepCounterTest.kt", "ReturnRepTrackerTest.kt", "RepHysteresisTest.kt", "LegCycleTest.kt",
-            "FloorChainTest.kt", "FloorCycleTest.kt", "PlankHoldTest.kt", "trex/**")
+            "FloorChainTest.kt", "FloorCycleTest.kt", "PlankHoldTest.kt", "FourExerciseFormTest.kt", "trex/**")
         resources.srcDir(appRoot.resolve("test/resources"))
         resources.include("rep_fixture_baseline1.txt", "plank_replay_fixture.tsv")
     }

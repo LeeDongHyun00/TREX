@@ -90,9 +90,10 @@ object SetLabelFormat {
     }
 }
 
-class SetLabelStore(private val dir: File) {
+class SetLabelStore private constructor(private val dir: File, private val storage: com.example.trex_kotlin.security.TextFileStorage) {
+    internal constructor(dir: File) : this(dir, com.example.trex_kotlin.security.PlainTextFiles)
 
-    constructor(context: Context) : this(File(context.getExternalFilesDir(null) ?: context.filesDir, "posture_logs"))
+    constructor(context: Context) : this(File(context.getExternalFilesDir(null) ?: context.filesDir, "posture_logs"), com.example.trex_kotlin.security.AndroidKeyCipher.files)
 
     val directory: File get() = dir
     val labelsFile: File get() = File(File(dir, LABELS_DIR), LABELS_FILE)
@@ -102,20 +103,20 @@ class SetLabelStore(private val dir: File) {
     fun append(label: SetSelfLabel) {
         synchronized(LOCK) {
             labelsFile.parentFile?.mkdirs()
-            labelsFile.appendText(SetLabelFormat.encodeJson(label) + "\n", Charsets.UTF_8)
+            storage.appendText(labelsFile, SetLabelFormat.encodeJson(label) + "\n")
             val row = SetLabelFormat.truthRow(label) ?: return
             val truth = truthFile
             // 헤더는 파일이 없거나 비어 있을 때만 — 중간에 헤더가 또 들어가면 csv.DictReader 가 데이터 행으로 읽는다
-            if (!truth.exists() || truth.length() == 0L) truth.appendText(TRUTH_HEADER + "\n", Charsets.UTF_8)
-            truth.appendText(row + "\n", Charsets.UTF_8)
+            if (!storage.exists(truth) || storage.readText(truth).isEmpty()) storage.appendText(truth, TRUTH_HEADER + "\n")
+            storage.appendText(truth, row + "\n")
         }
     }
 
     /** set_labels.jsonl 의 줄 수. */
     fun count(): Int {
         val f = labelsFile
-        if (!f.exists()) return 0
-        return f.useLines(Charsets.UTF_8) { lines -> lines.count { it.isNotBlank() } }
+        if (!storage.exists(f)) return 0
+        return storage.readText(f).lineSequence().count { it.isNotBlank() }
     }
 
     companion object {

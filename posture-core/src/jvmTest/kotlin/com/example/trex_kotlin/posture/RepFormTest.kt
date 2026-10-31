@@ -604,7 +604,7 @@ class RepFormTest {
             "knee_out_mean__mean", "knee_out_mean", "mean", "world", "<", 0.02388f, "C", "정면", .96f, .94f, 56, true, emptyList())
         val spine = knee.copy(id = "바벨 스쿼트|척추의 중립[flexion]", condition = "척추의 중립", subtype = "flexion", feature = "torso_incl__range", baseFeature = "torso_incl", stat = "range", op = ">", threshold = 30.85f)
         val merged = PostureRuleSet("mp_v0.1", "", listOf(knee, spine)).plusRepForm()
-        assertEquals("mp_v0.1+repform_v0.14", merged.version)
+        assertEquals("mp_v0.1+repform_v0.17", merged.version)
         assertEquals(RuleStatus.BETA, merged.rules.first { it.id == knee.id }.status)
         assertEquals(RuleStatus.SHIP, merged.rules.first { it.id == spine.id }.status)
         val added = merged.rules.filter { it.kind == "rep_form" }

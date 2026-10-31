@@ -558,6 +558,7 @@ fun run(job: Job, meta: Map<String, String>, frames: List<InputFrame>, stats: Fr
         // 반복 판별 게이트(spec §62) — 판별 신호가 있는 종목만 값이 있다. rejected = [t_ms, min, max, swing], identitySwing 은 센 사이클 순서(null = 미판정)
         "identityFeature" to rc.signal.identityFeature,
         "identityMinAmp" to rc.signal.identityMinAmp,
+        "requiredPostureFeature" to rc.signal.requiredPostureFeature,
         "retracted" to Raw(rc.retractedReps.joinToString(",", "[", "]")),
         "rejected" to Raw(rc.rejectedReps.joinToString(",", "[", "]") { r -> "[${r.tMs},${num(r.min)},${num(r.max)},${num(r.identitySwing)}" + (r.feature?.let { ",\"$it\"" } ?: "") + "]" }),
         "identitySwing" to Raw(rc.identitySwings.joinToString(",", "[", "]") { it?.let(::num) ?: "null" }),

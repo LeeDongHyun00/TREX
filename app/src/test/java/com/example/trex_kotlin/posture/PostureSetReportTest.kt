@@ -277,7 +277,8 @@ class PostureSetReportTest {
         assertEquals(RepRomTier.NONE, RepRomTier.of(RepSignal("x", 1f, romDirection = "mid", romThreshold = 1f, romValidated = true)))
         // 세션 구성(PostureLive 와 같은 forSession): 바닥은 규칙 설정이 없으면 ROM 을 떼고, 규칙 설정은 검증 표시를 끈다
         assertEquals(RepRomTier.NONE, RepRomTier.of(RepCounter.forSession("크런치", floor = true)!!.signal))
-        assertEquals(RepRomTier.REFERENCE, RepRomTier.of(RepCounter.forSession("푸시업", "min", 0.71f, floor = true)!!.signal))
+        assertEquals(RepRomTier.NONE, RepRomTier.of(RepCounter.forSession("푸시업", "min", 0.71f, floor = true)!!.signal))
+        assertEquals(RepRomTier.REFERENCE, RepRomTier.of(RepCounter.forSession("니푸쉬업", "min", 0.71f, floor = true)!!.signal))
         assertEquals(RepRomTier.VALIDATED, RepRomTier.of(RepCounter.forSession("바벨 런지", floor = false)!!.signal))
         assertEquals("reference", RepRomTier.REFERENCE.key)
     }

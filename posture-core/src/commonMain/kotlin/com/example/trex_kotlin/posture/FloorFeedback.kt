@@ -33,7 +33,8 @@ data class FloorFeedback(
  */
 class FloorFeedbackController(private val exercise: String, rules: List<PostureRule>) {
     private val activeRules = rules.filter { it.exercise == exercise && it.status != RuleStatus.EXCLUDE }
-    private val repRule = activeRules.firstOrNull { it.repConfig != null }
+    // §123: 양쪽 평균 거리의 깊이 임계를 새 한쪽 사슬 사이클에 적용하지 않는다.
+    private val repRule = activeRules.firstOrNull { it.repConfig != null && exercise != "푸시업" }
     private val holdRule = activeRules.firstOrNull { it.holdConfig != null }
     private data class Issue(val id: String, val message: String, val points: Set<Int>, val recovery: String)
     private val since = HashMap<String, Long>()
@@ -72,6 +73,11 @@ class FloorFeedbackController(private val exercise: String, rules: List<PostureR
             val msg = if (paused) "다시 시작하면 측정을 이어가요" else "필요한 관절이 안 보여요. 몸 전체가 보이도록 폰을 옮겨 주세요"
             return FloorFeedback(if (paused) FloorFeedbackPhase.PAUSED else FloorFeedbackPhase.UNAVAILABLE, msg,
                 speech = if (paused) null else voice("coverage", msg, now, voiceEnabled, 15000))
+        }
+        if (exercise == "푸시업" && features[FourExerciseForm.PUSHUP_POSTURE] != 1f) {
+            clearObservation()
+            return FloorFeedback(FloorFeedbackPhase.UNAVAILABLE,
+                "엎드린 자세를 확인하지 못했어요. 폰을 몸 옆에 세우고 어깨부터 발목까지 보여 주세요")
         }
         if (!anchored || holdRule != null && hold?.baseline == null) {
             clearObservation()

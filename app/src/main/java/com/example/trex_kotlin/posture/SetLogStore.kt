@@ -27,7 +27,7 @@ object SubjectId {
     private const val KEY = "subject_id"
 
     fun get(context: Context): String {
-        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val prefs = com.example.trex_kotlin.SharedPreferencesStore(context, PREFS)
         prefs.getString(KEY, null)?.let { return it }
         val id = "s-" + UUID.randomUUID().toString().substring(0, 8)
         prefs.edit().putString(KEY, id).apply()
@@ -36,12 +36,13 @@ object SubjectId {
 }
 
 /**
- * 세트 로그 저장소: `<externalFilesDir>/posture_logs/sets-yyyyMMdd.jsonl` 에 한 줄씩 추가.
- * 외부 앱 전용 저장소라 권한이 필요 없고, `adb pull` 또는 공유 시트로 꺼내 재보정 도구에 넣는다.
+ * 세트 로그 저장소: `<externalFilesDir>/posture_logs/sets-yyyyMMdd.jsonl.aes` 에 암호화하여 추가한다.
+ * 분석용 평문은 앱의 내보내기로 만든다. adb pull한 암호문은 기기의 Keystore 없이 해독할 수 없다.
  */
-class SetLogStore(private val dir: File) {
+class SetLogStore private constructor(private val dir: File, private val storage: com.example.trex_kotlin.security.TextFileStorage) {
+    internal constructor(dir: File) : this(dir, com.example.trex_kotlin.security.PlainTextFiles)
 
-    constructor(context: Context) : this(File(context.getExternalFilesDir(null) ?: context.filesDir, "posture_logs"))
+    constructor(context: Context) : this(File(context.getExternalFilesDir(null) ?: context.filesDir, "posture_logs"), com.example.trex_kotlin.security.AndroidKeyCipher.files)
 
     val directory: File get() = dir
 
@@ -49,19 +50,20 @@ class SetLogStore(private val dir: File) {
         dir.mkdirs()
         val day = SimpleDateFormat("yyyyMMdd", Locale.US).apply { timeZone = TimeZone.getTimeZone("UTC") }.format(now)
         val file = File(dir, "sets-$day.jsonl")
-        file.appendText(SetLogJson.encode(log) + "\n", Charsets.UTF_8)
+        storage.appendText(file, SetLogJson.encode(log) + "\n")
         return file
     }
 
-    fun files(): List<File> = dir.listFiles { f -> f.isFile && f.name.endsWith(".jsonl") }?.sortedBy { it.name } ?: emptyList()
+    fun files(): List<File> = storage.list(dir).filter { it.name.endsWith(".jsonl") }.sortedBy { it.name }
+    internal fun exportFiles(): List<File> = files() +
+        storage.list(File(dir, "labels")).filter { it.name.endsWith(".jsonl") } +
+        storage.list(dir).filter { it.name == SetLabelFormat.TRUTH_FILE }
 
-    fun totalSets(): Int = files().sumOf { f -> f.useLines(Charsets.UTF_8) { lines -> lines.count { it.isNotBlank() } } }
+    internal fun readText(file: File): String = storage.readText(file)
+    fun totalSets(): Int = files().sumOf { storage.readText(it).lineSequence().count { line -> line.isNotBlank() } }
+    fun totalBytes(): Long = files().sumOf { storage.size(it) }
 
-    fun totalBytes(): Long = files().sumOf { it.length() }
-
-    fun clear() {
-        files().forEach { it.delete() }
-    }
+    fun clear() { files().forEach(storage::delete) }
 
     companion object {
         /**

@@ -540,6 +540,7 @@ object SetLogJson {
                     e.romRefMin?.let { sb.append(",\"rom_ref_min\":").append(num(it)) }
                     e.romAuxFeature?.let { sb.append(",\"rom_aux\":{\"feature\":"); str(sb, it); sb.append(",\"ratio\":").append(num(e.romAuxRatio)).append(",\"floor\":").append(num(e.romAuxFloor)).append('}') }
                 }
+                e.requiredPostureFeature?.let { sb.append(",\"required_posture\":"); str(sb, it) }
                 sb.append('}')
             }
             // 판별 게이트가 세지 않은 사이클과 센 사이클의 판별 스윙 — 판별 신호가 있는 종목만(없으면 키 부재)
