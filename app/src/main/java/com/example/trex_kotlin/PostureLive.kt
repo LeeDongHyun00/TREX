@@ -1,5 +1,7 @@
 package com.example.trex_kotlin
 
+import com.example.trex_kotlin.posture.FourExerciseForm
+
 import com.example.trex_kotlin.posture.FloorFeedback
 import com.example.trex_kotlin.posture.FloorFeedbackController
 import com.example.trex_kotlin.posture.FloorFeedbackPhase
@@ -377,6 +379,8 @@ fun PostureLiveSessionScreen(
     /** 앵커가 잡힌 세트 상대시각(ms). 로그에 남겨 오프라인 재계산이 같은 창을 쓸 수 있게 한다. 0 = 아직. */
     // 베타(미보정) 위반 — 말하지 않고 화면에만 '참고' 로 남긴다
     var provisionalNote by remember { mutableStateOf<String?>(null) }
+    // §123: 반복 참고를 창 규칙·바닥 피드백이 같은 프레임에서 지우지 않게 별도로 보관한다.
+    var repReferenceNote by remember { mutableStateOf<String?>(null) }
     var provisionalHighlight by remember { mutableStateOf<Set<Int>>(emptySet()) }
     var repFast by remember { mutableStateOf(false) }
     var repTempoMs by remember { mutableStateOf<Long?>(null) }   // 렙 간격 중앙값 — 기록 모드 계기판 (§29)
@@ -395,7 +399,7 @@ fun PostureLiveSessionScreen(
     LaunchedEffect(formHighlightStamp) {
         if (formHighlightStamp == 0L) return@LaunchedEffect
         kotlinx.coroutines.delay(FORM_HIGHLIGHT_MS)
-        formHighlight = emptySet(); formProvHighlight = emptySet()
+        formHighlight = emptySet(); formProvHighlight = emptySet(); repReferenceNote = null
     }
     // ---- 검은 무대(docs/LIVE_SCREEN_REDESIGN.md §2): 세트 시작 뒤 몸이 1 s 보이면 배율을 잠그고, 1.5 s 잃으면 영상으로 돌아간다.
     //      분석 스레드가 프레임마다 갱신한다(sample 과 같은 경로). 사용자 토글은 세션 동안 유지된다
@@ -789,6 +793,7 @@ fun PostureLiveSessionScreen(
         refs.anchorAtRef[0] = 0L
         scoreOk = null
         provisionalNote = null
+        repReferenceNote = null
         refs.provisionalAtRef[0] = 0L
         provisionalHighlight = emptySet()
         formHighlight = emptySet(); formProvHighlight = emptySet(); formHighlightStamp = 0L
@@ -913,6 +918,14 @@ fun PostureLiveSessionScreen(
                 }
                 if (s.detected) everDetected = true
                 if (!s.detected || refs.pausedRef[0]) {
+                    // §132: 사람 검출 실패 프레임도 전달해 가림 앞뒤의 푸시업을 이어 세지 않는다.
+                    if (!refs.pausedRef[0]) locked(refs.repLock) {
+                        refs.repRef[0]?.takeIf { it.pushupTracker != null }?.let { rc ->
+                            rc.onFrameFeatures(now,emptyMap())
+                            refs.repFormRef[0]?.onFrame(now,emptyMap())
+                            provisionalNote=rc.pushupTracker?.note
+                        }
+                    }
                     refs.contactRef[0].clear()
                     alignment = refs.alignmentRef[0]?.add(now,emptyMap()) ?: AlignmentSnapshot()
                     refs.comparisonRef[0]?.unavailable()
@@ -934,7 +947,7 @@ fun PostureLiveSessionScreen(
                         // 종목은 세트 시작 시점 값(§99 — 비교 추적기가 생기기 전엔 "" 라 플랭크 피처가 빠졌다)
                         // §101d: 얼굴 메시 피처(face_*)는 분석기 샘플에 있다 — 바닥 맵에 얹는다(시선·세트 로그)
                         refs.floorLive.withFace(floorExtractor.computeForExercise(refs.floorLive.exercise,s.normalizedXy,s.visibility,s.imageWidth,s.imageHeight,
-                            FloorChain.gravityUp(s.up, s.upFromGravity, s.upFlipped), now), s.features)
+                            FloorChain.gravityUp(s.up, s.upFromGravity, s.upFlipped), now, world = s.world), s.features)
                     } else {
                         // §98a: 85 ms 접촉 최솟값을 이 판정 프레임의 피처에 얹는다 — 평가기·카운터·세트 로그가 같은 맵을 본다(재생 .fcap 파리티)
                         val contact = refs.contactRef[0].drain()
@@ -1042,8 +1055,8 @@ fun PostureLiveSessionScreen(
                             }
                             repCount += tally.repsNotShort
                             repInvalid += tally.repsShort
-                            // COACH 만 ship 위반 회를 횟수에서 뺀다(spec §62b, 사용자 결정 2026-09-25). TRACK 은 전부 센다 — 게이트 없음.
-                            val gate = refs.modeRef[0] == CoachMode.COACH && !refs.floorRef[0]
+                            // §126: 바닥 일괄 예외에 숨지 않도록 푸시업의 관측된 횟수 위반도 연결한다.
+                            val gate = FourExerciseForm.usesFormCountGate(aihubExercise, refs.modeRef[0] == CoachMode.COACH, refs.floorRef[0])
                             // 부분(ROM 미달)으로 이미 빠진 회는 자세 위반으로 다시 빼지 않는다 — 같은 회를 두 번 빼면 화면 수가 실제보다 준다(폰 15:34 세트 6·8회)
                             if (gate && refs.sideCounterRef[0] == null) {
                                 val excluded = formReps.indices.count { i -> !formReps[i].correct && !(rc.signal.romExcludesShort && tally.records.getOrNull(i)?.valid == false) }
@@ -1076,7 +1089,7 @@ fun PostureLiveSessionScreen(
                                 }
                             }
                             // 틀린 부위를 스켈레톤에 칠한다(§62c 후속 4) — COACH·서서만(TRACK 은 모집단 기준 '틀림' 을 칠하지 않는다, §29)
-                            if (gate) formReps.lastOrNull()?.let { rep ->
+                            if (coachNow) formReps.lastOrNull()?.let { rep ->
                                 val (red, prov) = RuleHighlight.forRepForm(rep)   // 걸음 검사는 앞다리만(§63), 그 밖은 종전과 같다
                                 formHighlight = red; formProvHighlight = prov
                                 formHighlightStamp = if (red.isEmpty() && prov.isEmpty()) 0L else now
@@ -1089,6 +1102,9 @@ fun PostureLiveSessionScreen(
                             val extraStep = sideEv != null && !sideEv.counted && !sideEv.blocked
                             // speak = 실제로 말하는 경우(COACH·추가 걸음 아님)에만 쿨다운·교정됨 대기를 쓴다(§100)
                             val formEv = if (lastRep == null || rf == null) null else rf.eventFor(lastRep, now, gate = gate, speak = gate && !extraStep)
+                            repReferenceNote = formEv?.takeIf { !it.ship && it.check.referenceFix && !extraStep }?.message
+                                ?: lastRep?.takeIf { coachNow && !extraStep }?.let(FourExerciseForm::unobservedNote)
+                            if (repReferenceNote != null) formHighlightStamp = now
                             if (lastRep?.correct == true) { formNote = null; if (motionCue?.origin == MotionOrigin.REPFORM) motionCue = null }   // 통과한 회 — 반복 검사 화살표만 지운다(§3.2·§101: 한 다리 계열의 센 회는 beta 뿐이라 늘 correct — 다른 다리의 기각 화살표를 지우면 안 된다)
                             // 부분(ROM 미달)으로 빠진 회의 사유(spec §62c 후속 3) — 손목이 보여 준 끝(덜 올림/덜 폄). 세트당 처음 MAX_INVALID_CUES 번은 교정 문장까지, 그 뒤는 짧게
                             val shortReason = if (gate && rc.signal.romExcludesShort && tally.repsShort > 0)
@@ -1125,7 +1141,7 @@ fun PostureLiveSessionScreen(
                                     RomShort.RANGE -> FormMotion.mark(MotionAnchor.WRISTS, pick = MotionPick.NEAR)
                                 }, MotionOrigin.ROM, near = FormMotion.nearSide(lastRep?.view)), now)
                             } else if (formEv != null && !formEv.ship && !extraStep) {
-                                provisionalNote = formEv.message   // beta 는 화면 '참고' 로만 — 침묵이 "이상 없음" 으로 읽히면 안 된다
+                                if (!formEv.check.referenceFix) provisionalNote = formEv.message   // §123 새 참고는 위의 별도 상태에서 만료한다
                             } else if (gate && !extraStep && rf != null && lastRep != null) {
                                 // 교정됨(§100): 말한 위반의 검사가 이 회에서 OK 로 판정됐으면 "좋아요, … 교정됐어요"(위반 후보가 없는 회에서만 — LiveCoach 와 같은 순서).
                                 // 가동 범위 미달을 말한 뒤 끝까지 한 회도 교정. 화살표·강조는 지운다
@@ -1286,7 +1302,10 @@ fun PostureLiveSessionScreen(
                         // 바닥 피드백 음성은 관측 문장뿐(beta 는 말하지 않는다 — Q1). 끊지 않는다(§99)
                         if (refs.modeRef[0] != CoachMode.TRACK) floorFeedback?.speech?.let { speech.speakLatest(it) }
                         // beta 확인 필요(정렬 이탈 등)는 '참고' 칩으로만(원칙 #2) — 큰 교정 줄에 올리지 않는다
-                        provisionalNote = floorFeedback?.takeIf { it.phase == FloorFeedbackPhase.ATTENTION }?.message
+                        provisionalNote = listOfNotNull(
+                            refs.repRef[0]?.pushupTracker?.note,
+                            floorFeedback?.takeIf { it.phase == FloorFeedbackPhase.ATTENTION }?.message
+                        ).distinct().joinToString("\n").ifEmpty { null }
                     }
                 }
             } catch (_: Throwable) {
@@ -1364,7 +1383,7 @@ fun PostureLiveSessionScreen(
                 sample = sample, mirror = useFrontCamera, dark = stageDark, lock = stageLock.takeIf { !preparing },
                 // 바닥은 전부 beta — 빨강(ship 전용) 대신 '참고' 채널로(§99, Q1)
                 highlight = if (preparing || mode == CoachMode.TRACK || paused || isFloorExercise) emptySet() else violHighlight + formHighlight,
-                provisional = if (preparing || paused) emptySet() else if (mode == CoachMode.TRACK) comparison.landmarks else if (isFloorExercise) floorFeedback?.landmarks.orEmpty() else (provisionalHighlight + formProvHighlight) - formHighlight,
+                provisional = if (preparing || paused) emptySet() else if (mode == CoachMode.TRACK) comparison.landmarks else if (isFloorExercise) floorFeedback?.landmarks.orEmpty() + formProvHighlight else (provisionalHighlight + formProvHighlight) - formHighlight,
                 visibilityCut = if (isFloorExercise) 0.35f else 0.5f,
                 plankSide = alignment.visibleSide.takeIf { !preparing && alignment.placementReady && mode == CoachMode.COACH && !paused },
                 // 화살표는 COACH 만(TRACK 은 앱이 가르치지 않는다 — 원칙 #3). 바닥도 그린다(§101, 참고색 — U7)
@@ -1398,7 +1417,7 @@ fun PostureLiveSessionScreen(
             mode = selected; refs.modeRef[0] = selected
             modeStore.set(workout.name, selected)
             speech.stop(); comparisonSpeech.clear()
-            coachBanner = null; provisionalNote = null
+            coachBanner = null; provisionalNote = null; repReferenceNote = null
             violHighlight = emptySet(); provisionalHighlight = emptySet()
             formHighlight = emptySet(); formProvHighlight = emptySet()
             // 모드를 바꿔도 현재 세트 초반 기준과 누적 횟수는 유지한다.
@@ -1513,7 +1532,10 @@ fun PostureLiveSessionScreen(
                     countNoteActive = !validation && (repHalfPending || sideTallies?.next(mode == CoachMode.COACH) != null),
                     elapsedSec = setElapsedSec,
                     // beta 는 '참고' 칩으로만(원칙 #2) — COACH 에서만(TRACK 은 모집단 기준 '틀림' 을 보이지 않는다, §29)
-                    referenceNote = provisionalNote?.takeIf { mode == CoachMode.COACH && !validation },
+                    referenceNote = (if (aihubExercise == "푸시업")
+                        listOfNotNull(repReferenceNote, provisionalNote).distinct().joinToString("\n").takeIf { it.isNotEmpty() }
+                        else repReferenceNote ?: provisionalNote)?.takeIf { mode == CoachMode.COACH && !validation && !paused },
+                    referenceMaxLines = if (aihubExercise == "푸시업") 10 else 1,
                     modeLabel = if (mode == CoachMode.TRACK) "TRACK" else "COACH",
                     // 호흡(§5): 카운터 위상을 따라가는 표시. 카운터 없는 시간 목표(플랭크)는 "자연스럽게 호흡". 검증 모드·사람 없음·쉼이면 없음
                     breath = when {

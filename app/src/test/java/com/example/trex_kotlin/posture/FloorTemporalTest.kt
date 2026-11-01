@@ -49,7 +49,8 @@ class FloorTemporalTest {
         kind = "rep", repConfig = RepRuleConfig("min", .71f, .34f, 2))
 
     @Test fun oneDeepRepDoesNotHideRepeatedShallowReps() {
-        val result = FloorTemporal.repResult(rule(), listOf(.5f, .9f, .9f, .9f).mapIndexed { i, v -> RepRecord(i * 3000L, v, 1.4f, null) })
+        // §123: 푸시업은 신호가 바뀌어 옛 깊이 보정을 유보한다. 기존 반복 집계 자체는 니푸쉬업 설정으로 검증한다.
+        val result = FloorTemporal.repResult(rule().copy(exercise = "니푸쉬업"), listOf(.5f, .9f, .9f, .9f).mapIndexed { i, v -> RepRecord(i * 3000L, v, 1.4f, null) })
         assertEquals(Verdict.VIOLATION, result.verdict)
         assertEquals(.75f, result.value!!, .001f)
         assertEquals(4, result.sampleCount)
@@ -58,6 +59,12 @@ class FloorTemporalTest {
     @Test fun noRepsAndSingleRepCannotPass() {
         assertEquals(Verdict.ABSTAIN, FloorTemporal.repResult(rule(), emptyList()).verdict)
         assertEquals(Verdict.ABSTAIN, FloorTemporal.repResult(rule(), listOf(RepRecord(0, .5f, 1.4f, true))).verdict)
+    }
+
+    @Test fun newPushupSignalCannotReuseLegacyDepthThreshold() {
+        val r = FloorTemporal.repResult(rule(), List(5) { RepRecord(it * 3000L, .1f, 1.4f, null) })
+        assertEquals(Verdict.ABSTAIN, r.verdict)
+        assertTrue(r.abstainReason!!.contains("재검증"))
     }
 
     @Test fun repRulesCannotFallBackToSetMinimum() {

@@ -4,6 +4,7 @@ import com.example.trex_kotlin.posture.FloorChain
 import com.example.trex_kotlin.posture.FloorFeatureExtractor
 import com.example.trex_kotlin.posture.FloorProfile
 import com.example.trex_kotlin.posture.PlankHoldClock
+import com.example.trex_kotlin.posture.PushupBalance
 import com.example.trex_kotlin.posture.Vec3
 import java.io.File
 import kotlin.math.cos
@@ -21,6 +22,37 @@ import org.junit.Test
  * FloorCycleTracker(RepCounter.forSession floor = true), 플랭크는 PlankHoldClock 으로 돈다. 합성 측면 좌표(1000×1000, 왼쪽이 카메라 쪽).
  */
 class FloorReplayTest {
+    @Test fun coupledPushupReplayRetainsMissingFrameAbstention() {
+        val frames=ArrayList<InputFrame>();var t=0L
+        repeat(3) { cycle ->
+            for ((i,h) in listOf(.45f,.45f,.4f,.3f,.2f,.15f,.2f,.3f,.4f,.45f,.45f).withIndex()) {
+                val f=if(cycle==1 && i==5)null else mapOf("pushup_posture" to 1f,"pushup_shoulder_height" to h,
+                    "pushup_pelvis_height" to h*.6f,"pushup_pelvis_position" to .6f,"pushup_hip_offset" to 0f,
+                    "pushup_knee" to 175f,"pushup_elbow" to if(h>=.43f)175f else 90f,FloorChain.SIDE to 0f)
+                frames+=InputFrame(t,f);t+=300
+            }
+        }
+        val result=run(Job("p","x.cap","푸시업","live",null,null,floor=true),emptyMap(),frames,FrameStats(),null)
+        assertTrue(result,result.contains("\"engine\":\"pushup_coupled_v1\""))
+        assertTrue(result,result.contains("\"reps\":2,"))
+        assertTrue(result,result.contains("pushup_unobserved"))
+    }
+
+    @Test fun pushupReferenceReplayUsesRecordedWorldAndAbstainsWhenItIsMissing() {
+        val image = Array<FloatArray?>(33) { i -> plank()[i].let { floatArrayOf(it[0],it[1],1f,1f) } }
+        image[12]!![1] = .65f; image[24]!![1] = .42f
+        val world = Array<Vec3?>(33) { i -> Vec3(image[i]!![0],image[i]!![1],if (i%2==0) .28f else 0f) }
+        val f=CaptureFrame(0,1,image,world,Vec3(0f,1f,0f))
+        val actual=floorFrameFeatures(f,"푸시업",FloorFeatureExtractor(),1000,1000)!!
+        val xy=FloatArray(66) { image[it/2]!![it%2] }
+        val raw=FloatArray(99) { k -> world[k/3]!!.let { when(k%3) { 0 -> it.x; 1 -> it.y; else -> it.z } } }
+        val direct=FloorFeatureExtractor().computeForExercise("푸시업",xy,FloatArray(33) { 1f },1000,1000,f.up,0,raw)
+        assertEquals(direct,actual); assertTrue(actual.keys.containsAll(PushupBalance.keys))
+        val noWorld=CaptureFrame(0,1,image,arrayOfNulls(33),f.up)
+        val missing=floorFrameFeatures(noWorld,"푸시업",FloorFeatureExtractor(),1000,1000)!!
+        assertTrue(missing.keys.intersect(PushupBalance.keys).isEmpty())
+    }
+
     private fun temp(text: String): File = File.createTempFile("floor", ".cap").apply { deleteOnExit(); writeText(text) }
 
     /** 33점 정규화 좌표·가시성 — 가까운 쪽(왼쪽, 짝수 인덱스 아님 주의: MediaPipe 왼쪽 = 홀수 11·13…) 0.9, 먼 쪽은 같은 자리 + 0.01 아래, 가시성 0.3. */

@@ -15,6 +15,7 @@ import com.example.trex_kotlin.posture.RepPolarity
 import com.example.trex_kotlin.posture.RepSignal
 import com.example.trex_kotlin.posture.RepSignals
 import com.example.trex_kotlin.posture.Stance2d
+import com.example.trex_kotlin.posture.StandingFormGeometry
 import com.example.trex_kotlin.posture.Arm2d
 import com.example.trex_kotlin.posture.Lunge2d
 import com.example.trex_kotlin.posture.SideStepCounter
@@ -231,11 +232,12 @@ fun frameFeatures(frame: CaptureFrame, stats: FrameStats): Map<String, Float>? {
     val viewF = ViewEstimator.frameFeatures(joints)
     val pf = PoseFrame(joints, up)
     // §63: 런지 걸음 기하도 앱과 같은 순서·같은 함수
-    return pf.features() + viewF + Stance2d.features(xy, vis, MIN_VISIBILITY) +
+    val features = pf.features() + viewF + Stance2d.features(xy, vis, MIN_VISIBILITY) +
         Arm2d.features(xy, vis, MIN_VISIBILITY, Stance2d.DEFAULT_ASPECT, Arm2d.yawOf(viewF)) +
         Lunge2d.features(pf, xy, vis, MIN_VISIBILITY, Stance2d.DEFAULT_ASPECT, ViewEstimator.shoulderYawOf(viewF)) +
         // §97: 한 다리 계열의 기하 — 앱 PostureAnalyzer 와 같은 순서·같은 함수(롤은 캡처의 up 에서)
         LegGeometry.features(pf, xy, vis, MIN_VISIBILITY, frame.aspect, LegGeometry.rollDeg(up))
+    return StandingFormGeometry.apply(features,xy,vis,frame.aspect,up)
 }
 
 /** 바닥 경로의 이미지 크기(px) — 메타 imageW/imageH(또는 imageWidth/imageHeight). 없으면 세로 480×640 가정(stats.floorImageAssumed). */
@@ -258,7 +260,11 @@ fun floorFrameFeatures(frame: CaptureFrame, exercise: String, extractor: FloorFe
         minOf(if (lm[2].isNaN()) 1f else lm[2], if (lm[3].isNaN()) 1f else lm[3])
     }
     val xy = FloatArray(MP_LANDMARK_COUNT * 2) { k -> frame.image[k / 2]!![k % 2] }
-    return extractor.computeForExercise(exercise, xy, vis, width, height, frame.up, frame.tMs)
+    // §131: 기록된 원본 world가 있을 때만 양쪽 정렬 참고를 재생한다. 누락 좌표를 0으로 채우지 않는다.
+    val world = FloatArray(MP_LANDMARK_COUNT * 3) { k -> frame.world[k / 3]?.let {
+        when (k % 3) { 0 -> it.x; 1 -> it.y; else -> it.z }
+    } ?: Float.NaN }
+    return extractor.computeForExercise(exercise, xy, vis, width, height, frame.up, frame.tMs, world)
 }
 
 /** 한 세트(캡처·클립)의 바닥 경로 입력 — 추출기는 세트 단위 상태(접지선 이력·쪽 잠금)를 들고 있어 여기서 새로 만든다. */
@@ -468,7 +474,12 @@ fun run(job: Job, meta: Map<String, String>, frames: List<InputFrame>, stats: Fr
         stats.frames++
         prevT?.let { if (frame.tMs - it > SESSION_MAX_GAP_MS) gaps++ }
         prevT = frame.tMs
-        val features = frame.features ?: continue
+        val features = frame.features
+        if (features == null) {
+            // §132: 원본의 미검출 칸도 푸시업에 전달한다. 가림 앞뒤를 한 회로 잇지 않는다.
+            if (rc.pushupTracker != null) { rc.onFrameFeatures(frame.tMs,emptyMap()); rf?.onFrame(frame.tMs,emptyMap()) }
+            continue
+        }
         stats.detected++
         // 앱이 준비 단계에서 심은 서 있는 기준(§89 후속 2, 로그 reps.config.seed) — 앱처럼 카운터가 처음 보는 프레임에 심는다
         pendingSeed?.let { v -> rc.seedStanding(frame.tMs, v); pendingSeed = null }
@@ -532,7 +543,8 @@ fun run(job: Job, meta: Map<String, String>, frames: List<InputFrame>, stats: Fr
         "id" to job.id, "capture" to job.capture, "exercise" to job.exercise, "mode" to job.mode,
         "feature" to rc.signal.feature, "minAmp" to rc.signal.minAmp,
         "romDirection" to rc.signal.romDirection, "romThreshold" to rc.signal.romThreshold,
-        "engine" to (if (rc.legTracker != null) com.example.trex_kotlin.posture.LegCycleTracker.VERSION
+        "engine" to (if (rc.pushupTracker != null) com.example.trex_kotlin.posture.PushupCycleTracker.VERSION
+            else if (rc.legTracker != null) com.example.trex_kotlin.posture.LegCycleTracker.VERSION
             else if (rc.floorTracker != null) com.example.trex_kotlin.posture.FloorCycleTracker.VERSION
             else if (rc.usesHysteresis) "hysteresis_v1" else "return_v1"),
         // 카운터가 실제로 쓰는 구성(RepEngineLog.of 와 같은 출처) — 합성 픽스처가 로그 reps.config 를 앱처럼 적을 수 있게
@@ -558,6 +570,7 @@ fun run(job: Job, meta: Map<String, String>, frames: List<InputFrame>, stats: Fr
         // 반복 판별 게이트(spec §62) — 판별 신호가 있는 종목만 값이 있다. rejected = [t_ms, min, max, swing], identitySwing 은 센 사이클 순서(null = 미판정)
         "identityFeature" to rc.signal.identityFeature,
         "identityMinAmp" to rc.signal.identityMinAmp,
+        "requiredPostureFeature" to rc.signal.requiredPostureFeature,
         "retracted" to Raw(rc.retractedReps.joinToString(",", "[", "]")),
         "rejected" to Raw(rc.rejectedReps.joinToString(",", "[", "]") { r -> "[${r.tMs},${num(r.min)},${num(r.max)},${num(r.identitySwing)}" + (r.feature?.let { ",\"$it\"" } ?: "") + "]" }),
         "identitySwing" to Raw(rc.identitySwings.joinToString(",", "[", "]") { it?.let(::num) ?: "null" }),

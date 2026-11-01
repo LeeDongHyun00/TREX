@@ -6,6 +6,73 @@ import org.junit.Test
 
 /** 플랫폼 경계 회귀: 실제 패키징 규칙으로 전 종목을 열고 빈 입력/중단·발화 대기열·얼굴 피처·플랭크 시계·관절 게이트를 검증한다. */
 class IosEngineTest {
+    @Test fun coupledPushupCountsThroughJsonAndWholePoseLossDiscardsOnlyThatAttempt() {
+        val e=engine();e.configure("{\"name\":\"푸쉬업\",\"mode\":\"coach\",\"muted\":true,\"target\":20}")
+        e.manualStart(1000);e.tick(6000)
+        var t=6300L;var status=""
+        fun send(angle:Double,missing:Boolean=false) {
+            val (xy,vis)=PushupCycleTest.landmarks(angle)
+            status=e.frame(Json.encode(if(missing) mapOf("timeMs" to t,"width" to 1000,"height" to 1000)
+                else mapOf("timeMs" to t,"width" to 1000,"height" to 1000,"xy" to xy.toList(),
+                    "world" to List(99) { 0f },"visibility" to vis.toList(),"up" to listOf(0,1,0),"gravityFresh" to true)))
+            t+=300
+        }
+        repeat(8) { send(25.0) }
+        repeat(3) { cycle ->
+            for ((i,a) in listOf(22.0,19.0,16.0,13.0,12.0,12.0,13.0,16.0,19.0,22.0,25.0).withIndex()) {
+                send(a,cycle==1 && i==5)
+                if(cycle==1 && i==5) assertTrue(status,JSONObject(status).optString("provisionalNote").contains("판단 유보"))
+            }
+            repeat(8) { send(25.0) }
+            assertEquals(status,if(cycle<2)1 else 2,JSONObject(status).getInt("reps"))
+        }
+        assertEquals(2,JSONObject(status).getInt("cycles"))
+        assertTrue(speechOf(status).isEmpty());assertTrue(JSONObject(e.finish(t)).isNull("score"))
+    }
+
+    @Test fun pushupBalanceWorldCoordinatesReachReferenceOnlyJsonFeedback() {
+        val e=engine(); e.configure("{\"name\":\"푸쉬업\",\"mode\":\"coach\",\"muted\":true}")
+        e.manualStart(1000); e.tick(6000)
+        val b=PushupBalanceTest.Body(30f,0f)
+        var status=""
+        for (i in 0..65) status=e.frame(Json.encode(mapOf("timeMs" to 6300+i*300,"width" to 1000,"height" to 1000,
+            "xy" to b.xy.toList(),"world" to b.world.toList(),"visibility" to b.vis.toList(),
+            "up" to listOf(0,1,0),"gravityFresh" to true)))
+        val f=JSONObject(e.exportFrames().lines().last()).optJSONObject("features")!!
+        assertTrue(f.has(PushupBalance.SHOULDER)); assertTrue(f.has(PushupBalance.TWIST))
+        val st=JSONObject(status)
+        assertTrue(status,st.optString("provisionalNote").contains("비틀림"))
+        assertTrue(st.optString("provisionalNote").contains("의심"))
+        assertEquals(0,st.getJSONArray("highlight").length())
+        assertTrue(st.getJSONArray("provisional").length()>0)
+        assertTrue(speechOf(status).isEmpty())
+        val missing=JSONObject(e.frame(Json.encode(mapOf("timeMs" to 26100,"width" to 1000,"height" to 1000,
+            "xy" to b.xy.toList(),"world" to List(99) { 0f },"visibility" to b.vis.toList(),
+            "up" to listOf(0,1,0),"gravityFresh" to true))))
+        assertFalse(missing.optString("provisionalNote").contains("비틀림"))
+        assertTrue(missing.toString(),missing.optString("message").contains("기울기·비틀림은 확인하지 못했어요"))
+        assertTrue(JSONObject(e.finish(27000)).isNull("score"))
+    }
+
+    @Test fun pushupLiveFeedbackCrossesJsonBoundaryAsReferenceOnly() {
+        val e = engine(); e.configure("{\"name\":\"푸쉬업\",\"mode\":\"coach\",\"muted\":true}")
+        e.manualStart(1000); e.tick(6000)
+        val xy = MutableList(66) { .5 }; val vis = MutableList(33) { 1f }
+        for (o in 0..1) {
+            fun p(i: Int, x: Double, y: Double) { xy[(i+o)*2] = x + o*.01; xy[(i+o)*2+1] = y }
+            p(11,.2,.3); p(13,.2,.45); p(15,.2,.6); p(23,.4,.5); p(25,.65,.4); p(27,.85,.45)
+        }
+        var status = ""
+        for (i in 0..65) status = e.frame(Json.encode(mapOf("timeMs" to 6300+i*300,
+            "width" to 1000, "height" to 1000, "xy" to xy, "world" to List(99) { 0.0 },
+            "visibility" to vis, "up" to listOf(0,1,0), "gravityFresh" to true)))
+        val st = JSONObject(status)
+        assertTrue("stage=${st.optString("stage")} message=${st.optString("message")} note=${st.optString("provisionalNote")} frames=${e.exportFrames().lines().last()}", st.optString("provisionalNote").contains("골반"))
+        assertEquals(0, st.getJSONArray("highlight").length())
+        assertTrue(st.getJSONArray("provisional").values().any { (it as? Number)?.toInt() == 23 })
+        assertTrue(speechOf(status).isEmpty())
+        assertTrue(JSONObject(e.finish(27000)).isNull("score"))
+    }
     private fun engine() = IosEngine(File("src/main/assets/posture/rules_mp_v0.json").readText(), File("src/main/assets/posture/rules_floor_v0.json").readText())
     private fun frames(status: String) = JSONObject(status)
     private fun speechOf(status: String): List<String> = frames(status).getJSONArray("speech").let { a -> (0 until a.length()).map { a.getJSONObject(it).getString("text") } }

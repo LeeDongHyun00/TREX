@@ -6,6 +6,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.example.trex_kotlin.posture.AlignmentSnapshot
 import com.example.trex_kotlin.posture.FloorGaze
+import com.example.trex_kotlin.posture.FourExerciseForm
 import com.example.trex_kotlin.posture.FloorGazeVoice
 import com.example.trex_kotlin.posture.FloorChain
 import com.example.trex_kotlin.posture.FloorCycleTracker
@@ -299,7 +300,7 @@ internal class FloorLiveState {
      * `PostureLiveSessionScreen` 의 지역 변수를 늘리지 않으려고 여기 둔다.
      */
     fun withFace(floor: Map<String, Float>, sample: Map<String, Float>): Map<String, Float> {
-        val found = sample[FloorGaze.FOUND] ?: return floor
+        val found = sample[FloorGaze.FOUND] ?: return FourExerciseForm.filterPushupHead(floor)
         val out = HashMap<String, Float>(floor.size + 3)
         out.putAll(floor)
         out[FloorGaze.FOUND] = found
@@ -307,7 +308,7 @@ internal class FloorLiveState {
         sample[FloorGaze.INFER_MS]?.let { out[FloorGaze.INFER_MS] = it }
         sample[FloorGaze.ROTATION]?.let { out[FloorGaze.ROTATION] = it }
         sample[FloorGaze.SIZE]?.let { out[FloorGaze.SIZE] = it }
-        return out
+        return FourExerciseForm.filterPushupHead(out)
     }
 
     /** 바닥 반복 종목의 횟수 줄(HUD countNote) — 세지 않은 동작 + 시선 칩. */

@@ -64,7 +64,7 @@ object Floor2d {
 class FloorChain(val kind: Kind) {
     /** 이 층을 쓰는 종목. 축각의 몸 축이 종목마다 다르다(플랭크 어깨→발목, 누운 종목 어깨→골반). */
     enum class Kind(val exercise: String) {
-        PLANK("플랭크"), CRUNCH("크런치"), LEG_RAISE("라잉 레그 레이즈");
+        PLANK("플랭크"), CRUNCH("크런치"), LEG_RAISE("라잉 레그 레이즈"), PUSHUP("푸시업");
         companion object { fun of(exercise: String): Kind? = entries.firstOrNull { it.exercise == exercise } }
     }
 
@@ -145,6 +145,53 @@ class FloorChain(val kind: Kind) {
         }
 
         when (kind) {
+            Kind.PUSHUP -> {
+                // §123: 앉아서 팔만 접는 움직임은 푸시업이 아니다. 정렬의 좋고 나쁨(beta)과 엎드림 관측을 분리한다.
+                // 중력·측면·전신이 불명확하면 신호를 만들지 않는다. 반대쪽의 외삽 좌표를 평균하지 않는다.
+                val sideOk = out[YAW]?.let { it <= .2f } == true
+                if (upOk && sideOk && chain && A != null && K != null && visible(el) && visible(wr)) {
+                    val W = p(wr)
+                    val length = hypot(A[0] - S[0], A[1] - S[1])
+                    val thigh = hypot(K[0] - H[0], K[1] - H[1])
+                    val shin = hypot(A[0] - K[0], A[1] - K[1])
+                    if (length >= torso && thigh >= torso * .2 && shin >= torso * .2) {
+                        put(FourExerciseForm.PUSHUP_HIP, devAlong(H, S, A, ux, uy))
+                        out[KNEE]?.let { out[FourExerciseForm.PUSHUP_KNEE] = it }
+                        val prone = axisDeg(sub(A, S), ux, uy) <= 45.0 && axisDeg(sub(S, H), ux, uy) <= 60.0 &&
+                            (S[0] - W[0]) * ux + (S[1] - W[1]) * uy >= 0.0
+                        out[FourExerciseForm.PUSHUP_POSTURE] = if (prone) 1f else 0f
+                        if (prone) {
+                            // §126: 손목·골반 이동이 신호에 섞이지 않도록 발목 기준 어깨 높이를 어깨–발목 길이로 나눈다.
+                            put(FourExerciseForm.PUSHUP_SIGNAL, ((S[0] - A[0]) * ux + (S[1] - A[1]) * uy) / length)
+                            // §132: 같은 발목·길이 기준의 골반 높이와 몸통 위 위치. 양 부위에 같은 이동 거리를 요구하지 않는다.
+                            put(PushupCycleTracker.HIP_HEIGHT, ((H[0] - A[0]) * ux + (H[1] - A[1]) * uy) / length)
+                            put(PushupCycleTracker.HIP_RATIO, ((H[0] - A[0]) * (S[0] - A[0]) +
+                                (H[1] - A[1]) * (S[1] - A[1])) / (length * length))
+                            // §123b: 측면·전신·중력이 확인된 팔만 범위를 본다. 관절이 겹친 프레임의 가짜 90°를 쓰지 않는다.
+                            val E = p(el)
+                            val upper = hypot(E[0] - S[0], E[1] - S[1])
+                            val forearm = hypot(W[0] - E[0], W[1] - E[1])
+                            if (upper >= torso * .15 && forearm >= torso * .15)
+                                out[ELBOW]?.let { out[FourExerciseForm.PUSHUP_ELBOW] = it }
+                            // §127: 보이는 쪽 코·귀로만 고개/머리 위치를 참고한다. 작은 얼굴·겹친 점은 각도를 만들지 않는다.
+                            if (visible(ear, .7f) && visible(0, .7f)) {
+                                val earPoint = p(ear); val nose = p(0)
+                                val faceLength = hypot(nose[0] - earPoint[0], nose[1] - earPoint[1])
+                                val neckLength = hypot(earPoint[0] - S[0], earPoint[1] - S[1])
+                                val forward = ((earPoint[0] - S[0]) * (S[0] - H[0]) +
+                                    (earPoint[1] - S[1]) * (S[1] - H[1])) / torso
+                                if (faceLength >= max(8.0, torso * .06) && faceLength <= torso * .6 &&
+                                    neckLength >= torso * .12 && neckLength <= torso * .8 && forward >= torso * .08) {
+                                    headPitch(earPoint, nose, S, H, torso, ux, uy)?.let { pitch ->
+                                        put(FourExerciseForm.PUSHUP_HEAD, pitch)
+                                        put(FourExerciseForm.PUSHUP_NECK, elev(sub(earPoint, S), sub(S, H), ux, uy))
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
             Kind.PLANK -> {
                 if (A != null) {
                     if (upOk) put(AXIS_H, axisDeg(sub(A, S), ux, uy))
