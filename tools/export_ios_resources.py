@@ -23,7 +23,7 @@ def main():
         for field in ['breathing', 'sourceName', 'sourceUrl']:
             guide[field] = strings(re.search(field+r' = ("(?:[^"\\]|\\.)*")', chunk).group(1))[0]
         guides.append(guide)
-    assert len(guides) == 10, len(guides)
+    assert len(guides) == 14, len(guides)
     files['guides.json'] = guides
     nutrition = []
     data_text = (JAVA/'TrexData.kt').read_text(encoding='utf-8')

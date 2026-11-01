@@ -3417,3 +3417,37 @@ Validation: Android 778 unit tests and 525 common JVM tests pass; debug and inst
 **방안(순서).** A 종목 준비 카드·시작 문장에 옷 안내(원칙 #5, 지금) → B 옷 불확실 지표가 문턱을 넘는 세트는 COACH 에서 그 관절에 기대는 차단을 코칭(주황, §125)으로 강등하고 화면·완료 화면에 이유(원칙 #1·#6; B' = 그 세트에서 `refCap` 해제) → C `pose_landmarker_heavy` 는 영상 A/B 뒤(로그는 랜드마크뿐이라 재생으로 못 잰다, 85 ms 격자 위험) → D 런지 깊이의 골반 하강 교차 확인은 블록이 '얕게 읽힘' 이면. 하지 않을 것: 옷 때문에 모집단 임계를 넓히기(원칙 #4), 옷 세트를 정상으로 세기, 라벨 없는 한 세트로 문턱 정하기.
 
 **블록(§5).** 같은 폰 위치에서 옷만 바꿔 컬 정면·사선, 런지 사선·옆 — 정상/지정 오류 세트, 자가 라벨 메모에 `옷: …`. 붙는 옷 정상 차단 0 vs 통 옷 정상 차단 ≥ 2/10 이면 옷 효과 확정. **결정 대기** — A 의 문구와 블록 일정.
+
+
+## §125. Four additional local exercise guides (2026-11-01)
+
+Add bodyweight good morning, standard toe-supported push-up, dumbbell front raise
+and dumbbell lateral raise to `ExerciseGuides`, taking the catalog from 10 to 14.
+Each has a dedicated two-pose 640 x 640 GIF (900 ms/frame), setup, movement,
+breathing and caution text. Reusing exact-name lookup preserves the existing guide
+entry points and first-preparation pause/seen-state behavior without new UI state.
+The posture engine is untouched: educational instructions do not become assessment
+rules or validated camera directions. Unsupported variants remain unsupported.
+
+The Swift JSON export and its bundle test count follow the Android source. Source
+adaptations, generated-art limitations and verification are recorded in
+`docs/EXERCISE_GUIDE_UI.md` (2026-11-01 section); image provenance and encoding
+are in `app/src/main/assets/exercise_guides/README.md`.
+
+Verification: Android 883 unit tests, assembleDebug and lintDebug passed; all four
+APK GIFs match source bytes. iOS resource export check passed. Full iOS static
+verification is blocked by missing PyYAML; native iOS and device playback were not run.
+
+
+### §125a. Good morning clothing and muscle-highlight audit (2026-11-01)
+
+Replace both good-morning frames with intact opaque shorts; retain the same GIF
+contract and exposed posterior-thigh highlight. Audit the four new guides against
+primary EMG/biomechanics publications. Main target choices are broadly defensible,
+but spinal extensors (good morning), serratus/anterior deltoid (push-up), and
+clavicular pectoralis (front raise) are omitted. Lateral-raise middle deltoid emphasis
+is reasonable but does not cover cuff/scapular participation. Exact shoulder mask
+boundaries and color intensity are not validated. Findings and source applicability
+are recorded in `docs/EXERCISE_GUIDE_UI.md`; no assessment policy changed.
+Guide tests 6/6 and APK build passed; asset-byte equality verified. Device/native
+iOS playback and human anatomical/EMG validation were not run.

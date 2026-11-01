@@ -91,7 +91,56 @@ with their neutral frames using a shared 256-color palette. Filenames and guide
 registration are unchanged; Android and iOS reference this same asset directory.
 These overlays remain qualitative illustrations, not measured muscle activation.
 
+## Good morning, push-up and dumbbell raises (2026-11-01)
+
+Four new built-in `image_gen` illustrations follow the existing grayscale anatomical
+figure, black shorts, white background and restrained red muscle highlights.
+Each starting pose was generated separately; its second pose was edited from that
+image to preserve identity, camera and scale. No third-party photographs or videos
+are packaged. Both complete frames were visually inspected, including 260 px previews.
+
+| Asset | Poses | Highlight |
+| --- | --- | --- |
+| `good-morning.gif` | Standing with crossed arms, then bodyweight hip hinge; side view | Glutes and hamstrings |
+| `push-up.gif` | Toe-supported straight-arm plank, then lowered push-up | Chest and triceps |
+| `front-raise.gif` | Dumbbells in front of thighs, then both arms forward at shoulder height | Anterior deltoids |
+| `lateral-raise.gif` | Dumbbells beside thighs, then arms raised to the sides | Lateral deltoids |
+
+Encoding: resize each square source to 640 x 640 with Lanczos, derive one shared
+256-color palette from both frames, quantize both with that palette, save GIF with
+`duration=[900, 900]`, `loop=0`, `disposal=2`, `optimize=False` using Pillow.
+The 900 ms interval illustrates two poses; it does not prescribe movement tempo.
+These are generated illustrations, not continuous motion capture or expert validation.
+
+Source images remain in the Codex generated image directory for this chat
+(`01a1960b-d164-7fc0-973e-cb8248cb448b`). The `exec-<id>.png` source IDs are:
+
+| Asset | Start | End |
+| --- | --- | --- |
+| Good morning | `159d1ce1-5d56-46cb-ae7e-a09d1c04f8d6` | `8e8f3cf8-5db2-421f-8cbf-59e4de6955b1` |
+| Push-up | `80577c86-7e05-44a0-a167-0431a400ec75` | `53d081a4-1fb1-46c4-b268-7619762e6cb6` |
+| Front raise | `a93df8fe-977f-4919-b012-6e9f9e579b1a` | `e4c7867c-b6ef-4436-9278-3c3945211ff5` |
+| Lateral raise | `989eb9fb-9d99-43c1-bc85-cdc0b2429d45` | `75e56496-166b-497d-9fc1-b5d1e94b1329` |
+
 Verification: inspected all four decoded frames at 640 px and a 260 px preview;
 confirmed GIF decoding, frame duration, infinite looping, and byte equality with
 the copies packaged in `app-debug.apk`. `ExerciseGuidesTest` passed all 6 tests
 and `:app:assembleDebug` succeeded. Device playback and native iOS were not run.
+
+
+## Good morning clothing correction and muscle audit (2026-11-01)
+
+User requested intact shorts and a literature-based audit of all four new guides.
+Both good-morning frames now have complete opaque black shorts covering the glutes
+and upper thighs. Only the exposed posterior thigh remains red. The glutes are
+occluded, not asserted inactive. Pose and canvas are retained; metadata remains
+640 x 640, two 900 ms frames, infinite loop. Source IDs for the revised frames:
+`f4320478-cae2-4227-a5d2-29c312c37d19` and
+`81a5f393-a428-453b-b1e8-c31971251536` (same generated-image directory).
+
+The literature audit is in `docs/EXERCISE_GUIDE_UI.md`, "Muscle-highlight audit".
+The figures are selected target-region illustrations, not complete activation maps.
+Other guides' highlights were audited but not changed in this follow-up.
+Verification: both decoded frames inspected at 260 px; intact shorts and visible
+posterior-thigh highlights confirmed. ExerciseGuidesTest 6/6 and assembleDebug
+passed; updated GIF is byte-identical to the APK entry. Device playback not run.

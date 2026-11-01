@@ -6,13 +6,13 @@ import org.junit.Test
 
 class ExerciseGuidesTest {
     @Test fun differentEquipmentAndEngineAliasesNeverReuseTheSample() {
-        listOf("바벨 컬", "바벨 스쿼트", "바벨 런지", "행잉 레그 레이즈", "라잉 레그 레이즈").forEach {
+        listOf("바벨 컬", "바벨 스쿼트", "바벨 런지", "행잉 레그 레이즈", "라잉 레그 레이즈", "니 푸쉬업", "바벨 굿모닝").forEach {
             assertNull(it, ExerciseGuides.forName(it))
         }
     }
 
     @Test fun firstGuideRequiresPreparationAndIsRememberedPerExercise() {
-        listOf("덤벨 컬", "크런치", "레그 레이즈", "플랭크").forEach { name ->
+        listOf("덤벨 컬", "크런치", "레그 레이즈", "플랭크", "굿모닝", "푸쉬업", "프런트 레이즈", "사이드 레터럴 레이즈").forEach { name ->
             assertNotNull(name, ExerciseGuides.introduction(name, true, emptySet()))
             assertNull(name, ExerciseGuides.introduction(name, false, emptySet()))
             assertNull(name, ExerciseGuides.introduction(name, true, setOf(name)))
