@@ -59,24 +59,25 @@ final class FoodRecognizer: ObservableObject {
         if classifier == nil { classifier = try model("yolov8n_food") }
         if regionModel == nil && !regionMissing { regionModel = try? model("food_region"); regionMissing = regionModel == nil }
         if labels.isEmpty { labels = try Resources.text("food_labels.txt").components(separatedBy: .newlines).filter { !$0.isEmpty } }
-        if memory == nil { memory = loadMemory() }
+        if memory == nil { memory = try loadMemory() }
     }
 
-    private func loadMemory() -> IosFoodMemory {
-        if let text = try? String(contentsOf: memoryURL, encoding: .utf8) { return IosFoodMemory(text: text) }
+    private func loadMemory() throws -> IosFoodMemory {
+        if let data = try LocalEncryptedStore.shared.read(memoryURL) {
+            return IosFoodMemory(text: try LocalEncryptedStore.shared.utf8(data))
+        }
         // §107 의 JSON 기억(이름·벡터·날짜·고친 이름)을 Android 텍스트 형식으로 한 번 옮긴다
         let m = IosFoodMemory(text: "")
-        if let data = try? Data(contentsOf: legacyMemoryURL), let items = try? JSONDecoder().decode([LegacyItem].self, from: data) {
-            for item in items { _ = try? m.plus(name: item.name, vectorJson: Resources.json(item.vector), savedAtMs: Int64(item.date.timeIntervalSince1970 * 1000), correctedFrom: item.correctedFrom) }
-            saveMemory(m); try? FileManager.default.removeItem(at: legacyMemoryURL)
+        if let data = try LocalEncryptedStore.shared.read(legacyMemoryURL) {
+            let items = try JSONDecoder().decode([LegacyItem].self, from: data)
+            for item in items { _ = try m.plus(name: item.name, vectorJson: Resources.json(item.vector), savedAtMs: Int64(item.date.timeIntervalSince1970 * 1000), correctedFrom: item.correctedFrom) }
+            try saveMemory(m)
+            // 형식 변환 전 사본도 암호화되어 있다. 이전 기억의 검증/복구를 위해 보존한다.
         }
         return m
     }
-    private func saveMemory(_ m: IosFoodMemory) {
-        do {
-            try FileManager.default.createDirectory(at: memoryURL.deletingLastPathComponent(), withIntermediateDirectories: true)
-            try Data(m.encode().utf8).write(to: memoryURL, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
-        } catch { }
+    private func saveMemory(_ m: IosFoodMemory) throws {
+        try LocalEncryptedStore.shared.write(Data(m.encode().utf8), to: memoryURL)
     }
 
     /// Android `FoodDetector.detect` 와 같은 순서: 자리(2단계) → 자리별 상위 3 이름 → 기억 비교 → 이름 없는 사진의 전체 1회 폴백 → 공통 정책으로 목록. 자리를 못 찾으면 전체 1회만.
@@ -164,7 +165,13 @@ final class FoodRecognizer: ObservableObject {
                       let json = try? Resources.json(v) else { continue }
                 if (try? memory.plus(name: row.name, vectorJson: json, savedAtMs: Int64(Date().timeIntervalSince1970 * 1000), correctedFrom: spot.modelName)) == true { changed = true }
             }
-            if changed { saveMemory(memory) }
+            if changed {
+                do { try saveMemory(memory) }
+                catch {
+                    LocalEncryptedStore.shared.block()
+                    DispatchQueue.main.async { NotificationCenter.default.post(name: .trexLocalStorageFailed, object: nil) }
+                }
+            }
         }
     }
 

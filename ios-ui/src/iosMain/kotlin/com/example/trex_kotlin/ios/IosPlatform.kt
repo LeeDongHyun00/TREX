@@ -22,25 +22,20 @@ import platform.Foundation.NSApplicationSupportDirectory
 import platform.Foundation.NSBundle
 import platform.Foundation.NSData
 import platform.Foundation.NSDocumentDirectory
-import platform.Foundation.NSFileHandle
 import platform.Foundation.NSFileManager
 import platform.Foundation.NSFileSize
 import platform.Foundation.NSNumber
 import platform.Foundation.NSSearchPathForDirectoriesInDomains
 import platform.Foundation.NSUserDomainMask
-import platform.Foundation.closeFile
 import platform.Foundation.create
 import platform.Foundation.dataWithContentsOfFile
-import platform.Foundation.fileHandleForWritingAtPath
-import platform.Foundation.seekToEndOfFile
-import platform.Foundation.writeData
 import platform.Foundation.writeToFile
 import platform.posix.memcpy
 
 /**
  * [AppPlatform] 의 iPhone 구현(§108 Phase 2). Android 판(AndroidPlatform.kt)과 같은 의미를 iOS API 로 잇는다.
- * 저장 자리: 키-값은 NSUserDefaults `trex.<이름>`, 근육 장부는 앱 지원 폴더 `TREX/muscle_load.json`,
- * 자가 라벨은 Documents `posture_logs/`(Android 의 앱 외부 폴더 자리 — Mac 이 devicectl 로 가져간다).
+ * 키-값·근육 장부·자가 라벨은 Swift CryptoKit 저장소가 AES-256-GCM으로 저장한다(§125).
+ * 파일의 논리 경로는 유지하며 실제 파일은 `.aes`다. devicectl로 회수한 암호문은 분석용 JSON이 아니다.
  */
 open class IosAppPlatform : AppPlatform {
     override fun preferences(name: String): KeyValueStore = UserDefaultsStore(name)
@@ -78,7 +73,7 @@ class SetLabelFiles(private val dir: String) {
                     val row = SetLabelFormat.truthRow(label) ?: return@synchronized
                     val truth = "$dir/${SetLabelFormat.TRUTH_FILE}"
                     // 헤더는 파일이 없거나 비어 있을 때만 — 중간에 헤더가 또 들어가면 csv.DictReader 가 데이터 행으로 읽는다
-                    if (fileSize(truth) == 0L) appendTextFile(truth, SetLabelFormat.TRUTH_HEADER + "\n")
+                    if (readSecureTextFile(truth).isNullOrEmpty()) appendTextFile(truth, SetLabelFormat.TRUTH_HEADER + "\n")
                     appendTextFile(truth, row + "\n")
                 }
             }
@@ -127,18 +122,7 @@ internal fun writeBytesFile(path: String, bytes: ByteArray) {
 }
 
 internal fun appendTextFile(path: String, text: String) {
-    val manager = NSFileManager.defaultManager
-    if (!manager.fileExistsAtPath(path)) {
-        ensureDirectory(path.substringBeforeLast('/'))
-        check(manager.createFileAtPath(path, contents = null, attributes = null)) { "파일을 만들지 못했습니다: $path" }
-    }
-    val handle = checkNotNull(NSFileHandle.fileHandleForWritingAtPath(path)) { "파일을 열지 못했습니다: $path" }
-    try {
-        handle.seekToEndOfFile()
-        handle.writeData(text.encodeToByteArray().toNSData())
-    } finally {
-        handle.closeFile()
-    }
+    secureStorage("append", path, text)
 }
 
 @OptIn(ExperimentalForeignApi::class, BetaInteropApi::class)

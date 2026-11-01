@@ -4,7 +4,8 @@ package com.example.trex_kotlin.posture
 
 import androidx.compose.runtime.Composable
 import com.example.trex_kotlin.ios.appendTextFile
-import com.example.trex_kotlin.ios.readTextFile
+import com.example.trex_kotlin.ios.readSecureTextFile
+import com.example.trex_kotlin.ios.secureFiles
 import com.example.trex_kotlin.nowMillis
 import com.example.trex_kotlin.utcDayStamp
 import kotlinx.cinterop.ExperimentalForeignApi
@@ -13,7 +14,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
-import platform.Foundation.NSFileManager
 
 /*
  * 자세 패키지의 iPhone 쪽 짝(§108c) — Android `posture/SetLogStore.kt` 와 같은 이름·같은 시그니처.
@@ -49,7 +49,7 @@ internal fun formatFixed(v: Float, decimals: Int): String {
 
 /**
  * 세트 로그 저장소 — `Documents/posture_logs/sets-yyyyMMdd.jsonl`(UTC 날짜)에 한 줄씩. Android 의 앱 외부 폴더 자리이고,
- * Mac 이 `xcrun devicectl device copy from` 으로 가져간다(Android `adb pull` 과 같은 파일 이름).
+ * 실제 파일은 `.aes` 암호문이다(§125). 외부 분석에는 명시적인 복호화 내보내기가 필요하다.
  */
 class SetLogStore(private val dir: String) {
     fun append(log: SetLog, now: Long = nowMillis()): String {
@@ -58,11 +58,9 @@ class SetLogStore(private val dir: String) {
         return file
     }
 
-    fun files(): List<String> =
-        NSFileManager.defaultManager.contentsOfDirectoryAtPath(dir, error = null).orEmpty()
-            .map { it as String }.filter { it.endsWith(".jsonl") }.sorted().map { "$dir/$it" }
+    fun files(): List<String> = secureFiles(dir).filter { it.endsWith(".jsonl") }
 
-    fun totalSets(): Int = files().sumOf { f -> readTextFile(f)?.lineSequence()?.count { it.isNotBlank() } ?: 0 }
+    fun totalSets(): Int = files().sumOf { f -> readSecureTextFile(f)?.lineSequence()?.count { it.isNotBlank() } ?: 0 }
 
     companion object {
         /** 세트 로그 쓰기 전용 직렬 실행(앱 수명) — Android 의 단일 기록 스레드처럼 화면 수명과 무관하게 순서대로 쓴다. */
