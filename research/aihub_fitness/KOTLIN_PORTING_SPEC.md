@@ -3492,3 +3492,11 @@ Android uses the existing sheet. Exported iOS guides and its expected count beco
 not clinically certified.
 
 Verification: app JVM 914 tests passed (zero failures/errors/skips); assembleDebug and lintDebug passed. Resource export --check passed for 16 guides. All 24 decoded poses were inspected at 260 px. NOT RUN: device popup/playback and native iOS build/tests (Windows); clinician review and anatomical mask validation.
+
+## §129. 운동 화면의 beta '참고 · …' 칩 제거 (2026-11-01, 사용자 결정 "호박색 문구는 어차피 못 보니까 제거해")
+
+**배경.** HUD 의 '참고 · …' 칩(`LiveWorkoutHud.referenceNote`, 12sp 호박색, 한 줄 말줄임)은 beta 반복 검사·창 규칙 beta 위반·바닥 '확인 필요' 문장을 말하지 않는 대신 화면에 남기던 자리였다(원칙 #2). 운동 거리(2.5 m, `docs/LIVE_SCREEN_REDESIGN.md` §4)에서 읽히지 않는 글자였고, 코드 확인에서 컬·런지 beta 반복 검사의 칩은 창 규칙 갱신(3 s, `PROVISIONAL_NOTE_GAP_MS`)이 공용 `provisionalNote` 를 덮어 길어야 3 s 만 보이는 결함도 있었다(§124 가 네 종목 검사만 `repReferenceNote` 로 보호).
+
+**변경.** 칩과 그 상태(`provisionalNote`·`repReferenceNote`·`provisionalAtRef`·`PROVISIONAL_NOTE_GAP_MS`)를 `PostureLive`·`LiveWorkoutHud` 에서 뺐다(iPhone 도 같은 공유 파일). **beta 가 남는 자리**: 뼈대·관절 호박색(`provisionalHighlight`·`formProvHighlight`·바닥 `FloorFeedback.points`, §125 색 = 결과)과 완료 화면·세트 리포트의 참고 항목. 음성 정책(beta 는 말하지 않는다 — 바닥 Q1, 컬 '팔꿈치 앞뒤(옆)' 예외 등)은 그대로. 원칙 #2 의 "화면에는 '참고'로 남긴다" 는 이제 **글자가 아니라 색**이다 — 침묵이 '이상 없음' 으로 읽히지 않게 하는 장치는 호박색 뼈대가 맡는다. 호박색으로 남는 글자는 기능 줄뿐: 횟수 메모(자세로 뺀 회·세지 않은 동작, 원칙 #1), "일시정지", 플랭크 멈춤·시계 폴백 줄. 준비 화면의 주황(`warn`) 자리 안내는 운동 거리 밖(폰 앞)에서 읽는 글자라 그대로.
+
+**이유.** 못 읽는 글자는 정보가 아니라 잡음이고, 레지스터 256 함정(§108c)이 있는 `PostureLiveSessionScreen` 의 상태 둘을 줄였다.

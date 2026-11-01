@@ -648,3 +648,7 @@ docs/exercise-guide-sources-2026-11-01.json. No clinical mask validation or post
 rule promotion is implied by new illustrations.
 
 Verification: app JVM 914 tests passed (zero failures/errors/skips); assembleDebug and lintDebug passed. Resource export --check passed for 16 guides. All 24 decoded poses were inspected at 260 px. NOT RUN: device popup/playback and native iOS build/tests (Windows); clinician review and anatomical mask validation.
+
+## 2026-11-01 — HUD beta '참고 · …' 칩 제거 (§129)
+
+사용자 결정 "호박색 문구는 어차피 못 보니까 제거해". `LiveWorkoutHud.referenceNote` 와 `PostureLive` 의 `provisionalNote`·`repReferenceNote`·`provisionalAtRef` 를 뺐다. beta 는 뼈대 호박색과 완료 화면에만. 호박색 글자는 횟수 메모·일시정지·플랭크 멈춤 줄만 남는다. 준비 화면 주황 자리 안내는 그대로. 코드 확인에서 본 결함(컬·런지 beta 칩이 창 규칙 3 s 갱신에 지워짐)은 칩 제거로 함께 사라졌다.

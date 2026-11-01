@@ -70,7 +70,6 @@ class IosEngine @Throws(Exception::class) constructor(standingRules: String, flo
     private var normalMatches: List<NormalPoseMatch> = emptyList()
     // 화면 상태(Android `PostureLive` 의 Compose 상태와 같은 이름)
     private var formNote: String? = null
-    private var provisionalNote: String? = null
     private var guideNote: String? = null
     private var guideStamp = 0L
     private var floorMeasurement: String? = null
@@ -81,7 +80,6 @@ class IosEngine @Throws(Exception::class) constructor(standingRules: String, flo
     private var formHighlightStamp = 0L
     private var violHighlight = emptySet<Int>()
     private var provisionalHighlight = emptySet<Int>()
-    private var provisionalAt = Long.MIN_VALUE / 2
     private var motionCue: MotionCueOut? = null
     private var invalidCues = 0
     private var romShortSpoken = false
@@ -234,9 +232,9 @@ class IosEngine @Throws(Exception::class) constructor(standingRules: String, flo
         samples.clear(); times.clear(); records.clear(); prepFrames.clear(); aggregator.reset()
         detectStart = 0L; anchorAt = Long.MAX_VALUE; startAt = 0; lastGrid = Long.MIN_VALUE; lastFrame = Long.MIN_VALUE
         rejectedSeen = 0; notShort = 0; short = 0; incorrect = 0; detected = 0; viewEst = null
-        formNote = null; provisionalNote = null; guideNote = null; guideStamp = 0L; floorMeasurement = null; rejectNote = null; gazeNote = null
+        formNote = null; guideNote = null; guideStamp = 0L; floorMeasurement = null; rejectNote = null; gazeNote = null
         formHighlight = emptySet(); formProvHighlight = emptySet(); formHighlightStamp = 0L; violHighlight = emptySet(); provisionalHighlight = emptySet()
-        provisionalAt = Long.MIN_VALUE / 2; motionCue = null; invalidCues = 0; romShortSpoken = false; sideCueAt = Long.MIN_VALUE / 2; angleNoteAt = Long.MIN_VALUE / 2
+        motionCue = null; invalidCues = 0; romShortSpoken = false; sideCueAt = Long.MIN_VALUE / 2; angleNoteAt = Long.MIN_VALUE / 2
         stopSpoken = null; announcedMs = 0L; guideQuietUntil = 0L; finishedHold = null; scoreOk = null; sideTallies = null; breathDir = 0; lastRepAt = null
         setEndAt = null; quietPolls = 0; coverage = CoverageReport.OK; coverageStreak = 0; normalMatches = emptyList(); tones.clear()
         stage = "preparing"
@@ -433,7 +431,7 @@ class IosEngine @Throws(Exception::class) constructor(standingRules: String, flo
                         RomShort.RANGE -> FormMotion.mark(MotionAnchor.WRISTS, pick = MotionPick.NEAR)
                     }, MotionOrigin.ROM, near = FormMotion.nearSide(lastRep?.view)), now)
                 } else if (formEv != null && !formEv.ship && !extraStep) {
-                    provisionalNote = formEv.message
+                    // beta 반복 검사 — '참고' 칩은 §129 에서 뺐다(뼈대 호박색·완료 화면만)
                 } else if (gate && !extraStep && rf != null && lastRep != null) {
                     rf.recoveryEvent(lastRep, now) { speech.recoverable("rf:$it") }?.also { say += it.message; formHighlight = emptySet(); formProvHighlight = emptySet(); motionCue = null }
                     if (say.isEmpty() && romShortSpoken && tally.records.lastOrNull()?.valid == true) {
@@ -507,13 +505,7 @@ class IosEngine @Throws(Exception::class) constructor(standingRules: String, flo
         val betaStates = coach.lastStates.filter { it.rule.status == RuleStatus.BETA }
         violHighlight = if (track || profile.floor) emptySet() else RuleHighlight.forViolations(shipStates)
         provisionalHighlight = if (track || profile.floor) emptySet() else RuleHighlight.forViolations(betaStates)
-        if (!track && !profile.floor && now - provisionalAt > PROVISIONAL_NOTE_GAP_MS) {
-            provisionalAt = now
-            provisionalNote = betaStates.firstOrNull { it.recent == Verdict.VIOLATION }?.let { st ->
-                val cue = CoachCues.cueFor(st.rule, st.direction ?: Direction.PRIMARY)
-                PostureSetReport.splitCue(when (st.kind) { OnsetKind.DRIFT -> cue.drift; OnsetKind.HABIT -> cue.habit; else -> cue.current }).first
-            }
-        }
+        // 창 규칙 beta 위반의 '참고' 칩은 §129 에서 뺐다 — provisionalHighlight(호박색)만 남는다
         if (profile.floor) {
             // 바닥 피드백은 아래의 시간·반복 상태기가 한 번만 발화한다
         } else if (!coverage.ok) {
@@ -533,7 +525,6 @@ class IosEngine @Throws(Exception::class) constructor(standingRules: String, flo
             floorState = floorFeedback.update(now, features, hold?.snapshot(), coach.lastStates, newFloorRep, coach.isAnchored, floorObservable,
                 mode = mode, voiceEnabled = mode != CoachMode.TRACK && speech.ready && !speech.muted && legacyVoice, alignment = alignment.takeIf { alignmentTracker != null })
             if (mode != CoachMode.TRACK) floorState?.speech?.let { speech.speakLatest(it, now) }
-            provisionalNote = floorState?.takeIf { it.phase == FloorFeedbackPhase.ATTENTION }?.message
         }
         return status(now)
     }
@@ -709,7 +700,7 @@ class IosEngine @Throws(Exception::class) constructor(standingRules: String, flo
                 else -> if (profile.floor) FloorReasons.liveMessage(guideNote.takeIf { now - guideStamp < GUIDE_MS }, floorState) else if (lastFeatures.isNullOrEmpty()) "필요한 관절이 보이면 평가를 이어갑니다." else comparison.snapshot.message
             },
             "sideLine" to sideTallies?.headline(mode == CoachMode.COACH), "cue" to formNote,
-            "provisionalNote" to provisionalNote, "guideNote" to guideNote.takeIf { now - guideStamp < GUIDE_MS },
+            "provisionalNote" to null, "guideNote" to guideNote.takeIf { now - guideStamp < GUIDE_MS },
             "note" to (if (counter?.floorTracker != null) floorNote else null), "floorMeasurement" to floorMeasurement,
             "coverage" to (if (coverage.ok) null else mapOf("message" to coverage.message, "fix" to coverage.fix)),
             "highlight" to (highlightNow + violHighlight + (floorState?.landmarks.orEmpty())).toList(), "provisional" to (provNow + provisionalHighlight).toList(),
@@ -808,7 +799,6 @@ class IosEngine @Throws(Exception::class) constructor(standingRules: String, flo
         private const val COVERAGE_STREAK = 3
         private const val ANCHOR_FALLBACK_NO_COUNTER_MS = 4_000L
         private const val ANCHOR_FALLBACK_WITH_COUNTER_MS = 10_000L
-        private const val PROVISIONAL_NOTE_GAP_MS = 3_000L
         private const val MAX_INVALID_CUES = 2
         private const val ANGLE_NOTE_GAP_MS = 15_000L
         private const val SIDE_CUE_GAP_MS = 8_000L
