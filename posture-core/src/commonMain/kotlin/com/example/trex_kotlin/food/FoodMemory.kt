@@ -17,13 +17,17 @@ import kotlin.math.sqrt
 /**
  * 기억 한 장. [correctedFrom] 은 사용자가 **모델이 붙인 이름을 고친** 기억일 때 모델이 원래 붙였던 이름이다(고침 기억).
  * 다음에 모델이 비슷한 자리에 같은 이름을 또 붙이면 사용자가 고친 이름으로 바꾸는 데 쓴다. "?" 에 붙인 기억이면 null.
+ *
+ * [suggestOnly] 는 빈 그릇처럼 보인 자리([FoodRegion.looksEmpty])에서 배운 기억이다. 그런 자리는 대부분 빈 그릇·종지라 특징값이
+ * 그릇 모양에 끌린다 — 다른 날 같은 그릇이 비어 있어도 매우 비슷하게 나올 수 있어, 자동 이름에는 쓰지 않고 후보로만 쓴다.
  */
-data class MemoryEntry(val name: String, val vector: FloatArray, val savedAt: Long, val correctedFrom: String? = null) {
+data class MemoryEntry(val name: String, val vector: FloatArray, val savedAt: Long, val correctedFrom: String? = null, val suggestOnly: Boolean = false) {
     override fun equals(other: Any?): Boolean =
         other is MemoryEntry && other.name == name && other.savedAt == savedAt && other.correctedFrom == correctedFrom &&
-            other.vector.contentEquals(vector)
+            other.suggestOnly == suggestOnly && other.vector.contentEquals(vector)
 
-    override fun hashCode(): Int = ((name.hashCode() * 31 + savedAt.hashCode()) * 31 + vector.contentHashCode()) * 31 + correctedFrom.hashCode()
+    override fun hashCode(): Int =
+        (((name.hashCode() * 31 + savedAt.hashCode()) * 31 + vector.contentHashCode()) * 31 + correctedFrom.hashCode()) * 31 + suggestOnly.hashCode()
 }
 
 @OptIn(kotlin.io.encoding.ExperimentalEncodingApi::class)
@@ -58,6 +62,10 @@ class FoodMemory(val entries: List<MemoryEntry> = emptyList()) {
         return FoodMemory(all.drop((all.size - TOTAL).coerceAtLeast(0)))
     }
 
+    /** [name] 기억 중 자동 이름에 쓸 수 있는 것(후보 전용 [MemoryEntry.suggestOnly] 제외)과 [vector] 의 최고 유사도. 없으면 −∞. */
+    fun trustedSimilarity(vector: FloatArray, name: String): Float =
+        entries.filter { it.name == name && !it.suggestOnly }.maxOfOrNull { cosine(it.vector, vector) } ?: Float.NEGATIVE_INFINITY
+
     /** 이 이름의 기억을 모두 지운다. */
     fun forget(name: String): FoodMemory = FoodMemory(entries.filter { it.name != name })
 
@@ -65,14 +73,15 @@ class FoodMemory(val entries: List<MemoryEntry> = emptyList()) {
     fun hasCorrectionOf(modelName: String): Boolean = entries.any { it.correctedFrom == modelName }
 
     /**
-     * 한 줄에 하나: `이름<TAB>저장시각<TAB>특징값(float32 리틀엔디언, Base64)[<TAB>모델이 붙였던 이름]`.
-     * 넷째 칸은 고침 기억에만 있다(없으면 세 칸 — 먼저 만든 파일과 호환). 이름에 탭·줄바꿈은 저장 전에 공백으로 바꾼다.
+     * 한 줄에 하나: `이름<TAB>저장시각<TAB>특징값(float32 리틀엔디언, Base64)[<TAB>모델이 붙였던 이름[<TAB>s]]`.
+     * 넷째 칸은 고침 기억에만, 다섯째 칸 `s` 는 후보 전용 기억에만 있다(그때 넷째 칸은 비어 있을 수 있다). 다른 기억은 세·네 칸 그대로라
+     * 먼저 만든 파일과 호환된다 — 다섯 칸 줄은 예전 앱이 깨진 줄로 보고 건너뛴다. 이름에 탭·줄바꿈은 저장 전에 공백으로 바꾼다.
      */
     fun encode(): String = entries.joinToString("\n") { e ->
         val bytes = ByteArray(e.vector.size * 4)
         e.vector.forEachIndexed { i, f -> val bits = f.toBits(); for (b in 0..3) bytes[i*4+b] = (bits ushr (8*b)).toByte() }
         "${clean(e.name)}\t${e.savedAt}\t${kotlin.io.encoding.Base64.encode(bytes)}" +
-            (e.correctedFrom?.let { "\t${clean(it)}" } ?: "")
+            if (e.suggestOnly) "\t${e.correctedFrom?.let { clean(it) }.orEmpty()}\t$SUGGEST_ONLY_MARK" else e.correctedFrom?.let { "\t${clean(it)}" } ?: ""
     }
 
     companion object {
@@ -90,14 +99,17 @@ class FoodMemory(val entries: List<MemoryEntry> = emptyList()) {
         const val PER_NAME = 5
         const val TOTAL = 300
 
+        /** 파일 다섯째 칸 — 후보 전용 기억([MemoryEntry.suggestOnly]). */
+        private const val SUGGEST_ONLY_MARK = "s"
+
         fun decode(text: String): FoodMemory = FoodMemory(
             text.lineSequence().mapNotNull { line ->
                 val parts = line.split('\t')
-                if (parts.size !in 3..4) return@mapNotNull null
+                if (parts.size !in 3..5) return@mapNotNull null
                 val bytes = runCatching { kotlin.io.encoding.Base64.decode(parts[2]) }.getOrNull() ?: return@mapNotNull null
                 if (bytes.isEmpty() || bytes.size % 4 != 0) return@mapNotNull null
                 val v = FloatArray(bytes.size / 4) { i -> Float.fromBits((0..3).fold(0) { bits, b -> bits or ((bytes[i*4+b].toInt() and 255) shl (8*b)) }) }
-                MemoryEntry(parts[0], v, parts[1].toLongOrNull() ?: 0L, parts.getOrNull(3)?.takeIf { it.isNotEmpty() })
+                MemoryEntry(parts[0], v, parts[1].toLongOrNull() ?: 0L, parts.getOrNull(3)?.takeIf { it.isNotEmpty() }, parts.getOrNull(4) == SUGGEST_ONLY_MARK)
             }.toList(),
         )
 

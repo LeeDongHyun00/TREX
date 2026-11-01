@@ -185,10 +185,17 @@ data class FoodRegion(
     val top: List<Pair<String, Float>>,
     /**
      * 내 음식 기억([FoodMemory])에서 이 자리와 비슷한 이름들(이름, 유사도) — 유사도순, [FoodMemory.SUGGEST_AT] 이상만.
-     * 이름이 없고 비어 보이지 않는 자리는 모든 기억과 견준다. 모델이 이름을 붙인 자리는 **사용자가 그 이름을 고친 기억**
+     * 이름이 없는 자리는 비어 보여도 모든 기억과 견준다. 모델이 이름을 붙인 자리는 **사용자가 그 이름을 고친 기억**
      * (고침 기억, [MemoryEntry.correctedFrom])하고만 견준다. 기억이 비어 있으면 늘 빈 목록이다.
      */
     val remembered: List<Pair<String, Float>> = emptyList(),
+    /**
+     * [remembered] 를 고르는 창의 후보로만 쓰고 자동 이름([rememberedName])은 붙이지 않는 자리 — 비어 보이는 자리([looksEmpty]),
+     * 또는 1위 이름이 후보 전용 기억([MemoryEntry.suggestOnly], 비어 보인 자리에서 배운 것) 덕분에만 자동 이름 기준을 넘는 자리다.
+     * 사용자가 이름을 붙인 작은 곁들이를 다음에 후보로 찾게 하되, 빈 그릇·컵이 기억 이름으로 기록되지 않게 한다
+     * (FOOD_IMPROVEMENT_PLAN 4단계 — 빈 그릇 오명명과 비용을 재기 전에는 자동 이름·숨김 해제로 넓히지 않는다).
+     */
+    val memorySuggestionOnly: Boolean = false,
 ) {
     val name: String? get() = top.firstOrNull()?.takeIf { it.second >= FoodRegions.NAME_THRESHOLD }?.first
     val confidence: Float get() = top.firstOrNull()?.second ?: 0f
@@ -199,9 +206,11 @@ data class FoodRegion(
     /**
      * 기억이 매우 비슷하다고 한 이름([FoodMemory.AUTO_NAME_AT] 이상). 이름 없는 자리에는 이름을 붙이고,
      * 모델 이름이 붙은 자리에서는 **고침 기억**만 모델 이름을 바꾼다 — 모델이 같은 음식을 같은 이름으로 또 잘못 볼 때다.
+     * [memorySuggestionOnly] 자리는 아무리 비슷해도 null 이다.
      */
     val rememberedName: String?
-        get() = remembered.firstOrNull()?.takeIf { it.second >= FoodMemory.AUTO_NAME_AT && it.first != name }?.first
+        get() = if (memorySuggestionOnly) null
+        else remembered.firstOrNull()?.takeIf { it.second >= FoodMemory.AUTO_NAME_AT && it.first != name }?.first
 }
 
 /**

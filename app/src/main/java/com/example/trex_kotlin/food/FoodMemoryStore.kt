@@ -16,8 +16,8 @@ import java.io.File
  */
 object FoodMemoryStore {
 
-    /** 기억할 자리 하나. [correctedFrom] 은 사용자가 모델 이름을 고쳤을 때 모델이 붙였던 이름. */
-    data class Spot(val name: String, val photo: Bitmap, val box: PixelBox, val correctedFrom: String?)
+    /** 기억할 자리 하나. [correctedFrom] 은 사용자가 모델 이름을 고쳤을 때 모델이 붙였던 이름, [suggestOnly] 는 후보 전용 기억([MemoryEntry.suggestOnly]). */
+    data class Spot(val name: String, val photo: Bitmap, val box: PixelBox, val correctedFrom: String?, val suggestOnly: Boolean = false)
 
     private const val TAG = "FoodMemory"
     private const val FILE_NAME = "food_memory.tsv"
@@ -57,12 +57,17 @@ object FoodMemoryStore {
                 var memory = load(app)
                 val now = System.currentTimeMillis()
                 vectors.forEachIndexed { i, (spot, v) ->
-                    memory = memory.plus(MemoryEntry(FoodMemory.clean(spot.name), v, now + i, spot.correctedFrom?.let(FoodMemory::clean)))
+                    memory = memory.plus(MemoryEntry(FoodMemory.clean(spot.name), v, now + i, spot.correctedFrom?.let(FoodMemory::clean), spot.suggestOnly))
                 }
                 save(app, memory)
                 cached = memory
             }
-            Log.i(TAG, "기억 ${vectors.size}개 추가: ${vectors.joinToString { (spot, _) -> spot.name + (spot.correctedFrom?.let { " (모델: $it)" } ?: "") }}")
+            Log.i(
+                TAG,
+                "기억 ${vectors.size}개 추가: " + vectors.joinToString { (spot, _) ->
+                    spot.name + (spot.correctedFrom?.let { " (모델: $it)" } ?: "") + (if (spot.suggestOnly) " (후보 전용)" else "")
+                },
+            )
         }
     }
 
