@@ -3467,3 +3467,26 @@ for replacement/import/session entry. Stored flags cannot bypass session gating.
 This is availability policy, not promotion of beta/trial/pilot assessment evidence.
 
 Verification: app JVM 914 tests and shared JVM 558 tests passed (zero failures/errors/skips); assembleDebug and lintDebug passed. Resource export and shared-source parity checks passed. All four APK GIFs match source bytes. NOT RUN: device popup/playback and native iOS build (Windows); full iOS static checker requires unavailable PyYAML.
+
+
+### §128. Remaining twelve evidence-informed guides (2026-11-01)
+
+The user requested the remaining 12 of the 16 enabled exercises receive the same
+literature audit and regenerated GIFs. Replace ten existing guides and add
+dedicated barbell curl/lunge guides through ExerciseGuides; do not alias equipment.
+Plank changes to a hold GIF under the latest request. Guide availability and camera
+availability now both contain 16 names, enforced by PostureExerciseMapTest. No
+assessment thresholds, evidence statuses or camera rollout gates change.
+
+Correct the hip-flexor emphasis for knee-up/leg raise and disclose deep iliopsoas;
+distinguish abdominal control from isolated lower-abdominal training. Other deep
+/occluded muscles and cloth overlays are explained in each caution tab. Exact-task
+research is weaker for curtsy and standing side-crunch; do not promote functional
+anatomy to direct validation. Source-by-source applicability and limitations are
+in docs/EXERCISE_GUIDE_UI.md; source image provenance is in the dated JSON manifest.
+
+Android uses the existing sheet. Exported iOS guides and its expected count become
+16. The 12 GIFs remain two-pose illustrations; generated anatomical boundaries are
+not clinically certified.
+
+Verification: app JVM 914 tests passed (zero failures/errors/skips); assembleDebug and lintDebug passed. Resource export --check passed for 16 guides. All 24 decoded poses were inspected at 260 px. NOT RUN: device popup/playback and native iOS build/tests (Windows); clinician review and anatomical mask validation.

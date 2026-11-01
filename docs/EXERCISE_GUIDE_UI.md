@@ -373,3 +373,75 @@ registration and surface muscle boundaries are illustrative, not motion capture 
 anatomically measured masks. Four source GIFs match their APK entries byte-for-byte.
 
 Verification: app JVM 914 tests and shared JVM 558 tests passed (zero failures/errors/skips); assembleDebug and lintDebug passed. Resource export and shared-source parity checks passed. All four APK GIFs match source bytes. NOT RUN: device popup/playback and native iOS build (Windows); full iOS static checker requires unavailable PyYAML.
+
+
+## Remaining twelve guides: evidence and illustration audit (2026-11-01)
+
+Scope: the 16 camera-enabled exercises minus good morning, push-up, front raise and
+lateral raise. Ten existing guides are replaced and two equipment-specific guides
+(barbell curl/lunge) are added. Guide count is now 16; camera eligibility remains 16.
+The latest request explicitly asks for GIFs, so plank changes from the earlier
+user-selected PNG to a two-frame HOLD illustration. It does not demonstrate reps.
+
+### Evidence contract
+
+EMG records electrical activity in sampled muscles under a specific task. It is not
+a complete muscle inventory, a direct force measure, proof of hypertrophy, or pixel
+segmentation validation. The color system is qualitative: red = illustrated target,
+orange = selected assisting/stabilizing regions. Red does not mean stronger than
+orange, and gray does not mean inactive. All claims are limited to muscle roles.
+
+Direct exercise measurements, related-task evidence and functional-anatomy inference
+are distinguished below. No curtsy-lunge superiority or isolated lower-abdominal
+training claim is made. A conference abstract found for curtsy lunges was not treated
+as a peer-reviewed validation. The illustrations are literature-informed generated
+assets, not clinician-certified anatomy. Surface boundaries and two-pose registration
+remain approximate. Deep iliopsoas, brachialis, internal oblique/transversus and
+quadratus lumborum are explained in text rather than invented as skin patches.
+
+### Per-exercise findings and changes
+
+| Exercise | Supported muscle roles | Evidence applicability | Final visual decision |
+|---|---|---|---|
+| 기본 스쿼트 | Quadriceps and gluteus maximus drive knee/hip extension; hamstrings and gastrocnemius participate, trunk stabilizes. | Direct unloaded-squat EMG [S1]; no loaded-squat intensity extrapolation. | Visible quadriceps red. Proper shorts cover hips; hidden gluteals/posterior muscles explicitly explained in caution text. Remove ambiguous inner-thigh orange from drafts. |
+| 런지 | Quadriceps/gluteus maximus; gluteus medius, hamstrings, adductors and calf participate. | Bodyweight forward-lunge EMG [S2], loaded stride/step-length dependence [S3]. | Quadriceps red, full shorts, hidden muscles acknowledged. No equal-activation claim for front and rear legs. |
+| 바벨 런지 | Knee/hip extensors as above plus trunk stabilization under external load. | Loaded forward-lunge [S3] supports participation; exact bar placement is not a separate validated EMG ranking. | New actual barbell across upper back, secured symmetric plates, standing/lowered poses; visible quadriceps red. |
+| 사이드 런지 | Quadriceps/gluteals; adductors contribute frontal-plane control and return; hip abductors stabilize. | Direct side-lunge biomechanics [S4], adductor function [S5]. The joint-load study is not an adductor EMG ranking. | Quadriceps red, medial thigh adductor region orange. Gluteals obscured in front view are described in text. |
+| 크로스 런지 | Quadriceps/gluteus maximus for rising; lateral hip muscles for pelvic control, adductors/hamstrings may assist. | Functional inference from lunge and hip anatomy [S2,S5]; exact-movement peer-reviewed evidence not established in this audit. | Quadriceps red; action-frame gluteal/medius schematic tint over opaque cloth. No claim that curtsy is best for gluteus medius. |
+| 덤벨 컬 | Biceps brachii, brachialis and brachioradialis flex the elbow. | Direct curl comparison [S6]; brachialis anatomy [S7]. Study dumbbell condition alternated arms; illustration shows simultaneous arms, so do not transfer exact amplitudes. | Biceps red, brachioradialis orange. Deep brachialis omitted and named. |
+| 바벨 컬 | Same elbow flexors; grip influences activation. | Straight-bar curl included in [S6]; no universal equipment superiority claimed. | Dedicated straight bar with underhand grip; same color groups. Top-frame bar length/plate size corrected to match start. |
+| 스탠딩 니업 | Iliopsoas and rectus femoris flex hip; abdominal wall and stance hip stabilize. | Hip-flexor anatomy/morphology [S8,S9]; exact hands-on-hips marching task not directly measured. | Replace misleading red-only abs with orange trunk, red rectus femoris; deep iliopsoas named, not painted on belly. |
+| 스탠딩 사이드 크런치 | Obliques participate in lateral trunk control; hip flexors lift knee; stance hip stabilizes. | Trunk anatomy [S10] and hip anatomy [S8]; exact combined task is inference. Gravity/phase changes which side acts concentrically/eccentrically. | Both superficial oblique regions red, rectus/raised thigh orange. Do not claim only the shortened side works. Deep QL/obliques omitted. |
+| 크런치 | Rectus abdominis and obliques flex/control trunk. | Direct abdominal-exercise EMG [S11,S12]. | Rectus red, lateral abdominal region orange; no upper/lower isolation claim. Feet/pelvis remain supported, small shoulder-blade lift. |
+| 레그 레이즈 | Iliopsoas/rectus femoris move thighs; abdominal wall controls lumbopelvic motion. | Fine-wire psoas study is unilateral active straight-leg raise [S13]; bilateral isometric comparison [S14] confirms abdominal participation, not identical dynamic amplitudes. | Rectus femoris red, abdominals orange; deep iliopsoas named. Rejected draft colored shins; final lower legs are gray. |
+| 플랭크 | Rectus/obliques resist trunk motion; scapular stabilizers including serratus and gluteals contribute. | Standard-plank trunk data [S14], low/high-plank shoulder EMG [S15], gluteal/trunk plank measurements [S16]. | Two hold poses: rectus red, oblique/scapular regions and gluteal cloth overlay orange. No push-up, sagging, or prescribed breathing cadence. |
+
+### Sources and limits
+
+- [S1: Isear et al., unloaded squat EMG](https://pubmed.ncbi.nlm.nih.gov/9107637/): measured gluteus maximus, quadriceps, hamstrings and gastrocnemius in an unloaded squat. Used only for participation.
+- [S2: Muyor et al., 2020](https://pubmed.ncbi.nlm.nih.gov/32236133/): bodyweight forward lunge, monopodal squat and lateral step-up; six sampled thigh/hip muscles. The last two tasks are not substituted for bilateral squat or curtsy lunge.
+- [S3: Escamilla et al., 2025](https://pubmed.ncbi.nlm.nih.gov/39982282/): externally loaded forward lunges, differing stride/step length; quadriceps, gluteals, hamstrings, gastrocnemius and adductor longus. No universal percentages exported to app.
+- [S4: Escamilla et al., 2022](https://www.ijspt.org/wp-content/uploads/2022/01/9-Escamilla.pdf): 16 participants, bodyweight forward/side lunges and modelled patellofemoral loading. Used for task mechanics, not a complete muscle activation map.
+- [S5: StatPearls, femoral muscles](https://www.ncbi.nlm.nih.gov/sites/books/NBK500008/): medial thigh adduction/extension and quadriceps function; anatomy supports inference, not exercise-specific EMG magnitude.
+- [S6: Marcolin et al., 2018](https://pmc.ncbi.nlm.nih.gov/articles/PMC6047503/): 12 trained men, 65% 1RM, dumbbell/straight/EZ curls; biceps and brachioradialis recorded. Brachialis was not measured.
+- [S7: StatPearls, brachialis](https://www.ncbi.nlm.nih.gov/books/NBK551630/): anatomical elbow-flexion role, used to explain a deep muscle omitted by surface illustration.
+- [S8: StatPearls, iliopsoas](https://www.ncbi.nlm.nih.gov/books/NBK531508/): hip flexion/stabilization anatomy. No external iliopsoas patch is drawn.
+- [S9: Hip-flexor anatomical analysis](https://pmc.ncbi.nlm.nih.gov/articles/PMC11250012/): iliopsoas/rectus femoris mechanical contributions vary with hip angle. Not direct EMG of the app's standing knee-up.
+- [S10: Cunningham's Manual, trunk actions](https://accessmedicine.mhmedical.com/content.aspx?bookid=3475&sectionid=286447429): distinguishes resisted lateral flexion from gravity-assisted eccentric control. It does not validate a standing elbow-to-knee exercise protocol.
+- [S11: Escamilla et al., abdominal exercises](https://pubmed.ncbi.nlm.nih.gov/16494072/): rectus and oblique activity during crunch and other tasks; exercise-specific findings, not a universal ranking.
+- [S12: Four abdominal exercises](https://pubmed.ncbi.nlm.nih.gov/16558218/): sampled rectus quadrants did not support quadrant-specific isolation across the tested exercises.
+- [S13: Active straight-leg raise](https://pubmed.ncbi.nlm.nih.gov/34455371/): nine men; fine-wire psoas and surface thigh/abdominal EMG; unilateral task and angle-dependent activation limit transfer to bilateral moving reps.
+- [S14: Plank/bilateral leg-raise comparison](https://pubmed.ncbi.nlm.nih.gov/30856100/): 18 active women, isometric conditions; rectus/internal oblique/erector-spinae measurements. Does not support all-muscle completeness.
+- [S15: Can et al., shoulder/scapular plank study](https://pubmed.ncbi.nlm.nih.gov/37815235/): low/high plank and support variations, including serratus and trapezius/cuff/arm measurements. The guide shows only selected visible groups.
+- [S16: Trained/untrained plank comparison](https://pubmed.ncbi.nlm.nih.gov/41967361/): monitored abdominal, spinal and gluteal muscles. Supports participation, not a fixed intensity for every user.
+
+### Delivery contract
+
+Twelve 640 x 640 GIFs, two poses each, 900 ms/frame except squat's existing 1100 ms,
+infinite loop and shared palette. Timing is display timing, not prescribed tempo.
+Source IDs and prompt recipe are in `docs/exercise-guide-sources-2026-11-01.json`.
+Rejected clothing, preparation-pose and lower-leg-color drafts are not packaged.
+The previous four guides and camera assessment policies are unchanged. All 16 guides
+use the existing popup and its caution tab; missing deep/occluded muscles are named.
+
+Verification: app JVM 914 tests passed (zero failures/errors/skips); assembleDebug and lintDebug passed. Resource export --check passed for 16 guides. All 24 decoded poses were inspected at 260 px. NOT RUN: device popup/playback and native iOS build/tests (Windows); clinician review and anatomical mask validation.

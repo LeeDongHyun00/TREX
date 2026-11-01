@@ -634,3 +634,15 @@ replacement/import and session entry respect the gate. Existing pilot/beta/trial
 status is unchanged. Device playback and native iOS verification remain outstanding.
 
 Verification: app JVM 914 tests and shared JVM 558 tests passed (zero failures/errors/skips); assembleDebug and lintDebug passed. Resource export and shared-source parity checks passed. All four APK GIFs match source bytes. NOT RUN: device popup/playback and native iOS build (Windows); full iOS static checker requires unavailable PyYAML.
+
+
+## 2026-11-01 follow-up: remaining twelve guide audit (§128)
+
+Regenerated all 12 remaining enabled exercises after an EMG/anatomy evidence audit.
+Ten guides replaced; dedicated barbell curl/lunge added, total 16. Plank now uses a
+hold GIF. Existing four guides and the 16-exercise posture gate remain unchanged.
+Evidence table and limits: docs/EXERCISE_GUIDE_UI.md. Source IDs/prompt recipes:
+docs/exercise-guide-sources-2026-11-01.json. No clinical mask validation or posture
+rule promotion is implied by new illustrations.
+
+Verification: app JVM 914 tests passed (zero failures/errors/skips); assembleDebug and lintDebug passed. Resource export --check passed for 16 guides. All 24 decoded poses were inspected at 260 px. NOT RUN: device popup/playback and native iOS build/tests (Windows); clinician review and anatomical mask validation.

@@ -52,8 +52,8 @@ class PostureExerciseMapTest {
         assertTrue(catalog.all { it.posture == Workout("t", it.name, it.reps, it.duration, true, it.category).postureSupported() })
         assertTrue(todayPlan.all { it.name in postureExerciseMap })
     }
-    @Test fun cameraScopeIncludesGuidesAndTwoPilotsOnly() {
-        val expected = ExerciseGuides.all.map { it.name }.toSet() + setOf("바벨 컬", "바벨 런지")
+    @Test fun cameraScopeMatchesSixteenDedicatedGuides() {
+        val expected = ExerciseGuides.all.map { it.name }.toSet()
         val actual = com.example.trex_kotlin.posture.ExerciseProfiles.all.filter { it.cameraEnabled }.map { it.name }.toSet()
         assertEquals(16, expected.size)
         assertEquals(expected, actual)

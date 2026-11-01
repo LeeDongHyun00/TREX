@@ -1,0 +1,96 @@
+{
+  "generator": "built-in image_gen",
+  "date": "2026-11-01",
+  "sourceDirectory": "generated_images/01a1960b-d164-7fc0-973e-cb8248cb448b",
+  "frames": {
+    "squat": [
+      "exec-a98856e8-3dfa-4476-8797-80534531a5fc.png",
+      "exec-f58eb8fc-7947-44dc-ab95-aae3c05a438b.png"
+    ],
+    "lunge": [
+      "exec-3f0d710d-0b15-4b02-b89d-5d2dd3bc9f18.png",
+      "exec-02b489fe-9ec6-4206-b4ea-bb2932f12408.png"
+    ],
+    "barbell-lunge": [
+      "exec-c1fade97-f0d0-40bf-96cb-5249862014a7.png",
+      "exec-2602473a-1cfb-499c-9cf8-488a934b6429.png"
+    ],
+    "side-lunge": [
+      "exec-4a7bf8b6-56bc-4d41-8f36-82620d0dd477.png",
+      "exec-538b0dc3-e039-4d43-a8ca-495d31fd7462.png"
+    ],
+    "cross-lunge": [
+      "exec-891df088-7ea1-424b-a775-77062e148559.png",
+      "exec-473ba313-fb31-4418-81bd-cbf1f2b8a270.png"
+    ],
+    "dumbbell-curl": [
+      "exec-97c1afd9-b7c2-4d94-984b-01b098310e21.png",
+      "exec-de691f74-a21d-4737-a9ff-8b9b9751b230.png"
+    ],
+    "barbell-curl": [
+      "exec-5f0d9a29-6d81-45b0-921a-0288648d6187.png",
+      "exec-90fca23b-af56-4c78-90c6-88ba43a0978c.png"
+    ],
+    "standing-knee-up": [
+      "exec-e22ca900-241d-4f36-8743-dc09d3add5e7.png",
+      "exec-3edfe133-90ee-49f9-881a-161248783b4a.png"
+    ],
+    "standing-side-crunch": [
+      "exec-c1a45277-9b74-42e5-b706-eb7bd2fcc370.png",
+      "exec-81b77efb-971c-440d-920f-781eb19fe9e9.png"
+    ],
+    "crunch": [
+      "exec-74cff97f-1715-498d-87d7-f530abe8d3e3.png",
+      "exec-f85cff5e-2011-45aa-b8b8-5137d2fd7f7b.png"
+    ],
+    "lying-leg-raise": [
+      "exec-17462202-0af1-40a0-8359-940f1f72c7da.png",
+      "exec-175ebc80-e437-4fdc-a5ec-bd3bdb614184.png"
+    ],
+    "forearm-plank": [
+      "exec-8126ccc6-ca05-420f-907f-db4174251686.png",
+      "exec-e430495b-5426-420b-982c-05cabe3b20ea.png"
+    ]
+  },
+  "promptRecipe": {
+    "common": "Create a revised SINGLE-POSE fitness anatomy illustration from the reference. WHITE SQUARE background, entire body visible, gray human anatomy, same camera, pose, body proportions and foot coordinates. CLOTHING CORRECTION IS MANDATORY: replace any briefs or tiny cut-out shorts with proper opaque BLACK SPORTS SHORTS ending at MID-THIGH, waist continuous, two complete fabric leg tubes, no exposed buttocks, no holes. Never paint deep muscles on skin. No text/panels/arrows. Preserve all muscles gray except the precise visible superficial muscle targets specified below. Color is a qualitative group indication, not measured activation. Hidden muscles are omitted and will be explained in accompanying text. Do not make cloth transparent.",
+    "muscles": {
+      "squat": "Bilateral bodyweight squat: visible quadriceps red. Gluteus maximus red only where anatomically visible laterally, over intact shorts if necessary. Subtle orange posterior thigh hamstrings only where visible. Do not color shin, kneecap, groin or entire thighs uniformly. Both legs participate. No colored abs.",
+      "lunge": "Forward bodyweight lunge: quadriceps and gluteus maximus red on both legs as participating target groups, visible gluteal region as restrained overlay on intact shorts. Hamstrings and lateral hip gluteus medius orange only where visible. Keep knees and calf gray. No large red patch masquerading as exposed buttock.",
+      "dumbbell-curl": "Supinated dumbbell biceps curl: biceps brachii on front upper arms RED; brachioradialis on thumb-side proximal forearm ORANGE, taper before wrist. Brachialis is deep and should NOT be drawn as a separate superficial broad patch. Triceps, deltoids, chest and abdominals gray. Preserve both dumbbells and grip precisely.",
+      "cross-lunge": "Curtsy/cross-back lunge. Quadriceps red on exposed fronts of thighs, gluteus maximus represented only by a subtle red tint OVER black cloth on posterolateral hip, with visible cloth texture. No red bare buttock. Small ORANGE lateral hip patch over shorts for gluteus medius, anatomically BELOW iliac crest, not on obliques. Leave adductors/hamstrings gray if obscured. Preserve crossed rear leg, stable front foot, hand position.",
+      "side-lunge": "Side lunge. Exposed front thigh quadriceps RED. Inner thigh adductor region ORANGE; never paint knees, shins or entire leg. Gluteus maximus is hidden behind shorts in this front view and must be omitted rather than invented on front hip. Keep proper mid-thigh shorts. Preserve exact side-step pose, bent knee following foot, opposite leg long.",
+      "standing-knee-up": "Standing knee raise/march. REMOVE RED ABDOMINAL HIGHLIGHT. Rectus abdominis and external obliques should be ORANGE indicating stabilization. Rectus femoris only, narrow central anterior thigh, RED on the raised leg; if both feet are down red small central rectus femoris regions on both thighs to show alternation. Other quadriceps gray. Iliopsoas is deep and must NOT be painted on the abdomen or groin. Stance-side gluteus medius small orange overlay on lateral shorts BELOW iliac crest if visible. Preserve hands on hips and upright balance.",
+      "standing-side-crunch": "Standing side crunch: external obliques on both lateral abdomen RED, rectus abdominis ORANGE for co-stabilization. No red on rib serratus or chest. Deep internal obliques and quadratus lumborum not painted. Raised thigh central rectus femoris ORANGE if leg lifted, otherwise legs gray. Small stance lateral hip orange on fabric optional, not essential.",
+      "crunch": "Bent knee abdominal crunch: rectus abdominis entire visible length RED, superficial external obliques at sides ORANGE. Both upper/lower abs same color without claiming isolation. Chest/arms/legs gray. Keep elbows open, fingertips supporting near ears without pulling neck, both feet flat in precisely same positions, low back and pelvis on mat.",
+      "lying-leg-raise": "Supine bilateral straight leg raise: central narrow rectus femoris of each exposed anterior thigh RED, rectus abdominis and visible external obliques ORANGE for trunk stabilization. Vastus muscles and other leg muscles gray. Deep iliopsoas NOT drawn on skin and no red groin. Head shoulders lower back and pelvis supported on mat. Arms alongside torso, palms on mat. Two legs distinct.",
+      "forearm-plank": "FOREARM PLANK HOLD. Rectus abdominis RED, visible superficial external oblique and serratus anterior ORANGE. Small gluteal ORANGE overlay only on opaque shorts over posterior hip. Legs other than hidden glute gray. Deep transversus not fabricated on surface. Elbows under shoulders forearms and toes fixed on mat. Head spine pelvis heels in a straight comfortable line. No sag or pike. This is a STATIC HOLD, not push-up."
+    },
+    "poses": {
+      "standing-side-crunch": [
+        "START POSE: stand fully upright, BOTH FEET ON GROUND parallel, BOTH KNEES STRAIGHT, no trunk lean, fingers by ears.",
+        "ACTION POSE: lift anatomical right knee toward right elbow, lean trunk right, left foot remains grounded. Match reference."
+      ],
+      "crunch": [
+        "START: head and shoulder blades resting on mat, knees bent and feet flat. Do NOT lift shoulders.",
+        "ACTION: modest curl of head and shoulder blades off mat, pelvis stays down, never a sit-up. Match reference."
+      ],
+      "lying-leg-raise": [
+        "START: both straight legs LOW resting on mat, head/shoulders down. Do NOT raise legs.",
+        "ACTION: both straight legs elevated together 65-75 degrees, pelvis on mat, no reverse crunch."
+      ],
+      "forearm-plank": [
+        "Hold steady forearm plank exactly as reference."
+      ]
+    },
+    "finalCorrections": [
+      "Squat and lunge: opaque mid-thigh shorts; visible quadriceps red, all remaining visible muscles gray; hidden gluteals explained in text.",
+      "Cross/side-lunge and knee-up starting frames: both feet grounded, knees straight, no stepping or lifting.",
+      "Leg-raise elevated pose: thigh rectus femoris red ends above knees; entire lower legs gray.",
+      "Barbell curl: one straight bar, equal secured plates, supinated shoulder-width grip; arms down then elbows flexed.",
+      "Barbell lunge: straight bar across upper back, equal secured plates; upright then forward lunge.",
+      "Plank: forearm support retained in both frames; small illustrative breathing variation, not a repetition.",
+      "Barbell curl top frame regenerated from start to preserve bar length, plate diameter and grip spacing."
+    ]
+  }
+}

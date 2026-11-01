@@ -165,3 +165,24 @@ Final source IDs (same ImageGen directory as above), start / end:
 
 Each GIF remains 640 x 640, two 900 ms poses, infinite loop, disposal 2 and a shared
 256-color palette. These are two-pose illustrations, not continuous motion capture.
+
+
+## Remaining twelve replacements (2026-11-01)
+
+The current app has 16 dedicated GIF guides. This replaces the earlier ten-guide
+asset set and adds equipment-specific barbell curl and barbell lunge. Plank now
+uses forearm-plank.gif, a two-pose hold illustration; its historical PNG remains
+unreferenced for provenance. The four previously audited GIFs are unchanged.
+
+The 12 replacements use qualitative red target/orange participation regions,
+opaque shorts and explicit text for deep or occluded muscles. Generated surface
+boundaries are approximate and have not received clinical validation. Exact-task
+EMG, related-task evidence and anatomical inference are distinguished in
+docs/EXERCISE_GUIDE_UI.md. Source IDs and prompt recipes are recorded in
+docs/exercise-guide-sources-2026-11-01.json. Original tool outputs are preserved.
+
+Each new GIF is 640 x 640, two frames, infinite loop and a shared 256-color palette;
+squat retains 1100 ms/frame and the other eleven use 900 ms/frame. These are
+two-pose illustrations, not continuous motion capture or prescribed cadence.
+
+Verification: app JVM 914 tests passed (zero failures/errors/skips); assembleDebug and lintDebug passed. Resource export --check passed for 16 guides. All 24 decoded poses were inspected at 260 px. NOT RUN: device popup/playback and native iOS build/tests (Windows); clinician review and anatomical mask validation.
