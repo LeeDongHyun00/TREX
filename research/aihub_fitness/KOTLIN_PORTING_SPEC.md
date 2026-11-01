@@ -3419,7 +3419,7 @@ Validation: Android 778 unit tests and 525 common JVM tests pass; debug and inst
 **블록(§5).** 같은 폰 위치에서 옷만 바꿔 컬 정면·사선, 런지 사선·옆 — 정상/지정 오류 세트, 자가 라벨 메모에 `옷: …`. 붙는 옷 정상 차단 0 vs 통 옷 정상 차단 ≥ 2/10 이면 옷 효과 확정. **결정 대기** — A 의 문구와 블록 일정.
 
 
-## §125. Four additional local exercise guides (2026-11-01)
+## §127. Four additional local exercise guides (2026-11-01)
 
 Add bodyweight good morning, standard toe-supported push-up, dumbbell front raise
 and dumbbell lateral raise to `ExerciseGuides`, taking the catalog from 10 to 14.
@@ -3439,7 +3439,7 @@ APK GIFs match source bytes. iOS resource export check passed. Full iOS static
 verification is blocked by missing PyYAML; native iOS and device playback were not run.
 
 
-### §125a. Good morning clothing and muscle-highlight audit (2026-11-01)
+### §127a. Good morning clothing and muscle-highlight audit (2026-11-01)
 
 Replace both good-morning frames with intact opaque shorts; retain the same GIF
 contract and exposed posterior-thigh highlight. Audit the four new guides against
@@ -3451,3 +3451,19 @@ boundaries and color intensity are not validated. Findings and source applicabil
 are recorded in `docs/EXERCISE_GUIDE_UI.md`; no assessment policy changed.
 Guide tests 6/6 and APK build passed; asset-byte equality verified. Device/native
 iOS playback and human anatomical/EMG validation were not run.
+
+
+### §127b. Evidence-informed assets and explicit camera rollout (2026-11-01)
+
+Replace all four GIFs with red target/orange participation illustrations and add
+qualitative legends to the existing caution tabs. Keep intact good-morning shorts.
+See the guide UI audit for source applicability and anatomical limitations.
+
+User-approved scope is 16 exercises: 14 registered guides plus barbell curl/lunge.
+`ExerciseProfiles.cameraSupportedNames` gates `cameraEnabled` in Android and the
+synchronized shared engine. Keep all 26 profiles/reference mappings for research.
+Disable the other ten catalog posture defaults and use the same support predicate
+for replacement/import/session entry. Stored flags cannot bypass session gating.
+This is availability policy, not promotion of beta/trial/pilot assessment evidence.
+
+Verification: app JVM 914 tests and shared JVM 558 tests passed (zero failures/errors/skips); assembleDebug and lintDebug passed. Resource export and shared-source parity checks passed. All four APK GIFs match source bytes. NOT RUN: device popup/playback and native iOS build (Windows); full iOS static checker requires unavailable PyYAML.

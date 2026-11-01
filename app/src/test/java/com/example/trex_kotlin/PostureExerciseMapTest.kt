@@ -10,7 +10,7 @@ class PostureExerciseMapTest {
 
     @Test
     fun floorExercisesAreMapped() {
-        // rules_floor_v0.1 에 규칙이 남은 8종목은 세션에서 자세 평가가 켜져야 한다
+        // Reference mappings survive independently of the camera rollout scope.
         val expected = mapOf(
             "푸쉬업" to "푸시업",
             "니 푸쉬업" to "니푸쉬업",
@@ -48,7 +48,17 @@ class PostureExerciseMapTest {
         // The catalog is trimmed to AIHub-backed exercises so every pick has a real rule basis.
         val catalog = workoutCatalog.values.flatten()
         assertEquals(postureExerciseMap.keys, catalog.map { it.name }.toSet())
-        assertTrue(catalog.all { it.posture && Workout("t", it.name, it.reps, it.duration, true, it.category).postureSupported() })
+        assertEquals(16, catalog.count { it.posture })
+        assertTrue(catalog.all { it.posture == Workout("t", it.name, it.reps, it.duration, true, it.category).postureSupported() })
         assertTrue(todayPlan.all { it.name in postureExerciseMap })
+    }
+    @Test fun cameraScopeIncludesGuidesAndTwoPilotsOnly() {
+        val expected = ExerciseGuides.all.map { it.name }.toSet() + setOf("바벨 컬", "바벨 런지")
+        val actual = com.example.trex_kotlin.posture.ExerciseProfiles.all.filter { it.cameraEnabled }.map { it.name }.toSet()
+        assertEquals(16, expected.size)
+        assertEquals(expected, actual)
+        (postureExerciseMap.keys - expected + setOf("", "unknown", "바벨 스쿼트")).forEach { name ->
+            assertFalse(name, Workout("stored", name, "10회", "5분", true, "상체").postureSupported())
+        }
     }
 }

@@ -340,3 +340,36 @@ a measurement of the change in excitation during a repetition.
 - `git diff --check` passed.
 - NOT RUN: device playback, native iOS, new human EMG or expert anatomical validation.
   This is a literature and illustration audit; it is not clinical validation.
+
+
+## Final regenerated guides and camera scope (2026-11-01, PR #61)
+
+All four GIFs now incorporate the preceding audit: red main target, orange
+participating/stabilizing muscles, with a Korean legend in each caution tab.
+Good-morning shorts remain intact; the gluteal tint is explicitly an overlay on
+clothing. Deep rotator-cuff muscles are explained in text, not painted superficially.
+Pixel boundaries remain illustrative and are not medically validated segmentation.
+
+The four exact-name entries use the existing `ExerciseGuideSheet`: GIF preview,
+exercise/caution tabs, preparation steps, movement steps, breathing, and source.
+No alternative popup or camera-direction promise is introduced.
+
+The user selected 16 camera-enabled exercises: the 14 guides plus barbell curl and
+barbell lunge. `ExerciseProfiles.cameraSupportedNames` is the shared Android/iOS
+rollout contract. All 26 reference mappings and manual workouts remain available.
+Catalog defaults, replacement UI, routine import and camera routing use this gate;
+stale stored `posture=true` cannot reopen a disabled camera exercise. Existing beta,
+trial and pilot statuses remain unchanged; enabled does not mean clinically validated.
+
+| Camera enabled (16) | Camera disabled (10) |
+|---|---|
+| 기본 스쿼트, 런지, 바벨 런지, 사이드 런지, 크로스 런지, 굿모닝 | 바벨 데드리프트, 힙 쓰러스트 |
+| 덤벨 컬, 바벨 컬, 프런트 레이즈, 사이드 레터럴 레이즈, 푸쉬업 | 오버헤드 프레스, 랫풀 다운, 딥스, 업라이트로우, 니 푸쉬업 |
+| 스탠딩 니업, 스탠딩 사이드 크런치, 크런치, 레그 레이즈, 플랭크 | 행잉 레그 레이즈, 시저 크로스, Y 레이즈 |
+
+Final visual review: all eight decoded poses inspected at 260 x 260 preview size;
+clothing, visible limb placement and color-role distinctions checked. Two-pose
+registration and surface muscle boundaries are illustrative, not motion capture or
+anatomically measured masks. Four source GIFs match their APK entries byte-for-byte.
+
+Verification: app JVM 914 tests and shared JVM 558 tests passed (zero failures/errors/skips); assembleDebug and lintDebug passed. Resource export and shared-source parity checks passed. All four APK GIFs match source bytes. NOT RUN: device popup/playback and native iOS build (Windows); full iOS static checker requires unavailable PyYAML.

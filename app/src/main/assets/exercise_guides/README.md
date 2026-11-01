@@ -144,3 +144,24 @@ Other guides' highlights were audited but not changed in this follow-up.
 Verification: both decoded frames inspected at 260 px; intact shorts and visible
 posterior-thigh highlights confirmed. ExerciseGuidesTest 6/6 and assembleDebug
 passed; updated GIF is byte-identical to the APK entry. Device playback not run.
+
+
+## Evidence-informed replacement of all four GIFs (2026-11-01)
+
+Supersedes the earlier unchanged-highlight audit. All eight poses were regenerated
+with red for the principal illustrated target and orange for participating muscles.
+These colors describe roles, not activation magnitude, rankings, or validated masks.
+Good morning: posterior thigh red, gluteal overlay over intact shorts and thoracic/
+lumbar extensors orange. Push-up: pectoralis/triceps red, anterior deltoid/serratus
+orange. Front raise: anterior deltoid red, clavicular pectoralis orange. Lateral
+raise: middle deltoid red, upper trapezius/serratus orange; deep cuff muscles omitted.
+The guide cautions explain these omissions and the schematic clothing overlay.
+
+Final source IDs (same ImageGen directory as above), start / end:
+- Good morning: `7d5271bc-c4b6-4794-9c88-6f6fa559210e` / `c8f2f77b-83ff-4d40-aeb0-2a9c33daa3e4`
+- Push-up: `b591a4fe-2c55-48cd-a0d0-a2432467ca2f` / `d9c31a02-65b4-4d0a-bdf2-8342b9fd83d6`
+- Front raise: `11ed8f19-cb70-4e2d-9748-7cd7b5c0f79a` / `201993fd-24a5-4428-89d7-ecf76a553471`
+- Lateral raise: `678a9361-1355-40df-bce5-e1f5a55da222` / `b04dda5b-e8ba-433b-bb6d-e5019b8d1661`
+
+Each GIF remains 640 x 640, two 900 ms poses, infinite loop, disposal 2 and a shared
+256-color palette. These are two-pose illustrations, not continuous motion capture.

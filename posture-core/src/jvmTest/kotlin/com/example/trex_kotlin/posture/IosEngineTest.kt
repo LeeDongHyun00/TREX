@@ -10,8 +10,8 @@ class IosEngineTest {
     private fun frames(status: String) = JSONObject(status)
     private fun speechOf(status: String): List<String> = frames(status).getJSONArray("speech").let { a -> (0 until a.length()).map { a.getJSONObject(it).getString("text") } }
 
-    @Test fun all26ExercisesConfigureAndMissingBodyNeverReceivesScore() {
-        ExerciseProfiles.all.forEach { p ->
+    @Test fun enabledExercisesConfigureAndMissingBodyNeverReceivesScore() {
+        ExerciseProfiles.all.filter { it.cameraEnabled }.forEach { p ->
             val engine=engine(); engine.configure(Json.encode(mapOf("name" to p.name,"mode" to "coach","target" to 10)))
             engine.arm(1000); engine.manualStart(1000)
             engine.tick(6000)
@@ -19,6 +19,15 @@ class IosEngineTest {
             val report=JSONObject(engine.finish(22000))
             assertTrue(p.name,report.isNull("score"));assertEquals(0,report.getInt("shipJudged"));assertEquals(0,report.getInt("reps"))
             assertFalse(report.getString("summary").contains("깨끗"))
+        }
+    }
+    @Test fun disabledExercisesRejectCameraConfiguration() {
+        val disabled = ExerciseProfiles.all.filterNot { it.cameraEnabled }
+        assertEquals(10, disabled.size)
+        disabled.forEach { p ->
+            assertThrows(p.name, IllegalArgumentException::class.java) {
+                engine().configure(Json.encode(mapOf("name" to p.name)))
+            }
         }
     }
     @Test fun trackAlsoKeepsZeroJudgementsUnscored() {

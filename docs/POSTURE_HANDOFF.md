@@ -619,3 +619,18 @@ Play 1.3.0 보고 "팔꿈치 벌어짐·허리 숙임을 잡는데 횟수로 센
 ## 2026-11-01 — 헐렁한 옷과 컬·런지 판정 연구 (§126, 구현 전)
 
 사용자 보고 "통 크거나 펑퍼짐한 옷이면 자주 오류" → `docs/LOOSE_CLOTHING_RESEARCH.md`. 기전(옷 속 관절을 지어냄·가시성 무력), 컬 옆 벌림 `refCap`/`absMin` 경로가 1단에서 매 회 차단한다는 예측(폰 연결하면 11-01 이후 로그의 `rep_form` 회별 raw·ref 로 먼저 확인), 대리 지표 `clothing_proxies.py` 와 일상복 기준값, 방안 A(안내)→B(옷 불확실 세트 강등)→C(heavy, 영상 필요), 옷 라벨 블록 설계. 임계 변경 없음. 결정 대기: A 문구, 블록 일정.
+
+
+
+## 2026-11-01 — PR #61 guide assets and camera rollout (§127)
+
+Four new guides (good morning, push-up, front/lateral raise) use the existing sheet,
+bringing guides to 14. Evidence-informed GIFs and Korean cautions distinguish
+primary/participating muscle roles without claiming measured intensity.
+The user explicitly chose 16 camera-enabled exercises including barbell curl and
+barbell lunge. `ExerciseProfiles.cameraSupportedNames` is the shared rollout gate;
+the other ten remain manual exercises and retain research profiles. Catalog defaults,
+replacement/import and session entry respect the gate. Existing pilot/beta/trial
+status is unchanged. Device playback and native iOS verification remain outstanding.
+
+Verification: app JVM 914 tests and shared JVM 558 tests passed (zero failures/errors/skips); assembleDebug and lintDebug passed. Resource export and shared-source parity checks passed. All four APK GIFs match source bytes. NOT RUN: device popup/playback and native iOS build (Windows); full iOS static checker requires unavailable PyYAML.

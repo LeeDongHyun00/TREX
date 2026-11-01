@@ -143,7 +143,7 @@ data class ExerciseProfile(val name: String, val referenceExercise: String?, val
     val lateralReach: Float? get() = if (name == "사이드 런지") 0.9f else null
     /** 사이드 런지(§101): 검은 무대를 가로 전체(배율 ≤ 1)로 — 스탠스가 이미지 폭의 3/4 이라 배율 1.46 이면 편 다리가 화면 밖(관절 67.5 % → 2.6 %). */
     val stageFullWidth: Boolean get() = name == "사이드 런지"
-    val cameraEnabled get() = kind != ObservationKind.GUIDE
+    val cameraEnabled get() = name in ExerciseProfiles.cameraSupportedNames && kind != ObservationKind.GUIDE
     /**
      * 준비 확인이 요구하는 몸 범위(§89) — 무릎·골반 피처를 쓰지 않는 서서 하는 팔 운동(컬·레이즈·프레스·랫풀·딥스)은 상체만.
      * 가까이 찍어 다리가 화면 밖인 컬 세트가 전신 요구에 막혀 시작하지 못했다. 바닥 종목은 늘 전신(옆 사슬).
@@ -164,6 +164,13 @@ data class ExerciseProfile(val name: String, val referenceExercise: String?, val
  * 카탈로그 밖 이름(예전 저장 루틴의 종목)은 프로필이 없어 카메라를 켜지 않는다.
  */
 object ExerciseProfiles {
+    // Explicit camera rollout scope; profiles outside this set remain available for research.
+    val cameraSupportedNames: Set<String> = setOf(
+        "기본 스쿼트", "런지", "바벨 런지", "사이드 런지", "크로스 런지", "굿모닝",
+        "덤벨 컬", "바벨 컬", "사이드 레터럴 레이즈", "프런트 레이즈", "푸쉬업",
+        "스탠딩 사이드 크런치", "스탠딩 니업", "플랭크", "크런치", "레그 레이즈",
+    )
+
     private val legs = listOf("knee_L", "knee_R", "hip_L", "hip_R", "torso_pitch")
     private val arms = listOf("elbow_L", "elbow_R", "elbow_torso_L", "elbow_torso_R", "torso_pitch")
     private val raises = listOf("upperarm_vert_L", "upperarm_vert_R", "elbow_L", "elbow_R", "torso_pitch")
