@@ -336,6 +336,13 @@ class RepCounter(
     }
 
     fun onFrameFeatures(tMs: Long, features: Map<String, Float>): Boolean {
+        // §123: 엎드림을 확인하지 못한 구간 앞뒤의 팔 동작을 한 회로 잇지 않는다. 판정 불가는 정상 자세가 아니다.
+        if (signal.requiredPostureFeature?.let { features[it] != 1f } == true) {
+            resetCycle()
+            newlyPublished = emptyList(); newlyPublishedValid = emptyList(); newlyPublishedShort = emptyList()
+            newlyRetracted = false
+            return false
+        }
         legTracker?.let { tracker ->
             newlyPublished = tracker.onFrame(tMs, features)
             rejectedReps.clear(); rejectedReps.addAll(tracker.rejected)
@@ -868,7 +875,7 @@ class RepCounter(
             if (sig.isometric) return null
             val signal = when {
                 // 바닥 반복 계열(§99)에는 종목 이름의 ROM 을 붙이지 않는다 — 규칙의 rep 설정은 옛 신호(head_ground·hip_ang)의 단위다
-                sig.floorProfile != null -> sig.copy(romThreshold = null, romDirection = null, romValidated = false)
+                sig.floorProfile != null || exercise in FourExerciseForm.changedSignalExercises -> sig.copy(romThreshold = null, romDirection = null, romValidated = false)
                 ruleRomDirection != null && ruleRomThreshold != null ->
                     sig.copy(romDirection = ruleRomDirection, romThreshold = ruleRomThreshold, romValidated = false)
                 floor -> sig.copy(romThreshold = null, romDirection = null, romValidated = false)
@@ -933,6 +940,8 @@ data class RepSignal(
      */
     val identityFeature: String? = null,
     val identityMinAmp: Float? = null,
+    /** 해당 운동의 시작 배치가 관측된 프레임에서만 사이클을 잇는다(§123 푸시업). null = 기존 경로. */
+    val requiredPostureFeature: String? = null,
     /**
      * 팔별(좌·우) 신호로 세는 종목(덤벨 컬, spec §62c·설계 §22): (왼쪽 피처, 오른쪽 피처). 자식 카운터 둘이 각자 사이클을 내고
      * **완료 = min(nL, nR) 증가** — 동시 컬은 사이클마다 1회, 교대 컬은 왼 + 오른 = 1회(런지 결정과 같은 단위)가 한 식으로 된다.
@@ -986,7 +995,7 @@ data class RepSignal(
         return copy(
             feature = f, minAmp = comparisonMinAmp ?: minAmp, polarity = null,
             comparisonFeature = null, comparisonMinAmp = null,
-            identityFeature = null, identityMinAmp = null,   // 비교 지표는 사이클을 세지 않는다 — 판별 게이트는 카운트의 성질
+            identityFeature = null, identityMinAmp = null, requiredPostureFeature = null,   // 비교 지표는 사이클을 세지 않는다 — 판별 게이트는 카운트의 성질
             pairedFeatures = null, rejectFeatures = emptyMap(), romRatio = null, romAbsMin = null, romRefMin = null, romExcludesShort = false,
             romAuxFeature = null, romAuxRatio = null, romAuxFloor = null,
             romDirection = if (sameFeature) romDirection else null, romThreshold = if (sameFeature) romThreshold else null,
@@ -1089,12 +1098,14 @@ object RepSignals {
     )
 
     val byExercise: Map<String, RepSignal> = base().mapValues { (ex, sig) ->
-        if (sig.legProfile != null || sig.floorProfile != null) sig else ROM[ex]?.let { sig.copy(romDirection = it.dir, romThreshold = it.thr, romValidated = it.validated, romCue = it.cue) } ?: sig
+        // §123: 신호가 바뀐 네 종목에 옛 고관절각/양쪽 평균 거리/전완각의 ROM 임계를 이식하지 않는다.
+        if (sig.legProfile != null || sig.floorProfile != null || ex in FourExerciseForm.changedSignalExercises) sig else ROM[ex]?.let { sig.copy(romDirection = it.dir, romThreshold = it.thr, romValidated = it.validated, romCue = it.cue) } ?: sig
     }
 
     private fun base(): Map<String, RepSignal> = buildMap {
         // ---- 바닥 (M0 재생 검증 — rep_replay.py SIGNALS 와 일치)
-        put("푸시업", RepSignal("wrist_shoulder_d", 0.30f, validated = true, plausibleMin = 0.10f))
+        put("푸시업", RepSignal(FourExerciseForm.PUSHUP_SIGNAL, 0.30f, plausibleMin = 0.10f,
+            requiredPostureFeature = FourExerciseForm.PUSHUP_POSTURE, comparisonFeature = "wrist_shoulder_d", comparisonMinAmp = 0.30f))
         put("니푸쉬업", RepSignal("wrist_shoulder_d", 0.30f, validated = true, plausibleMin = 0.10f))
         // 크런치·라잉 레그 레이즈(§99): 바닥 반복 계열 — 보이는 쪽 한 사슬의 주 운동 분절(어깨–골반 현 들림·허벅지 들림) 사이클. 머리 높이(head_ground)는 '고개만 까딱' 의
         // 89 % 가 진폭을 넘고, 중점 3점 고관절각(hip_ang)은 무릎을 접어도 채워졌다. TRACK 비교는 기존 기록의 단위(head_ground 0.15·hip_ang 25°)를 유지한다
@@ -1108,7 +1119,9 @@ object RepSignals {
         put("바이시클 크런치", RepSignal("knee_gap2d", NORM))
         put("플랭크", RepSignal("trunk_ankle_ang", ANGLE, isometric = true))
         // ---- 서서: 힙 힌지 (설문 hip_R 0.98~1.00 → 앱 가용 hip_mean)
-        for (ex in listOf("바벨 데드리프트", "바벨 스티프 데드리프트", "굿모닝")) put(ex, RepSignal("hip_mean", ANGLE))
+        for (ex in listOf("바벨 데드리프트", "바벨 스티프 데드리프트")) put(ex, RepSignal("hip_mean", ANGLE))
+        put("굿모닝", RepSignal(FourExerciseForm.GOOD_MORNING_SIGNAL, ANGLE,
+            comparisonFeature = "hip_mean", comparisonMinAmp = ANGLE))
         // ---- 스쿼트·런지·버피 (무릎각 계열)
         // 바벨 스쿼트: 카운트는 양 무릎 평균, 판별은 더 편 쪽 무릎(spec §62). 평균만 보면 한쪽 무릎 들기(제자리 걷기)가 65° 를 흔들어 카운트된다
         // (2026-09-25 실기기 세트: 무릎 들기 7번 중 1번 카운트, 스쿼트 바닥의 knee_maxside 66~126° vs 무릎 들기 156~163°). 런지류는
@@ -1165,9 +1178,13 @@ object RepSignals {
             romCueBottom = "팔을 끝까지 펴지 않았어요. 내릴 때 팔꿈치를 다 펴 주세요"))
         put("랫풀 다운", RepSignal("forearm_vert_mean", ANGLE))
         // ---- 전완 수직도 계열 (들어올림)
-        for (ex in listOf("사이드 레터럴 레이즈", "프런트 레이즈", "업라이트로우", "덤벨 체스트 플라이", "덤벨 인클라인 체스트 플라이")) {
+        for (ex in listOf("업라이트로우", "덤벨 체스트 플라이", "덤벨 인클라인 체스트 플라이")) {
             put(ex, RepSignal("forearm_vert_mean", ANGLE))
         }
+        // §123: 팔꿈치를 굽혀도 위팔 올림을 센다. TRACK의 기존 전완 기록 단위는 유지한다.
+        for (ex in listOf("사이드 레터럴 레이즈", "프런트 레이즈"))
+            put(ex, RepSignal(FourExerciseForm.RAISE_SIGNAL, ANGLE,
+                comparisonFeature = "forearm_vert_mean", comparisonMinAmp = ANGLE))
         // ---- 손 높이/거리 계열
         put("오버 헤드 프레스", RepSignal("palm_h_sh", NORM))
         put("케이블 푸시 다운", RepSignal("palm_h_sh", NORM))

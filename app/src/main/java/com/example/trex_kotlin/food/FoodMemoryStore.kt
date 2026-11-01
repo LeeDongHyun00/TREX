@@ -10,9 +10,9 @@ import kotlinx.coroutines.launch
 import java.io.File
 
 /**
- * [FoodMemory] 를 앱 전용 저장소 파일 하나(`files/food_memory.tsv`)에 둔다.
+ * [FoodMemory] 를 앱 전용 AES-256 파일(`files/food_memory.tsv.aes`)에 둔다. 기존 TSV는 검증 후 이관한다.
  * 사진 자체는 저장하지 않는다 — 이름과 특징값(숫자 384개)만 남는다. 비교도 폰에서만 한다.
- * 이 파일은 클라우드 자동 백업에서 뺐다(res/xml/backup_rules.xml·data_extraction_rules.xml). 새 폰으로 직접 옮기는 기기 이전에는 따라간다.
+ * 이 파일은 클라우드 자동 백업에서 뺐다(res/xml/backup_rules.xml·data_extraction_rules.xml). 암호키가 기기에 귀속되므로 기기 이전에서도 제외한다.
  */
 object FoodMemoryStore {
 
@@ -31,12 +31,9 @@ object FoodMemoryStore {
     fun load(context: Context): FoodMemory = synchronized(lock) {
         cached ?: run {
             val file = File(context.applicationContext.filesDir, FILE_NAME)
-            val memory = try {
-                if (file.exists()) FoodMemory.decode(file.readText(Charsets.UTF_8)) else FoodMemory()
-            } catch (e: Exception) {
-                Log.w(TAG, "기억 파일을 읽지 못해 빈 기억으로 시작한다", e)
-                FoodMemory()
-            }
+            val files = com.example.trex_kotlin.security.AndroidKeyCipher.files
+            // 복호화 실패를 빈 기억으로 바꾸면 다음 저장에서 원본을 잃는다. 실패를 그대로 전달한다.
+            val memory = if (files.exists(file)) FoodMemory.decode(files.readText(file)) else FoodMemory()
             memory.also { cached = it }
         }
     }
@@ -53,30 +50,25 @@ object FoodMemoryStore {
                 FoodDetector.embed(app, spot.photo, spot.box)?.let { spot to it }
             }
             if (vectors.isEmpty()) return@launch
-            synchronized(lock) {
-                var memory = load(app)
-                val now = System.currentTimeMillis()
-                vectors.forEachIndexed { i, (spot, v) ->
-                    memory = memory.plus(MemoryEntry(FoodMemory.clean(spot.name), v, now + i, spot.correctedFrom?.let(FoodMemory::clean)))
+            try {
+                synchronized(lock) {
+                    var memory = load(app)
+                    val now = System.currentTimeMillis()
+                    vectors.forEachIndexed { i, (spot, v) ->
+                        memory = memory.plus(MemoryEntry(FoodMemory.clean(spot.name), v, now + i, spot.correctedFrom?.let(FoodMemory::clean)))
+                    }
+                    save(app, memory)
+                    cached = memory
                 }
-                save(app, memory)
-                cached = memory
+                Log.i(TAG, "기억 ${vectors.size}개 추가")
+            } catch (_: Exception) {
+                // 실패한 저장은 메모리 캐시에도 반영하지 않는다. 이름·벡터·암호문을 로그에 남기지 않는다.
+                Log.e(TAG, "음식 기억 저장 실패: 이전 기록을 유지합니다")
             }
-            Log.i(TAG, "기억 ${vectors.size}개 추가: ${vectors.joinToString { (spot, _) -> spot.name + (spot.correctedFrom?.let { " (모델: $it)" } ?: "") }}")
         }
     }
 
     private fun save(context: Context, memory: FoodMemory) {
-        try {
-            val dir = context.filesDir
-            val tmp = File(dir, "$FILE_NAME.tmp")
-            tmp.writeText(memory.encode(), Charsets.UTF_8)
-            if (!tmp.renameTo(File(dir, FILE_NAME))) {
-                File(dir, FILE_NAME).writeText(memory.encode(), Charsets.UTF_8)
-                tmp.delete()
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "기억 저장 실패", e)
-        }
+        com.example.trex_kotlin.security.AndroidKeyCipher.files.writeText(File(context.filesDir, FILE_NAME), memory.encode())
     }
 }

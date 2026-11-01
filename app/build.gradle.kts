@@ -86,6 +86,9 @@ kotlin {
 }
 
 dependencies {
+    // AES-256 DB 암호화. Community Edition; 평문 DB는 검증 후 이관한다(§124).
+    implementation("net.zetetic:sqlcipher-android:4.20.0")
+    implementation("androidx.sqlite:sqlite:2.7.0")
     implementation("androidx.window:window:1.5.0")
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)

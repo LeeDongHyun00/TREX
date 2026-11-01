@@ -2,13 +2,15 @@ package com.example.trex_kotlin
 
 import android.content.ContentValues
 import android.content.Context
-import android.database.sqlite.SQLiteDatabase
-import android.database.sqlite.SQLiteOpenHelper
+import net.zetetic.database.sqlcipher.SQLiteDatabase
+import net.zetetic.database.sqlcipher.SQLiteOpenHelper
+import com.example.trex_kotlin.security.EncryptedMuscleDatabase
 import com.example.trex_kotlin.trainingload.*
 import org.json.JSONObject
 
-/** Android 기본 SQLite. 세트 원본과 파생 부하를 한 트랜잭션으로 교체한다. */
-internal class MuscleLoadStore(context: Context) : SQLiteOpenHelper(context, "muscle_load.db", null, 1), MuscleLoadDatabase {
+/** AES-256 SQLCipher DB. 기존 SQLite는 검증 후 이관하고 세트 원본과 파생 부하를 한 트랜잭션으로 교체한다. */
+internal class MuscleLoadStore(context: Context) : SQLiteOpenHelper(context, EncryptedMuscleDatabase.NAME,
+    EncryptedMuscleDatabase.prepare(context), null, 1, 0, EncryptedMuscleDatabase.preserveOnError, null, true), MuscleLoadDatabase {
     override fun onConfigure(db: SQLiteDatabase) { db.setForeignKeyConstraintsEnabled(true); db.enableWriteAheadLogging() }
     override fun onCreate(db: SQLiteDatabase) {
         db.execSQL("CREATE TABLE load_sets (id TEXT PRIMARY KEY, session_id TEXT NOT NULL, exercise_id TEXT NOT NULL, ended_at INTEGER NOT NULL, posture_set_id TEXT, model_version INTEGER NOT NULL, raw TEXT NOT NULL)")

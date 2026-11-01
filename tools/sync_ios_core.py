@@ -7,6 +7,8 @@ SOURCE = ROOT / 'app/src/main/java/com/example/trex_kotlin/posture'
 TARGET = ROOT / 'posture-core/src/commonMain/kotlin/com/example/trex_kotlin/posture'
 NAMES = '''Arm2d Breathing CameraPlacement CapturePreparation ContactMinimum DinoCopy ExerciseProfiles FloorFeedback FloorTemporal FormMotion LegCycle Lunge2d LungeSides NormalPoseReference PlankAlignment PostureAssessment PostureComparison PostureCore PostureFloor PostureFloorCoverage PostureScope PostureSetReport PostureView PostureViewGuide RepCounter RepForm RepFormPriorTable RepFormRules RepHysteresis RepUnit ReturnRepTracker RuleHighlight RuleTypes Stance2d PostureRules PostureBaseline PostureCoach PostureMode FloorChain FloorCycle FloorGaze FloorLive PlankGeometry PlankHold PostureTrial PreparationVoice SpeechQueue StandingFraming PoseLandmarks RepEngineLog InferencePolicy'''.split()
 
+NAMES += ['FourExerciseForm']
+
 def portable(name, text):
     text = re.sub(r'^import (android\..*|java\..*|org.json.JSONObject)\n', '', text, flags=re.M)
     if name == 'PostureRules':
@@ -15,7 +17,7 @@ def portable(name, text):
         assert old in text
         text = text.replace(old, '')
     if name == 'PostureBaseline':
-        text = text[:text.index('class BaselineStore(')]
+        text = text[:text.index('class BaselineStore ')]
         text = text.replace('SetLog.nowIso()', '""')
     if name == 'PostureMode':   # 저장소는 공유 ModeStore.kt(ios-ui) — Android 팩토리와 그 import 를 뗀다
         text = text[:text.index('/** 종목별 모드 저장 — Android SharedPreferences')].replace('import com.example.trex_kotlin.SharedPreferencesStore\n', '')
@@ -51,7 +53,7 @@ def main():
     # 자가 라벨 값과 줄 형식(§108) — 앱 상태(AppViewModel)가 라벨을 만들고, 두 플랫폼이 같은 SetLabelFormat 으로 줄을 쓴다.
     # 파일 쓰기(SetLabelStore)는 플랫폼마다 따로다. 값·형식만 잘라 온다.
     label = (SOURCE/'PostureSetLabel.kt').read_text(encoding='utf-8')
-    label = label[label.index('data class SetSelfLabel('):label.index('class SetLabelStore(')]
+    label = label[label.index('data class SetSelfLabel('):label.index('class SetLabelStore ')]
     assert 'android' not in label and 'File' not in label and 'object SetLabelFormat' in label, 'PostureSetLabel 의 SetSelfLabel·SetLabelFormat 형태를 확인하세요.'
     label = 'package com.example.trex_kotlin.posture\n\n// PostureSetLabel 의 SetSelfLabel·SetLabelFormat 정본 슬라이스(§108).\n' + label.rstrip() + '\n'
     # 추론 이후 처리(PoseSample·피처·얼굴 기하)는 PoseLandmarks.kt 통째로 NAMES 에 있다(§108c) — 예전 FaceYaw 슬라이스는 없앴다.

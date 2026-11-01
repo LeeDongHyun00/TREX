@@ -45,6 +45,8 @@ data class RepEngineLog(
     val standing: Map<String, Float>? = null,
     /** 바닥 반복 계열(§99)의 세트 첫 누운 기준(`FloorCycleTracker.lying`) — 재생기가 같은 값을 심는다(`restoreLying`). JSON 키 `lying`. */
     val lying: Map<String, Float>? = null,
+    /** §123: 사이클을 잇기 전에 1로 관측되어야 하는 배치 피처. 모름·0이면 현재 후보를 버린다. */
+    val requiredPostureFeature: String? = null,
 ) {
     companion object {
         /** v2 = 방향 복귀 띠(spec §99). v1 로그는 옛 복귀 규칙으로 센 것이라 지금 재생과 파리티가 어긋날 수 있다. */
@@ -81,6 +83,7 @@ data class RepEngineLog(
                 romTier = RepRomTier.of(s).key,
                 identityFeature = s.identityFeature,
                 identityMinAmp = s.identityFeature?.let { s.identityMinAmp },
+                requiredPostureFeature = s.requiredPostureFeature,
                 seed = counter.standingSeed,
                 standing = counter.legTracker?.standing,
                 lying = counter.floorTracker?.lying,

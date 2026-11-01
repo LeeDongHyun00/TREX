@@ -13,7 +13,7 @@ fun SpeechCoach(context: Context): SpeechCoach = SpeechCoach(AndroidSpeechEngine
 
 /**
  * Android TTS 엔진 — 한국어 음성, 초기화 비동기. 발화 동안만 DUCK 포커스(음악을 끄지 않고 낮춘다), 개발 기록은
- * `<externalFilesDir>/posture_logs/feedback-yyyyMMdd.jsonl`(기기 시간대 날짜)에 기록 전용 스레드로 붙인다.
+ * `<externalFilesDir>/posture_logs/feedback-yyyyMMdd.jsonl.aes`(기기 시간대 날짜)에 암호화하여 기록 전용 스레드로 붙인다.
  */
 private class AndroidSpeechEngine(context: Context) : SpeechEngine {
     private val appContext = context.applicationContext
@@ -31,9 +31,9 @@ private class AndroidSpeechEngine(context: Context) : SpeechEngine {
         val record = feedbackTraceLine(atMs, kind, text, utteranceId, muted, ready)
         runCatching { traceExecutor.execute {
             runCatching {
-                val dir = java.io.File(appContext.getExternalFilesDir(null),"posture_logs").apply { mkdirs() }
+                val dir = java.io.File(appContext.getExternalFilesDir(null) ?: appContext.filesDir,"posture_logs").apply { mkdirs() }
                 val date = java.text.SimpleDateFormat("yyyyMMdd",Locale.US).format(java.util.Date(atMs))
-                java.io.File(dir,"feedback-$date.jsonl").appendText(record+"\n")
+                com.example.trex_kotlin.security.AndroidKeyCipher.files.appendText(java.io.File(dir,"feedback-$date.jsonl"), record+"\n")
             }
         } }
     }

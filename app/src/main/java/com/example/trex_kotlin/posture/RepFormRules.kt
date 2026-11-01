@@ -71,3 +71,15 @@ fun legScopeRules(): List<PostureRule> = LegProfile.entries.flatMap { ex ->
             listOf(reason), kind = "scope")
     }
 }
+
+/** §123: 몸통 기울기나 골반 이탈이 척추 곡선을 측정한 것으로 읽히지 않게 사각을 규칙 목록에도 남긴다. */
+fun fourExerciseScopeRules(): List<PostureRule> = FourExerciseForm.scopeLines.map { (ex, line) ->
+    val condition = when (ex) {
+        "사이드 레터럴 레이즈" -> "견갑골 움직임·어깨 회전"
+        "푸시업" -> "척추 분절·어깨 회전·바닥 접촉"
+        else -> "척추 분절·허리 말림"
+    }
+    PostureRule("four_scope|$ex|$condition", ex, condition, null, RuleStatus.EXCLUDE, line,
+        "unobservable", "unobservable", "none", "scope", ">", Float.NaN, "C", "미관측", Float.NaN, Float.NaN, 0, false,
+        listOf(line), kind = "scope")
+}

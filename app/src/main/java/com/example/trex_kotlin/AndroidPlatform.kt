@@ -2,7 +2,6 @@ package com.example.trex_kotlin
 
 import android.app.Application
 import android.content.Context
-import android.content.SharedPreferences
 import com.example.trex_kotlin.posture.SetLabelStore
 import com.example.trex_kotlin.posture.SetSelfLabel
 import com.example.trex_kotlin.sync.BinaryResponse
@@ -46,37 +45,9 @@ class AndroidAppPlatform(private val app: Application) : AppPlatform {
 fun TrexStore(context: Context, preferenceName: String = "trex_store"): TrexStore =
     TrexStore(SharedPreferencesStore(context, preferenceName))
 
-/** SharedPreferences 를 그대로 감싼다. [KeyValueStore] 가 이름·의미를 SharedPreferences 에 맞춰 두었다. */
-class SharedPreferencesStore(context: Context, name: String) : KeyValueStore {
-    private val prefs: SharedPreferences = context.applicationContext.getSharedPreferences(name, Context.MODE_PRIVATE)
-
-    // SharedPreferences 는 리스너를 약하게 잡는다 — 필드로 붙들어 둔다.
-    private var changeListener: SharedPreferences.OnSharedPreferenceChangeListener? = null
-
-    override fun getString(key: String, defValue: String?): String? = prefs.getString(key, defValue)
-    override fun getBoolean(key: String, defValue: Boolean): Boolean = prefs.getBoolean(key, defValue)
-    override fun getLong(key: String, defValue: Long): Long = prefs.getLong(key, defValue)
-    override fun getStringSet(key: String, defValues: Set<String>?): Set<String>? = prefs.getStringSet(key, defValues)
-    override fun contains(key: String): Boolean = prefs.contains(key)
-    override fun edit(): KeyValueStore.Editor = Editor(prefs.edit())
-
-    override fun setChangeListener(onChange: (String) -> Unit) {
-        changeListener?.let(prefs::unregisterOnSharedPreferenceChangeListener)
-        changeListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key -> key?.let(onChange) }
-            .also(prefs::registerOnSharedPreferenceChangeListener)
-    }
-
-    private class Editor(private val edit: SharedPreferences.Editor) : KeyValueStore.Editor {
-        override fun putString(key: String, value: String?): KeyValueStore.Editor { edit.putString(key, value); return this }
-        override fun putBoolean(key: String, value: Boolean): KeyValueStore.Editor { edit.putBoolean(key, value); return this }
-        override fun putLong(key: String, value: Long): KeyValueStore.Editor { edit.putLong(key, value); return this }
-        override fun putStringSet(key: String, values: Set<String>?): KeyValueStore.Editor { edit.putStringSet(key, values); return this }
-        override fun remove(key: String): KeyValueStore.Editor { edit.remove(key); return this }
-        override fun clear(): KeyValueStore.Editor { edit.clear(); return this }
-        override fun apply() = edit.apply()
-        override fun commit(): Boolean = edit.commit()
-    }
-}
+/** Android 저장값은 AES-256-GCM으로 보호한다. 기존 호출과 KeyValueStore 계약은 유지한다. */
+class SharedPreferencesStore(context: Context, name: String) : KeyValueStore by
+    com.example.trex_kotlin.security.EncryptedPreferences(context, name)
 
 /** HttpURLConnection 한 번 주고받기 — 경계를 만들기 전 TrexApi.call 의 연결 부분 그대로. IOException 은 [NetworkException] 으로 바꾼다. */
 object HttpUrlConnectionTransport : HttpTransport {

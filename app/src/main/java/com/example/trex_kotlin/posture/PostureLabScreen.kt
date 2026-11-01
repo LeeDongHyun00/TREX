@@ -54,6 +54,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.CancellationException
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -140,6 +143,8 @@ fun PostureLabScreen(onClose: () -> Unit) {
     val recordedSamples = remember { ArrayList<PoseSample>() }
     val recordedTimesMs = remember { ArrayList<Long>() }
     val logStore = remember { SetLogStore(context) }
+    val exportScope = rememberCoroutineScope()
+    var exportBusy by remember { mutableStateOf(false) }
     var savedSets by remember { mutableIntStateOf(0) }
     var lastSavedNote by remember { mutableStateOf<String?>(null) }
     // 개인 기준선 저장소 (BaselineGuideScreen 이 기록, 여기서는 읽기만)
@@ -658,13 +663,22 @@ fun PostureLabScreen(onClose: () -> Unit) {
                     modifier = Modifier.weight(1f),
                 )
                 Text(
-                    text = "내보내기",
+                    text = if (exportBusy) "준비 중" else "내보내기",
                     color = if (savedSets > 0) TrexLime else Color.White.copy(alpha = 0.3f),
                     fontSize = 10.sp,
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier
-                        .clickable(enabled = savedSets > 0) {
-                            if (!SetLogExport.share(context, logStore)) lastSavedNote = "내보낼 로그가 없습니다"
+                        .clickable(enabled = savedSets > 0 && !exportBusy) {
+                            exportBusy = true
+                            exportScope.launch {
+                                try {
+                                    if (!SetLogExport.share(context, logStore)) lastSavedNote = "내보낼 로그가 없습니다"
+                                } catch (e: CancellationException) {
+                                    throw e
+                                } catch (_: Exception) {
+                                    lastSavedNote = "로그를 내보내지 못했습니다. 저장된 원본은 유지됩니다."
+                                } finally { exportBusy = false }
+                            }
                         }
                         .padding(horizontal = 6.dp, vertical = 2.dp),
                 )
@@ -684,6 +698,7 @@ fun PostureLabScreen(onClose: () -> Unit) {
                         .padding(horizontal = 6.dp, vertical = 2.dp),
                 )
             }
+            Text("내보낸 로그는 암호화되지 않은 파일입니다.", color = Color.White.copy(alpha = 0.55f), fontSize = 10.sp)
             lastSavedNote?.let { Text(it, color = Color.White.copy(alpha = 0.55f), fontSize = 10.sp) }
             Spacer(Modifier.height(10.dp))
 
