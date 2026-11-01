@@ -24,8 +24,9 @@ android {
         applicationId = "com.example.trex_kotlin"
         minSdk = 26
         targetSdk = 36
-        versionCode = 12
-        versionName = "1.3.0-preview.7"
+        // v1.4(2026-11-01) — 코드 15: Play 1.3.0 이 14, 다른 작업 폴더 빌드가 13 을 써서 어느 설치본에서도 앱 내 업데이트가 뜨게 그 위로
+        versionCode = 15
+        versionName = "1.4.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
