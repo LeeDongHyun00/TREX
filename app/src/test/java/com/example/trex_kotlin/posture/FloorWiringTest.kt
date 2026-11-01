@@ -12,6 +12,16 @@ import java.io.File
  *  - 세트 로그·리포트의 바닥 블록, rules_floor v0.5.
  */
 class FloorWiringTest {
+    @Test fun pushupCountGateIsWiredIntoBothPlatformScreens() {
+        val root = if (File("src/main").exists()) File("..") else File(".")
+        val android = File(root, "app/src/main/java/com/example/trex_kotlin/PostureLive.kt").readText()
+        val ios = File(root, "posture-core/src/commonMain/kotlin/com/example/trex_kotlin/posture/IosEngine.kt").readText()
+        assertTrue(android.contains("val gate = FourExerciseForm.usesFormCountGate(aihubExercise, refs.modeRef[0] == CoachMode.COACH, refs.floorRef[0])"))
+        assertTrue(ios.contains("val gate = FourExerciseForm.usesFormCountGate(exercise, mode == CoachMode.COACH, profile.floor)"))
+        val floor = File(root, "app/src/main/java/com/example/trex_kotlin/PostureFloorLive.kt").readText()
+        assertTrue(floor.contains("return FourExerciseForm.filterPushupHead(out)"))
+        assertTrue(ios.contains("return FourExerciseForm.filterPushupHead(out)"))
+    }
     private fun crunch(lift: Float, yaw: Float? = 0.05f): Map<String, Float> = buildMap {
         put(FloorChain.TRUNK_LIFT, lift); put(FloorChain.EAR_LIFT, 10f + lift); put(FloorChain.AXIS_H, lift); put(FloorChain.TORSO_ELEV, lift)
         put(FloorChain.CHAIN, 1f); yaw?.let { put(FloorChain.YAW, it) }
@@ -70,9 +80,9 @@ class FloorWiringTest {
             emptyList(), kind = kind, repConfig = repConfig, alignmentConfig = alignment)
 
     @Test fun betaFloorJudgementsAreNeverSpoken() {
-        // 반복 범위 참고(푸시업 rep 규칙) — 두 번 연속 미달이면 확인 필요, 다시 두 번 통과하면 복귀. 둘 다 화면에만(Q1)
-        val r = rule("푸시업", "rep", "wrist_shoulder_d", repConfig = RepRuleConfig("min", .71f, .34f, 2))
-        val fb = FloorFeedbackController("푸시업", listOf(r))
+        // 반복 범위 참고 — §123에 신호를 바꾼 푸시업 대신 기존 거리 신호를 유지하는 니푸쉬업으로 무음 정책을 검증한다.
+        val r = rule("니푸쉬업", "rep", "wrist_shoulder_d", repConfig = RepRuleConfig("min", .71f, .34f, 2))
+        val fb = FloorFeedbackController("니푸쉬업", listOf(r))
         val f = mapOf("wrist_shoulder_d" to .9f)
         val out = ArrayList<FloorFeedback>()
         var t = 1_000L
@@ -94,7 +104,7 @@ class FloorWiringTest {
         assertEquals(FloorFeedbackPhase.MEASURING, pf.update(600_000, emptyMap(), null, emptyList(),
             alignment = AlignmentSnapshot(emptyList(), placementReady = true, held = false)).phase)
         // 범위 문장도 음성 지적을 약속하지 않는다
-        val scope = PostureScope.of(PostureRuleSet("t", "d", listOf(r)), "푸시업")
+        val scope = PostureScope.of(PostureRuleSet("t", "d", listOf(r)), "니푸쉬업")
         assertTrue(scope.startLine!!.contains("음성으로 지적하지 않아요")); assertFalse(scope.startLine!!.contains("빨간"))
     }
 

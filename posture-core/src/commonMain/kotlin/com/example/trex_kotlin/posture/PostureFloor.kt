@@ -22,6 +22,8 @@ import kotlin.math.max
  * **중점 피처(좌우 관절 평균)는 플랭크·크런치·라잉 레그 레이즈의 카운트·시간에 쓰지 않는다**(spec §99) — 측면에서 먼 쪽이 가려지면 절반가량 빠지고(09-23 55~69 %),
  * 화면 좌표 그대로라 폰 롤에 부호가 깨진다. 그 세 종목은 보이는 쪽 한 사슬(`FloorChain`, `fc_*`)로 세고 재며, 중점 피처는 로그·TRACK 비교(`head_ground`·`hip_ang`)·
  * 레거시 규칙 호환용으로만 남긴다.
+ * §131 예외: 푸시업의 양쪽 정렬 '의심'은 world·IMU·2D 일치가 확인될 때만 별도 beta 참고로 더한다.
+ * 이 추정값으로 횟수·점수·음성을 바꾸지 않는다. 카운트용 사슬은 기존 2D 경로를 유지한다.
  */
 const val FLOOR_RULES_ASSET = "posture/rules_floor_v0.json"
 
@@ -64,9 +66,10 @@ class FloorFeatureExtractor {
      * (리뷰 2026-10-07). 쪽 잠금 이력은 그 프레임도 본다(관측 층을 부르기는 한다).
      * @param up 중력 up(`FloorChain.gravityUp` — 앱 `checkUpSanity` 의 뒤집힘을 되돌린 값). 모르면 null(절대 수평 피처 유보, 부호는 화면 위 기준).
      * @param tMs 프레임 시각(쪽 잠금 이력). 없으면 판정 격자 300 ms 간격을 가정한다(연구 픽스처 경로).
+     * @param world 원본 MediaPipe 미터 좌표. 없으면 푸시업 양쪽 정렬 참고만 유보한다.
      */
     fun computeForExercise(exercise: String, xy: FloatArray, vis: FloatArray, width: Int, height: Int,
-                           up: Vec3? = null, tMs: Long? = null): Map<String, Float> {
+                           up: Vec3? = null, tMs: Long? = null, world: FloatArray? = null): Map<String, Float> {
         val legacy = compute(xy,vis,width,height) + sideFeatures(xy,vis,width,height) +
             if(exercise == "플랭크") PlankGeometry.features(xy,vis,width,height) else emptyMap()
         val kind = FloorChain.Kind.of(exercise) ?: return legacy
@@ -74,7 +77,10 @@ class FloorFeatureExtractor {
         val t = tMs ?: (chainFrames * CHAIN_FRAME_MS)
         chainFrames++
         val fc = c.features(t, xy, vis, width, height, up)
-        return if (fc.containsKey(FloorChain.TORSO)) legacy + fc else legacy
+        if (!fc.containsKey(FloorChain.TORSO)) return legacy
+        val balance = if (exercise == "푸시업") PushupBalance.features(xy,vis,width,height,world,up,
+            fc[FourExerciseForm.PUSHUP_POSTURE] == 1f) else emptyMap()
+        return legacy + fc + balance
     }
 
     /** 개인 비교용 측별 기하. 반대쪽이 가려져도 보이는 쪽의 기준 수집은 계속한다. */

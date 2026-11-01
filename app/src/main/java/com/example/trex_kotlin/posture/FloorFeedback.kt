@@ -32,7 +32,8 @@ data class FloorFeedback(
  */
 class FloorFeedbackController(private val exercise: String, rules: List<PostureRule>) {
     private val activeRules = rules.filter { it.exercise == exercise && it.status != RuleStatus.EXCLUDE }
-    private val repRule = activeRules.firstOrNull { it.repConfig != null }
+    // §123: 양쪽 평균 거리의 깊이 임계를 새 한쪽 사슬 사이클에 적용하지 않는다.
+    private val repRule = activeRules.firstOrNull { it.repConfig != null && exercise != "푸시업" }
     private val holdRule = activeRules.firstOrNull { it.holdConfig != null }
     private data class Issue(val id: String, val message: String, val points: Set<Int>, val recovery: String)
     private val since = HashMap<String, Long>()
@@ -50,6 +51,8 @@ class FloorFeedbackController(private val exercise: String, rules: List<PostureR
     private var measuredSince: Long? = null
     private var readyAnnounced = false
     private var lastMode: CoachMode? = null
+    private val pushupChecks = if (exercise == "푸시업") FourExerciseForm.byExercise.getValue(exercise)
+        .filter { it.phase == RepPhase.CYCLE } else emptyList()
 
     /** 테스트와 앱이 같은 진입점을 사용한다. voiceEnabled=false인 동안 발화 쿨다운은 소비하지 않는다. */
     fun update(
@@ -72,12 +75,18 @@ class FloorFeedbackController(private val exercise: String, rules: List<PostureR
             return FloorFeedback(if (paused) FloorFeedbackPhase.PAUSED else FloorFeedbackPhase.UNAVAILABLE, msg,
                 speech = if (paused) null else voice("coverage", msg, now, voiceEnabled, 15000))
         }
+        if (exercise == "푸시업" && features[FourExerciseForm.PUSHUP_POSTURE] != 1f) {
+            clearObservation()
+            return FloorFeedback(FloorFeedbackPhase.UNAVAILABLE,
+                "엎드린 자세를 확인하지 못했어요. 폰을 몸 옆에 세우고 어깨부터 발목까지 보여 주세요")
+        }
         if (!anchored || holdRule != null && hold?.baseline == null) {
             clearObservation()
             val msg = if (holdRule != null) "몸을 옆에서 비추고 처음 자세를 5초간 유지해 주세요" else "몸 전체가 보이면 편하게 동작을 시작해 주세요"
             return FloorFeedback(FloorFeedbackPhase.PREPARING, msg)
         }
         if (measuredSince == null) measuredSince = now
+        if (exercise == "푸시업") return pushupFeedback(features, mode)
         val candidates = ArrayList<Issue>()
         if (holdRule != null && hold?.currentSide != null && hold.currentSide != 0 && hold.currentSideMs >= hold.breakMs) {
             val direction = if (hold.currentSide > 0) "위" else "아래"
@@ -153,6 +162,58 @@ class FloorFeedbackController(private val exercise: String, rules: List<PostureR
     private fun clearObservation() {
         since.clear(); active = null; goodSince = null; repIssueUntil = 0; recoveryUntil = 0
         badReps = 0; goodReps = 0; lastRep = null; measuredSince = null
+    }
+
+    /** §126: 반복 완료 전에도 보이는 쪽 골반·무릎과 검출된 얼굴 방향을 안내한다. 미검출은 정상 시선이 아니다. */
+    private fun pushupFeedback(f: Map<String, Float>, mode: CoachMode): FloorFeedback {
+        if (mode == CoachMode.TRACK) return FloorFeedback(FloorFeedbackPhase.MEASURING, "어깨의 상하 움직임을 기록하고 있어요")
+        val messages = ArrayList<String>()
+        val points = HashSet<Int>()
+        val ids = ArrayList<String>()
+        val observed = FourExerciseForm.filterPushupHead(f)
+        var headMessageShown = false
+        val balanceMessages = ArrayList<String>()
+        for (c in pushupChecks) {
+            val direction = observed[c.feature]?.takeIf(Float::isFinite)?.let(c::judge)
+            // §129 현재 관측은 바로 참고로 표시한다. 횟수 제외는 반복 완료 후 공통 평가기가 정한다.
+            if (direction != null) {
+                if (c.feature in PushupBalance.keys) {
+                    balanceMessages += when (c.feature) {
+                        PushupBalance.SHOULDER -> "어깨 기울어짐"
+                        PushupBalance.PELVIS -> "골반 기울어짐"
+                        else -> "어깨·골반 비틀림"
+                    }
+                    points += RuleHighlight.landmarksFor(c.feature); ids += c.id
+                    continue
+                }
+                val isHead = c.feature in FourExerciseForm.pushupHeadFeatures
+                if (!isHead || !headMessageShown) messages += when (c.feature) {
+                    FourExerciseForm.PUSHUP_KNEE -> "무릎이 굽혀져 있어요. 다리를 펴 주세요"
+                    FourExerciseForm.PUSHUP_NECK -> "머리가 몸통선보다 처졌어요. 목을 길게 유지해 주세요"
+                    FourExerciseForm.PUSHUP_TURN -> "얼굴이 화면 쪽으로 돌아갔어요. 고개 방향을 확인해 주세요"
+                    FourExerciseForm.PUSHUP_HEAD -> if (direction == FormDirection.HIGH)
+                        "고개가 많이 들렸어요. 목을 뒤로 꺾지 않도록 해 주세요"
+                        else "고개가 많이 숙여졌어요. 턱을 과하게 당기지 않도록 해 주세요"
+                    else -> if (direction == FormDirection.LOW) "골반이 처졌어요. 몸통을 한 선으로 유지해 주세요"
+                        else "골반이 들렸어요. 몸통을 한 선으로 유지해 주세요"
+                }
+                if (isHead) headMessageShown = true
+                points += RuleHighlight.landmarksFor(c.feature); ids += c.id
+            }
+        }
+        if (balanceMessages.isNotEmpty()) messages += balanceMessages.joinToString(" / ") + " 의심 · 참고"
+        if (messages.isNotEmpty()) return FloorFeedback(FloorFeedbackPhase.ATTENTION,
+            messages.joinToString("\n"), points, ruleId = ids.joinToString(";"))
+        // §128 고개도 횟수 제외 항목이지만, 고개 미관측으로 몸통 측정을 멈추지 않는다.
+        val missing = listOf(FourExerciseForm.PUSHUP_HIP, FourExerciseForm.PUSHUP_KNEE)
+            .any { observed[it]?.isFinite() != true }
+        val headObserved = FourExerciseForm.pushupHeadFeatures.all { observed[it]?.isFinite() == true }
+        val balanceNote = if (PushupBalance.keys.all { observed[it]?.isFinite() == true })
+            "\n양쪽 어깨·골반의 정렬을 추정 중이에요 · 참고" else "\n양쪽 어깨·골반의 기울기·비틀림은 확인하지 못했어요"
+        return FloorFeedback(if (missing) FloorFeedbackPhase.UNAVAILABLE else FloorFeedbackPhase.MEASURING,
+            (if (missing) "골반·무릎을 확인하지 못했어요. 몸 전체가 보이도록 해 주세요"
+            else if (!headObserved) "어깨·골반·무릎을 측정 중이에요. 고개 위치는 확인하지 못했어요"
+            else "어깨·골반·무릎과 고개 각도를 측정 중이에요. 눈동자 시선은 판정하지 않아요") + balanceNote)
     }
 
     @Suppress("UNUSED_PARAMETER")

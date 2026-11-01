@@ -4,6 +4,24 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class ReturnRepTrackerTest {
+    @Test fun goodMorningCannotStartFromBentHoldOrSeed() {
+        val tracker=ReturnRepTracker(35f,uprightMin=160f)
+        assertFalse(tracker.seed(0L,120f))
+        repeat(8) { assertNull(tracker.onFrame(it*300L,120f)) }
+        repeat(4) { assertNull(tracker.onFrame(2400L+it*300L,178f)) }
+        assertNull(tracker.onFrame(3600L,120f))
+        assertNull(tracker.onFrame(3900L,120f))
+        assertNull(tracker.onFrame(4200L,178f))
+        assertNotNull(tracker.onFrame(4500L,178f))
+    }
+    @Test fun goodMorningPartialReturnIsNotStanding() {
+        val tracker=ReturnRepTracker(35f,uprightMin=160f)
+        tracker.seed(0L,165f)
+        tracker.onFrame(600L,120f)
+        repeat(5) { assertNull(tracker.onFrame(900L+it*300L,155f)) }
+        assertNull(tracker.onFrame(2400L,170f))
+        assertNotNull(tracker.onFrame(2700L,170f))
+    }
     private class Motion {
         val counter = RepCounter(RepSignal("test", .3f, plausibleMin = .1f), maxGapMs = 1500, completeOnReturn = true)
         var time = 0L

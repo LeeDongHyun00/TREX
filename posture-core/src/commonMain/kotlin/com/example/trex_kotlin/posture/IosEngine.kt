@@ -71,6 +71,8 @@ class IosEngine @Throws(Exception::class) constructor(standingRules: String, flo
     // 화면 상태(Android `PostureLive` 의 Compose 상태와 같은 이름)
     private var formNote: String? = null
     private var provisionalNote: String? = null
+    private var pushupRepNote: String? = null
+    private var pushupRepNoteAt = 0L
     private var guideNote: String? = null
     private var guideStamp = 0L
     private var floorMeasurement: String? = null
@@ -234,7 +236,7 @@ class IosEngine @Throws(Exception::class) constructor(standingRules: String, flo
         samples.clear(); times.clear(); records.clear(); prepFrames.clear(); aggregator.reset()
         detectStart = 0L; anchorAt = Long.MAX_VALUE; startAt = 0; lastGrid = Long.MIN_VALUE; lastFrame = Long.MIN_VALUE
         rejectedSeen = 0; notShort = 0; short = 0; incorrect = 0; detected = 0; viewEst = null
-        formNote = null; provisionalNote = null; guideNote = null; guideStamp = 0L; floorMeasurement = null; rejectNote = null; gazeNote = null
+        formNote = null; provisionalNote = null; pushupRepNote = null; guideNote = null; guideStamp = 0L; floorMeasurement = null; rejectNote = null; gazeNote = null
         formHighlight = emptySet(); formProvHighlight = emptySet(); formHighlightStamp = 0L; violHighlight = emptySet(); provisionalHighlight = emptySet()
         provisionalAt = Long.MIN_VALUE / 2; motionCue = null; invalidCues = 0; romShortSpoken = false; sideCueAt = Long.MIN_VALUE / 2; angleNoteAt = Long.MIN_VALUE / 2
         stopSpoken = null; announcedMs = 0L; guideQuietUntil = 0L; finishedHold = null; scoreOk = null; sideTallies = null; breathDir = 0; lastRepAt = null
@@ -312,6 +314,10 @@ class IosEngine @Throws(Exception::class) constructor(standingRules: String, flo
             if (!sample.detected) holdFrame(now, null)
         }
         if (!sample.detected) {
+            counter?.takeIf { it.pushupTracker != null }?.let {
+                it.onFrameFeatures(now,emptyMap()); form?.onFrame(now,emptyMap())
+                provisionalNote=it.pushupTracker?.note
+            }
             contact.clear()
             alignment = alignmentTracker?.add(now, emptyMap()) ?: AlignmentSnapshot()
             comparison.unavailable()
@@ -325,7 +331,7 @@ class IosEngine @Throws(Exception::class) constructor(standingRules: String, flo
             return status(now)
         }
         val features = if (profile.floor) withFace(floor.computeForExercise(exercise, sample.normalizedXy, sample.visibility, sample.imageWidth, sample.imageHeight,
-            FloorChain.gravityUp(sample.up, sample.upFromGravity, sample.upFlipped), now), sample.features)
+            FloorChain.gravityUp(sample.up, sample.upFromGravity, sample.upFlipped), now, world = sample.world), sample.features)
             else contact.drain().let { c -> if (c.isEmpty()) sample.features else sample.features + c }
         var newFloorRep: RepRecord? = null
         var comparisonPeakAt: Long? = null
@@ -381,7 +387,7 @@ class IosEngine @Throws(Exception::class) constructor(standingRules: String, flo
                 if (profile.floor) newFloorRep = tally.records.lastOrNull()
                 val formReps = if (rf == null) emptyList() else tally.records.map { r -> rf.onCycle(r.tMs, r.cycleMin, r.cycleMax, r.cycleStartMs, r.side) }
                 notShort += tally.repsNotShort; short += tally.repsShort
-                val gate = mode == CoachMode.COACH && !profile.floor
+                val gate = FourExerciseForm.usesFormCountGate(exercise, mode == CoachMode.COACH, profile.floor)
                 if (gate && side == null) {
                     val excluded = formReps.indices.count { i -> !formReps[i].correct && !(rc.signal.romExcludesShort && tally.records.getOrNull(i)?.valid == false) }
                     incorrect += excluded
@@ -415,6 +421,11 @@ class IosEngine @Throws(Exception::class) constructor(standingRules: String, flo
                 val sideEv = sideEvs.map { it.of(coachNow) }.let { es -> es.lastOrNull { it.switchTo != null } ?: es.lastOrNull() }
                 val extraStep = sideEv != null && !sideEv.counted && !sideEv.blocked
                 val formEv = if (lastRep == null || rf == null) null else rf.eventFor(lastRep, now, gate = gate, speak = gate && !extraStep)
+                if (exercise in FourExerciseForm.byExercise) {
+                    pushupRepNote = formEv?.takeIf { !it.ship && it.gated && !extraStep }?.message
+                        ?: lastRep?.takeIf { coachNow && !extraStep }?.let(FourExerciseForm::unobservedNote)
+                    pushupRepNoteAt = now
+                }
                 if (lastRep?.correct == true) { formNote = null; if (motionCue?.origin == MotionOrigin.REPFORM) motionCue = null }
                 val shortReason = if (gate && rc.signal.romExcludesShort && tally.repsShort > 0) (rc.newlyPublishedShort.lastOrNull { it != null } ?: RomShort.RANGE) else null
                 val say = ArrayList<String>(); val screenOnly = ArrayList<String>()
@@ -533,7 +544,9 @@ class IosEngine @Throws(Exception::class) constructor(standingRules: String, flo
             floorState = floorFeedback.update(now, features, hold?.snapshot(), coach.lastStates, newFloorRep, coach.isAnchored, floorObservable,
                 mode = mode, voiceEnabled = mode != CoachMode.TRACK && speech.ready && !speech.muted && legacyVoice, alignment = alignment.takeIf { alignmentTracker != null })
             if (mode != CoachMode.TRACK) floorState?.speech?.let { speech.speakLatest(it, now) }
-            provisionalNote = floorState?.takeIf { it.phase == FloorFeedbackPhase.ATTENTION }?.message
+            provisionalNote = listOfNotNull(counter?.pushupTracker?.note,
+                floorState?.takeIf { it.phase == FloorFeedbackPhase.ATTENTION }?.message
+            ).distinct().joinToString("\n").ifEmpty { null }
         }
         return status(now)
     }
@@ -551,11 +564,11 @@ class IosEngine @Throws(Exception::class) constructor(standingRules: String, flo
     }
 
     private fun withFace(floorMap: Map<String, Float>, sample: Map<String, Float>): Map<String, Float> {
-        val found = sample[FloorGaze.FOUND] ?: return floorMap
+        val found = sample[FloorGaze.FOUND] ?: return FourExerciseForm.filterPushupHead(floorMap)
         val out = HashMap<String, Float>(floorMap.size + 3); out.putAll(floorMap); out[FloorGaze.FOUND] = found
         sample[FloorGaze.YAW]?.let { out[FloorGaze.YAW] = it }; sample[FloorGaze.INFER_MS]?.let { out[FloorGaze.INFER_MS] = it }
         sample[FloorGaze.ROTATION]?.let { out[FloorGaze.ROTATION] = it }; sample[FloorGaze.SIZE]?.let { out[FloorGaze.SIZE] = it }
-        return out
+        return FourExerciseForm.filterPushupHead(out)
     }
 
     private fun alignmentGate(features: Map<String, Float>): Boolean =
@@ -654,9 +667,9 @@ class IosEngine @Throws(Exception::class) constructor(standingRules: String, flo
         val features = HashMap<String, Float>()
         if (detected) {
             // 서서 하는 종목의 3D·2D 피처는 Android `PostureAnalyzer.analyze` 와 같은 순서·같은 함수. 바닥은 세트 추출기(`FloorFeatureExtractor`)가 판정 칸에서 만든다
-            if (!profile.floor) features.putAll((f.features() + view + Stance2d.features(xy, vis, .5f, aspect) + Arm2d.features(xy, vis, .5f, aspect, Arm2d.yawOf(view)) +
+            if (!profile.floor) features.putAll(StandingFormGeometry.apply((f.features() + view + Stance2d.features(xy, vis, .5f, aspect) + Arm2d.features(xy, vis, .5f, aspect, Arm2d.yawOf(view)) +
                 Lunge2d.features(f, xy, vis, .5f, aspect, ViewEstimator.shoulderYawOf(view), gravityUp = j.optBoolean("gravityFresh")) +
-                LegGeometry.features(f, xy, vis, .5f, aspect, LegGeometry.rollDeg(used))).filterValues(Float::isFinite))
+                LegGeometry.features(f, xy, vis, .5f, aspect, LegGeometry.rollDeg(used))),xy,vis,aspect,used).filterValues(Float::isFinite))
             // §101d 얼굴 메시 피처 — Swift 가 바닥 세 종목에서 300 ms 마다 머리 크롭에 얼굴 모델을 돌려 자세 행렬을 넘긴다. 없으면 키가 없다(시선 '측정 중')
             if (profile.floor) j.optJSONObject("face")?.let { face ->
                 val found = face.optBoolean("found", false)
@@ -709,10 +722,15 @@ class IosEngine @Throws(Exception::class) constructor(standingRules: String, flo
                 else -> if (profile.floor) FloorReasons.liveMessage(guideNote.takeIf { now - guideStamp < GUIDE_MS }, floorState) else if (lastFeatures.isNullOrEmpty()) "필요한 관절이 보이면 평가를 이어갑니다." else comparison.snapshot.message
             },
             "sideLine" to sideTallies?.headline(mode == CoachMode.COACH), "cue" to formNote,
-            "provisionalNote" to provisionalNote, "guideNote" to guideNote.takeIf { now - guideStamp < GUIDE_MS },
+            "provisionalNote" to (if (exercise in FourExerciseForm.byExercise) listOfNotNull(
+                pushupRepNote.takeIf { now - pushupRepNoteAt < HIGHLIGHT_MS }, provisionalNote
+            ).distinct().joinToString("\n").takeIf { it.isNotEmpty() && mode == CoachMode.COACH && stage == "active" }
+                else provisionalNote), "guideNote" to guideNote.takeIf { now - guideStamp < GUIDE_MS },
             "note" to (if (counter?.floorTracker != null) floorNote else null), "floorMeasurement" to floorMeasurement,
             "coverage" to (if (coverage.ok) null else mapOf("message" to coverage.message, "fix" to coverage.fix)),
-            "highlight" to (highlightNow + violHighlight + (floorState?.landmarks.orEmpty())).toList(), "provisional" to (provNow + provisionalHighlight).toList(),
+            // 새 푸시업 관측은 beta 참고 색에만 연결한다.
+            "highlight" to (highlightNow + violHighlight + floorState?.landmarks.orEmpty().takeIf { exercise != "푸시업" }.orEmpty()).toList(),
+            "provisional" to (provNow + provisionalHighlight + floorState?.landmarks.orEmpty().takeIf { exercise == "푸시업" }.orEmpty()).toList(),
             "shown" to gate.shown.toList(), "target2d" to gate.target.toList(),
             "motion" to cueOut?.let { mapOf("kind" to it.kind.name, "anchors" to it.anchors.toList(), "targets" to it.targets.toList(), "gravity" to it.gravity, "chain" to it.chain, "soft" to it.soft, "origin" to it.origin.name, "startedAt" to it.startedAt) },
             "hold" to holdHud(),

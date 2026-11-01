@@ -58,7 +58,8 @@ import com.example.trex_kotlin.TrexText as Text
 internal fun LiveWorkoutHud(workout: Workout, repetitions: Int, timeLeft: Int, totalSeconds: Int,
     setLabel: String, paused: Boolean, compact: Boolean, message: String?,
     countNote: String? = null, countNoteActive: Boolean = false, hideCount: Boolean = false, sideCount: String? = null,
-    elapsedSec: Int? = null, referenceNote: String? = null, modeLabel: String? = null, breath: String? = null, hold: HoldHud? = null) {
+    elapsedSec: Int? = null, referenceNote: String? = null, modeLabel: String? = null, breath: String? = null, hold: HoldHud? = null,
+    referenceMaxLines: Int = 1) {
     val duration = workout.resolvedTarget() is WorkoutTarget.Duration
     val target = workout.resolvedTarget().amount
     val lime = Color(0xFFB8DD83)
@@ -129,8 +130,8 @@ internal fun LiveWorkoutHud(workout: Workout, repetitions: Int, timeLeft: Int, t
         }
         if (!duration && countNote != null) Text(countNote, color = if (countNoteActive) lime else amber, fontSize = 13.sp,
             fontWeight = if (countNoteActive) FontWeight.SemiBold else FontWeight.Normal, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        if (referenceNote != null) Text("참고 · $referenceNote", color = amber, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(top = 4.dp).border(1.dp, amber.copy(alpha = .6f), RoundedCornerShape(99.dp)).padding(horizontal = 10.dp, vertical = 3.dp))
+        if (referenceNote != null) Text("참고 · $referenceNote", color = amber, fontSize = 12.sp, maxLines = referenceMaxLines, overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(top = 4.dp).border(1.dp, amber.copy(alpha = .6f), RoundedCornerShape(12.dp)).padding(horizontal = 10.dp, vertical = 3.dp))
     }
 }
 

@@ -67,11 +67,15 @@ class RepCounter(
      * 레거시·새 코어·팔별 경로를 쓰지 않고, 기각은 [rejectedReps](사유 = `RepRejected.feature`), 첫 회 잠정 거둠은 [newlyRetracted].
      */
     val floorTracker: FloorCycleTracker? = signal.floorProfile?.let { FloorCycleTracker(it, floorEnabled ?: it.defaultEnabled) }
+    /** §132: 푸시업은 어깨 단독 신호 대신 양 부위의 동반 왕복을 확인한다. */
+    val pushupTracker: PushupCycleTracker? = if (signal.feature == FourExerciseForm.PUSHUP_SIGNAL &&
+        signal.requiredPostureFeature == FourExerciseForm.PUSHUP_POSTURE) PushupCycleTracker(signal.minAmp) else null
     /** 판별 기각·멈춤 사유의 음성 문장 원천(§4.4) — 다리·바닥 사이클 경로만. 나머지는 null. */
     val cueSource: IdentityCueSource? get() = legTracker ?: floorTracker ?: (if (paired) PairedArmCues else null)
     private val hysteresis = signal.polarity?.let { RepHysteresis(signal.minAmp, it) }
     private val confirmation = if (hysteresis != null && startConfirmation) RepStartConfirmation() else null
-    private val returnTracker = if (completeOnReturn && hysteresis == null) ReturnRepTracker(signal.minAmp, refractoryMs) else null
+    private val returnTracker = if (completeOnReturn && hysteresis == null) ReturnRepTracker(signal.minAmp, refractoryMs,
+        uprightMin = if (signal.feature == FourExerciseForm.GOOD_MORNING_SIGNAL) FourExerciseForm.GOOD_MORNING_UPRIGHT_MIN else null) else null
     var reps: Int = 0
         private set
     val repTimesMs = ArrayList<Long>()
@@ -83,7 +87,7 @@ class RepCounter(
      * 걸음(반복) 도중인가 — 세지 않는 조회(§63). 레거시는 준비 자세에서 최소 진폭 이상 벗어나 복귀를 기다리는 중, 새 코어는 진행·확정 대기 후보가 있을 때.
      * 놓친 얕은 걸음 알림(`RepFormEvaluator.missedDipEvent`)이 카운터가 곧 셀 걸음에 "덜 내려갔어요" 를 말하지 않게 한다.
      */
-    val midCycle: Boolean get() = legTracker?.pending ?: floorTracker?.pending ?: returnTracker?.moving ?: (hysteresis?.candidate() != null || confirmation?.pending != null)
+    val midCycle: Boolean get() = pushupTracker?.pending ?: legTracker?.pending ?: floorTracker?.pending ?: returnTracker?.moving ?: (hysteresis?.candidate() != null || confirmation?.pending != null)
 
     /**
      * 지금 움직이는 방향 — **화면 표시용**(호흡 표시, docs/LIVE_SCREEN_REDESIGN.md §5). 판정·카운트와 무관하고 로그에 남지 않는다.
@@ -95,13 +99,14 @@ class RepCounter(
      * 이 카운터가 **실제로 쓰는** 구성 — 세트 로그(`RepEngineLog`)가 이 값을 그대로 적는다(복사한 상수는 조용히 어긋난다).
      * 새 코어 경로는 생성자의 불응기·끊김 기준 대신 코어의 값을 쓰고, 복귀 완료는 코어의 성질이다.
      */
-    val effectiveRefractoryMs: Long get() = if (legTracker != null || floorTracker != null) 0L else hysteresis?.refractoryMs ?: refractoryMs
+    val effectiveRefractoryMs: Long get() = if (pushupTracker != null || legTracker != null || floorTracker != null) 0L else hysteresis?.refractoryMs ?: refractoryMs
     val effectiveMaxGapMs: Long get() = when {
+        pushupTracker != null -> PushupCycleTracker.MAX_GAP_MS
         legTracker != null -> LegCycleTracker.MAX_GAP_MS
         floorTracker != null -> FloorCycleTracker.MAX_GAP_MS
         else -> hysteresis?.maxGapMs ?: maxGapMs
     }
-    val effectiveCompleteOnReturn: Boolean get() = legTracker != null || floorTracker != null || hysteresis != null || completeOnReturn
+    val effectiveCompleteOnReturn: Boolean get() = pushupTracker != null || legTracker != null || floorTracker != null || hysteresis != null || completeOnReturn
 
     /** 새 코어의 복귀 잔여 비율(f). 레거시 경로는 null. */
     val returnFraction: Float? get() = hysteresis?.returnFraction
@@ -133,7 +138,7 @@ class RepCounter(
      * 세트 종료 시점의 미완 상태 — **세지 않고** 로그에 '미완 후보' 로 남긴다(설계 §4.2·§4.7).
      * 절반만 올라온 동작이나 짝을 못 만난 한 번의 사이클을 한 회로 만들지 않는다. 레거시 경로에서는 둘 다 null.
      */
-    fun pendingAtSetEnd(): RepPendingState = RepPendingState(confirmation?.pending, legTracker?.candidate() ?: floorTracker?.candidate() ?: hysteresis?.candidate())
+    fun pendingAtSetEnd(): RepPendingState = RepPendingState(confirmation?.pending, pushupTracker?.candidate() ?: legTracker?.candidate() ?: floorTracker?.candidate() ?: hysteresis?.candidate())
 
     /** 방금 완료된 렙의 사이클 극값 (onFrame 이 true 를 돌려준 직후 유효). */
     var lastCycleMin: Float = Float.NaN
@@ -248,6 +253,7 @@ class RepCounter(
         hysteresis?.reset()
         confirmation?.reset()
         newlyPublished = emptyList()
+        pushupTracker?.reset()
         reps = 0
         repTimesMs.clear()
         periodMs = null
@@ -284,6 +290,7 @@ class RepCounter(
      * 끊김(검출 공백 > maxGap)은 이 함수가 아니다 — 코어가 진행 중 사이클만 버리고 보류의 수명은 짝 창이 정한다(프로토타입·배터리와 같다).
      */
     fun resetCycle() {
+        pushupTracker?.resetCycle()
         legTracker?.resetCycle()
         floorTracker?.resetCycle()
         // 준비에서 심은 기준도 함께 버린다 — 일시정지·재배치 뒤의 자세는 준비 때와 다를 수 있다(다시 스스로 잡는다)
@@ -313,6 +320,7 @@ class RepCounter(
      * 첫 운동 프레임 시각 [tMs] 에 심는다(재생기가 로그의 값으로 같은 자리에 심을 수 있게). 심었으면 true.
      */
     fun seedStanding(tMs: Long, value: Float): Boolean {
+        if (pushupTracker != null) return false // 어깨 높이 하나로 두 관절의 시작 자세를 만들지 않는다.
         val t = returnTracker ?: return false
         if (!t.seed(tMs, value)) return false
         standingSeed = value
@@ -325,6 +333,7 @@ class RepCounter(
      * 모두 0.22 × 진폭(기준을 잡는 띠와 같은 폭) 안에 모여 있으면 그 중앙값. 움직이고 있었으면 null(심지 않고 종전처럼 스스로 잡는다).
      */
     fun standingSeedFrom(frames: List<Pair<Long, Map<String, Float>>>, atMs: Long): Float? {
+        if (pushupTracker != null) return null
         if (legTracker != null) { legTracker.prepare(frames, atMs); return null }   // 다리 사이클 경로: 준비 프레임에서 서 있는 기준(§97)
         if (floorTracker != null) { floorTracker.prepare(frames, atMs); return null }   // 바닥 반복 계열: 준비 프레임이 누운 영역이면 누운 기준(§99)
         if (returnTracker == null) return null
@@ -337,6 +346,21 @@ class RepCounter(
     }
 
     fun onFrameFeatures(tMs: Long, features: Map<String, Float>): Boolean {
+        pushupTracker?.let { tracker ->
+            newlyRetracted=false; newlyPublishedValid=emptyList(); newlyPublishedShort=emptyList()
+            newlyPublished=tracker.onFrame(tMs,features)
+            rejectedReps.clear(); rejectedReps.addAll(tracker.rejected)
+            for (c in newlyPublished) { reps++; repTimesMs+=c.tMs; lastCycleMin=c.min; lastCycleMax=c.max }
+            if (repTimesMs.size>=2) periodMs=repTimesMs.last()-repTimesMs[repTimesMs.lastIndex-1]
+            return newlyPublished.isNotEmpty()
+        }
+        // §123: 엎드림을 확인하지 못한 구간 앞뒤의 팔 동작을 한 회로 잇지 않는다. 판정 불가는 정상 자세가 아니다.
+        if (signal.requiredPostureFeature?.let { features[it] != 1f } == true) {
+            resetCycle()
+            newlyPublished = emptyList(); newlyPublishedValid = emptyList(); newlyPublishedShort = emptyList()
+            newlyRetracted = false
+            return false
+        }
         legTracker?.let { tracker ->
             newlyPublished = tracker.onFrame(tMs, features)
             rejectedReps.clear(); rejectedReps.addAll(tracker.rejected)
@@ -689,6 +713,7 @@ class RepCounter(
      * @return 이 프레임에서 렙이 완료됐으면 true. value=null(가림)·물리범위 밖이면 일시정지.
      */
     fun onFrame(tMs: Long, value: Float?, identity: Float? = null): Boolean {
+        if (pushupTracker != null) return onFrameFeatures(tMs,emptyMap()) // 어깨 단독 입력은 관측 유보.
         if (hysteresis != null) newlyPublished = emptyList()
         if (signal.identityFeature != null && identity != null && identity.isFinite()) {
             identitySamples += tMs to identity
@@ -869,7 +894,7 @@ class RepCounter(
             if (sig.isometric) return null
             val signal = when {
                 // 바닥 반복 계열(§99)에는 종목 이름의 ROM 을 붙이지 않는다 — 규칙의 rep 설정은 옛 신호(head_ground·hip_ang)의 단위다
-                sig.floorProfile != null -> sig.copy(romThreshold = null, romDirection = null, romValidated = false)
+                sig.floorProfile != null || exercise in FourExerciseForm.changedSignalExercises -> sig.copy(romThreshold = null, romDirection = null, romValidated = false)
                 ruleRomDirection != null && ruleRomThreshold != null ->
                     sig.copy(romDirection = ruleRomDirection, romThreshold = ruleRomThreshold, romValidated = false)
                 floor -> sig.copy(romThreshold = null, romDirection = null, romValidated = false)
@@ -934,6 +959,8 @@ data class RepSignal(
      */
     val identityFeature: String? = null,
     val identityMinAmp: Float? = null,
+    /** 해당 운동의 시작 배치가 관측된 프레임에서만 사이클을 잇는다(§123 푸시업). null = 기존 경로. */
+    val requiredPostureFeature: String? = null,
     /**
      * 팔별(좌·우) 신호로 세는 종목(덤벨 컬, spec §62c·설계 §22): (왼쪽 피처, 오른쪽 피처). 자식 카운터 둘이 각자 사이클을 내고
      * **완료 = min(nL, nR) 증가** — 동시 컬은 사이클마다 1회, 교대 컬은 왼 + 오른 = 1회(런지 결정과 같은 단위)가 한 식으로 된다.
@@ -987,7 +1014,7 @@ data class RepSignal(
         return copy(
             feature = f, minAmp = comparisonMinAmp ?: minAmp, polarity = null,
             comparisonFeature = null, comparisonMinAmp = null,
-            identityFeature = null, identityMinAmp = null,   // 비교 지표는 사이클을 세지 않는다 — 판별 게이트는 카운트의 성질
+            identityFeature = null, identityMinAmp = null, requiredPostureFeature = null,   // 비교 지표는 사이클을 세지 않는다 — 판별 게이트는 카운트의 성질
             pairedFeatures = null, rejectFeatures = emptyMap(), romRatio = null, romAbsMin = null, romRefMin = null, romExcludesShort = false,
             romAuxFeature = null, romAuxRatio = null, romAuxFloor = null,
             romDirection = if (sameFeature) romDirection else null, romThreshold = if (sameFeature) romThreshold else null,
@@ -1090,12 +1117,15 @@ object RepSignals {
     )
 
     val byExercise: Map<String, RepSignal> = base().mapValues { (ex, sig) ->
-        if (sig.legProfile != null || sig.floorProfile != null) sig else ROM[ex]?.let { sig.copy(romDirection = it.dir, romThreshold = it.thr, romValidated = it.validated, romCue = it.cue) } ?: sig
+        // §123: 신호가 바뀐 네 종목에 옛 고관절각/양쪽 평균 거리/전완각의 ROM 임계를 이식하지 않는다.
+        if (sig.legProfile != null || sig.floorProfile != null || ex in FourExerciseForm.changedSignalExercises) sig else ROM[ex]?.let { sig.copy(romDirection = it.dir, romThreshold = it.thr, romValidated = it.validated, romCue = it.cue) } ?: sig
     }
 
     private fun base(): Map<String, RepSignal> = buildMap {
         // ---- 바닥 (M0 재생 검증 — rep_replay.py SIGNALS 와 일치)
-        put("푸시업", RepSignal("wrist_shoulder_d", 0.30f, validated = true, plausibleMin = 0.10f))
+        // §126: 발목보다 어깨가 낮은 하단도 유효하다. 옛 손목 거리의 양수 하한을 재사용하지 않는다.
+        put("푸시업", RepSignal(FourExerciseForm.PUSHUP_SIGNAL, 0.12f,
+            requiredPostureFeature = FourExerciseForm.PUSHUP_POSTURE, comparisonFeature = "wrist_shoulder_d", comparisonMinAmp = 0.30f))
         put("니푸쉬업", RepSignal("wrist_shoulder_d", 0.30f, validated = true, plausibleMin = 0.10f))
         // 크런치·라잉 레그 레이즈(§99): 바닥 반복 계열 — 보이는 쪽 한 사슬의 주 운동 분절(어깨–골반 현 들림·허벅지 들림) 사이클. 머리 높이(head_ground)는 '고개만 까딱' 의
         // 89 % 가 진폭을 넘고, 중점 3점 고관절각(hip_ang)은 무릎을 접어도 채워졌다. TRACK 비교는 기존 기록의 단위(head_ground 0.15·hip_ang 25°)를 유지한다
@@ -1109,7 +1139,9 @@ object RepSignals {
         put("바이시클 크런치", RepSignal("knee_gap2d", NORM))
         put("플랭크", RepSignal("trunk_ankle_ang", ANGLE, isometric = true))
         // ---- 서서: 힙 힌지 (설문 hip_R 0.98~1.00 → 앱 가용 hip_mean)
-        for (ex in listOf("바벨 데드리프트", "바벨 스티프 데드리프트", "굿모닝")) put(ex, RepSignal("hip_mean", ANGLE))
+        for (ex in listOf("바벨 데드리프트", "바벨 스티프 데드리프트")) put(ex, RepSignal("hip_mean", ANGLE))
+        put("굿모닝", RepSignal(FourExerciseForm.GOOD_MORNING_SIGNAL, ANGLE,
+            comparisonFeature = "hip_mean", comparisonMinAmp = ANGLE))
         // ---- 스쿼트·런지·버피 (무릎각 계열)
         // 바벨 스쿼트: 카운트는 양 무릎 평균, 판별은 더 편 쪽 무릎(spec §62). 평균만 보면 한쪽 무릎 들기(제자리 걷기)가 65° 를 흔들어 카운트된다
         // (2026-09-25 실기기 세트: 무릎 들기 7번 중 1번 카운트, 스쿼트 바닥의 knee_maxside 66~126° vs 무릎 들기 156~163°). 런지류는
@@ -1166,9 +1198,13 @@ object RepSignals {
             romCueBottom = "팔을 끝까지 펴지 않았어요. 내릴 때 팔꿈치를 다 펴 주세요"))
         put("랫풀 다운", RepSignal("forearm_vert_mean", ANGLE))
         // ---- 전완 수직도 계열 (들어올림)
-        for (ex in listOf("사이드 레터럴 레이즈", "프런트 레이즈", "업라이트로우", "덤벨 체스트 플라이", "덤벨 인클라인 체스트 플라이")) {
+        for (ex in listOf("업라이트로우", "덤벨 체스트 플라이", "덤벨 인클라인 체스트 플라이")) {
             put(ex, RepSignal("forearm_vert_mean", ANGLE))
         }
+        // §123: 팔꿈치를 굽혀도 위팔 올림을 센다. TRACK의 기존 전완 기록 단위는 유지한다.
+        for (ex in listOf("사이드 레터럴 레이즈", "프런트 레이즈"))
+            put(ex, RepSignal(FourExerciseForm.RAISE_SIGNAL, ANGLE,
+                comparisonFeature = "forearm_vert_mean", comparisonMinAmp = ANGLE))
         // ---- 손 높이/거리 계열
         put("오버 헤드 프레스", RepSignal("palm_h_sh", NORM))
         put("케이블 푸시 다운", RepSignal("palm_h_sh", NORM))

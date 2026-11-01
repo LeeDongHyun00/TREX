@@ -155,7 +155,8 @@ object PoseLandmarks {
             // §96: 한 발 떠남 계열의 기하(허벅지각·비틀림·롤 보정 2D 발목/무릎/골반·손–귀·팔꿈치–무릎) — 재생기 frameFeatures 도 같은 순서·같은 함수
             LegGeometry.features(frame, xy, vis, MIN_VISIBILITY, aspect, LegGeometry.rollDeg(upUsed))
         // §101d: 얼굴 메시 피처(바닥 세 종목의 시선) — 판정 격자마다 한 번, 같은 영상. 재생기 .cap 에는 없다(로그 전용)
-        val featuresOut = if (addFace != null) HashMap(features).also(addFace) else features
+        val observed = StandingFormGeometry.apply(features,xy,vis,aspect,upUsed)
+        val featuresOut = if (addFace != null) HashMap(observed).also(addFace) else observed
         val visibleCount = vis.count { it >= MIN_VISIBILITY }
         return PoseSample(
             detected = true,

@@ -8,6 +8,10 @@ package com.example.trex_kotlin.posture
 object FloorReasons {
     /** 세지 않은 동작의 짧은 이름(HUD '세지 않은 동작 n · 목만 당김', 리포트 사유별 수). 모르는 사유는 그대로. */
     fun repLabel(profile: FloorProfile?, reason: String?): String = when (reason) {
+        PushupCycleTracker.UNOBSERVED -> "관측 부족 · 판단 유보"
+        PushupCycleTracker.ALIGNMENT -> "몸통 정렬 이탈"
+        PushupCycleTracker.ASYNC -> "어깨·골반 동반 이동 부족"
+        PushupCycleTracker.SHALLOW -> "하강 범위 부족"
         "sit_up" -> "끝까지 일어남"
         "arms_only" -> "팔만 움직임"
         "neck_only" -> "목만 당김"
