@@ -3416,7 +3416,9 @@ Validation: Android 778 unit tests and 525 common JVM tests pass; debug and inst
 
 **방안(순서).** A 종목 준비 카드·시작 문장에 옷 안내(원칙 #5, 지금) → B 옷 불확실 지표가 문턱을 넘는 세트는 COACH 에서 그 관절에 기대는 차단을 코칭(주황, §125)으로 강등하고 화면·완료 화면에 이유(원칙 #1·#6; B' = 그 세트에서 `refCap` 해제) → C `pose_landmarker_heavy` 는 영상 A/B 뒤(로그는 랜드마크뿐이라 재생으로 못 잰다, 85 ms 격자 위험) → D 런지 깊이의 골반 하강 교차 확인은 블록이 '얕게 읽힘' 이면. 하지 않을 것: 옷 때문에 모집단 임계를 넓히기(원칙 #4), 옷 세트를 정상으로 세기, 라벨 없는 한 세트로 문턱 정하기.
 
-**블록(§5).** 같은 폰 위치에서 옷만 바꿔 컬 정면·사선, 런지 사선·옆 — 정상/지정 오류 세트, 자가 라벨 메모에 `옷: …`. 붙는 옷 정상 차단 0 vs 통 옷 정상 차단 ≥ 2/10 이면 옷 효과 확정. **결정 대기** — A 의 문구와 블록 일정.
+**블록(§5).** 같은 폰 위치에서 옷만 바꿔 컬 정면·사선, 런지 사선·옆 — 정상/지정 오류 세트, 자가 라벨 메모에 `옷: …`. 붙는 옷 정상 차단 0 vs 통 옷 정상 차단 ≥ 2/10 이면 옷 효과 확정. 블록 일정은 미정.
+
+**구현 — 방안 A(2026-11-01 저녁, 사용자 결정 "방안 A 를 구현").** `ExerciseProfiles.kt` 의 `CLOTHING_LINES`(앱 이름 키, 컬 둘·런지 넷)와 `ExerciseProfile.clothingHint` — 준비 카드(`CapturePreparationUi`)가 '세는 조건' 아래 옅은 글자로 보이고, 준비 전문(`preparationInstruction`)에도 3초 약속 앞에 들어간다. 음성은 첫 문장만(`CLOTHING_VOICE`, "팔꿈치가 보이는 옷을 입어 주세요." 14음절 / "무릎과 발목이 보이는 바지를 입어 주세요." 17음절) **맨 뒤 DET** 로 — 세는 조건보다 뒤, 시작 전에 끝날 때만(§101 예산). 문장은 '횟수에서 빠질 수 있어요' 까지만 말한다 — 1단·깊이 차단이 실제로 하는 일이고, 옷을 입은 세트를 정상으로 세지는 않는다(연구 §6). `countingConditions`('세는 조건') 에는 섞지 않는다. `PostureScope.startLine` 의 '못 본 것' 문장은 지금 어느 화면에도 닿지 않는 경로(`rememberPostureScope`·`scope` 미사용)라 손대지 않았다 — 완료 화면 문장은 B 와 함께. 잠금: `CapturePreparationTest.clothingHintOnlyForCurlAndLungeFamilies`, `PreparationVoiceTest`(음절 예산). 임계·규칙 변경 없음(`rules_version` 그대로). iPhone 은 `posture-core` 동기화 + 공유 `CapturePreparationUi` 로 같은 카드.
 
 
 ## §127. Four additional local exercise guides (2026-11-01)

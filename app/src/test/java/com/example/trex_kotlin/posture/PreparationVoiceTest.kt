@@ -25,6 +25,7 @@ class PreparationVoiceTest {
         }
         for ((name, lines) in DETAIL_LINES) for (l in lines) assertTrue("$name DET '$l' ${PrepSpeech.syllables(l)}음절", PrepSpeech.syllables(l) <= 22)
         for ((name, l) in PLACE_LINES) assertTrue("$name PLACE", PrepSpeech.syllables(l) <= 32)
+        for ((name, l) in CLOTHING_VOICE) assertTrue("$name 옷(§126 A) '$l' ${PrepSpeech.syllables(l)}음절", PrepSpeech.syllables(l) <= 22)
     }
 
     @Test fun planSaysEssentialFirstPlaceOnlyWhenUnsettledAndDetailOnlyIfItFinishesInTime() {

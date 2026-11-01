@@ -217,6 +217,8 @@ internal fun CapturePreparationPanel(
             if (reason != null) Text(reason, color = if (reason == CapturePreparationController.READY_MESSAGE) c.text else c.warn, fontSize = 14.sp, lineHeight = 20.sp, fontWeight = FontWeight.SemiBold)
             // 세는 조건 전문(ESS + DET, §101) — 음성이 못 다 말한 내용은 화면이 가진다(원칙 #5). 그 아래 바닥 범위 문장(spec §99, PostureScope.FLOOR_LINES)
             profile.countingConditions?.let { Text(it, color = c.text2, fontSize = 13.sp, lineHeight = 18.sp) }
+            // 헐렁한 옷 안내(§126 방안 A) — 컬·런지 계열만. 소매·바지통 속 관절은 지어낸 자리라 판정이 흔들린다(원칙 #5)
+            profile.clothingHint?.let { Text(it, color = c.text3, fontSize = 12.sp, lineHeight = 17.sp) }
             com.example.trex_kotlin.posture.PostureScope.floorLine(profile.referenceExercise)?.let {
                 Text(it, color = c.text3, fontSize = 12.sp, lineHeight = 17.sp)
             }
