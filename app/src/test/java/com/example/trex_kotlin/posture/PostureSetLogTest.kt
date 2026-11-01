@@ -11,6 +11,17 @@ import java.util.Date
 /** 세트 로그 직렬화/저장 테스트 — 재보정 도구(calibrate_from_logs.py)가 읽는 형식과 맞아야 한다. */
 class PostureSetLogTest {
 
+    @Test fun pushupPlacementPrerequisiteIsSerializedOutsidePairedArms() {
+        val engine = RepEngineLog.of(RepCounter.forSession("푸시업", floor = true)!!)
+        val log = SetLog.build(exercise = "푸시업", samples = emptyList(), results = emptyList(), rulesVersion = "test",
+            model = "full", delegate = "CPU", frontCamera = true, sampleIntervalMs = 300L, now = 0L,
+            repCount = 0, repEngine = engine)
+        val json = SetLogJson.encode(log)
+        assertTrue(json.contains("\"required_posture\":\"pushup_posture\""))
+        assertTrue(json.contains("\"feature\":\"pushup_distance\""))
+        assertFalse(json.contains("\"rom_threshold\""))
+    }
+
     @get:Rule
     val tmp = TemporaryFolder()
 

@@ -76,6 +76,10 @@ object RuleHighlight {
         // 런지 걸음 기하(§63)
         "lunge_front_shin" to KNEES + ANKLES + FEET, "lunge_back_knee_h" to KNEES + ANKLES, "lunge" to HIPS + KNEES + ANKLES,
         "sh_level2d" to SHOULDERS,
+        "raise_plane" to SHOULDERS + ELBOWS,
+        "pushup_hip_offset" to SHOULDERS + HIPS + ANKLES,
+        "pushup_knee" to HIPS + KNEES + ANKLES,
+        "pushup_elbow" to SHOULDERS + ELBOWS + WRISTS,
     )
 
     fun landmarksFor(baseFeature: String): Set<Int> {

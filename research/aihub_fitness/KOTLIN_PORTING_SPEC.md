@@ -3364,3 +3364,28 @@ Validation: Android 778 unit tests and 525 common JVM tests pass; debug and inst
 **검증.** 11-01 세트 로그를 재생기(`setlog_captures.py` → `run_replay.py`, 재생기 installDist 재빌드)로 새 엔진에 돌리면 정확 **18 → 12 / 29회** — 코칭 띠 6회가 그대로 빠진다. 앱 JVM 테스트 883건·`posture-core` jvmTest 528건 통과(`RepFormTest` 의 컬 2단 테스트 4건을 1단으로 고침, 바벨 컬 2단 유지 단언 추가)· iOS 는 생성본(`tools/sync_ios_core.py`, `--check` 통과)이라 같은 `RepFormSpecs` 를 쓴다 — `ios-ui` 컴파일은 Mac 에서. **실기기 재확인은 사용자가 한다**(11-01 세트와 같은 조건으로 — 코칭 띠 회가 "이 회는 세지 않았어요" 와 함께 빠지는지).
 
 **부수 발견(미수정).** 11-01 세트 77.3 s 회는 옆 벌림 차단으로 빠졌는데 음성은 우선순위가 앞선 상체 숙임(그때 코칭 띠, 차단 아님) 문장만 말해 "이 회는 세지 않았어요" 가 빠졌다 — `eventFor` 가 첫 위반 검사의 `gated` 만 보기 때문. 1단에서는 숙임도 차단이라 이 경우가 사라지지만, 2단 검사가 남은 종목(바벨 컬·런지)에서는 같은 틈이 있다.
+
+## §124. 굿모닝·푸시업·프런트 레이즈·사이드 레터럴 레이즈 — 반복 검사(beta 참고)와 카운터 신호 (2026-11-01, PR 59 에서 분리, `repform_v0.16`)
+
+**출처.** Kercy-kim 의 PR 59(`feature/posture-aes256`, 커밋 `b792538a`, 10-31)는 Android AES-256 암호화와 네 종목 자세 교정을 한 커밋에 담았다. 사용자 요청(2026-11-01 "aes256 없이 운동 구현이랑 덤벨컬 수정한 것만 올릴 수 있니")으로 **암호화를 뺀 운동 부분만** 체리픽했다(`security/`·SQLCipher·`SetLogStore`·`AndroidSpeech`·`PostureBaseline`·`PostureSetLabel`·`PostureSetLogExport`·`MainActivity`·`AndroidPlatform`·백업 규칙·`PostureLabScreen` 내보내기 비동기화는 제외). 원 PR 은 스펙 절이 없었고 코드 주석이 §123·§123a·§123b 를 가리켰다 — §123 은 덤벨 컬 1단이라 **§124·§124a·§124b 로 바꿨다**. 버전은 원 PR 의 `repform_v0.17` 대신 v0.16(v0.15 = §123).
+
+**설계(원 PR 그대로, 파일 `posture/FourExerciseForm.kt`).** 운동 설명은 임계값 검증 자료가 아니다 — 새 반복 검사는 **전부 beta·화면 참고**(`gates = false`, 음성·점수 없음), 척추 분절·근육의 힘·반동의 원인은 못 본다고 `scopeLines`(시작 안내)와 `four_scope|…` EXCLUDE 규칙(`RepFormRules.fourExerciseScopeRules`)으로 밝힌다(원칙 #5). 새 통계 `RepFormStat.SPAN`(반복 안 p90 − p10), 관측 조건 `minSamples`·`minCoverage`(0.6)·`requireView`(뷰 모름 = 유보 "촬영 방향 확인 필요"), 참고 문장에 고치는 말을 붙이는 `referenceFix`, 참고를 창 규칙·바닥 피드백이 지우지 않게 `PostureLive.repReferenceNote` 로 따로 보관.
+
+| 종목 | 카운터 신호(변경 전 → 후) | 반복 검사(beta) |
+|---|---|---|
+| 굿모닝 | `hip_mean` → `goodmorning_hinge`(목–골반 선의 전후 회전, `PostureCore`) — 고관절각은 허벅지만 움직여도 바뀐다 | 쪽별 무릎 움직임 SPAN ≤ 20°, 하단 무릎 과굽힘 < 140° (C·B·D) |
+| 푸시업 | 양쪽 평균 `wrist_shoulder_d` → 보이는 쪽 사슬 `pushup_distance`(`FloorChain.Kind.PUSHUP`), **엎드림 `pushup_posture` = 1 인 프레임만 사이클을 잇는다**(`RepSignal.requiredPostureFeature` — 모름·0 이면 후보 폐기, `RepCounter`); 옛 ROM 0.71 은 새 신호에 이식하지 않음(`FloorTemporal` 유보 "재검증 필요") | 골반 정렬 ±0.08, 다리 펴기 ≥ 150°, 하단 팔꿈치 ≤ 120°(§124b), 시작 팔 펴기 ≥ 150° (측면만) |
+| 프런트 레이즈 | `forearm_vert_mean` → `upperarm_vert_mean`(팔꿈치를 굽혀도 위팔 올림을 센다) | 상체 기울기 ≤ 25°, 몸통 흔들림 SPAN ≤ 20°, **팔 높이**(§124a) |
+| 사이드 레터럴 레이즈 | 〃 | 쪽별 팔꿈치 굽힘 135~175°, 팔 경로 `raise_plane` 5~60°(든 구간만), **팔 높이**(§124a) |
+
+네 종목 모두 옛 ROM 임계를 떼서 '범위 미판정'(`romValidated = false`, `RepRomTier.NONE`) — 이전 신호의 보정값을 새 신호에 이식하지 않는다. 푸시업 바닥 피드백은 엎드림 미확인이면 `UNAVAILABLE`("엎드린 자세를 확인하지 못했어요 …", 무음). 옛 푸시업 신호를 쓰는 회귀 테스트는 니푸쉬업 설정으로 옮겼다.
+
+**§124a — 레이즈 팔 높이 미달의 COACH 횟수 제외(확인 필요).** 두 레이즈의 '팔 높이' 검사만 `gates = true, gateHi = 125°, countOnlyDirection = HIGH`: 올린 구간 위팔각 중앙값이 125° 를 넘는(= 어깨 높이에 못 미친) 회를 COACH 에서 빼고 화면 참고에 "이 회는 세지 않았어요" 를 붙인다(`RepFormOutcome.countOnlyGate`, `RepFormRep.correct`). 너무 높음·미관측·다른 beta 는 빼지 않는다. 원 PR 주석은 "사용자 요청(2026-10-31): 기존 높이 미달 차단만 복원" 이라 적었으나 **이 저장소의 결정 기록에는 없다**(10-14 메모 'beta 로 회 빼기 는 미결정'). beta 가 회를 빼는 것은 원칙 #2 의 예외이고, 빠진 회를 **음성 없이** 빼므로 사용자가 카운트가 죽은 줄 알 수 있다(§62b "빠진 회를 침묵하면 …"). 저장소 주인이 확인하기 전까지 **사용자 정의 게이트 예외(확인 대기)** 로 둔다 — 확인되지 않으면 `gates = false` 로 되돌린다.
+
+**§124b — 푸시업 팔 굽힘 범위.** 하단 창 보이는 쪽 팔꿈치각 ≤ 120°(얕은 하강 참고)와 하강 직전 상단 창 ≥ 150°(시작 팔 펴기). 상완·전완이 몸통의 0.15 미만으로 겹친 프레임의 가짜 90° 는 쓰지 않는다. 둘 다 잠정 띠.
+
+**근거(이 절에서 더한 것).** 원 PR 에는 재생 근거가 없었다. MM-Fit 사이드 레터럴 레이즈 13세트(`data/mmfit_arms_mp_captures`)로 `tracker_ab.py`(변경 전 = main+§123 재생기, 변경 후 = PR 59 재생기): MAE 2.15 → **1.08**, 앞뒤 헛카운트 포함 정확 0.15 → **0.85**, 정확 일치 0.38 → 0.38, 과다·0회 세트 0 → 0, 최악 세트 w18_set26 2 → 8회(정답 10). 위팔각 신호가 전완각보다 낫다. **프런트 레이즈·굿모닝·푸시업은 모집단 캡처가 없어 A/B 가 없다** — 폰 평문 로그도 8월 푸시업 9세트·굿모닝 1세트뿐. 푸시업은 엎드림 게이트가 틀리면 0회가 되는 구조(런지 v1 의 발 앵커와 같은 위험, §96)라 폰 세트가 먼저다. 같은 재생에서 오버 헤드 프레스는 전후 모두 12세트 전부 0회(이 절과 무관, 기존 공백).
+
+**검증.** 앱 JVM 테스트·`posture-core` jvmTest 통과(커밋 메시지 참조), `tools/sync_ios_core.py --check` 통과(`NAMES` 에 `FourExerciseForm` 추가). 실기기는 미확인 — PR 59 빌드로 11-01 14:34 에 찍힌 세트는 `.aes` 라 읽지 못했다.
+
+**원 PR 에 남는 것(여기 포함 안 함).** AES-256 로컬 암호화(PR 59)·iOS 암호화(PR 60). 암호화가 들어오면 세트 로그 `.aes` 를 `pull_logs.py`·재생기가 읽을 길(개발자 빌드 평문 예외 또는 복호 도구)이 같이 와야 실검증 루프(DEV_TOOLS.md)가 유지된다.
