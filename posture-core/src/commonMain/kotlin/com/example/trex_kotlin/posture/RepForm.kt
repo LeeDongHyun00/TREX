@@ -1338,7 +1338,8 @@ object RepFormSpecs {
     /** v0.12(§101b, 2026-10-09 오후): 스쿼트 '발끝 방향' 절대 상한 40°·시작 기준 상한 35°·"처음부터" 알림(시작 띠 50 → 40), '무릎 바깥 벌림' 기준 두 번째로 작은 바닥값(SET_LOW_DELTA)·차단 +0.30. */
     /** v0.13(§101c, 2026-10-09 오후): 스쿼트 '발끝 방향' 절대 띠 [−5, 45]° 만(시작 대비 폐기, 사용자 결정)·크로스 런지 '어깨 기울기' ship(런지와 같은 검사, 정면 포함). */
     /** v0.14(§101f, 2026-10-10): 스쿼트 '무릎 바깥 벌림' 차단 = 코칭 +0.25(말한 회는 세지 않는다)·절대 상한 0.36(사전값 단계의 처음 2회도 차단). */
-    const val VERSION = "repform_v0.14"
+    /** v0.15(§123, 2026-11-01 — 사용자 결정 2026-10-15): 덤벨 컬 2단 검사 4개(상체 숙임·옆 벌림·앞 이탈·몸에서 떨어짐)를 1단(코칭 = 차단)으로. 바벨 컬은 2단 그대로. */
+    const val VERSION = "repform_v0.15"
 
     /**
      * 이 검사가 대체하는 창 규칙 id — 세션 규칙셋에서 beta 로 낮춘다(음성·점수·헤드라인에서 빠지고 리포트엔 '참고'로 남는다).
@@ -1615,6 +1616,10 @@ object RepFormSpecs {
     private fun curl(ex: String = "덤벨 컬"): List<RepFormCheck> {
         val oblique = setOf("B", "D")
         val front = setOf("C")
+        // 덤벨 컬은 1단(§123, 사용자 결정 2026-10-15 "덤벨 컬 차단으로 변경" — 11-01 Play 1.3.0 세트에서 코칭 띠 6회가 지적을 받고도 세졌다): 코칭 단계(지적만 하고 셈)를 차단으로,
+        // 말한 회는 세지 않는다(스쿼트 무릎 벌림 §101f 와 같은 정책). 코칭 띠의 정상 오탐은 차단 띠보다 높다(앞 이탈 AIHub D/B 5.4·3.3 %, 떨어짐 7.4·4.6 %, 옆 벌림 MM-Fit 0.7·AIHub 2.9 % —
+        // 단일 프레임 상한) — 사용자 정의 게이트 예외. 바벨 컬은 종전 2단(결정 범위 밖)
+        val oneTier = ex == "덤벨 컬"
         return listOf(
             // 우선순위 순 — 발화·화면 사건은 이 순서의 첫 위반. 창 분할 신호는 elbow_minside(더 굽은 팔): 바닥 = 수축, 상단 = 이완(서 있음)
             // 스쿼트 '상체 숙임' 과 같은 검사·같은 정책(사용자 결정 2026-09-26 "스쿼트와 똑같이") — 1단: 위반 = 음성 + COACH 에서 그 회를 세지 않음.
@@ -1623,7 +1628,7 @@ object RepFormSpecs {
                 // 2단(§62c 후속 10, 임의값): 코칭 +15°(등 말림은 골반 접힘보다 목–골반 선이 덜 기울어 +15~+19° 에 걸린다 — 13:49 세트 15회 +19·12:36 세트 20·21회 +16·+17 통과),
                 // 차단은 종전 +20°(정상 오탐 근거가 있는 값). 문구는 둘을 다 덮는다 — 이 선 하나로는 척추 말림과 골반 접힘을 못 가른다
                 lo = null, hi = LEAN_COACH_HI, lowText = null, highText = "등이 말리거나 상체가 숙여졌어요", lowLabel = null, highLabel = "숙임",
-                fix = "가슴을 들고 등을 편 채 팔만 움직이세요", unit = "°", views = setOf("C", "D"), gateHi = LEAN_HI, cue = "상체 숙임",
+                fix = "가슴을 들고 등을 편 채 팔만 움직이세요", unit = "°", views = setOf("C", "D"), gateHi = if (oneTier) null else LEAN_HI, cue = "상체 숙임",
                 liveHoldFrames = 14, liveText = "상체가 숙여져 있어요", motion = FormMotion(MotionAnchor.SHOULDERS, high = MotionKind.UP),
                 reason = "§62c 후속 6(사용자 \"숙이는 거 인식 못 해\"): 반복 창 몸통 기울기(목−골반 vs 중력 up) 최대 − **세트에서 가장 곧았던 상단 자세**(SET_MIN_DELTA). 그 반복 시작 대비(후속 4)는 숙인 채 반복하면 차이가 0 이라 11:14 세트 숙인 반복 3·5·12~14회(창 최대 36~45°)를 −2~+3° 로 전부 통과시켰고, 세트 시작 대비(스쿼트 방식)는 첫 상단이 덤벨 집기에 오염되면(09:59·15:33, 45°) 세트 전체가 음수로 읽힌다 — 가장 곧았던 상단은 두 실패를 함께 피한다. 연속 세트 재생: 폰 정상 75회 최대 +23.3°(+20° 초과 1회, 10:41 6회 — 숙임 여부 불명)·MM-Fit 123회 +20° 초과 1회(0.8 %); 11:14 정면 숙임 3·4·5회 +30·+23·+27 검출(2회 +18 은 숙이기 시작한 회). 반복 없이 팔을 내린 채 4초 숙여 있으면 유지 사건으로 말한다(스쿼트 창 규칙 '척추의 중립' 과 같은 역할 — 11:14 세트 58~73 s 는 숙인 채 16초 멈춰 반복 판정이 오지 않았다). 1단(스쿼트와 같은 정책): 반복 위반 = 음성 + COACH 횟수 제외",
                 cautions = listOf("정면에서는 앞 숙임과 뒤 젖힘을 못 가른다(깊이 축) — 뒤로 젖혀도 '숙여졌어요' 로 말할 수 있다(스쿼트와 같은 한계)", "세트 첫 반복부터 계속 숙이고 있으면 기준 자체가 숙은 자세다(스쿼트와 같은 한계)", "AIHub 세션(32클립·수십 분)을 한 세트로 본 상한: 정면 +20° 초과 13.9 %(GT 3D 4.0 %) — 긴 시간의 자세 이동이 섞인 과대 추정이지만 지정 오류 세트에서 정상 오탐이 나오면 25° 로 올린다", "옆(SIDE)·B 뷰는 판정하지 않는다 — 옆으로 돌아서 숙인 반복·유지는 유보(반복마다 그 창의 뷰로)", "중력 up 기반 — up 오류 세트에서는 유보되지 않는다(up 방어 작업 대기)", "미세한 척추 말림은 못 본다")),
@@ -1645,7 +1650,7 @@ object RepFormSpecs {
                 cautions = listOf("정면(C)에서만", "반동·으쓱·앞 내밀기를 못 가른다(내밀기 43 % 겹침) → 문구는 '팔꿈치가 몸에서 뜸' 으로 포괄", "임계는 스튜디오·MM-Fit·폰 1명 — 지정 오류 세트 3명 이후 확정")),
             RepFormCheck("repform|$ex|팔꿈치 옆 벌림", ex, "팔꿈치 옆 벌림(반복)", "팔꿈치", RuleStatus.SHIP, Arm2d.ELBOW_LAT_MAX, RepPhase.BOTTOM, RepFormStat.MEDIAN, RepFormRef.SET_MIN_DELTA,
                 lo = null, hi = 0.15f, lowText = null, highText = "팔꿈치가 옆으로 벌어졌어요", lowLabel = null, highLabel = "옆 벌림",
-                fix = "팔꿈치를 옆구리에 붙이세요", absMin = 0.30f, gateHi = 0.20f, gateAbsMin = 0.35f, views = front, cue = "팔꿈치 벌어짐",
+                fix = "팔꿈치를 옆구리에 붙이세요", absMin = 0.30f, gateHi = if (oneTier) null else 0.20f, gateAbsMin = if (oneTier) null else 0.35f, views = front, cue = "팔꿈치 벌어짐",
                 motion = FormMotion(MotionAnchor.ELBOWS, high = MotionKind.TOWARD_MIDLINE, pick = MotionPick.NEAR),
                 // 등이 말리거나 숙인 회는 어깨 가로폭 투영이 줄고 팔꿈치가 어깨 대비 옮겨져 가로 비가 부푼다(14:46 세트 등 말림 3회: 가까운 팔 0.39~0.49, 월드 바깥은 정상) — 측정 무효(§62c 후속 10)
                 invalidatedBy = listOf("repform|$ex|상체 숙임"),
@@ -1663,7 +1668,7 @@ object RepFormSpecs {
             // ---- 사선(B/D) 검사 (B1)
             RepFormCheck("repform|$ex|팔꿈치 앞 이탈", ex, "팔꿈치 앞 이탈(반복)", "팔꿈치", RuleStatus.SHIP, Arm2d.ELBOW_FWD_NEAR, RepPhase.BOTTOM, RepFormStat.MEDIAN, RepFormRef.FIRST_REPS_DELTA,
                 lo = null, hi = 0.12f, lowText = null, highText = "팔꿈치가 앞으로 나갔어요", lowLabel = null, highLabel = "앞으로",
-                fix = "팔꿈치를 옆구리에 고정하세요", gateHi = 0.20f, views = oblique, cue = "팔꿈치 앞으로",
+                fix = "팔꿈치를 옆구리에 고정하세요", gateHi = if (oneTier) null else 0.20f, views = oblique, cue = "팔꿈치 앞으로",
                 // 판정한 카메라 쪽 팔에만(§101 — 종전엔 판정하지 않은 먼 팔꿈치에도 그렸다)
                 motion = FormMotion(MotionAnchor.ELBOWS, high = MotionKind.TOWARD_TORSO, pick = MotionPick.NEAR),
                 // 기준 오염 막기(§62c 후속 9) — 몸에서 떨어진 반복은 이 축에 '뒤로' 샌다. 12:41 세트: 벌린 첫 두 회(가로 0.80·0.77, 절대 상한 위반)가 기준을 −0.44 로 끌었다
@@ -1672,7 +1677,7 @@ object RepFormSpecs {
                 cautions = listOf("사선(B/D)에서만 — 정면에서는 앞 성분이 깊이 축이라 못 본다", "첫 3회가 기준이라 처음부터 팔꿈치를 내밀고 하면 못 잡는다(본인 기준의 한계)", "'몸에서 떨어짐' 이 위반인 반복은 기준에 넣지 않는다(벌린 반복은 이 축에 뒤로 샌다, §62c 후속 9) — 절대 상한(0.72) 밑으로 벌린 처음 몇 회는 막지 못한다", "사선에서는 옆 벌림이 이 축에 '뒤로' 새어(외전 1° = −0.5~−0.63°) 뒤 방향은 이 검사가 말하지 않는다 — '몸에서 떨어짐' 이 맡는다", "임계는 AIHub(4~6 m) 단일 프레임 수치 — 폰 지정 오류 세트로 확정")),
             RepFormCheck("repform|$ex|팔꿈치 몸에서 떨어짐", ex, "팔꿈치 몸에서 떨어짐(반복)", "팔꿈치", RuleStatus.SHIP, Arm2d.ELBOW_LAT_NEAR, RepPhase.BOTTOM, RepFormStat.MEDIAN, RepFormRef.SET_LOW_DELTA,
                 lo = null, hi = 0.25f, lowText = null, highText = "팔꿈치가 몸에서 떨어졌어요", lowLabel = null, highLabel = "떨어짐",
-                fix = "팔꿈치를 옆구리에 붙이세요", gateHi = 0.40f, views = oblique, cue = "팔꿈치 떨어짐",
+                fix = "팔꿈치를 옆구리에 붙이세요", gateHi = if (oneTier) null else 0.40f, views = oblique, cue = "팔꿈치 떨어짐",
                 motion = FormMotion(MotionAnchor.ELBOWS, high = MotionKind.TOWARD_TORSO, pick = MotionPick.NEAR),
                 invalidatedBy = listOf("repform|$ex|상체 숙임"),
                 // 처음부터 벌림(§62c 후속 9) — AIHub 사선 가까운 팔 수축 원값 p90 0.33(D)·0.31(B), p99 0.62·0.59. 기준을 p90 으로 자르면 처음부터 벌린 사람의 실효
