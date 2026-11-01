@@ -4,7 +4,7 @@
 
 # TREX
 
-### 휴대폰 카메라로 자세를 보는 운동·식단 앱
+### 휴대폰 카메라로 자세를, 사진 한 장으로 영양성분을 기록하는 운동·식단 앱
 
 [![최신 체험판](https://img.shields.io/github/v/release/LeeDongHyun00/TREX?include_prereleases&label=%EC%B2%B4%ED%97%98%ED%8C%90)](https://github.com/LeeDongHyun00/TREX/releases)
 [![다운로드](https://img.shields.io/github/downloads/LeeDongHyun00/TREX/total?label=%EB%8B%A4%EC%9A%B4%EB%A1%9C%EB%93%9C)](https://github.com/LeeDongHyun00/TREX/releases)
