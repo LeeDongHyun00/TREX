@@ -12,38 +12,63 @@ final class PoseCameraBridge: NSObject, IosCameraBridge, IosStillDetector, AVCap
     private let queue = DispatchQueue(label: "trex.posture.camera", qos: .userInitiated)
     private let sinkLock = NSLock()
     private var sink: IosCameraFrameSink?
+    /// 지금 세션을 쓰는 화면의 세대(Kotlin `IosPoseCamera.stream` 이 start 마다 올린다) — `stop` 은 자기 세대일 때만 끈다.
+    /// 종목이 바뀔 때 AnimatedContent 가 옛 자세 화면을 한 프레임 더 두어 새 화면의 start 뒤에 옛 화면의 stop 이 왔고, 세션이 꺼진 채 미리보기가 멈추고
+    /// 사람 인식·준비 카운트다운이 없었다(10-30 iPhone 보고 2번). 다리는 앱에 하나라 세대로 가른다.
+    private var generation: Int64 = 0
+    /// 미리보기 레이어는 **하나**를 세션에 한 번만 붙인다 — 레이어를 세션에 붙이고 떼는 일은 돌아가는 세션의 재구성이라 메인 스레드를 초 단위로 막는다
+    /// (10-30 보고: 종목 전환 9 s 멈춤). Compose 에는 호출마다 새 컨테이너 뷰를 주고 이 뷰를 그 안으로 옮긴다(`makePreviewView`).
+    private lazy var preview: CameraPreviewView = {
+        let view = CameraPreviewView()
+        view.backgroundColor = .black
+        view.previewLayer.videoGravity = .resizeAspect   // FIT_CENTER — 분석 범위 전체를 보인다
+        view.previewLayer.session = session
+        view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        return view
+    }()
     private var pose: PoseRunner?
     private var face: FaceRunner?
     private var faceFailed = false
     // 분석 큐 안(Kotlin analyze)에서도 읽으므로 큐가 아니라 잠금으로 지킨다 — queue.sync 를 쓰면 같은 큐에서 교착한다
     private let errorLock = NSLock()
     private var poseError: String?
-    private lazy var preview: CameraPreviewView = {
-        let view = CameraPreviewView()
-        view.backgroundColor = .black
-        view.previewLayer.videoGravity = .resizeAspect   // FIT_CENTER — 분석 범위 전체를 보인다
-        view.previewLayer.session = session
-        return view
-    }()
-
     var modelError: String? { errorLock.lock(); defer { errorLock.unlock() }; return poseError }
 
-    func previewView() -> UIView { preview }
-
-    func start(front: Bool, sink: IosCameraFrameSink) -> String? {
-        var failure: String?
-        queue.sync {
-            do { try configure(front: front) } catch { failure = (error as? BridgeError)?.message ?? error.localizedDescription }
-        }
-        if let failure { return failure }
-        sinkLock.lock(); self.sink = sink; sinkLock.unlock()
-        queue.async { [session] in if !session.isRunning { session.startRunning() } }
-        return nil
+    /// Compose 에 줄 뷰는 **부를 때마다 새 컨테이너**다. 하나를 돌려쓰면 종목 전환의 한 프레임 겹침에서 두 UIKitView 가 같은 UIView 를 쥐고,
+    /// Compose Multiplatform 의 인터롭 장부(UIView 가 키)에서 뒤 화면의 등록이 지워져 그 래퍼가 화면에 남았다(10-30 iPhone 보고 3번 — 근육 피로도의 카메라 잔상).
+    /// 미리보기 레이어 자체는 하나(`preview`)를 새 컨테이너로 옮긴다 — 옛 컨테이너는 비고, 세션 재구성은 없다.
+    func makePreviewView() -> UIView {
+        let container = UIView()
+        container.backgroundColor = .black
+        preview.frame = container.bounds
+        container.addSubview(preview)
+        return container
     }
 
-    func stop() {
+    /// Compose 가 컨테이너를 놓았다 — 아직 그 안에 있으면 미리보기를 뺀다(뒤에 다른 컨테이너가 가져갔으면 건드리지 않는다).
+    func releasePreviewView(view: UIView) {
+        if preview.superview === view { preview.removeFromSuperview() }
+    }
+
+    /// 구성·시작은 **카메라 큐에서**, 결과는 `sink.onStarted(failure:)` 로 메인에 — 메인에서 `queue.sync` 로 기다리면 돌아가는 세션의 재구성·시작 동안 화면이 멈춘다
+    /// (10-30 보고: 종목 전환 9 s). 같은 렌즈가 이미 구성돼 있으면 재구성하지 않는다.
+    func start(front: Bool, generation: Int64, sink: IosCameraFrameSink) {
+        sinkLock.lock(); self.sink = sink; self.generation = generation; sinkLock.unlock()
+        queue.async { [self] in
+            var failure: String?
+            do { try configure(front: front) } catch { failure = (error as? BridgeError)?.message ?? error.localizedDescription }
+            if failure == nil, !session.isRunning { session.startRunning() }
+            DispatchQueue.main.async { sink.onStarted(failure: failure) }
+        }
+    }
+
+    /// [generation] 이 지금 세대일 때만 — 뒤에 시작한 화면이 있으면 그 세션을 건드리지 않는다.
+    func stop(generation: Int64) {
+        sinkLock.lock()
+        guard self.generation == generation else { sinkLock.unlock(); return }
         // 진행 중인 프레임은 끝까지 간다(Android clearAnalyzer 와 같다). 다음 프레임부터 넘기지 않는다
-        sinkLock.lock(); sink = nil; sinkLock.unlock()
+        sink = nil
+        sinkLock.unlock()
         queue.async { [session] in if session.isRunning { session.stopRunning() } }
     }
 
@@ -133,11 +158,15 @@ final class PoseCameraBridge: NSObject, IosCameraBridge, IosStillDetector, AVCap
 
     /// 분석 영상 = 4:3(640×480 → 세로 480×640, Android 분석 해상도와 같은 비율·크기), BGRA, 세로, 미러 없음. 전면 미러는 미리보기에서만.
     private func configure(front: Bool) throws {
+        let position: AVCaptureDevice.Position = front ? .front : .back
+        // 같은 렌즈가 이미 구성돼 있으면(종목 전환) 재구성하지 않는다 — 돌아가는 세션의 commitConfiguration 은 초 단위다
+        if let current = session.inputs.compactMap({ $0 as? AVCaptureDeviceInput }).first, current.device.position == position,
+           session.outputs.contains(output) { return }
         session.beginConfiguration()
         defer { session.commitConfiguration() }
         if session.canSetSessionPreset(.vga640x480) { session.sessionPreset = .vga640x480 }
         session.inputs.forEach { session.removeInput($0) }
-        guard let device = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: front ? .front : .back) else {
+        guard let device = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: position) else {
             throw BridgeError("이 기기에서 카메라를 찾지 못했어요")
         }
         let input = try AVCaptureDeviceInput(device: device)

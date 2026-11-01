@@ -17,7 +17,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -47,25 +46,25 @@ internal fun MuscleLoadHomeCard(app: AppViewModel, onOpen: () -> Unit) {
     }
 }
 
-private val muscleRegions = listOf(
-    "상체" to listOf(Muscle.PECS, Muscle.DELTOIDS, Muscle.LATS, Muscle.TRAPS, Muscle.SERRATUS, Muscle.BICEPS, Muscle.TRICEPS, Muscle.FOREARMS),
-    "하체" to listOf(Muscle.QUADS, Muscle.GLUTES, Muscle.ABDUCTORS, Muscle.ADDUCTORS, Muscle.HAMSTRINGS, Muscle.CALVES, Muscle.HIP_FLEXORS),
-    "코어" to listOf(Muscle.ABS, Muscle.OBLIQUES, Muscle.ERECTORS),
-)
+/** 표시 목록만 거른다. 추천·기록 계산에서 쓰는 전체 근육 스냅샷은 유지한다. */
+internal fun rankedMuscles(snapshot: LoadSnapshot): List<MuscleStatus> =
+    snapshot.muscles.filter { it.known && it.value > 0.0 }
+        .sortedWith(compareByDescending<MuscleStatus> { it.value }.thenBy { it.muscle.ordinal })
 
-@OptIn(ExperimentalLayoutApi::class)
+internal fun muscleScoreLabel(value: Double): String =
+    if (value > 0.0 && value < 1.0) "1점 미만" else "${value.roundToInt()}점"
+
 @Composable
 internal fun MuscleLoadScreen(app: AppViewModel, onBack: () -> Unit) {
     val c = Trex.c
     val snapshot = app.muscleLoad
     var selectedName by rememberSaveable { mutableStateOf("") }
     var tab by rememberSaveable { mutableIntStateOf(0) }
-    val selected = Muscle.entries.find { it.name == selectedName } ?: snapshot.peak?.muscle ?: Muscle.QUADS
-    val region = muscleRegions.indexOfFirst { selected in it.second }
-    val status = snapshot.muscles.first { it.muscle == selected }
-    val uri = LocalUriHandler.current
+    // 30초 새로고침(TrexApp)은 계산 시각(calculatedAt)만 바뀐 스냅샷도 새로 만든다 — 쓰는 값(근육 목록)이 같으면 다시 계산하지 않는다(스펙 §115).
+    val ranked = remember(snapshot.muscles) { rankedMuscles(snapshot) }
+    val selected = ranked.firstOrNull { it.muscle.name == selectedName }?.muscle ?: ranked.firstOrNull()?.muscle
     LaunchedEffect(Unit) { app.refreshMuscleLoad() }
-    val recommendations = remember(snapshot, app.profile) { MuscleLoadEngine.recommendations(snapshot, app.profile.loadEquipment()) }
+    val recommendations = remember(snapshot.muscles, app.profile) { MuscleLoadEngine.recommendations(snapshot, app.profile.loadEquipment()) }
     Column(Modifier.fillMaxSize().background(c.bg)) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "뒤로", tint = c.text) }
@@ -82,9 +81,12 @@ internal fun MuscleLoadScreen(app: AppViewModel, onBack: () -> Unit) {
                 TextButton(onClick = app::syncMuscleLoad) { Text("다시 불러오기", color = c.primaryText) }
             }
             item {
+                // 근육도 WebView 는 화면 밖으로 스크롤돼도 폐기하지 않는다 — 돌아올 때마다 WebView 를 새로 만들고 페이지·SVG 를
+                // 다시 읽던 비용(과 "불러오는 중" 깜빡임)을 없앤다(스펙 §115). 항목 키는 예전 그대로(순서)다.
+                KeepComposedInLazyList()
                 Surface(shape = RoundedCornerShape(24.dp), color = Color(0xFF222527)) {
                     Column {
-                        MuscleAtlas(snapshot, if (tab == 0) selected.name else "", Modifier.fillMaxWidth().height(366.dp))
+                        MuscleAtlas(snapshot, if (tab == 0) selected?.name.orEmpty() else "", Modifier.fillMaxWidth().height(366.dp))
                         Column(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 16.dp)) {
                             Box(Modifier.fillMaxWidth().height(10.dp).clip(RoundedCornerShape(5.dp))
                                 .background(Brush.horizontalGradient(listOf(Color(0xFFDEDED9), Color(0xFFC7E26B), Color(0xFF759848)))))
@@ -111,21 +113,24 @@ internal fun MuscleLoadScreen(app: AppViewModel, onBack: () -> Unit) {
                 }
             }
             if (tab == 0) {
-                item {
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        muscleRegions.forEachIndexed { index, (title, muscles) ->
-                            FilterChip(selected = region == index, onClick = {
-                                selectedName = snapshot.muscles.filter { it.muscle in muscles }.maxByOrNull { it.value }!!.muscle.name
-                            }, label = { Text(title) }, modifier = Modifier.weight(1f))
+                item { Text("피로도 높은 순", color = c.text, fontSize = 18.sp, fontWeight = FontWeight.SemiBold) }
+                if (ranked.isEmpty() && !app.muscleLoadLoading && app.muscleLoadError == null) item {
+                    Text("현재 표시할 근육 피로도가 없어요. 운동 기록을 저장하면 사용한 근육이 나타납니다.", color = c.text2, fontSize = 14.sp)
+                }
+                items(ranked, key = { it.muscle.name }) { status ->
+                    val expanded = selected == status.muscle
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Surface(onClick = { selectedName = status.muscle.name }, shape = RoundedCornerShape(16.dp),
+                            color = if (expanded) c.primary.copy(alpha = .12f) else c.surface) {
+                            Row(Modifier.fillMaxWidth().padding(18.dp), horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically) {
+                                Text(status.muscle.label, color = c.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                                Text(muscleScoreLabel(status.value), color = c.primaryText, fontSize = 16.sp)
+                            }
                         }
-                    }
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        muscleRegions[region].second.forEach { muscle ->
-                            FilterChip(selected = muscle == selected, onClick = { selectedName = muscle.name }, label = { Text(muscle.label) })
-                        }
+                        if (expanded) MuscleDetailCard(status, snapshot)
                     }
                 }
-                item { MuscleDetailCard(status, snapshot) }
             } else {
                 item { Text("최근 부하와 덜 겹치는 운동", color = c.text, fontSize = 18.sp, fontWeight = FontWeight.SemiBold) }
                 if (recommendations.isEmpty()) item {
@@ -146,13 +151,6 @@ internal fun MuscleLoadScreen(app: AppViewModel, onBack: () -> Unit) {
                     }
                 }
             }
-            item {
-                // 연구 설명과 별개로 재배포 모델의 저작자/라이선스 표시는 유지한다.
-                Text("3D: Z-Anatomy / BodyParts3D · 수정 모델", color = c.text3, fontSize = 10.sp)
-                TextButton(onClick = { uri.openUri("https://creativecommons.org/licenses/by-sa/4.0/") }) {
-                    Text("CC BY-SA 4.0", color = c.text3, fontSize = 10.sp)
-                }
-            }
         }
     }
 }
@@ -160,14 +158,14 @@ internal fun MuscleLoadScreen(app: AppViewModel, onBack: () -> Unit) {
 @Composable
 private fun MuscleDetailCard(status: MuscleStatus, snapshot: LoadSnapshot) {
     val c = Trex.c
-    val related = remember(snapshot, status.muscle) {
+    val related = remember(snapshot.sets, status.muscle) {
         snapshot.sets.filter { set -> MuscleLoadEngine.doses(set).any { it.muscle == status.muscle && it.dose > 0 } }
             .sortedByDescending { it.endedAt }.take(3)
     }
     Surface(shape = RoundedCornerShape(22.dp), color = c.surface, modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(status.muscle.label, color = c.text, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
-            Text(if (status.known) "${status.value.roundToInt()}점" else "기록 없음", color = c.text, fontSize = 30.sp, fontWeight = FontWeight.Bold)
+            Text(if (status.known) muscleScoreLabel(status.value) else "기록 없음", color = c.text, fontSize = 30.sp, fontWeight = FontWeight.Bold)
             if (status.known) {
                 LinearProgressIndicator(progress = { (status.value / 100).toFloat() }, modifier = Modifier.fillMaxWidth().height(5.dp), color = c.primaryText, trackColor = c.bg)
                 Text("왼쪽 ${status.left.roundToInt()} · 오른쪽 ${status.right.roundToInt()}  |  최근 ${loadDate(status.lastAt!!)}", color = c.text2, fontSize = 12.sp)
@@ -177,7 +175,6 @@ private fun MuscleDetailCard(status: MuscleStatus, snapshot: LoadSnapshot) {
                     Text("${loadDate(set.endedAt)} · ${MuscleLoadCatalog.find(set.exerciseId)?.name} · ${loadAmount(set)}", color = c.text, fontSize = 13.sp)
                 }
             } else Text("이 부위에 반영할 수행 기록이 아직 없어요", color = c.text2, fontSize = 13.sp)
-            if (status.muscle == Muscle.HIP_FLEXORS) Text("깊은 근육은 3D에서 일부 보이지 않습니다", color = c.text3, fontSize = 11.sp)
         }
     }
 }
@@ -191,7 +188,7 @@ internal fun SessionMuscleMap(app: AppViewModel, sessionId: String) {
     }
     val used = calculated?.takeIf { it.first == sessionId && it.second == sets }?.third
     val keys = JSONArray((used ?: emptySet()).sorted()).toString()
-    // 좌우 28dp는 WebView 밖에 두어 세로 스크롤을 시작할 수 있는 여백으로 사용한다.
+    // 앞·뒷면 2D 근육도는 회전하지 않으며 위에서 시작한 터치도 페이지 스크롤에 사용한다.
     Box(Modifier.fillMaxWidth().padding(top = 20.dp).padding(horizontal = 28.dp), contentAlignment = Alignment.Center) {
         Column(Modifier.widthIn(max = 340.dp).fillMaxWidth()) {
             Text("사용 근육", color = c.text, fontSize = 19.sp, fontWeight = FontWeight.SemiBold,
@@ -200,7 +197,7 @@ internal fun SessionMuscleMap(app: AppViewModel, sessionId: String) {
                 Box(Modifier.fillMaxWidth().height(400.dp), contentAlignment = Alignment.Center) {
                     key(sessionId) {
                         MuscleAtlasWebView("window.setUsedMuscles && window.setUsedMuscles($keys);", true,
-                            "이번 운동에서 사용한 근육. 드래그 또는 방향키로 회전", Modifier.fillMaxSize())
+                            "이번 운동에서 사용한 근육. 왼쪽 뒷면, 오른쪽 앞면", Modifier.fillMaxSize())
                     }
                     if (app.muscleLoadLoading || used == null) CircularProgressIndicator(color = c.primaryText)
                     if (app.muscleLoadError != null) {
@@ -226,10 +223,11 @@ private fun loadAmount(s: LoadSet): String = when(s.unit) {
 
 @Composable
 private fun MuscleAtlas(snapshot: LoadSnapshot, selected: String, modifier: Modifier) {
-    val colors=JSONObject().apply { snapshot.muscles.filter { it.known }.forEach {
+    // 근육 값이 같으면 다시 만들지 않는다 — 명령이 같으면 MuscleAtlasWebView 도 JS 를 다시 돌리지 않는다(스펙 §115)
+    val colors=remember(snapshot.muscles) { JSONObject().apply { snapshot.muscles.filter { it.known }.forEach {
         put(it.muscle.name+"_L",it.left);put(it.muscle.name+"_R",it.right)
-    } }.toString()
+    } }.toString() }
     MuscleAtlasWebView("window.setFatigue && window.setFatigue($colors,${JSONObject.quote(selected)});", false,
-        "운동 기록 기반 근육 부하 3D. 드래그로 회전, 상세 값은 아래 부위 선택 카드에서 확인", modifier)
+        "운동 기록 기반 근육 피로도. 왼쪽 뒷면, 오른쪽 앞면. 상세 값은 아래 목록에서 확인", modifier)
 }
 

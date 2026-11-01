@@ -5,6 +5,12 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import com.example.trex_kotlin.TrexText as Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.Surface
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Pause
+import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -52,10 +58,15 @@ internal fun TimedPreparationScreen(step: SessionStep, paused: Boolean, onToggle
                 Text("준비 시간 +5초",color=c.primaryText)
             }
         }
-        TextButton(onClick=onExit) { Text("나가기",color=c.text2) }
-        Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
-            GhostButton(if(paused)"재개" else "일시정지",onTogglePause,Modifier.weight(1f))
-            Cta("바로 시작",{finish()},Modifier.weight(1.8f),enabled=!paused && !delivered)
+        // 제어판 디자인(스펙 §115) — 흰 둥근 판 위 원형 버튼 줄, 바로 시작이 주요 동작
+        Surface(Modifier.fillMaxWidth(), shape = RoundedCornerShape(28.dp), color = c.surface, shadowElevation = 2.dp) {
+            SessionActionRow(Modifier.padding(horizontal = 12.dp, vertical = 12.dp)) {
+                SessionCircleButton("나가기", "나가기", Icons.Rounded.Close, onExit, Modifier.weight(1f), destructive = true)
+                SessionCircleButton("바로 시작", "바로 시작", Icons.Rounded.PlayArrow, { finish() }, Modifier.weight(1f),
+                    highlighted = true, enabled = !paused && !delivered)
+                SessionCircleButton(if(paused)"재개" else "일시정지", if(paused)"재개" else "일시정지",
+                    if(paused) Icons.Rounded.PlayArrow else Icons.Rounded.Pause, onTogglePause, Modifier.weight(1f))
+            }
         }
     }
 }

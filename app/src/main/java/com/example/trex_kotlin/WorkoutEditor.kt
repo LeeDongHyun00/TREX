@@ -19,6 +19,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.trex_kotlin.posture.ExerciseProfiles
+import com.example.trex_kotlin.trainingload.MuscleLoadEngine
+import com.example.trex_kotlin.weather.WeatherExerciseRecommender
+import com.example.trex_kotlin.weather.rememberWeatherLocator
+import com.example.trex_kotlin.weather.resolveWeatherPlace
 
 /** 한 항목만 초안으로 편집한다. 추가는 마지막 회복 운동 앞에 넣는다. */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -30,6 +34,26 @@ fun WorkoutEditorSheet(app: AppViewModel, initialId: String?, onClose: () -> Uni
     val original = remember(initialId) { app.workoutPlan.firstOrNull { it.id == initialId } }
     var selected by remember(initialId) { mutableStateOf(original) }
     var picking by remember(initialId, initialMode) { mutableStateOf(initialMode != "edit" || original == null) }
+    val lifecyclePaused = rememberTrexLifecyclePaused()
+    val locator = rememberWeatherLocator()
+    var weatherNames by remember { mutableStateOf(emptyList<String>()) }
+    LaunchedEffect(picking, lifecyclePaused, original?.id) {
+        weatherNames = emptyList()
+        if (!picking || original == null || lifecyclePaused) return@LaunchedEffect
+        app.refreshMuscleLoad()
+        val services = app.weather
+        val place = resolveWeatherPlace(services.locationPrefs, locator)
+        services.repository.fetchCurrentWeather(place.latitude, place.longitude).getOrNull()?.let { weather ->
+            weatherNames = WeatherExerciseRecommender.recommend(weather, place.label).exercises.map { it.catalogName }
+        }
+    }
+    val fatigueNames = remember(app.muscleLoad, app.muscleLoadLoading, app.muscleLoadError, app.profile) {
+        if (app.muscleLoadLoading || app.muscleLoadError != null) emptyList()
+        else MuscleLoadEngine.recommendations(app.muscleLoad, app.profile.loadEquipment()).map { it.name }
+    }
+    val recommendationGroups = remember(selected?.name, weatherNames, fatigueNames) {
+        replacementRecommendationGroups(selected?.name, weatherNames, fatigueNames)
+    }
     val timed = selected?.timeOnly() == true || selected?.resolvedTarget() is WorkoutTarget.Duration
     val wheelKey = Triple(selected?.id, selected?.name, timed)
     val setWheel = remember(wheelKey) { WorkoutNumberWheelState(selected?.repsSpec()?.sets ?: 1, 1..20) }
@@ -48,15 +72,15 @@ fun WorkoutEditorSheet(app: AppViewModel, initialId: String?, onClose: () -> Uni
         selected = next.withGoal(next.resolvedTarget(), before?.repsSpec()?.sets ?: next.repsSpec().sets)
         picking = false
     }
-    ModalBottomSheet(onDismissRequest = onClose, containerColor = c.sheet, sheetGesturesEnabled = picking,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
-        Column(Modifier.fillMaxWidth().heightIn(max = 640.dp).imePadding().padding(horizontal = 22.dp).padding(bottom = 22.dp)) {
+    SheetHost(onDismiss = onClose) {
+        Column(Modifier.fillMaxWidth().heightIn(max = 640.dp).padding(horizontal = 22.dp).padding(bottom = 22.dp)) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text(if (picking) { if (original == null) "운동 추가" else "종목 변경" } else if (original == null) "운동 추가" else "운동 수정",
                     color = c.text, fontSize = 24.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
             }
             if (picking) {
-                WorkoutCatalogBrowser(if (original == null) null else selected, onPick = ::pick, modifier = Modifier.weight(1f))
+                WorkoutCatalogBrowser(if (original == null) null else selected, onPick = ::pick,
+                    modifier = Modifier.weight(1f), recommendationGroups = recommendationGroups)
                 Row(Modifier.padding(top = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     GhostButton("취소", onClose, Modifier.weight(1f))
                     if (selected != null) Cta("설정으로 돌아가기", { picking = false }, modifier = Modifier.weight(1.7f))

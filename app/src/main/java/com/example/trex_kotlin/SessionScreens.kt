@@ -30,6 +30,7 @@ import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.FitnessCenter
+import androidx.compose.material.icons.rounded.Forum
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PhotoCamera
@@ -99,8 +100,13 @@ fun TimerSessionScreen(
             Text(if (paused) "일시정지" else if (workout.resolvedTarget() is WorkoutTarget.Repetitions) "직접 횟수 기록" else "시간 측정",
                 color = c.text2, fontSize = 14.sp, modifier = Modifier.padding(top = 28.dp))
         }
-        WorkoutSessionActions(workout, repetitions, false, paused, onTogglePause, onRepetitions, onPartial, onSkip, onExit,
-            onShowGuide = onShowGuide)
+        // 제어판 디자인(스펙 §115) — 흰 둥근 판 위 원형 버튼 줄
+        Surface(Modifier.fillMaxWidth(), shape = RoundedCornerShape(28.dp), color = c.surface, shadowElevation = 2.dp) {
+            Column(Modifier.padding(horizontal = 12.dp, vertical = 10.dp)) {
+                WorkoutSessionActions(workout, repetitions, false, paused, onTogglePause, onRepetitions, onPartial, onSkip, onExit,
+                    onShowGuide = onShowGuide)
+            }
+        }
     }
 }
 
@@ -154,6 +160,8 @@ fun SessionCompleteScreen(
     /** 세션 스코프 스피커 — 라이브 화면의 음소거 상태를 그대로 따른다. */
     speak: (String) -> Unit = {},
     fatigueContent: @Composable () -> Unit = {},
+    /** 커뮤니티에 오운완 카드 올리기(커뮤니티를 쓸 수 있을 때만, 없으면 버튼이 없다). */
+    onShare: (() -> Unit)? = null,
     onDone: () -> Unit,
 ) {
     val c = Trex.c
@@ -214,6 +222,7 @@ fun SessionCompleteScreen(
             PostureSessionBlock(reports = ordered, headline = headline, onLabel = onLabel, modifier = Modifier.padding(top = 20.dp))
         }
         }
+        if (onShare != null) GhostButton("오운완 올리기", onShare, Modifier.padding(top = 12.dp).fillMaxWidth(), icon = Icons.Rounded.Forum)
         Cta("홈으로", icon = Icons.Rounded.Home, onClick = onDone, modifier = Modifier.padding(top = 12.dp).fillMaxWidth())
     }
 }
@@ -354,7 +363,8 @@ private fun PostureSetRow(
                     CoachMode.COACH -> CoachSetDetail(report)
                     CoachMode.TRACK -> TrackSetDetail(report)
                 }
-                SelfLabelSlot(report = report, draft = draft, onDraft = onDraft, onLabel = onLabel)
+                // 자가 라벨(실제 횟수·자세 자평)은 실검증 도구 — 배포 빌드에는 없다(스펙 §116)
+                if (PLATFORM_DEV_TOOLS) SelfLabelSlot(report = report, draft = draft, onDraft = onDraft, onLabel = onLabel)
             }
         }
     }

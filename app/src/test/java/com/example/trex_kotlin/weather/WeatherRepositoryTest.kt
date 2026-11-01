@@ -130,4 +130,13 @@ class WeatherRepositoryTest {
         prefs.saveSelectedRegion(KoreanRegion.JEJU)
         assertEquals("지역을 고르면 GPS 모드가 꺼진다", "제주", resolveWeatherPlace(prefs, FakeLocator(true, 1.0 to 2.0)).label)
     }
+
+    @Test
+    fun homeRowShowsShortPlaceName() {
+        // 홈 날씨 줄 맨 앞 — 어느 곳 날씨인지 보인다(제주로 둔 줄 모르고 "맑음"이 이상하다고 본 일, 10-29)
+        assertEquals("제주", shortPlaceLabel("제주"))
+        assertEquals("경기(수원)", shortPlaceLabel("경기(수원)"))
+        assertEquals("현재 위치", shortPlaceLabel("현재 위치"))
+        assertEquals("위치를 못 얻은 표시는 시트에만", "부산", shortPlaceLabel("부산 (위치 확인 불가)"))
+    }
 }

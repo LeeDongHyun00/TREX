@@ -1,13 +1,29 @@
 package com.example.trex_kotlin
 
+import com.example.trex_kotlin.community.CommunityApi
+import com.example.trex_kotlin.community.CommunityGate
+import com.example.trex_kotlin.community.CommunityMe
+import com.example.trex_kotlin.community.FeedController
+import com.example.trex_kotlin.community.WorkoutCardData
+import com.example.trex_kotlin.community.communityGate
+import com.example.trex_kotlin.routines.AppLink
+import com.example.trex_kotlin.routines.SavedRoutine
+import com.example.trex_kotlin.routines.SharedRoutine
+import com.example.trex_kotlin.routines.toTodayPlan
+import com.example.trex_kotlin.routines.withAdded
+import com.example.trex_kotlin.routines.without
 import com.example.trex_kotlin.sync.ApiException
+import com.example.trex_kotlin.sync.AppleCredential
 import com.example.trex_kotlin.sync.AuthAccount
 import com.example.trex_kotlin.sync.AuthSession
+import com.example.trex_kotlin.sync.BinaryTransport
 import com.example.trex_kotlin.sync.FirstSync
 import com.example.trex_kotlin.sync.NetworkException
 import com.example.trex_kotlin.sync.SignInException
+import com.example.trex_kotlin.sync.SignupForm
 import com.example.trex_kotlin.sync.SyncManager
 import com.example.trex_kotlin.sync.TrexApi
+import com.example.trex_kotlin.sync.signupProblem
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
@@ -84,6 +100,12 @@ class AppViewModel(private val platform: AppPlatform) : ViewModel() {
         private set
     var authBusy by mutableStateOf(false)
         private set
+    /**
+     * 계정 선택을 마치고 서버 로그인·첫 동기화를 기다리는 중 — 앱 전체에 로그인 로딩 화면([SignInLoadingScreen])을 덮는다.
+     * 계정 선택 창(구글·Apple)이 떠 있는 동안은 거짓이다 — 창을 닫았을 때 로딩 화면이 깜빡이지 않게. 탈퇴처럼 [authBusy] 만 켜는 일에는 덮지 않는다.
+     */
+    var authVerifying by mutableStateOf(false)
+        private set
     var authMessage by mutableStateOf<String?>(null)
         private set
     /** 처음 연결한 계정의 서버에도 이 기기에도 기록이 있다 — 어느 쪽을 남길지 묻는 중. */
@@ -105,8 +127,14 @@ class AppViewModel(private val platform: AppPlatform) : ViewModel() {
 
     fun clearAuthMessage() { authMessage = null }
 
-    /** "로그인 없이 사용". 나중에 설정에서 계정을 연결할 수 있다. */
-    fun continueWithoutAccount() = completeLogin()
+    /**
+     * "로그인 없이 사용". 나중에 설정에서 계정을 연결할 수 있다. 시작 화면의 로그인 안내("다른 계정 연결을 취소했어요" 등)는
+     * 여기서 지운다 — 남겨 두면 설정·커뮤니티의 계정 칸에 그대로 보였다(10-29 실기기).
+     */
+    fun continueWithoutAccount() {
+        authMessage = null
+        completeLogin()
+    }
 
     /**
      * "Google로 계속하기" — 로그인 화면과 설정의 계정 연결이 같이 쓴다. [requestIdToken] 은 플랫폼의 계정 선택 화면이다
@@ -118,12 +146,62 @@ class AppViewModel(private val platform: AppPlatform) : ViewModel() {
             authMessage = "구글 로그인이 아직 준비되지 않았어요. ‘로그인 없이 사용’으로 시작해 주세요."
             return
         }
+        signIn("구글", credential = { requestIdToken(platform.googleWebClientId) }) { api.googleLogin(it) }
+    }
+
+    /** Apple 로그인을 쓸 수 있는가 — 버튼을 그릴지(iPhone 은 기본 로그인 창, Android 는 웹 로그인이 설정된 빌드). */
+    val appleSignInAvailable: Boolean get() = platform.appleSignInAvailable && api.configured
+
+    /**
+     * "Apple로 계속하기"(iPhone·Android, 설계 docs/superpowers/specs/2026-10-29-apple-sign-in-design.md) — 구글과 같은 길로 서버 로그인·
+     * 첫 동기화를 한다. [requestCredential] 은 플랫폼의 Apple 로그인 창이다(iPhone 기본 창, Android 웹 로그인 — 취소는 [SignInException.Cancelled]).
+     */
+    fun continueWithApple(requestCredential: suspend () -> AppleCredential) {
+        if (authBusy) return
+        if (!appleSignInAvailable) {
+            authMessage = "Apple 로그인이 아직 준비되지 않았어요."
+            return
+        }
+        signIn("Apple", credential = requestCredential) { api.appleLogin(it) }
+    }
+
+    /**
+     * 아이디·비밀번호 로그인(docs/SERVER_SYNC_HANDOFF.md D13) — 소셜 로그인과 같은 길로 계정을 저장하고 첫 동기화를 한다.
+     * 플랫폼 창이 없어 바로 서버 확인으로 들어가고, 그동안 로그인 로딩 화면이 덮인다([authVerifying]).
+     * 틀린 비밀번호·5번 연속 실패 잠금은 서버 문구를 그대로 보인다.
+     */
+    fun loginWithPassword(loginId: String, password: String) {
+        if (authBusy) return
+        if (!api.configured) {
+            authMessage = "서버가 아직 준비되지 않았어요. ‘로그인 없이 사용’으로 시작해 주세요."
+            return
+        }
+        signIn("아이디", credential = {}) { api.passwordLogin(loginId, password) }
+    }
+
+    /** 아이디·비밀번호 가입(D13) — 가입하면 바로 로그인된다. 칸 확인은 화면이 [signupProblem] 으로 먼저 하고, 서버도 같은 규칙으로 본다. */
+    fun signUpWithPassword(form: SignupForm) {
+        if (authBusy) return
+        if (!api.configured) {
+            authMessage = "서버가 아직 준비되지 않았어요. ‘로그인 없이 사용’으로 시작해 주세요."
+            return
+        }
+        signupProblem(form)?.let { authMessage = it; return }
+        signIn("아이디", credential = {}) { api.signup(form) }
+    }
+
+    /**
+     * 로그인 공통 — [credential](플랫폼의 계정 선택 창 — 아이디·비밀번호는 창이 없다)로 받은 증명을 [exchange] 로 서버 계정으로 바꿔 저장하고
+     * 첫 동기화를 시작한다. 증명을 받은 뒤부터 끝날 때까지 [authVerifying]. [label] 은 실패 문구의 이름("구글"·"Apple"·"아이디").
+     */
+    private fun <T> signIn(label: String, credential: suspend () -> T, exchange: suspend (T) -> AuthAccount) {
         viewModelScope.launch {
             authBusy = true
             authMessage = null
             try {
-                val idToken = requestIdToken(platform.googleWebClientId)
-                val signedIn = api.googleLogin(idToken)
+                val proof = credential()
+                authVerifying = true
+                val signedIn = exchange(proof)
                 authSession.save(signedIn)
                 account = signedIn
                 beginSync(signedIn)
@@ -132,8 +210,8 @@ class AppViewModel(private val platform: AppPlatform) : ViewModel() {
             } catch (_: SignInException.NoAccount) {
                 authMessage = "이 기기에 구글 계정이 없어요. 휴대폰 설정에서 계정을 추가해 주세요."
             } catch (e: SignInException.Failed) {
-                // 콘솔 설정 오류(SHA-1·패키지명·테스트 사용자)는 여기로 온다 — 로그는 플랫폼 쪽(GoogleSignIn.kt)이 남긴다
-                authMessage = "구글 로그인에 실패했어요. ${e.reason}"
+                // 콘솔 설정 오류(SHA-1·패키지명·테스트 사용자, Apple 기능 미설정)는 여기로 온다 — 로그는 플랫폼 쪽이 남긴다
+                authMessage = "$label 로그인에 실패했어요. ${e.reason}"
             } catch (e: ApiException) {
                 authMessage = e.message
             } catch (_: NetworkException) {
@@ -144,6 +222,7 @@ class AppViewModel(private val platform: AppPlatform) : ViewModel() {
                 authMessage = e.message ?: "로그인하지 못했어요."
             } finally {
                 authBusy = false
+                authVerifying = false
             }
         }
     }
@@ -218,6 +297,108 @@ class AppViewModel(private val platform: AppPlatform) : ViewModel() {
         refreshAccountSync()
     }
 
+    // ---- 커뮤니티 (docs/superpowers/specs/2026-10-28-community-design.md — 서버 계정이 있을 때만)
+
+    /** 커뮤니티 서버 API — 계정 토큰을 같이 쓴다. 글·댓글 목록은 화면 상태라 여기 두지 않고 화면이 바로 부른다. */
+    val community = CommunityApi(platform.apiBaseUrl, platform.http, platform.binary) { authSession.token }
+
+    /** 커뮤니티 사진을 받는 전송 — 앱 루트의 원격 사진 로더가 쓴다(서명 주소라 인증 헤더 없음). */
+    val imageTransport: BinaryTransport get() = platform.binary
+
+    /** 서버의 내 커뮤니티 상태와 그것을 받은 계정 — 로그아웃·계정 전환 뒤 남의 상태로 들어가지 않게 계정을 같이 둔다. */
+    private var communityMeState by mutableStateOf<Pair<String, CommunityMe>?>(null)
+    var communityMessage by mutableStateOf<String?>(null)
+        private set
+
+    val communityMe: CommunityMe?
+        get() = communityMeState?.takeIf { it.first == account?.loginId }?.second
+
+    val communityGate: CommunityGate
+        // 서버만 있으면 아이디로 가입할 수 있다(D13) — 구글 설정이 빠진 iPhone 빌드에서도 Apple·아이디 회원이 들어온다
+        get() = communityGate(api.configured, account != null, communityMe)
+
+    /** 커뮤니티 탭에 들어올 때·닉네임 정하기·동의 뒤에 부른다. 실패하면 [communityMessage] 에 문구를 둔다. */
+    suspend fun refreshCommunityMe() {
+        val signedIn = account ?: return
+        try {
+            communityMeState = signedIn.loginId to community.me()
+            communityMessage = null
+        } catch (e: ApiException) {
+            if (e.status == 401) {
+                authSession.clear()
+                account = null
+                authMessage = "로그인이 만료됐어요. 다시 로그인하면 동기화가 이어져요."
+            } else {
+                communityMessage = e.message
+            }
+        } catch (_: NetworkException) {
+            communityMessage = "네트워크에 연결하지 못했어요"
+        }
+    }
+
+    fun clearCommunityMessage() { communityMessage = null }
+
+    /** 전체 피드 — 탭을 오가도 남는다. 계정이 바뀌면 비운다(좋아요 표시가 앞 사람 것이 되지 않게). */
+    val communityFeed = FeedController(
+        load = { before -> community.feed(before) },
+        setLike = { id, liked -> if (liked) community.like(id) else community.unlike(id) },
+        scope = viewModelScope,
+        now = ::nowMillis,
+    )
+    private var communityFeedOwner: String? = null
+
+    /** 운동 완료 화면에서 "오운완 올리기"를 눌렀다 — 커뮤니티 탭이 이 카드를 넣은 글쓰기를 열고 비운다. */
+    var pendingWorkoutCard by mutableStateOf<WorkoutCardData?>(null)
+
+    // ---- 루틴 공유·내 루틴 보관함(docs/superpowers/specs/2026-10-29-routine-share-design.md)
+
+    /** 링크로 들어온 곳 — 앱 화면(RootRoute.Main)에 닿으면 [TrexApp] 이 받은 루틴 창이나 게시글로 연다(시작 화면·온보딩·운동 중엔 기다린다). */
+    var pendingLink by mutableStateOf<AppLink?>(null)
+
+    /** 링크로 받은 게시글 — 커뮤니티 탭이 이용 준비를 마친 뒤 상세를 열고 비운다. */
+    var pendingPostId by mutableStateOf<Long?>(null)
+
+    var savedRoutines by mutableStateOf(store.loadRoutines())
+        private set
+
+    /** 보관함에 넣는다 — 성공이면 null, 가득 찼으면 그 문구. [from] 은 받은 루틴의 보낸 사람 닉네임. */
+    fun saveRoutine(name: String, workouts: List<Workout>, from: String?): String? {
+        val now = nowMillis()
+        val next = savedRoutines.withAdded(SavedRoutine("routine-$now", name.trim(), workouts, from, now))
+            ?: return "보관함이 가득 찼어요. 안 쓰는 루틴을 지워 주세요"
+        savedRoutines = next
+        store.saveRoutines(next)
+        return null
+    }
+
+    fun deleteRoutine(id: String) {
+        savedRoutines = savedRoutines.without(id)
+        store.saveRoutines(savedRoutines)
+    }
+
+    /** 오늘 루틴을 [workouts] 로 바꾼다(확인은 화면이 먼저 받는다) — 새 id, 완료 표시 없이. */
+    fun applyRoutine(name: String, workouts: List<Workout>) {
+        updatePlan(SavedRoutine("apply", name, workouts, null, 0L).toTodayPlan(nowMillis()))
+    }
+
+    /** 서버에 올리고 메신저에 붙일 링크를 받는다. 예상 시간은 [routineOverview] 로 계산해 같이 보낸다. */
+    suspend fun shareRoutine(name: String, workouts: List<Workout>): String =
+        api.shareRoutine(name, routineOverview(workouts).totalSeconds, workouts)
+
+    suspend fun loadSharedRoutine(code: String): SharedRoutine = api.sharedRoutine(code)
+
+    fun postShareUrl(postId: Long): String = api.postShareUrl(postId)
+
+    /** 피드를 보이기 전 — 계정이 바뀌었으면 비우고, 받은 적이 없거나 사진 주소가 곧 만료되면 새로 받는다. */
+    suspend fun refreshFeedIfNeeded() {
+        val loginId = account?.loginId ?: return
+        if (communityFeedOwner != loginId) {
+            communityFeed.reset()
+            communityFeedOwner = loginId
+        }
+        if (communityFeed.state.isStale(nowMillis())) communityFeed.refresh()
+    }
+
     /** 회원 탈퇴 — 서버의 계정과 백업을 지운다. 이 기기의 기록은 남는다. */
     fun deleteAccount(onDone: () -> Unit) {
         viewModelScope.launch {
@@ -246,6 +427,7 @@ class AppViewModel(private val platform: AppPlatform) : ViewModel() {
         }
         goalOverride = store.loadGoalOverride()
         workoutPlan = store.loadPlan() ?: todayPlan
+        savedRoutines = store.loadRoutines()
         workoutHistory = store.loadHistory() ?: emptyList()
         dietByDay = store.loadDiet() ?: emptyMap()
         waterByDay = store.loadWater() ?: emptyMap()
@@ -263,6 +445,9 @@ class AppViewModel(private val platform: AppPlatform) : ViewModel() {
         themeMode = mode
         store.themeMode = mode
     }
+
+    /** 설정 화면의 '버전' — 설치된 앱 그대로(§119). 예전에는 "1.0" 이 박혀 있어 스토어 버전과 달랐다. */
+    val versionLabel: String get() = appVersionLabel(platform.appVersion, platform.appBuild)
 
     // ---- 운동 안내를 본 종목 — 세션 첫 준비에서 한 번만 자동으로 띄운다(§108 에서 TrexApp 에서 옮김, 같은 저장소·키)
 
@@ -319,9 +504,13 @@ class AppViewModel(private val platform: AppPlatform) : ViewModel() {
     private val loadCorrections = mutableMapOf<String, Double?>()
 
     fun refreshMuscleLoad() {
+        val now = nowMillis()
+        if (loadLedger.sets.any { it.endedAt < workoutRetentionStart(now) }) {
+            syncMuscleLoad()
+        }
         val ledger=loadLedger
         viewModelScope.launch {
-            val next=withContext(Dispatchers.Default) { MuscleLoadEngine.snapshot(ledger.sets,nowMillis(),ledger.doses) }
+            val next=withContext(Dispatchers.Default) { MuscleLoadEngine.snapshot(ledger.sets,now,ledger.doses,workoutRetentionStart(now)) }
             if(ledger === loadLedger) muscleLoad=next
         }
     }
@@ -340,7 +529,8 @@ class AppViewModel(private val platform: AppPlatform) : ViewModel() {
                     // 저장과 계산이 모두 끝나야 완료 화면의 로딩을 해제한다.
                     val ledger = loadLedger
                     muscleLoad = withContext(Dispatchers.Default) {
-                        MuscleLoadEngine.snapshot(ledger.sets, nowMillis(), ledger.doses)
+                        val now = nowMillis()
+                        MuscleLoadEngine.snapshot(ledger.sets, now, ledger.doses, workoutRetentionStart(now))
                     }
                     muscleLoadError = null
                 } catch (cancelled: kotlinx.coroutines.CancellationException) {

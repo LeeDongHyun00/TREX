@@ -21,18 +21,21 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.example.trex_kotlin.community.UploadSizing
 import com.example.trex_kotlin.food.FoodDetectionResult
 import com.example.trex_kotlin.food.FoodDetector
 import com.example.trex_kotlin.food.FoodMemoryStore
 import com.example.trex_kotlin.food.decodeScaledBitmap
 import com.example.trex_kotlin.food.rotated
 import com.example.trex_kotlin.food.scaledToMax
+import java.io.ByteArrayOutputStream
 import java.util.concurrent.Executors
 
 /*
@@ -47,6 +50,35 @@ class AndroidFoodPhoto(val bitmap: Bitmap) : FoodPhoto {
     override val image: ImageBitmap by lazy { bitmap.asImageBitmap() }
     override fun scaledToMax(maxDimension: Int): FoodPhoto = bitmap.scaledToMax(maxDimension).let { if (it === bitmap) this else AndroidFoodPhoto(it) }
     override fun crop(left: Int, top: Int, width: Int, height: Int): FoodPhoto = AndroidFoodPhoto(Bitmap.createBitmap(bitmap, left, top, width, height))
+    override fun jpeg(maxDimension: Int, quality: Int): ByteArray {
+        val (w, h) = UploadSizing.fit(bitmap.width, bitmap.height, maxDimension)
+        val scaled = if (w == bitmap.width && h == bitmap.height) bitmap else Bitmap.createScaledBitmap(bitmap, w, h, true)
+        try {
+            return ByteArrayOutputStream().use { out ->
+                check(scaled.compress(Bitmap.CompressFormat.JPEG, quality, out)) { "JPEG 로 만들지 못했어요" }
+                out.toByteArray()
+            }
+        } finally {
+            if (scaled !== bitmap) scaled.recycle()
+        }
+    }
+}
+
+/**
+ * 화면에서 뜬 그림(오운완 카드, 커뮤니티 글쓰기)을 JPEG 로 — iPhone 은 ios-ui 의 같은 이름 함수. 그래픽 레이어 그림은 HARDWARE
+ * 비트맵이라 압축할 수 없어 소프트웨어 사본을 만든다. IO 스레드에서 부른다.
+ */
+fun encodeJpeg(image: ImageBitmap, quality: Int = 90): ByteArray {
+    val source = image.asAndroidBitmap()
+    val soft = if (source.config == Bitmap.Config.HARDWARE) source.copy(Bitmap.Config.ARGB_8888, false) else source
+    try {
+        return ByteArrayOutputStream().use { out ->
+            check(soft.compress(Bitmap.CompressFormat.JPEG, quality, out)) { "JPEG 로 만들지 못했어요" }
+            out.toByteArray()
+        }
+    } finally {
+        if (soft !== source) soft.recycle()
+    }
 }
 
 /** 메모리 부족 — 2단계 인식·기억 비교가 앱을 죽이지 않고 물러서는 조건(`FoodPipeline`). */
@@ -65,14 +97,23 @@ fun rememberFoodRecognizer(): FoodRecognizer {
     return remember { AndroidFoodRecognizer(context) }
 }
 
-/** 갤러리(사진 선택기, 최대 [maxItems]장) — 돌려준 함수를 부르면 연다. 고른 사진은 분석 스레드에서 디코딩한다. */
+/**
+ * 갤러리(사진 선택기, 최대 [maxItems]장) — 돌려준 함수를 부르면 연다. 고른 사진은 분석 스레드에서 디코딩한다.
+ * 한 장이면 단일 선택기 — `PickMultipleVisualMedia` 는 최대 1장을 받지 않고 생성자에서 앱을 멈춘다(커뮤니티 프로필 사진, 2026-10-29 실기기).
+ */
 @Composable
 fun rememberFoodGallery(maxItems: Int, onPicked: (List<FoodPhotoLoader>) -> Unit): () -> Unit {
     val context = LocalContext.current
+    fun loaders(uris: List<android.net.Uri>) = uris.map { uri -> FoodPhotoLoader { decodeScaledBitmap(context, uri)?.let { AndroidFoodPhoto(it) } } }
+    val request = PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+    if (maxItems <= 1) {
+        val single = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri -> onPicked(loaders(listOfNotNull(uri))) }
+        return { single.launch(request) }
+    }
     val launcher = rememberLauncherForActivityResult(
         ActivityResultContracts.PickMultipleVisualMedia(maxItems = maxItems),
-    ) { uris -> onPicked(uris.map { uri -> FoodPhotoLoader { decodeScaledBitmap(context, uri)?.let { AndroidFoodPhoto(it) } } }) }
-    return { launcher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }
+    ) { uris -> onPicked(loaders(uris)) }
+    return { launcher.launch(request) }
 }
 
 @Composable

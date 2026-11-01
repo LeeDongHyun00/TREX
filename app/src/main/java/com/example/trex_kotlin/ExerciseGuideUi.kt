@@ -14,7 +14,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -55,14 +54,13 @@ internal fun ExerciseGuideSheet(guide: ExerciseGuide, onClose: () -> Unit,
     val c = Trex.c
     val lifecyclePaused = rememberTrexLifecyclePaused()
     var section by rememberSaveable(guide.name) { mutableIntStateOf(0) }
-    ModalBottomSheet(onDismissRequest = onClose, containerColor = c.sheet, sheetGesturesEnabled = false, dragHandle = null,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    SheetHost(onDismiss = onClose) {
         Column(Modifier.fillMaxWidth().height(660.dp).padding(horizontal = 24.dp).padding(top = 24.dp, bottom = 20.dp)) {
             Text(guide.name, color = c.text, fontSize = 24.sp, fontWeight = FontWeight.SemiBold)
             Text("운동 방법", color = c.text2, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp))
             Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
                 Box(Modifier.padding(top = 16.dp).fillMaxWidth().height(260.dp)
-                    .clip(RoundedCornerShape(20.dp)).background(Color.White), contentAlignment = Alignment.Center) {
+                    .clip(RoundedCornerShape(20.dp)).background(c.sheet), contentAlignment = Alignment.Center) {
                     GuideVisualView(guide.asset, "${guide.name} 동작 예시", playing = !lifecyclePaused, Modifier.fillMaxSize()) { failed ->
                         Text(if (failed) "시범을 불러오지 못했어요." else "시범을 준비하고 있어요.", color = TrexTextSecondary)
                     }

@@ -1,4 +1,3 @@
-import GoogleSignIn
 import SwiftUI
 import TrexCore
 
@@ -11,6 +10,8 @@ import TrexCore
         IosFoodBridgeRegistry.shared.photos = FoodPhotoBridge()
         // 공유 앱 상태(Kotlin)의 구글 로그인 — Android Credential Manager 자리
         IosGoogleSignInRegistry.shared.bridge = GoogleSignInBridge()
+        // 공유 앱 상태(Kotlin)의 Apple 로그인 — iPhone 은 기본 로그인 창(App Store 지침 4.8). Android 는 웹 로그인(설계 §9)
+        IosAppleSignInRegistry.shared.bridge = AppleSignInBridge()
     }
     var body: some Scene {
         WindowGroup {
@@ -27,9 +28,9 @@ import TrexCore
             } else {
                 // §108 Phase 2: 앱 화면은 Android 정본 Compose(TrexApp)다. 아래 예전 SwiftUI 화면(RootView 등)은
                 // 쓰지 않는다 — 자세(§108c)·사진 식단(§108d)까지 공유 화면으로 옮겼고, 정리는 따로 한다.
-                // 구글 로그인 창에서 돌아오는 주소는 GIDSignIn 이 받는다.
                 ComposeAppView().ignoresSafeArea()
-                    .onOpenURL { url in GIDSignIn.sharedInstance.handle(url) }
+                    // 공유 링크의 "앱에서 열기"(trex://r/…, trex://p/…) — 공유 화면(Kotlin)이 꺼내 연다
+                    .onOpenURL { url in AppLinkInbox.shared.deliver(url: url.absoluteString) }
             }
         }
     }

@@ -1,5 +1,7 @@
 package com.example.trex_kotlin.weather
 
+import com.example.trex_kotlin.SheetHost
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -33,9 +35,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -200,8 +200,11 @@ fun WeatherSummaryRow(
                         Modifier.size(26.dp).clip(CircleShape).background(Brush.linearGradient(skyColors(rec.theme, w.isDay))),
                         contentAlignment = Alignment.Center,
                     ) { Icon(weatherIcon(w.weatherCode, w.isDay), contentDescription = null, tint = Color.White, modifier = Modifier.size(15.dp)) }
-                    Text("${w.temperature.roundToInt()}°", color = c.text, fontSize = 17.sp, fontWeight = FontWeight.SemiBold,
+                    // 어느 곳 날씨인지 — 다른 지역으로 둔 줄 모르고 날씨가 틀리다고 보지 않게(10-29 실기기: 제주로 두고 "맑음")
+                    Text(shortPlaceLabel(rec.locationLabel), color = c.text2, fontSize = 14.sp, maxLines = 1,
                         modifier = Modifier.padding(start = 9.dp))
+                    Text("${w.temperature.roundToInt()}°", color = c.text, fontSize = 17.sp, fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.padding(start = 7.dp))
                     // 좁은 화면·큰 글씨에서는 날씨 이름이 먼저 줄어든다(weight) — 강수량과 › 가 밀려나지 않게
                     Text(WeatherExerciseRecommender.getWeatherDescription(w.weatherCode), color = c.text2, fontSize = 14.sp,
                         maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false).padding(start = 7.dp))
@@ -264,7 +267,7 @@ private fun WeatherSheet(
     val uri = LocalUriHandler.current
     // 추천을 만든 순간의 글이 아니라 지금 기준 — 새로 받기에 실패해 남은 묵은 날씨를 '방금' 이라 하지 않는다
     val age = WeatherExerciseRecommender.updateAgeText(recommendation.weather.fetchedAtMillis, nowMillis())
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = c.sheet, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    SheetHost(onDismiss = onDismiss) {
         LazyColumn(Modifier.fillMaxWidth().padding(bottom = 16.dp)) {
             item { RecommendationHeader(recommendation) }
             items(recommendation.exercises) { exercise ->

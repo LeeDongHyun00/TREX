@@ -1,6 +1,10 @@
 package com.example.trex_kotlin.sync
 
 import com.example.trex_kotlin.nowMillis
+import com.example.trex_kotlin.Workout
+import com.example.trex_kotlin.routines.SharedRoutine
+import com.example.trex_kotlin.routines.decodeRoutineExercises
+import com.example.trex_kotlin.routines.encodeRoutineExercises
 import org.json.JSONObject
 
 /** 서버가 준 로그인 결과. [expiresAtMillis] 가 지나면 다시 로그인한다. */
@@ -47,8 +51,53 @@ class TrexApi(private val baseUrl: String, private val transport: HttpTransport,
     /** 어느 서버인지. 같은 계정이라도 서버가 다르면 백업도 다르다(로컬 개발 서버 ↔ 운영 서버). */
     val serverId: String get() = baseUrl.trimEnd('/')
 
-    suspend fun googleLogin(idToken: String): AuthAccount {
-        val (_, body) = call("POST", "/api/auth/oauth/google", JSONObject().put("idToken", idToken), auth = false)
+    suspend fun googleLogin(idToken: String): AuthAccount =
+        account(call("POST", "/api/auth/oauth/google", JSONObject().put("idToken", idToken), auth = false).second)
+
+    /** iPhone Apple 로그인(설계 docs/superpowers/specs/2026-10-29-apple-sign-in-design.md) — 응답은 구글과 같은 모양. */
+    suspend fun appleLogin(credential: AppleCredential): AuthAccount {
+        val body = JSONObject().put("identityToken", credential.identityToken).put("nonce", credential.nonce)
+        credential.authorizationCode?.let { body.put("authorizationCode", it) }
+        return account(call("POST", "/api/auth/oauth/apple", body, auth = false).second)
+    }
+
+    /** 아이디·비밀번호 가입(D13) — 가입하면 바로 로그인된 계정을 준다. 아이디·이름·이메일은 앞뒤 공백을 지워 보낸다. */
+    suspend fun signup(form: SignupForm): AuthAccount {
+        val body = JSONObject()
+            .put("loginId", form.loginId.trim())
+            .put("password", form.password)
+            .put("name", form.name.trim())
+            .put("email", form.email.trim())
+        return account(call("POST", "/api/auth/signup", body, auth = false).second)
+    }
+
+    /** 아이디·비밀번호 로그인(D13). 비밀번호는 적은 그대로 보낸다. */
+    suspend fun passwordLogin(loginId: String, password: String): AuthAccount {
+        val body = JSONObject().put("loginId", loginId.trim()).put("password", password)
+        return account(call("POST", "/api/auth/login", body, auth = false).second)
+    }
+
+    /** 루틴 공유(docs/superpowers/specs/2026-10-29-routine-share-design.md) — 메신저에 붙일 링크를 돌려준다. 커뮤니티 준비가 된 회원만. */
+    suspend fun shareRoutine(name: String, totalSeconds: Int, workouts: List<Workout>): String {
+        val body = JSONObject().put("name", name.trim()).put("totalSeconds", totalSeconds).put("exercises", encodeRoutineExercises(workouts))
+        return JSONObject(call("POST", "/api/routines/share", body).second).getString("url")
+    }
+
+    /** 링크로 받은 루틴 — 로그인 없이. 운동 id 는 `recv-순번`. */
+    suspend fun sharedRoutine(code: String): SharedRoutine {
+        val o = JSONObject(call("GET", "/api/routines/shared/$code", auth = false).second)
+        return SharedRoutine(
+            name = o.getString("name"),
+            senderNickname = o.optString("senderNickname"),
+            totalSeconds = o.optInt("totalSeconds", 0),
+            workouts = decodeRoutineExercises(o.getJSONArray("exercises"), "recv"),
+        )
+    }
+
+    /** 게시글 공유 링크 — 서버를 부르지 않는다(웹 페이지에는 닉네임만 보인다). */
+    fun postShareUrl(postId: Long): String = "$serverId/p/$postId"
+
+    private fun account(body: String): AuthAccount {
         val o = JSONObject(body)
         val user = o.getJSONObject("user")
         return AuthAccount(
@@ -82,6 +131,14 @@ class TrexApi(private val baseUrl: String, private val transport: HttpTransport,
 
     private fun item(o: JSONObject) = RemoteItem(o.getString("key"), o.getString("payload"), o.getLong("updatedAt"))
 
+    /** 서버 오류의 문구 — 칸별 오류(가입 규칙 등)가 있으면 그중 하나, 없으면 "message". */
+    private fun errorMessage(text: String): String? = runCatching {
+        val o = JSONObject(text)
+        val fields = o.optJSONObject("fieldErrors")
+        val field = fields?.keys()?.asSequence()?.map { fields.optString(it) }?.firstOrNull { it.isNotBlank() }
+        field ?: o.optString("message").takeIf { it.isNotBlank() }
+    }.getOrNull()
+
     private suspend fun call(
         method: String,
         path: String,
@@ -99,8 +156,7 @@ class TrexApi(private val baseUrl: String, private val transport: HttpTransport,
         val status = response.status
         val text = response.body
         if (status >= 400 && !(accept409 && status == 409)) {
-            val message = runCatching { JSONObject(text).optString("message") }.getOrNull()
-            throw ApiException(status, message?.takeIf { it.isNotBlank() } ?: "서버 오류($status)")
+            throw ApiException(status, errorMessage(text) ?: "서버 오류($status)")
         }
         return status to text
     }

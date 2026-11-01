@@ -27,6 +27,7 @@ private class AndroidSpeechEngine(context: Context) : SpeechEngine {
     private var focusRequest: AudioFocusRequest? = null
 
     override fun trace(atMs: Long, kind: String, text: String, utteranceId: String?, muted: Boolean, ready: Boolean) {
+        if (!com.example.trex_kotlin.PLATFORM_DEV_TOOLS) return   // 배포 빌드는 개발 기록을 남기지 않는다(스펙 §116)
         val record = feedbackTraceLine(atMs, kind, text, utteranceId, muted, ready)
         runCatching { traceExecutor.execute {
             runCatching {

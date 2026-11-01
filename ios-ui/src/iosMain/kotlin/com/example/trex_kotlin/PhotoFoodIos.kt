@@ -12,6 +12,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asComposeImageBitmap
+import androidx.compose.ui.graphics.asSkiaBitmap
 import androidx.compose.ui.viewinterop.UIKitInteropProperties
 import androidx.compose.ui.viewinterop.UIKitView
 import com.example.trex_kotlin.food.FoodDetectionResult
@@ -91,8 +92,9 @@ interface IosFoodModelBridge {
 interface IosFoodPhotoSource {
     /** 사진 보관함(PHPicker, 최대 [maxItems]장, 고른 순서) — 고른 사진의 로더를 [done](메인)에. 취소하면 빈 목록. */
     fun pickPhotos(maxItems: Int, done: (List<IosFoodImageLoader>) -> Unit)
-    /** 시트 안 카메라 미리보기(화면 채움 — Android FILL_CENTER). */
-    fun cameraView(): UIView
+    /** 시트 안 카메라 미리보기(화면 채움 — Android FILL_CENTER) — 부를 때마다 새 뷰(자세 화면 `IosCameraBridge.makePreviewView` 와 같은 이유). 놓을 때 [releaseCameraView]. */
+    fun makeCameraView(): UIView
+    fun releaseCameraView(view: UIView)
     /** 후면 카메라 시작(메인에서) — 실패하면 이유, 성공이면 null. */
     fun startCamera(): String?
     fun stopCamera()
@@ -126,6 +128,39 @@ class IosFoodPhoto(val native: IosFoodImage) : FoodPhoto {
     }
     override fun scaledToMax(maxDimension: Int): FoodPhoto = if (maxOf(width, height) <= maxDimension) this else IosFoodPhoto(native.scaled(maxDimension))
     override fun crop(left: Int, top: Int, width: Int, height: Int): FoodPhoto = IosFoodPhoto(native.cropped(left, top, width, height))
+    override fun jpeg(maxDimension: Int, quality: Int): ByteArray {
+        // Swift 가 줄인 픽셀(RGBA)로 Skia 래스터를 만들어 JPEG 로 — 원본 파일이 아니니 EXIF 가 없다(Android 와 같은 결과)
+        val source = if (maxOf(width, height) <= maxDimension) native else native.scaled(maxDimension)
+        val info = ImageInfo(source.width, source.height, ColorType.RGBA_8888, ColorAlphaType.PREMUL)
+        val raster = org.jetbrains.skia.Image.makeRaster(info, source.rgba().toByteArray(), source.width * 4)
+        try {
+            val data = raster.encodeToData(org.jetbrains.skia.EncodedImageFormat.JPEG, quality)
+                ?: throw IllegalStateException("JPEG 로 만들지 못했어요")
+            try {
+                return data.bytes
+            } finally {
+                data.close()
+            }
+        } finally {
+            raster.close()
+        }
+    }
+}
+
+/** 화면에서 뜬 그림(오운완 카드)을 JPEG 로 — Android `PhotoFoodAndroid.kt` 의 같은 이름 함수와 같은 결과. */
+fun encodeJpeg(image: ImageBitmap, quality: Int = 90): ByteArray {
+    val skia = org.jetbrains.skia.Image.makeFromBitmap(image.asSkiaBitmap())
+    try {
+        val data = skia.encodeToData(org.jetbrains.skia.EncodedImageFormat.JPEG, quality)
+            ?: throw IllegalStateException("JPEG 로 만들지 못했어요")
+        try {
+            return data.bytes
+        } finally {
+            data.close()
+        }
+    } finally {
+        skia.close()
+    }
 }
 
 /** 메모리 부족 — Kotlin/Native 의 OutOfMemoryError(2단계 인식·기억 비교가 앱을 죽이지 않고 물러서는 조건). */
@@ -345,7 +380,7 @@ private class IosFoodCamera : FoodCamera {
             }
             onDispose { release() }
         }
-        if (source != null) UIKitView(factory = { source.cameraView() }, modifier = modifier,
+        if (source != null) UIKitView(factory = { source.makeCameraView() }, onRelease = { source.releaseCameraView(it) }, modifier = modifier,
             properties = UIKitInteropProperties(interactionMode = null, isNativeAccessibilityEnabled = false))
     }
 

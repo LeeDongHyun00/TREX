@@ -74,6 +74,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -92,7 +93,6 @@ import com.example.trex_kotlin.posture.CoverageReport
 import com.example.trex_kotlin.posture.PartStatus
 import com.example.trex_kotlin.posture.BodyPart
 import com.example.trex_kotlin.posture.OutDirection
-import com.example.trex_kotlin.posture.FLOOR_RULES_ASSET
 import com.example.trex_kotlin.posture.FloorChain
 import com.example.trex_kotlin.posture.FloorCoverage
 import com.example.trex_kotlin.posture.FloorFeatureExtractor
@@ -281,20 +281,12 @@ fun PostureLiveSessionScreen(
     // 분석 스레드와 공유하는 ref 들을 한 객체로 — remember 44개를 하나로 줄여 이 Composable 메서드를 작게 한다(2026-10-02 ART VerifyError, PostureSupport.kt 주석)
     // 프로필 키는 배치 지문(§91)의 거리·높이 척도에 쓴다 — 홀더에 두어 이 Composable 의 지역 변수를 늘리지 않는다(dex 레지스터, CLAUDE.md)
     val refs = remember { LiveSessionRefs().also { it.subjectHeightCm[0] = host.profileHeightCm() ?: 0f } }
+    // 규칙·정상 자세 참조는 백그라운드에서 한 번만 읽어 앱 수명 동안 같이 쓴다(PostureLiveAssets, 스펙 §115)
     LaunchedEffect(Unit) {
-        refs.normalReferenceRef[0] = runCatching {
-            NormalPoseReference.parse(host.readAsset(NormalPoseReference.ASSET).lineSequence())
-        }.getOrDefault(NormalPoseReference(emptyList()))
-        runCatching {
-            val standing = PostureRuleSet.loadText(host.readAsset(PostureRuleSet.ASSET_PATH))
-            try {
-                val floor = PostureRuleSet.loadText(host.readAsset(FLOOR_RULES_ASSET))
-                floorExercises = floor.rules.map { it.exercise }.toSet()
-                PostureRuleSet("${standing.version}+${floor.version}", standing.generated, standing.rules + floor.rules)
-            } catch (_: Throwable) {
-                standing
-            }.plusRepForm()   // spec §62a 반복별 검사(발 너비·발끝·무릎 바닥) — AIHub 밖 항목
-        }.onSuccess { ruleSet = it }
+        val assets = PostureLiveAssets.load(host)
+        refs.normalReferenceRef[0] = assets.normalReference
+        floorExercises = assets.floorExercises
+        assets.ruleSet?.let { ruleSet = it }
     }
     // 바닥 종목은 중력/3D 피처 대신 2D 평면 피처를 쓴다 (spec §25). 분석 스레드에서 매 프레임 읽으므로 ref 로 전달.
     val isFloorExercise = profile?.floor == true || aihubExercise in floorExercises
@@ -532,9 +524,7 @@ fun PostureLiveSessionScreen(
     val subjectId = remember { host.subjectId() }
     // 어떤 빌드가 센 세트인지 — 폰 검증 전후 빌드를 로그만으로 가른다 (spec §58 단계 0)
     val appVersion = remember { host.appVersion() }
-    var savedSets by remember { mutableIntStateOf(0) }
     var recordedFrames by remember { mutableIntStateOf(0) }
-    LaunchedEffect(Unit) { savedSets = runCatching { logStore.totalSets() }.getOrDefault(0) }
 
     // 세트 마감 — 세트 경계에서 호출된다. 종목/뷰는 **세트 시작 시점 값**을 인자로 받는다 —
     // 이 화면은 다음 운동으로 넘어가도 재생성되지 않아(AnimatedContent 의 같은 route), 지금 값을 쓰면 종목이 어긋난다.
@@ -712,11 +702,11 @@ fun PostureLiveSessionScreen(
             floorChainSwitches = if (floor && com.example.trex_kotlin.posture.FloorChain.Kind.of(ex) != null) refs.floorLive.chainSwitches() else null,
             hold = holdSnap?.let { HoldLog.of(it, t0) },
         )
-        // 분석 executor 는 화면 종료 시 shutdown 되므로 앱 수명의 기록 스레드에서 쓴다. 실패는 삼키지 않고 feedback 로그에 남긴다
-        SetLogStore.writer.execute {
+        // 분석 executor 는 화면 종료 시 shutdown 되므로 앱 수명의 기록 스레드에서 쓴다. 실패는 삼키지 않고 feedback 로그에 남긴다.
+        // 배포 빌드는 파일로 남기지 않는다(스펙 §116) — 리포트·기록은 아래에서 그대로 만든다
+        if (PLATFORM_DEV_TOOLS) SetLogStore.writer.execute {
             runCatching {
                 logStore.append(log)
-                savedSets = logStore.totalSets()
             }.onFailure { speech.traceFeedback("set_log_failed", "${log.setId} ${it::class.simpleName}: ${it.message}") }
         }
         PostureSetReport.build(
@@ -1383,9 +1373,6 @@ fun PostureLiveSessionScreen(
                 modifier = Modifier.fillMaxSize(),
             )
             if (preparing) PreparationFramingOverlay(sample, Modifier.fillMaxSize())   // 무대 위에 — 검은 배경이 덮지 않게
-            // 무대 보기 전환(§2.1, 사용자 요청 10-23) — 오른쪽 위. ⋯ 패널의 토글과 같은 상태다(패널이 열리면 패널 쪽을 쓴다)
-            if (preparing || !panelVisible) StageViewToggle(showCamera, { showCamera = it },
-                Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(12.dp))
             if (preparing) Column(Modifier.fillMaxWidth().background(Brush.verticalGradient(
                 listOf(Color(0xBB10140E), Color.Transparent))).padding(20.dp)) {
                 val goal = workout.resolvedTarget()
@@ -1430,26 +1417,36 @@ fun PostureLiveSessionScreen(
             guideName = workout.name,
             onTogglePause = onTogglePause,
             cameraError = cameraError ?: stats?.error?.let { "몸을 인식할 수 없어요. 직접 기록으로 계속할 수 있어요." }, onFallback = onFallbackToTimer,
-        ) else Column(mod) {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(18.dp)) {
-                Column(Modifier.weight(1f)) {
-                    AnimatedContent(targetState = liveMessage,
-                        transitionSpec = { fadeIn(tween(180)) togetherWith fadeOut(tween(120)) }, label = "coach-cue") { msg ->
-                        Text(msg ?: "", color = c.text, fontSize = 15.sp, lineHeight = 22.sp)
-                    }
-                    if (workout.resolvedTarget() is WorkoutTarget.Repetitions) {
-                        // 좌우 짝 단위는 단위와, 한쪽을 마친 동안 '반대쪽 차례' 를 붙인다 — 화면 전용(쪽을 모르므로 말하지 않는다, 원칙 #6)
-                        val autoLabel = listOfNotNull("자동 횟수 · 참고",
-                            SIDE_PAIR_UNIT_HINT.takeIf { repUnit == RepUnit.SIDE_PAIR },
-                            "왼·오 따로 셈".takeIf { sideTallies != null },
-                            SIDE_PAIR_NEXT_HINT.takeIf { repUnit == RepUnit.SIDE_PAIR && repHalfPending }).joinToString(" · ")
-                        Text(if (refs.repRef[0] == null) "직접 횟수 기록" else if (validation) RepValidation.BANNER else autoLabel, color = c.text2,
-                            fontSize = 11.sp, modifier = Modifier.padding(top = 6.dp))
-                    }
+            goalLabel = workout.resolvedTarget().let { if (it is WorkoutTarget.Duration) it.amount.asClock() else "${it.amount}회" },
+            setLabel = setLabel,
+        ) else Column(mod, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            // 제어판 디자인(스펙 §115) — 손잡이(접기) · 세 칸 수치(세트 경과 · 남은 시간/센 횟수 · 세트) · 안내 · 원형 버튼 줄 · 방식 · 칩
+            SessionPanelHandle(onCollapse = { closePanel() }, enabled = !paused)
+            val goal = workout.resolvedTarget()
+            SessionStatsRow("경과", setElapsedSec.asClock(), "세트", setFraction(setLabel)) {
+                when {
+                    goal is WorkoutTarget.Duration -> SessionBigValue(timeLeft.asClock(), caption = "남은 시간")
+                    // 검증 모드는 자동 횟수 숫자를 숨긴다 — 집계자가 앱 숫자에 끌려가지 않게(HUD 와 같은 규칙, §61)
+                    validation && refs.repRef[0] != null -> SessionBigValue("—", "/ ${goal.amount}회")
+                    else -> SessionBigValue("$repetitions", "/ ${goal.amount}회")
                 }
             }
-            modeControl()
+            Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                AnimatedContent(targetState = liveMessage,
+                    transitionSpec = { fadeIn(tween(180)) togetherWith fadeOut(tween(120)) }, label = "coach-cue") { msg ->
+                    Text(msg ?: "", color = c.text, fontSize = 15.sp, lineHeight = 21.sp, textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth())
+                }
+                if (goal is WorkoutTarget.Repetitions) {
+                    // 좌우 짝 단위는 단위와, 한쪽을 마친 동안 '반대쪽 차례' 를 붙인다 — 화면 전용(쪽을 모르므로 말하지 않는다, 원칙 #6)
+                    val autoLabel = listOfNotNull("자동 횟수 · 참고",
+                        SIDE_PAIR_UNIT_HINT.takeIf { repUnit == RepUnit.SIDE_PAIR },
+                        "왼·오 따로 셈".takeIf { sideTallies != null },
+                        SIDE_PAIR_NEXT_HINT.takeIf { repUnit == RepUnit.SIDE_PAIR && repHalfPending }).joinToString(" · ")
+                    Text(if (refs.repRef[0] == null) "직접 횟수 기록" else if (validation) RepValidation.BANNER else autoLabel, color = c.text2,
+                        fontSize = 11.sp, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 2.dp))
+                }
+            }
             WorkoutSessionActions(workout, repetitions, refs.repRef[0] != null, paused,
                 onTogglePause, onRepetitions, onPartial, onSkip,
                 onShowGuide = onShowGuide,
@@ -1457,12 +1454,11 @@ fun PostureLiveSessionScreen(
                     refs.finalizeRef[0]?.invoke(aihubExercise, workout.name, isFloorExercise)?.let(onSetReport)
                     onExit()
                 },
-                onExpandCamera = { closePanel() },
-                directTools = {
-                    SessionTool(if (muted) "음성 꺼짐" else "음성 켜짐", if (muted) "음성 안내 켜기" else "음성 안내 끄기",
-                        if (muted) Icons.AutoMirrored.Rounded.VolumeOff else Icons.AutoMirrored.Rounded.VolumeUp,
-                        { muted = !muted }, Modifier.weight(1f))
-                    SessionTool("카메라", "카메라 전환", Icons.Rounded.Cameraswitch, {
+                livePanel = true,
+                tools = listOf(
+                    SessionToolSpec("음성", if (muted) "음성 안내 켜기" else "음성 안내 끄기",
+                        if (muted) Icons.AutoMirrored.Rounded.VolumeOff else Icons.AutoMirrored.Rounded.VolumeUp) { muted = !muted },
+                    SessionToolSpec("카메라", "카메라 전환", Icons.Rounded.Cameraswitch) {
                         useFrontCamera = !useFrontCamera
                         refs.comparisonRef[0]?.reset(); comparison = ComparisonSnapshot(); comparisonSpeech.clear()
                         locked(refs.repLock) {
@@ -1472,14 +1468,12 @@ fun PostureLiveSessionScreen(
                                 repResets += RepResetEvent(nowMillis(), "camera_switch", refs.lastCounterFrameAt[0].takeIf { t -> t > 0L })
                             }
                         }
-                    }, Modifier.weight(1f))
-                    // 무대 토글(§2.1) — 영상을 보고 싶을 때. 세션 동안 유지
-                    SessionTool(if (showCamera) "영상" else "뼈대만", if (showCamera) "뼈대만 보기" else "카메라 영상 보기",
-                        Icons.Rounded.PhotoCamera, { showCamera = !showCamera }, Modifier.weight(1f))
-                    // 숫자 읽기 토글(§7) — 기본은 틱. 바닥 종목은 화면을 못 보므로 기본 켬
-                    SessionTool(if (speakNumbers) "숫자 읽기" else "틱 소리", if (speakNumbers) "횟수를 틱 소리로" else "횟수를 숫자로 읽기",
-                        Icons.AutoMirrored.Rounded.VolumeUp, { speakNumbers = !speakNumbers; refs.floorLive.speakNumbers = speakNumbers }, Modifier.weight(1f))
-                })
+                    },
+                ),
+                // 숫자 읽기 토글(§7) — 기본은 틱. 바닥 종목은 화면을 못 보므로 기본 켬
+                moreTools = listOf(SessionToolSpec(if (speakNumbers) "숫자 읽기" else "틱 소리", if (speakNumbers) "횟수를 틱 소리로" else "횟수를 숫자로 읽기",
+                    Icons.AutoMirrored.Rounded.VolumeUp) { speakNumbers = !speakNumbers; refs.floorLive.speakNumbers = speakNumbers }),
+                belowActions = modeControl)
         }
     }
 
@@ -1533,11 +1527,16 @@ fun PostureLiveSessionScreen(
             },
             camera = { cameraArea(Modifier.fillMaxSize()) },
             controls = {
-                panel(Modifier.fillMaxSize().clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)).background(c.bg)
+                // 흰 둥근 판(스펙 §115) — 영상 쪽 가장자리에 옅은 그림자를 둔다
+                panel(Modifier.fillMaxSize().shadow(10.dp, RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
+                    .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)).background(c.surface)
                     .then(if (preparing) Modifier else Modifier.verticalScroll(rememberScrollState()))
-                    .padding(horizontal = 12.dp, vertical = 10.dp))
+                    .padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 10.dp))
             },
         )
+        // Keep the toggle above the adaptive camera/panel layout so it never moves into the PiP.
+        StageViewToggle(showCamera, { showCamera = it },
+            Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(12.dp))
     }
 }
 

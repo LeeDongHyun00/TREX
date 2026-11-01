@@ -5,6 +5,8 @@ import android.content.Context
 import android.content.SharedPreferences
 import com.example.trex_kotlin.posture.SetLabelStore
 import com.example.trex_kotlin.posture.SetSelfLabel
+import com.example.trex_kotlin.sync.BinaryResponse
+import com.example.trex_kotlin.sync.BinaryTransport
 import com.example.trex_kotlin.sync.HttpResponse
 import com.example.trex_kotlin.sync.HttpTransport
 import com.example.trex_kotlin.sync.NetworkException
@@ -23,8 +25,14 @@ import java.net.URL
 class AndroidAppPlatform(private val app: Application) : AppPlatform {
     override fun preferences(name: String): KeyValueStore = SharedPreferencesStore(app, name)
     override val http: HttpTransport = HttpUrlConnectionTransport
+    override val binary: BinaryTransport = HttpUrlConnectionBinaryTransport
     override val apiBaseUrl: String get() = BuildConfig.TREX_API_BASE_URL
     override val googleWebClientId: String get() = BuildConfig.GOOGLE_WEB_CLIENT_ID
+    /** Apple 웹 로그인(설계 §9) — Services ID·Return URL 이 설정된 빌드만. 비어 있으면 눌러도 안 되는 버튼을 그리지 않는다. */
+    override val appleSignInAvailable: Boolean get() = BuildConfig.APPLE_SERVICES_ID.isNotBlank() && BuildConfig.APPLE_REDIRECT_URI.isNotBlank()
+    /** 저장소 빌드는 끝에 "-dev" 가 붙는다(§116) — 배포 빌드와 설정 화면에서도 갈린다. */
+    override val appVersion: String get() = BuildConfig.VERSION_NAME
+    override val appBuild: String get() = BuildConfig.VERSION_CODE.toString()
     override fun muscleLoadDatabase(): MuscleLoadDatabase = MuscleLoadStore(app)
 
     override fun appendSetLabel(label: SetSelfLabel) {
@@ -88,6 +96,34 @@ object HttpUrlConnectionTransport : HttpTransport {
                     val status = conn.responseCode
                     val stream = if (status < 400) conn.inputStream else conn.errorStream
                     HttpResponse(status, stream?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }.orEmpty())
+                } finally {
+                    conn.disconnect()
+                }
+            } catch (e: IOException) {
+                throw NetworkException(e.message, e)
+            }
+        }
+}
+
+/** [BinaryTransport] 의 Android 구현 — 커뮤니티 사진 올리기·받기. 사진은 글자보다 커서 읽기 시간을 30 s 로 둔다. */
+object HttpUrlConnectionBinaryTransport : BinaryTransport {
+    override suspend fun exchange(method: String, url: String, headers: Map<String, String>, body: ByteArray?): BinaryResponse =
+        withContext(Dispatchers.IO) {
+            try {
+                val conn = URL(url).openConnection() as HttpURLConnection
+                try {
+                    conn.requestMethod = method
+                    conn.connectTimeout = 10_000
+                    conn.readTimeout = 30_000
+                    headers.forEach { (name, value) -> conn.setRequestProperty(name, value) }
+                    if (body != null) {
+                        conn.doOutput = true
+                        conn.setFixedLengthStreamingMode(body.size)
+                        conn.outputStream.use { it.write(body) }
+                    }
+                    val status = conn.responseCode
+                    val stream = if (status < 400) conn.inputStream else conn.errorStream
+                    BinaryResponse(status, stream?.use { it.readBytes() } ?: ByteArray(0))
                 } finally {
                     conn.disconnect()
                 }

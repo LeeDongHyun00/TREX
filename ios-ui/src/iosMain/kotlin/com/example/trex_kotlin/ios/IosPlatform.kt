@@ -5,6 +5,7 @@ import com.example.trex_kotlin.KeyValueStore
 import com.example.trex_kotlin.MuscleLoadDatabase
 import com.example.trex_kotlin.posture.SetLabelFormat
 import com.example.trex_kotlin.posture.SetSelfLabel
+import com.example.trex_kotlin.sync.BinaryTransport
 import com.example.trex_kotlin.sync.HttpTransport
 import kotlinx.atomicfu.locks.SynchronizedObject
 import kotlinx.atomicfu.locks.synchronized
@@ -44,6 +45,7 @@ import platform.posix.memcpy
 open class IosAppPlatform : AppPlatform {
     override fun preferences(name: String): KeyValueStore = UserDefaultsStore(name)
     override val http: HttpTransport = UrlSessionTransport
+    override val binary: BinaryTransport = UrlSessionBinaryTransport
     /** Android gradle.properties `trex.apiBaseUrl` 과 같은 서버. */
     override val apiBaseUrl: String = "https://trex-api.duckdns.org"
     /**
@@ -51,6 +53,15 @@ open class IosAppPlatform : AppPlatform {
      * 비어 있으면 앱 상태가 "구글 로그인이 아직 준비되지 않았어요" 로 밝힌다. iPhone 클라이언트 ID 는 Swift 다리가 `GIDClientID` 로 읽는다.
      */
     override val googleWebClientId: String = (NSBundle.mainBundle.objectForInfoDictionaryKey("GIDServerClientID") as? String).orEmpty()
+    /**
+     * Apple 로그인(설계 docs/superpowers/specs/2026-10-29-apple-sign-in-design.md) — Swift 다리 `AppleSignInBridge` 가 있으면 쓸 수 있다.
+     * 다리 없이 띄운 화면(프로브 등)에서는 거짓 — 눌러도 안 되는 버튼을 그리지 않는다.
+     */
+    override val appleSignInAvailable: Boolean get() = IosAppleSignInRegistry.bridge != null
+    /** project.yml `MARKETING_VERSION` — App Store 에 보이는 버전. */
+    override val appVersion: String = (NSBundle.mainBundle.objectForInfoDictionaryKey("CFBundleShortVersionString") as? String).orEmpty()
+    /** project.yml `CURRENT_PROJECT_VERSION` — 같은 버전을 다시 올리면 이것만 오른다. */
+    override val appBuild: String = (NSBundle.mainBundle.objectForInfoDictionaryKey("CFBundleVersion") as? String).orEmpty()
     override fun muscleLoadDatabase(): MuscleLoadDatabase = FileMuscleLoadDatabase(appSupportPath("TREX") + "/muscle_load.json")
     override fun appendSetLabel(label: SetSelfLabel) = SetLabelFiles(documentsPath() + "/posture_logs").append(label)
 }

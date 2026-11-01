@@ -151,6 +151,14 @@ class SocialSyncApiTest {
     }
 
     @Test
+    void apple_설정이_없어도_구글_로그인은_된다() throws Exception {
+        // 이 테스트는 진짜 Apple 검증기 — 테스트 설정에 APPLE_CLIENT_IDS 가 없다(운영에서 비운 채 배포한 상황)
+        mvc.perform(post("/api/auth/oauth/apple").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"identityToken\":\"x.y.z\",\"nonce\":\"n\"}")).andExpect(status().isUnauthorized());
+        google(uniq(), null, false, "x").andExpect(status().isOk());
+    }
+
+    @Test
     void 콘솔이_꺼진_h2_console_주소는_404() throws Exception {
         mvc.perform(get("/h2-console")).andExpect(status().isNotFound());
     }

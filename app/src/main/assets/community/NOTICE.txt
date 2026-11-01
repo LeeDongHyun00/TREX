@@ -1,0 +1,6 @@
+TREX 커뮤니티 기본 프로필 그림 — Chromium 오프라인 공룡(BSD-3-Clause)
+원본: https://chromium.googlesource.com/chromium/src/+/main/components/neterror/resources/images/default_200_percent/offline/200-offline-sprite.png
+자리: 2배 스프라이트의 (1678, 2) 88x94 — Chromium dino_game/offline_sprite_definitions.ts 의 hdpi tRex 첫 프레임(서 있는 모습).
+TREX 변경: 그 칸만 잘라 RGBA PNG 로 저장(trex_avatar.png). 색·모양은 바꾸지 않았다.
+라이선스 전문: CHROMIUM-LICENSE.txt (Copyright 2015 The Chromium Authors).
+Google·Chromium 이 TREX 를 보증하거나 TREX 와 관계있다는 뜻이 아니다.

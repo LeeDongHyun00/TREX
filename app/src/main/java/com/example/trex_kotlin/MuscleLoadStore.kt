@@ -37,7 +37,7 @@ internal class MuscleLoadStore(context: Context) : SQLiteOpenHelper(context, "mu
                 }
                 corrected.forEach { put(db,it) }
             }
-            db.delete("load_sets", "ended_at < ?", arrayOf((now - MuscleLoadEngine.RETENTION_MS).toString()))
+            db.delete("load_sets", "ended_at < ?", arrayOf(workoutRetentionStart(now).toString()))
             db.setTransactionSuccessful()
         } finally { db.endTransaction() }
         val sets = db.rawQuery("SELECT raw FROM load_sets ORDER BY ended_at", null).use { cursor ->

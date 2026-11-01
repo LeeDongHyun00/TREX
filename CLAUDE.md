@@ -48,7 +48,7 @@ Android Kotlin/Jetpack Compose 운동·식단 앱. 핵심 기능은 **카메라 
 
 - ⚠️ **새로 클론했다면 먼저** `chmod +x gradlew` — git 에 등록된 모드가 100644 라 `./gradlew` 가 Permission denied 로 실패한다(실행비트 변경이 아직 미커밋).
 - macOS 에 `timeout` 명령이 없다. gradle 은 수 분 걸릴 수 있다.
-- 유닛 테스트에서 **`org.json` 은 스텁**이다 — 직렬화 코드는 직접 문자열로 만든다(`SetLogJson`, `SetLabelStore` 가 그렇게 돼 있다).
+- 유닛 테스트의 `org.json` 은 **실제 구현**이다(2026-10-29, `testImplementation(libs.org.json)` — 커뮤니티 API 파싱 검증). 그 전에는 Android 스텁이라 직렬화 코드를 직접 문자열로 만들었다(`SetLogJson`, `SetLabelStore` 가 그 흔적이고 그대로 둔다).
 - 주석·KDoc·사용자 문구는 **한국어**. 판정·코칭 문장은 존댓말 평서체, 공룡 말투("~해룡")는 완료 화면 제목류에만.
 - `posture` 패키지는 앱 최상위 패키지에 의존하지 않는다 — 단 **엔진 파일에 한한다**. 개발용 화면 `BaselineGuideScreen`·`PostureLabScreen` 은 테마 상수 때문에 이미 예외다.
 
@@ -60,7 +60,7 @@ Android Kotlin/Jetpack Compose 운동·식단 앱. 핵심 기능은 **카메라 
 
 세션마다 세트 로그(원본 프레임 피처)가 `/sdcard/Android/data/com.example.trex_kotlin/files/posture_logs/sets-YYYYMMDD.jsonl` 에 쌓인다. 자가 라벨은 `labels/set_labels.jsonl` 과 `rep_truth.csv`. 회수는 `research/aihub_fitness/pull_logs.py`(단 adb 경로가 Windows 로 하드코딩돼 있다).
 
-**체험판 배포(§98 이후)**: `docs/ANDROID_PREVIEW_RELEASE_1_3_0_6.md` — `assembleRelease` 는 debug 키스토어로 서명되고(`signingConfigs.getByName("debug")`), 릴리스 자산 `BUILD_INFO.json`(versionCode·apkSHA256·certificateSHA256)이 **앱 내 업데이트(`AppUpdate.kt`)의 정본**이라 빠뜨리면 앱이 그 릴리스를 건너뛴다. 릴리스 생성은 GitHub API(`scripts/publish_release.sh` 절차는 그 문서).
+**체험판 배포(§98 이후)**: `docs/ANDROID_PREVIEW_RELEASE_1_3_0_6.md` — `assembleRelease` 는 debug 키스토어로 서명되고(`signingConfigs.getByName("debug")`), 릴리스 자산 `BUILD_INFO.json`(versionCode·apkSHA256·certificateSHA256)이 **앱 내 업데이트(`AppUpdate.kt`)의 정본**이라 빠뜨리면 앱이 그 릴리스를 건너뛴다. 릴리스 생성은 GitHub API(`scripts/publish_release.sh` 절차는 그 문서). **배포 APK 는 `./gradlew :app:assembleRelease -Ptrex.distribution=true` 로 만든다**(§116) — 플래그 없이 빌드하면 실검증 도구(세트 로그·음성 기록·자가 라벨·횟수 검증 모드)가 켜지고 버전 이름이 `-dev` 로 끝나며, `publish_release.sh` 가 그 APK 를 거부한다. iPhone 배포 빌드는 `xcodebuild … TREX_DEV_TOOLS=NO` — **App Store 업로드는 Actions `iOS App Store 업로드`(`ios-release.yml`, §121)만 쓴다**. App Store 는 Xcode 26 빌드만 받는데 저장소 주인 Mac(2017 MBP, Xcode 16.2)은 Xcode 26 을 못 깐다. 시크릿은 보호 환경 `app-store` 에만(§121a — 저장소 시크릿에 넣지 않는다), 절차는 `docs/IOS_APP_STORE_RELEASE.md`.
 
 **설치 함정**: 기기에 다른 키로 서명된 빌드가 있으면 설치가 거부된다. 삭제 후 재설치해야 하는데 그러면 운동 기록·기준선이 지워진다. 지우기 전에 반드시 백업한다 — 로그는 `adb pull`, 내부 저장소는 디버그 빌드라 `adb shell "run-as com.example.trex_kotlin cat shared_prefs/…"` 로 꺼낼 수 있다(복원은 앱 전용 외부 폴더를 경유해야 한다. 앱 UID 는 `/sdcard` 루트를 못 읽는다).
 

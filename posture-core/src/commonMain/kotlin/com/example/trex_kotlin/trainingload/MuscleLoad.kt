@@ -111,7 +111,8 @@ data class LoadSnapshot(val muscles: List<MuscleStatus> = Muscle.entries.map { M
 }
 
 object MuscleLoadEngine {
-    const val RETENTION_MS = 90L * 24 * 60 * 60 * 1000
+    const val RETENTION_DAYS = 7
+    const val RETENTION_MS = RETENTION_DAYS * 24L * 60 * 60 * 1000
     fun doses(set: LoadSet): List<MuscleDose> {
         val p = MuscleLoadCatalog.find(set.exerciseId) ?: return emptyList()
         fun sane(v: Double) = if (v.isFinite()) v.coerceAtLeast(0.0) else 0.0
@@ -132,9 +133,10 @@ object MuscleLoadEngine {
     }
     fun decay(hours: Double): Double = .35 * 2.0.pow(-hours.coerceAtLeast(0.0) / 6.0) + .65 * 2.0.pow(-hours.coerceAtLeast(0.0) / 24.0)
     fun score(load: Double) = 100.0 * (1.0 - exp(-load.coerceAtLeast(0.0) / 6.0))
-    fun snapshot(sets: List<LoadSet>, now: Long, prepared: Map<String,List<MuscleDose>> = emptyMap()): LoadSnapshot {
+    fun snapshot(sets: List<LoadSet>, now: Long, prepared: Map<String,List<MuscleDose>> = emptyMap(),
+                 oldestAt: Long = now - RETENTION_MS): LoadSnapshot {
         // 재시도/세트 수정은 같은 ID의 최신 입력 한 건으로 계산한다.
-        val retained = sets.associateBy { it.id }.values.filter { it.endedAt <= now && it.endedAt >= now - RETENTION_MS }
+        val retained = sets.associateBy { it.id }.values.filter { it.endedAt <= now && it.endedAt >= oldestAt }
         val sums = mutableMapOf<Pair<Muscle, String>, Double>(); val last = mutableMapOf<Muscle, Long>()
         retained.forEach { s ->
             val k = decay((now - s.endedAt) / 3_600_000.0)
