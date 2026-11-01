@@ -31,6 +31,12 @@
 -keep class com.google.protobuf.** { *; }
 -dontwarn com.google.mediapipe.**
 -dontwarn com.google.protobuf.**
+# MediaPipe 의 로거(Flogger)도 통째로 둔다(스펙 §121, 다른 작업 폴더 커밋 94941d91 에서 옮김). FluentLogger.forEnclosingClass() 는 스택에서 자기 프레임 다음 프레임으로
+# 호출 클래스를 찾는데, R8 이 그 메서드를 MediaPipe 클래스(Graph 등) 안으로 인라인하면 자기 프레임이 사라져 Graph 정적 초기화가
+# "no caller found on the stack" 으로 실패하고 PoseLandmarker·FaceLandmarker 를 만들 수 없다 — 카메라 자세 분석 전체가 죽는다.
+# v1.4 APK(b2dd0f2a)는 dex 확인에서 인라인되지 않았지만, R8 의 인라인 판단은 빌드·라이브러리 버전마다 바뀌므로 막아 둔다.
+-keep class com.google.common.flogger.** { *; }
+-dontwarn com.google.common.flogger.**
 
 # LiteRT(사진 식단 TFLite) — 자바 패키지는 org.tensorflow.lite 그대로이고 네이티브가 이름으로 부른다.
 -keep class org.tensorflow.lite.** { *; }

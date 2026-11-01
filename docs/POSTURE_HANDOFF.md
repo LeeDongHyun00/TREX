@@ -652,3 +652,7 @@ Verification: app JVM 914 tests passed (zero failures/errors/skips); assembleDeb
 ## 2026-11-01 — HUD beta '참고 · …' 칩 제거 (§129)
 
 사용자 결정 "호박색 문구는 어차피 못 보니까 제거해". `LiveWorkoutHud.referenceNote` 와 `PostureLive` 의 `provisionalNote`·`repReferenceNote`·`provisionalAtRef` 를 뺐다. beta 는 뼈대 호박색과 완료 화면에만. 호박색 글자는 횟수 메모·일시정지·플랭크 멈춤 줄만 남는다. 준비 화면 주황 자리 안내는 그대로. 코드 확인에서 본 결함(컬·런지 beta 칩이 창 규칙 3 s 갱신에 지워짐)은 칩 제거로 함께 사라졌다.
+
+## 2026-11-01 — Android 체험판 TREX v1.4 (1.4.0, versionCode 15)
+
+GitHub 사전 릴리스 `v1.4.0`(새 페이지) — PR #61 빌드 커밋 `b2dd0f2a86d20cc1d87f9e315d67386491dfa2da`, 배포 빌드, APK SHA-256 `332497558e265b191ac2d1da09019d440a029d547a648fe0e6bd4b575e4eb523`. 코드 15 는 Play 1.3.0(14)·내부 빌드(13) 위. 본문 `docs/ANDROID_RELEASE_1_4_0.md`. 같은 날 preview.7 릴리스 자산도 같은 코드(27eaa909, 코드 12)로 교체해 뒀다. 배포 APK 의 폰 설치·세션 검증은 안 했다.
