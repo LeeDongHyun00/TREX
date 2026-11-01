@@ -116,6 +116,22 @@ object RuleHighlight {
         return ship to beta
     }
 
+    /**
+     * 한 회의 위반 부위를 **결과**로 가른 세 채널(§125, 사용자 요청 2026-11-01 "코칭 라인과 차단 라인이 같은 빨강이라 헷갈린다").
+     * [blocked] = 이 회를 횟수에서 뺀 검사(ship 차단, 또는 §124a 의 명시적 횟수 예외) → 빨강. [coaching] = 말했지만 센 검사(ship 코칭 띠) → 주황.
+     * [provisional] = 말하지 않는 참고(beta) → 호박. 같은 관절이 둘에 걸리면 센 쪽(빨강 > 주황 > 호박)만 — 종전 두 채널([forRepForm])은 그대로 둔다.
+     */
+    data class RepFormHighlight(val blocked: Set<Int>, val coaching: Set<Int>, val provisional: Set<Int>)
+
+    fun tiers(rep: RepFormRep): RepFormHighlight {
+        fun feat(o: RepFormOutcome): String = o.check.highlight?.let { h -> rep.side?.let { h.replace("{front}", it.key) } ?: h.replace("_{front}", "") } ?: o.check.feature
+        val bad = rep.outcomes.filter { it.verdict == Verdict.VIOLATION }
+        val blocked = bad.filter { (it.check.ship && it.gate) || it.countOnlyGate }.flatMap { landmarksFor(feat(it)) }.toSet()
+        val coaching = bad.filter { it.check.ship && !it.gate }.flatMap { landmarksFor(feat(it)) }.toSet() - blocked
+        val beta = bad.filter { !it.check.ship && !it.countOnlyGate }.flatMap { landmarksFor(feat(it)) }.toSet() - blocked - coaching
+        return RepFormHighlight(blocked, coaching, beta)
+    }
+
     /** 위반 중인 규칙들의 강조 관절 합집합. */
     fun forViolations(states: List<OnsetState>): Set<Int> = states
         .filter { it.recent == Verdict.VIOLATION }

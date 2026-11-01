@@ -3389,3 +3389,19 @@ Validation: Android 778 unit tests and 525 common JVM tests pass; debug and inst
 **검증.** 앱 JVM 테스트·`posture-core` jvmTest 통과(커밋 메시지 참조), `tools/sync_ios_core.py --check` 통과(`NAMES` 에 `FourExerciseForm` 추가). 실기기는 미확인 — PR 59 빌드로 11-01 14:34 에 찍힌 세트는 `.aes` 라 읽지 못했다.
 
 **원 PR 에 남는 것(여기 포함 안 함).** AES-256 로컬 암호화(PR 59)·iOS 암호화(PR 60). 암호화가 들어오면 세트 로그 `.aes` 를 `pull_logs.py`·재생기가 읽을 길(개발자 빌드 평문 예외 또는 복호 도구)이 같이 와야 실검증 루프(DEV_TOOLS.md)가 유지된다.
+
+## §125. 뼈대·화살표 색 = 결과 — 빨강(회 제외) · 주황(말했지만 셈) · 호박(참고) (2026-11-01, 사용자 요청)
+
+**요청.** "코칭 라인과 차단 라인이 빨간색으로 같은데 주황색으로 표현해서 다르게 표현했으면 좋겠어, 헷갈리지 않게." 종전 색의 뜻은 **말함/안 말함**이었다(`docs/LIVE_SCREEN_REDESIGN.md` §2.3 — 붉음 = 말하는 판정(ship), 호박 = 말하지 않는 판정(beta)). 2단 검사(§62c 후속 10·§101f)가 생긴 뒤로는 ship 위반에 '말만 하고 센 회(코칭 띠)' 와 '뺀 회(차단 띠)' 가 있는데 둘 다 빨강이라, 사용자는 빨강을 보고 회가 빠졌는지 알 수 없었다. 검토 결론: **색의 뜻을 '결과' 로 바꾼다** — 사용자가 화면에서 알아야 할 것은 "이 회가 세어졌나" 이지 "앱이 말했나" 가 아니다(말했는지는 귀로 안다).
+
+| 색 | 뜻 | 들어가는 것 |
+|---|---|---|
+| 빨강 `WARN` FF5A5A | 이 회(시간)를 **뺐다** | ship 차단 띠(`gate`), §124a 명시적 횟수 예외(`countOnlyGate`), 판별 기각(REASON), 가동 범위 미달(ROM), 플랭크 멈춤(HOLD), 세지 않은 얕은 걸음 |
+| 주황 `COACH` FF8C42 | **말했지만 셌다** | ship 코칭 띠(2단 검사의 아래 띠), 세트 창 규칙(WINDOW — 점수엔 들어가지만 회는 빼지 않는다), 유지 자세(반복이 아님), 처음부터 알림(NOTICE), 시선(GAZE — 횟수를 막지 않는다) |
+| 호박 `PROVISIONAL` FFC24B | 말하지 않는 **참고**(beta) | 종전 그대로. 바닥 계열의 그림(`soft`)도 그대로 |
+
+구현: `RuleHighlight.tiers(rep)` → `RepFormHighlight(blocked, coaching, provisional)`(같은 관절은 센 쪽만 — 빨강 > 주황 > 호박; 종전 `forRepForm` 두 채널은 재생기·테스트용으로 그대로), `SkeletonStage(highlight, coaching, provisional)` 세 채널 — 주황은 **빨강과 같은 굵기**(연결선 1.8×, 관절 6 dp, 바깥 원)로 그려 호박(1.3×, 5 dp)과 굵기로도 갈린다(주황·호박은 색상환에서 이웃이라 색만으로는 약하다). `MotionCue.blocked`(기본 true) — 반복 검사 화살표는 `RepFormEvent.gated`, 창 규칙·알림·유지 자세·시선은 false. `PostureLive` 에 상태 하나(`formCoachHighlight`) — `PostureLiveSessionScreen` 지역 변수 한도(dex 256 레지스터) 때문에 설치 뒤 `cmd package compile -m verify` 로 확인했다(커밋 메시지 참조). TRACK·준비·일시정지·바닥은 종전처럼 빨강·주황 없음. iOS 는 같은 `SkeletonStage`·`PostureLive`(§108c) 라 함께 바뀐다.
+
+테스트: `RepFormTest.coachingTierIsPaintedOrangeAndBlockingTierRed` — 바벨 컬(2단) 상체 숙임 +17° → 주황, +27° → 빨강(같은 관절은 주황에 남지 않음), 덤벨 컬(1단, §123) +17° → 빨강.
+
+**§125a — 글자 대신 기호(검토안, 미구현).** 같은 날 추가 요청: "말 대신 화살표나 다른 기호로 표현하는 것도 검토해, 실제 운동 시 너무 작아서 텍스트가 안 보여." 현재 세트 중 화면 글자는 넷 — 교정 문장(`formNote`), 안내(`guideNote`), 참고 칩(`referenceNote`/`provisionalNote`), 창 규칙 배너(`coachBanner`). 이 가운데 **교정의 '무엇을·어디로'** 는 이미 글자가 아니라 화살표가 맡는다(§101 — "말하는 사유 ⇒ 그림", `CueMotionCoverageTest` 가 잠근다; 방향이 없는 지적은 점 `MARK`). 글자에만 남아 있는 정보는 두 가지다: (1) **이 회가 빠졌다** — "이 회는 세지 않았어요" 는 글자와 낮은 틱뿐이고 HUD 숫자는 '안 오름' 으로만 보인다, (2) **참고(beta)** 의 내용. 제안: (1) 은 HUD 큰 숫자 옆에 **빨간 ✕ 배지 + 숫자 붉은 점멸 1.2 s**(글리프 = 결과, §125 색과 같은 뜻) — 글자는 남기되(완료 화면·접근성) 읽지 않아도 알게 한다; 코칭 띠는 주황 화살표만으로 충분하고 배지는 없다(회가 셌으니까); (2) 참고는 호박 관절·점이 이미 위치를 말하므로 칩을 문장 대신 **ⓘ 아이콘 + 부위 한 단어**로 줄인다. 하지 않을 것: 교정 문장을 더 큰 글자로 — 2~3 m 에서 폰 글자는 어떤 크기여도 읽기 어렵고 화면 자리를 먹는다; 기호 어휘를 늘리는 것(✕·화살표·점 셋을 넘기면 다시 외워야 한다). 비용: HUD 한 줄(`LiveWorkoutHud`)과 `PostureLive` 상태 하나(레지스터 한도 — 홀더 `LiveSessionRefs` 에 둔다). **결정 대기** — 승인되면 §125b 로 구현.

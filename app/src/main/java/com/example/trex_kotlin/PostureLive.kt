@@ -392,12 +392,13 @@ fun PostureLiveSessionScreen(
     // 반복별 자세 검사 위반 부위(§62c 후속 4) — 그 회가 끝난 순간부터 FORM_HIGHLIGHT_MS 동안 칠한다(창 규칙과 달리 '지금' 이 아니라 '방금 그 회' 의 판정이다).
     // ship = 붉게, beta = '참고' 색. 다음 회가 깨끗하면 바로 지운다. 스탬프가 바뀔 때마다 타이머를 다시 건다
     var formHighlight by remember { mutableStateOf<Set<Int>>(emptySet()) }
+    var formCoachHighlight by remember { mutableStateOf<Set<Int>>(emptySet()) }   // 말했지만 센 회의 부위 — 주황(§125)
     var formProvHighlight by remember { mutableStateOf<Set<Int>>(emptySet()) }
     var formHighlightStamp by remember { mutableLongStateOf(0L) }
     LaunchedEffect(formHighlightStamp) {
         if (formHighlightStamp == 0L) return@LaunchedEffect
         kotlinx.coroutines.delay(FORM_HIGHLIGHT_MS)
-        formHighlight = emptySet(); formProvHighlight = emptySet(); repReferenceNote = null
+        formHighlight = emptySet(); formCoachHighlight = emptySet(); formProvHighlight = emptySet(); repReferenceNote = null
     }
     // ---- 검은 무대(docs/LIVE_SCREEN_REDESIGN.md §2): 세트 시작 뒤 몸이 1 s 보이면 배율을 잠그고, 1.5 s 잃으면 영상으로 돌아간다.
     //      분석 스레드가 프레임마다 갱신한다(sample 과 같은 경로). 사용자 토글은 세션 동안 유지된다
@@ -794,7 +795,7 @@ fun PostureLiveSessionScreen(
         repReferenceNote = null
         refs.provisionalAtRef[0] = 0L
         provisionalHighlight = emptySet()
-        formHighlight = emptySet(); formProvHighlight = emptySet(); formHighlightStamp = 0L
+        formHighlight = emptySet(); formCoachHighlight = emptySet(); formProvHighlight = emptySet(); formHighlightStamp = 0L
         motionCue = null
         breathDir = 0
         repFast = false
@@ -1080,9 +1081,9 @@ fun PostureLiveSessionScreen(
                             }
                             // 틀린 부위를 스켈레톤에 칠한다(§62c 후속 4) — COACH·서서만(TRACK 은 모집단 기준 '틀림' 을 칠하지 않는다, §29)
                             if (coachNow) formReps.lastOrNull()?.let { rep ->
-                                val (red, prov) = RuleHighlight.forRepForm(rep)   // 걸음 검사는 앞다리만(§63), 그 밖은 종전과 같다
-                                formHighlight = red; formProvHighlight = prov
-                                formHighlightStamp = if (red.isEmpty() && prov.isEmpty()) 0L else now
+                                val h = RuleHighlight.tiers(rep)   // 걸음 검사는 앞다리만(§63). 빨강 = 회를 뺀 검사, 주황 = 말만 한 검사, 호박 = 참고(§125)
+                                formHighlight = h.blocked; formCoachHighlight = h.coaching; formProvHighlight = h.provisional
+                                formHighlightStamp = if (h.blocked.isEmpty() && h.coaching.isEmpty() && h.provisional.isEmpty()) 0L else now
                             }
                             // 이 회에서 말할 것 하나(§62c 후속 10): **자세 사유(ship·COACH) > 가동 범위 사유**. 전에는 ROM 이 먼저라 팔꿈치를 앞으로 낸 회(손목이 덜
                             // 내려가 ROM 도 걸린다)가 전부 "덜 폈어요" 로 나갔다(오늘 자세 위반 57회 중 19회). 코칭 문장은 speakLatest — 서로 끊지 않고 하나만 보류한다
@@ -1104,7 +1105,7 @@ fun PostureLiveSessionScreen(
                             refs.heardKeyRef[0] = null; refs.setScopedRef[0] = false
                             if (formEv != null && formEv.ship && gate && !extraStep) {
                                 // 음성 문장을 만든 그 사건이 화살표도 만든다(§3.2) — 두 채널이 다른 부위를 가리키지 않게. 쪽(런지 뒷무릎)·뷰(컬 카메라 쪽 팔)를 넘긴다(§101)
-                                motionCue = MotionCue.of(formEv.check, formEv.direction, formHighlight, now, lastRep?.side, lastRep?.view)
+                                motionCue = MotionCue.of(formEv.check, formEv.direction, formHighlight + formCoachHighlight, now, lastRep?.side, lastRep?.view, blocked = formEv.gated)
                                 refs.heardKeyRef[0] = "rf:${formEv.check.id}"
                                 // 빠진 회는 그 자리에서 이유를 말한다 — 침묵하면 카운트가 죽은 줄 안다. 첫 위반은 교정 문장까지, 같은 검사의 쿨다운(12 s) 안은 짧은 단서(brief).
                                 // 2단 검사의 코칭 단계 위반은 회를 빼지 않으므로 그 말을 붙이지 않는다
@@ -1133,7 +1134,7 @@ fun PostureLiveSessionScreen(
                             } else if (gate && !extraStep && rf != null && lastRep != null) {
                                 // 교정됨(§100): 말한 위반의 검사가 이 회에서 OK 로 판정됐으면 "좋아요, … 교정됐어요"(위반 후보가 없는 회에서만 — LiveCoach 와 같은 순서).
                                 // 가동 범위 미달을 말한 뒤 끝까지 한 회도 교정. 화살표·강조는 지운다
-                                rf.recoveryEvent(lastRep, now) { speech.recoverable("rf:$it") }?.also { say += it.message; formHighlight = emptySet(); formProvHighlight = emptySet(); motionCue = null }
+                                rf.recoveryEvent(lastRep, now) { speech.recoverable("rf:$it") }?.also { say += it.message; formHighlight = emptySet(); formCoachHighlight = emptySet(); formProvHighlight = emptySet(); motionCue = null }
                                 // 가동 범위 교정은 **판정돼 충족한 회**(valid == true)만 — 판정 없는 회(null, 10-08 컬 22172)에 "교정됐어요" 를 말했다(U0). 들린 지적만(§101 장부)
                                 if (say.isEmpty() && refs.romShortSpokenRef[0] && tally.records.lastOrNull()?.valid == true) {
                                     refs.romShortSpokenRef[0] = false
@@ -1178,7 +1179,7 @@ fun PostureLiveSessionScreen(
                             if (gate && rf != null) locked(refs.repLock) { rf.takeNotice(now) }?.let { ev ->
                                 say += ev.message
                                 // 처음부터 알림의 화살표(§101) — 같은 칸에 반복 화살표가 없을 때만
-                                if (ev.ship && motionCue?.startedAt != now) MotionCue.of(ev.check, ev.direction, RuleHighlight.landmarksFor(ev.check.feature), now, lastRep?.side, lastRep?.view)?.let { motionCue = it.copy(origin = MotionOrigin.NOTICE) }
+                                if (ev.ship && motionCue?.startedAt != now) MotionCue.of(ev.check, ev.direction, RuleHighlight.landmarksFor(ev.check.feature), now, lastRep?.side, lastRep?.view, blocked = false)?.let { motionCue = it.copy(origin = MotionOrigin.NOTICE) }   // 알림은 회를 빼지 않는다 — 주황
                             }
                             if (say.isNotEmpty() || screenOnly.isNotEmpty()) formNote = (say + screenOnly).joinToString(" ")
                             // 들림 장부 키(§101): 이 회의 지적(반복 검사·가동 범위) — 교정 문장은 이 문장이 재생을 시작한 뒤에만. 쪽 전환만 있는 문장은 세트 범위(꼬리에서 뺀다)
@@ -1201,7 +1202,7 @@ fun PostureLiveSessionScreen(
                                     formNote = msg
                                     speech.speakLatest(msg)
                                     formHighlight = RuleHighlight.landmarksFor(ev.check.highlight?.let { h -> side?.let { h.replace("{front}", it.key) } ?: h.replace("_{front}", "") } ?: ev.check.feature)
-                                    formProvHighlight = emptySet(); formHighlightStamp = now
+                                    formCoachHighlight = emptySet(); formProvHighlight = emptySet(); formHighlightStamp = now   // 세지 않은 걸음 — 빨강
                                     motionCue = MotionCue.of(ev.check, ev.direction, formHighlight, now, side, rf.lockedView)
                                 }
                             }
@@ -1210,8 +1211,9 @@ fun PostureLiveSessionScreen(
                             locked(refs.repLock) { rf.liveEvent(now) }?.let { ev ->
                                 formNote = ev.message
                                 speech.speakLatest(ev.message)
-                                formHighlight = RuleHighlight.landmarksFor(ev.check.feature); formProvHighlight = emptySet(); formHighlightStamp = now
-                                motionCue = MotionCue.of(ev.check, ev.direction, formHighlight, now)
+                                // 유지 자세는 회가 아니라 뺄 것이 없다 — 주황(§125)
+                                formCoachHighlight = RuleHighlight.landmarksFor(ev.check.feature); formHighlight = emptySet(); formProvHighlight = emptySet(); formHighlightStamp = now
+                                motionCue = MotionCue.of(ev.check, ev.direction, formCoachHighlight, now, blocked = false)
                             }
                         }
                     }
@@ -1367,7 +1369,8 @@ fun PostureLiveSessionScreen(
             SkeletonStage(
                 sample = sample, mirror = useFrontCamera, dark = stageDark, lock = stageLock.takeIf { !preparing },
                 // 바닥은 전부 beta — 빨강(ship 전용) 대신 '참고' 채널로(§99, Q1)
-                highlight = if (preparing || mode == CoachMode.TRACK || paused || isFloorExercise) emptySet() else violHighlight + formHighlight,
+                highlight = if (preparing || mode == CoachMode.TRACK || paused || isFloorExercise) emptySet() else formHighlight,   // 빨강 = 회를 뺀 검사만(§125)
+                coaching = if (preparing || mode == CoachMode.TRACK || paused || isFloorExercise) emptySet() else violHighlight + formCoachHighlight,   // 주황 = 창 규칙·코칭 띠
                 provisional = if (preparing || paused) emptySet() else if (mode == CoachMode.TRACK) comparison.landmarks else if (isFloorExercise) floorFeedback?.landmarks.orEmpty() + formProvHighlight else (provisionalHighlight + formProvHighlight) - formHighlight,
                 visibilityCut = if (isFloorExercise) 0.35f else 0.5f,
                 plankSide = alignment.visibleSide.takeIf { !preparing && alignment.placementReady && mode == CoachMode.COACH && !paused },
@@ -1404,7 +1407,7 @@ fun PostureLiveSessionScreen(
             speech.stop(); comparisonSpeech.clear()
             coachBanner = null; provisionalNote = null; repReferenceNote = null
             violHighlight = emptySet(); provisionalHighlight = emptySet()
-            formHighlight = emptySet(); formProvHighlight = emptySet()
+            formHighlight = emptySet(); formCoachHighlight = emptySet(); formProvHighlight = emptySet()
             // 모드를 바꿔도 현재 세트 초반 기준과 누적 횟수는 유지한다.
         }
     }

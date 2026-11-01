@@ -1161,6 +1161,20 @@ class RepFormCurlTest {
     }
 
     @Test
+    fun coachingTierIsPaintedOrangeAndBlockingTierRed() {
+        // §125(사용자 요청 2026-11-01): 말만 하고 센 회(코칭 띠)와 뺀 회(차단)를 색으로 가른다 — 2단이 남은 바벨 컬 '상체 숙임'(코칭 +15°·차단 +20°)으로
+        val ev = RepFormEvaluator(RepFormSpecs.byExercise.getValue("바벨 컬"), "elbow_minside", 35f, priors = { _, _ -> null }); val f = Frames(ev)
+        assertTrue(RuleHighlight.tiers(f.rep(ev = ev)).let { it.blocked.isEmpty() && it.coaching.isEmpty() && it.provisional.isEmpty() })
+        val coach = RuleHighlight.tiers(f.rep(incl = 22f, ev = ev))   // +17° — 위반이지만 회는 센다 → 주황
+        assertEquals(setOf(11, 12, 23, 24), coach.coaching); assertTrue(coach.blocked.isEmpty())
+        val block = RuleHighlight.tiers(f.rep(incl = 32f, ev = ev))   // +27° — 차단 → 빨강, 같은 관절은 주황에 두지 않는다
+        assertEquals(setOf(11, 12, 23, 24), block.blocked); assertTrue(block.coaching.isEmpty())
+        // 덤벨 컬은 1단(§123)이라 같은 +17° 가 바로 빨강
+        val one = evaluator(); val g = Frames(one); g.rep(ev = one)
+        assertEquals(setOf(11, 12, 23, 24), RuleHighlight.tiers(g.rep(incl = 22f, ev = one)).blocked)
+    }
+
+    @Test
     fun torsoSwingAndFlareAreBetaScreenOnly() {
         val ev = evaluator(); val f = Frames(ev)
         f.rep(ev = ev)
