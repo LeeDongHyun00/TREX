@@ -3342,3 +3342,161 @@ Validation: Android 778 unit tests and 525 common JVM tests pass; debug and inst
 
 **후속(같은 날 저녁) — 종목 전환 9 s 멈춤.** 개발 빌드의 발화 기록(`feedback-20261030.jsonl`): `speech_handoff` 23:00:26.0 → 다음 종목 `prep armed` 23:00:35.2. 세트 마감(`set_end` → handoff 0.34 s)은 빠르고, 멈춤은 다음 화면의 효과가 돌기 전이다. 그 사이 메인 스레드가 한 일은 카메라 다리의 `queue.sync { configure }`(돌아가는 세션의 입력 제거·추가 → `commitConfiguration`)와, 위 3번 수정이 더한 미리보기 레이어의 세션 붙이기·떼기(이것도 돌아가는 세션의 재구성)다. → (a) `start` 는 구성·시작을 카메라 큐에서 하고 결과를 `IosCameraFrameSink.onStarted(failure)` 로 메인에 돌려준다(Kotlin `stream` 은 `CompletableDeferred` 로 기다린다 — 메인은 막히지 않는다). (b) 같은 렌즈가 이미 구성돼 있으면 재구성하지 않는다. (c) 미리보기 레이어는 하나를 세션에 한 번만 붙이고, Compose 에는 호출마다 **새 컨테이너 UIView** 를 주어 레이어를 그 안으로 옮긴다(`releasePreviewView` 는 아직 그 컨테이너 안에 있을 때만 뺀다) — 3번의 "뷰 개별화" 는 컨테이너 단위로 지키면서 세션 재구성은 없앤다. 사진 식단 카메라도 같은 구조.
 
+## §123. 덤벨 컬 1단 — 코칭 띠에서 차단 (2026-11-01, 사용자 결정 2026-10-15, `repform_v0.15`)
+
+**배경.** Play 1.3.0(versionCode 14, 10-30 이후 main 빌드)에서 사용자 보고 "팔꿈치가 벌어지거나 허리를 숙이면 오류는 잡는데 그 회를 횟수로 센다". 11-01 폰 개발자 빌드(main, repform_v0.14) 덤벨 컬 29회 세트(COACH·정면)로 재현: 사이클 29회 · 정확 18회. 음성 기록(`feedback-20261101.jsonl`)과 반복 판정을 맞추면 **지적을 듣고도 세진 회가 6회** — 옆 벌림 Δ +0.17~+0.22(원값 0.28~0.38) 5회, 상체 숙임 +17.5° 1회. 전부 2단 검사의 **코칭 띠**(위반이지만 `gate = false`)였다: 옆 벌림 코칭 +0.15∧원값 0.30 / 차단 +0.20∧원값 0.35, 상체 숙임 코칭 +15° / 차단 +20°(§62c 후속 10).
+
+**결정의 출처.** 2026-10-15 사용자 결정 "덤벨 컬 차단으로 변경"(§108 보고 뒤)은 `claude/sync-local-main-changes-bb8f7d` 워크트리(베이스 10-14 `ca7f1fa0`)에 `repform_v0.16` 으로 구현됐으나 **미커밋·미병합**이었다. main 과 Play 빌드는 그 결정 전 동작이었다. 여기서는 그 작업 중 덤벨 컬 1단만 main 에 옮긴다(같은 워크트리의 §108 가까운 팔 위상·판정 수 표기·스쿼트 깊이 차단은 옮기지 않았다 — 별도 결정).
+
+**변경(`RepFormSpecs.curl`, `oneTier = ex == "덤벨 컬"`).** 2단 검사 4개의 차단 띠를 뗀다 — 코칭 띠 위반 = 차단(1단, `gateHi = null`, 옆 벌림은 `gateAbsMin` 도 null):
+
+| 검사 | 종전(코칭 / 차단) | 지금(덤벨 컬) | 바벨 컬 |
+|---|---|---|---|
+| 상체 숙임 | +15° / +20° | +15° 부터 차단 | 2단 그대로 |
+| 팔꿈치 옆 벌림(정면) | +0.15∧0.30 / +0.20∧0.35 | +0.15∧0.30 부터 차단 | 2단 그대로 |
+| 팔꿈치 앞 이탈(사선) | +0.12 / +0.20 | +0.12 부터 차단 | 2단 그대로 |
+| 팔꿈치 몸에서 떨어짐(사선) | +0.25 / +0.40 | +0.25 부터 차단 | 2단 그대로 |
+
+정책은 스쿼트 무릎 벌림 §101f 와 같다 — 말한 회는 세지 않는다. 상체 숙임이 +15° 부터 차단 단계가 되므로 그 회의 옆 벌림·떨어짐은 `invalidatedBy` 로 '측정 무효' 유보가 된다(회는 숙임으로 이미 빠진다). 바벨 컬은 결정 범위 밖이라 2단 그대로다.
+
+**비용(사용자 정의 게이트 예외).** 코칭 띠의 모집단 정상 오탐은 차단 띠보다 높다 — 앞 이탈 AIHub D/B 5.4·3.3 %, 떨어짐 7.4·4.6 %, 옆 벌림 MM-Fit 0.7·AIHub 2.9 %(단일 프레임 상한). 10-15 워크트리의 MM-Fit 컬 298회 재생에서 자세로 빠지는 회 13 → 15. 원칙 #7 의 입장 조건(≤ 2 %)을 넘지만 사용자 결정이다.
+
+**검증.** 11-01 세트 로그를 재생기(`setlog_captures.py` → `run_replay.py`, 재생기 installDist 재빌드)로 새 엔진에 돌리면 정확 **18 → 12 / 29회** — 코칭 띠 6회가 그대로 빠진다. 앱 JVM 테스트 883건·`posture-core` jvmTest 528건 통과(`RepFormTest` 의 컬 2단 테스트 4건을 1단으로 고침, 바벨 컬 2단 유지 단언 추가)· iOS 는 생성본(`tools/sync_ios_core.py`, `--check` 통과)이라 같은 `RepFormSpecs` 를 쓴다 — `ios-ui` 컴파일은 Mac 에서. **실기기 재확인은 사용자가 한다**(11-01 세트와 같은 조건으로 — 코칭 띠 회가 "이 회는 세지 않았어요" 와 함께 빠지는지).
+
+**부수 발견(미수정).** 11-01 세트 77.3 s 회는 옆 벌림 차단으로 빠졌는데 음성은 우선순위가 앞선 상체 숙임(그때 코칭 띠, 차단 아님) 문장만 말해 "이 회는 세지 않았어요" 가 빠졌다 — `eventFor` 가 첫 위반 검사의 `gated` 만 보기 때문. 1단에서는 숙임도 차단이라 이 경우가 사라지지만, 2단 검사가 남은 종목(바벨 컬·런지)에서는 같은 틈이 있다.
+
+## §124. 굿모닝·푸시업·프런트 레이즈·사이드 레터럴 레이즈 — 반복 검사(beta 참고)와 카운터 신호 (2026-11-01, PR 59 에서 분리, `repform_v0.16`)
+
+**출처.** Kercy-kim 의 PR 59(`feature/posture-aes256`, 커밋 `b792538a`, 10-31)는 Android AES-256 암호화와 네 종목 자세 교정을 한 커밋에 담았다. 사용자 요청(2026-11-01 "aes256 없이 운동 구현이랑 덤벨컬 수정한 것만 올릴 수 있니")으로 **암호화를 뺀 운동 부분만** 체리픽했다(`security/`·SQLCipher·`SetLogStore`·`AndroidSpeech`·`PostureBaseline`·`PostureSetLabel`·`PostureSetLogExport`·`MainActivity`·`AndroidPlatform`·백업 규칙·`PostureLabScreen` 내보내기 비동기화는 제외). 원 PR 은 스펙 절이 없었고 코드 주석이 §123·§123a·§123b 를 가리켰다 — §123 은 덤벨 컬 1단이라 **§124·§124a·§124b 로 바꿨다**. 버전은 원 PR 의 `repform_v0.17` 대신 v0.16(v0.15 = §123).
+
+**설계(원 PR 그대로, 파일 `posture/FourExerciseForm.kt`).** 운동 설명은 임계값 검증 자료가 아니다 — 새 반복 검사는 **전부 beta·화면 참고**(`gates = false`, 음성·점수 없음), 척추 분절·근육의 힘·반동의 원인은 못 본다고 `scopeLines`(시작 안내)와 `four_scope|…` EXCLUDE 규칙(`RepFormRules.fourExerciseScopeRules`)으로 밝힌다(원칙 #5). 새 통계 `RepFormStat.SPAN`(반복 안 p90 − p10), 관측 조건 `minSamples`·`minCoverage`(0.6)·`requireView`(뷰 모름 = 유보 "촬영 방향 확인 필요"), 참고 문장에 고치는 말을 붙이는 `referenceFix`, 참고를 창 규칙·바닥 피드백이 지우지 않게 `PostureLive.repReferenceNote` 로 따로 보관.
+
+| 종목 | 카운터 신호(변경 전 → 후) | 반복 검사(beta) |
+|---|---|---|
+| 굿모닝 | `hip_mean` → `goodmorning_hinge`(목–골반 선의 전후 회전, `PostureCore`) — 고관절각은 허벅지만 움직여도 바뀐다 | 쪽별 무릎 움직임 SPAN ≤ 20°, 하단 무릎 과굽힘 < 140° (C·B·D) |
+| 푸시업 | 양쪽 평균 `wrist_shoulder_d` → 보이는 쪽 사슬 `pushup_distance`(`FloorChain.Kind.PUSHUP`), **엎드림 `pushup_posture` = 1 인 프레임만 사이클을 잇는다**(`RepSignal.requiredPostureFeature` — 모름·0 이면 후보 폐기, `RepCounter`); 옛 ROM 0.71 은 새 신호에 이식하지 않음(`FloorTemporal` 유보 "재검증 필요") | 골반 정렬 ±0.08, 다리 펴기 ≥ 150°, 하단 팔꿈치 ≤ 120°(§124b), 시작 팔 펴기 ≥ 150° (측면만) |
+| 프런트 레이즈 | `forearm_vert_mean` → `upperarm_vert_mean`(팔꿈치를 굽혀도 위팔 올림을 센다) | 상체 기울기 ≤ 25°, 몸통 흔들림 SPAN ≤ 20°, **팔 높이**(§124a) |
+| 사이드 레터럴 레이즈 | 〃 | 쪽별 팔꿈치 굽힘 135~175°, 팔 경로 `raise_plane` 5~60°(든 구간만), **팔 높이**(§124a) |
+
+네 종목 모두 옛 ROM 임계를 떼서 '범위 미판정'(`romValidated = false`, `RepRomTier.NONE`) — 이전 신호의 보정값을 새 신호에 이식하지 않는다. 푸시업 바닥 피드백은 엎드림 미확인이면 `UNAVAILABLE`("엎드린 자세를 확인하지 못했어요 …", 무음). 옛 푸시업 신호를 쓰는 회귀 테스트는 니푸쉬업 설정으로 옮겼다.
+
+**§124a — 레이즈 팔 높이 미달의 COACH 횟수 제외(확인 필요).** 두 레이즈의 '팔 높이' 검사만 `gates = true, gateHi = 125°, countOnlyDirection = HIGH`: 올린 구간 위팔각 중앙값이 125° 를 넘는(= 어깨 높이에 못 미친) 회를 COACH 에서 빼고 화면 참고에 "이 회는 세지 않았어요" 를 붙인다(`RepFormOutcome.countOnlyGate`, `RepFormRep.correct`). 너무 높음·미관측·다른 beta 는 빼지 않는다. 원 PR 주석은 "사용자 요청(2026-10-31): 기존 높이 미달 차단만 복원" 이라 적었으나 **이 저장소의 결정 기록에는 없다**(10-14 메모 'beta 로 회 빼기 는 미결정'). beta 가 회를 빼는 것은 원칙 #2 의 예외이고, 빠진 회를 **음성 없이** 빼므로 사용자가 카운트가 죽은 줄 알 수 있다(§62b "빠진 회를 침묵하면 …"). 저장소 주인이 확인하기 전까지 **사용자 정의 게이트 예외(확인 대기)** 로 둔다 — 확인되지 않으면 `gates = false` 로 되돌린다.
+
+**§124b — 푸시업 팔 굽힘 범위.** 하단 창 보이는 쪽 팔꿈치각 ≤ 120°(얕은 하강 참고)와 하강 직전 상단 창 ≥ 150°(시작 팔 펴기). 상완·전완이 몸통의 0.15 미만으로 겹친 프레임의 가짜 90° 는 쓰지 않는다. 둘 다 잠정 띠.
+
+**근거(이 절에서 더한 것).** 원 PR 에는 재생 근거가 없었다. MM-Fit 사이드 레터럴 레이즈 13세트(`data/mmfit_arms_mp_captures`)로 `tracker_ab.py`(변경 전 = main+§123 재생기, 변경 후 = PR 59 재생기): MAE 2.15 → **1.08**, 앞뒤 헛카운트 포함 정확 0.15 → **0.85**, 정확 일치 0.38 → 0.38, 과다·0회 세트 0 → 0, 최악 세트 w18_set26 2 → 8회(정답 10). 위팔각 신호가 전완각보다 낫다. **프런트 레이즈·굿모닝·푸시업은 모집단 캡처가 없어 A/B 가 없다** — 폰 평문 로그도 8월 푸시업 9세트·굿모닝 1세트뿐. 푸시업은 엎드림 게이트가 틀리면 0회가 되는 구조(런지 v1 의 발 앵커와 같은 위험, §96)라 폰 세트가 먼저다. 같은 재생에서 오버 헤드 프레스는 전후 모두 12세트 전부 0회(이 절과 무관, 기존 공백).
+
+**검증.** 앱 JVM 테스트·`posture-core` jvmTest 통과(커밋 메시지 참조), `tools/sync_ios_core.py --check` 통과(`NAMES` 에 `FourExerciseForm` 추가). 실기기는 미확인 — PR 59 빌드로 11-01 14:34 에 찍힌 세트는 `.aes` 라 읽지 못했다.
+
+**원 PR 에 남는 것(여기 포함 안 함).** AES-256 로컬 암호화(PR 59)·iOS 암호화(PR 60). 암호화가 들어오면 세트 로그 `.aes` 를 `pull_logs.py`·재생기가 읽을 길(개발자 빌드 평문 예외 또는 복호 도구)이 같이 와야 실검증 루프(DEV_TOOLS.md)가 유지된다.
+
+## §125. 뼈대·화살표 색 = 결과 — 빨강(회 제외) · 주황(말했지만 셈) · 호박(참고) (2026-11-01, 사용자 요청)
+
+**요청.** "코칭 라인과 차단 라인이 빨간색으로 같은데 주황색으로 표현해서 다르게 표현했으면 좋겠어, 헷갈리지 않게." 종전 색의 뜻은 **말함/안 말함**이었다(`docs/LIVE_SCREEN_REDESIGN.md` §2.3 — 붉음 = 말하는 판정(ship), 호박 = 말하지 않는 판정(beta)). 2단 검사(§62c 후속 10·§101f)가 생긴 뒤로는 ship 위반에 '말만 하고 센 회(코칭 띠)' 와 '뺀 회(차단 띠)' 가 있는데 둘 다 빨강이라, 사용자는 빨강을 보고 회가 빠졌는지 알 수 없었다. 검토 결론: **색의 뜻을 '결과' 로 바꾼다** — 사용자가 화면에서 알아야 할 것은 "이 회가 세어졌나" 이지 "앱이 말했나" 가 아니다(말했는지는 귀로 안다).
+
+| 색 | 뜻 | 들어가는 것 |
+|---|---|---|
+| 빨강 `WARN` FF5A5A | 이 회(시간)를 **뺐다** | ship 차단 띠(`gate`), §124a 명시적 횟수 예외(`countOnlyGate`), 판별 기각(REASON), 가동 범위 미달(ROM), 플랭크 멈춤(HOLD), 세지 않은 얕은 걸음 |
+| 주황 `COACH` FF8C42 | **말했지만 셌다** | ship 코칭 띠(2단 검사의 아래 띠), 세트 창 규칙(WINDOW — 점수엔 들어가지만 회는 빼지 않는다), 유지 자세(반복이 아님), 처음부터 알림(NOTICE), 시선(GAZE — 횟수를 막지 않는다) |
+| 호박 `PROVISIONAL` FFC24B | 말하지 않는 **참고**(beta) | 종전 그대로. 바닥 계열의 그림(`soft`)도 그대로 |
+
+구현: `RuleHighlight.tiers(rep)` → `RepFormHighlight(blocked, coaching, provisional)`(같은 관절은 센 쪽만 — 빨강 > 주황 > 호박; 종전 `forRepForm` 두 채널은 재생기·테스트용으로 그대로), `SkeletonStage(highlight, coaching, provisional)` 세 채널 — 주황은 **빨강과 같은 굵기**(연결선 1.8×, 관절 6 dp, 바깥 원)로 그려 호박(1.3×, 5 dp)과 굵기로도 갈린다(주황·호박은 색상환에서 이웃이라 색만으로는 약하다). `MotionCue.blocked`(기본 true) — 반복 검사 화살표는 `RepFormEvent.gated`, 창 규칙·알림·유지 자세·시선은 false. `PostureLive` 에 상태 하나(`formCoachHighlight`) — `PostureLiveSessionScreen` 지역 변수 한도(dex 256 레지스터) 때문에 설치 뒤 `cmd package compile -m verify` 로 확인했다(커밋 메시지 참조). TRACK·준비·일시정지·바닥은 종전처럼 빨강·주황 없음. iOS 는 같은 `SkeletonStage`·`PostureLive`(§108c) 라 함께 바뀐다.
+
+테스트: `RepFormTest.coachingTierIsPaintedOrangeAndBlockingTierRed` — 바벨 컬(2단) 상체 숙임 +17° → 주황, +27° → 빨강(같은 관절은 주황에 남지 않음), 덤벨 컬(1단, §123) +17° → 빨강.
+
+**§125a — 글자 대신 기호(검토안, 미구현).** 같은 날 추가 요청: "말 대신 화살표나 다른 기호로 표현하는 것도 검토해, 실제 운동 시 너무 작아서 텍스트가 안 보여." 현재 세트 중 화면 글자는 넷 — 교정 문장(`formNote`), 안내(`guideNote`), 참고 칩(`referenceNote`/`provisionalNote`), 창 규칙 배너(`coachBanner`). 이 가운데 **교정의 '무엇을·어디로'** 는 이미 글자가 아니라 화살표가 맡는다(§101 — "말하는 사유 ⇒ 그림", `CueMotionCoverageTest` 가 잠근다; 방향이 없는 지적은 점 `MARK`). 글자에만 남아 있는 정보는 두 가지다: (1) **이 회가 빠졌다** — "이 회는 세지 않았어요" 는 글자와 낮은 틱뿐이고 HUD 숫자는 '안 오름' 으로만 보인다, (2) **참고(beta)** 의 내용. 제안: (1) 은 HUD 큰 숫자 옆에 **빨간 ✕ 배지 + 숫자 붉은 점멸 1.2 s**(글리프 = 결과, §125 색과 같은 뜻) — 글자는 남기되(완료 화면·접근성) 읽지 않아도 알게 한다; 코칭 띠는 주황 화살표만으로 충분하고 배지는 없다(회가 셌으니까); (2) 참고는 호박 관절·점이 이미 위치를 말하므로 칩을 문장 대신 **ⓘ 아이콘 + 부위 한 단어**로 줄인다. 하지 않을 것: 교정 문장을 더 큰 글자로 — 2~3 m 에서 폰 글자는 어떤 크기여도 읽기 어렵고 화면 자리를 먹는다; 기호 어휘를 늘리는 것(✕·화살표·점 셋을 넘기면 다시 외워야 한다). 비용: HUD 한 줄(`LiveWorkoutHud`)과 `PostureLive` 상태 하나(레지스터 한도 — 홀더 `LiveSessionRefs` 에 둔다). **결정 대기** — 승인되면 §125b 로 구현.
+
+## §126. 헐렁한 옷(통 큰 소매·펑퍼짐한 바지)과 덤벨 컬·런지 판정 — 연구, 구현 전 (2026-11-01, 사용자 보고)
+
+**보고.** "덤벨 컬이랑 런지할 때 통이 크거나 펑퍼짐한 옷을 입으면 자주 오류를 발생해." 연구는 `docs/LOOSE_CLOTHING_RESEARCH.md`. 폰 미연결·옷 라벨 세트 없음이라 기전 분석·대리 지표 기준값·방안·블록 설계만이고 **임계는 바꾸지 않았다**.
+
+**기전.** MediaPipe 는 옷 속 관절의 자리를 실루엣에서 지어내고 그때 `visibility` 는 떨어지지 않는다(§101c·§101d 와 같은 성질) — 가시성 0.5 문턱은 옷에 무력하다. 팔꿈치(소매)·무릎(바지통)·골반(헐렁한 상의)이 깨지고 손목·발목·어깨·머리는 비교적 안전하다. 소매·바지통의 오프셋은 동작 위상에 따라 변해 본인 기준(고정 오프셋 상쇄)으로 못 지운다. **컬에서 가장 의심되는 경로**: '팔꿈치 옆 벌림' 의 `refCap` 0.19 · `absMin` 0.30 — 소매가 팔을 내린 자세의 원값을 0.30 위로 올리면 기준은 0.19 에서 잘려 매 회 Δ ≥ +0.15, 1단(§123)이라 **매 회 차단**. '처음부터 벌어져 있어요' 알림(`refNotice` 0.30)이 들렸다면 이 경로다 — 로그의 회별 `raw`·`ref` 로 바로 확인된다. 런지는 앞무릎 깊이(절대 90°, 본인 기준 없음)·카운트 신호(무릎각)·앞다리 쪽(발목 z, 밑단)이 노출되고 편향 방향은 미상.
+
+**대리 지표.** `research/external_rep_replay/clothing_proxies.py` — 세트별 관절 가시성·2D 흔들림 p90·**월드 마디 길이 CV**(뼈는 안 변한다). 로컬 42세트 일상복 기준값: 상완 0.05~0.11, 전완 0.06~0.15, 허벅지 0.01~0.13, 정강이 0.01~0.09, 몸통 0.01~0.07 — 옷 세트가 이 띠를 분명히 넘어야 지표로 쓴다.
+
+**방안(순서).** A 종목 준비 카드·시작 문장에 옷 안내(원칙 #5, 지금) → B 옷 불확실 지표가 문턱을 넘는 세트는 COACH 에서 그 관절에 기대는 차단을 코칭(주황, §125)으로 강등하고 화면·완료 화면에 이유(원칙 #1·#6; B' = 그 세트에서 `refCap` 해제) → C `pose_landmarker_heavy` 는 영상 A/B 뒤(로그는 랜드마크뿐이라 재생으로 못 잰다, 85 ms 격자 위험) → D 런지 깊이의 골반 하강 교차 확인은 블록이 '얕게 읽힘' 이면. 하지 않을 것: 옷 때문에 모집단 임계를 넓히기(원칙 #4), 옷 세트를 정상으로 세기, 라벨 없는 한 세트로 문턱 정하기.
+
+**블록(§5).** 같은 폰 위치에서 옷만 바꿔 컬 정면·사선, 런지 사선·옆 — 정상/지정 오류 세트, 자가 라벨 메모에 `옷: …`. 붙는 옷 정상 차단 0 vs 통 옷 정상 차단 ≥ 2/10 이면 옷 효과 확정. 블록 일정은 미정.
+
+**구현 — 방안 A(2026-11-01 저녁, 사용자 결정 "방안 A 를 구현").** `ExerciseProfiles.kt` 의 `CLOTHING_LINES`(앱 이름 키, 컬 둘·런지 넷)와 `ExerciseProfile.clothingHint` — 준비 카드(`CapturePreparationUi`)가 '세는 조건' 아래 옅은 글자로 보이고, 준비 전문(`preparationInstruction`)에도 3초 약속 앞에 들어간다. 음성은 첫 문장만(`CLOTHING_VOICE`, "팔꿈치가 보이는 옷을 입어 주세요." 14음절 / "무릎과 발목이 보이는 바지를 입어 주세요." 17음절) **맨 뒤 DET** 로 — 세는 조건보다 뒤, 시작 전에 끝날 때만(§101 예산). 문장은 '횟수에서 빠질 수 있어요' 까지만 말한다 — 1단·깊이 차단이 실제로 하는 일이고, 옷을 입은 세트를 정상으로 세지는 않는다(연구 §6). `countingConditions`('세는 조건') 에는 섞지 않는다. `PostureScope.startLine` 의 '못 본 것' 문장은 지금 어느 화면에도 닿지 않는 경로(`rememberPostureScope`·`scope` 미사용)라 손대지 않았다 — 완료 화면 문장은 B 와 함께. 잠금: `CapturePreparationTest.clothingHintOnlyForCurlAndLungeFamilies`, `PreparationVoiceTest`(음절 예산). 임계·규칙 변경 없음(`rules_version` 그대로). iPhone 은 `posture-core` 동기화 + 공유 `CapturePreparationUi` 로 같은 카드.
+
+
+## §127. Four additional local exercise guides (2026-11-01)
+
+Add bodyweight good morning, standard toe-supported push-up, dumbbell front raise
+and dumbbell lateral raise to `ExerciseGuides`, taking the catalog from 10 to 14.
+Each has a dedicated two-pose 640 x 640 GIF (900 ms/frame), setup, movement,
+breathing and caution text. Reusing exact-name lookup preserves the existing guide
+entry points and first-preparation pause/seen-state behavior without new UI state.
+The posture engine is untouched: educational instructions do not become assessment
+rules or validated camera directions. Unsupported variants remain unsupported.
+
+The Swift JSON export and its bundle test count follow the Android source. Source
+adaptations, generated-art limitations and verification are recorded in
+`docs/EXERCISE_GUIDE_UI.md` (2026-11-01 section); image provenance and encoding
+are in `app/src/main/assets/exercise_guides/README.md`.
+
+Verification: Android 883 unit tests, assembleDebug and lintDebug passed; all four
+APK GIFs match source bytes. iOS resource export check passed. Full iOS static
+verification is blocked by missing PyYAML; native iOS and device playback were not run.
+
+
+### §127a. Good morning clothing and muscle-highlight audit (2026-11-01)
+
+Replace both good-morning frames with intact opaque shorts; retain the same GIF
+contract and exposed posterior-thigh highlight. Audit the four new guides against
+primary EMG/biomechanics publications. Main target choices are broadly defensible,
+but spinal extensors (good morning), serratus/anterior deltoid (push-up), and
+clavicular pectoralis (front raise) are omitted. Lateral-raise middle deltoid emphasis
+is reasonable but does not cover cuff/scapular participation. Exact shoulder mask
+boundaries and color intensity are not validated. Findings and source applicability
+are recorded in `docs/EXERCISE_GUIDE_UI.md`; no assessment policy changed.
+Guide tests 6/6 and APK build passed; asset-byte equality verified. Device/native
+iOS playback and human anatomical/EMG validation were not run.
+
+
+### §127b. Evidence-informed assets and explicit camera rollout (2026-11-01)
+
+Replace all four GIFs with red target/orange participation illustrations and add
+qualitative legends to the existing caution tabs. Keep intact good-morning shorts.
+See the guide UI audit for source applicability and anatomical limitations.
+
+User-approved scope is 16 exercises: 14 registered guides plus barbell curl/lunge.
+`ExerciseProfiles.cameraSupportedNames` gates `cameraEnabled` in Android and the
+synchronized shared engine. Keep all 26 profiles/reference mappings for research.
+Disable the other ten catalog posture defaults and use the same support predicate
+for replacement/import/session entry. Stored flags cannot bypass session gating.
+This is availability policy, not promotion of beta/trial/pilot assessment evidence.
+
+Verification: app JVM 914 tests and shared JVM 558 tests passed (zero failures/errors/skips); assembleDebug and lintDebug passed. Resource export and shared-source parity checks passed. All four APK GIFs match source bytes. NOT RUN: device popup/playback and native iOS build (Windows); full iOS static checker requires unavailable PyYAML.
+
+
+### §128. Remaining twelve evidence-informed guides (2026-11-01)
+
+The user requested the remaining 12 of the 16 enabled exercises receive the same
+literature audit and regenerated GIFs. Replace ten existing guides and add
+dedicated barbell curl/lunge guides through ExerciseGuides; do not alias equipment.
+Plank changes to a hold GIF under the latest request. Guide availability and camera
+availability now both contain 16 names, enforced by PostureExerciseMapTest. No
+assessment thresholds, evidence statuses or camera rollout gates change.
+
+Correct the hip-flexor emphasis for knee-up/leg raise and disclose deep iliopsoas;
+distinguish abdominal control from isolated lower-abdominal training. Other deep
+/occluded muscles and cloth overlays are explained in each caution tab. Exact-task
+research is weaker for curtsy and standing side-crunch; do not promote functional
+anatomy to direct validation. Source-by-source applicability and limitations are
+in docs/EXERCISE_GUIDE_UI.md; source image provenance is in the dated JSON manifest.
+
+Android uses the existing sheet. Exported iOS guides and its expected count become
+16. The 12 GIFs remain two-pose illustrations; generated anatomical boundaries are
+not clinically certified.
+
+Verification: app JVM 914 tests passed (zero failures/errors/skips); assembleDebug and lintDebug passed. Resource export --check passed for 16 guides. All 24 decoded poses were inspected at 260 px. NOT RUN: device popup/playback and native iOS build/tests (Windows); clinician review and anatomical mask validation.
+
+## §129. 운동 화면의 beta '참고 · …' 칩 제거 (2026-11-01, 사용자 결정 "호박색 문구는 어차피 못 보니까 제거해")
+
+**배경.** HUD 의 '참고 · …' 칩(`LiveWorkoutHud.referenceNote`, 12sp 호박색, 한 줄 말줄임)은 beta 반복 검사·창 규칙 beta 위반·바닥 '확인 필요' 문장을 말하지 않는 대신 화면에 남기던 자리였다(원칙 #2). 운동 거리(2.5 m, `docs/LIVE_SCREEN_REDESIGN.md` §4)에서 읽히지 않는 글자였고, 코드 확인에서 컬·런지 beta 반복 검사의 칩은 창 규칙 갱신(3 s, `PROVISIONAL_NOTE_GAP_MS`)이 공용 `provisionalNote` 를 덮어 길어야 3 s 만 보이는 결함도 있었다(§124 가 네 종목 검사만 `repReferenceNote` 로 보호).
+
+**변경.** 칩과 그 상태(`provisionalNote`·`repReferenceNote`·`provisionalAtRef`·`PROVISIONAL_NOTE_GAP_MS`)를 `PostureLive`·`LiveWorkoutHud` 에서 뺐다(iPhone 도 같은 공유 파일). **beta 가 남는 자리**: 뼈대·관절 호박색(`provisionalHighlight`·`formProvHighlight`·바닥 `FloorFeedback.points`, §125 색 = 결과)과 완료 화면·세트 리포트의 참고 항목. 음성 정책(beta 는 말하지 않는다 — 바닥 Q1, 컬 '팔꿈치 앞뒤(옆)' 예외 등)은 그대로. 원칙 #2 의 "화면에는 '참고'로 남긴다" 는 이제 **글자가 아니라 색**이다 — 침묵이 '이상 없음' 으로 읽히지 않게 하는 장치는 호박색 뼈대가 맡는다. 호박색으로 남는 글자는 기능 줄뿐: 횟수 메모(자세로 뺀 회·세지 않은 동작, 원칙 #1), "일시정지", 플랭크 멈춤·시계 폴백 줄. 준비 화면의 주황(`warn`) 자리 안내는 운동 거리 밖(폰 앞)에서 읽는 글자라 그대로.
+
+**이유.** 못 읽는 글자는 정보가 아니라 잡음이고, 레지스터 256 함정(§108c)이 있는 `PostureLiveSessionScreen` 의 상태 둘을 줄였다.

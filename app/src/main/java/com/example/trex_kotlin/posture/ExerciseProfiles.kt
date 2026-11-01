@@ -43,6 +43,29 @@ val REFERENCE_HINTS: Map<String, String> = mapOf(
 )
 
 /**
+ * 헐렁한 옷 안내(§126 방안 A, 사용자 결정 2026-11-01) — MediaPipe 는 소매·바지통 속 관절을 실루엣에서 지어내고 그때 가시성은 떨어지지 않아(§101c·§101d 와 같은 성질)
+ * 가시성 문턱이 옷을 못 거른다. 컬은 팔꿈치(옆 벌림·떨어짐·앞 이탈), 런지는 무릎(앞무릎 깊이·카운트 신호)이 노출되고 1단(§123)·깊이 차단이라 오탐 한 번이 한 회를 지운다.
+ * 원인을 사용자가 없앨 수 있는 유일한 층이라 준비 카드에 밝힌다(원칙 #5). 임계는 옷 라벨 블록(연구 §5) 전엔 옮기지 않는다. 키는 앱 이름.
+ */
+val CLOTHING_LINES: Map<String, String> = mapOf(
+    "덤벨 컬" to "팔꿈치가 보이는 옷을 입어 주세요. 통 큰 소매는 팔꿈치 위치를 잘못 읽어 횟수에서 빠질 수 있어요.",
+    "바벨 컬" to "팔꿈치가 보이는 옷을 입어 주세요. 통 큰 소매는 팔꿈치 위치를 잘못 읽어 횟수에서 빠질 수 있어요.",
+    "런지" to "무릎과 발목이 보이는 바지를 입어 주세요. 펑퍼짐한 바지는 무릎 깊이를 잘못 읽어 횟수에서 빠질 수 있어요.",
+    "바벨 런지" to "무릎과 발목이 보이는 바지를 입어 주세요. 펑퍼짐한 바지는 무릎 깊이를 잘못 읽어 횟수에서 빠질 수 있어요.",
+    "사이드 런지" to "무릎과 발목이 보이는 바지를 입어 주세요. 펑퍼짐한 바지는 무릎 깊이를 잘못 읽어 횟수에서 빠질 수 있어요.",
+    "크로스 런지" to "무릎과 발목이 보이는 바지를 입어 주세요. 펑퍼짐한 바지는 무릎 깊이를 잘못 읽어 횟수에서 빠질 수 있어요.",
+)
+/** 옷 안내의 음성 한 문장(§126 A, DET 예산 ≤ 22음절) — 첫 문장만. 이유는 화면([CLOTHING_LINES])이 가진다. */
+val CLOTHING_VOICE: Map<String, String> = mapOf(
+    "덤벨 컬" to "팔꿈치가 보이는 옷을 입어 주세요.",
+    "바벨 컬" to "팔꿈치가 보이는 옷을 입어 주세요.",
+    "런지" to "무릎과 발목이 보이는 바지를 입어 주세요.",
+    "바벨 런지" to "무릎과 발목이 보이는 바지를 입어 주세요.",
+    "사이드 런지" to "무릎과 발목이 보이는 바지를 입어 주세요.",
+    "크로스 런지" to "무릎과 발목이 보이는 바지를 입어 주세요.",
+)
+
+/**
  * 바닥 계열 세 종목(앱 이름)의 준비 문장(spec §99, 설계 §6) — '무엇이 있어야 세는가(재는가)' 를 먼저 말한다(한 다리 계열 §6 선례). 공유 `FLOOR_SIDE.voice`
  * ("편하게 앉거나 무릎을 대고 준비해 주세요")는 누워서 시작해야 세는 종목에 '앉거나' 를 안내했다 — 다른 바닥 다섯 종목은 그 문장을 그대로 쓴다.
  */
@@ -120,7 +143,9 @@ data class ExerciseProfile(val name: String, val referenceExercise: String?, val
             "스탠딩 사이드 크런치" -> "$LEG_PAIR_COUNT_RULE 무릎을 굽힌 채 옆으로 올리며 옆구리를 접어 팔꿈치가 무릎에 닿아야 세요. 다리만 올리거나, 앞으로 올리거나, 앞으로 숙이면 세지 않아요. "
             "덤벨 컬", "바벨 컬" -> "$ARM_PAIR_COUNT_RULE "
             else -> if (repUnit == RepUnit.SIDE_PAIR) "$ALTERNATING_COUNT_RULE " else if (repUnit == RepUnit.SIDE_EACH) "$SIDE_EACH_COUNT_RULE " else ""
-        }) + (referenceHint?.let { "$it " } ?: "") + "몸이 화면에 잡히면 3초 뒤 시작해요."
+        }) + (referenceHint?.let { "$it " } ?: "") + (clothingHint?.let { "$it " } ?: "") + "몸이 화면에 잡히면 3초 뒤 시작해요."
+    /** 헐렁한 옷 안내(§126 A) — 컬·런지 계열만. 준비 카드가 '세는 조건' 아래에 따로 보인다. */
+    val clothingHint: String? get() = CLOTHING_LINES[name]
     /**
      * 준비 안내 음성의 문장 계획(§101 `PreparationVoicePlan`) — ESS(세는 핵심 조건 한 문장, ≤ 24음절) → PLACE(자리·방향, 아직 안 맞을 때만) → DET(세부, 시작 전에 끝날 때만).
      * 약속 문장 '몸이 화면에 잡히면 3초 뒤 시작해요' 는 음성에서 빼고 화면 고정 문구로 옮겼다. 낱말은 판별 기각 대사(`LegCycleTracker.cueFor`·`FloorCycleTracker.cueFor`)와 같다.
@@ -134,6 +159,8 @@ data class ExerciseProfile(val name: String, val referenceExercise: String?, val
             repUnit == RepUnit.SIDE_PAIR -> out += PrepLine(PrepKind.DET, ALTERNATING_COUNT_RULE)
             repUnit == RepUnit.SIDE_EACH -> out += PrepLine(PrepKind.DET, "왼발 앞과 오른발 앞을 따로 세요.")
         }
+        // 옷 안내(§126 A)는 맨 뒤 DET — 세는 조건보다 뒤, 시작 전에 끝날 때만. 화면은 늘 보인다
+        CLOTHING_VOICE[name]?.let { out += PrepLine(PrepKind.DET, it) }
         return out
     }
     /** 화면 '세는 조건' 전문(ESS + DET) — 음성에서 뺀 내용은 화면이 가진다(원칙 #5). 없으면 null. */
@@ -142,7 +169,7 @@ data class ExerciseProfile(val name: String, val referenceExercise: String?, val
     val lateralReach: Float? get() = if (name == "사이드 런지") 0.9f else null
     /** 사이드 런지(§101): 검은 무대를 가로 전체(배율 ≤ 1)로 — 스탠스가 이미지 폭의 3/4 이라 배율 1.46 이면 편 다리가 화면 밖(관절 67.5 % → 2.6 %). */
     val stageFullWidth: Boolean get() = name == "사이드 런지"
-    val cameraEnabled get() = kind != ObservationKind.GUIDE
+    val cameraEnabled get() = name in ExerciseProfiles.cameraSupportedNames && kind != ObservationKind.GUIDE
     /**
      * 준비 확인이 요구하는 몸 범위(§89) — 무릎·골반 피처를 쓰지 않는 서서 하는 팔 운동(컬·레이즈·프레스·랫풀·딥스)은 상체만.
      * 가까이 찍어 다리가 화면 밖인 컬 세트가 전신 요구에 막혀 시작하지 못했다. 바닥 종목은 늘 전신(옆 사슬).
@@ -163,6 +190,13 @@ data class ExerciseProfile(val name: String, val referenceExercise: String?, val
  * 카탈로그 밖 이름(예전 저장 루틴의 종목)은 프로필이 없어 카메라를 켜지 않는다.
  */
 object ExerciseProfiles {
+    // Explicit camera rollout scope; profiles outside this set remain available for research.
+    val cameraSupportedNames: Set<String> = setOf(
+        "기본 스쿼트", "런지", "바벨 런지", "사이드 런지", "크로스 런지", "굿모닝",
+        "덤벨 컬", "바벨 컬", "사이드 레터럴 레이즈", "프런트 레이즈", "푸쉬업",
+        "스탠딩 사이드 크런치", "스탠딩 니업", "플랭크", "크런치", "레그 레이즈",
+    )
+
     private val legs = listOf("knee_L", "knee_R", "hip_L", "hip_R", "torso_pitch")
     private val arms = listOf("elbow_L", "elbow_R", "elbow_torso_L", "elbow_torso_R", "torso_pitch")
     private val raises = listOf("upperarm_vert_L", "upperarm_vert_R", "elbow_L", "elbow_R", "torso_pitch")

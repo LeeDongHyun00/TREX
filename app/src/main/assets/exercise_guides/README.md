@@ -91,7 +91,98 @@ with their neutral frames using a shared 256-color palette. Filenames and guide
 registration are unchanged; Android and iOS reference this same asset directory.
 These overlays remain qualitative illustrations, not measured muscle activation.
 
+## Good morning, push-up and dumbbell raises (2026-11-01)
+
+Four new built-in `image_gen` illustrations follow the existing grayscale anatomical
+figure, black shorts, white background and restrained red muscle highlights.
+Each starting pose was generated separately; its second pose was edited from that
+image to preserve identity, camera and scale. No third-party photographs or videos
+are packaged. Both complete frames were visually inspected, including 260 px previews.
+
+| Asset | Poses | Highlight |
+| --- | --- | --- |
+| `good-morning.gif` | Standing with crossed arms, then bodyweight hip hinge; side view | Glutes and hamstrings |
+| `push-up.gif` | Toe-supported straight-arm plank, then lowered push-up | Chest and triceps |
+| `front-raise.gif` | Dumbbells in front of thighs, then both arms forward at shoulder height | Anterior deltoids |
+| `lateral-raise.gif` | Dumbbells beside thighs, then arms raised to the sides | Lateral deltoids |
+
+Encoding: resize each square source to 640 x 640 with Lanczos, derive one shared
+256-color palette from both frames, quantize both with that palette, save GIF with
+`duration=[900, 900]`, `loop=0`, `disposal=2`, `optimize=False` using Pillow.
+The 900 ms interval illustrates two poses; it does not prescribe movement tempo.
+These are generated illustrations, not continuous motion capture or expert validation.
+
+Source images remain in the Codex generated image directory for this chat
+(`01a1960b-d164-7fc0-973e-cb8248cb448b`). The `exec-<id>.png` source IDs are:
+
+| Asset | Start | End |
+| --- | --- | --- |
+| Good morning | `159d1ce1-5d56-46cb-ae7e-a09d1c04f8d6` | `8e8f3cf8-5db2-421f-8cbf-59e4de6955b1` |
+| Push-up | `80577c86-7e05-44a0-a167-0431a400ec75` | `53d081a4-1fb1-46c4-b268-7619762e6cb6` |
+| Front raise | `a93df8fe-977f-4919-b012-6e9f9e579b1a` | `e4c7867c-b6ef-4436-9278-3c3945211ff5` |
+| Lateral raise | `989eb9fb-9d99-43c1-bc85-cdc0b2429d45` | `75e56496-166b-497d-9fc1-b5d1e94b1329` |
+
 Verification: inspected all four decoded frames at 640 px and a 260 px preview;
 confirmed GIF decoding, frame duration, infinite looping, and byte equality with
 the copies packaged in `app-debug.apk`. `ExerciseGuidesTest` passed all 6 tests
 and `:app:assembleDebug` succeeded. Device playback and native iOS were not run.
+
+
+## Good morning clothing correction and muscle audit (2026-11-01)
+
+User requested intact shorts and a literature-based audit of all four new guides.
+Both good-morning frames now have complete opaque black shorts covering the glutes
+and upper thighs. Only the exposed posterior thigh remains red. The glutes are
+occluded, not asserted inactive. Pose and canvas are retained; metadata remains
+640 x 640, two 900 ms frames, infinite loop. Source IDs for the revised frames:
+`f4320478-cae2-4227-a5d2-29c312c37d19` and
+`81a5f393-a428-453b-b1e8-c31971251536` (same generated-image directory).
+
+The literature audit is in `docs/EXERCISE_GUIDE_UI.md`, "Muscle-highlight audit".
+The figures are selected target-region illustrations, not complete activation maps.
+Other guides' highlights were audited but not changed in this follow-up.
+Verification: both decoded frames inspected at 260 px; intact shorts and visible
+posterior-thigh highlights confirmed. ExerciseGuidesTest 6/6 and assembleDebug
+passed; updated GIF is byte-identical to the APK entry. Device playback not run.
+
+
+## Evidence-informed replacement of all four GIFs (2026-11-01)
+
+Supersedes the earlier unchanged-highlight audit. All eight poses were regenerated
+with red for the principal illustrated target and orange for participating muscles.
+These colors describe roles, not activation magnitude, rankings, or validated masks.
+Good morning: posterior thigh red, gluteal overlay over intact shorts and thoracic/
+lumbar extensors orange. Push-up: pectoralis/triceps red, anterior deltoid/serratus
+orange. Front raise: anterior deltoid red, clavicular pectoralis orange. Lateral
+raise: middle deltoid red, upper trapezius/serratus orange; deep cuff muscles omitted.
+The guide cautions explain these omissions and the schematic clothing overlay.
+
+Final source IDs (same ImageGen directory as above), start / end:
+- Good morning: `7d5271bc-c4b6-4794-9c88-6f6fa559210e` / `c8f2f77b-83ff-4d40-aeb0-2a9c33daa3e4`
+- Push-up: `b591a4fe-2c55-48cd-a0d0-a2432467ca2f` / `d9c31a02-65b4-4d0a-bdf2-8342b9fd83d6`
+- Front raise: `11ed8f19-cb70-4e2d-9748-7cd7b5c0f79a` / `201993fd-24a5-4428-89d7-ecf76a553471`
+- Lateral raise: `678a9361-1355-40df-bce5-e1f5a55da222` / `b04dda5b-e8ba-433b-bb6d-e5019b8d1661`
+
+Each GIF remains 640 x 640, two 900 ms poses, infinite loop, disposal 2 and a shared
+256-color palette. These are two-pose illustrations, not continuous motion capture.
+
+
+## Remaining twelve replacements (2026-11-01)
+
+The current app has 16 dedicated GIF guides. This replaces the earlier ten-guide
+asset set and adds equipment-specific barbell curl and barbell lunge. Plank now
+uses forearm-plank.gif, a two-pose hold illustration; its historical PNG remains
+unreferenced for provenance. The four previously audited GIFs are unchanged.
+
+The 12 replacements use qualitative red target/orange participation regions,
+opaque shorts and explicit text for deep or occluded muscles. Generated surface
+boundaries are approximate and have not received clinical validation. Exact-task
+EMG, related-task evidence and anatomical inference are distinguished in
+docs/EXERCISE_GUIDE_UI.md. Source IDs and prompt recipes are recorded in
+docs/exercise-guide-sources-2026-11-01.json. Original tool outputs are preserved.
+
+Each new GIF is 640 x 640, two frames, infinite loop and a shared 256-color palette;
+squat retains 1100 ms/frame and the other eleven use 900 ms/frame. These are
+two-pose illustrations, not continuous motion capture or prescribed cadence.
+
+Verification: app JVM 914 tests passed (zero failures/errors/skips); assembleDebug and lintDebug passed. Resource export --check passed for 16 guides. All 24 decoded poses were inspected at 260 px. NOT RUN: device popup/playback and native iOS build/tests (Windows); clinician review and anatomical mask validation.

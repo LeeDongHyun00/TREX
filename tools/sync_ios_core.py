@@ -5,7 +5,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / 'app/src/main/java/com/example/trex_kotlin/posture'
 TARGET = ROOT / 'posture-core/src/commonMain/kotlin/com/example/trex_kotlin/posture'
-NAMES = '''Arm2d Breathing CameraPlacement CapturePreparation ContactMinimum DinoCopy ExerciseProfiles FloorFeedback FloorTemporal FormMotion LegCycle Lunge2d LungeSides NormalPoseReference PlankAlignment PostureAssessment PostureComparison PostureCore PostureFloor PostureFloorCoverage PostureScope PostureSetReport PostureView PostureViewGuide RepCounter RepForm RepFormPriorTable RepFormRules RepHysteresis RepUnit ReturnRepTracker RuleHighlight RuleTypes Stance2d PostureRules PostureBaseline PostureCoach PostureMode FloorChain FloorCycle FloorGaze FloorLive PlankGeometry PlankHold PostureTrial PreparationVoice SpeechQueue StandingFraming PoseLandmarks RepEngineLog InferencePolicy'''.split()
+NAMES = '''Arm2d Breathing CameraPlacement CapturePreparation ContactMinimum DinoCopy ExerciseProfiles FloorFeedback FloorTemporal FormMotion LegCycle Lunge2d LungeSides NormalPoseReference PlankAlignment PostureAssessment PostureComparison PostureCore PostureFloor PostureFloorCoverage PostureScope PostureSetReport PostureView PostureViewGuide RepCounter RepForm RepFormPriorTable RepFormRules RepHysteresis RepUnit ReturnRepTracker RuleHighlight RuleTypes Stance2d PostureRules PostureBaseline PostureCoach PostureMode FloorChain FloorCycle FloorGaze FloorLive PlankGeometry PlankHold PostureTrial PreparationVoice SpeechQueue StandingFraming PoseLandmarks RepEngineLog InferencePolicy FourExerciseForm'''.split()
 
 def portable(name, text):
     text = re.sub(r'^import (android\..*|java\..*|org.json.JSONObject)\n', '', text, flags=re.M)

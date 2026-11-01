@@ -4,7 +4,7 @@ import com.example.trex_kotlin.Workout
 import com.example.trex_kotlin.WorkoutAlt
 import com.example.trex_kotlin.WorkoutNames
 import com.example.trex_kotlin.WorkoutTarget
-import com.example.trex_kotlin.postureExerciseMap
+import com.example.trex_kotlin.postureSupported
 import com.example.trex_kotlin.resolvedTarget
 import com.example.trex_kotlin.timeOnlyNormalized
 import org.json.JSONArray
@@ -64,7 +64,7 @@ fun encodeRoutineExercises(workouts: List<Workout>): JSONArray = JSONArray().als
 fun decodeRoutineExercises(
     arr: JSONArray,
     idPrefix: String,
-    postureKnown: (String) -> Boolean = postureExerciseMap::containsKey,
+    postureKnown: (String) -> Boolean = ::postureSupported,
 ): List<Workout> = (0 until arr.length()).mapNotNull { i ->
     runCatching {
         val o = arr.getJSONObject(i)

@@ -50,7 +50,6 @@ import com.example.trex_kotlin.TrexText as Text
  * @param hideCount 렙 검증 모드 — 반복 수 대신 "검증 중" 을 보인다.
  * @param sideCount 쪽별로 세는 종목(런지, §63)의 큰 글자 — 쪽마다 남은 수("왼 7 · 오 8"). null 이면 남은 수.
  * @param elapsedSec 세트 경과(보조 정보 — 반복 운동의 시간은 끝내는 조건이 아니다, THUMB_FIRST §1).
- * @param referenceNote beta 검사의 '참고' 칩 — 말하지 않는 판정은 작게, 호박색(원칙 #2).
  * @param hold 플랭크 유지 시계(spec §99, 설계 §6) — 카메라 시간이면 큰 숫자 = 카메라가 확인한 시간 / 목표(멈춘 동안 회색), 아래 상태 줄('멈춤 · 무릎이 바닥에 닿음')과
  *   작게 경과. 시계 폴백이면 종전 남은 시간에 상태 줄만. null 이면 종전.
  */
@@ -58,7 +57,7 @@ import com.example.trex_kotlin.TrexText as Text
 internal fun LiveWorkoutHud(workout: Workout, repetitions: Int, timeLeft: Int, totalSeconds: Int,
     setLabel: String, paused: Boolean, compact: Boolean, message: String?,
     countNote: String? = null, countNoteActive: Boolean = false, hideCount: Boolean = false, sideCount: String? = null,
-    elapsedSec: Int? = null, referenceNote: String? = null, modeLabel: String? = null, breath: String? = null, hold: HoldHud? = null) {
+    elapsedSec: Int? = null, modeLabel: String? = null, breath: String? = null, hold: HoldHud? = null) {
     val duration = workout.resolvedTarget() is WorkoutTarget.Duration
     val target = workout.resolvedTarget().amount
     val lime = Color(0xFFB8DD83)
@@ -129,8 +128,7 @@ internal fun LiveWorkoutHud(workout: Workout, repetitions: Int, timeLeft: Int, t
         }
         if (!duration && countNote != null) Text(countNote, color = if (countNoteActive) lime else amber, fontSize = 13.sp,
             fontWeight = if (countNoteActive) FontWeight.SemiBold else FontWeight.Normal, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        if (referenceNote != null) Text("참고 · $referenceNote", color = amber, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(top = 4.dp).border(1.dp, amber.copy(alpha = .6f), RoundedCornerShape(99.dp)).padding(horizontal = 10.dp, vertical = 3.dp))
+        // beta '참고 · …' 칩(12sp 호박)은 §129 에서 뺐다 — 운동 거리에서 못 읽는 글자. beta 는 뼈대 호박색과 완료 화면이 가진다
     }
 }
 

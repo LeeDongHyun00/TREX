@@ -143,7 +143,7 @@ private fun AltSheet(app: AppViewModel, workout: Workout, onClose: () -> Unit) {
                     reps = alt.reps,
                     duration = template?.duration,
                     best = i == 0,
-                    postureReady = postureExerciseMap.containsKey(alt.name),
+                    postureReady = postureSupported(alt.name),
                 )
             }
         } else {
@@ -277,7 +277,7 @@ private fun Workout.replacedWith(name: String, reps: String): Workout {
         reps = reps,
         duration = template?.duration ?: duration,
         category = template?.category ?: category,
-        posture = posture && postureExerciseMap.containsKey(name),
+        posture = posture && postureSupported(name),
         secondsPerRep = null,
         restSeconds = null,
     )

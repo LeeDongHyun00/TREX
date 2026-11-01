@@ -6,7 +6,7 @@ package com.example.trex_kotlin
  * 거부되지 않아도 목록 첫 진입에 그 클래스 전체를 로드·검증하느라 느렸다. 라이브 화면을 실제로 열 때만 그 클래스가 로드되게 분리한다.
  */
 
-/** 앱 운동명 → AIHub 규칙 종목 매핑 — 여기 있는 운동만 자세 교정을 켤 수 있다. */
+/** 앱 운동명 → AIHub 규칙 종목 매핑 — 연구용 매핑이며 카메라 활성화 여부는 프로필 게이트로 확인한다. */
 val postureExerciseMap: Map<String, String> = mapOf(
     "기본 스쿼트" to "바벨 스쿼트",   // 표시 이름만 바뀜 — 규칙·카운터·로그의 종목 이름은 AIHub 그대로
     "런지" to "스텝 포워드 다이나믹 런지",
@@ -39,7 +39,9 @@ val postureExerciseMap: Map<String, String> = mapOf(
 )
 
 /** 카메라 자세 평가를 켤 수 있는 종목인가. [PLATFORM_POSTURE_CAMERA] 는 이 플랫폼에 자세 화면이 있는가다(§108 — iPhone 은 Phase 3 까지 없다). */
-fun Workout.postureSupported(): Boolean = PLATFORM_POSTURE_CAMERA && com.example.trex_kotlin.posture.ExerciseProfiles.forName(name)?.cameraEnabled == true
+fun postureSupported(name: String): Boolean = PLATFORM_POSTURE_CAMERA && com.example.trex_kotlin.posture.ExerciseProfiles.forName(name)?.cameraEnabled == true
+
+fun Workout.postureSupported(): Boolean = postureSupported(name)
 
 /** 자세 교정이 **시험 단계**인 종목(크런치·레그 레이즈·플랭크, `PostureTrial`) — 목록·편집이 꼬리표를 붙인다. 카메라는 켤 수 있다. */
 fun Workout.postureTrial(): Boolean = postureSupported() && com.example.trex_kotlin.posture.PostureTrial.isTrialApp(name)

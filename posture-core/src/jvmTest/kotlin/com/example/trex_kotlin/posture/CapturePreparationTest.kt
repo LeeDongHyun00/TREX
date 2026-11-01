@@ -78,6 +78,22 @@ class CapturePreparationTest {
         assertTrue(curl.preparationInstruction.indexOf(hint) < curl.preparationInstruction.indexOf("3초"))
         assertFalse(ExerciseProfiles.forName("기본 스쿼트")!!.preparationInstruction.contains(hint))
     }
+    @Test fun clothingHintOnlyForCurlAndLungeFamilies() {
+        // §126 방안 A(사용자 결정 2026-11-01) — 소매·바지통 속 관절은 지어낸 자리. 컬·런지 계열 여섯만, 준비 전문에도 들어가고 음성은 짧은 첫 문장만 맨 뒤 DET
+        val clothed = setOf("덤벨 컬", "바벨 컬", "런지", "바벨 런지", "사이드 런지", "크로스 런지")
+        assertEquals(clothed, CLOTHING_LINES.keys); assertEquals(clothed, CLOTHING_VOICE.keys)
+        ExerciseProfiles.all.forEach { p ->
+            assertEquals(p.name, p.name in clothed, p.clothingHint != null)
+            assertEquals(p.name, p.name in clothed, p.preparationInstruction.contains("보이는 옷을 입어") || p.preparationInstruction.contains("보이는 바지를 입어"))
+            assertEquals(p.name, p.name in clothed, p.preparationLines().lastOrNull()?.text in CLOTHING_VOICE.values)
+            assertFalse(p.name, p.countingConditions?.contains("입어 주세요") == true)   // '세는 조건' 과 섞지 않는다
+        }
+        val curl = ExerciseProfiles.forName("덤벨 컬")!!
+        assertTrue(curl.clothingHint!!.startsWith("팔꿈치가 보이는 옷"))
+        assertTrue(curl.preparationInstruction.indexOf(curl.clothingHint!!) < curl.preparationInstruction.indexOf("3초"))
+        assertTrue(ExerciseProfiles.forName("런지")!!.clothingHint!!.startsWith("무릎과 발목이 보이는 바지"))
+        assertEquals(PrepKind.DET, curl.preparationLines().last().kind)
+    }
 
     private val ready = CaptureFrame(true, "촬영 범위", listOf(.2f,.1f,.8f,.9f))
     private fun controller(floor: Boolean = false) = CapturePreparationController(floor).apply { arm(0) }

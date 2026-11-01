@@ -601,3 +601,54 @@ WorkoutHistoryItem.postureCorrection → 기록 화면
 - **(후속 6)** 사용자 확인: 12:19 세트 7·8회 발끝 그대로 → 넓은 스탠스가 발끝 각을 +20~28° 부풀린다. 발 너비 위반 반복에서 발끝 유보. 두 정적 검사의 1명 성적: 발 너비 2/2·오탐 0/8, 발끝 4/4·오탐 0/2. 다음: 사람 2명 더(지정 오류 세트, 검증 모드 on 권장 — 좌표로 보정식 근거), 시작 자세 기준의 취약성(5프레임 하나) 개선, 발끝 각 원근 보정식.
 - **(후속 7, 사용자 지시 "있는 데이터로 지도 확정")** REHAB24-6·MM-Fit 랜드마크 캡처(`data/rehab_mp_captures`·`data/mmfit_mp_captures`)를 재생해 모집단 오탐률로 띠 확정(설계 §21.10): 무릎 0.0(ship, 4/0/0 %), 발 너비 0.6~1.5(1/2/3 %), 발끝 중앙값 ±15°(8/5/2 %). 좌표 로깅 상시화(검증 모드 불필요). 문헌 기반 오류 카탈로그 `docs/SQUAT_FAULT_CATALOG.md`(14항목: 봄 8·못 봄 3·미구현 2). **다음**: ① 서 있음 판정을 시작 자세 무릎각 기준으로(발끝 2/4 놓침 원인) ② 좌우 쏠림(`knee_asym`·`torso_roll`) 검사 구현 ③ 지정 오류 세트 2명. 재생 명령: `run_replay.py <captures> --out <out> --configs live` → `replay.jsonl` 의 `repForm`(라벨 조인은 index 의 `reps[[start,end,correct]]`).
 - **(후속 8)** 서 있음 판정 수정(발끝 3/4), 좌우 쏠림·hip rise 검사(beta, 모집단 p95 띠) — 설계 §21.11, 카탈로그 갱신. 스쿼트 반복 검사 10개(ship: 무릎 안쪽 모임). 다음: 검출 근거 — 일부러 쏠리기·엉덩이 먼저 올리기를 포함한 지정 오류 세트(사용자 1회면 시작), 사람 2명.
+
+## 2026-11-01 — 덤벨 컬 1단 (§123)
+
+Play 1.3.0 보고 "팔꿈치 벌어짐·허리 숙임을 잡는데 횟수로 센다" 의 원인은 컬 2단 검사의 코칭 띠(말만 하고 셈)였고, 10-15 에 결정한 '덤벨 컬 1단' 이 `claude/sync-local-main-changes-bb8f7d` 워크트리에 미커밋으로만 있었다. 그 중 덤벨 컬 1단만 main 에 옮겼다(`repform_v0.15`, 바벨 컬은 2단 그대로). 같은 워크트리의 §108(가까운 팔 위상·판정 수 표기)·스쿼트 깊이 차단은 **아직 미병합** — 별도 결정.
+
+다음: ① 사용자 폰 재확인(개발자 빌드, 11-01 15:02 세트와 같은 조건 — 코칭 띠 회가 "이 회는 세지 않았어요" 와 함께 빠지는지), ② Mac 에서 `bash gradlew -PiosOnly=true :ios-ui:compileKotlinIosArm64`, ③ 2단이 남은 종목(바벨 컬·런지)의 '첫 위반만 보는 `gated`' 틈(§123 부수 발견).
+
+## 2026-11-01 — 네 종목(굿모닝·푸시업·프런트·사이드 레터럴 레이즈) PR 59 에서 분리 (§124)
+
+사용자 요청으로 PR 59 의 암호화를 뺀 운동 부분만 `fix/curl-one-tier-gate` 에 체리픽(`repform_v0.16`). 전부 beta 참고, 카운터 신호 변경(굿모닝 몸통 회전·푸시업 보이는 쪽 사슬+엎드림 게이트·레이즈 위팔각). MM-Fit 사이드 레이즈 A/B MAE 2.15 → 1.08. **§124a 레이즈 높이 미달의 beta 횟수 제외는 사용자 확인 대기** — 확인 안 되면 `gates = false`. 푸시업·프런트·굿모닝은 재생 근거 없음 → 폰 세트 필요. 암호화(PR 59·60)는 별도.
+
+## 2026-11-01 — 뼈대·화살표 색 = 결과 (§125), 글자 대신 기호는 검토안(§125a)
+
+사용자 요청 "코칭 라인과 차단 라인이 같은 빨강이라 헷갈린다" → 빨강 = 회 제외, 주황 = 말했지만 셈, 호박 = 참고. `RuleHighlight.tiers`·`SkeletonStage(coaching=)`·`MotionCue.blocked`. 같은 날 "말 대신 화살표·기호" 요청은 §125a 에 제안만 적었다(✕ 배지 + 숫자 점멸, 참고 칩 축약) — 승인 대기. 폰 확인은 사용자.
+
+## 2026-11-01 — 헐렁한 옷과 컬·런지 판정 연구 (§126, 구현 전)
+
+사용자 보고 "통 크거나 펑퍼짐한 옷이면 자주 오류" → `docs/LOOSE_CLOTHING_RESEARCH.md`. 기전(옷 속 관절을 지어냄·가시성 무력), 컬 옆 벌림 `refCap`/`absMin` 경로가 1단에서 매 회 차단한다는 예측(폰 연결하면 11-01 이후 로그의 `rep_form` 회별 raw·ref 로 먼저 확인), 대리 지표 `clothing_proxies.py` 와 일상복 기준값, 방안 A(안내)→B(옷 불확실 세트 강등)→C(heavy, 영상 필요), 옷 라벨 블록 설계. 임계 변경 없음.
+
+**A 구현(같은 날 저녁, 사용자 결정).** `CLOTHING_LINES`·`clothingHint`(ExerciseProfiles) → 준비 카드 '세는 조건' 아래 한 줄 + 준비 전문, 음성은 첫 문장만 맨 뒤 DET(`CLOTHING_VOICE`). 컬 둘·런지 넷. `PostureScope.startLine` 은 화면에 안 닿아 그대로. 남은 것: 폰 로그에서 컬 옆 벌림 `raw`·`ref`(refCap 예측) 확인, 옷 라벨 블록(연구 §5), B 는 블록 뒤.
+
+
+
+## 2026-11-01 — PR #61 guide assets and camera rollout (§127)
+
+Four new guides (good morning, push-up, front/lateral raise) use the existing sheet,
+bringing guides to 14. Evidence-informed GIFs and Korean cautions distinguish
+primary/participating muscle roles without claiming measured intensity.
+The user explicitly chose 16 camera-enabled exercises including barbell curl and
+barbell lunge. `ExerciseProfiles.cameraSupportedNames` is the shared rollout gate;
+the other ten remain manual exercises and retain research profiles. Catalog defaults,
+replacement/import and session entry respect the gate. Existing pilot/beta/trial
+status is unchanged. Device playback and native iOS verification remain outstanding.
+
+Verification: app JVM 914 tests and shared JVM 558 tests passed (zero failures/errors/skips); assembleDebug and lintDebug passed. Resource export and shared-source parity checks passed. All four APK GIFs match source bytes. NOT RUN: device popup/playback and native iOS build (Windows); full iOS static checker requires unavailable PyYAML.
+
+
+## 2026-11-01 follow-up: remaining twelve guide audit (§128)
+
+Regenerated all 12 remaining enabled exercises after an EMG/anatomy evidence audit.
+Ten guides replaced; dedicated barbell curl/lunge added, total 16. Plank now uses a
+hold GIF. Existing four guides and the 16-exercise posture gate remain unchanged.
+Evidence table and limits: docs/EXERCISE_GUIDE_UI.md. Source IDs/prompt recipes:
+docs/exercise-guide-sources-2026-11-01.json. No clinical mask validation or posture
+rule promotion is implied by new illustrations.
+
+Verification: app JVM 914 tests passed (zero failures/errors/skips); assembleDebug and lintDebug passed. Resource export --check passed for 16 guides. All 24 decoded poses were inspected at 260 px. NOT RUN: device popup/playback and native iOS build/tests (Windows); clinician review and anatomical mask validation.
+
+## 2026-11-01 — HUD beta '참고 · …' 칩 제거 (§129)
+
+사용자 결정 "호박색 문구는 어차피 못 보니까 제거해". `LiveWorkoutHud.referenceNote` 와 `PostureLive` 의 `provisionalNote`·`repReferenceNote`·`provisionalAtRef` 를 뺐다. beta 는 뼈대 호박색과 완료 화면에만. 호박색 글자는 횟수 메모·일시정지·플랭크 멈춤 줄만 남는다. 준비 화면 주황 자리 안내는 그대로. 코드 확인에서 본 결함(컬·런지 beta 칩이 창 규칙 3 s 갱신에 지워짐)은 칩 제거로 함께 사라졌다.
