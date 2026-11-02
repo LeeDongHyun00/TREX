@@ -98,6 +98,7 @@ class WeatherRepository(context: Context? = null) {
     }
 
     private fun requestOpenMeteo(latitude: Double, longitude: Double): WeatherInfo {
+        // 순수 URL 문자열 형태 유지 (마크다운 링크 형태 금지)
         val urlString = "https://api.open-meteo.com/v1/forecast" +
             "?latitude=" + latitude +
             "&longitude=" + longitude +
@@ -121,7 +122,8 @@ class WeatherRepository(context: Context? = null) {
         }
     }
 
-    private data class AirQualityRaw(
+    // 라이너 피드백 반영: internal로 가시성 통일
+    internal data class AirQualityRaw(
         val aqi: Int?,
         val pm10: Double?,
         val pm25: Double?
