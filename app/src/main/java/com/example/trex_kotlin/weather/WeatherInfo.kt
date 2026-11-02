@@ -39,7 +39,7 @@ data class WeatherWorkoutRecommendation(
     val theme: WeatherThemeMode,
     val locationLabel: String,
     val weatherSummary: String,
-    val precipitationSummary: String,
+    val precipitationSummary: String? = null,
     val updateAgeText: String,
     val message: String,
     val exercises: List<RecommendedExercise>
