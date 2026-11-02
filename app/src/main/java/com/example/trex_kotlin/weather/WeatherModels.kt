@@ -39,6 +39,7 @@ data class WeatherWorkoutRecommendation(
     val theme: WeatherThemeMode,
     val locationLabel: String,
     val weatherSummary: String,
+    val airQualitySummary: String = "", // 👈 미세먼지 수치 요약 필드 추가
     val updateAgeText: String,
     val message: String,
     val exercises: List<RecommendedExercise>
@@ -68,4 +69,3 @@ enum class KoreanRegion(
             entries.find { it.displayName == name } ?: SEOUL
     }
 }
-

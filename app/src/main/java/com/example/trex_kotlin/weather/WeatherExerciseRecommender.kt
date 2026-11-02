@@ -9,7 +9,6 @@ object WeatherExerciseRecommender {
         locationLabel: String,
         nowMillis: Long = System.currentTimeMillis()
     ): WeatherWorkoutRecommendation {
-        // 피드백 반영: AQI가 100을 초과하면 나쁨(실내 전환 요인)으로 판정 (null일 때는 기존 날씨 유지)
         val isPoorAirQuality = weather.aqi?.let { it > 100 } == true
 
         val isSnow = weather.weatherCode in 71..77 || weather.weatherCode in 85..86
@@ -31,15 +30,24 @@ object WeatherExerciseRecommender {
             else -> WeatherThemeMode.SUNNY
         }
 
-        // 미세먼지가 나쁘거나 기존 악천후인 경우 실내 운동으로 지정
         val isBadWeather = isSnow || isRaining || isCold || isHeatwave || isFogOrWind || isPoorAirQuality
         val environment = if (isBadWeather) WorkoutEnvironment.INDOOR else WorkoutEnvironment.OUTDOOR
         val weatherText = getWeatherDescription(weather.weatherCode)
         val roundedTemp = weather.temperature.roundToInt()
         
-        // 요약 텍스트에 AQI 정보 추가
-        val airQualityLabel = weather.aqi?.let { " · AQI $it" } ?: ""
-        val summary = locationLabel + " · " + weatherText + " · " + roundedTemp + "°C" + airQualityLabel
+        // 미세먼지 수치 포맷팅 (괄호 제거 및 공백 연결로 한 줄 최적화)
+        val airQualityLabel = weather.aqi?.let { aqi ->
+            val statusText = when {
+                aqi <= 50 -> "미세먼지 좋음"
+                aqi <= 100 -> "미세먼지 보통"
+                aqi <= 150 -> "민감군 나쁨"
+                else -> "미세먼지 나쁨"
+            }
+            " · $statusText $aqi"
+        } ?: ""
+
+        // 👈 [수정 완료] 우측 상단에 지역명이 있으므로 summary에서 locationLabel 제거
+        val summary = weatherText + " · " + roundedTemp + "°C" + airQualityLabel
 
         val minutesAgo = ((nowMillis - weather.fetchedAtMillis) / 60000L).coerceAtLeast(0L)
         val updateAgeText = when {
@@ -48,7 +56,6 @@ object WeatherExerciseRecommender {
             else -> (minutesAgo / 60L).toString() + "시간 전 업데이트"
         }
 
-        // 대기질 상태를 반영한 원본 말투 메시지
         val message = when {
             isPoorAirQuality -> "대기질(AQI ${weather.aqi})이 나빠예룡! 야외 활동을 피하고 실내에서 안전하게 운동해 보세룡."
             isSnow || isCold -> "기온이 낮거나 눈 소식이 있어룡. 실내에서 체온을 높이는 웜업 운동을 권장해룡."

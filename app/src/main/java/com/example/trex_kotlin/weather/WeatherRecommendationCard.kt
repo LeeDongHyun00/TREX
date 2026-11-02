@@ -208,10 +208,11 @@ fun WeatherRecommendationCard(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
+                            // 👈 [수정 완료] 14.sp 크기로 조정하고 maxLines = 1을 주어 완벽한 한 줄 표시 확보
                             Text(
                                 text = rec.weatherSummary,
                                 color = c.text,
-                                fontSize = 18.sp,
+                                fontSize = 14.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
