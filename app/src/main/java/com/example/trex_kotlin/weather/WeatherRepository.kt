@@ -1,13 +1,17 @@
 package com.example.trex_kotlin.weather
 
 import android.content.Context
+import com.example.trex_kotlin.BuildConfig
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
 import java.util.Locale
+import java.util.concurrent.ConcurrentHashMap
 
 class WeatherRepository(context: Context? = null) {
 
@@ -52,7 +56,21 @@ class WeatherRepository(context: Context? = null) {
 
         var lastError: Throwable? = null
         repeat(2) { attempt ->
-            val result = runCatching { requestOpenMeteo(latitude, longitude) }
+            val result = runCatching {
+                coroutineScope {
+                    val weatherDeferred = async { requestOpenMeteo(latitude, longitude) }
+                    val airDeferred = async { runCatching { requestAqicn(latitude, longitude) }.getOrNull() }
+
+                    val weatherInfo = weatherDeferred.await()
+                    val airInfo = airDeferred.await()
+
+                    weatherInfo.copy(
+                        aqi = airInfo?.aqi,
+                        pm10 = airInfo?.pm10,
+                        pm25 = airInfo?.pm25
+                    )
+                }
+            }
             if (result.isSuccess) {
                 val info = result.getOrThrow()
                 memoryCache[cacheKey] = info
@@ -103,6 +121,53 @@ class WeatherRepository(context: Context? = null) {
         }
     }
 
+    private data class AirQualityRaw(
+        val aqi: Int?,
+        val pm10: Double?,
+        val pm25: Double?
+    )
+
+    private fun requestAqicn(latitude: Double, longitude: Double): AirQualityRaw? {
+        val token = runCatching { BuildConfig.AQICN_API_KEY }.getOrDefault("demo").ifBlank { "demo" }
+        val urlString = String.format(
+            Locale.US,
+            "https://api.waqi.info/feed/geo:%.4f;%.4f/?token=%s",
+            latitude,
+            longitude,
+            token
+        )
+
+        val connection = (URL(urlString).openConnection() as HttpURLConnection).apply {
+            requestMethod = "GET"
+            connectTimeout = 5000
+            readTimeout = 5000
+        }
+
+        return try {
+            if (connection.responseCode != HttpURLConnection.HTTP_OK) return null
+            val responseText = connection.inputStream.bufferedReader().use { it.readText() }
+            parseAqicnJson(responseText)
+        } finally {
+            connection.disconnect()
+        }
+    }
+
+    internal fun parseAqicnJson(responseText: String): AirQualityRaw? {
+        val root = JSONObject(responseText)
+        if (root.optString("status") != "ok") return null
+        val data = root.optJSONObject("data") ?: return null
+
+        val aqi = if (data.has("aqi") && !data.isNull("aqi")) {
+            data.optInt("aqi", -1).takeIf { it >= 0 }
+        } else null
+
+        val iaqi = data.optJSONObject("iaqi")
+        val pm10 = iaqi?.optJSONObject("pm10")?.optDouble("v")?.takeIf { !it.isNaN() }
+        val pm25 = iaqi?.optJSONObject("pm25")?.optDouble("v")?.takeIf { !it.isNaN() }
+
+        return AirQualityRaw(aqi = aqi, pm10 = pm10, pm25 = pm25)
+    }
+
     internal fun parseCurrentWeatherJson(
         responseText: String,
         fetchedAtMillis: Long = System.currentTimeMillis()
@@ -149,7 +214,10 @@ class WeatherRepository(context: Context? = null) {
                 precipitation = obj.getDouble("p"),
                 weatherCode = obj.getInt("c"),
                 windSpeed = obj.getDouble("w"),
-                fetchedAtMillis = obj.getLong("ts")
+                fetchedAtMillis = obj.getLong("ts"),
+                aqi = if (obj.has("aqi") && !obj.isNull("aqi")) obj.getInt("aqi") else null,
+                pm10 = if (obj.has("pm10") && !obj.isNull("pm10")) obj.getDouble("pm10") else null,
+                pm25 = if (obj.has("pm25") && !obj.isNull("pm25")) obj.getDouble("pm25") else null
             )
         }.getOrNull()
     }
@@ -163,6 +231,9 @@ class WeatherRepository(context: Context? = null) {
                 put("c", info.weatherCode)
                 put("w", info.windSpeed)
                 put("ts", info.fetchedAtMillis)
+                info.aqi?.let { put("aqi", it) }
+                info.pm10?.let { put("pm10", it) }
+                info.pm25?.let { put("pm25", it) }
             }.toString()
         )?.apply()
     }
@@ -171,6 +242,7 @@ class WeatherRepository(context: Context? = null) {
         private const val CACHE_PREFS = "trex_weather_cache_prefs"
         internal const val CACHE_TTL_MILLIS = 60 * 60 * 1000L
         internal const val MAX_STALE_CACHE_MILLIS = 3 * 60 * 60 * 1000L
-        private val memoryCache = mutableMapOf<String, WeatherInfo>()
+
+        private val memoryCache = ConcurrentHashMap<String, WeatherInfo>()
     }
 }
