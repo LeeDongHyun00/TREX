@@ -9,6 +9,9 @@ object WeatherExerciseRecommender {
         locationLabel: String,
         nowMillis: Long = System.currentTimeMillis()
     ): WeatherWorkoutRecommendation {
+        // 미세먼지(AQI) 수치가 100을 초과하면 나쁨(실내 전환 요인)으로 판정
+        val isPoorAirQuality = weather.aqi?.let { it > 100 } == true
+
         val isSnow = weather.weatherCode in 71..77 || weather.weatherCode in 85..86
         val isRaining = weather.weatherCode in 51..67 ||
             weather.weatherCode in 80..82 ||
@@ -19,6 +22,7 @@ object WeatherExerciseRecommender {
         val isCloudy = weather.weatherCode in 2..3
 
         val theme = when {
+            isPoorAirQuality -> WeatherThemeMode.CLOUDY // 미세먼지 나쁠 때는 대기질 테마에 준하게 실내 테마 유도
             isSnow -> WeatherThemeMode.SNOWY_COLD
             isRaining -> WeatherThemeMode.RAINY
             isCold -> WeatherThemeMode.SNOWY_COLD
@@ -27,11 +31,15 @@ object WeatherExerciseRecommender {
             else -> WeatherThemeMode.SUNNY
         }
 
-        val isBadWeather = isSnow || isRaining || isCold || isHeatwave || isFogOrWind
+        // 미세먼지가 나쁘거나 기존 악천후인 경우 실내 운동으로 지정
+        val isBadWeather = isSnow || isRaining || isCold || isHeatwave || isFogOrWind || isPoorAirQuality
         val environment = if (isBadWeather) WorkoutEnvironment.INDOOR else WorkoutEnvironment.OUTDOOR
         val weatherText = getWeatherDescription(weather.weatherCode)
         val roundedTemp = weather.temperature.roundToInt()
-        val summary = locationLabel + " · " + weatherText + " · " + roundedTemp + "°C"
+        
+        // 요약 텍스트에 미세먼지 AQI 정보가 있다면 함께 표기
+        val airQualityLabel = weather.aqi?.let { " · AQI $it" } ?: ""
+        val summary = locationLabel + " · " + weatherText + " · " + roundedTemp + "°C" + airQualityLabel
 
         val minutesAgo = ((nowMillis - weather.fetchedAtMillis) / 60000L).coerceAtLeast(0L)
         val updateAgeText = when {
@@ -40,7 +48,9 @@ object WeatherExerciseRecommender {
             else -> (minutesAgo / 60L).toString() + "시간 전 업데이트"
         }
 
+        // 미세먼지 상태를 반영한 원본 말투 메시지
         val message = when {
+            isPoorAirQuality -> "대기질(AQI ${weather.aqi})이 나빠예룡! 야외 활동을 피하고 실내에서 안전하게 운동해 보세룡."
             isSnow || isCold -> "기온이 낮거나 눈 소식이 있어룡. 실내에서 체온을 높이는 웜업 운동을 권장해룡."
             isRaining -> "비 소식이 있어룡! 실내에서 안전하게 전신 근력 운동을 진행해 보세룡."
             isHeatwave -> "무더운 날씨예룡. 시원한 실내에서 수분을 보충하며 부위별 운동을 해보세룡."
