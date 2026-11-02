@@ -5,7 +5,10 @@ data class WeatherInfo(
     val precipitation: Double,
     val weatherCode: Int,
     val windSpeed: Double,
-    val fetchedAtMillis: Long = System.currentTimeMillis()
+    val fetchedAtMillis: Long = System.currentTimeMillis(),
+    val aqi: Int? = null,
+    val pm10: Double? = null,
+    val pm25: Double? = null
 )
 
 enum class WorkoutEnvironment(val labelKorean: String) {
@@ -65,3 +68,4 @@ enum class KoreanRegion(
             entries.find { it.displayName == name } ?: SEOUL
     }
 }
+

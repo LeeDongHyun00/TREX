@@ -15,6 +15,12 @@ fun trexConfig(name: String, default: String): String =
     localProps.getProperty(name) ?: (project.findProperty(name) as String?) ?: default
 
 android {
+    buildFeatures {
+        buildConfig = true
+    }
+    defaultConfig {
+        buildConfigField("String", "AQICN_API_KEY", "\"demo\"")
+    }
     namespace = "com.example.trex_kotlin"
     compileSdk {
         version = release(36)
@@ -105,3 +111,4 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 }
+
