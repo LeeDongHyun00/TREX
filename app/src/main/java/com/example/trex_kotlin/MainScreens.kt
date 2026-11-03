@@ -113,6 +113,18 @@ fun HomeScreen(app: AppViewModel, onGoWorkout: () -> Unit, onGoDiet: () -> Unit,
         item {
             Text("${today.monthValue}월 ${today.dayOfMonth}일 ${today.dayOfWeek.getDisplayName(TextStyle.FULL, Locale.KOREAN)}",
                 color = c.text2, fontSize = 14.sp)
+
+            // 날짜 바로 아래, '운동한 날' 상단에 컴팩트 한 줄 날씨 바 배치
+            WeatherRecommendationCard(
+                plannedExerciseNames = app.workoutPlan.map { it.name }.toSet(),
+                onExerciseClick = { exercise ->
+                    if (app.workoutPlan.none { it.name == exercise.catalogName }) {
+                        app.addMuscleRecommendation(exercise.catalogName)
+                    }
+                },
+                modifier = Modifier.padding(top = 4.dp, bottom = 4.dp)
+            )
+
             Text("운동한 날", color = c.text2, fontSize = 12.sp,
                 modifier = Modifier.padding(top = 6.dp, bottom = 12.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -140,16 +152,6 @@ fun HomeScreen(app: AppViewModel, onGoWorkout: () -> Unit, onGoDiet: () -> Unit,
         }
         item { HomeNutrition(total, goal, onGoDiet) }
         item { HomeActionCards(overview, onGoWorkout, onRecordMeal) }
-        item {
-            WeatherRecommendationCard(
-                plannedExerciseNames = app.workoutPlan.map { it.name }.toSet(),
-                onExerciseClick = { exercise ->
-                    if ( app.workoutPlan.none { it.name == exercise.catalogName } ) {
-                        app.addMuscleRecommendation(exercise.catalogName)
-                    }
-                }
-            )
-        }
         item { MuscleLoadHomeCard(app, onOpenMuscleLoad) }
         item { HomeActivityCards(app) }
     }
@@ -262,6 +264,3 @@ fun profileGoalLabel(goal: String): String = when (goal) {
     "maintain" -> "유지"
     else -> "일반"
 }
-
-
-

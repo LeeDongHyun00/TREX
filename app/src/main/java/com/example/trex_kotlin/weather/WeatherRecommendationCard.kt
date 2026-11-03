@@ -9,6 +9,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
@@ -33,6 +34,7 @@ private object WeatherUiStateCache {
     var lastError by mutableStateOf<String?>(null)
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WeatherRecommendationCard(
     plannedExerciseNames: Set<String> = emptySet(),
@@ -58,7 +60,8 @@ fun WeatherRecommendationCard(
     }
     var isLoading by remember { mutableStateOf(recommendation == null && WeatherUiStateCache.lastError == null) }
     var errorMessage by remember { mutableStateOf(WeatherUiStateCache.lastError) }
-    var showRegionDialog by remember { mutableStateOf(false) }
+    var showSheet by remember { mutableStateOf(false) }
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     fun loadWeather(forceRefresh: Boolean = false) {
         coroutineScope.launch {
@@ -111,147 +114,113 @@ fun WeatherRecommendationCard(
         }
     }
 
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
-        color = c.surface,
-        contentColor = c.text,
-        border = BorderStroke(1.dp, c.line)
+    // 1. 상단 컴팩트 한 줄 바 UI
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .clickable { showSheet = true }
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Column(modifier = Modifier.padding(18.dp)) {
-            if (isLoading && recommendation == null) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(88.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(28.dp),
-                        color = c.primary
-                    )
-                }
-            } else if (errorMessage != null && recommendation == null) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = errorMessage ?: "",
-                        color = c.text2,
-                        fontSize = 13.sp,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f)
-                    )
-                    TextButton(onClick = { loadWeather(forceRefresh = true) }) {
-                        Text(
-                            text = "다시 시도",
-                            color = c.primaryText,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                }
-            } else {
+        val currentRec = recommendation
+        if (currentRec != null) {
+            Text(
+                text = currentRec.theme.emoji,
+                fontSize = 14.sp,
+                modifier = Modifier.padding(end = 6.dp)
+            )
+            Text(
+                text = currentRec.locationLabel + " " + currentRec.weatherSummary,
+                color = c.text,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Medium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f, fill = false)
+            )
+            Text(
+                text = " >",
+                color = c.text2,
+                fontSize = 13.sp,
+                modifier = Modifier.padding(start = 4.dp)
+            )
+        } else if (isLoading) {
+            CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp, color = c.primary)
+            Text(
+                text = " 날씨 불러오는 중...",
+                color = c.text2,
+                fontSize = 12.sp,
+                modifier = Modifier.padding(start = 6.dp)
+            )
+        } else {
+            Text(
+                text = "날씨 정보 갱신 실패 (탭하여 재시도)",
+                color = c.text2,
+                fontSize = 12.sp
+            )
+        }
+    }
+
+    // 2. 탭 시 나타나는 상세 바텀시트 모달
+    if (showSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showSheet = false },
+            sheetState = sheetState,
+            containerColor = c.surface,
+            contentColor = c.text
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 8.dp)
+                    .verticalScroll(rememberScrollState())
+            ) {
                 recommendation?.let { rec ->
+                    // 바텀시트 헤더: 테마 & 권장 환경
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Box(
-                            modifier = Modifier.weight(1f),
-                            contentAlignment = Alignment.CenterStart
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(999.dp))
-                                    .background(c.primaryWash)
-                                    .padding(horizontal = 10.dp, vertical = 5.dp)
-                            ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(text = rec.theme.emoji, fontSize = 22.sp)
+                            Spacer(Modifier.width(8.dp))
+                            Column {
                                 Text(
-                                    text = rec.theme.emoji + " " + rec.theme.titleKorean + " · " + rec.environment.labelKorean,
-                                    color = c.primaryText,
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
+                                    text = rec.theme.titleKorean,
+                                    color = c.text,
+                                    fontSize = 17.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = rec.locationLabel + " · " + rec.weatherSummary + " · " + rec.environment.labelKorean,
+                                    color = c.text2,
+                                    fontSize = 12.sp
                                 )
                             }
                         }
-
-                        Spacer(modifier = Modifier.width(8.dp))
-
-                        TextButton(
-                            onClick = { showRegionDialog = true },
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
-                        ) {
-                            Text(
-                                text = "📍 " + rec.locationLabel + " ▾",
-                                color = c.text2,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
+                        TextButton(onClick = { loadWeather(forceRefresh = true) }) {
+                            Text("↻ 새로고침", color = c.primaryText, fontSize = 12.sp)
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            // 👈 [수정 완료] 14.sp 크기로 조정하고 maxLines = 1을 주어 완벽한 한 줄 표시 확보
-                            Text(
-                                text = rec.weatherSummary,
-                                color = c.text,
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            Text(
-                                text = rec.updateAgeText,
-                                color = c.text2,
-                                fontSize = 11.sp,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.padding(top = 2.dp)
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.width(8.dp))
-
-                        TextButton(
-                            onClick = { loadWeather(forceRefresh = true) },
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
-                        ) {
-                            Text(
-                                text = "↻ 새로고침",
-                                color = c.text2,
-                                fontSize = 11.sp,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(Modifier.height(12.dp))
                     Text(
                         text = rec.message,
-                        color = c.text2,
+                        color = c.text,
                         fontSize = 13.sp,
                         lineHeight = 19.sp
                     )
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(Modifier.height(16.dp))
+                    Text(
+                        text = "추천 운동",
+                        color = c.text,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Spacer(Modifier.height(8.dp))
 
                     rec.exercises.forEach { exercise ->
                         val isAdded = exercise.catalogName in plannedExerciseNames
@@ -260,7 +229,7 @@ fun WeatherRecommendationCard(
                                 .fillMaxWidth()
                                 .padding(vertical = 4.dp)
                                 .clickable(enabled = !isAdded) { onExerciseClick(exercise) },
-                            shape = RoundedCornerShape(16.dp),
+                            shape = RoundedCornerShape(12.dp),
                             color = c.surface2,
                             border = BorderStroke(1.dp, c.line)
                         ) {
@@ -276,102 +245,100 @@ fun WeatherRecommendationCard(
                                         text = exercise.title,
                                         color = c.text,
                                         fontSize = 14.sp,
-                                        fontWeight = FontWeight.SemiBold,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
+                                        fontWeight = FontWeight.SemiBold
                                     )
-                                    Spacer(modifier = Modifier.height(3.dp))
+                                    Spacer(Modifier.height(2.dp))
                                     Text(
                                         text = exercise.description,
                                         color = c.text2,
-                                        fontSize = 12.sp
+                                        fontSize = 11.sp
                                     )
                                 }
                                 Text(
-                                    text = if (isAdded) "목록에 있음" else "운동 목록에 추가",
+                                    text = if (isAdded) "목록에 있음" else "목록에 추가",
                                     color = if (isAdded) c.text2 else c.primaryText,
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.SemiBold,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
                                     modifier = Modifier.padding(start = 8.dp)
                                 )
                             }
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(Modifier.height(20.dp))
+                    HorizontalDivider(color = c.line)
+                    Spacer(Modifier.height(14.dp))
+
                     Text(
-                        text = "날씨 정보: Open-Meteo.com",
-                        color = c.text2,
-                        fontSize = 10.sp,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        text = "날씨 기준 지역",
+                        color = c.text,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold
                     )
+                    Spacer(Modifier.height(8.dp))
+
+                    // GPS 현재 위치 옵션
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable {
+                                if (preferenceManager.hasLocationPermission()) {
+                                    preferenceManager.enableGpsMode()
+                                    loadWeather(forceRefresh = true)
+                                } else {
+                                    permissionLauncher.launch(
+                                        arrayOf(
+                                            Manifest.permission.ACCESS_FINE_LOCATION,
+                                            Manifest.permission.ACCESS_COARSE_LOCATION
+                                        )
+                                    )
+                                }
+                            }
+                            .padding(vertical = 10.dp, horizontal = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("🎯", fontSize = 14.sp)
+                        Spacer(Modifier.width(8.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("현재 위치", color = c.text, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                            Text("GPS로 지금 있는 곳의 날씨", color = c.text2, fontSize = 11.sp)
+                        }
+                        if (preferenceManager.isGpsModeEnabled()) {
+                            Text("✓", color = c.primaryText, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+
+                    // 지역 선택 목록
+                    KoreanRegion.entries.forEach { region ->
+                        val isSelected = !preferenceManager.isGpsModeEnabled() && preferenceManager.getSavedRegion() == region
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable {
+                                    preferenceManager.saveSelectedRegion(region)
+                                    loadWeather(forceRefresh = true)
+                                }
+                                .padding(vertical = 9.dp, horizontal = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("📍", fontSize = 13.sp)
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                text = region.displayName,
+                                color = c.text,
+                                fontSize = 13.sp,
+                                modifier = Modifier.weight(1f)
+                            )
+                            if (isSelected) {
+                                Text("✓", color = c.primaryText, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                    Spacer(Modifier.height(16.dp))
                 }
             }
         }
-    }
-
-    if (showRegionDialog) {
-        AlertDialog(
-            onDismissRequest = { showRegionDialog = false },
-            containerColor = c.surface,
-            titleContentColor = c.text,
-            textContentColor = c.text,
-            title = { Text("날씨 기준 지역 선택", color = c.text, fontSize = 18.sp, fontWeight = FontWeight.SemiBold) },
-            text = {
-                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                    TextButton(
-                        onClick = {
-                            showRegionDialog = false
-                            if (preferenceManager.hasLocationPermission()) {
-                                preferenceManager.enableGpsMode()
-                                loadWeather(forceRefresh = true)
-                            } else {
-                                permissionLauncher.launch(
-                                    arrayOf(
-                                        Manifest.permission.ACCESS_FINE_LOCATION,
-                                        Manifest.permission.ACCESS_COARSE_LOCATION
-                                    )
-                                )
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(
-                            text = "🎯 현재 위치(GPS)",
-                            color = c.primaryText,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
-                    HorizontalDivider(color = c.line)
-                    KoreanRegion.entries.forEach { region ->
-                        TextButton(
-                            onClick = {
-                                preferenceManager.saveSelectedRegion(region)
-                                showRegionDialog = false
-                                loadWeather(forceRefresh = true)
-                            },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text(
-                                text = "📍 " + region.displayName,
-                                color = c.text,
-                                fontSize = 14.sp,
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { showRegionDialog = false }) {
-                    Text("닫기", color = c.text2, fontSize = 13.sp)
-                }
-            }
-        )
     }
 }
