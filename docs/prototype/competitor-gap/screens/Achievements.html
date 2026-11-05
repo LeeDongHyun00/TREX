@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>업적</title>
+</head>
+<body style="background:#E9ECE4;display:flex;justify-content:center;padding:24px 0">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<style>
+body{margin:0;background:#F5F7F1;color:#1F2618;font-family:"Noto Sans KR",system-ui,sans-serif;font-size:14px;line-height:1.45}
+a{color:#4A6329;text-decoration:none}a:hover{color:#1F2618}
+.card{background:#fff;border-radius:20px;padding:16px;box-shadow:0 1px 2px rgba(31,38,24,.06)}
+.dark{background:#1F2618;color:#fff}
+.eb{font-size:12px;color:#5E6754;margin:0;line-height:1.4}
+.ib{width:44px;height:44px;border-radius:12px;border:0;background:transparent;display:flex;align-items:center;justify-content:center;color:#5E6754;cursor:pointer;flex:none;font-family:inherit}
+.row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.badge{background:#fff;border-radius:16px;padding:12px 6px;text-align:center;font-size:12px;color:#1F2618;box-shadow:0 1px 2px rgba(31,38,24,.06);border:0;font-family:inherit;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;min-height:96px;justify-content:center;line-height:1.3}
+.badge i{width:44px;height:44px;border-radius:50%;background:#C7E26B;display:flex;align-items:center;justify-content:center}
+.badge.off{color:#5E6754}.badge.off i{background:#ECEEE8}
+.days{display:flex;gap:4px}.days span{flex:1;text-align:center;font-size:12px;padding:6px 0;border-radius:8px;background:#ECEEE8;color:#5E6754}.days span.on{background:#A8C47C;color:#1F2618;font-weight:600}
+.it{display:flex;justify-content:space-between;align-items:center;min-height:44px;border-top:1px solid rgba(31,38,24,.08);font-size:13px;gap:10px}
+.it:first-child{border-top:0}
+.note{font-size:12px;color:#5E6754;background:#ECEEE8;border-radius:10px;padding:8px 10px;line-height:1.5;margin:0}
+.nav{position:absolute;left:0;right:0;bottom:0;height:80px;background:#fff;border-top:1px solid rgba(31,38,24,.08);display:flex;justify-content:space-around;align-items:center;padding:0 8px 12px;box-sizing:border-box}
+.nav a{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:12px;color:#5E6754;min-width:56px;min-height:48px;justify-content:center}
+.nav a.on{color:#4A6329;font-weight:600}
+</style>
+<div style="width:390px;height:844px;position:relative;overflow:hidden;box-sizing:border-box">
+<div style="height:100%;overflow:auto;padding:48px 20px 100px;box-sizing:border-box;display:flex;flex-direction:column;gap:12px">
+  <div class="row" style="margin-left:-10px">
+    <div style="display:flex;align-items:center;gap:2px"><a href="Settings.html" class="ib" aria-label="뒤로"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></a><h1 style="margin:0;font-size:20px;font-weight:700">업적</h1></div>
+  </div>
+
+  <div class="card dark">
+    <div class="row"><div><p class="eb" style="color:rgba(255,255,255,.72)">레벨</p><p style="margin:0;font-size:28px;font-weight:700">Lv 6</p></div><div style="text-align:right"><p class="eb" style="color:rgba(255,255,255,.72)">다음 레벨까지</p><p style="margin:0;font-size:18px;font-weight:700">180 XP</p></div></div>
+    <div style="height:8px;border-radius:999px;background:rgba(255,255,255,.15);margin-top:12px;overflow:hidden" role="img" aria-label="레벨 진행 64%"><i style="display:block;height:100%;width:64%;background:#C7E26B"></i></div>
+    <p style="margin:8px 0 0;font-size:12px;color:#E5EDD9">XP 는 운동을 마치고 기록할 때만 쌓여요. 자세 점수는 XP 와 무관해요.</p>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(2, minmax(0, 1fr));gap:10px">
+    <div class="card"><p class="eb">연속 운동</p><p style="margin:2px 0 0;font-size:26px;font-weight:700">12일</p><p class="eb">최장 19일 · 목표 요일 기준</p></div>
+    <div class="card"><p class="eb">이번 주 · 목표 4일</p><p style="margin:2px 0 6px;font-size:26px;font-weight:700">3 / 4</p><div class="days" aria-label="이번 주 운동한 요일: 월, 수, 목"><span class="on">월</span><span>화</span><span class="on">수</span><span class="on">목</span><span>금</span><span>토</span><span>일</span></div></div>
+  </div>
+
+  <button type="button" class="card row" style="width:100%;border:0;text-align:left;font-family:inherit;cursor:pointer;min-height:60px"><span><span style="font-size:15px;font-weight:600">연속 잠시 멈추기</span><p class="eb">부상·여행 때 최대 14일. 멈춘 동안은 연속이 줄지 않고, 돈이나 아이템은 필요 없어요.</p></span><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#5E6754" stroke-width="1.8" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+
+  <div class="row" style="margin-top:4px"><h2 style="font-size:16px;font-weight:600;margin:0">배지</h2><span class="eb">7 / 18 획득</span></div>
+  <div style="display:grid;grid-template-columns:repeat(3, minmax(0, 1fr));gap:8px">
+    <button type="button" class="badge" aria-label="첫 운동, 획득"><i><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1F2618" stroke-width="1.8" aria-hidden="true"><path d="M5 12l4 4L19 6"/></svg></i>첫 운동</button>
+    <button type="button" class="badge" aria-label="7일 연속, 획득"><i><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1F2618" stroke-width="1.8" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></i>7일 연속</button>
+    <button type="button" class="badge off" aria-label="30일 연속, 미획득, 12 / 30"><i><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#5E6754" stroke-width="1.8" aria-hidden="true"><path d="M12 3c2 4 6 5 6 10a6 6 0 0 1-12 0c0-3 2-4 2-7 1 1 2 2 4-3z"/></svg></i>30일 연속<span class="eb">12 / 30</span></button>
+    <button type="button" class="badge" aria-label="교정 모드 50세트 시도, 획득"><i><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1F2618" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/></svg></i>교정 모드 50세트</button>
+    <button type="button" class="badge" aria-label="가이드 16종목 열람, 획득"><i><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1F2618" stroke-width="1.8" aria-hidden="true"><path d="M4 5h7a3 3 0 0 1 3 3v12a3 3 0 0 0-3-3H4zM20 5h-7"/><path d="M20 5v12h-6"/></svg></i>가이드 16종목</button>
+    <button type="button" class="badge" aria-label="첫 PR, 획득"><i><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1F2618" stroke-width="1.8" aria-hidden="true"><path d="M8 21h8M12 17v4M5 4h14v4a7 7 0 0 1-14 0z"/></svg></i>첫 PR</button>
+    <button type="button" class="badge off" aria-label="스쿼트 500회, 미획득, 312 / 500"><i><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#5E6754" stroke-width="1.8" aria-hidden="true"><path d="M3 10v4M21 10v4M6 8v8M18 8v8M6 12h12"/></svg></i>스쿼트 500회<span class="eb">312 / 500</span></button>
+    <button type="button" class="badge" aria-label="플랭크 누적 30분, 획득"><i><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1F2618" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></i>플랭크 30분</button>
+    <button type="button" class="badge" aria-label="식단 7일 기록, 획득"><i><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1F2618" stroke-width="1.8" aria-hidden="true"><path d="M4 11h16a8 8 0 0 1-16 0zM12 3v4"/></svg></i>식단 7일</button>
+    <button type="button" class="badge off" aria-label="100일 연속, 미획득"><i><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#5E6754" stroke-width="1.8" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M7 14l3 3 7-7"/></svg></i>100일 연속</button>
+    <button type="button" class="badge off" aria-label="수동 기록 10회, 미획득, 4 / 10"><i><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#5E6754" stroke-width="1.8" aria-hidden="true"><path d="M4 20h16M6 16l10-10 2 2-10 10H6z"/></svg></i>수동 기록 10회<span class="eb">4 / 10</span></button>
+    <button type="button" class="badge off" aria-label="루틴 공유, 미획득"><i><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#5E6754" stroke-width="1.8" aria-hidden="true"><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M8 11l8-4M8 13l8 4"/></svg></i>루틴 공유</button>
+  </div>
+
+  <h2 style="font-size:16px;font-weight:600;margin:4px 0 0">XP 내역</h2>
+  <div class="card" style="padding:4px 16px">
+    <div class="it"><span>11월 5일 · 세션 완료 · 9세트 · PR</span><b>+120</b></div>
+    <div class="it"><span>11월 4일 · 수동 기록</span><b>+20</b></div>
+    <div class="it"><span>11월 3일 · 세션 완료 · 8세트</span><b>+90</b></div>
+    <div class="it"><span>11월 2일 · 가이드 열람 · 런지</span><b>+10</b></div>
+  </div>
+
+  <p class="note">배지와 XP 는 '했다·기록했다' 에만 걸려요. 카메라가 덜 봤다고 유리해지거나, 자세 판정으로 깎이는 일은 없어요.</p>
+</div>
+<nav class="nav" aria-label="하단 탭">
+  <a href="Main.html"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>홈</a>
+  <a href="Weekly.html"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 10v4M21 10v4M6 8v8M18 8v8M6 12h12"/></svg>운동</a>
+  <a href="Water.html"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 11h16a8 8 0 0 1-16 0zM12 3v4"/></svg>식단</a>
+  <a href="Main.html"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 19a6 6 0 0 1 12 0M14 19a4 4 0 0 1 7-2"/></svg>커뮤니티</a>
+  <a href="Settings.html" class="on"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>내 정보</a>
+</nav>
+</div>
+</body>
+</html>

@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>추천 루틴</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<style>
+body{margin:0;background:#F5F7F1;color:#1F2618;font-family:"Noto Sans KR",system-ui,sans-serif;font-size:14px;line-height:1.45}
+a{color:#4A6329;text-decoration:none}a:hover{color:#1F2618}
+.card{background:#fff;border-radius:20px;padding:16px;box-shadow:0 1px 2px rgba(31,38,24,.06)}
+.eb{font-size:12px;color:#5E6754;margin:0;line-height:1.4}
+.chip{display:inline-flex;align-items:center;min-height:24px;padding:2px 10px;border-radius:999px;font-size:12px;font-weight:500;background:#E5EDD9;color:#4A6329;white-space:nowrap}
+.chip.gray{background:#ECEEE8;color:#5E6754}
+.btn{display:flex;align-items:center;justify-content:center;min-height:48px;border-radius:14px;background:#5F7D39;color:#fff;font-size:15px;font-weight:600;border:0;font-family:inherit;cursor:pointer;width:100%;flex:none;padding:0 16px;box-sizing:border-box}
+.btn.ghost{background:#fff;color:#1F2618;border:1px solid rgba(31,38,24,.14)}.btn.sm{min-height:44px;font-size:14px;width:auto}
+.row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.seg{display:flex;background:#ECEEE8;border-radius:14px;padding:4px}
+.seg a{flex:1;text-align:center;min-height:44px;display:flex;align-items:center;justify-content:center;border-radius:11px;font-size:14px;color:#5E6754}
+.seg a.on{background:#fff;color:#1F2618;font-weight:600;box-shadow:0 1px 2px rgba(31,38,24,.08)}
+.tabs{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px}
+.tabs button{flex:none;min-height:44px;min-width:44px;padding:0 14px;border-radius:999px;background:#fff;font-size:13px;color:#5E6754;border:1px solid rgba(31,38,24,.14);font-family:inherit;cursor:pointer}
+.tabs button[aria-pressed=true]{background:#1F2618;color:#fff;border-color:#1F2618}
+.preset{display:flex;flex-direction:column;gap:12px;color:inherit}
+.note{font-size:12px;color:#5E6754;background:#ECEEE8;border-radius:10px;padding:8px 10px;line-height:1.5;margin:0}
+.nav{position:absolute;left:0;right:0;bottom:0;height:80px;background:#fff;border-top:1px solid rgba(31,38,24,.08);display:flex;justify-content:space-around;align-items:center;padding:0 8px 12px;box-sizing:border-box}
+.nav a{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:12px;color:#5E6754;min-width:56px;min-height:48px;justify-content:center}
+.nav a.on{color:#4A6329;font-weight:600}
+</style>
+</helmet>
+<div style="width:390px;height:844px;position:relative;overflow:hidden;box-sizing:border-box">
+<div style="height:100%;overflow:auto;padding:56px 20px 100px;box-sizing:border-box;display:flex;flex-direction:column;gap:12px">
+  <h1 style="margin:0;font-size:24px;font-weight:700">운동</h1>
+  <nav class="seg" aria-label="루틴 구분"><a href="Weekly.dc.html">내 루틴 (3)</a><a href="Routines.dc.html" class="on" aria-current="page">추천</a><a href="RoutinePreview.dc.html">받은 루틴 (1)</a></nav>
+  <div class="tabs" role="group" aria-label="추천 조건 · 온보딩 답으로 미리 켜짐"><button type="button" aria-pressed="true">근육 늘리기</button><button type="button" aria-pressed="true">헬스장</button><button type="button" aria-pressed="true">주 4일</button><button type="button" aria-pressed="false">바벨 · 덤벨 · 머신</button><button type="button" aria-pressed="false">초보</button></div>
+
+  <div class="card row" style="border-left:4px solid #A8C47C">
+    <div><p class="eb">오늘의 제안 · 근육 피로도</p><p style="margin:2px 0 0;font-size:15px;font-weight:600;line-height:1.4">어깨·팔이 아직 무거워요. 오늘은 하체 날로 바꿔 보세요.</p></div>
+    <a href="Weekly.dc.html" class="btn ghost sm" style="padding:0 14px">적용하기</a>
+  </div>
+
+  <a href="RoutinePreview.dc.html" class="card preset">
+    <div class="row"><div><b style="font-size:16px">상하체 분할 A · 하체</b><p class="eb" style="margin-top:2px">6종목 · 자세 교정 5 · 약 42분</p></div><span class="chip">월 · 목</span></div>
+    <div class="row"><span class="eb">카드를 누르면 종목을 미리 봐요</span><span class="btn sm" style="padding:0 16px">요일에 넣기</span></div>
+  </a>
+  <a href="RoutinePreview.dc.html" class="card preset">
+    <div class="row"><div><b style="font-size:16px">상하체 분할 B · 상체</b><p class="eb" style="margin-top:2px">7종목 · 자세 교정 4 · 약 45분</p></div><span class="chip">화 · 금</span></div>
+    <div class="row"><span class="eb">카드를 누르면 종목을 미리 봐요</span><span class="btn sm" style="padding:0 16px">요일에 넣기</span></div>
+  </a>
+  <a href="RoutinePreview.dc.html" class="card preset">
+    <div class="row"><div><b style="font-size:16px">전신 기초 · 초보</b><p class="eb" style="margin-top:2px">5종목 · 자세 교정 5 · 약 30분</p></div><span class="chip gray">미배정</span></div>
+    <div class="row"><span class="eb">카드를 누르면 종목을 미리 봐요</span><span class="btn sm" style="padding:0 16px">요일에 넣기</span></div>
+  </a>
+  <a href="RoutinePreview.dc.html" class="card preset">
+    <div class="row"><div><b style="font-size:16px">푸시 · 풀 · 레그</b><p class="eb" style="margin-top:2px">3루틴 · 자세 교정 11 · 약 40분 × 3</p></div><span class="chip gray">미배정</span></div>
+    <div class="row"><span class="eb">카드를 누르면 종목을 미리 봐요</span><span class="btn sm" style="padding:0 16px">요일에 넣기</span></div>
+  </a>
+  <a href="RoutinePreview.dc.html" class="card preset">
+    <div class="row"><div><b style="font-size:16px">홈트 맨몸 · 3일</b><p class="eb" style="margin-top:2px">6종목 · 자세 교정 6 · 약 25분</p></div><span class="chip gray">미배정</span></div>
+    <div class="row"><span class="eb">카드를 누르면 종목을 미리 봐요</span><span class="btn sm" style="padding:0 16px">요일에 넣기</span></div>
+  </a>
+
+  <p class="note">프리셋은 팀이 쓴 분할 템플릿이에요. '당신에게 맞다' 고 단정하지 않고, 자세 교정 지원 종목을 앞에 둡니다.</p>
+</div>
+<nav class="nav" aria-label="하단 탭">
+  <a href="Main.dc.html"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>홈</a>
+  <a href="Weekly.dc.html" class="on" aria-current="page"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 10v4M21 10v4M6 8v8M18 8v8M6 12h12"/></svg>운동</a>
+  <a href="Water.dc.html"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 11h16a8 8 0 0 1-16 0zM12 3v4"/></svg>식단</a>
+  <a href="Main.dc.html"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 19a6 6 0 0 1 12 0M14 19a4 4 0 0 1 7-2"/></svg>커뮤니티</a>
+  <a href="Settings.dc.html"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>내 정보</a>
+</nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

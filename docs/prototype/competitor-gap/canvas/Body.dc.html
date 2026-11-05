@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>체중·신체 기록</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<style>
+body{margin:0;background:#F5F7F1;color:#1F2618;font-family:"Noto Sans KR",system-ui,sans-serif;font-size:14px;line-height:1.45}
+a{color:#4A6329;text-decoration:none}a:hover{color:#1F2618}
+.card{background:#fff;border-radius:20px;padding:16px;box-shadow:0 1px 2px rgba(31,38,24,.06)}
+.eb{font-size:12px;color:#5E6754;margin:0;line-height:1.4}
+.chip{display:inline-flex;align-items:center;min-height:24px;padding:2px 10px;border-radius:999px;font-size:12px;font-weight:500;background:#ECEEE8;color:#5E6754;white-space:nowrap}
+.btn{display:flex;align-items:center;justify-content:center;min-height:48px;border-radius:14px;background:#5F7D39;color:#fff;font-size:15px;font-weight:600;border:0;font-family:inherit;cursor:pointer;width:100%;flex:none;padding:0 16px;box-sizing:border-box}
+.ib{width:44px;height:44px;border-radius:12px;border:0;background:transparent;display:flex;align-items:center;justify-content:center;color:#5E6754;cursor:pointer;flex:none;font-family:inherit}
+.row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.it{display:flex;justify-content:space-between;align-items:center;min-height:60px;border-top:1px solid rgba(31,38,24,.08);font-size:14px;gap:10px}
+.it:first-child{border-top:0}
+.tabs{display:flex;gap:6px}
+.tabs button{flex:1;min-height:44px;border-radius:12px;background:#fff;font-size:13px;color:#5E6754;border:1px solid rgba(31,38,24,.14);font-family:inherit;cursor:pointer}
+.tabs button[aria-pressed=true]{background:#1F2618;color:#fff;border-color:#1F2618}
+.sticky{position:absolute;left:0;right:0;bottom:0;padding:10px 20px 24px;background:#F5F7F1;border-top:1px solid rgba(31,38,24,.08)}
+</style>
+</helmet>
+<div style="width:390px;height:844px;position:relative;overflow:hidden;box-sizing:border-box">
+<div style="height:100%;overflow:auto;padding:48px 20px 110px;box-sizing:border-box;display:flex;flex-direction:column;gap:12px">
+  <div class="row" style="margin-left:-10px">
+    <div style="display:flex;align-items:center;gap:2px"><a href="Settings.dc.html" class="ib" aria-label="뒤로"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></a><h1 style="margin:0;font-size:20px;font-weight:700">체중 기록</h1></div>
+    <span class="chip">동기화 · 방금</span>
+  </div>
+
+  <div class="card row">
+    <div><p class="eb">최근 · 11월 5일 아침</p><p style="margin:2px 0 0;font-size:34px;font-weight:700;line-height:1.2">68.2 <span style="font-size:14px;font-weight:400;color:#5E6754">kg</span></p></div>
+    <div style="text-align:right"><p class="eb">7일 전보다</p><p style="margin:2px 0 0;font-size:16px;font-weight:600;color:#4A6329">−0.6 kg</p><p class="eb">30일 전보다 −1.8 kg</p></div>
+  </div>
+
+  <div class="card">
+    <div class="tabs" role="group" aria-label="기간"><button type="button" aria-pressed="false">30일</button><button type="button" aria-pressed="true">90일</button><button type="button" aria-pressed="false">1년</button></div>
+    <svg viewBox="0 0 320 120" width="100%" height="120" role="img" aria-label="90일 체중 추이: 70.0 kg 에서 68.2 kg 로 완만히 감소, 목표 67 kg" style="margin-top:8px">
+      <line x1="10" y1="90" x2="310" y2="90" stroke="#D5DACF" stroke-dasharray="3 3"/><text x="250" y="85" font-size="12" fill="#5E6754">목표 67</text>
+      <path d="M10 40 L50 44 L90 42 L130 52 L170 56 L210 62 L250 66 L300 74" fill="none" stroke="#A8C47C" stroke-width="2.5"/>
+      <circle cx="300" cy="74" r="5" fill="#5F7D39"/>
+      <text x="6" y="112" font-size="12" fill="#5E6754">8/7 · 70.0</text><text x="250" y="112" font-size="12" fill="#5E6754">11/5 · 68.2</text>
+    </svg>
+    <p class="eb">체중이 바뀌면 영양 목표와 근육 부하의 체격 계수가 최신 값을 써요.</p>
+  </div>
+
+  <div class="row" style="margin-top:4px"><h2 style="font-size:16px;font-weight:600;margin:0">기록 41건</h2><span class="eb">체지방은 선택 입력</span></div>
+  <div class="card" style="padding:0 16px">
+    <div class="it"><div><b>11월 5일</b><p class="eb">아침 · 공복</p></div><div style="text-align:right"><b>68.2 kg</b><p class="eb">체지방 18.4%</p></div></div>
+    <div class="it"><div><b>11월 2일</b><p class="eb">아침</p></div><div style="text-align:right"><b>68.5 kg</b><p class="eb">—</p></div></div>
+    <div class="it"><div><b>10월 29일</b><p class="eb">아침 · 공복 <span class="chip" style="min-height:20px;padding:0 8px">연동</span></p></div><div style="text-align:right"><b>68.8 kg</b><p class="eb">체지방 18.9%</p></div></div>
+    <div class="it"><div><b>10월 25일</b><p class="eb">저녁</p></div><div style="text-align:right"><b>69.4 kg</b><p class="eb">—</p></div></div>
+  </div>
+</div>
+<div class="sticky"><button type="button" class="btn">오늘 체중 기록하기</button></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

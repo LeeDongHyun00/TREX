@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>빈 상태 모음</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<style>
+body{margin:0;background:#F5F7F1;color:#1F2618;font-family:"Noto Sans KR",system-ui,sans-serif;font-size:14px;line-height:1.45}
+a{color:#4A6329;text-decoration:none}a:hover{color:#1F2618}
+.card{background:#fff;border-radius:20px;padding:20px 16px;box-shadow:0 1px 2px rgba(31,38,24,.06);display:flex;flex-direction:column;align-items:center;text-align:center;gap:8px}
+.eb{font-size:12px;color:#5E6754;margin:0;line-height:1.4}
+.where{align-self:flex-start;font-size:12px;color:#4A6329;background:#E5EDD9;border-radius:999px;padding:3px 10px;min-height:24px;display:inline-flex;align-items:center}
+.ico{width:56px;height:56px;border-radius:50%;background:#ECEEE8;display:flex;align-items:center;justify-content:center;margin-top:4px}
+.btn{display:flex;align-items:center;justify-content:center;min-height:48px;border-radius:14px;background:#5F7D39;color:#fff;font-size:15px;font-weight:600;border:0;font-family:inherit;cursor:pointer;width:100%;flex:none;padding:0 16px;box-sizing:border-box}
+.btn.ghost{background:#fff;color:#1F2618;border:1px solid rgba(31,38,24,.14)}
+</style>
+</helmet>
+<div style="width:390px;height:844px;position:relative;overflow:hidden;box-sizing:border-box">
+<div style="height:100%;overflow:auto;padding:56px 20px 28px;box-sizing:border-box;display:flex;flex-direction:column;gap:12px">
+  <div><p class="eb">규칙 · 비어 있는 이유 한 줄 + 다음 행동 하나</p><h1 style="margin:2px 0 0;font-size:20px;font-weight:700">빈 상태 모음</h1></div>
+
+  <section class="card" aria-label="기록 없음">
+    <span class="where">P1 운동 기록 · 이 달에 기록 없음</span>
+    <div class="ico"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#5E6754" stroke-width="1.8" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></div>
+    <p style="margin:0;font-size:16px;font-weight:600">아직 이 달 기록이 없어요</p>
+    <p class="eb">운동을 마치면 날짜에 점이 찍혀요. 지난 운동은 지금 적어도 돼요.</p>
+    <div style="display:grid;grid-template-columns:repeat(2, minmax(0, 1fr));gap:8px;width:100%;margin-top:4px"><a href="ManualRecord.dc.html" class="btn ghost">지난 운동 적기</a><a href="Weekly.dc.html" class="btn">운동 시작하기</a></div>
+  </section>
+
+  <section class="card" aria-label="배지 없음">
+    <span class="where">P6 업적 · 배지 0개</span>
+    <div class="ico"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#5E6754" stroke-width="1.8" aria-hidden="true"><path d="M8 21h8M12 17v4M5 4h14v4a7 7 0 0 1-14 0z"/></svg></div>
+    <p style="margin:0;font-size:16px;font-weight:600">첫 운동을 마치면 첫 배지예요</p>
+    <p class="eb">배지와 XP 는 운동을 마치고 기록한 사실에만 붙어요.</p>
+    <a href="Weekly.dc.html" class="btn" style="margin-top:4px">오늘 루틴 보기</a>
+  </section>
+
+  <section class="card" aria-label="요일 루틴 없음">
+    <span class="where">P11 주간 루틴 · 화요일 비어 있음</span>
+    <div class="ico"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#5E6754" stroke-width="1.8" aria-hidden="true"><path d="M3 10v4M21 10v4M6 8v8M18 8v8M6 12h12"/></svg></div>
+    <p style="margin:0;font-size:16px;font-weight:600">화요일은 휴식이에요</p>
+    <p class="eb">쉬는 날은 연속 운동이 끊기지 않아요. 루틴을 넣으면 목표 요일이 돼요.</p>
+    <div style="display:grid;grid-template-columns:repeat(2, minmax(0, 1fr));gap:8px;width:100%;margin-top:4px"><a href="Routines.dc.html" class="btn ghost">추천에서 고르기</a><a href="Catalog.dc.html" class="btn">직접 만들기</a></div>
+  </section>
+
+  <section class="card" aria-label="검색 결과 없음">
+    <span class="where">P8 운동 목록 · 검색 결과 없음</span>
+    <div class="ico"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#5E6754" stroke-width="1.8" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg></div>
+    <p style="margin:0;font-size:16px;font-weight:600">'펜들레이' 로 찾은 종목이 없어요</p>
+    <p class="eb">영문·다른 이름으로도 찾아봤어요. 직접 추가하면 내 기록에 쓸 수 있어요.</p>
+    <a href="CustomWorkout.dc.html" class="btn ghost" style="margin-top:4px">'펜들레이' 직접 추가하기</a>
+  </section>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

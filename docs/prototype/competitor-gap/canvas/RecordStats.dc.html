@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>운동 기록 · 통계</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<style>
+body{margin:0;background:#F5F7F1;color:#1F2618;font-family:"Noto Sans KR",system-ui,sans-serif;font-size:14px;line-height:1.45}
+a{color:#4A6329;text-decoration:none}a:hover{color:#1F2618}
+.card{background:#fff;border-radius:20px;padding:16px;box-shadow:0 1px 2px rgba(31,38,24,.06)}
+.eb{font-size:12px;color:#5E6754;margin:0;line-height:1.4}
+.chip{display:inline-flex;align-items:center;min-height:24px;padding:2px 10px;border-radius:999px;font-size:12px;font-weight:500;background:#E5EDD9;color:#4A6329;white-space:nowrap}
+.chip.gray{background:#ECEEE8;color:#5E6754}
+.ib{width:44px;height:44px;border-radius:12px;border:0;background:transparent;display:flex;align-items:center;justify-content:center;color:#5E6754;cursor:pointer;flex:none;font-family:inherit}
+.row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.seg{display:flex;background:#ECEEE8;border-radius:14px;padding:4px}
+.seg a{flex:1;text-align:center;min-height:44px;display:flex;align-items:center;justify-content:center;border-radius:11px;font-size:14px;color:#5E6754}
+.seg a.on{background:#fff;color:#1F2618;font-weight:600;box-shadow:0 1px 2px rgba(31,38,24,.08)}
+.tabs{display:flex;gap:8px}
+.tabs button{flex:1;min-height:44px;border-radius:12px;background:#fff;font-size:13px;color:#5E6754;border:1px solid rgba(31,38,24,.14);font-family:inherit;cursor:pointer}
+.tabs button[aria-pressed=true]{background:#1F2618;color:#fff;border-color:#1F2618}
+.it{display:flex;justify-content:space-between;align-items:center;min-height:52px;border-top:1px solid rgba(31,38,24,.08);gap:10px;color:inherit}
+.it:first-child{border-top:0}
+.note{font-size:12px;color:#5E6754;background:#ECEEE8;border-radius:10px;padding:8px 10px;line-height:1.5;margin:0}
+.nav{position:absolute;left:0;right:0;bottom:0;height:80px;background:#fff;border-top:1px solid rgba(31,38,24,.08);display:flex;justify-content:space-around;align-items:center;padding:0 8px 12px;box-sizing:border-box}
+.nav a{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:12px;color:#5E6754;min-width:56px;min-height:48px;justify-content:center}
+.nav a.on{color:#4A6329;font-weight:600}
+</style>
+</helmet>
+<div style="width:390px;height:844px;position:relative;overflow:hidden;box-sizing:border-box">
+<div style="height:100%;overflow:auto;padding:48px 20px 100px;box-sizing:border-box;display:flex;flex-direction:column;gap:12px">
+  <div class="row" style="margin-left:-10px">
+    <div style="display:flex;align-items:center;gap:2px"><a href="Main.dc.html" class="ib" aria-label="뒤로"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></a><h1 style="margin:0;font-size:20px;font-weight:700">운동 기록</h1></div>
+  </div>
+  <nav class="seg" aria-label="기록 보기 방식"><a href="Record.dc.html">달력</a><a href="RecordStats.dc.html" class="on" aria-current="page">통계</a></nav>
+  <div class="tabs" role="group" aria-label="기간"><button type="button" aria-pressed="true">이번 주</button><button type="button" aria-pressed="false">이번 달</button><button type="button" aria-pressed="false">올해</button></div>
+
+  <div class="card">
+    <div style="display:grid;grid-template-columns:repeat(2, minmax(0, 1fr));gap:12px">
+      <div><p class="eb">운동일 · 세트</p><p style="margin:2px 0 0;font-size:20px;font-weight:700">3일 · 27세트</p></div>
+      <div><p class="eb">볼륨 <span class="chip gray" style="min-height:20px;padding:0 8px">추정 2세트</span></p><p style="margin:2px 0 0;font-size:20px;font-weight:700">4,120 kg</p></div>
+      <div><p class="eb">운동 시간</p><p style="margin:2px 0 0;font-size:20px;font-weight:700">1시간 22분</p></div>
+      <div><p class="eb">소모 · 추정</p><p style="margin:2px 0 0;font-size:20px;font-weight:700">610 kcal</p></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="row"><b>날짜별 세트</b><span class="eb">10/30 ~ 11/5</span></div>
+    <svg viewBox="0 0 320 120" width="100%" height="120" role="img" aria-label="날짜별 세트 수: 금 0, 토 9, 일 0, 월 9, 화 0, 수 9, 목 9">
+      <rect x="14" y="98" width="30" height="2" fill="#ECEEE8"/><rect x="58" y="34" width="30" height="66" rx="5" fill="#A8C47C"/><rect x="102" y="98" width="30" height="2" fill="#ECEEE8"/><rect x="146" y="34" width="30" height="66" rx="5" fill="#A8C47C"/><rect x="190" y="98" width="30" height="2" fill="#ECEEE8"/><rect x="234" y="34" width="30" height="66" rx="5" fill="#A8C47C"/><rect x="278" y="34" width="30" height="66" rx="5" fill="#5F7D39"/>
+      <text x="29" y="116" text-anchor="middle" font-size="12" fill="#5E6754">금</text><text x="73" y="116" text-anchor="middle" font-size="12" fill="#5E6754">토</text><text x="117" y="116" text-anchor="middle" font-size="12" fill="#5E6754">일</text><text x="161" y="116" text-anchor="middle" font-size="12" fill="#5E6754">월</text><text x="205" y="116" text-anchor="middle" font-size="12" fill="#5E6754">화</text><text x="249" y="116" text-anchor="middle" font-size="12" fill="#5E6754">수</text><text x="293" y="116" text-anchor="middle" font-size="12" fill="#1F2618" font-weight="700">목</text>
+      <text x="73" y="28" text-anchor="middle" font-size="12" fill="#5E6754">9</text><text x="161" y="28" text-anchor="middle" font-size="12" fill="#5E6754">9</text><text x="249" y="28" text-anchor="middle" font-size="12" fill="#5E6754">9</text><text x="293" y="28" text-anchor="middle" font-size="12" fill="#1F2618">9</text>
+    </svg>
+  </div>
+
+  <div class="card">
+    <b>부위 비중</b>
+    <div style="display:flex;height:12px;border-radius:999px;overflow:hidden;margin-top:10px"><i style="width:48%;background:#5F7D39"></i><i style="width:32%;background:#759848"></i><i style="width:20%;background:#A8C47C"></i></div>
+    <div style="display:flex;gap:14px;font-size:12px;color:#5E6754;margin-top:8px"><span><i style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#5F7D39;margin-right:4px"></i>하체 48%</span><span><i style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#759848;margin-right:4px"></i>상체 32%</span><span><i style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#A8C47C;margin-right:4px"></i>코어 20%</span></div>
+    <p class="note" style="margin-top:10px">비중은 세트당 운동 시간 합산의 제품용 분류예요. 볼륨은 사용자가 확정한 횟수로만 계산하고, 카메라 횟수만 있는 세트는 '추정' 으로 셉니다.</p>
+  </div>
+
+  <div class="card" style="padding:4px 16px">
+    <div class="it" style="min-height:48px"><b>많이 한 종목</b><span class="eb">세트 기준</span></div>
+    <a href="ExerciseDetail.dc.html" class="it"><span>기본 스쿼트</span><span class="eb">9세트 · 최고 60 kg ›</span></a>
+    <a href="ExerciseDetail.dc.html" class="it"><span>덤벨 컬</span><span class="eb">6세트 · 최고 12 kg ›</span></a>
+    <a href="ExerciseDetail.dc.html" class="it"><span>플랭크</span><span class="eb">6세트 · 최장 50초 ›</span></a>
+  </div>
+
+  <a href="Main.dc.html" class="card row" style="color:inherit;min-height:56px">
+    <div><p class="eb">근육 피로도 · 기록 기반 추정</p><p style="margin:2px 0 0;font-size:15px;font-weight:600">어깨 72 · 이두 64 · 대퇴사두 41</p></div>
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#5E6754" stroke-width="1.8" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+  </a>
+</div>
+<nav class="nav" aria-label="하단 탭">
+  <a href="Main.dc.html"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>홈</a>
+  <a href="Weekly.dc.html" class="on"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 10v4M21 10v4M6 8v8M18 8v8M6 12h12"/></svg>운동</a>
+  <a href="Water.dc.html"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 11h16a8 8 0 0 1-16 0zM12 3v4"/></svg>식단</a>
+  <a href="Main.dc.html"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 19a6 6 0 0 1 12 0M14 19a4 4 0 0 1 7-2"/></svg>커뮤니티</a>
+  <a href="Settings.dc.html"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>내 정보</a>
+</nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

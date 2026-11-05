@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>운동 목록 · 2층 카탈로그</title>
+</head>
+<body style="background:#E9ECE4;display:flex;justify-content:center;padding:24px 0">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<style>
+body{margin:0;background:#F5F7F1;color:#1F2618;font-family:"Noto Sans KR",system-ui,sans-serif;font-size:14px;line-height:1.45}
+a{color:#1F2618;text-decoration:none}a:hover{color:#4A6329}
+.card{background:#fff;border-radius:20px;padding:0 16px;box-shadow:0 1px 2px rgba(31,38,24,.06)}
+.eb{font-size:12px;color:#5E6754;margin:0;line-height:1.4}
+.chip{display:inline-flex;align-items:center;min-height:24px;padding:2px 10px;border-radius:999px;font-size:12px;font-weight:500;background:#E5EDD9;color:#4A6329;white-space:nowrap}
+.chip.gray{background:#ECEEE8;color:#5E6754}.chip.lime{background:#EEF5D6;color:#4A6329}
+.btn{display:flex;align-items:center;justify-content:center;min-height:48px;border-radius:14px;background:#5F7D39;color:#fff;font-size:15px;font-weight:600;border:0;font-family:inherit;cursor:pointer;width:100%;flex:none;padding:0 16px;box-sizing:border-box}
+.btn.ghost{background:#fff;color:#1F2618;border:1px solid rgba(31,38,24,.14)}
+.ib{width:44px;height:44px;border-radius:12px;border:0;background:transparent;display:flex;align-items:center;justify-content:center;color:#5E6754;cursor:pointer;flex:none;font-family:inherit}
+.row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.tabs{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px}
+.tabs button{flex:none;min-height:44px;min-width:44px;padding:0 14px;border-radius:999px;background:#fff;font-size:13px;color:#5E6754;border:1px solid rgba(31,38,24,.14);font-family:inherit;cursor:pointer}
+.tabs button[aria-pressed=true]{background:#1F2618;color:#fff;border-color:#1F2618}
+.it{display:flex;justify-content:space-between;align-items:center;min-height:60px;border-top:1px solid rgba(31,38,24,.08);gap:10px;color:inherit}
+.it:first-child{border-top:0}
+.th{width:44px;height:44px;border-radius:12px;background:#ECEEE8;flex:none}
+.h2{font-size:15px;font-weight:600;margin:16px 0 6px 4px;display:flex;align-items:center;gap:8px}
+.sticky{position:absolute;left:0;right:0;bottom:0;padding:10px 20px 24px;background:#F5F7F1;border-top:1px solid rgba(31,38,24,.08)}
+</style>
+<div style="width:390px;height:844px;position:relative;overflow:hidden;box-sizing:border-box">
+<div style="height:100%;overflow:auto;padding:48px 20px 110px;box-sizing:border-box">
+  <div class="row" style="margin-left:-10px">
+    <div style="display:flex;align-items:center;gap:2px"><a href="Weekly.html" class="ib" aria-label="뒤로"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></a><h1 style="margin:0;font-size:20px;font-weight:700">운동 목록</h1></div>
+    <span class="eb">목요일 루틴에 추가</span>
+  </div>
+
+  <label for="q" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">종목 검색</label>
+  <input id="q" type="search" placeholder="종목 검색 (예: 랫풀, lat, 레그프레스)" style="width:100%;box-sizing:border-box;height:48px;border-radius:14px;border:1px solid rgba(31,38,24,.14);background:#fff;padding:0 14px;font-size:15px;font-family:inherit;color:#1F2618;margin-top:12px">
+
+  <div class="tabs" style="margin-top:10px" role="group" aria-label="부위"><button type="button" aria-pressed="true">전체</button><button type="button" aria-pressed="false">하체</button><button type="button" aria-pressed="false">가슴</button><button type="button" aria-pressed="false">등</button><button type="button" aria-pressed="false">어깨</button><button type="button" aria-pressed="false">팔</button><button type="button" aria-pressed="false">코어</button><button type="button" aria-pressed="false">유산소</button></div>
+  <div class="tabs" style="margin-top:8px" role="group" aria-label="기구"><button type="button" aria-pressed="true">전체 기구</button><button type="button" aria-pressed="false">바벨</button><button type="button" aria-pressed="false">덤벨</button><button type="button" aria-pressed="false">머신</button><button type="button" aria-pressed="false">케이블</button><button type="button" aria-pressed="false">맨몸</button></div>
+
+  <h2 class="h2">자세 교정 지원 <span class="chip">16</span></h2>
+  <div class="card">
+    <a href="ExerciseDetail.html" class="it"><span style="display:flex;align-items:center;gap:12px"><span class="th"></span><span><b>기본 스쿼트</b><p class="eb">하체 · 바벨 · 가이드</p></span></span><span class="chip">자세 교정</span></a>
+    <a href="ExerciseDetail.html" class="it"><span style="display:flex;align-items:center;gap:12px"><span class="th"></span><span><b>런지</b><p class="eb">하체 · 맨몸 · 가이드</p></span></span><span class="chip">자세 교정</span></a>
+    <a href="ExerciseDetail.html" class="it"><span style="display:flex;align-items:center;gap:12px"><span class="th"></span><span><b>덤벨 컬</b><p class="eb">팔 · 덤벨 · 가이드</p></span></span><span class="chip">자세 교정</span></a>
+    <a href="ExerciseDetail.html" class="it"><span style="display:flex;align-items:center;gap:12px"><span class="th"></span><span><b>플랭크</b><p class="eb">코어 · 맨몸 · 가이드</p></span></span><span class="chip">자세 교정</span></a>
+    <button type="button" class="it" style="width:100%;background:none;border-left:0;border-right:0;border-bottom:0;font-family:inherit;cursor:pointer;min-height:48px;justify-content:center;color:#4A6329;font-size:14px">12개 더 보기</button>
+  </div>
+
+  <h2 class="h2">기록 전용 <span class="chip gray">312</span><span class="eb" style="font-weight:400">자세 비교 미지원</span></h2>
+  <div class="card">
+    <a href="ExerciseDetail.html" class="it"><span style="display:flex;align-items:center;gap:12px"><span class="th" style="background:#EEF5D6"></span><span><b>펜들레이 로우</b><p class="eb">등 · 바벨</p></span></span><span class="chip lime">내가 추가</span></a>
+    <a href="ExerciseDetail.html" class="it"><span style="display:flex;align-items:center;gap:12px"><span class="th"></span><span><b>레그 프레스</b><p class="eb">하체 · 머신</p></span></span><span class="chip gray">기록 전용</span></a>
+    <a href="ExerciseDetail.html" class="it"><span style="display:flex;align-items:center;gap:12px"><span class="th"></span><span><b>벤치 프레스</b><p class="eb">가슴 · 바벨</p></span></span><span class="chip gray">기록 전용</span></a>
+    <a href="ExerciseDetail.html" class="it"><span style="display:flex;align-items:center;gap:12px"><span class="th"></span><span><b>데드리프트</b><p class="eb">하체 · 바벨 · 가이드</p></span></span><span class="chip gray">기록 전용</span></a>
+    <a href="ExerciseDetail.html" class="it"><span style="display:flex;align-items:center;gap:12px"><span class="th"></span><span><b>랫풀다운</b><p class="eb">등 · 머신</p></span></span><span class="chip gray">기록 전용</span></a>
+    <button type="button" class="it" style="width:100%;background:none;border-left:0;border-right:0;border-bottom:0;font-family:inherit;cursor:pointer;min-height:48px;justify-content:center;color:#4A6329;font-size:14px">307개 더 보기</button>
+  </div>
+</div>
+<div class="sticky"><a href="CustomWorkout.html" class="btn ghost">직접 추가하기</a></div>
+</div>
+</body>
+</html>

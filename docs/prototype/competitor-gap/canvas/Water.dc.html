@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>식단 탭 · 물 카드</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<style>
+body{margin:0;background:#F5F7F1;color:#1F2618;font-family:"Noto Sans KR",system-ui,sans-serif;font-size:14px;line-height:1.45}
+a{color:#4A6329;text-decoration:none}a:hover{color:#1F2618}
+.card{background:#fff;border-radius:20px;padding:16px;box-shadow:0 1px 2px rgba(31,38,24,.06)}
+.eb{font-size:12px;color:#5E6754;margin:0;line-height:1.4}
+.chip{display:inline-flex;align-items:center;min-height:24px;padding:2px 10px;border-radius:999px;font-size:12px;font-weight:500;background:#ECEEE8;color:#5E6754;white-space:nowrap}
+.btn{display:flex;align-items:center;justify-content:center;min-height:48px;border-radius:14px;background:#5F7D39;color:#fff;font-size:15px;font-weight:600;border:0;font-family:inherit;cursor:pointer;width:100%;flex:none;padding:0 16px;box-sizing:border-box}
+.btn.ghost{background:#fff;color:#1F2618;border:1px solid rgba(31,38,24,.14)}.btn.sm{min-height:44px;font-size:14px;width:auto}
+.row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.it{display:flex;justify-content:space-between;align-items:center;min-height:60px;border-top:1px solid rgba(31,38,24,.08);font-size:14px;gap:10px;color:inherit}
+.it:first-child{border-top:0}
+.cup{width:48px;height:48px;border-radius:14px;border:1px solid rgba(31,38,24,.14);background:#fff;font-family:inherit;color:#1F2618;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;flex:none}
+.bars{display:flex;gap:4px;align-items:flex-end;height:36px}
+.bars i{flex:1;border-radius:4px 4px 2px 2px;background:#6E9BC5;display:block}
+.nav{position:absolute;left:0;right:0;bottom:0;height:80px;background:#fff;border-top:1px solid rgba(31,38,24,.08);display:flex;justify-content:space-around;align-items:center;padding:0 8px 12px;box-sizing:border-box}
+.nav a{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:12px;color:#5E6754;min-width:56px;min-height:48px;justify-content:center}
+.nav a.on{color:#4A6329;font-weight:600}
+</style>
+</helmet>
+<div style="width:390px;height:844px;position:relative;overflow:hidden;box-sizing:border-box">
+<div style="height:100%;overflow:auto;padding:56px 20px 100px;box-sizing:border-box;display:flex;flex-direction:column;gap:12px">
+  <div class="row"><div><p class="eb">식단</p><h1 style="margin:2px 0 0;font-size:24px;font-weight:700">11월 5일</h1></div><a href="Record.dc.html" class="btn ghost sm" style="padding:0 14px">지난 식단</a></div>
+
+  <div class="card" style="display:flex;gap:14px;align-items:center">
+    <svg width="80" height="80" viewBox="0 0 80 80" role="img" aria-label="오늘 섭취 1,420 kcal, 목표 2,100 의 68%"><circle cx="40" cy="40" r="33" stroke="#ECEEE8" stroke-width="9" fill="none"/><circle cx="40" cy="40" r="33" stroke="#5F7D39" stroke-width="9" fill="none" stroke-dasharray="207" stroke-dashoffset="66" stroke-linecap="round" transform="rotate(-90 40 40)"/><text x="40" y="45" text-anchor="middle" font-size="15" font-weight="700" fill="#1F2618">68%</text></svg>
+    <div style="flex:1;min-width:0"><p class="eb">오늘 섭취</p><p style="margin:2px 0 8px;font-size:20px;font-weight:700">1,420 <span style="font-size:12px;font-weight:400;color:#5E6754">/ 2,100 kcal</span></p>
+      <div style="display:flex;flex-direction:column;gap:6px;font-size:12px;color:#5E6754">
+        <div class="row"><span>탄수화물 142 / 240 g</span><i style="width:80px;height:6px;border-radius:999px;background:#ECEEE8;display:block;overflow:hidden"><i style="display:block;height:100%;width:59%;background:#A8C47C"></i></i></div>
+        <div class="row"><span>단백질 96 / 122 g</span><i style="width:80px;height:6px;border-radius:999px;background:#ECEEE8;display:block;overflow:hidden"><i style="display:block;height:100%;width:78%;background:#5F7D39"></i></i></div>
+        <div class="row"><span>지방 41 / 58 g</span><i style="width:80px;height:6px;border-radius:999px;background:#ECEEE8;display:block;overflow:hidden"><i style="display:block;height:100%;width:70%;background:#C7E26B"></i></i></div>
+      </div></div>
+  </div>
+
+  <section class="card" aria-label="물 섭취" style="border:1.5px solid #D6E3F0">
+    <div class="row">
+      <div><p class="eb">물 · 오늘</p><p style="margin:2px 0 0;font-size:22px;font-weight:700">1.25 <span style="font-size:13px;font-weight:400;color:#5E6754">/ 2.0 L</span></p><p class="eb">컵 5잔 · 한 잔 250 ml</p></div>
+      <div style="display:flex;gap:8px"><button type="button" class="cup" aria-label="한 잔 빼기"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M5 12h14"/></svg></button><button type="button" class="cup" aria-label="한 잔 더" style="background:#1F2618;color:#fff;border-color:#1F2618"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button></div>
+    </div>
+    <div class="bars" style="margin-top:12px" role="img" aria-label="최근 7일 물 섭취: 목표 대비 60에서 100%"><i style="height:60%"></i><i style="height:80%"></i><i style="height:45%"></i><i style="height:100%"></i><i style="height:70%"></i><i style="height:90%"></i><i style="height:62%"></i></div>
+    <div style="display:flex;justify-content:space-between;font-size:12px;color:#5E6754;margin-top:4px;padding:0 6px"><span>금</span><span>토</span><span>일</span><span>월</span><span>화</span><span>수</span><span>목</span></div>
+  </section>
+
+  <h2 style="font-size:16px;font-weight:600;margin:4px 0 0">끼니</h2>
+  <div class="card" style="padding:0 16px">
+    <a href="Water.dc.html" class="it"><div><b>아침</b><p class="eb">현미밥 · 된장국 · 계란 2개</p></div><span>520 kcal</span></a>
+    <a href="Water.dc.html" class="it"><div><b>점심</b><p class="eb">닭가슴살 샐러드 · 고구마</p></div><span>610 kcal</span></a>
+    <a href="Water.dc.html" class="it"><div><b>간식</b><p class="eb">그릭요거트 · 바나나</p></div><span>290 kcal</span></a>
+    <a href="Water.dc.html" class="it"><div><b style="color:#5E6754">저녁</b><p class="eb">아직 안 적었어요</p></div><span class="btn ghost sm" style="padding:0 12px">기록</span></a>
+  </div>
+</div>
+<nav class="nav" aria-label="하단 탭">
+  <a href="Main.dc.html"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>홈</a>
+  <a href="Weekly.dc.html"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 10v4M21 10v4M6 8v8M18 8v8M6 12h12"/></svg>운동</a>
+  <a href="Water.dc.html" class="on" aria-current="page"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 11h16a8 8 0 0 1-16 0zM12 3v4"/></svg>식단</a>
+  <a href="Main.dc.html"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 19a6 6 0 0 1 12 0M14 19a4 4 0 0 1 7-2"/></svg>커뮤니티</a>
+  <a href="Settings.dc.html"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>내 정보</a>
+</nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

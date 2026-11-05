@@ -220,6 +220,7 @@ APK 무결성은 `SHA256SUMS.txt`, 버전·서명·빌드 커밋은 `BUILD_INFO.
 - [자세 엔진 정본 스펙](research/aihub_fitness/KOTLIN_PORTING_SPEC.md)
 - [서버·로그인·동기화 인수인계](docs/SERVER_SYNC_HANDOFF.md)
 - [경쟁 앱(Liftoff·플릭) 대비 기능 격차와 개발 계획](docs/COMPETITOR_GAP_LIFTOFF_FLEEK.md)
-- [격차 항목 화면·시스템 프로토타입 설계](docs/GAP_PROTOTYPE_DESIGN.md) · [클릭 프로토타입](docs/prototype/competitor-gap/index.html)
+- [격차 항목 화면·시스템 프로토타입 설계](docs/GAP_PROTOTYPE_DESIGN.md) · [클릭 프로토타입 v2 갤러리](docs/prototype/competitor-gap/index.html)
 - [격차 항목 페이지 계획](docs/GAP_PAGE_PLAN.md)
+- [UI/UX 기준 Top 10 · 사례 Top 10 과 디자인 평가·개정(v2)](docs/UX_REVIEW_TOP10.md)
 - [iPhone 실행 안내](docs/IOS_INSTALL.md) · [iOS 포팅](docs/IOS_PORT.md)

@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>기록 추가·수정 시트</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<style>
+body{margin:0;background:#F5F7F1;color:#1F2618;font-family:"Noto Sans KR",system-ui,sans-serif;font-size:14px;line-height:1.45}
+a{color:#4A6329;text-decoration:none}a:hover{color:#1F2618}
+.eb{font-size:12px;color:#5E6754;margin:0;line-height:1.4}
+.chip{display:inline-flex;align-items:center;min-height:24px;padding:2px 10px;border-radius:999px;font-size:12px;font-weight:500;background:#ECEEE8;color:#5E6754;white-space:nowrap}
+.btn{display:flex;align-items:center;justify-content:center;min-height:48px;border-radius:14px;background:#5F7D39;color:#fff;font-size:15px;font-weight:600;border:0;font-family:inherit;cursor:pointer;width:100%;flex:none;padding:0 16px;box-sizing:border-box}
+.btn.ghost{background:#fff;color:#1F2618;border:1px solid rgba(31,38,24,.14)}
+.ib{width:44px;height:44px;border-radius:12px;border:0;background:transparent;display:flex;align-items:center;justify-content:center;color:#5E6754;cursor:pointer;flex:none;font-family:inherit}
+.row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.field{display:flex;align-items:center;justify-content:space-between;min-height:52px;border-top:1px solid rgba(31,38,24,.08);font-size:15px;color:inherit;gap:10px}
+.field:first-child{border-top:0}
+.set{display:grid;grid-template-columns:36px minmax(0,1fr) minmax(0,1fr) 44px;gap:10px;align-items:center}
+.set input{width:100%;box-sizing:border-box;height:48px;border:1px solid rgba(31,38,24,.16);border-radius:12px;font-size:17px;text-align:center;background:#fff;color:#1F2618;font-family:inherit}
+.set .n{font-size:12px;color:#5E6754;text-align:center}
+.ok{width:44px;height:44px;border-radius:12px;border:1.5px solid #A8C47C;background:#fff;color:#4A6329;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
+.ok[aria-pressed=true]{background:#5F7D39;border-color:#5F7D39;color:#fff}
+.note{font-size:12px;color:#5E6754;background:#ECEEE8;border-radius:10px;padding:8px 10px;line-height:1.5;margin:0}
+.scrim{position:absolute;inset:0;background:rgba(31,38,24,.35)}
+.sheet{position:absolute;left:0;right:0;bottom:0;background:#F5F7F1;border-radius:28px 28px 0 0;padding:8px 20px 24px;box-sizing:border-box;display:flex;flex-direction:column;gap:12px}
+.handle{width:36px;height:4px;border-radius:2px;background:rgba(31,38,24,.18);margin:0 auto}
+</style>
+</helmet>
+<div style="width:390px;height:844px;position:relative;overflow:hidden;box-sizing:border-box;background:#9FA69A">
+  <div class="scrim"></div>
+  <div class="sheet" role="dialog" aria-labelledby="t">
+    <div class="handle"></div>
+    <div class="row" style="margin-right:-10px"><h1 id="t" style="margin:0;font-size:18px;font-weight:700">기록 추가</h1><a href="Record.dc.html" class="ib" aria-label="닫기"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></a></div>
+    <p class="note">카메라·타이머 없이 적는 기록이에요. 자세 판정은 남지 않아요.</p>
+
+    <div style="background:#fff;border-radius:18px;padding:0 16px">
+      <button type="button" class="field" style="width:100%;background:none;border:0;border-top:0;font-family:inherit;padding:0;cursor:pointer"><span>날짜</span><span style="display:flex;align-items:center;gap:6px;color:#1F2618">11월 5일 (목)<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5E6754" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></span></button>
+      <a href="Catalog.dc.html" class="field"><span>종목</span><span style="display:flex;align-items:center;gap:6px;color:#1F2618">레그 프레스 <span class="chip">기록 전용</span><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5E6754" stroke-width="2" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span></a>
+    </div>
+
+    <div style="background:#fff;border-radius:18px;padding:14px 16px;display:flex;flex-direction:column;gap:10px">
+      <div class="set"><span class="n">세트</span><span class="n" id="hk">kg</span><span class="n" id="hr">회</span><span class="n">완료</span></div>
+      <div class="set"><span class="n">1</span><input value="90" inputmode="decimal" aria-label="1세트 kg"><input value="12" inputmode="numeric" aria-label="1세트 회"><button type="button" class="ok" aria-pressed="true" aria-label="1세트 완료"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M5 12l4 4L19 6"/></svg></button></div>
+      <div class="set"><span class="n">2</span><input value="90" inputmode="decimal" aria-label="2세트 kg"><input value="12" inputmode="numeric" aria-label="2세트 회"><button type="button" class="ok" aria-pressed="true" aria-label="2세트 완료"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M5 12l4 4L19 6"/></svg></button></div>
+      <div class="set"><span class="n">3</span><input placeholder="kg" inputmode="decimal" aria-label="3세트 kg"><input placeholder="회" inputmode="numeric" aria-label="3세트 회"><button type="button" class="ok" aria-pressed="false" aria-label="3세트 완료"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M5 12l4 4L19 6"/></svg></button></div>
+      <div style="display:grid;grid-template-columns:repeat(2, minmax(0, 1fr));gap:8px">
+        <button type="button" class="btn ghost" style="min-height:44px;font-size:14px">세트 추가하기</button>
+        <button type="button" class="btn ghost" style="min-height:44px;font-size:14px" aria-expanded="false">RPE · 메모 더 보기</button>
+      </div>
+    </div>
+
+    <a href="Record.dc.html" class="btn">저장하기</a>
+    <p class="eb" style="text-align:center">그날 첫 기록은 +20 XP · 개인 기록이면 저장 뒤 알려 드려요</p>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>세트 사이 휴식 · 세트 입력</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<style>
+body{margin:0;background:#F5F7F1;color:#1F2618;font-family:"Noto Sans KR",system-ui,sans-serif;font-size:14px;line-height:1.45}
+a{color:#4A6329;text-decoration:none}a:hover{color:#1F2618}
+.card{background:#fff;border-radius:20px;padding:16px;box-shadow:0 1px 2px rgba(31,38,24,.06)}
+.eb{font-size:12px;color:#5E6754;margin:0;line-height:1.4}
+.btn{display:flex;align-items:center;justify-content:center;min-height:48px;border-radius:14px;background:#5F7D39;color:#fff;font-size:15px;font-weight:600;border:0;font-family:inherit;cursor:pointer;width:100%;flex:none;padding:0 16px;box-sizing:border-box}
+.btn.ghost{background:#fff;color:#1F2618;border:1px solid rgba(31,38,24,.14)}.btn.dark{background:#1F2618}.btn.sm{min-height:44px;font-size:14px;width:auto}
+.ib{width:44px;height:44px;border-radius:12px;border:0;background:transparent;display:flex;align-items:center;justify-content:center;color:#5E6754;cursor:pointer;flex:none;font-family:inherit}
+.row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.set{display:grid;grid-template-columns:36px minmax(0,1fr) minmax(0,1fr) 44px;gap:10px;align-items:center}
+.set input{width:100%;box-sizing:border-box;height:48px;border:1px solid rgba(31,38,24,.16);border-radius:12px;font-size:17px;text-align:center;background:#fff;color:#1F2618;font-family:inherit}
+.set input.auto{border-color:#D9A441;background:#FBF6EA}
+.set input:disabled{background:#F5F7F1;color:#6B7363}
+.set .n{font-size:12px;color:#5E6754;text-align:center}
+.ok{width:44px;height:44px;border-radius:12px;border:1.5px solid #A8C47C;background:#fff;color:#4A6329;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
+.ok[aria-pressed=true]{background:#5F7D39;border-color:#5F7D39;color:#fff}
+.ok:disabled{border-color:#D5DACF;color:#B2B8AC}
+.sticky{position:absolute;left:0;right:0;bottom:0;padding:10px 20px 24px;background:#F5F7F1;border-top:1px solid rgba(31,38,24,.08);display:grid;grid-template-columns:repeat(2, minmax(0, 1fr));gap:10px}
+</style>
+</helmet>
+<div style="width:390px;height:844px;position:relative;overflow:hidden;box-sizing:border-box">
+<div style="height:100%;overflow:auto;padding:48px 20px 110px;box-sizing:border-box;display:flex;flex-direction:column;gap:12px">
+  <div class="row" style="margin-left:-10px">
+    <div style="display:flex;align-items:center;gap:2px"><a href="Weekly.dc.html" class="ib" aria-label="세션 나가기"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></a><div><p class="eb">세트 사이 휴식 · 2 / 3 세트</p><h1 style="margin:0;font-size:20px;font-weight:700">기본 스쿼트</h1></div></div>
+    <div style="display:flex;align-items:center;gap:6px"><button type="button" class="btn ghost sm" style="padding:0 12px" aria-label="휴식 30초 더">+30초</button><svg width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="휴식 남은 시간 42초"><circle cx="32" cy="32" r="27" stroke="#ECEEE8" stroke-width="6" fill="none"/><circle cx="32" cy="32" r="27" stroke="#5F7D39" stroke-width="6" fill="none" stroke-dasharray="170" stroke-dashoffset="50" stroke-linecap="round" transform="rotate(-90 32 32)"/><text x="32" y="37" text-anchor="middle" font-size="15" font-weight="700" fill="#1F2618">0:42</text></svg></div>
+  </div>
+
+  <div class="card row">
+    <div><p class="eb">지난번 · 11월 3일</p><p style="margin:2px 0 0;font-size:15px;font-weight:600">55 kg × 10 · 10 · 10</p></div>
+    <button type="button" class="btn dark sm" style="padding:0 14px">그대로 채우기</button>
+  </div>
+
+  <div class="card" style="display:flex;flex-direction:column;gap:10px">
+    <div class="set"><span class="n">세트</span><span class="n">kg</span><span class="n">회</span><span class="n">완료</span></div>
+    <div class="set"><span class="n">1</span><input value="60" inputmode="decimal" aria-label="1세트 kg"><input value="10" inputmode="numeric" aria-label="1세트 회"><button type="button" class="ok" aria-pressed="true" aria-label="1세트 완료"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M5 12l4 4L19 6"/></svg></button></div>
+    <div class="set"><span class="n">2</span><input placeholder="kg" inputmode="decimal" aria-label="2세트 kg"><input class="auto" value="9" inputmode="numeric" aria-label="2세트 회, 카메라가 센 값 9"><button type="button" class="ok" aria-pressed="false" aria-label="2세트 완료"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M5 12l4 4L19 6"/></svg></button></div>
+    <p class="eb" style="margin:-4px 0 0 46px"><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#FBF6EA;border:1px solid #D9A441;vertical-align:-1px;margin-right:5px"></span>9회는 카메라가 센 값이에요. 다르면 고쳐 주세요 — 고친 값이 기록 기준이 됩니다.</p>
+    <div class="set"><span class="n">3</span><input placeholder="kg" disabled aria-label="3세트 kg"><input placeholder="회" disabled aria-label="3세트 회"><button type="button" class="ok" disabled aria-label="3세트 완료"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M5 12l4 4L19 6"/></svg></button></div>
+  </div>
+
+  <button type="button" class="card row" style="width:100%;border:0;text-align:left;font-family:inherit;cursor:pointer;min-height:56px" aria-expanded="false">
+    <span><span style="font-size:15px;font-weight:600">RPE · 메모</span><p class="eb">지난번 RPE 8 · 메모 "벨트 착용"</p></span>
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#5E6754" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+  </button>
+</div>
+<div class="sticky">
+  <button type="button" class="btn ghost">휴식 끝내기</button>
+  <a href="Complete.dc.html" class="btn">다음 세트</a>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

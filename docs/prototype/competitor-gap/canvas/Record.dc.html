@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>운동 기록 · 달력</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<style>
+body{margin:0;background:#F5F7F1;color:#1F2618;font-family:"Noto Sans KR",system-ui,sans-serif;font-size:14px;line-height:1.45}
+a{color:#4A6329;text-decoration:none}a:hover{color:#1F2618}
+.card{background:#fff;border-radius:20px;padding:16px;box-shadow:0 1px 2px rgba(31,38,24,.06)}
+.dark{background:#1F2618;color:#fff}
+.eb{font-size:12px;color:#5E6754;margin:0;line-height:1.4}
+.chip{display:inline-flex;align-items:center;min-height:24px;padding:2px 10px;border-radius:999px;font-size:12px;font-weight:500;background:#E5EDD9;color:#4A6329;white-space:nowrap}
+.chip.gray{background:#ECEEE8;color:#5E6754}.chip.amber{background:#F7EBD0;color:#7A5A10}
+.btn{display:flex;align-items:center;justify-content:center;min-height:48px;border-radius:14px;background:#5F7D39;color:#fff;font-size:15px;font-weight:600;border:0;font-family:inherit;cursor:pointer;width:100%;flex:none;padding:0 16px;box-sizing:border-box}
+.btn.ghost{background:#fff;color:#1F2618;border:1px solid rgba(31,38,24,.14)}
+.ib{width:44px;height:44px;border-radius:12px;border:0;background:transparent;display:flex;align-items:center;justify-content:center;color:#5E6754;cursor:pointer;flex:none;font-family:inherit;font-size:14px}
+.row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.seg{display:flex;background:#ECEEE8;border-radius:14px;padding:4px}
+.seg a{flex:1;text-align:center;min-height:44px;display:flex;align-items:center;justify-content:center;border-radius:11px;font-size:14px;color:#5E6754}
+.seg a.on{background:#fff;color:#1F2618;font-weight:600;box-shadow:0 1px 2px rgba(31,38,24,.08)}
+.it{display:flex;justify-content:space-between;align-items:center;min-height:60px;border-top:1px solid rgba(31,38,24,.08);gap:10px;color:inherit}
+.it:first-child{border-top:0}
+.cal{display:grid;grid-template-columns:repeat(7, minmax(0, 1fr));gap:2px;text-align:center}
+.cal .h{color:#5E6754;font-size:12px;padding:6px 0}
+.cal button{min-height:44px;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:#1F2618;background:transparent;border:0;font-family:inherit;font-size:14px;cursor:pointer;padding:0}
+.cal .f{min-height:44px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:#6B7363;font-size:14px}
+.cal .dot{width:6px;height:6px;border-radius:50%;background:transparent;display:block}
+.cal .w .dot{background:#5F7D39}.cal .r .dot{background:#A8C47C}
+.cal .sel{background:#1F2618;color:#fff}.cal .sel .dot{background:#C7E26B}
+.cal .today{box-shadow:inset 0 0 0 1.5px #5F7D39}
+.nav{position:absolute;left:0;right:0;bottom:0;height:80px;background:#fff;border-top:1px solid rgba(31,38,24,.08);display:flex;justify-content:space-around;align-items:center;padding:0 8px 12px;box-sizing:border-box}
+.nav a{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:12px;color:#5E6754;min-width:56px;min-height:48px;justify-content:center}
+.nav a.on{color:#4A6329;font-weight:600}
+</style>
+</helmet>
+<div style="width:390px;height:844px;position:relative;overflow:hidden;box-sizing:border-box">
+<div style="height:100%;overflow:auto;padding:48px 20px 100px;box-sizing:border-box;display:flex;flex-direction:column;gap:12px">
+  <div class="row" style="margin-left:-10px">
+    <div style="display:flex;align-items:center;gap:2px"><a href="Main.dc.html" class="ib" aria-label="뒤로"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></a><h1 style="margin:0;font-size:20px;font-weight:700">운동 기록</h1></div>
+    <button type="button" class="ib" style="width:auto;padding:0 10px;color:#4A6329;font-weight:600">오늘</button>
+  </div>
+  <nav class="seg" aria-label="기록 보기 방식"><a href="Record.dc.html" class="on" aria-current="page">달력</a><a href="RecordStats.dc.html">통계</a></nav>
+
+  <div class="card" style="padding:12px 10px 14px">
+    <div class="row" style="padding:0 4px"><button type="button" class="ib" aria-label="이전 달, 10월"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button><b style="font-size:16px">2026년 11월</b><button type="button" class="ib" aria-label="다음 달, 12월"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button></div>
+    <div class="cal" style="margin-top:4px" role="grid" aria-label="2026년 11월">
+      <div class="h">월</div><div class="h">화</div><div class="h">수</div><div class="h">목</div><div class="h">금</div><div class="h">토</div><div class="h">일</div>
+      <span></span><span></span><span></span><span></span><span></span><span></span>
+      <button type="button" class="r" aria-label="11월 1일 일요일, 계획된 휴식">1<span class="dot"></span></button>
+      <button type="button" class="w" aria-label="11월 2일 월요일, 운동함">2<span class="dot"></span></button>
+      <button type="button" class="r" aria-label="11월 3일 화요일, 계획된 휴식">3<span class="dot"></span></button>
+      <button type="button" class="w" aria-label="11월 4일 수요일, 운동함">4<span class="dot"></span></button>
+      <button type="button" class="w sel today" aria-label="11월 5일 목요일, 오늘, 운동함, 선택됨" aria-current="date">5<span class="dot"></span></button>
+      <span class="f">6</span><span class="f">7</span><span class="f">8</span>
+      <span class="f">9</span><span class="f">10</span><span class="f">11</span><span class="f">12</span><span class="f">13</span><span class="f">14</span><span class="f">15</span>
+      <span class="f">16</span><span class="f">17</span><span class="f">18</span><span class="f">19</span><span class="f">20</span><span class="f">21</span><span class="f">22</span>
+      <span class="f">23</span><span class="f">24</span><span class="f">25</span><span class="f">26</span><span class="f">27</span><span class="f">28</span><span class="f">29</span>
+      <span class="f">30</span>
+    </div>
+    <div style="display:flex;gap:14px;font-size:12px;color:#5E6754;margin-top:10px;padding:0 4px;flex-wrap:wrap"><span><i style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#5F7D39;margin-right:5px;vertical-align:-1px"></i>운동한 날</span><span><i style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#A8C47C;margin-right:5px;vertical-align:-1px"></i>계획된 휴식</span><span><i style="display:inline-block;width:10px;height:10px;border-radius:50%;box-shadow:inset 0 0 0 1.5px #5F7D39;margin-right:5px;vertical-align:-1px"></i>오늘</span></div>
+  </div>
+
+  <div class="card dark row">
+    <div><p class="eb" style="color:rgba(255,255,255,.72)">연속 운동 · 목표 요일 기준</p><p style="margin:0;font-size:26px;font-weight:700">12일</p></div>
+    <div style="text-align:right"><p class="eb" style="color:rgba(255,255,255,.72)">이번 주 목표</p><p style="margin:0;font-size:26px;font-weight:700">3 / 4일</p></div>
+  </div>
+
+  <h2 style="font-size:16px;font-weight:600;margin:4px 0 0">11월 5일 (목) · 오늘</h2>
+  <div class="card" style="padding:4px 16px 16px">
+    <a href="ExerciseDetail.dc.html" class="it"><div><b>기본 스쿼트</b> <span class="chip">자세 교정</span><p class="eb" style="margin-top:3px">60 kg × 10 · 10 · 8 · 세트 3</p></div><span class="chip amber">PR</span></a>
+    <a href="ExerciseDetail.dc.html" class="it"><div><b>덤벨 컬</b> <span class="chip">자세 교정</span><p class="eb" style="margin-top:3px">12 kg × 12 · 12 · 10 · 팔꿈치 앞 이탈 1회 뺌</p></div><span class="eb">RPE 8</span></a>
+    <a href="ExerciseDetail.dc.html" class="it"><div><b>랫풀다운</b> <span class="chip gray">기록 전용</span><p class="eb" style="margin-top:3px">45 kg × 12 · 12 · 12 · 메모 1</p></div><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#5E6754" stroke-width="1.8" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></a>
+    <a href="ManualRecord.dc.html" class="btn ghost" style="margin-top:12px">기록 추가하기</a>
+  </div>
+</div>
+<nav class="nav" aria-label="하단 탭">
+  <a href="Main.dc.html"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>홈</a>
+  <a href="Weekly.dc.html" class="on"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 10v4M21 10v4M6 8v8M18 8v8M6 12h12"/></svg>운동</a>
+  <a href="Water.dc.html"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 11h16a8 8 0 0 1-16 0zM12 3v4"/></svg>식단</a>
+  <a href="Main.dc.html"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 19a6 6 0 0 1 12 0M14 19a4 4 0 0 1 7-2"/></svg>커뮤니티</a>
+  <a href="Settings.dc.html"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>내 정보</a>
+</nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

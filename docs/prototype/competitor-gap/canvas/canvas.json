@@ -1,0 +1,41 @@
+{
+  "v": 3,
+  "createdOnFiles": {"v": 1, "at": "2026-11-05T06:10:00Z"},
+  "title": "TREX 격차 페이지 디자인",
+  "launch": {"view": "canvas"},
+  "pages": [],
+  "boards": {
+    "Main.dc.html":           {"x": 0,    "y": 0,    "w": 390, "h": 844, "title": "P18 홈 (v2)", "is_interactive": true},
+    "Record.dc.html":         {"x": 470,  "y": 0,    "w": 390, "h": 844, "title": "P1 운동 기록 · 달력 (v2)", "is_interactive": true},
+    "RecordStats.dc.html":    {"x": 940,  "y": 0,    "w": 390, "h": 844, "title": "P1 운동 기록 · 통계 (v2 신설)", "is_interactive": true},
+    "ManualRecord.dc.html":   {"x": 1410, "y": 0,    "w": 390, "h": 844, "title": "P2 기록 추가·수정 (v2)", "is_interactive": true},
+    "SetInput.dc.html":       {"x": 1880, "y": 0,    "w": 390, "h": 844, "title": "P3 세트 입력 · 휴식 (v2)", "is_interactive": true},
+    "Settings.dc.html":       {"x": 2350, "y": 0,    "w": 390, "h": 844, "title": "P13 설정 (v2)", "is_interactive": true},
+    "Retention.dc.html":      {"x": 2820, "y": 0,    "w": 390, "h": 844, "title": "P14 보관 기간 (v2)", "is_interactive": true},
+    "Export.dc.html":         {"x": 3290, "y": 0,    "w": 390, "h": 844, "title": "P15 내보내기 (v2)", "is_interactive": true},
+    "ExerciseDetail.dc.html": {"x": 0,    "y": 1200, "w": 390, "h": 844, "title": "P4 종목 상세 (v2)", "is_interactive": true},
+    "Complete.dc.html":       {"x": 470,  "y": 1200, "w": 390, "h": 844, "title": "P5 완료 + 보상 (v2)", "is_interactive": true},
+    "Achievements.dc.html":   {"x": 940,  "y": 1200, "w": 390, "h": 844, "title": "P6 업적 (v2)", "is_interactive": true},
+    "Body.dc.html":           {"x": 1410, "y": 1200, "w": 390, "h": 844, "title": "P7 체중 기록 (v2)", "is_interactive": true},
+    "Catalog.dc.html":        {"x": 1880, "y": 1200, "w": 390, "h": 844, "title": "P8 운동 목록 · 2층 (v2)", "is_interactive": true},
+    "CustomWorkout.dc.html":  {"x": 2350, "y": 1200, "w": 390, "h": 844, "title": "P9 종목 직접 추가 (v2)", "is_interactive": true},
+    "Routines.dc.html":       {"x": 0,    "y": 2400, "w": 390, "h": 844, "title": "P10 추천 루틴 (v2)", "is_interactive": true},
+    "Weekly.dc.html":         {"x": 470,  "y": 2400, "w": 390, "h": 844, "title": "P11 주간 루틴 (v2)", "is_interactive": true},
+    "RoutinePreview.dc.html": {"x": 940,  "y": 2400, "w": 390, "h": 844, "title": "P12 루틴 미리 보기 (v2)", "is_interactive": true},
+    "Notify.dc.html":         {"x": 1410, "y": 2400, "w": 390, "h": 844, "title": "P16 알림 설정 (v2)", "is_interactive": true},
+    "Water.dc.html":          {"x": 1880, "y": 2400, "w": 390, "h": 844, "title": "P17 식단 탭 물 카드 (v2)", "is_interactive": true},
+    "Empty.dc.html":          {"x": 2350, "y": 2400, "w": 390, "h": 844, "title": "빈 상태 모음 (v2 신설)", "is_interactive": true}
+  },
+  "order": [
+    "Main.dc.html", "Record.dc.html", "RecordStats.dc.html", "ManualRecord.dc.html", "SetInput.dc.html", "Settings.dc.html", "Retention.dc.html", "Export.dc.html",
+    "ExerciseDetail.dc.html", "Complete.dc.html", "Achievements.dc.html", "Body.dc.html", "Catalog.dc.html", "CustomWorkout.dc.html",
+    "Routines.dc.html", "Weekly.dc.html", "RoutinePreview.dc.html", "Notify.dc.html", "Water.dc.html", "Empty.dc.html"
+  ],
+  "notes": {
+    "row1": {"x": 0, "y": -300, "text": "단계 1 — 보관 분리·세트 입력·기록 (G1·G2·G9·G10) — v2", "kind": "title1", "maxW": 3680},
+    "row2": {"x": 0, "y": 900,  "text": "단계 2 — 종목 상세·보상·체중·운동 목록 (G3·G4·G5) — v2", "kind": "title1", "maxW": 2740},
+    "row3": {"x": 0, "y": 2100, "text": "단계 2·3 — 추천 루틴·요일·알림·물 · 빈 상태 (G6·G7·G11) — v2", "kind": "title1", "maxW": 2740},
+    "legend": {"x": 2820, "y": 2400, "w": 390, "text": "v2 (2026-11-05 UX 검토 반영). 공통 규칙: 탭 대상 44×44 이상(Apple HIG)·글자 12px 이상·본문 대비 4.5:1(WCAG 1.4.3)·화면당 주요 행동 하나를 하단 고정(엄지 영역)·시트는 핸들+제목+44px 닫기·밀어 올린 화면은 44px 뒤로 버튼·회색 안내 상자는 화면당 하나·고급 입력(RPE·메모)은 접어 둠(점진적 공개)·빈 상태는 설명+다음 행동. 보상·XP 는 자세 점수·자동 카운트와 무관. 숫자는 예시.", "fill": "green"}
+  },
+  "designSystems": []
+}

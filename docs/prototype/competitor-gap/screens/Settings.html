@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>설정 · 기록·알림</title>
+</head>
+<body style="background:#E9ECE4;display:flex;justify-content:center;padding:24px 0">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<style>
+body{margin:0;background:#F5F7F1;color:#1F2618;font-family:"Noto Sans KR",system-ui,sans-serif;font-size:14px;line-height:1.45}
+a{color:#1F2618;text-decoration:none}a:hover{color:#4A6329}
+.card{background:#fff;border-radius:20px;padding:0 16px;box-shadow:0 1px 2px rgba(31,38,24,.06)}
+.eb{font-size:12px;color:#5E6754;margin:0;line-height:1.4}
+.chip{display:inline-flex;align-items:center;min-height:24px;padding:2px 10px;border-radius:999px;font-size:12px;font-weight:500;background:#E5EDD9;color:#4A6329;white-space:nowrap}
+.h3{font-size:13px;font-weight:600;color:#5E6754;margin:16px 0 6px 4px}
+.it{display:flex;justify-content:space-between;align-items:center;min-height:56px;border-top:1px solid rgba(31,38,24,.08);font-size:15px;gap:10px;width:100%;box-sizing:border-box;background:none;border-left:0;border-right:0;border-bottom:0;font-family:inherit;padding:0;cursor:pointer;color:inherit;text-align:left}
+.it:first-child{border-top:0}
+.it .l{display:flex;align-items:center;gap:12px}
+.it .r{display:flex;align-items:center;gap:6px;color:#5E6754;font-size:13px}
+.nav{position:absolute;left:0;right:0;bottom:0;height:80px;background:#fff;border-top:1px solid rgba(31,38,24,.08);display:flex;justify-content:space-around;align-items:center;padding:0 8px 12px;box-sizing:border-box}
+.nav a{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:12px;color:#5E6754;min-width:56px;min-height:48px;justify-content:center}
+.nav a.on{color:#4A6329;font-weight:600}
+</style>
+<div style="width:390px;height:844px;position:relative;overflow:hidden;box-sizing:border-box">
+<div style="height:100%;overflow:auto;padding:56px 20px 100px;box-sizing:border-box">
+  <h1 style="margin:0;font-size:24px;font-weight:700">내 정보</h1>
+  <a href="Settings.html" class="card" style="padding:14px 16px;display:flex;align-items:center;gap:12px;margin-top:12px;min-height:72px;box-sizing:border-box">
+    <span style="width:44px;height:44px;border-radius:50%;background:#C7E26B;flex:none"></span>
+    <span style="flex:1"><span style="display:block;font-size:16px;font-weight:600">프로필 편집</span><span class="eb">키 175 · 68.2 kg · 29세 · 근육 ↑</span></span>
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#5E6754" stroke-width="1.8" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+  </a>
+
+  <p class="h3">기록</p>
+  <div class="card">
+    <a href="Record.html" class="it"><span class="l"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#5E6754" stroke-width="1.8" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>운동 기록</span><span class="r"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span></a>
+    <a href="Achievements.html" class="it"><span class="l"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#5E6754" stroke-width="1.8" aria-hidden="true"><path d="M8 21h8M12 17v4M5 4h14v4a7 7 0 0 1-14 0zM5 6H3v2a3 3 0 0 0 3 3M19 6h2v2a3 3 0 0 1-3 3"/></svg>업적</span><span class="r"><span class="chip">새 배지 1</span><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span></a>
+    <a href="Body.html" class="it"><span class="l"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#5E6754" stroke-width="1.8" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="3"/><path d="M8 8h8M12 12v5"/></svg>체중 기록</span><span class="r">68.2 kg<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span></a>
+    <a href="Retention.html" class="it"><span class="l"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#5E6754" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>기록 보관 기간</span><span class="r">제한 없음<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span></a>
+    <a href="Export.html" class="it"><span class="l"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#5E6754" stroke-width="1.8" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M4 19h16"/></svg>기록 내보내기</span><span class="r">CSV · JSON<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span></a>
+    <button type="button" class="it" style="color:#9E3D3D"><span class="l"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9E3D3D" stroke-width="1.8" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>운동 기록 전체 삭제</span><span class="r" style="color:#9E3D3D"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span></button>
+  </div>
+
+  <p class="h3">알림</p>
+  <div class="card">
+    <a href="Notify.html" class="it"><span class="l"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#5E6754" stroke-width="1.8" aria-hidden="true"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4zM10 20a2 2 0 0 0 4 0"/></svg>알림</span><span class="r">운동 요일 · 휴식 끝<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span></a>
+  </div>
+
+  <p class="h3">계정</p>
+  <div class="card">
+    <button type="button" class="it"><span class="l"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#5E6754" stroke-width="1.8" aria-hidden="true"><path d="M4 12a8 8 0 0 1 14-5M20 12a8 8 0 0 1-14 5M18 3v4h-4M6 21v-4h4"/></svg>지금 동기화</span><span class="r">마지막 동기화 방금</span></button>
+  </div>
+
+  <p class="h3">화면·권한</p>
+  <div class="card">
+    <button type="button" class="it"><span class="l"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#5E6754" stroke-width="1.8" aria-hidden="true"><path d="M12 3a9 9 0 0 0 0 18 7 7 0 0 1 0-18z"/></svg>화면 모드</span><span class="r">시스템<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span></button>
+    <button type="button" class="it"><span class="l"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#5E6754" stroke-width="1.8" aria-hidden="true"><rect x="3" y="7" width="18" height="12" rx="3"/><circle cx="12" cy="13" r="3"/><path d="M9 7l1-2h4l1 2"/></svg>카메라 및 권한</span><span class="r"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span></button>
+  </div>
+
+  <p class="h3">정보</p>
+  <div class="card">
+    <button type="button" class="it"><span>도움말</span><span class="r"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span></button>
+    <button type="button" class="it"><span>저작권 및 라이선스</span><span class="r"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span></button>
+    <div class="it" style="cursor:default"><span>버전</span><span class="r">1.5.0</span></div>
+  </div>
+</div>
+<nav class="nav" aria-label="하단 탭">
+  <a href="Main.html"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>홈</a>
+  <a href="Weekly.html"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 10v4M21 10v4M6 8v8M18 8v8M6 12h12"/></svg>운동</a>
+  <a href="Water.html"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 11h16a8 8 0 0 1-16 0zM12 3v4"/></svg>식단</a>
+  <a href="Main.html"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 19a6 6 0 0 1 12 0M14 19a4 4 0 0 1 7-2"/></svg>커뮤니티</a>
+  <a href="Settings.html" class="on" aria-current="page"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>내 정보</a>
+</nav>
+</div>
+</body>
+</html>

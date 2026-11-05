@@ -2,7 +2,9 @@
 
 상태: **설계 — 구현 전.** 페이지 단위 계획(라우트·진입·구성·우선순위)은 `docs/GAP_PAGE_PLAN.md`. 격차 분석은 `docs/COMPETITOR_GAP_LIFTOFF_FLEEK.md`(이하 격차 문서). 이 문서는 그 G1~G11 을 **화면(§1)** 과 **시스템(§2~§6)** 으로 구체화한다.
 
-클릭 프로토타입: **`docs/prototype/competitor-gap/index.html`** — 브라우저로 열면 된다(의존성 없음, 오프라인). 색·모양은 앱 테마(`TrexTheme.kt`)와 같고 화면 9개를 위 버튼으로 오간다. 숫자는 전부 예시이고 자세 판정·점수 계산은 들어 있지 않다. 아래 그림은 Playwright 로 찍은 그 화면이다.
+클릭 프로토타입: **`docs/prototype/competitor-gap/index.html`**(갤러리, 의존성 없음·오프라인) — 화면 20장은 `screens/`, 디자인 캔버스 원본(아트보드 `.dc.html` + `canvas.json`)은 `canvas/`, 내보내기는 `tools/export_gap_prototype.py`. 색·모양은 앱 테마(`TrexTheme.kt`)와 같고 화면 안 링크로 서로 오간다. 숫자는 전부 예시이고 자세 판정·점수 계산은 들어 있지 않다. 아래 그림은 Playwright 로 찍은 **v2** 화면이다(v1 은 `docs/images/prototype/v1/`).
+
+> **v2 (2026-11-05 UX 검토 반영, `docs/UX_REVIEW_TOP10.md`)**: 탭 대상 44 px 미만 92곳·12 px 미만 글자 149곳·대비 미달 30곳을 0 으로. 구조 변경 — 기록 페이지를 **달력 / 통계** 세그먼트로 분리(§1.1a), 홈은 '오늘 운동' 카드를 맨 위로, 세트 입력은 RPE·메모를 접고 휴식 **+30초**, 업적에 **연속 잠시 멈추기**(최대 14일·구매 없음), 알림 문구는 긍정 프레이밍, **빈 상태 4종** 신설, 시트는 핸들+제목 한 줄+44 px 닫기, 주요 행동은 하단 고정, CTA 는 "~하기". 아래 §1 의 표는 v1 기준 설명이고 그림만 v2 다 — 달라진 점은 그 문서 §4.2.
 
 사용자 결정이 필요한 것은 격차 문서 §8 과 같다 — 특히 **7일 삭제 해제(G1)** 는 2026-10-28 결정을 바꾸는 일이라 이 설계는 "해제한다" 를 전제로 쓰되 §2.2 에 되돌릴 수 있는 길을 남겼다.
 
@@ -10,9 +12,9 @@
 
 ## 1. 화면 설계
 
-### 1.1 기록 — 월 달력 + 날짜 카드 + 주간 요약 (G1·G3·G9)
+### 1.1 기록 — 월 달력 + 날짜 카드 (G1·G3·G9) · v2 에서 주간 요약은 1.1a 통계로
 
-<img src="images/prototype/gap-record.png" width="280"> <img src="images/prototype/gap-record-manual.png" width="280">
+<img src="images/prototype/v2-Record.png" width="280"> <img src="images/prototype/v2-ManualRecord.png" width="280">
 
 | 요소 | 내용 | 데이터 |
 |---|---|---|
@@ -24,9 +26,15 @@
 
 지금의 `RecordScreen`('최근 7일')을 대체한다. 진입은 설정 → 운동 기록, 운동 탭 리모트 → 기록, 홈 '운동한 날' 점 줄.
 
+### 1.1a 기록 — 통계 세그먼트 (G3, v2 신설)
+
+<img src="images/prototype/v2-RecordStats.png" width="280"> <img src="images/prototype/v2-Empty.png" width="280">
+
+- 기간 탭(이번 주·이번 달·올해), 운동일·세트 / 볼륨(+'추정 n세트') / 운동 시간 / 소모(추정), 날짜별 세트 막대, 부위 비중, 많이 한 종목 3(→ 종목 상세), 근육 피로도 요약(→ 기존 피로도 화면). 오른쪽 그림은 빈 상태 4종(기록 없음·배지 0·요일 비어 있음·검색 결과 없음 — 상태+설명+CTA).
+
 ### 1.2 종목 상세 (G3)
 
-<img src="images/prototype/gap-exercise.png" width="280">
+<img src="images/prototype/v2-ExerciseDetail.png" width="280">
 
 - 최고 무게 · 추정 1RM(§3.3) · 최고 무게 추이(최근 8세션, PR 점 강조) · 횟수 추이(자세 교정 세트의 **확정 횟수**, 뺀 회는 그래프 밖) · 세트 이력 · 가이드 진입.
 - 맨몸 종목은 무게 카드 대신 '최고 횟수'·'누적 횟수'. 시간 종목(플랭크)은 최장 유지·누적 시간.
@@ -34,7 +42,7 @@
 
 ### 1.3 세트 입력 — 휴식 화면 (G2)
 
-<img src="images/prototype/gap-setinput.png" width="280">
+<img src="images/prototype/v2-SetInput.png" width="280">
 
 - 상단에 **지난 세션 인라인**("55 kg × 10 · 10 · 10 · RPE 8") + '그대로 채우기'(빈 칸만 채운다).
 - 세트 행 kg · 회 · RPE · 완료. kg 0.5 단위, 맨몸이면 비움. 카메라 세션은 '회' 에 자동 카운트가 미리 들어오고 **사용자가 고치면 `actualReps`**, 안 고치면 `countedReps` 만 남아 볼륨은 '추정'.
@@ -43,7 +51,7 @@
 
 ### 1.4 완료 화면 + 보상 띠 (G5)
 
-<img src="images/prototype/gap-complete.png" width="280">
+<img src="images/prototype/v2-Complete.png" width="280">
 
 - 맨 위 띠: PR 갱신(종목·새 기록·이전 기록) · +XP · 연속 일수 · 새 배지. **트리거는 "세션을 마치고 기록했다"**(§4.1). 자세 점수·자동 카운트·COACH 정확 횟수는 보상에 들어가지 않는다.
 - 아래는 지금 완료 화면 그대로(세트·시간·kcal·근육 맵·자세 문장·자가 라벨·오운완). 볼륨 칸 추가.
@@ -51,14 +59,14 @@
 
 ### 1.5 업적 (G5)
 
-<img src="images/prototype/gap-rewards.png" width="280">
+<img src="images/prototype/v2-Achievements.png" width="280">
 
 - 내 정보 → 업적. 레벨·XP 바, 연속(현재·최장·이번 주 요일 점), 배지 격자(획득/미획득 흐림).
 - 화면 안 문장으로 원칙을 밝힌다: "XP 는 운동을 마치고 기록할 때만 쌓여요. 자세 점수는 XP 와 무관해요."
 
 ### 1.6 추천 루틴 (G6)
 
-<img src="images/prototype/gap-routines.png" width="280">
+<img src="images/prototype/v2-Routines.png" width="280">
 
 - 운동 탭 상단 탭: 내 루틴(보관함, 기존) · **추천** · 받은 루틴(기존 공유 링크).
 - 필터 칩은 온보딩 답(목표·장소·주 N일·장비)으로 미리 켜져 있고 바꿀 수 있다.
@@ -68,14 +76,14 @@
 
 ### 1.7 주간 루틴 — 요일 슬롯 (G6)
 
-<img src="images/prototype/gap-weekly.png" width="280">
+<img src="images/prototype/v2-Weekly.png" width="280">
 
 - 요일 7칸, 오늘이 기본 선택. 칸마다 루틴 하나(없으면 휴식). 홈 '오늘 운동' 카드와 '운동 시작' 은 오늘 요일 슬롯을 읽는다.
 - 목록 행은 지금 `WorkoutListScreen` 그대로(드래그·스와이프 삭제·자세 토글·수정). 기존 '오늘 루틴'(`plan`)은 **'매일' 슬롯**으로 이관(§5).
 
 ### 1.8 운동 목록 — 2층 카탈로그 + 직접 추가 (G4)
 
-<img src="images/prototype/gap-catalog.png" width="280"> <img src="images/prototype/gap-catalog-custom.png" width="280">
+<img src="images/prototype/v2-Catalog.png" width="280"> <img src="images/prototype/v2-CustomWorkout.png" width="280">
 
 - 검색(한글·영문 별칭), 부위 탭(전체·하체·가슴·등·어깨·팔·코어·유산소), 기구 필터.
 - 섹션 둘: **자세 교정 지원(16)** — 기존 `postureExerciseMap` 종목, 초록 칩 / **기록 전용(n)** — 회색 칩 "자세 비교 미지원". 자세 교정 26종목 중 자세 미지원 10개(데드리프트 등)는 기록 전용 섹션에 나타나되 가이드가 있으면 가이드 표시.
@@ -83,7 +91,7 @@
 
 ### 1.9 설정 — 보관·내보내기·알림·연동 (G1·G7·G8·G10)
 
-<img src="images/prototype/gap-settings.png" width="280">
+<img src="images/prototype/v2-Settings.png" width="280">
 
 - 기록 보관 기간 라디오: 7일(지금까지의 기본) · 90일 · 1년 · **제한 없음(추천)**. 줄이면 삭제 경고 + 내보내기 권유.
 - 기록 내보내기(CSV·JSON), 체중 기록(이력 화면 진입), 전체 삭제(확인 2단계).
