@@ -219,4 +219,5 @@ APK 무결성은 `SHA256SUMS.txt`, 버전·서명·빌드 커밋은 `BUILD_INFO.
 - [자세 평가 인수인계](docs/POSTURE_HANDOFF.md)
 - [자세 엔진 정본 스펙](research/aihub_fitness/KOTLIN_PORTING_SPEC.md)
 - [서버·로그인·동기화 인수인계](docs/SERVER_SYNC_HANDOFF.md)
+- [경쟁 앱(Liftoff·플릭) 대비 기능 격차와 개발 계획](docs/COMPETITOR_GAP_LIFTOFF_FLEEK.md)
 - [iPhone 실행 안내](docs/IOS_INSTALL.md) · [iOS 포팅](docs/IOS_PORT.md)
