@@ -36,7 +36,9 @@ object SyncRules {
      * 내 음식 기억(food_memory.tsv)·자세 기준선·자세 로그는 `trex_store` 밖이라 대상이 아니다 — 음식 기억은 폰 밖으로 내보내지 않는다(FOOD_EVAL §9).
      */
     // routines = 내 루틴 보관함(루틴 공유, docs/superpowers/specs/2026-10-29-routine-share-design.md) — 옛 앱은 모르는 항목을 무시한다
-    val KEYS: List<String> = listOf("profile", "plan", "history", "diet", "water", "custom_foods", "goal_override", "routines")
+    // §131 — 체중 기록·XP 장부·직접 추가한 종목·주간 루틴·보관 기간·연속 멈춤도 백업한다(알림 설정은 기기 설정이라 뺀다)
+    val KEYS: List<String> = listOf("profile", "plan", "history", "diet", "water", "custom_foods", "goal_override", "routines",
+        "body_weight", "xp", "custom_exercises", "weekly_routine", "record_retention", "streak_pause")
 
     /**
      * @param otherAccountOnDevice 이 서버에서 이 기기와 마지막으로 맞춘 계정이 지금 계정과 다르다.

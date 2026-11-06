@@ -96,7 +96,8 @@ internal val tabContentPadding: PaddingValues
 // ============================================================= HOME
 
 @Composable
-fun HomeScreen(app: AppViewModel, onGoWorkout: () -> Unit, onGoDiet: () -> Unit, onRecordMeal: () -> Unit, onOpenMuscleLoad: () -> Unit = {}) {
+fun HomeScreen(app: AppViewModel, onGoWorkout: () -> Unit, onGoDiet: () -> Unit, onRecordMeal: () -> Unit, onOpenMuscleLoad: () -> Unit = {},
+    onOpenRoutines: () -> Unit = {}, onOpenAchievements: () -> Unit = {}, onOpenRecord: () -> Unit = {}) {
     val c = Trex.c
     val today = localToday()
     val activeDays = app.workoutHistory.filter { it.items.isNotEmpty() }.map { it.epochDay }.toSet()
@@ -140,9 +141,9 @@ fun HomeScreen(app: AppViewModel, onGoWorkout: () -> Unit, onGoDiet: () -> Unit,
             }
         }
         item { HomeNutrition(total, goal, onGoDiet) }
-        item { HomeActionCards(overview, onGoWorkout, onRecordMeal) }
+        item { HomeActionCards(overview, onGoWorkout, onRecordMeal, routineName = app.weeklyRoutine.ref(today.dayOfWeek)?.let(app::routineName), onChangeRoutine = onOpenRoutines) }
         item { MuscleLoadHomeCard(app, onOpenMuscleLoad) }
-        item { HomeActivityCards(app) }
+        item { HomeActivityCards(app, onOpenAchievements, onOpenRecord) }
     }
 }
 
@@ -179,6 +180,7 @@ fun DietTabScreen(app: AppViewModel, onOpenGoals: () -> Unit, onOpenPhoto: () ->
             }
             Text("목표 ${goal.kcal} kcal", color = c.text2, fontSize = 13.sp, modifier = Modifier.padding(bottom = 22.dp))
             DietRecordLink(onOpenRecord)
+            WaterCard(app)   // §131 P17
         }
         items(mealMetas.size, key = { mealMetas[it].id }) { i ->
             val meal = mealMetas[i]; val entries = foods[meal.id].orEmpty()

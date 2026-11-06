@@ -2,6 +2,7 @@ package com.example.trex_kotlin
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -84,7 +85,7 @@ private fun CompactMacro(label: String, value: Int, goal: Int, color: Color, mod
 
 /** 좁은 창과 큰 글씨에서는 카드 자체를 세로로 바꿔 버튼과 숫자를 자르지 않는다. */
 @Composable
-internal fun HomeActionCards(overview: RoutineOverview, onWorkout: () -> Unit, onMeal: () -> Unit) {
+internal fun HomeActionCards(overview: RoutineOverview, onWorkout: () -> Unit, onMeal: () -> Unit, routineName: String? = null, onChangeRoutine: (() -> Unit)? = null) {
     val c = Trex.c
     BoxWithConstraints(Modifier.fillMaxWidth()) {
         val stacked = maxWidth < 330.dp || LocalDensity.current.fontScale > 1.3f
@@ -94,8 +95,12 @@ internal fun HomeActionCards(overview: RoutineOverview, onWorkout: () -> Unit, o
                     AssetArtwork("routine/${overview.focus.image}.png", Modifier.matchParentSize(), ContentScale.Crop)
                     Box(Modifier.matchParentSize().background(Brush.verticalGradient(listOf(Color(0x18385027), Color(0xAB385027), Color(0xF5385027)))))
                     Column(Modifier.fillMaxWidth().align(Alignment.BottomStart).padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("오늘 운동", color = Color.White, fontSize = 21.sp, fontWeight = FontWeight.SemiBold)
-                        Text(overview.focus.title, color = Color.White, fontSize = 13.sp)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("오늘 운동", color = Color.White, fontSize = 21.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                            // 주간 루틴(§131 P11)으로 — 오늘 요일의 루틴을 바꾼다
+                            if (onChangeRoutine != null) Text("루틴 바꾸기", color = c.lime, fontSize = 12.sp, modifier = Modifier.clickable(onClick = onChangeRoutine).padding(4.dp))
+                        }
+                        Text(routineName?.let { "$it · ${overview.focus.title}" } ?: overview.focus.title, color = Color.White, fontSize = 13.sp)
                         Text(if (overview.count > 0) "${overview.count}개 운동 · 약 ${overview.minutes}분" else "운동을 추가해 주세룡", color = Color.White.copy(alpha = .85f), fontSize = 11.sp)
                         Surface(onClick = onWorkout, shape = RoundedCornerShape(50), color = c.surface, modifier = Modifier.fillMaxWidth()) {
                             Text("운동하기", color = c.primaryText, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
@@ -123,21 +128,26 @@ internal fun HomeActionCards(overview: RoutineOverview, onWorkout: () -> Unit, o
 }
 
 @Composable
-internal fun HomeActivityCards(app: AppViewModel) {
+internal fun HomeActivityCards(app: AppViewModel, onOpenAchievements: () -> Unit = {}, onOpenRecord: () -> Unit = {}) {
     val c = Trex.c
+    // §131 P18 — 연속 운동(목표 요일 기준)·이번 주 볼륨(kg × 확정 회, 추정 세트 제외)
+    val weekStart = app.calendarDay - kotlinx.datetime.LocalDate.fromEpochDays(app.calendarDay).dayOfWeek.ordinal
+    val volume = app.workoutHistory.volume(weekStart, app.calendarDay)
+    val weekSets = app.workoutHistory.filter { it.epochDay in weekStart..app.calendarDay }.sumOf { d -> d.items.sumOf { if (it.sets.isEmpty()) parseReps(it.reps).sets else it.sets.count { s -> s.done } } }
+    val weekDays = app.workoutHistory.count { it.epochDay in weekStart..app.calendarDay && it.items.isNotEmpty() }
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        listOf("운동 소모 · 추정" to "${app.todayRecord?.totalCalories() ?: 0} kcal", "연속 운동" to "${app.attendanceStreak()}일").forEach { (label, value) ->
-            Surface(shape = RoundedCornerShape(24.dp), color = c.surface, modifier = Modifier.weight(1f)) {
+        listOf(Triple("연속 운동", "${app.attendanceStreak()}일", "목표 요일 기준"), Triple("이번 주 볼륨", "${volume.kg.toInt()} kg", "${weekDays}일 · ${weekSets}세트" + if (volume.estimatedSets > 0) " · 추정 ${volume.estimatedSets}" else "")).forEachIndexed { index, (label, value, sub) ->
+            Surface(onClick = if (index == 0) onOpenAchievements else onOpenRecord, shape = RoundedCornerShape(24.dp), color = c.surface, modifier = Modifier.weight(1f)) {
                 Column(Modifier.padding(18.dp)) {
                     Text(label, color = c.text2, fontSize = 12.sp)
                     Text(value, color = c.text, fontSize = 25.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 12.dp))
-                    Row(Modifier.fillMaxWidth().padding(top = 15.dp), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.Bottom) {
+                    Text(sub, color = c.text2, fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp))
+                    Row(Modifier.fillMaxWidth().padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.Bottom) {
                         (6 downTo 0).forEach { offset ->
                             val record = app.workoutHistory.firstOrNull { it.epochDay == app.calendarDay - offset }
-                            val calories = label.startsWith("운동")
-                            val count = if (calories) record?.totalCalories() ?: 0 else record?.items?.size ?: 0
-                            val max = app.workoutHistory.maxOfOrNull { if (calories) it.totalCalories() else it.items.size }?.coerceAtLeast(1) ?: 1
-                            Box(Modifier.weight(1f).height(if (label.startsWith("운동")) (3 + 22f * count / max).dp else 15.dp)
+                            val count = if (index == 0) (record?.items?.size ?: 0) else record?.items?.sumOf { it.sets.sumOf { s -> (s.volumeKg ?: 0.0).toInt() } } ?: 0
+                            val max = if (index == 0) 1 else app.workoutHistory.maxOfOrNull { d -> d.items.sumOf { it.sets.sumOf { s -> (s.volumeKg ?: 0.0).toInt() } } }?.coerceAtLeast(1) ?: 1
+                            Box(Modifier.weight(1f).height(if (index == 0) 15.dp else (3 + 22f * count / max).dp)
                                 .clip(RoundedCornerShape(4.dp)).background(if (count > 0) c.primary else c.track))
                         }
                     }

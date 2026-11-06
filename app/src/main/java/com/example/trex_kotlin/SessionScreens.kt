@@ -113,7 +113,9 @@ fun TimerSessionScreen(
 /** 준비는 직접 시작한다. 휴식에만 원형 타이머와 자동 전환을 제공한다. */
 @Composable
 fun SessionTransitionScreen(step: SessionStep, timeLeft: Int, paused: Boolean,
-    onTogglePause: () -> Unit, onNext: () -> Unit, onExit: () -> Unit, onShowGuide: (() -> Unit)? = null) {
+    onTogglePause: () -> Unit, onNext: () -> Unit, onExit: () -> Unit, onShowGuide: (() -> Unit)? = null,
+    /** 세트 입력 카드(§131 P3) — 있으면 큰 링 대신 작은 링 + 세트 입력을 보인다. */
+    setInput: (@Composable () -> Unit)? = null, onExtendRest: (() -> Unit)? = null) {
     KeepScreenOn()
     val c = Trex.c
     val preparing = step.phase == SessionPhase.PREPARE
@@ -121,24 +123,43 @@ fun SessionTransitionScreen(step: SessionStep, timeLeft: Int, paused: Boolean,
         TimedPreparationScreen(step, paused, onTogglePause, onNext, onExit, onShowGuide)
         return
     }
-    Column(Modifier.fillMaxSize().background(c.bg).statusBarsPadding().navigationBarsPadding().padding(24.dp)) {
-        Text("세트 사이 휴식", color = c.primaryText, fontSize = 14.sp)
-        Text(step.workout.name, color = c.text, fontSize = 28.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 12.dp))
-        Text("${step.setLabel} · ${step.workout.repsSpec().targetLabel}", color = c.text2, modifier = Modifier.padding(top = 8.dp))
-        Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally) {
-                RingGauge(progress = (1f - timeLeft.toFloat() / step.seconds.coerceAtLeast(1)).coerceIn(0f, 1f), size = 224.dp, stroke = 9.dp) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(timeLeft.asClock(), color = c.text, fontSize = 44.sp, fontWeight = FontWeight.SemiBold)
-                        Text(if (paused) "일시정지" else "남은 휴식", color = c.text2, fontSize = 13.sp)
-                    }
+    val progress = (1f - timeLeft.toFloat() / step.seconds.coerceAtLeast(1)).coerceIn(0f, 1f)
+    Column(Modifier.fillMaxSize().background(c.bg).statusBarsPadding().navigationBarsPadding().padding(horizontal = 22.dp).padding(top = 16.dp, bottom = 20.dp)) {
+        if (setInput != null) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("세트 사이 휴식 · ${step.setLabel}", color = c.primaryText, fontSize = 13.sp)
+                    Text(step.workout.name, color = c.text, fontSize = 22.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 4.dp))
                 }
+                if (onExtendRest != null) GhostButton("+30초", onExtendRest, Modifier.padding(end = 8.dp), height = 44.dp)
+                RingGauge(progress = progress, size = 64.dp, stroke = 6.dp) {
+                    Text(timeLeft.asClock(), color = c.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                }
+            }
+            Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(top = 12.dp)) {
+                setInput()
+                if (onShowGuide != null) ExerciseGuideButton(step.workout.name, onShowGuide)
+                Spacer(Modifier.height(8.dp))
+            }
+        } else {
+            Text("세트 사이 휴식", color = c.primaryText, fontSize = 14.sp)
+            Text(step.workout.name, color = c.text, fontSize = 28.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 12.dp))
+            Text("${step.setLabel} · ${step.workout.repsSpec().targetLabel}", color = c.text2, modifier = Modifier.padding(top = 8.dp))
+            Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally) {
+                    RingGauge(progress = progress, size = 224.dp, stroke = 9.dp) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(timeLeft.asClock(), color = c.text, fontSize = 44.sp, fontWeight = FontWeight.SemiBold)
+                            Text(if (paused) "일시정지" else "남은 휴식", color = c.text2, fontSize = 13.sp)
+                        }
+                    }
+            }
+            if (onShowGuide != null) ExerciseGuideButton(step.workout.name, onShowGuide)
         }
-        if (onShowGuide != null) ExerciseGuideButton(step.workout.name, onShowGuide)
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             GhostButton(if (paused) "재개" else "일시정지",
                 onClick = onTogglePause, modifier = Modifier.width(100.dp))
-            Cta("휴식 끝내기", onClick = onNext, modifier = Modifier.weight(1f))
+            Cta(if (setInput != null) "다음 세트" else "휴식 끝내기", onClick = onNext, modifier = Modifier.weight(1f))
         }
     }
 }
@@ -163,6 +184,9 @@ fun SessionCompleteScreen(
     /** 커뮤니티에 오운완 카드 올리기(커뮤니티를 쓸 수 있을 때만, 없으면 버튼이 없다). */
     onShare: (() -> Unit)? = null,
     onDone: () -> Unit,
+    /** 보상 띠(§131 P5) — 기록한 사실에만 붙는 XP·PR·연속·새 배지. 자세 판정·카메라 횟수와 무관. */
+    reward: SessionReward? = null,
+    onOpenAchievements: (() -> Unit)? = null,
 ) {
     val c = Trex.c
     val doneCount = plan.count { it.done }
@@ -200,10 +224,23 @@ fun SessionCompleteScreen(
         val partial = plan.count { !it.done }
         if (partial > 0) Text("부분 수행 ${partial}세트도 함께 저장했어요.", color = c.text2,
             fontSize = 13.sp, modifier = Modifier.padding(top = 10.dp))
+        if (reward != null && (reward.xp > 0 || reward.personalRecord != null || reward.newBadges.isNotEmpty())) {
+            Surface(shape = RoundedCornerShape(18.dp), color = c.primaryWash, modifier = Modifier.fillMaxWidth().padding(top = 18.dp)) {
+                Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    reward.personalRecord?.let { (name, set) ->
+                        Text("개인 기록 갱신!", color = c.primaryText, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                        Text("$name ${set.kg?.let(::trimKg)} kg × ${set.reps}" + (reward.previousBestKg?.let { " · 지난 최고 ${trimKg(it)} kg" } ?: ""), color = c.text, fontSize = 13.sp)
+                    }
+                    if (reward.xp > 0) Text("+${reward.xp} XP · Lv ${reward.level + 1} 까지 ${reward.toNextLevel} · 연속 ${reward.streak}일", color = c.text, fontSize = 13.sp)
+                    reward.newBadges.forEach { Text("새 배지 · ${it.title}", color = c.primaryText, fontSize = 13.sp, fontWeight = FontWeight.SemiBold) }
+                }
+            }
+        }
         Row(Modifier.padding(top = 24.dp).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf(
+            listOfNotNull(
                 "$doneCount" to "완료 세트",
                 elapsedSeconds.asClock() to "총 시간",
+                reward?.takeIf { it.volumeKg > 0 }?.let { "${it.volumeKg.toInt()}kg" to "볼륨" },
                 "${kcal}kcal" to "예상 소모",
             ).forEach { (v, label) ->
                 Column(
@@ -222,7 +259,11 @@ fun SessionCompleteScreen(
             PostureSessionBlock(reports = ordered, headline = headline, onLabel = onLabel, modifier = Modifier.padding(top = 20.dp))
         }
         }
-        if (onShare != null) GhostButton("오운완 올리기", onShare, Modifier.padding(top = 12.dp).fillMaxWidth(), icon = Icons.Rounded.Forum)
+        if (reward != null) Text("XP·배지는 운동을 마치고 기록한 사실에만 붙어요. 자세 판정·카메라 횟수와는 무관해요.", color = c.text3, fontSize = 11.sp, lineHeight = 15.sp, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 8.dp))
+        Row(Modifier.padding(top = 12.dp).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (onShare != null) GhostButton("오운완 올리기", onShare, Modifier.weight(1f), icon = Icons.Rounded.Forum)
+            if (onOpenAchievements != null) GhostButton("업적 보기", onOpenAchievements, Modifier.weight(1f))
+        }
         Cta("홈으로", icon = Icons.Rounded.Home, onClick = onDone, modifier = Modifier.padding(top = 12.dp).fillMaxWidth())
     }
 }

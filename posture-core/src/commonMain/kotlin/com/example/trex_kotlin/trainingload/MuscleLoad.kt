@@ -10,7 +10,7 @@ enum class Muscle(val label: String) {
     HAMSTRINGS("뒤 허벅지"), CALVES("종아리"), HIP_FLEXORS("고관절 굽힘근"), ABS("복직근"),
     OBLIQUES("옆구리"), ERECTORS("척추기립근"), PECS("가슴"), DELTOIDS("어깨"), LATS("광배근"),
     TRAPS("승모근"), SERRATUS("전거근"), BICEPS("팔 앞쪽"), TRICEPS("팔 뒤쪽"), FOREARMS("전완"),
-    // §130(2026-11-07) 46종 확장에서 추가 — 2D 근육도(atlas-2d.js, 3D 모델 18근육에서 구운 것)에는 영역이 없어 목록·추천에만 나온다.
+    // §130(2026-11-07) 46종 확장에서 추가 — 2D 근육도(atlas-2d.js)에는 3D 모델에 없는 근육이라 손 그린 근사 영역(export_atlas_2d.py MANUAL_REGIONS)을 덮는 근육 위에 겹쳐 둔다.
     // 이름으로 저장되므로(MuscleLoadStore) 끝에만 붙인다. 복횡근·다열근은 표면 EMG 로 분리 측정된 적이 없어 넣지 않는다.
     ROTATOR_CUFF("회전근개"), RHOMBOIDS("능형근"), TIBIALIS("정강이 앞"), QUADRATUS_LUMBORUM("요방형근")
 }
@@ -188,7 +188,19 @@ object MuscleLoadCatalog {
         p("single_leg_abdominal_press", "싱글레그 애브도미널 프레스", "https://www.mayoclinic.org/healthy-lifestyle/fitness/in-depth/core-strength/art-20546851", "손-무릎 누르기 직접 EMG 미확보 — Mayo Clinic 동작 정의(복직근·복사근 등척, 고관절 굽힘근)", LoadUnit.SECONDS, true,
             muscles=arrayOf(Muscle.ABS to .8, Muscle.OBLIQUES to .4, Muscle.HIP_FLEXORS to .4, Muscle.QUADS to .15)),
     )
+    /**
+     * 직접 추가한 종목의 프로필(§131 P9) — 앱 상태가 로드·추가 때 바꿔 끼운다. 고른 주 근육에만 역할 초기값을 주고 연구 출처는 없다
+     * (화면이 "근육 부하는 고른 근육으로만 대략 추정" 이라고 밝힌다). iPhone 도 같은 소스(posture-core 복사본).
+     */
+    @kotlin.concurrent.Volatile var custom: List<ExerciseLoadProfile> = emptyList()
+    fun customProfile(id: String, name: String, muscles: List<Muscle>, timed: Boolean): ExerciseLoadProfile = ExerciseLoadProfile(
+        id = "custom:$id", name = name,
+        weights = muscles.mapIndexed { i, m -> m to if (i == 0) 1.0 else .8 }.toMap(),
+        sources = emptyList(), evidence = "직접 추가한 종목 — 고른 주 근육으로만 대략 추정, 연구 출처 없음",
+        unit = if (timed) LoadUnit.SECONDS else LoadUnit.REP,
+    )
     fun find(name: String) = all.firstOrNull { it.name == name || it.id == name || (name == "바벨 스쿼트" && it.id == "squat") }
+        ?: custom.firstOrNull { it.name == name || it.id == name }
 }
 
 /** 세트 시점의 프로필과 관측 원본을 보존한다. null/미관측을 0회 판정으로 바꾸지 않는다. */

@@ -25,7 +25,7 @@ def main():
         assert page.locator('canvas').count() == 0
         assert page.locator('script[src*="three"]').count() == 0
         keys = page.locator('[data-muscle]').evaluate_all('(nodes) => [...new Set(nodes.map(n => n.dataset.muscle))]')
-        assert len(keys) == 36, keys  # 18근육 × 신체 좌우
+        assert len(keys) == 44, keys  # 22근육 × 신체 좌우(§130 손 그린 4종 포함)
         def fill(key):
             return page.locator(f'[data-muscle="{key}"]').first.get_attribute('fill')
         neutral = fill('QUADS_L')

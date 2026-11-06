@@ -17,6 +17,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.FolderOpen
 import androidx.compose.material.icons.rounded.Share
 import com.example.trex_kotlin.routines.RoutineLibraryScreen
@@ -60,7 +61,7 @@ internal fun List<Workout>.moveWorkout(id: String, targetId: String): List<Worko
 /** 길게 누르면 순서 변경, 왼쪽 스와이프는 삭제 확인, 나머지 조작은 행 안에서 처리한다. */
 @Composable
 fun WorkoutTabScreen(app: AppViewModel, onOpenAlt: (Workout) -> Unit, onOpenSets: (Workout) -> Unit, onAddWorkout: () -> Unit,
-                     onOpenCommunity: () -> Unit = {}) {
+                     onOpenCommunity: () -> Unit = {}, onOpenRoutines: () -> Unit = {}) {
     val c = Trex.c
     // 루틴 공유(docs/superpowers/specs/2026-10-29-routine-share-design.md) — 머리줄의 "내 루틴"·"루틴 공유"
     var showLibrary by remember { mutableStateOf(false) }
@@ -160,6 +161,7 @@ fun WorkoutTabScreen(app: AppViewModel, onOpenAlt: (Workout) -> Unit, onOpenSets
             item(key="workout-header") {
                 Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
                     Text("오늘 운동",color=c.text,fontSize=30.sp,fontWeight=FontWeight.SemiBold,modifier=Modifier.weight(1f))
+                    IconButton(onClick={ onOpenRoutines() },enabled=canClick) { Icon(Icons.Rounded.CalendarMonth,"주간 루틴·추천",tint=c.primaryText) }
                     IconButton(onClick={ showLibrary=true },enabled=canClick) { Icon(Icons.Rounded.FolderOpen,"내 루틴",tint=c.primaryText) }
                     IconButton(onClick={ sharing=null to app.workoutPlan },enabled=canClick&&plan.isNotEmpty()) { Icon(Icons.Rounded.Share,"루틴 공유",tint=c.primaryText) }
                     IconButton(onClick=onAddWorkout,enabled=canClick) { Icon(Icons.Rounded.Add,"운동 추가",tint=c.primaryText) }

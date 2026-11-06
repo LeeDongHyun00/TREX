@@ -87,7 +87,7 @@ import kotlinx.coroutines.delay
  * 화면 순서(guide→auth→find→onboarding→main→record→session→complete)상 앞으로 가면 오른쪽에서,
  * 뒤로 가면 왼쪽에서 들어온다.
  */
-private enum class RootRoute { Guide, Auth, Onboarding, Main, Record, DietRecord, MuscleLoad, TransitionSession, PostureSession, TimerSession, Complete, PostureLab, BaselineGuide }
+private enum class RootRoute { Guide, Auth, Onboarding, Main, Record, DietRecord, MuscleLoad, Achievements, BodyWeight, Catalog, Routines, ExerciseDetail, TransitionSession, PostureSession, TimerSession, Complete, PostureLab, BaselineGuide }
 
 /** 메인 하단 시트. */
 sealed class MainSheet {
@@ -135,7 +135,13 @@ private fun TrexAppContent(app: AppViewModel) {
         if (app.askSwitchAccount) SwitchAccountDialog(onMove = { app.resolveFirstSync(keepLocal = true) }, onCancel = { app.cancelAccountSwitch() })
 
         var selectedTab by rememberSaveable { mutableStateOf(TrexTab.Home) }
-        var subScreen by rememberSaveable { mutableStateOf("none") } // none | guide | record | postureLab | baselineGuide
+        var subScreen by rememberSaveable { mutableStateOf("none") } // none | guide | record | postureLab | baselineGuide | achievements | bodyWeight | catalog | routines[:presets] | exercise:<이름>
+        // 한 단계 되돌아갈 곳(§131) — 기록·통계에서 연 종목 상세는 기록으로 돌아간다. 그 밖은 홈.
+        var subReturn by rememberSaveable { mutableStateOf("none") }
+        fun openSub(next: String) { subReturn = if (subScreen.startsWith("exercise:")) subReturn else subScreen; subScreen = next }
+        fun backSub() { subScreen = subReturn; subReturn = "none" }
+        // 기록 추가·수정 시트(P2) — (날짜, 종목 또는 null)
+        var manualRecord by remember { mutableStateOf<Pair<Long, String?>?>(null) }
         var progress by rememberSaveable(stateSaver = listSaver<SessionProgress, Any>(
             save = { listOf(it.index, it.remainingMs, it.elapsedMs, it.completed.joinToString(","), it.skipped.joinToString(","),
                 it.repetitions, it.recordedCounts.entries.joinToString(",") { entry -> "${entry.key}:${entry.value}" },
@@ -171,6 +177,8 @@ private fun TrexAppContent(app: AppViewModel) {
         val sessionTimeLeft by remember { derivedStateOf { progress.secondsLeft } }
         val sessionElapsed by remember { derivedStateOf { (progress.elapsedMs / 1000).toInt() } }
         val sessionRepetitions by remember { derivedStateOf { progress.repetitions } }
+        // 휴식 화면의 세트 입력(P3)이 읽는 값 — 세트 경계에서만 바뀐다(틱마다 다시 구성되지 않게 파생 상태)
+        val sessionCounts by remember { derivedStateOf { progress.recordedCounts to progress.workMillis } }
         var sessionPaused by rememberSaveable { mutableStateOf(false) }
         // 카메라 권한을 거부한 운동 — 자세 평가 대신 **같은 운동을** 타이머로 돌린다(건너뛰지 않는다).
         // 세션 단위 상태라 다음 세션에서는 다시 권한을 물어본다.
@@ -200,7 +208,8 @@ private fun TrexAppContent(app: AppViewModel) {
         val activeGuide = requestedGuide?.let(ExerciseGuides::forName) ?: introductionGuide
         val showingIntroduction = requestedGuide == null && introductionGuide != null
         // 초기 구성부터 시범이 시간을 막는다. 효과에서 뒤늦게 일시정지하면 준비가 먼저 진행될 수 있다.
-        val pausedState = rememberUpdatedState(sessionPaused || appPaused || exitAsk || activeGuide != null)
+        // 휴식(REST)은 앱이 뒤로 가도 시계가 흐른다(§131 P16 '휴식 끝' 알림 — 돌아오면 다음 세트가 멈춘 채 기다린다). 운동·준비는 종전처럼 멈춘다.
+        val pausedState = rememberUpdatedState(sessionPaused || (appPaused && step?.phase != SessionPhase.REST) || exitAsk || activeGuide != null)
         fun closeGuide(continuePreparation: Boolean) {
             activeGuide?.let { guide -> app.markGuideSeen(guide.name) }
             requestedGuide = null
@@ -349,6 +358,12 @@ private fun TrexAppContent(app: AppViewModel) {
                 advanceHoldFrom.remove(step.token)
             }
         }
+        // 휴식 끝 알림(§131 P16) — 앱이 뒤로 간 휴식에만 예약하고, 돌아오거나 단계가 바뀌면 취소한다. 설정이 꺼져 있으면 아무것도 걸지 않는다
+        val reminders = rememberReminderScheduler()
+        LaunchedEffect(appPaused, sessionIndex) {
+            if (appPaused && step?.phase == SessionPhase.REST && app.notifyPrefs.restEnd && !sessionPaused) reminders.scheduleRestEnd(nowMillis() + sessionTimeLeft * 1000L)
+            else reminders.scheduleRestEnd(null)
+        }
         LaunchedEffect(sessionIndex) {
             if (step?.phase == SessionPhase.WORK && !speech.muted) startTone()
             if (step?.phase == SessionPhase.REST) speech.speak("쉬는 시간이에요", flush = true)
@@ -370,13 +385,18 @@ private fun TrexAppContent(app: AppViewModel) {
                     RootRoute.TimerSession
                 }
             subScreen == "record" -> RootRoute.Record
+            subScreen == "achievements" -> RootRoute.Achievements
+            subScreen == "bodyWeight" -> RootRoute.BodyWeight
+            subScreen == "catalog" -> RootRoute.Catalog
+            subScreen.startsWith("routines") -> RootRoute.Routines
+            subScreen.startsWith("exercise:") -> RootRoute.ExerciseDetail
             subScreen == "dietRecord" -> RootRoute.DietRecord
             subScreen == "muscleLoad" -> RootRoute.MuscleLoad
             else -> RootRoute.Main
         }
 
         PlatformBackHandler(enabled = sessionDone || sessionIndex >= 0 || subScreen != "none") {
-            if (sessionDone) exitSession() else if (sessionIndex >= 0) requestExit() else subScreen = "none"
+            if (sessionDone) exitSession() else if (sessionIndex >= 0) requestExit() else backSub()
         }
 
         // 앱 내 업데이트 — 운동·하위 화면이 아닐 때만 확인하고 묻는다(AppUpdate.kt)
@@ -477,13 +497,24 @@ private fun TrexAppContent(app: AppViewModel) {
                                 }
                             } else null,
                             onDone = { exitSession() },
+                            reward = app.lastSessionReward,
+                            onOpenAchievements = { exitSession(); subScreen = "achievements" },
                             )
 
                             RootRoute.TransitionSession -> renderedStep?.let { current ->
                                 SessionTransitionScreen(current, sessionTimeLeft, pausedState.value,
                                 onTogglePause = { sessionPaused = !sessionPaused },
                                 onNext = { nextSession(current.token, true) }, onExit = { requestExit() },
-                                onShowGuide = ExerciseGuides.forName(current.workout.name)?.let { { showGuide(current.workout.name) } })
+                                onShowGuide = ExerciseGuides.forName(current.workout.name)?.let { { showGuide(current.workout.name) } },
+                                // 세트 사이 휴식의 세트 입력(§131 P3) — 방금 끝낸 세트(setNumber-1)의 카메라 횟수·시간을 넘긴다
+                                setInput = if (current.phase == SessionPhase.REST) { {
+                                    val (counts, work) = sessionCounts
+                                    val cameraSet = current.workout.posture && current.workout.postureSupported() && current.originalId !in postureFallback
+                                    SessionSetInputCard(app, current.originalId, current.workout.name, current.totalSets, current.setNumber - 1,
+                                        cameraReps = if (cameraSet) counts[current.token - 1] else null, initialReps = if (cameraSet) null else counts[current.token - 1],
+                                        timed = current.workout.resolvedTarget() is WorkoutTarget.Duration, finishedSeconds = ((work[current.token - 1] ?: 0L) / 1000).toInt())
+                                } } else null,
+                                onExtendRest = { progress = progress.copy(remainingMs = progress.remainingMs + 30_000L) })
                             }
 
                             RootRoute.PostureSession -> renderedStep?.let { current -> key(current.workout.id) {
@@ -526,7 +557,18 @@ private fun TrexAppContent(app: AppViewModel) {
                                     )
                                 } }
 
-                            RootRoute.Record -> RecordScreen(app = app, onBack = { subScreen = "none" })
+                            RootRoute.Record -> RecordScreen(app = app, onBack = { backSub() }, onOpenExercise = { openSub("exercise:$it") },
+                                onAddManual = { manualRecord = it to null }, onOpenMuscleLoad = { openSub("muscleLoad") }, onStartWorkout = { subScreen = "none"; startSession() })
+                            RootRoute.Achievements -> AchievementsScreen(app, onBack = { backSub() }, onGoWorkout = { subScreen = "none"; selectedTab = TrexTab.Workout })
+                            RootRoute.BodyWeight -> BodyWeightScreen(app, onBack = { backSub() })
+                            RootRoute.Catalog -> CatalogScreen(app, subtitle = "오늘 루틴에 추가", onBack = { backSub() },
+                                onPick = { t -> app.addToPlan(t.name); backSub() }, onOpenDetail = { openSub("exercise:$it") })
+                            RootRoute.Routines -> RoutinesScreen(app, initialTab = if (subScreen == "routines:presets") 1 else 0, onBack = { backSub() },
+                                onOpenCatalog = { openSub("catalog") }, onStartWorkout = { subScreen = "none"; subReturn = "none"; selectedTab = TrexTab.Workout; startSession() })
+                            RootRoute.ExerciseDetail -> subScreen.removePrefix("exercise:").let { name ->
+                                ExerciseDetailScreen(app, name, onBack = { backSub() }, onAddToPlan = { app.addToPlan(name); subScreen = "none"; subReturn = "none"; selectedTab = TrexTab.Workout },
+                                    onAddManual = { manualRecord = todayEpochDay() to name })
+                            }
                             RootRoute.DietRecord -> DietRecordScreen(app = app, onBack = { subScreen = "none" })
                             RootRoute.MuscleLoad -> MuscleLoadScreen(app = app, onBack = { subScreen = "none" })
 
@@ -541,10 +583,16 @@ private fun TrexAppContent(app: AppViewModel) {
                             onOpenRecord = { subScreen = "record" },
                             onOpenDietRecord = { subScreen = "dietRecord" },
                             onOpenMuscleLoad = { subScreen = "muscleLoad" },
+                            onOpenAchievements = { subScreen = "achievements" },
+                            onOpenBodyWeight = { subScreen = "bodyWeight" },
+                            onOpenCatalog = { subScreen = "catalog" },
+                            onOpenRoutines = { presets -> subScreen = if (presets) "routines:presets" else "routines" },
+                            onAddManual = { manualRecord = it to null },
                             )
                         }
                     }
 
+                    manualRecord?.let { (day, name) -> ManualRecordSheet(app, day, name, onClose = { manualRecord = null }) }
                     if (activeGuide != null) {
                         ExerciseGuideSheet(activeGuide,
                             onClose = { closeGuide(false) },
@@ -619,6 +667,11 @@ private fun MainTabs(
     onOpenRecord: () -> Unit,
     onOpenDietRecord: () -> Unit,
     onOpenMuscleLoad: () -> Unit,
+    onOpenAchievements: () -> Unit = {},
+    onOpenBodyWeight: () -> Unit = {},
+    onOpenCatalog: () -> Unit = {},
+    onOpenRoutines: (presets: Boolean) -> Unit = {},
+    onAddManual: (Long) -> Unit = {},
 ) {
     val c = Trex.c
     var navExpanded by rememberSaveable { mutableStateOf(false) }
@@ -660,14 +713,18 @@ private fun MainTabs(
                     onGoDiet = { onTabSelected(TrexTab.Diet) },
                     onRecordMeal = { sheet = MainSheet.Manual(currentMealId()) },
                     onOpenMuscleLoad = onOpenMuscleLoad,
+                    onOpenRoutines = { onOpenRoutines(false) },
+                    onOpenAchievements = onOpenAchievements,
+                    onOpenRecord = onOpenRecord,
                 )
 
                 TrexTab.Workout -> WorkoutTabScreen(
                     app = app,
                     onOpenAlt = { sheet = MainSheet.Alt(it) },
                     onOpenSets = { sheet = MainSheet.Sets(it.setDraft()) },
-                    onAddWorkout = { sheet = MainSheet.AddWorkout },
+                    onAddWorkout = onOpenCatalog,
                     onOpenCommunity = { onTabSelected(TrexTab.Community) },
+                    onOpenRoutines = { onOpenRoutines(false) },
                 )
 
                 TrexTab.Diet -> DietTabScreen(
@@ -683,6 +740,8 @@ private fun MainTabs(
                 TrexTab.Profile -> ProfileTabScreen(
                     app = app,
                     onOpenRecord = onOpenRecord,
+                    onOpenAchievements = onOpenAchievements,
+                    onOpenBodyWeight = onOpenBodyWeight,
                     onLogout = { app.logout() },
                 )
             }

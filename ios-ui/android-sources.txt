@@ -113,3 +113,18 @@ com/example/trex_kotlin/weather/WeatherExerciseRecommender.kt
 com/example/trex_kotlin/weather/WeatherRepository.kt
 com/example/trex_kotlin/weather/WeatherLocation.kt
 com/example/trex_kotlin/weather/WeatherSummaryRow.kt
+# §131 — 기록 확장 화면(디자인 캔버스 "TREX 격차 페이지 디자인" v2): 모델·세트 입력·기록 달력/통계·수동 기록·종목 상세·업적·체중·카탈로그·루틴·설정 시트·물 카드.
+# 플랫폼 짝은 Android AndroidReminders.kt(목록 밖) ↔ ios-ui iosMain PlatformUi.kt 의 rememberReminderScheduler.
+com/example/trex_kotlin/RecordModels.kt
+com/example/trex_kotlin/SetEntryUi.kt
+com/example/trex_kotlin/ManualRecordSheet.kt
+com/example/trex_kotlin/ExerciseDetailScreen.kt
+com/example/trex_kotlin/AchievementsScreen.kt
+com/example/trex_kotlin/BodyWeightScreen.kt
+com/example/trex_kotlin/CatalogScreen.kt
+com/example/trex_kotlin/RoutinesScreen.kt
+com/example/trex_kotlin/SettingsSheets.kt
+com/example/trex_kotlin/WaterCard.kt
+com/example/trex_kotlin/SessionSetInput.kt
+com/example/trex_kotlin/routines/RoutinePresetModels.kt
+com/example/trex_kotlin/routines/RoutinePresets.kt

@@ -3517,8 +3517,22 @@ Verification: app JVM 914 tests passed (zero failures/errors/skips); assembleDeb
 
 **구현.**
 - `WorkoutCatalog.kt` 72종(`posture=false` 46) — `postureExerciseMap`·`ExerciseProfiles` 에 없어 `postureSupported()` 거짓 → "미지원", 세션은 카메라 없이. 2026-08 카탈로그 이름은 같은 철자로 복귀, `retiredWorkoutCategories` 에서 제거. `export_ios_resources.py` 72, `catalog.json` 재생성.
-- `Muscle` +4(회전근개·능형근·정강이 앞·요방형근, 끝에 — 이름 저장). 2D 근육도에는 영역 없음(3D 모델 18근육에서 구운 자산) → 목록·추천에만. `Equipment` +8(BAND·CABLE·LEG_PRESS·LEG_CURL_MACHINE·CHEST_PRESS_MACHINE·ROW_MACHINE·STABILITY_BALL·RACK) — 온보딩 31개 라벨 비트에 대응(`loadEquipment`), 목록 순서 불변.
+- `Muscle` +4(회전근개·능형근·정강이 앞·요방형근, 끝에 — 이름 저장). 2D 근육도에는 손 그린 근사 영역(`export_atlas_2d.py` `MANUAL_REGIONS`, 덮는 근육 위에 겹침 — 사용자 요청) → `test_muscle_atlas_2d.py` 44키. `Equipment` +8(BAND·CABLE·LEG_PRESS·LEG_CURL_MACHINE·CHEST_PRESS_MACHINE·ROW_MACHINE·STABILITY_BALL·RACK) — 온보딩 31개 라벨 비트에 대응(`loadEquipment`), 목록 순서 불변.
 - `MuscleLoadCatalog` +46 — 출처는 PubMed ID 또는 전체 URL, 역할 초기값 가중치(EMG % 아님), 한쪽씩 하는 종목 PAIR · 교대 EACH · 버티기/운반 SECONDS(한쪽씩 버티는 종목은 좌우 같은 부하 — 어느 쪽인지 모름). 밴드·머신·케이블은 장력/표시 중량을 모른다(B=1).
 - 테스트: `MuscleLoadTest`(72 · 출처 URL 형식 · 단위 · 세 종목의 논문 결과) · `PostureExerciseMapTest`(map ⊂ 카탈로그, 확장 46 전부 posture=false·프로필 없음) · `PersonalizationTest`(프로필 26 ⊂ 카탈로그 72).
 
-**넣지 않은 것.** 루틴 60개, 46종 가이드, 외부 중량·RIR 입력(자료 5장), 2D 근육도 새 영역, "근육 피로도" 화면 이름(지수가 측정값처럼 읽힌다는 지적은 타당 — 제품 결정으로 남김).
+**넣지 않은 것.** 루틴 60개, 46종 가이드, 외부 중량·RIR 입력(자료 5장), "근육 피로도" 화면 이름(지수가 측정값처럼 읽힌다는 지적은 타당 — 제품 결정으로 남김).
+
+## §131. 격차 페이지(디자인 캔버스 "TREX 격차 페이지 디자인" v2) — 세트 기록·달력·업적·체중·2층 카탈로그·루틴·설정·물 (2026-11-07, 사용자 요청 "이 아키펙트로 앱의 페이지들을 추가")
+
+**근거.** 디자인 v2(2026-11-05 UX 검토 반영, P1~P18 + 빈 상태 모음) — 공통 규칙: 탭 대상 44 px·글자 12 px 이상·주요 행동 하나를 하단 고정·고급 입력(RPE·메모)은 접어 둠·빈 상태는 이유 한 줄 + 다음 행동. **보상·XP 는 자세 점수·자동 카운트와 무관**(디자인 범례 = 원칙 #1). 서버 쪽은 `docs/SERVER_REQUIREMENTS_PAGES_V2.md`.
+
+**모델(`RecordModels.kt`, 공유).** `SetEntry`(세트 · kg · 회 · 초 · 카메라 횟수 · RPE · 메모 · 완료) — 사용자가 적은 횟수가 기록 기준, 카메라 값만 있으면 '추정'(볼륨에 kg 을 곱하지 않는다). `WorkoutHistoryItem.sets`·`source`("session"|"manual"). 체중 `BodyWeightEntry`, XP `XpEntry`(키로 멱등), 배지 12종 `badges(RewardFacts)`, 직접 추가 종목 `CustomExercise`, 주간 루틴 `WeeklyRoutine`(요일→"preset:<id>"|"saved:<id>"), 알림 `NotifyPrefs`, 보관 기간 `RetentionOptions`(7·90·365·제한 없음, **기본 제한 없음** — 예전 7일 고정을 사용자 설정으로), 연속 `targetDayStreak`(목표 요일 기준 — 계획된 휴식·멈춘 날은 건너뛴다, 요일 설정 없으면 매일), Epley 1RM(10회 이하만), CSV/JSON 내보내기(자세 원본·음식 사진 제외).
+
+**저장·동기화.** `TrexStore` 키 `body_weight`·`xp`·`custom_exercises`·`weekly_routine`·`record_retention`·`streak_pause`(백업 항목, `SyncRules.KEYS`) · `notify_prefs`·`weekly_applied_day`(기기). 근육 피로도 창은 그대로 7일(`workoutRetentionStart`), 기록 보관만 설정을 따른다(`retainVisibleWorkoutHistory(today, days)`).
+
+**화면.** P1 `RecordScreen`(월 달력·운동한 날·계획된 휴식·연속·이번 주 목표 / 통계 이번 주·달·해·날짜별 세트·부위 비중·많이 한 종목) · P2 `ManualRecordSheet`(날짜·종목·세트·RPE·메모, 첫 수동 기록 +20 XP, PR 안내) · P3 `SessionSetInputCard`(휴식 화면: 지난번 '그대로 채우기'·카메라 값 호박색·+30초; 휴식은 앱이 뒤로 가도 시계가 흐른다 — 휴식 끝 알림) · P4 `ExerciseDetailScreen`(최고 무게·추정 1RM·추이·세트 이력·사용 근육·근거 링크·가이드) · P5 완료 보상 띠(PR·XP·연속·새 배지·볼륨 타일) · P6 `AchievementsScreen`(레벨·연속 멈추기 최대 14일·배지·XP 내역) · P7 `BodyWeightScreen` · P8 `CatalogScreen`(1층 자세 교정 지원 16 / 2층 기록 전용 56+내 종목, 부위·기구 칩, 검색 없음 → 직접 추가) · P9 `CustomExerciseSheet`(`MuscleLoadCatalog.custom` 에 고른 근육 프로필) · P10~P12 `RoutinesScreen`(주간 요일 슬롯·추천 프리셋 60개 `routines/RoutinePresets.kt`(생성, 정본 `research/routines/routine_presets.json`, `tools/gen_routine_presets.py --check`)·미리 보기·보관함; 날이 바뀌면 그 요일 루틴을 오늘 루틴으로) · P13 설정 기록 묶음 · P14 `RetentionSheet` · P15 `ExportSheet`(`rememberTextSharer`) · P16 `NotifySheet`(플랫폼 짝 `ReminderScheduler` — Android `AndroidReminders.kt` AlarmManager+채널, iPhone 미구현) · P17 `WaterCard`(기존 `water` 항목, 250 ml·8잔) · P18 홈(루틴 이름·루틴 바꾸기·연속 운동·이번 주 볼륨).
+
+**근육도.** 2D 근육도에 §130 의 네 근육 영역을 손으로 그려 넣었다(`export_atlas_2d.py` `MANUAL_REGIONS`, 덮는 근육 위에 겹침, 44키).
+
+**하지 않은 것.** 외부 중량·RIR 의 부하 모델 반영, 재부팅 뒤 알림 재예약·iPhone 알림, 46종 가이드, 운동 탭 행의 kg 목표, 커뮤니티 카드의 PR·XP(서버 스키마).
