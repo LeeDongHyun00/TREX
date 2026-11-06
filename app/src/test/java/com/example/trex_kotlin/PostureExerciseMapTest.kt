@@ -44,10 +44,17 @@ class PostureExerciseMapTest {
     }
 
     @Test
-    fun catalogContainsOnlyAihubMappedExercises() {
-        // The catalog is trimmed to AIHub-backed exercises so every pick has a real rule basis.
+    fun catalogHoldsAihubMappedExercisesPlusCameraOffExpansion() {
+        // §130: AIHub 26 종은 전부 map 에 있고, 나머지 46 종은 map 에도 프로필에도 없어 카메라가 꺼진다(posture=false, postureSupported 거짓).
         val catalog = workoutCatalog.values.flatten()
-        assertEquals(postureExerciseMap.keys, catalog.map { it.name }.toSet())
+        val names = catalog.map { it.name }
+        assertEquals(names.size, names.toSet().size)
+        assertEquals(72, names.size)
+        assertTrue(postureExerciseMap.keys.all { it in names })
+        val expansion = catalog.filter { it.name !in postureExerciseMap }
+        assertEquals(46, expansion.size)
+        assertTrue(expansion.all { !it.posture })
+        assertTrue(expansion.all { com.example.trex_kotlin.posture.ExerciseProfiles.forName(it.name) == null })
         assertEquals(16, catalog.count { it.posture })
         assertTrue(catalog.all { it.posture == Workout("t", it.name, it.reps, it.duration, true, it.category).postureSupported() })
         assertTrue(todayPlan.all { it.name in postureExerciseMap })

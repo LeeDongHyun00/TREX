@@ -19,10 +19,19 @@ class MuscleLoadTest {
 
     @Test fun everyActualCatalogExerciseHasExactlyOneResearchedProfile() {
         val expected=workoutCatalog.values.flatten().map { it.name }.toSet()
-        assertEquals(26,expected.size)
+        assertEquals(72,expected.size)   // AIHub 26 + §130 46
         assertEquals(expected,MuscleLoadCatalog.all.map { it.name }.toSet())
-        assertEquals(26,MuscleLoadCatalog.all.map { it.id }.toSet().size)
+        assertEquals(72,MuscleLoadCatalog.all.map { it.id }.toSet().size)
         assertTrue(MuscleLoadCatalog.all.all { it.sources.isNotEmpty() && it.primary.isNotEmpty() })
+        // 출처는 PubMed ID 또는 전체 URL(기관 자료·MDPI·DOI) — 둘 다 열리는 링크여야 한다
+        assertTrue(MuscleLoadCatalog.all.flatMap { it.sources }.all { it.startsWith("https://") && !it.contains("https://pubmed.ncbi.nlm.nih.gov/http") })
+        // 버티기·운반 종목은 초 단위, 한쪽씩 하는 종목은 쌍 단위(§130)
+        assertEquals(LoadUnit.SECONDS, MuscleLoadCatalog.find("파머스 캐리")!!.unit)
+        assertEquals(LoadUnit.PAIR, MuscleLoadCatalog.find("리버스 런지")!!.unit)
+        // 인용 논문이 문서 분류와 반대였던 세 종목은 논문 결과를 따른다(docs/EXERCISE_EXPANSION_46.md §2)
+        assertTrue(Muscle.TIBIALIS in MuscleLoadCatalog.find("의자 스쿼트")!!.primary)
+        assertTrue(Muscle.ABDUCTORS in MuscleLoadCatalog.find("리버스 런지")!!.primary && Muscle.GLUTES !in MuscleLoadCatalog.find("리버스 런지")!!.primary)
+        assertTrue(Muscle.HAMSTRINGS in MuscleLoadCatalog.find("싱글레그 글루트 브릿지")!!.primary)
     }
     @Test fun threeSetsAccumulateAndDecayWithoutInventingRecovery() {
         val sets=(1..3).map { set(it.toString()) }

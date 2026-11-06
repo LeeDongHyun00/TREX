@@ -65,5 +65,14 @@ internal fun UserProfile.loadEquipment(): Set<Equipment> {
         if(has(20)) add(Equipment.DIP_BAR)
         if(has(21)) add(Equipment.PULLUP_BAR)
         if(has(16) || has(17)) add(Equipment.BENCH)
+        // §130 — 온보딩 목록(AuthScreens.equipCats)의 기존 비트에 대응. 목록 순서를 바꾸면 저장된 마스크가 어긋난다.
+        if(has(27)) add(Equipment.BAND)                 // 저항 밴드
+        if(has(5)) add(Equipment.CABLE)                 // 케이블 머신
+        if(has(7)) add(Equipment.LEG_PRESS)             // 레그프레스
+        if(has(11)) add(Equipment.LEG_CURL_MACHINE)     // 레그컬 머신
+        if(has(9)) add(Equipment.CHEST_PRESS_MACHINE)   // 체스트프레스 머신
+        if(has(10) || has(5)) add(Equipment.ROW_MACHINE) // 시티드 로우 머신 또는 케이블 머신
+        if(has(30)) add(Equipment.STABILITY_BALL)       // 짐볼
+        if(has(19)) add(Equipment.RACK)                 // 스쿼트 랙(인버티드 로우의 낮은 바)
     }
 }
