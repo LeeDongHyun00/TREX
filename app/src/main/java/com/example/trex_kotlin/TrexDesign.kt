@@ -1,19 +1,20 @@
 package com.example.trex_kotlin
 
+import com.example.trex_kotlin.TrexText as Text
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.runtime.getValue
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,7 +25,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -33,6 +33,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Close
@@ -40,7 +42,6 @@ import androidx.compose.material.icons.rounded.Remove
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import com.example.trex_kotlin.TrexText as Text
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
@@ -67,6 +68,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.AlertDialog
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.style.TextDecoration
 
 /**
  * TREX 리디자인 디자인 시스템 (claude.ai 디자인 캔버스 "TREX Redesign.dc.html" 구현).
@@ -375,6 +383,11 @@ fun DField(
     height: Dp = 50.dp,
     centered: Boolean = false,
     textSize: Int = 14,
+    /** 입력 칸 자체(BasicTextField)에 붙는 수정자 — 포커스 요청·포커스 변화를 받을 때 쓴다([modifier] 는 이름·안내까지 감싼 바깥). */
+    fieldModifier: Modifier = Modifier,
+    /** 키보드의 실행 키(다음·완료). [onImeAction] 이 있으면 그 키를 누를 때 부른다. */
+    imeAction: ImeAction = ImeAction.Default,
+    onImeAction: (() -> Unit)? = null,
 ) {
     val c = Trex.c
     Column(modifier) {
@@ -386,7 +399,8 @@ fun DField(
             value = value,
             onValueChange = onValueChange,
             singleLine = true,
-            keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
+            keyboardOptions = KeyboardOptions(keyboardType = keyboardType, imeAction = imeAction),
+            keyboardActions = if (onImeAction != null) KeyboardActions(onAny = { onImeAction() }) else KeyboardActions.Default,
             visualTransformation = if (password) PasswordVisualTransformation() else VisualTransformation.None,
             textStyle = TextStyle(
                 color = c.text, fontSize = textSize.sp, fontWeight = if (centered) FontWeight.SemiBold else FontWeight.Normal,
@@ -410,7 +424,7 @@ fun DField(
                     inner()
                 }
             },
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().then(fieldModifier),
         )
         if (hint != null) {
             Spacer(Modifier.height(4.dp))
@@ -490,6 +504,10 @@ fun StepperControl(
     decIcon: ImageVector = Icons.Rounded.Remove,
     valueMinWidth: Dp = 48.dp,
     label: String = "",
+    /** 있으면 가운데 숫자를 눌러 직접 입력한다(밑줄로 누를 수 있음을 보인다) — 음식 인분([PortionInputDialog]). */
+    onValueClick: (() -> Unit)? = null,
+    /** 왼쪽 버튼의 낭독 설명을 바꾼다 — 휴지통일 때 "감소" 가 아니라 "삭제" 라고 읽히게. */
+    decLabel: String? = null,
 ) {
     val c = Trex.c
     Row(
@@ -502,16 +520,29 @@ fun StepperControl(
         horizontalArrangement = Arrangement.spacedBy(3.dp),
     ) {
         Surface(onClick = onDec, modifier = Modifier.size(44.dp), shape = CircleShape, color = Color.Transparent, contentColor = c.text2) {
-            Box(contentAlignment = Alignment.Center) { Icon(decIcon, contentDescription = "$label 감소".trim(), modifier = Modifier.size(17.dp)) }
+            Box(contentAlignment = Alignment.Center) { Icon(decIcon, contentDescription = decLabel ?: "$label 감소".trim(), modifier = Modifier.size(17.dp)) }
         }
-        Text(
-            valueLabel,
-            color = c.text,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.SemiBold,
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-            modifier = Modifier.width(valueMinWidth),
-        )
+        if (onValueClick == null) {
+            Text(
+                valueLabel,
+                color = c.text,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                modifier = Modifier.width(valueMinWidth),
+            )
+        } else {
+            // 누르는 칸 — 옆 버튼과 같은 44dp 높이, 큰 글씨에서도 한 줄("12.5")이 들어가게 폭은 최소값만 둔다
+            Box(
+                Modifier.widthIn(min = valueMinWidth).heightIn(min = 44.dp).clip(RoundedCornerShape(10.dp))
+                    .clickable(role = Role.Button, onClickLabel = "$label 직접 입력".trim(), onClick = onValueClick)
+                    .padding(horizontal = 4.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(valueLabel, color = c.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1,
+                    textDecoration = TextDecoration.Underline)
+            }
+        }
         Surface(
             onClick = onInc, modifier = Modifier.size(44.dp), shape = CircleShape,
             color = c.surface, contentColor = c.primaryText, shadowElevation = 1.dp,
@@ -521,39 +552,90 @@ fun StepperControl(
     }
 }
 
-/** 바텀 시트 호스트 (스크림 + 하단 고정, 닫기는 스크림 탭). */
+/**
+ * 음식 인분 직접 입력 — 스테퍼 가운데 숫자를 누르면 연다. 소수 한 자리(0.1~20)만 칠 수 있고([FoodPortion.isTypable]·[FoodPortion.parseTyped]),
+ * 빈칸·0·범위 밖이면 '확인' 을 누를 수 없다 — 잘못 눌러 기록이 사라지지 않게, 지우는 길은 스테퍼의 휴지통뿐이다.
+ * 입력 칸은 **비운 채로** 연다(지금 값은 안내 글로) — 지금 값을 채워 두면 커서가 맨 앞이라 "2" 앞에 "1" 을 쳐 "12" 가 조용히 저장됐다.
+ */
 @Composable
-fun SheetHost(onDismiss: () -> Unit, content: @Composable () -> Unit) {
+fun PortionInputDialog(foodName: String, current: Double, onConfirm: (Double) -> Unit, onDismiss: () -> Unit) {
     val c = Trex.c
-    Box(
-        modifier = Modifier
-            .fillMaxSize().imePadding()
-            .background(Color(0xB01A2010))
-            .clickable(interactionSource = remember2(), indication = null, onClick = onDismiss),
-        contentAlignment = Alignment.BottomCenter,
-    ) {
-        Surface(
-            modifier = Modifier
-                .widthIn(max = 600.dp).fillMaxWidth()
-                .clickable(interactionSource = remember2(), indication = null, onClick = {}),
-            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
-            color = c.sheet,
-            contentColor = c.text,
-        ) {
-            Box(Modifier.navigationBarsPadding()) { content() }
-        }
+    var text by androidx.compose.runtime.remember { mutableStateOf("") }
+    val parsed = FoodPortion.parseTyped(text)
+    val focus = androidx.compose.runtime.remember { FocusRequester() }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        shape = RoundedCornerShape(26.dp),
+        containerColor = c.sheet,
+        titleContentColor = c.text,
+        textContentColor = c.text2,
+        title = { Text("$foodName 몇 인분을 드셨나요?", fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis) },
+        text = {
+            TrexTextField(
+                value = text,
+                // 소수 한 자리까지만 칠 수 있다 — 둘째 자리를 몰래 반올림하지 않도록 아예 받지 않는다
+                onValueChange = { typed -> if (FoodPortion.isTypable(typed)) text = typed },
+                placeholder = "지금 ${FoodPortion.label(current)}인분",
+                keyboardType = KeyboardType.Decimal,
+                focusRequester = focus,
+                hint = if (text.isNotBlank() && parsed == null) "0.1 ~ 20 사이, 소수 한 자리까지 넣어 주세요" else "소수 한 자리까지 — 예: 0.3, 1.5",
+                textColor = c.text, containerColor = c.surface2, borderColor = c.line,
+                placeholderColor = c.text3, iconColor = c.text2, hintColor = c.text2,
+            )
+            // 입력 칸이 붙은 뒤에 포커스를 준다(대화 상자 안에서 — 칸보다 먼저 돌면 붙지 않은 요청이 된다)
+            LaunchedEffect(Unit) { focus.requestFocus() }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("취소", color = c.text2) } },
+        confirmButton = {
+            TextButton(onClick = { parsed?.let(onConfirm) }, enabled = parsed != null) {
+                Text("확인", color = if (parsed != null) c.primaryText else c.text3, fontWeight = FontWeight.SemiBold)
+            }
+        },
+    )
+}
+
+/**
+ * LazyColumn 항목 안에서 부르면 그 항목이 화면 밖으로 스크롤돼도 폐기되지 않고 남는다(스펙 §115) — 항목 안의 `remember` 상태
+ * (적다 만 등록 폼)·플랫폼 뷰(근육도 WebView)가 예전 스크롤 Column 에서처럼 살아 있게. 항목이 목록에서 빠지거나 이 호출이
+ * 합성에서 사라지면 놓는다. 지연 목록 밖에서는 아무 일도 하지 않는다.
+ */
+@Composable
+fun KeepComposedInLazyList() {
+    val container = androidx.compose.ui.layout.LocalPinnableContainer.current
+    androidx.compose.runtime.DisposableEffect(container) {
+        val handle = container?.pin()
+        onDispose { handle?.release() }
     }
 }
 
-@Composable
-private fun remember2(): MutableInteractionSource =
-    androidx.compose.runtime.remember { MutableInteractionSource() }
+/** Child controls can temporarily own a gesture without disabling the sheet's handle permanently. */
+internal val LocalSheetGestureLock = staticCompositionLocalOf<(Any, Boolean) -> Unit> { { _, _ -> } }
 
-/** 시트 상단 그랩 핸들. */
+/** Complex sheets open expanded. Only compact entry menus opt into a partial starting anchor. */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
-fun SheetHandle() {
-    Box(Modifier.fillMaxWidth().padding(top = 9.dp), contentAlignment = Alignment.Center) {
-        Box(Modifier.width(38.dp).height(4.dp).clip(RoundedCornerShape(999.dp)).background(Trex.c.track))
+fun SheetHost(onDismiss: () -> Unit, startPartiallyExpanded: Boolean = false,
+    expandContent: Boolean = false, content: @Composable () -> Unit) {
+    val sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = !startPartiallyExpanded)
+    // Advancing from a compact menu expands the same state, without recreating or re-showing the dialog.
+    LaunchedEffect(expandContent) { if (expandContent) sheetState.expand() }
+    val gestureLocks = androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateMapOf<Any, Unit>() }
+    val lockGesture = androidx.compose.runtime.remember { { owner: Any, locked: Boolean ->
+        if (locked) gestureLocks[owner] = Unit else gestureLocks.remove(owner)
+        Unit
+    } }
+    androidx.compose.material3.ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        sheetGesturesEnabled = gestureLocks.isEmpty(),
+        sheetMaxWidth = 600.dp,
+        containerColor = Trex.c.sheet,
+        contentColor = Trex.c.text,
+        scrimColor = Color(0xB01A2010),
+    ) {
+        CompositionLocalProvider(LocalSheetGestureLock provides lockGesture) {
+            Box(Modifier.fillMaxWidth()) { content() }
+        }
     }
 }
 

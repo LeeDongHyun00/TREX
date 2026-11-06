@@ -1473,6 +1473,8 @@ JVM 244건 통과: 모든 카메라 종목에서 방향 문구가 5초 안내보
 
 *재생(폰 8세트·MM-Fit 59세트).* 11:54 D 세트: '몸에서 떨어짐' 코칭 8/10(13·14·15·16·17·19·20·21회), 차단 4(14·15·16·19회), 초반 4·5회(+0.14·+0.18)는 기준이 서는 중이라 놓침; 정상 10~12·18회 −0.02~0.00; '앞 이탈' 오탐 0(벌림이 앞 축에서는 −로 읽힌다); 정면으로 돌아선 6·7회 '옆 벌림' 검출(앞쪽 반구 기준). MM-Fit 사선 반복: '몸에서 떨어짐' 85회·'앞 이탈' 50회 위반 0. 정면 '옆 벌림': 09:59 5·6·10회, 15:33 5·12·13회, 9/25 11:06 7·8회가 새로 걸린다(원값 0.33~0.60 — 같은 세트 다른 반복 0.21~0.26, 모집단 정상 p95 0.29) — 첫 상단 오염이 사라진 결과. MM-Fit 정면 판정 88회 코칭 5·차단 2(차단 2는 종전과 같고, 코칭 2건은 종전에 기준이 없어 판정 못 하던 반복). 15:34 13회 정답 세트 판정 불변. 유닛 411건.
 
+- **기본 프로필 그림은 Chromium 오프라인 공룡**(사용자 결정 2026-10-29). 2배 스프라이트에서 서 있는 프레임(88×94)만 잘라 `assets/community/` 에 BSD-3 전문·NOTICE 와 함께 둔다. 재배포 조건이라 내 프로필(사진이 없을 때)에 출처 링크를 보인다. 픽셀 그림이라 원본 크기로 읽고 `FilterQuality.None` 으로 키운다.
+
 *남은 것.* 폰 지정 오류 세트 — D·B 각각 정상·벌림·팔꿈치 앞·팔꿈치 뒤 10회(회 번호 기록), 옆 뷰 앞뒤 beta 확정. AIHub 수치를 앱 창 통계(수축 구간 중앙값·같은 기준)로 재측정. 세트 내내 벌리고 하면 '몸에서 떨어짐' 기준이 벌린 자세다(본인 기준의 한계).
 
 **§62c 후속 8 — 사선 촬영 안내에 각도 · '0회 → 2회' 원인 · '처음부터 벌림' 방지 설계 (2026-09-26 12:49, 사용자 요청)**
@@ -3004,3 +3006,501 @@ APK 서명 검증과 preview.6의 인증서 일치, 패키지·버전·가이드
 - **폭염 (`HEATWAVE`, 실내 전환)**: 기상청 폭염특보 기준(일최고체감온도 33°C 이상)에 준하여, 반올림 표기 시 33°C에 도달하는 `temperature > 32.0°C` 구간부터 열사병 예방을 위해 실내 운동으로 전환한다.
 - **안개/강풍 및 구름 (`CLOUDY`)**: 안개(`45..48`) 또는 강풍(`windSpeed >= 35.0 km/h`, 기상청 육상 강풍주의보 풍속 약 10m/s ≈ 36km/h에 준하는 야외 보행 저항 기준) 시 실내(`INDOOR`)로 전환하며, 단순 구름 조금·흐림(`2..3`)은 실외(`OUTDOOR`) 선선한 날 운동으로 안내한다.
 - **맑음 (`SUNNY`, 실외 추천)**: WMO 코드 `0`(맑음), `1`(대체로 맑음)이고 기온·풍속 특보 조건이 없을 때 실외 운동을 추천한다.
+
+*화면 — 날씨 시트(2026-10-23, `feature/weather-sheet-recommend`).* §108f 가 홈을 한 화면에 담으려고 날씨를 한 줄로 줄이면서 추천 운동 목록과 출처 표기가 화면에서 빠졌다. 홈 한 줄은 그대로 두고, 줄을 누르면 열리는 시트(예전 지역 고르기)의 **위쪽에 추천**을 되살렸다: 하늘색 아이콘·테마 제목·지역/기온·실내/실외·추천 문장, 추천 운동 세 개와 '목록에 추가'(이미 오늘 안 한 같은 이름이 있으면 '목록에 있음' — 근육 부하 화면 추천과 같은 규칙, `addMuscleRecommendation`; 버튼마다 운동 이름을 낭독 설명으로). 그 바로 아래 **출처 "날씨 정보: Open-Meteo.com (CC BY 4.0)"** 과 받은 지 얼마나 됐는지(누르면 Open-Meteo 사이트) — Open-Meteo 데이터는 CC BY 4.0 이라 출처를 단다. 홈 한 줄에는 자리가 없어 시트를 열면 스크롤 없이 보이는 자리에 둔다. 받은 지 얼마나 됐는지는 시트를 그릴 때 다시 센다(`updateAgeText`) — 추천을 만든 순간의 글을 쓰면 새로 받기에 실패해 남은 묵은 날씨를 '방금' 이라 한다. 그 아래 날씨 기준 지역. 줄 끝의 › 는 누르면 열린다는 표시이고, 좁은 화면·큰 글씨에서는 날씨 이름이 먼저 줄어든다. 판정은 바꾸지 않았다. 추천 이름이 전부 운동 카탈로그에 있는지 테스트가 지킨다(없으면 '목록에 추가' 가 아무것도 안 한다).
+
+## §107. iPhone 앱과 공통 엔진 경계 (2026-10-06, `ios-redesign`)
+
+*요청·결정.* 사용자가 자세 교정 엔진부터 전체 소비자 기능을 iPhone으로 제작해 달라고 했다. 최신 `redesign` `5213e3c4`가 기준이다. 엔진을 Swift로 다시 쓰면 §98의 최근 임계값·뷰·짝·접촉·beta 정책이 서로 달라지므로 **Android Kotlin 정본을 KMP로 생성**하고 플랫폼 I/O와 UI만 SwiftUI로 구성한다. Android 엔진은 기존 경로를 유지한다. 생성 도구 `tools/sync_ios_core.py --check`가 38파일·정본 테스트·부하/음식 기하·중력/DTO를 검사한다. 원본 코드 SHA는 Git LF로 계산하고, 텍스트 자산도 LF·모델은 원시 바이트로 대조한다(Windows autocrlf와 Mac의 같은 내용을 다른 자산으로 읽지 않기 위해).
+
+*구조.* `posture-core`는 JVM / iosArm64 / iosSimulatorArm64 / iosX64와 정적 `TrexCore.framework`. `IosEngine`의 JSON 입구는 직렬 호출 전용이고 MediaPipe의 미러 전 33관절·단조 ms·중력·실제 버퍼 크기를 받는다. 3D m→cm 및 y/z 반전·가시성·up 자가검증·2D 기하·규칙/렙/반복 검사는 정본 함수다. **준비/판정/렙은 now/300 칸의 첫 프레임**, 접촉만 85ms를 받아 drain한다. Swift 쪽은 실행 1개+대기 최신 1개, 세대/정지/복귀에 이전 프레임을 버리고 다음 추론보다 앞선 정지 명령을 먼저 적용한다. 빌드 진입은 `-PiosOnly`와 Xcode pre-build의 `embedAndSignAppleFrameworkForXcode`.
+
+*정책.* 유보는 정상/점수 분모로 바꾸지 않고 ship/beta/exclude·COACH/TRACK·비관측 범위를 유지한다. beta 음성 교정은 끄며 네 종목 횟수 입장 조건의 기각 사유는 정본대로 말한다. 촬영 메타데이터 없는 개발용 기준선은 현재 Android처럼 실시간에 자동 적용하지 않는다. 수집 중앙값은 `BaselineCollector`를 공유하고 같은 세트의 중복 수집을 막는다. 기록 부하는 물리 수행 수·자가 수정 수로 계산하며 자세 점수를 곱하지 않는다.
+
+*소비자 앱.* `iosApp/Trex`에 프로필/홈, 26종 계획·세션·7종 가이드, 기록·자가 라벨, 350종 영양과 목표·사진 최대5장/원본 TFLite3모델/음식 기억, 원본 3D 근육 보기·장비 추천, 로컬 백업/복원을 연결했다. 자산 정본 추출은 `tools/export_ios_resources.py`. 별도 번들 `com.leedonghyun.trex.ios`, iPhone 세로 iOS16+다. Android APK 자동 업데이트/개발용 PostureLab 전체/연구 CLI/Android 데이터 자동 마이그레이션/서버 동기화는 포함하지 않는다. 자세 로그는 사진 없는 `ios_session/ios_frame` schema1이며 **Android SetLogJson 완전 재생 호환이 아니다**(준비 원시 프레임·카운터 상태 미포함). 범위와 Mac 실행 절차는 `docs/IOS_PORT.md`.
+
+*검증·한계.* Windows에서 **공통 JVM 376/376**(정본366 + iOS 경계10), Android557/557·assembleDebug, Swift31파일 구문·plist·경로·정본 동기화를 통과했다. 최초 Windows 구현 뒤 사용자 요청으로 원격에 푸시하고 §107a~§107e에서 실제 macOS 빌드/SDK 검사까지 진행했다. 최종 검증 코드 `e52b15be`는 Xcode26.0.1에서 iPhone arm64 Release·번들/IPA와 시뮬레이터 XCTest4/4를 통과했다. **서명과 실제 iPhone 실행·운동/음식 정확도는 미검증**이다. 다음은 사용자의 iPhone 전후면·중력·네종목 짝/기각/접촉·음식 방향·3D 검증이다. Android와 MediaPipe SDK/CPU가 달라 자동 검사 통과를 동일한 폰 정확도로 주장하지 않는다.
+
+
+*§107a 원격 Mac 첫 빌드(2026-10-07).* 사용자 요청으로 `ios-redesign`에 커밋/푸시하고 macOS Actions를 실행했다. runner의 기본 Xcode 대신 호환 26 계열을 선택하고 Homebrew CocoaPods의 정확한 경로를 쓴다. 공통 피처 맵의 JVM `putIfAbsent` 5곳은 생성 단계에서 null 없는 Float 맵의 공통 `getOrPut`으로 치환한다. [3차 빌드](https://github.com/LeeDongHyun00/TREX/actions/runs/37483210227)에서 Kotlin/Native Release 프레임워크와 Swift 컴파일은 통과했으나 MediaPipe 내장 TFLite와 TensorFlowLiteC 사이 C API 212개 중복으로 최종 링크가 실패했다. 서로 다른 런타임의 심볼을 임의로 합치거나 오류를 무시하지 않고, 음식 Interpreter를 동적 `TrexFoodRuntime.framework`에 정적으로 묶는다. 공개 경계는 Foundation Data·형태·자료형이고 TensorFlowLite 타입/모듈은 implementation-only다. 앱은 MediaPipe, 음식 프레임워크는 음식 TFLite 각각의 ABI로 링크한다. 공통 Kotlin은 앱에만 연결해 테스트/음식 프레임워크에 런타임을 중복 포함하지 않는다. 새 XCTest는 세 음식 모델의 실제 추론과 자세 모델 초기화/빈 버퍼 추론을 같은 프로세스에서 실행하고 IPA 검사는 음식 프레임워크 포함도 확인한다. 최종 IPA/XCTest 결과와 실기기 미검증 범위는 `docs/IOS_PORT.md`를 따른다.
+
+
+*§107b 호스팅 XCTest의 그래프 단일 연결(2026-10-07).* [4차 빌드](https://github.com/LeeDongHyun00/TREX/actions/runs/37485560724)에서 기기용 IPA와 원본 자세 자산 SHA·음식 프레임워크 포함 검사는 성공했다. 시뮬레이터 컴파일도 성공했지만 XCTest 주입 시 앱/테스트 번들에 `FlowLimiterCalculator`가 두 번 등록돼 시작 전에 SIGABRT가 났다. `inherit! :search_paths`에도 MediaPipe Pod의 `user_target_xcconfig`에 있는 그래프 `-force_load`가 테스트로 전파된 것이 실제 링크 명령에서 확인됐다. `TrexTests.OTHER_LDFLAGS`를 상속 없는 빈 값으로 명시해 SDK 그래프는 호스팅 앱에만 두고, 음식 프레임워크/XCTest의 일반 타깃 링크는 유지한다. 테스트와 소비자 앱의 그래프를 각각 만드는 구조를 피한다. 실제 SDK 동시 실행 테스트를 건너뛰지 않으며 최종 결과는 `docs/IOS_PORT.md`에 기록한다.
+
+*§107c 음식 런타임 내부 심볼 격리(2026-10-07).* [5차 빌드](https://github.com/LeeDongHyun00/TREX/actions/runs/37488481897)에서 XCTest 주입과 자산·백업·85ms 캡처 검사 3건은 통과했으나, 첫 음식 모델 추론이 `Input tensor 149 lacks data`로 실패했다. 원본 YOLO의 73개 가중치 버퍼는 FlatBuffer의 `data` 대신 파일 `offset/size`를 쓴다(149번: offset 3740672, size 4608). [TensorFlow 2.17 InterpreterBuilder](https://github.com/tensorflow/tensorflow/blob/v2.17.0/tensorflow/lite/core/interpreter_builder.cc)는 allocation이 있는 파일 모델에서 이 형식을 지원한다. 모델을 먼저 재학습/변환하기보다 서로 다른 버전의 내부 C++ 심볼이 합쳐지는 경로를 차단한다. `TrexFoodRuntime/exports.txt`로 공개 Swift API와 해당 모듈 ObjC 메타데이터만 내보내고 TFLite의 C/C++ 구현은 프레임워크 내부에 둔다. IPA 검사에서 `nm -gU`로 음식 프레임워크의 `_TfLite*`와 `__Z*` 공개 심볼이 0개인지 확인한다. 원본 세 음식 모델과 자세 모델의 실제 동시 추론 XCTest를 유지하며, 최종 통과 여부는 `docs/IOS_PORT.md`에 기록한다.
+
+*§107d 외부 가중치와 C API allocation 경계(2026-10-07).* [6차 빌드](https://github.com/LeeDongHyun00/TREX/actions/runs/37491976065)에서 내부 공개 심볼 0개·Release IPA 검사는 통과했지만 YOLO의 같은 149번 오류가 재현됐다. §107c의 심볼 공유 가설만으로 해결되지 않았다. [2.17 C API의 438행](https://github.com/tensorflow/tensorflow/blob/v2.17.0/tensorflow/lite/core/c/c_api.cc#L438)은 `GetModel()` 포인터만 InterpreterBuilder에 전달해 allocation을 빠뜨린다. Swift의 파일 경로 초기화도 이 C API를 사용한다. `tools/prepare_ios_food_model.py`로 iOS YOLO의 버퍼 161개를 새 배열에 보관하고 외부 73개를 inline `Buffer.data`로 옮긴다. 원본 전체를 보존한 뒤 배열을 추가해 Model.buffers 포인터 4바이트만 변경하며, 원본 그래프/텐서/양자화/메타데이터 바이트와 버퍼마다 가중치 바이트의 동일성을 검사한다. Buffer.data의 16바이트 정렬도 확인한다. external custom options 또는 미래 Buffer 필드가 발견되면 변환을 거부한다. 정본은 Android 원본 모델이며 iOS 생성물은 `TrexFoodModels/yolov8n_food.tflite`, 해시/가중치 기준표는 `FOOD_MODEL_BASELINE.json`이다. 보존 영역으로 파일은 3,773,677 → 7,236,576바이트가 된다. 나머지 두 모델과 Android 모델은 그대로다. 준비/CI 정적 검사에서 재생성 비교, Xcode pre-build에서는 기본 Python으로 정본/생성물 SHA 검사, Release 번들과 XCTest에서 생성물 SHA, 세 음식 모델의 실제 추론과 자세 SDK 동시 실행 검사를 한다. 내부 심볼 격리는 별도 ABI 경계로 유지한다.
+
+*§107e 최종 macOS 검증(2026-10-07).* 코드 `e52b15be`의 [8차 실행](https://github.com/LeeDongHyun00/TREX/actions/runs/37495731624)이 성공했다. Xcode26.0.1에서 공통 JVM376, iPhone arm64 Release와 원본 자세 자산·iOS YOLO SHA·음식 내부 공개 심볼0개, 미서명 IPA 패키징을 통과했다. arm64 시뮬레이터 XCTest4/4도 성공했다. 세 음식 모델의 실제 invoke와 MediaPipe Full 모델 초기화/빈 BGRA 버퍼 VIDEO 추론을 같은 앱에서 실행했다. 자산/가이드·백업의 유보/자가 라벨·85ms와 오래된 캡처 세대 차단도 포함한다. Xcode는 setup-python의 Python과 다른 기본 Python을 사용할 수 있어 pre-build는 추가 패키지 없는 SHA 검사, 준비/CI는 pinned flatbuffers/tflite의 전체 보존 검사를 한다. [IPA artifact](https://github.com/LeeDongHyun00/TREX/actions/runs/37495731624/artifacts/11427878651) 업로드 성공. **서명과 물리 iPhone 실행/운동·음식 정확도는 미검증**이며 사용자 기기 검증을 다음 단계로 남긴다.
+
+*§107f main 병합과 바닥·시선·발화 정책의 iOS 이식(2026-10-21, `ios-redesign`).* `origin/main` `ca7f1fa`(§99~§106)를 병합했다(충돌은 README·인수인계·이 문서뿐 — README 는 main 판을 두고 iPhone 안내를 `docs/IOS_INSTALL.md` 로, 이 절은 §99 → §107 로 개명). 사용자 요청 "iOS 도 가능하도록, 기준을 세우고 그 기준을 지키며 변환" — 기준은 `docs/IOS_PORT.md` 의 8항(판정은 한 곳·Swift 는 센서/TTS/화면·발화는 엔진 대기열·격자 동일·못 하는 것은 밝힘·로그는 iOS 형식·자산은 정본 바이트·Android 무변경). **동기화 목록을 38 → 48 파일**로(FloorChain·FloorCycle·FloorGaze·FloorLive·PlankGeometry·PlankHold·PostureTrial·PreparationVoice·SpeechQueue·StandingFraming), `PostureAnalyzer.faceYawDeg` 는 슬라이스(`FaceYaw.kt`), 앱 패키지의 `JointGate`(§101c) 는 그대로 생성, `FloorWiringTest` 만 `SetLog` 의존으로 제외. 공통 `Math` 에 `asin` 등을 더해 정본 `Math.asin`(Lunge2d) 이 그대로 컴파일된다. `IosEngine` 을 **`PostureLive` 분석 루프·`PostureFloorLive`·`CapturePreparationUi`·`SpeechCoach` 의 배선 순서대로 다시 썼다** — 준비 안내(`PreparationVoicePlan`·`CountdownVoice`), 준비 전용 바닥 추출기와 누운 기준 시드, `StandingFraming`, `RejectionCues`/`RejectCueGate`, 가동 범위 사유·교정됨, 쪽별 카운트 음성, 플랭크 시계(`PlankHoldClock`·`HoldVoice`·`HoldAnnounce`)·정렬 HOLD 게이트·시선(`PlankGazeVoice`·`FloorGazeVoice`)·`FloorCoverage(front)`, 교정 화살표(`MotionSpec` → JSON), 관절 게이트 출력, 세트 마감(`AssessmentWindow`·`holdSegments`·`floorLines`·`HoldSummary`·`FloorRepSummary`·`scopeLine`). 발화는 새 `IosSpeech`(공통 `SpeechQueue`) 가 고르고 Swift `SpeechService` 는 한 번에 하나만 재생하며 시작·종결을 돌려준다(`speechStarted`/`speechFinished`); 목표 도달은 `beginSetEnd` → `AdvanceHoldPolicy`(Android `AdvanceHold`) → `finish(handOff=true)` 꼬리. 시선은 Swift `FaceRunner`(Face Landmarker IMAGE·자세 행렬) + 엔진 `IosFace.cropSpec`(Android `faceCrop` 기하) 으로, 바닥 세 종목에서만 300 ms 에 한 번. 사람이 안 잡힌 프레임은 Android 처럼 로그·집계에 넣지 않는다(종전 iOS 는 넣었다 — 테스트를 고쳤다). 번들 자산 5개(얼굴 모델), 가이드 10종. 검증: 공통 JVM **504/504**(Linux, 정본 + iOS 경계 18건), 세 `--check`, Swift 31파일 구문·XcodeGen·plist. Xcode 컴파일·XCTest·IPA 는 코드 `a4a4e5ed` 의 [macOS Actions 12차](https://github.com/LeeDongHyun00/TREX/actions/runs/39558756012)에서 성공했다(9~11차는 Swift 오류 4건·관절 게이트 좌표 null 디코딩으로 실패 → 수정). 실기기는 미검증. iOS 에 없는 것: §101e 센서 방향(세로 고정), `HoldBridge`(HUD `camera` 플래그로 대체), 무대 배율·유령 다리·검증 모드·서버 동기화.
+
+*§107g 사진 식단 흐름·공통 판정 경계, 화면 제스처(2026-10-22, `ios-redesign`).* 사용자 요청 "음식 사진 인식도 앱에 구현" — §107 의 iOS 사진 식단은 모델은 돌렸지만 '사진 분석' 버튼을 따로 누르고 줄마다 시트를 열어 하나씩 저장했고, 이름 문턱·기억 유사도(0.77/0.45)·합치기를 Swift 가 따로 갖고 있었다(기준 1 위반). Android `PhotoFoodSheet` 흐름(고르기 → 자동 분석 → 결과: 수량·확신·기억·바꾸기·후보·추정값 고지 → 한 번에 기록 → 고친 자리 기억, 원인별 실패)으로 다시 쓰고, 판정은 새 공통 경계 `IosFood`(`FoodRegions.toResultLists`·`photosWithoutNames`·전체 1회 합치기 — Android `FoodDetector.detect` 의 상수 그대로)·`IosFoodMemory`(공통 `FoodMemory`, Android `FoodMemoryStore` 텍스트 형식)로 옮겼다. 영양 DB 추출에 `approximate`(추정값 8종) 를 더했다. JVM `IosFoodTest` 4건. 같은 날 사용자 요청으로 왼쪽 가장자리 스와이프 뒤로(모든 내비게이션 컨트롤러의 pop 제스처 켬)와 시트 끌어 내려 닫기(운동 세션은 전체 화면 덮개 → 시트, 준비·운동·저장 중은 닫히지 않음)를 넣었다. Xcode 빌드는 푸시의 macOS Actions 가 확인한다.
+
+## §108. 화면도 한 곳에만 — Android Compose 화면을 iPhone 에서 그대로 컴파일 (2026-10-22, `spike/ios-compose-ui`)
+
+*요청·결정.* `ios-redesign` 을 실기기(iPhone 16 Plus, iOS 27.0.1)에 처음 설치한 사용자가 "main 과 디자인·기능·자세 화면이 전부 다르다"고 했다. 원인은 구조다 — §107 은 엔진만 정본에서 생성하고 화면은 SwiftUI 로 새로 썼다(Swift 화면 ≈1.6천 줄 대 Android 화면 ≈1.3만 줄, UI 동등 기준은 없었다). 자세 화면은 실시간 미리보기 대신 85 ms 추론 프레임을 360 pt 카드에 그리고 세트마다 카메라를 다시 켜며, 세션 중 모드 전환·숫자/틱·영상/뼈대 토글이 없고, 저장 형식도 Android 와 호환되지 않는다. ADR-056 이 Compose Multiplatform(CMP)을 뺀 이유는 '자세 기능 첫 이식'의 범위였고, §107 이 범위를 앱 전체로 넓힐 때 다시 따지지 않았다. 사용자 승인(2026-10-22)으로 IOS_PORT 원칙 #1(판정은 한 곳)을 화면으로 넓힌다: **iPhone 은 Android 정본 Compose 파일을 CMP 로 그대로 컴파일한다**(IOS_PORT 원칙 #9). 버린 대안 — SwiftUI 재작성(1.3만 줄을 손으로 따라가며 계속 어긋남), 복사·패치 사본(`codex/ios-port` 미커밋 시도: 고정한 43파일 중 13개가 3주 만에 main 과 어긋남), 생성기(Android 무수정은 지키지만 카메라·엔진 배선이 얽힌 자세 화면은 결국 손 이식으로 남는다). 대가로 원칙 #8 'Android 는 손대지 않는다'를 '동작을 바꾸지 않는다'로 푼다 — Android API 호출을 작은 플랫폼 파일로 옮기는 리팩터만 하고, 그때마다 Android 테스트와 실기기 확인을 거친다.
+
+*구조.* `ios-ui`(iOS 전용 KMP+CMP 모듈, `-PiosOnly` 일 때만 포함 — Android 빌드는 이 모듈을 보지 않는다). 공유 목록은 `ios-ui/android-sources.txt` 한 곳이고, 빌드마다 `Sync` 작업이 `app/src/main/java` 에서 가져와 **commonMain** 으로 컴파일한다. 커밋된 사본이 없으니 어긋날 사본도 없고, commonMain 이라 Android·UIKit API 를 쓰면 컴파일이 깨진다(그것이 경계 검사다). 프레임워크는 `posture-core` 를 export 한 정적 `TrexCore` 하나다 — Kotlin/Native 런타임이 둘이면 엔진 객체를 화면에 넘길 수 없다. 기존 Swift(`IosEngine`·`IosFace`·`IosLoad`…)는 ObjC 이름이 그대로라 고치지 않고 컴파일된다. 판은 Android composeBom 2026.04.01(ui·foundation 1.11.0, material3 1.4.0)에 맞춰 CMP **1.11.1**, CMP material3 **1.9.0**(androidx material3 1.4.0 의 멀티플랫폼 판 — POM 이 그 판을 가리킨다), 아이콘 1.7.3(동결판).
+
+*Phase 0 결과(스파이크).* Android 파일 6개(`TrexDesign`·`TrexText`·`WorkoutNumberWheel`·`ReorderableList`·`CoachModeControl`·`AdaptivePolicy`)가 **한 글자도 고치지 않고** CMP·Kotlin 2.3.21 로 컴파일됐다. `RecordOverview`·`RoutineOverview`(→ `TrexData` 의 java.time)·`MealSymbol`(→ `MainScreens.mealIcon`)은 의존 때문에 뺐다 — Phase 1 대상이다. 실기기에서 Android 부품(링 게이지·영양 막대·칩·입력칸·코칭 모드 전환·스테퍼·숫자 휠)이 라이트·다크 모두 Android 색 토큰(#759848 등)대로 그려졌고, `TrexText` 의 공룡 말투("남았어룡")로 엔진의 `DinoCopy` 가 같은 프레임워크 안에서 도는 것을 확인했다. 기존 SwiftUI 앱도 합친 프레임워크로 정상 기동한다(기존 화면 옆에 'Compose' 탭을 임시로 붙였다). 확인 방법: 실행 인자 `--compose-probe` 가 화면을 Compose `GraphicsLayer` 로 떠 앱 Documents 에 PNG 로 남기고(라이트·다크 두 장, 4.05 s), Mac 이 `xcrun devicectl device copy from` 으로 가져온다. Mac 에서의 `devicectl device process launch` 는 개발자 신뢰를 마친 뒤부터 된다.
+
+*도구 사슬(2017 인텔 MacBook Pro·macOS 14.8·Xcode 16.2).* (1) CMP 1.11 은 iOS 26 SDK 로 빌드돼 UIKit `UIViewLayoutRegion` 을 참조하는데 18.2 SDK 에는 그 심볼이 없어 앱 링크가 깨졌다(누락 심볼은 이것 하나). `OTHER_LDFLAGS[sdk=iphoneos18*]` 에만 `-Wl,-U,_OBJC_CLASS_$_UIViewLayoutRegion` 을 둬 링크 때 비워 두고 기기의 UIKit 이 채운다 — 그래서 이 조건으로 만든 빌드는 **iOS 26 이상 기기 전용**이고, Xcode 26(CI)에는 조건이 걸리지 않는다. (2) CMP 1.11 은 `iosX64` 를 내지 않아(ui-iosx64 1.11.1 없음) 이 Mac 에서는 시뮬레이터로 볼 수 없다 — 실기기 캡처나 CI(Apple Silicon)로 본다. (3) Kotlin 2.3.21 의 공식 짝은 Xcode 26.0 이지만 16.2 에서도 엔진·화면 모두 컴파일·링크됐다. CMP 가 iOS 26+ 심볼을 더 참조하게 되면 이 우회가 늘어나므로, 장기 해법은 Xcode 26 이 도는 Mac(또는 CI 빌드 + 로컬 재서명)이다.
+
+*측정.* 첫 Kotlin 컴파일 7분(CMP 내려받기 포함), 첫 기기 빌드의 Gradle 단계(프레임워크 링크 포함) 9분 58초, 이후 증분 빌드 23초. Debug 앱 154 → 217 MB(최적화 없는 Debug 라 실제 배포 크기가 아니다). Release(미서명, 기준 `ios-redesign` 을 같은 방식으로 따로 빌드해 비교): 앱 120.7 → 152.2 MiB(+31.5), 실행 파일 63.3 → 96.3 MB(+33.0), zip 68.9 → 78.6 MB(**+9.7 MB** — 내려받기 크기에 가까운 값). 화면 파일은 6개뿐이라 늘어난 몫은 대부분 CMP 런타임(Skia)으로 추정하며, 화면을 옮긴 뒤(Phase 2) 다시 잰다. Release 빌드는 이 Mac 에서 14.9분(기준 4.6분)이고, Kotlin/Native 최적화 링크가 2 GB 힙에서 `OutOfMemoryError` 로 멈춰 `gradle.properties` 의 `org.gradle.jvmargs` 를 4 GB 로 올렸다(Android 앱 동작과 무관한 빌드 메모리).
+
+*다음(Phase 1).* Android 쪽 이음매 정리(동작 불변): `AppViewModel`(AndroidViewModel → 플랫폼 서비스 주입), 저장(SharedPreferences → 키·JSON 이 같은 저장소 — iOS 도 Android 형식이 되어 이후 서버 동기화가 그대로 붙는다), 날짜(java.time → kotlinx-datetime), 그림·자산(BitmapFactory·`R.drawable` → 경로), WebView·GIF, TTS·톤, 창(화면 켜짐·뒤로·상태줄). 공유 목록을 늘릴 때마다 Android 단위 테스트와 실기기 확인을 하고, CI 에 `ios-ui` 컴파일을 걸어 main 의 Android 변경이 iOS 를 깨면 바로 보이게 한다. 자세 화면(Phase 3)은 `PostureLive` 분석 루프를 공유 세션 객체로 떼어 `IosEngine` 의 손 이식 배선을 없애는 것이 목표이고, 기존 재생 픽스처(`posture_port`·`floor_port`·`setlog_s58`·`plank_replay`)로 전후 출력이 같은지 본다.
+
+*§108a Phase 1 — 앱 상태의 플랫폼 경계(2026-10-22, `ios-compose-ui`).* 사용자 결정 "Phase 1(AppViewModel 부터)". 모든 화면이 받는 `AppViewModel` 과 그것이 끌고 오는 데이터 층을 **동작을 바꾸지 않고** 플랫폼 경계 뒤로 옮겨, iPhone 이 같은 소스를 컴파일하게 했다. 공유 목록에 21파일을 더했다(앱 상태·`TrexStore`·`TrexData`·`WorkoutMath`·`WorkoutSession`·기록 개요·`MuscleLoadAdapter`·동기화 4파일 등, Phase 0 의 6 과 합쳐 27). 경계: `AppPlatform`(이름별 키-값 저장소·HTTP 전송·서버 주소·구글 웹 클라이언트 ID·근육 장부·자가 라벨 파일), `KeyValueStore`(SharedPreferences 와 **같은 이름·같은 의미** — `null` 넣으면 지움, 리스너는 구현이 붙들어 둔다, 그래서 저장소 코드가 거의 그대로다), `HttpTransport`(예전 `TrexApi.call` 의 HttpURLConnection 부분 — 실패는 `NetworkException`, `ApiException` 은 그 하위로 옮겼다; 예전 `IOException` 자리를 그대로 대신한다), `SignInException`(Credential Manager 예외를 Android `requestGoogleIdToken` 이 바꿔 던진다 — 로그도 그쪽), `MuscleLoadDatabase`(SQLite 구현 그대로). Android 구현은 `AndroidPlatform.kt` 한 곳(목록 밖)이고 `TrexStore(context)` 생성 함수가 기존 호출(라이브 화면·계측 테스트)을 그대로 둔다. 데이터 파일 둘은 자리만 옮겼다 — `workoutCatalog`(Sheets.kt → `WorkoutCatalog.kt`, `export_ios_resources.py`·`PersonalizationTest` 경로 함께), `LoadSetJson`(SQLite 파일 → `LoadSetJson.kt`). 플랫폼 API 치환: java.time·Calendar → `TrexTime.kt`(kotlinx-datetime 0.8.0 — 오늘 epochDay·현재 시·하루 시작 ms·라벨 시각 문자열·요일 한 글자·"월/일"·UUID v4), `UUID.nameUUIDFromBytes` → `NameUuid.kt`(RFC 1321 MD5 를 그대로 옮김 — 구기록 부하 세트 ID 가 이 값이라 플랫폼과 무관하게 같아야 한다), `HoldBridge` 의 `@Synchronized` → atomicfu 0.28.0 `synchronized(lock)`(JVM 은 같은 모니터, Kotlin/Native 는 `@Synchronized` 를 조용히 무시해 플랭크 다리가 경쟁 상태가 될 뻔했다). iOS 의 org.json 은 `posture-core/src/commonMain/kotlin/org/json/OrgJson.kt`(손 코드) — Android libcore 의미(키 순서, opt* 강제 변환, JSON null 의 optString = "null", put(null) = 지움, 65.0 → "65", '/' → "\/", `String?` 생성자)를 따른다. `SetSelfLabel` 은 엔진 동기화가 `PostureSetLabel.kt` 에서 값만 잘라 온다(파일 쓰기 `SetLabelStore` 는 플랫폼). *검증:* Android 단위 테스트 713 → **722 전부 통과**(새 9건 — `TrexTimeTest`: 2015~2026 매일 × 9개 시간대(자정 서머타임 전환이 있는 상파울루·아바나·가자·베이루트 포함)의 하루 시작 ms, `SetLog.nowIso` 와 같은 시각 문자열, 400일의 요일·"월/일", UUID v4 형식 / `NameUuidTest`: 0~200바이트 전 패딩 경계·한글·무작위 500건이 java 와 같음), 공통 엔진 JVM 504 → **510**(`OrgJsonTest` 6), `ios-ui` iOS 컴파일 성공. 실기기 Android 실행·계측 테스트(androidTest)는 연결된 기기가 없어 이번에 돌리지 않았다. 등가가 아닌 곳은 두 군데뿐이고 관측되지 않는 차이다: 서버 호출의 토큰 읽기가 IO 스레드에서 호출 스레드로(메모리 읽기), 오류 응답의 메시지 해석이 IO 블록 밖으로. Android APK(`assembleDebug`)와 iPhone 서명 Debug 빌드·설치도 성공했다 — 기동 확인은 기기가 잠겨 있어(원격 실행 거부 `Locked`) 남았다. *ObjC 헤더:* `posture-core` 를 export 하므로 공개 선언이 전부 Swift 용 헤더에 실린다 — org.json 공통 판의 `JSONObject.NULL` 이 C 매크로 `NULL` 과 부딪혀 헤더 컴파일이 깨졌다(Kotlin 컴파일은 통과). Swift 가 쓰지 않는 그 세 클래스는 `@HiddenFromObjC` 로 뺐다. Kotlin 컴파일만 하는 아래 `shared` 작업은 이런 헤더 문제를 못 잡고 Xcode 빌드(IPA 작업)가 잡는다. *CI:* `ios-build.yml` 에 `shared` 작업(공통 엔진 JVM + `ios-ui` 시뮬레이터 컴파일, ~10분)을 main 대상 PR(공유 경로 변경)에 건다 — 이 브랜치가 main 에 들어간 뒤부터 Android 변경이 iPhone 공유 컴파일을 깨면 PR 에서 보인다. IPA 빌드는 push 때만. *남은 것(Phase 2):* iOS 쪽 `AppPlatform` 구현(NSUserDefaults 키-값 — 같은 이름은 리스너를 공유해야 Android 와 같다, NSURLSession 전송, 근육 장부, 라벨 파일), 그 위에 카메라 없는 화면 전부.
+
+*§108b Phase 2 — iPhone 플랫폼 구현과 카메라 없는 화면 전부(2026-10-22, `ios-compose-ui`).* 사용자 결정 "iOS 플랫폼 구현부터, 그다음 카메라 없는 화면". *플랫폼 구현(ios-ui iosMain):* `UserDefaultsStore`(이름마다 NSUserDefaults 스위트 `trex.<이름>` — SharedPreferences 와 같게 이름별로 리스너를 모으고, **값이 실제로 바뀐 키만** 알리며(SharedPreferencesImpl — 동기화가 안 바뀐 쓰기를 '이 기기에서 바꿈' 으로 세지 않게), 메인에서 쓰면 그 자리에서 알린다; 편집기의 clear 를 먼저, 알림은 거꾸로), `UrlSessionTransport`(임시 세션·유휴 20 s — NSURLSession 에는 연결 시간 제한이 따로 없다), `FileMuscleLoadDatabase`(앱 지원 폴더 JSON — 구기록 한 번, 원본이 같으면 건너뜀·다르면 지우고 다시, 보정, 90일, 끝난 시각 순으로 SQLite 판과 같은 의미), `SetLabelFiles`(Documents/posture_logs — 줄 형식은 `PostureSetLabel.kt` 의 새 `object SetLabelFormat` 하나를 두 플랫폼이 같이 쓴다; `SetLabelStore` 는 그것을 부르고, 엔진 동기화가 값·형식만 잘라 간다). *실기기 확인(실행 인자 `--app-probe`, probe 이름공간·폴더만):* 10건 전부 통과 — 앱 상태 생성, 오늘 날짜(목 10/22), 저장 → 새 저장소로 다시 읽기, 변경 알림 → 동기화 버전·dirty, 두 번째 변경, 세션 기록 → 근육 장부 파일(세트 1·부하 14칸), 오늘 기록, 자가 라벨 두 파일, UUID v3 = java, NSURLSession(토큰 없이 401). *화면:* 공유 목록에 26파일을 더했다(앱 루트 `TrexApp`·탭 넷·시트·기록·식단 기록·근육 피로도·설정·로그인·온보딩·가이드북·운동 안내·세션 화면 등 — 모두 53). 화면이 쓰는 플랫폼 기능은 **같은 이름·같은 시그니처의 짝**으로 둔다 — Android `PlatformUi.kt`(목록 밖) ↔ iPhone `ios-ui/.../PlatformUi.kt`, 경계 타입은 공유 `PlatformApi.kt`(자산 그림 디코더·LRU·설정 링크). Android 쪽은 공유 파일에서 그대로 옮긴 것(접힘·회전·방향, 화면 켜짐, 가이드 SVG·3D 근육 WebView, GIF 시범)이거나 그 자리의 호출을 감싼 것(상태 막대, SpeechCoach·시작 톤, `SystemClock`, 검증 모드, 뒤로, 구글 계정 선택, 설정 화면, 로고 프레임, 전체 화면 대화상자, `%.1f`)이라 동작이 같다. 그 밖의 정리: 안 쓰이던 `rememberWorkoutFeedback`(TTS·톤) 삭제, '본 운동 안내' 기록은 `AppViewModel`(같은 저장소·키 `exercise_guides`/`seen_v1`, `KeyValueStore` 에 문자열 집합 추가), 날짜 화면 셋은 java.time 대신 같은 이름의 도우미(`monthValue`·`toEpochDay`·`minusDays`·요일 이름 — 한국어 FULL/SHORT/NARROW 가 java 와 같은지 테스트), `LoadSet` 좌우 값은 지역 값으로(iPhone 에서는 다른 모듈이라 스마트 캐스트가 안 된다), 사진 자리 그림은 `ImageBitmap` 으로 받는다. 공유 파일은 **iosMain** 에서 컴파일한다 — 같은 이름의 iPhone 구현이 UIKit 을 써서 그 소스 집합에 있어야 공유 파일이 본다(Android API 를 쓰면 여기서도 깨지므로 경계 검사는 그대로). *아직 없는 것은 없다고 밝힌다:* `PLATFORM_POSTURE_CAMERA`(Android true·iPhone false)로 `postureSupported()` 를 막아 iPhone 운동 목록의 자세 스위치는 '미지원'이고 자세 종목도 타이머로 돈다(Phase 3), 사진 기록은 "아직 옮기는 중"을 밝히고 직접 입력으로 잇는다(Phase 4), 구글 로그인은 웹 클라이언트 ID 가 비어 있어 "준비되지 않았어요" 로 안내하고, 앱 내 업데이트는 없다(App Store 몫). iPhone 앱 루트는 이제 Compose `TrexApp`(`TrexAppViewController`, 키보드는 Compose imePadding 이 맞춘다 — `OnFocusBehavior.DoNothing`)이고, 예전 SwiftUI 화면은 카메라·사진 경로를 옮기는 동안만 남는다(쓰지 않음). 번들에 루틴 그림·가이드북 SVG·로그인 프레임(res/drawable-nodpi)을 더했다. *실기기 화면 둘러보기(`--screen-tour`, tour 이름공간):* 11장 — 홈(내비 포함)·운동·식단·설정·운동 기록·식단 기록·근육 피로도·가이드북·로그인·온보딩·다크 홈이 Android 리디자인과 같은 모양으로 그려졌다. WebView 로 그리는 것(가이드북 SVG·3D 근육도·운동 안내 GIF)은 Compose 층이 아니라 PNG 에 검게 남아 기기 화면으로 따로 본다. *검증:* Android 단위 테스트 722 → **725 전부 통과**·APK, 공통 엔진 JVM **511**, iPhone 서명 빌드·설치·두 확인 모드. *남은 것:* Phase 3 자세 화면(`PostureLive` 분석 루프를 공유 세션 객체로 — `IosEngine` 손 배선을 없애고, iPhone 카메라·MediaPipe 를 프레임 소스로; iPhone `SpeechCoach` 도 그때 `SpeechQueue` 까지 Android 와 같게; `PostureLiveSessionScreen` 은 VerifyError 레지스터 함정(CLAUDE.md)이 있어 지역 변수를 늘리지 않는다), Phase 4 사진 식단, Phase 5 구글 로그인·동기화, iPhone 뒤로 밀기 제스처, 예전 SwiftUI 파일 정리.
+
+*§108c Phase 3 — 자세 화면도 한 소스: 분석 루프를 공유하고 iPhone 카메라를 연결(2026-10-22, `ios-compose-ui`).* 사용자 결정 "PostureLive 의 분석 루프를 공유 코드로, iPhone 카메라 연결". *방식:* 분석 루프를 새 객체로 다시 쓰지 않고 **`PostureLive.kt` 자체를 공유 목록에 올렸다** — CameraX 분석기 콜백 안의 본문(판정 격자·준비 프레임·바닥 계열·카운터·판별 기각·반복 검사·발화·창 규칙·비교)과 세트 마감·세트 로그·리포트는 글자 그대로 두고, 그 둘레의 플랫폼 코드만 경계 뒤로 옮겼다. 경계는 공유 `PostureLiveApi.kt`: `PoseCamera`(카메라를 묶고 분석 스레드에서 프레임마다 루프를 부르는 `stream(front, label, onFrame)` — 처리 중 프레임은 버림 = KEEP_ONLY_LATEST, `analyze(frame, now, up)`, `gravityUp(rotation, front)`, 얼굴 메시, 통계·렌즈, 열 센서, FIT_CENTER 미리보기), `PostureHost`(Context 자리 — 자산 텍스트·프로필 키·모드 저장소·세트 로그 저장소·수행자 ID·빌드 이름), `RepTone`(ToneGenerator 자리, 종류 값은 TONE_PROP_* 그대로), `CameraPermission`, 그리고 `locked(lock)`(atomicfu 잠금 + '정확히 한 번' 계약 — 세트 마감이 잠금 안에서 바깥 `val` 을 처음 정한다). Android 구현 `PostureCameraAndroid.kt` 는 종전 `PostureLive.kt` 의 CameraX 바인딩·해상도·회전·MediaPipe 분석기·단일 분석 스레드·중력·열·ToneGenerator·권한·자산 코드를 **옮겨 놓은 것**이다. 함께 옮긴 것: (1) 추론 이후 처리 `posture/PoseLandmarks.kt` — Android `PostureAnalyzer.analyzeLocked` 의 관절 → up 자가검증 → 프레임 피처 순서, 얼굴 크롭 기하(`FaceCrop`)와 얼굴 결과 시간(`FaceTrack`)을 그대로 떼어 냈다(Android 분석기는 이것을 부른다). 엔진 동기화가 통째로 옮겨 iPhone 손 `PoseSample`·`FaceYaw` 슬라이스를 대신한다. (2) 세트 로그 형식 `PostureSetLog.kt` 를 공유(파일 IO `SetLogStore`·`SubjectId` 는 Android 전용 `SetLogStore.kt` 로) — 시각 문자열은 `TrexTime`(`utcCompactStamp`·`utcDayStamp`·`dayStamp`, SimpleDateFormat 과 같은지 `TrexTimeTest`), `\u` 이스케이프는 같은 출력의 공통 코드, 숫자 고정 소수만 플랫폼 함수(`formatFixed` — Android 는 `String.format(Locale.US, "%.Nf")` 그대로라 로그 바이트가 같다). `RepEngineLog` 는 자기 파일(엔진 동기화). (3) 세션 스피커 `SpeechCoach` 를 공유 정책 + `SpeechEngine` 으로 — 준비 전 대기·`SpeechQueue` 호출·감시 시한·꼬리 처리 코드는 Android 판을 그대로 옮겼고, 엔진(TextToSpeech·DUCK 포커스·발화 기록 파일)은 `AndroidSpeech.kt`(`SpeechCoach(context)` 생성 함수가 기존 호출을 둔다). (4) `ModeStore` 는 `KeyValueStore` 위(같은 "trex_posture" 파일·키), `InferencePolicy` 는 엔진 동기화로(`ThermalMonitor` 만 Android 파일), `RepValidation` 은 상수만 공유(`isOn(dir)` 는 Android 확장), `PostureRuleSet.loadText` 분리. 그 밖: `ToneGenerator`·`SystemClock`·`System.currentTimeMillis`·`System.arraycopy`·`Math.toRadians`·`ValueAnimator` 를 짝 함수·공통 표준으로, 객체 모니터 `synchronized(repRecords)` 등은 같은 범위의 전용 잠금(`refs.repLock`·`sampleLock`·`prepLock`·`thermalLock`, JVM 에서는 같은 모니터 의미), 마감 멱등 `AtomicBoolean` 은 `refs.tryFinalize()`, posture-core 속성의 스마트 캐스트는 `?.let`(iPhone 에서는 다른 모듈이라 안 된다 — 같은 값·같은 순서). *VerifyError 레지스터(CLAUDE.md):* Context·분석기·실행기·센서·미리보기 지역 변수가 `camera`·`host` 둘로 줄어 dexdump `PostureLiveSessionScreen` **215 → 201**. *iPhone:* `PostureCameraIos.kt` — 카메라 세션·미리보기·MediaPipe 추론은 Swift 다리 `IosCameraBridge`(`iosApp/Trex/PoseCameraBridge.swift`, 기존 `PoseRunner`·`FaceRunner` 재사용)가 하고, 결과를 공유 `PoseLandmarks.sample` 이 Android 와 같은 피처로 만든다. 영상은 640×480 4:3(세로 480×640, Android 분석 해상도와 같은 비율) BGRA·세로·미러 없음(전면 미러는 미리보기만, aspect-fit = FIT_CENTER). 중력은 Kotlin 이 Core Motion 에서 직접 — 앱 좌표(영상 오른쪽·위·카메라 쪽)로 후면 up = −g, 전면 (gx, −gy, gz); 열 상태는 ProcessInfo 를 Android 단계로(보통 → LIGHT, 심각 → SEVERE, 위험 → CRITICAL); 확인음은 AVAudioEngine 합성음(TONE_PROP_* 모양 — 삑 1200 Hz, 낮은 틱 300·400·500 Hz, 이중 틱 40 ms; 재생 범주라 무음 스위치와 무관 = Android 미디어 음량 자리); 음성은 AVSpeechSynthesizer(ko-KR) 엔진 — 말하는 동안만 다른 소리를 낮추고 끝나면 세션을 놓는다; 세트 로그는 `Documents/posture_logs/sets-yyyyMMdd.jsonl`(Android 와 같은 스키마·파일 이름)·발화 기록 `feedback-*.jsonl`. 렌즈 물리 사양은 iPhone 이 주지 않아 `lens = null`(배치 지문의 거리·높이 없음). `PLATFORM_POSTURE_CAMERA` 를 iPhone 에서도 true 로 — 운동 목록의 자세 종목이 카메라 화면으로 간다. *실기기에서 찾은 결함:* 프레임을 감싼 Swift 객체를 Kotlin/Native 가 GC 때까지 쥐어 CVPixelBuffer 풀(몇 장)이 바닥나, 카메라가 초당 29장 중 1~2장만 넘겼다(`didDrop` 222/235, 분석 초당 0.6회) — 프레임 콜백이 끝나면 Swift 가 버퍼를 놓게 고쳐 **버린 프레임 0, 분석 초당 약 10회**(Android 85 ms 간격과 같은 박자). *실기기 확인(실행 인자 `--posture-probe`, `Documents/posture-probe/`):* 번들 그림 두 장을 iPhone MediaPipe + 공유 후처리로 — 스쿼트 33관절·피처 212·up 검증, 플랭크 33관절·피처 219(누운 자세라 up 미검증); 공유 자세 화면 준비 6 s(프레임 173·버림 0·분석 58·검출 48)·운동 8 s(245·0·82·78), MediaPipe 평균 31 ms·공유 후처리 0.1 ms, 모델 오류 없음, 확인음 경로(무음)·한국어 음성 준비됨; 화면 PNG 는 준비 패널·HUD·검은 무대 뼈대가 Android 와 같은 모양(미리보기 영상은 UIKit 층이라 PNG 에 없다); 세트를 닫자 Android 와 같은 스키마의 세트 로그 2줄(규칙 17건 전부 ABSTAIN — 앉아서 몸 일부만 보였다, 원칙 #1). *검증:* Android 단위 테스트 **737 전부 통과**(새 12 — `PoseLandmarksTest` 6·`SpeechCoachTest` 5·`TrexTimeTest` 스탬프 1), 공통 엔진 JVM **520**, APK, `ios-ui` iOS 컴파일·서명 빌드·설치. *Android 원본에서 그대로 옮긴 결함(이식은 동작을 바꾸지 않았고, 아래 후속에서 고쳤다):* `FaceTrack` 이 얼굴 결과 시각을 Float 칸에 두어, epoch ms 에서는 `FACE_STALE_MS`(450 ms) 비교가 Float 정밀도(약 131 s)로 돌았다. *아직 확인하지 않은 것:* 사람이 실제로 반복하는 세트의 횟수·코칭·음성(사용자 확인), Android 실기기(연결된 기기 없음 — `compile -m verify` 포함), 바닥 종목의 얼굴 메시. *남은 것:* 쓰지 않게 된 예전 SwiftUI 세션 화면·`IosEngine` 손 배선 정리, Phase 4 사진 식단, Phase 5 구글 로그인·동기화, iPhone 뒤로 밀기 제스처.
+
+*§108c 후속 — 얼굴 결과 시각을 Long 으로(2026-10-23, 사용자 결정 "FaceTrack 시각을 Long 으로, 테스트와 함께").* `FaceTrack`(Android 원본 `PostureAnalyzer.faceFeatures`)은 마지막 얼굴 결과를 `[검출, 요, 추론 ms, 시각, 회전, 머리 px]` 한 Float 배열에 두어, epoch ms(약 1.76e12)인 시각이 Float 정밀도 131 072 ms 단위로만 구별됐다 — `FACE_STALE_MS`(450 ms) 비교가 사실상 "같은 131 s 칸이면 신선" 이 되어, 머리가 화면에서 사라지면(크롭 실패로 그 칸의 얼굴 추론을 건너뜀) 마지막 시선 값(`face_found`·`face_yaw` 등)이 칸 경계까지 — 정렬에 따라 수십 초에서 약 2분 — 판정 프레임에 얹혔다. 영향: 바닥 세 종목(플랭크·크런치·레그 레이즈)의 시선 분류(`FloorGaze`)와 그 음성(COACH 의 시선 지적·교정)·시선 칩이 묵은 얼굴을 봤을 수 있다(원칙 #6 — 음성은 즉시 몸을 바꾸게 한다). 고침: 시각은 Long 칸(`lastFaceAt`)에 따로 둔다. 정상 동작(300 ms 가 지난 첫 프레임이 새 결과를 내므로 얹히는 결과의 나이는 늘 300 ms 미만)은 그대로이고, 머리를 잃은 뒤 450 ms 가 지나면 키를 넣지 않는다 — 시선 '측정 중'(§101d 설계대로). 테스트 `PoseLandmarksTest.faceReadingExpiresAfterStaleWindowAtEpochMillis`: Float 로 정확한 칸 시작 시각(2025-10-22)에서 450 ms 는 신선, 451 ms·1분 뒤는 없음, 새 결과가 오면 그 시각부터 다시 — 옛 구현에 돌리면 451 ms 단언에서 실패함을 확인했다. 공유 `PoseLandmarks.kt` 라 iPhone 도 같이 고쳐졌다. 세트 로그: 이 수정 전 로그에서 머리를 잃은 칸의 `face_*` 키는 묵은 값일 수 있다(재생·분석 때 주의).
+
+*§108d — 뒤로 밀기·시트 끌어 닫기·사진 식단도 한 소스(2026-10-23, `ios-compose-ui`).* 사용자 요청 "팝업 스와이프 뒤로가기, 식단 사진 기록 활성화 기능 올렸어 아이폰에 적용시켜". 사용자가 `origin/ios-redesign` 에 올린 두 커밋 — b35ce0e(SwiftUI: 모든 내비게이션 스택의 가장자리 뒤로, 시트 끌어 닫기, 운동 세션을 세트 중에는 닫히지 않는 시트로)·f109cd0(SwiftUI 사진 식단 + 공통 정책 `IosFood`·`IosFoodMemory`, §107g) — 을 이 브랜치에 병합(81dbc81)하고, 같은 기능을 지금의 iPhone 앱(Android 정본 Compose, §108b)에 옮겼다. SwiftUI 판은 쓰지 않는 화면이라 **무엇이 되는가**를 기준으로 맞추고 구현은 Android 를 따른다(원칙 #9). *(1) 뒤로 밀기:* `PlatformBackHandler` 의 iPhone 짝이 CMP 공통 `BackHandler`(ui-backhandler 1.11.1)다 — ComposeUIViewController 가 화면 가장자리 팬 제스처를 같은 NavigationEvent 디스패처로 보내므로 Android 시스템 뒤로와 **같은 처리기**가 돈다: 하위 화면 닫기, 시트·펼친 내비 닫기, 로그인·온보딩 단계, 운동 중이면 `requestExit`(진행 중 세트를 마감하고 기록/버리기/계속 시트). 1.11 에서 deprecated(NavigationEventHandler 권장)지만 같은 디스패처에 붙는 얇은 감싸개다(klib 확인). SwiftUI 판과 다른 점 하나: 그쪽은 세트 준비·운동·저장 중에는 끌어 내려도 세션이 닫히지 않았고, 공유 화면은 Android 뒤로처럼 세트를 마감하고 묻는다(잃지는 않는다 — 기록 시트가 뜬다). *(2) 시트 끌어 닫기:* 공유 `SheetHost`(스크림 탭으로 닫는 바텀 시트 — 직접 입력·목표·사진·설정 등)에 짝 상수 `PLATFORM_SHEET_DRAG_DISMISS`(Android false — 종전 그대로 스크림 탭·시스템 뒤로, iPhone true). 시트 어디를 끌어도 되고, 안의 목록이 맨 위일 때 더 끌어 내리는 손가락도 시트가 받는다 — 손으로 끄는 동안만이고 목록의 관성 스크롤은 시트를 움직이지 않는다(Material ModalBottomSheet 의 중첩 스크롤 규칙). 시트 높이의 25 % 넘게 내렸거나 900 dp/s 보다 빠르게 아래로 놓으면 닫고(스크림이 따라 옅어진다), 아니면 제자리로. 운동 편집 시트는 이미 두 플랫폼 모두 Material ModalBottomSheet(종목 고르기에서만 끌어 닫기 — 숫자 휠과 겹치지 않게)다. *(3) 사진 식단:* Android `PhotoFoodSheet` 를 공유 목록에 올렸다. 판정 흐름 — 위치 모델 → 자리 30 % 크롭 이름 → 내 음식 기억 비교(비어 보이는 자리는 견주지 않음) → 이름 없는 사진의 전체 1회 → 결과 목록·합치기, 위치 모델 실패·메모리 부족 물러서기 — 를 `FoodDetector` 에서 공유 `food/FoodPipeline.kt` 로 **코드 그대로** 떼어 냈다(시계·로그·메모리 부족 판정만 주입). 모델 실행은 `FoodModels` 경계(342종 클래스별 최고 점수·위치 출력·특징값)이고 Android 는 `FoodDetector` 의 TFLite 인터프리터·Bitmap 입력 버퍼가 그대로 채운다. 결과 타입은 `food/FoodResults.kt`(엔진 동기화 — 예전 posture-core 손 사본 `FoodDto.kt` 를 대신). 시트가 쓰는 플랫폼 기능은 `PhotoFoodApi.kt`(`FoodPhoto`·`FoodPhotoLoader`·`FoodRecognizer`·`FoodCamera`·`FoodMemorySpot`)와 같은 이름의 짝 — Android `PhotoFoodAndroid.kt`(종전 시트의 사진 선택기·CameraX·Bitmap 코드를 옮김) ↔ iPhone `PhotoFoodIos.kt`. 카메라 권한은 자세 화면의 `rememberCameraPermission()` 을 같이 쓰고 "권한 다시 요청" 은 새 `CameraPermission.request`(Android 는 다시 묻고, iPhone 은 아직 묻지 않았으면 묻고 거절했으면 설정 화면 — 앱이 다시 물을 수 없다). 입력 배치(letterbox 정수 자리, 2단계 자리의 버림 좌표 + `FoodRegions.cropPlacement`, 특징값 둘레 10 %·짧은 변 224·가운데)도 공유 `FoodInputs`(같은 파일)로 옮겨 Android `FoodDetector` 의 그리기가 그것을 부른다 — 식은 그대로라 Android 입력은 비트 단위로 같다. *iPhone 구현:* `IosFoodModels` 가 같은 `FoodInputs` 배치를 Swift 에 넘기고, Swift `iosApp/Trex/FoodBridge.swift` 는 sRGB RGBA 캔버스(회색 114)에 사진 영역을 그 자리로 그려 float32(NHWC/NCHW, 특징값만 ImageNet 정규화 — 채널 우선이면 안 함, Android 와 같다)로 TrexFoodRuntime(TFLite)을 돌린다. 342종 출력(342+4 × 8400)은 Swift 가 클래스별 최고 점수로 줄여 넘긴다. 로드 확인(입력 float32·4차원, 위치 출력 3차원, 특징값 입력 [1,224,224,3])과 라벨 줄 처리(앞뒤 공백·BOM·빈 줄)도 Android 와 같고, TrexFoodRuntime 은 음식 추론 직렬 큐에서만 부른다. 사진은 ImageIO 축소 디코딩(최대 변 1280·EXIF 방향 한 번에 — 원본 크기 비트맵을 만들지 않는다, Android `decodeScaledBitmap` 자리), 보관함은 PHPicker(권한 없이 고른 사진만, 고른 순서, 최대 5장), 카메라는 시트 안 AVFoundation 미리보기(화면 채움 = FILL_CENTER)·지연 최소 촬영. 내 음식 기억은 Android 와 같은 텍스트 형식으로 `Application Support/TREX/food-memory.tsv` — §107g SwiftUI 판이 쓰던 그 파일을 이어 읽는다(같은 `FoodMemory.encode`). *실기기 확인(실행 인자 `--food-probe`, iPhone 16 Plus, `Documents/food-probe/`):* Swift 가 그린 합성 접시(1600×1200 PNG → 축소 디코딩 1280×960)로 — 세 모델 모두 불러옴(342종 입력 [1,3,640,640] 채널 우선·출력 [1,346,8400], 위치 [1,640,640,3] → [1,13,8400], 특징값 [1,224,224,3] → [1,384]), 판정 약 670 ms 에 위치 모델이 그린 접시 자리를 (0.19, 0.13)–(0.81, 0.87) 로 정확히 찾았다(그린 자리 0.19~0.81 × 0.125~0.875 — letterbox 배치와 좌표 되돌림이 맞다), 특징값 384차원 약 80 ms, 표지 색(왼쪽 위 빨강·오른쪽 아래 파랑)이 화면 그림·자르기에서 (255, 0, 0)·(0, 0, 255) 로 돌아와 채널 순서·위아래·자르기 좌표가 맞고, 공유 사진 시트 첫 화면과 사진 축소본(1024×768)의 Compose Image 그리기가 PNG 로 Android 와 같은 모양이다. 합성 그림이라 인식 이름(후보 잣죽 0.21 등)은 의미가 없다. *사용자 실기기에서 찾은 결함 2건(10-23):* (1) **사진을 찍으면 앱이 종료** — 충돌 기록: 결과 화면의 사진 그리기가 Compose 크기 검사(`Painter.draw → inset`)에 걸린 미처리 예외. 원인은 `IosFoodPhoto.image` 에서 `Bitmap().apply { allocPixels(ImageInfo(width, height, …)) }` 의 width·height 가 **apply 수신자인 빈 Bitmap 의 0** 으로 풀려 모든 사진 그림이 0×0 이었던 것(Kotlin 수신자 가림 — 컴파일은 조용히 통과). 크기를 블록 밖에서 정해 고쳤고, 위 확인의 표지 색·그리기로 실기기에서 확인했다(새 충돌 기록 없음). (2) **음성 안내가 어색** — iPhone 엔진이 시스템 한국어 기본 음성을 그대로 썼는데, 이 기기에 깔린 한국어 음성은 기본(압축) 품질 '유나' 와 Eloquence 음성(Eddy·Flo·Grandma 등)뿐이었다. 엔진이 설치된 한국어 음성 중 품질이 가장 높은 것(프리미엄 > 향상됨 > 기본, 같은 품질이면 시스템 기본 — Eloquence 는 기본 품질이라 고르지 않는다)을 고르고, 빠르기는 Android `setSpeechRate(1.05f)` 자리로 보통 값(0.5)×1.05(예전 0.48 은 보통보다 느렸다)로 바꿨다. Android 가 자연스러운 것은 구글 음성이 기기에 깔려 있어서이고, iPhone 의 향상·프리미엄 음성은 앱이 받을 수 없다 — 사용자가 설정 › 손쉬운 사용 › 콘텐츠 말하기 › 음성 › 한국어에서 받아 두면 다음 세션부터 엔진이 저절로 그 음성을 쓴다. *검증:* Android 단위 테스트 **749 전부 통과**(새 11 — `FoodPipelineTest` 8·`FoodInputsTest` 3), APK, dexdump `PostureLiveSessionScreen` 199, 공통 엔진 JVM **525**(병합한 `IosFoodTest` 포함), 엔진 동기화 검사, `ios-ui` iOS 컴파일·서명 빌드·설치·`--food-probe`. *아직 확인하지 않은 것(사용자):* 실제 음식 사진의 촬영·갤러리 → 결과 → 기록 → 기억, 카메라 권한 거절 뒤 '권한 다시 요청', 가장자리 스와이프·시트 끌어 닫기의 손 느낌(제스처는 자동 확인이 없다), 향상·프리미엄 음성을 받은 뒤의 세션 음성, Android 실기기(연결된 기기 없음). *남은 것:* 쓰지 않게 된 예전 SwiftUI 화면(세션·식단·`FoodRecognition.swift`·`IosEngine`)과 공통 정책 `IosFood`·`IosFoodMemory` 정리, Phase 5 구글 로그인·동기화.
+
+*§108e — 교정 문장이 안 들리던 결함·자연스러운 음성·무대 보기 토글·홈 날씨 카드(2026-10-23, `ios-compose-ui`).* 사용자 보고·요청 "음성 자연스럽게 변경이 안됐어 … 음성 교정 대사가 출력이 안됨 … 운동 화면 오른쪽 위에 … 골격만 보여주는 것과 실제 화면 보여주는 토글 … 메인 화면에 날씨 레이아웃 … 아이폰 디자인처럼 모던하게". *(1) 세트 중 교정 문장이 하나도 안 들렸다 — 실기기 발화 기록(`feedback-20261023.jsonl`, 덤벨 컬 한 세트):* 교정 문장(예 "팔꿈치를 옆구리에 붙이세요.")이 전부 `speech_requested → speech_held` 로 끝나고 `tts_submit` 이 없었으며, `tts_start`·`tts_done` 에 발화 id 가 비어 있었다. 원인은 §108c 의 iPhone 엔진이 AVSpeechSynthesizer 사건의 발화를 Kotlin 참조 비교(`===`)로 찾은 것 — Kotlin/Native 에서 같은 객체로 잡히지 않아 사건마다 id 가 null 이 되었고, 공유 `SpeechQueue` 가 '말하는 중' 에서 벗어나지 못해 COACH 문장(`speakLatest`)은 보류만 됐다. 끊고 들어오는 경계 안내·카운트("3·2·1", "쉬는 시간이에요")만 들렸고 회복 문장도 `recovery_unheard` 로 거둬졌다. 고침: 같은 객체(`==`, isEqual) → 같은 글의 가장 오래된 것 순으로 찾고, 사건은 메인 스레드에서 넘긴다. 공유 정책은 바꾸지 않았다(Android 는 발화 id 를 엔진이 돌려주므로 해당 없음). *(2) 자연스러운 음성:* §108d 의 '가장 좋은 한국어 음성 고르기' 는 엔진이 앱 수명 하나라 앱을 켠 뒤 받은 음성을 다시 켤 때까지 못 썼다 — 30초마다 설치된 음성을 다시 보고, 바뀌면 발화 기록에 `tts_voice`. 이 기기에는 여전히 기본 음질 '유나'(와 Eloquence 음성)뿐이라 소리는 그대로다 — iPhone 은 고품질 음성을 앱이 받을 수 없어, 설정 화면에 iPhone 만 '음성 안내 목소리' 줄을 두었다(지금 목소리·받는 길: 설정 › 손쉬운 사용 › 콘텐츠 말하기 › 음성 › 한국어 › 유나 → '향상된 음질'/'프리미엄'·미리 듣기, 짝 `rememberVoiceAdvisor()` — Android 는 null 이라 화면이 그대로다). *(3) 무대 보기 토글:* 저장소 어느 브랜치에도 오른쪽 위 토글은 없었다 — ⋯ 패널의 '뼈대만/영상' 만 있었고, LIVE_SCREEN_REDESIGN §2.1 은 '상단 띠 길게 누르기 또는 ⋯ 패널' 이었다. 카메라 칸 오른쪽 위에 두 칸 분할 버튼(뼈대 | 영상, `StageViewToggle`)을 두었다 — 패널 토글과 같은 상태(`showCamera`), 준비·세트 모두, 패널이 열리면 패널 쪽. 두 플랫폼 공유. dexdump `PostureLiveSessionScreen` 199 → 201. *(4) 홈 날씨 운동 추천 카드:* 사용자가 올린 `origin/feat/weather-recommendation`(5커밋 — Open-Meteo 날씨로 실내·실외 운동 추천, 위 '날씨 기반 운동 추천 판정 기준')을 이 브랜치로 가져와(병합 커밋 없이 작업 트리로) 두 플랫폼 한 소스로 옮겼다 — 판정 `WeatherExerciseRecommender` 는 그대로(시계만 공유 `nowMillis`), 저장소 `WeatherRepository` 는 플랫폼 `HttpTransport`·`KeyValueStore` 위(1시간 캐시·두 번 시도·실패 시 3시간 묵은 캐시·저장소 이름과 좌표 키 그대로; 지역을 바꿔 앞 요청을 취소하면 실패로 세지 않는다 — 브랜치의 `runCatching` 은 취소까지 삼켰다; 캐시 한 줄은 org.json 없이), 위치 설정 `WeatherLocationPrefs`(저장소 이름·키 그대로), 현재 위치는 짝 `rememberWeatherLocator()` — Android 는 브랜치의 권한·LocationManager 코드를 옮겼고 iPhone 은 Core Location(When In Use, 1 km 정확도, 30분 안의 위치, 5 s; Info.plist `NSLocationWhenInUseUsageDescription`). 카드는 iPhone 날씨 앱처럼 다시 그렸다: 날씨·낮밤에 따른 하늘 그라데이션, 큰 기온(66 sp Light)·상태 아이콘·최고/최저, 체감·바람(m/s)·강수 유리 칸, 지금부터 다섯 시간, 추천(제목·실내/실외·문장·운동 '추가' 알약 — 이미 있으면 '목록에 있음'), 출처·갱신 시각, 지역 고르기는 아래 시트(현재 위치·13개 지역, 체크). Toast 는 카드 위 잠깐 안내로 바꿨다. 표시용으로 체감·낮밤·오늘 최고/최저·시간별을 더 받는다(판정은 그대로). 공유 화면이라 Android 홈도 같은 카드다(브랜치 카드는 아직 main 에 없었다). *실기기 확인(`--food-probe`, iPhone 16 Plus):* 소리 없는 발화 사건 — `start:a, tts_done:a, start:b, tts_done:b, start:c, tts_stop:c, start:d, tts_done:d`(잇단 두 문장·끊긴 문장·끊고 들어온 문장이 모두 낸 id 로 돌아온다); 서울 날씨를 NSURLSession·공통 org.json 으로 받아 18.7 °C·코드 2·낮·최고 18.8/최저 7.1·시간별 6, 카드 PNG 가 위 모양으로 그려졌다(위치 이름 옆 새로고침이 가운데로 밀려 있던 배치를 고쳤다). *검증:* Android 단위 테스트 **760 전부 통과**(새 11 — `WeatherRepositoryTest` 6: 캐시 한 줄 왕복·브랜치 JSON 캐시 무시·좌표 키·1시간/강제/3시간 물러서기·저장소 캐시·GPS/지역 고르기, 브랜치 `WeatherExerciseRecommenderTest` 5), APK, 엔진 동기화 검사, `ios-ui` iOS 컴파일·서명 빌드·설치. *아직 확인하지 않은 것(사용자):* 실제 세트에서 교정 문장이 들리는지, 고품질 음성을 받은 뒤의 소리, '영상' 쪽에서 카메라 화면이 보이는지(UIKit 층이라 자동 PNG 에 없다), 현재 위치 권한 묻기·지역 바꾸기, Android 실기기(연결된 기기 없음).
+
+*§108f — 홈을 한 화면에: 날씨는 날짜 아래 한 줄, 섭취 요약 축소(2026-10-23, `ios-compose-ui`).* 사용자 요청 "간단하게 기온, 날씨, 강수량만 … 위치는 현재 몇 월 며칠인지 보여주는 텍스트 아래 그리고 운동한 날 위로 … 한 화면에 내비게이션 포함해서 오늘의 운동과 식사 기록까지 전부 보이도록 축소 … 오늘의 섭취 칸에서 오늘의 섭취와 목표까지 얼마 남았는지 보여주는 텍스트와 칸을 제거하고 식단 보기까지 제거하여 높이를 최대한 축소". *날씨:* §108e 의 큰 카드를 빼고 날짜 아래 한 줄 `WeatherSummaryRow` — 하늘색 아이콘(날씨·낮밤)·기온·날씨·강수량(mm). 위치 이름은 보이지 않고, 줄을 누르면 지역/현재 위치 시트(지역 바꾸기는 그대로). 불러오기·캐시·화면 복귀 시 갱신·지역 규칙은 §108e 그대로, 받는 값은 다시 지금 날씨만(기온·강수·코드·풍속 + 낮밤; 체감·최고/최저·시간별은 뺐다 — 캐시 한 줄 판 3, 예전 판은 새로 받는다). 추천 운동 목록은 홈에서 뺐다(판정 코드는 남아 하늘색을 고른다 — 뒤에 줄을 누르면 열리는 시트로 되살렸다, '날씨 기반 운동 추천 판정 기준' 의 화면 절). *섭취 요약:* '오늘의 섭취' 제목·'목표까지 … 남았어룡' 칸·'식단 보기' 를 빼고 kcal 고리(68 dp)와 탄수화물·단백질·지방(가로 셋, 좁은 창·큰 글씨는 세로)만 — 약 256 dp → 약 96 dp. 카드를 누르면 식단 탭(예전 '식단 보기' 자리). *크기:* 홈 위 여백 18 → 14 dp, 칸 사이 18 → 14 dp, 운동한 날 동그라미 36 → 34 dp, 오늘 운동·식사 기록 카드 최소 높이 220 → 196 dp. 계산상 오늘 운동·식사 기록 아래 끝이 약 500 dp — iPhone 16 Plus 의 내비 위 보이는 높이 약 729 dp, 일반 크기 폰(약 620~650 dp)에도 들어간다. 공유 화면이라 Android 홈도 같다. *후속(2026-10-24):* 동그라미 아래 '오늘'·'✓' 라벨(10 sp)의 상자 높이도 18 → 15 dp 로 줄였었는데, Android 에서 '오늘' 글자 아래가 잘렸다(iPhone 16 Plus 크기 430×932 dp 에뮬레이터 실측 — main 의 18 dp 는 온전). 18 dp 로 되돌렸다 — 위 계산에 +3 dp.
+
+*§108g — 플랭크 목표는 시간만(2026-10-24).* 사용자 결정 "플랭크는 횟수 선택불가하게 하고 시간만 선택가능하도록". *왜:* 플랭크는 버티는 운동이라 엔진이 시간만 적립한다(`PlankHold`, '플랭크 시간 = 카메라가 확인한 시간'). 횟수 목표면 유지 시계의 목표 시간이 0 으로 들어가(PostureLive `ensureSet`) 세트가 시간으로 끝나지 않는다. *무엇:* 시간 전용 종목 `TIME_ONLY_EXERCISES = {플랭크}`(`WorkoutSession.kt`) — 카탈로그에서 버티는 운동은 플랭크 하나다. 운동 편집 시트는 이 종목에서 '횟수 | 시간' 탭을 보이지 않고 목표 바퀴는 시간(초)이다 — 처음 넣었던 안내 한 줄("버티는 운동이라 시간으로만 정해요.")은 같은 날 사용자 요청으로 뺐다. 이전 편집·동기화로 남은 횟수 목표는 계획을 불러올 때(`TrexStore.loadPlan`)와 바꿀 때(`updatePlan`) 카탈로그 기본 45초로 바꾼다 — 12회를 12초로 읽지 않는다. 세트·휴식은 그대로. 편집 시트·앱 상태가 공유 목록에 있어 iPhone 도 같다. *검증:* `WorkoutEditorValuesTest.plankKeepsOnlyTimeGoals`(남은 횟수 → 45초·표시 문자열·휴식 보존, 시간 목표·다른 종목은 그대로).
+
+## §109. 커뮤니티 탭 화면 (2026-10-29, `feature/community-app-screens`, 설계 `docs/superpowers/specs/2026-10-28-community-design.md`)
+
+*요청·결정.* 팀이 인스타그램형 커뮤니티를 별도 탭으로 두기로 했다(2026-10-28). 글 종류는 나누지 않고, 글만 올리기도 되며, 사진은 서버에 저장한다(사용자 결정). 피드 순서(전체 최신순), 글당 사진 5장, 탭 위치(홈 · 운동 · 식단 · **커뮤니티** · 내 정보), 보기·쓰기 모두 서버 계정 필요는 설계 §3 의 판단이다. 서버는 계획 1(PR #28), 전송·API·사진 로더는 계획 2(PR #29), 화면은 계획 3 이다.
+
+*구조.* 화면 파일은 `community/` 에 두고 전부 `ios-ui/android-sources.txt` 에 올린다(§108). 계산·상태 변화는 순수 값으로 떼어 JVM 테스트로 잠근다 — `CommunityGate`(진입: 로그인 설정 없음 → 계정 없음 → 로딩 → 닉네임 → 이용규칙 동의 → 정지/정상), `FeedState`(쪽 붙이기·중복 제거·좋아요·만료), `CommentsState`, `ComposeState`, `workoutCardData`, `postMenu`. 서버 호출 순서는 `FeedController`(전체 피드는 `AppViewModel.communityFeed`, 프로필 글 목록은 탭 안 화면 쌓기가 든다). 탭 안의 상세·글쓰기·프로필은 단순 스택이고 뒤로 가면 하나씩 닫는다.
+
+*근거.*
+- **좋아요는 바라는 값과 서버 값을 따로 둔다.** 누르면 화면이 바로 바뀌고, 글마다 한 번에 하나만 보내며, 돌아오면 아직 다른지 다시 본다. 빠르게 여러 번 눌러도 요청은 최대 두 번이고 마지막 값으로 맞는다. 실패하면 서버 값으로 돌아가고 서버 문구를 보인다. 상세 화면에서 댓글 수를 바꿀 때 화면 값(`shown`)을 목록에 되써 넣으면 확인 안 된 좋아요가 확인된 것처럼 굳는다 — 그래서 `commentsChanged` 로 댓글 수만 바꾼다.
+- **피드는 받은 지 50분이 지나면 탭에 들어올 때 새로 받는다.** 사진 주소는 S3 서명 주소(수명 1시간)라 오래 켜 둔 피드의 사진이 403 으로 실패한다(계획 2 리뷰가 남긴 항목).
+- **본문·댓글 글자 수는 서버처럼 코드 포인트로 센다**(본문 2,000자, 댓글 500자, 닉네임 2~12자). Kotlin `length` 는 이모지를 두 칸으로 세서 서버보다 먼저 막는다.
+- **정지된 계정은 읽기·차단·내 글 지우기만 된다**(서버 `requireReader`/`requireWriter` 와 같게). 이용규칙 동의는 정지보다 먼저 묻는다 — 서버가 읽기에도 동의를 요구한다.
+- **앱 문구는 공룡 말투(`TrexText`), 사용자 글·닉네임·신고 미리보기는 원문**(사용자 결정 2026-10-29 "통일을 위해 룡으로"). 닉네임이 들어간 대화상자 제목은 고정 부분만 바꾼다(`withName`) — 닉네임 안의 "…요 " 가 "…룡" 으로 바뀌지 않게.
+- **오운완 카드는 숫자만**(날짜·운동 이름·완료 세트·총 시간·예상 kcal). 자세 판정(헤드라인·점수·자세 블록)은 넣지 않는다 — 공개 이미지에서 판정 정직성 원칙을 다시 지켜야 하고 자세 문구는 자세 담당 영역이다. 카드는 글쓰기 미리보기를 그래픽 레이어로 떠서 `encodeJpeg`(Android: HARDWARE 비트맵의 소프트웨어 사본, iPhone: Skia)로 만든다. 완료 화면에는 선택 콜백 `onShare` 와 버튼 한 줄만 더했다.
+- **올리는 사진은 긴 변 1080 JPEG 를 IO 스레드에서 다시 만든다**(EXIF 가 따라가지 않는다). 글쓰기 화면에 "서버에 저장되고 모든 사용자에게 공개돼요"를 둔다 — 사진 식단의 "기기 안에서만" 과 헷갈리지 않게(설계 §2 반목표).
+- **안전 장치를 피드와 함께 연다.** 글·댓글·사용자 신고(사유 6개), 차단(상대에게 알리지 않음, 내 프로필에서 해제), 내 글·댓글 지우기, 관리자 신고함(내 정보 탭, 관리자에게만)과 카드 ⋯ 의 관리자 숨기기·지우기·작성자 정지. 신고한 사람은 내 프로필의 "내 신고"에서 처리 상태를 본다(설계 §3 처리 결과 알림).
+
+*남은 것.* 실기기 확인(폰 360dp·폴드 펼침·글자 1.3배, 세로·큰·EXIF 회전 사진, 관리자·일반 계정 둘 다), 이용규칙·처리방침 PR #26 머지, App Store 용 Apple 로그인(설계 §4).
+
+## §110. Android·iOS 공용 근육 목록·2D 근육도·메인 탭 스와이프 (2026-10-28)
+
+사용자 요청으로 근육 상태의 부위 카테고리를 없애고 양수 피로도만 내림차순 목록으로 표시한다. 계산 스냅샷은 그대로 보존하고 화면에서만 필터해 추천 알고리즘의 입력을 바꾸지 않는다. 1점 미만은 0점으로 보이지 않게 표기한다. 기존 해부 모델을 가림 처리한 앞·뒷면 2D SVG로 추출해 왼쪽 뒷면/오른쪽 앞면을 동시에 표시하며, 근육 ID·신체 좌우·저작자 표시를 유지한다. 피로도 화면과 완료 화면이 같은 도형을 쓰되 누적 점수와 세션 사용 부위를 혼합하지 않는다.
+
+공통 MainTabs에 좌우 스와이프를 연결한다. 순서는 홈/운동/식단/내 정보이며 끝에서는 멈춘다. 자식 삭제·정렬 제스처와 시스템 가장자리 뒤로를 우선한다. 운동 가이드 이미지 컨테이너는 불투명한 시트 배경색으로 채운다. 사용자 재설명에 따라 iOS GIF의 HTML·WKWebView·scrollView도 같은 색으로 막아 팝업 뒤 화면이 비치는 현상을 방지한다. 온보딩 SVG의 투명 배경은 유지한다. 공통 Compose 파일은 iOS 정본 목록으로 공유하고, 근육도 플랫폼 뷰는 양쪽에서 스크롤을 가로채지 않게 변경한다. 설계·검증·기기 검토 항목은 `docs/UI_REVIEW_2026-10-28.md`. 사용자 후속 요청으로 로컬 커밋을 승인받았다. 푸시·배포는 하지 않는다.
+
+## §111. Muscle viewer sizing, seven-day records, and persistent stage toggle (2026-10-28)
+
+The device WebView reported a 366px viewport while HTML/body/SVG heights were zero, even though atlas data, viewer initialization, and all 64 paths were present. The shared viewer now assigns viewport pixel heights to the roots and stage on initialization, resize, pageshow, visual viewport changes, and the first animation frame. Both fatigue and session modes use this sizing; session highlighting still uses only the session's used muscles.
+
+User workout history and fatigue now share seven calendar dates including today in the device timezone. `workoutRetentionStart(now, zone)` computes the first retained midnight (including DST transitions); both Android SQLite and iOS JSON stores remove earlier sets and their doses. Snapshots receive the same cutoff, exclude future events from scoring, and refresh every existing foreground timer cycle. Expired display data is filtered even if persistence cleanup fails. The app performs cleanup when running/returning, not through a background alarm while terminated. The user explicitly retained diagnostic posture logs and self-labels; routine/profile/baseline settings are outside this deletion policy. No server schema or retention scheduler was changed.
+
+`StageViewToggle` is rendered above the adaptive camera/panel layout at the screen's top right in preparation and exercise, so panel visibility and PiP shrinking cannot hide or move it. The panel duplicate was removed. The muscle-page footer and anatomical caveat were removed; model attribution remains accessible from Settings → copyright/licenses.
+
+Validation: Android debug APK and 776 unit tests pass, plus 525 common-engine JVM tests. New tests cover eight-day expiry, calendar cutoff boundaries, and DST. Headless Chrome verifies both viewer modes, recovery from zero root heights, three viewport sizes, muscle colors, and session input isolation. Android home-to-fatigue rendering was visually confirmed on SM-N976N. iOS engine/resource sync checks pass. Native iOS compilation/device rendering and the full workout-completion/camera-toggle UI flow were not executed. The optional Swift/project static checker is blocked by missing Python yaml. No production deployment, commit, or push.
+
+
+## §112. Shared expandable sheets and source-labelled replacement recommendations (2026-10-29)
+
+All active app-owned bottom sheets now use `SheetHost`, backed by one Material3 `SheetState`. Complex content starts expanded and can be dismissed downward. Only the photo entry menu starts partially expanded and can be dragged upward; advancing to camera/analysis/results expands the same SheetState. Short content fits above the bottom edge. Nine direct Material call sites (exercise guide/editor, settings theme/voice/profile, nutrition goals, quick settings/count adjustment, weather) were migrated; manual/photo food already called the host. Legacy alternate/set/add helpers also inherit it; the unused `SheetSurface` has no call sites. Central confirmation dialogs and OS pickers are not bottom sheets.
+
+The removed iOS-only `SheetDrag` exposed two release paths (`draggable.onDragStopped` and nested `onPreFling`) that launched settling animations without cancelling an existing settle, and started a return spring after dismissal. These competing offset writes are a code-supported oscillation path; the reported iPhone motion was not directly reproduced on this Windows host. The replacement has one gesture/animation owner on both platforms and removes duplicate caller IME padding. Numeric wheels temporarily lock parent-sheet gestures through touch and snap/fling completion, including range boundaries, without disabling the handle after release. Locks are owned per control and removed on disposal. A device test reproduced the parent consuming a wheel swipe before this guard.
+
+The replacement tab groups actual `WeatherExerciseRecommender` and `MuscleLoadEngine.recommendations` results under `날씨 기반 추천 운동` and `근육 피로도 기반 추천 운동`. It maps names to selectable catalog entries, removes the current exercise/unknown names/duplicates within a source, preserves source order, and permits the same exercise under both sources. Empty or failed sources are omitted, without explanatory text or guide previews. Weather uses the existing region/GPS resolver and cache without requesting new permissions; request lifetime follows picker visibility and foreground state. Fatigue uses the existing seven-day snapshot and available equipment. Selection edits the draft and still requires Save. Manual food puts search below the meal tabs and results before totals while the manual form opens expanded.
+
+Validation: Android 778 unit tests and 525 common JVM tests pass; debug and instrumentation APK builds pass. Five connected SM-N976N tests pass, covering compact and expanded starts, automatic detail expansion, dismissal, numeric wheel direction/boundary/cancellation interactions, and recommendation headings/selection. Source/resource sync checks pass. `lintDebug` remains blocked by the pre-existing `ByteOrderMark` at `food/FoodDetector.kt:142`. Native iOS compilation and real iPhone gesture/keyboard verification are NOT RUN (Windows; no Xcode/iPhone). Detailed evidence and any final device follow-up are recorded in `docs/superpowers/plans/2026-10-29-sheets-recommendations.md`. No commit or push.
+
+## §113. 로그인 화면 정리 · Apple/Google 버튼 통일 · 로그인 로딩 화면 (2026-10-29, `feature/shared-ui-muscle-navigation`)
+
+*요청(동현님 2026-10-29).* 로그인 화면의 Apple·Google 버튼 디자인을 서로 맞추고, Google 도 Google 본래 디자인으로, 문구도 같은 꼴로. 종이를 찢고 얼굴을 내민 공룡 대신 공룡 하나만 크게 가운데. 워드마크 "TREX"·"움직임을 보고 함께 운동해룡"·버튼 아래 작은 설명은 전부 빼고, "로그인 없이 사용"도 같은 크기·간격으로. 커뮤니티·내 정보의 계정 연결에도 같은 버튼, 로그인할 때 로딩 화면. iPhone·Android 둘 다.
+
+*무엇.*
+- 공유 `SignInUi.kt`(ios-ui 목록에 올림): `SocialSignInButton(Apple|Google)`·`WithoutAccountButton` 이 높이 54dp·알약 모양·16sp Medium·로고 20dp+간격 10dp 를 같이 쓰고, 색·로고만 각 회사 지침을 따른다 — Apple: 밝은 배경 검정 / 어두운 배경 흰색. Google: Light #FFFFFF·테두리 #747775·글자 #1F1F1F / Dark #131314·#8E918F·#E3E3E3. 문구는 "Apple로 계속하기"·"Google로 계속하기"이고 공룡 말투(TrexText)를 거치지 않는다. "로그인 없이 사용"은 같은 틀에 바탕 없이 테두리만 — 채우면 어두운 화면에서 Google 버튼(#131314)보다 눈에 띄었다.
+- iPhone 의 Apple 버튼은 시스템 기본 버튼(`ASAuthorizationAppleIDButton` 을 UIKitView 로 끼움)을 버리고 같은 Compose 버튼으로 그린다. Swift 다리의 `makeButton` 을 지웠다. 다리가 없으면(프로브) `IosPlatform.appleSignInAvailable` 이 거짓이라 버튼이 없다(예전엔 버튼 함수가 스스로 안 그렸다).
+- 공룡: `res/drawable-nodpi/trex_dino_head.png`(690², 정사각 가운데) — 종이를 찢고 나온 로고의 마지막 프레임에서 공룡만 오렸다(`tools/icon/make_dino_head.py`, 같은 PNG 를 다시 만든다). 로그인 화면은 그림(폭 68% — 60% 는 화면 확인에서 여전히 작았다, 버튼 위 남은 자리 가운데) + 버튼 줄만이다. 16프레임 애니메이션(`LoginLogo`·플랫폼 짝 `loginAnimationFrame`)은 지웠고, 프레임 PNG 는 앱 아이콘 생성기(`tools/icon/make_launcher_icon.py`)가 10번을 쓰므로 남겼다.
+- 로그인 로딩 화면 `SignInLoadingScreen`(처음엔 공룡이 고개를 까딱이고 점 셋이 차례로 밝아졌다 — *2026-10-30 동현님 요청으로 가운데 로딩바 하나만, §114*) — `AppViewModel.authVerifying` 동안 TrexApp 맨 위를 덮는다. 로그인 화면·내 정보·커뮤니티 어디서 연결해도 같다.
+- 내 정보 계정 칸: "Google 계정 연결" 줄 → "계정 연결" 머리(설명 한 줄, 실패하면 그 자리에 실패 문구) + 두 버튼. 커뮤니티 계정 안내: 녹색 "Google 계정 연결" → 두 버튼.
+
+*근거.*
+- **Apple 버튼을 직접 그려도 되는가.** Apple HIG 는 시스템 버튼을 권하지만 Apple 로고·허용 문구(로그인/계속하기/가입)·검정/흰 모양을 지킨 직접 그린 버튼을 허용하고, 모서리는 앱의 다른 버튼에 맞춰도 된다. 알약 모양은 Google 지침의 두 모양(사각·알약) 중 하나라 두 회사 지침을 같이 지킨다. Apple 버튼을 다른 로그인보다 작거나 덜 보이게 두지 말라는 조건은 같은 크기·Google 위 순서로 지킨다.
+- **로딩 화면은 계정 선택 창이 닫힌 뒤부터.** 버튼을 누르자마자 덮으면 계정 선택 창을 닫았을 때 로딩 화면이 잠깐 나타났다 사라진다. 그래서 `signIn` 을 증명 받기(`credential` — 구글 ID 토큰·Apple 자격)와 서버 교환(`exchange`)으로 나누고 그 사이에 `authVerifying` 을 켠다. 첫 동기화 질문(`askFirstSync`)이 뜨면 로딩 화면은 걷히고 대화상자가 남는다. 탈퇴(`deleteAccount`)도 `authBusy` 를 켜지만 로딩 화면은 덮지 않는다.
+- **실패 안내는 남긴다.** 뺀 것은 늘 보이던 설명이다. 로그인 실패 문구(`authMessage`)는 실패했을 때만 버튼 아래에 보인다 — 지우면 왜 안 되는지 알 길이 없다.
+- **Android 에 Apple 버튼은 여전히 없다** — *다음 날 동현님 요청으로 바뀌었다: Android 도 Apple 웹 로그인(§114).* (Apple 로그인 설계 §2 비목표, 반목표 "Android 에 눌러도 안 되는 Apple 버튼"). Android 의 Apple 로그인은 웹 로그인 흐름·Services ID·서버 콜백 주소가 더 필요하다. Android 는 Google·로그인 없이 사용 두 버튼이 같은 틀이다.
+- **공룡 오리기.** 종이·공룡이 둘 다 초록이라 밝기로는 못 가르고 색상으로 갈린다(종이 ~70°, 공룡 ~86°). 이마의 노란 하이라이트도 종이 색상대라 '바깥(투명)과 이어진 종이색'만 종이로 본다. 원본 외곽선은 검은 구멍 배경과 같은 색이라 남길 수 없어 오린 모양 둘레에 같은 색 선을 다시 그렸고, 종이에 가려 들쭉날쭉한 뒷머리·목은 손으로 정한 곡선으로 잘랐다. 원본 얼굴 폭이 ~215px 라 3배로 키웠다(모양은 흐린 뒤 키워 계단을 없애고, 선은 3배 해상도에서 그린다).
+
+*main 머지에 따른 고침.* main 의 커뮤니티 탭이 식단과 내 정보 사이에 들어와, 이 브랜치의 `PresentationPolicyTest.swipeFollowsNavigationOrderWithoutWrapping` 탭 목록을 하단 바 순서(5개)로 고치고 `TrexTab.entries` 와 같은지도 본다. 로그인 문구를 찾던 계측 테스트(`SessionFlowTest`)는 워드마크가 없음을 확인하도록 바꿨다.
+
+*검증.* Android 단위 테스트 848개 통과(새 `SignInUiTest` 3개 — 회사별 색·문구·공룡 말투 불변). 에뮬레이터(Medium Phone API 36)에서 계측 테스트 5개 통과 — 새 `SignInScreensUiTest` 3개(그림 하나·세 버튼 같은 높이·워드마크 없음, 로그인 중 버튼 비활성, 로딩 화면이 뒤 버튼을 막음), `RestorationUiTest.logoAndSignInChoicesSurviveNarrowToWideResize`, 재생 앱(`-PpostureReplay`)의 `SessionFlowTest.guideAndLoginKeepArtworkAndActionsVisible`(가이드 → 로그인 → 로그인 없이 사용 → 온보딩). 밝은·어두운 로그인 화면과 로딩 화면 캡처를 눈으로 확인했다. iPhone: Xcode 16.2 로 `ios-ui` Kotlin/Native(iosArm64) 컴파일·기기 빌드·서명(팀 프로비저닝 프로필) 후 iPhone 16 Plus(iOS 27.0.1)에 설치·실행했다(실행 직후 프로세스 살아 있음).
+
+*남은 것.* 실제 Apple·Google 계정으로 로그인해 로딩 화면 → 첫 동기화 질문/홈으로 넘어가는지(실기기, 계정 필요). iPhone 화면 캡처는 이 Mac 의 Xcode 16.2 로 뜨지 않아 iPhone 의 모양은 동현님 눈으로 확인. Android 실기기 설치(연결된 기기 없음 — `app-debug.apk` 만 만들었다).
+
+## §114. 공룡 검정 원 · 메인 탭 스와이프 개선 · Android Apple 로그인 (2026-10-30, `feature/shared-ui-muscle-navigation`)
+
+*요청(동현님 2026-10-29 밤).* "로그인 페이지에서 공룡 누끼가 티나서 주변에 검정색 원으로 감싸", "좌우 화면 드래그로 네비게이션 이동하는거 잘안되는데 확인하고 개선", "안드로이드에도 apple로그인 넣어", 그리고 푸시.
+
+*로그인 로딩 화면 — 로딩바 하나(2026-10-30 추가 요청 "공룡 로고 애니메이션 제거하고 그냥 로딩바로").* 가운데에 앱의 다른 로딩바(사진 식단 분석)와 같은 모양(8dp·둥근 끝·primary 위 track)의 indeterminate `LinearProgressIndicator` 하나. 글자는 없고 화면 읽기에는 "로그인하는 중". 무한 애니메이션 둘(공룡·점)이 빠져 로딩 중 그리는 일도 줄었다.
+
+*공룡 — 검정 원 배지(`TrexDinoBadge`).* 밝은 바탕에서는 오린 외곽선·잘린 목이 드러났다. 원래 그림이 검은 구멍 속 공룡이라 검정 원 위에 두면 외곽선이 바탕에 묻힌다. 머리 끝이 그림 반폭의 1.025배까지 가서 그림을 원 지름의 86% 로 두면 원 반지름 88% 안에 든다. 로그인 화면·로그인 로딩 화면 둘 다 같은 배지다.
+
+*탭 스와이프 — 원인(고치기 전 실측).* 실제 앱(에뮬레이터)에서 홈 → 빠르게 튕기기 40dp/60ms·53dp/120ms 는 넘어가지 않고 160dp 를 천천히 끌어야 넘어갔다. 운동 탭에서는 운동 행 위를 오른쪽으로 밀어도 그대로였다. 새 계측 테스트 `MainTabSwipeUiTest` 8개를 고치기 전 코드로 돌리면 `quickShortFlickMovesTab` 만 실패했다. 원인은 셋이다.
+- 손을 뗄 때 거리(64dp)만 보고 속도를 안 봤다 — 사람은 짧게 튕긴다.
+- 미는 동안 화면이 움직이지 않아 제스처가 먹혔는지 알 수 없었다.
+- 운동 행의 삭제 스와이프(`detectHorizontalDragGestures`)가 양방향을 다 잡았다 — 행은 왼쪽으로만 열리는데 오른쪽 밀기도 삼켰다.
+
+*고침.*
+- `swipedTab` 이 속도도 본다: 56dp 이상, 또는 400dp/s 이상으로 같은 방향으로 16dp 이상 튕기면 넘긴다(`TabSwipeThresholds`). 처음 움직임이 세로에 가까우면(|dx| < |dy|) 잡지 않고 목록 스크롤에 남긴다. 미는 동안 화면이 손가락의 35%(최대 40dp, 넘길 탭이 없는 끝에서는 12%)를 따라오고 손을 떼면 돌아온다. 손가락 좌표는 그 이동 전 좌표로 읽는다(`pointerInput` 이 `graphicsLayer` 바깥). 가장자리 예외는 24dp → 16dp.
+- 운동 행은 왼쪽 밀기(또는 이미 열린 행)만 잡는다 — 닫힌 행을 오른쪽으로 밀면 메인 탭 스와이프가 받아 이전 탭으로 간다. 이동량은 소비하기 전에 읽는다(소비한 변화의 `positionChange()` 는 0 — 처음 고친 판이 이것 때문에 행이 10px 만 움직였고, 원래 코드와 같은 실험으로 찾았다).
+
+*Android Apple 로그인(설계 `docs/superpowers/specs/2026-10-29-apple-sign-in-design.md` §9).* Android 는 Apple 웹 로그인을 Custom Tab(`androidx.browser` 1.8.0)으로 연다. Apple 은 결과를 서버 콜백(`POST /api/auth/oauth/apple/callback`)에 form_post 하고, 서버가 `intent://callback?…;scheme=trexapple;package=…` 로 앱에 되돌려 보낸다. `AppleSignInCallbackActivity` 가 state 가 맞을 때만 넘기고 MainActivity 로 돌아간다. 그 뒤는 iPhone 과 같은 `/api/auth/oauth/apple`(nonce 원문). 서버는 대상(aud)이 번들 ID 또는 Services ID 인지 보고, code 교환·연결 끊기를 토큰을 받은 client 로 한다 — `users.apple_client_id`, 웹 code 는 `redirect_uri` 를 같이 보낸다. 창을 닫고 결과 없이 돌아오면 0.7초 뒤 조용히 취소한다. 버튼은 `trex.appleServicesId`·`trex.appleRedirectUri`(gradle.properties)가 둘 다 있을 때만 그린다.
+
+*동작하려면(코드 밖).* 동현님 개발자 계정에 Services ID `com.leedonghyun.trex.signin`(Sign in with Apple, Return URL 위) → 서버 새 jar + `.env` 의 `APPLE_WEB_CLIENT_ID`·`APPLE_WEB_REDIRECT_URI`(`docs/SERVER_SYNC_HANDOFF.md` 10.5). 그 전에는 버튼은 보이지만 Apple 화면(Services ID 없음)이나 서버(대상 불일치 401)에서 실패한다.
+
+*검증.*
+- Android: 단위 테스트 854개 통과. 새 테스트는 `AppleWebAuthTest` 5개(주소·nonce 해시·state·취소·인코딩)와 `PresentationPolicyTest` 의 튕기기 규칙이다.
+- 계측 테스트(데이터 공간을 늘린 임시 에뮬레이터, API 36): `MainTabSwipeUiTest` 8개, `SignInScreensUiTest` 3개, 재생 앱 `SessionFlowTest` 4개 통과. 그중 새 `workoutRowRightSwipeGoesHomeAndLeftSwipeStillDeletes` 는 행 위 오른쪽 밀기 → 홈, 왼쪽 밀기 → 삭제 확인을 본다.
+- 실제 앱(에뮬레이터): Android 로그인 화면에 Apple 버튼이 보인다. 누르면 Chrome 이 열리지만, 새 에뮬레이터의 Chrome 첫 실행 화면(약관 동의) 때문에 Apple 화면까지는 가지 않았다. 창을 닫으면 오류 없이 버튼이 다시 켜진다. state 가 다른 위조 딥링크는 무시되고 Custom Tab 이 닫힌 채 앱으로 돌아온다.
+- 서버: 테스트 115개 통과. 새 테스트는 콜백 4개, 웹 code 교환·client 별 연결 끊기, 웹 대상 검증이다.
+- **아직 못 한 것**: Services ID·서버 배포 뒤의 실제 Apple 로그인(Android 실기기), 실제 손가락으로 해 보는 스와이프 감(에뮬레이터 주입 입력만 했다), iPhone 의 스와이프·배지 모양(설치만 했다).
+
+## §115. 버벅임 최적화 · 운동 준비/진행 제어판 새 디자인 (2026-10-30, `feature/shared-ui-muscle-navigation`)
+
+*요청(동현님 2026-10-30).* "안드로이드 노트 10에서는 버벅거리기도하고 아이폰 16에서도 버벅거리는게 보여" → 조사 뒤 "최적화 구현까지 순서대로 전부 실시해서 깃에 푸쉬하고 연결된 아이폰 안드로이드에 빌드해". 그 사이 추가 요청 "운동 준비와 시작시에 제어 화면을 이런 디자인과 레이아웃으로 변경해봐"(흰 둥근 판 · 손잡이 · 경과 | 큰 시간 | 세트 · 물결 위 원형 아이콘 버튼, 하나만 채운 원).
+
+*먼저 지킨 것 — 자세 판정·횟수는 그대로.* 판정 규칙·임계값·판정 격자(300ms)·추론 간격(85ms)·카운터는 건드리지 않았다. 고친 것은 화면이 다시 구성되는 횟수, 메인 스레드에서 하던 파일 읽기·파싱, 빌드 설정이다. 판정·카운트는 원래 메인 스레드가 아니라 카메라 분석 스레드에서 실제 시간 기준으로 돈다.
+
+### 1. 빌드 — 느린 빌드로 보고 있었다
+- **Android release:** R8 을 켰다(`isMinifyEnabled = true`). Compose 는 R8 이 디버깅용 `sourceInformation` 호출을 지우고 람다·상태 코드를 인라인해야 제 속도가 난다. 이름은 바꾸지 않는다(`-dontobfuscate` — 로그·크래시 스택을 그대로 읽는다). MediaPipe·protobuf·LiteRT 는 리플렉션·JNI 로 불리므로 통째로 둔다. MediaPipe 가 딸려 오는 AutoValue 주석 처리기의 `javax.lang.model` 참조는 실행 중에 닿지 않아 `-dontwarn`.
+- **Baseline Profile:** `app/src/main/baseline-prof.txt` 에 앱 패키지 전체(`HSPLcom/example/trex_kotlin/**;->**(**)**`)를 넣었다. Compose 라이브러리 프로필과 합쳐져 R8 뒤 15,295줄(앱 4,811줄)이 APK `assets/dexopt/baseline.prof` 로 들어간다. 디버그 빌드에는 적용되지 않는다(디버그는 미리 컴파일되지 않는다).
+- **iPhone:** 설치를 Debug 구성(`linkDebugFrameworkIosArm64`, Swift `-Onone`)에서 Release 구성으로 바꿨다(같은 개발 서명).
+
+### 2. 공룡 말투 변환 — 글자마다 정규식 컴파일
+`toDinoCopy()` 가 글자(`TrexText`)를 처음 그릴 때마다 정규식 둘을 새로 만들고 23개 표를 새로 만들었다(탭을 바꿀 때 수십 번, iPhone 의 Kotlin/Native 정규식은 특히 느리다). 표·정규식을 파일 수준 값으로 한 번만 만들고, 바꿀 어미('니다'·'시오'·'요')도 마침표도 없는 글자(숫자·시간·이름 — 대부분)는 바로 돌려준다. 세 단계가 모두 그 글자들이 있어야만 무엇이든 바꾸므로 결과가 같다.
+- `DinoCopyEquivalenceTest`: 최적화 전 구현을 기준으로 앱 소스의 문자열 리터럴 전부와 어미·명사·문장부호를 섞은 무작위 문장 2만 개가 한 글자도 다르지 않다. `sync_ios_core.py` 로 posture-core 에도 옮겨 iOS 공통 사본도 같은 테스트를 돈다.
+
+### 3. 탭 전환
+- `LocalTrexNavSpace`(하단 바 높이)가 `staticCompositionLocalOf` 라 값이 바뀌면(첫 배치·회전·글자 크기) 탭 화면 전체가 다시 구성됐다 — 앱을 켜자마자 홈이 두 번 구성됐다. `compositionLocalOf` 로 바꿔 읽는 곳만 다시 그린다.
+- 하단 바(`MorphNav`)의 투명도 애니메이션을 구성 단계에서 읽어 260ms 동안 바 전체를 매 프레임 다시 구성했다. `graphicsLayer { alpha }` 로 그리기 단계에서만 읽는다.
+
+### 4. 자세 세트 시작 — 메인 스레드 파일 읽기·파싱
+- `PostureLiveAssets`: 세트 화면을 열 때마다 메인 스레드에서 규칙 JSON(`rules_mp_v0.json` 283KB + 바닥 규칙)과 정상 자세 참조를 읽고 파싱했다. 백그라운드(`Dispatchers.Default`)에서 앱 수명에 한 번만 한다. 규칙셋·참조는 불변 객체라 세션끼리 같이 써도 판정이 같다. 실패 처리도 예전 그대로다(참조 실패 → 빈 참조, 서서 규칙 실패 → 규칙 없음이고 저장하지 않아 다음 화면에서 다시 시도, 바닥 규칙만 실패 → 서서 규칙만). 규칙이 오기 전에는 판정하지 않는 구조(`ruleSet ?: return`)도 그대로이고, 규칙은 준비 카운트다운 중에 이미 다 읽힌다.
+- `savedSets`: 저장된 세트 로그 전체를 읽어 세트 수를 세는 일을 세트 화면을 열 때(메인 스레드)와 세트를 마칠 때마다 했는데, 그 값을 읽는 곳이 없었다. 지웠다(로그 쓰기는 그대로).
+
+### 5. 운동 중
+- **세션 시계:** 0.1초마다 `progress` 를 새로 쓰는데 앱 최상단(`TrexApp`)이 그것을 바로 읽어 0.1초마다 앱 전체가 다시 구성됐다. 화면이 쓰는 값(단계·남은 초·경과 초·횟수)을 `derivedStateOf` 로 읽어 값이 바뀔 때만 다시 구성한다(남은 시간은 1초에 한 번, 단계 번호는 단계가 바뀔 때만). 시간 계산(실제 경과 차이 `elapsedRealtimeMs`)·플랭크의 카메라 확인 시간은 그대로다.
+- **숨쉬기 표시:** 무한 애니메이션의 크기를 구성 단계에서 읽어 운동 내내 HUD 를 매 프레임 다시 구성했다. `graphicsLayer { scaleX/scaleY }` 로 옮겼다.
+
+### 6. 하지 않은 것과 이유
+- **카메라 프레임 비트맵 재사용(Android):** 분석 입력이 YUV 라 프레임마다 `ImageProxy.toBitmap()` 으로 새 비트맵을 만든다. 재사용하려면 RGBA 출력으로 바꾸거나 변환을 직접 해야 하는데, 변환 경로가 바뀌면 모델에 들어가는 픽셀이 달라질 수 있다(관절 좌표·판정이 조용히 바뀔 위험, 원칙 1). 재생 데이터로 전후 관절·판정·횟수를 비교하는 장치를 갖춘 뒤에 한다. 지금도 회전·얼굴용 비트맵은 재사용하고, 원본은 매 프레임 바로 `recycle()` 한다.
+- **iPhone 카메라·웹뷰 UIKit 겹침 모드:** 매 프레임 Compose 와 맞추는 비용이 있지만, 겹침 모드(`placedAsOverlay`)는 카메라를 Compose 위로 올려 뼈대·안내가 가려진다. 하지 않았다.
+
+### 7. 화면별(식단 검색 · 근육 피로도 웹뷰 · 운동 방법 GIF · 커뮤니티)
+- **식단 직접 기록 시트(`Sheets.kt`):** 한 글자(자모) 칠 때마다 결과 전부("밥" 만 쳐도 53줄)를 목록 최적화 없이 다시 그렸다. 검색 결과·합계·담은 음식을 `LazyColumn` 하나에 두어 보이는 줄만 그린다. 자리(안쪽 여백 20/16, 검색 묶음 위 10·줄 사이 7, 묶음 뒤 16)는 항목 위 여백으로 예전 스크롤 Column 과 같게 맞췄다. 항목 키는 순서(기본) — 이름 키면 백스페이스로 결과가 늘 때 화면이 보던 음식을 따라가 새 결과가 위에 가려진다. 적다 만 등록 폼은 따로 키를 주고 붙잡아 둔다(`KeepComposedInLazyList`, `TrexDesign.kt` — `LocalPinnableContainer.pin()`). 인분 입력 창은 같은 조건으로 목록 밖에 둬 항목이 폐기돼도 닫히지 않는다. 사진 기록의 음식 고르기 창도 같은 방식이다.
+- **근육 피로도(`MuscleLoadScreen.kt`):** 30초 새로고침이 계산 시각만 바뀐 스냅샷을 새로 만들어 순위·추천·색 JSON 을 다시 계산했다 → 쓰는 값(`snapshot.muscles`·`sets`)을 키로. WebView 에 마지막으로 보낸 명령과 같으면 JS 를 다시 돌리지 않는다(Android `tag`, iPhone 내비게이션 대리자 — 페이지가 다 읽히면 최신 명령을 보내는 길은 그대로). 근육도 항목을 붙잡아 스크롤로 나갔다 와도 WebView·페이지를 다시 만들지 않는다. 최근 기록이 있으면 피로도가 시간에 따라 줄어 30초마다 값이 실제로 바뀌므로 그때는 JS 가 돈다(값을 반올림하면 화면이 달라져 하지 않았다).
+- **운동 방법 GIF(Android):** 2프레임(0.9·1.1 초) 시범을 매 화면(60~120 Hz) 다시 그렸다. 프레임이 바뀌는 때에만 그린다 — `gifFrameEnds` 가 Android `Movie`(GIFMovie)와 같은 규칙(그림 앞 첫 그래픽 제어 확장의 지연 × 10, `time ≤ 끝` 인 첫 프레임)으로 프레임 끝 시각을 읽고, 합이 `movie.duration()` 과 다르면 쓰지 않고 예전처럼 매 화면 그린다. 재생 시각 계산은 예전 그대로다(한 번에 더하는 상한만 '예약 간격 + 100 ms'). 한 바퀴 110~130번 그리던 것이 2번. iPhone 은 WKWebView `<img>` 라 WebKit 이 이미 프레임이 바뀔 때만 그린다.
+- **커뮤니티:** Android 사진 디코딩(백그라운드)에서 `prepareToDraw()` — 사진이 처음 보이는 프레임이 GPU 올리기를 떠안지 않는다. 좋아요 한 번에 보이는 카드가 전부 다시 그려졌다 — 카드마다 메뉴 목록(`List`, 불안정 타입)을 새로 만들어 `PostCard` 가 한 번도 건너뛰지 못했다 → `remember(post, gate)`(댓글 메뉴는 `remember(comment, post.mine, gate)`).
+
+### 8. 운동 준비·진행 제어판 새 디자인(`SessionControlPanel.kt`)
+- **공통 부품:** 손잡이(`SessionPanelHandle`) · 세 칸 수치(`SessionStatsRow` — 왼쪽·오른쪽은 이름과 값, 가운데는 큰 값) · 물결 무늬 위 원형 버튼 줄(`SessionActionRow` + `SessionCircleButton`, 주요 동작 하나만 크게 주색으로 채운다) · 작은 칩 줄(`SessionChip`). 물결은 버튼 줄 뒤 장식 그림(Canvas, 읽히지 않는다)이다.
+- **카메라 준비:** 손잡이 · "운동 준비" + 5초 후 시작 + 운동 방법 · 목표 | 카운트다운 링(또는 방향 시범) | 세트 · 배치 안내·약속 문장·이유·세는 조건(남는 높이 안에서 스크롤 — 버튼 줄은 늘 판 아래) · 방식 선택 · [나가기 · 음성 · **준비 건너뛰기** · 카메라 · 준비 멈춤].
+- **카메라 운동 중:** 손잡이(누르거나 아래로 끌면 제어판 접기 — 예전 '화면 넓게' 버튼 자리) · 경과(세트 경과) | 남은 시간 또는 센 횟수 "8 / 12회" | 세트 · 코칭 문장과 '자동 횟수 · 참고' 줄 · [종료 · 음성 · **일시정지/재개** · 카메라 · 건너뛰기] · 방식 선택 · 칩[횟수 수정 · 숫자 읽기 · 운동 방법]. 검증 모드(§61)는 HUD 와 같이 자동 횟수 숫자를 "—" 로 숨긴다. 횟수는 여전히 beta 라 '참고' 줄을 바로 아래 둔다(원칙 2).
+- **타이머 세션 · 타이머 준비:** 같은 흰 판과 원형 버튼 줄. 직접 횟수 기록 세트는 **횟수 기록**이, 시간 세트는 **일시정지/재개**가, 준비는 **바로 시작**이 주요 동작이다.
+- **바뀌지 않은 것:** 모든 동작·확인창·횟수 시트 흐름, 접근성 이름("운동 종료", "이 세트 건너뛰기", "일시정지"/"재개", "제어판 접기", "음성 안내 끄기/켜기", "카메라 전환", "준비 건너뛰기", "5초 후 시작", "횟수 기록/수정", "<운동> 운동 방법"). 원형 버튼은 원과 이름을 합친 칸 전체가 누르는 자리다.
+- 세트 칸 값은 세션 단계의 표기("1 / 2 세트")를 "1/2" 로 줄인다(`setFraction`, 모르는 형식은 그대로).
+
+### 9. iPhone 앱 아이콘 — 로그인 화면 공룡 로고(2026-10-30 추가 요청)
+"아이폰 아이콘 TREX 로그인 페이지 공룡 로고처럼 만들어서 적용". iPhone 앱에는 아이콘(에셋 카탈로그)이 아예 없어 기본 빈 아이콘이었다. 로그인 배지(`TrexDinoBadge`)를 그대로 옮긴 1024×1024 한 장을 `iosApp/Trex/Assets.xcassets/AppIcon.appiconset` 에 두었다 — 로그인 화면 바탕(#EFF1EA) 위 검정 원(아이콘 폭의 84%), 그 안에 원 지름의 86% 공룡 얼굴(`DINO_IN_BADGE` 와 같다). iOS 가 모서리를 깎으므로 정사각·불투명이다. 다시 만들 때는 `python3 tools/icon/make_ios_app_icon.py`. Xcode 프로젝트는 `project.yml` 로 생성(`xcodegen generate` 뒤 `TrexPods` 에서 `pod install`, `iosApp/scripts/setup-mac.sh`)하며 `Trex/` 아래 카탈로그를 자원으로 넣고 `ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon` 은 XcodeGen 기본값이다. Android 실행 아이콘(`tools/icon/make_launcher_icon.py`, 어두운 배경 + 예전 로고)은 이번에 바꾸지 않았다.
+
+### 검증
+- **단위 테스트:** 앱 861개·공통 엔진(posture-core — iPhone 이 쓰는 사본) 527개 모두 통과. 새로 넣은 것은 `DinoCopyEquivalenceTest`(앱·posture-core 양쪽), `SessionControlPanelTest`, `ExerciseGuidesTest` 의 GIF 3개(실제 자산 파싱 · 다시 그리는 시점 = 프레임이 바뀌는 시점 전수 · 깨진 파일은 예전 방식)다. 자세 엔진(규칙·임계값·카운터·분석 루프) 코드는 바뀌지 않았고 엔진 테스트가 그대로 통과한다.
+- **빌드:** Android release(R8) 빌드 성공, APK 에 `assets/dexopt/baseline.prof`. Credential Manager 구현 클래스는 라이브러리의 소비자 규칙이 남긴다(구글 로그인 경로). iPhone 은 Release 구성으로 빌드·설치했다.
+- **계측 테스트(임시 에뮬레이터 API 36, RAM 4GB — 2GB 는 스왑으로 너무 느렸다):** 44개 중 40개 통과(`SessionFlowTest` 14/17, `ExerciseGuideFlowTest` 2, `RestorationUiTest` 7, `MainTabSwipeUiTest` 8, `SignInScreensUiTest` 3, `BottomSheetGestureTest` 5, `SessionCompletionLayoutTest` 1). 실패 4개:
+  - `perExerciseEditorPersistsIndependentTargetsAndPosture` — 48a5cda 에서 화면 문구가 "추천 대체 운동" 에서 "근육 피로도/날씨 기반 추천 운동" 으로 바뀌었는데 테스트가 옛 문구를 찾는다(이번 변경 전부터 낡음).
+  - `SessionMuscleRenderTest` — c4ae041(2D 근육도)부터 근육도는 돌지 않는 그림이라 터치를 받지 않는데 테스트는 3D 회전을 기대한다(이번 변경 전부터 낡음).
+  - `cameraPreparationCancelsOnBackgroundAndStartsAtCountdownEnd` — 5초 카운트다운 안에 스크린샷 저장까지 끝나야 하는 시간 의존 테스트. 변경 전 코드(HEAD)도 같은 에뮬레이터에서 같은 줄(430)에서 두 번 다 실패했다.
+  - `configuredSetsRestPauseSkipAndAutoAdvanceUseRealApp` — 제어판에 시계(세트 경과, 올라간다)가 늘어 '첫 시계' 대신 '남은 시간' 시계를 읽게 고쳤다. 그래도 느린 에뮬레이터에서는 사람 없는 플랭크의 20 s 시계 폴백 따라잡기(`HoldBridge`, 설계된 동작)가 측정 구간에 걸려(00:58 → 00:39) 실패해, 측정 전에 타이머가 움직이기 시작하기를 기다리게 보강했다. 보강한 판은 에뮬레이터 검증을 멈춰(동현님 2026-10-30 "에뮬레이터는 안돌려도됨 내가 실검증할거야") 돌리지 않았다.
+- **아직 못 한 것:** 실기기 체감(Note 10·iPhone 16 Plus)과 제어판 실사용 — 동현님이 직접 검증한다. Note 10 은 설치된 앱의 서명이 이 Mac 의 디버그 키와 달라 덮어 설치가 안 된다(지우면 기록·기준선이 지워지므로 백업 뒤에만 — CLAUDE.md '설치 함정').
+
+## §116. 실검증 도구는 저장소 빌드에만 — 배포 빌드에서 끈다 (2026-10-30, `feature/shared-ui-muscle-navigation`)
+
+*요청(동현님 2026-10-30).* "실제 사용자들은 해당 기능이 필요없어 실검증하는 개발자들이 필요하지" → "배포하는 앱들은 해당 기능 없게 할거고 지금 git 에다가 올리고 해당 코드를 통해 빌드하면 기능이 있게".
+
+*무엇이 실검증 도구인가.* 세트 로그(`posture_logs/sets-*.jsonl` — 원본 프레임 피처·관절 좌표, §14), 음성 기록(`posture_logs/feedback-*.jsonl`, §101), 완료 화면의 자가 라벨(실제 횟수·자세 자평 → `labels/set_labels.jsonl`·`rep_truth.csv`), 횟수 검증 모드(`rep_validation.on`, §61). 그 전에는 모든 사용자의 모든 세트에 좌표가 기간 제한 없이 쌓였고 자가 라벨 입력이 모두에게 보였다.
+
+*어떻게 가르나 — 빌드 플래그, 기본은 켜짐.* 저장소 코드로 빌드하면 켜져 있고, 사용자에게 나가는 배포 빌드만 끈다. 앱 안 스위치(개발자 모드)가 아니라 빌드로 가른 것은 동현님 결정이다 — 배포 앱에는 기능 자체가 없다.
+- Android: `-Ptrex.distribution=true`(또는 `local.properties`) → `BuildConfig.DEV_TOOLS = false`. 켜진 빌드는 `versionNameSuffix = "-dev"` — 세트 로그의 `app_version` 에도 남아 어떤 빌드가 센 세트인지 갈린다. `scripts/publish_release.sh` 는 APK 버전 이름(aapt2)이 `-dev` 로 끝나면 올리지 않는다.
+- iPhone: Info.plist `TrexDevTools` = 빌드 설정 `TREX_DEV_TOOLS`(project.yml 기본 YES). `"NO"` 일 때만 꺼지고 값이 없거나 비면 켜진다(XcodeGen 을 다시 돌리지 않은 프로젝트도 켜진 쪽). 배포는 `xcodebuild … TREX_DEV_TOOLS=NO`. CI 의 서명 없는 IPA(`build-unsigned-ipa.sh`)는 배포가 아니라 그대로 켜져 있다.
+- 공유 코드는 짝 상수 `PLATFORM_DEV_TOOLS`(Android `PlatformUi.kt` ↔ iPhone `PlatformUi.kt`)만 본다.
+
+*끄는 자리.* 세트 로그 쓰기(`PostureLive` — 리포트·기록·완료 화면은 그대로 만든다, 지역 변수는 늘리지 않았다), 음성 기록 파일(Android `AndroidSpeech.trace`·iPhone `IosAudio.trace` — `SpeechCoach.traceFeedback` 은 그대로라 엔진 테스트의 기록 확인은 바뀌지 않는다), 자가 라벨 칸(`SessionScreens` `SelfLabelSlot`), 검증 모드(Android `rememberRepValidation` — 표시 파일이 있어도 끈다. iPhone 은 원래 꺼짐). 자세 판정·횟수·음성 코칭은 두 빌드가 같다.
+
+*포기한 것.* §14 의 "실제 세션 로그가 재보정 데이터" 는 이제 개발자 빌드에서만 생긴다. 라벨 없는 사용자 로그는 쓰임이 적고 몸 좌표라 동의 없이 남기지 않는다. 실사용 데이터가 필요해지면 동의·보관 기간을 갖춘 별도 기능으로 한다.
+
+## §117. 로그인 화면에 아이디로 로그인 — main 의 D13 과 합치기 (2026-10-30, `feature/shared-ui-muscle-navigation`)
+
+*배경.* main 에 아이디·비밀번호 로그인/가입(docs/SERVER_SYNC_HANDOFF.md D13, #36·#37)이 들어오면서, 공룡과 버튼 셋만 남긴 이 브랜치의 로그인 화면(§113)과 충돌했다 — main 판은 화면 위에 로그인/회원가입 탭과 칸을 늘 펼쳐 두고 아래를 스크롤했다.
+
+*요청(동현님 2026-10-30).* "로그인 없이 사용을 작은 버튼으로 만들고 그자리에 apple과 google과 같은 크기로 아이디로 로그인 버튼… apple로 계속하기 위에 처음 버튼으로", "누르면 입력칸이 열리면서 레이아웃 높이가 늘어나는데 이만큼 공룡 로고를 줄일거야 — 로그인 페이지에 스크롤이 되지 않도록", "애니메이션으로 자연스럽게", "누르면 자동으로 id에 focus되고 키패드에 현재 입력하는게 가려지지 않게".
+
+*화면.*
+- 버튼 줄: **아이디로 로그인**(`IdSignInButton` — Apple·Google 과 같은 틀·54dp, 앱 주색) → Apple → Google, 그 아래 작은 글자 버튼 "로그인 없이 사용"(48dp 누르는 자리).
+- "아이디로 로그인"을 누르면 그 **위에** 아이디·비밀번호 칸이 펼쳐지고(320ms, 아래에서 위로) 버튼은 "로그인"이 된다(두 칸을 채워야 누를 수 있다). 버튼 아래 "회원가입"·"접기". 뒤로 가기도 접는다.
+- 아이디 칸에 바로 커서가 가고 키보드가 열린다(펼친 다음 프레임에 `requestFocus`). 아이디는 영문 키보드(ASCII), 다음 키 → 비밀번호, 완료 키 → 로그인.
+- 가입은 "회원가입"이 main 의 가입 칸(이름·아이디·비밀번호·확인·이메일·동의, 비밀번호 찾기 없음 안내)을 전체 화면 창으로 연다 — 칸이 길어 그 창은 스크롤한다. 설정·커뮤니티의 "아이디로 로그인·가입"(같은 알약 버튼)도 같은 창이다.
+
+*스크롤 없는 배치(`AuthLayout`).* 위에서부터 공룡 · 펼친 칸 · 버튼 줄 · Apple·Google·로그인 없이 사용을 한 번의 배치 계산으로 놓는다.
+- 공룡 크기 = (접었을 때 크기 − 펼쳐 늘어난 높이), 최소 72dp. 공룡 위아래 빈자리는 그대로라 화면 전체 높이가 변하지 않고, 펼치는 애니메이션의 매 프레임을 공룡이 그대로 따라 작아진다(따로 애니메이션을 두지 않는다).
+- 키보드가 올라와 보이는 높이가 줄면, 적는 칸이 있는 동안 기억한 키보드 전 높이로 계산해 아래 버튼 줄(Apple·Google·로그인 없이 사용)이 먼저 키보드 밑으로 들어가고, 그래도 모자라면 공룡이 더 작아진다 — 적는 칸·로그인 버튼·회원가입 줄은 늘 보이는 높이 안이다. 키보드 밑으로 간 줄은 잘라 그리지 않는다.
+- 보이는 높이가 주는 길은 플랫폼마다 다르지만 이 화면에는 같다: Android 12 이하는 창이 줄고(`windowSoftInputMode=adjustResize` 를 매니페스트에 명시했다 — 그 전에는 지정이 없어 기기마다 밀기·줄이기가 갈렸다), Android 15 이상·iPhone(`OnFocusBehavior.DoNothing`)은 앱 루트의 `safeDrawing` 과 화면의 `imePadding` 이 키보드만큼 준다.
+
+*로그인 흐름.* 아이디 로그인·가입도 소셜과 같은 `signIn` 을 지난다(증명 단계가 없어 바로 서버 확인) — 확인 동안 로그인 로딩 화면(§113)이 덮이고, 실패 문구는 버튼 줄 아래에 보인다. 서버 규칙(5번 실패 10분 잠금 등)·가입 칸 검사(`signupProblem`)는 main 그대로다.
+
+*병합에서 고친 것.* `docs/SERVER_SYNC_HANDOFF.md` 는 두 쪽이 같은 10.4 를 써서 main 의 "첫 실기기 시도" 를 10.4, 이 브랜치의 Android Apple 웹 흐름을 10.5 로 두었다(§114·설계 문서의 참조도 10.5). `DField` 에 칸 자체의 수정자·키보드 실행 키를 받는 선택 인자를 더했다(기본값은 예전과 같다).
+
+*검증.* 단위 테스트 869개(main 의 `PasswordAccountTest` 포함), iPhone 공유 코드 컴파일, 계측 테스트 컴파일. `SignInScreensUiTest` 에 버튼 순서·크기와 "펼치면 아이디 칸에 커서·공룡이 작아짐·844dp 안에 전부·입력 후 로그인·접으면 원래 크기" 를 넣었고 `RestorationUiTest` 의 폭 바꾸기는 스크롤 없이 보는 것으로 바꿨다 — **계측 테스트는 실행하지 않았다**(에뮬레이터 대신 동현님 실기기 검증). 키보드가 칸을 가리지 않는지·애니메이션 느낌은 실기기에서 확인해야 한다.
+
+## §118. App Store 첫 제출 준비 — 카메라 권한 문구·암호화 선언 (2026-10-30, `fix/ios-app-store-review-plist`)
+
+*배경.* iPhone 1.3.0 을 App Store Connect 에 처음 올리면서(번들 `com.leedonghyun.trex.ios`, 대한민국, 무료) 심사에 걸릴 만한 `iosApp/Trex/Info.plist` 두 곳을 고쳤다. 스토어 문구(부제·설명·키워드)는 App Store Connect 에만 있다.
+
+*카메라 권한 문구(심사 지침 5.1.1(ii)).* 예전 문구 "…식단 사진을 촬영합니다. 영상은 저장하거나 전송하지 않습니다." 는 커뮤니티 글쓰기(§109)가 같은 카메라(`FoodPhotoBridge` 의 AVFoundation)로 찍은 사진을 서버에 올리는 용도를 빠뜨렸고, '전송하지 않는다' 가 그 사진까지 덮는 것처럼 읽혔다. 권한 창은 처음 한 번만 뜨므로 문구 하나가 세 용도(자세 분석·식단·게시글)를 다 말해야 한다 — 그래서 "운동 중 카메라 영상은 저장·전송하지 않고, 게시글 사진은 직접 올릴 때만 서버로 전송" 으로 범위를 나눴다. 사진 보관함은 PHPicker(권한 없이 고른 사진만 받는다)라 `NSPhotoLibraryUsageDescription` 창은 뜨지 않고, 동작(`CMMotionManager`)도 권한 창이 없다 — 두 키는 `tools/verify_ios_project.py` 가 요구해 그대로 둔다.
+
+*암호화 선언.* `ITSAppUsesNonExemptEncryption = NO` — 이 앱의 암호화는 OS 의 HTTPS(서버·Open-Meteo·OAuth)와 로그인용 SHA-256 해시(Apple nonce·Google PKCE, `CryptoKit`)뿐이라 수출 규정 면제 대상이다. 키가 없으면 빌드를 올릴 때마다 App Store Connect 가 수출 규정 질문을 다시 묻는다.
+
+*검증.* `plistlib` 로 읽어 새 키와 `verify_ios_project.py` 가 보는 키·화면 방향을 확인했다. Xcode 빌드와 실기기 권한 창 문구는 Mac 에서 확인해야 한다 — 이 변경에서는 하지 않았다.
+
+## §119. 설정 화면의 버전 = 설치된 앱의 버전 (2026-10-30, `fix/settings-app-version`)
+
+*배경.* iPhone 1.3.0 을 App Store Connect 에 올리다가(§118) 설정 화면의 '버전' 줄이 `"1.0"` 문자열로 박혀 있는 것을 봤다. 스토어가 말하는 버전은 1.3.0(project.yml `MARKETING_VERSION`)이고 Android 는 `versionName`(1.3.0-preview.7, 저장소 빌드는 끝에 `-dev`, §116)이라, 사용자가 설정에서 읽는 버전이 스토어·업데이트 창("새 버전 …")과 어긋났다. 문의할 때 사용자가 읽어 주는 값으로는 어느 빌드인지 가를 수 없었다.
+
+*무엇.* `AppPlatform` 에 `appVersion`(버전 이름)·`appBuild`(빌드 번호)를 더했다 — Android `BuildConfig.VERSION_NAME`·`VERSION_CODE`, iPhone Info.plist `CFBundleShortVersionString`·`CFBundleVersion`(= `MARKETING_VERSION`·`CURRENT_PROJECT_VERSION`). 표기는 공유 함수 `appVersionLabel` 하나가 정한다 — "1.3.0 (1)", 빌드 번호를 모르면 버전 이름만. 설정 화면은 `AppViewModel.versionLabel` 을 읽는다.
+
+*왜 빌드 번호까지.* 심사에서 거절되면 같은 1.3.0 으로 빌드 번호만 올려 다시 낸다 — TestFlight·심사 빌드를 가르는 값은 그것뿐이다. Android `versionCode` 는 앱 내 업데이트가 설치본과 비교하는 값이다(§106).
+
+*왜 이 경계.* `SettingsScreen.kt` 는 iPhone 도 그대로 컴파일하는 공유 파일(§108)이라 `BuildConfig`·Android API 를 쓸 수 없다. 자세 화면의 `PostureHost.appVersion()`(세트 로그 `app_version`, §108c)은 자세 화면의 경계라 그대로 두었다.
+
+*검증.* 단위 테스트 882개 전부 통과(새 `AppVersionLabelTest`), `assembleDebug`. iPhone 공유 코드 컴파일은 Windows 에서 돌릴 수 없어 PR CI 의 `shared` 작업(`:ios-ui:compileKotlinIosSimulatorArm64`)에 맡겼다. 두 기기 설정 화면의 실제 표시는 확인하지 않았다 — 실기기에서 봐야 한다.
+
+## §120. App Store·TestFlight 설치본은 실검증 도구를 늘 끈다 (2026-10-30, `fix/ios-store-build-no-dev-tools`)
+
+*요청(동현님 2026-10-30).* "배포하는 앱이 운동 기능 검증을 위한 로그가 남는 버전인지 확인하고 배포할 때는 이게 남으면 안 됨 … 깃허브에 있는 코드로 빌드했을 때는 개발자 모드 앱이라 있어야 하고 배포할 땐 없어야 해".
+
+*확인한 것.*
+- Android: `-Ptrex.distribution=true` 로 만든 `BuildConfig` 는 `DEV_TOOLS = false`·버전 이름 `1.3.0-preview.7`, 플래그 없이 만들면 `true`·`1.3.0-preview.7-dev` 다. `scripts/publish_release.sh` 는 `-dev` APK 를 올리지 않는다.
+- 로그를 쓰는 자리 — 세트 로그(`PostureLive`), 음성 기록(`AndroidSpeech`·`IosAudio`), 자가 라벨 칸(`SessionScreens`), 검증 모드(`rememberRepValidation`) — 는 모두 `PLATFORM_DEV_TOOLS` 를 지난다. 예전 SwiftUI 화면의 프레임 기록(`iosApp/Trex/TrexStore.swift` `record(frames:)`)은 앱 루트가 Compose 로 바뀐 뒤(§108b) 아무 데서도 만들지 않는 코드다. 실행 인자 점검 모드(`--app-probe` 등)는 사용자가 켤 수 없다.
+- **이미 배포된 Android `v1.3.0-preview.7`(2026-10-10)은 §116 이전 빌드라 세트 로그·음성 기록·자가 라벨이 조건 없이 켜져 있다.** 다음 체험판을 배포 빌드로 내야 사라진다.
+- iPhone 은 `TREX_DEV_TOOLS` 가 project.yml 의 모든 구성에서 YES 라 명령줄 `xcodebuild … TREX_DEV_TOOLS=NO` 로만 끌 수 있었다. App Store 에 올리는 흔한 길인 Xcode 의 Product → Archive 는 이 값을 넘기지 않으므로 **실검증 도구가 켜진 채 App Store 로 나갈 수 있었다**.
+
+*고친 것.* iPhone `PLATFORM_DEV_TOOLS`(`ios-ui` `PlatformUi.kt`)에 설치 경로 조건을 더했다 — 플래그가 "NO" 가 아니고, **그리고** 앱 묶음에 `embedded.mobileprovision` 이 있거나 시뮬레이터(`SIMULATOR_DEVICE_NAME`)일 때만 켠다. App Store·TestFlight 설치본에는 Apple 이 프로비저닝 파일을 넣지 않으므로 빌드 설정과 상관없이 꺼진다. Xcode 실행과, CI 의 서명 없는 IPA 를 Sideloadly 로 설치한 것(개발 프로파일로 다시 서명)은 그대로 켜진다 — "저장소 코드로 빌드 = 개발자 앱" 은 바뀌지 않는다. `xcodebuild … TREX_DEV_TOOLS=NO` 도 그대로 쓸 수 있다.
+
+*포기한 것.* TestFlight 로 받은 빌드에서도 실검증 도구가 꺼진다 — 개발자 검증은 Xcode·Sideloadly 빌드로 한다. 앱 안 스위치는 여전히 없다(§116 결정).
+
+*검증.* Windows 에서는 iPhone 코드를 컴파일할 수 없어 PR CI 의 공유 컴파일(`shared`)로 확인한다. App Store·TestFlight 설치본에서 완료 화면의 자가 라벨 칸이 없고 `Documents/posture_logs` 가 생기지 않는지는 첫 TestFlight 빌드에서 실기기로 확인해야 한다.
+
+## §121. iPhone App Store 업로드는 GitHub Actions(Xcode 26)에서 — 개인정보 매니페스트 (2026-10-30, `feature/ios-app-store-upload`)
+
+*요청(동현님 2026-10-30).* App Store Connect 등록 내용 작성을 마치고 "github main 최신으로 xcode 를 통해 빌드" — 빌드 경로는 검토 후 "GitHub Actions 로".
+
+*막힌 것.* App Store Connect 는 2026-04-28 부터 Xcode 26(iOS 26 SDK) 빌드만 받는다. 저장소 주인의 Mac 은 2017 MacBook Pro(`MacBookPro14,3`)라 macOS 14 가 상한이고 Xcode 26(macOS 15.6 이상 필요)을 설치할 수 없다. 로컬 Xcode 16.2 빌드(§108 의 `sdk=iphoneos18*` 약한 링크)는 실기기 설치용일 뿐 업로드하면 거부된다.
+
+*한 것.*
+- `.github/workflows/ios-release.yml` — 수동 실행(`workflow_dispatch`), `ios-build.yml` 의 `ios` 작업과 같은 준비(Xcode 26 선택·도구·`verify_ios_project.py`·`setup-mac.sh`) 뒤 Release 아카이브(`TREX_DEV_TOOLS=NO`, `CURRENT_PROJECT_VERSION` = 입력 또는 실행 번호) → 번들 검사(자세 자산 바이트·매니페스트 두 개·`DTSDKName` ≥ iphoneos26) → `-exportArchive`(`iosApp/ExportOptions-AppStore.plist`, `app-store-connect` + `destination=upload`).
+- 서명: 아카이브는 **개발 인증서 .p12 시크릿 + 자동 서명**, 배포 서명·프로파일·업로드는 **App Store Connect API 키(Admin)** 의 클라우드 관리 배포 인증서. API 키만 주면 새 러너에 개인 키가 없어 실행마다 개발 인증서를 새로 만들거나 기존 것을 폐기하려 한다(Apple 개발자 포럼에 같은 보고가 여럿) — 그래서 저장소 주인 Mac 의 `Apple Development` 인증서를 임시 키체인에 넣고 실행 끝에 지운다. 시크릿 다섯 개와 절차는 `docs/IOS_APP_STORE_RELEASE.md`.
+- **개인정보 매니페스트** — 앱에 `PrivacyInfo.xcprivacy` 가 없었다. App Store 는 '사유 필요 API' 를 쓰는 바이너리에 선언이 없으면 업로드를 받지 않는다(ITMS-91053). 10-30 로컬 Release 빌드의 `nm -u`·`strings` 로 실제 쓰는 것만 적었다: `NSUserDefaults`(`KeyValueStore`) → `CA92.1`, `stat`/`fstat`(Kotlin/Native 런타임·앱 컨테이너 파일) → `C617.1`, `NSProcessInfo.systemUptime`(`PlatformUi.elapsedRealtimeMs`·`PostureCameraIos.uptimeUs`) → `35F9.1`. 앱 것은 `iosApp/Trex/Resources/`(기존 resources 단계), 음식 런타임 프레임워크(`stat`/`fstat`, 링크된 TFLite)는 `iosApp/TrexFoodRuntime/` + project.yml 에 resources 단계로 명시. 추적 = false. 수집 데이터 항목은 App Store Connect 라벨이 정본이라 비워 둔다.
+
+*포기·미검증.* 워크플로는 아직 한 번도 돌지 않았다 — 시크릿이 들어간 뒤 첫 실행이 검증이다. `workflow_dispatch` 라 main 에 들어가야 Actions 목록에 나온다. 매니페스트의 범주는 Xcode 16.2 빌드에서 뽑았으니 Xcode 26 링크 결과에 새 API 가 생기면 Apple 메일(ITMS-91053)로 알 수 있다.
+
+### §121a. 배포 시크릿은 보호 환경에만 — 팀원 브랜치가 읽지 못하게 (2026-10-30, `chore/app-store-secrets-guard`)
+
+*요청(동현님 2026-10-30).* "다른 팀원이 이거 악용 가능하니?" → 적용.
+
+*위험.* 저장소는 공개, 쓰기 권한 팀원 2명, main 보호 없음. 저장소 시크릿이면 쓰기 권한자 누구나 자기 브랜치에 시크릿을 출력·전송하는 워크플로를 올려 꺼낼 수 있다(로그 가림은 base64 로 우회된다). App Store Connect API 키(Admin)는 앱 메타데이터·빌드 업로드·심사 제출·출시·인증서 폐기까지 된다.
+
+*한 것.*
+- 환경 `app-store`: 필수 승인자 = 저장소 주인, 배포 브랜치 = `main` 만, `prevent_self_review` 끔(주인이 자기 실행을 승인해야 하므로). 시크릿 다섯 개는 **이 환경의 시크릿**으로만 넣는다 — 다른 브랜치·PR 이벤트의 작업은 받지 못한다. `ios-release.yml` 의 작업에 `environment: app-store`.
+- `.github/CODEOWNERS`: `/.github/`·`ExportOptions-AppStore.plist`·`iosApp/project.yml` = 저장소 주인.
+- main 규칙셋 `trex-main`: PR 로만 병합, 코드 소유자 리뷰 필수, 강제 push·삭제 금지. 저장소 관리자는 우회(주인의 직접 push 유지).
+
+*남은 위험.* 승인된 실행은 main 의 코드(gradle 빌드 스크립트·`tools/*.py`·`setup-mac.sh`)를 API 키 파일이 있는 러너에서 돌린다. CODEOWNERS 밖의 빌드 스크립트가 PR 로 바뀌면(팀원끼리 리뷰 없이 병합 가능) 다음 승인 실행에서 키를 읽을 수 있다 — 승인 전 직전 실행 이후 main 에 들어온 변경을 본다. 키는 App Store Connect 에서 즉시 폐기할 수 있다.
+
+### §121b. 첫 업로드 실패 — 앱에 넣은 프레임워크의 버전 키 (2026-10-30, `fix/ios-framework-version`)
+
+첫 실행(run 41020468870)은 서명·아카이브·번들 검사를 통과했고 App Store Connect 분석에서 거부됐다: `Payload/Trex.app/Frameworks/TrexFoodRuntime.framework` 의 Info.plist 에 `CFBundleShortVersionString` 이 없음. 이 프레임워크는 `GENERATE_INFOPLIST_FILE` 인데 `MARKETING_VERSION` 이 앱 타깃에만 있었다. `MARKETING_VERSION`·`CURRENT_PROJECT_VERSION` 을 project.yml 프로젝트 설정으로 올려 두 타깃이 같은 값을 쓰게 하고, 워크플로의 아카이브 검사가 앱과 모든 내장 프레임워크의 버전 키를 출력(없으면 실패)하게 했다. 개인정보 매니페스트(§121)는 이 분석에서 지적되지 않았다.
+
+## §122. iPhone 종목 전환의 한 프레임 겹침 — 카메라 다리 세대·미리보기 뷰 개별화, 끊고 바로 말하기 지연 (2026-10-30, `feature/shared-ui-muscle-navigation`)
+
+10-30 iPhone 보고 3건(Android 는 정상). 2·3번은 뿌리가 하나다.
+
+**겹침.** `TrexApp` 의 `AnimatedContent` 는 `contentKey = 화면 to workout.id` 라 자세 종목 A → B 로 넘어가면 B 의 `PostureLiveSessionScreen` 이 먼저 올라오고 A 는 `fadeOut(tween(0))` 이어도 다음 프레임에야 내려간다. Android 는 화면마다 CameraX 유스케이스·`PreviewView` 가 따로라 A 의 정리가 B 에 닿지 않지만, iPhone 의 카메라 다리(`PoseCameraBridge`)와 미리보기 UIView 는 앱에 하나였다.
+
+- **2번(다음 종목 준비 화면이 멈추고 인식·카운트다운이 없음).** B 의 `stream` 이 `bridge.start()` 를 지난 뒤 A 의 stream 취소가 `bridge.stop()` 을 불러 sink 를 비우고 세션을 끄는데, B 를 다시 켜 주는 코드가 없다. → `start(front, generation, sink)`/`stop(generation)`: `IosCameraBridgeRegistry.nextGeneration()`(stream 마다, 메인)을 넘기고 다리는 **마지막 start 의 세대일 때만** 끈다.
+- **3번(근육 피로도 화면에 카메라 잔상).** 겹친 프레임에 두 `UIKitView` 가 같은 미리보기 UIView 를 쥔다. Compose Multiplatform 의 인터롭 장부(`IosInteropContainer.interopViews`)는 **UIView 객체가 키**라 B 의 등록이 A 를 덮고, A 의 `unplace` 가 그 키를 지우며, B 의 `unplace` 는 `if (!container.contains(this)) return` 으로 아무것도 안 해 B 의 래퍼(멈춘 미리보기)가 UIKit 계층에 남는다. 뒤에 오는 인터롭 뷰는 장부 기준 인덱스 0 에 들어가 그 아래 깔리므로, 근육도 WebView 가 Compose 층에 뚫은 구멍에서만 잔상이 비친다(1.10·jb-main 소스 확인). → `makePreviewView()` 가 부를 때마다 새 `CameraPreviewView`(한 세션에 미리보기 레이어 여럿 가능), `onRelease` 에서 `releasePreviewView` 가 세션을 뗀다. 사진 식단 카메라(`FoodPhotoBridge.makeCameraView`)도 같은 패턴이라 같이 바꿨다.
+- **1번(준비 화면 첫 설명이 가끔 안 나옴) — 미확정.** 설치된 1.3.0 (2) 는 배포 빌드라 발화 기록이 없다. 코드에서 본 것: ESS 문장은 들렸는지와 무관하게 `PreparationIntro.mark` 로 30분 동안 다시 안 나온다(설계). iOS 전용 후보 ① `IosSpeechEngine.speak(flush)` 가 `stopSpeaking(Immediate)` 직후 같은 틱에 `speakUtterance` — AVSpeechSynthesizer 는 stop 이 비동기라 새 문장이 함께 취소되거나 시작 사건 없이 사라지는 일이 있다(Android QUEUE_FLUSH 는 원자적). → 끊은 발화 수만큼 종결 사건(didCancel)을 기다렸다가 내고, 상한 400 ms(`STOP_SETTLE_MS`) 안에 안 오면 그냥 낸다(기록 `tts_deferred`). ② 공유 코드: 다음 종목 준비 화면은 직전 세트 꼬리 뒤에 설명을 줄 세우는데 꼬리가 상한 10 s 를 넘기면 `finished()` 의 `queue.stop()` 이 그 설명까지 지웠다(느린 iPhone 기본 음성일수록). → `SpeechQueue.expireTail()` 이 꼬리의 카운트·보류분만 버리고 경계 안내는 남겨 `onDone` 으로 잇는다(`SpeechQueueTest.expiredTailDropsItsCountsButKeepsTheNextSetsBoundaryGuidance`). 확정은 개발 빌드의 `feedback-*.jsonl` 에서 `prep armed` 뒤 `tts_submit → tts_start/tts_stop/tts_deferred` 로 본다.
+
+지키는 것: Android 동작 불변(§108 기준 8항 — 바꾼 공유 코드는 꼬리 만료 한 줄이고, 그 의도("꼬리 상한을 넘겼는데 아직 남아 있다")는 같다). 플랫폼 경계(`IosCameraBridge`·`IosFoodPhotoSource`)만 시그니처가 바뀌었다.
+
+**후속(같은 날 저녁) — 종목 전환 9 s 멈춤.** 개발 빌드의 발화 기록(`feedback-20261030.jsonl`): `speech_handoff` 23:00:26.0 → 다음 종목 `prep armed` 23:00:35.2. 세트 마감(`set_end` → handoff 0.34 s)은 빠르고, 멈춤은 다음 화면의 효과가 돌기 전이다. 그 사이 메인 스레드가 한 일은 카메라 다리의 `queue.sync { configure }`(돌아가는 세션의 입력 제거·추가 → `commitConfiguration`)와, 위 3번 수정이 더한 미리보기 레이어의 세션 붙이기·떼기(이것도 돌아가는 세션의 재구성)다. → (a) `start` 는 구성·시작을 카메라 큐에서 하고 결과를 `IosCameraFrameSink.onStarted(failure)` 로 메인에 돌려준다(Kotlin `stream` 은 `CompletableDeferred` 로 기다린다 — 메인은 막히지 않는다). (b) 같은 렌즈가 이미 구성돼 있으면 재구성하지 않는다. (c) 미리보기 레이어는 하나를 세션에 한 번만 붙이고, Compose 에는 호출마다 **새 컨테이너 UIView** 를 주어 레이어를 그 안으로 옮긴다(`releasePreviewView` 는 아직 그 컨테이너 안에 있을 때만 뺀다) — 3번의 "뷰 개별화" 는 컨테이너 단위로 지키면서 세션 재구성은 없앤다. 사진 식단 카메라도 같은 구조.
+
+## §123. 덤벨 컬 1단 — 코칭 띠에서 차단 (2026-11-01, 사용자 결정 2026-10-15, `repform_v0.15`)
+
+**배경.** Play 1.3.0(versionCode 14, 10-30 이후 main 빌드)에서 사용자 보고 "팔꿈치가 벌어지거나 허리를 숙이면 오류는 잡는데 그 회를 횟수로 센다". 11-01 폰 개발자 빌드(main, repform_v0.14) 덤벨 컬 29회 세트(COACH·정면)로 재현: 사이클 29회 · 정확 18회. 음성 기록(`feedback-20261101.jsonl`)과 반복 판정을 맞추면 **지적을 듣고도 세진 회가 6회** — 옆 벌림 Δ +0.17~+0.22(원값 0.28~0.38) 5회, 상체 숙임 +17.5° 1회. 전부 2단 검사의 **코칭 띠**(위반이지만 `gate = false`)였다: 옆 벌림 코칭 +0.15∧원값 0.30 / 차단 +0.20∧원값 0.35, 상체 숙임 코칭 +15° / 차단 +20°(§62c 후속 10).
+
+**결정의 출처.** 2026-10-15 사용자 결정 "덤벨 컬 차단으로 변경"(§108 보고 뒤)은 `claude/sync-local-main-changes-bb8f7d` 워크트리(베이스 10-14 `ca7f1fa0`)에 `repform_v0.16` 으로 구현됐으나 **미커밋·미병합**이었다. main 과 Play 빌드는 그 결정 전 동작이었다. 여기서는 그 작업 중 덤벨 컬 1단만 main 에 옮긴다(같은 워크트리의 §108 가까운 팔 위상·판정 수 표기·스쿼트 깊이 차단은 옮기지 않았다 — 별도 결정).
+
+**변경(`RepFormSpecs.curl`, `oneTier = ex == "덤벨 컬"`).** 2단 검사 4개의 차단 띠를 뗀다 — 코칭 띠 위반 = 차단(1단, `gateHi = null`, 옆 벌림은 `gateAbsMin` 도 null):
+
+| 검사 | 종전(코칭 / 차단) | 지금(덤벨 컬) | 바벨 컬 |
+|---|---|---|---|
+| 상체 숙임 | +15° / +20° | +15° 부터 차단 | 2단 그대로 |
+| 팔꿈치 옆 벌림(정면) | +0.15∧0.30 / +0.20∧0.35 | +0.15∧0.30 부터 차단 | 2단 그대로 |
+| 팔꿈치 앞 이탈(사선) | +0.12 / +0.20 | +0.12 부터 차단 | 2단 그대로 |
+| 팔꿈치 몸에서 떨어짐(사선) | +0.25 / +0.40 | +0.25 부터 차단 | 2단 그대로 |
+
+정책은 스쿼트 무릎 벌림 §101f 와 같다 — 말한 회는 세지 않는다. 상체 숙임이 +15° 부터 차단 단계가 되므로 그 회의 옆 벌림·떨어짐은 `invalidatedBy` 로 '측정 무효' 유보가 된다(회는 숙임으로 이미 빠진다). 바벨 컬은 결정 범위 밖이라 2단 그대로다.
+
+**비용(사용자 정의 게이트 예외).** 코칭 띠의 모집단 정상 오탐은 차단 띠보다 높다 — 앞 이탈 AIHub D/B 5.4·3.3 %, 떨어짐 7.4·4.6 %, 옆 벌림 MM-Fit 0.7·AIHub 2.9 %(단일 프레임 상한). 10-15 워크트리의 MM-Fit 컬 298회 재생에서 자세로 빠지는 회 13 → 15. 원칙 #7 의 입장 조건(≤ 2 %)을 넘지만 사용자 결정이다.
+
+**검증.** 11-01 세트 로그를 재생기(`setlog_captures.py` → `run_replay.py`, 재생기 installDist 재빌드)로 새 엔진에 돌리면 정확 **18 → 12 / 29회** — 코칭 띠 6회가 그대로 빠진다. 앱 JVM 테스트 883건·`posture-core` jvmTest 528건 통과(`RepFormTest` 의 컬 2단 테스트 4건을 1단으로 고침, 바벨 컬 2단 유지 단언 추가)· iOS 는 생성본(`tools/sync_ios_core.py`, `--check` 통과)이라 같은 `RepFormSpecs` 를 쓴다 — `ios-ui` 컴파일은 Mac 에서. **실기기 재확인은 사용자가 한다**(11-01 세트와 같은 조건으로 — 코칭 띠 회가 "이 회는 세지 않았어요" 와 함께 빠지는지).
+
+**부수 발견(미수정).** 11-01 세트 77.3 s 회는 옆 벌림 차단으로 빠졌는데 음성은 우선순위가 앞선 상체 숙임(그때 코칭 띠, 차단 아님) 문장만 말해 "이 회는 세지 않았어요" 가 빠졌다 — `eventFor` 가 첫 위반 검사의 `gated` 만 보기 때문. 1단에서는 숙임도 차단이라 이 경우가 사라지지만, 2단 검사가 남은 종목(바벨 컬·런지)에서는 같은 틈이 있다.
+
+## §124. 굿모닝·푸시업·프런트 레이즈·사이드 레터럴 레이즈 — 반복 검사(beta 참고)와 카운터 신호 (2026-11-01, PR 59 에서 분리, `repform_v0.16`)
+
+**출처.** Kercy-kim 의 PR 59(`feature/posture-aes256`, 커밋 `b792538a`, 10-31)는 Android AES-256 암호화와 네 종목 자세 교정을 한 커밋에 담았다. 사용자 요청(2026-11-01 "aes256 없이 운동 구현이랑 덤벨컬 수정한 것만 올릴 수 있니")으로 **암호화를 뺀 운동 부분만** 체리픽했다(`security/`·SQLCipher·`SetLogStore`·`AndroidSpeech`·`PostureBaseline`·`PostureSetLabel`·`PostureSetLogExport`·`MainActivity`·`AndroidPlatform`·백업 규칙·`PostureLabScreen` 내보내기 비동기화는 제외). 원 PR 은 스펙 절이 없었고 코드 주석이 §123·§123a·§123b 를 가리켰다 — §123 은 덤벨 컬 1단이라 **§124·§124a·§124b 로 바꿨다**. 버전은 원 PR 의 `repform_v0.17` 대신 v0.16(v0.15 = §123).
+
+**설계(원 PR 그대로, 파일 `posture/FourExerciseForm.kt`).** 운동 설명은 임계값 검증 자료가 아니다 — 새 반복 검사는 **전부 beta·화면 참고**(`gates = false`, 음성·점수 없음), 척추 분절·근육의 힘·반동의 원인은 못 본다고 `scopeLines`(시작 안내)와 `four_scope|…` EXCLUDE 규칙(`RepFormRules.fourExerciseScopeRules`)으로 밝힌다(원칙 #5). 새 통계 `RepFormStat.SPAN`(반복 안 p90 − p10), 관측 조건 `minSamples`·`minCoverage`(0.6)·`requireView`(뷰 모름 = 유보 "촬영 방향 확인 필요"), 참고 문장에 고치는 말을 붙이는 `referenceFix`, 참고를 창 규칙·바닥 피드백이 지우지 않게 `PostureLive.repReferenceNote` 로 따로 보관.
+
+| 종목 | 카운터 신호(변경 전 → 후) | 반복 검사(beta) |
+|---|---|---|
+| 굿모닝 | `hip_mean` → `goodmorning_hinge`(목–골반 선의 전후 회전, `PostureCore`) — 고관절각은 허벅지만 움직여도 바뀐다 | 쪽별 무릎 움직임 SPAN ≤ 20°, 하단 무릎 과굽힘 < 140° (C·B·D) |
+| 푸시업 | 양쪽 평균 `wrist_shoulder_d` → 보이는 쪽 사슬 `pushup_distance`(`FloorChain.Kind.PUSHUP`), **엎드림 `pushup_posture` = 1 인 프레임만 사이클을 잇는다**(`RepSignal.requiredPostureFeature` — 모름·0 이면 후보 폐기, `RepCounter`); 옛 ROM 0.71 은 새 신호에 이식하지 않음(`FloorTemporal` 유보 "재검증 필요") | 골반 정렬 ±0.08, 다리 펴기 ≥ 150°, 하단 팔꿈치 ≤ 120°(§124b), 시작 팔 펴기 ≥ 150° (측면만) |
+| 프런트 레이즈 | `forearm_vert_mean` → `upperarm_vert_mean`(팔꿈치를 굽혀도 위팔 올림을 센다) | 상체 기울기 ≤ 25°, 몸통 흔들림 SPAN ≤ 20°, **팔 높이**(§124a) |
+| 사이드 레터럴 레이즈 | 〃 | 쪽별 팔꿈치 굽힘 135~175°, 팔 경로 `raise_plane` 5~60°(든 구간만), **팔 높이**(§124a) |
+
+네 종목 모두 옛 ROM 임계를 떼서 '범위 미판정'(`romValidated = false`, `RepRomTier.NONE`) — 이전 신호의 보정값을 새 신호에 이식하지 않는다. 푸시업 바닥 피드백은 엎드림 미확인이면 `UNAVAILABLE`("엎드린 자세를 확인하지 못했어요 …", 무음). 옛 푸시업 신호를 쓰는 회귀 테스트는 니푸쉬업 설정으로 옮겼다.
+
+**§124a — 레이즈 팔 높이 미달의 COACH 횟수 제외(확인 필요).** 두 레이즈의 '팔 높이' 검사만 `gates = true, gateHi = 125°, countOnlyDirection = HIGH`: 올린 구간 위팔각 중앙값이 125° 를 넘는(= 어깨 높이에 못 미친) 회를 COACH 에서 빼고 화면 참고에 "이 회는 세지 않았어요" 를 붙인다(`RepFormOutcome.countOnlyGate`, `RepFormRep.correct`). 너무 높음·미관측·다른 beta 는 빼지 않는다. 원 PR 주석은 "사용자 요청(2026-10-31): 기존 높이 미달 차단만 복원" 이라 적었으나 **이 저장소의 결정 기록에는 없다**(10-14 메모 'beta 로 회 빼기 는 미결정'). beta 가 회를 빼는 것은 원칙 #2 의 예외이고, 빠진 회를 **음성 없이** 빼므로 사용자가 카운트가 죽은 줄 알 수 있다(§62b "빠진 회를 침묵하면 …"). 저장소 주인이 확인하기 전까지 **사용자 정의 게이트 예외(확인 대기)** 로 둔다 — 확인되지 않으면 `gates = false` 로 되돌린다.
+
+**§124b — 푸시업 팔 굽힘 범위.** 하단 창 보이는 쪽 팔꿈치각 ≤ 120°(얕은 하강 참고)와 하강 직전 상단 창 ≥ 150°(시작 팔 펴기). 상완·전완이 몸통의 0.15 미만으로 겹친 프레임의 가짜 90° 는 쓰지 않는다. 둘 다 잠정 띠.
+
+**근거(이 절에서 더한 것).** 원 PR 에는 재생 근거가 없었다. MM-Fit 사이드 레터럴 레이즈 13세트(`data/mmfit_arms_mp_captures`)로 `tracker_ab.py`(변경 전 = main+§123 재생기, 변경 후 = PR 59 재생기): MAE 2.15 → **1.08**, 앞뒤 헛카운트 포함 정확 0.15 → **0.85**, 정확 일치 0.38 → 0.38, 과다·0회 세트 0 → 0, 최악 세트 w18_set26 2 → 8회(정답 10). 위팔각 신호가 전완각보다 낫다. **프런트 레이즈·굿모닝·푸시업은 모집단 캡처가 없어 A/B 가 없다** — 폰 평문 로그도 8월 푸시업 9세트·굿모닝 1세트뿐. 푸시업은 엎드림 게이트가 틀리면 0회가 되는 구조(런지 v1 의 발 앵커와 같은 위험, §96)라 폰 세트가 먼저다. 같은 재생에서 오버 헤드 프레스는 전후 모두 12세트 전부 0회(이 절과 무관, 기존 공백).
+
+**검증.** 앱 JVM 테스트·`posture-core` jvmTest 통과(커밋 메시지 참조), `tools/sync_ios_core.py --check` 통과(`NAMES` 에 `FourExerciseForm` 추가). 실기기는 미확인 — PR 59 빌드로 11-01 14:34 에 찍힌 세트는 `.aes` 라 읽지 못했다.
+
+**원 PR 에 남는 것(여기 포함 안 함).** AES-256 로컬 암호화(PR 59)·iOS 암호화(PR 60). 암호화가 들어오면 세트 로그 `.aes` 를 `pull_logs.py`·재생기가 읽을 길(개발자 빌드 평문 예외 또는 복호 도구)이 같이 와야 실검증 루프(DEV_TOOLS.md)가 유지된다.
+
+## §125. 뼈대·화살표 색 = 결과 — 빨강(회 제외) · 주황(말했지만 셈) · 호박(참고) (2026-11-01, 사용자 요청)
+
+**요청.** "코칭 라인과 차단 라인이 빨간색으로 같은데 주황색으로 표현해서 다르게 표현했으면 좋겠어, 헷갈리지 않게." 종전 색의 뜻은 **말함/안 말함**이었다(`docs/LIVE_SCREEN_REDESIGN.md` §2.3 — 붉음 = 말하는 판정(ship), 호박 = 말하지 않는 판정(beta)). 2단 검사(§62c 후속 10·§101f)가 생긴 뒤로는 ship 위반에 '말만 하고 센 회(코칭 띠)' 와 '뺀 회(차단 띠)' 가 있는데 둘 다 빨강이라, 사용자는 빨강을 보고 회가 빠졌는지 알 수 없었다. 검토 결론: **색의 뜻을 '결과' 로 바꾼다** — 사용자가 화면에서 알아야 할 것은 "이 회가 세어졌나" 이지 "앱이 말했나" 가 아니다(말했는지는 귀로 안다).
+
+| 색 | 뜻 | 들어가는 것 |
+|---|---|---|
+| 빨강 `WARN` FF5A5A | 이 회(시간)를 **뺐다** | ship 차단 띠(`gate`), §124a 명시적 횟수 예외(`countOnlyGate`), 판별 기각(REASON), 가동 범위 미달(ROM), 플랭크 멈춤(HOLD), 세지 않은 얕은 걸음 |
+| 주황 `COACH` FF8C42 | **말했지만 셌다** | ship 코칭 띠(2단 검사의 아래 띠), 세트 창 규칙(WINDOW — 점수엔 들어가지만 회는 빼지 않는다), 유지 자세(반복이 아님), 처음부터 알림(NOTICE), 시선(GAZE — 횟수를 막지 않는다) |
+| 호박 `PROVISIONAL` FFC24B | 말하지 않는 **참고**(beta) | 종전 그대로. 바닥 계열의 그림(`soft`)도 그대로 |
+
+구현: `RuleHighlight.tiers(rep)` → `RepFormHighlight(blocked, coaching, provisional)`(같은 관절은 센 쪽만 — 빨강 > 주황 > 호박; 종전 `forRepForm` 두 채널은 재생기·테스트용으로 그대로), `SkeletonStage(highlight, coaching, provisional)` 세 채널 — 주황은 **빨강과 같은 굵기**(연결선 1.8×, 관절 6 dp, 바깥 원)로 그려 호박(1.3×, 5 dp)과 굵기로도 갈린다(주황·호박은 색상환에서 이웃이라 색만으로는 약하다). `MotionCue.blocked`(기본 true) — 반복 검사 화살표는 `RepFormEvent.gated`, 창 규칙·알림·유지 자세·시선은 false. `PostureLive` 에 상태 하나(`formCoachHighlight`) — `PostureLiveSessionScreen` 지역 변수 한도(dex 256 레지스터) 때문에 설치 뒤 `cmd package compile -m verify` 로 확인했다(커밋 메시지 참조). TRACK·준비·일시정지·바닥은 종전처럼 빨강·주황 없음. iOS 는 같은 `SkeletonStage`·`PostureLive`(§108c) 라 함께 바뀐다.
+
+테스트: `RepFormTest.coachingTierIsPaintedOrangeAndBlockingTierRed` — 바벨 컬(2단) 상체 숙임 +17° → 주황, +27° → 빨강(같은 관절은 주황에 남지 않음), 덤벨 컬(1단, §123) +17° → 빨강.
+
+**§125a — 글자 대신 기호(검토안, 미구현).** 같은 날 추가 요청: "말 대신 화살표나 다른 기호로 표현하는 것도 검토해, 실제 운동 시 너무 작아서 텍스트가 안 보여." 현재 세트 중 화면 글자는 넷 — 교정 문장(`formNote`), 안내(`guideNote`), 참고 칩(`referenceNote`/`provisionalNote`), 창 규칙 배너(`coachBanner`). 이 가운데 **교정의 '무엇을·어디로'** 는 이미 글자가 아니라 화살표가 맡는다(§101 — "말하는 사유 ⇒ 그림", `CueMotionCoverageTest` 가 잠근다; 방향이 없는 지적은 점 `MARK`). 글자에만 남아 있는 정보는 두 가지다: (1) **이 회가 빠졌다** — "이 회는 세지 않았어요" 는 글자와 낮은 틱뿐이고 HUD 숫자는 '안 오름' 으로만 보인다, (2) **참고(beta)** 의 내용. 제안: (1) 은 HUD 큰 숫자 옆에 **빨간 ✕ 배지 + 숫자 붉은 점멸 1.2 s**(글리프 = 결과, §125 색과 같은 뜻) — 글자는 남기되(완료 화면·접근성) 읽지 않아도 알게 한다; 코칭 띠는 주황 화살표만으로 충분하고 배지는 없다(회가 셌으니까); (2) 참고는 호박 관절·점이 이미 위치를 말하므로 칩을 문장 대신 **ⓘ 아이콘 + 부위 한 단어**로 줄인다. 하지 않을 것: 교정 문장을 더 큰 글자로 — 2~3 m 에서 폰 글자는 어떤 크기여도 읽기 어렵고 화면 자리를 먹는다; 기호 어휘를 늘리는 것(✕·화살표·점 셋을 넘기면 다시 외워야 한다). 비용: HUD 한 줄(`LiveWorkoutHud`)과 `PostureLive` 상태 하나(레지스터 한도 — 홀더 `LiveSessionRefs` 에 둔다). **결정 대기** — 승인되면 §125b 로 구현.
+
+## §126. 헐렁한 옷(통 큰 소매·펑퍼짐한 바지)과 덤벨 컬·런지 판정 — 연구, 구현 전 (2026-11-01, 사용자 보고)
+
+**보고.** "덤벨 컬이랑 런지할 때 통이 크거나 펑퍼짐한 옷을 입으면 자주 오류를 발생해." 연구는 `docs/LOOSE_CLOTHING_RESEARCH.md`. 폰 미연결·옷 라벨 세트 없음이라 기전 분석·대리 지표 기준값·방안·블록 설계만이고 **임계는 바꾸지 않았다**.
+
+**기전.** MediaPipe 는 옷 속 관절의 자리를 실루엣에서 지어내고 그때 `visibility` 는 떨어지지 않는다(§101c·§101d 와 같은 성질) — 가시성 0.5 문턱은 옷에 무력하다. 팔꿈치(소매)·무릎(바지통)·골반(헐렁한 상의)이 깨지고 손목·발목·어깨·머리는 비교적 안전하다. 소매·바지통의 오프셋은 동작 위상에 따라 변해 본인 기준(고정 오프셋 상쇄)으로 못 지운다. **컬에서 가장 의심되는 경로**: '팔꿈치 옆 벌림' 의 `refCap` 0.19 · `absMin` 0.30 — 소매가 팔을 내린 자세의 원값을 0.30 위로 올리면 기준은 0.19 에서 잘려 매 회 Δ ≥ +0.15, 1단(§123)이라 **매 회 차단**. '처음부터 벌어져 있어요' 알림(`refNotice` 0.30)이 들렸다면 이 경로다 — 로그의 회별 `raw`·`ref` 로 바로 확인된다. 런지는 앞무릎 깊이(절대 90°, 본인 기준 없음)·카운트 신호(무릎각)·앞다리 쪽(발목 z, 밑단)이 노출되고 편향 방향은 미상.
+
+**대리 지표.** `research/external_rep_replay/clothing_proxies.py` — 세트별 관절 가시성·2D 흔들림 p90·**월드 마디 길이 CV**(뼈는 안 변한다). 로컬 42세트 일상복 기준값: 상완 0.05~0.11, 전완 0.06~0.15, 허벅지 0.01~0.13, 정강이 0.01~0.09, 몸통 0.01~0.07 — 옷 세트가 이 띠를 분명히 넘어야 지표로 쓴다.
+
+**방안(순서).** A 종목 준비 카드·시작 문장에 옷 안내(원칙 #5, 지금) → B 옷 불확실 지표가 문턱을 넘는 세트는 COACH 에서 그 관절에 기대는 차단을 코칭(주황, §125)으로 강등하고 화면·완료 화면에 이유(원칙 #1·#6; B' = 그 세트에서 `refCap` 해제) → C `pose_landmarker_heavy` 는 영상 A/B 뒤(로그는 랜드마크뿐이라 재생으로 못 잰다, 85 ms 격자 위험) → D 런지 깊이의 골반 하강 교차 확인은 블록이 '얕게 읽힘' 이면. 하지 않을 것: 옷 때문에 모집단 임계를 넓히기(원칙 #4), 옷 세트를 정상으로 세기, 라벨 없는 한 세트로 문턱 정하기.
+
+**블록(§5).** 같은 폰 위치에서 옷만 바꿔 컬 정면·사선, 런지 사선·옆 — 정상/지정 오류 세트, 자가 라벨 메모에 `옷: …`. 붙는 옷 정상 차단 0 vs 통 옷 정상 차단 ≥ 2/10 이면 옷 효과 확정. 블록 일정은 미정.
+
+**구현 — 방안 A(2026-11-01 저녁, 사용자 결정 "방안 A 를 구현").** `ExerciseProfiles.kt` 의 `CLOTHING_LINES`(앱 이름 키, 컬 둘·런지 넷)와 `ExerciseProfile.clothingHint` — 준비 카드(`CapturePreparationUi`)가 '세는 조건' 아래 옅은 글자로 보이고, 준비 전문(`preparationInstruction`)에도 3초 약속 앞에 들어간다. 음성은 첫 문장만(`CLOTHING_VOICE`, "팔꿈치가 보이는 옷을 입어 주세요." 14음절 / "무릎과 발목이 보이는 바지를 입어 주세요." 17음절) **맨 뒤 DET** 로 — 세는 조건보다 뒤, 시작 전에 끝날 때만(§101 예산). 문장은 '횟수에서 빠질 수 있어요' 까지만 말한다 — 1단·깊이 차단이 실제로 하는 일이고, 옷을 입은 세트를 정상으로 세지는 않는다(연구 §6). `countingConditions`('세는 조건') 에는 섞지 않는다. `PostureScope.startLine` 의 '못 본 것' 문장은 지금 어느 화면에도 닿지 않는 경로(`rememberPostureScope`·`scope` 미사용)라 손대지 않았다 — 완료 화면 문장은 B 와 함께. 잠금: `CapturePreparationTest.clothingHintOnlyForCurlAndLungeFamilies`, `PreparationVoiceTest`(음절 예산). 임계·규칙 변경 없음(`rules_version` 그대로). iPhone 은 `posture-core` 동기화 + 공유 `CapturePreparationUi` 로 같은 카드.
+
+
+## §127. Four additional local exercise guides (2026-11-01)
+
+Add bodyweight good morning, standard toe-supported push-up, dumbbell front raise
+and dumbbell lateral raise to `ExerciseGuides`, taking the catalog from 10 to 14.
+Each has a dedicated two-pose 640 x 640 GIF (900 ms/frame), setup, movement,
+breathing and caution text. Reusing exact-name lookup preserves the existing guide
+entry points and first-preparation pause/seen-state behavior without new UI state.
+The posture engine is untouched: educational instructions do not become assessment
+rules or validated camera directions. Unsupported variants remain unsupported.
+
+The Swift JSON export and its bundle test count follow the Android source. Source
+adaptations, generated-art limitations and verification are recorded in
+`docs/EXERCISE_GUIDE_UI.md` (2026-11-01 section); image provenance and encoding
+are in `app/src/main/assets/exercise_guides/README.md`.
+
+Verification: Android 883 unit tests, assembleDebug and lintDebug passed; all four
+APK GIFs match source bytes. iOS resource export check passed. Full iOS static
+verification is blocked by missing PyYAML; native iOS and device playback were not run.
+
+
+### §127a. Good morning clothing and muscle-highlight audit (2026-11-01)
+
+Replace both good-morning frames with intact opaque shorts; retain the same GIF
+contract and exposed posterior-thigh highlight. Audit the four new guides against
+primary EMG/biomechanics publications. Main target choices are broadly defensible,
+but spinal extensors (good morning), serratus/anterior deltoid (push-up), and
+clavicular pectoralis (front raise) are omitted. Lateral-raise middle deltoid emphasis
+is reasonable but does not cover cuff/scapular participation. Exact shoulder mask
+boundaries and color intensity are not validated. Findings and source applicability
+are recorded in `docs/EXERCISE_GUIDE_UI.md`; no assessment policy changed.
+Guide tests 6/6 and APK build passed; asset-byte equality verified. Device/native
+iOS playback and human anatomical/EMG validation were not run.
+
+
+### §127b. Evidence-informed assets and explicit camera rollout (2026-11-01)
+
+Replace all four GIFs with red target/orange participation illustrations and add
+qualitative legends to the existing caution tabs. Keep intact good-morning shorts.
+See the guide UI audit for source applicability and anatomical limitations.
+
+User-approved scope is 16 exercises: 14 registered guides plus barbell curl/lunge.
+`ExerciseProfiles.cameraSupportedNames` gates `cameraEnabled` in Android and the
+synchronized shared engine. Keep all 26 profiles/reference mappings for research.
+Disable the other ten catalog posture defaults and use the same support predicate
+for replacement/import/session entry. Stored flags cannot bypass session gating.
+This is availability policy, not promotion of beta/trial/pilot assessment evidence.
+
+Verification: app JVM 914 tests and shared JVM 558 tests passed (zero failures/errors/skips); assembleDebug and lintDebug passed. Resource export and shared-source parity checks passed. All four APK GIFs match source bytes. NOT RUN: device popup/playback and native iOS build (Windows); full iOS static checker requires unavailable PyYAML.
+
+
+### §128. Remaining twelve evidence-informed guides (2026-11-01)
+
+The user requested the remaining 12 of the 16 enabled exercises receive the same
+literature audit and regenerated GIFs. Replace ten existing guides and add
+dedicated barbell curl/lunge guides through ExerciseGuides; do not alias equipment.
+Plank changes to a hold GIF under the latest request. Guide availability and camera
+availability now both contain 16 names, enforced by PostureExerciseMapTest. No
+assessment thresholds, evidence statuses or camera rollout gates change.
+
+Correct the hip-flexor emphasis for knee-up/leg raise and disclose deep iliopsoas;
+distinguish abdominal control from isolated lower-abdominal training. Other deep
+/occluded muscles and cloth overlays are explained in each caution tab. Exact-task
+research is weaker for curtsy and standing side-crunch; do not promote functional
+anatomy to direct validation. Source-by-source applicability and limitations are
+in docs/EXERCISE_GUIDE_UI.md; source image provenance is in the dated JSON manifest.
+
+Android uses the existing sheet. Exported iOS guides and its expected count become
+16. The 12 GIFs remain two-pose illustrations; generated anatomical boundaries are
+not clinically certified.
+
+Verification: app JVM 914 tests passed (zero failures/errors/skips); assembleDebug and lintDebug passed. Resource export --check passed for 16 guides. All 24 decoded poses were inspected at 260 px. NOT RUN: device popup/playback and native iOS build/tests (Windows); clinician review and anatomical mask validation.
+
+## §129. 운동 화면의 beta '참고 · …' 칩 제거 (2026-11-01, 사용자 결정 "호박색 문구는 어차피 못 보니까 제거해")
+
+**배경.** HUD 의 '참고 · …' 칩(`LiveWorkoutHud.referenceNote`, 12sp 호박색, 한 줄 말줄임)은 beta 반복 검사·창 규칙 beta 위반·바닥 '확인 필요' 문장을 말하지 않는 대신 화면에 남기던 자리였다(원칙 #2). 운동 거리(2.5 m, `docs/LIVE_SCREEN_REDESIGN.md` §4)에서 읽히지 않는 글자였고, 코드 확인에서 컬·런지 beta 반복 검사의 칩은 창 규칙 갱신(3 s, `PROVISIONAL_NOTE_GAP_MS`)이 공용 `provisionalNote` 를 덮어 길어야 3 s 만 보이는 결함도 있었다(§124 가 네 종목 검사만 `repReferenceNote` 로 보호).
+
+**변경.** 칩과 그 상태(`provisionalNote`·`repReferenceNote`·`provisionalAtRef`·`PROVISIONAL_NOTE_GAP_MS`)를 `PostureLive`·`LiveWorkoutHud` 에서 뺐다(iPhone 도 같은 공유 파일). **beta 가 남는 자리**: 뼈대·관절 호박색(`provisionalHighlight`·`formProvHighlight`·바닥 `FloorFeedback.points`, §125 색 = 결과)과 완료 화면·세트 리포트의 참고 항목. 음성 정책(beta 는 말하지 않는다 — 바닥 Q1, 컬 '팔꿈치 앞뒤(옆)' 예외 등)은 그대로. 원칙 #2 의 "화면에는 '참고'로 남긴다" 는 이제 **글자가 아니라 색**이다 — 침묵이 '이상 없음' 으로 읽히지 않게 하는 장치는 호박색 뼈대가 맡는다. 호박색으로 남는 글자는 기능 줄뿐: 횟수 메모(자세로 뺀 회·세지 않은 동작, 원칙 #1), "일시정지", 플랭크 멈춤·시계 폴백 줄. 준비 화면의 주황(`warn`) 자리 안내는 운동 거리 밖(폰 앞)에서 읽는 글자라 그대로.
+
+**이유.** 못 읽는 글자는 정보가 아니라 잡음이고, 레지스터 256 함정(§108c)이 있는 `PostureLiveSessionScreen` 의 상태 둘을 줄였다.
+
+## 홈 날씨 — 미세먼지 표시 (#64)
+
+홈의 기존 날씨 그림과 추천 시트를 유지한다. 같은 위치의 Open-Meteo 대기질 API에서 현재 PM10 예측 농도를 받아 홈에 반올림한 값, 시트에 단위(µg/m³)와 출처(CAMS / Open-Meteo)를 표시한다. 종합 대기질 지수를 미세먼지 농도로 오해하지 않도록 농도만 사용한다. 먼지 응답이 없으면 시트에 정보 없음으로 표시하고 날씨·운동 추천은 계속 제공한다.

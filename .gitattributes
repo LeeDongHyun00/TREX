@@ -1,0 +1,5 @@
+# iOS 자산 기준표와 Mac 번들은 Git 정본 LF 바이트로 대조한다.
+/app/src/main/assets/posture/rules_mp_v0.json text eol=lf
+/app/src/main/assets/posture/rules_floor_v0.json text eol=lf
+/app/src/main/assets/posture/normal_pose_reference.tsv text eol=lf
+/iosApp/scripts/*.sh text eol=lf

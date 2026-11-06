@@ -2,26 +2,33 @@ package com.example.trex_kotlin.weather
 
 import kotlin.math.roundToInt
 
+/**
+ * 날씨 → 실내·실외 운동 추천(판정 기준은 KOTLIN_PORTING_SPEC.md '날씨 기반 운동 추천 판정 기준'). 두 플랫폼 공유(§108e) — 순수 Kotlin.
+ */
 object WeatherExerciseRecommender {
+
+    internal const val COLD_THRESHOLD_CELSIUS = 0
+    internal const val HEATWAVE_THRESHOLD_CELSIUS = 32
 
     fun recommend(
         weather: WeatherInfo,
         locationLabel: String,
-        nowMillis: Long = System.currentTimeMillis()
+        nowMillis: Long = com.example.trex_kotlin.nowMillis()
     ): WeatherWorkoutRecommendation {
-        val isPoorAirQuality = weather.aqi?.let { it > 100 } == true
+        // 화면에 보이는 온도(반올림값)와 판정 기준을 일치시킨다.
+        // 예: -0.4°C 는 "0°C" 로 표시되므로 추운 날로 판정하지 않는다.
+        val roundedTemp = weather.temperature.roundToInt()
 
         val isSnow = weather.weatherCode in 71..77 || weather.weatherCode in 85..86
         val isRaining = weather.weatherCode in 51..67 ||
             weather.weatherCode in 80..82 ||
             weather.weatherCode in 95..99
-        val isCold = weather.temperature < 0.0
-        val isHeatwave = weather.temperature > 32.0
+        val isCold = roundedTemp < COLD_THRESHOLD_CELSIUS
+        val isHeatwave = roundedTemp > HEATWAVE_THRESHOLD_CELSIUS
         val isFogOrWind = weather.weatherCode in 45..48 || weather.windSpeed >= 35.0
         val isCloudy = weather.weatherCode in 2..3
 
         val theme = when {
-            isPoorAirQuality -> WeatherThemeMode.CLOUDY
             isSnow -> WeatherThemeMode.SNOWY_COLD
             isRaining -> WeatherThemeMode.RAINY
             isCold -> WeatherThemeMode.SNOWY_COLD
@@ -30,34 +37,14 @@ object WeatherExerciseRecommender {
             else -> WeatherThemeMode.SUNNY
         }
 
-        val isBadWeather = isSnow || isRaining || isCold || isHeatwave || isFogOrWind || isPoorAirQuality
+        val isBadWeather = isSnow || isRaining || isCold || isHeatwave || isFogOrWind
         val environment = if (isBadWeather) WorkoutEnvironment.INDOOR else WorkoutEnvironment.OUTDOOR
         val weatherText = getWeatherDescription(weather.weatherCode)
-        val roundedTemp = weather.temperature.roundToInt()
-        
-        // 미세먼지 수치 포맷팅 (괄호 제거 및 공백 연결로 한 줄 최적화)
-        val airQualityLabel = weather.aqi?.let { aqi ->
-            val statusText = when {
-                aqi <= 50 -> "미세먼지 좋음"
-                aqi <= 100 -> "미세먼지 보통"
-                aqi <= 150 -> "민감군 나쁨"
-                else -> "미세먼지 나쁨"
-            }
-            " · $statusText $aqi"
-        } ?: ""
+        val summary = locationLabel + " · " + weatherText + " · " + roundedTemp + "°C"
 
-        // 👈 [수정 완료] 우측 상단에 지역명이 있으므로 summary에서 locationLabel 제거
-        val summary = weatherText + " · " + roundedTemp + "°C" + airQualityLabel
-
-        val minutesAgo = ((nowMillis - weather.fetchedAtMillis) / 60000L).coerceAtLeast(0L)
-        val updateAgeText = when {
-            minutesAgo == 0L -> "방금 업데이트"
-            minutesAgo < 60L -> minutesAgo.toString() + "분 전 업데이트"
-            else -> (minutesAgo / 60L).toString() + "시간 전 업데이트"
-        }
+        val updateAgeText = updateAgeText(weather.fetchedAtMillis, nowMillis)
 
         val message = when {
-            isPoorAirQuality -> "대기질(AQI ${weather.aqi})이 나빠예룡! 야외 활동을 피하고 실내에서 안전하게 운동해 보세룡."
             isSnow || isCold -> "기온이 낮거나 눈 소식이 있어룡. 실내에서 체온을 높이는 웜업 운동을 권장해룡."
             isRaining -> "비 소식이 있어룡! 실내에서 안전하게 전신 근력 운동을 진행해 보세룡."
             isHeatwave -> "무더운 날씨예룡. 시원한 실내에서 수분을 보충하며 부위별 운동을 해보세룡."
@@ -101,8 +88,19 @@ object WeatherExerciseRecommender {
             weatherSummary = summary,
             updateAgeText = updateAgeText,
             message = message,
-            exercises = exercises
+            exercises = exercises,
+            weather = weather,
         )
+    }
+
+    /** 받은 지 얼마나 됐는지 — 화면이 그릴 때 다시 부른다(추천을 만든 순간에 굳힌 글은 새로 받기에 실패하면 묵은 날씨를 '방금' 이라 한다). */
+    fun updateAgeText(fetchedAtMillis: Long, nowMillis: Long): String {
+        val minutesAgo = ((nowMillis - fetchedAtMillis) / 60000L).coerceAtLeast(0L)
+        return when {
+            minutesAgo == 0L -> "방금 업데이트"
+            minutesAgo < 60L -> minutesAgo.toString() + "분 전 업데이트"
+            else -> (minutesAgo / 60L).toString() + "시간 전 업데이트"
+        }
     }
 
     internal fun getWeatherDescription(code: Int): String = when (code) {

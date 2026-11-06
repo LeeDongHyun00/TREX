@@ -9,9 +9,9 @@ class PlankAssetTest {
     @Test(timeout=10000) fun packagedRulesDetectHeadLiftAndBadStart() {
         val context=InstrumentationRegistry.getInstrumentation().targetContext
         val set=PostureRuleSet.load(context,FLOOR_RULES_ASSET)
-        assertEquals("floor_v0.4",set.version)
+        assertEquals("floor_v0.5",set.version)
         val rules=set.rulesFor("플랭크")
-        assertEquals(3,rules.size)
+        assertEquals(2,rules.size) // floor_v0.5: 몸통·엉덩이 정렬·고개 — 목 정렬은 exclude(rulesFor 는 판정하는 규칙만)
         assertTrue(rules.all { it.kind=="alignment" && it.status==RuleStatus.BETA && it.alignmentConfig!=null })
         val tracker=PlankAlignmentTracker(rules)
         val input=mapOf(PlankGeometry.READY to 1f,PlankGeometry.SIDE to 0f,

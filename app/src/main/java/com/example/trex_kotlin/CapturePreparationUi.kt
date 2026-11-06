@@ -1,11 +1,13 @@
 package com.example.trex_kotlin
 
-import android.animation.ValueAnimator
-import android.os.SystemClock
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material.icons.rounded.SkipNext
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.VolumeOff
 import androidx.compose.material.icons.automirrored.rounded.VolumeUp
@@ -64,10 +66,11 @@ internal fun CapturePreparationPanel(
     onShowGuide: (() -> Unit)? = null,
     guideName: String = profile.name,
     onTogglePause: () -> Unit = {},
+    goalLabel: String = "",
+    setLabel: String = "",
 ) {
     val c = Trex.c
-    val tone = remember { runCatching { android.media.ToneGenerator(android.media.AudioManager.STREAM_MUSIC, 60) }.getOrNull() }
-    DisposableEffect(tone) { onDispose { runCatching { tone?.release() } } }
+    val tone = rememberRepTone(60)
     val controller = remember(profile.name) { CapturePreparationController(profile.floor) }
     var state by remember { mutableStateOf(controller.state) }
     var userPaused by rememberSaveable { mutableStateOf(false) }
@@ -89,8 +92,8 @@ internal fun CapturePreparationPanel(
         if (!paused && !userPaused) {
             // §101(10-08): 카운트다운은 말과 분리됐다 — 범위·안정·방향 근거가 서면 설명 중에도 3초를 센다(숫자 대신 톤). 안내는 우선순위 문장 계획(ESS → PLACE → DET)으로,
             // 문장 하나가 끝난 뒤 다음을 고른다. 시스템이 문장 중간을 자르지 않는다(감시 시한만). 종전엔 한 덩어리 안내(13.6~26.5 s)가 12 s 마감에 잘리고 그때야 '3' 이 났다
-            controller.arm(SystemClock.elapsedRealtime()); state = controller.state
-            val now = SystemClock.elapsedRealtime()
+            controller.arm(elapsedRealtimeMs()); state = controller.state
+            val now = elapsedRealtimeMs()
             speech.traceFeedback("prep", "armed ${profile.name}")
             if (!introductionGiven && !speech.muted && PreparationIntro.due(profile.name, now)) {
                 val lines = profile.preparationLines()
@@ -98,7 +101,7 @@ internal fun CapturePreparationPanel(
                 while (!speech.muted && controller.isAutomatic && !reasonSpoken) {
                     val st = controller.state
                     val counting = st.phase == PreparationPhase.COUNTDOWN
-                    val t = SystemClock.elapsedRealtime()
+                    val t = elapsedRealtimeMs()
                     // 가장 이른 시작: 카운트 중이면 남은 초, 아니면 안정 0.4 s + 방향 0.68 s + 3 s
                     val earliest = t + (if (counting) st.seconds * 1000L else 400L + 680L + CapturePreparationController.COUNTDOWN_MS)
                     val idx = PreparationVoicePlan.nextLine(lines, i, t, settledRecommended = counting || frameReady, counting = counting,
@@ -106,11 +109,11 @@ internal fun CapturePreparationPanel(
                     val line = lines[idx]; i = idx + 1
                     introPlaying = true
                     speech.speak(line.text, flush = first); first = false
-                    val deadline = SystemClock.elapsedRealtime() + PrepSpeech.watchdogMs(line.text) + speech.tailRemainingMs
-                    while (!speech.muted && controller.isAutomatic && speech.isSpeaking && SystemClock.elapsedRealtime() < deadline) delay(50)
+                    val deadline = elapsedRealtimeMs() + PrepSpeech.watchdogMs(line.text) + speech.tailRemainingMs
+                    while (!speech.muted && controller.isAutomatic && speech.isSpeaking && elapsedRealtimeMs() < deadline) delay(50)
                     // TTS 콜백 누락에도 준비가 무한히 멈추지 않는다(감시 시한 = 예측 1.5배 + 2 s). 직접 시작을 누른 경우 그 카운트는 건드리지 않는다
-                    if (controller.isAutomatic && speech.isSpeaking && SystemClock.elapsedRealtime() >= deadline) speech.stop()
-                    if (line.kind == PrepKind.ESS) PreparationIntro.mark(profile.name, SystemClock.elapsedRealtime())
+                    if (controller.isAutomatic && speech.isSpeaking && elapsedRealtimeMs() >= deadline) speech.stop()
+                    if (line.kind == PrepKind.ESS) PreparationIntro.mark(profile.name, elapsedRealtimeMs())
                 }
                 introPlaying = false
             }
@@ -132,7 +135,7 @@ internal fun CapturePreparationPanel(
         while (true) {
             delay(100)
             if (latestPaused || userPaused) { controller.cancel(); state = controller.state; continue }
-            state = controller.tick(SystemClock.elapsedRealtime())
+            state = controller.tick(elapsedRealtimeMs())
             if (state.phase == PreparationPhase.STARTED && !delivered) { delivered = true; startedNormally = true; speech.traceFeedback("prep", "started"); start(false) }
         }
     }
@@ -148,7 +151,7 @@ internal fun CapturePreparationPanel(
             lastSaidSecond = state.seconds
             when (countMode) {
                 CountdownVoice.Mode.SPEAK -> speech.speak(state.seconds.toString(), flush = true)
-                CountdownVoice.Mode.TONE -> runCatching { tone?.startTone(android.media.ToneGenerator.TONE_PROP_BEEP, 100) }
+                CountdownVoice.Mode.TONE -> runCatching { tone?.startTone(RepTone.TONE_PROP_BEEP, 100) }
                 CountdownVoice.Mode.NONE -> {}
             }
         }
@@ -180,68 +183,67 @@ internal fun CapturePreparationPanel(
         }
     }
     val counting = state.phase == PreparationPhase.COUNTDOWN
-    Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Column(Modifier.weight(1f, fill = false), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    val prepPaused = userPaused || paused
+    // 제어판 디자인(스펙 §115) — 손잡이 · 세 칸 수치(목표 · 카운트다운/방향 시범 · 세트) · 안내 글 · 방식 선택 · 물결 위 원형 버튼 줄
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        SessionPanelHandle()
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text("운동 준비", color = c.text, fontSize = 19.sp, fontWeight = FontWeight.SemiBold,
+            Text("운동 준비", color = c.text, fontSize = 17.sp, fontWeight = FontWeight.SemiBold,
                 modifier = Modifier.weight(1f))
+            TextButton(onClick = {
+                if (!paused) { userPaused=false; speech.stop(); controller.manual(elapsedRealtimeMs(),5);state=controller.state }
+            }, enabled = !paused && !userPaused && (!counting || state.trackingHold)) {
+                Text("5초 후 시작", color = c.primaryText, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+            }
             if (onShowGuide != null) ExerciseGuideButton(guideName, { cancel(); onShowGuide() })
         }
-        Row(Modifier.fillMaxWidth().heightIn(min = 114.dp), verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            if (counting) RingGauge(state.progress, 110.dp, 5.dp) {
+        SessionStatsRow("목표", goalLabel, "세트", setFraction(setLabel), Modifier.heightIn(min = 104.dp)) {
+            if (counting) RingGauge(state.progress, 100.dp, 5.dp) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("${state.seconds}", color = c.text, fontSize = 36.sp, fontWeight = FontWeight.SemiBold)
                     Text(if(state.trackingHold) "잠시 확인 중" else "시작까지", color = c.text2, fontSize = 11.sp)
                 }
-            } else CaptureDirectionDemo(profile.capture, frontCamera, Modifier.size(114.dp))
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(profile.capture.placement, color = c.text, fontSize = 15.sp, lineHeight = 21.sp)
-                // 약속 문장은 화면 고정 문구(§101 — 음성에서 뺐다. 종전 안내 맨 끝에 있어 8/10 세트에서 들리지 않았다)
-                Text(START_PROMISE, color = c.text3, fontSize = 12.sp, lineHeight = 17.sp)
-                // 멈춘·처음으로 돌아간·아직 못 잡은 이유를 화면에도 — 배치 안내만 떠 있으면 무엇이 문제인지 모른다(§89 후속)
-                val reason = state.message.takeIf {
-                    (state.trackingHold || state.phase == PreparationPhase.WAITING) && it !in GENERIC_PREPARATION_MESSAGES
-                }
-                if (reason != null) Text(reason, color = if (reason == CapturePreparationController.READY_MESSAGE) c.text else c.warn, fontSize = 14.sp, lineHeight = 20.sp, fontWeight = FontWeight.SemiBold)
-                // 세는 조건 전문(ESS + DET, §101) — 음성이 못 다 말한 내용은 화면이 가진다(원칙 #5). 그 아래 바닥 범위 문장(spec §99, PostureScope.FLOOR_LINES)
-                profile.countingConditions?.let { Text(it, color = c.text2, fontSize = 13.sp, lineHeight = 18.sp) }
-                com.example.trex_kotlin.posture.PostureScope.floorLine(profile.referenceExercise)?.let {
-                    Text(it, color = c.text3, fontSize = 12.sp, lineHeight = 17.sp)
-                }
+            } else CaptureDirectionDemo(profile.capture, frontCamera, Modifier.size(104.dp))
+        }
+        // 안내 글은 남는 높이 안에서 스크롤한다 — 버튼 줄은 늘 판 아래에 있다
+        Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(profile.capture.placement, color = c.text, fontSize = 15.sp, lineHeight = 21.sp)
+            // 약속 문장은 화면 고정 문구(§101 — 음성에서 뺐다. 종전 안내 맨 끝에 있어 8/10 세트에서 들리지 않았다)
+            Text(START_PROMISE, color = c.text3, fontSize = 12.sp, lineHeight = 17.sp)
+            // 멈춘·처음으로 돌아간·아직 못 잡은 이유를 화면에도 — 배치 안내만 떠 있으면 무엇이 문제인지 모른다(§89 후속)
+            val reason = state.message.takeIf {
+                (state.trackingHold || state.phase == PreparationPhase.WAITING) && it !in GENERIC_PREPARATION_MESSAGES
             }
-        }
-        if (cameraError != null) {
-            Text(cameraError, color = c.text2, fontSize = 13.sp)
-            TextButton(onClick = { cancel(); onFallback() }) { Text("자세 비교 없이 계속", color = c.text) }
-        }
+            if (reason != null) Text(reason, color = if (reason == CapturePreparationController.READY_MESSAGE) c.text else c.warn, fontSize = 14.sp, lineHeight = 20.sp, fontWeight = FontWeight.SemiBold)
+            // 세는 조건 전문(ESS + DET, §101) — 음성이 못 다 말한 내용은 화면이 가진다(원칙 #5). 그 아래 바닥 범위 문장(spec §99, PostureScope.FLOOR_LINES)
+            profile.countingConditions?.let { Text(it, color = c.text2, fontSize = 13.sp, lineHeight = 18.sp) }
+            // 헐렁한 옷 안내(§126 방안 A) — 컬·런지 계열만. 소매·바지통 속 관절은 지어낸 자리라 판정이 흔들린다(원칙 #5)
+            profile.clothingHint?.let { Text(it, color = c.text3, fontSize = 12.sp, lineHeight = 17.sp) }
+            com.example.trex_kotlin.posture.PostureScope.floorLine(profile.referenceExercise)?.let {
+                Text(it, color = c.text3, fontSize = 12.sp, lineHeight = 17.sp)
+            }
+            if (cameraError != null) {
+                Text(cameraError, color = c.text2, fontSize = 13.sp)
+                TextButton(onClick = { cancel(); onFallback() }) { Text("자세 비교 없이 계속", color = c.text) }
+            }
         }
         modeControl()
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            TextButton(onClick = {
-                if (!paused) { userPaused=false; speech.stop(); controller.manual(SystemClock.elapsedRealtime(),5);state=controller.state }
-            }, enabled = !paused && !userPaused && (!counting || state.trackingHold), modifier = Modifier.weight(1f)) {
-                Text("5초 후 시작", color = c.text2, fontSize = 13.sp)
-            }
-            SessionTool("음성", if (muted) "음성 안내 켜기" else "음성 안내 끄기",
-                if (muted) Icons.AutoMirrored.Rounded.VolumeOff else Icons.AutoMirrored.Rounded.VolumeUp,
-                onMute, Modifier.width(48.dp))
-            SessionTool("카메라", "카메라 전환", Icons.Rounded.Cameraswitch, { cancel(); onCamera() }, Modifier.width(48.dp))
-            PreparationPauseAction(userPaused || paused, !delivered,
-                {
-                    if (paused) { userPaused = false; onTogglePause() }
-                    else { userPaused = !userPaused; if (userPaused) cancel() }
-                }, Modifier.width(104.dp))
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            GhostButton("나가기", { cancel(); onExit() }, Modifier.weight(1f))
-            Cta("준비 건너뛰기", {
+        SessionActionRow {
+            SessionCircleButton("나가기", "나가기", Icons.Rounded.Close, { cancel(); onExit() }, Modifier.weight(1f), destructive = true)
+            SessionCircleButton("음성", if (muted) "음성 안내 켜기" else "음성 안내 끄기",
+                if (muted) Icons.AutoMirrored.Rounded.VolumeOff else Icons.AutoMirrored.Rounded.VolumeUp, onMute, Modifier.weight(1f))
+            SessionCircleButton("준비 건너뛰기", "준비 건너뛰기", Icons.Rounded.SkipNext, {
                 // 준비만 종료한다. 운동 완료/세트 건너뛰기 콜백을 호출하지 않는다.
                 if (!paused && !delivered) {
                     delivered=true; cancel(); start(true)
                 }
-            }, Modifier.weight(1.8f), enabled = !paused && !delivered)
-
+            }, Modifier.weight(1f), highlighted = true, enabled = !paused && !delivered)
+            SessionCircleButton("카메라", "카메라 전환", Icons.Rounded.Cameraswitch, { cancel(); onCamera() }, Modifier.weight(1f))
+            SessionCircleButton(if (prepPaused) "준비 계속" else "준비 멈춤", if (prepPaused) "재개" else "일시정지",
+                if (prepPaused) Icons.Rounded.PlayArrow else Icons.Rounded.Pause, {
+                    if (paused) { userPaused = false; onTogglePause() }
+                    else { userPaused = !userPaused; if (userPaused) cancel() }
+                }, Modifier.weight(1f), enabled = !delivered)
         }
     }
 }
@@ -277,13 +279,13 @@ internal fun CaptureDirectionDemo(capture: CapturePosition, mirror: Boolean, mod
     val turn = remember(capture) { Animatable(target) }
     LaunchedEffect(capture) {
         // 시스템의 동작 줄이기를 따른다. 정지 그림도 항상 목표 방향을 보여 준다.
-        while (ValueAnimator.areAnimatorsEnabled()) {
+        while (animatorsEnabled()) {
             delay(1400); turn.animateTo(if (target == 0f) 35f else 0f, tween(650)); delay(300)
             turn.animateTo(target, tween(1800)); delay(1200)
         }
         turn.snapTo(target)
     }
-    val theta = Math.toRadians(turn.value.toDouble())
+    val theta = turn.value.toDouble() / 180.0 * kotlin.math.PI
     val floor = capture == CapturePosition.FLOOR_SIDE || capture == CapturePosition.FLOOR_FRONT
     Column(modifier.semantics { contentDescription = "${capture.title} 방향 시범 · 휴대폰은 고정하고 몸을 돌려 주세요" },
         horizontalAlignment = Alignment.CenterHorizontally) {

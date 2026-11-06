@@ -15,7 +15,6 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -29,6 +28,18 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.clickable
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.AccessibilityNew
+import androidx.compose.material.icons.rounded.Videocam
+import androidx.compose.material3.Icon
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import com.example.trex_kotlin.TrexText as Text
 
 /**
@@ -39,7 +50,6 @@ import com.example.trex_kotlin.TrexText as Text
  * @param hideCount 렙 검증 모드 — 반복 수 대신 "검증 중" 을 보인다.
  * @param sideCount 쪽별로 세는 종목(런지, §63)의 큰 글자 — 쪽마다 남은 수("왼 7 · 오 8"). null 이면 남은 수.
  * @param elapsedSec 세트 경과(보조 정보 — 반복 운동의 시간은 끝내는 조건이 아니다, THUMB_FIRST §1).
- * @param referenceNote beta 검사의 '참고' 칩 — 말하지 않는 판정은 작게, 호박색(원칙 #2).
  * @param hold 플랭크 유지 시계(spec §99, 설계 §6) — 카메라 시간이면 큰 숫자 = 카메라가 확인한 시간 / 목표(멈춘 동안 회색), 아래 상태 줄('멈춤 · 무릎이 바닥에 닿음')과
  *   작게 경과. 시계 폴백이면 종전 남은 시간에 상태 줄만. null 이면 종전.
  */
@@ -47,7 +57,7 @@ import com.example.trex_kotlin.TrexText as Text
 internal fun LiveWorkoutHud(workout: Workout, repetitions: Int, timeLeft: Int, totalSeconds: Int,
     setLabel: String, paused: Boolean, compact: Boolean, message: String?,
     countNote: String? = null, countNoteActive: Boolean = false, hideCount: Boolean = false, sideCount: String? = null,
-    elapsedSec: Int? = null, referenceNote: String? = null, modeLabel: String? = null, breath: String? = null, hold: HoldHud? = null) {
+    elapsedSec: Int? = null, modeLabel: String? = null, breath: String? = null, hold: HoldHud? = null) {
     val duration = workout.resolvedTarget() is WorkoutTarget.Duration
     val target = workout.resolvedTarget().amount
     val lime = Color(0xFFB8DD83)
@@ -104,9 +114,10 @@ internal fun LiveWorkoutHud(workout: Workout, repetitions: Int, timeLeft: Int, t
         // 호흡(§5) — 느리게 숨 쉬는 링 + 단어. 위상을 따라가는 표시라 소리가 없다
         if (breath != null) {
             val pulse = rememberInfiniteTransition(label = "breath")
-            val scale by pulse.animateFloat(0.75f, 1.2f, infiniteRepeatable(tween(2000, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "breath-scale")
+            // 크기는 그리기 단계에서만 읽는다 — 운동 내내 HUD 를 매 프레임 다시 구성하지 않는다(스펙 §115)
+            val scale = pulse.animateFloat(0.75f, 1.2f, infiniteRepeatable(tween(2000, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "breath-scale")
             Row(Modifier.padding(top = 2.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Box(Modifier.size(14.dp).scale(scale).border(2.dp, lime, CircleShape))
+                Box(Modifier.size(14.dp).graphicsLayer { scaleX = scale.value; scaleY = scale.value }.border(2.dp, lime, CircleShape))
                 Text(breath, color = Color.White.copy(alpha = .8f), fontSize = 14.sp, maxLines = 1)
             }
         }
@@ -117,7 +128,44 @@ internal fun LiveWorkoutHud(workout: Workout, repetitions: Int, timeLeft: Int, t
         }
         if (!duration && countNote != null) Text(countNote, color = if (countNoteActive) lime else amber, fontSize = 13.sp,
             fontWeight = if (countNoteActive) FontWeight.SemiBold else FontWeight.Normal, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        if (referenceNote != null) Text("참고 · $referenceNote", color = amber, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(top = 4.dp).border(1.dp, amber.copy(alpha = .6f), RoundedCornerShape(99.dp)).padding(horizontal = 10.dp, vertical = 3.dp))
+        // beta '참고 · …' 칩(12sp 호박)은 §129 에서 뺐다 — 운동 거리에서 못 읽는 글자. beta 는 뼈대 호박색과 완료 화면이 가진다
+    }
+}
+
+/**
+ * 무대 보기 전환(§2.1 수동 토글, 사용자 요청 10-23 — 운동 화면 오른쪽 위) — 뼈대만(검은 무대) ↔ 카메라 영상.
+ * The same top-right control remains visible during preparation and exercise; selection lasts for the session.
+ */
+@Composable
+internal fun StageViewToggle(showCamera: Boolean, onChange: (Boolean) -> Unit, modifier: Modifier = Modifier) {
+    Row(
+        modifier
+            .clip(RoundedCornerShape(999.dp))
+            .background(Color.Black.copy(alpha = 0.45f))
+            .border(1.dp, Color.White.copy(alpha = 0.16f), RoundedCornerShape(999.dp))
+            .padding(3.dp),
+        horizontalArrangement = Arrangement.spacedBy(2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        StageViewSegment("뼈대", "뼈대만 보기", Icons.Rounded.AccessibilityNew, selected = !showCamera) { onChange(false) }
+        StageViewSegment("영상", "카메라 영상 보기", Icons.Rounded.Videocam, selected = showCamera) { onChange(true) }
+    }
+}
+
+@Composable
+private fun StageViewSegment(label: String, description: String, icon: ImageVector, selected: Boolean, onClick: () -> Unit) {
+    Row(
+        Modifier
+            .clip(RoundedCornerShape(999.dp))
+            .background(if (selected) Color.White.copy(alpha = 0.92f) else Color.Transparent)
+            .semantics { contentDescription = description; this.selected = selected }
+            .clickable(role = Role.Tab, onClick = onClick)
+            .heightIn(min = 34.dp)
+            .padding(horizontal = 11.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        val tint = if (selected) Color(0xFF151A12) else Color.White.copy(alpha = 0.85f)
+        Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(15.dp))
+        Text(label, color = tint, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 4.dp))
     }
 }

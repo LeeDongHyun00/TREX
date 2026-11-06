@@ -2,6 +2,7 @@ package com.trex.server.security;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -44,6 +45,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // 토큰 없이 접근하는 인증 진입점만 개방한다.
                         .requestMatchers("/api/auth/signup", "/api/auth/login", "/api/auth/oauth/**").permitAll()
+                        // 공유 링크(docs/superpowers/specs/2026-10-29-routine-share-design.md) — 받은 루틴 조회와 링크 웹 페이지·대표 그림
+                        .requestMatchers(HttpMethod.GET, "/api/routines/shared/**", "/r/**", "/p/**", "/share/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 // 인증 실패 시 로그인 폼으로 리다이렉트하지 않고 401을 그대로 내려준다.

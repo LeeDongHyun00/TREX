@@ -1,7 +1,5 @@
 package com.example.trex_kotlin
 
-import android.graphics.BitmapFactory
-import android.util.LruCache
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
@@ -17,27 +15,24 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.withContext
 
-private val routineImages = LruCache<String, ImageBitmap>(3)
+private val routineImages = AssetImageCache(3)
 
 /** 홈/운동에 같은 요약을 표시한다. 사진은 장식이며 운동 자세의 정답으로 쓰지 않는다. */
 @Composable
 internal fun RoutineHero(overview: RoutineOverview, onOpen: (() -> Unit)? = null) {
-    val assets = LocalContext.current.applicationContext.assets
+    val decoder = rememberAssetImageDecoder()
     val imageKey = overview.focus.image
     val bitmap by produceState<ImageBitmap?>(routineImages.get(imageKey), imageKey) {
         value = withContext(Dispatchers.IO) {
-            routineImages.get(imageKey) ?: assets.open("routine/$imageKey.png").use {
-                BitmapFactory.decodeStream(it, null, BitmapFactory.Options().apply { inSampleSize = 2 })!!.asImageBitmap()
-            }.also { routineImages.put(imageKey, it) }
+            routineImages.get(imageKey) ?: decoder.decode("routine/$imageKey.png", 2).also { routineImages.put(imageKey, it) }
         }
     }
     val c = Trex.c

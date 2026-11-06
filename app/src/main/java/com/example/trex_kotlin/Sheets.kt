@@ -9,13 +9,13 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.foundation.layout.heightIn
@@ -25,6 +25,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -141,7 +143,7 @@ private fun AltSheet(app: AppViewModel, workout: Workout, onClose: () -> Unit) {
                     reps = alt.reps,
                     duration = template?.duration,
                     best = i == 0,
-                    postureReady = postureExerciseMap.containsKey(alt.name),
+                    postureReady = postureSupported(alt.name),
                 )
             }
         } else {
@@ -275,7 +277,7 @@ private fun Workout.replacedWith(name: String, reps: String): Workout {
         reps = reps,
         duration = template?.duration ?: duration,
         category = template?.category ?: category,
-        posture = posture && postureExerciseMap.containsKey(name),
+        posture = posture && postureSupported(name),
         secondsPerRep = null,
         restSeconds = null,
     )
@@ -299,7 +301,6 @@ private fun SetsSheet(app: AppViewModel, initial: SetDraft, onClose: () -> Unit)
 
     SheetHost(onDismiss = onClose) {
         Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 20.dp)) {
-            SheetHandle()
             Row(Modifier.padding(top = 12.dp, bottom = 16.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Kicker("운동 설정")
@@ -383,8 +384,7 @@ private fun SetsSheet(app: AppViewModel, initial: SetDraft, onClose: () -> Unit)
 private fun GoalsSheet(app: AppViewModel, onClose: () -> Unit) {
     val c = Trex.c
     var goal by remember { mutableStateOf(app.targetGoal) }
-    androidx.compose.material3.ModalBottomSheet(onDismissRequest = onClose, containerColor = c.sheet,
-        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    SheetHost(onDismiss = onClose) {
         Column(Modifier.fillMaxWidth().heightIn(max = 600.dp).padding(horizontal = 24.dp).padding(bottom = 24.dp)) {
             Text("영양 목표 수정", color = c.text, fontSize = 24.sp, fontWeight = FontWeight.SemiBold)
             Spacer(Modifier.height(18.dp))
@@ -422,6 +422,9 @@ internal fun ManualSheet(app: AppViewModel, initialSlot: String, onClose: () -> 
     var query by remember { mutableStateOf("") }
     // "새 음식으로 등록" 을 누른 검색어. 검색어가 바뀌면 자연히 닫힌다(값이 달라지므로).
     var registering by remember { mutableStateOf<String?>(null) }
+    // 인분 숫자를 눌러 직접 넣는 중인 음식 — 순서가 아니라 이름으로 잡는다(끼니 안에서 이름은 하나, appendFoods 가 합친다).
+    // 순서로 잡으면 앱 복귀 때 서버에서 받은 기록·자정 갱신으로 목록이 바뀌면 다른 음식을 고친다.
+    var editingPortion by remember { mutableStateOf<String?>(null) }
     val slotFoods = app.dietFor(0)[slot].orEmpty()
     val total = slotFoods.totalNutrition()
     val goal = app.targetGoal
@@ -432,7 +435,6 @@ internal fun ManualSheet(app: AppViewModel, initialSlot: String, onClose: () -> 
 
     SheetHost(onDismiss = onClose) {
         Column(Modifier.fillMaxHeight(0.92f)) {
-            SheetHandle()
             Row(Modifier.padding(start = 20.dp, end = 20.dp, top = 10.dp, bottom = 14.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Kicker("직접 기록")
@@ -450,122 +452,156 @@ internal fun ManualSheet(app: AppViewModel, initialSlot: String, onClose: () -> 
                 )
             }
 
-            Column(
-                Modifier
-                    .weight(1f)
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 20.dp)
-                    .padding(top = 16.dp, bottom = 16.dp),
+            Box(Modifier.padding(horizontal = 20.dp).padding(top = 12.dp)) {
+                FoodSearchField(query) { query = it }
+            }
+
+            // 검색어가 비면 자주 먹는 음식을 보여 준다. 늘 먹는 밥·국을 매번 치게 하지 않으려는 것이고,
+            // 사진 기록의 고르기 창과 같은 규칙이다 — 여기가 직접 기록의 주 경로다.
+            val listed = if (query.isBlank()) {
+                frequent.map { (name, n) -> Triple(name, n, name in app.customFoods) }
+            } else {
+                matches
+            }
+            val typed = query.trim()
+            // 검색 묶음의 첫 줄(안내 글·"자주 먹는 음식"·등록 폼)이 없으면 첫 결과 줄이 묶음의 첫 줄이다
+            val hasHeader = query.isBlank() || listed.isEmpty()
+            // 결과는 한 글자(자모)마다 바뀌고 "밥" 만 쳐도 53줄이다 — 보이는 줄만 그리도록 결과·합계·담은 음식을 LazyColumn 하나에 둔다(스펙 §115).
+            // 자리는 예전 스크롤 Column 그대로다: 안쪽 여백 위·아래 16, 검색 묶음은 위 10·줄 사이 7, 묶음 뒤 16 — 간격을 항목의 위 여백으로 준다.
+            // 항목 키는 순서(기본값)다. 검색어가 바뀌어도 스크롤이 예전처럼 제자리이고, 이름 키처럼 보던 음식을 따라 내려가지 않는다.
+            LazyColumn(
+                Modifier.weight(1f),
+                contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 16.dp),
             ) {
-                DCard(radius = 24.dp) {
-                    Column(Modifier.padding(18.dp)) {
-                        Row(verticalAlignment = Alignment.Bottom) {
-                            Column(Modifier.weight(1f)) {
-                                Row(Modifier.padding(top = 6.dp), verticalAlignment = Alignment.Bottom) {
-                                    Text("${total.kcal}", color = c.text, fontSize = 30.sp, fontWeight = FontWeight.SemiBold, lineHeight = 30.sp)
-                                    Text(" kcal", color = c.text3, fontSize = 13.sp, modifier = Modifier.padding(bottom = 3.dp))
-                                }
-                            }
-                            Text("음식 ${slotFoods.sumOf { it.qty }}개", color = c.text3, fontSize = 11.5.sp)
-                        }
-                        Column(Modifier.padding(top = 15.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                            MacroBar("탄수", total.carb.toInt(), goal.carb.toInt(), c.primary)
-                            MacroBar("단백질", total.protein.toInt(), goal.protein.toInt(), c.lime)
-                            MacroBar("지방", total.fat.toInt(), goal.fat.toInt(), c.warn)
+                // 검색 + 음식 DB
+                when {
+                    query.isBlank() && listed.isEmpty() -> item {
+                        Text(
+                            "음식 이름을 검색해 보세룡", color = c.text3, fontSize = 12.sp,
+                            modifier = Modifier.padding(top = 10.dp).fillMaxWidth().padding(top = 6.dp), textAlign = TextAlign.Center,
+                        )
+                    }
+                    query.isBlank() -> item {
+                        Text(
+                            "자주 먹는 음식", color = c.text3, fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.padding(top = 10.dp),
+                        )
+                    }
+                    listed.isEmpty() -> item {
+                        // 기본 DB 에도 내 음식에도 없으면 직접 등록한다 — 등록해 두면 다음부터 검색으로 바로 담을 수 있다.
+                        // 적다 만 값이 스크롤에 사라지지 않게 항목을 붙잡아 둔다(예전 Column 과 같다).
+                        KeepComposedInLazyList()
+                        CustomFoodForm(name = query.trim(), modifier = Modifier.padding(top = 10.dp)) { nutrition ->
+                            app.addCustomFood(query.trim(), nutrition)
+                            app.appendFoods(0, slot, listOf(FoodEntry(query.trim(), nutrition)))
+                            query = ""
                         }
                     }
                 }
-
-                if (slotFoods.isEmpty()) {
-                    Column(
-                        Modifier
-                            .padding(top = 16.dp)
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(22.dp))
-                            .background(c.surface)
-                            .border(1.dp, c.fieldLine, RoundedCornerShape(22.dp))
-                            .padding(22.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                    ) {
-                        Box(Modifier.size(40.dp).clip(CircleShape).background(c.surface2), contentAlignment = Alignment.Center) {
-                            Icon(Icons.Rounded.RestaurantMenu, contentDescription = null, tint = c.text3, modifier = Modifier.size(18.dp))
+                itemsIndexed(listed) { i, (name, n, isCustom) ->
+                    val added = slotFoods.any { it.name == name }
+                    FoodRow(
+                        name, n, isCustom,
+                        badgeIcon = if (added) Icons.Rounded.Check else Icons.Rounded.Add,
+                        badgeFilled = added,
+                        badgeDescription = "담기",
+                        modifier = Modifier.padding(top = if (i == 0 && !hasHeader) 10.dp else 7.dp),
+                    ) { app.appendFoods(0, slot, listOf(FoodEntry(name, n))) }
+                }
+                // 비슷한 이름만 나오고 딱 맞는 음식이 없으면 새로 등록할 길을 남긴다("라멘" 을 치면 "라면" 만 나와 고를 수밖에 없었다).
+                // 키를 따로 준다 — 폼을 연 채 앞에 결과 줄이 늘어도(동기화로 내 음식이 바뀜) 예전 Column 처럼 적던 값이 남는다.
+                if (typed.isNotEmpty() && listed.isNotEmpty() && listed.none { it.first == typed }) item(key = "register:$typed") {
+                    if (registering == typed) {
+                        KeepComposedInLazyList()
+                        CustomFoodForm(name = typed, modifier = Modifier.padding(top = 7.dp)) { nutrition ->
+                            app.addCustomFood(typed, nutrition)
+                            app.appendFoods(0, slot, listOf(FoodEntry(typed, nutrition)))
+                            query = ""
                         }
-                        Text("아래에서 음식을 골라 담아보세룡", color = c.text2, fontSize = 12.5.sp, modifier = Modifier.padding(top = 11.dp))
+                    } else {
+                        RegisterNewFoodRow(typed, Modifier.padding(top = 7.dp)) { registering = typed }
                     }
-                } else {
-                    DCard(modifier = Modifier.padding(top = 16.dp), radius = 22.dp) {
-                        Column {
-                            slotFoods.forEachIndexed { i, f ->
-                                if (i > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(c.line))
-                                Row(Modifier.padding(horizontal = 14.dp, vertical = 13.dp), verticalAlignment = Alignment.CenterVertically) {
-                                    Column(Modifier.weight(1f)) {
-                                        Text(f.name, fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold)
-                                        Text(
-                                            "${f.nutrition.kcal * f.qty} kcal · 탄 ${(f.nutrition.carb * f.qty).toInt()} · 단 ${(f.nutrition.protein * f.qty).toInt()} · 지 ${(f.nutrition.fat * f.qty).toInt()}",
-                                            color = c.text3, fontSize = 11.sp, modifier = Modifier.padding(top = 3.dp),
+                }
+                item {
+                    DCard(modifier = Modifier.padding(top = 16.dp), radius = 24.dp) {
+                        Column(Modifier.padding(18.dp)) {
+                            Row(verticalAlignment = Alignment.Bottom) {
+                                Column(Modifier.weight(1f)) {
+                                    Row(Modifier.padding(top = 6.dp), verticalAlignment = Alignment.Bottom) {
+                                        Text("${total.kcal}", color = c.text, fontSize = 30.sp, fontWeight = FontWeight.SemiBold, lineHeight = 30.sp)
+                                        Text(" kcal", color = c.text3, fontSize = 13.sp, modifier = Modifier.padding(bottom = 3.dp))
+                                    }
+                                }
+                                Text("음식 ${slotFoods.size}개", color = c.text3, fontSize = 11.5.sp)
+                            }
+                            Column(Modifier.padding(top = 15.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                MacroBar("탄수", total.carb.toInt(), goal.carb.toInt(), c.primary)
+                                MacroBar("단백질", total.protein.toInt(), goal.protein.toInt(), c.lime)
+                                MacroBar("지방", total.fat.toInt(), goal.fat.toInt(), c.warn)
+                            }
+                        }
+                    }
+                }
+                item {
+                    if (slotFoods.isEmpty()) {
+                        Column(
+                            Modifier
+                                .padding(top = 16.dp)
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(22.dp))
+                                .background(c.surface)
+                                .border(1.dp, c.fieldLine, RoundedCornerShape(22.dp))
+                                .padding(22.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                        ) {
+                            Box(Modifier.size(40.dp).clip(CircleShape).background(c.surface2), contentAlignment = Alignment.Center) {
+                                Icon(Icons.Rounded.RestaurantMenu, contentDescription = null, tint = c.text3, modifier = Modifier.size(18.dp))
+                            }
+                            Text("아래에서 음식을 골라 담아보세룡", color = c.text2, fontSize = 12.5.sp, modifier = Modifier.padding(top = 11.dp))
+                        }
+                    } else {
+                        DCard(modifier = Modifier.padding(top = 16.dp), radius = 22.dp) {
+                            Column {
+                                slotFoods.forEachIndexed { i, f ->
+                                    if (i > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(c.line))
+                                    Row(Modifier.padding(horizontal = 14.dp, vertical = 13.dp), verticalAlignment = Alignment.CenterVertically) {
+                                        Column(Modifier.weight(1f)) {
+                                            Text(f.name, fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold)
+                                            Text(
+                                                "${f.totalKcal()} kcal · 탄 ${(f.nutrition.carb * f.qty).toInt()} · 단 ${(f.nutrition.protein * f.qty).toInt()} · 지 ${(f.nutrition.fat * f.qty).toInt()}",
+                                                color = c.text3, fontSize = 11.sp, modifier = Modifier.padding(top = 3.dp),
+                                            )
+                                        }
+                                        // 0.5 씩 — 숫자를 누르면 소수 한 자리로 직접 넣는다(FoodPortion)
+                                        StepperControl(
+                                            valueLabel = FoodPortion.label(f.qty),
+                                            onDec = { app.stepFoodQty(0, slot, i, up = false) },
+                                            onInc = { app.stepFoodQty(0, slot, i, up = true) },
+                                            decIcon = if (FoodPortion.removesOnStepDown(f.qty)) Icons.Rounded.Delete else Icons.Rounded.Remove,
+                                            valueMinWidth = 38.dp,
+                                            label = "${f.name} 인분",
+                                            onValueClick = { editingPortion = f.name },
+                                            decLabel = if (FoodPortion.removesOnStepDown(f.qty)) "${f.name} 삭제" else null,
                                         )
                                     }
-                                    StepperControl(
-                                        valueLabel = "${f.qty}",
-                                        onDec = { app.changeFoodQty(0, slot, i, -1) },
-                                        onInc = { app.changeFoodQty(0, slot, i, +1) },
-                                        decIcon = if (f.qty > 1) Icons.Rounded.Remove else Icons.Rounded.Delete,
-                                        valueMinWidth = 24.dp,
-                                    )
                                 }
                             }
                         }
                     }
                 }
-
-                // 검색 + 음식 DB
-                Box(Modifier.padding(top = 18.dp)) { FoodSearchField(query) { query = it } }
-                Column(Modifier.padding(top = 10.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
-                    // 검색어가 비면 자주 먹는 음식을 보여 준다. 늘 먹는 밥·국을 매번 치게 하지 않으려는 것이고,
-                    // 사진 기록의 고르기 창과 같은 규칙이다 — 여기가 직접 기록의 주 경로다.
-                    val listed = if (query.isBlank()) {
-                        frequent.map { (name, n) -> Triple(name, n, name in app.customFoods) }
-                    } else {
-                        matches
-                    }
-                    when {
-                        query.isBlank() && listed.isEmpty() ->
-                            Text(
-                                "음식 이름을 검색해 보세룡", color = c.text3, fontSize = 12.sp,
-                                modifier = Modifier.fillMaxWidth().padding(top = 6.dp), textAlign = TextAlign.Center,
-                            )
-                        query.isBlank() ->
-                            Text("자주 먹는 음식", color = c.text3, fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold)
-                        listed.isEmpty() ->
-                            // 기본 DB 에도 내 음식에도 없으면 직접 등록한다 — 등록해 두면 다음부터 검색으로 바로 담을 수 있다.
-                            CustomFoodForm(name = query.trim()) { nutrition ->
-                                app.addCustomFood(query.trim(), nutrition)
-                                app.appendFoods(0, slot, listOf(FoodEntry(query.trim(), nutrition)))
-                                query = ""
-                            }
-                    }
-                    listed.forEach { (name, n, isCustom) ->
-                        val added = slotFoods.any { it.name == name }
-                        FoodRow(
-                            name, n, isCustom,
-                            badgeIcon = if (added) Icons.Rounded.Check else Icons.Rounded.Add,
-                            badgeFilled = added,
-                            badgeDescription = "담기",
-                        ) { app.appendFoods(0, slot, listOf(FoodEntry(name, n))) }
-                    }
-                    // 비슷한 이름만 나오고 딱 맞는 음식이 없으면 새로 등록할 길을 남긴다("라멘" 을 치면 "라면" 만 나와 고를 수밖에 없었다).
-                    val typed = query.trim()
-                    if (typed.isNotEmpty() && listed.isNotEmpty() && listed.none { it.first == typed }) {
-                        if (registering == typed) {
-                            CustomFoodForm(name = typed) { nutrition ->
-                                app.addCustomFood(typed, nutrition)
-                                app.appendFoods(0, slot, listOf(FoodEntry(typed, nutrition)))
-                                query = ""
-                            }
-                        } else {
-                            RegisterNewFoodRow(typed) { registering = typed }
-                        }
-                    }
+            }
+            // 인분 직접 입력 창은 목록 밖에 둔다 — 담은 음식 칸이 화면 밖으로 밀려 항목이 폐기돼도 창이 닫히지 않게(스펙 §115). 조건은 예전 그대로(담은 음식이 있을 때).
+            if (slotFoods.isNotEmpty()) editingPortion?.let { name ->
+                val i = slotFoods.indexOfFirst { it.name == name }
+                if (i < 0) {
+                    // 그 음식이 목록에서 사라졌다 — 열림 표시를 남기면 같은 이름이 다시 담길 때 저절로 열린다
+                    LaunchedEffect(name) { editingPortion = null }
+                } else {
+                    PortionInputDialog(
+                        foodName = name, current = slotFoods[i].qty,
+                        onConfirm = { q -> app.setFoodQty(0, slot, i, q); editingPortion = null },
+                        onDismiss = { editingPortion = null },
+                    )
                 }
             }
 
@@ -650,7 +686,7 @@ internal fun FoodPicker(
      * 사진에서 누른 자리를 잘라낸 그림. 겹친 "?" 여럿 중 무엇을 눌렀는지 사진만으로는 헷갈려서(실기기 사용 소감, 2026-09-27),
      * 고르는 창 맨 위에 그 자리를 보여준다.
      */
-    spotPreview: android.graphics.Bitmap? = null,
+    spotPreview: androidx.compose.ui.graphics.ImageBitmap? = null,
     /** 내 음식 기억이 이 자리와 비슷하다고 한 음식 이름. 사용자가 전에 이 사진 자리들에 직접 붙인 이름이다. */
     rememberedCandidates: List<String> = emptyList(),
     onPick: (String, Nutrition) -> Unit,
@@ -670,7 +706,7 @@ internal fun FoodPicker(
         onDismissRequest = onDismiss,
         // 화면의 유일한 입력칸이 이 안에 있다. 인셋을 창이 알아서 맞추게 두면 키보드가 올라올 때
         // 목록 아래쪽과 "등록하고 담기" 버튼이 가린다. SheetHost 와 같은 조합으로 직접 맞춘다.
-        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
+        properties = fullScreenDialogProperties(),
     ) {
         Box(Modifier.fillMaxSize().imePadding().navigationBarsPadding(), contentAlignment = Alignment.Center) {
             Column(
@@ -692,7 +728,7 @@ internal fun FoodPicker(
                 }
                 if (spotPreview != null) {
                     androidx.compose.foundation.Image(
-                        bitmap = spotPreview.asImageBitmap(),
+                        bitmap = spotPreview,
                         contentDescription = "누른 자리",
                         contentScale = ContentScale.Fit,
                         modifier = Modifier
@@ -705,82 +741,88 @@ internal fun FoodPicker(
                     )
                 }
                 Box(Modifier.padding(horizontal = 20.dp)) { FoodSearchField(query) { query = it } }
-                Column(
-                    Modifier
-                        .weight(1f)
-                        .verticalScroll(rememberScrollState())
-                        .padding(horizontal = 20.dp)
-                        .padding(top = 12.dp, bottom = 20.dp),
+                // 결과는 한 글자(자모)마다 바뀌고 수십 줄이다 — 보이는 줄만 그리게 LazyColumn 으로 둔다(스펙 §115). 여백·줄 간격은
+                // 예전 스크롤 Column 그대로이고 한 줄 = 한 항목이라 간격도 같다. 항목 키는 순서(기본값) — 검색어가 바뀌어도 스크롤이 제자리다.
+                LazyColumn(
+                    Modifier.weight(1f),
+                    contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 20.dp),
                     verticalArrangement = Arrangement.spacedBy(7.dp),
                 ) {
                     when {
-                        trimmed.isEmpty() && frequent.isEmpty() && candidates.isEmpty() && rememberedCandidates.isEmpty() ->
+                        trimmed.isEmpty() && frequent.isEmpty() && candidates.isEmpty() && rememberedCandidates.isEmpty() -> item {
                             Text(
                                 "음식 이름을 검색해 보세룡", color = c.text3, fontSize = 12.sp,
                                 modifier = Modifier.fillMaxWidth().padding(top = 6.dp), textAlign = TextAlign.Center,
                             )
+                        }
                         trimmed.isEmpty() -> {
                             if (rememberedCandidates.isNotEmpty()) {
-                                Text("기억한 음식", color = c.text3, fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold)
-                                Text(
-                                    "전에 비슷한 자리에 직접 고르셨던 음식이에요.",
-                                    color = c.text3, fontSize = 11.sp, modifier = Modifier.padding(bottom = 2.dp),
-                                )
-                                rememberedCandidates.forEach { name ->
-                                    val n = app.findFood(name)
-                                    if (n != null) {
-                                        FoodRow(
-                                            name, n, isCustom = name in app.customFoods,
-                                            badgeIcon = Icons.Rounded.Check, badgeFilled = false, badgeDescription = "고르기",
-                                        ) { onPick(name, n) }
-                                    }
+                                item { Text("기억한 음식", color = c.text3, fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold) }
+                                item {
+                                    Text(
+                                        "전에 비슷한 자리에 직접 고르셨던 음식이에요.",
+                                        color = c.text3, fontSize = 11.sp, modifier = Modifier.padding(bottom = 2.dp),
+                                    )
+                                }
+                                // DB 에 없는 이름은 줄을 만들지 않는다(빈 항목도 간격을 차지하므로 미리 거른다)
+                                val known = rememberedCandidates.mapNotNull { name -> app.findFood(name)?.let { name to it } }
+                                items(known) { (name, n) ->
+                                    FoodRow(
+                                        name, n, isCustom = name in app.customFoods,
+                                        badgeIcon = Icons.Rounded.Check, badgeFilled = false, badgeDescription = "고르기",
+                                    ) { onPick(name, n) }
                                 }
                             }
                             if (candidates.isNotEmpty()) {
-                                Text(
-                                    candidatesTitle ?: "사진에서 비슷하게 본 것", color = c.text3, fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold,
-                                    modifier = if (rememberedCandidates.isEmpty()) Modifier else Modifier.padding(top = 6.dp),
-                                )
-                                Text(
-                                    if (candidatesTitle != null) {
-                                        "모델이 이 자리를 보고 비슷하다고 한 순서예요. 맞는 게 없으면 검색해 주세요."
-                                    } else {
-                                        "확실하지 않아 결과에는 넣지 않았어요. 맞는 게 있으면 골라 주세요."
-                                    },
-                                    color = c.text3, fontSize = 11.sp, modifier = Modifier.padding(bottom = 2.dp),
-                                )
-                                candidates.forEach { (name, _) ->
-                                    val n = app.findFood(name)
-                                    if (n != null) {
-                                        FoodRow(
-                                            name, n, isCustom = name in app.customFoods,
-                                            badgeIcon = Icons.Rounded.Check, badgeFilled = false, badgeDescription = "고르기",
-                                        ) { onPick(name, n) }
-                                    }
+                                item {
+                                    Text(
+                                        candidatesTitle ?: "사진에서 비슷하게 본 것", color = c.text3, fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold,
+                                        modifier = if (rememberedCandidates.isEmpty()) Modifier else Modifier.padding(top = 6.dp),
+                                    )
+                                }
+                                item {
+                                    Text(
+                                        if (candidatesTitle != null) {
+                                            "모델이 이 자리를 보고 비슷하다고 한 순서예요. 맞는 게 없으면 검색해 주세요."
+                                        } else {
+                                            "확실하지 않아 결과에는 넣지 않았어요. 맞는 게 있으면 골라 주세요."
+                                        },
+                                        color = c.text3, fontSize = 11.sp, modifier = Modifier.padding(bottom = 2.dp),
+                                    )
+                                }
+                                val known = candidates.mapNotNull { (name, _) -> app.findFood(name)?.let { name to it } }
+                                items(known) { (name, n) ->
+                                    FoodRow(
+                                        name, n, isCustom = name in app.customFoods,
+                                        badgeIcon = Icons.Rounded.Check, badgeFilled = false, badgeDescription = "고르기",
+                                    ) { onPick(name, n) }
                                 }
                             }
-                            if (frequent.isNotEmpty()) {
+                            if (frequent.isNotEmpty()) item {
                                 Text(
                                     "자주 먹는 음식", color = c.text3, fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold,
                                     modifier = if (candidates.isEmpty()) Modifier else Modifier.padding(top = 6.dp),
                                 )
                             }
-                            frequent.forEach { (name, n) ->
+                            items(frequent) { (name, n) ->
                                 FoodRow(
                                     name, n, isCustom = name in app.customFoods,
                                     badgeIcon = Icons.Rounded.Check, badgeFilled = false, badgeDescription = "고르기",
                                 ) { onPick(name, n) }
                             }
                         }
-                        matches.isEmpty() ->
+                        matches.isEmpty() -> item {
                             // 기본 DB 에도 내 음식에도 없다. 등록하면 바로 고른 것으로 친다 —
                             // 등록만 하고 다시 찾게 하면 방금 한 일을 한 번 더 시키는 셈이다.
+                            // 적다 만 값이 스크롤에 사라지지 않게 항목을 붙잡아 둔다(예전 Column 과 같다).
+                            KeepComposedInLazyList()
                             CustomFoodForm(name = trimmed) { nutrition ->
                                 app.addCustomFood(trimmed, nutrition)
                                 onPick(trimmed, nutrition)
                             }
+                        }
                         else -> {
-                            matches.forEach { (name, n, isCustom) ->
+                            items(matches) { (name, n, isCustom) ->
                                 FoodRow(
                                     name, n, isCustom,
                                     badgeIcon = Icons.Rounded.Check, badgeFilled = false, badgeDescription = "고르기",
@@ -788,8 +830,10 @@ internal fun FoodPicker(
                             }
                             // 비슷한 이름만 나오고 딱 맞는 음식이 없으면 새로 등록할 길을 남긴다(사용자 소감 2026-09-27:
                             // "라멘" 을 치니 "라면" 말고는 방법이 없었다). 등록하면 바로 고른 것으로 친다.
-                            if (matches.none { it.first == trimmed }) {
+                            // 키를 따로 준다 — 폼을 연 채 앞에 결과 줄이 늘어도 예전 Column 처럼 적던 값이 남는다.
+                            if (matches.none { it.first == trimmed }) item(key = "register:$trimmed") {
                                 if (registering == trimmed) {
+                                    KeepComposedInLazyList()
                                     CustomFoodForm(name = trimmed) { nutrition ->
                                         app.addCustomFood(trimmed, nutrition)
                                         onPick(trimmed, nutrition)
@@ -819,11 +863,14 @@ private fun FoodRow(
     badgeIcon: ImageVector,
     badgeFilled: Boolean,
     badgeDescription: String,
+    /** 직접 기록 시트가 LazyColumn 줄 간격을 위 여백으로 준다(스펙 §115). 누르는 자리는 여백 안쪽뿐이다. */
+    modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
     val c = Trex.c
     Surface(
         onClick = onClick,
+        modifier = modifier,
         shape = RoundedCornerShape(18.dp),
         color = c.surface,
         contentColor = c.text,
@@ -859,10 +906,10 @@ private fun FoodRow(
  */
 /** 검색 결과 아래 "'이름' 새 음식으로 등록하기" 줄. 누르면 그 자리에 [CustomFoodForm] 이 열린다. */
 @Composable
-private fun RegisterNewFoodRow(name: String, onClick: () -> Unit) {
+private fun RegisterNewFoodRow(name: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
     val c = Trex.c
     Row(
-        Modifier
+        modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
             .clickable(role = Role.Button, onClick = onClick)
@@ -876,7 +923,7 @@ private fun RegisterNewFoodRow(name: String, onClick: () -> Unit) {
 }
 
 @Composable
-private fun CustomFoodForm(name: String, onAdd: (Nutrition) -> Unit) {
+private fun CustomFoodForm(name: String, modifier: Modifier = Modifier, onAdd: (Nutrition) -> Unit) {
     val c = Trex.c
     var kcal by remember(name) { mutableStateOf("") }
     var carb by remember(name) { mutableStateOf("") }
@@ -884,7 +931,7 @@ private fun CustomFoodForm(name: String, onAdd: (Nutrition) -> Unit) {
     var fat by remember(name) { mutableStateOf("") }
     val kcalValue = kcal.toIntOrNull()
 
-    DCard(modifier = Modifier.padding(top = 6.dp), radius = 20.dp) {
+    DCard(modifier = modifier.padding(top = 6.dp), radius = 20.dp) {
         Column(Modifier.padding(16.dp)) {
             Text("\"$name\" 을(를) 직접 등록할까룡?", color = c.text, fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold)
             Text(
@@ -951,52 +998,6 @@ private fun NumberField(value: String, onChange: (String) -> Unit, placeholder: 
 }
 // ============================================================= 운동 추가
 
-internal data class WorkoutTemplate(val name: String, val reps: String, val duration: String, val category: String, val posture: Boolean)
-
-/**
- * 운동 카탈로그 — AIHub 피트니스 자세 데이터에 규칙 근거가 있는 26종목만 둔다(spec §56).
- * 앱 이름과 AIHub 종목이 1:1 이고 전부 postureExerciseMap 에 있다. 데이터에 없는 종목을 남기면
- * 카메라는 켜지는데 판정 근거가 없어, 비교 전용 안내가 자세 평가처럼 읽힌다.
- * "기본 스쿼트" 는 AIHub 바벨 스쿼트의 앱 표시 이름이다(사용자 결정 2026-09-25 저녁, 이전엔 "바벨 스쿼트" 로 노출). 저장된 옛 이름은 로드 시 바꾼다(WorkoutNames.canonical).
- * 바이시클 크런치는 MP 충실도 게이트(spec §25a) 후 남은 규칙이 없어 처음부터 제외.
- */
-internal val workoutCatalog = mapOf(
-    "하체" to listOf(
-        WorkoutTemplate("기본 스쿼트", "10회 × 3세트", "10분", "하체", true),
-        WorkoutTemplate("런지", "10회 × 3세트", "10분", "하체", true),
-        WorkoutTemplate("바벨 런지", "10회 × 3세트", "10분", "하체", true),
-        WorkoutTemplate("사이드 런지", "10회 × 3세트", "9분", "하체", true),
-        WorkoutTemplate("크로스 런지", "10회 × 3세트", "9분", "하체", true),
-        WorkoutTemplate("바벨 데드리프트", "10회 × 3세트", "10분", "하체", true),
-        WorkoutTemplate("굿모닝", "12회 × 3세트", "8분", "하체", true),
-        WorkoutTemplate("힙 쓰러스트", "12회 × 3세트", "8분", "하체", true),
-    ),
-    "상체" to listOf(
-        WorkoutTemplate("오버헤드 프레스", "10회 × 3세트", "9분", "상체", true),
-        WorkoutTemplate("랫풀 다운", "12회 × 3세트", "8분", "상체", true),
-        WorkoutTemplate("딥스", "10회 × 3세트", "8분", "상체", true),
-        WorkoutTemplate("덤벨 컬", "12회 × 3세트", "7분", "상체", true),
-        WorkoutTemplate("바벨 컬", "12회 × 3세트", "7분", "상체", true),
-        WorkoutTemplate("사이드 레터럴 레이즈", "12회 × 3세트", "7분", "상체", true),
-        WorkoutTemplate("프런트 레이즈", "12회 × 3세트", "7분", "상체", true),
-        WorkoutTemplate("업라이트로우", "12회 × 3세트", "7분", "상체", true),
-        WorkoutTemplate("푸쉬업", "12회 × 3세트", "7분", "상체", true),
-        WorkoutTemplate("니 푸쉬업", "10회 × 3세트", "7분", "상체", true),
-        WorkoutTemplate("Y 레이즈", "12회 × 3세트", "6분", "상체", true),
-    ),
-    "코어" to listOf(
-        WorkoutTemplate("플랭크", "45초 × 3세트", "6분", "코어", true),
-    ),
-    "복근" to listOf(
-        WorkoutTemplate("스탠딩 사이드 크런치", "12회 × 3세트", "7분", "복근", true),
-        WorkoutTemplate("스탠딩 니업", "12회 × 3세트", "7분", "복근", true),
-        WorkoutTemplate("행잉 레그 레이즈", "10회 × 3세트", "8분", "복근", true),
-        WorkoutTemplate("크런치", "15회 × 3세트", "6분", "복근", true),
-        WorkoutTemplate("레그 레이즈", "12회 × 3세트", "7분", "복근", true),
-        WorkoutTemplate("시저 크로스", "20회 × 3세트", "7분", "복근", true),
-    ),
-)
-
 /** 이름으로 카탈로그를 찾는다 — 대체 운동으로 갈아끼울 때 시간/카테고리까지 함께 맞추려고 쓴다. */
 private val catalogByName: Map<String, WorkoutTemplate> =
     workoutCatalog.values.flatten().associateBy { it.name }
@@ -1023,7 +1024,7 @@ private fun AddWorkoutSheet(app: AppViewModel, onClose: () -> Unit) {
                         onClick = {
                             app.updatePlan(
                                 app.workoutPlan + Workout(
-                                    id = "custom-${System.currentTimeMillis()}-${t.name.hashCode()}",
+                                    id = "custom-${nowMillis()}-${t.name.hashCode()}",
                                     name = t.name, reps = t.reps, duration = t.duration,
                                     posture = t.posture, category = t.category,
                                 ),

@@ -5,13 +5,13 @@ import com.example.trex_kotlin.posture.CoachMode
 import com.example.trex_kotlin.posture.OnsetKind
 import com.example.trex_kotlin.posture.PostureSetReport
 import com.example.trex_kotlin.posture.SetVerdict
-import java.time.LocalDate
-import java.util.Calendar
+import kotlin.math.roundToInt
 
 enum class TrexTab(val label: String) {
     Home("홈"),
     Workout("운동"),
     Diet("식단"),
+    Community("커뮤니티"),
     Profile("내 정보"),
 }
 
@@ -197,9 +197,86 @@ data class Nutrition(
 data class FoodEntry(
     val name: String,
     val nutrition: Nutrition,
-    /** 수량 — 리디자인의 직접 기록 시트 스테퍼. 합산 시 곱해진다. */
-    val qty: Int = 1,
+    /** 인분 — 스테퍼는 0.5 씩, 숫자를 눌러 직접 넣으면 소수 한 자리([FoodPortion]). 합산 시 곱해진다. */
+    val qty: Double = 1.0,
 )
+
+/**
+ * 인분 규칙. 영양값이 "1인분" 기준이라 반 공기·한 그릇 반을 기록할 수 있어야 칼로리가 맞는다.
+ * 스테퍼는 0.5 씩만 움직인다 — 더 잘게 나눈 버튼은 헷갈리고, 먹은 양은 눈대중("반 공기")이라 0.1 단위 버튼은 정밀해 보이기만 한다.
+ * 숫자를 눌러 직접 넣을 때만 소수 한 자리(0.1~20)를 받는다 — 사용자가 뜻한 숫자를 쓰는 것이라 헷갈리지 않는다.
+ */
+object FoodPortion {
+    const val STEP = 0.5
+    const val MIN_TYPED = 0.1
+    const val MAX = 20.0
+
+    /** 소수 한 자리로 맞춘다 — 0.1 + 0.2 같은 부동소수 찌꺼기가 저장·표시에 남지 않게. */
+    fun normalize(value: Double): Double = (value * 10).roundToInt() / 10.0
+
+    /**
+     * 스테퍼 한 칸. 0 이하면 null(그 음식을 뺀다), 위로는 [MAX] 에서 멈춘다.
+     * 예전 앱은 상한이 없어 [MAX] 를 넘는 기록이 있을 수 있다 — 그때 + 는 값을 줄이지 않고 그대로 둔다.
+     */
+    fun step(value: Double, up: Boolean): Double? {
+        if (up && value >= MAX) return value
+        val next = normalize(value + if (up) STEP else -STEP)
+        return if (next <= 0.0) null else if (up) next.coerceAtMost(MAX) else next
+    }
+
+    /** 같은 음식을 한 줄로 합친 인분 — [MAX] 에서 멈추되, 이미 그보다 큰 예전 기록을 줄이지는 않는다. */
+    fun add(a: Double, b: Double): Double = normalize(a + b).coerceAtMost(maxOf(MAX, a, b))
+
+    /** 한 칸 내리면 빠지는가 — 스테퍼 왼쪽 아이콘을 휴지통으로 바꾼다. */
+    fun removesOnStepDown(value: Double): Boolean = step(value, up = false) == null
+
+    /** "1", "0.5", "2.3" — 정수면 소수점을 붙이지 않는다. */
+    fun label(value: Double): String {
+        val tenths = (value * 10).roundToInt()
+        return if (tenths % 10 == 0) (tenths / 10).toString() else "${tenths / 10}.${tenths % 10}"
+    }
+
+    /** 직접 입력으로 칠 수 있는 모양 — 정수 두 자리, 소수점(쉼표도) 뒤 한 자리까지. 입력 칸이 이 모양이 아닌 글자는 받지 않는다. */
+    fun isTypable(text: String): Boolean = TYPABLE.matches(text)
+
+    /**
+     * 직접 입력 — 쉼표도 소수점으로 받는다. 소수 둘째 자리("1.55")는 반올림하지 않고 null 이다(보이는 숫자와 저장값이 같게).
+     * 범위 밖·숫자 아님·0 도 null — 이전 값을 그대로 둔다. "1." 과 ".5" 는 플랫폼 숫자 해석에 맡기지 않고 직접 고쳐 읽는다.
+     */
+    fun parseTyped(text: String): Double? {
+        val t = text.trim().replace(',', '.')
+        if (!isTypable(t) || t.none { it.isDigit() }) return null
+        val value = (if (t.startsWith(".")) "0$t" else t).removeSuffix(".").toDoubleOrNull() ?: return null
+        return normalize(value).takeIf { it >= MIN_TYPED && it <= MAX }
+    }
+
+    private val TYPABLE = Regex("^[0-9]{0,2}([.,][0-9]?)?$")
+
+    /**
+     * 예전 앱이 읽는 정수 수량 — 예전 앱은 `qty` 를 정수로 읽어 0.5 를 0 으로 버린다(0 kcal).
+     * 그래서 `qty` 에는 0 이 되지 않는 반올림 값(0.5 → 1, 1.5 → 2)을 두고 정확한 인분은 `portion` 에 따로 쓴다(TrexStore).
+     */
+    fun legacyCount(value: Double): Int = (value + 0.5).toInt().coerceAtLeast(1)
+
+    fun isWhole(value: Double): Boolean = (value * 10).roundToInt() % 10 == 0
+
+    /** 저장할 정확한 인분 — 정수면 null(예전과 똑같은 JSON 이라 동기화할 것도 생기지 않는다). */
+    fun storedPortion(value: Double): Double? = if (isWhole(value)) null else normalize(value)
+
+    /**
+     * 저장된 한 줄 → 인분. [portion] 이 있고 그 정수 근사가 [count] 와 같으면 [portion] 이다. [portion] 이 없으면(정수 인분·예전 기록) [count].
+     * 예전 앱은 식단을 다시 쓸 때 [portion] 을 통째로 버리므로(그 계정의 모든 반 인분이 정수 근사로 바뀐다 — FOOD_RECOGNITION.md),
+     * 둘이 어긋난 줄은 정상 경로로는 생기지 않는다. 어긋나면 손상된 기록으로 보고 [count] 를 믿는다.
+     */
+    fun fromStored(count: Int, portion: Double?): Double {
+        if (portion == null || portion.isNaN()) return count.toDouble()
+        val exact = normalize(portion)
+        return if (exact > 0.0 && legacyCount(exact) == count) exact else count.toDouble()
+    }
+}
+
+/** 1인분 영양값 × 인분 — 화면 표시용 kcal(반올림). */
+fun FoodEntry.totalKcal(): Int = (nutrition.kcal * qty).roundToInt()
 
 @Immutable
 data class MealMeta(
@@ -633,6 +710,75 @@ val foodDatabase = linkedMapOf(
     "오징어무침" to Nutrition(250, 13.6, 38.7, 4.2),  // 200g
     "잡채" to Nutrition(199, 37.5, 2.6, 4.7),  // 150g
     "탕평채" to Nutrition(101, 10.2, 3.5, 3.1),  // 100g
+    // 아래는 Food-101 머지 학습(2026-09-28, training/merge_food101.py)에서 다룬 양식·일식 35종. 머지 모델은 실사 사진에서 나빠져
+    // 기각됐고(FOOD_EVAL §10) 앱 모델은 342종 그대로라, 이 음식들은 **직접 기록 검색에서만** 쓰인다. Food-101 에는 영양값이 없어
+    // 흔한 1인분 기준의 **추정치**다 — approximateNutritionNames 에 넣어 결과 화면이 "추정치" 라고 밝힌다.
+    "피자" to Nutrition(540, 60.0, 22.0, 22.0),  // 2조각 200g (추정)
+    "햄버거" to Nutrition(520, 45.0, 26.0, 26.0),  // 1개 220g (추정)
+    "핫도그" to Nutrition(330, 27.0, 12.0, 19.0),  // 1개 130g (추정)
+    "라멘" to Nutrition(650, 75.0, 28.0, 25.0),  // 1그릇 550g (추정)
+    "타코야키" to Nutrition(290, 32.0, 10.0, 13.0),  // 6개 150g (추정)
+    "스테이크" to Nutrition(500, 0.0, 48.0, 34.0),  // 200g (추정)
+    "타코" to Nutrition(380, 30.0, 18.0, 20.0),  // 2개 170g (추정)
+    "나초" to Nutrition(500, 50.0, 12.0, 28.0),  // 치즈 150g (추정)
+    "시저샐러드" to Nutrition(330, 12.0, 12.0, 26.0),  // 200g (추정)
+    "클럽샌드위치" to Nutrition(560, 45.0, 30.0, 28.0),  // 1개 250g (추정)
+    "그릴드치즈샌드위치" to Nutrition(420, 32.0, 16.0, 26.0),  // 1개 130g (추정)
+    "프렌치토스트" to Nutrition(380, 42.0, 12.0, 18.0),  // 2쪽 150g (추정)
+    "팬케이크" to Nutrition(520, 85.0, 12.0, 14.0),  // 3장+시럽 200g (추정)
+    "와플" to Nutrition(330, 40.0, 8.0, 15.0),  // 1개 120g (추정)
+    "도넛" to Nutrition(270, 33.0, 4.0, 14.0),  // 1개 70g (추정)
+    "아이스크림" to Nutrition(210, 24.0, 4.0, 11.0),  // 1컵 100g (추정)
+    "치즈케이크" to Nutrition(350, 28.0, 6.0, 24.0),  // 1조각 110g (추정)
+    "초콜릿케이크" to Nutrition(370, 50.0, 5.0, 18.0),  // 1조각 100g (추정)
+    "컵케이크" to Nutrition(290, 40.0, 3.0, 13.0),  // 1개 75g (추정)
+    "마카롱" to Nutrition(170, 24.0, 3.0, 7.0),  // 2개 40g (추정)
+    "티라미수" to Nutrition(360, 34.0, 6.0, 22.0),  // 1조각 120g (추정)
+    "추로스" to Nutrition(300, 36.0, 4.0, 16.0),  // 2개 80g (추정)
+    "어니언링" to Nutrition(400, 40.0, 5.0, 24.0),  // 120g (추정)
+    "마늘빵" to Nutrition(250, 28.0, 6.0, 13.0),  // 2조각 70g (추정)
+    "라자냐" to Nutrition(480, 38.0, 26.0, 24.0),  // 300g (추정)
+    "리조또" to Nutrition(450, 58.0, 12.0, 18.0),  // 300g (추정)
+    "맥앤치즈" to Nutrition(480, 50.0, 18.0, 23.0),  // 250g (추정)
+    "피시앤칩스" to Nutrition(800, 80.0, 32.0, 40.0),  // 350g (추정)
+    "팟타이" to Nutrition(620, 85.0, 20.0, 22.0),  // 350g (추정)
+    "에그베네딕트" to Nutrition(600, 30.0, 28.0, 40.0),  // 2개 250g (추정)
+    "폭립" to Nutrition(750, 25.0, 50.0, 50.0),  // 350g (추정)
+    "퀘사디아" to Nutrition(520, 40.0, 26.0, 28.0),  // 1개 200g (추정)
+    "오믈렛" to Nutrition(320, 3.0, 21.0, 25.0),  // 달걀 3개 200g (추정)
+    "에다마메" to Nutrition(120, 9.0, 11.0, 5.0),  // 100g (추정)
+    "스프링롤" to Nutrition(280, 30.0, 6.0, 15.0),  // 4개 120g (추정)
+    // UEC FOOD-256 머지 학습(training/merge_uec.py NEW, "샐러드" 는 위에 이미 있다)에서 다룬 일식·빵·디저트 — 이 머지 모델도 기각돼
+    // **직접 기록 검색에서만** 쓰인다. 영양값은 흔한 1인분 **추정치**다.
+    "규동" to Nutrition(750, 100.0, 28.0, 24.0),  // 1그릇 450g (추정)
+    "가츠동" to Nutrition(900, 110.0, 35.0, 32.0),  // 1그릇 450g (추정)
+    "오야코동" to Nutrition(700, 95.0, 32.0, 18.0),  // 1그릇 430g (추정)
+    "텐동" to Nutrition(850, 115.0, 22.0, 30.0),  // 1그릇 450g (추정)
+    "카이센동" to Nutrition(600, 85.0, 35.0, 10.0),  // 1그릇 400g (추정)
+    "카츠카레" to Nutrition(950, 110.0, 30.0, 42.0),  // 1접시 500g (추정)
+    "오코노미야키" to Nutrition(550, 55.0, 20.0, 28.0),  // 1장 300g (추정)
+    "츠케멘" to Nutrition(750, 100.0, 32.0, 22.0),  // 1인분 500g (추정)
+    "야키소바" to Nutrition(550, 70.0, 18.0, 20.0),  // 1인분 300g (추정)
+    "야키토리" to Nutrition(350, 10.0, 30.0, 20.0),  // 5꼬치 150g (추정)
+    "고로케" to Nutrition(330, 32.0, 7.0, 19.0),  // 2개 120g (추정)
+    "감자샐러드" to Nutrition(170, 14.0, 2.0, 12.0),  // 100g (추정)
+    "마카로니샐러드" to Nutrition(200, 20.0, 4.0, 12.0),  // 100g (추정)
+    "달걀프라이" to Nutrition(90, 0.5, 6.0, 7.0),  // 1개 50g (추정)
+    "연어구이" to Nutrition(250, 0.0, 26.0, 16.0),  // 1토막 120g (추정)
+    "크루아상" to Nutrition(250, 26.0, 5.0, 14.0),  // 1개 60g (추정)
+    "베이글" to Nutrition(270, 53.0, 10.0, 2.0),  // 1개 100g (추정)
+    "머핀" to Nutrition(420, 52.0, 6.0, 20.0),  // 1개 110g (추정)
+    "스콘" to Nutrition(350, 45.0, 6.0, 16.0),  // 1개 90g (추정)
+    "토스트" to Nutrition(280, 38.0, 7.0, 11.0),  // 2쪽+버터 90g (추정)
+    "크레페" to Nutrition(380, 50.0, 7.0, 17.0),  // 1개 150g (추정)
+    "생크림케이크" to Nutrition(330, 38.0, 5.0, 18.0),  // 1조각 110g (추정)
+    "브라우니" to Nutrition(300, 40.0, 4.0, 15.0),  // 1개 70g (추정)
+    "슈크림" to Nutrition(260, 24.0, 6.0, 16.0),  // 2개 100g (추정)
+    "애플파이" to Nutrition(300, 43.0, 3.0, 14.0),  // 1조각 125g (추정)
+    "파르페" to Nutrition(450, 60.0, 7.0, 20.0),  // 1잔 250g (추정)
+    "치킨너겟" to Nutrition(290, 16.0, 15.0, 18.0),  // 6개 100g (추정)
+    "샤오롱바오" to Nutrition(350, 35.0, 18.0, 15.0),  // 6개 180g (추정)
+    "스팸무스비" to Nutrition(330, 40.0, 12.0, 13.0),  // 1개 130g (추정)
 )
 
 /**
@@ -655,7 +801,6 @@ val foodNameAliases: Map<String, String> = mapOf(
     "양념고기" to "불고기",
     "소면" to "잔치국수",
     "짜장면" to "자장면",
-    "라멘" to "라면",
     "계란찜" to "달걀찜",
     "계란국" to "달걀국",
     "계란말이" to "달걀말이",
@@ -665,7 +810,8 @@ val foodNameAliases: Map<String, String> = mapOf(
  * 영양값이 실측이 아니라 추정인 항목. 나머지는 AI Hub 74번 영양DB 의 1인분 실측값이다.
  * 결과 화면은 이 둘을 같은 확신으로 말하지 않는다 — 추정이 섞이면 그렇다고 밝힌다.
  *
- * 모델 클래스에 없는 일반 식품 8종 — 직접 기록 검색에서만 쓰인다.
+ * 모델 클래스에 없는 일반 식품 8종과, 머지 학습(Food-101·UEC, 기각)에서 다룬 양식·일식·디저트 64종 — 모두 342종 모델 라벨이 아니라
+ * 직접 기록 검색에서만 쓰인다.
  */
 val approximateNutritionNames: Set<String> = setOf(
     "닭가슴살",
@@ -676,6 +822,72 @@ val approximateNutritionNames: Set<String> = setOf(
     "샐러드",
     "사과",
     "아몬드",
+    // Food-101 머지 학습에서 다룬 35종 — 앱 모델(342종) 라벨이 아니다. 영양값은 추정이다.
+    "피자",
+    "햄버거",
+    "핫도그",
+    "라멘",
+    "타코야키",
+    "스테이크",
+    "타코",
+    "나초",
+    "시저샐러드",
+    "클럽샌드위치",
+    "그릴드치즈샌드위치",
+    "프렌치토스트",
+    "팬케이크",
+    "와플",
+    "도넛",
+    "아이스크림",
+    "치즈케이크",
+    "초콜릿케이크",
+    "컵케이크",
+    "마카롱",
+    "티라미수",
+    "추로스",
+    "어니언링",
+    "마늘빵",
+    "라자냐",
+    "리조또",
+    "맥앤치즈",
+    "피시앤칩스",
+    "팟타이",
+    "에그베네딕트",
+    "폭립",
+    "퀘사디아",
+    "오믈렛",
+    "에다마메",
+    "스프링롤",
+    // UEC FOOD-256 머지 학습에서 다룬 29종(+ 이미 있는 "샐러드").
+    "규동",
+    "가츠동",
+    "오야코동",
+    "텐동",
+    "카이센동",
+    "카츠카레",
+    "오코노미야키",
+    "츠케멘",
+    "야키소바",
+    "야키토리",
+    "고로케",
+    "감자샐러드",
+    "마카로니샐러드",
+    "달걀프라이",
+    "연어구이",
+    "크루아상",
+    "베이글",
+    "머핀",
+    "스콘",
+    "토스트",
+    "크레페",
+    "생크림케이크",
+    "브라우니",
+    "슈크림",
+    "애플파이",
+    "파르페",
+    "치킨너겟",
+    "샤오롱바오",
+    "스팸무스비",
 )
 
 fun emptyDietSlots(): Map<String, List<FoodEntry>> =
@@ -691,7 +903,7 @@ fun Nutrition.plus(other: Nutrition): Nutrition = Nutrition(
 fun Iterable<FoodEntry>.totalNutrition(): Nutrition =
     fold(Nutrition(0, 0.0, 0.0, 0.0)) { acc, entry ->
         Nutrition(
-            kcal = acc.kcal + entry.nutrition.kcal * entry.qty,
+            kcal = acc.kcal + (entry.nutrition.kcal * entry.qty).roundToInt(),
             carb = acc.carb + entry.nutrition.carb * entry.qty,
             protein = acc.protein + entry.nutrition.protein * entry.qty,
             fat = acc.fat + entry.nutrition.fat * entry.qty,
@@ -705,7 +917,7 @@ fun createWorkoutHistoryDay(
     reports: Map<String, PostureSetReport> = emptyMap(),
     elapsedByWorkout: Map<String, Int> = emptyMap(),
 ): WorkoutHistoryDay {
-    val calendar = Calendar.getInstance()
+    val today = localToday()
     val items = plan.map { workout ->
         val report = reports[workout.id]
         val seconds = elapsedByWorkout[workout.id]?.coerceAtLeast(0) ?: 0
@@ -722,9 +934,9 @@ fun createWorkoutHistoryDay(
     }
 
     return WorkoutHistoryDay(
-        epochDay = LocalDate.now().toEpochDay(),
-        dayLabel = calendar.koreanDayOfWeek(),
-        dateLabel = "${calendar.get(Calendar.MONTH) + 1}/${calendar.get(Calendar.DAY_OF_MONTH)}",
+        epochDay = today.toEpochDays(),
+        dayLabel = koreanDayOfWeek(today.dayOfWeek),
+        dateLabel = monthDayLabel(today),
         items = items,
         averageMinutes = 0,
         averageCalories = 0,
@@ -762,14 +974,4 @@ fun WorkoutHistoryDay.summaryText(): String = dayWorkoutAssessment(this)
 fun WorkoutHistoryDay.durationLabel(): String {
     val seconds = items.sumOf { it.durationSeconds ?: it.durationMinutes * 60 }
     return if (seconds < 60) "${seconds}초" else "${seconds / 60}분"
-}
-
-fun Calendar.koreanDayOfWeek(): String = when (get(Calendar.DAY_OF_WEEK)) {
-    Calendar.MONDAY -> "월"
-    Calendar.TUESDAY -> "화"
-    Calendar.WEDNESDAY -> "수"
-    Calendar.THURSDAY -> "목"
-    Calendar.FRIDAY -> "금"
-    Calendar.SATURDAY -> "토"
-    else -> "일"
 }

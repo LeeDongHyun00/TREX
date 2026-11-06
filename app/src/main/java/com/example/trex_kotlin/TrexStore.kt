@@ -1,7 +1,10 @@
 package com.example.trex_kotlin
 
-import android.content.Context
-import android.content.SharedPreferences
+import com.example.trex_kotlin.routines.SavedRoutine
+import com.example.trex_kotlin.routines.decodeRoutineExercises
+import com.example.trex_kotlin.routines.encodeRoutineExercises
+import com.example.trex_kotlin.routines.workoutFromJson
+import com.example.trex_kotlin.routines.workoutJson
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -11,11 +14,11 @@ import org.json.JSONObject
  * 기존에는 모든 서비스 데이터가 컴포저블 `remember` 에만 있어서 탭 전환/화면 회전/앱 재시작에
  * 기록이 통째로 사라졌다. SharedPreferences + JSON 으로 단순하게 저장하고, 서버가 붙으면
  * 이 클래스만 원격 동기화 구현으로 교체한다.
+ *
+ * 저장소는 [KeyValueStore] 경계로 받는다(§108) — Android 는 SharedPreferences `trex_store` 그대로이고
+ * (`TrexStore(context)` 는 AndroidPlatform.kt 의 생성 함수), iPhone 은 같은 키·같은 JSON 을 NSUserDefaults 에 쓴다.
  */
-class TrexStore(context: Context, preferenceName: String = "trex_store") {
-
-    private val prefs: SharedPreferences =
-        context.applicationContext.getSharedPreferences(preferenceName, Context.MODE_PRIVATE)
+class TrexStore(private val prefs: KeyValueStore) {
 
     init { removeLegacyDemoData() }
 
@@ -119,55 +122,54 @@ class TrexStore(context: Context, preferenceName: String = "trex_store") {
 
     // ---- 운동 계획
 
+    // 운동 한 개의 JSON 은 공유·보관함과 같다(routines/RoutineCodec.kt) — 개명된 종목은 로드 시 새 이름으로
     fun loadPlan(): List<Workout>? = prefs.getString(KEY_PLAN, null)?.let { raw ->
         runCatching {
             val arr = JSONArray(raw)
             List(arr.length()) { i ->
                 val o = arr.getJSONObject(i)
-                Workout(
-                    id = o.getString("id"),
-                    name = WorkoutNames.canonical(o.getString("name")),   // 개명된 종목("바벨 스쿼트" → "기본 스쿼트")은 로드 시 바꾼다
-                    reps = o.getString("reps"),
-                    duration = o.getString("duration"),
-                    posture = o.getBoolean("posture"),
-                    category = o.getString("category"),
-                    alt = o.optJSONObject("alt")?.let { a ->
-                        WorkoutAlt(a.getString("name"), a.getString("reps"))
-                    },
-                    done = o.optBoolean("done", false),
-                    secondsPerRep = if (o.has("secondsPerRep")) o.optInt("secondsPerRep", 3).coerceIn(1, 15) else null,
-                    restSeconds = if (o.has("restSeconds")) o.optInt("restSeconds", 45).coerceIn(0, 600) else null,
-                    target = when (o.optString("targetKind")) {
-                        "duration" -> WorkoutTarget.Duration(o.optInt("targetAmount", 30).coerceIn(1, 3600))
-                        "repetitions" -> WorkoutTarget.Repetitions(o.optInt("targetAmount", 12).coerceIn(1, 999))
-                        else -> null
-                    },
-                )
+                workoutFromJson(o, o.getString("id"), done = o.optBoolean("done", false), posture = o.getBoolean("posture"))
             }
         }.getOrNull()
     }
 
     fun savePlan(plan: List<Workout>) {
         val arr = JSONArray()
-        plan.forEach { w ->
-            val o = JSONObject()
-                .put("id", w.id)
-                .put("name", w.name)
-                .put("reps", w.reps)
-                .put("duration", w.duration)
-                .put("posture", w.posture)
-                .put("category", w.category)
-                .put("done", w.done)
-            w.alt?.let { o.put("alt", JSONObject().put("name", it.name).put("reps", it.reps)) }
-            w.secondsPerRep?.let { o.put("secondsPerRep", it) }
-            w.restSeconds?.let { o.put("restSeconds", it) }
-            w.resolvedTarget().let { goal ->
-                o.put("targetKind", if (goal is WorkoutTarget.Duration) "duration" else "repetitions")
-                o.put("targetAmount", goal.amount)
-            }
-            arr.put(o)
-        }
+        plan.forEach { arr.put(workoutJson(it, withDeviceFields = true)) }
         prefs.edit().putString(KEY_PLAN, arr.toString()).apply()
+    }
+
+    // ---- 내 루틴 보관함(docs/superpowers/specs/2026-10-29-routine-share-design.md) — 계정 백업 항목 `routines`
+
+    fun loadRoutines(): List<SavedRoutine> = prefs.getString(KEY_ROUTINES, null)?.let { raw ->
+        runCatching {
+            val arr = JSONArray(raw)
+            (0 until arr.length()).mapNotNull { i ->
+                runCatching {
+                    val o = arr.getJSONObject(i)
+                    val id = o.getString("id")
+                    SavedRoutine(
+                        id = id,
+                        name = o.getString("name"),
+                        // 저장할 때 이미 이 앱이 아는 종목만 자세 교정을 켜 두었다
+                        workouts = decodeRoutineExercises(o.getJSONArray("exercises"), id) { true },
+                        from = if (o.isNull("from")) null else o.optString("from").takeIf { it.isNotBlank() },
+                        savedAtMillis = o.optLong("savedAt", 0L),
+                    )
+                }.getOrNull()
+            }
+        }.getOrNull()
+    } ?: emptyList()
+
+    fun saveRoutines(list: List<SavedRoutine>) {
+        val arr = JSONArray()
+        list.forEach { r ->
+            arr.put(
+                JSONObject().put("id", r.id).put("name", r.name).put("from", r.from ?: JSONObject.NULL)
+                    .put("savedAt", r.savedAtMillis).put("exercises", encodeRoutineExercises(r.workouts)),
+            )
+        }
+        prefs.edit().putString(KEY_ROUTINES, arr.toString()).apply()
     }
 
     // ---- 운동 기록
@@ -321,7 +323,7 @@ class TrexStore(context: Context, preferenceName: String = "trex_store") {
                                                 protein = f.getDouble("protein"),
                                                 fat = f.getDouble("fat"),
                                             ),
-                                            qty = f.optInt("qty", 1),
+                                            qty = readPortion(f),
                                         )
                                     },
                                 )
@@ -333,6 +335,10 @@ class TrexStore(context: Context, preferenceName: String = "trex_store") {
         }.getOrNull()
     }
 
+    /** 음식 한 줄의 인분 — 정수 `qty`(예전 앱도 읽는 근사)와 정수가 아닐 때만 있는 `portion`(정확한 값). 규칙은 [FoodPortion.fromStored]. */
+    private fun readPortion(f: JSONObject): Double =
+        FoodPortion.fromStored(f.optInt("qty", 1), if (f.has("portion")) f.optDouble("portion", Double.NaN) else null)
+
     fun saveDiet(diet: Map<Long, Map<String, List<FoodEntry>>>) {
         val root = JSONObject()
         diet.forEach { (epochDay, slots) ->
@@ -340,15 +346,16 @@ class TrexStore(context: Context, preferenceName: String = "trex_store") {
             slots.forEach { (slotId, foods) ->
                 val arr = JSONArray()
                 foods.forEach { food ->
-                    arr.put(
-                        JSONObject()
-                            .put("name", food.name)
-                            .put("kcal", food.nutrition.kcal)
-                            .put("carb", food.nutrition.carb)
-                            .put("protein", food.nutrition.protein)
-                            .put("fat", food.nutrition.fat)
-                            .put("qty", food.qty),
-                    )
+                    val obj = JSONObject()
+                        .put("name", food.name)
+                        .put("kcal", food.nutrition.kcal)
+                        .put("carb", food.nutrition.carb)
+                        .put("protein", food.nutrition.protein)
+                        .put("fat", food.nutrition.fat)
+                        // 예전 앱은 qty 를 정수로 읽는다 — 0 이 되지 않는 근사를 두고, 정수가 아닐 때만 정확한 인분을 따로 쓴다
+                        .put("qty", FoodPortion.legacyCount(food.qty))
+                    FoodPortion.storedPortion(food.qty)?.let { obj.put("portion", it) }
+                    arr.put(obj)
                 }
                 slotsObj.put(slotId, arr)
             }
@@ -442,15 +449,8 @@ class TrexStore(context: Context, preferenceName: String = "trex_store") {
         edit.commit()
     }
 
-    // SharedPreferences 는 리스너를 약하게 잡는다 — 필드로 붙들어 둔다.
-    private var changeListener: SharedPreferences.OnSharedPreferenceChangeListener? = null
-
     /** 항목이 바뀔 때마다 그 키로 [onChange] 를 부른다(메인 스레드). */
-    fun setChangeListener(onChange: (String) -> Unit) {
-        changeListener?.let(prefs::unregisterOnSharedPreferenceChangeListener)
-        changeListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key -> key?.let(onChange) }
-            .also(prefs::registerOnSharedPreferenceChangeListener)
-    }
+    fun setChangeListener(onChange: (String) -> Unit) = prefs.setChangeListener(onChange)
 
     private companion object {
         const val KEY_THEME = "theme_mode"
@@ -460,6 +460,7 @@ class TrexStore(context: Context, preferenceName: String = "trex_store") {
         const val KEY_ONBOARDED = "onboarded"
         const val KEY_PROFILE = "profile"
         const val KEY_PLAN = "plan"
+        const val KEY_ROUTINES = "routines"
         const val KEY_HISTORY = "history"
         const val KEY_DIET = "diet"
         const val KEY_WATER = "water"

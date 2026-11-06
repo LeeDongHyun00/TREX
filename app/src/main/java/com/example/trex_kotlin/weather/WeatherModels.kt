@@ -1,14 +1,19 @@
 package com.example.trex_kotlin.weather
 
+import com.example.trex_kotlin.nowMillis
+
+/**
+ * 지금 날씨(Open-Meteo `current`). 기온·강수·WMO 날씨 코드·풍속은 운동 추천 판정에 쓰고([WeatherExerciseRecommender]),
+ * 홈의 날씨 한 줄은 기온·날씨·강수량을 보인다(§108f). [isDay] 는 맑은 밤을 달 아이콘으로 그리는 데만 쓴다.
+ */
 data class WeatherInfo(
     val temperature: Double,
     val precipitation: Double,
     val weatherCode: Int,
     val windSpeed: Double,
-    val fetchedAtMillis: Long = System.currentTimeMillis(),
-    val aqi: Int? = null,
+    val fetchedAtMillis: Long = nowMillis(),
+    val isDay: Boolean = true,
     val pm10: Double? = null,
-    val pm25: Double? = null
 )
 
 enum class WorkoutEnvironment(val labelKorean: String) {
@@ -39,10 +44,11 @@ data class WeatherWorkoutRecommendation(
     val theme: WeatherThemeMode,
     val locationLabel: String,
     val weatherSummary: String,
-    val airQualitySummary: String = "", // 👈 미세먼지 수치 요약 필드 추가
     val updateAgeText: String,
     val message: String,
-    val exercises: List<RecommendedExercise>
+    val exercises: List<RecommendedExercise>,
+    /** 판정에 쓴 날씨 — 카드가 큰 기온·하늘색·시간별을 그린다. */
+    val weather: WeatherInfo,
 )
 
 enum class KoreanRegion(

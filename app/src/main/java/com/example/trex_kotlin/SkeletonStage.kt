@@ -45,24 +45,24 @@ import kotlin.math.sin
 /**
  * 화면에 켜진 교정 단서 하나(docs/LIVE_SCREEN_REDESIGN.md §3.2, spec §101) — "COACH 에서 말한 교정 문장 하나의 그림". 한 회에 하나, 음성 문장을 만든 사건이 만든다(문턱 = 음성).
  * [anchors] = 출발 관절(쪽·카메라 쪽 팔을 푼 뒤). [targets] = [MotionKind.TOWARD_TARGET] 의 목표 관절. [gravity] = 위아래를 중력 기준으로(바닥). [chain] = 보이는 쪽 사슬만(화면이 가시성으로 고른다).
- * [soft] = 참고색(바닥 — 사용자 결정 U7 '바닥 색은 참고색'). [origin] 별로 지우는 규칙이 다르다: 통과한 회는 REPFORM 만 지운다(한 다리 계열의 센 회는 beta 검사뿐이라 늘 correct 라 다른 다리의 기각 화살표를 지웠다).
+ * [soft] = 참고색(바닥 — 사용자 결정 U7 '바닥 색은 참고색'). [blocked] = 이 그림의 사유가 회(시간)를 뺐다 → 빨강, 아니면 주황(§125 — 말만 한 교정과 뺀 회를 색으로 가른다). [origin] 별로 지우는 규칙이 다르다: 통과한 회는 REPFORM 만 지운다(한 다리 계열의 센 회는 beta 검사뿐이라 늘 correct 라 다른 다리의 기각 화살표를 지웠다).
  * [startedAt] 부터 [PULSE_MS] 동안 맥동, 그 뒤 정지. [ttlMs] 지나면 지운다.
  */
 internal data class MotionCue(val kind: MotionKind, val anchors: Set<Int>, val startedAt: Long,
                               val origin: MotionOrigin = MotionOrigin.REPFORM, val targets: Set<Int> = emptySet(),
                               val gravity: Boolean = false, val chain: Boolean = false, val soft: Boolean = false,
-                              val ttlMs: Long = MotionSpec.DEFAULT_TTL_MS) {
+                              val ttlMs: Long = MotionSpec.DEFAULT_TTL_MS, val blocked: Boolean = true) {
     companion object {
         const val PULSE_MS = 1800L
         const val PERIOD_MS = 600L
 
         /** 반복 검사 사건 — [side] = 그 회의 앞다리(런지 깊이는 뒷무릎 SUPPORT), [view] 로 카메라 쪽 팔(컬 NEAR)과 좌우 가능 여부를 푼다. */
-        fun of(check: RepFormCheck, direction: FormDirection, highlight: Set<Int>, now: Long, side: StepSide? = null, view: String? = null): MotionCue? {
+        fun of(check: RepFormCheck, direction: FormDirection, highlight: Set<Int>, now: Long, side: StepSide? = null, view: String? = null, blocked: Boolean = true): MotionCue? {
             val m = check.motion ?: return null
             val spec = MotionSpec(m, MotionOrigin.REPFORM, direction, side = side, near = FormMotion.nearSide(view), lateralOk = MotionSpec.lateralOk(view))
             val kind = spec.kind ?: return null
             val anchors = spec.anchors.let { a -> if (m.pick == MotionPick.ALL) a.intersect(highlight).ifEmpty { a } else a }
-            return MotionCue(kind, anchors, now, MotionOrigin.REPFORM, spec.targets)
+            return MotionCue(kind, anchors, now, MotionOrigin.REPFORM, spec.targets, blocked = blocked)
         }
 
         /** 엔진이 만든 그림 명세(판별 기각·플랭크 멈춤·시선·가동 범위·처음부터 알림) — [soft] 는 바닥(참고색). 어휘가 없으면 null(문장만). */
@@ -76,7 +76,7 @@ internal data class MotionCue(val kind: MotionKind, val anchors: Set<Int>, val s
         fun ofWindow(event: CoachEvent, now: Long): MotionCue? {
             if (event.kind == OnsetKind.RECOVERED) return null
             val m = WindowMotions.forRule(event.rule.id, event.direction) ?: return null
-            return MotionCue(m.kindFor(event.direction) ?: return null, m.anchor.landmarks, now, MotionOrigin.WINDOW)
+            return MotionCue(m.kindFor(event.direction) ?: return null, m.anchor.landmarks, now, MotionOrigin.WINDOW, blocked = false)   // 창 규칙은 회를 빼지 않는다 — 주황
         }
     }
 }
@@ -85,8 +85,9 @@ internal data class MotionCue(val kind: MotionKind, val anchors: Set<Int>, val s
 private val GHOST_LEG = arrayOf(intArrayOf(25, 27, 29, 31), intArrayOf(26, 28, 30, 32))
 private const val GHOST_MS = 2000L
 
-private val WARN = Color(0xFFFF5A5A)          // ship 위반 = 말하는 판정
-private val PROVISIONAL = Color(0xFFFFC24B)   // beta = 말하지 않는 판정, '참고'
+private val WARN = Color(0xFFFF5A5A)          // 빨강 = 이 회를 횟수에서 뺀 판정(차단·기각·가동 범위 미달·플랭크 멈춤) — §125
+private val COACH = Color(0xFFFF8C42)         // 주황 = 말했지만 센 판정(코칭 띠·창 규칙·유지 자세·시선) — §125, 사용자 요청 2026-11-01
+private val PROVISIONAL = Color(0xFFFFC24B)   // 호박 = 말하지 않는 판정, '참고'(beta)
 private val FRAME_GLOW = Color(0xFFFFC24B)
 private val ALIGN = Color(0xFF58D8C7)
 
@@ -102,6 +103,8 @@ internal fun SkeletonStage(
     dark: Boolean,
     lock: BodyBox?,
     highlight: Set<Int> = emptySet(),
+    /** 말했지만 센 판정의 부위(§125) — 주황. [highlight](빨강)가 우선한다. */
+    coaching: Set<Int> = emptySet(),
     provisional: Set<Int> = emptySet(),
     visibilityCut: Float = 0.5f,
     plankSide: Int? = null,
@@ -146,8 +149,8 @@ internal fun SkeletonStage(
         anim[2] = now
         val fresh = anim[0] == 0L || gap > 900L   // 첫 샘플·오래 끊긴 뒤는 바로 놓는다
         anim[0] = now; anim[1] = gap.coerceIn(80L, 400L)
-        System.arraycopy(display, 0, from, 0, from.size)
-        if (fresh) { System.arraycopy(target, 0, display, 0, display.size); frameTick = now; return@LaunchedEffect }
+        display.copyInto(from, 0, 0, from.size)
+        if (fresh) { target.copyInto(display, 0, 0, display.size); frameTick = now; return@LaunchedEffect }
         // 유령 다리는 보간하지 않는다 — 가설이 뒤집히는 발목을 선형으로 옮기면 '쓸고 지나가는 다리' 가 된다(10-08 사이드 런지)
         for (s in 0..1) if (now < ghostUntil[s]) for (i in GHOST_LEG[s]) { from[i * 2] = target[i * 2]; from[i * 2 + 1] = target[i * 2 + 1] }
         while (true) {
@@ -235,11 +238,12 @@ internal fun SkeletonStage(
             val pa = point(p) ?: return@forEach; val pb = point(q) ?: return@forEach
             val both = visible(p) && visible(q)
             if (both) {
-                val hot = p in highlight && q in highlight   // 위반 부위의 연결선은 붉게
-                val soft = !hot && p in provisional && q in provisional
+                val hot = p in highlight && q in highlight   // 회를 뺀 부위의 연결선은 붉게(§125)
+                val warm = !hot && p in coaching && q in coaching   // 말했지만 센 부위는 주황 — 굵기는 빨강과 같다(참고와 가른다)
+                val soft = !hot && !warm && p in provisional && q in provisional
                 drawLine(
-                    color = when { hot -> WARN.copy(alpha = 0.9f); soft -> PROVISIONAL.copy(alpha = 0.75f); else -> Color.White.copy(alpha = if (dark) 0.9f else 0.55f) },
-                    start = pa, end = pb, strokeWidth = if (hot) lineW * 1.8f else if (soft) lineW * 1.3f else lineW, cap = StrokeCap.Round,
+                    color = when { hot -> WARN.copy(alpha = 0.9f); warm -> COACH.copy(alpha = 0.9f); soft -> PROVISIONAL.copy(alpha = 0.75f); else -> Color.White.copy(alpha = if (dark) 0.9f else 0.55f) },
+                    start = pa, end = pb, strokeWidth = if (hot || warm) lineW * 1.8f else if (soft) lineW * 1.3f else lineW, cap = StrokeCap.Round,
                 )
             } else if (dark) {
                 // 못 보는 관절로 가는 선은 점선 — "앱이 지금 못 보는 곳"(원칙 #5 의 화면판). 잘리면 다리가 점선으로 끝난다
@@ -251,8 +255,8 @@ internal fun SkeletonStage(
             val e1 = point(7); val e2 = point(8)
             val rad = max(if (e1 != null && e2 != null && visible(7) && visible(8)) hypot(e1.x - e2.x, e1.y - e2.y) / 2f else 0f, 9.dp.toPx())
             // 시선 지적(§101d) 동안 머리 원은 붉은 테두리 — 말한 문장의 그림(화살표)과 함께 '교정 가시성'
-            val gazeHot = cue != null && cue.origin == MotionOrigin.GAZE
-            drawCircle(if (gazeHot) WARN.copy(alpha = 0.95f) else Color.White.copy(alpha = if (dark) 0.9f else 0.55f), rad, nose, style = Stroke(if (gazeHot) lineW * 1.6f else lineW))
+            val gazeHot = cue != null && cue.origin == MotionOrigin.GAZE   // 시선은 회를 빼지 않는다 — 주황(§125)
+            drawCircle(if (gazeHot) COACH.copy(alpha = 0.95f) else Color.White.copy(alpha = if (dark) 0.9f else 0.55f), rad, nose, style = Stroke(if (gazeHot) lineW * 1.6f else lineW))
             val s1 = point(11); val s2 = point(12)
             if (s1 != null && s2 != null && visible(11) && visible(12)) {
                 val mid = Offset((s1.x + s2.x) / 2f, (s1.y + s2.y) / 2f)
@@ -268,10 +272,12 @@ internal fun SkeletonStage(
                 continue
             }
             val hot = i in highlight
-            val soft = !hot && i in provisional
+            val warm = !hot && i in coaching
+            val soft = !hot && !warm && i in provisional
             if (hot) drawCircle(WARN.copy(alpha = 0.22f), 16.dp.toPx() * 0.6f, p)
-            drawCircle(when { hot -> WARN; soft -> PROVISIONAL; else -> Color.White.copy(alpha = 0.9f) },
-                (if (hot) 6.dp else if (soft) 5.dp else 3.5.dp).toPx(), p)
+            if (warm) drawCircle(COACH.copy(alpha = 0.22f), 16.dp.toPx() * 0.6f, p)
+            drawCircle(when { hot -> WARN; warm -> COACH; soft -> PROVISIONAL; else -> Color.White.copy(alpha = 0.9f) },
+                (if (hot || warm) 6.dp else if (soft) 5.dp else 3.5.dp).toPx(), p)
         }
 
         // 교정 단서(§3.3·§101) — 위반 관절에서 고칠 방향으로. 앵커가 안 보이거나 이미지 밖이면 그리지 않는다(못 보는 관절에 화살표를 붙이면 거짓 확신).
@@ -298,7 +304,7 @@ internal fun SkeletonStage(
             // 위 방향 — 바닥은 중력 위의 화면 성분(폰을 눕히면 화면 위 ≠ 중력 위, §101), 서서는 화면 위. 미러면 x 가 뒤집힌다
             val up = (if (cue.gravity) FloorChain.gravityUp(sample.up, sample.upFromGravity, sample.upFlipped) else null)
                 ?.let { g -> val n = hypot(g.x, g.y); if (n < 0.3f) null else Offset((if (mirror) -g.x else g.x) / n, -g.y / n) } ?: Offset(0f, -1f)
-            val color = if (cue.soft) PROVISIONAL else WARN
+            val color = if (cue.soft) PROVISIONAL else if (cue.blocked) WARN else COACH   // §125: 뺀 회의 그림은 빨강, 말만 한 교정은 주황
             val phase = if (pulseMs >= MotionCue.PULSE_MS) 0f else (pulseMs % MotionCue.PERIOD_MS).toFloat() / MotionCue.PERIOD_MS
             val alpha = 1f - 0.55f * phase
             val len = size.height * 0.09f
@@ -346,12 +352,12 @@ private fun DrawScope.drawRotateArrow(center: Offset, r: Float, headAtRight: Boo
     drawArc(color, 200f, 140f, useCenter = false, topLeft = Offset(center.x - r, center.y - r), size = Size(2 * r, 2 * r),
         style = Stroke(width, cap = StrokeCap.Round))
     val endDeg = if (headAtRight) 340f else 200f
-    val rad = Math.toRadians(endDeg.toDouble()).toFloat()
+    val rad = (endDeg.toDouble() / 180.0 * kotlin.math.PI).toFloat()
     val tip = Offset(center.x + cos(rad) * r, center.y + sin(rad) * r)
     // 접선 방향(호를 따라 진행하는 쪽)
-    val tangent = if (headAtRight) rad + (Math.PI / 2).toFloat() else rad - (Math.PI / 2).toFloat()
+    val tangent = if (headAtRight) rad + (kotlin.math.PI / 2).toFloat() else rad - (kotlin.math.PI / 2).toFloat()
     for (s in floatArrayOf(-1f, 1f)) {
-        val a = tangent + Math.PI.toFloat() + s * 0.6f
+        val a = tangent + kotlin.math.PI.toFloat() + s * 0.6f
         drawLine(color, tip, Offset(tip.x + cos(a) * head, tip.y + sin(a) * head), width, StrokeCap.Round)
     }
 }

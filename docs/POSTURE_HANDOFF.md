@@ -1,5 +1,13 @@
 # 자세 평가 — 인수인계 (2026-10-08)
 
+> **2026-10-29 sheets follow-up, uncommitted on `c4ae0412`:** All active bottom-sheet flows use the shared Material `SheetHost` with downward dismissal and expanded opening by default. Only the photo entry menu starts partially; advancing to detailed steps expands the same state. Removed iOS-only competing settle animations and duplicate IME padding. Number-wheel touches/flings temporarily own their gestures; device regression caught and fixed parent interception. Replacement recommendations use existing weather/fatigue engines, source headings and names only. Manual food search/results moved higher in the content. Android 778 unit + core JVM 525 tests pass; five device tests pass; iOS source/resource checks pass. Native iOS remains unverified; existing FoodDetector BOM blocks lint. Spec §111 and `docs/superpowers/plans/2026-10-29-sheets-recommendations.md` contain verification and limitations. Previous §110 changes preserved; no commit/push.
+
+> **2026-10-28 follow-up, uncommitted on `c4ae0412`:** Shared muscle viewer now sets explicit viewport pixel heights on load/resize; device diagnosis found valid SVG paths with zero root/SVG heights. Android device fatigue screen now renders both bodies. Workout history/fatigue use the same today-inclusive seven-day window; Android SQLite and iOS JSON physically prune at refresh, and snapshots filter independently of storage failure. User explicitly excluded diagnostic logs/self-labels; routines and personal baselines remain. The stage toggle is a top-right overlay above the adaptive layout in preparation/exercise, with the panel duplicate removed. Muscle footer attribution moved to Settings. Android 776 and core JVM 525 tests pass, plus both viewer modes/zero-height recovery in headless Chrome. iOS core/resources checks pass; Xcode/native iOS and full workout UI flow remain unverified. Design/evidence: `docs/superpowers/plans/2026-10-28-muscle-ui-retention.md`, `outputs/muscle-ui-fix/`. No commit or push.
+
+> **iPhone 포팅 2차 — main 병합 + 바닥·시선·발화 정책 이식(2026-10-21, spec §107f, `ios-redesign`)**: `origin/main` `ca7f1fa` 를 병합하고(충돌은 문서 3개) 동기화 목록을 48파일로 늘려 §99~§106 의 바닥 엔진·Face Landmarker 시선·`SpeechQueue`·`StandingFraming`·관절 게이트를 iOS 에 올렸다. `IosEngine` 은 `PostureLive`/`PostureFloorLive`/`CapturePreparationUi`/`SpeechCoach` 배선을 같은 순서로 옮긴 것이고 Swift 는 카메라·중력·TTS·얼굴 크롭·화면만 든다. 포팅 기준 8항은 [IOS_PORT](IOS_PORT.md). 공통 JVM **504/504**(Linux), 세 `--check`, Swift 구문 검사 통과, 코드 `a4a4e5ed` 의 [macOS Actions 12차](https://github.com/LeeDongHyun00/TREX/actions/runs/39558756012) 성공(Xcode 26 빌드·번들 검사·시뮬레이터 XCTest 6건·미서명 IPA). **서명·실기기 실행은 미검증.**
+
+> **iPhone 포팅(2026-10-07, §99~§99e, `ios-redesign`)**: 최신 `redesign` `5213e3c4`를 기준으로 공통 엔진 + SwiftUI `Trex` 앱을 구현해 원격에 푸시했다. 자세·26종 운동·7종 가이드·350종 영양·사진 식단·기록·3D 부하·백업을 연결하고 Android 정본 38파일을 생성/검사한다. 준비/판정은 300ms 칸, 접촉은 85ms다. **Android 557/557·APK, 공통 JVM 376/376, Swift 31파일 정적 검사 통과. macOS Xcode 26.0.1에서도 iPhone arm64 Release 빌드·원본/호환 모델 번들 검사·미서명 IPA 생성과 시뮬레이터 XCTest 4/4 성공**(검증 코드 `e52b15be`). 음식 3모델과 자세 모델의 같은 프로세스 실제 추론까지 통과했다. 음식 런타임 격리, YOLO 외부 가중치 inline 호환과 보존 증빙을 포함한다. **서명·실제 iPhone 실행/운동 정확도는 미검증**이다. [IOS_PORT](IOS_PORT.md)에 IPA 링크·Mac 절차·남은 기기 검증을 기록했다.
+
 > **`main`(서버 동기화·구글 로그인·앱 아이콘) + `redesign` 통합 병합(2026-10-14, 브랜치 `claude/zen-wright-1xj9a4`)**: 분기점 `83075fb`(09-30) 이후 redesign 24커밋·main 17커밋. 규칙은 **양쪽을 모두 살리고 충돌만 영역별로** — 자세·운동 세션·가이드는 redesign, 로그인·동기화·서버·아이콘은 main, 배포(버전 코드 12·release 의 debug 키스토어 서명·앱 내 업데이트)는 redesign 유지. 양쪽이 다 건드린 파일은 5개이고 충돌은 3개였다: `app/build.gradle.kts`(release 블록에 main 의 `buildConfigField`·`manifestPlaceholders` 와 redesign 의 `signingConfig` 를 둘 다), `AndroidManifest.xml`(`INTERNET` 하나 + `REQUEST_INSTALL_PACKAGES`), `README.md`(덩어리별 수동 병합). `TrexApp.kt`·`CLAUDE.md` 는 자동 병합 — `TrexApp.kt` 에 main 의 첫 동기화 대화상자·`onAppForeground` 와 redesign 의 `HoldBridge`·`AppUpdatePrompt`·`SessionOrientation` 이 함께 있다. **병합 뒤 남는 일**: ① release 서명 키 SHA-1 을 구글 콘솔에 등록하지 않으면 체험판 APK 의 구글 로그인이 `28444` 로 실패한다 ② 다음 체험판부터 로그인·동기화가 들어가 앱 내 업데이트로 기존 체험자에게 안내된다 — 개인정보 처리방침·동의(서버 5단계)를 그 전에 할지 결정 필요. 두 항목 모두 `docs/SERVER_SYNC_HANDOFF.md` §7. 자세 엔진 코드는 바뀌지 않았다(main 이 `posture/` 를 건드리지 않음).
 
 > **preview.7 배포 완료(2026-10-10)**: [GitHub 사전 릴리스](https://github.com/LeeDongHyun00/TREX/releases/tag/v1.3.0-preview.7) 공개 완료(`draft=false`, `prerelease=true`). 빌드 소스·태그 커밋 `7d2bb43e`, versionCode 12. APK·SHA256SUMS.txt·BUILD_INFO.json 세 자산의 원격 해시와 크기, 앱이 읽는 릴리스 목록의 최신 항목을 확인했다. APK SHA-256 `a888647fc35451e4e9f2b9ba93c581c6536f41d563e67fd24f36bda2f2b6d440`. 폰 설치·실기기 UI 검증은 하지 않았다. 로컬 배포 증빙 `outputs/android-preview/1.3.0-preview.7/`.
@@ -164,6 +172,8 @@
 엔진은 판정을 잘 하는데 그 판정이 사용자에게 닿는 경로가 사용자를 잘못 이끌고 있었다. 이번 작업은 그 경로를 고쳤다 — 판정을 남기고(§30), 말하는 방식을 정직하게 만들고(§31), 점수가 준비 동작에 오염되던 실기기 오탐을 잡았다(§31a).
 
 ## 2. 브랜치·워킹트리 상태
+
+**iOS 별도 작업(2026-10-07)**: 현재 `ios-redesign`, 시작 `5213e3c4`(redesign preview.6). iOS/KMP 구현·CI 수정·음식 모델 호환 처리를 `origin/ios-redesign`에 푸시했다. 검증 코드 `e52b15be`의 macOS Actions와 IPA 업로드가 성공했고 상세 결과는 `docs/IOS_PORT.md`를 따른다. 이전 운동 가이드 변경은 `preserve exercise guides before iOS redesign port` stash에 보존했다. 다음 세션에서 `git status`로 실제 상태를 확인한다.
 
 | 브랜치 | 커밋 | 원격 |
 |---|---|---|
@@ -349,6 +359,8 @@ WorkoutHistoryItem.postureCorrection → 기록 화면
 ---
 
 ## 6. 다음에 할 일
+
+**iOS 포팅의 다음 단계**: framework/Swift 빌드·XCTest·번들/IPA 검증은 macOS Actions에서 완료했다. 사용자가 자신의 Mac에서 서명하고 iPhone 전후면·중력·정지/복귀·네 종목 짝/기각/접촉·음식 방향·3D를 확인한다. 자동 실행 검사와 실제 운동/사진 정확도 검증을 구분한다. 절차와 검증 범위는 `docs/IOS_PORT.md`.
 
 0. **`gradlew` 실행비트를 커밋할지 결정** (안 하면 새 클론에서 빌드 실패)
 1. **§31a 후속 수정을 실기기로 재검증** — 새 캡처가 있어야 `anchor_t_ms` 로 앵커 시점을 확인할 수 있다. 손에 있는 로그로는 불가능하다.
@@ -589,3 +601,58 @@ WorkoutHistoryItem.postureCorrection → 기록 화면
 - **(후속 6)** 사용자 확인: 12:19 세트 7·8회 발끝 그대로 → 넓은 스탠스가 발끝 각을 +20~28° 부풀린다. 발 너비 위반 반복에서 발끝 유보. 두 정적 검사의 1명 성적: 발 너비 2/2·오탐 0/8, 발끝 4/4·오탐 0/2. 다음: 사람 2명 더(지정 오류 세트, 검증 모드 on 권장 — 좌표로 보정식 근거), 시작 자세 기준의 취약성(5프레임 하나) 개선, 발끝 각 원근 보정식.
 - **(후속 7, 사용자 지시 "있는 데이터로 지도 확정")** REHAB24-6·MM-Fit 랜드마크 캡처(`data/rehab_mp_captures`·`data/mmfit_mp_captures`)를 재생해 모집단 오탐률로 띠 확정(설계 §21.10): 무릎 0.0(ship, 4/0/0 %), 발 너비 0.6~1.5(1/2/3 %), 발끝 중앙값 ±15°(8/5/2 %). 좌표 로깅 상시화(검증 모드 불필요). 문헌 기반 오류 카탈로그 `docs/SQUAT_FAULT_CATALOG.md`(14항목: 봄 8·못 봄 3·미구현 2). **다음**: ① 서 있음 판정을 시작 자세 무릎각 기준으로(발끝 2/4 놓침 원인) ② 좌우 쏠림(`knee_asym`·`torso_roll`) 검사 구현 ③ 지정 오류 세트 2명. 재생 명령: `run_replay.py <captures> --out <out> --configs live` → `replay.jsonl` 의 `repForm`(라벨 조인은 index 의 `reps[[start,end,correct]]`).
 - **(후속 8)** 서 있음 판정 수정(발끝 3/4), 좌우 쏠림·hip rise 검사(beta, 모집단 p95 띠) — 설계 §21.11, 카탈로그 갱신. 스쿼트 반복 검사 10개(ship: 무릎 안쪽 모임). 다음: 검출 근거 — 일부러 쏠리기·엉덩이 먼저 올리기를 포함한 지정 오류 세트(사용자 1회면 시작), 사람 2명.
+
+## 2026-11-01 — 덤벨 컬 1단 (§123)
+
+Play 1.3.0 보고 "팔꿈치 벌어짐·허리 숙임을 잡는데 횟수로 센다" 의 원인은 컬 2단 검사의 코칭 띠(말만 하고 셈)였고, 10-15 에 결정한 '덤벨 컬 1단' 이 `claude/sync-local-main-changes-bb8f7d` 워크트리에 미커밋으로만 있었다. 그 중 덤벨 컬 1단만 main 에 옮겼다(`repform_v0.15`, 바벨 컬은 2단 그대로). 같은 워크트리의 §108(가까운 팔 위상·판정 수 표기)·스쿼트 깊이 차단은 **아직 미병합** — 별도 결정.
+
+다음: ① 사용자 폰 재확인(개발자 빌드, 11-01 15:02 세트와 같은 조건 — 코칭 띠 회가 "이 회는 세지 않았어요" 와 함께 빠지는지), ② Mac 에서 `bash gradlew -PiosOnly=true :ios-ui:compileKotlinIosArm64`, ③ 2단이 남은 종목(바벨 컬·런지)의 '첫 위반만 보는 `gated`' 틈(§123 부수 발견).
+
+## 2026-11-01 — 네 종목(굿모닝·푸시업·프런트·사이드 레터럴 레이즈) PR 59 에서 분리 (§124)
+
+사용자 요청으로 PR 59 의 암호화를 뺀 운동 부분만 `fix/curl-one-tier-gate` 에 체리픽(`repform_v0.16`). 전부 beta 참고, 카운터 신호 변경(굿모닝 몸통 회전·푸시업 보이는 쪽 사슬+엎드림 게이트·레이즈 위팔각). MM-Fit 사이드 레이즈 A/B MAE 2.15 → 1.08. **§124a 레이즈 높이 미달의 beta 횟수 제외는 사용자 확인 대기** — 확인 안 되면 `gates = false`. 푸시업·프런트·굿모닝은 재생 근거 없음 → 폰 세트 필요. 암호화(PR 59·60)는 별도.
+
+## 2026-11-01 — 뼈대·화살표 색 = 결과 (§125), 글자 대신 기호는 검토안(§125a)
+
+사용자 요청 "코칭 라인과 차단 라인이 같은 빨강이라 헷갈린다" → 빨강 = 회 제외, 주황 = 말했지만 셈, 호박 = 참고. `RuleHighlight.tiers`·`SkeletonStage(coaching=)`·`MotionCue.blocked`. 같은 날 "말 대신 화살표·기호" 요청은 §125a 에 제안만 적었다(✕ 배지 + 숫자 점멸, 참고 칩 축약) — 승인 대기. 폰 확인은 사용자.
+
+## 2026-11-01 — 헐렁한 옷과 컬·런지 판정 연구 (§126, 구현 전)
+
+사용자 보고 "통 크거나 펑퍼짐한 옷이면 자주 오류" → `docs/LOOSE_CLOTHING_RESEARCH.md`. 기전(옷 속 관절을 지어냄·가시성 무력), 컬 옆 벌림 `refCap`/`absMin` 경로가 1단에서 매 회 차단한다는 예측(폰 연결하면 11-01 이후 로그의 `rep_form` 회별 raw·ref 로 먼저 확인), 대리 지표 `clothing_proxies.py` 와 일상복 기준값, 방안 A(안내)→B(옷 불확실 세트 강등)→C(heavy, 영상 필요), 옷 라벨 블록 설계. 임계 변경 없음.
+
+**A 구현(같은 날 저녁, 사용자 결정).** `CLOTHING_LINES`·`clothingHint`(ExerciseProfiles) → 준비 카드 '세는 조건' 아래 한 줄 + 준비 전문, 음성은 첫 문장만 맨 뒤 DET(`CLOTHING_VOICE`). 컬 둘·런지 넷. `PostureScope.startLine` 은 화면에 안 닿아 그대로. 남은 것: 폰 로그에서 컬 옆 벌림 `raw`·`ref`(refCap 예측) 확인, 옷 라벨 블록(연구 §5), B 는 블록 뒤.
+
+
+
+## 2026-11-01 — PR #61 guide assets and camera rollout (§127)
+
+Four new guides (good morning, push-up, front/lateral raise) use the existing sheet,
+bringing guides to 14. Evidence-informed GIFs and Korean cautions distinguish
+primary/participating muscle roles without claiming measured intensity.
+The user explicitly chose 16 camera-enabled exercises including barbell curl and
+barbell lunge. `ExerciseProfiles.cameraSupportedNames` is the shared rollout gate;
+the other ten remain manual exercises and retain research profiles. Catalog defaults,
+replacement/import and session entry respect the gate. Existing pilot/beta/trial
+status is unchanged. Device playback and native iOS verification remain outstanding.
+
+Verification: app JVM 914 tests and shared JVM 558 tests passed (zero failures/errors/skips); assembleDebug and lintDebug passed. Resource export and shared-source parity checks passed. All four APK GIFs match source bytes. NOT RUN: device popup/playback and native iOS build (Windows); full iOS static checker requires unavailable PyYAML.
+
+
+## 2026-11-01 follow-up: remaining twelve guide audit (§128)
+
+Regenerated all 12 remaining enabled exercises after an EMG/anatomy evidence audit.
+Ten guides replaced; dedicated barbell curl/lunge added, total 16. Plank now uses a
+hold GIF. Existing four guides and the 16-exercise posture gate remain unchanged.
+Evidence table and limits: docs/EXERCISE_GUIDE_UI.md. Source IDs/prompt recipes:
+docs/exercise-guide-sources-2026-11-01.json. No clinical mask validation or posture
+rule promotion is implied by new illustrations.
+
+Verification: app JVM 914 tests passed (zero failures/errors/skips); assembleDebug and lintDebug passed. Resource export --check passed for 16 guides. All 24 decoded poses were inspected at 260 px. NOT RUN: device popup/playback and native iOS build/tests (Windows); clinician review and anatomical mask validation.
+
+## 2026-11-01 — HUD beta '참고 · …' 칩 제거 (§129)
+
+사용자 결정 "호박색 문구는 어차피 못 보니까 제거해". `LiveWorkoutHud.referenceNote` 와 `PostureLive` 의 `provisionalNote`·`repReferenceNote`·`provisionalAtRef` 를 뺐다. beta 는 뼈대 호박색과 완료 화면에만. 호박색 글자는 횟수 메모·일시정지·플랭크 멈춤 줄만 남는다. 준비 화면 주황 자리 안내는 그대로. 코드 확인에서 본 결함(컬·런지 beta 칩이 창 규칙 3 s 갱신에 지워짐)은 칩 제거로 함께 사라졌다.
+
+## 2026-11-01 — Android 체험판 TREX v1.4 (1.4.0, versionCode 15)
+
+GitHub 사전 릴리스 `v1.4.0`(새 페이지) — PR #61 빌드 커밋 `b2dd0f2a86d20cc1d87f9e315d67386491dfa2da`, 배포 빌드, APK SHA-256 `332497558e265b191ac2d1da09019d440a029d547a648fe0e6bd4b575e4eb523`. 코드 15 는 Play 1.3.0(14)·내부 빌드(13) 위. 본문 `docs/ANDROID_RELEASE_1_4_0.md`. 같은 날 preview.7 릴리스 자산도 같은 코드(27eaa909, 코드 12)로 교체해 뒀다. 배포 APK 의 폰 설치·세션 검증은 안 했다.

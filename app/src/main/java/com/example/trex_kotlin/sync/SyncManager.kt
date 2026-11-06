@@ -1,10 +1,11 @@
 package com.example.trex_kotlin.sync
 
-import android.content.Context
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.example.trex_kotlin.KeyValueStore
 import com.example.trex_kotlin.TrexStore
+import com.example.trex_kotlin.nowMillis
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -13,7 +14,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import java.io.IOException
 
 /**
  * `trex_store` 항목을 서버와 맞춘다(규칙은 [SyncRules]).
@@ -24,9 +24,10 @@ import java.io.IOException
  *   (`owner` 가 지금 계정이 아니면 [syncNow] 는 아무것도 안 한다) — 남의 계정 기록과 섞이는 것을 막는다.
  *
  * 저장소 알림과 [scope](viewModelScope, 메인)의 비네트워크 부분은 모두 메인 스레드에서 돈다.
+ * [prefs] 는 버전·계정 표시를 두는 `trex_sync` 키-값 저장소다(§108).
  */
 class SyncManager(
-    context: Context,
+    private val prefs: KeyValueStore,
     private val store: TrexStore,
     private val session: AuthSession,
     private val api: TrexApi,
@@ -34,7 +35,6 @@ class SyncManager(
     private val onRemoteApplied: () -> Unit,
     private val onSessionExpired: () -> Unit,
 ) {
-    private val prefs = context.applicationContext.getSharedPreferences("trex_sync", Context.MODE_PRIVATE)
     private val lock = Mutex()
     private var applyingRemote = false
     private var pushPending = false
@@ -55,7 +55,7 @@ class SyncManager(
     fun start() {
         store.setChangeListener { key ->
             if (key in SyncRules.KEYS && !applyingRemote) {
-                setVersion(key, SyncRules.changed(version(key), System.currentTimeMillis()))
+                setVersion(key, SyncRules.changed(version(key), nowMillis()))
                 schedulePush()
             }
         }
@@ -86,7 +86,7 @@ class SyncManager(
             return null
         }
         val remote = api.syncItems()
-        lastPullAt = System.currentTimeMillis()
+        lastPullAt = nowMillis()
         val decision = SyncRules.firstSync(localHasData, remote, otherAccountOnDevice(loginId))
         when (decision) {
             FirstSync.UPLOAD_LOCAL -> { markLocalForUpload(remote, onlyWithData = true); setOwner(loginId); syncNow() }
@@ -141,7 +141,7 @@ class SyncManager(
         try {
             if (pull) {
                 val remote = api.syncItems()
-                lastPullAt = System.currentTimeMillis()
+                lastPullAt = nowMillis()
                 if (remote.none { it.key in SyncRules.KEYS }) {
                     // 이미 맞춘 계정인데 서버가 비었다 — 탈퇴 뒤 같은 구글 계정으로 다시 가입했거나 서버 DB 가 초기화됐다.
                     // 바뀐 것만 올리면 프로필·계획처럼 안 바뀐 항목은 영영 안 올라가 새 기기가 온보딩부터 다시 하게 된다.
@@ -151,7 +151,7 @@ class SyncManager(
                 }
             }
             pushDirty()
-            lastSyncedAt = System.currentTimeMillis().also { prefs.edit().putLong("last_synced_at", it).apply() }
+            lastSyncedAt = nowMillis().also { prefs.edit().putLong("last_synced_at", it).apply() }
             lastError = null
         } catch (e: ApiException) {
             if (e.status == 401) {
@@ -160,7 +160,7 @@ class SyncManager(
             } else {
                 lastError = e.message
             }
-        } catch (_: IOException) {
+        } catch (_: NetworkException) {
             lastError = "서버에 연결하지 못했어요. 다음에 다시 시도해요."
         } catch (_: org.json.JSONException) {
             lastError = "서버 응답을 읽지 못했어요."
@@ -203,7 +203,7 @@ class SyncManager(
      * [onlyWithData] 면 이 기기에 없는 항목은 건드리지 않는다 — 빈 값을 서버에 만들지 않는다.
      */
     private fun markLocalForUpload(remote: List<RemoteItem>, onlyWithData: Boolean) {
-        val now = System.currentTimeMillis()
+        val now = nowMillis()
         val remoteAt = remote.associate { it.key to it.updatedAt }
         for (key in SyncRules.KEYS) {
             if (onlyWithData && store.readRaw(key) == null) continue

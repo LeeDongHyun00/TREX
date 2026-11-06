@@ -78,11 +78,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.trex_kotlin.posture.rememberPostureScope
-import com.example.trex_kotlin.weather.WeatherRecommendationCard
-import java.time.LocalDate
-import java.time.format.TextStyle
-import java.util.Locale
+import com.example.trex_kotlin.weather.WeatherSummaryRow
 
 /** 종목 카테고리별 코칭 팁 (운동 카드 펼침 영역). */
 val categoryTips = mapOf(
@@ -102,31 +98,24 @@ internal val tabContentPadding: PaddingValues
 @Composable
 fun HomeScreen(app: AppViewModel, onGoWorkout: () -> Unit, onGoDiet: () -> Unit, onRecordMeal: () -> Unit, onOpenMuscleLoad: () -> Unit = {}) {
     val c = Trex.c
-    val today = LocalDate.now()
+    val today = localToday()
     val activeDays = app.workoutHistory.filter { it.items.isNotEmpty() }.map { it.epochDay }.toSet()
     val total = app.dietFor(0).values.flatten().totalNutrition()
     val goal = app.targetGoal
     val overview = remember(app.workoutPlan) { routineOverview(app.workoutPlan) }
+    // 한 화면(내비 포함)에 오늘 운동·식사 기록까지 보이게 — 날짜·날씨 한 줄·운동한 날·섭취 요약·오늘 할 일(§108f)
     LazyColumn(Modifier.fillMaxSize().background(c.bg),
-        contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 18.dp, bottom = LocalTrexNavSpace.current),
-        verticalArrangement = Arrangement.spacedBy(18.dp)) {
+        contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 14.dp, bottom = LocalTrexNavSpace.current),
+        verticalArrangement = Arrangement.spacedBy(14.dp)) {
         item {
-            Text("${today.monthValue}월 ${today.dayOfMonth}일 ${today.dayOfWeek.getDisplayName(TextStyle.FULL, Locale.KOREAN)}",
+            Text("${today.monthValue}월 ${today.day}일 ${koreanDayOfWeekFull(today.dayOfWeek)}",
                 color = c.text2, fontSize = 14.sp)
-
-            // 날짜 바로 아래, '운동한 날' 상단에 컴팩트 한 줄 날씨 바 배치
-            WeatherRecommendationCard(
-                plannedExerciseNames = app.workoutPlan.map { it.name }.toSet(),
-                onExerciseClick = { exercise ->
-                    if (app.workoutPlan.none { it.name == exercise.catalogName }) {
-                        app.addMuscleRecommendation(exercise.catalogName)
-                    }
-                },
-                modifier = Modifier.padding(top = 4.dp, bottom = 4.dp)
-            )
-
+            // 날씨 — 기온·날씨·강수량만. 누르면 날씨 시트(추천 운동·출처·지역) — 추천 운동은 근육 부하 추천과 같은 규칙으로 운동 목록에 넣는다
+            WeatherSummaryRow(app.weather, Modifier.padding(top = 6.dp),
+                isInPlan = { name -> app.workoutPlan.any { it.name == name && !it.done } },
+                onAddExercise = app::addMuscleRecommendation)
             Text("운동한 날", color = c.text2, fontSize = 12.sp,
-                modifier = Modifier.padding(top = 6.dp, bottom = 12.dp))
+                modifier = Modifier.padding(top = 10.dp, bottom = 8.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 (6 downTo 0).forEach { offset ->
                     val date = today.minusDays(offset.toLong())
@@ -134,14 +123,14 @@ fun HomeScreen(app: AppViewModel, onGoWorkout: () -> Unit, onGoDiet: () -> Unit,
                     val isToday = date == today
                     Column(horizontalAlignment = Alignment.CenterHorizontally,
                         modifier = Modifier.semantics(mergeDescendants = true) {
-                            contentDescription = "${date.monthValue}월 ${date.dayOfMonth}일, ${if(attended) "운동 기록 있음" else "운동 기록 없음"}${if(isToday) ", 오늘" else ""}"
+                            contentDescription = "${date.monthValue}월 ${date.day}일, ${if(attended) "운동 기록 있음" else "운동 기록 없음"}${if(isToday) ", 오늘" else ""}"
                         }) {
-                        Text(date.dayOfWeek.getDisplayName(TextStyle.NARROW, Locale.KOREAN), color = c.text2, fontSize = 11.sp)
-                        Box(Modifier.padding(top = 8.dp).size(36.dp).clip(CircleShape)
+                        Text(koreanDayOfWeek(date.dayOfWeek), color = c.text2, fontSize = 11.sp)
+                        Box(Modifier.padding(top = 6.dp).size(34.dp).clip(CircleShape)
                             .background(if (attended) c.primary else c.surface)
                             .border(if(isToday) 2.dp else 0.dp, if(isToday)c.primaryText else Color.Transparent, CircleShape),
                             contentAlignment = Alignment.Center) {
-                            Text("${date.dayOfMonth}", color = if(attended) Color.White else c.text,
+                            Text("${date.day}", color = if(attended) Color.White else c.text,
                                 fontWeight = FontWeight.Medium, fontSize = 13.sp)
                         }
                         Text(if(isToday) "오늘" else if(attended) "✓" else "", color = c.primaryText, fontSize = 10.sp,
@@ -201,7 +190,7 @@ fun DietTabScreen(app: AppViewModel, onOpenGoals: () -> Unit, onOpenPhoto: () ->
                     Text(meal.label, color = c.text, fontSize = 20.sp, fontWeight = FontWeight.Medium)
                     Text(if (entries.isEmpty()) "기록 전" else "${entries.totalNutrition().kcal} kcal", color = c.text2, fontSize = 13.sp)
                 }
-                if (entries.isNotEmpty()) Text(entries.joinToString(" · ") { if (it.qty > 1) "${it.name} ×${it.qty}" else it.name },
+                if (entries.isNotEmpty()) Text(entries.joinToString(" · ") { if (it.qty != 1.0) "${it.name} ×${FoodPortion.label(it.qty)}" else it.name },
                     color = c.text2, fontSize = 14.sp, lineHeight = 22.sp, modifier = Modifier.padding(top = 9.dp))
             }
             }

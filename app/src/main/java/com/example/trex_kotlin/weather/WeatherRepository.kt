@@ -1,250 +1,157 @@
 package com.example.trex_kotlin.weather
 
-import android.content.Context
-import com.example.trex_kotlin.BuildConfig
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
+import com.example.trex_kotlin.KeyValueStore
+import com.example.trex_kotlin.locked
+import com.example.trex_kotlin.nowMillis
+import com.example.trex_kotlin.sync.HttpTransport
+import kotlinx.atomicfu.locks.SynchronizedObject
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import org.json.JSONObject
-import java.net.HttpURLConnection
-import java.net.URL
-import java.util.Locale
-import java.util.concurrent.ConcurrentHashMap
+import kotlin.math.abs
+import kotlin.math.roundToLong
 
-class WeatherRepository(context: Context? = null) {
-
-    private val prefs = context?.applicationContext?.getSharedPreferences(CACHE_PREFS, Context.MODE_PRIVATE)
-
+/**
+ * Open-Meteo 지금 날씨(§108e — weather 브랜치의 저장소를 두 플랫폼 공유로). 전송은 플랫폼 [HttpTransport](Android HttpURLConnection·iPhone NSURLSession),
+ * 캐시는 [KeyValueStore](저장소 이름 "trex_weather_cache_prefs", 좌표 소수 둘째 자리 키 — 브랜치와 같다).
+ * 1시간 안의 캐시는 그대로 쓰고, 받기가 두 번 다 실패하면 3시간까지의 묵은 캐시로 물러선다(브랜치와 같은 규칙).
+ */
+class WeatherRepository(
+    private val http: HttpTransport,
+    private val cache: KeyValueStore?,
+    private val clock: () -> Long = { nowMillis() },
+    /** 응답 JSON → 날씨(받은 시각). 테스트는 가짜를 넣는다 — Android 유닛 테스트의 org.json 은 스텁이다. */
+    private val parse: (String, Long) -> WeatherInfo = ::parseOpenMeteo,
+    private val retryDelayMs: Long = 400L,
+) {
+    /** 화면을 그리기 전에 쓸 수 있는 캐시(묵은 것까지) — 받지 않는다. */
     fun peekCachedWeather(latitude: Double, longitude: Double): WeatherInfo? {
-        val cacheKey = formatCacheKey(latitude, longitude)
-        val now = System.currentTimeMillis()
-        memoryCache[cacheKey]?.let { cached ->
-            if (now - cached.fetchedAtMillis <= MAX_STALE_CACHE_MILLIS) return cached
-        }
-        readPrefsCache(cacheKey)?.let { cached ->
-            if (now - cached.fetchedAtMillis <= MAX_STALE_CACHE_MILLIS) {
-                memoryCache[cacheKey] = cached
-                return cached
-            }
-        }
-        return null
+        val key = cacheKey(latitude, longitude)
+        return cached(key) { clock() - it.fetchedAtMillis <= MAX_STALE_CACHE_MILLIS }
     }
 
-    suspend fun fetchCurrentWeather(
-        latitude: Double,
-        longitude: Double,
-        forceRefresh: Boolean = false
-    ): Result<WeatherInfo> = withContext(Dispatchers.IO) {
-        val cacheKey = formatCacheKey(latitude, longitude)
-        val now = System.currentTimeMillis()
-
+    suspend fun fetchCurrentWeather(latitude: Double, longitude: Double, forceRefresh: Boolean = false): Result<WeatherInfo> {
+        val key = cacheKey(latitude, longitude)
         if (!forceRefresh) {
-            memoryCache[cacheKey]?.let { cached ->
-                if (now - cached.fetchedAtMillis < CACHE_TTL_MILLIS) {
-                    return@withContext Result.success(cached)
-                }
-            }
-            readPrefsCache(cacheKey)?.let { cached ->
-                if (now - cached.fetchedAtMillis < CACHE_TTL_MILLIS) {
-                    memoryCache[cacheKey] = cached
-                    return@withContext Result.success(cached)
-                }
-            }
+            val now = clock()
+            cached(key) { now - it.fetchedAtMillis < CACHE_TTL_MILLIS }?.let { return Result.success(it) }
         }
-
         var lastError: Throwable? = null
         repeat(2) { attempt ->
-            val result = runCatching {
-                coroutineScope {
-                    val weatherDeferred = async { requestOpenMeteo(latitude, longitude) }
-                    val airDeferred = async { runCatching { requestAqicn(latitude, longitude) }.getOrNull() }
-
-                    val weatherInfo = weatherDeferred.await()
-                    val airInfo = airDeferred.await()
-
-                    weatherInfo.copy(
-                        aqi = airInfo?.aqi,
-                        pm10 = airInfo?.pm10,
-                        pm25 = airInfo?.pm25
-                    )
-                }
+            try {
+                val info = request(latitude, longitude)
+                remember(key, info)
+                return Result.success(info)
+            } catch (e: CancellationException) {
+                throw e   // 지역을 바꿔 앞 요청을 취소한 것 — 실패로 세지 않는다
+            } catch (e: Exception) {
+                lastError = e
             }
-            if (result.isSuccess) {
-                val info = result.getOrThrow()
-                memoryCache[cacheKey] = info
-                writePrefsCache(cacheKey, info)
-                return@withContext Result.success(info)
-            }
-            lastError = result.exceptionOrNull()
-            if (attempt == 0) delay(400L)
+            if (attempt == 0) delay(retryDelayMs)
         }
-
-        val fallbackNow = System.currentTimeMillis()
-        memoryCache[cacheKey]?.let { cached ->
-            if (fallbackNow - cached.fetchedAtMillis <= MAX_STALE_CACHE_MILLIS) {
-                return@withContext Result.success(cached)
-            }
-        }
-        readPrefsCache(cacheKey)?.let { cached ->
-            if (fallbackNow - cached.fetchedAtMillis <= MAX_STALE_CACHE_MILLIS) {
-                memoryCache[cacheKey] = cached
-                return@withContext Result.success(cached)
-            }
-        }
-
-        Result.failure(lastError ?: IllegalStateException("날씨 정보를 불러오지 못했습니다."))
+        val now = clock()
+        cached(key) { now - it.fetchedAtMillis <= MAX_STALE_CACHE_MILLIS }?.let { return Result.success(it) }
+        return Result.failure(lastError ?: IllegalStateException("날씨 정보를 불러오지 못했습니다."))
     }
 
-    private fun requestOpenMeteo(latitude: Double, longitude: Double): WeatherInfo {
-        // 순수 URL 문자열 형태 유지 (마크다운 링크 형태 금지)
-        val urlString = "https://api.open-meteo.com/v1/forecast" +
-            "?latitude=" + latitude +
-            "&longitude=" + longitude +
-            "&current=temperature_2m,precipitation,weather_code,wind_speed_10m" +
-            "&timezone=auto"
-
-        val connection = (URL(urlString).openConnection() as HttpURLConnection).apply {
-            requestMethod = "GET"
-            connectTimeout = 5000
-            readTimeout = 5000
-        }
-
-        return try {
-            if (connection.responseCode != HttpURLConnection.HTTP_OK) {
-                throw IllegalStateException("HTTP " + connection.responseCode)
+    private suspend fun request(latitude: Double, longitude: Double): WeatherInfo {
+        val response = http.send("GET", forecastUrl(latitude, longitude), emptyMap(), null)
+        check(response.status == 200) { "HTTP " + response.status }
+        val weather = parse(response.body, clock())
+        val pm10 = try {
+            val url = "https://air-quality-api.open-meteo.com/v1/air-quality?latitude=$latitude&longitude=$longitude&current=pm10"
+            withTimeoutOrNull(3000L) {
+                val air = http.send("GET", url, emptyMap(), null)
+                if (air.status == 200) JSONObject(air.body).getJSONObject("current").optDouble("pm10")
+                    .takeIf { it.isFinite() && it >= 0 } else null
             }
-            val responseText = connection.inputStream.bufferedReader().use { it.readText() }
-            parseCurrentWeatherJson(responseText)
-        } finally {
-            connection.disconnect()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            null
         }
+        return weather.copy(pm10 = pm10)
     }
 
-    // 라이너 피드백 반영: internal로 가시성 통일
-    internal data class AirQualityRaw(
-        val aqi: Int?,
-        val pm10: Double?,
-        val pm25: Double?
-    )
-
-    private fun requestAqicn(latitude: Double, longitude: Double): AirQualityRaw? {
-        val token = runCatching { BuildConfig.AQICN_API_KEY }.getOrDefault("demo").ifBlank { "demo" }
-        val urlString = String.format(
-            Locale.US,
-            "https://api.waqi.info/feed/geo:%.4f;%.4f/?token=%s",
-            latitude,
-            longitude,
-            token
-        )
-
-        val connection = (URL(urlString).openConnection() as HttpURLConnection).apply {
-            requestMethod = "GET"
-            connectTimeout = 5000
-            readTimeout = 5000
-        }
-
-        return try {
-            if (connection.responseCode != HttpURLConnection.HTTP_OK) return null
-            val responseText = connection.inputStream.bufferedReader().use { it.readText() }
-            parseAqicnJson(responseText)
-        } finally {
-            connection.disconnect()
-        }
+    /** 메모리 → 저장소 순으로 [fresh] 를 만족하는 캐시. 저장소에서 찾으면 메모리에도 올린다. */
+    private fun cached(key: String, fresh: (WeatherInfo) -> Boolean): WeatherInfo? {
+        locked(memoryLock) { memoryCache[key] }?.takeIf(fresh)?.let { return it }
+        val stored = cache?.getString(key, null)?.let(::decodeCache)?.takeIf(fresh) ?: return null
+        locked(memoryLock) { memoryCache[key] = stored }
+        return stored
     }
 
-    internal fun parseAqicnJson(responseText: String): AirQualityRaw? {
-        val root = JSONObject(responseText)
-        if (root.optString("status") != "ok") return null
-        val data = root.optJSONObject("data") ?: return null
-
-        val aqi = if (data.has("aqi") && !data.isNull("aqi")) {
-            data.optInt("aqi", -1).takeIf { it >= 0 }
-        } else null
-
-        val iaqi = data.optJSONObject("iaqi")
-        val pm10 = iaqi?.optJSONObject("pm10")?.optDouble("v")?.takeIf { !it.isNaN() }
-        val pm25 = iaqi?.optJSONObject("pm25")?.optDouble("v")?.takeIf { !it.isNaN() }
-
-        return AirQualityRaw(aqi = aqi, pm10 = pm10, pm25 = pm25)
-    }
-
-    internal fun parseCurrentWeatherJson(
-        responseText: String,
-        fetchedAtMillis: Long = System.currentTimeMillis()
-    ): WeatherInfo {
-        val root = JSONObject(responseText)
-        if (!root.has("current") || root.isNull("current")) {
-            throw IllegalStateException("current 필드가 없습니다.")
-        }
-        val currentJson = root.getJSONObject("current")
-        val requiredKeys = listOf("temperature_2m", "precipitation", "weather_code", "wind_speed_10m")
-        for (key in requiredKeys) {
-            if (!currentJson.has(key) || currentJson.isNull(key)) {
-                throw IllegalStateException("필수 날씨 필드가 누락되었습니다: " + key)
-            }
-        }
-
-        val temperature = currentJson.getDouble("temperature_2m")
-        val precipitation = currentJson.getDouble("precipitation")
-        val weatherCode = currentJson.getInt("weather_code")
-        val windSpeed = currentJson.getDouble("wind_speed_10m")
-
-        if (temperature.isNaN() || precipitation.isNaN() || windSpeed.isNaN()) {
-            throw IllegalStateException("유효하지 않은 날씨 수치입니다.")
-        }
-
-        return WeatherInfo(
-            temperature = temperature,
-            precipitation = precipitation,
-            weatherCode = weatherCode,
-            windSpeed = windSpeed,
-            fetchedAtMillis = fetchedAtMillis
-        )
-    }
-
-    private fun formatCacheKey(latitude: Double, longitude: Double): String =
-        String.format(Locale.US, "%.2f_%.2f", latitude, longitude)
-
-    private fun readPrefsCache(key: String): WeatherInfo? {
-        val raw = prefs?.getString(key, null) ?: return null
-        return runCatching {
-            val obj = JSONObject(raw)
-            WeatherInfo(
-                temperature = obj.getDouble("t"),
-                precipitation = obj.getDouble("p"),
-                weatherCode = obj.getInt("c"),
-                windSpeed = obj.getDouble("w"),
-                fetchedAtMillis = obj.getLong("ts"),
-                aqi = if (obj.has("aqi") && !obj.isNull("aqi")) obj.getInt("aqi") else null,
-                pm10 = if (obj.has("pm10") && !obj.isNull("pm10")) obj.getDouble("pm10") else null,
-                pm25 = if (obj.has("pm25") && !obj.isNull("pm25")) obj.getDouble("pm25") else null
-            )
-        }.getOrNull()
-    }
-
-    private fun writePrefsCache(key: String, info: WeatherInfo) {
-        prefs?.edit()?.putString(
-            key,
-            JSONObject().apply {
-                put("t", info.temperature)
-                put("p", info.precipitation)
-                put("c", info.weatherCode)
-                put("w", info.windSpeed)
-                put("ts", info.fetchedAtMillis)
-                info.aqi?.let { put("aqi", it) }
-                info.pm10?.let { put("pm10", it) }
-                info.pm25?.let { put("pm25", it) }
-            }.toString()
-        )?.apply()
+    private fun remember(key: String, info: WeatherInfo) {
+        locked(memoryLock) { memoryCache[key] = info }
+        cache?.edit()?.putString(key, encodeCache(info))?.apply()
     }
 
     companion object {
-        private const val CACHE_PREFS = "trex_weather_cache_prefs"
         internal const val CACHE_TTL_MILLIS = 60 * 60 * 1000L
         internal const val MAX_STALE_CACHE_MILLIS = 3 * 60 * 60 * 1000L
 
-        private val memoryCache = ConcurrentHashMap<String, WeatherInfo>()
+        /** 지금 날씨만(브랜치와 같은 네 값 + 낮밤). 풍속은 km/h(판정 기준 35 km/h). */
+        fun forecastUrl(latitude: Double, longitude: Double): String =
+            "https://api.open-meteo.com/v1/forecast?latitude=$latitude&longitude=$longitude" +
+                "&current=temperature_2m,precipitation,weather_code,wind_speed_10m,is_day&timezone=auto"
+
+        // 메인(peek)과 받기 코루틴이 같이 읽고 쓴다 — 앱 수명 하나(브랜치의 ConcurrentHashMap 자리)
+        private val memoryLock = SynchronizedObject()
+        private val memoryCache = HashMap<String, WeatherInfo>()
+
+        /** 좌표 소수 둘째 자리(브랜치 `String.format(Locale.US, "%.2f_%.2f")` 와 같은 모양). */
+        internal fun cacheKey(latitude: Double, longitude: Double): String = twoDecimals(latitude) + "_" + twoDecimals(longitude)
+
+        private fun twoDecimals(value: Double): String {
+            val hundredths = (value * 100).roundToLong()
+            val whole = abs(hundredths)
+            return (if (hundredths < 0) "-" else "") + (whole / 100) + "." + (whole % 100).toString().padStart(2, '0')
+        }
+
+        private const val CACHE_VERSION = "3"
+
+        /** 캐시 한 줄 — `3|받은시각|기온|강수|코드|풍속|낮(1/0)|PM10(없으면 빈 값)`. org.json 없이 쓰고 읽는다. */
+        internal fun encodeCache(info: WeatherInfo): String = listOf(
+            CACHE_VERSION, info.fetchedAtMillis.toString(), info.temperature.toString(), info.precipitation.toString(),
+            info.weatherCode.toString(), info.windSpeed.toString(), if (info.isDay) "1" else "0", info.pm10?.toString().orEmpty(),
+        ).joinToString("|")
+
+        /** [encodeCache] 의 거꾸로 — 모양이 다르면(브랜치의 JSON 캐시·예전 판) null 이라 새로 받는다. */
+        internal fun decodeCache(text: String): WeatherInfo? {
+            val f = text.split('|')
+            if (f.size !in 7..8 || f[0] != CACHE_VERSION) return null
+            return WeatherInfo(
+                temperature = f[2].toDoubleOrNull() ?: return null,
+                precipitation = f[3].toDoubleOrNull() ?: return null,
+                weatherCode = f[4].toIntOrNull() ?: return null,
+                windSpeed = f[5].toDoubleOrNull() ?: return null,
+                fetchedAtMillis = f[1].toLongOrNull() ?: return null,
+                isDay = f[6] != "0",
+                pm10 = f.getOrNull(7)?.toDoubleOrNull()?.takeIf { it.isFinite() && it >= 0 },
+            )
+        }
     }
+}
+
+/** Open-Meteo 응답 → 날씨. 판정에 쓰는 네 값(기온·강수·코드·풍속)이 없거나 숫자가 아니면 실패로 던진다(브랜치와 같다). 낮밤은 없으면 낮. */
+internal fun parseOpenMeteo(responseText: String, fetchedAtMillis: Long): WeatherInfo {
+    val root = JSONObject(responseText)
+    check(root.has("current") && !root.isNull("current")) { "current 필드가 없습니다." }
+    val current = root.getJSONObject("current")
+    for (key in listOf("temperature_2m", "precipitation", "weather_code", "wind_speed_10m")) {
+        check(current.has(key) && !current.isNull(key)) { "필수 날씨 필드가 누락되었습니다: $key" }
+    }
+    val temperature = current.getDouble("temperature_2m")
+    val precipitation = current.getDouble("precipitation")
+    val windSpeed = current.getDouble("wind_speed_10m")
+    check(!temperature.isNaN() && !precipitation.isNaN() && !windSpeed.isNaN()) { "유효하지 않은 날씨 수치입니다." }
+    return WeatherInfo(
+        temperature = temperature,
+        precipitation = precipitation,
+        weatherCode = current.getInt("weather_code"),
+        windSpeed = windSpeed,
+        fetchedAtMillis = fetchedAtMillis,
+        isDay = current.optInt("is_day", 1) != 0,
+    )
 }

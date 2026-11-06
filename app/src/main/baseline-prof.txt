@@ -1,0 +1,2 @@
+HSPLcom/example/trex_kotlin/**;->**(**)**
+Lcom/example/trex_kotlin/**;

@@ -29,7 +29,7 @@ class SessionCompletionLayoutTest {
         val context = instrumentation.targetContext
         check(context.packageName.endsWith(".replay") && (Build.MODEL.contains("sdk") || Build.FINGERPRINT.contains("generic")))
         lateinit var app: AppViewModel
-        instrumentation.runOnMainSync { app = AppViewModel(context.applicationContext as Application) }
+        instrumentation.runOnMainSync { app = AppViewModel(AndroidAppPlatform(context.applicationContext as Application)) }
         var viewport by mutableStateOf(DpSize(390.dp, 1100.dp))
         compose.setContent {
             CompositionLocalProvider(LocalDensity provides Density(1f)) {

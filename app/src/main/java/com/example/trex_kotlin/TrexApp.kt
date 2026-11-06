@@ -1,12 +1,11 @@
 package com.example.trex_kotlin
 
-import com.example.trex_kotlin.posture.RepValidation
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import android.app.Activity
-import android.content.Context
-import android.content.ContextWrapper
+import com.example.trex_kotlin.routines.AppLink
+import com.example.trex_kotlin.routines.AppLinkInbox
+import com.example.trex_kotlin.routines.ReceivedRoutineDialog
+import com.example.trex_kotlin.routines.parseAppLink
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -31,11 +30,16 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import com.example.trex_kotlin.community.CommunityTabScreen
+import com.example.trex_kotlin.community.ProvideRemoteImages
+import com.example.trex_kotlin.community.CommunityGate
+import com.example.trex_kotlin.community.workoutCardData
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.rounded.BarChart
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.FitnessCenter
+import androidx.compose.material.icons.rounded.Forum
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.MoreHoriz
 import androidx.compose.material.icons.rounded.Person
@@ -50,6 +54,7 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
@@ -64,17 +69,14 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.trex_kotlin.posture.BaselineGuideScreen
 import com.example.trex_kotlin.posture.PostureLabScreen
 import com.example.trex_kotlin.posture.SpeechCoach
@@ -113,22 +115,20 @@ fun Workout.setDraft(): SetDraft {
         secondsPerRep = timing().secondsPerRep, restSeconds = timing().restSeconds)
 }
 
+/** 앱 상태는 플랫폼이 만들어 넘긴다(§108) — Android 는 인자 없는 `TrexApp()`(PlatformUi.kt), iPhone 은 ios-ui. */
 @Composable
-fun TrexApp(app: AppViewModel = viewModel()) {
+fun TrexApp(app: AppViewModel) {
+    // 커뮤니티 원격 사진 로더는 앱에 하나 — 화면마다 두면 캐시가 곱해지고 만료된 주소로 다시 받다 실패한다(계획 2 리뷰)
+    ProvideRemoteImages(app.imageTransport) { TrexAppContent(app) }
+}
+
+@Composable
+private fun TrexAppContent(app: AppViewModel) {
     TrexAppTheme(mode = app.themeMode) {
         val c = Trex.c
-        val context = LocalContext.current
-        SideEffect {
-            @Suppress("DEPRECATION")
-            context.findTrexActivity()?.window?.let { w ->
-                w.statusBarColor = c.bg.toArgb()
-                w.navigationBarColor = c.bg.toArgb()
-                androidx.core.view.WindowCompat.getInsetsController(w, w.decorView).apply {
-                    isAppearanceLightStatusBars = !c.isDark
-                    isAppearanceLightNavigationBars = !c.isDark
-                }
-            }
-        }
+        TrexSystemBars(c)
+        val requestGoogleIdToken = rememberGoogleIdTokenRequest()
+        val requestAppleCredential = rememberAppleCredentialRequest()
 
         // 처음 연결한 계정의 서버에도 이 기기에도 기록이 있으면 어느 쪽을 남길지 묻는다(로그인 화면·설정 어디서 연결했든)
         if (app.askFirstSync) FirstSyncDialog(onKeepLocal = { app.resolveFirstSync(keepLocal = true) }, onUseServer = { app.resolveFirstSync(keepLocal = false) })
@@ -153,7 +153,10 @@ fun TrexApp(app: AppViewModel = viewModel()) {
                     if (key != null && value != null) key to value else null
                 }.toMap()) },
         )) { mutableStateOf(SessionProgress(-1, 0)) }
-        val sessionIndex = progress.index
+        // 세션 시계는 0.1초마다 progress 를 새로 쓴다 — 여기서 progress 를 바로 읽으면 앱 최상단이 0.1초마다 통째로 다시 구성된다.
+        // 화면이 쓰는 값(단계·남은 초·경과 초·횟수)은 바뀔 때만 알리는 파생 상태로 읽는다. 값과 시간 계산은 그대로다(스펙 §115).
+        val sessionIndexState = remember { derivedStateOf { progress.index } }
+        val sessionIndex = sessionIndexState.value
         var sessionDone by rememberSaveable { mutableStateOf(false) }
         var sessionPlanKey by rememberSaveable { mutableStateOf("") }
         var loadSessionId by rememberSaveable { mutableStateOf("") }
@@ -163,10 +166,11 @@ fun TrexApp(app: AppViewModel = viewModel()) {
             if(k != null && t != null) k to t else null
         }.toMap()
         fun stampWork(token: Int) {
-            loadEnds = (endTimes() + (token to System.currentTimeMillis())).entries.joinToString(",") { "${it.key}:${it.value}" }
+            loadEnds = (endTimes() + (token to nowMillis())).entries.joinToString(",") { "${it.key}:${it.value}" }
         }
-        val sessionTimeLeft = progress.secondsLeft
-        val sessionElapsed = (progress.elapsedMs / 1000).toInt()
+        val sessionTimeLeft by remember { derivedStateOf { progress.secondsLeft } }
+        val sessionElapsed by remember { derivedStateOf { (progress.elapsedMs / 1000).toInt() } }
+        val sessionRepetitions by remember { derivedStateOf { progress.repetitions } }
         var sessionPaused by rememberSaveable { mutableStateOf(false) }
         // 카메라 권한을 거부한 운동 — 자세 평가 대신 **같은 운동을** 타이머로 돌린다(건너뛰지 않는다).
         // 세션 단위 상태라 다음 세션에서는 다시 권한을 물어본다.
@@ -189,8 +193,7 @@ fun TrexApp(app: AppViewModel = viewModel()) {
         val planKey = plan.map { it.copy(done = false) }.toString()
         val steps = remember(plan.map { it.copy(done = false) }) { buildSessionSteps(plan) }
         val step = steps.getOrNull(sessionIndex)
-        val guidePreferences = remember { context.getSharedPreferences("exercise_guides", Context.MODE_PRIVATE) }
-        var seenGuides by remember { mutableStateOf(guidePreferences.getStringSet("seen_v1", emptySet()).orEmpty().toSet()) }
+        val seenGuides = app.seenGuides
         var requestedGuide by rememberSaveable(sessionIndex, sessionPlanKey) { mutableStateOf<String?>(null) }
         val introductionGuide = ExerciseGuides.introduction(step?.workout?.name,
             step?.phase == SessionPhase.PREPARE, seenGuides)
@@ -199,10 +202,7 @@ fun TrexApp(app: AppViewModel = viewModel()) {
         // 초기 구성부터 시범이 시간을 막는다. 효과에서 뒤늦게 일시정지하면 준비가 먼저 진행될 수 있다.
         val pausedState = rememberUpdatedState(sessionPaused || appPaused || exitAsk || activeGuide != null)
         fun closeGuide(continuePreparation: Boolean) {
-            activeGuide?.let { guide ->
-                seenGuides = seenGuides + guide.name
-                guidePreferences.edit().putStringSet("seen_v1", seenGuides).apply()
-            }
+            activeGuide?.let { guide -> app.markGuideSeen(guide.name) }
             requestedGuide = null
             // 첫 안내의 명시적 준비 버튼만 진행한다. 스와이프·뒤로가기·다시 보기는 정지 상태로 남긴다.
             if (!continuePreparation) sessionPaused = true
@@ -211,7 +211,7 @@ fun TrexApp(app: AppViewModel = viewModel()) {
 
         // 세션 스코프 스피커 (spec §30): 라이브 화면이 소유하면 자세→타이머 전환마다 shutdown 이 세트 요약을 끊는다.
         // 여기서 만들어 라이브 화면·완료 화면이 같은 큐를 쓰고, 세션을 나갈 때 stop 한다.
-        val speech = androidx.compose.runtime.remember { SpeechCoach(context) }
+        val speech = rememberSpeechCoach()
         androidx.compose.runtime.DisposableEffect(Unit) { onDispose { speech.shutdown() } }
         fun showGuide(name: String) {
             if (ExerciseGuides.forName(name) == null) return
@@ -219,8 +219,7 @@ fun TrexApp(app: AppViewModel = viewModel()) {
             requestedGuide = name
             speech.stop()
         }
-        val startTone = remember { runCatching { android.media.ToneGenerator(android.media.AudioManager.STREAM_MUSIC, 50) }.getOrNull() }
-        androidx.compose.runtime.DisposableEffect(Unit) { onDispose { startTone?.release() } }
+        val startTone = rememberStartTone()
 
         // 플랭크 유지 시계 → 남은 시간(spec §99, 설계 §4.3 브리지) — 라이브 화면이 WORK 에서 묶고 분석 스레드가 인정 시간을 쓴다. 세션 수명
         val holdBridge = remember { HoldBridge() }
@@ -241,7 +240,7 @@ fun TrexApp(app: AppViewModel = viewModel()) {
             if (finished) app.updatePlan(plan.map { it.copy(done = false) })
             val recordedCounts = if (finished || sessionPlanKey != planKey) emptyMap() else progress.recordedCounts.filterKeys { it in completed }
             // 종료 뒤 다시 시작한 미완료 세트는 새 수행이다. 이전 부분 수행 기록을 덮거나 다시 더하지 않는다.
-            loadSessionId = java.util.UUID.randomUUID().toString()
+            loadSessionId = newUuid()
             loadEnds = ""
             app.clearSessionReports(keep = steps.filter { it.token in completed || it.token in recordedCounts }.map { it.workout.id })
             postureFallback.clear()
@@ -314,10 +313,10 @@ fun TrexApp(app: AppViewModel = viewModel()) {
         val advanceLatest = rememberUpdatedState<(Int, Boolean) -> Unit> { token, skip -> nextSession(token, skip, handOff = true) }
         LaunchedEffect(sessionIndex, sessionPaused, appPaused, exitAsk) {
             val token = sessionIndex
-            var last = android.os.SystemClock.elapsedRealtime()
+            var last = elapsedRealtimeMs()
             while (progress.index == token && token >= 0) {
                 delay(100)
-                val now = android.os.SystemClock.elapsedRealtime()
+                val now = elapsedRealtimeMs()
                 // 플랭크(카메라 시간)는 남은 시간을 인정 시간의 증분으로 줄인다 — 묶이지 않은 세트·폴백 전 다른 종목은 null(벽시계, 종전)
                 val held = if (pausedState.value || step?.phase != SessionPhase.WORK) null else holdBridge.take(step.workout.id, now - last)
                 progress = progress.tick(now - last, pausedState.value, timed = step?.timed == true,
@@ -325,26 +324,23 @@ fun TrexApp(app: AppViewModel = viewModel()) {
                 last = now
                 if (!pausedState.value && step?.timed == true && progress.targetReached(step)) {
                     // 시간 목표의 끝 — 카운트는 남길 이유가 없다(§101), 넘기며 꼬리 넘김
-                    if (step.phase == SessionPhase.WORK) speech.beginSetEnd(android.os.SystemClock.elapsedRealtime(), dropCounts = true)
+                    if (step.phase == SessionPhase.WORK) speech.beginSetEnd(elapsedRealtimeMs(), dropCounts = true)
                     advanceLatest.value(token, false)
                 }
             }
         }
         // 렙 검증 모드(spec §61): 앱 전용 폴더의 표시 파일로 켠다 — 단계가 바뀔 때마다 다시 읽어 세션 사이에 켜고 끌 수 있다
-        var repValidation by remember { mutableStateOf(false) }
-        LaunchedEffect(sessionIndex) {
-            repValidation = withContext(Dispatchers.IO) { RepValidation.isOn(context.getExternalFilesDir(null)) }
-        }
-        LaunchedEffect(sessionIndex, progress.repetitions, sessionPaused, appPaused, exitAsk, repValidation) {
+        val repValidation = rememberRepValidation(sessionIndex)
+        LaunchedEffect(sessionIndex, sessionRepetitions, sessionPaused, appPaused, exitAsk, repValidation) {
             // 검증 모드는 목표에 닿아도 넘기지 않는다 — 세트는 ✓ 로만 끝난다(세트 뒤 헛카운트·마지막 반복까지 잰다)
             if (!repValidation && !pausedState.value && step?.phase == SessionPhase.WORK && !step.timed && progress.targetReached(step)) {
                 // 마지막 걸음·회의 판정·안내 발화가 끝날 때까지 최대 2 s 기다린다(§63) — 넘어가며 speech.stop() 이 마지막 말을 잘랐다("6" 뒤 0.7 s 에 넘어감).
                 // 이 효과는 반복 수가 바뀔 때마다 다시 시작하므로 기다림의 시작은 처음 목표에 닿은 시각으로 고정한다
-                val t0 = advanceHoldFrom.getOrPut(step.token) { android.os.SystemClock.elapsedRealtime().also { speech.beginSetEnd(it, dropCounts = false) } }
+                val t0 = advanceHoldFrom.getOrPut(step.token) { elapsedRealtimeMs().also { speech.beginSetEnd(it, dropCounts = false) } }
                 var quiet = 0
                 while (true) {
                     quiet = if (speech.isSpeaking) 0 else quiet + 1
-                    if (AdvanceHold.due(android.os.SystemClock.elapsedRealtime() - t0, quiet)) break
+                    if (AdvanceHold.due(elapsedRealtimeMs() - t0, quiet)) break
                     delay(AdvanceHold.POLL_MS)
                 }
                 if (!pausedState.value && progress.targetReached(step)) advanceLatest.value(step.token, false)
@@ -354,7 +350,7 @@ fun TrexApp(app: AppViewModel = viewModel()) {
             }
         }
         LaunchedEffect(sessionIndex) {
-            if (step?.phase == SessionPhase.WORK && !speech.muted) startTone?.startTone(android.media.ToneGenerator.TONE_PROP_ACK, 150)
+            if (step?.phase == SessionPhase.WORK && !speech.muted) startTone()
             if (step?.phase == SessionPhase.REST) speech.speak("쉬는 시간이에요", flush = true)
         }
 
@@ -379,12 +375,33 @@ fun TrexApp(app: AppViewModel = viewModel()) {
             else -> RootRoute.Main
         }
 
-        androidx.activity.compose.BackHandler(enabled = sessionDone || sessionIndex >= 0 || subScreen != "none") {
+        PlatformBackHandler(enabled = sessionDone || sessionIndex >= 0 || subScreen != "none") {
             if (sessionDone) exitSession() else if (sessionIndex >= 0) requestExit() else subScreen = "none"
         }
 
         // 앱 내 업데이트 — 운동·하위 화면이 아닐 때만 확인하고 묻는다(AppUpdate.kt)
         AppUpdatePrompt(enabled = sessionIndex < 0 && !sessionDone && subScreen == "none")
+
+        // 메신저 링크(docs/superpowers/specs/2026-10-29-routine-share-design.md) — 플랫폼이 넣은 앱 주소를 꺼내 두고, 앱 화면(Main)에 닿으면 연다.
+        // 시작 화면·온보딩·운동 세션 중에는 기다린다(받은 루틴이 운동 중에 오늘 루틴을 덮지 않게).
+        val incomingLink = AppLinkInbox.latest
+        LaunchedEffect(incomingLink) {
+            if (incomingLink != null) {
+                parseAppLink(incomingLink)?.let { app.pendingLink = it }
+                AppLinkInbox.latest = null
+            }
+        }
+        val link = app.pendingLink
+        if (route == RootRoute.Main && link != null) {
+            when (link) {
+                is AppLink.Routine -> ReceivedRoutineDialog(app, link.code, onDismiss = { app.pendingLink = null })
+                is AppLink.Post -> LaunchedEffect(link) {
+                    app.pendingPostId = link.id
+                    selectedTab = TrexTab.Community
+                    app.pendingLink = null
+                }
+            }
+        }
 
         // 운동 세션 동안은 폰을 둔 방향을 따른다 — 자동 회전이 꺼진 폰에서 바닥 종목을 가로로 두면 화면이 세로로 남았다(10-10 보고, AdaptiveLayout.kt)
         SessionOrientation(follow = sessionIndex >= 0 && !sessionDone)
@@ -427,8 +444,12 @@ fun TrexApp(app: AppViewModel = viewModel()) {
                             RootRoute.Auth -> AuthScreen(
                             busy = app.authBusy,
                             message = app.authMessage,
-                            onGoogle = { app.continueWithGoogle(context.findTrexActivity() ?: context) },
+                            onPasswordLogin = { id, pw -> app.loginWithPassword(id, pw) },
+                            onSignup = { app.signUpWithPassword(it) },
+                            onGoogle = { app.continueWithGoogle(requestGoogleIdToken) },
                             onWithoutAccount = { app.continueWithoutAccount() },
+                            appleAvailable = app.appleSignInAvailable,
+                            onApple = { app.continueWithApple(requestAppleCredential) },
                             )
 
                             RootRoute.Onboarding -> OnboardingScreen(onDone = { profile -> app.completeOnboarding(profile) })
@@ -443,6 +464,18 @@ fun TrexApp(app: AppViewModel = viewModel()) {
                             fatigueContent = {
                                 SessionMuscleMap(app, loadSessionId)
                             },
+                            // 계정이 있으면 보인다 — 커뮤니티 상태를 아직 안 받았거나 닉네임·동의 전이어도, 탭이 그 단계를 마친 뒤 카드 글쓰기를 연다
+                            onShare = if (app.communityGate.let { it !is CommunityGate.Suspended && it != CommunityGate.NoLogin && it != CommunityGate.NotSignedIn }) {
+                                {
+                                    val plan = recordableWorkouts()
+                                    val elapsed = progress.workDurations(steps)
+                                    // 완료 화면과 같은 kcal 식(SessionCompleteScreen)
+                                    val kcal = plan.sumOf { it.estimatedCalories(elapsed[it.id] ?: 0) }
+                                    app.pendingWorkoutCard = workoutCardData(plan, sessionElapsed, kcal, localToday())
+                                    exitSession()
+                                    selectedTab = TrexTab.Community
+                                }
+                            } else null,
                             onDone = { exitSession() },
                             )
 
@@ -462,7 +495,7 @@ fun TrexApp(app: AppViewModel = viewModel()) {
                                     onTogglePause = { sessionPaused = !sessionPaused },
                                     onNext = { nextSession(current.token, false) },
                                     onSkip = { nextSession(current.token, true) }, onExit = { requestExit() },
-                                    repetitions = progress.repetitions,
+                                    repetitions = sessionRepetitions,
                                     onRepetitions = { count -> progress = progress.setRepetitions(steps, current.token, count) },
                                     onRepDetected = { if (!pausedState.value) progress = progress.setRepetitions(steps, current.token, progress.repetitions + 1) },
                                     onPartial = { nextSession(current.token, true) },
@@ -486,7 +519,7 @@ fun TrexApp(app: AppViewModel = viewModel()) {
                                     onTogglePause = { sessionPaused = !sessionPaused },
                                     onNext = { nextSession(current.token, false) },
                                     onSkip = { nextSession(current.token, true) }, onExit = { requestExit() },
-                                    repetitions = progress.repetitions,
+                                    repetitions = sessionRepetitions,
                                     onRepetitions = { count -> progress = progress.setRepetitions(steps, current.token, count) },
                                     onPartial = { nextSession(current.token, true) },
                                     onShowGuide = ExerciseGuides.forName(current.workout.name)?.let { { showGuide(current.workout.name) } },
@@ -529,6 +562,10 @@ fun TrexApp(app: AppViewModel = viewModel()) {
                             )
                         }
                     }
+                }
+                // 로그인 로딩 화면 — 계정 선택을 마친 뒤 서버 로그인·첫 동기화 동안 맨 위를 덮는다(로그인 화면·내 정보·커뮤니티 어디서 연결했든)
+                AnimatedVisibility(visible = app.authVerifying, enter = fadeIn(tween(180)), exit = fadeOut(tween(260))) {
+                    SignInLoadingScreen()
                 }
             }
         }
@@ -588,7 +625,7 @@ private fun MainTabs(
     var sheet by androidx.compose.runtime.remember { mutableStateOf<MainSheet?>(null) }
     var lastTabOrdinal by rememberSaveable { mutableIntStateOf(selectedTab.ordinal) }
 
-    androidx.activity.compose.BackHandler(enabled = sheet != null || navExpanded) {
+    PlatformBackHandler(enabled = sheet != null || navExpanded) {
         when { sheet != null -> sheet = null; else -> navExpanded = false }
     }
 
@@ -603,6 +640,7 @@ private fun MainTabs(
         CompositionLocalProvider(LocalTrexNavSpace provides navSpace) {
         AnimatedContent(
             targetState = selectedTab,
+            modifier = Modifier.fillMaxSize().mainTabSwipe(selectedTab, sheet == null, onTabSelected),
             transitionSpec = {
                 val forward = targetState.ordinal >= initialState.ordinal
                 if (forward) {
@@ -629,6 +667,7 @@ private fun MainTabs(
                     onOpenAlt = { sheet = MainSheet.Alt(it) },
                     onOpenSets = { sheet = MainSheet.Sets(it.setDraft()) },
                     onAddWorkout = { sheet = MainSheet.AddWorkout },
+                    onOpenCommunity = { onTabSelected(TrexTab.Community) },
                 )
 
                 TrexTab.Diet -> DietTabScreen(
@@ -638,6 +677,8 @@ private fun MainTabs(
                     onOpenPhoto = { sheet = MainSheet.Photo },
                     onOpenManual = { slot -> sheet = MainSheet.Manual(slot) },
                 )
+
+                TrexTab.Community -> CommunityTabScreen(app = app)
 
                 TrexTab.Profile -> ProfileTabScreen(
                     app = app,
@@ -653,7 +694,8 @@ private fun MainTabs(
             selectedTab = selectedTab,
             expanded = navExpanded,
             onTab = { tab ->
-                if (tab == selectedTab && tab != TrexTab.Home) {
+                // 홈·커뮤니티는 다시 눌러도 리모컨으로 바뀌지 않는다(리모컨 동작이 없다)
+                if (tab == selectedTab && tab != TrexTab.Home && tab != TrexTab.Community) {
                     navExpanded = !navExpanded
                 } else {
                     onTabSelected(tab)
@@ -729,6 +771,7 @@ private fun MorphNav(
             TrexTab.Home -> Icons.Rounded.Home
             TrexTab.Workout -> Icons.Rounded.FitnessCenter
             TrexTab.Diet -> Icons.Rounded.Restaurant
+            TrexTab.Community -> Icons.Rounded.Forum
             TrexTab.Profile -> Icons.Rounded.Person
         }
         if (!remoteOn) {
@@ -776,7 +819,8 @@ private fun MorphNav(
     Row(modifier = modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         slots.forEachIndexed { i, slot ->
             val weight = slot.weight
-            val alpha by animateFloatAsState(slot.alpha, tween(260), label = "nav-a$i")
+            // 투명도는 그리기 단계에서만 읽는다 — 260ms 동안 내비 전체를 매 프레임 다시 구성하지 않는다(스펙 §115)
+            val alpha = animateFloatAsState(slot.alpha, tween(260), label = "nav-a$i")
             val h = 56.dp
             Surface(
                 onClick = slot.onClick,
@@ -784,7 +828,7 @@ private fun MorphNav(
                 modifier = Modifier
                     .weight(weight.coerceAtLeast(0.0001f))
                     .heightIn(min = h)
-                    .alpha(alpha),
+                    .graphicsLayer { this.alpha = alpha.value },
                 shape = RoundedCornerShape(999.dp),
                 color = slot.bg,
                 contentColor = slot.fg,
@@ -817,11 +861,3 @@ private fun MorphNav(
     }
 }
 
-fun Context.findTrexActivity(): Activity? {
-    var current = this
-    while (current is ContextWrapper) {
-        if (current is Activity) return current
-        current = current.baseContext
-    }
-    return null
-}

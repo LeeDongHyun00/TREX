@@ -127,21 +127,27 @@ class RestorationUiTest {
             }
         }
         compose.onNodeWithText("01:04").assertIsDisplayed()
-        compose.onNodeWithText("목표 01:30").assertIsDisplayed()
+        compose.onNodeWithText("/ 01:30").assertIsDisplayed()
         snapshot("pip-centered-goal")
         compose.runOnIdle { fontScale=2f }
         compose.onNodeWithText("01:04").assertIsDisplayed()
-        compose.onNodeWithText("목표 01:30").assertIsDisplayed()
+        compose.onNodeWithText("/ 01:30").assertIsDisplayed()
         compose.onNodeWithContentDescription("제어판 접기").assertHeightIsAtLeast(48.dp)
         snapshot("pip-goal-large")
     }
-    @Test fun logoAndInputSurviveNarrowToWideResize() {
+    // 로그인 화면은 공룡과 같은 크기의 버튼 셋(아이디·Google — Apple 은 쓸 수 있을 때) 아래 작은 "로그인 없이 사용"(AuthScreens, 스펙 §117) —
+    // 폭이 바뀌어도 스크롤 없이 로고·선택지가 한 화면에 남는지
+    @Test fun logoAndSignInChoicesSurviveNarrowToWideResize() {
         var width by mutableStateOf(320.dp)
-        compose.setContent { TrexAppTheme(ThemeMode.Light) { Box(Modifier.requiredSize(width,640.dp)) { AuthScreen({},{}) } } }
+        compose.setContent { TrexAppTheme(ThemeMode.Light) { Box(Modifier.requiredSize(width,640.dp)) { AuthScreen(false,null,{ _, _ -> },{},{},{}) } } }
         compose.onNodeWithContentDescription("TREX 로고").assertIsDisplayed()
-        compose.onAllNodes(hasSetTextAction())[0].performTextInput("layout-test")
+        compose.onNodeWithText("아이디로 로그인").assertIsDisplayed()
+        compose.onNodeWithText("Google로 계속하기").assertIsDisplayed()
         compose.runOnIdle { width=600.dp }
-        compose.onNodeWithText("layout-test").assertExists()
+        compose.onNodeWithText("아이디로 로그인").assertIsDisplayed()
+        compose.onNodeWithContentDescription("TREX 로고").assertIsDisplayed()
+        compose.onNodeWithText("Google로 계속하기").assertIsDisplayed()
+        compose.onNodeWithText("로그인 없이 사용").assertIsDisplayed()
         snapshot("login-wide")
     }
     @Test fun nutritionAndGuideRemainReachableAtLargeText() {

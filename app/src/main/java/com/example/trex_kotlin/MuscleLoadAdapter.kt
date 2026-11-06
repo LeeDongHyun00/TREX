@@ -2,9 +2,6 @@ package com.example.trex_kotlin
 
 import com.example.trex_kotlin.trainingload.*
 import com.example.trex_kotlin.posture.PostureSetReport
-import java.time.LocalDate
-import java.time.ZoneId
-import java.util.UUID
 
 internal fun workoutLoadSet(sessionId: String, workout: Workout, endedAt: Long, seconds: Int,
     profile: UserProfile, report: PostureSetReport?): LoadSet? {
@@ -37,9 +34,8 @@ internal fun SessionProgress.loadRecordableWorkouts(steps: List<SessionStep>, re
 
 /** 날짜만 있는 구기록은 정오 실측으로 위장하지 않는다. 하루 범위의 중간값과 오차 범위를 함께 보존한다. */
 internal fun legacyLoadSets(history: List<WorkoutHistoryDay>, profile: UserProfile, now: Long): List<LoadSet> = history.flatMap { day ->
-    val zone = ZoneId.systemDefault()
-    val start = LocalDate.ofEpochDay(day.epochDay).atStartOfDay(zone).toInstant().toEpochMilli()
-    val end = minOf(LocalDate.ofEpochDay(day.epochDay + 1).atStartOfDay(zone).toInstant().toEpochMilli(), now)
+    val start = startOfDayMillis(day.epochDay)
+    val end = minOf(startOfDayMillis(day.epochDay + 1), now)
     if(end < start) return@flatMap emptyList()
     day.items.flatMapIndexed { index, item ->
         if(item.loadSet != null) return@flatMapIndexed emptyList()
@@ -49,7 +45,7 @@ internal fun legacyLoadSets(history: List<WorkoutHistoryDay>, profile: UserProfi
         val pc = item.postureCorrection
         (0 until n).map { set ->
             val key = "legacy:${day.epochDay}:$index:${item.workoutName}:$set"
-            LoadSet(UUID.nameUUIDFromBytes(key.toByteArray()).toString(), "legacy:${day.epochDay}",p.id,(start+end)/2,
+            LoadSet(nameUuidFromBytes(key.encodeToByteArray()), "legacy:${day.epochDay}",p.id,(start+end)/2,
                 timeUncertaintyMs=(end-start)/2, reps=if(p.unit==LoadUnit.SECONDS) 0.0 else spec.count.toDouble(),
                 // 구기록은 저장된 수행 시간만 배분하고 목표 시간을 완수했다고 가정하지 않는다.
                 seconds=(item.durationSeconds ?: (item.durationMinutes * 60)).coerceAtLeast(0).toDouble()/n,

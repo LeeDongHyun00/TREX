@@ -92,6 +92,8 @@ object FloorTemporal {
     }
 
     fun repResult(rule: PostureRule, reps: List<RepRecord>): RuleResult {
+        if (rule.exercise == "푸시업") return RuleResult(rule, Verdict.ABSTAIN, null, 0,
+            abstainReason = "한쪽 사슬 가슴 이동 범위 재검증 필요")
         val cfg = rule.repConfig ?: return RuleResult(rule, Verdict.ABSTAIN, null, 0, abstainReason = "반복 기준 없음")
         val observed = reps.filter { it.cycleMin.isFinite() && it.cycleMax.isFinite() }
         val bad = observed.count { if (cfg.direction == "min") it.cycleMin > cfg.threshold else it.cycleMax < cfg.threshold }

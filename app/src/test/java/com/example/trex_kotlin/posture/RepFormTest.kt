@@ -603,7 +603,7 @@ class RepFormTest {
             "knee_out_mean__mean", "knee_out_mean", "mean", "world", "<", 0.02388f, "C", "정면", .96f, .94f, 56, true, emptyList())
         val spine = knee.copy(id = "바벨 스쿼트|척추의 중립[flexion]", condition = "척추의 중립", subtype = "flexion", feature = "torso_incl__range", baseFeature = "torso_incl", stat = "range", op = ">", threshold = 30.85f)
         val merged = PostureRuleSet("mp_v0.1", "", listOf(knee, spine)).plusRepForm()
-        assertEquals("mp_v0.1+repform_v0.14", merged.version)
+        assertEquals("mp_v0.1+repform_v0.16", merged.version)
         assertEquals(RuleStatus.BETA, merged.rules.first { it.id == knee.id }.status)
         assertEquals(RuleStatus.SHIP, merged.rules.first { it.id == spine.id }.status)
         val added = merged.rules.filter { it.kind == "rep_form" }
@@ -710,22 +710,22 @@ class RepFormCurlTest {
     }
 
     @Test
-    fun elbowDriftHasACoachingTierAndAStricterCountGate() {
+    fun elbowDriftGatesFromTheCoachingBand() {
         // §62c 후속 7: 카메라 쪽 팔 하나의 앞 성분, 본인 첫 3회 수축 중앙값 대비. 첫 3회는 기준을 이루므로 판정하지 않는다(유보 — 정상으로 세지 않는다)
         val ev = evaluator(); val f = Frames(ev)
         repeat(3) {
             val r = f.rep(ev = ev)                           // 수축 앞 성분 0.02 — 기준
             assertEquals(Verdict.ABSTAIN, r.outcomes.first { it.check.id == "repform|덤벨 컬|팔꿈치 앞 이탈" }.verdict); assertTrue(r.correct)
         }
-        // 코칭 단계: +0.13 — 위반이지만 차단은 아니다(+0.20 미만) → 정확은 유지
+        // +0.13: 종전 코칭 단계(+0.12~+0.20) — 덤벨 컬은 §123(사용자 결정 2026-10-15)부터 1단이라 차단한다(2단은 바벨 컬)
         val cue = f.rep(fwd = 0.15f, ev = ev)
         val o = cue.outcomes.first { it.check.id == "repform|덤벨 컬|팔꿈치 앞 이탈" }
-        assertEquals(Verdict.VIOLATION, o.verdict); assertFalse(o.gate); assertTrue(cue.correct)
+        assertEquals(Verdict.VIOLATION, o.verdict); assertTrue(o.gate); assertFalse(cue.correct)
         assertEquals(0.02f, o.reference!!, 1e-4f)
         val e = ev.eventFor(cue, 30_000L, gate = true)!!
-        assertTrue(e.ship); assertFalse("코칭 단계 — 회를 빼지 않았다", e.gated)
+        assertTrue(e.ship); assertTrue("§123 1단 — 지적한 회는 세지 않는다", e.gated)
         assertEquals("팔꿈치가 앞으로 나갔어요. 팔꿈치를 옆구리에 고정하세요.", e.message)
-        // 차단 단계: +0.21 → 정확에서 빠진다
+        // +0.21(종전 차단 단계)도 그대로 빠진다
         val gated = f.rep(fwd = 0.23f, ev = ev)
         assertTrue(gated.outcomes.first { it.check.id == "repform|덤벨 컬|팔꿈치 앞 이탈" }.gate); assertFalse(gated.correct)
         // 뒤로(−)는 이 검사의 몫이 아니다 — 사선에서는 옆 벌림이 이 축에 '뒤로' 로 샌다
@@ -743,16 +743,16 @@ class RepFormCurlTest {
     }
 
     @Test
-    fun obliqueNearArmAwayFromTheBodyHasTwoTiers() {
-        // §62c 후속 7(11:54 D 세트): 카메라 쪽 팔꿈치가 몸에서 떨어짐(옆 또는 뒤 — 사선에서는 못 가른다). 본인 첫 3회 수축 대비 +0.25 코칭, +0.40 차단
+    fun obliqueNearArmAwayFromTheBodyGatesFromTheCoachingBand() {
+        // §62c 후속 7(11:54 D 세트): 카메라 쪽 팔꿈치가 몸에서 떨어짐(옆 또는 뒤 — 사선에서는 못 가른다). 본인 첫 3회 수축 대비 +0.25 부터 위반 — 덤벨 컬은 §123(사용자 결정 2026-10-15)부터 1단이라 +0.25 에서 차단(종전 코칭 +0.25·차단 +0.40 은 바벨 컬)
         val ev = evaluator(); val f = Frames(ev)
         repeat(3) { f.rep(latNear = 0.18f, ev = ev) }
         assertTrue(f.rep(latNear = 0.24f, ev = ev).correct)                        // +0.06 — 정상 흔들림
-        val cue = f.rep(latNear = 0.45f, ev = ev)                                   // +0.27 — 코칭
+        val cue = f.rep(latNear = 0.45f, ev = ev)                                   // +0.27 — 종전 코칭 단계, 이제 차단
         val o = cue.outcomes.first { it.check.id == "repform|덤벨 컬|팔꿈치 몸에서 떨어짐" }
-        assertEquals(Verdict.VIOLATION, o.verdict); assertFalse(o.gate); assertTrue(cue.correct)
+        assertEquals(Verdict.VIOLATION, o.verdict); assertTrue(o.gate); assertFalse(cue.correct)
         assertEquals("팔꿈치가 몸에서 떨어졌어요. 팔꿈치를 옆구리에 붙이세요.", ev.eventFor(cue, 30_000L, gate = true)!!.message)
-        val wide = f.rep(latNear = 0.62f, ev = ev)                                  // +0.44 — 차단(큰 벌림)
+        val wide = f.rep(latNear = 0.62f, ev = ev)                                  // +0.44 — 종전 차단 띠도 그대로 차단
         assertTrue(wide.outcomes.first { it.check.id == "repform|덤벨 컬|팔꿈치 몸에서 떨어짐" }.gate); assertFalse(wide.correct)
     }
 
@@ -854,7 +854,7 @@ class RepFormCurlTest {
 
     @Test
     fun flaredFromTheStartIsNotTakenAsNormalOblique() {
-        // §62c 후속 9 — 사선 '몸에서 떨어짐': 세트 내내 벌려도(0.62) 기준을 모집단 p90(0.32)으로 잘라 +0.30 → 코칭, 0.75 는 +0.43 → 차단.
+        // §62c 후속 9 — 사선 '몸에서 떨어짐': 세트 내내 벌려도(0.62) 기준을 모집단 p90(0.32)으로 잘라 +0.30 → 위반(§123 덤벨 컬 1단이라 차단), 0.75 는 +0.43 → 차단.
         // 기준을 모으는 첫 두 회도 원값 0.72 이상이면 차단
         val ev = evaluator(); val f = Frames(ev)
         val first = f.rep(latNear = 0.75f, ev = ev)
@@ -863,7 +863,7 @@ class RepFormCurlTest {
         f.rep(latNear = 0.62f, ev = ev)
         val third = f.rep(latNear = 0.62f, ev = ev)                             // 두 번째로 작은 값 0.62 → 0.32 로 자름
         val o3 = third.outcomes.first { it.check.id == "repform|덤벨 컬|팔꿈치 몸에서 떨어짐" }
-        assertEquals(0.32f, o3.reference!!, 1e-4f); assertEquals(Verdict.VIOLATION, o3.verdict); assertFalse(o3.gate)
+        assertEquals(0.32f, o3.reference!!, 1e-4f); assertEquals(Verdict.VIOLATION, o3.verdict); assertTrue("§123 1단", o3.gate)
         assertEquals("처음부터 팔꿈치가 몸에서 떨어져 있어요. 옆구리에 붙이고 해 주세요.", ev.takeNotice(9_000L)!!.message)
         assertTrue(ev.summary().live.any { it.id == "repform|덤벨 컬|팔꿈치 몸에서 떨어짐#기준" })
         // 띠 안의 사람(0.18)은 그대로 — 그 뒤 0.45(+0.27)는 코칭
@@ -940,13 +940,15 @@ class RepFormCurlTest {
         assertEquals("repform|덤벨 컬|상체 숙임", e.check.id); assertTrue(e.gated)
         assertEquals("등이 말리거나 상체가 숙여졌어요. 가슴을 들고 등을 편 채 팔만 움직이세요.", e.message)
         assertTrue(f.rep(incl = 20f, ev = ev).correct)     // +15° — 띠 끝은 통과(폰 정상 p95 +13°)
-        val round = f.rep(incl = 22f, ev = ev)             // +17° → 코칭 단계: 위반이지만 회는 그대로
+        val round = f.rep(incl = 22f, ev = ev)             // +17° → 종전 코칭 단계, §123 부터 차단
         val oR = round.outcomes.first { it.check.id == "repform|덤벨 컬|상체 숙임" }
-        assertEquals(Verdict.VIOLATION, oR.verdict); assertFalse(oR.gate); assertTrue(round.correct)
+        assertEquals(Verdict.VIOLATION, oR.verdict); assertTrue(oR.gate); assertFalse(round.correct)
         val squat = RepFormSpecs.byExercise.getValue("바벨 스쿼트").first { it.id == "repform|바벨 스쿼트|상체 숙임" }
         val curlLean = curl.first { it.id == "repform|덤벨 컬|상체 숙임" }
         assertEquals(squat.feature, curlLean.feature); assertEquals(squat.status, curlLean.status)
-        assertEquals(RepFormSpecs.LEAN_COACH_HI, curlLean.hi); assertEquals(RepFormSpecs.LEAN_HI, curlLean.gateHi)
+        assertEquals(RepFormSpecs.LEAN_COACH_HI, curlLean.hi); assertNull("§123 덤벨 컬 1단", curlLean.gateHi)
+        // 바벨 컬은 2단 그대로(코칭 +15°·차단 +20°)
+        assertEquals(RepFormSpecs.LEAN_HI, RepFormSpecs.byExercise.getValue("바벨 컬").first { it.id == "repform|바벨 컬|상체 숙임" }.gateHi)
     }
 
     @Test
@@ -1021,7 +1023,7 @@ class RepFormCurlTest {
     @Test
     fun aRoundedBackInvalidatesTheElbowLateralMeasurement() {
         // 14:46 세트 등 말림 13~15회: 어깨가 말리면 어깨 가로폭 투영이 줄어 가까운 팔 가로 비가 0.39~0.49 로 부풀었다(월드 바깥은 정상) — 차단 단계 숙임이면 가로 검사는 유보.
-        // 코칭 단계(+17°)는 무효화하지 않는다
+        // 숙임 위반이 아닌 회는 무효화하지 않는다(§123 부터 덤벨 컬은 +15° 넘으면 전부 차단 단계)
         val away = "repform|덤벨 컬|팔꿈치 몸에서 떨어짐"; val lean = "repform|덤벨 컬|상체 숙임"
         val ev = evaluator(); val f = Frames(ev)
         repeat(3) { f.rep(latNear = 0.10f, yaw = -30f, ev = ev) }
@@ -1030,8 +1032,12 @@ class RepFormCurlTest {
         val o = round.outcomes.first { it.check.id == away }
         assertEquals(Verdict.ABSTAIN, o.verdict); assertEquals("상체 위반으로 측정 무효", o.abstainReason)
         assertEquals("말할 사유는 숙임", lean, ev.eventFor(round, 60_000L, gate = true)!!.check.id)
-        val mild = f.rep(latNear = 0.45f, incl = 22f, yaw = -30f, ev = ev)            // +17° 코칭 단계 — 가로 검사는 그대로 판정
-        assertFalse(mild.outcomes.first { it.check.id == lean }.gate)
+        // 숙임 위반이 아닌 회(+12°)는 가로 검사를 그대로 판정한다. 덤벨 컬은 §123 부터 1단이라 +15° 넘는 숙임은 전부 차단 단계 — 그 회는 가로가 유보된다
+        val mild = f.rep(latNear = 0.45f, incl = 17f, yaw = -30f, ev = ev)
+        assertEquals(Verdict.OK, mild.outcomes.first { it.check.id == lean }.verdict)
+        val wasCoaching = f.rep(latNear = 0.45f, incl = 22f, yaw = -30f, ev = ev)     // +17° — 종전 코칭 단계, 이제 차단이라 가로는 무효
+        assertTrue(wasCoaching.outcomes.first { it.check.id == lean }.gate)
+        assertEquals(Verdict.ABSTAIN, wasCoaching.outcomes.first { it.check.id == away }.verdict)
         assertEquals(Verdict.VIOLATION, mild.outcomes.first { it.check.id == away }.verdict)
     }
 
@@ -1058,8 +1064,8 @@ class RepFormCurlTest {
         assertFalse(a.brief); assertTrue(a.gated)
         val b = ev.eventFor(f.rep(latNear = 0.62f, ev = ev), 33_000L, gate = true)!!
         assertTrue(b.brief); assertTrue(b.gated); assertEquals("팔꿈치 떨어짐", b.message)
-        val c = ev.eventFor(f.rep(latNear = 0.45f, ev = ev), 36_000L, gate = true)!!       // 코칭 단계(+0.27) — 단서만, 회는 그대로
-        assertTrue(c.brief); assertFalse(c.gated)
+        val c = ev.eventFor(f.rep(latNear = 0.45f, ev = ev), 36_000L, gate = true)!!       // +0.27 — 종전 코칭 단계, §123 덤벨 컬 1단이라 이 회도 뺀다(쿨다운 안이라 단서)
+        assertTrue(c.brief); assertTrue(c.gated)
         assertNull("게이트가 아니면(TRACK) 쿨다운 안은 종전대로 없음", ev.eventFor(f.rep(latNear = 0.62f, ev = ev), 38_000L))
         assertFalse("쿨다운이 지나면 다시 문장", ev.eventFor(f.rep(latNear = 0.62f, ev = ev), 50_000L, gate = true)!!.brief)
     }
@@ -1155,6 +1161,20 @@ class RepFormCurlTest {
     }
 
     @Test
+    fun coachingTierIsPaintedOrangeAndBlockingTierRed() {
+        // §125(사용자 요청 2026-11-01): 말만 하고 센 회(코칭 띠)와 뺀 회(차단)를 색으로 가른다 — 2단이 남은 바벨 컬 '상체 숙임'(코칭 +15°·차단 +20°)으로
+        val ev = RepFormEvaluator(RepFormSpecs.byExercise.getValue("바벨 컬"), "elbow_minside", 35f, priors = { _, _ -> null }); val f = Frames(ev)
+        assertTrue(RuleHighlight.tiers(f.rep(ev = ev)).let { it.blocked.isEmpty() && it.coaching.isEmpty() && it.provisional.isEmpty() })
+        val coach = RuleHighlight.tiers(f.rep(incl = 22f, ev = ev))   // +17° — 위반이지만 회는 센다 → 주황
+        assertEquals(setOf(11, 12, 23, 24), coach.coaching); assertTrue(coach.blocked.isEmpty())
+        val block = RuleHighlight.tiers(f.rep(incl = 32f, ev = ev))   // +27° — 차단 → 빨강, 같은 관절은 주황에 두지 않는다
+        assertEquals(setOf(11, 12, 23, 24), block.blocked); assertTrue(block.coaching.isEmpty())
+        // 덤벨 컬은 1단(§123)이라 같은 +17° 가 바로 빨강
+        val one = evaluator(); val g = Frames(one); g.rep(ev = one)
+        assertEquals(setOf(11, 12, 23, 24), RuleHighlight.tiers(g.rep(incl = 22f, ev = one)).blocked)
+    }
+
+    @Test
     fun torsoSwingAndFlareAreBetaScreenOnly() {
         val ev = evaluator(); val f = Frames(ev)
         f.rep(ev = ev)
@@ -1197,16 +1217,16 @@ class RepFormCurlTest {
     }
 
     @Test
-    fun frontalFlareHasTwoTiersAndLiftedElbowIsGated() {
+    fun frontalFlareGatesFromTheCoachingBandAndLiftedElbowIsGated() {
         // 2026-09-26 실기기 13회(정면 C): 벌림 4회 lat 0.44~0.46(시작 0.11~0.13), 반동 3회 손목 최고 +0.20~+0.24, 정상 lat 0.12~0.18·손목 −0.07~−0.12
         val ev = evaluator(); val f = Frames(ev)
         val r1 = f.rep(ev = ev)
         assertTrue(r1.correct)
-        // 코칭 단계(+0.15 이고 ≥ 0.30 — 원값 0.31): 위반이지만 차단은 아니다(+0.20·0.35 미만)
+        // 종전 코칭 단계(+0.15 이고 ≥ 0.30 — 원값 0.31) — 덤벨 컬은 §123(사용자 결정 2026-10-15)부터 1단이라 차단(바벨 컬은 +0.20·0.35 부터)
         val cue = f.rep(lat = 0.31f, ev = ev)
         val o = cue.outcomes.first { it.check.id == "repform|덤벨 컬|팔꿈치 옆 벌림" }
-        assertEquals(Verdict.VIOLATION, o.verdict); assertFalse(o.gate); assertTrue(cue.correct)
-        // 차단 단계(실기기 0.45): 정확에서 빠진다
+        assertEquals(Verdict.VIOLATION, o.verdict); assertTrue(o.gate); assertFalse(cue.correct)
+        // 종전 차단 단계(실기기 0.45)도 그대로 빠진다
         val wide = f.rep(lat = 0.45f, ev = ev)
         val ow = wide.outcomes.first { it.check.id == "repform|덤벨 컬|팔꿈치 옆 벌림" }
         assertTrue(ow.gate); assertFalse(wide.correct)

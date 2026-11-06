@@ -1,6 +1,7 @@
 package com.example.trex_kotlin.posture
 
 import android.content.Context
+import com.example.trex_kotlin.SharedPreferencesStore
 
 /**
  * 세션 모드 (spec §29) — 초보자와 숙련자는 같은 엔진을 반대 정책으로 쓴다.
@@ -23,13 +24,5 @@ import android.content.Context
  */
 enum class CoachMode { COACH, TRACK }
 
-class ModeStore(context: Context) {
-    private val prefs = context.getSharedPreferences("trex_posture", Context.MODE_PRIVATE)
-
-    fun get(exercise: String): CoachMode =
-        if (prefs.getString("mode_$exercise", null) == "track") CoachMode.TRACK else CoachMode.COACH
-
-    fun set(exercise: String, mode: CoachMode) {
-        prefs.edit().putString("mode_$exercise", if (mode == CoachMode.TRACK) "track" else "coach").apply()
-    }
-}
+/** 종목별 모드 저장 — Android SharedPreferences "trex_posture"(§108c 전과 같은 파일·키). 형식은 공유 [ModeStore]. */
+fun ModeStore(context: Context): ModeStore = ModeStore(SharedPreferencesStore(context, "trex_posture"))
