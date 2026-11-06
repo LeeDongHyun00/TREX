@@ -2,9 +2,7 @@ package com.example.trex_kotlin.weather
 
 import com.example.trex_kotlin.SheetHost
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -14,21 +12,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.AcUnit
-import androidx.compose.material.icons.rounded.Cloud
-import androidx.compose.material.icons.rounded.Dehaze
-import androidx.compose.material.icons.rounded.NightsStay
-import androidx.compose.material.icons.rounded.Thunderstorm
-import androidx.compose.material.icons.rounded.Umbrella
-import androidx.compose.material.icons.rounded.WbCloudy
-import androidx.compose.material.icons.rounded.WbSunny
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -41,9 +28,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -61,7 +45,6 @@ import com.example.trex_kotlin.TrexText as Text
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlin.math.abs
 import kotlin.math.roundToInt
 
 /** 화면을 떠났다 돌아와도 마지막 날씨를 바로 보인다(앱 수명). */
@@ -73,9 +56,11 @@ private object WeatherUiStateCache {
 private const val WEATHER_LOAD_ERROR_MESSAGE = "날씨를 불러오지 못했어룡"
 
 /**
- * 홈 날짜 아래의 날씨 한 줄(§108f, 사용자 요청 "기온, 날씨, 강수량만") — 하늘색 아이콘·기온·날씨·강수량. 누르면 날씨 시트가 열린다.
+ * 홈 날짜 아래의 날씨 한 줄(§108f, 사용자 요청 "기온, 날씨, 강수량만") — 날씨 이모지·지역·기온·날씨·강수량·미세먼지. 누르면 날씨 시트가 열린다.
  * 불러오기·캐시·화면 복귀 시 갱신·지역 바꾸기 규칙은 weather 브랜치 카드와 같다([WeatherRepository]·[resolveWeatherPlace]).
- * 판정([WeatherExerciseRecommender])은 아이콘 바탕의 하늘색(날씨·낮밤)을 고른다. 추천 운동 목록은 홈 한 화면을 지키려고 줄에서 빼고
+ * 판정([WeatherExerciseRecommender])은 테마 이모지([WeatherThemeMode.emoji], weather 브랜치 카드의 것)를 고른다 — 아이콘은 없다(#64, 사용자 결정 2026-11-07
+ * "이모티콘은 기존 것으로, 아이콘은 전부 제거, 레이아웃은 유지"). 강수량·미세먼지는 숫자가 아니라 단계 말([precipitationLevel]·[dustLevel]).
+ * 추천 운동 목록은 홈 한 화면을 지키려고 줄에서 빼고
  * **시트 위쪽**에 둔다(날씨 시트 — 추천·지역·출처, 스펙 '날씨 기반 운동 추천 판정 기준'의 화면 절).
  * [isInPlan]·[onAddExercise] 는 추천 운동을 운동 목록에 넣는 길이다 — 근육 부하 화면 추천과 같은 규칙(오늘 안 한 같은 이름이 있으면 '목록에 있음').
  * [onAddExercise] 가 null 이면 추천은 보이기만 한다.
@@ -190,29 +175,28 @@ fun WeatherSummaryRow(
             when {
                 rec != null -> {
                     val w = rec.weather
-                    Box(
-                        Modifier.size(26.dp).clip(CircleShape).background(Brush.linearGradient(skyColors(rec.theme, w.isDay))),
-                        contentAlignment = Alignment.Center,
-                    ) { Icon(weatherIcon(w.weatherCode, w.isDay), contentDescription = null, tint = Color.White, modifier = Modifier.size(15.dp)) }
+                    Text(rec.theme.emoji, fontSize = 18.sp, maxLines = 1)
                     // 어느 곳 날씨인지 — 다른 지역으로 둔 줄 모르고 날씨가 틀리다고 보지 않게(10-29 실기기: 제주로 두고 "맑음")
                     Text(shortPlaceLabel(rec.locationLabel), color = c.text2, fontSize = 14.sp, maxLines = 1,
                         modifier = Modifier.padding(start = 9.dp))
                     Text("${w.temperature.roundToInt()}°", color = c.text, fontSize = 17.sp, fontWeight = FontWeight.SemiBold,
                         modifier = Modifier.padding(start = 7.dp))
-                    // 좁은 화면·큰 글씨에서는 날씨 이름이 먼저 줄어든다(weight) — 강수량과 › 가 밀려나지 않게
+                    // 좁은 화면·큰 글씨에서는 날씨 이름이 먼저 줄어든다(weight) — 강수량·미세먼지가 밀려나지 않게
                     Text(WeatherExerciseRecommender.getWeatherDescription(w.weatherCode), color = c.text2, fontSize = 14.sp,
                         maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false).padding(start = 7.dp))
                     Text("·", color = c.text3, fontSize = 14.sp, modifier = Modifier.padding(horizontal = 7.dp))
-                    Text("강수량 ${oneDecimal(w.precipitation)}mm", color = c.text2, fontSize = 14.sp, maxLines = 1,
-                        overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 3.dp))
+                    Text("강수량 " + precipitationLevel(w.precipitation), color = c.text2, fontSize = 14.sp, maxLines = 1,
+                        overflow = TextOverflow.Ellipsis)
+                    // 미세먼지(PM10) — 대기질 응답이 없으면(없는 값, 실패) 줄에서 빠진다. 숫자가 아니라 단계 말.
                     w.pm10?.let { dust ->
-                        Text("미세먼지 ${dust.roundToInt()}", color = c.text2, fontSize = 13.sp,
-                            modifier = Modifier.padding(start = 6.dp), maxLines = 1)
+                        Text("·", color = c.text3, fontSize = 14.sp, modifier = Modifier.padding(horizontal = 7.dp))
+                        Text("미세먼지 " + dustLevel(dust), color = c.text2, fontSize = 14.sp, maxLines = 1,
+                            overflow = TextOverflow.Ellipsis)
                     }
                 }
                 errorMessage != null -> {
                     Text("${errorMessage.orEmpty()} · 다시 시도", color = c.text2, fontSize = 13.sp, maxLines = 1,
-                        overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 6.dp))
+                        overflow = TextOverflow.Ellipsis)
                 }
                 else -> {
                     CircularProgressIndicator(color = c.primaryText, strokeWidth = 2.dp, modifier = Modifier.size(14.dp))
@@ -241,7 +225,7 @@ fun WeatherSummaryRow(
 
 /**
  * 날씨 시트 — 위에서부터 오늘의 날씨 운동 추천(판정 [WeatherExerciseRecommender], weather 브랜치 카드의 내용),
- * 출처(Open-Meteo, CC BY 4.0 — 홈 한 줄에는 자리가 없어 시트를 열면 바로 보이는 추천 아래에 단다, 누르면 Open-Meteo 사이트)와 받은 지 얼마나 됐는지,
+ * 출처(Open-Meteo, CC BY 4.0 — 미세먼지도 Open-Meteo 대기질 API(CAMS); 홈 한 줄에는 자리가 없어 시트를 열면 바로 보이는 추천 아래에 단다, 누르면 Open-Meteo 사이트)와 받은 지 얼마나 됐는지,
  * 날씨 기준 지역(현재 위치 또는 13개 지역, 고른 것에 체크).
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -267,7 +251,7 @@ private fun WeatherSheet(
                 RecommendedExerciseRow(exercise, inPlan = isInPlan(exercise.catalogName), onAdd = onAddExercise)
             }
             item {
-                Text("날씨 정보: Open-Meteo.com (CC BY 4.0) · $age", color = c.text3, fontSize = 12.sp,
+                Text("날씨·미세먼지 정보: Open-Meteo.com (CC BY 4.0, 미세먼지는 CAMS) · $age", color = c.text3, fontSize = 12.sp,
                     modifier = Modifier.fillMaxWidth()
                         .clickable(role = Role.Button, onClickLabel = "Open-Meteo 사이트 열기") { uri.openUri("https://open-meteo.com/") }
                         .padding(horizontal = 24.dp, vertical = 8.dp))
@@ -284,16 +268,13 @@ private fun WeatherSheet(
     }
 }
 
-/** 시트 맨 위 — 하늘색 아이콘·추천 제목(날씨 테마·실내/실외)·지역과 기온·추천 문장. */
+/** 시트 맨 위 — 날씨 이모지·추천 제목(날씨 테마·실내/실외)·지역과 기온·강수량·미세먼지(단계 말, 괄호에 수치)·추천 문장. */
 @Composable
 private fun RecommendationHeader(rec: WeatherWorkoutRecommendation) {
     val c = Trex.c
     Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                Modifier.size(40.dp).clip(CircleShape).background(Brush.linearGradient(skyColors(rec.theme, rec.weather.isDay))),
-                contentAlignment = Alignment.Center,
-            ) { Icon(weatherIcon(rec.weather.weatherCode, rec.weather.isDay), contentDescription = null, tint = Color.White, modifier = Modifier.size(22.dp)) }
+            Text(rec.theme.emoji, fontSize = 28.sp, maxLines = 1)
             Column(Modifier.weight(1f).padding(start = 14.dp)) {
                 Text(rec.theme.titleKorean, color = c.text, fontSize = 20.sp, fontWeight = FontWeight.SemiBold,
                     maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -302,8 +283,9 @@ private fun RecommendationHeader(rec: WeatherWorkoutRecommendation) {
             }
         }
         val dust = rec.weather.pm10
-        Text(if (dust == null) "미세먼지 정보 없음" else "미세먼지(PM10) ${dust.roundToInt()} µg/m³ · Open-Meteo / CAMS",
-            color = c.text2, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
+        val rain = "강수량 " + precipitationLevel(rec.weather.precipitation) + " (" + oneDecimal(rec.weather.precipitation) + " mm)"
+        val dustText = if (dust == null) "미세먼지 정보 없음" else "미세먼지 " + dustLevel(dust) + " (" + dust.roundToInt() + " µg/m³)"
+        Text("$rain · $dustText", color = c.text2, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
         Text(rec.message, color = c.text2, fontSize = 14.sp, lineHeight = 20.sp, modifier = Modifier.padding(top = 12.dp, bottom = 6.dp))
     }
 }
@@ -337,7 +319,7 @@ private fun RegionRow(title: String, subtitle: String?, checked: Boolean, onClic
     val c = Trex.c
     Row(Modifier.fillMaxWidth().clickable(role = Role.Button, onClick = onClick).padding(horizontal = 24.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically) {
-        Column(Modifier.weight(1f).padding(start = 14.dp)) {
+        Column(Modifier.weight(1f)) {
             Text(title, color = c.text, fontSize = 16.sp)
             subtitle?.let { Text(it, color = c.text2, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp)) }
         }
@@ -346,29 +328,8 @@ private fun RegionRow(title: String, subtitle: String?, checked: Boolean, onClic
 }
 
 
-/** 아이콘 바탕 하늘색(왼쪽 위 → 오른쪽 아래) — 날씨와 낮밤. 흰 아이콘이 늘 보이도록 중간 명도까지만. */
-private fun skyColors(theme: WeatherThemeMode, day: Boolean): List<Color> = when (theme) {
-    WeatherThemeMode.SUNNY -> if (day) listOf(Color(0xFF2F7FD8), Color(0xFF63A9EC)) else listOf(Color(0xFF0F1D3A), Color(0xFF2A3F6A))
-    WeatherThemeMode.CLOUDY -> if (day) listOf(Color(0xFF557595), Color(0xFF86A0B9)) else listOf(Color(0xFF1C2735), Color(0xFF394A5E))
-    WeatherThemeMode.RAINY -> if (day) listOf(Color(0xFF3A4B60), Color(0xFF5B6E84)) else listOf(Color(0xFF151D28), Color(0xFF303C4C))
-    WeatherThemeMode.SNOWY_COLD -> if (day) listOf(Color(0xFF5C87B3), Color(0xFF8DB0D3)) else listOf(Color(0xFF1E2C42), Color(0xFF41597A))
-    WeatherThemeMode.HEATWAVE -> if (day) listOf(Color(0xFFD9622A), Color(0xFFEE9548)) else listOf(Color(0xFF4A2320), Color(0xFF7A3F30))
-}
-
-/** WMO 날씨 코드 → 아이콘(맑음·구름·안개·비·눈·뇌우, 맑은 밤은 달). */
-private fun weatherIcon(code: Int, day: Boolean): ImageVector = when (code) {
-    0, 1 -> if (day) Icons.Rounded.WbSunny else Icons.Rounded.NightsStay
-    2 -> if (day) Icons.Rounded.WbCloudy else Icons.Rounded.NightsStay
-    3 -> Icons.Rounded.Cloud
-    in 45..48 -> Icons.Rounded.Dehaze
-    in 51..67, in 80..82 -> Icons.Rounded.Umbrella
-    in 71..77, in 85..86 -> Icons.Rounded.AcUnit
-    in 95..99 -> Icons.Rounded.Thunderstorm
-    else -> Icons.Rounded.Cloud
-}
-
 /** 강수량 — 소수 첫째 자리까지(0 이면 "0"). */
 private fun oneDecimal(value: Double): String {
     val tenths = (value * 10).roundToInt()
-    return if (tenths % 10 == 0) (tenths / 10).toString() else "${tenths / 10}.${abs(tenths % 10)}"
+    return if (tenths % 10 == 0) (tenths / 10).toString() else "${tenths / 10}.${tenths % 10}"
 }
