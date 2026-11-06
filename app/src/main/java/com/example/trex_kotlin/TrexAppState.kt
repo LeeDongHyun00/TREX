@@ -496,6 +496,24 @@ class AppViewModel(private val platform: AppPlatform) : ViewModel() {
         store.saveGoalOverride(null)
     }
 
+    // ---- §131 상태 — init 의 refreshCalendar(보관 기간·주간 루틴·연속 멈춤)보다 먼저 초기화돼야 한다(선언 순서 = 초기화 순서; 뒤에 두면 null 상태로 NPE, 11-07 실기기)
+    var retentionDays by mutableStateOf(store.loadRetentionDays())
+        private set
+    var bodyWeights by mutableStateOf(store.loadBodyWeights())
+        private set
+    var xpLedger by mutableStateOf(store.loadXp())
+        private set
+    var lastSessionReward by mutableStateOf<SessionReward?>(null)
+    var streakPause by mutableStateOf(store.loadStreakPause())
+        private set
+    var customExercises by mutableStateOf(store.loadCustomExercises())
+        private set
+    var weeklyRoutine by mutableStateOf(store.loadWeeklyRoutine())
+        private set
+    val sessionSets: SnapshotStateMap<String, SetEntry> = mutableStateMapOf()
+    var notifyPrefs by mutableStateOf(store.loadNotifyPrefs())
+        private set
+
     // ---- 운동 계획 / 기록
 
     var workoutPlan by mutableStateOf(store.loadPlan() ?: todayPlan)
@@ -738,8 +756,6 @@ class AppViewModel(private val platform: AppPlatform) : ViewModel() {
 
     // ---- §131 기록 확장 — 보관 기간·체중·XP·배지·직접 추가 종목·주간 루틴·세트 입력·수동 기록·내보내기·알림 설정
 
-    var retentionDays by mutableStateOf(store.loadRetentionDays())
-        private set
 
     /** 기간을 줄이면 그 밖의 기록이 이 기기와 백업에서 지워진다(P14 경고) — 화면이 먼저 내보내기를 권한다. */
     fun chooseRetentionDays(days: Int) {
@@ -748,8 +764,6 @@ class AppViewModel(private val platform: AppPlatform) : ViewModel() {
         refreshCalendar(resetPlan = false)
     }
 
-    var bodyWeights by mutableStateOf(store.loadBodyWeights())
-        private set
 
     val latestBodyWeight: BodyWeightEntry? get() = bodyWeights.maxWithOrNull(compareBy({ it.epochDay }, { it.recordedAt }))
 
@@ -766,8 +780,6 @@ class AppViewModel(private val platform: AppPlatform) : ViewModel() {
         store.saveBodyWeights(bodyWeights)
     }
 
-    var xpLedger by mutableStateOf(store.loadXp())
-        private set
     val totalXp: Int get() = xpLedger.sumOf { it.amount }
 
     /** 같은 [key] 로는 한 번만 준다. 줬으면 true. */
@@ -778,10 +790,7 @@ class AppViewModel(private val platform: AppPlatform) : ViewModel() {
         return true
     }
 
-    var lastSessionReward by mutableStateOf<SessionReward?>(null)
 
-    var streakPause by mutableStateOf(store.loadStreakPause())
-        private set
 
     /** 연속 잠시 멈추기 — 오늘부터 [days]일(최대 14). 멈춘 동안은 연속이 줄지 않는다. */
     fun pauseStreak(days: Int) {
@@ -823,8 +832,6 @@ class AppViewModel(private val platform: AppPlatform) : ViewModel() {
 
     fun badges(): List<BadgeStatus> = badges(rewardFacts())
 
-    var customExercises by mutableStateOf(store.loadCustomExercises())
-        private set
 
     private fun registerCustomProfiles() {
         MuscleLoadCatalog.custom = customExercises.map { ce ->
@@ -852,8 +859,6 @@ class AppViewModel(private val platform: AppPlatform) : ViewModel() {
         registerCustomProfiles()
     }
 
-    var weeklyRoutine by mutableStateOf(store.loadWeeklyRoutine())
-        private set
 
     /** 요일에 루틴을 넣거나(ref) 뺀다(null = 계획된 휴식). 오늘 요일이면 오늘 루틴에도 바로 얹는다. */
     fun assignWeeklyRoutine(day: kotlinx.datetime.DayOfWeek, ref: String?) {
@@ -887,7 +892,6 @@ class AppViewModel(private val platform: AppPlatform) : ViewModel() {
     }
 
     /** 세션 중 휴식 화면에서 적는 세트별 kg·회·RPE·메모 — 키는 세트의 운동 id(`…::set:N`). 기록 저장 때 접혀 들어간다. */
-    val sessionSets: SnapshotStateMap<String, SetEntry> = mutableStateMapOf()
 
     /** 이 종목의 가장 최근 세트 기록(지난번) — 휴식 화면의 "그대로 채우기" 와 종목 상세. */
     fun lastSets(name: String): Pair<Long, List<SetEntry>>? = workoutHistory.sortedByDescending { it.epochDay }.firstNotNullOfOrNull { day ->
@@ -938,8 +942,6 @@ class AppViewModel(private val platform: AppPlatform) : ViewModel() {
         return if (json) buildRecordJson(history, body, diet) else buildRecordCsv(history, body, diet)
     }
 
-    var notifyPrefs by mutableStateOf(store.loadNotifyPrefs())
-        private set
 
     fun updateNotifyPrefs(p: NotifyPrefs) {
         notifyPrefs = p
