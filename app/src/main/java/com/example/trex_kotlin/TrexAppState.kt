@@ -646,6 +646,8 @@ class AppViewModel(private val platform: AppPlatform) : ViewModel() {
         if (completedPlan.isEmpty()) return
         // 리포트 맵은 여기서 비우지 않는다 — 완료 화면이 같은 맵을 읽고, 다음 startSession 이 비운다
         val before = workoutHistory
+        // 새 배지 판정은 기록을 합치기 전 상태와 비교한다 — 합친 뒤 재면 '첫 운동' 처럼 이번 세션으로 얻은 배지가 새것이 아니게 된다(11-07 실기기)
+        val earnedBefore = badges().filter { it.earned }.map { it.id }.toSet()
         val record = createWorkoutHistoryDay(completedPlan, elapsedSeconds, sessionPostureReports.toMap(), elapsedByWorkout)
         var pr: Pair<String, SetEntry>? = null
         var previousBest: Double? = null
@@ -662,7 +664,6 @@ class AppViewModel(private val platform: AppPlatform) : ViewModel() {
         syncMuscleLoad()
         // 보상(§131 P5) — '마치고 기록한 사실' 에만. 같은 세션을 다시 저장하면(이어하기) 다시 주지 않는다
         val doneSets = completedPlan.count { it.done }
-        val earnedBefore = badges().filter { it.earned }.map { it.id }.toSet()
         val xp = Rewards.sessionXp(doneSets, pr != null)
         val awarded = awardXp("session:$sessionId", if (pr != null) "세션 완료 · ${doneSets}세트 · PR" else "세션 완료 · ${doneSets}세트", xp)
         val newBadges = badges().filter { it.earned && it.id !in earnedBefore }

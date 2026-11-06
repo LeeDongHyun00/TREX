@@ -2,6 +2,8 @@ package com.example.trex_kotlin
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -147,5 +149,6 @@ fun CustomExerciseSheet(app: AppViewModel, initialName: String = "", onClose: ()
     }
 }
 
-/** 시트 안 세로 스크롤 — 내용이 넘칠 때만. */
-private fun Modifier.verticalScrollIfNeeded(): Modifier = androidx.compose.ui.Modifier.then(this)
+/** 시트 안 세로 스크롤 — 근육 칩·단위·추가 버튼이 작은 화면(11-07 SM-N976N)에서 잘렸다. */
+@Composable
+private fun Modifier.verticalScrollIfNeeded(): Modifier = this.verticalScroll(rememberScrollState())

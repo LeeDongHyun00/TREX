@@ -24,6 +24,12 @@ import kotlinx.datetime.LocalDate
 const val WATER_CUP_ML = 250
 const val WATER_GOAL_CUPS = 8
 
+/** 0.25 → "0.25", 1.0 → "1", 1.5 → "1.5" — 한 잔 250 ml 가 0.3 으로 둥글려 보이지 않게(11-07 실기기). */
+fun formatLiters(liters: Double): String {
+    val hundredths = kotlin.math.round(liters * 100).toInt()
+    return if (hundredths % 100 == 0) (hundredths / 100).toString() else if (hundredths % 10 == 0) "${hundredths / 100}.${hundredths % 100 / 10}" else "${hundredths / 100}.${(hundredths % 100).toString().padStart(2, '0')}"
+}
+
 @Composable
 fun WaterCard(app: AppViewModel) {
     val c = Trex.c
@@ -35,7 +41,7 @@ fun WaterCard(app: AppViewModel) {
                 Column(Modifier.weight(1f)) {
                     Text("물 · 오늘", color = c.text2, fontSize = 12.sp)
                     Row(verticalAlignment = Alignment.Bottom) {
-                        Text(formatOneDecimal(liters.toFloat()).let { if (it.endsWith(".0")) it else it }, color = c.text, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                        Text(formatLiters(liters), color = c.text, fontSize = 22.sp, fontWeight = FontWeight.Bold)
                         Text(" / ${WATER_GOAL_CUPS * WATER_CUP_ML / 1000.0} L", color = c.text2, fontSize = 13.sp, modifier = Modifier.padding(bottom = 3.dp))
                     }
                     Text("컵 ${cups}잔 · 한 잔 ${WATER_CUP_ML} ml", color = c.text2, fontSize = 12.sp)

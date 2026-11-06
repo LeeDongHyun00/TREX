@@ -131,7 +131,8 @@ fun SessionTransitionScreen(step: SessionStep, timeLeft: Int, paused: Boolean,
                     Text("세트 사이 휴식 · ${step.setLabel}", color = c.primaryText, fontSize = 13.sp)
                     Text(step.workout.name, color = c.text, fontSize = 22.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 4.dp))
                 }
-                if (onExtendRest != null) GhostButton("+30초", onExtendRest, Modifier.padding(end = 8.dp), height = 44.dp)
+                // 폭을 주지 않으면 GhostButton 의 fillMaxWidth 가 제목 칸을 한 글자 폭으로 밀어낸다(11-07 실기기)
+                if (onExtendRest != null) GhostButton("+30초", onExtendRest, Modifier.width(96.dp).padding(end = 8.dp), height = 44.dp)
                 RingGauge(progress = progress, size = 64.dp, stroke = 6.dp) {
                     Text(timeLeft.asClock(), color = c.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                 }
