@@ -52,6 +52,21 @@ interface SystemSettingsLinks {
     fun openAppDetails()
 }
 
+/**
+ * 기기 알림 예약(§131 P16) — 운동 요일 알림·휴식 끝 알림. 서버 푸시가 아니다. Android 는 AlarmManager + 알림 채널(AndroidReminders.kt),
+ * iPhone 은 아직 없다([available] 거짓 — 설정은 저장되고 화면이 "이 기기에서는 아직" 이라고 밝힌다). 짝은 `rememberReminderScheduler()`.
+ */
+interface ReminderScheduler {
+    val available: Boolean
+    fun permitted(): Boolean
+    /** 알림 권한을 묻고(Android 13+) 허용되면 [onGranted]. 이미 허용됐거나 물을 수 없으면 바로 부른다. */
+    fun requestPermission(onGranted: () -> Unit)
+    /** 운동 요일(1=월 … 7=일) [hour]:[minute] 알림 — 빈 집합이면 취소. */
+    fun scheduleWorkoutDays(isoDays: Set<Int>, hour: Int, minute: Int)
+    /** 휴식 끝 알림 — [atMillis] null 이면 취소. */
+    fun scheduleRestEnd(atMillis: Long?)
+}
+
 /** 음성 안내 목소리 — [name] 은 화면 표기(예: "유나 · 기본 음질"), [natural] 은 고품질(향상·프리미엄) 음성인가. */
 class VoiceStatus(val name: String, val natural: Boolean)
 

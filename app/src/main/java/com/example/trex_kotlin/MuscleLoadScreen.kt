@@ -73,7 +73,8 @@ internal fun MuscleLoadScreen(app: AppViewModel, onBack: () -> Unit) {
         LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
             item {
                 Text("기록으로 보는 오늘의 근육", color = c.text, fontSize = 24.sp, fontWeight = FontWeight.Bold)
-                Text("기록 기반 추정 · 0–100점", color = c.text2, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
+                // 가정값 고지(근거 감사 §4 — §82 에서 사라진 '계산 방법' 의 최소판): 반감기·기준 횟수·체격 보정은 검증된 상수가 아니다
+                Text("기록 기반 추정 · 0–100점 · 반감기 6/24 h·12회 기준·체격 보정은 가정값", color = c.text2, fontSize = 12.sp, lineHeight = 17.sp, modifier = Modifier.padding(top = 8.dp))
             }
             if (app.muscleLoadLoading) item { LinearProgressIndicator(Modifier.fillMaxWidth(), color = c.primaryText) }
             if (app.muscleLoadError != null) item {
@@ -89,7 +90,7 @@ internal fun MuscleLoadScreen(app: AppViewModel, onBack: () -> Unit) {
                         MuscleAtlas(snapshot, if (tab == 0) selected?.name.orEmpty() else "", Modifier.fillMaxWidth().height(366.dp))
                         Column(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 16.dp)) {
                             Box(Modifier.fillMaxWidth().height(10.dp).clip(RoundedCornerShape(5.dp))
-                                .background(Brush.horizontalGradient(listOf(Color(0xFFDEDED9), Color(0xFFC7E26B), Color(0xFF759848)))))
+                                .background(Brush.horizontalGradient(listOf(Color(0xFFDEDED9), Color(0xFFFFC24B), Color(0xFFD78B28))))) // 피로 = 경고 계열, viewer.js color() 와 같은 램프(UI 감사 A25)
                             Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.SpaceBetween) {
                                 Text("낮음", color = Color(0xFFE3E8DD), fontSize = 12.sp, fontWeight = FontWeight.Medium)
                                 Text("높음", color = Color(0xFFE3E8DD), fontSize = 12.sp, fontWeight = FontWeight.Medium)

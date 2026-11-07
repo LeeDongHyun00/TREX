@@ -1,0 +1,76 @@
+{
+  "date": "2026-11-07",
+  "tool": "built-in image_gen.imagegen",
+  "scope": [
+    "iyt_raise",
+    "scissor_cross"
+  ],
+  "source_data": "research/exercise_guides/guides.ko.json image_review.actual_visible_roles",
+  "no_manual_image_edits": true,
+  "outputs": [
+    {
+      "id": "iyt_raise",
+      "path": "research/exercise_guides/corrections/visual-audit-20261107/iyt_raise.png",
+      "native_source": "generated_images/01a1b485-0f76-7260-8d69-db71b1c4bbe8/exec-79243219-3471-4042-80f6-a2a6529c1aec.png",
+      "status": "accepted_for_root_packaging_review",
+      "before": "First I frame had a whole-body/bench left shift and 5 px heel margin.",
+      "after": "Three square panels retain distinct I/Y/T. Final targeted built-in edit aligns the first body/bench with Y/T; remaining small outline shifts are visually minor, not pixel-perfect. All heels, fingertips and bench feet have ample margin. Existing visible red/orange roles retained.",
+      "prompts": [
+        "Use case: precise-object-edit. Edit the supplied I-Y-T anatomical exercise strip. Produce exactly THREE EQUAL SQUARE PANELS in a single 3:1 horizontal image, no borders, no text. Each panel is a successive pose of the SAME man on the SAME bench from the SAME rear three-quarter camera. White background, grayscale anatomical male, black shorts, existing realistic medical-fitness illustration style. Main correction: exact registered scene across all three panels. Bench legs, bench upholstery, man's torso/pelvis/head and both feet occupy identical local coordinates at identical size in each square; do NOT independently center each pose. Change ONLY the two arms at the shoulders. Left: I, both arms straight forward overhead in line with torso. Middle: Y, both arms symmetrically diagonal overhead. Right: T, both arms straight horizontally sideways. Chest and abdomen supported by bench, neck naturally aligned, feet supported. Use a common motion envelope sized to leave comfortable 8 percent white clearance around ALL hands, heels and bench feet inside EACH square. Preserve clear continuous shoulder-elbow-wrist-hand anatomy, no extra limbs. Established visible muscle roles: RED only middle/lower trapezius and posterior deltoid in T pose; ORANGE infraspinatus, visible serratus anterior, lumbar erector-spinae surface region. Anterior deltoid occluded in rear I/Y stays unpainted; no blanket upper trapezius coloring. Do not paint deep muscles, shorts, joints, tendons or bone. All other tissue grayscale. No labels, numerals, letters, arrows or watermark.",
+        "Precise framing correction to this I/Y/T strip, preserve all anatomy, style and muscle colors. OUTPUT MUST BE 3:1, THREE EQUAL SQUARE PANELS. The current LEFT panel is wrongly shifted left and its heel almost touches the edge; FIX THIS rather than copying it. Make the identical bench and body below the shoulders appear in exactly the SAME local position in all THREE squares. Use the MIDDLE panel's bench and body as the invariant template for all panels. First align/translate the LEFT body/bench to match middle; then REDUCE ALL THREE complete figures and benches TO 80 PERCENT of current size, using the SAME SCALE for all. Center the common complete motion envelope in each square, leaving at least 10 percent white margin to every fingertip, foot and bench leg. This is deliberately smaller with abundant blank margins, not edge-to-edge figures. Left arm pose I, middle Y, right T, same as input. DO NOT independently center each silhouette, and do not change the bench/torso/feet when changing arms. White background, grayscale male, black shorts, unchanged red middle/lower trapezius and posterior deltoid T, orange infraspinatus/serratus/lumbar erectors. No text, borders or arrows. Every panel must be perfectly square and equally sized.",
+        "Perform ONE precise local edit to the supplied three-panel illustration, retaining its 3:1 dimensions and equal square panel boundaries. Do NOT redraw any anatomy or change poses/colors/scale. In the LEFT square only, move the ENTIRE man plus bench 30 pixels to the RIGHT (approximately 4 percent of that square's width); leave its vertical position unchanged and fill vacated area white. Leave MIDDLE and RIGHT squares unchanged. This brings the left heel, head, shorts, and bench legs into the same local x coordinates as in the other two squares. The issue is translation ONLY. Remove faint vertical panel-divider lines, retaining plain white background. Keep generous margins, three distinct I/Y/T poses, exact same grayscale anatomy, red/orange muscles, black shorts. No text."
+      ],
+      "rejected": [
+        {
+          "path": "generated_images/01a1b485-0f76-7260-8d69-db71b1c4bbe8/exec-1391ad79-3289-4ac2-9e7c-5907ac6dd9ed.png",
+          "reason": "Repeated too-small heel margin and first-panel left shift."
+        },
+        {
+          "path": "generated_images/01a1b485-0f76-7260-8d69-db71b1c4bbe8/exec-ed064983-6212-4d2c-a31e-78dbbffb361a.png",
+          "reason": "Margins corrected but first panel still visibly left of other panels; superseded by targeted built-in edit."
+        }
+      ],
+      "actual_visible_roles": {
+        "red": [
+          "middle trapezius",
+          "lower trapezius",
+          "posterior deltoid (T)"
+        ],
+        "orange": [
+          "infraspinatus",
+          "serratus anterior",
+          "lumbar erector spinae recording region"
+        ]
+      },
+      "limitations": [
+        "Not exact pixel registration; native visual inspection found no material bench jump.",
+        "Final packaged GIF split/resize must be reviewed by root."
+      ]
+    },
+    {
+      "id": "scissor_cross",
+      "path": "research/exercise_guides/corrections/visual-audit-20261107/scissor_cross.png",
+      "native_source": "generated_images/01a1b485-0f76-7260-8d69-db71b1c4bbe8/exec-450205e5-00a3-4650-9398-dc0fbba5f752.png",
+      "status": "accepted_for_root_packaging_review",
+      "before": "Original legs hovered low near the floor despite the repository's selected elevated-leg variant.",
+      "after": "Both nearly straight legs now visibly elevated, with sideways spread then crossover and stable head/torso/pelvis/palm support. Orange-only role coloring preserved; no red added. Full anatomy visible with no clipping or ghosts.",
+      "prompts": [
+        "Use case: precise-object-edit. Correct the provided scissor-cross anatomical exercise strip. Produce exactly TWO EQUAL SQUARE PANELS in a 2:1 horizontal image, no borders and no text. Same grayscale anatomical man in black shorts, same camera, same scale and floor position in both panels, white background, reference medical-fitness rendering. Match this specific repository variation: supine horizontal scissor crossing with BOTH nearly straight legs elevated approximately 35-40 degrees ABOVE THE FLOOR. Do not reproduce the reference's low hovering feet. Side-three-quarter camera should make this elevation clearly readable. Head and shoulders are gently lifted, chin comfortably tucked toward torso, lower back/pelvis resting steadily on floor; no forceful full crunch. Arms by sides and palms on floor, with head/torso/pelvis/hands at identical local coordinates in both panels. Panel A: legs slightly spread laterally, both at same 35-40 degree elevation. Panel B: the same raised legs cross horizontally, near leg crossing in front of the far leg, knees almost straight. This is SIDEWAYS opening and crossing, NOT vertical flutter kicks and NOT alternate one-leg lifting. Continuous anatomically correct hips/knees/ankles, exactly two legs and two feet, no twisting/disconnection. 8 percent safe white margin around all body parts within each square. Preserve actual established visible color roles: ORANGE rectus abdominis, external oblique, rectus femoris, vastus lateralis and vastus medialis. NO RED on this exercise. No deep-muscle painting, no paint on shorts, bones/tendons or joints; other tissue grayscale. No labels, arrows, lettering or watermark."
+      ],
+      "rejected": [],
+      "actual_visible_roles": {
+        "orange": [
+          "rectus abdominis",
+          "external oblique",
+          "rectus femoris",
+          "vastus lateralis",
+          "vastus medialis"
+        ]
+      },
+      "limitations": [
+        "The 3D angle is an intended 35-40 degree illustration, not an image-derived measured value.",
+        "Final packaged GIF must be visually checked; no medical efficacy or quantitative muscle activation claim."
+      ]
+    }
+  ]
+}

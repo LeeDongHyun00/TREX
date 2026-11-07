@@ -73,6 +73,30 @@ def project(atlas, back):
     return shapes
 
 
+# §130(2026-11-07): 3D 모델에 없는 근육 4종의 손 그린 근사 영역. 덮는 근육(승모근·삼각근·복사근·종아리) 위에 겹쳐 그린다.
+# L 좌표만 정의하고 R 은 x → 360−x 거울. 뷰어는 뒤에 온 도형을 위에 칠한다.
+MANUAL_REGIONS = {
+    'front': {
+        'TIBIALIS': [[265, 936], [265, 970], [261, 1010], [254, 1050], [246, 1090], [233, 1090], [234, 1050], [235, 1010], [233, 970], [234, 936]],
+    },
+    'back': {
+        'RHOMBOIDS': [[178, 252], [156, 262], [142, 300], [146, 345], [160, 368], [178, 372]],
+        'ROTATOR_CUFF': [[104, 262], [150, 270], [148, 326], [118, 338], [98, 306]],
+        'QUADRATUS_LUMBORUM': [[152, 438], [124, 446], [118, 516], [152, 522]],
+    },
+}
+
+
+def manual_shapes(view):
+    def path(points):
+        return 'M' + 'L'.join(f'{x},{y}' for x, y in points) + 'Z'
+    shapes = []
+    for key, points in MANUAL_REGIONS[view].items():
+        shapes.append({'key': key + '_L', 'path': path(points)})
+        shapes.append({'key': key + '_R', 'path': path([(WIDTH - x, y) for x, y in points])})
+    return shapes
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--check', action='store_true')
@@ -80,13 +104,16 @@ def main():
     source = ASSETS / 'atlas.js'
     atlas = json.loads(source.read_text().split('=', 1)[1].rstrip(';\n'))
     data = {'sourceSHA256': hashlib.sha256(source.read_bytes()).hexdigest(),
-            'viewBox': f'0 0 {WIDTH} {HEIGHT}', 'back': project(atlas, True), 'front': project(atlas, False)}
+            'viewBox': f'0 0 {WIDTH} {HEIGHT}', 'back': project(atlas, True) + manual_shapes('back'),
+            'front': project(atlas, False) + manual_shapes('front'),
+            'manual': {'keys': list(MANUAL_REGIONS['front']) + list(MANUAL_REGIONS['back']),
+                       'note': '§130 손 그린 근사 영역(3D 모델에 없는 근육) — 덮는 근육 위에 겹쳐 그린다'}}
     text = 'window.TREX_ATLAS_2D=' + json.dumps(data, separators=(',', ':')) + ';\n'
     target = ASSETS / 'atlas-2d.js'
     if args.check:
-        assert target.read_text() == text, '2D 도형을 다시 생성하세요.'
+        assert target.read_text(encoding='utf-8') == text, '2D 도형을 다시 생성하세요.'
     else:
-        target.write_text(text)
+        target.write_text(text, encoding='utf-8', newline='\n')
     print(f"2D 근육도: 뒷면 {len(data['back'])}영역 / 앞면 {len(data['front'])}영역, {len(text)} bytes")
 
 

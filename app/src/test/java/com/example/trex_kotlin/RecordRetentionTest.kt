@@ -18,14 +18,21 @@ class RecordRetentionTest {
     private fun day(epoch: Long) = WorkoutHistoryDay(epoch,"","",emptyList(),0,0)
     @Test fun retainsCalendarWeekRatherThanSevenOldRecords() {
         val history = listOf(50L,90L,93L,94L,99L,100L).map(::day)
-        assertEquals(listOf(94L,99L,100L),history.retainVisibleWorkoutHistory(100).map { it.epochDay })
-        assertEquals(listOf(99L,100L),history.retainVisibleWorkoutHistory(101).map { it.epochDay })
+        assertEquals(listOf(94L,99L,100L),history.retainVisibleWorkoutHistory(100, 7).map { it.epochDay })
+        assertEquals(listOf(99L,100L),history.retainVisibleWorkoutHistory(101, 7).map { it.epochDay })
+    }
+    @Test fun unlimitedRetentionKeepsEverything() {
+        // §131 — 보관 기간 기본값은 제한 없음. 7일로 줄이면 예전 7일 창과 같다
+        val history = listOf(10L,94L,100L).map(::day)
+        assertEquals(listOf(10L,94L,100L),history.retainVisibleWorkoutHistory(100).map { it.epochDay })
+        assertEquals(listOf(10L,94L,100L),history.retainVisibleWorkoutHistory(100, RetentionOptions.UNLIMITED).map { it.epochDay })
+        assertEquals(listOf(94L,100L),history.retainVisibleWorkoutHistory(100, 90).map { it.epochDay })
     }
     @Test fun futureDateIsPreservedIfClockMovesBack() {
-        assertEquals(listOf(day(102)),listOf(day(102)).retainVisibleWorkoutHistory(100))
+        assertEquals(listOf(day(102)),listOf(day(102)).retainVisibleWorkoutHistory(100, 7))
     }
     @Test fun writingTodayAlsoDropsExpiredRecords() {
-        val merged = listOf(day(10),day(94),day(99),day(100)).replaceTodayWith(day(100))
+        val merged = listOf(day(10),day(94),day(99),day(100)).replaceTodayWith(day(100), retentionDays = 7)
         assertEquals(listOf(94L,99L,100L),merged.map { it.epochDay })
     }
 }

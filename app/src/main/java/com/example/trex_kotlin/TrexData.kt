@@ -147,6 +147,10 @@ data class WorkoutHistoryItem(
     val durationSeconds: Int? = null,
     /** 세트 원장 재전송용 원본. 기존 기록에는 없으며 날짜 추정 이관으로 구분한다. */
     val loadSet: com.example.trex_kotlin.trainingload.LoadSet? = null,
+    /** 세트별 kg·회·RPE·메모(§131) — 옛 기록은 비어 있다. */
+    val sets: List<SetEntry> = emptyList(),
+    /** "session"(세션) | "manual"(카메라·타이머 없이 적은 기록, P2) | null(옛 기록 = 세션). */
+    val source: String? = null,
 )
 
 @Immutable
@@ -910,14 +914,19 @@ fun Iterable<FoodEntry>.totalNutrition(): Nutrition =
         )
     }
 
-/** @param reports workoutId → 이번 세션의 세트 리포트. 자세를 켠 운동이라도 리포트가 없으면 항목의 자세 칸은 null 이다(판정 안 한 것을 지어내지 않는다). */
+/**
+ * @param reports workoutId → 이번 세션의 세트 리포트. 자세를 켠 운동이라도 리포트가 없으면 항목의 자세 칸은 null 이다(판정 안 한 것을 지어내지 않는다).
+ * @param bodyKg kcal 식의 체중(§134b) — 세션 총 경과를 종목 가동 시간 비율로 나눠 MET 를 적용한다(`sessionKcalByWorkout`).
+ */
 fun createWorkoutHistoryDay(
     plan: List<Workout>,
     elapsedSeconds: Int,
     reports: Map<String, PostureSetReport> = emptyMap(),
     elapsedByWorkout: Map<String, Int> = emptyMap(),
+    bodyKg: Double = DEFAULT_BODY_KG,
 ): WorkoutHistoryDay {
     val today = localToday()
+    val kcal = sessionKcalByWorkout(plan, elapsedSeconds, elapsedByWorkout, bodyKg)
     val items = plan.map { workout ->
         val report = reports[workout.id]
         val seconds = elapsedByWorkout[workout.id]?.coerceAtLeast(0) ?: 0
@@ -926,7 +935,7 @@ fun createWorkoutHistoryDay(
             reps = workout.reps,
             durationMinutes = seconds / 60,
             durationSeconds = seconds,
-            calories = workout.estimatedCalories(seconds),
+            calories = kcal[workout.id] ?: 0,
             postureCorrection = report?.toCorrection(),
             accuracy = report?.accuracy,
             category = workout.category,
@@ -943,23 +952,23 @@ fun createWorkoutHistoryDay(
     )
 }
 
-fun List<WorkoutHistoryDay>.replaceTodayWith(record: WorkoutHistoryDay): List<WorkoutHistoryDay> {
+fun List<WorkoutHistoryDay>.replaceTodayWith(record: WorkoutHistoryDay, retentionDays: Int = RetentionOptions.UNLIMITED): List<WorkoutHistoryDay> {
     val existingIndex = indexOfLast { it.epochDay == record.epochDay }
     val updated = if (existingIndex >= 0) {
         toMutableList().also { it[existingIndex] = record }
     } else {
         this + record
     }
-    return updated.retainVisibleWorkoutHistory(record.epochDay).sortedBy { it.epochDay }
+    return updated.retainVisibleWorkoutHistory(record.epochDay, retentionDays).sortedBy { it.epochDay }
 }
 
-/** 같은 세트 재저장은 갱신, 별도 세션은 누적한다. 기존 ID 없는 기록도 보존한다. */
-fun List<WorkoutHistoryDay>.mergeSession(record: WorkoutHistoryDay): List<WorkoutHistoryDay> {
+/** 같은 세트 재저장은 갱신, 별도 세션은 누적한다. 기존 ID 없는 기록도 보존한다. [retentionDays] 는 보관 기간(0 = 제한 없음, §131). */
+fun List<WorkoutHistoryDay>.mergeSession(record: WorkoutHistoryDay, retentionDays: Int = RetentionOptions.UNLIMITED): List<WorkoutHistoryDay> {
     val old = firstOrNull { it.epochDay == record.epochDay }
     val ids = record.items.mapNotNull { it.loadSet?.id }.toSet()
     val items = old?.items.orEmpty().filter { it.loadSet?.id !in ids } + record.items
     return filterNot { it.epochDay == record.epochDay }.plus(record.copy(items=items))
-        .retainVisibleWorkoutHistory(record.epochDay).sortedBy { it.epochDay }
+        .retainVisibleWorkoutHistory(record.epochDay, retentionDays).sortedBy { it.epochDay }
 }
 
 fun WorkoutHistoryDay.totalMinutes(): Int =

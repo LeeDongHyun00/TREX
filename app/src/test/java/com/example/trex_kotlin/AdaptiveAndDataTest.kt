@@ -64,8 +64,9 @@ class AdaptiveAndDataTest {
         val record = createWorkoutHistoryDay(listOf(done), 30, elapsedByWorkout = mapOf(done.id to 30))
         assertEquals(30, record.items.single().durationSeconds)
         assertEquals(0, record.totalMinutes())
-        assertEquals(4, record.totalCalories())
-        assertEquals(0, done.estimatedCalories(0))
+        // §134b — 한 종목뿐이라 세션 총 경과 30초 전부가 그 종목의 시간. MET × 3.5 × 기본 체중 / 200 × 0.5분
+        assertEquals(estimatedKcal(ExerciseMet.of(done.name, done.category).met, DEFAULT_BODY_KG, 30), record.totalCalories())
+        assertEquals(0, done.estimatedCalories(0, DEFAULT_BODY_KG))
         assertFalse(record.summaryText().contains("평소"))
     }
 

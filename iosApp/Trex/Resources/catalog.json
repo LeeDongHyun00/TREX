@@ -56,6 +56,111 @@
     "hold": false
   },
   {
+    "name": "의자 스쿼트",
+    "category": "하체",
+    "repetitions": 12,
+    "sets": 3,
+    "hold": false
+  },
+  {
+    "name": "고블릿 스쿼트",
+    "category": "하체",
+    "repetitions": 12,
+    "sets": 3,
+    "hold": false
+  },
+  {
+    "name": "밴드 스쿼트",
+    "category": "하체",
+    "repetitions": 12,
+    "sets": 3,
+    "hold": false
+  },
+  {
+    "name": "불가리안 스플릿 스쿼트",
+    "category": "하체",
+    "repetitions": 10,
+    "sets": 3,
+    "hold": false
+  },
+  {
+    "name": "리버스 런지",
+    "category": "하체",
+    "repetitions": 10,
+    "sets": 3,
+    "hold": false
+  },
+  {
+    "name": "스텝업",
+    "category": "하체",
+    "repetitions": 10,
+    "sets": 3,
+    "hold": false
+  },
+  {
+    "name": "레그 프레스",
+    "category": "하체",
+    "repetitions": 12,
+    "sets": 3,
+    "hold": false
+  },
+  {
+    "name": "덤벨 루마니안 데드리프트",
+    "category": "하체",
+    "repetitions": 12,
+    "sets": 3,
+    "hold": false
+  },
+  {
+    "name": "밴드 루마니안 데드리프트",
+    "category": "하체",
+    "repetitions": 12,
+    "sets": 3,
+    "hold": false
+  },
+  {
+    "name": "시티드 레그 컬",
+    "category": "하체",
+    "repetitions": 15,
+    "sets": 3,
+    "hold": false
+  },
+  {
+    "name": "글루트 브릿지",
+    "category": "하체",
+    "repetitions": 15,
+    "sets": 3,
+    "hold": false
+  },
+  {
+    "name": "싱글레그 글루트 브릿지",
+    "category": "하체",
+    "repetitions": 12,
+    "sets": 3,
+    "hold": false
+  },
+  {
+    "name": "네발기기 힙 익스텐션",
+    "category": "하체",
+    "repetitions": 12,
+    "sets": 3,
+    "hold": false
+  },
+  {
+    "name": "사이드 밴드 워크",
+    "category": "하체",
+    "repetitions": 15,
+    "sets": 3,
+    "hold": false
+  },
+  {
+    "name": "카프 레이즈",
+    "category": "하체",
+    "repetitions": 20,
+    "sets": 3,
+    "hold": false
+  },
+  {
     "name": "오버헤드 프레스",
     "category": "상체",
     "repetitions": 10,
@@ -133,9 +238,191 @@
     "hold": false
   },
   {
+    "name": "벽 푸쉬업",
+    "category": "상체",
+    "repetitions": 12,
+    "sets": 3,
+    "hold": false
+  },
+  {
+    "name": "인클라인 푸쉬업",
+    "category": "상체",
+    "repetitions": 12,
+    "sets": 3,
+    "hold": false
+  },
+  {
+    "name": "파이크 푸쉬업",
+    "category": "상체",
+    "repetitions": 10,
+    "sets": 3,
+    "hold": false
+  },
+  {
+    "name": "덤벨 벤치 프레스",
+    "category": "상체",
+    "repetitions": 12,
+    "sets": 3,
+    "hold": false
+  },
+  {
+    "name": "덤벨 플로어 프레스",
+    "category": "상체",
+    "repetitions": 12,
+    "sets": 3,
+    "hold": false
+  },
+  {
+    "name": "머신 체스트 프레스",
+    "category": "상체",
+    "repetitions": 12,
+    "sets": 3,
+    "hold": false
+  },
+  {
+    "name": "밴드 체스트 프레스",
+    "category": "상체",
+    "repetitions": 12,
+    "sets": 3,
+    "hold": false
+  },
+  {
+    "name": "밴드 숄더 프레스",
+    "category": "상체",
+    "repetitions": 12,
+    "sets": 3,
+    "hold": false
+  },
+  {
+    "name": "원암 덤벨 로우",
+    "category": "상체",
+    "repetitions": 12,
+    "sets": 3,
+    "hold": false
+  },
+  {
+    "name": "밴드 로우",
+    "category": "상체",
+    "repetitions": 15,
+    "sets": 3,
+    "hold": false
+  },
+  {
+    "name": "시티드 케이블 로우",
+    "category": "상체",
+    "repetitions": 12,
+    "sets": 3,
+    "hold": false
+  },
+  {
+    "name": "인버티드 로우",
+    "category": "상체",
+    "repetitions": 12,
+    "sets": 3,
+    "hold": false
+  },
+  {
+    "name": "풀업",
+    "category": "상체",
+    "repetitions": 8,
+    "sets": 3,
+    "hold": false
+  },
+  {
+    "name": "케이블 페이스 풀",
+    "category": "상체",
+    "repetitions": 15,
+    "sets": 3,
+    "hold": false
+  },
+  {
+    "name": "밴드 리버스 플라이",
+    "category": "상체",
+    "repetitions": 15,
+    "sets": 3,
+    "hold": false
+  },
+  {
+    "name": "I-Y-T 레이즈",
+    "category": "상체",
+    "repetitions": 6,
+    "sets": 3,
+    "hold": false
+  },
+  {
+    "name": "케이블 트라이셉스 푸시다운",
+    "category": "상체",
+    "repetitions": 15,
+    "sets": 3,
+    "hold": false
+  },
+  {
     "name": "플랭크",
     "category": "코어",
     "repetitions": 45,
+    "sets": 3,
+    "hold": true
+  },
+  {
+    "name": "무릎 플랭크",
+    "category": "코어",
+    "repetitions": 25,
+    "sets": 3,
+    "hold": true
+  },
+  {
+    "name": "사이드 플랭크",
+    "category": "코어",
+    "repetitions": 30,
+    "sets": 3,
+    "hold": true
+  },
+  {
+    "name": "무릎 사이드 플랭크",
+    "category": "코어",
+    "repetitions": 25,
+    "sets": 3,
+    "hold": true
+  },
+  {
+    "name": "데드버그",
+    "category": "코어",
+    "repetitions": 8,
+    "sets": 3,
+    "hold": false
+  },
+  {
+    "name": "버드독",
+    "category": "코어",
+    "repetitions": 8,
+    "sets": 3,
+    "hold": false
+  },
+  {
+    "name": "팔로프 프레스",
+    "category": "코어",
+    "repetitions": 12,
+    "sets": 3,
+    "hold": false
+  },
+  {
+    "name": "파머스 캐리",
+    "category": "코어",
+    "repetitions": 40,
+    "sets": 3,
+    "hold": true
+  },
+  {
+    "name": "수트케이스 캐리",
+    "category": "코어",
+    "repetitions": 30,
+    "sets": 3,
+    "hold": true
+  },
+  {
+    "name": "싱글레그 애브도미널 프레스",
+    "category": "코어",
+    "repetitions": 15,
     "sets": 3,
     "hold": true
   },
@@ -176,6 +463,41 @@
   },
   {
     "name": "시저 크로스",
+    "category": "복근",
+    "repetitions": 20,
+    "sets": 3,
+    "hold": false
+  },
+  {
+    "name": "리버스 크런치",
+    "category": "복근",
+    "repetitions": 12,
+    "sets": 3,
+    "hold": false
+  },
+  {
+    "name": "바이시클 크런치",
+    "category": "복근",
+    "repetitions": 20,
+    "sets": 3,
+    "hold": false
+  },
+  {
+    "name": "짐볼 크런치",
+    "category": "복근",
+    "repetitions": 15,
+    "sets": 3,
+    "hold": false
+  },
+  {
+    "name": "캡틴체어 니 레이즈",
+    "category": "복근",
+    "repetitions": 12,
+    "sets": 3,
+    "hold": false
+  },
+  {
+    "name": "러시안 트위스트",
     "category": "복근",
     "repetitions": 20,
     "sets": 3,

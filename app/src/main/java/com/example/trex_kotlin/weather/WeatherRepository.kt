@@ -7,6 +7,7 @@ import com.example.trex_kotlin.sync.HttpTransport
 import kotlinx.atomicfu.locks.SynchronizedObject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withTimeoutOrNull
 import org.json.JSONObject
 import kotlin.math.abs
 import kotlin.math.roundToLong
@@ -57,7 +58,20 @@ class WeatherRepository(
     private suspend fun request(latitude: Double, longitude: Double): WeatherInfo {
         val response = http.send("GET", forecastUrl(latitude, longitude), emptyMap(), null)
         check(response.status == 200) { "HTTP " + response.status }
-        return parse(response.body, clock())
+        val weather = parse(response.body, clock())
+        val pm10 = try {
+            val url = "https://air-quality-api.open-meteo.com/v1/air-quality?latitude=$latitude&longitude=$longitude&current=pm10"
+            withTimeoutOrNull(3000L) {
+                val air = http.send("GET", url, emptyMap(), null)
+                if (air.status == 200) JSONObject(air.body).getJSONObject("current").optDouble("pm10")
+                    .takeIf { it.isFinite() && it >= 0 } else null
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            null
+        }
+        return weather.copy(pm10 = pm10)
     }
 
     /** 메모리 → 저장소 순으로 [fresh] 를 만족하는 캐시. 저장소에서 찾으면 메모리에도 올린다. */
@@ -97,16 +111,16 @@ class WeatherRepository(
 
         private const val CACHE_VERSION = "3"
 
-        /** 캐시 한 줄 — `3|받은시각|기온|강수|코드|풍속|낮(1/0)`. org.json 없이 쓰고 읽는다. */
+        /** 캐시 한 줄 — `3|받은시각|기온|강수|코드|풍속|낮(1/0)|PM10(없으면 빈 값)`. org.json 없이 쓰고 읽는다. */
         internal fun encodeCache(info: WeatherInfo): String = listOf(
             CACHE_VERSION, info.fetchedAtMillis.toString(), info.temperature.toString(), info.precipitation.toString(),
-            info.weatherCode.toString(), info.windSpeed.toString(), if (info.isDay) "1" else "0",
+            info.weatherCode.toString(), info.windSpeed.toString(), if (info.isDay) "1" else "0", info.pm10?.toString().orEmpty(),
         ).joinToString("|")
 
         /** [encodeCache] 의 거꾸로 — 모양이 다르면(브랜치의 JSON 캐시·예전 판) null 이라 새로 받는다. */
         internal fun decodeCache(text: String): WeatherInfo? {
             val f = text.split('|')
-            if (f.size != 7 || f[0] != CACHE_VERSION) return null
+            if (f.size !in 7..8 || f[0] != CACHE_VERSION) return null
             return WeatherInfo(
                 temperature = f[2].toDoubleOrNull() ?: return null,
                 precipitation = f[3].toDoubleOrNull() ?: return null,
@@ -114,6 +128,7 @@ class WeatherRepository(
                 windSpeed = f[5].toDoubleOrNull() ?: return null,
                 fetchedAtMillis = f[1].toLongOrNull() ?: return null,
                 isDay = f[6] != "0",
+                pm10 = f.getOrNull(7)?.toDoubleOrNull()?.takeIf { it.isFinite() && it >= 0 },
             )
         }
     }

@@ -14,6 +14,7 @@ class WeatherExerciseRecommenderTest {
             precipitation = 1.2,
             weatherCode = 71,
             windSpeed = 5.0,
+            pm10 = 18.0,
             fetchedAtMillis = now
         )
         val result = WeatherExerciseRecommender.recommend(weather, "서울", nowMillis = now)
@@ -21,6 +22,7 @@ class WeatherExerciseRecommenderTest {
         assertEquals(WeatherThemeMode.SNOWY_COLD, result.theme)
         assertEquals(WorkoutEnvironment.INDOOR, result.environment)
         assertEquals("서울 · 눈 · 1°C", result.weatherSummary)
+        assertEquals(18.0, result.weather.pm10)
     }
 
     @Test
@@ -33,7 +35,7 @@ class WeatherExerciseRecommenderTest {
             windSpeed = 8.0,
             fetchedAtMillis = now
         )
-        val overcast = partlyCloudy.copy(weatherCode = 3)
+        val overcast = partlyCloudy.copy(weatherCode = 3, pm10 = 41.0)
 
         val result2 = WeatherExerciseRecommender.recommend(partlyCloudy, "서울", nowMillis = now)
         val result3 = WeatherExerciseRecommender.recommend(overcast, "서울", nowMillis = now)
@@ -45,6 +47,7 @@ class WeatherExerciseRecommenderTest {
         assertEquals(WeatherThemeMode.CLOUDY, result3.theme)
         assertEquals(WorkoutEnvironment.OUTDOOR, result3.environment)
         assertEquals("서울 · 흐림 · 17°C", result3.weatherSummary)
+        assertEquals(41.0, result3.weather.pm10)
     }
 
     @Test

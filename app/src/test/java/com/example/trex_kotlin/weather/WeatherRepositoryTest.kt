@@ -40,8 +40,10 @@ class WeatherRepositoryTest {
 
     private class FakeHttp : HttpTransport {
         var calls = 0
+        var dustBody = """{"current":{"pm10":12.5}}"""
         var failing = false
         override suspend fun send(method: String, url: String, headers: Map<String, String>, body: String?): HttpResponse {
+            if (url.startsWith("https://air-quality-api.")) return HttpResponse(200, dustBody)
             calls++
             if (failing) throw IOException("네트워크 없음")
             return HttpResponse(200, "{}")
@@ -52,7 +54,7 @@ class WeatherRepositoryTest {
 
     @Test
     fun cacheLineRoundTripsEveryField() {
-        val w = WeatherInfo(18.4, 0.2, 2, 11.3, fetchedAtMillis = 1_700_000_000_000L, isDay = false)
+        val w = WeatherInfo(18.4, 0.2, 2, 11.3, fetchedAtMillis = 1_700_000_000_000L, isDay = false, pm10 = 12.5)
         assertEquals(w, WeatherRepository.decodeCache(WeatherRepository.encodeCache(w)))
         val bare = WeatherInfo(-3.0, 0.0, 71, 4.0, fetchedAtMillis = 5L)
         assertEquals(bare, WeatherRepository.decodeCache(WeatherRepository.encodeCache(bare)))
@@ -80,12 +82,13 @@ class WeatherRepositoryTest {
         val http = FakeHttp()
         val repo = WeatherRepository(http, MemoryStore(), clock = { now }, parse = { _, at -> WeatherInfo(20.0, 0.0, 0, 3.0, fetchedAtMillis = at) }, retryDelayMs = 0)
 
-        assertTrue(repo.fetchCurrentWeather(10.0, 10.0).isSuccess)
+        assertEquals(12.5, repo.fetchCurrentWeather(10.0, 10.0).getOrThrow().pm10)
         assertEquals(1, http.calls)
         now += 30 * minute
         assertEquals("1시간 안은 받지 않는다", now - 30 * minute, repo.fetchCurrentWeather(10.0, 10.0).getOrThrow().fetchedAtMillis)
         assertEquals(1, http.calls)
-        repo.fetchCurrentWeather(10.0, 10.0, forceRefresh = true)
+        http.dustBody = "invalid"
+        assertNull(repo.fetchCurrentWeather(10.0, 10.0, forceRefresh = true).getOrThrow().pm10)
         assertEquals("새로고침은 받는다", 2, http.calls)
 
         val lastOk = now

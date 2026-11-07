@@ -11,6 +11,8 @@
         android:name="android.hardware.camera"
         android:required="false" />
 
+    <!-- 기기 알림(§131 P16): 운동 요일·휴식 끝 — AndroidReminders.kt. 서버 푸시가 아니다 -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <application
@@ -32,6 +34,7 @@
             windowSoftInputMode=adjustResize: 키보드가 올라오면 앱 화면 높이가 준다(스펙 §117) — Android 12 이하(가장자리까지 그리지 않는 창)는
             창이 줄고, 15 이상은 키보드 여백이 앱 루트의 safeDrawing 으로 온다. 어느 쪽이든 적는 칸이 키보드에 가리지 않는다.
         -->
+        <receiver android:name=".ReminderReceiver" android:exported="false" />
         <activity
             android:name=".MainActivity"
             android:exported="true"

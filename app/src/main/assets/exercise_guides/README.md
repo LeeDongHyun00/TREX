@@ -1,5 +1,34 @@
 # 운동 방법 시범
 
+## Current package — 2026-11-07
+
+All 72 catalog exercises have reviewed GIFs: 58 unchanged `roles-v3` assets,
+the earlier bicycle-crunch correction, and 13 corrections from the full visual
+audit in `research/exercise_guides/visual-audit-20261107.json`. Selected native
+images and exact prompts are in `research/exercise_guides/corrections/visual-audit-20261107/`.
+The new bird-dog source supersedes the earlier `BIRD_DOG.md` correction. The sections below
+are historical production notes, not the current registry. `ExerciseGuides.kt`
+is generated from `research/exercise_guides/guides.ko.json`; run
+`python tools/generate_exercise_guides.py --check` to verify both the registry and
+every packaged GIF against the reviewed SHA-256 hashes.
+
+All GIFs are 640 × 640 with a 900 ms frame delay and an infinite loop. I-Y-T has
+three poses; the other 71 have two. These are pose illustrations, not continuous
+motion capture or prescribed cadence. Plank now uses GIF, with an explicit hold
+instruction. The legacy plank PNG remains only for compatibility with the iOS
+resource probe and is not selected by any current exercise guide.
+
+Red indicates the exercise's visual focus; orange indicates cooperating muscles.
+Functional main/assist/stabilize roles are retained in the reviewed dataset.
+Isometric holds can have only stabilizer roles even when the image has red regions.
+Hidden/deep muscles and source-specific evidence remain in the research data;
+gray does not mean inactive. The user requested removal of the muscle/evidence
+tab and small image-reading explanations from the guide sheet.
+Neither the images nor these roles enable camera assessment or change the
+training-load model. Image generation and source review are not clinical certification.
+
+## Historical production notes
+
 로컬 UI 구현용 시범 10종목. Gym Visual 파일을 내려받거나 사용하지 않았다.
 
 | 앱 종목 | 패키지 파일 | 기존 로컬 원본 |

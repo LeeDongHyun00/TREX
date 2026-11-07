@@ -44,20 +44,30 @@ class PostureExerciseMapTest {
     }
 
     @Test
-    fun catalogContainsOnlyAihubMappedExercises() {
-        // The catalog is trimmed to AIHub-backed exercises so every pick has a real rule basis.
+    fun catalogHoldsAihubMappedExercisesPlusCameraOffExpansion() {
+        // §130: AIHub 26 종은 전부 map 에 있고, 나머지 46 종은 map 에도 프로필에도 없어 카메라가 꺼진다(posture=false, postureSupported 거짓).
         val catalog = workoutCatalog.values.flatten()
-        assertEquals(postureExerciseMap.keys, catalog.map { it.name }.toSet())
+        val names = catalog.map { it.name }
+        assertEquals(names.size, names.toSet().size)
+        assertEquals(72, names.size)
+        assertTrue(postureExerciseMap.keys.all { it in names })
+        val expansion = catalog.filter { it.name !in postureExerciseMap }
+        assertEquals(46, expansion.size)
+        assertTrue(expansion.all { !it.posture })
+        assertTrue(expansion.all { com.example.trex_kotlin.posture.ExerciseProfiles.forName(it.name) == null })
         assertEquals(16, catalog.count { it.posture })
         assertTrue(catalog.all { it.posture == Workout("t", it.name, it.reps, it.duration, true, it.category).postureSupported() })
         assertTrue(todayPlan.all { it.name in postureExerciseMap })
     }
-    @Test fun cameraScopeMatchesSixteenDedicatedGuides() {
-        val expected = ExerciseGuides.all.map { it.name }.toSet()
+    @Test fun expandedGuideCoverageDoesNotExpandCameraScope() {
+        val expected = setOf("기본 스쿼트", "런지", "바벨 런지", "사이드 런지", "크로스 런지", "굿모닝",
+            "덤벨 컬", "바벨 컬", "사이드 레터럴 레이즈", "프런트 레이즈", "푸쉬업", "플랭크",
+            "스탠딩 사이드 크런치", "스탠딩 니업", "크런치", "레그 레이즈")
         val actual = com.example.trex_kotlin.posture.ExerciseProfiles.all.filter { it.cameraEnabled }.map { it.name }.toSet()
         assertEquals(16, expected.size)
         assertEquals(expected, actual)
-        (postureExerciseMap.keys - expected + setOf("", "unknown", "바벨 스쿼트")).forEach { name ->
+        assertTrue(expected.all { ExerciseGuides.forName(it) != null })
+        (ExerciseGuides.all.map { it.name }.toSet() - expected + setOf("", "unknown", "바벨 스쿼트")).forEach { name ->
             assertFalse(name, Workout("stored", name, "10회", "5분", true, "상체").postureSupported())
         }
     }

@@ -157,11 +157,15 @@ class RestorationUiTest {
             CompositionLocalProvider(LocalDensity provides Density(density.density,2f)) { TrexAppTheme(ThemeMode.Light) {
                 Box(Modifier.requiredSize(360.dp,480.dp)) {
                     if(guide) GuideBookScreen { done=true }
-                    else HomeNutrition(Nutrition(200,20.0,10.0,5.0),Nutrition(2000,250.0,120.0,60.0),{})
+                    else {
+                        val context = ApplicationProvider.getApplicationContext<android.app.Application>()
+                        val app = remember { AppViewModel(AndroidAppPlatform(context)) }
+                        HomeGlanceStrip(app, Nutrition(200,20.0,10.0,5.0), Nutrition(2000,250.0,120.0,60.0), {}, {})
+                    }
                 }
             } }
         }
-        compose.onNodeWithText("탄수화물").assertExists()
+        compose.onNodeWithContentDescription("탄 20 / 250 g").assertExists()
         compose.runOnIdle { guide=true }
         repeat(3) { compose.onNodeWithText("다음").assertIsDisplayed().performClick() }
         compose.onNodeWithText("시작하기").assertIsDisplayed().performClick()

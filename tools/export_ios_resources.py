@@ -13,7 +13,7 @@ def main():
     for name, reps, duration, category in re.findall(r'WorkoutTemplate\("([^"]+)", "([^"]+)", "([^"]+)", "([^"]+)", (?:true|false)\)', (JAVA/'WorkoutCatalog.kt').read_text(encoding='utf-8')):
         numbers = [int(x) for x in re.findall(r'\d+', reps)]
         catalog.append(dict(name=name, category=category, repetitions=numbers[0], sets=numbers[-1], hold='초' in reps))
-    assert len(catalog) == 26
+    assert len(catalog) == 72, len(catalog)  # AIHub 26 + §130 46
     files['catalog.json'] = catalog
     guides = []
     for chunk in (JAVA/'ExerciseGuides.kt').read_text(encoding='utf-8').split('ExerciseGuide(')[2:]:
@@ -23,7 +23,7 @@ def main():
         for field in ['breathing', 'sourceName', 'sourceUrl']:
             guide[field] = strings(re.search(field+r' = ("(?:[^"\\]|\\.)*")', chunk).group(1))[0]
         guides.append(guide)
-    assert len(guides) == 16, len(guides)
+    assert len(guides) == len(catalog) == 72, len(guides)
     files['guides.json'] = guides
     nutrition = []
     data_text = (JAVA/'TrexData.kt').read_text(encoding='utf-8')

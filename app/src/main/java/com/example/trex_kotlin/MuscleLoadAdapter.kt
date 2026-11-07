@@ -21,9 +21,14 @@ internal fun workoutLoadSet(sessionId: String, workout: Workout, endedAt: Long, 
 }
 
 /** 표시 횟수가 0쌍이어도 한쪽 걸음은 부분 수행으로 기록한다. 자세 성공 여부와 구분한다. */
-internal fun SessionProgress.loadRecordableWorkouts(steps: List<SessionStep>, reports: Map<String,PostureSetReport>, captured: Set<Int>): List<Workout> {
+/**
+ * 기록·근육 부하에 넣을 세트. **건너뛴 세트([skipped])는 사용자가 횟수를 적은 것([userCounted])만** 들어간다(§138, 사용자 결정 2026-11-07 "건너뛰기 해도 횟수가
+ * 인정되는데 사용자가 횟수를 입력하지 않으면 피로도·기록에 남지 않게") — 카메라가 센 회·계획 횟수는 건너뛴 세트의 증거가 아니다.
+ */
+internal fun SessionProgress.loadRecordableWorkouts(steps: List<SessionStep>, reports: Map<String,PostureSetReport>, captured: Set<Int>,
+    skipped: Set<Int> = emptySet(), userCounted: (SessionStep) -> Boolean = { false }): List<Workout> {
     val base=completedWorkouts(steps).associateBy { it.id }
-    return steps.filter { it.phase==SessionPhase.WORK && it.token in captured }.mapNotNull { step ->
+    return steps.filter { it.phase==SessionPhase.WORK && it.token in captured && (it.token !in skipped || userCounted(it)) }.mapNotNull { step ->
         base[step.workout.id] ?: reports[step.workout.id]?.let { report ->
             val tally=report.repSides?.track
             if((tally?.let { it.steps+it.extra } ?: 0)>0 || report.repHalfPending)
@@ -65,5 +70,14 @@ internal fun UserProfile.loadEquipment(): Set<Equipment> {
         if(has(20)) add(Equipment.DIP_BAR)
         if(has(21)) add(Equipment.PULLUP_BAR)
         if(has(16) || has(17)) add(Equipment.BENCH)
+        // §130 — 온보딩 목록(AuthScreens.equipCats)의 기존 비트에 대응. 목록 순서를 바꾸면 저장된 마스크가 어긋난다.
+        if(has(27)) add(Equipment.BAND)                 // 저항 밴드
+        if(has(5)) add(Equipment.CABLE)                 // 케이블 머신
+        if(has(7)) add(Equipment.LEG_PRESS)             // 레그프레스
+        if(has(11)) add(Equipment.LEG_CURL_MACHINE)     // 레그컬 머신
+        if(has(9)) add(Equipment.CHEST_PRESS_MACHINE)   // 체스트프레스 머신
+        if(has(10) || has(5)) add(Equipment.ROW_MACHINE) // 시티드 로우 머신 또는 케이블 머신
+        if(has(30)) add(Equipment.STABILITY_BALL)       // 짐볼
+        if(has(19)) add(Equipment.RACK)                 // 스쿼트 랙(인버티드 로우의 낮은 바)
     }
 }

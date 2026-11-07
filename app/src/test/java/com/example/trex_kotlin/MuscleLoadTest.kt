@@ -19,10 +19,28 @@ class MuscleLoadTest {
 
     @Test fun everyActualCatalogExerciseHasExactlyOneResearchedProfile() {
         val expected=workoutCatalog.values.flatten().map { it.name }.toSet()
-        assertEquals(26,expected.size)
+        assertEquals(72,expected.size)   // AIHub 26 + §130 46
         assertEquals(expected,MuscleLoadCatalog.all.map { it.name }.toSet())
-        assertEquals(26,MuscleLoadCatalog.all.map { it.id }.toSet().size)
+        assertEquals(72,MuscleLoadCatalog.all.map { it.id }.toSet().size)
         assertTrue(MuscleLoadCatalog.all.all { it.sources.isNotEmpty() && it.primary.isNotEmpty() })
+        // 출처는 PubMed ID 또는 전체 URL(기관 자료·MDPI·DOI) — 둘 다 열리는 링크여야 한다
+        assertTrue(MuscleLoadCatalog.all.flatMap { it.sources }.all { it.startsWith("https://") && !it.contains("https://pubmed.ncbi.nlm.nih.gov/http") })
+        // 버티기·운반 종목은 초 단위, 한쪽씩 하는 종목은 쌍 단위(§130)
+        assertEquals(LoadUnit.SECONDS, MuscleLoadCatalog.find("파머스 캐리")!!.unit)
+        assertEquals(LoadUnit.PAIR, MuscleLoadCatalog.find("리버스 런지")!!.unit)
+        // 근거 감사 2026-11-07 F3·F1 — 교대 동작은 EACH, 카탈로그 '초' 는 SECONDS 와 1:1, 매달리기·엎드린 레이즈는 맨몸
+        assertEquals(LoadUnit.EACH, MuscleLoadCatalog.find("데드버그")!!.unit)
+        assertEquals(LoadUnit.EACH, MuscleLoadCatalog.find("버드독")!!.unit)
+        assertTrue(MuscleLoadCatalog.find("행잉 레그 레이즈")!!.bodyweight && MuscleLoadCatalog.find("Y 레이즈")!!.bodyweight)
+        val timedCatalog = com.example.trex_kotlin.workoutCatalog.values.flatten().filter { it.reps.contains("초") }.map { it.name }.toSet()
+        val timedProfiles = MuscleLoadCatalog.all.filter { it.unit == LoadUnit.SECONDS }.map { it.name }.toSet()
+        assertEquals(timedCatalog, timedProfiles)
+        val sided = listOf("런지", "사이드", "싱글레그", "원암", "스텝업", "불가리안", "네발기기", "팔로프", "수트케이스", "버드독", "데드버그", "시저", "바이시클", "러시안", "니업", "캐리")
+        MuscleLoadCatalog.all.filter { it.unit == LoadUnit.PAIR || it.unit == LoadUnit.EACH }.forEach { p -> assertTrue(p.name, sided.any { it in p.name }) }
+        // 인용 논문이 문서 분류와 반대였던 세 종목은 논문 결과를 따른다(docs/EXERCISE_EXPANSION_46.md §2)
+        assertTrue(Muscle.TIBIALIS in MuscleLoadCatalog.find("의자 스쿼트")!!.primary)
+        assertTrue(Muscle.ABDUCTORS in MuscleLoadCatalog.find("리버스 런지")!!.primary && Muscle.GLUTES !in MuscleLoadCatalog.find("리버스 런지")!!.primary)
+        assertTrue(Muscle.HAMSTRINGS in MuscleLoadCatalog.find("싱글레그 글루트 브릿지")!!.primary)
     }
     @Test fun threeSetsAccumulateAndDecayWithoutInventingRecovery() {
         val sets=(1..3).map { set(it.toString()) }
@@ -107,6 +125,20 @@ class MuscleLoadTest {
     @Test fun equipmentBitsMatchOnboardingAndBodyweightPreferenceWins() {
         assertEquals(setOf(Equipment.DUMBBELL,Equipment.LAT_MACHINE,Equipment.DIP_BAR),UserProfile(equipmentMask=(1 shl 0) or (1 shl 8) or (1 shl 20)).loadEquipment())
         assertTrue(UserProfile(equipmentMask=-1,bodyweightOnly=true).loadEquipment().isEmpty())
+    }
+    /** §138 — 건너뛴 세트는 사용자가 횟수를 적은 것만 기록·부하에 든다. 카메라가 센 회는 건너뛴 세트의 증거가 아니다. */
+    @Test fun skippedSetsNeedUserCountToBeRecorded() {
+        val w=Workout("s","기본 스쿼트","10회 × 1세트","",true,"하체")
+        val steps=buildSessionSteps(listOf(w));val work=steps.first { it.phase==SessionPhase.WORK }
+        // 카메라가 6회 세고 건너뜀 — recordedCounts 에는 남지만 사용자 입력이 없으면 빠진다
+        val p=SessionProgress(work.token,0).setRepetitions(steps,work.token,6).advance(steps,work.token,true)
+        assertTrue(work.token in p.skipped)
+        assertEquals(1,p.loadRecordableWorkouts(steps,emptyMap(),setOf(work.token)).size)              // 옛 호출(건너뜀 정보 없음)은 그대로
+        assertTrue(p.loadRecordableWorkouts(steps,emptyMap(),setOf(work.token),p.skipped).isEmpty())
+        assertEquals(1,p.loadRecordableWorkouts(steps,emptyMap(),setOf(work.token),p.skipped) { true }.size)
+        // 끝낸 세트는 입력 없이도 든다
+        val done=SessionProgress(work.token,0).setRepetitions(steps,work.token,10).advance(steps,work.token,false)
+        assertEquals(1,done.loadRecordableWorkouts(steps,emptyMap(),setOf(work.token),done.skipped).size)
     }
     @Test fun halfLungeWithZeroDisplayPairsStillEntersLedger() {
         val w=Workout("l","런지","10회 × 1세트","",true,"하체")

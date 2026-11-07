@@ -359,3 +359,15 @@ fun rememberTextSharer(): (String) -> Unit = remember {
         top?.presentViewController(sheet, animated = true, completion = null)
     }
 }
+
+/** 기기 알림 예약(§131 P16) — iPhone 은 아직 없다(설정만 저장). Android 짝은 AndroidReminders.kt. */
+@Composable
+fun rememberReminderScheduler(): ReminderScheduler = remember {
+    object : ReminderScheduler {
+        override val available: Boolean = false
+        override fun permitted(): Boolean = false
+        override fun requestPermission(onGranted: () -> Unit) = onGranted()
+        override fun scheduleWorkoutDays(isoDays: Set<Int>, hour: Int, minute: Int) {}
+        override fun scheduleRestEnd(atMillis: Long?) {}
+    }
+}

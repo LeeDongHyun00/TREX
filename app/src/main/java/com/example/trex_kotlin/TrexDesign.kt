@@ -4,8 +4,11 @@ import com.example.trex_kotlin.TrexText as Text
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.runtime.remember
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
@@ -465,15 +468,22 @@ fun RingGauge(
 
 /** 가로 진행 바. */
 @Composable
-fun TrackBar(progress: Float, color: Color = Trex.c.primary, height: Dp = 6.dp, modifier: Modifier = Modifier) {
+fun TrackBar(progress: Float, color: Color = Trex.c.primary, height: Dp = 6.dp, modifier: Modifier = Modifier,
+    /** 참이면 처음 보일 때 0 에서 차오르고 값이 바뀌면 400 ms 로 따라간다(UI 감사 A5/A24, K4 값 변화 알림). 세션 안 1초 틱처럼 자주 바뀌는 곳엔 쓰지 않는다. */
+    animate: Boolean = false) {
     val c = Trex.c
+    val shown = if (animate) {
+        val a = remember { Animatable(0f) }
+        LaunchedEffect(progress) { a.animateTo(progress.coerceIn(0f, 1f), tween(400, easing = FastOutSlowInEasing)) }
+        a.value
+    } else progress
     Box(
         modifier = modifier.fillMaxWidth().height(height).clip(RoundedCornerShape(999.dp)).background(c.track),
     ) {
         Box(
             Modifier
                 .fillMaxHeight()
-                .fillMaxWidth(progress.coerceIn(0f, 1f))
+                .fillMaxWidth(shown.coerceIn(0f, 1f))
                 .clip(RoundedCornerShape(999.dp))
                 .background(color),
         )

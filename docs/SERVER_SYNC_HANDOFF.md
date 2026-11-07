@@ -348,3 +348,7 @@ ssh -i $KEY $HOST "cd ~/trex && docker compose up -d && sleep 25 && docker compo
 - 키 셋(10.1)은 그대로 쓴다. Services ID 가 같은 Primary App ID(`com.leedonghyun.trex.ios`) 아래라 같은 키로 client_secret 을 만든다 — sub 만 Services ID 다.
 - `APPLE_WEB_CLIENT_ID` 가 비면 Android 토큰은 대상 불일치로 401(iPhone 은 그대로).
 - 확인: `curl -s -o /dev/null -w '%{redirect_url}\n' -X POST -d 'state=t&error=user_cancelled_authorize' https://trex-api.duckdns.org/api/auth/oauth/apple/callback` → `intent://callback?state=t&error=user_cancelled_authorize#Intent;scheme=trexapple;package=com.example.trex_kotlin;end`. 실기기: Android 로그인 화면 → "Apple로 계속하기" → Apple 화면 → 앱으로 돌아와 로딩 화면 → 홈. 탈퇴하면 서버 로그 `Apple 연결 끊기 완료`.
+
+## 2026-11-07 — 격차 페이지(디자인 v2) 뒤 서버 요구 사항
+
+앱 쪽 §131(세트 기록·달력·업적·체중·2층 카탈로그·루틴·보관 기간·내보내기·기기 알림·물)은 **서버 변경 없이** 돈다 — 새 백업 키 6개(`body_weight`·`xp`·`custom_exercises`·`weekly_routine`·`record_retention`·`streak_pause`)는 키-블롭 규칙 안이다. 서버가 결정·구현할 것(보관 기간 제한 없음 vs 2 MB 페이로드, XP·배지 권위, 푸시 여부, 공유 횟수 기록, 게시글 카드의 PR·XP 칸, 프리셋 배포)은 `docs/SERVER_REQUIREMENTS_PAGES_V2.md`.

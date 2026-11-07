@@ -25,7 +25,7 @@ import androidx.compose.ui.unit.sp
 /** 익숙한 설정 목록에서 각 기능으로 바로 들어간다. 상단 요약에도 편집 경로가 있다. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ProfileTabScreen(app: AppViewModel, onOpenRecord: () -> Unit, onLogout: () -> Unit) {
+fun ProfileTabScreen(app: AppViewModel, onOpenRecord: () -> Unit, onLogout: () -> Unit, onOpenAchievements: () -> Unit = {}, onOpenBodyWeight: () -> Unit = {}) {
     val c = Trex.c
     val settingsLinks = rememberSystemSettingsLinks()
     val uri = LocalUriHandler.current
@@ -60,16 +60,28 @@ fun ProfileTabScreen(app: AppViewModel, onOpenRecord: () -> Unit, onLogout: () -
         if (app.communityMe?.admin == true) item { SettingsGroup {
             SettingsRow("커뮤니티 신고함", Icons.Rounded.Flag, onClick = { sheet = "admin" })
         } }
+        // §131 P13 — 기록 묶음: 운동 기록·업적·체중·보관 기간·내보내기·전체 삭제
         item { SettingsGroup {
             SettingsRow("운동 기록", Icons.Rounded.History, onClick = onOpenRecord)
+            SettingsDivider()
+            SettingsRow("업적", Icons.Rounded.EmojiEvents, "Lv ${Rewards.level(app.totalXp)}", onOpenAchievements)
+            SettingsDivider()
+            SettingsRow("체중 기록", Icons.Rounded.MonitorWeight, app.latestBodyWeight?.let { "${trimKg(it.kg)} kg" }, onOpenBodyWeight)
+            SettingsDivider()
+            SettingsRow("기록 보관 기간", Icons.Rounded.Schedule, RetentionOptions.label(app.retentionDays), { sheet = "retention" })
+            SettingsDivider()
+            SettingsRow("기록 내보내기", Icons.Rounded.IosShare, "CSV · JSON", { sheet = "export" })
+            SettingsDivider()
+            Row(Modifier.fillMaxWidth().clickable { sheet = "deleteAll" }.padding(horizontal = 18.dp, vertical = 18.dp), verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Rounded.DeleteOutline, null, tint = c.err, modifier = Modifier.size(22.dp))
+                Text("운동 기록 전체 삭제", color = c.err, fontSize = 16.sp, modifier = Modifier.weight(1f).padding(start = 14.dp))
+            }
         } }
         item { SettingsGroup {
             SettingsRow("화면 모드", Icons.Rounded.Brightness4,
                 when(app.themeMode) { ThemeMode.Light -> "라이트"; ThemeMode.Dark -> "다크"; ThemeMode.System -> "시스템" }, { sheet = "theme" })
             SettingsDivider()
-            SettingsRow("알림", Icons.Rounded.NotificationsNone, onClick = {
-                settingsLinks.openNotifications()
-            })
+            SettingsRow("알림", Icons.Rounded.NotificationsNone, listOfNotNull(if (app.notifyPrefs.workoutDays) "운동 요일" else null, if (app.notifyPrefs.restEnd) "휴식 끝" else null).joinToString(" · ").ifBlank { "꺼짐" }, { sheet = "notify" })
             SettingsDivider()
             SettingsRow("카메라 및 권한", Icons.Rounded.PrivacyTip, onClick = {
                 settingsLinks.openAppDetails()
@@ -96,6 +108,14 @@ fun ProfileTabScreen(app: AppViewModel, onOpenRecord: () -> Unit, onLogout: () -
         }
     }
     if (sheet == "profile") ProfileEditSheet(app, { sheet = null })
+    if (sheet == "retention") RetentionSheet(app, onClose = { sheet = null }, onExport = { sheet = "export" })
+    if (sheet == "export") ExportSheet(app, onClose = { sheet = null })
+    if (sheet == "notify") NotifySheet(app, onClose = { sheet = null })
+    if (sheet == "deleteAll") AlertDialog(onDismissRequest = { sheet = null }, containerColor = c.sheet,
+        title = { Text("운동 기록을 전부 지울까요?") },
+        text = { Text("이 기기와 계정 백업의 운동 기록 ${app.workoutHistory.count { it.items.isNotEmpty() }}일분이 지워지고 되돌릴 수 없어요. 지우기 전에 내보내기를 권해요. 체중·식단 기록과 XP 는 남아요.") },
+        dismissButton = { TextButton(onClick = { sheet = "export" }) { Text("먼저 내보내기") } },
+        confirmButton = { TextButton(onClick = { app.deleteAllHistory(); sheet = null }) { Text("전부 삭제", color = c.err) } })
     if (sheet == "admin") SheetHost(onDismiss = { sheet = null }) {
         AdminInbox(app, onClose = { sheet = null })
     }

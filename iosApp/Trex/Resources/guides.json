@@ -2,367 +2,1585 @@
   {
     "name": "기본 스쿼트",
     "asset": "exercise_guides/squat.gif",
-    "comment": "허벅지와 엉덩이를 사용하는 기본 하체 운동입니다. 깊이보다 발바닥과 몸통을 안정적으로 유지하는 데 집중하세요.",
+    "comment": "두 발로 몸을 지지하며 앉았다 일어나는 맨몸 운동입니다.",
     "setup": [
-      "발을 골반 너비보다 조금 넓게 벌리고 발끝을 살짝 바깥으로 향하게 서세요.",
-      "복부에 힘을 주고 가슴을 편 채 몸통을 안정시키세요."
+      "발을 골반 너비보다 조금 넓게 두고 발끝을 편하게 벌리세요.",
+      "복부에 힘을 주고 양발 전체로 바닥을 지지하세요."
     ],
     "steps": [
-      "엉덩이를 뒤로 보내면서 무릎과 고관절을 함께 굽혀 내려가세요.",
-      "발뒤꿈치가 뜨거나 등이 말리지 않는 범위까지 천천히 낮추세요.",
-      "발바닥으로 바닥을 밀며 엉덩이와 몸통을 함께 일으켜 시작 자세로 돌아오세요."
+      "엉덩이를 뒤로 보내며 무릎과 고관절을 함께 굽히세요.",
+      "발뒤꿈치와 몸통을 안정적으로 유지할 수 있는 깊이까지 내려가세요.",
+      "발바닥으로 바닥을 밀며 엉덩이와 몸통을 함께 일으키세요."
     ],
     "cautions": [
-      "무릎이 안쪽으로 모이지 않게 발끝 방향을 따라 움직이세요.",
-      "발뒤꿈치를 바닥에 두고, 균형을 유지할 수 있는 깊이로 조절하세요.",
-      "반동으로 튀어 오르지 말고 움직임을 통제하세요. 통증이 생기면 중단하세요.",
-      "빨강은 화면에 보이는 대퇴사두근입니다. 대둔근도 고관절을 펴는 주요 근육이며, 햄스트링·종아리·몸통 근육도 참여합니다. 옷이나 시점에 가린 근육은 생략했습니다. 색은 자극 강도나 순위가 아닙니다."
+      "무릎이 발끝 방향을 따라 움직이게 하세요.",
+      "깊이를 늘리기 위해 허리를 말거나 반동을 쓰지 마세요.",
+      "통증이 생기면 중단하세요."
     ],
-    "breathing": "내려갈 때 들이마시고, 일어설 때 내쉬세요. 숨을 계속 참지 마세요.",
-    "sourceName": "ACE · Bodyweight Squat",
+    "breathing": "힘을 쓰는 구간에서 내쉬고, 시작 자세로 돌아올 때 들이마시세요. 숨을 오래 참지 마세요.",
+    "sourceName": "ACE · 동작 안내",
     "sourceUrl": "https://www.acefitness.org/resources/everyone/exercise-library/135/bodyweight-squat/"
   },
   {
     "name": "런지",
     "asset": "exercise_guides/lunge.gif",
-    "comment": "한 발을 앞으로 내디뎌 허벅지와 엉덩이를 사용하는 운동입니다. 몸이 좌우로 흔들리지 않도록 균형을 먼저 잡으세요.",
+    "comment": "한 발을 앞으로 내디뎠다가 돌아오는 하체 운동입니다.",
     "setup": [
-      "두 발로 똑바로 서서 어깨의 힘을 빼고 복부에 힘을 주세요.",
-      "허리를 과하게 젖히지 말고 한쪽 발을 내디딜 준비를 하세요."
+      "발을 나란히 두고 서서 몸통을 안정시키세요.",
+      "앞으로 한 걸음 움직일 공간을 확보하세요."
     ],
     "steps": [
-      "한 발을 앞으로 내디디며 뒤꿈치부터 닿게 한 뒤 발바닥을 안정적으로 디디세요.",
-      "양 무릎을 굽히며 엉덩이를 바닥 쪽으로 낮추세요. 균형을 유지할 수 있는 범위에서 움직이세요.",
-      "앞쪽 다리로 바닥을 밀어 시작 자세로 돌아오고 반대쪽도 진행하세요."
+      "한 발을 앞으로 내디뎌 발바닥을 안정적으로 놓으세요.",
+      "양 무릎을 굽혀 몸을 낮추되 앞발과 몸통의 균형을 유지하세요.",
+      "앞발로 바닥을 밀어 돌아온 뒤 반대쪽도 반복하세요."
     ],
     "cautions": [
-      "몸통이 좌우로 기울거나 흔들리지 않도록 속도를 줄이세요.",
-      "엉덩이를 앞으로 밀어 넣기보다 아래로 낮추세요. 등을 둥글게 말지 마세요.",
-      "균형을 잃는 깊이까지 무리하지 마세요. 통증이 생기면 중단하세요.",
-      "빨강은 화면에 보이는 대퇴사두근입니다. 대둔근도 주요 근육이며 중둔근·햄스트링·내전근·종아리가 함께 참여합니다. 보폭과 자세에 따라 역할이 달라지며, 가려진 근육은 생략했습니다. 색은 자극 강도가 아닙니다."
+      "발을 외줄처럼 일직선에 놓지 마세요.",
+      "앞쪽 무릎을 안으로 모으거나 바닥에 뒷무릎을 세게 부딪치지 마세요.",
+      "통증이 생기면 중단하세요."
     ],
-    "breathing": "몸을 낮출 때 들이마시고, 바닥을 밀어 돌아올 때 내쉬세요. 숨을 참지 마세요.",
-    "sourceName": "ACE · Forward Lunge",
+    "breathing": "힘을 쓰는 구간에서 내쉬고, 시작 자세로 돌아올 때 들이마시세요. 숨을 오래 참지 마세요.",
+    "sourceName": "ACE · 동작 안내",
     "sourceUrl": "https://www.acefitness.org/resources/everyone/exercise-library/94/forward-lunge/"
   },
   {
-    "name": "덤벨 컬",
-    "asset": "exercise_guides/dumbbell-curl.gif",
-    "comment": "위팔 앞쪽의 이두근을 사용하는 운동입니다. 무게를 높이기보다 팔꿈치를 안정시키고 천천히 올리고 내리세요.",
+    "name": "바벨 런지",
+    "asset": "exercise_guides/barbell-lunge.gif",
+    "comment": "등 위에 바벨을 지지하고 앞으로 내딛는 런지입니다.",
     "setup": [
-      "덤벨을 들고 안정적으로 서서 팔을 몸 옆에 두세요.",
-      "손바닥을 앞쪽으로 향하게 하고 손목이 꺾이지 않도록 곧게 유지하세요."
+      "맨몸 런지를 안정적으로 할 수 있는 가벼운 무게를 고르세요.",
+      "바벨을 목뼈가 아닌 등 위쪽에 안정적으로 놓고 양손으로 잡으세요."
     ],
     "steps": [
-      "팔꿈치를 몸 가까이에 둔 채 팔을 접어 덤벨을 천천히 들어 올리세요.",
-      "팔이나 팔꿈치를 흔들어 반동을 만들지 마세요.",
-      "손목을 곧게 유지하며 덤벨을 천천히 시작 위치로 내리세요."
+      "한 발을 앞으로 내디뎌 균형을 잡으세요.",
+      "몸통을 지지하며 양 무릎을 굽혀 내려가세요.",
+      "앞발로 바닥을 밀어 돌아온 뒤 반대쪽도 반복하세요."
     ],
     "cautions": [
-      "덤벨을 올리려고 손목을 안쪽으로 접지 마세요.",
-      "몸이나 팔을 흔들어야 들 수 있다면 무게를 줄이세요.",
-      "내려놓는 구간도 천천히 조절하세요. 통증이 생기면 중단하세요.",
-      "빨강은 상완이두근, 주황은 전완의 상완요골근입니다. 이두근 아래의 상완근도 팔꿈치를 굽히지만 그림에서는 생략했습니다. 색은 역할 구분이며 자극 강도나 순위가 아닙니다."
+      "바벨이 한쪽으로 기울거나 몸통이 흔들리면 무게를 줄이세요.",
+      "안전하게 바벨을 올리고 내릴 공간과 랙을 확보하세요.",
+      "통증이 생기면 중단하세요."
     ],
-    "breathing": "덤벨을 올릴 때 내쉬고, 내릴 때 들이마시세요. 숨을 참지 마세요.",
-    "sourceName": "Mayo Clinic · Biceps curl with dumbbell",
-    "sourceUrl": "https://www.mayoclinic.org/healthy-lifestyle/fitness/multimedia/biceps-curl/vid-20084675"
-  },
-  {
-    "name": "크로스 런지",
-    "asset": "exercise_guides/cross-lunge.gif",
-    "comment": "한 발을 반대쪽 뒤로 교차해 디디며 허벅지와 엉덩이를 사용하는 운동입니다. 다리를 깊게 교차하기보다 앞다리의 균형을 유지하세요.",
-    "setup": [
-      "발을 골반 너비로 벌리고 서서 복부에 힘을 주세요.",
-      "가슴과 골반이 앞을 향하도록 두고 두 손을 가슴 앞에 모아 균형을 잡으세요."
-    ],
-    "steps": [
-      "한 발을 반대쪽 다리의 뒤쪽 대각선으로 옮겨 앞꿈치를 디디세요.",
-      "앞발의 발바닥을 바닥에 둔 채 양 무릎을 굽혀 몸을 천천히 낮추세요.",
-      "앞다리로 바닥을 밀어 시작 자세로 돌아오고 반대쪽도 진행하세요."
-    ],
-    "cautions": [
-      "앞쪽 무릎이 안으로 무너지지 않도록 발끝 방향을 따라 움직이세요.",
-      "골반이나 몸통을 비틀며 내려가지 마세요. 균형을 잃으면 교차 폭과 깊이를 줄이세요.",
-      "뒤쪽 무릎을 바닥에 부딪치지 마세요. 무릎이나 고관절에 통증이 생기면 중단하세요.",
-      "빨강은 대퇴사두근과 수행 자세에서 보이는 엉덩이 근육의 위치, 주황은 옆쪽 엉덩이의 중둔근 위치를 나타냅니다. 바지 위 색은 위치 설명입니다. 이 동작의 직접 연구는 부족해 기능 해부학에 근거했으며, 다른 런지보다 특정 근육을 더 쓴다는 뜻은 아닙니다."
-    ],
-    "breathing": "몸을 낮출 때 들이마시고, 바닥을 밀어 돌아올 때 내쉬세요. 숨을 참지 마세요.",
-    "sourceName": "Physitrack · Curtsy Lunge",
-    "sourceUrl": "https://www.physitrack.com/exercise-library/how-to-perform-the-curtsy-lunge-exercise"
+    "breathing": "힘을 쓰는 구간에서 내쉬고, 시작 자세로 돌아올 때 들이마시세요. 숨을 오래 참지 마세요.",
+    "sourceName": "ACE · 동작 안내",
+    "sourceUrl": "https://www.acefitness.org/resources/everyone/exercise-library/8/forward-lunge/"
   },
   {
     "name": "사이드 런지",
     "asset": "exercise_guides/side-lunge.gif",
-    "comment": "옆으로 한 발을 내디뎌 허벅지와 엉덩이를 사용하는 운동입니다. 디딘 쪽 엉덩이를 뒤로 보내며 발바닥을 안정시키세요.",
+    "comment": "한쪽으로 내디디며 체중을 옮기는 런지입니다.",
     "setup": [
-      "발을 골반 너비로 벌리고 두 발끝이 앞을 향하도록 서세요.",
-      "복부에 힘을 주고 두 손을 가슴 앞에 모아 균형을 잡으세요."
+      "발을 골반 너비로 두고 정면을 향해 서세요.",
+      "손을 가슴 앞에 모으고 몸통을 안정시키세요."
     ],
     "steps": [
-      "한 발을 옆으로 내디뎌 발바닥을 바닥에 안정적으로 놓으세요.",
-      "디딘 쪽 무릎을 굽히고 엉덩이를 뒤로 보내세요. 반대쪽 다리는 길게 펴 두세요.",
-      "디딘 쪽 발로 바닥을 밀어 시작 자세로 돌아오고 반대쪽도 진행하세요."
+      "한 발을 옆으로 내디디세요.",
+      "디딘 다리의 무릎을 굽히며 엉덩이를 뒤로 보내세요.",
+      "디딘 발로 바닥을 밀어 돌아온 뒤 반대쪽도 반복하세요."
     ],
     "cautions": [
-      "굽힌 무릎이 안쪽으로 모이지 않도록 발끝 방향을 따라 움직이세요.",
-      "두 발뒤꿈치를 바닥에 두세요. 발바닥이 뜨거나 무릎 방향을 유지하기 어렵다면 보폭을 줄이세요.",
-      "등을 둥글게 말거나 반동으로 돌아오지 마세요. 통증이 생기면 중단하세요.",
-      "빨강은 대퇴사두근, 주황은 허벅지 안쪽 내전근 부위입니다. 대둔근과 중둔근도 참여하지만 정면과 옷에 가린 부분은 생략했습니다. 내전근의 역할에는 기능 해부학적 추론이 포함되며 색은 근활성도 순위가 아닙니다."
+      "반대쪽 다리는 편안하게 길게 유지하세요.",
+      "너무 넓게 디뎌 발이나 무릎이 안으로 무너지지 않게 하세요.",
+      "통증이 생기면 중단하세요."
     ],
-    "breathing": "옆으로 디디며 몸을 낮출 때 들이마시고, 시작 자세로 돌아올 때 내쉬세요. 숨을 참지 마세요.",
-    "sourceName": "ACE · Side Lunge",
+    "breathing": "힘을 쓰는 구간에서 내쉬고, 시작 자세로 돌아올 때 들이마시세요. 숨을 오래 참지 마세요.",
+    "sourceName": "ACE · 동작 안내",
     "sourceUrl": "https://www.acefitness.org/resources/everyone/exercise-library/50/side-lunge/"
   },
   {
-    "name": "스탠딩 니업",
-    "asset": "exercise_guides/standing-knee-up.gif",
-    "comment": "서서 무릎을 번갈아 들어 올리는 운동입니다. 몸통을 세우고 지지하는 다리로 균형을 잡으며 천천히 움직이세요.",
+    "name": "크로스 런지",
+    "asset": "exercise_guides/cross-lunge.gif",
+    "comment": "한 발을 반대쪽 뒤로 교차해 내딛는 런지입니다.",
     "setup": [
-      "발을 골반 너비로 벌리고 서서 시선을 앞에 두세요.",
-      "손을 허리에 두고 복부에 힘을 주세요. 균형이 어렵다면 벽을 가볍게 짚으세요."
+      "발을 골반 너비로 두고 손을 가슴 앞에 모으세요.",
+      "몸통을 편안하게 세우고 균형을 잡으세요."
     ],
     "steps": [
-      "한쪽 발에 체중을 싣고 반대쪽 무릎을 몸 앞쪽으로 천천히 들어 올리세요.",
-      "몸통을 세운 채 균형을 유지할 수 있는 높이까지 올리세요.",
-      "발을 천천히 내려 시작 자세로 돌아오고 반대쪽 무릎도 들어 올리세요."
+      "한 발을 반대쪽 뒤로 비스듬히 내디디세요.",
+      "양 무릎을 굽혀 균형을 유지할 수 있는 범위로 낮추세요.",
+      "앞발로 바닥을 밀어 돌아온 뒤 반대쪽도 반복하세요."
     ],
     "cautions": [
-      "무릎을 높이 들려고 허리를 뒤로 젖히거나 몸통을 흔들지 마세요.",
-      "지지하는 발로 뛰거나 반동을 만들지 말고 움직임을 통제하세요.",
-      "균형을 유지하기 어렵다면 높이와 속도를 줄이세요. 통증이 생기면 중단하세요.",
-      "빨강은 고관절을 굽히는 대퇴직근, 주황은 몸통과 지지쪽 골반의 안정화 부위입니다. 주요 고관절 굽힘근인 장요근은 깊은 곳에 있어 생략했습니다. 복근만으로 다리를 드는 운동은 아니며, 색은 자극 강도가 아닙니다."
+      "앞발과 무릎을 억지로 비틀지 마세요.",
+      "무릎이나 고관절이 불편하면 교차 폭을 줄이거나 중단하세요.",
+      "통증이 생기면 중단하세요."
     ],
-    "breathing": "무릎을 들어 올릴 때 내쉬고, 내릴 때 들이마시세요. 숨을 참지 마세요.",
-    "sourceName": "Physitrack · Standing marching",
-    "sourceUrl": "https://ca.physitrack.com/home-exercise-video/standing-marching"
+    "breathing": "힘을 쓰는 구간에서 내쉬고, 시작 자세로 돌아올 때 들이마시세요. 숨을 오래 참지 마세요.",
+    "sourceName": "Physitrack · 동작 안내",
+    "sourceUrl": "https://www.physitrack.com/exercise-library/how-to-perform-the-curtsy-lunge-exercise"
+  },
+  {
+    "name": "바벨 데드리프트",
+    "asset": "exercise_guides/deadlift.gif",
+    "comment": "바닥의 바벨을 몸 가까이 들어 올리는 운동입니다.",
+    "setup": [
+      "바벨을 발 중간 위에 두고 발을 골반 너비로 벌리세요.",
+      "고관절과 무릎을 굽혀 바를 잡고 몸통을 단단히 지지하세요."
+    ],
+    "steps": [
+      "바벨의 느슨함을 정리한 뒤 양발로 바닥을 미세요.",
+      "바를 다리 가까이 유지하며 고관절과 무릎을 펴 일어서세요.",
+      "엉덩이를 뒤로 보내며 바를 통제해 바닥으로 돌려놓으세요."
+    ],
+    "cautions": [
+      "허리를 뒤로 젖혀 마무리하지 마세요.",
+      "갑자기 잡아당기거나 바를 몸에서 멀리 보내지 마세요.",
+      "통증이 생기면 중단하세요."
+    ],
+    "breathing": "힘을 쓰는 구간에서 내쉬고, 시작 자세로 돌아올 때 들이마시세요. 숨을 오래 참지 마세요.",
+    "sourceName": "NASM · 동작 안내",
+    "sourceUrl": "https://www.nasm.org/resource-center/exercise-library/barbell-deadlift"
+  },
+  {
+    "name": "굿모닝",
+    "asset": "exercise_guides/good-morning.gif",
+    "comment": "상체를 고관절에서 접었다 펴는 맨몸 힙힌지 운동입니다.",
+    "setup": [
+      "발을 골반 너비로 두고 팔을 가슴 앞에 교차하세요.",
+      "무릎을 살짝 굽히고 몸통을 안정시키세요."
+    ],
+    "steps": [
+      "무릎 각도를 크게 바꾸지 않으며 엉덩이를 뒤로 보내세요.",
+      "허리 모양을 유지할 수 있는 범위까지 상체를 기울이세요.",
+      "발바닥을 지지하며 고관절을 펴 일어서세요."
+    ],
+    "cautions": [
+      "상체를 낮추려고 등을 둥글게 말지 마세요.",
+      "이 시범은 맨몸 동작이며 바벨 중량 운동과 구분하세요.",
+      "통증이 생기면 중단하세요."
+    ],
+    "breathing": "힘을 쓰는 구간에서 내쉬고, 시작 자세로 돌아올 때 들이마시세요. 숨을 오래 참지 마세요.",
+    "sourceName": "NASM · 동작 안내",
+    "sourceUrl": "https://www.nasm.org/resource-center/exercise-library/good-mornings"
+  },
+  {
+    "name": "힙 쓰러스트",
+    "asset": "exercise_guides/hip_thrust.gif",
+    "comment": "등 위쪽을 벤치에 지지하고 골반을 들어 올리는 운동입니다.",
+    "setup": [
+      "움직이지 않는 벤치에 등 위쪽을 기대고 양발을 바닥에 두세요.",
+      "이 시범은 추가 중량 없이 시작하며 목에 체중을 싣지 마세요."
+    ],
+    "steps": [
+      "발바닥으로 바닥을 누르며 골반을 들어 올리세요.",
+      "몸통과 허벅지가 자연스럽게 이어지는 범위에서 잠깐 멈추세요.",
+      "허리를 꺾지 않고 골반을 천천히 내려 반복하세요."
+    ],
+    "cautions": [
+      "벤치가 밀리지 않는지 먼저 확인하세요.",
+      "더 높이 올리려고 허리를 과하게 젖히지 마세요.",
+      "통증이 생기면 중단하세요."
+    ],
+    "breathing": "힘을 쓰는 구간에서 내쉬고, 시작 자세로 돌아올 때 들이마시세요. 숨을 오래 참지 마세요.",
+    "sourceName": "ACE · 동작 안내",
+    "sourceUrl": "https://www.acefitness.org/resources/everyone/exercise-library/367/elevated-glute-bridge/"
+  },
+  {
+    "name": "의자 스쿼트",
+    "asset": "exercise_guides/chair_squat.gif",
+    "comment": "의자에서 천천히 일어섰다가 다시 앉는 운동입니다.",
+    "setup": [
+      "바퀴가 없고 미끄러지지 않는 단단한 의자를 사용하세요.",
+      "의자 앞쪽에 앉아 양발 전체를 바닥에 놓으세요."
+    ],
+    "steps": [
+      "상체를 약간 앞으로 기울여 체중을 발 쪽으로 옮기세요.",
+      "양발로 바닥을 밀며 천천히 일어서세요.",
+      "엉덩이를 뒤로 보내며 의자를 확인하고 천천히 앉으세요."
+    ],
+    "cautions": [
+      "의자에 털썩 주저앉지 마세요.",
+      "균형이 어렵다면 안정적인 지지물을 이용하세요.",
+      "통증이 생기면 중단하세요."
+    ],
+    "breathing": "힘을 쓰는 구간에서 내쉬고, 시작 자세로 돌아올 때 들이마시세요. 숨을 오래 참지 마세요.",
+    "sourceName": "NHS · 동작 안내",
+    "sourceUrl": "https://www.nhs.uk/live-well/exercise/strength-exercises/"
+  },
+  {
+    "name": "고블릿 스쿼트",
+    "asset": "exercise_guides/goblet_squat.gif",
+    "comment": "덤벨 하나를 가슴 앞에 잡고 앉았다 일어나는 스쿼트입니다.",
+    "setup": [
+      "덤벨을 양손으로 안정적으로 잡아 가슴 앞에 두세요.",
+      "발을 편한 너비로 벌리고 몸통을 지지하세요."
+    ],
+    "steps": [
+      "덤벨을 몸 가까이 둔 채 고관절과 무릎을 굽히세요.",
+      "발바닥과 몸통을 안정시킬 수 있는 깊이까지 내려가세요.",
+      "양발로 바닥을 밀며 일어나세요."
+    ],
+    "cautions": [
+      "덤벨을 앞으로 멀리 내밀지 마세요.",
+      "손에서 미끄러질 정도의 무게를 사용하지 마세요.",
+      "통증이 생기면 중단하세요."
+    ],
+    "breathing": "힘을 쓰는 구간에서 내쉬고, 시작 자세로 돌아올 때 들이마시세요. 숨을 오래 참지 마세요.",
+    "sourceName": "NASM · 동작 안내",
+    "sourceUrl": "https://www.nasm.org/resource-center/exercise-library/goblet-squat"
+  },
+  {
+    "name": "밴드 스쿼트",
+    "asset": "exercise_guides/band_squat.gif",
+    "comment": "양발로 밴드를 고정한 상태에서 수행하는 스쿼트입니다.",
+    "setup": [
+      "손상 없는 긴 밴드의 가운데를 양발로 단단히 밟으세요.",
+      "양끝을 잡고 밴드가 미끄러지지 않는지 가볍게 당겨 확인하세요."
+    ],
+    "steps": [
+      "몸통을 지지하며 고관절과 무릎을 굽혀 내려가세요.",
+      "발바닥이 안정된 범위에서 방향을 바꾸세요.",
+      "밴드 저항을 통제하며 천천히 일어서세요."
+    ],
+    "cautions": [
+      "무릎에만 두르는 짧은 밴드 스쿼트와 다른 변형입니다.",
+      "밴드가 발에서 빠지거나 얼굴을 향해 튀지 않게 하세요.",
+      "통증이 생기면 중단하세요."
+    ],
+    "breathing": "힘을 쓰는 구간에서 내쉬고, 시작 자세로 돌아올 때 들이마시세요. 숨을 오래 참지 마세요.",
+    "sourceName": "ACE · 동작 안내",
+    "sourceUrl": "https://www.acefitness.org/getfit/rubrbndwkout.pdf"
+  },
+  {
+    "name": "불가리안 스플릿 스쿼트",
+    "asset": "exercise_guides/bulgarian_split_squat.gif",
+    "comment": "뒷발을 벤치에 올리고 앞다리로 몸을 낮췄다 일으키는 운동입니다.",
+    "setup": [
+      "움직이지 않는 낮은 벤치 앞에 서서 한 발을 뒤에 올리세요.",
+      "앞발 전체를 바닥에 두고 균형 잡히는 거리를 찾으세요."
+    ],
+    "steps": [
+      "앞쪽 고관절과 무릎을 굽혀 몸을 낮추세요.",
+      "몸통과 골반이 안정되는 범위에서 멈추세요.",
+      "앞발로 바닥을 밀어 올라온 뒤 반대쪽도 수행하세요."
+    ],
+    "cautions": [
+      "뒷발을 높이 올리거나 보폭을 억지로 늘리지 마세요.",
+      "균형이 흔들리면 가벼운 지지물을 이용하세요.",
+      "통증이 생기면 중단하세요."
+    ],
+    "breathing": "힘을 쓰는 구간에서 내쉬고, 시작 자세로 돌아올 때 들이마시세요. 숨을 오래 참지 마세요.",
+    "sourceName": "NASM · 동작 안내",
+    "sourceUrl": "https://www.nasm.org/resource-center/exercise-library/bulgarian-split-squat"
+  },
+  {
+    "name": "리버스 런지",
+    "asset": "exercise_guides/reverse_lunge.gif",
+    "comment": "한 발을 뒤로 내디뎠다가 돌아오는 런지입니다.",
+    "setup": [
+      "발을 골반 너비로 벌리고 몸통을 안정시키세요.",
+      "뒤로 내디딜 공간을 확보하세요."
+    ],
+    "steps": [
+      "한 발을 뒤로 내디뎌 앞꿈치로 바닥을 지지하세요.",
+      "양 무릎을 굽혀 균형을 유지하며 몸을 낮추세요.",
+      "앞발로 바닥을 밀어 돌아온 뒤 반대쪽도 반복하세요."
+    ],
+    "cautions": [
+      "뒷발을 외줄처럼 일직선에 놓지 마세요.",
+      "앞발이 들리거나 무릎이 안으로 꺾이지 않게 하세요.",
+      "통증이 생기면 중단하세요."
+    ],
+    "breathing": "힘을 쓰는 구간에서 내쉬고, 시작 자세로 돌아올 때 들이마시세요. 숨을 오래 참지 마세요.",
+    "sourceName": "ACE · 동작 안내",
+    "sourceUrl": "https://www.acefitness.org/resources/pros/expert-articles/5028/6-lower-body-exercises-to-do-instead-of-squats/"
+  },
+  {
+    "name": "스텝업",
+    "asset": "exercise_guides/step_up.gif",
+    "comment": "안정적인 발판에 올라갔다 내려오는 운동입니다.",
+    "setup": [
+      "미끄러지거나 흔들리지 않는 낮은 발판을 사용하세요.",
+      "발판 앞에서 발을 골반 너비로 벌리고 서세요."
+    ],
+    "steps": [
+      "한 발 전체를 발판 위에 놓으세요.",
+      "체중을 옮겨 발판 위로 올라가 균형을 잡으세요.",
+      "통제하며 내려온 뒤 반대쪽 다리로도 수행하세요."
+    ],
+    "cautions": [
+      "발뒤꿈치가 발판 밖으로 많이 나오지 않게 하세요.",
+      "높이보다 안정적인 오르내리기를 먼저 익히세요.",
+      "통증이 생기면 중단하세요."
+    ],
+    "breathing": "힘을 쓰는 구간에서 내쉬고, 시작 자세로 돌아올 때 들이마시세요. 숨을 오래 참지 마세요.",
+    "sourceName": "ACE · 동작 안내",
+    "sourceUrl": "https://www.acefitness.org/resources/everyone/exercise-library/28/step-up/"
+  },
+  {
+    "name": "레그 프레스",
+    "asset": "exercise_guides/leg_press.gif",
+    "comment": "머신의 발판을 양발로 밀었다 돌아오는 운동입니다.",
+    "setup": [
+      "기종 안내에 따라 좌석과 안전장치를 조절하세요.",
+      "등과 골반을 등받이에 지지하고 양발 전체를 발판에 놓으세요."
+    ],
+    "steps": [
+      "손잡이를 잡고 발판을 천천히 밀어내세요.",
+      "무릎을 세게 잠그지 않고 움직임을 통제하세요.",
+      "골반이 말려 들리지 않는 범위까지 천천히 돌아오세요."
+    ],
+    "cautions": [
+      "좌석·발판 구조에 따라 시작 자세가 다릅니다.",
+      "무게판을 튕기거나 골반을 등받이에서 떼지 마세요.",
+      "통증이 생기면 중단하세요."
+    ],
+    "breathing": "힘을 쓰는 구간에서 내쉬고, 시작 자세로 돌아올 때 들이마시세요. 숨을 오래 참지 마세요.",
+    "sourceName": "NASM · 동작 안내",
+    "sourceUrl": "https://www.nasm.org/resource-center/exercise-library/leg-press"
+  },
+  {
+    "name": "덤벨 루마니안 데드리프트",
+    "asset": "exercise_guides/dumbbell_rdl.gif",
+    "comment": "덤벨을 들고 고관절을 접었다 펴는 루마니안 데드리프트입니다.",
+    "setup": [
+      "양손에 덤벨을 들고 발을 골반 너비로 벌리세요.",
+      "무릎을 살짝 굽히고 몸통을 지지하세요."
+    ],
+    "steps": [
+      "덤벨을 다리 가까이 두며 엉덩이를 뒤로 보내세요.",
+      "허리 모양을 유지할 수 있는 범위까지 내려가세요.",
+      "고관절을 펴며 일어서되 허리를 뒤로 젖히지 마세요."
+    ],
+    "cautions": [
+      "덤벨을 바닥에 닿게 하는 것이 목표는 아닙니다.",
+      "무릎을 크게 굽혀 스쿼트로 바꾸지 마세요.",
+      "통증이 생기면 중단하세요."
+    ],
+    "breathing": "힘을 쓰는 구간에서 내쉬고, 시작 자세로 돌아올 때 들이마시세요. 숨을 오래 참지 마세요.",
+    "sourceName": "NASM · 동작 안내",
+    "sourceUrl": "https://www.nasm.org/resource-center/exercise-library/dumbbell-romanian-deadlift"
+  },
+  {
+    "name": "밴드 루마니안 데드리프트",
+    "asset": "exercise_guides/band_rdl.gif",
+    "comment": "양발로 밴드를 고정하고 고관절을 접었다 펴는 운동입니다.",
+    "setup": [
+      "손상 없는 긴 밴드를 양발로 밟고 양끝을 잡으세요.",
+      "무릎을 살짝 굽힌 채 몸통을 지지하고 밴드 고정을 확인하세요."
+    ],
+    "steps": [
+      "엉덩이를 뒤로 보내며 상체를 기울이세요.",
+      "등과 골반을 안정시킬 수 있는 범위에서 멈추세요.",
+      "밴드 저항을 통제하며 고관절을 펴 일어서세요."
+    ],
+    "cautions": [
+      "밴드가 발에서 빠지지 않게 하세요.",
+      "무거운 저항 때문에 허리를 말거나 갑자기 일어나지 마세요.",
+      "통증이 생기면 중단하세요."
+    ],
+    "breathing": "힘을 쓰는 구간에서 내쉬고, 시작 자세로 돌아올 때 들이마시세요. 숨을 오래 참지 마세요.",
+    "sourceName": "NASM · 동작 안내",
+    "sourceUrl": "https://www.nasm.org/resource-center/exercise-library/dumbbell-romanian-deadlift"
+  },
+  {
+    "name": "시티드 레그 컬",
+    "asset": "exercise_guides/seated_leg_curl.gif",
+    "comment": "앉은 자세에서 머신 저항에 맞서 무릎을 굽히는 운동입니다.",
+    "setup": [
+      "기종 안내에 맞춰 무릎과 머신 회전축을 맞추세요.",
+      "등받이·허벅지 고정 패드·발목 위쪽 패드를 조절하세요."
+    ],
+    "steps": [
+      "등과 골반을 지지한 채 무릎을 굽혀 패드를 아래로 당기세요.",
+      "허벅지와 골반이 움직이지 않는 범위에서 멈추세요.",
+      "저항을 통제하며 천천히 시작 위치로 돌아오세요."
+    ],
+    "cautions": [
+      "무릎 관절 위를 패드로 직접 누르지 마세요.",
+      "무게판을 부딪치거나 상체를 들썩여 당기지 마세요.",
+      "통증이 생기면 중단하세요."
+    ],
+    "breathing": "힘을 쓰는 구간에서 내쉬고, 시작 자세로 돌아올 때 들이마시세요. 숨을 오래 참지 마세요.",
+    "sourceName": "NASM · 동작 안내",
+    "sourceUrl": "https://www.nasm.org/resource-center/exercise-library/seated-leg-curl"
+  },
+  {
+    "name": "글루트 브릿지",
+    "asset": "exercise_guides/glute_bridge.gif",
+    "comment": "등을 바닥에 둔 채 골반을 들어 올리는 브릿지입니다.",
+    "setup": [
+      "매트에 누워 무릎을 굽히고 양발을 바닥에 두세요.",
+      "팔을 몸 옆에 놓고 몸통을 안정시키세요."
+    ],
+    "steps": [
+      "발바닥으로 바닥을 누르며 골반을 들어 올리세요.",
+      "어깨·골반·무릎이 자연스럽게 이어지는 범위에서 멈추세요.",
+      "골반을 천천히 내려 반복하세요."
+    ],
+    "cautions": [
+      "목이나 머리로 바닥을 밀지 마세요.",
+      "더 높이 들기 위해 허리를 과하게 젖히지 마세요.",
+      "통증이 생기면 중단하세요."
+    ],
+    "breathing": "힘을 쓰는 구간에서 내쉬고, 시작 자세로 돌아올 때 들이마시세요. 숨을 오래 참지 마세요.",
+    "sourceName": "Mayo Clinic · 동작 안내",
+    "sourceUrl": "https://www.mayoclinic.org/healthy-lifestyle/fitness/in-depth/core-strength/art-20546851"
+  },
+  {
+    "name": "싱글레그 글루트 브릿지",
+    "asset": "exercise_guides/single_leg_bridge.gif",
+    "comment": "한 발로 지지하며 골반을 들어 올리는 브릿지입니다.",
+    "setup": [
+      "누워 한 무릎을 굽히고 그 발을 바닥에 놓으세요.",
+      "반대쪽 다리를 들어 양쪽 골반 높이를 맞추세요."
+    ],
+    "steps": [
+      "지지하는 발로 바닥을 누르며 골반을 들어 올리세요.",
+      "골반이 돌아가거나 기울지 않는 범위에서 멈추세요.",
+      "천천히 내려온 뒤 반대쪽도 수행하세요."
+    ],
+    "cautions": [
+      "허벅지 뒤쪽이 심하게 당기거나 쥐가 나면 멈추세요.",
+      "골반을 높이 들기보다 좌우 수평을 유지하세요.",
+      "통증이 생기면 중단하세요."
+    ],
+    "breathing": "힘을 쓰는 구간에서 내쉬고, 시작 자세로 돌아올 때 들이마시세요. 숨을 오래 참지 마세요.",
+    "sourceName": "NHS · 동작 안내",
+    "sourceUrl": "https://www.newcastle-hospitals.nhs.uk/services/injury-prevention-advice-for-runners/"
+  },
+  {
+    "name": "네발기기 힙 익스텐션",
+    "asset": "exercise_guides/quadruped_hip_extension.gif",
+    "comment": "네발기기에서 한쪽 다리를 뒤로 들어 올리는 운동입니다.",
+    "setup": [
+      "손은 어깨 아래, 무릎은 골반 아래에 놓으세요.",
+      "등과 목을 편안하게 이어 복부에 힘을 주세요."
+    ],
+    "steps": [
+      "한쪽 무릎을 굽힌 채 다리를 뒤로 들어 올리세요.",
+      "허리와 골반이 돌아가지 않는 범위에서 멈추세요.",
+      "무릎을 천천히 돌려놓고 반대쪽도 반복하세요."
+    ],
+    "cautions": [
+      "발을 높이 차려고 허리를 꺾지 마세요.",
+      "버드독과 달리 양손을 바닥에 둡니다.",
+      "통증이 생기면 중단하세요."
+    ],
+    "breathing": "힘을 쓰는 구간에서 내쉬고, 시작 자세로 돌아올 때 들이마시세요. 숨을 오래 참지 마세요.",
+    "sourceName": "ACE · 동작 안내",
+    "sourceUrl": "https://www.acefitness.org/resources/pros/expert-articles/9061/glute-goals-an-evidence-based-glute-workout/"
+  },
+  {
+    "name": "사이드 밴드 워크",
+    "asset": "exercise_guides/band_walk.gif",
+    "comment": "루프밴드 저항을 유지하며 옆으로 걷는 운동입니다.",
+    "setup": [
+      "손상 없는 루프밴드를 무릎 바로 위 허벅지에 두세요.",
+      "발을 벌려 밴드에 가벼운 장력을 만들고 무릎을 살짝 굽히세요."
+    ],
+    "steps": [
+      "한 발을 옆으로 작은 폭만큼 옮기세요.",
+      "다른 발을 따라 옮기되 밴드 장력을 갑자기 풀지 마세요.",
+      "몸통과 골반을 안정시키며 반대 방향으로도 이동하세요."
+    ],
+    "cautions": [
+      "무릎이 안으로 모이지 않게 하세요.",
+      "발목 밴드 변형은 저항과 동작 조건이 달라 따로 조절해야 합니다.",
+      "통증이 생기면 중단하세요."
+    ],
+    "breathing": "힘을 쓰는 구간에서 내쉬고, 시작 자세로 돌아올 때 들이마시세요. 숨을 오래 참지 마세요.",
+    "sourceName": "ACE · 동작 안내",
+    "sourceUrl": "https://www.acefitness.org/continuing-education/prosource/september-2013/3459/is-your-exercise-selection-helping-or-hurting-your-clients/"
+  },
+  {
+    "name": "카프 레이즈",
+    "asset": "exercise_guides/calf_raise.gif",
+    "comment": "서서 뒤꿈치를 천천히 올렸다 내리는 운동입니다.",
+    "setup": [
+      "벽이나 단단한 지지물 옆에 서서 발을 나란히 두세요.",
+      "양발 앞쪽으로 체중을 고르게 분배하세요."
+    ],
+    "steps": [
+      "뒤꿈치를 천천히 들어 올리세요.",
+      "몸이 흔들리지 않는 높이에서 잠깐 멈추세요.",
+      "뒤꿈치를 천천히 바닥으로 내려놓으세요."
+    ],
+    "cautions": [
+      "발목이 안팎으로 크게 기울지 않게 하세요.",
+      "반동으로 튀어 오르거나 급하게 떨어지지 마세요.",
+      "통증이 생기면 중단하세요."
+    ],
+    "breathing": "힘을 쓰는 구간에서 내쉬고, 시작 자세로 돌아올 때 들이마시세요. 숨을 오래 참지 마세요.",
+    "sourceName": "NHS · 동작 안내",
+    "sourceUrl": "https://www.nhs.uk/live-well/exercise/strength-exercises/"
+  },
+  {
+    "name": "오버헤드 프레스",
+    "asset": "exercise_guides/overhead_press.gif",
+    "comment": "양손 덤벨을 어깨 높이에서 머리 위로 미는 운동입니다.",
+    "setup": [
+      "발을 안정적으로 벌리고 덤벨을 어깨 높이로 가져오세요.",
+      "손목을 팔 위에 두고 복부에 힘을 주세요."
+    ],
+    "steps": [
+      "몸통을 안정시킨 채 덤벨을 위로 밀어 올리세요.",
+      "통증 없는 범위에서 팔을 펴세요.",
+      "덤벨을 천천히 어깨 높이로 돌려놓으세요."
+    ],
+    "cautions": [
+      "허리를 젖히거나 다리 반동으로 밀지 마세요.",
+      "어깨가 불편하면 무게와 범위를 줄이고 통증이 지속되면 중단하세요.",
+      "통증이 생기면 중단하세요."
+    ],
+    "breathing": "힘을 쓰는 구간에서 내쉬고, 시작 자세로 돌아올 때 들이마시세요. 숨을 오래 참지 마세요.",
+    "sourceName": "NHS · 동작 안내",
+    "sourceUrl": "https://www.nsft.nhs.uk/help-for-your-body-and-mind/"
+  },
+  {
+    "name": "랫풀 다운",
+    "asset": "exercise_guides/lat_pulldown.gif",
+    "comment": "머리 위의 바를 앞가슴 쪽으로 당기는 머신 운동입니다.",
+    "setup": [
+      "허벅지 패드와 좌석을 맞추고 발을 바닥에 놓으세요.",
+      "바를 어깨보다 조금 넓게 잡고 몸통을 안정시키세요."
+    ],
+    "steps": [
+      "어깨를 들썩이지 않으며 팔꿈치를 아래로 당기세요.",
+      "바를 앞가슴 위쪽으로 가까이 가져오세요.",
+      "저항을 통제하며 팔을 천천히 위로 돌려보내세요."
+    ],
+    "cautions": [
+      "목 뒤로 바를 내리지 마세요.",
+      "몸통을 크게 젖히거나 반동으로 당기지 마세요.",
+      "통증이 생기면 중단하세요."
+    ],
+    "breathing": "힘을 쓰는 구간에서 내쉬고, 시작 자세로 돌아올 때 들이마시세요. 숨을 오래 참지 마세요.",
+    "sourceName": "ACE · 동작 안내",
+    "sourceUrl": "https://www.acefitness.org/continuing-education/certified/december-2018/7138/ace-sponsored-research-what-is-the-best-back-exercise/"
+  },
+  {
+    "name": "딥스",
+    "asset": "exercise_guides/dips.gif",
+    "comment": "평행봉을 잡고 몸을 낮췄다 밀어 올리는 운동입니다.",
+    "setup": [
+      "안정적으로 고정된 평행봉을 양손으로 잡으세요.",
+      "발을 바닥에서 떼고 몸통을 통제할 수 있는지 확인하세요."
+    ],
+    "steps": [
+      "팔꿈치를 굽혀 몸을 천천히 낮추세요.",
+      "어깨가 편안하고 움직임을 통제할 수 있는 범위에서 멈추세요.",
+      "평행봉을 밀며 시작 높이로 돌아오세요."
+    ],
+    "cautions": [
+      "벤치에 손을 짚는 벤치 딥스와 다른 운동입니다.",
+      "어깨 앞쪽 통증이 생기면 깊이를 억지로 늘리지 말고 중단하세요.",
+      "통증이 생기면 중단하세요."
+    ],
+    "breathing": "힘을 쓰는 구간에서 내쉬고, 시작 자세로 돌아올 때 들이마시세요. 숨을 오래 참지 마세요.",
+    "sourceName": "McKenzie et al., 2022 · 동작 안내",
+    "sourceUrl": "https://pmc.ncbi.nlm.nih.gov/articles/PMC9603242/"
+  },
+  {
+    "name": "덤벨 컬",
+    "asset": "exercise_guides/dumbbell-curl.gif",
+    "comment": "덤벨을 잡고 팔꿈치를 굽혔다 펴는 운동입니다.",
+    "setup": [
+      "발을 편하게 벌리고 양손에 덤벨을 잡으세요.",
+      "팔을 몸 옆에 두고 손목을 곧게 유지하세요."
+    ],
+    "steps": [
+      "한쪽 위팔을 몸 옆에 둔 채 팔꿈치를 굽히세요.",
+      "덤벨을 통제할 수 있는 높이까지 올리세요.",
+      "천천히 덤벨을 내린 뒤 반대쪽도 번갈아 반복하세요."
+    ],
+    "cautions": [
+      "몸통을 뒤로 젖혀 덤벨을 던지듯 올리지 마세요.",
+      "손목을 뒤로 꺾거나 어깨를 들썩이지 마세요.",
+      "통증이 생기면 중단하세요."
+    ],
+    "breathing": "힘을 쓰는 구간에서 내쉬고, 시작 자세로 돌아올 때 들이마시세요. 숨을 오래 참지 마세요.",
+    "sourceName": "Mayo Clinic · 동작 안내",
+    "sourceUrl": "https://www.mayoclinic.org/healthy-lifestyle/fitness/multimedia/biceps-curl/vid-20084675"
+  },
+  {
+    "name": "바벨 컬",
+    "asset": "exercise_guides/barbell-curl.gif",
+    "comment": "바벨을 양손으로 잡고 팔꿈치를 굽히는 운동입니다.",
+    "setup": [
+      "손바닥이 위를 향하도록 바벨을 어깨 너비로 잡으세요.",
+      "몸통을 세우고 위팔을 몸 옆에 두세요."
+    ],
+    "steps": [
+      "팔꿈치를 굽혀 바벨을 어깨 쪽으로 올리세요.",
+      "몸통과 손목을 안정적으로 유지하세요.",
+      "반동 없이 천천히 바벨을 내리세요."
+    ],
+    "cautions": [
+      "이 시범은 직선바 기준입니다.",
+      "허리를 젖히거나 팔꿈치를 크게 앞으로 보내지 마세요.",
+      "통증이 생기면 중단하세요."
+    ],
+    "breathing": "힘을 쓰는 구간에서 내쉬고, 시작 자세로 돌아올 때 들이마시세요. 숨을 오래 참지 마세요.",
+    "sourceName": "ACE · 동작 안내",
+    "sourceUrl": "https://www.acefitness.org/resources/everyone/exercise-library/70/bicep-curl/"
+  },
+  {
+    "name": "사이드 레터럴 레이즈",
+    "asset": "exercise_guides/lateral-raise.gif",
+    "comment": "덤벨을 몸 옆으로 들어 올렸다 내리는 운동입니다.",
+    "setup": [
+      "덤벨을 몸 옆에 들고 발을 안정적으로 벌리세요.",
+      "팔꿈치를 편안하게 조금 굽히고 손목을 곧게 두세요."
+    ],
+    "steps": [
+      "양팔을 몸 옆으로 천천히 들어 올리세요.",
+      "어깨 높이 안팎의 편안한 범위에서 멈추세요.",
+      "몸통을 고정한 채 덤벨을 천천히 내리세요."
+    ],
+    "cautions": [
+      "어깨를 귀 쪽으로 과하게 끌어올리지 마세요.",
+      "손목을 꺾거나 무거운 덤벨을 반동으로 올리지 마세요.",
+      "통증이 생기면 중단하세요."
+    ],
+    "breathing": "힘을 쓰는 구간에서 내쉬고, 시작 자세로 돌아올 때 들이마시세요. 숨을 오래 참지 마세요.",
+    "sourceName": "ACE · 동작 안내",
+    "sourceUrl": "https://www.acefitness.org/resources/everyone/exercise-library/26/lateral-raise/"
+  },
+  {
+    "name": "프런트 레이즈",
+    "asset": "exercise_guides/front-raise.gif",
+    "comment": "덤벨을 몸 앞쪽으로 들어 올렸다 내리는 운동입니다.",
+    "setup": [
+      "양손에 덤벨을 들고 허벅지 앞에 두세요.",
+      "발을 안정적으로 벌리고 몸통을 지지하세요."
+    ],
+    "steps": [
+      "팔꿈치를 편안하게 유지하며 한쪽 덤벨을 앞으로 올리세요.",
+      "어깨 높이 정도의 편안한 범위에서 멈추세요.",
+      "덤벨을 천천히 허벅지 앞쪽으로 내린 뒤 반대쪽도 번갈아 반복하세요."
+    ],
+    "cautions": [
+      "허리를 젖히거나 몸을 뒤로 흔들지 마세요.",
+      "어깨가 아프면 높이와 무게를 줄이고 무리하지 마세요.",
+      "통증이 생기면 중단하세요."
+    ],
+    "breathing": "힘을 쓰는 구간에서 내쉬고, 시작 자세로 돌아올 때 들이마시세요. 숨을 오래 참지 마세요.",
+    "sourceName": "ACE · 동작 안내",
+    "sourceUrl": "https://www.acefitness.org/resources/everyone/exercise-library/54/front-raise/"
+  },
+  {
+    "name": "업라이트로우",
+    "asset": "exercise_guides/upright_row.gif",
+    "comment": "바벨을 몸 가까이 위로 당기는 운동입니다.",
+    "setup": [
+      "가벼운 바벨을 잡고 손목이 불편하지 않은 그립 너비를 찾으세요.",
+      "발을 안정적으로 벌리고 몸통을 세우세요."
+    ],
+    "steps": [
+      "팔꿈치를 옆으로 움직이며 바를 몸 가까이 당기세요.",
+      "팔꿈치가 어깨보다 높이 올라가지 않는 편안한 범위에서 멈추세요.",
+      "바를 천천히 내려 시작 자세로 돌아오세요."
+    ],
+    "cautions": [
+      "어깨 통증이나 충돌감이 있으면 중단하세요.",
+      "턱까지 높이 끌어올리는 것을 목표로 삼지 마세요.",
+      "통증이 생기면 중단하세요."
+    ],
+    "breathing": "힘을 쓰는 구간에서 내쉬고, 시작 자세로 돌아올 때 들이마시세요. 숨을 오래 참지 마세요.",
+    "sourceName": "Schoenfeld et al., 2011 / author-hosted NSCA article · 동작 안내",
+    "sourceUrl": "https://www.lookgreatnaked.com/articles/upright_row_implications_for_preventing_subacromial_impingement.pdf"
+  },
+  {
+    "name": "푸쉬업",
+    "asset": "exercise_guides/push-up.gif",
+    "comment": "손과 발끝으로 몸을 지지하며 바닥을 미는 운동입니다.",
+    "setup": [
+      "손을 어깨보다 조금 넓게 놓고 발끝으로 지지하세요.",
+      "머리부터 골반·발까지 몸통을 안정적으로 이어 주세요."
+    ],
+    "steps": [
+      "팔꿈치를 굽혀 가슴을 바닥 쪽으로 낮추세요.",
+      "몸통이 처지지 않고 통제되는 범위에서 멈추세요.",
+      "손으로 바닥을 밀어 시작 높이로 돌아오세요."
+    ],
+    "cautions": [
+      "허리나 골반만 먼저 내려가지 않게 하세요.",
+      "목을 앞으로 빼거나 팔꿈치를 옆으로 과하게 벌리지 마세요.",
+      "통증이 생기면 중단하세요."
+    ],
+    "breathing": "힘을 쓰는 구간에서 내쉬고, 시작 자세로 돌아올 때 들이마시세요. 숨을 오래 참지 마세요.",
+    "sourceName": "NASM · 동작 안내",
+    "sourceUrl": "https://www.nasm.org/resource-center/exercise-library/push-up"
+  },
+  {
+    "name": "니 푸쉬업",
+    "asset": "exercise_guides/knee_pushup.gif",
+    "comment": "무릎을 바닥에 대고 수행하는 푸쉬업입니다.",
+    "setup": [
+      "손을 어깨보다 조금 넓게 놓고 무릎을 매트에 대세요.",
+      "무릎부터 골반·머리까지 몸통을 안정적으로 이어 주세요."
+    ],
+    "steps": [
+      "팔꿈치를 굽혀 가슴을 천천히 낮추세요.",
+      "골반이 뒤로 빠지거나 허리가 처지기 전에 멈추세요.",
+      "바닥을 밀어 시작 높이로 돌아오세요."
+    ],
+    "cautions": [
+      "손목과 무릎에 과한 압박이 생기지 않게 하세요.",
+      "엉덩이를 뒤로 접는 동작으로 바꾸지 마세요.",
+      "통증이 생기면 중단하세요."
+    ],
+    "breathing": "힘을 쓰는 구간에서 내쉬고, 시작 자세로 돌아올 때 들이마시세요. 숨을 오래 참지 마세요.",
+    "sourceName": "NASM · 동작 안내",
+    "sourceUrl": "https://www.nasm.org/resource-center/exercise-library/modified-push-up"
+  },
+  {
+    "name": "Y 레이즈",
+    "asset": "exercise_guides/y_raise.gif",
+    "comment": "바닥에 엎드려 양팔을 Y자 방향으로 조금 들어 올리는 운동입니다.",
+    "setup": [
+      "매트에 엎드려 목과 허리를 편안한 중립 자세로 두세요.",
+      "양팔을 머리 위 사선으로 뻗어 Y 모양을 만들고 엄지가 위를 향하게 하세요."
+    ],
+    "steps": [
+      "어깨를 귀 쪽으로 끌어올리지 않도록 자세를 잡으세요.",
+      "몸통을 바닥에 둔 채 양팔을 편안한 범위에서 조금 들어 올리세요.",
+      "반동 없이 천천히 팔을 내리세요."
+    ],
+    "cautions": [
+      "허리를 젖혀 팔 높이를 늘리지 마세요.",
+      "서서 수행하는 Y 레이즈와 지지 조건이 다릅니다.",
+      "통증이 생기면 중단하세요."
+    ],
+    "breathing": "힘을 쓰는 구간에서 내쉬고, 시작 자세로 돌아올 때 들이마시세요. 숨을 오래 참지 마세요.",
+    "sourceName": "ACE · 동작 안내",
+    "sourceUrl": "https://www.acefitness.org/continuing-education/certified/december-2018/7138/ace-sponsored-research-what-is-the-best-back-exercise/"
+  },
+  {
+    "name": "벽 푸쉬업",
+    "asset": "exercise_guides/wall_pushup.gif",
+    "comment": "벽에 손을 짚고 수행하는 푸쉬업입니다.",
+    "setup": [
+      "벽을 마주 보고 서서 손을 가슴·어깨 높이에 놓으세요.",
+      "양발을 뒤로 옮겨 편안한 거리를 만들고 몸통을 세우세요."
+    ],
+    "steps": [
+      "팔꿈치를 굽혀 몸 전체를 벽 쪽으로 기울이세요.",
+      "발바닥과 몸통을 안정적으로 유지하세요.",
+      "벽을 밀어 시작 위치로 돌아오세요."
+    ],
+    "cautions": [
+      "머리만 벽으로 내밀지 마세요.",
+      "바닥이나 손이 미끄러지지 않는지 확인하세요.",
+      "통증이 생기면 중단하세요."
+    ],
+    "breathing": "힘을 쓰는 구간에서 내쉬고, 시작 자세로 돌아올 때 들이마시세요. 숨을 오래 참지 마세요.",
+    "sourceName": "NHS · 동작 안내",
+    "sourceUrl": "https://www.nhs.uk/live-well/exercise/strength-exercises/"
+  },
+  {
+    "name": "인클라인 푸쉬업",
+    "asset": "exercise_guides/incline_pushup.gif",
+    "comment": "높은 지지면에 손을 짚고 수행하는 푸쉬업입니다.",
+    "setup": [
+      "고정된 벤치나 단단한 지지면에 양손을 놓으세요.",
+      "발을 뒤로 옮겨 머리부터 발까지 몸을 안정적으로 이어 주세요."
+    ],
+    "steps": [
+      "팔꿈치를 굽혀 가슴을 지지면 쪽으로 낮추세요.",
+      "허리와 골반을 안정적으로 유지하세요.",
+      "지지면을 밀어 시작 높이로 돌아오세요."
+    ],
+    "cautions": [
+      "움직이거나 넘어질 수 있는 가구를 쓰지 마세요.",
+      "손을 높이는 변형이며 발을 올리는 동작과 다릅니다.",
+      "통증이 생기면 중단하세요."
+    ],
+    "breathing": "힘을 쓰는 구간에서 내쉬고, 시작 자세로 돌아올 때 들이마시세요. 숨을 오래 참지 마세요.",
+    "sourceName": "NASM · 동작 안내",
+    "sourceUrl": "https://www.nasm.org/resource-center/exercise-library/incline-push-up"
+  },
+  {
+    "name": "파이크 푸쉬업",
+    "asset": "exercise_guides/pike_pushup.gif",
+    "comment": "엉덩이를 높인 자세에서 위쪽으로 미는 푸쉬업입니다.",
+    "setup": [
+      "손과 발을 바닥에 두고 엉덩이를 들어 역V 모양을 만드세요.",
+      "손바닥으로 바닥을 지지하고 목을 편안하게 두세요."
+    ],
+    "steps": [
+      "팔꿈치를 굽혀 머리를 바닥 쪽으로 천천히 낮추세요.",
+      "머리에 체중을 싣지 않는 범위에서 멈추세요.",
+      "손으로 바닥을 밀어 시작 자세로 돌아오세요."
+    ],
+    "cautions": [
+      "머리를 바닥에 부딪치거나 목으로 지지하지 마세요.",
+      "손목이나 어깨가 불편하면 중단하세요.",
+      "통증이 생기면 중단하세요."
+    ],
+    "breathing": "힘을 쓰는 구간에서 내쉬고, 시작 자세로 돌아올 때 들이마시세요. 숨을 오래 참지 마세요.",
+    "sourceName": "NASM · 동작 안내",
+    "sourceUrl": "https://www.nasm.org/resource-center/exercise-library/pike-push-up"
+  },
+  {
+    "name": "덤벨 벤치 프레스",
+    "asset": "exercise_guides/dumbbell_bench_press.gif",
+    "comment": "평벤치에 누워 양손 덤벨을 미는 운동입니다.",
+    "setup": [
+      "머리·등·엉덩이를 벤치에 지지하고 발을 바닥에 두세요.",
+      "덤벨을 가슴 위에 안정적으로 들고 손목을 곧게 하세요."
+    ],
+    "steps": [
+      "덤벨을 가슴 양옆으로 천천히 내리세요.",
+      "어깨가 편안하고 덤벨을 통제할 수 있는 범위에서 멈추세요.",
+      "양손을 균형 있게 밀어 시작 높이로 돌아오세요."
+    ],
+    "cautions": [
+      "덤벨을 가슴에 튕기거나 서로 부딪치지 마세요.",
+      "시작과 마무리에 무게를 안전하게 옮길 수 있어야 합니다.",
+      "통증이 생기면 중단하세요."
+    ],
+    "breathing": "힘을 쓰는 구간에서 내쉬고, 시작 자세로 돌아올 때 들이마시세요. 숨을 오래 참지 마세요.",
+    "sourceName": "ACE · 동작 안내",
+    "sourceUrl": "https://www.acefitness.org/resources/everyone/exercise-library/19/chest-press/"
+  },
+  {
+    "name": "덤벨 플로어 프레스",
+    "asset": "exercise_guides/dumbbell_floor_press.gif",
+    "comment": "바닥에 누워 양손 덤벨을 미는 운동입니다.",
+    "setup": [
+      "등을 바닥에 대고 무릎을 굽혀 발을 놓으세요.",
+      "덤벨을 가슴 위에 안정적으로 들고 손목을 곧게 하세요."
+    ],
+    "steps": [
+      "팔꿈치를 굽혀 상완이 바닥에 가볍게 닿을 때까지 내리세요.",
+      "팔을 바닥에 세게 부딪치지 않고 잠깐 멈추세요.",
+      "덤벨을 통제하며 위로 밀어 올리세요."
+    ],
+    "cautions": [
+      "바닥에 튕기는 반동을 쓰지 마세요.",
+      "벤치 프레스보다 내려가는 범위가 제한되는 변형입니다.",
+      "통증이 생기면 중단하세요."
+    ],
+    "breathing": "힘을 쓰는 구간에서 내쉬고, 시작 자세로 돌아올 때 들이마시세요. 숨을 오래 참지 마세요.",
+    "sourceName": "Primary source · 동작 안내",
+    "sourceUrl": "https://www.nsca.com/certification/tsac-f/essentials-of-tactical-strength-training-and-conditioning-2nd-edition/excerpts/modification-of-exercises-to-allow-injured-individuals-to-continue-training/"
+  },
+  {
+    "name": "머신 체스트 프레스",
+    "asset": "exercise_guides/machine_chest_press.gif",
+    "comment": "앉은 머신에서 손잡이를 앞으로 미는 운동입니다.",
+    "setup": [
+      "등과 골반을 등받이에 대고 발을 안정적으로 놓으세요.",
+      "기종 안내에 따라 손잡이가 가슴 부근에 오도록 좌석을 조절하세요."
+    ],
+    "steps": [
+      "손목을 곧게 두고 손잡이를 앞으로 미세요.",
+      "몸통을 지지하며 편안한 범위까지 팔을 펴세요.",
+      "저항을 통제하며 손잡이를 천천히 돌려보내세요."
+    ],
+    "cautions": [
+      "기종에 따라 손잡이와 시작 범위가 다릅니다.",
+      "등을 떼거나 어깨를 뒤로 과하게 꺾지 마세요.",
+      "통증이 생기면 중단하세요."
+    ],
+    "breathing": "힘을 쓰는 구간에서 내쉬고, 시작 자세로 돌아올 때 들이마시세요. 숨을 오래 참지 마세요.",
+    "sourceName": "ACE · 동작 안내",
+    "sourceUrl": "https://www.acefitness.org/resources/everyone/exercise-library/188/seated-chest-press/"
+  },
+  {
+    "name": "밴드 체스트 프레스",
+    "asset": "exercise_guides/band_chest_press.gif",
+    "comment": "등 뒤에 두른 밴드를 양손으로 앞으로 미는 운동입니다.",
+    "setup": [
+      "손상 없는 밴드를 등 뒤·겨드랑이 아래 높이에 두르세요.",
+      "양끝을 잡고 발을 안정적으로 벌리세요."
+    ],
+    "steps": [
+      "몸통과 손목을 안정시키며 양손을 앞으로 미세요.",
+      "팔을 편안하게 편 상태에서 잠깐 멈추세요.",
+      "밴드가 갑자기 당기지 않게 천천히 돌아오세요."
+    ],
+    "cautions": [
+      "밴드를 목에 두르지 마세요.",
+      "외부 고정점에 연결한 변형과 저항 방향이 다릅니다.",
+      "통증이 생기면 중단하세요."
+    ],
+    "breathing": "힘을 쓰는 구간에서 내쉬고, 시작 자세로 돌아올 때 들이마시세요. 숨을 오래 참지 마세요.",
+    "sourceName": "ACE · 동작 안내",
+    "sourceUrl": "https://www.acefitness.org/getfit/rubrbndwkout.pdf"
+  },
+  {
+    "name": "밴드 숄더 프레스",
+    "asset": "exercise_guides/band_shoulder_press.gif",
+    "comment": "양발로 밴드를 고정하고 머리 위로 미는 운동입니다.",
+    "setup": [
+      "긴 밴드를 양발로 밟고 양끝을 어깨 높이에서 잡으세요.",
+      "밴드가 빠지지 않는지 확인하고 몸통을 안정시키세요."
+    ],
+    "steps": [
+      "손목을 곧게 두고 양손을 위로 미세요.",
+      "허리를 젖히지 않는 편안한 범위에서 팔을 펴세요.",
+      "밴드 저항을 통제하며 어깨 높이로 내려오세요."
+    ],
+    "cautions": [
+      "밴드가 얼굴 쪽으로 튀지 않게 고정을 확인하세요.",
+      "장력이 너무 강하면 가벼운 밴드로 바꾸세요.",
+      "통증이 생기면 중단하세요."
+    ],
+    "breathing": "힘을 쓰는 구간에서 내쉬고, 시작 자세로 돌아올 때 들이마시세요. 숨을 오래 참지 마세요.",
+    "sourceName": "NHS · 동작 안내",
+    "sourceUrl": "https://www.kingstonandrichmond.nhs.uk/patients-and-families/patient-leaflets/home-exercise-programme-falls-prevention"
+  },
+  {
+    "name": "원암 덤벨 로우",
+    "asset": "exercise_guides/one_arm_dumbbell_row.gif",
+    "comment": "한쪽 손의 덤벨을 몸 옆으로 당기는 로우입니다.",
+    "setup": [
+      "한 손과 같은 쪽 무릎을 안정적인 벤치에 지지하세요.",
+      "반대쪽 발은 바닥에 두고 그쪽 손으로 덤벨을 잡으세요."
+    ],
+    "steps": [
+      "등과 골반을 안정시키며 팔꿈치를 뒤로 당기세요.",
+      "덤벨을 몸 옆으로 가까이 가져오세요.",
+      "팔을 천천히 내려 반복한 뒤 반대쪽도 수행하세요."
+    ],
+    "cautions": [
+      "몸통을 비틀어 덤벨을 높이 올리지 마세요.",
+      "어깨를 귀 쪽으로 들썩이거나 허리를 말지 마세요.",
+      "통증이 생기면 중단하세요."
+    ],
+    "breathing": "힘을 쓰는 구간에서 내쉬고, 시작 자세로 돌아올 때 들이마시세요. 숨을 오래 참지 마세요.",
+    "sourceName": "ACE · 동작 안내",
+    "sourceUrl": "https://www.acefitness.org/resources/everyone/exercise-library/126/single-arm-row/"
+  },
+  {
+    "name": "밴드 로우",
+    "asset": "exercise_guides/band_row.gif",
+    "comment": "고정한 밴드를 몸 쪽으로 당기는 로우입니다.",
+    "setup": [
+      "밴드를 몸 앞의 견고한 고정점에 연결하고 고정을 확인하세요.",
+      "양끝을 잡고 밴드가 가볍게 당겨지는 거리에 서세요."
+    ],
+    "steps": [
+      "몸통을 안정시킨 채 팔꿈치를 뒤로 당기세요.",
+      "손을 갈비뼈 양옆으로 가져오세요.",
+      "밴드에 끌려가지 않게 팔을 천천히 펴세요."
+    ],
+    "cautions": [
+      "움직이는 가구나 불안정한 손잡이에 고정하지 마세요.",
+      "몸을 뒤로 젖히는 반동으로 당기지 마세요.",
+      "통증이 생기면 중단하세요."
+    ],
+    "breathing": "힘을 쓰는 구간에서 내쉬고, 시작 자세로 돌아올 때 들이마시세요. 숨을 오래 참지 마세요.",
+    "sourceName": "University of New Mexico · 동작 안내",
+    "sourceUrl": "https://hsc.unm.edu/_media/pdfs/rbhomeworkoutguide2020-3.pdf"
+  },
+  {
+    "name": "시티드 케이블 로우",
+    "asset": "exercise_guides/seated_cable_row.gif",
+    "comment": "앉은 자세에서 케이블 손잡이를 몸 쪽으로 당기는 운동입니다.",
+    "setup": [
+      "발을 지지면에 두고 무릎을 편안하게 굽히세요.",
+      "손잡이를 잡고 등과 골반을 안정시키세요."
+    ],
+    "steps": [
+      "팔꿈치를 몸 가까이 뒤로 당기세요.",
+      "손잡이를 배 앞쪽으로 가져오세요.",
+      "몸통을 흔들지 않고 팔을 천천히 펴세요."
+    ],
+    "cautions": [
+      "허리를 크게 굽혔다 젖혀 무게를 움직이지 마세요.",
+      "손잡이를 몸에 세게 부딪치지 마세요.",
+      "통증이 생기면 중단하세요."
+    ],
+    "breathing": "힘을 쓰는 구간에서 내쉬고, 시작 자세로 돌아올 때 들이마시세요. 숨을 오래 참지 마세요.",
+    "sourceName": "ACE · 동작 안내",
+    "sourceUrl": "https://www.acefitness.org/resources/everyone/exercise-library/48/seated-row/"
+  },
+  {
+    "name": "인버티드 로우",
+    "asset": "exercise_guides/inverted_row.gif",
+    "comment": "고정된 바 아래에 매달려 가슴을 당겨 올리는 운동입니다.",
+    "setup": [
+      "빠지거나 굴러가지 않게 고정된 바를 잡으세요.",
+      "바 아래에서 뒤꿈치를 지지하고 몸통을 안정적으로 이어 주세요."
+    ],
+    "steps": [
+      "팔꿈치를 굽혀 가슴을 바 쪽으로 당기세요.",
+      "골반이 처지지 않는 범위에서 잠깐 멈추세요.",
+      "팔을 천천히 펴 시작 위치로 돌아가세요."
+    ],
+    "cautions": [
+      "바의 고정 상태를 체중을 싣기 전에 확인하세요.",
+      "목을 앞으로 빼거나 골반을 먼저 들어 올리지 마세요.",
+      "통증이 생기면 중단하세요."
+    ],
+    "breathing": "힘을 쓰는 구간에서 내쉬고, 시작 자세로 돌아올 때 들이마시세요. 숨을 오래 참지 마세요.",
+    "sourceName": "ACE · 동작 안내",
+    "sourceUrl": "https://www.acefitness.org/continuing-education/certified/december-2018/7138/ace-sponsored-research-what-is-the-best-back-exercise/"
+  },
+  {
+    "name": "풀업",
+    "asset": "exercise_guides/pullup.gif",
+    "comment": "철봉을 위에서 잡고 몸을 당겨 올리는 운동입니다.",
+    "setup": [
+      "체중을 견디도록 고정된 철봉을 손등이 얼굴 쪽을 향하게 잡으세요.",
+      "몸을 흔들지 않고 매달려 몸통을 안정시키세요."
+    ],
+    "steps": [
+      "팔꿈치를 아래로 당기며 몸을 올리세요.",
+      "목을 과하게 내밀지 않고 올라갈 수 있는 범위에서 멈추세요.",
+      "몸을 통제하며 천천히 내려오세요."
+    ],
+    "cautions": [
+      "다리를 차거나 몸을 흔드는 반동을 쓰지 마세요.",
+      "손바닥이 얼굴을 향하는 친업과 다른 그립입니다.",
+      "통증이 생기면 중단하세요."
+    ],
+    "breathing": "힘을 쓰는 구간에서 내쉬고, 시작 자세로 돌아올 때 들이마시세요. 숨을 오래 참지 마세요.",
+    "sourceName": "NASM · 동작 안내",
+    "sourceUrl": "https://www.nasm.org/resource-center/exercise-library/pull-up"
+  },
+  {
+    "name": "케이블 페이스 풀",
+    "asset": "exercise_guides/face_pull.gif",
+    "comment": "로프 손잡이를 얼굴 쪽으로 당기는 케이블 운동입니다.",
+    "setup": [
+      "로프 케이블을 눈높이 부근에 맞추세요.",
+      "양끝을 잡고 한 걸음 물러서 몸통을 안정시키세요."
+    ],
+    "steps": [
+      "팔꿈치를 뒤로 보내며 로프를 얼굴 쪽으로 당기세요.",
+      "양손이 얼굴 양옆으로 나뉘도록 움직이세요.",
+      "저항을 통제하며 팔을 천천히 펴세요."
+    ],
+    "cautions": [
+      "어깨를 과하게 으쓱하거나 허리를 젖히지 마세요.",
+      "얼굴에 로프나 손잡이가 부딪치지 않게 하세요.",
+      "통증이 생기면 중단하세요."
+    ],
+    "breathing": "힘을 쓰는 구간에서 내쉬고, 시작 자세로 돌아올 때 들이마시세요. 숨을 오래 참지 마세요.",
+    "sourceName": "NASM · 동작 안내",
+    "sourceUrl": "https://www.nasm.org/resource-center/exercise-library/face-pull"
+  },
+  {
+    "name": "밴드 리버스 플라이",
+    "asset": "exercise_guides/band_reverse_fly.gif",
+    "comment": "앞쪽에 고정한 밴드를 양옆으로 벌려 당기는 운동입니다.",
+    "setup": [
+      "밴드를 몸 앞의 견고한 고정점에 연결하세요.",
+      "양손으로 잡고 팔꿈치를 편안하게 굽힌 채 몸통을 세우세요."
+    ],
+    "steps": [
+      "팔을 양옆으로 벌리며 밴드를 당기세요.",
+      "허리와 어깨가 안정되는 편안한 범위에서 멈추세요.",
+      "밴드에 끌려가지 않게 천천히 돌아오세요."
+    ],
+    "cautions": [
+      "손에 든 밴드 양끝만 벌리는 풀어파트와 구분하세요.",
+      "고정점이 빠지거나 밴드가 얼굴로 튀지 않게 확인하세요.",
+      "통증이 생기면 중단하세요."
+    ],
+    "breathing": "힘을 쓰는 구간에서 내쉬고, 시작 자세로 돌아올 때 들이마시세요. 숨을 오래 참지 마세요.",
+    "sourceName": "University of New Mexico · 동작 안내",
+    "sourceUrl": "https://hsc.unm.edu/_media/pdfs/rbhomeworkoutguide2020-3.pdf"
+  },
+  {
+    "name": "I-Y-T 레이즈",
+    "asset": "exercise_guides/iyt_raise.gif",
+    "comment": "벤치에 엎드려 팔을 I·Y·T 방향으로 차례로 올리는 운동입니다.",
+    "setup": [
+      "벤치에 상체를 지지하고 목을 편안하게 두세요.",
+      "맨손으로 팔을 편안하게 내려놓으세요."
+    ],
+    "steps": [
+      "팔을 머리 위 I 방향으로 올린 뒤 천천히 내리세요.",
+      "팔을 사선 Y 방향으로 올린 뒤 천천히 내리세요.",
+      "팔을 옆 T 방향으로 올린 뒤 천천히 내리세요."
+    ],
+    "cautions": [
+      "각 방향에서 팔을 천천히 올리고 내리며 반동을 쓰지 마세요.",
+      "팔 높이를 늘리기 위해 허리를 젖히거나 어깨를 으쓱하지 마세요.",
+      "통증이 생기면 중단하세요."
+    ],
+    "breathing": "힘을 쓰는 구간에서 내쉬고, 시작 자세로 돌아올 때 들이마시세요. 숨을 오래 참지 마세요.",
+    "sourceName": "ACE · 동작 안내",
+    "sourceUrl": "https://www.acefitness.org/continuing-education/certified/december-2018/7138/ace-sponsored-research-what-is-the-best-back-exercise/"
+  },
+  {
+    "name": "케이블 트라이셉스 푸시다운",
+    "asset": "exercise_guides/triceps_pushdown.gif",
+    "comment": "높은 케이블의 로프를 아래로 밀어 팔꿈치를 펴는 운동입니다.",
+    "setup": [
+      "케이블을 높은 위치에 두고 로프 양끝을 잡으세요.",
+      "위팔을 몸 옆에 두고 몸통과 손목을 안정시키세요."
+    ],
+    "steps": [
+      "위팔 위치를 유지하며 팔꿈치를 펴 로프를 내리세요.",
+      "팔을 편안하게 편 상태에서 잠깐 멈추세요.",
+      "저항을 통제하며 팔꿈치를 천천히 굽히세요."
+    ],
+    "cautions": [
+      "몸 전체의 무게로 로프를 누르지 마세요.",
+      "팔꿈치를 앞뒤로 크게 움직이거나 손목을 꺾지 마세요.",
+      "통증이 생기면 중단하세요."
+    ],
+    "breathing": "힘을 쓰는 구간에서 내쉬고, 시작 자세로 돌아올 때 들이마시세요. 숨을 오래 참지 마세요.",
+    "sourceName": "ACE · 동작 안내",
+    "sourceUrl": "https://www.acefitness.org/resources/everyone/exercise-library/3/triceps-pressdown/"
+  },
+  {
+    "name": "플랭크",
+    "asset": "exercise_guides/forearm-plank.gif",
+    "comment": "전완과 발끝으로 몸을 지지하는 버티기 운동입니다.",
+    "setup": [
+      "팔꿈치를 어깨 아래에 두고 전완을 바닥에 놓으세요.",
+      "다리를 뒤로 펴 발끝으로 지지하세요."
+    ],
+    "steps": [
+      "복부에 힘을 주고 몸통과 골반을 들어 올리세요.",
+      "머리부터 발까지 정렬을 유지하며 편안하게 호흡하세요.",
+      "자세가 무너지기 전에 무릎을 내려 마무리하세요."
+    ],
+    "cautions": [
+      "허리가 처지거나 엉덩이가 과하게 올라가지 않게 하세요.",
+      "버티는 시간보다 안정적인 자세를 먼저 유지하세요.",
+      "통증이 생기면 중단하세요."
+    ],
+    "breathing": "유지하거나 걷는 동안 숨을 참지 말고 편안하게 호흡하세요.",
+    "sourceName": "ACE · 동작 안내",
+    "sourceUrl": "https://www.acefitness.org/resources/everyone/exercise-library/32/front-plank/"
+  },
+  {
+    "name": "무릎 플랭크",
+    "asset": "exercise_guides/knee_plank.gif",
+    "comment": "무릎과 전완으로 지지하는 플랭크입니다.",
+    "setup": [
+      "팔꿈치를 어깨 아래에 두고 무릎을 매트에 대세요.",
+      "목과 등을 자연스럽게 이어 주세요."
+    ],
+    "steps": [
+      "복부에 힘을 주고 몸통을 들어 올리세요.",
+      "무릎부터 머리까지 정렬을 유지하며 호흡하세요.",
+      "자세가 무너지기 전에 몸을 천천히 내려놓으세요."
+    ],
+    "cautions": [
+      "허리를 꺾거나 엉덩이를 뒤로 크게 접지 마세요.",
+      "무릎에 압박이 심하면 매트 두께를 조절하세요.",
+      "통증이 생기면 중단하세요."
+    ],
+    "breathing": "유지하거나 걷는 동안 숨을 참지 말고 편안하게 호흡하세요.",
+    "sourceName": "Mayo Clinic · 동작 안내",
+    "sourceUrl": "https://www.mayoclinic.org/healthy-lifestyle/fitness/in-depth/core-strength/art-20546851"
+  },
+  {
+    "name": "사이드 플랭크",
+    "asset": "exercise_guides/side_plank.gif",
+    "comment": "한쪽 전완과 발로 몸을 옆으로 지지하는 운동입니다.",
+    "setup": [
+      "옆으로 누워 팔꿈치를 어깨 아래에 두세요.",
+      "다리를 펴고 발을 포개거나 앞뒤로 놓아 균형을 잡으세요."
+    ],
+    "steps": [
+      "골반을 들어 몸통과 다리를 자연스럽게 이어 주세요.",
+      "몸통이 앞뒤로 돌아가지 않게 유지하며 호흡하세요.",
+      "골반을 천천히 내리고 반대쪽도 수행하세요."
+    ],
+    "cautions": [
+      "지지하는 어깨로 몸이 꺼지지 않게 하세요.",
+      "허리나 어깨가 아프면 중단하세요.",
+      "통증이 생기면 중단하세요."
+    ],
+    "breathing": "유지하거나 걷는 동안 숨을 참지 말고 편안하게 호흡하세요.",
+    "sourceName": "NASM · 동작 안내",
+    "sourceUrl": "https://www.nasm.org/resource-center/exercise-library/side-plank"
+  },
+  {
+    "name": "무릎 사이드 플랭크",
+    "asset": "exercise_guides/knee_side_plank.gif",
+    "comment": "무릎을 굽혀 지지하는 사이드 플랭크입니다.",
+    "setup": [
+      "옆으로 누워 무릎을 굽히고 팔꿈치를 어깨 아래에 두세요.",
+      "전완과 아래쪽 무릎으로 바닥을 지지하세요."
+    ],
+    "steps": [
+      "골반을 들어 무릎부터 머리까지 몸통을 이어 주세요.",
+      "몸이 돌아가지 않게 유지하며 편안하게 호흡하세요.",
+      "골반을 천천히 내리고 반대쪽도 수행하세요."
+    ],
+    "cautions": [
+      "어깨를 귀 쪽으로 움츠리거나 지지팔에 몸을 떨어뜨리지 마세요.",
+      "일반 사이드 플랭크와 무릎 지지점을 구분하세요.",
+      "통증이 생기면 중단하세요."
+    ],
+    "breathing": "유지하거나 걷는 동안 숨을 참지 말고 편안하게 호흡하세요.",
+    "sourceName": "Wrightington, Wigan and Leigh NHS · 동작 안내",
+    "sourceUrl": "https://www.wwl.nhs.uk/media/.leaflets/6214d2b8e08b32.04972952.pdf"
+  },
+  {
+    "name": "데드버그",
+    "asset": "exercise_guides/dead_bug.gif",
+    "comment": "누워서 반대쪽 팔과 다리를 번갈아 뻗는 운동입니다.",
+    "setup": [
+      "등을 대고 누워 팔을 천장으로 뻗으세요.",
+      "고관절과 무릎을 굽혀 다리를 들고 몸통을 안정시키세요."
+    ],
+    "steps": [
+      "한쪽 팔과 반대쪽 다리를 천천히 멀리 뻗으세요.",
+      "허리와 골반이 움직이기 전의 범위에서 멈추세요.",
+      "시작 위치로 돌아온 뒤 반대쪽도 반복하세요."
+    ],
+    "cautions": [
+      "팔·다리를 바닥에 닿게 하는 것이 목표는 아닙니다.",
+      "허리가 과하게 뜨면 뻗는 범위를 줄이세요.",
+      "통증이 생기면 중단하세요."
+    ],
+    "breathing": "힘을 쓰는 구간에서 내쉬고, 시작 자세로 돌아올 때 들이마시세요. 숨을 오래 참지 마세요.",
+    "sourceName": "NASM · 동작 안내",
+    "sourceUrl": "https://www.nasm.org/resource-center/exercise-library/dead-bug"
+  },
+  {
+    "name": "버드독",
+    "asset": "exercise_guides/bird_dog.gif",
+    "comment": "네발기기에서 반대쪽 팔과 다리를 뻗는 운동입니다.",
+    "setup": [
+      "손은 어깨 아래, 무릎은 골반 아래에 놓으세요.",
+      "목과 등을 자연스럽게 이어 복부에 힘을 주세요."
+    ],
+    "steps": [
+      "한쪽 팔과 반대쪽 다리를 천천히 뻗으세요.",
+      "골반이 기울거나 몸통이 돌아가지 않게 유지하세요.",
+      "천천히 돌아온 뒤 반대쪽도 반복하세요."
+    ],
+    "cautions": [
+      "팔·다리를 높이 들어 허리를 꺾지 마세요.",
+      "균형이 어렵다면 팔이나 다리 하나씩 먼저 움직이세요.",
+      "통증이 생기면 중단하세요."
+    ],
+    "breathing": "힘을 쓰는 구간에서 내쉬고, 시작 자세로 돌아올 때 들이마시세요. 숨을 오래 참지 마세요.",
+    "sourceName": "Mayo Clinic · 동작 안내",
+    "sourceUrl": "https://www.mayoclinic.org/healthy-lifestyle/fitness/in-depth/core-strength/art-20546851"
+  },
+  {
+    "name": "팔로프 프레스",
+    "asset": "exercise_guides/pallof_press.gif",
+    "comment": "옆에서 당기는 저항에 몸통이 돌아가지 않게 버티는 운동입니다.",
+    "setup": [
+      "밴드를 몸 옆의 가슴높이 고정점에 연결하세요.",
+      "양손으로 잡아 가슴 앞에 두고 발을 안정적으로 벌리세요."
+    ],
+    "steps": [
+      "몸통을 정면으로 유지하며 양손을 앞으로 미세요.",
+      "몸이 고정점 쪽으로 돌아가지 않게 잠깐 버티세요.",
+      "양손을 가슴 앞으로 돌려놓고 반대 방향도 수행하세요."
+    ],
+    "cautions": [
+      "팔을 뻗는 동안 몸통을 일부러 회전하지 마세요.",
+      "밴드 고정이 풀리지 않는지 먼저 확인하세요.",
+      "통증이 생기면 중단하세요."
+    ],
+    "breathing": "힘을 쓰는 구간에서 내쉬고, 시작 자세로 돌아올 때 들이마시세요. 숨을 오래 참지 마세요.",
+    "sourceName": "ACE · 동작 안내",
+    "sourceUrl": "https://www.acefitness.org/resources/everyone/exercise-library/332/standing-anti-rotation-press/"
+  },
+  {
+    "name": "파머스 캐리",
+    "asset": "exercise_guides/farmer_carry.gif",
+    "comment": "양손에 덤벨을 들고 몸통을 안정시켜 걷는 운동입니다.",
+    "setup": [
+      "주변 장애물을 치우고 짧고 평평한 통로를 확보하세요.",
+      "양손에 통제할 수 있는 덤벨을 들고 곧게 서세요."
+    ],
+    "steps": [
+      "작고 일정한 보폭으로 천천히 걸으세요.",
+      "몸통이 흔들리지 않게 유지하며 계속 호흡하세요.",
+      "멈춘 뒤 고관절과 무릎을 굽혀 덤벨을 안전하게 내려놓으세요."
+    ],
+    "cautions": [
+      "어깨를 과하게 으쓱하거나 덤벨을 흔들지 마세요.",
+      "손에서 미끄러질 정도로 오래 버티지 마세요.",
+      "통증이 생기면 중단하세요."
+    ],
+    "breathing": "유지하거나 걷는 동안 숨을 참지 말고 편안하게 호흡하세요.",
+    "sourceName": "ACE · 동작 안내",
+    "sourceUrl": "https://www.acefitness.org/resources/everyone/exercise-library/359/farmer-s-carry/"
+  },
+  {
+    "name": "수트케이스 캐리",
+    "asset": "exercise_guides/suitcase_carry.gif",
+    "comment": "한 손에 덤벨을 들고 몸통이 기울지 않게 걷는 운동입니다.",
+    "setup": [
+      "주변 장애물을 치우고 평평한 통로를 확보하세요.",
+      "한 손에 덤벨을 들고 양쪽 어깨와 골반을 안정시키세요."
+    ],
+    "steps": [
+      "몸을 한쪽으로 기울이지 않고 천천히 걸으세요.",
+      "계속 호흡하며 덤벨을 몸 옆에 안정적으로 유지하세요.",
+      "안전하게 내려놓고 반대 손으로도 수행하세요."
+    ],
+    "cautions": [
+      "무게를 상쇄하려고 반대쪽으로 과하게 기울지 마세요.",
+      "그립이 풀리기 전에 멈추세요.",
+      "통증이 생기면 중단하세요."
+    ],
+    "breathing": "유지하거나 걷는 동안 숨을 참지 말고 편안하게 호흡하세요.",
+    "sourceName": "ACE · 동작 안내",
+    "sourceUrl": "https://www.acefitness.org/resources/everyone/exercise-library/358/suitcase-carry/"
+  },
+  {
+    "name": "싱글레그 애브도미널 프레스",
+    "asset": "exercise_guides/single_leg_abdominal_press.gif",
+    "comment": "같은 쪽 손과 무릎을 서로 밀며 버티는 운동입니다.",
+    "setup": [
+      "바로 누워 한쪽 고관절과 무릎을 굽혀 다리를 드세요.",
+      "같은 쪽 손바닥을 그 무릎 위에 대고 몸통을 안정시키세요."
+    ],
+    "steps": [
+      "손은 무릎을 밀고 무릎은 손 쪽으로 저항하세요.",
+      "팔과 다리가 실제로 크게 움직이지 않게 유지하며 호흡하세요.",
+      "힘을 천천히 풀고 반대쪽도 수행하세요."
+    ],
+    "cautions": [
+      "숨을 참거나 허리를 과하게 눌러 비틀지 마세요.",
+      "반대 손으로 미는 변형과 구분하세요.",
+      "통증이 생기면 중단하세요."
+    ],
+    "breathing": "유지하거나 걷는 동안 숨을 참지 말고 편안하게 호흡하세요.",
+    "sourceName": "Mayo Clinic · 동작 안내",
+    "sourceUrl": "https://www.mayoclinic.org/healthy-lifestyle/fitness/in-depth/core-strength/art-20546851"
   },
   {
     "name": "스탠딩 사이드 크런치",
     "asset": "exercise_guides/standing-side-crunch.gif",
-    "comment": "서서 같은 쪽 팔꿈치와 무릎을 가까이 모으며 옆구리를 사용하는 운동입니다. 목을 당기지 말고 옆구리를 천천히 접으세요.",
+    "comment": "서서 한쪽 무릎과 같은 쪽 팔꿈치를 가까이 하는 운동입니다.",
     "setup": [
-      "발을 골반 너비로 벌리고 서서 복부에 힘을 주세요.",
-      "손끝을 귀 옆에 가볍게 대고 팔꿈치를 옆으로 열어 두세요."
+      "발을 안정적으로 벌리고 손끝을 귀 옆에 가볍게 두세요.",
+      "목을 당기지 말고 몸통을 세우세요."
     ],
     "steps": [
-      "한쪽 무릎을 몸 옆으로 들어 올리며 몸통을 같은 쪽으로 천천히 기울이세요.",
-      "같은 쪽 팔꿈치와 무릎을 가까이 모으세요. 서로 닿게 하려고 무리하지 마세요.",
-      "몸통을 세우고 발을 천천히 내려 시작 자세로 돌아온 뒤 반대쪽도 진행하세요."
+      "한쪽 무릎을 옆으로 들어 올리세요.",
+      "몸통을 그쪽으로 가볍게 굽혀 무릎과 팔꿈치를 가까이 하세요.",
+      "균형을 잡으며 돌아온 뒤 반대쪽도 반복하세요."
     ],
     "cautions": [
-      "손으로 머리나 목을 당기지 마세요. 어깨에 힘을 빼고 시선을 앞에 두세요.",
-      "몸통을 앞으로 숙이거나 비틀지 말고 같은 쪽 옆구리를 접으세요.",
-      "지지하는 발을 바닥에 두고 반동을 줄이세요. 균형을 잃거나 통증이 생기면 중단하세요.",
-      "빨강은 옆구리의 외복사근, 주황은 복직근과 다리를 드는 쪽의 참여 부위입니다. 내복사근·요방형근·장요근 등 깊은 근육은 생략했습니다. 정확히 같은 동작의 직접 연구는 부족해 기능 해부학을 적용했으며 색은 자극 강도가 아닙니다."
+      "팔꿈치와 무릎을 반드시 닿게 만들 필요는 없습니다.",
+      "목을 당기거나 몸통을 앞으로 비틀지 마세요.",
+      "통증이 생기면 중단하세요."
     ],
-    "breathing": "옆구리를 접으며 무릎을 올릴 때 내쉬고, 시작 자세로 돌아올 때 들이마시세요. 숨을 참지 마세요.",
-    "sourceName": "Physitrack · Side crunch in standing with knee lifts",
+    "breathing": "힘을 쓰는 구간에서 내쉬고, 시작 자세로 돌아올 때 들이마시세요. 숨을 오래 참지 마세요.",
+    "sourceName": "Physitrack · 동작 안내",
     "sourceUrl": "https://na.physitrack.com/home-exercise-video/side-crunch-in-standing-with-knee-lifts"
+  },
+  {
+    "name": "스탠딩 니업",
+    "asset": "exercise_guides/standing-knee-up.gif",
+    "comment": "서서 무릎을 번갈아 들어 올리는 운동입니다.",
+    "setup": [
+      "발을 골반 너비로 두고 몸통을 세우세요.",
+      "균형이 어렵다면 옆에 안정적인 지지물을 두세요."
+    ],
+    "steps": [
+      "한쪽 무릎을 앞쪽으로 천천히 들어 올리세요.",
+      "몸통이 뒤로 젖혀지지 않는 범위에서 멈추세요.",
+      "발을 내려놓고 반대쪽 무릎을 올리세요."
+    ],
+    "cautions": [
+      "높이를 늘리려고 뒤로 기대지 마세요.",
+      "뛰거나 발을 세게 구르는 동작으로 바꾸지 마세요.",
+      "통증이 생기면 중단하세요."
+    ],
+    "breathing": "힘을 쓰는 구간에서 내쉬고, 시작 자세로 돌아올 때 들이마시세요. 숨을 오래 참지 마세요.",
+    "sourceName": "Physitrack · 동작 안내",
+    "sourceUrl": "https://ca.physitrack.com/home-exercise-video/standing-marching"
+  },
+  {
+    "name": "행잉 레그 레이즈",
+    "asset": "exercise_guides/hanging_leg_raise.gif",
+    "comment": "철봉에 매달려 두 다리를 앞쪽으로 들어 올리는 운동입니다.",
+    "setup": [
+      "고정된 철봉을 잡고 몸을 흔들지 않고 매달리세요.",
+      "그립과 어깨로 몸을 안정적으로 지지할 수 있는지 확인하세요."
+    ],
+    "steps": [
+      "두 다리를 나란히 유지하며 앞쪽으로 들어 올리세요.",
+      "몸이 흔들리지 않고 통제되는 범위에서 멈추세요.",
+      "반동 없이 다리를 천천히 내려 반복하세요."
+    ],
+    "cautions": [
+      "다리를 차거나 허리를 크게 젖히지 마세요.",
+      "그립이 약해지거나 어깨가 아프면 바로 안전하게 내려오세요.",
+      "통증이 생기면 중단하세요."
+    ],
+    "breathing": "힘을 쓰는 구간에서 내쉬고, 시작 자세로 돌아올 때 들이마시세요. 숨을 오래 참지 마세요.",
+    "sourceName": "ACE · 동작 안내",
+    "sourceUrl": "https://www.acefitness.org/resources/pros/expert-articles/5452/6-exercises-for-a-stronger-core/"
   },
   {
     "name": "크런치",
     "asset": "exercise_guides/crunch.gif",
-    "comment": "복부에 힘을 주어 상체를 작게 말아 올리는 운동입니다.",
+    "comment": "등 위쪽을 작게 말아 올리는 복부 운동입니다.",
     "setup": [
-      "매트에 등을 대고 누워 무릎을 굽히고 두 발바닥을 바닥에 두세요.",
-      "손끝을 귀 옆에 가볍게 대고 팔꿈치를 열어 두세요. 목과 어깨의 힘을 빼세요."
+      "누워 무릎을 굽히고 발바닥을 바닥에 두세요.",
+      "손끝은 귀 옆에 가볍게 두거나 팔을 가슴 앞에 모으세요."
     ],
     "steps": [
-      "복부에 힘을 주며 갈비뼈를 골반 쪽으로 가까이 가져가듯 상체를 천천히 말아 올리세요.",
-      "상부 등이 매트에서 살짝 들리면 잠시 멈추세요. 발과 골반은 바닥에 두세요.",
-      "상체를 천천히 내려 시작 자세로 돌아오세요."
+      "목을 편안히 유지하며 갈비뼈를 골반 쪽으로 가까이 하세요.",
+      "등 위쪽이 작게 들리는 범위에서 멈추세요.",
+      "상체를 천천히 바닥으로 내려놓으세요."
     ],
     "cautions": [
-      "손으로 머리나 목을 당기지 마세요.",
-      "윗몸일으키기처럼 상체를 끝까지 세우거나 반동을 쓰지 마세요.",
-      "발과 골반을 바닥에 두세요. 목이나 허리에 통증이 생기면 중단하세요.",
-      "빨강은 복직근, 주황은 옆구리 복사근 부위입니다. 깊은 내복사근도 참여하지만 그림에서는 생략했습니다. 위·아래 복근을 따로 고립시킨다는 뜻이 아니며 색은 자극 강도나 순위가 아닙니다."
+      "손으로 머리나 목을 끌어올리지 마세요.",
+      "윗몸일으키기처럼 완전히 앉지 마세요.",
+      "통증이 생기면 중단하세요."
     ],
-    "breathing": "상체를 올릴 때 내쉬고, 내려올 때 들이마시세요. 숨을 참지 마세요.",
-    "sourceName": "ACE · Crunch",
+    "breathing": "힘을 쓰는 구간에서 내쉬고, 시작 자세로 돌아올 때 들이마시세요. 숨을 오래 참지 마세요.",
+    "sourceName": "ACE · 동작 안내",
     "sourceUrl": "https://www.acefitness.org/resources/everyone/exercise-library/52/crunch/"
   },
   {
     "name": "레그 레이즈",
     "asset": "exercise_guides/lying-leg-raise.gif",
-    "comment": "몸통을 안정시킨 채 두 다리를 함께 올리고 내리는 운동입니다.",
+    "comment": "누워서 두 다리를 함께 올렸다 내리는 운동입니다.",
     "setup": [
-      "매트에 등을 대고 누워 머리와 어깨를 편하게 내려놓으세요.",
-      "팔은 몸 옆에 두고 손바닥을 바닥에 대세요. 두 다리를 나란히 펴고 복부에 힘을 주세요."
+      "머리와 어깨를 바닥에 두고 등을 대고 누우세요.",
+      "팔을 몸 옆에 놓고 두 다리를 나란히 펴세요."
     ],
     "steps": [
-      "머리와 몸통을 바닥에 둔 채 두 다리를 함께 천천히 들어 올리세요.",
-      "골반을 안정적으로 유지할 수 있는 높이까지 올리세요.",
-      "허리가 과하게 뜨지 않는 범위까지 두 다리를 함께 천천히 내려 반복하세요."
+      "몸통을 안정시킨 채 두 다리를 함께 들어 올리세요.",
+      "골반을 안정적으로 유지할 수 있는 높이에서 멈추세요.",
+      "허리가 과하게 뜨기 전의 범위까지 천천히 내리세요."
     ],
     "cautions": [
-      "다리를 낮출 때 허리가 뜨거나 몸통이 흔들리면 내려가는 범위를 줄이세요.",
-      "다리를 번갈아 들거나 무릎을 가슴 쪽으로 접지 마세요. 두 다리를 함께 움직이세요.",
-      "반동으로 다리를 던지지 마세요. 허리나 고관절에 통증이 생기면 중단하세요.",
-      "빨강은 허벅지 앞쪽 대퇴직근, 주황은 몸통을 안정시키는 복근 부위입니다. 다리를 드는 주요 근육인 장요근은 깊은 곳에 있어 생략했습니다. 하복부만 고립하는 운동이 아니며, 색은 자극 강도가 아닙니다."
+      "다리를 낮게 내리는 것보다 몸통 조절이 우선입니다.",
+      "다리를 번갈아 차거나 반동으로 던지지 마세요.",
+      "통증이 생기면 중단하세요."
     ],
-    "breathing": "다리를 올릴 때 내쉬고, 내릴 때 들이마시세요. 숨을 참지 마세요.",
-    "sourceName": "Norfolk and Suffolk NHS · Double leg raises",
+    "breathing": "힘을 쓰는 구간에서 내쉬고, 시작 자세로 돌아올 때 들이마시세요. 숨을 오래 참지 마세요.",
+    "sourceName": "NHS · 동작 안내",
     "sourceUrl": "https://www.nsft.nhs.uk/help-for-your-body-and-mind/"
   },
   {
-    "name": "굿모닝",
-    "asset": "exercise_guides/good-morning.gif",
-    "comment": "엉덩이를 뒤로 보내며 허벅지 뒤쪽과 엉덩이를 사용하는 맨몸 운동입니다. 등을 굽히기보다 고관절을 접는 데 집중하세요.",
+    "name": "시저 크로스",
+    "asset": "exercise_guides/scissor_cross.gif",
+    "comment": "누운 자세에서 두 다리를 좌우로 벌렸다 교차하는 운동입니다.",
     "setup": [
-      "발을 골반 너비로 벌리고 서서 두 팔을 가슴 앞에 교차하세요.",
-      "무릎을 살짝 굽히고 복부에 힘을 주세요. 머리와 몸통을 자연스럽게 일직선으로 두세요."
+      "매트에 누워 턱을 가볍게 당기고 머리와 어깨를 들어 배꼽 쪽을 보세요.",
+      "허리가 과하게 뜨지 않는 높이에서 두 다리를 뻗으세요."
     ],
     "steps": [
-      "무릎의 굽힘을 크게 바꾸지 않고 엉덩이를 뒤로 보내며 상체를 천천히 숙이세요.",
-      "등을 둥글게 말지 않고 허벅지 뒤쪽이 당기는 범위까지만 고관절을 접으세요.",
-      "발바닥으로 바닥을 누르며 엉덩이를 앞으로 가져와 똑바로 서세요."
+      "무릎을 거의 편 상태로 두 다리를 옆으로 조금 벌리세요.",
+      "한쪽 다리가 위로 오도록 두 다리를 수평으로 교차하세요.",
+      "다시 벌린 뒤 반대쪽 다리가 위로 오도록 천천히 반복하세요."
     ],
     "cautions": [
-      "스쿼트처럼 무릎을 깊게 굽혀 앉지 마세요. 엉덩이를 뒤로 보내세요.",
-      "고개를 들어 앞을 보려고 목을 꺾거나, 일어선 뒤 허리를 뒤로 젖히지 마세요.",
-      "발바닥을 바닥에 두고 균형을 유지하세요. 허리나 허벅지 뒤쪽에 통증이 생기면 중단하세요.",
-      "그림의 빨강은 허벅지 뒤쪽, 주황은 엉덩이와 척추기립근을 구분합니다. 바지 위 색은 옷 아래 근육의 위치를 나타냅니다. 색은 역할 구분이며 자극 강도나 순위가 아닙니다."
+      "상하로 차는 플러터 킥과 다른 동작입니다.",
+      "허리가 뜨거나 목이 긴장되면 다리 높이와 범위를 조절하세요.",
+      "통증이 생기면 중단하세요."
     ],
-    "breathing": "상체를 숙일 때 들이마시고, 일어설 때 내쉬세요. 숨을 참지 마세요.",
-    "sourceName": "NSCA · Standing Good Morning (맨몸으로 적용)",
-    "sourceUrl": "https://www.nsca.com/education/articles/nsca-coach/exercise-progressions-for-resuming-strength-training-following-posterior-chain-muscle-injury/"
+    "breathing": "힘을 쓰는 구간에서 내쉬고, 시작 자세로 돌아올 때 들이마시세요. 숨을 오래 참지 마세요.",
+    "sourceName": "Physitrack · 동작 안내",
+    "sourceUrl": "https://ie.physitrack.com/home-exercise-video/trunk-flexion-supine-scissors-exercise"
   },
   {
-    "name": "푸쉬업",
-    "asset": "exercise_guides/push-up.gif",
-    "comment": "손바닥과 발끝으로 몸을 지지하며 가슴과 팔 뒤쪽을 사용하는 운동입니다. 가슴과 골반을 함께 움직이세요.",
+    "name": "리버스 크런치",
+    "asset": "exercise_guides/reverse_crunch.gif",
+    "comment": "무릎을 굽힌 채 골반을 작게 말아 올리는 운동입니다.",
     "setup": [
-      "손을 어깨 너비보다 조금 넓게 바닥에 놓고 다리를 뒤로 펴 발끝으로 지지하세요.",
-      "복부와 엉덩이에 힘을 주어 머리부터 발뒤꿈치까지 길게 정렬하고 시선은 바닥에 두세요."
+      "등을 대고 누워 고관절과 무릎을 편안히 굽히세요.",
+      "팔을 몸 옆에 놓고 머리와 어깨를 바닥에 두세요."
     ],
     "steps": [
-      "팔꿈치를 몸통에서 약 45도 방향으로 굽히며 가슴과 골반을 함께 낮추세요.",
-      "몸통 정렬을 유지할 수 있는 범위에서 가슴을 바닥 가까이 내리세요.",
-      "손바닥으로 바닥을 밀며 몸 전체를 함께 올려 시작 자세로 돌아오세요."
+      "복부를 수축하며 골반을 가슴 쪽으로 작게 말아 올리세요.",
+      "다리를 던지지 않고 꼬리뼈가 살짝 들리는 범위에서 멈추세요.",
+      "골반을 천천히 바닥으로 돌려놓으세요."
     ],
     "cautions": [
-      "허리가 처지거나 엉덩이만 먼저 올라가지 않도록 복부에 힘을 유지하세요.",
-      "팔꿈치를 어깨 옆으로 과하게 벌리거나 목을 앞으로 내밀지 마세요.",
-      "자세를 유지하기 어렵다면 내려가는 범위를 줄이세요. 손목이나 어깨에 통증이 생기면 중단하세요.",
-      "그림의 빨강은 가슴과 팔 뒤쪽, 주황은 앞쪽 어깨와 전거근을 구분합니다. 몸통을 지지하는 근육도 함께 사용되며, 색은 모든 근육의 활동이나 자극 강도를 나타내지 않습니다."
+      "무릎을 얼굴 쪽으로 세게 던지지 마세요.",
+      "허리를 크게 굴려 목까지 체중을 싣지 마세요.",
+      "통증이 생기면 중단하세요."
     ],
-    "breathing": "몸을 낮출 때 들이마시고, 바닥을 밀어 올라올 때 내쉬세요. 숨을 참지 마세요.",
-    "sourceName": "NASM · Push-Up",
-    "sourceUrl": "https://www.nasm.org/resource-center/exercise-library/push-up"
+    "breathing": "힘을 쓰는 구간에서 내쉬고, 시작 자세로 돌아올 때 들이마시세요. 숨을 오래 참지 마세요.",
+    "sourceName": "ACE · 동작 안내",
+    "sourceUrl": "https://www.acefitness.org/getfit/studies/bestworstabexercises.pdf"
   },
   {
-    "name": "프런트 레이즈",
-    "asset": "exercise_guides/front-raise.gif",
-    "comment": "덤벨을 몸 앞으로 들어 올려 어깨 앞쪽을 사용하는 운동입니다. 몸통의 반동 없이 조절할 수 있는 가벼운 무게로 시작하세요.",
+    "name": "바이시클 크런치",
+    "asset": "exercise_guides/bicycle_crunch.gif",
+    "comment": "누워서 반대쪽 팔꿈치와 무릎을 번갈아 가까이 하는 운동입니다.",
     "setup": [
-      "발을 골반 너비로 벌리고 양손에 덤벨을 들어 허벅지 앞에 두세요. 손바닥은 몸을 향하게 하세요.",
-      "복부에 힘을 주고 어깨의 힘을 빼세요. 팔꿈치는 살짝 굽히고 손목은 곧게 두세요."
+      "누워 손끝을 귀 옆에 가볍게 두고 무릎을 굽혀 드세요.",
+      "목을 당기지 않고 등 위쪽을 조금 들어 올리세요."
     ],
     "steps": [
-      "팔꿈치의 굽힘을 유지하며 두 덤벨을 몸 앞으로 천천히 들어 올리세요.",
-      "손등이 위를 향하도록 두고 팔이 어깨 높이에 이르면 멈추세요.",
-      "몸통을 세운 채 덤벨을 천천히 허벅지 앞으로 내려 반복하세요."
+      "한쪽 다리를 뻗으며 반대쪽 무릎을 몸 쪽으로 가져오세요.",
+      "몸통을 돌려 반대쪽 팔꿈치를 그 무릎에 가까이 하세요.",
+      "천천히 방향을 바꾸며 교대로 반복하세요."
     ],
     "cautions": [
-      "덤벨을 올리려고 허리를 뒤로 젖히거나 무릎과 몸통으로 반동을 만들지 마세요.",
-      "어깨를 귀 쪽으로 움츠리지 말고, 팔을 어깨 높이보다 높게 들지 마세요.",
-      "손목을 꺾거나 덤벨을 떨어뜨리듯 내리지 마세요. 어깨에 통증이 생기면 중단하세요.",
-      "그림의 빨강은 앞쪽 어깨, 주황은 윗가슴을 구분합니다. 색은 주요 대상과 함께 쓰이는 부위를 설명하며, 자극 강도나 순위를 뜻하지 않습니다."
+      "팔꿈치와 무릎을 억지로 닿게 하지 마세요.",
+      "빠르게 다리를 차거나 목을 손으로 당기지 마세요.",
+      "통증이 생기면 중단하세요."
     ],
-    "breathing": "덤벨을 올릴 때 내쉬고, 내릴 때 들이마시세요. 숨을 참지 마세요.",
-    "sourceName": "ACE · Front Raise",
-    "sourceUrl": "https://www.acefitness.org/resources/everyone/exercise-library/54/front-raise/"
+    "breathing": "힘을 쓰는 구간에서 내쉬고, 시작 자세로 돌아올 때 들이마시세요. 숨을 오래 참지 마세요.",
+    "sourceName": "ACE · 동작 안내",
+    "sourceUrl": "https://www.acefitness.org/getfit/studies/bestworstabexercises.pdf"
   },
   {
-    "name": "사이드 레터럴 레이즈",
-    "asset": "exercise_guides/lateral-raise.gif",
-    "comment": "덤벨을 양옆으로 들어 올려 어깨 옆쪽을 사용하는 운동입니다. 무게보다 어깨와 팔의 움직임을 천천히 조절하는 데 집중하세요.",
+    "name": "짐볼 크런치",
+    "asset": "exercise_guides/ball_crunch.gif",
+    "comment": "짐볼에 등을 지지하고 상체를 작게 말아 올리는 운동입니다.",
     "setup": [
-      "발을 골반 너비 정도로 벌리고 양손에 덤벨을 들어 몸 옆에 두세요. 손바닥은 몸을 향하게 하세요.",
-      "복부에 힘을 주고 몸통을 세우세요. 팔꿈치를 살짝 굽히고 손목은 곧게 유지하세요."
+      "미끄럽지 않은 바닥에서 크기가 맞는 짐볼을 사용하세요.",
+      "발바닥을 넓게 지지하고 등 중간·아래쪽을 공에 기대세요."
     ],
     "steps": [
-      "팔꿈치와 위팔을 함께 움직이며 두 팔을 양옆으로 천천히 들어 올리세요.",
-      "어깨 높이 가까이에서는 엄지 쪽을 살짝 위로 향하게 하고, 위팔이 어깨 높이에 이르면 멈추세요.",
-      "팔꿈치의 굽힘을 유지하며 덤벨을 천천히 몸 옆으로 내리세요."
+      "복부를 수축하며 등 위쪽을 천천히 말아 올리세요.",
+      "공과 발이 안정된 범위에서 멈추세요.",
+      "상체를 천천히 시작 위치로 돌려놓으세요."
     ],
     "cautions": [
-      "어깨를 귀 쪽으로 끌어올리거나 몸통을 흔들어 덤벨을 들지 마세요.",
-      "물을 따르듯 엄지를 아래로 꺾지 마세요. 손목을 곧게 두고 어깨 높이까지만 올리세요.",
-      "동작을 통제하기 어렵다면 무게를 줄이세요. 어깨에 통증이 생기면 중단하세요.",
-      "그림의 빨강은 어깨 중간부, 주황은 승모근 위쪽과 전거근을 구분합니다. 깊은 곳의 극상근 등 회전근개도 함께 작용하지만 그림에서는 생략했습니다. 색은 자극 강도나 순위가 아닙니다."
+      "공이 굴러가거나 발이 뜨지 않게 하세요.",
+      "머리를 뒤로 과하게 젖히거나 목을 당기지 마세요.",
+      "통증이 생기면 중단하세요."
     ],
-    "breathing": "덤벨을 올릴 때 내쉬고, 내릴 때 들이마시세요. 숨을 참지 마세요.",
-    "sourceName": "ACE · Lateral Raise",
-    "sourceUrl": "https://www.acefitness.org/resources/everyone/exercise-library/26/lateral-raise/"
+    "breathing": "힘을 쓰는 구간에서 내쉬고, 시작 자세로 돌아올 때 들이마시세요. 숨을 오래 참지 마세요.",
+    "sourceName": "ACE · 동작 안내",
+    "sourceUrl": "https://www.acefitness.org/getfit/studies/bestworstabexercises.pdf"
   },
   {
-    "name": "바벨 컬",
-    "asset": "exercise_guides/barbell-curl.gif",
-    "comment": "바벨을 양손으로 함께 들어 팔꿈치를 굽히는 운동입니다. 몸통 반동 없이 조절할 수 있는 무게를 사용하세요.",
+    "name": "캡틴체어 니 레이즈",
+    "asset": "exercise_guides/captains_chair_knee_raise.gif",
+    "comment": "캡틴체어에 팔과 등을 지지하고 무릎을 올리는 운동입니다.",
     "setup": [
-      "발을 골반 너비로 벌리고 바벨을 어깨 너비 정도로 잡으세요. 손바닥은 앞을 향하게 하세요.",
-      "손목을 곧게 두고 팔꿈치를 몸 옆에 놓으세요. 복부에 힘을 주고 몸통을 세우세요."
+      "전완을 패드에 두고 손잡이를 잡으세요.",
+      "등을 패드에 안정적으로 지지하고 다리를 아래로 내려놓으세요."
     ],
     "steps": [
-      "위팔을 몸 옆에 둔 채 두 팔꿈치를 함께 굽혀 바벨을 들어 올리세요.",
-      "팔꿈치가 앞으로 크게 움직이거나 몸통이 흔들리기 전까지 편안한 범위로 올리세요.",
-      "바벨을 천천히 내려 시작 자세로 돌아오세요. 팔꿈치를 뒤로 꺾어 잠그지 마세요."
+      "몸을 흔들지 않고 양 무릎을 가슴 쪽으로 들어 올리세요.",
+      "어깨와 등이 안정되는 범위에서 멈추세요.",
+      "무릎과 다리를 천천히 내려 반복하세요."
     ],
     "cautions": [
-      "허리를 젖히거나 무릎과 몸통의 반동으로 바벨을 올리지 마세요.",
-      "손목이 꺾이지 않게 하고, 손목이나 팔꿈치에 통증이 있으면 중단하세요.",
-      "빨강은 상완이두근, 주황은 상완요골근입니다. 깊은 상완근도 팔꿈치 굽힘에 참여하지만 생략했습니다. 색은 자극 강도나 덤벨 컬과의 우열을 뜻하지 않습니다."
+      "철봉에 손으로만 매달리는 동작과 다릅니다.",
+      "몸을 흔들어 올리거나 어깨를 귀 쪽으로 움츠리지 마세요.",
+      "통증이 생기면 중단하세요."
     ],
-    "breathing": "바벨을 올릴 때 내쉬고 내릴 때 들이마시세요. 숨을 참지 마세요.",
-    "sourceName": "Marcolin et al. · Curl EMG study",
-    "sourceUrl": "https://pmc.ncbi.nlm.nih.gov/articles/PMC6047503/"
+    "breathing": "힘을 쓰는 구간에서 내쉬고, 시작 자세로 돌아올 때 들이마시세요. 숨을 오래 참지 마세요.",
+    "sourceName": "ACE · 동작 안내",
+    "sourceUrl": "https://www.acefitness.org/getfit/studies/bestworstabexercises.pdf"
   },
   {
-    "name": "바벨 런지",
-    "asset": "exercise_guides/barbell-lunge.gif",
-    "comment": "바벨을 등 위쪽에 지지하고 한 발씩 앞으로 디디는 런지입니다. 먼저 맨몸에서 균형을 익힌 뒤 가벼운 무게를 사용하세요.",
+    "name": "러시안 트위스트",
+    "asset": "exercise_guides/russian_twist.gif",
+    "comment": "앉은 자세에서 몸통을 좌우로 천천히 회전하는 운동입니다.",
     "setup": [
-      "바벨을 목뼈가 아닌 등 위쪽 근육에 안정적으로 지지하고 양손으로 잡으세요.",
-      "발을 골반 너비로 두고 몸통에 힘을 주세요. 주변 공간과 바벨 양쪽 원판의 고정을 확인하세요."
+      "무릎을 굽히고 양발을 바닥에 놓으세요.",
+      "이 시범은 중량 없이 손을 가슴 앞에 모으는 변형입니다."
     ],
     "steps": [
-      "한 발을 앞으로 내디뎌 발바닥을 안정적으로 지지하세요.",
-      "몸통을 안정시킨 채 양 무릎을 천천히 굽히세요. 뒤쪽 무릎은 바닥에 부딪히지 않게 하세요.",
-      "앞발로 바닥을 밀어 시작 자세로 돌아오세요. 균형을 회복한 뒤 반대쪽도 진행하세요."
+      "양발과 골반을 고정하고 척추의 중립을 유지한 채 몸통을 약간 뒤로 기울이세요.",
+      "정면 준비 자세에서 가슴과 어깨를 함께 한쪽으로 천천히 돌리세요.",
+      "정면으로 돌아온 뒤 반대쪽도 같은 범위로 반복하세요."
     ],
     "cautions": [
-      "앞 무릎이 안쪽으로 모이지 않게 발끝 방향을 따라 움직이세요.",
-      "바벨이 흔들리거나 균형이 무너지면 무게와 보폭을 줄이세요. 통증이 생기면 중단하세요.",
-      "빨강은 보이는 대퇴사두근입니다. 대둔근·중둔근·햄스트링·내전근과 몸통 안정화 근육도 참여하지만 가려진 부분은 생략했습니다. 부하 런지 연구를 참고했으며 색은 자극 강도나 바벨 위치별 우열이 아닙니다."
+      "손만 크게 휘두르거나 허리를 억지로 비틀지 마세요.",
+      "발을 띄우거나 무게를 더하는 변형과 구분하세요.",
+      "통증이 생기면 중단하세요."
     ],
-    "breathing": "내려갈 때 들이마시고 올라올 때 내쉬세요. 숨을 참지 마세요.",
-    "sourceName": "Escamilla et al. · Loaded forward lunge",
-    "sourceUrl": "https://pubmed.ncbi.nlm.nih.gov/39982282/"
-  },
-  {
-    "name": "플랭크",
-    "asset": "exercise_guides/forearm-plank.gif",
-    "comment": "전완과 발끝으로 몸을 지지하며 몸통을 안정적으로 유지하는 운동입니다.",
-    "setup": [
-      "매트에 엎드려 팔꿈치를 어깨 바로 아래에 놓고 전완을 바닥에 대세요.",
-      "발끝을 바닥에 대고 다리를 펴세요. 복부에 힘을 주고 시선은 바닥에 두세요."
-    ],
-    "steps": [
-      "전완과 발끝으로 바닥을 밀며 몸통을 천천히 들어 올리세요.",
-      "머리부터 발뒤꿈치까지 길게 이어지는 자세를 유지하세요.",
-      "자세를 유지하기 어려워지면 몸을 천천히 내려 쉬세요."
-    ],
-    "cautions": [
-      "허리가 처지거나 엉덩이가 높이 올라가지 않도록 몸통을 안정시키세요.",
-      "어깨를 귀 쪽으로 움츠리지 말고 팔꿈치 위에서 지지하세요.",
-      "목표 시간을 채우려고 무너진 자세로 버티지 마세요. 통증이 생기면 중단하세요.",
-      "빨강은 복직근, 주황은 옆구리·어깨뼈 주변·엉덩이의 안정화 부위입니다. 깊은 복횡근·내복사근도 참여하지만 생략했습니다. 바지 위 색은 근육 위치 설명이며 자극 강도가 아닙니다. GIF는 유지 자세 예시이며 몸을 위아래로 반복하지 않습니다."
-    ],
-    "breathing": "유지하는 동안 자연스럽게 들이마시고 내쉬세요. 숨을 참지 마세요.",
-    "sourceName": "ACE · Front Plank",
-    "sourceUrl": "https://www.acefitness.org/resources/everyone/exercise-library/32/front-plank/"
+    "breathing": "힘을 쓰는 구간에서 내쉬고, 시작 자세로 돌아올 때 들이마시세요. 숨을 오래 참지 마세요.",
+    "sourceName": "NASM · 동작 안내",
+    "sourceUrl": "https://www.nasm.org/resource-center/exercise-library/russian-twist"
   }
 ]

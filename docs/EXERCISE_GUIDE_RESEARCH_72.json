@@ -1,0 +1,1874 @@
+{
+  "schema_version": 1,
+  "checked_on": "2026-11-07",
+  "pull_request": "https://github.com/LeeDongHyun00/TREX/pull/65",
+  "base_sha": "bb83fbd1fa4683d5f55c2533f31cf1b8db671f24",
+  "head_sha": "c7e16633b73f498bb16feb3a655dca9c3fa6f6a0",
+  "scope": "Evidence audit before matching-style image/GIF and Korean guide copy production. Every muscle highlight must be reverified before further generation.",
+  "counts": {
+    "total": 72,
+    "new_in_pr": 46,
+    "existing_guides": 16,
+    "new_guides_needed": 56,
+    "direct_matches": 58,
+    "adaptations": 14
+  },
+  "sources": [
+    {
+      "id": "S01",
+      "url": "https://www.acefitness.org/resources/everyone/exercise-library/135/bodyweight-squat/",
+      "publisher": "ACE",
+      "access": "page_text_opened",
+      "visual_review": "not_performed",
+      "reuse_permission": "not_established_reference_only"
+    },
+    {
+      "id": "S02",
+      "url": "https://www.acefitness.org/resources/everyone/exercise-library/94/forward-lunge/",
+      "publisher": "ACE",
+      "access": "page_text_opened",
+      "visual_review": "not_performed",
+      "reuse_permission": "not_established_reference_only"
+    },
+    {
+      "id": "S03",
+      "url": "https://www.acefitness.org/resources/everyone/exercise-library/8/forward-lunge/",
+      "publisher": "ACE",
+      "access": "page_text_opened",
+      "visual_review": "not_performed",
+      "reuse_permission": "not_established_reference_only"
+    },
+    {
+      "id": "S04",
+      "url": "https://www.acefitness.org/resources/everyone/exercise-library/50/side-lunge/",
+      "publisher": "ACE",
+      "access": "page_text_opened",
+      "visual_review": "not_performed",
+      "reuse_permission": "not_established_reference_only"
+    },
+    {
+      "id": "S05",
+      "url": "https://www.physitrack.com/exercise-library/how-to-perform-the-curtsy-lunge-exercise",
+      "publisher": "Physitrack",
+      "access": "page_text_opened",
+      "visual_review": "not_performed",
+      "reuse_permission": "not_established_reference_only"
+    },
+    {
+      "id": "S06",
+      "url": "https://www.nasm.org/resource-center/exercise-library/barbell-deadlift",
+      "publisher": "NASM",
+      "access": "page_text_opened",
+      "visual_review": "not_performed",
+      "reuse_permission": "not_established_reference_only"
+    },
+    {
+      "id": "S07",
+      "url": "https://www.nasm.org/resource-center/exercise-library/good-mornings",
+      "publisher": "NASM",
+      "access": "page_text_opened",
+      "visual_review": "not_performed",
+      "reuse_permission": "not_established_reference_only"
+    },
+    {
+      "id": "S08",
+      "url": "https://www.acefitness.org/resources/everyone/exercise-library/367/elevated-glute-bridge/",
+      "publisher": "ACE",
+      "access": "page_text_opened",
+      "visual_review": "not_performed",
+      "reuse_permission": "not_established_reference_only"
+    },
+    {
+      "id": "S09",
+      "url": "https://www.nhs.uk/live-well/exercise/strength-exercises/",
+      "publisher": "NHS",
+      "access": "page_text_opened",
+      "visual_review": "not_performed",
+      "reuse_permission": "not_established_reference_only"
+    },
+    {
+      "id": "S10",
+      "url": "https://www.nasm.org/resource-center/exercise-library/goblet-squat",
+      "publisher": "NASM",
+      "access": "page_text_opened",
+      "visual_review": "not_performed",
+      "reuse_permission": "not_established_reference_only"
+    },
+    {
+      "id": "S11",
+      "url": "https://www.acefitness.org/getfit/rubrbndwkout.pdf",
+      "publisher": "ACE",
+      "access": "page_text_opened",
+      "visual_review": "not_performed",
+      "reuse_permission": "not_established_reference_only"
+    },
+    {
+      "id": "S12",
+      "url": "https://www.nasm.org/resource-center/exercise-library/bulgarian-split-squat",
+      "publisher": "NASM",
+      "access": "page_text_opened",
+      "visual_review": "not_performed",
+      "reuse_permission": "not_established_reference_only"
+    },
+    {
+      "id": "S13",
+      "url": "https://www.acefitness.org/resources/pros/expert-articles/5028/6-lower-body-exercises-to-do-instead-of-squats/",
+      "publisher": "ACE",
+      "access": "page_text_opened",
+      "visual_review": "not_performed",
+      "reuse_permission": "not_established_reference_only"
+    },
+    {
+      "id": "S14",
+      "url": "https://www.acefitness.org/resources/everyone/exercise-library/28/step-up/",
+      "publisher": "ACE",
+      "access": "search_index_excerpt_only",
+      "visual_review": "not_performed",
+      "reuse_permission": "not_established_reference_only"
+    },
+    {
+      "id": "S15",
+      "url": "https://www.nasm.org/resource-center/exercise-library/leg-press",
+      "publisher": "NASM",
+      "access": "page_text_opened",
+      "visual_review": "not_performed",
+      "reuse_permission": "not_established_reference_only"
+    },
+    {
+      "id": "S16",
+      "url": "https://www.nasm.org/resource-center/exercise-library/dumbbell-romanian-deadlift",
+      "publisher": "NASM",
+      "access": "page_text_opened",
+      "visual_review": "not_performed",
+      "reuse_permission": "not_established_reference_only"
+    },
+    {
+      "id": "S17",
+      "url": "https://www.nasm.org/resource-center/exercise-library/seated-leg-curl",
+      "publisher": "NASM",
+      "access": "page_text_opened",
+      "visual_review": "not_performed",
+      "reuse_permission": "not_established_reference_only"
+    },
+    {
+      "id": "S18",
+      "url": "https://www.mayoclinic.org/healthy-lifestyle/fitness/in-depth/core-strength/art-20546851",
+      "publisher": "Mayo Clinic",
+      "access": "page_text_opened",
+      "visual_review": "not_performed",
+      "reuse_permission": "not_established_reference_only"
+    },
+    {
+      "id": "S19",
+      "url": "https://www.newcastle-hospitals.nhs.uk/services/injury-prevention-advice-for-runners/",
+      "publisher": "NHS",
+      "access": "page_text_opened",
+      "visual_review": "not_performed",
+      "reuse_permission": "not_established_reference_only"
+    },
+    {
+      "id": "S20",
+      "url": "https://www.acefitness.org/resources/pros/expert-articles/9061/glute-goals-an-evidence-based-glute-workout/",
+      "publisher": "ACE",
+      "access": "search_excerpt_only",
+      "visual_review": "not_performed",
+      "reuse_permission": "not_established_reference_only"
+    },
+    {
+      "id": "S21",
+      "url": "https://www.acefitness.org/continuing-education/prosource/september-2013/3459/is-your-exercise-selection-helping-or-hurting-your-clients/",
+      "publisher": "ACE",
+      "access": "search_excerpt_only",
+      "visual_review": "not_performed",
+      "reuse_permission": "not_established_reference_only"
+    },
+    {
+      "id": "S22",
+      "url": "https://www.nsft.nhs.uk/help-for-your-body-and-mind/",
+      "publisher": "NHS",
+      "access": "page_text_opened",
+      "visual_review": "not_performed",
+      "reuse_permission": "not_established_reference_only"
+    },
+    {
+      "id": "S23",
+      "url": "https://www.acefitness.org/continuing-education/certified/december-2018/7138/ace-sponsored-research-what-is-the-best-back-exercise/",
+      "publisher": "ACE",
+      "access": "page_text_opened",
+      "visual_review": "not_performed",
+      "reuse_permission": "not_established_reference_only"
+    },
+    {
+      "id": "S24",
+      "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC9603242/",
+      "publisher": "McKenzie et al., 2022",
+      "access": "page_text_opened",
+      "visual_review": "not_performed",
+      "reuse_permission": "not_established_reference_only"
+    },
+    {
+      "id": "S25",
+      "url": "https://www.mayoclinic.org/healthy-lifestyle/fitness/multimedia/biceps-curl/vid-20084675",
+      "publisher": "Mayo Clinic",
+      "access": "page_text_opened",
+      "visual_review": "not_performed",
+      "reuse_permission": "not_established_reference_only"
+    },
+    {
+      "id": "S26",
+      "url": "https://www.acefitness.org/resources/everyone/exercise-library/70/bicep-curl/",
+      "publisher": "ACE",
+      "access": "page_text_opened",
+      "visual_review": "not_performed",
+      "reuse_permission": "not_established_reference_only"
+    },
+    {
+      "id": "S27",
+      "url": "https://www.acefitness.org/resources/everyone/exercise-library/26/lateral-raise/",
+      "publisher": "ACE",
+      "access": "page_text_opened",
+      "visual_review": "not_performed",
+      "reuse_permission": "not_established_reference_only"
+    },
+    {
+      "id": "S28",
+      "url": "https://www.acefitness.org/resources/everyone/exercise-library/54/front-raise/",
+      "publisher": "ACE",
+      "access": "page_text_opened",
+      "visual_review": "not_performed",
+      "reuse_permission": "not_established_reference_only"
+    },
+    {
+      "id": "S29",
+      "url": "https://www.lookgreatnaked.com/articles/upright_row_implications_for_preventing_subacromial_impingement.pdf",
+      "publisher": "Schoenfeld et al., 2011 / author-hosted NSCA article",
+      "access": "page_text_opened",
+      "visual_review": "not_performed",
+      "reuse_permission": "not_established_reference_only"
+    },
+    {
+      "id": "S30",
+      "url": "https://www.nasm.org/resource-center/exercise-library/push-up",
+      "publisher": "NASM",
+      "access": "page_text_opened",
+      "visual_review": "not_performed",
+      "reuse_permission": "not_established_reference_only"
+    },
+    {
+      "id": "S31",
+      "url": "https://www.nasm.org/resource-center/exercise-library/modified-push-up",
+      "publisher": "NASM",
+      "access": "page_text_opened",
+      "visual_review": "not_performed",
+      "reuse_permission": "not_established_reference_only"
+    },
+    {
+      "id": "S32",
+      "url": "https://www.nasm.org/resource-center/exercise-library/incline-push-up",
+      "publisher": "NASM",
+      "access": "page_text_opened",
+      "visual_review": "not_performed",
+      "reuse_permission": "not_established_reference_only"
+    },
+    {
+      "id": "S33",
+      "url": "https://www.nasm.org/resource-center/exercise-library/pike-push-up",
+      "publisher": "NASM",
+      "access": "page_text_opened",
+      "visual_review": "not_performed",
+      "reuse_permission": "not_established_reference_only"
+    },
+    {
+      "id": "S34",
+      "url": "https://www.acefitness.org/resources/everyone/exercise-library/19/chest-press/",
+      "publisher": "ACE",
+      "access": "page_text_opened",
+      "visual_review": "not_performed",
+      "reuse_permission": "not_established_reference_only"
+    },
+    {
+      "id": "S35",
+      "url": "https://www.nsca.com/certification/tsac-f/essentials-of-tactical-strength-training-and-conditioning-2nd-edition/excerpts/modification-of-exercises-to-allow-injured-individuals-to-continue-training/",
+      "publisher": "Primary source",
+      "access": "page_text_opened",
+      "visual_review": "not_performed",
+      "reuse_permission": "not_established_reference_only"
+    },
+    {
+      "id": "S36",
+      "url": "https://www.acefitness.org/resources/everyone/exercise-library/188/seated-chest-press/",
+      "publisher": "ACE",
+      "access": "page_text_opened",
+      "visual_review": "not_performed",
+      "reuse_permission": "not_established_reference_only"
+    },
+    {
+      "id": "S37",
+      "url": "https://www.kingstonandrichmond.nhs.uk/patients-and-families/patient-leaflets/home-exercise-programme-falls-prevention",
+      "publisher": "NHS",
+      "access": "search_excerpt_only",
+      "visual_review": "not_performed",
+      "reuse_permission": "not_established_reference_only"
+    },
+    {
+      "id": "S38",
+      "url": "https://www.acefitness.org/resources/everyone/exercise-library/126/single-arm-row/",
+      "publisher": "ACE",
+      "access": "page_text_opened",
+      "visual_review": "not_performed",
+      "reuse_permission": "not_established_reference_only"
+    },
+    {
+      "id": "S39",
+      "url": "https://hsc.unm.edu/_media/pdfs/rbhomeworkoutguide2020-3.pdf",
+      "publisher": "University of New Mexico",
+      "access": "search_excerpt_only_open_timed_out",
+      "visual_review": "not_performed",
+      "reuse_permission": "not_established_reference_only"
+    },
+    {
+      "id": "S40",
+      "url": "https://www.acefitness.org/resources/everyone/exercise-library/48/seated-row/",
+      "publisher": "ACE",
+      "access": "page_text_opened",
+      "visual_review": "not_performed",
+      "reuse_permission": "not_established_reference_only"
+    },
+    {
+      "id": "S41",
+      "url": "https://www.nasm.org/resource-center/exercise-library/pull-up",
+      "publisher": "NASM",
+      "access": "page_text_opened",
+      "visual_review": "not_performed",
+      "reuse_permission": "not_established_reference_only"
+    },
+    {
+      "id": "S42",
+      "url": "https://www.nasm.org/resource-center/exercise-library/face-pull",
+      "publisher": "NASM",
+      "access": "page_text_opened",
+      "visual_review": "not_performed",
+      "reuse_permission": "not_established_reference_only"
+    },
+    {
+      "id": "S43",
+      "url": "https://www.acefitness.org/resources/everyone/exercise-library/3/triceps-pressdown/",
+      "publisher": "ACE",
+      "access": "page_text_opened",
+      "visual_review": "not_performed",
+      "reuse_permission": "not_established_reference_only"
+    },
+    {
+      "id": "S44",
+      "url": "https://www.acefitness.org/resources/everyone/exercise-library/32/front-plank/",
+      "publisher": "ACE",
+      "access": "page_text_opened",
+      "visual_review": "not_performed",
+      "reuse_permission": "not_established_reference_only"
+    },
+    {
+      "id": "S45",
+      "url": "https://www.nasm.org/resource-center/exercise-library/side-plank",
+      "publisher": "NASM",
+      "access": "page_text_opened",
+      "visual_review": "not_performed",
+      "reuse_permission": "not_established_reference_only"
+    },
+    {
+      "id": "S46",
+      "url": "https://www.nasm.org/resource-center/exercise-library/dead-bug",
+      "publisher": "NASM",
+      "access": "page_text_opened",
+      "visual_review": "not_performed",
+      "reuse_permission": "not_established_reference_only"
+    },
+    {
+      "id": "S47",
+      "url": "https://www.acefitness.org/resources/everyone/exercise-library/332/standing-anti-rotation-press/",
+      "publisher": "ACE",
+      "access": "page_text_opened",
+      "visual_review": "not_performed",
+      "reuse_permission": "not_established_reference_only"
+    },
+    {
+      "id": "S48",
+      "url": "https://www.acefitness.org/resources/everyone/exercise-library/359/farmer-s-carry/",
+      "publisher": "ACE",
+      "access": "page_text_opened",
+      "visual_review": "not_performed",
+      "reuse_permission": "not_established_reference_only"
+    },
+    {
+      "id": "S49",
+      "url": "https://www.acefitness.org/resources/everyone/exercise-library/358/suitcase-carry/",
+      "publisher": "ACE",
+      "access": "page_text_opened",
+      "visual_review": "not_performed",
+      "reuse_permission": "not_established_reference_only"
+    },
+    {
+      "id": "S50",
+      "url": "https://na.physitrack.com/home-exercise-video/side-crunch-in-standing-with-knee-lifts",
+      "publisher": "Physitrack",
+      "access": "page_text_opened",
+      "visual_review": "not_performed",
+      "reuse_permission": "not_established_reference_only"
+    },
+    {
+      "id": "S51",
+      "url": "https://ca.physitrack.com/home-exercise-video/standing-marching",
+      "publisher": "Physitrack",
+      "access": "page_text_opened",
+      "visual_review": "not_performed",
+      "reuse_permission": "not_established_reference_only"
+    },
+    {
+      "id": "S52",
+      "url": "https://www.acefitness.org/resources/pros/expert-articles/5452/6-exercises-for-a-stronger-core/",
+      "publisher": "ACE",
+      "access": "page_text_opened",
+      "visual_review": "not_performed",
+      "reuse_permission": "not_established_reference_only"
+    },
+    {
+      "id": "S53",
+      "url": "https://www.acefitness.org/resources/everyone/exercise-library/52/crunch/",
+      "publisher": "ACE",
+      "access": "page_text_opened",
+      "visual_review": "not_performed",
+      "reuse_permission": "not_established_reference_only"
+    },
+    {
+      "id": "S54",
+      "url": "https://ie.physitrack.com/home-exercise-video/trunk-flexion-supine-scissors-exercise",
+      "publisher": "Physitrack",
+      "access": "page_text_opened",
+      "visual_review": "not_performed",
+      "reuse_permission": "not_established_reference_only"
+    },
+    {
+      "id": "S55",
+      "url": "https://www.acefitness.org/getfit/studies/bestworstabexercises.pdf",
+      "publisher": "ACE",
+      "access": "page_text_opened",
+      "visual_review": "not_performed",
+      "reuse_permission": "not_established_reference_only"
+    },
+    {
+      "id": "S56",
+      "url": "https://www.nasm.org/resource-center/exercise-library/russian-twist",
+      "publisher": "NASM",
+      "access": "page_text_opened",
+      "visual_review": "not_performed",
+      "reuse_permission": "not_established_reference_only"
+    },
+    {
+      "id": "S57",
+      "url": "https://www.wwl.nhs.uk/media/.leaflets/6214d2b8e08b32.04972952.pdf",
+      "publisher": "Wrightington, Wigan and Leigh NHS",
+      "access": "pdf_text_opened",
+      "visual_review": "source_variant_confirmed_by_text",
+      "reuse_permission": "not_established_reference_only"
+    }
+  ],
+  "exercises": [
+    {
+      "number": 1,
+      "id": "squat",
+      "name": "기본 스쿼트",
+      "category": "하체",
+      "added_in_pr65": false,
+      "existing_guide": true,
+      "existing_asset": "exercise_guides/squat.gif",
+      "technique_source": "S01",
+      "match": "direct",
+      "production_note": "맨몸. 측면의 시작·하강·복귀; 바벨 스쿼트 그림으로 바꾸지 않는다.",
+      "muscle_references_from_pr": [
+        "https://pubmed.ncbi.nlm.nih.gov/19075302/"
+      ],
+      "muscle_evidence_note_from_pr": "바벨 스쿼트 연구를 맨몸 동작에 적용",
+      "muscle_reference_reverification": "completed_with_variant_and_access_limits",
+      "publication_ready": false,
+      "muscle_audit_file": "../outputs/exercise-guides-72/muscle-evidence.json#squat"
+    },
+    {
+      "number": 2,
+      "id": "lunge",
+      "name": "런지",
+      "category": "하체",
+      "added_in_pr65": false,
+      "existing_guide": true,
+      "existing_asset": "exercise_guides/lunge.gif",
+      "technique_source": "S02",
+      "match": "direct",
+      "production_note": "맨몸 전방 런지. 발 내딛기·하강·복귀; 좌우 1회 단위는 앱과 대조.",
+      "muscle_references_from_pr": [
+        "https://pubmed.ncbi.nlm.nih.gov/32236133/",
+        "https://pubmed.ncbi.nlm.nih.gov/39982282/"
+      ],
+      "muscle_evidence_note_from_pr": "전방 런지 연구 · 부하/보폭 차이",
+      "muscle_reference_reverification": "completed_with_variant_and_access_limits",
+      "publication_ready": false,
+      "muscle_audit_file": "../outputs/exercise-guides-72/muscle-evidence.json#lunge"
+    },
+    {
+      "number": 3,
+      "id": "barbell_lunge",
+      "name": "바벨 런지",
+      "category": "하체",
+      "added_in_pr65": false,
+      "existing_guide": true,
+      "existing_asset": "exercise_guides/barbell-lunge.gif",
+      "technique_source": "S03",
+      "match": "direct",
+      "production_note": "등 위 바벨 전방 런지. 바 위치와 앞·뒤 발 지지를 함께 표시.",
+      "muscle_references_from_pr": [
+        "https://pubmed.ncbi.nlm.nih.gov/39982282/"
+      ],
+      "muscle_evidence_note_from_pr": "외부 중량 전방 런지 연구 · 중량 미입력",
+      "muscle_reference_reverification": "completed_with_variant_and_access_limits",
+      "publication_ready": false,
+      "muscle_audit_file": "../outputs/exercise-guides-72/muscle-evidence.json#barbell_lunge"
+    },
+    {
+      "number": 4,
+      "id": "side_lunge",
+      "name": "사이드 런지",
+      "category": "하체",
+      "added_in_pr65": false,
+      "existing_guide": true,
+      "existing_asset": "exercise_guides/side-lunge.gif",
+      "technique_source": "S04",
+      "match": "direct",
+      "production_note": "측방 내딛기. 정면 사선에서 굽힌 다리와 반대쪽 다리를 구분.",
+      "muscle_references_from_pr": [
+        "https://pubmed.ncbi.nlm.nih.gov/23584319/",
+        "https://pubmed.ncbi.nlm.nih.gov/19321909/"
+      ],
+      "muscle_evidence_note_from_pr": "측방 런지 관절역학 + 전방 런지 근활성에서 추론",
+      "muscle_reference_reverification": "completed_with_variant_and_access_limits",
+      "publication_ready": false,
+      "muscle_audit_file": "../outputs/exercise-guides-72/muscle-evidence.json#side_lunge"
+    },
+    {
+      "number": 5,
+      "id": "cross_lunge",
+      "name": "크로스 런지",
+      "category": "하체",
+      "added_in_pr65": false,
+      "existing_guide": true,
+      "existing_asset": "exercise_guides/cross-lunge.gif",
+      "technique_source": "S05",
+      "match": "direct",
+      "production_note": "뒤로 교차하는 런지. 발 교차가 보이는 정면 사선; 회전 런지와 구분.",
+      "muscle_references_from_pr": [
+        "https://pubmed.ncbi.nlm.nih.gov/32236133/",
+        "https://pubmed.ncbi.nlm.nih.gov/19321909/"
+      ],
+      "muscle_evidence_note_from_pr": "유사 런지 연구와 관절 작용에 근거한 추론",
+      "muscle_reference_reverification": "completed_with_variant_and_access_limits",
+      "publication_ready": false,
+      "muscle_audit_file": "../outputs/exercise-guides-72/muscle-evidence.json#cross_lunge"
+    },
+    {
+      "number": 6,
+      "id": "deadlift",
+      "name": "바벨 데드리프트",
+      "category": "하체",
+      "added_in_pr65": false,
+      "existing_guide": false,
+      "existing_asset": null,
+      "technique_source": "S06",
+      "match": "direct",
+      "production_note": "바닥에서 시작하는 바벨 데드리프트. RDL과 시작 높이를 구분.",
+      "muscle_references_from_pr": [
+        "https://pubmed.ncbi.nlm.nih.gov/28151780/"
+      ],
+      "muscle_evidence_note_from_pr": "바벨 데드리프트 직접 연구 · 중량 미입력",
+      "muscle_reference_reverification": "completed_with_variant_and_access_limits",
+      "publication_ready": false,
+      "muscle_audit_file": "../outputs/exercise-guides-72/muscle-evidence.json#deadlift"
+    },
+    {
+      "number": 7,
+      "id": "good_morning",
+      "name": "굿모닝",
+      "category": "하체",
+      "added_in_pr65": false,
+      "existing_guide": true,
+      "existing_asset": "exercise_guides/good-morning.gif",
+      "technique_source": "S07",
+      "match": "adaptation",
+      "production_note": "원문은 바벨. 기존 앱 시범의 무중량 변형을 유지할지 먼저 확정.",
+      "muscle_references_from_pr": [
+        "https://pubmed.ncbi.nlm.nih.gov/25653899/"
+      ],
+      "muscle_evidence_note_from_pr": "바벨 굿모닝 연구 · 중량/변형 차이",
+      "muscle_reference_reverification": "completed_with_variant_and_access_limits",
+      "publication_ready": false,
+      "muscle_audit_file": "../outputs/exercise-guides-72/muscle-evidence.json#good_morning"
+    },
+    {
+      "number": 8,
+      "id": "hip_thrust",
+      "name": "힙 쓰러스트",
+      "category": "하체",
+      "added_in_pr65": false,
+      "existing_guide": false,
+      "existing_asset": null,
+      "technique_source": "S08",
+      "match": "adaptation",
+      "production_note": "등 위쪽 벤치 지지. 참고는 덤벨 부하; 맨몸/바벨 여부를 그림 제작 전에 확정.",
+      "muscle_references_from_pr": [
+        "https://pubmed.ncbi.nlm.nih.gov/28151780/"
+      ],
+      "muscle_evidence_note_from_pr": "바벨 힙 쓰러스트 연구 · 중량/벤치 조건 차이",
+      "muscle_reference_reverification": "completed_with_variant_and_access_limits",
+      "publication_ready": false,
+      "muscle_audit_file": "../outputs/exercise-guides-72/muscle-evidence.json#hip_thrust"
+    },
+    {
+      "number": 9,
+      "id": "chair_squat",
+      "name": "의자 스쿼트",
+      "category": "하체",
+      "added_in_pr65": true,
+      "existing_guide": false,
+      "existing_asset": null,
+      "technique_source": "S09",
+      "match": "direct",
+      "production_note": "실제 의자에 앉았다 일어나기. 의자·발 접촉이 보이는 측면.",
+      "muscle_references_from_pr": [
+        "https://pubmed.ncbi.nlm.nih.gov/33728287/"
+      ],
+      "muscle_evidence_note_from_pr": "앉았다 일어나기 EMG(Kim·Ju 2021) — 전경골근이 대퇴직근보다 높았다(모든 의자 높이); 대둔근은 미측정, 관절 작용 추론",
+      "muscle_reference_reverification": "completed_with_variant_and_access_limits",
+      "publication_ready": false,
+      "muscle_audit_file": "../outputs/exercise-guides-72/muscle-evidence.json#chair_squat"
+    },
+    {
+      "number": 10,
+      "id": "goblet_squat",
+      "name": "고블릿 스쿼트",
+      "category": "하체",
+      "added_in_pr65": true,
+      "existing_guide": false,
+      "existing_asset": null,
+      "technique_source": "S10",
+      "match": "direct",
+      "production_note": "덤벨 1개를 가슴 앞에 세워 잡기. 손과 덤벨의 연결을 확대 검수.",
+      "muscle_references_from_pr": [
+        "https://pubmed.ncbi.nlm.nih.gov/34341315/"
+      ],
+      "muscle_evidence_note_from_pr": "고블릿 스쿼트 직접 EMG(Collins 2021, 체중 30% 부하) — 광근·햄스트링 측정; 대둔근·내전근·몸통은 추론 · 중량 미입력",
+      "muscle_reference_reverification": "completed_with_variant_and_access_limits",
+      "publication_ready": false,
+      "muscle_audit_file": "../outputs/exercise-guides-72/muscle-evidence.json#goblet_squat"
+    },
+    {
+      "number": 11,
+      "id": "band_squat",
+      "name": "밴드 스쿼트",
+      "category": "하체",
+      "added_in_pr65": true,
+      "existing_guide": false,
+      "existing_asset": null,
+      "technique_source": "S11",
+      "match": "direct",
+      "production_note": "긴 밴드를 양발로 밟고 손으로 잡는 변형. 무릎 미니밴드와 구분.",
+      "muscle_references_from_pr": [
+        "https://pubmed.ncbi.nlm.nih.gov/34341315/"
+      ],
+      "muscle_evidence_note_from_pr": "밴드 동일 조건 EMG 미확보 — 고블릿·바벨 스쿼트 EMG(Collins 2021)에서 추론 · 밴드 장력 미입력",
+      "muscle_reference_reverification": "completed_with_variant_and_access_limits",
+      "publication_ready": false,
+      "muscle_audit_file": "../outputs/exercise-guides-72/muscle-evidence.json#band_squat"
+    },
+    {
+      "number": 12,
+      "id": "bulgarian_split_squat",
+      "name": "불가리안 스플릿 스쿼트",
+      "category": "하체",
+      "added_in_pr65": true,
+      "existing_guide": false,
+      "existing_asset": null,
+      "technique_source": "S12",
+      "match": "direct",
+      "production_note": "뒷발 벤치 지지. 맨몸 기본안; 앞발과 벤치 안정성이 보이는 측면 사선.",
+      "muscle_references_from_pr": [
+        "https://pubmed.ncbi.nlm.nih.gov/40867012/"
+      ],
+      "muscle_evidence_note_from_pr": "불가리안 스플릿 스쿼트 EMG(2025, 훈련 여성 21명) — 둔근·광근·대퇴직근·햄스트링·기립근 직접",
+      "muscle_reference_reverification": "completed_with_variant_and_access_limits",
+      "publication_ready": false,
+      "muscle_audit_file": "../outputs/exercise-guides-72/muscle-evidence.json#bulgarian_split_squat"
+    },
+    {
+      "number": 13,
+      "id": "reverse_lunge",
+      "name": "리버스 런지",
+      "category": "하체",
+      "added_in_pr65": true,
+      "existing_guide": false,
+      "existing_asset": null,
+      "technique_source": "S13",
+      "match": "direct",
+      "production_note": "뒤로 내딛고 돌아오기. 전방 런지와 화살표 방향 구분.",
+      "muscle_references_from_pr": [
+        "https://www.mdpi.com/2076-3417/14/24/11480"
+      ],
+      "muscle_evidence_note_from_pr": "맨몸 리버스 런지 EMG(2024, 20명) — 강화 수준은 앞다리 대퇴직근·지지다리 중둔근뿐, 대둔근은 미달; 광근·내전근·몸통은 추론",
+      "muscle_reference_reverification": "completed_with_variant_and_access_limits",
+      "publication_ready": false,
+      "muscle_audit_file": "../outputs/exercise-guides-72/muscle-evidence.json#reverse_lunge"
+    },
+    {
+      "number": 14,
+      "id": "step_up",
+      "name": "스텝업",
+      "category": "하체",
+      "added_in_pr65": true,
+      "existing_guide": false,
+      "existing_asset": null,
+      "technique_source": "S14",
+      "match": "adaptation",
+      "production_note": "원문은 덤벨 포함. 앱 맨몸 기본안에서는 부하만 생략하고 발판 전체를 표시.",
+      "muscle_references_from_pr": [
+        "https://pubmed.ncbi.nlm.nih.gov/32236133/"
+      ],
+      "muscle_evidence_note_from_pr": "측방 스텝업 EMG(Muyor 2020, 5RM 60%)를 정면 스텝업에 적용 — 광근·중둔근·대둔근 순",
+      "muscle_reference_reverification": "completed_with_variant_and_access_limits",
+      "publication_ready": false,
+      "muscle_audit_file": "../outputs/exercise-guides-72/muscle-evidence.json#step_up"
+    },
+    {
+      "number": 15,
+      "id": "leg_press",
+      "name": "레그 프레스",
+      "category": "하체",
+      "added_in_pr65": true,
+      "existing_guide": false,
+      "existing_asset": null,
+      "technique_source": "S15",
+      "match": "direct",
+      "production_note": "머신 형태 확정 필요. 좌석·발판·안전장치가 보이는 측면; 기종별 조절법은 별도.",
+      "muscle_references_from_pr": [
+        "https://pubmed.ncbi.nlm.nih.gov/32605065/"
+      ],
+      "muscle_evidence_note_from_pr": "레그 프레스 변형 체계적 고찰(Martín-Fuentes 2020) — 광근·대퇴직근·대퇴이두근·비복근 종합; 둔근·내전근은 추론 · 머신 표시 중량 미입력",
+      "muscle_reference_reverification": "completed_with_variant_and_access_limits",
+      "publication_ready": false,
+      "muscle_audit_file": "../outputs/exercise-guides-72/muscle-evidence.json#leg_press"
+    },
+    {
+      "number": 16,
+      "id": "dumbbell_rdl",
+      "name": "덤벨 루마니안 데드리프트",
+      "category": "하체",
+      "added_in_pr65": true,
+      "existing_guide": false,
+      "existing_asset": null,
+      "technique_source": "S16",
+      "match": "direct",
+      "production_note": "서서 시작하는 양손 덤벨 힙힌지. 덤벨을 바닥에 놓는 데드리프트와 구분.",
+      "muscle_references_from_pr": [
+        "https://pubmed.ncbi.nlm.nih.gov/35162922/"
+      ],
+      "muscle_evidence_note_from_pr": "바벨 RDL EMG(Coratella 2022, 80% 1RM)를 덤벨에 적용 — 대둔근·중둔근·햄스트링·기립근 직접 · 중량 미입력",
+      "muscle_reference_reverification": "completed_with_variant_and_access_limits",
+      "publication_ready": false,
+      "muscle_audit_file": "../outputs/exercise-guides-72/muscle-evidence.json#dumbbell_rdl"
+    },
+    {
+      "number": 17,
+      "id": "band_rdl",
+      "name": "밴드 루마니안 데드리프트",
+      "category": "하체",
+      "added_in_pr65": true,
+      "existing_guide": false,
+      "existing_asset": null,
+      "technique_source": "S16",
+      "match": "adaptation",
+      "production_note": "힙힌지 참고만 가능. 양발 밴드 고정·손잡이·장력 경로의 직접 시범 근거 추가 필요.",
+      "muscle_references_from_pr": [
+        "https://pubmed.ncbi.nlm.nih.gov/35162922/"
+      ],
+      "muscle_evidence_note_from_pr": "밴드 동일 조건 EMG 미확보 — 바벨 RDL EMG(Coratella 2022)에서 추론 · 밴드 장력 미입력",
+      "muscle_reference_reverification": "completed_with_variant_and_access_limits",
+      "publication_ready": false,
+      "muscle_audit_file": "../outputs/exercise-guides-72/muscle-evidence.json#band_rdl"
+    },
+    {
+      "number": 18,
+      "id": "seated_leg_curl",
+      "name": "시티드 레그 컬",
+      "category": "하체",
+      "added_in_pr65": true,
+      "existing_guide": false,
+      "existing_asset": null,
+      "technique_source": "S17",
+      "match": "direct",
+      "production_note": "앉은 머신. 원문의 시작 각도·패드 설명은 실제 기종 설명서와 재대조 후 그림 확정.",
+      "muscle_references_from_pr": [
+        "https://pubmed.ncbi.nlm.nih.gov/33009197/"
+      ],
+      "muscle_evidence_note_from_pr": "시티드 레그 컬 훈련 MRI(Maeo 2021) — 햄스트링 개별 체적; 비복근은 추론 · 머신 표시 중량 미입력",
+      "muscle_reference_reverification": "completed_with_variant_and_access_limits",
+      "publication_ready": false,
+      "muscle_audit_file": "../outputs/exercise-guides-72/muscle-evidence.json#seated_leg_curl"
+    },
+    {
+      "number": 19,
+      "id": "glute_bridge",
+      "name": "글루트 브릿지",
+      "category": "하체",
+      "added_in_pr65": true,
+      "existing_guide": false,
+      "existing_asset": null,
+      "technique_source": "S18",
+      "match": "direct",
+      "production_note": "등과 어깨 바닥 지지. 벤치 힙 쓰러스트와 그림 공유 금지.",
+      "muscle_references_from_pr": [
+        "https://pubmed.ncbi.nlm.nih.gov/29706723/",
+        "https://pubmed.ncbi.nlm.nih.gov/23160432/"
+      ],
+      "muscle_evidence_note_from_pr": "브리지 EMG(Khaiyat 2018 여성 12명; Selkowitz 2013 세침) — 대둔근·대퇴이두근 직접, 발 위치·무릎 각도에 따라 변함",
+      "muscle_reference_reverification": "completed_with_variant_and_access_limits",
+      "publication_ready": false,
+      "muscle_audit_file": "../outputs/exercise-guides-72/muscle-evidence.json#glute_bridge"
+    },
+    {
+      "number": 20,
+      "id": "single_leg_bridge",
+      "name": "싱글레그 글루트 브릿지",
+      "category": "하체",
+      "added_in_pr65": true,
+      "existing_guide": false,
+      "existing_asset": null,
+      "technique_source": "S19",
+      "match": "direct",
+      "production_note": "한발 바닥 지지, 반대 다리 들기. 골반 좌우 기울기가 보이는 사선.",
+      "muscle_references_from_pr": [
+        "https://pubmed.ncbi.nlm.nih.gov/28900560/"
+      ],
+      "muscle_evidence_note_from_pr": "싱글레그 브리지 EMG(Lehecka 2017, 28명) — 무릎 90° 에서 햄스트링 75% > 중둔근 58%·대둔근 51% MVIC; 135° 변형에서만 햄스트링이 낮다",
+      "muscle_reference_reverification": "completed_with_variant_and_access_limits",
+      "publication_ready": false,
+      "muscle_audit_file": "../outputs/exercise-guides-72/muscle-evidence.json#single_leg_bridge"
+    },
+    {
+      "number": 21,
+      "id": "quadruped_hip_extension",
+      "name": "네발기기 힙 익스텐션",
+      "category": "하체",
+      "added_in_pr65": true,
+      "existing_guide": false,
+      "existing_asset": null,
+      "technique_source": "S20",
+      "match": "adaptation",
+      "production_note": "팔은 지지하고 한 다리만 뒤로 올림. 무릎 굽힌 변형/편 변형의 정확한 원문 시범 재확인.",
+      "muscle_references_from_pr": [
+        "https://pubmed.ncbi.nlm.nih.gov/23160432/"
+      ],
+      "muscle_evidence_note_from_pr": "네발기기 고관절 폄 세침 EMG(Selkowitz 2013) — 중둔근·상부 대둔근·대퇴근막장근; 햄스트링·몸통은 추론",
+      "muscle_reference_reverification": "completed_with_variant_and_access_limits",
+      "publication_ready": false,
+      "muscle_audit_file": "../outputs/exercise-guides-72/muscle-evidence.json#quadruped_hip_extension"
+    },
+    {
+      "number": 22,
+      "id": "band_walk",
+      "name": "사이드 밴드 워크",
+      "category": "하체",
+      "added_in_pr65": true,
+      "existing_guide": false,
+      "existing_asset": null,
+      "technique_source": "S21",
+      "match": "direct",
+      "production_note": "발목 또는 무릎 루프밴드 중 하나를 확정. 발 아래 긴 밴드 Walking Abduction과 구분.",
+      "muscle_references_from_pr": [
+        "https://pubmed.ncbi.nlm.nih.gov/30615490/",
+        "https://pubmed.ncbi.nlm.nih.gov/23160432/"
+      ],
+      "muscle_evidence_note_from_pr": "밴드 사이드 스테핑 EMG(Lewis 2018, 22명) + 둔근 세침(Selkowitz 2013) — 대둔근·중둔근·대퇴근막장근 직접 · 밴드 장력 미입력",
+      "muscle_reference_reverification": "completed_with_variant_and_access_limits",
+      "publication_ready": false,
+      "muscle_audit_file": "../outputs/exercise-guides-72/muscle-evidence.json#band_walk"
+    },
+    {
+      "number": 23,
+      "id": "calf_raise",
+      "name": "카프 레이즈",
+      "category": "하체",
+      "added_in_pr65": true,
+      "existing_guide": false,
+      "existing_asset": null,
+      "technique_source": "S09",
+      "match": "direct",
+      "production_note": "서서 양발 뒤꿈치 올림. 바닥 기본안과 균형 지지물 표시; 계단 변형 아님.",
+      "muscle_references_from_pr": [
+        "https://pubmed.ncbi.nlm.nih.gov/38156065/"
+      ],
+      "muscle_evidence_note_from_pr": "스탠딩 카프 레이즈 훈련 MRI(Kinoshita·Maeo 2023, 공동 제1저자) — 비복근 내외측두·가자미근 체적; 균형 근육은 추론",
+      "muscle_reference_reverification": "completed_with_variant_and_access_limits",
+      "publication_ready": false,
+      "muscle_audit_file": "../outputs/exercise-guides-72/muscle-evidence.json#calf_raise"
+    },
+    {
+      "number": 24,
+      "id": "overhead_press",
+      "name": "오버헤드 프레스",
+      "category": "상체",
+      "added_in_pr65": false,
+      "existing_guide": false,
+      "existing_asset": null,
+      "technique_source": "S22",
+      "match": "direct",
+      "production_note": "NHS 본문의 서서 양손 중량 프레스. 앱 덤벨 기본안; 바벨 원문과 혼용하지 않는다.",
+      "muscle_references_from_pr": [
+        "https://pubmed.ncbi.nlm.nih.gov/35936912/"
+      ],
+      "muscle_evidence_note_from_pr": "프레스 직접 연구 · 덤벨/바벨 및 방향 차이",
+      "muscle_reference_reverification": "completed_with_variant_and_access_limits",
+      "publication_ready": false,
+      "muscle_audit_file": "../outputs/exercise-guides-72/muscle-evidence.json#overhead_press"
+    },
+    {
+      "number": 25,
+      "id": "lat_pulldown",
+      "name": "랫풀 다운",
+      "category": "상체",
+      "added_in_pr65": false,
+      "existing_guide": false,
+      "existing_asset": null,
+      "technique_source": "S23",
+      "match": "direct",
+      "production_note": "앉아 앞가슴으로 당기는 오버핸드. 목 뒤로 내리는 그림 금지.",
+      "muscle_references_from_pr": [
+        "https://pubmed.ncbi.nlm.nih.gov/40981044/"
+      ],
+      "muscle_evidence_note_from_pr": "랫풀 다운 직접 연구 · 그립 차이",
+      "muscle_reference_reverification": "completed_with_variant_and_access_limits",
+      "publication_ready": false,
+      "muscle_audit_file": "../outputs/exercise-guides-72/muscle-evidence.json#lat_pulldown"
+    },
+    {
+      "number": 26,
+      "id": "dips",
+      "name": "딥스",
+      "category": "상체",
+      "added_in_pr65": false,
+      "existing_guide": false,
+      "existing_asset": null,
+      "technique_source": "S24",
+      "match": "direct",
+      "production_note": "평행봉 딥스 연구의 Methods와 Figure 1B 참고. 벤치/링 딥스와 구분; 연구 표본의 수행이 보편적 안전 보장은 아님.",
+      "muscle_references_from_pr": [
+        "https://pubmed.ncbi.nlm.nih.gov/36293792/"
+      ],
+      "muscle_evidence_note_from_pr": "바 딥스 직접 연구 · 벤치 딥스와 구분",
+      "muscle_reference_reverification": "completed_with_variant_and_access_limits",
+      "publication_ready": false,
+      "muscle_audit_file": "../outputs/exercise-guides-72/muscle-evidence.json#dips"
+    },
+    {
+      "number": 27,
+      "id": "dumbbell_curl",
+      "name": "덤벨 컬",
+      "category": "상체",
+      "added_in_pr65": false,
+      "existing_guide": true,
+      "existing_asset": "exercise_guides/dumbbell-curl.gif",
+      "technique_source": "S25",
+      "match": "direct",
+      "production_note": "덤벨 팔꿈치 굽힘. 몸통 반동 없이 손목과 위팔 위치 표시.",
+      "muscle_references_from_pr": [
+        "https://pubmed.ncbi.nlm.nih.gov/30013836/",
+        "https://pubmed.ncbi.nlm.nih.gov/17545433/"
+      ],
+      "muscle_evidence_note_from_pr": "컬 근활성 + 상완근 해부 연구",
+      "muscle_reference_reverification": "completed_with_variant_and_access_limits",
+      "publication_ready": false,
+      "muscle_audit_file": "../outputs/exercise-guides-72/muscle-evidence.json#dumbbell_curl"
+    },
+    {
+      "number": 28,
+      "id": "barbell_curl",
+      "name": "바벨 컬",
+      "category": "상체",
+      "added_in_pr65": false,
+      "existing_guide": true,
+      "existing_asset": "exercise_guides/barbell-curl.gif",
+      "technique_source": "S26",
+      "match": "direct",
+      "production_note": "양손 바벨, 손바닥 위. EZ바와 직선바를 그림에서 혼용하지 않는다.",
+      "muscle_references_from_pr": [
+        "https://pubmed.ncbi.nlm.nih.gov/30013836/",
+        "https://pubmed.ncbi.nlm.nih.gov/17545433/"
+      ],
+      "muscle_evidence_note_from_pr": "바벨/EZ바 컬 직접 연구",
+      "muscle_reference_reverification": "completed_with_variant_and_access_limits",
+      "publication_ready": false,
+      "muscle_audit_file": "../outputs/exercise-guides-72/muscle-evidence.json#barbell_curl"
+    },
+    {
+      "number": 29,
+      "id": "lateral_raise",
+      "name": "사이드 레터럴 레이즈",
+      "category": "상체",
+      "added_in_pr65": false,
+      "existing_guide": true,
+      "existing_asset": "exercise_guides/lateral-raise.gif",
+      "technique_source": "S27",
+      "match": "direct",
+      "production_note": "덤벨 옆으로 들기. 전면에서 팔의 진행 방향 표시.",
+      "muscle_references_from_pr": [
+        "https://pubmed.ncbi.nlm.nih.gov/32824894/"
+      ],
+      "muscle_evidence_note_from_pr": "측면 들기 직접 연구 · 어깨는 한 근육군으로 표시",
+      "muscle_reference_reverification": "completed_with_variant_and_access_limits",
+      "publication_ready": false,
+      "muscle_audit_file": "../outputs/exercise-guides-72/muscle-evidence.json#lateral_raise"
+    },
+    {
+      "number": 30,
+      "id": "front_raise",
+      "name": "프런트 레이즈",
+      "category": "상체",
+      "added_in_pr65": false,
+      "existing_guide": true,
+      "existing_asset": "exercise_guides/front-raise.gif",
+      "technique_source": "S28",
+      "match": "direct",
+      "production_note": "덤벨 앞으로 들기. 측면에서 몸통과 팔의 관계 표시.",
+      "muscle_references_from_pr": [
+        "https://pubmed.ncbi.nlm.nih.gov/32824894/"
+      ],
+      "muscle_evidence_note_from_pr": "전면 들기 직접 연구 · 어깨는 한 근육군으로 표시",
+      "muscle_reference_reverification": "completed_with_variant_and_access_limits",
+      "publication_ready": false,
+      "muscle_audit_file": "../outputs/exercise-guides-72/muscle-evidence.json#front_raise"
+    },
+    {
+      "number": 31,
+      "id": "upright_row",
+      "name": "업라이트로우",
+      "category": "상체",
+      "added_in_pr65": false,
+      "existing_guide": false,
+      "existing_asset": null,
+      "technique_source": "S29",
+      "match": "adaptation",
+      "production_note": "NSCA 기술 해설의 수정 자세 검토. 어깨높이 위로 과하게 끌어올리는 시범 대신 범위·그립을 전문가 검수 후 확정.",
+      "muscle_references_from_pr": [
+        "https://pubmed.ncbi.nlm.nih.gov/22362088/"
+      ],
+      "muscle_evidence_note_from_pr": "업라이트로우 직접 연구 · 그립 폭 차이",
+      "muscle_reference_reverification": "completed_with_variant_and_access_limits",
+      "publication_ready": false,
+      "muscle_audit_file": "../outputs/exercise-guides-72/muscle-evidence.json#upright_row"
+    },
+    {
+      "number": 32,
+      "id": "pushup",
+      "name": "푸쉬업",
+      "category": "상체",
+      "added_in_pr65": false,
+      "existing_guide": true,
+      "existing_asset": "exercise_guides/push-up.gif",
+      "technique_source": "S30",
+      "match": "direct",
+      "production_note": "손·발 지지. 옆모습으로 몸통과 골반 정렬 표시.",
+      "muscle_references_from_pr": [
+        "https://pubmed.ncbi.nlm.nih.gov/20664364/",
+        "https://pubmed.ncbi.nlm.nih.gov/24511343/"
+      ],
+      "muscle_evidence_note_from_pr": "일반 푸쉬업 직접 연구",
+      "muscle_reference_reverification": "completed_with_variant_and_access_limits",
+      "publication_ready": false,
+      "muscle_audit_file": "../outputs/exercise-guides-72/muscle-evidence.json#pushup"
+    },
+    {
+      "number": 33,
+      "id": "knee_pushup",
+      "name": "니 푸쉬업",
+      "category": "상체",
+      "added_in_pr65": false,
+      "existing_guide": false,
+      "existing_asset": null,
+      "technique_source": "S31",
+      "match": "direct",
+      "production_note": "손·무릎 지지. 일반 푸쉬업 그림의 다리만 자르는 방식 금지.",
+      "muscle_references_from_pr": [
+        "https://pubmed.ncbi.nlm.nih.gov/20664364/",
+        "https://pubmed.ncbi.nlm.nih.gov/27693098/"
+      ],
+      "muscle_evidence_note_from_pr": "일반/무릎 플러스 변형 연구 · 일반 니 푸쉬업에 추론",
+      "muscle_reference_reverification": "completed_with_variant_and_access_limits",
+      "publication_ready": false,
+      "muscle_audit_file": "../outputs/exercise-guides-72/muscle-evidence.json#knee_pushup"
+    },
+    {
+      "number": 34,
+      "id": "y_raise",
+      "name": "Y 레이즈",
+      "category": "상체",
+      "added_in_pr65": false,
+      "existing_guide": false,
+      "existing_asset": null,
+      "technique_source": "S23",
+      "match": "adaptation",
+      "production_note": "바닥 엎드린 Y 레이즈로 확정. 테이블·벤치 지지 연구와의 차이를 근육 감사에 명시합니다.",
+      "muscle_references_from_pr": [
+        "https://pubmed.ncbi.nlm.nih.gov/23068897/"
+      ],
+      "muscle_evidence_note_from_pr": "견갑면 팔 올리기 연구 · 자세/지지 조건에 따른 추론",
+      "muscle_reference_reverification": "completed_with_variant_and_access_limits",
+      "publication_ready": false,
+      "muscle_audit_file": "../outputs/exercise-guides-72/muscle-evidence.json#y_raise"
+    },
+    {
+      "number": 35,
+      "id": "wall_pushup",
+      "name": "벽 푸쉬업",
+      "category": "상체",
+      "added_in_pr65": true,
+      "existing_guide": false,
+      "existing_asset": null,
+      "technique_source": "S09",
+      "match": "direct",
+      "production_note": "벽 지지. 손 높이와 발·벽 간격이 보이는 측면.",
+      "muscle_references_from_pr": [
+        "https://pubmed.ncbi.nlm.nih.gov/14977678/",
+        "https://pubmed.ncbi.nlm.nih.gov/35599715/"
+      ],
+      "muscle_evidence_note_from_pr": "벽 푸시업 플러스 EMG(Ludewig 2004 — 전거근·상부 승모근만) + 푸시업 변형 고찰(Kowalski 2022); 대흉근·삼두근은 푸시업 문헌 적용, 가장 낮은 부하",
+      "muscle_reference_reverification": "completed_with_variant_and_access_limits",
+      "publication_ready": false,
+      "muscle_audit_file": "../outputs/exercise-guides-72/muscle-evidence.json#wall_pushup"
+    },
+    {
+      "number": 36,
+      "id": "incline_pushup",
+      "name": "인클라인 푸쉬업",
+      "category": "상체",
+      "added_in_pr65": true,
+      "existing_guide": false,
+      "existing_asset": null,
+      "technique_source": "S32",
+      "match": "direct",
+      "production_note": "높은 면에 손 지지. 발을 올리는 디클라인과 구분.",
+      "muscle_references_from_pr": [
+        "https://pubmed.ncbi.nlm.nih.gov/35599715/"
+      ],
+      "muscle_evidence_note_from_pr": "인클라인 푸시업 포함 변형 고찰(Kowalski 2022) — 대흉근·삼두근·전거근 종합; 지지대가 높을수록 부하 감소",
+      "muscle_reference_reverification": "completed_with_variant_and_access_limits",
+      "publication_ready": false,
+      "muscle_audit_file": "../outputs/exercise-guides-72/muscle-evidence.json#incline_pushup"
+    },
+    {
+      "number": 37,
+      "id": "pike_pushup",
+      "name": "파이크 푸쉬업",
+      "category": "상체",
+      "added_in_pr65": true,
+      "existing_guide": false,
+      "existing_asset": null,
+      "technique_source": "S33",
+      "match": "direct",
+      "production_note": "엉덩이 높인 역V. 머리를 바닥에 지지하는 물구나무 그림으로 바꾸지 않는다.",
+      "muscle_references_from_pr": [
+        "https://www.nasm.org/resource-center/exercise-library/pike-push-up",
+        "https://pubmed.ncbi.nlm.nih.gov/35599715/"
+      ],
+      "muscle_evidence_note_from_pr": "파이크 푸시업 독립 EMG 미확보 — NASM 동작 설명 + 푸시업 변형 고찰에서 추론",
+      "muscle_reference_reverification": "completed_with_variant_and_access_limits",
+      "publication_ready": false,
+      "muscle_audit_file": "../outputs/exercise-guides-72/muscle-evidence.json#pike_pushup"
+    },
+    {
+      "number": 38,
+      "id": "dumbbell_bench_press",
+      "name": "덤벨 벤치 프레스",
+      "category": "상체",
+      "added_in_pr65": true,
+      "existing_guide": false,
+      "existing_asset": null,
+      "technique_source": "S34",
+      "match": "direct",
+      "production_note": "평벤치에 누운 양손 덤벨. 발·엉덩이·등 지지와 손목 표시.",
+      "muscle_references_from_pr": [
+        "https://pubmed.ncbi.nlm.nih.gov/21225489/"
+      ],
+      "muscle_evidence_note_from_pr": "덤벨 벤치 프레스 직접 EMG(Saeterbakken 2011) — 대흉근·전면 삼각근·이두근·삼두근 · 중량 미입력",
+      "muscle_reference_reverification": "completed_with_variant_and_access_limits",
+      "publication_ready": false,
+      "muscle_audit_file": "../outputs/exercise-guides-72/muscle-evidence.json#dumbbell_bench_press"
+    },
+    {
+      "number": 39,
+      "id": "dumbbell_floor_press",
+      "name": "덤벨 플로어 프레스",
+      "category": "상체",
+      "added_in_pr65": true,
+      "existing_guide": false,
+      "existing_asset": null,
+      "technique_source": "S35",
+      "match": "direct",
+      "production_note": "바닥이 상완 하강 범위를 제한. 재활 대상의 처방을 일반인 횟수로 옮기지 않는다.",
+      "muscle_references_from_pr": [
+        "https://pubmed.ncbi.nlm.nih.gov/21225489/"
+      ],
+      "muscle_evidence_note_from_pr": "덤벨 벤치 EMG(Saeterbakken 2011)를 바닥이 제한하는 가동 범위에 적용 · 중량 미입력",
+      "muscle_reference_reverification": "completed_with_variant_and_access_limits",
+      "publication_ready": false,
+      "muscle_audit_file": "../outputs/exercise-guides-72/muscle-evidence.json#dumbbell_floor_press"
+    },
+    {
+      "number": 40,
+      "id": "machine_chest_press",
+      "name": "머신 체스트 프레스",
+      "category": "상체",
+      "added_in_pr65": true,
+      "existing_guide": false,
+      "existing_asset": null,
+      "technique_source": "S36",
+      "match": "direct",
+      "production_note": "앉은 머신. 손잡이 높이·등 지지·기종별 시작 범위 검수.",
+      "muscle_references_from_pr": [
+        "https://www.nasm.org/resource-center/exercise-library/chest-press-machine",
+        "https://pubmed.ncbi.nlm.nih.gov/21225489/"
+      ],
+      "muscle_evidence_note_from_pr": "시티드 머신 자체 실험 미확보 — NASM 설명 + 스미스/바벨/덤벨 프레스 EMG에서 추론 · 머신 표시 중량 미입력",
+      "muscle_reference_reverification": "completed_with_variant_and_access_limits",
+      "publication_ready": false,
+      "muscle_audit_file": "../outputs/exercise-guides-72/muscle-evidence.json#machine_chest_press"
+    },
+    {
+      "number": 41,
+      "id": "band_chest_press",
+      "name": "밴드 체스트 프레스",
+      "category": "상체",
+      "added_in_pr65": true,
+      "existing_guide": false,
+      "existing_asset": null,
+      "technique_source": "S11",
+      "match": "direct",
+      "production_note": "밴드를 등 뒤로 감싼 서기 변형. 외부 앵커 변형과 구분.",
+      "muscle_references_from_pr": [
+        "https://pubmed.ncbi.nlm.nih.gov/18076235/"
+      ],
+      "muscle_evidence_note_from_pr": "밴드 동일 조건 EMG 미확보 — 서서 케이블 프레스(Santana 2007)·푸시업 문헌에서 추론 · 밴드 장력 미입력",
+      "muscle_reference_reverification": "completed_with_variant_and_access_limits",
+      "publication_ready": false,
+      "muscle_audit_file": "../outputs/exercise-guides-72/muscle-evidence.json#band_chest_press"
+    },
+    {
+      "number": 42,
+      "id": "band_shoulder_press",
+      "name": "밴드 숄더 프레스",
+      "category": "상체",
+      "added_in_pr65": true,
+      "existing_guide": false,
+      "existing_asset": null,
+      "technique_source": "S37",
+      "match": "adaptation",
+      "production_note": "자료는 앉은 동작과 밴드 추가 옵션. 서서 밟는 밴드 경로의 직접 근거 추가 필요.",
+      "muscle_references_from_pr": [
+        "https://pubmed.ncbi.nlm.nih.gov/23096062/"
+      ],
+      "muscle_evidence_note_from_pr": "밴드 동일 조건 EMG 미확보 — 덤벨/바벨 숄더 프레스 EMG(Saeterbakken 2013)에서 추론 · 밴드 장력 미입력",
+      "muscle_reference_reverification": "completed_with_variant_and_access_limits",
+      "publication_ready": false,
+      "muscle_audit_file": "../outputs/exercise-guides-72/muscle-evidence.json#band_shoulder_press"
+    },
+    {
+      "number": 43,
+      "id": "one_arm_dumbbell_row",
+      "name": "원암 덤벨 로우",
+      "category": "상체",
+      "added_in_pr65": true,
+      "existing_guide": false,
+      "existing_asset": null,
+      "technique_source": "S38",
+      "match": "direct",
+      "production_note": "벤치에 한손·한무릎 지지 여부를 확정하고 반대 손 덤벨 궤적 표시.",
+      "muscle_references_from_pr": [
+        "https://pubmed.ncbi.nlm.nih.gov/19620925/",
+        "https://pubmed.ncbi.nlm.nih.gov/15228624/"
+      ],
+      "muscle_evidence_note_from_pr": "원암 케이블 로우(Fenwick 2009)·시티드 로우(Lehman 2004) EMG에서 추론 — 광배근·이두근·중부 승모근/능형근 · 중량 미입력",
+      "muscle_reference_reverification": "completed_with_variant_and_access_limits",
+      "publication_ready": false,
+      "muscle_audit_file": "../outputs/exercise-guides-72/muscle-evidence.json#one_arm_dumbbell_row"
+    },
+    {
+      "number": 44,
+      "id": "band_row",
+      "name": "밴드 로우",
+      "category": "상체",
+      "added_in_pr65": true,
+      "existing_guide": false,
+      "existing_asset": null,
+      "technique_source": "S39",
+      "match": "adaptation",
+      "production_note": "대학 자료에 Banded Rows 사진 있음. 서서 발로 밟기/외부 고정/앉기 중 원본 시범과 맞춰 확정.",
+      "muscle_references_from_pr": [
+        "https://pubmed.ncbi.nlm.nih.gov/15228624/",
+        "https://pubmed.ncbi.nlm.nih.gov/19620925/"
+      ],
+      "muscle_evidence_note_from_pr": "밴드 동일 조건 EMG 미확보 — 시티드/원암 로우 EMG에서 추론 · 밴드 장력 미입력",
+      "muscle_reference_reverification": "completed_with_variant_and_access_limits",
+      "publication_ready": false,
+      "muscle_audit_file": "../outputs/exercise-guides-72/muscle-evidence.json#band_row"
+    },
+    {
+      "number": 45,
+      "id": "seated_cable_row",
+      "name": "시티드 케이블 로우",
+      "category": "상체",
+      "added_in_pr65": true,
+      "existing_guide": false,
+      "existing_asset": null,
+      "technique_source": "S40",
+      "match": "direct",
+      "production_note": "앉은 좁은 손잡이 케이블. 몸통 흔들림 없이 손잡이·발 지지 표시.",
+      "muscle_references_from_pr": [
+        "https://pubmed.ncbi.nlm.nih.gov/15228624/"
+      ],
+      "muscle_evidence_note_from_pr": "시티드 로우 직접 EMG(Lehman 2004) — 광배근·이두근·중부 승모근/능형근(표면 EMG 한 그룹) · 머신 표시 중량 미입력",
+      "muscle_reference_reverification": "completed_with_variant_and_access_limits",
+      "publication_ready": false,
+      "muscle_audit_file": "../outputs/exercise-guides-72/muscle-evidence.json#seated_cable_row"
+    },
+    {
+      "number": 46,
+      "id": "inverted_row",
+      "name": "인버티드 로우",
+      "category": "상체",
+      "added_in_pr65": true,
+      "existing_guide": false,
+      "existing_asset": null,
+      "technique_source": "S23",
+      "match": "direct",
+      "production_note": "고정 바 아래에서 몸 당기기. 바·랙 고정과 뒤꿈치 지지 표시.",
+      "muscle_references_from_pr": [
+        "https://pubmed.ncbi.nlm.nih.gov/19620925/",
+        "https://www.acefitness.org/continuing-education/certified/april-2018/6959/ace-sponsored-research-what-is-the-best-back-exercise/"
+      ],
+      "muscle_evidence_note_from_pr": "인버티드 로우 직접 EMG(Fenwick 2009 — 광배근·등 위쪽·고관절 폄근·몸통; ACE 2018) · 바 높이로 부하 변함",
+      "muscle_reference_reverification": "completed_with_variant_and_access_limits",
+      "publication_ready": false,
+      "muscle_audit_file": "../outputs/exercise-guides-72/muscle-evidence.json#inverted_row"
+    },
+    {
+      "number": 47,
+      "id": "pullup",
+      "name": "풀업",
+      "category": "상체",
+      "added_in_pr65": true,
+      "existing_guide": false,
+      "existing_asset": null,
+      "technique_source": "S41",
+      "match": "direct",
+      "production_note": "오버핸드 풀업. 언더핸드 친업과 손바닥 방향 구분.",
+      "muscle_references_from_pr": [
+        "https://pubmed.ncbi.nlm.nih.gov/21068680/"
+      ],
+      "muscle_evidence_note_from_pr": "오버핸드 풀업 직접 EMG(Youdas 2010, 25명) — 광배근·이두근·극하근·하부 승모근·대흉근·기립근·외복사근",
+      "muscle_reference_reverification": "completed_with_variant_and_access_limits",
+      "publication_ready": false,
+      "muscle_audit_file": "../outputs/exercise-guides-72/muscle-evidence.json#pullup"
+    },
+    {
+      "number": 48,
+      "id": "face_pull",
+      "name": "케이블 페이스 풀",
+      "category": "상체",
+      "added_in_pr65": true,
+      "existing_guide": false,
+      "existing_asset": null,
+      "technique_source": "S42",
+      "match": "direct",
+      "production_note": "눈높이 로프 케이블. 로프 양끝·팔꿈치·얼굴 사이 공간 표시.",
+      "muscle_references_from_pr": [
+        "https://www.nasm.org/resource-center/exercise-library/face-pull"
+      ],
+      "muscle_evidence_note_from_pr": "로프 페이스 풀 독립 EMG 미확보 — NASM 동작 설명(후면 삼각근·능형근·중부 승모근·극하근) · 머신 표시 중량 미입력",
+      "muscle_reference_reverification": "completed_with_variant_and_access_limits",
+      "publication_ready": false,
+      "muscle_audit_file": "../outputs/exercise-guides-72/muscle-evidence.json#face_pull"
+    },
+    {
+      "number": 49,
+      "id": "band_reverse_fly",
+      "name": "밴드 리버스 플라이",
+      "category": "상체",
+      "added_in_pr65": true,
+      "existing_guide": false,
+      "existing_asset": null,
+      "technique_source": "S39",
+      "match": "adaptation",
+      "production_note": "Band Pull Aparts 참고. 손에 든 밴드 벌리기와 외부 고정 리버스 플라이 중 변형 확정 필요.",
+      "muscle_references_from_pr": [
+        "https://pubmed.ncbi.nlm.nih.gov/29599855/"
+      ],
+      "muscle_evidence_note_from_pr": "밴드 리버스 플라이 직접 EMG(Bergquist 2018, 10RM) — 후면·중간 삼각근·상부 승모근; 능형근은 추론 · 밴드 장력 미입력",
+      "muscle_reference_reverification": "completed_with_variant_and_access_limits",
+      "publication_ready": false,
+      "muscle_audit_file": "../outputs/exercise-guides-72/muscle-evidence.json#band_reverse_fly"
+    },
+    {
+      "number": 50,
+      "id": "iyt_raise",
+      "name": "I-Y-T 레이즈",
+      "category": "상체",
+      "added_in_pr65": true,
+      "existing_guide": false,
+      "existing_asset": null,
+      "technique_source": "S23",
+      "match": "direct",
+      "production_note": "엎드려 벤치 지지한 I→Y→T. 세 단계와 복귀를 모두 보여주는 별도 구성 필요.",
+      "muscle_references_from_pr": [
+        "https://www.acefitness.org/continuing-education/certified/april-2018/6959/ace-sponsored-research-what-is-the-best-back-exercise/"
+      ],
+      "muscle_evidence_note_from_pr": "ACE 의뢰 등 운동 EMG(2018, I-Y-T 포함, 19명) — 중·하부 승모근·극하근 직접; 동료심사 논문과 구분",
+      "muscle_reference_reverification": "completed_with_variant_and_access_limits",
+      "publication_ready": false,
+      "muscle_audit_file": "../outputs/exercise-guides-72/muscle-evidence.json#iyt_raise"
+    },
+    {
+      "number": 51,
+      "id": "triceps_pushdown",
+      "name": "케이블 트라이셉스 푸시다운",
+      "category": "상체",
+      "added_in_pr65": true,
+      "existing_guide": false,
+      "existing_asset": null,
+      "technique_source": "S43",
+      "match": "direct",
+      "production_note": "높은 케이블·로프 기본안. 위팔 고정과 팔꿈치 펴기를 표시.",
+      "muscle_references_from_pr": [
+        "https://pubmed.ncbi.nlm.nih.gov/32153422/"
+      ],
+      "muscle_evidence_note_from_pr": "삼두 푸시다운 직접 EMG(Hussain 2020, 25명) — 장두·외측두·내측두 · 머신 표시 중량 미입력",
+      "muscle_reference_reverification": "completed_with_variant_and_access_limits",
+      "publication_ready": false,
+      "muscle_audit_file": "../outputs/exercise-guides-72/muscle-evidence.json#triceps_pushdown"
+    },
+    {
+      "number": 52,
+      "id": "plank",
+      "name": "플랭크",
+      "category": "코어",
+      "added_in_pr65": false,
+      "existing_guide": true,
+      "existing_asset": "exercise_guides/forearm-plank.gif",
+      "technique_source": "S44",
+      "match": "direct",
+      "production_note": "전완·발끝 지지 정지 자세. 반복 운동처럼 왕복 프레임 구성하지 않는다.",
+      "muscle_references_from_pr": [
+        "https://pubmed.ncbi.nlm.nih.gov/30856100/"
+      ],
+      "muscle_evidence_note_from_pr": "플랭크 직접 연구 · 버틴 시간 기준",
+      "muscle_reference_reverification": "completed_with_variant_and_access_limits",
+      "publication_ready": false,
+      "muscle_audit_file": "../outputs/exercise-guides-72/muscle-evidence.json#plank"
+    },
+    {
+      "number": 53,
+      "id": "knee_plank",
+      "name": "무릎 플랭크",
+      "category": "코어",
+      "added_in_pr65": true,
+      "existing_guide": false,
+      "existing_asset": null,
+      "technique_source": "S18",
+      "match": "direct",
+      "production_note": "전완·무릎 지지. 일반 플랭크와 지지점을 구분.",
+      "muscle_references_from_pr": [
+        "https://pubmed.ncbi.nlm.nih.gov/22436839/",
+        "https://www.mayoclinic.org/healthy-lifestyle/fitness/in-depth/core-strength/art-20546851"
+      ],
+      "muscle_evidence_note_from_pr": "무릎 지지 직접 EMG 미확보 — 앞 브리지 EMG(García-Vaquero 2012)에서 추론, 일반 플랭크보다 낮은 부하",
+      "muscle_reference_reverification": "completed_with_variant_and_access_limits",
+      "publication_ready": false,
+      "muscle_audit_file": "../outputs/exercise-guides-72/muscle-evidence.json#knee_plank"
+    },
+    {
+      "number": 54,
+      "id": "side_plank",
+      "name": "사이드 플랭크",
+      "category": "코어",
+      "added_in_pr65": true,
+      "existing_guide": false,
+      "existing_asset": null,
+      "technique_source": "S45",
+      "match": "direct",
+      "production_note": "전완·발 지지. 좌우 각각 표시; 버티기 동작.",
+      "muscle_references_from_pr": [
+        "https://pubmed.ncbi.nlm.nih.gov/22436839/",
+        "https://pubmed.ncbi.nlm.nih.gov/11415616/"
+      ],
+      "muscle_evidence_note_from_pr": "사이드 브리지 직접 EMG(García-Vaquero 2012 — 복직근·내외복사근·기립근) + 요방형근 세침(McGill 1996, 4명)",
+      "muscle_reference_reverification": "completed_with_variant_and_access_limits",
+      "publication_ready": false,
+      "muscle_audit_file": "../outputs/exercise-guides-72/muscle-evidence.json#side_plank"
+    },
+    {
+      "number": 55,
+      "id": "knee_side_plank",
+      "name": "무릎 사이드 플랭크",
+      "category": "코어",
+      "added_in_pr65": true,
+      "existing_guide": false,
+      "existing_asset": null,
+      "technique_source": "S57",
+      "match": "direct",
+      "production_note": "NHS의 양 무릎 굽힘·전완/무릎 지지 변형. Mayo 발 지지 그림은 이 종목의 자세 근거에서 제외합니다.",
+      "muscle_references_from_pr": [
+        "https://pubmed.ncbi.nlm.nih.gov/22436839/",
+        "https://pubmed.ncbi.nlm.nih.gov/11415616/",
+        "https://www.mayoclinic.org/healthy-lifestyle/fitness/in-depth/core-strength/art-20546851"
+      ],
+      "muscle_evidence_note_from_pr": "무릎 지지 직접 EMG 미확보 — 사이드 브리지 EMG(García-Vaquero 2012)·요방형근 세침(McGill 1996)에서 추론",
+      "muscle_reference_reverification": "completed_with_variant_and_access_limits",
+      "publication_ready": false,
+      "muscle_audit_file": "../outputs/exercise-guides-72/muscle-evidence.json#knee_side_plank"
+    },
+    {
+      "number": 56,
+      "id": "dead_bug",
+      "name": "데드버그",
+      "category": "코어",
+      "added_in_pr65": true,
+      "existing_guide": false,
+      "existing_asset": null,
+      "technique_source": "S46",
+      "match": "direct",
+      "production_note": "바로 누워 반대 팔·다리 교대. 좌우 두 동작의 연결을 표시.",
+      "muscle_references_from_pr": [
+        "https://pubmed.ncbi.nlm.nih.gov/11689975/"
+      ],
+      "muscle_evidence_note_from_pr": "데드버그 직접 EMG(Souza 2001, 12명) — 복직근·복사근; 복횡근·다열근은 미측정",
+      "muscle_reference_reverification": "completed_with_variant_and_access_limits",
+      "publication_ready": false,
+      "muscle_audit_file": "../outputs/exercise-guides-72/muscle-evidence.json#dead_bug"
+    },
+    {
+      "number": 57,
+      "id": "bird_dog",
+      "name": "버드독",
+      "category": "코어",
+      "added_in_pr65": true,
+      "existing_guide": false,
+      "existing_asset": null,
+      "technique_source": "S18",
+      "match": "direct",
+      "production_note": "네발기기에서 반대 팔·다리 동시 뻗기 변형. 한 다리만 드는 힙 익스텐션과 구분.",
+      "muscle_references_from_pr": [
+        "https://pubmed.ncbi.nlm.nih.gov/11689975/",
+        "https://pubmed.ncbi.nlm.nih.gov/22436839/"
+      ],
+      "muscle_evidence_note_from_pr": "버드독 직접 EMG(Souza 2001; García-Vaquero 2012) — 기립근·대둔근·복직근·복사근",
+      "muscle_reference_reverification": "completed_with_variant_and_access_limits",
+      "publication_ready": false,
+      "muscle_audit_file": "../outputs/exercise-guides-72/muscle-evidence.json#bird_dog"
+    },
+    {
+      "number": 58,
+      "id": "pallof_press",
+      "name": "팔로프 프레스",
+      "category": "코어",
+      "added_in_pr65": true,
+      "existing_guide": false,
+      "existing_asset": null,
+      "technique_source": "S47",
+      "match": "adaptation",
+      "production_note": "원문은 케이블. 앱 밴드는 몸 옆 가슴높이 앵커를 확정; 회전하지 않고 버티기.",
+      "muscle_references_from_pr": [
+        "https://doi.org/10.1519/SSC.0000000000000596"
+      ],
+      "muscle_evidence_note_from_pr": "팔로프 프레스 기술 해설(Mullane·Turner·Bishop 2021 SCJ) — 새 EMG 실험 아님; 회전 저항 역할을 정성 적용 · 밴드 장력 미입력",
+      "muscle_reference_reverification": "completed_with_variant_and_access_limits",
+      "publication_ready": false,
+      "muscle_audit_file": "../outputs/exercise-guides-72/muscle-evidence.json#pallof_press"
+    },
+    {
+      "number": 59,
+      "id": "farmer_carry",
+      "name": "파머스 캐리",
+      "category": "코어",
+      "added_in_pr65": true,
+      "existing_guide": false,
+      "existing_asset": null,
+      "technique_source": "S48",
+      "match": "direct",
+      "production_note": "양손 덤벨 보행. 정지 슈러그가 아니며 통로·양손 무게를 표시.",
+      "muscle_references_from_pr": [
+        "https://pubmed.ncbi.nlm.nih.gov/38665162/"
+      ],
+      "muscle_evidence_note_from_pr": "로디드 캐리 직접 EMG(Ellestad 2024) — 복직근·외복사근·최장근·다열근 표면 EMG; 그립·승모근·보행은 추론 · 중량 미입력",
+      "muscle_reference_reverification": "completed_with_variant_and_access_limits",
+      "publication_ready": false,
+      "muscle_audit_file": "../outputs/exercise-guides-72/muscle-evidence.json#farmer_carry"
+    },
+    {
+      "number": 60,
+      "id": "suitcase_carry",
+      "name": "수트케이스 캐리",
+      "category": "코어",
+      "added_in_pr65": true,
+      "existing_guide": false,
+      "existing_asset": null,
+      "technique_source": "S49",
+      "match": "direct",
+      "production_note": "한손 덤벨 보행. ACE 389의 양손 설명은 제외; 좌우 교대 표시.",
+      "muscle_references_from_pr": [
+        "https://pubmed.ncbi.nlm.nih.gov/38665162/",
+        "https://pubmed.ncbi.nlm.nih.gov/11415616/"
+      ],
+      "muscle_evidence_note_from_pr": "로디드 캐리 EMG(Ellestad 2024) + 요방형근 세침(McGill 1996) — 기울임 저항, 양측 공동수축; 한 손 그립도 좌우 같은 부하로 적는다 · 중량 미입력",
+      "muscle_reference_reverification": "completed_with_variant_and_access_limits",
+      "publication_ready": false,
+      "muscle_audit_file": "../outputs/exercise-guides-72/muscle-evidence.json#suitcase_carry"
+    },
+    {
+      "number": 61,
+      "id": "single_leg_abdominal_press",
+      "name": "싱글레그 애브도미널 프레스",
+      "category": "코어",
+      "added_in_pr65": true,
+      "existing_guide": false,
+      "existing_asset": null,
+      "technique_source": "S18",
+      "match": "direct",
+      "production_note": "누워 같은 쪽 손·무릎을 서로 밀며 유지. 팔·다리가 왕복하는 데드버그와 구분.",
+      "muscle_references_from_pr": [
+        "https://www.mayoclinic.org/healthy-lifestyle/fitness/in-depth/core-strength/art-20546851"
+      ],
+      "muscle_evidence_note_from_pr": "손-무릎 누르기 직접 EMG 미확보 — Mayo Clinic 동작 정의(복직근·복사근 등척, 고관절 굽힘근)",
+      "muscle_reference_reverification": "completed_with_variant_and_access_limits",
+      "publication_ready": false,
+      "muscle_audit_file": "../outputs/exercise-guides-72/muscle-evidence.json#single_leg_abdominal_press"
+    },
+    {
+      "number": 62,
+      "id": "side_crunch",
+      "name": "스탠딩 사이드 크런치",
+      "category": "복근",
+      "added_in_pr65": false,
+      "existing_guide": true,
+      "existing_asset": "exercise_guides/standing-side-crunch.gif",
+      "technique_source": "S50",
+      "match": "direct",
+      "production_note": "같은 쪽 무릎·팔꿈치를 가까이. 정면 사선에서 측굴과 다리 올림 표시.",
+      "muscle_references_from_pr": [
+        "https://pubmed.ncbi.nlm.nih.gov/12937449/"
+      ],
+      "muscle_evidence_note_from_pr": "체간 측굴 연구를 서서 수행하는 동작에 적용",
+      "muscle_reference_reverification": "completed_with_variant_and_access_limits",
+      "publication_ready": false,
+      "muscle_audit_file": "../outputs/exercise-guides-72/muscle-evidence.json#side_crunch"
+    },
+    {
+      "number": 63,
+      "id": "knee_up",
+      "name": "스탠딩 니업",
+      "category": "복근",
+      "added_in_pr65": false,
+      "existing_guide": true,
+      "existing_asset": "exercise_guides/standing-knee-up.gif",
+      "technique_source": "S51",
+      "match": "direct",
+      "production_note": "서서 제자리 교대 무릎 올리기. 점프·달리기와 구분.",
+      "muscle_references_from_pr": [
+        "https://pubmed.ncbi.nlm.nih.gov/9118976/",
+        "https://pubmed.ncbi.nlm.nih.gov/34455371/"
+      ],
+      "muscle_evidence_note_from_pr": "다리 들기/고관절 굴곡 연구에서 추론",
+      "muscle_reference_reverification": "completed_with_variant_and_access_limits",
+      "publication_ready": false,
+      "muscle_audit_file": "../outputs/exercise-guides-72/muscle-evidence.json#knee_up"
+    },
+    {
+      "number": 64,
+      "id": "hanging_leg_raise",
+      "name": "행잉 레그 레이즈",
+      "category": "복근",
+      "added_in_pr65": false,
+      "existing_guide": false,
+      "existing_asset": null,
+      "technique_source": "S52",
+      "match": "adaptation",
+      "production_note": "관련 Hanging Leg Lowers 설명. 무릎 굽힘/양다리 폄·시작 자세 확정 후 제작.",
+      "muscle_references_from_pr": [
+        "https://pubmed.ncbi.nlm.nih.gov/9118976/",
+        "https://pubmed.ncbi.nlm.nih.gov/27065536/"
+      ],
+      "muscle_evidence_note_from_pr": "누운 다리 들기 연구 + 매달리기 관절 작용에서 추론",
+      "muscle_reference_reverification": "completed_with_variant_and_access_limits",
+      "publication_ready": false,
+      "muscle_audit_file": "../outputs/exercise-guides-72/muscle-evidence.json#hanging_leg_raise"
+    },
+    {
+      "number": 65,
+      "id": "crunch",
+      "name": "크런치",
+      "category": "복근",
+      "added_in_pr65": false,
+      "existing_guide": true,
+      "existing_asset": "exercise_guides/crunch.gif",
+      "technique_source": "S53",
+      "match": "direct",
+      "production_note": "상체 일부만 들기. 완전히 일어나는 싯업과 구분.",
+      "muscle_references_from_pr": [
+        "https://pubmed.ncbi.nlm.nih.gov/12937449/"
+      ],
+      "muscle_evidence_note_from_pr": "컬업/체간 굴곡 직접 연구",
+      "muscle_reference_reverification": "completed_with_variant_and_access_limits",
+      "publication_ready": false,
+      "muscle_audit_file": "../outputs/exercise-guides-72/muscle-evidence.json#crunch"
+    },
+    {
+      "number": 66,
+      "id": "leg_raise",
+      "name": "레그 레이즈",
+      "category": "복근",
+      "added_in_pr65": false,
+      "existing_guide": true,
+      "existing_asset": "exercise_guides/lying-leg-raise.gif",
+      "technique_source": "S22",
+      "match": "direct",
+      "production_note": "NHS 본문의 Double leg raises 확인. 누운 양다리 동시 올림; 90도 도달을 모든 사용자에게 강제하지 않는다.",
+      "muscle_references_from_pr": [
+        "https://pubmed.ncbi.nlm.nih.gov/27065536/",
+        "https://pubmed.ncbi.nlm.nih.gov/34455371/"
+      ],
+      "muscle_evidence_note_from_pr": "누운 다리 들기 직접 연구",
+      "muscle_reference_reverification": "completed_with_variant_and_access_limits",
+      "publication_ready": false,
+      "muscle_audit_file": "../outputs/exercise-guides-72/muscle-evidence.json#leg_raise"
+    },
+    {
+      "number": 67,
+      "id": "scissor_cross",
+      "name": "시저 크로스",
+      "category": "복근",
+      "added_in_pr65": false,
+      "existing_guide": false,
+      "existing_asset": null,
+      "technique_source": "S54",
+      "match": "adaptation",
+      "production_note": "저장소 정의와 자료를 대조해 상체 굴곡 유지·수평 다리 교차로 확정. 복직근 표시는 해부학적 추론입니다.",
+      "muscle_references_from_pr": [
+        "https://pubmed.ncbi.nlm.nih.gov/9118976/",
+        "https://pubmed.ncbi.nlm.nih.gov/20625774/"
+      ],
+      "muscle_evidence_note_from_pr": "다리 들기 연구 + 교차 내전 동작의 해부학적 추론",
+      "muscle_reference_reverification": "completed_with_variant_and_access_limits",
+      "publication_ready": false,
+      "muscle_audit_file": "../outputs/exercise-guides-72/muscle-evidence.json#scissor_cross"
+    },
+    {
+      "number": 68,
+      "id": "reverse_crunch",
+      "name": "리버스 크런치",
+      "category": "복근",
+      "added_in_pr65": true,
+      "existing_guide": false,
+      "existing_asset": null,
+      "technique_source": "S55",
+      "match": "direct",
+      "production_note": "골반을 말아 올리는 동작. 단순 무릎 굽힘과 구분.",
+      "muscle_references_from_pr": [
+        "https://pubmed.ncbi.nlm.nih.gov/16649890/"
+      ],
+      "muscle_evidence_note_from_pr": "리버스 크런치 직접 EMG(Escamilla 2006, 21명) — 복직근 상하부·내외복사근·대퇴직근",
+      "muscle_reference_reverification": "completed_with_variant_and_access_limits",
+      "publication_ready": false,
+      "muscle_audit_file": "../outputs/exercise-guides-72/muscle-evidence.json#reverse_crunch"
+    },
+    {
+      "number": 69,
+      "id": "bicycle_crunch",
+      "name": "바이시클 크런치",
+      "category": "복근",
+      "added_in_pr65": true,
+      "existing_guide": false,
+      "existing_asset": null,
+      "technique_source": "S55",
+      "match": "direct",
+      "production_note": "반대 팔꿈치·무릎 교대. 팔로 목을 당기는 그림 금지.",
+      "muscle_references_from_pr": [
+        "https://www.acefitness.org/about-ace/press-room/in-the-news/246/american-council-on-exercise-ace-sponsored-study-reveals-best-and-worst-abdominal-exercises/"
+      ],
+      "muscle_evidence_note_from_pr": "ACE/SDSU 복근 13종 EMG(2001, 30명) — 복직근 1위·복사근 2위; 기관 보고, 동료심사 논문과 구분",
+      "muscle_reference_reverification": "completed_with_variant_and_access_limits",
+      "publication_ready": false,
+      "muscle_audit_file": "../outputs/exercise-guides-72/muscle-evidence.json#bicycle_crunch"
+    },
+    {
+      "number": 70,
+      "id": "ball_crunch",
+      "name": "짐볼 크런치",
+      "category": "복근",
+      "added_in_pr65": true,
+      "existing_guide": false,
+      "existing_asset": null,
+      "technique_source": "S55",
+      "match": "direct",
+      "production_note": "짐볼 위 등 지지. 공 위치·발바닥 지지가 보이는 측면.",
+      "muscle_references_from_pr": [
+        "https://pubmed.ncbi.nlm.nih.gov/17530978/"
+      ],
+      "muscle_evidence_note_from_pr": "짐볼 크런치 직접 EMG(Sternlicht 2007, 41명) — 복직근 상하부·외복사근; 공 위치에 따라 변함",
+      "muscle_reference_reverification": "completed_with_variant_and_access_limits",
+      "publication_ready": false,
+      "muscle_audit_file": "../outputs/exercise-guides-72/muscle-evidence.json#ball_crunch"
+    },
+    {
+      "number": 71,
+      "id": "captains_chair_knee_raise",
+      "name": "캡틴체어 니 레이즈",
+      "category": "복근",
+      "added_in_pr65": true,
+      "existing_guide": false,
+      "existing_asset": null,
+      "technique_source": "S55",
+      "match": "direct",
+      "production_note": "전완 패드·등 패드 지지, 무릎 굽혀 올리기. 철봉 매달리기와 구분.",
+      "muscle_references_from_pr": [
+        "https://www.acefitness.org/about-ace/press-room/in-the-news/246/american-council-on-exercise-ace-sponsored-study-reveals-best-and-worst-abdominal-exercises/",
+        "https://pubmed.ncbi.nlm.nih.gov/16649890/"
+      ],
+      "muscle_evidence_note_from_pr": "ACE/SDSU 2001 캡틴체어 + 스트랩 니업 EMG(Escamilla 2006)에서 추론 — 고관절 굽힘근·복직근 · 기구는 딥스 바(캡틴체어 겸용) 보유로 가늠",
+      "muscle_reference_reverification": "completed_with_variant_and_access_limits",
+      "publication_ready": false,
+      "muscle_audit_file": "../outputs/exercise-guides-72/muscle-evidence.json#captains_chair_knee_raise"
+    },
+    {
+      "number": 72,
+      "id": "russian_twist",
+      "name": "러시안 트위스트",
+      "category": "복근",
+      "added_in_pr65": true,
+      "existing_guide": false,
+      "existing_asset": null,
+      "technique_source": "S56",
+      "match": "adaptation",
+      "production_note": "원문은 중량·발 지지 선택형. 앱 기본안은 발 바닥·무중량; 그 변형을 명시.",
+      "muscle_references_from_pr": [
+        "https://www.nasm.org/resource-center/exercise-library/russian-twist"
+      ],
+      "muscle_evidence_note_from_pr": "발 지지·무중량 조건 직접 EMG 미확보 — NASM 동작 설명(외·내복사근·복직근)",
+      "muscle_reference_reverification": "completed_with_variant_and_access_limits",
+      "publication_ready": false,
+      "muscle_audit_file": "../outputs/exercise-guides-72/muscle-evidence.json#russian_twist"
+    }
+  ],
+  "muscle_audit_summary": {
+    "exercises": 72,
+    "ready_for_draft": 72
+  }
+}
