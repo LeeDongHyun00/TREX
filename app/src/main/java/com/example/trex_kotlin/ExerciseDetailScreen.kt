@@ -51,6 +51,7 @@ fun ExerciseDetailScreen(app: AppViewModel, name: String, onBack: () -> Unit, on
         LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             // 맨 위는 사용 근육(사용자 요청 2026-11-07 — 머리 그림 카드는 뺐다). 지원·루틴 표시는 이 카드 머리줄에
             item { UsedMusclesCard(app, name, profile, custom != null, evidenceOpen, { evidenceOpen = !evidenceOpen }, uri) }
+            item { ExerciseGuidePreview(name) }
             item {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Surface(shape = RoundedCornerShape(18.dp), color = c.surface, modifier = Modifier.weight(1f)) {
@@ -108,7 +109,6 @@ fun ExerciseDetailScreen(app: AppViewModel, name: String, onBack: () -> Unit, on
                     }
                 }
             }
-            item { ExerciseGuidePreview(name) }
         }
         Row(Modifier.padding(horizontal = 20.dp, vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             GhostButton("기록 추가", onAddManual, Modifier.weight(1f))
@@ -142,10 +142,14 @@ private fun UsedMusclesCard(app: AppViewModel, name: String, profile: com.exampl
                         MuscleAtlasWebView("window.setUsedMuscles && window.setUsedMuscles($keys);", true, "$name 의 주 근육. 왼쪽 뒷면, 오른쪽 앞면", Modifier.fillMaxSize())
                     }
                 }
-                val primary = profile.primary.map { it.label }
-                val secondary = profile.weights.filterValues { it < .75 }.entries.sortedByDescending { it.value }.map { it.key.label }
-                Text("주요 · " + primary.joinToString(" · "), color = c.text, fontSize = 14.sp)
-                if (secondary.isNotEmpty()) Text("보조·안정 · " + secondary.joinToString(" · "), color = c.text2, fontSize = 13.sp)
+                val guide = ExerciseGuides.forName(name)
+                if (guide != null) GuideMuscleSummary(guide)
+                else {
+                    val primary = profile.primary.map { it.label }
+                    val secondary = profile.weights.filterValues { it < .75 }.entries.sortedByDescending { it.value }.map { it.key.label }
+                    Text("주요 · " + primary.joinToString(" · "), color = c.text, fontSize = 14.sp)
+                    if (secondary.isNotEmpty()) Text("보조·안정 · " + secondary.joinToString(" · "), color = c.text2, fontSize = 13.sp)
+                }
                 if (evidenceOpen) {
                     Text(profile.evidence, color = c.text2, fontSize = 12.sp, lineHeight = 17.sp, modifier = Modifier.padding(top = 4.dp))
                     if (profile.sources.isNotEmpty()) Row(Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {

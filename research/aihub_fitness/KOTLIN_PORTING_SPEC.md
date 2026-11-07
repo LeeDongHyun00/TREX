@@ -3587,3 +3587,39 @@ Verification: app JVM 914 tests passed (zero failures/errors/skips); assembleDeb
 **기록·상세(사용자 요청 4).** 기록 행의 '타이머·기록 전용·자세 교정' 칩 제거. 종목 상세는 제목만(부위·기구 줄 제거), 머리 그림 카드 제거, **'사용 근육' 카드가 맨 위**(지원·루틴·추정 표시는 그 머리줄에).
 
 **§134a — 감사 반영(같은 날 저녁, `docs/EXERCISE_DATA_AUDIT_2026-11-07.md` §8).** 데이터: 데드버그·버드독 `LoadUnit.EACH`(교대 동작, §130 규칙 — PAIR 로는 같은 '8회' 가 바이시클보다 쪽당 2배), 행잉 레그 레이즈·Y 레이즈 `body=true`. 화면: 맨몸 버티기 5종은 kg 칸 닫힘(`exerciseShowsKg`), PAIR 종목 머리글 '회(쪽당)'·좌우 버티기 '초(한쪽)'(`countLabelFor` — 엔진이 적은 수를 쪽당으로 읽는 뜻을 화면이 말한다), 맨몸 PR·요약 줄의 '+kg', `evidenceWeak` 는 a(추론·유추·적용·추정·편집·유사)+b(미확보)+c(동료심사 출처 없음 — PubMed·DOI·MDPI 밖) = 39종(테스트가 잠금). kcal 은 식을 바꾸지 않고 완료 화면 ⓘ·통계 배너에 "분당 고정값 어림, 체중·강도 미반영" 고지(MET×체중 식은 사용자 결정). 피로도 화면 부제에 가정값 고지, `MUSCLE_LOAD_IMPLEMENTATION.md` §3 의 90일 서술을 7일로. 카탈로그 기구 칩에 '밴드'(밴드 8종이 '맨몸' 으로 접히던 것). `Workout.loadLabel()`(죽은 코드) 삭제. `MuscleLoadTest` 가 '초'↔SECONDS 1:1 과 PAIR/EACH = 좌우 이름을 잠근다.
+
+## §135. Reviewed guides for all 72 exercises (2026-11-07)
+
+Input: the reviewed `roles-v3` artwork, Korean copy and muscle-role evidence for
+PR #65's 72 catalog exercises. `research/exercise_guides/guides.ko.json` preserves
+the final source metadata, each asset's reviewed SHA-256, role limitations and
+the registry path. `tools/generate_exercise_guides.py` generates `ExerciseGuides.kt`
+without runtime JSON parsing; one factory per exercise avoids JVM method-size
+limits. `--check` detects a stale registry or changed/missing artwork. The existing
+16 asset paths remain stable; 56 exact-variant assets extend the catalog.
+
+`ExerciseGuides.forName(String): ExerciseGuide?` retains exact matching and null
+for unknown/custom exercises. Preparation introductions retain their per-exercise
+seen state. The existing GIF renderer and lifecycle pause behavior are reused.
+All 72 GIFs are 640 × 640 with 900 ms frames: 71 two-pose examples and one
+three-pose I-Y-T example. Hold exercises explicitly tell the reader to maintain
+the pose instead of moving repeatedly with the GIF.
+
+The exercise detail page exposes the guide near the top. Its muscle summary and
+the guide's third tab use the same evidence-linked role data. The guide also shows
+the introduction, setup, steps, breathing, cautions, image caveats and sources.
+Red/orange represent visual emphasis/cooperation, not measured activation or
+training efficacy. Main/assist/stabilize are functional roles: a hold can have
+only stabilizers despite red visual emphasis. Direct-task EMG, related-variant
+evidence and anatomical inference have different labels; per-muscle source
+numbers resolve to the full link list. Occluded/deep regions remain in text.
+This does not change training-load weights or the 16-exercise camera scope.
+
+Happy path: catalog name → exact guide → packaged GIF → scrollable copy and
+muscle/source tab. Failure path: unknown name has no guide button; unreadable GIF
+uses the existing failure placeholder while the text remains available. The
+generator checks file hashes before producing code, so incomplete source copies
+fail validation. Repeated generation is deterministic. The iOS resource exporter
+is updated to 72 guides; native iOS compilation requires macOS.
+
+Validation and device evidence are recorded in `docs/EXERCISE_GUIDE_APP_72.md`.

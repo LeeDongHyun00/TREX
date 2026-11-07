@@ -59,12 +59,15 @@ class PostureExerciseMapTest {
         assertTrue(catalog.all { it.posture == Workout("t", it.name, it.reps, it.duration, true, it.category).postureSupported() })
         assertTrue(todayPlan.all { it.name in postureExerciseMap })
     }
-    @Test fun cameraScopeMatchesSixteenDedicatedGuides() {
-        val expected = ExerciseGuides.all.map { it.name }.toSet()
+    @Test fun expandedGuideCoverageDoesNotExpandCameraScope() {
+        val expected = setOf("기본 스쿼트", "런지", "바벨 런지", "사이드 런지", "크로스 런지", "굿모닝",
+            "덤벨 컬", "바벨 컬", "사이드 레터럴 레이즈", "프런트 레이즈", "푸쉬업", "플랭크",
+            "스탠딩 사이드 크런치", "스탠딩 니업", "크런치", "레그 레이즈")
         val actual = com.example.trex_kotlin.posture.ExerciseProfiles.all.filter { it.cameraEnabled }.map { it.name }.toSet()
         assertEquals(16, expected.size)
         assertEquals(expected, actual)
-        (postureExerciseMap.keys - expected + setOf("", "unknown", "바벨 스쿼트")).forEach { name ->
+        assertTrue(expected.all { ExerciseGuides.forName(it) != null })
+        (ExerciseGuides.all.map { it.name }.toSet() - expected + setOf("", "unknown", "바벨 스쿼트")).forEach { name ->
             assertFalse(name, Workout("stored", name, "10회", "5분", true, "상체").postureSupported())
         }
     }
