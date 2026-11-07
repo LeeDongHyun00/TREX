@@ -54,7 +54,12 @@ class RecordModelsTest {
         // 목표 요일(월)에 안 하면 끊긴다
         assertEquals(0, targetDayStreak(setOf(friday), wednesday, target))
         // 그 주를 멈춤으로 덮으면 이어진다
-        assertEquals(1, targetDayStreak(setOf(friday), wednesday, target, StreakPause(nextMonday, 3)))
+        assertEquals(1, targetDayStreak(setOf(friday), wednesday, target, listOf(StreakPause(nextMonday, 3))))
+        // 멈춤을 해제해도 지난 날의 면제는 남는다 — 수요일에 해제하면 월·화까지로 접힌다(PR 65 리뷰)
+        val resumed = listOf(StreakPause(nextMonday, 7)).endedBefore(wednesday)
+        assertEquals(listOf(StreakPause(nextMonday, 2)), resumed)
+        assertEquals(1, targetDayStreak(setOf(friday), wednesday, target, resumed))
+        assertTrue(listOf(StreakPause(wednesday, 3)).endedBefore(wednesday).isEmpty())
         // 요일 설정이 없으면 매일 — 예전 규칙과 같다
         assertEquals(2, targetDayStreak(setOf(99L, 100L), 100L, { false }))
         assertEquals(1, targetDayStreak(setOf(98L, 100L), 100L, { false }))

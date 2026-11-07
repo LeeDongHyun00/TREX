@@ -64,14 +64,19 @@ internal object Reminders {
             Intent(context, ReminderReceiver::class.java).putExtra(EXTRA_KIND, kind).putExtra(EXTRA_ISO_DAY, isoDay).putExtra(EXTRA_HOUR, hour).putExtra(EXTRA_MINUTE, minute),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
 
-    /** 요일 1=월 … 7=일. 고르지 않은 요일의 예약은 취소한다. */
+    /** 요일 1=월 … 7=일. 고르지 않은 요일의 예약은 취소한다 — 설정 화면이 전체 집합으로 부를 때만. */
     fun scheduleWorkoutDays(context: Context, isoDays: Set<Int>, hour: Int, minute: Int) {
         val alarms = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         for (day in 1..7) {
-            val pi = intent(context, "day", day, hour, minute, REQ_DAY_BASE + day)
-            if (day !in isoDays) { alarms.cancel(pi); continue }
-            alarms.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, nextOccurrence(day, hour, minute), pi)
+            if (day !in isoDays) { alarms.cancel(intent(context, "day", day, hour, minute, REQ_DAY_BASE + day)); continue }
+            scheduleWorkoutDay(context, day, hour, minute)
         }
+    }
+
+    /** 요일 하나만 다시 건다 — 다른 요일의 예약은 건드리지 않는다(울린 요일을 다음 주로 넘길 때. 전체 집합으로 걸면 월요일 알림이 수·금을 지웠다 — PR 65 리뷰). */
+    fun scheduleWorkoutDay(context: Context, isoDay: Int, hour: Int, minute: Int) {
+        val alarms = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        alarms.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, nextOccurrence(isoDay, hour, minute), intent(context, "day", isoDay, hour, minute, REQ_DAY_BASE + isoDay))
     }
 
     /** 다음 그 요일 hour:minute(기기 시간대). 오늘 그 요일이고 시각이 지났으면 다음 주. */
@@ -107,7 +112,7 @@ class ReminderReceiver : BroadcastReceiver() {
             "day" -> {
                 val day = intent.getIntExtra(EXTRA_ISO_DAY, 0); val hour = intent.getIntExtra(EXTRA_HOUR, 19); val minute = intent.getIntExtra(EXTRA_MINUTE, 30)
                 Reminders.notify(context, REQ_DAY_BASE + day, "오늘 운동 요일이에요", "주간 루틴이 기다리고 있어요")
-                if (day in 1..7) Reminders.scheduleWorkoutDays(context, setOf(day), hour, minute)
+                if (day in 1..7) Reminders.scheduleWorkoutDay(context, day, hour, minute)
             }
         }
     }

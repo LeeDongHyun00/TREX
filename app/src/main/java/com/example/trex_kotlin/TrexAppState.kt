@@ -442,7 +442,7 @@ class AppViewModel(private val platform: AppPlatform) : ViewModel() {
         registerCustomProfiles()
         weeklyRoutine = store.loadWeeklyRoutine()
         retentionDays = store.loadRetentionDays()
-        streakPause = store.loadStreakPause()
+        streakPauses = store.loadStreakPauses()
         refreshCalendar(resetPlan = false)
         syncMuscleLoad()
     }
@@ -504,7 +504,7 @@ class AppViewModel(private val platform: AppPlatform) : ViewModel() {
     var xpLedger by mutableStateOf(store.loadXp())
         private set
     var lastSessionReward by mutableStateOf<SessionReward?>(null)
-    var streakPause by mutableStateOf(store.loadStreakPause())
+    var streakPauses by mutableStateOf(store.loadStreakPauses())
         private set
     var customExercises by mutableStateOf(store.loadCustomExercises())
         private set
@@ -610,14 +610,9 @@ class AppViewModel(private val platform: AppPlatform) : ViewModel() {
     }
 
     init {
-        // 어제 완료한 계획은 오늘 다시 처음부터 — done 플래그는 하루 단위다
-        val today = todayEpochDay()
-        if (store.planDoneEpochDay != today && workoutPlan.any { it.done }) {
-            workoutPlan = workoutPlan.map { it.copy(done = false) }
-            store.savePlan(workoutPlan)
-        }
-        store.planDoneEpochDay = today
-        refreshCalendar(today)
+        // 어제 완료한 계획은 오늘 다시 처음부터(done 플래그는 하루 단위) + 그 요일의 주간 루틴 — 날짜 경계 처리는 refreshCalendar 한 곳.
+        // 예전엔 여기서 planDoneEpochDay 를 먼저 오늘로 두어 콜드 스타트에서는 주간 루틴이 한 번도 적용되지 않았다(PR 65 리뷰).
+        refreshCalendar(todayEpochDay())
         syncMuscleLoad()
     }
 
@@ -683,11 +678,35 @@ class AppViewModel(private val platform: AppPlatform) : ViewModel() {
         val timed = w.resolvedTarget() is WorkoutTarget.Duration
         return SetEntry(index = index, kg = typed?.kg,
             reps = typed?.reps ?: if (camera == null && !timed) w.repsSpec().count else null,
-            seconds = if (timed) seconds else null, cameraReps = camera, rpe = typed?.rpe, memo = typed?.memo, done = w.done)
+            // 시간 종목은 사용자가 고친 초가 기준, 없으면 잰 시간(PR 65 리뷰 — 고친 45→30초가 기록엔 45로 남았다)
+            seconds = if (timed) typed?.seconds ?: seconds else null, cameraReps = camera, rpe = typed?.rpe, memo = typed?.memo, done = w.done)
     }
 
     val todayRecord: WorkoutHistoryDay?
         get() = workoutHistory.firstOrNull { it.epochDay == todayEpochDay() }
+
+    /**
+     * 완료 화면에서 세트 한 줄을 고친다(PR 65 리뷰 — 마지막 세트는 휴식 화면이 없어 kg·RPE·메모를 적을 곳이 없었다).
+     * 오늘 기록에서 [workoutName] 의 [SetEntry.index] 가 같은 세트를 바꾸고, 보상 띠의 볼륨·PR 을 다시 잰다(XP 는 그대로 — 세트 수가 바뀌지 않는다).
+     */
+    fun updateTodaySet(workoutName: String, entry: SetEntry) {
+        val today = todayEpochDay()
+        val day = workoutHistory.firstOrNull { it.epochDay == today } ?: return
+        var changed = false
+        val items = day.items.map { item ->
+            if (item.workoutName != workoutName || item.sets.none { it.index == entry.index }) item
+            else { changed = true; item.copy(sets = item.sets.map { s -> if (s.index == entry.index) entry.copy(cameraReps = s.cameraReps) else s }) }
+        }
+        if (!changed) return
+        workoutHistory = workoutHistory.map { if (it.epochDay == today) it.copy(items = items) else it }
+        store.saveHistory(workoutHistory)
+        lastSessionReward?.let { r ->
+            val before = workoutHistory.filter { it.epochDay != today }
+            val pr = r.personalRecord ?: if (isPersonalRecord(before, workoutName, entry)) workoutName to entry else null
+            lastSessionReward = r.copy(personalRecord = pr, previousBestKg = r.previousBestKg ?: if (pr != null) before.bestKg(workoutName)?.set?.kg else null,
+                volumeKg = items.sumOf { it.sets.sumOf { s -> s.volumeKg ?: 0.0 } })
+        }
+    }
 
     // ---- 이번 세션의 자세 리포트 (spec §30) — workoutId → 세트 리포트
 
@@ -745,9 +764,9 @@ class AppViewModel(private val platform: AppPlatform) : ViewModel() {
     }
 
     /** 오늘 포함 최근 연속 운동일 — 목표 요일 기준(§131 P6): 계획된 휴식일과 멈춘 날은 건너뛴다. 요일 설정이 없으면 매일이 목표다. */
-    fun attendanceStreak(): Int = targetDayStreak(workoutDaySet(), todayEpochDay(), ::isTargetDay, streakPause)
+    fun attendanceStreak(): Int = targetDayStreak(workoutDaySet(), todayEpochDay(), ::isTargetDay, streakPauses)
 
-    fun longestStreak(): Int = longestTargetDayStreak(workoutDaySet(), todayEpochDay(), ::isTargetDay, streakPause)
+    fun longestStreak(): Int = longestTargetDayStreak(workoutDaySet(), todayEpochDay(), ::isTargetDay, streakPauses)
 
     private fun workoutDaySet(): Set<Long> = workoutHistory.filter { it.items.isNotEmpty() }.map { it.epochDay }.toSet()
 
@@ -793,15 +812,20 @@ class AppViewModel(private val platform: AppPlatform) : ViewModel() {
 
 
 
-    /** 연속 잠시 멈추기 — 오늘부터 [days]일(최대 14). 멈춘 동안은 연속이 줄지 않는다. */
+    /** 지금 진행 중인(오늘 이후까지 덮는) 멈춤 — 화면 표시·해제 버튼용. 지난 멈춤은 [streakPauses] 에 남아 그 날들의 면제가 유지된다(PR 65 리뷰). */
+    val streakPause: StreakPause? get() = streakPauses.firstOrNull { it.untilEpochDay >= todayEpochDay() }
+
+    /** 연속 잠시 멈추기 — 오늘부터 [days]일(최대 14). 멈춘 동안은 연속이 줄지 않는다. 진행 중이던 멈춤은 어제까지로 접고 새 구간을 더한다. */
     fun pauseStreak(days: Int) {
-        streakPause = StreakPause(todayEpochDay(), days.coerceIn(1, StreakPause.MAX_DAYS))
-        store.saveStreakPause(streakPause)
+        val today = todayEpochDay()
+        streakPauses = streakPauses.endedBefore(today) + StreakPause(today, days.coerceIn(1, StreakPause.MAX_DAYS))
+        store.saveStreakPauses(streakPauses)
     }
 
+    /** 멈춤 해제 — 지난 날의 면제는 그대로, 오늘부터의 구간만 접는다. */
     fun resumeStreak() {
-        streakPause = null
-        store.saveStreakPause(null)
+        streakPauses = streakPauses.endedBefore(todayEpochDay())
+        store.saveStreakPauses(streakPauses)
     }
 
     fun rewardFacts(): RewardFacts {

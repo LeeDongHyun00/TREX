@@ -499,6 +499,7 @@ private fun TrexAppContent(app: AppViewModel) {
                             onDone = { exitSession() },
                             reward = app.lastSessionReward,
                             onOpenAchievements = { exitSession(); subScreen = "achievements" },
+                            setsContent = { SessionFinalSetsCard(app, recordableWorkouts()) },
                             )
 
                             RootRoute.TransitionSession -> renderedStep?.let { current ->

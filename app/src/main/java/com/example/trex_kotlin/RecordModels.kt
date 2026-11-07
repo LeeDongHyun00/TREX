@@ -119,11 +119,22 @@ data class StreakPause(val fromEpochDay: Long, val days: Int) {
     companion object { const val MAX_DAYS = 14 }
 }
 
+/** [today] 전날까지로 구간을 접는다 — 오늘 이후만 덮는 구간은 빠지고, 걸쳐 있는 구간은 어제까지로 줄어 지난 면제가 남는다(PR 65 리뷰). */
+fun List<StreakPause>.endedBefore(today: Long): List<StreakPause> = mapNotNull { p ->
+    when {
+        p.fromEpochDay >= today -> null
+        p.untilEpochDay >= today -> p.copy(days = (today - p.fromEpochDay).toInt())
+        else -> p
+    }
+}
+
+fun List<StreakPause>.covers(epochDay: Long): Boolean = any { it.covers(epochDay) }
+
 /**
  * 목표 요일 기준 연속 운동(P6 "목표 요일 기준") — 목표가 아닌 날(계획된 휴식)과 멈춘 날은 건너뛰고, 목표 요일에 안 했으면 끊긴다.
  * [isTarget] 이 모든 요일에 거짓이면(요일 설정 없음) 매일을 목표로 본다(예전 [AppViewModel.attendanceStreak] 과 같다).
  */
-fun targetDayStreak(workoutDays: Set<Long>, today: Long, isTarget: (DayOfWeek) -> Boolean, pause: StreakPause? = null): Int {
+fun targetDayStreak(workoutDays: Set<Long>, today: Long, isTarget: (DayOfWeek) -> Boolean, pauses: List<StreakPause> = emptyList()): Int {
     val anyTarget = DayOfWeek.entries.any(isTarget)
     fun target(day: Long) = !anyTarget || isTarget(LocalDate.fromEpochDays(day).dayOfWeek)
     var streak = 0
@@ -133,7 +144,7 @@ fun targetDayStreak(workoutDays: Set<Long>, today: Long, isTarget: (DayOfWeek) -
     while (guard++ < 3660) {
         when {
             cursor in workoutDays -> streak += 1
-            pause?.covers(cursor) == true || !target(cursor) -> {}
+            pauses.covers(cursor) || !target(cursor) -> {}
             else -> break
         }
         cursor -= 1
@@ -142,7 +153,7 @@ fun targetDayStreak(workoutDays: Set<Long>, today: Long, isTarget: (DayOfWeek) -
 }
 
 /** 가장 길었던 연속(같은 규칙) — 기록 전체를 하루씩 훑는다. */
-fun longestTargetDayStreak(workoutDays: Set<Long>, today: Long, isTarget: (DayOfWeek) -> Boolean, pause: StreakPause? = null): Int {
+fun longestTargetDayStreak(workoutDays: Set<Long>, today: Long, isTarget: (DayOfWeek) -> Boolean, pauses: List<StreakPause> = emptyList()): Int {
     val first = workoutDays.minOrNull() ?: return 0
     val anyTarget = DayOfWeek.entries.any(isTarget)
     fun target(day: Long) = !anyTarget || isTarget(LocalDate.fromEpochDays(day).dayOfWeek)
@@ -150,7 +161,7 @@ fun longestTargetDayStreak(workoutDays: Set<Long>, today: Long, isTarget: (DayOf
     for (day in first..today) {
         when {
             day in workoutDays -> { run += 1; best = maxOf(best, run) }
-            pause?.covers(day) == true || !target(day) -> {}
+            pauses.covers(day) || !target(day) -> {}
             else -> run = 0
         }
     }

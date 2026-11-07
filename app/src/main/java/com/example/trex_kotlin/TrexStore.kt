@@ -461,10 +461,15 @@ class TrexStore(private val prefs: KeyValueStore) {
     fun loadRetentionDays(): Int = prefs.getString(KEY_RETENTION, null)?.toIntOrNull()?.takeIf { it in RetentionOptions.choices } ?: RetentionOptions.UNLIMITED
     fun saveRetentionDays(days: Int) = prefs.edit().putString(KEY_RETENTION, days.toString()).apply()
 
-    fun loadStreakPause(): StreakPause? = prefs.getString(KEY_STREAK_PAUSE, null)?.let { raw ->
-        runCatching { val o = JSONObject(raw); StreakPause(o.getLong("from"), o.getInt("days").coerceIn(1, StreakPause.MAX_DAYS)) }.getOrNull()
-    }
-    fun saveStreakPause(p: StreakPause?) = prefs.edit().putString(KEY_STREAK_PAUSE, p?.let { JSONObject().put("from", it.fromEpochDay).put("days", it.days).toString() }).apply()
+    /** 멈춤 구간 목록 — 옛 저장(객체 하나)도 읽는다. 지난 구간을 지우지 않아 그 날들의 면제가 남는다(PR 65 리뷰). */
+    fun loadStreakPauses(): List<StreakPause> = prefs.getString(KEY_STREAK_PAUSE, null)?.let { raw ->
+        runCatching {
+            val arr = if (raw.trimStart().startsWith("[")) JSONArray(raw) else JSONArray().put(JSONObject(raw))
+            (0 until arr.length()).map { arr.getJSONObject(it) }.map { StreakPause(it.getLong("from"), it.getInt("days").coerceIn(1, StreakPause.MAX_DAYS)) }
+        }.getOrNull()
+    }.orEmpty()
+    fun saveStreakPauses(p: List<StreakPause>) = prefs.edit().putString(KEY_STREAK_PAUSE,
+        if (p.isEmpty()) null else JSONArray().also { a -> p.forEach { a.put(JSONObject().put("from", it.fromEpochDay).put("days", it.days)) } }.toString()).apply()
 
     fun loadNotifyPrefs(): NotifyPrefs = prefs.getString(KEY_NOTIFY, null)?.let { raw -> runCatching { decodeNotifyPrefs(JSONObject(raw)) }.getOrNull() } ?: NotifyPrefs()
     fun saveNotifyPrefs(p: NotifyPrefs) = prefs.edit().putString(KEY_NOTIFY, encodeNotifyPrefs(p).toString()).apply()

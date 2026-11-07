@@ -188,6 +188,8 @@ fun SessionCompleteScreen(
     /** 보상 띠(§131 P5) — 기록한 사실에만 붙는 XP·PR·연속·새 배지. 자세 판정·카메라 횟수와 무관. */
     reward: SessionReward? = null,
     onOpenAchievements: (() -> Unit)? = null,
+    /** 세트 기록 확인·수정(마지막 세트 입력 자리, PR 65 리뷰). */
+    setsContent: @Composable () -> Unit = {},
 ) {
     val c = Trex.c
     val doneCount = plan.count { it.done }
@@ -255,6 +257,7 @@ fun SessionCompleteScreen(
                 }
             }
         }
+        setsContent()
         fatigueContent()
         if (ordered.isNotEmpty()) {
             PostureSessionBlock(reports = ordered, headline = headline, onLabel = onLabel, modifier = Modifier.padding(top = 20.dp))

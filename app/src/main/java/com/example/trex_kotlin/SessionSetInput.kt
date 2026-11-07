@@ -59,3 +59,39 @@ fun SessionSetInputCard(app: AppViewModel, originalId: String, workoutName: Stri
         RpeMemoExpander(rpe, { rpe = it }, memo, { memo = it }, lastHint = last?.second?.let { s -> listOfNotNull(s.mapNotNull { it.rpe }.lastOrNull()?.let { "지난번 RPE $it" }, s.mapNotNull { it.memo }.lastOrNull()?.let { "메모 \"$it\"" }).joinToString(" · ").ifBlank { null } })
     }
 }
+
+/**
+ * 완료 화면의 세트 기록 확인·수정(PR 65 리뷰) — 종목마다 오늘 기록의 세트 전부를 편집 행으로. 마지막 세트(휴식 화면이 없는 세트)와 1세트짜리 종목은 여기가 유일한 입력 자리다.
+ * 고치면 바로 [AppViewModel.updateTodaySet] 으로 오늘 기록에 들어간다. [plan] 은 기록한 세트별 운동(`…::set:N`).
+ */
+@Composable
+fun SessionFinalSetsCard(app: AppViewModel, plan: List<Workout>) {
+    val c = Trex.c
+    val names = remember(plan) { plan.map { it.name }.distinct() }
+    val record = app.todayRecord ?: return
+    if (names.isEmpty()) return
+    Surface(shape = RoundedCornerShape(18.dp), color = c.surface, modifier = Modifier.fillMaxWidth().padding(top = 16.dp)) {
+        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text("세트 기록 확인", color = c.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+            Text("마지막 세트의 kg·회는 여기서 적어요. 고친 값이 기록 기준이에요.", color = c.text2, fontSize = 12.sp)
+            names.forEach { name -> FinalSetsRows(app, name, record.items.filter { it.workoutName == name }.flatMap { it.sets }.sortedBy { it.index },
+                timed = plan.first { it.name == name }.resolvedTarget() is WorkoutTarget.Duration) }
+        }
+    }
+}
+
+@Composable
+private fun FinalSetsRows(app: AppViewModel, name: String, sets: List<SetEntry>, timed: Boolean) {
+    val c = Trex.c
+    if (sets.isEmpty()) return
+    val drafts = remember(name) { mutableStateListOf<SetRowDraft>().also { l -> sets.forEach { l += it.toDraft() } } }
+    val rpeMemo = remember(name) { sets.associate { it.index to (it.rpe to it.memo) } }
+    LaunchedEffect(drafts.map { Triple(it.kg, it.count, it.done) }) {
+        drafts.forEach { d -> val (rpe, memo) = rpeMemo[d.index] ?: (null to null); app.updateTodaySet(name, d.toEntry(timed, rpe, memo)) }
+    }
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(name, color = c.text, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+        SetRowHeader(timed)
+        drafts.forEach { d -> SetRow(d, timed) }
+    }
+}
