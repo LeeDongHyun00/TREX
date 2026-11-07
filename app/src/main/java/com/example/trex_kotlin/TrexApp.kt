@@ -8,6 +8,7 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -46,6 +47,7 @@ import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.PhotoCamera
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Restaurant
+import androidx.compose.material.icons.rounded.SwapVert
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import com.example.trex_kotlin.TrexText as Text
@@ -62,6 +64,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.key
 import androidx.compose.runtime.saveable.listSaver
@@ -72,6 +75,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -685,9 +690,22 @@ private fun MainTabs(
     var navExpanded by rememberSaveable { mutableStateOf(false) }
     var sheet by androidx.compose.runtime.remember { mutableStateOf<MainSheet?>(null) }
     var lastTabOrdinal by rememberSaveable { mutableIntStateOf(selectedTab.ordinal) }
+    // 운동 탭 조작부 자리 바꾸기(§139, WorkoutDock.kt) — 교체 상태는 기기에 남는다
+    val dock = remember { WorkoutDock(app.workoutDockSwapped) { app.updateWorkoutDockSwapped(it) } }
+    val dockScope = rememberCoroutineScope()
+    val dockAnimate = LocalDensity.current.fontScale <= 1.3f
+    val haptics = LocalHapticFeedback.current
+    /** 버튼 자리가 바뀌는 조작(교체·리모컨 접기/펴기) — 바뀌기 전후 배치를 비교해 버튼을 날린다. 탭 이동은 날리지 않는다(머리줄이 화면째 바뀐다). */
+    fun dockMove(change: () -> Unit) {
+        val before = dockPlacement(dock.swapped, navExpanded && selectedTab == TrexTab.Workout)
+        change()
+        dock.fly(before, dockPlacement(dock.swapped, navExpanded && selectedTab == TrexTab.Workout), dockScope, dockAnimate)
+    }
+    // 머리줄에 운동 기록·운동 시작이 있는가 — 교체 상태이고 운동 탭 리모컨이 펼쳐져 있을 때
+    val actionsUp = dockPlacement(dock.swapped, navExpanded && selectedTab == TrexTab.Workout)[DockItem.Start] == DockHost.Header
 
     PlatformBackHandler(enabled = sheet != null || navExpanded) {
-        when { sheet != null -> sheet = null; else -> navExpanded = false }
+        when { sheet != null -> sheet = null; else -> dockMove { navExpanded = false } }
     }
 
     // 탭과 조작부가 같은 입력에 반응한다. 지연 뒤 한 번 더 늘어나는 전환을 없앤다.
@@ -726,14 +744,23 @@ private fun MainTabs(
                     onOpenRecord = onOpenRecord,
                 )
 
-                TrexTab.Workout -> WorkoutTabScreen(
-                    app = app,
-                    onOpenAlt = { sheet = MainSheet.Alt(it) },
-                    onOpenSets = { sheet = MainSheet.Sets(it.setDraft()) },
-                    onAddWorkout = onOpenCatalog,
-                    onOpenCommunity = { onTabSelected(TrexTab.Community) },
-                    onOpenRoutines = { onOpenRoutines(false) },
-                )
+                TrexTab.Workout -> {
+                    // 다른 탭으로 나가는 동안에는 머리줄을 그대로 둔다 — 리모컨이 접히며 버튼이 바뀌는 모습이 사라지는 화면에 비치지 않게
+                    val heldUp = remember { booleanArrayOf(actionsUp) }
+                    if (selectedTab == TrexTab.Workout) heldUp[0] = actionsUp
+                    WorkoutTabScreen(
+                        app = app,
+                        onOpenAlt = { sheet = MainSheet.Alt(it) },
+                        onOpenSets = { sheet = MainSheet.Sets(it.setDraft()) },
+                        onAddWorkout = onOpenCatalog,
+                        onOpenCommunity = { onTabSelected(TrexTab.Community) },
+                        onOpenRoutines = { onOpenRoutines(false) },
+                        dock = dock,
+                        actionsUp = heldUp[0],
+                        onOpenRecord = onOpenRecord,
+                        onStartWorkout = onStartWorkout,
+                    )
+                }
 
                 TrexTab.Diet -> DietTabScreen(
                     app = app,
@@ -763,12 +790,12 @@ private fun MainTabs(
             onTab = { tab ->
                 // 홈·커뮤니티는 다시 눌러도 리모컨으로 바뀌지 않는다(리모컨 동작이 없다)
                 if (tab == selectedTab && tab != TrexTab.Home && tab != TrexTab.Community) {
-                    navExpanded = !navExpanded
+                    dockMove { navExpanded = !navExpanded }
                 } else {
                     onTabSelected(tab)
                 }
             },
-            onCollapse = { navExpanded = false },
+            onCollapse = { dockMove { navExpanded = false } },
             onPrimary = {
                 when (selectedTab) {
                     TrexTab.Diet -> sheet = MainSheet.Photo
@@ -783,6 +810,15 @@ private fun MainTabs(
                     else -> onOpenRecord()
                 }
             },
+            dock = dock,
+            onSwap = {
+                haptics.performHapticFeedback(HapticFeedbackType.Confirm)
+                dockMove { dock.toggle() }
+            },
+            onRoutines = { onOpenRoutines(false) },
+            onLibrary = { dock.libraryOpen = true },
+            onShare = { dock.sharing = null to app.workoutPlan },
+            shareEnabled = app.workoutPlan.isNotEmpty(),
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .onSizeChanged { navSpace = with(density) { it.height.toDp() } + 12.dp }
@@ -790,6 +826,9 @@ private fun MainTabs(
                 .padding(horizontal = 16.dp)
                 .padding(bottom = 16.dp),
         )
+
+        // 자리를 바꾸는 버튼의 유령 — 내비 위, 시트 아래(§139)
+        DockFlightLayer(dock, Modifier.fillMaxSize())
 
         sheet?.let { s ->
             Box(Modifier.fillMaxSize().zIndex(40f)) {
@@ -802,6 +841,8 @@ private fun MainTabs(
 
 /**
  * 모핑 내비게이션 — 4개 필이 같은 자리에서 리모컨(운동 시작·기록 / 사진 기록·직접 입력 + 뒤로)으로 변형.
+ * 운동 탭 리모컨은 오른쪽 끝에 '교체'(뒤로와 같은 크기)가 있다 — 누르면 운동 기록·운동 시작과 머리줄의 루틴·내 루틴·공유가
+ * 자리를 바꾼다(§139, WorkoutDock.kt). 그 셋의 슬롯은 평소 폭 0 으로 접혀 있고, 바뀐 자리의 버튼은 유령이 도착할 때까지 투명하다.
  */
 @Composable
 private fun MorphNav(
@@ -811,12 +852,21 @@ private fun MorphNav(
     onCollapse: () -> Unit,
     onPrimary: () -> Unit,
     onSecondary: () -> Unit,
+    dock: WorkoutDock,
+    onSwap: () -> Unit,
+    onRoutines: () -> Unit,
+    onLibrary: () -> Unit,
+    onShare: () -> Unit,
+    shareEnabled: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val c = Trex.c
     val remoteOn = expanded && selectedTab in setOf(TrexTab.Workout, TrexTab.Diet)
     val isDiet = selectedTab == TrexTab.Diet
     val isProfile = selectedTab == TrexTab.Profile
+    val workoutRemote = remoteOn && selectedTab == TrexTab.Workout
+    // 교체 상태의 운동 리모컨 — 가운데가 루틴·내 루틴·공유(운동 기록·운동 시작은 머리줄에)
+    val dockDown = workoutRemote && dock.swapped
     val tabs = TrexTab.entries
 
     data class Slot(
@@ -830,9 +880,19 @@ private fun MorphNav(
         val showLabel: Boolean,
         val onClick: () -> Unit,
         val elevated: Boolean,
+        // 자리를 바꾸는 버튼이면 그 항목 — 자리를 적고, 유령이 나는 동안 감춘다(§139)
+        val dockItem: DockItem? = null,
+        val enabled: Boolean = true,
+        // 아이콘 회전(교체 버튼) — 그리기 단계에서만 읽는다
+        val rotation: (() -> Float)? = null,
     )
 
-    val slots = tabs.mapIndexed { i, tab ->
+    fun hiddenSlot(icon: ImageVector, label: String, dockItem: DockItem? = null) = Slot(
+        weight = 0.0001f, bg = c.surface, fg = c.text3, line = c.line, alpha = 0f,
+        icon = icon, label = label, showLabel = false, onClick = {}, elevated = false, dockItem = dockItem,
+    )
+
+    val tabSlots = tabs.mapIndexed { i, tab ->
         val active = tab == selectedTab
         val baseIcon = when (tab) {
             TrexTab.Home -> Icons.Rounded.Home
@@ -861,26 +921,49 @@ private fun MorphNav(
                     icon = Icons.AutoMirrored.Rounded.ArrowBack, label = "뒤로가기", showLabel = false,
                     onClick = onCollapse, elevated = false,
                 )
-                primaryIdx -> Slot(
-                    weight = 3.1f, bg = c.primary, fg = Color.White, line = c.primary, alpha = 1f,
+                // 운동 리모컨은 '교체' 가 들어온 만큼 둘을 줄였다 — 뒤로·교체가 원(56 dp)에 가깝게 남고, 예전 2.4 : 3.1 비율은 그대로(§139)
+                primaryIdx -> if (dockDown) hiddenSlot(Icons.Rounded.PlayArrow, "운동 시작", DockItem.Start) else Slot(
+                    weight = if (workoutRemote) 2.44f else 3.1f, bg = c.primary, fg = Color.White, line = c.primary, alpha = 1f,
                     icon = if (isProfile) Icons.Rounded.Person else if (isDiet) Icons.Rounded.PhotoCamera else Icons.Rounded.PlayArrow,
                     label = if (isProfile) "설정" else if (isDiet) "사진 기록" else "운동 시작", showLabel = true,
                     onClick = onPrimary, elevated = true,
+                    dockItem = if (workoutRemote) DockItem.Start else null,
                 )
-                secondaryIdx -> Slot(
-                    weight = 2.4f, bg = c.surface, fg = c.primaryText, line = c.line, alpha = 1f,
+                secondaryIdx -> if (dockDown) hiddenSlot(Icons.Rounded.BarChart, "운동 기록", DockItem.Record) else Slot(
+                    weight = if (workoutRemote) 1.9f else 2.4f, bg = c.surface, fg = c.primaryText, line = c.line, alpha = 1f,
                     icon = if (isDiet) Icons.Rounded.Edit else Icons.Rounded.BarChart,
                     label = if (isProfile) "운동 기록" else if (isDiet) "직접 입력" else "운동 기록", showLabel = true,
                     onClick = onSecondary, elevated = false,
+                    dockItem = if (workoutRemote) DockItem.Record else null,
                 )
-                else -> Slot(
-                    weight = 0.0001f, bg = c.surface, fg = c.text3, line = c.line, alpha = 0f,
-                    icon = baseIcon, label = tab.label, showLabel = false,
-                    onClick = {}, elevated = false,
-                )
+                else -> hiddenSlot(baseIcon, tab.label)
             }
         }
     }
+    // 교체 상태에서 내려오는 셋 — 내 루틴은 글자가 길어 조금 넓다. 공유는 오늘 운동이 없으면 흐리게(머리줄과 같다)
+    val dockSlots = listOf(DockItem.Routines, DockItem.Library, DockItem.Share).map { item ->
+        if (!dockDown) hiddenSlot(item.icon(), item.navLabel(), item) else {
+            val enabled = item != DockItem.Share || shareEnabled
+            Slot(
+                weight = if (item == DockItem.Library) 1.6f else 1.3f,
+                bg = c.surface, fg = if (enabled) c.primaryText else c.text3, line = c.line, alpha = 1f,
+                icon = item.icon(), label = item.navLabel(), showLabel = true,
+                onClick = when (item) { DockItem.Routines -> onRoutines; DockItem.Library -> onLibrary; else -> onShare },
+                elevated = false, dockItem = item, enabled = enabled,
+            )
+        }
+    }
+    // 교체 — 뒤로와 같은 크기. 누를 때마다 아이콘이 반 바퀴 돈다(위아래 화살표라 돌고 나도 같은 모양)
+    val swapTurn = animateFloatAsState(if (dock.swapped) 180f else 0f, spring(dampingRatio = 0.72f, stiffness = 260f), label = "nav-swap")
+    val swapSlot = if (!workoutRemote) hiddenSlot(Icons.Rounded.SwapVert, "버튼 자리 바꾸기") else Slot(
+        weight = 1f, bg = c.surface, fg = c.text2, line = c.line, alpha = 1f,
+        icon = Icons.Rounded.SwapVert,
+        label = if (dock.swapped) "버튼 자리 바꾸기, 운동 기록과 운동 시작을 아래로" else "버튼 자리 바꾸기, 루틴·내 루틴·공유를 아래로",
+        showLabel = false, onClick = onSwap, elevated = false, rotation = { swapTurn.value },
+    )
+    val slots = listOf(tabSlots[0], tabSlots[1]) + dockSlots + listOf(tabSlots[2], tabSlots[3], tabSlots[4], swapSlot)
+    // 간격은 보이는 슬롯 사이에만 — 뒤에 보이는 슬롯이 없으면 0(접힌 '교체' 앞에 8 dp 가 남지 않게)
+    val lastVisible = slots.indexOfLast { it.alpha > 0.1f }
 
     val largeText = LocalDensity.current.fontScale > 1.3f
     Row(modifier = modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -889,24 +972,31 @@ private fun MorphNav(
             val weight = animateFloatAsState(slot.weight, tween(260), label = "nav-w$i")
             // 투명도는 그리기 단계에서만 읽는다 — 260ms 동안 내비 전체를 매 프레임 다시 구성하지 않는다(스펙 §115)
             val alpha = animateFloatAsState(slot.alpha, tween(260), label = "nav-a$i")
+            val gap = animateDpAsState(if (slot.alpha > 0.1f && i < lastVisible) 8.dp else 0.dp, tween(260), label = "nav-g$i")
             val h = 56.dp
+            // 자리를 바꾸는 버튼 — 보일 때만 자리를 적고, 유령이 나는 동안은(접히는 중이어도) 감춘다
+            val anchor = slot.dockItem?.let { item ->
+                Modifier.dockAnchor(dock, item, DockHost.Nav, dockNavLook(item, slot.enabled), record = slot.alpha > 0.1f)
+            } ?: Modifier
             Surface(
                 onClick = slot.onClick,
-                enabled = slot.alpha > 0.1f,
+                enabled = slot.alpha > 0.1f && slot.enabled,
                 modifier = Modifier
                     .weight(weight.value.coerceAtLeast(0.0001f))
                     .heightIn(min = h)
-                    .graphicsLayer { this.alpha = alpha.value },
+                    .graphicsLayer { this.alpha = alpha.value }
+                    .then(anchor),
                 shape = RoundedCornerShape(999.dp),
                 color = slot.bg,
                 contentColor = slot.fg,
                 border = androidx.compose.foundation.BorderStroke(1.dp, slot.line),
                 shadowElevation = if (slot.elevated) 3.dp else 1.dp,
             ) {
+                val iconModifier = Modifier.size(19.dp).graphicsLayer { rotationZ = slot.rotation?.invoke() ?: 0f }
                 if (largeText) {
                     Column(Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 10.dp),
                         horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(slot.icon, contentDescription = slot.label, modifier = Modifier.size(19.dp))
+                        Icon(slot.icon, contentDescription = slot.label, modifier = iconModifier)
                         if (slot.showLabel) Text(slot.label, fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold,
                             textAlign = TextAlign.Center)
                     }
@@ -915,7 +1005,7 @@ private fun MorphNav(
                     horizontalArrangement = androidx.compose.foundation.layout.Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Icon(slot.icon, contentDescription = slot.label, modifier = Modifier.size(19.dp))
+                    Icon(slot.icon, contentDescription = slot.label, modifier = iconModifier)
                     androidx.compose.animation.AnimatedVisibility(visible = slot.showLabel) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Spacer(Modifier.width(7.dp))
@@ -924,7 +1014,7 @@ private fun MorphNav(
                     }
                 }
             }
-            if (i != slots.lastIndex) Spacer(Modifier.width(if (slot.alpha > 0.1f) 8.dp else 0.dp))
+            if (i != slots.lastIndex) Spacer(Modifier.width(gap.value))
         }
     }
 }

@@ -124,7 +124,8 @@ fun NotifySheet(app: AppViewModel, onClose: () -> Unit) {
             }
             Surface(shape = RoundedCornerShape(18.dp), color = c.surface, modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(horizontal = 16.dp)) {
-                    ToggleRow("운동 요일 알림", (if (days.isEmpty()) "요일을 주간 루틴이나 프로필에서 정하면 그 요일에" else days.joinToString("·") { koreanDayOfWeek(it) } + " ${prefs.timeLabel}") + " · 요일은 주간 루틴과 같아요",
+                    // 요일 = 목표 요일(운동 요일 ∪ 루틴 요일, §139) — 운동 기록의 '운동 요일' 에서 고친다
+                    ToggleRow("운동 요일 알림", (if (days.isEmpty()) "운동 기록에서 운동 요일을 정하면 그 요일에" else days.joinToString("·") { koreanDayOfWeek(it) } + " ${prefs.timeLabel}") + " · 요일은 운동 요일과 같아요",
                         prefs.workoutDays) { on -> if (on) reminders.requestPermission { update(prefs.copy(workoutDays = true)) } else update(prefs.copy(workoutDays = false)) }
                     if (prefs.workoutDays) Row(Modifier.padding(bottom = 10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text("시각", color = c.text2, fontSize = 13.sp)

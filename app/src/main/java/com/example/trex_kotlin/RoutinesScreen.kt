@@ -9,7 +9,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material3.*
 import com.example.trex_kotlin.TrexText as Text
 import androidx.compose.runtime.*
@@ -30,7 +29,7 @@ import kotlinx.datetime.DayOfWeek
 
 /**
  * 루틴(§131, 디자인 P10·P11·P12) — 주간 루틴(요일 슬롯), 추천(자료집 프리셋 60개 — 관심 목표·장비·초보 필터, 오늘의 제안은 근육 피로도), 보관함(내 루틴·받은 루틴).
- * 프리셋은 팀이 쓴 분할 템플릿이다. '당신에게 맞다' 고 단정하지 않고 자세 교정 지원 종목을 앞에 둔다.
+ * 프리셋은 팀이 쓴 분할 템플릿이다. '당신에게 맞다' 고 단정하지 않고 자세 교정 지원 종목을 앞에 둔다(추천 목록 끝의 그 안내 띠는 §139 에서 뺐다 — 원칙은 그대로).
  */
 @Composable
 fun RoutinesScreen(app: AppViewModel, initialTab: Int = 0, onBack: () -> Unit, onOpenCatalog: () -> Unit, onStartWorkout: () -> Unit) {
@@ -71,22 +70,29 @@ private fun WeeklyTab(app: AppViewModel, onOpenCatalog: () -> Unit, onStartWorko
     val isToday = dow == today
     val workouts = if (isToday) app.workoutPlan else routine?.second.orEmpty()
     val overview = routineOverview(workouts)
+    // 운동 요일(운동 기록에서 고친다)인데 루틴이 없는 날은 휴식이 아니다(§139 — 목표 요일 = 운동 요일 ∪ 루틴 요일)
+    val workoutDay = app.isTargetDay(dow)
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             DayOfWeek.entries.forEach { d ->
                 val on = d == dow
                 val has = app.weeklyRoutine.isTarget(d)
                 Surface(onClick = { day = d.isoDayNumber }, shape = CircleShape, color = if (on) c.text else if (has) c.primaryWash else c.surface, modifier = Modifier.size(44.dp)) {
-                    Box(contentAlignment = Alignment.Center) { Text(koreanDayOfWeek(d), color = if (on) c.bg else c.text, fontSize = 14.sp, fontWeight = if (has) FontWeight.SemiBold else FontWeight.Normal) }
+                    Box(contentAlignment = Alignment.Center) {
+                        Text(koreanDayOfWeek(d), color = if (on) c.bg else c.text, fontSize = 14.sp, fontWeight = if (has) FontWeight.SemiBold else FontWeight.Normal)
+                        // 루틴 없는 운동 요일 — 작은 점(글을 읽지 않아도 보이게, K3)
+                        if (!has && !on && app.isTargetDay(d)) Box(Modifier.align(Alignment.BottomCenter).padding(bottom = 5.dp).size(5.dp).background(c.primary, CircleShape))
+                    }
                 }
             }
         }
-        Text("${koreanDayOfWeekFull(dow)}${if (isToday) " · 오늘" else ""} · ${if (ref == null && !isToday) "휴식" else overview.focus.title}", color = c.text2, fontSize = 13.sp)
+        Text("${koreanDayOfWeekFull(dow)}${if (isToday) " · 오늘" else ""} · ${if (ref == null && !isToday) (if (workoutDay) "운동 요일 · 루틴 없음" else "휴식") else overview.focus.title}", color = c.text2, fontSize = 13.sp)
         if (ref == null && !isToday) {
             Surface(shape = RoundedCornerShape(20.dp), color = c.surface, modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(18.dp)) {
-                    Text("${koreanDayOfWeekFull(dow)}은 휴식이에요", color = c.text, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
-                    Text("쉬는 날은 연속 운동이 끊기지 않아요. 루틴을 넣으면 목표 요일이 돼요.", color = c.text2, fontSize = 13.sp, lineHeight = 19.sp, modifier = Modifier.padding(top = 6.dp))
+                    Text(if (workoutDay) "${koreanDayOfWeekFull(dow)}은 운동 요일이에요" else "${koreanDayOfWeekFull(dow)}은 휴식이에요", color = c.text, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+                    Text(if (workoutDay) "아직 넣은 루틴이 없어요. 루틴을 넣으면 그날 오늘 루틴으로 바뀌어요. 운동 요일은 운동 기록에서 고쳐요."
+                        else "쉬는 날은 연속 운동이 끊기지 않아요. 루틴을 넣으면 목표 요일이 돼요.", color = c.text2, fontSize = 13.sp, lineHeight = 19.sp, modifier = Modifier.padding(top = 6.dp))
                     Row(Modifier.padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Cta("추천에서 고르기", onPickRoutine, Modifier.weight(1f), height = 48.dp)
                         GhostButton("직접 만들기", onOpenCatalog, Modifier.weight(1f))
@@ -195,7 +201,7 @@ private fun PresetsTab(app: AppViewModel, onPreview: (RoutinePreset) -> Unit, on
                 PresetCard(p, days, showEquipment = equipment == null, onPreview = { onPreview(p) }, onAssign = { onAssign(p) })
             }
         }
-        item { WashBanner("프리셋은 자료집(2026-11-07)의 분할 템플릿이에요. '당신에게 맞다' 고 단정하지 않고, 자세 교정 지원 종목을 앞에 둡니다. 세트·반복·휴식은 시작안이에요. 카드를 누르면 종목을 미리 봐요.", Icons.Rounded.Info) }
+        // 목록 맨 아래의 출처 띠("프리셋은 자료집(2026-11-07)의 분할 템플릿이에요…")는 뺐다(§139, 사용자 요청 2026-11-07)
     }
 }
 

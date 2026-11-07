@@ -17,8 +17,10 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.BarChart
 import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.FolderOpen
+import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Share
 import com.example.trex_kotlin.routines.RoutineLibraryScreen
 import com.example.trex_kotlin.routines.ShareRoutineSheet
@@ -60,17 +62,22 @@ internal fun List<Workout>.moveWorkout(id: String, targetId: String): List<Worko
     return toMutableList().apply { add(to, removeAt(from)) }
 }
 
-/** 길게 누르면 순서 변경, 왼쪽 스와이프는 삭제 확인, 나머지 조작은 행 안에서 처리한다. */
+/**
+ * 길게 누르면 순서 변경, 왼쪽 스와이프는 삭제 확인, 나머지 조작은 행 안에서 처리한다.
+ * [actionsUp] = 조작부 자리 바꾸기(§139) — 머리줄 오른쪽에 루틴·내 루틴·공유 대신 운동 기록·운동 시작([onOpenRecord]·[onStartWorkout])이 온다.
+ * [dock] 이 버튼 자리(유령 비행)와 내 루틴·공유 창 상태를 갖는다 — 내비에서 눌러도 같은 창이 열린다.
+ */
 @Composable
 fun WorkoutTabScreen(app: AppViewModel, onOpenAlt: (Workout) -> Unit, onOpenSets: (Workout) -> Unit, onAddWorkout: () -> Unit,
-                     onOpenCommunity: () -> Unit = {}, onOpenRoutines: () -> Unit = {}) {
+                     onOpenCommunity: () -> Unit = {}, onOpenRoutines: () -> Unit = {},
+                     dock: WorkoutDock? = null, actionsUp: Boolean = false,
+                     onOpenRecord: () -> Unit = {}, onStartWorkout: () -> Unit = {}) {
     val c = Trex.c
-    // 루틴 공유(docs/superpowers/specs/2026-10-29-routine-share-design.md) — 머리줄의 "내 루틴"·"루틴 공유"
-    var showLibrary by remember { mutableStateOf(false) }
-    var sharing by remember { mutableStateOf<Pair<String?, List<Workout>>?>(null) }
-    if (showLibrary) RoutineLibraryScreen(app, onShare = { r -> sharing = r.name to r.workouts }, onDismiss = { showLibrary = false })
-    sharing?.let { (name, workouts) ->
-        ShareRoutineSheet(app, workouts, name, onOpenCommunity = { showLibrary = false; onOpenCommunity() }, onDismiss = { sharing = null })
+    // 루틴 공유(docs/superpowers/specs/2026-10-29-routine-share-design.md) — 머리줄(교체 상태면 내비)의 "내 루틴"·"루틴 공유"
+    val d = dock ?: remember { WorkoutDock(false) }
+    if (d.libraryOpen) RoutineLibraryScreen(app, onShare = { r -> d.sharing = r.name to r.workouts }, onDismiss = { d.libraryOpen = false })
+    d.sharing?.let { (name, workouts) ->
+        ShareRoutineSheet(app, workouts, name, onOpenCommunity = { d.libraryOpen = false; onOpenCommunity() }, onDismiss = { d.sharing = null })
     }
     val state = rememberLazyListState()
     val haptics = LocalHapticFeedback.current
@@ -161,12 +168,28 @@ fun WorkoutTabScreen(app: AppViewModel, onOpenAlt: (Workout) -> Unit, onOpenSets
             }
         }, state=state, contentPadding=tabContentPadding, verticalArrangement=Arrangement.spacedBy(10.dp)) {
             item(key="workout-header") {
-                Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
-                    Text("오늘 운동",color=c.text,fontSize=30.sp,fontWeight=FontWeight.SemiBold,modifier=Modifier.weight(1f))
-                    IconButton(onClick={ onOpenRoutines() },enabled=canClick) { Icon(Icons.Rounded.CalendarMonth,"주간 루틴·추천",tint=c.primaryText) }
-                    IconButton(onClick={ showLibrary=true },enabled=canClick) { Icon(Icons.Rounded.FolderOpen,"내 루틴",tint=c.primaryText) }
-                    IconButton(onClick={ sharing=null to app.workoutPlan },enabled=canClick&&plan.isNotEmpty()) { Icon(Icons.Rounded.Share,"루틴 공유",tint=c.primaryText) }
-                    IconButton(onClick=onAddWorkout,enabled=canClick) { Icon(Icons.Rounded.Add,"운동 추가",tint=c.primaryText) }
+                // 머리줄 오른쪽 — 평소 루틴·내 루틴·공유, 교체 상태면 운동 기록·운동 시작(§139). 자리가 바뀐 버튼은 유령이 도착할 때까지 투명하다.
+                // 운동 시작 알약은 좁은 화면(폭 360 dp 미만)·큰 글자에서 "시작" 만 — 제목이 두 줄로 밀리지 않게
+                BoxWithConstraints(Modifier.fillMaxWidth()) {
+                    val startLabel = if (maxWidth >= 360.dp && LocalDensity.current.fontScale <= 1.15f) "운동 시작" else "시작"
+                    Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
+                        Text("오늘 운동",color=c.text,fontSize=30.sp,fontWeight=FontWeight.SemiBold,maxLines=1,modifier=Modifier.weight(1f))
+                        if (actionsUp) {
+                            IconButton(onClick=onOpenRecord,enabled=canClick,
+                                modifier=Modifier.dockAnchor(d,DockItem.Record,DockHost.Header,dockHeaderIconLook())) { Icon(Icons.Rounded.BarChart,"운동 기록",tint=c.primaryText) }
+                            HeaderStartPill(startLabel,enabled=canClick,onClick=onStartWorkout,
+                                modifier=Modifier.padding(start=2.dp,end=4.dp).dockAnchor(d,DockItem.Start,DockHost.Header,dockHeaderStartLook(startLabel)))
+                        } else {
+                            val look = dockHeaderIconLook()
+                            IconButton(onClick={ onOpenRoutines() },enabled=canClick,
+                                modifier=Modifier.dockAnchor(d,DockItem.Routines,DockHost.Header,look)) { Icon(Icons.Rounded.CalendarMonth,"주간 루틴·추천",tint=c.primaryText) }
+                            IconButton(onClick={ d.libraryOpen=true },enabled=canClick,
+                                modifier=Modifier.dockAnchor(d,DockItem.Library,DockHost.Header,look)) { Icon(Icons.Rounded.FolderOpen,"내 루틴",tint=c.primaryText) }
+                            IconButton(onClick={ d.sharing=null to app.workoutPlan },enabled=canClick&&plan.isNotEmpty(),
+                                modifier=Modifier.dockAnchor(d,DockItem.Share,DockHost.Header,look)) { Icon(Icons.Rounded.Share,"루틴 공유",tint=c.primaryText) }
+                        }
+                        IconButton(onClick=onAddWorkout,enabled=canClick) { Icon(Icons.Rounded.Add,"운동 추가",tint=c.primaryText) }
+                    }
                 }
                 Spacer(Modifier.height(22.dp))
                 RoutineHero(remember(plan) { routineOverview(plan) })
@@ -220,6 +243,20 @@ fun WorkoutTabScreen(app: AppViewModel, onOpenAlt: (Workout) -> Unit, onOpenSets
         confirmButton = { TextButton(onClick = {
             plan = app.workoutPlan.filterNot { it.id == deleting.id }; app.updatePlan(plan); deleteId = null; swipeReset++
         }) { Text("삭제", color = c.err, fontWeight = FontWeight.SemiBold) } })
+}
+
+/** 머리줄의 운동 시작(교체 상태, §139) — 내비 알약을 줄인 꼴: primary 알약 40 dp, 아이콘 18 dp + 글자 14 sp. 유령의 도착 모양([dockHeaderStartLook])과 같다. */
+@Composable
+private fun HeaderStartPill(label: String, enabled: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val c = Trex.c
+    Surface(onClick = onClick, enabled = enabled, modifier = modifier.height(40.dp), shape = RoundedCornerShape(999.dp),
+        color = c.primary, contentColor = Color.White, shadowElevation = 2.dp) {
+        Row(Modifier.padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Rounded.PlayArrow, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(6.dp))
+            Text(label, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+        }
+    }
 }
 
 @Composable
