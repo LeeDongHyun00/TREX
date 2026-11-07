@@ -3655,3 +3655,20 @@ restored old tab state is bounded. No workout records, camera gates or training
 load weights change. Generated poses retain minor drawing drift and are not motion
 capture; the audit does not claim clinical certification. Phone/build verification
 and its actual limits are recorded in `docs/EXERCISE_GUIDE_APP_72.md`.
+
+## §137. 업적 배지 손질 — 첫 PR 제거, 다른 운동 앱의 배지 틀 (2026-11-07 밤, 사용자 요청 "첫 PR 제거하고 다른 운동 앱 배지를 참조해서")
+
+**참조한 틀.** Apple Fitness 의 Perfect Week/Month(한 주·한 달의 목표를 전부 채움)와 Longest Streak, Garmin Connect 의 'Super Strength' 사다리(근력 활동 10/25/100/200회)와 월간 챌린지, Hevy 의 100번째 운동 배지·PR 메달·볼륨 통계·주 단위 연속, Nike Run Club 의 Early Bird·Night Owl(시간대), Fitbit 의 습관(체중·물) 배지. 우리 원칙은 그대로 — **배지는 '했다·기록했다' 의 사실에만**(§131 P5), 자세 점수·카메라 횟수는 입력이 아니다.
+
+**뺀 것.** `first_pr`(첫 PR) — 처음 적은 kg 도 PR 로 세는 정의(`isPersonalRecord`)라 '했다' 의 증거가 아니고, Hevy 의 PR 메달은 세트에 붙는 표시지 배지가 아니다. `manual_10`(수동 기록 10회)도 뺐다 — 운동 일수 사다리가 대신한다. PR 알림·XP 보너스(`XP_PR_BONUS`)는 그대로다.
+
+**표(22개, `badges()` — 화면 순서 = 쉬운 것부터).** 운동 일수 첫/10/50/100(`days_*`) · 연속 7/30/100(`streak_*`) · **완벽한 주·달**(`perfect_week`·`perfect_month` — 목표 요일을 전부 채운 월~일 주·달력 달, 마지막 목표 요일이 지나야 세고, 연속 멈춤이 덮는 날은 한 것으로, 목표 요일이 없으면 매일 — `perfectWeeks`·`perfectMonths`, 연속 규칙과 같은 해석) · **아침·저녁 운동 5일**(`morning_5` 09:00 전 세션 끝, `night_5` 21:00 이후 — `loadSet.endedAt` 의 현지 시 `hourOf`, 직접 적은 기록은 정오로 지어낸 시각이라 뺀다) · 스쿼트 500회·푸쉬업 500회·플랭크 30분 · **볼륨 10톤**(`volume_10t` — 세트 기록의 kg × 확정 회 누적) · 교정 모드 50세트 · 가이드 전 종목 · 식단 7/30일 · **물 목표 7일**(`water_7`, `WATER_GOAL_CUPS`) · **체중 기록 7일**(`weigh_7`) · 루틴 공유. `RewardFacts` 가 그만큼 늘었다(perfectWeeks·perfectMonths·pushupReps·volumeKg·morningDays·nightDays·waterGoalDays·bodyWeightDays, personalRecords·manualRecords 제거). 업적 화면의 remember 키에 물·체중이 들어간다.
+
+**안 한 것.** 월간 챌린지(Garmin·Strava — 서버·운영 필요), 사다리 다음 단(운동 200일·볼륨 100톤 — 사용자 데이터가 쌓인 뒤), 배지 그림(지금은 원 안 짧은 글자). 검증은 `RecordModelsTest`(완벽한 주·달 경계, 배지 표)이며 실기기는 업적 화면 렌더링만 봤다.
+
+## §138. 배지 아이콘 + 건너뛴 세트는 사용자 횟수가 있어야 기록 (2026-11-07 밤, 사용자 요청)
+
+**배지 아이콘.** 업적 화면의 원 안 짧은 글자를 Material 아이콘으로(`badgeIcon(id)`, `AchievementsScreen.kt` — id 앞 토큰으로 고른다: 운동 일수 덤벨 · 연속 불꽃 · 완벽한 주 달력 체크/달 달력 · 아침 해/저녁 달 · 스쿼트 사람/푸쉬업 체조/플랭크 타이머 · 볼륨 저울 · 교정 카메라 · 가이드 책 · 식단 식기 · 물 물방울 · 체중 체중계 · 루틴 공유). 사다리는 같은 그림이고 제목이 단을 말한다. 완료 화면의 새 배지 칩도 같은 아이콘. 못 얻은 배지는 흐린 색.
+
+**건너뛴 세트(사용자 결정 "건너뛰기 해도 횟수가 인정되는데 사용자가 횟수를 입력하지 않으면 근육 피로도와 기록에 남지 않도록").** 원인: 카메라 세트를 건너뛰면 그때까지 센 회가 `recordedCounts` 로 남아 `completedWorkouts` 에 들고, 휴식 화면 입력이 비어도 `sessionSetEntry` 가 계획 횟수로 채웠다. 수정: `loadRecordableWorkouts(…, skipped, userCounted)` — `progress.skipped` 에 든 WORK 세트는 **사용자가 횟수를 적은 것**(휴식 화면 입력 `sessionSets[id].reps` — 카메라 값을 고친 것 포함)이나 **직접 센 것**(카메라 없는 세트의 탭 횟수 `recordedCounts`)만 기록·근육 부하에 든다. 시간 세트(플랭크 등)는 잰 시간이 사실이라 그대로 둔다. 끝낸 세트('세트 끝'·목표 도달)는 전과 같다. 테스트 `MuscleLoadTest.skippedSetsNeedUserCountToBeRecorded`. 나가기(`requestExit`)는 건너뛰기가 아니라 현재 세트의 센 회를 그대로 둔다(종전).
+

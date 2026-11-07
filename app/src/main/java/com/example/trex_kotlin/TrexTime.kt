@@ -32,6 +32,9 @@ fun monthDayLabel(date: LocalDate): String = "${date.month.number}/${date.day}"
 /** 지금 몇 시(0~23) — `Calendar.getInstance().get(Calendar.HOUR_OF_DAY)` 와 같다. */
 fun currentHour(zone: TimeZone = TimeZone.currentSystemDefault()): Int = Clock.System.now().toLocalDateTime(zone).hour
 
+/** epoch millis 의 현지 시(0~23) — 아침·저녁 운동 배지(§137). */
+fun hourOf(millis: Long, zone: TimeZone = TimeZone.currentSystemDefault()): Int = Instant.fromEpochMilliseconds(millis).toLocalDateTime(zone).hour
+
 /** 그 날의 첫 순간(ms) — `LocalDate.ofEpochDay(d).atStartOfDay(zone)` 과 같다. 자정이 없는 날(서머타임)은 그날의 첫 유효 시각이다. */
 fun startOfDayMillis(epochDay: Long, zone: TimeZone = TimeZone.currentSystemDefault()): Long =
     LocalDate.fromEpochDays(epochDay).atStartOfDayIn(zone).toEpochMilliseconds()

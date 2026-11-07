@@ -92,12 +92,35 @@ class RecordModelsTest {
         assertEquals(2, longestTargetDayStreak(setOf(friday, nextMonday), wednesday, target))
     }
 
+    /** §137 — 완벽한 주·달: 목표 요일을 전부 채운 주(월~일)·달만, 마지막 목표 요일이 지나야 세고, 멈춤이 덮는 날은 한 것으로. 목표 요일이 없으면 매일. */
+    @Test fun perfectWeekAndMonthCountOnlyFinishedTargetSpans() {
+        val mon = kotlinx.datetime.LocalDate(2026, 1, 5).toEpochDays() // 월요일
+        val mwf = { d: DayOfWeek -> d == DayOfWeek.MONDAY || d == DayOfWeek.WEDNESDAY || d == DayOfWeek.FRIDAY }
+        val done = setOf(mon, mon + 2, mon + 4)
+        assertEquals(1, perfectWeeks(done, mon + 4, mwf))          // 금요일에 마쳤다
+        assertEquals(0, perfectWeeks(done, mon + 3, mwf))          // 아직 금요일 전
+        assertEquals(0, perfectWeeks(setOf(mon, mon + 2), mon + 6, mwf))
+        assertEquals(1, perfectWeeks(setOf(mon, mon + 2), mon + 6, mwf, listOf(StreakPause(mon + 4, 1))))
+        assertEquals(1, perfectWeeks(done + (mon + 7), mon + 9, mwf)) // 다음 주는 아직
+        // 목표 요일 없음 = 매일
+        val jan1 = kotlinx.datetime.LocalDate(2026, 1, 1).toEpochDays()
+        val everyDay = (jan1 until jan1 + 31).toSet()
+        assertEquals(1, perfectMonths(everyDay, jan1 + 30, { false }))
+        assertEquals(0, perfectMonths(everyDay, jan1 + 29, { false }))
+        assertEquals(0, perfectMonths(everyDay - (jan1 + 10), jan1 + 30, { false }))
+        assertEquals(0, perfectWeeks(emptySet(), mon, mwf))
+    }
+
     @Test fun badgesFollowFactsOnly() {
-        val none = badges(RewardFacts(0, 0, 0, 0, 0, 16, 0, 0, 0, 0, 0, 0))
+        val zero = RewardFacts(0, 0, 0, 0, 0, 0, 0, 16, 0, 0, 0, 0.0, 0, 0, 0, 0, 0, 0)
+        val none = badges(zero)
         assertTrue(none.none { it.earned })
-        val some = badges(RewardFacts(workoutDays = 3, streak = 7, longestStreak = 7, coachSets = 50, guidesSeen = 16, guidesTotal = 16, personalRecords = 1, squatReps = 312, plankSeconds = 1800, dietDays = 7, manualRecords = 4, routineShares = 0))
-        assertEquals(setOf("first_workout", "streak_7", "coach_50", "guides_all", "first_pr", "plank_30m", "diet_7"), some.filter { it.earned }.map { it.id }.toSet())
+        assertEquals(22, none.size); assertTrue(none.none { it.id == "first_pr" || it.id == "manual_10" })
+        val some = badges(zero.copy(workoutDays = 10, streak = 7, longestStreak = 7, perfectWeeks = 1, coachSets = 50, guidesSeen = 16, squatReps = 312, pushupReps = 500,
+            plankSeconds = 1800, volumeKg = 9_999.0, morningDays = 5, nightDays = 2, dietDays = 7, waterGoalDays = 7, bodyWeightDays = 3))
+        assertEquals(setOf("first_workout", "days_10", "streak_7", "perfect_week", "morning_5", "coach_50", "guides_all", "pushup_500", "plank_30m", "diet_7", "water_7"), some.filter { it.earned }.map { it.id }.toSet())
         assertEquals(312 to 500, some.first { it.id == "squat_500" }.let { it.progress to it.goal })
+        assertEquals(9 to 10, some.first { it.id == "volume_10t" }.let { it.progress to it.goal })
         assertEquals(1, Rewards.level(299)); assertEquals(2, Rewards.level(300)); assertEquals(180, Rewards.toNextLevel(120))
         assertEquals(120, Rewards.sessionXp(9, true)); assertEquals(90, Rewards.sessionXp(9, false))
     }
