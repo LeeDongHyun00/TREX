@@ -312,6 +312,6 @@ fun Workout.estimatedCalories(elapsedSeconds: Int? = null): Int {
 | F3 | 데드버그·버드독 → **EACH**. 세트 입력 머리글: PAIR 종목 '회(쪽당)', 좌우 버티기 '초(한쪽)'(`countLabelFor`). `MuscleLoadTest` 가 '초'↔SECONDS 1:1, PAIR/EACH 는 좌우 이름만을 잠근다 | — |
 | F4 | 없음(감사 결론) | — |
 | F5 | 1RM 은 EXTERNAL 만. 맨몸 상세는 '최고 추가 중량 · 최다 횟수'. PR·요약 줄의 kg 에 '+' | PR 을 맨몸에서 아예 안 매기는 안 — 추가 중량 PR 로 유지 |
-| kcal | 완료 화면 ⓘ·기록 통계 배너에 "부위별 분당 고정값(5~7 kcal)으로 어림, 체중·강도 미반영" 고지 | MET × 체중 식으로 바꾸기(수치가 달라져 사용자 결정) · 수동 기록 세트당 30초 가정 문장 |
+| kcal | **MET × 체중 식으로 교체(스펙 §134b, 같은 날 밤 사용자 결정)** — kcal/분 = MET × 3.5 × 체중 / 200, MET 는 2024 Adult Compendium(Herrmann 2024) 행을 종목별로(`ExerciseMet.kt`, 카탈로그 72종 전부 — 테스트), 시간은 휴식 포함(세션은 총 경과를 가동 비율로, 직접 적은 기록은 세트당 30초 + 설정 휴식), 옛 기록은 값이 옛 식과 같을 때만 이관, ⓘ·배너에 식·출처·쓰인 체중·30초 가정 | 강도(중량·RPE·심박) 반영 없음 — Compendium 행이 활동 평균이라 |
 | 피로 상수 | 값 유지. 피로도 화면 부제에 "반감기 6/24 h·12회 기준·체격 보정은 가정값". `MUSCLE_LOAD_IMPLEMENTATION.md` §3 의 90일 → 7일 바로잡음 | 기본 체중 65 vs 70 통일, "근육 피로도" 이름 |
 | §6 | `Workout.loadLabel()` 삭제. `catalogEquipments` 에 '밴드' | `LoadSet` 횟수가 적은 값(`SetEntry.reps`)을 안 보는 것 — 부하 엔진 입력 변경은 별도 결정 |

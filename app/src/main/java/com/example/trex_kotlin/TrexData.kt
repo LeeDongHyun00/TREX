@@ -914,14 +914,19 @@ fun Iterable<FoodEntry>.totalNutrition(): Nutrition =
         )
     }
 
-/** @param reports workoutId → 이번 세션의 세트 리포트. 자세를 켠 운동이라도 리포트가 없으면 항목의 자세 칸은 null 이다(판정 안 한 것을 지어내지 않는다). */
+/**
+ * @param reports workoutId → 이번 세션의 세트 리포트. 자세를 켠 운동이라도 리포트가 없으면 항목의 자세 칸은 null 이다(판정 안 한 것을 지어내지 않는다).
+ * @param bodyKg kcal 식의 체중(§134b) — 세션 총 경과를 종목 가동 시간 비율로 나눠 MET 를 적용한다(`sessionKcalByWorkout`).
+ */
 fun createWorkoutHistoryDay(
     plan: List<Workout>,
     elapsedSeconds: Int,
     reports: Map<String, PostureSetReport> = emptyMap(),
     elapsedByWorkout: Map<String, Int> = emptyMap(),
+    bodyKg: Double = DEFAULT_BODY_KG,
 ): WorkoutHistoryDay {
     val today = localToday()
+    val kcal = sessionKcalByWorkout(plan, elapsedSeconds, elapsedByWorkout, bodyKg)
     val items = plan.map { workout ->
         val report = reports[workout.id]
         val seconds = elapsedByWorkout[workout.id]?.coerceAtLeast(0) ?: 0
@@ -930,7 +935,7 @@ fun createWorkoutHistoryDay(
             reps = workout.reps,
             durationMinutes = seconds / 60,
             durationSeconds = seconds,
-            calories = workout.estimatedCalories(seconds),
+            calories = kcal[workout.id] ?: 0,
             postureCorrection = report?.toCorrection(),
             accuracy = report?.accuracy,
             category = workout.category,

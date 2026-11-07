@@ -478,6 +478,7 @@ private fun TrexAppContent(app: AppViewModel) {
                             plan = recordableWorkouts(),
                             elapsedSeconds = sessionElapsed,
                             elapsedByWorkout = progress.workDurations(steps),
+                            bodyKg = app.profile.weightKg,
                             reports = app.sessionPostureReports,
                             onLabel = { setId, actualReps, repsSource, form -> app.labelPostureSet(setId, actualReps, repsSource, form) },
                             speak = { speech.speak(it, flush = false) },
@@ -489,8 +490,8 @@ private fun TrexAppContent(app: AppViewModel) {
                                 {
                                     val plan = recordableWorkouts()
                                     val elapsed = progress.workDurations(steps)
-                                    // 완료 화면과 같은 kcal 식(SessionCompleteScreen)
-                                    val kcal = plan.sumOf { it.estimatedCalories(elapsed[it.id] ?: 0) }
+                                    // 완료 화면과 같은 kcal 식(SessionCompleteScreen, §134b)
+                                    val kcal = sessionKcalByWorkout(plan, sessionElapsed, elapsed, app.profile.weightKg).values.sum()
                                     app.pendingWorkoutCard = workoutCardData(plan, sessionElapsed, kcal, localToday())
                                     exitSession()
                                     selectedTab = TrexTab.Community

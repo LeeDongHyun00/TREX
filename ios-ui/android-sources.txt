@@ -125,6 +125,7 @@ com/example/trex_kotlin/CatalogScreen.kt
 com/example/trex_kotlin/RoutinesScreen.kt
 com/example/trex_kotlin/RoutinePresetUi.kt
 com/example/trex_kotlin/ExerciseLoadKind.kt
+com/example/trex_kotlin/ExerciseMet.kt
 com/example/trex_kotlin/MuscleGlyph.kt
 com/example/trex_kotlin/MuscleGlyphPaths.kt
 com/example/trex_kotlin/SettingsSheets.kt

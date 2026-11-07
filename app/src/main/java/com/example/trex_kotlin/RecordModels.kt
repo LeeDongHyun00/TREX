@@ -462,6 +462,25 @@ fun List<WorkoutHistoryDay>.stats(from: Long, to: Long): RecordStats {
 
 private fun WorkoutHistoryItem.repsSpecSets(): Int = parseReps(reps).sets
 
+/**
+ * §134b — 옛 kcal 식(분류별 분당 상수 × 가동 분, `legacyCategoryCalories`)으로 적힌 항목만 MET 식으로 고쳐 적는다. 값이 옛 식과 **정확히 같은** 항목만 바꾸므로
+ * 새 식으로 적힌 값은 건드리지 않고 다시 불러도 같은 결과다. 옛 세션은 휴식 시간이 남아 있지 않아 세트 사이 설정 휴식을 더한다(`offlineActivitySeconds`).
+ * 두는 것: 분류를 모르는 항목(옛 식을 되짚을 수 없다), 가동 시간이 없거나 0초인 세션 항목(시간을 지어내지 않는다). [bodyKgOn] 은 그 날짜의 체중.
+ */
+fun List<WorkoutHistoryDay>.migrateLegacyCalories(bodyKgOn: (Long) -> Double): List<WorkoutHistoryDay> = map { day ->
+    val items = day.items.map { item ->
+        val category = item.category ?: return@map item
+        val work = item.durationSeconds ?: return@map item
+        val manual = item.source == "manual"
+        if (!manual && work <= 0) return@map item
+        val legacy = legacyCategoryCalories(category, if (manual) maxOf(work, item.sets.size * 30) else work)
+        if (item.calories != legacy) return@map item
+        val sets = if (manual) item.sets.size.coerceAtLeast(1) else item.repsSpecSets()
+        item.copy(calories = estimatedKcal(ExerciseMet.of(item.workoutName, category).met, bodyKgOn(day.epochDay), offlineActivitySeconds(item.workoutName, category, sets, work)))
+    }
+    if (items == day.items) day else day.copy(items = items)
+}
+
 /** 세션을 마치고 기록한 직후의 보상 요약(P5 보상 띠) — [xp] 0 이면 같은 세션을 다시 저장한 것(중복 지급 없음). */
 @Immutable
 data class SessionReward(

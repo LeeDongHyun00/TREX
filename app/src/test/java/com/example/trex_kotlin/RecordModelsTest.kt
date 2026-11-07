@@ -154,4 +154,29 @@ class RecordModelsTest {
         assertEquals("머신", catalogEquipmentOf("레그 프레스")); assertEquals("케이블", catalogEquipmentOf("케이블 페이스 풀")); assertEquals("맨몸", catalogEquipmentOf("벽 푸쉬업"))
         assertEquals("가슴", catalogRegionOf("푸쉬업", "상체")); assertEquals("등", catalogRegionOf("풀업", "상체"))
     }
+
+    /** §134b — 옛 식(분당 상수)으로 적힌 kcal 만 MET 식으로 고쳐 적고, 새 값·분류 없음·가동 0초 세션은 둔다. 두 번 돌려도 같다. */
+    @Test fun legacyCaloriesMigrateOnlyWhenTheyMatchTheOldFormula() {
+        val kg = { _: Long -> 70.0 }
+        val legacySession = WorkoutHistoryItem("기본 스쿼트", "12회 x 3세트", 2, legacyCategoryCalories("하체", 150), category = "하체", durationSeconds = 150)
+        val alreadyNew = legacySession.copy(calories = 40)
+        val manualSets = listOf(SetEntry(1, reps = 10), SetEntry(2, reps = 10), SetEntry(3, reps = 10))
+        val legacyManual = WorkoutHistoryItem("크런치", "10회 × 3세트", 0, legacyCategoryCalories("복근", 90), category = "복근", durationSeconds = 0, sets = manualSets, source = "manual")
+        val noCategory = WorkoutHistoryItem("런지", "10회 x 3세트", 2, 14, durationSeconds = 120)
+        val zeroSession = WorkoutHistoryItem("런지", "10회 x 3세트", 0, 0, category = "하체", durationSeconds = 0)
+        val day = WorkoutHistoryDay(20000, "목", "10/3", listOf(legacySession, alreadyNew, legacyManual, noCategory, zeroSession), 0, 0)
+        val migrated = listOf(day).migrateLegacyCalories(kg)
+        val items = migrated.single().items
+        // 옛 세션: 가동 150초 + 설정 휴식 2 × 120(기본 스쿼트) = 390초 × 5.0 MET(02052)
+        assertEquals(estimatedKcal(5.0, 70.0, 390), items[0].calories)
+        assertEquals(40, items[1].calories)
+        // 옛 수동 기록: 횟수 세트 3 = 90초 + 휴식 2 × 45 = 180초 × 2.8 MET(02024)
+        assertEquals(estimatedKcal(2.8, 70.0, 180), items[2].calories)
+        assertEquals(14, items[3].calories)
+        assertEquals(0, items[4].calories)
+        assertEquals(migrated, migrated.migrateLegacyCalories(kg))
+        // 바꿀 것이 없으면 같은 객체
+        val clean = listOf(day.copy(items = listOf(alreadyNew)))
+        assertSame(clean.single(), clean.migrateLegacyCalories(kg).single())
+    }
 }

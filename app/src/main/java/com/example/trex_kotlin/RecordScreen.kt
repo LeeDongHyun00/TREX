@@ -297,8 +297,8 @@ private fun RecordStatsView(app: AppViewModel, onOpenExercise: (String) -> Unit,
                         }
                     }
                     Box(Modifier.padding(top = 10.dp)) {
-                        // 소모 kcal 의 근거 고지(근거 감사 §3 — 분당 고정값, 체중·강도 미반영, 횟수만 적은 세트는 30초로 침)
-                        WashBanner("비중은 세트당 운동 시간 합산의 제품용 분류예요. 볼륨은 사용자가 확정한 횟수로만 계산하고, 카메라 횟수만 있는 세트는 '추정' 으로 셉니다. 소모 kcal 은 부위별 분당 고정값(5~7 kcal)으로 어림한 값이라 체중·강도를 반영하지 않아요.", Icons.Rounded.Info)
+                        // 소모 kcal 의 근거 고지(§134b — MET × 체중, 시간 기준과 횟수 세트의 30초 가정을 밝힌다)
+                        WashBanner("비중은 세트당 운동 시간 합산의 제품용 분류예요. 볼륨은 사용자가 확정한 횟수로만 계산하고, 카메라 횟수만 있는 세트는 '추정' 으로 셉니다. 소모 kcal 은 종목별 MET(2024 Compendium) × 체중 ${trimKg(app.profile.weightKg)} kg × 시간으로 어림한 값이에요 — 세션은 휴식을 포함한 시간, 직접 적은 기록은 세트당 30초 + 설정 휴식으로 봐요. 중량·강도는 반영하지 않아요.", Icons.Rounded.Info)
                     }
                 }
             }

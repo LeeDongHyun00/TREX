@@ -208,6 +208,8 @@ fun SessionCompleteScreen(
     plan: List<Workout>,
     elapsedSeconds: Int,
     elapsedByWorkout: Map<String, Int> = emptyMap(),
+    /** kcal 식의 체중(§134b) — 프로필 체중(체중 기록이 갱신). */
+    bodyKg: Double = DEFAULT_BODY_KG,
     reports: Map<String, PostureSetReport> = emptyMap(),
     /** (setId, actualReps, repsSource "edited"|"confirmed"|null, form). */
     onLabel: (setId: String, actualReps: Int?, repsSource: String?, form: FormLabel?) -> Unit = { _, _, _, _ -> },
@@ -225,7 +227,8 @@ fun SessionCompleteScreen(
 ) {
     val c = Trex.c
     val doneCount = plan.count { it.done }
-    val kcal = plan.sumOf { it.estimatedCalories(elapsedByWorkout[it.id] ?: 0) }
+    // 세션 총 경과(휴식 포함)를 종목 가동 비율로 나눠 MET 적용(§134b) — 기록(`createWorkoutHistoryDay`)·오운완 카드와 같은 식
+    val kcal = sessionKcalByWorkout(plan, elapsedSeconds, elapsedByWorkout, bodyKg).values.sum()
     // plan 순서로 늘어놓은 리포트 — 헤드라인 선택과 운동별 행이 같은 순서를 쓴다
     val ordered = plan.mapNotNull { reports[it.id] }
     val headline = sessionHeadline(ordered)
@@ -321,7 +324,7 @@ fun SessionCompleteScreen(
             var note by remember { mutableStateOf(false) }
             Row(Modifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
                 IconButton(onClick = { note = !note }, modifier = Modifier.size(28.dp)) { Icon(Icons.Rounded.Info, "XP 안내", tint = c.text3, modifier = Modifier.size(16.dp)) }
-                if (note) Text("XP·배지는 운동을 마치고 기록한 사실에만 붙어요. 자세 판정·카메라 횟수와는 무관해요. 예상 소모 kcal 은 부위별 분당 고정값(5~7 kcal)으로 어림한 값이라 체중·강도를 반영하지 않아요.", color = c.text3, fontSize = 11.sp, lineHeight = 15.sp)
+                if (note) Text("XP·배지는 운동을 마치고 기록한 사실에만 붙어요. 자세 판정·카메라 횟수와는 무관해요. 예상 소모 kcal 은 종목별 MET(2024 Compendium) × 체중 ${trimKg(bodyKg)} kg × 세션 시간(휴식 포함)으로 어림한 값이에요. 중량·강도·심박은 반영하지 않아요.", color = c.text3, fontSize = 11.sp, lineHeight = 15.sp)
             }
         }
         Row(Modifier.padding(top = 8.dp).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {

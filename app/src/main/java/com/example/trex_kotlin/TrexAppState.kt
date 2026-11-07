@@ -443,6 +443,7 @@ class AppViewModel(private val platform: AppPlatform) : ViewModel() {
         weeklyRoutine = store.loadWeeklyRoutine()
         retentionDays = store.loadRetentionDays()
         streakPauses = store.loadStreakPauses()
+        migrateHistoryCalories()
         refreshCalendar(resetPlan = false)
         syncMuscleLoad()
     }
@@ -612,8 +613,17 @@ class AppViewModel(private val platform: AppPlatform) : ViewModel() {
     init {
         // 어제 완료한 계획은 오늘 다시 처음부터(done 플래그는 하루 단위) + 그 요일의 주간 루틴 — 날짜 경계 처리는 refreshCalendar 한 곳.
         // 예전엔 여기서 planDoneEpochDay 를 먼저 오늘로 두어 콜드 스타트에서는 주간 루틴이 한 번도 적용되지 않았다(PR 65 리뷰).
+        migrateHistoryCalories()
         refreshCalendar(todayEpochDay())
         syncMuscleLoad()
+    }
+
+    /** 옛 kcal 식(분류별 분당 상수)으로 적힌 기록을 MET 식으로 고쳐 적는다(§134b) — 체중은 그 날짜 이전의 마지막 체중 기록, 없으면 프로필 체중. 값이 옛 식과 같은 항목만 바뀐다. */
+    private fun migrateHistoryCalories() {
+        val migrated = workoutHistory.migrateLegacyCalories { day ->
+            bodyWeights.filter { it.epochDay <= day }.maxWithOrNull(compareBy({ it.epochDay }, { it.recordedAt }))?.kg ?: profile.weightKg
+        }
+        if (migrated != workoutHistory) { workoutHistory = migrated; store.saveHistory(migrated) }
     }
 
     fun updatePlan(plan: List<Workout>) {
@@ -643,7 +653,7 @@ class AppViewModel(private val platform: AppPlatform) : ViewModel() {
         val before = workoutHistory
         // 새 배지 판정은 기록을 합치기 전 상태와 비교한다 — 합친 뒤 재면 '첫 운동' 처럼 이번 세션으로 얻은 배지가 새것이 아니게 된다(11-07 실기기)
         val earnedBefore = badges().filter { it.earned }.map { it.id }.toSet()
-        val record = createWorkoutHistoryDay(completedPlan, elapsedSeconds, sessionPostureReports.toMap(), elapsedByWorkout)
+        val record = createWorkoutHistoryDay(completedPlan, elapsedSeconds, sessionPostureReports.toMap(), elapsedByWorkout, profile.weightKg)
         var pr: Pair<String, SetEntry>? = null
         var previousBest: Double? = null
         val items = record.items.mapIndexed { i, item ->
@@ -947,7 +957,9 @@ class AppViewModel(private val platform: AppPlatform) : ViewModel() {
         val endedAt = if (epochDay == todayEpochDay()) nowMillis() else startOfDayMillis(epochDay) + 12 * 3_600_000L
         val load = workoutLoadSet("manual:$epochDay", w.copy(reps = "${done.sumOf { it.countedReps ?: 0 }}회 × 1세트"), endedAt, seconds, profile, null)?.copy(source = "manual")
         val date = LocalDate.fromEpochDays(epochDay)
-        val item = WorkoutHistoryItem(name, label, seconds / 60, w.estimatedCalories(seconds.coerceAtLeast(done.size * 30)), null, null, w.category, seconds, load, done, "manual")
+        // kcal 은 세션 시간이 없어 세트 가동 초(횟수 세트는 30초 가정) + 설정 휴식으로(§134b, `offlineActivitySeconds`)
+        val item = WorkoutHistoryItem(name, label, seconds / 60, w.estimatedCalories(offlineActivitySeconds(name, w.category, done.size, done.sumOf { it.seconds ?: 30 }), profile.weightKg),
+            null, null, w.category, seconds, load, done, "manual")
         val day = WorkoutHistoryDay(epochDay, koreanDayOfWeek(date.dayOfWeek), monthDayLabel(date), listOf(item), 0, 0)
         workoutHistory = workoutHistory.mergeSession(day, retentionDays)
         store.saveHistory(workoutHistory)
