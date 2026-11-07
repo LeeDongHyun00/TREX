@@ -497,7 +497,8 @@ fun buildRecordJson(history: List<WorkoutHistoryDay>, bodyWeights: List<BodyWeig
             o.put(day.toString(), JSONObject().also { s -> slots.forEach { (slot, foods) -> s.put(slot, JSONArray().also { a -> foods.forEach { f -> a.put(JSONObject().put("name", f.name).put("qty", f.qty).put("kcal", f.nutrition.kcal)) } }) } })
         }
     })
-    return root.toString(2)
+    // 들여쓰기 없는 toString — iPhone 의 공통 org.json(OrgJson.kt)에는 toString(indent) 가 없다(PR 64 shared CI 가 잡음, §138)
+    return root.toString()
 }
 
 // ============================================================= 통계(P1)
