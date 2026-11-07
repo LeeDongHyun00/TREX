@@ -4,7 +4,7 @@ import com.example.trex_kotlin.nowMillis
 
 /**
  * 지금 날씨(Open-Meteo `current`). 기온·강수·WMO 날씨 코드·풍속은 운동 추천 판정에 쓰고([WeatherExerciseRecommender]),
- * 홈의 날씨 한 줄은 기온·날씨·강수량·미세먼지를 단계 말로 보인다(§108f, #64). [isDay] 는 캐시 한 줄에 남아 있을 뿐 화면은 테마 이모지를 그린다.
+ * 홈의 날씨 한 줄은 기온·날씨·강수량·미세먼지를 단계 말로 보인다(§108f, #64). [isDay] 는 맑은 밤을 달 아이콘으로 그리는 데만 쓴다.
  * [pm10] 은 같은 자리의 Open-Meteo 대기질 API(CAMS) 현재 PM10 농도(µg/m³) — 응답이 없거나 실패하면 null 이고 날씨·추천은 그대로 간다.
  */
 data class WeatherInfo(
