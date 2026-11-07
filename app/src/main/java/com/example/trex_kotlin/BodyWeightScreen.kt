@@ -62,20 +62,21 @@ fun BodyWeightScreen(app: AppViewModel, onBack: () -> Unit) {
                 val points = app.bodyWeights.filter { it.epochDay >= today - range }.sortedBy { it.epochDay }
                 Surface(shape = RoundedCornerShape(20.dp), color = c.surface, modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp)) {
-                        if (points.size < 2) Text("기록이 2건 이상 쌓이면 추이가 나타나요", color = c.text2, fontSize = 13.sp)
+                        if (points.isEmpty()) Text("체중을 기록하면 추이가 나타나요", color = c.text2, fontSize = 13.sp)
                         else {
                             val min = points.minOf { it.kg }; val max = points.maxOf { it.kg }; val span = (max - min).coerceAtLeast(0.5)
                             Row(Modifier.fillMaxWidth().height(120.dp), horizontalArrangement = Arrangement.spacedBy(3.dp), verticalAlignment = Alignment.Bottom) {
                                 points.takeLast(40).forEach { e ->
                                     Box(Modifier.weight(1f).fillMaxHeight(), contentAlignment = Alignment.BottomCenter) {
-                                        Box(Modifier.fillMaxWidth().height((20 + 90 * (e.kg - min) / span).dp).clip(RoundedCornerShape(3.dp)).background(c.primary))
+                                        // 값이 모두 같으면(기록 1건 포함) 가운데 높이 — 바닥에 붙은 막대가 '낮다' 로 읽히지 않게. 막대 폭은 상한을 둬 1건이 화면을 다 덮지 않는다.
+                                        Box(Modifier.widthIn(max = 28.dp).fillMaxWidth().height((if (max == min) 65.0 else 20 + 90 * (e.kg - min) / span).dp).clip(RoundedCornerShape(3.dp)).background(c.primary))
                                     }
                                 }
                             }
                             Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.SpaceBetween) {
                                 Text(LocalDate.fromEpochDays(points.first().epochDay).let { "${it.monthValue}/${it.day}" }, color = c.text3, fontSize = 11.sp)
-                                Text("${trimKg(min)} ~ ${trimKg(max)} kg", color = c.text3, fontSize = 11.sp)
-                                Text(LocalDate.fromEpochDays(points.last().epochDay).let { "${it.monthValue}/${it.day}" }, color = c.text3, fontSize = 11.sp)
+                                Text(if (max == min) "${trimKg(min)} kg" else "${trimKg(min)} ~ ${trimKg(max)} kg", color = c.text3, fontSize = 11.sp)
+                                if (points.size > 1) Text(LocalDate.fromEpochDays(points.last().epochDay).let { "${it.monthValue}/${it.day}" }, color = c.text3, fontSize = 11.sp)
                             }
                         }
                     }

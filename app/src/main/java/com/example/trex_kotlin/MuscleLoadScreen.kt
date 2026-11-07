@@ -73,8 +73,6 @@ internal fun MuscleLoadScreen(app: AppViewModel, onBack: () -> Unit) {
         LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
             item {
                 Text("기록으로 보는 오늘의 근육", color = c.text, fontSize = 24.sp, fontWeight = FontWeight.Bold)
-                // 가정값 고지(근거 감사 §4 — §82 에서 사라진 '계산 방법' 의 최소판): 반감기·기준 횟수·체격 보정은 검증된 상수가 아니다
-                Text("기록 기반 추정 · 0–100점 · 반감기 6/24 h·12회 기준·체격 보정은 가정값", color = c.text2, fontSize = 12.sp, lineHeight = 17.sp, modifier = Modifier.padding(top = 8.dp))
             }
             if (app.muscleLoadLoading) item { LinearProgressIndicator(Modifier.fillMaxWidth(), color = c.primaryText) }
             if (app.muscleLoadError != null) item {

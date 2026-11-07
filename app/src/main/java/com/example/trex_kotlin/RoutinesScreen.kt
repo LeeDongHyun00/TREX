@@ -209,7 +209,7 @@ private fun RoutinePreviewSheet(app: AppViewModel, p: RoutinePreset, onClose: ()
     SheetHost(onDismiss = onClose) {
         Column(Modifier.fillMaxWidth().heightIn(max = 680.dp).padding(horizontal = 22.dp).padding(bottom = 22.dp)) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
-                Column(Modifier.weight(1f)) { Kicker("추천 루틴 · ${p.topic?.let { t -> routineTopics.first { it.id == t }.title } ?: p.part}", c.primaryText); Text(p.displayName, color = c.text, fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 4.dp)) }
+                Text(p.displayName, color = c.text, fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
                 SheetClose(onClose)
             }
             Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -218,7 +218,6 @@ private fun RoutinePreviewSheet(app: AppViewModel, p: RoutinePreset, onClose: ()
             }
             if (p.postureCount > 0) Box(Modifier.padding(top = 6.dp)) { PostureSupportPill("자세 교정 지원 ${p.postureCount} / ${p.items.size}") }
             if (p.required.isNotBlank()) Text("필수 장비 · ${p.required}", color = c.text2, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
-            p.topic?.let { t -> routineTopics.firstOrNull { it.id == t } }?.let { tp -> Text("${tp.schedule} · 근거 ${tp.evidence}", color = c.text3, fontSize = 11.sp, lineHeight = 15.sp, modifier = Modifier.padding(top = 4.dp)) }
             Column(Modifier.weight(1f, false).verticalScroll(rememberScrollState()).padding(top = 12.dp)) {
                 p.items.forEachIndexed { i, item ->
                     if (i > 0) HorizontalDivider(color = c.line)
@@ -230,8 +229,6 @@ private fun RoutinePreviewSheet(app: AppViewModel, p: RoutinePreset, onClose: ()
                         Text("${item.sets} × ${if (item.min == item.max) "${item.max}" else "${item.min}~${item.max}"}${item.unit}${if (item.perSide) "/한쪽" else ""}", color = c.text2, fontSize = 13.sp)
                     }
                 }
-                if (p.note.isNotBlank()) Text(p.note, color = c.text2, fontSize = 12.sp, lineHeight = 17.sp, modifier = Modifier.padding(top = 8.dp))
-                Text("무게는 처음엔 비어 있어요. 첫 세트에서 적으면 다음부터 '지난번' 으로 채워 드려요.", color = c.text3, fontSize = 12.sp, lineHeight = 17.sp, modifier = Modifier.padding(top = 6.dp))
                 notice?.let { Text(it, color = c.primaryText, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp)) }
             }
             Row(Modifier.padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
