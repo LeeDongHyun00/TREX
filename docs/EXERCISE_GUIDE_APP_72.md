@@ -56,8 +56,11 @@ corrected framing while preserving the two poses and muscle roles. See
 The corrected native/260 px artwork and both rendered app frames were inspected.
 All 145 frames passed a fresh native decode test after the final APK rebuild
 (5.43 seconds); unchanged screen/copy behavior is covered by the full earlier run.
-An edge scan flagged three other assets, which were inspected: machine/frame
-outlines or small edge contact, with no neighboring figure fragment identified.
+An initial edge scan flagged three other assets. The initial review accepted them,
+but later production-phone review exposed a bird-dog neighboring-foot fragment.
+That false acceptance is corrected in the phone follow-up below; the other two
+flagged assets were re-opened and showed machine/frame outlines, not a neighboring
+figure fragment.
 
 Manual real-app navigation passed: onboarding → guest mode → workout tab →
 catalog → I-Y-T detail → guide, and the abs filter → bicycle-crunch detail →
@@ -89,24 +92,44 @@ inspected. Evidence is retained locally under
 `outputs/exercise-guides-72/app-integration/pr65-verification/` and
 `pr65-emulator-tests.log`. No phone interaction occurred.
 
-The final APK contains 72/72 reviewed GIF hashes and has SHA-256
+The pre-phone APK contained 72/72 reviewed GIF hashes and had SHA-256
 `9d13ad59c4f4ee489caf66cd5a6abe65b64c8127714ab62d7a218c2d209f5cba`.
 
-## Connected phone — explicit user hold
+## Connected phone — resumed 2026-11-07
 
-Galaxy Note10+ SM-N976N: the initial app update and test APK installed successfully
-without uninstalling the existing app. All 72 GIFs decoded on the phone. A separate
-concurrent installation then killed the instrumentation process (`installPackageLI`)
-and replaced the app. The initial screen check also revealed that the test needed
-native-view accessibility lookup instead of Compose-only semantics; this was fixed
-and passed on the emulator.
+The user released the previous device hold. PR head `527b9504` was fast-forwarded
+locally, including the MET calculation changes. The latest build passed 934 unit
+tests, `assembleDebug`, `assembleDebugAndroidTest` and lint (0 errors, 51 warnings,
+4 hints). The Galaxy Note10+ SM-N976N runs Android 12 / API 31. Installation used
+`adb install -r`, with no uninstall or data clearing. A private, Git-ignored local
+backup was taken first; no phone records or tokens were uploaded.
 
-The user explicitly asked to wait until the other task is finished. No further
-phone installation or interaction was performed after that answer. The final
-bicycle correction is therefore **not installed or screen-verified on the phone**.
-Resume from the final APK when the device is released; preserve existing data and
-coordinate the latest build from the other task before replacing its installation.
-The test package `com.example.trex_kotlin.test` remains pending that handoff.
+The initial physical-device run passed all three guide tests in 133.988 seconds:
+72 GIFs / 145 distinct decoded poses, three visibly different I-Y-T frames, and
+all 72 sheets through setup, movement, breathing, visual instructions, cautions,
+stabilization roles and the final source. Before production-app navigation,
+all 14 existing preferences/database/no_backup files matched the pre-install
+backup byte for byte.
 
-NOT RUN: final full phone screen/playback verification while the user hold is
-active; native iOS compilation/testing on Windows; clinical certification.
+Production-app review then caught a visual error that the structural tests cannot
+prove absent: bird-dog frame 0 included the extended foot from the neighboring
+source panel. The native image generator corrected figure placement while
+preserving the poses, camera angle and reviewed muscle overlays. Both complete
+640 px frames and the 260 px preview were inspected. See
+`research/exercise_guides/corrections/BIRD_DOG.md` for the exact prompt and native
+output. Bird-dog was added to the physical screenshot samples. The other earlier
+edge flags (lat pulldown and incline push-up) were re-opened and verified.
+
+The corrected app APK SHA-256 is
+`e6d7a1d0a486eb602721bee426dd65d3c49767d2fe828178f069ebb3e20a5b1c`.
+The installed APK was confirmed to match this hash after an ADB connection drop
+during installation. All 72 packaged GIF hashes match the final source dataset.
+
+The corrected APK passed the complete phone suite again: **3/3 tests, 118.403
+seconds**, 72/72 sheets and 145 decoded poses. The actual bird-dog guide and its
+last source were visually inspected on the phone; the stray foot is absent.
+Local evidence: `outputs/exercise-guides-72/app-integration/phone-corrected-tests.log`,
+`phone-corrected-verification/` and `phone-validation.json`. The production app was
+opened after testing. The private backup remains local and ignored by Git.
+
+NOT RUN: native iOS compilation/testing on Windows; clinical certification.

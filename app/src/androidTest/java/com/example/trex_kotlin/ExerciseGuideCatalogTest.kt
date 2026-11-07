@@ -66,7 +66,7 @@ class ExerciseGuideCatalogTest {
             }
         }
         val results = mutableListOf<String>()
-        val samples = setOf("기본 스쿼트", "원암 덤벨 로우", "I-Y-T 레이즈", "플랭크", "바이시클 크런치", "러시안 트위스트")
+        val samples = setOf("기본 스쿼트", "원암 덤벨 로우", "I-Y-T 레이즈", "플랭크", "바이시클 크런치", "러시안 트위스트", "버드독")
         ExerciseGuides.all.forEach { guide ->
             compose.runOnIdle { current = guide }
             compose.waitUntil(15_000) {

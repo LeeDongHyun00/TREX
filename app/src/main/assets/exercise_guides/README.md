@@ -2,9 +2,9 @@
 
 ## Current package — 2026-11-07
 
-All 72 catalog exercises now have reviewed GIFs: 71 unchanged `roles-v3` assets
-and the bicycle-crunch panel-boundary correction documented in
-`research/exercise_guides/corrections/README.md`. The sections below
+All 72 catalog exercises now have reviewed GIFs: 70 unchanged `roles-v3` assets
+and the bicycle-crunch and bird-dog panel-boundary corrections documented in
+`research/exercise_guides/corrections/README.md` and `BIRD_DOG.md`. The sections below
 are historical production notes, not the current registry. `ExerciseGuides.kt`
 is generated from `research/exercise_guides/guides.ko.json`; run
 `python tools/generate_exercise_guides.py --check` to verify both the registry and

@@ -32005,7 +32005,13 @@
         ]
       },
       "app_asset": "exercise_guides/bird_dog.gif",
-      "asset_sha256": "e7f0bb6634899daeabe8427f5c21addb4dda0152fcb6b28520c352559d968de1"
+      "asset_sha256": "b928c20761bec418eb92d1b844f19d2727ef7882c35c2a1dca75c7c6c2440451",
+      "app_visual_revision": {
+        "reason": "Phone review exposed an adjacent-panel foot fragment; regenerate isolated complete poses without changing muscle roles.",
+        "original_reviewed_sha256": "e7f0bb6634899daeabe8427f5c21addb4dda0152fcb6b28520c352559d968de1",
+        "source": "research/exercise_guides/corrections/bird_dog.png",
+        "date": "2026-11-07"
+      }
     },
     {
       "id": "pallof_press",
