@@ -20,15 +20,15 @@
   let selected = '', state = {}, used = new Set();
   function color(value) {
     const t = Math.max(0, Math.min(1, Number.isFinite(value) ? value / 100 : 0));
-    const stops = [[222, 222, 217], [199, 226, 107], [117, 152, 72]];
+    const stops = [[222, 222, 217], [255, 194, 75], [215, 139, 40]]; // 회색 → 호박 #FFC24B → 주황 #D78B28(TrexWarning)
     const a = t <= .5 ? stops[0] : stops[1], b = t <= .5 ? stops[1] : stops[2];
     const f = t <= .5 ? t * 2 : (t - .5) * 2;
     return `rgb(${a.map((v, i) => Math.round(v + (b[i] - v) * f)).join(',')})`;
   }
   function paint() {
     for (const {path, key} of regions) {
-      const value = sessionMode ? (used.has(key) ? 100 : 0) : state[key];
-      path.setAttribute('fill', color(value));
+      // 피로 = 경고 계열 램프, 사용 근육 = primary 초록 — 색 = 뜻(UI 감사 2026-11-07 A25).
+      path.setAttribute('fill', sessionMode ? (used.has(key) ? '#759848' : color(0)) : color(state[key]));
       const focused = selected && key.slice(0, -2) === selected;
       path.setAttribute('stroke', focused ? '#f1ffc7' : '#94988b');
       path.setAttribute('stroke-width', focused ? '2.5' : '.65');

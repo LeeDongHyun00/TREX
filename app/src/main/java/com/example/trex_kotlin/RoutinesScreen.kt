@@ -160,7 +160,7 @@ private fun PresetsTab(app: AppViewModel, onPreview: (RoutinePreset) -> Unit, on
             }
         }
         item { EquipmentTiles(equipment) { equipment = it } }
-        item { PartChips(part) { part = it } }
+        item { PartChips(part, onSelect = { part = it }) }
         if (heavy.isNotEmpty()) item {
             Surface(shape = RoundedCornerShape(18.dp), color = c.primaryWash, modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp)) {

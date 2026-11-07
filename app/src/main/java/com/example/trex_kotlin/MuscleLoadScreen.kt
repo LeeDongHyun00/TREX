@@ -89,7 +89,7 @@ internal fun MuscleLoadScreen(app: AppViewModel, onBack: () -> Unit) {
                         MuscleAtlas(snapshot, if (tab == 0) selected?.name.orEmpty() else "", Modifier.fillMaxWidth().height(366.dp))
                         Column(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 16.dp)) {
                             Box(Modifier.fillMaxWidth().height(10.dp).clip(RoundedCornerShape(5.dp))
-                                .background(Brush.horizontalGradient(listOf(Color(0xFFDEDED9), Color(0xFFC7E26B), Color(0xFF759848)))))
+                                .background(Brush.horizontalGradient(listOf(Color(0xFFDEDED9), Color(0xFFFFC24B), Color(0xFFD78B28))))) // 피로 = 경고 계열, viewer.js color() 와 같은 램프(UI 감사 A25)
                             Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.SpaceBetween) {
                                 Text("낮음", color = Color(0xFFE3E8DD), fontSize = 12.sp, fontWeight = FontWeight.Medium)
                                 Text("높음", color = Color(0xFFE3E8DD), fontSize = 12.sp, fontWeight = FontWeight.Medium)

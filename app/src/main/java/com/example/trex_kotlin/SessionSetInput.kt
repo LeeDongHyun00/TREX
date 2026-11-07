@@ -17,8 +17,11 @@ import kotlinx.datetime.LocalDate
  * 적은 값은 [AppViewModel.sessionSets] 에 들어가 기록 저장 때 접혀 들어간다. 아직 할 세트는 회색이다.
  */
 @Composable
-fun SessionSetInputCard(app: AppViewModel, originalId: String, workoutName: String, totalSets: Int, finishedSet: Int, cameraReps: Int?, initialReps: Int? = null, timed: Boolean, finishedSeconds: Int?) {
+fun SessionSetInputCard(app: AppViewModel, originalId: String, workoutName: String, totalSets: Int, finishedSet: Int, cameraReps: Int?, initialReps: Int? = null, timed: Boolean, finishedSeconds: Int?,
+    /** 참이면 방금 끝낸 세트 한 줄만 펼치고 나머지는 '전체 세트' 뒤에 둔다 — 휴식 화면의 1차는 남은 시간(UI 감사 A14, K1). */
+    compact: Boolean = false) {
     val c = Trex.c
+    var allRows by remember(originalId) { mutableStateOf(!compact) }
     val last = remember(workoutName) { app.lastSets(workoutName) }
     val drafts = remember(originalId) { mutableStateListOf<SetRowDraft>().also { list ->
         for (i in 1..totalSets) {
@@ -51,8 +54,12 @@ fun SessionSetInputCard(app: AppViewModel, originalId: String, workoutName: Stri
             Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 SetRowHeader(timed)
                 drafts.forEach { d ->
+                    if (!allRows && d.index != finishedSet) return@forEach
                     SetRow(d, timed, enabled = d.index <= finishedSet)
                     if (d.index == finishedSet && cameraReps != null && !d.edited) CameraCountNote(cameraReps)
+                }
+                if (compact && totalSets > 1) TextButton(onClick = { allRows = !allRows }, contentPadding = PaddingValues(horizontal = 4.dp)) {
+                    Text(if (allRows) "방금 세트만" else "전체 ${totalSets}세트 보기", color = c.primaryText, fontSize = 12.sp)
                 }
             }
         }

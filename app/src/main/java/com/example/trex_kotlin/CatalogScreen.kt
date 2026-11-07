@@ -11,6 +11,7 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.Videocam
 import androidx.compose.material3.*
 import com.example.trex_kotlin.TrexText as Text
 import androidx.compose.runtime.*
@@ -31,7 +32,9 @@ internal fun CatalogScreen(app: AppViewModel, title: String = "운동 목록", s
     onPick: (WorkoutTemplate) -> Unit, onOpenDetail: (String) -> Unit) {
     val c = Trex.c
     var query by rememberSaveable { mutableStateOf("") }
-    var region by rememberSaveable { mutableStateOf("전체") }
+    // 부위는 그림 칩(UI 감사 A8, K6) — 하체·상체·코어·유산소. 상체를 고르면 가슴·등·어깨·팔 세부 칩이 한 줄 더 나온다(필터 줄은 둘까지, NTC 비평의 '압도' 방지)
+    var part by rememberSaveable { mutableStateOf<String?>(null) }
+    var region by rememberSaveable { mutableStateOf("상체 전체") }
     var equipment by rememberSaveable { mutableStateOf("전체 기구") }
     var moreTop by rememberSaveable { mutableStateOf(false) }
     var moreBottom by rememberSaveable { mutableStateOf(false) }
@@ -39,8 +42,10 @@ internal fun CatalogScreen(app: AppViewModel, title: String = "운동 목록", s
     val all = remember(app.customExercises) { app.catalogTemplates() }
     val customNames = app.customExercises.map { it.name }.toSet()
     val filtered = all.filter { t ->
+        val r = catalogRegionOf(t.name, t.category)
         (query.isBlank() || t.name.contains(query.trim(), true)) &&
-            (region == "전체" || catalogRegionOf(t.name, t.category) == region) &&
+            (part == null || catalogPartOf(r) == part) &&
+            (part != "상체" || region == "상체 전체" || r == region) &&
             (equipment == "전체 기구" || (app.customExercises.firstOrNull { it.name == t.name }?.equipment ?: catalogEquipmentOf(t.name)) == equipment)
     }
     val top = filtered.filter { postureSupported(it.name) }
@@ -52,7 +57,8 @@ internal fun CatalogScreen(app: AppViewModel, title: String = "운동 목록", s
         }
         LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 6.dp, bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             item { DField(query, { query = it }, "종목 검색", modifier = Modifier.fillMaxWidth()) }
-            item { FilterChipRow(listOf("전체") + catalogRegions, region, { region = it }) }
+            item { PartChips(part, { part = it; region = "상체 전체" }, parts = catalogParts) }
+            if (part == "상체") item { FilterChipRow(listOf("상체 전체", "가슴", "등", "어깨", "팔"), region, { region = it }) }
             item { FilterChipRow(listOf("전체 기구") + catalogEquipments, equipment, { equipment = it }) }
             if (query.isNotBlank() && filtered.isEmpty()) item {
                 Surface(shape = RoundedCornerShape(18.dp), color = c.surface, modifier = Modifier.fillMaxWidth()) {
@@ -64,44 +70,52 @@ internal fun CatalogScreen(app: AppViewModel, title: String = "운동 목록", s
                 }
             }
             if (top.isNotEmpty()) {
-                item { TierHeader("자세 교정 지원", "${top.size}", "카메라 규칙이 있는 종목") }
-                items(if (moreTop) top.size else top.size.coerceAtMost(4), key = { "top-" + top[it].name }) { i -> CatalogRow(top[i], "자세 교정", false, { onOpenDetail(top[i].name) }, { onPick(top[i]) }) }
+                item { TierHeader("자세 교정 지원", "${top.size}", "카메라 규칙이 있는 종목", posture = true) }
+                items(if (moreTop) top.size else top.size.coerceAtMost(4), key = { "top-" + top[it].name }) { i -> CatalogRow(top[i], null, false, { onOpenDetail(top[i].name) }, { onPick(top[i]) }) }
                 if (!moreTop && top.size > 4) item { GhostButton("${top.size - 4}개 더 보기", { moreTop = true }, Modifier.fillMaxWidth()) }
             }
             if (bottom.isNotEmpty()) {
-                item { TierHeader("기록 전용", "${bottom.size}", "자세 비교 미지원") }
+                // 층 헤더가 '기록 전용' 을 말하므로 행마다 칩을 달지 않는다(UI 감사 A8, K2). 자세 비교는 규칙이 생길 때까지 꺼져 있다
+                item { TierHeader("기록 전용", "${bottom.size}", "내 기록에만 · 자세 비교는 규칙이 생기면") }
                 items(if (moreBottom) bottom.size else bottom.size.coerceAtMost(5), key = { "bottom-" + bottom[it].name }) { i ->
                     val t = bottom[i]
-                    CatalogRow(t, if (t.name in customNames) "내가 추가" else "기록 전용", t.name in customNames, { onOpenDetail(t.name) }, { onPick(t) })
+                    CatalogRow(t, if (t.name in customNames) "내가 추가" else null, t.name in customNames, { onOpenDetail(t.name) }, { onPick(t) })
                 }
                 if (!moreBottom && bottom.size > 5) item { GhostButton("${bottom.size - 5}개 더 보기", { moreBottom = true }, Modifier.fillMaxWidth()) }
             }
-            item { WashBanner("기록 전용 종목은 내 기록에만 쓰여요. 자세 비교는 그 종목의 규칙이 생길 때까지 꺼져 있어요.", Icons.Rounded.Info) }
         }
         GhostButton("직접 추가하기", { custom = true }, Modifier.padding(horizontal = 20.dp, vertical = 12.dp).fillMaxWidth(), icon = Icons.Rounded.Add)
     }
     if (custom) CustomExerciseSheet(app, initialName = query.trim(), onClose = { custom = false })
 }
 
+/** 카탈로그 부위 그림 칩 — 루틴의 넷에 유산소(`cardio.png`)를 더한다. 세부 부위(`catalogRegionOf`)는 [catalogPartOf] 로 접는다. */
+internal val catalogParts: List<Pair<String, String>> = listOf("하체" to "lower", "상체" to "upper", "코어" to "core", "유산소" to "cardio")
+
+internal fun catalogPartOf(region: String): String = if (region == "유산소") "유산소" else bodyPartOf(region)
+
 @Composable
-private fun TierHeader(title: String, count: String, note: String) {
+private fun TierHeader(title: String, count: String, note: String, posture: Boolean = false) {
     val c = Trex.c
     Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(title, color = c.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold); WashPill(count); Text(note, color = c.text2, fontSize = 12.sp)
+        if (posture) Icon(Icons.Rounded.Videocam, null, tint = c.primaryText, modifier = Modifier.size(16.dp))
+        Text(title, color = c.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold); WashPill(count); Text(note, color = c.text2, fontSize = 12.sp, maxLines = 1)
     }
 }
 
+/** 종목 행 — 부위 글리프(K6) + 이름 + 부위·기구. [chip] 은 '내가 추가' 처럼 층이 말하지 않는 것만. */
 @Composable
-private fun CatalogRow(t: WorkoutTemplate, chip: String, mine: Boolean, onOpen: () -> Unit, onPick: () -> Unit) {
+private fun CatalogRow(t: WorkoutTemplate, chip: String?, mine: Boolean, onOpen: () -> Unit, onPick: () -> Unit) {
     val c = Trex.c
     Surface(onClick = onOpen, shape = RoundedCornerShape(16.dp), color = c.surface, modifier = Modifier.fillMaxWidth()) {
-        Row(Modifier.padding(start = 16.dp, end = 6.dp, top = 10.dp, bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
+        Row(Modifier.padding(start = 10.dp, end = 6.dp, top = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            BodyPartGlyph(bodyPartForWorkout(t.name, t.category), 40.dp)
+            Column(Modifier.weight(1f).padding(start = 12.dp)) {
                 Text(t.name, color = c.text, fontSize = 15.sp, fontWeight = FontWeight.Medium)
                 Text(listOfNotNull(catalogRegionOf(t.name, t.category), if (mine) null else catalogEquipmentOf(t.name), if (ExerciseGuides.forName(t.name) != null) "가이드" else null).joinToString(" · "),
                     color = c.text2, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp))
             }
-            WashPill(chip)
+            if (chip != null) WashPill(chip)
             IconButton(onClick = onPick) { Icon(Icons.Rounded.Add, "${t.name} 루틴에 추가", tint = c.primaryText) }
             Icon(Icons.Rounded.ChevronRight, null, tint = c.text3, modifier = Modifier.size(18.dp))
         }

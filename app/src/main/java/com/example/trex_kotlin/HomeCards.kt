@@ -1,6 +1,8 @@
 package com.example.trex_kotlin
 
 import androidx.compose.foundation.Image
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -34,7 +36,8 @@ internal fun AssetArtwork(path: String, modifier: Modifier = Modifier, scale: Co
     val decoder = rememberAssetImageDecoder()
     val bitmap by produceState(decorativeImages.get(path), path) {
         value = withContext(Dispatchers.IO) {
-            decorativeImages.get(path) ?: decoder.decode(path, if (path.startsWith("routine/")) 2 else 4)
+            // 루틴 사진과 가이드 첫 프레임(종목 상세 머리 그림, UI 감사 A11)은 크게 보여 절반 축소만
+            decorativeImages.get(path) ?: decoder.decode(path, if (path.startsWith("routine/") || path.startsWith("exercise_guides/")) 2 else 4)
                 .also { decorativeImages.put(path, it) }
         }
     }
@@ -165,7 +168,11 @@ internal fun HomeActivityCards(app: AppViewModel, onOpenRecord: () -> Unit = {},
                 Text("${cups}잔 / ${WATER_GOAL_CUPS}잔", color = c.text2, fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp))
                 Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.SpaceBetween) {
                     repeat(WATER_GOAL_CUPS) { i ->
-                        Icon(Icons.Rounded.WaterDrop, null, tint = if (i < cups) c.primary else c.track, modifier = Modifier.size(13.dp))
+                        // 새로 찬 잔은 120 ms 로 커지며 들어온다 — 값이 바뀌었다는 피드백(UI 감사 A5, K4)
+                        val filled = i < cups
+                        val scale = animateFloatAsState(if (filled) 1f else 0.72f, tween(120), label = "drop$i")
+                        Icon(Icons.Rounded.WaterDrop, null, tint = if (filled) c.primary else c.track,
+                            modifier = Modifier.size(13.dp).graphicsLayer { scaleX = scale.value; scaleY = scale.value })
                     }
                 }
             }

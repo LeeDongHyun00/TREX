@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material3.*
 import com.example.trex_kotlin.TrexText as Text
 import androidx.compose.runtime.*
@@ -38,16 +39,26 @@ fun ExerciseDetailScreen(app: AppViewModel, name: String, onBack: () -> Unit, on
     val kgTrend = byDay.take(8).reversed().map { (day, list) -> day to (list.mapNotNull { it.set.kg }.maxOrNull() ?: 0.0) }
     val repTrend = byDay.take(8).reversed().map { (day, list) -> day to list.filter { !it.set.estimated }.mapNotNull { it.set.countedReps } }
     var showAll by remember { mutableStateOf(false) }
+    var evidenceOpen by remember { mutableStateOf(false) }
+    val region = catalogRegionOf(name, template?.category ?: "")
+    val guide = ExerciseGuides.forName(name)
     Column(Modifier.fillMaxSize().background(c.bg).statusBarsPadding().navigationBarsPadding()) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "뒤로", tint = c.text) }
-            Column { Text("${catalogRegionOf(name, template?.category ?: "")} · ${custom?.equipment ?: catalogEquipmentOf(name)}", color = c.text2, fontSize = 12.sp); Text(name, color = c.text, fontSize = 18.sp, fontWeight = FontWeight.SemiBold) }
+            Column { Text("$region · ${custom?.equipment ?: catalogEquipmentOf(name)}", color = c.text2, fontSize = 12.sp); Text(name, color = c.text, fontSize = 18.sp, fontWeight = FontWeight.SemiBold) }
         }
         LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            item { Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                WashPill(if (postureSupported(name)) "자세 교정 지원" else if (custom != null) "내가 추가" else "기록 전용 · 자세 비교 미지원")
-                if (app.workoutPlan.any { it.name == name }) WashPill("오늘 루틴에 있음")
-            } }
+            // 머리 그림(UI 감사 A11, K1·K6) — 가이드가 있는 16종은 시범 첫 프레임, 나머지는 부위 글리프. 그림은 자세 정답이 아니다(ExerciseGuides 머리말)
+            item {
+                Box(Modifier.fillMaxWidth().height(150.dp).clip(RoundedCornerShape(20.dp)).background(c.surface), contentAlignment = Alignment.Center) {
+                    if (guide != null) AssetArtwork(guide.asset, Modifier.fillMaxSize().padding(6.dp))
+                    else BodyPartGlyph(bodyPartOf(region), 96.dp, background = c.surface)
+                    Row(Modifier.align(Alignment.BottomStart).padding(10.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        if (postureSupported(name)) PostureSupportPill() else if (custom != null) WashPill("내가 추가")
+                        if (app.workoutPlan.any { it.name == name }) WashPill("오늘 루틴에 있음")
+                    }
+                }
+            }
             item {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Surface(shape = RoundedCornerShape(18.dp), color = c.surface, modifier = Modifier.weight(1f)) {
@@ -101,18 +112,31 @@ fun ExerciseDetailScreen(app: AppViewModel, name: String, onBack: () -> Unit, on
             item {
                 Surface(shape = RoundedCornerShape(18.dp), color = c.surface, modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text("사용 근육", color = c.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Text("사용 근육", color = c.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                            // 근거·각주는 ⓘ 뒤로(UI 감사 A11, K2 글은 둘째 자리) — 그림(근육도)과 이름 한 줄이 1차
+                            if (profile != null) IconButton(onClick = { evidenceOpen = !evidenceOpen }, modifier = Modifier.size(32.dp)) { Icon(Icons.Rounded.Info, if (evidenceOpen) "근거 접기" else "근거 보기", tint = c.text3, modifier = Modifier.size(18.dp)) }
+                        }
                         if (profile == null) Text("근육 부하 추정 없음", color = c.text2, fontSize = 13.sp)
                         else {
+                            // 완료 화면의 '사용 근육' 과 같은 2D 근육도(사용 = primary) — 주 근육(가중치 ≥ .75)만 칠하고 보조는 글로
+                            val keys = remember(profile.id) { profile.primary.flatMap { m -> listOf("${m.name}_L", "${m.name}_R") }.joinToString(",", "[", "]") { "\"$it\"" } }
+                            Surface(shape = RoundedCornerShape(16.dp), color = androidx.compose.ui.graphics.Color(0xFF222527), modifier = Modifier.fillMaxWidth()) {
+                                Box(Modifier.fillMaxWidth().height(260.dp)) {
+                                    MuscleAtlasWebView("window.setUsedMuscles && window.setUsedMuscles($keys);", true, "$name 의 주 근육. 왼쪽 뒷면, 오른쪽 앞면", Modifier.fillMaxSize())
+                                }
+                            }
                             val primary = profile.primary.map { it.label }
                             val secondary = profile.weights.filterValues { it < .75 }.entries.sortedByDescending { it.value }.map { it.key.label }
                             Text("주요 · " + primary.joinToString(" · "), color = c.text, fontSize = 14.sp)
                             if (secondary.isNotEmpty()) Text("보조·안정 · " + secondary.joinToString(" · "), color = c.text2, fontSize = 13.sp)
-                            Text(profile.evidence, color = c.text2, fontSize = 12.sp, lineHeight = 17.sp, modifier = Modifier.padding(top = 4.dp))
-                            if (profile.sources.isNotEmpty()) Row(Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                profile.sources.take(3).forEachIndexed { i, url -> TextButton(onClick = { uri.openUri(url) }, contentPadding = PaddingValues(horizontal = 8.dp)) { Text("근거 ${i + 1}", color = c.primaryText, fontSize = 12.sp) } }
+                            if (evidenceOpen) {
+                                Text(profile.evidence, color = c.text2, fontSize = 12.sp, lineHeight = 17.sp, modifier = Modifier.padding(top = 4.dp))
+                                if (profile.sources.isNotEmpty()) Row(Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    profile.sources.take(3).forEachIndexed { i, url -> TextButton(onClick = { uri.openUri(url) }, contentPadding = PaddingValues(horizontal = 8.dp)) { Text("근거 ${i + 1}", color = c.primaryText, fontSize = 12.sp) } }
+                                }
+                                Text("역할 가중치는 EMG 비율이 아니라 제품 초기값이에요(docs/MUSCLE_LOAD_IMPLEMENTATION.md).", color = c.text3, fontSize = 11.sp, lineHeight = 15.sp)
                             }
-                            Text("역할 가중치는 EMG 비율이 아니라 제품 초기값이에요(docs/MUSCLE_LOAD_IMPLEMENTATION.md).", color = c.text3, fontSize = 11.sp, lineHeight = 15.sp)
                         }
                     }
                 }

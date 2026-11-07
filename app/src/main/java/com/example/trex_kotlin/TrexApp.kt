@@ -513,7 +513,8 @@ private fun TrexAppContent(app: AppViewModel) {
                                     val cameraSet = current.workout.posture && current.workout.postureSupported() && current.originalId !in postureFallback
                                     SessionSetInputCard(app, current.originalId, current.workout.name, current.totalSets, current.setNumber - 1,
                                         cameraReps = if (cameraSet) counts[current.token - 1] else null, initialReps = if (cameraSet) null else counts[current.token - 1],
-                                        timed = current.workout.resolvedTarget() is WorkoutTarget.Duration, finishedSeconds = ((work[current.token - 1] ?: 0L) / 1000).toInt())
+                                        timed = current.workout.resolvedTarget() is WorkoutTarget.Duration, finishedSeconds = ((work[current.token - 1] ?: 0L) / 1000).toInt(),
+                                        compact = true)   // 휴식 화면의 1차는 남은 시간 — 방금 세트 한 줄만(UI 감사 A14)
                                 } } else null,
                                 onExtendRest = { progress = progress.copy(remainingMs = progress.remainingMs + 30_000L) })
                             }
@@ -878,7 +879,8 @@ private fun MorphNav(
     val largeText = LocalDensity.current.fontScale > 1.3f
     Row(modifier = modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         slots.forEachIndexed { i, slot ->
-            val weight = slot.weight
+            // 폭도 260 ms 로 옮긴다 — '모핑' 인데 폭이 즉시 바뀌어 뚝 끊기던 것(UI 감사 2026-11-07 A4, K4). 폭은 배치 단계 값이라 애니 동안만 내비가 다시 구성된다
+            val weight = animateFloatAsState(slot.weight, tween(260), label = "nav-w$i")
             // 투명도는 그리기 단계에서만 읽는다 — 260ms 동안 내비 전체를 매 프레임 다시 구성하지 않는다(스펙 §115)
             val alpha = animateFloatAsState(slot.alpha, tween(260), label = "nav-a$i")
             val h = 56.dp
@@ -886,7 +888,7 @@ private fun MorphNav(
                 onClick = slot.onClick,
                 enabled = slot.alpha > 0.1f,
                 modifier = Modifier
-                    .weight(weight.coerceAtLeast(0.0001f))
+                    .weight(weight.value.coerceAtLeast(0.0001f))
                     .heightIn(min = h)
                     .graphicsLayer { this.alpha = alpha.value },
                 shape = RoundedCornerShape(999.dp),

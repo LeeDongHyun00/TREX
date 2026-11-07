@@ -32,7 +32,9 @@ import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.unit.IntOffset
 import kotlin.math.roundToInt
 import androidx.compose.material.icons.rounded.DeleteOutline
+import androidx.compose.material.icons.rounded.DragHandle
 import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.Videocam
 import androidx.compose.material3.*
 import com.example.trex_kotlin.TrexText as Text
 import androidx.compose.runtime.*
@@ -257,35 +259,51 @@ private fun WorkoutSwipeRow(workout: Workout, shape: RoundedCornerShape, reset: 
                     if (completed && offset < -reveal * .65f) { offset = -reveal; onDelete() } else offset = 0f
                 }
             }) {
-            Row(Modifier.fillMaxWidth().heightIn(min = 104.dp).padding(start = 18.dp, end = 8.dp, top = 12.dp, bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Row(verticalAlignment=Alignment.CenterVertically, horizontalArrangement=Arrangement.spacedBy(6.dp)) {
-                        if(workout.done) Icon(Icons.Rounded.CheckCircle,"${workout.name} 완료",tint=c.primaryText,modifier=Modifier.size(21.dp))
-                        Text(workout.name, color = if(workout.done)c.primaryText else c.text, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+            Row(Modifier.fillMaxWidth().heightIn(min = 104.dp).padding(start = 14.dp, end = 8.dp, top = 12.dp, bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                // 부위 글리프(UI 감사 A6, K6) — 글을 읽기 전에 부위가 보인다. 완료한 운동은 글리프 자리에 체크
+                if (workout.done) Box(Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(c.primaryWash), contentAlignment = Alignment.Center) {
+                    Icon(Icons.Rounded.CheckCircle, "${workout.name} 완료", tint = c.primaryText, modifier = Modifier.size(24.dp))
+                } else BodyPartGlyph(bodyPartForWorkout(workout.name, workout.category), 40.dp)
+                Column(Modifier.weight(1f).padding(start = 12.dp)) {
+                    Text(workout.name, color = if(workout.done)c.primaryText else c.text, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                    Row(Modifier.padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        // 세트 점 — 세트 수를 세지 않고 본다. 완료한 운동은 전부 채움
+                        SetDots(workout.repsSpec().sets, filled = if (workout.done) workout.repsSpec().sets else 0)
+                        Text(workout.reps + if (workout.repsSpec().sets > 1) " · 휴식 ${workout.timing().restSeconds}초" else "",
+                            color = c.text2, fontSize = 12.sp, lineHeight = 18.sp)
                     }
-                    Text(workout.reps + if (workout.repsSpec().sets > 1) " · 휴식 ${workout.timing().restSeconds}초" else "",
-                        color = c.text2, fontSize = 12.sp, lineHeight = 18.sp, modifier = Modifier.padding(top = 7.dp))
                     ExerciseGuidePreview(workout.name, enabled = gesturesEnabled)
-
                 }
-                Column(Modifier.padding(start = 10.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Switch(checked = workout.posture && workout.postureSupported(), onCheckedChange = onPosture,
-                            colors = postureSwitchColors(), enabled = gesturesEnabled && workout.postureSupported(),
-                            modifier = Modifier.semantics {
-                                contentDescription = "${workout.name} 자세 교정 사용"
-                                stateDescription = (if (workout.postureTrial()) "시험 단계 · " else "") +
-                                    (if (!workout.postureSupported()) "미지원" else if (workout.posture) "사용 중" else "꺼짐")
-                            })
-
-                    }
+                // 자세 교정 스위치는 지원 종목에만 — '미지원' 글자는 뺐다(UI 감사 A7, 루틴 화면과 같은 규칙: 없는 종목엔 아무것도 붙지 않는다)
+                if (workout.postureSupported()) Column(Modifier.padding(start = 6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Switch(checked = workout.posture, onCheckedChange = onPosture,
+                        colors = postureSwitchColors(), enabled = gesturesEnabled,
+                        modifier = Modifier.semantics {
+                            contentDescription = "${workout.name} 자세 교정 사용"
+                            stateDescription = (if (workout.postureTrial()) "시험 단계 · " else "") + (if (workout.posture) "사용 중" else "꺼짐")
+                        })
                     // 시험 단계(크런치·레그 레이즈·플랭크, PostureTrial): 틀린 동작이 세지거나 교정이 빠질 수 있다 — 목록에서 먼저 밝힌다(원칙 #2)
-                    Text(when { !workout.postureSupported() -> "미지원"; workout.postureTrial() -> com.example.trex_kotlin.posture.PostureTrial.LABEL; else -> "자세 교정" }, color = c.text2,
-                        fontSize = 10.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.width(52.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                        Icon(Icons.Rounded.Videocam, null, tint = c.text2, modifier = Modifier.size(11.dp))
+                        Text(if (workout.postureTrial()) com.example.trex_kotlin.posture.PostureTrial.LABEL else "자세 교정", color = c.text2, fontSize = 10.sp, maxLines = 1)
+                    }
                 }
+                // 순서 바꾸기 손잡이 — 길게 눌러 끄는 조작을 그림으로 알린다(UI 감사 A6, K10 발견성). 끌기는 행 전체에서 시작한다
+                Icon(Icons.Rounded.DragHandle, "길게 눌러 순서 바꾸기", tint = c.text3, modifier = Modifier.padding(start = 6.dp).size(20.dp))
             }
             if (!last) HorizontalDivider(Modifier.padding(start = 18.dp), color = c.line)
         }
+    }
+}
+
+/** 세트 점 — [total] 개 가운데 [filled] 개를 primary 로. 7개를 넘으면 점 대신 "×N". 목록 행·휴식 화면이 같이 쓴다(UI 감사 A6·A16). */
+@Composable
+internal fun SetDots(total: Int, filled: Int, dot: androidx.compose.ui.unit.Dp = 7.dp, on: Color = Trex.c.primary, off: Color = Trex.c.track) {
+    if (total <= 0) return
+    if (total > 7) { Text("×$total", color = Trex.c.text2, fontSize = 12.sp); return }
+    Row(horizontalArrangement = Arrangement.spacedBy(3.dp), verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.semantics { contentDescription = "${total}세트 중 ${filled}세트 완료" }) {
+        repeat(total) { i -> Box(Modifier.size(dot).clip(androidx.compose.foundation.shape.CircleShape).background(if (i < filled) on else off)) }
     }
 }
 

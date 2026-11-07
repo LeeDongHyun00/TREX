@@ -7,8 +7,14 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
@@ -57,12 +63,20 @@ import com.example.trex_kotlin.TrexText as Text
 internal fun LiveWorkoutHud(workout: Workout, repetitions: Int, timeLeft: Int, totalSeconds: Int,
     setLabel: String, paused: Boolean, compact: Boolean, message: String?,
     countNote: String? = null, countNoteActive: Boolean = false, hideCount: Boolean = false, sideCount: String? = null,
-    elapsedSec: Int? = null, modeLabel: String? = null, breath: String? = null, hold: HoldHud? = null) {
+    elapsedSec: Int? = null, modeLabel: String? = null, breath: String? = null, hold: HoldHud? = null,
+    /** 자세로 뺀 회의 누계(COACH, §62b) — 늘 때마다 큰 숫자 옆 빨간 ✕ 배지와 숫자 붉은 점멸 1.2 s(§125b, UI 감사 A15 — 글자 대신 기호, 색 = 결과). */
+    excludedCount: Int = 0,
+    /** 이 세트의 세트 번호·총 세트 — 큰 숫자 아래 세트 점(UI 감사 A16, 윗줄 글자 대신 보이는 진행). null 이면 없음. */
+    setIndex: Int? = null, setTotal: Int? = null) {
     val duration = workout.resolvedTarget() is WorkoutTarget.Duration
     val target = workout.resolvedTarget().amount
     val lime = Color(0xFFB8DD83)
     val amber = Color(0xFFFFC24B)
+    val red = Color(0xFFFF5A5A)   // SkeletonStage.WARN 과 같은 빨강 = 회를 뺀 판정(§125)
     val dim = Color.White.copy(alpha = .7f)
+    // 제외 점멸 — 값이 늘 때만 1 → 0 으로 1.2 s. 그리기 단계에서만 읽는다(스펙 §115)
+    val flash = remember { Animatable(0f) }
+    LaunchedEffect(excludedCount) { if (excludedCount > 0) { flash.snapTo(1f); flash.animateTo(0f, tween(1200)) } }
     Column(Modifier.fillMaxWidth()
         .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = .78f))))
         .padding(horizontal = 20.dp, vertical = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -105,11 +119,25 @@ internal fun LiveWorkoutHud(workout: Workout, repetitions: Int, timeLeft: Int, t
                     Text("남음", color = dim, fontSize = 16.sp, modifier = Modifier.padding(bottom = if (compact) 4.dp else 8.dp))
                 }
                 else -> {
-                    Text("${(target - repetitions).coerceAtLeast(0)}", color = Color.White, fontSize = big, lineHeight = bigLine, fontWeight = FontWeight.Bold, maxLines = 1)
+                    Box(contentAlignment = Alignment.TopEnd) {
+                        // 숫자는 제외 직후 붉게 물들었다가 돌아온다 — 색은 그리기 단계에서 섞는다
+                        Text("${(target - repetitions).coerceAtLeast(0)}", color = Color.White, fontSize = big, lineHeight = bigLine, fontWeight = FontWeight.Bold, maxLines = 1,
+                            modifier = Modifier.drawWithContent { drawContent(); if (flash.value > 0f) drawRect(red.copy(alpha = .55f * flash.value), blendMode = BlendMode.SrcAtop) })
+                        // ✕ 배지 = 이 회를 세지 않았다(§125b) — 글자 없이 결과만. 누계가 있으면 작게 남고, 직후 1.2 s 는 크게
+                        if (excludedCount > 0) Box(Modifier.offset(x = 14.dp, y = (-2).dp).size(if (compact) 18.dp else 24.dp)
+                            .graphicsLayer { val s = 1f + .35f * flash.value; scaleX = s; scaleY = s }
+                            .background(red, CircleShape).semantics { contentDescription = "자세로 뺀 회 ${excludedCount}" }, contentAlignment = Alignment.Center) {
+                            Icon(Icons.Rounded.Close, null, tint = Color.White, modifier = Modifier.size(if (compact) 12.dp else 16.dp))
+                        }
+                    }
                     Text("남음", color = dim, fontSize = 18.sp, modifier = Modifier.padding(bottom = if (compact) 8.dp else 14.dp))
                     Text("$repetitions / $target", color = dim, fontSize = 14.sp, modifier = Modifier.padding(bottom = if (compact) 8.dp else 14.dp))
                 }
             }
+        }
+        // 세트 진행 점(§125b·A16) — 윗줄의 '2 / 3 세트' 글자를 읽지 않아도 보인다. 글자는 접근성·완료 화면에 남는다
+        if (setIndex != null && setTotal != null && setTotal in 2..7) Row(Modifier.padding(top = 2.dp), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+            repeat(setTotal) { i -> Box(Modifier.size(7.dp).background(if (i < setIndex) lime else Color.White.copy(alpha = .3f), CircleShape)) }
         }
         // 호흡(§5) — 느리게 숨 쉬는 링 + 단어. 위상을 따라가는 표시라 소리가 없다
         if (breath != null) {

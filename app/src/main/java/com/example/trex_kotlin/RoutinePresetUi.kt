@@ -2,6 +2,7 @@ package com.example.trex_kotlin
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -61,9 +62,12 @@ internal fun EquipmentTiles(selected: String?, onSelect: (String?) -> Unit) {
     }
 }
 
-/** 부위 칩(NTC 의 부위 둘러보기) — 홈 카드와 같은 그림을 둥글게 잘라 쓴다. 고른 칩에 primary 테두리. [selected] null = 전체. */
+/**
+ * 부위 칩(NTC 의 부위 둘러보기) — 홈 카드와 같은 그림을 둥글게 잘라 쓴다. 고른 칩에 primary 테두리. [selected] null = 전체.
+ * [parts] 는 (이름, `assets/routine/` 그림 키) — 루틴은 [presetParts], 카탈로그는 유산소를 더한 목록(UI 감사 A8).
+ */
 @Composable
-internal fun PartChips(selected: String?, onSelect: (String?) -> Unit) {
+internal fun PartChips(selected: String?, onSelect: (String?) -> Unit, parts: List<Pair<String, String>> = presetParts) {
     val c = Trex.c
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -73,10 +77,11 @@ internal fun PartChips(selected: String?, onSelect: (String?) -> Unit) {
             }
             Text("부위", color = c.text3, fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp))
         }
-        presetParts.forEach { (key, image) ->
+        parts.forEach { (key, image) ->
             val on = key == selected
-            Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                Surface(onClick = { onSelect(if (on) null else key) }, shape = CircleShape, color = c.surface2,
+            // 글자까지 눌리게 — 실기기에서 라벨을 누르고 안 바뀌던 것(11-07)
+            Column(Modifier.weight(1f).clip(RoundedCornerShape(12.dp)).clickable { onSelect(if (on) null else key) }, horizontalAlignment = Alignment.CenterHorizontally) {
+                Surface(shape = CircleShape, color = c.surface2,
                     border = BorderStroke(if (on) 3.dp else 1.dp, if (on) c.primary else c.line), modifier = Modifier.size(48.dp)) {
                     Box(Modifier.fillMaxSize().padding(if (on) 3.dp else 1.dp).clip(CircleShape)) { AssetArtwork("routine/$image.png", Modifier.matchParentSize(), ContentScale.Crop) }
                 }

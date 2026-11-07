@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -40,7 +41,13 @@ import androidx.compose.material.icons.rounded.PhotoCamera
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.RestartAlt
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.material.icons.rounded.EmojiEvents
+import androidx.compose.material.icons.rounded.Info
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Size
 import com.example.trex_kotlin.TrexText as Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -132,15 +139,17 @@ fun SessionTransitionScreen(step: SessionStep, timeLeft: Int, paused: Boolean,
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text("세트 사이 휴식 · ${step.setLabel}", color = c.primaryText, fontSize = 13.sp)
-                    Text(step.workout.name, color = c.text, fontSize = 22.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 4.dp))
+                    Text(step.workout.name, color = c.text, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 2.dp))
                 }
                 // 폭을 주지 않으면 GhostButton 의 fillMaxWidth 가 제목 칸을 한 글자 폭으로 밀어낸다(11-07 실기기)
-                if (onExtendRest != null) GhostButton("+30초", onExtendRest, Modifier.width(96.dp).padding(end = 8.dp), height = 44.dp)
-                RingGauge(progress = progress, size = 64.dp, stroke = 6.dp) {
-                    Text(timeLeft.asClock(), color = c.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                }
+                if (onExtendRest != null) GhostButton("+30초", onExtendRest, Modifier.width(96.dp), height = 44.dp)
             }
-            Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(top = 12.dp)) {
+            // 남은 휴식이 1차(UI 감사 A14, K1) — 오른쪽 위 64 dp 링 대신 큰 숫자. 세트 입력은 그 아래, 방금 세트 한 줄만 펼친다
+            Row(Modifier.fillMaxWidth().padding(top = 6.dp), verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.Center) {
+                Text(timeLeft.asClock(), color = if (paused) c.warn else c.text, fontSize = 40.sp, lineHeight = 44.sp, fontWeight = FontWeight.Bold)
+                Text(if (paused) "일시정지" else "남은 휴식", color = c.text2, fontSize = 13.sp, modifier = Modifier.padding(start = 8.dp, bottom = 7.dp))
+            }
+            Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(top = 10.dp)) {
                 setInput()
                 if (onShowGuide != null) ExerciseGuideButton(step.workout.name, onShowGuide)
                 Spacer(Modifier.height(8.dp))
@@ -163,7 +172,25 @@ fun SessionTransitionScreen(step: SessionStep, timeLeft: Int, paused: Boolean,
         Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             GhostButton(if (paused) "재개" else "일시정지",
                 onClick = onTogglePause, modifier = Modifier.width(100.dp))
-            Cta(if (setInput != null) "다음 세트" else "휴식 끝내기", onClick = onNext, modifier = Modifier.weight(1f))
+            RestProgressCta(if (setInput != null) "다음 세트" else "휴식 끝내기", progress, onNext, Modifier.weight(1f))
+        }
+    }
+}
+
+/**
+ * 휴식 진행이 차오르는 주 행동 버튼(UI 감사 A14, K4 값 변화 알림) — 왼쪽부터 진한 primary 가 남은 비율만큼 채워진다. 1초마다 오는 값을 1초 선형 보간으로 이어
+ * 눈에 뚝뚝 끊기지 않는다. 글자는 늘 흰색이라 채움이 지나가도 읽힌다.
+ */
+@Composable
+private fun RestProgressCta(text: String, progress: Float, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val c = Trex.c
+    val shown by animateFloatAsState(progress.coerceIn(0f, 1f), tween(1000, easing = LinearEasing), label = "rest-fill")
+    Surface(onClick = onClick, modifier = modifier.heightIn(min = 54.dp), shape = RoundedCornerShape(18.dp), color = c.primary.copy(alpha = .66f), contentColor = Color.White, shadowElevation = 2.dp) {
+        Box {
+            Box(Modifier.matchParentSize().drawBehind { drawRect(c.primary, size = Size(size.width * shown, size.height)) })
+            Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 16.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                Text(text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
+            }
         }
     }
 }
@@ -230,27 +257,18 @@ fun SessionCompleteScreen(
         val partial = plan.count { !it.done }
         if (partial > 0) Text("부분 수행 ${partial}세트도 함께 저장했어요.", color = c.text2,
             fontSize = 13.sp, modifier = Modifier.padding(top = 10.dp))
-        if (reward != null && (reward.xp > 0 || reward.personalRecord != null || reward.newBadges.isNotEmpty())) {
-            Surface(shape = RoundedCornerShape(18.dp), color = c.primaryWash, modifier = Modifier.fillMaxWidth().padding(top = 18.dp)) {
-                Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    reward.personalRecord?.let { (name, set) ->
-                        Text("개인 기록 갱신!", color = c.primaryText, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-                        Text("$name ${set.kg?.let(::trimKg)} kg × ${set.reps}" + (reward.previousBestKg?.let { " · 지난 최고 ${trimKg(it)} kg" } ?: ""), color = c.text, fontSize = 13.sp)
-                    }
-                    if (reward.xp > 0) {
-                        Text("+${reward.xp} XP · 연속 ${reward.streak}일", color = c.text, fontSize = 13.sp)
-                        XpLevelBar(reward)
-                    }
-                    reward.newBadges.forEach { Text("새 배지 · ${it.title}", color = c.primaryText, fontSize = 13.sp, fontWeight = FontWeight.SemiBold) }
-                }
-            }
-        }
-        Row(Modifier.padding(top = 24.dp).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        // 1. 기록 수치가 먼저(UI 감사 A21, K9 보상은 보조) — 숫자가 차례로 올라온다(400 ms, 한 번에 하나: K4)
+        val volume = reward?.takeIf { it.volumeKg > 0 }?.volumeKg?.toInt()
+        val shownSets = countUp(doneCount, 0)
+        val shownSeconds = countUp(elapsedSeconds, 120)
+        val shownVolume = countUp(volume ?: 0, 240)
+        val shownKcal = countUp(kcal, if (volume != null) 360 else 240)
+        Row(Modifier.padding(top = 22.dp).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOfNotNull(
-                "$doneCount" to "완료 세트",
-                elapsedSeconds.asClock() to "총 시간",
-                reward?.takeIf { it.volumeKg > 0 }?.let { "${it.volumeKg.toInt()}kg" to "볼륨" },
-                "${kcal}kcal" to "예상 소모",
+                "$shownSets" to "완료 세트",
+                shownSeconds.asClock() to "총 시간",
+                volume?.let { "${shownVolume}kg" to "볼륨" },
+                "${shownKcal}kcal" to "예상 소모",
             ).forEach { (v, label) ->
                 Column(
                     Modifier
@@ -258,8 +276,33 @@ fun SessionCompleteScreen(
                         .padding(vertical = 13.dp, horizontal = 8.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    Text(v, color = c.text, fontSize = 19.sp, fontWeight = FontWeight.SemiBold, lineHeight = 19.sp)
+                    Text(v, color = c.text, fontSize = 21.sp, fontWeight = FontWeight.SemiBold, lineHeight = 21.sp)
                     Text(label, color = c.text3, fontSize = 10.5.sp, modifier = Modifier.padding(top = 5.dp))
+                }
+            }
+        }
+        // 2. 보상은 그 아래 한 칸 — XP 바 + 배지 글리프, 글은 한 줄
+        if (reward != null && (reward.xp > 0 || reward.personalRecord != null || reward.newBadges.isNotEmpty())) {
+            Surface(shape = RoundedCornerShape(18.dp), color = c.primaryWash, modifier = Modifier.fillMaxWidth().padding(top = 6.dp)) {
+                Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    reward.personalRecord?.let { (name, set) ->
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Icon(Icons.Rounded.EmojiEvents, null, tint = c.primaryText, modifier = Modifier.size(18.dp))
+                            Text("개인 기록 · $name ${set.kg?.let(::trimKg)} kg × ${set.reps}" + (reward.previousBestKg?.let { " (지난 ${trimKg(it)})" } ?: ""), color = c.text, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                        }
+                    }
+                    if (reward.xp > 0) {
+                        Text("+${reward.xp} XP · 연속 ${reward.streak}일", color = c.text, fontSize = 13.sp)
+                        XpLevelBar(reward)
+                    }
+                    if (reward.newBadges.isNotEmpty()) Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        reward.newBadges.forEach { b ->
+                            Row(Modifier.clip(RoundedCornerShape(999.dp)).background(c.primary).padding(horizontal = 9.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Icon(Icons.Rounded.EmojiEvents, null, tint = Color.White, modifier = Modifier.size(12.dp))
+                                Text(b.title, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -269,13 +312,28 @@ fun SessionCompleteScreen(
             PostureSessionBlock(reports = ordered, headline = headline, onLabel = onLabel, modifier = Modifier.padding(top = 20.dp))
         }
         }
-        if (reward != null) Text("XP·배지는 운동을 마치고 기록한 사실에만 붙어요. 자세 판정·카메라 횟수와는 무관해요.", color = c.text3, fontSize = 11.sp, lineHeight = 15.sp, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 8.dp))
-        Row(Modifier.padding(top = 12.dp).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        // 면책은 ⓘ 뒤로(K2) — 눌러야 보이고, 접근성 설명에는 남긴다
+        if (reward != null) {
+            var note by remember { mutableStateOf(false) }
+            Row(Modifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
+                IconButton(onClick = { note = !note }, modifier = Modifier.size(28.dp)) { Icon(Icons.Rounded.Info, "XP 안내", tint = c.text3, modifier = Modifier.size(16.dp)) }
+                if (note) Text("XP·배지는 운동을 마치고 기록한 사실에만 붙어요. 자세 판정·카메라 횟수와는 무관해요.", color = c.text3, fontSize = 11.sp, lineHeight = 15.sp)
+            }
+        }
+        Row(Modifier.padding(top = 8.dp).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             if (onShare != null) GhostButton("오운완 올리기", onShare, Modifier.weight(1f), icon = Icons.Rounded.Forum)
             if (onOpenAchievements != null) GhostButton("업적 보기", onOpenAchievements, Modifier.weight(1f))
         }
         Cta("홈으로", icon = Icons.Rounded.Home, onClick = onDone, modifier = Modifier.padding(top = 12.dp).fillMaxWidth())
     }
+}
+
+/** 완료 화면 수치 카운트업 — [delayMs] 뒤 0 에서 [target] 까지 400 ms(값 변화 알림, 순차라 동시 애니가 아니다). */
+@Composable
+private fun countUp(target: Int, delayMs: Int): Int {
+    val a = remember { Animatable(0f) }
+    LaunchedEffect(target) { delay(delayMs.toLong()); a.animateTo(target.toFloat(), tween(400, easing = FastOutSlowInEasing)) }
+    return a.value.toInt()
 }
 
 /**

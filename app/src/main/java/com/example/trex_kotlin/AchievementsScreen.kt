@@ -48,8 +48,8 @@ fun AchievementsScreen(app: AppViewModel, onBack: () -> Unit, onGoWorkout: () ->
                             Column { Text("레벨", color = c.bg.copy(alpha = .72f), fontSize = 12.sp); Text("Lv ${Rewards.level(total)}", color = c.bg, fontSize = 28.sp, fontWeight = FontWeight.Bold) }
                             Column(horizontalAlignment = Alignment.End) { Text("다음 레벨까지", color = c.bg.copy(alpha = .72f), fontSize = 12.sp); Text("${Rewards.toNextLevel(total)} XP", color = c.bg, fontSize = 28.sp, fontWeight = FontWeight.Bold) }
                         }
-                        TrackBar((total % Rewards.XP_PER_LEVEL).toFloat() / Rewards.XP_PER_LEVEL, color = c.lime, modifier = Modifier.padding(top = 12.dp))
-                        Text("XP 는 운동을 마치고 기록할 때만 쌓여요. 자세 점수는 XP 와 무관해요.", color = c.bg.copy(alpha = .72f), fontSize = 12.sp, modifier = Modifier.padding(top = 10.dp))
+                        TrackBar((total % Rewards.XP_PER_LEVEL).toFloat() / Rewards.XP_PER_LEVEL, color = c.lime, modifier = Modifier.padding(top = 12.dp), animate = true)
+                        Text("XP 는 운동을 마치고 기록한 사실에만 붙어요.", color = c.bg.copy(alpha = .72f), fontSize = 12.sp, modifier = Modifier.padding(top = 10.dp))
                     }
                 }
             }
