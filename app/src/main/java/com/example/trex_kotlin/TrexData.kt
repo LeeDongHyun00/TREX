@@ -39,6 +39,8 @@ data class UserProfile(
     val weightKg: Double = 65.0,
     val age: Int = 30,
     val activityFactor: Double = 1.35,
+    /** 목표 요일 규칙의 판(§139) — 1 = §131(루틴이 있으면 루틴 요일만), [TARGET_DAYS_VERSION] = 운동 요일 ∪ 루틴 요일. 옛 저장본은 1 로 읽혀 한 번 옮겨진다. */
+    val daysVersion: Int = TARGET_DAYS_VERSION,
 )
 
 @Immutable

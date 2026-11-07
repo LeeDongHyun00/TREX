@@ -80,6 +80,11 @@ class TrexStore(private val prefs: KeyValueStore) {
         get() = runCatching { ThemeMode.valueOf(prefs.getString(KEY_THEME, null) ?: "System") }.getOrDefault(ThemeMode.System)
         set(value) = prefs.edit().putString(KEY_THEME, value.name).apply()
 
+    /** 운동 탭 조작부 자리 바꾸기(§139) — 기기 설정이라 백업·동기화 항목(SyncRules.KEYS)이 아니다. */
+    var workoutDockSwapped: Boolean
+        get() = prefs.getBoolean(KEY_WORKOUT_DOCK, false)
+        set(value) = prefs.edit().putBoolean(KEY_WORKOUT_DOCK, value).apply()
+
     /** 계획의 done 플래그가 어느 날짜 기준인지 — 날짜가 바뀌면 리셋한다. */
     var planDoneEpochDay: Long
         get() = prefs.getLong(KEY_PLAN_DONE_DAY, -1L)
@@ -101,6 +106,8 @@ class TrexStore(private val prefs: KeyValueStore) {
                 weightKg = o.optDouble("weightKg", 65.0),
                 age = o.optInt("age", 30),
                 activityFactor = o.optDouble("activityFactor", 1.35),
+                // 판 표시가 없으면 §131 규칙으로 저장된 것(§139 — AppViewModel.migrateTargetDays)
+                daysVersion = o.optInt("daysV", 1),
             )
         }.getOrNull()
     }
@@ -117,6 +124,7 @@ class TrexStore(private val prefs: KeyValueStore) {
             .put("weightKg", profile.weightKg)
             .put("age", profile.age)
             .put("activityFactor", profile.activityFactor)
+            .put("daysV", profile.daysVersion)
         prefs.edit().putString(KEY_PROFILE, o.toString()).apply()
     }
 
@@ -495,6 +503,7 @@ class TrexStore(private val prefs: KeyValueStore) {
 
     private companion object {
         const val KEY_THEME = "theme_mode"
+        const val KEY_WORKOUT_DOCK = "workout_dock_swapped"
         const val KEY_PLAN_DONE_DAY = "plan_done_day"
         const val KEY_GUIDE_DONE = "guide_done"
         const val KEY_LOGGED_IN = "logged_in"

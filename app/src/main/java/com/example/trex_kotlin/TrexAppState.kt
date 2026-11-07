@@ -441,6 +441,7 @@ class AppViewModel(private val platform: AppPlatform) : ViewModel() {
         customExercises = store.loadCustomExercises()
         registerCustomProfiles()
         weeklyRoutine = store.loadWeeklyRoutine()
+        migrateTargetDays()
         retentionDays = store.loadRetentionDays()
         streakPauses = store.loadStreakPauses()
         migrateHistoryCalories()
@@ -456,6 +457,16 @@ class AppViewModel(private val platform: AppPlatform) : ViewModel() {
     fun setTheme(mode: ThemeMode) {
         themeMode = mode
         store.themeMode = mode
+    }
+
+    // ---- 운동 탭 조작부 자리 바꾸기(§139, WorkoutDock.kt) — 기기 설정
+
+    var workoutDockSwapped by mutableStateOf(store.workoutDockSwapped)
+        private set
+
+    fun updateWorkoutDockSwapped(swapped: Boolean) {
+        workoutDockSwapped = swapped
+        store.workoutDockSwapped = swapped
     }
 
     /** 설정 화면의 '버전' — 설치된 앱 그대로(§119). 예전에는 "1.0" 이 박혀 있어 스토어 버전과 달랐다. */
@@ -614,6 +625,7 @@ class AppViewModel(private val platform: AppPlatform) : ViewModel() {
         // 어제 완료한 계획은 오늘 다시 처음부터(done 플래그는 하루 단위) + 그 요일의 주간 루틴 — 날짜 경계 처리는 refreshCalendar 한 곳.
         // 예전엔 여기서 planDoneEpochDay 를 먼저 오늘로 두어 콜드 스타트에서는 주간 루틴이 한 번도 적용되지 않았다(PR 65 리뷰).
         migrateHistoryCalories()
+        migrateTargetDays()
         refreshCalendar(todayEpochDay())
         syncMuscleLoad()
     }
@@ -785,9 +797,35 @@ class AppViewModel(private val platform: AppPlatform) : ViewModel() {
 
     private fun workoutDaySet(): Set<Long> = workoutHistory.filter { it.items.isNotEmpty() }.map { it.epochDay }.toSet()
 
-    /** 목표 요일 — 주간 루틴 슬롯이 있으면 그 요일, 없으면 온보딩의 운동 요일([UserProfile.dayMask], 0비트 = 월). */
-    fun isTargetDay(day: kotlinx.datetime.DayOfWeek): Boolean =
-        if (weeklyRoutine.slots.isNotEmpty()) weeklyRoutine.isTarget(day) else (profile.dayMask shr (day.isoDayNumber - 1)) and 1 == 1
+    /**
+     * 목표 요일(§139) — 운동 요일([UserProfile.dayMask], 0비트 = 월 — 온보딩에서 고르고 운동 기록에서 고친다) ∪ 주간 루틴을 넣은 요일.
+     * §131 에는 루틴이 하나라도 있으면 루틴 요일만 봐서, 루틴을 쓰는 사람은 운동 요일을 고쳐도 소용이 없었다.
+     */
+    fun isTargetDay(day: kotlinx.datetime.DayOfWeek): Boolean = isWorkoutTargetDay(day, profile.dayMask, weeklyRoutine)
+
+    /**
+     * 운동 요일 바꾸기(§139, 운동 기록 화면) — 끈 요일에 들어 있던 주간 루틴은 휴식으로 뺀다(루틴이 든 요일은 목표 요일이라 그대로 두면 꺼지지 않는다).
+     * 운동 요일 알림은 화면이 다시 예약한다(플랫폼 알림이 화면 쪽 짝이라).
+     */
+    fun setWorkoutDays(mask: Int) {
+        val off = routineDaysTurnedOff(mask, weeklyRoutine)
+        if (off.isNotEmpty()) {
+            weeklyRoutine = off.fold(weeklyRoutine) { w, d -> w.assigned(d, null) }
+            store.saveWeeklyRoutine(weeklyRoutine)
+        }
+        profile = profile.copy(dayMask = mask and ALL_DAYS_MASK, daysVersion = TARGET_DAYS_VERSION)
+        store.saveProfile(profile)
+    }
+
+    /**
+     * §131 규칙으로 저장된 프로필(판 표시 `daysV` 없음)을 한 번 옮긴다 — 루틴이 있었으면 그때 목표였던 루틴 요일로 맞춰,
+     * 새 규칙(운동 요일 ∪ 루틴 요일)에서 목표 요일이 늘거나 줄지 않게 한다(연속 운동이 갑자기 끊기지 않게). 서버에서 받은 옛 프로필도 같다.
+     */
+    private fun migrateTargetDays() {
+        if (profile.daysVersion >= TARGET_DAYS_VERSION) return
+        profile = profile.copy(dayMask = migratedDayMask(profile.dayMask, weeklyRoutine), daysVersion = TARGET_DAYS_VERSION)
+        store.saveProfile(profile)
+    }
 
     // ---- §131 기록 확장 — 보관 기간·체중·XP·배지·직접 추가 종목·주간 루틴·세트 입력·수동 기록·내보내기·알림 설정
 
@@ -904,6 +942,12 @@ class AppViewModel(private val platform: AppPlatform) : ViewModel() {
     fun assignWeeklyRoutine(day: kotlinx.datetime.DayOfWeek, ref: String?) {
         weeklyRoutine = weeklyRoutine.assigned(day, ref)
         store.saveWeeklyRoutine(weeklyRoutine)
+        // 운동 요일과 함께 간다(§139) — 루틴을 넣으면 운동 요일, 빼면("휴식으로") 휴식. 목표 요일 = 운동 요일 ∪ 루틴 요일이라 빼기만 하면 운동 요일로 남는다
+        val mask = withDay(profile.dayMask, day, on = ref != null)
+        if (mask != profile.dayMask) {
+            profile = profile.copy(dayMask = mask)
+            store.saveProfile(profile)
+        }
         if (day == localToday().dayOfWeek) applyWeeklyRoutineForToday(force = true)
     }
 

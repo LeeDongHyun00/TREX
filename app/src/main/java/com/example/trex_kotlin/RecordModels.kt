@@ -418,6 +418,34 @@ internal fun decodeWeeklyRoutine(o: JSONObject): WeeklyRoutine =
 
 val DayOfWeek.isoDayNumber: Int get() = ordinal + 1
 
+// ============================================================= 목표 요일(§139) — 운동 요일 ∪ 주간 루틴 요일
+
+/** 목표 요일 규칙의 판 — 1 = §131(루틴이 하나라도 있으면 루틴 요일만), 2 = 운동 요일 ∪ 루틴 요일. [UserProfile.daysVersion]. */
+const val TARGET_DAYS_VERSION = 2
+
+/** 일곱 요일 전부(0비트 = 월 … 6비트 = 일). */
+const val ALL_DAYS_MASK = 0b1111111
+
+/** 요일 비트(0비트 = 월) — 온보딩의 "운동할 요일"·운동 기록의 운동 요일 편집과 같은 꼴([UserProfile.dayMask]). */
+fun dayBit(day: DayOfWeek): Int = 1 shl (day.isoDayNumber - 1)
+
+fun withDay(mask: Int, day: DayOfWeek, on: Boolean): Int = if (on) mask or dayBit(day) else mask and dayBit(day).inv()
+
+/**
+ * 목표 요일 — 운동 요일([dayMask])이거나 주간 루틴을 넣은 요일. 둘 다 하나도 없으면 연속 규칙이 매일을 목표로 본다(`everyDayIfNoTarget`).
+ * §131 에는 루틴이 하나라도 있으면 루틴 요일만 봤다 — 그래서 루틴을 쓰는 사람은 온보딩 요일을 고쳐도 소용이 없었다.
+ */
+fun isWorkoutTargetDay(day: DayOfWeek, dayMask: Int, weekly: WeeklyRoutine): Boolean =
+    dayMask and dayBit(day) != 0 || weekly.isTarget(day)
+
+/** §131 규칙 저장본을 한 번 옮긴다 — 루틴이 있었으면 그때 목표였던 루틴 요일로(목표가 늘거나 줄지 않게), 없었으면 그대로. */
+fun migratedDayMask(dayMask: Int, weekly: WeeklyRoutine): Int =
+    if (weekly.slots.isEmpty()) dayMask else weekly.slots.keys.fold(0) { m, d -> if (d in 1..7) m or (1 shl (d - 1)) else m }
+
+/** 운동 요일을 [newMask] 로 바꿀 때 주간 루틴에서 빠질 요일 — 끈 요일에 들어 있던 루틴(그대로 두면 그 요일이 계속 목표다). */
+fun routineDaysTurnedOff(newMask: Int, weekly: WeeklyRoutine): List<DayOfWeek> =
+    DayOfWeek.entries.filter { weekly.isTarget(it) && newMask and dayBit(it) == 0 }
+
 // ============================================================= 알림 설정(P16) · 보관 기간(P14)
 
 /** 기기 안에서만 예약하는 알림 — 서버 푸시가 아니다. [hour]:[minute] 는 운동 요일 알림 시각. */
