@@ -42,6 +42,14 @@ class RecordModelsTest {
         val s = SetEntry(2, kg = 5.0, reps = 8, bodyKg = 72.5)
         assertEquals(s, setEntryFromJson(setEntryJson(s)))
         assertEquals(null, setEntryFromJson(setEntryJson(SetEntry(1, reps = 5))).bodyKg)
+        // 근거 약한 가중치(감사 F2 a·b·c) — 옮겨 온 종목은 '추정', 직접 EMG 종목은 아님; 감사 당시 39종
+        val weak = com.example.trex_kotlin.trainingload.MuscleLoadCatalog.all.filter { it.evidenceWeak }.map { it.name }
+        assertTrue("기본 스쿼트" in weak && "밴드 스쿼트" in weak && "케이블 페이스 풀" in weak && "바이시클 크런치" in weak)
+        assertTrue("풀업" !in weak && "플랭크" !in weak && "덤벨 컬" !in weak)
+        assertEquals(39, weak.size)
+        assertEquals("회(쪽당)", countLabelFor("리버스 런지", false)); assertEquals("초(한쪽)", countLabelFor("사이드 플랭크", true))
+        assertEquals("회", countLabelFor("데드버그", false)); assertEquals("회", countLabelFor("덤벨 컬", false))
+        assertEquals("+10 kg × 8 · 8회", listOf(SetEntry(1, kg = 10.0, reps = 8), SetEntry(2, kg = 10.0, reps = 8)).summaryLine(bodyweight = true))
     }
 
     @Test fun summaryLineAndEpley() {

@@ -52,7 +52,7 @@ fun ManualRecordSheet(app: AppViewModel, initialEpochDay: Long, initialExercise:
             }
             if (savedPr != null) {
                 Column(Modifier.weight(1f, false).padding(top = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    WashBanner("개인 기록 갱신! $exercise ${savedPr!!.kg?.let(::trimKg)} kg × ${savedPr!!.reps}회", Icons.Rounded.Info)
+                    WashBanner("개인 기록 갱신! $exercise ${if (exercise?.let { exerciseLoadKind(it).kgLabel() } == "+kg") "+" else ""}${savedPr!!.kg?.let(::trimKg)} kg × ${savedPr!!.reps}회", Icons.Rounded.Info)
                     Cta("확인", onClose, Modifier.fillMaxWidth())
                 }
                 return@Column
@@ -84,8 +84,9 @@ fun ManualRecordSheet(app: AppViewModel, initialEpochDay: Long, initialExercise:
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         // 맨몸 종목은 kg 이 추가 중량(+kg) — 체중을 kg 칸에 적게 하지 않는다(ExerciseLoadKind)
                         val kgLabel = exercise?.let { exerciseLoadKind(it).kgLabel() } ?: "kg"
-                        SetRowHeader(timed, kgLabel)
-                        drafts.forEach { SetRow(it, timed, kgLabel = kgLabel) }
+                        val showKg = exercise?.let { exerciseShowsKg(it) } ?: true
+                        SetRowHeader(timed, if (showKg) kgLabel else "—", exercise?.let { countLabelFor(it, timed) })
+                        drafts.forEach { SetRow(it, timed, showKg = showKg, kgLabel = kgLabel) }
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             GhostButton("세트 추가하기", { drafts += SetRowDraft(drafts.size + 1, drafts.lastOrNull()?.kg ?: "", drafts.lastOrNull()?.count ?: "") }, Modifier.weight(1f))
                             if (drafts.size > 1) GhostButton("마지막 세트 빼기", { drafts.removeAt(drafts.lastIndex) }, Modifier.weight(1f))

@@ -28,6 +28,15 @@ class MuscleLoadTest {
         // 버티기·운반 종목은 초 단위, 한쪽씩 하는 종목은 쌍 단위(§130)
         assertEquals(LoadUnit.SECONDS, MuscleLoadCatalog.find("파머스 캐리")!!.unit)
         assertEquals(LoadUnit.PAIR, MuscleLoadCatalog.find("리버스 런지")!!.unit)
+        // 근거 감사 2026-11-07 F3·F1 — 교대 동작은 EACH, 카탈로그 '초' 는 SECONDS 와 1:1, 매달리기·엎드린 레이즈는 맨몸
+        assertEquals(LoadUnit.EACH, MuscleLoadCatalog.find("데드버그")!!.unit)
+        assertEquals(LoadUnit.EACH, MuscleLoadCatalog.find("버드독")!!.unit)
+        assertTrue(MuscleLoadCatalog.find("행잉 레그 레이즈")!!.bodyweight && MuscleLoadCatalog.find("Y 레이즈")!!.bodyweight)
+        val timedCatalog = com.example.trex_kotlin.workoutCatalog.values.flatten().filter { it.reps.contains("초") }.map { it.name }.toSet()
+        val timedProfiles = MuscleLoadCatalog.all.filter { it.unit == LoadUnit.SECONDS }.map { it.name }.toSet()
+        assertEquals(timedCatalog, timedProfiles)
+        val sided = listOf("런지", "사이드", "싱글레그", "원암", "스텝업", "불가리안", "네발기기", "팔로프", "수트케이스", "버드독", "데드버그", "시저", "바이시클", "러시안", "니업", "캐리")
+        MuscleLoadCatalog.all.filter { it.unit == LoadUnit.PAIR || it.unit == LoadUnit.EACH }.forEach { p -> assertTrue(p.name, sided.any { it in p.name }) }
         // 인용 논문이 문서 분류와 반대였던 세 종목은 논문 결과를 따른다(docs/EXERCISE_EXPANSION_46.md §2)
         assertTrue(Muscle.TIBIALIS in MuscleLoadCatalog.find("의자 스쿼트")!!.primary)
         assertTrue(Muscle.ABDUCTORS in MuscleLoadCatalog.find("리버스 런지")!!.primary && Muscle.GLUTES !in MuscleLoadCatalog.find("리버스 런지")!!.primary)

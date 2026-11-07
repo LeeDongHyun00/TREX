@@ -37,12 +37,38 @@ fun exerciseLoadKind(name: String): ExerciseLoadKind {
 /** kg 칸의 뜻 — 맨몸은 '+kg'(추가 중량), 외부 중량은 'kg'. */
 fun ExerciseLoadKind.kgLabel(): String = when (this) { ExerciseLoadKind.BODYWEIGHT, ExerciseLoadKind.BODYWEIGHT_FULL -> "+kg"; else -> "kg" }
 
+/** kg 칸을 여는가 — 맨몸 버티기(플랭크 4종·싱글레그 애브도미널 프레스)는 kg 이 뜻이 없어 닫는다('—'). 운반(캐리)은 운반 중량이라 연다. */
+fun exerciseShowsKg(name: String): Boolean {
+    val p = MuscleLoadCatalog.find(name) ?: return true
+    return !(p.unit == LoadUnit.SECONDS && p.bodyweight)
+}
+
 /** 1RM(Epley)은 외부 중량에만 뜻이 있다 — 맨몸 + 추가 중량은 체중 비율이 섞여 추정하지 않는다. */
 fun ExerciseLoadKind.supportsOneRepMax(): Boolean = this == ExerciseLoadKind.EXTERNAL
 
 /**
- * 근육 역할 가중치의 근거가 약한 프로필 — 출처가 없거나 evidence 가 '추론·유추·적용·추정·편집' 으로 적힌 것. 화면은 '추정' 칩으로 밝힌다(원칙 #2, 감사 F2).
- * 가중치 자체는 전부 제품 초기값이라(EMG 비율 아님) 이 칩은 '다른 종목에서 옮겨 왔다' 는 뜻이다.
+ * 근육 역할 가중치의 근거가 약한 프로필(감사 F2 의 a·b·c) — 출처가 없거나, evidence 가 '추론·유추·적용·추정·편집·유사·미확보' 로 적혔거나(a·b),
+ * 출처가 동료심사 논문(PubMed·DOI·MDPI)이 아닌 기관 자료(NASM·ACE·Mayo)뿐인 것(c). 화면은 '추정' 칩으로 밝힌다(원칙 #2).
+ * 가중치 자체는 전부 제품 초기값이라(EMG 비율 아님) 이 칩은 '같은 조건의 측정이 없어 옮겨 왔다' 는 뜻이다. 감사 당시 72종 중 39종.
  */
 val ExerciseLoadProfile.evidenceWeak: Boolean
-    get() = sources.isEmpty() || listOf("추론", "유추", "적용", "추정", "편집", "유사").any { it in evidence }
+    get() = sources.isEmpty() ||
+        listOf("추론", "유추", "적용", "추정", "편집", "유사", "미확보").any { it in evidence } ||
+        sources.none { s -> listOf("pubmed.ncbi", "doi.org", "mdpi.com").any { it in s } }
+
+/** 체중을 양쪽 같은 부하로 적는 좌우 버티기(§130) — 머리글 '초(한쪽)'. */
+val SIDED_TIMED_EXERCISES: Set<String> = setOf("사이드 플랭크", "무릎 사이드 플랭크", "수트케이스 캐리", "싱글레그 애브도미널 프레스")
+
+/**
+ * 세트 입력 머리글의 횟수 칸 이름 — PAIR 종목(한쪽씩, 엔진은 적은 수를 **쪽당**으로 읽는다)은 '회(쪽당)', 좌우 버티기는 '초(한쪽)', 그 밖은 '회'/'초'.
+ * 엔진이 `l = r = n/12` 로 읽는 뜻을 화면이 말해야 한다(감사 F3 참고 항목).
+ */
+fun countLabelFor(name: String, timed: Boolean): String {
+    val p = MuscleLoadCatalog.find(name)
+    return when {
+        timed && name in SIDED_TIMED_EXERCISES -> "초(한쪽)"
+        timed -> "초"
+        p?.unit == LoadUnit.PAIR -> "회(쪽당)"
+        else -> "회"
+    }
+}

@@ -67,13 +67,6 @@ fun Workout.exerciseSpec(): ExerciseSpec {
     )
 }
 
-fun Workout.loadLabel(): String = when (category) {
-    "하체", "상체" -> "체중"
-    "코어", "복근" -> "매트"
-    "유산소" -> "심박"
-    "회복" -> "가동범위"
-    else -> "자율"
-}
 
 // ---- 끼니 시간대
 

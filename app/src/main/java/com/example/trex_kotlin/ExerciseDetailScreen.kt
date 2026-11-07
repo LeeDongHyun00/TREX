@@ -97,7 +97,7 @@ fun ExerciseDetailScreen(app: AppViewModel, name: String, onBack: () -> Unit, on
                             Row(Modifier.fillMaxWidth().padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Column(Modifier.weight(1f)) {
                                     Text("${date.monthValue}월 ${date.day}일", color = c.text, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-                                    Text(entries.summaryLine() + (entries.mapNotNull { it.rpe }.lastOrNull()?.let { " · RPE $it" } ?: "") + (if (entries.any { !it.memo.isNullOrBlank() }) " · 메모" else ""),
+                                    Text(entries.summaryLine(bodyweight = kind != ExerciseLoadKind.EXTERNAL) + (entries.mapNotNull { it.rpe }.lastOrNull()?.let { " · RPE $it" } ?: "") + (if (entries.any { !it.memo.isNullOrBlank() }) " · 메모" else ""),
                                         color = c.text2, fontSize = 13.sp, modifier = Modifier.padding(top = 3.dp))
                                     entries.mapNotNull { it.memo }.distinct().forEach { Text("\"$it\"", color = c.text3, fontSize = 12.sp) }
                                 }

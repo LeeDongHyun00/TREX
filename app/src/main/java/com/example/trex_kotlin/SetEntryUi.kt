@@ -55,12 +55,12 @@ fun SetEntry.toDraft(): SetRowDraft = SetRowDraft(index, kg?.let(::trimKg) ?: ""
 
 /** [kgLabel] 은 외부 중량이면 "kg", 맨몸이면 "+kg"(추가 중량 — `ExerciseLoadKind.kgLabel`). */
 @Composable
-fun SetRowHeader(timed: Boolean, kgLabel: String = "kg") {
+fun SetRowHeader(timed: Boolean, kgLabel: String = "kg", countLabel: String? = null) {
     val c = Trex.c
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         Text("세트", color = c.text2, fontSize = 12.sp, textAlign = TextAlign.Center, modifier = Modifier.width(36.dp))
         Text(kgLabel, color = c.text2, fontSize = 12.sp, textAlign = TextAlign.Center, modifier = Modifier.weight(1f))
-        Text(if (timed) "초" else "회", color = c.text2, fontSize = 12.sp, textAlign = TextAlign.Center, modifier = Modifier.weight(1f))
+        Text(countLabel ?: if (timed) "초" else "회", color = c.text2, fontSize = 12.sp, textAlign = TextAlign.Center, modifier = Modifier.weight(1f))
         Text("완료", color = c.text2, fontSize = 12.sp, textAlign = TextAlign.Center, modifier = Modifier.width(44.dp))
     }
 }

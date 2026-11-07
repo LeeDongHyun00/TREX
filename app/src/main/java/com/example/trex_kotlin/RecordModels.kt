@@ -69,14 +69,15 @@ internal fun encodeSetEntries(sets: List<SetEntry>): JSONArray = JSONArray().als
 internal fun decodeSetEntries(arr: JSONArray?): List<SetEntry> =
     if (arr == null) emptyList() else (0 until arr.length()).mapNotNull { i -> runCatching { setEntryFromJson(arr.getJSONObject(i)) }.getOrNull() }
 
-/** 세트 기록 한 줄 — "60 kg × 10 · 10 · 8" / "45초 · 40초" / "12 · 12 · 10회". 카메라 값만 있는 세트는 뒤에 '추정' 을 붙인다. */
-fun List<SetEntry>.summaryLine(): String {
+/** 세트 기록 한 줄 — "60 kg × 10 · 10 · 8" / "45초 · 40초" / "12 · 12 · 10회". 카메라 값만 있는 세트는 뒤에 '추정' 을 붙인다. [bodyweight] 종목의 kg 은 추가 중량이라 "+10 kg". */
+fun List<SetEntry>.summaryLine(bodyweight: Boolean = false): String {
     val done = filter { it.done }
     if (done.isEmpty()) return ""
     val kgs = done.mapNotNull { it.kg }.distinct()
+    val plus = if (bodyweight) "+" else ""
     val counts = done.map { s -> s.seconds?.let { "${it}초" } ?: s.countedReps?.toString() ?: "–" }
-    val head = if (kgs.size == 1) "${trimKg(kgs.single())} kg × " else ""
-    val tail = if (kgs.size > 1) done.joinToString(" · ") { s -> "${s.kg?.let(::trimKg) ?: "–"}×${s.countedReps ?: s.seconds ?: "–"}" } else counts.joinToString(" · ")
+    val head = if (kgs.size == 1) "$plus${trimKg(kgs.single())} kg × " else ""
+    val tail = if (kgs.size > 1) done.joinToString(" · ") { s -> "$plus${s.kg?.let(::trimKg) ?: "–"}×${s.countedReps ?: s.seconds ?: "–"}" } else counts.joinToString(" · ")
     val unit = if (kgs.size <= 1 && done.all { it.seconds == null }) "회" else ""
     return (head + tail + unit + if (done.any { it.estimated }) " · 추정" else "").trim()
 }
@@ -318,12 +319,13 @@ fun catalogRegionOf(name: String, category: String): String = when (workoutRegio
     else -> when (category) { "코어" -> "코어"; "복근" -> "복근"; "유산소" -> "유산소"; else -> "하체" }
 }
 
-/** 카탈로그 기구 칩(P8) — 부하 프로필의 `Equipment` 를 다섯 묶음으로. */
-val catalogEquipments: List<String> = listOf("바벨", "덤벨", "머신", "케이블", "맨몸")
+/** 카탈로그 기구 칩(P8) — 부하 프로필의 `Equipment` 를 여섯 묶음으로. 밴드는 맨몸과 다르다(장력, 근거 감사 §6). */
+val catalogEquipments: List<String> = listOf("바벨", "덤벨", "머신", "케이블", "밴드", "맨몸")
 
 fun catalogEquipmentOf(name: String): String {
     val e = com.example.trex_kotlin.trainingload.MuscleLoadCatalog.find(name)?.equipment ?: return "맨몸"
     return when (e) {
+        com.example.trex_kotlin.trainingload.Equipment.BAND -> "밴드"
         com.example.trex_kotlin.trainingload.Equipment.BARBELL -> "바벨"
         com.example.trex_kotlin.trainingload.Equipment.DUMBBELL, com.example.trex_kotlin.trainingload.Equipment.BENCH -> "덤벨"
         com.example.trex_kotlin.trainingload.Equipment.CABLE -> "케이블"

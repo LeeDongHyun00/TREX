@@ -290,7 +290,9 @@ fun SessionCompleteScreen(
                     reward.personalRecord?.let { (name, set) ->
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             Icon(Icons.Rounded.EmojiEvents, null, tint = c.primaryText, modifier = Modifier.size(18.dp))
-                            Text("개인 기록 · $name ${set.kg?.let(::trimKg)} kg × ${set.reps}" + (reward.previousBestKg?.let { " (지난 ${trimKg(it)})" } ?: ""), color = c.text, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                            // 맨몸 종목의 PR 은 추가 중량 PR — '+' 로 가른다(근거 감사 F5)
+                            val plus = if (exerciseLoadKind(name).kgLabel() == "+kg") "+" else ""
+                            Text("개인 기록 · $name $plus${set.kg?.let(::trimKg)} kg × ${set.reps}" + (reward.previousBestKg?.let { " (지난 $plus${trimKg(it)})" } ?: ""), color = c.text, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                         }
                     }
                     if (reward.xp > 0) {
@@ -319,7 +321,7 @@ fun SessionCompleteScreen(
             var note by remember { mutableStateOf(false) }
             Row(Modifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
                 IconButton(onClick = { note = !note }, modifier = Modifier.size(28.dp)) { Icon(Icons.Rounded.Info, "XP 안내", tint = c.text3, modifier = Modifier.size(16.dp)) }
-                if (note) Text("XP·배지는 운동을 마치고 기록한 사실에만 붙어요. 자세 판정·카메라 횟수와는 무관해요.", color = c.text3, fontSize = 11.sp, lineHeight = 15.sp)
+                if (note) Text("XP·배지는 운동을 마치고 기록한 사실에만 붙어요. 자세 판정·카메라 횟수와는 무관해요. 예상 소모 kcal 은 부위별 분당 고정값(5~7 kcal)으로 어림한 값이라 체중·강도를 반영하지 않아요.", color = c.text3, fontSize = 11.sp, lineHeight = 15.sp)
             }
         }
         Row(Modifier.padding(top = 8.dp).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {

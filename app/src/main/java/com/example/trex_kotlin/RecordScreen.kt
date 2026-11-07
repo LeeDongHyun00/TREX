@@ -191,7 +191,7 @@ private fun RecordItemRow(item: WorkoutHistoryItem, onOpen: () -> Unit) {
         Column(Modifier.weight(1f)) {
             // '타이머·기록 전용·자세 교정' 칩은 뺐다(사용자 요청 2026-11-07) — 출처는 세부 줄의 '자세 지적' 과 종목 상세가 말한다
             Text(item.workoutName, color = c.text, fontSize = 16.sp, fontWeight = FontWeight.Medium)
-            val line = item.sets.summaryLine().ifBlank { item.reps }
+            val line = item.sets.summaryLine(bodyweight = exerciseLoadKind(item.workoutName).kgLabel() == "+kg").ifBlank { item.reps }
             val pc = item.postureCorrection
             val detail = buildList {
                 add(line)
@@ -297,7 +297,8 @@ private fun RecordStatsView(app: AppViewModel, onOpenExercise: (String) -> Unit,
                         }
                     }
                     Box(Modifier.padding(top = 10.dp)) {
-                        WashBanner("비중은 세트당 운동 시간 합산의 제품용 분류예요. 볼륨은 사용자가 확정한 횟수로만 계산하고, 카메라 횟수만 있는 세트는 '추정' 으로 셉니다.", Icons.Rounded.Info)
+                        // 소모 kcal 의 근거 고지(근거 감사 §3 — 분당 고정값, 체중·강도 미반영, 횟수만 적은 세트는 30초로 침)
+                        WashBanner("비중은 세트당 운동 시간 합산의 제품용 분류예요. 볼륨은 사용자가 확정한 횟수로만 계산하고, 카메라 횟수만 있는 세트는 '추정' 으로 셉니다. 소모 kcal 은 부위별 분당 고정값(5~7 kcal)으로 어림한 값이라 체중·강도를 반영하지 않아요.", Icons.Rounded.Info)
                     }
                 }
             }

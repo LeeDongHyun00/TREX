@@ -24,6 +24,7 @@ fun SessionSetInputCard(app: AppViewModel, originalId: String, workoutName: Stri
     var allRows by remember(originalId) { mutableStateOf(!compact) }
     val last = remember(workoutName) { app.lastSets(workoutName) }
     val kgLabel = remember(workoutName) { exerciseLoadKind(workoutName).kgLabel() }
+    val showKg = remember(workoutName) { exerciseShowsKg(workoutName) }
     val drafts = remember(originalId) { mutableStateListOf<SetRowDraft>().also { list ->
         for (i in 1..totalSets) {
             val saved = app.sessionSets["$originalId::set:$i"]
@@ -43,7 +44,7 @@ fun SessionSetInputCard(app: AppViewModel, originalId: String, workoutName: Stri
                 Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
                         Text("지난번 · ${LocalDate.fromEpochDays(day).let { "${it.monthValue}월 ${it.day}일" }}", color = c.text2, fontSize = 12.sp)
-                        Text(sets.summaryLine(), color = c.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 2.dp))
+                        Text(sets.summaryLine(bodyweight = kgLabel == "+kg"), color = c.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 2.dp))
                     }
                     // 폭을 주지 않으면 GhostButton 의 fillMaxWidth 가 왼쪽 글 칸을 한 글자 폭으로 밀어낸다(11-07 실기기 — '+30초' 와 같은 함정)
                     GhostButton("그대로 채우기", {
@@ -54,10 +55,10 @@ fun SessionSetInputCard(app: AppViewModel, originalId: String, workoutName: Stri
         }
         Surface(shape = RoundedCornerShape(18.dp), color = c.surface, modifier = Modifier.fillMaxWidth()) {
             Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                SetRowHeader(timed, kgLabel)
+                SetRowHeader(timed, if (showKg) kgLabel else "—", countLabelFor(workoutName, timed))
                 drafts.forEach { d ->
                     if (!allRows && d.index != finishedSet) return@forEach
-                    SetRow(d, timed, enabled = d.index <= finishedSet, kgLabel = kgLabel)
+                    SetRow(d, timed, enabled = d.index <= finishedSet, showKg = showKg, kgLabel = kgLabel)
                     if (d.index == finishedSet && cameraReps != null && !d.edited) CameraCountNote(cameraReps)
                 }
                 if (compact && totalSets > 1) TextButton(onClick = { allRows = !allRows }, contentPadding = PaddingValues(horizontal = 4.dp)) {
@@ -99,9 +100,10 @@ private fun FinalSetsRows(app: AppViewModel, name: String, sets: List<SetEntry>,
         drafts.forEach { d -> val (rpe, memo) = rpeMemo[d.index] ?: (null to null); app.updateTodaySet(name, d.toEntry(timed, rpe, memo)) }
     }
     val kgLabel = remember(name) { exerciseLoadKind(name).kgLabel() }
+    val showKg = remember(name) { exerciseShowsKg(name) }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(name, color = c.text, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-        SetRowHeader(timed, kgLabel)
-        drafts.forEach { d -> SetRow(d, timed, kgLabel = kgLabel) }
+        SetRowHeader(timed, if (showKg) kgLabel else "—", countLabelFor(name, timed))
+        drafts.forEach { d -> SetRow(d, timed, showKg = showKg, kgLabel = kgLabel) }
     }
 }
