@@ -1,6 +1,5 @@
 package com.example.trex_kotlin
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -15,16 +14,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 
 /** 기존 행의 이름·스위치·편집 동작을 유지하고 작은 안내 진입점만 추가한다. */
 @Composable
@@ -74,24 +69,18 @@ internal fun ExerciseGuideSheet(guide: ExerciseGuide, onClose: () -> Unit,
                 }
                 Text(guide.comment, color = c.text, fontSize = 14.sp, lineHeight = 22.sp,
                     modifier = Modifier.padding(top = 12.dp))
-                Text(guide.legend, color = c.text2, fontSize = 12.sp, lineHeight = 18.sp,
-                    modifier = Modifier.padding(top = 8.dp))
                 Spacer(Modifier.height(16.dp))
-                SegmentedTabs(listOf("운동 가이드", "주의사항", "근육·근거"), section,
+                SegmentedTabs(listOf("운동 가이드", "주의사항"), section.coerceIn(0, 1),
                     onSelect = { section = it })
                 Spacer(Modifier.height(20.dp))
-                when (section) {
+                when (section.coerceIn(0, 1)) {
                     0 -> {
                         GuideSection("시작 자세", guide.setup)
                         GuideSection("운동 동작", guide.steps)
                         GuideSection("호흡법", listOf(guide.breathing), numbered = false)
-                        GuideSection("그림 읽기", listOf(guide.visualNote), numbered = false)
                     }
                     1 -> GuideSection("주의사항", guide.cautions)
-                    2 -> GuideMuscleDetails(guide)
                 }
-                Text("시범의 각도와 권장 촬영 방향은 다를 수 있어요.", color = c.text2,
-                    fontSize = 12.sp, modifier = Modifier.padding(top = 12.dp, bottom = 8.dp))
             }
             if (sessionPaused) Text("운동은 일시정지 중이에요. 닫은 뒤 직접 재개해 주세요.",
                 color = c.text2, fontSize = 12.sp, modifier = Modifier.padding(vertical = 8.dp))
@@ -117,38 +106,6 @@ internal fun GuideMuscleSummary(guide: ExerciseGuide) {
     }
     Text("색은 주요 강조 부위와 함께 작용하는 근육을 구분하며, 근활성도나 효과의 순위가 아닙니다.",
         color = Trex.c.text2, fontSize = 12.sp, lineHeight = 18.sp)
-}
-
-@Composable
-private fun GuideMuscleDetails(guide: ExerciseGuide) {
-    val uri = LocalUriHandler.current
-    Text("근육의 역할", color = Trex.c.text, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
-    Text("깊은 근육과 옷·각도에 가려진 부위는 그림에서 생략될 수 있습니다. 회색은 사용하지 않는다는 뜻이 아닙니다. 근전도는 측정 조건의 참여 자료이며, 아래 역할은 해부학과 동작을 함께 해석한 것입니다.",
-        color = Trex.c.text2, fontSize = 13.sp, lineHeight = 20.sp, modifier = Modifier.padding(vertical = 12.dp))
-    listOf("main" to "주동근", "assist" to "보조근", "stabilize" to "지지·안정근").forEach { (role, title) ->
-        val muscles = guide.muscles.filter { it.role == role }
-        if (muscles.isNotEmpty()) {
-            Text(title, color = Trex.c.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.padding(top = 12.dp, bottom = 8.dp))
-            muscles.forEach { muscle ->
-                Text(muscle.name + muscle.visibilityNote.takeIf { it.isNotBlank() }?.let { " · $it" }.orEmpty(), color = Trex.c.text,
-                    fontSize = 14.sp, fontWeight = FontWeight.Medium)
-                Text(muscle.function, color = Trex.c.text, fontSize = 13.sp, lineHeight = 20.sp)
-                Text("${muscle.evidence} · 근거 ${muscle.sourceNumbers.joinToString(", ")}",
-                    color = Trex.c.text2, fontSize = 12.sp, lineHeight = 18.sp,
-                    modifier = Modifier.padding(top = 4.dp, bottom = 12.dp))
-            }
-        }
-    }
-    Text("출처", color = Trex.c.text, fontSize = 17.sp, fontWeight = FontWeight.SemiBold,
-        modifier = Modifier.padding(top = 12.dp))
-    guide.sources.forEachIndexed { index, source ->
-        TextButton(onClick = { uri.openUri(source.url) }, modifier = Modifier.fillMaxWidth(),
-            contentPadding = PaddingValues(vertical = 8.dp)) {
-            Text("${index + 1}. ${source.label}", color = Trex.c.primaryText, fontSize = 13.sp,
-                modifier = Modifier.fillMaxWidth())
-        }
-    }
 }
 
 @Composable

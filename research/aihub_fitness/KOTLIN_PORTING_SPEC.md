@@ -3628,3 +3628,30 @@ fail validation. Repeated generation is deterministic. The iOS resource exporter
 is updated to 72 guides; native iOS compilation requires macOS.
 
 Validation and device evidence are recorded in `docs/EXERCISE_GUIDE_APP_72.md`.
+
+## §136 — Guide simplification and complete visual audit (2026-11-07)
+
+The user requested removal of the image-reading block, muscle/evidence tab and
+small explanation below each exercise introduction, and a review of all 72 GIFs
+after identifying awkward bird-dog/dead-bug poses. `ExerciseGuideSheet` now renders
+two tabs (instructions/cautions); old saved tab index 2 is clamped to 1 so restored
+state cannot produce an empty body. Red/orange swatches, introductory sentence,
+setup, movement, breathing and cautions remain. `ExerciseGuide` source evidence
+and `GuideMuscleSummary` in the exercise detail are retained for traceability.
+
+Input: the existing exact-name registry, GIF and Korean guide variant. Output:
+the same guide routes with fewer explanatory blocks and 13 corrected GIF assets.
+All 72 original GIFs were decoded and visually inspected. Structural decode tests
+alone had missed panel fragments, inconsistent support points and equipment.
+The audit replaces lunges (three), step-up, calf raise, lat pulldown, dumbbell
+bench press, machine chest press, face pull, I-Y-T, dead bug, bird dog and scissor
+cross. It retains the other 59. Native outputs, exact prompts, per-guide findings
+and SHA-256 revisions are committed under `research/exercise_guides/`.
+
+Happy path: open any guide, view its GIF, scroll instructions, switch to cautions.
+Failure path: unreadable media retains the existing placeholder and readable text;
+unknown names still have no guide action. Reopening a sheet resets by guide name;
+restored old tab state is bounded. No workout records, camera gates or training
+load weights change. Generated poses retain minor drawing drift and are not motion
+capture; the audit does not claim clinical certification. Phone/build verification
+and its actual limits are recorded in `docs/EXERCISE_GUIDE_APP_72.md`.

@@ -58,7 +58,7 @@ class ExerciseGuideCatalogTest {
         File(output, "decoded-72.tsv").writeText(results.joinToString("\n"))
     }
 
-    @Test fun allSeventyTwoSheetsShowCopyCautionsAndMuscleSources() {
+    @Test fun allSeventyTwoSheetsShowInstructionsWithoutRemovedExplanations() {
         var current by mutableStateOf(ExerciseGuides.all.first())
         compose.setContent {
             TrexAppTheme(ThemeMode.Light) {
@@ -66,7 +66,12 @@ class ExerciseGuideCatalogTest {
             }
         }
         val results = mutableListOf<String>()
-        val samples = setOf("기본 스쿼트", "원암 덤벨 로우", "I-Y-T 레이즈", "플랭크", "바이시클 크런치", "러시안 트위스트", "버드독")
+        val samples = setOf(
+            "기본 스쿼트", "원암 덤벨 로우", "I-Y-T 레이즈", "플랭크", "바이시클 크런치",
+            "러시안 트위스트", "버드독", "데드버그", "런지", "바벨 런지", "사이드 런지",
+            "스텝업", "카프 레이즈", "랫풀 다운", "덤벨 벤치 프레스", "머신 체스트 프레스",
+            "케이블 페이스 풀", "시저 크로스",
+        )
         ExerciseGuides.all.forEach { guide ->
             compose.runOnIdle { current = guide }
             compose.waitUntil(15_000) {
@@ -78,15 +83,13 @@ class ExerciseGuideCatalogTest {
             compose.onNodeWithText(guide.setup.first()).performScrollTo().assertIsDisplayed()
             compose.onNodeWithText(guide.steps.last()).performScrollTo().assertIsDisplayed()
             compose.onNodeWithText(guide.breathing).performScrollTo().assertIsDisplayed()
-            compose.onNodeWithText(guide.visualNote).performScrollTo().assertIsDisplayed()
+            compose.onNodeWithText("그림 읽기").assertDoesNotExist()
+            compose.onNodeWithText("근육·근거").assertDoesNotExist()
+            compose.onNodeWithText(guide.legend).assertDoesNotExist()
+            compose.onNodeWithText(guide.visualNote).assertDoesNotExist()
             compose.onNodeWithText("주의사항").performScrollTo().performClick()
             compose.onNodeWithText(guide.cautions.last()).performScrollTo().assertIsDisplayed()
-            compose.onNodeWithText("근육·근거").performScrollTo().performClick()
-            compose.onNodeWithText("근육의 역할").performScrollTo().assertIsDisplayed()
-            compose.onNodeWithText("지지·안정근").performScrollTo().assertIsDisplayed()
-            val source = "${guide.sources.size}. ${guide.sources.last().label}"
-            compose.onNodeWithText(source).performScrollTo().assertIsDisplayed()
-            if (guide.name in samples) capture(guide.asset.substringAfterLast('/').substringBefore('.') + "-sources")
+            if (guide.name in samples) capture(guide.asset.substringAfterLast('/').substringBefore('.') + "-cautions")
             compose.onNodeWithText("닫기").assertIsDisplayed()
             results += guide.name
         }

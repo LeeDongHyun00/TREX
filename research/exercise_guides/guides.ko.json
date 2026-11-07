@@ -1144,7 +1144,15 @@
         ]
       },
       "app_asset": "exercise_guides/lunge.gif",
-      "asset_sha256": "fbb58bb0c466416e8e57f3037284239f4c6602bcd05592c21e3f9c789b35b985"
+      "asset_sha256": "6b353f1d258c6d55b211c6ab5f957a7589af03d6532fdb28b37529f9186174e1",
+      "app_visual_revision": {
+        "date": "2026-11-07",
+        "reason": "Full 72-guide pose and frame-continuity audit correction",
+        "previous_sha256": "fbb58bb0c466416e8e57f3037284239f4c6602bcd05592c21e3f9c789b35b985",
+        "source": "research/exercise_guides/corrections/visual-audit-20261107/lunge.png",
+        "source_sha256": "579c059fefcd3ca681dd86b5a715f1f322246cc8bb8b2afe603bd4d221c325d3",
+        "review_record": "research/exercise_guides/visual-audit-20261107.json"
+      }
     },
     {
       "id": "barbell_lunge",
@@ -1935,7 +1943,15 @@
         ]
       },
       "app_asset": "exercise_guides/barbell-lunge.gif",
-      "asset_sha256": "b2064f07e84f47acf35ff83a4416563d0eead1efa3b18a5eebc2cc3b74c48f9c"
+      "asset_sha256": "088217ac7d611bc616c9ae326580c71a7b189866515eecd8f28c2f1f8dcd7c3e",
+      "app_visual_revision": {
+        "date": "2026-11-07",
+        "reason": "Full 72-guide pose and frame-continuity audit correction",
+        "previous_sha256": "b2064f07e84f47acf35ff83a4416563d0eead1efa3b18a5eebc2cc3b74c48f9c",
+        "source": "research/exercise_guides/corrections/visual-audit-20261107/barbell_lunge.png",
+        "source_sha256": "f14e23f51b802a83994a523f0bf07e6f74cbbe2a01ba16421612b3f46d091c08",
+        "review_record": "research/exercise_guides/visual-audit-20261107.json"
+      }
     },
     {
       "id": "side_lunge",
@@ -2534,7 +2550,15 @@
         ]
       },
       "app_asset": "exercise_guides/side-lunge.gif",
-      "asset_sha256": "f6b2c98fe7fb404b91af94c6684694465c35a355a4a236c41063e00a7bde9b38"
+      "asset_sha256": "bc454efd29d052d92c3174c821217a0b57b02064b89d4eeda07c7af6f7418291",
+      "app_visual_revision": {
+        "date": "2026-11-07",
+        "reason": "Full 72-guide pose and frame-continuity audit correction",
+        "previous_sha256": "f6b2c98fe7fb404b91af94c6684694465c35a355a4a236c41063e00a7bde9b38",
+        "source": "research/exercise_guides/corrections/visual-audit-20261107/side_lunge.png",
+        "source_sha256": "b1e5acd69688a51abfc3b3ccceaf1602f812b91e9da2b694d66a7866273627f4",
+        "review_record": "research/exercise_guides/visual-audit-20261107.json"
+      }
     },
     {
       "id": "cross_lunge",
@@ -8211,7 +8235,15 @@
         ]
       },
       "app_asset": "exercise_guides/step_up.gif",
-      "asset_sha256": "f91298c3139799ff5a781653f409e60bc456cf5ea967f8e770afb05cdc339074"
+      "asset_sha256": "c93d58c0b03b64e1c3fe178516b32dbdd6fc81ee628568cb73885df1a1e8e84a",
+      "app_visual_revision": {
+        "date": "2026-11-07",
+        "reason": "Full 72-guide pose and frame-continuity audit correction",
+        "previous_sha256": "f91298c3139799ff5a781653f409e60bc456cf5ea967f8e770afb05cdc339074",
+        "source": "research/exercise_guides/corrections/visual-audit-20261107/step_up.png",
+        "source_sha256": "8b09434f2cf706b6f93ca7a99d12a27ed3bce05e63d6480632f21644ac75f916",
+        "review_record": "research/exercise_guides/visual-audit-20261107.json"
+      }
     },
     {
       "id": "leg_press",
@@ -12944,7 +12976,15 @@
         ]
       },
       "app_asset": "exercise_guides/calf_raise.gif",
-      "asset_sha256": "0f9f4c98592eca24f70896d548140eba2ce526273b9cd3fa0fb308d62ad9b317"
+      "asset_sha256": "f97bcf54538da578ff2cbba7cf06b2afdb530bd6b8df73962530f2e2cc9154df",
+      "app_visual_revision": {
+        "date": "2026-11-07",
+        "reason": "Full 72-guide pose and frame-continuity audit correction",
+        "previous_sha256": "0f9f4c98592eca24f70896d548140eba2ce526273b9cd3fa0fb308d62ad9b317",
+        "source": "research/exercise_guides/corrections/visual-audit-20261107/calf_raise.png",
+        "source_sha256": "b836d9177f41cde09048da4fdca3b97b55f01460c259fa1fa84fe36da23f309f",
+        "review_record": "research/exercise_guides/visual-audit-20261107.json"
+      }
     },
     {
       "id": "overhead_press",
@@ -14473,7 +14513,15 @@
         ]
       },
       "app_asset": "exercise_guides/lat_pulldown.gif",
-      "asset_sha256": "d888d6eeec1e75222d4920edc46795caf2d1b6dde60631b61d77becea7e2c3e7"
+      "asset_sha256": "8c51e7bf4ac20d66918272ed89b47e01b302893a339e6797b8f0542f7bd7bb5b",
+      "app_visual_revision": {
+        "date": "2026-11-07",
+        "reason": "Full 72-guide pose and frame-continuity audit correction",
+        "previous_sha256": "d888d6eeec1e75222d4920edc46795caf2d1b6dde60631b61d77becea7e2c3e7",
+        "source": "research/exercise_guides/corrections/visual-audit-20261107/lat_pulldown.png",
+        "source_sha256": "9c3321291fb21c02b909a8c958529904d82eeb6a7ef3de0ebc676710cd0e7b56",
+        "review_record": "research/exercise_guides/visual-audit-20261107.json"
+      }
     },
     {
       "id": "dips",
@@ -22113,7 +22161,15 @@
         ]
       },
       "app_asset": "exercise_guides/dumbbell_bench_press.gif",
-      "asset_sha256": "dcb34ad2c4df19511459b5abacc2f18a188b19d87a6e526a8215da7034e60d03"
+      "asset_sha256": "ca322d7cee28d2d682c489eb80c612057b806a5f1baf2eb08c7d2c159e8136cd",
+      "app_visual_revision": {
+        "date": "2026-11-07",
+        "reason": "Full 72-guide pose and frame-continuity audit correction",
+        "previous_sha256": "dcb34ad2c4df19511459b5abacc2f18a188b19d87a6e526a8215da7034e60d03",
+        "source": "research/exercise_guides/corrections/visual-audit-20261107/dumbbell_bench_press.png",
+        "source_sha256": "7484a0f91ac3a02b8f3282afc322a81e3c5d38042e3847825da6aa3d7180347b",
+        "review_record": "research/exercise_guides/visual-audit-20261107.json"
+      }
     },
     {
       "id": "dumbbell_floor_press",
@@ -23021,7 +23077,15 @@
         ]
       },
       "app_asset": "exercise_guides/machine_chest_press.gif",
-      "asset_sha256": "710f62fc0476999b3d074f6624fcf2d37322b8fffc7d48456f8ccc2e1bcf1487"
+      "asset_sha256": "330f88dcd08f8c99117a341157d29000b7d9c74adedfa1205d10b1f81f98dec5",
+      "app_visual_revision": {
+        "date": "2026-11-07",
+        "reason": "Full 72-guide pose and frame-continuity audit correction",
+        "previous_sha256": "710f62fc0476999b3d074f6624fcf2d37322b8fffc7d48456f8ccc2e1bcf1487",
+        "source": "research/exercise_guides/corrections/visual-audit-20261107/machine_chest_press.png",
+        "source_sha256": "65ff14a6bd0422cfcc179ec27f5ff9ebb2833a414aed920f86665ef24e62f50f",
+        "review_record": "research/exercise_guides/visual-audit-20261107.json"
+      }
     },
     {
       "id": "band_chest_press",
@@ -28580,7 +28644,15 @@
         ]
       },
       "app_asset": "exercise_guides/face_pull.gif",
-      "asset_sha256": "c9452d4d97fa7c07760cc6dfe5c2f38df8bb7f54e49d945e1b15affcf83112a5"
+      "asset_sha256": "1ee0200f7408db8de4c344a736b6ee304a92d51538b3ac88b58ddc91b3e48973",
+      "app_visual_revision": {
+        "date": "2026-11-07",
+        "reason": "Full 72-guide pose and frame-continuity audit correction",
+        "previous_sha256": "c9452d4d97fa7c07760cc6dfe5c2f38df8bb7f54e49d945e1b15affcf83112a5",
+        "source": "research/exercise_guides/corrections/visual-audit-20261107/face_pull.png",
+        "source_sha256": "aa7a4797af41ab8f9b82d188804237ffe4aeec3f2ea7ebf5aa35bfba92eb0b9b",
+        "review_record": "research/exercise_guides/visual-audit-20261107.json"
+      }
     },
     {
       "id": "band_reverse_fly",
@@ -29306,7 +29378,15 @@
         ]
       },
       "app_asset": "exercise_guides/iyt_raise.gif",
-      "asset_sha256": "7e518f07e5334547284dc828ebf5cf97e94cffe3cc217535c238ecebf31bf403"
+      "asset_sha256": "4a80a39ec38bbaffc9faf81c50aa118792b59bb4ae4a1fa183ecd2459b0a803a",
+      "app_visual_revision": {
+        "date": "2026-11-07",
+        "reason": "Full 72-guide pose and frame-continuity audit correction",
+        "previous_sha256": "7e518f07e5334547284dc828ebf5cf97e94cffe3cc217535c238ecebf31bf403",
+        "source": "research/exercise_guides/corrections/visual-audit-20261107/iyt_raise.png",
+        "source_sha256": "223ddd1b63f96b712ae48bcb9b1f3272075ca6c5b4d1d5d6a76c30b28e4b75cd",
+        "review_record": "research/exercise_guides/visual-audit-20261107.json"
+      }
     },
     {
       "id": "triceps_pushdown",
@@ -31480,7 +31560,15 @@
         ]
       },
       "app_asset": "exercise_guides/dead_bug.gif",
-      "asset_sha256": "57dccca210cbdb34fc95a4a4125bec1751fa5d1f969d2c6d31d6ae11cfae3ac8"
+      "asset_sha256": "76392476248f1a68a8d4701b1f276ee2887020cc524c9d6565f12261429942c0",
+      "app_visual_revision": {
+        "date": "2026-11-07",
+        "reason": "Full 72-guide pose and frame-continuity audit correction",
+        "previous_sha256": "57dccca210cbdb34fc95a4a4125bec1751fa5d1f969d2c6d31d6ae11cfae3ac8",
+        "source": "research/exercise_guides/corrections/visual-audit-20261107/dead_bug.png",
+        "source_sha256": "dcc7d9de7165d0748827afdab7b618f507940e562be89406f82d8fa3c462b101",
+        "review_record": "research/exercise_guides/visual-audit-20261107.json"
+      }
     },
     {
       "id": "bird_dog",
@@ -32005,13 +32093,23 @@
         ]
       },
       "app_asset": "exercise_guides/bird_dog.gif",
-      "asset_sha256": "b928c20761bec418eb92d1b844f19d2727ef7882c35c2a1dca75c7c6c2440451",
+      "asset_sha256": "6b8f157737eb664b876e348f996318ce60cc62d4e983501861b0c8f8ba26cff5",
       "app_visual_revision": {
-        "reason": "Phone review exposed an adjacent-panel foot fragment; regenerate isolated complete poses without changing muscle roles.",
-        "original_reviewed_sha256": "e7f0bb6634899daeabe8427f5c21addb4dda0152fcb6b28520c352559d968de1",
-        "source": "research/exercise_guides/corrections/bird_dog.png",
-        "date": "2026-11-07"
-      }
+        "date": "2026-11-07",
+        "reason": "Full 72-guide pose and frame-continuity audit correction",
+        "previous_sha256": "b928c20761bec418eb92d1b844f19d2727ef7882c35c2a1dca75c7c6c2440451",
+        "source": "research/exercise_guides/corrections/visual-audit-20261107/bird_dog.png",
+        "source_sha256": "c2d56bc7efaaa0f500952164d69aadaadcd20358c8ec991e01255c708e4fb471",
+        "review_record": "research/exercise_guides/visual-audit-20261107.json"
+      },
+      "app_visual_history": [
+        {
+          "reason": "Phone review exposed an adjacent-panel foot fragment; regenerate isolated complete poses without changing muscle roles.",
+          "original_reviewed_sha256": "e7f0bb6634899daeabe8427f5c21addb4dda0152fcb6b28520c352559d968de1",
+          "source": "research/exercise_guides/corrections/bird_dog.png",
+          "date": "2026-11-07"
+        }
+      ]
     },
     {
       "id": "pallof_press",
@@ -35730,7 +35828,15 @@
         ]
       },
       "app_asset": "exercise_guides/scissor_cross.gif",
-      "asset_sha256": "48a95a5922235ef021fd52d21ad1954d4976e436d24cf95f9cb11262609f45f7"
+      "asset_sha256": "c6427843c205abe518cda348aa036b49e25546fee52e8e539910f72b98d9c3c8",
+      "app_visual_revision": {
+        "date": "2026-11-07",
+        "reason": "Full 72-guide pose and frame-continuity audit correction",
+        "previous_sha256": "48a95a5922235ef021fd52d21ad1954d4976e436d24cf95f9cb11262609f45f7",
+        "source": "research/exercise_guides/corrections/visual-audit-20261107/scissor_cross.png",
+        "source_sha256": "8c01c60da995e6cd95c7728c1e463f3a54d6a9d630647b9b5382580e56f5646b",
+        "review_record": "research/exercise_guides/visual-audit-20261107.json"
+      }
     },
     {
       "id": "reverse_crunch",

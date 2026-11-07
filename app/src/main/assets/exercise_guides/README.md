@@ -2,9 +2,11 @@
 
 ## Current package — 2026-11-07
 
-All 72 catalog exercises now have reviewed GIFs: 70 unchanged `roles-v3` assets
-and the bicycle-crunch and bird-dog panel-boundary corrections documented in
-`research/exercise_guides/corrections/README.md` and `BIRD_DOG.md`. The sections below
+All 72 catalog exercises have reviewed GIFs: 58 unchanged `roles-v3` assets,
+the earlier bicycle-crunch correction, and 13 corrections from the full visual
+audit in `research/exercise_guides/visual-audit-20261107.json`. Selected native
+images and exact prompts are in `research/exercise_guides/corrections/visual-audit-20261107/`.
+The new bird-dog source supersedes the earlier `BIRD_DOG.md` correction. The sections below
 are historical production notes, not the current registry. `ExerciseGuides.kt`
 is generated from `research/exercise_guides/guides.ko.json`; run
 `python tools/generate_exercise_guides.py --check` to verify both the registry and
@@ -17,10 +19,11 @@ instruction. The legacy plank PNG remains only for compatibility with the iOS
 resource probe and is not selected by any current exercise guide.
 
 Red indicates the exercise's visual focus; orange indicates cooperating muscles.
-Functional main/assist/stabilize roles are described separately. Isometric holds
-can have only stabilizer roles even when the image has red regions. Hidden and
-deep muscles remain in the text; gray does not mean inactive. Source-specific
-EMG evidence and anatomical/task inference are labeled in the guide's muscle tab.
+Functional main/assist/stabilize roles are retained in the reviewed dataset.
+Isometric holds can have only stabilizer roles even when the image has red regions.
+Hidden/deep muscles and source-specific evidence remain in the research data;
+gray does not mean inactive. The user requested removal of the muscle/evidence
+tab and small image-reading explanations from the guide sheet.
 Neither the images nor these roles enable camera assessment or change the
 training-load model. Image generation and source review are not clinical certification.
 
