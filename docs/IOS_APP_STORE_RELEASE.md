@@ -53,7 +53,7 @@ gh workflow run ios-release.yml --ref main
 ## 3. 업로드 뒤
 
 1. App Store Connect → TestFlight 에서 빌드 처리가 끝날 때까지 기다린다(수 분~수십 분). 문제가 있으면 Apple 이 계정 메일로 `ITMS-…` 사유를 보낸다.
-2. 배포 → iOS 앱 1.3.0 → 빌드 칸에서 방금 빌드를 고른다. 수출 규정 질문은 `ITSAppUsesNonExemptEncryption = false`(§118)라 생략된다.
+2. 배포 → iOS 앱 → **새 버전(+)** 을 `MARKETING_VERSION`(지금 1.5.0)과 같은 번호로 만들고 빌드 칸에서 방금 빌드를 고른다. 이미 심사 통과한 버전 번호(1.3.0)로는 새 빌드를 제출할 수 없다 — 올릴 때마다 `iosApp/project.yml` 의 MARKETING_VERSION 을 올린다. 수출 규정 질문은 `ITSAppUsesNonExemptEncryption = false`(§118)라 생략된다.
 3. TestFlight 설치본에서 실검증 도구가 꺼졌는지 실기기로 확인한다 — 완료 화면의 자가 라벨 칸이 없고 `Documents/posture_logs` 가 생기지 않아야 한다(§120 미검증 항목).
 
 ## 실패하면

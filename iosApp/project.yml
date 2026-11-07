@@ -11,7 +11,7 @@ settings:
     CODE_SIGN_STYLE: Automatic
     # 앱 버전은 프로젝트에 한 번만(§121) — 앱에 넣는 TrexFoodRuntime.framework 도 같은 값이어야 App Store 검증이 통과한다
     # (프레임워크 Info.plist 에 CFBundleShortVersionString 이 없으면 업로드 거부). 배포 빌드 번호는 CI 가 CURRENT_PROJECT_VERSION 으로 덮는다.
-    MARKETING_VERSION: '1.3.0'
+    MARKETING_VERSION: '1.5.0'
     CURRENT_PROJECT_VERSION: '1'
     # Apple 로그인(Sign in with Apple) 엔타이틀먼트 — 개발자 계정에서 앱의 같은 기능도 켜야 서명된 빌드가 로그인한다
     CODE_SIGN_ENTITLEMENTS: Trex/Trex.entitlements
