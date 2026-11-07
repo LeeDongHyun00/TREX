@@ -82,3 +82,6 @@ app/src/test/resources/posture_port_fixture.json
 class_map.csv
 class_map.json
 nutrition_400*.json
+
+# 폰 내부 데이터 백업(adb pull·run-as 스냅샷) — 개인 기록·토큰이 들어 있어 저장소에 올리지 않는다
+android_data_backup*/

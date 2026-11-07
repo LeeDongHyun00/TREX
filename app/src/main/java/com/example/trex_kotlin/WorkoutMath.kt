@@ -37,16 +37,39 @@ fun Workout.repsSpec(): RepsSpec = parseReps(reps)
 
 fun Workout.durationMinutes(): Int = timing().minutes
 
-fun Workout.estimatedCalories(elapsedSeconds: Int? = null): Int {
-    val multiplier = when (category) {
-        "유산소" -> 8
-        "하체" -> 7
-        "상체" -> 6
-        "코어", "복근" -> 5
-        else -> 4
-    }
-    val timing = timing()
-    return ((elapsedSeconds ?: (timing.workSeconds * timing.sets)).coerceAtLeast(0) / 60.0 * multiplier).roundToInt().coerceAtLeast(0)
+/**
+ * 종목의 소모 kcal 추정 — MET(`ExerciseMet`, 2024 Compendium) × 3.5 × [bodyKg] / 200 × 분(§134b). [activitySeconds] 는 **휴식을 포함한** 활동 시간이다
+ * (Compendium 값이 휴식을 포함한 활동 평균이라) — null 이면 계획 시간(가동 + 세트 사이 휴식, `timing().totalSeconds`).
+ */
+fun Workout.estimatedCalories(activitySeconds: Int?, bodyKg: Double): Int =
+    estimatedKcal(ExerciseMet.of(name, category).met, bodyKg, activitySeconds ?: timing().totalSeconds)
+
+/**
+ * 세션의 종목별 kcal — 세션 총 경과([elapsedSeconds]: 준비·휴식 포함, 일시정지 제외)를 종목의 **가동 시간 비율**로 나눠 각 종목의 MET 를 적용한다.
+ * 세션은 휴식을 종목별로 재지 않으므로(`workDurations` 는 WORK 칸만) 총 시간을 나눠 쓴다 — 준비·전환 시간도 들어가지만 Compendium 의 세션 평균 MET 역시
+ * 그런 시간을 포함해 잰 값이다. 가동 시간이 전부 0 이면(한 세트도 안 함) 전부 0.
+ */
+fun sessionKcalByWorkout(plan: List<Workout>, elapsedSeconds: Int, elapsedByWorkout: Map<String, Int>, bodyKg: Double): Map<String, Int> {
+    val work = plan.associate { it.id to (elapsedByWorkout[it.id] ?: 0).coerceAtLeast(0) }
+    val totalWork = work.values.sum()
+    if (totalWork <= 0) return plan.associate { it.id to 0 }
+    val total = elapsedSeconds.coerceAtLeast(totalWork)
+    return plan.associate { w -> w.id to w.estimatedCalories((total.toDouble() * work.getValue(w.id) / totalWork).roundToInt(), bodyKg) }
+}
+
+/**
+ * 세션 시간이 없는 기록(직접 적은 기록·옛 기록)의 활동 시간 — 세트 가동 초([workSeconds], 0 이면 **세트당 30초** 가정) + 세트 사이 설정 휴식(`WorkoutPacing.restSeconds`).
+ * 30초 가정은 화면 ⓘ 가 밝힌다(근거 감사 §3).
+ */
+fun offlineActivitySeconds(name: String, category: String, sets: Int, workSeconds: Int): Int {
+    val n = sets.coerceAtLeast(1)
+    return (if (workSeconds > 0) workSeconds else n * 30) + (n - 1) * WorkoutPacing.restSeconds(name, category)
+}
+
+/** §134b 이전의 kcal 식(분류별 분당 상수 × 가동 분) — 옛 기록을 알아보는 데만 쓴다(`migrateLegacyCalories`). 새 계산에 쓰지 않는다. */
+internal fun legacyCategoryCalories(category: String?, seconds: Int): Int {
+    val multiplier = when (category) { "유산소" -> 8; "하체" -> 7; "상체" -> 6; "코어", "복근" -> 5; else -> 4 }
+    return (seconds.coerceAtLeast(0) / 60.0 * multiplier).roundToInt().coerceAtLeast(0)
 }
 
 /** 세션 화면이 쓰는 실행 스펙. 설정한 세트 사이 휴식을 포함한다. */
@@ -67,13 +90,6 @@ fun Workout.exerciseSpec(): ExerciseSpec {
     )
 }
 
-fun Workout.loadLabel(): String = when (category) {
-    "하체", "상체" -> "체중"
-    "코어", "복근" -> "매트"
-    "유산소" -> "심박"
-    "회복" -> "가동범위"
-    else -> "자율"
-}
 
 // ---- 끼니 시간대
 

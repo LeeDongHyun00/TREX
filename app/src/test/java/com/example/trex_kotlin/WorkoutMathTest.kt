@@ -91,11 +91,39 @@ class WorkoutMathTest {
         assertEquals("02:05", 125.asClock())
     }
 
+    /** §134b — kcal/분 = MET × 3.5 × 체중 / 200. 체중이 식에 들어가고, 세션은 총 경과를 가동 비율로 나누며, 세션 시간이 없으면 30초/세트 + 휴식. */
+    @Test
+    fun metCaloriesFollowCompendiumFormula() {
+        // 3.5 MET(저항운동 다종목) × 70 kg = 4.2875 kcal/분 → 30분 128.6
+        assertEquals(129, estimatedKcal(3.5, 70.0, 1800))
+        assertEquals(184, estimatedKcal(3.5, 100.0, 1800))
+        assertEquals(92, estimatedKcal(3.5, 50.0, 1800))
+        assertEquals(0, estimatedKcal(3.5, 70.0, -5))
+        // 세션: 총 1800초를 가동 200:100 으로 나눠 스쿼트(02052, 5.0) 1200초 · 플랭크(02024, 2.8) 600초
+        val squat = Workout("a", "기본 스쿼트", "12회 x 3세트", "10분", posture = false, category = "하체")
+        val plank = Workout("b", "플랭크", "60초 x 3세트", "5분", posture = false, category = "코어")
+        val kcal = sessionKcalByWorkout(listOf(squat, plank), 1800, mapOf("a" to 200, "b" to 100), 70.0)
+        assertEquals(estimatedKcal(5.0, 70.0, 1200), kcal["a"])
+        assertEquals(estimatedKcal(2.8, 70.0, 600), kcal["b"])
+        // 가동 0 이면 전부 0, 총 경과가 가동 합보다 짧으면 가동 합을 쓴다
+        assertEquals(mapOf("a" to 0, "b" to 0), sessionKcalByWorkout(listOf(squat, plank), 1800, emptyMap(), 70.0))
+        assertEquals(estimatedKcal(5.0, 70.0, 200), sessionKcalByWorkout(listOf(squat), 10, mapOf("a" to 200), 70.0)["a"])
+        // 세션 시간이 없는 기록: 횟수 세트 3 = 90초 + 휴식 2 × 120(기본 스쿼트) / 크런치 2 × 45, 버티기는 적은 초 + 휴식
+        assertEquals(330, offlineActivitySeconds("기본 스쿼트", "하체", 3, 0))
+        assertEquals(180, offlineActivitySeconds("크런치", "복근", 3, 0))
+        assertEquals(225, offlineActivitySeconds("플랭크", "코어", 3, 135))
+        assertEquals(30, offlineActivitySeconds("크런치", "복근", 0, 0))
+        // 옛 식은 되짚기용으로만 남는다 — 하체 150초 = 2.5분 × 7
+        assertEquals(18, legacyCategoryCalories("하체", 150))
+    }
+
     @Test
     fun workoutDurationAndCaloriesDegradeGracefully() {
         val stretch = Workout("s", "스트레칭", "전신 6분", "6분", posture = false, category = "회복")
         assertEquals(6, stretch.durationMinutes())
-        assertTrue(stretch.estimatedCalories() >= 24)
+        // 시간을 안 주면 계획 시간(가동 + 휴식), 회복 분류는 스트레칭 행(02101, 2.3 MET)
+        assertEquals(estimatedKcal(2.3, 65.0, stretch.timing().totalSeconds), stretch.estimatedCalories(null, 65.0))
+        assertTrue(stretch.estimatedCalories(null, 65.0) > 0)
         val noNumber = Workout("n", "자유", "자유", "자유", posture = false, category = "기타")
         assertEquals(6, noNumber.durationMinutes())
     }

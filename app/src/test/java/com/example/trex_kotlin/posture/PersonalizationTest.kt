@@ -8,8 +8,8 @@ class PersonalizationTest {
     @Test fun everyCatalogExerciseHasOneExplicitProfile() {
         val source=File("src/main/java/com/example/trex_kotlin/WorkoutCatalog.kt").readText()   // §108 에서 Sheets.kt 에서 옮겼다
         val names=Regex("WorkoutTemplate\\(\"([^\"]+)\"").findAll(source).map { it.groupValues[1] }.toSet()
-        assertEquals(26,names.size)
-        assertEquals(names,ExerciseProfiles.all.map { it.name }.toSet())
+        assertEquals(72,names.size)   // §130: AIHub 26 + 자세 평가 없는 46 — 프로필은 AIHub 26 에만 있다
+        assertTrue(ExerciseProfiles.all.map { it.name }.all { it in names })
         assertEquals(26,ExerciseProfiles.all.size)
         // Every catalog entry must be backed by an AIHub rule exercise, one-to-one.
         assertEquals(26,ExerciseProfiles.all.count { it.referenceExercise != null })

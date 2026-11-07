@@ -1,0 +1,789 @@
+{
+  "date": "2026-11-07",
+  "method": "All 72 actual packaged GIFs decoded and viewed at native frame resolution, with guide variant/setup/steps. Structural tests alone do not establish visual correctness.",
+  "entries": [
+    {
+      "index": 0,
+      "id": "squat",
+      "severity": "none",
+      "observations": "Grounded feet, connected limbs, unloaded bilateral squat with meaningful hip/knee flexion. No material clipping or scale drift.",
+      "prompt_correction": null,
+      "initial_status": "PASS",
+      "final_status": "RETAINED",
+      "asset": "exercise_guides/squat.gif",
+      "asset_sha256": "3e9ce4c4c91b23c60b47e6e60049cbd5857f0c11d6f8898fe7514edd3538e532"
+    },
+    {
+      "index": 1,
+      "id": "lunge",
+      "severity": "medium",
+      "observations": "Poses are anatomically plausible, but both feet split away from the centered standing pose. The rear supporting toe moves from approximately local x270,y610 to x160,y555, while the front foot moves forward. This does not clearly illustrate a forward step with the rear forefoot staying planted.",
+      "prompt_correction": "Use one fixed camera/world coordinate system. Keep the rear forefoot at the identical floor location in both frames; only its heel rises. Move the other foot forward and allow the pelvis to translate forward. Keep body scale and foot dimensions unchanged. Use a sufficiently wide shared canvas instead of centering each pose independently.",
+      "repair_type": "registration_or_regeneration",
+      "initial_status": "REPAIR",
+      "final_status": "CORRECTED",
+      "asset": "exercise_guides/lunge.gif",
+      "asset_sha256": "6b353f1d258c6d55b211c6ab5f957a7589af03d6532fdb28b37529f9186174e1",
+      "selected_source": "research/exercise_guides/corrections/visual-audit-20261107/lunge.png",
+      "final_review": "Native source and decoded GIF reviewed: connected limbs, readable intended pose, no neighboring figure or clipped limb, stable support/equipment. Small illustration drift remains; not motion capture."
+    },
+    {
+      "index": 2,
+      "id": "barbell_lunge",
+      "severity": "medium",
+      "observations": "Upper-back bar placement and limbs are plausible, but the rear supporting toe shifts approximately x240,y600 to x180,y555 as the other foot advances. The animation demonstrates both feet separating rather than the prescribed single forward step.",
+      "prompt_correction": "Anchor the rear forefoot at the same floor point through both frames, allowing heel lift. The front foot and pelvis advance together. Keep the bar diameter, plate size, person scale and camera unchanged; allow adequate forward space rather than recentering the second pose.",
+      "repair_type": "registration_or_regeneration",
+      "initial_status": "REPAIR",
+      "final_status": "CORRECTED",
+      "asset": "exercise_guides/barbell-lunge.gif",
+      "asset_sha256": "088217ac7d611bc616c9ae326580c71a7b189866515eecd8f28c2f1f8dcd7c3e",
+      "selected_source": "research/exercise_guides/corrections/visual-audit-20261107/barbell_lunge.png",
+      "final_review": "Native source and decoded GIF reviewed: connected limbs, readable intended pose, no neighboring figure or clipped limb, stable support/equipment. Small illustration drift remains; not motion capture."
+    },
+    {
+      "index": 3,
+      "id": "side_lunge",
+      "severity": "medium",
+      "observations": "Final lateral-lunge anatomy is plausible, but the straight-leg support foot moves from approximately local x395 to x505 while the bent-side foot moves from x250 to x110. Both feet widen, rather than one foot stepping laterally with the other grounded as stated in the instructions.",
+      "prompt_correction": "Keep the straight-leg foot at one unchanged floor point. Only the bent-side foot steps sideways; pelvis shifts toward that foot, opposite knee remains extended. Preserve person size and frontal camera, allowing full lateral travel within a larger shared crop.",
+      "repair_type": "registration_or_regeneration",
+      "initial_status": "REPAIR",
+      "final_status": "CORRECTED",
+      "asset": "exercise_guides/side-lunge.gif",
+      "asset_sha256": "bc454efd29d052d92c3174c821217a0b57b02064b89d4eeda07c7af6f7418291",
+      "selected_source": "research/exercise_guides/corrections/visual-audit-20261107/side_lunge.png",
+      "final_review": "Native source and decoded GIF reviewed: connected limbs, readable intended pose, no neighboring figure or clipped limb, stable support/equipment. Small illustration drift remains; not motion capture."
+    },
+    {
+      "index": 4,
+      "id": "cross_lunge",
+      "severity": "minor",
+      "observations": "Clear backward-crossing curtsy stance with connected legs and plausible rear forefoot support. Front-foot registration shifts about 60 px, but the intended crossing remains readable; no anatomical regeneration required.",
+      "prompt_correction": null,
+      "initial_status": "PASS",
+      "final_status": "RETAINED",
+      "asset": "exercise_guides/cross-lunge.gif",
+      "asset_sha256": "835a740cb5201a241167f909204f22f066de363689816ced7456c7bb5c028322"
+    },
+    {
+      "index": 5,
+      "id": "deadlift",
+      "severity": "none",
+      "observations": "Straight bar starts at floor and ends near thighs; legs/hips extend, hands remain connected to bar, feet and plate dimensions remain credible.",
+      "prompt_correction": null,
+      "initial_status": "PASS",
+      "final_status": "RETAINED",
+      "asset": "exercise_guides/deadlift.gif",
+      "asset_sha256": "c7b90e310c1c28cd5bc4a35df5b6c660547fc0e3d68fdb4d0b33b221f8d976c0"
+    },
+    {
+      "index": 6,
+      "id": "good_morning",
+      "severity": "none",
+      "observations": "Unloaded hands-crossed hinge, slight knee flexion, connected limbs and stable floor contact. Meaningful hip hinge without wrong equipment.",
+      "prompt_correction": null,
+      "initial_status": "PASS",
+      "final_status": "RETAINED",
+      "asset": "exercise_guides/good-morning.gif",
+      "asset_sha256": "f217266f680d6e009a456c80d778d4ced0d02b3db2b15aac7d71902fe5a4858e"
+    },
+    {
+      "index": 7,
+      "id": "hip_thrust",
+      "severity": "none",
+      "observations": "Bench remains stationary and same size. Upper-back support, grounded feet and pelvis lift are visible; raised trunk/thigh line is plausible.",
+      "prompt_correction": null,
+      "initial_status": "PASS",
+      "final_status": "RETAINED",
+      "asset": "exercise_guides/hip_thrust.gif",
+      "asset_sha256": "42476274decd0cdcb40797af6c4bc5b83460fffaefccdeefabba53dfa68a8226"
+    },
+    {
+      "index": 8,
+      "id": "chair_squat",
+      "severity": "minor",
+      "observations": "Seated-to-standing movement with arms crossed, feet grounded and stable chair. Minor person/chair registration drift does not obscure the movement or support.",
+      "prompt_correction": null,
+      "initial_status": "PASS",
+      "final_status": "RETAINED",
+      "asset": "exercise_guides/chair_squat.gif",
+      "asset_sha256": "b0d3f7d207aa6c876c0306b9f9fd836054701c5f9db384e90f20b547a18b9bd3"
+    },
+    {
+      "index": 9,
+      "id": "goblet_squat",
+      "severity": "none",
+      "observations": "Single vertical dumbbell held at chest; bilateral squat with connected limbs and grounded feet. Native strip has head margin and no actual clipping.",
+      "prompt_correction": null,
+      "initial_status": "PASS",
+      "final_status": "RETAINED",
+      "asset": "exercise_guides/goblet_squat.gif",
+      "asset_sha256": "f03d7adba6826af8f1f2364670dd24330c53dc2d2ff6fa472099294e3abaf5fb"
+    },
+    {
+      "index": 10,
+      "id": "band_squat",
+      "severity": "none",
+      "observations": "Long band visibly secured under both feet and held near shoulders; correct squat change and no mini-band substitution.",
+      "prompt_correction": null,
+      "initial_status": "PASS",
+      "final_status": "RETAINED",
+      "asset": "exercise_guides/band_squat.gif",
+      "asset_sha256": "db82183a5ab292f00379735014daba61e229fffd4785436a516c795465dbf946"
+    },
+    {
+      "index": 11,
+      "id": "bulgarian_split_squat",
+      "severity": "minor",
+      "observations": "Rear foot remains on the same fixed bench; front knee/hip flex visibly with supported stance. Minor front-foot drift is not a functional or anatomical defect.",
+      "prompt_correction": null,
+      "initial_status": "PASS",
+      "final_status": "RETAINED",
+      "asset": "exercise_guides/bulgarian_split_squat.gif",
+      "asset_sha256": "cc25b30ce4ab8093d672c47f1e5c41c714b2660ee1f113d25cae178bd44a2a77"
+    },
+    {
+      "index": 12,
+      "id": "reverse_lunge",
+      "severity": "minor",
+      "observations": "Rear foot steps backward and front leg accepts load. Front-foot registration shifts about 35 px, but backward travel remains readable and anatomy is plausible; this is smaller than the forward-lunge dual-foot displacement.",
+      "prompt_correction": null,
+      "initial_status": "PASS",
+      "final_status": "RETAINED",
+      "asset": "exercise_guides/reverse_lunge.gif",
+      "asset_sha256": "e1ad2b10ebfe0d4d2616783010ed0d88fdf2616b67e74e84e0a0072e4a85ba24"
+    },
+    {
+      "index": 13,
+      "id": "step_up",
+      "severity": "high",
+      "observations": "Fixed apparatus changes between frames: platform footprint approximately x244-505 in frame 1 becomes local x177-467 in frame 2 (left shift about 60 px, width grows from about 261 to 290 px). Person also appears shorter on the platform: head rises only about 30 px while the grounded foot rises roughly 100 px. This reads as camera/scale change rather than stepping onto a fixed platform.",
+      "prompt_correction": "Lock the platform shape, size and exact pixel coordinates across both frames. Keep the same camera and human bone lengths/head size. Frame 1 has one foot flat on the platform and the other on floor. Frame 2 extends the leading leg and places both feet atop that identical platform; the entire body rises by the appropriate platform height without resizing. Preserve the initially planted platform foot location.",
+      "repair_type": "regeneration",
+      "initial_status": "REPAIR",
+      "final_status": "CORRECTED",
+      "asset": "exercise_guides/step_up.gif",
+      "asset_sha256": "c93d58c0b03b64e1c3fe178516b32dbdd6fc81ee628568cb73885df1a1e8e84a",
+      "selected_source": "research/exercise_guides/corrections/visual-audit-20261107/step_up.png",
+      "final_review": "Native source and decoded GIF reviewed: connected limbs, readable intended pose, no neighboring figure or clipped limb, stable support/equipment. Small illustration drift remains; not motion capture."
+    },
+    {
+      "index": 14,
+      "id": "leg_press",
+      "severity": "none",
+      "observations": "Fixed seat/rails remain consistent, feet stay on moving sled, back/pelvis supported. Sled moves along rails and knees extend plausibly.",
+      "prompt_correction": null,
+      "initial_status": "PASS",
+      "final_status": "RETAINED",
+      "asset": "exercise_guides/leg_press.gif",
+      "asset_sha256": "6d377fae0fd5001ec772f27dfc3cb1475abcb6d77411485b7fecb8e15eb4c834"
+    },
+    {
+      "index": 15,
+      "id": "dumbbell_rdl",
+      "severity": "none",
+      "observations": "Two connected dumbbells near legs, standing-start hip hinge, slight knee flexion and stable feet. Far-side occlusion is plausible rather than a missing limb.",
+      "prompt_correction": null,
+      "initial_status": "PASS",
+      "final_status": "RETAINED",
+      "asset": "exercise_guides/dumbbell_rdl.gif",
+      "asset_sha256": "843ceee42507be1ca9275a7b3da5853b0d446c12e73259b75c353c0f3bd72f38"
+    },
+    {
+      "index": 16,
+      "id": "band_rdl",
+      "severity": "none",
+      "observations": "Long band under both feet, ends in hands; hips hinge while knee bend remains limited. No visible disconnected equipment or limb defect.",
+      "prompt_correction": null,
+      "initial_status": "PASS",
+      "final_status": "RETAINED",
+      "asset": "exercise_guides/band_rdl.gif",
+      "asset_sha256": "ae086808c93675d6c331160572dd63041f174df235ed01a48268f38a9ca1968d"
+    },
+    {
+      "index": 17,
+      "id": "seated_leg_curl",
+      "severity": "none",
+      "observations": "Stable seat/backrest/thigh restraint, knee-aligned pivot and ankle roller moving through knee flexion. Support and apparatus geometry are coherent.",
+      "prompt_correction": null,
+      "initial_status": "PASS",
+      "final_status": "RETAINED",
+      "asset": "exercise_guides/seated_leg_curl.gif",
+      "asset_sha256": "3befbf3a5ba3530a2eec38a2aac2af56a2f2b5d515a905403e7e531dae21d2a4"
+    },
+    {
+      "index": 18,
+      "id": "glute_bridge",
+      "severity": "none",
+      "observations": "Bilateral floor bridge; shoulders/head and feet supported, pelvis clearly lifts, limbs remain connected and scale consistent.",
+      "prompt_correction": null,
+      "initial_status": "PASS",
+      "final_status": "RETAINED",
+      "asset": "exercise_guides/glute_bridge.gif",
+      "asset_sha256": "ff7c3719c7766dcae37cd650135fa11f390143de688c7663778cc7eab542b28a"
+    },
+    {
+      "index": 19,
+      "id": "single_leg_bridge",
+      "severity": "none",
+      "observations": "One foot supports the bridge, opposite leg remains extended. Shoulder/head support and pelvis lift are visible; no side-switch or extra-limb defect.",
+      "prompt_correction": null,
+      "initial_status": "PASS",
+      "final_status": "RETAINED",
+      "asset": "exercise_guides/single_leg_bridge.gif",
+      "asset_sha256": "7a96320a1b378016433b165e386339d8329a15680b36e0efef690281a1d6b94d"
+    },
+    {
+      "index": 20,
+      "id": "quadruped_hip_extension",
+      "severity": "none",
+      "observations": "Both hands and one knee remain grounded. Other thigh extends backward with bent knee, without an extra knee or disconnected hip. Trunk/camera are consistent.",
+      "prompt_correction": null,
+      "initial_status": "PASS",
+      "final_status": "RETAINED",
+      "asset": "exercise_guides/quadruped_hip_extension.gif",
+      "asset_sha256": "42a3759ca57d4bbbf786aa92b712aae1b1709c444ec9617627867d27c00d578a"
+    },
+    {
+      "index": 21,
+      "id": "band_walk",
+      "severity": "minor",
+      "observations": "Above-knee loop, partial squat and widened lateral stance are readable. Two endpoints omit a complete traveling cycle; this is acceptable with existing instructions and no body-scale change.",
+      "prompt_correction": null,
+      "initial_status": "PASS",
+      "final_status": "RETAINED",
+      "asset": "exercise_guides/band_walk.gif",
+      "asset_sha256": "7b1910afbca0c9bbb362f01c25aaeeebf5260884dabc070eb5a159c90627aa5a"
+    },
+    {
+      "index": 22,
+      "id": "calf_raise",
+      "severity": "high",
+      "observations": "Heels rise roughly 40 px but head and pelvis remain almost stationary (only about 5-10 px upward). Knees move up substantially while hips do not, so the legs visibly shorten instead of lifting the whole body. Chair remains fixed and helps expose the inconsistency.",
+      "prompt_correction": "Keep chair and toe contact points fixed. Preserve femur/tibia lengths and knee angles. Plantarflex both ankles to lift heels; translate knees, hips, torso and head upward together by the corresponding rise. The support hand can slide lightly on the fixed chair or the elbow can change angle. Include overhead space instead of holding the head in place by shrinking the legs.",
+      "repair_type": "regeneration",
+      "initial_status": "REPAIR",
+      "final_status": "CORRECTED",
+      "asset": "exercise_guides/calf_raise.gif",
+      "asset_sha256": "f97bcf54538da578ff2cbba7cf06b2afdb530bd6b8df73962530f2e2cc9154df",
+      "selected_source": "research/exercise_guides/corrections/visual-audit-20261107/calf_raise.png",
+      "final_review": "Native source and decoded GIF reviewed: connected limbs, readable intended pose, no neighboring figure or clipped limb, stable support/equipment. Small illustration drift remains; not motion capture."
+    },
+    {
+      "index": 23,
+      "id": "overhead_press",
+      "severity": "none",
+      "observations": "Two dumbbells remain gripped, arms extend overhead in front of head, trunk/feet stay stable and weights fit fully inside the frame.",
+      "prompt_correction": null,
+      "initial_status": "PASS",
+      "final_status": "RETAINED",
+      "asset": "exercise_guides/overhead_press.gif",
+      "asset_sha256": "cb91ad9dab3d8f3d0c18294147a588ef354632537bf8a9671a13d456c756a7b2"
+    },
+    {
+      "index": 24,
+      "id": "lat_pulldown",
+      "problems": [
+        "The lowered-bar frame shows a much shorter lifted weight stack, while the missing lower plates leave no stationary remainder. Plate count/stack height changes between frames; this is not a camera-perspective effect."
+      ],
+      "prompt_correction": "Keep the tower, seat, pads, feet, camera and person identical. Preserve every weight plate: lift only the selected contiguous upper plates and retain the unselected lower plates at the original base, or lift the entire unchanged stack. Preserve the current connected front-to-upper-chest wide-grip movement.",
+      "initial_status": "REPAIR",
+      "final_status": "CORRECTED",
+      "asset": "exercise_guides/lat_pulldown.gif",
+      "asset_sha256": "8c51e7bf4ac20d66918272ed89b47e01b302893a339e6797b8f0542f7bd7bb5b",
+      "selected_source": "research/exercise_guides/corrections/visual-audit-20261107/lat_pulldown.png",
+      "final_review": "Native source and decoded GIF reviewed: connected limbs, readable intended pose, no neighboring figure or clipped limb, stable support/equipment. Small illustration drift remains; not motion capture."
+    },
+    {
+      "index": 25,
+      "id": "dips",
+      "observations": "Parallel bars, hand contact and frame stay fixed; connected elbows bend as body lowers. Feet remain unsupported. No concrete clipping or anatomy defect.",
+      "initial_status": "PASS",
+      "final_status": "RETAINED",
+      "asset": "exercise_guides/dips.gif",
+      "asset_sha256": "9ca7b184fb079386c27085f07675b6069bb5298fe1744db8a5796f35bf927bc5"
+    },
+    {
+      "index": 26,
+      "id": "dumbbell_curl",
+      "observations": "One arm curls while the other dumbbell remains at the side. Stable torso, feet, equipment size and camera; limb continuity intact.",
+      "initial_status": "PASS",
+      "final_status": "RETAINED",
+      "asset": "exercise_guides/dumbbell-curl.gif",
+      "asset_sha256": "14a6a4e854d46845249b835eaba152bdbeea7ad7c6904400c96c3c205fdd1638"
+    },
+    {
+      "index": 27,
+      "id": "barbell_curl",
+      "observations": "Straight bar remains straight and consistently sized, both hands grip it, elbows flex without torso translation. Supinated grip is visible.",
+      "initial_status": "PASS",
+      "final_status": "RETAINED",
+      "asset": "exercise_guides/barbell-curl.gif",
+      "asset_sha256": "704a8a88f33f5db6a4b7a6832431b3644e970225730f582e6da58371fc720508"
+    },
+    {
+      "index": 28,
+      "id": "lateral_raise",
+      "observations": "Clear bilateral lateral elevation to approximately shoulder level, slight elbow flexion and stable body scale. Dumbbells and limbs remain connected.",
+      "initial_status": "PASS",
+      "final_status": "RETAINED",
+      "asset": "exercise_guides/lateral-raise.gif",
+      "asset_sha256": "1837a0b2c2cd08d104b27a255987b944c1e898e6a46edd5200bf0dba929281e1"
+    },
+    {
+      "index": 29,
+      "id": "front_raise",
+      "observations": "One forward arm raise with the other arm down, stable trunk and foot locations. Perspective explains hand overlap; no extra limb.",
+      "initial_status": "PASS",
+      "final_status": "RETAINED",
+      "asset": "exercise_guides/front-raise.gif",
+      "asset_sha256": "e1dd82ddc5af8bdd411a685539935de970066a4c8805cc10e1dff90195236624"
+    },
+    {
+      "index": 30,
+      "id": "upright_row",
+      "observations": "Pronated straight-bar pull, wide grip and elbows approximately below shoulder height. Bar size, body and stance are consistent.",
+      "initial_status": "PASS",
+      "final_status": "RETAINED",
+      "asset": "exercise_guides/upright_row.gif",
+      "asset_sha256": "7b45a59845edd6816aafc6f161396c27b3657cc0f46acd3934e363671a21fbdd"
+    },
+    {
+      "index": 31,
+      "id": "pushup",
+      "observations": "Palms/toes stay fixed; body lowers through elbow flexion with connected limbs and no visible floor intersection.",
+      "initial_status": "PASS",
+      "final_status": "RETAINED",
+      "asset": "exercise_guides/push-up.gif",
+      "asset_sha256": "266325e5b3683a9393c151d3af960ee04dfb523e3fe227f5af97a4eb6c3942b3"
+    },
+    {
+      "index": 32,
+      "id": "knee_pushup",
+      "observations": "Knees and palms stay supported, lower legs remain behind knees, shoulder-to-knee line is coherent during lowering. Mat is fixed.",
+      "initial_status": "PASS",
+      "final_status": "RETAINED",
+      "asset": "exercise_guides/knee_pushup.gif",
+      "asset_sha256": "63690d815bd4cc76d19d8344fbb966056ee166944fc2a261becdf7839d867a45"
+    },
+    {
+      "index": 33,
+      "id": "y_raise",
+      "observations": "Full-size inspection shows a modest arm lift with thumbs up while torso, legs and mat remain fixed. Small range matches the stated small prone raise; no perspective-only defect flagged.",
+      "initial_status": "PASS",
+      "final_status": "RETAINED",
+      "asset": "exercise_guides/y_raise.gif",
+      "asset_sha256": "a747780493473b05cba7c4d36ff183d9767040708ba1fb87a68a89821df65eb6"
+    },
+    {
+      "index": 34,
+      "id": "wall_pushup",
+      "observations": "Hands remain against fixed wall, elbows bend and body inclines toward it. Slight foot illustration drift is minor, not gross relocation or scaling.",
+      "initial_status": "PASS",
+      "final_status": "RETAINED",
+      "asset": "exercise_guides/wall_pushup.gif",
+      "asset_sha256": "ab3ea5b4c1c976b738d4082a185449559bba59c4fb86d34ecfbfec8e6bed9689"
+    },
+    {
+      "index": 35,
+      "id": "incline_pushup",
+      "observations": "Bench geometry and hand/foot contacts are stable. Elbows bend to lower aligned body toward the bench without clipping.",
+      "initial_status": "PASS",
+      "final_status": "RETAINED",
+      "asset": "exercise_guides/incline_pushup.gif",
+      "asset_sha256": "c756ad97b9fd837b28d981e467837462c021d330f78af4cc62ea3167f62cc8ed"
+    },
+    {
+      "index": 36,
+      "id": "pike_pushup",
+      "observations": "Hands and feet stay fixed; high hips and connected arms remain coherent as head approaches floor without contacting it.",
+      "initial_status": "PASS",
+      "final_status": "RETAINED",
+      "asset": "exercise_guides/pike_pushup.gif",
+      "asset_sha256": "8aae7681ff2dd575c2a0dc0fcdf35a55e7a6aa122885cee66c7db3f34c99a988"
+    },
+    {
+      "index": 37,
+      "id": "dumbbell_bench_press",
+      "problems": [
+        "In the lowered-dumbbell frame the head is conspicuously elevated above the bench, whereas it rests on the bench in the extended-arm frame. The extra head/neck motion contradicts the setup requiring head support and is unrelated to pressing."
+      ],
+      "prompt_correction": "Lock the head, upper back, pelvis, feet and flat bench across both frames. Back of head must visibly contact the same bench surface with a comfortable neutral neck in both poses. Move only anatomically connected shoulders/elbows/forearms and dumbbells through the press; retain identical camera, body proportions and dumbbell size.",
+      "initial_status": "REPAIR",
+      "final_status": "CORRECTED",
+      "asset": "exercise_guides/dumbbell_bench_press.gif",
+      "asset_sha256": "ca322d7cee28d2d682c489eb80c612057b806a5f1baf2eb08c7d2c159e8136cd",
+      "selected_source": "research/exercise_guides/corrections/visual-audit-20261107/dumbbell_bench_press.png",
+      "final_review": "Native source and decoded GIF reviewed: connected limbs, readable intended pose, no neighboring figure or clipped limb, stable support/equipment. Small illustration drift remains; not motion capture."
+    },
+    {
+      "index": 38,
+      "id": "dumbbell_floor_press",
+      "observations": "Head/back remain supported, bent knees and feet stay fixed. Bottom upper arm contacts floor and top arms extend with connected dumbbells.",
+      "initial_status": "PASS",
+      "final_status": "RETAINED",
+      "asset": "exercise_guides/dumbbell_floor_press.gif",
+      "asset_sha256": "037f865baac4695a4624b3d75dab1800cd2592757e85543f8dd5cd0a7e7e80ba"
+    },
+    {
+      "index": 39,
+      "id": "machine_chest_press",
+      "problems": [
+        "The near-side lever linkage changes structure: the starting frame has a long diagonal member attached near the machine base, but the pressing frame replaces it with a short horizontal member attached to a newly appearing lateral circular pivot near the weight stack. Fixed pivots and linkage lengths do not remain consistent."
+      ],
+      "prompt_correction": "Use one physically coherent seated chest-press machine with two rigid pivoting arms. Draw each pivot visibly attached to the same fixed frame location in both poses; retain identical arm lengths and topology. Only rotate the rigid press arms about their fixed pivots, and raise selected weight plates without changing their count. Keep seat, backrest, feet, torso, camera and machine frame identical.",
+      "initial_status": "REPAIR",
+      "final_status": "CORRECTED",
+      "asset": "exercise_guides/machine_chest_press.gif",
+      "asset_sha256": "330f88dcd08f8c99117a341157d29000b7d9c74adedfa1205d10b1f81f98dec5",
+      "selected_source": "research/exercise_guides/corrections/visual-audit-20261107/machine_chest_press.png",
+      "final_review": "Native source and decoded GIF reviewed: connected limbs, readable intended pose, no neighboring figure or clipped limb, stable support/equipment. Small illustration drift remains; not motion capture."
+    },
+    {
+      "index": 40,
+      "id": "band_chest_press",
+      "observations": "Band visibly wraps behind upper torso without an external anchor. Both hands press forward; body and feet remain stable. No clearly disconnected band or extra limb.",
+      "initial_status": "PASS",
+      "final_status": "RETAINED",
+      "asset": "exercise_guides/band_chest_press.gif",
+      "asset_sha256": "d177b35aa285107a31ecab985250c776bcefde375faeac096bb29225fe22e4da"
+    },
+    {
+      "index": 41,
+      "id": "band_shoulder_press",
+      "observations": "Band remains under both feet with continuous strands to hands. Overhead arm extension is clear and body scale/stance consistent; no gross normalization shrinkage.",
+      "initial_status": "PASS",
+      "final_status": "RETAINED",
+      "asset": "exercise_guides/band_shoulder_press.gif",
+      "asset_sha256": "e93e6bb22847506a3804f51992e5043c67584b889ad15b6166b588da13ef00b0"
+    },
+    {
+      "index": 42,
+      "id": "one_arm_dumbbell_row",
+      "observations": "Same-side far hand and knee stay on bench, opposite foot stays on floor. Free near arm moves from hang to elbow-back row; bench fixed and all limbs connected.",
+      "initial_status": "PASS",
+      "final_status": "RETAINED",
+      "asset": "exercise_guides/one_arm_dumbbell_row.gif",
+      "asset_sha256": "50c1fdd794b8c04f0e7a95094cddf6db494f0aed2382713a944bf1555c0d97d5"
+    },
+    {
+      "index": 43,
+      "id": "band_row",
+      "observations": "Fixed external torso-height anchor and standing row are visible. Band stretches with hands drawing back; stable feet and torso. Rear arm occlusion is plausible.",
+      "initial_status": "PASS",
+      "final_status": "RETAINED",
+      "asset": "exercise_guides/band_row.gif",
+      "asset_sha256": "31026179182881f87412f9f1a9a0b93eb677baf30969304a6caf026f7c45ffdb"
+    },
+    {
+      "index": 44,
+      "id": "seated_cable_row",
+      "observations": "Fixed bench, foot plates, feet and tower; cable length changes as handle approaches abdomen and selected plates lift with a lower remainder preserved. Connected narrow-handle grip.",
+      "initial_status": "PASS",
+      "final_status": "RETAINED",
+      "asset": "exercise_guides/seated_cable_row.gif",
+      "asset_sha256": "e760ba851b5c58df84ae4d308e5e60f2c46c56d43cd57885731407ca84174263"
+    },
+    {
+      "index": 45,
+      "id": "inverted_row",
+      "observations": "Full-size strip confirms fixed bar/rack and heel locations with body pulled toward bar. Rear hand is occluded by shoulder in top pose; no demonstrable missing limb or apparatus relocation.",
+      "initial_status": "PASS",
+      "final_status": "RETAINED",
+      "asset": "exercise_guides/inverted_row.gif",
+      "asset_sha256": "b3b47a69ef2b07ba338416c13a1f5297d2b3d518a70bbcaf4ecb8cce6b484fcc"
+    },
+    {
+      "index": 46,
+      "id": "pullup",
+      "observations": "Fixed overhead bar, pronated hand contacts and clear body lift. Feet stay off floor; no apparatus movement, disconnected limbs or kipping substitution.",
+      "initial_status": "PASS",
+      "final_status": "RETAINED",
+      "asset": "exercise_guides/pullup.gif",
+      "asset_sha256": "6d90f55ca5a09fd455235159ae4387be503dfaff433459b70987de733daaae79"
+    },
+    {
+      "index": 47,
+      "id": "face_pull",
+      "problems": [
+        "Rope/cable is visibly drawn substantially farther from the fixed pulley in the contracted frame, but the exposed weight stack remains completely unchanged in height and position. The visible resistance mechanism does not respond to the pull."
+      ],
+      "prompt_correction": "Retain the current anatomically connected face-pull poses and fixed tower, eye-height pulley, feet, body and camera. In the contracted pose lift the same selected upper weight plates along the fixed rods, leaving the unselected lower plates at the base. Preserve total plate count and connect the cable consistently through the pulley; do not translate or resize the machine.",
+      "initial_status": "REPAIR",
+      "final_status": "CORRECTED",
+      "asset": "exercise_guides/face_pull.gif",
+      "asset_sha256": "1ee0200f7408db8de4c344a736b6ee304a92d51538b3ac88b58ddc91b3e48973",
+      "selected_source": "research/exercise_guides/corrections/visual-audit-20261107/face_pull.png",
+      "final_review": "Native source and decoded GIF reviewed: connected limbs, readable intended pose, no neighboring figure or clipped limb, stable support/equipment. Small illustration drift remains; not motion capture."
+    },
+    {
+      "index": 48,
+      "id": "band_reverse_fly",
+      "observations": "Externally anchored two-handle band stays attached to the same wall point; arms open horizontally with a slight elbow bend. Person, feet and wall remain registered; no clipping or detached limbs.",
+      "prompt_correction": null,
+      "initial_status": "PASS",
+      "final_status": "RETAINED",
+      "asset": "exercise_guides/band_reverse_fly.gif",
+      "asset_sha256": "dd4585e03486cafa12a86adefe1c10a9e15875469bee595f086c99a2330afd3b"
+    },
+    {
+      "index": 49,
+      "id": "iyt_raise",
+      "severity": "medium",
+      "confidence": "high",
+      "observations": "I, Y and T poses are distinct and bench-supported, but the complete bench/person in frame I is shifted left relative to Y/T. The rear bench foot and grounded heels visibly jump even though neither should move. Frame I has only a 5 px dark-foreground left margin, compared with 45 px in Y/T. This is a framing/registration defect, not a claim that the three arm poses are wrong.",
+      "prompt_correction": "Preserve the existing three I/Y/T positions and anatomy. Lock the same camera, scale, bench position, torso, head, pelvis and both feet in every frame. Change only arms at the shoulders. Keep every hand and heel at least 24 px inside its own 640x640 panel. Do not individually auto-center frames; use one union-of-motion canvas. Do not add return frames merely to repair this registration issue.",
+      "initial_status": "REPAIR",
+      "final_status": "CORRECTED",
+      "asset": "exercise_guides/iyt_raise.gif",
+      "asset_sha256": "4a80a39ec38bbaffc9faf81c50aa118792b59bb4ae4a1fa183ecd2459b0a803a",
+      "selected_source": "research/exercise_guides/corrections/visual-audit-20261107/iyt_raise.png",
+      "final_review": "Native source and decoded GIF reviewed: connected limbs, readable intended pose, no neighboring figure or clipped limb, stable support/equipment. Small illustration drift remains; not motion capture."
+    },
+    {
+      "index": 50,
+      "id": "triceps_pushdown",
+      "observations": "High pulley and rope remain connected; elbows extend while upper arms remain beside torso. Weight stack rises coherently. Machine, feet and body size stay stable.",
+      "prompt_correction": null,
+      "initial_status": "PASS",
+      "final_status": "RETAINED",
+      "asset": "exercise_guides/triceps_pushdown.gif",
+      "asset_sha256": "ba8013557b9baf0918880729ff051484cd5f7bf139aad1313eefd07c21626d01"
+    },
+    {
+      "index": 51,
+      "id": "plank",
+      "observations": "Shows knees-down preparation followed by forearm/toe support with visibly straightened legs. Forearms and shoulders stay planted and body is continuous. This is entry/hold illustration, not a claim of repeated dynamic planking.",
+      "prompt_correction": null,
+      "initial_status": "PASS",
+      "final_status": "RETAINED",
+      "asset": "exercise_guides/forearm-plank.gif",
+      "asset_sha256": "9821c87464329ab7591f95a917982d3ee92a9e88ae8cc2de4d86337542d706dd"
+    },
+    {
+      "index": 52,
+      "id": "knee_plank",
+      "observations": "Knees and forearms remain on the floor; slight torso lift/bracing is visible. Small transition is appropriate to an isometric exercise, with no invented alternating limb motion.",
+      "prompt_correction": null,
+      "initial_status": "PASS",
+      "final_status": "RETAINED",
+      "asset": "exercise_guides/knee_plank.gif",
+      "asset_sha256": "bd2491d7ec02834c0739c84b6a27d7eaca4fe16f662e15e59fb9d1603dc32ff5"
+    },
+    {
+      "index": 53,
+      "id": "side_plank",
+      "observations": "Hip rises from the floor while the lower forearm and stacked feet provide support. Elbow remains below shoulder; lifted body is continuous without extra or disconnected limbs.",
+      "prompt_correction": null,
+      "initial_status": "PASS",
+      "final_status": "RETAINED",
+      "asset": "exercise_guides/side_plank.gif",
+      "asset_sha256": "e6b9602e05eeb581e339b960bc965eb3bb6cee2d50f9b4736daea88d23fe367b"
+    },
+    {
+      "index": 54,
+      "id": "knee_side_plank",
+      "observations": "Bent knees remain stacked and planted with lower-forearm support while pelvis lifts. No top-leg abduction or substitution of straight-leg side plank. Anchor points stay stable.",
+      "prompt_correction": null,
+      "initial_status": "PASS",
+      "final_status": "RETAINED",
+      "asset": "exercise_guides/knee_side_plank.gif",
+      "asset_sha256": "9efe5d55627770d10a27c0c7dfd6fa7cde6763005880ad4baf9b1ce334aee31b"
+    },
+    {
+      "index": 55,
+      "id": "dead_bug",
+      "severity": "high",
+      "confidence": "high",
+      "observations": "Opposite arm/leg pairing is correct, but the extended overhead hand crosses the panel split. A detached fragment of that hand appears at the right edge of the preparation frame, and the reach frame clips the hand at its left edge. Decoded 640x640 GIF dark foreground bounds: frame 0 x=76..639, frame 1 x=0..622. Head/torso/pelvis also shift between frames rather than remaining stationary against the floor. This creates an awkward body slide in addition to the definite clipping/ghost artifact.",
+      "prompt_correction": "Rebuild two complete independent 640x640 panels on one locked camera/scale. Fix skull, shoulders, spine and pelvis to identical floor coordinates in both panels. Frame A: supine, both arms vertical, hips/knees approximately 90 degrees. Frame B: far arm reaches overhead and near leg extends away; near arm remains vertical and far hip/knee stay flexed. Clearly preserve one continuous shoulder-elbow-wrist-hand chain and hip-knee-ankle-foot chain. Keep head/back supported and pelvis still. Reserve generous horizontal space for the full overhead fingertips and extended toes, minimum 24 px internal margin, no neighboring-panel content or duplicated hand fragments.",
+      "initial_status": "REPAIR",
+      "final_status": "CORRECTED",
+      "asset": "exercise_guides/dead_bug.gif",
+      "asset_sha256": "76392476248f1a68a8d4701b1f276ee2887020cc524c9d6565f12261429942c0",
+      "selected_source": "research/exercise_guides/corrections/visual-audit-20261107/dead_bug.png",
+      "final_review": "Native source and decoded GIF reviewed: connected limbs, readable intended pose, no neighboring figure or clipped limb, stable support/equipment. Small illustration drift remains; not motion capture."
+    },
+    {
+      "index": 56,
+      "id": "bird_dog",
+      "severity": "high",
+      "confidence": "high",
+      "observations": "Contralateral pairing is correct: far arm and near leg reach; near hand and far knee support. The recent reframing does not clip the limbs, but the reach leg remains visibly bent/drooping at the knee/ankle instead of a clear long extension. Pelvis/support-knee location changes while the head/support hand largely stay fixed, making the torso appear to reshape. Reach-frame dark foreground left margin is only 13 px. Do not diagnose same-side pairing: that is not the visible problem.",
+      "prompt_correction": "Use a fixed rear three-quarter camera and the same person/size. Frame A: natural quadruped, hands beneath shoulders and knees beneath hips. Frame B: extend the far arm forward and near leg backward with a clearly almost-straight knee, heel approximately level with hip, natural ankle, and no shortened calf. Keep supporting near hand and far knee/shin at exactly the same floor coordinates; keep shoulder/pelvis height, spine length and body orientation stable, allowing only natural minimal weight shift. Keep pelvis level, no lumbar arch exaggeration or torso twist. Make shoulder-elbow-hand and hip-knee-heel chains easy to follow. Center using the combined motion bounds and provide at least 24 px limb margins.",
+      "initial_status": "REPAIR",
+      "final_status": "CORRECTED",
+      "asset": "exercise_guides/bird_dog.gif",
+      "asset_sha256": "6b8f157737eb664b876e348f996318ce60cc62d4e983501861b0c8f8ba26cff5",
+      "selected_source": "research/exercise_guides/corrections/visual-audit-20261107/bird_dog.png",
+      "final_review": "Native source and decoded GIF reviewed: connected limbs, readable intended pose, no neighboring figure or clipped limb, stable support/equipment. Small illustration drift remains; not motion capture."
+    },
+    {
+      "index": 57,
+      "id": "pallof_press",
+      "observations": "Side chest-height band anchor is clear, hands move from chest to forward reach, and torso/feet remain square and stable. No visible trunk rotation or disconnected band.",
+      "prompt_correction": null,
+      "initial_status": "PASS",
+      "final_status": "RETAINED",
+      "asset": "exercise_guides/pallof_press.gif",
+      "asset_sha256": "fa11a013d1acd9450f00487bfbc5d4f2b90606d81dbb49c8bf64eed808c78a94"
+    },
+    {
+      "index": 58,
+      "id": "farmer_carry",
+      "observations": "Two dumbbells remain in the hands and alternating grounded/swing legs convey walking. Torso remains upright at the same scale; this is not a stationary hold substituted for carry.",
+      "prompt_correction": null,
+      "initial_status": "PASS",
+      "final_status": "RETAINED",
+      "asset": "exercise_guides/farmer_carry.gif",
+      "asset_sha256": "36aaf0294f9f908045b0e97533a9a68c782b8b75538e6f61656912fd76631464"
+    },
+    {
+      "index": 59,
+      "id": "suitcase_carry",
+      "observations": "One dumbbell stays in the same hand while feet alternate through a walking step. Shoulders remain level, body does not lean markedly, and anatomy is continuous.",
+      "prompt_correction": null,
+      "initial_status": "PASS",
+      "final_status": "RETAINED",
+      "asset": "exercise_guides/suitcase_carry.gif",
+      "asset_sha256": "3bf997db7c9794d985c2a830d78c5ab037afe20aab358160d717656994763298"
+    },
+    {
+      "index": 60,
+      "id": "single_leg_abdominal_press",
+      "observations": "Raised far knee is contacted by the same-side far hand; opposite foot is planted and opposite arm is on the floor. The change is hand contact followed by an isometric position, appropriately without large leg motion.",
+      "prompt_correction": null,
+      "initial_status": "PASS",
+      "final_status": "RETAINED",
+      "asset": "exercise_guides/single_leg_abdominal_press.gif",
+      "asset_sha256": "3907a557ad91b99b19ee58deee7b5ab217511a1852c190dafe76d29b6541a8f2"
+    },
+    {
+      "index": 61,
+      "id": "side_crunch",
+      "observations": "Same-side elbow and knee approximate during lateral trunk bend; opposite leg remains planted. No contralateral bicycle-style rotation, clipping or extra limb.",
+      "prompt_correction": null,
+      "initial_status": "PASS",
+      "final_status": "RETAINED",
+      "asset": "exercise_guides/standing-side-crunch.gif",
+      "asset_sha256": "eab043d4a9951ba40125c0936ec26a9e002624f90b6169c702ec7115a4e9ee8e"
+    },
+    {
+      "index": 62,
+      "id": "knee_up",
+      "observations": "Standing preparation changes to one bent-knee hip raise with upright trunk and planted opposite foot. Modest lateral balance shift is natural and does not indicate camera-scale drift.",
+      "prompt_correction": null,
+      "initial_status": "PASS",
+      "final_status": "RETAINED",
+      "asset": "exercise_guides/standing-knee-up.gif",
+      "asset_sha256": "45c2309e22cc86a6e4adfdd0bfdb1de3757f9fd47f82a2662ebab424bc3211ea"
+    },
+    {
+      "index": 63,
+      "id": "hanging_leg_raise",
+      "observations": "Both hands stay attached to the bar; two mostly straight legs lift together. Apparatus and upper body stay registered. No substitution of bent-knee raise and no visible clipping.",
+      "prompt_correction": null,
+      "initial_status": "PASS",
+      "final_status": "RETAINED",
+      "asset": "exercise_guides/hanging_leg_raise.gif",
+      "asset_sha256": "07b5d750874bf2544143dc734466607bc3f753dddbf5d64f8d4d72d3631e1eda"
+    },
+    {
+      "index": 64,
+      "id": "crunch",
+      "observations": "Crossed arms, bent knees and planted feet remain stable while shoulders perform a small trunk curl. It remains a partial crunch rather than becoming a full sit-up.",
+      "prompt_correction": null,
+      "initial_status": "PASS",
+      "final_status": "RETAINED",
+      "asset": "exercise_guides/crunch.gif",
+      "asset_sha256": "e3c92a8f9505ae41ecee4b3d6d6a9b8fd9b9f28e41a12fe70c96f561371c1bff"
+    },
+    {
+      "index": 65,
+      "id": "leg_raise",
+      "observations": "Head, shoulders and arms remain supported; straight legs rise together from a low hover. Pelvis and body size remain stable without extra limbs or visible crop artifacts.",
+      "prompt_correction": null,
+      "initial_status": "PASS",
+      "final_status": "RETAINED",
+      "asset": "exercise_guides/lying-leg-raise.gif",
+      "asset_sha256": "33d8eb6c8e960b231af41a91ea9650e199c7e65c0828e38d1c4c8eb54b39546b"
+    },
+    {
+      "index": 66,
+      "id": "scissor_cross",
+      "severity": "medium",
+      "confidence": "medium",
+      "observations": "Head/upper trunk are held flexed and straight legs visibly move from apart to horizontally crossed, so the basic exercise identity is correct. However, both poses show legs hovering very low, close to floor level, rather than the manifest's deliberately selected elevated-leg product variant (30-60 degrees). Exact 3D elevation cannot be measured from this perspective; the concern is the visible low-leg variant, not a universal clinical angle rule. No clipping or ghost limbs are visible.",
+      "prompt_correction": "Preserve horizontal lateral crossing, nearly straight knees, chin tucked and raised upper trunk. Select the repository's visibly elevated-leg variation: show both legs clearly raised approximately 40 degrees above the floor in a side-three-quarter camera where elevation is readable. Keep the pelvis, trunk and camera fixed. Frame A legs slightly apart at the same elevation; frame B legs horizontally cross with one shin clearly in front of the other, not a vertical flutter kick. Keep the full feet visible with margin.",
+      "initial_status": "REPAIR",
+      "final_status": "CORRECTED",
+      "asset": "exercise_guides/scissor_cross.gif",
+      "asset_sha256": "c6427843c205abe518cda348aa036b49e25546fee52e8e539910f72b98d9c3c8",
+      "selected_source": "research/exercise_guides/corrections/visual-audit-20261107/scissor_cross.png",
+      "final_review": "Native source and decoded GIF reviewed: connected limbs, readable intended pose, no neighboring figure or clipped limb, stable support/equipment. Small illustration drift remains; not motion capture."
+    },
+    {
+      "index": 67,
+      "id": "reverse_crunch",
+      "observations": "Bent legs remain together while pelvis makes a small upward curl; head and shoulders stay supported. Floor-based variant is clear, with no incline bench or large swinging leg substitution.",
+      "prompt_correction": null,
+      "initial_status": "PASS",
+      "final_status": "RETAINED",
+      "asset": "exercise_guides/reverse_crunch.gif",
+      "asset_sha256": "c4f5eb3f5ac011cd9ce5b7bb7985af03ed4d6ac9e00b385349bf4cac1c396502"
+    },
+    {
+      "index": 68,
+      "id": "bicycle_crunch",
+      "observations": "Preparation changes to far bent knee approaching the opposite near elbow while near leg extends; trunk rotation is visible. Hands stay near ears and limb chains remain continuous. One illustrated side is acceptable when text directs alternation.",
+      "prompt_correction": null,
+      "initial_status": "PASS",
+      "final_status": "RETAINED",
+      "asset": "exercise_guides/bicycle_crunch.gif",
+      "asset_sha256": "a435c2232ca5093775335ad80b2978643cd2c4742a4768e697e8c8bcb54d0553"
+    },
+    {
+      "index": 69,
+      "id": "ball_crunch",
+      "observations": "Ball remains under lower back, both feet remain grounded, and torso performs a controlled partial lift. Ball, legs and body size remain stable; no unsupported back or rolling-ball jump is visible.",
+      "prompt_correction": null,
+      "initial_status": "PASS",
+      "final_status": "RETAINED",
+      "asset": "exercise_guides/ball_crunch.gif",
+      "asset_sha256": "f189473a48fb679e0e02896ade1856f34e7dc527d2bb98c18fbcea548d2a21da"
+    },
+    {
+      "index": 70,
+      "id": "captains_chair_knee_raise",
+      "observations": "Forearms and back remain visibly supported by pads, hands keep hold of handles, and bent knees rise together. Equipment/upper body registration is stable; correct captain-chair variant.",
+      "prompt_correction": null,
+      "initial_status": "PASS",
+      "final_status": "RETAINED",
+      "asset": "exercise_guides/captains_chair_knee_raise.gif",
+      "asset_sha256": "c002e8fc8eb1b022db8a969ab8c259d23911175c7ee8a9ef589195be91c1759c"
+    },
+    {
+      "index": 71,
+      "id": "russian_twist",
+      "observations": "Both feet and pelvis remain planted while chest/shoulders rotate from neutral to one side with hands clasped and no load. Stable full-body framing. This matches the manifest's explicit neutral-to-one-side two-frame illustration.",
+      "prompt_correction": null,
+      "initial_status": "PASS",
+      "final_status": "RETAINED",
+      "asset": "exercise_guides/russian_twist.gif",
+      "asset_sha256": "3d3268162b0c86a7dbe2f5895b0def01f1b9ecc65eeb3ada9065d48e92dbf53c"
+    }
+  ],
+  "summary": {
+    "total": 72,
+    "retained": 59,
+    "corrected": 13
+  },
+  "correction_receipts": [
+    "research/exercise_guides/corrections/visual-audit-20261107/receipt-core.json",
+    "research/exercise_guides/corrections/visual-audit-20261107/receipt-lower.json",
+    "research/exercise_guides/corrections/visual-audit-20261107/receipt-root.json",
+    "research/exercise_guides/corrections/visual-audit-20261107/receipt-upper.json"
+  ],
+  "scope": "Pose continuity, anatomy illustration, framing, equipment and agreement with existing guide variant. Existing evidence-based muscle roles retained; not clinical validation."
+}

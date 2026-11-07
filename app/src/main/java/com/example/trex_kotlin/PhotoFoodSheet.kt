@@ -5,6 +5,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.offset
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.PathEffect
@@ -12,12 +13,15 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -46,13 +50,13 @@ import androidx.compose.material.icons.rounded.Remove
 import androidx.compose.material.icons.rounded.SwapHoriz
 import androidx.compose.material.icons.rounded.RestaurantMenu
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -76,8 +80,6 @@ import com.example.trex_kotlin.TrexText as Text
 import com.example.trex_kotlin.food.FoodDetectionResult
 import com.example.trex_kotlin.food.FoodRegion
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
 // ============================================================= 사진 식단 기록
@@ -89,6 +91,13 @@ private enum class PhotoStep { Pick, Camera, Analyzing, Result, Failed }
  * 갤러리 5장을 다 들고 있어도 메모리가 감당되는 선으로 잡았다(장당 약 4MB).
  */
 private const val PREVIEW_MAX_PX = 1024
+
+/**
+ * 결과 단계의 사용법 문단을 이 앱 프로세스에서 이미 한 번 펼쳐 보였는지. 처음 보는 결과에서만 펼쳐 두고(첫 1회 코치마크)
+ * 그 뒤로는 제목 옆 ⓘ 뒤로 접는다 — 같은 문단을 매번 읽게 하지 않는다(UI 감사 A27, K2 글은 둘째 자리).
+ * 저장하지 않는 이유: 앱을 다시 켠 뒤 한 번 더 보이는 정도는 해롭지 않고, 잊은 사람에게는 ⓘ 가 있다.
+ */
+private var usageShownOnce = false
 
 /**
  * 음식 고르기 창이 무엇을 하려는지. 인덱스 센티넬(-1) 대신 타입으로 가른다 —
@@ -137,7 +146,7 @@ private sealed interface FoodSource {
  */
 private data class RegionLabel(val name: String, val kind: LabelKind)
 
-/** 자리 이름표가 어디서 왔는지. 사진 위에서 모양으로 구분한다. */
+/** 자리 이름표가 어디서 왔는지. 사진 위에서는 색(앱이 붙임 = 강조색 · 내가 고름 = 흰색)으로, 기억은 "기억 · " 글자로 구분한다. */
 private enum class LabelKind { MODEL, MEMORY, USER }
 
 /**
@@ -207,7 +216,6 @@ internal fun PhotoFoodSheet(app: AppViewModel, onClose: () -> Unit) {
     var pickedUris by remember { mutableStateOf<List<FoodPhotoLoader>>(emptyList()) }
     var fromGallery by remember { mutableStateOf(false) }
     var analysisRequest by remember { mutableIntStateOf(0) }
-    var progress by remember { mutableFloatStateOf(0f) }
     var failureTitle by remember { mutableStateOf("") }
     var failure by remember { mutableStateOf("") }
     var items by remember { mutableStateOf<List<RecognizedItem>>(emptyList()) }
@@ -220,6 +228,8 @@ internal fun PhotoFoodSheet(app: AppViewModel, onClose: () -> Unit) {
     var zoomed by remember { mutableStateOf<FoodPhoto?>(null) }
     // 음식 고르기 창의 대상. null 이면 닫힘.
     var pickTarget by remember { mutableStateOf<PickTarget?>(null) }
+    // 결과 단계의 사용법 문단이 펼쳐져 있는지. 앱을 켠 뒤 첫 결과에서만 펼쳐진 채 시작하고, 제목 옆 ⓘ 로 여닫는다(UI 감사 A27, K2).
+    var usageOpen by remember { mutableStateOf(!usageShownOnce) }
 
     // 모델(12MB)·인터프리터 초기화를 첫 분석이 아니라 시트를 여는 시점에 미리 해 둔다.
     LaunchedEffect(Unit) { withContext(Dispatchers.Default) { recognizer.warmUp() } }
@@ -228,7 +238,6 @@ internal fun PhotoFoodSheet(app: AppViewModel, onClose: () -> Unit) {
         photos = bitmaps
         pickedUris = uris
         fromGallery = uris.isNotEmpty()
-        progress = 0f
         analysisRequest++
         step = PhotoStep.Analyzing
     }
@@ -245,21 +254,15 @@ internal fun PhotoFoodSheet(app: AppViewModel, onClose: () -> Unit) {
         val sources = photos
         val uris = pickedUris
         if (sources.isEmpty() && uris.isEmpty()) return@LaunchedEffect
-        // 추론은 백그라운드에서, 메인에서는 진행률 연출만 갱신한다.
-        val job = async(Dispatchers.Default) {
+        // 추론은 백그라운드에서 돈다. 진행률은 흉내 내지 않는다 — 화면은 불확정 막대를 보이고, 끝나는 즉시 결과로 간다
+        // (UI 감사 A27, K8 정직한 시각화: 200 ms 마다 +0.05 씩 차오르던 연출과 끝의 200 ms 꽉 찬 막대를 뺐다).
+        val (result, bitmaps) = withContext(Dispatchers.Default) {
             val bitmaps = sources.ifEmpty { uris.mapNotNull { it.load() } }
             recognizer.detect(bitmaps) to bitmaps
         }
-        while (!job.isCompleted) {
-            delay(200)
-            progress = (progress + 0.05f).coerceAtMost(0.9f)
-        }
-        val (result, bitmaps) = job.await()
         // 화면에는 썸네일만 필요하다 — 추론용 1280px 비트맵(장당 수 MB)을 붙들지 않고 작은 사본만 상태에 남긴다.
         photos = bitmaps.map { it.scaledToMax(PREVIEW_MAX_PX) }
         pickedUris = emptyList()
-        progress = 1f
-        delay(200)
         when (result) {
             // 이름이 하나도 안 붙었어도 자리를 찾았으면 결과로 간다 — "?" 를 눌러 이름을 붙이면 된다.
             is FoodDetectionResult.Success -> if (result.foods.isEmpty() && result.regions.isEmpty()) {
@@ -321,6 +324,17 @@ internal fun PhotoFoodSheet(app: AppViewModel, onClose: () -> Unit) {
                     Kicker("사진 식단 기록")
                     Text(title, color = c.text, fontSize = 17.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 2.dp))
                 }
+                // 결과 단계의 사용법 ⓘ — 문단은 앱을 켠 뒤 첫 결과에서만 펼쳐 두고, 그 뒤로는 이 버튼으로 연다(UI 감사 A27, K2 글은 둘째 자리).
+                if (step == PhotoStep.Result) {
+                    IconButton(onClick = { usageOpen = !usageOpen }, modifier = Modifier.padding(end = 4.dp).size(36.dp)) {
+                        Icon(
+                            Icons.Rounded.Info,
+                            contentDescription = if (usageOpen) "사용법 접기" else "사용법 보기",
+                            tint = if (usageOpen) c.primaryText else c.text3,
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
+                }
                 SheetClose(onClose)
             }
             Box(Modifier.weight(1f)) {
@@ -335,12 +349,13 @@ internal fun PhotoFoodSheet(app: AppViewModel, onClose: () -> Unit) {
                         onBack = { step = PhotoStep.Pick },
                         onManual = { manual = true },
                     )
-                    PhotoStep.Analyzing -> AnalyzingStep(photos = photos, progress = progress, onZoom = { zoomed = it })
+                    PhotoStep.Analyzing -> AnalyzingStep(photos = photos, onZoom = { zoomed = it })
                     PhotoStep.Result -> ResultStep(
                         photos = photos,
                         regions = regions,
                         showEmpty = showEmpty,
                         onToggleEmpty = { showEmpty = !showEmpty },
+                        usageOpen = usageOpen,
                         labelOf = { region ->
                             items.firstOrNull { region.id in it.regionIds }?.let { row ->
                                 RegionLabel(
@@ -569,23 +584,19 @@ private fun CameraStep(onCapture: (FoodPhoto) -> Unit, onBack: () -> Unit, onMan
 }
 
 @Composable
-private fun AnalyzingStep(photos: List<FoodPhoto>, progress: Float, onZoom: (FoodPhoto) -> Unit) {
+private fun AnalyzingStep(photos: List<FoodPhoto>, onZoom: (FoodPhoto) -> Unit) {
     val c = Trex.c
-    // 분석은 전부 온디바이스라 '업로드' 문구를 쓰지 않는다.
-    val status = when {
-        progress < 0.3f -> "사진 준비 중"
-        progress < 0.7f -> "음식 인식 중"
-        else -> "영양 정보 계산 중"
-    }
     Column(Modifier.fillMaxSize().padding(horizontal = 20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         PhotoStrip(photos, Modifier.fillMaxWidth().height(240.dp), onZoom = onZoom)
+        // 가짜 진행률 대신 불확정 막대(UI 감사 A27, K8 정직한 시각화). 추론은 파이프라인이 단계를 알려 주지 않는 한 번의 호출이라
+        // 예전의 "사진 준비 중 → 음식 인식 중 → 영양 정보 계산 중" 은 연출된 진행률의 문턱에서 나온 말이었다 — 글도 하나로 줄인다.
+        // 분석은 전부 온디바이스라 '업로드' 문구를 쓰지 않는다.
         LinearProgressIndicator(
-            progress = { progress.coerceIn(0f, 1f) },
             modifier = Modifier.padding(top = 22.dp).fillMaxWidth().height(8.dp).clip(RoundedCornerShape(999.dp)),
             color = c.primary,
             trackColor = c.track,
         )
-        Text(status, color = c.text2, fontSize = 13.sp, modifier = Modifier.padding(top = 10.dp))
+        Text("음식을 살펴보고 있어요", color = c.text2, fontSize = 13.sp, modifier = Modifier.padding(top = 10.dp))
         Text("기기 안에서 분석 중이라 네트워크가 필요 없어요.", color = c.text3, fontSize = 11.5.sp, modifier = Modifier.padding(top = 4.dp))
     }
 }
@@ -597,6 +608,8 @@ private fun ResultStep(
     regions: List<FoodRegion>,
     showEmpty: Boolean,
     onToggleEmpty: () -> Unit,
+    /** 사용법 문단을 펼쳐 보이는지 — 시트 제목 옆 ⓘ 가 여닫는다(UI 감사 A27, K2). */
+    usageOpen: Boolean,
     /** 자리의 이름표 — 그 자리와 이어진 줄의 이름. null 이면 "?" 다. */
     labelOf: (FoodRegion) -> RegionLabel?,
     onRegion: (FoodRegion) -> Unit,
@@ -622,6 +635,8 @@ private fun ResultStep(
     val slotIndex = mealMetas.indexOfFirst { it.id == slot }.coerceAtLeast(0)
     val entries = items.toEntries()
     val total = entries.totalNutrition()
+    // 이 프로세스에서 결과를 한 번 보였다 — 다음에 여는 결과부터 사용법 문단은 ⓘ 뒤에 접힌 채 시작한다(UI 감사 A27, K2).
+    LaunchedEffect(Unit) { usageShownOnce = true }
     // 인분 숫자를 눌러 직접 넣는 중인 음식 — 이름으로 잡는다(mergedByName 으로 이름은 하나). 줄을 지우거나 바꿔도 다른 줄을 고치지 않게.
     var editingPortion by remember { mutableStateOf<String?>(null) }
     editingPortion?.let { name ->
@@ -647,7 +662,11 @@ private fun ResultStep(
                 // 이름표가 있는 자리는 늘 그린다. 이름 없고 비어 보이는 자리만 숨길 수 있다.
                 val hidden = regions.filter { labelOf(it) == null && it.looksEmpty }
                 val drawn = if (showEmpty) regions else regions - hidden.toSet()
-                RegionPhotos(photos, drawn, labelOf, onRegion, onZoom)
+                // 사진 바로 아래 이름표 색 범례 — 색만으로는 뜻이 읽히지 않는다(UI 감사 A27, K3 색 = 뜻).
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    RegionPhotos(photos, drawn, labelOf, onRegion, onZoom)
+                    RegionLegend()
+                }
                 val unnamed = drawn.count { labelOf(it) == null }
                 // 모델이 이름을 알았는데 사용자가 줄을 지운 자리도 "?" 로 돌아가므로 "모르는" 이 아니라 "없는" 이라고 말한다.
                 // "?" 는 기록에 들어가지 않는다. 음식이 아닌 자리(컵·빈 그릇)도 여기 섞이므로 지우라고 하지 않고 그냥 두면 된다고 말한다.
@@ -680,6 +699,15 @@ private fun ResultStep(
             )
             DCard(radius = 22.dp) {
                 Column {
+                    // 사용법 문단 — 앱을 켠 뒤 첫 결과에서만 펼쳐져 있고(첫 1회 코치마크), 그 뒤로는 시트 제목 옆 ⓘ 로 연다(UI 감사 A27, K2 글은 둘째 자리).
+                    if (usageOpen) {
+                        Text(
+                            "음식 이름을 누르면 다른 음식으로 바꿀 수 있어요. 인분 숫자를 누르면 0.3처럼 직접 넣을 수 있어요. 잘못 인식된 건 인분을 줄여 빼 주세요.",
+                            color = c.text3, fontSize = 11.5.sp, lineHeight = 17.sp,
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 11.dp),
+                        )
+                        Box(Modifier.fillMaxWidth().height(1.dp).background(c.line))
+                    }
                     items.forEachIndexed { i, item ->
                         if (i > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(c.line))
                         Row(Modifier.padding(horizontal = 14.dp, vertical = 13.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -730,7 +758,7 @@ private fun ResultStep(
                                             )
                                         FoodSource.Picked ->
                                             Text("직접 고름", color = c.primaryText, fontSize = 10.5.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 6.dp))
-                                        // "직접 고름" 과 구분되게 강조색을 쓰지 않는다(사진 위에서는 연두 이름표로 구분된다).
+                                        // "직접 고름" 과 구분되게 강조색을 쓰지 않는다(사진 위에서는 "기억 · " 이름표로 구분된다).
                                         is FoodSource.Remembered ->
                                             Text("기억한 음식", color = c.text2, fontSize = 10.5.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(start = 6.dp))
                                     }
@@ -787,7 +815,6 @@ private fun ResultStep(
             } else {
                 WashBanner("영양값은 1인분 기준이에요. 실제로 드신 양이 다르면 인분으로 조절해 주세요. 반 그릇은 0.5예요.", Icons.Rounded.Info)
             }
-            Text("음식 이름을 누르면 다른 음식으로 바꿀 수 있어요. 인분 숫자를 누르면 0.3처럼 직접 넣을 수 있어요. 잘못 인식된 건 인분을 줄여 빼 주세요.", color = c.text3, fontSize = 11.5.sp, lineHeight = 17.sp)
         }
         Box(Modifier.fillMaxWidth().height(1.dp).background(c.line))
         Row(
@@ -895,8 +922,8 @@ private fun RegionPhoto(
     modifier: Modifier,
 ) {
     val c = Trex.c
+    // 앱이 붙인 이름(모델·기억)은 강조색 하나다 — 기억은 "기억 · " 글자로 가른다(UI 감사 A27, K3 색 = 뜻: 연두는 진행·활성의 색이라 쓰지 않는다).
     val named = c.primary
-    val remembered = c.lime
     val dash = remember { PathEffect.dashPathEffect(floatArrayOf(14f, 10f)) }
     BoxWithConstraints(
         modifier
@@ -927,11 +954,10 @@ private fun RegionPhoto(
                 val boxSize = Size(region.box.width * size.width, region.box.height * size.height)
                 // 어두운 테두리를 먼저 깔아 밝은 식탁에서도 선이 보이게 한다.
                 drawRect(Color.Black.copy(alpha = 0.35f), topLeft, boxSize, style = Stroke(stroke + 2.dp.toPx()))
-                // 모델 이름 = 강조색 실선, 기억한 이름 = 연두 실선, 직접 붙인 이름 = 흰 실선, 이름 없음 = 흰 점선.
+                // 앱이 붙인 이름(모델·기억) = 강조색 실선, 직접 붙인 이름 = 흰 실선, 이름 없음 = 흰 점선. 범례는 사진 아래 RegionLegend.
                 drawRect(
                     when (label?.kind) {
-                        LabelKind.MODEL -> named
-                        LabelKind.MEMORY -> remembered
+                        LabelKind.MODEL, LabelKind.MEMORY -> named
                         else -> Color.White
                     },
                     topLeft, boxSize,
@@ -951,8 +977,8 @@ private fun RegionPhoto(
                     LabelKind.MEMORY -> "기억 · ${label.name}"
                     else -> label.name
                 },
-                // 모델 이름 = 강조색 바탕, 기억한 이름 = 연두 바탕, 직접 붙인 이름 = 흰 바탕, 이름 없음 = 어두운 바탕.
-                color = if (label == null || label.kind == LabelKind.MODEL) Color.White else Color.Black,
+                // 앱이 붙인 이름(모델·기억) = 강조색 바탕, 직접 붙인 이름 = 흰 바탕, 이름 없음 = 어두운 바탕.
+                color = if (label?.kind == LabelKind.USER) Color.Black else Color.White,
                 fontSize = 11.sp,
                 fontWeight = FontWeight.SemiBold,
                 maxLines = 1,
@@ -965,8 +991,7 @@ private fun RegionPhoto(
                     .background(
                         when (label?.kind) {
                             null -> Color.Black.copy(alpha = 0.6f)
-                            LabelKind.MODEL -> named
-                            LabelKind.MEMORY -> remembered
+                            LabelKind.MODEL, LabelKind.MEMORY -> named
                             LabelKind.USER -> Color.White
                         },
                     )
@@ -975,6 +1000,42 @@ private fun RegionPhoto(
                     .padding(horizontal = 6.dp, vertical = 2.dp),
             )
         }
+    }
+}
+
+/**
+ * 사진 위 이름표 색의 범례(UI 감사 A27, K3 색 = 뜻). 사용자가 확인할 때 갈리는 것은 "앱이 붙였나 · 내가 골랐나 · 아직 없나" 셋이라 색도 셋이다 —
+ * 모델과 기억은 같은 강조색이고 기억은 이름표의 "기억 · " 글자가 가른다. 색만으로는 범례 없이 읽히지 않아 사진 바로 아래 한 줄로 둔다.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun RegionLegend() {
+    val c = Trex.c
+    val swatch = RoundedCornerShape(3.dp)
+    val ink = c.text2
+    // 셋이 한 줄에 들지 않는 폭(큰 글꼴)에서는 다음 줄로 넘긴다 — 잘리지 않게.
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        LegendItem("앱이 붙임") { Box(Modifier.size(10.dp).clip(swatch).background(c.primary)) }
+        LegendItem("내가 고름") { Box(Modifier.size(10.dp).clip(swatch).background(Color.White).border(1.dp, c.text3, swatch)) }
+        LegendItem("이름 없음") {
+            // 사진 위 점선 박스와 같은 무늬. 사진 밖이라 흰색 대신 글자색으로 그린다.
+            Canvas(Modifier.size(10.dp)) {
+                drawRoundRect(
+                    color = ink,
+                    cornerRadius = CornerRadius(3.dp.toPx()),
+                    style = Stroke(width = 1.5.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(2.5.dp.toPx(), 2.dp.toPx()))),
+                )
+            }
+        }
+    }
+}
+
+/** 범례 한 항목 — 10 dp 색 견본과 짧은 말 하나. */
+@Composable
+private fun LegendItem(word: String, swatch: @Composable () -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+        swatch()
+        Text(word, color = Trex.c.text2, fontSize = 10.5.sp, maxLines = 1)
     }
 }
 

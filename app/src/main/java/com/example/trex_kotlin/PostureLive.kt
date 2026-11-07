@@ -1497,6 +1497,9 @@ fun PostureLiveSessionScreen(
                         else -> null
                     },
                     countNoteActive = !validation && (repHalfPending || sideTallies?.next(mode == CoachMode.COACH) != null),
+                    // §125b(UI 감사 A15·A16): 자세로 뺀 회는 ✕ 배지·숫자 점멸, 세트 진행은 점 — 글자 대신 기호. 검증 모드는 숫자를 숨기므로 배지도 없다
+                    excludedCount = if (validation) 0 else repIncorrect,
+                    setIndex = setLabel.substringBefore("/").trim().toIntOrNull(), setTotal = setLabel.substringAfter("/").trim().substringBefore(" ").toIntOrNull(),
                     elapsedSec = setElapsedSec,
                     modeLabel = if (mode == CoachMode.TRACK) "TRACK" else "COACH",
                     // 호흡(§5): 카운터 위상을 따라가는 표시. 카운터 없는 시간 목표(플랭크)는 "자연스럽게 호흡". 검증 모드·사람 없음·쉼이면 없음

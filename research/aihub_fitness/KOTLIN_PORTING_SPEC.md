@@ -2154,6 +2154,8 @@ PC Android 에뮬레이터의 완료 화면 레이아웃 검사 1건과 실제 �
 세 칩으로 바꾼다. 0/50/100 색 기준은 #DEDED9/#C7E26B/#759848이며, 실제 재질은
 선형 색 공간에서 구간 보간한다. 0점 기본 회색, 완료 사용 부위는 같은 그린 최대
 강조를 사용한다. 선택/세션과 누적 피로 분리/계산식은 변경하지 않는다.
+(2026-11-07 UI 감사 A25 로 피로 램프는 #DEDED9/#FFC24B/#D78B28 경고 계열로 바뀌었다 —
+`docs/MUSCLE_LOAD_IMPLEMENTATION.md` §13. 완료 사용 부위의 그린 #759848 은 그대로다.)
 
 실제 앱 정적 atlas를 Blender로 재구성해 돌출 위치를 확인했다. 둔부 사이의 둥근
 하단은 둔근이 아니라 몸통 연결층이었다. 새 조각을 덧대는 대신 기존 연결층의
@@ -2186,7 +2188,8 @@ PC Chromium 실제 자산 두 모드 색 반영/해제/회전 검사를 통과�
 글자는 바 아래 8dp 간격으로 왼쪽 ‘낮음’, 오른쪽 ‘높음’만 표시한다. ‘중간’은
 제거한다. 3D 색상과 피로 계산, 완료 화면, 입력 처리는 변경하지 않는다.
 일반 APK 빌드로 오류를 확인하고 실휴대폰은 화면 조작 없이 업데이트 설치만 한다.
-설치 증빙: `outputs/muscle-spectrum/deployment.json`.
+설치 증빙: `outputs/muscle-spectrum/deployment.json`. 바의 색은 2026-11-07 UI 감사
+A25 에서 회색→호박→주황(경고 계열)으로 바뀌었다 — `docs/MUSCLE_LOAD_IMPLEMENTATION.md` §13.
 
 
 ## §89. 운동 시작 전 촬영 범위 확인 완화 (2026-09-29)
@@ -3508,3 +3511,147 @@ Verification: app JVM 914 tests passed (zero failures/errors/skips); assembleDeb
 **화면(사용자 결정 2026-11-07 "날씨 그림은 기존 것으로 유지하고 아이콘은 전부 제거, 기존 레이아웃은 유지하고 미세먼지만 추가. 미세먼지와 강수량은 조금·보통·많음·상당히 많음·매우 많음으로" — 처음엔 '기존' 을 weather 카드의 테마 이모지로 읽어 ☀️ 로 바꿨다가, 같은 날 "main 에 있는 미세먼지 없을 때 그 날씨 표현으로" 로 바로잡았다).** 홈 한 줄(§108f)의 자리·순서·날씨 그림은 main 그대로 — `하늘색 동그라미 아이콘(날씨·낮밤) · 지역 · 기온 · 날씨 · 강수량 <단계> · 미세먼지 <단계>`. 줄 끝 ›·강수 물방울·오류 구름·시트의 지역 핀/현재 위치/체크 아이콘은 전부 뺐다(체크는 '선택됨' 글자). 시트 머리도 main 의 아이콘이고 그 아래 `강수량 <단계> (x.x mm) · 미세먼지 <단계> (n µg/m³)` 한 줄, 없으면 "미세먼지 정보 없음". 출처 줄은 "날씨·미세먼지 정보: Open-Meteo.com (CC BY 4.0, 미세먼지는 CAMS)".
 
 **단계 말(`precipitationLevel`·`dustLevel`, `WeatherModels.kt`, `WeatherLevelsTest`).** 숫자 대신 말로 — 강수량 mm 와 PM10 µg/m³ 는 운동 전에 읽는 사람에게 뜻이 없고, 사용자 요청도 말이다. 띠는 우리가 정하지 않고 공식 구분을 빌린다. *강수량(지난 한 시간 mm, Open-Meteo `current.precipitation`)* — 기상청 시간당 강수 강도: 0 없음 · 3 미만 조금(약한 비) · 3~15 보통 · 15~30 많음(강한 비) · 30~50 상당히 많음(매우 강한 비) · 50 이상 매우 많음. 0 을 '조금' 이라 하지 않는다. *미세먼지(PM10)* — 환경부 예보 등급: ~30 조금(좋음) · ~80 보통 · ~150 많음(나쁨) · ~300 상당히 많음(매우 나쁨·주의보 150) · 300 초과 매우 많음(경보 300).
+
+## §130. AIHub 밖 운동 46종 카탈로그 확장 — 자세 평가 없이, 근육·기구 추가 (2026-11-07, 사용자 결정)
+
+**배경.** 사용자가 가져온 자료집(운동 55 · 루틴 60 · 사용 근육 문헌 31+17 · 피로 문헌 20, 기준 커밋 `0c23dc8f`)의 인용 67건을 전부 원문과 대조했다 — 링크·수치는 전부 맞고, 인용 논문이 문서의 근육 역할 분류와 **반대**인 종목이 셋(의자 스쿼트 전경골근 > 대퇴직근 · 리버스 런지 대둔근 미달/중둔근 도달 · 싱글레그 브릿지 햄스트링 75 % > 대둔근 51 %). 검증·판정·대응표는 `docs/EXERCISE_EXPANSION_46.md`.
+
+**결정(사용자 2026-11-07).** ① AIHub 26종 밖의 운동도 카탈로그에 넣는다 — 단 **자세 교정은 그 종목의 규칙·카운터가 개발될 때까지 비활성화**. ② 없는 근육·기구는 앱에 추가한다. ③ 자료의 피로 모델 결론은 지지/기각을 근거로 판단한다 — "기록 → 생리적 피로 %" 변환이 없다는 전반부는 지지, "감쇠·점수를 미측정으로 표시" 라는 후반부는 기각(앱의 양은 잔여 부하 **지수**이지 측정이 아니며, 인용 논문들은 감쇠의 존재·방향을 지지하고 요구하는 것은 RIR·중량 **입력 추가**다). §80·§81 의 감쇠·점수는 유지한다.
+
+**구현.**
+- `WorkoutCatalog.kt` 72종(`posture=false` 46) — `postureExerciseMap`·`ExerciseProfiles` 에 없어 `postureSupported()` 거짓 → "미지원", 세션은 카메라 없이. 2026-08 카탈로그 이름은 같은 철자로 복귀, `retiredWorkoutCategories` 에서 제거. `export_ios_resources.py` 72, `catalog.json` 재생성.
+- `Muscle` +4(회전근개·능형근·정강이 앞·요방형근, 끝에 — 이름 저장). 2D 근육도에는 손 그린 근사 영역(`export_atlas_2d.py` `MANUAL_REGIONS`, 덮는 근육 위에 겹침 — 사용자 요청) → `test_muscle_atlas_2d.py` 44키. `Equipment` +8(BAND·CABLE·LEG_PRESS·LEG_CURL_MACHINE·CHEST_PRESS_MACHINE·ROW_MACHINE·STABILITY_BALL·RACK) — 온보딩 31개 라벨 비트에 대응(`loadEquipment`), 목록 순서 불변.
+- `MuscleLoadCatalog` +46 — 출처는 PubMed ID 또는 전체 URL, 역할 초기값 가중치(EMG % 아님), 한쪽씩 하는 종목 PAIR · 교대 EACH · 버티기/운반 SECONDS(한쪽씩 버티는 종목은 좌우 같은 부하 — 어느 쪽인지 모름). 밴드·머신·케이블은 장력/표시 중량을 모른다(B=1).
+- 테스트: `MuscleLoadTest`(72 · 출처 URL 형식 · 단위 · 세 종목의 논문 결과) · `PostureExerciseMapTest`(map ⊂ 카탈로그, 확장 46 전부 posture=false·프로필 없음) · `PersonalizationTest`(프로필 26 ⊂ 카탈로그 72).
+
+**넣지 않은 것.** 루틴 60개, 46종 가이드, 외부 중량·RIR 입력(자료 5장), "근육 피로도" 화면 이름(지수가 측정값처럼 읽힌다는 지적은 타당 — 제품 결정으로 남김).
+
+## §131. 격차 페이지(디자인 캔버스 "TREX 격차 페이지 디자인" v2) — 세트 기록·달력·업적·체중·2층 카탈로그·루틴·설정·물 (2026-11-07, 사용자 요청 "이 아키펙트로 앱의 페이지들을 추가")
+
+**근거.** 디자인 v2(2026-11-05 UX 검토 반영, P1~P18 + 빈 상태 모음) — 공통 규칙: 탭 대상 44 px·글자 12 px 이상·주요 행동 하나를 하단 고정·고급 입력(RPE·메모)은 접어 둠·빈 상태는 이유 한 줄 + 다음 행동. **보상·XP 는 자세 점수·자동 카운트와 무관**(디자인 범례 = 원칙 #1). 서버 쪽은 `docs/SERVER_REQUIREMENTS_PAGES_V2.md`.
+
+**모델(`RecordModels.kt`, 공유).** `SetEntry`(세트 · kg · 회 · 초 · 카메라 횟수 · RPE · 메모 · 완료) — 사용자가 적은 횟수가 기록 기준, 카메라 값만 있으면 '추정'(볼륨에 kg 을 곱하지 않는다). `WorkoutHistoryItem.sets`·`source`("session"|"manual"). 체중 `BodyWeightEntry`, XP `XpEntry`(키로 멱등), 배지 12종 `badges(RewardFacts)`, 직접 추가 종목 `CustomExercise`, 주간 루틴 `WeeklyRoutine`(요일→"preset:<id>"|"saved:<id>"), 알림 `NotifyPrefs`, 보관 기간 `RetentionOptions`(7·90·365·제한 없음, **기본 제한 없음** — 예전 7일 고정을 사용자 설정으로), 연속 `targetDayStreak`(목표 요일 기준 — 계획된 휴식·멈춘 날은 건너뛴다, 요일 설정 없으면 매일), Epley 1RM(10회 이하만), CSV/JSON 내보내기(자세 원본·음식 사진 제외).
+
+**저장·동기화.** `TrexStore` 키 `body_weight`·`xp`·`custom_exercises`·`weekly_routine`·`record_retention`·`streak_pause`(백업 항목, `SyncRules.KEYS`) · `notify_prefs`·`weekly_applied_day`(기기). 근육 피로도 창은 그대로 7일(`workoutRetentionStart`), 기록 보관만 설정을 따른다(`retainVisibleWorkoutHistory(today, days)`).
+
+**화면.** P1 `RecordScreen`(월 달력·운동한 날·계획된 휴식·연속·이번 주 목표 / 통계 이번 주·달·해·날짜별 세트·부위 비중·많이 한 종목) · P2 `ManualRecordSheet`(날짜·종목·세트·RPE·메모, 첫 수동 기록 +20 XP, PR 안내) · P3 `SessionSetInputCard`(휴식 화면: 지난번 '그대로 채우기'·카메라 값 호박색·+30초; 휴식은 앱이 뒤로 가도 시계가 흐른다 — 휴식 끝 알림) · P4 `ExerciseDetailScreen`(최고 무게·추정 1RM·추이·세트 이력·사용 근육·근거 링크·가이드) · P5 완료 보상 띠(PR·XP·연속·새 배지·볼륨 타일) · P6 `AchievementsScreen`(레벨·연속 멈추기 최대 14일·배지·XP 내역) · P7 `BodyWeightScreen` · P8 `CatalogScreen`(1층 자세 교정 지원 16 / 2층 기록 전용 56+내 종목, 부위·기구 칩, 검색 없음 → 직접 추가) · P9 `CustomExerciseSheet`(`MuscleLoadCatalog.custom` 에 고른 근육 프로필) · P10~P12 `RoutinesScreen`(주간 요일 슬롯·추천 프리셋 60개 `routines/RoutinePresets.kt`(생성, 정본 `research/routines/routine_presets.json`, `tools/gen_routine_presets.py --check`)·미리 보기·보관함; 날이 바뀌면 그 요일 루틴을 오늘 루틴으로) · P13 설정 기록 묶음 · P14 `RetentionSheet` · P15 `ExportSheet`(`rememberTextSharer`) · P16 `NotifySheet`(플랫폼 짝 `ReminderScheduler` — Android `AndroidReminders.kt` AlarmManager+채널, iPhone 미구현) · P17 `WaterCard`(기존 `water` 항목, 250 ml·8잔) · P18 홈(루틴 이름·루틴 바꾸기·연속 운동·이번 주 볼륨).
+
+**근육도.** 2D 근육도에 §130 의 네 근육 영역을 손으로 그려 넣었다(`export_atlas_2d.py` `MANUAL_REGIONS`, 덮는 근육 위에 겹침, 44키).
+
+**하지 않은 것.** 외부 중량·RIR 의 부하 모델 반영, 재부팅 뒤 알림 재예약·iPhone 알림, 46종 가이드, 운동 탭 행의 kg 목표, 커뮤니티 카드의 PR·XP(서버 스키마).
+
+## §132. 루틴 추천·홈 카드의 그림 중심 부분 변경 (2026-11-07, 사용자 요청 "Liftoff 처럼 글보다 그림으로 한눈에, 목록을 쉽게 고르게")
+
+**참조한 넷(사용자 요청 'UI/UX top 4').** ① Liftoff — 종목마다 그림·근육 그림, 등급·XP 배지로 글을 대신함. ② Nike Training Club — 부위·장비·수준으로 거른 그림 카드에 시간·강도 라벨, 세부는 눌러서. ③ Hevy — 장비별 루틴 묶음(맨몸·밴드·덤벨·헬스장) 타일이 첫 선택이고 루틴마다 '저장' 한 번. ④ NN/g 카드 대 목록 — 둘러보기는 카드(시각 구분), 비교·정렬은 목록. 그래서 **루틴은 그림 카드, 루틴 안의 종목은 비교용 목록**이다(`RoutinePresetUi.kt`).
+
+**추천 탭(`PresetsTab`).** 고르는 순서 수준 → 장비 → 부위. ① **초보/전체 토글**(`SegmentedTabs` filled) — 초보 = 자료집 수준의 **상한이 중급이 아닌 것**(입문·초급·초중급 43개, `RoutinePreset.beginnerFriendly`), 초중급~중급·중급 17개는 전체에서만. 초급·입문(13개)만 남기면 목표 8개가 통째로 사라지고 자료집이 '4주 스타터'·'바쁜 날 짧은 전신' 에 초중급을 매겼으므로 이 경계. 초보 보기는 쉬운 수준이 앞(`filtered` 가 `levelRank` 로 정렬). 처음 쓰는 사람(운동한 날 5일 미만)은 초보로 시작. ② 장비 타일 5개(그림 하나씩, 고른 것만 primary). ③ 부위 칩 — 홈 카드와 같은 `assets/routine/` 그림을 둥글게(전신·하체·상체·코어, 복근은 코어). 목표 칩 줄은 뺐다 — 목록이 **목표별 묶음**(제목 + 자료의 주 N회 안내, 부위별 기본 R01~R16 은 맨 뒤)이라 장비를 고르면 목표마다 카드 하나만 남는다(같은 제목 넷이 줄지어 보이지 않게). 카드 = 부위 그림(시간을 그림 위에) + 제목 + 수준 배지(초보 가능 primary 톤 / 중급 상한 경고 톤) + 장비(장비 전체일 때만) + 종목 수 + '자세 교정 n/총' + 배정 요일, 달력 아이콘 = 요일에 넣기. 빈 결과는 '전체 수준 보기' 로 돌아가는 카드.
+
+**'기록 전용' 꼬리표 제거(루틴 화면).** 주간 루틴 행·미리 보기 종목 행은 **자세 교정 지원 종목에만** `PostureSupportPill`(카메라 글리프)을 붙이고 나머지는 아무것도 붙이지 않는다(사용자 요청 4). 카탈로그(2층)·수동 기록 시트·종목 상세의 '기록 전용' 은 그대로 — 거기선 층 구분이 의미라서.
+
+**홈.** '오늘 운동' 카드의 '루틴 바꾸기' 글자 제거(주간 루틴은 운동 탭 달력 아이콘). 아래 두 칸 — **연속 운동 → 운동 기록 화면**(예전 업적), **오늘 물**(예전 '이번 주 볼륨' 자리 — L·잔 수·물방울 8개, '+' 로 한 잔, 누르면 식단 탭 물 카드). 볼륨은 기록 화면 통계에 남아 있다. 실기기(SM-N976N) 확인: 홈·물 +·연속 운동 → 기록·추천 초보/전체·장비/부위 칩·미리 보기 시트·주간 루틴 행.
+
+## §133. UI 감사 P1 구현 — 그림·움직임·배치 기준(K1~K10)의 첫 적용 (2026-11-07, 사용자 결정 "기본안으로 시작")
+
+**근거.** `docs/UI_DESIGN_AUDIT_2026-11-07.md` — 자료(NN/g 아이콘·애니, Apple HIG Workouts, Blascheck 2018, Nishi 2024·Yang 2022, Nunes & Drèze 2006, Hoober 2013)와 저장소 실측(§125·§125a·§129, 날씨 이모지 오독)으로 세운 기준 K1~K10. §8 의 결정 9건은 전부 기본안(§125a 승인, 완료 화면 '기록 먼저', 내비 라벨 유지, 피로도 경고 램프, 배지 글리프, 사진 식단 색 3종, 글쓰기 위치 유지, GIF 재착색 보류).
+
+**§125b — 세션 '이 회 제외' 기호(A15·A16, `LiveWorkoutHud`).** `excludedCount`(= `repIncorrect`, 검증 모드는 0)가 늘 때마다 큰 숫자 옆 **빨간 ✕ 배지**(누계가 있는 동안 남고 직후 1.2 s 는 1.35배)와 **숫자 붉은 점멸 1.2 s**(`drawWithContent` + `SrcAtop`, 그리기 단계). 빨강 = `SkeletonStage.WARN` 과 같은 뜻(회를 뺀 판정, §125). 세트 진행은 큰 숫자 아래 **점 ●●○**(`setIndex/setTotal`, 2~7세트) — 윗줄 '2 / 3 세트' 글자는 접근성·완료 화면용으로 남는다. `PostureLiveSessionScreen` 에는 지역 상태를 더하지 않았다(기존 `repIncorrect`·`setLabel` 만 넘김).
+
+**휴식 화면(A14, `SessionTransitionScreen`).** 남은 시간이 1차 — 상단 중앙 40 sp 숫자(일시정지면 warn 색), 오른쪽 위 64 dp 링 제거. '다음 세트' 는 `RestProgressCta`: 왼쪽부터 primary 가 진행 비율만큼 채워지고 1초 선형 보간으로 이어진다(값 변화 알림, K4). `SessionSetInputCard(compact = true)` 는 방금 끝낸 세트 한 줄만 펼치고 '전체 N세트 보기' 로 연다.
+
+**완료 화면(A21, `SessionCompleteScreen`).** 순서 = 체크·제목 → **수치 타일**(완료 세트·총 시간·볼륨·예상 소모, `countUp` 400 ms 를 0/120/240/360 ms 로 순차) → **보상 한 칸**(PR 한 줄 + XP 바 + 새 배지 글리프 칩) → 세트 확인 → 근육도 → 자세 블록. 면책 문장은 ⓘ 뒤로(K2). 보상은 기록 수치 뒤(K9).
+
+**목록 글리프(A6·A7·A8, `BodyGlyph.kt`).** 부위 실루엣 글리프 `BodyPartGlyph(part)` — 전신·하체·상체·코어 넷(가슴·등·어깨·팔 → 상체, 복근 → 코어, 유산소·회복 → 전신). Canvas 뿐이라 iPhone 도 그린다(`android-sources.txt`). 운동 탭 행: 글리프(완료는 체크) + `SetDots` + 드래그 손잡이 ≡, 자세 스위치는 **지원 종목에만**(카메라 글리프 + '자세 교정'/시험 라벨, '미지원' 글자 제거). 카탈로그: 부위 그림 칩(`PartChips(parts = catalogParts)` — 하체·상체·코어·유산소, 상체를 고르면 가슴·등·어깨·팔 세부 칩 한 줄), 행 글리프, 행의 '기록 전용' 칩 제거(층 헤더가 말함), 배너 제거(헤더 노트로).
+
+**종목 상세(A11).** 머리 그림 150 dp — 가이드 16종은 GIF 첫 프레임(`AssetArtwork`, `exercise_guides/` 도 절반 축소), 나머지는 글리프 96 dp. '사용 근육' 은 2D 근육도(`MuscleAtlasWebView` session 모드, 주 근육(가중치 ≥ .75) = primary) + 주요/보조 한 줄, 근거·EMG 각주·링크는 ⓘ 뒤.
+
+**값 변화 애니(A4·A5·A24).** `MorphNav` 슬롯 **폭**도 260 ms(알파만 애니고 폭은 즉시 바뀌어 끊기던 것). 홈 물방울은 새로 찬 잔이 120 ms 로 커진다. `TrackBar(animate = true)` 는 처음 0 에서 400 ms 로 차오른다(업적 레벨 바).
+
+**색(A25, `viewer.js`·`MuscleLoadScreen`).** 피로 램프 회색 → 호박 #FFC24B → 주황 #D78B28(경고 계열), 세션 모드 '사용 근육' 은 #759848 유지 — 색 = 뜻. 세부는 `docs/MUSCLE_LOAD_IMPLEMENTATION.md` §13.
+
+**사진 식단(A27, `PhotoFoodSheet`).** 이름표 색 4 → 3(모델·기억 = primary, 내가 고름 = 흰, 이름 없음 = 점선) + 범례 한 줄, 사용법 문단은 앱 실행당 첫 1회만 펼치고 ⓘ 로 토글, 분석 진행률은 불확정 막대(가짜 증가 제거, K8).
+
+**하지 않은 것(P2 이후).** 홈 '오늘 한눈' 띠(A1)·운동한 날 줄(A2)·피로도 카드 글리프(A3)·루틴 행 글리프(A9/A10)·준비 패널 접기(A19)·가이드 범례(A20)·기록 전환(A22/A23)·토글 이동(A17)·HUD 숫자 크기 실측(A18)·준비 링 보간(A12).
+
+**§133a — P2 (같은 날 저녁, 사용자 "P2 이어서").** 홈 '오늘 한눈' 띠 `HomeGlanceStrip`(A1): 운동 세트(오늘 루틴의 완료 세트/전체)·섭취 kcal·물 잔의 도넛 셋(Blascheck 2018 — 도넛·막대가 가장 빨리 읽힘), 물 도넛의 + 는 한 잔 더; kcal 고리는 띠로 옮기고 `HomeNutrition` 은 탄·단·지 막대만(같은 수치가 두 번 경쟁하지 않게, K1). '운동한 날' 은 원·날짜·✓ 세 줄에서 점 한 줄로(A2). 홈 아래 오른쪽 칸은 물 대신 **근육 피로도**(A3) — 가장 피로한 근육의 부위를 글리프에 색칠(`bodyPartOfMuscle`) + 점수·근육 이름; 전폭 `MuscleLoadHomeCard` 는 홈에서 빠지고 기록 통계에만 남는다. 루틴 주간·미리 보기 행에 부위 글리프(A9), 요일에 넣기의 '다른 루틴 있는 요일' 은 원 안 작은 점 + 범례 한 줄(A10). 카메라 준비 패널(A19)은 배치 한 줄·지금 안 잡히는 이유·바닥 범위(원칙 #5)만 늘 보이고 시작 약속·세는 조건·옷 안내는 '자세히 ▾' 뒤(내용은 그대로). 운동 방법 시트(A20)는 시범 그림 아래 색 범례(빨강 = 주 근육 · 주황 = 보조·안정 · "자극 순위가 아니에요"). 기록 달력의 달 넘김은 200 ms 슬라이드(방향 신호, A22), 통계의 날짜별 세트 막대는 300 ms 로 자라고 볼륨의 '추정 N세트' 는 호박 칩(A23). **하지 않은 것**: A17 토글 이동(사용자 결정 2026-11-07 "오른쪽 위 유지" — 10-23 요청 그대로, 폐기), A18 HUD 숫자 크기(2.5 m 실측 필요), A12(준비 링은 이미 100 ms 틱 + 240 ms 보간이라 충분).
+
+**휴식 화면 실기기 수정(같은 날).** '지난번 · 그대로 채우기' 카드의 `GhostButton` 에 폭(124 dp)을 주지 않아 왼쪽 글 칸이 한 글자 폭으로 세로 배열됐다('+30초' 와 같은 함정 — `GhostButton` 안쪽 Row 가 fillMaxWidth). `RestProgressCta` 의 바탕을 반투명(primary α .66)에서 **불투명**(`lerp(bg, primary, .66)`)으로 — 반투명 표면 밑으로 그림자가 비쳐 안쪽만 밝은 띠로 보였다.
+
+## §134. 종목 데이터 근거 감사 + 근육 글리프 + 홈·기록·상세 손질 (2026-11-07 저녁, 사용자 요청 4건)
+
+**맨몸 종목의 kg(사용자 질문 "맨몸 스쿼트는 kg 을 어떻게?" → 검색: Hevy 규칙).** 종목마다 하중 종류 `ExerciseLoadKind`(`ExerciseLoadKind.kt`): EXTERNAL(외부 중량) · BODYWEIGHT(맨몸 — kg 은 **추가 중량 '+kg'**) · BODYWEIGHT_FULL(체중 전부를 드는 풀업·딥스 — `FULL_BODYWEIGHT_EXERCISES`) · TIMED(버티기·운반, `LoadUnit.SECONDS`). 판정은 `MuscleLoadCatalog` 의 `bodyweight`·`unit` 에서. `SetEntry.bodyKg`(JSON `bw`)는 BODYWEIGHT_FULL 종목에서 기록 당시 체중(`latestBodyWeight`, 없으면 null)을 남기고, `loadKg = bodyKg + kg`·`volumeKg = loadKg × reps` — 스쿼트·푸쉬업처럼 체중 일부만 드는 종목은 **체중을 넣지 않는다**(푸쉬업 64~75 % 측정은 있으나 스쿼트는 없음, 원칙 #1). 세트 입력 행·수동 기록의 kg 머리글은 종류에 따라 'kg'/'+kg'. 1RM(Epley)은 EXTERNAL 에만(`supportsOneRepMax`), 맨몸 종목 상세는 '최고 추가 중량 · 최다 횟수' 로. 근육 가중치 근거가 약한 프로필(`evidenceWeak` — 출처 없음 또는 evidence 에 추론·유추·적용·추정·편집·유사)은 종목 상세 '사용 근육' 머리줄에 **'추정' 칩**(원칙 #2). 종목별 감사표는 `docs/EXERCISE_DATA_AUDIT_2026-11-07.md`.
+
+**근육 글리프(사용자 요청 2 "이미지 퀄리티 개선 — 디자인 검색").** 막대 사람(`BodyGlyph.kt`, 삭제)을 **2D 근육도의 실루엣 + 근육 영역**(`MuscleGlyph.kt` ← 생성 파일 `MuscleGlyphPaths.kt`, `tools/gen_muscle_glyph_paths.py` 가 `atlas-2d.js` 를 RDP 1.5 로 줄여 16.7 KB)으로 바꿨다 — Hevy·Fitbod·Muscle Map 류의 '회색 실루엣 + 색칠한 근육' 관례(앞·뒷면 나란히). 행은 종목의 주 근육(가중치 ≥ .75, 없으면 상위 2개)을 primary 로, 홈 '근육 피로도' 칸은 가장 피로한 근육을 **경고 색**(A25)으로. 경로는 EvenOdd 로 채운다(구멍). 프로필 없는 직접 추가 종목은 부위 대표 근육(`partMuscleKeys`).
+
+**홈(사용자 요청 3).** '오늘 한눈' 띠의 섭취 도넛 안에 목표(`/ 2260`), 오른쪽에 **탄·단·지 작은 링**(16 dp, 수치 없이, 색은 식단 탭 막대와 같음), 아래 탄단지 카드(`HomeNutrition`) 제거.
+
+**기록·상세(사용자 요청 4).** 기록 행의 '타이머·기록 전용·자세 교정' 칩 제거. 종목 상세는 제목만(부위·기구 줄 제거), 머리 그림 카드 제거, **'사용 근육' 카드가 맨 위**(지원·루틴·추정 표시는 그 머리줄에).
+
+**§134a — 감사 반영(같은 날 저녁, `docs/EXERCISE_DATA_AUDIT_2026-11-07.md` §8).** 데이터: 데드버그·버드독 `LoadUnit.EACH`(교대 동작, §130 규칙 — PAIR 로는 같은 '8회' 가 바이시클보다 쪽당 2배), 행잉 레그 레이즈·Y 레이즈 `body=true`. 화면: 맨몸 버티기 5종은 kg 칸 닫힘(`exerciseShowsKg`), PAIR 종목 머리글 '회(쪽당)'·좌우 버티기 '초(한쪽)'(`countLabelFor` — 엔진이 적은 수를 쪽당으로 읽는 뜻을 화면이 말한다), 맨몸 PR·요약 줄의 '+kg', `evidenceWeak` 는 a(추론·유추·적용·추정·편집·유사)+b(미확보)+c(동료심사 출처 없음 — PubMed·DOI·MDPI 밖) = 39종(테스트가 잠금). kcal 은 식을 바꾸지 않고 완료 화면 ⓘ·통계 배너에 "분당 고정값 어림, 체중·강도 미반영" 고지(MET×체중 식은 사용자 결정). 피로도 화면 부제에 가정값 고지, `MUSCLE_LOAD_IMPLEMENTATION.md` §3 의 90일 서술을 7일로. 카탈로그 기구 칩에 '밴드'(밴드 8종이 '맨몸' 으로 접히던 것). `Workout.loadLabel()`(죽은 코드) 삭제. `MuscleLoadTest` 가 '초'↔SECONDS 1:1 과 PAIR/EACH = 좌우 이름을 잠근다.
+
+**§134b — 소모 kcal 을 MET × 체중 식으로 (2026-11-07 밤, 사용자 결정 "MET 공식으로 바꿔").** 감사 §3 의 '분류별 분당 상수(유산소 8·하체 7·상체 6·코어 5·그 밖 4) × 가동 분' 을 버리고 **kcal/분 = MET × 3.5 × 체중(kg) / 200**(ACSM 대사 계산 — 1 MET = 3.5 mL O₂/kg/분, O₂ 1 L ≈ 5 kcal)으로 바꿨다(`ExerciseMet.kt`·`WorkoutMath.estimatedCalories`·`estimatedKcal`). MET 는 **2024 Adult Compendium of Physical Activities**(Herrmann SD 외, J Sport Health Sci 2024;13(1):6-12, doi 10.1016/j.jshs.2023.10.010, PubMed 38242596 — 행은 pacompendium.com 의 Conditioning Exercise·Running·Walking·Sports 페이지에서 옮김). 카탈로그 72종 + 퇴역 종목 18종(`retiredWorkoutCategories`)을 이름으로 행에 묶었다(`ExerciseMet.byName` — `ExerciseMetTest` 가 카탈로그·퇴역·기본 계획 전부를 잠근다): 바벨·덤벨 스쿼트/데드리프트 02052 5.0 · 그 밖의 중량·머신·케이블·밴드 02054 3.5 · 선 자세 맨몸(런지·푸쉬업·브릿지·스텝업·스탠딩 크런치) 02056 3.0 · 당기는 맨몸(풀업·딥스·인버티드 로우·행잉·캡틴체어) 02022 3.8 · 바닥 코어(플랭크·크런치·레이즈·트위스트) 02024 2.8 · 등·네발 운동(버드독·데드버그·Y·I-Y-T·네발기기 힙 익스텐션) 02030 3.5 · 퇴역 유산소(버피·점핑잭·마운틴 클라이머·스키터) 02020 7.5, 하이 니 12025 4.8, 제자리 걷기 17190 3.8(전용 행 없음), 섀도 복싱 15125 9.3 · 스트레칭 02101 2.3. 운반(파머스·수트케이스 캐리)은 전용 행이 없어 02054. 내가 추가한 종목은 분류 기본값(하체·상체·부위 02054, 코어·복근 02024, 유산소 12010 6.0, 회복 02101, 그 밖 02064 3.8).
+**시간 기준.** Compendium 값은 **휴식을 포함한 활동 평균**(저항운동 3.5 METs 는 세트 사이 휴식을 포함한 세션 평균)이라 가동 시간이 아니라 휴식 포함 시간을 쓴다. 세션: 총 경과(준비·휴식 포함, 일시정지 제외)를 종목의 가동 시간 비율로 나눠 종목별 MET 를 적용(`sessionKcalByWorkout` — 세션은 REST 칸을 종목별로 재지 않는다; 완료 화면·기록·오운완 카드가 같은 식). 직접 적은 기록·옛 기록: 세트 가동 초(횟수 세트는 **세트당 30초** 가정) + 세트 사이 설정 휴식(`offlineActivitySeconds`, `WorkoutPacing.restSeconds`). 체중은 `profile.weightKg`(체중 기록이 갱신, 기본 `DEFAULT_BODY_KG` 65 — 테스트가 `UserProfile` 기본값과 같음을 잠근다). 기록 통계의 '시간' 은 그대로 가동 시간이라 kcal 이 그보다 긴 시간을 기준으로 한다는 것을 배너가 밝힌다.
+**옛 기록 이관.** 값이 옛 식과 **정확히 같은** 항목만 MET 식으로 고쳐 적는다(`migrateLegacyCalories` — 앱 시작 `init`·서버 `reloadFromStore` 때, `TrexAppState.migrateHistoryCalories`; 체중은 그 날짜 이전 마지막 체중 기록, 없으면 프로필). 분류 없는 항목(옛 식을 되짚을 수 없다)과 가동 0초 세션 항목(시간을 지어내지 않는다)은 둔다. 새 식 값은 옛 식과 일치하지 않으므로 다시 불러도 같다(`RecordModelsTest`). 수치 변화 예(70 kg, 기본 스쿼트 12회×3세트, 가동 144초): 옛 17 kcal → 새 39 kcal(휴식 240초를 더한 384초 × 6.1 kcal/분).
+**화면·한계.** 완료 화면 ⓘ 와 기록 통계 배너가 식·출처·쓰인 체중·30초 가정을 밝힌다; 라벨은 그대로 '예상/추정'. 강도(중량·RPE·심박)는 반영하지 않는다 — Compendium 행이 '8~15회 다종목' 같은 활동 평균이라 무거운 세트와 가벼운 세트가 같은 값이다. `ExerciseMet.kt` 는 `ios-ui/android-sources.txt` 에 올라 iPhone 도 같은 표를 쓴다.
+
+## §135. Reviewed guides for all 72 exercises (2026-11-07)
+
+Input: the reviewed `roles-v3` artwork, Korean copy and muscle-role evidence for
+PR #65's 72 catalog exercises. `research/exercise_guides/guides.ko.json` preserves
+the final source metadata, each asset's reviewed SHA-256, role limitations and
+the registry path. `tools/generate_exercise_guides.py` generates `ExerciseGuides.kt`
+without runtime JSON parsing; one factory per exercise avoids JVM method-size
+limits. `--check` detects a stale registry or changed/missing artwork. The existing
+16 asset paths remain stable; 56 exact-variant assets extend the catalog.
+
+`ExerciseGuides.forName(String): ExerciseGuide?` retains exact matching and null
+for unknown/custom exercises. Preparation introductions retain their per-exercise
+seen state. The existing GIF renderer and lifecycle pause behavior are reused.
+All 72 GIFs are 640 × 640 with 900 ms frames: 71 two-pose examples and one
+three-pose I-Y-T example. Hold exercises explicitly tell the reader to maintain
+the pose instead of moving repeatedly with the GIF.
+
+The exercise detail page exposes the guide near the top. Its muscle summary and
+the guide's third tab use the same evidence-linked role data. The guide also shows
+the introduction, setup, steps, breathing, cautions, image caveats and sources.
+Red/orange represent visual emphasis/cooperation, not measured activation or
+training efficacy. Main/assist/stabilize are functional roles: a hold can have
+only stabilizers despite red visual emphasis. Direct-task EMG, related-variant
+evidence and anatomical inference have different labels; per-muscle source
+numbers resolve to the full link list. Occluded/deep regions remain in text.
+This does not change training-load weights or the 16-exercise camera scope.
+
+Happy path: catalog name → exact guide → packaged GIF → scrollable copy and
+muscle/source tab. Failure path: unknown name has no guide button; unreadable GIF
+uses the existing failure placeholder while the text remains available. The
+generator checks file hashes before producing code, so incomplete source copies
+fail validation. Repeated generation is deterministic. The iOS resource exporter
+is updated to 72 guides; native iOS compilation requires macOS.
+
+Validation and device evidence are recorded in `docs/EXERCISE_GUIDE_APP_72.md`.
+
+## §136 — Guide simplification and complete visual audit (2026-11-07)
+
+The user requested removal of the image-reading block, muscle/evidence tab and
+small explanation below each exercise introduction, and a review of all 72 GIFs
+after identifying awkward bird-dog/dead-bug poses. `ExerciseGuideSheet` now renders
+two tabs (instructions/cautions); old saved tab index 2 is clamped to 1 so restored
+state cannot produce an empty body. Red/orange swatches, introductory sentence,
+setup, movement, breathing and cautions remain. `ExerciseGuide` source evidence
+and `GuideMuscleSummary` in the exercise detail are retained for traceability.
+
+Input: the existing exact-name registry, GIF and Korean guide variant. Output:
+the same guide routes with fewer explanatory blocks and 13 corrected GIF assets.
+All 72 original GIFs were decoded and visually inspected. Structural decode tests
+alone had missed panel fragments, inconsistent support points and equipment.
+The audit replaces lunges (three), step-up, calf raise, lat pulldown, dumbbell
+bench press, machine chest press, face pull, I-Y-T, dead bug, bird dog and scissor
+cross. It retains the other 59. Native outputs, exact prompts, per-guide findings
+and SHA-256 revisions are committed under `research/exercise_guides/`.
+
+Happy path: open any guide, view its GIF, scroll instructions, switch to cautions.
+Failure path: unreadable media retains the existing placeholder and readable text;
+unknown names still have no guide action. Reopening a sheet resets by guide name;
+restored old tab state is bounded. No workout records, camera gates or training
+load weights change. Generated poses retain minor drawing drift and are not motion
+capture; the audit does not claim clinical certification. Phone/build verification
+and its actual limits are recorded in `docs/EXERCISE_GUIDE_APP_72.md`.

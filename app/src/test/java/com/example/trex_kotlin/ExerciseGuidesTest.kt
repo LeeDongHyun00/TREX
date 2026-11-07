@@ -6,7 +6,7 @@ import org.junit.Test
 
 class ExerciseGuidesTest {
     @Test fun differentEquipmentAndEngineAliasesNeverReuseTheSample() {
-        listOf("바벨 스쿼트", "행잉 레그 레이즈", "라잉 레그 레이즈", "니 푸쉬업", "바벨 굿모닝").forEach {
+        listOf("바벨 스쿼트", "라잉 레그 레이즈", "바벨 굿모닝", "", "unknown").forEach {
             assertNull(it, ExerciseGuides.forName(it))
         }
     }
@@ -24,10 +24,23 @@ class ExerciseGuidesTest {
 
     @Test fun everyRegisteredGuideHasAPackagedVisualAndMatchesTheCatalog() {
         val catalog = workoutCatalog.values.flatten().map { it.name }.toSet()
+        assertEquals(72, ExerciseGuides.all.size)
+        assertEquals(catalog, ExerciseGuides.all.map { it.name }.toSet())
         assertEquals(ExerciseGuides.all.size, ExerciseGuides.all.map { it.name }.toSet().size)
         assertEquals(ExerciseGuides.all.size, ExerciseGuides.all.map { it.asset }.toSet().size)
         ExerciseGuides.all.forEach { guide ->
             assertTrue(guide.name, guide.name in catalog)
+            assertTrue(guide.name, guide.setup.isNotEmpty() && guide.steps.isNotEmpty() && guide.cautions.isNotEmpty())
+            assertTrue(guide.name, guide.breathing.isNotBlank() && guide.legend.isNotBlank() && guide.visualNote.isNotBlank())
+            assertTrue(guide.name, guide.muscles.isNotEmpty())
+            assertTrue(guide.name, guide.muscles.any { it.role == "stabilize" })
+            guide.muscles.forEach { muscle ->
+                assertTrue(guide.name, muscle.role in setOf("main", "assist", "stabilize"))
+                assertTrue(guide.name, muscle.name.isNotBlank() && muscle.function.isNotBlank() && muscle.evidence.isNotBlank())
+                assertTrue(guide.name, muscle.sourceNumbers.isNotEmpty())
+                assertTrue(guide.name, muscle.sourceNumbers.all { it in 1..guide.sources.size })
+            }
+            assertTrue(guide.name, guide.sources.all { it.url.startsWith("https://") })
             val bytes = File("src/main/assets/${guide.asset}").readBytes()
             assertTrue(guide.asset, bytes.size > 100)
             when (guide.asset.substringAfterLast('.')) {
@@ -41,6 +54,12 @@ class ExerciseGuidesTest {
         assertEquals("exercise_guides/forearm-plank.gif", ExerciseGuides.forName("플랭크")!!.asset)
     }
 
+    @Test fun redEmphasisDoesNotTurnIsometricStabilizersIntoDynamicPrimeMovers() {
+        listOf("플랭크", "무릎 플랭크", "사이드 플랭크", "무릎 사이드 플랭크", "싱글레그 애브도미널 프레스").forEach { name ->
+            assertTrue(name, ExerciseGuides.forName(name)!!.muscles.all { it.role == "stabilize" })
+        }
+    }
+
     /** Android 시범 GIF 는 프레임이 바뀔 때만 다시 그린다(스펙 §115) — 프레임 시각을 Movie(GIFMovie)와 같은 규칙으로 읽는지 잠근다. */
     @Test fun gifFrameTimesMatchTheMovieRuleForEveryPackagedGuide() {
         val gifs = ExerciseGuides.all.filter { it.asset.endsWith(".gif") }
@@ -48,11 +67,10 @@ class ExerciseGuidesTest {
         gifs.forEach { guide ->
             val ends = gifFrameEnds(File("src/main/assets/${guide.asset}").readBytes())
             assertNotNull(guide.asset, ends)
-            // 지금 시범은 모두 2프레임, 프레임마다 0.9 또는 1.1 초
-            assertEquals(guide.asset, 2, ends!!.size)
-            assertTrue(guide.asset, ends[0] in setOf(900, 1100) && ends[1] == ends[0] * 2)
+            val expectedFrames = if (guide.name == "I-Y-T 레이즈") 3 else 2
+            assertArrayEquals(guide.asset, IntArray(expectedFrames) { (it + 1) * 900 }, ends!!)
         }
-        assertArrayEquals(intArrayOf(1100, 2200), gifFrameEnds(File("src/main/assets/exercise_guides/squat.gif").readBytes()))
+        assertArrayEquals(intArrayOf(900, 1800), gifFrameEnds(File("src/main/assets/exercise_guides/squat.gif").readBytes()))
         assertArrayEquals(intArrayOf(900, 1800), gifFrameEnds(File("src/main/assets/exercise_guides/crunch.gif").readBytes()))
     }
 

@@ -206,21 +206,29 @@ internal fun CapturePreparationPanel(
             } else CaptureDirectionDemo(profile.capture, frontCamera, Modifier.size(104.dp))
         }
         // 안내 글은 남는 높이 안에서 스크롤한다 — 버튼 줄은 늘 판 아래에 있다
+        // 글은 둘째 자리(UI 감사 A19, K2) — 늘 보이는 것은 배치 한 줄·지금 안 잡히는 이유·못 보는 범위(원칙 #5)뿐. 약속 문장·세는 조건·옷 안내는 '자세히' 뒤에 그대로 남는다
+        var details by rememberSaveable(profile.name) { mutableStateOf(false) }
         Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text(profile.capture.placement, color = c.text, fontSize = 15.sp, lineHeight = 21.sp)
-            // 약속 문장은 화면 고정 문구(§101 — 음성에서 뺐다. 종전 안내 맨 끝에 있어 8/10 세트에서 들리지 않았다)
-            Text(START_PROMISE, color = c.text3, fontSize = 12.sp, lineHeight = 17.sp)
             // 멈춘·처음으로 돌아간·아직 못 잡은 이유를 화면에도 — 배치 안내만 떠 있으면 무엇이 문제인지 모른다(§89 후속)
             val reason = state.message.takeIf {
                 (state.trackingHold || state.phase == PreparationPhase.WAITING) && it !in GENERIC_PREPARATION_MESSAGES
             }
             if (reason != null) Text(reason, color = if (reason == CapturePreparationController.READY_MESSAGE) c.text else c.warn, fontSize = 14.sp, lineHeight = 20.sp, fontWeight = FontWeight.SemiBold)
-            // 세는 조건 전문(ESS + DET, §101) — 음성이 못 다 말한 내용은 화면이 가진다(원칙 #5). 그 아래 바닥 범위 문장(spec §99, PostureScope.FLOOR_LINES)
-            profile.countingConditions?.let { Text(it, color = c.text2, fontSize = 13.sp, lineHeight = 18.sp) }
-            // 헐렁한 옷 안내(§126 방안 A) — 컬·런지 계열만. 소매·바지통 속 관절은 지어낸 자리라 판정이 흔들린다(원칙 #5)
-            profile.clothingHint?.let { Text(it, color = c.text3, fontSize = 12.sp, lineHeight = 17.sp) }
+            // 바닥 범위 문장(spec §99, PostureScope.FLOOR_LINES) — 못 보는 것은 접지 않는다(원칙 #5)
             com.example.trex_kotlin.posture.PostureScope.floorLine(profile.referenceExercise)?.let {
                 Text(it, color = c.text3, fontSize = 12.sp, lineHeight = 17.sp)
+            }
+            TextButton(onClick = { details = !details }, contentPadding = PaddingValues(0.dp), modifier = Modifier.heightIn(min = 32.dp)) {
+                Text(if (details) "간단히 ▴" else "자세히 ▾ · 세는 조건·시작 약속", color = c.primaryText, fontSize = 12.sp)
+            }
+            if (details) {
+                // 약속 문장은 화면 고정 문구(§101 — 음성에서 뺐다. 종전 안내 맨 끝에 있어 8/10 세트에서 들리지 않았다)
+                Text(START_PROMISE, color = c.text3, fontSize = 12.sp, lineHeight = 17.sp)
+                // 세는 조건 전문(ESS + DET, §101) — 음성이 못 다 말한 내용은 화면이 가진다(원칙 #5)
+                profile.countingConditions?.let { Text(it, color = c.text2, fontSize = 13.sp, lineHeight = 18.sp) }
+                // 헐렁한 옷 안내(§126 방안 A) — 컬·런지 계열만. 소매·바지통 속 관절은 지어낸 자리라 판정이 흔들린다(원칙 #5)
+                profile.clothingHint?.let { Text(it, color = c.text3, fontSize = 12.sp, lineHeight = 17.sp) }
             }
             if (cameraError != null) {
                 Text(cameraError, color = c.text2, fontSize = 13.sp)

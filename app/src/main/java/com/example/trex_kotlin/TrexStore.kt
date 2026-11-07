@@ -200,6 +200,8 @@ class TrexStore(private val prefs: KeyValueStore) {
                             category = it.optString("category").takeIf(String::isNotBlank),
                             accuracy = if (legacy) null else it.optInt("accuracy", -1).takeIf { a -> a >= 0 },
                             loadSet = it.optJSONObject("loadSet")?.let { rawSet -> runCatching { LoadSetJson.decode(rawSet) }.getOrNull() },
+                            sets = decodeSetEntries(it.optJSONArray("sets")),
+                            source = it.optString("source").takeIf(String::isNotBlank),
                         )
                     },
                 )
@@ -207,8 +209,9 @@ class TrexStore(private val prefs: KeyValueStore) {
         }.getOrNull()
     }
 
-    /** 만료된 날짜만 지운다. 남은 기록의 알 수 없는/구버전 필드도 그대로 보존한다. */
-    fun pruneExpiredHistory(today: Long) {
+    /** 보관 기간([retentionDays], 0 = 제한 없음) 밖의 날짜만 지운다. 남은 기록의 알 수 없는/구버전 필드도 그대로 보존한다. */
+    fun pruneExpiredHistory(today: Long, retentionDays: Int) {
+        if (retentionDays <= 0) return
         val raw = prefs.getString(KEY_HISTORY, null) ?: return
         runCatching {
             val before = JSONArray(raw)
@@ -216,7 +219,7 @@ class TrexStore(private val prefs: KeyValueStore) {
             for (i in 0 until before.length()) {
                 val entry = before.get(i)
                 val epochDay = (entry as? JSONObject)?.optLong("epochDay", Long.MAX_VALUE) ?: Long.MAX_VALUE
-                if (epochDay >= today - (RECORD_WINDOW_DAYS - 1)) after.put(entry)
+                if (epochDay >= today - (retentionDays - 1)) after.put(entry)
             }
             if (after.length() != before.length()) prefs.edit().putString(KEY_HISTORY, after.toString()).apply()
         }
@@ -237,6 +240,8 @@ class TrexStore(private val prefs: KeyValueStore) {
                         .put("category", item.category ?: "")
                         .put("durationSeconds", item.durationSeconds ?: -1)
                         .also { o -> item.loadSet?.let { o.put("loadSet", LoadSetJson.encode(it)) } }
+                        .also { o -> if (item.sets.isNotEmpty()) o.put("sets", encodeSetEntries(item.sets)) }
+                        .also { o -> item.source?.let { o.put("source", it) } }
                         .also { o -> writePostureCorrection(o, item.postureCorrection) },
                 )
             }
@@ -438,6 +443,42 @@ class TrexStore(private val prefs: KeyValueStore) {
         }
     }
 
+    // ---- §131 기록 확장 — 체중·XP·직접 추가 종목·주간 루틴·보관 기간·연속 멈춤(계정 백업 항목) · 알림 설정(기기)
+
+    fun loadBodyWeights(): List<BodyWeightEntry> = prefs.getString(KEY_BODY_WEIGHT, null)?.let { raw -> runCatching { decodeBodyWeights(JSONArray(raw)) }.getOrNull() } ?: emptyList()
+    fun saveBodyWeights(list: List<BodyWeightEntry>) = prefs.edit().putString(KEY_BODY_WEIGHT, encodeBodyWeights(list).toString()).apply()
+
+    fun loadXp(): List<XpEntry> = prefs.getString(KEY_XP, null)?.let { raw -> runCatching { decodeXp(JSONArray(raw)) }.getOrNull() } ?: emptyList()
+    fun saveXp(list: List<XpEntry>) = prefs.edit().putString(KEY_XP, encodeXp(list).toString()).apply()
+
+    fun loadCustomExercises(): List<CustomExercise> = prefs.getString(KEY_CUSTOM_EXERCISES, null)?.let { raw -> runCatching { decodeCustomExercises(JSONArray(raw)) }.getOrNull() } ?: emptyList()
+    fun saveCustomExercises(list: List<CustomExercise>) = prefs.edit().putString(KEY_CUSTOM_EXERCISES, encodeCustomExercises(list).toString()).apply()
+
+    fun loadWeeklyRoutine(): WeeklyRoutine = prefs.getString(KEY_WEEKLY_ROUTINE, null)?.let { raw -> runCatching { decodeWeeklyRoutine(JSONObject(raw)) }.getOrNull() } ?: WeeklyRoutine()
+    fun saveWeeklyRoutine(w: WeeklyRoutine) = prefs.edit().putString(KEY_WEEKLY_ROUTINE, encodeWeeklyRoutine(w).toString()).apply()
+
+    /** 보관 기간(일, 0 = 제한 없음). 저장된 적 없으면 제한 없음 — 디자인 P14 의 추천이자 달력·추이·연속 일수가 온전한 쪽. */
+    fun loadRetentionDays(): Int = prefs.getString(KEY_RETENTION, null)?.toIntOrNull()?.takeIf { it in RetentionOptions.choices } ?: RetentionOptions.UNLIMITED
+    fun saveRetentionDays(days: Int) = prefs.edit().putString(KEY_RETENTION, days.toString()).apply()
+
+    /** 멈춤 구간 목록 — 옛 저장(객체 하나)도 읽는다. 지난 구간을 지우지 않아 그 날들의 면제가 남는다(PR 65 리뷰). */
+    fun loadStreakPauses(): List<StreakPause> = prefs.getString(KEY_STREAK_PAUSE, null)?.let { raw ->
+        runCatching {
+            val arr = if (raw.trimStart().startsWith("[")) JSONArray(raw) else JSONArray().put(JSONObject(raw))
+            (0 until arr.length()).map { arr.getJSONObject(it) }.map { StreakPause(it.getLong("from"), it.getInt("days").coerceIn(1, StreakPause.MAX_DAYS)) }
+        }.getOrNull()
+    }.orEmpty()
+    fun saveStreakPauses(p: List<StreakPause>) = prefs.edit().putString(KEY_STREAK_PAUSE,
+        if (p.isEmpty()) null else JSONArray().also { a -> p.forEach { a.put(JSONObject().put("from", it.fromEpochDay).put("days", it.days)) } }.toString()).apply()
+
+    fun loadNotifyPrefs(): NotifyPrefs = prefs.getString(KEY_NOTIFY, null)?.let { raw -> runCatching { decodeNotifyPrefs(JSONObject(raw)) }.getOrNull() } ?: NotifyPrefs()
+    fun saveNotifyPrefs(p: NotifyPrefs) = prefs.edit().putString(KEY_NOTIFY, encodeNotifyPrefs(p).toString()).apply()
+
+    /** 주간 루틴을 오늘 루틴에 마지막으로 얹은 날 — 하루 한 번만 얹는다(기기 값). */
+    var weeklyAppliedDay: Long
+        get() = prefs.getLong(KEY_WEEKLY_APPLIED_DAY, -1L)
+        set(value) = prefs.edit().putLong(KEY_WEEKLY_APPLIED_DAY, value).apply()
+
     // ---- 계정 동기화(sync/SyncManager)용 원본 접근 — 항목 JSON 을 해석하지 않고 그대로 주고받는다
 
     fun readRaw(key: String): String? = prefs.getString(key, null)
@@ -466,5 +507,14 @@ class TrexStore(private val prefs: KeyValueStore) {
         const val KEY_WATER = "water"
         const val KEY_GOAL = "goal_override"
         const val KEY_CUSTOM_FOODS = "custom_foods"
+        // §131 — 이름은 sync/SyncRules.KEYS 와 같다(알림·주간 적용일은 기기 전용)
+        const val KEY_BODY_WEIGHT = "body_weight"
+        const val KEY_XP = "xp"
+        const val KEY_CUSTOM_EXERCISES = "custom_exercises"
+        const val KEY_WEEKLY_ROUTINE = "weekly_routine"
+        const val KEY_RETENTION = "record_retention"
+        const val KEY_STREAK_PAUSE = "streak_pause"
+        const val KEY_NOTIFY = "notify_prefs"
+        const val KEY_WEEKLY_APPLIED_DAY = "weekly_applied_day"
     }
 }
