@@ -126,6 +126,20 @@ class MuscleLoadTest {
         assertEquals(setOf(Equipment.DUMBBELL,Equipment.LAT_MACHINE,Equipment.DIP_BAR),UserProfile(equipmentMask=(1 shl 0) or (1 shl 8) or (1 shl 20)).loadEquipment())
         assertTrue(UserProfile(equipmentMask=-1,bodyweightOnly=true).loadEquipment().isEmpty())
     }
+    /** §138 — 건너뛴 세트는 사용자가 횟수를 적은 것만 기록·부하에 든다. 카메라가 센 회는 건너뛴 세트의 증거가 아니다. */
+    @Test fun skippedSetsNeedUserCountToBeRecorded() {
+        val w=Workout("s","기본 스쿼트","10회 × 1세트","",true,"하체")
+        val steps=buildSessionSteps(listOf(w));val work=steps.first { it.phase==SessionPhase.WORK }
+        // 카메라가 6회 세고 건너뜀 — recordedCounts 에는 남지만 사용자 입력이 없으면 빠진다
+        val p=SessionProgress(work.token,0).setRepetitions(steps,work.token,6).advance(steps,work.token,true)
+        assertTrue(work.token in p.skipped)
+        assertEquals(1,p.loadRecordableWorkouts(steps,emptyMap(),setOf(work.token)).size)              // 옛 호출(건너뜀 정보 없음)은 그대로
+        assertTrue(p.loadRecordableWorkouts(steps,emptyMap(),setOf(work.token),p.skipped).isEmpty())
+        assertEquals(1,p.loadRecordableWorkouts(steps,emptyMap(),setOf(work.token),p.skipped) { true }.size)
+        // 끝낸 세트는 입력 없이도 든다
+        val done=SessionProgress(work.token,0).setRepetitions(steps,work.token,10).advance(steps,work.token,false)
+        assertEquals(1,done.loadRecordableWorkouts(steps,emptyMap(),setOf(work.token),done.skipped).size)
+    }
     @Test fun halfLungeWithZeroDisplayPairsStillEntersLedger() {
         val w=Workout("l","런지","10회 × 1세트","",true,"하체")
         val steps=buildSessionSteps(listOf(w));val work=steps.first { it.phase==SessionPhase.WORK }

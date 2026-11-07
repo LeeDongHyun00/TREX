@@ -305,7 +305,7 @@ fun SessionCompleteScreen(
                     if (reward.newBadges.isNotEmpty()) Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         reward.newBadges.forEach { b ->
                             Row(Modifier.clip(RoundedCornerShape(999.dp)).background(c.primary).padding(horizontal = 9.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                Icon(Icons.Rounded.EmojiEvents, null, tint = Color.White, modifier = Modifier.size(12.dp))
+                                Icon(badgeIcon(b.id), null, tint = Color.White, modifier = Modifier.size(12.dp))
                                 Text(b.title, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
                             }
                         }

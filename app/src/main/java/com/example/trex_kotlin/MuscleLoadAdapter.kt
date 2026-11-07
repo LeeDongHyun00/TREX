@@ -21,9 +21,14 @@ internal fun workoutLoadSet(sessionId: String, workout: Workout, endedAt: Long, 
 }
 
 /** 표시 횟수가 0쌍이어도 한쪽 걸음은 부분 수행으로 기록한다. 자세 성공 여부와 구분한다. */
-internal fun SessionProgress.loadRecordableWorkouts(steps: List<SessionStep>, reports: Map<String,PostureSetReport>, captured: Set<Int>): List<Workout> {
+/**
+ * 기록·근육 부하에 넣을 세트. **건너뛴 세트([skipped])는 사용자가 횟수를 적은 것([userCounted])만** 들어간다(§138, 사용자 결정 2026-11-07 "건너뛰기 해도 횟수가
+ * 인정되는데 사용자가 횟수를 입력하지 않으면 피로도·기록에 남지 않게") — 카메라가 센 회·계획 횟수는 건너뛴 세트의 증거가 아니다.
+ */
+internal fun SessionProgress.loadRecordableWorkouts(steps: List<SessionStep>, reports: Map<String,PostureSetReport>, captured: Set<Int>,
+    skipped: Set<Int> = emptySet(), userCounted: (SessionStep) -> Boolean = { false }): List<Workout> {
     val base=completedWorkouts(steps).associateBy { it.id }
-    return steps.filter { it.phase==SessionPhase.WORK && it.token in captured }.mapNotNull { step ->
+    return steps.filter { it.phase==SessionPhase.WORK && it.token in captured && (it.token !in skipped || userCounted(it)) }.mapNotNull { step ->
         base[step.workout.id] ?: reports[step.workout.id]?.let { report ->
             val tally=report.repSides?.track
             if((tally?.let { it.steps+it.extra } ?: 0)>0 || report.repHalfPending)

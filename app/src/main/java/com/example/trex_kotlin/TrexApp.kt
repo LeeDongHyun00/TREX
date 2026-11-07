@@ -265,7 +265,12 @@ private fun TrexAppContent(app: AppViewModel) {
             sessionPaused = false
         }
 
-        fun recordableWorkouts() = progress.loadRecordableWorkouts(steps,app.sessionPostureReports,endTimes().keys)
+        // 건너뛴 세트는 사용자가 적은 횟수(휴식 화면 입력, 카메라 값을 고친 것 포함)나 직접 센 횟수(카메라 없는 세트의 탭)만 기록한다(§138). 시간 세트는 잰 시간이 사실이라 그대로
+        fun recordableWorkouts() = progress.loadRecordableWorkouts(steps, app.sessionPostureReports, endTimes().keys, progress.skipped) { step ->
+            val typed = app.sessionSets[step.workout.id]
+            val cameraSet = step.workout.posture && step.workout.postureSupported() && step.originalId !in postureFallback
+            step.workout.resolvedTarget() is WorkoutTarget.Duration || typed?.reps != null || (!cameraSet && (progress.recordedCounts[step.token] ?: 0) > 0)
+        }
         fun recordSession() {
             val ends = endTimes()
             val done = recordableWorkouts()

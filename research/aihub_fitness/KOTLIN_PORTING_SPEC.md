@@ -3666,3 +3666,9 @@ and its actual limits are recorded in `docs/EXERCISE_GUIDE_APP_72.md`.
 
 **안 한 것.** 월간 챌린지(Garmin·Strava — 서버·운영 필요), 사다리 다음 단(운동 200일·볼륨 100톤 — 사용자 데이터가 쌓인 뒤), 배지 그림(지금은 원 안 짧은 글자). 검증은 `RecordModelsTest`(완벽한 주·달 경계, 배지 표)이며 실기기는 업적 화면 렌더링만 봤다.
 
+## §138. 배지 아이콘 + 건너뛴 세트는 사용자 횟수가 있어야 기록 (2026-11-07 밤, 사용자 요청)
+
+**배지 아이콘.** 업적 화면의 원 안 짧은 글자를 Material 아이콘으로(`badgeIcon(id)`, `AchievementsScreen.kt` — id 앞 토큰으로 고른다: 운동 일수 덤벨 · 연속 불꽃 · 완벽한 주 달력 체크/달 달력 · 아침 해/저녁 달 · 스쿼트 사람/푸쉬업 체조/플랭크 타이머 · 볼륨 저울 · 교정 카메라 · 가이드 책 · 식단 식기 · 물 물방울 · 체중 체중계 · 루틴 공유). 사다리는 같은 그림이고 제목이 단을 말한다. 완료 화면의 새 배지 칩도 같은 아이콘. 못 얻은 배지는 흐린 색.
+
+**건너뛴 세트(사용자 결정 "건너뛰기 해도 횟수가 인정되는데 사용자가 횟수를 입력하지 않으면 근육 피로도와 기록에 남지 않도록").** 원인: 카메라 세트를 건너뛰면 그때까지 센 회가 `recordedCounts` 로 남아 `completedWorkouts` 에 들고, 휴식 화면 입력이 비어도 `sessionSetEntry` 가 계획 횟수로 채웠다. 수정: `loadRecordableWorkouts(…, skipped, userCounted)` — `progress.skipped` 에 든 WORK 세트는 **사용자가 횟수를 적은 것**(휴식 화면 입력 `sessionSets[id].reps` — 카메라 값을 고친 것 포함)이나 **직접 센 것**(카메라 없는 세트의 탭 횟수 `recordedCounts`)만 기록·근육 부하에 든다. 시간 세트(플랭크 등)는 잰 시간이 사실이라 그대로 둔다. 끝낸 세트('세트 끝'·목표 도달)는 전과 같다. 테스트 `MuscleLoadTest.skippedSetsNeedUserCountToBeRecorded`. 나가기(`requestExit`)는 건너뛰기가 아니라 현재 세트의 센 회를 그대로 둔다(종전).
+

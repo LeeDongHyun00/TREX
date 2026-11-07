@@ -6,8 +6,27 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.Accessibility
+import androidx.compose.material.icons.rounded.Bedtime
+import androidx.compose.material.icons.rounded.CalendarMonth
+import androidx.compose.material.icons.rounded.EmojiEvents
+import androidx.compose.material.icons.rounded.EventAvailable
+import androidx.compose.material.icons.rounded.FitnessCenter
 import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.LocalFireDepartment
+import androidx.compose.material.icons.rounded.MenuBook
+import androidx.compose.material.icons.rounded.MonitorWeight
 import androidx.compose.material.icons.rounded.PauseCircle
+import androidx.compose.material.icons.rounded.Restaurant
+import androidx.compose.material.icons.rounded.Scale
+import androidx.compose.material.icons.rounded.Share
+import androidx.compose.material.icons.rounded.SportsGymnastics
+import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material.icons.rounded.Timer
+import androidx.compose.material.icons.rounded.Videocam
+import androidx.compose.material.icons.rounded.WaterDrop
+import androidx.compose.material.icons.rounded.WbSunny
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material3.*
 import com.example.trex_kotlin.TrexText as Text
 import androidx.compose.runtime.*
@@ -98,8 +117,9 @@ fun AchievementsScreen(app: AppViewModel, onBack: () -> Unit, onGoWorkout: () ->
                             Row(Modifier.fillMaxWidth().padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                                 row.forEach { b ->
                                     Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                                        // 배지 그림(§138) — 글자 대신 아이콘, 사다리(10/50/100 등)는 제목이 단을 말한다. 못 얻은 배지는 흐리게
                                         Surface(shape = androidx.compose.foundation.shape.CircleShape, color = if (b.earned) c.primary else c.surface2, modifier = Modifier.size(56.dp)) {
-                                            Box(contentAlignment = Alignment.Center) { Text(b.short, color = if (b.earned) c.bg else c.text3, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center) }
+                                            Box(contentAlignment = Alignment.Center) { Icon(badgeIcon(b.id), b.short, tint = if (b.earned) c.bg else c.text3, modifier = Modifier.size(26.dp)) }
                                         }
                                         Text(b.title, color = if (b.earned) c.text else c.text2, fontSize = 12.sp, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 6.dp))
                                         if (!b.earned && b.progress > 0) Text("${b.progress} / ${b.goal}", color = c.text3, fontSize = 11.sp)
@@ -144,4 +164,25 @@ fun AchievementsScreen(app: AppViewModel, onBack: () -> Unit, onGoWorkout: () ->
             }
         }
     }
+}
+
+/** 배지 id → 아이콘(§138). 표에 없는 id 는 트로피 — 사다리(운동 일수·연속·식단)는 같은 그림이고 제목이 단을 말한다. */
+internal fun badgeIcon(id: String): ImageVector = when (id.substringBefore('_')) {
+    "first" -> Icons.Rounded.Star
+    "days" -> Icons.Rounded.FitnessCenter
+    "streak" -> Icons.Rounded.LocalFireDepartment
+    "perfect" -> if (id == "perfect_month") Icons.Rounded.CalendarMonth else Icons.Rounded.EventAvailable
+    "morning" -> Icons.Rounded.WbSunny
+    "night" -> Icons.Rounded.Bedtime
+    "squat" -> Icons.Rounded.Accessibility
+    "pushup" -> Icons.Rounded.SportsGymnastics
+    "plank" -> Icons.Rounded.Timer
+    "volume" -> Icons.Rounded.Scale
+    "coach" -> Icons.Rounded.Videocam
+    "guides" -> Icons.Rounded.MenuBook
+    "diet" -> Icons.Rounded.Restaurant
+    "water" -> Icons.Rounded.WaterDrop
+    "weigh" -> Icons.Rounded.MonitorWeight
+    "routine" -> Icons.Rounded.Share
+    else -> Icons.Rounded.EmojiEvents
 }
