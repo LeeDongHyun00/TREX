@@ -48,6 +48,7 @@ import androidx.compose.material.icons.rounded.EmojiEvents
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.lerp
 import com.example.trex_kotlin.TrexText as Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -185,7 +186,8 @@ fun SessionTransitionScreen(step: SessionStep, timeLeft: Int, paused: Boolean,
 private fun RestProgressCta(text: String, progress: Float, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val c = Trex.c
     val shown by animateFloatAsState(progress.coerceIn(0f, 1f), tween(1000, easing = LinearEasing), label = "rest-fill")
-    Surface(onClick = onClick, modifier = modifier.heightIn(min = 54.dp), shape = RoundedCornerShape(18.dp), color = c.primary.copy(alpha = .66f), contentColor = Color.White, shadowElevation = 2.dp) {
+    // 바탕은 불투명(배경과 66 % 섞은 primary) — 반투명 표면은 그림자가 비쳐 안쪽만 밝은 띠로 보였다(11-07 실기기)
+    Surface(onClick = onClick, modifier = modifier.heightIn(min = 54.dp), shape = RoundedCornerShape(18.dp), color = lerp(c.bg, c.primary, .66f), contentColor = Color.White, shadowElevation = 2.dp) {
         Box {
             Box(Modifier.matchParentSize().drawBehind { drawRect(c.primary, size = Size(size.width * shown, size.height)) })
             Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 16.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {

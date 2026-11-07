@@ -7,9 +7,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.WaterDrop
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material3.*
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -45,8 +46,48 @@ internal fun AssetArtwork(path: String, modifier: Modifier = Modifier, scale: Co
 }
 
 /**
- * 오늘의 섭취 요약(§108f, 사용자 요청 — 제목·'목표까지 … 남았어룡' 칸·'식단 보기' 를 빼고 높이를 최대한 줄임) — kcal 고리와 탄수화물·단백질·지방.
- * 카드를 누르면 식단 탭(예전 '식단 보기' 자리). 좁은 창·큰 글씨에서는 영양소를 세로로 쌓는다.
+ * 홈 '오늘 한눈' 띠(UI 감사 2026-11-07 A1, K1) — 운동 세트·섭취 kcal·물 잔의 도넛 셋. 도넛은 막대와 함께 가장 빨리 읽히는 채움(Blascheck 2018 ~160 ms).
+ * 운동은 오늘 루틴의 세트 수 기준(완료한 운동의 세트), 섭취는 목표 대비, 물은 8잔 대비. 물 도넛의 + 는 한 잔 더(값 변화는 링이 보여 준다).
+ * 셋을 누르면 각 탭으로 간다. 점수·자세와 무관한 '했다' 의 양만 그린다(원칙 #1).
+ */
+@Composable
+internal fun HomeGlanceStrip(app: AppViewModel, total: Nutrition, goal: Nutrition, onWorkout: () -> Unit, onDiet: () -> Unit) {
+    val c = Trex.c
+    val plan = app.workoutPlan
+    val totalSets = plan.sumOf { it.repsSpec().sets }
+    val doneSets = plan.filter { it.done }.sumOf { it.repsSpec().sets }
+    val cups = app.waterFor(0)
+    Surface(shape = RoundedCornerShape(22.dp), color = c.surface, modifier = Modifier.fillMaxWidth()) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 14.dp)) {
+            GlanceDonut(if (totalSets > 0) doneSets.toFloat() / totalSets else 0f, if (plan.isEmpty()) "—" else "$doneSets/$totalSets", "운동 세트",
+                done = totalSets > 0 && doneSets >= totalSets, onClick = onWorkout)
+            GlanceDonut(if (goal.kcal > 0) total.kcal.toFloat() / goal.kcal else 0f, "${total.kcal}", "섭취 kcal", onClick = onDiet)
+            GlanceDonut(cups.toFloat() / WATER_GOAL_CUPS, "$cups/$WATER_GOAL_CUPS", "물 잔", done = cups >= WATER_GOAL_CUPS, onClick = onDiet, action = { app.addWater(0) }, actionLabel = "물 한 잔 더")
+        }
+    }
+}
+
+/** 도넛 하나 — 64 dp 링, 가운데 숫자 13 sp, 아래 라벨. [done] 이면 가운데가 체크. [action] 이 있으면 오른쪽 아래 작은 + 배지(별도 탭 대상). */
+@Composable
+private fun RowScope.GlanceDonut(progress: Float, center: String, label: String, done: Boolean = false, onClick: () -> Unit, action: (() -> Unit)? = null, actionLabel: String = "") {
+    val c = Trex.c
+    Column(Modifier.weight(1f).clip(RoundedCornerShape(16.dp)).clickable(onClick = onClick).padding(vertical = 4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(contentAlignment = Alignment.Center) {
+            RingGauge(progress, 64.dp, 7.dp) {
+                if (done) Icon(Icons.Rounded.Check, null, tint = c.primaryText, modifier = Modifier.size(22.dp))
+                else Text(center, color = c.text, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+            }
+            if (action != null) Surface(onClick = action, shape = CircleShape, color = c.primary, modifier = Modifier.align(Alignment.BottomEnd).size(22.dp).semantics { contentDescription = actionLabel }) {
+                Box(contentAlignment = Alignment.Center) { Icon(Icons.Rounded.Add, null, tint = c.bg, modifier = Modifier.size(14.dp)) }
+            }
+        }
+        Text(label, color = c.text2, fontSize = 11.sp, modifier = Modifier.padding(top = 6.dp), maxLines = 1)
+    }
+}
+
+/**
+ * 오늘의 섭취 요약(§108f, 사용자 요청 — 제목·'목표까지 … 남았어룡' 칸·'식단 보기' 를 빼고 높이를 최대한 줄임) — 탄수화물·단백질·지방.
+ * kcal 고리는 '오늘 한눈' 띠(A1)로 옮겼다 — 같은 수치가 두 번 경쟁하지 않게(K1). 카드를 누르면 식단 탭. 좁은 창·큰 글씨에서는 영양소를 세로로 쌓는다.
  */
 @Composable
 internal fun HomeNutrition(total: Nutrition, goal: Nutrition, onOpen: () -> Unit) {
@@ -55,13 +96,6 @@ internal fun HomeNutrition(total: Nutrition, goal: Nutrition, onOpen: () -> Unit
         BoxWithConstraints(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp)) {
             val stacked = maxWidth < 300.dp || LocalDensity.current.fontScale > 1.3f
             Row(verticalAlignment = Alignment.CenterVertically) {
-                RingGauge(if (goal.kcal > 0) total.kcal.toFloat() / goal.kcal else 0f, 68.dp, 6.dp) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("${total.kcal}", color = c.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-                        Text("/ ${goal.kcal} kcal", color = c.text2, fontSize = 9.sp)
-                    }
-                }
-                Spacer(Modifier.width(16.dp))
                 if (stacked) Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     MacroBar("탄수화물", total.carb.toInt(), goal.carb.toInt(), c.primary, barHeight = 5.dp, showPercent = true)
                     MacroBar("단백질", total.protein.toInt(), goal.protein.toInt(), c.lime, barHeight = 5.dp, showPercent = true)
@@ -132,11 +166,11 @@ internal fun HomeActionCards(overview: RoutineOverview, onWorkout: () -> Unit, o
 }
 
 /**
- * 홈 아래 두 칸(§131 P18 → §132, 사용자 요청 2026-11-07) — 왼쪽 **연속 운동**(목표 요일 기준, 누르면 운동 기록), 오른쪽 **오늘 물**(예전 '이번 주 볼륨' 자리 —
- * 잔 수를 물방울 8개로, '+' 로 한 잔 더, 누르면 식단 탭의 물 카드). 볼륨은 기록 화면 통계에 남아 있다.
+ * 홈 아래 두 칸(§131 P18 → §132 → UI 감사 A3) — 왼쪽 **연속 운동**(목표 요일 기준, 누르면 운동 기록), 오른쪽 **근육 피로도**(가장 피로한 부위를 글리프에 색칠,
+ * 누르면 근육 피로도 화면). 물은 '오늘 한눈' 띠(A1)로 올라갔고(+ 포함), 볼륨은 기록 화면 통계에 있다.
  */
 @Composable
-internal fun HomeActivityCards(app: AppViewModel, onOpenRecord: () -> Unit = {}, onOpenWater: () -> Unit = {}) {
+internal fun HomeActivityCards(app: AppViewModel, onOpenRecord: () -> Unit = {}, onOpenMuscle: () -> Unit = {}) {
     val c = Trex.c
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         Surface(onClick = onOpenRecord, shape = RoundedCornerShape(24.dp), color = c.surface, modifier = Modifier.weight(1f)) {
@@ -152,29 +186,20 @@ internal fun HomeActivityCards(app: AppViewModel, onOpenRecord: () -> Unit = {},
                 }
             }
         }
-        val cups = app.waterFor(0)
-        Surface(onClick = onOpenWater, shape = RoundedCornerShape(24.dp), color = c.surface, modifier = Modifier.weight(1f)) {
+        val peak = app.muscleLoad.peak
+        Surface(onClick = onOpenMuscle, shape = RoundedCornerShape(24.dp), color = c.surface, modifier = Modifier.weight(1f)) {
             Column(Modifier.padding(18.dp)) {
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Text("오늘 물", color = c.text2, fontSize = 12.sp, modifier = Modifier.weight(1f))
-                    Surface(onClick = { app.addWater(0) }, shape = CircleShape, color = c.primary, modifier = Modifier.size(26.dp).semantics { contentDescription = "물 한 잔 더" }) {
-                        Box(contentAlignment = Alignment.Center) { Icon(Icons.Rounded.Add, null, tint = c.bg, modifier = Modifier.size(16.dp)) }
+                Text("근육 피로도", color = c.text2, fontSize = 12.sp)
+                Row(Modifier.padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    // 가장 피로한 근육의 부위를 글리프에 색칠(UI 감사 A3, K6) — 글을 읽기 전에 '어디' 가 보인다
+                    BodyPartGlyph(peak?.let { bodyPartOfMuscle(it.muscle) } ?: "전신", 44.dp, background = if (peak != null) c.primaryWash else c.surface2)
+                    Column(Modifier.padding(start = 10.dp)) {
+                        Text(peak?.let { "${it.value.toInt()}점" } ?: "—", color = c.text, fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
+                        Text(when { app.muscleLoadLoading -> "불러오는 중"; app.muscleLoadError != null -> "다시 불러오기"; peak == null -> "기록이 쌓이면"; else -> peak.muscle.label },
+                            color = c.text2, fontSize = 11.sp, maxLines = 1)
                     }
                 }
-                Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.padding(top = 6.dp)) {
-                    Text(formatLiters(cups * WATER_CUP_ML / 1000.0), color = c.text, fontSize = 25.sp, fontWeight = FontWeight.SemiBold)
-                    Text(" L", color = c.text2, fontSize = 13.sp, modifier = Modifier.padding(bottom = 4.dp))
-                }
-                Text("${cups}잔 / ${WATER_GOAL_CUPS}잔", color = c.text2, fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp))
-                Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                    repeat(WATER_GOAL_CUPS) { i ->
-                        // 새로 찬 잔은 120 ms 로 커지며 들어온다 — 값이 바뀌었다는 피드백(UI 감사 A5, K4)
-                        val filled = i < cups
-                        val scale = animateFloatAsState(if (filled) 1f else 0.72f, tween(120), label = "drop$i")
-                        Icon(Icons.Rounded.WaterDrop, null, tint = if (filled) c.primary else c.track,
-                            modifier = Modifier.size(13.dp).graphicsLayer { scaleX = scale.value; scaleY = scale.value })
-                    }
-                }
+                Text("기록 기반 추정", color = c.text3, fontSize = 10.5.sp, modifier = Modifier.padding(top = 8.dp))
             }
         }
     }

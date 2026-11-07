@@ -39,6 +39,16 @@ fun bodyPartOf(region: String): String = when (region) {
 /** 종목 이름·카테고리로 바로 — 운동 탭·카탈로그 행에서 쓴다. */
 fun bodyPartForWorkout(name: String, category: String): String = bodyPartOf(catalogRegionOf(name, category))
 
+/** 근육 → 글리프 부위 — 홈 근육 피로도 칸(UI 감사 A3)이 가장 피로한 근육의 자리를 색칠할 때. */
+fun bodyPartOfMuscle(m: com.example.trex_kotlin.trainingload.Muscle): String = when (m) {
+    com.example.trex_kotlin.trainingload.Muscle.QUADS, com.example.trex_kotlin.trainingload.Muscle.GLUTES, com.example.trex_kotlin.trainingload.Muscle.ABDUCTORS,
+    com.example.trex_kotlin.trainingload.Muscle.ADDUCTORS, com.example.trex_kotlin.trainingload.Muscle.HAMSTRINGS, com.example.trex_kotlin.trainingload.Muscle.CALVES,
+    com.example.trex_kotlin.trainingload.Muscle.HIP_FLEXORS, com.example.trex_kotlin.trainingload.Muscle.TIBIALIS -> "하체"
+    com.example.trex_kotlin.trainingload.Muscle.ABS, com.example.trex_kotlin.trainingload.Muscle.OBLIQUES, com.example.trex_kotlin.trainingload.Muscle.ERECTORS,
+    com.example.trex_kotlin.trainingload.Muscle.QUADRATUS_LUMBORUM -> "코어"
+    else -> "상체"
+}
+
 /**
  * 부위 글리프 — [part] 는 전신·하체·상체·코어. [size] 안에 둥근 바탕(surface2)과 실루엣. 색칠은 primary, 나머지는 line 색.
  * Canvas 만 쓰므로 iPhone 도 그대로 그린다.

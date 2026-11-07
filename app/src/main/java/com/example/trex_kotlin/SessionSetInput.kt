@@ -44,9 +44,10 @@ fun SessionSetInputCard(app: AppViewModel, originalId: String, workoutName: Stri
                         Text("지난번 · ${LocalDate.fromEpochDays(day).let { "${it.monthValue}월 ${it.day}일" }}", color = c.text2, fontSize = 12.sp)
                         Text(sets.summaryLine(), color = c.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 2.dp))
                     }
+                    // 폭을 주지 않으면 GhostButton 의 fillMaxWidth 가 왼쪽 글 칸을 한 글자 폭으로 밀어낸다(11-07 실기기 — '+30초' 와 같은 함정)
                     GhostButton("그대로 채우기", {
                         drafts.forEach { d -> sets.getOrNull(d.index - 1)?.let { s -> if (d.kg.isBlank()) d.kg = s.kg?.let(::trimKg) ?: ""; if (d.count.isBlank()) d.count = (s.reps ?: s.seconds)?.toString() ?: "" } }
-                    }, height = 44.dp)
+                    }, Modifier.width(124.dp), height = 44.dp)
                 }
             }
         }

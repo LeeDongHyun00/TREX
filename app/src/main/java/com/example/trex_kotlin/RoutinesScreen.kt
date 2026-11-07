@@ -109,8 +109,10 @@ private fun WeeklyTab(app: AppViewModel, onOpenCatalog: () -> Unit, onStartWorko
                     workouts.forEachIndexed { i, w ->
                         if (i > 0) HorizontalDivider(color = c.line)
                         val last = app.lastSets(w.name)?.second?.lastOrNull()?.kg
-                        Row(Modifier.fillMaxWidth().padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Column(Modifier.weight(1f)) {
+                        Row(Modifier.fillMaxWidth().padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                            // 부위 글리프(UI 감사 A9, K6) — 운동 탭 행과 같은 어휘
+                            BodyPartGlyph(bodyPartForWorkout(w.name, w.category), 34.dp)
+                            Column(Modifier.weight(1f).padding(start = 10.dp)) {
                                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                     Text(w.name, color = c.text, fontSize = 15.sp, fontWeight = FontWeight.Medium)
                                     if (w.postureSupported()) PostureSupportPill()
@@ -220,8 +222,9 @@ private fun RoutinePreviewSheet(app: AppViewModel, p: RoutinePreset, onClose: ()
             Column(Modifier.weight(1f, false).verticalScroll(rememberScrollState()).padding(top = 12.dp)) {
                 p.items.forEachIndexed { i, item ->
                     if (i > 0) HorizontalDivider(color = c.line)
-                    Row(Modifier.fillMaxWidth().padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Column(Modifier.weight(1f)) {
+                    Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        BodyPartGlyph(bodyPartForWorkout(item.name, workouts.getOrNull(i)?.category ?: ""), 32.dp)
+                        Column(Modifier.weight(1f).padding(start = 10.dp)) {
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) { Text(item.name, color = c.text, fontSize = 15.sp); if (postureSupported(item.name)) PostureSupportPill() }
                         }
                         Text("${item.sets} × ${if (item.min == item.max) "${item.max}" else "${item.min}~${item.max}"}${item.unit}${if (item.perSide) "/한쪽" else ""}", color = c.text2, fontSize = 13.sp)
@@ -254,11 +257,18 @@ private fun AssignDaysSheet(app: AppViewModel, ref: String, name: String, onClos
                     val on = d in picked
                     val other = app.weeklyRoutine.ref(d)?.takeIf { it != ref }
                     Surface(onClick = { if (on) picked.remove(d) else picked.add(d) }, shape = CircleShape, color = if (on) c.primary else if (other != null) c.surface2 else c.surface, modifier = Modifier.size(44.dp)) {
-                        Box(contentAlignment = Alignment.Center) { Text(koreanDayOfWeek(d), color = if (on) c.bg else c.text, fontSize = 14.sp) }
+                        Box(contentAlignment = Alignment.Center) {
+                            Text(koreanDayOfWeek(d), color = if (on) c.bg else c.text, fontSize = 14.sp)
+                            // 다른 루틴이 있는 요일은 작은 점 — 글을 읽지 않아도 보인다(UI 감사 A10, K3)
+                            if (other != null && !on) Box(Modifier.align(Alignment.BottomCenter).padding(bottom = 5.dp).size(5.dp).background(c.text3, CircleShape))
+                        }
                     }
                 }
             }
-            Text("회색 요일에는 다른 루틴이 있어요 — 고르면 바꿔요. 고르지 않은 요일은 그대로예요.", color = c.text2, fontSize = 12.sp)
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Box(Modifier.size(12.dp).background(c.surface2, CircleShape), contentAlignment = Alignment.BottomCenter) { Box(Modifier.padding(bottom = 1.dp).size(3.dp).background(c.text3, CircleShape)) }
+                Text("다른 루틴이 있는 요일 — 고르면 바꿔요", color = c.text2, fontSize = 12.sp)
+            }
             Cta("저장", {
                 DayOfWeek.entries.forEach { d ->
                     val had = app.weeklyRoutine.ref(d) == ref

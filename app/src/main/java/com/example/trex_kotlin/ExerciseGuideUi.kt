@@ -14,6 +14,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -65,7 +66,12 @@ internal fun ExerciseGuideSheet(guide: ExerciseGuide, onClose: () -> Unit,
                         Text(if (failed) "시범을 불러오지 못했어요." else "시범을 준비하고 있어요.", color = TrexTextSecondary)
                     }
                 }
-                Spacer(Modifier.height(16.dp))
+                // 시범 그림의 색 범례(UI 감사 A20, K3) — 빨강 = 주 근육, 주황 = 보조·안정. 세션의 빨강(회 제외)·주황(말함)과는 다른 어휘라 그림 바로 아래 한 줄로 밝힌다
+                Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                    GuideLegend(Color(0xFFD94A3D), "주 근육"); GuideLegend(Color(0xFFE39A3C), "보조·안정")
+                    Text("그림 속 색 · 자극 순위가 아니에요", color = c.text3, fontSize = 11.sp)
+                }
+                Spacer(Modifier.height(10.dp))
                 SegmentedTabs(listOf("운동 가이드", "주의사항"), section,
                     onSelect = { section = it })
                 Spacer(Modifier.height(20.dp))
@@ -84,6 +90,14 @@ internal fun ExerciseGuideSheet(guide: ExerciseGuide, onClose: () -> Unit,
                 color = c.text2, fontSize = 12.sp, modifier = Modifier.padding(vertical = 8.dp))
             Cta(confirmLabel, onConfirm, modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
         }
+    }
+}
+
+@Composable
+private fun GuideLegend(color: Color, label: String) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+        Box(Modifier.size(10.dp).clip(RoundedCornerShape(3.dp)).background(color))
+        Text(label, color = Trex.c.text2, fontSize = 11.sp)
     }
 }
 

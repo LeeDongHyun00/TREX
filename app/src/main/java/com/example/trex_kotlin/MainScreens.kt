@@ -115,36 +115,34 @@ fun HomeScreen(app: AppViewModel, onGoWorkout: () -> Unit, onGoDiet: () -> Unit,
             WeatherSummaryRow(app.weather, Modifier.padding(top = 6.dp),
                 isInPlan = { name -> app.workoutPlan.any { it.name == name && !it.done } },
                 onAddExercise = app::addMuscleRecommendation)
-            Text("운동한 날", color = c.text2, fontSize = 12.sp,
-                modifier = Modifier.padding(top = 10.dp, bottom = 8.dp))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                (6 downTo 0).forEach { offset ->
-                    val date = today.minusDays(offset.toLong())
-                    val attended = date.toEpochDay() in activeDays
-                    val isToday = date == today
-                    Column(horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.semantics(mergeDescendants = true) {
-                            contentDescription = "${date.monthValue}월 ${date.day}일, ${if(attended) "운동 기록 있음" else "운동 기록 없음"}${if(isToday) ", 오늘" else ""}"
-                        }) {
-                        Text(koreanDayOfWeek(date.dayOfWeek), color = c.text2, fontSize = 11.sp)
-                        Box(Modifier.padding(top = 6.dp).size(34.dp).clip(CircleShape)
-                            .background(if (attended) c.primary else c.surface)
-                            .border(if(isToday) 2.dp else 0.dp, if(isToday)c.primaryText else Color.Transparent, CircleShape),
-                            contentAlignment = Alignment.Center) {
-                            Text("${date.day}", color = if(attended) Color.White else c.text,
-                                fontWeight = FontWeight.Medium, fontSize = 13.sp)
+        }
+        // '오늘 한눈' 띠(UI 감사 A1) — 운동 세트·섭취·물 도넛 셋이 홈의 첫 지표
+        item { HomeGlanceStrip(app, total, goal, onGoWorkout, onGoDiet) }
+        item {
+            // 운동한 날 — 7개 원·날짜·✓ 세 줄을 점 한 줄로(UI 감사 A2, K1·K2). 날짜는 기록 달력이 가진다
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text("운동한 날", color = c.text2, fontSize = 12.sp, modifier = Modifier.width(72.dp))
+                Row(Modifier.weight(1f), horizontalArrangement = Arrangement.SpaceBetween) {
+                    (6 downTo 0).forEach { offset ->
+                        val date = today.minusDays(offset.toLong())
+                        val attended = date.toEpochDay() in activeDays
+                        val isToday = date == today
+                        Column(horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.semantics(mergeDescendants = true) {
+                                contentDescription = "${date.monthValue}월 ${date.day}일, ${if(attended) "운동 기록 있음" else "운동 기록 없음"}${if(isToday) ", 오늘" else ""}"
+                            }) {
+                            Box(Modifier.size(14.dp).clip(CircleShape).background(if (attended) c.primary else c.track)
+                                .border(if (isToday) 2.dp else 0.dp, if (isToday) c.primaryText else Color.Transparent, CircleShape))
+                            Text(koreanDayOfWeek(date.dayOfWeek), color = if (isToday) c.primaryText else c.text3, fontSize = 10.sp, modifier = Modifier.padding(top = 3.dp))
                         }
-                        Text(if(isToday) "오늘" else if(attended) "✓" else "", color = c.primaryText, fontSize = 10.sp,
-                            modifier = Modifier.height(18.dp))
                     }
                 }
             }
         }
         item { HomeNutrition(total, goal, onGoDiet) }
         item { HomeActionCards(overview, onGoWorkout, onRecordMeal, routineName = app.weeklyRoutine.ref(today.dayOfWeek)?.let(app::routineName)) }
-        item { MuscleLoadHomeCard(app, onOpenMuscleLoad) }
-        // 연속 운동 → 운동 기록, 오늘 물 → 식단 탭(물 카드) — 사용자 요청 2026-11-07
-        item { HomeActivityCards(app, onOpenRecord = onOpenRecord, onOpenWater = onGoDiet) }
+        // 연속 운동 → 운동 기록, 근육 피로도 → 피로도 화면(물은 위 띠로, UI 감사 A3)
+        item { HomeActivityCards(app, onOpenRecord = onOpenRecord, onOpenMuscle = onOpenMuscleLoad) }
     }
 }
 

@@ -1,5 +1,13 @@
 package com.example.trex_kotlin
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -80,15 +88,27 @@ private fun RecordCalendar(app: AppViewModel, onOpenExercise: (String) -> Unit, 
                     Row(Modifier.fillMaxWidth()) {
                         listOf("월", "화", "수", "목", "금", "토", "일").forEach { Text(it, color = c.text2, fontSize = 12.sp, textAlign = TextAlign.Center, modifier = Modifier.weight(1f)) }
                     }
-                    val cells = leading + daysInMonth
+                    // 달 넘김은 200 ms 슬라이드 — 어느 쪽으로 갔는지 보인다(UI 감사 A22, K4 방향 신호). 점·칸은 등장 장식 없이 그대로
+                    // 키 = year*12 + (month-1) — month 를 그대로 더하면 12월이 key%12 == 0 으로 풀려 LocalDate(…, 0, 1) 에서 죽는다(11-07 실기기)
+                    AnimatedContent(year * 12 + (month - 1), transitionSpec = {
+                        val forward = targetState > initialState
+                        (slideInHorizontally(tween(200)) { if (forward) it / 3 else -it / 3 } + fadeIn(tween(160))) togetherWith
+                            (slideOutHorizontally(tween(200)) { if (forward) -it / 3 else it / 3 } + fadeOut(tween(120)))
+                    }, label = "month") { key ->
+                    val y = key / 12; val m = key % 12 + 1
+                    val firstOf = LocalDate(y, m, 1)
+                    val days = daysIn(y, m)
+                    val lead = firstOf.dayOfWeek.isoDayNumber - 1
+                    val cells = lead + days
                     val rows = (cells + 6) / 7
+                    Column {
                     repeat(rows) { r ->
                         Row(Modifier.fillMaxWidth().padding(top = 2.dp)) {
                             repeat(7) { col ->
                                 val index = r * 7 + col
-                                val day = index - leading + 1
-                                if (day < 1 || day > daysInMonth) { Spacer(Modifier.weight(1f).height(44.dp)); return@repeat }
-                                val date = LocalDate(year, month, day)
+                                val day = index - lead + 1
+                                if (day < 1 || day > days) { Spacer(Modifier.weight(1f).height(44.dp)); return@repeat }
+                                val date = LocalDate(y, m, day)
                                 val epoch = date.toEpochDay()
                                 val worked = epoch in workoutDays
                                 val future = epoch > today.toEpochDay()
@@ -99,7 +119,7 @@ private fun RecordCalendar(app: AppViewModel, onOpenExercise: (String) -> Unit, 
                                     .background(if (isSelected) c.text else Color.Transparent)
                                     .border(if (isToday && !isSelected) 1.5.dp else 0.dp, if (isToday) c.primary else Color.Transparent, RoundedCornerShape(12.dp))
                                     .clickable(enabled = !future) { selected = epoch }
-                                    .semantics { contentDescription = "${month}월 ${day}일" + (if (worked) ", 운동함" else if (rest) ", 계획된 휴식" else "") + (if (isToday) ", 오늘" else "") },
+                                    .semantics { contentDescription = "${m}월 ${day}일" + (if (worked) ", 운동함" else if (rest) ", 계획된 휴식" else "") + (if (isToday) ", 오늘" else "") },
                                     horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
                                     Text("$day", color = if (isSelected) c.bg else if (future) c.text3 else c.text, fontSize = 14.sp)
                                     Box(Modifier.padding(top = 3.dp).size(6.dp).clip(CircleShape)
@@ -107,6 +127,8 @@ private fun RecordCalendar(app: AppViewModel, onOpenExercise: (String) -> Unit, 
                                 }
                             }
                         }
+                    }
+                    }
                     }
                     Row(Modifier.padding(top = 10.dp, start = 6.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                         Legend(c.primary, "운동한 날"); Legend(c.primarySoftLine, "계획된 휴식")
@@ -225,7 +247,8 @@ private fun RecordStatsView(app: AppViewModel, onOpenExercise: (String) -> Unit,
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Row(Modifier.fillMaxWidth()) {
                         StatCell("운동일 · 세트", "${stats.days}일 · ${stats.sets}세트", Modifier.weight(1f))
-                        StatCell("볼륨" + if (stats.volume.estimatedSets > 0) " · 추정 ${stats.volume.estimatedSets}세트" else "", "${stats.volume.kg.roundToInt()} kg", Modifier.weight(1f))
+                        // 추정 세트는 글 대신 호박 칩 — 호박 = 참고/카메라 값(K3·K8, UI 감사 A23)
+                        StatCell("볼륨", "${stats.volume.kg.roundToInt()} kg", Modifier.weight(1f), note = if (stats.volume.estimatedSets > 0) "추정 ${stats.volume.estimatedSets}세트" else null)
                     }
                     Row(Modifier.fillMaxWidth()) {
                         StatCell("운동 시간", stats.seconds.let { s -> if (s >= 3600) "${s / 3600}시간 ${s % 3600 / 60}분" else "${s / 60}분" }, Modifier.weight(1f))
@@ -246,7 +269,9 @@ private fun RecordStatsView(app: AppViewModel, onOpenExercise: (String) -> Unit,
                             Column(Modifier.weight(1f).fillMaxHeight(), horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text(if (n > 0) "$n" else "", color = c.text2, fontSize = 11.sp)
                                 Box(Modifier.weight(1f).fillMaxWidth().padding(vertical = 4.dp), contentAlignment = Alignment.BottomCenter) {
-                                    Box(Modifier.widthIn(max = 28.dp).fillMaxWidth().height((70f * n / max).coerceAtLeast(2f).dp).clip(RoundedCornerShape(5.dp))
+                                    // 막대는 300 ms 로 자란다 — 기간을 바꾸면 값이 바뀌었다는 피드백(UI 감사 A23, K4). 처음 열 때도 0 에서 한 번
+                                    val h by animateDpAsState((70f * n / max).coerceAtLeast(2f).dp, tween(300), label = "bar$d")
+                                    Box(Modifier.widthIn(max = 28.dp).fillMaxWidth().height(h).clip(RoundedCornerShape(5.dp))
                                         .background(if (n == 0) c.track else if (d == today.toEpochDay()) c.primaryText else c.primary))
                                 }
                                 Text(koreanDayOfWeek(date.dayOfWeek), color = if (d == today.toEpochDay()) c.text else c.text2, fontSize = 12.sp)
@@ -301,9 +326,11 @@ private fun RecordStatsView(app: AppViewModel, onOpenExercise: (String) -> Unit,
 }
 
 @Composable
-private fun StatCell(label: String, value: String, modifier: Modifier) {
+private fun StatCell(label: String, value: String, modifier: Modifier, note: String? = null) {
     Column(modifier) {
         Text(label, color = Trex.c.text2, fontSize = 12.sp)
         Text(value, color = Trex.c.text, fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 2.dp))
+        if (note != null) Text(note, color = Trex.c.warn, fontSize = 10.5.sp, fontWeight = FontWeight.SemiBold, maxLines = 1,
+            modifier = Modifier.padding(top = 4.dp).clip(RoundedCornerShape(999.dp)).background(Trex.c.warnWash).padding(horizontal = 8.dp, vertical = 3.dp))
     }
 }
