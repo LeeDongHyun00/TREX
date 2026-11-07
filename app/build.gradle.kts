@@ -24,9 +24,9 @@ android {
         applicationId = "com.example.trex_kotlin"
         minSdk = 26
         targetSdk = 36
-        // v1.4(2026-11-01) — 코드 15: Play 1.3.0 이 14, 다른 작업 폴더 빌드가 13 을 써서 어느 설치본에서도 앱 내 업데이트가 뜨게 그 위로
-        versionCode = 15
-        versionName = "1.4.0"
+        // v1.5(2026-11-07) — 코드 16: v1.4(15) 위로. 운동 46종 확장·기록 화면·72종 가이드·MET kcal·배지(PR 64, 스펙 §130~§138)
+        versionCode = 16
+        versionName = "1.5.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
