@@ -139,7 +139,6 @@ fun HomeScreen(app: AppViewModel, onGoWorkout: () -> Unit, onGoDiet: () -> Unit,
                 }
             }
         }
-        item { HomeNutrition(total, goal, onGoDiet) }
         item { HomeActionCards(overview, onGoWorkout, onRecordMeal, routineName = app.weeklyRoutine.ref(today.dayOfWeek)?.let(app::routineName)) }
         // 연속 운동 → 운동 기록, 근육 피로도 → 피로도 화면(물은 위 띠로, UI 감사 A3)
         item { HomeActivityCards(app, onOpenRecord = onOpenRecord, onOpenMuscle = onOpenMuscleLoad) }

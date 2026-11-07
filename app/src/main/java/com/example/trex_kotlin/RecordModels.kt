@@ -30,13 +30,17 @@ data class SetEntry(
     val rpe: Int? = null,
     val memo: String? = null,
     val done: Boolean = true,
+    /** 기록 당시 체중 — 체중 전부를 드는 종목(풀업·딥스, [ExerciseLoadKind.BODYWEIGHT_FULL])에서 체중 기록이 있을 때만. 볼륨 = (체중 + 추가 kg) × 회. */
+    val bodyKg: Double? = null,
 ) {
     /** 통계가 쓰는 횟수 — 사용자 확정값 우선, 없으면 카메라 값. */
     val countedReps: Int? get() = reps ?: cameraReps
     /** 카메라 횟수만 있는 세트 — 볼륨·추이에서 '추정' 으로 표시한다. */
     val estimated: Boolean get() = reps == null && cameraReps != null
-    /** 볼륨(kg × 회) — kg 와 사용자 확정 횟수가 둘 다 있을 때만(추정 횟수로 kg 을 곱하지 않는다). */
-    val volumeKg: Double? get() = if (kg != null && reps != null) kg * reps else null
+    /** 하중 — 외부 중량이면 kg, 체중 전부를 드는 종목이면 체중 + 추가 kg. 맨몸 일부 종목(스쿼트·푸쉬업)은 kg(추가 중량)만 — 체중 비율을 지어내지 않는다. */
+    val loadKg: Double? get() = if (bodyKg != null) bodyKg + (kg ?: 0.0) else kg
+    /** 볼륨(하중 × 회) — 하중과 사용자 확정 횟수가 둘 다 있을 때만(추정 횟수로 kg 을 곱하지 않는다). */
+    val volumeKg: Double? get() = loadKg?.let { l -> reps?.let { l * it } }
 }
 
 internal fun setEntryJson(s: SetEntry): JSONObject = JSONObject().put("i", s.index).put("done", s.done).also { o ->
@@ -46,6 +50,7 @@ internal fun setEntryJson(s: SetEntry): JSONObject = JSONObject().put("i", s.ind
     s.cameraReps?.let { o.put("cam", it) }
     s.rpe?.let { o.put("rpe", it) }
     s.memo?.takeIf { it.isNotBlank() }?.let { o.put("memo", it) }
+    s.bodyKg?.let { o.put("bw", it) }
 }
 
 internal fun setEntryFromJson(o: JSONObject): SetEntry = SetEntry(
@@ -57,6 +62,7 @@ internal fun setEntryFromJson(o: JSONObject): SetEntry = SetEntry(
     rpe = if (o.has("rpe")) o.optInt("rpe", -1).takeIf { it in 1..10 } else null,
     memo = o.optString("memo").takeIf { it.isNotBlank() },
     done = o.optBoolean("done", true),
+    bodyKg = if (o.has("bw")) o.optDouble("bw").takeIf { it.isFinite() && it > 0 } else null,
 )
 
 internal fun encodeSetEntries(sets: List<SetEntry>): JSONArray = JSONArray().also { arr -> sets.forEach { arr.put(setEntryJson(it)) } }

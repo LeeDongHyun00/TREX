@@ -189,10 +189,8 @@ private fun RecordItemRow(item: WorkoutHistoryItem, onOpen: () -> Unit) {
     val c = Trex.c
     Row(Modifier.fillMaxWidth().clickable(onClick = onOpen).padding(vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(item.workoutName, color = c.text, fontSize = 16.sp, fontWeight = FontWeight.Medium)
-                WashPill(when { item.source == "manual" -> "기록 전용"; item.postureCorrection != null -> "자세 교정"; else -> "타이머" })
-            }
+            // '타이머·기록 전용·자세 교정' 칩은 뺐다(사용자 요청 2026-11-07) — 출처는 세부 줄의 '자세 지적' 과 종목 상세가 말한다
+            Text(item.workoutName, color = c.text, fontSize = 16.sp, fontWeight = FontWeight.Medium)
             val line = item.sets.summaryLine().ifBlank { item.reps }
             val pc = item.postureCorrection
             val detail = buildList {

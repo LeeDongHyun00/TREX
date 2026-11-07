@@ -23,6 +23,7 @@ fun SessionSetInputCard(app: AppViewModel, originalId: String, workoutName: Stri
     val c = Trex.c
     var allRows by remember(originalId) { mutableStateOf(!compact) }
     val last = remember(workoutName) { app.lastSets(workoutName) }
+    val kgLabel = remember(workoutName) { exerciseLoadKind(workoutName).kgLabel() }
     val drafts = remember(originalId) { mutableStateListOf<SetRowDraft>().also { list ->
         for (i in 1..totalSets) {
             val saved = app.sessionSets["$originalId::set:$i"]
@@ -53,10 +54,10 @@ fun SessionSetInputCard(app: AppViewModel, originalId: String, workoutName: Stri
         }
         Surface(shape = RoundedCornerShape(18.dp), color = c.surface, modifier = Modifier.fillMaxWidth()) {
             Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                SetRowHeader(timed)
+                SetRowHeader(timed, kgLabel)
                 drafts.forEach { d ->
                     if (!allRows && d.index != finishedSet) return@forEach
-                    SetRow(d, timed, enabled = d.index <= finishedSet)
+                    SetRow(d, timed, enabled = d.index <= finishedSet, kgLabel = kgLabel)
                     if (d.index == finishedSet && cameraReps != null && !d.edited) CameraCountNote(cameraReps)
                 }
                 if (compact && totalSets > 1) TextButton(onClick = { allRows = !allRows }, contentPadding = PaddingValues(horizontal = 4.dp)) {
@@ -97,9 +98,10 @@ private fun FinalSetsRows(app: AppViewModel, name: String, sets: List<SetEntry>,
     LaunchedEffect(drafts.map { Triple(it.kg, it.count, it.done) }) {
         drafts.forEach { d -> val (rpe, memo) = rpeMemo[d.index] ?: (null to null); app.updateTodaySet(name, d.toEntry(timed, rpe, memo)) }
     }
+    val kgLabel = remember(name) { exerciseLoadKind(name).kgLabel() }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(name, color = c.text, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-        SetRowHeader(timed)
-        drafts.forEach { d -> SetRow(d, timed) }
+        SetRowHeader(timed, kgLabel)
+        drafts.forEach { d -> SetRow(d, timed, kgLabel = kgLabel) }
     }
 }

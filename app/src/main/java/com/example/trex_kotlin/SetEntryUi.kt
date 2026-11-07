@@ -53,12 +53,13 @@ class SetRowDraft(index: Int, kg: String = "", count: String = "", done: Boolean
 
 fun SetEntry.toDraft(): SetRowDraft = SetRowDraft(index, kg?.let(::trimKg) ?: "", (reps ?: cameraReps ?: seconds)?.toString() ?: "", done, cameraReps)
 
+/** [kgLabel] 은 외부 중량이면 "kg", 맨몸이면 "+kg"(추가 중량 — `ExerciseLoadKind.kgLabel`). */
 @Composable
-fun SetRowHeader(timed: Boolean) {
+fun SetRowHeader(timed: Boolean, kgLabel: String = "kg") {
     val c = Trex.c
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         Text("세트", color = c.text2, fontSize = 12.sp, textAlign = TextAlign.Center, modifier = Modifier.width(36.dp))
-        Text("kg", color = c.text2, fontSize = 12.sp, textAlign = TextAlign.Center, modifier = Modifier.weight(1f))
+        Text(kgLabel, color = c.text2, fontSize = 12.sp, textAlign = TextAlign.Center, modifier = Modifier.weight(1f))
         Text(if (timed) "초" else "회", color = c.text2, fontSize = 12.sp, textAlign = TextAlign.Center, modifier = Modifier.weight(1f))
         Text("완료", color = c.text2, fontSize = 12.sp, textAlign = TextAlign.Center, modifier = Modifier.width(44.dp))
     }
@@ -66,11 +67,11 @@ fun SetRowHeader(timed: Boolean) {
 
 /** [enabled] 거짓이면 아직 할 세트(회색). [showKg] 거짓이면 kg 칸 대신 '—'(맨몸·시간 종목도 kg 을 적을 수 있어 기본 참). */
 @Composable
-fun SetRow(draft: SetRowDraft, timed: Boolean, enabled: Boolean = true, showKg: Boolean = true) {
+fun SetRow(draft: SetRowDraft, timed: Boolean, enabled: Boolean = true, showKg: Boolean = true, kgLabel: String = "kg") {
     val c = Trex.c
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
         Text("${draft.index}", color = c.text2, fontSize = 12.sp, textAlign = TextAlign.Center, modifier = Modifier.width(36.dp))
-        if (showKg) NumberCell(draft.kg, { draft.kg = it.decimalOnly().take(6) }, "kg", enabled, false, Modifier.weight(1f), "${draft.index}세트 kg")
+        if (showKg) NumberCell(draft.kg, { draft.kg = it.decimalOnly().take(6) }, kgLabel, enabled, false, Modifier.weight(1f), "${draft.index}세트 ${if (kgLabel == "+kg") "추가 중량" else "kg"}")
         else Box(Modifier.weight(1f).height(48.dp), contentAlignment = Alignment.Center) { Text("—", color = c.text3) }
         NumberCell(draft.count, { draft.count = it.digitsOnly().take(4) }, if (timed) "초" else "회", enabled, draft.cameraReps != null && !draft.edited, Modifier.weight(1f),
             "${draft.index}세트 ${if (timed) "초" else "회"}" + (draft.cameraReps?.let { ", 카메라가 센 값 $it" } ?: ""))
@@ -91,7 +92,7 @@ private fun NumberCell(value: String, onChange: (String) -> Unit, placeholder: S
         .semantics { contentDescription = description }, contentAlignment = Alignment.Center) {
         BasicTextField(value, onChange, enabled = enabled, singleLine = true,
             textStyle = TextStyle(color = if (enabled) c.text else c.text3, fontSize = 17.sp, textAlign = TextAlign.Center),
-            keyboardOptions = KeyboardOptions(keyboardType = if (placeholder == "kg") KeyboardType.Decimal else KeyboardType.Number),
+            keyboardOptions = KeyboardOptions(keyboardType = if (placeholder.endsWith("kg")) KeyboardType.Decimal else KeyboardType.Number),
             cursorBrush = SolidColor(c.primaryText), modifier = Modifier.fillMaxWidth().padding(horizontal = 6.dp),
             decorationBox = { inner -> Box(contentAlignment = Alignment.Center) { if (value.isEmpty()) Text(placeholder, color = c.text3, fontSize = 15.sp); inner() } })
     }

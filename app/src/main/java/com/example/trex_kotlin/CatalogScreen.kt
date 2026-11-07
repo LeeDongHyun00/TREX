@@ -109,7 +109,7 @@ private fun CatalogRow(t: WorkoutTemplate, chip: String?, mine: Boolean, onOpen:
     val c = Trex.c
     Surface(onClick = onOpen, shape = RoundedCornerShape(16.dp), color = c.surface, modifier = Modifier.fillMaxWidth()) {
         Row(Modifier.padding(start = 10.dp, end = 6.dp, top = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            BodyPartGlyph(bodyPartForWorkout(t.name, t.category), 40.dp)
+            MuscleGlyph(muscleKeysFor(t.name, t.category), 44.dp, description = "${t.name} 사용 근육")
             Column(Modifier.weight(1f).padding(start = 12.dp)) {
                 Text(t.name, color = c.text, fontSize = 15.sp, fontWeight = FontWeight.Medium)
                 Text(listOfNotNull(catalogRegionOf(t.name, t.category), if (mine) null else catalogEquipmentOf(t.name), if (ExerciseGuides.forName(t.name) != null) "가이드" else null).joinToString(" · "),

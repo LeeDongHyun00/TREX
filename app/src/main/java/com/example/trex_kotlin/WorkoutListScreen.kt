@@ -260,10 +260,10 @@ private fun WorkoutSwipeRow(workout: Workout, shape: RoundedCornerShape, reset: 
                 }
             }) {
             Row(Modifier.fillMaxWidth().heightIn(min = 104.dp).padding(start = 14.dp, end = 8.dp, top = 12.dp, bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                // 부위 글리프(UI 감사 A6, K6) — 글을 읽기 전에 부위가 보인다. 완료한 운동은 글리프 자리에 체크
-                if (workout.done) Box(Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(c.primaryWash), contentAlignment = Alignment.Center) {
+                // 근육 글리프(UI 감사 A6, K6 — 실루엣에 주 근육 색칠) — 글을 읽기 전에 어디를 쓰는지 보인다. 완료한 운동은 글리프 자리에 체크
+                if (workout.done) Box(Modifier.size(44.dp).clip(RoundedCornerShape(12.dp)).background(c.primaryWash), contentAlignment = Alignment.Center) {
                     Icon(Icons.Rounded.CheckCircle, "${workout.name} 완료", tint = c.primaryText, modifier = Modifier.size(24.dp))
-                } else BodyPartGlyph(bodyPartForWorkout(workout.name, workout.category), 40.dp)
+                } else MuscleGlyph(muscleKeysFor(workout.name, workout.category), 44.dp, description = "${workout.name} 사용 근육")
                 Column(Modifier.weight(1f).padding(start = 12.dp)) {
                     Text(workout.name, color = if(workout.done)c.primaryText else c.text, fontSize = 16.sp, fontWeight = FontWeight.Medium)
                     Row(Modifier.padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {

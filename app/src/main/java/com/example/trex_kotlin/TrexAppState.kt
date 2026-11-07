@@ -679,8 +679,13 @@ class AppViewModel(private val platform: AppPlatform) : ViewModel() {
         return SetEntry(index = index, kg = typed?.kg,
             reps = typed?.reps ?: if (camera == null && !timed) w.repsSpec().count else null,
             // 시간 종목은 사용자가 고친 초가 기준, 없으면 잰 시간(PR 65 리뷰 — 고친 45→30초가 기록엔 45로 남았다)
-            seconds = if (timed) typed?.seconds ?: seconds else null, cameraReps = camera, rpe = typed?.rpe, memo = typed?.memo, done = w.done)
+            seconds = if (timed) typed?.seconds ?: seconds else null, cameraReps = camera, rpe = typed?.rpe, memo = typed?.memo, done = w.done,
+            bodyKg = bodyKgFor(w.name))
     }
+
+    /** 체중 전부를 드는 종목(풀업·딥스)만 기록 당시 체중을 세트에 남긴다 — 체중 기록이 없으면 null(볼륨 없음, 지어내지 않는다). */
+    private fun bodyKgFor(name: String): Double? =
+        if (exerciseLoadKind(name) == ExerciseLoadKind.BODYWEIGHT_FULL) latestBodyWeight?.kg else null
 
     val todayRecord: WorkoutHistoryDay?
         get() = workoutHistory.firstOrNull { it.epochDay == todayEpochDay() }
@@ -695,7 +700,7 @@ class AppViewModel(private val platform: AppPlatform) : ViewModel() {
         var changed = false
         val items = day.items.map { item ->
             if (item.workoutName != workoutName || item.sets.none { it.index == entry.index }) item
-            else { changed = true; item.copy(sets = item.sets.map { s -> if (s.index == entry.index) entry.copy(cameraReps = s.cameraReps) else s }) }
+            else { changed = true; item.copy(sets = item.sets.map { s -> if (s.index == entry.index) entry.copy(cameraReps = s.cameraReps, bodyKg = s.bodyKg) else s }) }
         }
         if (!changed) return
         workoutHistory = workoutHistory.map { if (it.epochDay == today) it.copy(items = items) else it }
@@ -929,7 +934,7 @@ class AppViewModel(private val platform: AppPlatform) : ViewModel() {
      * 돌려주는 값은 개인 기록이면 그 세트(저장 뒤 알려 준다), 아니면 null; 기록할 세트가 없으면 저장하지 않는다.
      */
     fun recordManualWorkout(epochDay: Long, name: String, sets: List<SetEntry>): Result<SetEntry?> {
-        val done = sets.filter { it.done && (it.reps != null || it.seconds != null) }.mapIndexed { i, s -> s.copy(index = i + 1) }
+        val done = sets.filter { it.done && (it.reps != null || it.seconds != null) }.mapIndexed { i, s -> s.copy(index = i + 1, bodyKg = bodyKgFor(name)) }
         if (done.isEmpty()) return Result.failure(IllegalArgumentException("완료한 세트가 없어요"))
         val template = catalogTemplates().firstOrNull { it.name == name }
         val timed = done.all { it.seconds != null }

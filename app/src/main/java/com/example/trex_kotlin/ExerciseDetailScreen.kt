@@ -35,44 +35,43 @@ fun ExerciseDetailScreen(app: AppViewModel, name: String, onBack: () -> Unit, on
     val sets = remember(app.workoutHistory) { app.workoutHistory.datedSets().filter { it.workoutName == name }.sortedByDescending { it.epochDay } }
     val byDay = sets.groupBy { it.epochDay }.entries.sortedByDescending { it.key }
     val best = app.workoutHistory.bestKg(name)
-    val oneRm = best?.set?.let { s -> s.kg?.let { kg -> s.reps?.let { estimatedOneRepMax(kg, it) } } }
+    // 1RM(Epley)은 외부 중량 종목에만 — 맨몸 + 추가 중량은 체중 비율이 섞여 추정하지 않는다(근거 감사 F5)
+    val kind = exerciseLoadKind(name)
+    val oneRm = if (kind.supportsOneRepMax()) best?.set?.let { s -> s.kg?.let { kg -> s.reps?.let { estimatedOneRepMax(kg, it) } } } else null
     val kgTrend = byDay.take(8).reversed().map { (day, list) -> day to (list.mapNotNull { it.set.kg }.maxOrNull() ?: 0.0) }
     val repTrend = byDay.take(8).reversed().map { (day, list) -> day to list.filter { !it.set.estimated }.mapNotNull { it.set.countedReps } }
     var showAll by remember { mutableStateOf(false) }
     var evidenceOpen by remember { mutableStateOf(false) }
-    val region = catalogRegionOf(name, template?.category ?: "")
-    val guide = ExerciseGuides.forName(name)
     Column(Modifier.fillMaxSize().background(c.bg).statusBarsPadding().navigationBarsPadding()) {
+        // 이름만 — '등 · 맨몸' 부위·기구 줄은 뺐다(사용자 요청 2026-11-07, 카탈로그 행이 이미 말한다)
         Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "뒤로", tint = c.text) }
-            Column { Text("$region · ${custom?.equipment ?: catalogEquipmentOf(name)}", color = c.text2, fontSize = 12.sp); Text(name, color = c.text, fontSize = 18.sp, fontWeight = FontWeight.SemiBold) }
+            Text(name, color = c.text, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
         }
         LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            // 머리 그림(UI 감사 A11, K1·K6) — 가이드가 있는 16종은 시범 첫 프레임, 나머지는 부위 글리프. 그림은 자세 정답이 아니다(ExerciseGuides 머리말)
-            item {
-                Box(Modifier.fillMaxWidth().height(150.dp).clip(RoundedCornerShape(20.dp)).background(c.surface), contentAlignment = Alignment.Center) {
-                    if (guide != null) AssetArtwork(guide.asset, Modifier.fillMaxSize().padding(6.dp))
-                    else BodyPartGlyph(bodyPartOf(region), 96.dp, background = c.surface)
-                    Row(Modifier.align(Alignment.BottomStart).padding(10.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        if (postureSupported(name)) PostureSupportPill() else if (custom != null) WashPill("내가 추가")
-                        if (app.workoutPlan.any { it.name == name }) WashPill("오늘 루틴에 있음")
-                    }
-                }
-            }
+            // 맨 위는 사용 근육(사용자 요청 2026-11-07 — 머리 그림 카드는 뺐다). 지원·루틴 표시는 이 카드 머리줄에
+            item { UsedMusclesCard(app, name, profile, custom != null, evidenceOpen, { evidenceOpen = !evidenceOpen }, uri) }
             item {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Surface(shape = RoundedCornerShape(18.dp), color = c.surface, modifier = Modifier.weight(1f)) {
                         Column(Modifier.padding(16.dp)) {
-                            Text("최고 무게", color = c.text2, fontSize = 12.sp)
-                            Text(best?.set?.kg?.let { "${trimKg(it)} kg" } ?: "—", color = c.text, fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 2.dp))
-                            Text(best?.let { b -> LocalDate.fromEpochDays(b.epochDay).let { "${it.monthValue}월 ${it.day}일 · ${b.set.reps}회" } } ?: "기록이 쌓이면 나타나요", color = c.text2, fontSize = 12.sp)
+                            Text(if (kind == ExerciseLoadKind.EXTERNAL) "최고 무게" else "최고 추가 중량", color = c.text2, fontSize = 12.sp)
+                            Text(best?.set?.kg?.let { "${if (kind == ExerciseLoadKind.EXTERNAL) "" else "+"}${trimKg(it)} kg" } ?: "—", color = c.text, fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 2.dp))
+                            Text(best?.let { b -> LocalDate.fromEpochDays(b.epochDay).let { "${it.monthValue}월 ${it.day}일 · ${b.set.reps}회" } } ?: if (kind == ExerciseLoadKind.EXTERNAL) "기록이 쌓이면 나타나요" else "맨몸 · 조끼·벨트를 더하면 적어요", color = c.text2, fontSize = 12.sp)
                         }
                     }
                     Surface(shape = RoundedCornerShape(18.dp), color = c.surface, modifier = Modifier.weight(1f)) {
                         Column(Modifier.padding(16.dp)) {
-                            Text("추정 1RM", color = c.text2, fontSize = 12.sp)
-                            Text(oneRm?.let { "${it.roundToInt()} kg" } ?: "—", color = c.text, fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 2.dp))
-                            Text(if (oneRm != null) "${trimKg(best!!.set.kg!!)} kg × ${best.set.reps} · Epley · 추정" else "10회 이하 세트에서 추정해요", color = c.text2, fontSize = 12.sp)
+                            Text(if (kind == ExerciseLoadKind.EXTERNAL) "추정 1RM" else "최다 횟수", color = c.text2, fontSize = 12.sp)
+                            // 맨몸 종목은 1RM 대신 한 세트 최다 횟수 — 체중 비율을 지어내지 않는다
+                            val bestReps = if (kind == ExerciseLoadKind.EXTERNAL) null else sets.mapNotNull { it.set.reps }.maxOrNull()
+                            Text(oneRm?.let { "${it.roundToInt()} kg" } ?: bestReps?.let { "${it}회" } ?: "—", color = c.text, fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 2.dp))
+                            Text(when {
+                                oneRm != null -> "${trimKg(best!!.set.kg!!)} kg × ${best.set.reps} · Epley · 추정"
+                                kind == ExerciseLoadKind.EXTERNAL -> "10회 이하 세트에서 추정해요"
+                                kind == ExerciseLoadKind.BODYWEIGHT_FULL -> "볼륨은 체중 + 추가 중량 · 체중 기록 기준"
+                                else -> "맨몸 · 1RM 은 추정하지 않아요"
+                            }, color = c.text2, fontSize = 12.sp)
                         }
                     }
                 }
@@ -109,43 +108,52 @@ fun ExerciseDetailScreen(app: AppViewModel, name: String, onBack: () -> Unit, on
                     }
                 }
             }
-            item {
-                Surface(shape = RoundedCornerShape(18.dp), color = c.surface, modifier = Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                            Text("사용 근육", color = c.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-                            // 근거·각주는 ⓘ 뒤로(UI 감사 A11, K2 글은 둘째 자리) — 그림(근육도)과 이름 한 줄이 1차
-                            if (profile != null) IconButton(onClick = { evidenceOpen = !evidenceOpen }, modifier = Modifier.size(32.dp)) { Icon(Icons.Rounded.Info, if (evidenceOpen) "근거 접기" else "근거 보기", tint = c.text3, modifier = Modifier.size(18.dp)) }
-                        }
-                        if (profile == null) Text("근육 부하 추정 없음", color = c.text2, fontSize = 13.sp)
-                        else {
-                            // 완료 화면의 '사용 근육' 과 같은 2D 근육도(사용 = primary) — 주 근육(가중치 ≥ .75)만 칠하고 보조는 글로
-                            val keys = remember(profile.id) { profile.primary.flatMap { m -> listOf("${m.name}_L", "${m.name}_R") }.joinToString(",", "[", "]") { "\"$it\"" } }
-                            Surface(shape = RoundedCornerShape(16.dp), color = androidx.compose.ui.graphics.Color(0xFF222527), modifier = Modifier.fillMaxWidth()) {
-                                Box(Modifier.fillMaxWidth().height(260.dp)) {
-                                    MuscleAtlasWebView("window.setUsedMuscles && window.setUsedMuscles($keys);", true, "$name 의 주 근육. 왼쪽 뒷면, 오른쪽 앞면", Modifier.fillMaxSize())
-                                }
-                            }
-                            val primary = profile.primary.map { it.label }
-                            val secondary = profile.weights.filterValues { it < .75 }.entries.sortedByDescending { it.value }.map { it.key.label }
-                            Text("주요 · " + primary.joinToString(" · "), color = c.text, fontSize = 14.sp)
-                            if (secondary.isNotEmpty()) Text("보조·안정 · " + secondary.joinToString(" · "), color = c.text2, fontSize = 13.sp)
-                            if (evidenceOpen) {
-                                Text(profile.evidence, color = c.text2, fontSize = 12.sp, lineHeight = 17.sp, modifier = Modifier.padding(top = 4.dp))
-                                if (profile.sources.isNotEmpty()) Row(Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                    profile.sources.take(3).forEachIndexed { i, url -> TextButton(onClick = { uri.openUri(url) }, contentPadding = PaddingValues(horizontal = 8.dp)) { Text("근거 ${i + 1}", color = c.primaryText, fontSize = 12.sp) } }
-                                }
-                                Text("역할 가중치는 EMG 비율이 아니라 제품 초기값이에요(docs/MUSCLE_LOAD_IMPLEMENTATION.md).", color = c.text3, fontSize = 11.sp, lineHeight = 15.sp)
-                            }
-                        }
-                    }
-                }
-            }
             item { ExerciseGuidePreview(name) }
         }
         Row(Modifier.padding(horizontal = 20.dp, vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             GhostButton("기록 추가", onAddManual, Modifier.weight(1f))
             Cta("오늘 루틴에 넣기", onAddToPlan, Modifier.weight(1.4f))
+        }
+    }
+}
+
+/** 사용 근육 카드 — 2D 근육도(주 근육 = primary) + 주요/보조 한 줄, 근거·각주는 ⓘ 뒤(UI 감사 A11, K2). 머리줄 오른쪽에 자세 교정 지원·내가 추가·오늘 루틴 표시. */
+@Composable
+private fun UsedMusclesCard(app: AppViewModel, name: String, profile: com.example.trex_kotlin.trainingload.ExerciseLoadProfile?, mine: Boolean,
+    evidenceOpen: Boolean, onToggleEvidence: () -> Unit, uri: androidx.compose.ui.platform.UriHandler) {
+    val c = Trex.c
+    Surface(shape = RoundedCornerShape(18.dp), color = c.surface, modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text("사용 근육", color = c.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                // 근거가 약한 가중치(다른 종목에서 옮김·출처 없음)는 '추정' 으로 밝힌다(원칙 #2, 근거 감사 F2)
+                if (profile?.evidenceWeak == true) Text("추정", color = c.warn, fontSize = 10.5.sp, fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.clip(RoundedCornerShape(999.dp)).background(c.warnWash).padding(horizontal = 8.dp, vertical = 3.dp))
+                if (postureSupported(name)) PostureSupportPill() else if (mine) WashPill("내가 추가")
+                if (app.workoutPlan.any { it.name == name }) WashPill("오늘 루틴에 있음")
+                if (profile != null) IconButton(onClick = onToggleEvidence, modifier = Modifier.size(32.dp)) { Icon(Icons.Rounded.Info, if (evidenceOpen) "근거 접기" else "근거 보기", tint = c.text3, modifier = Modifier.size(18.dp)) }
+            }
+            if (profile == null) Text("근육 부하 추정 없음", color = c.text2, fontSize = 13.sp)
+            else {
+                // 완료 화면의 '사용 근육' 과 같은 2D 근육도(사용 = primary) — 주 근육(가중치 ≥ .75)만 칠하고 보조는 글로
+                val keys = remember(profile.id) { profile.primary.flatMap { m -> listOf("${m.name}_L", "${m.name}_R") }.joinToString(",", "[", "]") { "\"$it\"" } }
+                Surface(shape = RoundedCornerShape(16.dp), color = androidx.compose.ui.graphics.Color(0xFF222527), modifier = Modifier.fillMaxWidth()) {
+                    Box(Modifier.fillMaxWidth().height(260.dp)) {
+                        MuscleAtlasWebView("window.setUsedMuscles && window.setUsedMuscles($keys);", true, "$name 의 주 근육. 왼쪽 뒷면, 오른쪽 앞면", Modifier.fillMaxSize())
+                    }
+                }
+                val primary = profile.primary.map { it.label }
+                val secondary = profile.weights.filterValues { it < .75 }.entries.sortedByDescending { it.value }.map { it.key.label }
+                Text("주요 · " + primary.joinToString(" · "), color = c.text, fontSize = 14.sp)
+                if (secondary.isNotEmpty()) Text("보조·안정 · " + secondary.joinToString(" · "), color = c.text2, fontSize = 13.sp)
+                if (evidenceOpen) {
+                    Text(profile.evidence, color = c.text2, fontSize = 12.sp, lineHeight = 17.sp, modifier = Modifier.padding(top = 4.dp))
+                    if (profile.sources.isNotEmpty()) Row(Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        profile.sources.take(3).forEachIndexed { i, url -> TextButton(onClick = { uri.openUri(url) }, contentPadding = PaddingValues(horizontal = 8.dp)) { Text("근거 ${i + 1}", color = c.primaryText, fontSize = 12.sp) } }
+                    }
+                    Text("역할 가중치는 EMG 비율이 아니라 제품 초기값이에요(docs/MUSCLE_LOAD_IMPLEMENTATION.md).", color = c.text3, fontSize = 11.sp, lineHeight = 15.sp)
+                }
+            }
         }
     }
 }

@@ -111,7 +111,7 @@ private fun WeeklyTab(app: AppViewModel, onOpenCatalog: () -> Unit, onStartWorko
                         val last = app.lastSets(w.name)?.second?.lastOrNull()?.kg
                         Row(Modifier.fillMaxWidth().padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                             // 부위 글리프(UI 감사 A9, K6) — 운동 탭 행과 같은 어휘
-                            BodyPartGlyph(bodyPartForWorkout(w.name, w.category), 34.dp)
+                            MuscleGlyph(muscleKeysFor(w.name, w.category), 38.dp, description = "${w.name} 사용 근육")
                             Column(Modifier.weight(1f).padding(start = 10.dp)) {
                                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                     Text(w.name, color = c.text, fontSize = 15.sp, fontWeight = FontWeight.Medium)
@@ -223,7 +223,7 @@ private fun RoutinePreviewSheet(app: AppViewModel, p: RoutinePreset, onClose: ()
                 p.items.forEachIndexed { i, item ->
                     if (i > 0) HorizontalDivider(color = c.line)
                     Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                        BodyPartGlyph(bodyPartForWorkout(item.name, workouts.getOrNull(i)?.category ?: ""), 32.dp)
+                        MuscleGlyph(muscleKeysFor(item.name, workouts.getOrNull(i)?.category ?: ""), 36.dp, description = "${item.name} 사용 근육")
                         Column(Modifier.weight(1f).padding(start = 10.dp)) {
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) { Text(item.name, color = c.text, fontSize = 15.sp); if (postureSupported(item.name)) PostureSupportPill() }
                         }

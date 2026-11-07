@@ -26,6 +26,24 @@ class RecordModelsTest {
         assertFalse(fixed.estimated); assertEquals(600.0, fixed.volumeKg!!, 0.0)   // 고친 값이 기록 기준
     }
 
+    @Test fun bodyweightLoadKindAndVolume() {
+        // 맨몸 스쿼트는 체중 비율 근거가 없어 kg 이 없으면 볼륨도 없다; 풀업·딥스만 체중 + 추가 kg (근거 감사 2026-11-07)
+        assertEquals(ExerciseLoadKind.BODYWEIGHT, exerciseLoadKind("기본 스쿼트"))
+        assertEquals(ExerciseLoadKind.BODYWEIGHT, exerciseLoadKind("푸쉬업"))
+        assertEquals(ExerciseLoadKind.BODYWEIGHT_FULL, exerciseLoadKind("풀업"))
+        assertEquals(ExerciseLoadKind.BODYWEIGHT_FULL, exerciseLoadKind("딥스"))
+        assertEquals(ExerciseLoadKind.EXTERNAL, exerciseLoadKind("바벨 데드리프트"))
+        assertEquals(ExerciseLoadKind.TIMED, exerciseLoadKind("플랭크"))
+        assertEquals("+kg", exerciseLoadKind("기본 스쿼트").kgLabel()); assertEquals("kg", exerciseLoadKind("덤벨 컬").kgLabel())
+        assertFalse(exerciseLoadKind("풀업").supportsOneRepMax()); assertTrue(exerciseLoadKind("덤벨 컬").supportsOneRepMax())
+        assertEquals(null, SetEntry(1, reps = 12).volumeKg)                       // 맨몸, 추가 중량 없음 → 볼륨 없음
+        assertEquals(120.0, SetEntry(1, kg = 10.0, reps = 12).volumeKg)            // 추가 중량만
+        assertEquals(800.0, SetEntry(1, kg = 10.0, reps = 10, bodyKg = 70.0).volumeKg)   // 풀업: (70 + 10) × 10
+        val s = SetEntry(2, kg = 5.0, reps = 8, bodyKg = 72.5)
+        assertEquals(s, setEntryFromJson(setEntryJson(s)))
+        assertEquals(null, setEntryFromJson(setEntryJson(SetEntry(1, reps = 5))).bodyKg)
+    }
+
     @Test fun summaryLineAndEpley() {
         assertEquals("60 kg × 10 · 10 · 8회", listOf(SetEntry(1, 60.0, 10), SetEntry(2, 60.0, 10), SetEntry(3, 60.0, 8)).summaryLine())
         assertEquals("45초 · 40초", listOf(SetEntry(1, seconds = 45), SetEntry(2, seconds = 40)).summaryLine())

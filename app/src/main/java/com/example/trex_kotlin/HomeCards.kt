@@ -7,7 +7,11 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Check
@@ -61,66 +65,62 @@ internal fun HomeGlanceStrip(app: AppViewModel, total: Nutrition, goal: Nutritio
         Row(Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 14.dp)) {
             GlanceDonut(if (totalSets > 0) doneSets.toFloat() / totalSets else 0f, if (plan.isEmpty()) "—" else "$doneSets/$totalSets", "운동 세트",
                 done = totalSets > 0 && doneSets >= totalSets, onClick = onWorkout)
-            GlanceDonut(if (goal.kcal > 0) total.kcal.toFloat() / goal.kcal else 0f, "${total.kcal}", "섭취 kcal", onClick = onDiet)
+            // 섭취 — 숫자 아래 목표, 오른쪽에 탄·단·지 작은 링 셋(사용자 요청 2026-11-07 — 아래 탄단지 카드는 뺐다)
+            GlanceDonut(if (goal.kcal > 0) total.kcal.toFloat() / goal.kcal else 0f, "${total.kcal}", "섭취 kcal", sub = "/ ${goal.kcal}", onClick = onDiet, weight = 1.45f) {
+                Column(Modifier.padding(start = 6.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    MacroRing("탄", total.carb, goal.carb, c.primary)
+                    MacroRing("단", total.protein, goal.protein, c.lime)
+                    MacroRing("지", total.fat, goal.fat, c.warn)
+                }
+            }
             GlanceDonut(cups.toFloat() / WATER_GOAL_CUPS, "$cups/$WATER_GOAL_CUPS", "물 잔", done = cups >= WATER_GOAL_CUPS, onClick = onDiet, action = { app.addWater(0) }, actionLabel = "물 한 잔 더")
         }
     }
 }
 
-/** 도넛 하나 — 64 dp 링, 가운데 숫자 13 sp, 아래 라벨. [done] 이면 가운데가 체크. [action] 이 있으면 오른쪽 아래 작은 + 배지(별도 탭 대상). */
+/** 탄·단·지 작은 링 — 수치 없이 채움만(16 dp), 왼쪽에 한 글자. 색은 식단 탭 막대와 같다(탄 primary · 단 lime · 지 warn). */
 @Composable
-private fun RowScope.GlanceDonut(progress: Float, center: String, label: String, done: Boolean = false, onClick: () -> Unit, action: (() -> Unit)? = null, actionLabel: String = "") {
+private fun MacroRing(letter: String, value: Double, goal: Double, color: Color) {
     val c = Trex.c
-    Column(Modifier.weight(1f).clip(RoundedCornerShape(16.dp)).clickable(onClick = onClick).padding(vertical = 4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        Box(contentAlignment = Alignment.Center) {
-            RingGauge(progress, 64.dp, 7.dp) {
-                if (done) Icon(Icons.Rounded.Check, null, tint = c.primaryText, modifier = Modifier.size(22.dp))
-                else Text(center, color = c.text, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
-            }
-            if (action != null) Surface(onClick = action, shape = CircleShape, color = c.primary, modifier = Modifier.align(Alignment.BottomEnd).size(22.dp).semantics { contentDescription = actionLabel }) {
-                Box(contentAlignment = Alignment.Center) { Icon(Icons.Rounded.Add, null, tint = c.bg, modifier = Modifier.size(14.dp)) }
-            }
+    val p = if (goal > 0) (value / goal).toFloat().coerceIn(0f, 1f) else 0f
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp),
+        modifier = Modifier.semantics { contentDescription = "$letter ${value.toInt()} / ${goal.toInt()} g" }) {
+        Text(letter, color = c.text3, fontSize = 9.sp, lineHeight = 10.sp, fontWeight = FontWeight.SemiBold)
+        Canvas(Modifier.size(16.dp)) {
+            val sw = 3.dp.toPx()
+            val arc = Size(size.width - sw, size.height - sw); val o = Offset(sw / 2, sw / 2)
+            drawArc(c.track, -90f, 360f, false, o, arc, style = Stroke(sw))
+            if (p > 0f) drawArc(color, -90f, 360f * p, false, o, arc, style = Stroke(sw, cap = StrokeCap.Round))
         }
-        Text(label, color = c.text2, fontSize = 11.sp, modifier = Modifier.padding(top = 6.dp), maxLines = 1)
     }
 }
 
 /**
- * 오늘의 섭취 요약(§108f, 사용자 요청 — 제목·'목표까지 … 남았어룡' 칸·'식단 보기' 를 빼고 높이를 최대한 줄임) — 탄수화물·단백질·지방.
- * kcal 고리는 '오늘 한눈' 띠(A1)로 옮겼다 — 같은 수치가 두 번 경쟁하지 않게(K1). 카드를 누르면 식단 탭. 좁은 창·큰 글씨에서는 영양소를 세로로 쌓는다.
+ * 도넛 하나 — 64 dp 링, 가운데 숫자 13 sp(+[sub] 9 sp), 아래 라벨. [done] 이면 가운데가 체크. [action] 이 있으면 오른쪽 아래 작은 + 배지(별도 탭 대상).
+ * [side] 는 링 오른쪽에 붙는 내용(탄·단·지 작은 링).
  */
 @Composable
-internal fun HomeNutrition(total: Nutrition, goal: Nutrition, onOpen: () -> Unit) {
+private fun RowScope.GlanceDonut(progress: Float, center: String, label: String, sub: String? = null, done: Boolean = false, onClick: () -> Unit,
+    action: (() -> Unit)? = null, actionLabel: String = "", weight: Float = 1f, side: (@Composable () -> Unit)? = null) {
     val c = Trex.c
-    Surface(onClick = onOpen, shape = RoundedCornerShape(22.dp), color = c.surface) {
-        BoxWithConstraints(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp)) {
-            val stacked = maxWidth < 300.dp || LocalDensity.current.fontScale > 1.3f
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                if (stacked) Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    MacroBar("탄수화물", total.carb.toInt(), goal.carb.toInt(), c.primary, barHeight = 5.dp, showPercent = true)
-                    MacroBar("단백질", total.protein.toInt(), goal.protein.toInt(), c.lime, barHeight = 5.dp, showPercent = true)
-                    MacroBar("지방", total.fat.toInt(), goal.fat.toInt(), c.warn, barHeight = 5.dp, showPercent = true)
-                } else Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    CompactMacro("탄수화물", total.carb.toInt(), goal.carb.toInt(), c.primary, Modifier.weight(1f))
-                    CompactMacro("단백질", total.protein.toInt(), goal.protein.toInt(), c.lime, Modifier.weight(1f))
-                    CompactMacro("지방", total.fat.toInt(), goal.fat.toInt(), c.warn, Modifier.weight(1f))
+    Column(Modifier.weight(weight).clip(RoundedCornerShape(16.dp)).clickable(onClick = onClick).padding(vertical = 4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(contentAlignment = Alignment.Center) {
+                RingGauge(progress, 64.dp, 7.dp) {
+                    if (done) Icon(Icons.Rounded.Check, null, tint = c.primaryText, modifier = Modifier.size(22.dp))
+                    else Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(center, color = c.text, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+                        if (sub != null) Text(sub, color = c.text3, fontSize = 8.5.sp, maxLines = 1)
+                    }
+                }
+                if (action != null) Surface(onClick = action, shape = CircleShape, color = c.primary, modifier = Modifier.align(Alignment.BottomEnd).size(22.dp).semantics { contentDescription = actionLabel }) {
+                    Box(contentAlignment = Alignment.Center) { Icon(Icons.Rounded.Add, null, tint = c.bg, modifier = Modifier.size(14.dp)) }
                 }
             }
+            // 옆 내용은 링 높이(64 dp) 안에 가둔다 — 라벨 줄이 다른 도넛과 어긋나지 않게(11-07 실기기)
+            if (side != null) Box(Modifier.height(64.dp), contentAlignment = Alignment.Center) { side() }
         }
-    }
-}
-
-/** 영양소 한 칸(가로 셋) — 이름·퍼센트, 섭취/목표 g, 막대. */
-@Composable
-private fun CompactMacro(label: String, value: Int, goal: Int, color: Color, modifier: Modifier) {
-    val c = Trex.c
-    Column(modifier) {
-        Row(verticalAlignment = Alignment.Bottom) {
-            Text(label, color = c.text2, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, modifier = Modifier.weight(1f, fill = false))
-            if (goal > 0) Text("${value * 100 / goal}%", color = c.primaryText, fontSize = 10.sp, maxLines = 1, modifier = Modifier.padding(start = 4.dp))
-        }
-        Text("$value/${goal}g", color = c.text3, fontSize = 10.5.sp, fontWeight = FontWeight.Medium, maxLines = 1, modifier = Modifier.padding(top = 2.dp))
-        TrackBar(progress = if (goal > 0) value / goal.toFloat() else 0f, color = color, height = 5.dp, modifier = Modifier.padding(top = 5.dp))
+        Text(label, color = c.text2, fontSize = 11.sp, modifier = Modifier.padding(top = 6.dp), maxLines = 1)
     }
 }
 
@@ -191,8 +191,8 @@ internal fun HomeActivityCards(app: AppViewModel, onOpenRecord: () -> Unit = {},
             Column(Modifier.padding(18.dp)) {
                 Text("근육 피로도", color = c.text2, fontSize = 12.sp)
                 Row(Modifier.padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                    // 가장 피로한 근육의 부위를 글리프에 색칠(UI 감사 A3, K6) — 글을 읽기 전에 '어디' 가 보인다
-                    BodyPartGlyph(peak?.let { bodyPartOfMuscle(it.muscle) } ?: "전신", 44.dp, background = if (peak != null) c.primaryWash else c.surface2)
+                    // 가장 피로한 근육을 실루엣에 색칠(UI 감사 A3, K6) — 글을 읽기 전에 '어디' 가 보인다. 피로 = 경고 계열(A25 색 = 뜻)
+                    MuscleGlyph(peak?.let { muscleKeys(listOf(it.muscle)) } ?: emptySet(), 48.dp, highlight = c.warn, description = peak?.let { "${it.muscle.label} 피로" } ?: "근육 피로도")
                     Column(Modifier.padding(start = 10.dp)) {
                         Text(peak?.let { "${it.value.toInt()}점" } ?: "—", color = c.text, fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
                         Text(when { app.muscleLoadLoading -> "불러오는 중"; app.muscleLoadError != null -> "다시 불러오기"; peak == null -> "기록이 쌓이면"; else -> peak.muscle.label },
