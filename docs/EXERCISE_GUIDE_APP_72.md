@@ -1,6 +1,7 @@
 # Guide integration — 72 exercises
 
-Base: PR #65, `c7e16633b73f498bb16feb3a655dca9c3fa6f6a0`.
+Original content baseline: PR #65, `c7e16633b73f498bb16feb3a655dca9c3fa6f6a0`.
+Integrated onto PR head `e5bdf126d4f8a231ef00398052bac29434936acc` before publication.
 Local branch: `codex/exercise-guides-72`.
 
 ## Content and UI
@@ -31,12 +32,13 @@ of that output folder. The legacy iOS resource JSON is regenerated too.
 
 ## Verification status
 
-Unit tests: 928 passed, zero failures/errors/skips. `assembleDebug`,
+After integrating the current PR: app unit tests 929 passed; shared-core JVM tests
+559 passed. App tests had zero failures/errors/skips. `assembleDebug`,
 `assembleDebugAndroidTest` and `lintDebug` passed; lint reported 0 errors,
-50 warnings and 4 hints. Generator, resource export and the 52-file shared-core
+51 warnings and 4 hints. Generator, resource export and the 52-file shared-core
 synchronization checks passed. The final APK contains all 72 expected asset hashes.
 
-The isolated Android API 36.1 emulator passed all three `ExerciseGuideCatalogTest`
+Before the PR-head integration, the isolated Android API 36.1 emulator passed all three `ExerciseGuideCatalogTest`
 tests in 274.401 seconds:
 
 1. All 72 GIFs decode at 640 × 640; all 145 frames differ within their exercise
@@ -66,6 +68,29 @@ Evidence: `outputs/exercise-guides-72/roles-v3/emulator-guide-tests.log`,
 `roles-v3/emulator-verification/guide-verification/`, and
 `outputs/exercise-guides-72/app-integration/` (final build/decode logs, screenshots,
 APK/hash summary and correction receipt). These are local verification artifacts.
+
+## PR-head integration
+
+The latest PR's first-position muscle atlas, bodyweight record behavior and
+training-load evidence panel are retained. The guide entry follows the muscle
+card, whose role text now uses the same reviewed dataset as the guide. Red/orange
+swatches remain; their labels describe visual emphasis rather than dynamic roles.
+The porting specification records this addition as section 135.
+
+Integration checks found two pre-existing inconsistencies in the PR head:
+`RestorationUiTest` still referenced the removed `HomeNutrition`, and the generated
+shared `MuscleLoad` copy lagged behind Android. The test now exercises the current
+`HomeGlanceStrip`, and the shared copy is regenerated from the Android source.
+A fresh API 36.1 emulator run on the integrated APK passed all four selected tests
+in 183.312 seconds: all 72 GIFs/145 frames, visible I-Y-T animation, all 72 guide
+sheets through the last source, and the updated large-text home/onboarding test.
+The final red/orange swatches, bicycle artwork and source-tab screenshots were
+inspected. Evidence is retained locally under
+`outputs/exercise-guides-72/app-integration/pr65-verification/` and
+`pr65-emulator-tests.log`. No phone interaction occurred.
+
+The final APK contains 72/72 reviewed GIF hashes and has SHA-256
+`9d13ad59c4f4ee489caf66cd5a6abe65b64c8127714ab62d7a218c2d209f5cba`.
 
 ## Connected phone — explicit user hold
 

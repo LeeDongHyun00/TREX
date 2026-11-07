@@ -72,7 +72,7 @@ object MuscleLoadCatalog {
             muscles=arrayOf(Muscle.PECS to 1.0, Muscle.TRICEPS to .75, Muscle.SERRATUS to .45, Muscle.DELTOIDS to .35, Muscle.ABS to .15)),
         p("knee_pushup", "니 푸쉬업", "20664364,27693098", "일반/무릎 플러스 변형 연구 · 일반 니 푸쉬업에 추론", body=true,
             muscles=arrayOf(Muscle.PECS to .8, Muscle.TRICEPS to .6, Muscle.SERRATUS to .35, Muscle.DELTOIDS to .25, Muscle.ABS to .1)),
-        p("y_raise", "Y 레이즈", "23068897", "견갑면 팔 올리기 연구 · 자세/지지 조건에 따른 추론",
+        p("y_raise", "Y 레이즈", "23068897", "견갑면 팔 올리기 연구 · 자세/지지 조건에 따른 추론", body=true,   // 기구 없음(엎드려 맨몸) — 감사 F1 불일치 수정
             muscles=arrayOf(Muscle.TRAPS to 1.0, Muscle.DELTOIDS to .4, Muscle.SERRATUS to .35)),
         p("plank", "플랭크", "30856100", "플랭크 직접 연구 · 버틴 시간 기준", LoadUnit.SECONDS, true,
             muscles=arrayOf(Muscle.ABS to 1.0, Muscle.OBLIQUES to .5, Muscle.SERRATUS to .25, Muscle.DELTOIDS to .2, Muscle.GLUTES to .15, Muscle.ERECTORS to .1)),
@@ -80,7 +80,7 @@ object MuscleLoadCatalog {
             muscles=arrayOf(Muscle.OBLIQUES to 1.0, Muscle.ABS to .35, Muscle.ERECTORS to .15)),
         p("knee_up", "스탠딩 니업", "9118976,34455371", "다리 들기/고관절 굴곡 연구에서 추론", LoadUnit.EACH, true,
             muscles=arrayOf(Muscle.HIP_FLEXORS to 1.0, Muscle.ABS to .35, Muscle.OBLIQUES to .2, Muscle.QUADS to .25)),
-        p("hanging_leg_raise", "행잉 레그 레이즈", "9118976,27065536", "누운 다리 들기 연구 + 매달리기 관절 작용에서 추론", equipment=Equipment.PULLUP_BAR,
+        p("hanging_leg_raise", "행잉 레그 레이즈", "9118976,27065536", "누운 다리 들기 연구 + 매달리기 관절 작용에서 추론", body=true, equipment=Equipment.PULLUP_BAR,   // 맨몸(철봉에 매달림) — 감사 F1 불일치 수정
             muscles=arrayOf(Muscle.HIP_FLEXORS to 1.0, Muscle.ABS to .8, Muscle.OBLIQUES to .3, Muscle.FOREARMS to .3, Muscle.LATS to .15)),
         p("crunch", "크런치", "12937449", "컬업/체간 굴곡 직접 연구", body=true,
             muscles=arrayOf(Muscle.ABS to 1.0, Muscle.OBLIQUES to .3)),
@@ -169,9 +169,10 @@ object MuscleLoadCatalog {
         p("russian_twist", "러시안 트위스트", "https://www.nasm.org/resource-center/exercise-library/russian-twist", "발 지지·무중량 조건 직접 EMG 미확보 — NASM 동작 설명(외·내복사근·복직근)", LoadUnit.EACH, true,
             muscles=arrayOf(Muscle.OBLIQUES to 1.0, Muscle.ABS to .5, Muscle.HIP_FLEXORS to .25, Muscle.ERECTORS to .1)),
         // 코어 — 버티기·운반은 초 단위. 한쪽씩 버티는 종목(무릎 사이드 플랭크·사이드 플랭크·수트케이스 캐리·팔로프)도 좌우 같은 부하로 적는다(어느 쪽을 했는지 모름).
-        p("dead_bug", "데드버그", "11689975", "데드버그 직접 EMG(Souza 2001, 12명) — 복직근·복사근; 복횡근·다열근은 미측정", LoadUnit.PAIR, true,
+        // 데드버그·버드독은 팔다리를 번갈아 뻗는 교대 동작 — §130 규칙(교대 = EACH)대로 EACH. PAIR 로 두면 같은 '8회' 가 바이시클보다 쪽당 2배였다(근거 감사 2026-11-07 F3)
+        p("dead_bug", "데드버그", "11689975", "데드버그 직접 EMG(Souza 2001, 12명) — 복직근·복사근; 복횡근·다열근은 미측정", LoadUnit.EACH, true,
             muscles=arrayOf(Muscle.ABS to 1.0, Muscle.OBLIQUES to .6, Muscle.HIP_FLEXORS to .3, Muscle.DELTOIDS to .15)),
-        p("bird_dog", "버드독", "11689975,22436839", "버드독 직접 EMG(Souza 2001; García-Vaquero 2012) — 기립근·대둔근·복직근·복사근", LoadUnit.PAIR, true,
+        p("bird_dog", "버드독", "11689975,22436839", "버드독 직접 EMG(Souza 2001; García-Vaquero 2012) — 기립근·대둔근·복직근·복사근", LoadUnit.EACH, true,
             muscles=arrayOf(Muscle.ERECTORS to 1.0, Muscle.GLUTES to .8, Muscle.OBLIQUES to .4, Muscle.ABS to .3, Muscle.ABDUCTORS to .2, Muscle.DELTOIDS to .15, Muscle.HAMSTRINGS to .15)),
         p("knee_plank", "무릎 플랭크", "22436839,https://www.mayoclinic.org/healthy-lifestyle/fitness/in-depth/core-strength/art-20546851", "무릎 지지 직접 EMG 미확보 — 앞 브리지 EMG(García-Vaquero 2012)에서 추론, 일반 플랭크보다 낮은 부하", LoadUnit.SECONDS, true,
             muscles=arrayOf(Muscle.ABS to .8, Muscle.OBLIQUES to .4, Muscle.SERRATUS to .2, Muscle.DELTOIDS to .15, Muscle.ERECTORS to .1, Muscle.GLUTES to .1)),
