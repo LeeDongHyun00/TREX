@@ -847,25 +847,25 @@ class AppViewModel(private val platform: AppPlatform) : ViewModel() {
         val days = workoutHistory.filter { it.items.isNotEmpty() }
         val items = days.flatMap { it.items }
         val sets = workoutHistory.datedSets()
-        // 개인 기록 수 — 종목별 최고 kg 가 시간순으로 올라간 횟수(처음 kg 기록도 PR)
-        var prs = 0
-        val best = mutableMapOf<String, Double>()
-        sets.sortedBy { it.epochDay }.forEach { d ->
-            val kg = d.set.kg ?: return@forEach
-            if (d.set.reps == null) return@forEach
-            if (kg > (best[d.workoutName] ?: -1.0)) { prs += 1; best[d.workoutName] = kg }
-        }
-        val squatReps = items.filter { it.workoutName == "기본 스쿼트" }.sumOf { item ->
+        fun reps(name: String) = items.filter { it.workoutName == name }.sumOf { item ->
             if (item.sets.isEmpty()) item.reps.let { parseReps(it).let { s -> s.count * s.sets } } else item.sets.sumOf { it.countedReps ?: 0 }
         }
+        // 아침·저녁 — 세션 항목의 세트 끝 시각(loadSet.endedAt)만. 직접 적은 기록은 정오로 지어낸 시각이라 뺀다
+        val sessionEnds = days.flatMap { d -> d.items.filter { it.source != "manual" }.mapNotNull { it.loadSet?.endedAt }.map { d.epochDay to hourOf(it) } }
+        val today = todayEpochDay()
         return RewardFacts(
             workoutDays = days.size, streak = attendanceStreak(), longestStreak = longestStreak(),
+            perfectWeeks = perfectWeeks(workoutDaySet(), today, ::isTargetDay, streakPauses), perfectMonths = perfectMonths(workoutDaySet(), today, ::isTargetDay, streakPauses),
             coachSets = items.count { it.postureCorrection?.mode == "coach" },
             guidesSeen = seenGuides.count { ExerciseGuides.forName(it) != null }, guidesTotal = ExerciseGuides.all.size,
-            personalRecords = prs, squatReps = squatReps,
+            squatReps = reps("기본 스쿼트"), pushupReps = reps("푸쉬업"),
             plankSeconds = items.filter { it.workoutName == "플랭크" }.sumOf { it.durationSeconds ?: it.durationMinutes * 60 },
+            volumeKg = sets.sumOf { it.set.volumeKg ?: 0.0 },
+            morningDays = sessionEnds.filter { it.second < 9 }.map { it.first }.distinct().size,
+            nightDays = sessionEnds.filter { it.second >= 21 }.map { it.first }.distinct().size,
             dietDays = dietByDay.count { (_, slots) -> slots.values.any { it.isNotEmpty() } },
-            manualRecords = items.count { it.source == "manual" },
+            waterGoalDays = waterByDay.count { it.value >= WATER_GOAL_CUPS },
+            bodyWeightDays = bodyWeights.map { it.epochDay }.distinct().size,
             routineShares = xpLedger.count { it.key.startsWith("share:") },
         )
     }

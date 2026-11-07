@@ -28,7 +28,7 @@ import kotlinx.datetime.LocalDate
 fun AchievementsScreen(app: AppViewModel, onBack: () -> Unit, onGoWorkout: () -> Unit) {
     val c = Trex.c
     val total = app.totalXp
-    val badges = remember(app.workoutHistory, app.xpLedger, app.seenGuides, app.dietByDay, app.streakPause, app.weeklyRoutine) { app.badges() }
+    val badges = remember(app.workoutHistory, app.xpLedger, app.seenGuides, app.dietByDay, app.streakPause, app.weeklyRoutine, app.waterByDay, app.bodyWeights) { app.badges() }
     val today = LocalDate.fromEpochDays(app.calendarDay)
     val weekStart = today.toEpochDay() - (today.dayOfWeek.isoDayNumber - 1)
     val workoutDays = app.workoutHistory.filter { it.items.isNotEmpty() }.map { it.epochDay }.toSet()

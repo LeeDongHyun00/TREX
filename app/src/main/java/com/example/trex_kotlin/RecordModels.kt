@@ -3,6 +3,7 @@ package com.example.trex_kotlin
 import androidx.compose.runtime.Immutable
 import kotlinx.datetime.DayOfWeek
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.isoDayNumber
 import kotlinx.datetime.number
 import org.json.JSONArray
 import org.json.JSONObject
@@ -243,36 +244,100 @@ data class BadgeStatus(val id: String, val title: String, val short: String, val
     val earned: Boolean get() = progress >= goal
 }
 
-/** 배지 계산에 드는 사실들 — 전부 '했다·기록했다' 에서 나온다. */
+/** 배지 계산에 드는 사실들 — 전부 '했다·기록했다' 에서 나온다. 자세 점수·카메라 횟수·PR 은 입력이 아니다(§137). */
 data class RewardFacts(
     val workoutDays: Int,
     val streak: Int,
     val longestStreak: Int,
+    /** 목표 요일을 전부 채운 주(월~일)의 수 — Apple Fitness 'Perfect Week' 꼴. */
+    val perfectWeeks: Int,
+    /** 목표 요일을 전부 채운 달의 수 — 'Perfect Month' 꼴. */
+    val perfectMonths: Int,
     val coachSets: Int,
     val guidesSeen: Int,
     val guidesTotal: Int,
-    val personalRecords: Int,
     val squatReps: Int,
+    val pushupReps: Int,
     val plankSeconds: Int,
+    /** 누적 볼륨(kg × 확정 회) — 세트 기록이 있는 세션·수동 기록만. */
+    val volumeKg: Double,
+    /** 세션을 09:00 전에 마친 날 수 / 21:00 이후에 마친 날 수 — 직접 적은 기록은 시각이 없어 빠진다. */
+    val morningDays: Int,
+    val nightDays: Int,
     val dietDays: Int,
-    val manualRecords: Int,
+    val waterGoalDays: Int,
+    val bodyWeightDays: Int,
     val routineShares: Int,
 )
 
+/**
+ * 배지 표(§137, 2026-11-07 사용자 요청 "첫 PR 제거, 다른 운동 앱 배지 참조"). 사다리는 다른 앱의 틀을 빌렸다 —
+ * 운동 일수 10/50/100(Garmin 'Super Strength' 10/25/100/200 · Hevy 100번째 운동 배지), 완벽한 주·달(Apple Fitness Perfect Week/Month — 목표 요일 기준),
+ * 아침·저녁(Nike Run Club 'Early Bird'·'Night Owl'), 누적 볼륨(Hevy 볼륨 통계), 물·체중·식단(Fitbit·Garmin 의 습관 배지).
+ * PR 배지는 뺐다 — 처음 적은 kg 도 PR 로 세는 정의라 '했다' 의 증거가 아니다. 순서 = 화면 순서(쉬운 것부터).
+ */
 fun badges(f: RewardFacts): List<BadgeStatus> = listOf(
     BadgeStatus("first_workout", "첫 운동", "첫", f.workoutDays.coerceAtMost(1), 1),
+    BadgeStatus("days_10", "운동 10일", "10", f.workoutDays, 10),
+    BadgeStatus("days_50", "운동 50일", "50", f.workoutDays, 50),
+    BadgeStatus("days_100", "운동 100일", "100", f.workoutDays, 100),
     BadgeStatus("streak_7", "7일 연속", "7일", f.longestStreak, 7),
     BadgeStatus("streak_30", "30일 연속", "30일", f.longestStreak, 30),
+    BadgeStatus("streak_100", "100일 연속", "100일", f.longestStreak, 100),
+    BadgeStatus("perfect_week", "완벽한 주", "주", f.perfectWeeks.coerceAtMost(1), 1),
+    BadgeStatus("perfect_month", "완벽한 달", "달", f.perfectMonths.coerceAtMost(1), 1),
+    BadgeStatus("morning_5", "아침 운동 5일", "아침", f.morningDays, 5),
+    BadgeStatus("night_5", "저녁 운동 5일", "저녁", f.nightDays, 5),
+    BadgeStatus("squat_500", "스쿼트 500회", "스쿼트", f.squatReps, 500),
+    BadgeStatus("pushup_500", "푸쉬업 500회", "푸쉬업", f.pushupReps, 500),
+    BadgeStatus("plank_30m", "플랭크 30분", "플랭크", f.plankSeconds / 60, 30),
+    BadgeStatus("volume_10t", "볼륨 10톤", "10 t", (f.volumeKg / 1000).toInt(), 10),
     BadgeStatus("coach_50", "교정 모드 50세트", "교정", f.coachSets, 50),
     BadgeStatus("guides_all", "가이드 ${f.guidesTotal}종목", "가이드", f.guidesSeen, f.guidesTotal.coerceAtLeast(1)),
-    BadgeStatus("first_pr", "첫 PR", "PR", f.personalRecords.coerceAtMost(1), 1),
-    BadgeStatus("squat_500", "스쿼트 500회", "스쿼트", f.squatReps, 500),
-    BadgeStatus("plank_30m", "플랭크 30분", "플랭크", f.plankSeconds / 60, 30),
     BadgeStatus("diet_7", "식단 7일", "식단", f.dietDays, 7),
-    BadgeStatus("streak_100", "100일 연속", "100일", f.longestStreak, 100),
-    BadgeStatus("manual_10", "수동 기록 10회", "수동", f.manualRecords, 10),
+    BadgeStatus("diet_30", "식단 30일", "30일", f.dietDays, 30),
+    BadgeStatus("water_7", "물 목표 7일", "물", f.waterGoalDays, 7),
+    BadgeStatus("weigh_7", "체중 기록 7일", "체중", f.bodyWeightDays, 7),
     BadgeStatus("routine_share", "루틴 공유", "루틴", f.routineShares.coerceAtMost(1), 1),
 )
+
+/**
+ * 목표 요일을 전부 채운 주(월~일)의 수 — [today] 까지 끝난 주만(마지막 목표 요일이 지났거나 오늘이고 그날도 했을 때). 목표 요일이 없는 주는 세지 않고,
+ * 연속 멈춤([pauses])이 덮는 목표 요일은 한 것으로 친다(연속 규칙과 같다). 첫 운동 전의 주는 보지 않는다.
+ */
+fun perfectWeeks(workoutDays: Set<Long>, today: Long, isTarget: (DayOfWeek) -> Boolean, pauses: List<StreakPause> = emptyList()): Int {
+    val first = workoutDays.minOrNull() ?: return 0
+    val target = everyDayIfNoTarget(isTarget)
+    val firstDate = LocalDate.fromEpochDays(first)
+    var weekStart = first - (firstDate.dayOfWeek.isoDayNumber - 1)
+    var count = 0
+    while (weekStart <= today) {
+        val targets = (weekStart..weekStart + 6).filter { target(LocalDate.fromEpochDays(it).dayOfWeek) }
+        if (targets.isNotEmpty() && targets.last() <= today && targets.all { it in workoutDays || pauses.any { p -> p.covers(it) } }) count += 1
+        weekStart += 7
+    }
+    return count
+}
+
+/** 목표 요일을 전부 채운 달의 수 — [perfectWeeks] 와 같은 규칙을 달력 달에 적용한다. */
+fun perfectMonths(workoutDays: Set<Long>, today: Long, isTarget: (DayOfWeek) -> Boolean, pauses: List<StreakPause> = emptyList()): Int {
+    val first = workoutDays.minOrNull() ?: return 0
+    val target = everyDayIfNoTarget(isTarget)
+    var month = LocalDate.fromEpochDays(first).let { LocalDate(it.year, it.month, 1) }
+    val todayDate = LocalDate.fromEpochDays(today)
+    var count = 0
+    while (month <= todayDate) {
+        val next = if (month.month.number == 12) LocalDate(month.year + 1, 1, 1) else LocalDate(month.year, month.month.number + 1, 1)
+        val targets = (month.toEpochDays() until next.toEpochDays()).filter { target(LocalDate.fromEpochDays(it).dayOfWeek) }
+        if (targets.isNotEmpty() && targets.last() <= today && targets.all { it in workoutDays || pauses.any { p -> p.covers(it) } }) count += 1
+        month = next
+    }
+    return count
+}
+
+/** 목표 요일이 하나도 없으면 매일이 목표 — 연속 규칙(`targetDayStreak`)과 같은 해석. */
+private fun everyDayIfNoTarget(isTarget: (DayOfWeek) -> Boolean): (DayOfWeek) -> Boolean =
+    if (DayOfWeek.entries.none(isTarget)) { _ -> true } else isTarget
 
 // ============================================================= 직접 추가한 종목(P9)
 
