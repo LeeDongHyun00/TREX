@@ -123,6 +123,7 @@ com/example/trex_kotlin/AchievementsScreen.kt
 com/example/trex_kotlin/BodyWeightScreen.kt
 com/example/trex_kotlin/CatalogScreen.kt
 com/example/trex_kotlin/RoutinesScreen.kt
+com/example/trex_kotlin/RoutinePresetUi.kt
 com/example/trex_kotlin/SettingsSheets.kt
 com/example/trex_kotlin/WaterCard.kt
 com/example/trex_kotlin/SessionSetInput.kt

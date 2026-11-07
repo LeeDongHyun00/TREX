@@ -26,7 +26,31 @@ data class RoutinePreset(
     /** "상하체 분할 A · 하체" 꼴의 표시 이름 — 관심 목표 루틴은 장비를 붙여 가른다(같은 제목이 장비마다 있다). */
     val displayName: String get() = if (topic != null) "$title · $equipment" else title
     val ref: String get() = "preset:$id"
+    /**
+     * 수준 순위 — 입문 0 · 초급 1 · 초중급 2 · 초중급~중급 3 · 중급 4. '초보' 보기(사용자 요청 2026-11-07)는 **상한이 중급이 아닌 것**(입문·초급·초중급)만 보인다 —
+     * 자료집이 '4주 스타터'·'바쁜 날 짧은 전신' 같은 입문용 루틴에 초중급을 매겼으므로 초급만 남기면 초보가 고를 루틴이 13개뿐이고 목표 8개가 통째로 사라진다.
+     */
+    val levelRank: Int get() = when {
+        level.startsWith("입문") -> 0
+        level.startsWith("초급") -> 1
+        level.contains("~") -> 3
+        level.startsWith("초중급") -> 2
+        else -> 4
+    }
+    val beginnerFriendly: Boolean get() = levelRank <= 2
+    /** 부위 키 — 카드 그림·부위 칩의 기준. 복근·코어는 한 그림(core)이다. */
+    val partKey: String get() = when {
+        part.startsWith("전신") -> "전신"
+        part.startsWith("하체") -> "하체"
+        part.startsWith("상체") -> "상체"
+        else -> "코어"
+    }
+    /** 카드 그림 — `assets/routine/` 의 png(홈 카드와 같은 그림). */
+    val image: String get() = when (partKey) { "전신" -> "full"; "하체" -> "lower"; "상체" -> "upper"; else -> "core" }
 }
+
+/** 부위 칩 순서와 그림 — 루틴 추천 화면의 부위 고르기. */
+val presetParts: List<Pair<String, String>> = listOf("전신" to "full", "하체" to "lower", "상체" to "upper", "코어" to "core")
 
 /** 프리셋 → 오늘 루틴 운동 목록. 반복은 자료 범위의 상한, 자세 교정은 지원 종목에 켜 둔다. */
 fun RoutinePreset.toWorkouts(nowMillis: Long): List<Workout> = items.mapIndexed { i, item ->
@@ -41,13 +65,15 @@ fun RoutinePreset.toWorkouts(nowMillis: Long): List<Workout> = items.mapIndexed 
     ).timeOnlyNormalized()
 }
 
-/** 디자인 P10 의 필터 — 관심 목표(없으면 부위별 기본), 장비, 주 N일, 초보. */
-data class PresetFilter(val topic: String? = null, val equipment: String? = null, val beginner: Boolean = false)
+/** 디자인 P10 의 필터 — 관심 목표(없으면 부위별 기본), 장비, 부위([RoutinePreset.partKey]), 초보([RoutinePreset.beginnerFriendly]). */
+data class PresetFilter(val topic: String? = null, val equipment: String? = null, val beginner: Boolean = false, val part: String? = null)
 
+/** 거른 뒤 초보 보기에서는 쉬운 수준이 먼저다(같은 수준 안에서는 자료 순서). */
 fun List<RoutinePreset>.filtered(f: PresetFilter): List<RoutinePreset> = filter { p ->
     (f.topic == null || p.topic == f.topic) &&
         (f.equipment == null || p.equipment == f.equipment || (f.equipment == "헬스장" && p.equipment == "복합")) &&
-        (!f.beginner || p.level.startsWith("초급") || p.level.startsWith("입문"))
-}
+        (f.part == null || p.partKey == f.part) &&
+        (!f.beginner || p.beginnerFriendly)
+}.let { if (f.beginner) it.sortedBy { p -> p.levelRank } else it }
 
 fun presetById(id: String): RoutinePreset? = routinePresets.firstOrNull { it.id == id }

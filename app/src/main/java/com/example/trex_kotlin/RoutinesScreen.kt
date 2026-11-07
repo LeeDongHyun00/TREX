@@ -113,7 +113,7 @@ private fun WeeklyTab(app: AppViewModel, onOpenCatalog: () -> Unit, onStartWorko
                             Column(Modifier.weight(1f)) {
                                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                     Text(w.name, color = c.text, fontSize = 15.sp, fontWeight = FontWeight.Medium)
-                                    WashPill(if (w.postureSupported()) "자세 교정" else "기록 전용")
+                                    if (w.postureSupported()) PostureSupportPill()
                                 }
                                 Text("${w.repsSpec().sets}세트 × ${w.repsSpec().targetLabel}" + (last?.let { " · ${trimKg(it)} kg" } ?: ""), color = c.text2, fontSize = 12.sp, modifier = Modifier.padding(top = 3.dp))
                             }
@@ -133,24 +133,34 @@ private fun WeeklyTab(app: AppViewModel, onOpenCatalog: () -> Unit, onStartWorko
 
 // ============================================================= 추천(P10)
 
+/**
+ * 추천 루틴(§132 — 그림 중심, `RoutinePresetUi.kt` 머리말의 참조 넷).
+ * 고르는 순서는 수준 → 장비 → 부위 — **초보/전체 토글**(사용자 요청 2026-11-07)이 맨 위에 있고 초보에서는 상한이 중급인 루틴이 숨는다([RoutinePreset.beginnerFriendly]).
+ * 처음 쓰는 사람(운동한 날 5일 미만)은 초보로 시작한다. 목록은 목표별 묶음(제목 + 주 N회)이라 장비를 고르면 목표마다 카드 하나가 남는다 — 같은 제목 넷이 줄지어 보이지 않게.
+ */
 @Composable
 private fun PresetsTab(app: AppViewModel, onPreview: (RoutinePreset) -> Unit, onAssign: (RoutinePreset) -> Unit) {
     val c = Trex.c
-    var topic by rememberSaveable { mutableStateOf<String?>(null) }
+    val newcomer = remember { app.workoutHistory.count { it.items.isNotEmpty() } < 5 }
+    var beginner by rememberSaveable { mutableStateOf(newcomer) }
     var equipment by rememberSaveable { mutableStateOf<String?>(null) }
-    var beginner by rememberSaveable { mutableStateOf(false) }
-    val list = routinePresets.filtered(PresetFilter(topic, equipment, beginner))
+    var part by rememberSaveable { mutableStateOf<String?>(null) }
+    val list = routinePresets.filtered(PresetFilter(equipment = equipment, beginner = beginner, part = part))
+    val hiddenByLevel = if (beginner) routinePresets.filtered(PresetFilter(equipment = equipment, part = part)).size - list.size else 0
+    // 목표별 묶음 — 초보 보기에서는 쉬운 루틴이 있는 묶음이 먼저, 부위별 기본(R01~R16)은 '부위별 기본 루틴' 으로 맨 뒤
+    val groups = list.groupBy { it.topic }.entries.sortedWith(compareBy({ it.key == null }, { e -> if (beginner) e.value.minOf { it.levelRank } else 0 }, { e -> routineTopics.indexOfFirst { it.id == e.key } }))
     val heavy = remember(app.muscleLoad) { app.muscleLoad.muscles.filter { it.known && it.value >= 55.0 }.sortedByDescending { it.value }.take(2) }
     val suggestion = remember(app.muscleLoad, app.profile) { MuscleLoadEngine.recommendations(app.muscleLoad, app.profile.loadEquipment()).firstOrNull() }
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 20.dp, end = 20.dp, bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        item { FilterChipRow(listOf("전체") + routineTopics.map { it.title }, topic?.let { t -> routineTopics.first { it.id == t }.title } ?: "전체", { label -> topic = routineTopics.firstOrNull { it.title == label }?.id }) }
-        item { FilterChipRow(listOf("장비 전체", "맨몸", "밴드", "덤벨", "헬스장"), equipment ?: "장비 전체", { equipment = it.takeIf { l -> l != "장비 전체" } }) }
-        item { FilterChipRow(listOf("전체 수준", "초보"), if (beginner) "초보" else "전체 수준", { beginner = it == "초보" }) }
-        topic?.let { t -> routineTopics.firstOrNull { it.id == t } }?.let { tp -> item {
-            Surface(shape = RoundedCornerShape(16.dp), color = c.surface2, modifier = Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(14.dp)) { Text(tp.schedule, color = c.text, fontSize = 13.sp); Text("관심도 근거 · ${tp.evidence}", color = c.text2, fontSize = 12.sp, lineHeight = 17.sp, modifier = Modifier.padding(top = 4.dp)) }
+        item {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                SegmentedTabs(listOf("초보", "전체"), if (beginner) 0 else 1, { beginner = it == 0 }, Modifier.width(168.dp), height = 36.dp, filled = true)
+                Text(if (beginner) "${list.size}개" + (if (hiddenByLevel > 0) " · 중급 ${hiddenByLevel}개 숨김" else "") else "전체 ${list.size}개",
+                    color = c.text2, fontSize = 12.sp, modifier = Modifier.padding(start = 12.dp))
             }
-        } }
+        }
+        item { EquipmentTiles(equipment) { equipment = it } }
+        item { PartChips(part) { part = it } }
         if (heavy.isNotEmpty()) item {
             Surface(shape = RoundedCornerShape(18.dp), color = c.primaryWash, modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp)) {
@@ -160,23 +170,30 @@ private fun PresetsTab(app: AppViewModel, onPreview: (RoutinePreset) -> Unit, on
                 }
             }
         }
-        items(list.size, key = { list[it].id }) { i ->
-            val p = list[i]
-            val days = app.weeklyRoutine.slots.filterValues { it == p.ref }.keys.sorted().map { koreanDayOfWeek(DayOfWeek.entries[it - 1]) }
-            Surface(onClick = { onPreview(p) }, shape = RoundedCornerShape(18.dp), color = c.surface, modifier = Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(16.dp)) {
-                    Text(p.displayName, color = c.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-                    Text("${p.part} · ${p.level} · ${p.items.size}종목 · 자세 교정 ${p.postureCount} · 약 ${p.minutes}", color = c.text2, fontSize = 12.sp, modifier = Modifier.padding(top = 3.dp))
-                    Row(Modifier.fillMaxWidth().padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                        WashPill(if (days.isEmpty()) "미배정" else days.joinToString(" · "))
-                        Spacer(Modifier.weight(1f))
-                        Text("카드를 누르면 종목을 미리 봐요", color = c.text3, fontSize = 11.sp)
-                        TextButton(onClick = { onAssign(p) }) { Text("요일에 넣기", color = c.primaryText, fontSize = 13.sp) }
-                    }
+        if (list.isEmpty()) item {
+            Surface(shape = RoundedCornerShape(18.dp), color = c.surface, modifier = Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(18.dp)) {
+                    Text(if (beginner) "이 조건에 초보 루틴이 없어요" else "이 조건의 루틴이 없어요", color = c.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                    Text(if (beginner) "전체로 바꾸면 중급 루틴까지 보여요." else "장비나 부위를 '전체' 로 돌려 보세요.", color = c.text2, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp))
+                    if (beginner) GhostButton("전체 수준 보기", { beginner = false }, Modifier.fillMaxWidth().padding(top = 10.dp))
                 }
             }
         }
-        item { WashBanner("프리셋은 자료집(2026-11-07)의 분할 템플릿이에요. '당신에게 맞다' 고 단정하지 않고, 자세 교정 지원 종목을 앞에 둡니다. 세트·반복·휴식은 시작안이에요.", Icons.Rounded.Info) }
+        groups.forEach { (topicId, presets) ->
+            val tp = topicId?.let { t -> routineTopics.firstOrNull { it.id == t } }
+            item(key = "head-${topicId ?: "R"}") {
+                Column(Modifier.padding(top = 6.dp)) {
+                    Text(tp?.title ?: "부위별 기본 루틴", color = c.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                    Text(tp?.schedule ?: "부위 하나를 집중하는 짧은 루틴 — 주간 루틴의 빈 요일에 넣기 좋아요", color = c.text2, fontSize = 12.sp, lineHeight = 17.sp, modifier = Modifier.padding(top = 2.dp))
+                }
+            }
+            items(presets.size, key = { presets[it].id }) { i ->
+                val p = presets[i]
+                val days = app.weeklyRoutine.slots.filterValues { it == p.ref }.keys.sorted().map { koreanDayOfWeek(DayOfWeek.entries[it - 1]) }
+                PresetCard(p, days, showEquipment = equipment == null, onPreview = { onPreview(p) }, onAssign = { onAssign(p) })
+            }
+        }
+        item { WashBanner("프리셋은 자료집(2026-11-07)의 분할 템플릿이에요. '당신에게 맞다' 고 단정하지 않고, 자세 교정 지원 종목을 앞에 둡니다. 세트·반복·휴식은 시작안이에요. 카드를 누르면 종목을 미리 봐요.", Icons.Rounded.Info) }
     }
 }
 
@@ -193,14 +210,19 @@ private fun RoutinePreviewSheet(app: AppViewModel, p: RoutinePreset, onClose: ()
                 Column(Modifier.weight(1f)) { Kicker("추천 루틴 · ${p.topic?.let { t -> routineTopics.first { it.id == t }.title } ?: p.part}", c.primaryText); Text(p.displayName, color = c.text, fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 4.dp)) }
                 SheetClose(onClose)
             }
-            Text("${p.items.size}종목 · ${overview.totalSets}세트 · 약 ${overview.minutes}분 · 자세 교정 ${p.postureCount} / ${p.items.size}", color = c.text2, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
-            if (p.required.isNotBlank()) Text("필수 장비 · ${p.required}", color = c.text2, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp))
+            Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                LevelBadge(p); WashPill(p.equipment)
+                Text("${p.items.size}종목 · ${overview.totalSets}세트 · 약 ${overview.minutes}분", color = c.text2, fontSize = 13.sp)
+            }
+            if (p.postureCount > 0) Box(Modifier.padding(top = 6.dp)) { PostureSupportPill("자세 교정 지원 ${p.postureCount} / ${p.items.size}") }
+            if (p.required.isNotBlank()) Text("필수 장비 · ${p.required}", color = c.text2, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
+            p.topic?.let { t -> routineTopics.firstOrNull { it.id == t } }?.let { tp -> Text("${tp.schedule} · 근거 ${tp.evidence}", color = c.text3, fontSize = 11.sp, lineHeight = 15.sp, modifier = Modifier.padding(top = 4.dp)) }
             Column(Modifier.weight(1f, false).verticalScroll(rememberScrollState()).padding(top = 12.dp)) {
                 p.items.forEachIndexed { i, item ->
                     if (i > 0) HorizontalDivider(color = c.line)
                     Row(Modifier.fillMaxWidth().padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) { Text(item.name, color = c.text, fontSize = 15.sp); WashPill(if (postureSupported(item.name)) "자세 교정" else "기록 전용") }
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) { Text(item.name, color = c.text, fontSize = 15.sp); if (postureSupported(item.name)) PostureSupportPill() }
                         }
                         Text("${item.sets} × ${if (item.min == item.max) "${item.max}" else "${item.min}~${item.max}"}${item.unit}${if (item.perSide) "/한쪽" else ""}", color = c.text2, fontSize = 13.sp)
                     }

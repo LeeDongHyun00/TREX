@@ -106,6 +106,13 @@ class RecordModelsTest {
         assertEquals("12회 × 2세트", workouts[0].reps); assertEquals(75, workouts[0].restSeconds)
         assertTrue(routinePresets.filtered(PresetFilter(topic = "T10", beginner = true)).isNotEmpty())
         assertTrue(routinePresets.filtered(PresetFilter(equipment = "밴드")).all { it.equipment == "밴드" })
+        // 초보 보기 — 상한이 중급인 루틴(초중급~중급·중급 17개)만 빠지고, 쉬운 수준이 앞에 온다
+        val beginner = routinePresets.filtered(PresetFilter(beginner = true))
+        assertEquals(43, beginner.size)
+        assertTrue(beginner.none { it.level.endsWith("중급") && !it.level.startsWith("초중급") || it.level.contains("~") })
+        assertEquals(beginner.map { it.levelRank }, beginner.map { it.levelRank }.sorted())
+        assertTrue(routinePresets.filtered(PresetFilter(part = "코어")).all { it.part.contains("코어") || it.part.contains("복근") })
+        assertEquals(setOf("full", "lower", "upper", "core"), routinePresets.map { it.image }.toSet())
     }
 
     @Test fun catalogRegionsAndEquipmentsResolveForEveryExercise() {

@@ -141,9 +141,10 @@ fun HomeScreen(app: AppViewModel, onGoWorkout: () -> Unit, onGoDiet: () -> Unit,
             }
         }
         item { HomeNutrition(total, goal, onGoDiet) }
-        item { HomeActionCards(overview, onGoWorkout, onRecordMeal, routineName = app.weeklyRoutine.ref(today.dayOfWeek)?.let(app::routineName), onChangeRoutine = onOpenRoutines) }
+        item { HomeActionCards(overview, onGoWorkout, onRecordMeal, routineName = app.weeklyRoutine.ref(today.dayOfWeek)?.let(app::routineName)) }
         item { MuscleLoadHomeCard(app, onOpenMuscleLoad) }
-        item { HomeActivityCards(app, onOpenAchievements, onOpenRecord) }
+        // 연속 운동 → 운동 기록, 오늘 물 → 식단 탭(물 카드) — 사용자 요청 2026-11-07
+        item { HomeActivityCards(app, onOpenRecord = onOpenRecord, onOpenWater = onGoDiet) }
     }
 }
 

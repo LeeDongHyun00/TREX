@@ -2,11 +2,15 @@ package com.example.trex_kotlin
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.WaterDrop
 import androidx.compose.material3.*
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import com.example.trex_kotlin.TrexText as Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -85,7 +89,7 @@ private fun CompactMacro(label: String, value: Int, goal: Int, color: Color, mod
 
 /** 좁은 창과 큰 글씨에서는 카드 자체를 세로로 바꿔 버튼과 숫자를 자르지 않는다. */
 @Composable
-internal fun HomeActionCards(overview: RoutineOverview, onWorkout: () -> Unit, onMeal: () -> Unit, routineName: String? = null, onChangeRoutine: (() -> Unit)? = null) {
+internal fun HomeActionCards(overview: RoutineOverview, onWorkout: () -> Unit, onMeal: () -> Unit, routineName: String? = null) {
     val c = Trex.c
     BoxWithConstraints(Modifier.fillMaxWidth()) {
         val stacked = maxWidth < 330.dp || LocalDensity.current.fontScale > 1.3f
@@ -95,11 +99,8 @@ internal fun HomeActionCards(overview: RoutineOverview, onWorkout: () -> Unit, o
                     AssetArtwork("routine/${overview.focus.image}.png", Modifier.matchParentSize(), ContentScale.Crop)
                     Box(Modifier.matchParentSize().background(Brush.verticalGradient(listOf(Color(0x18385027), Color(0xAB385027), Color(0xF5385027)))))
                     Column(Modifier.fillMaxWidth().align(Alignment.BottomStart).padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("오늘 운동", color = Color.White, fontSize = 21.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-                            // 주간 루틴(§131 P11)으로 — 오늘 요일의 루틴을 바꾼다
-                            if (onChangeRoutine != null) Text("루틴 바꾸기", color = c.lime, fontSize = 12.sp, modifier = Modifier.clickable(onClick = onChangeRoutine).padding(4.dp))
-                        }
+                        // '루틴 바꾸기' 글자는 뺐다(사용자 요청 2026-11-07) — 주간 루틴은 운동 탭의 달력 아이콘으로 간다
+                        Text("오늘 운동", color = Color.White, fontSize = 21.sp, fontWeight = FontWeight.SemiBold)
                         Text(routineName?.let { "$it · ${overview.focus.title}" } ?: overview.focus.title, color = Color.White, fontSize = 13.sp)
                         Text(if (overview.count > 0) "${overview.count}개 운동 · 약 ${overview.minutes}분" else "운동을 추가해 주세룡", color = Color.White.copy(alpha = .85f), fontSize = 11.sp)
                         Surface(onClick = onWorkout, shape = RoundedCornerShape(50), color = c.surface, modifier = Modifier.fillMaxWidth()) {
@@ -127,29 +128,44 @@ internal fun HomeActionCards(overview: RoutineOverview, onWorkout: () -> Unit, o
     }
 }
 
+/**
+ * 홈 아래 두 칸(§131 P18 → §132, 사용자 요청 2026-11-07) — 왼쪽 **연속 운동**(목표 요일 기준, 누르면 운동 기록), 오른쪽 **오늘 물**(예전 '이번 주 볼륨' 자리 —
+ * 잔 수를 물방울 8개로, '+' 로 한 잔 더, 누르면 식단 탭의 물 카드). 볼륨은 기록 화면 통계에 남아 있다.
+ */
 @Composable
-internal fun HomeActivityCards(app: AppViewModel, onOpenAchievements: () -> Unit = {}, onOpenRecord: () -> Unit = {}) {
+internal fun HomeActivityCards(app: AppViewModel, onOpenRecord: () -> Unit = {}, onOpenWater: () -> Unit = {}) {
     val c = Trex.c
-    // §131 P18 — 연속 운동(목표 요일 기준)·이번 주 볼륨(kg × 확정 회, 추정 세트 제외)
-    val weekStart = app.calendarDay - kotlinx.datetime.LocalDate.fromEpochDays(app.calendarDay).dayOfWeek.ordinal
-    val volume = app.workoutHistory.volume(weekStart, app.calendarDay)
-    val weekSets = app.workoutHistory.filter { it.epochDay in weekStart..app.calendarDay }.sumOf { d -> d.items.sumOf { if (it.sets.isEmpty()) parseReps(it.reps).sets else it.sets.count { s -> s.done } } }
-    val weekDays = app.workoutHistory.count { it.epochDay in weekStart..app.calendarDay && it.items.isNotEmpty() }
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        listOf(Triple("연속 운동", "${app.attendanceStreak()}일", "목표 요일 기준"), Triple("이번 주 볼륨", "${volume.kg.toInt()} kg", "${weekDays}일 · ${weekSets}세트" + if (volume.estimatedSets > 0) " · 추정 ${volume.estimatedSets}" else "")).forEachIndexed { index, (label, value, sub) ->
-            Surface(onClick = if (index == 0) onOpenAchievements else onOpenRecord, shape = RoundedCornerShape(24.dp), color = c.surface, modifier = Modifier.weight(1f)) {
-                Column(Modifier.padding(18.dp)) {
-                    Text(label, color = c.text2, fontSize = 12.sp)
-                    Text(value, color = c.text, fontSize = 25.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 12.dp))
-                    Text(sub, color = c.text2, fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp))
-                    Row(Modifier.fillMaxWidth().padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.Bottom) {
-                        (6 downTo 0).forEach { offset ->
-                            val record = app.workoutHistory.firstOrNull { it.epochDay == app.calendarDay - offset }
-                            val count = if (index == 0) (record?.items?.size ?: 0) else record?.items?.sumOf { it.sets.sumOf { s -> (s.volumeKg ?: 0.0).toInt() } } ?: 0
-                            val max = if (index == 0) 1 else app.workoutHistory.maxOfOrNull { d -> d.items.sumOf { it.sets.sumOf { s -> (s.volumeKg ?: 0.0).toInt() } } }?.coerceAtLeast(1) ?: 1
-                            Box(Modifier.weight(1f).height(if (index == 0) 15.dp else (3 + 22f * count / max).dp)
-                                .clip(RoundedCornerShape(4.dp)).background(if (count > 0) c.primary else c.track))
-                        }
+        Surface(onClick = onOpenRecord, shape = RoundedCornerShape(24.dp), color = c.surface, modifier = Modifier.weight(1f)) {
+            Column(Modifier.padding(18.dp)) {
+                Text("연속 운동", color = c.text2, fontSize = 12.sp)
+                Text("${app.attendanceStreak()}일", color = c.text, fontSize = 25.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 12.dp))
+                Text("목표 요일 기준", color = c.text2, fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp))
+                Row(Modifier.fillMaxWidth().padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.Bottom) {
+                    (6 downTo 0).forEach { offset ->
+                        val did = app.workoutHistory.any { it.epochDay == app.calendarDay - offset && it.items.isNotEmpty() }
+                        Box(Modifier.weight(1f).height(15.dp).clip(RoundedCornerShape(4.dp)).background(if (did) c.primary else c.track))
+                    }
+                }
+            }
+        }
+        val cups = app.waterFor(0)
+        Surface(onClick = onOpenWater, shape = RoundedCornerShape(24.dp), color = c.surface, modifier = Modifier.weight(1f)) {
+            Column(Modifier.padding(18.dp)) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text("오늘 물", color = c.text2, fontSize = 12.sp, modifier = Modifier.weight(1f))
+                    Surface(onClick = { app.addWater(0) }, shape = CircleShape, color = c.primary, modifier = Modifier.size(26.dp).semantics { contentDescription = "물 한 잔 더" }) {
+                        Box(contentAlignment = Alignment.Center) { Icon(Icons.Rounded.Add, null, tint = c.bg, modifier = Modifier.size(16.dp)) }
+                    }
+                }
+                Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.padding(top = 6.dp)) {
+                    Text(formatLiters(cups * WATER_CUP_ML / 1000.0), color = c.text, fontSize = 25.sp, fontWeight = FontWeight.SemiBold)
+                    Text(" L", color = c.text2, fontSize = 13.sp, modifier = Modifier.padding(bottom = 4.dp))
+                }
+                Text("${cups}잔 / ${WATER_GOAL_CUPS}잔", color = c.text2, fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp))
+                Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+                    repeat(WATER_GOAL_CUPS) { i ->
+                        Icon(Icons.Rounded.WaterDrop, null, tint = if (i < cups) c.primary else c.track, modifier = Modifier.size(13.dp))
                     }
                 }
             }
