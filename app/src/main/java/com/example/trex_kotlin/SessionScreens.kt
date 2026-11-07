@@ -2,8 +2,11 @@ package com.example.trex_kotlin
 
 import com.example.trex_kotlin.posture.FloorTemporal
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -234,7 +237,10 @@ fun SessionCompleteScreen(
                         Text("개인 기록 갱신!", color = c.primaryText, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                         Text("$name ${set.kg?.let(::trimKg)} kg × ${set.reps}" + (reward.previousBestKg?.let { " · 지난 최고 ${trimKg(it)} kg" } ?: ""), color = c.text, fontSize = 13.sp)
                     }
-                    if (reward.xp > 0) Text("+${reward.xp} XP · Lv ${reward.level + 1} 까지 ${reward.toNextLevel} · 연속 ${reward.streak}일", color = c.text, fontSize = 13.sp)
+                    if (reward.xp > 0) {
+                        Text("+${reward.xp} XP · 연속 ${reward.streak}일", color = c.text, fontSize = 13.sp)
+                        XpLevelBar(reward)
+                    }
                     reward.newBadges.forEach { Text("새 배지 · ${it.title}", color = c.primaryText, fontSize = 13.sp, fontWeight = FontWeight.SemiBold) }
                 }
             }
@@ -269,6 +275,37 @@ fun SessionCompleteScreen(
             if (onOpenAchievements != null) GhostButton("업적 보기", onOpenAchievements, Modifier.weight(1f))
         }
         Cta("홈으로", icon = Icons.Rounded.Home, onClick = onDone, modifier = Modifier.padding(top = 12.dp).fillMaxWidth())
+    }
+}
+
+/**
+ * 경험치 바(사용자 요청 2026-11-07 "글 대신 경험치 바가 차는 애니메이션") — 지급 전 위치에서 지급 뒤 위치까지 찬다.
+ * 레벨이 오르면 바가 끝까지 찬 뒤 0 부터 다시 차고 라벨이 "Lv n → Lv n+1" 로 바뀐다. 숫자도 바와 함께 오른다. 같은 세션 재저장(xp 0)에는 그리지 않는다.
+ */
+@Composable
+private fun XpLevelBar(reward: SessionReward) {
+    val c = Trex.c
+    val per = Rewards.XP_PER_LEVEL.toFloat()
+    val fill = remember(reward) { Animatable((reward.xpInLevelBefore.coerceAtLeast(0)) / per) }
+    var level by remember(reward) { mutableIntStateOf(if (reward.leveledUp) reward.level - 1 else reward.level) }
+    LaunchedEffect(reward) {
+        delay(350)
+        if (reward.leveledUp) {
+            fill.animateTo(1f, tween(600, easing = FastOutSlowInEasing))
+            level = reward.level
+            fill.snapTo(0f)
+        }
+        fill.animateTo(reward.xpInLevelAfter / per, tween(if (reward.leveledUp) 500 else 800, easing = FastOutSlowInEasing))
+    }
+    val shown = (fill.value * per).toInt()
+    Column(Modifier.fillMaxWidth().padding(top = 6.dp)) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text(if (reward.leveledUp && level == reward.level) "Lv ${reward.level - 1} → Lv ${reward.level}" else "Lv $level", color = c.primaryText, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+            Text("$shown / ${Rewards.XP_PER_LEVEL} XP", color = c.text2, fontSize = 11.sp)
+        }
+        Box(Modifier.fillMaxWidth().padding(top = 5.dp).height(10.dp).clip(RoundedCornerShape(999.dp)).background(c.track)) {
+            Box(Modifier.fillMaxHeight().fillMaxWidth(fill.value.coerceIn(0f, 1f)).clip(RoundedCornerShape(999.dp)).background(c.primary))
+        }
     }
 }
 

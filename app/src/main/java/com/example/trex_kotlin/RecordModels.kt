@@ -466,7 +466,13 @@ data class SessionReward(
     val toNextLevel: Int,
     /** 이번 세션의 볼륨(kg × 확정 회) — kg 을 적은 세트만. */
     val volumeKg: Double = 0.0,
-)
+) {
+    /** 지급 뒤 이 레벨 안에서 찬 XP(0 ≤ x < 300) — 바 애니메이션의 끝. */
+    val xpInLevelAfter: Int get() = Rewards.XP_PER_LEVEL - toNextLevel
+    /** 지급 전 이 레벨 안의 XP — 음수면 이번 지급으로 레벨이 올랐다(바가 한 번 꽉 차고 0 부터 다시). */
+    val xpInLevelBefore: Int get() = xpInLevelAfter - xp
+    val leveledUp: Boolean get() = xp > 0 && xpInLevelBefore < 0
+}
 
 /** 주간 루틴·요일 설정에서 그 날이 계획된 휴식인가 — 목표 요일이 하나도 없으면 휴식 표시를 하지 않는다. */
 fun plannedRest(day: LocalDate, isTarget: (DayOfWeek) -> Boolean): Boolean = DayOfWeek.entries.any(isTarget) && !isTarget(day.dayOfWeek)
